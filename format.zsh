@@ -1,0 +1,1 @@
+find ./ -type f \( -name "*.h" -o -name "*.cc" -o -name "*.cpp" \) -print -exec clang-format -i {} \;
