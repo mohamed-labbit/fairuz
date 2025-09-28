@@ -66,7 +66,7 @@ struct WStringHash
   }
 };
 
-std::size_t utf8_size(wchar_t wc) {
+inline static std::size_t utf8_size(wchar_t wc) {
   unsigned int cp = static_cast<unsigned int>(wc);
 
   if (cp <= 0x7F)
