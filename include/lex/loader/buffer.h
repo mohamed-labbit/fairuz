@@ -47,8 +47,56 @@ struct Buffer
     this->start_[this->size_] = BUF_END;
   }
 
+  Buffer(Buffer&& other) {
+    if (this != &other)
+    {
+      // free existing resources
+      if (start_)
+        std::free(start_);
+
+      // steal other's resources
+      start_    = other.start_;
+      size_     = other.size_;
+      capacity_ = other.capacity_;
+
+      // leave other in a safe empty state
+      other.start_    = nullptr;
+      other.size_     = 0;
+      other.capacity_ = 0;
+    }
+  }
+
+  Buffer& operator=(Buffer&& other) noexcept {
+    if (this != &other)
+    {
+      // free existing resources
+      if (start_)
+        std::free(start_);
+
+      // steal other's resources
+      start_    = other.start_;
+      size_     = other.size_;
+      capacity_ = other.capacity_;
+
+      // leave other in a safe empty state
+      other.start_    = nullptr;
+      other.size_     = 0;
+      other.capacity_ = 0;
+    }
+    return *this;
+  }
+
   Buffer(const Buffer&)            = delete;
   Buffer& operator=(const Buffer&) = delete;
+
+  Buffer clone() const {
+    Buffer copy(capacity_);
+    if (size_ > 0)
+      std::wmemcpy(copy.start_, start_, size_);
+    copy.size_         = size_;
+    copy.start_[size_] = L'\0';
+    return copy;
+  }
 
   wchar_t*    data() const { return this->start_; }
   std::size_t size() const { return this->size_; }
@@ -92,6 +140,8 @@ class InputBuffer
   using char_type = wchar_t;
   using pointer   = wchar_t*;
 
+  InputBuffer() = default;
+
   explicit InputBuffer(FILE* fp, size_type cap = 4096) :
       fileptr_(fp),
       capacity_(cap),
@@ -101,18 +151,85 @@ class InputBuffer
     reset();
   }
 
-  InputBuffer(const InputBuffer&)            = delete;
-  InputBuffer& operator=(const InputBuffer&) = delete;
+  InputBuffer(const InputBuffer& other) :
+      buffers_{other.buffers_[0].clone(), other.buffers_[1].clone()},
+      current_position_(other.current_position_),
+      current_buffer_(other.current_buffer_),
+      capacity_(other.capacity_),
+      columns_(other.columns_),
+      unget_stack_(other.unget_stack_),
+      fileptr_(nullptr),
+      file_pos_(other.file_pos_) {
+    if (other.current_)
+    {
+      size_type offset_cur =
+        static_cast<size_type>(other.current_ - other.buffers_[other.current_buffer_].data());
+      current_ = buffers_[current_buffer_].data() + offset_cur;
+    }
+    else
+    {
+      current_ = nullptr;
+    }
+
+    if (other.forward_)
+    {
+      size_type offset_fwd =
+        static_cast<size_type>(other.forward_ - other.buffers_[other.current_buffer_].data());
+      forward_ = buffers_[current_buffer_].data() + offset_fwd;
+    }
+    else
+    {
+      forward_ = nullptr;
+    }
+  }
+
+  // --- Move constructor/assignment ---
+  InputBuffer(InputBuffer&&) noexcept            = default;
+  InputBuffer& operator=(InputBuffer&&) noexcept = default;
+
+  // --- Swap helper ---
+  friend void swap(InputBuffer& lhs, InputBuffer& rhs) noexcept {
+    using std::swap;
+
+    // Move-swap the underlying buffers explicitly
+    Buffer tmp0     = std::move(lhs.buffers_[0]);
+    lhs.buffers_[0] = std::move(rhs.buffers_[0]);
+    rhs.buffers_[0] = std::move(tmp0);
+
+    Buffer tmp1     = std::move(lhs.buffers_[1]);
+    lhs.buffers_[1] = std::move(rhs.buffers_[1]);
+    rhs.buffers_[1] = std::move(tmp1);
+
+    // Swap trivial/standard members
+    swap(lhs.current_position_, rhs.current_position_);
+    swap(lhs.current_, rhs.current_);
+    swap(lhs.forward_, rhs.forward_);
+    swap(lhs.current_buffer_, rhs.current_buffer_);
+    swap(lhs.capacity_, rhs.capacity_);
+    swap(lhs.columns_, rhs.columns_);
+    swap(lhs.unget_stack_, rhs.unget_stack_);
+    swap(lhs.file_pos_, rhs.file_pos_);
+
+    // FILE* semantics: borrow vs own
+    swap(lhs.fileptr_, rhs.fileptr_);
+  }
 
   // get
+
+  Buffer& buffer(const int index) {
+    if (index < 0 || index > 2)
+      throw std::out_of_range("Index out of range!");
+    return buffers_[index];
+  }
   pointer   data() const noexcept { return buffers_[current_buffer_].data(); }
   size_type size() const noexcept { return buffers_[0].size_ + buffers_[1].size_; }
   size_type capacity() const noexcept { return capacity_; }
-  bool      empty() const noexcept {
+  Position  pos() const noexcept { return current_position_; }
+
+  bool empty() const noexcept {
     pointer p = buffers_[current_buffer_].data();
     return !p || (*p == BUF_END);
   }
-  Position  pos() const noexcept { return current_position_; }
   size_type remaining() const noexcept {
     return buffers_[current_buffer_].size_ - current_position_.buf_pos.second;
   }
