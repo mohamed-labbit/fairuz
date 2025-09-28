@@ -3,32 +3,41 @@
 
 
 typename SourceManager::size_type SourceManager::remaining() const {
-  return loader_.buffer_size() - offset_;
+  return this->input_buffer_.remaining();
 }
 
 typename SourceManager::size_type SourceManager::line() const { return cur_line_; }
 typename SourceManager::size_type SourceManager::column() const { return cur_column_; }
 // char_type current() const { return offset_ < source_.length() ? source_[offset_] : EOF; }
-bool SourceManager::done() const { return offset_ >= loader_.buffer_size(); }
+bool SourceManager::done() const { return this->input_buffer_.data() == nullptr; }
 
 // next consumes the character while peek doesn't
 typename SourceManager::char_type SourceManager::next() {
+  /*
   if (done())
-    return EOF;
+  return EOF;
   InputBuffer& buf = loader_.get();
   char_type    ret = buf.next();
   move();
   return ret;
+  */
+
+  return this->input_buffer_.next();
 }
 
 typename SourceManager::char_type SourceManager::peek() {
+  /*
   if (done())
-    return EOF;
+  return EOF;
   InputBuffer& buf = loader_.get();
   return buf.next();
+  */
+
+  return input_buffer_.peek();
 }
 
 void SourceManager::move(unsigned len) {
+  /*
   InputBuffer& buf = loader_.get();
   for (; offset_ < loader_.buffer_size() && len > 0; ++offset_, --len)
   {
@@ -39,7 +48,10 @@ void SourceManager::move(unsigned len) {
       buf.move();
       continue;
     }
-
+    
     ++cur_column_;
   }
+  */
+
+  input_buffer_.consume(len);
 }
