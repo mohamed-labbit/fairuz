@@ -14,10 +14,19 @@ class SourceManager
   using size_type   = std::size_t;
 
   SourceManager(const std::string& filename) :
-      loader_(std::move(filename)),
       cur_column_(1),  // column starts at 0, it increments in the first consumption of a character
       cur_line_(1),
-      offset_(0) {}
+      offset_(0) {
+    if ((file_ptr_ = std::fopen(filename.c_str(), "r")) == nullptr)
+      throw std::invalid_argument("File not found :" + filename);
+
+    input_buffer_ = InputBuffer(file_ptr_);
+  }
+
+  ~SourceManager() {
+    if (file_ptr_ != nullptr)
+      std::fclose(file_ptr_);
+  }
 
   // string_type getRaw() const;
   size_type remaining() const;
@@ -48,8 +57,9 @@ class SourceManager
   void move(unsigned len = 1);
 
  private:
-  Loader    loader_;
-  size_type cur_line_;
-  size_type cur_column_;
-  size_type offset_;
+  InputBuffer input_buffer_;
+  FILE*       file_ptr_;
+  size_type   cur_line_;
+  size_type   cur_column_;
+  size_type   offset_;
 };
