@@ -45,7 +45,7 @@ class Lexer
   std::vector<unsigned> indent_stack_;
   size_type             indent_size_ = 0;
 
-  void consume_char(unsigned len = 1) { source_manager_.move(len); }
+  char_type consume_char() { return source_manager_.consume_char(); }
 
   void store(Token tok) {
     // push and update index
