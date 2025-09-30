@@ -48,37 +48,25 @@ struct Buffer
   }
 
   Buffer(Buffer&& other) {
-    if (this != &other)
-    {
-      // free existing resources
-      if (start_)
-        std::free(start_);
+    start_    = other.start_;
+    size_     = other.size_;
+    capacity_ = other.capacity_;
 
-      // steal other's resources
-      start_    = other.start_;
-      size_     = other.size_;
-      capacity_ = other.capacity_;
-
-      // leave other in a safe empty state
-      other.start_    = nullptr;
-      other.size_     = 0;
-      other.capacity_ = 0;
-    }
+    other.start_    = nullptr;
+    other.size_     = 0;
+    other.capacity_ = 0;
   }
 
   Buffer& operator=(Buffer&& other) noexcept {
     if (this != &other)
     {
-      // free existing resources
       if (start_)
         std::free(start_);
 
-      // steal other's resources
       start_    = other.start_;
       size_     = other.size_;
       capacity_ = other.capacity_;
 
-      // leave other in a safe empty state
       other.start_    = nullptr;
       other.size_     = 0;
       other.capacity_ = 0;
@@ -94,7 +82,7 @@ struct Buffer
     if (size_ > 0)
       std::wmemcpy(copy.start_, start_, size_);
     copy.size_         = size_;
-    copy.start_[size_] = L'\0';
+    copy.start_[size_] = BUF_END;
     return copy;
   }
 
@@ -217,14 +205,14 @@ class InputBuffer
   // get
 
   Buffer& buffer(const int index) {
-    if (index < 0 || index > 2)
+    if (index < 0 || index > 1)
       throw std::out_of_range("Index out of range!");
     return buffers_[index];
   }
   pointer   data() const noexcept { return buffers_[current_buffer_].data(); }
   size_type size() const noexcept { return buffers_[0].size_ + buffers_[1].size_; }
   size_type capacity() const noexcept { return capacity_; }
-  Position  pos() const noexcept { return current_position_; }
+  Position  position() const noexcept { return current_position_; }
 
   bool empty() const noexcept {
     pointer p = buffers_[current_buffer_].data();
@@ -234,6 +222,37 @@ class InputBuffer
     return buffers_[current_buffer_].size_ - current_position_.buf_pos.second;
   }
 
+  char_type consume_char() {
+    char_type ch;
+
+    if (!unget_stack_.empty())
+    {
+      auto entry = unget_stack_.top();
+      unget_stack_.pop();
+      current_position_ = entry.pos;
+      ch                = entry.ch;
+    }
+    else
+    {
+      if (!forward_ || *forward_ == BUF_END)
+      {
+        if (!refresh(current_buffer_ ^ 1))
+          return BUF_END;
+        swap_buffers();
+      }
+
+      ch = *forward_;
+      if (ch == BUF_END)
+        return BUF_END;
+
+      ++forward_;
+    }
+
+    advance_position(ch);
+    return ch;
+  }
+
+  /*
   // commits change of pointers
   char_type next() {
     if (!unget_stack_.empty())
@@ -243,11 +262,11 @@ class InputBuffer
       current_position_ = entry.pos;
       return entry.ch;
     }
-
+    
     if (!forward_ || *forward_ == BUF_END)
     {
       if (!refresh(current_buffer_ ^ 1))
-        return BUF_END;
+      return BUF_END;
       swap_buffers();
     }
 
@@ -255,23 +274,23 @@ class InputBuffer
     ++forward_;
     return ch;
   }
-
+  */
+  
   // gives next char without changing pointers
   char_type peek() {
     if (!forward_)
       return BUF_END;
 
-    pointer nxt = forward_ + 1;
-    if (*nxt == BUF_END)
+    pointer nxt = forward_;
+    if (*forward_ == BUF_END)
     {
       if (!refresh(current_buffer_ ^ 1))
         return BUF_END;
       swap_buffers();
-      nxt = forward_ + 1;
-      if (*nxt == BUF_END)
+      if (*forward_ == BUF_END)
         return BUF_END;
     }
-    return *nxt;
+    return *forward_;
   }
 
   std::wstring n_peek(size_type n) {
@@ -303,12 +322,6 @@ class InputBuffer
     return out;
   }
 
-  void consume_char() {
-    char_type ch = next();
-    if (ch == BUF_END)
-      return;
-    advance_position(ch);
-  }
 
   // consumes an entire lexeme at once
   void consume(size_type len = 1) {
@@ -324,6 +337,7 @@ class InputBuffer
   void reset() {
     current_buffer_   = 0;
     buffers_[0].size_ = buffers_[1].size_ = 0;
+    buffers_[0].data()[0] = buffers_[1].data()[0] = BUF_END;
     current_ = forward_ = buffers_[0].data();
     current_position_   = Position(1, 1, 0, 0, 0);
     while (!columns_.empty())
