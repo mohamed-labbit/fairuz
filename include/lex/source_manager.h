@@ -13,10 +13,7 @@ class SourceManager
   using string_type = std::wstring;
   using size_type   = std::size_t;
 
-  SourceManager(const std::string& filename) :
-      cur_column_(1),  // column starts at 0, it increments in the first consumption of a character
-      cur_line_(1),
-      offset_(0) {
+  SourceManager(const std::string& filename) {
     if ((file_ptr_ = std::fopen(filename.c_str(), "r")) == nullptr)
       throw std::invalid_argument("File not found :" + filename);
 
@@ -36,7 +33,6 @@ class SourceManager
   bool done() const;
 
   // next consumes the character while peek doesn't
-  char_type next();
   char_type peek();
 
   // including current
@@ -54,12 +50,9 @@ class SourceManager
   //string_type lookbehind(unsigned len = 1) const;
   //char_type   lookbehind_char() const;
 
-  void move(unsigned len = 1);
+  char_type consume_char();
 
  private:
   InputBuffer input_buffer_;
   FILE*       file_ptr_;
-  size_type   cur_line_;
-  size_type   cur_column_;
-  size_type   offset_;
 };

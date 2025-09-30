@@ -6,24 +6,18 @@ typename SourceManager::size_type SourceManager::remaining() const {
   return this->input_buffer_.remaining();
 }
 
-typename SourceManager::size_type SourceManager::line() const { return cur_line_; }
-typename SourceManager::size_type SourceManager::column() const { return cur_column_; }
+typename SourceManager::size_type SourceManager::line() const {
+  Position pos = input_buffer_.position();
+  return pos.line;
+}
+
+typename SourceManager::size_type SourceManager::column() const {
+  Position pos = input_buffer_.position();
+  return pos.column;
+}
+
 // char_type current() const { return offset_ < source_.length() ? source_[offset_] : EOF; }
 bool SourceManager::done() const { return this->input_buffer_.data() == nullptr; }
-
-// next consumes the character while peek doesn't
-typename SourceManager::char_type SourceManager::next() {
-  /*
-  if (done())
-  return EOF;
-  InputBuffer& buf = loader_.get();
-  char_type    ret = buf.next();
-  move();
-  return ret;
-  */
-
-  return this->input_buffer_.next();
-}
 
 typename SourceManager::char_type SourceManager::peek() {
   /*
@@ -36,7 +30,7 @@ typename SourceManager::char_type SourceManager::peek() {
   return input_buffer_.peek();
 }
 
-void SourceManager::move(unsigned len) {
+typename SourceManager::char_type SourceManager::consume_char() {
   /*
   InputBuffer& buf = loader_.get();
   for (; offset_ < loader_.buffer_size() && len > 0; ++offset_, --len)
@@ -53,5 +47,5 @@ void SourceManager::move(unsigned len) {
   }
   */
 
-  input_buffer_.consume(len);
+  return input_buffer_.consume_char();
 }

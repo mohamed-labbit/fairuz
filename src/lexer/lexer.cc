@@ -8,264 +8,235 @@
 #include <string>
 
 
-const unsigned int TABWIDTH           = 8;
-const unsigned int MAX_ALLOWED_INDENT = TABWIDTH;
-
-
 Token Lexer::next() {
-  // If we already lexed ahead and are walking forward again, return cached.
-  if (tok_index_ + 1 < tok_stream_.size())
+  // Return cached token if we already lexed ahead
+  if (this->tok_index_ + 1 < this->tok_stream_.size())
   {
-    ++tok_index_;
-    return tok_stream_[tok_index_];
+    ++this->tok_index_;
+    return this->tok_stream_[this->tok_index_];
   }
 
-  // First-call sentinel
-  if (tok_stream_.empty())
+  // First token: emit SOF
+  if (this->tok_stream_.empty())
   {
-    // make STARTFILE consistent with line/col convention (1-based)
-    tok_stream_.push_back(Token(L"", TokenType::START_OF_FILE, {1, 1}));
-    tok_index_ = 0;
+    this->tok_stream_.push_back(Token(L"", TokenType::START_OF_FILE, {1, 1}));
+    this->tok_index_ = 0;
   }
 
-  char_type ch;
-  while ((ch = source_manager_.peek()) != BUF_END)
+  while (true)
   {
+    char_type ch = this->source_manager_.peek();
+    if (ch == BUF_END)
+      break;
+
     size_type line = source_manager_.line();
     size_type col  = source_manager_.column();
-    consume_char();
 
-    // newline
+    ch = this->consume_char();
+
+
     switch (ch)
     {
     case L'\n' : {
       string_type endl = L"\n";
       Token       ret(std::move(endl), TokenType::NEWLINE, {line, col});
-      store(std::move(ret));
-      size_type ret_index = tok_index_;
+      this->store(std::move(ret));
+      size_type ret_index = this->tok_index_;
 
-      // lexing ahead for indentation
-      ch = source_manager_.peek();
-      if (ch == L' ' || ch == L'\t')
+      // 🔑 New indentation logic
+      char_type lookahead = this->source_manager_.peek();
+      if (lookahead == L' ' || lookahead == L'\t')
       {
-        consume_char();
+        size_type space_count = 0;
+        bool      used_tab    = false;
+        bool      used_space  = false;
 
-        line = source_manager_.line();
-        col  = source_manager_.column();
-
-        // Count indentation
-        size_type space_count = 1;
-        char_type cur         = source_manager_.peek();
-
-        bool used_tabs   = false;
-        bool used_spaces = false;
-
-        while (cur == L' ' || cur == L'\t')
+        while (true)
         {
-          if (cur == L' ')
+          lookahead = this->source_manager_.peek();
+          if (lookahead != L' ' && lookahead != L'\t')
+            break;
+
+          char_type ws = this->consume_char();
+          if (ws == L' ')
           {
-            space_count++;
-            used_spaces = true;
+            ++space_count;
+            used_space = true;
           }
-          else if (cur == L'\t')
+          else if (ws == L'\t')
           {
             space_count += TABWIDTH - (space_count % TABWIDTH);
-            used_tabs = true;
+            used_tab = true;
           }
-
-          consume_char();
-          cur = source_manager_.peek();
         }
 
-        if (used_tabs && used_spaces)
+        if (used_tab && used_space)
           throw std::runtime_error("Mixed tabs and spaces in indentation");
 
-        if (indent_stack_.empty() && indent_size_ == 0 && space_count > 0)
+        if (this->indent_stack_.empty() && this->indent_size_ == 0 && space_count > 0)
         {
           if (space_count > MAX_ALLOWED_INDENT)
             throw std::runtime_error("Indentation too large for first indent");
-          indent_size_ = space_count;
+          this->indent_size_ = space_count;
         }
 
-        if (indent_size_ > 0 && space_count % indent_size_ != 0)
+        if (this->indent_size_ > 0 && space_count % this->indent_size_ != 0)
           throw std::runtime_error("Inconsistent indentation detected");
 
-        size_type indent_count =
-          space_count
-          / (indent_size_ == 0 ? 1 : indent_size_);  // not needed to check for 0 but careful for me
+        size_type indent_count = space_count / (this->indent_size_ == 0 ? 1 : this->indent_size_);
 
-        int prev = indent_stack_.empty() ? 0 : indent_stack_.back();
+        int prev = this->indent_stack_.empty() ? 0 : this->indent_stack_.back();
 
-        if (source_manager_.peek() == L'\n' || source_manager_.peek() == EOF)
-          return tok_stream_[tok_index_];
+        lookahead = this->source_manager_.peek();
+        if (lookahead == L'\n' || lookahead == BUF_END)
+          return this->tok_stream_[this->tok_index_];
 
         if (indent_count > prev)
         {
-
-          indent_stack_.push_back(indent_count);
-          // dont use store because it moves the buffer index
+          this->indent_stack_.push_back(indent_count);
           for (size_type i = 0, n = indent_count - prev; i < n; ++i)
           {
-            string_type s = L"";  // just to satistfy the token constructor
+            string_type s = L"";
             Token       tok(std::move(s), TokenType::INDENT, {line, col});
-            tok_stream_.push_back(std::move(tok));
-            col += indent_size_;
+            this->tok_stream_.push_back(std::move(tok));
+            col += this->indent_size_;
           }
         }
-
         else if (indent_count < prev)
         {
-          while (!indent_stack_.empty() && indent_count < indent_stack_.back())
+          while (!this->indent_stack_.empty() && indent_count < this->indent_stack_.back())
           {
-            indent_stack_.pop_back();
-            string_type s = L"";  // just to satisfy the token constructor
+            this->indent_stack_.pop_back();
+            string_type s = L"";
             Token       tok(std::move(s), TokenType::DEDENT, {line, col});
-            tok_stream_.push_back(std::move(tok));
+            this->tok_stream_.push_back(std::move(tok));
           }
         }
       }
 
-      return tok_stream_[ret_index];
+      return this->tok_stream_[ret_index];
     }
-    break;
+
     case L' ' :
     case L'\t' :
     case L'\r' :
       continue;
-      break;
-    case L'\\' : {
-      if (source_manager_.peek() == L'\\')
-      {
-        consume_char();  // second '\'
-        // consume until newline or EOF (but do not consume the newline here)
-        while (source_manager_.peek() != L'\n' && source_manager_.peek() != '\0')
-          consume_char();
 
+    case L'\\' : {
+      char_type lookahead = this->source_manager_.peek();
+      if (lookahead == ch)
+      {
+        this->consume_char();  // consume the second '\'
+        while (true)
+        {
+          char_type c2 = this->source_manager_.peek();
+          if (c2 == L'\n' || c2 == BUF_END)
+            break;
+          this->consume_char();
+        }
         continue;
       }
       else
       {
         Token ret(string_type(1, ch), TokenType::UNKNOWN, {line, col});
-        store(std::move(ret));
-        return tok_stream_.back();
+        this->store(std::move(ret));
+        return this->tok_stream_.back();
       }
     }
-    break;
+
     case L'_' :
       goto handle_other_symbols;
-      break;
+
     case L'\'' :
     case L'"' : {
-      char_type   quote = ch;
       string_type s;
+      char_type   quote = ch;
 
-      char_type cur = source_manager_.peek();
-      while (cur != L'\n' && cur != quote)
+      while (true)
       {
-        s.push_back(cur);
-        consume_char();
-        cur = source_manager_.peek();
+        char_type c2 = this->source_manager_.peek();
+        if (c2 == L'\n' || c2 == BUF_END || c2 == quote)
+          break;
+        s.push_back(this->consume_char());
       }
 
-      // consume closing quote if present
-      if (cur == quote)
-        consume_char();
+      if (this->source_manager_.peek() == quote)
+        this->consume_char();
       else
-        // should emmit error due to the lack of closing
-        // quote, currently just returns UNKNOWN
         return Token(std::move(s), TokenType::UNKNOWN, {line, col});
 
       Token ret(std::move(s), TokenType::STRING, {line, col});
-      store(std::move(ret));
-      return tok_stream_.back();
+      this->store(std::move(ret));
+      return this->tok_stream_.back();
     }
-    break;
+
     default :
-      // goto handler;
       break;
     }
 
 handle_other_symbols:
-    // Identifiers
     if (isalpha_arabic(ch) || ch == L'_')
     {
       string_type id;
       id.push_back(ch);
 
-      char_type cur;
-      while ((cur = source_manager_.peek()) != EOF)
+      while (true)
       {
-        if (isalpha_arabic(cur) || cur == L'_')
-        {
-          id.push_back(cur);
-          consume_char();
-        }
-        else
-        {
+        char_type c2 = this->source_manager_.peek();
+        if (!(isalpha_arabic(c2) || c2 == L'_' || std::iswdigit(c2)))
           break;
-        }
+        id.push_back(this->consume_char());
       }
 
       TokenType tt = TokenType::IDENTIFIER;
-
       if (keywords.find(id) != keywords.end())
         tt = keywords.at(id);
 
       Token tok(std::move(id), tt, {line, col});
       store(std::move(tok));
-      return tok_stream_.back();
+      return this->tok_stream_.back();
     }
 
-    // numbers (use iswdigit for char_type)
     else if (std::iswdigit(ch))
     {
       string_type num;
       num.push_back(ch);
 
-      char_type cur;
-      while (std::iswdigit((cur = source_manager_.peek())))
+      while (true)
       {
-        num.push_back(cur);
-        consume_char();
+        char_type c2 = this->source_manager_.peek();
+        if (!std::iswdigit(c2))
+          break;
+        num.push_back(this->consume_char());
       }
 
       Token ret(std::move(num), TokenType::NUMBER, {line, col});
       store(std::move(ret));
-      return tok_stream_.back();
+      return this->tok_stream_.back();
     }
 
-    // operators (allow two-char ops by consulting operators map)
     else if (std::wstring_view(L"=<>!+-|&*/").find(ch) != std::wstring_view::npos)
     {
       string_type op(1, ch);
 
-      // optional second character if it forms a valid operator
-      char_type cur;
-      if ((cur = source_manager_.peek()) != EOF)
+      char_type lookahead = this->source_manager_.peek();
+      if (lookahead != BUF_END)
       {
-        char_type   nxt = cur;
         string_type two = op;
-        two.push_back(nxt);
+        two.push_back(lookahead);
 
         if (operators.find(two) != operators.end())
         {
-          op.push_back(nxt);
-          consume_char();
+          op.push_back(this->consume_char());
         }
       }
 
-      TokenType tt;
-      if (operators.find(op) != operators.end())
-        tt = operators.at(op);
-      else
-        tt = TokenType::UNKNOWN;
-
-      Token ret(std::move(op), tt, {line, col});
-      store(std::move(ret));
-      return tok_stream_.back();
+      TokenType tt = operators.count(op) ? operators.at(op) : TokenType::UNKNOWN;
+      Token     ret(std::move(op), tt, {line, col});
+      this->store(std::move(ret));
+      return this->tok_stream_.back();
     }
 
-    // symbols
     else if (std::wstring_view(L",[]().:").find(ch) != std::wstring_view::npos)
     {
       TokenType   tt;
@@ -282,30 +253,27 @@ handle_other_symbols:
       case '.' :
         tt = TokenType::DOT;
         break;
-      case ':' : {
-        if (source_manager_.peek() == L'=')
+      case ':' :
+        if (this->source_manager_.peek() == L'=')
         {
+          this->consume_char();
           sym = L":=";
-          consume_char();
-          tt = TokenType::ASSIGN;
+          tt  = TokenType::ASSIGN;
         }
         else
         {
           tt = TokenType::COLON;
         }
-      }
-      break;
+        break;
       default :
         tt = TokenType::UNKNOWN;
         break;
-        // ',', '[', ']' remain as SYMBOL
       }
 
-      store(Token(std::move(sym), tt, {line, col}));
-      return tok_stream_.back();
+      this->store(Token(std::move(sym), tt, {line, col}));
+      return this->tok_stream_.back();
     }
 
-    // unknown char -> consume and return UNKNOWN token (avoid infinite loop)
     {
       Token ret(string_type(1, ch), TokenType::UNKNOWN, {line, col});
       store(std::move(ret));
