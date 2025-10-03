@@ -1,4 +1,4 @@
-ww#pragma once
+#pragma once
 
 #include "lex/lexer.h"
 #include "lex/token.h"

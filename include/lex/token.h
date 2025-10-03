@@ -62,6 +62,18 @@ enum class TokenType {
     UNKNOWN
 };
 
+static const std::unordered_map<std::wstring, TokenType, WStringHash> operators = {
+  {L"=", TokenType::EQ},   {L":=", TokenType::ASSIGN}, {L"+", TokenType::PLUS}, {L"-", TokenType::MINUS},
+  {L"*", TokenType::STAR}, {L"/", TokenType::SLASH},   {L"<", TokenType::LT},   {L">", TokenType::GT},
+  {L"<=", TokenType::LE},  {L">=", TokenType::GE}};
+
+static const std::unordered_map<std::wstring, TokenType, WStringHash> keywords = {
+  {L"خطا", TokenType::KW_FALSE},   {L"عدم", TokenType::KW_NONE},    {L"صحيح", TokenType::KW_TRUE},
+  {L"و", TokenType::AND},          {L"اخرج", TokenType::KW_RETURN}, {L"اكمل", TokenType::KW_CONTINUE},
+  {L"عرف", TokenType::KW_FN},      {L"او", TokenType::OR},          {L"بكل", TokenType::KW_FOR},
+  {L"اذا", TokenType::KW_IF},      {L"ليس", TokenType::NOT},        {L"ارجع", TokenType::KW_RETURN},
+  {L"طالما", TokenType::KW_WHILE}, {L"ثابت", TokenType::KW_CONST}};
+
 class Token
 {
    public:
@@ -81,6 +93,11 @@ class Token
             filepath_(fp),
             line_(coords[0]),
             column_(coords[1]) {}
+
+        Location(std::string fp, size_type coords[2]) :
+            filepath_(fp),
+            line_(coords[0]),
+            column_(coords[1]) {}
     };
 
     // Main ctor: take value by value so callers can move temporaries in.
@@ -88,6 +105,11 @@ class Token
         value_(std::move(v)),
         type_(t),
         location_("" /*TODO : change to only accept a valid filepath*/, coords) {}
+
+    Token(string_type v, TokenType t, size_type coords[2]) :
+        value_(std::move(v)),
+        type_(t),
+        location_("", coords) {}
 
     Token()                 = default;
     Token(const Token&)     = default;
@@ -116,18 +138,6 @@ class Token
 
    private:
     string_type value_;
-    TokenType   type_{};
+    TokenType   type_;
     Location    location_;
 };
-
-static const std::unordered_map<std::wstring, TokenType, WStringHash> operators = {
-  {L"=", TokenType::EQ},   {L":=", TokenType::ASSIGN}, {L"+", TokenType::PLUS}, {L"-", TokenType::MINUS},
-  {L"*", TokenType::STAR}, {L"/", TokenType::SLASH},   {L"<", TokenType::LT},   {L">", TokenType::GT},
-  {L"<=", TokenType::LE},  {L">=", TokenType::GE}};
-
-static const std::unordered_map<std::wstring, TokenType, WStringHash> keywords = {
-  {L"خطا", TokenType::KW_FALSE},   {L"عدم", TokenType::KW_NONE},    {L"صحيح", TokenType::KW_TRUE},
-  {L"و", TokenType::AND},          {L"اخرج", TokenType::KW_RETURN}, {L"اكمل", TokenType::KW_CONTINUE},
-  {L"عرف", TokenType::KW_FN},      {L"او", TokenType::OR},          {L"بكل", TokenType::KW_FOR},
-  {L"اذا", TokenType::KW_IF},      {L"ليس", TokenType::NOT},        {L"ارجع", TokenType::KW_RETURN},
-  {L"طالما", TokenType::KW_WHILE}, {L"ثابت", TokenType::KW_CONST}};

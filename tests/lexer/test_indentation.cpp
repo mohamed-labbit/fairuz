@@ -1,5 +1,4 @@
 #include "lex/lexer.h"
-#include "lex/loader/loader.h"
 #include <gtest/gtest.h>
 #include <iostream>
 

@@ -152,77 +152,101 @@ mylang_tests/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_tests.dir/build.make CMakeFiles/mylang_tests.dir/build
 .PHONY : mylang_tests/fast
 
-src/lexer/lexer.o: src/lexer/lexer.cc.o
-.PHONY : src/lexer/lexer.o
+src/lex/buffer.o: src/lex/buffer.cc.o
+.PHONY : src/lex/buffer.o
 
 # target to build an object file
-src/lexer/lexer.cc.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_objects.dir/build.make CMakeFiles/mylang_objects.dir/src/lexer/lexer.cc.o
-.PHONY : src/lexer/lexer.cc.o
+src/lex/buffer.cc.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_objects.dir/build.make CMakeFiles/mylang_objects.dir/src/lex/buffer.cc.o
+.PHONY : src/lex/buffer.cc.o
 
-src/lexer/lexer.i: src/lexer/lexer.cc.i
-.PHONY : src/lexer/lexer.i
+src/lex/buffer.i: src/lex/buffer.cc.i
+.PHONY : src/lex/buffer.i
 
 # target to preprocess a source file
-src/lexer/lexer.cc.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_objects.dir/build.make CMakeFiles/mylang_objects.dir/src/lexer/lexer.cc.i
-.PHONY : src/lexer/lexer.cc.i
+src/lex/buffer.cc.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_objects.dir/build.make CMakeFiles/mylang_objects.dir/src/lex/buffer.cc.i
+.PHONY : src/lex/buffer.cc.i
 
-src/lexer/lexer.s: src/lexer/lexer.cc.s
-.PHONY : src/lexer/lexer.s
+src/lex/buffer.s: src/lex/buffer.cc.s
+.PHONY : src/lex/buffer.s
 
 # target to generate assembly for a file
-src/lexer/lexer.cc.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_objects.dir/build.make CMakeFiles/mylang_objects.dir/src/lexer/lexer.cc.s
-.PHONY : src/lexer/lexer.cc.s
+src/lex/buffer.cc.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_objects.dir/build.make CMakeFiles/mylang_objects.dir/src/lex/buffer.cc.s
+.PHONY : src/lex/buffer.cc.s
 
-src/lexer/source_manager.o: src/lexer/source_manager.cc.o
-.PHONY : src/lexer/source_manager.o
+src/lex/lexer.o: src/lex/lexer.cc.o
+.PHONY : src/lex/lexer.o
 
 # target to build an object file
-src/lexer/source_manager.cc.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_objects.dir/build.make CMakeFiles/mylang_objects.dir/src/lexer/source_manager.cc.o
-.PHONY : src/lexer/source_manager.cc.o
+src/lex/lexer.cc.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_objects.dir/build.make CMakeFiles/mylang_objects.dir/src/lex/lexer.cc.o
+.PHONY : src/lex/lexer.cc.o
 
-src/lexer/source_manager.i: src/lexer/source_manager.cc.i
-.PHONY : src/lexer/source_manager.i
+src/lex/lexer.i: src/lex/lexer.cc.i
+.PHONY : src/lex/lexer.i
 
 # target to preprocess a source file
-src/lexer/source_manager.cc.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_objects.dir/build.make CMakeFiles/mylang_objects.dir/src/lexer/source_manager.cc.i
-.PHONY : src/lexer/source_manager.cc.i
+src/lex/lexer.cc.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_objects.dir/build.make CMakeFiles/mylang_objects.dir/src/lex/lexer.cc.i
+.PHONY : src/lex/lexer.cc.i
 
-src/lexer/source_manager.s: src/lexer/source_manager.cc.s
-.PHONY : src/lexer/source_manager.s
+src/lex/lexer.s: src/lex/lexer.cc.s
+.PHONY : src/lex/lexer.s
 
 # target to generate assembly for a file
-src/lexer/source_manager.cc.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_objects.dir/build.make CMakeFiles/mylang_objects.dir/src/lexer/source_manager.cc.s
-.PHONY : src/lexer/source_manager.cc.s
+src/lex/lexer.cc.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_objects.dir/build.make CMakeFiles/mylang_objects.dir/src/lex/lexer.cc.s
+.PHONY : src/lex/lexer.cc.s
 
-src/lexer/token.o: src/lexer/token.cc.o
-.PHONY : src/lexer/token.o
+src/lex/source_manager.o: src/lex/source_manager.cc.o
+.PHONY : src/lex/source_manager.o
 
 # target to build an object file
-src/lexer/token.cc.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_objects.dir/build.make CMakeFiles/mylang_objects.dir/src/lexer/token.cc.o
-.PHONY : src/lexer/token.cc.o
+src/lex/source_manager.cc.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_objects.dir/build.make CMakeFiles/mylang_objects.dir/src/lex/source_manager.cc.o
+.PHONY : src/lex/source_manager.cc.o
 
-src/lexer/token.i: src/lexer/token.cc.i
-.PHONY : src/lexer/token.i
+src/lex/source_manager.i: src/lex/source_manager.cc.i
+.PHONY : src/lex/source_manager.i
 
 # target to preprocess a source file
-src/lexer/token.cc.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_objects.dir/build.make CMakeFiles/mylang_objects.dir/src/lexer/token.cc.i
-.PHONY : src/lexer/token.cc.i
+src/lex/source_manager.cc.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_objects.dir/build.make CMakeFiles/mylang_objects.dir/src/lex/source_manager.cc.i
+.PHONY : src/lex/source_manager.cc.i
 
-src/lexer/token.s: src/lexer/token.cc.s
-.PHONY : src/lexer/token.s
+src/lex/source_manager.s: src/lex/source_manager.cc.s
+.PHONY : src/lex/source_manager.s
 
 # target to generate assembly for a file
-src/lexer/token.cc.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_objects.dir/build.make CMakeFiles/mylang_objects.dir/src/lexer/token.cc.s
-.PHONY : src/lexer/token.cc.s
+src/lex/source_manager.cc.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_objects.dir/build.make CMakeFiles/mylang_objects.dir/src/lex/source_manager.cc.s
+.PHONY : src/lex/source_manager.cc.s
+
+src/lex/token.o: src/lex/token.cc.o
+.PHONY : src/lex/token.o
+
+# target to build an object file
+src/lex/token.cc.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_objects.dir/build.make CMakeFiles/mylang_objects.dir/src/lex/token.cc.o
+.PHONY : src/lex/token.cc.o
+
+src/lex/token.i: src/lex/token.cc.i
+.PHONY : src/lex/token.i
+
+# target to preprocess a source file
+src/lex/token.cc.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_objects.dir/build.make CMakeFiles/mylang_objects.dir/src/lex/token.cc.i
+.PHONY : src/lex/token.cc.i
+
+src/lex/token.s: src/lex/token.cc.s
+.PHONY : src/lex/token.s
+
+# target to generate assembly for a file
+src/lex/token.cc.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_objects.dir/build.make CMakeFiles/mylang_objects.dir/src/lex/token.cc.s
+.PHONY : src/lex/token.cc.s
 
 src/object/object.o: src/object/object.cc.o
 .PHONY : src/object/object.o
@@ -355,15 +379,18 @@ help:
 	@echo "... test"
 	@echo "... mylang_objects"
 	@echo "... mylang_tests"
-	@echo "... src/lexer/lexer.o"
-	@echo "... src/lexer/lexer.i"
-	@echo "... src/lexer/lexer.s"
-	@echo "... src/lexer/source_manager.o"
-	@echo "... src/lexer/source_manager.i"
-	@echo "... src/lexer/source_manager.s"
-	@echo "... src/lexer/token.o"
-	@echo "... src/lexer/token.i"
-	@echo "... src/lexer/token.s"
+	@echo "... src/lex/buffer.o"
+	@echo "... src/lex/buffer.i"
+	@echo "... src/lex/buffer.s"
+	@echo "... src/lex/lexer.o"
+	@echo "... src/lex/lexer.i"
+	@echo "... src/lex/lexer.s"
+	@echo "... src/lex/source_manager.o"
+	@echo "... src/lex/source_manager.i"
+	@echo "... src/lex/source_manager.s"
+	@echo "... src/lex/token.o"
+	@echo "... src/lex/token.i"
+	@echo "... src/lex/token.s"
 	@echo "... src/object/object.o"
 	@echo "... src/object/object.i"
 	@echo "... src/object/object.s"

@@ -2,6 +2,8 @@
 
 #include "buffer.h"
 #include "macros.h"
+#include <fstream>
+#include <stdexcept>
 #include <string>
 #include <wchar.h>
 
@@ -13,52 +15,35 @@ class SourceManager
     using string_type = std::wstring;
     using size_type   = std::size_t;
 
-    SourceManager(const std::string& filename) {
-        if ((file_ptr_ = std::fopen(filename.c_str(), "r")) == nullptr)
+    explicit SourceManager(const std::string& filename) :
+        file_(filename, std::ios::binary),
+        input_buffer_(file_, DEFAULT_CAPACITY) {
+        if (!file_.is_open())
         {
-            throw std::invalid_argument("File not found :" + filename);
+            throw std::runtime_error("File not found: " + filename);
         }
-
-        input_buffer_ = InputBuffer(file_ptr_);
     }
 
     ~SourceManager() {
-        if (file_ptr_ != nullptr)
+        if (file_.is_open())
         {
-            std::fclose(file_ptr_);
+            file_.close();
         }
     }
 
-    // string_type getRaw() const;
-    size_type remaining() const;
-    size_type line() const;
-    size_type column() const;
-    // char_type current() const;
-    bool done() const;
+    size_type line() const { return input_buffer_.position().line_; }
+    size_type column() const { return input_buffer_.position().column_; }
 
-    // next consumes the character while peek doesn't
-    char_type peek();
+    Position position() const { return input_buffer_.position(); }
 
-    // including current
-    // string_type lookahead(unsigned len = 1) const;
+    bool done() const { return input_buffer_.empty(); }
 
-    /*
-  char_type lookahead_char() const {
-    if (offset_ == source_.length() - 1)
-    return EOF;
-    return source_[offset_ + 1];
-  }
-  */
-
-    // excluding current
-    //string_type lookbehind(unsigned len = 1) const;
-    //char_type   lookbehind_char() const;
-
-    char_type consume_char();
-
-    char_type current() { return this->input_buffer_.current(); }
+    // next consumes the character, peek does not
+    char_type peek() { return input_buffer_.peek(); }
+    char_type consume_char() { return input_buffer_.consume_char(); }
+    char_type current() { return input_buffer_.current(); }
 
    private:
-    InputBuffer input_buffer_;
-    FILE*       file_ptr_;
+    std::ifstream file_;
+    InputBuffer   input_buffer_;
 };

@@ -107,18 +107,20 @@ mylang_tests_OBJECTS = \
 
 # External object files for target mylang_tests
 mylang_tests_EXTERNAL_OBJECTS = \
-"/Users/mohamedrabbit/mylang/build/CMakeFiles/mylang_objects.dir/src/lexer/lexer.cc.o" \
-"/Users/mohamedrabbit/mylang/build/CMakeFiles/mylang_objects.dir/src/lexer/source_manager.cc.o" \
-"/Users/mohamedrabbit/mylang/build/CMakeFiles/mylang_objects.dir/src/lexer/token.cc.o" \
+"/Users/mohamedrabbit/mylang/build/CMakeFiles/mylang_objects.dir/src/lex/buffer.cc.o" \
+"/Users/mohamedrabbit/mylang/build/CMakeFiles/mylang_objects.dir/src/lex/lexer.cc.o" \
+"/Users/mohamedrabbit/mylang/build/CMakeFiles/mylang_objects.dir/src/lex/source_manager.cc.o" \
+"/Users/mohamedrabbit/mylang/build/CMakeFiles/mylang_objects.dir/src/lex/token.cc.o" \
 "/Users/mohamedrabbit/mylang/build/CMakeFiles/mylang_objects.dir/src/object/object.cc.o" \
 "/Users/mohamedrabbit/mylang/build/CMakeFiles/mylang_objects.dir/src/parser/ast.cc.o" \
 "/Users/mohamedrabbit/mylang/build/CMakeFiles/mylang_objects.dir/src/parser/parser.cc.o"
 
 mylang_tests: CMakeFiles/mylang_tests.dir/tests/lexer/test_tokens.cpp.o
 mylang_tests: CMakeFiles/mylang_tests.dir/tests/lexer/test_file.cpp.o
-mylang_tests: CMakeFiles/mylang_objects.dir/src/lexer/lexer.cc.o
-mylang_tests: CMakeFiles/mylang_objects.dir/src/lexer/source_manager.cc.o
-mylang_tests: CMakeFiles/mylang_objects.dir/src/lexer/token.cc.o
+mylang_tests: CMakeFiles/mylang_objects.dir/src/lex/buffer.cc.o
+mylang_tests: CMakeFiles/mylang_objects.dir/src/lex/lexer.cc.o
+mylang_tests: CMakeFiles/mylang_objects.dir/src/lex/source_manager.cc.o
+mylang_tests: CMakeFiles/mylang_objects.dir/src/lex/token.cc.o
 mylang_tests: CMakeFiles/mylang_objects.dir/src/object/object.cc.o
 mylang_tests: CMakeFiles/mylang_objects.dir/src/parser/ast.cc.o
 mylang_tests: CMakeFiles/mylang_objects.dir/src/parser/parser.cc.o

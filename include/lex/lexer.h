@@ -14,8 +14,6 @@ class Lexer
     explicit Lexer(const std::string& filename) :
         source_manager_(filename),
         tok_index_(0) {
-        // reserve a conservative upper bound: at most source.size() tokens (safe)
-        this->tok_stream_.reserve(this->source_manager_.remaining() > 0 ? this->source_manager_.remaining() : 1);
         // setting locale at the constructor, maybe there's a better place I donno ?
         std::locale::global(std::locale("ar_SA.UTF-8"));
     }
@@ -24,26 +22,31 @@ class Lexer
 
     Token operator()() { return next(); }
 
-    // string_type getRaw() const { return source_manager_.getRaw(); }
-
     Token next();
     Token peek();
     Token prev();
 
-    // get: avoid copies where possible
     const std::vector<Token>& tokenStream() const { return tok_stream_; }
     std::vector<Token>        tokenize();
-
-    // DEBUGGING
 
     const size_type indent_size() const { return indent_size_; }
 
    private:
-    SourceManager         source_manager_;
-    size_type             tok_index_;
+    SourceManager source_manager_;
+
+    size_type tok_index_;
+    size_type indent_size_;
+
     std::vector<Token>    tok_stream_;
     std::vector<unsigned> indent_stack_;
-    size_type             indent_size_ = 0;
+
+    void  handle_indentation(size_type line, size_type col);
+    Token handle_identifier(char_type c, size_type line, size_type col);
+    Token handle_number(char_type c, size_type line, size_type col);
+    Token handle_operator(char_type c, size_type line, size_type col);
+    Token handle_symbol(char_type c, size_type line, size_type col);
+    Token handle_string_literal(char_type c, size_type line, size_type col);
+    Token emit_eof();
 
     char_type consume_char() { return source_manager_.consume_char(); }
 

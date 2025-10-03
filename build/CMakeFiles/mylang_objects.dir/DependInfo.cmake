@@ -8,9 +8,10 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
-  "/Users/mohamedrabbit/mylang/src/lexer/lexer.cc" "CMakeFiles/mylang_objects.dir/src/lexer/lexer.cc.o" "gcc" "CMakeFiles/mylang_objects.dir/src/lexer/lexer.cc.o.d"
-  "/Users/mohamedrabbit/mylang/src/lexer/source_manager.cc" "CMakeFiles/mylang_objects.dir/src/lexer/source_manager.cc.o" "gcc" "CMakeFiles/mylang_objects.dir/src/lexer/source_manager.cc.o.d"
-  "/Users/mohamedrabbit/mylang/src/lexer/token.cc" "CMakeFiles/mylang_objects.dir/src/lexer/token.cc.o" "gcc" "CMakeFiles/mylang_objects.dir/src/lexer/token.cc.o.d"
+  "/Users/mohamedrabbit/mylang/src/lex/buffer.cc" "CMakeFiles/mylang_objects.dir/src/lex/buffer.cc.o" "gcc" "CMakeFiles/mylang_objects.dir/src/lex/buffer.cc.o.d"
+  "/Users/mohamedrabbit/mylang/src/lex/lexer.cc" "CMakeFiles/mylang_objects.dir/src/lex/lexer.cc.o" "gcc" "CMakeFiles/mylang_objects.dir/src/lex/lexer.cc.o.d"
+  "/Users/mohamedrabbit/mylang/src/lex/source_manager.cc" "CMakeFiles/mylang_objects.dir/src/lex/source_manager.cc.o" "gcc" "CMakeFiles/mylang_objects.dir/src/lex/source_manager.cc.o.d"
+  "/Users/mohamedrabbit/mylang/src/lex/token.cc" "CMakeFiles/mylang_objects.dir/src/lex/token.cc.o" "gcc" "CMakeFiles/mylang_objects.dir/src/lex/token.cc.o.d"
   "/Users/mohamedrabbit/mylang/src/object/object.cc" "CMakeFiles/mylang_objects.dir/src/object/object.cc.o" "gcc" "CMakeFiles/mylang_objects.dir/src/object/object.cc.o.d"
   "/Users/mohamedrabbit/mylang/src/parser/ast.cc" "CMakeFiles/mylang_objects.dir/src/parser/ast.cc.o" "gcc" "CMakeFiles/mylang_objects.dir/src/parser/ast.cc.o.d"
   "/Users/mohamedrabbit/mylang/src/parser/parser.cc" "CMakeFiles/mylang_objects.dir/src/parser/parser.cc.o" "gcc" "CMakeFiles/mylang_objects.dir/src/parser/parser.cc.o.d"

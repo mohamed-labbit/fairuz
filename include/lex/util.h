@@ -3,12 +3,24 @@
 #include <string>
 
 
-inline bool wisdigit(const wchar_t c) {
+static inline bool is_whitespace(wchar_t ch) { return ch == L' ' || ch == L'\t' || ch == L'\r'; }
+
+static inline bool is_operator_char(wchar_t ch) {
+    static constexpr std::wstring_view ops = L"=<>!+-|&*/";
+    return ops.find(ch) != std::wstring_view::npos;
+}
+
+static inline bool is_symbol_char(wchar_t ch) {
+    static constexpr std::wstring_view syms = L",[]().:";
+    return syms.find(ch) != std::wstring_view::npos;
+}
+
+static inline bool wisdigit(const wchar_t c) {
     return (c == L'0' || c == L'1' || c == L'2' || c == L'3' || c == L'4' || c == L'5' || c == L'6' || c == L'7'
             || c == L'8' || c == L'9');
 }
 
-inline bool isalpha_arabic(const wchar_t c) { return (c >= 0x0600 && c <= 0x06FF); }
+static inline bool isalpha_arabic(const wchar_t c) { return (c >= 0x0600 && c <= 0x06FF); }
 
 // Very basic UTF-32 (wchar_t) → UTF-8 converter
 inline std::string to_utf8(const std::wstring& wstr) {

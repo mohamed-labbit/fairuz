@@ -1,5 +1,5 @@
-CMakeFiles/mylang_objects.dir/src/lexer/token.cc.o: \
-  /Users/mohamedrabbit/mylang/src/lexer/token.cc \
+CMakeFiles/mylang_objects.dir/src/lex/token.cc.o: \
+  /Users/mohamedrabbit/mylang/src/lex/token.cc \
   /Users/mohamedrabbit/mylang/include/lex/token.h \
   /Users/mohamedrabbit/mylang/include/lex/util.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/string \

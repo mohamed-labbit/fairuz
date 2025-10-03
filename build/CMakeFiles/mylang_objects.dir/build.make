@@ -72,52 +72,66 @@ include CMakeFiles/mylang_objects.dir/flags.make
 CMakeFiles/mylang_objects.dir/codegen:
 .PHONY : CMakeFiles/mylang_objects.dir/codegen
 
-CMakeFiles/mylang_objects.dir/src/lexer/lexer.cc.o: CMakeFiles/mylang_objects.dir/flags.make
-CMakeFiles/mylang_objects.dir/src/lexer/lexer.cc.o: /Users/mohamedrabbit/mylang/src/lexer/lexer.cc
-CMakeFiles/mylang_objects.dir/src/lexer/lexer.cc.o: CMakeFiles/mylang_objects.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mohamedrabbit/mylang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/mylang_objects.dir/src/lexer/lexer.cc.o"
-	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mylang_objects.dir/src/lexer/lexer.cc.o -MF CMakeFiles/mylang_objects.dir/src/lexer/lexer.cc.o.d -o CMakeFiles/mylang_objects.dir/src/lexer/lexer.cc.o -c /Users/mohamedrabbit/mylang/src/lexer/lexer.cc
+CMakeFiles/mylang_objects.dir/src/lex/buffer.cc.o: CMakeFiles/mylang_objects.dir/flags.make
+CMakeFiles/mylang_objects.dir/src/lex/buffer.cc.o: /Users/mohamedrabbit/mylang/src/lex/buffer.cc
+CMakeFiles/mylang_objects.dir/src/lex/buffer.cc.o: CMakeFiles/mylang_objects.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mohamedrabbit/mylang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/mylang_objects.dir/src/lex/buffer.cc.o"
+	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mylang_objects.dir/src/lex/buffer.cc.o -MF CMakeFiles/mylang_objects.dir/src/lex/buffer.cc.o.d -o CMakeFiles/mylang_objects.dir/src/lex/buffer.cc.o -c /Users/mohamedrabbit/mylang/src/lex/buffer.cc
 
-CMakeFiles/mylang_objects.dir/src/lexer/lexer.cc.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/mylang_objects.dir/src/lexer/lexer.cc.i"
-	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/mohamedrabbit/mylang/src/lexer/lexer.cc > CMakeFiles/mylang_objects.dir/src/lexer/lexer.cc.i
+CMakeFiles/mylang_objects.dir/src/lex/buffer.cc.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/mylang_objects.dir/src/lex/buffer.cc.i"
+	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/mohamedrabbit/mylang/src/lex/buffer.cc > CMakeFiles/mylang_objects.dir/src/lex/buffer.cc.i
 
-CMakeFiles/mylang_objects.dir/src/lexer/lexer.cc.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/mylang_objects.dir/src/lexer/lexer.cc.s"
-	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/mohamedrabbit/mylang/src/lexer/lexer.cc -o CMakeFiles/mylang_objects.dir/src/lexer/lexer.cc.s
+CMakeFiles/mylang_objects.dir/src/lex/buffer.cc.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/mylang_objects.dir/src/lex/buffer.cc.s"
+	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/mohamedrabbit/mylang/src/lex/buffer.cc -o CMakeFiles/mylang_objects.dir/src/lex/buffer.cc.s
 
-CMakeFiles/mylang_objects.dir/src/lexer/source_manager.cc.o: CMakeFiles/mylang_objects.dir/flags.make
-CMakeFiles/mylang_objects.dir/src/lexer/source_manager.cc.o: /Users/mohamedrabbit/mylang/src/lexer/source_manager.cc
-CMakeFiles/mylang_objects.dir/src/lexer/source_manager.cc.o: CMakeFiles/mylang_objects.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mohamedrabbit/mylang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/mylang_objects.dir/src/lexer/source_manager.cc.o"
-	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mylang_objects.dir/src/lexer/source_manager.cc.o -MF CMakeFiles/mylang_objects.dir/src/lexer/source_manager.cc.o.d -o CMakeFiles/mylang_objects.dir/src/lexer/source_manager.cc.o -c /Users/mohamedrabbit/mylang/src/lexer/source_manager.cc
+CMakeFiles/mylang_objects.dir/src/lex/lexer.cc.o: CMakeFiles/mylang_objects.dir/flags.make
+CMakeFiles/mylang_objects.dir/src/lex/lexer.cc.o: /Users/mohamedrabbit/mylang/src/lex/lexer.cc
+CMakeFiles/mylang_objects.dir/src/lex/lexer.cc.o: CMakeFiles/mylang_objects.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mohamedrabbit/mylang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/mylang_objects.dir/src/lex/lexer.cc.o"
+	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mylang_objects.dir/src/lex/lexer.cc.o -MF CMakeFiles/mylang_objects.dir/src/lex/lexer.cc.o.d -o CMakeFiles/mylang_objects.dir/src/lex/lexer.cc.o -c /Users/mohamedrabbit/mylang/src/lex/lexer.cc
 
-CMakeFiles/mylang_objects.dir/src/lexer/source_manager.cc.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/mylang_objects.dir/src/lexer/source_manager.cc.i"
-	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/mohamedrabbit/mylang/src/lexer/source_manager.cc > CMakeFiles/mylang_objects.dir/src/lexer/source_manager.cc.i
+CMakeFiles/mylang_objects.dir/src/lex/lexer.cc.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/mylang_objects.dir/src/lex/lexer.cc.i"
+	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/mohamedrabbit/mylang/src/lex/lexer.cc > CMakeFiles/mylang_objects.dir/src/lex/lexer.cc.i
 
-CMakeFiles/mylang_objects.dir/src/lexer/source_manager.cc.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/mylang_objects.dir/src/lexer/source_manager.cc.s"
-	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/mohamedrabbit/mylang/src/lexer/source_manager.cc -o CMakeFiles/mylang_objects.dir/src/lexer/source_manager.cc.s
+CMakeFiles/mylang_objects.dir/src/lex/lexer.cc.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/mylang_objects.dir/src/lex/lexer.cc.s"
+	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/mohamedrabbit/mylang/src/lex/lexer.cc -o CMakeFiles/mylang_objects.dir/src/lex/lexer.cc.s
 
-CMakeFiles/mylang_objects.dir/src/lexer/token.cc.o: CMakeFiles/mylang_objects.dir/flags.make
-CMakeFiles/mylang_objects.dir/src/lexer/token.cc.o: /Users/mohamedrabbit/mylang/src/lexer/token.cc
-CMakeFiles/mylang_objects.dir/src/lexer/token.cc.o: CMakeFiles/mylang_objects.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mohamedrabbit/mylang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/mylang_objects.dir/src/lexer/token.cc.o"
-	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mylang_objects.dir/src/lexer/token.cc.o -MF CMakeFiles/mylang_objects.dir/src/lexer/token.cc.o.d -o CMakeFiles/mylang_objects.dir/src/lexer/token.cc.o -c /Users/mohamedrabbit/mylang/src/lexer/token.cc
+CMakeFiles/mylang_objects.dir/src/lex/source_manager.cc.o: CMakeFiles/mylang_objects.dir/flags.make
+CMakeFiles/mylang_objects.dir/src/lex/source_manager.cc.o: /Users/mohamedrabbit/mylang/src/lex/source_manager.cc
+CMakeFiles/mylang_objects.dir/src/lex/source_manager.cc.o: CMakeFiles/mylang_objects.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mohamedrabbit/mylang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/mylang_objects.dir/src/lex/source_manager.cc.o"
+	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mylang_objects.dir/src/lex/source_manager.cc.o -MF CMakeFiles/mylang_objects.dir/src/lex/source_manager.cc.o.d -o CMakeFiles/mylang_objects.dir/src/lex/source_manager.cc.o -c /Users/mohamedrabbit/mylang/src/lex/source_manager.cc
 
-CMakeFiles/mylang_objects.dir/src/lexer/token.cc.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/mylang_objects.dir/src/lexer/token.cc.i"
-	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/mohamedrabbit/mylang/src/lexer/token.cc > CMakeFiles/mylang_objects.dir/src/lexer/token.cc.i
+CMakeFiles/mylang_objects.dir/src/lex/source_manager.cc.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/mylang_objects.dir/src/lex/source_manager.cc.i"
+	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/mohamedrabbit/mylang/src/lex/source_manager.cc > CMakeFiles/mylang_objects.dir/src/lex/source_manager.cc.i
 
-CMakeFiles/mylang_objects.dir/src/lexer/token.cc.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/mylang_objects.dir/src/lexer/token.cc.s"
-	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/mohamedrabbit/mylang/src/lexer/token.cc -o CMakeFiles/mylang_objects.dir/src/lexer/token.cc.s
+CMakeFiles/mylang_objects.dir/src/lex/source_manager.cc.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/mylang_objects.dir/src/lex/source_manager.cc.s"
+	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/mohamedrabbit/mylang/src/lex/source_manager.cc -o CMakeFiles/mylang_objects.dir/src/lex/source_manager.cc.s
+
+CMakeFiles/mylang_objects.dir/src/lex/token.cc.o: CMakeFiles/mylang_objects.dir/flags.make
+CMakeFiles/mylang_objects.dir/src/lex/token.cc.o: /Users/mohamedrabbit/mylang/src/lex/token.cc
+CMakeFiles/mylang_objects.dir/src/lex/token.cc.o: CMakeFiles/mylang_objects.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mohamedrabbit/mylang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/mylang_objects.dir/src/lex/token.cc.o"
+	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mylang_objects.dir/src/lex/token.cc.o -MF CMakeFiles/mylang_objects.dir/src/lex/token.cc.o.d -o CMakeFiles/mylang_objects.dir/src/lex/token.cc.o -c /Users/mohamedrabbit/mylang/src/lex/token.cc
+
+CMakeFiles/mylang_objects.dir/src/lex/token.cc.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/mylang_objects.dir/src/lex/token.cc.i"
+	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/mohamedrabbit/mylang/src/lex/token.cc > CMakeFiles/mylang_objects.dir/src/lex/token.cc.i
+
+CMakeFiles/mylang_objects.dir/src/lex/token.cc.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/mylang_objects.dir/src/lex/token.cc.s"
+	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/mohamedrabbit/mylang/src/lex/token.cc -o CMakeFiles/mylang_objects.dir/src/lex/token.cc.s
 
 CMakeFiles/mylang_objects.dir/src/object/object.cc.o: CMakeFiles/mylang_objects.dir/flags.make
 CMakeFiles/mylang_objects.dir/src/object/object.cc.o: /Users/mohamedrabbit/mylang/src/object/object.cc
 CMakeFiles/mylang_objects.dir/src/object/object.cc.o: CMakeFiles/mylang_objects.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mohamedrabbit/mylang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/mylang_objects.dir/src/object/object.cc.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mohamedrabbit/mylang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/mylang_objects.dir/src/object/object.cc.o"
 	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mylang_objects.dir/src/object/object.cc.o -MF CMakeFiles/mylang_objects.dir/src/object/object.cc.o.d -o CMakeFiles/mylang_objects.dir/src/object/object.cc.o -c /Users/mohamedrabbit/mylang/src/object/object.cc
 
 CMakeFiles/mylang_objects.dir/src/object/object.cc.i: cmake_force
@@ -131,7 +145,7 @@ CMakeFiles/mylang_objects.dir/src/object/object.cc.s: cmake_force
 CMakeFiles/mylang_objects.dir/src/parser/ast.cc.o: CMakeFiles/mylang_objects.dir/flags.make
 CMakeFiles/mylang_objects.dir/src/parser/ast.cc.o: /Users/mohamedrabbit/mylang/src/parser/ast.cc
 CMakeFiles/mylang_objects.dir/src/parser/ast.cc.o: CMakeFiles/mylang_objects.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mohamedrabbit/mylang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/mylang_objects.dir/src/parser/ast.cc.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mohamedrabbit/mylang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/mylang_objects.dir/src/parser/ast.cc.o"
 	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mylang_objects.dir/src/parser/ast.cc.o -MF CMakeFiles/mylang_objects.dir/src/parser/ast.cc.o.d -o CMakeFiles/mylang_objects.dir/src/parser/ast.cc.o -c /Users/mohamedrabbit/mylang/src/parser/ast.cc
 
 CMakeFiles/mylang_objects.dir/src/parser/ast.cc.i: cmake_force
@@ -145,7 +159,7 @@ CMakeFiles/mylang_objects.dir/src/parser/ast.cc.s: cmake_force
 CMakeFiles/mylang_objects.dir/src/parser/parser.cc.o: CMakeFiles/mylang_objects.dir/flags.make
 CMakeFiles/mylang_objects.dir/src/parser/parser.cc.o: /Users/mohamedrabbit/mylang/src/parser/parser.cc
 CMakeFiles/mylang_objects.dir/src/parser/parser.cc.o: CMakeFiles/mylang_objects.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mohamedrabbit/mylang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/mylang_objects.dir/src/parser/parser.cc.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mohamedrabbit/mylang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/mylang_objects.dir/src/parser/parser.cc.o"
 	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mylang_objects.dir/src/parser/parser.cc.o -MF CMakeFiles/mylang_objects.dir/src/parser/parser.cc.o.d -o CMakeFiles/mylang_objects.dir/src/parser/parser.cc.o -c /Users/mohamedrabbit/mylang/src/parser/parser.cc
 
 CMakeFiles/mylang_objects.dir/src/parser/parser.cc.i: cmake_force
@@ -156,9 +170,10 @@ CMakeFiles/mylang_objects.dir/src/parser/parser.cc.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/mylang_objects.dir/src/parser/parser.cc.s"
 	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/mohamedrabbit/mylang/src/parser/parser.cc -o CMakeFiles/mylang_objects.dir/src/parser/parser.cc.s
 
-mylang_objects: CMakeFiles/mylang_objects.dir/src/lexer/lexer.cc.o
-mylang_objects: CMakeFiles/mylang_objects.dir/src/lexer/source_manager.cc.o
-mylang_objects: CMakeFiles/mylang_objects.dir/src/lexer/token.cc.o
+mylang_objects: CMakeFiles/mylang_objects.dir/src/lex/buffer.cc.o
+mylang_objects: CMakeFiles/mylang_objects.dir/src/lex/lexer.cc.o
+mylang_objects: CMakeFiles/mylang_objects.dir/src/lex/source_manager.cc.o
+mylang_objects: CMakeFiles/mylang_objects.dir/src/lex/token.cc.o
 mylang_objects: CMakeFiles/mylang_objects.dir/src/object/object.cc.o
 mylang_objects: CMakeFiles/mylang_objects.dir/src/parser/ast.cc.o
 mylang_objects: CMakeFiles/mylang_objects.dir/src/parser/parser.cc.o
