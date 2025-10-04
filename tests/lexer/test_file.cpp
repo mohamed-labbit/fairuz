@@ -8,8 +8,8 @@ const std::string test_cases_path = "/Users/mohamedrabbit/mylang/tests/lexer/tes
 
 
 inline void PrintTo(const Token& tok, std::ostream* os) {
-    *os << "Token(\"" << utf8::utf16to8(tok.str()) << "\", type=" << static_cast<int>(tok.type()) << ", line=" << tok.line()
-        << ", col=" << tok.column() << ")" << '\n';
+    *os << "Token(\"" << utf8::utf16to8(tok.str()) << "\", type=" << static_cast<int>(tok.type())
+        << ", line=" << tok.line() << ", col=" << tok.column() << ")" << '\n';
 }
 
 TEST(TestFile, TestFileTokenization) {

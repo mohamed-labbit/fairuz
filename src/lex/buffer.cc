@@ -1,204 +1,292 @@
-
-/*
 #include "lex/buffer.h"
 
 
-typename InputBuffer::pointer InputBuffer::data() const noexcept { return buffers_[current_buffer_].data(); }
+bool InputBase::refresh_buffer(const unsigned int to_refresh) {
+    if (!file_.is_open())
+    {
+        return false;
+    }
 
-typename InputBuffer::size_type InputBuffer::size() const noexcept { return buffers_[0].size_ + buffers_[1].size_; }
+    size_type max_chars = buffers_[to_refresh].size() - 1;
+    auto      buf       = read_wchar_window(max_chars);
 
-typename InputBuffer::size_type InputBuffer::capacity() const noexcept { return capacity_; }
+    if (buf.empty())
+    {
+        buffers_[to_refresh].clear();
+        buffers_[to_refresh].push_back(BUF_END);
+        return false;
+    }
 
-Position InputBuffer::position() const noexcept { return current_position_; }
+    buffers_[to_refresh].assign(buf.begin(), buf.end());
+    buffers_[to_refresh].push_back(BUF_END);
 
-bool InputBuffer::empty() const noexcept {
-    pointer p = buffers_[current_buffer_].data();
-    return p == nullptr || (*p == BUF_END);
+    return true;
+}
+
+typename InputBase::buffer_t InputBase::read_wchar_window(size_type max_chars) {
+    if (max_chars == 0)
+    {
+        return {};
+    }
+
+    if (!file_.is_open())
+    {
+        return {};
+    }
+
+    size_type         byte_chunk_size = max_chars * 4;  // Conservative estimate
+    std::vector<char> byte_buffer(byte_chunk_size);
+
+    file_.read(byte_buffer.data(), byte_chunk_size);
+    std::streamsize bytes_read = file_.gcount();
+
+    if (bytes_read <= 0)
+    {
+        return {};
+    }
+
+    byte_buffer.resize(bytes_read);
+
+    size_type valid_bytes = bytes_read;
+
+    if (bytes_read > 0)
+    {
+        unsigned char last_byte = static_cast<unsigned char>(byte_buffer[bytes_read - 1]);
+
+        int bytes_to_rewind = 0;
+
+        for (int i = bytes_read - 1; i >= 0 && i >= bytes_read - 4; --i)
+        {
+            unsigned char byte = static_cast<unsigned char>(byte_buffer[i]);
+
+            if ((byte & 0x80) == 0)
+            {
+                break;
+            }
+            else if ((byte & 0xC0) == 0xC0)
+            {
+                int expected_bytes = 0;
+                if ((byte & 0xE0) == 0xC0)
+                {
+                    expected_bytes = 2;
+                }
+                else if ((byte & 0xF0) == 0xE0)
+                {
+                    expected_bytes = 3;
+                }
+                else if ((byte & 0xF8) == 0xF0)
+                {
+                    expected_bytes = 4;
+                }
+
+                if (i + expected_bytes > bytes_read)
+                {
+                    bytes_to_rewind = bytes_read - i;
+                }
+                break;
+            }
+        }
+
+        if (bytes_to_rewind > 0)
+        {
+            valid_bytes = bytes_read - bytes_to_rewind;
+            byte_buffer.resize(valid_bytes);
+            file_.seekg(-bytes_to_rewind, std::ios_base::cur);
+        }
+    }
+
+    byte_position_ += valid_bytes;
+
+    std::string u8_str;
+    for (auto b : byte_buffer)
+    {
+        u8_str.push_back(b);
+    }
+
+    buffer_t result = utf8::utf8to16(u8_str);
+
+    if (result.size() > max_chars)
+    {
+        result.resize(max_chars);
+    }
+
+    char_count_ += result.size();
+
+    return result;
+}
+
+
+typename InputBuffer::size_type InputBuffer::size() const { return this->buffers_[this->current_buffer_].length(); }
+
+typename InputBuffer::size_type InputBuffer::buffer_offset() const { return this->current_; }
+
+bool InputBuffer::empty() const { return (!this->file_.is_open()); }
+
+typename InputBuffer::char_type InputBuffer::at(const size_type idx) const {
+    return this->buffers_[this->current_buffer_][idx];
 }
 
 typename InputBuffer::char_type InputBuffer::consume_char() {
     char_type ch;
-    
-    if (unget_stack_.empty() == false)
+    if (!this->unget_stack_.empty())
     {
         auto entry = unget_stack_.top();
         unget_stack_.pop();
-        current_position_ = entry.pos;
-        ch                = entry.ch;
+        this->current_position_ = entry.pos;
+        ch                      = entry.ch;
     }
     else
     {
-        if (forward_ == nullptr || *forward_ == BUF_END)
+        if (this->buffers_[this->current_buffer_][this->current_] == BUF_END)
         {
-            if (refresh_(current_buffer_ ^ 1) == false)
+            if (!this->refresh_buffer(this->current_buffer_ ^ 1))
             {
                 return BUF_END;
             }
-            
-            swap_buffers_();
+
+            this->swap_buffers_();
         }
-        
-        ch = *forward_;
-        if (ch == BUF_END)
-        {
-            return BUF_END;
-        }
-        
-        forward_ += 1;
+
+        ch = this->buffers_[this->current_buffer_][this->current_];
+        this->current_ += 1;
     }
-    
-    advance_position_(ch);
+
+    this->advance_position_(ch);
     return ch;
 }
 
+[[nodiscard]]
 typename InputBuffer::char_type InputBuffer::current() {
-    if (!current_ || *current_ == BUF_END)
+    if (this->buffers_[this->current_buffer_][this->current_] == BUF_END)
     {
-        if (!refresh_(current_buffer_ ^ 1))
+        if (!this->refresh_buffer(this->current_buffer_ ^ 1))
         {
             return BUF_END;
         }
-        
-        swap_buffers_();
+
+        this->swap_buffers_();
     }
-    return *current_;
+
+    return this->buffers_[this->current_buffer_][this->current_];
 }
 
-// gives next char without changing pointers
+[[nodiscard]]
 typename InputBuffer::char_type InputBuffer::peek() {
-    if (forward_ == nullptr)
+    size_type next_idx = this->current_ + 1;
+    if (next_idx >= this->buffers_[this->current_buffer_].size())
     {
-        return BUF_END;
-    }
-    
-    pointer nxt = forward_;
-    if (*forward_ == BUF_END)
-    {
-        if (refresh_(current_buffer_ ^ 1) == false)
+        if (!this->refresh_buffer(this->current_buffer_ ^ 1))
         {
             return BUF_END;
         }
-        
-        swap_buffers_();
+
+        this->swap_buffers_();
+        next_idx = 0;
     }
-    return *forward_;
+
+    if (this->buffers_[this->current_buffer_][next_idx] == BUF_END)
+    {
+        if (!this->refresh_buffer(this->current_buffer_ ^ 1))
+        {
+            return BUF_END;
+        }
+
+        this->swap_buffers_();
+        next_idx = 0;
+    }
+
+    return this->buffers_[this->current_buffer_][next_idx];
 }
 
 typename InputBuffer::string_type InputBuffer::n_peek(size_type n) {
-    std::wstring out;
-    if (forward_ == nullptr || n == 0)
+    string_type out;
+    if (n == 0)
     {
         return out;
     }
-    
-    pointer   it      = forward_;
+
     size_type rem     = n;
-    unsigned  buf_idx = current_buffer_;
-    size_type offset  = static_cast<size_type>(it - buffers_[buf_idx].data());
-    
+    int       buf_idx = this->current_buffer_;
+    size_type offset  = this->current_ + 1;
+
     while (rem > 0)
     {
-        if (offset >= buffers_[buf_idx].size_)
+        if (offset >= this->buffers_[buf_idx].size() || this->buffers_[buf_idx][offset] == BUF_END)
         {
-            if (refresh_(buf_idx ^ 1) == false)
+            if (!this->refresh_buffer(buf_idx ^ 1))
             {
                 break;
             }
-            
             buf_idx ^= 1;
-            it     = buffers_[buf_idx].data();
             offset = 0;
-            if (buffers_[buf_idx].size_ == 0)
-            {
-                break;
-            }
         }
-        out.push_back(it[offset]);
-        offset += 1;
-        rem -= 1;
+
+        out.push_back(this->buffers_[buf_idx][offset]);
+        offset++;
+        rem--;
     }
+
     return out;
 }
 
 
-// consumes an entire lexeme at once
 void InputBuffer::consume(size_type len) {
-    for (; len > 0; len -= 1)
+    while (len-- > 0)
     {
-        consume_char();
+        this->consume_char();
     }
 }
 
 void InputBuffer::unget(char_type ch) {
-    unget_stack_.push(PushbackEntry{ch, current_position_});
-    rewind_position_(ch);
+    // store previous position instead of current one
+    Position prev_pos = this->current_position_;
+    this->rewind_position_(ch);
+    this->unget_stack_.push({ch, prev_pos});
 }
 
-void InputBuffer::reset_() {
-    current_buffer_   = 0;
-    buffers_[0].size_ = buffers_[1].size_ = 0;
-    buffers_[0].data()[0] = buffers_[1].data()[0] = BUF_END;
-    current_ = forward_       = buffers_[0].data();
-    current_position_.line_   = 1;
-    current_position_.column_ = 1;
-    
-    while (columns_.empty() == false)
+void InputBuffer::reset() {
+    this->current_buffer_ = 0;
+    this->buffers_[0][0] = this->buffers_[1][0] = BUF_END;
+    this->current_                              = 0;
+    this->current_position_                     = {1, 1};
+
+    while (!this->columns_.empty())
     {
-        columns_.pop();
+        this->columns_.pop();
     }
-    
-    columns_.push(1);
+
+    this->columns_.push(1);
 }
 
-// --- Helpers ---
+Position InputBuffer::position() const noexcept { return this->current_position_; }
+
 void InputBuffer::swap_buffers_() {
-    current_buffer_ ^= 1;
-    current_ = forward_ = buffers_[current_buffer_].data();
-    
-    if (columns_.empty())
-    {
-        columns_.push(1);
-    }
-}
+    this->current_buffer_ ^= 1;
+    this->current_ = 0;
 
-bool InputBuffer::refresh_(int buffer_index) {
-    if (buffer_index < 0 || buffer_index > 1 || !fileptr_)
+    if (this->columns_.empty())
     {
-        return false;
+        this->columns_.push(1);
     }
-
-    size_type read_count = std::fread(buffers_[buffer_index].data(), sizeof(wchar_t), capacity_, fileptr_);
-    if (read_count == 0)
-    {
-        buffers_[buffer_index].size_     = 0;
-        buffers_[buffer_index].data()[0] = BUF_END;
-        return false;
-    }
-    
-    buffers_[buffer_index].size_              = read_count;
-    buffers_[buffer_index].data()[read_count] = BUF_END;
-    file_pos_ += read_count;
-    
-    return true;
 }
 
 void InputBuffer::advance_position_(char_type ch) {
     if (ch == u'\n')
     {
-        current_position_.line_ += 1;
-        current_position_.column_ = 1;
-        columns_.push(current_position_.column_);
+        this->current_position_.line_++;
+        this->current_position_.column_ = 1;
+        this->columns_.push(1);
     }
     else
     {
-        current_position_.column_ += 1;
-        if (columns_.empty() == false)
+        this->current_position_.column_++;
+        if (!this->columns_.empty())
         {
-            columns_.top() = current_position_.column_;
+            this->columns_.top() = this->current_position_.column_;
         }
         else
         {
-            columns_.push(current_position_.column_);
+            this->columns_.push(this->current_position_.column_);
         }
     }
 }
@@ -206,21 +294,21 @@ void InputBuffer::advance_position_(char_type ch) {
 void InputBuffer::rewind_position_(char_type ch) {
     if (ch == u'\n')
     {
-        if (columns_.empty() == false)
+        if (!this->columns_.empty())
         {
-            columns_.pop();
+            this->columns_.pop();
         }
-        
-        current_position_.line_   = std::max<size_type>(1, current_position_.line_ - 1);
-        current_position_.column_ = columns_.empty() ? 1 : columns_.top();
+
+        this->current_position_.line_   = std::max<size_type>(1, this->current_position_.line_ - 1);
+        this->current_position_.column_ = this->columns_.empty() ? 1 : this->columns_.top();
     }
     else
     {
-        current_position_.column_ = (current_position_.column_ > 0 ? current_position_.column_ - 1 : 0);
-        if (columns_.empty() == false)
+        this->current_position_.column_ =
+          (this->current_position_.column_ > 0 ? this->current_position_.column_ - 1 : 0);
+        if (!this->columns_.empty())
         {
-            columns_.top() = current_position_.column_;
+            this->columns_.top() = this->current_position_.column_;
         }
     }
 }
-*/

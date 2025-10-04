@@ -122,11 +122,16 @@ class Token
 
     // Return const references to avoid copies
     const string_type& str() const;
-    TokenType          type() const;
-    size_type          size() const;
-    size_type          line() const;
-    size_type          column() const;
-    Location           location() const;
+
+    TokenType type() const;
+
+    size_type size() const;
+
+    size_type line() const;
+
+    size_type column() const;
+
+    Location location() const;
 
     bool operator==(const Token& other) const;
     bool operator!=(const Token& other) const;

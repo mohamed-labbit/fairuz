@@ -31,17 +31,24 @@ class SourceManager
         }
     }
 
-    size_type line() const { return input_buffer_.position().line_; }
-    size_type column() const { return input_buffer_.position().column_; }
+    size_type line() const;
 
-    Position position() const { return input_buffer_.position(); }
+    size_type column() const;
 
-    bool done() const { return input_buffer_.empty(); }
+    Position position() const;
+
+    bool done() const;
 
     // next consumes the character, peek does not
-    char_type peek() { return input_buffer_.peek(); }
-    char_type consume_char() { return input_buffer_.consume_char(); }
-    char_type current() { return input_buffer_.current(); }
+    char_type peek();
+
+    char_type consume_char();
+
+    char_type current();
+
+    Position offset_map(const size_type& offset);
+
+    Position offset_map_(const size_type& offset) const;
 
    private:
     std::ifstream file_;

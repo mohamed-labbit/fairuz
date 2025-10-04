@@ -41,15 +41,25 @@ class Lexer
     std::vector<Token>   tok_stream_;
     std::stack<unsigned> indent_stack_;
 
-    void  handle_indentation_(size_type line, size_type col);
+
+    void handle_indentation_(size_type line, size_type col);
+
     Token handle_identifier_(char_type c, size_type line, size_type col);
+
     Token handle_number_(char_type c, size_type line, size_type col);
+
     Token handle_operator_(char_type c, size_type line, size_type col);
+
     Token handle_symbol_(char_type c, size_type line, size_type col);
+
     Token handle_string_literal_(char_type c, size_type line, size_type col);
+
     Token handle_newline_(char_type c, size_type line, size_type col);
+
     Token emit_unknown_(char_type c, size_type line, size_type col);
+
     Token emit_eof_();
+
     Token emit_sof_();
 
     char_type consume_char() { return source_manager_.consume_char(); }
