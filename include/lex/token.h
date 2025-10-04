@@ -10,6 +10,10 @@
 #include <vector>
 
 
+namespace mylang {
+namespace lex {
+
+
 enum class TokenType {
     // Special
     START_OF_FILE,
@@ -64,17 +68,20 @@ enum class TokenType {
     UNKNOWN
 };
 
-static const std::unordered_map<std::u16string, TokenType, U16StringHash, U16StringEqual> operators = {
-  {u"=", TokenType::EQ},   {u":=", TokenType::ASSIGN}, {u"+", TokenType::PLUS}, {u"-", TokenType::MINUS},
-  {u"*", TokenType::STAR}, {u"/", TokenType::SLASH},   {u"<", TokenType::LT},   {u">", TokenType::GT},
-  {u"<=", TokenType::LE},  {u">=", TokenType::GE}};
+static const std::unordered_map<std::u16string, TokenType, U16StringHash, U16StringEqual>
+  operators = {{u"=", TokenType::EQ},    {u":=", TokenType::ASSIGN}, {u"+", TokenType::PLUS},
+               {u"-", TokenType::MINUS}, {u"*", TokenType::STAR},    {u"/", TokenType::SLASH},
+               {u"<", TokenType::LT},    {u">", TokenType::GT},      {u"<=", TokenType::LE},
+               {u">=", TokenType::GE}};
 
-static const std::unordered_map<std::u16string, TokenType, U16StringHash, U16StringEqual> keywords = {
-  {u"خطا", TokenType::KW_FALSE},   {u"عدم", TokenType::KW_NONE},    {u"صحيح", TokenType::KW_TRUE},
-  {u"و", TokenType::AND},          {u"اخرج", TokenType::KW_RETURN}, {u"اكمل", TokenType::KW_CONTINUE},
-  {u"عرف", TokenType::KW_FN},      {u"او", TokenType::OR},          {u"بكل", TokenType::KW_FOR},
-  {u"اذا", TokenType::KW_IF},      {u"ليس", TokenType::NOT},        {u"ارجع", TokenType::KW_RETURN},
-  {u"طالما", TokenType::KW_WHILE}, {u"ثابت", TokenType::KW_CONST}};
+static const std::unordered_map<std::u16string, TokenType, U16StringHash, U16StringEqual> keywords =
+  {{u"خطا", TokenType::KW_FALSE},   {u"عدم", TokenType::KW_NONE},
+   {u"صحيح", TokenType::KW_TRUE},   {u"و", TokenType::AND},
+   {u"اخرج", TokenType::KW_RETURN}, {u"اكمل", TokenType::KW_CONTINUE},
+   {u"عرف", TokenType::KW_FN},      {u"او", TokenType::OR},
+   {u"بكل", TokenType::KW_FOR},     {u"اذا", TokenType::KW_IF},
+   {u"ليس", TokenType::NOT},        {u"ارجع", TokenType::KW_RETURN},
+   {u"طالما", TokenType::KW_WHILE}, {u"ثابت", TokenType::KW_CONST}};
 
 class Token
 {
@@ -94,24 +101,32 @@ class Token
         Location(std::string fp, std::array<size_type, 2> coords) :
             filepath_(fp),
             line_(coords[0]),
-            column_(coords[1]) {}
+            column_(coords[1])
+        {
+        }
 
         Location(std::string fp, size_type coords[2]) :
             filepath_(fp),
             line_(coords[0]),
-            column_(coords[1]) {}
+            column_(coords[1])
+        {
+        }
     };
 
     // Main ctor: take value by value so callers can move temporaries in.
     Token(string_type v, TokenType t, std::array<size_type, 2> coords) :
         value_(std::move(v)),
         type_(t),
-        location_("" /*TODO : change to only accept a valid filepath*/, coords) {}
+        location_("" /*TODO : change to only accept a valid filepath*/, coords)
+    {
+    }
 
     Token(string_type v, TokenType t, size_type coords[2]) :
         value_(std::move(v)),
         type_(t),
-        location_("", coords) {}
+        location_("", coords)
+    {
+    }
 
     Token()                 = default;
     Token(const Token&)     = default;
@@ -137,7 +152,8 @@ class Token
     bool operator!=(const Token& other) const;
 
     // friend ostream operator for pretty-printing in tests/logs
-    friend std::ostream& operator<<(std::ostream& os, const Token& tok) {
+    friend std::ostream& operator<<(std::ostream& os, const Token& tok)
+    {
         os << "Token(\"" << utf8::utf16to8(tok.value_) << "\", type=" << static_cast<int>(tok.type_)
            << ", line=" << tok.location_.line_ << ", col=" << tok.location_.column_ << ")";
         return os;
@@ -148,3 +164,7 @@ class Token
     TokenType   type_;
     Location    location_;
 };
+
+
+}  // lex
+}  // mylang

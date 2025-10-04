@@ -20,7 +20,9 @@ struct NumberNode: public ASTNode
     NumberNode() = default;
 
     NumberNode(double v) :
-        value_(v) {}
+        value_(v)
+    {
+    }
 };
 
 struct BinaryOpNode: public ASTNode
@@ -34,7 +36,9 @@ struct BinaryOpNode: public ASTNode
     BinaryOpNode(const std::wstring& o, ASTNode* l, ASTNode* r) :
         op_(o),
         left_(l),
-        right_(r) {}
+        right_(r)
+    {
+    }
 };
 
 struct NonTerminalNode: public ASTNode
@@ -44,7 +48,9 @@ struct NonTerminalNode: public ASTNode
     NonTerminalNode() = default;
 
     NonTerminalNode(std::wstring v) :
-        value_(v) {}
+        value_(v)
+    {
+    }
 };
 
 struct SymbolNode: public ASTNode
@@ -54,7 +60,9 @@ struct SymbolNode: public ASTNode
     SymbolNode() = default;
 
     SymbolNode(const wchar_t& v) :
-        value_(v) {}
+        value_(v)
+    {
+    }
 };
 
 struct SpaceNode: public ASTNode
@@ -64,7 +72,9 @@ struct SpaceNode: public ASTNode
     SpaceNode() = default;
 
     SpaceNode(const wchar_t& v) :
-        value_(v) {}
+        value_(v)
+    {
+    }
 };
 
 struct TerminalNode: public ASTNode
@@ -74,7 +84,9 @@ struct TerminalNode: public ASTNode
     TerminalNode() = default;
 
     TerminalNode(const std::wstring& v) :
-        value_(v) {}
+        value_(v)
+    {
+    }
 };
 
 class Parser
@@ -84,5 +96,7 @@ class Parser
 
    public:
     Parser(const Lexer& l) :
-        lex_(l) {}
+        lex_(l)
+    {
+    }
 };

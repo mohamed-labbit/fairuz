@@ -17,7 +17,8 @@ class SymbolTable
     // Each scope = a map from lexeme to entry
     using Scope = std::unordered_map<string_type, Entry>;
 
-    SymbolTable() {
+    SymbolTable()
+    {
         // Always start with global scope
         this->scopes_.emplace_back();
     }
@@ -26,7 +27,8 @@ class SymbolTable
     void enterScope() { this->scopes_.emplace_back(); }
 
     // Leave current scope
-    void leaveScope() {
+    void leaveScope()
+    {
         if (this->scopes_.size() > 1)
         {
             this->scopes_.pop_back();
@@ -34,14 +36,16 @@ class SymbolTable
     }
 
     // Insert symbol into current scope
-    bool insert(const Entry& entry) {
+    bool insert(const Entry& entry)
+    {
         auto& currentScope = this->scopes_.back();
         auto  result       = currentScope.emplace(entry.lexeme_, entry);
         return result.second;  // false if already existed
     }
 
     // Lookup symbol (searches from innermost → outermost)
-    std::optional<Entry> lookup(const string_type& name) const {
+    std::optional<Entry> lookup(const string_type& name) const
+    {
         for (auto it = this->scopes_.rbegin(); it != this->scopes_.rend(); it += 1)
         {
             auto found = it->find(name);
@@ -55,7 +59,8 @@ class SymbolTable
     }
 
     // Check if exists in *current* scope only
-    bool existsInCurrentScope(const string_type& name) const {
+    bool existsInCurrentScope(const string_type& name) const
+    {
         const auto& currentScope = this->scopes_.back();
         return currentScope.find(name) != currentScope.end();
     }

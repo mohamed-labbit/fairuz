@@ -31,9 +31,12 @@ class _Object
         __int_(0),
         __float_(0.0),
         __str_(""),
-        __func_(nullptr) {}
+        __func_(nullptr)
+    {
+    }
 
-    _Object(_Args&&... __args) {
+    _Object(_Args&&... __args)
+    {
         if ((... || (typeid(__args) == typeid(long long))))
         {
             __type_  = _Type::Integer;

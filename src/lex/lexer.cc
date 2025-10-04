@@ -8,7 +8,12 @@
 #include <string>
 
 
-void Lexer::handle_indentation_(size_type line, size_type col) {
+namespace mylang {
+namespace lex {
+
+
+void Lexer::handle_indentation_(size_type line, size_type col)
+{
     char_type current = this->source_manager_.current();
 
     // only care if next char is space or tab
@@ -106,7 +111,8 @@ void Lexer::handle_indentation_(size_type line, size_type col) {
     }
 }
 
-Token Lexer::handle_identifier_(char_type c, size_type line, size_type col) {
+Token Lexer::handle_identifier_(char_type c, size_type line, size_type col)
+{
     string_type id(1, c);
     this->consume_char();
 
@@ -129,7 +135,8 @@ Token Lexer::handle_identifier_(char_type c, size_type line, size_type col) {
     return this->tok_stream_.back();
 }
 
-Token Lexer::handle_number_(char_type c, size_type line, size_type col) {
+Token Lexer::handle_number_(char_type c, size_type line, size_type col)
+{
     string_type num(1, c);
     this->consume_char();
 
@@ -146,7 +153,8 @@ Token Lexer::handle_number_(char_type c, size_type line, size_type col) {
     return this->tok_stream_.back();
 }
 
-Token Lexer::handle_operator_(char_type c, size_type line, size_type col) {
+Token Lexer::handle_operator_(char_type c, size_type line, size_type col)
+{
     string_type op(1, c);
     this->consume_char();
 
@@ -168,7 +176,8 @@ Token Lexer::handle_operator_(char_type c, size_type line, size_type col) {
     return this->tok_stream_.back();
 }
 
-Token Lexer::handle_symbol_(char_type c, size_type line, size_type col) {
+Token Lexer::handle_symbol_(char_type c, size_type line, size_type col)
+{
     TokenType   tt;
     string_type sym(1, c);
     this->consume_char();
@@ -205,7 +214,8 @@ Token Lexer::handle_symbol_(char_type c, size_type line, size_type col) {
     return this->tok_stream_.back();
 }
 
-Token Lexer::handle_string_literal_(char_type c, size_type line, size_type col) {
+Token Lexer::handle_string_literal_(char_type c, size_type line, size_type col)
+{
     string_type s;
     char_type   quote = c;
     this->consume_char();  // consume opening quote
@@ -234,7 +244,8 @@ Token Lexer::handle_string_literal_(char_type c, size_type line, size_type col) 
     return this->tok_stream_.back();
 }
 
-Token Lexer::emit_eof_() {
+Token Lexer::emit_eof_()
+{
     this->consume_char();
     if (!tok_stream_.empty() && tok_stream_.back().type() == TokenType::END_OF_FILE)
     {
@@ -246,14 +257,16 @@ Token Lexer::emit_eof_() {
     return tok_stream_.back();
 }
 
-Token Lexer::emit_sof_() {
+Token Lexer::emit_sof_()
+{
     Token ret(u"", TokenType::START_OF_FILE, {1, 1});
     this->tok_stream_.push_back(ret);
     this->tok_index_ = 0;
     return this->tok_stream_.back();
 }
 
-Token Lexer::handle_newline_(char_type c, size_t line, size_t col) {
+Token Lexer::handle_newline_(char_type c, size_t line, size_t col)
+{
     this->consume_char();
     string_type endl = u"\n";
     Token       ret(std::move(endl), TokenType::NEWLINE, {line, col});
@@ -264,14 +277,16 @@ Token Lexer::handle_newline_(char_type c, size_t line, size_t col) {
     return this->tok_stream_.back();
 }
 
-Token Lexer::emit_unknown_(char_type c, size_type line, size_type col) {
+Token Lexer::emit_unknown_(char_type c, size_type line, size_type col)
+{
     this->consume_char();
     Token ret(string_type(1, c), TokenType::UNKNOWN, {line, col});
     this->store(std::move(ret));
     return tok_stream_.back();
 }
 
-Token Lexer::next() {
+Token Lexer::next()
+{
     // Return cached token if already lexed ahead
     if (this->tok_index_ + 1 < this->tok_stream_.size())
     {
@@ -371,7 +386,8 @@ Token Lexer::next() {
     return this->emit_eof_();
 }
 
-std::vector<Token> Lexer::tokenize() {
+std::vector<Token> Lexer::tokenize()
+{
     // next_token() will push tokens to the stream on it's own
     while (next().type() != TokenType::END_OF_FILE)
     {
@@ -383,15 +399,20 @@ std::vector<Token> Lexer::tokenize() {
 
 Token Lexer::peek() { return Token(u"", TokenType::END_OF_FILE, {1, 1}); }
 
-Token Lexer::prev() {
+Token Lexer::prev()
+{
     if (tok_index_ > 0)
     {
         --tok_index_;
     }
     else
     {
-        return Token(u"", TokenType::END_OF_FILE, {source_manager_.line(), source_manager_.column()});
+        return Token(u"", TokenType::END_OF_FILE,
+                     {source_manager_.line(), source_manager_.column()});
     }
 
     return tok_stream_[tok_index_];
 }
+
+}  // lex
+}  // mylang

@@ -4,6 +4,9 @@
 #include "lex/token.h"
 
 
+namespace mylang {
+namespace lex {
+
 class Lexer
 {
    public:
@@ -14,7 +17,8 @@ class Lexer
     explicit Lexer(const std::string& filename) :
         source_manager_(filename),
         tok_index_(0),
-        indent_size_(0) {
+        indent_size_(0)
+    {
         // setting locale at the constructor, maybe there's a better place I donno ?
         std::locale::global(std::locale("ar_SA.UTF-8"));
     }
@@ -33,7 +37,7 @@ class Lexer
     const size_type indent_size() const { return indent_size_; }
 
    private:
-    SourceManager source_manager_;
+    lex::SourceManager source_manager_;
 
     size_type tok_index_;
     size_type indent_size_;
@@ -64,9 +68,14 @@ class Lexer
 
     char_type consume_char() { return source_manager_.consume_char(); }
 
-    void store(Token tok) {
+    void store(Token tok)
+    {
         // push and update index
         tok_stream_.push_back(std::move(tok));
         tok_index_ = tok_stream_.size() - 1;
     }
 };
+
+
+}  // lexer
+}  // mylang

@@ -1,12 +1,15 @@
 #pragma once
 
-#include "buffer.h"
+#include "buffer/input_buffer.h"
 #include "macros.h"
 #include <fstream>
 #include <stdexcept>
 #include <string>
 #include <wchar.h>
 
+
+namespace mylang {
+namespace lex {
 
 class SourceManager
 {
@@ -17,14 +20,16 @@ class SourceManager
 
     explicit SourceManager(const std::string& filename) :
         file_(filename, std::ios::binary),
-        input_buffer_(file_, DEFAULT_CAPACITY) {
+        input_buffer_(file_, DEFAULT_CAPACITY)
+    {
         if (!file_.is_open())
         {
             throw std::runtime_error("File not found: " + filename);
         }
     }
 
-    ~SourceManager() {
+    ~SourceManager()
+    {
         if (file_.is_open())
         {
             file_.close();
@@ -35,7 +40,7 @@ class SourceManager
 
     size_type column() const;
 
-    Position position() const;
+    lex::Position position() const;
 
     bool done() const;
 
@@ -46,11 +51,13 @@ class SourceManager
 
     char_type current();
 
-    Position offset_map(const size_type& offset);
+    lex::Position offset_map(const size_type& offset);
 
-    Position offset_map_(const size_type& offset) const;
+    lex::Position offset_map_(const size_type& offset) const;
 
    private:
     std::ifstream file_;
     InputBuffer   input_buffer_;
 };
+}  // lex
+}  // mylang

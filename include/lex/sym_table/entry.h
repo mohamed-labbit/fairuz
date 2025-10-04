@@ -29,9 +29,14 @@ struct SymbolTableEntry
     SymbolType               type_;
     size_type                scope_;  // nesting_level
 
-    SymbolTableEntry(const string_type& lexeme, typename Token::Location location, SymbolType type, size_type scope) :
+    SymbolTableEntry(const string_type&       lexeme,
+                     typename Token::Location location,
+                     SymbolType               type,
+                     size_type                scope) :
         lexeme_(lexeme),
         location_(location),
         type_(type),
-        scope_(scope) {}
+        scope_(scope)
+    {
+    }
 };
