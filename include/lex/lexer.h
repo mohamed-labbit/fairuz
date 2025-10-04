@@ -7,13 +7,14 @@
 class Lexer
 {
    public:
-    using char_type   = wchar_t;
-    using string_type = std::wstring;
+    using char_type   = char16_t;
+    using string_type = std::u16string;
     using size_type   = std::size_t;
 
     explicit Lexer(const std::string& filename) :
         source_manager_(filename),
-        tok_index_(0) {
+        tok_index_(0),
+        indent_size_(0) {
         // setting locale at the constructor, maybe there's a better place I donno ?
         std::locale::global(std::locale("ar_SA.UTF-8"));
     }
@@ -37,16 +38,19 @@ class Lexer
     size_type tok_index_;
     size_type indent_size_;
 
-    std::vector<Token>    tok_stream_;
-    std::vector<unsigned> indent_stack_;
+    std::vector<Token>   tok_stream_;
+    std::stack<unsigned> indent_stack_;
 
-    void  handle_indentation(size_type line, size_type col);
-    Token handle_identifier(char_type c, size_type line, size_type col);
-    Token handle_number(char_type c, size_type line, size_type col);
-    Token handle_operator(char_type c, size_type line, size_type col);
-    Token handle_symbol(char_type c, size_type line, size_type col);
-    Token handle_string_literal(char_type c, size_type line, size_type col);
-    Token emit_eof();
+    void  handle_indentation_(size_type line, size_type col);
+    Token handle_identifier_(char_type c, size_type line, size_type col);
+    Token handle_number_(char_type c, size_type line, size_type col);
+    Token handle_operator_(char_type c, size_type line, size_type col);
+    Token handle_symbol_(char_type c, size_type line, size_type col);
+    Token handle_string_literal_(char_type c, size_type line, size_type col);
+    Token handle_newline_(char_type c, size_type line, size_type col);
+    Token emit_unknown_(char_type c, size_type line, size_type col);
+    Token emit_eof_();
+    Token emit_sof_();
 
     char_type consume_char() { return source_manager_.consume_char(); }
 

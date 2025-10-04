@@ -1,10 +1,10 @@
 CMakeFiles/mylang_objects.dir/src/lex/token.cc.o: \
   /Users/mohamedrabbit/mylang/src/lex/token.cc \
   /Users/mohamedrabbit/mylang/include/lex/token.h \
-  /Users/mohamedrabbit/mylang/include/lex/util.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/string \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/max.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/comp.h \
+  /Users/mohamedrabbit/mylang/include/../utfcpp/source/utf8.h \
+  /Users/mohamedrabbit/mylang/include/../utfcpp/source/utf8/checked.h \
+  /Users/mohamedrabbit/mylang/include/../utfcpp/source/utf8/core.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/cstring \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__config \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__config_site \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__configuration/abi.h \
@@ -12,38 +12,69 @@ CMakeFiles/mylang_objects.dir/src/lex/token.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__configuration/platform.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__configuration/availability.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__configuration/language.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/desugars_to.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_integral.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/integral_constant.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/remove_cv.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/comp_ref_type.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__cstddef/size_t.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_constant_evaluated.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/string.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/string.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_string.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_bounds.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/cdefs.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_symbol_aliasing.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_posix_availability.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/machine/_types.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/arm/_types.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_ptrdiff_t.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/stddef.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21/include/stddef.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/stddef.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21/include/__stddef_ptrdiff_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_size_t.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21/include/__stddef_size_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_va_list.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21/include/stdarg.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21/include/__stdarg_va_list.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_wchar_t.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21/include/__stddef_wchar_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_null.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21/include/__stddef_null.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_pthread/_pthread_types.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/Availability.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/AvailabilityVersions.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/AvailabilityInternal.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/AvailabilityInternalLegacy.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_rsize_t.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21/include/__stddef_rsize_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_errno_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_ssize_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/machine/types.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/arm/types.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_int8_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_int16_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_int32_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_int64_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int8_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int16_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int32_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int64_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_intptr_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_uintptr_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_strings.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/iterator \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/access.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/advance.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__assert \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__assertion_handler \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__log_hardening_failure \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__verbose_abort \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__verbose_trap \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__utility/declval.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/max_element.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/iterator_traits.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/arithmetic.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_floating_point.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_signed.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_arithmetic.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/constructible.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/convertible_to.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_convertible.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/destructible.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_nothrow_destructible.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__cstddef/size_t.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_destructible.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_function.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_reference.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/remove_all_extents.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_constructible.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/add_reference.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/copyable.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/assignable.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/common_reference_with.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/convertible_to.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_convertible.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/integral_constant.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__utility/declval.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/same_as.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_same.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/common_reference.h \
@@ -60,8 +91,25 @@ CMakeFiles/mylang_objects.dir/src/lex/token.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__utility/empty.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/copy_cv.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/copy_cvref.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/add_reference.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_reference.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/make_const_lvalue_ref.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__utility/forward.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/concepts.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/arithmetic.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_floating_point.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/remove_cv.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_integral.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_signed.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_arithmetic.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/constructible.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/destructible.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_nothrow_destructible.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_destructible.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_function.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/remove_all_extents.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_constructible.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/copyable.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/movable.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/swappable.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/class_or_enum.h \
@@ -75,18 +123,34 @@ CMakeFiles/mylang_objects.dir/src/lex/token.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__utility/move.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__undef_macros \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_object.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/derived_from.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_base_of.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/equality_comparable.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/boolean_testable.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/totally_ordered.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__cstddef/ptrdiff_t.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/pair.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/tuple.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/incrementable_traits.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_primary_template.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/invocable.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__functional/invoke.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/invoke.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/enable_if.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_core_convertible.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_member_pointer.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_reference_wrapper.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/functional.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/nat.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/predicate.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/regular.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/semiregular.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/relation.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/totally_ordered.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/incrementable_traits.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__cstddef/ptrdiff_t.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_primary_template.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_valid_expansion.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/make_signed.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/type_list.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/iter_move.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/iterator_traits.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/pair.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/tuple.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/readable_traits.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_array.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/remove_extent.h \
@@ -96,47 +160,16 @@ CMakeFiles/mylang_objects.dir/src/lex/token.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__tuple/tuple_types.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/detected_or.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/disjunction.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/nat.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/remove_const.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_callable.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/initializer_list \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/version \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/cstddef \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/stddef.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21/include/stddef.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/stddef.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21/include/__stddef_header_macro.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21/include/__stddef_ptrdiff_t.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21/include/__stddef_size_t.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21/include/__stddef_wchar_t.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21/include/__stddef_null.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21/include/__stddef_nullptr_t.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21/include/__stddef_max_align_t.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21/include/__stddef_offsetof.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__cstddef/byte.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/byte.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__cstddef/max_align_t.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__cstddef/nullptr_t.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/min.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/min_element.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__functional/identity.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/functional.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/invoke.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_base_of.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_core_convertible.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_member_pointer.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_reference_wrapper.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/remove.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/find.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/find_segment_if.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/segmented_iterator.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/unwrap_iter.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory/pointer_traits.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory/addressof.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/conjunction.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__bit/countr.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/integer_traits.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_pointer.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__utility/convert_to_integral.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/underlying_type.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__utility/unreachable.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/limits \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/version \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/type_traits \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/add_cv_quals.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/aligned_storage.h \
@@ -148,11 +181,11 @@ CMakeFiles/mylang_objects.dir/src/lex/token.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_compound.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_fundamental.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_null_pointer.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__cstddef/nullptr_t.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_const.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_empty.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_literal_type.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_pod.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_pointer.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_polymorphic.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_scalar.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_standard_layout.h \
@@ -163,30 +196,10 @@ CMakeFiles/mylang_objects.dir/src/lex/token.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/cstdint \
   /opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21/include/stdint.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/stdint.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_int8_t.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_int16_t.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_int32_t.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_int64_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types/_uint8_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types/_uint16_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types/_uint32_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types/_uint64_t.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/cdefs.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_symbol_aliasing.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_posix_availability.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/machine/_types.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/arm/_types.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_ptrdiff_t.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_size_t.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_va_list.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21/include/stdarg.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21/include/__stdarg_va_list.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_wchar_t.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_null.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_pthread/_pthread_types.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_intptr_t.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_uintptr_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types/_intmax_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types/_uintmax_t.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_trivially_destructible.h \
@@ -197,18 +210,60 @@ CMakeFiles/mylang_objects.dir/src/lex/token.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/remove_pointer.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/remove_volatile.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/result_of.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/underlying_type.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_final.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/has_unique_object_representation.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_aggregate.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_swappable.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/negation.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_bounded_array.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_constant_evaluated.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_unbounded_array.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/unwrap_ref.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__bit/invert_if.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/back_insert_iterator.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/iterator.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/distance.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__ranges/access.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__ranges/enable_borrowed_range.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__utility/auto_cast.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__ranges/concepts.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__ranges/data.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__ranges/enable_view.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__ranges/size.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/initializer_list \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/cstddef \
+  /opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21/include/__stddef_header_macro.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21/include/__stddef_nullptr_t.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21/include/__stddef_max_align_t.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21/include/__stddef_offsetof.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__cstddef/byte.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/byte.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__cstddef/max_align_t.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/front_insert_iterator.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/insert_iterator.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/istream_iterator.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/istream.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/string.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/memory.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/memory_resource.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/default_sentinel.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/istreambuf_iterator.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/streambuf.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__string/char_traits.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/fill_n.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/min.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/comp.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/desugars_to.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/comp_ref_type.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/min_element.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__functional/identity.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_callable.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/bit_reference.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/find.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/find_segment_if.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/segmented_iterator.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/unwrap_iter.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__bit/countr.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/integer_traits.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__bit/invert_if.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__string/constexpr_c_functions.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory/construct_at.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__new/placement_new_delete.h \
@@ -225,9 +280,7 @@ CMakeFiles/mylang_objects.dir/src/lex/token.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/ctype.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/ctype.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_ctype.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_bounds.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/runetype.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_ct_rune_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_rune_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_wint_t.h \
@@ -241,17 +294,7 @@ CMakeFiles/mylang_objects.dir/src/lex/token.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/wchar.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/wchar.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_wchar.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/Availability.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/AvailabilityVersions.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/AvailabilityInternal.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/AvailabilityInternalLegacy.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_mbstate_t.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/machine/types.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/arm/types.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int8_t.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int16_t.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int32_t.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int64_t.h \
   /opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21/include/__stdarg_header_macro.h \
   /opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21/include/__stdarg___gnuc_va_list.h \
   /opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21/include/__stdarg_va_arg.h \
@@ -265,21 +308,20 @@ CMakeFiles/mylang_objects.dir/src/lex/token.cc.o: \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_seek_set.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_ctermid.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_off_t.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_ssize_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/time.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_time.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_clock_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_time_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_timespec.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__mbstate_t.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21/include/__stddef_rsize_t.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/find_if.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/remove_if.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__debug_utils/sanitizers.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__format/enable_insertable.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__functional/hash.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__functional/unary_function.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_unqualified.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/find_end.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/iterator_operations.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/iter_swap.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__utility/swap.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/ranges_iterator_concept.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/iter_swap.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/next.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/prev.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__utility/pair.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__compare/common_comparison_category.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__compare/ordering.h \
@@ -294,78 +336,47 @@ CMakeFiles/mylang_objects.dir/src/lex/token.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_replaceable.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_trivially_relocatable.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__utility/piecewise_construct.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__utility/swap.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/cstring \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/string.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/string.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_string.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_rsize_t.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_errno_t.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_strings.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/string.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/memory.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/memory_resource.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__ios/fpos.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/find_first_of.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__functional/hash.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__functional/unary_function.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_unqualified.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__std_mbstate_t.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/cstdio \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/iosfwd \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/fstream.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/ios.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/bounded_iter.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/distance.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/concepts.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/derived_from.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/invocable.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__functional/invoke.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/predicate.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/regular.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/semiregular.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/relation.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/iter_move.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__ranges/access.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__ranges/enable_borrowed_range.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__utility/auto_cast.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__ranges/concepts.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__ranges/data.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__ranges/enable_view.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__ranges/size.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/reverse_iterator.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/ostream.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/sstream.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/move_iterator.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__compare/compare_three_way_result.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/advance.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__utility/convert_to_integral.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__utility/unreachable.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/iter_swap.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/iterator.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/next.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/prev.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/move_sentinel.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/ostream_iterator.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/ostreambuf_iterator.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/reverse_iterator.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__ranges/subrange.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/subrange.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__ranges/dangling.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__ranges/view_interface.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__ranges/empty.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/wrap_iter.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory/allocate_at_least.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory/allocator_traits.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory/allocator.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__new/allocate.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__new/align_val_t.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__new/global_new_delete.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__new/exceptions.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/reverse_access.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/data.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/empty.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/size.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/common_iterator.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/variant \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__exception/exception.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__new/nothrow_t.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory/compressed_pair.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory/noexcept_move_assign_container.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory/swap_allocator.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory_resource/polymorphic_allocator.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory_resource/memory_resource.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__utility/exception_guard.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/tuple \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory/allocator_arg_t.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory/uses_allocator.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__functional/operations.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__functional/binary_function.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/variant.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__tuple/find_index.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__tuple/ignore.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__tuple/make_tuple_types.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__tuple/sfinae_helpers.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__tuple/make_tuple_types.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__tuple/tuple_like_ext.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/lazy.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/maybe_const.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/reference_constructs_from_temporary.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/dependent_type.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__utility/forward_like.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__utility/in_place.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__variant/monostate.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/compare \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__compare/compare_partial_order_fallback.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__compare/partial_order.h \
@@ -446,32 +457,57 @@ CMakeFiles/mylang_objects.dir/src/lex/token.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__exception/nested_exception.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__exception/terminate.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/new \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__new/align_val_t.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__new/allocate.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__new/global_new_delete.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__new/exceptions.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__new/nothrow_t.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__new/new_handler.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__new/interference_size.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__new/launder.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__new/destroying_delete_t.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/iosfwd \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/fstream.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/istream.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/ostream.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/sstream.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/streambuf.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__std_mbstate_t.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/tuple \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory/allocator_arg_t.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory/uses_allocator.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__tuple/ignore.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/lazy.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/maybe_const.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/reference_constructs_from_temporary.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/utility \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__utility/rel_ops.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__utility/as_const.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__utility/in_place.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__utility/cmp.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/counted_iterator.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/common_with.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/indirectly_comparable.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/projected.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/mergeable.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__functional/ranges_operations.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/permutable.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/sortable.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/unreachable_sentinel.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/concepts \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/string \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/max.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/max_element.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/remove.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/find_if.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/remove_if.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__debug_utils/sanitizers.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__format/enable_insertable.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__ios/fpos.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/bounded_iter.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory/allocate_at_least.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory/allocator_traits.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory/allocator.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory/compressed_pair.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory/noexcept_move_assign_container.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory/swap_allocator.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory_resource/polymorphic_allocator.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory_resource/memory_resource.h \
+  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__utility/exception_guard.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__ranges/container_compatible_range.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__ranges/from_range.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__string/char_traits.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/fill_n.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/find_end.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/iterator_operations.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/iter_swap.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/ranges_iterator_concept.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/find_first_of.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/cstdio \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__string/extern_template_lists.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_allocator.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__utility/scope_guard.h \
@@ -485,11 +521,6 @@ CMakeFiles/mylang_objects.dir/src/lex/token.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/stdexcept \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/string_view \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/string_view.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/access.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/data.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/empty.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/reverse_access.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/size.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/algorithm \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/adjacent_find.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/all_of.h \
@@ -523,11 +554,8 @@ CMakeFiles/mylang_objects.dir/src/lex/token.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/swap_ranges.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory/destruct_n.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory/unique_ptr.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__functional/operations.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__functional/binary_function.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory/array_cookie.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory/auto_ptr.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/dependent_type.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__utility/private_constructor_tag.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory/unique_temporary_buffer.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/is_heap.h \
@@ -559,7 +587,6 @@ CMakeFiles/mylang_objects.dir/src/lex/token.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__debug_utils/randomize_range.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__bit/bit_log2.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__bit/blsr.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__functional/ranges_operations.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/partial_sort_copy.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/make_projected.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/partition.h \
@@ -587,8 +614,6 @@ CMakeFiles/mylang_objects.dir/src/lex/token.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/stable_partition.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/stable_sort.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/radix_sort.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/move_iterator.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/move_sentinel.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__numeric/partial_sum.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/transform.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/unique.h \
@@ -609,7 +634,6 @@ CMakeFiles/mylang_objects.dir/src/lex/token.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/min_max_result.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/out_value_result.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/ranges_adjacent_find.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/projected.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/ranges_all_of.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/ranges_any_of.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/ranges_binary_search.h \
@@ -620,12 +644,10 @@ CMakeFiles/mylang_objects.dir/src/lex/token.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__functional/reference_wrapper.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__functional/weak_result_type.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__type_traits/is_specialization.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/indirectly_comparable.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/ranges_copy.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/ranges_copy_backward.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/ranges_copy_if.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/ranges_copy_n.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/unreachable_sentinel.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/ranges_count.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/ranges_count_if.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/ranges_equal.h \
@@ -641,8 +663,6 @@ CMakeFiles/mylang_objects.dir/src/lex/token.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/ranges_generate_n.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/ranges_includes.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/ranges_inplace_merge.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/sortable.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/permutable.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/ranges_is_heap.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/ranges_is_heap_until.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/ranges_is_partitioned.h \
@@ -655,7 +675,6 @@ CMakeFiles/mylang_objects.dir/src/lex/token.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/ranges_max.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/ranges_max_element.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/ranges_merge.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/mergeable.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/ranges_min.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/ranges_min_element.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__algorithm/ranges_minmax.h \
@@ -761,23 +780,6 @@ CMakeFiles/mylang_objects.dir/src/lex/token.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__bit/endian.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__bit/has_single_bit.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__bit/rotate.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/concepts \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__concepts/common_with.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/iterator \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/back_insert_iterator.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/front_insert_iterator.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/insert_iterator.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/istream_iterator.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/default_sentinel.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/istreambuf_iterator.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/ostream_iterator.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/ostreambuf_iterator.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/common_iterator.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/variant \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__fwd/variant.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__utility/forward_like.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__variant/monostate.h \
-  /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__iterator/counted_iterator.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/memory \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory/align.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory/inout_ptr.h \
@@ -798,6 +800,11 @@ CMakeFiles/mylang_objects.dir/src/lex/token.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory/ranges_uninitialized_algorithms.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__memory/uses_allocator_construction.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/optional \
+  /Users/mohamedrabbit/mylang/include/../utfcpp/source/utf8/cpp20.h \
+  /Users/mohamedrabbit/mylang/include/../utfcpp/source/utf8/cpp17.h \
+  /Users/mohamedrabbit/mylang/include/../utfcpp/source/utf8/cpp11.h \
+  /Users/mohamedrabbit/mylang/include/../utfcpp/source/utf8/unchecked.h \
+  /Users/mohamedrabbit/mylang/include/lex/util.h \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/iostream \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/ios \
   /opt/homebrew/Cellar/llvm/21.1.2/bin/../include/c++/v1/__locale \

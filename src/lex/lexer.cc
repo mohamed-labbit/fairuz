@@ -8,11 +8,11 @@
 #include <string>
 
 
-void Lexer::handle_indentation(size_type line, size_type col) {
-    char_type lookahead = this->source_manager_.peek();
+void Lexer::handle_indentation_(size_type line, size_type col) {
+    char_type current = this->source_manager_.current();
 
     // only care if next char is space or tab
-    if (lookahead != L' ' && lookahead != L'\t')
+    if (current != u' ' && current != u'\t')
     {
         return;
     }
@@ -22,32 +22,28 @@ void Lexer::handle_indentation(size_type line, size_type col) {
     bool      used_space  = false;
 
     // count indentation width
-    while (true)
+    while (current == u' ' || current == u'\t')
     {
-        lookahead = this->source_manager_.peek();
-        if (lookahead != L' ' && lookahead != L'\t')
-        {
-            break;
-        }
+        this->consume_char();
 
-        char_type ws = this->consume_char();
-
-        if (ws == L' ')
+        if (current == u' ')
         {
             space_count += 1;
             used_space = true;
         }
-        else if (ws == L'\t')
+        else if (current == u'\t')
         {
             // tab expands to next multiple of TABWIDTH
             space_count += TABWIDTH - (space_count % TABWIDTH);
             used_tab = true;
         }
+
+        current = this->source_manager_.current();
     }
 
     // Blank line? -> ignore indentation
-    lookahead = this->source_manager_.peek();
-    if (lookahead == L'\n' || lookahead == BUF_END)
+    char_type lookahead = this->source_manager_.peek();
+    if (lookahead == u'\n' || lookahead == BUF_END)
     {
         return;
     }
@@ -76,16 +72,16 @@ void Lexer::handle_indentation(size_type line, size_type col) {
     }
 
     size_type indent_count = (this->indent_size_ == 0) ? 0 : space_count / this->indent_size_;
-    int       prev         = this->indent_stack_.empty() ? 0 : this->indent_stack_.back();
+    int       prev         = this->indent_stack_.empty() ? 0 : this->indent_stack_.top();
 
     if (indent_count > prev)
     {
         // new indent → push level and emit INDENT tokens
-        this->indent_stack_.push_back(indent_count);
+        this->indent_stack_.push(indent_count);
 
         for (size_type i = 0, n = indent_count - prev; i < n; i++)
         {
-            string_type s = L"";
+            string_type s;
             Token       tok(std::move(s), TokenType::INDENT, {line, col});
             this->tok_stream_.push_back(std::move(tok));
             col += this->indent_size_;
@@ -94,35 +90,32 @@ void Lexer::handle_indentation(size_type line, size_type col) {
     else if (indent_count < prev)
     {
         // dedent → pop until we match a previous level
-        while (!this->indent_stack_.empty() && indent_count < this->indent_stack_.back())
+        while (!this->indent_stack_.empty() && indent_count < this->indent_stack_.top())
         {
-            this->indent_stack_.pop_back();
-            string_type s = L"";
+            this->indent_stack_.pop();
+            string_type s = u"";
             Token       tok(std::move(s), TokenType::DEDENT, {line, col});
             this->tok_stream_.push_back(std::move(tok));
         }
 
         // if indent_count does not match any previous level → error
-        if (this->indent_stack_.empty() || indent_count != this->indent_stack_.back())
+        if (this->indent_stack_.empty() || indent_count != this->indent_stack_.top())
         {
             throw std::runtime_error("Indentation does not match any previous level");
         }
     }
 }
 
-Token Lexer::handle_identifier(char_type c, size_type line, size_type col) {
+Token Lexer::handle_identifier_(char_type c, size_type line, size_type col) {
     string_type id(1, c);
     this->consume_char();
 
-    while (true)
+    char_type c2 = this->source_manager_.current();
+    while (isalpha_arabic(c2) || c2 == u'_' || std::iswdigit(c2))
     {
-        char_type c2 = this->source_manager_.peek();
-        if (!(isalpha_arabic(c2) || c2 == L'_' || std::iswdigit(c2)))
-        {
-            break;
-        }
-
-        id.push_back(this->consume_char());
+        id.push_back(c2);
+        this->consume_char();
+        c2 = this->source_manager_.current();
     }
 
     TokenType tt = TokenType::IDENTIFIER;
@@ -136,18 +129,16 @@ Token Lexer::handle_identifier(char_type c, size_type line, size_type col) {
     return this->tok_stream_.back();
 }
 
-Token Lexer::handle_number(char_type c, size_type line, size_type col) {
+Token Lexer::handle_number_(char_type c, size_type line, size_type col) {
     string_type num(1, c);
     this->consume_char();
 
-    while (true)
+    char_type c2 = this->source_manager_.current();
+    while (std::iswdigit(c2))
     {
-        char_type c2 = this->source_manager_.peek();
-        if (!std::iswdigit(c2))
-        {
-            break;
-        }
-        num.push_back(this->consume_char());
+        num.push_back(c2);
+        this->consume_char();
+        c2 = this->source_manager_.current();
     }
 
     Token ret(std::move(num), TokenType::NUMBER, {line, col});
@@ -155,7 +146,7 @@ Token Lexer::handle_number(char_type c, size_type line, size_type col) {
     return this->tok_stream_.back();
 }
 
-Token Lexer::handle_operator(char_type c, size_type line, size_type col) {
+Token Lexer::handle_operator_(char_type c, size_type line, size_type col) {
     string_type op(1, c);
     this->consume_char();
 
@@ -177,7 +168,7 @@ Token Lexer::handle_operator(char_type c, size_type line, size_type col) {
     return this->tok_stream_.back();
 }
 
-Token Lexer::handle_symbol(char_type c, size_type line, size_type col) {
+Token Lexer::handle_symbol_(char_type c, size_type line, size_type col) {
     TokenType   tt;
     string_type sym(1, c);
     this->consume_char();
@@ -194,10 +185,10 @@ Token Lexer::handle_symbol(char_type c, size_type line, size_type col) {
         tt = TokenType::DOT;
         break;
     case ':' :
-        if (this->source_manager_.peek() == L'=')
+        if (this->source_manager_.peek() == u'=')
         {
             this->consume_char();
-            sym = L":=";
+            sym = u":=";
             tt  = TokenType::ASSIGN;
         }
         else
@@ -214,28 +205,27 @@ Token Lexer::handle_symbol(char_type c, size_type line, size_type col) {
     return this->tok_stream_.back();
 }
 
-Token Lexer::handle_string_literal(char_type c, size_type line, size_type col) {
+Token Lexer::handle_string_literal_(char_type c, size_type line, size_type col) {
     string_type s;
     char_type   quote = c;
-    this->consume_char();
+    this->consume_char();  // consume opening quote
 
-    while (true)
+    char_type c2 = this->source_manager_.current();
+    while (c2 != u'\n' && c2 != BUF_END && c2 != quote)
     {
-        char_type c2 = this->source_manager_.peek();
-        if (c2 == L'\n' || c2 == BUF_END || c2 == quote)
-        {
-            break;
-        }
-
-        s.push_back(this->consume_char());
+        s.push_back(c2);
+        this->consume_char();
+        c2 = this->source_manager_.current();
     }
 
-    if (this->source_manager_.peek() == quote)
+    // now current() is at the closing quote
+    if (c2 == quote)
     {
         this->consume_char();  // consume closing quote
     }
     else
     {
+        // Unterminated string literal
         return Token(std::move(s), TokenType::UNKNOWN, {line, col});
     }
 
@@ -244,15 +234,40 @@ Token Lexer::handle_string_literal(char_type c, size_type line, size_type col) {
     return this->tok_stream_.back();
 }
 
-Token Lexer::emit_eof() {
+Token Lexer::emit_eof_() {
     this->consume_char();
     if (!tok_stream_.empty() && tok_stream_.back().type() == TokenType::END_OF_FILE)
     {
         return tok_stream_.back();
     }
 
-    Token ret(L"", TokenType::END_OF_FILE, {source_manager_.line(), source_manager_.column()});
+    Token ret(u"", TokenType::END_OF_FILE, {source_manager_.line(), source_manager_.column() - 1});
     store(std::move(ret));
+    return tok_stream_.back();
+}
+
+Token Lexer::emit_sof_() {
+    Token ret(u"", TokenType::START_OF_FILE, {1, 1});
+    this->tok_stream_.push_back(ret);
+    this->tok_index_ = 0;
+    return this->tok_stream_.back();
+}
+
+Token Lexer::handle_newline_(char_type c, size_t line, size_t col) {
+    this->consume_char();
+    string_type endl = u"\n";
+    Token       ret(std::move(endl), TokenType::NEWLINE, {line, col});
+    this->store(std::move(ret));
+
+    this->handle_indentation_(line + 1, 1);
+
+    return this->tok_stream_.back();
+}
+
+Token Lexer::emit_unknown_(char_type c, size_type line, size_type col) {
+    this->consume_char();
+    Token ret(string_type(1, c), TokenType::UNKNOWN, {line, col});
+    this->store(std::move(ret));
     return tok_stream_.back();
 }
 
@@ -267,9 +282,7 @@ Token Lexer::next() {
     // First token: emit SOF
     if (this->tok_stream_.empty())
     {
-        this->tok_stream_.push_back(Token(L"", TokenType::START_OF_FILE, {1, 1}));
-        this->tok_index_ = 0;
-        return this->tok_stream_.back();
+        return this->emit_sof_();
     }
 
     while (true)
@@ -285,23 +298,17 @@ Token Lexer::next() {
 
         switch (ch)
         {
-        case L'\n' : {
-            Token ret(L"\n", TokenType::NEWLINE, {line, col});
-            this->store(std::move(ret));
-            this->consume_char();
-
-            // indentation is processed immediately after newline
-            this->handle_indentation(line + 1, 1);
-
-            return this->tok_stream_.back();
+        case u'\n' : {
+            return this->handle_newline_(ch, line, col);
         }
 
-        case L' ' :
-        case L'\t' :
-        case L'\r' :
+        case u' ' :
+        case u'\t' :
+        case u'\r' :
+            this->consume_char();
             continue;  // skip whitespace
 
-        case L'\\' : {
+        case u'\\' : {
             char_type lookahead = this->source_manager_.peek();
             if (lookahead == ch)
             {
@@ -311,7 +318,7 @@ Token Lexer::next() {
                 while (true)
                 {
                     char_type c2 = this->source_manager_.peek();
-                    if (c2 == L'\n' || c2 == BUF_END)
+                    if (c2 == u'\n' || c2 == BUF_END)
                     {
                         break;
                     }
@@ -324,48 +331,44 @@ Token Lexer::next() {
         }
         break;
 
-        case L'\'' :
-        case L'"' : {
-            return this->handle_string_literal(ch, line, col);
-        }
+        case u'\'' :
+        case u'"' :
+            return this->handle_string_literal_(ch, line, col);
 
         default :
             break;
         }
 
         // ---------- Identifiers ----------
-        if (isalpha_arabic(ch) || ch == L'_')
+        if (isalpha_arabic(ch) || ch == u'_')
         {
-            return this->handle_identifier(ch, line, col);
+            return this->handle_identifier_(ch, line, col);
         }
 
         // ---------- Numbers ----------
         else if (std::iswdigit(ch))
         {
-            return this->handle_number(ch, line, col);
+            return this->handle_number_(ch, line, col);
         }
 
         // ---------- Operators ----------
         else if (is_operator_char(ch))
         {
-            return this->handle_operator(ch, line, col);
+            return this->handle_operator_(ch, line, col);
         }
 
         // ---------- Symbols ----------
         else if (is_symbol_char(ch))
         {
-            return this->handle_symbol(ch, line, col);
+            return this->handle_symbol_(ch, line, col);
         }
 
         // ---------- Unknown fallback ----------
-        this->consume_char();
-        Token ret(string_type(1, ch), TokenType::UNKNOWN, {line, col});
-        this->store(std::move(ret));
-        return tok_stream_.back();
+        return this->emit_unknown_(ch, line, col);
     }
 
     // ---------- EOF ----------
-    return this->emit_eof();
+    return this->emit_eof_();
 }
 
 std::vector<Token> Lexer::tokenize() {
@@ -378,7 +381,7 @@ std::vector<Token> Lexer::tokenize() {
     return tok_stream_;
 }
 
-Token Lexer::peek() { return Token(L"", TokenType::END_OF_FILE, {1, 1}); }
+Token Lexer::peek() { return Token(u"", TokenType::END_OF_FILE, {1, 1}); }
 
 Token Lexer::prev() {
     if (tok_index_ > 0)
@@ -387,7 +390,7 @@ Token Lexer::prev() {
     }
     else
     {
-        return Token(L"", TokenType::END_OF_FILE, {source_manager_.line(), source_manager_.column()});
+        return Token(u"", TokenType::END_OF_FILE, {source_manager_.line(), source_manager_.column()});
     }
 
     return tok_stream_[tok_index_];

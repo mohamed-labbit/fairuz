@@ -183,7 +183,7 @@ bool InputBuffer::refresh_(int buffer_index) {
 }
 
 void InputBuffer::advance_position_(char_type ch) {
-    if (ch == L'\n')
+    if (ch == u'\n')
     {
         current_position_.line_ += 1;
         current_position_.column_ = 1;
@@ -204,7 +204,7 @@ void InputBuffer::advance_position_(char_type ch) {
 }
 
 void InputBuffer::rewind_position_(char_type ch) {
-    if (ch == L'\n')
+    if (ch == u'\n')
     {
         if (columns_.empty() == false)
         {

@@ -1,6 +1,8 @@
 #pragma once
 
+#include "../utfcpp/source/utf8.h"
 #include "lex/util.h"
+
 #include <iostream>
 #include <locale>
 #include <string>
@@ -62,30 +64,30 @@ enum class TokenType {
     UNKNOWN
 };
 
-static const std::unordered_map<std::wstring, TokenType, WStringHash> operators = {
-  {L"=", TokenType::EQ},   {L":=", TokenType::ASSIGN}, {L"+", TokenType::PLUS}, {L"-", TokenType::MINUS},
-  {L"*", TokenType::STAR}, {L"/", TokenType::SLASH},   {L"<", TokenType::LT},   {L">", TokenType::GT},
-  {L"<=", TokenType::LE},  {L">=", TokenType::GE}};
+static const std::unordered_map<std::u16string, TokenType, U16StringHash, U16StringEqual> operators = {
+  {u"=", TokenType::EQ},   {u":=", TokenType::ASSIGN}, {u"+", TokenType::PLUS}, {u"-", TokenType::MINUS},
+  {u"*", TokenType::STAR}, {u"/", TokenType::SLASH},   {u"<", TokenType::LT},   {u">", TokenType::GT},
+  {u"<=", TokenType::LE},  {u">=", TokenType::GE}};
 
-static const std::unordered_map<std::wstring, TokenType, WStringHash> keywords = {
-  {L"خطا", TokenType::KW_FALSE},   {L"عدم", TokenType::KW_NONE},    {L"صحيح", TokenType::KW_TRUE},
-  {L"و", TokenType::AND},          {L"اخرج", TokenType::KW_RETURN}, {L"اكمل", TokenType::KW_CONTINUE},
-  {L"عرف", TokenType::KW_FN},      {L"او", TokenType::OR},          {L"بكل", TokenType::KW_FOR},
-  {L"اذا", TokenType::KW_IF},      {L"ليس", TokenType::NOT},        {L"ارجع", TokenType::KW_RETURN},
-  {L"طالما", TokenType::KW_WHILE}, {L"ثابت", TokenType::KW_CONST}};
+static const std::unordered_map<std::u16string, TokenType, U16StringHash, U16StringEqual> keywords = {
+  {u"خطا", TokenType::KW_FALSE},   {u"عدم", TokenType::KW_NONE},    {u"صحيح", TokenType::KW_TRUE},
+  {u"و", TokenType::AND},          {u"اخرج", TokenType::KW_RETURN}, {u"اكمل", TokenType::KW_CONTINUE},
+  {u"عرف", TokenType::KW_FN},      {u"او", TokenType::OR},          {u"بكل", TokenType::KW_FOR},
+  {u"اذا", TokenType::KW_IF},      {u"ليس", TokenType::NOT},        {u"ارجع", TokenType::KW_RETURN},
+  {u"طالما", TokenType::KW_WHILE}, {u"ثابت", TokenType::KW_CONST}};
 
 class Token
 {
    public:
     using char_type   = wchar_t;
-    using string_type = std::wstring;
+    using string_type = std::u16string;
     using size_type   = std::size_t;
 
     struct Location
     {
-        std::string filepath_{};
-        size_type   line_{0};
-        size_type   column_{0};
+        std::string filepath_;
+        size_type   line_   = 0;
+        size_type   column_ = 0;
 
         Location() = default;
 
@@ -131,7 +133,7 @@ class Token
 
     // friend ostream operator for pretty-printing in tests/logs
     friend std::ostream& operator<<(std::ostream& os, const Token& tok) {
-        os << "Token(\"" << to_utf8(tok.value_) << "\", type=" << static_cast<int>(tok.type_)
+        os << "Token(\"" << utf8::utf16to8(tok.value_) << "\", type=" << static_cast<int>(tok.type_)
            << ", line=" << tok.location_.line_ << ", col=" << tok.location_.column_ << ")";
         return os;
     }
