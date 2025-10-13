@@ -1,13 +1,15 @@
 #include "lex/buffer/base.h"
 #include "../utfcpp/source/utf8.h"
+#include "lex/util.h"
 
 
 namespace mylang {
 namespace lex {
+namespace buffer {
 
 bool InputBase::refresh_buffer(const unsigned int to_refresh)
 {
-    if (!file_.is_open())
+    if (!file_.is_open()) 
     {
         return false;
     }
@@ -51,6 +53,7 @@ typename InputBase::buffer_t InputBase::read_wchar_window(size_type max_chars)
         return {};
     }
 
+    // validate the buffer bytes
     byte_buffer.resize(bytes_read);
 
     size_type valid_bytes = bytes_read;
@@ -102,6 +105,10 @@ typename InputBase::buffer_t InputBase::read_wchar_window(size_type max_chars)
     }
 
     byte_position_ += valid_bytes;
+    /*
+    // convert buffer to string
+    buffer_t result = mylang::util::buffer_toU16_string(byte_buffer);
+    */
 
     std::string u8_str;
     for (auto b : byte_buffer)
@@ -110,6 +117,7 @@ typename InputBase::buffer_t InputBase::read_wchar_window(size_type max_chars)
     }
 
     buffer_t result = utf8::utf8to16(u8_str);
+
 
     if (result.size() > max_chars)
     {
@@ -121,5 +129,6 @@ typename InputBase::buffer_t InputBase::read_wchar_window(size_type max_chars)
     return result;
 }
 
+}
 }  // lex
 }  // mylang

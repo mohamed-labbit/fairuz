@@ -715,3 +715,55 @@ NEXT InputBuffer Improvements :
     Current peek only peeks by N = 1
 
 - Add eof() method
+
+Indentation logic : 
+
+    FUNCTION generate_indents(tokens):
+        indents = [0]
+        stream = []
+
+        WHILE tokens IS NOT EMPTY:
+            token = tokens[0]
+            REMOVE FIRST ELEMENT FROM tokens
+
+            IF token.type == 'NL':
+                IF tokens IS EMPTY:
+                    APPEND token TO stream
+                    CALL dedent(0, indents, stream)
+                    BREAK LOOP
+
+                ELSE IF tokens[0].type == 'WS':
+                    indent = LENGTH OF tokens[0].value
+
+                    IF indent > LAST ELEMENT OF indents:
+                        APPEND indent TO indents
+                        APPEND ('Indent', indent) TO stream
+
+                    ELSE IF indent == LAST ELEMENT OF indents:
+                        APPEND token TO stream
+
+                    ELSE:
+                        APPEND token TO stream
+                        CALL dedent(indent, indents, stream)
+
+                    REMOVE FIRST ELEMENT FROM tokens  // consume the WS token
+
+                ELSE:
+                    APPEND token TO stream
+                    CALL dedent(0, indents, stream)
+
+            ELSE:
+                APPEND token TO stream
+
+        ASSERT LENGTH OF indents == 1
+        RETURN stream
+
+
+
+    FUNCTION dedent(indent, indents, stream):
+        WHILE indent < LAST ELEMENT OF indents:
+            REMOVE LAST ELEMENT FROM indents
+            APPEND ('Dedent', LAST ELEMENT OF indents) TO stream
+
+        ASSERT indent == LAST ELEMENT OF indents
+        RETURN

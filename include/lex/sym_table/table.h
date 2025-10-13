@@ -8,6 +8,10 @@
 #include <vector>
 
 
+namespace mylang {
+namespace lex {
+
+
 class SymbolTable
 {
    public:
@@ -70,4 +74,8 @@ class SymbolTable
 
    private:
     std::vector<Scope> scopes_;  // stack of scopes
+};
+
+
+};
 };

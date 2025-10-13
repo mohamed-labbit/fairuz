@@ -69,6 +69,9 @@
         "__config": "cpp",
         "codecvt": "cpp",
         "__config_site": "cpp",
-        "filesystem": "cpp"
+        "filesystem": "cpp",
+        "format": "cpp",
+        "iterator": "cpp",
+        "utility": "cpp"
     }
 }

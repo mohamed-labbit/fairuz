@@ -1,12 +1,13 @@
 #pragma once
 
+#include "macros.h"
 #include <fstream>
 #include <string>
-#include "macros.h"
 
 
 namespace mylang {
 namespace lex {
+namespace buffer {
 
 class InputBase
 {
@@ -44,6 +45,6 @@ class InputBase
     buffer_t read_wchar_window(std::size_t max_chars);
 };
 
+}
 }  // lex
 }  // mylang
-

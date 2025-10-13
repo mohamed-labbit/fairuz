@@ -1,7 +1,7 @@
 set(CMAKE_CXX_COMPILER "/opt/homebrew/opt/llvm/bin/clang++")
 set(CMAKE_CXX_COMPILER_ARG1 "")
 set(CMAKE_CXX_COMPILER_ID "Clang")
-set(CMAKE_CXX_COMPILER_VERSION "21.1.2")
+set(CMAKE_CXX_COMPILER_VERSION "21.1.3")
 set(CMAKE_CXX_COMPILER_VERSION_INTERNAL "")
 set(CMAKE_CXX_COMPILER_WRAPPER "")
 set(CMAKE_CXX_STANDARD_COMPUTED_DEFAULT "17")
@@ -26,9 +26,9 @@ set(CMAKE_CXX_COMPILER_ARCHITECTURE_ID "arm64")
 
 
 set(CMAKE_AR "/usr/bin/ar")
-set(CMAKE_CXX_COMPILER_AR "/opt/homebrew/Cellar/llvm/21.1.2/bin/llvm-ar")
+set(CMAKE_CXX_COMPILER_AR "/opt/homebrew/Cellar/llvm/21.1.3/bin/llvm-ar")
 set(CMAKE_RANLIB "/opt/homebrew/opt/llvm/bin/llvm-ranlib")
-set(CMAKE_CXX_COMPILER_RANLIB "/opt/homebrew/Cellar/llvm/21.1.2/bin/llvm-ranlib")
+set(CMAKE_CXX_COMPILER_RANLIB "/opt/homebrew/Cellar/llvm/21.1.3/bin/llvm-ranlib")
 set(CMAKE_LINKER "/usr/bin/ld")
 set(CMAKE_LINKER_LINK "")
 set(CMAKE_LINKER_LLD "")
@@ -90,11 +90,11 @@ endif()
 
 
 
-set(CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES "/opt/homebrew/opt/libomp/include;/opt/homebrew/Cellar/llvm/21.1.2/include/c++/v1;/opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21/include;/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include")
+set(CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES "/opt/homebrew/opt/libomp/include;/opt/homebrew/Cellar/llvm/21.1.3/include/c++/v1;/opt/homebrew/Cellar/llvm/21.1.3/lib/clang/21/include;/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include")
 set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "c++")
 set(CMAKE_CXX_IMPLICIT_LINK_DIRECTORIES "/opt/homebrew/opt/libomp/lib;/Users/mohamedrabbit/mylang;/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib;/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/swift")
 set(CMAKE_CXX_IMPLICIT_LINK_FRAMEWORK_DIRECTORIES "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks")
-set(CMAKE_CXX_COMPILER_CLANG_RESOURCE_DIR "/opt/homebrew/Cellar/llvm/21.1.2/lib/clang/21")
+set(CMAKE_CXX_COMPILER_CLANG_RESOURCE_DIR "/opt/homebrew/Cellar/llvm/21.1.3/lib/clang/21")
 
 set(CMAKE_CXX_COMPILER_IMPORT_STD "")
 ### Imported target for C++23 standard library

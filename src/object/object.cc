@@ -19,10 +19,9 @@ bool _Object<_Args...>::operator==(const _Object& __other) const
         return __str_ == __other.__str_;
     case _Type::Function :
         // Functions are equal if they point to the same address
-        return static_cast<bool>(
-          __func_.target_type() == __other.__func_.target_type()
-          && __func_.template target<_Object (*)(std::vector<_Object>)>()
-               == __other.__func_.template target<_Object (*)(std::vector<_Object>)>());
+        return static_cast<bool>(__func_.target_type() == __other.__func_.target_type()
+                                 && __func_.template target<_Object (*)(std::vector<_Object>)>()
+                                      == __other.__func_.template target<_Object (*)(std::vector<_Object>)>());
     case _Type::Boolean :
         return __bool_ == __other.__bool_;
     case _Type::None :
@@ -139,10 +138,9 @@ bool _Object<_Args...>::less_than(const _Object& __other) const
     }
     else if (__type_ == _Type::Function && __other.__type_ == _Type::Function)
     {
-        return _Object(static_cast<bool>(
-          __func_.target_type() == __other.__func_.target_type()
-          && __func_.template target<_Object (*)(std::vector<_Object>)>()
-               < __other.__func_.template target<_Object (*)(std::vector<_Object>)>()));
+        return _Object(static_cast<bool>(__func_.target_type() == __other.__func_.target_type()
+                                         && __func_.template target<_Object (*)(std::vector<_Object>)>()
+                                              < __other.__func_.template target<_Object (*)(std::vector<_Object>)>()));
     }
     else if (__type_ == _Type::STRING && __other.__type_ == _Type::STRING)
     {
@@ -162,10 +160,9 @@ bool _Object<_Args...>::greater_than(const _Object& __other) const
     }
     else if (__type_ == _Type::Function && __other.__type_ == _Type::Function)
     {
-        return _Object(static_cast<bool>(
-          __func_.target_type() == __other.__func_.target_type()
-          && __func_.template target<_Object (*)(std::vector<_Object>)>()
-               > __other.__func_.template target<_Object (*)(std::vector<_Object>)>()));
+        return _Object(static_cast<bool>(__func_.target_type() == __other.__func_.target_type()
+                                         && __func_.template target<_Object (*)(std::vector<_Object>)>()
+                                              > __other.__func_.template target<_Object (*)(std::vector<_Object>)>()));
     }
     else if (__type_ == _Type::STRING && __other.__type_ == _Type::STRING)
     {

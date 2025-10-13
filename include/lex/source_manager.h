@@ -40,7 +40,11 @@ class SourceManager
 
     size_type column() const;
 
-    lex::Position position() const;
+    size_type fpos() const;
+
+    const std::string& fpath() const;
+
+    mylang::lex::buffer::Position position() const;
 
     bool done() const;
 
@@ -51,13 +55,14 @@ class SourceManager
 
     char_type current();
 
-    lex::Position offset_map(const size_type& offset);
+    std::pair<size_type, size_type> offset_map(const size_type& offset);
 
-    lex::Position offset_map_(const size_type& offset) const;
+    std::pair<size_type, size_type> offset_map_(const size_type& offset) const;
 
    private:
-    std::ifstream file_;
-    InputBuffer   input_buffer_;
+    std::ifstream       file_;
+    std::string         filepath_;
+    buffer::InputBuffer input_buffer_;
 };
 }  // lex
 }  // mylang

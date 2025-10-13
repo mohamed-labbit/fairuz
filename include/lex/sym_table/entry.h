@@ -3,6 +3,9 @@
 #include "lex/token.h"
 #include <string>
 
+namespace mylang {
+namespace lex {
+
 
 enum class SymbolType : int {
     VARIABLE,
@@ -24,15 +27,15 @@ struct SymbolTableEntry
     using string_type = std::wstring;
     using size_type   = std::size_t;
 
-    string_type              lexeme_;
-    typename Token::Location location_;
-    SymbolType               type_;
-    size_type                scope_;  // nesting_level
+    string_type                                lexeme_;
+    typename mylang::lex::tok::Token::Location location_;
+    SymbolType                                 type_;
+    ScopeType                                  scope_;  // nesting_level
 
-    SymbolTableEntry(const string_type&       lexeme,
-                     typename Token::Location location,
-                     SymbolType               type,
-                     size_type                scope) :
+    SymbolTableEntry(const string_type&                         lexeme,
+                     typename mylang::lex::tok::Token::Location location,
+                     SymbolType                                 type,
+                     ScopeType                                  scope) :
         lexeme_(lexeme),
         location_(location),
         type_(type),
@@ -40,3 +43,7 @@ struct SymbolTableEntry
     {
     }
 };
+
+
+}
+}

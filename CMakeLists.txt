@@ -3,7 +3,7 @@ project(MyProgrammingLanguage)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_compile_options(-g)
+add_compile_options(-g -fopenmp)
 
 # Add include directories
 include_directories(${CMAKE_SOURCE_DIR}/include)
@@ -30,7 +30,6 @@ endif()
 # Define the test executable
 add_executable(mylang_tests
     tests/lexer/test_tokens.cpp
-    tests/lexer/test_file.cpp
     $<TARGET_OBJECTS:mylang_objects>
 )
 

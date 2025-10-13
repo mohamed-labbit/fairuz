@@ -3,11 +3,10 @@
 
 namespace mylang {
 namespace lex {
+namespace buffer {
 
-typename InputBuffer::size_type InputBuffer::size() const
-{
-    return this->buffers_[this->current_buffer_].length();
-}
+
+typename InputBuffer::size_type InputBuffer::size() const { return this->buffers_[this->current_buffer_].length(); }
 
 typename InputBuffer::size_type InputBuffer::buffer_offset() const
 {
@@ -16,8 +15,7 @@ typename InputBuffer::size_type InputBuffer::buffer_offset() const
 
 bool InputBuffer::empty() const
 {
-    return (!this->file_.is_open() || this->current_ == nullptr
-            || this->buffers_[this->current_buffer_].empty());
+    return (!this->file_.is_open() || this->current_ == nullptr || this->buffers_[this->current_buffer_].empty());
 }
 
 typename InputBuffer::char_type InputBuffer::at(const size_type idx) const
@@ -125,8 +123,7 @@ typename InputBuffer::string_type InputBuffer::n_peek(size_type n)
 
     size_type rem     = n;
     int       buf_idx = this->current_buffer_;
-    size_type offset =
-      static_cast<size_type>(this->current_ - this->buffers_[this->current_buffer_].data() + 1);
+    size_type offset  = static_cast<size_type>(this->current_ - this->buffers_[this->current_buffer_].data() + 1);
 
     while (rem > 0)
     {
@@ -172,7 +169,7 @@ void InputBuffer::reset()
     this->buffers_[0][0]    = BUF_END;
     this->buffers_[0][1]    = BUF_END;
     this->current_          = this->buffers_[0].data();
-    this->current_position_ = {1, 1};
+    this->current_position_ = {1, 1, 0};
 
     while (!this->columns_.empty())
     {
@@ -197,28 +194,38 @@ void InputBuffer::swap_buffers_()
 
 void InputBuffer::advance_position_(char_type ch)
 {
+    this->current_position_.file_pos_ += 1;
+
     if (ch == u'\n')
     {
-        this->current_position_.line_++;
+        this->current_position_.line_ += 1;
         this->current_position_.column_ = 1;
         this->columns_.push(1);
     }
     else
     {
-        this->current_position_.column_++;
+        this->current_position_.column_ += 1;
         if (!this->columns_.empty())
         {
-            this->columns_.top() = this->current_position_.column_;
+            this->columns_.top() = this->current_position_.column();
         }
         else
         {
-            this->columns_.push(this->current_position_.column_);
+            this->columns_.push(this->current_position_.column());
         }
     }
 }
 
 void InputBuffer::rewind_position_(char_type ch)
 {
+    if (this->current_position_.fpos() == 0)
+    {
+        // ultimately should emit an error
+        return;
+    }
+
+    this->current_position_.file_pos_ = std::max<size_type>(0, this->current_position_.fpos() - 1);
+
     if (ch == u'\n')
     {
         if (!this->columns_.empty())
@@ -226,19 +233,20 @@ void InputBuffer::rewind_position_(char_type ch)
             this->columns_.pop();
         }
 
-        this->current_position_.line_   = std::max<size_type>(1, this->current_position_.line_ - 1);
+        this->current_position_.line_   = std::max<size_type>(1, this->current_position_.line() - 1);
         this->current_position_.column_ = this->columns_.empty() ? 1 : this->columns_.top();
     }
     else
     {
         this->current_position_.column_ =
-          (this->current_position_.column_ > 0 ? this->current_position_.column_ - 1 : 0);
+          (this->current_position_.column() > 0 ? this->current_position_.column() - 1 : 0);
         if (!this->columns_.empty())
         {
-            this->columns_.top() = this->current_position_.column_;
+            this->columns_.top() = this->current_position_.column();
         }
     }
 }
 
-} // lex
-} // mylang
+}
+}  // lex
+}  // mylang

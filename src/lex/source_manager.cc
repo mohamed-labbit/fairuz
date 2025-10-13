@@ -5,34 +5,31 @@ namespace mylang {
 namespace lex {
 
 
-typename SourceManager::size_type SourceManager::line() const
-{
-    return this->input_buffer_.position().line_;
-}
+using offset_pair = std::pair<typename SourceManager::size_type, typename SourceManager::size_type>;
 
-typename SourceManager::size_type SourceManager::column() const
-{
-    return this->input_buffer_.position().column_;
-}
+typename SourceManager::size_type SourceManager::line() const { return this->input_buffer_.position().line(); }
 
-Position SourceManager::position() const { return this->input_buffer_.position(); }
+typename SourceManager::size_type SourceManager::column() const { return this->input_buffer_.position().column(); }
+
+typename SourceManager::size_type SourceManager::fpos() const { return this->input_buffer_.position().fpos(); }
+
+const std::string& SourceManager::fpath() const { return std::cref<std::string>(this->filepath_); }
+
+buffer::Position SourceManager::position() const { return this->input_buffer_.position(); }
 
 bool SourceManager::done() const { return this->input_buffer_.empty(); }
 
 typename SourceManager::char_type SourceManager::peek() { return this->input_buffer_.peek(); }
 
-typename SourceManager::char_type SourceManager::consume_char()
-{
-    return this->input_buffer_.consume_char();
-}
+typename SourceManager::char_type SourceManager::consume_char() { return this->input_buffer_.consume_char(); }
 
 typename SourceManager::char_type SourceManager::current() { return input_buffer_.current(); }
 
-Position SourceManager::offset_map_(const size_type& offset) const
+offset_pair SourceManager::offset_map_(const size_type& offset) const
 {
     if (offset == this->input_buffer_.buffer_offset())
     {
-        return this->input_buffer_.position();
+        return std::make_pair(this->input_buffer_.position().line(), this->input_buffer_.position().column());
     }
 
     size_type iter = 0;
@@ -77,20 +74,19 @@ Position SourceManager::offset_map_(const size_type& offset) const
     // combine with base line
     line = base_line + (line - 1);
 
-    return Position(line, col);
+    return std::make_pair(line, col);
 }
 
-Position SourceManager::offset_map(const size_type& offset)
+offset_pair SourceManager::offset_map(const size_type& offset)
 {
     if (offset == this->input_buffer_.buffer_offset())
     {
-        return this->input_buffer_.position();
+        return std::make_pair(this->input_buffer_.position().line(), this->input_buffer_.position().column());
     }
 
     if (offset >= this->file_.tellg())
     {
-        return Position(this->input_buffer_.position().line_,
-                        this->input_buffer_.position().column_);
+        return std::make_pair(this->input_buffer_.position().line(), this->input_buffer_.position().column());
     }
 
     this->file_.imbue(std::locale(this->file_.getloc()));
@@ -104,7 +100,7 @@ Position SourceManager::offset_map(const size_type& offset)
     {
         if (current_offset == offset)
         {
-            return Position(line, col);
+            return std::make_pair(line, col);
         }
 
         if (c == L'\n')
@@ -121,7 +117,7 @@ Position SourceManager::offset_map(const size_type& offset)
     }
 
     this->file_.close();
-    return Position(line, col);
+    return std::make_pair(line, col);
 }
 
 }  // lex

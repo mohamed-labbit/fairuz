@@ -1,6 +1,4 @@
 file(REMOVE_RECURSE
-  "CMakeFiles/mylang_tests.dir/tests/lexer/test_file.cpp.o"
-  "CMakeFiles/mylang_tests.dir/tests/lexer/test_file.cpp.o.d"
   "CMakeFiles/mylang_tests.dir/tests/lexer/test_tokens.cpp.o"
   "CMakeFiles/mylang_tests.dir/tests/lexer/test_tokens.cpp.o.d"
   "mylang_tests"

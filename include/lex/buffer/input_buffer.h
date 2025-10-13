@@ -5,27 +5,34 @@
 
 namespace mylang {
 namespace lex {
-
+namespace buffer {
 
 struct Position
 {
     std::size_t line_;
     std::size_t column_;
+    std::size_t file_pos_;
 
     Position() :
         line_(0),
-        column_(0)
+        column_(0),
+        file_pos_(0)
     {
     }
 
-    Position(const std::size_t line, const std::size_t col) :
+    Position(const std::size_t line, const std::size_t col, std::size_t fpos) :
         line_(line),
-        column_(col)
+        column_(col),
+        file_pos_(fpos)
     {
     }
+
+    std::size_t line() const { return this->line_; }
+    std::size_t column() const { return this->column_; }
+    std::size_t fpos() const { return this->file_pos_; }
 };
 
-    class InputBuffer: public InputBase
+class InputBuffer: public InputBase
 {
    public:
     using char_type   = char16_t;
@@ -92,6 +99,6 @@ struct Position
     void rewind_position_(char_type ch);
 };
 
-
+}
 }  // lex
 }  // mylang

@@ -4,6 +4,8 @@
 #include "macros.h"
 
 #include <algorithm>
+#include <cassert>
+#include <list>
 #include <memory>
 #include <string>
 
@@ -12,130 +14,119 @@ namespace mylang {
 namespace lex {
 
 
-void Lexer::handle_indentation_(size_type line, size_type col)
+tok::Token Lexer::make_token(tok::TokenType             tt,
+                             std::optional<string_type> lexeme,
+                             std::optional<size_type>   line,
+                             std::optional<size_type>   col,
+                             std::optional<size_type>   file_pos,
+                             std::optional<std::string> file_path) const
 {
-    char_type current = this->source_manager_.current();
-
-    // only care if next char is space or tab
-    if (current != u' ' && current != u'\t')
-    {
-        return;
-    }
-
-    size_type space_count = 0;
-    bool      used_tab    = false;
-    bool      used_space  = false;
-
-    // count indentation width
-    while (current == u' ' || current == u'\t')
-    {
-        this->consume_char();
-
-        if (current == u' ')
-        {
-            space_count += 1;
-            used_space = true;
-        }
-        else if (current == u'\t')
-        {
-            // tab expands to next multiple of TABWIDTH
-            space_count += TABWIDTH - (space_count % TABWIDTH);
-            used_tab = true;
-        }
-
-        current = this->source_manager_.current();
-    }
-
-    // Blank line? -> ignore indentation
-    char_type lookahead = this->source_manager_.peek();
-    if (lookahead == u'\n' || lookahead == BUF_END)
-    {
-        return;
-    }
-
-    // Mixed spaces and tabs = error
-    if (used_space && used_tab)
-    {
-        throw std::runtime_error("Mixed tabs and spaces in indentation");
-    }
-
-    // First indent defines indent size
-    if (this->indent_stack_.empty() && this->indent_size_ == 0 && space_count > 0)
-    {
-        if (space_count > MAX_ALLOWED_INDENT)
-        {
-            throw std::runtime_error("Indentation too large for first indent");
-        }
-
-        this->indent_size_ = space_count;  // base size
-    }
-
-    // Ensure consistent multiples of base indent
-    if (this->indent_size_ > 0 && space_count % this->indent_size_ != 0)
-    {
-        throw std::runtime_error("Inconsistent indentation detected");
-    }
-
-    size_type indent_count = (this->indent_size_ == 0) ? 0 : space_count / this->indent_size_;
-    int       prev         = this->indent_stack_.empty() ? 0 : this->indent_stack_.top();
-
-    if (indent_count > prev)
-    {
-        // new indent → push level and emit INDENT tokens
-        this->indent_stack_.push(indent_count);
-
-        for (size_type i = 0, n = indent_count - prev; i < n; i++)
-        {
-            string_type s;
-            Token       tok(std::move(s), TokenType::INDENT, {line, col});
-            this->tok_stream_.push_back(std::move(tok));
-            col += this->indent_size_;
-        }
-    }
-    else if (indent_count < prev)
-    {
-        // dedent → pop until we match a previous level
-        while (!this->indent_stack_.empty() && indent_count < this->indent_stack_.top())
-        {
-            this->indent_stack_.pop();
-            string_type s = u"";
-            Token       tok(std::move(s), TokenType::DEDENT, {line, col});
-            this->tok_stream_.push_back(std::move(tok));
-        }
-
-        // if indent_count does not match any previous level → error
-        if (this->indent_stack_.empty() || indent_count != this->indent_stack_.top())
-        {
-            throw std::runtime_error("Indentation does not match any previous level");
-        }
-    }
+    return tok::Token(lexeme.value_or(u""), tt,
+                      {line.value_or(this->source_manager_.line()), col.value_or(this->source_manager_.column()),
+                       file_pos.value_or(this->source_manager_.fpos())},
+                      file_path.value_or(this->source_manager_.fpath()));
 }
 
-Token Lexer::handle_identifier_(char_type c, size_type line, size_type col)
+void Lexer::handle_indentation_(size_type line, size_type col)
+{
+    auto& indents = this->indent_stack_;
+    auto& stream  = this->tok_stream_;
+    auto& sm      = this->source_manager_;
+    auto  current = sm.current();
+
+    auto dedent = [this](unsigned indent, std::stack<unsigned>& indents, std::vector<tok::Token>& stream) {
+        while (indent < indents.top())
+        {
+            indents.pop();
+            tok::Token tok = this->make_token(tok::TokenType::DEDENT);
+            stream.push_back(tok);
+        }
+        // optional consistency check:
+        assert(indent == indents.top());
+    };
+
+    while (current != BUF_END)
+    {
+        if (current == u'\n')
+        {
+            this->consume_char();
+            current = sm.current();
+
+            if (current == BUF_END)
+            {
+                dedent(0, indents, stream);
+                break;
+            }
+            else if (current == ' ')  // tabs not supported yet
+            {
+                unsigned indent = 0;
+                while (current == ' ')
+                {
+                    indent += 1;
+                    this->consume_char();
+                    current = sm.current();
+                }
+
+                if (indent > indents.top())
+                {
+                    indents.push(indent);
+                    stream.push_back(this->make_token(tok::TokenType::INDENT));
+                }
+                else if (indent == indents.top())
+                {
+                    stream.push_back(this->make_token(tok::TokenType::NEWLINE));
+                }
+                else
+                {
+                    dedent(indent, indents, stream);
+                }
+            }
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    // optional safety check
+    assert(indents.size() >= 1);
+}
+
+tok::Token Lexer::handle_identifier_(char_type c, size_type line, size_type col)
 {
     string_type id(1, c);
     this->consume_char();
 
     char_type c2 = this->source_manager_.current();
-    while (isalpha_arabic(c2) || c2 == u'_' || std::iswdigit(c2))
+    while (util::isalpha_arabic(c2) || c2 == u'_' || std::iswdigit(c2))
     {
         id.push_back(c2);
         this->consume_char();
         c2 = this->source_manager_.current();
     }
 
-    TokenType tt = TokenType::IDENTIFIER;
-    if (keywords.count(id))
+    tok::TokenType tt = tok::TokenType::IDENTIFIER;
+    if (tok::keywords.count(id))
     {
-        tt = keywords.at(id);
+        tt = tok::keywords.at(id);
     }
 
-    Token tok(std::move(id), tt, {line, col});
+    if (tt == tok::TokenType::IDENTIFIER) 
+    {
+        this->symbol_table_.insert(
+          SymbolTableEntry(id,
+                           tok::Token::Location(this->source_manager_.fpath(),
+                                                {this->source_manager_.line(), this->source_manager_.column(),
+                                                 this->source_manager_.fpos()}),
+                           SymbolType::VARIABLE, ScopeType::GLOBAL));
+    }
+
+    tok::Token tok = this->make_token(tt, std::move(id), line, col);
     this->store(std::move(tok));
     return this->tok_stream_.back();
 }
 
-Token Lexer::handle_number_(char_type c, size_type line, size_type col)
+tok::Token Lexer::handle_number_(char_type c, size_type line, size_type col)
 {
     string_type num(1, c);
     this->consume_char();
@@ -148,12 +139,12 @@ Token Lexer::handle_number_(char_type c, size_type line, size_type col)
         c2 = this->source_manager_.current();
     }
 
-    Token ret(std::move(num), TokenType::NUMBER, {line, col});
+    tok::Token ret = this->make_token(tok::TokenType::NUMBER, std::move(num), line, col);
     store(std::move(ret));
     return this->tok_stream_.back();
 }
 
-Token Lexer::handle_operator_(char_type c, size_type line, size_type col)
+tok::Token Lexer::handle_operator_(char_type c, size_type line, size_type col)
 {
     string_type op(1, c);
     this->consume_char();
@@ -164,57 +155,57 @@ Token Lexer::handle_operator_(char_type c, size_type line, size_type col)
         string_type two = op;
         two.push_back(lookahead);
 
-        if (operators.count(two))
+        if (tok::operators.count(two))
         {
             op.push_back(this->consume_char());
         }
     }
 
-    TokenType tt = operators.count(op) ? operators.at(op) : TokenType::UNKNOWN;
-    Token     ret(std::move(op), tt, {line, col});
+    tok::TokenType tt  = tok::operators.count(op) ? tok::operators.at(op) : tok::TokenType::UNKNOWN;
+    tok::Token     ret = this->make_token(tt, std::move(op), line, col);
     this->store(std::move(ret));
     return this->tok_stream_.back();
 }
 
-Token Lexer::handle_symbol_(char_type c, size_type line, size_type col)
+tok::Token Lexer::handle_symbol_(char_type c, size_type line, size_type col)
 {
-    TokenType   tt;
-    string_type sym(1, c);
+    tok::TokenType tt;
+    string_type    sym(1, c);
     this->consume_char();
 
     switch (c)
     {
     case '(' :
-        tt = TokenType::LPAREN;
+        tt = tok::TokenType::LPAREN;
         break;
     case ')' :
-        tt = TokenType::RPAREN;
+        tt = tok::TokenType::RPAREN;
         break;
     case '.' :
-        tt = TokenType::DOT;
+        tt = tok::TokenType::DOT;
         break;
     case ':' :
         if (this->source_manager_.peek() == u'=')
         {
             this->consume_char();
             sym = u":=";
-            tt  = TokenType::ASSIGN;
+            tt  = tok::TokenType::ASSIGN;
         }
         else
         {
-            tt = TokenType::COLON;
+            tt = tok::TokenType::COLON;
         }
         break;
     default :
-        tt = TokenType::UNKNOWN;
+        tt = tok::TokenType::UNKNOWN;
         break;
     }
 
-    this->store(Token(std::move(sym), tt, {line, col}));
+    tok::Token ret = this->make_token(tt, std::move(sym), line, col);
     return this->tok_stream_.back();
 }
 
-Token Lexer::handle_string_literal_(char_type c, size_type line, size_type col)
+tok::Token Lexer::handle_string_literal_(char_type c, size_type line, size_type col)
 {
     string_type s;
     char_type   quote = c;
@@ -236,80 +227,82 @@ Token Lexer::handle_string_literal_(char_type c, size_type line, size_type col)
     else
     {
         // Unterminated string literal
-        return Token(std::move(s), TokenType::UNKNOWN, {line, col});
+        return this->make_token(tok::TokenType::UNKNOWN, std::move(s), line, col);
     }
 
-    Token ret(std::move(s), TokenType::STRING, {line, col});
+    tok::Token ret = this->make_token(tok::TokenType::STRING, std::move(s), line, col);
     this->store(std::move(ret));
     return this->tok_stream_.back();
 }
 
-Token Lexer::emit_eof_()
+tok::Token Lexer::emit_eof_()
 {
     this->consume_char();
-    if (!tok_stream_.empty() && tok_stream_.back().type() == TokenType::END_OF_FILE)
+    if (!tok_stream_.empty() && tok_stream_.back().type() == tok::TokenType::END_OF_FILE)
     {
         return tok_stream_.back();
     }
 
-    Token ret(u"", TokenType::END_OF_FILE, {source_manager_.line(), source_manager_.column() - 1});
+    tok::Token ret =
+      this->make_token(tok::TokenType::END_OF_FILE, std::nullopt, std::nullopt, this->source_manager_.column() - 1);
     store(std::move(ret));
     return tok_stream_.back();
 }
 
-Token Lexer::emit_sof_()
+tok::Token Lexer::emit_sof_()
 {
-    Token ret(u"", TokenType::START_OF_FILE, {1, 1});
-    this->tok_stream_.push_back(ret);
-    this->tok_index_ = 0;
+    tok::Token ret = this->make_token(tok::TokenType::START_OF_FILE);
+    this->store(std::move(ret));
     return this->tok_stream_.back();
 }
 
-Token Lexer::handle_newline_(char_type c, size_t line, size_t col)
+tok::Token Lexer::handle_newline_(char_type c, size_t line, size_t col)
 {
     this->consume_char();
     string_type endl = u"\n";
-    Token       ret(std::move(endl), TokenType::NEWLINE, {line, col});
+    tok::Token  ret  = this->make_token(tok::TokenType::NEWLINE, std::move(endl), line, col);
     this->store(std::move(ret));
-
     this->handle_indentation_(line + 1, 1);
-
     return this->tok_stream_.back();
 }
 
-Token Lexer::emit_unknown_(char_type c, size_type line, size_type col)
+tok::Token Lexer::emit_unknown_(char_type c, size_type line, size_type col)
 {
     this->consume_char();
-    Token ret(string_type(1, c), TokenType::UNKNOWN, {line, col});
+    tok::Token ret = this->make_token(tok::TokenType::UNKNOWN, string_type(1, c), line, col);
     this->store(std::move(ret));
     return tok_stream_.back();
 }
 
-Token Lexer::next()
+tok::Token Lexer::next()
 {
+    auto& stream       = this->tok_stream_;
+    auto& stream_index = this->tok_index_;
+    auto& sm           = this->source_manager_;
+
     // Return cached token if already lexed ahead
-    if (this->tok_index_ + 1 < this->tok_stream_.size())
+    if (stream_index + 1 < stream.size())
     {
-        this->tok_index_++;
-        return this->tok_stream_[this->tok_index_];
+        stream_index += 1;
+        return stream[stream_index];
     }
 
     // First token: emit SOF
-    if (this->tok_stream_.empty())
+    if (stream.empty())
     {
         return this->emit_sof_();
     }
 
     while (true)
     {
-        char_type ch = this->source_manager_.current();
+        char_type ch = sm.current();
         if (ch == BUF_END)
         {
             break;
         }
 
-        size_type line = source_manager_.line();
-        size_type col  = source_manager_.column();
+        size_type line = sm.line();
+        size_type col  = sm.column();
 
         switch (ch)
         {
@@ -324,7 +317,7 @@ Token Lexer::next()
             continue;  // skip whitespace
 
         case u'\\' : {
-            char_type lookahead = this->source_manager_.peek();
+            char_type lookahead = sm.peek();
             if (lookahead == ch)
             {
                 this->consume_char();
@@ -332,7 +325,7 @@ Token Lexer::next()
 
                 while (true)
                 {
-                    char_type c2 = this->source_manager_.peek();
+                    char_type c2 = sm.peek();
                     if (c2 == u'\n' || c2 == BUF_END)
                     {
                         break;
@@ -355,7 +348,7 @@ Token Lexer::next()
         }
 
         // ---------- Identifiers ----------
-        if (isalpha_arabic(ch) || ch == u'_')
+        if (util::isalpha_arabic(ch) || ch == u'_')
         {
             return this->handle_identifier_(ch, line, col);
         }
@@ -367,13 +360,13 @@ Token Lexer::next()
         }
 
         // ---------- Operators ----------
-        else if (is_operator_char(ch))
+        else if (util::is_operator_char(ch))
         {
             return this->handle_operator_(ch, line, col);
         }
 
         // ---------- Symbols ----------
-        else if (is_symbol_char(ch))
+        else if (util::is_symbol_char(ch))
         {
             return this->handle_symbol_(ch, line, col);
         }
@@ -386,10 +379,10 @@ Token Lexer::next()
     return this->emit_eof_();
 }
 
-std::vector<Token> Lexer::tokenize()
+std::vector<tok::Token> Lexer::tokenize()
 {
     // next_token() will push tokens to the stream on it's own
-    while (next().type() != TokenType::END_OF_FILE)
+    while (next().type() != tok::TokenType::END_OF_FILE)
     {
         ;
     }
@@ -397,9 +390,9 @@ std::vector<Token> Lexer::tokenize()
     return tok_stream_;
 }
 
-Token Lexer::peek() { return Token(u"", TokenType::END_OF_FILE, {1, 1}); }
+tok::Token Lexer::peek() { return this->make_token(tok::TokenType::END_OF_FILE); }
 
-Token Lexer::prev()
+tok::Token Lexer::prev()
 {
     if (tok_index_ > 0)
     {
@@ -407,12 +400,12 @@ Token Lexer::prev()
     }
     else
     {
-        return Token(u"", TokenType::END_OF_FILE,
-                     {source_manager_.line(), source_manager_.column()});
+        return this->make_token(tok::TokenType::END_OF_FILE);
     }
 
     return tok_stream_[tok_index_];
 }
+
 
 }  // lex
 }  // mylang
