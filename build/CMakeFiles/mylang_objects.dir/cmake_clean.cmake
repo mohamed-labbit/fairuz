@@ -29,6 +29,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/mylang_objects.dir/src/parser/ast.cc.o.d"
   "CMakeFiles/mylang_objects.dir/src/parser/parser.cc.o"
   "CMakeFiles/mylang_objects.dir/src/parser/parser.cc.o.d"
+  "CMakeFiles/mylang_objects.dir/src/parser/runtime.cc.o"
+  "CMakeFiles/mylang_objects.dir/src/parser/runtime.cc.o.d"
 )
 
 # Per-language clean rules from dependency scanning.

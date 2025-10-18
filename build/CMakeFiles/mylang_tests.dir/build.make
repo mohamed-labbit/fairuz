@@ -106,7 +106,8 @@ mylang_tests_EXTERNAL_OBJECTS = \
 "/Users/mohamedrabbit/mylang/build/CMakeFiles/mylang_objects.dir/src/lex/token.cc.o" \
 "/Users/mohamedrabbit/mylang/build/CMakeFiles/mylang_objects.dir/src/object/object.cc.o" \
 "/Users/mohamedrabbit/mylang/build/CMakeFiles/mylang_objects.dir/src/parser/ast.cc.o" \
-"/Users/mohamedrabbit/mylang/build/CMakeFiles/mylang_objects.dir/src/parser/parser.cc.o"
+"/Users/mohamedrabbit/mylang/build/CMakeFiles/mylang_objects.dir/src/parser/parser.cc.o" \
+"/Users/mohamedrabbit/mylang/build/CMakeFiles/mylang_objects.dir/src/parser/runtime.cc.o"
 
 mylang_tests: CMakeFiles/mylang_tests.dir/tests/lexer/test_tokens.cpp.o
 mylang_tests: CMakeFiles/mylang_objects.dir/src/diag/diagnostic.cc.o
@@ -124,6 +125,7 @@ mylang_tests: CMakeFiles/mylang_objects.dir/src/lex/token.cc.o
 mylang_tests: CMakeFiles/mylang_objects.dir/src/object/object.cc.o
 mylang_tests: CMakeFiles/mylang_objects.dir/src/parser/ast.cc.o
 mylang_tests: CMakeFiles/mylang_objects.dir/src/parser/parser.cc.o
+mylang_tests: CMakeFiles/mylang_objects.dir/src/parser/runtime.cc.o
 mylang_tests: CMakeFiles/mylang_tests.dir/build.make
 mylang_tests: /opt/homebrew/lib/libgtest_main.a
 mylang_tests: /opt/homebrew/lib/libgtest.a

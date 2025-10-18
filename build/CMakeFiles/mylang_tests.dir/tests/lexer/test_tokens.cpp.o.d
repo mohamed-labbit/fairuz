@@ -998,6 +998,8 @@ CMakeFiles/mylang_tests.dir/tests/lexer/test_tokens.cpp.o: \
   /opt/homebrew/Cellar/llvm/21.1.3/bin/../include/c++/v1/__filesystem/path_iterator.h \
   /opt/homebrew/Cellar/llvm/21.1.3/bin/../include/c++/v1/__filesystem/recursive_directory_iterator.h \
   /opt/homebrew/Cellar/llvm/21.1.3/bin/../include/c++/v1/__filesystem/u8path.h \
+  /Users/mohamedrabbit/mylang/include/lex/sym_table/table.h \
+  /Users/mohamedrabbit/mylang/include/lex/sym_table/entry.h \
   /Users/mohamedrabbit/mylang/include/lex/token.h \
   /Users/mohamedrabbit/mylang/include/../utfcpp/source/utf8.h \
   /Users/mohamedrabbit/mylang/include/../utfcpp/source/utf8/checked.h \
@@ -1009,6 +1011,7 @@ CMakeFiles/mylang_tests.dir/tests/lexer/test_tokens.cpp.o: \
   /Users/mohamedrabbit/mylang/include/lex/util.h \
   /opt/homebrew/opt/libomp/include/omp.h \
   /opt/homebrew/Cellar/llvm/21.1.3/bin/../include/c++/v1/iostream \
+  /opt/homebrew/Cellar/llvm/21.1.3/bin/../include/c++/v1/unordered_set \
   /Users/mohamedrabbit/mylang/tests/lexer/../../include/lex/token.h \
   /opt/homebrew/include/gtest/gtest.h \
   /opt/homebrew/Cellar/llvm/21.1.3/bin/../include/c++/v1/set \

@@ -998,6 +998,8 @@ CMakeFiles/mylang_objects.dir/src/lex/lexer.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.3/bin/../include/c++/v1/__filesystem/path_iterator.h \
   /opt/homebrew/Cellar/llvm/21.1.3/bin/../include/c++/v1/__filesystem/recursive_directory_iterator.h \
   /opt/homebrew/Cellar/llvm/21.1.3/bin/../include/c++/v1/__filesystem/u8path.h \
+  /Users/mohamedrabbit/mylang/include/lex/sym_table/table.h \
+  /Users/mohamedrabbit/mylang/include/lex/sym_table/entry.h \
   /Users/mohamedrabbit/mylang/include/lex/token.h \
   /Users/mohamedrabbit/mylang/include/../utfcpp/source/utf8.h \
   /Users/mohamedrabbit/mylang/include/../utfcpp/source/utf8/checked.h \
@@ -1009,6 +1011,7 @@ CMakeFiles/mylang_objects.dir/src/lex/lexer.cc.o: \
   /Users/mohamedrabbit/mylang/include/lex/util.h \
   /opt/homebrew/opt/libomp/include/omp.h \
   /opt/homebrew/Cellar/llvm/21.1.3/bin/../include/c++/v1/iostream \
+  /opt/homebrew/Cellar/llvm/21.1.3/bin/../include/c++/v1/unordered_set \
   /opt/homebrew/Cellar/llvm/21.1.3/bin/../include/c++/v1/cassert \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/assert.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_assert.h \

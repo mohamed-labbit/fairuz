@@ -512,6 +512,30 @@ src/parser/parser.cc.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_objects.dir/build.make CMakeFiles/mylang_objects.dir/src/parser/parser.cc.s
 .PHONY : src/parser/parser.cc.s
 
+src/parser/runtime.o: src/parser/runtime.cc.o
+.PHONY : src/parser/runtime.o
+
+# target to build an object file
+src/parser/runtime.cc.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_objects.dir/build.make CMakeFiles/mylang_objects.dir/src/parser/runtime.cc.o
+.PHONY : src/parser/runtime.cc.o
+
+src/parser/runtime.i: src/parser/runtime.cc.i
+.PHONY : src/parser/runtime.i
+
+# target to preprocess a source file
+src/parser/runtime.cc.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_objects.dir/build.make CMakeFiles/mylang_objects.dir/src/parser/runtime.cc.i
+.PHONY : src/parser/runtime.cc.i
+
+src/parser/runtime.s: src/parser/runtime.cc.s
+.PHONY : src/parser/runtime.s
+
+# target to generate assembly for a file
+src/parser/runtime.cc.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_objects.dir/build.make CMakeFiles/mylang_objects.dir/src/parser/runtime.cc.s
+.PHONY : src/parser/runtime.cc.s
+
 tests/lexer/test_tokens.o: tests/lexer/test_tokens.cpp.o
 .PHONY : tests/lexer/test_tokens.o
 
@@ -592,6 +616,9 @@ help:
 	@echo "... src/parser/parser.o"
 	@echo "... src/parser/parser.i"
 	@echo "... src/parser/parser.s"
+	@echo "... src/parser/runtime.o"
+	@echo "... src/parser/runtime.i"
+	@echo "... src/parser/runtime.s"
 	@echo "... tests/lexer/test_tokens.o"
 	@echo "... tests/lexer/test_tokens.i"
 	@echo "... tests/lexer/test_tokens.s"

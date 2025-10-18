@@ -27,8 +27,8 @@ CMAKE_BUILD_TYPE:STRING=
 //Enable/Disable color output during build.
 CMAKE_COLOR_MAKEFILE:BOOL=ON
 
-//CXX compiler
-CMAKE_CXX_COMPILER:STRING=/opt/homebrew/opt/llvm/bin/clang++
+//No help, variable specified on the command line.
+CMAKE_CXX_COMPILER:UNINITIALIZED=clang++
 
 //LLVM archiver
 CMAKE_CXX_COMPILER_AR:FILEPATH=/opt/homebrew/Cellar/llvm/21.1.3/bin/llvm-ar
@@ -54,8 +54,8 @@ CMAKE_CXX_FLAGS_RELEASE:STRING=-O3 -DNDEBUG
 //Flags used by the CXX compiler during RELWITHDEBINFO builds.
 CMAKE_CXX_FLAGS_RELWITHDEBINFO:STRING=-O2 -g -DNDEBUG
 
-//C compiler
-CMAKE_C_COMPILER:STRING=/opt/homebrew/opt/llvm/bin/clang
+//No help, variable specified on the command line.
+CMAKE_C_COMPILER:UNINITIALIZED=clang
 
 //LLVM archiver
 CMAKE_C_COMPILER_AR:FILEPATH=/opt/homebrew/Cellar/llvm/21.1.3/bin/llvm-ar

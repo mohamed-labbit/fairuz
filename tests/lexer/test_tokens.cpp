@@ -80,7 +80,7 @@ TEST(LexerTest, HandlesUnexpectedCharacter) {
 }
 */
 
-TEST(LexerTest, TokenizesExpression)
+TEST(LexerTest, TokenizesExpression01)
 {
     mylang::lex::Lexer                   lexer(test_cases_path + "recognizes_expression.txt");
     std::vector<mylang::lex::tok::Token> tokens = lexer.tokenize();
@@ -97,5 +97,41 @@ TEST(LexerTest, TokenizesExpression)
 
     EXPECT_EQ(tokens.size(), 7);
     EXPECT_EQ(tokens[0].type(), mylang::lex::tok::TokenType::START_OF_FILE);
+    EXPECT_EQ(tokens, expected);
+}
+
+TEST(LexerTest, TokenizesExpression02)
+{
+    mylang::lex::Lexer                   lexer(test_cases_path + "recognizes_stmt_00.txt");
+    std::vector<mylang::lex::tok::Token> tokens = lexer.tokenize();
+
+    std::vector<mylang::lex::tok::Token> expected = {
+      lexer.make_token(mylang::lex::tok::TokenType::START_OF_FILE, u"", 1, 1),
+      lexer.make_token(mylang::lex::tok::TokenType::KW_IF, u"اذا", 1, 1),
+      lexer.make_token(mylang::lex::tok::TokenType::IDENTIFIER, u"س", 1, 5),
+      lexer.make_token(mylang::lex::tok::TokenType::EQ, u"=", 1, 7),
+      lexer.make_token(mylang::lex::tok::TokenType::IDENTIFIER, u"د", 1, 9),
+      lexer.make_token(mylang::lex::tok::TokenType::COLON, u":", 1, 10),
+      lexer.make_token(mylang::lex::tok::TokenType::END_OF_FILE, u"", 1, 10)};
+
+    EXPECT_EQ(tokens.size(), expected.size());
+    EXPECT_EQ(tokens, expected);
+}
+
+TEST(LexerTest, TokenizesExpression03)
+{
+    mylang::lex::Lexer                   lexer(test_cases_path + "recognizes_stmt_01.txt");
+    std::vector<mylang::lex::tok::Token> tokens = lexer.tokenize();
+
+    std::vector<mylang::lex::tok::Token> expected = {
+      lexer.make_token(mylang::lex::tok::TokenType::START_OF_FILE, u"", 1, 1),
+      lexer.make_token(mylang::lex::tok::TokenType::KW_WHILE, u"طالما", 1, 1),
+      lexer.make_token(mylang::lex::tok::TokenType::IDENTIFIER, u"س", 1, 7),
+      lexer.make_token(mylang::lex::tok::TokenType::NEQ, u"!=", 1, 9),
+      lexer.make_token(mylang::lex::tok::TokenType::IDENTIFIER, u"د", 1, 12),
+      lexer.make_token(mylang::lex::tok::TokenType::COLON, u":", 1, 13),
+      lexer.make_token(mylang::lex::tok::TokenType::END_OF_FILE, u"", 1, 13)};
+
+    EXPECT_EQ(tokens.size(), expected.size());
     EXPECT_EQ(tokens, expected);
 }

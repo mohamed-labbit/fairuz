@@ -25,7 +25,9 @@ class Lexer
     }
 
     explicit Lexer(const Lexer&) = delete;
+    
     mylang::lex::tok::Token operator()() { return next(); }
+
     mylang::lex::tok::Token next();
     mylang::lex::tok::Token peek();
     mylang::lex::tok::Token prev();
@@ -59,7 +61,7 @@ class Lexer
     mylang::lex::tok::Token handle_operator_(char_type c, size_type line, size_type col);
     mylang::lex::tok::Token handle_symbol_(char_type c, size_type line, size_type col);
     mylang::lex::tok::Token handle_string_literal_(char_type c, size_type line, size_type col);
-    mylang::lex::tok::Token handle_newline_(char_type c, size_type line, size_type col);
+    mylang::lex::tok::Token handle_newline_(char_type c, size_t line, size_t col);
     mylang::lex::tok::Token emit_unknown_(char_type c, size_type line, size_type col);
     mylang::lex::tok::Token emit_eof_();
     mylang::lex::tok::Token emit_sof_();

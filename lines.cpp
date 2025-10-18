@@ -12,7 +12,8 @@ namespace fs = filesystem;
 
 int main()
 {
-    string      directories[] = {"/Users/mohamedrabbit/mylang/src/", "/Users/mohamedrabbit/mylang/include/"};
+    string directories[] = {
+      "/Users/mohamedrabbit/mylang/" /*, "/Users/mohamedrabbit/mylang/include/", "/Users/mohamedrabbit/mylang/tests"*/};
     std::size_t total_lines   = 0;
     std::size_t num_of_files  = 0;
 

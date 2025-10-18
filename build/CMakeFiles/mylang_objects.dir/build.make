@@ -282,6 +282,20 @@ CMakeFiles/mylang_objects.dir/src/parser/parser.cc.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/mylang_objects.dir/src/parser/parser.cc.s"
 	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/mohamedrabbit/mylang/src/parser/parser.cc -o CMakeFiles/mylang_objects.dir/src/parser/parser.cc.s
 
+CMakeFiles/mylang_objects.dir/src/parser/runtime.cc.o: CMakeFiles/mylang_objects.dir/flags.make
+CMakeFiles/mylang_objects.dir/src/parser/runtime.cc.o: /Users/mohamedrabbit/mylang/src/parser/runtime.cc
+CMakeFiles/mylang_objects.dir/src/parser/runtime.cc.o: CMakeFiles/mylang_objects.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mohamedrabbit/mylang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_16) "Building CXX object CMakeFiles/mylang_objects.dir/src/parser/runtime.cc.o"
+	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mylang_objects.dir/src/parser/runtime.cc.o -MF CMakeFiles/mylang_objects.dir/src/parser/runtime.cc.o.d -o CMakeFiles/mylang_objects.dir/src/parser/runtime.cc.o -c /Users/mohamedrabbit/mylang/src/parser/runtime.cc
+
+CMakeFiles/mylang_objects.dir/src/parser/runtime.cc.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/mylang_objects.dir/src/parser/runtime.cc.i"
+	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/mohamedrabbit/mylang/src/parser/runtime.cc > CMakeFiles/mylang_objects.dir/src/parser/runtime.cc.i
+
+CMakeFiles/mylang_objects.dir/src/parser/runtime.cc.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/mylang_objects.dir/src/parser/runtime.cc.s"
+	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/mohamedrabbit/mylang/src/parser/runtime.cc -o CMakeFiles/mylang_objects.dir/src/parser/runtime.cc.s
+
 mylang_objects: CMakeFiles/mylang_objects.dir/src/diag/diagnostic.cc.o
 mylang_objects: CMakeFiles/mylang_objects.dir/src/diag/diagnostic_codes.cc.o
 mylang_objects: CMakeFiles/mylang_objects.dir/src/diag/diagnostic_emitter.cc.o
@@ -297,6 +311,7 @@ mylang_objects: CMakeFiles/mylang_objects.dir/src/lex/token.cc.o
 mylang_objects: CMakeFiles/mylang_objects.dir/src/object/object.cc.o
 mylang_objects: CMakeFiles/mylang_objects.dir/src/parser/ast.cc.o
 mylang_objects: CMakeFiles/mylang_objects.dir/src/parser/parser.cc.o
+mylang_objects: CMakeFiles/mylang_objects.dir/src/parser/runtime.cc.o
 mylang_objects: CMakeFiles/mylang_objects.dir/build.make
 .PHONY : mylang_objects
 

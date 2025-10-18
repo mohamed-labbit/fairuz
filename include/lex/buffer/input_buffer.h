@@ -32,7 +32,7 @@ struct Position
     std::size_t fpos() const { return this->file_pos_; }
 };
 
-class InputBuffer: public InputBase
+class InputBuffer: public InputBufferBase
 {
    public:
     using char_type   = char16_t;
@@ -42,7 +42,7 @@ class InputBuffer: public InputBase
 
     InputBuffer(std::ifstream& f, size_type cap = DEFAULT_CAPACITY) :
         capacity_(cap),
-        InputBase(f, cap)
+        InputBufferBase(f, cap)
     {
         buffers_[0].resize(capacity_ + 1, BUF_END);
         buffers_[1].resize(capacity_ + 1, BUF_END);
@@ -86,8 +86,8 @@ class InputBuffer: public InputBase
 
     struct PushbackEntry
     {
-        char_type ch;
-        Position  pos;
+        char_type ch_;
+        Position  pos_;
     };
 
     std::stack<PushbackEntry> unget_stack_;

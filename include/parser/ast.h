@@ -4,10 +4,17 @@
 #include "lex/token.h"
 
 
+namespace mylang {
+namespace parser {
+namespace ast {
+
+
+using string_type = std::u16string;
+
 struct ASTNode
 {
    private:
-    Token token_;
+    lex::tok::Token token_;
 
    public:
     virtual ~ASTNode() = default;
@@ -27,13 +34,13 @@ struct NumberNode: public ASTNode
 
 struct BinaryOpNode: public ASTNode
 {
-    std::wstring op_{};
+    string_type op_{};
     ASTNode*     left_{nullptr};
     ASTNode*     right_{nullptr};
 
     BinaryOpNode() = default;
 
-    BinaryOpNode(const std::wstring& o, ASTNode* l, ASTNode* r) :
+    BinaryOpNode(const string_type& o, ASTNode* l, ASTNode* r) :
         op_(o),
         left_(l),
         right_(r)
@@ -43,11 +50,11 @@ struct BinaryOpNode: public ASTNode
 
 struct NonTerminalNode: public ASTNode
 {
-    std::wstring value_;
+    string_type value_;
 
     NonTerminalNode() = default;
 
-    NonTerminalNode(std::wstring v) :
+    NonTerminalNode(string_type v) :
         value_(v)
     {
     }
@@ -79,11 +86,11 @@ struct SpaceNode: public ASTNode
 
 struct TerminalNode: public ASTNode
 {
-    std::wstring value_;
+    string_type value_;
 
     TerminalNode() = default;
 
-    TerminalNode(const std::wstring& v) :
+    TerminalNode(const string_type& v) :
         value_(v)
     {
     }
@@ -92,11 +99,16 @@ struct TerminalNode: public ASTNode
 class Parser
 {
    private:
-    const Lexer& lex_;
+    const lex::Lexer& lex_;
 
    public:
-    Parser(const Lexer& l) :
+    Parser(const lex::Lexer& l) :
         lex_(l)
     {
     }
 };
+
+
+}
+}
+}
