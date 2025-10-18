@@ -22,6 +22,7 @@ enum class TokenType {
     // Identifiers & literals
     IDENTIFIER,
     NUMBER,
+    FLOAT,
     STRING,
 
     // Keywords
@@ -71,7 +72,7 @@ enum class TokenType {
 static const std::unordered_map<std::u16string, TokenType, util::U16StringHash, util::U16StringEqual> operators = {
   {u"=", TokenType::EQ},   {u":=", TokenType::ASSIGN}, {u"+", TokenType::PLUS}, {u"-", TokenType::MINUS},
   {u"*", TokenType::STAR}, {u"/", TokenType::SLASH},   {u"<", TokenType::LT},   {u">", TokenType::GT},
-  {u"<=", TokenType::LE},  {u">=", TokenType::GE}, {u"!=", TokenType::NEQ}};
+  {u"<=", TokenType::LE},  {u">=", TokenType::GE},     {u"!=", TokenType::NEQ}};
 
 static const std::unordered_map<std::u16string, TokenType, util::U16StringHash, util::U16StringEqual> keywords = {
   {u"خطا", TokenType::KW_FALSE},   {u"عدم", TokenType::KW_NONE},    {u"صحيح", TokenType::KW_TRUE},

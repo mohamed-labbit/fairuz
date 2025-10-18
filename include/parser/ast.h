@@ -35,8 +35,8 @@ struct NumberNode: public ASTNode
 struct BinaryOpNode: public ASTNode
 {
     string_type op_{};
-    ASTNode*     left_{nullptr};
-    ASTNode*     right_{nullptr};
+    ASTNode*    left_{nullptr};
+    ASTNode*    right_{nullptr};
 
     BinaryOpNode() = default;
 

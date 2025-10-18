@@ -35,7 +35,8 @@ struct SymbolTableEntry
     SymbolTableEntry(const SymbolTableEntry& other) :
         type_(other.type_),
         scope_(other.scope_)
-    {}
+    {
+    }
 
     SymbolTableEntry& operator=(const SymbolTableEntry& other)
     {

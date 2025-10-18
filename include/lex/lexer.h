@@ -25,11 +25,11 @@ class Lexer
     }
 
     explicit Lexer(const Lexer&) = delete;
-    
+
     mylang::lex::tok::Token operator()() { return next(); }
 
     mylang::lex::tok::Token next();
-    mylang::lex::tok::Token peek();
+    mylang::lex::tok::Token peek(size_type n = 1);
     mylang::lex::tok::Token prev();
 
     const std::vector<mylang::lex::tok::Token>& tokenStream() const { return tok_stream_; }
@@ -55,6 +55,7 @@ class Lexer
 
     mylang::lex::SymbolTable symbol_table_;
 
+    void                    lex_token_();
     void                    handle_indentation_(size_type line, size_type col);
     mylang::lex::tok::Token handle_identifier_(char_type c, size_type line, size_type col);
     mylang::lex::tok::Token handle_number_(char_type c, size_type line, size_type col);

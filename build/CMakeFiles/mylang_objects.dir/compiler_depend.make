@@ -5951,6 +5951,10 @@ CMakeFiles/mylang_objects.dir/src/parser/ast.cc.o: /Users/mohamedrabbit/mylang/s
 
 CMakeFiles/mylang_objects.dir/src/parser/parser.cc.o: /Users/mohamedrabbit/mylang/src/parser/parser.cc
 
+CMakeFiles/mylang_objects.dir/src/parser/runtime.cc.o: /Users/mohamedrabbit/mylang/src/parser/runtime.cc
+
+
+/Users/mohamedrabbit/mylang/src/parser/runtime.cc:
 
 /Users/mohamedrabbit/mylang/src/parser/parser.cc:
 

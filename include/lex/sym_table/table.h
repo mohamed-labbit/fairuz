@@ -59,7 +59,7 @@ class SymbolTable
         current_scope[lexeme] = e;
         return true;
     }
-    
+
     // Lookup symbol (searches from innermost → outermost)
     std::optional<Entry> lookup(const string_type& name) const
     {
