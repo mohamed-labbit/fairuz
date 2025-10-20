@@ -24,7 +24,7 @@ class Lexer
         std::locale::global(std::locale("ar_SA.UTF-8"));
     }
 
-    explicit Lexer(const Lexer&) = delete;
+    explicit Lexer(const Lexer&) = default;
 
     mylang::lex::tok::Token operator()() { return next(); }
 
