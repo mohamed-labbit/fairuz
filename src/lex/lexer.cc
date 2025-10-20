@@ -45,7 +45,7 @@ void Lexer::handle_indentation_(size_type line, size_type col)
             tok::Token tok = make_token(tok::TokenType::DEDENT);
             stream.push_back(tok);
         }
-        
+
         assert(indent == indents.top());
     };
 
@@ -266,8 +266,9 @@ tok::Token Lexer::emit_eof_()
 
 tok::Token Lexer::emit_sof_()
 {
-    auto&      stream = this->tok_stream_;
-    tok::Token ret    = make_token(tok::TokenType::START_OF_FILE);
+    auto& stream = this->tok_stream_;
+
+    tok::Token ret = make_token(tok::TokenType::START_OF_FILE);
     store(std::move(ret));
     return stream.back();
 }
