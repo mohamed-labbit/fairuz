@@ -1,4 +1,4 @@
-// 
+//
 // diagnostic_codes.h
 //
 
