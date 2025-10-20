@@ -3,9 +3,9 @@
 #include "lex/lexer.h"
 #include "lex/token.h"
 #include <memory>
+#include <stdio.h>
 #include <string>
 #include <vector>
-#include <stdio.h>
 
 namespace mylang {
 namespace parser {
