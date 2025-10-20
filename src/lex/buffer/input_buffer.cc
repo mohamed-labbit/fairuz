@@ -33,10 +33,9 @@ typename InputBuffer::char_type InputBuffer::consume_char()
     char_type ch;
     if (!unget_stack.empty())
     {
-        auto entry = unget_stack.top();
+        cur_pos    = unget_stack.top().pos_;
+        ch         = unget_stack.top().ch_;
         unget_stack.pop();
-        cur_pos = entry.pos_;
-        ch      = entry.ch_;
     }
     else
     {
