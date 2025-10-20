@@ -137,7 +137,7 @@ class Token
     Token& operator=(Token&&) noexcept = default;
 
     // Return const references to avoid copies
-    const string_type& str() const;
+    const string_type& lexeme() const;
 
     const TokenType& type() const;
 
