@@ -6,7 +6,7 @@ namespace mylang {
 namespace lex {
 namespace tok {
 
-const typename Token::string_type& Token::str() const { return this->value_; }
+const typename Token::string_type& Token::lexeme() const { return this->value_; }
 const TokenType&                   Token::type() const { return this->type_; }
 typename Token::size_type          Token::size() const { return this->value_.length(); }
 const typename Token::size_type&   Token::line() const { return this->location_.line_; }
