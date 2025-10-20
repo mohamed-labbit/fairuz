@@ -49,7 +49,7 @@ typename InputBufferBase::buffer_t InputBufferBase::read_wchar_window(size_type 
         return {};
     }
 
-    size_type         byte_chunk_size = max_chars * 4;  // Conservative estimate
+    size_type         byte_chunk_size = max_chars * 4;
     std::vector<char> byte_buffer(byte_chunk_size);
 
     file.read(byte_buffer.data(), byte_chunk_size);
