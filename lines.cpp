@@ -12,9 +12,8 @@ namespace fs = filesystem;
 
 int main()
 {
-    string directories[] = {
-      "/Users/mohamedrabbit/mylang/" /*, "/Users/mohamedrabbit/mylang/include/", "/Users/mohamedrabbit/mylang/tests"*/};
-    std::size_t total_lines  = 0;
+    string directories[] = {"/Users/mohamedrabbit/mylang/src", "/Users/mohamedrabbit/mylang/include/", "/Users/mohamedrabbit/mylang/tests"};
+    std::size_t total_lines = 0;
     std::size_t num_of_files = 0;
 
     vector<pair<fs::path, std::size_t>> file_line_counts;
@@ -41,7 +40,7 @@ int main()
                     }
 
                     string line;
-                    auto   sub_count = 0;
+                    auto sub_count = 0;
 
                     while (getline(file, line))
                     {
@@ -65,8 +64,7 @@ int main()
     }
 
     // Sort by line count in ascending order
-    sort(file_line_counts.begin(), file_line_counts.end(),
-         [](const auto& a, const auto& b) { return a.second < b.second; });
+    sort(file_line_counts.begin(), file_line_counts.end(), [](const auto& a, const auto& b) { return a.second < b.second; });
 
     // Print sorted results
     for (const auto& [path, lines] : file_line_counts)

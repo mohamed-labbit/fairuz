@@ -1,4 +1,4 @@
-#include "lex/buffer/input_buffer.h"
+#include "../../../include/lex/buffer/input_buffer.h"
 
 
 namespace mylang {
@@ -18,32 +18,29 @@ bool InputBuffer::empty() const
     return (!this->file_.is_open() || this->current_ == nullptr || this->buffers_[this->current_buffer_].empty());
 }
 
-typename InputBuffer::char_type InputBuffer::at(const size_type idx) const
-{
-    return this->buffers_[this->current_buffer_][idx];
-}
+typename InputBuffer::char_type InputBuffer::at(const size_type idx) const { return this->buffers_[this->current_buffer_][idx]; }
 
 typename InputBuffer::char_type InputBuffer::consume_char()
 {
     auto& unget_stack = this->unget_stack_;
-    auto& cur_pos     = this->current_position_;
-    auto& cur_buf     = this->current_buffer_;
-    auto& cur         = this->current_;
+    auto& cur_pos = this->current_position_;
+    auto& cur_buf = this->current_buffer_;
+    auto& cur = this->current_;
 
     char_type ch;
     if (!unget_stack.empty())
     {
         cur_pos = unget_stack.top().pos_;
-        ch      = unget_stack.top().ch_;
+        ch = unget_stack.top().ch_;
         unget_stack.pop();
     }
     else
     {
-        if (*cur == BUF_END)
+        if (*cur == BUFFER_END)
         {
             if (!refresh_buffer(cur_buf ^ 1))
             {
-                return BUF_END;
+                return BUFFER_END;
             }
 
             swap_buffers_();
@@ -60,20 +57,20 @@ typename InputBuffer::char_type InputBuffer::consume_char()
 [[nodiscard]]
 const typename InputBuffer::char_type& InputBuffer::current()
 {
-    auto& cur     = this->current_;
+    auto& cur = this->current_;
     auto& cur_buf = this->current_buffer_;
 
     if (cur == nullptr)
     {
-        char_type end = BUF_END;
+        char_type end = BUFFER_END;
         return std::cref<char_type>(end);
     }
 
-    if (*cur == BUF_END)
+    if (*cur == BUFFER_END)
     {
         if (!this->refresh_buffer(cur_buf ^ 1))
         {
-            char_type end = BUF_END;
+            char_type end = BUFFER_END;
             return std::cref<char_type>(end);
         }
 
@@ -86,21 +83,21 @@ const typename InputBuffer::char_type& InputBuffer::current()
 [[nodiscard]]
 const typename InputBuffer::char_type& InputBuffer::peek()
 {
-    auto& cur     = this->current_;
+    auto& cur = this->current_;
     auto& cur_buf = this->current_buffer_;
 
     if (cur == nullptr)
     {
-        char_type end = BUF_END;
+        char_type end = BUFFER_END;
         return std::cref<char_type>(end);
     }
 
     pointer forward = cur + 1;
-    if (*cur == BUF_END)
+    if (*cur == BUFFER_END)
     {
         if (!refresh_buffer(cur_buf ^ 1))
         {
-            char_type end = BUF_END;
+            char_type end = BUFFER_END;
             return std::cref<char_type>(end);
         }
 
@@ -108,11 +105,11 @@ const typename InputBuffer::char_type& InputBuffer::peek()
         forward = cur + 1;
     }
 
-    if (*forward == BUF_END)
+    if (*forward == BUFFER_END)
     {
         if (!refresh_buffer(cur_buf ^ 1))
         {
-            char_type end = BUF_END;
+            char_type end = BUFFER_END;
             return std::cref<char_type>(end);
         }
 
@@ -126,8 +123,8 @@ const typename InputBuffer::char_type& InputBuffer::peek()
 typename InputBuffer::string_type InputBuffer::n_peek(size_type n)
 {
     auto& cur_buf = this->current_buffer_;
-    auto& bufs    = this->buffers_;
-    auto& cur     = this->current_;
+    auto& bufs = this->buffers_;
+    auto& cur = this->current_;
 
     string_type out;
     if (n == 0)
@@ -135,13 +132,13 @@ typename InputBuffer::string_type InputBuffer::n_peek(size_type n)
         return out;
     }
 
-    size_type rem     = n;
-    int       buf_idx = cur_buf;
-    size_type offset  = static_cast<size_type>(cur - bufs[buf_idx].data() + 1);
+    size_type rem = n;
+    int buf_idx = cur_buf;
+    size_type offset = static_cast<size_type>(cur - bufs[buf_idx].data() + 1);
 
     while (rem > 0)
     {
-        if (offset >= bufs[buf_idx].size() || bufs[buf_idx][offset] == BUF_END)
+        if (offset >= bufs[buf_idx].size() || bufs[buf_idx][offset] == BUFFER_END)
         {
             if (!refresh_buffer(buf_idx ^ 1))
             {
@@ -180,16 +177,16 @@ void InputBuffer::unget(char_type ch)
 void InputBuffer::reset()
 {
     auto& cur_buf = this->current_buffer_;
-    auto& bufs    = this->buffers_;
-    auto& cur     = this->current_;
+    auto& bufs = this->buffers_;
+    auto& cur = this->current_;
     auto& cur_pos = this->current_position_;
-    auto& cols    = this->columns_;
+    auto& cols = this->columns_;
 
-    cur_buf    = 0;
-    bufs[0][0] = BUF_END;
-    bufs[0][1] = BUF_END;
-    cur        = bufs[0].data();
-    cur_pos    = {1, 1, 0};
+    cur_buf = 0;
+    bufs[0][0] = BUFFER_END;
+    bufs[0][1] = BUFFER_END;
+    cur = bufs[0].data();
+    cur_pos = {1, 1, 0};
 
     while (!cols.empty())
     {
@@ -204,9 +201,9 @@ Position InputBuffer::position() const noexcept { return this->current_position_
 void InputBuffer::swap_buffers_()
 {
     auto& cur_buf = this->current_buffer_;
-    auto& bufs    = this->buffers_;
-    auto& cur     = this->current_;
-    auto& cols    = this->columns_;
+    auto& bufs = this->buffers_;
+    auto& cur = this->current_;
+    auto& cols = this->columns_;
 
     cur_buf ^= 1;
     cur = bufs[cur_buf].data();
@@ -220,7 +217,7 @@ void InputBuffer::swap_buffers_()
 void InputBuffer::advance_position_(char_type ch)
 {
     auto& cur_pos = this->current_position_;
-    auto& cols    = this->columns_;
+    auto& cols = this->columns_;
 
     cur_pos.file_pos_ += 1;
 
@@ -247,7 +244,7 @@ void InputBuffer::advance_position_(char_type ch)
 void InputBuffer::rewind_position_(char_type ch)
 {
     auto& cur_pos = this->current_position_;
-    auto& cols    = this->columns_;
+    auto& cols = this->columns_;
 
     if (cur_pos.fpos() == 0)
     {
@@ -264,7 +261,7 @@ void InputBuffer::rewind_position_(char_type ch)
             cols.pop();
         }
 
-        cur_pos.line_   = std::max<size_type>(1, cur_pos.line() - 1);
+        cur_pos.line_ = std::max<size_type>(1, cur_pos.line() - 1);
         cur_pos.column_ = cols.empty() ? 1 : cols.top();
     }
     else

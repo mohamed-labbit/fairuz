@@ -1,42 +1,98 @@
-/*
-def parse():
-    stack = [(0, None, None)]  # (state, symbol, ast_node)
-    pos = 0
-    
-    while True:
-        state = stack[-1][0]
-        token = tokens[pos] if pos < len(tokens) else EOF_TOKEN
-        action = ACTION[state][token.type]
-        
-        if action == ACCEPT:
-            return stack[-1][2]  # Return AST root
-            
-        elif action.type == SHIFT:
-            #Push token and new state
-            ast_node = create_leaf_node(token)
-            stack.append((action.state, token.type, ast_node))
-            pos += 1
-            
-        elif action.type == REDUCE:
-            production = action.production  # A → β
-            beta_len = len(production.rhs)
+#pragma once
 
-            #Pop | β | items from stack
-            children = []
-            for _ in range(beta_len):
-                _, _, child_ast = stack.pop()
-                children.insert(0, child_ast)
+#include "lex/lexer.h"
+#include "lex/token.h"
+#include "parser/ast.h"
 
-            #Get goto state
-            current_state = stack[-1][0]
-            next_state = GOTO[current_state][production.lhs]
 
-            #Create AST node for this production
-            ast_node = create_ast_node(production.lhs, children)
+namespace mylang {
+namespace parser {
 
-            #Push non - terminal and new state
-            stack.append((next_state, production.lhs, ast_node))
-            
-        else:
-            raise SyntaxError(f"Unexpected token {token}")
-*/
+
+class Parser
+{
+   private:
+    lex::Lexer lexer_;
+    lex::tok::Token current_token_;
+    bool had_error_;
+
+   public:
+    explicit Parser(const std::string& filename) :
+        lexer_(filename),
+        current_token_(),
+        had_error_(false)
+    {
+        advance();  // load tokenizer
+    }
+
+    std::unique_ptr<ast::ASTNode> parse() { return parse_program(); }
+
+    bool has_errors() const { return had_error_; }
+
+   private:
+    void advance() { current_token_ = lexer_.next(); }
+
+    lex::tok::Token peek() { return lexer_.peek(); }
+
+    const lex::tok::Token& current() const { return current_token_; }
+
+    bool done() const { return current_token_.type() == lex::tok::TokenType::END_OF_FILE; }
+
+    bool isKind(lex::tok::TokenType type) const
+    {
+        if (done())
+        {
+            return false;
+        }
+
+        return current_token_.type() == type;
+    }
+
+    bool match(lex::tok::TokenType type)
+    {
+        if (isKind(type))
+        {
+            advance();
+            return true;
+        }
+
+        return false;
+    }
+
+    template<typename... Args>
+    bool match(lex::tok::TokenType first, Args... rest)
+    {
+        if (match(first))
+        {
+            return true;
+        }
+
+        return match(rest...);
+    }
+
+    lex::tok::Token consume(lex::tok::TokenType type, const std::string& error_msg)
+    {
+        if (isKind(type))
+        {
+            lex::tok::Token tok = current_token_;
+            advance();
+            return tok;
+        }
+
+        // report_error(error_msg);
+        return current_token_;
+    }
+
+    std::unique_ptr<ast::ASTNode> parse_program();
+    std::unique_ptr<ast::ASTNode> parse_statement();
+    std::unique_ptr<ast::ASTNode> parse_expression();
+    std::unique_ptr<ast::ASTNode> parse_assignment();
+    std::unique_ptr<ast::ASTNode> parse_term();
+    std::unique_ptr<ast::ASTNode> parse_factor();
+    std::unique_ptr<ast::ASTNode> parse_primary();
+    std::unique_ptr<ast::ASTNode> parse_block();
+
+    void sync();
+};
+}
+}

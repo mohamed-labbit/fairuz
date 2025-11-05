@@ -1,16 +1,18 @@
 AccessModifierOffset: -1
-AlignAfterOpenBracket: Align
-AlignConsecutiveAssignments: Consecutive
-AlignConsecutiveDeclarations: Consecutive
-AlignEscapedNewlines: DontAlign
-AlignOperands: AlignAfterOperator
-AlignTrailingComments: true
+#AlignAfterOpenBracket: Align
+#AlignConsecutiveAssignments: Consecutive
+#AlignConsecutiveDeclarations: Consecutive
+#AlignEscapedNewlines: DontAlign
+#AlignOperands: AlignAfterOperator
+#AlignTrailingComments: true
+
 AllowAllParametersOfDeclarationOnNextLine: true
 AllowShortCaseLabelsOnASingleLine: false
-AllowShortEnumsOnASingleLine: false
+AllowShortEnumsOnASingleLine: true
 AllowShortIfStatementsOnASingleLine: false
 AllowShortBlocksOnASingleLine: false
 AlwaysBreakTemplateDeclarations: Yes
+
 BasedOnStyle: WebKit
 BitFieldColonSpacing: After
 BinPackParameters: false
@@ -25,7 +27,7 @@ BraceWrapping:
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializers: AfterColon
 BreakStringLiterals: false
-ColumnLimit: 120
+ColumnLimit: 140
 ContinuationIndentWidth: 2
 Cpp11BracedListStyle: true
 IndentGotoLabels: false

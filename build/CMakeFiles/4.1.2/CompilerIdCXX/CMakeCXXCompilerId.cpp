@@ -417,10 +417,9 @@
         #define COMPILER_VERSION_MINOR DEC(((__VER__) / 1000) % 1000)
         #define COMPILER_VERSION_PATCH DEC((__VER__) % 1000)
         #define COMPILER_VERSION_INTERNAL DEC(__IAR_SYSTEMS_ICC__)
-    #elif defined(__VER__) \
-      && (defined(__ICCAVR__) || defined(__ICCRX__) || defined(__ICCRH850__) || defined(__ICCRL78__) \
-          || defined(__ICC430__) || defined(__ICCRISCV__) || defined(__ICCV850__) || defined(__ICC8051__) \
-          || defined(__ICCSTM8__))
+    #elif defined(__VER__)                                                                                                                 \
+      && (defined(__ICCAVR__) || defined(__ICCRX__) || defined(__ICCRH850__) || defined(__ICCRL78__) || defined(__ICC430__)                \
+        || defined(__ICCRISCV__) || defined(__ICCV850__) || defined(__ICC8051__) || defined(__ICCSTM8__))
         #define COMPILER_VERSION_MAJOR DEC((__VER__) / 100)
         #define COMPILER_VERSION_MINOR DEC((__VER__) - (((__VER__) / 100) * 100))
         #define COMPILER_VERSION_PATCH DEC(__SUBVERSION__)
@@ -765,15 +764,14 @@ char const* info_cray = "INFO"
 #endif
 
 /* Convert integer to decimal digit literals.  */
-#define DEC(n) \
-    ('0' + (((n) / 10000000) % 10)), ('0' + (((n) / 1000000) % 10)), ('0' + (((n) / 100000) % 10)), \
-      ('0' + (((n) / 10000) % 10)), ('0' + (((n) / 1000) % 10)), ('0' + (((n) / 100) % 10)), \
-      ('0' + (((n) / 10) % 10)), ('0' + ((n) % 10))
+#define DEC(n)                                                                                                                             \
+    ('0' + (((n) / 10000000) % 10)), ('0' + (((n) / 1000000) % 10)), ('0' + (((n) / 100000) % 10)), ('0' + (((n) / 10000) % 10)),          \
+      ('0' + (((n) / 1000) % 10)), ('0' + (((n) / 100) % 10)), ('0' + (((n) / 10) % 10)), ('0' + ((n) % 10))
 
 /* Convert integer to hex digit literals.  */
-#define HEX(n) \
-    ('0' + ((n) >> 28 & 0xF)), ('0' + ((n) >> 24 & 0xF)), ('0' + ((n) >> 20 & 0xF)), ('0' + ((n) >> 16 & 0xF)), \
-      ('0' + ((n) >> 12 & 0xF)), ('0' + ((n) >> 8 & 0xF)), ('0' + ((n) >> 4 & 0xF)), ('0' + ((n) & 0xF))
+#define HEX(n)                                                                                                                             \
+    ('0' + ((n) >> 28 & 0xF)), ('0' + ((n) >> 24 & 0xF)), ('0' + ((n) >> 20 & 0xF)), ('0' + ((n) >> 16 & 0xF)), ('0' + ((n) >> 12 & 0xF)), \
+      ('0' + ((n) >> 8 & 0xF)), ('0' + ((n) >> 4 & 0xF)), ('0' + ((n) & 0xF))
 
 /* Construct a string literal encoding the version number. */
 #ifdef COMPILER_VERSION
@@ -783,51 +781,24 @@ char const* info_version = "INFO"
 
 /* Construct a string literal encoding the version number components. */
 #elif defined(COMPILER_VERSION_MAJOR)
-char const info_version[] = {'I',
-                             'N',
-                             'F',
-                             'O',
-                             ':',
-                             'c',
-                             'o',
-                             'm',
-                             'p',
-                             'i',
-                             'l',
-                             'e',
-                             'r',
-                             '_',
-                             'v',
-                             'e',
-                             'r',
-                             's',
-                             'i',
-                             'o',
-                             'n',
-                             '[',
-                             COMPILER_VERSION_MAJOR,
+char const info_version[] = {'I', 'N', 'F', 'O', ':', 'c', 'o', 'm', 'p', 'i', 'l', 'e', 'r', '_', 'v', 'e', 'r', 's', 'i', 'o', 'n', '[',
+  COMPILER_VERSION_MAJOR,
     #ifdef COMPILER_VERSION_MINOR
-                             '.',
-                             COMPILER_VERSION_MINOR,
+  '.', COMPILER_VERSION_MINOR,
         #ifdef COMPILER_VERSION_PATCH
-                             '.',
-                             COMPILER_VERSION_PATCH,
+  '.', COMPILER_VERSION_PATCH,
             #ifdef COMPILER_VERSION_TWEAK
-                             '.',
-                             COMPILER_VERSION_TWEAK,
+  '.', COMPILER_VERSION_TWEAK,
             #endif
         #endif
     #endif
-                             ']',
-                             '\0'};
+  ']', '\0'};
 #endif
 
 /* Construct a string literal encoding the internal version number. */
 #ifdef COMPILER_VERSION_INTERNAL
-char const info_version_internal[] = {
-  'I', 'N', 'F', 'O', ':', 'c', 'o', 'm', 'p', 'i', 'l', 'e', 'r', '_', 'v', 'e',
-  'r', 's', 'i', 'o', 'n', '_', 'i', 'n', 't', 'e', 'r', 'n', 'a', 'l', '[', COMPILER_VERSION_INTERNAL,
-  ']', '\0'};
+char const info_version_internal[] = {'I', 'N', 'F', 'O', ':', 'c', 'o', 'm', 'p', 'i', 'l', 'e', 'r', '_', 'v', 'e', 'r', 's', 'i', 'o',
+  'n', '_', 'i', 'n', 't', 'e', 'r', 'n', 'a', 'l', '[', COMPILER_VERSION_INTERNAL, ']', '\0'};
 #elif defined(COMPILER_VERSION_INTERNAL_STR)
 char const* info_version_internal = "INFO"
                                     ":"
@@ -836,43 +807,18 @@ char const* info_version_internal = "INFO"
 
 /* Construct a string literal encoding the version number components. */
 #ifdef SIMULATE_VERSION_MAJOR
-char const info_simulate_version[] = {'I',
-                                      'N',
-                                      'F',
-                                      'O',
-                                      ':',
-                                      's',
-                                      'i',
-                                      'm',
-                                      'u',
-                                      'l',
-                                      'a',
-                                      't',
-                                      'e',
-                                      '_',
-                                      'v',
-                                      'e',
-                                      'r',
-                                      's',
-                                      'i',
-                                      'o',
-                                      'n',
-                                      '[',
-                                      SIMULATE_VERSION_MAJOR,
+char const info_simulate_version[] = {'I', 'N', 'F', 'O', ':', 's', 'i', 'm', 'u', 'l', 'a', 't', 'e', '_', 'v', 'e', 'r', 's', 'i', 'o',
+  'n', '[', SIMULATE_VERSION_MAJOR,
     #ifdef SIMULATE_VERSION_MINOR
-                                      '.',
-                                      SIMULATE_VERSION_MINOR,
+  '.', SIMULATE_VERSION_MINOR,
         #ifdef SIMULATE_VERSION_PATCH
-                                      '.',
-                                      SIMULATE_VERSION_PATCH,
+  '.', SIMULATE_VERSION_PATCH,
             #ifdef SIMULATE_VERSION_TWEAK
-                                      '.',
-                                      SIMULATE_VERSION_TWEAK,
+  '.', SIMULATE_VERSION_TWEAK,
             #endif
         #endif
     #endif
-                                      ']',
-                                      '\0'};
+  ']', '\0'};
 #endif
 
 /* Construct the string literal in pieces to prevent the source from
@@ -882,9 +828,9 @@ char const info_simulate_version[] = {'I',
 char const* info_platform = "INFO"
                             ":"
                             "platform[" PLATFORM_ID "]";
-char const* info_arch     = "INFO"
-                            ":"
-                            "arch[" ARCHITECTURE_ID "]";
+char const* info_arch = "INFO"
+                        ":"
+                        "arch[" ARCHITECTURE_ID "]";
 
 
 #define CXX_STD_98 199711L
@@ -965,8 +911,7 @@ const char* info_language_standard_default = "INFO"
 const char* info_language_extensions_default = "INFO"
                                                ":"
                                                "extensions_default["
-#if (defined(__clang__) || defined(__GNUC__) || defined(__xlC__) || defined(__TI_COMPILER_VERSION__) \
-     || defined(__RENESAS__)) \
+#if (defined(__clang__) || defined(__GNUC__) || defined(__xlC__) || defined(__TI_COMPILER_VERSION__) || defined(__RENESAS__))              \
   && !defined(__STRICT_ANSI__)
                                                "ON"
 #else

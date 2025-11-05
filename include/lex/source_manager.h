@@ -1,7 +1,7 @@
 #pragma once
 
+#include "../macros.h"
 #include "buffer/input_buffer.h"
-#include "macros.h"
 #include <fstream>
 #include <stdexcept>
 #include <string>
@@ -14,9 +14,9 @@ namespace lex {
 class SourceManager
 {
    public:
-    using char_type   = wchar_t;
+    using char_type = wchar_t;
     using string_type = std::wstring;
-    using size_type   = std::size_t;
+    using size_type = std::size_t;
 
     explicit SourceManager(const std::string& filename) :
         file_(filename, std::ios::binary),
@@ -60,8 +60,8 @@ class SourceManager
     std::pair<size_type, size_type> offset_map_(const size_type& offset) const;
 
    private:
-    std::ifstream       file_;
-    std::string         filepath_;
+    std::ifstream file_;
+    std::string filepath_;
     buffer::InputBuffer input_buffer_;
 };
 }  // lex

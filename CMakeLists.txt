@@ -3,7 +3,7 @@ project(MyProgrammingLanguage)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_compile_options(-g -fopenmp)
+add_compile_options(-g -stdlib=libc++ -fopenmp)
 
 # Add include directories
 include_directories(${CMAKE_SOURCE_DIR}/include)

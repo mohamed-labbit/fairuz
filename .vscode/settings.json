@@ -72,6 +72,10 @@
         "filesystem": "cpp",
         "format": "cpp",
         "iterator": "cpp",
-        "utility": "cpp"
-    }
+        "utility": "cpp",
+        "version": "cpp",
+        "shared_mutex": "cpp",
+        "atomic": "cpp"
+    },
+    "editor.formatOnSave": true
 }

@@ -1,4 +1,4 @@
-#include "lex/source_manager.h"
+#include "../../include/lex/source_manager.h"
 
 
 namespace mylang {
@@ -50,9 +50,9 @@ offset_pair SourceManager::offset_map_(const size_type& offset) const
 
     size_type base_line = buf.position().line() - diff;
 
-    iter           = 0;
+    iter = 0;
     size_type line = 1;
-    size_type col  = 1;
+    size_type col = 1;
 
     const size_type limit = std::min(offset, buf.size() - 1);
 
@@ -81,7 +81,7 @@ offset_pair SourceManager::offset_map_(const size_type& offset) const
 
 offset_pair SourceManager::offset_map(const size_type& offset)
 {
-    auto& buf  = this->input_buffer_;
+    auto& buf = this->input_buffer_;
     auto& file = this->file_;
 
     if (offset == buf.buffer_offset())
@@ -96,8 +96,8 @@ offset_pair SourceManager::offset_map(const size_type& offset)
 
     file.imbue(std::locale(file.getloc()));
 
-    size_type line           = 1;
-    size_type col            = 1;
+    size_type line = 1;
+    size_type col = 1;
     size_type current_offset = 0;
 
     char c;

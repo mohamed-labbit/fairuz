@@ -68,8 +68,8 @@ inline const char* ast_node_type_to_string(ASTNodeType type)
 struct ASTNode
 {
    private:
-    ASTNodeType                           type_;
-    lex::tok::Token                       token_;
+    ASTNodeType type_;
+    lex::tok::Token token_;
     std::vector<std::unique_ptr<ASTNode>> children_;
 
    public:
@@ -91,17 +91,17 @@ struct ASTNode
     virtual ~ASTNode() = default;
 
     // Delete copy operations
-    ASTNode(const ASTNode&)            = delete;
+    ASTNode(const ASTNode&) = delete;
     ASTNode& operator=(const ASTNode&) = delete;
 
     // Default move operations
-    ASTNode(ASTNode&&)            = default;
+    ASTNode(ASTNode&&) = default;
     ASTNode& operator=(ASTNode&&) = default;
 
     // Accessors
-    ASTNodeType            type() const { return type_; }
+    ASTNodeType type() const { return type_; }
     const lex::tok::Token& token() const { return token_; }
-    lex::tok::Token&       token() { return token_; }
+    lex::tok::Token& token() { return token_; }
 
     const std::vector<std::unique_ptr<ASTNode>>& children() const { return children_; }
 
@@ -153,8 +153,7 @@ inline std::unique_ptr<ASTNode> make_ast_node(ASTNodeType type, lex::tok::Token 
     return std::make_unique<ASTNode>(type, std::move(token));
 }
 
-inline std::unique_ptr<ASTNode>
-make_binary_op(lex::tok::Token op_token, std::unique_ptr<ASTNode> left, std::unique_ptr<ASTNode> right)
+inline std::unique_ptr<ASTNode> make_binary_op(lex::tok::Token op_token, std::unique_ptr<ASTNode> left, std::unique_ptr<ASTNode> right)
 {
     auto node = make_ast_node(ASTNodeType::BINARY_OP, std::move(op_token));
     node->add_child(std::move(left));
@@ -162,108 +161,6 @@ make_binary_op(lex::tok::Token op_token, std::unique_ptr<ASTNode> left, std::uni
     return node;
 }
 
-class Parser
-{
-   private:
-    lex::Lexer               lexer_;
-    lex::tok::Token          current_token_;
-    std::vector<std::string> errors_;
-    bool                     had_error_;
-
-   public:
-    explicit Parser(const std::string& filename) :
-        lexer_(filename),
-        current_token_(),
-        errors_(),
-        had_error_(false)
-    {
-        advance();  // Load first token
-    }
-
-    // Main entry point
-    std::unique_ptr<ASTNode> parse() { return parse_program(); }
-
-    // Error handling
-    bool                            has_errors() const { return had_error_; }
-    const std::vector<std::string>& errors() const { return errors_; }
-
-   private:
-    // Token management
-    void advance() { current_token_ = lexer_.next(); }
-
-    lex::tok::Token peek() { return lexer_.peek(); }
-
-    const lex::tok::Token& current() const { return current_token_; }
-
-    bool at_end() const { return current_token_.type() == lex::tok::TokenType::END_OF_FILE; }
-
-    // Matching utilities
-    bool is_kind(lex::tok::TokenType type) const
-    {
-        if (at_end())
-        {
-            return false;
-        }
-
-        return current_token_.type() == type;
-    }
-
-    bool match(lex::tok::TokenType type)
-    {
-        if (is_kind(type))
-        {
-            advance();
-            return true;
-        }
-
-        return false;
-    }
-
-    template<typename... Args>
-    bool match(lex::tok::TokenType first, Args... rest)
-    {
-        if (match(first))
-        {
-            return true;
-        }
-
-        return match(rest...);
-    }
-
-    lex::tok::Token consume(lex::tok::TokenType type, const std::string& error_msg)
-    {
-        if (is_kind(type))
-        {
-            lex::tok::Token tok = current_token_;
-            advance();
-            return tok;
-        }
-
-        report_error(error_msg);
-        return current_token_;
-    }
-
-    void report_error(const std::string& message)
-    {
-        std::string error = "Error at line " + std::to_string(current_token_.line()) + ", col "
-                          + std::to_string(current_token_.column()) + ": " + message;
-        errors_.push_back(error);
-        had_error_ = true;
-    }
-
-    // Parsing methods - implement based on your grammar
-    std::unique_ptr<ASTNode> parse_program();
-    std::unique_ptr<ASTNode> parse_statement();
-    std::unique_ptr<ASTNode> parse_expression();
-    std::unique_ptr<ASTNode> parse_assignment();
-    std::unique_ptr<ASTNode> parse_term();
-    std::unique_ptr<ASTNode> parse_factor();
-    std::unique_ptr<ASTNode> parse_primary();
-    std::unique_ptr<ASTNode> parse_block();
-
-    // Error recovery
-    void synchronize();
-};
 
 }  // namespace ast
 }  // namespace parser

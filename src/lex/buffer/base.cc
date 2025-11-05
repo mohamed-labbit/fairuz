@@ -1,7 +1,5 @@
-#include "lex/buffer/base.h"
-#include "../utfcpp/source/utf8.h"
-#include "lex/util.h"
-
+#include "../../../include/lex/buffer/base.h"
+#include "../../../utfcpp/source/utf8.h"
 
 namespace mylang {
 namespace lex {
@@ -18,25 +16,25 @@ bool InputBufferBase::refresh_buffer(const unsigned int to_refresh)
     }
 
     size_type max_chars = bufs[to_refresh].size() - 1;
-    auto      buf       = read_wchar_window(max_chars);
+    auto buf = read_wchar_window(max_chars);
 
     if (buf.empty())
     {
         bufs[to_refresh].clear();
-        bufs[to_refresh].push_back(BUF_END);
+        bufs[to_refresh].push_back(BUFFER_END);
         return false;
     }
 
     bufs[to_refresh].assign(buf.begin(), buf.end());
-    bufs[to_refresh].push_back(BUF_END);
+    bufs[to_refresh].push_back(BUFFER_END);
 
     return true;
 }
 
 typename InputBufferBase::buffer_t InputBufferBase::read_wchar_window(size_type max_chars)
 {
-    auto& file       = this->file_;
-    auto& byte_pos   = this->byte_position_;
+    auto& file = this->file_;
+    auto& byte_pos = this->byte_position_;
     auto& char_count = this->char_count_;
 
     if (max_chars == 0)
@@ -49,7 +47,7 @@ typename InputBufferBase::buffer_t InputBufferBase::read_wchar_window(size_type 
         return {};
     }
 
-    size_type         byte_chunk_size = max_chars * 4;
+    size_type byte_chunk_size = max_chars * 4;
     std::vector<char> byte_buffer(byte_chunk_size);
 
     file.read(byte_buffer.data(), byte_chunk_size);

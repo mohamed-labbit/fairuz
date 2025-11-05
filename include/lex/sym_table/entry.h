@@ -1,27 +1,21 @@
 #pragma once
 
-#include "lex/token.h"
+#include "../token.h"
 #include <string>
 
 namespace mylang {
 namespace lex {
 
 
-enum class SymbolType : int {
-    VARIABLE,
-    PARAMETER,
-    KEYWORD,
-    FUNCTION,
-    CONSTANT
-};
+enum class SymbolType : int { VARIABLE, PARAMETER, KEYWORD, FUNCTION, CONSTANT };
 
 struct SymbolTableEntry
 {
     using string_type = std::u16string;
-    using size_type   = std::size_t;
+    using size_type = std::size_t;
 
     SymbolType type_;
-    size_type  scope_;  // nesting_level
+    size_type scope_;  // nesting_level
 
 
     SymbolTableEntry() = default;
@@ -40,7 +34,7 @@ struct SymbolTableEntry
 
     SymbolTableEntry& operator=(const SymbolTableEntry& other)
     {
-        this->type_  = other.type_;
+        this->type_ = other.type_;
         this->scope_ = other.scope_;
         return *this;
     }

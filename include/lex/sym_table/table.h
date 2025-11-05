@@ -1,7 +1,7 @@
 #pragma once
 
+#include "../token.h"
 #include "entry.h"
-#include "lex/token.h"
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -17,8 +17,8 @@ class SymbolTable
 {
    public:
     using string_type = std::u16string;
-    using Entry       = SymbolTableEntry;
-    using size_type   = std::size_t;
+    using Entry = SymbolTableEntry;
+    using size_type = std::size_t;
 
     // Each scope = a map from lexeme to entry
     using Scope = std::unordered_map<string_type, Entry>;
@@ -121,7 +121,7 @@ class SymbolTable
     // Respects shadowing - inner scope symbols hide outer ones with same name
     std::vector<Entry> getAllVisibleSymbols() const
     {
-        std::vector<Entry>              symbols;
+        std::vector<Entry> symbols;
         std::unordered_set<string_type> seen;
 
         // Iterate from innermost to outermost

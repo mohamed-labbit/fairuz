@@ -1,6 +1,6 @@
 #pragma once
 
-#include "macros.h"
+#include "../../macros.h"
 #include <fstream>
 #include <string>
 
@@ -12,7 +12,7 @@ namespace buffer {
 class InputBufferBase
 {
    public:
-    using buffer_t  = std::u16string;
+    using buffer_t = std::u16string;
     using size_type = std::size_t;
 
     InputBufferBase(std::ifstream& f, size_type cap = DEFAULT_CAPACITY) :
@@ -20,8 +20,8 @@ class InputBufferBase
         byte_position_(0),
         char_count_(0)
     {
-        buffers_[0].resize(cap + 1, BUF_END);
-        buffers_[1].resize(cap + 1, BUF_END);
+        buffers_[0].resize(cap + 1, BUFFER_END);
+        buffers_[1].resize(cap + 1, BUFFER_END);
 
         // Open file in binary mode for proper UTF-8 reading
         if (!file_.is_open())
@@ -36,9 +36,9 @@ class InputBufferBase
 
    protected:
     std::ifstream& file_;
-    buffer_t       buffers_[2];
-    std::size_t    byte_position_;  // Current byte position in file
-    std::size_t    char_count_;     // Total characters read so far
+    buffer_t buffers_[2];
+    std::size_t byte_position_;  // Current byte position in file
+    std::size_t char_count_;  // Total characters read so far
 
    private:
     // Read up to max_chars wide characters from the current file position

@@ -10,15 +10,15 @@ const std::string test_cases_path = "/Users/mohamedrabbit/mylang/tests/lexer/tes
 
 inline void PrintTo(const mylang::lex::tok::Token& tok, std::ostream* os)
 {
-    *os << "mylang::lex::tok::Token(\"" << utf8::utf16to8(tok.str()) << "\", type=" << static_cast<int>(tok.type())
+    *os << "mylang::lex::tok::Token(\"" << utf8::utf16to8(tok.lexeme()) << "\", type=" << static_cast<int>(tok.type())
         << ", line=" << tok.line() << ", col=" << tok.column() << ")";
 }
 
 TEST(LexerTest, RecognizesPlus)
 {
-    mylang::lex::Lexer                   lexer(test_cases_path + "recognizes_plus.txt");
-    std::vector<mylang::lex::tok::Token> tokens   = lexer.tokenize();
-    mylang::lex::tok::Token              expected = lexer.make_token(mylang::lex::tok::TokenType::PLUS, u"+", 1, 1);
+    mylang::lex::Lexer lexer(test_cases_path + "recognizes_plus.txt");
+    auto tokens = lexer.tokenize();
+    auto expected = lexer.make_token(mylang::lex::tok::TokenType::PLUS, u"+", 1, 1);
 
     EXPECT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0].type(), mylang::lex::tok::TokenType::START_OF_FILE);
@@ -28,9 +28,9 @@ TEST(LexerTest, RecognizesPlus)
 
 TEST(LexerTest, RecognizesInteger)
 {
-    mylang::lex::Lexer                   lexer(test_cases_path + "recognizes_integer.txt");
-    std::vector<mylang::lex::tok::Token> tokens   = lexer.tokenize();
-    mylang::lex::tok::Token              expected = lexer.make_token(mylang::lex::tok::TokenType::NUMBER, u"123", 1, 1);
+    mylang::lex::Lexer lexer(test_cases_path + "recognizes_integer.txt");
+    auto tokens = lexer.tokenize();
+    auto expected = lexer.make_token(mylang::lex::tok::TokenType::NUMBER, u"123", 1, 1);
 
     EXPECT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0].type(), mylang::lex::tok::TokenType::START_OF_FILE);
@@ -40,9 +40,9 @@ TEST(LexerTest, RecognizesInteger)
 
 TEST(LexerTest, RecognizesIdentifier)
 {
-    mylang::lex::Lexer                   lexer(test_cases_path + "recognizes_identifier.txt");
-    std::vector<mylang::lex::tok::Token> tokens = lexer.tokenize();
-    mylang::lex::tok::Token expected = lexer.make_token(mylang::lex::tok::TokenType::IDENTIFIER, u"مرحبا", 1, 1);
+    mylang::lex::Lexer lexer(test_cases_path + "recognizes_identifier.txt");
+    auto tokens = lexer.tokenize();
+    auto expected = lexer.make_token(mylang::lex::tok::TokenType::IDENTIFIER, u"مرحبا", 1, 1);
 
     EXPECT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0].type(), mylang::lex::tok::TokenType::START_OF_FILE);
@@ -52,8 +52,8 @@ TEST(LexerTest, RecognizesIdentifier)
 
 TEST(LexerTest, RecognizesKeyword)
 {
-    mylang::lex::Lexer                   lexer(test_cases_path + "recognizes_keyword.txt");
-    std::vector<mylang::lex::tok::Token> tokens = lexer.tokenize();
+    mylang::lex::Lexer lexer(test_cases_path + "recognizes_keyword.txt");
+    auto tokens = lexer.tokenize();
 
     EXPECT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0].type(), mylang::lex::tok::TokenType::START_OF_FILE);
@@ -63,9 +63,9 @@ TEST(LexerTest, RecognizesKeyword)
 
 TEST(LexerTest, RecognizesStringLiteral)
 {
-    mylang::lex::Lexer                   lexer(test_cases_path + "recognizes_string_literal.txt");
-    std::vector<mylang::lex::tok::Token> tokens = lexer.tokenize();
-    mylang::lex::tok::Token expected = lexer.make_token(mylang::lex::tok::TokenType::STRING, u"العالم", 1, 1);
+    mylang::lex::Lexer lexer(test_cases_path + "recognizes_string_literal.txt");
+    auto tokens = lexer.tokenize();
+    auto expected = lexer.make_token(mylang::lex::tok::TokenType::STRING, u"العالم", 1, 1);
 
     EXPECT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0].type(), mylang::lex::tok::TokenType::START_OF_FILE);
@@ -82,15 +82,12 @@ TEST(LexerTest, HandlesUnexpectedCharacter) {
 
 TEST(LexerTest, TokenizesExpression01)
 {
-    mylang::lex::Lexer                   lexer(test_cases_path + "recognizes_expression.txt");
-    std::vector<mylang::lex::tok::Token> tokens = lexer.tokenize();
+    mylang::lex::Lexer lexer(test_cases_path + "recognizes_expression.txt");
+    auto tokens = lexer.tokenize();
 
-    std::vector<mylang::lex::tok::Token> expected = {
-      lexer.make_token(mylang::lex::tok::TokenType::START_OF_FILE, u"", 1, 1),
-      lexer.make_token(mylang::lex::tok::TokenType::IDENTIFIER, u"س", 1, 1),
-      lexer.make_token(mylang::lex::tok::TokenType::EQ, u"=", 1, 3),
-      lexer.make_token(mylang::lex::tok::TokenType::NUMBER, u"42", 1, 5),
-      lexer.make_token(mylang::lex::tok::TokenType::PLUS, u"+", 1, 8),
+    std::vector<mylang::lex::tok::Token> expected = {lexer.make_token(mylang::lex::tok::TokenType::START_OF_FILE, u"", 1, 1),
+      lexer.make_token(mylang::lex::tok::TokenType::IDENTIFIER, u"س", 1, 1), lexer.make_token(mylang::lex::tok::TokenType::EQ, u"=", 1, 3),
+      lexer.make_token(mylang::lex::tok::TokenType::NUMBER, u"42", 1, 5), lexer.make_token(mylang::lex::tok::TokenType::PLUS, u"+", 1, 8),
       lexer.make_token(mylang::lex::tok::TokenType::IDENTIFIER, u"ي", 1, 10),
       lexer.make_token(mylang::lex::tok::TokenType::END_OF_FILE, u"", 1, 10)};
 
@@ -102,14 +99,12 @@ TEST(LexerTest, TokenizesExpression01)
 
 TEST(LexerTest, TokenizesExpression02)
 {
-    mylang::lex::Lexer                   lexer(test_cases_path + "recognizes_stmt_00.txt");
-    std::vector<mylang::lex::tok::Token> tokens = lexer.tokenize();
+    mylang::lex::Lexer lexer(test_cases_path + "recognizes_stmt_00.txt");
+    auto tokens = lexer.tokenize();
 
-    std::vector<mylang::lex::tok::Token> expected = {
-      lexer.make_token(mylang::lex::tok::TokenType::START_OF_FILE, u"", 1, 1),
+    std::vector<mylang::lex::tok::Token> expected = {lexer.make_token(mylang::lex::tok::TokenType::START_OF_FILE, u"", 1, 1),
       lexer.make_token(mylang::lex::tok::TokenType::KW_IF, u"اذا", 1, 1),
-      lexer.make_token(mylang::lex::tok::TokenType::IDENTIFIER, u"س", 1, 5),
-      lexer.make_token(mylang::lex::tok::TokenType::EQ, u"=", 1, 7),
+      lexer.make_token(mylang::lex::tok::TokenType::IDENTIFIER, u"س", 1, 5), lexer.make_token(mylang::lex::tok::TokenType::EQ, u"=", 1, 7),
       lexer.make_token(mylang::lex::tok::TokenType::IDENTIFIER, u"د", 1, 9),
       lexer.make_token(mylang::lex::tok::TokenType::COLON, u":", 1, 10),
       lexer.make_token(mylang::lex::tok::TokenType::END_OF_FILE, u"", 1, 10)};
@@ -120,17 +115,68 @@ TEST(LexerTest, TokenizesExpression02)
 
 TEST(LexerTest, TokenizesExpression03)
 {
-    mylang::lex::Lexer                   lexer(test_cases_path + "recognizes_stmt_01.txt");
-    std::vector<mylang::lex::tok::Token> tokens = lexer.tokenize();
+    mylang::lex::Lexer lexer(test_cases_path + "recognizes_stmt_01.txt");
+    auto tokens = lexer.tokenize();
 
-    std::vector<mylang::lex::tok::Token> expected = {
-      lexer.make_token(mylang::lex::tok::TokenType::START_OF_FILE, u"", 1, 1),
+    std::vector<mylang::lex::tok::Token> expected = {lexer.make_token(mylang::lex::tok::TokenType::START_OF_FILE, u"", 1, 1),
       lexer.make_token(mylang::lex::tok::TokenType::KW_WHILE, u"طالما", 1, 1),
       lexer.make_token(mylang::lex::tok::TokenType::IDENTIFIER, u"س", 1, 7),
       lexer.make_token(mylang::lex::tok::TokenType::NEQ, u"!=", 1, 9),
       lexer.make_token(mylang::lex::tok::TokenType::IDENTIFIER, u"د", 1, 12),
       lexer.make_token(mylang::lex::tok::TokenType::COLON, u":", 1, 13),
       lexer.make_token(mylang::lex::tok::TokenType::END_OF_FILE, u"", 1, 13)};
+
+    EXPECT_EQ(tokens.size(), expected.size());
+    EXPECT_EQ(tokens, expected);
+}
+
+TEST(LexerTest, TokenizesExpression04)
+{
+    mylang::lex::Lexer lexer(test_cases_path + "recognizes_stmt_02.txt");
+    auto tokens = lexer.tokenize();
+
+    std::vector<mylang::lex::tok::Token> expected = {lexer.make_token(mylang::lex::tok::TokenType::START_OF_FILE, u"", 1, 1),
+      lexer.make_token(mylang::lex::tok::TokenType::KW_FOR, u"بكل", 1, 1),
+      lexer.make_token(mylang::lex::tok::TokenType::IDENTIFIER, u"ل", 1, 5),
+      lexer.make_token(mylang::lex::tok::TokenType::IDENTIFIER, u"في", 1, 7),
+      lexer.make_token(mylang::lex::tok::TokenType::IDENTIFIER, u"ك", 1, 10),
+      lexer.make_token(mylang::lex::tok::TokenType::COLON, u":", 1, 11),
+      lexer.make_token(mylang::lex::tok::TokenType::END_OF_FILE, u"", 1, 11)};
+
+    EXPECT_EQ(tokens.size(), expected.size());
+    EXPECT_EQ(tokens, expected);
+}
+
+TEST(LexerTest, TokenizesExpression05)
+{
+    mylang::lex::Lexer lexer(test_cases_path + "recognizes_stmt_03.txt");
+    auto tokens = lexer.tokenize();
+
+    std::vector<mylang::lex::tok::Token> expected = {
+      lexer.make_token(mylang::lex::tok::TokenType::START_OF_FILE, u"", 1, 1),
+      lexer.make_token(mylang::lex::tok::TokenType::IDENTIFIER, u"ا", 1, 1),
+      lexer.make_token(mylang::lex::tok::TokenType::ASSIGN, u":=", 1, 3),
+      lexer.make_token(mylang::lex::tok::TokenType::KW_FALSE, u"خطا", 1, 6),
+      lexer.make_token(mylang::lex::tok::TokenType::END_OF_FILE, u"", 1, 8),
+    };
+
+    EXPECT_EQ(tokens.size(), expected.size());
+    EXPECT_EQ(tokens, expected);
+}
+
+TEST(LexerTest, TokenizesExpression06)
+{
+    mylang::lex::Lexer lexer(test_cases_path + "recognizes_stmt_04.txt");
+    auto tokens = lexer.tokenize();
+
+    std::vector<mylang::lex::tok::Token> expected = {lexer.make_token(mylang::lex::tok::TokenType::START_OF_FILE, u"", 1, 1),
+      lexer.make_token(mylang::lex::tok::TokenType::KW_IF, u"اذا", 1, 5),
+      lexer.make_token(mylang::lex::tok::TokenType::IDENTIFIER, u"ا", 1, 3), lexer.make_token(mylang::lex::tok::TokenType::EQ, u"=", 1, 7),
+      lexer.make_token(mylang::lex::tok::TokenType::NUMBER, u"3", 1, 9), lexer.make_token(mylang::lex::tok::TokenType::COLON, u":", 1, 10),
+      lexer.make_token(mylang::lex::tok::TokenType::NEWLINE, u"\n", 1, 10),
+      lexer.make_token(mylang::lex::tok::TokenType::INDENT, u"", 2, 1),
+      lexer.make_token(mylang::lex::tok::TokenType::KW_RETURN, u"اخرج", 2, 5),
+      lexer.make_token(mylang::lex::tok::TokenType::END_OF_FILE, u"", 2, 5)};
 
     EXPECT_EQ(tokens.size(), expected.size());
     EXPECT_EQ(tokens, expected);

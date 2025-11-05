@@ -35,17 +35,17 @@ struct Position
 class InputBuffer: public InputBufferBase
 {
    public:
-    using char_type   = char16_t;
-    using pointer     = char_type*;
+    using char_type = char16_t;
+    using pointer = char_type*;
     using string_type = std::u16string;
-    using size_type   = size_t;
+    using size_type = size_t;
 
     InputBuffer(std::ifstream& f, size_type cap = DEFAULT_CAPACITY) :
         capacity_(cap),
         InputBufferBase(f, cap)
     {
-        buffers_[0].resize(capacity_ + 1, BUF_END);
-        buffers_[1].resize(capacity_ + 1, BUF_END);
+        buffers_[0].resize(capacity_ + 1, BUFFER_END);
+        buffers_[1].resize(capacity_ + 1, BUFFER_END);
         reset();
     }
 
@@ -77,17 +77,17 @@ class InputBuffer: public InputBufferBase
 
    private:
     size_type capacity_ = DEFAULT_CAPACITY;
-    pointer   current_{nullptr};
-    uint8_t   current_buffer_{0};
+    pointer current_{nullptr};
+    uint8_t current_buffer_{0};
     size_type file_pos_{0};
 
-    Position           current_position_;
+    Position current_position_;
     std::stack<size_t> columns_;
 
     struct PushbackEntry
     {
         char_type ch_;
-        Position  pos_;
+        Position pos_;
     };
 
     std::stack<PushbackEntry> unget_stack_;
