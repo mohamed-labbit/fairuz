@@ -84,7 +84,6 @@ static const std::unordered_map<std::u16string, TokenType, util::U16StringHash, 
 class Token
 {
    public:
-
     struct Location
     {
         std::string filepath_;

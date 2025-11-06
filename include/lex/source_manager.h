@@ -14,7 +14,6 @@ namespace lex {
 class SourceManager
 {
    public:
-
     explicit SourceManager(const std::string& filename) :
         file_(filename, std::ios::binary),
         input_buffer_(file_, DEFAULT_CAPACITY)
