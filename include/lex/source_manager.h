@@ -14,9 +14,6 @@ namespace lex {
 class SourceManager
 {
    public:
-    using char_type = wchar_t;
-    using string_type = std::wstring;
-    using size_type = std::size_t;
 
     explicit SourceManager(const std::string& filename) :
         file_(filename, std::ios::binary),
@@ -36,11 +33,11 @@ class SourceManager
         }
     }
 
-    size_type line() const;
+    std::size_t line() const;
 
-    size_type column() const;
+    std::size_t column() const;
 
-    size_type fpos() const;
+    std::size_t fpos() const;
 
     const std::string& fpath() const;
 
@@ -49,15 +46,15 @@ class SourceManager
     bool done() const;
 
     // next consumes the character, peek does not
-    char_type peek();
+    char16_t peek();
 
-    char_type consume_char();
+    char16_t consume_char();
 
-    char_type current();
+    char16_t current();
 
-    std::pair<size_type, size_type> offset_map(const size_type& offset);
+    std::pair<std::size_t, std::size_t> offset_map(const std::size_t& offset);
 
-    std::pair<size_type, size_type> offset_map_(const size_type& offset) const;
+    std::pair<std::size_t, std::size_t> offset_map_(const std::size_t& offset) const;
 
    private:
     std::ifstream file_;

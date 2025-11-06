@@ -6,11 +6,11 @@ namespace lex {
 namespace buffer {
 
 
-typename InputBuffer::size_type InputBuffer::size() const { return this->buffers_[this->current_buffer_].length(); }
+std::size_t InputBuffer::size() const { return this->buffers_[this->current_buffer_].length(); }
 
-typename InputBuffer::size_type InputBuffer::buffer_offset() const
+std::size_t InputBuffer::buffer_offset() const
 {
-    return static_cast<size_type>(this->current_ - this->buffers_[this->current_buffer_].data());
+    return static_cast<std::size_t>(this->current_ - this->buffers_[this->current_buffer_].data());
 }
 
 bool InputBuffer::empty() const
@@ -18,16 +18,16 @@ bool InputBuffer::empty() const
     return (!this->file_.is_open() || this->current_ == nullptr || this->buffers_[this->current_buffer_].empty());
 }
 
-typename InputBuffer::char_type InputBuffer::at(const size_type idx) const { return this->buffers_[this->current_buffer_][idx]; }
+char16_t InputBuffer::at(const std::size_t idx) const { return this->buffers_[this->current_buffer_][idx]; }
 
-typename InputBuffer::char_type InputBuffer::consume_char()
+char16_t InputBuffer::consume_char()
 {
     auto& unget_stack = this->unget_stack_;
     auto& cur_pos = this->current_position_;
     auto& cur_buf = this->current_buffer_;
     auto& cur = this->current_;
 
-    char_type ch;
+    char16_t ch;
     if (!unget_stack.empty())
     {
         cur_pos = unget_stack.top().pos_;
@@ -55,23 +55,23 @@ typename InputBuffer::char_type InputBuffer::consume_char()
 }
 
 [[nodiscard]]
-const typename InputBuffer::char_type& InputBuffer::current()
+const char16_t& InputBuffer::current()
 {
     auto& cur = this->current_;
     auto& cur_buf = this->current_buffer_;
 
     if (cur == nullptr)
     {
-        char_type end = BUFFER_END;
-        return std::cref<char_type>(end);
+        char16_t end = BUFFER_END;
+        return std::cref<char16_t>(end);
     }
 
     if (*cur == BUFFER_END)
     {
         if (!this->refresh_buffer(cur_buf ^ 1))
         {
-            char_type end = BUFFER_END;
-            return std::cref<char_type>(end);
+            char16_t end = BUFFER_END;
+            return std::cref<char16_t>(end);
         }
 
         this->swap_buffers_();
@@ -81,15 +81,15 @@ const typename InputBuffer::char_type& InputBuffer::current()
 }
 
 [[nodiscard]]
-const typename InputBuffer::char_type& InputBuffer::peek()
+const char16_t& InputBuffer::peek()
 {
     auto& cur = this->current_;
     auto& cur_buf = this->current_buffer_;
 
     if (cur == nullptr)
     {
-        char_type end = BUFFER_END;
-        return std::cref<char_type>(end);
+        char16_t end = BUFFER_END;
+        return std::cref<char16_t>(end);
     }
 
     pointer forward = cur + 1;
@@ -97,8 +97,8 @@ const typename InputBuffer::char_type& InputBuffer::peek()
     {
         if (!refresh_buffer(cur_buf ^ 1))
         {
-            char_type end = BUFFER_END;
-            return std::cref<char_type>(end);
+            char16_t end = BUFFER_END;
+            return std::cref<char16_t>(end);
         }
 
         swap_buffers_();
@@ -109,8 +109,8 @@ const typename InputBuffer::char_type& InputBuffer::peek()
     {
         if (!refresh_buffer(cur_buf ^ 1))
         {
-            char_type end = BUFFER_END;
-            return std::cref<char_type>(end);
+            char16_t end = BUFFER_END;
+            return std::cref<char16_t>(end);
         }
 
         swap_buffers_();
@@ -120,21 +120,21 @@ const typename InputBuffer::char_type& InputBuffer::peek()
     return *forward;
 }
 
-typename InputBuffer::string_type InputBuffer::n_peek(size_type n)
+std::u16string InputBuffer::n_peek(std::size_t n)
 {
     auto& cur_buf = this->current_buffer_;
     auto& bufs = this->buffers_;
     auto& cur = this->current_;
 
-    string_type out;
+    std::u16string out;
     if (n == 0)
     {
         return out;
     }
 
-    size_type rem = n;
+    std::size_t rem = n;
     int buf_idx = cur_buf;
-    size_type offset = static_cast<size_type>(cur - bufs[buf_idx].data() + 1);
+    std::size_t offset = static_cast<std::size_t>(cur - bufs[buf_idx].data() + 1);
 
     while (rem > 0)
     {
@@ -158,7 +158,7 @@ typename InputBuffer::string_type InputBuffer::n_peek(size_type n)
 }
 
 
-void InputBuffer::consume(size_type len)
+void InputBuffer::consume(std::size_t len)
 {
     while (len-- > 0)
     {
@@ -166,7 +166,7 @@ void InputBuffer::consume(size_type len)
     }
 }
 
-void InputBuffer::unget(char_type ch)
+void InputBuffer::unget(char16_t ch)
 {
     // store previous position instead of current one
     Position prev_pos = current_position_;
@@ -214,7 +214,7 @@ void InputBuffer::swap_buffers_()
     }
 }
 
-void InputBuffer::advance_position_(char_type ch)
+void InputBuffer::advance_position_(char16_t ch)
 {
     auto& cur_pos = this->current_position_;
     auto& cols = this->columns_;
@@ -241,7 +241,7 @@ void InputBuffer::advance_position_(char_type ch)
     }
 }
 
-void InputBuffer::rewind_position_(char_type ch)
+void InputBuffer::rewind_position_(char16_t ch)
 {
     auto& cur_pos = this->current_position_;
     auto& cols = this->columns_;
@@ -252,7 +252,7 @@ void InputBuffer::rewind_position_(char_type ch)
         return;
     }
 
-    cur_pos.file_pos_ = std::max<size_type>(0, cur_pos.fpos() - 1);
+    cur_pos.file_pos_ = std::max<std::size_t>(0, cur_pos.fpos() - 1);
 
     if (ch == u'\n')
     {
@@ -261,7 +261,7 @@ void InputBuffer::rewind_position_(char_type ch)
             cols.pop();
         }
 
-        cur_pos.line_ = std::max<size_type>(1, cur_pos.line() - 1);
+        cur_pos.line_ = std::max<std::size_t>(1, cur_pos.line() - 1);
         cur_pos.column_ = cols.empty() ? 1 : cols.top();
     }
     else

@@ -15,7 +15,7 @@ bool InputBufferBase::refresh_buffer(const unsigned int to_refresh)
         return false;
     }
 
-    size_type max_chars = bufs[to_refresh].size() - 1;
+    std::size_t max_chars = bufs[to_refresh].size() - 1;
     auto buf = read_wchar_window(max_chars);
 
     if (buf.empty())
@@ -31,7 +31,7 @@ bool InputBufferBase::refresh_buffer(const unsigned int to_refresh)
     return true;
 }
 
-typename InputBufferBase::buffer_t InputBufferBase::read_wchar_window(size_type max_chars)
+typename InputBufferBase::buffer_t InputBufferBase::read_wchar_window(std::size_t max_chars)
 {
     auto& file = this->file_;
     auto& byte_pos = this->byte_position_;
@@ -47,7 +47,7 @@ typename InputBufferBase::buffer_t InputBufferBase::read_wchar_window(size_type 
         return {};
     }
 
-    size_type byte_chunk_size = max_chars * 4;
+    std::size_t byte_chunk_size = max_chars * 4;
     std::vector<char> byte_buffer(byte_chunk_size);
 
     file.read(byte_buffer.data(), byte_chunk_size);
@@ -61,7 +61,7 @@ typename InputBufferBase::buffer_t InputBufferBase::read_wchar_window(size_type 
     // validate the buffer bytes
     byte_buffer.resize(bytes_read);
 
-    size_type valid_bytes = bytes_read;
+    std::size_t valid_bytes = bytes_read;
 
     if (bytes_read > 0)
     {

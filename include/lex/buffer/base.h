@@ -13,9 +13,8 @@ class InputBufferBase
 {
    public:
     using buffer_t = std::u16string;
-    using size_type = std::size_t;
 
-    InputBufferBase(std::ifstream& f, size_type cap = DEFAULT_CAPACITY) :
+    InputBufferBase(std::ifstream& f, std::size_t cap = DEFAULT_CAPACITY) :
         file_(f),
         byte_position_(0),
         char_count_(0)
@@ -42,7 +41,7 @@ class InputBufferBase
 
    private:
     // Read up to max_chars wide characters from the current file position
-    buffer_t read_wchar_window(size_type max_chars);
+    buffer_t read_wchar_window(std::size_t max_chars);
 };
 }
 }  // lex

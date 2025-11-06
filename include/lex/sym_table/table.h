@@ -16,12 +16,10 @@ namespace lex {
 class SymbolTable
 {
    public:
-    using string_type = std::u16string;
     using Entry = SymbolTableEntry;
-    using size_type = std::size_t;
 
     // Each scope = a map from lexeme to entry
-    using Scope = std::unordered_map<string_type, Entry>;
+    using Scope = std::unordered_map<std::u16string, Entry>;
 
     SymbolTable()
     {
@@ -44,7 +42,7 @@ class SymbolTable
     // Insert symbol into current scope
     // Returns false if symbol already exists in current scope
     // Returns true if successfully inserted
-    bool insert(const string_type& lexeme, SymbolType st)
+    bool insert(const std::u16string& lexeme, SymbolType st)
     {
         auto& current_scope = this->scopes_.back();
 
@@ -55,13 +53,13 @@ class SymbolTable
         }
 
         // Insert into current scope
-        Entry e(st, static_cast<size_type>(scopeLevel()));
+        Entry e(st, static_cast<std::size_t>(scopeLevel()));
         current_scope[lexeme] = e;
         return true;
     }
 
     // Lookup symbol (searches from innermost → outermost)
-    std::optional<Entry> lookup(const string_type& name) const
+    std::optional<Entry> lookup(const std::u16string& name) const
     {
         for (auto it = this->scopes_.rbegin(); it != this->scopes_.rend(); ++it)
         {
@@ -76,10 +74,10 @@ class SymbolTable
     }
 
     // Check if a symbol is visible in the current scope chain
-    bool is_in_scope(const string_type& name) const { return lookup(name).has_value(); }
+    bool is_in_scope(const std::u16string& name) const { return lookup(name).has_value(); }
 
     // Check if a symbol exists at a specific scope level
-    bool is_in_scope(const string_type& name, std::optional<size_type> _scope) const
+    bool is_in_scope(const std::u16string& name, std::optional<std::size_t> _scope) const
     {
         // Default: check if symbol is visible anywhere in scope chain
         if (_scope == std::nullopt)
@@ -88,7 +86,7 @@ class SymbolTable
         }
 
         // Check if symbol exists at specific scope level
-        size_type scope_level = _scope.value();
+        std::size_t scope_level = _scope.value();
         if (scope_level >= this->scopes_.size())
         {
             return false;
@@ -122,7 +120,7 @@ class SymbolTable
     std::vector<Entry> getAllVisibleSymbols() const
     {
         std::vector<Entry> symbols;
-        std::unordered_set<string_type> seen;
+        std::unordered_set<std::u16string> seen;
 
         // Iterate from innermost to outermost
         for (auto it = this->scopes_.rbegin(); it != this->scopes_.rend(); ++it)
@@ -142,7 +140,7 @@ class SymbolTable
     }
 
     // Get all symbols at a specific scope level
-    std::vector<Entry> getSymbolsAtLevel(size_type level) const
+    std::vector<Entry> getSymbolsAtLevel(std::size_t level) const
     {
         std::vector<Entry> symbols;
         if (level < this->scopes_.size())

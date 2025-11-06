@@ -35,12 +35,9 @@ struct Position
 class InputBuffer: public InputBufferBase
 {
    public:
-    using char_type = char16_t;
-    using pointer = char_type*;
-    using string_type = std::u16string;
-    using size_type = size_t;
+    using pointer = char16_t*;
 
-    InputBuffer(std::ifstream& f, size_type cap = DEFAULT_CAPACITY) :
+    InputBuffer(std::ifstream& f, std::size_t cap = DEFAULT_CAPACITY) :
         capacity_(cap),
         InputBufferBase(f, cap)
     {
@@ -49,44 +46,44 @@ class InputBuffer: public InputBufferBase
         reset();
     }
 
-    size_type size() const;
+    std::size_t size() const;
 
-    size_type buffer_offset() const;
+    std::size_t buffer_offset() const;
 
     bool empty() const;
 
-    char_type at(const size_type idx) const;
+    char16_t at(const std::size_t idx) const;
 
-    char_type consume_char();
-
-    [[nodiscard]]
-    const char_type& current();
+    char16_t consume_char();
 
     [[nodiscard]]
-    const char_type& peek();
+    const char16_t& current();
 
-    string_type n_peek(size_type n);
+    [[nodiscard]]
+    const char16_t& peek();
 
-    void consume(size_type len);
+    std::u16string n_peek(std::size_t n);
 
-    void unget(char_type ch);
+    void consume(std::size_t len);
+
+    void unget(char16_t ch);
 
     void reset();
 
     Position position() const noexcept;
 
    private:
-    size_type capacity_ = DEFAULT_CAPACITY;
+    std::size_t capacity_ = DEFAULT_CAPACITY;
     pointer current_{nullptr};
     uint8_t current_buffer_{0};
-    size_type file_pos_{0};
+    std::size_t file_pos_{0};
 
     Position current_position_;
     std::stack<size_t> columns_;
 
     struct PushbackEntry
     {
-        char_type ch_;
+        char16_t ch_;
         Position pos_;
     };
 
@@ -94,9 +91,9 @@ class InputBuffer: public InputBufferBase
 
     void swap_buffers_();
 
-    void advance_position_(char_type ch);
+    void advance_position_(char16_t ch);
 
-    void rewind_position_(char_type ch);
+    void rewind_position_(char16_t ch);
 };
 
 }

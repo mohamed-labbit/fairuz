@@ -5,13 +5,13 @@ namespace mylang {
 namespace lex {
 
 
-using offset_pair = std::pair<typename SourceManager::size_type, typename SourceManager::size_type>;
+using offset_pair = std::pair<std::size_t, std::size_t>;
 
-typename SourceManager::size_type SourceManager::line() const { return this->input_buffer_.position().line(); }
+std::size_t SourceManager::line() const { return this->input_buffer_.position().line(); }
 
-typename SourceManager::size_type SourceManager::column() const { return this->input_buffer_.position().column(); }
+std::size_t SourceManager::column() const { return this->input_buffer_.position().column(); }
 
-typename SourceManager::size_type SourceManager::fpos() const { return this->input_buffer_.position().fpos(); }
+std::size_t SourceManager::fpos() const { return this->input_buffer_.position().fpos(); }
 
 const std::string& SourceManager::fpath() const { return std::cref<std::string>(this->filepath_); }
 
@@ -19,13 +19,13 @@ buffer::Position SourceManager::position() const { return this->input_buffer_.po
 
 bool SourceManager::done() const { return this->input_buffer_.empty(); }
 
-typename SourceManager::char_type SourceManager::peek() { return this->input_buffer_.peek(); }
+char16_t SourceManager::peek() { return this->input_buffer_.peek(); }
 
-typename SourceManager::char_type SourceManager::consume_char() { return this->input_buffer_.consume_char(); }
+char16_t SourceManager::consume_char() { return this->input_buffer_.consume_char(); }
 
-typename SourceManager::char_type SourceManager::current() { return input_buffer_.current(); }
+char16_t SourceManager::current() { return input_buffer_.current(); }
 
-offset_pair SourceManager::offset_map_(const size_type& offset) const
+offset_pair SourceManager::offset_map_(const std::size_t& offset) const
 {
     auto& buf = this->input_buffer_;
 
@@ -34,8 +34,8 @@ offset_pair SourceManager::offset_map_(const size_type& offset) const
         return std::make_pair(buf.position().line(), buf.position().column());
     }
 
-    size_type iter = 0;
-    size_type diff = 0;
+    std::size_t iter = 0;
+    std::size_t diff = 0;
 
     // Count lines before buffer start
     while (iter < buf.buffer_offset())
@@ -48,17 +48,17 @@ offset_pair SourceManager::offset_map_(const size_type& offset) const
         iter += 1;
     }
 
-    size_type base_line = buf.position().line() - diff;
+    std::size_t base_line = buf.position().line() - diff;
 
     iter = 0;
-    size_type line = 1;
-    size_type col = 1;
+    std::size_t line = 1;
+    std::size_t col = 1;
 
-    const size_type limit = std::min(offset, buf.size() - 1);
+    const std::size_t limit = std::min(offset, buf.size() - 1);
 
     while (iter < limit)
     {
-        char_type c = buf.at(iter);
+        char16_t c = buf.at(iter);
 
         if (c == u'\n')
         {
@@ -79,7 +79,7 @@ offset_pair SourceManager::offset_map_(const size_type& offset) const
     return std::make_pair(line, col);
 }
 
-offset_pair SourceManager::offset_map(const size_type& offset)
+offset_pair SourceManager::offset_map(const std::size_t& offset)
 {
     auto& buf = this->input_buffer_;
     auto& file = this->file_;
@@ -96,9 +96,9 @@ offset_pair SourceManager::offset_map(const size_type& offset)
 
     file.imbue(std::locale(file.getloc()));
 
-    size_type line = 1;
-    size_type col = 1;
-    size_type current_offset = 0;
+    std::size_t line = 1;
+    std::size_t col = 1;
+    std::size_t current_offset = 0;
 
     char c;
     while (file.get(c))

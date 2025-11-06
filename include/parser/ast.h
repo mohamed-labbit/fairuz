@@ -11,7 +11,7 @@ namespace mylang {
 namespace parser {
 namespace ast {
 
-using string_type = std::u16string;
+using std::u16string = std::u16string;
 
 enum class ASTNodeType : int {
     // Program structure

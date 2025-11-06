@@ -56,6 +56,8 @@ enum class TokenType {
     // Symbols / punctuation
     LPAREN,
     RPAREN,
+    LBRACKET,
+    RBRACKET,
     COMMA,
     DOT,
     COLON,
@@ -82,20 +84,17 @@ static const std::unordered_map<std::u16string, TokenType, util::U16StringHash, 
 class Token
 {
    public:
-    using char_type = wchar_t;
-    using string_type = std::u16string;
-    using size_type = std::size_t;
 
     struct Location
     {
         std::string filepath_;
-        size_type line_{0};
-        size_type column_{0};
-        size_type file_pos_{0};
+        std::size_t line_{0};
+        std::size_t column_{0};
+        std::size_t file_pos_{0};
 
         Location() = default;
 
-        Location(std::string fp, std::array<size_type, 3> coords) :
+        Location(std::string fp, std::array<std::size_t, 3> coords) :
             filepath_(fp),
             line_(coords[0]),
             column_(coords[1]),
@@ -103,7 +102,7 @@ class Token
         {
         }
 
-        Location(std::string fp, size_type coords[3]) :
+        Location(std::string fp, std::size_t coords[3]) :
             filepath_(fp),
             line_(coords[0]),
             column_(coords[1]),
@@ -113,14 +112,14 @@ class Token
     };
 
     // Main ctor: take value by value so callers can move temporaries in.
-    Token(string_type v, TokenType t, std::array<size_type, 3> coords, std::string fp) :
+    Token(std::u16string v, TokenType t, std::array<std::size_t, 3> coords, std::string fp) :
         value_(std::move(v)),
         type_(t),
         location_(fp, coords)
     {
     }
 
-    Token(string_type v, TokenType t, size_type coords[3], std::string fp) :
+    Token(std::u16string v, TokenType t, std::size_t coords[3], std::string fp) :
         value_(std::move(v)),
         type_(t),
         location_(fp, coords)
@@ -135,15 +134,15 @@ class Token
     Token& operator=(Token&&) noexcept = default;
 
     // Return const references to avoid copies
-    const string_type& lexeme() const;
+    const std::u16string& lexeme() const;
 
     const TokenType& type() const;
 
-    size_type size() const;
+    std::size_t size() const;
 
-    const size_type& line() const;
+    const std::size_t& line() const;
 
-    const size_type& column() const;
+    const std::size_t& column() const;
 
     const Location& location() const;
 
@@ -162,7 +161,7 @@ class Token
     }
 
    private:
-    string_type value_;
+    std::u16string value_;
     TokenType type_;
     Location location_;
 };
