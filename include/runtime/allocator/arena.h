@@ -554,8 +554,19 @@ class ArenaAllocator
             return nullptr;
         }
 
-        std::size_t alloc_size = count * sizeof(_Tp);
-        std::size_t align = std::max(alignof(_Tp), min_alignment_);
+        
+    if (count > SIZE_MAX / sizeof(_Tp)) {
+        throw std::bad_alloc(); // prevent overflow
+    }
+
+    std::size_t alloc_size = count * sizeof(_Tp);
+
+// check overflow azbi
+    if (alloc_size > SIZE_MAX - padding) {
+        throw std::bad_alloc();
+    }
+
+    std::size_t used = alloc_size + padding;
 
         if (alloc_size > MAX_BLOCK_SIZE)
         {
