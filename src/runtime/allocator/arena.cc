@@ -519,13 +519,18 @@ _Tp* ArenaAllocator::allocate(std::size_t count)
         return nullptr;
     }
 
+    if (count > SIZE_MAX / sizeof(_Tp)) 
+    {
+        throw std::bad_alloc(); // prevent overflow
+    }
+
     std::size_t alloc_size = count * sizeof(_Tp);
     std::size_t align = std::max(std::alignment_of<_Tp>::value, min_alignment_);
 
     if (alloc_size > MAX_BLOCK_SIZE)
     {
         return nullptr;
-    }
+    }    
 
     pointer mem = nullptr;
 
