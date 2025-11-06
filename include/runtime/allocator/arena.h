@@ -560,8 +560,7 @@ class ArenaAllocator
     }
 
     std::size_t alloc_size = count * sizeof(_Tp);
-
-// check overflow azbi
+        
     if (alloc_size > SIZE_MAX - padding) {
         throw std::bad_alloc();
     }
