@@ -18,7 +18,7 @@ struct IndentationContext
     std::stack<std::size_t> indent_stack_;  // Stack of indentation levels
     std::size_t current_level_{0};  // Current indentation level
     bool at_line_start_{true};  // Are we at the start of a line?
-    bool in_parentheses_{0};  // Nesting depth of (), [], {}
+    std::size_t in_parentheses_{0};  // Nesting depth of (), [], {}
     bool expecting_indent_{false};  // Did previous line end with ':'?
     std::size_t spaces_per_indent_{4};  // Expected spaces per indent level
     bool mixed_indent_error_{false};  // Detected mixed tabs/spaces
@@ -44,10 +44,8 @@ struct IndentationContext
     {
         if (mode_ != IndentMode::UNDETECTED)
             return;
-
         bool has_spaces = false;
         bool has_tabs = false;
-
         for (char16_t ch : indent_str)
         {
             if (ch == u' ')
@@ -55,7 +53,6 @@ struct IndentationContext
             if (ch == u'\t')
                 has_tabs = true;
         }
-
         if (has_spaces && has_tabs)
         {
             mode_ = IndentMode::MIXED;
@@ -90,13 +87,9 @@ struct IndentationContext
     bool validate_indent(const std::u16string& indent_str) const
     {
         if (mode_ == IndentMode::MIXED)
-        {
             return false;
-        }
-
         bool has_spaces = false;
         bool has_tabs = false;
-
         for (char16_t ch : indent_str)
         {
             if (ch == u' ')
@@ -104,20 +97,12 @@ struct IndentationContext
             if (ch == u'\t')
                 has_tabs = true;
         }
-
         if (mode_ == IndentMode::SPACES && has_tabs)
-        {
             return false;
-        }
         if (mode_ == IndentMode::TABS && has_spaces)
-        {
             return false;
-        }
         if (has_spaces && has_tabs)
-        {
             return false;
-        }
-
         return true;
     }
 
@@ -172,19 +157,14 @@ class Lexer
     }
 
     explicit Lexer(const Lexer&) = delete;
-
-    mylang::lex::tok::Token operator()() { return next(); }
-
-    mylang::lex::tok::Token next();
-    mylang::lex::tok::Token peek(std::size_t n = 1);
-    mylang::lex::tok::Token prev();
-
-    const std::vector<mylang::lex::tok::Token>& tokenStream() const { return tok_stream_; }
-    std::vector<mylang::lex::tok::Token> tokenize();
-
+    tok::Token operator()() { return next(); }
+    tok::Token next();
+    tok::Token peek(std::size_t n = 1);
+    tok::Token prev();
+    const std::vector<tok::Token>& tokenStream() const { return tok_stream_; }
+    std::vector<tok::Token> tokenize();
     const std::size_t indent_size() const { return indent_size_; }
-
-    mylang::lex::tok::Token make_token(mylang::lex::tok::TokenType tt,
+    tok::Token make_token(tok::TokenType tt,
       std::optional<std::u16string> lexeme = std::nullopt,
       std::optional<std::size_t> line = std::nullopt,
       std::optional<std::size_t> col = std::nullopt,
@@ -193,33 +173,29 @@ class Lexer
 
    private:
     SourceManager source_manager_;
-
     std::size_t tok_index_;
     std::size_t indent_size_;
-
-    std::vector<mylang::lex::tok::Token> tok_stream_;
+    std::vector<tok::Token> tok_stream_;
     std::stack<unsigned> indent_stack_;
-
-    mylang::lex::SymbolTable symbol_table_;
+    SymbolTable symbol_table_;
     IndentationContext indent_ctx_;
 
     void lex_token_();
-    mylang::lex::tok::Token _handle_indentation(std::size_t line, std::size_t col);
-    mylang::lex::tok::Token _handle_identifier(char16_t c, std::size_t line, std::size_t col);
-    mylang::lex::tok::Token _handle_number(char16_t c, std::size_t line, std::size_t col);
-    mylang::lex::tok::Token _handle_operator(char16_t c, std::size_t line, std::size_t col);
-    mylang::lex::tok::Token _handle_symbol(char16_t c, std::size_t line, std::size_t col);
-    mylang::lex::tok::Token _handle_string_literal(char16_t c, std::size_t line, std::size_t col);
-    mylang::lex::tok::Token _handle_newline(char16_t c, size_t line, size_t col);
-    mylang::lex::tok::Token _emit_unknown(char16_t c, std::size_t line, std::size_t col);
-    mylang::lex::tok::Token _emit_eof();
-    mylang::lex::tok::Token _emit_sof();
+    tok::Token _handle_indentation(std::size_t line, std::size_t col);
+    tok::Token _handle_identifier(char16_t c, std::size_t line, std::size_t col);
+    tok::Token _handle_number(char16_t c, std::size_t line, std::size_t col);
+    tok::Token _handle_operator(char16_t c, std::size_t line, std::size_t col);
+    tok::Token _handle_symbol(char16_t c, std::size_t line, std::size_t col);
+    tok::Token _handle_string_literal(char16_t c, std::size_t line, std::size_t col);
+    tok::Token _handle_newline(char16_t c, size_t line, size_t col);
+    tok::Token _emit_unknown(char16_t c, std::size_t line, std::size_t col);
+    tok::Token _emit_eof();
+    tok::Token _emit_sof();
     IndentationAnalysis _analyze_indentation(std::size_t line, std::size_t col);
     void update_indentation_context(const tok::Token& token);
-
     char16_t consume_char() { return source_manager_.consume_char(); }
 
-    void store(mylang::lex::tok::Token tok)
+    void store(tok::Token tok)
     {
         // push and update index
         tok_stream_.push_back(std::move(tok));
@@ -228,5 +204,5 @@ class Lexer
 };
 
 
-}  // lexer
+}  // lex
 }  // mylang

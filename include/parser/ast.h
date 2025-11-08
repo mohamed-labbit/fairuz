@@ -81,7 +81,8 @@ struct ASTNode
     {
     }
 
-    ASTNode(ASTNodeType type, lex::tok::Token token, std::vector<std::unique_ptr<ASTNode>> children) :
+    ASTNode(
+      ASTNodeType type, lex::tok::Token token, std::vector<std::unique_ptr<ASTNode>> children) :
         type_(type),
         token_(std::move(token)),
         children_(std::move(children))
@@ -107,7 +108,10 @@ struct ASTNode
 
     size_t num_children() const { return children_.size(); }
 
-    const ASTNode* child(size_t i) const { return i < children_.size() ? children_[i].get() : nullptr; }
+    const ASTNode* child(size_t i) const
+    {
+        return i < children_.size() ? children_[i].get() : nullptr;
+    }
 
     ASTNode* child(size_t i) { return i < children_.size() ? children_[i].get() : nullptr; }
 
@@ -130,20 +134,13 @@ struct ASTNode
             // Convert u16string to string for printing
             std::string lexeme;
             for (auto c : token_.lexeme())
-            {
                 lexeme += static_cast<char>(c);
-            }
             std::cout << " (" << lexeme << ")";
         }
         std::cout << "\n";
-
         for (const auto& child : children_)
-        {
             if (child)
-            {
                 child->print(indent + 1);
-            }
-        }
     }
 };
 
@@ -153,7 +150,8 @@ inline std::unique_ptr<ASTNode> make_ast_node(ASTNodeType type, lex::tok::Token 
     return std::make_unique<ASTNode>(type, std::move(token));
 }
 
-inline std::unique_ptr<ASTNode> make_binary_op(lex::tok::Token op_token, std::unique_ptr<ASTNode> left, std::unique_ptr<ASTNode> right)
+inline std::unique_ptr<ASTNode> make_binary_op(
+  lex::tok::Token op_token, std::unique_ptr<ASTNode> left, std::unique_ptr<ASTNode> right)
 {
     auto node = make_ast_node(ASTNodeType::BINARY_OP, std::move(op_token));
     node->add_child(std::move(left));

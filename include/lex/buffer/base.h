@@ -21,16 +21,12 @@ class InputBufferBase
     {
         buffers_[0].resize(cap + 1, BUFFER_END);
         buffers_[1].resize(cap + 1, BUFFER_END);
-
         // Open file in binary mode for proper UTF-8 reading
         if (!file_.is_open())
-        {
             throw std::runtime_error("File is not open");
-        }
     }
 
     bool empty() const noexcept { return !file_.is_open(); }
-
     bool refresh_buffer(const unsigned int to_refresh);
 
    protected:

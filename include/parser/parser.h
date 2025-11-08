@@ -41,10 +41,7 @@ class Parser
     bool isKind(lex::tok::TokenType type) const
     {
         if (done())
-        {
             return false;
-        }
-
         return current_token_.type() == type;
     }
 
@@ -55,7 +52,6 @@ class Parser
             advance();
             return true;
         }
-
         return false;
     }
 
@@ -63,10 +59,7 @@ class Parser
     bool match(lex::tok::TokenType first, Args... rest)
     {
         if (match(first))
-        {
             return true;
-        }
-
         return match(rest...);
     }
 
@@ -78,7 +71,6 @@ class Parser
             advance();
             return tok;
         }
-
         // report_error(error_msg);
         return current_token_;
     }

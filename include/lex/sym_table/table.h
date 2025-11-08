@@ -12,7 +12,6 @@
 namespace mylang {
 namespace lex {
 
-
 class SymbolTable
 {
    public:
@@ -34,9 +33,7 @@ class SymbolTable
     void leaveScope()
     {
         if (this->scopes_.size() > 1)
-        {
             this->scopes_.pop_back();
-        }
     }
 
     // Insert symbol into current scope
@@ -45,13 +42,9 @@ class SymbolTable
     bool insert(const std::u16string& lexeme, SymbolType st)
     {
         auto& current_scope = this->scopes_.back();
-
         // Check if symbol already exists in current scope
         if (current_scope.find(lexeme) != current_scope.end())
-        {
             return false;
-        }
-
         // Insert into current scope
         Entry e(st, static_cast<std::size_t>(scopeLevel()));
         current_scope[lexeme] = e;
@@ -65,11 +58,8 @@ class SymbolTable
         {
             auto found = it->find(name);
             if (found != it->end())
-            {
                 return found->second;
-            }
         }
-
         return std::nullopt;  // not found
     }
 
@@ -81,17 +71,11 @@ class SymbolTable
     {
         // Default: check if symbol is visible anywhere in scope chain
         if (_scope == std::nullopt)
-        {
             return lookup(name).has_value();
-        }
-
         // Check if symbol exists at specific scope level
         std::size_t scope_level = _scope.value();
         if (scope_level >= this->scopes_.size())
-        {
             return false;
-        }
-
         const auto& scope = this->scopes_[scope_level];
         return scope.find(name) != scope.end();
     }
@@ -108,20 +92,17 @@ class SymbolTable
             const auto& current = this->scopes_.back();
             symbols.reserve(current.size());
             for (const auto& pair : current)
-            {
                 symbols.push_back(pair.second);
-            }
         }
         return symbols;
     }
-
+    
     // Get all visible symbols (from all scopes in the chain)
     // Respects shadowing - inner scope symbols hide outer ones with same name
     std::vector<Entry> getAllVisibleSymbols() const
     {
         std::vector<Entry> symbols;
         std::unordered_set<std::u16string> seen;
-
         // Iterate from innermost to outermost
         for (auto it = this->scopes_.rbegin(); it != this->scopes_.rend(); ++it)
         {
@@ -135,10 +116,9 @@ class SymbolTable
                 }
             }
         }
-
         return symbols;
     }
-
+    
     // Get all symbols at a specific scope level
     std::vector<Entry> getSymbolsAtLevel(std::size_t level) const
     {
@@ -148,9 +128,7 @@ class SymbolTable
             const auto& scope = this->scopes_[level];
             symbols.reserve(scope.size());
             for (const auto& pair : scope)
-            {
                 symbols.push_back(pair.second);
-            }
         }
         return symbols;
     }

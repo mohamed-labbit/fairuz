@@ -71,15 +71,21 @@ enum class TokenType {
     UNKNOWN
 };
 
-static const std::unordered_map<std::u16string, TokenType, util::U16StringHash, util::U16StringEqual> operators = {{u"=", TokenType::EQ},
-  {u":=", TokenType::ASSIGN}, {u"+", TokenType::PLUS}, {u"-", TokenType::MINUS}, {u"*", TokenType::STAR}, {u"/", TokenType::SLASH},
-  {u"<", TokenType::LT}, {u">", TokenType::GT}, {u"<=", TokenType::LE}, {u">=", TokenType::GE}, {u"!=", TokenType::NEQ}};
+static const std::
+  unordered_map<std::u16string, TokenType, util::U16StringHash, util::U16StringEqual>
+    operators = {{u"=", TokenType::EQ}, {u":=", TokenType::ASSIGN}, {u"+", TokenType::PLUS},
+      {u"-", TokenType::MINUS}, {u"*", TokenType::STAR}, {u"/", TokenType::SLASH},
+      {u"<", TokenType::LT}, {u">", TokenType::GT}, {u"<=", TokenType::LE}, {u">=", TokenType::GE},
+      {u"!=", TokenType::NEQ}};
 
-static const std::unordered_map<std::u16string, TokenType, util::U16StringHash, util::U16StringEqual> keywords = {
-  {u"خطا", TokenType::KW_FALSE}, {u"عدم", TokenType::KW_NONE}, {u"صحيح", TokenType::KW_TRUE}, {u"و", TokenType::AND},
-  {u"اخرج", TokenType::KW_RETURN}, {u"اكمل", TokenType::KW_CONTINUE}, {u"عرف", TokenType::KW_FN}, {u"او", TokenType::OR},
-  {u"بكل", TokenType::KW_FOR}, {u"اذا", TokenType::KW_IF}, {u"ليس", TokenType::NOT}, {u"ارجع", TokenType::KW_RETURN},
-  {u"طالما", TokenType::KW_WHILE}, {u"ثابت", TokenType::KW_CONST}};
+static const std::
+  unordered_map<std::u16string, TokenType, util::U16StringHash, util::U16StringEqual>
+    keywords = {{u"خطا", TokenType::KW_FALSE}, {u"عدم", TokenType::KW_NONE},
+      {u"صحيح", TokenType::KW_TRUE}, {u"و", TokenType::AND}, {u"اخرج", TokenType::KW_RETURN},
+      {u"اكمل", TokenType::KW_CONTINUE}, {u"عرف", TokenType::KW_FN}, {u"او", TokenType::OR},
+      {u"بكل", TokenType::KW_FOR}, {u"اذا", TokenType::KW_IF}, {u"ليس", TokenType::NOT},
+      {u"ارجع", TokenType::KW_RETURN}, {u"طالما", TokenType::KW_WHILE},
+      {u"ثابت", TokenType::KW_CONST}};
 
 class Token
 {
@@ -128,34 +134,26 @@ class Token
     Token() = default;
     Token(const Token&) = default;
     Token(Token&&) noexcept = default;
-
-    Token& operator=(const Token&) = default;
-    Token& operator=(Token&&) noexcept = default;
-
-    // Return const references to avoid copies
-    const std::u16string& lexeme() const;
-
-    const TokenType& type() const;
-
-    std::size_t size() const;
-
-    const std::size_t& line() const;
-
-    const std::size_t& column() const;
-
-    const Location& location() const;
-
-    const std::string& filepath() const;
-
     bool operator==(const Token& other) const;
     bool operator!=(const Token& other) const;
+    Token& operator=(const Token&) = default;
+    Token& operator=(Token&&) noexcept = default;
+    // Return const references to avoid copies
+    const std::u16string& lexeme() const;
+    const TokenType& type() const;
+    std::size_t size() const;
+    const std::size_t& line() const;
+    const std::size_t& column() const;
+    const Location& location() const;
+    const std::string& filepath() const;
 
     // friend ostream operator for pretty-printing in tests/logs
     friend std::ostream& operator<<(std::ostream& os, const Token& tok)
     {
-        os << "Token(\"" << utf8::utf16to8(tok.value_) << "\", type=" << static_cast<int>(tok.type_) << ", line=" << tok.location_.line_
-           << ", col=" << tok.location_.column_ << "\", file_pos=" << tok.location_.file_pos_ << "\", file path=" << tok.location_.filepath_
-           << ")";
+        os << "Token(\"" << utf8::utf16to8(tok.value_) << "\", type=" << static_cast<int>(tok.type_)
+           << ", line=" << tok.location_.line_ << ", col=" << tok.location_.column_
+           << "\", file_pos=" << tok.location_.file_pos_
+           << "\", file path=" << tok.location_.filepath_ << ")";
         return os;
     }
 
