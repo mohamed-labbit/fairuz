@@ -6,11 +6,14 @@
 #include <chrono>
 #include <functional>
 #include <iostream>
+#include <iterator>
 #include <limits>
 #include <mutex>
 #include <optional>
 #include <set>
 #include <shared_mutex>
+#include <stdexcept>
+#include <type_traits>
 #include <unordered_set>
 #include <vector>
 
@@ -152,19 +155,20 @@ class ArenaBlock
         return static_cast<std::size_t>(begin_ + size_ - current_next);
     }
 
-    pointer allocate(std::size_t bytes, std::size_t alignment = alignof(std::max_align_t))
+    pointer allocate(std::size_t bytes, std::optional<std::size_t> alignment = std::nullopt)
     {
         if (!begin_ || bytes == 0)
             return nullptr;
+        std::size_t alignment_value = alignment.value_or(std::alignment_of<std::max_align_t>::value);
         // Validate alignment
-        if (alignment == 0 || (alignment & (alignment - 1)) != 0)
-            return nullptr;
+        if (alignment_value == 0 || (alignment_value & (alignment_value - 1)) != 0)
+            throw std::invalid_argument("Invalid alignment!");
         // Try lock-free allocation first using compare-and-swap
         pointer current_next = next_.load(std::memory_order_acquire);
         while (true)
         {
             std::uintptr_t cur = reinterpret_cast<std::uintptr_t>(current_next);
-            std::uintptr_t aligned = (cur + (alignment - 1)) & ~(alignment - 1);
+            std::uintptr_t aligned = (cur + (alignment_value - 1)) & ~(alignment_value - 1);
             std::size_t pad = aligned - cur;
             // Check if we have enough space
             std::size_t remaining = begin_ + size_ - current_next;
@@ -291,14 +295,20 @@ class LockFreeFastAllocBlock
             return nullptr;
         pointer b = begin_.load(std::memory_order_acquire);
         if (!b)
+        {
+            std::cerr << "Failed to load begin pointer" << std::endl;
             return nullptr;
+        }
         pointer current_next = next_.load(std::memory_order_acquire);
         std::size_t s = size_.load(std::memory_order_acquire);
         while (true)
         {
             std::size_t remaining = b + s - current_next;
             if (remaining < alloc_size)
+            {
+                std::cerr << "Failed to allocate because there's not enough remaining bytes" << std::endl;
                 return nullptr;
+            }
             pointer new_next = current_next + alloc_size;
             if (next_.compare_exchange_weak(
                   current_next, new_next, std::memory_order_release, std::memory_order_acquire))
@@ -456,6 +466,19 @@ class ArenaAllocator
     using OutOfMemoryHandler = std::function<bool(std::size_t requested)>;
 
    private:
+    struct VoidPtrHash
+    {
+        std::size_t operator()(const void* ptr) const noexcept
+        {
+            return std::hash<std::uintptr_t>()(reinterpret_cast<std::uintptr_t>(ptr));
+        }
+    };
+
+    struct VoidPtrEqual
+    {
+        bool operator()(const void* a, const void* b) const noexcept { return a == b; }
+    };
+    
     ArenaAllocStats alloc_stats_;
     std::vector<ArenaBlock> blocks_{};
     mutable std::shared_mutex blocks_mutex_;
@@ -481,20 +504,6 @@ class ArenaAllocator
     // Use multiset for general free list too
     std::multiset<FreeListRegion> free_list_{};
     mutable std::mutex free_list_mutex_;
-
-    struct VoidPtrHash
-    {
-        std::size_t operator()(const void* ptr) const noexcept
-        {
-            return std::hash<std::uintptr_t>()(reinterpret_cast<std::uintptr_t>(ptr));
-        }
-    };
-
-    struct VoidPtrEqual
-    {
-        bool operator()(const void* a, const void* b) const noexcept { return a == b; }
-    };
-
     std::unordered_map<void*, AllocationHeader, VoidPtrHash, VoidPtrEqual> allocation_map_{};
     mutable std::shared_mutex allocation_map_mutex_;
     // Track allocated pointers to prevent double-free
@@ -507,10 +516,11 @@ class ArenaAllocator
     std::atomic<std::size_t> max_block_size_{MAX_BLOCK_SIZE};
 
    public:
-    ArenaAllocator(int growth_strategy = static_cast<int>(GrowthStrategy::EXPONENTIAL),
+    ArenaAllocator(/*std::size_t init_block_size = DEFAULT_BLOCK_SIZE,*/ int growth_strategy = static_cast<int>(GrowthStrategy::EXPONENTIAL),
       std::size_t min_align = std::alignment_of<std::max_align_t>::value,
       OutOfMemoryHandler oom_handler = nullptr,
       bool debug = false) :
+        /*block_size_(init_block_size),*/
         growth_factor_(GrowthStrategy(growth_strategy)),
         min_alignment_(min_align),
         oom_handler_(oom_handler),
@@ -524,6 +534,17 @@ class ArenaAllocator
             track_allocations_.store(true, std::memory_order_relaxed);
             enable_statistics_.store(true, std::memory_order_relaxed);
         }
+        /*
+         * 
+        fast_pool8_.push_back(std::move(LockFreeFastAllocBlock<8>(block_size_)));
+        fast_pool16_.push_back(std::move(LockFreeFastAllocBlock<16>(block_size_)));
+        fast_pool32_.push_back(std::move(LockFreeFastAllocBlock<32>(block_size_)));
+        fast_pool64_.push_back(std::move(LockFreeFastAllocBlock<64>(block_size_)));
+        fast_pool128_.push_back(std::move(LockFreeFastAllocBlock<128>(block_size_)));
+        fast_pool256_.push_back(std::move(LockFreeFastAllocBlock<256>(block_size_)));
+        
+        blocks_.push_back(std::move(ArenaBlock(block_size_)));
+        */
     }
 
     ~ArenaAllocator() { reset(); }
@@ -580,7 +601,7 @@ class ArenaAllocator
     [[nodiscard]]
     pointer allocate_block(std::size_t requested,
       std::size_t alignment_ = alignof(std::max_align_t),
-      bool retry_on_oom = false)
+      bool retry_on_oom = true)
     {
         // Validate alignment
         if (alignment_ == 0 || (alignment_ & (alignment_ - 1)) != 0)
@@ -666,13 +687,18 @@ class ArenaAllocator
             return nullptr;
         if (count > MAX_BLOCK_SIZE / sizeof(_Tp))
         {
-            std::cerr << "allocation size is too large" << std::endl;
+            std::cerr << "allocation size is too large!" << std::endl;
+            if (oom_handler_ && oom_handler_(count)) 
+                return allocate<_Tp>(count);
             throw std::bad_alloc();  // prevent overflow
         }
         std::size_t alloc_size = count * sizeof(_Tp);
         std::size_t align = std::max(std::alignment_of<_Tp>::value, min_alignment_);
         if (alloc_size > MAX_BLOCK_SIZE)
+        {
+            std::cerr << "allocation size (after alignment) is too larger!" << std::endl;
             return nullptr;
+        }
         pointer mem = nullptr;
         constexpr std::size_t type_size = sizeof(_Tp);
         constexpr std::size_t pool_size = type_size <= 8 ? 8
@@ -684,12 +710,18 @@ class ArenaAllocator
                                                          : 0;
         constexpr bool use_fast_pool = (pool_size > 0) && (pool_size >= type_size);
         if constexpr (use_fast_pool)
-            if (align <= pool_size)
+            if (align <= pool_size){
                 mem = allocate_from_fast_pool<pool_size>(alloc_size);
+                if (!mem)
+                    std::cerr << "allocate_from_fast_pool() failed!" << std::endl;
+            }
         if (!mem)
             mem = allocate_from_blocks(alloc_size, align);
         if (!mem)
+        {
+            std::cerr << "allocate_from_blocks() failed!" << std::endl;
             return nullptr;
+        }
         _Tp* region = reinterpret_cast<_Tp*>(mem);
         if (enable_statistics_.load(std::memory_order_relaxed))
         {
@@ -715,8 +747,6 @@ class ArenaAllocator
             for (std::size_t i = 0; i < count; ++i)
                 new (region + i) _Tp();
         auto end = std::chrono::high_resolution_clock::now();
-        //std::cout << "Time for allocate() call is : " << std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() << " ns"
-        //         << std::endl;
         return region;
     }
 
@@ -803,8 +833,12 @@ class ArenaAllocator
         {
             // Release lock before allocating new block
             lock.unlock();
-            if (!allocate_fast_block<ObjectSize>(next_block_size_.load(std::memory_order_relaxed)))
+            std::size_t block_size = std::max(alloc_size, next_block_size_.load(std::memory_order_relaxed));
+            if (!allocate_fast_block<ObjectSize>(block_size))
+            {
+                std::cerr << "allocate_fast_block() failed!" << std::endl;
                 return nullptr;
+            }
             update_next_block_size();
             // Reacquire lock
             lock.lock();
@@ -817,13 +851,20 @@ class ArenaAllocator
         {
             // Release lock before allocating new block
             lock.unlock();
-            if (!allocate_fast_block<ObjectSize>(next_block_size_.load(std::memory_order_relaxed)))
+            std::size_t block_size = std::max(alloc_size, next_block_size_.load(std::memory_order_relaxed));
+            if (!allocate_fast_block<ObjectSize>(block_size))
+            {
+                std::cerr << "allocate_fast_block() failed!" << std::endl;
                 return nullptr;
+            }
             update_next_block_size();
             // Reacquire lock
             lock.lock();
         }
-        return pool->back().allocate(alloc_size);
+        pointer ret =  pool->back().allocate(alloc_size);
+        std::string print_value = ret != nullptr ? std::to_string(reinterpret_cast<std::uintptr_t>(ret)) : "nullptr";
+        std::cout << "-- DEBUG : allocate_from_fast_pool() returned with ret = " << print_value << std::endl;
+        return ret;
     }
 
     template<std::size_t ObjectSize>
@@ -917,6 +958,7 @@ class ArenaAllocator
 
     void update_next_block_size() noexcept
     {
+        // TODO : prevent overflow
         if (growth_factor_.load(std::memory_order_relaxed) == GrowthStrategy::EXPONENTIAL)
         {
             std::size_t current = next_block_size_.load(std::memory_order_relaxed);

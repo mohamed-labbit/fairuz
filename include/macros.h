@@ -7,5 +7,5 @@
 #define TABWIDTH 8
 #define MAX_ALLOWED_INDENT TABWIDTH
 #define DEFAULT_CAPACITY 4096
-#define DEFAULT_BLOCK_SIZE 1024
-#define MAX_BLOCK_SIZE std::numeric_limits<std::size_t>::max() / 2
+#define DEFAULT_BLOCK_SIZE 1024 // 1 KiB
+#define MAX_BLOCK_SIZE 4294967296 // 4 GiB
