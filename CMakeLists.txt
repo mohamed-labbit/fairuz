@@ -30,6 +30,7 @@ endif()
 # Define the test executable
 add_executable(mylang_tests
     tests/lexer/test_tokens.cpp
+    tests/lexer/test_arena.cpp
     $<TARGET_OBJECTS:mylang_objects>
 )
 
