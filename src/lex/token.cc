@@ -25,8 +25,8 @@ const std::string& Token::filepath() const { return this->location_.filepath_; }
 
 bool Token::operator==(const Token& other) const
 {
-    return value_ == other.value_ && type_ == other.type_ && location_.line_ == other.location_.line_
-      && location_.column_ == other.location_.column_;
+    return value_ == other.value_ && type_ == other.type_
+      && location_.line_ == other.location_.line_ && location_.column_ == other.location_.column_;
 }
 
 bool Token::operator!=(const Token& other) const { return !(*this == other); }
