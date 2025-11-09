@@ -767,3 +767,16 @@ Indentation logic :
 
         ASSERT indent == LAST ELEMENT OF indents
         RETURN
+
+
+Equipements dans le quartier villa:
+
+- Mini-Marché
+- Ecole + Crèche
+- Parkings
+- Terrain de foot
+- Mosqué
+
+
+
+
