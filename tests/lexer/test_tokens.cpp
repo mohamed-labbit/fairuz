@@ -171,6 +171,7 @@ TEST(LexerTest, RecognizesStmt04)
       lexer.make_token(mylang::lex::tok::TokenType::NEWLINE, u"\n", 1, 10),
       lexer.make_token(mylang::lex::tok::TokenType::INDENT, u"    ", 2, 1),
       lexer.make_token(mylang::lex::tok::TokenType::KW_RETURN, u"اخرج", 2, 5),
+      lexer.make_token(mylang::lex::tok::TokenType::DEDENT, u"", 2, 9),
       lexer.make_token(mylang::lex::tok::TokenType::END_OF_FILE, u"", 2, 5)};
     EXPECT_EQ(tokens.size(), expected.size());
     EXPECT_EQ(tokens, expected);
