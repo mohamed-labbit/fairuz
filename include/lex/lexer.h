@@ -181,17 +181,17 @@ class Lexer
     IndentationContext indent_ctx_;
 
     void lex_token_();
-    tok::Token _handle_indentation(std::size_t line, std::size_t col);
-    tok::Token _handle_identifier(char16_t c, std::size_t line, std::size_t col);
-    tok::Token _handle_number(char16_t c, std::size_t line, std::size_t col);
-    tok::Token _handle_operator(char16_t c, std::size_t line, std::size_t col);
-    tok::Token _handle_symbol(char16_t c, std::size_t line, std::size_t col);
-    tok::Token _handle_string_literal(char16_t c, std::size_t line, std::size_t col);
-    tok::Token _handle_newline(char16_t c, size_t line, size_t col);
-    tok::Token _emit_unknown(char16_t c, std::size_t line, std::size_t col);
-    tok::Token _emit_eof();
-    tok::Token _emit_sof();
-    IndentationAnalysis _analyze_indentation(std::size_t line, std::size_t col);
+    tok::Token _handle_indentation(SourceManager& sm);
+    tok::Token _handle_identifier(char16_t c, SourceManager& sm);
+    tok::Token _handle_number(char16_t c, SourceManager& sm);
+    tok::Token _handle_operator(char16_t c, SourceManager& sm);
+    tok::Token _handle_symbol(char16_t c, SourceManager& sm);
+    tok::Token _handle_string_literal(char16_t c, SourceManager& sm);
+    tok::Token _handle_newline(char16_t c, SourceManager& sm);
+    tok::Token _emit_unknown(char16_t c, SourceManager& sm);
+    tok::Token _emit_eof(SourceManager& sm);
+    tok::Token _emit_sof(SourceManager& sm);
+    IndentationAnalysis _analyze_indentation(SourceManager& sm);
     void update_indentation_context(const tok::Token& token);
     char16_t consume_char() { return source_manager_.consume_char(); }
 

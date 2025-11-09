@@ -9,3 +9,7 @@
 #define DEFAULT_CAPACITY 4096
 #define DEFAULT_BLOCK_SIZE 1024 // 1 KiB
 #define MAX_BLOCK_SIZE 4294967296 // 4 GiB
+#define MYLANG_COMPILER_API __attribute__((visibility("default")))
+#define MYLANG_INLINE inline
+#define MYLANG_NODISCARD [[nodiscard]]
+#define MYLANG_NOEXCEPT noexcept
