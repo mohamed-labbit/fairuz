@@ -14,78 +14,94 @@ namespace mylang {
 namespace lex {
 namespace tok {
 
-enum class TokenType {
-    // Special
-    START_OF_FILE,
-    END_OF_FILE,
-
-    // Identifiers & literals
-    IDENTIFIER,
-    NUMBER,
-    FLOAT,
-    STRING,
-
-    // Keywords
-    KW_IF,
-    KW_WHILE,
-    KW_FN,
-    KW_CONST,
-    KW_FOR,
-    KW_RETURN,
-    KW_CONTINUE,
-    KW_TRUE,
-    KW_FALSE,
-    KW_NONE,
+enum class TokenType : int {
+    // Keywords (Arabic)
+    KW_IF,  // اذا
+    KW_WHILE,  // طالما
+    KW_FOR,  // لكل
+    KW_IN,  // في
+    KW_FN,  // عرف
+    KW_RETURN,  // رجوع
+    KW_CONTINUE,  // اكمل
+    KW_AND,  // و
+    KW_OR,  // او
+    KW_NOT,  // ليس
+    KW_TRUE,  // صحيح
+    KW_FALSE,  // خطا
+    KW_NONE,  // عدم
 
     // Operators
-    PLUS,
-    MINUS,
-    STAR,
-    SLASH,
-    AND,
-    OR,
-    NOT,
-    EQ,
-    NEQ,
-    LT,
-    LE,
-    GT,
-    GE,
-    ASSIGN,
+    OP_PLUS,  // +
+    OP_MINUS,  // -
+    OP_STAR,  // *
+    OP_SLASH,  // /
+    OP_PERCENT,  // %
+    OP_POWER,  // **
+    OP_EQ,  // =
+    OP_NEQ,  // !=
+    OP_LT,  // <
+    OP_GT,  // >
+    OP_LTE,  // <=
+    OP_GTE,  // >=
+    OP_ASSIGN,  // :=
+    OP_BITAND,  // &
+    OP_BITOR,  // |
+    OP_BITXOR,  // ^
+    OP_BITNOT,  // ~
+    OP_LSHIFT,  // <<
+    OP_RSHIFT,  // >>
 
-    // Symbols / punctuation
-    LPAREN,
-    RPAREN,
-    LBRACKET,
-    RBRACKET,
-    COMMA,
-    DOT,
-    COLON,
+    // Augmented assignment
+    OP_PLUSEQ,  // +=
+    OP_MINUSEQ,  // -=
+    OP_STAREQ,  // *=
+    OP_SLASHEQ,  // /=
+    OP_PERCENTEQ,  // %=
+    OP_ANDEQ,  // &=
+    OP_OREQ,  // |=
+    OP_XOREQ,  // ^=
+    OP_LSHIFTEQ,  // <<=
+    OP_RSHIFTEQ,  // >>=
 
-    // Layout
-    NEWLINE,  // only if significant
+    // Delimiters
+    LPAREN,  // (
+    RPAREN,  // )
+    LBRACKET,  // [
+    RBRACKET,  // ]
+    LBRACE,  // {
+    RBRACE,  // }
+    COMMA,  // ,
+    COLON,  // :
+    SEMICOLON,  // ;
+    ARROW,  // ->
+    DOT,  // .
+
+    // Literals
+    NUMBER,
+    STRING,
+    NAME,
+
+    // Special
+    NEWLINE,
     INDENT,
     DEDENT,
+    ENDMARKER,
+    TYPE_COMMENT,
 
-    // Error handling
-    UNKNOWN
+    // Error
+    INVALID
 };
 
-static const std::
-  unordered_map<std::u16string, TokenType, util::U16StringHash, util::U16StringEqual>
-    operators = {{u"=", TokenType::EQ}, {u":=", TokenType::ASSIGN}, {u"+", TokenType::PLUS},
-      {u"-", TokenType::MINUS}, {u"*", TokenType::STAR}, {u"/", TokenType::SLASH},
-      {u"<", TokenType::LT}, {u">", TokenType::GT}, {u"<=", TokenType::LE}, {u">=", TokenType::GE},
-      {u"!=", TokenType::NEQ}};
+static const std::unordered_map<std::u16string, TokenType, util::U16StringHash, util::U16StringEqual> operators = {
+  {u"=", TokenType::OP_EQ}, {u":=", TokenType::OP_ASSIGN}, {u"+", TokenType::OP_PLUS}, {u"-", TokenType::OP_MINUS},
+  {u"*", TokenType::OP_STAR}, {u"/", TokenType::OP_SLASH}, {u"<", TokenType::OP_LT}, {u">", TokenType::OP_GT},
+  {u"<=", TokenType::OP_LTE}, {u">=", TokenType::OP_GTE}, {u"!=", TokenType::OP_NEQ}};
 
-static const std::
-  unordered_map<std::u16string, TokenType, util::U16StringHash, util::U16StringEqual>
-    keywords = {{u"خطا", TokenType::KW_FALSE}, {u"عدم", TokenType::KW_NONE},
-      {u"صحيح", TokenType::KW_TRUE}, {u"و", TokenType::AND}, {u"اخرج", TokenType::KW_RETURN},
-      {u"اكمل", TokenType::KW_CONTINUE}, {u"عرف", TokenType::KW_FN}, {u"او", TokenType::OR},
-      {u"بكل", TokenType::KW_FOR}, {u"اذا", TokenType::KW_IF}, {u"ليس", TokenType::NOT},
-      {u"ارجع", TokenType::KW_RETURN}, {u"طالما", TokenType::KW_WHILE},
-      {u"ثابت", TokenType::KW_CONST}};
+static const std::unordered_map<std::u16string, TokenType, util::U16StringHash, util::U16StringEqual> keywords = {
+  {u"خطا", TokenType::KW_FALSE}, {u"عدم", TokenType::KW_NONE}, {u"صحيح", TokenType::KW_TRUE}, {u"و", TokenType::KW_AND},
+  {u"اخرج", TokenType::KW_RETURN}, {u"اكمل", TokenType::KW_CONTINUE}, {u"عرف", TokenType::KW_FN},
+  {u"او", TokenType::KW_OR}, {u"بكل", TokenType::KW_FOR}, {u"اذا", TokenType::KW_IF}, {u"ليس", TokenType::KW_NOT},
+  {u"ارجع", TokenType::KW_RETURN}, {u"طالما", TokenType::KW_WHILE}};
 
 class Token
 {
@@ -140,6 +156,7 @@ class Token
     Token& operator=(Token&&) noexcept = default;
     // Return const references to avoid copies
     const std::u16string& lexeme() const;
+    std::string utf8_lexeme() const;
     const TokenType& type() const;
     std::size_t size() const;
     const std::size_t& line() const;
@@ -147,13 +164,14 @@ class Token
     const Location& location() const;
     const std::string& filepath() const;
 
+    bool is(const TokenType tt) const { return tt == type_; }
+
     // friend ostream operator for pretty-printing in tests/logs
     friend std::ostream& operator<<(std::ostream& os, const Token& tok)
     {
         os << "Token(\"" << utf8::utf16to8(tok.value_) << "\", type=" << static_cast<int>(tok.type_)
            << ", line=" << tok.location_.line_ << ", col=" << tok.location_.column_
-           << "\", file_pos=" << tok.location_.file_pos_
-           << "\", file path=" << tok.location_.filepath_ << ")";
+           << "\", file_pos=" << tok.location_.file_pos_ << "\", file path=" << tok.location_.filepath_ << ")";
         return os;
     }
 

@@ -96,7 +96,7 @@ class SymbolTable
         }
         return symbols;
     }
-    
+
     // Get all visible symbols (from all scopes in the chain)
     // Respects shadowing - inner scope symbols hide outer ones with same name
     std::vector<Entry> getAllVisibleSymbols() const
@@ -118,7 +118,7 @@ class SymbolTable
         }
         return symbols;
     }
-    
+
     // Get all symbols at a specific scope level
     std::vector<Entry> getSymbolsAtLevel(std::size_t level) const
     {

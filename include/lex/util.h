@@ -41,10 +41,7 @@ struct U16StringHash
 
 struct U16StringEqual
 {
-    bool operator()(const std::u16string& a, const std::u16string& b) const noexcept
-    {
-        return a == b;
-    }
+    bool operator()(const std::u16string& a, const std::u16string& b) const noexcept { return a == b; }
 };
 
 // utility function to parallelize the process of conversion

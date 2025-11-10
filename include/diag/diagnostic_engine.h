@@ -19,8 +19,7 @@ class DiagnosticsEngine
    private:
    public:
     void emit(Diagnostic&);
-    void emit_simple(
-      std::string, std::size_t, std::size_t, /*, mylang::lex::tok::Token*/ std::string);
+    void emit_simple(std::string, std::size_t, std::size_t, /*, mylang::lex::tok::Token*/ std::string);
     std::vector<Diagnostic> collect_for_file(std::string);
 };
 }
