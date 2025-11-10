@@ -15,14 +15,10 @@ std::size_t InputBuffer::buffer_offset() const
 
 bool InputBuffer::empty() const
 {
-    return (!this->file_.is_open() || this->current_ == nullptr
-      || this->buffers_[this->current_buffer_].empty());
+    return (!this->file_.is_open() || this->current_ == nullptr || this->buffers_[this->current_buffer_].empty());
 }
 
-char16_t InputBuffer::at(const std::size_t idx) const
-{
-    return this->buffers_[this->current_buffer_][idx];
-}
+char16_t InputBuffer::at(const std::size_t idx) const { return this->buffers_[this->current_buffer_][idx]; }
 
 char16_t InputBuffer::consume_char()
 {

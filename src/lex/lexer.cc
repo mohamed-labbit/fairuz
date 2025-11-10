@@ -62,7 +62,7 @@ IndentationAnalysis Lexer::_analyze_indentation(SourceManager& sm)
     if (!indent_str.empty())
     {
         if (indent_ctx_.mode_ == IndentationContext::IndentMode::UNDETECTED)
-            indent_ctx_.detect_indent_mode(indent_str);   
+            indent_ctx_.detect_indent_mode(indent_str);
         if (!indent_ctx_.validate_indent(indent_str))
         {
             result.action = IndentationAnalysis::Action::ERROR;
@@ -120,7 +120,7 @@ IndentationAnalysis Lexer::_analyze_indentation(SourceManager& sm)
         }
         // Apply the dedents
         for (std::size_t i = 0; i < dedent_count; ++i)
-            indent_ctx_.pop();   
+            indent_ctx_.pop();
         result.action = IndentationAnalysis::Action::DEDENT;
         result.count = dedent_count;
         indent_ctx_.expecting_indent_ = false;
@@ -140,22 +140,22 @@ void Lexer::update_indentation_context(const tok::Token& token)
     auto tt = token.type();
     switch (tt)
     {
-    case tok::TokenType::LPAREN:
-    case tok::TokenType::LBRACKET:
+    case tok::TokenType::LPAREN :
+    case tok::TokenType::LBRACKET :
         indent_ctx_.in_parentheses_++;  // FIX: Increment instead of = true
         break;
-    case tok::TokenType::RPAREN:
-    case tok::TokenType::RBRACKET:
+    case tok::TokenType::RPAREN :
+    case tok::TokenType::RBRACKET :
         if (indent_ctx_.in_parentheses_ > 0)
             indent_ctx_.in_parentheses_--;  // FIX: Decrement instead of = false
         break;
-    case tok::TokenType::COLON:
+    case tok::TokenType::COLON :
         indent_ctx_.expecting_indent_ = true;
         break;
-    case tok::TokenType::NEWLINE:
+    case tok::TokenType::NEWLINE :
         indent_ctx_.at_line_start_ = true;
-        break;       
-    default:
+        break;
+    default :
         if (indent_ctx_.at_line_start_)
             indent_ctx_.at_line_start_ = false;
         break;
@@ -168,40 +168,32 @@ tok::Token Lexer::_handle_indentation(SourceManager& sm)
     IndentationAnalysis analysis = _analyze_indentation(sm);
     switch (analysis.action)
     {
-    case IndentationAnalysis::Action::INDENT: {
+    case IndentationAnalysis::Action::INDENT : {
         for (std::size_t i = 0; i < analysis.count; ++i)
         {
-            tok::Token indent_tok = make_token(
-                tok::TokenType::INDENT,
-                analysis.indent_string
-            );
+            tok::Token indent_tok = make_token(tok::TokenType::INDENT, analysis.indent_string);
             store(std::move(indent_tok));
         }
         return stream.back();
     }
-    case IndentationAnalysis::Action::DEDENT: {
+    case IndentationAnalysis::Action::DEDENT : {
         for (std::size_t i = 0; i < analysis.count; ++i)
         {
-            tok::Token dedent_tok = make_token(
-                tok::TokenType::DEDENT,
-                u""
-            );
+            tok::Token dedent_tok = make_token(tok::TokenType::DEDENT, u"");
             store(std::move(dedent_tok));
         }
         return stream.back();
     }
-    case IndentationAnalysis::Action::ERROR: {
+    case IndentationAnalysis::Action::ERROR : {
         tok::Token error_tok = make_token(
-            tok::TokenType::UNKNOWN,
-            std::u16string(analysis.error_message.begin(), analysis.error_message.end())
-        );
+          tok::TokenType::UNKNOWN, std::u16string(analysis.error_message.begin(), analysis.error_message.end()));
         store(std::move(error_tok));
         std::cerr << "Indentation Error at line " << sm.line() << ", col " << sm.column() << ": "
-                  << analysis.error_message << std::endl;   
+                  << analysis.error_message << std::endl;
         return stream.back();
     }
-    case IndentationAnalysis::Action::NONE:
-    default:
+    case IndentationAnalysis::Action::NONE :
+    default :
         if (!stream.empty())
             return stream.back();
         return make_token(tok::TokenType::UNKNOWN, u"", sm.line(), sm.column());
@@ -260,7 +252,7 @@ tok::Token Lexer::_handle_operator(char16_t c, SourceManager& sm)
     if (nxt != BUFFER_END)
     {
         std::u16string two = op;
-        two.push_back(nxt);   
+        two.push_back(nxt);
         if (tok::operators.count(two))
         {
             op.push_back(nxt);
@@ -284,22 +276,22 @@ tok::Token Lexer::_handle_symbol(char16_t c, SourceManager& sm)
     sm.consume_char();
     switch (c)
     {
-    case '(':
+    case '(' :
         tt = tok::TokenType::LPAREN;
         break;
-    case ')':
+    case ')' :
         tt = tok::TokenType::RPAREN;
         break;
-    case '[':  // FIX: Added bracket support
+    case '[' :  // FIX: Added bracket support
         tt = tok::TokenType::LBRACKET;
         break;
-    case ']':
+    case ']' :
         tt = tok::TokenType::RBRACKET;
         break;
-    case '.':
+    case '.' :
         tt = tok::TokenType::DOT;
         break;
-    case ':':
+    case ':' :
         if (sm.current() == u'=')
         {
             sm.consume_char();
@@ -311,7 +303,7 @@ tok::Token Lexer::_handle_symbol(char16_t c, SourceManager& sm)
             tt = tok::TokenType::COLON;
         }
         break;
-    default:
+    default :
         tt = tok::TokenType::UNKNOWN;
         break;
     }
@@ -378,12 +370,12 @@ tok::Token Lexer::_handle_newline(char16_t c, SourceManager& sm)
     auto line = sm.line();
     auto col = sm.column();
     sm.consume_char();
-    
+
     std::u16string endl = u"\n";
     auto ret = make_token(tok::TokenType::NEWLINE, std::move(endl), line, col);
     store(std::move(ret));
     update_indentation_context(ret);
-    
+
     // Don't handle indentation here - let the main loop do it
     return stream.back();
 }
@@ -431,25 +423,25 @@ void Lexer::lex_token_()
         std::size_t col = sm.column();
         switch (ch)
         {
-        case u'\n': {
+        case u'\n' : {
             _handle_newline(ch, sm);
             return;
         }
-        case u' ':
-        case u'\t':
-        case u'\r':
+        case u' ' :
+        case u'\t' :
+        case u'\r' :
             if (!indent_ctx_.at_line_start_)
             {
                 sm.consume_char();
                 continue;
             }
             break;
-        case u'\\': {
+        case u'\\' : {
             char16_t lookahead = sm.peek();
             if (lookahead == ch)
             {
                 sm.consume_char();
-                sm.consume_char();  
+                sm.consume_char();
                 while (true)
                 {
                     char16_t c2 = sm.peek();
@@ -461,13 +453,13 @@ void Lexer::lex_token_()
             }
         }
         break;
-        case u'\'':
-        case u'"': {
+        case u'\'' :
+        case u'"' : {
             auto tok = _handle_string_literal(ch, sm);
             update_indentation_context(tok);
             return;
         }
-        default:
+        default :
             break;
         }
         // Handle indentation at line start
@@ -509,7 +501,7 @@ void Lexer::lex_token_()
         update_indentation_context(tok);
         return;
     }
-    
+
     _emit_eof(sm);
 }
 

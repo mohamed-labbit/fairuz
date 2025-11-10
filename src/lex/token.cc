@@ -9,6 +9,8 @@ namespace tok {
 
 const std::u16string& Token::lexeme() const { return this->value_; }
 
+std::string Token::utf8_lexeme() const { return utf8::utf16to8(this->value_); }
+
 const TokenType& Token::type() const { return this->type_; }
 
 typename std::size_t Token::size() const { return this->value_.length(); }
@@ -25,8 +27,8 @@ const std::string& Token::filepath() const { return this->location_.filepath_; }
 
 bool Token::operator==(const Token& other) const
 {
-    return value_ == other.value_ && type_ == other.type_
-      && location_.line_ == other.location_.line_ && location_.column_ == other.location_.column_;
+    return value_ == other.value_ && type_ == other.type_ && location_.line_ == other.location_.line_
+      && location_.column_ == other.location_.column_;
 }
 
 bool Token::operator!=(const Token& other) const { return !(*this == other); }
