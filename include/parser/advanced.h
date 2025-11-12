@@ -1,6 +1,11 @@
 #pragma once
-#include "AST.h"
-#include "Token.h"
+
+
+#include "../lex/lexer.h"
+#include "../lex/token.h"
+#include "ast.h"
+#include "parser.h"
+
 #include <functional>
 #include <future>
 #include <memory>
@@ -9,6 +14,10 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+
+
+namespace mylang {
+namespace parser {
 
 // ============================================================================
 // INCREMENTAL PARSING - Parse only changed regions
@@ -19,7 +28,7 @@ class IncrementalParser
     struct ParseNode
     {
         size_t startPos, endPos;
-        std::unique_ptr<ASTNode> ast;
+        std::unique_ptr<ast::ASTNode> ast;
         size_t hash;
     };
 
@@ -34,10 +43,10 @@ class IncrementalParser
 
    public:
     // Only reparse changed regions
-    std::vector<StmtPtr> parseIncremental(const std::string& newSource, const std::vector<size_t>& changedLines)
+    std::vector<ast::StmtPtr> parseIncremental(const std::string& newSource, const std::vector<size_t>& changedLines)
     {
         // Identify unchanged regions and reuse cached AST
-        std::vector<StmtPtr> result;
+        std::vector<ast::StmtPtr> result;
         // Implementation would diff source and reparse only changes
         return result;
     }
@@ -49,22 +58,23 @@ class IncrementalParser
 class ParallelParser
 {
    public:
-    static std::vector<StmtPtr> parseParallel(const std::vector<Token>& tokens, int threadCount = 4)
+    static std::vector<ast::StmtPtr> parseParallel(
+      const std::vector<mylang::lex::tok::Token>& tokens, int threadCount = 4)
     {
         // Split tokens by top-level definitions
-        std::vector<std::vector<Token>> chunks = splitIntoChunks(tokens);
-        std::vector<std::future<StmtPtr>> futures;
+        std::vector<std::vector<mylang::lex::tok::Token>> chunks = splitIntoChunks(tokens);
+        std::vector<std::future<ast::StmtPtr>> futures;
 
         for (auto& chunk : chunks)
         {
             futures.push_back(std::async(std::launch::async, [chunk]() {
-                Parser parser(chunk);
+                mylang::parser::Parser parser(chunk);
                 auto stmts = parser.parse();
                 return stmts.empty() ? nullptr : std::move(stmts[0]);
             }));
         }
 
-        std::vector<StmtPtr> result;
+        std::vector<ast::StmtPtr> result;
         for (auto& future : futures)
         {
             if (auto stmt = future.get())
@@ -76,15 +86,16 @@ class ParallelParser
     }
 
    private:
-    static std::vector<std::vector<Token>> splitIntoChunks(const std::vector<Token>& tokens)
+    static std::vector<std::vector<mylang::lex::tok::Token>> splitIntoChunks(
+      const std::vector<mylang::lex::tok::Token>& tokens)
     {
-        std::vector<std::vector<Token>> chunks;
-        std::vector<Token> current;
+        std::vector<std::vector<mylang::lex::tok::Token>> chunks;
+        std::vector<mylang::lex::tok::Token> current;
 
         for (const auto& tok : tokens)
         {
             current.push_back(tok);
-            if (tok.type == TokenType::KW_DEF && current.size() > 1)
+            if (tok.type == lex::tok::TokenType::KW_FN && current.size() > 1)
             {
                 chunks.push_back(current);
                 current.clear();
@@ -92,7 +103,9 @@ class ParallelParser
             }
         }
         if (!current.empty())
+        {
             chunks.push_back(current);
+        }
         return chunks;
     }
 };
@@ -169,7 +182,9 @@ class TypeSystem
         void unify(std::shared_ptr<Type> t1, std::shared_ptr<Type> t2)
         {
             if (*t1 == *t2)
+            {
                 return;
+            }
 
             // Type variable substitution
             if (t1->base == BaseType::Any)
@@ -194,46 +209,48 @@ class TypeSystem
         }
 
        public:
-        std::shared_ptr<Type> inferExpr(const Expr* expr)
+        std::shared_ptr<Type> inferExpr(const ast::Expr* expr)
         {
             if (!expr)
-                return std::make_shared<Type>();
-
-            switch (expr->kind)
             {
-            case Expr::Kind::Literal : {
-                auto* lit = static_cast<const LiteralExpr*>(expr);
+                return std::make_shared<Type>();
+            }
+
+            switch (expr->kind_)
+            {
+            case ast::Expr::Kind::LITERAL : {
+                auto* lit = static_cast<const ast::LiteralExpr*>(expr);
                 auto t = std::make_shared<Type>();
-                switch (lit->litType)
+                switch (lit->litType_)
                 {
-                case LiteralExpr::Type::Number :
-                    t->base = lit->value.find('.') != std::string::npos ? BaseType::Float : BaseType::Int;
+                case ast::LiteralExpr::Type::NUMBER :
+                    t->base = lit->value_.find('.') != std::string::npos ? BaseType::Float : BaseType::Int;
                     break;
-                case LiteralExpr::Type::String :
+                case ast::LiteralExpr::Type::STRING :
                     t->base = BaseType::String;
                     break;
-                case LiteralExpr::Type::Boolean :
+                case ast::LiteralExpr::Type::BOOLEAN :
                     t->base = BaseType::Bool;
                     break;
-                case LiteralExpr::Type::None :
+                case ast::LiteralExpr::Type::NONE :
                     t->base = BaseType::None;
                     break;
                 }
                 return t;
             }
-            case Expr::Kind::Binary : {
-                auto* bin = static_cast<const BinaryExpr*>(expr);
-                auto leftType = inferExpr(bin->left.get());
-                auto rightType = inferExpr(bin->right.get());
+            case ast::Expr::Kind::BINARY : {
+                auto* bin = static_cast<const ast::BinaryExpr*>(expr);
+                auto leftType = inferExpr(bin->left_.get());
+                auto rightType = inferExpr(bin->right_.get());
 
                 unify(leftType, rightType);
 
                 // Result type based on operator
-                if (bin->op == "+" || bin->op == "-" || bin->op == "*" || bin->op == "/")
+                if (bin->op_ == u"+" || bin->op_ == u"-" || bin->op_ == u"*" || bin->op_ == u"/")
                 {
                     return leftType;
                 }
-                else if (bin->op == "==" || bin->op == "!=" || bin->op == "<" || bin->op == ">")
+                else if (bin->op_ == u"==" || bin->op_ == u"!=" || bin->op_ == u"<" || bin->op_ == u">")
                 {
                     auto t = std::make_shared<Type>();
                     t->base = BaseType::Bool;
@@ -241,8 +258,8 @@ class TypeSystem
                 }
                 return leftType;
             }
-            case Expr::Kind::List : {
-                auto* list = static_cast<const ListExpr*>(expr);
+            case ast::Expr::Kind::LIST : {
+                auto* list = static_cast<const ast::ListExpr*>(expr);
                 auto t = std::make_shared<Type>();
                 t->base = BaseType::List;
 
@@ -291,7 +308,7 @@ class CodeGenerator
     };
 
     // Generate Python bytecode-like instructions
-    std::vector<Bytecode> generateBytecode(const std::vector<StmtPtr>& ast)
+    std::vector<Bytecode> generateBytecode(const std::vector<ast::StmtPtr>& ast)
     {
         std::vector<Bytecode> code;
 
@@ -304,7 +321,7 @@ class CodeGenerator
     }
 
     // Generate C++ code
-    std::string generateCPP(const std::vector<StmtPtr>& ast)
+    std::string generateCPP(const std::vector<ast::StmtPtr>& ast)
     {
         std::stringstream ss;
         ss << "#include <iostream>\n";
@@ -313,35 +330,37 @@ class CodeGenerator
 
         for (const auto& stmt : ast)
         {
-            ss << generateCPPStmt(stmt.get());
+            ss << utf8::utf16to8(generateCPPStmt(stmt.get()));
         }
 
         return ss.str();
     }
 
    private:
-    void generateStmt(const Stmt* stmt, std::vector<Bytecode>& code)
+    void generateStmt(const ast::Stmt* stmt, std::vector<Bytecode>& code)
     {
         if (!stmt)
-            return;
-
-        switch (stmt->kind)
         {
-        case Stmt::Kind::Assignment : {
-            auto* assign = static_cast<const AssignmentStmt*>(stmt);
-            generateExpr(assign->value.get(), code);
+            return;
+        }
+
+        switch (stmt->kind_)
+        {
+        case ast::Stmt::Kind::ASSIGNMENT : {
+            auto* assign = static_cast<const ast::AssignmentStmt*>(stmt);
+            generateExpr(assign->value_.get(), code);
             code.push_back({Bytecode::Op::STORE_VAR, 0});  // Store to variable
             break;
         }
-        case Stmt::Kind::Expression : {
-            auto* exprStmt = static_cast<const ExprStmt*>(stmt);
-            generateExpr(exprStmt->expression.get(), code);
+        case ast::Stmt::Kind::EXPRESSION : {
+            auto* exprStmt = static_cast<const ast::ExprStmt*>(stmt);
+            generateExpr(exprStmt->expression_.get(), code);
             code.push_back({Bytecode::Op::POP, 0});
             break;
         }
-        case Stmt::Kind::Return : {
-            auto* ret = static_cast<const ReturnStmt*>(stmt);
-            generateExpr(ret->value.get(), code);
+        case ast::Stmt::Kind::RETURN : {
+            auto* ret = static_cast<const ast::ReturnStmt*>(stmt);
+            generateExpr(ret->value_.get(), code);
             code.push_back({Bytecode::Op::RETURN, 0});
             break;
         }
@@ -350,34 +369,44 @@ class CodeGenerator
         }
     }
 
-    void generateExpr(const Expr* expr, std::vector<Bytecode>& code)
+    void generateExpr(const ast::Expr* expr, std::vector<Bytecode>& code)
     {
         if (!expr)
-            return;
-
-        switch (expr->kind)
         {
-        case Expr::Kind::Literal : {
+            return;
+        }
+
+        switch (expr->kind_)
+        {
+        case ast::Expr::Kind::LITERAL : {
             code.push_back({Bytecode::Op::LOAD_CONST, 0});
             break;
         }
-        case Expr::Kind::Name : {
+        case ast::Expr::Kind::NAME : {
             code.push_back({Bytecode::Op::LOAD_VAR, 0});
             break;
         }
-        case Expr::Kind::Binary : {
-            auto* bin = static_cast<const BinaryExpr*>(expr);
-            generateExpr(bin->left.get(), code);
-            generateExpr(bin->right.get(), code);
+        case ast::Expr::Kind::BINARY : {
+            auto* bin = static_cast<const ast::BinaryExpr*>(expr);
+            generateExpr(bin->left_.get(), code);
+            generateExpr(bin->right_.get(), code);
 
-            if (bin->op == "+")
+            if (bin->op_ == u"+")
+            {
                 code.push_back({Bytecode::Op::ADD, 0});
-            else if (bin->op == "-")
+            }
+            else if (bin->op_ == u"-")
+            {
                 code.push_back({Bytecode::Op::SUB, 0});
-            else if (bin->op == "*")
+            }
+            else if (bin->op_ == u"*")
+            {
                 code.push_back({Bytecode::Op::MUL, 0});
-            else if (bin->op == "/")
+            }
+            else if (bin->op_ == u"/")
+            {
                 code.push_back({Bytecode::Op::DIV, 0});
+            }
             break;
         }
         default :
@@ -385,87 +414,95 @@ class CodeGenerator
         }
     }
 
-    std::string generateCPPStmt(const Stmt* stmt)
+    std::u16string generateCPPStmt(const ast::Stmt* stmt)
     {
         if (!stmt)
-            return "";
-
-        switch (stmt->kind)
         {
-        case Stmt::Kind::Assignment : {
-            auto* assign = static_cast<const AssignmentStmt*>(stmt);
-            return "auto " + assign->target + " = " + generateCPPExpr(assign->value.get()) + ";\n";
+            return u"";
         }
-        case Stmt::Kind::Expression : {
-            auto* exprStmt = static_cast<const ExprStmt*>(stmt);
-            return generateCPPExpr(exprStmt->expression.get()) + ";\n";
+
+        switch (stmt->kind_)
+        {
+        case ast::Stmt::Kind::ASSIGNMENT : {
+            auto* assign = static_cast<const ast::AssignmentStmt*>(stmt);
+            return u"auto " + assign->target_ + u" = " + generateCPPExpr(assign->value_.get()) + u";\n";
         }
-        case Stmt::Kind::If : {
-            auto* ifStmt = static_cast<const IfStmt*>(stmt);
-            std::string result = "if (" + generateCPPExpr(ifStmt->condition.get()) + ") {\n";
+        case ast::Stmt::Kind::EXPRESSION : {
+            auto* exprStmt = static_cast<const ast::ExprStmt*>(stmt);
+            return generateCPPExpr(exprStmt->expression_.get()) + u";\n";
+        }
+        case ast::Stmt::Kind::IF : {
+            auto* ifStmt = static_cast<const ast::IfStmt*>(stmt);
+            std::u16string result = u"if (" + generateCPPExpr(ifStmt->condition.get()) + u") {\n";
             for (const auto& s : ifStmt->thenBlock)
             {
-                result += "  " + generateCPPStmt(s.get());
+                result += u"  " + generateCPPStmt(s.get());
             }
-            result += "}\n";
+            result += u"}\n";
             return result;
         }
-        case Stmt::Kind::FunctionDef : {
-            auto* func = static_cast<const FunctionDef*>(stmt);
-            std::string result = "auto " + func->name + "(";
-            for (size_t i = 0; i < func->params.size(); i++)
+        case ast::Stmt::Kind::FUNCTION_DEF : {
+            auto* func = static_cast<const ast::FunctionDef*>(stmt);
+            std::u16string result = u"auto " + func->name_ + u"(";
+            for (size_t i = 0; i < func->params_.size(); i++)
             {
-                result += "auto " + func->params[i];
-                if (i + 1 < func->params.size())
-                    result += ", ";
+                result += u"auto " + func->params_[i];
+                if (i + 1 < func->params_.size())
+                {
+                    result += u", ";
+                }
             }
-            result += ") {\n";
-            for (const auto& s : func->body)
+            result += u") {\n";
+            for (const auto& s : func->body_)
             {
-                result += "  " + generateCPPStmt(s.get());
+                result += u"  " + generateCPPStmt(s.get());
             }
-            result += "}\n";
+            result += u"}\n";
             return result;
         }
         default :
-            return "";
+            return u"";
         }
     }
 
-    std::string generateCPPExpr(const Expr* expr)
+    std::u16string generateCPPExpr(const ast::Expr* expr)
     {
         if (!expr)
-            return "";
-
-        switch (expr->kind)
         {
-        case Expr::Kind::Literal : {
-            auto* lit = static_cast<const LiteralExpr*>(expr);
-            return lit->value;
+            return u"";
         }
-        case Expr::Kind::Name : {
-            auto* name = static_cast<const NameExpr*>(expr);
-            return name->name;
+
+        switch (expr->kind_)
+        {
+        case ast::Expr::Kind::LITERAL : {
+            auto* lit = static_cast<const ast::LiteralExpr*>(expr);
+            return lit->value_;
         }
-        case Expr::Kind::Binary : {
-            auto* bin = static_cast<const BinaryExpr*>(expr);
-            return "(" + generateCPPExpr(bin->left.get()) + " " + bin->op + " " + generateCPPExpr(bin->right.get())
-              + ")";
+        case ast::Expr::Kind::NAME : {
+            auto* name = static_cast<const ast::NameExpr*>(expr);
+            return name->name_;
         }
-        case Expr::Kind::Call : {
-            auto* call = static_cast<const CallExpr*>(expr);
-            std::string result = generateCPPExpr(call->callee.get()) + "(";
-            for (size_t i = 0; i < call->args.size(); i++)
+        case ast::Expr::Kind::BINARY : {
+            auto* bin = static_cast<const ast::BinaryExpr*>(expr);
+            return u"(" + generateCPPExpr(bin->left_.get()) + u" " + bin->op_ + u" "
+              + generateCPPExpr(bin->right_.get()) + u")";
+        }
+        case ast::Expr::Kind::CALL : {
+            auto* call = static_cast<const ast::CallExpr*>(expr);
+            std::u16string result = generateCPPExpr(call->callee_.get()) + u"(";
+            for (size_t i = 0; i < call->args_.size(); i++)
             {
-                result += generateCPPExpr(call->args[i].get());
-                if (i + 1 < call->args.size())
-                    result += ", ";
+                result += generateCPPExpr(call->args_[i].get());
+                if (i + 1 < call->args_.size())
+                {
+                    result += u", ";
+                }
             }
-            result += ")";
+            result += u")";
             return result;
         }
         default :
-            return "";
+            return u"";
         }
     }
 };
@@ -666,9 +703,7 @@ class LanguageServer
         std::vector<CompletionItem> items;
 
         // Parse and get symbol table
-        Lexer lexer(source);
-        auto tokens = lexer.tokenize();
-        Parser parser(std::move(tokens));
+        mylang::parser::Parser parser(source);
         auto ast = parser.parse();
 
         // Analyze and extract symbols
@@ -743,7 +778,10 @@ class ParserProfiler
                       << "(" << std::setw(5) << percent << "%)\n";
         }
 
-        std::cout << "\n" << std::string(41, '─') << "\n";
+        // std::cout << "\n" << std::string(41, "─") << "\n";
         std::cout << std::left << std::setw(20) << "Total" << ": " << std::right << std::setw(8) << total << "ms\n";
     }
 };
+
+}
+}

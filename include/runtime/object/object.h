@@ -1,280 +1,197 @@
 #pragma once
 
-#include "runtime/allocator/arena.h"
+
+#include "../../../utfcpp/source/utf8.h"
+
 #include <functional>
 #include <string>
-#include <utility>
 #include <vector>
+
 
 namespace mylang {
 namespace runtime {
 namespace object {
 
-template<class _Alloc = allocator::ArenaAllocator, typename... _Args>
-class _PrimitiveObject
+// ============================================================================
+// ADVANCED VALUE SYSTEM - Full Python-like dynamic typing
+// ============================================================================
+class Value
 {
    public:
-    enum class _PrimitiveType { __INTEGER__, __FLOAT__, __STRING__, __FUNCTION__, __BOOLEAN__, __NONE__ };
+    enum class Type {
+        NONE,
+        INT,
+        FLOAT,
+        STRING,
+        BOOL,
+        LIST,
+        DICT,
+        TUPLE,
+        SET,
+        FUNCTION,
+        NATIVE_FUNCTION,
+        OBJECT,
+        SLICE,
+        ITERATOR,
+        GENERATOR,
+        COROUTINE
+    };
 
-   protected:
-    bool __bool_;
-    long long __int_;
-    double __float_;
-    std::string __str_;
-    std::function<_PrimitiveObject(std::vector<_Object>)> __func_;
-    _PrimitiveType __type_;
-    _Alloc* __allocator_;
+   private:
+    Type type_;
+
+    struct Function
+    {
+        int codeOffset;
+        std::vector<std::string> params;
+        std::vector<Value> defaults;
+        std::vector<Value> closure;  // Captured variables
+    };
+
+    struct NativeFunction
+    {
+        std::function<Value(const std::vector<Value>&)> func;
+        std::string name;
+        int arity;
+    };
+
+    struct Object
+    {
+        std::string className;
+        std::unordered_map<std::string, Value> attributes;
+        std::shared_ptr<Value> parent;  // For inheritance
+    };
+
+    struct Iterator
+    {
+        std::shared_ptr<std::vector<Value>> items;
+        size_t index;
+    };
+
+    std::variant<std::monostate,  // None
+      long long,  // Int
+      double,  // Float
+      std::shared_ptr<std::u16string>,  // String (shared for efficiency)
+      bool,  // Bool
+      std::shared_ptr<std::vector<Value>>,  // List (shared)
+      std::shared_ptr<std::unordered_map<std::u16string, Value>>,  // Dict
+      Function,  // User function
+      NativeFunction,  // Native C++ function
+      Object,  // Object instance
+      Iterator  // Iterator
+      >
+      data_;
+
+    // Reference counting for memory management
+    mutable int refCount_ = 0;
 
    public:
-    // Default constructor
-    _PrimitiveObject() :
-        __type_(_PrimitiveType::__NONE__),
-        __int_(0),
-        __float_(0.0),
-        __str_(""),
-        __func_(nullptr),
-        __bool_(false),
-        __allocator_(nullptr)
+    Value() :
+        type_(Type::NONE)
+    {
+    }
+    Value(long long v) :
+        type_(Type::INT),
+        data_(v)
+    {
+    }
+    Value(double v) :
+        type_(Type::FLOAT),
+        data_(v)
+    {
+    }
+    Value(const std::u16string& v) :
+        type_(Type::STRING),
+        data_(std::make_shared<std::u16string>(v))
+    {
+    }
+    Value(bool v) :
+        type_(Type::BOOL),
+        data_(v)
+    {
+    }
+    Value(const std::vector<Value>& v) :
+        type_(Type::LIST),
+        data_(std::make_shared<std::vector<Value>>(v))
+    {
+    }
+    Value(std::shared_ptr<std::vector<Value>> v) :
+        type_(Type::LIST),
+        data_(v)
     {
     }
 
-    // Constructor with allocator
-    _PrimitiveObject(_Alloc& __alloc) :
-        __type_(_PrimitiveType::__NONE__),
-        __int_(0),
-        __float_(0.0),
-        __str_(""),
-        __func_(nullptr),
-        __bool_(false),
-        __allocator_(&__alloc)
+    // Copy constructor with COW (Copy-On-Write)
+    Value(const Value& other) :
+        type_(other.type_),
+        data_(other.data_)
     {
     }
 
-    // Variadic constructor for values
-    template<typename T, typename = std::enable_if_t<!std::is_same_v<std::decay_t<T>, _Alloc>>>
-    _PrimitiveObject(T&& __arg)
-    {
-        __allocator_ = nullptr;
+    Type getType() const { return type_; }
 
-        if constexpr (std::is_same_v<std::decay_t<T>, long long> || std::is_integral_v<std::decay_t<T>>)
-        {
-            __type_ = _PrimitiveType::__INTEGER__;
-            __int_ = static_cast<long long>(__arg);
-            __float_ = static_cast<double>(__int_);
-            __str_ = "";
-            __func_ = nullptr;
-            __bool_ = __int_ != 0;
-        }
-        else if constexpr (std::is_same_v<std::decay_t<T>, double> || std::is_floating_point_v<std::decay_t<T>>)
-        {
-            __type_ = _PrimitiveType::__FLOAT__;
-            __float_ = static_cast<double>(__arg);
-            __int_ = static_cast<long long>(__float_);
-            __str_ = "";
-            __func_ = nullptr;
-            __bool_ = __float_ != 0.0;
-        }
-        else if constexpr (std::is_same_v<std::decay_t<T>, std::string> || std::is_same_v<std::decay_t<T>, const char*>
-          || std::is_same_v<std::decay_t<T>, char*>)
-        {
-            __type_ = _PrimitiveType::__STRING__;
-            __int_ = 0;
-            __float_ = 0.0;
-            __str_ = std::forward<T>(__arg);
-            __func_ = nullptr;
-            __bool_ = !__str_.empty();
-        }
-        else if constexpr (std::is_same_v<std::decay_t<T>,
-                             std::function<_PrimitiveObject(std::vector<_PrimitiveObject>)>>)
-        {
-            __type_ = _PrimitiveType::__FUNCTION__;
-            __int_ = 0;
-            __float_ = 0.0;
-            __str_ = "";
-            __func_ = std::forward<T>(__arg);
-            __bool_ = __func_ != nullptr;
-        }
-        else if constexpr (std::is_same_v<std::decay_t<T>, bool>)
-        {
-            __type_ = _PrimitiveType::__BOOLEAN__;
-            __bool_ = __arg;
-            __int_ = __bool_ ? 1 : 0;
-            __float_ = static_cast<double>(__int_);
-            __str_ = "";
-            __func_ = nullptr;
-        }
-        else
-        {
-            *this = _PrimitiveObject();
-        }
-    }
+    // Type checks
+    bool isNone() const { return type_ == Type::NONE; }
+    bool isInt() const { return type_ == Type::INT; }
+    bool isFloat() const { return type_ == Type::FLOAT; }
+    bool isNumber() const { return isInt() || isFloat(); }
+    bool isString() const { return type_ == Type::STRING; }
+    bool isBool() const { return type_ == Type::BOOL; }
+    bool isList() const { return type_ == Type::LIST; }
+    bool isDict() const { return type_ == Type::DICT; }
+    bool isFunction() const { return type_ == Type::FUNCTION; }
+    bool isCallable() const { return isFunction() || type_ == Type::NATIVE_FUNCTION; }
+    bool isIterable() const { return isList() || isString() || isDict(); }
 
-    // Constructor with allocator and value
-    template<typename T>
-    _PrimitiveObject(_Alloc& __alloc, T&& __arg) :
-        _PrimitiveObject(std::forward<T>(__arg))
-    {
-        __allocator_ = &__alloc;
-    }
+    // Getters with safety
+    long long asInt() const;
+    double asFloat() const;
+    const std::u16string& asString() const;
+    bool asBool() const;
+    std::vector<Value>& asList();
+    const std::vector<Value>& asList() const;
+    std::unordered_map<std::u16string, Value>& asDict() const;
+    Function& asFunction();
+    NativeFunction& asNativeFunction();
 
-    ~_PrimitiveObject() = default;
+    // Type conversions
+    double toFloat() const;
+    long long toInt() const;
+    bool toBool() const;
+    std::string toString() const;
+    std::string repr() const;
 
-    // Getters for type checking and access
-    _PrimitiveType type() const { return __type_; }
-    bool as_bool() const { return __bool_; }
-    long long as_int() const { return __int_; }
-    double as_float() const { return __float_; }
-    const std::string& as_string() const { return __str_; }
+    // Hash for use in dictionaries
+    size_t hash() const;
 
-    bool operator==(const _Object& __other) const
-    {
-        if (__type_ != __other.__type_)
-            return false;
-        switch (__type_)
-        {
-        case _PrimitiveType::__INTEGER__ :
-            return __int_ == __other.__int_;
-        case _PrimitiveType::__FLOAT__ :
-            return __float_ == __other.__float_;
-        case _PrimitiveType::__STRING__ :
-            return __str_ == __other.__str_;
-        case _PrimitiveType::__FUNCTION__ :
-            return __func_.target_type() == __other.__func_.target_type();
-        case _PrimitiveType::__BOOLEAN__ :
-            return __bool_ == __other.__bool_;
-        case _PrimitiveType::__NONE__ :
-            return true;
-        default :
-            return false;
-        }
-    }
+    // Comparison operators
+    bool operator==(const Value& other) const;
+    bool operator<(const Value& other) const;
+    bool operator>(const Value& other) const;
+    bool operator<=(const Value& other) const;
+    bool operator>=(const Value& other) const;
+    bool operator!=(const Value& other) const;
 
-    bool operator!=(const _Object& __other) const { return !(*this == __other); }
+    // Arithmetic operators with type promotion
+    Value operator+(const Value& other) const;
+    Value operator-(const Value& other) const;
+    Value operator*(const Value& other) const;
+    Value operator/(const Value& other) const;
+    Value operator%(const Value& other) const;
+    Value pow(const Value& other) const;
 
-    _PrimitiveObject operator+(const _Object& __other) const
-    {
-        if ((__type_ == _PrimitiveType::__INTEGER__ || __type_ == _PrimitiveType::__FLOAT__)
-          && (__other.__type_ == _PrimitiveType::__INTEGER__ || __other.__type_ == _PrimitiveType::__FLOAT__))
-            return _PrimitiveObject(__float_ + __other.__float_);
-        else if (__type_ == _PrimitiveType::__STRING__ && __other.__type_ == _PrimitiveType::__STRING__)
-            return _PrimitiveObject(__str_ + __other.__str_);
-        return _PrimitiveObject();
-    }
+    // Unary operators
+    Value operator-() const;
+    Value operator!() const;
 
-    _PrimitiveObject operator-(const _Object& __other) const
-    {
-        if ((__type_ == _PrimitiveType::__INTEGER__ || __type_ == _PrimitiveType::__FLOAT__)
-          && (__other.__type_ == _PrimitiveType::__INTEGER__ || __other.__type_ == _PrimitiveType::__FLOAT__))
-            return _PrimitiveObject(__float_ - __other.__float_);
-        return _PrimitiveObject();
-    }
+    // Subscript operator
+    Value getItem(const Value& key) const;
+    void setItem(const Value& key, const Value& value);
 
-    _PrimitiveObject operator*(const _Object& __other) const
-    {
-        if ((__type_ == _PrimitiveType::__INTEGER__ || __type_ == _PrimitiveType::__FLOAT__)
-          && (__other.__type_ == _PrimitiveType::__INTEGER__ || __other.__type_ == _PrimitiveType::__FLOAT__))
-            return _PrimitiveObject(__float_ * __other.__float_);
-        return _PrimitiveObject();
-    }
-
-    _PrimitiveObject operator/(const _Object& __other) const
-    {
-        if ((__type_ == _PrimitiveType::__INTEGER__ || __type_ == _PrimitiveType::__FLOAT__)
-          && (__other.__type_ == _PrimitiveType::__INTEGER__ || __other.__type_ == _PrimitiveType::__FLOAT__))
-        {
-            if (__other.__float_ == 0.0)
-                return _PrimitiveObject();
-            return _PrimitiveObject(__float_ / __other.__float_);
-        }
-        return _PrimitiveObject();
-    }
-
-    _PrimitiveObject operator&(const _Object& __other) const
-    {
-        if ((__type_ == _PrimitiveType::__INTEGER__ || __type_ == _PrimitiveType::__FLOAT__)
-          && (__other.__type_ == _PrimitiveType::__INTEGER__ || __other.__type_ == _PrimitiveType::__FLOAT__))
-            return _PrimitiveObject(__int_ & __other.__int_);
-        else if (__type_ == _PrimitiveType::__BOOLEAN__ && __other.__type_ == _PrimitiveType::__BOOLEAN__)
-            return _PrimitiveObject(__bool_ & __other.__bool_);
-        return _PrimitiveObject();
-    }
-
-    _PrimitiveObject operator|(const _Object& __other) const
-    {
-        if ((__type_ == _PrimitiveType::__INTEGER__ || __type_ == _PrimitiveType::__FLOAT__)
-          && (__other.__type_ == _PrimitiveType::__INTEGER__ || __other.__type_ == _PrimitiveType::__FLOAT__))
-            return _PrimitiveObject(__int_ | __other.__int_);
-        else if (__type_ == _PrimitiveType::__BOOLEAN__ && __other.__type_ == _PrimitiveType::__BOOLEAN__)
-            return _PrimitiveObject(__bool_ | __other.__bool_);
-        return _PrimitiveObject();
-    }
-
-    _PrimitiveObject operator^(const _Object& __other) const
-    {
-        if ((__type_ == _PrimitiveType::__INTEGER__ || __type_ == _PrimitiveType::__FLOAT__)
-          && (__other.__type_ == _PrimitiveType::__INTEGER__ || __other.__type_ == _PrimitiveType::__FLOAT__))
-            return _PrimitiveObject(__int_ ^ __other.__int_);
-        else if (__type_ == _PrimitiveType::__BOOLEAN__ && __other.__type_ == _PrimitiveType::__BOOLEAN__)
-            return _PrimitiveObject(__bool_ ^ __other.__bool_);
-        return _PrimitiveObject();
-    }
-
-    _PrimitiveObject operator~() const
-    {
-        if (__type_ == _PrimitiveType::__INTEGER__ || __type_ == _PrimitiveType::__FLOAT__)
-            return _PrimitiveObject(~__int_);
-        else if (__type_ == _PrimitiveType::__BOOLEAN__)
-            return _PrimitiveObject(!__bool_);
-        return _PrimitiveObject();
-    }
-
-    _PrimitiveObject operator!() const
-    {
-        if (__type_ == _PrimitiveType::__BOOLEAN__)
-            return _PrimitiveObject(!__bool_);
-        else if (__type_ == _PrimitiveType::__FUNCTION__)
-            return _PrimitiveObject(__func_ == nullptr);
-        return _PrimitiveObject();
-    }
-
-    _PrimitiveObject pow(const _Object& __other) const
-    {
-        if ((__type_ == _PrimitiveType::__INTEGER__ || __type_ == _PrimitiveType::__FLOAT__)
-          && (__other.__type_ == _PrimitiveType::__INTEGER__ || __other.__type_ == _PrimitiveType::__FLOAT__))
-            return _PrimitiveObject(std::pow(__float_, __other.__float_));
-        return _PrimitiveObject();
-    }
-
-    bool greater_than(const _Object& __other) const
-    {
-        if ((__type_ == _PrimitiveType::__INTEGER__ || __type_ == _PrimitiveType::__FLOAT__)
-          && (__other.__type_ == _PrimitiveType::__INTEGER__ || __other.__type_ == _PrimitiveType::__FLOAT__))
-            return __float_ > __other.__float_;
-        else if (__type_ == _PrimitiveType::__STRING__ && __other.__type_ == _PrimitiveType::__STRING__)
-            return __str_ > __other.__str_;
-        return false;
-    }
-
-    bool greater_equal(const _Object& __other) const { return greater_than(__other) || (*this == __other); }
-
-    bool less_than(const _Object& __other) const
-    {
-        if ((__type_ == _PrimitiveType::__INTEGER__ || __type_ == _PrimitiveType::__FLOAT__)
-          && (__other.__type_ == _PrimitiveType::__INTEGER__ || __other.__type_ == _PrimitiveType::__FLOAT__))
-            return __float_ < __other.__float_;
-        else if (__type_ == _PrimitiveType::__STRING__ && __other.__type_ == _PrimitiveType::__STRING__)
-            return __str_ < __other.__str_;
-        return false;
-    }
-
-    bool less_equal(const _Object& __other) const { return less_than(__other) || (*this == __other); }
-
-    _PrimitiveObject func_call(std::vector<_Object> args)
-    {
-        if (__type_ == _PrimitiveType::__FUNCTION__ && __func_)
-            return __func_(args);
-        return _PrimitiveObject();
-    }
+    // Iterator support
+    Value getIterator() const;
+    bool hasNext() const;
+    Value next();
 };
 
 }

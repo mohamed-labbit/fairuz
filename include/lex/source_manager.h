@@ -19,13 +19,17 @@ class SourceManager
         input_buffer_(file_, DEFAULT_CAPACITY)
     {
         if (!file_.is_open())
+        {
             throw std::runtime_error("File not found: " + filename);
+        }
     }
 
     ~SourceManager()
     {
         if (file_.is_open())
+        {
             file_.close();
+        }
     }
 
     std::size_t line() const;

@@ -1,10 +1,12 @@
-#include "AST.h"
-#include "AdvancedFeatures.h"
-#include "Lexer.h"
-#include "Optimizer.h"
-#include "Parser.h"
-#include "SemanticAnalyzer.h"
-#include "VirtualMachine.h"
+#include "../diag/diagnostic_engine.h"
+#include "../lex/lexer.h"
+#include "../runtime/vm/vm.h"
+#include "advanced.h"
+#include "analyze.h"
+#include "ast.h"
+#include "optim.h"
+#include "parser.h"
+
 #include <chrono>
 #include <fstream>
 #include <iomanip>
@@ -28,7 +30,9 @@ const char* GRAY = "\033[90m";
 std::string colorize(const std::string& text, const char* color, bool enabled = true)
 {
     if (!enabled)
+    {
         return text;
+    }
     return std::string(color) + text + Color::RESET;
 }
 
@@ -54,65 +58,71 @@ class EnhancedASTPrinter
     {
     }
 
-    void print(const Expr* expr)
+    void print(const mylang::parser::ast::Expr* expr)
     {
         if (!expr)
+        {
             return;
+        }
         nodeCount++;
 
-        switch (expr->kind)
+        switch (expr->kind_)
         {
-        case Expr::Kind::Binary : {
-            auto* e = static_cast<const BinaryExpr*>(expr);
+        case mylang::parser::ast::Expr::Kind::BINARY : {
+            auto* e = static_cast<const mylang::parser::ast::BinaryExpr*>(expr);
             printIndent();
-            std::cout << colorize("BinaryOp", Color::BOLD, useColor) << " " << colorize(e->op, Color::YELLOW, useColor)
+            std::cout << colorize("BinaryOp", Color::BOLD, useColor) << " " << colorize(e->op_, Color::YELLOW, useColor)
                       << "\n";
             indent++;
-            print(e->left.get());
-            print(e->right.get());
+            print(e->left_.get());
+            print(e->right_.get());
             indent--;
             break;
         }
-        case Expr::Kind::Unary : {
-            auto* e = static_cast<const UnaryExpr*>(expr);
+        case mylang::parser::ast::Expr::Kind::UNARY : {
+            auto* e = static_cast<const mylang::parser::ast::UnaryExpr*>(expr);
             printIndent();
-            std::cout << colorize("UnaryOp", Color::BOLD, useColor) << " " << colorize(e->op, Color::YELLOW, useColor)
+            std::cout << colorize("UnaryOp", Color::BOLD, useColor) << " " << colorize(e->op_, Color::YELLOW, useColor)
                       << "\n";
             indent++;
-            print(e->operand.get());
+            print(e->operand_.get());
             indent--;
             break;
         }
-        case Expr::Kind::Literal : {
-            auto* e = static_cast<const LiteralExpr*>(expr);
+        case mylang::parser::ast::Expr::Kind::LITERAL : {
+            auto* e = static_cast<const mylang::parser::ast::LiteralExpr*>(expr);
             printIndent();
-            std::cout << colorize("Literal", Color::GREEN, useColor) << ": " << e->value << "\n";
+            std::cout << colorize("Literal", Color::GREEN, useColor) << ": " << e->value_ << "\n";
             break;
         }
-        case Expr::Kind::Name : {
-            auto* e = static_cast<const NameExpr*>(expr);
+        case mylang::parser::ast::Expr::Kind::NAME : {
+            auto* e = static_cast<const mylang::parser::ast::NameExpr*>(expr);
             printIndent();
-            std::cout << colorize("Var", Color::CYAN, useColor) << ": " << e->name << "\n";
+            std::cout << colorize("Var", Color::CYAN, useColor) << ": " << e->name_ << "\n";
             break;
         }
-        case Expr::Kind::Call : {
-            auto* e = static_cast<const CallExpr*>(expr);
+        case mylang::parser::ast::Expr::Kind::CALL : {
+            auto* e = static_cast<const mylang::parser::ast::CallExpr*>(expr);
             printIndent();
-            std::cout << colorize("Call", Color::MAGENTA, useColor) << " [" << e->args.size() << " args]\n";
+            std::cout << colorize("Call", Color::MAGENTA, useColor) << " [" << e->args_.size() << " args]\n";
             indent++;
-            print(e->callee.get());
-            for (const auto& arg : e->args)
+            print(e->callee_.get());
+            for (const auto& arg : e->args_)
+            {
                 print(arg.get());
+            }
             indent--;
             break;
         }
-        case Expr::Kind::List : {
-            auto* e = static_cast<const ListExpr*>(expr);
+        case mylang::parser::ast::Expr::Kind::LIST : {
+            auto* e = static_cast<const mylang::parser::ast::ListExpr*>(expr);
             printIndent();
-            std::cout << colorize("List", Color::BLUE, useColor) << " [" << e->elements.size() << "]\n";
+            std::cout << colorize("List", Color::BLUE, useColor) << " [" << e->elements_.size() << "]\n";
             indent++;
-            for (const auto& elem : e->elements)
+            for (const auto& elem : e->elements_)
+            {
                 print(elem.get());
+            }
             indent--;
             break;
         }
@@ -121,87 +131,99 @@ class EnhancedASTPrinter
         }
     }
 
-    void print(const Stmt* stmt)
+    void print(const mylang::parser::ast::Stmt* stmt)
     {
         if (!stmt)
+        {
             return;
+        }
         nodeCount++;
 
         switch (stmt->kind)
         {
-        case Stmt::Kind::Assignment : {
-            auto* s = static_cast<const AssignmentStmt*>(stmt);
+        case mylang::parser::ast::Stmt::Kind::ASSIGNMENT : {
+            auto* s = static_cast<const mylang::parser::ast::AssignmentStmt*>(stmt);
             printIndent();
-            std::cout << colorize("Assign", Color::BOLD, useColor) << " " << colorize(s->target, Color::CYAN, useColor)
+            std::cout << colorize("Assign", Color::BOLD, useColor) << " " << colorize(s->target_, Color::CYAN, useColor)
                       << "\n";
             indent++;
-            print(s->value.get());
+            print(s->value_.get());
             indent--;
             break;
         }
-        case Stmt::Kind::If : {
-            auto* s = static_cast<const IfStmt*>(stmt);
+        case mylang::parser::ast::Stmt::Kind::IF : {
+            auto* s = static_cast<const mylang::parser::ast::IfStmt*>(stmt);
             printIndent();
             std::cout << colorize("If", Color::BOLD, useColor) << "\n";
             indent++;
-            print(s->condition.get());
-            for (const auto& st : s->thenBlock)
+            print(s->condition_.get());
+            for (const auto& st : s->thenBlock_)
+            {
                 print(st.get());
+            }
             indent--;
             break;
         }
-        case Stmt::Kind::While : {
-            auto* s = static_cast<const WhileStmt*>(stmt);
+        case mylang::parser::ast::Stmt::Kind::WHILE : {
+            auto* s = static_cast<const mylang::parser::ast::WhileStmt*>(stmt);
             printIndent();
             std::cout << colorize("While", Color::BOLD, useColor) << "\n";
             indent++;
-            print(s->condition.get());
-            for (const auto& st : s->body)
-                print(st.get());
-            indent--;
-            break;
-        }
-        case Stmt::Kind::For : {
-            auto* s = static_cast<const ForStmt*>(stmt);
-            printIndent();
-            std::cout << colorize("For", Color::BOLD, useColor) << " " << s->target << "\n";
-            indent++;
-            print(s->iter.get());
-            for (const auto& st : s->body)
-                print(st.get());
-            indent--;
-            break;
-        }
-        case Stmt::Kind::FunctionDef : {
-            auto* s = static_cast<const FunctionDef*>(stmt);
-            printIndent();
-            std::cout << colorize("Function", Color::BOLD, useColor) << " " << colorize(s->name, Color::GREEN, useColor)
-                      << "(";
-            for (size_t i = 0; i < s->params.size(); i++)
+            print(s->condition_.get());
+            for (const auto& st : s->body_)
             {
-                std::cout << s->params[i];
-                if (i + 1 < s->params.size())
+                print(st.get());
+            }
+            indent--;
+            break;
+        }
+        case mylang::parser::ast::Stmt::Kind::FOR : {
+            auto* s = static_cast<const mylang::parser::ast::ForStmt*>(stmt);
+            printIndent();
+            std::cout << colorize("For", Color::BOLD, useColor) << " " << s->target_ << "\n";
+            indent++;
+            print(s->iter_.get());
+            for (const auto& st : s->body_)
+            {
+                print(st.get());
+            }
+            indent--;
+            break;
+        }
+        case mylang::parser::ast::Stmt::Kind::FUNCTION_DEF : {
+            auto* s = static_cast<const mylang::parser::ast::FunctionDef*>(stmt);
+            printIndent();
+            std::cout << colorize("Function", Color::BOLD, useColor) << " "
+                      << colorize(s->name_, Color::GREEN, useColor) << "(";
+            for (size_t i = 0; i < s->params_.size(); i++)
+            {
+                std::cout << s->params_[i];
+                if (i + 1 < s->params_.size())
+                {
                     std::cout << ", ";
+                }
             }
             std::cout << ")\n";
             indent++;
-            for (const auto& st : s->body)
+            for (const auto& st : s->body_)
+            {
                 print(st.get());
+            }
             indent--;
             break;
         }
-        case Stmt::Kind::Return : {
-            auto* s = static_cast<const ReturnStmt*>(stmt);
+        case mylang::parser::ast::Stmt::Kind::RETURN : {
+            auto* s = static_cast<const mylang::parser::ast::ReturnStmt*>(stmt);
             printIndent();
             std::cout << colorize("Return", Color::BOLD, useColor) << "\n";
             indent++;
-            print(s->value.get());
+            print(s->value_.get());
             indent--;
             break;
         }
-        case Stmt::Kind::Expression : {
-            auto* s = static_cast<const ExprStmt*>(stmt);
-            print(s->expression.get());
+        case mylang::parser::ast::Stmt::Kind::EXPRESSION : {
+            auto* s = static_cast<const mylang::parser::ast::ExprStmt*>(stmt);
+            print(s->expression_.get());
             break;
         }
         default :
@@ -275,33 +297,61 @@ int main(int argc, char* argv[])
     {
         std::string arg = argv[i];
         if (arg == "-O0")
+        {
             optLevel = 0;
+        }
         else if (arg == "-O1")
+        {
             optLevel = 1;
+        }
         else if (arg == "-O2")
+        {
             optLevel = 2;
+        }
         else if (arg == "-O3")
+        {
             optLevel = 3;
+        }
         else if (arg == "--no-color")
+        {
             useColor = false;
+        }
         else if (arg == "--no-ast")
+        {
             printAST = false;
+        }
         else if (arg == "--stats")
+        {
             showStats = true;
+        }
         else if (arg == "--profile")
+        {
             enableProfile = true;
+        }
         else if (arg == "--run")
+        {
             runCode = true;
+        }
         else if (arg == "--bytecode")
+        {
             showBytecode = true;
+        }
         else if (arg == "--cpp")
+        {
             generateCPP = true;
+        }
         else if (arg == "--parallel")
+        {
             useParallel = true;
+        }
         else if (arg == "--json")
+        {
             jsonOutput = true;
+        }
         else if (arg == "--check")
+        {
             checkOnly = true;
+        }
         else if (arg == "--help" || arg == "-h")
         {
             printBanner(useColor);
@@ -322,8 +372,8 @@ int main(int argc, char* argv[])
 
     std::string source((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
-    ParserProfiler profiler;
-    DiagnosticEngine diagnostics;
+    mylang::parser::ParserProfiler profiler;
+    mylang::diagnostics::DiagnosticEngine diagnostics;
     diagnostics.setSource(source);
 
     auto totalStart = std::chrono::high_resolution_clock::now();
@@ -334,13 +384,15 @@ int main(int argc, char* argv[])
         std::cout << "\n" << colorize("▶ Phase 1: Lexical Analysis", Color::CYAN, useColor) << "\n";
 
         auto lexStart = std::chrono::high_resolution_clock::now();
-        Lexer lexer(source);
+        mylang::lex::Lexer lexer(source);
         auto tokens = lexer.tokenize();
         auto lexEnd = std::chrono::high_resolution_clock::now();
         auto lexTime = std::chrono::duration<double, std::milli>(lexEnd - lexStart).count();
 
         if (enableProfile)
+        {
             profiler.recordPhase("Lexing", lexTime);
+        }
 
         std::cout << colorize("  ✓ ", Color::GREEN, useColor) << tokens.size() << " tokens in " << std::fixed
                   << std::setprecision(2) << lexTime << "ms"
@@ -352,13 +404,15 @@ int main(int argc, char* argv[])
         std::cout << "\n" << colorize("▶ Phase 2: Syntax Analysis", Color::CYAN, useColor) << "\n";
 
         auto parseStart = std::chrono::high_resolution_clock::now();
-        Parser parser(std::move(tokens));
+        mylang::parser::Parser parser(std::move(tokens));
         auto ast = parser.parse();
         auto parseEnd = std::chrono::high_resolution_clock::now();
         auto parseTime = std::chrono::duration<double, std::milli>(parseEnd - parseStart).count();
 
         if (enableProfile)
+        {
             profiler.recordPhase("Parsing", parseTime);
+        }
 
         std::cout << colorize("  ✓ ", Color::GREEN, useColor) << ast.size() << " statements in " << std::fixed
                   << std::setprecision(2) << parseTime << "ms\n";
@@ -367,22 +421,28 @@ int main(int argc, char* argv[])
         std::cout << "\n" << colorize("▶ Phase 3: Semantic Analysis", Color::CYAN, useColor) << "\n";
 
         auto semanticStart = std::chrono::high_resolution_clock::now();
-        SemanticAnalyzer analyzer;
+        mylang::parser::symbols::SemanticAnalyzer analyzer;
         analyzer.analyze(ast);
         auto semanticEnd = std::chrono::high_resolution_clock::now();
         auto semanticTime = std::chrono::duration<double, std::milli>(semanticEnd - semanticStart).count();
 
         if (enableProfile)
+        {
             profiler.recordPhase("Semantic Analysis", semanticTime);
+        }
 
         const auto& issues = analyzer.getIssues();
         int errors = 0, warnings = 0;
         for (const auto& issue : issues)
         {
-            if (issue.severity == SemanticAnalyzer::Issue::Severity::Error)
+            if (issue.severity_ == mylang::parser::symbols::SemanticAnalyzer::Issue::Severity::ERROR)
+            {
                 errors++;
-            else if (issue.severity == SemanticAnalyzer::Issue::Severity::Warning)
+            }
+            else if (issue.severity_ == mylang::parser::symbols::SemanticAnalyzer::Issue::Severity::WARNING)
+            {
                 warnings++;
+            }
         }
 
         std::cout << colorize("  ✓ ", Color::GREEN, useColor) << "Analysis complete in " << std::fixed
@@ -415,19 +475,21 @@ int main(int argc, char* argv[])
                       << "\n";
 
             auto optStart = std::chrono::high_resolution_clock::now();
-            ASTOptimizer optimizer;
+            mylang::parser::optim::ASTOptimizer optimizer;
             ast = optimizer.optimize(std::move(ast), optLevel);
             auto optEnd = std::chrono::high_resolution_clock::now();
             auto optTime = std::chrono::duration<double, std::milli>(optEnd - optStart).count();
 
             if (enableProfile)
+            {
                 profiler.recordPhase("Optimization", optTime);
+            }
 
             std::cout << colorize("  ✓ ", Color::GREEN, useColor) << "Optimized in " << std::fixed
                       << std::setprecision(2) << optTime << "ms\n";
 
             const auto& stats = optimizer.getStats();
-            int totalOpts = stats.constantFolds + stats.deadCodeEliminations + stats.strengthReductions;
+            int totalOpts = stats.constantFolds_ + stats.deadCodeEliminations_ + stats.strengthReductions_;
             std::cout << "    " << totalOpts << " optimizations applied\n";
 
             if (showStats)
@@ -445,12 +507,14 @@ int main(int argc, char* argv[])
 
             auto codegenStart = std::chrono::high_resolution_clock::now();
             BytecodeCompiler compiler;
-            bytecode = compiler.compile(ast);
+            std::vector<mylang::runtime::bytecode::Instruction> bc = compiler.compile(ast);
             auto codegenEnd = std::chrono::high_resolution_clock::now();
             auto codegenTime = std::chrono::duration<double, std::milli>(codegenEnd - codegenStart).count();
 
             if (enableProfile)
+            {
                 profiler.recordPhase("Code Generation", codegenTime);
+            }
 
             std::cout << colorize("  ✓ ", Color::GREEN, useColor) << bytecode.instructions.size()
                       << " instructions generated in " << std::fixed << std::setprecision(2) << codegenTime << "ms\n";
@@ -495,37 +559,37 @@ int main(int argc, char* argv[])
                 // Print opcode name
                 switch (instr.op)
                 {
-                case OpCode::LOAD_CONST :
+                case mylang::runtime::bytecode::OpCode::LOAD_CONST :
                     std::cout << "LOAD_CONST  " << instr.arg;
                     break;
-                case OpCode::LOAD_VAR :
+                case mylang::runtime::bytecode::OpCode::LOAD_VAR :
                     std::cout << "LOAD_VAR    " << instr.arg;
                     break;
-                case OpCode::STORE_VAR :
+                case mylang::runtime::bytecode::OpCode::STORE_VAR :
                     std::cout << "STORE_VAR   " << instr.arg;
                     break;
-                case OpCode::ADD :
+                case mylang::runtime::bytecode::OpCode::ADD :
                     std::cout << "ADD";
                     break;
-                case OpCode::SUB :
+                case mylang::runtime::bytecode::OpCode::SUB :
                     std::cout << "SUB";
                     break;
-                case OpCode::MUL :
+                case mylang::runtime::bytecode::OpCode::MUL :
                     std::cout << "MUL";
                     break;
-                case OpCode::DIV :
+                case mylang::runtime::bytecode::OpCode::DIV :
                     std::cout << "DIV";
                     break;
-                case OpCode::PRINT :
+                case mylang::runtime::bytecode::OpCode::PRINT :
                     std::cout << "PRINT       " << instr.arg;
                     break;
-                case OpCode::JUMP :
+                case mylang::runtime::bytecode::OpCode::JUMP :
                     std::cout << "JUMP        " << instr.arg;
                     break;
-                case OpCode::JUMP_IF_FALSE :
+                case mylang::runtime::bytecode::OpCode::JUMP_IF_FALSE :
                     std::cout << "JUMP_IF_FALSE " << instr.arg;
                     break;
-                case OpCode::HALT :
+                case mylang::runtime::bytecode::OpCode::HALT :
                     std::cout << "HALT";
                     break;
                 default :
@@ -544,13 +608,15 @@ int main(int argc, char* argv[])
             std::cout << colorize("─────────────────────────────────────\n", Color::GRAY, useColor);
 
             auto execStart = std::chrono::high_resolution_clock::now();
-            VirtualMachine vm;
-            vm.execute(bytecode);
+            mylang::runtime::VirtualMachine vm;
+            vm.execute(bc);
             auto execEnd = std::chrono::high_resolution_clock::now();
             auto execTime = std::chrono::duration<double, std::milli>(execEnd - execStart).count();
 
             if (enableProfile)
+            {
                 profiler.recordPhase("Execution", execTime);
+            }
 
             std::cout << colorize("─────────────────────────────────────\n", Color::GRAY, useColor);
             std::cout << colorize("  ✓ ", Color::GREEN, useColor) << "Executed in " << std::fixed

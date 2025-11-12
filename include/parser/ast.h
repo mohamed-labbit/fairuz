@@ -6,6 +6,10 @@
 #include <vector>
 
 
+namespace mylang {
+namespace parser {
+namespace ast {
+
 // Forward declarations
 struct Expr;
 struct Stmt;
@@ -16,45 +20,45 @@ using StmtPtr = std::unique_ptr<Stmt>;
 // Base classes
 struct ASTNode
 {
-    std::size_t line_, column_;
+    std::size_t line, column;
     virtual ~ASTNode() = default;
 };
 
 struct Expr: ASTNode
 {
     enum class Kind { BINARY, UNARY, LITERAL, NAME, CALL, TERNARY, ASSIGNMENT, LIST, TUPLE };
-    Kind kind_;
+    Kind kind;
 };
 
 struct Stmt: ASTNode
 {
     enum class Kind { EXPRESSION, ASSIGNMENT, IF, WHILE, FOR, FUNCTION_DEF, RETURN, BLOCK };
-    Kind kind_;
+    Kind kind;
 };
 
 // Expression nodes
 struct BinaryExpr: Expr
 {
-    ExprPtr left_, right_;
-    std::u16string op_;
+    ExprPtr left, right;
+    std::u16string op;
     BinaryExpr(ExprPtr l, std::u16string o, ExprPtr r) :
-        left_(std::move(l)),
-        op_(std::move(o)),
-        right_(std::move(r))
+        left(std::move(l)),
+        op(std::move(o)),
+        right(std::move(r))
     {
-        kind_ = Kind::BINARY;
+        kind = Kind::BINARY;
     }
 };
 
 struct UnaryExpr: Expr
 {
-    std::u16string op_;
-    ExprPtr operand_;
+    std::u16string op;
+    ExprPtr operand;
     UnaryExpr(std::u16string o, ExprPtr expr) :
-        op_(std::move(o)),
-        operand_(std::move(expr))
+        op(std::move(o)),
+        operand(std::move(expr))
     {
-        kind_ = Kind::UNARY;
+        kind = Kind::UNARY;
     }
 };
 
@@ -67,7 +71,7 @@ struct LiteralExpr: Expr
         litType_(t),
         value_(std::move(v))
     {
-        kind_ = Kind::LITERAL;
+        kind = Kind::LITERAL;
     }
 };
 
@@ -77,7 +81,7 @@ struct NameExpr: Expr
     explicit NameExpr(std::u16string n) :
         name_(std::move(n))
     {
-        kind_ = Kind::NAME;
+        kind = Kind::NAME;
     }
 };
 
@@ -89,7 +93,7 @@ struct CallExpr: Expr
         callee_(std::move(c)),
         args_(std::move(a))
     {
-        kind_ = Kind::CALL;
+        kind = Kind::CALL;
     }
 };
 
@@ -101,7 +105,7 @@ struct TernaryExpr: Expr
         trueExpr_(std::move(t)),
         falseExpr_(std::move(f))
     {
-        kind_ = Kind::TERNARY;
+        kind = Kind::TERNARY;
     }
 };
 
@@ -113,17 +117,17 @@ struct AssignmentExpr: Expr
         target_(std::move(t)),
         value_(std::move(v))
     {
-        kind_ = Kind::ASSIGNMENT;
+        kind = Kind::ASSIGNMENT;
     }
 };
 
 struct ListExpr: Expr
 {
-    std::vector<ExprPtr> elements;
+    std::vector<ExprPtr> elements_;
     explicit ListExpr(std::vector<ExprPtr> elems) :
-        elements(std::move(elems))
+        elements_(std::move(elems))
     {
-        kind_ = Kind::LIST;
+        kind = Kind::LIST;
     }
 };
 
@@ -134,7 +138,7 @@ struct ExprStmt: Stmt
     explicit ExprStmt(ExprPtr e) :
         expression_(std::move(e))
     {
-        kind_ = Kind::EXPRESSION;
+        kind = Kind::EXPRESSION;
     }
 };
 
@@ -146,33 +150,33 @@ struct AssignmentStmt: Stmt
         target_(std::move(t)),
         value_(std::move(v))
     {
-        kind_ = Kind::ASSIGNMENT;
+        kind = Kind::ASSIGNMENT;
     }
 };
 
 struct IfStmt: Stmt
 {
-    ExprPtr condition;
-    std::vector<StmtPtr> thenBlock;
-    std::vector<StmtPtr> elseBlock;
+    ExprPtr condition_;
+    std::vector<StmtPtr> thenBlock_;
+    std::vector<StmtPtr> elseBlock_;
     IfStmt(ExprPtr cond, std::vector<StmtPtr> tb, std::vector<StmtPtr> eb) :
-        condition(std::move(cond)),
-        thenBlock(std::move(tb)),
-        elseBlock(std::move(eb))
+        condition_(std::move(cond)),
+        thenBlock_(std::move(tb)),
+        elseBlock_(std::move(eb))
     {
-        kind_ = Kind::IF;
+        kind = Kind::IF;
     }
 };
 
 struct WhileStmt: Stmt
 {
-    ExprPtr condition;
-    std::vector<StmtPtr> body;
+    ExprPtr condition_;
+    std::vector<StmtPtr> body_;
     WhileStmt(ExprPtr cond, std::vector<StmtPtr> b) :
-        condition(std::move(cond)),
-        body(std::move(b))
+        condition_(std::move(cond)),
+        body_(std::move(b))
     {
-        kind_ = Kind::WHILE;
+        kind = Kind::WHILE;
     }
 };
 
@@ -186,7 +190,7 @@ struct ForStmt: Stmt
         iter_(std::move(i)),
         body_(std::move(b))
     {
-        kind_ = Kind::FOR;
+        kind = Kind::FOR;
     }
 };
 
@@ -200,7 +204,7 @@ struct FunctionDef: Stmt
         params_(std::move(p)),
         body_(std::move(b))
     {
-        kind_ = Kind::FUNCTION_DEF;
+        kind = Kind::FUNCTION_DEF;
     }
 };
 
@@ -210,7 +214,7 @@ struct ReturnStmt: Stmt
     explicit ReturnStmt(ExprPtr v) :
         value_(std::move(v))
     {
-        kind_ = Kind::RETURN;
+        kind = Kind::RETURN;
     }
 };
 
@@ -220,6 +224,10 @@ struct BlockStmt: Stmt
     explicit BlockStmt(std::vector<StmtPtr> stmts) :
         statements_(std::move(stmts))
     {
-        kind_ = Kind::BLOCK;
+        kind = Kind::BLOCK;
     }
 };
+
+}
+}
+}

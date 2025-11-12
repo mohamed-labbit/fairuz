@@ -9,27 +9,23 @@ namespace buffer {
 
 struct Position
 {
-    std::size_t line_;
-    std::size_t column_;
-    std::size_t file_pos_;
+    std::size_t line;
+    std::size_t column;
+    std::size_t file_pos;
 
     Position() :
-        line_(0),
-        column_(0),
-        file_pos_(0)
+        line(0),
+        column(0),
+        file_pos(0)
     {
     }
 
     Position(const std::size_t line, const std::size_t col, std::size_t fpos) :
-        line_(line),
-        column_(col),
-        file_pos_(fpos)
+        line(line),
+        column(col),
+        file_pos(fpos)
     {
     }
-
-    std::size_t line() const { return this->line_; }
-    std::size_t column() const { return this->column_; }
-    std::size_t fpos() const { return this->file_pos_; }
 };
 
 class InputBuffer: public InputBufferBase
@@ -64,8 +60,8 @@ class InputBuffer: public InputBufferBase
    private:
     struct PushbackEntry
     {
-        char16_t ch_;
-        Position pos_;
+        char16_t ch;
+        Position pos;
     };
 
     std::size_t capacity_ = DEFAULT_CAPACITY;

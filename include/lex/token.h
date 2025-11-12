@@ -86,7 +86,11 @@ enum class TokenType : int {
     INDENT,
     DEDENT,
     ENDMARKER,
+    BEGINMARKER,
     TYPE_COMMENT,
+
+    // identifier
+    IDENTIFIER,
 
     // Error
     INVALID
@@ -108,26 +112,26 @@ class Token
    public:
     struct Location
     {
-        std::string filepath_;
-        std::size_t line_{0};
-        std::size_t column_{0};
-        std::size_t file_pos_{0};
+        std::string filepath;
+        std::size_t line{0};
+        std::size_t column{0};
+        std::size_t file_pos{0};
 
         Location() = default;
 
         Location(std::string fp, std::array<std::size_t, 3> coords) :
-            filepath_(fp),
-            line_(coords[0]),
-            column_(coords[1]),
-            file_pos_(coords[2])
+            filepath(fp),
+            line(coords[0]),
+            column(coords[1]),
+            file_pos(coords[2])
         {
         }
 
         Location(std::string fp, std::size_t coords[3]) :
-            filepath_(fp),
-            line_(coords[0]),
-            column_(coords[1]),
-            file_pos_(coords[2])
+            filepath(fp),
+            line(coords[0]),
+            column(coords[1]),
+            file_pos(coords[2])
         {
         }
     };
@@ -170,8 +174,8 @@ class Token
     friend std::ostream& operator<<(std::ostream& os, const Token& tok)
     {
         os << "Token(\"" << utf8::utf16to8(tok.value_) << "\", type=" << static_cast<int>(tok.type_)
-           << ", line=" << tok.location_.line_ << ", col=" << tok.location_.column_
-           << "\", file_pos=" << tok.location_.file_pos_ << "\", file path=" << tok.location_.filepath_ << ")";
+           << ", line=" << tok.location_.line << ", col=" << tok.location_.column
+           << "\", file_pos=" << tok.location_.file_pos << "\", file path=" << tok.location_.filepath << ")";
         return os;
     }
 

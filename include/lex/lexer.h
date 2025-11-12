@@ -15,13 +15,13 @@ namespace lex {
 struct IndentationContext
 {
 
-    std::stack<std::size_t> indent_stack_;  // Stack of indentation levels
-    std::size_t current_level_{0};  // Current indentation level
-    bool at_line_start_{true};  // Are we at the start of a line?
-    std::size_t in_parentheses_{0};  // Nesting depth of (), [], {}
-    bool expecting_indent_{false};  // Did previous line end with ':'?
-    std::size_t spaces_per_indent_{4};  // Expected spaces per indent level
-    bool mixed_indent_error_{false};  // Detected mixed tabs/spaces
+    std::stack<std::size_t> indent_stack;  // Stack of indentation levels
+    std::size_t current_level{0};  // Current indentation level
+    bool at_line_start{true};  // Are we at the start of a line?
+    std::size_t in_parentheses{0};  // Nesting depth of (), [], {}
+    bool expecting_indent{false};  // Did previous line end with ':'?
+    std::size_t spaces_per_indent{4};  // Expected spaces per indent level
+    bool mixed_indent_error{false};  // Detected mixed tabs/spaces
 
     enum class IndentMode {
         UNDETECTED,  // Haven't determined yet
@@ -30,11 +30,11 @@ struct IndentationContext
         MIXED  // Mixed (error state)
     };
 
-    IndentMode mode_{IndentMode::UNDETECTED};
+    IndentMode mode{IndentMode::UNDETECTED};
 
     IndentationContext()
     {
-        indent_stack_.push(0);  // Base indentation level
+        indent_stack.push(0);  // Base indentation level
     }
 
     /**
@@ -42,25 +42,34 @@ struct IndentationContext
         */
     void detect_indent_mode(const std::u16string& indent_str)
     {
-        if (mode_ != IndentMode::UNDETECTED)
+        if (mode != IndentMode::UNDETECTED)
+        {
             return;
+        }
+
         bool has_spaces = false;
         bool has_tabs = false;
+        
         for (char16_t ch : indent_str)
         {
             if (ch == u' ')
+            {
                 has_spaces = true;
+            }
             if (ch == u'\t')
+            {
                 has_tabs = true;
+            }
         }
+        
         if (has_spaces && has_tabs)
         {
-            mode_ = IndentMode::MIXED;
-            mixed_indent_error_ = true;
+            mode = IndentMode::MIXED;
+            mixed_indent_error = true;
         }
         else if (has_spaces)
         {
-            mode_ = IndentMode::SPACES;
+            mode = IndentMode::SPACES;
             // Try to detect spaces per indent
             if (indent_str.length() > 0)
             {
@@ -69,7 +78,7 @@ struct IndentationContext
                 {
                     if (indent_str.length() % width == 0)
                     {
-                        spaces_per_indent_ = width;
+                        spaces_per_indent = width;
                         break;
                     }
                 }
@@ -77,7 +86,7 @@ struct IndentationContext
         }
         else if (has_tabs)
         {
-            mode_ = IndentMode::TABS;
+            mode = IndentMode::TABS;
         }
     }
 
@@ -86,42 +95,54 @@ struct IndentationContext
         */
     bool validate_indent(const std::u16string& indent_str) const
     {
-        if (mode_ == IndentMode::MIXED)
+        if (mode == IndentMode::MIXED)
+        {
             return false;
+        }
         bool has_spaces = false;
         bool has_tabs = false;
         for (char16_t ch : indent_str)
         {
             if (ch == u' ')
+            {
                 has_spaces = true;
+            }
             if (ch == u'\t')
+            {
                 has_tabs = true;
+            }
         }
-        if (mode_ == IndentMode::SPACES && has_tabs)
+        if (mode == IndentMode::SPACES && has_tabs)
+        {
             return false;
-        if (mode_ == IndentMode::TABS && has_spaces)
+        }
+        if (mode == IndentMode::TABS && has_spaces)
+        {
             return false;
+        }
         if (has_spaces && has_tabs)
+        {
             return false;
+        }
         return true;
     }
 
-    std::size_t top() const { return indent_stack_.top(); }
+    std::size_t top() const { return indent_stack.top(); }
 
-    void push(std::size_t level) { indent_stack_.push(level); }
+    void push(std::size_t level) { indent_stack.push(level); }
 
     std::size_t pop()
     {
-        if (indent_stack_.size() > 1)
+        if (indent_stack.size() > 1)
         {
-            std::size_t val = indent_stack_.top();
-            indent_stack_.pop();
+            std::size_t val = indent_stack.top();
+            indent_stack.pop();
             return val;
         }
         return 0;
     }
 
-    std::size_t stack_size() const { return indent_stack_.size(); }
+    std::size_t stack_size() const { return indent_stack.size(); }
 };
 
 /**
@@ -188,7 +209,7 @@ class Lexer
     tok::Token _handle_symbol(char16_t c, SourceManager& sm);
     tok::Token _handle_string_literal(char16_t c, SourceManager& sm);
     tok::Token _handle_newline(char16_t c, SourceManager& sm);
-    tok::Token _emit_unknown(char16_t c, SourceManager& sm);
+    tok::Token _emit_invalid(char16_t c, SourceManager& sm);
     tok::Token _emit_eof(SourceManager& sm);
     tok::Token _emit_sof(SourceManager& sm);
     IndentationAnalysis _analyze_indentation(SourceManager& sm);
