@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <functional>
+#include <iostream>
 #include <memory>
 #include <optional>
 #include <sstream>
@@ -11,7 +12,6 @@
 #include <unordered_map>
 #include <variant>
 #include <vector>
-#include <iostream>
 
 
 namespace diagnostics {

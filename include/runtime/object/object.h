@@ -37,6 +37,7 @@ class Value
         COROUTINE
     };
 
+
    private:
     Type type_;
 
@@ -129,6 +130,22 @@ class Value
     }
 
     Type getType() const { return type_; }
+    void setType(const Type type) { type_ = type; }
+    void setData(const std::variant<std::monostate,  // None
+      long long,  // Int
+      double,  // Float
+      std::shared_ptr<std::u16string>,  // String (shared for efficiency)
+      bool,  // Bool
+      std::shared_ptr<std::vector<Value>>,  // List (shared)
+      std::shared_ptr<std::unordered_map<std::u16string, Value>>,  // Dict
+      Function,  // User function
+      NativeFunction,  // Native C++ function
+      Object,  // Object instance
+      Iterator  // Iterator
+      > data)
+    {
+        data_ = data;
+    }
 
     // Type checks
     bool isNone() const { return type_ == Type::NONE; }

@@ -28,7 +28,7 @@ char16_t SourceManager::current() { return input_buffer_.current(); }
 offset_pair SourceManager::offset_map_(const std::size_t& offset) const
 {
     auto& buf = this->input_buffer_;
-    
+
     if (offset == buf.buffer_offset())
     {
         return std::make_pair(buf.position().line, buf.position().column);
@@ -36,7 +36,7 @@ offset_pair SourceManager::offset_map_(const std::size_t& offset) const
 
     std::size_t iter = 0;
     std::size_t diff = 0;
-    
+
     // Count lines before buffer start
     while (iter < buf.buffer_offset())
     {
@@ -46,7 +46,7 @@ offset_pair SourceManager::offset_map_(const std::size_t& offset) const
         }
         iter += 1;
     }
-    
+
     std::size_t base_line = buf.position().line - diff;
     iter = 0;
     std::size_t line = 1;
@@ -67,7 +67,7 @@ offset_pair SourceManager::offset_map_(const std::size_t& offset) const
         }
         iter += 1;
     }
-    
+
     // combine with base line
     line = base_line + (line - 1);
     return std::make_pair(line, col);
@@ -77,7 +77,7 @@ offset_pair SourceManager::offset_map(const std::size_t& offset)
 {
     auto& buf = this->input_buffer_;
     auto& file = this->file_;
-    
+
     if (offset == buf.buffer_offset())
     {
         return std::make_pair(buf.position().line, buf.position().column);
@@ -93,28 +93,28 @@ offset_pair SourceManager::offset_map(const std::size_t& offset)
     std::size_t col = 1;
     std::size_t current_offset = 0;
     char c;
-    
+
     while (file.get(c))
     {
         if (current_offset == offset)
         {
             return std::make_pair(line, col);
         }
-    
+
         if (c == L'\n')
         {
             line += 1;
             col = 1;
         }
-    
+
         else
         {
             col += 1;
         }
-    
+
         current_offset++;
     }
-    
+
     file.close();
     return std::make_pair(line, col);
 }

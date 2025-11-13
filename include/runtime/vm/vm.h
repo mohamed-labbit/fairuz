@@ -9,7 +9,6 @@
 namespace mylang {
 namespace runtime {
 
-
 // ============================================================================
 // ENHANCED VIRTUAL MACHINE with optimizations
 // ============================================================================
@@ -77,4 +76,6 @@ class VirtualMachine
     const std::vector<object::Value>& getGlobals() const { return globals_; }
 
     const std::vector<object::Value>& getStack() const { return stack_; }
-};}}
+};
+}
+}

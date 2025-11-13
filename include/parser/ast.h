@@ -41,6 +41,7 @@ struct BinaryExpr: Expr
 {
     ExprPtr left, right;
     std::u16string op;
+
     BinaryExpr(ExprPtr l, std::u16string o, ExprPtr r) :
         left(std::move(l)),
         op(std::move(o)),
@@ -54,6 +55,7 @@ struct UnaryExpr: Expr
 {
     std::u16string op;
     ExprPtr operand;
+
     UnaryExpr(std::u16string o, ExprPtr expr) :
         op(std::move(o)),
         operand(std::move(expr))
@@ -65,11 +67,12 @@ struct UnaryExpr: Expr
 struct LiteralExpr: Expr
 {
     enum class Type { NUMBER, STRING, BOOLEAN, NONE };
-    Type litType_;
-    std::u16string value_;
+    Type litType;
+    std::u16string value;
+
     LiteralExpr(Type t, std::u16string v) :
-        litType_(t),
-        value_(std::move(v))
+        litType(t),
+        value(std::move(v))
     {
         kind = Kind::LITERAL;
     }
@@ -77,9 +80,10 @@ struct LiteralExpr: Expr
 
 struct NameExpr: Expr
 {
-    std::u16string name_;
+    std::u16string name;
+
     explicit NameExpr(std::u16string n) :
-        name_(std::move(n))
+        name(std::move(n))
     {
         kind = Kind::NAME;
     }
@@ -87,11 +91,12 @@ struct NameExpr: Expr
 
 struct CallExpr: Expr
 {
-    ExprPtr callee_;
-    std::vector<ExprPtr> args_;
+    ExprPtr callee;
+    std::vector<ExprPtr> args;
+
     CallExpr(ExprPtr c, std::vector<ExprPtr> a) :
-        callee_(std::move(c)),
-        args_(std::move(a))
+        callee(std::move(c)),
+        args(std::move(a))
     {
         kind = Kind::CALL;
     }
@@ -99,11 +104,12 @@ struct CallExpr: Expr
 
 struct TernaryExpr: Expr
 {
-    ExprPtr condition_, trueExpr_, falseExpr_;
+    ExprPtr condition, trueExpr, falseExpr;
+
     TernaryExpr(ExprPtr cond, ExprPtr t, ExprPtr f) :
-        condition_(std::move(cond)),
-        trueExpr_(std::move(t)),
-        falseExpr_(std::move(f))
+        condition(std::move(cond)),
+        trueExpr(std::move(t)),
+        falseExpr(std::move(f))
     {
         kind = Kind::TERNARY;
     }
@@ -111,11 +117,12 @@ struct TernaryExpr: Expr
 
 struct AssignmentExpr: Expr
 {
-    std::u16string target_;
-    ExprPtr value_;
+    std::u16string target;
+    ExprPtr value;
+
     AssignmentExpr(std::u16string t, ExprPtr v) :
-        target_(std::move(t)),
-        value_(std::move(v))
+        target(std::move(t)),
+        value(std::move(v))
     {
         kind = Kind::ASSIGNMENT;
     }
@@ -123,9 +130,10 @@ struct AssignmentExpr: Expr
 
 struct ListExpr: Expr
 {
-    std::vector<ExprPtr> elements_;
+    std::vector<ExprPtr> elements;
+
     explicit ListExpr(std::vector<ExprPtr> elems) :
-        elements_(std::move(elems))
+        elements(std::move(elems))
     {
         kind = Kind::LIST;
     }
@@ -134,9 +142,10 @@ struct ListExpr: Expr
 // Statement nodes
 struct ExprStmt: Stmt
 {
-    ExprPtr expression_;
+    ExprPtr expression;
+
     explicit ExprStmt(ExprPtr e) :
-        expression_(std::move(e))
+        expression(std::move(e))
     {
         kind = Kind::EXPRESSION;
     }
@@ -144,11 +153,12 @@ struct ExprStmt: Stmt
 
 struct AssignmentStmt: Stmt
 {
-    std::u16string target_;
-    ExprPtr value_;
+    std::u16string target;
+    ExprPtr value;
+
     AssignmentStmt(std::u16string t, ExprPtr v) :
-        target_(std::move(t)),
-        value_(std::move(v))
+        target(std::move(t)),
+        value(std::move(v))
     {
         kind = Kind::ASSIGNMENT;
     }
@@ -156,13 +166,14 @@ struct AssignmentStmt: Stmt
 
 struct IfStmt: Stmt
 {
-    ExprPtr condition_;
-    std::vector<StmtPtr> thenBlock_;
-    std::vector<StmtPtr> elseBlock_;
+    ExprPtr condition;
+    std::vector<StmtPtr> thenBlock;
+    std::vector<StmtPtr> elseBlock;
+
     IfStmt(ExprPtr cond, std::vector<StmtPtr> tb, std::vector<StmtPtr> eb) :
-        condition_(std::move(cond)),
-        thenBlock_(std::move(tb)),
-        elseBlock_(std::move(eb))
+        condition(std::move(cond)),
+        thenBlock(std::move(tb)),
+        elseBlock(std::move(eb))
     {
         kind = Kind::IF;
     }
@@ -170,11 +181,12 @@ struct IfStmt: Stmt
 
 struct WhileStmt: Stmt
 {
-    ExprPtr condition_;
-    std::vector<StmtPtr> body_;
+    ExprPtr condition;
+    std::vector<StmtPtr> body;
+
     WhileStmt(ExprPtr cond, std::vector<StmtPtr> b) :
-        condition_(std::move(cond)),
-        body_(std::move(b))
+        condition(std::move(cond)),
+        body(std::move(b))
     {
         kind = Kind::WHILE;
     }
@@ -182,13 +194,14 @@ struct WhileStmt: Stmt
 
 struct ForStmt: Stmt
 {
-    std::u16string target_;
-    ExprPtr iter_;
-    std::vector<StmtPtr> body_;
+    std::u16string target;
+    ExprPtr iter;
+    std::vector<StmtPtr> body;
+
     ForStmt(std::u16string t, ExprPtr i, std::vector<StmtPtr> b) :
-        target_(std::move(t)),
-        iter_(std::move(i)),
-        body_(std::move(b))
+        target(std::move(t)),
+        iter(std::move(i)),
+        body(std::move(b))
     {
         kind = Kind::FOR;
     }
@@ -196,13 +209,14 @@ struct ForStmt: Stmt
 
 struct FunctionDef: Stmt
 {
-    std::u16string name_;
-    std::vector<std::u16string> params_;
-    std::vector<StmtPtr> body_;
+    std::u16string name;
+    std::vector<std::u16string> params;
+    std::vector<StmtPtr> body;
+
     FunctionDef(std::u16string n, std::vector<std::u16string> p, std::vector<StmtPtr> b) :
-        name_(std::move(n)),
-        params_(std::move(p)),
-        body_(std::move(b))
+        name(std::move(n)),
+        params(std::move(p)),
+        body(std::move(b))
     {
         kind = Kind::FUNCTION_DEF;
     }
@@ -210,9 +224,10 @@ struct FunctionDef: Stmt
 
 struct ReturnStmt: Stmt
 {
-    ExprPtr value_;
+    ExprPtr value;
+
     explicit ReturnStmt(ExprPtr v) :
-        value_(std::move(v))
+        value(std::move(v))
     {
         kind = Kind::RETURN;
     }
@@ -220,9 +235,10 @@ struct ReturnStmt: Stmt
 
 struct BlockStmt: Stmt
 {
-    std::vector<StmtPtr> statements_;
+    std::vector<StmtPtr> statements;
+
     explicit BlockStmt(std::vector<StmtPtr> stmts) :
-        statements_(std::move(stmts))
+        statements(std::move(stmts))
     {
         kind = Kind::BLOCK;
     }

@@ -49,7 +49,7 @@ struct IndentationContext
 
         bool has_spaces = false;
         bool has_tabs = false;
-        
+
         for (char16_t ch : indent_str)
         {
             if (ch == u' ')
@@ -61,7 +61,7 @@ struct IndentationContext
                 has_tabs = true;
             }
         }
-        
+
         if (has_spaces && has_tabs)
         {
             mode = IndentMode::MIXED;

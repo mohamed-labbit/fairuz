@@ -29,7 +29,7 @@ IndentationAnalysis Lexer::_analyze_indentation(SourceManager& sm)
 {
     std::size_t col = sm.column();
     std::size_t line = sm.line();
-    
+
     IndentationAnalysis result;
     // Skip indentation handling inside parentheses (implicit line joining)
     if (indent_ctx_.in_parentheses > 0)
@@ -42,7 +42,7 @@ IndentationAnalysis Lexer::_analyze_indentation(SourceManager& sm)
     std::size_t indent_count = 0;
     std::u16string indent_str;
     char16_t ch = sm.current();
-    
+
     while (ch == u' ' || ch == u'\t')
     {
         indent_str.push_back(ch);
@@ -57,17 +57,17 @@ IndentationAnalysis Lexer::_analyze_indentation(SourceManager& sm)
         sm.consume_char();
         ch = sm.current();
     }
-    
+
     result.indent_string = indent_str;
     result.column = col + indent_str.length();
-    
+
     // Check for blank line or comment-only line
     if (ch == u'\n' || ch == BUFFER_END || ch == u'\\')
     {
         result.action = IndentationAnalysis::Action::NONE;
         return result;
     }
-    
+
     // Detect and validate indentation mode
     if (!indent_str.empty())
     {
@@ -75,7 +75,7 @@ IndentationAnalysis Lexer::_analyze_indentation(SourceManager& sm)
         {
             indent_ctx_.detect_indent_mode(indent_str);
         }
-    
+
         if (!indent_ctx_.validate_indent(indent_str))
         {
             result.action = IndentationAnalysis::Action::ERROR;
@@ -83,7 +83,7 @@ IndentationAnalysis Lexer::_analyze_indentation(SourceManager& sm)
             return result;
         }
     }
-    
+
     // Compare with current indentation level
     std::size_t current_indent = indent_ctx_.top();
     if (indent_count > current_indent)
@@ -114,37 +114,37 @@ IndentationAnalysis Lexer::_analyze_indentation(SourceManager& sm)
         while (temp_stack.size() > 1)
         {
             std::size_t level = temp_stack.top();
-        
+
             if (level == indent_count)
             {
                 found_match = true;
                 break;
             }
-        
+
             if (level < indent_count)
             {
                 result.action = IndentationAnalysis::Action::ERROR;
                 result.error_message = "Unindent does not match any outer indentation level";
                 return result;
             }
-        
+
             temp_stack.pop();
             dedent_count++;
         }
-        
+
         if (!found_match && temp_stack.top() != indent_count)
         {
             result.action = IndentationAnalysis::Action::ERROR;
             result.error_message = "Unindent does not match any outer indentation level";
             return result;
         }
-        
+
         // Apply the dedents
         for (std::size_t i = 0; i < dedent_count; ++i)
         {
             indent_ctx_.pop();
         }
-        
+
         result.action = IndentationAnalysis::Action::DEDENT;
         result.count = dedent_count;
         indent_ctx_.expecting_indent = false;
@@ -237,24 +237,24 @@ tok::Token Lexer::_handle_identifier(char16_t c, SourceManager& sm)
     std::u16string id(1, c);
     auto line = sm.line();
     auto col = sm.column();
-    
+
     sm.consume_char();
     char16_t c2 = sm.current();
-    
+
     while (util::isalpha_arabic(c2) || c2 == u'_' || std::iswdigit(c2))
     {
         id.push_back(c2);
         sm.consume_char();
         c2 = sm.current();
     }
-    
+
     tok::TokenType tt = tok::TokenType::IDENTIFIER;
-    
+
     if (tok::keywords.count(id))
     {
         tt = tok::keywords.at(id);
     }
-    
+
     tok::Token tok = make_token(tt, std::move(id), line, col);
     store(std::move(tok));
     return stream.back();
@@ -266,17 +266,17 @@ tok::Token Lexer::_handle_number(char16_t c, SourceManager& sm)
     std::u16string num(1, c);
     auto line = sm.line();
     auto col = sm.column();
-    
+
     sm.consume_char();
     char16_t c2 = sm.current();
-    
+
     while (std::iswdigit(c2))
     {
         num.push_back(c2);
         sm.consume_char();
         c2 = sm.current();
     }
-    
+
     tok::Token ret = make_token(tok::TokenType::NUMBER, std::move(num), line, col);
     store(std::move(ret));
     return stream.back();
@@ -288,22 +288,22 @@ tok::Token Lexer::_handle_operator(char16_t c, SourceManager& sm)
     std::u16string op(1, c);
     auto line = sm.line();
     auto col = sm.column();
-    
+
     sm.consume_char();
     char16_t nxt = sm.current();
-    
+
     if (nxt != BUFFER_END)
     {
         std::u16string two = op;
         two.push_back(nxt);
-    
+
         if (tok::operators.count(two))
         {
             op.push_back(nxt);
             sm.consume_char();
         }
     }
-    
+
     tok::TokenType tt = tok::operators.count(op) ? tok::operators.at(op) : tok::TokenType::IDENTIFIER;
     tok::Token ret = make_token(tt, std::move(op), line, col);
     store(std::move(ret));
@@ -318,9 +318,9 @@ tok::Token Lexer::_handle_symbol(char16_t c, SourceManager& sm)
     std::u16string sym(1, c);
     auto line = sm.line();
     auto col = sm.column();
-    
+
     sm.consume_char();
-    
+
     switch (c)
     {
     case '(' :
@@ -354,7 +354,7 @@ tok::Token Lexer::_handle_symbol(char16_t c, SourceManager& sm)
         tt = tok::TokenType::INVALID;
         break;
     }
-    
+
     tok::Token ret = make_token(tt, std::move(sym), line, col);
     store(std::move(ret));
     return stream.back();
@@ -370,14 +370,14 @@ tok::Token Lexer::_handle_string_literal(char16_t c, SourceManager& sm)
 
     sm.consume_char();
     char16_t c2 = sm.current();
-    
+
     while (c2 != u'\n' && c2 != BUFFER_END && c2 != quote)
     {
         s.push_back(c2);
         sm.consume_char();
         c2 = sm.current();
     }
-    
+
     if (c2 == quote)
     {
         sm.consume_char();
@@ -396,7 +396,7 @@ tok::Token Lexer::_handle_string_literal(char16_t c, SourceManager& sm)
 tok::Token Lexer::_emit_eof(SourceManager& sm)
 {
     auto& stream = this->tok_stream_;
-    
+
     // Emit all remaining DEDENT tokens
     while (indent_ctx_.stack_size() > 1)
     {
@@ -404,14 +404,14 @@ tok::Token Lexer::_emit_eof(SourceManager& sm)
         auto dedent_tok = make_token(tok::TokenType::DEDENT, u"", sm.line(), sm.column());
         store(std::move(dedent_tok));
     }
-    
+
     sm.consume_char();
-    
+
     if (!stream.empty() && stream.back().type() == tok::TokenType::ENDMARKER)
     {
         return stream.back();
     }
-    
+
     auto ret = make_token(tok::TokenType::ENDMARKER, std::nullopt, std::nullopt, sm.column() - 1);
     store(std::move(ret));
     return stream.back();
@@ -431,7 +431,7 @@ tok::Token Lexer::_handle_newline(char16_t c, SourceManager& sm)
     auto& stream = this->tok_stream_;
     auto line = sm.line();
     auto col = sm.column();
-    
+
     sm.consume_char();
     std::u16string endl = u"\n";
     auto ret = make_token(tok::TokenType::NEWLINE, std::move(endl), line, col);
@@ -469,7 +469,7 @@ tok::Token Lexer::peek(std::size_t n)
     {
         lex_token_();
     }
-    
+
     return tok_stream_[tok_index_ + n];
 }
 
@@ -477,25 +477,25 @@ void Lexer::lex_token_()
 {
     auto& stream = this->tok_stream_;
     auto& sm = this->source_manager_;
-    
+
     if (stream.empty())
     {
         _emit_sof(sm);
         return;
     }
-    
+
     while (true)
     {
         char16_t ch = sm.current();
-        
+
         if (ch == BUFFER_END)
         {
             break;
         }
-        
+
         std::size_t line = sm.line();
         std::size_t col = sm.column();
-        
+
         switch (ch)
         {
         case u'\n' : {
