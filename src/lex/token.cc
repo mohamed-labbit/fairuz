@@ -1,4 +1,4 @@
-#include "../../include/lex/token.h"
+#include "../../include/lex/token.hpp"
 
 
 // getters

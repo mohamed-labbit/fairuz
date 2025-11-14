@@ -1,3 +1,5 @@
+#pragma once
+
 //
 // diagnostic_emitter.h
 //

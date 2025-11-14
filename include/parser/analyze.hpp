@@ -2,7 +2,7 @@
 
 
 #include "../../utfcpp/source/utf8.h"
-#include "ast.h"
+#include "ast.hpp"
 #include <iostream>
 #include <memory>
 #include <optional>
@@ -200,7 +200,7 @@ class ControlFlowGraph
                 std::unordered_set<std::u16string> newLiveOut;
                 for (int succ : block.successors)
                 {
-                    newLiveOut.insert(blocks_[succ].liveIn.begin(), blocks_[succ].liveIn_.end());
+                    newLiveOut.insert(blocks_[succ].liveIn.begin(), blocks_[succ].liveIn.end());
                 }
 
                 // liveIn = use ∪ (liveOut - def)

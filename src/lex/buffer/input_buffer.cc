@@ -1,4 +1,4 @@
-#include "../../../include/lex/buffer/input_buffer.h"
+#include "../../../include/lex/buffer/input_buffer.hpp"
 
 
 namespace mylang {

@@ -1,9 +1,9 @@
 #pragma once
 
 
-#include "../lex/lexer.h"
-#include "../lex/token.h"
-#include "ast.h"
+#include "../lex/lexer.hpp"
+#include "../lex/token.hpp"
+#include "ast.hpp"
 
 #include <algorithm>
 #include <memory>
@@ -45,9 +45,13 @@ class Parser
 {
    private:
     lex::Lexer lexer_;
-    std::size_t current_ = 0;
-    unsigned loopDepth_ = 0;
-    unsigned functionDepth_ = 0;
+    std::size_t current_{0};
+    unsigned loopDepth_{0};
+    unsigned functionDepth_{0};
+
+    std::vector<lex::tok::Token> tokens_;
+    std::size_t current{0};
+    bool use_lexer{false};
 
     // Packrat parsing memoization cache
     struct MemoEntry
@@ -162,9 +166,17 @@ class Parser
 
    public:
     explicit Parser(std::string filename) :
-        lexer_(filename)
-    {
+        lexer_(filename),
+        use_lexer(true)
+    { 
         enterScope();  // Global scope
+    }
+
+    // TODO : figure out why is the default constructor of the lexer deleted
+    explicit Parser(std::vector<lex::tok::Token> toks) :
+        tokens_(toks)
+    {
+        enterScope();
     }
 
     // Parse primary with speculative parsing for ambiguity
@@ -240,9 +252,9 @@ const std::unordered_set<lex::tok::TokenType> Parser::syncTokens_ = {lex::tok::T
   lex::tok::TokenType::KW_WHILE, lex::tok::TokenType::KW_FOR, lex::tok::TokenType::KW_FN,
   lex::tok::TokenType::KW_RETURN, lex::tok::TokenType::DEDENT, lex::tok::TokenType::NEWLINE};
 
-const std::unordered_map<std::u16string, std::u16string> Parser::errorSuggestions_ = {{"اذ", "اذا"}, {"طالم", "طالما"},
-  {"لك", "لكل"}, {"ف", "في"}, {"عر", "عرف"}, {"صحي", "صحيح"}, {"خط", "خطا"}, {"عد", "عدم"}, {"ليست", "ليس"},
-  {"او", "او"}, {"وا", "و"}};
+const std::unordered_map<std::u16string, std::u16string> Parser::errorSuggestions_ = {{u"اذ", u"اذا"},
+  {u"طالم", u"طالما"}, {u"لك", u"لكل"}, {u"ف", u"في"}, {u"عر", u"عرف"}, {u"صحي", u"صحيح"}, {u"خط", u"خطا"},
+  {u"عد", u"عدم"}, {u"ليست", u"ليس"}, {u"او", u"او"}, {u"وا", u"و"}};
 
 }
 }

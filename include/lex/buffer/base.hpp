@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../macros.h"
+#include "../../macros.hpp"
 #include <fstream>
 #include <string>
 
@@ -27,6 +27,9 @@ class InputBufferBase
             throw std::runtime_error("File is not open");
         }
     }
+
+    // TODO : ta hadi fiha nadar
+    InputBufferBase() = default;
 
     bool empty() const noexcept { return !file_.is_open(); }
     bool refresh_buffer(const unsigned int to_refresh);

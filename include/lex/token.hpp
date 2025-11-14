@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../utfcpp/source/utf8.h"
-#include "util.h"
+#include "util.hpp"
 
 #include <iostream>
 #include <locale>

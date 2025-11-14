@@ -17,9 +17,9 @@ class JITCompiler
    private:
     struct HotSpot
     {
-        int startPC;
-        int endPC;
-        int executionCount;
+        unsigned startPC;
+        unsigned endPC;
+        unsigned executionCount;
         bool compiled;
         void* nativeCode;
     };

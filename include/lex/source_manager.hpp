@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../macros.h"
-#include "buffer/input_buffer.h"
+#include "../macros.hpp"
+#include "buffer/input_buffer.hpp"
 #include <fstream>
 #include <stdexcept>
 #include <string>
@@ -31,6 +31,9 @@ class SourceManager
             file_.close();
         }
     }
+
+    // TODO; ta hadi fiha nadar
+    SourceManager() = default;
 
     std::size_t line() const;
     std::size_t column() const;

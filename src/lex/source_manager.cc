@@ -1,4 +1,4 @@
-#include "../../include/lex/source_manager.h"
+#include "../../include/lex/source_manager.hpp"
 
 
 namespace mylang {

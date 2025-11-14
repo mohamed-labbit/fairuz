@@ -1,11 +1,11 @@
-#include "../diag/diagnostic_engine.h"
-#include "../lex/lexer.h"
-#include "../runtime/vm/vm.h"
-#include "advanced.h"
-#include "analyze.h"
-#include "ast.h"
-#include "optim.h"
-#include "parser.h"
+#include "../diag/diagnostic_engine.hpp"
+#include "../lex/lexer.hpp"
+#include "../runtime/vm/vm.hpp"
+#include "advanced.hpp"
+#include "analyze.hpp"
+#include "ast.hpp"
+#include "optim.hpp"
+#include "parser.hpp"
 
 #include <chrono>
 #include <fstream>

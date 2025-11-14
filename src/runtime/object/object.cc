@@ -1,4 +1,4 @@
-#include "../../../include/runtime/object/object.h"
+#include "../../../include/runtime/object/object.hpp"
 
 
 namespace mylang {

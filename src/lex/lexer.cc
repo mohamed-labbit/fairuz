@@ -2,10 +2,10 @@
 // lexer.cc - FIXED VERSION
 //
 
-#include "../../include/lex/lexer.h"
-#include "../../include/lex/token.h"
-#include "../../include/lex/util.h"
-#include "../../include/macros.h"
+#include "../../include/lex/lexer.hpp"
+#include "../../include/lex/token.hpp"
+#include "../../include/lex/util.hpp"
+#include "../../include/macros.hpp"
 
 #include <cassert>
 

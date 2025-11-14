@@ -12,9 +12,11 @@ enum class OpCode : std::uint8_t {
     // Stack operations
     LOAD_CONST,  // Push constant onto stack
     LOAD_VAR,  // Load local variable
+    LOAD_FAST,
     LOAD_GLOBAL,  // Load global variable
     STORE_VAR,  // Store to local variable
     STORE_GLOBAL,  // Store to global variable
+    STORE_FAST,
     LOAD_ATTR,  // Load attribute from object
     STORE_ATTR,  // Store attribute to object
     POP,  // Pop top of stack
@@ -24,8 +26,11 @@ enum class OpCode : std::uint8_t {
 
     // Arithmetic (optimized for int fast path)
     ADD,
+    ADD_FAST,
     SUB,
+    SUB_FAST,
     MUL,
+    MUL_FAST,
     DIV,
     FLOOR_DIV,
     MOD,
@@ -60,13 +65,20 @@ enum class OpCode : std::uint8_t {
 
     // Control flow
     JUMP,  // Unconditional jump
+    JUMP_FORWARD,
+    JUMP_BACKWARD,
     JUMP_IF_FALSE,  // Conditional jump (pop)
     JUMP_IF_TRUE,  // Conditional jump (pop)
+    POP_JUMP_IF_TRUE,
     POP_JUMP_IF_FALSE,  // Conditional jump (keep on stack)
     FOR_ITER,  // For loop iteration
+    FOR_ITER_FAST,
+    HOT_LOOP_END,
+    HOT_LOOP_START,
 
     // Functions & Methods
     CALL,  // Call function
+    CALL_FAST,
     CALL_METHOD,  // Call method (optimized)
     RETURN,  // Return from function
     YIELD,  // Generator yield

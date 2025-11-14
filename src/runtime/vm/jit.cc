@@ -1,4 +1,4 @@
-#include "../../../include/runtime/vm/vm.h"
+#include "../../../include/runtime/vm/vm.hpp"
 
 #include <iostream>
 

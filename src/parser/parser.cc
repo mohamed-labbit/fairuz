@@ -1,4 +1,4 @@
-#include "../../include/parser/parser.h"
+#include "../../include/parser/parser.hpp"
 
 
 namespace mylang {
@@ -24,11 +24,33 @@ std::u16string ParseError::format() const
     return utf8::utf8to16(ss.str());
 }
 
-lex::tok::Token Parser::peek(std::size_t offset) { return lexer_.peek(offset); }
+// TODO : watch out for overflow and underflow
+lex::tok::Token Parser::peek(std::size_t offset)
+{
+    if (use_lexer)
+    {
+        return lexer_.peek(offset);
+    }
+    return tokens_[current_ + 1];
+}
 
-lex::tok::Token Parser::previous() { return lexer_.prev(); }
+lex::tok::Token Parser::previous()
+{
+    if (use_lexer)
+    {
+        return lexer_.prev();
+    }
+    return tokens_[current_ - 1];
+}
 
-lex::tok::Token Parser::advance() { return lexer_.next(); }
+lex::tok::Token Parser::advance()
+{
+    if (use_lexer)
+    {
+        return lexer_.next();
+    }
+    return tokens_[current_++];
+}
 
 bool Parser::check(lex::tok::TokenType type) { return peek().is(type); }
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "base.h"
+#include "base.hpp"
 
 
 namespace mylang {
@@ -41,6 +41,9 @@ class InputBuffer: public InputBufferBase
         buffers_[1].resize(capacity_ + 1, BUFFER_END);
         reset();
     }
+
+    // TODO : ta hadi fiha nadar
+    InputBuffer() = default;
 
     std::size_t size() const;
     std::size_t buffer_offset() const;

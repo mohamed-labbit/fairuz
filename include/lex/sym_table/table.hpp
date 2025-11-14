@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../token.h"
-#include "entry.h"
+#include "../token.hpp"
+#include "entry.hpp"
 #include <optional>
 #include <string>
 #include <unordered_map>

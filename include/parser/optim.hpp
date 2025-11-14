@@ -2,7 +2,7 @@
 
 
 #include "../../utfcpp/source/utf8.h"
-#include "ast.h"
+#include "ast.hpp"
 #include <cmath>
 #include <iostream>
 #include <memory>

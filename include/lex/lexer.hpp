@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../../include/lex/sym_table/table.h"
-#include "source_manager.h"
-#include "token.h"
+#include "../../include/lex/sym_table/table.hpp"
+#include "source_manager.hpp"
+#include "token.hpp"
 
 
 namespace mylang {
@@ -177,7 +177,9 @@ class Lexer
         std::locale::global(std::locale("ar_SA.UTF-8"));
     }
 
+    explicit Lexer() = default;
     explicit Lexer(const Lexer&) = delete;
+
     tok::Token operator()() { return next(); }
     tok::Token next();
     tok::Token peek(std::size_t n = 1);
@@ -198,7 +200,6 @@ class Lexer
     std::size_t indent_size_;
     std::vector<tok::Token> tok_stream_;
     std::stack<unsigned> indent_stack_;
-    SymbolTable symbol_table_;
     IndentationContext indent_ctx_;
 
     void lex_token_();

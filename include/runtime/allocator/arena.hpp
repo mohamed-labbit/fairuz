@@ -17,7 +17,7 @@
  * @version 2.0
  */
 
-#include "../../macros.h"
+#include "../../macros.hppw"
 
 #include <atomic>
 #include <chrono>
