@@ -1,19 +1,17 @@
-#include "../../include/lex/lexer.h"
+w #include "../../include/lex/lexer.h"
 #include "../../include/lex/token.h"
 
 #include <gtest/gtest.h>
 #include <vector>
 
 
-const std::string test_cases_path =
-  "/Users/mohamedrabbit/mylang/tests/lexer/test_cases/test_tokens/";
+  const std::string test_cases_path = "/Users/mohamedrabbit/mylang/tests/lexer/test_cases/test_tokens/";
 
 
 inline void PrintTo(const mylang::lex::tok::Token& tok, std::ostream* os)
 {
-    *os << "mylang::lex::tok::Token(\"" << utf8::utf16to8(tok.lexeme())
-        << "\", type=" << static_cast<int>(tok.type()) << ", line=" << tok.line()
-        << ", col=" << tok.column() << ")";
+    *os << "mylang::lex::tok::Token(\"" << utf8::utf16to8(tok.lexeme()) << "\", type=" << static_cast<int>(tok.type())
+        << ", line=" << tok.line() << ", col=" << tok.column() << ")";
 }
 
 TEST(LexerTest, RecognizesPlus)
@@ -163,16 +161,16 @@ TEST(LexerTest, RecognizesStmt04)
     auto tokens = lexer.tokenize();
     std::vector<mylang::lex::tok::Token> expected = {
       lexer.make_token(mylang::lex::tok::TokenType::START_OF_FILE, u"", 1, 1),
-      lexer.make_token(mylang::lex::tok::TokenType::KW_IF, u"اذا", 1, 5),
-      lexer.make_token(mylang::lex::tok::TokenType::IDENTIFIER, u"ا", 1, 3),
+      lexer.make_token(mylang::lex::tok::TokenType::KW_IF, u"اذا", 1, 1),
+      lexer.make_token(mylang::lex::tok::TokenType::IDENTIFIER, u"ا", 1, 5),
       lexer.make_token(mylang::lex::tok::TokenType::EQ, u"=", 1, 7),
       lexer.make_token(mylang::lex::tok::TokenType::NUMBER, u"3", 1, 9),
       lexer.make_token(mylang::lex::tok::TokenType::COLON, u":", 1, 10),
-      lexer.make_token(mylang::lex::tok::TokenType::NEWLINE, u"\n", 1, 10),
-      lexer.make_token(mylang::lex::tok::TokenType::INDENT, u"    ", 2, 1),
+      lexer.make_token(mylang::lex::tok::TokenType::NEWLINE, u"\n", 1, 11),
+      lexer.make_token(mylang::lex::tok::TokenType::INDENT, u"    ", 2, 5),
       lexer.make_token(mylang::lex::tok::TokenType::KW_RETURN, u"اخرج", 2, 5),
       lexer.make_token(mylang::lex::tok::TokenType::DEDENT, u"", 2, 9),
-      lexer.make_token(mylang::lex::tok::TokenType::END_OF_FILE, u"", 2, 5)};
+      lexer.make_token(mylang::lex::tok::TokenType::END_OF_FILE, u"", 2, 8)};
     EXPECT_EQ(tokens.size(), expected.size());
     EXPECT_EQ(tokens, expected);
 }

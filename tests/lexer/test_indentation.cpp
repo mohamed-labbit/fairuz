@@ -3,8 +3,7 @@
 #include <iostream>
 
 
-const std::string test_cases_path =
-  "/Users/mohamedrabbit/mylang/tests/lexer/test_cases/test_indentation.txt";
+const std::string test_cases_path = "/Users/mohamedrabbit/mylang/tests/lexer/test_cases/test_indentation.txt";
 
 
 inline void PrintTo(const mylang::lex::tok::Token& tok, std::ostream* os)
