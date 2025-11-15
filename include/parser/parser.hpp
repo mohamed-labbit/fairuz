@@ -23,12 +23,15 @@ namespace parser {
 class ParseError: public std::runtime_error
 {
    public:
-    int line, column;
+    std::int32_t line, column;
     std::u16string context;
     std::vector<std::u16string> suggestions;
 
-    ParseError(
-      const std::u16string& msg, int l, int c, std::u16string ctx = u"", std::vector<std::u16string> sugg = {}) :
+    ParseError(const std::u16string& msg,
+      std::int32_t l,
+      std::int32_t c,
+      std::u16string ctx = u"",
+      std::vector<std::u16string> sugg = {}) :
         std::runtime_error(utf8::utf16to8(msg)),
         line(l),
         column(c),
@@ -110,7 +113,7 @@ class Parser
     void skipNewlines();
 
     // Get source line for error context
-    std::u16string getSourceLine(int line);
+    std::u16string getSourceLine(std::int32_t line);
 
     // Generate smart suggestions based on context
     std::vector<std::u16string> getSuggestions(lex::tok::TokenType expected);
@@ -147,7 +150,7 @@ class Parser
 
     struct OpInfo
     {
-        int precedence;
+        std::int32_t precedence;
         bool rightAssoc;
         bool isComparison;
     };
@@ -168,7 +171,7 @@ class Parser
     explicit Parser(std::string filename) :
         lexer_(filename),
         use_lexer(true)
-    { 
+    {
         enterScope();  // Global scope
     }
 
@@ -202,7 +205,7 @@ class Parser
 
     ast::ExprPtr parsePower();
 
-    ast::ExprPtr parseBinaryExpr(int minPrec);
+    ast::ExprPtr parseBinaryExpr(std::int32_t minPrec);
 
     // Python-style comparison chaining: a < b < c == d
     ast::ExprPtr parseComparison();

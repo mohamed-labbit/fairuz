@@ -7,7 +7,7 @@ namespace mylang {
 namespace lex {
 
 
-enum class SymbolType : int { VARIABLE, PARAMETER, KEYWORD, FUNCTION, CONSTANT };
+enum class SymbolType : std::int32_t { VARIABLE, PARAMETER, KEYWORD, FUNCTION, CONSTANT };
 
 struct SymbolTableEntry
 {

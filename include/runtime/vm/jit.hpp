@@ -24,13 +24,13 @@ class JITCompiler
         void* nativeCode;
     };
 
-    std::unordered_map<int, HotSpot> hotSpots_;
-    int hotThreshold_ = 100;  // Compile after 100 executions
+    std::unordered_map<std::int32_t, HotSpot> hotSpots_;
+    std::int32_t hotThreshold_ = 100;  // Compile after 100 executions
 
    public:
-    void recordExecution(int pc);
+    void recordExecution(std::int32_t pc);
 
-    bool isHotSpot(int pc) const;
+    bool isHotSpot(std::int32_t pc) const;
 
    private:
     void compileHotSpot(HotSpot& spot);

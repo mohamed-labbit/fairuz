@@ -32,8 +32,8 @@ class SymbolTable
         bool isConstant = false;
         bool isGlobal = false;
         bool isUsed = false;
-        int definitionLine = 0;
-        std::vector<int> usageLines;
+        std::int32_t definitionLine = 0;
+        std::vector<std::int32_t> usageLines;
 
         // For functions
         std::vector<DataType> paramTypes;
@@ -51,7 +51,7 @@ class SymbolTable
     unsigned scopeLevel_ = 0;
 
    public:
-    explicit SymbolTable(SymbolTable* p = nullptr, int level = 0) :
+    explicit SymbolTable(SymbolTable* p = nullptr, std::int32_t level = 0) :
         parent(p),
         scopeLevel_(level)
     {
@@ -88,7 +88,7 @@ class SymbolTable
         return parent ? parent->isDefined(name) : false;
     }
 
-    void markUsed(const std::u16string& name, int line)
+    void markUsed(const std::u16string& name, std::int32_t line)
     {
         if (auto* sym = lookup(name))
         {
@@ -127,10 +127,10 @@ class ControlFlowGraph
    public:
     struct BasicBlock
     {
-        int id_;
+        std::int32_t id_;
         std::vector<ast::StmtPtr*> statements;
-        std::vector<int> predecessors;
-        std::vector<int> successors;
+        std::vector<std::int32_t> predecessors;
+        std::vector<std::int32_t> successors;
         bool isReachable = false;
 
         // Data flow analysis
@@ -142,13 +142,13 @@ class ControlFlowGraph
 
    private:
     std::vector<BasicBlock> blocks_;
-    int entryBlock_ = 0;
-    int exitBlock_ = -1;
+    std::int32_t entryBlock_ = 0;
+    std::int32_t exitBlock_ = -1;
 
    public:
     void addBlock(BasicBlock block) { blocks_.push_back(std::move(block)); }
 
-    void addEdge(int from, int to)
+    void addEdge(std::int32_t from, std::int32_t to)
     {
         if (from >= 0 && from < blocks_.size() && to >= 0 && to < blocks_.size())
         {
@@ -166,14 +166,14 @@ class ControlFlowGraph
         }
 
         blocks_[entryBlock_].isReachable = true;
-        std::vector<int> worklist = {entryBlock_};
+        std::vector<std::int32_t> worklist = {entryBlock_};
 
         while (!worklist.empty())
         {
-            int blockId = worklist.back();
+            std::int32_t blockId = worklist.back();
             worklist.pop_back();
 
-            for (int succ : blocks_[blockId].successors)
+            for (std::int32_t succ : blocks_[blockId].successors)
             {
                 if (!blocks_[succ].isReachable)
                 {
@@ -192,13 +192,13 @@ class ControlFlowGraph
         {
             changed = false;
 
-            for (int i = blocks_.size() - 1; i >= 0; --i)
+            for (std::int32_t i = blocks_.size() - 1; i >= 0; --i)
             {
                 auto& block = blocks_[i];
 
                 // liveOut = union of successors' liveIn
                 std::unordered_set<std::u16string> newLiveOut;
-                for (int succ : block.successors)
+                for (std::int32_t succ : block.successors)
                 {
                     newLiveOut.insert(blocks_[succ].liveIn.begin(), blocks_[succ].liveIn.end());
                 }
@@ -223,9 +223,9 @@ class ControlFlowGraph
         }
     }
 
-    std::vector<int> getUnreachableBlocks() const
+    std::vector<std::int32_t> getUnreachableBlocks() const
     {
-        std::vector<int> unreachable;
+        std::vector<std::int32_t> unreachable;
         for (size_t i = 0; i < blocks_.size(); ++i)
         {
             if (!blocks_[i].isReachable)
@@ -248,7 +248,7 @@ class SemanticAnalyzer
         enum class Severity { ERROR, WARNING, INFO };
         Severity severity;
         std::u16string message;
-        int line;
+        std::int32_t line;
         std::u16string suggestion;
     };
 
@@ -333,7 +333,8 @@ class SemanticAnalyzer
         return SymbolTable::DataType::UNKNOWN;
     }
 
-    void reportIssue(Issue::Severity sev, const std::u16string& msg, int line, const std::u16string& sugg = u"")
+    void reportIssue(
+      Issue::Severity sev, const std::u16string& msg, std::int32_t line, const std::u16string& sugg = u"")
     {
         issues_.push_back({sev, msg, line, sugg});
     }

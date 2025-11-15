@@ -980,7 +980,7 @@ class MYLANG_COMPILER_API ArenaAllocator
      * @enum GrowthStrategy
      * @brief Strategy for expanding block size as allocations grow
      */
-    enum class GrowthStrategy : int {
+    enum class GrowthStrategy : std::int32_t {
         LINEAR,  ///< Keep block size constant
         EXPONENTIAL  ///< Double block size each time (default)
     };
@@ -1089,7 +1089,7 @@ class MYLANG_COMPILER_API ArenaAllocator
      * If min_align is invalid (not a power of 2), it defaults to alignof(max_align_t).
      * Debug mode enables allocation tracking and double-free detection.
      */
-    ArenaAllocator(int growth_strategy = static_cast<int>(GrowthStrategy::EXPONENTIAL),
+    ArenaAllocator(std::int32_t growth_strategy = static_cast<std::int32_t>(GrowthStrategy::EXPONENTIAL),
       std::size_t min_align = std::alignment_of<std::max_align_t>::value,
       OutOfMemoryHandler oom_handler = nullptr,
       bool debug = false) :

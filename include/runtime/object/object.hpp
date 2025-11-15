@@ -43,7 +43,7 @@ class Value
 
     struct Function
     {
-        int codeOffset;
+        std::int32_t codeOffset;
         std::vector<std::string> params;
         std::vector<Value> defaults;
         std::vector<Value> closure;  // Captured variables
@@ -53,7 +53,7 @@ class Value
     {
         std::function<Value(const std::vector<Value>&)> func;
         std::string name;
-        int arity;
+        std::int32_t arity;
     };
 
     struct Object
@@ -70,7 +70,7 @@ class Value
     };
 
     std::variant<std::monostate,  // None
-      long long,  // Int
+      std::int64_t,  // Int
       double,  // Float
       std::shared_ptr<std::u16string>,  // String (shared for efficiency)
       bool,  // Bool
@@ -84,14 +84,14 @@ class Value
       data_;
 
     // Reference counting for memory management
-    mutable int refCount_ = 0;
+    mutable std::int32_t refCount_ = 0;
 
    public:
     Value() :
         type_(Type::NONE)
     {
     }
-    Value(long long v) :
+    Value(std::int64_t v) :
         type_(Type::INT),
         data_(v)
     {
@@ -132,7 +132,7 @@ class Value
     Type getType() const { return type_; }
     void setType(const Type type) { type_ = type; }
     void setData(const std::variant<std::monostate,  // None
-      long long,  // Int
+      std::int64_t,  // Int
       double,  // Float
       std::shared_ptr<std::u16string>,  // String (shared for efficiency)
       bool,  // Bool
@@ -161,7 +161,7 @@ class Value
     bool isIterable() const { return isList() || isString() || isDict(); }
 
     // Getters with safety
-    long long asInt() const;
+    std::int64_t asInt() const;
     double asFloat() const;
     const std::u16string& asString() const;
     bool asBool() const;
@@ -173,7 +173,7 @@ class Value
 
     // Type conversions
     double toFloat() const;
-    long long toInt() const;
+    std::int64_t toInt() const;
     bool toBool() const;
     std::string toString() const;
     std::string repr() const;

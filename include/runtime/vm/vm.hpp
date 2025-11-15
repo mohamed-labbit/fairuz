@@ -32,7 +32,7 @@ class CompilerSymbolTable
     struct Symbol
     {
         std::string name;
-        int index;
+        std::int32_t index;
         SymbolScope scope;
         bool isParameter;
         bool isCaptured;  // Used in closure
@@ -42,7 +42,7 @@ class CompilerSymbolTable
    private:
     std::unordered_map<std::string, Symbol> symbols;
     CompilerSymbolTable* parent;
-    int nextIndex = 0;
+    std::int32_t nextIndex = 0;
     std::vector<std::string> freeVars;  // Closure variables
 
    public:
@@ -55,8 +55,8 @@ class CompilerSymbolTable
 
     Symbol* resolve(const std::string& name);
 
-    const std::vector<std::string>& getFreeVars() const ;
-    int getLocalCount() const ;
+    const std::vector<std::string>& getFreeVars() const;
+    std::int32_t getLocalCount() const;
 
     std::vector<Symbol> getUnusedSymbols() const;
 };
@@ -66,18 +66,18 @@ class CompilerSymbolTable
 // ============================================================================
 struct BytecodeBlock
 {
-    int id;
+    std::int32_t id;
     std::vector<bytecode::Instruction> instructions;
-    std::vector<int> predecessors;
-    std::vector<int> successors;
+    std::vector<std::int32_t> predecessors;
+    std::vector<std::int32_t> successors;
     bool isLoopHeader = false;
     bool isLoopExit = false;
 
     // Data flow analysis
-    std::unordered_set<int> liveIn;
-    std::unordered_set<int> liveOut;
-    std::unordered_set<int> defsIn;
-    std::unordered_set<int> usesIn;
+    std::unordered_set<std::int32_t> liveIn;
+    std::unordered_set<std::int32_t> liveOut;
+    std::unordered_set<std::int32_t> defsIn;
+    std::unordered_set<std::int32_t> usesIn;
 };
 
 // ============================================================================
@@ -87,12 +87,12 @@ class ConstantPool
 {
    private:
     std::vector<object::Value> constants;
-    std::unordered_map<std::u16string, int> stringConstants;
-    std::unordered_map<long long, int> intConstants;
-    std::unordered_map<double, int> floatConstants;
+    std::unordered_map<std::u16string, std::int32_t> stringConstants;
+    std::unordered_map<std::int64_t, std::int32_t> intConstants;
+    std::unordered_map<double, std::int32_t> floatConstants;
 
    public:
-    int addConstant(const object::Value& val);
+    std::int32_t addConstant(const object::Value& val);
 
     const std::vector<object::Value>& getConstants() const;
 
@@ -107,21 +107,21 @@ class JumpResolver
    private:
     struct PendingJump
     {
-        int instructionIndex;
+        std::int32_t instructionIndex;
         std::string labelName;
     };
 
-    std::unordered_map<std::string, int> labels;
+    std::unordered_map<std::string, std::int32_t> labels;
     std::vector<PendingJump> pendingJumps;
 
    public:
-    void defineLabel(const std::string& name, int position);
+    void defineLabel(const std::string& name, std::int32_t position);
 
-    void addJump(int instrIndex, const std::string& target);
+    void addJump(std::int32_t instrIndex, const std::string& target);
 
     void resolveJumps(std::vector<bytecode::Instruction>& instructions);
 
-    int getLabel(const std::string& name) const;
+    std::int32_t getLabel(const std::string& name) const;
 };
 
 // ============================================================================
@@ -132,12 +132,12 @@ class LoopAnalyzer
    public:
     struct Loop
     {
-        int headerPC;
-        int exitPC;
-        std::vector<int> bodyPCs;
-        std::unordered_set<int> invariants;  // Loop-invariant variables
+        std::int32_t headerPC;
+        std::int32_t exitPC;
+        std::vector<std::int32_t> bodyPCs;
+        std::unordered_set<std::int32_t> invariants;  // Loop-invariant variables
         bool isInnerLoop;
-        int nestingLevel;
+        std::int32_t nestingLevel;
     };
 
    private:
@@ -160,7 +160,7 @@ class PeepholeOptimizer
     struct Optimization
     {
         std::string name;
-        int replacementCount;
+        std::int32_t replacementCount;
     };
 
    private:
@@ -188,16 +188,16 @@ class BytecodeCompiler
         std::vector<bytecode::Instruction> instructions;
         std::vector<object::Value> constants;
         std::vector<std::string> names;  // Variable names
-        int numLocals;
-        int numCellVars;  // Closure variables
-        int stackSize;  // Maximum stack depth
+        std::int32_t numLocals;
+        std::int32_t numCellVars;  // Closure variables
+        std::int32_t stackSize;  // Maximum stack depth
 
         // Metadata
         std::string filename;
-        std::vector<int> lineNumbers;  // PC -> line number mapping
+        std::vector<std::int32_t> lineNumbers;  // PC -> line number mapping
 
         // Debug info
-        std::unordered_map<int, std::string> pcToSourceMap;
+        std::unordered_map<std::int32_t, std::string> pcToSourceMap;
     };
 
    private:
@@ -211,38 +211,38 @@ class BytecodeCompiler
     std::stack<CompilerSymbolTable*> scopeStack;
 
     std::vector<BytecodeBlock> blocks;
-    int currentBlock = 0;
+    std::int32_t currentBlock = 0;
 
     // Stack depth tracking for optimization
-    int currentStackDepth = 0;
-    int maxStackDepth = 0;
+    std::int32_t currentStackDepth = 0;
+    std::int32_t maxStackDepth = 0;
 
     // Loop context
     struct LoopContext
     {
-        int breakLabel;
-        int continueLabel;
-        int startPC;
+        std::int32_t breakLabel;
+        std::int32_t continueLabel;
+        std::int32_t startPC;
     };
     std::stack<LoopContext> loopStack;
 
     // Statistics
     struct Stats
     {
-        int instructionsGenerated = 0;
-        int constantsPoolSize = 0;
-        int jumpsResolved = 0;
-        int peepholeOptimizations = 0;
-        int loopsDetected = 0;
+        std::int32_t instructionsGenerated = 0;
+        std::int32_t constantsPoolSize = 0;
+        std::int32_t jumpsResolved = 0;
+        std::int32_t peepholeOptimizations = 0;
+        std::int32_t loopsDetected = 0;
     } stats;
 
-    void emit(bytecode::OpCode op, int arg = 0, int line = 0);
+    void emit(bytecode::OpCode op, std::int32_t arg = 0, std::int32_t line = 0);
 
     void updateStackDepth(bytecode::OpCode op);
 
-    int getCurrentPC() const;
+    std::int32_t getCurrentPC() const;
 
-    void patchJump(int jumpIndex);
+    void patchJump(std::int32_t jumpIndex);
 
     void enterScope();
 
@@ -277,7 +277,7 @@ class BytecodeOptimizer
     {
         std::string name;
         std::function<bool(std::vector<bytecode::Instruction>&)> apply;
-        int applicationsCount = 0;
+        std::int32_t applicationsCount = 0;
     };
 
    private:
@@ -300,7 +300,9 @@ class BytecodeOptimizer
                                       for (size_t j = i + 1; j < code.size(); j++)
                                       {
                                           if (isJumpTarget(code, j))
+                                          {
                                               break;
+                                          }
                                           toRemove++;
                                       }
                                       if (toRemove > 0)
@@ -337,7 +339,7 @@ class BytecodeOptimizer
                               {
                                   if (isJumpOp(instr.op))
                                   {
-                                      int target = instr.arg;
+                                      std::int32_t target = instr.arg;
                                       if (target < code.size() && code[target].op == bytecode::OpCode::JUMP)
                                       {
                                           instr.arg = code[target].arg;
@@ -358,7 +360,7 @@ class BytecodeOptimizer
                           }});
     }
 
-    void optimize(std::vector<bytecode::Instruction>& code, int maxIterations = 10);
+    void optimize(std::vector<bytecode::Instruction>& code, std::int32_t maxIterations = 10);
 
     void printReport(std::ostream& out) const;
 
@@ -378,7 +380,7 @@ class BytecodeVerifier
    public:
     struct VerificationError
     {
-        int pc;
+        std::int32_t pc;
         std::string message;
     };
 
@@ -393,9 +395,12 @@ class BytecodeVerifier
     void printErrors(std::ostream& out) const;
 
    private:
-    void verifyStackDepth(const BytecodeCompiler::CompilationUnit& unit, int pc, int depth, std::vector<int>& depths);
+    void verifyStackDepth(const BytecodeCompiler::CompilationUnit& unit,
+      std::int32_t pc,
+      std::int32_t depth,
+      std::vector<std::int32_t>& depths);
 
-    int getStackEffect(bytecode::OpCode op, int arg) const;
+    std::int32_t getStackEffect(bytecode::OpCode op, std::int32_t arg) const;
 
     bool isJumpInstruction(bytecode::OpCode op) const;
 
@@ -412,7 +417,7 @@ class VirtualMachine
     std::vector<object::Value> stack_;
     std::vector<object::Value> globals_;
     std::vector<std::unordered_map<std::string, object::Value>> frames_;  // Call frames
-    int ip_ = 0;
+    std::int32_t ip_ = 0;
 
     // Advanced features
     JITCompiler jit_;
@@ -421,10 +426,10 @@ class VirtualMachine
     // Performance monitoring
     struct Statistics
     {
-        long long instructionsExecuted = 0;
-        long long functionsCalled = 0;
-        long long gcCollections = 0;
-        long long jitCompilations = 0;
+        std::int64_t instructionsExecuted = 0;
+        std::int64_t functionsCalled = 0;
+        std::int64_t gcCollections = 0;
+        std::int64_t jitCompilations = 0;
         std::chrono::microseconds executionTime{0};
     } stats_;
 
@@ -439,7 +444,7 @@ class VirtualMachine
 
     object::Value& top();
 
-    object::Value& peek(int offset);
+    object::Value& peek(std::int32_t offset);
 
     // Fast integer operations (avoid type checking overhead)
     object::Value fastAdd(const object::Value& a, const object::Value& b);

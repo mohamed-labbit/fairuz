@@ -32,7 +32,7 @@ class InputBufferBase
     InputBufferBase() = default;
 
     bool empty() const noexcept { return !file_.is_open(); }
-    bool refresh_buffer(const unsigned int to_refresh);
+    bool refresh_buffer(const std::uint32_t to_refresh);
 
    protected:
     std::ifstream& file_;

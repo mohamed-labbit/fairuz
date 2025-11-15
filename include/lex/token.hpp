@@ -14,7 +14,7 @@ namespace mylang {
 namespace lex {
 namespace tok {
 
-enum class TokenType : int {
+enum class TokenType : std::int32_t {
     // Keywords (Arabic)
     KW_IF,  // اذا
     KW_WHILE,  // طالما
@@ -173,7 +173,7 @@ class Token
     // friend ostream operator for pretty-printing in tests/logs
     friend std::ostream& operator<<(std::ostream& os, const Token& tok)
     {
-        os << "Token(\"" << utf8::utf16to8(tok.value_) << "\", type=" << static_cast<int>(tok.type_)
+        os << "Token(\"" << utf8::utf16to8(tok.value_) << "\", type=" << static_cast<std::int32_t>(tok.type_)
            << ", line=" << tok.location_.line << ", col=" << tok.location_.column
            << "\", file_pos=" << tok.location_.file_pos << "\", file path=" << tok.location_.filepath << ")";
         return os;

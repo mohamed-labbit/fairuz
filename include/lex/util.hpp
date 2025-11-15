@@ -1,9 +1,9 @@
 #pragma once
 
+#include "../../utfcpp/source/utf8.h"
 #include <omp.h>
 #include <string>
 #include <vector>
-#include "../../utfcpp/source/utf8.h"
 
 
 namespace mylang {

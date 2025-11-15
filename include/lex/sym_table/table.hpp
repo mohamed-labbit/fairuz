@@ -91,7 +91,7 @@ class SymbolTable
     }
 
     // Current nesting depth (0 = global scope)
-    int scopeLevel() const { return static_cast<int>(this->scopes_.size()) - 1; }
+    std::int32_t scopeLevel() const { return static_cast<std::int32_t>(this->scopes_.size()) - 1; }
 
     // Get all symbols in current scope
     std::vector<Entry> getCurrentScopeSymbols() const

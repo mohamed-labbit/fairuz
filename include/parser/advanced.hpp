@@ -59,7 +59,7 @@ class ParallelParser
 {
    public:
     static std::vector<ast::StmtPtr> parseParallel(
-      const std::vector<mylang::lex::tok::Token>& tokens, int threadCount = 4);
+      const std::vector<mylang::lex::tok::Token>& tokens, std::int32_t threadCount = 4);
 
    private:
     static std::vector<std::vector<mylang::lex::tok::Token>> splitIntoChunks(
@@ -125,7 +125,7 @@ class TypeSystem
     class TypeInference
     {
        private:
-        int freshVarCounter = 0;
+        std::int32_t freshVarCounter = 0;
         std::unordered_map<std::string, std::shared_ptr<Type>> substitutions;
 
         std::shared_ptr<Type> freshTypeVar()
@@ -260,7 +260,7 @@ class CodeGenerator
         };
 
         Op opcode;
-        int arg;
+        std::int32_t arg;
     };
 
     // Generate Python bytecode-like instructions
@@ -290,12 +290,12 @@ class DiagnosticEngine
     struct Diagnostic
     {
         Severity severity;
-        int line, column;
-        int length;
+        std::int32_t line, column;
+        std::int32_t length;
         std::string message;
         std::string code;  // Error code like E0001
         std::vector<std::string> suggestions;
-        std::vector<std::pair<int, std::string>> notes;  // Additional context
+        std::vector<std::pair<std::int32_t, std::string>> notes;  // Additional context
     };
 
    private:
@@ -305,7 +305,12 @@ class DiagnosticEngine
    public:
     void setSource(const std::string& source) { sourceCode = source; }
 
-    void report(Severity sev, int line, int col, int len, const std::string& msg, const std::string& code = "")
+    void report(Severity sev,
+      std::int32_t line,
+      std::int32_t col,
+      std::int32_t len,
+      const std::string& msg,
+      const std::string& code = "")
     {
         Diagnostic diag;
         diag.severity = sev;
@@ -325,7 +330,7 @@ class DiagnosticEngine
         }
     }
 
-    void addNote(int line, const std::string& note)
+    void addNote(std::int32_t line, const std::string& note)
     {
         if (!diagnostics.empty())
         {
@@ -342,7 +347,7 @@ class DiagnosticEngine
         {
             const auto& diag = diagnostics[i];
             ss << "  {\n";
-            ss << "    \"severity\": " << static_cast<int>(diag.severity) << ",\n";
+            ss << "    \"severity\": " << static_cast<std::int32_t>(diag.severity) << ",\n";
             ss << "    \"line\": " << diag.line << ",\n";
             ss << "    \"column\": " << diag.column << ",\n";
             ss << "    \"message\": \"" << diag.message << "\",\n";
@@ -447,7 +452,7 @@ class LanguageServer
    public:
     struct Position
     {
-        int line, character;
+        std::int32_t line, character;
     };
 
     struct Range
@@ -460,7 +465,7 @@ class LanguageServer
         std::string label;
         std::string detail;
         std::string documentation;
-        int kind;  // Variable, Function, Class, etc.
+        std::int32_t kind;  // Variable, Function, Class, etc.
     };
 
     struct Hover

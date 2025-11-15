@@ -398,7 +398,7 @@ class ASTOptimizer
     {
        private:
         std::unordered_map<std::u16string, std::u16string> exprCache;
-        int tempCounter = 0;
+        std::int32_t tempCounter = 0;
 
         std::u16string exprToString(const ast::Expr* expr)
         {
@@ -493,7 +493,7 @@ class ASTOptimizer
 
    public:
     // Main optimization pipeline
-    std::vector<ast::StmtPtr> optimize(std::vector<ast::StmtPtr> statements, int level = 2)
+    std::vector<ast::StmtPtr> optimize(std::vector<ast::StmtPtr> statements, std::int32_t level = 2)
     {
         std::vector<ast::StmtPtr> result;
 

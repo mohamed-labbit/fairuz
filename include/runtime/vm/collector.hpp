@@ -21,7 +21,7 @@ class GarbageCollector
     // Generational: young, old
     std::vector<object::Value*> youngGen_;
     std::vector<object::Value*> oldGen_;
-    int youngGenCollections_ = 0;
+    std::int32_t youngGenCollections_ = 0;
 
    public:
     void registerObject(object::Value* obj);

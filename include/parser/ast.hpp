@@ -20,7 +20,7 @@ using StmtPtr = std::unique_ptr<Stmt>;
 // Base classes
 struct ASTNode
 {
-    unsigned long line, column;
+    std::uint64_t line, column;
     virtual ~ASTNode() = default;
 };
 
