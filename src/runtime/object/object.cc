@@ -5,13 +5,13 @@ namespace mylang {
 namespace runtime {
 
 // Getters with safety
-long long object::Value::asInt() const
+std::int64_t object::Value::asInt() const
 {
     if (!isInt())
     {
         throw std::runtime_error("Value is not an integer");
     }
-    return std::get<long long>(data_);
+    return std::get<std::int64_t>(data_);
 }
 
 double object::Value::asFloat() const
@@ -104,7 +104,7 @@ double object::Value::toFloat() const
     throw std::runtime_error("Cannot convert to float");
 }
 
-long long object::Value::toInt() const
+std::int64_t object::Value::toInt() const
 {
     if (isInt())
     {
@@ -112,7 +112,7 @@ long long object::Value::toInt() const
     }
     if (isFloat())
     {
-        return static_cast<long long>(asFloat());
+        return static_cast<std::int64_t>(asFloat());
     }
     if (isBool())
     {
@@ -323,7 +323,7 @@ object::Value object::Value::operator*(const Value& other) const
     if (isString() && other.isInt())
     {
         std::u16string result;
-        for (long long i = 0; i < other.asInt(); i++)
+        for (std::int64_t i = 0; i < other.asInt(); i++)
         {
             result += asString();
         }
@@ -332,7 +332,7 @@ object::Value object::Value::operator*(const Value& other) const
     if (isList() && other.isInt())
     {
         std::vector<Value> result;
-        for (long long i = 0; i < other.asInt(); i++)
+        for (std::int64_t i = 0; i < other.asInt(); i++)
         {
             result.insert(result.end(), asList().begin(), asList().end());
         }
@@ -402,7 +402,7 @@ object::Value object::Value::getItem(const Value& key) const
 {
     if (isList())
     {
-        long long index = key.toInt();
+        std::int64_t index = key.toInt();
         const auto& list = asList();
         if (index < 0)
         {
@@ -426,7 +426,7 @@ object::Value object::Value::getItem(const Value& key) const
     }
     if (isString())
     {
-        long long index = key.toInt();
+        std::int64_t index = key.toInt();
         const auto& str = asString();
         if (index < 0)
         {
@@ -445,7 +445,7 @@ void object::Value::setItem(const Value& key, const Value& value)
 {
     if (isList())
     {
-        long long index = key.toInt();
+        std::int64_t index = key.toInt();
         auto& list = asList();
         if (index < 0)
         {

@@ -102,7 +102,7 @@ void Parser::skipNewlines()
 }
 
 // Get source line for error context
-std::u16string Parser::getSourceLine(int line)
+std::u16string Parser::getSourceLine(std::int32_t line)
 {
     // This would retrieve the actual source line
     // Simplified for now
@@ -653,7 +653,7 @@ ast::ExprPtr Parser::parsePower()
     return left;
 }
 
-ast::ExprPtr Parser::parseBinaryExpr(int minPrec)
+ast::ExprPtr Parser::parseBinaryExpr(std::int32_t minPrec)
 {
     auto left = parsePower();
 
@@ -672,7 +672,7 @@ ast::ExprPtr Parser::parseBinaryExpr(int minPrec)
         }
 
         auto op = advance();
-        int nextMinPrec = opInfo.rightAssoc ? opInfo.precedence : opInfo.precedence + 1;
+        std::int32_t nextMinPrec = opInfo.rightAssoc ? opInfo.precedence : opInfo.precedence + 1;
         auto right = parseBinaryExpr(nextMinPrec);
 
         left = std::make_unique<ast::BinaryExpr>(std::move(left), op.lexeme(), std::move(right));

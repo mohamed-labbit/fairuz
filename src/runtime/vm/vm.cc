@@ -63,7 +63,7 @@ typename CompilerSymbolTable::Symbol* CompilerSymbolTable::resolve(const std::st
 
 const std::vector<std::string>& CompilerSymbolTable::getFreeVars() const { return freeVars; }
 
-int CompilerSymbolTable::getLocalCount() const { return nextIndex; }
+std::int32_t CompilerSymbolTable::getLocalCount() const { return nextIndex; }
 
 std::vector<typename CompilerSymbolTable::Symbol> CompilerSymbolTable::getUnusedSymbols() const
 {
@@ -78,18 +78,18 @@ std::vector<typename CompilerSymbolTable::Symbol> CompilerSymbolTable::getUnused
     return unused;
 }
 
-int ConstantPool::addConstant(const object::Value& val)
+std::int32_t ConstantPool::addConstant(const object::Value& val)
 {
     if (val.isInt())
     {
-        long long v = val.asInt();
+        std::int64_t v = val.asInt();
         auto it = intConstants.find(v);
         if (it != intConstants.end())
         {
             return it->second;
         }
 
-        int idx = constants.size();
+        std::int32_t idx = constants.size();
         constants.push_back(val);
         intConstants[v] = idx;
         return idx;
@@ -104,7 +104,7 @@ int ConstantPool::addConstant(const object::Value& val)
             return it->second;
         }
 
-        int idx = constants.size();
+        std::int32_t idx = constants.size();
         constants.push_back(val);
         floatConstants[v] = idx;
         return idx;
@@ -119,14 +119,14 @@ int ConstantPool::addConstant(const object::Value& val)
             return it->second;
         }
 
-        int idx = constants.size();
+        std::int32_t idx = constants.size();
         constants.push_back(val);
         stringConstants[v] = idx;
         return idx;
     }
 
     // Other types - no deduplication
-    int idx = constants.size();
+    std::int32_t idx = constants.size();
     constants.push_back(val);
     return idx;
 }
@@ -138,9 +138,9 @@ void ConstantPool::optimize()
     // Remove unused constants (requires usage tracking)
 }
 
-void JumpResolver::defineLabel(const std::string& name, int position) { labels[name] = position; }
+void JumpResolver::defineLabel(const std::string& name, std::int32_t position) { labels[name] = position; }
 
-void JumpResolver::addJump(int instrIndex, const std::string& target)
+void JumpResolver::addJump(std::int32_t instrIndex, const std::string& target)
 {
     auto it = labels.find(target);
     if (it != labels.end())
@@ -170,7 +170,7 @@ void JumpResolver::resolveJumps(std::vector<bytecode::Instruction>& instructions
     }
 }
 
-int JumpResolver::getLabel(const std::string& name) const
+std::int32_t JumpResolver::getLabel(const std::string& name) const
 {
     auto it = labels.find(name);
     return it != labels.end() ? it->second : -1;
@@ -192,7 +192,7 @@ void LoopAnalyzer::detectLoops(const std::vector<bytecode::Instruction>& instruc
             loop.nestingLevel = 1;
 
             // Collect loop body
-            for (int pc = instr.arg; pc <= i; pc++)
+            for (std::int32_t pc = instr.arg; pc <= i; pc++)
             {
                 loop.bodyPCs.push_back(pc);
             }
@@ -226,10 +226,10 @@ void LoopAnalyzer::findInvariants(
         // 3. Used inside loop
         // Can be hoisted out
 
-        std::unordered_set<int> modifiedVars;
-        std::unordered_set<int> usedVars;
+        std::unordered_set<std::int32_t> modifiedVars;
+        std::unordered_set<std::int32_t> usedVars;
 
-        for (int pc : loop.bodyPCs)
+        for (std::int32_t pc : loop.bodyPCs)
         {
             const auto& instr = instructions[pc];
             if (instr.op == bytecode::OpCode::STORE_VAR || instr.op == bytecode::OpCode::STORE_FAST)
@@ -242,7 +242,7 @@ void LoopAnalyzer::findInvariants(
             }
         }
 
-        for (int var : usedVars)
+        for (std::int32_t var : usedVars)
         {
             if (!modifiedVars.count(var))
             {
@@ -275,7 +275,7 @@ bool PeepholeOptimizer::matchPattern(
 
 void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instructions)
 {
-    int replacements = 0;
+    std::int32_t replacements = 0;
 
     // Pattern 1: LOAD_CONST followed by POP -> remove both
     for (size_t i = 0; i + 1 < instructions.size();)
@@ -414,7 +414,7 @@ void PeepholeOptimizer::printReport() const
     }
 }
 
-void BytecodeCompiler::emit(bytecode::OpCode op, int arg, int line)
+void BytecodeCompiler::emit(bytecode::OpCode op, std::int32_t arg, std::int32_t line)
 {
     bytecode::Instruction instr(op, arg, line);
     unit.instructions.push_back(instr);
@@ -480,9 +480,9 @@ void BytecodeCompiler::updateStackDepth(bytecode::OpCode op)
     maxStackDepth = std::max(maxStackDepth, currentStackDepth);
 }
 
-int BytecodeCompiler::getCurrentPC() const { return unit.instructions.size(); }
+std::int32_t BytecodeCompiler::getCurrentPC() const { return unit.instructions.size(); }
 
-void BytecodeCompiler::patchJump(int jumpIndex) { unit.instructions[jumpIndex].arg = getCurrentPC(); }
+void BytecodeCompiler::patchJump(std::int32_t jumpIndex) { unit.instructions[jumpIndex].arg = getCurrentPC(); }
 
 void BytecodeCompiler::enterScope()
 {
@@ -538,7 +538,7 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
             break;
         }
 
-        int idx = constants.addConstant(val);
+        std::int32_t idx = constants.addConstant(val);
         emit(bytecode::OpCode::LOAD_CONST, idx, expr->line);
         break;
     }
@@ -578,7 +578,7 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
         {
             compileExpr(bin->left.get());
             emit(bytecode::OpCode::DUP, 0, expr->line);
-            int jumpIfFalse = getCurrentPC();
+            std::int32_t jumpIfFalse = getCurrentPC();
             emit(bytecode::OpCode::POP_JUMP_IF_FALSE, 0, expr->line);
             emit(bytecode::OpCode::POP, 0, expr->line);
             compileExpr(bin->right.get());
@@ -590,7 +590,7 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
         {
             compileExpr(bin->left.get());
             emit(bytecode::OpCode::DUP, 0, expr->line);
-            int jumpIfTrue = getCurrentPC();
+            std::int32_t jumpIfTrue = getCurrentPC();
             emit(bytecode::OpCode::POP_JUMP_IF_TRUE, 0, expr->line);
             emit(bytecode::OpCode::POP, 0, expr->line);
             compileExpr(bin->right.get());
@@ -748,12 +748,12 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
         // Compile condition
         compileExpr(tern->condition.get());
 
-        int jumpIfFalse = getCurrentPC();
+        std::int32_t jumpIfFalse = getCurrentPC();
         emit(bytecode::OpCode::POP_JUMP_IF_FALSE, 0, expr->line);
 
         // True branch
         compileExpr(tern->trueExpr.get());
-        int jumpEnd = getCurrentPC();
+        std::int32_t jumpEnd = getCurrentPC();
         emit(bytecode::OpCode::JUMP, 0, expr->line);
 
         // False branch
@@ -836,7 +836,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
         // Compile condition
         compileExpr(ifStmt->condition.get());
 
-        int jumpIfFalse = getCurrentPC();
+        std::int32_t jumpIfFalse = getCurrentPC();
         emit(bytecode::OpCode::POP_JUMP_IF_FALSE, 0, stmt->line);
 
         // Then block
@@ -847,7 +847,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
 
         if (!ifStmt->elseBlock.empty())
         {
-            int jumpEnd = getCurrentPC();
+            std::int32_t jumpEnd = getCurrentPC();
             emit(bytecode::OpCode::JUMP, 0, stmt->line);
 
             patchJump(jumpIfFalse);
@@ -870,7 +870,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     case parser::ast::Stmt::Kind::WHILE : {
         auto* whileStmt = static_cast<const parser::ast::WhileStmt*>(stmt);
 
-        int loopStart = getCurrentPC();
+        std::int32_t loopStart = getCurrentPC();
 
         // Mark as potential hot loop
         emit(bytecode::OpCode::HOT_LOOP_START, 0, stmt->line);
@@ -878,7 +878,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
         // Compile condition
         compileExpr(whileStmt->condition.get());
 
-        int jumpIfFalse = getCurrentPC();
+        std::int32_t jumpIfFalse = getCurrentPC();
         emit(bytecode::OpCode::POP_JUMP_IF_FALSE, 0, stmt->line);
 
         // Loop body
@@ -917,11 +917,11 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
         compileExpr(forStmt->iter.get());
         emit(bytecode::OpCode::GET_ITER, 0, stmt->line);
 
-        int loopStart = getCurrentPC();
+        std::int32_t loopStart = getCurrentPC();
         emit(bytecode::OpCode::HOT_LOOP_START, 0, stmt->line);
 
         // FOR_ITER gets next item or jumps to end
-        int forIter = getCurrentPC();
+        std::int32_t forIter = getCurrentPC();
         emit(bytecode::OpCode::FOR_ITER_FAST, 0, stmt->line);
 
         // Store loop variable
@@ -972,8 +972,8 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
         // Save current compilation state
         auto savedInstructions = std::move(unit.instructions);
         auto savedConstants = constants;
-        int savedStackDepth = currentStackDepth;
-        int savedMaxStackDepth = maxStackDepth;
+        std::int32_t savedStackDepth = currentStackDepth;
+        std::int32_t savedMaxStackDepth = maxStackDepth;
 
         unit.instructions.clear();
         currentStackDepth = 0;
@@ -988,14 +988,14 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
         // Implicit return None if no return statement
         if (unit.instructions.empty() || unit.instructions.back().op != bytecode::OpCode::RETURN)
         {
-            int noneIdx = constants.addConstant(object::Value());
+            std::int32_t noneIdx = constants.addConstant(object::Value());
             emit(bytecode::OpCode::LOAD_CONST, noneIdx, stmt->line);
             emit(bytecode::OpCode::RETURN, 0, stmt->line);
         }
 
         // Create function object
         auto funcInstructions = std::move(unit.instructions);
-        int funcStackSize = maxStackDepth;
+        std::int32_t funcStackSize = maxStackDepth;
 
         // Restore compilation state
         unit.instructions = std::move(savedInstructions);
@@ -1005,7 +1005,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
 
         // Store function object as constant
         object::Value funcObj;  // Would create FunctionObject here
-        int funcIdx = constants.addConstant(funcObj);
+        std::int32_t funcIdx = constants.addConstant(funcObj);
 
         emit(bytecode::OpCode::LOAD_CONST, funcIdx, stmt->line);
         emit(bytecode::OpCode::MAKE_FUNCTION, funcDef->params.size(), stmt->line);
@@ -1027,7 +1027,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
         }
         else
         {
-            int noneIdx = constants.addConstant(object::Value());
+            std::int32_t noneIdx = constants.addConstant(object::Value());
             emit(bytecode::OpCode::LOAD_CONST, noneIdx, stmt->line);
         }
 
@@ -1183,7 +1183,7 @@ void BytecodeCompiler::optimizationReport(std::ostream& out) const
     out << "Loop Optimizations:\n";
     out << "  Loops detected: " << stats.loopsDetected << "\n";
     const auto& loops = loopAnalyzer.getLoops();
-    int totalInvariants = 0;
+    std::int32_t totalInvariants = 0;
     for (const auto& loop : loops)
     {
         totalInvariants += loop.invariants.size();
@@ -1358,10 +1358,10 @@ bool BytecodeCompiler::needsArg(bytecode::OpCode op) const
       && op != bytecode::OpCode::HALT && op != bytecode::OpCode::NOP;
 }
 
-void BytecodeOptimizer::optimize(std::vector<bytecode::Instruction>& code, int maxIterations)
+void BytecodeOptimizer::optimize(std::vector<bytecode::Instruction>& code, std::int32_t maxIterations)
 {
     bool changed = true;
-    int iteration = 0;
+    std::int32_t iteration = 0;
 
     while (changed && iteration < maxIterations)
     {
@@ -1431,13 +1431,14 @@ bool BytecodeVerifier::verify(const BytecodeCompiler::CompilationUnit& unit)
         {
             if (instr.arg < 0 || instr.arg >= unit.instructions.size())
             {
-                errors.push_back({static_cast<int>(i), "Jump target out of bounds: " + std::to_string(instr.arg)});
+                errors.push_back(
+                  {static_cast<std::int32_t>(i), "Jump target out of bounds: " + std::to_string(instr.arg)});
             }
         }
     }
 
     // Check 2: Stack balance
-    std::vector<int> stackDepths(unit.instructions.size(), -1);
+    std::vector<std::int32_t> stackDepths(unit.instructions.size(), -1);
     verifyStackDepth(unit, 0, 0, stackDepths);
 
     // Check 3: Constant pool bounds
@@ -1449,7 +1450,8 @@ bool BytecodeVerifier::verify(const BytecodeCompiler::CompilationUnit& unit)
         {
             if (instr.arg < 0 || instr.arg >= unit.constants.size())
             {
-                errors.push_back({static_cast<int>(i), "Constant index out of bounds: " + std::to_string(instr.arg)});
+                errors.push_back(
+                  {static_cast<std::int32_t>(i), "Constant index out of bounds: " + std::to_string(instr.arg)});
             }
         }
     }
@@ -1478,7 +1480,7 @@ void BytecodeVerifier::printErrors(std::ostream& out) const
 }
 
 void BytecodeVerifier::verifyStackDepth(
-  const BytecodeCompiler::CompilationUnit& unit, int pc, int depth, std::vector<int>& depths)
+  const BytecodeCompiler::CompilationUnit& unit, std::int32_t pc, std::int32_t depth, std::vector<std::int32_t>& depths)
 {
     if (pc >= unit.instructions.size())
     {
@@ -1494,7 +1496,7 @@ void BytecodeVerifier::verifyStackDepth(
     depths[pc] = depth;
 
     const auto& instr = unit.instructions[pc];
-    int newDepth = depth + getStackEffect(instr.op, instr.arg);
+    std::int32_t newDepth = depth + getStackEffect(instr.op, instr.arg);
 
     if (newDepth < 0)
     {
@@ -1528,7 +1530,7 @@ void BytecodeVerifier::verifyStackDepth(
     }
 }
 
-int BytecodeVerifier::getStackEffect(bytecode::OpCode op, int arg) const
+std::int32_t BytecodeVerifier::getStackEffect(bytecode::OpCode op, std::int32_t arg) const
 {
     switch (op)
     {
@@ -1615,7 +1617,7 @@ object::Value& VirtualMachine::top()
     return stack_.back();
 }
 
-object::Value& VirtualMachine::peek(int offset)
+object::Value& VirtualMachine::peek(std::int32_t offset)
 {
     if (stack_.size() < offset + 1)
     {
@@ -1676,11 +1678,11 @@ void VirtualMachine::registerNativeFunctions()
         }
         if (args[0].isList())
         {
-            return object::Value(static_cast<long long>(args[0].asList().size()));
+            return object::Value(static_cast<std::int64_t>(args[0].asList().size()));
         }
         if (args[0].isString())
         {
-            return object::Value(static_cast<long long>(args[0].asString().size()));
+            return object::Value(static_cast<std::int64_t>(args[0].asString().size()));
         }
         throw std::runtime_error("len() requires list or string");
     };
@@ -1692,7 +1694,7 @@ void VirtualMachine::registerNativeFunctions()
             throw std::runtime_error("range() takes 1-3 arguments");
         }
 
-        long long start = 0, stop, step = 1;
+        std::int64_t start = 0, stop, step = 1;
         if (args.size() == 1)
         {
             stop = args[0].toInt();
@@ -1710,7 +1712,7 @@ void VirtualMachine::registerNativeFunctions()
         }
 
         std::vector<object::Value> result;
-        for (long long i = start; (step > 0) ? (i < stop) : (i > stop); i += step)
+        for (std::int64_t i = start; (step > 0) ? (i < stop) : (i > stop); i += step)
         {
             result.push_back(object::Value(i));
         }
@@ -1929,7 +1931,7 @@ void VirtualMachine::registerNativeFunctions()
         const auto& list = args[0].asList();
         for (size_t i = 0; i < list.size(); i++)
         {
-            std::vector<object::Value> pair = {object::Value(static_cast<long long>(i)), list[i]};
+            std::vector<object::Value> pair = {object::Value(static_cast<std::int64_t>(i)), list[i]};
             result.push_back(object::Value(pair));
         }
         return object::Value(result);
@@ -2039,7 +2041,7 @@ void VirtualMachine::registerNativeFunctions()
         {
             throw std::runtime_error("round() takes 1 argument");
         }
-        return object::Value(static_cast<long long>(std::round(args[0].toFloat())));
+        return object::Value(static_cast<std::int64_t>(std::round(args[0].toFloat())));
     };
 }
 
@@ -2171,7 +2173,7 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     case bytecode::OpCode::FLOOR_DIV : {
         object::Value b = pop();
         object::Value a = pop();
-        push(object::Value(static_cast<long long>(a.toFloat() / b.toFloat())));
+        push(object::Value(static_cast<std::int64_t>(a.toFloat() / b.toFloat())));
         break;
     }
 
@@ -2390,9 +2392,9 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
 
     // Function calls
     case bytecode::OpCode::CALL : {
-        int numArgs = instr.arg;
+        std::int32_t numArgs = instr.arg;
         std::vector<object::Value> args;
-        for (int i = 0; i < numArgs; i++)
+        for (std::int32_t i = 0; i < numArgs; i++)
         {
             args.insert(args.begin(), pop());
         }
@@ -2437,7 +2439,7 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     // Collections
     case bytecode::OpCode::BUILD_LIST : {
         std::vector<object::Value> elements;
-        for (int i = 0; i < instr.arg; i++)
+        for (std::int32_t i = 0; i < instr.arg; i++)
         {
             elements.insert(elements.begin(), pop());
         }
@@ -2447,7 +2449,7 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
 
     case bytecode::OpCode::BUILD_DICT : {
         std::unordered_map<std::u16string, object::Value> dict;
-        for (int i = 0; i < instr.arg; i++)
+        for (std::int32_t i = 0; i < instr.arg; i++)
         {
             object::Value val = pop();
             object::Value key = pop();
@@ -2508,7 +2510,7 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     // Special operations
     case bytecode::OpCode::PRINT : {
         std::vector<object::Value> args;
-        for (int i = 0; i < instr.arg; i++)
+        for (std::int32_t i = 0; i < instr.arg; i++)
         {
             args.insert(args.begin(), pop());
         }
@@ -2541,7 +2543,7 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
         return;
 
     default :
-        throw std::runtime_error("Unknown opcode: " + std::to_string(static_cast<int>(instr.op)));
+        throw std::runtime_error("Unknown opcode: " + std::to_string(static_cast<std::int32_t>(instr.op)));
     }
 }
 
@@ -2560,7 +2562,7 @@ void VirtualMachine::printStatistics() const
     if (stats_.instructionsExecuted > 0)
     {
         double ips = stats_.instructionsExecuted / (stats_.executionTime.count() / 1000000.0);
-        std::cout << "Instructions/second:    " << static_cast<long long>(ips) << "\n";
+        std::cout << "Instructions/second:    " << static_cast<std::int64_t>(ips) << "\n";
     }
 
     std::cout << "\nStack size:            " << stack_.size() << "\n";

@@ -122,7 +122,7 @@ std::u16string InputBuffer::n_peek(std::size_t n)
         return out;
     }
     std::size_t rem = n;
-    int buf_idx = cur_buf;
+    std::int32_t buf_idx = cur_buf;
     std::size_t offset = static_cast<std::size_t>(cur - bufs[buf_idx].data() + 1);
     while (rem > 0)
     {

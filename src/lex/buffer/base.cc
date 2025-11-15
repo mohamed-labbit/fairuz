@@ -6,7 +6,7 @@ namespace mylang {
 namespace lex {
 namespace buffer {
 
-bool InputBufferBase::refresh_buffer(const unsigned int to_refresh)
+bool InputBufferBase::refresh_buffer(const std::uint32_t to_refresh)
 {
     auto& file = this->file_;
     auto& bufs = this->buffers_;
@@ -54,8 +54,8 @@ typename InputBufferBase::buffer_t InputBufferBase::read_wchar_window(std::size_
     if (bytes_read > 0)
     {
         unsigned char last_byte = static_cast<unsigned char>(byte_buffer[bytes_read - 1]);
-        int bytes_to_rewind = 0;
-        for (int i = bytes_read - 1; i >= 0 && i >= bytes_read - 4; --i)
+        std::int32_t bytes_to_rewind = 0;
+        for (std::int32_t i = bytes_read - 1; i >= 0 && i >= bytes_read - 4; --i)
         {
             unsigned char byte = static_cast<unsigned char>(byte_buffer[i]);
             if ((byte & 0x80) == 0)
@@ -64,7 +64,7 @@ typename InputBufferBase::buffer_t InputBufferBase::read_wchar_window(std::size_
             }
             else if ((byte & 0xC0) == 0xC0)
             {
-                int expected_bytes = 0;
+                std::int32_t expected_bytes = 0;
                 if ((byte & 0xE0) == 0xC0)
                 {
                     expected_bytes = 2;

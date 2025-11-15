@@ -5,7 +5,7 @@ namespace mylang {
 namespace parser {
 
 std::vector<ast::StmtPtr> ParallelParser::parseParallel(
-  const std::vector<mylang::lex::tok::Token>& tokens, int threadCount)
+  const std::vector<mylang::lex::tok::Token>& tokens, std::int32_t threadCount)
 {
     // Split tokens by top-level definitions
     std::vector<std::vector<mylang::lex::tok::Token>> chunks = splitIntoChunks(tokens);
