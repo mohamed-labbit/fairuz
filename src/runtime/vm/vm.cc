@@ -9,37 +9,37 @@ namespace runtime {
 
 typename CompilerSymbolTable::Symbol* CompilerSymbolTable::define(const std::string& name, bool isParam)
 {
-    if (symbols.count(name))
+    if (symbols_.count(name))
     {
-        return &symbols[name];
+        return &symbols_[name];
     }
 
     Symbol sym;
     sym.name = name;
-    sym.index = nextIndex++;
-    sym.scope = parent ? SymbolScope::Local : SymbolScope::Global;
+    sym.index = nextIndex_++;
+    sym.scope = parent_ ? SymbolScope::Local : SymbolScope::Global;
     sym.isParameter = isParam;
     sym.isCaptured = false;
     sym.isUsed = false;
 
-    symbols[name] = sym;
-    return &symbols[name];
+    symbols_[name] = sym;
+    return &symbols_[name];
 }
 
 typename CompilerSymbolTable::Symbol* CompilerSymbolTable::resolve(const std::string& name)
 {
     // Check local scope
-    auto it = symbols.find(name);
-    if (it != symbols.end())
+    auto it = symbols_.find(name);
+    if (it != symbols_.end())
     {
         it->second.isUsed = true;
         return &it->second;
     }
 
     // Check parent scopes
-    if (parent)
+    if (parent_)
     {
-        Symbol* parentSym = parent->resolve(name);
+        Symbol* parentSym = parent_->resolve(name);
         if (parentSym)
         {
             // Mark as captured for closure
@@ -53,8 +53,8 @@ typename CompilerSymbolTable::Symbol* CompilerSymbolTable::resolve(const std::st
             closureSym.isUsed = true;
 
             freeVars.push_back(name);
-            symbols[name] = closureSym;
-            return &symbols[name];
+            symbols_[name] = closureSym;
+            return &symbols_[name];
         }
     }
 
@@ -63,12 +63,12 @@ typename CompilerSymbolTable::Symbol* CompilerSymbolTable::resolve(const std::st
 
 const std::vector<std::string>& CompilerSymbolTable::getFreeVars() const { return freeVars; }
 
-std::int32_t CompilerSymbolTable::getLocalCount() const { return nextIndex; }
+std::int32_t CompilerSymbolTable::getLocalCount() const { return nextIndex_; }
 
 std::vector<typename CompilerSymbolTable::Symbol> CompilerSymbolTable::getUnusedSymbols() const
 {
     std::vector<Symbol> unused;
-    for (const auto& [name, sym] : symbols)
+    for (const auto& [name, sym] : symbols_)
     {
         if (!sym.isUsed && !sym.isParameter)
         {
@@ -83,83 +83,83 @@ std::int32_t ConstantPool::addConstant(const object::Value& val)
     if (val.isInt())
     {
         std::int64_t v = val.asInt();
-        auto it = intConstants.find(v);
-        if (it != intConstants.end())
+        auto it = intConstants_.find(v);
+        if (it != intConstants_.end())
         {
             return it->second;
         }
 
-        std::int32_t idx = constants.size();
-        constants.push_back(val);
-        intConstants[v] = idx;
+        std::int32_t idx = constants_.size();
+        constants_.push_back(val);
+        intConstants_[v] = idx;
         return idx;
     }
 
     if (val.isFloat())
     {
         double v = val.asFloat();
-        auto it = floatConstants.find(v);
-        if (it != floatConstants.end())
+        auto it = floatConstants_.find(v);
+        if (it != floatConstants_.end())
         {
             return it->second;
         }
 
-        std::int32_t idx = constants.size();
-        constants.push_back(val);
-        floatConstants[v] = idx;
+        std::int32_t idx = constants_.size();
+        constants_.push_back(val);
+        floatConstants_[v] = idx;
         return idx;
     }
 
     if (val.isString())
     {
         const std::u16string& v = val.asString();
-        auto it = stringConstants.find(v);
-        if (it != stringConstants.end())
+        auto it = stringConstants_.find(v);
+        if (it != stringConstants_.end())
         {
             return it->second;
         }
 
-        std::int32_t idx = constants.size();
-        constants.push_back(val);
-        stringConstants[v] = idx;
+        std::int32_t idx = constants_.size();
+        constants_.push_back(val);
+        stringConstants_[v] = idx;
         return idx;
     }
 
     // Other types - no deduplication
-    std::int32_t idx = constants.size();
-    constants.push_back(val);
+    std::int32_t idx = constants_.size();
+    constants_.push_back(val);
     return idx;
 }
 
-const std::vector<object::Value>& ConstantPool::getConstants() const { return constants; }
+const std::vector<object::Value>& ConstantPool::getConstants() const { return constants_; }
 
 void ConstantPool::optimize()
 {
     // Remove unused constants (requires usage tracking)
 }
 
-void JumpResolver::defineLabel(const std::string& name, std::int32_t position) { labels[name] = position; }
+void JumpResolver::defineLabel(const std::string& name, std::int32_t position) { labels_[name] = position; }
 
 void JumpResolver::addJump(std::int32_t instrIndex, const std::string& target)
 {
-    auto it = labels.find(target);
-    if (it != labels.end())
+    auto it = labels_.find(target);
+    if (it != labels_.end())
     {
         // Label already defined - immediate resolution
         // (Would patch instruction here)
     }
     else
     {
-        pendingJumps.push_back({instrIndex, target});
+        pendingJumps_.push_back({instrIndex, target});
     }
 }
 
 void JumpResolver::resolveJumps(std::vector<bytecode::Instruction>& instructions)
 {
-    for (const auto& jump : pendingJumps)
+    for (const auto& jump : pendingJumps_)
     {
-        auto it = labels.find(jump.labelName);
-        if (it != labels.end())
+        auto it = labels_.find(jump.labelName);
+        if (it != labels_.end())
         {
             instructions[jump.instructionIndex].arg = it->second;
         }
@@ -172,8 +172,8 @@ void JumpResolver::resolveJumps(std::vector<bytecode::Instruction>& instructions
 
 std::int32_t JumpResolver::getLabel(const std::string& name) const
 {
-    auto it = labels.find(name);
-    return it != labels.end() ? it->second : -1;
+    auto it = labels_.find(name);
+    return it != labels_.end() ? it->second : -1;
 }
 
 void LoopAnalyzer::detectLoops(const std::vector<bytecode::Instruction>& instructions)
@@ -197,14 +197,14 @@ void LoopAnalyzer::detectLoops(const std::vector<bytecode::Instruction>& instruc
                 loop.bodyPCs.push_back(pc);
             }
 
-            loops.push_back(loop);
+            loops_.push_back(loop);
         }
     }
 
     // Calculate nesting levels
-    for (auto& outer : loops)
+    for (auto& outer : loops_)
     {
-        for (const auto& inner : loops)
+        for (const auto& inner : loops_)
         {
             if (inner.headerPC > outer.headerPC && inner.exitPC < outer.exitPC)
             {
@@ -218,7 +218,7 @@ void LoopAnalyzer::detectLoops(const std::vector<bytecode::Instruction>& instruc
 void LoopAnalyzer::findInvariants(
   const std::vector<bytecode::Instruction>& instructions, const CompilerSymbolTable& symbols)
 {
-    for (auto& loop : loops)
+    for (auto& loop : loops_)
     {
         // Variables that are:
         // 1. Defined outside loop
@@ -252,7 +252,7 @@ void LoopAnalyzer::findInvariants(
     }
 }
 
-const std::vector<typename LoopAnalyzer::Loop>& LoopAnalyzer::getLoops() const { return loops; }
+const std::vector<typename LoopAnalyzer::Loop>& LoopAnalyzer::getLoops() const { return loops_; }
 
 bool PeepholeOptimizer::matchPattern(
   const std::vector<bytecode::Instruction>& code, size_t pos, const std::vector<bytecode::OpCode>& pattern)
@@ -290,7 +290,7 @@ void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instruction
     }
     if (replacements > 0)
     {
-        optimizations.push_back({"Const-Pop elimination", replacements});
+        optimizations_.push_back({"Const-Pop elimination", replacements});
     }
 
     // Pattern 2: LOAD x, STORE x -> remove (redundant load-store)
@@ -314,7 +314,7 @@ void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instruction
     }
     if (replacements > 0)
     {
-        optimizations.push_back({"Load-Store elimination", replacements});
+        optimizations_.push_back({"Load-Store elimination", replacements});
     }
 
     // Pattern 3: DUP, POP -> remove both (useless dup)
@@ -331,7 +331,7 @@ void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instruction
     }
     if (replacements > 0)
     {
-        optimizations.push_back({"Dup-Pop elimination", replacements});
+        optimizations_.push_back({"Dup-Pop elimination", replacements});
     }
 
     // Pattern 4: JUMP to next instruction -> remove
@@ -348,7 +348,7 @@ void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instruction
     }
     if (replacements > 0)
     {
-        optimizations.push_back({"Redundant jump elimination", replacements});
+        optimizations_.push_back({"Redundant jump elimination", replacements});
     }
 
     // Pattern 5: NOT, NOT -> remove both (double negation)
@@ -365,7 +365,7 @@ void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instruction
     }
     if (replacements > 0)
     {
-        optimizations.push_back({"Double negation elimination", replacements});
+        optimizations_.push_back({"Double negation elimination", replacements});
     }
 
     // Pattern 6: Use fast opcodes for common operations
@@ -390,25 +390,25 @@ void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instruction
     }
     if (replacements > 0)
     {
-        optimizations.push_back({"Fast opcode substitution", replacements});
+        optimizations_.push_back({"Fast opcode substitution", replacements});
     }
 }
 
 const std::vector<typename PeepholeOptimizer::Optimization>& PeepholeOptimizer::getOptimizations() const
 {
-    return optimizations;
+    return optimizations_;
 }
 
 void PeepholeOptimizer::printReport() const
 {
-    if (optimizations.empty())
+    if (optimizations_.empty())
     {
         std::cout << "  No peephole optimizations applied\n";
         return;
     }
 
     std::cout << "  Peephole Optimizations:\n";
-    for (const auto& opt : optimizations)
+    for (const auto& opt : optimizations_)
     {
         std::cout << "    • " << opt.name << ": " << opt.name << " replacements\n";
     }
@@ -417,8 +417,8 @@ void PeepholeOptimizer::printReport() const
 void BytecodeCompiler::emit(bytecode::OpCode op, std::int32_t arg, std::int32_t line)
 {
     bytecode::Instruction instr(op, arg, line);
-    unit.instructions.push_back(instr);
-    stats.instructionsGenerated++;
+    unit_.instructions.push_back(instr);
+    stats_.instructionsGenerated++;
 
     // Track stack depth
     updateStackDepth(op);
@@ -426,7 +426,7 @@ void BytecodeCompiler::emit(bytecode::OpCode op, std::int32_t arg, std::int32_t 
     // Track line numbers
     if (line > 0)
     {
-        unit.lineNumbers.push_back(line);
+        unit_.lineNumbers.push_back(line);
     }
 }
 
@@ -441,14 +441,14 @@ void BytecodeCompiler::updateStackDepth(bytecode::OpCode op)
     case bytecode::OpCode::LOAD_GLOBAL :
     case bytecode::OpCode::LOAD_FAST :
     case bytecode::OpCode::DUP :
-        currentStackDepth++;
+        currentStackDepth_++;
         break;
 
     case bytecode::OpCode::POP :
     case bytecode::OpCode::STORE_VAR :
     case bytecode::OpCode::STORE_GLOBAL :
     case bytecode::OpCode::STORE_FAST :
-        currentStackDepth--;
+        currentStackDepth_--;
         break;
 
     case bytecode::OpCode::ADD :
@@ -465,7 +465,7 @@ void BytecodeCompiler::updateStackDepth(bytecode::OpCode op)
     case bytecode::OpCode::GE :
     case bytecode::OpCode::AND :
     case bytecode::OpCode::OR :
-        currentStackDepth--;  // Two operands -> one result
+        currentStackDepth_--;  // Two operands -> one result
         break;
 
     case bytecode::OpCode::CALL :
@@ -477,29 +477,29 @@ void BytecodeCompiler::updateStackDepth(bytecode::OpCode op)
         break;
     }
 
-    maxStackDepth = std::max(maxStackDepth, currentStackDepth);
+    maxStackDepth_ = std::max(maxStackDepth_, currentStackDepth_);
 }
 
-std::int32_t BytecodeCompiler::getCurrentPC() const { return unit.instructions.size(); }
+std::int32_t BytecodeCompiler::getCurrentPC() const { return unit_.instructions.size(); }
 
-void BytecodeCompiler::patchJump(std::int32_t jumpIndex) { unit.instructions[jumpIndex].arg = getCurrentPC(); }
+void BytecodeCompiler::patchJump(std::int32_t jumpIndex) { unit_.instructions[jumpIndex].arg = getCurrentPC(); }
 
 void BytecodeCompiler::enterScope()
 {
-    auto* newScope = new CompilerSymbolTable(currentScope.get());
-    if (currentScope)
+    auto* newScope = new CompilerSymbolTable(currentScope_.get());
+    if (currentScope_)
     {
-        scopeStack.push(currentScope.release());
+        scopeStack_.push(currentScope_.release());
     }
-    currentScope.reset(newScope);
+    currentScope_.reset(newScope);
 }
 
 void BytecodeCompiler::exitScope()
 {
-    if (!scopeStack.empty())
+    if (!scopeStack_.empty())
     {
-        currentScope.reset(scopeStack.top());
-        scopeStack.pop();
+        currentScope_.reset(scopeStack_.top());
+        scopeStack_.pop();
     }
 }
 
@@ -538,14 +538,14 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
             break;
         }
 
-        std::int32_t idx = constants.addConstant(val);
+        std::int32_t idx = constants_.addConstant(val);
         emit(bytecode::OpCode::LOAD_CONST, idx, expr->line);
         break;
     }
 
     case parser::ast::Expr::Kind::NAME : {
         auto* name = static_cast<const parser::ast::NameExpr*>(expr);
-        auto* sym = currentScope->resolve(utf8::utf16to8(name->name));
+        auto* sym = currentScope_->resolve(utf8::utf16to8(name->name));
 
         if (!sym)
         {
@@ -720,7 +720,7 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
         emit(bytecode::OpCode::CALL, call->args.size(), expr->line);
 
         // Adjust stack depth
-        currentStackDepth -= call->args.size();
+        currentStackDepth_ -= call->args.size();
         break;
     }
 
@@ -737,8 +737,8 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
         emit(bytecode::OpCode::BUILD_LIST, list->elements.size(), expr->line);
 
         // Adjust stack depth
-        currentStackDepth -= list->elements.size();
-        currentStackDepth++;
+        currentStackDepth_ -= list->elements.size();
+        currentStackDepth_++;
         break;
     }
 
@@ -777,7 +777,7 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
         emit(bytecode::OpCode::DUP, 0, expr->line);
 
         // Store
-        auto* sym = currentScope->define(utf8::utf16to8(assign->target));
+        auto* sym = currentScope_->define(utf8::utf16to8(assign->target));
         if (sym->scope == CompilerSymbolTable::SymbolScope::Global)
         {
             emit(bytecode::OpCode::STORE_GLOBAL, sym->index, expr->line);
@@ -810,7 +810,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
         compileExpr(assign->value.get());
 
         // Store to variable
-        auto* sym = currentScope->define(utf8::utf16to8(assign->target));
+        auto* sym = currentScope_->define(utf8::utf16to8(assign->target));
 
         if (sym->scope == CompilerSymbolTable::SymbolScope::Global)
         {
@@ -886,7 +886,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
         ctx.startPC = loopStart;
         ctx.continueLabel = loopStart;
         ctx.breakLabel = -1;  // Will be patched
-        loopStack.push(ctx);
+        loopStack_.push(ctx);
 
         for (const auto& s : whileStmt->body)
         {
@@ -900,13 +900,13 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
         emit(bytecode::OpCode::HOT_LOOP_END, 0, stmt->line);
 
         // Patch break statements
-        if (loopStack.top().breakLabel != -1)
+        if (loopStack_.top().breakLabel != -1)
         {
-            patchJump(loopStack.top().breakLabel);
+            patchJump(loopStack_.top().breakLabel);
         }
-        loopStack.pop();
+        loopStack_.pop();
 
-        stats.loopsDetected++;
+        stats_.loopsDetected++;
         break;
     }
 
@@ -925,7 +925,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
         emit(bytecode::OpCode::FOR_ITER_FAST, 0, stmt->line);
 
         // Store loop variable
-        auto* sym = currentScope->define(utf8::utf16to8(forStmt->target));
+        auto* sym = currentScope_->define(utf8::utf16to8(forStmt->target));
         emit(bytecode::OpCode::STORE_FAST, sym->index, stmt->line);
 
         // Loop body
@@ -933,7 +933,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
         ctx.startPC = loopStart;
         ctx.continueLabel = loopStart;
         ctx.breakLabel = -1;
-        loopStack.push(ctx);
+        loopStack_.push(ctx);
 
         for (const auto& s : forStmt->body)
         {
@@ -947,13 +947,13 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
         patchJump(forIter);
         emit(bytecode::OpCode::HOT_LOOP_END, 0, stmt->line);
 
-        if (loopStack.top().breakLabel != -1)
+        if (loopStack_.top().breakLabel != -1)
         {
-            patchJump(loopStack.top().breakLabel);
+            patchJump(loopStack_.top().breakLabel);
         }
-        loopStack.pop();
+        loopStack_.pop();
 
-        stats.loopsDetected++;
+        stats_.loopsDetected++;
         break;
     }
 
@@ -966,18 +966,18 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
         // Define parameters
         for (const auto& param : funcDef->params)
         {
-            currentScope->define(utf8::utf16to8(param), true);
+            currentScope_->define(utf8::utf16to8(param), true);
         }
 
         // Save current compilation state
-        auto savedInstructions = std::move(unit.instructions);
-        auto savedConstants = constants;
-        std::int32_t savedStackDepth = currentStackDepth;
-        std::int32_t savedMaxStackDepth = maxStackDepth;
+        auto savedInstructions = std::move(unit_.instructions);
+        auto savedConstants = constants_;
+        std::int32_t savedStackDepth = currentStackDepth_;
+        std::int32_t savedMaxStackDepth = maxStackDepth_;
 
-        unit.instructions.clear();
-        currentStackDepth = 0;
-        maxStackDepth = 0;
+        unit_.instructions.clear();
+        currentStackDepth_ = 0;
+        maxStackDepth_ = 0;
 
         // Compile function body
         for (const auto& s : funcDef->body)
@@ -986,32 +986,32 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
         }
 
         // Implicit return None if no return statement
-        if (unit.instructions.empty() || unit.instructions.back().op != bytecode::OpCode::RETURN)
+        if (unit_.instructions.empty() || unit_.instructions.back().op != bytecode::OpCode::RETURN)
         {
-            std::int32_t noneIdx = constants.addConstant(object::Value());
+            std::int32_t noneIdx = constants_.addConstant(object::Value());
             emit(bytecode::OpCode::LOAD_CONST, noneIdx, stmt->line);
             emit(bytecode::OpCode::RETURN, 0, stmt->line);
         }
 
         // Create function object
-        auto funcInstructions = std::move(unit.instructions);
-        std::int32_t funcStackSize = maxStackDepth;
+        auto funcInstructions = std::move(unit_.instructions);
+        std::int32_t funcStackSize = maxStackDepth_;
 
         // Restore compilation state
-        unit.instructions = std::move(savedInstructions);
-        constants = savedConstants;
-        currentStackDepth = savedStackDepth;
-        maxStackDepth = savedMaxStackDepth;
+        unit_.instructions = std::move(savedInstructions);
+        constants_ = savedConstants;
+        currentStackDepth_ = savedStackDepth;
+        maxStackDepth_ = savedMaxStackDepth;
 
         // Store function object as constant
         object::Value funcObj;  // Would create FunctionObject here
-        std::int32_t funcIdx = constants.addConstant(funcObj);
+        std::int32_t funcIdx = constants_.addConstant(funcObj);
 
         emit(bytecode::OpCode::LOAD_CONST, funcIdx, stmt->line);
         emit(bytecode::OpCode::MAKE_FUNCTION, funcDef->params.size(), stmt->line);
 
         // Store function
-        auto* sym = currentScope->define(utf8::utf16to8(funcDef->name));
+        auto* sym = currentScope_->define(utf8::utf16to8(funcDef->name));
         emit(bytecode::OpCode::STORE_FAST, sym->index, stmt->line);
 
         exitScope();
@@ -1027,7 +1027,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
         }
         else
         {
-            std::int32_t noneIdx = constants.addConstant(object::Value());
+            std::int32_t noneIdx = constants_.addConstant(object::Value());
             emit(bytecode::OpCode::LOAD_CONST, noneIdx, stmt->line);
         }
 
@@ -1053,10 +1053,10 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
 typename BytecodeCompiler::CompilationUnit BytecodeCompiler::compile(const std::vector<parser::ast::StmtPtr>& ast)
 {
     // Reset state
-    unit = CompilationUnit();
-    stats = Stats();
-    currentStackDepth = 0;
-    maxStackDepth = 0;
+    unit_ = CompilationUnit();
+    stats_ = Stats();
+    currentStackDepth_ = 0;
+    maxStackDepth_ = 0;
 
     // Compile all statements
     for (const auto& stmt : ast)
@@ -1068,32 +1068,32 @@ typename BytecodeCompiler::CompilationUnit BytecodeCompiler::compile(const std::
     emit(bytecode::OpCode::HALT, 0, 0);
 
     // Finalize constant pool
-    unit.constants = constants.getConstants();
-    stats.constantsPoolSize = unit.constants.size();
+    unit_.constants = constants_.getConstants();
+    stats_.constantsPoolSize = unit_.constants.size();
 
     // Resolve all jumps
-    jumps.resolveJumps(unit.instructions);
+    jumps_.resolveJumps(unit_.instructions);
 
     // Detect loops for optimization
-    loopAnalyzer.detectLoops(unit.instructions);
-    loopAnalyzer.findInvariants(unit.instructions, *currentScope);
+    loopAnalyzer_.detectLoops(unit_.instructions);
+    loopAnalyzer_.findInvariants(unit_.instructions, *currentScope_);
 
     // Apply peephole optimizations
-    peephole.optimize(unit.instructions);
-    stats.peepholeOptimizations = peephole.getOptimizations().size();
+    peephole_.optimize(unit_.instructions);
+    stats_.peepholeOptimizations = peephole_.getOptimizations().size();
 
     // Set metadata
-    unit.numLocals = currentScope->getLocalCount();
-    unit.stackSize = maxStackDepth;
+    unit_.numLocals = currentScope_->getLocalCount();
+    unit_.stackSize = maxStackDepth_;
 
     // Report unused variables
-    auto unused = currentScope->getUnusedSymbols();
+    auto unused = currentScope_->getUnusedSymbols();
     if (!unused.empty())
     {
         std::cout << "[Compiler] Warning: " << unused.size() << " unused variables detected\n";
     }
 
-    return unit;
+    return unit_;
 }
 
 void BytecodeCompiler::disassemble(const CompilationUnit& unit, std::ostream& out) const
@@ -1144,13 +1144,13 @@ void BytecodeCompiler::disassemble(const CompilationUnit& unit, std::ostream& ou
     }
 
     out << "\n=== Compilation Statistics ===\n";
-    out << "Instructions generated: " << stats.instructionsGenerated << "\n";
-    out << "Constants in pool: " << stats.constantsPoolSize << "\n";
-    out << "Loops detected: " << stats.loopsDetected << "\n";
-    out << "Peephole optimizations: " << stats.peepholeOptimizations << "\n";
+    out << "Instructions generated: " << stats_.instructionsGenerated << "\n";
+    out << "Constants in pool: " << stats_.constantsPoolSize << "\n";
+    out << "Loops detected: " << stats_.loopsDetected << "\n";
+    out << "Peephole optimizations: " << stats_.peepholeOptimizations << "\n";
 
     // Loop analysis
-    const auto& loops = loopAnalyzer.getLoops();
+    const auto& loops = loopAnalyzer_.getLoops();
     if (!loops.empty())
     {
         out << "\nLoop Analysis:\n";
@@ -1165,7 +1165,7 @@ void BytecodeCompiler::disassemble(const CompilationUnit& unit, std::ostream& ou
 
     // Peephole report
     out << "\n";
-    peephole.printReport();
+    peephole_.printReport();
 }
 
 
@@ -1176,13 +1176,13 @@ void BytecodeCompiler::optimizationReport(std::ostream& out) const
     out << "╚═══════════════════════════════════════╝\n\n";
 
     out << "Code Size:\n";
-    out << "  Instructions: " << stats.instructionsGenerated << "\n";
-    out << "  Constants: " << stats.constantsPoolSize << "\n";
-    out << "  Stack size: " << maxStackDepth << "\n\n";
+    out << "  Instructions: " << stats_.instructionsGenerated << "\n";
+    out << "  Constants: " << stats_.constantsPoolSize << "\n";
+    out << "  Stack size: " << maxStackDepth_ << "\n\n";
 
     out << "Loop Optimizations:\n";
-    out << "  Loops detected: " << stats.loopsDetected << "\n";
-    const auto& loops = loopAnalyzer.getLoops();
+    out << "  Loops detected: " << stats_.loopsDetected << "\n";
+    const auto& loops = loopAnalyzer_.getLoops();
     std::int32_t totalInvariants = 0;
     for (const auto& loop : loops)
     {
@@ -1191,9 +1191,9 @@ void BytecodeCompiler::optimizationReport(std::ostream& out) const
     out << "  Hoistable invariants: " << totalInvariants << "\n\n";
 
     out << "Peephole Optimizations:\n";
-    if (stats.peepholeOptimizations > 0)
+    if (stats_.peepholeOptimizations > 0)
     {
-        peephole.printReport();
+        peephole_.printReport();
     }
     else
     {
@@ -1367,7 +1367,7 @@ void BytecodeOptimizer::optimize(std::vector<bytecode::Instruction>& code, std::
     {
         changed = false;
 
-        for (auto& pass : passes)
+        for (auto& pass : passes_)
         {
             if (pass.apply(code))
             {
@@ -1383,7 +1383,7 @@ void BytecodeOptimizer::optimize(std::vector<bytecode::Instruction>& code, std::
 void BytecodeOptimizer::printReport(std::ostream& out) const
 {
     out << "\nBytecode Optimizer Report:\n";
-    for (const auto& pass : passes)
+    for (const auto& pass : passes_)
     {
         if (pass.applicationsCount > 0)
         {
@@ -1420,7 +1420,7 @@ bool BytecodeOptimizer::isBinaryOp(bytecode::OpCode op)
 
 bool BytecodeVerifier::verify(const BytecodeCompiler::CompilationUnit& unit)
 {
-    errors.clear();
+    errors_.clear();
 
     // Check 1: Valid jump targets
     for (size_t i = 0; i < unit.instructions.size(); i++)
@@ -1431,7 +1431,7 @@ bool BytecodeVerifier::verify(const BytecodeCompiler::CompilationUnit& unit)
         {
             if (instr.arg < 0 || instr.arg >= unit.instructions.size())
             {
-                errors.push_back(
+                errors_.push_back(
                   {static_cast<std::int32_t>(i), "Jump target out of bounds: " + std::to_string(instr.arg)});
             }
         }
@@ -1450,7 +1450,7 @@ bool BytecodeVerifier::verify(const BytecodeCompiler::CompilationUnit& unit)
         {
             if (instr.arg < 0 || instr.arg >= unit.constants.size())
             {
-                errors.push_back(
+                errors_.push_back(
                   {static_cast<std::int32_t>(i), "Constant index out of bounds: " + std::to_string(instr.arg)});
             }
         }
@@ -1459,21 +1459,21 @@ bool BytecodeVerifier::verify(const BytecodeCompiler::CompilationUnit& unit)
     // Check 4: All paths return (for functions)
     // Would implement dataflow analysis here
 
-    return errors.empty();
+    return errors_.empty();
 }
 
-const std::vector<typename BytecodeVerifier::VerificationError>& BytecodeVerifier::getErrors() const { return errors; }
+const std::vector<typename BytecodeVerifier::VerificationError>& BytecodeVerifier::getErrors() const { return errors_; }
 
 void BytecodeVerifier::printErrors(std::ostream& out) const
 {
-    if (errors.empty())
+    if (errors_.empty())
     {
         out << "✓ Bytecode verification passed\n";
         return;
     }
 
-    out << "✗ Bytecode verification failed with " << errors.size() << " error(s):\n";
-    for (const auto& err : errors)
+    out << "✗ Bytecode verification failed with " << errors_.size() << " error(s):\n";
+    for (const auto& err : errors_)
     {
         out << "  PC " << err.pc << ": " << err.message << "\n";
     }
@@ -1500,13 +1500,13 @@ void BytecodeVerifier::verifyStackDepth(
 
     if (newDepth < 0)
     {
-        errors.push_back({pc, "Stack underflow"});
+        errors_.push_back({pc, "Stack underflow"});
         return;
     }
 
     if (newDepth > unit.stackSize)
     {
-        errors.push_back(
+        errors_.push_back(
           {pc, "Stack overflow (depth " + std::to_string(newDepth) + " > " + std::to_string(unit.stackSize) + ")"});
     }
 

@@ -4,7 +4,6 @@
 namespace mylang {
 namespace lex {
 
-
 using offset_pair = std::pair<std::size_t, std::size_t>;
 
 std::size_t SourceManager::line() const { return this->input_buffer_.position().line; }
