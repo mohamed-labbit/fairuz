@@ -354,7 +354,9 @@ class DiagnosticEngine
             ss << "    \"code\": \"" << diag.code << "\"\n";
             ss << "  }";
             if (i + 1 < diagnostics.size())
+            {
                 ss << ",";
+            }
             ss << "\n";
         }
         ss << "]\n";

@@ -40,14 +40,14 @@ class CompilerSymbolTable
     };
 
    private:
-    std::unordered_map<std::string, Symbol> symbols;
-    CompilerSymbolTable* parent;
-    std::int32_t nextIndex = 0;
+    std::unordered_map<std::string, Symbol> symbols_;
+    CompilerSymbolTable* parent_;
+    std::int32_t nextIndex_{0};
     std::vector<std::string> freeVars;  // Closure variables
 
    public:
     explicit CompilerSymbolTable(CompilerSymbolTable* p = nullptr) :
-        parent(p)
+        parent_(p)
     {
     }
 
@@ -86,10 +86,10 @@ struct BytecodeBlock
 class ConstantPool
 {
    private:
-    std::vector<object::Value> constants;
-    std::unordered_map<std::u16string, std::int32_t> stringConstants;
-    std::unordered_map<std::int64_t, std::int32_t> intConstants;
-    std::unordered_map<double, std::int32_t> floatConstants;
+    std::vector<object::Value> constants_;
+    std::unordered_map<std::u16string, std::int32_t> stringConstants_;
+    std::unordered_map<std::int64_t, std::int32_t> intConstants_;
+    std::unordered_map<double, std::int32_t> floatConstants_;
 
    public:
     std::int32_t addConstant(const object::Value& val);
@@ -111,8 +111,8 @@ class JumpResolver
         std::string labelName;
     };
 
-    std::unordered_map<std::string, std::int32_t> labels;
-    std::vector<PendingJump> pendingJumps;
+    std::unordered_map<std::string, std::int32_t> labels_;
+    std::vector<PendingJump> pendingJumps_;
 
    public:
     void defineLabel(const std::string& name, std::int32_t position);
@@ -141,7 +141,7 @@ class LoopAnalyzer
     };
 
    private:
-    std::vector<Loop> loops;
+    std::vector<Loop> loops_;
 
    public:
     void detectLoops(const std::vector<bytecode::Instruction>& instructions);
@@ -164,7 +164,7 @@ class PeepholeOptimizer
     };
 
    private:
-    std::vector<Optimization> optimizations;
+    std::vector<Optimization> optimizations_;
 
     bool matchPattern(
       const std::vector<bytecode::Instruction>& code, size_t pos, const std::vector<bytecode::OpCode>& pattern);
@@ -201,21 +201,21 @@ class BytecodeCompiler
     };
 
    private:
-    CompilationUnit unit;
-    ConstantPool constants;
-    JumpResolver jumps;
-    PeepholeOptimizer peephole;
-    LoopAnalyzer loopAnalyzer;
+    CompilationUnit unit_;
+    ConstantPool constants_;
+    JumpResolver jumps_;
+    PeepholeOptimizer peephole_;
+    LoopAnalyzer loopAnalyzer_;
 
-    std::unique_ptr<CompilerSymbolTable> currentScope;
-    std::stack<CompilerSymbolTable*> scopeStack;
+    std::unique_ptr<CompilerSymbolTable> currentScope_;
+    std::stack<CompilerSymbolTable*> scopeStack_;
 
-    std::vector<BytecodeBlock> blocks;
-    std::int32_t currentBlock = 0;
+    std::vector<BytecodeBlock> blocks_;
+    std::int32_t currentBlock_{0};
 
     // Stack depth tracking for optimization
-    std::int32_t currentStackDepth = 0;
-    std::int32_t maxStackDepth = 0;
+    std::int32_t currentStackDepth_{0};
+    std::int32_t maxStackDepth_{0};
 
     // Loop context
     struct LoopContext
@@ -224,7 +224,7 @@ class BytecodeCompiler
         std::int32_t continueLabel;
         std::int32_t startPC;
     };
-    std::stack<LoopContext> loopStack;
+    std::stack<LoopContext> loopStack_;
 
     // Statistics
     struct Stats
@@ -234,7 +234,7 @@ class BytecodeCompiler
         std::int32_t jumpsResolved = 0;
         std::int32_t peepholeOptimizations = 0;
         std::int32_t loopsDetected = 0;
-    } stats;
+    } stats_;
 
     void emit(bytecode::OpCode op, std::int32_t arg = 0, std::int32_t line = 0);
 
@@ -281,7 +281,7 @@ class BytecodeOptimizer
     };
 
    private:
-    std::vector<OptimizationPass> passes;
+    std::vector<OptimizationPass> passes_;
 
    public:
     BytecodeOptimizer()
@@ -385,7 +385,7 @@ class BytecodeVerifier
     };
 
    private:
-    std::vector<VerificationError> errors;
+    std::vector<VerificationError> errors_;
 
    public:
     bool verify(const BytecodeCompiler::CompilationUnit& unit);

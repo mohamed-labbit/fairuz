@@ -17,7 +17,7 @@
  * @version 2.0
  */
 
-#include "../../macros.hppw"
+#include "../../macros.hpp"
 
 #include <atomic>
 #include <chrono>
@@ -1851,7 +1851,9 @@ class MYLANG_COMPILER_API ArenaAllocator
             return &fast_pool256_;
         }
         else
+        {
             return nullptr;
+        }
     }
 
     template<std::size_t ObjectSize>
