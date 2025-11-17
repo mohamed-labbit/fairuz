@@ -42,9 +42,6 @@ class InputBuffer: public InputBufferBase
         reset();
     }
 
-    // TODO : ta hadi fiha nadar
-    InputBuffer() = default;
-
     std::size_t size() const;
     std::size_t buffer_offset() const;
     bool empty() const;

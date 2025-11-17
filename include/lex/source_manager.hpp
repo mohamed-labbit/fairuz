@@ -32,9 +32,6 @@ class SourceManager
         }
     }
 
-    // TODO; ta hadi fiha nadar
-    SourceManager() = default;
-
     std::size_t line() const;
     std::size_t column() const;
     std::size_t fpos() const;

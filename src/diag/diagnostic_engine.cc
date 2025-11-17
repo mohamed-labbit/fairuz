@@ -17,13 +17,13 @@ Diagnostic& Diagnostic::with_range(SourceRange range)
     return *this;
 }
 
-Diagnostic& Diagnostic::add_highlight(SourceRange range, HighlightStyle style, std::string label = "")
+Diagnostic& Diagnostic::add_highlight(SourceRange range, HighlightStyle style, std::string label)
 {
     highlights_.emplace_back(std::move(range), style, std::move(label));
     return *this;
 }
 
-Diagnostic& Diagnostic::add_note(std::string note, std::optional<SourceLocation> loc = std::nullopt)
+Diagnostic& Diagnostic::add_note(std::string note, std::optional<SourceLocation> loc)
 {
     notes_.emplace_back(std::move(note), std::move(loc));
     return *this;

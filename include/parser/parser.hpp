@@ -47,30 +47,11 @@ class ParseError: public std::runtime_error
 class Parser
 {
    private:
-    lex::Lexer lexer_;
-    std::size_t current_{0};
-    unsigned loopDepth_{0};
-    unsigned functionDepth_{0};
-
-    std::vector<lex::tok::Token> tokens_;
-    std::size_t current{0};
-    bool use_lexer{false};
-
-    // Packrat parsing memoization cache
-    struct MemoEntry
-    {
-        std::optional<ast::ExprPtr> result_;
-        std::size_t endPos_;
-        bool failed_;
-    };
-    std::unordered_map<std::u16string, MemoEntry> memoCache_;
-
-    // Symbol table for semantic analysis during parsing
     struct Scope
     {
         std::unordered_set<std::u16string> variables_;
         std::unordered_set<std::u16string> functions_;
-        Scope* parent = nullptr;
+        Scope* parent{nullptr};
 
         bool isDefined(const std::u16string& name) const
         {
@@ -81,14 +62,43 @@ class Parser
             return parent ? parent->isDefined(name) : false;
         }
     };
-    std::vector<std::unique_ptr<Scope>> scopeStack_;
 
     // Error tracking for batch reporting
     struct ErrorInfo
     {
         ParseError error_;
-        std::size_t position_;
+        std::size_t position_{0};
     };
+
+    // Packrat parsing memoization cache
+    struct MemoEntry
+    {
+        ast::ExprPtr* result_{nullptr};
+        std::size_t endPos_{0};
+        bool failed_{false};
+    };
+
+    struct OpInfo
+    {
+        std::int32_t precedence;
+        bool rightAssoc;
+        bool isComparison;
+    };
+
+    lex::Lexer lexer_;
+    std::size_t current_{0};
+    unsigned loopDepth_{0};
+    unsigned functionDepth_{0};
+
+    std::vector<lex::tok::Token> tokens_;
+    std::size_t current{0};
+    bool use_lexer{false};
+
+    std::unordered_map<std::u16string, MemoEntry> memoCache_;
+
+    // Symbol table for semantic analysis during parsing
+    std::vector<std::unique_ptr<Scope>> scopeStack_;
+
     std::vector<ErrorInfo> errors_;
 
     static const std::unordered_set<lex::tok::TokenType> syncTokens_;
@@ -148,13 +158,6 @@ class Parser
 
     // === Operator Precedence & Properties ===
 
-    struct OpInfo
-    {
-        std::int32_t precedence;
-        bool rightAssoc;
-        bool isComparison;
-    };
-
     OpInfo getOpInfo(lex::tok::TokenType type) const;
 
     bool isUnaryOp(lex::tok::TokenType type) const;
@@ -177,10 +180,21 @@ class Parser
 
     // TODO : figure out why is the default constructor of the lexer deleted
     explicit Parser(std::vector<lex::tok::Token> toks) :
-        tokens_(toks)
+        tokens_(toks),
+        lexer_("")
+
     {
         enterScope();
     }
+
+    struct ParseStats
+    {
+        std::size_t tokenCount;
+        std::size_t statementCount;
+        std::size_t errorCount;
+        std::size_t cacheHits;
+        double parseTimeMs;
+    };
 
     // Parse primary with speculative parsing for ambiguity
     ast::ExprPtr parsePrimary();
@@ -216,6 +230,8 @@ class Parser
 
     ast::ExprPtr parseExpression();
 
+    ast::ExprPtr parseAssignmentExpr();
+
     std::vector<ast::ExprPtr> parseExpressionList();
 
     // === Statement Parsing ===
@@ -235,14 +251,6 @@ class Parser
     // === Utility Methods ===
 
     // Get parsing statistics
-    struct ParseStats
-    {
-        size_t tokenCount_;
-        size_t statementCount_;
-        size_t errorCount_;
-        size_t cacheHits_;
-        double parseTimeMs_;
-    };
 
     // ParseStats getStats() const { return this->parse_stats_; }
 

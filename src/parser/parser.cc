@@ -24,14 +24,28 @@ std::u16string ParseError::format() const
     return utf8::utf8to16(ss.str());
 }
 
+
+/* ---- Parser methods ---- */
+
 // TODO : watch out for overflow and underflow
 lex::tok::Token Parser::peek(std::size_t offset)
 {
+    if (!offset)
+    {
+        return;
+    }
+
     if (use_lexer)
     {
         return lexer_.peek(offset);
     }
-    return tokens_[current_ + 1];
+
+    if (offset > tokens_.size() - current_)
+    {
+        throw std::invalid_argument("offset is larger that the remaining tokens in parser");
+    }
+
+    return tokens_[current_ + offset];
 }
 
 lex::tok::Token Parser::previous()
@@ -40,6 +54,12 @@ lex::tok::Token Parser::previous()
     {
         return lexer_.prev();
     }
+
+    if (!current_)
+    {
+        throw std::runtime_error("Cannot call previous when the parser hasn't advanced yet");
+    }
+
     return tokens_[current_ - 1];
 }
 
@@ -49,6 +69,12 @@ lex::tok::Token Parser::advance()
     {
         return lexer_.next();
     }
+
+    if (current_ >= tokens_.size())
+    {
+        return lexer_.make_token(lex::tok::TokenType::ENDMARKER);
+    }
+
     return tokens_[current_++];
 }
 
@@ -734,6 +760,8 @@ ast::ExprPtr Parser::parseTernary()
 
     return expr;
 }
+
+ast::ExprPtr Parser::parseAssignmentExpr() { return ast::ExprPtr(); }
 
 ast::ExprPtr Parser::parseStarredExpr()
 {

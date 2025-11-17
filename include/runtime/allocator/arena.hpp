@@ -740,7 +740,7 @@ struct FreeListRegion
      * @param size Required size in bytes
      * @return true if this region is large enough
      */
-    bool has_space_for(std::size_t size) const { return size >= size; }
+    bool has_space_for(std::size_t size) const { return size >= this->size; }
 
     /**
      * @brief Comparison operator for ordered containers
@@ -890,21 +890,21 @@ class FastAllocBlockFreeList
             FreeListRegion reg = *it;
 
             // Calculate alignment padding
-            std::uintptr_t addr = reinterpret_cast<std::uintptr_t>(reg.ptr_);
+            std::uintptr_t addr = reinterpret_cast<std::uintptr_t>(reg.ptr);
             std::uintptr_t aligned = (addr + (align - 1)) & ~(align - 1);
             std::size_t padding = aligned - addr;
 
-            if (reg.size_ >= size + padding)
+            if (reg.size >= size + padding)
             {
                 // Found a suitable region
                 regions_.erase(it);
 
                 // Split if there's leftover space
                 std::size_t used = size + padding;
-                if (reg.size_ > used)
+                if (reg.size > used)
                 {
-                    Pointer remainder = reg.ptr_ + used;
-                    std::size_t remainder_size = reg.size_ - used;
+                    Pointer remainder = reg.ptr + used;
+                    std::size_t remainder_size = reg.size - used;
                     regions_.insert(FreeListRegion(remainder, remainder_size));
                 }
 
@@ -1024,10 +1024,6 @@ class MYLANG_COMPILER_API ArenaAllocator
     {
         bool operator()(const void* a, const void* b) const MYLANG_NOEXCEPT { return a == b; }
     };
-
-    //==========================================================================
-    // Member Variables
-    //==========================================================================
 
     // Statistics
     ArenaAllocStats alloc_stats_;  ///< Allocation statistics
@@ -1314,7 +1310,7 @@ class MYLANG_COMPILER_API ArenaAllocator
 
             Pointer ret = arena_block.begin();
             pool->push_back(std::move(arena_block));
-            alloc_stats_.safe_increment(alloc_stats_.active_blocks_);
+            alloc_stats_.safe_increment(alloc_stats_.active_blocks);
 
             return ret;
         } catch (const std::bad_alloc&)
@@ -1443,19 +1439,19 @@ class MYLANG_COMPILER_API ArenaAllocator
         // Update statistics
         if (enable_statistics_.load(std::memory_order_relaxed))
         {
-            alloc_stats_.safe_increment(alloc_stats_.total_allocations_);
-            alloc_stats_.safe_increment(alloc_stats_.total_allocated_, alloc_size);
+            alloc_stats_.safe_increment(alloc_stats_.total_allocations);
+            alloc_stats_.safe_increment(alloc_stats_.total_allocated, alloc_size);
         }
 
         // Track allocation if enabled
         if (track_allocations_.load(std::memory_order_relaxed))
         {
             AllocationHeader header{};
-            header.magic_ = AllocationHeader::MAGIC_;
-            header.size_ = static_cast<std::uint32_t>(alloc_size);
-            header.alignment_ = static_cast<std::uint32_t>(align);
-            header.checksum_ = header.compute_checksum();
-            header.timestamp_ = std::chrono::steady_clock::now();
+            header.magic = AllocationHeader::MAGIC;
+            header.size = static_cast<std::uint32_t>(alloc_size);
+            header.alignment = static_cast<std::uint32_t>(align);
+            header.checksum = header.compute_checksum();
+            header.timestamp = std::chrono::steady_clock::now();
 
             std::unique_lock<std::shared_mutex> lock(allocation_map_mutex_);
             allocation_map_[region] = header;
@@ -1574,7 +1570,7 @@ class MYLANG_COMPILER_API ArenaAllocator
         // Update statistics
         if (enable_statistics_.load(std::memory_order_relaxed))
         {
-            alloc_stats_.safe_increment(alloc_stats_.total_deallocations_);
+            alloc_stats_.safe_increment(alloc_stats_.total_deallocations);
         }
 
         // Remove from tracking
@@ -1718,7 +1714,7 @@ class MYLANG_COMPILER_API ArenaAllocator
         if (result.has_value())
         {
             // Align the result
-            std::uintptr_t addr = reinterpret_cast<std::uintptr_t>(result->ptr_);
+            std::uintptr_t addr = reinterpret_cast<std::uintptr_t>(result->ptr);
             std::uintptr_t aligned = (addr + (ObjectSize - 1)) & ~(ObjectSize - 1);
             return reinterpret_cast<Pointer>(aligned);
         }

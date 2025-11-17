@@ -28,9 +28,6 @@ class InputBufferBase
         }
     }
 
-    // TODO : ta hadi fiha nadar
-    InputBufferBase() = default;
-
     bool empty() const noexcept { return !file_.is_open(); }
     bool refresh_buffer(const std::uint32_t to_refresh);
 

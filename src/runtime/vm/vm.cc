@@ -209,7 +209,7 @@ void LoopAnalyzer::detectLoops(const std::vector<bytecode::Instruction>& instruc
             if (inner.headerPC > outer.headerPC && inner.exitPC < outer.exitPC)
             {
                 outer.isInnerLoop = false;
-                // inner is nested in outer
+                // TODO: inner is nested in outer
             }
         }
     }
@@ -220,12 +220,6 @@ void LoopAnalyzer::findInvariants(
 {
     for (auto& loop : loops_)
     {
-        // Variables that are:
-        // 1. Defined outside loop
-        // 2. Not modified inside loop
-        // 3. Used inside loop
-        // Can be hoisted out
-
         std::unordered_set<std::int32_t> modifiedVars;
         std::unordered_set<std::int32_t> usedVars;
 
@@ -288,6 +282,7 @@ void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instruction
         }
         i++;
     }
+
     if (replacements > 0)
     {
         optimizations_.push_back({"Const-Pop elimination", replacements});
@@ -312,6 +307,7 @@ void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instruction
         }
         i++;
     }
+
     if (replacements > 0)
     {
         optimizations_.push_back({"Load-Store elimination", replacements});
@@ -329,6 +325,7 @@ void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instruction
         }
         i++;
     }
+
     if (replacements > 0)
     {
         optimizations_.push_back({"Dup-Pop elimination", replacements});
@@ -346,6 +343,7 @@ void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instruction
         }
         i++;
     }
+
     if (replacements > 0)
     {
         optimizations_.push_back({"Redundant jump elimination", replacements});
@@ -363,6 +361,7 @@ void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instruction
         }
         i++;
     }
+
     if (replacements > 0)
     {
         optimizations_.push_back({"Double negation elimination", replacements});
@@ -388,6 +387,7 @@ void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instruction
             replacements++;
         }
     }
+
     if (replacements > 0)
     {
         optimizations_.push_back({"Fast opcode substitution", replacements});
@@ -470,7 +470,7 @@ void BytecodeCompiler::updateStackDepth(bytecode::OpCode op)
 
     case bytecode::OpCode::CALL :
         // Function + args -> result
-        // Stack depth change handled separately
+        // TODO: Stack depth change handled separately
         break;
 
     default :
@@ -506,7 +506,9 @@ void BytecodeCompiler::exitScope()
 void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
 {
     if (!expr)
+    {
         return;
+    }
 
     switch (expr->kind)
     {
@@ -2045,9 +2047,9 @@ void VirtualMachine::registerNativeFunctions()
     };
 }
 
-void VirtualMachine::execute(const BytecodeCompiler::CompiledCode& code)
+void VirtualMachine::execute(const BytecodeCompiler::CompilationUnit& code)
 {
-    globals_.resize(code.numVariables);
+    globals_.resize(code.numCellVars);
     stack_.clear();
     stack_.reserve(1000);  // Pre-allocate for performance
     ip_ = 0;
@@ -2083,7 +2085,8 @@ void VirtualMachine::execute(const BytecodeCompiler::CompiledCode& code)
     stats_.executionTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
 }
 
-void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, const BytecodeCompiler::CompiledCode& code)
+void VirtualMachine::executeInstruction(
+  const bytecode::Instruction& instr, const BytecodeCompiler::CompilationUnit& code)
 {
     switch (instr.op)
     {
@@ -2453,9 +2456,9 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
         {
             object::Value val = pop();
             object::Value key = pop();
-            dict[key.toString()] = val;
+            dict[key.asString()] = val;
         }
-        auto dictPtr = std::make_shared<std::unordered_map<std::string, object::Value>>(dict);
+        auto dictPtr = std::make_shared<std::unordered_map<std::u16string, object::Value>>(dict);
         object::Value result;
         result.setType(object::Value::Type::DICT);
         result.setData(dictPtr);

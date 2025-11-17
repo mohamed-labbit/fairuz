@@ -253,7 +253,7 @@ class BytecodeCompiler
     void compileStmt(const parser::ast::Stmt* stmt);
 
    public:
-    BytecodeCompiler() { currentScope = std::make_unique<CompilerSymbolTable>(); }
+    BytecodeCompiler() { currentScope_ = std::make_unique<CompilerSymbolTable>(); }
 
     CompilationUnit compile(const std::vector<parser::ast::StmtPtr>& ast);
 
@@ -289,75 +289,75 @@ class BytecodeOptimizer
         // Register optimization passes
 
         // Pass 1: Dead code elimination after returns
-        passes.push_back({"Dead code after return", [](std::vector<bytecode::Instruction>& code) -> bool {
-                              bool changed = false;
-                              for (size_t i = 0; i + 1 < code.size(); i++)
-                              {
-                                  if (code[i].op == bytecode::OpCode::RETURN || code[i].op == bytecode::OpCode::HALT)
-                                  {
-                                      // Remove instructions until next label/jump target
-                                      size_t toRemove = 0;
-                                      for (size_t j = i + 1; j < code.size(); j++)
-                                      {
-                                          if (isJumpTarget(code, j))
-                                          {
-                                              break;
-                                          }
-                                          toRemove++;
-                                      }
-                                      if (toRemove > 0)
-                                      {
-                                          code.erase(code.begin() + i + 1, code.begin() + i + 1 + toRemove);
-                                          changed = true;
-                                      }
-                                  }
-                              }
-                              return changed;
-                          }});
+        passes_.push_back({"Dead code after return", [](std::vector<bytecode::Instruction>& code) -> bool {
+                               bool changed = false;
+                               for (size_t i = 0; i + 1 < code.size(); i++)
+                               {
+                                   if (code[i].op == bytecode::OpCode::RETURN || code[i].op == bytecode::OpCode::HALT)
+                                   {
+                                       // Remove instructions until next label/jump target
+                                       size_t toRemove = 0;
+                                       for (size_t j = i + 1; j < code.size(); j++)
+                                       {
+                                           if (isJumpTarget(code, j))
+                                           {
+                                               break;
+                                           }
+                                           toRemove++;
+                                       }
+                                       if (toRemove > 0)
+                                       {
+                                           code.erase(code.begin() + i + 1, code.begin() + i + 1 + toRemove);
+                                           changed = true;
+                                       }
+                                   }
+                               }
+                               return changed;
+                           }});
 
         // Pass 2: Constant folding in bytecode
-        passes.push_back({"Constant folding", [](std::vector<bytecode::Instruction>& code) -> bool {
-                              bool changed = false;
-                              // Find LOAD_CONST, LOAD_CONST, binary_op patterns
-                              for (size_t i = 0; i + 2 < code.size(); i++)
-                              {
-                                  if (code[i].op == bytecode::OpCode::LOAD_CONST
-                                    && code[i + 1].op == bytecode::OpCode::LOAD_CONST && isBinaryOp(code[i + 2].op))
-                                  {
-                                      // Would fold constants here
-                                      changed = true;
-                                  }
-                              }
-                              return changed;
-                          }});
+        passes_.push_back({"Constant folding", [](std::vector<bytecode::Instruction>& code) -> bool {
+                               bool changed = false;
+                               // Find LOAD_CONST, LOAD_CONST, binary_op patterns
+                               for (size_t i = 0; i + 2 < code.size(); i++)
+                               {
+                                   if (code[i].op == bytecode::OpCode::LOAD_CONST
+                                     && code[i + 1].op == bytecode::OpCode::LOAD_CONST && isBinaryOp(code[i + 2].op))
+                                   {
+                                       // Would fold constants here
+                                       changed = true;
+                                   }
+                               }
+                               return changed;
+                           }});
 
         // Pass 3: Jump threading
-        passes.push_back({"Jump threading", [](std::vector<bytecode::Instruction>& code) -> bool {
-                              bool changed = false;
-                              // If jump target is another jump, redirect
-                              for (auto& instr : code)
-                              {
-                                  if (isJumpOp(instr.op))
-                                  {
-                                      std::int32_t target = instr.arg;
-                                      if (target < code.size() && code[target].op == bytecode::OpCode::JUMP)
-                                      {
-                                          instr.arg = code[target].arg;
-                                          changed = true;
-                                      }
-                                  }
-                              }
-                              return changed;
-                          }});
+        passes_.push_back({"Jump threading", [](std::vector<bytecode::Instruction>& code) -> bool {
+                               bool changed = false;
+                               // If jump target is another jump, redirect
+                               for (auto& instr : code)
+                               {
+                                   if (isJumpOp(instr.op))
+                                   {
+                                       std::int32_t target = instr.arg;
+                                       if (target < code.size() && code[target].op == bytecode::OpCode::JUMP)
+                                       {
+                                           instr.arg = code[target].arg;
+                                           changed = true;
+                                       }
+                                   }
+                               }
+                               return changed;
+                           }});
 
         // Pass 4: Remove NOPs
-        passes.push_back({"NOP elimination", [](std::vector<bytecode::Instruction>& code) -> bool {
-                              auto it = std::remove_if(code.begin(), code.end(),
-                                [](const bytecode::Instruction& instr) { return instr.op == bytecode::OpCode::NOP; });
-                              bool changed = it != code.end();
-                              code.erase(it, code.end());
-                              return changed;
-                          }});
+        passes_.push_back({"NOP elimination", [](std::vector<bytecode::Instruction>& code) -> bool {
+                               auto it = std::remove_if(code.begin(), code.end(),
+                                 [](const bytecode::Instruction& instr) { return instr.op == bytecode::OpCode::NOP; });
+                               bool changed = it != code.end();
+                               code.erase(it, code.end());
+                               return changed;
+                           }});
     }
 
     void optimize(std::vector<bytecode::Instruction>& code, std::int32_t maxIterations = 10);
@@ -461,10 +461,10 @@ class VirtualMachine
    public:
     VirtualMachine() { registerNativeFunctions(); }
 
-    void execute(const BytecodeCompiler::CompiledCode& code);
+    void execute(const BytecodeCompiler::CompilationUnit& code);
 
    private:
-    void executeInstruction(const bytecode::Instruction& instr, const BytecodeCompiler::CompiledCode& code);
+    void executeInstruction(const bytecode::Instruction& instr, const BytecodeCompiler::CompilationUnit& code);
 
    public:
     const Statistics& getStatistics() const { return stats_; }

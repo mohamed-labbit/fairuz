@@ -130,7 +130,9 @@ class Value
     }
 
     Type getType() const { return type_; }
+
     void setType(const Type type) { type_ = type; }
+
     void setData(const std::variant<std::monostate,  // None
       std::int64_t,  // Int
       double,  // Float
@@ -149,33 +151,55 @@ class Value
 
     // Type checks
     bool isNone() const { return type_ == Type::NONE; }
+
     bool isInt() const { return type_ == Type::INT; }
+
     bool isFloat() const { return type_ == Type::FLOAT; }
+
     bool isNumber() const { return isInt() || isFloat(); }
+
     bool isString() const { return type_ == Type::STRING; }
+
     bool isBool() const { return type_ == Type::BOOL; }
+
     bool isList() const { return type_ == Type::LIST; }
+
     bool isDict() const { return type_ == Type::DICT; }
+
     bool isFunction() const { return type_ == Type::FUNCTION; }
+
     bool isCallable() const { return isFunction() || type_ == Type::NATIVE_FUNCTION; }
+
     bool isIterable() const { return isList() || isString() || isDict(); }
 
     // Getters with safety
     std::int64_t asInt() const;
+
     double asFloat() const;
+
     const std::u16string& asString() const;
+
     bool asBool() const;
+
     std::vector<Value>& asList();
+
     const std::vector<Value>& asList() const;
+
     std::unordered_map<std::u16string, Value>& asDict() const;
+
     Function& asFunction();
+
     NativeFunction& asNativeFunction();
 
     // Type conversions
     double toFloat() const;
+
     std::int64_t toInt() const;
+
     bool toBool() const;
+
     std::string toString() const;
+
     std::string repr() const;
 
     // Hash for use in dictionaries
@@ -183,31 +207,45 @@ class Value
 
     // Comparison operators
     bool operator==(const Value& other) const;
+
     bool operator<(const Value& other) const;
+
     bool operator>(const Value& other) const;
+
     bool operator<=(const Value& other) const;
+
     bool operator>=(const Value& other) const;
+
     bool operator!=(const Value& other) const;
 
     // Arithmetic operators with type promotion
     Value operator+(const Value& other) const;
+
     Value operator-(const Value& other) const;
+
     Value operator*(const Value& other) const;
+
     Value operator/(const Value& other) const;
+
     Value operator%(const Value& other) const;
+
     Value pow(const Value& other) const;
 
     // Unary operators
     Value operator-() const;
+
     Value operator!() const;
 
     // Subscript operator
     Value getItem(const Value& key) const;
+
     void setItem(const Value& key, const Value& value);
 
     // Iterator support
     Value getIterator() const;
+
     bool hasNext() const;
+
     Value next();
 };
 

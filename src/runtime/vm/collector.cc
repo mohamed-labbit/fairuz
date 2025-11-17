@@ -8,6 +8,12 @@ namespace runtime {
 
 void GarbageCollector::registerObject(object::Value* obj)
 {
+    if (!obj)
+    {
+        std::cerr << "-- DEBUG: a null object was pushed to the garbage collector" << std::endl;
+        return;
+    }
+
     allObjects_.push_back(obj);
     youngGen_.push_back(obj);
     allocated_++;
@@ -18,7 +24,15 @@ void GarbageCollector::registerObject(object::Value* obj)
     }
 }
 
-void GarbageCollector::addRoot(object::Value* root) { roots_.push_back(root); }
+void GarbageCollector::addRoot(object::Value* root) { 
+    if (!root)
+    {
+        std::cerr << "-- DEBUG: a null root was pushed to the garbage collector" << std::endl;
+        return;
+    }
+
+    roots_.push_back(root); 
+}
 
 void GarbageCollector::collect()
 {

@@ -295,16 +295,30 @@ class DiagnosticRenderer
 
     struct RenderOptions
     {
-        ColorMode color_mode = ColorMode::ANSI;
-        bool show_line_numbers = true;
-        bool show_column_markers = true;
-        bool show_source_snippets = true;
-        bool show_fixits = true;
-        bool show_notes = true;
-        bool show_help = true;
-        bool show_urls = true;
-        uint32_t context_lines = 2;  // Lines of context around error
-        uint32_t max_snippet_width = 120;
+        ColorMode color_mode{ColorMode::ANSI};
+        bool show_line_numbers{true};
+        bool show_column_markers{true};
+        bool show_source_snippets{true};
+        bool show_fixits{true};
+        bool show_notes{true};
+        bool show_help{true};
+        bool show_urls{true};
+        uint32_t context_lines{2};  // Lines of context around error
+        uint32_t max_snippet_width{120};
+
+        RenderOptions() :
+            color_mode(ColorMode::ANSI),
+            show_line_numbers(true),
+            show_column_markers(true),
+            show_source_snippets(true),
+            show_fixits(true),
+            show_notes(true),
+            show_help(true),
+            show_urls(true),
+            context_lines(2),
+            max_snippet_width(120)
+        {
+        }
     };
 
     DiagnosticRenderer(const SourceManager& sm, RenderOptions opts = {}) :
