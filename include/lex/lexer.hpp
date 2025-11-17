@@ -180,6 +180,7 @@ class Lexer
     explicit Lexer(const Lexer&) = delete;
 
     tok::Token operator()() { return next(); }
+    tok::Token current() const { return tok_stream_[tok_index_]; }
     tok::Token next();
     tok::Token peek(std::size_t n = 1);
     tok::Token prev();

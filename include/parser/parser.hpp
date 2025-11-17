@@ -101,8 +101,14 @@ class Parser
 
     std::vector<ErrorInfo> errors_;
 
-    static const std::unordered_set<lex::tok::TokenType> syncTokens_;
-    static const std::unordered_map<std::u16string, std::u16string> errorSuggestions_;
+    const std::unordered_set<lex::tok::TokenType> syncTokens_ = {lex::tok::TokenType::KW_IF,
+      lex::tok::TokenType::KW_WHILE, lex::tok::TokenType::KW_FOR, lex::tok::TokenType::KW_FN,
+      lex::tok::TokenType::KW_RETURN, lex::tok::TokenType::DEDENT, lex::tok::TokenType::NEWLINE};
+      
+    const std::unordered_map<std::u16string, std::u16string> errorSuggestions_ = {{u"اذ", u"اذا"}, {u"طالم", u"طالما"},
+      {u"لك", u"لكل"}, {u"ف", u"في"}, {u"عر", u"عرف"}, {u"صحي", u"صحيح"}, {u"خط", u"خطا"}, {u"عد", u"عدم"},
+      {u"ليست", u"ليس"}, {u"او", u"او"}, {u"وا", u"و"}};
+    ;
 
     // === lex::tok::Token Access & Navigation ===
 
@@ -259,13 +265,8 @@ class Parser
 };
 
 // Static initializations
-const std::unordered_set<lex::tok::TokenType> Parser::syncTokens_ = {lex::tok::TokenType::KW_IF,
-  lex::tok::TokenType::KW_WHILE, lex::tok::TokenType::KW_FOR, lex::tok::TokenType::KW_FN,
-  lex::tok::TokenType::KW_RETURN, lex::tok::TokenType::DEDENT, lex::tok::TokenType::NEWLINE};
+// const std::unordered_set<lex::tok::TokenType> Parser::syncTokens_ =
 
-const std::unordered_map<std::u16string, std::u16string> Parser::errorSuggestions_ = {{u"اذ", u"اذا"},
-  {u"طالم", u"طالما"}, {u"لك", u"لكل"}, {u"ف", u"في"}, {u"عر", u"عرف"}, {u"صحي", u"صحيح"}, {u"خط", u"خطا"},
-  {u"عد", u"عدم"}, {u"ليست", u"ليس"}, {u"او", u"او"}, {u"وا", u"و"}};
-
+// const std::unordered_map<std::u16string, std::u16string> Parser::errorSuggestions_
 }
 }

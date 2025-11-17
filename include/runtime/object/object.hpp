@@ -44,7 +44,7 @@ class Value
     struct Function
     {
         std::int32_t codeOffset;
-        std::vector<std::string> params;
+        std::vector<std::u16string> params;
         std::vector<Value> defaults;
         std::vector<Value> closure;  // Captured variables
     };
@@ -52,14 +52,14 @@ class Value
     struct NativeFunction
     {
         std::function<Value(const std::vector<Value>&)> func;
-        std::string name;
+        std::u16string name;
         std::int32_t arity;
     };
 
     struct Object
     {
-        std::string className;
-        std::unordered_map<std::string, Value> attributes;
+        std::u16string className;
+        std::unordered_map<std::u16string, Value> attributes;
         std::shared_ptr<Value> parent;  // For inheritance
     };
 
@@ -198,7 +198,7 @@ class Value
 
     bool toBool() const;
 
-    std::string toString() const;
+    std::u16string toString() const;
 
     std::string repr() const;
 
