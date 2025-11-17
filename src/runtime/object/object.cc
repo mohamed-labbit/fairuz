@@ -148,60 +148,60 @@ bool object::Value::toBool() const
     }
 }
 
-std::string object::Value::toString() const
+std::u16string object::Value::toString() const
 {
     switch (type_)
     {
     case Type::NONE :
-        return "None";
+        return u"None";
     case Type::INT :
-        return std::to_string(asInt());
+        return utf8::utf8to16(std::to_string(asInt()));
     case Type::FLOAT : {
-        auto s = std::to_string(asFloat());
+        auto s = utf8::utf8to16(std::to_string(asFloat()));
         s.erase(s.find_last_not_of('0') + 1);
         if (s.back() == '.')
         {
-            s += "0";
+            s += u"0";
         }
         return s;
     }
     case Type::STRING :
-        return utf8::utf16to8(asString());
+        return asString();
     case Type::BOOL :
-        return asBool() ? "True" : "False";
+        return asBool() ? u"True" : u"False";
     case Type::LIST : {
-        std::string result = "[";
+        std::u16string result = u"[";
         const auto& list = asList();
         for (size_t i = 0; i < list.size(); i++)
         {
             result += list[i].toString();
             if (i + 1 < list.size())
             {
-                result += ", ";
+                result += u", ";
             }
         }
-        return result + "]";
+        return result + u"]";
     }
     case Type::DICT : {
-        std::string result = "{";
+        std::u16string result = u"{";
         const auto& dict = std::get<std::shared_ptr<std::unordered_map<std::u16string, Value>>>(data_);
         size_t count = 0;
         for (const auto& [k, v] : *dict)
         {
-            result += "'" + utf8::utf16to8(k) + "': " + v.toString();
+            result += u"'" + k + u"': " + v.toString();
             if (++count < dict->size())
             {
-                result += ", ";
+                result += u", ";
             }
         }
-        return result + "}";
+        return result + u"}";
     }
     case Type::FUNCTION :
-        return "<function>";
+        return u"<function>";
     case Type::NATIVE_FUNCTION :
-        return "<native function>";
+        return u"<native function>";
     default :
-        return "<object>";
+        return u"<object>";
     }
 }
 
@@ -211,13 +211,13 @@ std::string object::Value::repr() const
     {
         return "'" + utf8::utf16to8(asString()) + "'";
     }
-    return toString();
+    return utf8::utf16to8(toString());
 }
 
 // Hash for use in dictionaries
 std::size_t object::Value::hash() const
 {
-    std::hash<std::string> hasher;
+    std::hash<std::u16string> hasher;
     return hasher(toString());
 }
 
@@ -284,7 +284,7 @@ object::Value object::Value::operator+(const Value& other) const
     }
     if (isString() || other.isString())
     {
-        return Value(utf8::utf8to16(toString()) + utf8::utf8to16(other.toString()));
+        return Value(toString() + other.toString());
     }
     if (isList() && other.isList())
     {
@@ -417,10 +417,10 @@ object::Value object::Value::getItem(const Value& key) const
     if (isDict())
     {
         const auto& dict = asDict();
-        auto it = dict.find(utf8::utf8to16(key.toString()));
+        auto it = dict.find(key.toString());
         if (it == dict.end())
         {
-            throw std::runtime_error("Key not found: " + key.toString());
+            throw std::runtime_error("Key not found: " + utf8::utf16to8(key.toString()));
         }
         return it->second;
     }
@@ -459,7 +459,7 @@ void object::Value::setItem(const Value& key, const Value& value)
     }
     else if (isDict())
     {
-        asDict()[utf8::utf8to16(key.toString())] = value;
+        asDict()[key.toString()] = value;
     }
     else
     {

@@ -32,7 +32,7 @@ lex::tok::Token Parser::peek(std::size_t offset)
 {
     if (!offset)
     {
-        return;
+        return lexer_.current(); 
     }
 
     if (use_lexer)

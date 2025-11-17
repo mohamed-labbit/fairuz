@@ -190,7 +190,7 @@ std::u16string CodeGenerator::generateCPPStmt(const ast::Stmt* stmt)
     case ast::Stmt::Kind::FUNCTION_DEF : {
         auto* func = static_cast<const ast::FunctionDef*>(stmt);
         std::u16string result = u"auto " + func->name + u"(";
-        for (size_t i = 0; i < func->params.size(); i++)
+        for (std::size_t i = 0; i < func->params.size(); i++)
         {
             result += u"auto " + func->params[i];
             if (i + 1 < func->params.size())
@@ -236,7 +236,7 @@ std::u16string CodeGenerator::generateCPPExpr(const ast::Expr* expr)
     case ast::Expr::Kind::CALL : {
         auto* call = static_cast<const ast::CallExpr*>(expr);
         std::u16string result = generateCPPExpr(call->callee.get()) + u"(";
-        for (size_t i = 0; i < call->args.size(); i++)
+        for (std::size_t i = 0; i < call->args.size(); i++)
         {
             result += generateCPPExpr(call->args[i].get());
             if (i + 1 < call->args.size())

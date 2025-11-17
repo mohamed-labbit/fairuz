@@ -1104,7 +1104,7 @@ void BytecodeCompiler::disassemble(const CompilationUnit& unit, std::ostream& ou
     out << "Constants Pool (" << unit.constants.size() << " entries):\n";
     for (size_t i = 0; i < unit.constants.size(); i++)
     {
-        out << "  [" << i << "] " << unit.constants[i].toString() << "\n";
+        out << "  [" << i << "] " << unit.constants[i].repr() << "\n";
     }
 
     out << "\nCode (" << unit.instructions.size() << " instructions):\n";
@@ -1138,7 +1138,7 @@ void BytecodeCompiler::disassemble(const CompilationUnit& unit, std::ostream& ou
             // Show constant value for LOAD_CONST
             if (instr.op == bytecode::OpCode::LOAD_CONST && instr.arg < unit.constants.size())
             {
-                out << "  ; " << unit.constants[instr.arg].toString();
+                out << "  ; " << unit.constants[instr.arg].repr();
             }
         }
 
@@ -1662,7 +1662,7 @@ void VirtualMachine::registerNativeFunctions()
     nativeFunctions["print"] = [](const std::vector<object::Value>& args) {
         for (size_t i = 0; i < args.size(); i++)
         {
-            std::cout << args[i].toString();
+            std::cout << args[i].repr();
             if (i + 1 < args.size())
             {
                 std::cout << " ";
@@ -2307,7 +2307,7 @@ void VirtualMachine::executeInstruction(
         }
         else if (b.isString())
         {
-            push(object::Value(b.asString().find(utf8::utf8to16(a.toString())) != std::string::npos));
+            push(object::Value(b.asString().find(a.toString()) != std::string::npos));
         }
         else
         {
@@ -2519,7 +2519,7 @@ void VirtualMachine::executeInstruction(
         }
         for (size_t i = 0; i < args.size(); i++)
         {
-            std::cout << args[i].toString();
+            std::cout << args[i].repr();
             if (i + 1 < args.size())
             {
                 std::cout << " ";
