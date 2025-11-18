@@ -363,7 +363,7 @@ TEST(ArenaAllocatorTest, ActiveBlocksCount)
     // Large allocation forces new block
     auto p = arena.allocate<char>(1024 * 1024);
     if (!p)
-        throw std::bad_alloc();
+        {throw std::bad_alloc();}
     EXPECT_GT(arena.active_blocks(), initial_blocks);
 }
 
@@ -868,7 +868,7 @@ TEST(ArenaAllocatorPerformance, ResetPerformance)
     {
         auto p = arena.allocate<char>(1024);
         if (!p)
-            throw std::bad_alloc();
+            {throw std::bad_alloc();}
     }
 
     auto start = std::chrono::high_resolution_clock::now();
