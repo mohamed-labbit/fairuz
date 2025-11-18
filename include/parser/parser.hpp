@@ -49,13 +49,13 @@ class Parser
    private:
     struct Scope
     {
-        std::unordered_set<std::u16string> variables_;
-        std::unordered_set<std::u16string> functions_;
+        std::unordered_set<std::u16string> variables;
+        std::unordered_set<std::u16string> functions;
         Scope* parent{nullptr};
 
         bool isDefined(const std::u16string& name) const
         {
-            if (variables_.count(name) || functions_.count(name))
+            if (variables.count(name) || functions.count(name))
             {
                 return true;
             }
