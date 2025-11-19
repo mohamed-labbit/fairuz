@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../include/lex/sym_table/table.hpp"
-#include "source_manager.hpp"
+#include "../input/source_manager.hpp"
 #include "token.hpp"
 
 
@@ -161,19 +161,28 @@ struct IndentationAnalysis
     Action action{Action::NONE};
     std::size_t count{0};  // Number of INDENT/DEDENT tokens
     std::size_t column{0};  // Column where indentation ends
-    std::string error_message;  // Error description if any
+    std::u16string error_message;  // Error description if any
     std::u16string indent_string;  // The actual indentation characters
 };
 
 class Lexer
 {
    public:
-    explicit Lexer(const std::string& filename) :
-        source_manager_(filename),
+    explicit Lexer() = default;
+
+    explicit Lexer(std::ifstream* file) :
+        source_manager_(file),
         tok_index_(0),
         indent_size_(0)
     {
-        // setting locale at the constructor, maybe there's a better place I donno ?
+        std::locale::global(std::locale("ar_SA.UTF-8"));
+    }
+
+    explicit Lexer(const std::u16string source) :
+        source_manager_(source),
+        tok_index_(0),
+        indent_size_(0)
+    {
         std::locale::global(std::locale("ar_SA.UTF-8"));
     }
 

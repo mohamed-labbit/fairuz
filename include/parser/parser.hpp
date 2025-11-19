@@ -3,7 +3,7 @@
 
 #include "../lex/lexer.hpp"
 #include "../lex/token.hpp"
-#include "ast.hpp"
+#include "ast/ast.hpp"
 
 #include <algorithm>
 #include <memory>
@@ -17,7 +17,6 @@
 
 namespace mylang {
 namespace parser {
-
 
 // Advanced error with source context and suggestions
 class ParseError: public std::runtime_error
@@ -59,6 +58,7 @@ class Parser
             {
                 return true;
             }
+
             return parent ? parent->isDefined(name) : false;
         }
     };
@@ -66,16 +66,16 @@ class Parser
     // Error tracking for batch reporting
     struct ErrorInfo
     {
-        ParseError error_;
-        std::size_t position_{0};
+        ParseError error;
+        std::size_t position{0};
     };
 
     // Packrat parsing memoization cache
     struct MemoEntry
     {
-        ast::ExprPtr* result_{nullptr};
-        std::size_t endPos_{0};
-        bool failed_{false};
+        ast::ExprPtr* result{nullptr};
+        std::size_t endPos{0};
+        bool failed{false};
     };
 
     struct OpInfo
@@ -104,7 +104,7 @@ class Parser
     const std::unordered_set<lex::tok::TokenType> syncTokens_ = {lex::tok::TokenType::KW_IF,
       lex::tok::TokenType::KW_WHILE, lex::tok::TokenType::KW_FOR, lex::tok::TokenType::KW_FN,
       lex::tok::TokenType::KW_RETURN, lex::tok::TokenType::DEDENT, lex::tok::TokenType::NEWLINE};
-      
+
     const std::unordered_map<std::u16string, std::u16string> errorSuggestions_ = {{u"اذ", u"اذا"}, {u"طالم", u"طالما"},
       {u"لك", u"لكل"}, {u"ف", u"في"}, {u"عر", u"عرف"}, {u"صحي", u"صحيح"}, {u"خط", u"خطا"}, {u"عد", u"عدم"},
       {u"ليست", u"ليس"}, {u"او", u"او"}, {u"وا", u"و"}};
@@ -177,18 +177,22 @@ class Parser
     // === Advanced Expression Parsing ===
 
    public:
-    explicit Parser(std::string filename) :
-        lexer_(filename),
+    explicit Parser(std::ifstream* file) :
+        lexer_(file),
         use_lexer(true)
     {
-        enterScope();  // Global scope
+        enterScope();  // global
     }
 
-    // TODO : figure out why is the default constructor of the lexer deleted
     explicit Parser(std::vector<lex::tok::Token> toks) :
-        tokens_(toks),
-        lexer_("")
+        tokens_(toks)
+    {
+        enterScope();
+    }
 
+    explicit Parser(const std::u16string source) :
+        lexer_(source),
+        use_lexer(true)
     {
         enterScope();
     }
@@ -199,6 +203,7 @@ class Parser
         std::size_t statementCount;
         std::size_t errorCount;
         std::size_t cacheHits;
+
         double parseTimeMs;
     };
 

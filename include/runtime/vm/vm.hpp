@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include "../../parser/ast.hpp"
+#include "../../parser/ast/ast.hpp"
 #include "bytecode.hpp"
 #include "collector.hpp"
 #include "jit.hpp"
@@ -27,7 +27,7 @@ namespace runtime {
 class CompilerSymbolTable
 {
    public:
-    enum class SymbolScope { Global, Local, Closure, Cell };
+    enum class SymbolScope { GLOBAL, LOCAL, CLOSURE, CELL };
 
     struct Symbol
     {
@@ -59,7 +59,7 @@ class CompilerSymbolTable
     std::int32_t getLocalCount() const;
 
     std::vector<Symbol> getUnusedSymbols() const;
-};
+};  // CompilerSymbolTable
 
 // ============================================================================
 // BYTECODE BLOCK - Basic block for optimization
@@ -122,7 +122,7 @@ class JumpResolver
     void resolveJumps(std::vector<bytecode::Instruction>& instructions);
 
     std::int32_t getLabel(const std::string& name) const;
-};
+};  // JumpResolver
 
 // ============================================================================
 // LOOP ANALYSIS - Detect and optimize loops
@@ -149,7 +149,7 @@ class LoopAnalyzer
     void findInvariants(const std::vector<bytecode::Instruction>& instructions, const CompilerSymbolTable& symbols);
 
     const std::vector<Loop>& getLoops() const;
-};
+};  // LoopAnalyzer
 
 // ============================================================================
 // PEEPHOLE OPTIMIZER - Local optimization
@@ -167,7 +167,7 @@ class PeepholeOptimizer
     std::vector<Optimization> optimizations_;
 
     bool matchPattern(
-      const std::vector<bytecode::Instruction>& code, size_t pos, const std::vector<bytecode::OpCode>& pattern);
+      const std::vector<bytecode::Instruction>& code, std::size_t pos, const std::vector<bytecode::OpCode>& pattern);
 
    public:
     void optimize(std::vector<bytecode::Instruction>& instructions);
@@ -175,7 +175,7 @@ class PeepholeOptimizer
     const std::vector<Optimization>& getOptimizations() const;
 
     void printReport() const;
-};
+};  // PeepholeOptimizer
 
 // ============================================================================
 // ADVANCED BYTECODE COMPILER
@@ -265,7 +265,7 @@ class BytecodeCompiler
     std::string opcodeToString(bytecode::OpCode op) const;
 
     bool needsArg(bytecode::OpCode op) const;
-};
+};  // BytecodeCompiler
 
 // ============================================================================
 // BYTECODE OPTIMIZER - Cross-instruction optimization
@@ -291,13 +291,13 @@ class BytecodeOptimizer
         // Pass 1: Dead code elimination after returns
         passes_.push_back({"Dead code after return", [](std::vector<bytecode::Instruction>& code) -> bool {
                                bool changed = false;
-                               for (size_t i = 0; i + 1 < code.size(); i++)
+                               for (std::size_t i = 0; i + 1 < code.size(); i++)
                                {
                                    if (code[i].op == bytecode::OpCode::RETURN || code[i].op == bytecode::OpCode::HALT)
                                    {
                                        // Remove instructions until next label/jump target
-                                       size_t toRemove = 0;
-                                       for (size_t j = i + 1; j < code.size(); j++)
+                                       std::size_t toRemove = 0;
+                                       for (std::size_t j = i + 1; j < code.size(); j++)
                                        {
                                            if (isJumpTarget(code, j))
                                            {
@@ -319,7 +319,7 @@ class BytecodeOptimizer
         passes_.push_back({"Constant folding", [](std::vector<bytecode::Instruction>& code) -> bool {
                                bool changed = false;
                                // Find LOAD_CONST, LOAD_CONST, binary_op patterns
-                               for (size_t i = 0; i + 2 < code.size(); i++)
+                               for (std::size_t i = 0; i + 2 < code.size(); i++)
                                {
                                    if (code[i].op == bytecode::OpCode::LOAD_CONST
                                      && code[i + 1].op == bytecode::OpCode::LOAD_CONST && isBinaryOp(code[i + 2].op))
@@ -365,12 +365,12 @@ class BytecodeOptimizer
     void printReport(std::ostream& out) const;
 
    private:
-    static bool isJumpTarget(const std::vector<bytecode::Instruction>& code, size_t pos);
+    static bool isJumpTarget(const std::vector<bytecode::Instruction>& code, std::size_t pos);
 
     static bool isJumpOp(bytecode::OpCode op);
 
     static bool isBinaryOp(bytecode::OpCode op);
-};
+};  // BytecodeOptimizer
 
 // ============================================================================
 // BYTECODE VERIFIER - Ensure bytecode correctness
@@ -405,7 +405,7 @@ class BytecodeVerifier
     bool isJumpInstruction(bytecode::OpCode op) const;
 
     bool isUnconditionalJump(bytecode::OpCode op) const;
-};
+};  // ByteCodeVerifier
 
 // ============================================================================
 // ENHANCED VIRTUAL MACHINE with optimizations
@@ -434,7 +434,7 @@ class VirtualMachine
     } stats_;
 
     // Instruction cache for faster dispatch
-    static constexpr size_t CACHE_SIZE_ = 256;
+    static constexpr std::size_t CACHE_SIZE_ = 256;
     std::array<void*, CACHE_SIZE_> dispatchTable_;
 
     // Stack manipulation (with bounds checking)
@@ -474,6 +474,7 @@ class VirtualMachine
     const std::vector<object::Value>& getGlobals() const { return globals_; }
 
     const std::vector<object::Value>& getStack() const { return stack_; }
-};
-}
-}
+};  // VirtualMachine
+
+}  // runtime
+}  // mylang

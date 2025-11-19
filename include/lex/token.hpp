@@ -14,6 +14,24 @@ namespace mylang {
 namespace lex {
 namespace tok {
 
+struct Location
+{
+    std::string filepath{""};
+    std::size_t line{0};
+    std::size_t column{0};
+    std::size_t filepos{0};
+
+    Location() = default;
+
+    Location(std::string fpath, std::size_t line, std::size_t col, std::size_t fpos) :
+        filepath(fpath),
+        line(line),
+        column(col),
+        filepos(fpos)
+    {
+    }
+};
+
 enum class TokenType : std::int32_t {
     // Keywords (Arabic)
     KW_IF,  // اذا
@@ -110,44 +128,10 @@ static const std::unordered_map<std::u16string, TokenType, util::U16StringHash, 
 class Token
 {
    public:
-    struct Location
-    {
-        std::string filepath;
-        std::size_t line{0};
-        std::size_t column{0};
-        std::size_t file_pos{0};
-
-        Location() = default;
-
-        Location(std::string fp, std::array<std::size_t, 3> coords) :
-            filepath(fp),
-            line(coords[0]),
-            column(coords[1]),
-            file_pos(coords[2])
-        {
-        }
-
-        Location(std::string fp, std::size_t coords[3]) :
-            filepath(fp),
-            line(coords[0]),
-            column(coords[1]),
-            file_pos(coords[2])
-        {
-        }
-    };
-
-    // Main ctor: take value by value so callers can move temporaries in.
-    Token(std::u16string v, TokenType t, std::array<std::size_t, 3> coords, std::string fp) :
-        value_(std::move(v)),
-        type_(t),
-        location_(fp, coords)
-    {
-    }
-
-    Token(std::u16string v, TokenType t, std::size_t coords[3], std::string fp) :
-        value_(std::move(v)),
-        type_(t),
-        location_(fp, coords)
+    Token(std::u16string val, TokenType tt, std::size_t line, std::size_t col, std::size_t fpos, std::string fpath) :
+        value_(std::move(val)),
+        type_(tt),
+        location_(fpath, line, col, fpos)
     {
     }
 
@@ -175,7 +159,7 @@ class Token
     {
         os << "Token(\"" << utf8::utf16to8(tok.value_) << "\", type=" << static_cast<std::int32_t>(tok.type_)
            << ", line=" << tok.location_.line << ", col=" << tok.location_.column
-           << "\", file_pos=" << tok.location_.file_pos << "\", file path=" << tok.location_.filepath << ")";
+           << "\", file_pos=" << tok.location_.filepos << "\", file path=" << tok.location_.filepath << ")";
         return os;
     }
 

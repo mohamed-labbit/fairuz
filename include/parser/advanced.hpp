@@ -3,7 +3,7 @@
 
 #include "../lex/lexer.hpp"
 #include "../lex/token.hpp"
-#include "ast.hpp"
+#include "ast/ast.hpp"
 #include "parser.hpp"
 
 #include <functional>
@@ -27,23 +27,24 @@ class IncrementalParser
    private:
     struct ParseNode
     {
-        size_t startPos, endPos;
+        std::size_t startPos, endPos;
         std::unique_ptr<ast::ASTNode> ast;
-        size_t hash;
+        std::size_t hash;
     };
 
     std::vector<ParseNode> cache_;
-    std::string lastSource_;
+    std::u16string lastSource_;
 
-    size_t hashRegion(const std::string& source, size_t start, size_t end)
+    std::size_t hashRegion(const std::u16string& source, std::size_t start, std::size_t end)
     {
-        std::hash<std::string> hasher;
+        std::hash<std::u16string> hasher;
         return hasher(source.substr(start, end - start));
     }
 
    public:
     // Only reparse changed regions
-    std::vector<ast::StmtPtr> parseIncremental(const std::string& newSource, const std::vector<size_t>& changedLines)
+    std::vector<ast::StmtPtr> parseIncremental(
+      const std::u16string& newSource, const std::vector<std::size_t>& changedLines)
     {
         // Identify unchanged regions and reuse cached AST
         std::vector<ast::StmtPtr> result;
@@ -78,7 +79,7 @@ class TypeSystem
     {
         BaseType base;
         std::vector<std::shared_ptr<Type>> typeParams;  // For generics: List[Int]
-        std::unordered_map<std::string, std::shared_ptr<Type>> fields;  // For classes
+        std::unordered_map<std::u16string, std::shared_ptr<Type>> fields;  // For classes
 
         // Function signature
         std::vector<std::shared_ptr<Type>> paramTypes;
@@ -89,34 +90,34 @@ class TypeSystem
             return base == other.base;  // Simplified
         }
 
-        std::string toString() const
+        std::u16string toString() const
         {
             switch (base)
             {
             case BaseType::Int :
-                return "int";
+                return u"int";
             case BaseType::Float :
-                return "float";
+                return u"float";
             case BaseType::String :
-                return "str";
+                return u"str";
             case BaseType::Bool :
-                return "bool";
+                return u"bool";
             case BaseType::None :
-                return "None";
+                return u"None";
             case BaseType::List :
                 if (!typeParams.empty())
                 {
-                    return "List[" + typeParams[0]->toString() + "]";
+                    return u"List[" + typeParams[0]->toString() + u"]";
                 }
-                return "List";
+                return u"List";
             case BaseType::Dict :
                 if (typeParams.size() >= 2)
                 {
-                    return "Dict[" + typeParams[0]->toString() + ", " + typeParams[1]->toString() + "]";
+                    return u"Dict[" + typeParams[0]->toString() + u", " + typeParams[1]->toString() + u"]";
                 }
-                return "Dict";
+                return u"Dict";
             default :
-                return "Any";
+                return u"Any";
             }
         }
     };
@@ -126,7 +127,7 @@ class TypeSystem
     {
        private:
         std::int32_t freshVarCounter = 0;
-        std::unordered_map<std::string, std::shared_ptr<Type>> substitutions;
+        std::unordered_map<std::u16string, std::shared_ptr<Type>> substitutions;
 
         std::shared_ptr<Type> freshTypeVar()
         {
@@ -160,7 +161,8 @@ class TypeSystem
             }
             else
             {
-                throw std::runtime_error("Type mismatch: " + t1->toString() + " vs " + t2->toString());
+                throw std::runtime_error(
+                  "Type mismatch: " + utf8::utf16to8(t1->toString()) + " vs " + utf8::utf16to8(t2->toString()));
             }
         }
 
@@ -292,25 +294,25 @@ class DiagnosticEngine
         Severity severity;
         std::int32_t line, column;
         std::int32_t length;
-        std::string message;
-        std::string code;  // Error code like E0001
-        std::vector<std::string> suggestions;
-        std::vector<std::pair<std::int32_t, std::string>> notes;  // Additional context
+        std::u16string message;
+        std::u16string code;  // Error code like E0001
+        std::vector<std::u16string> suggestions;
+        std::vector<std::pair<std::int32_t, std::u16string>> notes;  // Additional context
     };
 
    private:
-    std::vector<Diagnostic> diagnostics;
-    std::string sourceCode;
+    std::vector<Diagnostic> diagnostics_;
+    std::u16string sourceCode_;
 
    public:
-    void setSource(const std::string& source) { sourceCode = source; }
+    void setSource(const std::u16string& source) { sourceCode_ = source; }
 
     void report(Severity sev,
       std::int32_t line,
       std::int32_t col,
       std::int32_t len,
-      const std::string& msg,
-      const std::string& code = "")
+      const std::u16string& msg,
+      const std::u16string& code = u"")
     {
         Diagnostic diag;
         diag.severity = sev;
@@ -319,22 +321,22 @@ class DiagnosticEngine
         diag.length = len;
         diag.message = msg;
         diag.code = code;
-        diagnostics.push_back(diag);
+        diagnostics_.push_back(diag);
     }
 
-    void addSuggestion(const std::string& suggestion)
+    void addSuggestion(const std::u16string& suggestion)
     {
-        if (!diagnostics.empty())
+        if (!diagnostics_.empty())
         {
-            diagnostics.back().suggestions.push_back(suggestion);
+            diagnostics_.back().suggestions.push_back(suggestion);
         }
     }
 
-    void addNote(std::int32_t line, const std::string& note)
+    void addNote(std::int32_t line, const std::u16string& note)
     {
-        if (!diagnostics.empty())
+        if (!diagnostics_.empty())
         {
-            diagnostics.back().notes.push_back({line, note});
+            diagnostics_.back().notes.push_back({line, note});
         }
     }
 
@@ -343,17 +345,17 @@ class DiagnosticEngine
     {
         std::stringstream ss;
         ss << "[\n";
-        for (size_t i = 0; i < diagnostics.size(); i++)
+        for (std::size_t i = 0; i < diagnostics_.size(); i++)
         {
-            const auto& diag = diagnostics[i];
+            const auto& diag = diagnostics_[i];
             ss << "  {\n";
             ss << "    \"severity\": " << static_cast<std::int32_t>(diag.severity) << ",\n";
             ss << "    \"line\": " << diag.line << ",\n";
             ss << "    \"column\": " << diag.column << ",\n";
-            ss << "    \"message\": \"" << diag.message << "\",\n";
-            ss << "    \"code\": \"" << diag.code << "\"\n";
+            ss << "    \"message\": \"" << utf8::utf16to8(diag.message) << "\",\n";
+            ss << "    \"code\": \"" << utf8::utf16to8(diag.code) << "\"\n";
             ss << "  }";
-            if (i + 1 < diagnostics.size())
+            if (i + 1 < diagnostics_.size())
             {
                 ss << ",";
             }
@@ -366,48 +368,48 @@ class DiagnosticEngine
     // Beautiful terminal output with colors
     void prettyPrint() const
     {
-        for (const auto& diag : diagnostics)
+        for (const auto& diag : diagnostics_)
         {
-            std::string sevStr;
-            std::string color;
+            std::u16string sevStr;
+            std::u16string color;
 
             switch (diag.severity)
             {
             case Severity::Note :
-                sevStr = "note";
-                color = "\033[36m";  // Cyan
+                sevStr = u"note";
+                color = u"\033[36m";  // Cyan
                 break;
             case Severity::Warning :
-                sevStr = "warning";
-                color = "\033[33m";  // Yellow
+                sevStr = u"warning";
+                color = u"\033[33m";  // Yellow
                 break;
             case Severity::Error :
-                sevStr = "error";
-                color = "\033[31m";  // Red
+                sevStr = u"error";
+                color = u"\033[31m";  // Red
                 break;
             case Severity::Fatal :
-                sevStr = "fatal";
-                color = "\033[1;31m";  // Bold Red
+                sevStr = u"fatal";
+                color = u"\033[1;31m";  // Bold Red
                 break;
             }
 
-            std::cout << color << sevStr << "\033[0m";
+            std::cout << utf8::utf16to8(color) << utf8::utf16to8(sevStr) << "\033[0m";
             if (!diag.code.empty())
             {
-                std::cout << "[" << diag.code << "]";
+                std::cout << "[" << utf8::utf16to8(diag.code) << "]";
             }
-            std::cout << ": " << diag.message << "\n";
+            std::cout << ": " << utf8::utf16to8(diag.message) << "\n";
 
             // Show source line
             std::cout << "  --> line " << diag.line << ":" << diag.column << "\n";
 
             // Extract and show the problematic line
-            auto lines = splitLines(sourceCode);
+            auto lines = splitLines(utf8::utf16to8(sourceCode_));
             if (diag.line > 0 && diag.line <= lines.size())
             {
                 std::cout << "   |\n";
                 std::cout << std::setw(3) << diag.line << " | " << lines[diag.line - 1] << "\n";
-                std::cout << "   | " << std::string(diag.column - 1, ' ') << color
+                std::cout << "   | " << std::string(diag.column - 1, ' ') << utf8::utf16to8(color)
                           << std::string(std::max(1, diag.length), '^') << "\033[0m\n";
             }
 
@@ -417,14 +419,14 @@ class DiagnosticEngine
                 std::cout << "\n  \033[1mHelp:\033[0m\n";
                 for (const auto& sugg : diag.suggestions)
                 {
-                    std::cout << "    • " << sugg << "\n";
+                    std::cout << "    • " << utf8::utf16to8(sugg) << "\n";
                 }
             }
 
             // Show notes
             for (const auto& [noteLine, noteMsg] : diag.notes)
             {
-                std::cout << "\n  \033[36mnote:\033[0m " << noteMsg << "\n";
+                std::cout << "\n  \033[36mnote:\033[0m " << utf8::utf16to8(noteMsg) << "\n";
                 std::cout << "  --> line " << noteLine << "\n";
             }
 
@@ -464,20 +466,20 @@ class LanguageServer
 
     struct CompletionItem
     {
-        std::string label;
-        std::string detail;
-        std::string documentation;
+        std::u16string label;
+        std::u16string detail;
+        std::u16string documentation;
         std::int32_t kind;  // Variable, Function, Class, etc.
     };
 
     struct Hover
     {
-        std::string contents;
+        std::u16string contents;
         Range range;
     };
 
     // Auto-completion at cursor position
-    std::vector<CompletionItem> getCompletions(const std::string& source, Position pos)
+    std::vector<CompletionItem> getCompletions(const std::u16string& source, Position pos)
     {
         std::vector<CompletionItem> items;
 
@@ -487,7 +489,7 @@ class LanguageServer
 
         // Analyze and extract symbols
         // Add keywords
-        for (const auto& kw : {"اذا", "طالما", "لكل", "عرف", "return"})
+        for (const auto& kw : {u"اذا", u"طالما", u"لكل", u"عرف", u"return"})
         {
             CompletionItem item;
             item.label = kw;
@@ -499,22 +501,22 @@ class LanguageServer
     }
 
     // Hover information
-    Hover getHover(const std::string& source, Position pos)
+    Hover getHover(const std::u16string& source, Position pos)
     {
         Hover hover;
-        hover.contents = "Variable: x\nType: int";
+        hover.contents = u"Variable: x\nType: int";
         return hover;
     }
 
     // Go to definition
-    Position getDefinition(const std::string& source, Position pos) { return {0, 0}; }
+    Position getDefinition(const std::u16string& source, Position pos) { return {0, 0}; }
 
     // Find all references
-    std::vector<Range> getReferences(const std::string& source, Position pos) { return {}; }
+    std::vector<Range> getReferences(const std::u16string& source, Position pos) { return {}; }
 
     // Rename symbol
-    std::unordered_map<std::string, std::string> rename(
-      const std::string& source, Position pos, const std::string& newName)
+    std::unordered_map<std::u16string, std::u16string> rename(
+      const std::u16string& source, Position pos, const std::u16string& newName)
     {
         return {};
     }
@@ -528,14 +530,14 @@ class ParserProfiler
    private:
     struct Timing
     {
-        std::string phase;
+        std::u16string phase;
         double milliseconds;
     };
 
     std::vector<Timing> timings;
 
    public:
-    void recordPhase(const std::string& phase, double ms) { timings.push_back({phase, ms}); }
+    void recordPhase(const std::u16string& phase, double ms) { timings.push_back({phase, ms}); }
 
     void printReport() const
     {
@@ -552,8 +554,8 @@ class ParserProfiler
         for (const auto& t : timings)
         {
             double percent = (t.milliseconds / total) * 100;
-            std::cout << std::left << std::setw(20) << t.phase << ": " << std::right << std::setw(8) << std::fixed
-                      << std::setprecision(2) << t.milliseconds << "ms "
+            std::cout << std::left << std::setw(20) << utf8::utf16to8(t.phase) << ": " << std::right << std::setw(8)
+                      << std::fixed << std::setprecision(2) << t.milliseconds << "ms "
                       << "(" << std::setw(5) << percent << "%)\n";
         }
 

@@ -66,7 +66,7 @@ class Value
     struct Iterator
     {
         std::shared_ptr<std::vector<Value>> items;
-        size_t index;
+        std::size_t index;
     };
 
     std::variant<std::monostate,  // None
@@ -203,7 +203,7 @@ class Value
     std::string repr() const;
 
     // Hash for use in dictionaries
-    size_t hash() const;
+    std::size_t hash() const;
 
     // Comparison operators
     bool operator==(const Value& other) const;

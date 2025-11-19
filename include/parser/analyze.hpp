@@ -2,7 +2,7 @@
 
 
 #include "../../utfcpp/source/utf8.h"
-#include "ast.hpp"
+#include "ast/ast.hpp"
 #include <iostream>
 #include <memory>
 #include <optional>
@@ -127,7 +127,7 @@ class ControlFlowGraph
    public:
     struct BasicBlock
     {
-        std::int32_t id_;
+        std::int32_t id;
         std::vector<ast::StmtPtr*> statements;
         std::vector<std::int32_t> predecessors;
         std::vector<std::int32_t> successors;
@@ -226,7 +226,7 @@ class ControlFlowGraph
     std::vector<std::int32_t> getUnreachableBlocks() const
     {
         std::vector<std::int32_t> unreachable;
-        for (size_t i = 0; i < blocks_.size(); ++i)
+        for (std::size_t i = 0; i < blocks_.size(); ++i)
         {
             if (!blocks_[i].isReachable)
             {

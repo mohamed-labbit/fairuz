@@ -14,25 +14,25 @@ class InputBufferBase
    public:
     using buffer_t = std::u16string;
 
-    InputBufferBase(std::ifstream& f, std::size_t cap = DEFAULT_CAPACITY) :
-        file_(f),
+    InputBufferBase(std::ifstream* file, std::size_t cap = DEFAULT_CAPACITY) :
+        file_(file),
         byte_position_(0),
         char_count_(0)
     {
         buffers_[0].resize(cap + 1, BUFFER_END);
         buffers_[1].resize(cap + 1, BUFFER_END);
         // Open file in binary mode for proper UTF-8 reading
-        if (!file_.is_open())
+        if (file_ == nullptr || !file_->is_open())
         {
             throw std::runtime_error("File is not open");
         }
     }
 
-    bool empty() const noexcept { return !file_.is_open(); }
+    bool empty() const noexcept { return !file_->is_open(); }
     bool refresh_buffer(const std::uint32_t to_refresh);
 
    protected:
-    std::ifstream& file_;
+    std::ifstream* file_{nullptr};
     buffer_t buffers_[2];
     std::size_t byte_position_;  // Current byte position in file
     std::size_t char_count_;  // Total characters read so far
