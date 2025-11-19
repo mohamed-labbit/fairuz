@@ -19,19 +19,17 @@ void GarbageCollector::registerObject(object::Value* obj)
     allocated_++;
 
     if (allocated_ >= threshold_)
-    {
         collect();
-    }
 }
 
-void GarbageCollector::addRoot(object::Value* root) { 
+void GarbageCollector::addRoot(object::Value* root)
+{
     if (!root)
     {
         std::cerr << "-- DEBUG: a null root was pushed to the garbage collector" << std::endl;
         return;
     }
-
-    roots_.push_back(root); 
+    roots_.push_back(root);
 }
 
 void GarbageCollector::collect()
@@ -44,21 +42,13 @@ void GarbageCollector::collect()
     {
         object::Value* obj = worklist.back();
         worklist.pop_back();
-
         if (marked.count(obj))
-        {
             continue;
-        }
         marked.insert(obj);
-
         // Mark children (if list, dict, etc.)
         if (obj->isList())
-        {
             for (auto& item : obj->asList())
-            {
                 worklist.push_back(const_cast<object::Value*>(&item));
-            }
-        }
     }
 
     // Sweep phase
@@ -78,12 +68,9 @@ void GarbageCollector::collect()
     }
 
     youngGenCollections_++;
-
     // Promote survivors to old generation every 5 collections
     if (youngGenCollections_ % 5 == 0)
-    {
         promoteToOldGen();
-    }
 }
 
 }

@@ -12,22 +12,17 @@ std::vector<ast::StmtPtr> ParallelParser::parseParallel(
     std::vector<std::future<ast::StmtPtr>> futures;
 
     for (auto& chunk : chunks)
-    {
         futures.push_back(std::async(std::launch::async, [chunk]() {
             mylang::parser::Parser parser(chunk);
             auto stmts = parser.parse();
             return stmts.empty() ? nullptr : std::move(stmts[0]);
         }));
-    }
 
     std::vector<ast::StmtPtr> result;
     for (auto& future : futures)
-    {
         if (auto stmt = future.get())
-        {
             result.push_back(std::move(stmt));
-        }
-    }
+
     return result;
 }
 
@@ -47,10 +42,9 @@ std::vector<std::vector<mylang::lex::tok::Token>> ParallelParser::splitIntoChunk
             current.push_back(tok);
         }
     }
+
     if (!current.empty())
-    {
         chunks.push_back(current);
-    }
     return chunks;
 }
 
@@ -58,12 +52,8 @@ std::vector<std::vector<mylang::lex::tok::Token>> ParallelParser::splitIntoChunk
 std::vector<typename CodeGenerator::Bytecode> CodeGenerator::generateBytecode(const std::vector<ast::StmtPtr>& ast)
 {
     std::vector<Bytecode> code;
-
     for (const auto& stmt : ast)
-    {
         generateStmt(stmt.get(), code);
-    }
-
     return code;
 }
 
@@ -74,21 +64,15 @@ std::string CodeGenerator::generateCPP(const std::vector<ast::StmtPtr>& ast)
     ss << "#include <iostream>\n";
     ss << "#include <vector>\n";
     ss << "#include <string>\n\n";
-
     for (const auto& stmt : ast)
-    {
         ss << utf8::utf16to8(generateCPPStmt(stmt.get()));
-    }
-
     return ss.str();
 }
 
 void CodeGenerator::generateStmt(const ast::Stmt* stmt, std::vector<Bytecode>& code)
 {
     if (!stmt)
-    {
         return;
-    }
 
     switch (stmt->kind)
     {
@@ -118,9 +102,7 @@ void CodeGenerator::generateStmt(const ast::Stmt* stmt, std::vector<Bytecode>& c
 void CodeGenerator::generateExpr(const ast::Expr* expr, std::vector<Bytecode>& code)
 {
     if (!expr)
-    {
         return;
-    }
 
     switch (expr->kind)
     {
@@ -136,23 +118,14 @@ void CodeGenerator::generateExpr(const ast::Expr* expr, std::vector<Bytecode>& c
         auto* bin = static_cast<const ast::BinaryExpr*>(expr);
         generateExpr(bin->left.get(), code);
         generateExpr(bin->right.get(), code);
-
         if (bin->op == u"+")
-        {
             code.push_back({Bytecode::Op::ADD, 0});
-        }
         else if (bin->op == u"-")
-        {
             code.push_back({Bytecode::Op::SUB, 0});
-        }
         else if (bin->op == u"*")
-        {
             code.push_back({Bytecode::Op::MUL, 0});
-        }
         else if (bin->op == u"/")
-        {
             code.push_back({Bytecode::Op::DIV, 0});
-        }
         break;
     }
     default :
@@ -163,9 +136,7 @@ void CodeGenerator::generateExpr(const ast::Expr* expr, std::vector<Bytecode>& c
 std::u16string CodeGenerator::generateCPPStmt(const ast::Stmt* stmt)
 {
     if (!stmt)
-    {
         return u"";
-    }
 
     switch (stmt->kind)
     {
@@ -181,9 +152,7 @@ std::u16string CodeGenerator::generateCPPStmt(const ast::Stmt* stmt)
         auto* ifStmt = static_cast<const ast::IfStmt*>(stmt);
         std::u16string result = u"if (" + generateCPPExpr(ifStmt->condition.get()) + u") {\n";
         for (const auto& s : ifStmt->thenBlock)
-        {
             result += u"  " + generateCPPStmt(s.get());
-        }
         result += u"}\n";
         return result;
     }
@@ -194,15 +163,11 @@ std::u16string CodeGenerator::generateCPPStmt(const ast::Stmt* stmt)
         {
             result += u"auto " + func->params[i];
             if (i + 1 < func->params.size())
-            {
                 result += u", ";
-            }
         }
         result += u") {\n";
         for (const auto& s : func->body)
-        {
             result += u"  " + generateCPPStmt(s.get());
-        }
         result += u"}\n";
         return result;
     }
@@ -214,9 +179,7 @@ std::u16string CodeGenerator::generateCPPStmt(const ast::Stmt* stmt)
 std::u16string CodeGenerator::generateCPPExpr(const ast::Expr* expr)
 {
     if (!expr)
-    {
         return u"";
-    }
 
     switch (expr->kind)
     {
@@ -240,9 +203,7 @@ std::u16string CodeGenerator::generateCPPExpr(const ast::Expr* expr)
         {
             result += generateCPPExpr(call->args[i].get());
             if (i + 1 < call->args.size())
-            {
                 result += u", ";
-            }
         }
         result += u")";
         return result;

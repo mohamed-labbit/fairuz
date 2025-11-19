@@ -6,7 +6,6 @@ namespace mylang {
 namespace lex {
 namespace tok {
 
-
 const std::u16string& Token::lexeme() const { return this->value_; }
 
 std::string Token::utf8_lexeme() const { return utf8::utf16to8(this->value_); }
@@ -19,7 +18,7 @@ const std::size_t& Token::line() const { return this->location_.line; }
 
 const std::size_t& Token::column() const { return this->location_.column; }
 
-const typename Token::Location& Token::location() const { return this->location_; }
+const Location& Token::location() const { return this->location_; }
 
 const std::string& Token::filepath() const { return this->location_.filepath; }
 
@@ -32,7 +31,6 @@ bool Token::operator==(const Token& other) const
 }
 
 bool Token::operator!=(const Token& other) const { return !(*this == other); }
-
 
 }
 }
