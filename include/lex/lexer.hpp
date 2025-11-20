@@ -5,6 +5,9 @@
 #include "token.hpp"
 
 
+#include <optional>
+
+
 namespace mylang {
 namespace lex {
 
@@ -42,24 +45,15 @@ struct IndentationContext
         */
     void detect_indent_mode(const std::u16string& indent_str)
     {
-        if (mode != IndentMode::UNDETECTED)
-        {
-            return;
-        }
+        if (mode != IndentMode::UNDETECTED) return;
 
         bool has_spaces = false;
         bool has_tabs = false;
 
         for (char16_t ch : indent_str)
         {
-            if (ch == u' ')
-            {
-                has_spaces = true;
-            }
-            if (ch == u'\t')
-            {
-                has_tabs = true;
-            }
+            if (ch == u' ') has_spaces = true;
+            if (ch == u'\t') has_tabs = true;
         }
 
         if (has_spaces && has_tabs)
@@ -72,22 +66,15 @@ struct IndentationContext
             mode = IndentMode::SPACES;
             // Try to detect spaces per indent
             if (indent_str.length() > 0)
-            {
                 // Common indent widths: 2, 4, 8
                 for (std::size_t width : {2, 4, 8})
-                {
                     if (indent_str.length() % width == 0)
                     {
                         spaces_per_indent = width;
                         break;
                     }
-                }
-            }
         }
-        else if (has_tabs)
-        {
-            mode = IndentMode::TABS;
-        }
+        else if (has_tabs) { mode = IndentMode::TABS; }
     }
 
     /**
@@ -95,35 +82,17 @@ struct IndentationContext
         */
     bool validate_indent(const std::u16string& indent_str) const
     {
-        if (mode == IndentMode::MIXED)
-        {
-            return false;
-        }
+        if (mode == IndentMode::MIXED) return false;
         bool has_spaces = false;
         bool has_tabs = false;
         for (char16_t ch : indent_str)
         {
-            if (ch == u' ')
-            {
-                has_spaces = true;
-            }
-            if (ch == u'\t')
-            {
-                has_tabs = true;
-            }
+            if (ch == u' ') has_spaces = true;
+            if (ch == u'\t') has_tabs = true;
         }
-        if (mode == IndentMode::SPACES && has_tabs)
-        {
-            return false;
-        }
-        if (mode == IndentMode::TABS && has_spaces)
-        {
-            return false;
-        }
-        if (has_spaces && has_tabs)
-        {
-            return false;
-        }
+        if (mode == IndentMode::SPACES && has_tabs) return false;
+        if (mode == IndentMode::TABS && has_spaces) return false;
+        if (has_spaces && has_tabs) return false;
         return true;
     }
 
@@ -188,15 +157,15 @@ class Lexer
 
     explicit Lexer(const Lexer&) = delete;
 
-    tok::Token operator()() { return next(); }
-    tok::Token current() const { return tok_stream_[tok_index_]; }
-    tok::Token next();
-    tok::Token peek(std::size_t n = 1);
-    tok::Token prev();
-    const std::vector<tok::Token>& tokenStream() const { return tok_stream_; }
-    std::vector<tok::Token> tokenize();
-    const std::size_t indent_size() const { return indent_size_; }
-    tok::Token make_token(tok::TokenType tt,
+    MYLANG_COMPILER_API tok::Token operator()() { return next(); }
+    MYLANG_COMPILER_API tok::Token current() const { return tok_stream_[tok_index_]; }
+    MYLANG_COMPILER_API tok::Token next();
+    MYLANG_COMPILER_API tok::Token peek(std::size_t n = 1);
+    MYLANG_COMPILER_API tok::Token prev();
+    MYLANG_COMPILER_API const std::vector<tok::Token>& tokenStream() const { return tok_stream_; }
+    MYLANG_COMPILER_API std::vector<tok::Token> tokenize();
+    MYLANG_COMPILER_API const std::size_t indent_size() const { return indent_size_; }
+    MYLANG_COMPILER_API tok::Token make_token(tok::TokenType tt,
       std::optional<std::u16string> lexeme = std::nullopt,
       std::optional<std::size_t> line = std::nullopt,
       std::optional<std::size_t> col = std::nullopt,
@@ -211,22 +180,21 @@ class Lexer
     std::stack<unsigned> indent_stack_;
     IndentationContext indent_ctx_;
 
-    void lex_token_();
-    tok::Token _handle_indentation(SourceManager& sm);
-    tok::Token _handle_identifier(char16_t c, SourceManager& sm);
-    tok::Token _handle_number(char16_t c, SourceManager& sm);
-    tok::Token _handle_operator(char16_t c, SourceManager& sm);
-    tok::Token _handle_symbol(char16_t c, SourceManager& sm);
-    tok::Token _handle_string_literal(char16_t c, SourceManager& sm);
-    tok::Token _handle_newline(char16_t c, SourceManager& sm);
-    tok::Token _emit_invalid(char16_t c, SourceManager& sm);
-    tok::Token _emit_eof(SourceManager& sm);
-    tok::Token _emit_sof(SourceManager& sm);
-    IndentationAnalysis _analyze_indentation(SourceManager& sm);
-    void update_indentation_context(const tok::Token& token);
-    char16_t consume_char() { return source_manager_.consume_char(); }
-
-    void store(tok::Token tok)
+    MYLANG_COMPILER_API void lex_token_();
+    MYLANG_COMPILER_API tok::Token _handle_indentation(SourceManager& sm);
+    MYLANG_COMPILER_API tok::Token _handle_identifier(char16_t c, SourceManager& sm);
+    MYLANG_COMPILER_API tok::Token _handle_number(char16_t c, SourceManager& sm);
+    MYLANG_COMPILER_API tok::Token _handle_operator(char16_t c, SourceManager& sm);
+    MYLANG_COMPILER_API tok::Token _handle_symbol(char16_t c, SourceManager& sm);
+    MYLANG_COMPILER_API tok::Token _handle_string_literal(char16_t c, SourceManager& sm);
+    MYLANG_COMPILER_API tok::Token _handle_newline(char16_t c, SourceManager& sm);
+    MYLANG_COMPILER_API tok::Token _emit_invalid(char16_t c, SourceManager& sm);
+    MYLANG_COMPILER_API tok::Token _emit_eof(SourceManager& sm);
+    MYLANG_COMPILER_API tok::Token _emit_sof(SourceManager& sm);
+    MYLANG_COMPILER_API IndentationAnalysis _analyze_indentation(SourceManager& sm);
+    MYLANG_COMPILER_API void update_indentation_context(const tok::Token& token);
+    MYLANG_COMPILER_API char16_t consume_char() { return source_manager_.consume_char(); }
+    MYLANG_COMPILER_API void store(tok::Token tok)
     {
         // push and update index
         tok_stream_.push_back(std::move(tok));

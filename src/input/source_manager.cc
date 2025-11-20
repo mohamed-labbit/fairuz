@@ -10,61 +10,52 @@ using offset_pair = std::pair<std::size_t, std::size_t>;
 
 std::size_t SourceManager::line() const
 {
-    if (use_file_buffer_)
-        return this->input_buffer_.value().position().line;
-    return current_position_.value().line;
+    if (use_file_buffer_ && input_buffer_.has_value()) return this->input_buffer_.value().position().line;
+    return current_position_.has_value() ? current_position_.value().line : 0;
 }
 
 std::size_t SourceManager::column() const
 {
-    if (use_file_buffer_)
-        return this->input_buffer_.value().position().column;
-    return current_position_.value().column;
+    if (use_file_buffer_ && input_buffer_.has_value()) return this->input_buffer_.value().position().column;
+    return current_position_.has_value() ? current_position_.value().column : 0;
 }
 
 std::size_t SourceManager::fpos() const
 {
-    if (use_file_buffer_)
-        return this->input_buffer_.value().position().filepos;
-    return current_position_.value().filepos;
+    if (use_file_buffer_ && input_buffer_.has_value()) return this->input_buffer_.value().position().filepos;
+    return current_position_.has_value() ? current_position_.value().filepos : 0;
 }
 
 const std::string SourceManager::fpath() const
 {
-    if (use_file_buffer_)
-        return this->filepath_;
+    if (use_file_buffer_) return this->filepath_;
     return "";
 }
 
 buffer::Position SourceManager::position() const
 {
-    if (use_file_buffer_)
-        return this->input_buffer_.value().position();
-    return current_position_.value();
+    if (use_file_buffer_ && input_buffer_.has_value()) return this->input_buffer_.value().position();
+    return current_position_.value_or(buffer::Position());
 }
 
 bool SourceManager::done() const
 {
-    if (use_file_buffer_)
-        return this->input_buffer_.value().empty();
-    return source_.value().empty();
+    if (use_file_buffer_ && input_buffer_.has_value()) return this->input_buffer_.value().empty();
+    return source_.has_value() ? source_.value().empty() : true;
 }
 
 char16_t SourceManager::peek()
 {
-    if (use_file_buffer_)
-        return this->input_buffer_.value().peek();
+    if (use_file_buffer_ && input_buffer_.has_value()) return this->input_buffer_.value().peek();
     auto& cur = this->current_.value();
-    if (cur == nullptr || *cur == BUFFER_END)
-        return BUFFER_END;
+    if (cur == nullptr || *cur == BUFFER_END) return BUFFER_END;
     char16_t* forward = cur + 1;
     return *forward;
 }
 
 char16_t SourceManager::consume_char()
 {
-    if (use_file_buffer_)
-        return this->input_buffer_.value().consume_char();
+    if (use_file_buffer_ && input_buffer_.has_value()) return this->input_buffer_.value().consume_char();
 
     char16_t ret = current();
     if (current_.value() != source_.value().data() + source_.value().length() && current_.value() != nullptr)
@@ -103,8 +94,7 @@ char16_t SourceManager::consume_char()
 
 char16_t SourceManager::current()
 {
-    if (use_file_buffer_)
-        return input_buffer_.value().current();
+    if (use_file_buffer_ && input_buffer_.has_value()) return input_buffer_.value().current();
     return current_.value() ? *current_.value() : BUFFER_END;
 }
 
@@ -116,16 +106,14 @@ offset_pair SourceManager::offset_map_(const std::size_t& offset) const
     }
 
     auto& buf = this->input_buffer_.value();
-    if (offset == buf.buffer_offset())
-        return std::make_pair(buf.position().line, buf.position().column);
+    if (offset == buf.buffer_offset()) return std::make_pair(buf.position().line, buf.position().column);
 
     std::size_t iter = 0;
     std::size_t diff = 0;
     // Count lines before buffer start
     while (iter < buf.buffer_offset())
     {
-        if (buf.at(iter) == u'\n')
-            diff += 1;
+        if (buf.at(iter) == u'\n') diff += 1;
         iter += 1;
     }
 
@@ -165,10 +153,8 @@ offset_pair SourceManager::offset_map(const std::size_t& offset)
     auto& buf = this->input_buffer_.value();
     auto& file = this->file_;
 
-    if (offset == buf.buffer_offset())
-        return std::make_pair(buf.position().line, buf.position().column);
-    if (offset >= file->tellg())
-        return std::make_pair(buf.position().line, buf.position().column);
+    if (offset == buf.buffer_offset()) return std::make_pair(buf.position().line, buf.position().column);
+    if (offset >= file->tellg()) return std::make_pair(buf.position().line, buf.position().column);
 
     file->imbue(std::locale(file->getloc()));
     std::size_t line = 1;
@@ -178,8 +164,7 @@ offset_pair SourceManager::offset_map(const std::size_t& offset)
 
     while (file->get(c))
     {
-        if (current_offset == offset)
-            return std::make_pair(line, col);
+        if (current_offset == offset) return std::make_pair(line, col);
 
         if (c == L'\n')
         {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../utfcpp/source/utf8.h"
+#include "../macros.hpp"
 #include "util.hpp"
 
 #include <iostream>
@@ -136,20 +137,32 @@ class Token
     }
 
     Token() = default;
+
     Token(const Token&) = default;
-    Token(Token&&) noexcept = default;
+
+    Token(Token&&) MYLANG_NOEXCEPT = default;
+
     bool operator==(const Token& other) const;
     bool operator!=(const Token& other) const;
+
     Token& operator=(const Token&) = default;
-    Token& operator=(Token&&) noexcept = default;
+    Token& operator=(Token&&) MYLANG_NOEXCEPT = default;
+
     // Return const references to avoid copies
     const std::u16string& lexeme() const;
+
     std::string utf8_lexeme() const;
+
     const TokenType& type() const;
+
     std::size_t size() const;
+
     const std::size_t& line() const;
+
     const std::size_t& column() const;
+
     const Location& location() const;
+
     const std::string& filepath() const;
 
     bool is(const TokenType tt) const { return tt == type_; }

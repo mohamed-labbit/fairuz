@@ -18,8 +18,7 @@ void GarbageCollector::registerObject(object::Value* obj)
     youngGen_.push_back(obj);
     allocated_++;
 
-    if (allocated_ >= threshold_)
-        collect();
+    if (allocated_ >= threshold_) collect();
 }
 
 void GarbageCollector::addRoot(object::Value* root)
@@ -42,8 +41,7 @@ void GarbageCollector::collect()
     {
         object::Value* obj = worklist.back();
         worklist.pop_back();
-        if (marked.count(obj))
-            continue;
+        if (marked.count(obj)) continue;
         marked.insert(obj);
         // Mark children (if list, dict, etc.)
         if (obj->isList())
@@ -69,8 +67,7 @@ void GarbageCollector::collect()
 
     youngGenCollections_++;
     // Promote survivors to old generation every 5 collections
-    if (youngGenCollections_ % 5 == 0)
-        promoteToOldGen();
+    if (youngGenCollections_ % 5 == 0) promoteToOldGen();
 }
 
 }

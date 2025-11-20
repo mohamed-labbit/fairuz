@@ -7,7 +7,7 @@
 const std::string test_cases_path = "/Users/mohamedrabbit/code/mylang/tests/lexer/test_cases/test_file.txt";
 
 
-inline void PrintTo(const mylang::lex::tok::Token& tok, std::ostream* os)
+MYLANG_INLINE void PrintTo(const mylang::lex::tok::Token& tok, std::ostream* os)
 {
     *os << "mylang::lex::Token(\"" << utf8::utf16to8(tok.lexeme()) << "\", type=" << static_cast<int>(tok.type())
         << ", line=" << tok.line() << ", col=" << tok.column() << ")" << '\n';

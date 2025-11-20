@@ -94,30 +94,19 @@ class TypeSystem
         {
             switch (base)
             {
-            case BaseType::Int :
-                return u"int";
-            case BaseType::Float :
-                return u"float";
-            case BaseType::String :
-                return u"str";
-            case BaseType::Bool :
-                return u"bool";
-            case BaseType::None :
-                return u"None";
+            case BaseType::Int : return u"int";
+            case BaseType::Float : return u"float";
+            case BaseType::String : return u"str";
+            case BaseType::Bool : return u"bool";
+            case BaseType::None : return u"None";
             case BaseType::List :
-                if (!typeParams.empty())
-                {
-                    return u"List[" + typeParams[0]->toString() + u"]";
-                }
+                if (!typeParams.empty()) return u"List[" + typeParams[0]->toString() + u"]";
                 return u"List";
             case BaseType::Dict :
                 if (typeParams.size() >= 2)
-                {
                     return u"Dict[" + typeParams[0]->toString() + u", " + typeParams[1]->toString() + u"]";
-                }
                 return u"Dict";
-            default :
-                return u"Any";
+            default : return u"Any";
             }
         }
     };
@@ -138,41 +127,25 @@ class TypeSystem
 
         void unify(std::shared_ptr<Type> t1, std::shared_ptr<Type> t2)
         {
-            if (*t1 == *t2)
-            {
-                return;
-            }
-
+            if (*t1 == *t2) return;
             // Type variable substitution
             if (t1->base == BaseType::Any)
-            {
                 *t1 = *t2;
-            }
             else if (t2->base == BaseType::Any)
-            {
                 *t2 = *t1;
-            }
             else if (t1->base == BaseType::List && t2->base == BaseType::List)
             {
-                if (!t1->typeParams.empty() && !t2->typeParams.empty())
-                {
-                    unify(t1->typeParams[0], t2->typeParams[0]);
-                }
+                if (!t1->typeParams.empty() && !t2->typeParams.empty()) unify(t1->typeParams[0], t2->typeParams[0]);
             }
             else
-            {
                 throw std::runtime_error(
                   "Type mismatch: " + utf8::utf16to8(t1->toString()) + " vs " + utf8::utf16to8(t2->toString()));
-            }
         }
 
        public:
         std::shared_ptr<Type> inferExpr(const ast::Expr* expr)
         {
-            if (!expr)
-            {
-                return std::make_shared<Type>();
-            }
+            if (!expr) return std::make_shared<Type>();
 
             switch (expr->kind)
             {
@@ -184,15 +157,9 @@ class TypeSystem
                 case ast::LiteralExpr::Type::NUMBER :
                     t->base = lit->value.find('.') != std::string::npos ? BaseType::Float : BaseType::Int;
                     break;
-                case ast::LiteralExpr::Type::STRING :
-                    t->base = BaseType::String;
-                    break;
-                case ast::LiteralExpr::Type::BOOLEAN :
-                    t->base = BaseType::Bool;
-                    break;
-                case ast::LiteralExpr::Type::NONE :
-                    t->base = BaseType::None;
-                    break;
+                case ast::LiteralExpr::Type::STRING : t->base = BaseType::String; break;
+                case ast::LiteralExpr::Type::BOOLEAN : t->base = BaseType::Bool; break;
+                case ast::LiteralExpr::Type::NONE : t->base = BaseType::None; break;
                 }
                 return t;
             }
@@ -200,14 +167,9 @@ class TypeSystem
                 auto* bin = static_cast<const ast::BinaryExpr*>(expr);
                 auto leftType = inferExpr(bin->left.get());
                 auto rightType = inferExpr(bin->right.get());
-
                 unify(leftType, rightType);
-
                 // Result type based on operator
-                if (bin->op == u"+" || bin->op == u"-" || bin->op == u"*" || bin->op == u"/")
-                {
-                    return leftType;
-                }
+                if (bin->op == u"+" || bin->op == u"-" || bin->op == u"*" || bin->op == u"/") { return leftType; }
                 else if (bin->op == u"==" || bin->op == u"!=" || bin->op == u"<" || bin->op == u">")
                 {
                     auto t = std::make_shared<Type>();
@@ -220,7 +182,6 @@ class TypeSystem
                 auto* list = static_cast<const ast::ListExpr*>(expr);
                 auto t = std::make_shared<Type>();
                 t->base = BaseType::List;
-
                 if (!list->elements.empty())
                 {
                     auto elemType = inferExpr(list->elements[0].get());
@@ -228,8 +189,7 @@ class TypeSystem
                 }
                 return t;
             }
-            default :
-                return freshTypeVar();
+            default : return freshTypeVar();
             }
         }
     };
@@ -326,18 +286,12 @@ class DiagnosticEngine
 
     void addSuggestion(const std::u16string& suggestion)
     {
-        if (!diagnostics_.empty())
-        {
-            diagnostics_.back().suggestions.push_back(suggestion);
-        }
+        if (!diagnostics_.empty()) diagnostics_.back().suggestions.push_back(suggestion);
     }
 
     void addNote(std::int32_t line, const std::u16string& note)
     {
-        if (!diagnostics_.empty())
-        {
-            diagnostics_.back().notes.push_back({line, note});
-        }
+        if (!diagnostics_.empty()) diagnostics_.back().notes.push_back({line, note});
     }
 
     // Generate LSP-compatible diagnostics
@@ -355,10 +309,7 @@ class DiagnosticEngine
             ss << "    \"message\": \"" << utf8::utf16to8(diag.message) << "\",\n";
             ss << "    \"code\": \"" << utf8::utf16to8(diag.code) << "\"\n";
             ss << "  }";
-            if (i + 1 < diagnostics_.size())
-            {
-                ss << ",";
-            }
+            if (i + 1 < diagnostics_.size()) ss << ",";
             ss << "\n";
         }
         ss << "]\n";
@@ -394,15 +345,10 @@ class DiagnosticEngine
             }
 
             std::cout << utf8::utf16to8(color) << utf8::utf16to8(sevStr) << "\033[0m";
-            if (!diag.code.empty())
-            {
-                std::cout << "[" << utf8::utf16to8(diag.code) << "]";
-            }
+            if (!diag.code.empty()) std::cout << "[" << utf8::utf16to8(diag.code) << "]";
             std::cout << ": " << utf8::utf16to8(diag.message) << "\n";
-
             // Show source line
             std::cout << "  --> line " << diag.line << ":" << diag.column << "\n";
-
             // Extract and show the problematic line
             auto lines = splitLines(utf8::utf16to8(sourceCode_));
             if (diag.line > 0 && diag.line <= lines.size())
@@ -412,24 +358,19 @@ class DiagnosticEngine
                 std::cout << "   | " << std::string(diag.column - 1, ' ') << utf8::utf16to8(color)
                           << std::string(std::max(1, diag.length), '^') << "\033[0m\n";
             }
-
             // Show suggestions
             if (!diag.suggestions.empty())
             {
                 std::cout << "\n  \033[1mHelp:\033[0m\n";
                 for (const auto& sugg : diag.suggestions)
-                {
                     std::cout << "    • " << utf8::utf16to8(sugg) << "\n";
-                }
             }
-
             // Show notes
             for (const auto& [noteLine, noteMsg] : diag.notes)
             {
                 std::cout << "\n  \033[36mnote:\033[0m " << utf8::utf16to8(noteMsg) << "\n";
                 std::cout << "  --> line " << noteLine << "\n";
             }
-
             std::cout << "\n";
         }
     }
@@ -441,9 +382,7 @@ class DiagnosticEngine
         std::stringstream ss(text);
         std::string line;
         while (std::getline(ss, line))
-        {
             lines.push_back(line);
-        }
         return lines;
     }
 };
@@ -482,11 +421,9 @@ class LanguageServer
     std::vector<CompletionItem> getCompletions(const std::u16string& source, Position pos)
     {
         std::vector<CompletionItem> items;
-
         // Parse and get symbol table
         mylang::parser::Parser parser(source);
         auto ast = parser.parse();
-
         // Analyze and extract symbols
         // Add keywords
         for (const auto& kw : {u"اذا", u"طالما", u"لكل", u"عرف", u"return"})
@@ -496,7 +433,6 @@ class LanguageServer
             item.kind = 14;  // Keyword
             items.push_back(item);
         }
-
         return items;
     }
 
@@ -544,13 +480,9 @@ class ParserProfiler
         std::cout << "\n╔═══════════════════════════════════════╗\n";
         std::cout << "║      Parser Performance Report        ║\n";
         std::cout << "╚═══════════════════════════════════════╝\n\n";
-
         double total = 0;
         for (const auto& t : timings)
-        {
             total += t.milliseconds;
-        }
-
         for (const auto& t : timings)
         {
             double percent = (t.milliseconds / total) * 100;
@@ -558,7 +490,6 @@ class ParserProfiler
                       << std::fixed << std::setprecision(2) << t.milliseconds << "ms "
                       << "(" << std::setw(5) << percent << "%)\n";
         }
-
         // std::cout << "\n" << std::string(41, "─") << "\n";
         std::cout << std::left << std::setw(20) << "Total" << ": " << std::right << std::setw(8) << total << "ms\n";
     }

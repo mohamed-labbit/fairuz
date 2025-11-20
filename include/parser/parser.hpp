@@ -54,11 +54,7 @@ class Parser
 
         bool isDefined(const std::u16string& name) const
         {
-            if (variables.count(name) || functions.count(name))
-            {
-                return true;
-            }
-
+            if (variables.count(name) || functions.count(name)) return true;
             return parent ? parent->isDefined(name) : false;
         }
     };
@@ -112,67 +108,69 @@ class Parser
 
     // === lex::tok::Token Access & Navigation ===
 
-    lex::tok::Token peek(std::size_t offset = 1);
+    MYLANG_COMPILER_API lex::tok::Token peek(std::size_t offset = 1);
 
-    lex::tok::Token previous();
+    MYLANG_COMPILER_API lex::tok::Token previous();
 
-    lex::tok::Token advance();
+    MYLANG_COMPILER_API lex::tok::Token advance();
 
-    bool check(lex::tok::TokenType type);
+    MYLANG_COMPILER_API bool check(lex::tok::TokenType type);
 
-    bool checkAny(std::initializer_list<lex::tok::TokenType> types);
+    MYLANG_COMPILER_API bool checkAny(std::initializer_list<lex::tok::TokenType> types);
 
-    bool match(std::initializer_list<lex::tok::TokenType> types);
+    MYLANG_COMPILER_API bool match(std::initializer_list<lex::tok::TokenType> types);
 
-    lex::tok::Token consume(lex::tok::TokenType type, const std::u16string& msg);
+    MYLANG_COMPILER_API lex::tok::Token consume(lex::tok::TokenType type, const std::u16string& msg);
 
-    void skipNewlines();
+    MYLANG_COMPILER_API void skipNewlines();
 
     // Get source line for error context
-    std::u16string getSourceLine(std::int32_t line);
+    MYLANG_COMPILER_API std::u16string getSourceLine(std::int32_t line);
 
     // Generate smart suggestions based on context
-    std::vector<std::u16string> getSuggestions(lex::tok::TokenType expected);
+    MYLANG_COMPILER_API std::vector<std::u16string> getSuggestions(lex::tok::TokenType expected);
 
     // Error recovery with Panic Mode
-    void synchronize();
+    MYLANG_COMPILER_API void synchronize();
 
     // Record error without throwing
-    void recordError(const ParseError& error);
+    MYLANG_COMPILER_API void recordError(const ParseError& error);
 
     // === Scope Management ===
 
-    void enterScope();
+    MYLANG_COMPILER_API void enterScope();
 
-    void exitScope();
+    MYLANG_COMPILER_API void exitScope();
 
-    void declareVariable(const std::u16string& name);
+    MYLANG_COMPILER_API void declareVariable(const std::u16string& name);
 
-    void declareFunction(const std::u16string& name);
+    MYLANG_COMPILER_API void declareFunction(const std::u16string& name);
 
-    bool isVariableDefined(const std::u16string& name) const;
+    MYLANG_COMPILER_API bool isVariableDefined(const std::u16string& name) const;
 
     // === Memoization for Packrat Parsing ===
 
-    std::u16string getMemoKey(const std::u16string& rule) const;
+    MYLANG_COMPILER_API std::u16string getMemoKey(const std::u16string& rule) const;
 
     template<typename T>
-    std::optional<T> getMemo(const std::u16string& rule);
+    MYLANG_COMPILER_API std::optional<T> getMemo(const std::u16string& rule);
 
     template<typename T>
-    void setMemo(const std::u16string& rule, T result);
+    MYLANG_COMPILER_API void setMemo(const std::u16string& rule, T result);
 
     // === Operator Precedence & Properties ===
 
-    OpInfo getOpInfo(lex::tok::TokenType type) const;
+    MYLANG_COMPILER_API OpInfo getOpInfo(lex::tok::TokenType type) const;
 
-    bool isUnaryOp(lex::tok::TokenType type) const;
+    MYLANG_COMPILER_API bool isUnaryOp(lex::tok::TokenType type) const;
 
-    bool isBinaryOp(lex::tok::TokenType type) const;
+    MYLANG_COMPILER_API bool isBinaryOp(lex::tok::TokenType type) const;
 
-    bool isAugmentedAssign(lex::tok::TokenType type) const;
+    MYLANG_COMPILER_API bool isAugmentedAssign(lex::tok::TokenType type) const;
 
-    bool isExpressionStart();
+    MYLANG_COMPILER_API bool isExpressionStart();
+
+    lex::tok::Token next_token();
 
     // === Advanced Expression Parsing ===
 
@@ -185,7 +183,8 @@ class Parser
     }
 
     explicit Parser(std::vector<lex::tok::Token> toks) :
-        tokens_(toks)
+        tokens_(toks),
+        use_lexer(false)
     {
         enterScope();
     }
@@ -208,56 +207,56 @@ class Parser
     };
 
     // Parse primary with speculative parsing for ambiguity
-    ast::ExprPtr parsePrimary();
+    MYLANG_COMPILER_API ast::ExprPtr parsePrimary();
 
     // Parse postfix operations (calls, subscripts, attributes)
-    ast::ExprPtr parsePostfixOps(ast::ExprPtr expr);
+    MYLANG_COMPILER_API ast::ExprPtr parsePostfixOps(ast::ExprPtr expr);
 
     // Parse parenthesized expression or tuple
-    ast::ExprPtr parseParenthesizedExpr();
+    MYLANG_COMPILER_API ast::ExprPtr parseParenthesizedExpr();
 
     // Parse list literal with comprehensions
-    ast::ExprPtr parseListLiteral();
+    MYLANG_COMPILER_API ast::ExprPtr parseListLiteral();
 
     // Parse dictionary literal
-    ast::ExprPtr parseDictLiteral();
+    MYLANG_COMPILER_API ast::ExprPtr parseDictLiteral();
 
     // Parse lambda expression
-    ast::ExprPtr parseLambda();
+    MYLANG_COMPILER_API ast::ExprPtr parseLambda();
 
     // Pratt parser for expressions with left recursion handling
-    ast::ExprPtr parseUnary();
+    MYLANG_COMPILER_API ast::ExprPtr parseUnary();
 
-    ast::ExprPtr parsePower();
+    MYLANG_COMPILER_API ast::ExprPtr parsePower();
 
-    ast::ExprPtr parseBinaryExpr(std::int32_t minPrec);
+    MYLANG_COMPILER_API ast::ExprPtr parseBinaryExpr(std::int32_t minPrec);
 
     // Python-style comparison chaining: a < b < c == d
-    ast::ExprPtr parseComparison();
+    MYLANG_COMPILER_API ast::ExprPtr parseComparison();
 
-    ast::ExprPtr parseTernary();
+    MYLANG_COMPILER_API ast::ExprPtr parseTernary();
 
-    ast::ExprPtr parseStarredExpr();
+    MYLANG_COMPILER_API ast::ExprPtr parseStarredExpr();
 
-    ast::ExprPtr parseExpression();
+    MYLANG_COMPILER_API ast::ExprPtr parseExpression();
 
-    ast::ExprPtr parseAssignmentExpr();
+    MYLANG_COMPILER_API ast::ExprPtr parseAssignmentExpr();
 
-    std::vector<ast::ExprPtr> parseExpressionList();
+    MYLANG_COMPILER_API std::vector<ast::ExprPtr> parseExpressionList();
 
     // === Statement Parsing ===
 
-    std::vector<ast::StmtPtr> parseBlock();
+    MYLANG_COMPILER_API std::vector<ast::StmtPtr> parseBlock();
 
-    ast::StmtPtr parseSimpleStmt();
+    MYLANG_COMPILER_API ast::StmtPtr parseSimpleStmt();
 
-    ast::StmtPtr parseCompoundStmt();
+    MYLANG_COMPILER_API ast::StmtPtr parseCompoundStmt();
 
-    ast::StmtPtr parseStatement();
+    MYLANG_COMPILER_API ast::StmtPtr parseStatement();
 
     // === Main Parse Method with Advanced Error Recovery ===
 
-    std::vector<ast::StmtPtr> parse();
+    MYLANG_COMPILER_API std::vector<ast::StmtPtr> parse();
 
     // === Utility Methods ===
 
@@ -266,7 +265,7 @@ class Parser
     // ParseStats getStats() const { return this->parse_stats_; }
 
     // Clear memoization cache (for memory management)
-    void clearCache();
+    MYLANG_COMPILER_API void clearCache();
 };
 
 // Static initializations

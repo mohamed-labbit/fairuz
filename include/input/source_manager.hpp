@@ -20,12 +20,10 @@ class SourceManager
 
     explicit SourceManager(std::ifstream* file) :
         file_(file),
-        input_buffer_(buffer::InputBuffer(file_, DEFAULT_CAPACITY))
+        input_buffer_(buffer::InputBuffer(file_, DEFAULT_CAPACITY)),
+        use_file_buffer_(true)
     {
-        if (!file_->is_open())
-        {
-            throw std::invalid_argument("File not open");
-        }
+        if (!file_->is_open()) throw std::invalid_argument("File not open");
     }
 
     explicit SourceManager(const std::u16string source) :
@@ -69,7 +67,7 @@ class SourceManager
     std::optional<char16_t*> current_{nullptr};
     std::optional<buffer::Position> current_position_;
 
-    bool use_file_buffer_{true};
+    bool use_file_buffer_{false};
 };
 
 }  // lex

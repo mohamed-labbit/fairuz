@@ -32,10 +32,7 @@ class SymbolTable
     // Leave current scope
     void leaveScope()
     {
-        if (this->scopes_.size() > 1)
-        {
-            this->scopes_.pop_back();
-        }
+        if (this->scopes_.size() > 1) this->scopes_.pop_back();
     }
 
     // Insert symbol into current scope
@@ -45,10 +42,7 @@ class SymbolTable
     {
         auto& current_scope = this->scopes_.back();
         // Check if symbol already exists in current scope
-        if (current_scope.find(lexeme) != current_scope.end())
-        {
-            return false;
-        }
+        if (current_scope.find(lexeme) != current_scope.end()) return false;
         // Insert into current scope
         Entry e(st, static_cast<std::size_t>(scopeLevel()));
         current_scope[lexeme] = e;
@@ -61,10 +55,7 @@ class SymbolTable
         for (auto it = this->scopes_.rbegin(); it != this->scopes_.rend(); ++it)
         {
             auto found = it->find(name);
-            if (found != it->end())
-            {
-                return found->second;
-            }
+            if (found != it->end()) return found->second;
         }
         return std::nullopt;  // not found
     }
@@ -76,16 +67,10 @@ class SymbolTable
     bool is_in_scope(const std::u16string& name, std::optional<std::size_t> _scope) const
     {
         // Default: check if symbol is visible anywhere in scope chain
-        if (_scope == std::nullopt)
-        {
-            return lookup(name).has_value();
-        }
+        if (_scope == std::nullopt) return lookup(name).has_value();
         // Check if symbol exists at specific scope level
         std::size_t scope_level = _scope.value();
-        if (scope_level >= this->scopes_.size())
-        {
-            return false;
-        }
+        if (scope_level >= this->scopes_.size()) return false;
         const auto& scope = this->scopes_[scope_level];
         return scope.find(name) != scope.end();
     }
@@ -102,9 +87,7 @@ class SymbolTable
             const auto& current = this->scopes_.back();
             symbols.reserve(current.size());
             for (const auto& pair : current)
-            {
                 symbols.push_back(pair.second);
-            }
         }
         return symbols;
     }
@@ -117,17 +100,13 @@ class SymbolTable
         std::unordered_set<std::u16string> seen;
         // Iterate from innermost to outermost
         for (auto it = this->scopes_.rbegin(); it != this->scopes_.rend(); ++it)
-        {
             for (const auto& pair : *it)
-            {
                 // Only add if not shadowed by inner scope
                 if (seen.find(pair.first) == seen.end())
                 {
                     symbols.push_back(pair.second);
                     seen.insert(pair.first);
                 }
-            }
-        }
         return symbols;
     }
 
@@ -140,9 +119,7 @@ class SymbolTable
             const auto& scope = this->scopes_[level];
             symbols.reserve(scope.size());
             for (const auto& pair : scope)
-            {
                 symbols.push_back(pair.second);
-            }
         }
         return symbols;
     }

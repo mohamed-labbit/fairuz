@@ -48,10 +48,10 @@ class InputBuffer: public InputBufferBase
 
     char16_t consume_char();
 
-    [[nodiscard]]
+    MYLANG_NODISCARD
     const char16_t& current();
 
-    [[nodiscard]]
+    MYLANG_NODISCARD
     const char16_t& peek();
 
     std::u16string n_peek(std::size_t n);
@@ -62,7 +62,7 @@ class InputBuffer: public InputBufferBase
 
     void reset();
 
-    Position position() const noexcept;
+    Position position() const MYLANG_NOEXCEPT;
 
    private:
     struct PushbackEntry

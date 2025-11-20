@@ -11,8 +11,7 @@ namespace buffer {
 bool InputBufferBase::refresh_buffer(const std::uint32_t to_refresh)
 {
     auto& file = this->file_;
-    if (!file->is_open())
-        return false;
+    if (!file->is_open()) return false;
     auto& bufs = this->buffers_;
     std::size_t max_chars = bufs[to_refresh].size() - 1;
     auto buf = read_wchar_window(max_chars);
@@ -35,17 +34,14 @@ typename InputBufferBase::buffer_t InputBufferBase::read_wchar_window(std::size_
     auto& byte_pos = this->byte_position_;
     auto& char_count = this->char_count_;
 
-    if (max_chars == 0)
-        return {};
-    if (!file->is_open())
-        return {};
+    if (max_chars == 0) return {};
+    if (!file->is_open()) return {};
 
     std::size_t byte_chunk_size = max_chars * 4;
     std::vector<char> byte_buffer(byte_chunk_size);
     file->read(byte_buffer.data(), byte_chunk_size);
     std::streamsize bytes_read = file->gcount();
-    if (bytes_read <= 0)
-        return {};
+    if (bytes_read <= 0) return {};
 
     // validate the buffer bytes
     byte_buffer.resize(bytes_read);
@@ -70,8 +66,7 @@ typename InputBufferBase::buffer_t InputBufferBase::read_wchar_window(std::size_
                     expected_bytes = 3;
                 else if ((byte & 0xF8) == 0xF0)
                     expected_bytes = 4;
-                if (i + expected_bytes > bytes_read)
-                    bytes_to_rewind = bytes_read - i;
+                if (i + expected_bytes > bytes_read) bytes_to_rewind = bytes_read - i;
                 break;
             }
         }
@@ -91,8 +86,7 @@ typename InputBufferBase::buffer_t InputBufferBase::read_wchar_window(std::size_
         u8_str.push_back(b);
 
     buffer_t result = utf8::utf8to16(u8_str);
-    if (result.size() > max_chars)
-        result.resize(max_chars);
+    if (result.size() > max_chars) result.resize(max_chars);
 
     char_count += result.size();
     return result;

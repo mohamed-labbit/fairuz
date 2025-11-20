@@ -19,19 +19,14 @@ class EnhancedASTPrinter
 
     std::string colorize(const std::u16string& text, const std::u16string color, bool enabled = true)
     {
-        if (!enabled)
-        {
-            return utf8::utf16to8(text);
-        }
+        if (!enabled) return utf8::utf16to8(text);
         return utf8::utf16to8(color + text + Color::RESET);
     }
 
     void printIndent()
     {
         for (int i = 0; i < indent; i++)
-        {
             std::cout << (useColor ? "│ " : "| ");
-        }
     }
 
    public:
@@ -42,10 +37,8 @@ class EnhancedASTPrinter
 
     void print(const mylang::parser::ast::Expr* expr)
     {
-        if (!expr)
-        {
-            return;
-        }
+        if (!expr) return;
+
         nodeCount++;
 
         switch (expr->kind)
@@ -90,9 +83,7 @@ class EnhancedASTPrinter
             indent++;
             print(e->callee.get());
             for (const auto& arg : e->args)
-            {
                 print(arg.get());
-            }
             indent--;
             break;
         }
@@ -102,23 +93,17 @@ class EnhancedASTPrinter
             std::cout << colorize(u"List", Color::BLUE, useColor) << " [" << e->elements.size() << "]\n";
             indent++;
             for (const auto& elem : e->elements)
-            {
                 print(elem.get());
-            }
             indent--;
             break;
         }
-        default :
-            break;
+        default : break;
         }
     }
 
     void print(const mylang::parser::ast::Stmt* stmt)
     {
-        if (!stmt)
-        {
-            return;
-        }
+        if (!stmt) return;
 
         nodeCount++;
 
@@ -141,9 +126,7 @@ class EnhancedASTPrinter
             indent++;
             print(s->condition.get());
             for (const auto& st : s->thenBlock)
-            {
                 print(st.get());
-            }
             indent--;
             break;
         }
@@ -154,9 +137,7 @@ class EnhancedASTPrinter
             indent++;
             print(s->condition.get());
             for (const auto& st : s->body)
-            {
                 print(st.get());
-            }
             indent--;
             break;
         }
@@ -167,9 +148,7 @@ class EnhancedASTPrinter
             indent++;
             print(s->iter.get());
             for (const auto& st : s->body)
-            {
                 print(st.get());
-            }
             indent--;
             break;
         }
@@ -181,17 +160,12 @@ class EnhancedASTPrinter
             for (std::size_t i = 0; i < s->params.size(); i++)
             {
                 std::cout << utf8::utf16to8(s->params[i]);
-                if (i + 1 < s->params.size())
-                {
-                    std::cout << ", ";
-                }
+                if (i + 1 < s->params.size()) std::cout << ", ";
             }
             std::cout << ")\n";
             indent++;
             for (const auto& st : s->body)
-            {
                 print(st.get());
-            }
             indent--;
             break;
         }
@@ -209,8 +183,7 @@ class EnhancedASTPrinter
             print(s->expression.get());
             break;
         }
-        default :
-            break;
+        default : break;
         }
     }
 
