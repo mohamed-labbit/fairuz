@@ -6,35 +6,33 @@
 #include <memory>
 #include <vector>
 
-using namespace mylang::parser;
-using namespace mylang::lex::tok;
-using namespace mylang::lex;
-using namespace mylang::parser::ast;
 
 // ============================================================================
 // Test Fixtures
 // ============================================================================
 
+
 class ParserTest: public ::testing::Test
 {
    protected:
-    std::vector<Token> createTokens(std::initializer_list<TokenType> types)
+    std::vector<mylang::lex::tok::Token> createTokens(std::initializer_list<mylang::lex::tok::TokenType> types)
     {
-        Lexer lexer;
-        std::vector<Token> tokens;
+        mylang::lex::Lexer lexer;
+        std::vector<mylang::lex::tok::Token> tokens;
         int line = 1, col = 1;
         for (auto type : types)
         {
             tokens.emplace_back(lexer.make_token(type, u"", line, col));
             col++;
         }
-        tokens.emplace_back(lexer.make_token(TokenType::ENDMARKER, u"", line, col));
+        tokens.emplace_back(lexer.make_token(mylang::lex::tok::TokenType::ENDMARKER, u"", line, col));
         return tokens;
     }
 
-    Token makeToken(TokenType type, const std::u16string& value = u"", int line = 1, int col = 1)
+    mylang::lex::tok::Token makeToken(
+      mylang::lex::tok::TokenType type, const std::u16string& value = u"", int line = 1, int col = 1)
     {
-        Lexer lexer;
+        mylang::lex::Lexer lexer;
         return lexer.make_token(type, value, line, col);
     }
 };
@@ -45,8 +43,7 @@ class ParserTest: public ::testing::Test
 
 TEST(ParseErrorTest, BasicConstruction)
 {
-    ParseError err(u"Test error", 10, 5, u"context line", {u"suggestion1"});
-
+    mylang::parser::ParseError err(u"Test error", 10, 5, u"context line", {u"suggestion1"});
     EXPECT_EQ(err.line, 10);
     EXPECT_EQ(err.column, 5);
     EXPECT_EQ(err.context, u"context line");
@@ -56,7 +53,7 @@ TEST(ParseErrorTest, BasicConstruction)
 
 TEST(ParseErrorTest, FormatMethod)
 {
-    ParseError err(u"Syntax error", 5, 10);
+    mylang::parser::ParseError err(u"Syntax error", 5, 10);
     std::u16string formatted = err.format();
     EXPECT_FALSE(formatted.empty());
 }
@@ -64,8 +61,7 @@ TEST(ParseErrorTest, FormatMethod)
 TEST(ParseErrorTest, MultipleSuggestions)
 {
     std::vector<std::u16string> suggestions = {u"اذا", u"طالما", u"لكل"};
-    ParseError err(u"Unknown keyword", 1, 1, u"", suggestions);
-
+    mylang::parser::ParseError err(u"Unknown keyword", 1, 1, u"", suggestions);
     EXPECT_EQ(err.suggestions.size(), 3);
 }
 
@@ -75,96 +71,100 @@ TEST(ParseErrorTest, MultipleSuggestions)
 /*
 
 TEST_F(ParserTest, PeekWithOffset) {
-    auto tokens = createTokens({TokenType::NUMBER, TokenType::OP_PLUS, 
-                                TokenType::NUMBER});
+    auto tokens = createTokens({mylang::lex::tok::TokenType::NUMBER, mylang::lex::tok::TokenType::OP_PLUS, 
+                                mylang::lex::tok::TokenType::NUMBER});
     Parser parser(tokens);
     
     // Test peeking without advancing
     auto tok1 = parser.peek(0);
     auto tok2 = parser.peek(1);
     
-    EXPECT_EQ(tok1.type, TokenType::NUMBER);
-    EXPECT_EQ(tok2.type, TokenType::OP_PLUS);
+    EXPECT_EQ(tok1.type, mylang::lex::tok::TokenType::NUMBER);
+    EXPECT_EQ(tok2.type, mylang::lex::tok::TokenType::OP_PLUS);
 }
 
 TEST_F(ParserTest, AdvanceToken) {
-    auto tokens = createTokens({TokenType::NUMBER, TokenType::OP_PLUS});
+    auto tokens = createTokens({mylang::lex::tok::TokenType::NUMBER, mylang::lex::tok::TokenType::OP_PLUS});
     Parser parser(tokens);
     
     auto first = parser.advance();
     auto second = parser.advance();
     
-    EXPECT_EQ(first.type, TokenType::NUMBER);
-    EXPECT_EQ(second.type, TokenType::OP_PLUS);
+    EXPECT_EQ(first.type, mylang::lex::tok::TokenType::NUMBER);
+    EXPECT_EQ(second.type, mylang::lex::tok::TokenType::OP_PLUS);
 }
 
 TEST_F(ParserTest, CheckTokenType) {
-    auto tokens = createTokens({TokenType::KW_IF, TokenType::LPAREN});
+    auto tokens = createTokens({mylang::lex::tok::TokenType::KW_IF, mylang::lex::tok::TokenType::LPAREN});
     Parser parser(tokens);
     
-    EXPECT_TRUE(parser.check(TokenType::KW_IF));
-    EXPECT_FALSE(parser.check(TokenType::KW_WHILE));
+    EXPECT_TRUE(parser.check(mylang::lex::tok::TokenType::KW_IF));
+    EXPECT_FALSE(parser.check(mylang::lex::tok::TokenType::KW_WHILE));
 }
 
 TEST_F(ParserTest, CheckAnyTokenTypes) {
-    auto tokens = createTokens({TokenType::OP_PLUS});
+    auto tokens = createTokens({mylang::lex::tok::TokenType::OP_PLUS});
     Parser parser(tokens);
     
-    EXPECT_TRUE(parser.checkAny({TokenType::OP_PLUS, TokenType::MINUS, TokenType::STAR}));
-    EXPECT_FALSE(parser.checkAny({TokenType::LPAREN, TokenType::RPAREN}));
+    EXPECT_TRUE(parser.checkAny({mylang::lex::tok::TokenType::OP_PLUS, mylang::lex::tok::TokenType::MINUS, mylang::lex::tok::TokenType::STAR}));
+    EXPECT_FALSE(parser.checkAny({mylang::lex::tok::TokenType::LPAREN, mylang::lex::tok::TokenType::RPAREN}));
 }
 
 TEST_F(ParserTest, MatchTokenTypes) {
-    auto tokens = createTokens({TokenType::KW_IF, TokenType::LPAREN});
+    auto tokens = createTokens({mylang::lex::tok::TokenType::KW_IF, mylang::lex::tok::TokenType::LPAREN});
     Parser parser(tokens);
     
-    EXPECT_TRUE(parser.match({TokenType::KW_IF, TokenType::KW_WHILE}));
-    EXPECT_TRUE(parser.check(TokenType::LPAREN)); // Advanced past KW_IF
+    EXPECT_TRUE(parser.match({mylang::lex::tok::TokenType::KW_IF, mylang::lex::tok::TokenType::KW_WHILE}));
+    EXPECT_TRUE(parser.check(mylang::lex::tok::TokenType::LPAREN)); // Advanced past KW_IF
 }
 */
 // ============================================================================
 // Primary Expression Tests
 // ============================================================================
 
+const std::string test_cases_dir = "/Users/mohamedrabbit/code/mylang/tests/parser/test_cases/";
+
+
 TEST_F(ParserTest, ParseNumberLiteral)
 {
-    std::vector<Token> tokens = {makeToken(TokenType::NUMBER, u"42"), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "number_literal.txt", std::ios::binary);
+    mylang::parser::Parser parser(&file);
     auto expr = parser.parsePrimary();
     ASSERT_NE(expr, nullptr);
+    file.close();
     // Add type checking based on your AST implementation
 }
 
 TEST_F(ParserTest, ParseStringLiteral)
 {
-    std::vector<Token> tokens = {makeToken(TokenType::STRING, u"hello"), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "string_literal.txt", std::ios::binary);
+    mylang::parser::Parser parser(&file);
     auto expr = parser.parsePrimary();
     ASSERT_NE(expr, nullptr);
+    file.close();
 }
 
 TEST_F(ParserTest, ParseBooleanLiterals)
 {
-    std::vector<Token> tokens1 = {makeToken(TokenType::KW_TRUE), makeToken(TokenType::ENDMARKER)};
-    Parser parser1(tokens1);
+    std::ifstream file_true(test_cases_dir + "boolean_literal_true", std::ios::binary);
+    mylang::parser::Parser parser1(&file_true);
     auto expr1 = parser1.parsePrimary();
     ASSERT_NE(expr1, nullptr);
-
-    std::vector<Token> tokens2 = {makeToken(TokenType::KW_FALSE), makeToken(TokenType::ENDMARKER)};
-    Parser parser2(tokens2);
+    file_true.close();
+    std::ifstream file_false(test_cases_dir + "boolean_literal_false", std::ios::binary);
+    mylang::parser::Parser parser2(&file_false);
     auto expr2 = parser2.parsePrimary();
     ASSERT_NE(expr2, nullptr);
+    file_false.close();
 }
 
 TEST_F(ParserTest, ParseIdentifier)
 {
-    std::vector<Token> tokens = {makeToken(TokenType::IDENTIFIER, u"variable"), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "identifier.txt", std::ios::binary);
+    mylang::parser::Parser parser(&file);
     auto expr = parser.parsePrimary();
     ASSERT_NE(expr, nullptr);
+    file.close();
 }
 
 // ============================================================================
@@ -173,32 +173,38 @@ TEST_F(ParserTest, ParseIdentifier)
 
 TEST_F(ParserTest, ParseUnaryMinus)
 {
-    std::vector<Token> tokens = {
-      makeToken(TokenType::OP_MINUS), makeToken(TokenType::NUMBER, u"5"), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "unary_minus.txt", std::ios::binary);
+    mylang::parser::Parser parser(&file);
     auto expr = parser.parseUnary();
     ASSERT_NE(expr, nullptr);
+    file.close();
 }
+
+//
+// write the files starting from here
+//
 
 TEST_F(ParserTest, ParseUnaryNot)
 {
-    std::vector<Token> tokens = {
-      makeToken(TokenType::KW_NOT), makeToken(TokenType::KW_TRUE), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "unary_not.txt", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::KW_NOT),
+      makeToken(mylang::lex::tok::TokenType::KW_TRUE), makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto expr = parser.parseUnary();
     ASSERT_NE(expr, nullptr);
+    file.close();
 }
 
 TEST_F(ParserTest, ParseNestedUnary)
 {
-    std::vector<Token> tokens = {makeToken(TokenType::OP_MINUS), makeToken(TokenType::OP_MINUS),
-      makeToken(TokenType::NUMBER, u"10"), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::OP_MINUS),
+      makeToken(mylang::lex::tok::TokenType::OP_MINUS), makeToken(mylang::lex::tok::TokenType::NUMBER, u"10"),
+      makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto expr = parser.parseUnary();
     ASSERT_NE(expr, nullptr);
+    file.close();
 }
 
 // ============================================================================
@@ -207,44 +213,50 @@ TEST_F(ParserTest, ParseNestedUnary)
 
 TEST_F(ParserTest, ParseSimpleAddition)
 {
-    std::vector<Token> tokens = {makeToken(TokenType::NUMBER, u"5"), makeToken(TokenType::OP_PLUS),
-      makeToken(TokenType::NUMBER, u"3"), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "simple_addition.txt", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::NUMBER, u"5"),
+      makeToken(mylang::lex::tok::TokenType::OP_PLUS), makeToken(mylang::lex::tok::TokenType::NUMBER, u"3"),
+      makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto expr = parser.parseExpression();
     ASSERT_NE(expr, nullptr);
+    file.close();
 }
 
 TEST_F(ParserTest, ParseMultiplication)
 {
-    std::vector<Token> tokens = {makeToken(TokenType::NUMBER, u"4"), makeToken(TokenType::OP_STAR),
-      makeToken(TokenType::NUMBER, u"2"), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "multiplication.txt", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::NUMBER, u"4"),
+      makeToken(mylang::lex::tok::TokenType::OP_STAR), makeToken(mylang::lex::tok::TokenType::NUMBER, u"2"),
+      makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto expr = parser.parseExpression();
     ASSERT_NE(expr, nullptr);
+    file.close();
 }
 
 TEST_F(ParserTest, ParseOperatorPrecedence)
 {
+    std::ifstream file(test_cases_dir + "operator_precedence.txt", std::ios::binary);
     // 2 + 3 * 4 should parse as 2 + (3 * 4)
-    std::vector<Token> tokens = {makeToken(TokenType::NUMBER, u"2"), makeToken(TokenType::OP_PLUS),
-      makeToken(TokenType::NUMBER, u"3"), makeToken(TokenType::OP_STAR), makeToken(TokenType::NUMBER, u"4"),
-      makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::NUMBER, u"2"),
+      makeToken(mylang::lex::tok::TokenType::OP_PLUS), makeToken(mylang::lex::tok::TokenType::NUMBER, u"3"),
+      makeToken(mylang::lex::tok::TokenType::OP_STAR), makeToken(mylang::lex::tok::TokenType::NUMBER, u"4"),
+      makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto expr = parser.parseExpression();
     ASSERT_NE(expr, nullptr);
     // Verify AST structure matches expected precedence
+    file.close();
 }
 
 /*
 TEST_F(ParserTest, ParsePowerOperator) {
-    std::vector<Token> tokens = {
-        makeToken(TokenType::NUMBER, u"2"),
-        makeToken(TokenType::POWER),
-        makeToken(TokenType::NUMBER, u"3"),
-        makeToken(TokenType::ENDMARKER)
+    std::vector<mylang::lex::tok::Token> tokens = {
+        makeToken(mylang::lex::tok::TokenType::NUMBER, u"2"),
+        makeToken(mylang::lex::tok::TokenType::POWER),
+        makeToken(mylang::lex::tok::TokenType::NUMBER, u"3"),
+        makeToken(mylang::lex::tok::TokenType::ENDMARKER)
     };
     Parser parser(tokens);
     
@@ -259,35 +271,41 @@ TEST_F(ParserTest, ParsePowerOperator) {
 
 TEST_F(ParserTest, ParseSimpleComparison)
 {
-    std::vector<Token> tokens = {makeToken(TokenType::NUMBER, u"5"), makeToken(TokenType::OP_LT),
-      makeToken(TokenType::NUMBER, u"10"), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "simple_comparison.txt", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::NUMBER, u"5"),
+      makeToken(mylang::lex::tok::TokenType::OP_LT), makeToken(mylang::lex::tok::TokenType::NUMBER, u"10"),
+      makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto expr = parser.parseComparison();
     ASSERT_NE(expr, nullptr);
+    file.close();
 }
 
 TEST_F(ParserTest, ParseChainedComparison)
 {
     // a < b < c
-    std::vector<Token> tokens = {makeToken(TokenType::IDENTIFIER, u"a"), makeToken(TokenType::OP_LT),
-      makeToken(TokenType::IDENTIFIER, u"b"), makeToken(TokenType::OP_LT), makeToken(TokenType::IDENTIFIER, u"c"),
-      makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "chained_comparison.txt", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::IDENTIFIER, u"a"),
+      makeToken(mylang::lex::tok::TokenType::OP_LT), makeToken(mylang::lex::tok::TokenType::IDENTIFIER, u"b"),
+      makeToken(mylang::lex::tok::TokenType::OP_LT), makeToken(mylang::lex::tok::TokenType::IDENTIFIER, u"c"),
+      makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto expr = parser.parseComparison();
     ASSERT_NE(expr, nullptr);
+    file.close();
 }
 
 TEST_F(ParserTest, ParseEqualityComparison)
 {
     // 42 = x
-    std::vector<Token> tokens = {makeToken(TokenType::IDENTIFIER, u"x"), makeToken(TokenType::OP_EQ),
-      makeToken(TokenType::NUMBER, u"42"), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "equality_comparison.txt", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::IDENTIFIER, u"x"),
+      makeToken(mylang::lex::tok::TokenType::OP_EQ), makeToken(mylang::lex::tok::TokenType::NUMBER, u"42"),
+      makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto expr = parser.parseComparison();
     ASSERT_NE(expr, nullptr);
+    file.close();
 }
 
 // ============================================================================
@@ -296,13 +314,14 @@ TEST_F(ParserTest, ParseEqualityComparison)
 
 TEST_F(ParserTest, ParseTernaryExpression)
 {
-    std::vector<Token> tokens = {makeToken(TokenType::IDENTIFIER, u"x"), makeToken(TokenType::KW_IF),
-      makeToken(TokenType::IDENTIFIER, u"condition"), makeToken(TokenType::IDENTIFIER, u"y"),
-      makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "ternary_expression.txt", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::IDENTIFIER, u"x"),
+      makeToken(mylang::lex::tok::TokenType::KW_IF), makeToken(mylang::lex::tok::TokenType::IDENTIFIER, u"condition"),
+      makeToken(mylang::lex::tok::TokenType::IDENTIFIER, u"y"), makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto expr = parser.parseTernary();
     ASSERT_NE(expr, nullptr);
+    file.close();
 }
 
 // ============================================================================
@@ -311,23 +330,26 @@ TEST_F(ParserTest, ParseTernaryExpression)
 
 TEST_F(ParserTest, ParseParenthesizedExpr)
 {
-    std::vector<Token> tokens = {makeToken(TokenType::LPAREN), makeToken(TokenType::NUMBER, u"5"),
-      makeToken(TokenType::OP_PLUS), makeToken(TokenType::NUMBER, u"3"), makeToken(TokenType::RPAREN),
-      makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "parenthesized_expr.txt", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::LPAREN),
+      makeToken(mylang::lex::tok::TokenType::NUMBER, u"5"), makeToken(mylang::lex::tok::TokenType::OP_PLUS),
+      makeToken(mylang::lex::tok::TokenType::NUMBER, u"3"), makeToken(mylang::lex::tok::TokenType::RPAREN),
+      makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto expr = parser.parseParenthesizedExpr();
     ASSERT_NE(expr, nullptr);
+    file.close();
 }
 
 TEST_F(ParserTest, ParseEmptyTuple)
 {
-    std::vector<Token> tokens = {
-      makeToken(TokenType::LPAREN), makeToken(TokenType::RPAREN), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::LPAREN),
+      makeToken(mylang::lex::tok::TokenType::RPAREN), makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto expr = parser.parseParenthesizedExpr();
     ASSERT_NE(expr, nullptr);
+    file.close();
 }
 
 // ============================================================================
@@ -336,23 +358,27 @@ TEST_F(ParserTest, ParseEmptyTuple)
 
 TEST_F(ParserTest, ParseEmptyList)
 {
-    std::vector<Token> tokens = {
-      makeToken(TokenType::LBRACKET), makeToken(TokenType::RBRACKET), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "empty_list.txt", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::LBRACKET),
+      makeToken(mylang::lex::tok::TokenType::RBRACKET), makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto expr = parser.parseListLiteral();
     ASSERT_NE(expr, nullptr);
+    file.close();
 }
 
 TEST_F(ParserTest, ParseListWithElements)
 {
-    std::vector<Token> tokens = {makeToken(TokenType::LBRACKET), makeToken(TokenType::NUMBER, u"1"),
-      makeToken(TokenType::COMMA), makeToken(TokenType::NUMBER, u"2"), makeToken(TokenType::COMMA),
-      makeToken(TokenType::NUMBER, u"3"), makeToken(TokenType::RBRACKET), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "list_with_elements.txt", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::LBRACKET),
+      makeToken(mylang::lex::tok::TokenType::NUMBER, u"1"), makeToken(mylang::lex::tok::TokenType::COMMA),
+      makeToken(mylang::lex::tok::TokenType::NUMBER, u"2"), makeToken(mylang::lex::tok::TokenType::COMMA),
+      makeToken(mylang::lex::tok::TokenType::NUMBER, u"3"), makeToken(mylang::lex::tok::TokenType::RBRACKET),
+      makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto expr = parser.parseListLiteral();
     ASSERT_NE(expr, nullptr);
+    file.close();
 }
 
 // ============================================================================
@@ -361,23 +387,26 @@ TEST_F(ParserTest, ParseListWithElements)
 
 TEST_F(ParserTest, ParseEmptyDict)
 {
-    std::vector<Token> tokens = {
-      makeToken(TokenType::LBRACE), makeToken(TokenType::RBRACE), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "empty_dict.txt", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::LBRACE),
+      makeToken(mylang::lex::tok::TokenType::RBRACE), makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto expr = parser.parseDictLiteral();
     ASSERT_NE(expr, nullptr);
+    file.close();
 }
 
 TEST_F(ParserTest, ParseDictWithKeyValue)
 {
-    std::vector<Token> tokens = {makeToken(TokenType::LBRACE), makeToken(TokenType::STRING, u"key"),
-      makeToken(TokenType::COLON), makeToken(TokenType::NUMBER, u"42"), makeToken(TokenType::RBRACE),
-      makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "dict_with_key_value.txt", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::LBRACE),
+      makeToken(mylang::lex::tok::TokenType::STRING, u"key"), makeToken(mylang::lex::tok::TokenType::COLON),
+      makeToken(mylang::lex::tok::TokenType::NUMBER, u"42"), makeToken(mylang::lex::tok::TokenType::RBRACE),
+      makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto expr = parser.parseDictLiteral();
     ASSERT_NE(expr, nullptr);
+    file.close();
 }
 
 // ============================================================================
@@ -386,24 +415,29 @@ TEST_F(ParserTest, ParseDictWithKeyValue)
 
 TEST_F(ParserTest, ParseSimpleLambda)
 {
-    std::vector<Token> tokens = {makeToken(TokenType::IDENTIFIER, u"x"), makeToken(TokenType::COLON),
-      makeToken(TokenType::IDENTIFIER, u"x"), makeToken(TokenType::OP_STAR), makeToken(TokenType::NUMBER, u"2"),
-      makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "simple_lambda.txt", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::IDENTIFIER, u"x"),
+      makeToken(mylang::lex::tok::TokenType::COLON), makeToken(mylang::lex::tok::TokenType::IDENTIFIER, u"x"),
+      makeToken(mylang::lex::tok::TokenType::OP_STAR), makeToken(mylang::lex::tok::TokenType::NUMBER, u"2"),
+      makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto expr = parser.parseLambda();
     ASSERT_NE(expr, nullptr);
+    file.close();
 }
 
 TEST_F(ParserTest, ParseLambdaWithMultipleParams)
 {
-    std::vector<Token> tokens = {makeToken(TokenType::IDENTIFIER, u"x"), makeToken(TokenType::COMMA),
-      makeToken(TokenType::IDENTIFIER, u"y"), makeToken(TokenType::COLON), makeToken(TokenType::IDENTIFIER, u"x"),
-      makeToken(TokenType::OP_PLUS), makeToken(TokenType::IDENTIFIER, u"y"), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::IDENTIFIER, u"x"),
+      makeToken(mylang::lex::tok::TokenType::COMMA), makeToken(mylang::lex::tok::TokenType::IDENTIFIER, u"y"),
+      makeToken(mylang::lex::tok::TokenType::COLON), makeToken(mylang::lex::tok::TokenType::IDENTIFIER, u"x"),
+      makeToken(mylang::lex::tok::TokenType::OP_PLUS), makeToken(mylang::lex::tok::TokenType::IDENTIFIER, u"y"),
+      makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto expr = parser.parseLambda();
     ASSERT_NE(expr, nullptr);
+    file.close();
 }
 
 // ============================================================================
@@ -412,47 +446,55 @@ TEST_F(ParserTest, ParseLambdaWithMultipleParams)
 
 TEST_F(ParserTest, ParseFunctionCall)
 {
-    std::vector<Token> tokens = {makeToken(TokenType::IDENTIFIER, u"func"), makeToken(TokenType::LPAREN),
-      makeToken(TokenType::RPAREN), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::IDENTIFIER, u"func"),
+      makeToken(mylang::lex::tok::TokenType::LPAREN), makeToken(mylang::lex::tok::TokenType::RPAREN),
+      makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto expr = parser.parsePrimary();
     expr = parser.parsePostfixOps(std::move(expr));
     ASSERT_NE(expr, nullptr);
+    file.close();
 }
 
 TEST_F(ParserTest, ParseFunctionCallWithArgs)
 {
-    std::vector<Token> tokens = {makeToken(TokenType::IDENTIFIER, u"func"), makeToken(TokenType::LPAREN),
-      makeToken(TokenType::NUMBER, u"1"), makeToken(TokenType::COMMA), makeToken(TokenType::NUMBER, u"2"),
-      makeToken(TokenType::RPAREN), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::IDENTIFIER, u"func"),
+      makeToken(mylang::lex::tok::TokenType::LPAREN), makeToken(mylang::lex::tok::TokenType::NUMBER, u"1"),
+      makeToken(mylang::lex::tok::TokenType::COMMA), makeToken(mylang::lex::tok::TokenType::NUMBER, u"2"),
+      makeToken(mylang::lex::tok::TokenType::RPAREN), makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto expr = parser.parsePrimary();
     expr = parser.parsePostfixOps(std::move(expr));
     ASSERT_NE(expr, nullptr);
+    file.close();
 }
 
 TEST_F(ParserTest, ParseSubscript)
 {
-    std::vector<Token> tokens = {makeToken(TokenType::IDENTIFIER, u"list"), makeToken(TokenType::LBRACKET),
-      makeToken(TokenType::NUMBER, u"0"), makeToken(TokenType::RBRACKET), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::IDENTIFIER, u"list"),
+      makeToken(mylang::lex::tok::TokenType::LBRACKET), makeToken(mylang::lex::tok::TokenType::NUMBER, u"0"),
+      makeToken(mylang::lex::tok::TokenType::RBRACKET), makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto expr = parser.parsePrimary();
     expr = parser.parsePostfixOps(std::move(expr));
     ASSERT_NE(expr, nullptr);
+    file.close();
 }
 
 TEST_F(ParserTest, ParseAttributeAccess)
 {
-    std::vector<Token> tokens = {makeToken(TokenType::IDENTIFIER, u"obj"), makeToken(TokenType::DOT),
-      makeToken(TokenType::IDENTIFIER, u"property"), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::IDENTIFIER, u"obj"),
+      makeToken(mylang::lex::tok::TokenType::DOT), makeToken(mylang::lex::tok::TokenType::IDENTIFIER, u"property"),
+      makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto expr = parser.parsePrimary();
     expr = parser.parsePostfixOps(std::move(expr));
     ASSERT_NE(expr, nullptr);
+    file.close();
 }
 
 // ============================================================================
@@ -461,22 +503,26 @@ TEST_F(ParserTest, ParseAttributeAccess)
 
 TEST_F(ParserTest, ParseSimpleAssignment)
 {
-    std::vector<Token> tokens = {makeToken(TokenType::IDENTIFIER, u"x"), makeToken(TokenType::OP_EQ),
-      makeToken(TokenType::NUMBER, u"42"), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::IDENTIFIER, u"x"),
+      makeToken(mylang::lex::tok::TokenType::OP_EQ), makeToken(mylang::lex::tok::TokenType::NUMBER, u"42"),
+      makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto expr = parser.parseAssignmentExpr();
     ASSERT_NE(expr, nullptr);
+    file.close();
 }
 
 TEST_F(ParserTest, ParseAugmentedAssignment)
 {
-    std::vector<Token> tokens = {makeToken(TokenType::IDENTIFIER, u"x"), makeToken(TokenType::OP_PLUSEQ),
-      makeToken(TokenType::NUMBER, u"5"), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::IDENTIFIER, u"x"),
+      makeToken(mylang::lex::tok::TokenType::OP_PLUSEQ), makeToken(mylang::lex::tok::TokenType::NUMBER, u"5"),
+      makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto expr = parser.parseAssignmentExpr();
     ASSERT_NE(expr, nullptr);
+    file.close();
 }
 
 // ============================================================================
@@ -485,60 +531,74 @@ TEST_F(ParserTest, ParseAugmentedAssignment)
 
 TEST_F(ParserTest, ParseSimpleStatement)
 {
-    std::vector<Token> tokens = {makeToken(TokenType::IDENTIFIER, u"x"), makeToken(TokenType::OP_EQ),
-      makeToken(TokenType::NUMBER, u"10"), makeToken(TokenType::NEWLINE), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::IDENTIFIER, u"x"),
+      makeToken(mylang::lex::tok::TokenType::OP_EQ), makeToken(mylang::lex::tok::TokenType::NUMBER, u"10"),
+      makeToken(mylang::lex::tok::TokenType::NEWLINE), makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto stmt = parser.parseSimpleStmt();
     ASSERT_NE(stmt, nullptr);
+    file.close();
 }
 
 TEST_F(ParserTest, ParseIfStatement)
 {
-    std::vector<Token> tokens = {makeToken(TokenType::KW_IF), makeToken(TokenType::KW_TRUE),
-      makeToken(TokenType::COLON), makeToken(TokenType::NEWLINE), makeToken(TokenType::INDENT),
-      makeToken(TokenType::NEWLINE), makeToken(TokenType::DEDENT), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::KW_IF),
+      makeToken(mylang::lex::tok::TokenType::KW_TRUE), makeToken(mylang::lex::tok::TokenType::COLON),
+      makeToken(mylang::lex::tok::TokenType::NEWLINE), makeToken(mylang::lex::tok::TokenType::INDENT),
+      makeToken(mylang::lex::tok::TokenType::NEWLINE), makeToken(mylang::lex::tok::TokenType::DEDENT),
+      makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto stmt = parser.parseCompoundStmt();
     ASSERT_NE(stmt, nullptr);
+    file.close();
 }
 
 TEST_F(ParserTest, ParseWhileLoop)
 {
-    std::vector<Token> tokens = {makeToken(TokenType::KW_WHILE), makeToken(TokenType::KW_TRUE),
-      makeToken(TokenType::COLON), makeToken(TokenType::NEWLINE), makeToken(TokenType::INDENT),
-      makeToken(TokenType::NEWLINE), makeToken(TokenType::DEDENT), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::KW_WHILE),
+      makeToken(mylang::lex::tok::TokenType::KW_TRUE), makeToken(mylang::lex::tok::TokenType::COLON),
+      makeToken(mylang::lex::tok::TokenType::NEWLINE), makeToken(mylang::lex::tok::TokenType::INDENT),
+      makeToken(mylang::lex::tok::TokenType::NEWLINE), makeToken(mylang::lex::tok::TokenType::DEDENT),
+      makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto stmt = parser.parseCompoundStmt();
     ASSERT_NE(stmt, nullptr);
+    file.close();
 }
 
 TEST_F(ParserTest, ParseForLoop)
 {
-    std::vector<Token> tokens = {makeToken(TokenType::KW_FOR), makeToken(TokenType::IDENTIFIER, u"i"),
-      makeToken(TokenType::KW_IN), makeToken(TokenType::IDENTIFIER, u"range"), makeToken(TokenType::LPAREN),
-      makeToken(TokenType::NUMBER, u"10"), makeToken(TokenType::RPAREN), makeToken(TokenType::COLON),
-      makeToken(TokenType::NEWLINE), makeToken(TokenType::INDENT), makeToken(TokenType::NEWLINE),
-      makeToken(TokenType::DEDENT), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::KW_FOR),
+      makeToken(mylang::lex::tok::TokenType::IDENTIFIER, u"i"), makeToken(mylang::lex::tok::TokenType::KW_IN),
+      makeToken(mylang::lex::tok::TokenType::IDENTIFIER, u"range"), makeToken(mylang::lex::tok::TokenType::LPAREN),
+      makeToken(mylang::lex::tok::TokenType::NUMBER, u"10"), makeToken(mylang::lex::tok::TokenType::RPAREN),
+      makeToken(mylang::lex::tok::TokenType::COLON), makeToken(mylang::lex::tok::TokenType::NEWLINE),
+      makeToken(mylang::lex::tok::TokenType::INDENT), makeToken(mylang::lex::tok::TokenType::NEWLINE),
+      makeToken(mylang::lex::tok::TokenType::DEDENT), makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto stmt = parser.parseCompoundStmt();
     ASSERT_NE(stmt, nullptr);
+    file.close();
 }
 
 TEST_F(ParserTest, ParseFunctionDefinition)
 {
-    std::vector<Token> tokens = {makeToken(TokenType::KW_FN), makeToken(TokenType::IDENTIFIER, u"test"),
-      makeToken(TokenType::LPAREN), makeToken(TokenType::RPAREN), makeToken(TokenType::COLON),
-      makeToken(TokenType::NEWLINE), makeToken(TokenType::INDENT), makeToken(TokenType::KW_RETURN),
-      makeToken(TokenType::NUMBER, u"42"), makeToken(TokenType::NEWLINE), makeToken(TokenType::DEDENT),
-      makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::KW_FN),
+      makeToken(mylang::lex::tok::TokenType::IDENTIFIER, u"test"), makeToken(mylang::lex::tok::TokenType::LPAREN),
+      makeToken(mylang::lex::tok::TokenType::RPAREN), makeToken(mylang::lex::tok::TokenType::COLON),
+      makeToken(mylang::lex::tok::TokenType::NEWLINE), makeToken(mylang::lex::tok::TokenType::INDENT),
+      makeToken(mylang::lex::tok::TokenType::KW_RETURN), makeToken(mylang::lex::tok::TokenType::NUMBER, u"42"),
+      makeToken(mylang::lex::tok::TokenType::NEWLINE), makeToken(mylang::lex::tok::TokenType::DEDENT),
+      makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto stmt = parser.parseCompoundStmt();
     ASSERT_NE(stmt, nullptr);
+    file.close();
 }
 
 // ============================================================================
@@ -547,24 +607,29 @@ TEST_F(ParserTest, ParseFunctionDefinition)
 
 TEST_F(ParserTest, ParseEmptyBlock)
 {
-    std::vector<Token> tokens = {makeToken(TokenType::INDENT), makeToken(TokenType::NEWLINE),
-      makeToken(TokenType::DEDENT), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::INDENT),
+      makeToken(mylang::lex::tok::TokenType::NEWLINE), makeToken(mylang::lex::tok::TokenType::DEDENT),
+      makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto stmts = parser.parseBlock();
     EXPECT_FALSE(stmts.empty());
+    file.close();
 }
 
 TEST_F(ParserTest, ParseMultiStatementBlock)
 {
-    std::vector<Token> tokens = {makeToken(TokenType::INDENT), makeToken(TokenType::IDENTIFIER, u"x"),
-      makeToken(TokenType::OP_EQ), makeToken(TokenType::NUMBER, u"1"), makeToken(TokenType::NEWLINE),
-      makeToken(TokenType::IDENTIFIER, u"y"), makeToken(TokenType::OP_EQ), makeToken(TokenType::NUMBER, u"2"),
-      makeToken(TokenType::NEWLINE), makeToken(TokenType::DEDENT), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::INDENT),
+      makeToken(mylang::lex::tok::TokenType::IDENTIFIER, u"x"), makeToken(mylang::lex::tok::TokenType::OP_EQ),
+      makeToken(mylang::lex::tok::TokenType::NUMBER, u"1"), makeToken(mylang::lex::tok::TokenType::NEWLINE),
+      makeToken(mylang::lex::tok::TokenType::IDENTIFIER, u"y"), makeToken(mylang::lex::tok::TokenType::OP_EQ),
+      makeToken(mylang::lex::tok::TokenType::NUMBER, u"2"), makeToken(mylang::lex::tok::TokenType::NEWLINE),
+      makeToken(mylang::lex::tok::TokenType::DEDENT), makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     auto stmts = parser.parseBlock();
     EXPECT_GE(stmts.size(), 2);
+    file.close();
 }
 
 // ============================================================================
@@ -572,7 +637,7 @@ TEST_F(ParserTest, ParseMultiStatementBlock)
 // ============================================================================
 /*
 TEST_F(ParserTest, ScopeEnterExit) {
-    auto tokens = createTokens({TokenType::ENDMARKER});
+    auto tokens = createTokens({mylang::lex::tok::TokenType::ENDMARKER});
     Parser parser(tokens);
     
     parser.enterScope();
@@ -584,7 +649,7 @@ TEST_F(ParserTest, ScopeEnterExit) {
 }
 
 TEST_F(ParserTest, NestedScopes) {
-    auto tokens = createTokens({TokenType::ENDMARKER});
+    auto tokens = createTokens({mylang::lex::tok::TokenType::ENDMARKER});
     Parser parser(tokens);
     
     parser.declareVariable(u"global");
@@ -600,7 +665,7 @@ TEST_F(ParserTest, NestedScopes) {
 }
 
 TEST_F(ParserTest, FunctionDeclaration) {
-    auto tokens = createTokens({TokenType::ENDMARKER});
+    auto tokens = createTokens({mylang::lex::tok::TokenType::ENDMARKER});
     Parser parser(tokens);
     
     parser.declareFunction(u"myFunc");
@@ -614,76 +679,84 @@ TEST_F(ParserTest, FunctionDeclaration) {
 
 TEST_F(ParserTest, UnexpectedTokenError)
 {
-    std::vector<Token> tokens = {makeToken(TokenType::OP_PLUS), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {
+      makeToken(mylang::lex::tok::TokenType::OP_PLUS), makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     EXPECT_THROW({ parser.parseExpression(); }, std::exception);
+    file.close();
 }
 
 TEST_F(ParserTest, MissingClosingParen)
 {
-    std::vector<Token> tokens = {
-      makeToken(TokenType::LPAREN), makeToken(TokenType::NUMBER, u"5"), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::LPAREN),
+      makeToken(mylang::lex::tok::TokenType::NUMBER, u"5"), makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     EXPECT_THROW({ parser.parseParenthesizedExpr(); }, std::exception);
+    file.close();
 }
 
 TEST_F(ParserTest, ErrorRecoveryWithSynchronization)
 {
-    std::vector<Token> tokens = {makeToken(TokenType::IDENTIFIER, u"x"),
-      makeToken(TokenType::OP_PLUS),  // Missing right operand
-      makeToken(TokenType::NEWLINE),
-      makeToken(TokenType::KW_IF),  // Sync token
-      makeToken(TokenType::KW_TRUE), makeToken(TokenType::COLON), makeToken(TokenType::ENDMARKER)};
-    Parser parser(tokens);
-
+    std::ifstream file(test_cases_dir + "", std::ios::binary);
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::IDENTIFIER, u"x"),
+      makeToken(mylang::lex::tok::TokenType::OP_PLUS),  // Missing right operand
+      makeToken(mylang::lex::tok::TokenType::NEWLINE),
+      makeToken(mylang::lex::tok::TokenType::KW_IF),  // Sync token
+      makeToken(mylang::lex::tok::TokenType::KW_TRUE), makeToken(mylang::lex::tok::TokenType::COLON),
+      makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
     // Should recover and continue parsing
     auto stmts = parser.parse();
     // Should have captured some statements despite error
+    file.close();
 }
 
 // ============================================================================
 // Operator Tests
 // ============================================================================
-/*
-TEST_F(ParserTest, IsUnaryOperator) {
-    auto tokens = createTokens({TokenType::ENDMARKER});
-    Parser parser(tokens);
-    
-    EXPECT_TRUE(parser.isUnaryOp(TokenType::OP_MINUS));
-    EXPECT_TRUE(parser.isUnaryOp(TokenType::OP_PLUS));
-    EXPECT_TRUE(parser.isUnaryOp(TokenType::KW_NOT));
-    EXPECT_FALSE(parser.isUnaryOp(TokenType::OP_STAR));
+TEST_F(ParserTest, IsUnaryOperator)
+{
+    auto tokens = createTokens({mylang::lex::tok::TokenType::ENDMARKER});
+    mylang::parser::Parser parser(tokens);
+
+    EXPECT_TRUE(parser.isUnaryOp(mylang::lex::tok::TokenType::OP_MINUS));
+    EXPECT_TRUE(parser.isUnaryOp(mylang::lex::tok::TokenType::OP_PLUS));
+    EXPECT_TRUE(parser.isUnaryOp(mylang::lex::tok::TokenType::KW_NOT));
+    EXPECT_FALSE(parser.isUnaryOp(mylang::lex::tok::TokenType::OP_STAR));
 }
 
-TEST_F(ParserTest, IsBinaryOperator) {
-    auto tokens = createTokens({TokenType::ENDMARKER});
-    Parser parser(tokens);
-    
-    EXPECT_TRUE(parser.isBinaryOp(TokenType::OP_PLUS));
-    EXPECT_TRUE(parser.isBinaryOp(TokenType::STAR));
-    EXPECT_TRUE(parser.isBinaryOp(TokenType::LESS));
-    EXPECT_FALSE(parser.isBinaryOp(TokenType::LPAREN));
+TEST_F(ParserTest, IsBinaryOperator)
+{
+    auto tokens = createTokens({mylang::lex::tok::TokenType::ENDMARKER});
+    mylang::parser::Parser parser(tokens);
+
+    EXPECT_TRUE(parser.isBinaryOp(mylang::lex::tok::TokenType::OP_PLUS));
+    EXPECT_TRUE(parser.isBinaryOp(mylang::lex::tok::TokenType::STAR));
+    EXPECT_TRUE(parser.isBinaryOp(mylang::lex::tok::TokenType::LESS));
+    EXPECT_FALSE(parser.isBinaryOp(mylang::lex::tok::TokenType::LPAREN));
 }
 
-TEST_F(ParserTest, IsAugmentedAssignment) {
-    auto tokens = createTokens({TokenType::ENDMARKER});
-    Parser parser(tokens);
-    
-    EXPECT_TRUE(parser.isAugmentedAssign(TokenType::PLUS_EQUAL));
-    EXPECT_TRUE(parser.isAugmentedAssign(TokenType::MINUS_EQUAL));
-    EXPECT_TRUE(parser.isAugmentedAssign(TokenType::STAR_EQUAL));
-    EXPECT_FALSE(parser.isAugmentedAssign(TokenType::EQUAL));
+TEST_F(ParserTest, IsAugmentedAssignment)
+{
+    auto tokens = createTokens({mylang::lex::tok::TokenType::ENDMARKER});
+    mylang::parser::Parser parser(tokens);
+
+    EXPECT_TRUE(parser.isAugmentedAssign(mylang::lex::tok::TokenType::PLUS_EQUAL));
+    EXPECT_TRUE(parser.isAugmentedAssign(mylang::lex::tok::TokenType::MINUS_EQUAL));
+    EXPECT_TRUE(parser.isAugmentedAssign(mylang::lex::tok::TokenType::STAR_EQUAL));
+    EXPECT_FALSE(parser.isAugmentedAssign(mylang::lex::tok::TokenType::EQUAL));
 }
 
-TEST_F(ParserTest, OperatorPrecedence) {
-    auto tokens = createTokens({TokenType::ENDMARKER});
-    Parser parser(tokens);
-    
-    auto plusInfo = parser.getOpInfo(TokenType::OP_PLUS);
-    auto starInfo = parser.getOpInfo(TokenType::STAR);
-    
+TEST_F(ParserTest, OperatorPrecedence)
+{
+    auto tokens = createTokens({mylang::lex::tok::TokenType::ENDMARKER});
+    mylang::parser::Parser parser(tokens);
+
+    auto plusInfo = parser.getOpInfo(mylang::lex::tok::TokenType::OP_PLUS);
+    auto starInfo = parser.getOpInfo(mylang::lex::tok::TokenType::STAR);
+
     EXPECT_GT(starInfo.precedence, plusInfo.precedence);
 }
 
@@ -691,21 +764,15 @@ TEST_F(ParserTest, OperatorPrecedence) {
 // Full Program Tests
 // ============================================================================
 
-TEST_F(ParserTest, ParseCompleteProgram) {
-    std::vector<Token> tokens = {
-        makeToken(TokenType::IDENTIFIER, u"x"),
-        makeToken(TokenType::OP_EQ),
-        makeToken(TokenType::NUMBER, u"10"),
-        makeToken(TokenType::NEWLINE),
-        makeToken(TokenType::IDENTIFIER, u"y"),
-        makeToken(TokenType::OP_EQ),
-        makeToken(TokenType::NUMBER, u"20"),
-        makeToken(TokenType::NEWLINE),
-        makeToken(TokenType::ENDMARKER)
-    };
-    Parser parser(tokens);
-    
+TEST_F(ParserTest, ParseCompleteProgram)
+{
+    std::vector<mylang::lex::tok::Token> tokens = {makeToken(mylang::lex::tok::TokenType::IDENTIFIER, u"x"),
+      makeToken(mylang::lex::tok::TokenType::OP_EQ), makeToken(mylang::lex::tok::TokenType::NUMBER, u"10"),
+      makeToken(mylang::lex::tok::TokenType::NEWLINE), makeToken(mylang::lex::tok::TokenType::IDENTIFIER, u"y"),
+      makeToken(mylang::lex::tok::TokenType::OP_EQ), makeToken(mylang::lex::tok::TokenType::NUMBER, u"20"),
+      makeToken(mylang::lex::tok::TokenType::NEWLINE), makeToken(mylang::lex::tok::TokenType::ENDMARKER)};
+    mylang::parser::Parser parser(tokens);
+
     auto stmts = parser.parse();
     EXPECT_GE(stmts.size(), 2);
 }
-*/
