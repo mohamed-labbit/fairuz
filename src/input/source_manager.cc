@@ -165,10 +165,14 @@ offset_pair SourceManager::offset_map(const std::size_t& offset)
     auto& buf = this->input_buffer_.value();
     auto& file = this->file_;
 
-    if (offset == buf.buffer_offset())
-        return std::make_pair(buf.position().line, buf.position().column);
-    if (offset >= file->tellg())
-        return std::make_pair(buf.position().line, buf.position().column);
+    if (offset == buf.buffer_offset()) return std::make_pair(buf.position().line, buf.position().column);
+
+    std::istream::pos_type original_pos = file->tellg();
+    std::ios::iostate original_state = file->rdstate();
+
+    // ensure we can seek and read from the beginning without corrupting caller state
+    file->clear();
+    file->seekg(0, std::ios::beg);
 
     file->imbue(std::locale(file->getloc()));
     std::size_t line = 1;
@@ -194,7 +198,9 @@ offset_pair SourceManager::offset_map(const std::size_t& offset)
         current_offset++;
     }
 
-    file->close();
+    file->clear();
+    if (original_pos != static_cast<std::istream::pos_type>(-1)) file->seekg(original_pos);
+    file->clear(original_state);
     return std::make_pair(line, col);
 }
 

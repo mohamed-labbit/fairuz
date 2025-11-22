@@ -58,18 +58,17 @@ const char16_t& InputBuffer::current()
 {
     auto& cur = this->current_;
     auto& cur_buf = this->current_buffer_;
+    static const char16_t end = BUFFER_END;
 
     if (cur == nullptr)
     {
-        char16_t end = BUFFER_END;
-        return std::cref<char16_t>(end);
+        return end;
     }
     if (*cur == BUFFER_END)
     {
         if (!this->refresh_buffer(cur_buf ^ 1))
         {
-            char16_t end = BUFFER_END;
-            return std::cref<char16_t>(end);
+            return end;
         }
         this->swap_buffers_();
     }
@@ -81,19 +80,18 @@ const char16_t& InputBuffer::peek()
 {
     auto& cur = this->current_;
     auto& cur_buf = this->current_buffer_;
+    static const char16_t end = BUFFER_END;
 
     if (cur == nullptr)
     {
-        char16_t end = BUFFER_END;
-        return std::cref<char16_t>(end);
+        return end;
     }
     pointer forward = cur + 1;
     if (*cur == BUFFER_END)
     {
         if (!refresh_buffer(cur_buf ^ 1))
         {
-            char16_t end = BUFFER_END;
-            return std::cref<char16_t>(end);
+            return end;
         }
         swap_buffers_();
         forward = cur + 1;
@@ -103,8 +101,7 @@ const char16_t& InputBuffer::peek()
     {
         if (!refresh_buffer(cur_buf ^ 1))
         {
-            char16_t end = BUFFER_END;
-            return std::cref<char16_t>(end);
+            return end;
         }
         swap_buffers_();
         forward = cur + 1;
