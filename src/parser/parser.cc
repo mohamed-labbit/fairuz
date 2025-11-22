@@ -28,24 +28,30 @@ std::u16string ParseError::format() const
 // TODO : watch out for overflow and underflow
 lex::tok::Token Parser::peek(std::size_t offset)
 {
-    if (!offset && use_lexer) return lexer_.current();
-    if (use_lexer) return lexer_.peek(offset);
+    if (!offset && use_lexer)
+        return lexer_.current();
+    if (use_lexer)
+        return lexer_.peek(offset);
     if (offset > tokens_.size() - current_ && !use_lexer)
-        throw std::invalid_argument("offset is larger that the remaining tokens in parser");
+        throw std::invalid_argument("offset is larger than the remaining tokens in parser");
     return tokens_[current_ + offset];
 }
 
 lex::tok::Token Parser::previous()
 {
-    if (use_lexer) return lexer_.prev();
-    if (!current_) throw std::runtime_error("Cannot call previous when the parser hasn't advanced yet");
+    if (use_lexer)
+        return lexer_.prev();
+    if (!current_)
+        throw std::runtime_error("Cannot call previous when the parser hasn't advanced yet");
     return tokens_[current_ - 1];
 }
 
 lex::tok::Token Parser::advance()
 {
-    if (use_lexer) return lexer_.next();
-    if (current_ >= tokens_.size()) return lexer_.make_token(lex::tok::TokenType::ENDMARKER);
+    if (use_lexer)
+        return lexer_.next();
+    if (current_ >= tokens_.size())
+        return lexer_.make_token(lex::tok::TokenType::ENDMARKER);
     return tokens_[current_++];
 }
 
@@ -54,24 +60,25 @@ bool Parser::check(lex::tok::TokenType type) { return peek().is(type); }
 bool Parser::checkAny(std::initializer_list<lex::tok::TokenType> types)
 {
     for (auto type : types)
-        if (check(type)) return true;
+        if (check(type))
+            return true;
     return false;
 }
 
-bool Parser::match(std::initializer_list<lex::tok::TokenType> types)
+bool Parser::match(const lex::tok::TokenType type)
 {
-    for (auto type : types)
-        if (check(type))
-        {
-            advance();
-            return true;
-        }
+    if (check(type))
+    {
+        advance();
+        return true;
+    }
     return false;
 }
 
 lex::tok::Token Parser::consume(lex::tok::TokenType type, const std::u16string& msg)
 {
-    if (check(type)) return advance();
+    if (check(type))
+        return advance();
     // Generate helpful error with context
     std::u16string context = getSourceLine(peek().line());
     std::vector<std::u16string> suggestions = getSuggestions(type);
@@ -80,7 +87,7 @@ lex::tok::Token Parser::consume(lex::tok::TokenType type, const std::u16string& 
 
 void Parser::skipNewlines()
 {
-    while (match({lex::tok::TokenType::NEWLINE}))
+    while (match(lex::tok::TokenType::NEWLINE))
         ;
 }
 
@@ -104,13 +111,15 @@ std::vector<std::u16string> Parser::getSuggestions(lex::tok::TokenType expected)
     else if (expected == lex::tok::TokenType::NAME)
     {
         suggs.push_back(u"Expected an identifier");
-        if (check(lex::tok::TokenType::NUMBER)) suggs.push_back(u"Identifiers cannot start with numbers");
+        if (check(lex::tok::TokenType::NUMBER))
+            suggs.push_back(u"Identifiers cannot start with numbers");
     }
 
     // Check for similar tokens
     auto current = peek().lexeme();
     auto it = errorSuggestions_.find(current);
-    if (it != errorSuggestions_.end()) suggs.push_back(u"Did you mean '" + it->second + u"'?");
+    if (it != errorSuggestions_.end())
+        suggs.push_back(u"Did you mean '" + it->second + u"'?");
     return suggs;
 }
 
@@ -120,9 +129,12 @@ void Parser::synchronize()
     advance();
     while (!check(lex::tok::TokenType::ENDMARKER))
     {
-        if (previous().is(lex::tok::TokenType::NEWLINE)) return;
-        if (previous().is(lex::tok::TokenType::SEMICOLON)) return;
-        if (syncTokens_.count(peek().type())) return;
+        if (previous().is(lex::tok::TokenType::NEWLINE))
+            return;
+        if (previous().is(lex::tok::TokenType::SEMICOLON))
+            return;
+        if (syncTokens_.count(peek().type()))
+            return;
         advance();
     }
 }
@@ -135,13 +147,15 @@ void Parser::recordError(const ParseError& error) { errors_.push_back({error}); 
 void Parser::enterScope()
 {
     auto scope = std::make_unique<Scope>();
-    if (!scopeStack_.empty()) scope->parent = scopeStack_.back().get();
+    if (!scopeStack_.empty())
+        scope->parent = scopeStack_.back().get();
     scopeStack_.push_back(std::move(scope));
 }
 
 void Parser::exitScope()
 {
-    if (!scopeStack_.empty()) scopeStack_.pop_back();
+    if (!scopeStack_.empty())
+        scopeStack_.pop_back();
 }
 
 void Parser::declareVariable(const std::u16string& name)
@@ -261,7 +275,8 @@ bool Parser::isExpressionStart()
 
 lex::tok::Token Parser::next_token()
 {
-    if (use_lexer) return lexer_.next();
+    if (use_lexer)
+        return lexer_.next();
     return tokens_[current_++];
 }
 
@@ -270,7 +285,8 @@ ast::ExprPtr Parser::parsePrimary()
 {
     // Try memoized result first
     std::optional<ast::ExprPtr> cached = getMemo<ast::ExprPtr>(u"primary");
-    if (cached.has_value()) return std::move(cached.value());
+    if (cached.has_value())
+        return std::move(cached.value());
 
     std::size_t startPos = current_;
     ast::ExprPtr result;
@@ -278,30 +294,30 @@ ast::ExprPtr Parser::parsePrimary()
     try
     {
         // Literals
-        if (match({lex::tok::TokenType::NUMBER}))
+        if (match(lex::tok::TokenType::NUMBER))
         {
             auto tok = next_token();
             result = std::make_unique<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER, tok.lexeme());
         }
-        else if (match({lex::tok::TokenType::STRING}))
+        else if (match(lex::tok::TokenType::STRING))
         {
             auto tok = next_token();
             result = std::make_unique<ast::LiteralExpr>(ast::LiteralExpr::Type::STRING, tok.lexeme());
         }
-        else if (match({lex::tok::TokenType::KW_TRUE}))
+        else if (match(lex::tok::TokenType::KW_TRUE))
         {
             result = std::make_unique<ast::LiteralExpr>(ast::LiteralExpr::Type::BOOLEAN, u"true");
         }
-        else if (match({lex::tok::TokenType::KW_FALSE}))
+        else if (match(lex::tok::TokenType::KW_FALSE))
         {
             result = std::make_unique<ast::LiteralExpr>(ast::LiteralExpr::Type::BOOLEAN, u"false");
         }
-        else if (match({lex::tok::TokenType::KW_NONE}))
+        else if (match(lex::tok::TokenType::KW_NONE))
         {
             result = std::make_unique<ast::LiteralExpr>(ast::LiteralExpr::Type::NONE, u"none");
         }
         // Names with postfix operations
-        else if (match({lex::tok::TokenType::NAME}))
+        else if (match(lex::tok::TokenType::NAME))
         {
             auto tok = next_token();
             auto name = tok.lexeme();
@@ -315,11 +331,20 @@ ast::ExprPtr Parser::parsePrimary()
             result = parsePostfixOps(std::move(result));
         }
         // Parenthesized expression or tuple
-        else if (match({lex::tok::TokenType::LPAREN})) { result = parseParenthesizedExpr(); }
+        else if (match(lex::tok::TokenType::LPAREN))
+        {
+            result = parseParenthesizedExpr();
+        }
         // List literal
-        else if (match({lex::tok::TokenType::LBRACKET})) { result = parseListLiteral(); }
+        else if (match(lex::tok::TokenType::LBRACKET))
+        {
+            result = parseListLiteral();
+        }
         // Dictionary literal
-        else if (match({lex::tok::TokenType::LBRACE})) { result = parseDictLiteral(); }
+        else if (match(lex::tok::TokenType::LBRACE))
+        {
+            result = parseDictLiteral();
+        }
         else
         {
             throw ParseError(u"Expected expression, got '" + peek().lexeme() + u"'", peek().line(), peek().column(),
@@ -359,12 +384,12 @@ ast::ExprPtr Parser::parsePostfixOps(ast::ExprPtr expr)
                         advance();  // '='
                         kwargs[key] = parseExpression();
                     }
-                    else if (match({lex::tok::TokenType::OP_STAR}))
+                    else if (match(lex::tok::TokenType::OP_STAR))
                     {
                         // *args unpacking
                         args.push_back(parseExpression());
                     }
-                    else if (match({lex::tok::TokenType::OP_POWER}))
+                    else if (match(lex::tok::TokenType::OP_POWER))
                     {
                         // **kwargs unpacking
                         auto kwexpr = parseExpression();
@@ -374,28 +399,29 @@ ast::ExprPtr Parser::parsePostfixOps(ast::ExprPtr expr)
                         args.push_back(parseExpression());
                     }
                     skipNewlines();
-                } while (match({lex::tok::TokenType::COMMA}));
+                } while (match(lex::tok::TokenType::COMMA));
             }
             consume(lex::tok::TokenType::RPAREN, u"Expected ')' after arguments");
             expr = std::make_unique<ast::CallExpr>(std::move(expr), std::move(args));
         }
         // Subscript access
-        else if (match({lex::tok::TokenType::LBRACKET}))
+        else if (match(lex::tok::TokenType::LBRACKET))
         {
             auto index = parseExpression();
             // Handle slicing: [start:stop:step]
-            if (match({lex::tok::TokenType::COLON}))
+            if (match(lex::tok::TokenType::COLON))
             {
                 auto stop = isExpressionStart() ? parseExpression() : nullptr;
                 ast::ExprPtr step = nullptr;
-                if (match({lex::tok::TokenType::COLON})) step = isExpressionStart() ? parseExpression() : nullptr;
+                if (match(lex::tok::TokenType::COLON))
+                    step = isExpressionStart() ? parseExpression() : nullptr;
                 // Create slice expression
             }
             consume(lex::tok::TokenType::RBRACKET, u"Expected ']' after subscript");
             // expr = subscript node
         }
         // Attribute access
-        else if (match({lex::tok::TokenType::DOT}))
+        else if (match(lex::tok::TokenType::DOT))
         {
             std::u16string attr = consume(lex::tok::TokenType::NAME, u"Expected attribute name after '.'").lexeme();
             // expr = attribute node
@@ -422,12 +448,14 @@ ast::ExprPtr Parser::parseParenthesizedExpr()
     {
         std::vector<ast::ExprPtr> elements;
         elements.push_back(std::move(expr));
-        if (!check(lex::tok::TokenType::RPAREN)) do
+        if (!check(lex::tok::TokenType::RPAREN))
+            do
             {
                 skipNewlines();
-                if (check(lex::tok::TokenType::RPAREN)) break;
+                if (check(lex::tok::TokenType::RPAREN))
+                    break;
                 elements.push_back(parseExpression());
-            } while (match({lex::tok::TokenType::COMMA}));
+            } while (match(lex::tok::TokenType::COMMA));
         consume(lex::tok::TokenType::RPAREN, u"Expected ')' after tuple elements");
         return std::make_unique<ast::ListExpr>(std::move(elements));
     }
@@ -459,11 +487,12 @@ ast::ExprPtr Parser::parseListLiteral()
             return std::make_unique<ast::ListExpr>(std::vector<ast::ExprPtr>());
         }
         elements.push_back(std::move(firstExpr));
-        while (match({lex::tok::TokenType::COMMA}))
+        while (match(lex::tok::TokenType::COMMA))
         {
             skipNewlines();
-            if (check(lex::tok::TokenType::RBRACKET)) break;
-            if (match({lex::tok::TokenType::OP_STAR}))
+            if (check(lex::tok::TokenType::RBRACKET))
+                break;
+            if (match(lex::tok::TokenType::OP_STAR))
                 // Unpacking: [1, 2, *others]
                 elements.push_back(parseExpression());
             else
@@ -479,19 +508,22 @@ ast::ExprPtr Parser::parseListLiteral()
 ast::ExprPtr Parser::parseDictLiteral()
 {
     std::vector<std::pair<ast::ExprPtr, ast::ExprPtr>> pairs;
-    if (!check(lex::tok::TokenType::RBRACE)) do
+    if (!check(lex::tok::TokenType::RBRACE))
+        do
         {
             skipNewlines();
-            if (check(lex::tok::TokenType::RBRACE)) break;
+            if (check(lex::tok::TokenType::RBRACE))
+                break;
             // Dictionary unpacking: {**other}
-            if (match({lex::tok::TokenType::OP_POWER})) auto expr = parseExpression();
+            if (match(lex::tok::TokenType::OP_POWER))
+                auto expr = parseExpression();
             continue;
             auto key = parseExpression();
             consume(lex::tok::TokenType::COLON, u"Expected ':' after dictionary key");
             auto value = parseExpression();
             pairs.emplace_back(std::move(key), std::move(value));
             skipNewlines();
-        } while (match({lex::tok::TokenType::COMMA}));
+        } while (match(lex::tok::TokenType::COMMA));
     consume(lex::tok::TokenType::RBRACE, u"Expected '}' after dictionary");
     // Return dict node
     return std::make_unique<ast::ListExpr>(std::vector<ast::ExprPtr>());
@@ -502,9 +534,10 @@ ast::ExprPtr Parser::parseLambda()
 {
     consume(lex::tok::TokenType::NAME, u"");  // lambda keyword
     std::vector<std::u16string> params;
-    if (!check(lex::tok::TokenType::COLON)) do
+    if (!check(lex::tok::TokenType::COLON))
+        do
             params.push_back(consume(lex::tok::TokenType::NAME, u"Expected parameter").lexeme());
-        while (match({lex::tok::TokenType::COMMA}));
+        while (match(lex::tok::TokenType::COMMA));
     consume(lex::tok::TokenType::COLON, u"Expected ':' in lambda");
     auto body = parseExpression();
     // Return lambda node
@@ -526,7 +559,7 @@ ast::ExprPtr Parser::parseUnary()
 ast::ExprPtr Parser::parsePower()
 {
     auto left = parseUnary();
-    if (match({lex::tok::TokenType::OP_POWER}))
+    if (match(lex::tok::TokenType::OP_POWER))
     {
         auto right = parsePower();
         return std::make_unique<ast::BinaryExpr>(std::move(left), u"**", std::move(right));
@@ -540,8 +573,10 @@ ast::ExprPtr Parser::parseBinaryExpr(std::int32_t minPrec)
     while (isBinaryOp(peek().type()))
     {
         OpInfo opInfo = getOpInfo(peek().type());
-        if (opInfo.precedence < minPrec) break;
-        if (opInfo.isComparison) break;  // Handle separately
+        if (opInfo.precedence < minPrec)
+            break;
+        if (opInfo.isComparison)
+            break;  // Handle separately
         auto op = advance();
         std::int32_t nextMinPrec = opInfo.rightAssoc ? opInfo.precedence : opInfo.precedence + 1;
         auto right = parseBinaryExpr(nextMinPrec);
@@ -558,12 +593,14 @@ ast::ExprPtr Parser::parseComparison()
     while (true)
     {
         OpInfo opInfo = getOpInfo(peek().type());
-        if (!opInfo.isComparison) break;
+        if (!opInfo.isComparison)
+            break;
         auto op = advance();
         auto right = parseBinaryExpr(5);
         chain.push_back({op.lexeme(), std::move(right)});
     }
-    if (chain.empty()) return left;
+    if (chain.empty())
+        return left;
     // Build: (a < b) and (b < c) and (c == d)
     auto prevRight = std::move(chain[0].second);
     auto result = std::make_unique<ast::BinaryExpr>(std::move(left), chain[0].first,
@@ -578,7 +615,7 @@ ast::ExprPtr Parser::parseComparison()
 ast::ExprPtr Parser::parseTernary()
 {
     auto expr = parseComparison();
-    if (match({lex::tok::TokenType::KW_IF}))
+    if (match(lex::tok::TokenType::KW_IF))
     {
         auto condition = parseComparison();
         // Python: true_expr if cond else false_expr
@@ -592,7 +629,7 @@ ast::ExprPtr Parser::parseAssignmentExpr() { return ast::ExprPtr(); }
 
 ast::ExprPtr Parser::parseStarredExpr()
 {
-    if (match({lex::tok::TokenType::OP_STAR}))
+    if (match(lex::tok::TokenType::OP_STAR))
     {
         auto expr = parseAssignmentExpr();
         return expr;  // Wrap in starred node
@@ -610,7 +647,7 @@ std::vector<ast::ExprPtr> Parser::parseExpressionList()
         skipNewlines();
         exprs.push_back(parseExpression());
         skipNewlines();
-    } while (match({lex::tok::TokenType::COMMA}) && isExpressionStart());
+    } while (match(lex::tok::TokenType::COMMA) && isExpressionStart());
     return exprs;
 }
 
@@ -620,9 +657,9 @@ std::vector<ast::StmtPtr> Parser::parseBlock()
 {
     std::vector<ast::StmtPtr> statements;
 
-    if (match({lex::tok::TokenType::NEWLINE}))
+    if (match(lex::tok::TokenType::NEWLINE))
     {
-        if (!match({lex::tok::TokenType::INDENT}))
+        if (!match(lex::tok::TokenType::INDENT))
             throw ParseError(u"Expected indented block", peek().line(), peek().column(), getSourceLine(peek().line()));
 
         while (!check(lex::tok::TokenType::DEDENT) && !check(lex::tok::TokenType::ENDMARKER))
@@ -637,7 +674,7 @@ std::vector<ast::StmtPtr> Parser::parseBlock()
             }
         }
 
-        if (!match({lex::tok::TokenType::DEDENT}))
+        if (!match(lex::tok::TokenType::DEDENT))
             throw ParseError(u"Expected dedent", peek().line(), peek().column(), getSourceLine(peek().line()));
     }
     else
@@ -652,13 +689,14 @@ ast::StmtPtr Parser::parseSimpleStmt()
 {
     skipNewlines();
 
-    if (match({lex::tok::TokenType::KW_RETURN}))
+    if (match(lex::tok::TokenType::KW_RETURN))
     {
         if (functionDepth_ == 0)
             throw ParseError(u"'return' outside function", previous().line(), previous().column(),
               getSourceLine(previous().line()), {u"Move this inside a function"});
         ast::ExprPtr value = nullptr;
-        if (isExpressionStart()) value = parseExpression();
+        if (isExpressionStart())
+            value = parseExpression();
         skipNewlines();
         return std::make_unique<ast::ReturnStmt>(std::move(value));
     }
@@ -675,7 +713,7 @@ ast::StmtPtr Parser::parseSimpleStmt()
             advance();
             auto typeExpr = parseExpression();
             ast::ExprPtr value = nullptr;
-            if (match({lex::tok::TokenType::OP_ASSIGN}))
+            if (match(lex::tok::TokenType::OP_ASSIGN))
             {
                 value = parseExpression();
                 declareVariable(name);
@@ -714,7 +752,7 @@ ast::StmtPtr Parser::parseSimpleStmt()
 
 ast::StmtPtr Parser::parseCompoundStmt()
 {
-    if (match({lex::tok::TokenType::KW_IF}))
+    if (match(lex::tok::TokenType::KW_IF))
     {
         auto condition = parseExpression();
         consume(lex::tok::TokenType::COLON, u"Expected ':' after if condition");
@@ -723,7 +761,7 @@ ast::StmtPtr Parser::parseCompoundStmt()
         return std::make_unique<ast::IfStmt>(std::move(condition), std::move(thenBlock), std::move(elseBlock));
     }
 
-    if (match({lex::tok::TokenType::KW_WHILE}))
+    if (match(lex::tok::TokenType::KW_WHILE))
     {
         loopDepth_++;
         auto condition = parseExpression();
@@ -733,7 +771,7 @@ ast::StmtPtr Parser::parseCompoundStmt()
         return std::make_unique<ast::WhileStmt>(std::move(condition), std::move(body));
     }
 
-    if (match({lex::tok::TokenType::KW_FOR}))
+    if (match(lex::tok::TokenType::KW_FOR))
     {
         loopDepth_++;
         std::u16string target = consume(lex::tok::TokenType::NAME, u"Expected variable name after 'لكل'").lexeme();
@@ -748,7 +786,7 @@ ast::StmtPtr Parser::parseCompoundStmt()
         return std::make_unique<ast::ForStmt>(target, std::move(iter), std::move(body));
     }
 
-    if (match({lex::tok::TokenType::KW_FN}))
+    if (match(lex::tok::TokenType::KW_FN))
     {
         functionDepth_++;
         std::u16string name = consume(lex::tok::TokenType::NAME, u"Expected function name").lexeme();
@@ -763,7 +801,8 @@ ast::StmtPtr Parser::parseCompoundStmt()
                 skipNewlines();
                 // Handle default parameters: param=value
                 std::u16string paramName = consume(lex::tok::TokenType::NAME, u"Expected parameter name").lexeme();
-                if (match({lex::tok::TokenType::OP_ASSIGN})) auto defaultVal = parseExpression();
+                if (match({lex::tok::TokenType::OP_ASSIGN}))
+                    auto defaultVal = parseExpression();
                 // Store default value
                 params.push_back(paramName);
                 declareVariable(paramName);
@@ -771,7 +810,8 @@ ast::StmtPtr Parser::parseCompoundStmt()
             } while (match({lex::tok::TokenType::COMMA}));
         }
         consume(lex::tok::TokenType::RPAREN, u"Expected ')' after parameters");
-        if (match({lex::tok::TokenType::ARROW})) parseExpression();
+        if (match({lex::tok::TokenType::ARROW}))
+            parseExpression();
         consume(lex::tok::TokenType::COLON, u"Expected ':' after function signature");
         auto body = parseBlock();
         exitScope();
@@ -802,7 +842,8 @@ std::vector<ast::StmtPtr> Parser::parse()
         try
         {
             skipNewlines();
-            if (check(lex::tok::TokenType::ENDMARKER)) break;
+            if (check(lex::tok::TokenType::ENDMARKER))
+                break;
             statements.push_back(parseStatement());
         } catch (const ParseError& e)
         {

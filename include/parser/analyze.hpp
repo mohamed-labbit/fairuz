@@ -64,7 +64,8 @@ class SymbolTable
     Symbol* lookup(const std::u16string& name)
     {
         auto it = symbols_.find(name);
-        if (it != symbols_.end()) return &it->second;
+        if (it != symbols_.end())
+            return &it->second;
         return parent ? parent->lookup(name) : nullptr;
     }
 
@@ -76,7 +77,8 @@ class SymbolTable
 
     bool isDefined(const std::u16string& name) const
     {
-        if (symbols_.count(name)) return true;
+        if (symbols_.count(name))
+            return true;
         return parent ? parent->isDefined(name) : false;
     }
 
@@ -101,7 +103,8 @@ class SymbolTable
     {
         std::vector<Symbol*> unused;
         for (auto& [name, sym] : symbols_)
-            if (!sym.isUsed && sym.symbolType == SymbolType::VARIABLE) unused.push_back(&sym);
+            if (!sym.isUsed && sym.symbolType == SymbolType::VARIABLE)
+                unused.push_back(&sym);
         return unused;
     }
 
@@ -146,7 +149,8 @@ class ControlFlowGraph
     // Compute reachability
     void computeReachability()
     {
-        if (blocks_.empty()) return;
+        if (blocks_.empty())
+            return;
 
         blocks_[entryBlock_].isReachable = true;
         std::vector<std::int32_t> worklist = {entryBlock_};
@@ -185,7 +189,8 @@ class ControlFlowGraph
                 // liveIn = use ∪ (liveOut - def)
                 std::unordered_set<std::u16string> newLiveIn = block.useVars;
                 for (const std::u16string& var : newLiveOut)
-                    if (!block.defVars.count(var)) newLiveIn.insert(var);
+                    if (!block.defVars.count(var))
+                        newLiveIn.insert(var);
                 if (newLiveIn != block.liveIn || newLiveOut != block.liveOut)
                 {
                     block.liveIn = std::move(newLiveIn);
@@ -200,7 +205,8 @@ class ControlFlowGraph
     {
         std::vector<std::int32_t> unreachable;
         for (std::size_t i = 0; i < blocks_.size(); ++i)
-            if (!blocks_[i].isReachable) unreachable.push_back(i);
+            if (!blocks_[i].isReachable)
+                unreachable.push_back(i);
         return unreachable;
     }
 
@@ -229,7 +235,8 @@ class SemanticAnalyzer
     // Type inference engine
     SymbolTable::DataType inferType(const ast::Expr* expr)
     {
-        if (!expr) return SymbolTable::DataType::UNKNOWN;
+        if (!expr)
+            return SymbolTable::DataType::UNKNOWN;
 
         switch (expr->kind)
         {
@@ -248,7 +255,8 @@ class SemanticAnalyzer
         }
         case ast::Expr::Kind::NAME : {
             auto* name = static_cast<const ast::NameExpr*>(expr);
-            if (auto* sym = currentScope_->lookup(name->name)) return sym->dataType;
+            if (auto* sym = currentScope_->lookup(name->name))
+                return sym->dataType;
             break;
         }
         case ast::Expr::Kind::BINARY : {
@@ -261,9 +269,11 @@ class SemanticAnalyzer
             if (leftType == SymbolTable::DataType::INTEGER && rightType == SymbolTable::DataType::INTEGER)
                 return SymbolTable::DataType::INTEGER;
             // String concatenation
-            if (bin->op == u"+" && leftType == SymbolTable::DataType::STRING) return SymbolTable::DataType::STRING;
+            if (bin->op == u"+" && leftType == SymbolTable::DataType::STRING)
+                return SymbolTable::DataType::STRING;
             // Boolean operations
-            if (bin->op == u"و" || bin->op == u"او") return SymbolTable::DataType::BOOLEAN;
+            if (bin->op == u"و" || bin->op == u"او")
+                return SymbolTable::DataType::BOOLEAN;
             break;
         }
         case ast::Expr::Kind::LIST : return SymbolTable::DataType::LIST;
@@ -281,7 +291,8 @@ class SemanticAnalyzer
 
     void analyzeExpr(const ast::Expr* expr)
     {
-        if (!expr) return;
+        if (!expr)
+            return;
 
         switch (expr->kind)
         {
@@ -357,7 +368,8 @@ class SemanticAnalyzer
 
     void analyzeStmt(const ast::Stmt* stmt)
     {
-        if (!stmt) return;
+        if (!stmt)
+            return;
 
         switch (stmt->kind)
         {
@@ -452,7 +464,8 @@ class SemanticAnalyzer
                     hasReturn = true;
                     break;
                 }
-            if (!hasReturn) reportIssue(Issue::Severity::INFO, u"Function may not return a value", stmt->line);
+            if (!hasReturn)
+                reportIssue(Issue::Severity::INFO, u"Function may not return a value", stmt->line);
             // Exit function scope
             currentScope_ = currentScope_->parent;
             break;
@@ -514,7 +527,8 @@ class SemanticAnalyzer
             }
             std::cout << "[" << utf8::utf16to8(sevStr) << "] Line " << issue.line << ": "
                       << utf8::utf16to8(issue.message) << "\n";
-            if (!issue.suggestion.empty()) std::cout << "  → " << utf8::utf16to8(issue.suggestion) << "\n";
+            if (!issue.suggestion.empty())
+                std::cout << "  → " << utf8::utf16to8(issue.suggestion) << "\n";
             std::cout << "\n";
         }
     }

@@ -100,7 +100,8 @@ class TypeSystem
             case BaseType::Bool : return u"bool";
             case BaseType::None : return u"None";
             case BaseType::List :
-                if (!typeParams.empty()) return u"List[" + typeParams[0]->toString() + u"]";
+                if (!typeParams.empty())
+                    return u"List[" + typeParams[0]->toString() + u"]";
                 return u"List";
             case BaseType::Dict :
                 if (typeParams.size() >= 2)
@@ -127,7 +128,8 @@ class TypeSystem
 
         void unify(std::shared_ptr<Type> t1, std::shared_ptr<Type> t2)
         {
-            if (*t1 == *t2) return;
+            if (*t1 == *t2)
+                return;
             // Type variable substitution
             if (t1->base == BaseType::Any)
                 *t1 = *t2;
@@ -135,7 +137,8 @@ class TypeSystem
                 *t2 = *t1;
             else if (t1->base == BaseType::List && t2->base == BaseType::List)
             {
-                if (!t1->typeParams.empty() && !t2->typeParams.empty()) unify(t1->typeParams[0], t2->typeParams[0]);
+                if (!t1->typeParams.empty() && !t2->typeParams.empty())
+                    unify(t1->typeParams[0], t2->typeParams[0]);
             }
             else
                 throw std::runtime_error(
@@ -145,7 +148,8 @@ class TypeSystem
        public:
         std::shared_ptr<Type> inferExpr(const ast::Expr* expr)
         {
-            if (!expr) return std::make_shared<Type>();
+            if (!expr)
+                return std::make_shared<Type>();
 
             switch (expr->kind)
             {
@@ -169,7 +173,10 @@ class TypeSystem
                 auto rightType = inferExpr(bin->right.get());
                 unify(leftType, rightType);
                 // Result type based on operator
-                if (bin->op == u"+" || bin->op == u"-" || bin->op == u"*" || bin->op == u"/") { return leftType; }
+                if (bin->op == u"+" || bin->op == u"-" || bin->op == u"*" || bin->op == u"/")
+                {
+                    return leftType;
+                }
                 else if (bin->op == u"==" || bin->op == u"!=" || bin->op == u"<" || bin->op == u">")
                 {
                     auto t = std::make_shared<Type>();
@@ -286,12 +293,14 @@ class DiagnosticEngine
 
     void addSuggestion(const std::u16string& suggestion)
     {
-        if (!diagnostics_.empty()) diagnostics_.back().suggestions.push_back(suggestion);
+        if (!diagnostics_.empty())
+            diagnostics_.back().suggestions.push_back(suggestion);
     }
 
     void addNote(std::int32_t line, const std::u16string& note)
     {
-        if (!diagnostics_.empty()) diagnostics_.back().notes.push_back({line, note});
+        if (!diagnostics_.empty())
+            diagnostics_.back().notes.push_back({line, note});
     }
 
     // Generate LSP-compatible diagnostics
@@ -309,7 +318,8 @@ class DiagnosticEngine
             ss << "    \"message\": \"" << utf8::utf16to8(diag.message) << "\",\n";
             ss << "    \"code\": \"" << utf8::utf16to8(diag.code) << "\"\n";
             ss << "  }";
-            if (i + 1 < diagnostics_.size()) ss << ",";
+            if (i + 1 < diagnostics_.size())
+                ss << ",";
             ss << "\n";
         }
         ss << "]\n";
@@ -345,7 +355,8 @@ class DiagnosticEngine
             }
 
             std::cout << utf8::utf16to8(color) << utf8::utf16to8(sevStr) << "\033[0m";
-            if (!diag.code.empty()) std::cout << "[" << utf8::utf16to8(diag.code) << "]";
+            if (!diag.code.empty())
+                std::cout << "[" << utf8::utf16to8(diag.code) << "]";
             std::cout << ": " << utf8::utf16to8(diag.message) << "\n";
             // Show source line
             std::cout << "  --> line " << diag.line << ":" << diag.column << "\n";

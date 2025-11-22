@@ -32,7 +32,8 @@ class ASTOptimizer
     // Constant folding evaluator
     std::optional<double> evaluateConstant(const ast::Expr* expr)
     {
-        if (!expr) return std::nullopt;
+        if (!expr)
+            return std::nullopt;
 
         if (expr->kind == ast::Expr::Kind::LITERAL)
         {
@@ -50,29 +51,39 @@ class ASTOptimizer
             auto* bin = static_cast<const ast::BinaryExpr*>(expr);
             auto left = evaluateConstant(bin->left.get());
             auto right = evaluateConstant(bin->right.get());
-            if (!left || !right) return std::nullopt;
-            if (bin->op == u"+") return *left + *right;
-            if (bin->op == u"-") return *left - *right;
-            if (bin->op == u"*") return *left * *right;
+            if (!left || !right)
+                return std::nullopt;
+            if (bin->op == u"+")
+                return *left + *right;
+            if (bin->op == u"-")
+                return *left - *right;
+            if (bin->op == u"*")
+                return *left * *right;
             if (bin->op == u"/")
             {
-                if (*right == 0.0) return std::nullopt;
+                if (*right == 0.0)
+                    return std::nullopt;
                 return *left / *right;
             }
             if (bin->op == u"%")
             {
-                if (*right == 0.0) return std::nullopt;
+                if (*right == 0.0)
+                    return std::nullopt;
                 return std::fmod(*left, *right);
             }
-            if (bin->op == u"**") return std::pow(*left, *right);
+            if (bin->op == u"**")
+                return std::pow(*left, *right);
         }
         else if (expr->kind == ast::Expr::Kind::UNARY)
         {
             auto* un = static_cast<const ast::UnaryExpr*>(expr);
             auto operand = evaluateConstant(un->operand.get());
-            if (!operand) return std::nullopt;
-            if (un->op == u"+") return *operand;
-            if (un->op == u"-") return -*operand;
+            if (!operand)
+                return std::nullopt;
+            if (un->op == u"+")
+                return *operand;
+            if (un->op == u"-")
+                return -*operand;
         }
         return std::nullopt;
     }
@@ -81,7 +92,8 @@ class ASTOptimizer
     // Pass 1: Constant Folding
     ast::ExprPtr optimizeConstantFolding(ast::ExprPtr expr)
     {
-        if (!expr) return expr;
+        if (!expr)
+            return expr;
 
         // First, optimize children
         if (expr->kind == ast::Expr::Kind::BINARY)
@@ -210,7 +222,8 @@ class ASTOptimizer
     // Pass 2: Dead Code Elimination
     ast::StmtPtr eliminateDeadCode(ast::StmtPtr stmt)
     {
-        if (!stmt) return stmt;
+        if (!stmt)
+            return stmt;
 
         if (stmt->kind == ast::Stmt::Kind::IF)
         {
@@ -235,9 +248,11 @@ class ASTOptimizer
             // Recursively eliminate in blocks
             std::vector<ast::StmtPtr> newThen, newElse;
             for (auto& s : ifStmt->thenBlock)
-                if (auto opt = eliminateDeadCode(std::move(s))) newThen.push_back(std::move(opt));
+                if (auto opt = eliminateDeadCode(std::move(s)))
+                    newThen.push_back(std::move(opt));
             for (auto& s : ifStmt->elseBlock)
-                if (auto opt = eliminateDeadCode(std::move(s))) newElse.push_back(std::move(opt));
+                if (auto opt = eliminateDeadCode(std::move(s)))
+                    newElse.push_back(std::move(opt));
             ifStmt->thenBlock = std::move(newThen);
             ifStmt->elseBlock = std::move(newElse);
         }
@@ -254,7 +269,8 @@ class ASTOptimizer
             }
             std::vector<ast::StmtPtr> newBody;
             for (auto& s : whileStmt->body)
-                if (auto opt = eliminateDeadCode(std::move(s))) newBody.push_back(std::move(opt));
+                if (auto opt = eliminateDeadCode(std::move(s)))
+                    newBody.push_back(std::move(opt));
             whileStmt->body = std::move(newBody);
         }
         else if (stmt->kind == ast::Stmt::Kind::FOR)
@@ -263,7 +279,8 @@ class ASTOptimizer
 
             std::vector<ast::StmtPtr> newBody;
             for (auto& s : forStmt->body)
-                if (auto opt = eliminateDeadCode(std::move(s))) newBody.push_back(std::move(opt));
+                if (auto opt = eliminateDeadCode(std::move(s)))
+                    newBody.push_back(std::move(opt));
             forStmt->body = std::move(newBody);
         }
         else if (stmt->kind == ast::Stmt::Kind::FUNCTION_DEF)
@@ -278,8 +295,10 @@ class ASTOptimizer
                     stats_.deadCodeEliminations++;
                     continue;  // Skip statements after return
                 }
-                if (s->kind == ast::Stmt::Kind::RETURN) seenReturn = true;
-                if (auto opt = eliminateDeadCode(std::move(s))) newBody.push_back(std::move(opt));
+                if (s->kind == ast::Stmt::Kind::RETURN)
+                    seenReturn = true;
+                if (auto opt = eliminateDeadCode(std::move(s)))
+                    newBody.push_back(std::move(opt));
             }
             funcDef->body = std::move(newBody);
         }
@@ -296,7 +315,8 @@ class ASTOptimizer
 
         std::u16string exprToString(const ast::Expr* expr)
         {
-            if (!expr) return u"";
+            if (!expr)
+                return u"";
 
             switch (expr->kind)
             {
@@ -327,23 +347,27 @@ class ASTOptimizer
         std::optional<std::u16string> findCSE(const ast::Expr* expr)
         {
             std::u16string exprStr = exprToString(expr);
-            if (exprStr.empty()) return std::nullopt;
+            if (exprStr.empty())
+                return std::nullopt;
             auto it = exprCache.find(exprStr);
-            if (it != exprCache.end()) return it->second;
+            if (it != exprCache.end())
+                return it->second;
             return std::nullopt;
         }
 
         void recordExpr(const ast::Expr* expr, const std::u16string& var)
         {
             std::u16string exprStr = exprToString(expr);
-            if (!exprStr.empty()) exprCache[exprStr] = var;
+            if (!exprStr.empty())
+                exprCache[exprStr] = var;
         }
     };
 
     // Pass 4: Loop Invariant Code Motion
     bool isLoopInvariant(const ast::Expr* expr, const std::unordered_set<std::u16string>& loopVars)
     {
-        if (!expr) return true;
+        if (!expr)
+            return true;
         if (expr->kind == ast::Expr::Kind::NAME)
         {
             auto* name = static_cast<const ast::NameExpr*>(expr);
@@ -390,7 +414,8 @@ class ASTOptimizer
             if (level >= 2)
                 // O2: Dead code elimination
                 stmt = eliminateDeadCode(std::move(stmt));
-            if (stmt) result.push_back(std::move(stmt));
+            if (stmt)
+                result.push_back(std::move(stmt));
         }
         return result;
     }

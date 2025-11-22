@@ -9,7 +9,8 @@ namespace runtime {
 
 typename CompilerSymbolTable::Symbol* CompilerSymbolTable::define(const std::string& name, bool isParam)
 {
-    if (symbols_.count(name)) return &symbols_[name];
+    if (symbols_.count(name))
+        return &symbols_[name];
 
     Symbol sym;
     sym.name = name;
@@ -62,7 +63,8 @@ std::vector<typename CompilerSymbolTable::Symbol> CompilerSymbolTable::getUnused
 {
     std::vector<Symbol> unused;
     for (const auto& [name, sym] : symbols_)
-        if (!sym.isUsed && !sym.isParameter) unused.push_back(sym);
+        if (!sym.isUsed && !sym.isParameter)
+            unused.push_back(sym);
     return unused;
 }
 
@@ -72,7 +74,8 @@ std::int32_t ConstantPool::addConstant(const object::Value& val)
     {
         std::int64_t v = val.asInt();
         auto it = intConstants_.find(v);
-        if (it != intConstants_.end()) return it->second;
+        if (it != intConstants_.end())
+            return it->second;
         std::int32_t idx = constants_.size();
         constants_.push_back(val);
         intConstants_[v] = idx;
@@ -83,7 +86,8 @@ std::int32_t ConstantPool::addConstant(const object::Value& val)
     {
         double v = val.asFloat();
         auto it = floatConstants_.find(v);
-        if (it != floatConstants_.end()) return it->second;
+        if (it != floatConstants_.end())
+            return it->second;
         std::int32_t idx = constants_.size();
         constants_.push_back(val);
         floatConstants_[v] = idx;
@@ -94,7 +98,8 @@ std::int32_t ConstantPool::addConstant(const object::Value& val)
     {
         const std::u16string& v = val.asString();
         auto it = stringConstants_.find(v);
-        if (it != stringConstants_.end()) return it->second;
+        if (it != stringConstants_.end())
+            return it->second;
         std::int32_t idx = constants_.size();
         constants_.push_back(val);
         stringConstants_[v] = idx;
@@ -172,7 +177,8 @@ void LoopAnalyzer::detectLoops(const std::vector<bytecode::Instruction>& instruc
     // Calculate nesting levels
     for (auto& outer : loops_)
         for (const auto& inner : loops_)
-            if (inner.headerPC > outer.headerPC && inner.exitPC < outer.exitPC) outer.isInnerLoop = false;
+            if (inner.headerPC > outer.headerPC && inner.exitPC < outer.exitPC)
+                outer.isInnerLoop = false;
     // TODO: inner is nested in outer
 }
 
@@ -194,7 +200,8 @@ void LoopAnalyzer::findInvariants(
         }
 
         for (std::int32_t var : usedVars)
-            if (!modifiedVars.count(var)) loop.invariants.insert(var);
+            if (!modifiedVars.count(var))
+                loop.invariants.insert(var);
     }
 }
 
@@ -203,9 +210,11 @@ const std::vector<typename LoopAnalyzer::Loop>& LoopAnalyzer::getLoops() const {
 bool PeepholeOptimizer::matchPattern(
   const std::vector<bytecode::Instruction>& code, std::size_t pos, const std::vector<bytecode::OpCode>& pattern)
 {
-    if (pos + pattern.size() > code.size()) return false;
+    if (pos + pattern.size() > code.size())
+        return false;
     for (std::size_t i = 0; i < pattern.size(); i++)
-        if (code[pos + i].op != pattern[i]) return false;
+        if (code[pos + i].op != pattern[i])
+            return false;
     return true;
 }
 
@@ -225,7 +234,8 @@ void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instruction
         i++;
     }
 
-    if (replacements > 0) optimizations_.push_back({"Const-Pop elimination", replacements});
+    if (replacements > 0)
+        optimizations_.push_back({"Const-Pop elimination", replacements});
 
     // Pattern 2: LOAD x, STORE x -> remove (redundant load-store)
     replacements = 0;
@@ -247,7 +257,8 @@ void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instruction
         i++;
     }
 
-    if (replacements > 0) optimizations_.push_back({"Load-Store elimination", replacements});
+    if (replacements > 0)
+        optimizations_.push_back({"Load-Store elimination", replacements});
 
     // Pattern 3: DUP, POP -> remove both (useless dup)
     replacements = 0;
@@ -262,7 +273,8 @@ void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instruction
         i++;
     }
 
-    if (replacements > 0) optimizations_.push_back({"Dup-Pop elimination", replacements});
+    if (replacements > 0)
+        optimizations_.push_back({"Dup-Pop elimination", replacements});
 
     // Pattern 4: JUMP to next instruction -> remove
     replacements = 0;
@@ -277,7 +289,8 @@ void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instruction
         i++;
     }
 
-    if (replacements > 0) optimizations_.push_back({"Redundant jump elimination", replacements});
+    if (replacements > 0)
+        optimizations_.push_back({"Redundant jump elimination", replacements});
 
     // Pattern 5: NOT, NOT -> remove both (double negation)
     replacements = 0;
@@ -292,7 +305,8 @@ void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instruction
         i++;
     }
 
-    if (replacements > 0) optimizations_.push_back({"Double negation elimination", replacements});
+    if (replacements > 0)
+        optimizations_.push_back({"Double negation elimination", replacements});
 
     // Pattern 6: Use fast opcodes for common operations
     replacements = 0;
@@ -315,7 +329,8 @@ void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instruction
         }
     }
 
-    if (replacements > 0) optimizations_.push_back({"Fast opcode substitution", replacements});
+    if (replacements > 0)
+        optimizations_.push_back({"Fast opcode substitution", replacements});
 }
 
 const std::vector<typename PeepholeOptimizer::Optimization>& PeepholeOptimizer::getOptimizations() const
@@ -344,7 +359,8 @@ void BytecodeCompiler::emit(bytecode::OpCode op, std::int32_t arg, std::int32_t 
     // Track stack depth
     updateStackDepth(op);
     // Track line numbers
-    if (line > 0) unit_.lineNumbers.push_back(line);
+    if (line > 0)
+        unit_.lineNumbers.push_back(line);
 }
 
 
@@ -395,7 +411,8 @@ void BytecodeCompiler::patchJump(std::int32_t jumpIndex) { unit_.instructions[ju
 void BytecodeCompiler::enterScope()
 {
     auto* newScope = new CompilerSymbolTable(currentScope_.get());
-    if (currentScope_) scopeStack_.push(currentScope_.release());
+    if (currentScope_)
+        scopeStack_.push(currentScope_.release());
     currentScope_.reset(newScope);
 }
 
@@ -410,7 +427,8 @@ void BytecodeCompiler::exitScope()
 
 void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
 {
-    if (!expr) return;
+    if (!expr)
+        return;
 
     switch (expr->kind)
     {
@@ -443,7 +461,8 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
         auto* name = static_cast<const parser::ast::NameExpr*>(expr);
         auto* sym = currentScope_->resolve(utf8::utf16to8(name->name));
 
-        if (!sym) throw std::runtime_error("Undefined variable: " + utf8::utf16to8(name->name));
+        if (!sym)
+            throw std::runtime_error("Undefined variable: " + utf8::utf16to8(name->name));
 
         switch (sym->scope)
         {
@@ -585,7 +604,8 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
         emit(bytecode::OpCode::JUMP, 0, expr->line);
         // False branch
         patchJump(jumpIfFalse);
-        if (tern->falseExpr) compileExpr(tern->falseExpr.get());
+        if (tern->falseExpr)
+            compileExpr(tern->falseExpr.get());
         patchJump(jumpEnd);
         break;
     }
@@ -611,7 +631,8 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
 
 void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
 {
-    if (!stmt) return;
+    if (!stmt)
+        return;
 
     switch (stmt->kind)
     {
@@ -683,7 +704,8 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
         patchJump(jumpIfFalse);
         emit(bytecode::OpCode::HOT_LOOP_END, 0, stmt->line);
         // Patch break statements
-        if (loopStack_.top().breakLabel != -1) patchJump(loopStack_.top().breakLabel);
+        if (loopStack_.top().breakLabel != -1)
+            patchJump(loopStack_.top().breakLabel);
         loopStack_.pop();
         stats_.loopsDetected++;
         break;
@@ -715,7 +737,8 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
         // Patch FOR_ITER to jump here when exhausted
         patchJump(forIter);
         emit(bytecode::OpCode::HOT_LOOP_END, 0, stmt->line);
-        if (loopStack_.top().breakLabel != -1) patchJump(loopStack_.top().breakLabel);
+        if (loopStack_.top().breakLabel != -1)
+            patchJump(loopStack_.top().breakLabel);
         loopStack_.pop();
         stats_.loopsDetected++;
         break;
@@ -768,7 +791,10 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
 
     case parser::ast::Stmt::Kind::RETURN : {
         auto* ret = static_cast<const parser::ast::ReturnStmt*>(stmt);
-        if (ret->value) { compileExpr(ret->value.get()); }
+        if (ret->value)
+        {
+            compileExpr(ret->value.get());
+        }
         else
         {
             std::int32_t noneIdx = constants_.addConstant(object::Value());
@@ -818,7 +844,8 @@ typename BytecodeCompiler::CompilationUnit BytecodeCompiler::compile(const std::
     unit_.stackSize = maxStackDepth_;
     // Report unused variables
     auto unused = currentScope_->getUnusedSymbols();
-    if (!unused.empty()) std::cout << "[Compiler] Warning: " << unused.size() << " unused variables detected\n";
+    if (!unused.empty())
+        std::cout << "[Compiler] Warning: " << unused.size() << " unused variables detected\n";
     return unit_;
 }
 
@@ -1018,7 +1045,8 @@ bool BytecodeOptimizer::isJumpTarget(const std::vector<bytecode::Instruction>& c
 {
     // Check if any instruction jumps to this position
     for (const auto& instr : code)
-        if (isJumpOp(instr.op) && instr.arg == pos) return true;
+        if (isJumpOp(instr.op) && instr.arg == pos)
+            return true;
     return false;
 }
 
@@ -1075,17 +1103,17 @@ void BytecodeVerifier::printErrors(std::ostream& out) const
     }
     out << "✗ Bytecode verification failed with " << errors_.size() << " error(s):\n";
     for (const auto& err : errors_)
-    {
         out << "  PC " << err.pc << ": " << err.message << "\n";
-    }
 }
 
 void BytecodeVerifier::verifyStackDepth(
   const BytecodeCompiler::CompilationUnit& unit, std::int32_t pc, std::int32_t depth, std::vector<std::int32_t>& depths)
 {
-    if (pc >= unit.instructions.size()) return;
+    if (pc >= unit.instructions.size())
+        return;
     // Already visited with same or greater depth
-    if (depths[pc] >= depth) return;
+    if (depths[pc] >= depth)
+        return;
 
     depths[pc] = depth;
     const auto& instr = unit.instructions[pc];
@@ -1102,12 +1130,14 @@ void BytecodeVerifier::verifyStackDepth(
           {pc, "Stack overflow (depth " + std::to_string(newDepth) + " > " + std::to_string(unit.stackSize) + ")"});
 
     // Follow control flow
-    if (instr.op == bytecode::OpCode::RETURN || instr.op == bytecode::OpCode::HALT) return;
+    if (instr.op == bytecode::OpCode::RETURN || instr.op == bytecode::OpCode::HALT)
+        return;
 
     if (isJumpInstruction(instr.op))
     {
         verifyStackDepth(unit, instr.arg, newDepth, depths);
-        if (!isUnconditionalJump(instr.op)) verifyStackDepth(unit, pc + 1, newDepth, depths);
+        if (!isUnconditionalJump(instr.op))
+            verifyStackDepth(unit, pc + 1, newDepth, depths);
     }
     else
     {
@@ -1164,13 +1194,15 @@ bool BytecodeVerifier::isUnconditionalJump(bytecode::OpCode op) const
 
 void VirtualMachine::push(const object::Value& val)
 {
-    if (stack_.size() >= 10000) throw std::runtime_error("Stack overflow");
+    if (stack_.size() >= 10000)
+        throw std::runtime_error("Stack overflow");
     stack_.push_back(val);
 }
 
 object::Value VirtualMachine::pop()
 {
-    if (stack_.empty()) throw std::runtime_error("Stack underflow");
+    if (stack_.empty())
+        throw std::runtime_error("Stack underflow");
     object::Value val = stack_.back();
     stack_.pop_back();
     return val;
@@ -1178,32 +1210,37 @@ object::Value VirtualMachine::pop()
 
 object::Value& VirtualMachine::top()
 {
-    if (stack_.empty()) throw std::runtime_error("Stack empty");
+    if (stack_.empty())
+        throw std::runtime_error("Stack empty");
     return stack_.back();
 }
 
 object::Value& VirtualMachine::peek(std::int32_t offset)
 {
-    if (stack_.size() < offset + 1) throw std::runtime_error("Stack underflow in peek");
+    if (stack_.size() < offset + 1)
+        throw std::runtime_error("Stack underflow in peek");
     return stack_[stack_.size() - 1 - offset];
 }
 
 // Fast integer operations (avoid type checking overhead)
 object::Value VirtualMachine::fastAdd(const object::Value& a, const object::Value& b)
 {
-    if (a.isInt() && b.isInt()) return object::Value(a.asInt() + b.asInt());
+    if (a.isInt() && b.isInt())
+        return object::Value(a.asInt() + b.asInt());
     return a + b;
 }
 
 object::Value VirtualMachine::fastSub(const object::Value& a, const object::Value& b)
 {
-    if (a.isInt() && b.isInt()) return object::Value(a.asInt() - b.asInt());
+    if (a.isInt() && b.isInt())
+        return object::Value(a.asInt() - b.asInt());
     return a - b;
 }
 
 object::Value VirtualMachine::fastMul(const object::Value& a, const object::Value& b)
 {
-    if (a.isInt() && b.isInt()) return object::Value(a.asInt() * b.asInt());
+    if (a.isInt() && b.isInt())
+        return object::Value(a.asInt() * b.asInt());
     return a * b;
 }
 
@@ -1214,7 +1251,8 @@ void VirtualMachine::registerNativeFunctions()
         for (std::size_t i = 0; i < args.size(); i++)
         {
             std::cout << args[i].repr();
-            if (i + 1 < args.size()) std::cout << " ";
+            if (i + 1 < args.size())
+                std::cout << " ";
         }
         std::cout << "\n";
         return object::Value();
@@ -1222,18 +1260,25 @@ void VirtualMachine::registerNativeFunctions()
 
     // len
     nativeFunctions["len"] = [](const std::vector<object::Value>& args) {
-        if (args.size() != 1) throw std::runtime_error("len() takes 1 argument");
-        if (args[0].isList()) return object::Value(static_cast<std::int64_t>(args[0].asList().size()));
-        if (args[0].isString()) return object::Value(static_cast<std::int64_t>(args[0].asString().size()));
+        if (args.size() != 1)
+            throw std::runtime_error("len() takes 1 argument");
+        if (args[0].isList())
+            return object::Value(static_cast<std::int64_t>(args[0].asList().size()));
+        if (args[0].isString())
+            return object::Value(static_cast<std::int64_t>(args[0].asString().size()));
         throw std::runtime_error("len() requires list or string");
     };
 
     // range
     nativeFunctions["range"] = [](const std::vector<object::Value>& args) {
-        if (args.empty() || args.size() > 3) throw std::runtime_error("range() takes 1-3 arguments");
+        if (args.empty() || args.size() > 3)
+            throw std::runtime_error("range() takes 1-3 arguments");
 
         std::int64_t start = 0, stop, step = 1;
-        if (args.size() == 1) { stop = args[0].toInt(); }
+        if (args.size() == 1)
+        {
+            stop = args[0].toInt();
+        }
         else if (args.size() == 2)
         {
             start = args[0].toInt();
@@ -1254,7 +1299,8 @@ void VirtualMachine::registerNativeFunctions()
 
     // type
     nativeFunctions["type"] = [](const std::vector<object::Value>& args) {
-        if (args.size() != 1) throw std::runtime_error("type() takes 1 argument");
+        if (args.size() != 1)
+            throw std::runtime_error("type() takes 1 argument");
 
         std::u16string typeName;
         switch (args[0].getType())
@@ -1273,26 +1319,31 @@ void VirtualMachine::registerNativeFunctions()
 
     // str
     nativeFunctions["str"] = [](const std::vector<object::Value>& args) {
-        if (args.size() != 1) throw std::runtime_error("str() takes 1 argument");
+        if (args.size() != 1)
+            throw std::runtime_error("str() takes 1 argument");
         return object::Value(args[0].asString());
     };
 
     // int
     nativeFunctions["int"] = [](const std::vector<object::Value>& args) {
-        if (args.size() != 1) throw std::runtime_error("int() takes 1 argument");
+        if (args.size() != 1)
+            throw std::runtime_error("int() takes 1 argument");
         return object::Value(args[0].toInt());
     };
 
     // float
     nativeFunctions["float"] = [](const std::vector<object::Value>& args) {
-        if (args.size() != 1) throw std::runtime_error("float() takes 1 argument");
+        if (args.size() != 1)
+            throw std::runtime_error("float() takes 1 argument");
         return object::Value(args[0].toFloat());
     };
 
     // sum
     nativeFunctions["sum"] = [](const std::vector<object::Value>& args) {
-        if (args.empty()) throw std::runtime_error("sum() takes at least 1 argument");
-        if (!args[0].isList()) throw std::runtime_error("sum() requires iterable");
+        if (args.empty())
+            throw std::runtime_error("sum() takes at least 1 argument");
+        if (!args[0].isList())
+            throw std::runtime_error("sum() requires iterable");
         object::Value total = args.size() > 1 ? args[1] : object::Value(0LL);
         for (const auto& item : args[0].asList())
             total = total + item;
@@ -1301,50 +1352,62 @@ void VirtualMachine::registerNativeFunctions()
 
     // abs
     nativeFunctions["abs"] = [](const std::vector<object::Value>& args) {
-        if (args.size() != 1) throw std::runtime_error("abs() takes 1 argument");
-        if (args[0].isInt()) return object::Value(std::abs(args[0].asInt()));
+        if (args.size() != 1)
+            throw std::runtime_error("abs() takes 1 argument");
+        if (args[0].isInt())
+            return object::Value(std::abs(args[0].asInt()));
         return object::Value(std::abs(args[0].toFloat()));
     };
 
     // min, max
     nativeFunctions["min"] = [](const std::vector<object::Value>& args) {
-        if (args.empty()) throw std::runtime_error("min() requires at least 1 argument");
+        if (args.empty())
+            throw std::runtime_error("min() requires at least 1 argument");
         if (args.size() == 1 && args[0].isList())
         {
             const auto& list = args[0].asList();
-            if (list.empty()) throw std::runtime_error("min() arg is empty sequence");
+            if (list.empty())
+                throw std::runtime_error("min() arg is empty sequence");
             object::Value minVal = list[0];
             for (std::size_t i = 1; i < list.size(); i++)
-                if (list[i] < minVal) minVal = list[i];
+                if (list[i] < minVal)
+                    minVal = list[i];
             return minVal;
         }
         object::Value minVal = args[0];
         for (std::size_t i = 1; i < args.size(); i++)
-            if (args[i] < minVal) minVal = args[i];
+            if (args[i] < minVal)
+                minVal = args[i];
         return minVal;
     };
 
     nativeFunctions["max"] = [](const std::vector<object::Value>& args) {
-        if (args.empty()) throw std::runtime_error("max() requires at least 1 argument");
+        if (args.empty())
+            throw std::runtime_error("max() requires at least 1 argument");
         if (args.size() == 1 && args[0].isList())
         {
             const auto& list = args[0].asList();
-            if (list.empty()) throw std::runtime_error("max() arg is empty sequence");
+            if (list.empty())
+                throw std::runtime_error("max() arg is empty sequence");
             object::Value maxVal = list[0];
             for (std::size_t i = 1; i < list.size(); i++)
-                if (list[i] > maxVal) maxVal = list[i];
+                if (list[i] > maxVal)
+                    maxVal = list[i];
             return maxVal;
         }
         object::Value maxVal = args[0];
         for (std::size_t i = 1; i < args.size(); i++)
-            if (args[i] > maxVal) maxVal = args[i];
+            if (args[i] > maxVal)
+                maxVal = args[i];
         return maxVal;
     };
 
     // sorted
     nativeFunctions["sorted"] = [](const std::vector<object::Value>& args) {
-        if (args.size() != 1) throw std::runtime_error("sorted() takes 1 argument");
-        if (!args[0].isList()) throw std::runtime_error("sorted() requires list");
+        if (args.size() != 1)
+            throw std::runtime_error("sorted() takes 1 argument");
+        if (!args[0].isList())
+            throw std::runtime_error("sorted() requires list");
         auto result = args[0].asList();
         std::sort(result.begin(), result.end());
         return object::Value(result);
@@ -1352,8 +1415,10 @@ void VirtualMachine::registerNativeFunctions()
 
     // reversed
     nativeFunctions["reversed"] = [](const std::vector<object::Value>& args) {
-        if (args.size() != 1) throw std::runtime_error("reversed() takes 1 argument");
-        if (!args[0].isList()) throw std::runtime_error("reversed() requires list");
+        if (args.size() != 1)
+            throw std::runtime_error("reversed() takes 1 argument");
+        if (!args[0].isList())
+            throw std::runtime_error("reversed() requires list");
         auto result = args[0].asList();
         std::reverse(result.begin(), result.end());
         return object::Value(result);
@@ -1361,8 +1426,10 @@ void VirtualMachine::registerNativeFunctions()
 
     // enumerate
     nativeFunctions["enumerate"] = [](const std::vector<object::Value>& args) {
-        if (args.size() != 1) throw std::runtime_error("enumerate() takes 1 argument");
-        if (!args[0].isList()) throw std::runtime_error("enumerate() requires list");
+        if (args.size() != 1)
+            throw std::runtime_error("enumerate() takes 1 argument");
+        if (!args[0].isList())
+            throw std::runtime_error("enumerate() requires list");
         std::vector<object::Value> result;
         const auto& list = args[0].asList();
         for (std::size_t i = 0; i < list.size(); i++)
@@ -1375,11 +1442,13 @@ void VirtualMachine::registerNativeFunctions()
 
     // zip
     nativeFunctions["zip"] = [](const std::vector<object::Value>& args) {
-        if (args.size() < 2) throw std::runtime_error("zip() requires at least 2 arguments");
+        if (args.size() < 2)
+            throw std::runtime_error("zip() requires at least 2 arguments");
         std::size_t minLen = SIZE_MAX;
         for (const auto& arg : args)
         {
-            if (!arg.isList()) throw std::runtime_error("zip() requires lists");
+            if (!arg.isList())
+                throw std::runtime_error("zip() requires lists");
             minLen = std::min(minLen, arg.asList().size());
         }
         std::vector<object::Value> result;
@@ -1395,41 +1464,51 @@ void VirtualMachine::registerNativeFunctions()
 
     // all, any
     nativeFunctions["all"] = [](const std::vector<object::Value>& args) {
-        if (args.size() != 1) throw std::runtime_error("all() takes 1 argument");
-        if (!args[0].isList()) throw std::runtime_error("all() requires list");
+        if (args.size() != 1)
+            throw std::runtime_error("all() takes 1 argument");
+        if (!args[0].isList())
+            throw std::runtime_error("all() requires list");
         for (const auto& item : args[0].asList())
-            if (!item.toBool()) return object::Value(false);
+            if (!item.toBool())
+                return object::Value(false);
         return object::Value(true);
     };
 
     nativeFunctions["any"] = [](const std::vector<object::Value>& args) {
-        if (args.size() != 1) throw std::runtime_error("any() takes 1 argument");
-        if (!args[0].isList()) throw std::runtime_error("any() requires list");
+        if (args.size() != 1)
+            throw std::runtime_error("any() takes 1 argument");
+        if (!args[0].isList())
+            throw std::runtime_error("any() requires list");
         for (const auto& item : args[0].asList())
-            if (item.toBool()) return object::Value(true);
+            if (item.toBool())
+                return object::Value(true);
         return object::Value(false);
     };
 
     // map, filter
     nativeFunctions["map"] = [](const std::vector<object::Value>& args) {
-        if (args.size() != 2) throw std::runtime_error("map() takes 2 arguments");
+        if (args.size() != 2)
+            throw std::runtime_error("map() takes 2 arguments");
         // Would need to handle function calls properly
         return object::Value();
     };
 
     // Math functions
     nativeFunctions["sqrt"] = [](const std::vector<object::Value>& args) {
-        if (args.size() != 1) throw std::runtime_error("sqrt() takes 1 argument");
+        if (args.size() != 1)
+            throw std::runtime_error("sqrt() takes 1 argument");
         return object::Value(std::sqrt(args[0].toFloat()));
     };
 
     nativeFunctions["pow"] = [](const std::vector<object::Value>& args) {
-        if (args.size() != 2) throw std::runtime_error("pow() takes 2 arguments");
+        if (args.size() != 2)
+            throw std::runtime_error("pow() takes 2 arguments");
         return object::Value(std::pow(args[0].toFloat(), args[1].toFloat()));
     };
 
     nativeFunctions["round"] = [](const std::vector<object::Value>& args) {
-        if (args.size() != 1) throw std::runtime_error("round() takes 1 argument");
+        if (args.size() != 1)
+            throw std::runtime_error("round() takes 1 argument");
         return object::Value(static_cast<std::int64_t>(std::round(args[0].toFloat())));
     };
 }
@@ -1448,7 +1527,8 @@ void VirtualMachine::execute(const BytecodeCompiler::CompilationUnit& code)
         const auto& instr = code.instructions[ip_];
         stats_.instructionsExecuted++;
         // JIT hot spot detection
-        if (stats_.instructionsExecuted % 100 == 0) jit_.recordExecution(ip_);
+        if (stats_.instructionsExecuted % 100 == 0)
+            jit_.recordExecution(ip_);
         // Dispatch instruction
         try
         {
@@ -1472,12 +1552,14 @@ void VirtualMachine::executeInstruction(
     {
     case bytecode::OpCode::LOAD_CONST : push(code.constants[instr.arg]); break;
     case bytecode::OpCode::LOAD_VAR :
-        if (instr.arg >= globals_.size()) throw std::runtime_error("Variable index out of range");
+        if (instr.arg >= globals_.size())
+            throw std::runtime_error("Variable index out of range");
         push(globals_[instr.arg]);
         break;
     case bytecode::OpCode::LOAD_GLOBAL : push(globals_[instr.arg]); break;
     case bytecode::OpCode::STORE_VAR :
-        if (instr.arg >= globals_.size()) globals_.resize(instr.arg + 1);
+        if (instr.arg >= globals_.size())
+            globals_.resize(instr.arg + 1);
         globals_[instr.arg] = pop();
         break;
     case bytecode::OpCode::STORE_GLOBAL : globals_[instr.arg] = pop(); break;
@@ -1637,7 +1719,10 @@ void VirtualMachine::executeInstruction(
                 }
             push(object::Value(found));
         }
-        else if (b.isString()) { push(object::Value(b.asString().find(a.toString()) != std::string::npos)); }
+        else if (b.isString())
+        {
+            push(object::Value(b.asString().find(a.toString()) != std::string::npos));
+        }
         else
         {
             throw std::runtime_error("'in' requires list or string");
@@ -1678,21 +1763,27 @@ void VirtualMachine::executeInstruction(
         break;
     case bytecode::OpCode::JUMP_IF_FALSE : {
         object::Value cond = pop();
-        if (!cond.toBool()) ip_ = instr.arg - 1;
+        if (!cond.toBool())
+            ip_ = instr.arg - 1;
         break;
     }
     case bytecode::OpCode::JUMP_IF_TRUE : {
         object::Value cond = pop();
-        if (cond.toBool()) ip_ = instr.arg - 1;
+        if (cond.toBool())
+            ip_ = instr.arg - 1;
         break;
     }
     case bytecode::OpCode::POP_JUMP_IF_FALSE : {
-        if (!top().toBool()) ip_ = instr.arg - 1;
+        if (!top().toBool())
+            ip_ = instr.arg - 1;
         break;
     }
     case bytecode::OpCode::FOR_ITER : {
         object::Value& iterator = top();
-        if (iterator.hasNext()) { push(iterator.next()); }
+        if (iterator.hasNext())
+        {
+            push(iterator.next());
+        }
         else
         {
             pop();  // Remove exhausted iterator
@@ -1767,9 +1858,11 @@ void VirtualMachine::executeInstruction(
         break;
     case bytecode::OpCode::UNPACK_SEQUENCE : {
         object::Value seq = pop();
-        if (!seq.isList()) throw std::runtime_error("Cannot unpack non-sequence");
+        if (!seq.isList())
+            throw std::runtime_error("Cannot unpack non-sequence");
         const auto& list = seq.asList();
-        if (list.size() != instr.arg) throw std::runtime_error("Unpack size mismatch");
+        if (list.size() != instr.arg)
+            throw std::runtime_error("Unpack size mismatch");
         for (const auto& item : list)
             push(item);
         break;
@@ -1800,7 +1893,8 @@ void VirtualMachine::executeInstruction(
         for (std::size_t i = 0; i < args.size(); i++)
         {
             std::cout << args[i].repr();
-            if (i + 1 < args.size()) std::cout << " ";
+            if (i + 1 < args.size())
+                std::cout << " ";
         }
         std::cout << "\n";
         push(object::Value());  // print returns None

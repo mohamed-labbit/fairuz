@@ -23,7 +23,8 @@ class SourceManager
         input_buffer_(buffer::InputBuffer(file_, DEFAULT_CAPACITY)),
         use_file_buffer_(true)
     {
-        if (!file_->is_open()) throw std::invalid_argument("File not open");
+        if (!file_->is_open())
+            throw std::invalid_argument("File not open");
     }
 
     explicit SourceManager(const std::u16string source) :

@@ -40,7 +40,10 @@ char16_t InputBuffer::consume_char()
     {
         if (*cur == BUFFER_END)
         {
-            if (!refresh_buffer(cur_buf ^ 1)) { return BUFFER_END; }
+            if (!refresh_buffer(cur_buf ^ 1))
+            {
+                return BUFFER_END;
+            }
             swap_buffers_();
         }
         ch = *cur;
@@ -116,7 +119,8 @@ std::u16string InputBuffer::n_peek(std::size_t n)
     auto& cur = this->current_;
 
     std::u16string out;
-    if (n == 0) return out;
+    if (n == 0)
+        return out;
 
     std::size_t rem = n;
     std::int32_t buf_idx = cur_buf;
@@ -125,7 +129,8 @@ std::u16string InputBuffer::n_peek(std::size_t n)
     {
         if (offset >= bufs[buf_idx].size() || bufs[buf_idx][offset] == BUFFER_END)
         {
-            if (!refresh_buffer(buf_idx ^ 1)) break;
+            if (!refresh_buffer(buf_idx ^ 1))
+                break;
             buf_idx ^= 1;
             offset = 0;
         }
@@ -184,7 +189,8 @@ void InputBuffer::swap_buffers_()
     cur_buf ^= 1;
     cur = bufs[cur_buf].data();
 
-    if (cols.empty()) cols.push(1);
+    if (cols.empty())
+        cols.push(1);
 }
 
 void InputBuffer::advance_position_(char16_t ch)
@@ -221,14 +227,16 @@ void InputBuffer::rewind_position_(char16_t ch)
     cur_pos.filepos = std::max<std::size_t>(0, cur_pos.filepos - 1);
     if (ch == u'\n')
     {
-        if (!cols.empty()) cols.pop();
+        if (!cols.empty())
+            cols.pop();
         cur_pos.line = std::max<std::size_t>(1, cur_pos.line - 1);
         cur_pos.column = cols.empty() ? 1 : cols.top();
     }
     else
     {
         cur_pos.column = (cur_pos.column > 0 ? cur_pos.column - 1 : 0);
-        if (!cols.empty()) cols.top() = cur_pos.column;
+        if (!cols.empty())
+            cols.top() = cur_pos.column;
     }
 }
 
