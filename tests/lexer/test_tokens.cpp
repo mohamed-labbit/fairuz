@@ -1,11 +1,14 @@
 #include "../../include/lex/lexer.hpp"
 #include "../../include/lex/token.hpp"
 
+#include <filesystem>
 #include <gtest/gtest.h>
 #include <vector>
 
 
-const std::string test_cases_path = "/Users/mohamedrabbit/code/mylang/tests/lexer/test_cases/test_tokens/";
+namespace {
+const std::filesystem::path test_cases_path = std::filesystem::path(__FILE__).parent_path() / "test_cases" / "test_tokens";
+}
 
 
 inline void PrintTo(const mylang::lex::tok::Token& tok, std::ostream* os)
@@ -16,7 +19,7 @@ inline void PrintTo(const mylang::lex::tok::Token& tok, std::ostream* os)
 
 TEST(LexerTest, RecognizesPlus)
 {
-    std::ifstream file(test_cases_path + "recognizes_plus.txt", std::ios::binary);
+    std::ifstream file(test_cases_path / "recognizes_plus.txt", std::ios::binary);
     mylang::lex::Lexer lexer(&file);
     auto tokens = lexer.tokenize();
     auto expected = lexer.make_token(mylang::lex::tok::TokenType::OP_PLUS, u"+", 1, 1);
@@ -29,7 +32,7 @@ TEST(LexerTest, RecognizesPlus)
 
 TEST(LexerTest, RecognizesInteger)
 {
-    std::ifstream file(test_cases_path + "recognizes_integer.txt", std::ios::binary);
+    std::ifstream file(test_cases_path / "recognizes_integer.txt", std::ios::binary);
     mylang::lex::Lexer lexer(&file);
     auto tokens = lexer.tokenize();
     auto expected = lexer.make_token(mylang::lex::tok::TokenType::NUMBER, u"123", 1, 1);
@@ -42,7 +45,7 @@ TEST(LexerTest, RecognizesInteger)
 
 TEST(LexerTest, RecognizesIdentifier)
 {
-    std::ifstream file(test_cases_path + "recognizes_identifier.txt", std::ios::binary);
+    std::ifstream file(test_cases_path / "recognizes_identifier.txt", std::ios::binary);
     mylang::lex::Lexer lexer(&file);
     auto tokens = lexer.tokenize();
     auto expected = lexer.make_token(mylang::lex::tok::TokenType::IDENTIFIER, u"مرحبا", 1, 1);
@@ -55,7 +58,7 @@ TEST(LexerTest, RecognizesIdentifier)
 
 TEST(LexerTest, RecognizesKeyword)
 {
-    std::ifstream file(test_cases_path + "recognizes_keyword.txt", std::ios::binary);
+    std::ifstream file(test_cases_path / "recognizes_keyword.txt", std::ios::binary);
     mylang::lex::Lexer lexer(&file);
     auto tokens = lexer.tokenize();
     EXPECT_EQ(tokens.size(), 3);
@@ -65,9 +68,39 @@ TEST(LexerTest, RecognizesKeyword)
     file.close();
 }
 
+TEST(LexerTest, RecognizesNoneKeyword)
+{
+    std::ifstream file(test_cases_path / "recognizes_none_keyword.txt", std::ios::binary);
+    mylang::lex::Lexer lexer(&file);
+    auto tokens = lexer.tokenize();
+
+    EXPECT_EQ(tokens.size(), 3);
+    EXPECT_EQ(tokens[0].type(), mylang::lex::tok::TokenType::BEGINMARKER);
+    EXPECT_EQ(tokens[1].type(), mylang::lex::tok::TokenType::KW_NONE);
+    EXPECT_EQ(tokens[1].lexeme(), u"عدم");
+    EXPECT_EQ(tokens[2].type(), mylang::lex::tok::TokenType::ENDMARKER);
+    file.close();
+}
+
+TEST(LexerTest, RecognizesBooleanKeywords)
+{
+    std::ifstream file(test_cases_path / "recognizes_boolean_keywords.txt", std::ios::binary);
+    mylang::lex::Lexer lexer(&file);
+    auto tokens = lexer.tokenize();
+
+    ASSERT_EQ(tokens.size(), 4);
+    EXPECT_EQ(tokens[0].type(), mylang::lex::tok::TokenType::BEGINMARKER);
+    EXPECT_EQ(tokens[1].type(), mylang::lex::tok::TokenType::KW_TRUE);
+    EXPECT_EQ(tokens[1].lexeme(), u"صحيح");
+    EXPECT_EQ(tokens[2].type(), mylang::lex::tok::TokenType::KW_FALSE);
+    EXPECT_EQ(tokens[2].lexeme(), u"خطا");
+    EXPECT_EQ(tokens[3].type(), mylang::lex::tok::TokenType::ENDMARKER);
+    file.close();
+}
+
 TEST(LexerTest, RecognizesStringLiteral)
 {
-    std::ifstream file(test_cases_path + "recognizes_string_literal.txt", std::ios::binary);
+    std::ifstream file(test_cases_path / "recognizes_string_literal.txt", std::ios::binary);
     mylang::lex::Lexer lexer(&file);
     auto tokens = lexer.tokenize();
     auto expected = lexer.make_token(mylang::lex::tok::TokenType::STRING, u"العالم", 1, 1);
@@ -87,7 +120,7 @@ TEST(LexerTest, HandlesUnexpectedCharacter) {
 
 TEST(LexerTest, RecognizesExpression00)
 {
-    std::ifstream file(test_cases_path + "recognizes_expression.txt", std::ios::binary);
+    std::ifstream file(test_cases_path / "recognizes_expression.txt", std::ios::binary);
     mylang::lex::Lexer lexer(&file);
     auto tokens = lexer.tokenize();
     std::vector<mylang::lex::tok::Token> expected = {
@@ -106,7 +139,7 @@ TEST(LexerTest, RecognizesExpression00)
 
 TEST(LexerTest, RecognizesStmt00)
 {
-    std::ifstream file(test_cases_path + "recognizes_stmt_00.txt", std::ios::binary);
+    std::ifstream file(test_cases_path / "recognizes_stmt_00.txt", std::ios::binary);
     mylang::lex::Lexer lexer(&file);
     auto tokens = lexer.tokenize();
     std::vector<mylang::lex::tok::Token> expected = {
@@ -124,7 +157,7 @@ TEST(LexerTest, RecognizesStmt00)
 
 TEST(LexerTest, RecognizesStmt01)
 {
-    std::ifstream file(test_cases_path + "recognizes_stmt_01.txt", std::ios::binary);
+    std::ifstream file(test_cases_path / "recognizes_stmt_01.txt", std::ios::binary);
     mylang::lex::Lexer lexer(&file);
     auto tokens = lexer.tokenize();
     std::vector<mylang::lex::tok::Token> expected = {
@@ -142,7 +175,7 @@ TEST(LexerTest, RecognizesStmt01)
 
 TEST(LexerTest, RecognizesStmt02)
 {
-    std::ifstream file(test_cases_path + "recognizes_stmt_02.txt", std::ios::binary);
+    std::ifstream file(test_cases_path / "recognizes_stmt_02.txt", std::ios::binary);
     mylang::lex::Lexer lexer(&file);
     auto tokens = lexer.tokenize();
     std::vector<mylang::lex::tok::Token> expected = {
@@ -160,7 +193,7 @@ TEST(LexerTest, RecognizesStmt02)
 
 TEST(LexerTest, RecognizesStmt03)
 {
-    std::ifstream file(test_cases_path + "recognizes_stmt_03.txt", std::ios::binary);
+    std::ifstream file(test_cases_path / "recognizes_stmt_03.txt", std::ios::binary);
     mylang::lex::Lexer lexer(&file);
     auto tokens = lexer.tokenize();
     std::vector<mylang::lex::tok::Token> expected = {
@@ -177,7 +210,7 @@ TEST(LexerTest, RecognizesStmt03)
 
 TEST(LexerTest, RecognizesStmt04)
 {
-    std::ifstream file(test_cases_path + "recognizes_stmt_04.txt", std::ios::binary);
+    std::ifstream file(test_cases_path / "recognizes_stmt_04.txt", std::ios::binary);
     mylang::lex::Lexer lexer(&file);
     auto tokens = lexer.tokenize();
     std::vector<mylang::lex::tok::Token> expected = {
