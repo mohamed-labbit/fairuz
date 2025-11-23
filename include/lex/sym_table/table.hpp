@@ -41,7 +41,7 @@ class SymbolTable
     // Returns true if successfully inserted
     bool insert(const std::u16string& lexeme, SymbolType st)
     {
-        auto& current_scope = this->scopes_.back();
+        Scope& current_scope = this->scopes_.back();
         // Check if symbol already exists in current scope
         if (current_scope.find(lexeme) != current_scope.end())
             return false;
@@ -76,7 +76,7 @@ class SymbolTable
         std::size_t scope_level = _scope.value();
         if (scope_level >= this->scopes_.size())
             return false;
-        const auto& scope = this->scopes_[scope_level];
+        const Scope& scope = this->scopes_[scope_level];
         return scope.find(name) != scope.end();
     }
 

@@ -23,19 +23,19 @@ namespace fs = std::filesystem;
 
 /// @brief Error codes for FileManager operations
 enum class FileManagerError {
-    FileNotFound,
-    FileNotOpen,
-    SeekOutOfBounds,
-    ReadError,
-    InvalidUtf8,
-    InvalidCharacterOffset,
-    PermissionDenied,
-    UnexpectedEOF,
-    SystemError,
-    EncodingError,
-    CacheError,
-    InvalidLineNumber,
-    BufferTooSmall
+    FILE_NOT_FOUND,
+    FILE_NOT_OPEN,
+    SEEK_OUT_OF_BOUND,
+    READ_ERROR,
+    INVALID_UTF8,
+    INVALID_CHAR_OFFSET,
+    PERMISSION_DENIED,
+    UNEXPECTED_EOF,
+    SYSTEM_ERROR,
+    ENCODING_ERROR,
+    CACHE_ERROR,
+    INVALID_LINE_NUMBER,
+    BUFFER_TOO_SMALL
 };
 
 /// @brief Convert error code to human-readable string
@@ -43,19 +43,19 @@ MYLANG_INLINE constexpr const char* to_string(FileManagerError error) MYLANG_NOE
 {
     switch (error)
     {
-    case FileManagerError::FileNotFound : return "File not found";
-    case FileManagerError::FileNotOpen : return "File is not open";
-    case FileManagerError::SeekOutOfBounds : return "Seek position out of bounds";
-    case FileManagerError::ReadError : return "Failed to read from file";
-    case FileManagerError::InvalidUtf8 : return "Invalid UTF-8 sequence encountered";
-    case FileManagerError::InvalidCharacterOffset : return "Invalid character offset";
-    case FileManagerError::PermissionDenied : return "Permission denied";
-    case FileManagerError::UnexpectedEOF : return "Unexpected end of file";
-    case FileManagerError::SystemError : return "System error occurred";
-    case FileManagerError::EncodingError : return "Encoding conversion error";
-    case FileManagerError::CacheError : return "Cache operation failed";
-    case FileManagerError::InvalidLineNumber : return "Invalid line number";
-    case FileManagerError::BufferTooSmall : return "Buffer too small for operation";
+    case FileManagerError::FILE_NOT_FOUND : return "File not found";
+    case FileManagerError::FILE_NOT_OPEN : return "File is not open";
+    case FileManagerError::SEEK_OUT_OF_BOUND : return "Seek position out of bounds";
+    case FileManagerError::READ_ERROR : return "Failed to read from file";
+    case FileManagerError::INVALID_UTF8 : return "Invalid UTF-8 sequence encountered";
+    case FileManagerError::INVALID_CHAR_OFFSET : return "Invalid character offset";
+    case FileManagerError::PERMISSION_DENIED : return "Permission denied";
+    case FileManagerError::UNEXPECTED_EOF : return "Unexpected end of file";
+    case FileManagerError::SYSTEM_ERROR : return "System error occurred";
+    case FileManagerError::ENCODING_ERROR : return "Encoding conversion error";
+    case FileManagerError::CACHE_ERROR : return "Cache operation failed";
+    case FileManagerError::INVALID_LINE_NUMBER : return "Invalid line number";
+    case FileManagerError::BUFFER_TOO_SMALL : return "Buffer too small for operation";
     default : return "Unknown error";
     }
 }
@@ -65,8 +65,8 @@ enum class LineEnding {
     LF,  // Unix/Linux/macOS (\n)
     CRLF,  // Windows (\r\n)
     CR,  // Classic Mac (\r)
-    Mixed,  // Mixed line endings
-    Unknown
+    MIXED,  // Mixed line endings
+    UNKNOWN
 };
 
 /// @brief High-performance UTF-8 aware file reader with advanced features
@@ -94,7 +94,7 @@ class FileManager
         std::size_t total_characters{0};
         std::size_t total_lines{0};
         std::size_t max_line_length{0};
-        LineEnding predominant_line_ending{LineEnding::Unknown};
+        LineEnding predominant_line_ending{LineEnding::UNKNOWN};
         std::optional<std::size_t> average_line_length;
         fs::file_time_type last_modified;
         bool has_bom{false};
@@ -124,11 +124,11 @@ class FileManager
 
     /// @brief Buffer management strategy
     enum class BufferStrategy {
-        SmallFile,  ///< < 1MB - aggressive buffering
-        MediumFile,  ///< 1MB - 100MB - balanced
-        LargeFile,  ///< > 100MB - conservative buffering
-        Streaming,  ///< Minimal buffering for streaming reads
-        MemoryMapped  ///< Use memory mapping for very large files
+        SMALL_FILE,  ///< < 1MB - aggressive buffering
+        MEDIUM_FILE,  ///< 1MB - 100MB - balanced
+        LARGE_FILE,  ///< > 100MB - conservative buffering
+        STREAMING,  ///< Minimal buffering for streaming reads
+        MEMORY_MAPPED  ///< Use memory mapping for very large files
     };
 
     /// @brief Cache entry for frequently accessed regions
