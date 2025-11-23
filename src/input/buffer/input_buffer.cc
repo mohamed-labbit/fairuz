@@ -41,9 +41,7 @@ char16_t InputBuffer::consume_char()
         if (*cur == BUFFER_END)
         {
             if (!refresh_buffer(cur_buf ^ 1))
-            {
                 return BUFFER_END;
-            }
             swap_buffers_();
         }
         ch = *cur;
@@ -61,15 +59,11 @@ const char16_t& InputBuffer::current()
     static const char16_t end = BUFFER_END;
 
     if (cur == nullptr)
-    {
         return end;
-    }
     if (*cur == BUFFER_END)
     {
         if (!this->refresh_buffer(cur_buf ^ 1))
-        {
             return end;
-        }
         this->swap_buffers_();
     }
     return *cur;
@@ -83,16 +77,12 @@ const char16_t& InputBuffer::peek()
     static const char16_t end = BUFFER_END;
 
     if (cur == nullptr)
-    {
         return end;
-    }
     pointer forward = cur + 1;
     if (*cur == BUFFER_END)
     {
         if (!refresh_buffer(cur_buf ^ 1))
-        {
             return end;
-        }
         swap_buffers_();
         forward = cur + 1;
     }
@@ -100,9 +90,7 @@ const char16_t& InputBuffer::peek()
     if (*forward == BUFFER_END)
     {
         if (!refresh_buffer(cur_buf ^ 1))
-        {
             return end;
-        }
         swap_buffers_();
         forward = cur + 1;
     }

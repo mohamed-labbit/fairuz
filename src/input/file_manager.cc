@@ -109,23 +109,23 @@ constexpr std::size_t FileManager::get_utf8_sequence_length(unsigned char first_
 typename FileManager::BufferStrategy FileManager::determine_strategy(std::size_t file_size) const MYLANG_NOEXCEPT
 {
     if (file_size > MMAP_THRESHOLD)
-        return BufferStrategy::MemoryMapped;
+        return BufferStrategy::MEMORY_MAPPED;
     if (file_size < SMALL_FILE_THRESHOLD)
-        return BufferStrategy::SmallFile;
+        return BufferStrategy::SMALL_FILE;
     if (file_size < LARGE_FILE_THRESHOLD)
-        return BufferStrategy::MediumFile;
-    return BufferStrategy::LargeFile;
+        return BufferStrategy::MEDIUM_FILE;
+    return BufferStrategy::LARGE_FILE;
 }
 
 std::size_t FileManager::get_buffer_size() const MYLANG_NOEXCEPT
 {
     switch (strategy_)
     {
-    case BufferStrategy::SmallFile : return DEFAULT_BUFFER_SIZE * 4;
-    case BufferStrategy::MediumFile : return DEFAULT_BUFFER_SIZE * 2;
-    case BufferStrategy::LargeFile : return DEFAULT_BUFFER_SIZE;
-    case BufferStrategy::Streaming : return DEFAULT_BUFFER_SIZE / 2;
-    case BufferStrategy::MemoryMapped : return DEFAULT_BUFFER_SIZE * 8;
+    case BufferStrategy::SMALL_FILE : return DEFAULT_BUFFER_SIZE * 4;
+    case BufferStrategy::MEDIUM_FILE : return DEFAULT_BUFFER_SIZE * 2;
+    case BufferStrategy::LARGE_FILE : return DEFAULT_BUFFER_SIZE;
+    case BufferStrategy::STREAMING : return DEFAULT_BUFFER_SIZE / 2;
+    case BufferStrategy::MEMORY_MAPPED : return DEFAULT_BUFFER_SIZE * 8;
     default : return DEFAULT_BUFFER_SIZE;
     }
 }
@@ -166,8 +166,8 @@ LineEnding FileManager::detect_line_endings() const
     if (cr_count > 0)
         return LineEnding::CR;
     if (crlf_count > 0 || lf_count > 0)
-        return LineEnding::Mixed;
-    return LineEnding::Unknown;
+        return LineEnding::MIXED;
+    return LineEnding::UNKNOWN;
 }
 
 std::expected<void, FileManagerError> FileManager::build_line_index()
@@ -237,7 +237,7 @@ std::expected<std::u16string, FileManagerError> FileManager::read_window_interna
     if (size == 0)
         return std::u16string{};
     if (!is_open())
-        return std::unexpected(FileManagerError::FileNotOpen);
+        return std::unexpected(FileManagerError::FILE_NOT_OPEN);
     const std::size_t byte_chunk_size = size * MAX_UTF8_CHAR_BYTES;
     std::vector<char> byte_buffer(byte_chunk_size);
     stream_.read(byte_buffer.data(), byte_chunk_size);
@@ -247,10 +247,10 @@ std::expected<std::u16string, FileManagerError> FileManager::read_window_interna
         if (stream_.eof())
             return std::u16string();
         else
-            return std::unexpected(FileManagerError::ReadError);
+            return std::unexpected(FileManagerError::READ_ERROR);
     }
     if (bytes_read < 0)
-        return std::unexpected(FileManagerError::ReadError);
+        return std::unexpected(FileManagerError::READ_ERROR);
     byte_buffer.resize(static_cast<std::size_t>(bytes_read));
     const std::size_t bytes_to_rewind = validate_utf8_boundary(byte_buffer);
     if (bytes_to_rewind > 0)
@@ -258,7 +258,7 @@ std::expected<std::u16string, FileManagerError> FileManager::read_window_interna
         byte_buffer.resize(bytes_read - bytes_to_rewind);
         stream_.seekg(-static_cast<std::streamoff>(bytes_to_rewind), std::ios_base::cur);
         if (stream_.fail())
-            return std::unexpected(FileManagerError::SeekOutOfBounds);
+            return std::unexpected(FileManagerError::SEEK_OUT_OF_BOUND);
     }
     const std::size_t valid_bytes = byte_buffer.size();
     context_.byte_offset += valid_bytes;
@@ -268,9 +268,9 @@ std::expected<std::u16string, FileManagerError> FileManager::read_window_interna
     try
     {
         result = utf8::utf8to16(std::string(byte_buffer.begin(), byte_buffer.end()));
-    } catch (const utf8::invalid_utf8&) { return std::unexpected(FileManagerError::InvalidUtf8); } catch (...)
+    } catch (const utf8::invalid_utf8&) { return std::unexpected(FileManagerError::INVALID_UTF8); } catch (...)
     {
-        return std::unexpected(FileManagerError::SystemError);
+        return std::unexpected(FileManagerError::SYSTEM_ERROR);
     }
 
     if (result.size() > size)
@@ -358,13 +358,13 @@ std::expected<typename FileManager::FileStats, FileManagerError> FileManager::co
                 stream_.seekg(4);
         }
         return stats;
-    } catch (const fs::filesystem_error&) { return std::unexpected(FileManagerError::SystemError); }
+    } catch (const fs::filesystem_error&) { return std::unexpected(FileManagerError::SYSTEM_ERROR); }
 }
 
 FileManager::FileManager(const fs::path& filepath) :
     filepath_(filepath),
     stream_(filepath, std::ios::binary),
-    strategy_(BufferStrategy::MediumFile)
+    strategy_(BufferStrategy::MEDIUM_FILE)
 {
     if (!fs::exists(filepath_))
         throw std::runtime_error("File not found: " + filepath_.string());
@@ -373,6 +373,7 @@ FileManager::FileManager(const fs::path& filepath) :
     auto stats_result = compute_stats();
     if (!stats_result)
         throw std::runtime_error("Failed to read file statistics");
+
     stats_ = *stats_result;
     last_known_write_time_ = stats_.last_modified;
     strategy_ = determine_strategy(stats_.total_bytes);
@@ -429,7 +430,7 @@ std::expected<void, FileManagerError> FileManager::reset()
 {
     std::unique_lock lock(mutex_);
     if (!is_open())
-        return std::unexpected(FileManagerError::FileNotOpen);
+        return std::unexpected(FileManagerError::FILE_NOT_FOUND);
     stream_.clear();
     stream_.seekg(0, std::ios::beg);
     // Skip BOM if present
@@ -441,7 +442,7 @@ std::expected<void, FileManagerError> FileManager::reset()
             stream_.seekg(2);
     }
     if (stream_.fail())
-        return std::unexpected(FileManagerError::SeekOutOfBounds);
+        return std::unexpected(FileManagerError::SEEK_OUT_OF_BOUND);
     context_.reset();
     return {};
 }
@@ -471,7 +472,7 @@ std::expected<void, FileManagerError> FileManager::seek_to_char(std::size_t char
         if (!result)
             return std::unexpected(result.error());
         if (result->empty())
-            return std::unexpected(FileManagerError::UnexpectedEOF);
+            return std::unexpected(FileManagerError::UNEXPECTED_EOF);
     }
 
     return {};
@@ -488,12 +489,12 @@ std::expected<void, FileManagerError> FileManager::seek_to_line(std::size_t line
 
     std::unique_lock lock(mutex_);
     if (line_number >= line_index_.size())
-        return std::unexpected(FileManagerError::InvalidLineNumber);
+        return std::unexpected(FileManagerError::INVALID_LINE_NUMBER);
     const auto& line_info = line_index_[line_number];
     stream_.clear();
     stream_.seekg(static_cast<std::streamoff>(line_info.byte_offset));
     if (stream_.fail())
-        return std::unexpected(FileManagerError::SeekOutOfBounds);
+        return std::unexpected(FileManagerError::SEEK_OUT_OF_BOUND);
     context_.byte_offset = line_info.byte_offset;
     context_.char_offset = line_info.char_offset;
     context_.line_number = line_number;
@@ -580,7 +581,7 @@ std::expected<std::vector<std::u16string>, FileManagerError> FileManager::read_l
     }
     if (start_line >= line_index_.size())
     {
-        return std::unexpected(FileManagerError::InvalidLineNumber);
+        return std::unexpected(FileManagerError::INVALID_LINE_NUMBER);
     }
     const std::size_t end_line = std::min(start_line + count, line_index_.size());
     std::vector<std::u16string> lines;
@@ -671,7 +672,7 @@ std::expected<void, FileManagerError> FileManager::goto_bookmark(const std::stri
     std::shared_lock lock(mutex_);
     auto it = bookmarks_.find(name);
     if (it == bookmarks_.end())
-        return std::unexpected(FileManagerError::InvalidCharacterOffset);
+        return std::unexpected(FileManagerError::INVALID_CHAR_OFFSET);
     lock.unlock();
     return seek_to_char(it->second.context.char_offset);
 }
@@ -699,7 +700,7 @@ std::expected<void, FileManagerError> FileManager::pop_position()
 {
     std::unique_lock lock(mutex_);
     if (position_stack_.empty())
-        return std::unexpected(FileManagerError::InvalidCharacterOffset);
+        return std::unexpected(FileManagerError::INVALID_CHAR_OFFSET);
     const auto prev_context = position_stack_.back();
     position_stack_.pop_back();
     lock.unlock();
@@ -780,7 +781,7 @@ std::expected<char16_t, FileManagerError> FileManager::peek_char(std::size_t cha
     if (!result)
         return std::unexpected(result.error());
     if (result->empty())
-        return std::unexpected(FileManagerError::UnexpectedEOF);
+        return std::unexpected(FileManagerError::UNEXPECTED_EOF);
     return (*result)[0];
 }
 
