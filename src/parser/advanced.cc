@@ -68,7 +68,7 @@ std::string CodeGenerator::generateCPP(const std::vector<ast::StmtPtr>& ast)
     return ss.str();
 }
 
-void CodeGenerator::generateStmt(const ast::Stmt* stmt, std::vector<Bytecode>& code)
+void CodeGenerator::generateStmt(const ast::Stmt* stmt, std::vector<Bytecode>& code) 
 {
     if (!stmt)
         return;
