@@ -22,7 +22,6 @@ std::u16string ParseError::format() const
     return utf8::utf8to16(ss.str());
 }
 
-
 /* ---- Parser methods ---- */
 
 // TODO : watch out for overflow and underflow
@@ -105,9 +104,13 @@ std::vector<std::u16string> Parser::getSuggestions(lex::tok::TokenType expected)
     std::vector<std::u16string> suggs;
 
     if (expected == lex::tok::TokenType::COLON)
+    {
         suggs.push_back(u"Did you forget ':' after the statement?");
+    }
     else if (expected == lex::tok::TokenType::RPAREN)
+    {
         suggs.push_back(u"Check for matching parentheses");
+    }
     else if (expected == lex::tok::TokenType::NAME)
     {
         suggs.push_back(u"Expected an identifier");
@@ -271,7 +274,6 @@ bool Parser::isExpressionStart()
       lex::tok::TokenType::OP_PLUS, lex::tok::TokenType::OP_MINUS, lex::tok::TokenType::OP_BITNOT,
       lex::tok::TokenType::KW_NOT});
 }
-
 
 lex::tok::Token Parser::next_token()
 {

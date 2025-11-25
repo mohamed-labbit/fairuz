@@ -8,26 +8,26 @@ namespace lex {
 namespace buffer {
 
 
-std::size_t InputBuffer::size() const { return this->buffers_[this->current_buffer_].length(); }
+std::size_t InputBuffer::size() const { return buffers_[current_buffer_].length(); }
 
 std::size_t InputBuffer::buffer_offset() const
 {
-    return static_cast<std::size_t>(this->current_ - this->buffers_[this->current_buffer_].data());
+    return static_cast<std::size_t>(current_ - buffers_[current_buffer_].data());
 }
 
 bool InputBuffer::empty() const
 {
-    return (!this->file_->is_open() || this->current_ == nullptr || this->buffers_[this->current_buffer_].empty());
+    return (!file_manager_->is_open() || current_ == nullptr || buffers_[current_buffer_].empty());
 }
 
-char16_t InputBuffer::at(const std::size_t idx) const { return this->buffers_[this->current_buffer_][idx]; }
+char16_t InputBuffer::at(const std::size_t idx) const { return buffers_[current_buffer_][idx]; }
 
 char16_t InputBuffer::consume_char()
 {
-    auto& unget_stack = this->unget_stack_;
-    auto& cur_pos = this->current_position_;
-    auto& cur_buf = this->current_buffer_;
-    auto& cur = this->current_;
+    auto& unget_stack = unget_stack_;
+    auto& cur_pos = current_position_;
+    auto& cur_buf = current_buffer_;
+    auto& cur = current_;
 
     char16_t ch;
     if (!unget_stack.empty())
@@ -54,17 +54,17 @@ char16_t InputBuffer::consume_char()
 MYLANG_NODISCARD
 const char16_t& InputBuffer::current()
 {
-    auto& cur = this->current_;
-    auto& cur_buf = this->current_buffer_;
+    auto& cur = current_;
+    auto& cur_buf = current_buffer_;
     static const char16_t end = BUFFER_END;
 
     if (cur == nullptr)
         return end;
     if (*cur == BUFFER_END)
     {
-        if (!this->refresh_buffer(cur_buf ^ 1))
+        if (!refresh_buffer(cur_buf ^ 1))
             return end;
-        this->swap_buffers_();
+        swap_buffers_();
     }
     return *cur;
 }
@@ -72,8 +72,8 @@ const char16_t& InputBuffer::current()
 MYLANG_NODISCARD
 const char16_t& InputBuffer::peek()
 {
-    auto& cur = this->current_;
-    auto& cur_buf = this->current_buffer_;
+    auto& cur = current_;
+    auto& cur_buf = current_buffer_;
     static const char16_t end = BUFFER_END;
 
     if (cur == nullptr)
@@ -99,9 +99,9 @@ const char16_t& InputBuffer::peek()
 
 std::u16string InputBuffer::n_peek(std::size_t n)
 {
-    auto& cur_buf = this->current_buffer_;
-    auto& bufs = this->buffers_;
-    auto& cur = this->current_;
+    auto& cur_buf = current_buffer_;
+    auto& bufs = buffers_;
+    auto& cur = current_;
 
     std::u16string out;
     if (n == 0)
@@ -144,11 +144,11 @@ void InputBuffer::unget(char16_t ch)
 
 void InputBuffer::reset()
 {
-    auto& cur_buf = this->current_buffer_;
-    auto& bufs = this->buffers_;
-    auto& cur = this->current_;
-    auto& cur_pos = this->current_position_;
-    auto& cols = this->columns_;
+    auto& cur_buf = current_buffer_;
+    auto& bufs = buffers_;
+    auto& cur = current_;
+    auto& cur_pos = current_position_;
+    auto& cols = columns_;
 
     cur_buf = 0;
     bufs[0][0] = BUFFER_END;
@@ -162,14 +162,14 @@ void InputBuffer::reset()
     cols.push(1);
 }
 
-Position InputBuffer::position() const MYLANG_NOEXCEPT { return this->current_position_; }
+Position InputBuffer::position() const MYLANG_NOEXCEPT { return current_position_; }
 
 void InputBuffer::swap_buffers_()
 {
-    auto& cur_buf = this->current_buffer_;
-    auto& bufs = this->buffers_;
-    auto& cur = this->current_;
-    auto& cols = this->columns_;
+    auto& cur_buf = current_buffer_;
+    auto& bufs = buffers_;
+    auto& cur = current_;
+    auto& cols = columns_;
 
     cur_buf ^= 1;
     cur = bufs[cur_buf].data();
@@ -180,8 +180,8 @@ void InputBuffer::swap_buffers_()
 
 void InputBuffer::advance_position_(char16_t ch)
 {
-    auto& cur_pos = this->current_position_;
-    auto& cols = this->columns_;
+    auto& cur_pos = current_position_;
+    auto& cols = columns_;
     cur_pos.filepos += 1;
 
     if (ch == u'\n')
@@ -202,8 +202,8 @@ void InputBuffer::advance_position_(char16_t ch)
 
 void InputBuffer::rewind_position_(char16_t ch)
 {
-    auto& cur_pos = this->current_position_;
-    auto& cols = this->columns_;
+    auto& cur_pos = current_position_;
+    auto& cols = columns_;
 
     if (cur_pos.filepos == 0)
         // TODO: ultimately should emit an error
