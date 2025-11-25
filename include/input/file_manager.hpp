@@ -188,41 +188,30 @@ class FileManager
 
     /// @brief Detect BOM and encoding
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::pair<bool, std::string> detect_encoding() const;
-
     /// @brief Validate UTF-8 sequence and find truncation point
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::size_t validate_utf8_boundary(
       std::span<const char> buffer) const MYLANG_NOEXCEPT;
-
     /// @brief Validate a complete UTF-8 sequence
     MYLANG_COMPILER_ABI MYLANG_NODISCARD static bool is_valid_utf8_sequence(std::span<const char> seq) MYLANG_NOEXCEPT;
-
     /// @brief Get expected UTF-8 sequence length from first byte
     MYLANG_COMPILER_ABI MYLANG_NODISCARD static constexpr std::size_t get_utf8_sequence_length(
       unsigned char first_byte) MYLANG_NOEXCEPT;
-
     /// @brief Determine optimal buffer strategy based on file size
     MYLANG_COMPILER_ABI MYLANG_NODISCARD BufferStrategy determine_strategy(std::size_t file_size) const MYLANG_NOEXCEPT;
-
     /// @brief Get buffer size based on strategy
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::size_t get_buffer_size() const MYLANG_NOEXCEPT;
-
     /// @brief Detect predominant line ending type
     MYLANG_COMPILER_ABI MYLANG_NODISCARD LineEnding detect_line_endings() const;
-
     /// @brief Build line index for fast line-based access
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<void, FileManagerError> build_line_index();
-
     /// @brief Internal read window without locking
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<std::u16string, FileManagerError> read_window_internal(
       std::size_t size);
-
     /// @brief Check and update cache
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::optional<std::u16string> check_cache(
       std::size_t char_offset, std::size_t size) const;
-
     /// @brief Add entry to cache with LRU eviction
     MYLANG_COMPILER_ABI void update_cache(std::size_t char_offset, const std::u16string& data);
-
     /// @brief Initialize file statistics
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<FileStats, FileManagerError> compute_stats();
 
@@ -238,105 +227,73 @@ class FileManager
 
     /// @brief Check if file has been modified since last read
     MYLANG_COMPILER_ABI MYLANG_NODISCARD bool is_changed_since_last_read() const MYLANG_NOEXCEPT;
-
     /// @brief Check if file stream is open and ready
     MYLANG_COMPILER_ABI MYLANG_NODISCARD bool is_open() const MYLANG_NOEXCEPT;
-
     /// @brief Get current context (position tracking)
     MYLANG_COMPILER_ABI MYLANG_NODISCARD Context get_context() const MYLANG_NOEXCEPT;
-
     /// @brief Get file statistics
     MYLANG_COMPILER_ABI MYLANG_NODISCARD FileStats get_stats() const MYLANG_NOEXCEPT;
-
     /// @brief Get cache statistics
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::pair<std::size_t, std::size_t> get_cache_stats() const MYLANG_NOEXCEPT;
-
     /// @brief Enable or disable caching
     MYLANG_COMPILER_ABI void set_caching(bool enabled) MYLANG_NOEXCEPT;
-
     /// @brief Set maximum cache entries
     MYLANG_COMPILER_ABI void set_max_cache_entries(std::size_t max_entries) MYLANG_NOEXCEPT;
-
     /// @brief Reset read position to beginning of file
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<void, FileManagerError> reset();
-
     /// @brief Seek to specific character offset
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<void, FileManagerError> seek_to_char(std::size_t char_offset);
-
     /// @brief Seek to specific line number
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<void, FileManagerError> seek_to_line(std::size_t line_number);
-
     /// @brief Read a window of UTF-16 characters starting from current position
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<std::u16string, FileManagerError> read_window(std::size_t size);
-
     /// @brief Read specific line by number
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<std::u16string, FileManagerError> read_line(
       std::size_t line_number);
-
     /// @brief Read next line from current position
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<std::u16string, FileManagerError> read_next_line();
-
     /// @brief Read range of lines
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<std::vector<std::u16string>, FileManagerError> read_lines(
       std::size_t start_line, std::size_t count);
-
     /// @brief Read entire file as UTF-16 string
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<std::u16string, FileManagerError> read_all();
-
     /// @brief Search for pattern in file
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<std::vector<std::size_t>, FileManagerError> search(
       std::u16string_view pattern, std::size_t max_results = 1000);
-
     /// @brief Create bookmark at current position
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<void, FileManagerError> create_bookmark(const std::string& name);
-
     /// @brief Jump to bookmark
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<void, FileManagerError> goto_bookmark(const std::string& name);
-
     /// @brief Get all bookmark names
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::vector<std::string> get_bookmarks() const;
-
     /// @brief Push current position to navigation stack
     MYLANG_COMPILER_ABI void push_position();
-
     /// @brief Pop and restore previous position
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<void, FileManagerError> pop_position();
-
     /// @brief Get number of positions in navigation stack
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::size_t get_position_stack_size() const MYLANG_NOEXCEPT;
-
     /// @brief Update file statistics and check for changes
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<void, FileManagerError> refresh_stats();
-
     /// @brief Build line index for fast line access
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<void, FileManagerError> ensure_line_index();
-
     /// @brief Get total number of lines (builds index if needed)
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<std::size_t, FileManagerError> get_line_count();
-
     /// @brief Read file in reverse order (from end to beginning)
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<std::u16string, FileManagerError> read_reverse(
       std::size_t char_count);
-
     /// @brief Get character at specific offset without moving position
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<char16_t, FileManagerError> peek_char(std::size_t char_offset);
-
     /// @brief Get substring without changing position
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<std::u16string, FileManagerError> peek_range(
       std::size_t start_offset, std::size_t length);
-
     /// @brief Count occurrences of character
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<std::size_t, FileManagerError> count_char(char16_t target);
-
     /// @brief Get file path
     MYLANG_COMPILER_ABI MYLANG_NODISCARD const fs::path& get_path() const MYLANG_NOEXCEPT;
-
     /// @brief Get buffer strategy
     MYLANG_COMPILER_ABI MYLANG_NODISCARD BufferStrategy get_strategy() const MYLANG_NOEXCEPT;
-
     /// @brief Clear all caches and bookmarks
     MYLANG_COMPILER_ABI void clear_all_caches() MYLANG_NOEXCEPT;
-
     /// @brief Get memory usage estimate in bytes
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::size_t estimate_memory_usage() const MYLANG_NOEXCEPT;
 
@@ -363,21 +320,17 @@ class FileManager
         explicit iterator(FileManager* mgr, bool end = false);
 
         reference operator*() const;
-
         pointer operator->() const;
 
         iterator& operator++();
-
         iterator operator++(int);
 
         bool operator==(const iterator& other) const;
-
         bool operator!=(const iterator& other) const;
     };
 
     /// @brief Get iterator to beginning
     MYLANG_COMPILER_ABI MYLANG_NODISCARD iterator begin();
-
     /// @brief Get iterator to end
     MYLANG_COMPILER_ABI MYLANG_NODISCARD iterator end();
 };

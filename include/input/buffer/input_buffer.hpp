@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../file_manager.hpp"
 #include "base.hpp"
 #include <stack>
 
@@ -29,9 +30,9 @@ class InputBuffer: public InputBufferBase
    public:
     using pointer = char16_t*;
 
-    InputBuffer(std::ifstream* file, std::size_t cap = DEFAULT_CAPACITY) :
+    InputBuffer(FileManager* file_manager, std::size_t cap = DEFAULT_CAPACITY) :
         capacity_(cap),
-        InputBufferBase(file, cap)
+        InputBufferBase(file_manager, cap)
     {
         buffers_[0].resize(capacity_ + 1, BUFFER_END);
         buffers_[1].resize(capacity_ + 1, BUFFER_END);

@@ -18,12 +18,12 @@ class SourceManager
    public:
     explicit SourceManager() = default;
 
-    explicit SourceManager(std::ifstream* file) :
-        file_(file),
-        input_buffer_(buffer::InputBuffer(file_, DEFAULT_CAPACITY)),
+    explicit SourceManager(FileManager* file_manager) :
+        file_manager_(file_manager),
+        input_buffer_(buffer::InputBuffer(file_manager, DEFAULT_CAPACITY)),
         use_file_buffer_(true)
     {
-        if (!file_->is_open())
+        if (!file_manager_->is_open())
             throw std::invalid_argument("File not open");
     }
 
@@ -61,7 +61,7 @@ class SourceManager
     std::pair<std::size_t, std::size_t> offset_map_(const std::size_t& offset) const;
 
    private:
-    std::ifstream* file_{nullptr};
+    FileManager* file_manager_{nullptr};
     std::string filepath_;
     std::optional<buffer::InputBuffer> input_buffer_;
     std::optional<std::u16string> source_;
