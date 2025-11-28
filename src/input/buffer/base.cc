@@ -19,15 +19,11 @@ bool InputBufferBase::refresh_buffer(const std::uint32_t to_refresh)
     auto buf_or_error = file_manager_->read_window(max_chars);
     buffer_t buf;
 
-    if (buf_or_error.has_value())
-    {
-        buf = buf_or_error.value();
-    }
-    else if (!buf_or_error)
+    if (!buf_or_error)
     {
         FileManagerError err = buf_or_error.error();
-        std::cerr << to_string(err) << std::endl;
-        return false;
+        std::string err_msg = "-- DEBUG: " + std::string(to_string(err));
+        throw std::runtime_error(err_msg);
     }
 
     if (buf.empty())

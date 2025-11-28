@@ -157,54 +157,9 @@ offset_pair SourceManager::offset_map_(const std::size_t& offset) const
 
 offset_pair SourceManager::offset_map(const std::size_t& offset)
 {
-    if (!file_manager_ || !file_manager_->is_open())
-        return {};
-
-    if (!use_file_buffer_)
-    {
-        // TODO : implement for normal string buffer
-    }
-
-    auto& buf = this->input_buffer_.value();
-
-    if (offset == buf.buffer_offset())
-        return std::make_pair(buf.position().line, buf.position().column);
-
-    std::istream::pos_type original_pos = file_manager_->tellg();
-    std::ios::iostate original_state = file_manager_->rdstate();
-
-    // ensure we can seek and read from the beginning without corrupting caller state
-    file_manager_->clear();
-    file_manager_->seekg(0, std::ios::beg);
-
-    file_manager_->imbue(std::locale(file_manager_->getloc()));
+    // TODO : implement this using the new file manager
     std::size_t line = 1;
     std::size_t col = 1;
-    std::size_t current_offset = 0;
-    char c;
-
-    while (file_manager_->get(c))
-    {
-        if (current_offset == offset)
-            return std::make_pair(line, col);
-
-        if (c == L'\n')
-        {
-            line += 1;
-            col = 1;
-        }
-        else
-        {
-            col += 1;
-        }
-
-        current_offset++;
-    }
-
-    file_manager_->clear();
-    if (original_pos != static_cast<std::istream::pos_type>(-1))
-        file_manager_->seekg(original_pos);
-    file_manager_->clear(original_state);
     return std::make_pair(line, col);
 }
 

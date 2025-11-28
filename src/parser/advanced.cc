@@ -352,7 +352,7 @@ void DiagnosticEngine::report(Severity sev,
   std::int32_t col,
   std::int32_t len,
   const std::u16string& msg,
-  const std::u16string& code = u"")
+  const std::u16string& code)
 {
     Diagnostic diag;
     diag.severity = sev;

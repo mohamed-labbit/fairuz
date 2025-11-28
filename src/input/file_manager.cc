@@ -1,5 +1,7 @@
 #include "../../include/input/file_manager.hpp"
 
+#include <shared_mutex>
+
 
 std::pair<bool, std::string> FileManager::detect_encoding() const
 {
@@ -174,7 +176,6 @@ std::expected<void, FileManagerError> FileManager::build_line_index()
 {
     if (line_index_built_)
         return {};
-    std::unique_lock lock(mutex_);
     auto reset_result = reset();
     if (!reset_result)
         return reset_result;
@@ -242,6 +243,7 @@ std::expected<std::u16string, FileManagerError> FileManager::read_window_interna
     std::vector<char> byte_buffer(byte_chunk_size);
     stream_.read(byte_buffer.data(), byte_chunk_size);
     std::streamsize bytes_read = stream_.gcount();
+
     if (bytes_read == 0)
     {
         if (stream_.eof())
@@ -251,6 +253,7 @@ std::expected<std::u16string, FileManagerError> FileManager::read_window_interna
     }
     if (bytes_read < 0)
         return std::unexpected(FileManagerError::READ_ERROR);
+
     byte_buffer.resize(static_cast<std::size_t>(bytes_read));
     const std::size_t bytes_to_rewind = validate_utf8_boundary(byte_buffer);
     if (bytes_to_rewind > 0)
@@ -299,7 +302,7 @@ std::optional<std::u16string> FileManager::check_cache(std::size_t char_offset, 
 {
     if (!enable_caching_)
         return std::nullopt;
-    std::shared_lock lock(mutex_);
+
     const std::size_t cache_key = char_offset / CACHE_CHUNK_SIZE;
     auto it = cache_.find(cache_key);
     if (it != cache_.end())
@@ -322,7 +325,6 @@ void FileManager::update_cache(std::size_t char_offset, const std::u16string& da
 {
     if (!enable_caching_)
         return;
-    std::unique_lock lock(mutex_);
     if (cache_.size() >= max_cache_entries_)
     {
         // LRU eviction
@@ -381,6 +383,12 @@ FileManager::FileManager(const fs::path& filepath) :
     stream_.rdbuf()->pubsetbuf(nullptr, buffer_size);
 }
 
+FileManager::~FileManager()
+{
+    if (stream_.is_open())
+        stream_.close();
+}
+
 bool FileManager::is_changed_since_last_read() const MYLANG_NOEXCEPT
 {
     try
@@ -391,44 +399,29 @@ bool FileManager::is_changed_since_last_read() const MYLANG_NOEXCEPT
 }
 
 /// @brief Check if file stream is open and ready
-bool FileManager::is_open() const MYLANG_NOEXCEPT { return stream_.is_open() && stream_.good(); }
+bool FileManager::is_open() const MYLANG_NOEXCEPT { return stream_.is_open() /*&& stream_.good()*/; }
 
 /// @brief Get current context (position tracking)
-typename FileManager::Context FileManager::get_context() const MYLANG_NOEXCEPT
-{
-    std::shared_lock lock(mutex_);
-    return context_;
-}
+typename FileManager::Context FileManager::get_context() const MYLANG_NOEXCEPT { return context_; }
 
-typename FileManager::FileStats FileManager::get_stats() const MYLANG_NOEXCEPT
-{
-    std::shared_lock lock(mutex_);
-    return stats_;
-}
+typename FileManager::FileStats FileManager::get_stats() const MYLANG_NOEXCEPT { return stats_; }
 
 std::pair<std::size_t, std::size_t> FileManager::get_cache_stats() const MYLANG_NOEXCEPT
 {
-    std::shared_lock lock(mutex_);
     return {cache_hits_, cache_misses_};
 }
 
 void FileManager::set_caching(bool enabled) MYLANG_NOEXCEPT
 {
-    std::unique_lock lock(mutex_);
     enable_caching_ = enabled;
     if (!enabled)
         cache_.clear();
 }
 
-void FileManager::set_max_cache_entries(std::size_t max_entries) MYLANG_NOEXCEPT
-{
-    std::unique_lock lock(mutex_);
-    max_cache_entries_ = max_entries;
-}
+void FileManager::set_max_cache_entries(std::size_t max_entries) MYLANG_NOEXCEPT { max_cache_entries_ = max_entries; }
 
 std::expected<void, FileManagerError> FileManager::reset()
 {
-    std::unique_lock lock(mutex_);
     if (!is_open())
         return std::unexpected(FileManagerError::FILE_NOT_FOUND);
     stream_.clear();
@@ -449,15 +442,16 @@ std::expected<void, FileManagerError> FileManager::reset()
 
 std::expected<void, FileManagerError> FileManager::seek_to_char(std::size_t char_offset)
 {
-    std::unique_lock lock(mutex_);
     if (char_offset == context_.char_offset)
         return {};
+
     // Check cache first
     if (auto cached = check_cache(char_offset, 1))
     {
         context_.char_offset = char_offset;
         return {};
     }
+
     if (char_offset < context_.char_offset || char_offset - context_.char_offset > 10000)
     {
         auto reset_result = reset();
@@ -487,7 +481,6 @@ std::expected<void, FileManagerError> FileManager::seek_to_line(std::size_t line
             return build_result;
     }
 
-    std::unique_lock lock(mutex_);
     if (line_number >= line_index_.size())
         return std::unexpected(FileManagerError::INVALID_LINE_NUMBER);
     const auto& line_info = line_index_[line_number];
@@ -504,7 +497,6 @@ std::expected<void, FileManagerError> FileManager::seek_to_line(std::size_t line
 
 std::expected<std::u16string, FileManagerError> FileManager::read_window(std::size_t size)
 {
-    std::unique_lock lock(mutex_);
     // Check cache
     if (auto cached = check_cache(context_.char_offset, size))
         return *cached;
@@ -519,14 +511,12 @@ std::expected<std::u16string, FileManagerError> FileManager::read_line(std::size
     auto seek_result = seek_to_line(line_number);
     if (!seek_result)
         return std::unexpected(seek_result.error());
-    std::unique_lock lock(mutex_);
     const std::size_t line_length = line_index_[line_number].line_length;
     return read_window_internal(line_length);
 }
 
 std::expected<std::u16string, FileManagerError> FileManager::read_next_line()
 {
-    std::unique_lock lock(mutex_);
     std::u16string line;
     line.reserve(80);  // Average line length
 
@@ -662,24 +652,20 @@ std::expected<std::vector<std::size_t>, FileManagerError> FileManager::search(
 
 std::expected<void, FileManagerError> FileManager::create_bookmark(const std::string& name)
 {
-    std::unique_lock lock(mutex_);
     bookmarks_[name] = Bookmark{name, context_, std::chrono::system_clock::now()};
     return {};
 }
 
 std::expected<void, FileManagerError> FileManager::goto_bookmark(const std::string& name)
 {
-    std::shared_lock lock(mutex_);
     auto it = bookmarks_.find(name);
     if (it == bookmarks_.end())
         return std::unexpected(FileManagerError::INVALID_CHAR_OFFSET);
-    lock.unlock();
     return seek_to_char(it->second.context.char_offset);
 }
 
 std::vector<std::string> FileManager::get_bookmarks() const
 {
-    std::shared_lock lock(mutex_);
     std::vector<std::string> names;
     names.reserve(bookmarks_.size());
     for (const auto& [name, _] : bookmarks_)
@@ -689,7 +675,6 @@ std::vector<std::string> FileManager::get_bookmarks() const
 
 void FileManager::push_position()
 {
-    std::unique_lock lock(mutex_);
     position_stack_.push_back(context_);
     // Limit stack size
     if (position_stack_.size() > 100)
@@ -698,27 +683,20 @@ void FileManager::push_position()
 
 std::expected<void, FileManagerError> FileManager::pop_position()
 {
-    std::unique_lock lock(mutex_);
     if (position_stack_.empty())
         return std::unexpected(FileManagerError::INVALID_CHAR_OFFSET);
     const auto prev_context = position_stack_.back();
     position_stack_.pop_back();
-    lock.unlock();
     return seek_to_char(prev_context.char_offset);
 }
 
-std::size_t FileManager::get_position_stack_size() const MYLANG_NOEXCEPT
-{
-    std::shared_lock lock(mutex_);
-    return position_stack_.size();
-}
+std::size_t FileManager::get_position_stack_size() const MYLANG_NOEXCEPT { return position_stack_.size(); }
 
 std::expected<void, FileManagerError> FileManager::refresh_stats()
 {
     auto new_stats = compute_stats();
     if (!new_stats)
         return std::unexpected(new_stats.error());
-    std::unique_lock lock(mutex_);
     stats_ = *new_stats;
     last_known_write_time_ = stats_.last_modified;
     strategy_ = determine_strategy(stats_.total_bytes);
@@ -748,19 +726,16 @@ std::expected<std::size_t, FileManagerError> FileManager::get_line_count()
             return std::unexpected(build_result.error());
     }
 
-    std::shared_lock lock(mutex_);
     return stats_.total_lines;
 }
 
 std::expected<std::u16string, FileManagerError> FileManager::read_reverse(std::size_t char_count)
 {
-    std::unique_lock lock(mutex_);
     if (context_.char_offset < char_count)
         char_count = context_.char_offset;
     if (char_count == 0)
         return std::u16string{};
     const std::size_t target_offset = context_.char_offset - char_count;
-    lock.unlock();
     auto seek_result = seek_to_char(target_offset);
     if (!seek_result)
         return std::unexpected(seek_result.error());
@@ -822,15 +797,10 @@ std::expected<std::size_t, FileManagerError> FileManager::count_char(char16_t ta
 
 const fs::path& FileManager::get_path() const MYLANG_NOEXCEPT { return filepath_; }
 
-typename FileManager::BufferStrategy FileManager::get_strategy() const MYLANG_NOEXCEPT
-{
-    std::shared_lock lock(mutex_);
-    return strategy_;
-}
+typename FileManager::BufferStrategy FileManager::get_strategy() const MYLANG_NOEXCEPT { return strategy_; }
 
 void FileManager::clear_all_caches() MYLANG_NOEXCEPT
 {
-    std::unique_lock lock(mutex_);
     cache_.clear();
     line_index_.clear();
     position_stack_.clear();
@@ -842,7 +812,6 @@ void FileManager::clear_all_caches() MYLANG_NOEXCEPT
 
 std::size_t FileManager::estimate_memory_usage() const MYLANG_NOEXCEPT
 {
-    std::shared_lock lock(mutex_);
     std::size_t total = 0;
     // Cache
     for (const auto& [_, entry] : cache_)
