@@ -176,8 +176,8 @@ class Parser
     // === Advanced Expression Parsing ===
 
    public:
-    explicit Parser(std::ifstream* file) :
-        lexer_(file),
+    explicit Parser(FileManager* file_manager) :
+        lexer_(file_manager),
         use_lexer(true)
     {
         enterScope();  // global

@@ -151,8 +151,8 @@ class Lexer
    public:
     explicit Lexer() = default;
 
-    explicit Lexer(std::ifstream* file) :
-        source_manager_(file),
+    explicit Lexer(FileManager* file_manager) :
+        source_manager_(file_manager),
         tok_index_(0),
         indent_size_(0)
     {

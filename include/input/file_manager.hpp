@@ -166,7 +166,6 @@ class FileManager
     fs::file_time_type last_known_write_time_;
 
     // Advanced features
-    mutable std::shared_mutex mutex_;  ///< Thread-safety
     std::vector<LineIndex> line_index_;  ///< Fast line lookup
     std::unordered_map<std::size_t, CacheEntry> cache_;  ///< LRU cache
     std::vector<Context> position_stack_;  ///< Navigation history
@@ -224,6 +223,8 @@ class FileManager
 
     FileManager(const FileManager&) = delete;
     FileManager& operator=(const FileManager&) = delete;
+
+    ~FileManager();
 
     /// @brief Check if file has been modified since last read
     MYLANG_COMPILER_ABI MYLANG_NODISCARD bool is_changed_since_last_read() const MYLANG_NOEXCEPT;
