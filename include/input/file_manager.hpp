@@ -1,25 +1,20 @@
 #pragma once
 
 
-#include "../../utfcpp/source/utf8.h"
 #include "../macros.hpp"
 
-#include <chrono>
-#include <cstdint>
-#include <expected>
 #include <filesystem>
 #include <fstream>
-#include <memory>
 #include <optional>
-#include <shared_mutex>
 #include <span>
-#include <string>
 #include <unordered_map>
 #include <vector>
 
 
 namespace fs = std::filesystem;
 
+namespace mylang {
+namespace input {
 
 /// @brief Error codes for FileManager operations
 enum class FileManagerError {
@@ -202,17 +197,16 @@ class FileManager
     /// @brief Detect predominant line ending type
     MYLANG_COMPILER_ABI MYLANG_NODISCARD LineEnding detect_line_endings() const;
     /// @brief Build line index for fast line-based access
-    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<void, FileManagerError> build_line_index();
+    MYLANG_COMPILER_ABI void build_line_index();
     /// @brief Internal read window without locking
-    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<std::u16string, FileManagerError> read_window_internal(
-      std::size_t size);
+    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::u16string read_window_internal(std::size_t size);
     /// @brief Check and update cache
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::optional<std::u16string> check_cache(
       std::size_t char_offset, std::size_t size) const;
     /// @brief Add entry to cache with LRU eviction
     MYLANG_COMPILER_ABI void update_cache(std::size_t char_offset, const std::u16string& data);
     /// @brief Initialize file statistics
-    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<FileStats, FileManagerError> compute_stats();
+    MYLANG_COMPILER_ABI MYLANG_NODISCARD FileStats compute_stats();
 
    public:
     /// @brief Construct FileManager for given file path
@@ -241,54 +235,51 @@ class FileManager
     /// @brief Set maximum cache entries
     MYLANG_COMPILER_ABI void set_max_cache_entries(std::size_t max_entries) MYLANG_NOEXCEPT;
     /// @brief Reset read position to beginning of file
-    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<void, FileManagerError> reset();
+    MYLANG_COMPILER_ABI void reset();
     /// @brief Seek to specific character offset
-    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<void, FileManagerError> seek_to_char(std::size_t char_offset);
+    MYLANG_COMPILER_ABI void seek_to_char(std::size_t char_offset);
     /// @brief Seek to specific line number
-    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<void, FileManagerError> seek_to_line(std::size_t line_number);
+    MYLANG_COMPILER_ABI void seek_to_line(std::size_t line_number);
     /// @brief Read a window of UTF-16 characters starting from current position
-    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<std::u16string, FileManagerError> read_window(std::size_t size);
+    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::u16string read_window(std::size_t size);
     /// @brief Read specific line by number
-    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<std::u16string, FileManagerError> read_line(
-      std::size_t line_number);
+    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::u16string read_line(std::size_t line_number);
     /// @brief Read next line from current position
-    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<std::u16string, FileManagerError> read_next_line();
+    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::u16string read_next_line();
     /// @brief Read range of lines
-    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<std::vector<std::u16string>, FileManagerError> read_lines(
+    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::vector<std::u16string> read_lines(
       std::size_t start_line, std::size_t count);
     /// @brief Read entire file as UTF-16 string
-    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<std::u16string, FileManagerError> read_all();
+    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::u16string read_all();
     /// @brief Search for pattern in file
-    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<std::vector<std::size_t>, FileManagerError> search(
+    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::vector<std::size_t> search(
       std::u16string_view pattern, std::size_t max_results = 1000);
     /// @brief Create bookmark at current position
-    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<void, FileManagerError> create_bookmark(const std::string& name);
+    MYLANG_COMPILER_ABI void create_bookmark(const std::string& name);
     /// @brief Jump to bookmark
-    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<void, FileManagerError> goto_bookmark(const std::string& name);
+    MYLANG_COMPILER_ABI void goto_bookmark(const std::string& name);
     /// @brief Get all bookmark names
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::vector<std::string> get_bookmarks() const;
     /// @brief Push current position to navigation stack
     MYLANG_COMPILER_ABI void push_position();
     /// @brief Pop and restore previous position
-    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<void, FileManagerError> pop_position();
+    MYLANG_COMPILER_ABI void pop_position();
     /// @brief Get number of positions in navigation stack
     MYLANG_COMPILER_ABI MYLANG_NODISCARD std::size_t get_position_stack_size() const MYLANG_NOEXCEPT;
     /// @brief Update file statistics and check for changes
-    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<void, FileManagerError> refresh_stats();
+    MYLANG_COMPILER_ABI void refresh_stats();
     /// @brief Build line index for fast line access
-    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<void, FileManagerError> ensure_line_index();
+    MYLANG_COMPILER_ABI void ensure_line_index();
     /// @brief Get total number of lines (builds index if needed)
-    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<std::size_t, FileManagerError> get_line_count();
+    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::size_t get_line_count();
     /// @brief Read file in reverse order (from end to beginning)
-    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<std::u16string, FileManagerError> read_reverse(
-      std::size_t char_count);
+    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::u16string read_reverse(std::size_t char_count);
     /// @brief Get character at specific offset without moving position
-    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<char16_t, FileManagerError> peek_char(std::size_t char_offset);
+    MYLANG_COMPILER_ABI MYLANG_NODISCARD char16_t peek_char(std::size_t char_offset);
     /// @brief Get substring without changing position
-    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<std::u16string, FileManagerError> peek_range(
-      std::size_t start_offset, std::size_t length);
+    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::u16string peek_range(std::size_t start_offset, std::size_t length);
     /// @brief Count occurrences of character
-    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::expected<std::size_t, FileManagerError> count_char(char16_t target);
+    MYLANG_COMPILER_ABI MYLANG_NODISCARD std::size_t count_char(char16_t target);
     /// @brief Get file path
     MYLANG_COMPILER_ABI MYLANG_NODISCARD const fs::path& get_path() const MYLANG_NOEXCEPT;
     /// @brief Get buffer strategy
@@ -335,3 +326,6 @@ class FileManager
     /// @brief Get iterator to end
     MYLANG_COMPILER_ABI MYLANG_NODISCARD iterator end();
 };
+
+}
+}

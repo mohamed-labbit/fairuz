@@ -702,7 +702,7 @@ ast::StmtPtr Parser::parseSimpleStmt()
         skipNewlines();
         return std::make_unique<ast::ReturnStmt>(std::move(value));
     }
-
+    
     // Complex assignment handling
     if (check(lex::tok::TokenType::NAME))
     {

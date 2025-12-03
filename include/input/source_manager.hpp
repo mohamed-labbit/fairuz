@@ -18,7 +18,7 @@ class SourceManager
    public:
     explicit SourceManager() = default;
 
-    explicit SourceManager(FileManager* file_manager) :
+    explicit SourceManager(input::FileManager* file_manager) :
         file_manager_(file_manager),
         input_buffer_(buffer::InputBuffer(file_manager, DEFAULT_CAPACITY)),
         use_file_buffer_(true)
@@ -61,7 +61,7 @@ class SourceManager
     std::pair<std::size_t, std::size_t> offset_map_(const std::size_t& offset) const;
 
    private:
-    FileManager* file_manager_{nullptr};
+    input::FileManager* file_manager_{nullptr};
     std::string filepath_;
     std::optional<buffer::InputBuffer> input_buffer_;
     std::optional<std::u16string> source_;

@@ -16,15 +16,7 @@ bool InputBufferBase::refresh_buffer(const std::uint32_t to_refresh)
 
     auto& bufs = this->buffers_;
     std::size_t max_chars = bufs[to_refresh].size() - 1;
-    auto buf_or_error = file_manager_->read_window(max_chars);
-    buffer_t buf;
-
-    if (!buf_or_error)
-    {
-        FileManagerError err = buf_or_error.error();
-        std::string err_msg = "-- DEBUG: " + std::string(to_string(err));
-        throw std::runtime_error(err_msg);
-    }
+    buffer_t buf = file_manager_->read_window(max_chars);
 
     if (buf.empty())
     {

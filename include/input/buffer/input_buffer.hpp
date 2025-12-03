@@ -30,7 +30,7 @@ class InputBuffer: public InputBufferBase
    public:
     using pointer = char16_t*;
 
-    InputBuffer(FileManager* file_manager, std::size_t cap = DEFAULT_CAPACITY) :
+    InputBuffer(input::FileManager* file_manager, std::size_t cap = DEFAULT_CAPACITY) :
         capacity_(cap),
         InputBufferBase(file_manager, cap)
     {

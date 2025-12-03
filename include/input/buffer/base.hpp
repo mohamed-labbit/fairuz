@@ -15,7 +15,7 @@ class InputBufferBase
    public:
     using buffer_t = std::u16string;
 
-    InputBufferBase(FileManager* file_manager, std::size_t cap = DEFAULT_CAPACITY) :
+    InputBufferBase(input::FileManager* file_manager, std::size_t cap = DEFAULT_CAPACITY) :
         file_manager_(file_manager),
         byte_position_(0),
         char_count_(0)
@@ -31,7 +31,7 @@ class InputBufferBase
     bool refresh_buffer(const std::uint32_t to_refresh);
 
    protected:
-    FileManager* file_manager_{nullptr};
+    input::FileManager* file_manager_{nullptr};
     buffer_t buffers_[2];
     std::size_t byte_position_;  // Current byte position in file
     std::size_t char_count_;  // Total characters read so far

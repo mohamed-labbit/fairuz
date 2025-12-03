@@ -176,7 +176,7 @@ class Parser
     // === Advanced Expression Parsing ===
 
    public:
-    explicit Parser(FileManager* file_manager) :
+    explicit Parser(input::FileManager* file_manager) :
         lexer_(file_manager),
         use_lexer(true)
     {
