@@ -1,5 +1,12 @@
 #include "../../include/input/file_manager.hpp"
+#include "../../include/input/error.hpp"
+#include "../../utfcpp/source/utf8.h"
 
+#include <shared_mutex>
+
+
+namespace mylang {
+namespace input {
 
 std::pair<bool, std::string> FileManager::detect_encoding() const
 {
@@ -35,7 +42,8 @@ std::pair<bool, std::string> FileManager::detect_encoding() const
 
 std::size_t FileManager::validate_utf8_boundary(std::span<const char> buffer) const MYLANG_NOEXCEPT
 {
-    if (buffer.empty()) return 0;
+    if (buffer.empty())
+        return 0;
 
     const std::size_t size = buffer.size();
     // Search backwards up to 4 bytes for incomplete UTF-8 sequence
@@ -43,14 +51,17 @@ std::size_t FileManager::validate_utf8_boundary(std::span<const char> buffer) co
     {
         const std::size_t pos = size - 1 - i;
         const auto byte = static_cast<unsigned char>(buffer[pos]);
-        if ((byte & 0x80) == 0) return 0;
+        if ((byte & 0x80) == 0)
+            return 0;
         if ((byte & 0xC0) == 0xC0)
         {
             const std::size_t expected = get_utf8_sequence_length(byte);
             const std::size_t available = size - pos;
-            if (available < expected) return i + 1;
+            if (available < expected)
+                return i + 1;
             // Validate the complete sequence
-            if (!is_valid_utf8_sequence(buffer.subspan(pos, available))) return i + 1;
+            if (!is_valid_utf8_sequence(buffer.subspan(pos, available)))
+                return i + 1;
             return 0;
         }
     }
@@ -60,13 +71,16 @@ std::size_t FileManager::validate_utf8_boundary(std::span<const char> buffer) co
 
 bool FileManager::is_valid_utf8_sequence(std::span<const char> seq) MYLANG_NOEXCEPT
 {
-    if (seq.empty()) return false;
+    if (seq.empty())
+        return false;
     const auto first = static_cast<unsigned char>(seq[0]);
     const std::size_t len = get_utf8_sequence_length(first);
-    if (seq.size() < len) return false;
+    if (seq.size() < len)
+        return false;
     // Validate continuation bytes
     for (std::size_t i = 1; i < len; ++i)
-        if ((static_cast<unsigned char>(seq[i]) & 0xC0) != 0x80) return false;
+        if ((static_cast<unsigned char>(seq[i]) & 0xC0) != 0x80)
+            return false;
     // Check for overlong encodings and invalid ranges
     if (len == 2)
     {
@@ -88,30 +102,37 @@ bool FileManager::is_valid_utf8_sequence(std::span<const char> seq) MYLANG_NOEXC
 
 constexpr std::size_t FileManager::get_utf8_sequence_length(unsigned char first_byte) MYLANG_NOEXCEPT
 {
-    if ((first_byte & 0x80) == 0) return 1;
-    if ((first_byte & 0xE0) == 0xC0) return 2;
-    if ((first_byte & 0xF0) == 0xE0) return 3;
-    if ((first_byte & 0xF8) == 0xF0) return 4;
+    if ((first_byte & 0x80) == 0)
+        return 1;
+    if ((first_byte & 0xE0) == 0xC0)
+        return 2;
+    if ((first_byte & 0xF0) == 0xE0)
+        return 3;
+    if ((first_byte & 0xF8) == 0xF0)
+        return 4;
     return 1;
 }
 
 typename FileManager::BufferStrategy FileManager::determine_strategy(std::size_t file_size) const MYLANG_NOEXCEPT
 {
-    if (file_size > MMAP_THRESHOLD) return BufferStrategy::MemoryMapped;
-    if (file_size < SMALL_FILE_THRESHOLD) return BufferStrategy::SmallFile;
-    if (file_size < LARGE_FILE_THRESHOLD) return BufferStrategy::MediumFile;
-    return BufferStrategy::LargeFile;
+    if (file_size > MMAP_THRESHOLD)
+        return BufferStrategy::MEMORY_MAPPED;
+    if (file_size < SMALL_FILE_THRESHOLD)
+        return BufferStrategy::SMALL_FILE;
+    if (file_size < LARGE_FILE_THRESHOLD)
+        return BufferStrategy::MEDIUM_FILE;
+    return BufferStrategy::LARGE_FILE;
 }
 
 std::size_t FileManager::get_buffer_size() const MYLANG_NOEXCEPT
 {
     switch (strategy_)
     {
-    case BufferStrategy::SmallFile : return DEFAULT_BUFFER_SIZE * 4;
-    case BufferStrategy::MediumFile : return DEFAULT_BUFFER_SIZE * 2;
-    case BufferStrategy::LargeFile : return DEFAULT_BUFFER_SIZE;
-    case BufferStrategy::Streaming : return DEFAULT_BUFFER_SIZE / 2;
-    case BufferStrategy::MemoryMapped : return DEFAULT_BUFFER_SIZE * 8;
+    case BufferStrategy::SMALL_FILE : return DEFAULT_BUFFER_SIZE * 4;
+    case BufferStrategy::MEDIUM_FILE : return DEFAULT_BUFFER_SIZE * 2;
+    case BufferStrategy::LARGE_FILE : return DEFAULT_BUFFER_SIZE;
+    case BufferStrategy::STREAMING : return DEFAULT_BUFFER_SIZE / 2;
+    case BufferStrategy::MEMORY_MAPPED : return DEFAULT_BUFFER_SIZE * 8;
     default : return DEFAULT_BUFFER_SIZE;
     }
 }
@@ -140,21 +161,28 @@ LineEnding FileManager::detect_line_endings() const
                 ++cr_count;
             }
         }
-        else if (sample[i] == '\n') { ++lf_count; }
+        else if (sample[i] == '\n')
+        {
+            ++lf_count;
+        }
     }
-    if (crlf_count > lf_count && crlf_count > cr_count) return LineEnding::CRLF;
-    if (lf_count > crlf_count && lf_count > cr_count) return LineEnding::LF;
-    if (cr_count > 0) return LineEnding::CR;
-    if (crlf_count > 0 || lf_count > 0) return LineEnding::Mixed;
-    return LineEnding::Unknown;
+    if (crlf_count > lf_count && crlf_count > cr_count)
+        return LineEnding::CRLF;
+    if (lf_count > crlf_count && lf_count > cr_count)
+        return LineEnding::LF;
+    if (cr_count > 0)
+        return LineEnding::CR;
+    if (crlf_count > 0 || lf_count > 0)
+        return LineEnding::MIXED;
+    return LineEnding::UNKNOWN;
 }
 
-std::expected<void, FileManagerError> FileManager::build_line_index()
+void FileManager::build_line_index()
 {
-    if (line_index_built_) return {};
-    std::unique_lock lock(mutex_);
-    auto reset_result = reset();
-    if (!reset_result) return reset_result;
+    if (line_index_built_)
+        return;
+
+    reset();
     line_index_.clear();
     line_index_.reserve(stats_.total_bytes / 80);  // Estimate
     std::size_t byte_pos = 0;
@@ -163,12 +191,14 @@ std::expected<void, FileManagerError> FileManager::build_line_index()
     std::size_t line_start_char = 0;
     std::size_t max_line_len = 0;
     std::size_t current_line_len = 0;
+
     while (true)
     {
-        auto chunk = read_window_internal(LINE_INDEX_CHUNK);
-        if (!chunk) return std::unexpected(chunk.error());
-        if (chunk->empty()) break;
-        for (char16_t c : *chunk)
+        std::u16string chunk = read_window_internal(LINE_INDEX_CHUNK);
+        if (chunk.empty())
+            break;
+
+        for (char16_t c : chunk)
         {
             ++current_line_len;
 
@@ -198,48 +228,54 @@ std::expected<void, FileManagerError> FileManager::build_line_index()
     }
     stats_.total_lines = line_index_.size();
     stats_.max_line_length = max_line_len;
-    if (stats_.total_lines > 0) { stats_.average_line_length = stats_.total_characters / stats_.total_lines; }
+    if (stats_.total_lines > 0)
+        stats_.average_line_length = stats_.total_characters / stats_.total_lines;
     line_index_built_ = true;
-    auto error = reset();  // TODO : report error
-    return {};
+    reset();
 }
 
-std::expected<std::u16string, FileManagerError> FileManager::read_window_internal(std::size_t size)
+std::u16string FileManager::read_window_internal(std::size_t size)
 {
-    if (size == 0) return std::u16string{};
-    if (!is_open()) return std::unexpected(FileManagerError::FileNotOpen);
+    if (size == 0)
+        return std::u16string{};
+    if (!is_open())
+        throw error::file_error(to_string(FileManagerError::FILE_NOT_OPEN));
+
     const std::size_t byte_chunk_size = size * MAX_UTF8_CHAR_BYTES;
     std::vector<char> byte_buffer(byte_chunk_size);
     stream_.read(byte_buffer.data(), byte_chunk_size);
     std::streamsize bytes_read = stream_.gcount();
+
     if (bytes_read == 0)
     {
         if (stream_.eof())
             return std::u16string();
         else
-            return std::unexpected(FileManagerError::ReadError);
+            throw error::file_error(to_string(FileManagerError::READ_ERROR));
     }
-    if (bytes_read < 0) return std::unexpected(FileManagerError::ReadError);
+    if (bytes_read < 0)
+        throw error::file_error(to_string(FileManagerError::READ_ERROR));
+
     byte_buffer.resize(static_cast<std::size_t>(bytes_read));
     const std::size_t bytes_to_rewind = validate_utf8_boundary(byte_buffer);
     if (bytes_to_rewind > 0)
     {
         byte_buffer.resize(bytes_read - bytes_to_rewind);
         stream_.seekg(-static_cast<std::streamoff>(bytes_to_rewind), std::ios_base::cur);
-        if (stream_.fail()) return std::unexpected(FileManagerError::SeekOutOfBounds);
+        if (stream_.fail())
+            throw error::file_error(to_string(FileManagerError::SEEK_OUT_OF_BOUND));
     }
     const std::size_t valid_bytes = byte_buffer.size();
     context_.byte_offset += valid_bytes;
     context_.bytes_read_total += valid_bytes;
     std::u16string result;
-
     try
     {
         result = utf8::utf8to16(std::string(byte_buffer.begin(), byte_buffer.end()));
-    } catch (const utf8::invalid_utf8&) { return std::unexpected(FileManagerError::InvalidUtf8); } catch (...)
+    } catch (const utf8::invalid_utf8&)
     {
-        return std::unexpected(FileManagerError::SystemError);
-    }
+        throw error::file_error(to_string(FileManagerError::INVALID_UTF8));
+    } catch (...) { throw error::file_error(to_string(FileManagerError::SYSTEM_ERROR)); }
 
     if (result.size() > size)
     {
@@ -265,8 +301,9 @@ std::expected<std::u16string, FileManagerError> FileManager::read_window_interna
 
 std::optional<std::u16string> FileManager::check_cache(std::size_t char_offset, std::size_t size) const
 {
-    if (!enable_caching_) return std::nullopt;
-    std::shared_lock lock(mutex_);
+    if (!enable_caching_)
+        return std::nullopt;
+
     const std::size_t cache_key = char_offset / CACHE_CHUNK_SIZE;
     auto it = cache_.find(cache_key);
     if (it != cache_.end())
@@ -287,21 +324,22 @@ std::optional<std::u16string> FileManager::check_cache(std::size_t char_offset, 
 
 void FileManager::update_cache(std::size_t char_offset, const std::u16string& data)
 {
-    if (!enable_caching_) return;
-    std::unique_lock lock(mutex_);
+    if (!enable_caching_)
+        return;
     if (cache_.size() >= max_cache_entries_)
     {
         // LRU eviction
         auto oldest = cache_.begin();
         for (auto it = cache_.begin(); it != cache_.end(); ++it)
-            if (it->second.last_access < oldest->second.last_access) oldest = it;
+            if (it->second.last_access < oldest->second.last_access)
+                oldest = it;
         cache_.erase(oldest);
     }
     const std::size_t cache_key = char_offset / CACHE_CHUNK_SIZE;
     cache_[cache_key] = CacheEntry{data, context_.byte_offset, char_offset, std::chrono::steady_clock::now(), 1};
 }
 
-std::expected<typename FileManager::FileStats, FileManagerError> FileManager::compute_stats()
+typename FileManager::FileStats FileManager::compute_stats()
 {
     try
     {
@@ -323,23 +361,31 @@ std::expected<typename FileManager::FileStats, FileManagerError> FileManager::co
                 stream_.seekg(4);
         }
         return stats;
-    } catch (const fs::filesystem_error&) { return std::unexpected(FileManagerError::SystemError); }
+    } catch (const fs::filesystem_error&) { throw error::file_error(to_string(FileManagerError::SYSTEM_ERROR)); }
 }
 
 FileManager::FileManager(const fs::path& filepath) :
     filepath_(filepath),
     stream_(filepath, std::ios::binary),
-    strategy_(BufferStrategy::MediumFile)
+    strategy_(BufferStrategy::MEDIUM_FILE)
 {
-    if (!fs::exists(filepath_)) throw std::runtime_error("File not found: " + filepath_.string());
-    if (!stream_.is_open()) throw std::runtime_error("Failed to open file: " + filepath_.string());
-    auto stats_result = compute_stats();
-    if (!stats_result) throw std::runtime_error("Failed to read file statistics");
-    stats_ = *stats_result;
+    if (!fs::exists(filepath_))
+        throw std::runtime_error("File not found: " + filepath_.string());
+    if (!stream_.is_open())
+        throw std::runtime_error("Failed to open file: " + filepath_.string());
+
+    FileStats stats_result = compute_stats();
+    stats_ = stats_result;
     last_known_write_time_ = stats_.last_modified;
     strategy_ = determine_strategy(stats_.total_bytes);
     const std::size_t buffer_size = get_buffer_size();
     stream_.rdbuf()->pubsetbuf(nullptr, buffer_size);
+}
+
+FileManager::~FileManager()
+{
+    if (stream_.is_open())
+        stream_.close();
 }
 
 bool FileManager::is_changed_since_last_read() const MYLANG_NOEXCEPT
@@ -352,44 +398,31 @@ bool FileManager::is_changed_since_last_read() const MYLANG_NOEXCEPT
 }
 
 /// @brief Check if file stream is open and ready
-bool FileManager::is_open() const MYLANG_NOEXCEPT { return stream_.is_open() && stream_.good(); }
+bool FileManager::is_open() const MYLANG_NOEXCEPT { return stream_.is_open() /*&& stream_.good()*/; }
 
 /// @brief Get current context (position tracking)
-typename FileManager::Context FileManager::get_context() const MYLANG_NOEXCEPT
-{
-    std::shared_lock lock(mutex_);
-    return context_;
-}
+typename FileManager::Context FileManager::get_context() const MYLANG_NOEXCEPT { return context_; }
 
-typename FileManager::FileStats FileManager::get_stats() const MYLANG_NOEXCEPT
-{
-    std::shared_lock lock(mutex_);
-    return stats_;
-}
+typename FileManager::FileStats FileManager::get_stats() const MYLANG_NOEXCEPT { return stats_; }
 
 std::pair<std::size_t, std::size_t> FileManager::get_cache_stats() const MYLANG_NOEXCEPT
 {
-    std::shared_lock lock(mutex_);
     return {cache_hits_, cache_misses_};
 }
 
 void FileManager::set_caching(bool enabled) MYLANG_NOEXCEPT
 {
-    std::unique_lock lock(mutex_);
     enable_caching_ = enabled;
-    if (!enabled) cache_.clear();
+    if (!enabled)
+        cache_.clear();
 }
 
-void FileManager::set_max_cache_entries(std::size_t max_entries) MYLANG_NOEXCEPT
-{
-    std::unique_lock lock(mutex_);
-    max_cache_entries_ = max_entries;
-}
+void FileManager::set_max_cache_entries(std::size_t max_entries) MYLANG_NOEXCEPT { max_cache_entries_ = max_entries; }
 
-std::expected<void, FileManagerError> FileManager::reset()
+void FileManager::reset()
 {
-    std::unique_lock lock(mutex_);
-    if (!is_open()) return std::unexpected(FileManagerError::FileNotOpen);
+    if (!is_open())
+        throw error::file_error(to_string(FileManagerError::FILE_NOT_FOUND));
     stream_.clear();
     stream_.seekg(0, std::ios::beg);
     // Skip BOM if present
@@ -400,90 +433,82 @@ std::expected<void, FileManagerError> FileManager::reset()
         else if (stats_.detected_encoding == "UTF-16LE" || stats_.detected_encoding == "UTF-16BE")
             stream_.seekg(2);
     }
-    if (stream_.fail()) return std::unexpected(FileManagerError::SeekOutOfBounds);
+    if (stream_.fail())
+        throw error::file_error(to_string(FileManagerError::SEEK_OUT_OF_BOUND));
     context_.reset();
-    return {};
 }
 
-std::expected<void, FileManagerError> FileManager::seek_to_char(std::size_t char_offset)
+void FileManager::seek_to_char(std::size_t char_offset)
 {
-    std::unique_lock lock(mutex_);
-    if (char_offset == context_.char_offset) return {};
+    if (char_offset == context_.char_offset)
+        return;
+
     // Check cache first
     if (auto cached = check_cache(char_offset, 1))
     {
         context_.char_offset = char_offset;
-        return {};
+        return;
     }
+
     if (char_offset < context_.char_offset || char_offset - context_.char_offset > 10000)
-    {
-        auto reset_result = reset();
-        if (!reset_result) return reset_result;
-    }
+        reset();
 
     while (context_.char_offset < char_offset)
     {
         const std::size_t chars_to_read = char_offset - context_.char_offset;
-        auto result = read_window_internal(std::min(chars_to_read, std::size_t{1024}));
-        if (!result) return std::unexpected(result.error());
-        if (result->empty()) return std::unexpected(FileManagerError::UnexpectedEOF);
+        std::u16string result = read_window_internal(std::min(chars_to_read, std::size_t{1024}));
+        if (result.empty())
+            throw error::file_error(to_string(FileManagerError::UNEXPECTED_EOF));
     }
-
-    return {};
 }
 
-std::expected<void, FileManagerError> FileManager::seek_to_line(std::size_t line_number)
+void FileManager::seek_to_line(std::size_t line_number)
 {
     if (!line_index_built_)
-    {
-        auto build_result = build_line_index();
-        if (!build_result) return build_result;
-    }
+        build_line_index();
+    if (line_number >= line_index_.size())
+        throw error::file_error(to_string(FileManagerError::INVALID_LINE_NUMBER));
 
-    std::unique_lock lock(mutex_);
-    if (line_number >= line_index_.size()) return std::unexpected(FileManagerError::InvalidLineNumber);
     const auto& line_info = line_index_[line_number];
     stream_.clear();
     stream_.seekg(static_cast<std::streamoff>(line_info.byte_offset));
-    if (stream_.fail()) return std::unexpected(FileManagerError::SeekOutOfBounds);
+    if (stream_.fail())
+        throw error::file_error(to_string(FileManagerError::SEEK_OUT_OF_BOUND));
     context_.byte_offset = line_info.byte_offset;
     context_.char_offset = line_info.char_offset;
     context_.line_number = line_number;
     context_.column_number = 0;
-    return {};
 }
 
-std::expected<std::u16string, FileManagerError> FileManager::read_window(std::size_t size)
+std::u16string FileManager::read_window(std::size_t size)
 {
-    std::unique_lock lock(mutex_);
     // Check cache
-    if (auto cached = check_cache(context_.char_offset, size)) return *cached;
+    if (auto cached = check_cache(context_.char_offset, size))
+        return *cached;
     auto result = read_window_internal(size);
-    if (result && enable_caching_) update_cache(context_.char_offset - result->size(), *result);
+    if (enable_caching_)
+        update_cache(context_.char_offset - result.size(), result);
     return result;
 }
 
-std::expected<std::u16string, FileManagerError> FileManager::read_line(std::size_t line_number)
+std::u16string FileManager::read_line(std::size_t line_number)
 {
-    auto seek_result = seek_to_line(line_number);
-    if (!seek_result) return std::unexpected(seek_result.error());
-    std::unique_lock lock(mutex_);
+    seek_to_line(line_number);
     const std::size_t line_length = line_index_[line_number].line_length;
     return read_window_internal(line_length);
 }
 
-std::expected<std::u16string, FileManagerError> FileManager::read_next_line()
+std::u16string FileManager::read_next_line()
 {
-    std::unique_lock lock(mutex_);
     std::u16string line;
     line.reserve(80);  // Average line length
 
     while (true)
     {
-        auto chunk = read_window_internal(1);
-        if (!chunk) return std::unexpected(chunk.error());
-        if (chunk->empty()) break;
-        const char16_t c = (*chunk)[0];
+        std::u16string chunk = read_window_internal(1);
+        if (chunk.empty())
+            break;
+        const char16_t c = chunk[0];
         if (c == u'\n')
         {
             ++context_.line_number;
@@ -494,11 +519,11 @@ std::expected<std::u16string, FileManagerError> FileManager::read_next_line()
         {
             // Check for CRLF
             auto peek = read_window_internal(1);
-            if (peek && !peek->empty() && (*peek)[0] == u'\n')
+            if (!peek.empty() && peek[0] == u'\n')
             {
                 // CRLF - consume the \n
             }
-            else if (peek)
+            else
             {
                 // Just CR - rewind the peek
                 stream_.seekg(-1, std::ios_base::cur);
@@ -516,48 +541,41 @@ std::expected<std::u16string, FileManagerError> FileManager::read_next_line()
     return line;
 }
 
-std::expected<std::vector<std::u16string>, FileManagerError> FileManager::read_lines(
-  std::size_t start_line, std::size_t count)
+std::vector<std::u16string> FileManager::read_lines(std::size_t start_line, std::size_t count)
 {
     if (!line_index_built_)
-    {
-        auto build_result = build_line_index();
-        if (!build_result) return std::unexpected(build_result.error());
-    }
-    if (start_line >= line_index_.size()) { return std::unexpected(FileManagerError::InvalidLineNumber); }
+        build_line_index();
+    if (start_line >= line_index_.size())
+        throw error::file_error(to_string(FileManagerError::INVALID_LINE_NUMBER));
     const std::size_t end_line = std::min(start_line + count, line_index_.size());
     std::vector<std::u16string> lines;
     lines.reserve(end_line - start_line);
     for (std::size_t i = start_line; i < end_line; ++i)
     {
         auto line = read_line(i);
-        if (!line) return std::unexpected(line.error());
-        lines.push_back(std::move(*line));
+        lines.push_back(std::move(line));
     }
     return lines;
 }
 
-std::expected<std::u16string, FileManagerError> FileManager::read_all()
+std::u16string FileManager::read_all()
 {
-    auto reset_result = reset();
-    if (!reset_result) return std::unexpected(reset_result.error());
+    reset();
     std::u16string result;
     result.reserve(stats_.total_bytes / 2);
     while (true)
     {
         auto chunk = read_window(4096);
-        if (!chunk) return std::unexpected(chunk.error());
-        if (chunk->empty()) break;
-        result.append(*chunk);
+        if (chunk.empty())
+            break;
+        result.append(chunk);
     }
     return result;
 }
 
-std::expected<std::vector<std::size_t>, FileManagerError> FileManager::search(
-  std::u16string_view pattern, std::size_t max_results)
+std::vector<std::size_t> FileManager::search(std::u16string_view pattern, std::size_t max_results)
 {
-    auto reset_result = reset();
-    if (!reset_result) return std::unexpected(reset_result.error());
+    reset();
     std::vector<std::size_t> matches;
     matches.reserve(100);
     std::u16string buffer;
@@ -567,17 +585,18 @@ std::expected<std::vector<std::size_t>, FileManagerError> FileManager::search(
     while (matches.size() < max_results)
     {
         auto chunk = read_window(4096);
-        if (!chunk) return std::unexpected(chunk.error());
-        if (chunk->empty()) break;
+        if (chunk.empty())
+            break;
 
-        buffer += *chunk;
+        buffer += chunk;
         std::size_t pos = 0;
 
         while ((pos = buffer.find(pattern, pos)) != std::u16string::npos)
         {
             matches.push_back(char_position + pos);
             pos += pattern.size();
-            if (matches.size() >= max_results) break;
+            if (matches.size() >= max_results)
+                break;
         }
 
         // Keep last pattern.size()-1 chars for overlap detection
@@ -594,25 +613,21 @@ std::expected<std::vector<std::size_t>, FileManagerError> FileManager::search(
     return matches;
 }
 
-std::expected<void, FileManagerError> FileManager::create_bookmark(const std::string& name)
+void FileManager::create_bookmark(const std::string& name)
 {
-    std::unique_lock lock(mutex_);
     bookmarks_[name] = Bookmark{name, context_, std::chrono::system_clock::now()};
-    return {};
 }
 
-std::expected<void, FileManagerError> FileManager::goto_bookmark(const std::string& name)
+void FileManager::goto_bookmark(const std::string& name)
 {
-    std::shared_lock lock(mutex_);
     auto it = bookmarks_.find(name);
-    if (it == bookmarks_.end()) return std::unexpected(FileManagerError::InvalidCharacterOffset);
-    lock.unlock();
+    if (it == bookmarks_.end())
+        throw error::file_error(to_string(FileManagerError::INVALID_CHAR_OFFSET));
     return seek_to_char(it->second.context.char_offset);
 }
 
 std::vector<std::string> FileManager::get_bookmarks() const
 {
-    std::shared_lock lock(mutex_);
     std::vector<std::string> names;
     names.reserve(bookmarks_.size());
     for (const auto& [name, _] : bookmarks_)
@@ -622,34 +637,27 @@ std::vector<std::string> FileManager::get_bookmarks() const
 
 void FileManager::push_position()
 {
-    std::unique_lock lock(mutex_);
     position_stack_.push_back(context_);
     // Limit stack size
-    if (position_stack_.size() > 100) position_stack_.erase(position_stack_.begin());
+    if (position_stack_.size() > 100)
+        position_stack_.erase(position_stack_.begin());
 }
 
-std::expected<void, FileManagerError> FileManager::pop_position()
+void FileManager::pop_position()
 {
-    std::unique_lock lock(mutex_);
-    if (position_stack_.empty()) return std::unexpected(FileManagerError::InvalidCharacterOffset);
+    if (position_stack_.empty())
+        throw error::file_error(to_string(FileManagerError::INVALID_CHAR_OFFSET));
     const auto prev_context = position_stack_.back();
     position_stack_.pop_back();
-    lock.unlock();
     return seek_to_char(prev_context.char_offset);
 }
 
-std::size_t FileManager::get_position_stack_size() const MYLANG_NOEXCEPT
-{
-    std::shared_lock lock(mutex_);
-    return position_stack_.size();
-}
+std::size_t FileManager::get_position_stack_size() const MYLANG_NOEXCEPT { return position_stack_.size(); }
 
-std::expected<void, FileManagerError> FileManager::refresh_stats()
+void FileManager::refresh_stats()
 {
     auto new_stats = compute_stats();
-    if (!new_stats) return std::unexpected(new_stats.error());
-    std::unique_lock lock(mutex_);
-    stats_ = *new_stats;
+    stats_ = new_stats;
     last_known_write_time_ = stats_.last_modified;
     strategy_ = determine_strategy(stats_.total_bytes);
     // Invalidate line index if file changed
@@ -659,98 +667,73 @@ std::expected<void, FileManagerError> FileManager::refresh_stats()
         line_index_built_ = false;
         cache_.clear();
     }
-    return {};
 }
 
-std::expected<void, FileManagerError> FileManager::ensure_line_index()
+void FileManager::ensure_line_index()
 {
-    if (line_index_built_) return {};
+    if (line_index_built_)
+        return;
     return build_line_index();
 }
 
-std::expected<std::size_t, FileManagerError> FileManager::get_line_count()
+std::size_t FileManager::get_line_count()
 {
     if (!line_index_built_)
-    {
-        auto build_result = build_line_index();
-        if (!build_result) return std::unexpected(build_result.error());
-    }
-
-    std::shared_lock lock(mutex_);
+        build_line_index();
     return stats_.total_lines;
 }
 
-std::expected<std::u16string, FileManagerError> FileManager::read_reverse(std::size_t char_count)
+std::u16string FileManager::read_reverse(std::size_t char_count)
 {
-    std::unique_lock lock(mutex_);
-    if (context_.char_offset < char_count) char_count = context_.char_offset;
-    if (char_count == 0) return std::u16string{};
+    if (context_.char_offset < char_count)
+        char_count = context_.char_offset;
+    if (char_count == 0)
+        return std::u16string{};
     const std::size_t target_offset = context_.char_offset - char_count;
-    lock.unlock();
-    auto seek_result = seek_to_char(target_offset);
-    if (!seek_result) return std::unexpected(seek_result.error());
+    seek_to_char(target_offset);
     return read_window(char_count);
 }
 
-std::expected<char16_t, FileManagerError> FileManager::peek_char(std::size_t char_offset)
+char16_t FileManager::peek_char(std::size_t char_offset)
 {
     push_position();
-    auto seek_result = seek_to_char(char_offset);
-    if (!seek_result)
-    {
-        auto error = pop_position();  // TODO : report error
-        return std::unexpected(seek_result.error());
-    }
+    seek_to_char(char_offset);
     auto result = read_window(1);
-    auto error = pop_position();  // TODO : report error
-    if (!result) return std::unexpected(result.error());
-    if (result->empty()) return std::unexpected(FileManagerError::UnexpectedEOF);
-    return (*result)[0];
+    return result[0];
 }
 
-std::expected<std::u16string, FileManagerError> FileManager::peek_range(std::size_t start_offset, std::size_t length)
+std::u16string FileManager::peek_range(std::size_t start_offset, std::size_t length)
 {
     push_position();
-    auto seek_result = seek_to_char(start_offset);
-    if (!seek_result)
-    {
-        auto error = pop_position();  // TODO : report error
-        return std::unexpected(seek_result.error());
-    }
+    seek_to_char(start_offset);
     auto result = read_window(length);
-    auto error = pop_position();  // TODO : report error
+    pop_position();
     return result;
 }
 
-std::expected<std::size_t, FileManagerError> FileManager::count_char(char16_t target)
+std::size_t FileManager::count_char(char16_t target)
 {
-    auto reset_result = reset();
-    if (!reset_result) return std::unexpected(reset_result.error());
+    reset();
     std::size_t count = 0;
 
     while (true)
     {
         auto chunk = read_window(4096);
-        if (!chunk) return std::unexpected(chunk.error());
-        if (chunk->empty()) break;
-        count += std::count(chunk->begin(), chunk->end(), target);
+        if (chunk.empty())
+            break;
+        count += std::count(chunk.begin(), chunk.end(), target);
     }
 
-    auto error = reset();  // TODO : report error
+    reset();
     return count;
 }
 
 const fs::path& FileManager::get_path() const MYLANG_NOEXCEPT { return filepath_; }
 
-typename FileManager::BufferStrategy FileManager::get_strategy() const MYLANG_NOEXCEPT
-{
-    std::shared_lock lock(mutex_);
-    return strategy_;
-}
+typename FileManager::BufferStrategy FileManager::get_strategy() const MYLANG_NOEXCEPT { return strategy_; }
 
 void FileManager::clear_all_caches() MYLANG_NOEXCEPT
 {
-    std::unique_lock lock(mutex_);
     cache_.clear();
     line_index_.clear();
     position_stack_.clear();
@@ -762,7 +745,6 @@ void FileManager::clear_all_caches() MYLANG_NOEXCEPT
 
 std::size_t FileManager::estimate_memory_usage() const MYLANG_NOEXCEPT
 {
-    std::shared_lock lock(mutex_);
     std::size_t total = 0;
     // Cache
     for (const auto& [_, entry] : cache_)
@@ -779,16 +761,17 @@ std::size_t FileManager::estimate_memory_usage() const MYLANG_NOEXCEPT
 
 void FileManager::iterator::advance()
 {
-    if (at_end_) return;
+    if (at_end_)
+        return;
     auto result = manager_->read_window(1);
-    if (!result || result->empty())
+    if (result.empty())
     {
         at_end_ = true;
         current_ = std::nullopt;
     }
     else
     {
-        current_ = (*result)[0];
+        current_ = result[0];
     }
 }
 
@@ -796,7 +779,8 @@ FileManager::iterator::iterator(FileManager* mgr, bool end) :
     manager_(mgr),
     at_end_(end)
 {
-    if (!at_end_ && manager_) advance();
+    if (!at_end_ && manager_)
+        advance();
 }
 
 typename FileManager::iterator::reference FileManager::iterator::operator*() const { return *current_; }
@@ -818,8 +802,10 @@ FileManager::iterator FileManager::iterator::operator++(int)
 
 bool FileManager::iterator::operator==(const iterator& other) const
 {
-    if (at_end_ && other.at_end_) return true;
-    if (at_end_ != other.at_end_) return false;
+    if (at_end_ && other.at_end_)
+        return true;
+    if (at_end_ != other.at_end_)
+        return false;
     return manager_ == other.manager_ && current_ == other.current_;
 }
 
@@ -827,8 +813,11 @@ bool FileManager::iterator::operator!=(const iterator& other) const { return !(*
 
 FileManager::iterator FileManager::begin()
 {
-    auto error = reset();  // TODO : report error
+    reset();
     return iterator(this, false);
 }
 
 FileManager::iterator FileManager::end() { return iterator(this, true); }
+
+}
+}

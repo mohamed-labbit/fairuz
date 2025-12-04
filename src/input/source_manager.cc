@@ -10,52 +10,61 @@ using offset_pair = std::pair<std::size_t, std::size_t>;
 
 std::size_t SourceManager::line() const
 {
-    if (use_file_buffer_ && input_buffer_.has_value()) return this->input_buffer_.value().position().line;
+    if (use_file_buffer_ && input_buffer_.has_value())
+        return this->input_buffer_.value().position().line;
     return current_position_.has_value() ? current_position_.value().line : 0;
 }
 
 std::size_t SourceManager::column() const
 {
-    if (use_file_buffer_ && input_buffer_.has_value()) return this->input_buffer_.value().position().column;
+    if (use_file_buffer_ && input_buffer_.has_value())
+        return this->input_buffer_.value().position().column;
     return current_position_.has_value() ? current_position_.value().column : 0;
 }
 
 std::size_t SourceManager::fpos() const
 {
-    if (use_file_buffer_ && input_buffer_.has_value()) return this->input_buffer_.value().position().filepos;
+    if (use_file_buffer_ && input_buffer_.has_value())
+        return this->input_buffer_.value().position().filepos;
     return current_position_.has_value() ? current_position_.value().filepos : 0;
 }
 
 const std::string SourceManager::fpath() const
 {
-    if (use_file_buffer_) return this->filepath_;
+    if (use_file_buffer_)
+        return this->filepath_;
     return "";
 }
 
 buffer::Position SourceManager::position() const
 {
-    if (use_file_buffer_ && input_buffer_.has_value()) return this->input_buffer_.value().position();
+    if (use_file_buffer_ && input_buffer_.has_value())
+        return this->input_buffer_.value().position();
     return current_position_.value_or(buffer::Position());
 }
 
 bool SourceManager::done() const
 {
-    if (use_file_buffer_ && input_buffer_.has_value()) return this->input_buffer_.value().empty();
+    if (use_file_buffer_ && input_buffer_.has_value())
+        return this->input_buffer_.value().empty();
     return source_.has_value() ? source_.value().empty() : true;
 }
 
 char16_t SourceManager::peek()
 {
-    if (use_file_buffer_ && input_buffer_.has_value()) return this->input_buffer_.value().peek();
+    if (use_file_buffer_ && input_buffer_.has_value())
+        return this->input_buffer_.value().peek();
     auto& cur = this->current_.value();
-    if (cur == nullptr || *cur == BUFFER_END) return BUFFER_END;
+    if (cur == nullptr || *cur == BUFFER_END)
+        return BUFFER_END;
     char16_t* forward = cur + 1;
     return *forward;
 }
 
 char16_t SourceManager::consume_char()
 {
-    if (use_file_buffer_ && input_buffer_.has_value()) return this->input_buffer_.value().consume_char();
+    if (use_file_buffer_ && input_buffer_.has_value())
+        return this->input_buffer_.value().consume_char();
 
     char16_t ret = current();
     if (current_.value() != source_.value().data() + source_.value().length() && current_.value() != nullptr)
@@ -94,7 +103,8 @@ char16_t SourceManager::consume_char()
 
 char16_t SourceManager::current()
 {
-    if (use_file_buffer_ && input_buffer_.has_value()) return input_buffer_.value().current();
+    if (use_file_buffer_ && input_buffer_.has_value())
+        return input_buffer_.value().current();
     return current_.value() ? *current_.value() : BUFFER_END;
 }
 
@@ -106,14 +116,16 @@ offset_pair SourceManager::offset_map_(const std::size_t& offset) const
     }
 
     auto& buf = this->input_buffer_.value();
-    if (offset == buf.buffer_offset()) return std::make_pair(buf.position().line, buf.position().column);
+    if (offset == buf.buffer_offset())
+        return std::make_pair(buf.position().line, buf.position().column);
 
     std::size_t iter = 0;
     std::size_t diff = 0;
     // Count lines before buffer start
     while (iter < buf.buffer_offset())
     {
-        if (buf.at(iter) == u'\n') diff += 1;
+        if (buf.at(iter) == u'\n')
+            diff += 1;
         iter += 1;
     }
 
@@ -145,49 +157,9 @@ offset_pair SourceManager::offset_map_(const std::size_t& offset) const
 
 offset_pair SourceManager::offset_map(const std::size_t& offset)
 {
-    if (!use_file_buffer_)
-    {
-        // TODO : implement for normal string buffer
-    }
-
-    auto& buf = this->input_buffer_.value();
-    auto& file = this->file_;
-
-    if (offset == buf.buffer_offset()) return std::make_pair(buf.position().line, buf.position().column);
-
-    std::istream::pos_type original_pos = file->tellg();
-    std::ios::iostate original_state = file->rdstate();
-
-    // ensure we can seek and read from the beginning without corrupting caller state
-    file->clear();
-    file->seekg(0, std::ios::beg);
-
-    file->imbue(std::locale(file->getloc()));
+    // TODO : implement this using the new file manager
     std::size_t line = 1;
     std::size_t col = 1;
-    std::size_t current_offset = 0;
-    char c;
-
-    while (file->get(c))
-    {
-        if (current_offset == offset) return std::make_pair(line, col);
-
-        if (c == L'\n')
-        {
-            line += 1;
-            col = 1;
-        }
-        else
-        {
-            col += 1;
-        }
-
-        current_offset++;
-    }
-
-    file->clear();
-    if (original_pos != static_cast<std::istream::pos_type>(-1)) file->seekg(original_pos);
-    file->clear(original_state);
     return std::make_pair(line, col);
 }
 

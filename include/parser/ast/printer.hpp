@@ -19,7 +19,8 @@ class EnhancedASTPrinter
 
     std::string colorize(const std::u16string& text, const std::u16string color, bool enabled = true)
     {
-        if (!enabled) return utf8::utf16to8(text);
+        if (!enabled)
+            return utf8::utf16to8(text);
         return utf8::utf16to8(color + text + Color::RESET);
     }
 
@@ -37,7 +38,8 @@ class EnhancedASTPrinter
 
     void print(const mylang::parser::ast::Expr* expr)
     {
-        if (!expr) return;
+        if (!expr)
+            return;
 
         nodeCount++;
 
@@ -103,7 +105,8 @@ class EnhancedASTPrinter
 
     void print(const mylang::parser::ast::Stmt* stmt)
     {
-        if (!stmt) return;
+        if (!stmt)
+            return;
 
         nodeCount++;
 
@@ -160,7 +163,8 @@ class EnhancedASTPrinter
             for (std::size_t i = 0; i < s->params.size(); i++)
             {
                 std::cout << utf8::utf16to8(s->params[i]);
-                if (i + 1 < s->params.size()) std::cout << ", ";
+                if (i + 1 < s->params.size())
+                    std::cout << ", ";
             }
             std::cout << ")\n";
             indent++;

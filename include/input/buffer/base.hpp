@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../../macros.hpp"
+#include "../file_manager.hpp"
 #include <fstream>
 #include <string>
 
@@ -14,29 +15,26 @@ class InputBufferBase
    public:
     using buffer_t = std::u16string;
 
-    InputBufferBase(std::ifstream* file, std::size_t cap = DEFAULT_CAPACITY) :
-        file_(file),
+    InputBufferBase(input::FileManager* file_manager, std::size_t cap = DEFAULT_CAPACITY) :
+        file_manager_(file_manager),
         byte_position_(0),
         char_count_(0)
     {
         buffers_[0].resize(cap + 1, BUFFER_END);
         buffers_[1].resize(cap + 1, BUFFER_END);
-        // Open file in binary mode for proper UTF-8 reading
-        if (file_ == nullptr || !file_->is_open()) { throw std::runtime_error("File is not open"); }
+        
+        if (file_manager_ == nullptr || !file_manager_->is_open())
+            throw std::runtime_error("File is not open");
     }
 
-    bool empty() const MYLANG_NOEXCEPT { return !file_->is_open(); }
+    bool empty() const MYLANG_NOEXCEPT { return !file_manager_->is_open(); }
     bool refresh_buffer(const std::uint32_t to_refresh);
 
    protected:
-    std::ifstream* file_{nullptr};
+    input::FileManager* file_manager_{nullptr};
     buffer_t buffers_[2];
     std::size_t byte_position_;  // Current byte position in file
     std::size_t char_count_;  // Total characters read so far
-
-   private:
-    // Read up to max_chars wide characters from the current file position
-    buffer_t read_wchar_window(std::size_t max_chars);
 };
 }
 }  // lex

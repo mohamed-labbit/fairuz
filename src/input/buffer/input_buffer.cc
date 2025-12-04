@@ -8,26 +8,26 @@ namespace lex {
 namespace buffer {
 
 
-std::size_t InputBuffer::size() const { return this->buffers_[this->current_buffer_].length(); }
+std::size_t InputBuffer::size() const { return buffers_[current_buffer_].length(); }
 
 std::size_t InputBuffer::buffer_offset() const
 {
-    return static_cast<std::size_t>(this->current_ - this->buffers_[this->current_buffer_].data());
+    return static_cast<std::size_t>(current_ - buffers_[current_buffer_].data());
 }
 
 bool InputBuffer::empty() const
 {
-    return (!this->file_->is_open() || this->current_ == nullptr || this->buffers_[this->current_buffer_].empty());
+    return (!file_manager_->is_open() || current_ == nullptr || buffers_[current_buffer_].empty());
 }
 
-char16_t InputBuffer::at(const std::size_t idx) const { return this->buffers_[this->current_buffer_][idx]; }
+char16_t InputBuffer::at(const std::size_t idx) const { return buffers_[current_buffer_][idx]; }
 
 char16_t InputBuffer::consume_char()
 {
-    auto& unget_stack = this->unget_stack_;
-    auto& cur_pos = this->current_position_;
-    auto& cur_buf = this->current_buffer_;
-    auto& cur = this->current_;
+    auto& unget_stack = unget_stack_;
+    auto& cur_pos = current_position_;
+    auto& cur_buf = current_buffer_;
+    auto& cur = current_;
 
     char16_t ch;
     if (!unget_stack.empty())
@@ -40,7 +40,8 @@ char16_t InputBuffer::consume_char()
     {
         if (*cur == BUFFER_END)
         {
-            if (!refresh_buffer(cur_buf ^ 1)) { return BUFFER_END; }
+            if (!refresh_buffer(cur_buf ^ 1))
+                return BUFFER_END;
             swap_buffers_();
         }
         ch = *cur;
@@ -53,21 +54,17 @@ char16_t InputBuffer::consume_char()
 MYLANG_NODISCARD
 const char16_t& InputBuffer::current()
 {
-    auto& cur = this->current_;
-    auto& cur_buf = this->current_buffer_;
+    auto& cur = current_;
+    auto& cur_buf = current_buffer_;
     static const char16_t end = BUFFER_END;
 
     if (cur == nullptr)
-    {
         return end;
-    }
     if (*cur == BUFFER_END)
     {
-        if (!this->refresh_buffer(cur_buf ^ 1))
-        {
+        if (!refresh_buffer(cur_buf ^ 1))
             return end;
-        }
-        this->swap_buffers_();
+        swap_buffers_();
     }
     return *cur;
 }
@@ -75,21 +72,17 @@ const char16_t& InputBuffer::current()
 MYLANG_NODISCARD
 const char16_t& InputBuffer::peek()
 {
-    auto& cur = this->current_;
-    auto& cur_buf = this->current_buffer_;
+    auto& cur = current_;
+    auto& cur_buf = current_buffer_;
     static const char16_t end = BUFFER_END;
 
     if (cur == nullptr)
-    {
         return end;
-    }
     pointer forward = cur + 1;
     if (*cur == BUFFER_END)
     {
         if (!refresh_buffer(cur_buf ^ 1))
-        {
             return end;
-        }
         swap_buffers_();
         forward = cur + 1;
     }
@@ -97,9 +90,7 @@ const char16_t& InputBuffer::peek()
     if (*forward == BUFFER_END)
     {
         if (!refresh_buffer(cur_buf ^ 1))
-        {
             return end;
-        }
         swap_buffers_();
         forward = cur + 1;
     }
@@ -108,12 +99,13 @@ const char16_t& InputBuffer::peek()
 
 std::u16string InputBuffer::n_peek(std::size_t n)
 {
-    auto& cur_buf = this->current_buffer_;
-    auto& bufs = this->buffers_;
-    auto& cur = this->current_;
+    auto& cur_buf = current_buffer_;
+    auto& bufs = buffers_;
+    auto& cur = current_;
 
     std::u16string out;
-    if (n == 0) return out;
+    if (n == 0)
+        return out;
 
     std::size_t rem = n;
     std::int32_t buf_idx = cur_buf;
@@ -122,7 +114,8 @@ std::u16string InputBuffer::n_peek(std::size_t n)
     {
         if (offset >= bufs[buf_idx].size() || bufs[buf_idx][offset] == BUFFER_END)
         {
-            if (!refresh_buffer(buf_idx ^ 1)) break;
+            if (!refresh_buffer(buf_idx ^ 1))
+                break;
             buf_idx ^= 1;
             offset = 0;
         }
@@ -151,11 +144,11 @@ void InputBuffer::unget(char16_t ch)
 
 void InputBuffer::reset()
 {
-    auto& cur_buf = this->current_buffer_;
-    auto& bufs = this->buffers_;
-    auto& cur = this->current_;
-    auto& cur_pos = this->current_position_;
-    auto& cols = this->columns_;
+    auto& cur_buf = current_buffer_;
+    auto& bufs = buffers_;
+    auto& cur = current_;
+    auto& cur_pos = current_position_;
+    auto& cols = columns_;
 
     cur_buf = 0;
     bufs[0][0] = BUFFER_END;
@@ -169,25 +162,26 @@ void InputBuffer::reset()
     cols.push(1);
 }
 
-Position InputBuffer::position() const MYLANG_NOEXCEPT { return this->current_position_; }
+Position InputBuffer::position() const MYLANG_NOEXCEPT { return current_position_; }
 
 void InputBuffer::swap_buffers_()
 {
-    auto& cur_buf = this->current_buffer_;
-    auto& bufs = this->buffers_;
-    auto& cur = this->current_;
-    auto& cols = this->columns_;
+    auto& cur_buf = current_buffer_;
+    auto& bufs = buffers_;
+    auto& cur = current_;
+    auto& cols = columns_;
 
     cur_buf ^= 1;
     cur = bufs[cur_buf].data();
 
-    if (cols.empty()) cols.push(1);
+    if (cols.empty())
+        cols.push(1);
 }
 
 void InputBuffer::advance_position_(char16_t ch)
 {
-    auto& cur_pos = this->current_position_;
-    auto& cols = this->columns_;
+    auto& cur_pos = current_position_;
+    auto& cols = columns_;
     cur_pos.filepos += 1;
 
     if (ch == u'\n')
@@ -208,8 +202,8 @@ void InputBuffer::advance_position_(char16_t ch)
 
 void InputBuffer::rewind_position_(char16_t ch)
 {
-    auto& cur_pos = this->current_position_;
-    auto& cols = this->columns_;
+    auto& cur_pos = current_position_;
+    auto& cols = columns_;
 
     if (cur_pos.filepos == 0)
         // TODO: ultimately should emit an error
@@ -218,14 +212,16 @@ void InputBuffer::rewind_position_(char16_t ch)
     cur_pos.filepos = std::max<std::size_t>(0, cur_pos.filepos - 1);
     if (ch == u'\n')
     {
-        if (!cols.empty()) cols.pop();
+        if (!cols.empty())
+            cols.pop();
         cur_pos.line = std::max<std::size_t>(1, cur_pos.line - 1);
         cur_pos.column = cols.empty() ? 1 : cols.top();
     }
     else
     {
         cur_pos.column = (cur_pos.column > 0 ? cur_pos.column - 1 : 0);
-        if (!cols.empty()) cols.top() = cur_pos.column;
+        if (!cols.empty())
+            cols.top() = cur_pos.column;
     }
 }
 
