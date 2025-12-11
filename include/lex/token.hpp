@@ -4,6 +4,7 @@
 #include "../macros.hpp"
 #include "util.hpp"
 
+#include <cstdint>
 #include <iostream>
 #include <locale>
 #include <string>
