@@ -32,6 +32,7 @@ class SourceManager
         current_(source_.value().data()),
         filepath_(""),
         input_buffer_(std::nullopt),
+        current_position_(buffer::Position(1, 1, 0)),
         use_file_buffer_(false)
     {
     }

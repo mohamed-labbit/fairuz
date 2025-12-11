@@ -2,6 +2,7 @@
 #include "../../include/input/error.hpp"
 #include "../../utfcpp/source/utf8.h"
 
+#include <algorithm>
 #include <shared_mutex>
 
 
@@ -243,15 +244,15 @@ std::u16string FileManager::read_window_internal(std::size_t size)
 
     const std::size_t byte_chunk_size = size * MAX_UTF8_CHAR_BYTES;
     std::vector<char> byte_buffer(byte_chunk_size);
+    stream_.clear();
     stream_.read(byte_buffer.data(), byte_chunk_size);
     std::streamsize bytes_read = stream_.gcount();
 
     if (bytes_read == 0)
     {
-        if (stream_.eof())
-            return std::u16string();
-        else
-            throw error::file_error(to_string(FileManagerError::READ_ERROR));
+        if (!stream_.eof())
+            stream_.clear();
+        return std::u16string();
     }
     if (bytes_read < 0)
         throw error::file_error(to_string(FileManagerError::READ_ERROR));

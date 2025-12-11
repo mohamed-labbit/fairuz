@@ -5,6 +5,7 @@
 #include "token.hpp"
 
 
+#include <locale>
 #include <optional>
 
 
@@ -156,7 +157,7 @@ class Lexer
         tok_index_(0),
         indent_size_(0)
     {
-        std::locale::global(std::locale("ar_SA.UTF-8"));
+        configure_locale();
     }
 
     explicit Lexer(const std::u16string source) :
@@ -164,7 +165,7 @@ class Lexer
         tok_index_(0),
         indent_size_(0)
     {
-        std::locale::global(std::locale("ar_SA.UTF-8"));
+        configure_locale();
     }
 
     explicit Lexer(const Lexer&) = delete;
@@ -211,6 +212,17 @@ class Lexer
         // push and update index
         tok_stream_.push_back(std::move(tok));
         tok_index_ = tok_stream_.size() - 1;
+    }
+
+    static void configure_locale()
+    {
+        try
+        {
+            std::locale::global(std::locale("ar_SA.UTF-8"));
+        } catch (const std::runtime_error&)
+        {
+            std::locale::global(std::locale::classic());
+        }
     }
 };
 

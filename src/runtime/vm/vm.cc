@@ -1,6 +1,7 @@
 #include "../../../include/runtime/vm/vm.hpp"
 #include "../../../include/runtime/object/object.hpp"
 
+#include <cmath>
 #include <iostream>
 
 
@@ -442,7 +443,7 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
             if (lit->value.find('.') != std::string::npos)
                 val = object::Value(std::stod(utf8::utf16to8(lit->value)));
             else
-                val = object::Value(std::stoll(utf8::utf16to8(lit->value)));
+                val = object::Value(static_cast<std::int64_t>(std::stoll(utf8::utf16to8(lit->value))));
             break;
         }
         case parser::ast::LiteralExpr::Type::STRING : val = object::Value(lit->value); break;
@@ -1344,7 +1345,7 @@ void VirtualMachine::registerNativeFunctions()
             throw std::runtime_error("sum() takes at least 1 argument");
         if (!args[0].isList())
             throw std::runtime_error("sum() requires iterable");
-        object::Value total = args.size() > 1 ? args[1] : object::Value(0LL);
+        object::Value total = args.size() > 1 ? args[1] : object::Value(static_cast<std::int64_t>(0));
         for (const object::Value& item : args[0].asList())
             total = total + item;
         return total;
