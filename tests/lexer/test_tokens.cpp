@@ -1,4 +1,4 @@
-#include "../../include/input/file_manager_.hpp"
+#include "../../include/input/file_manager.hpp"
 #include "../../include/lex/lexer.hpp"
 #include "../../include/lex/token.hpp"
 
@@ -7,9 +7,11 @@
 #include <gtest/gtest.h>
 #include <iterator>
 #include <vector>
+#include <algorithm>
 
 
 using mylang::input::FileManager;
+
 
 namespace {
 const std::filesystem::path test_cases_path =

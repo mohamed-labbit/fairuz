@@ -12,7 +12,7 @@
 #include "../include/input/buffer/input_buffer.hpp"
 //#include "../include/input/file_manager.hpp"
 // TODO :remove
-#include "../include/input/file_manager_.hpp"
+#include "../include/input/file_manager.hpp"
 #include "../include/input/source_manager.hpp"
 #include "../include/lex/lexer.hpp"
 #include "../include/lex/sym_table/entry.hpp"

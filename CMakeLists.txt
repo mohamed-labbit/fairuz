@@ -1,9 +1,20 @@
 cmake_minimum_required(VERSION 3.14)
 project(MyProgrammingLanguage)
 
-set(CMAKE_CXX_STANDARD 26)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+# For LLVM/Clang on macOS, ensure we use the right standard library
+if(APPLE)
+    # Use libc++ and ensure proper linkage
+    add_compile_options(-stdlib=libc++)
+    add_link_options(-stdlib=libc++)
+    
+    # Point to Homebrew LLVM's libc++
+    link_directories(/opt/homebrew/opt/llvm/lib/c++)
+    include_directories(/opt/homebrew/opt/llvm/include/c++/v1)
+endif()
 
 # Add include directories
 include_directories(${CMAKE_SOURCE_DIR}/include)
@@ -50,6 +61,7 @@ target_link_libraries(mylang_tests
     PRIVATE
     GTest::gtest_main
 )
+
 if(OpenMP_FOUND)
     target_link_libraries(mylang_tests PRIVATE OpenMP::OpenMP_CXX)
 endif()

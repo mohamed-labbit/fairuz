@@ -4,7 +4,7 @@
 #include <memory>
 #include <iterator>
 
-#include "../include/input/file_manager_.hpp"
+#include "../include/input/file_manager.hpp"
 #include "../include/lex/lexer.hpp"
 #include "../include/parser/ast/ast.hpp"
 #include "../include/parser/parser.hpp"

@@ -83,7 +83,7 @@ class FileManager
     FileManager(const FileManager&) noexcept = delete;
     FileManager& operator=(FileManager&) noexcept = delete;
 
-    ~FileManager();
+    ~FileManager() = default;
 
     bool is_open() const noexcept;
     bool is_changed_since_last_time() const noexcept;
