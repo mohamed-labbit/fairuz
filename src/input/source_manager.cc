@@ -54,10 +54,18 @@ char16_t SourceManager::peek()
 {
     if (use_file_buffer_ && input_buffer_.has_value())
         return this->input_buffer_.value().peek();
-    auto& cur = this->current_.value();
-    if (cur == nullptr || *cur == BUFFER_END)
+
+    if (!current_.has_value())
         return BUFFER_END;
-    char16_t* forward = cur + 1;
+
+    auto* cur = current_.value();
+    auto* end = source_.has_value() ? source_.value().data() + source_.value().size() : nullptr;
+    if (!cur || !end || cur >= end)
+        return BUFFER_END;
+
+    auto* forward = cur + 1;
+    if (forward >= end)
+        return BUFFER_END;
     return *forward;
 }
 
@@ -67,37 +75,28 @@ char16_t SourceManager::consume_char()
         return this->input_buffer_.value().consume_char();
 
     char16_t ret = current();
-    if (current_.value() != source_.value().data() + source_.value().length() && current_.value() != nullptr)
+    if (ret == BUFFER_END || !current_.has_value() || !source_.has_value())
+        return ret;
+
+    auto& cur = current_.value();
+    auto& pos = current_position_.value();
+    auto* end = source_.value().data() + source_.value().size();
+    if (cur >= end)
+        return BUFFER_END;
+
+    pos.filepos += 1;
+
+    if (*cur == u'\n')
     {
-        auto& cur = current_.value();
-        auto& pos = current_position_.value();
-        pos.filepos += 1;
-
-        if (*cur == u'\n')
-        {
-            pos.line += 1;
-            pos.column = 1;
-            // enable if necessary
-            // cols.push(1);
-        }
-        else
-        {
-            pos.column += 1;
-            /* enable if necessary
-            if (!cols.empty())
-            {
-                cols.top() = cur_pos.column;
-            }
-            else
-            {
-                cols.push(cur_pos.column);
-            }
-            */
-        }
-
-        cur++;
+        pos.line += 1;
+        pos.column = 1;
+    }
+    else
+    {
+        pos.column += 1;
     }
 
+    ++cur;
     return ret;
 }
 
@@ -105,7 +104,15 @@ char16_t SourceManager::current()
 {
     if (use_file_buffer_ && input_buffer_.has_value())
         return input_buffer_.value().current();
-    return current_.value() ? *current_.value() : BUFFER_END;
+
+    if (!current_.has_value() || !source_.has_value())
+        return BUFFER_END;
+
+    auto* cur = current_.value();
+    auto* end = source_.value().data() + source_.value().size();
+    if (!cur || cur >= end)
+        return BUFFER_END;
+    return *cur;
 }
 
 offset_pair SourceManager::offset_map_(const std::size_t& offset) const

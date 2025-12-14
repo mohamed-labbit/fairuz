@@ -3,8 +3,11 @@
 
 #include "../../../utfcpp/source/utf8.h"
 
+#include <cstdint>
 #include <functional>
+#include <memory>
 #include <string>
+#include <variant>
 #include <vector>
 
 

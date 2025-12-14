@@ -465,7 +465,7 @@ TEST(ArenaAllocatorTest, AllocateMaxBlockSize)
 
     // Allocate close to MAX_BLOCK_SIZE
     constexpr std::size_t large_size = MAX_BLOCK_SIZE / sizeof(char32_t);
-    ArenaAllocator arena(large_size);
+    ArenaAllocator arena;
     char32_t* ptr = arena.allocate<char32_t>(large_size);
     ASSERT_NE(ptr, nullptr);
 

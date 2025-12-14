@@ -1,22 +1,15 @@
 cmake_minimum_required(VERSION 3.14)
 project(MyProgrammingLanguage)
 
-set(CMAKE_CXX_STANDARD 26)
-
-# Force CMake to use Homebrew's LLVM
-set(CMAKE_CXX_COMPILER "/opt/homebrew/opt/llvm/bin/clang++")
-set(CMAKE_C_COMPILER "/opt/homebrew/opt/llvm/bin/clang")
-
-# Use LLVM's libc++ explicitly with full path
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -g -I/opt/homebrew/opt/llvm/include/c++/v1")
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++ -L/opt/homebrew/opt/llvm/lib/c++ -Wl,-rpath,/opt/homebrew/opt/llvm/lib/c++")
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -stdlib=libc++")
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Add include directories
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
-# Find OpenMP first
-find_package(OpenMP REQUIRED)
+# Find OpenMP if available
+find_package(OpenMP)
 
 if(OpenMP_FOUND)
     message(STATUS "Found OpenMP: ${OpenMP_CXX_FLAGS}")
@@ -27,12 +20,22 @@ file(GLOB_RECURSE MYLANG_SOURCES ${CMAKE_SOURCE_DIR}/src/*.cpp ${CMAKE_SOURCE_DI
 
 # Build an object library from your language sources
 add_library(mylang_objects OBJECT ${MYLANG_SOURCES})
-target_include_directories(mylang_objects PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_compile_options(mylang_objects PRIVATE ${OpenMP_CXX_FLAGS})
+target_include_directories(mylang_objects PUBLIC
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/utfcpp/source
+)
+if(OpenMP_FOUND)
+    target_compile_options(mylang_objects PRIVATE ${OpenMP_CXX_FLAGS})
+endif()
 
-# Find GTest
-set(GTest_DIR /opt/homebrew/Cellar/googletest/1.16.0)
-find_package(GTest REQUIRED CONFIG)
+# Find GTest (use system package if available, otherwise fall back to a minimal
+# bundled implementation so tests can still run in restricted environments)
+find_package(GTest CONFIG QUIET)
+if(NOT GTest_FOUND)
+    add_library(minimal_gtest STATIC tests/support/minimal_gtest_main.cpp)
+    target_include_directories(minimal_gtest PUBLIC ${CMAKE_SOURCE_DIR}/tests/support)
+    add_library(GTest::gtest_main ALIAS minimal_gtest)
+endif()
 
 # Define the test executable
 add_executable(mylang_tests
@@ -43,14 +46,13 @@ add_executable(mylang_tests
     $<TARGET_OBJECTS:mylang_objects>
 )
 
-# Link with full paths to ensure correct libraries
-target_link_libraries(mylang_tests 
-    PRIVATE 
+target_link_libraries(mylang_tests
+    PRIVATE
     GTest::gtest_main
-    OpenMP::OpenMP_CXX
-    /opt/homebrew/opt/llvm/lib/c++/libc++.dylib
-    /opt/homebrew/opt/llvm/lib/c++/libc++abi.dylib
 )
+if(OpenMP_FOUND)
+    target_link_libraries(mylang_tests PRIVATE OpenMP::OpenMP_CXX)
+endif()
 
 # Also propagate include dirs
 target_include_directories(mylang_tests PRIVATE ${CMAKE_SOURCE_DIR}/include)

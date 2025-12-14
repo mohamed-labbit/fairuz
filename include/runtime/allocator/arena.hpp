@@ -21,6 +21,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <cstdlib>
 #include <functional>
 #include <iostream>
 #include <iterator>
@@ -1148,11 +1149,19 @@ class MYLANG_COMPILER_ABI ArenaAllocator
         // Validate and fix alignment if needed
         if (alignment_ == 0 || (alignment_ & (alignment_ - 1)) != 0)
             alignment_ = min_alignment_;
+        const std::size_t max_block = max_block_size_.load(std::memory_order_relaxed);
+        if (requested > max_block)
+            return nullptr;
+
+        std::size_t aligned_request = requested;
+        if (alignment_ < max_block - requested)
+            aligned_request += alignment_;
+
         // Determine block size (including growth strategy)
-        std::size_t block_size = std::max(requested + alignment_, next_block_size_.load(std::memory_order_relaxed));
+        std::size_t block_size = std::max(aligned_request, next_block_size_.load(std::memory_order_relaxed));
 
         // Check against maximum
-        if (block_size > max_block_size_.load(std::memory_order_relaxed))
+        if (block_size > max_block)
         {
             if (retry_on_oom)
             {
@@ -1273,7 +1282,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     template<typename _Tp>
     MYLANG_NODISCARD MYLANG_COMPILER_ABI _Tp* allocate(std::size_t count = 1)
     {
-        std::chrono::steady_clock::time_point start = std::chrono::high_resolution_clock::now();
+        auto start = std::chrono::high_resolution_clock::now();
         // Validate count
         if (count == 0)
             return nullptr;
@@ -1362,7 +1371,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
             for (std::size_t i = 0; i < count; ++i)
                 new (region + i) _Tp();
 
-        std::chrono::steady_clock::time_point end = std::chrono::high_resolution_clock::now();
+        auto end = std::chrono::high_resolution_clock::now();
         return region;
     }
 

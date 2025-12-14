@@ -7,6 +7,7 @@
 #include "jit.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <iomanip>
 #include <iostream>
 #include <memory>
