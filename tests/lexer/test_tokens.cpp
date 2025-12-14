@@ -116,12 +116,12 @@ TEST(LexerTest, RecognizesStringLiteral)
     EXPECT_EQ(tokens[2].type(), mylang::lex::tok::TokenType::ENDMARKER);
 }
 
-/*
+#if 0
 TEST(LexerTest, HandlesUnexpectedCharacter) {
   LexTokenizer lexer("@");
   EXPECT_THROW(lexer.tokenize(), LexerError);
 }
-*/
+#endif
 
 TEST(LexerTest, RecognizesExpression00)
 {
