@@ -69,7 +69,7 @@ std::u16string FileManager::read_window(const std::size_t size)
     return read_window_internal(size);
 }
 
-constexpr std::size_t get_utf8_sequence_length(unsigned char first_byte) 
+constexpr std::size_t get_utf8_sequence_length(unsigned char first_byte)
 {
     if ((first_byte & 0x80) == 0)
         return 1;
@@ -82,7 +82,8 @@ constexpr std::size_t get_utf8_sequence_length(unsigned char first_byte)
     return 1;
 }
 
-std::size_t FileManager::validate_utf8_bound(std::span<const char> buffer) const {
+std::size_t FileManager::validate_utf8_bound(std::span<const char> buffer) const
+{
     if (buffer.empty())
         return 0;
 
@@ -171,20 +172,226 @@ std::u16string FileManager::read_window_internal(const std::size_t size)
     return result;
 }
 
-std::u16string FileManager::read_line(const std::size_t line_number) {
-    std::u16string line = u"";
+std::u16string FileManager::read_line(const std::size_t line_number)
+{
+    seek_to_line(line_number);
+    const std::size_t line_length = line_indices_[line_number].line_length;
+    return read_window_internal(line_length);
 }
 
-std::u16string FileManager::read_next_line() {}
-std::vector<std::u16string> FileManager::read_lines(const std::size_t start_line, const std::size_t count) {}
-std::u16string FileManager::read_all() {}
-void FileManager::refresh_stats() {}
-std::size_t FileManager::get_line_count() {}
-std::size_t FileManager::get_char_count() {}
-char16_t FileManager::peek_char(const std::size_t char_offset) {}
-std::u16string FileManager::peek_range(const std::size_t start_offset, const std::size_t length) {}
-std::string FileManager::get_path() const noexcept {}
+std::u16string FileManager::read_next_line()
+{
+    std::u16string line;
+    line.reserve(100);  // average
 
+    while (true)
+    {
+        // check line is not empty
+        std::u16string chunk = read_window_internal(1);
+        if (chunk.empty())
+            break;
+
+        const char16_t c = chunk[0];
+
+        if (c == u'\n')
+        {
+            context_.line += 1;
+            context_.column = 0;
+            break;
+        }
+
+        if (c == u'\r')
+        {
+            std::u16string peek = read_window_internal(1);
+            if (!peek.empty() && peek[0] == u'\n')
+            {
+                // consume \n
+            }
+            else
+            {
+                // rewind
+                stream_.seekg(-1, std::ios_base::cur);
+                context_.byte_offset -= 1;
+                context_.char_offset -= 1;
+            }
+            context_.line += 1;
+            context_.column = 0;
+            break;
+        }
+        line += c;
+        context_.column += 1;
+    }
+
+    return line;
+}
+
+std::vector<std::u16string> FileManager::read_lines(const std::size_t start, const std::size_t count)
+{
+    if (!line_index_built_)
+        build_line_index();
+
+    if (start >= line_indices_.size())
+        throw error::file_error(to_string(FileManagerError::INVALID_LINE_NUMBER));
+
+    const std::size_t end = std::min(start + count, line_indices_.size());
+    std::vector<std::u16string> lines;
+    lines.reserve(end - start);
+
+    for (std::size_t i = start; i < end; ++i)
+        lines.push_back(std::move(read_line(i)));
+
+    return lines;
+}
+
+std::u16string FileManager::read_all()
+{
+    reset();
+    std::u16string result;
+    result.reserve(stats_.total_bytes / 2);
+
+    while (true)
+    {
+        auto chunk = read_window_internal(4096);  // 4 MB
+        if (chunk.empty())
+            break;
+        result.append(chunk);
+    }
+
+    return result;
+}
+
+typename FileManager::FileStats FileManager::compute_stats()
+{
+    FileStats stats;
+    stats.total_bytes = fs::file_size(full_path_);
+    stats.last_modified = fs::last_write_time(full_path_);
+    // TODO : detect file encoding
+    return stats;
+}
+
+bool FileManager::is_changed_since_last_read() const
+{
+    return fs::last_write_time(full_path_) != last_known_write_time_;
+}
+
+void FileManager::refresh_stats()
+{
+    auto new_stats = compute_stats();
+    stats_ = new_stats;
+    last_known_write_time_ = stats_.last_modified;
+    // Invalidate line index if file changed
+    if (is_changed_since_last_read())
+    {
+        line_indices_.clear();
+        line_index_built_ = false;
+        // cache_.clear();
+    }
+}
+
+std::size_t FileManager::get_line_count()
+{
+    if (!line_index_built_)
+        build_line_index();
+    return stats_.total_lines;
+}
+
+std::size_t FileManager::get_char_count()
+{
+    if (!line_index_built_)
+        build_line_index();
+    return stats_.total_characters;
+}
+
+void FileManager::push_position()
+{
+    position_stack_.push_back(context_);
+    // Limit stack size
+    if (position_stack_.size() > 100)
+        position_stack_.erase(position_stack_.begin());
+}
+
+void FileManager::pop_position()
+{
+    if (!position_stack_.empty())
+        position_stack_.erase(position_stack_.begin());
+}
+
+char16_t FileManager::peek_char(const std::size_t char_offset)
+{
+    push_position();
+    seek_to_char(char_offset);
+    return read_window_internal(1)[0];
+}
+
+std::u16string FileManager::peek_range(const std::size_t start_offset, const std::size_t length)
+{
+    push_position();
+    seek_to_char(start_offset);
+    auto result = read_window_internal(length);
+    pop_position();
+    return result;
+}
+
+std::string FileManager::get_path() const noexcept { return full_path_; }
+
+void FileManager::build_line_index()
+{
+    if (line_index_built_)
+        return;
+
+    reset();
+    line_indices_.clear();
+    line_indices_.reserve(stats_.total_bytes / 80);  // roughly
+
+    std::size_t byte_pos = 0;
+    std::size_t char_pos = 0;
+    std::size_t start_byte = 0;
+    std::size_t start_char = 0;
+    std::size_t max_len = 0;
+    std::size_t current_len = 0;
+
+    while (true)
+    {
+        auto chunk = read_window_internal(LINE_INDEX_CHUNK);
+        if (chunk.empty())
+            break;
+
+        for (auto c : chunk)
+        {
+            current_len += 1;
+            if (c == u'\n' || c == u'\r')
+            {
+                max_len = std::max(max_len, current_len - 1);
+                line_indices_.push_back(LineIndex{start_byte, start_char, current_len - 1});
+                // TODO: Handle CRLF
+                if (c == u'\r' && char_pos + 1 < context_.char_offset)
+                {
+                    // Peek next char (already in chunk if available)
+                    // This is simplified; in practice we'd need to handle this better
+                }
+                start_byte = context_.byte_offset;
+                start_char = context_.char_offset;
+                current_len = 0;
+            }
+            char_pos += 1;
+        }
+    }
+
+    if (current_len > 0)
+    {
+        max_len = std::max(max_len, current_len);
+        line_indices_.push_back(LineIndex{start_byte, start_char, current_len});
+    }
+
+    stats_.total_lines = line_indices_.size();
+    stats_.max_line_length = max_len;
+
+    if (stats_.total_lines > 0)
+        stats_.average_line_length = stats_.total_characters / stats_.total_lines;
+
+    line_index_built_ = true;
+    reset();
+}
 
 }
 }

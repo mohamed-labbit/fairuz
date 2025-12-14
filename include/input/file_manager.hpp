@@ -75,6 +75,15 @@ class FileManager
         std::size_t line_length{0};
     };
 
+    struct FileStats {
+        std::size_t total_bytes{0};
+        std::size_t total_lines{0};
+        std::size_t max_line_length{0};
+        std::size_t average_line_length{0};
+        std::size_t total_characters{0};
+        std::filesystem::file_time_type last_modified;
+    };
+
     explicit FileManager(const std::string& filepath);
 
     FileManager(FileManager&&) noexcept = delete;
@@ -98,7 +107,7 @@ class FileManager
     std::u16string read_window_internal(const std::size_t size);
     std::u16string read_line(const std::size_t line_number);
     std::u16string read_next_line();
-    std::vector<std::u16string> read_lines(const std::size_t start_line, const std::size_t count);
+    std::vector<std::u16string> read_lines(const std::size_t start, const std::size_t count);
     std::u16string read_all();
     void refresh_stats();
     std::size_t get_line_count();
@@ -111,14 +120,26 @@ class FileManager
     std::string full_path_;
     std::ifstream stream_;
     Context context_;
-
+    std::vector<Context> position_stack_;
+    std::vector<LineIndex> line_indices_;
+    FileStats stats_;
+    
     // private constants
     static constexpr std::size_t DEFAULT_BUFFER_SIZE = 8192;
     static constexpr std::size_t MAX_UTF8_CHAR_BYTES = 8;
     static constexpr std::size_t SMALL_FILE_THRESHOLD = 1024 * 1024;  // 1 MB
     static constexpr std::size_t LARGE_FILE_THRESHOLD = 1024 * 1024 * 100;  // 100 MB
-
+    static constexpr std::size_t LINE_INDEX_CHUNK = 10;
+    
+    bool line_index_built_{false};
+    std::filesystem::file_time_type last_known_write_time_;
+    
+    void pop_position();
+    void push_position();
     std::size_t validate_utf8_bound(std::span<const char> buffer) const;
+    void build_line_index();
+    FileStats compute_stats();
+    bool is_changed_since_last_read() const;
 };
 
 }
