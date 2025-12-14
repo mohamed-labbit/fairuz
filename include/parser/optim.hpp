@@ -43,7 +43,10 @@ class ASTOptimizer
                 try
                 {
                     return std::stod(utf8::utf16to8(lit->value));
-                } catch (...) { return std::nullopt; }
+                } catch (...)
+                {
+                    return std::nullopt;
+                }
             }
         }
         else if (expr->kind == ast::Expr::Kind::BINARY)
@@ -337,7 +340,8 @@ class ASTOptimizer
                 auto* un = static_cast<const ast::UnaryExpr*>(expr);
                 return un->op + exprToString(un->operand.get());
             }
-            default : return u"";
+            default :
+                return u"";
             }
         }
 

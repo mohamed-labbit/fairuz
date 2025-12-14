@@ -68,7 +68,7 @@ std::string CodeGenerator::generateCPP(const std::vector<ast::StmtPtr>& ast)
     return ss.str();
 }
 
-void CodeGenerator::generateStmt(const ast::Stmt* stmt, std::vector<Bytecode>& code) 
+void CodeGenerator::generateStmt(const ast::Stmt* stmt, std::vector<Bytecode>& code)
 {
     if (!stmt)
         return;
@@ -93,7 +93,8 @@ void CodeGenerator::generateStmt(const ast::Stmt* stmt, std::vector<Bytecode>& c
         code.push_back({Bytecode::Op::RETURN, 0});
         break;
     }
-    default : break;
+    default :
+        break;
     }
 }
 
@@ -126,7 +127,8 @@ void CodeGenerator::generateExpr(const ast::Expr* expr, std::vector<Bytecode>& c
             code.push_back({Bytecode::Op::DIV, 0});
         break;
     }
-    default : break;
+    default :
+        break;
     }
 }
 
@@ -168,7 +170,8 @@ std::u16string CodeGenerator::generateCPPStmt(const ast::Stmt* stmt)
         result += u"}\n";
         return result;
     }
-    default : return u"";
+    default :
+        return u"";
     }
 
     return u"";
@@ -206,7 +209,8 @@ std::u16string CodeGenerator::generateCPPExpr(const ast::Expr* expr)
         result += u")";
         return result;
     }
-    default : return u"";
+    default :
+        return u"";
     }
 
     return u"";
@@ -237,11 +241,16 @@ std::u16string TypeSystem::Type::toString() const
 {
     switch (base)
     {
-    case BaseType::Int : return u"int";
-    case BaseType::Float : return u"float";
-    case BaseType::String : return u"str";
-    case BaseType::Bool : return u"bool";
-    case BaseType::None : return u"None";
+    case BaseType::Int :
+        return u"int";
+    case BaseType::Float :
+        return u"float";
+    case BaseType::String :
+        return u"str";
+    case BaseType::Bool :
+        return u"bool";
+    case BaseType::None :
+        return u"None";
     case BaseType::List :
         if (!typeParams.empty())
             return u"List[" + typeParams[0]->toString() + u"]";
@@ -250,7 +259,8 @@ std::u16string TypeSystem::Type::toString() const
         if (typeParams.size() >= 2)
             return u"Dict[" + typeParams[0]->toString() + u", " + typeParams[1]->toString() + u"]";
         return u"Dict";
-    default : return u"Any";
+    default :
+        return u"Any";
     }
 
     return u"Any";
@@ -304,9 +314,15 @@ std::shared_ptr<TypeSystem::Type> TypeSystem::TypeInference::inferExpr(const ast
         case ast::LiteralExpr::Type::NUMBER :
             t->base = lit->value.find('.') != std::string::npos ? BaseType::Float : BaseType::Int;
             break;
-        case ast::LiteralExpr::Type::STRING : t->base = BaseType::String; break;
-        case ast::LiteralExpr::Type::BOOLEAN : t->base = BaseType::Bool; break;
-        case ast::LiteralExpr::Type::NONE : t->base = BaseType::None; break;
+        case ast::LiteralExpr::Type::STRING :
+            t->base = BaseType::String;
+            break;
+        case ast::LiteralExpr::Type::BOOLEAN :
+            t->base = BaseType::Bool;
+            break;
+        case ast::LiteralExpr::Type::NONE :
+            t->base = BaseType::None;
+            break;
         }
         return t;
     }
@@ -339,7 +355,8 @@ std::shared_ptr<TypeSystem::Type> TypeSystem::TypeInference::inferExpr(const ast
         }
         return t;
     }
-    default : return freshTypeVar();
+    default :
+        return freshTypeVar();
     }
 
     return freshTypeVar();

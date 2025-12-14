@@ -224,28 +224,40 @@ typename Parser::OpInfo Parser::getOpInfo(lex::tok::TokenType type) const
 {
     switch (type)
     {
-    case lex::tok::TokenType::KW_OR : return {1, false, false};
-    case lex::tok::TokenType::KW_AND : return {2, false, false};
-    case lex::tok::TokenType::KW_NOT : return {3, false, false};
+    case lex::tok::TokenType::KW_OR :
+        return {1, false, false};
+    case lex::tok::TokenType::KW_AND :
+        return {2, false, false};
+    case lex::tok::TokenType::KW_NOT :
+        return {3, false, false};
     case lex::tok::TokenType::OP_EQ :
     case lex::tok::TokenType::OP_NEQ :
     case lex::tok::TokenType::OP_LT :
     case lex::tok::TokenType::OP_GT :
     case lex::tok::TokenType::OP_LTE :
     case lex::tok::TokenType::OP_GTE :
-    case lex::tok::TokenType::KW_IN : return {4, false, true};
-    case lex::tok::TokenType::OP_BITOR : return {5, false, false};
-    case lex::tok::TokenType::OP_BITXOR : return {6, false, false};
-    case lex::tok::TokenType::OP_BITAND : return {7, false, false};
+    case lex::tok::TokenType::KW_IN :
+        return {4, false, true};
+    case lex::tok::TokenType::OP_BITOR :
+        return {5, false, false};
+    case lex::tok::TokenType::OP_BITXOR :
+        return {6, false, false};
+    case lex::tok::TokenType::OP_BITAND :
+        return {7, false, false};
     case lex::tok::TokenType::OP_LSHIFT :
-    case lex::tok::TokenType::OP_RSHIFT : return {8, false, false};
+    case lex::tok::TokenType::OP_RSHIFT :
+        return {8, false, false};
     case lex::tok::TokenType::OP_PLUS :
-    case lex::tok::TokenType::OP_MINUS : return {9, false, false};
+    case lex::tok::TokenType::OP_MINUS :
+        return {9, false, false};
     case lex::tok::TokenType::OP_STAR :
     case lex::tok::TokenType::OP_SLASH :
-    case lex::tok::TokenType::OP_PERCENT : return {10, false, false};
-    case lex::tok::TokenType::OP_POWER : return {11, true, false};
-    default : return {0, false, false};
+    case lex::tok::TokenType::OP_PERCENT :
+        return {10, false, false};
+    case lex::tok::TokenType::OP_POWER :
+        return {11, true, false};
+    default :
+        return {0, false, false};
     }
 }
 
@@ -702,7 +714,7 @@ ast::StmtPtr Parser::parseSimpleStmt()
         skipNewlines();
         return std::make_unique<ast::ReturnStmt>(std::move(value));
     }
-    
+
     // Complex assignment handling
     if (check(lex::tok::TokenType::NAME))
     {

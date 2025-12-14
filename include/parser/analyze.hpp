@@ -247,9 +247,12 @@ class SemanticAnalyzer
             case ast::LiteralExpr::Type::NUMBER :
                 return lit->value.find('.') != std::string::npos ? SymbolTable::DataType::FLOAT
                                                                  : SymbolTable::DataType::INTEGER;
-            case ast::LiteralExpr::Type::STRING : return SymbolTable::DataType::STRING;
-            case ast::LiteralExpr::Type::BOOLEAN : return SymbolTable::DataType::BOOLEAN;
-            case ast::LiteralExpr::Type::NONE : return SymbolTable::DataType::NONE;
+            case ast::LiteralExpr::Type::STRING :
+                return SymbolTable::DataType::STRING;
+            case ast::LiteralExpr::Type::BOOLEAN :
+                return SymbolTable::DataType::BOOLEAN;
+            case ast::LiteralExpr::Type::NONE :
+                return SymbolTable::DataType::NONE;
             }
             break;
         }
@@ -276,9 +279,12 @@ class SemanticAnalyzer
                 return SymbolTable::DataType::BOOLEAN;
             break;
         }
-        case ast::Expr::Kind::LIST : return SymbolTable::DataType::LIST;
-        case ast::Expr::Kind::CALL : return SymbolTable::DataType::ANY;
-        default : break;
+        case ast::Expr::Kind::LIST :
+            return SymbolTable::DataType::LIST;
+        case ast::Expr::Kind::CALL :
+            return SymbolTable::DataType::ANY;
+        default :
+            break;
         }
         return SymbolTable::DataType::UNKNOWN;
     }
@@ -362,7 +368,8 @@ class SemanticAnalyzer
             analyzeExpr(tern->falseExpr.get());
             break;
         }
-        default : break;
+        default :
+            break;
         }
     }
 
@@ -475,7 +482,8 @@ class SemanticAnalyzer
             analyzeExpr(ret->value.get());
             break;
         }
-        default : break;
+        default :
+            break;
         }
     }
 
@@ -521,9 +529,15 @@ class SemanticAnalyzer
             std::u16string sevStr;
             switch (issue.severity)
             {
-            case Issue::Severity::ERROR : sevStr = u"ERROR"; break;
-            case Issue::Severity::WARNING : sevStr = u"WARNING"; break;
-            case Issue::Severity::INFO : sevStr = u"INFO"; break;
+            case Issue::Severity::ERROR :
+                sevStr = u"ERROR";
+                break;
+            case Issue::Severity::WARNING :
+                sevStr = u"WARNING";
+                break;
+            case Issue::Severity::INFO :
+                sevStr = u"INFO";
+                break;
             }
             std::cout << "[" << utf8::utf16to8(sevStr) << "] Line " << issue.line << ": "
                       << utf8::utf16to8(issue.message) << "\n";

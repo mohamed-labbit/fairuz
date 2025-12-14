@@ -4,7 +4,6 @@
 #include <span>
 #include <string>
 #include <vector>
-#include <span>
 
 
 namespace mylang {
@@ -32,20 +31,34 @@ constexpr const char* to_string(FileManagerError error) noexcept
 {
     switch (error)
     {
-    case FileManagerError::FILE_NOT_FOUND : return "File not found";
-    case FileManagerError::FILE_NOT_OPEN : return "File is not open";
-    case FileManagerError::SEEK_OUT_OF_BOUND : return "Seek position out of bounds";
-    case FileManagerError::READ_ERROR : return "Failed to read from file";
-    case FileManagerError::INVALID_UTF8 : return "Invalid UTF-8 sequence encountered";
-    case FileManagerError::INVALID_CHAR_OFFSET : return "Invalid character offset";
-    case FileManagerError::PERMISSION_DENIED : return "Permission denied";
-    case FileManagerError::UNEXPECTED_EOF : return "Unexpected end of file";
-    case FileManagerError::SYSTEM_ERROR : return "System error occurred";
-    case FileManagerError::ENCODING_ERROR : return "Encoding conversion error";
-    case FileManagerError::CACHE_ERROR : return "Cache operation failed";
-    case FileManagerError::INVALID_LINE_NUMBER : return "Invalid line number";
-    case FileManagerError::BUFFER_TOO_SMALL : return "Buffer too small for operation";
-    default : return "Unknown error";
+    case FileManagerError::FILE_NOT_FOUND :
+        return "File not found";
+    case FileManagerError::FILE_NOT_OPEN :
+        return "File is not open";
+    case FileManagerError::SEEK_OUT_OF_BOUND :
+        return "Seek position out of bounds";
+    case FileManagerError::READ_ERROR :
+        return "Failed to read from file";
+    case FileManagerError::INVALID_UTF8 :
+        return "Invalid UTF-8 sequence encountered";
+    case FileManagerError::INVALID_CHAR_OFFSET :
+        return "Invalid character offset";
+    case FileManagerError::PERMISSION_DENIED :
+        return "Permission denied";
+    case FileManagerError::UNEXPECTED_EOF :
+        return "Unexpected end of file";
+    case FileManagerError::SYSTEM_ERROR :
+        return "System error occurred";
+    case FileManagerError::ENCODING_ERROR :
+        return "Encoding conversion error";
+    case FileManagerError::CACHE_ERROR :
+        return "Cache operation failed";
+    case FileManagerError::INVALID_LINE_NUMBER :
+        return "Invalid line number";
+    case FileManagerError::BUFFER_TOO_SMALL :
+        return "Buffer too small for operation";
+    default :
+        return "Unknown error";
     }
 }
 
@@ -75,7 +88,8 @@ class FileManager
         std::size_t line_length{0};
     };
 
-    struct FileStats {
+    struct FileStats
+    {
         std::size_t total_bytes{0};
         std::size_t total_lines{0};
         std::size_t max_line_length{0};
@@ -123,17 +137,17 @@ class FileManager
     std::vector<Context> position_stack_;
     std::vector<LineIndex> line_indices_;
     FileStats stats_;
-    
+
     // private constants
     static constexpr std::size_t DEFAULT_BUFFER_SIZE = 8192;
     static constexpr std::size_t MAX_UTF8_CHAR_BYTES = 8;
     static constexpr std::size_t SMALL_FILE_THRESHOLD = 1024 * 1024;  // 1 MB
     static constexpr std::size_t LARGE_FILE_THRESHOLD = 1024 * 1024 * 100;  // 100 MB
     static constexpr std::size_t LINE_INDEX_CHUNK = 10;
-    
+
     bool line_index_built_{false};
     std::filesystem::file_time_type last_known_write_time_;
-    
+
     void pop_position();
     void push_position();
     std::size_t validate_utf8_bound(std::span<const char> buffer) const;

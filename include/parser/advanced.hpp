@@ -225,7 +225,7 @@ class LanguageServer
 
     // Go to definition
     Position getDefinition(const std::u16string& source, Position pos);
-    
+
     // Find all references
     std::vector<Range> getReferences(const std::u16string& source, Position pos);
 
@@ -250,7 +250,7 @@ class ParserProfiler
 
    public:
     void recordPhase(const std::u16string& phase, double ms);
-    
+
     void printReport() const;
 };
 
