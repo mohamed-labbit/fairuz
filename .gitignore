@@ -1,4 +1,5 @@
-.venv/
-build/
-./lines.cpp
-./lines
+.venv/        # ignore the virtual environment folder
+build/        # ignore the build folder
+lines.cpp
+lines      
+some.cpp        
