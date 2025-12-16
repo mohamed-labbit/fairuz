@@ -35,7 +35,7 @@ class ParserTest: public ::testing::Test
    public:
     void SetUp() override
     {
-        GTEST_SKIP() << "Parser tests temporarily disabled while lexer source handling is stabilized.";
+        // GTEST_SKIP() << "Parser tests temporarily disabled while lexer source handling is stabilized.";
         ASSERT_TRUE(std::filesystem::exists(parser_test_cases_dir()))
           << "Test cases directory not found: " << parser_test_cases_dir();
     }
@@ -155,7 +155,6 @@ TEST_F(ParseErrorTest, LargeLineAndColumnNumbers)
 }
 
 // Literal Expression Tests
-#if 0
 TEST_F(ParserTest, ParseNumberLiteral)
 {
     mylang::input::FileManager file_manager(parser_test_cases_dir() / "number_literal.txt");
@@ -166,6 +165,7 @@ TEST_F(ParserTest, ParseNumberLiteral)
     EXPECT_EQ(literal->litType, mylang::parser::ast::LiteralExpr::Type::NUMBER);
 }
 
+#if 0
 TEST_F(ParserTest, ParseStringLiteral)
 {
     mylang::input::FileManager file_manager(parser_test_cases_dir() / "string_literal.txt");
