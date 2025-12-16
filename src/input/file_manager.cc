@@ -6,6 +6,7 @@
 
 namespace fs = std::filesystem;
 
+
 namespace mylang {
 namespace input {
 
@@ -126,13 +127,9 @@ std::u16string FileManager::read_window_internal(const std::size_t size)
     if (bytes_read == 0)
     {
         if (stream_.eof())
-        {
             return std::u16string{};
-        }
         else if (byte_buffer.empty())
-        {
             throw error::file_error(to_string(FileManagerError::READ_ERROR));
-        }
     }
 
     if (bytes_read < 0)
