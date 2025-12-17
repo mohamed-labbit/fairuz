@@ -1,13 +1,15 @@
 #include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
-#include <memory>
 #include <iterator>
+#include <memory>
+#define BOOST_STACKTRACE_GNU_SOURCE_NOT_REQUIRED
+#include <boost/stacktrace.hpp>
 
 #include "../include/input/file_manager.hpp"
 #include "../include/lex/lexer.hpp"
-#include "../include/parser/ast/ast.hpp"
-#include "../include/parser/parser.hpp"
+#include "../include/parser/ast/ast_.hpp"
+#include "../include/parser/parser_.hpp"
 
 
 namespace {
@@ -79,7 +81,7 @@ class ParserTest: public ::testing::Test
         EXPECT_NE(expr, nullptr) << "Expression should not be null";
         if (!expr)
             return nullptr;
-        T* casted = dynamic_cast<T*>(expr.get());
+        T* casted = static_cast<T*>(expr.get());
         EXPECT_NE(casted, nullptr) << "Failed to cast to expected type";
         return casted;
     }
@@ -158,11 +160,14 @@ TEST_F(ParseErrorTest, LargeLineAndColumnNumbers)
 TEST_F(ParserTest, ParseNumberLiteral)
 {
     mylang::input::FileManager file_manager(parser_test_cases_dir() / "number_literal.txt");
+    std::cout << "-- DEBUG : file_manager initialized successfully!" << std::endl;
     mylang::parser::Parser parser(&file_manager);
+    // std::cout << boost::stacktrace::stacktrace();
+    std::cout << "-- DEBUG : parser initialized successfully!" << std::endl;
     mylang::parser::ast::ExprPtr expr = parser.parsePrimary();
     mylang::parser::ast::LiteralExpr* literal = parseAndCast<mylang::parser::ast::LiteralExpr>(parser, expr);
     ASSERT_NE(literal, nullptr);
-    EXPECT_EQ(literal->litType, mylang::parser::ast::LiteralExpr::Type::NUMBER);
+    EXPECT_EQ(literal->type, mylang::parser::ast::LiteralExpr::Type::NUMBER);
 }
 
 #if 0
