@@ -25,7 +25,7 @@
 #include "../include/parser/ast/ast.hpp"
 #include "../include/parser/ast/printer.hpp"
 #include "../include/parser/optim.hpp"
-#include "../include/parser/parser.hpp"
+//#include "../include/parser/parser.hpp"
 #include "../include/parser/util.hpp"
 #include "../include/runtime/allocator/arena.hpp"
 #include "../include/runtime/object/object.hpp"

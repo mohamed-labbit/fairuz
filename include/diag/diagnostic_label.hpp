@@ -9,7 +9,7 @@ namespace diagnostics {
 
 class DiagnosticLabel
 {
-   public:
+ public:
 };
 
 

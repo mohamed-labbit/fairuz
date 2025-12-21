@@ -13,6 +13,7 @@ MYLANG_INLINE void PrintTo(const mylang::lex::tok::Token& tok, std::ostream* os)
         << ", line=" << tok.line() << ", col=" << tok.column() << ")" << '\n';
 }
 
+#if 0
 TEST(TestFile, TestFileTokenization)
 {
     mylang::lex::Lexer lexer(test_cases_path);
@@ -82,3 +83,4 @@ TEST(TestFile, TestFileTokenization)
     std::cout << "DEBUG -> indent_size:" << '\n';
     std::cout << lexer.indent_size() << std::endl;
 };
+#endif

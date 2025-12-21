@@ -8,69 +8,70 @@ namespace runtime {
 
 void GarbageCollector::registerObject(object::Value* obj)
 {
-    if (!obj)
-    {
-        std::cerr << "-- DEBUG: a null object was pushed to the garbage collector" << std::endl;
-        return;
-    }
+  if (!obj)
+  {
+#if DEBUG_PRINT
+    std::cerr << "-- DEBUG: a null object was pushed to the garbage collector" << std::endl;
+#endif
+    return;
+  }
 
-    allObjects_.push_back(obj);
-    youngGen_.push_back(obj);
-    allocated_++;
+  allObjects_.push_back(obj);
+  youngGen_.push_back(obj);
+  allocated_++;
 
-    if (allocated_ >= threshold_)
-        collect();
+  if (allocated_ >= threshold_) collect();
 }
 
 void GarbageCollector::addRoot(object::Value* root)
 {
-    if (!root)
-    {
-        std::cerr << "-- DEBUG: a null root was pushed to the garbage collector" << std::endl;
-        return;
-    }
-    roots_.push_back(root);
+  if (!root)
+  {
+#if DEBUG_PRINT
+    std::cerr << "-- DEBUG: a null root was pushed to the garbage collector" << std::endl;
+#endif
+    return;
+  }
+  roots_.push_back(root);
 }
 
 void GarbageCollector::collect()
 {
-    // Mark phase
-    std::unordered_set<object::Value*> marked;
-    std::vector<object::Value*> worklist = roots_;
+  // Mark phase
+  std::unordered_set<object::Value*> marked;
+  std::vector<object::Value*> worklist = roots_;
 
-    while (!worklist.empty())
+  while (!worklist.empty())
+  {
+    object::Value* obj = worklist.back();
+    worklist.pop_back();
+    if (marked.count(obj)) continue;
+    marked.insert(obj);
+    // Mark children (if list, dict, etc.)
+    if (obj->isList())
+      for (auto& item : obj->asList())
+        worklist.push_back(const_cast<object::Value*>(&item));
+  }
+
+  // Sweep phase
+  auto it = allObjects_.begin();
+  while (it != allObjects_.end())
+  {
+    if (!marked.count(*it))
     {
-        object::Value* obj = worklist.back();
-        worklist.pop_back();
-        if (marked.count(obj))
-            continue;
-        marked.insert(obj);
-        // Mark children (if list, dict, etc.)
-        if (obj->isList())
-            for (auto& item : obj->asList())
-                worklist.push_back(const_cast<object::Value*>(&item));
+      delete *it;
+      it = allObjects_.erase(it);
+      allocated_--;
     }
-
-    // Sweep phase
-    auto it = allObjects_.begin();
-    while (it != allObjects_.end())
+    else
     {
-        if (!marked.count(*it))
-        {
-            delete *it;
-            it = allObjects_.erase(it);
-            allocated_--;
-        }
-        else
-        {
-            ++it;
-        }
+      ++it;
     }
+  }
 
-    youngGenCollections_++;
-    // Promote survivors to old generation every 5 collections
-    if (youngGenCollections_ % 5 == 0)
-        promoteToOldGen();
+  youngGenCollections_++;
+  // Promote survivors to old generation every 5 collections
+  if (youngGenCollections_ % 5 == 0) promoteToOldGen();
 }
 
 }

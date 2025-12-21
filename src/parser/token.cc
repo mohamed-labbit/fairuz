@@ -6,7 +6,7 @@ namespace mylang {
 namespace lex {
 namespace tok {
 
-const std::u16string& Token::lexeme() const { return this->value_; }
+const string_type& Token::lexeme() const { return this->value_; }
 
 std::string Token::utf8_lexeme() const { return utf8::utf16to8(this->value_); }
 
@@ -26,8 +26,7 @@ const std::string& Token::filepath() const { return this->location_.filepath; }
 
 bool Token::operator==(const Token& other) const
 {
-    return value_ == other.value_ && type_ == other.type_ && location_.line == other.location_.line
-      && location_.column == other.location_.column;
+  return value_ == other.value_ && type_ == other.type_ && location_.line == other.location_.line && location_.column == other.location_.column;
 }
 
 bool Token::operator!=(const Token& other) const { return !(*this == other); }

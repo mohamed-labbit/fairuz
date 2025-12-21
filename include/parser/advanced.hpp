@@ -1,19 +1,21 @@
-#pragma once
+#if 0
+
+  #pragma once
 
 
-#include "../lex/lexer.hpp"
-#include "../lex/token.hpp"
-#include "ast/ast.hpp"
-#include "parser.hpp"
+  #include "../lex/lexer.hpp"
+  #include "../lex/token.hpp"
+  #include "ast/ast.hpp"
+  #include "parser.hpp"
 
-#include <functional>
-#include <future>
-#include <memory>
-#include <optional>
-#include <thread>
-#include <unordered_map>
-#include <unordered_set>
-#include <vector>
+  #include <functional>
+  #include <future>
+  #include <memory>
+  #include <optional>
+  #include <thread>
+  #include <unordered_map>
+  #include <unordered_set>
+  #include <vector>
 
 
 namespace mylang {
@@ -33,14 +35,14 @@ class IncrementalParser
     };
 
     std::vector<ParseNode> cache_;
-    std::u16string lastSource_;
+    string_type lastSource_;
 
-    std::size_t hashRegion(const std::u16string& source, std::size_t start, std::size_t end);
+    std::size_t hashRegion(const string_type& source, std::size_t start, std::size_t end);
 
    public:
     // Only reparse changed regions
     std::vector<ast::StmtPtr> parseIncremental(
-      const std::u16string& newSource, const std::vector<std::size_t>& changedLines);
+      const string_type& newSource, const std::vector<std::size_t>& changedLines);
 };
 
 // ============================================================================
@@ -69,14 +71,14 @@ class TypeSystem
     {
         BaseType base;
         std::vector<std::shared_ptr<Type>> typeParams;  // For generics: List[Int]
-        std::unordered_map<std::u16string, std::shared_ptr<Type>> fields;  // For classes
+        std::unordered_map<string_type, std::shared_ptr<Type>> fields;  // For classes
 
         // Function signature
         std::vector<std::shared_ptr<Type>> paramTypes;
         std::shared_ptr<Type> returnType;
 
         bool operator==(const Type& other) const;
-        std::u16string toString() const;
+        string_type toString() const;
     };
 
     // Hindley-Milner type inference
@@ -84,7 +86,7 @@ class TypeSystem
     {
        private:
         std::int32_t freshVarCounter = 0;
-        std::unordered_map<std::u16string, std::shared_ptr<Type>> substitutions;
+        std::unordered_map<string_type, std::shared_ptr<Type>> substitutions;
 
         std::shared_ptr<Type> freshTypeVar();
         void unify(std::shared_ptr<Type> t1, std::shared_ptr<Type> t2);
@@ -135,9 +137,9 @@ class CodeGenerator
 
     void generateExpr(const ast::Expr* expr, std::vector<Bytecode>& code);
 
-    std::u16string generateCPPStmt(const ast::Stmt* stmt);
+    string_type generateCPPStmt(const ast::Stmt* stmt);
 
-    std::u16string generateCPPExpr(const ast::Expr* expr);
+    string_type generateCPPExpr(const ast::Expr* expr);
 };
 
 // ============================================================================
@@ -153,29 +155,29 @@ class DiagnosticEngine
         Severity severity;
         std::int32_t line, column;
         std::int32_t length;
-        std::u16string message;
-        std::u16string code;  // Error code like E0001
-        std::vector<std::u16string> suggestions;
-        std::vector<std::pair<std::int32_t, std::u16string>> notes;  // Additional context
+        string_type message;
+        string_type code;  // Error code like E0001
+        std::vector<string_type> suggestions;
+        std::vector<std::pair<std::int32_t, string_type>> notes;  // Additional context
     };
 
    private:
     std::vector<Diagnostic> diagnostics_;
-    std::u16string sourceCode_;
+    string_type sourceCode_;
 
    public:
-    void setSource(const std::u16string& source);
+    void setSource(const string_type& source);
 
     void report(Severity sev,
       std::int32_t line,
       std::int32_t col,
       std::int32_t len,
-      const std::u16string& msg,
-      const std::u16string& code = u"");
+      const string_type& msg,
+      const string_type& code = u"");
 
-    void addSuggestion(const std::u16string& suggestion);
+    void addSuggestion(const string_type& suggestion);
 
-    void addNote(std::int32_t line, const std::u16string& note);
+    void addNote(std::int32_t line, const string_type& note);
 
     // Generate LSP-compatible diagnostics
     std::string toJSON() const;
@@ -205,33 +207,33 @@ class LanguageServer
 
     struct CompletionItem
     {
-        std::u16string label;
-        std::u16string detail;
-        std::u16string documentation;
+        string_type label;
+        string_type detail;
+        string_type documentation;
         std::int32_t kind;  // Variable, Function, Class, etc.
     };
 
     struct Hover
     {
-        std::u16string contents;
+        string_type contents;
         Range range;
     };
 
     // Auto-completion at cursor position
-    std::vector<CompletionItem> getCompletions(const std::u16string& source, Position pos);
+    std::vector<CompletionItem> getCompletions(const string_type& source, Position pos);
 
     // Hover information
-    Hover getHover(const std::u16string& source, Position pos);
+    Hover getHover(const string_type& source, Position pos);
 
     // Go to definition
-    Position getDefinition(const std::u16string& source, Position pos);
+    Position getDefinition(const string_type& source, Position pos);
 
     // Find all references
-    std::vector<Range> getReferences(const std::u16string& source, Position pos);
+    std::vector<Range> getReferences(const string_type& source, Position pos);
 
     // Rename symbol
-    std::unordered_map<std::u16string, std::u16string> rename(
-      const std::u16string& source, Position pos, const std::u16string& newName);
+    std::unordered_map<string_type, string_type> rename(
+      const string_type& source, Position pos, const string_type& newName);
 };
 
 // ============================================================================
@@ -242,17 +244,18 @@ class ParserProfiler
    private:
     struct Timing
     {
-        std::u16string phase;
+        string_type phase;
         double milliseconds;
     };
 
     std::vector<Timing> timings;
 
    public:
-    void recordPhase(const std::u16string& phase, double ms);
+    void recordPhase(const string_type& phase, double ms);
 
     void printReport() const;
 };
 
 }
 }
+#endif

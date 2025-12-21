@@ -1,5 +1,7 @@
 #include "../../include/parser/parser_.hpp"
 
+#include <cassert>
+
 
 namespace mylang {
 namespace parser {
@@ -8,184 +10,211 @@ namespace parser {
 Parser::Parser(input::FileManager* file_manager) :
     lex_(file_manager)
 {
-    // ...
+  if (file_manager == nullptr) throw std::invalid_argument("file_manager is NULL!");
+
+  // assert(lex_.next().type() == lex::tok::TokenType::BEGINMARKER);
+
+  // Check that we START at beginmarker
+  // assert(lex_.current().type() == lex::tok::TokenType::BEGINMARKER);
+
+  // Then advance to the first real token
+  lex_.next();
+
+#if DEBUG_PRINT
+  std::cout << "-- DEBUG : lex_.next() = " << std::to_string(static_cast<int>(lex_.current().type())) << std::endl;
+  std::cout << "-- DEBUG : parser initialized successfully!" << std::endl;
+#endif
+  // ...
 }
 
 ast::ExprPtr Parser::parseUnary()
 {
-    auto type = peek();
+  auto type = peek();
 
-    if (isUnaryOp(type))
-    {
-        auto op = advance();
-        auto self = parseUnary();
-        return std::make_unique<ast::UnaryExpr>(std::move(self), op.lexeme());
-    }
+  if (isUnaryOp(type))
+  {
+    auto op = advance();
+    auto self = parseUnary();
+    return std::make_unique<ast::UnaryExpr>(std::move(self), op.lexeme());
+  }
 
-    return parsePrimary();
+  return parsePrimary();
 }
 
 ast::ExprPtr Parser::parsePrimary()
 {
-    ast::ExprPtr ret;
+#if DEBUG_PRINT
+  std::cout << "-- DEBUG : parse primary started!" << std::endl;
+#endif
+  ast::ExprPtr ret;
 
-    // number literal
-    if (match(lex::tok::TokenType::NUMBER))
-    {
-        auto tok = advance();
-        ret = std::make_unique<ast::LiteralExpr>(ast::LiteralExpr(ast::LiteralExpr::Type::NUMBER, tok.lexeme()));
-    }
-    // string literal
-    else if (match(lex::tok::TokenType::STRING))
-    {
-        auto tok = advance();
-        ret = std::make_unique<ast::LiteralExpr>(ast::LiteralExpr(ast::LiteralExpr::Type::STRING, tok.lexeme()));
-    }
-    // keyword true
-    else if (match(lex::tok::TokenType::KW_TRUE))
-    {
-        auto tok = advance();
-        ret = std::make_unique<ast::LiteralExpr>(ast::LiteralExpr(ast::LiteralExpr::Type::BOOLEAN, tok.lexeme()));
-    }
-    // keyword false
-    else if (match(lex::tok::TokenType::KW_FALSE))
-    {
-        auto tok = advance();
-        ret = std::make_unique<ast::LiteralExpr>(ast::LiteralExpr(ast::LiteralExpr::Type::BOOLEAN, tok.lexeme()));
-    }
-    // keyword none
-    else if (match(lex::tok::TokenType::KW_NONE))
-    {
-        auto tok = advance();
-        ret = std::make_unique<ast::LiteralExpr>(ast::LiteralExpr(ast::LiteralExpr::Type::NONE, tok.lexeme()));
-    }
-    // parenthesized expression
-    /// @note parsing tuples isn't implemented yet
-    else if (match(lex::tok::TokenType::LPAREN))
-    {
-        ret = parseParenthesizedExpr();
-    }
-    // list
-    else if (match(lex::tok::TokenType::LPAREN))
-    {
-        ret = parseListLiteral();
-    }
-    // ... 'dict'
-    else
-    {
-        throw ParseError(u"Expected expression, got '" + peek().lexeme() + u"'", peek().line(), peek().column(),
-          getSourceLine(peek().line()));
-    }
+  // number literal
+  if (match(lex::tok::TokenType::NUMBER))
+  {
+    auto tok = lex_.prev();
+    ret = std::make_unique<ast::LiteralExpr>(ast::LiteralExpr(ast::LiteralExpr::Type::NUMBER, tok.lexeme()));
+  }
+  // string literal
+  else if (match(lex::tok::TokenType::STRING))
+  {
+    auto tok = advance();
+    ret = std::make_unique<ast::LiteralExpr>(ast::LiteralExpr(ast::LiteralExpr::Type::STRING, tok.lexeme()));
+  }
+  // keyword true
+  else if (match(lex::tok::TokenType::KW_TRUE))
+  {
+    auto tok = advance();
+    ret = std::make_unique<ast::LiteralExpr>(ast::LiteralExpr(ast::LiteralExpr::Type::BOOLEAN, tok.lexeme()));
+  }
+  // keyword false
+  else if (match(lex::tok::TokenType::KW_FALSE))
+  {
+    auto tok = advance();
+    ret = std::make_unique<ast::LiteralExpr>(ast::LiteralExpr(ast::LiteralExpr::Type::BOOLEAN, tok.lexeme()));
+  }
+  // keyword none
+  else if (match(lex::tok::TokenType::KW_NONE))
+  {
+    auto tok = advance();
+    ret = std::make_unique<ast::LiteralExpr>(ast::LiteralExpr(ast::LiteralExpr::Type::NONE, tok.lexeme()));
+  }
+  // parenthesized expression
+  /// @note parsing tuples isn't implemented yet
+  else if (match(lex::tok::TokenType::LPAREN)) { ret = parseParenthesizedExpr(); }
+  // list
+  else if (match(lex::tok::TokenType::LBRACKET)) { ret = parseListLiteral(); }
+  // ... 'dict'
+  else
+  {
+    throw ParseError(u"Expected expression, got '" + peek().lexeme() + u"'", peek().line(), peek().column(), getSourceLine(peek().line()));
+  }
 
-    // TODO : add caching
-    return ret;
+  // TODO : add caching
+  return ret;
 }
 
 ast::ExprPtr Parser::parseParenthesizedExpr()
 {
-    if (check(lex::tok::TokenType::RPAREN))
-    {
-        advance();
-        return std::make_unique<ast::ListExpr>(std::vector<ast::ExprPtr>());
-    }
+  if (check(lex::tok::TokenType::RPAREN))
+  {
+    advance();
+    return std::make_unique<ast::ListExpr>(std::vector<ast::ExprPtr>());
+  }
 
-    ast::ExprPtr expr = parseExpression();
+  ast::ExprPtr expr = parseExpression();
 
-    // check for tuple
-    // ...
+  // check for tuple
+  // ...
 
-    consume(lex::tok::TokenType::RPAREN, u"Expected ')' after expression");
-    return expr;
+  consume(lex::tok::TokenType::RPAREN, u"Expected ')' after expression");
+  return expr;
 }
 
 ast::ExprPtr Parser::parseExpression()
 {
-    // TODO : starred
-    // ...
-    return parseAssignmentExpr();
+  // TODO : starred
+  // ...
+  return parseAssignmentExpr();
 }
 
 ast::ExprPtr Parser::parseAssignmentExpr()
 {
-    // TODO
-    // ...
-    return ast::ExprPtr();
+  // TODO
+  // ...
+  return ast::ExprPtr();
 }
 
 ast::ExprPtr Parser::parseListLiteral()
 {
-    std::vector<ast::ExprPtr> elements;
-    if (!check(lex::tok::TokenType::RBRACKET))
+  std::vector<ast::ExprPtr> elements;
+  if (!check(lex::tok::TokenType::RBRACKET))
+  {
+    // ... 'list comprehension'
+
+    while (match(lex::tok::TokenType::COMMA))
     {
-        // ... 'list comprehension'
+      skipNewlines();
+      if (check(lex::tok::TokenType::RBRACKET)) break;
 
-        while (match(lex::tok::TokenType::COMMA))
-        {
-            skipNewlines();
-            if (check(lex::tok::TokenType::RBRACKET))
-                break;
+      // ... 'unpacking'
 
-            // ... 'unpacking'
-
-            elements.push_back(parseExpression());
-            skipNewlines();
-        }
+      elements.push_back(parseExpression());
+      skipNewlines();
     }
+  }
 
-    // TODO : hell find a better way to report errors
-    consume(lex::tok::TokenType::RBRACKET, u"Expected ']' after list elements");
-    return std::make_unique<ast::ListExpr>(std::move(elements));
+  // TODO : hell find a better way to report errors
+  consume(lex::tok::TokenType::RBRACKET, u"Expected ']' after list elements");
+  return std::make_unique<ast::ListExpr>(std::move(elements));
 }
 
 // helpers
 bool Parser::isUnaryOp(lex::tok::Token tok) const
 {
-    return tok.type() == lex::tok::TokenType::OP_MINUS || tok.type() == lex::tok::TokenType::OP_BITNOT;
+  return tok.type() == lex::tok::TokenType::OP_MINUS || tok.type() == lex::tok::TokenType::OP_BITNOT;
 }
 
 lex::tok::Token Parser::peek(std::size_t offset)
 {
-    if (!offset)
-        return lex_.current();
-    return lex_.peek(offset);
+#if DEBUG_PRINT
+  std::cout << "-- DEBUG : peek() called!" << std::endl;
+#endif
+  return lex_.peek(offset);
 }
 
-lex::tok::Token Parser::advance() { return lex_.next(); }
+lex::tok::Token Parser::advance()
+{
+#if DEBUG_PRINT
+  std::cout << "-- DEBUG : advance() called!" << std::endl;
+#endif
+  return lex_.next();
+}
 
 bool Parser::match(const lex::tok::TokenType type)
 {
-    if (check(type))
-    {
-        advance();
-        return true;
-    }
-    return false;
+#if DEBUG_PRINT
+  std::cout << "-- DEBUG : match(" << std::to_string(static_cast<int>(type)) << ") called!" << std::endl;
+#endif
+  if (check(type))
+  {
+    advance();
+    return true;
+  }
+  return false;
 }
 
-bool Parser::check(lex::tok::TokenType type) { return peek().is(type); }
-
-lex::tok::Token Parser::consume(lex::tok::TokenType type, const std::u16string& msg)
+bool Parser::check(lex::tok::TokenType type)
 {
-    if (check(type))
-        return advance();
-    // TODO  : error ...
-    // throw ParseError(msg, peek().line(), peek().column(), context, suggestions);
-    // Placeholder to suppress warnings
-    return lex::tok::Token();
+#if DEBUG_PRINT
+  std::cout << "-- DEBUG : check(" << std::to_string(static_cast<int>(type)) << ") called!" << std::endl;
+#endif
+  return lex_.current().is(type);
+}
+
+lex::tok::Token Parser::consume(lex::tok::TokenType type, const string_type& msg)
+{
+#if DEBUG_PRINT
+  std::cout << "-- DEBUG : Parser::consume() called!" << std::endl;
+#endif
+  if (check(type)) return advance();
+  // TODO  : error ...
+  // throw ParseError(msg, peek().line(), peek().column(), context, suggestions);
+  // Placeholder to suppress warnings
+  return lex::tok::Token();
 }
 
 void Parser::skipNewlines()
 {
-    while (match(lex::tok::TokenType::NEWLINE))
-        ;
+  while (match(lex::tok::TokenType::NEWLINE))
+    ;
 }
 
-std::u16string Parser::getSourceLine(std::size_t line)
+string_type Parser::getSourceLine(std::size_t line)
 {
-    // this would retrieve the actual source line
-    // simplified for now
-    // TODO : use the file manager
-    return peek().lexeme();
+  // this would retrieve the actual source line
+  // simplified for now
+  // TODO : use the file manager
+  return peek().lexeme();
 }
 
 }

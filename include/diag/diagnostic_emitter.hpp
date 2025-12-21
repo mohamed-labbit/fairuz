@@ -9,7 +9,7 @@ namespace diagnostics {
 
 class DiagnosticEmitter
 {
-   public:
+ public:
 };
 
 

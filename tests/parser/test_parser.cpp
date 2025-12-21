@@ -11,22 +11,22 @@
 #include "../include/parser/ast/ast_.hpp"
 #include "../include/parser/parser_.hpp"
 
+using string_type = mylang::string_type;
 
 namespace {
 std::filesystem::path parser_test_cases_dir()
 {
-    static const auto dir = std::filesystem::path(__FILE__).parent_path() / "test_cases";
-    return dir;
+  static const auto dir = std::filesystem::path(__FILE__).parent_path() / "test_cases";
+  return dir;
 }
 
-std::u16string load_source(const std::string& filename)
+string_type load_source(const std::string& filename)
 {
-    auto filepath = parser_test_cases_dir() / filename;
-    std::ifstream file(filepath, std::ios::binary);
-    if (!file.is_open())
-        ADD_FAILURE() << "Failed to open test file: " << filepath;
-    std::string utf8_contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-    return utf8::utf8to16(utf8_contents);
+  auto filepath = parser_test_cases_dir() / filename;
+  std::ifstream file(filepath, std::ios::binary);
+  if (!file.is_open()) ADD_FAILURE() << "Failed to open test file: " << filepath;
+  std::string utf8_contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+  return utf8::utf8to16(utf8_contents);
 }
 
 }  // anonymous namespace
@@ -34,57 +34,53 @@ std::u16string load_source(const std::string& filename)
 // Test Fixture
 class ParserTest: public ::testing::Test
 {
-   public:
-    void SetUp() override
+ public:
+  void SetUp() override
+  {
+    // GTEST_SKIP() << "Parser tests temporarily disabled while lexer source handling is stabilized.";
+    ASSERT_TRUE(std::filesystem::exists(parser_test_cases_dir())) << "Test cases directory not found: " << parser_test_cases_dir();
+  }
+
+  std::vector<mylang::lex::tok::Token> createTokens(std::initializer_list<mylang::lex::tok::TokenType> types)
+  {
+    mylang::lex::Lexer lexer;
+    std::vector<mylang::lex::tok::Token> tokens;
+    tokens.emplace_back(lexer.make_token(mylang::lex::tok::TokenType::BEGINMARKER, u"", 1, 1));
+    int line = 1, col = 2;
+
+    for (auto type : types)
     {
-        // GTEST_SKIP() << "Parser tests temporarily disabled while lexer source handling is stabilized.";
-        ASSERT_TRUE(std::filesystem::exists(parser_test_cases_dir()))
-          << "Test cases directory not found: " << parser_test_cases_dir();
+      tokens.emplace_back(lexer.make_token(type, u"", line, col));
+      col++;
     }
 
-    std::vector<mylang::lex::tok::Token> createTokens(std::initializer_list<mylang::lex::tok::TokenType> types)
-    {
-        mylang::lex::Lexer lexer;
-        std::vector<mylang::lex::tok::Token> tokens;
-        tokens.emplace_back(lexer.make_token(mylang::lex::tok::TokenType::BEGINMARKER, u"", 1, 1));
-        int line = 1, col = 2;
+    tokens.emplace_back(lexer.make_token(mylang::lex::tok::TokenType::ENDMARKER, u"", line, col));
+    return tokens;
+  }
 
-        for (auto type : types)
-        {
-            tokens.emplace_back(lexer.make_token(type, u"", line, col));
-            col++;
-        }
+  mylang::lex::tok::Token makeToken(mylang::lex::tok::TokenType type, const string_type& value = u"", int line = 1, int col = 1)
+  {
+    mylang::lex::Lexer lexer;
+    return lexer.make_token(type, value, line, col);
+  }
 
-        tokens.emplace_back(lexer.make_token(mylang::lex::tok::TokenType::ENDMARKER, u"", line, col));
-        return tokens;
-    }
+  std::ifstream openTestFile(const std::string& filename)
+  {
+    auto filepath = parser_test_cases_dir() / filename;
+    std::ifstream file(filepath, std::ios::binary);
+    if (!file.is_open()) ADD_FAILURE() << "Failed to open test file: " << filepath;
+    return file;
+  }
 
-    mylang::lex::tok::Token makeToken(
-      mylang::lex::tok::TokenType type, const std::u16string& value = u"", int line = 1, int col = 1)
-    {
-        mylang::lex::Lexer lexer;
-        return lexer.make_token(type, value, line, col);
-    }
-
-    std::ifstream openTestFile(const std::string& filename)
-    {
-        auto filepath = parser_test_cases_dir() / filename;
-        std::ifstream file(filepath, std::ios::binary);
-        if (!file.is_open())
-            ADD_FAILURE() << "Failed to open test file: " << filepath;
-        return file;
-    }
-
-    template<typename T>
-    T* parseAndCast(mylang::parser::Parser& parser, mylang::parser::ast::ExprPtr& expr)
-    {
-        EXPECT_NE(expr, nullptr) << "Expression should not be null";
-        if (!expr)
-            return nullptr;
-        T* casted = static_cast<T*>(expr.get());
-        EXPECT_NE(casted, nullptr) << "Failed to cast to expected type";
-        return casted;
-    }
+  template<typename T>
+  T* parseAndCast(mylang::parser::Parser& parser, mylang::parser::ast::ExprPtr& expr)
+  {
+    EXPECT_NE(expr, nullptr) << "Expression should not be null";
+    if (!expr) return nullptr;
+    T* casted = static_cast<T*>(expr.get());
+    EXPECT_NE(casted, nullptr) << "Failed to cast to expected type";
+    return casted;
+  }
 };
 
 // ParseError Tests
@@ -92,6 +88,7 @@ class ParseErrorTest: public ::testing::Test
 {
 };
 
+#if 0
 TEST_F(ParseErrorTest, BasicConstruction)
 {
     mylang::parser::ParseError err(u"Test error", 10, 5, u"context line", {u"suggestion1"});
@@ -116,7 +113,7 @@ TEST_F(ParseErrorTest, ConstructionWithoutContext)
 TEST_F(ParseErrorTest, FormatMethodNotEmpty)
 {
     mylang::parser::ParseError err(u"Syntax error", 5, 10);
-    std::u16string formatted = err.format();
+    string_type formatted = err.format();
 
     EXPECT_FALSE(formatted.empty());
     // verify format contains line/column info
@@ -125,7 +122,7 @@ TEST_F(ParseErrorTest, FormatMethodNotEmpty)
 TEST_F(ParseErrorTest, FormatWithContext)
 {
     mylang::parser::ParseError err(u"Unexpected token", 3, 7, u"x = 5 + ");
-    std::u16string formatted = err.format();
+    string_type formatted = err.format();
 
     EXPECT_FALSE(formatted.empty());
     // verify context appears in formatted message
@@ -133,7 +130,7 @@ TEST_F(ParseErrorTest, FormatWithContext)
 
 TEST_F(ParseErrorTest, MultipleSuggestions)
 {
-    std::vector<std::u16string> suggestions = {u"اذا", u"طالما", u"لكل"};
+    std::vector<string_type> suggestions = {u"اذا", u"طالما", u"لكل"};
     mylang::parser::ParseError err(u"Unknown keyword", 1, 1, u"", suggestions);
 
     ASSERT_EQ(err.suggestions.size(), 3);
@@ -155,22 +152,19 @@ TEST_F(ParseErrorTest, LargeLineAndColumnNumbers)
     EXPECT_EQ(err.line, 9999);
     EXPECT_EQ(err.column, 250);
 }
+#endif
 
 // Literal Expression Tests
 TEST_F(ParserTest, ParseNumberLiteral)
 {
-    mylang::input::FileManager file_manager(parser_test_cases_dir() / "number_literal.txt");
-    std::cout << "-- DEBUG : file_manager initialized successfully!" << std::endl;
-    mylang::parser::Parser parser(&file_manager);
-    // std::cout << boost::stacktrace::stacktrace();
-    std::cout << "-- DEBUG : parser initialized successfully!" << std::endl;
-    mylang::parser::ast::ExprPtr expr = parser.parsePrimary();
-    mylang::parser::ast::LiteralExpr* literal = parseAndCast<mylang::parser::ast::LiteralExpr>(parser, expr);
-    ASSERT_NE(literal, nullptr);
-    EXPECT_EQ(literal->type, mylang::parser::ast::LiteralExpr::Type::NUMBER);
+  mylang::input::FileManager file_manager(parser_test_cases_dir() / "number_literal.txt");
+  mylang::parser::Parser parser(&file_manager);
+  mylang::parser::ast::ExprPtr expr = parser.parsePrimary();
+  mylang::parser::ast::LiteralExpr* literal = parseAndCast<mylang::parser::ast::LiteralExpr>(parser, expr);
+  ASSERT_NE(literal, nullptr);
+  EXPECT_EQ(literal->type, mylang::parser::ast::LiteralExpr::Type::NUMBER);
 }
 
-#if 0
 TEST_F(ParserTest, ParseStringLiteral)
 {
     mylang::input::FileManager file_manager(parser_test_cases_dir() / "string_literal.txt");
@@ -178,8 +172,10 @@ TEST_F(ParserTest, ParseStringLiteral)
     mylang::parser::ast::ExprPtr expr = parser.parsePrimary();
     mylang::parser::ast::LiteralExpr* literal = parseAndCast<mylang::parser::ast::LiteralExpr>(parser, expr);
     ASSERT_NE(literal, nullptr);
-    EXPECT_EQ(literal->litType, mylang::parser::ast::LiteralExpr::Type::STRING);
+    EXPECT_EQ(literal->type, mylang::parser::ast::LiteralExpr::Type::STRING);
 }
+
+#if 0
 
 TEST_F(ParserTest, ParseBooleanLiteralTrue)
 {

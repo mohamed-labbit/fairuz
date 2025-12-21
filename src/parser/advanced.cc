@@ -1,6 +1,6 @@
 
 #if 0
-#include "../../include/parser/advanced.hpp"
+  #include "../../include/parser/advanced.hpp"
 
 
 namespace mylang {
@@ -134,7 +134,7 @@ void CodeGenerator::generateExpr(const ast::Expr* expr, std::vector<Bytecode>& c
     }
 }
 
-std::u16string CodeGenerator::generateCPPStmt(const ast::Stmt* stmt)
+string_type CodeGenerator::generateCPPStmt(const ast::Stmt* stmt)
 {
     if (!stmt)
         return u"";
@@ -151,7 +151,7 @@ std::u16string CodeGenerator::generateCPPStmt(const ast::Stmt* stmt)
     }
     case ast::Stmt::Kind::IF : {
         auto* ifStmt = static_cast<const ast::IfStmt*>(stmt);
-        std::u16string result = u"if (" + generateCPPExpr(ifStmt->condition.get()) + u") {\n";
+        string_type result = u"if (" + generateCPPExpr(ifStmt->condition.get()) + u") {\n";
         for (const auto& s : ifStmt->thenBlock)
             result += u"  " + generateCPPStmt(s.get());
         result += u"}\n";
@@ -159,7 +159,7 @@ std::u16string CodeGenerator::generateCPPStmt(const ast::Stmt* stmt)
     }
     case ast::Stmt::Kind::FUNCTION_DEF : {
         auto* func = static_cast<const ast::FunctionDef*>(stmt);
-        std::u16string result = u"auto " + func->name + u"(";
+        string_type result = u"auto " + func->name + u"(";
         for (std::size_t i = 0; i < func->params.size(); i++)
         {
             result += u"auto " + func->params[i];
@@ -179,7 +179,7 @@ std::u16string CodeGenerator::generateCPPStmt(const ast::Stmt* stmt)
     return u"";
 }
 
-std::u16string CodeGenerator::generateCPPExpr(const ast::Expr* expr)
+string_type CodeGenerator::generateCPPExpr(const ast::Expr* expr)
 {
     if (!expr)
         return u"";
@@ -201,7 +201,7 @@ std::u16string CodeGenerator::generateCPPExpr(const ast::Expr* expr)
     }
     case ast::Expr::Kind::CALL : {
         auto* call = static_cast<const ast::CallExpr*>(expr);
-        std::u16string result = generateCPPExpr(call->callee.get()) + u"(";
+        string_type result = generateCPPExpr(call->callee.get()) + u"(";
         for (std::size_t i = 0; i < call->args.size(); i++)
         {
             result += generateCPPExpr(call->args[i].get());
@@ -218,15 +218,15 @@ std::u16string CodeGenerator::generateCPPExpr(const ast::Expr* expr)
     return u"";
 }
 
-std::size_t IncrementalParser::hashRegion(const std::u16string& source, std::size_t start, std::size_t end)
+std::size_t IncrementalParser::hashRegion(const string_type& source, std::size_t start, std::size_t end)
 {
-    std::hash<std::u16string> hasher;
+    std::hash<string_type> hasher;
     return hasher(source.substr(start, end - start));
 }
 
 // Only reparse changed regions
 std::vector<ast::StmtPtr> IncrementalParser::parseIncremental(
-  const std::u16string& newSource, const std::vector<std::size_t>& changedLines)
+  const string_type& newSource, const std::vector<std::size_t>& changedLines)
 {
     // Identify unchanged regions and reuse cached AST
     std::vector<ast::StmtPtr> result;
@@ -239,7 +239,7 @@ bool TypeSystem::Type::operator==(const Type& other) const
     return base == other.base;  // Simplified
 }
 
-std::u16string TypeSystem::Type::toString() const
+string_type TypeSystem::Type::toString() const
 {
     switch (base)
     {
@@ -364,14 +364,14 @@ std::shared_ptr<TypeSystem::Type> TypeSystem::TypeInference::inferExpr(const ast
     return freshTypeVar();
 }
 
-void DiagnosticEngine::setSource(const std::u16string& source) { sourceCode_ = source; }
+void DiagnosticEngine::setSource(const string_type& source) { sourceCode_ = source; }
 
 void DiagnosticEngine::report(Severity sev,
   std::int32_t line,
   std::int32_t col,
   std::int32_t len,
-  const std::u16string& msg,
-  const std::u16string& code)
+  const string_type& msg,
+  const string_type& code)
 {
     Diagnostic diag;
     diag.severity = sev;
@@ -383,13 +383,13 @@ void DiagnosticEngine::report(Severity sev,
     diagnostics_.push_back(diag);
 }
 
-void DiagnosticEngine::addSuggestion(const std::u16string& suggestion)
+void DiagnosticEngine::addSuggestion(const string_type& suggestion)
 {
     if (!diagnostics_.empty())
         diagnostics_.back().suggestions.push_back(suggestion);
 }
 
-void DiagnosticEngine::addNote(std::int32_t line, const std::u16string& note)
+void DiagnosticEngine::addNote(std::int32_t line, const string_type& note)
 {
     if (!diagnostics_.empty())
         diagnostics_.back().notes.push_back({line, note});
@@ -423,8 +423,8 @@ void DiagnosticEngine::prettyPrint() const
 {
     for (const auto& diag : diagnostics_)
     {
-        std::u16string sevStr;
-        std::u16string color;
+        string_type sevStr;
+        string_type color;
 
         switch (diag.severity)
         {
@@ -488,7 +488,7 @@ std::vector<std::string> DiagnosticEngine::splitLines(const std::string& text) c
     return lines;
 }
 
-std::vector<LanguageServer::CompletionItem> LanguageServer::getCompletions(const std::u16string& source, Position pos)
+std::vector<LanguageServer::CompletionItem> LanguageServer::getCompletions(const string_type& source, Position pos)
 {
     std::vector<CompletionItem> items;
     // Parse and get symbol table
@@ -506,27 +506,27 @@ std::vector<LanguageServer::CompletionItem> LanguageServer::getCompletions(const
     return items;
 }
 
-LanguageServer::Hover LanguageServer::getHover(const std::u16string& source, LanguageServer::Position pos)
+LanguageServer::Hover LanguageServer::getHover(const string_type& source, LanguageServer::Position pos)
 {
     Hover hover;
     hover.contents = u"Variable: x\nType: int";
     return hover;
 }
 
-LanguageServer::Position LanguageServer::getDefinition(const std::u16string& source, Position pos) { return {0, 0}; }
+LanguageServer::Position LanguageServer::getDefinition(const string_type& source, Position pos) { return {0, 0}; }
 
-std::vector<LanguageServer::Range> LanguageServer::getReferences(const std::u16string& source, Position pos)
+std::vector<LanguageServer::Range> LanguageServer::getReferences(const string_type& source, Position pos)
 {
     return {};
 }
 
-std::unordered_map<std::u16string, std::u16string> LanguageServer::rename(
-  const std::u16string& source, Position pos, const std::u16string& newName)
+std::unordered_map<string_type, string_type> LanguageServer::rename(
+  const string_type& source, Position pos, const string_type& newName)
 {
     return {};
 }
 
-void ParserProfiler::recordPhase(const std::u16string& phase, double ms) { timings.push_back({phase, ms}); }
+void ParserProfiler::recordPhase(const string_type& phase, double ms) { timings.push_back({phase, ms}); }
 
 void ParserProfiler::printReport() const
 {

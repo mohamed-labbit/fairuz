@@ -9,7 +9,7 @@ namespace diagnostics {
 
 class DiagnosticEngine
 {
-   public:
+ public:
 };
 
 
