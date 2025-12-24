@@ -52,7 +52,7 @@ static string_type buffer_toU16_string(const std::vector<char>& buf)
   string_type ret = u"";
   ret.resize(buf.size());
   const char* __restrict bptr = buf.data();
-  char16_t* __restrict rptr = ret.data();
+  char16_t* __restrict rptr   = ret.data();
   for (std::size_t i = 0, n = buf.size(); i < n; ++i)
     rptr[i] = *utf8::utf8to16(std::string(reinterpret_cast<char*>(bptr[i]))).data();
   return ret;

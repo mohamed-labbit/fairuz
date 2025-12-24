@@ -111,7 +111,7 @@ string_type object::Value::toString() const
   case Type::BOOL : return asBool() ? u"True" : u"False";
   case Type::LIST : {
     string_type result = u"[";
-    const auto& list = asList();
+    const auto& list   = asList();
     for (std::size_t i = 0; i < list.size(); i++)
     {
       result += list[i].toString();
@@ -121,8 +121,8 @@ string_type object::Value::toString() const
   }
   case Type::DICT : {
     string_type result = u"{";
-    const auto& dict = std::get<std::shared_ptr<std::unordered_map<string_type, Value>>>(data_);
-    std::size_t count = 0;
+    const auto& dict   = std::get<std::shared_ptr<std::unordered_map<string_type, Value>>>(data_);
+    std::size_t count  = 0;
     for (const auto& [k, v] : *dict)
     {
       result += u"'" + k + u"': " + v.toString();
@@ -191,7 +191,7 @@ object::Value object::Value::operator+(const Value& other) const
   if (isString() || other.isString()) return Value(toString() + other.toString());
   if (isList() && other.isList())
   {
-    auto result = asList();
+    auto        result    = asList();
     const auto& otherList = other.asList();
     result.insert(result.end(), otherList.begin(), otherList.end());
     return Value(result);
@@ -272,7 +272,7 @@ object::Value object::Value::getItem(const Value& key) const
   if (isList())
   {
     std::int64_t index = key.toInt();
-    const auto& list = asList();
+    const auto&  list  = asList();
     if (index < 0) index += list.size();
     if (index < 0 || index >= list.size()) throw std::runtime_error("List index out of range");
     return list[index];
@@ -280,14 +280,14 @@ object::Value object::Value::getItem(const Value& key) const
   if (isDict())
   {
     const auto& dict = asDict();
-    auto it = dict.find(key.toString());
+    auto        it   = dict.find(key.toString());
     if (it == dict.end()) throw std::runtime_error("Key not found: " + utf8::utf16to8(key.toString()));
     return it->second;
   }
   if (isString())
   {
     std::int64_t index = key.toInt();
-    const auto& str = asString();
+    const auto&  str   = asString();
     if (index < 0) index += str.size();
     if (index < 0 || index >= str.size()) throw std::runtime_error("String index out of range");
     return Value(string_type(1, str[index]));
@@ -300,7 +300,7 @@ void object::Value::setItem(const Value& key, const Value& value)
   if (isList())
   {
     std::int64_t index = key.toInt();
-    auto& list = asList();
+    auto&        list  = asList();
     if (index < 0) index += list.size();
     if (index < 0 || index >= list.size()) throw std::runtime_error("List index out of range");
     list[index] = value;

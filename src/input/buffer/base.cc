@@ -16,9 +16,9 @@ bool InputBufferBase::refresh_buffer(const std::uint32_t to_refresh)
 #endif
   if (!file_manager_->is_open()) return false;
 
-  auto& bufs = this->buffers_;
+  auto&       bufs      = this->buffers_;
   std::size_t max_chars = bufs[to_refresh].size() - 1;
-  buffer_t buf = file_manager_->read_window(max_chars);
+  buffer_t    buf       = file_manager_->read_window(max_chars);
 
   if (buf.empty())
   {

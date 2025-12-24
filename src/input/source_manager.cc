@@ -108,10 +108,10 @@ offset_pair SourceManager::offset_map_(const std::size_t& offset) const
     iter += 1;
   }
 
-  std::size_t base_line = input_buffer_.position().line - diff;
-  iter = 0;
-  std::size_t line = 1;
-  std::size_t col = 1;
+  std::size_t base_line   = input_buffer_.position().line - diff;
+  iter                    = 0;
+  std::size_t       line  = 1;
+  std::size_t       col   = 1;
   const std::size_t limit = std::min(offset, input_buffer_.size() - 1);
 
   while (iter < limit)
@@ -141,7 +141,7 @@ offset_pair SourceManager::offset_map(const std::size_t& offset)
 #endif
   // TODO : implement this using the new file manager
   std::size_t line = 1;
-  std::size_t col = 1;
+  std::size_t col  = 1;
   return std::make_pair(line, col);
 }
 

@@ -42,7 +42,7 @@ struct Stmt: ASTNode
 // Expression nodes
 struct BinaryExpr: Expr
 {
-  ExprPtr left, right;
+  ExprPtr     left, right;
   string_type op;
 
   BinaryExpr(ExprPtr l, string_type o, ExprPtr r) :
@@ -57,7 +57,7 @@ struct BinaryExpr: Expr
 struct UnaryExpr: Expr
 {
   string_type op;
-  ExprPtr operand;
+  ExprPtr     operand;
 
   UnaryExpr(string_type o, ExprPtr expr) :
       op(std::move(o)),
@@ -70,7 +70,7 @@ struct UnaryExpr: Expr
 struct LiteralExpr: Expr
 {
   enum class Type { NUMBER, STRING, BOOLEAN, NONE };
-  Type litType;
+  Type        litType;
   string_type value;
 
   LiteralExpr(Type t, string_type v) :
@@ -94,7 +94,7 @@ struct NameExpr: Expr
 
 struct CallExpr: Expr
 {
-  ExprPtr callee;
+  ExprPtr              callee;
   std::vector<ExprPtr> args;
 
   CallExpr(ExprPtr c, std::vector<ExprPtr> a) :
@@ -121,7 +121,7 @@ struct TernaryExpr: Expr
 struct AssignmentExpr: Expr
 {
   string_type target;
-  ExprPtr value;
+  ExprPtr     value;
 
   AssignmentExpr(string_type t, ExprPtr v) :
       target(std::move(t)),
@@ -157,7 +157,7 @@ struct ExprStmt: Stmt
 struct AssignmentStmt: Stmt
 {
   string_type target;
-  ExprPtr value;
+  ExprPtr     value;
 
   AssignmentStmt(string_type t, ExprPtr v) :
       target(std::move(t)),
@@ -169,7 +169,7 @@ struct AssignmentStmt: Stmt
 
 struct IfStmt: Stmt
 {
-  ExprPtr condition;
+  ExprPtr              condition;
   std::vector<StmtPtr> thenBlock;
   std::vector<StmtPtr> elseBlock;
 
@@ -184,7 +184,7 @@ struct IfStmt: Stmt
 
 struct WhileStmt: Stmt
 {
-  ExprPtr condition;
+  ExprPtr              condition;
   std::vector<StmtPtr> body;
 
   WhileStmt(ExprPtr cond, std::vector<StmtPtr> b) :
@@ -197,8 +197,8 @@ struct WhileStmt: Stmt
 
 struct ForStmt: Stmt
 {
-  string_type target;
-  ExprPtr iter;
+  string_type          target;
+  ExprPtr              iter;
   std::vector<StmtPtr> body;
 
   ForStmt(string_type t, ExprPtr i, std::vector<StmtPtr> b) :
@@ -212,9 +212,9 @@ struct ForStmt: Stmt
 
 struct FunctionDef: Stmt
 {
-  string_type name;
+  string_type              name;
   std::vector<string_type> params;
-  std::vector<StmtPtr> body;
+  std::vector<StmtPtr>     body;
 
   FunctionDef(string_type n, std::vector<string_type> p, std::vector<StmtPtr> b) :
       name(std::move(n)),

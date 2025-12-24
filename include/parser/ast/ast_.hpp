@@ -45,8 +45,8 @@ struct Stmt: ASTNode
 
 struct BinaryExpr: Expr
 {
-  ExprPtr left;
-  ExprPtr right;
+  ExprPtr     left;
+  ExprPtr     right;
   string_type op;
 
   BinaryExpr(ExprPtr l, ExprPtr r, string_type o) :
@@ -60,7 +60,7 @@ struct BinaryExpr: Expr
 
 struct UnaryExpr: Expr
 {
-  ExprPtr self;
+  ExprPtr     self;
   string_type op;
 
   UnaryExpr(ExprPtr s, string_type o) :
@@ -97,7 +97,7 @@ struct NameExpr: Expr
 
 struct CallExpr: Expr
 {
-  ExprPtr callee;
+  ExprPtr              callee;
   std::vector<ExprPtr> args;
 
   CallExpr(ExprPtr c, std::vector<ExprPtr> a) :
@@ -164,7 +164,7 @@ struct AssignmentStmt: Stmt
 
 struct IfStmt: Stmt
 {
-  ExprPtr condition;
+  ExprPtr              condition;
   std::vector<StmtPtr> then_stmts;
   std::vector<StmtPtr> else_stmts;
 
@@ -179,7 +179,7 @@ struct IfStmt: Stmt
 
 struct WhileStmt: Stmt
 {
-  ExprPtr condition;
+  ExprPtr              condition;
   std::vector<StmtPtr> stmts;
 
   WhileStmt(ExprPtr c, std::vector<StmtPtr> s) :
@@ -191,8 +191,8 @@ struct WhileStmt: Stmt
 
 struct ForStmt: Stmt
 {
-  string_type target;
-  ExprPtr iter;
+  string_type          target;
+  ExprPtr              iter;
   std::vector<StmtPtr> body;
 
   ForStmt(string_type t, ExprPtr i, std::vector<StmtPtr> b) :
@@ -206,9 +206,9 @@ struct ForStmt: Stmt
 
 struct FunctionDef: Stmt
 {
-  string_type name;
+  string_type              name;
   std::vector<string_type> params;
-  std::vector<StmtPtr> body;
+  std::vector<StmtPtr>     body;
 
   FunctionDef(string_type n, std::vector<string_type> p, std::vector<StmtPtr> b) :
       name(std::move(n)),

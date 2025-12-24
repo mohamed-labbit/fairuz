@@ -26,17 +26,17 @@ class SymbolTable
 
   struct Symbol
   {
-    string_type name;
-    SymbolType symbolType;
-    DataType dataType;
-    bool isConstant = false;
-    bool isGlobal = false;
-    bool isUsed = false;
-    std::int32_t definitionLine = 0;
+    string_type               name;
+    SymbolType                symbolType;
+    DataType                  dataType;
+    bool                      isConstant     = false;
+    bool                      isGlobal       = false;
+    bool                      isUsed         = false;
+    std::int32_t              definitionLine = 0;
     std::vector<std::int32_t> usageLines;
     // For functions
     std::vector<DataType> paramTypes;
-    DataType returnType = DataType::UNKNOWN;
+    DataType              returnType = DataType::UNKNOWN;
     // For type inference
     std::unordered_set<DataType> possibleTypes;
   };
@@ -44,9 +44,9 @@ class SymbolTable
   SymbolTable* parent = nullptr;
 
  private:
-  std::unordered_map<string_type, Symbol> symbols_;
+  std::unordered_map<string_type, Symbol>   symbols_;
   std::vector<std::unique_ptr<SymbolTable>> children_;
-  unsigned scopeLevel_ = 0;
+  unsigned                                  scopeLevel_ = 0;
 
  public:
   explicit SymbolTable(SymbolTable* p = nullptr, std::int32_t level = 0) :
@@ -57,7 +57,7 @@ class SymbolTable
 
   void define(const string_type& name, Symbol symbol)
   {
-    symbol.name = name;
+    symbol.name    = name;
     symbols_[name] = std::move(symbol);
   }
 
@@ -91,8 +91,8 @@ class SymbolTable
 
   SymbolTable* createChild()
   {
-    auto child = std::make_unique<SymbolTable>(this, scopeLevel_ + 1);
-    auto* ptr = child.get();
+    auto  child = std::make_unique<SymbolTable>(this, scopeLevel_ + 1);
+    auto* ptr   = child.get();
     children_.push_back(std::move(child));
     return ptr;
   }
@@ -114,22 +114,22 @@ class ControlFlowGraph
  public:
   struct BasicBlock
   {
-    std::int32_t id;
+    std::int32_t               id;
     std::vector<ast::StmtPtr*> statements;
-    std::vector<std::int32_t> predecessors;
-    std::vector<std::int32_t> successors;
-    bool isReachable = false;
+    std::vector<std::int32_t>  predecessors;
+    std::vector<std::int32_t>  successors;
+    bool                       isReachable = false;
     // Data flow analysis
     std::unordered_set<string_type> defVars;  // Variables defined
     std::unordered_set<string_type> useVars;  // Variables used
-    std::unordered_set<string_type> liveIn;  // Live at entry
+    std::unordered_set<string_type> liveIn;   // Live at entry
     std::unordered_set<string_type> liveOut;  // Live at exit
   };
 
  private:
   std::vector<BasicBlock> blocks_;
-  std::int32_t entryBlock_ = 0;
-  std::int32_t exitBlock_ = -1;
+  std::int32_t            entryBlock_ = 0;
+  std::int32_t            exitBlock_  = -1;
 
  public:
   void addBlock(BasicBlock block) { blocks_.push_back(std::move(block)); }
@@ -148,7 +148,7 @@ class ControlFlowGraph
   {
     if (blocks_.empty()) return;
 
-    blocks_[entryBlock_].isReachable = true;
+    blocks_[entryBlock_].isReachable   = true;
     std::vector<std::int32_t> worklist = {entryBlock_};
 
     while (!worklist.empty())
@@ -188,9 +188,9 @@ class ControlFlowGraph
           if (!block.defVars.count(var)) newLiveIn.insert(var);
         if (newLiveIn != block.liveIn || newLiveOut != block.liveOut)
         {
-          block.liveIn = std::move(newLiveIn);
+          block.liveIn  = std::move(newLiveIn);
           block.liveOut = std::move(newLiveOut);
-          changed = true;
+          changed       = true;
         }
       }
     }
@@ -214,17 +214,17 @@ class SemanticAnalyzer
   struct Issue
   {
     enum class Severity { ERROR, WARNING, INFO };
-    Severity severity;
-    string_type message;
+    Severity     severity;
+    string_type  message;
     std::int32_t line;
-    string_type suggestion;
+    string_type  suggestion;
   };
 
  private:
-  SymbolTable* currentScope_;
+  SymbolTable*                 currentScope_;
   std::unique_ptr<SymbolTable> globalScope_;
-  std::vector<Issue> issues_;
-  ControlFlowGraph cfg_;
+  std::vector<Issue>           issues_;
+  ControlFlowGraph             cfg_;
 
   // Type inference engine
   SymbolTable::DataType inferType(const ast::Expr* expr)
@@ -251,9 +251,9 @@ class SemanticAnalyzer
       break;
     }
     case ast::Expr::Kind::BINARY : {
-      auto* bin = static_cast<const ast::BinaryExpr*>(expr);
-      auto leftType = inferType(bin->left.get());
-      auto rightType = inferType(bin->right.get());
+      auto* bin       = static_cast<const ast::BinaryExpr*>(expr);
+      auto  leftType  = inferType(bin->left.get());
+      auto  rightType = inferType(bin->right.get());
       // Type promotion rules
       if (leftType == SymbolTable::DataType::FLOAT || rightType == SymbolTable::DataType::FLOAT) return SymbolTable::DataType::FLOAT;
       if (leftType == SymbolTable::DataType::INTEGER && rightType == SymbolTable::DataType::INTEGER) return SymbolTable::DataType::INTEGER;
@@ -294,12 +294,12 @@ class SemanticAnalyzer
       analyzeExpr(bin->left.get());
       analyzeExpr(bin->right.get());
       // Type compatibility checking
-      auto leftType = inferType(bin->left.get());
+      auto leftType  = inferType(bin->left.get());
       auto rightType = inferType(bin->right.get());
       if (leftType != rightType && leftType != SymbolTable::DataType::UNKNOWN && rightType != SymbolTable::DataType::UNKNOWN)
         // Check for invalid operations
         if ((bin->op == u"-" || bin->op == u"*" || bin->op == u"/")
-          && (leftType == SymbolTable::DataType::STRING || rightType == SymbolTable::DataType::STRING))
+            && (leftType == SymbolTable::DataType::STRING || rightType == SymbolTable::DataType::STRING))
           reportIssue(Issue::Severity::ERROR, u"Invalid operation on string", expr->line, u"Strings don't support this operator");
       // Division by zero detection (constant folding)
       if (bin->op == u"/" && bin->right->kind == ast::Expr::Kind::LITERAL)
@@ -355,10 +355,10 @@ class SemanticAnalyzer
     case ast::Stmt::Kind::ASSIGNMENT : {
       auto* assign = static_cast<const ast::AssignmentStmt*>(stmt);
       analyzeExpr(assign->value.get());
-      auto type = inferType(assign->value.get());
+      auto                type = inferType(assign->value.get());
       SymbolTable::Symbol sym;
-      sym.symbolType = SymbolTable::SymbolType::VARIABLE;
-      sym.dataType = type;
+      sym.symbolType     = SymbolTable::SymbolType::VARIABLE;
+      sym.dataType       = type;
       sym.definitionLine = stmt->line;
       currentScope_->define(assign->target, sym);
       break;
@@ -403,7 +403,7 @@ class SemanticAnalyzer
       currentScope_ = currentScope_->createChild();
       SymbolTable::Symbol loopVar;
       loopVar.symbolType = SymbolTable::SymbolType::VARIABLE;
-      loopVar.dataType = SymbolTable::DataType::ANY;
+      loopVar.dataType   = SymbolTable::DataType::ANY;
       currentScope_->define(forStmt->target, loopVar);
       for (const auto& s : forStmt->body)
         analyzeStmt(s.get());
@@ -415,10 +415,10 @@ class SemanticAnalyzer
       break;
     }
     case ast::Stmt::Kind::FUNCTION_DEF : {
-      auto* funcDef = static_cast<const ast::FunctionDef*>(stmt);
+      auto*               funcDef = static_cast<const ast::FunctionDef*>(stmt);
       SymbolTable::Symbol funcSym;
-      funcSym.symbolType = SymbolTable::SymbolType::FUNCTION;
-      funcSym.dataType = SymbolTable::DataType::FUNCTION;
+      funcSym.symbolType     = SymbolTable::SymbolType::FUNCTION;
+      funcSym.dataType       = SymbolTable::DataType::FUNCTION;
       funcSym.definitionLine = stmt->line;
       currentScope_->define(funcDef->name, funcSym);
       // Create function scope
@@ -427,7 +427,7 @@ class SemanticAnalyzer
       {
         SymbolTable::Symbol paramSym;
         paramSym.symbolType = SymbolTable::SymbolType::VARIABLE;
-        paramSym.dataType = SymbolTable::DataType::ANY;
+        paramSym.dataType   = SymbolTable::DataType::ANY;
         currentScope_->define(param, paramSym);
       }
       for (const auto& s : funcDef->body)
@@ -457,13 +457,13 @@ class SemanticAnalyzer
  public:
   SemanticAnalyzer()
   {
-    globalScope_ = std::make_unique<SymbolTable>();
+    globalScope_  = std::make_unique<SymbolTable>();
     currentScope_ = globalScope_.get();
     // Add built-in functions
     SymbolTable::Symbol printSym;
-    printSym.name = u"print";
+    printSym.name       = u"print";
     printSym.symbolType = SymbolTable::SymbolType::FUNCTION;
-    printSym.dataType = SymbolTable::DataType::FUNCTION;
+    printSym.dataType   = SymbolTable::DataType::FUNCTION;
     globalScope_->define(u"print", printSym);
   }
 

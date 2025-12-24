@@ -43,18 +43,18 @@ class InputBuffer: public InputBufferBase
 
   std::size_t size() const;
   std::size_t buffer_offset() const;
-  bool empty() const;
-  char16_t at(const std::size_t idx) const;
-  char16_t consume_char();
+  bool        empty() const;
+  char16_t    at(const std::size_t idx) const;
+  char16_t    consume_char();
   MYLANG_NODISCARD
   const char16_t& current();
   MYLANG_NODISCARD
   const char16_t& peek();
-  string_type n_peek(std::size_t n);
-  void consume(std::size_t len);
-  void unget(char16_t ch);
-  void reset();
-  Position position() const MYLANG_NOEXCEPT;
+  string_type     n_peek(std::size_t n);
+  void            consume(std::size_t len);
+  void            unget(char16_t ch);
+  void            reset();
+  Position        position() const MYLANG_NOEXCEPT;
 
  private:
   struct PushbackEntry
@@ -63,12 +63,12 @@ class InputBuffer: public InputBufferBase
     Position pos;
   };
 
-  std::size_t capacity_ = DEFAULT_CAPACITY;
-  pointer current_{nullptr};
-  uint8_t current_buffer_{0};
-  std::size_t file_pos_{0};
-  Position current_position_;
-  std::stack<std::size_t> columns_;
+  std::size_t               capacity_ = DEFAULT_CAPACITY;
+  pointer                   current_{nullptr};
+  uint8_t                   current_buffer_{0};
+  std::size_t               file_pos_{0};
+  Position                  current_position_;
+  std::stack<std::size_t>   columns_;
   std::stack<PushbackEntry> unget_stack_;
 
   void swap_buffers_();

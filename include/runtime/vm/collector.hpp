@@ -15,13 +15,13 @@ class GarbageCollector
  private:
   std::vector<object::Value*> allObjects_;
   std::vector<object::Value*> roots_;
-  std::size_t threshold_ = 1000;
-  std::size_t allocated_ = 0;
+  std::size_t                 threshold_ = 1000;
+  std::size_t                 allocated_ = 0;
 
   // Generational: young, old
   std::vector<object::Value*> youngGen_;
   std::vector<object::Value*> oldGen_;
-  std::int32_t youngGenCollections_ = 0;
+  std::int32_t                youngGenCollections_ = 0;
 
  public:
   void registerObject(object::Value* obj);

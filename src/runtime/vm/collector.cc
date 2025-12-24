@@ -39,7 +39,7 @@ void GarbageCollector::collect()
 {
   // Mark phase
   std::unordered_set<object::Value*> marked;
-  std::vector<object::Value*> worklist = roots_;
+  std::vector<object::Value*>        worklist = roots_;
 
   while (!worklist.empty())
   {

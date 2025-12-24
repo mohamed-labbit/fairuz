@@ -175,7 +175,6 @@ TEST_F(ParserTest, ParseStringLiteral)
     EXPECT_EQ(literal->type, mylang::parser::ast::LiteralExpr::Type::STRING);
 }
 
-#if 0
 
 TEST_F(ParserTest, ParseBooleanLiteralTrue)
 {
@@ -184,7 +183,7 @@ TEST_F(ParserTest, ParseBooleanLiteralTrue)
     mylang::parser::ast::ExprPtr expr = parser.parsePrimary();
     mylang::parser::ast::LiteralExpr* literal = parseAndCast<mylang::parser::ast::LiteralExpr>(parser, expr);
     ASSERT_NE(literal, nullptr);
-    EXPECT_EQ(literal->litType, mylang::parser::ast::LiteralExpr::Type::BOOLEAN);
+    EXPECT_EQ(literal->type, mylang::parser::ast::LiteralExpr::Type::BOOLEAN);
 }
 
 TEST_F(ParserTest, ParseBooleanLiteralFalse)
@@ -194,7 +193,7 @@ TEST_F(ParserTest, ParseBooleanLiteralFalse)
     mylang::parser::ast::ExprPtr expr = parser.parsePrimary();
     mylang::parser::ast::LiteralExpr* literal = parseAndCast<mylang::parser::ast::LiteralExpr>(parser, expr);
     ASSERT_NE(literal, nullptr);
-    EXPECT_EQ(literal->litType, mylang::parser::ast::LiteralExpr::Type::BOOLEAN);
+    EXPECT_EQ(literal->type, mylang::parser::ast::LiteralExpr::Type::BOOLEAN);
 }
 
 TEST_F(ParserTest, ParseNoneLiteral)
@@ -204,7 +203,7 @@ TEST_F(ParserTest, ParseNoneLiteral)
     mylang::parser::ast::ExprPtr expr = parser.parsePrimary();
     mylang::parser::ast::LiteralExpr* literal = parseAndCast<mylang::parser::ast::LiteralExpr>(parser, expr);
     ASSERT_NE(literal, nullptr);
-    EXPECT_EQ(literal->litType, mylang::parser::ast::LiteralExpr::Type::NONE);
+    EXPECT_EQ(literal->type, mylang::parser::ast::LiteralExpr::Type::NONE);
 }
 
 TEST_F(ParserTest, ParseParenthesizedNumberLiteral)
@@ -214,9 +213,10 @@ TEST_F(ParserTest, ParseParenthesizedNumberLiteral)
     mylang::parser::ast::ExprPtr expr = parser.parsePrimary();
     mylang::parser::ast::LiteralExpr* literal = parseAndCast<mylang::parser::ast::LiteralExpr>(parser, expr);
     ASSERT_NE(literal, nullptr);
-    EXPECT_EQ(literal->litType, mylang::parser::ast::LiteralExpr::Type::NUMBER);
+    EXPECT_EQ(literal->type, mylang::parser::ast::LiteralExpr::Type::NUMBER);
 }
 
+#if 0
 // ============================================================================
 // Name/Identifier Expression Tests
 // ============================================================================

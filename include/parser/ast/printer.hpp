@@ -15,7 +15,7 @@ class EnhancedASTPrinter
  private:
   std::uint8_t indent{0};
   std::uint8_t nodeCount{0};
-  bool useColor{true};
+  bool         useColor{true};
 
   std::string colorize(const string_type& text, const string_type color, bool enabled = true)
   {
