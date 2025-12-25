@@ -159,7 +159,7 @@ TEST_F(ParserTest, ParseNumberLiteral)
 {
   mylang::input::FileManager file_manager(parser_test_cases_dir() / "number_literal.txt");
   mylang::parser::Parser parser(&file_manager);
-  mylang::parser::ast::ExprPtr expr = parser.parsePrimary();
+  mylang::parser::ast::ExprPtr expr = parser.parsePrimaryExpr();
   mylang::parser::ast::LiteralExpr* literal = parseAndCast<mylang::parser::ast::LiteralExpr>(parser, expr);
   ASSERT_NE(literal, nullptr);
   EXPECT_EQ(literal->type, mylang::parser::ast::LiteralExpr::Type::NUMBER);
@@ -169,10 +169,11 @@ TEST_F(ParserTest, ParseStringLiteral)
 {
     mylang::input::FileManager file_manager(parser_test_cases_dir() / "string_literal.txt");
     mylang::parser::Parser parser(&file_manager);
-    mylang::parser::ast::ExprPtr expr = parser.parsePrimary();
+    mylang::parser::ast::ExprPtr expr = parser.parsePrimaryExpr();
     mylang::parser::ast::LiteralExpr* literal = parseAndCast<mylang::parser::ast::LiteralExpr>(parser, expr);
     ASSERT_NE(literal, nullptr);
-    EXPECT_EQ(literal->type, mylang::parser::ast::LiteralExpr::Type::STRING);
+    std::cout << static_cast<int>(literal->type) << std::endl;
+    EXPECT_EQ(static_cast<int>(literal->type), static_cast<int>(mylang::parser::ast::LiteralExpr::Type::STRING));
 }
 
 
@@ -180,7 +181,7 @@ TEST_F(ParserTest, ParseBooleanLiteralTrue)
 {
     mylang::input::FileManager file_manager(parser_test_cases_dir() / "boolean_literal_true.txt");
     mylang::parser::Parser parser(&file_manager);
-    mylang::parser::ast::ExprPtr expr = parser.parsePrimary();
+    mylang::parser::ast::ExprPtr expr = parser.parsePrimaryExpr();
     mylang::parser::ast::LiteralExpr* literal = parseAndCast<mylang::parser::ast::LiteralExpr>(parser, expr);
     ASSERT_NE(literal, nullptr);
     EXPECT_EQ(literal->type, mylang::parser::ast::LiteralExpr::Type::BOOLEAN);
@@ -190,7 +191,7 @@ TEST_F(ParserTest, ParseBooleanLiteralFalse)
 {
     mylang::input::FileManager file_manager(parser_test_cases_dir() / "boolean_literal_false.txt");
     mylang::parser::Parser parser(&file_manager);
-    mylang::parser::ast::ExprPtr expr = parser.parsePrimary();
+    mylang::parser::ast::ExprPtr expr = parser.parsePrimaryExpr();
     mylang::parser::ast::LiteralExpr* literal = parseAndCast<mylang::parser::ast::LiteralExpr>(parser, expr);
     ASSERT_NE(literal, nullptr);
     EXPECT_EQ(literal->type, mylang::parser::ast::LiteralExpr::Type::BOOLEAN);
@@ -200,7 +201,7 @@ TEST_F(ParserTest, ParseNoneLiteral)
 {
     mylang::input::FileManager file_manager(parser_test_cases_dir() / "none_literal.txt");
     mylang::parser::Parser parser(&file_manager);
-    mylang::parser::ast::ExprPtr expr = parser.parsePrimary();
+    mylang::parser::ast::ExprPtr expr = parser.parsePrimaryExpr();
     mylang::parser::ast::LiteralExpr* literal = parseAndCast<mylang::parser::ast::LiteralExpr>(parser, expr);
     ASSERT_NE(literal, nullptr);
     EXPECT_EQ(literal->type, mylang::parser::ast::LiteralExpr::Type::NONE);
@@ -210,40 +211,41 @@ TEST_F(ParserTest, ParseParenthesizedNumberLiteral)
 {
     mylang::input::FileManager file_manager(parser_test_cases_dir() / "parenthesized_number.txt");
     mylang::parser::Parser parser(&file_manager);
-    mylang::parser::ast::ExprPtr expr = parser.parsePrimary();
+    mylang::parser::ast::ExprPtr expr = parser.parsePrimaryExpr();
     mylang::parser::ast::LiteralExpr* literal = parseAndCast<mylang::parser::ast::LiteralExpr>(parser, expr);
     ASSERT_NE(literal, nullptr);
     EXPECT_EQ(literal->type, mylang::parser::ast::LiteralExpr::Type::NUMBER);
 }
 
-#if 0
 // ============================================================================
 // Name/Identifier Expression Tests
 // ============================================================================
 
 TEST_F(ParserTest, ParseIdentifier)
 {
-    mylang::input::FileManager file_manager(parser_test_cases_dir() / "indentifier.txt");
+    mylang::input::FileManager file_manager(parser_test_cases_dir() / "identifier.txt");
     mylang::parser::Parser parser(&file_manager);
-    mylang::parser::ast::ExprPtr expr = parser.parsePrimary();
+    mylang::parser::ast::ExprPtr expr = parser.parsePrimaryExpr();
     mylang::parser::ast::NameExpr* name_expr = parseAndCast<mylang::parser::ast::NameExpr>(parser, expr);
     ASSERT_NE(name_expr, nullptr);
     EXPECT_EQ(name_expr->name, u"المتنبي");
 }
 
+/*
 TEST_F(ParserTest, ParseSimpleIdentifier)
 {
     // Test with a simple ASCII identifier when supported
     auto tokens = createTokens({mylang::lex::tok::TokenType::NAME});
     // ...
 }
+*/
 
 // Call Expression Tests
 TEST_F(ParserTest, ParseCallExpressionNoArgs)
 {
     mylang::input::FileManager file_manager(parser_test_cases_dir() / "call_expression.txt");
     mylang::parser::Parser parser(&file_manager);
-    mylang::parser::ast::ExprPtr expr = parser.parsePrimary();
+    mylang::parser::ast::ExprPtr expr = parser.parsePrimaryExpr();
     mylang::parser::ast::CallExpr* call_expr = parseAndCast<mylang::parser::ast::CallExpr>(parser, expr);
     ASSERT_NE(call_expr, nullptr);
     mylang::parser::ast::NameExpr* callee_name = dynamic_cast<mylang::parser::ast::NameExpr*>(call_expr->callee.get());
@@ -252,6 +254,7 @@ TEST_F(ParserTest, ParseCallExpressionNoArgs)
     EXPECT_TRUE(call_expr->args.empty());
 }
 
+#if 0
 TEST_F(ParserTest, ParseCallExpressionWithArgs)
 {
     // TODO: Add test case file with arguments
