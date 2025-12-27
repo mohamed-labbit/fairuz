@@ -38,46 +38,46 @@ ast::ExprPtr Parser::parseUnary()
     return std::make_unique<ast::UnaryExpr>(std::move(self), op.lexeme());
   }
 
-  return parsePrimary();
+  return parsePrimaryExpr();
 }
-
+/*
 ast::ExprPtr Parser::parsePrimary()
 {
 #if DEBUG_PRINT
   std::cout << "-- DEBUG : parse primary started!" << std::endl;
-#endif
+  #endif
   ast::ExprPtr ret;
-
+  
   // number literal
   if (match(lex::tok::TokenType::NUMBER))
   {
     auto tok = lex_.prev();
     ret      = std::make_unique<ast::LiteralExpr>(ast::LiteralExpr(ast::LiteralExpr::Type::NUMBER, tok.lexeme()));
-  }
+    }
   // string literal
   else if (match(lex::tok::TokenType::STRING))
   {
     auto tok = advance();
     ret      = std::make_unique<ast::LiteralExpr>(ast::LiteralExpr(ast::LiteralExpr::Type::STRING, tok.lexeme()));
-  }
+    }
   // keyword true
   else if (match(lex::tok::TokenType::KW_TRUE))
   {
     auto tok = advance();
     ret      = std::make_unique<ast::LiteralExpr>(ast::LiteralExpr(ast::LiteralExpr::Type::BOOLEAN, tok.lexeme()));
-  }
+    }
   // keyword false
   else if (match(lex::tok::TokenType::KW_FALSE))
   {
     auto tok = advance();
     ret      = std::make_unique<ast::LiteralExpr>(ast::LiteralExpr(ast::LiteralExpr::Type::BOOLEAN, tok.lexeme()));
-  }
+    }
   // keyword none
   else if (match(lex::tok::TokenType::KW_NONE))
   {
     auto tok = advance();
     ret      = std::make_unique<ast::LiteralExpr>(ast::LiteralExpr(ast::LiteralExpr::Type::NONE, tok.lexeme()));
-  }
+    }
   // parenthesized expression
   /// @note parsing tuples isn't implemented yet
   else if (match(lex::tok::TokenType::LPAREN)) { ret = parseParenthesizedExpr(); }
@@ -92,6 +92,7 @@ ast::ExprPtr Parser::parsePrimary()
   // TODO : add caching
   return ret;
 }
+*/
 /*
 TODO : remove
 ast::ExprPtr Parser::parseParenthesizedExpr()
@@ -410,7 +411,7 @@ ast::ExprPtr Parser::parsePrimaryExpr()
   {
     string_type value = lex_.current().lexeme();
     advance();
-    return std::make_unique<ast::LiteralExpr>(ast::LiteralExpr::Type::BOOLEAN, value);
+    return std::make_unique<ast::LiteralExpr>(ast::LiteralExpr::Type::STRING, value);
   }
 
   if (check(lex::tok::TokenType::KW_TRUE) || check(lex::tok::TokenType::KW_FALSE))
@@ -582,3 +583,4 @@ string_type Parser::getSourceLine(std::size_t line)
 
 }
 }
+ 

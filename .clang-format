@@ -1,16 +1,16 @@
 AccessModifierOffset: -1
-#AlignAfterOpenBracket: Align
-#AlignConsecutiveAssignments: Consecutive
-#AlignConsecutiveDeclarations: Consecutive
-#AlignEscapedNewlines: DontAlign
-#AlignOperands: AlignAfterOperator
-#AlignTrailingComments: true
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: Consecutive
+AlignConsecutiveDeclarations: Consecutive
+AlignEscapedNewlines: true
+AlignOperands: AlignAfterOperator
+AlignTrailingComments: true
 
 AllowAllParametersOfDeclarationOnNextLine: true
-AllowShortCaseLabelsOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: true
 AllowShortEnumsOnASingleLine: true
-AllowShortIfStatementsOnASingleLine: false
-AllowShortBlocksOnASingleLine: false
+AllowShortIfStatementsOnASingleLine: true
+AllowShortBlocksOnASingleLine: true
 AlwaysBreakTemplateDeclarations: Yes
 
 BasedOnStyle: WebKit
@@ -27,12 +27,12 @@ BraceWrapping:
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializers: AfterColon
 BreakStringLiterals: false
-ColumnLimit: 120
+ColumnLimit: 150
 ContinuationIndentWidth: 2
 Cpp11BracedListStyle: true
 IndentGotoLabels: false
 IndentPPDirectives: BeforeHash
-IndentWidth: 4
+IndentWidth: 2
 MaxEmptyLinesToKeep: 2
 NamespaceIndentation: None
 PackConstructorInitializers: Never
