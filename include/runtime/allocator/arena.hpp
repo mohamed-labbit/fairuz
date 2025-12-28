@@ -19,6 +19,7 @@
 
 #include "../../macros.hpp"
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstdlib>
@@ -31,13 +32,12 @@
 #include <set>
 #include <shared_mutex>
 #include <stdexcept>
+#include <string>
 #include <type_traits>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
-#include <unordered_map>
-#include <algorithm>
 #include <vector>
-#include <string>
 
 
 namespace mylang {

@@ -74,8 +74,8 @@ class Parser
  private:
   lex::Lexer lex_;
 
-  static bool     isUnaryOp(const lex::tok::Token tok);
-  static bool     isBinaryOp(const lex::tok::Token tok);
+  static bool isUnaryOp(const lex::tok::Token tok);
+  static bool isBinaryOp(const lex::tok::Token tok);
 
   lex::tok::Token peek(std::size_t offset = 1);
   lex::tok::Token advance();
@@ -86,7 +86,7 @@ class Parser
   string_type     getSourceLine(std::size_t line);
   int             getLogicalOperatorPrecedence(lex::tok::TokenType tt);
   int             getArithmeticOperatorPrecedence(const lex::tok::TokenType type);
-  void enterScope() {}
+  void            enterScope() {}
 };
 
 }
