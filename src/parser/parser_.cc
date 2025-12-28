@@ -190,7 +190,7 @@ ast::ExprPtr Parser::parseAssignmentExpr()
 ast::ExprPtr Parser::parseConditionalExpr()
 {
   ast::ExprPtr expr = parseLogicalExpr();
-  
+
   /*
   // Check for ternary: a if b else c
   if (check(lex::tok::TokenType::KW_IF))
@@ -251,11 +251,11 @@ int Parser::getLogicalOperatorPrecedence(lex::tok::TokenType tt)
 {
   switch (tt)
   {
-  case lex::tok::TokenType::OP_BITOR : // '|'
-  case lex::tok::TokenType::KW_OR :  // 'or'
+  case lex::tok::TokenType::OP_BITOR :  // '|'
+  case lex::tok::TokenType::KW_OR :     // 'or'
     return 1;
-  case lex::tok::TokenType::OP_BITAND : // &
-  case lex::tok::TokenType::KW_AND :  // 'and'
+  case lex::tok::TokenType::OP_BITAND :  // &
+  case lex::tok::TokenType::KW_AND :     // 'and'
     return 2;
   case lex::tok::TokenType::OP_BITNOT :
   case lex::tok::TokenType::KW_NOT :  // !
@@ -268,8 +268,9 @@ ast::ExprPtr Parser::parseComparisonExpr()
 {
   ast::ExprPtr left = parseBinaryExpr();
 
-  while (check(lex::tok::TokenType::OP_EQ) || check(lex::tok::TokenType::OP_NEQ) || check(lex::tok::TokenType::OP_LT) || check(lex::tok::TokenType::OP_GT)
-         || check(lex::tok::TokenType::OP_LTE) || check(lex::tok::TokenType::OP_GTE) /*|| check(lex::tok::TokenType::OP_IN) || check(lex::tok::TokenType::IS)*/)
+  while (check(lex::tok::TokenType::OP_EQ) || check(lex::tok::TokenType::OP_NEQ) || check(lex::tok::TokenType::OP_LT)
+         || check(lex::tok::TokenType::OP_GT) || check(lex::tok::TokenType::OP_LTE)
+         || check(lex::tok::TokenType::OP_GTE) /*|| check(lex::tok::TokenType::OP_IN) || check(lex::tok::TokenType::IS)*/)
   {
     string_type op = lex_.current().lexeme();
     advance();
@@ -297,9 +298,9 @@ ast::ExprPtr Parser::parseBinaryExprPrecedence(int min_precedence)
     // Handle right associativity for power operator
     int nextMinPrecedence;
     // if (op == lex::tok::TokenType::DOUBLE_STAR)
-      // nextMinPrecedence = precedence;  // Right associative: same precedence
+    // nextMinPrecedence = precedence;  // Right associative: same precedence
     // else
-      nextMinPrecedence = precedence + 1;  // Left associative: higher precedence
+    nextMinPrecedence = precedence + 1;  // Left associative: higher precedence
 
     ast::ExprPtr right = parseBinaryExprPrecedence(nextMinPrecedence);
     left               = std::make_unique<ast::BinaryExpr>(std::move(left), std::move(right), op);
@@ -314,9 +315,9 @@ int Parser::getArithmeticOperatorPrecedence(const lex::tok::TokenType type)
   {
   // case lex::tok::TokenType::DOUBLE_STAR :  // **
   // return 4;
-  case lex::tok::TokenType::OP_STAR :          // *
-  case lex::tok::TokenType::OP_SLASH :         // /
-  // case lex::tok::TokenType::PERCENT :       // %
+  case lex::tok::TokenType::OP_STAR :   // *
+  case lex::tok::TokenType::OP_SLASH :  // /
+                                        // case lex::tok::TokenType::PERCENT :       // %
     return 3;
   case lex::tok::TokenType::OP_PLUS :   // +
   case lex::tok::TokenType::OP_MINUS :  // -
@@ -583,4 +584,3 @@ string_type Parser::getSourceLine(std::size_t line)
 
 }
 }
- 

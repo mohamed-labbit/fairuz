@@ -183,14 +183,12 @@ void LoopAnalyzer::findInvariants(const std::vector<bytecode::Instruction>& inst
   {
     std::unordered_set<std::int32_t> modifiedVars;
     std::unordered_set<std::int32_t> usedVars;
-
     for (std::int32_t pc : loop.bodyPCs)
     {
       const bytecode::Instruction& instr = instructions[pc];
       if (instr.op == bytecode::OpCode::STORE_VAR || instr.op == bytecode::OpCode::STORE_FAST) modifiedVars.insert(instr.arg);
       if (instr.op == bytecode::OpCode::LOAD_VAR || instr.op == bytecode::OpCode::LOAD_FAST) usedVars.insert(instr.arg);
     }
-
     for (std::int32_t var : usedVars)
       if (!modifiedVars.count(var)) loop.invariants.insert(var);
   }
@@ -221,9 +219,7 @@ void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instruction
     }
     i++;
   }
-
   if (replacements > 0) optimizations_.push_back({"Const-Pop elimination", replacements});
-
   // Pattern 2: LOAD x, STORE x -> remove (redundant load-store)
   replacements = 0;
   for (std::size_t i = 0; i + 1 < instructions.size();)
@@ -243,9 +239,7 @@ void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instruction
     }
     i++;
   }
-
   if (replacements > 0) optimizations_.push_back({"Load-Store elimination", replacements});
-
   // Pattern 3: DUP, POP -> remove both (useless dup)
   replacements = 0;
   for (std::size_t i = 0; i + 1 < instructions.size();)
@@ -258,9 +252,7 @@ void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instruction
     }
     i++;
   }
-
   if (replacements > 0) optimizations_.push_back({"Dup-Pop elimination", replacements});
-
   // Pattern 4: JUMP to next instruction -> remove
   replacements = 0;
   for (std::size_t i = 0; i < instructions.size();)
@@ -273,9 +265,7 @@ void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instruction
     }
     i++;
   }
-
   if (replacements > 0) optimizations_.push_back({"Redundant jump elimination", replacements});
-
   // Pattern 5: NOT, NOT -> remove both (double negation)
   replacements = 0;
   for (std::size_t i = 0; i + 1 < instructions.size();)
@@ -288,9 +278,7 @@ void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instruction
     }
     i++;
   }
-
   if (replacements > 0) optimizations_.push_back({"Double negation elimination", replacements});
-
   // Pattern 6: Use fast opcodes for common operations
   replacements = 0;
   for (bytecode::Instruction& instr : instructions)
@@ -311,7 +299,6 @@ void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instruction
       replacements++;
     }
   }
-
   if (replacements > 0) optimizations_.push_back({"Fast opcode substitution", replacements});
 }
 
@@ -324,7 +311,6 @@ void PeepholeOptimizer::printReport() const
     std::cout << "  No peephole optimizations applied\n";
     return;
   }
-
   std::cout << "  Peephole Optimizations:\n";
   for (const auto& opt : optimizations_)
     std::cout << "    • " << opt.name << ": " << opt.name << " replacements\n";
