@@ -33,9 +33,9 @@ class InputBufferBase
 
  protected:
   input::FileManager* file_manager_{nullptr};
-  buffer_t            buffers_[2];
-  std::size_t         byte_position_;  // Current byte position in file
-  std::size_t         char_count_;     // Total characters read so far
+  buffer_t buffers_[2];
+  std::size_t byte_position_;  // Current byte position in file
+  std::size_t char_count_;     // Total characters read so far
 };
 }
 }  // lex

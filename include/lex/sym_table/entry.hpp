@@ -12,7 +12,7 @@ enum class SymbolType : std::int32_t { VARIABLE, PARAMETER, KEYWORD, FUNCTION, C
 struct SymbolTableEntry
 {
 
-  SymbolType  type;
+  SymbolType type;
   std::size_t scope;  // nesting_level
 
 
@@ -32,7 +32,7 @@ struct SymbolTableEntry
 
   SymbolTableEntry& operator=(const SymbolTableEntry& other)
   {
-    this->type  = other.type;
+    this->type = other.type;
     this->scope = other.scope;
     return *this;
   }

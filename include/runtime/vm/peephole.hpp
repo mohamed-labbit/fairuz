@@ -1,0 +1,36 @@
+#pragma once
+
+#include <string>
+#include <vector>
+
+#include "bytecode.hpp"
+
+
+// ============================================================================
+// PEEPHOLE OPTIMIZER - Local optimization
+// ============================================================================
+
+namespace mylang {
+namespace runtime {
+
+class PeepholeOptimizer
+{
+ public:
+  struct Optimization
+  {
+    std::string name;
+    std::int32_t replacementCount;
+  };
+
+ private:
+  std::vector<Optimization> optimizations_;
+  bool matchPattern(const std::vector<bytecode::Instruction>& code, std::size_t pos, const std::vector<bytecode::OpCode>& pattern);
+
+ public:
+  void optimize(std::vector<bytecode::Instruction>& instructions);
+  const std::vector<Optimization>& getOptimizations() const;
+  void printReport() const;
+};  // PeepholeOptimizer
+
+}
+}

@@ -137,24 +137,24 @@ class Token
   {
   }
 
-  Token()                        = default;
-  Token(const Token&)            = default;
+  Token() = default;
+  Token(const Token&) = default;
   Token(Token&&) MYLANG_NOEXCEPT = default;
 
-  bool   operator==(const Token& other) const;
-  bool   operator!=(const Token& other) const;
-  Token& operator=(const Token&)            = default;
+  bool operator==(const Token& other) const;
+  bool operator!=(const Token& other) const;
+  Token& operator=(const Token&) = default;
   Token& operator=(Token&&) MYLANG_NOEXCEPT = default;
   // Return const references to avoid copies
   const string_type& lexeme() const;
-  std::string        utf8_lexeme() const;
-  const TokenType&   type() const;
-  std::size_t        size() const;
+  std::string utf8_lexeme() const;
+  const TokenType& type() const;
+  std::size_t size() const;
   const std::size_t& line() const;
   const std::size_t& column() const;
-  const Location&    location() const;
+  const Location& location() const;
   const std::string& filepath() const;
-  bool               is(const TokenType tt) const { return tt == type_; }
+  bool is(const TokenType tt) const { return tt == type_; }
 
   // friend ostream operator for pretty-printing in tests/logs
   friend std::ostream& operator<<(std::ostream& os, const Token& tok)
@@ -166,8 +166,8 @@ class Token
 
  private:
   string_type value_;
-  TokenType   type_;
-  Location    location_;
+  TokenType type_;
+  Location location_;
 };
 }
 }  // lex

@@ -47,30 +47,30 @@ class Value
 
   struct Function
   {
-    std::int32_t             codeOffset;
+    std::int32_t codeOffset;
     std::vector<string_type> params;
-    std::vector<Value>       defaults;
-    std::vector<Value>       closure;  // Captured variables
+    std::vector<Value> defaults;
+    std::vector<Value> closure;  // Captured variables
   };
 
   struct NativeFunction
   {
     std::function<Value(const std::vector<Value>&)> func;
-    string_type                                     name;
-    std::int32_t                                    arity;
+    string_type name;
+    std::int32_t arity;
   };
 
   struct Object
   {
-    string_type                            className;
+    string_type className;
     std::unordered_map<string_type, Value> attributes;
-    std::shared_ptr<Value>                 parent;  // For inheritance
+    std::shared_ptr<Value> parent;  // For inheritance
   };
 
   struct Iterator
   {
     std::shared_ptr<std::vector<Value>> items;
-    std::size_t                         index;
+    std::size_t index;
   };
 
   std::variant<std::monostate,                                           // None
@@ -163,21 +163,21 @@ class Value
   bool isCallable() const { return isFunction() || type_ == Type::NATIVE_FUNCTION; }
   bool isIterable() const { return isList() || isString() || isDict(); }
   // Getters with safety
-  std::int64_t                            asInt() const;
-  double                                  asFloat() const;
-  const string_type&                      asString() const;
-  bool                                    asBool() const;
-  std::vector<Value>&                     asList();
-  const std::vector<Value>&               asList() const;
+  std::int64_t asInt() const;
+  double asFloat() const;
+  const string_type& asString() const;
+  bool asBool() const;
+  std::vector<Value>& asList();
+  const std::vector<Value>& asList() const;
   std::unordered_map<string_type, Value>& asDict() const;
-  Function&                               asFunction();
-  NativeFunction&                         asNativeFunction();
+  Function& asFunction();
+  NativeFunction& asNativeFunction();
   // Type conversions
-  double       toFloat() const;
+  double toFloat() const;
   std::int64_t toInt() const;
-  bool         toBool() const;
-  string_type  toString() const;
-  std::string  repr() const;
+  bool toBool() const;
+  string_type toString() const;
+  std::string repr() const;
   // Hash for use in dictionaries
   std::size_t hash() const;
   // Comparison operators
@@ -199,10 +199,10 @@ class Value
   Value operator!() const;
   // Subscript operator
   Value getItem(const Value& key) const;
-  void  setItem(const Value& key, const Value& value);
+  void setItem(const Value& key, const Value& value);
   // Iterator support
   Value getIterator() const;
-  bool  hasNext() const;
+  bool hasNext() const;
   Value next();
 };
 
