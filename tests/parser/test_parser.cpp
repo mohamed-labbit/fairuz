@@ -8,8 +8,8 @@
 
 #include "../include/input/file_manager.hpp"
 #include "../include/lex/lexer.hpp"
-#include "../include/parser/ast/ast_.hpp"
-#include "../include/parser/parser_.hpp"
+#include "../include/parser/ast/ast.hpp"
+#include "../include/parser/parser.hpp"
 
 using string_type = mylang::string_type;
 
@@ -243,15 +243,29 @@ TEST_F(ParserTest, ParseSimpleIdentifier)
 // Call Expression Tests
 TEST_F(ParserTest, ParseCallExpressionNoArgs)
 {
+    std::cout << "ll" << '\n';
     mylang::input::FileManager file_manager(parser_test_cases_dir() / "call_expression.txt");
+    std::cout << "ll" << '\n';
     mylang::parser::Parser parser(&file_manager);
+    std::cout << "ll" << '\n';
     mylang::parser::ast::ExprPtr expr = parser.parsePrimaryExpr();
+    std::cout << "ll" << '\n';
+    ASSERT_NE(expr, nullptr);
+    std::cout << "ll" << '\n';
     mylang::parser::ast::CallExpr* call_expr = parseAndCast<mylang::parser::ast::CallExpr>(parser, expr);
+    std::cout << "ll" << '\n';
     ASSERT_NE(call_expr, nullptr);
+    std::cout << "ll" << '\n';
+    ASSERT_NE(call_expr->callee, nullptr);
+    std::cout << "ll" << '\n';
     mylang::parser::ast::NameExpr* callee_name = dynamic_cast<mylang::parser::ast::NameExpr*>(call_expr->callee.get());
+    std::cout << "ll" << '\n';
     ASSERT_NE(callee_name, nullptr);
+    std::cout << "ll" << '\n';
     EXPECT_EQ(callee_name->name, u"اطبع");
+    std::cout << "ll" << '\n';
     EXPECT_TRUE(call_expr->args.empty());
+    std::cout << "ll" << '\n';
 }
 
 #if 0

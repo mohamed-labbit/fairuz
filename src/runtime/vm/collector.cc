@@ -1,3 +1,4 @@
+#include "../../../include/diag/diagnostic.hpp"
 #include "../../../include/runtime/vm/vm.hpp"
 
 #include <unordered_set>
@@ -11,7 +12,8 @@ void GarbageCollector::registerObject(object::Value* obj)
   if (!obj)
   {
 #if DEBUG_PRINT
-    std::cerr << "-- DEBUG: a null object was pushed to the garbage collector" << std::endl;
+    // std::cerr << "-- DEBUG: a null object was pushed to the garbage collector" << std::endl;
+    diagnostics::diag_engine.emit("-- DEBUG : null object push to gc");
 #endif
     return;
   }
@@ -28,7 +30,8 @@ void GarbageCollector::addRoot(object::Value* root)
   if (!root)
   {
 #if DEBUG_PRINT
-    std::cerr << "-- DEBUG: a null root was pushed to the garbage collector" << std::endl;
+    // std::cerr << "-- DEBUG: a null root was pushed to the garbage collector" << std::endl;
+    diagnostics::diag_engine.emit("-- DEBUG : null root push to gc");
 #endif
     return;
   }
@@ -39,7 +42,7 @@ void GarbageCollector::collect()
 {
   // Mark phase
   std::unordered_set<object::Value*> marked;
-  std::vector<object::Value*>        worklist = roots_;
+  std::vector<object::Value*> worklist = roots_;
 
   while (!worklist.empty())
   {

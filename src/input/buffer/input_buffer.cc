@@ -46,15 +46,15 @@ char16_t InputBuffer::consume_char()
 #if DEBUG_PRINT
   std::cout << "-- DEBUG : InputBuffer::consume_char() called!" << std::endl;
 #endif
-  auto&    unget_stack = unget_stack_;
-  auto&    cur_pos     = current_position_;
-  auto&    cur_buf     = current_buffer_;
-  auto&    cur         = current_;
+  auto& unget_stack = unget_stack_;
+  auto& cur_pos = current_position_;
+  auto& cur_buf = current_buffer_;
+  auto& cur = current_;
   char16_t ch;
   if (!unget_stack.empty())
   {
     cur_pos = unget_stack.top().pos;
-    ch      = unget_stack.top().ch;
+    ch = unget_stack.top().ch;
     unget_stack.pop();
   }
   else
@@ -77,9 +77,9 @@ const char16_t& InputBuffer::current()
 #if DEBUG_PRINT
   std::cout << "-- DEBUG : InputBuffer::current() called!" << std::endl;
 #endif
-  auto&                 cur     = current_;
-  auto&                 cur_buf = current_buffer_;
-  static const char16_t end     = BUFFER_END;
+  auto& cur = current_;
+  auto& cur_buf = current_buffer_;
+  static const char16_t end = BUFFER_END;
   if (cur == nullptr) return end;
   if (*cur == BUFFER_END)
   {
@@ -95,9 +95,9 @@ const char16_t& InputBuffer::peek()
 #if DEBUG_PRINT
   std::cout << "-- DEBUG : InputBuffer::peek() called!" << std::endl;
 #endif
-  auto&                 cur     = current_;
-  auto&                 cur_buf = current_buffer_;
-  static const char16_t end     = BUFFER_END;
+  auto& cur = current_;
+  auto& cur_buf = current_buffer_;
+  static const char16_t end = BUFFER_END;
   if (cur == nullptr) return end;
   pointer forward = cur + 1;
   if (*cur == BUFFER_END)
@@ -121,14 +121,14 @@ string_type InputBuffer::n_peek(std::size_t n)
 #if DEBUG_PRINT
   std::cout << "-- DEBUG : InputBuffer::n_peek() called!" << std::endl;
 #endif
-  auto&       cur_buf = current_buffer_;
-  auto&       bufs    = buffers_;
-  auto&       cur     = current_;
+  auto& cur_buf = current_buffer_;
+  auto& bufs = buffers_;
+  auto& cur = current_;
   string_type out;
   if (n == 0) return out;
-  std::size_t  rem     = n;
+  std::size_t rem = n;
   std::int32_t buf_idx = cur_buf;
-  std::size_t  offset  = static_cast<std::size_t>(cur - bufs[buf_idx].data() + 1);
+  std::size_t offset = static_cast<std::size_t>(cur - bufs[buf_idx].data() + 1);
   while (rem > 0)
   {
     if (offset >= bufs[buf_idx].size() || bufs[buf_idx][offset] == BUFFER_END)
@@ -171,15 +171,15 @@ void InputBuffer::reset()
   std::cout << "-- DEBUG : InputBuffer::reset() called!" << std::endl;
 #endif
   auto& cur_buf = current_buffer_;
-  auto& bufs    = buffers_;
-  auto& cur     = current_;
+  auto& bufs = buffers_;
+  auto& cur = current_;
   auto& cur_pos = current_position_;
-  auto& cols    = columns_;
-  cur_buf       = 0;
-  bufs[0][0]    = BUFFER_END;
-  bufs[0][1]    = BUFFER_END;
-  cur           = bufs[0].data();
-  cur_pos       = {1, 1, 0};
+  auto& cols = columns_;
+  cur_buf = 0;
+  bufs[0][0] = BUFFER_END;
+  bufs[0][1] = BUFFER_END;
+  cur = bufs[0].data();
+  cur_pos = {1, 1, 0};
   while (!cols.empty())
     cols.pop();
   cols.push(1);
@@ -193,9 +193,9 @@ void InputBuffer::swap_buffers_()
   std::cout << "-- DEBUG : InputBuffer::swap_buffers_() called!" << std::endl;
 #endif
   auto& cur_buf = current_buffer_;
-  auto& bufs    = buffers_;
-  auto& cur     = current_;
-  auto& cols    = columns_;
+  auto& bufs = buffers_;
+  auto& cur = current_;
+  auto& cols = columns_;
   cur_buf ^= 1;
   cur = bufs[cur_buf].data();
   if (cols.empty()) cols.push(1);
@@ -207,7 +207,7 @@ void InputBuffer::advance_position_(char16_t ch)
   std::cout << "-- DEBUG : InputBuffer::advance_position_() called!" << std::endl;
 #endif
   auto& cur_pos = current_position_;
-  auto& cols    = columns_;
+  auto& cols = columns_;
   cur_pos.filepos += 1;
   if (ch == u'\n')
   {
@@ -231,7 +231,7 @@ void InputBuffer::rewind_position_(char16_t ch)
   std::cout << "-- DEBUG : InputBuffer::rewind_position_() called!" << std::endl;
 #endif
   auto& cur_pos = current_position_;
-  auto& cols    = columns_;
+  auto& cols = columns_;
   if (cur_pos.filepos == 0)
     // TODO: ultimately should emit an error
     return;
@@ -239,7 +239,7 @@ void InputBuffer::rewind_position_(char16_t ch)
   if (ch == u'\n')
   {
     if (!cols.empty()) cols.pop();
-    cur_pos.line   = std::max<std::size_t>(1, cur_pos.line - 1);
+    cur_pos.line = std::max<std::size_t>(1, cur_pos.line - 1);
     cur_pos.column = cols.empty() ? 1 : cols.top();
   }
   else
