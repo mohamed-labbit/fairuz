@@ -1,17 +1,17 @@
 #pragma once
 
-#include <vector>
-#include <unordered_map>
-#include <string>
+#include <array>
 #include <chrono>
 #include <functional>
-#include <array>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 #include "../object/object.hpp"
+#include "btcompiler.hpp"
+#include "bytecode.hpp"
 #include "gc.hpp"
 #include "jit.hpp"
-#include "bytecode.hpp"
-#include "btcompiler.hpp"
 
 
 namespace mylang {

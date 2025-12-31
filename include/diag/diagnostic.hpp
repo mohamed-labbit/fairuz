@@ -16,7 +16,7 @@ class Diagnostic
     ERROR,
     WARNING,
   };
-  
+
   Diagnostic() = default;
 
   void emit(const string_type& msg, std::optional<Severity> sv = std::nullopt) { emit_error(msg, sv.value_or(Severity::ERROR)); }

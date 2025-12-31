@@ -124,7 +124,7 @@ struct AssignmentExpr: Expr
   {
     kind = Kind::ASSIGNMENT;
   }
-}; // ?
+};  // ?
 
 struct ListExpr: Expr
 {

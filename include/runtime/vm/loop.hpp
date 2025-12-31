@@ -1,7 +1,7 @@
 #pragma once
 
-#include <vector>
 #include <unordered_set>
+#include <vector>
 
 #include "bytecode.hpp"
 #include "symbol_table.hpp"

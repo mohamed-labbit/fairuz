@@ -1,7 +1,7 @@
 #pragma once
 
-#include <functional>
 #include <algorithm>
+#include <functional>
 #include <string>
 
 #include "bytecode.hpp"
