@@ -271,14 +271,14 @@ TEST_F(ParserTest, ParseCallExpressionNoArgs)
 #if 0
 TEST_F(ParserTest, ParseCallExpressionWithArgs)
 {
-    // TODO: Add test case file with arguments
+    /// @todo: Add test case file with arguments
     // Expected: function_name(arg1, arg2, arg3)
     GTEST_SKIP() << "Test file with arguments not yet created";
 }
 
 TEST_F(ParserTest, ParseNestedCallExpression)
 {
-    // TODO: Add test for nested calls like f(g(x))
+    /// @todo: Add test for nested calls like f(g(x))
     GTEST_SKIP() << "Nested call test not yet implemented";
 }
 
@@ -288,13 +288,13 @@ TEST_F(ParserTest, ParseNestedCallExpression)
 
 TEST_F(ParserTest, ParseSimpleAddition)
 {
-    // TODO: Add test for binary operations
+    /// @todo: Add test for binary operations
     GTEST_SKIP() << "Binary operation tests not yet implemented";
 }
 
 TEST_F(ParserTest, ParseComplexExpression)
 {
-    // TODO: Test operator precedence: 2 + 3 * 4
+    /// @todo: Test operator precedence: 2 + 3 * 4
     GTEST_SKIP() << "Complex expression tests not yet implemented";
 }
 
@@ -304,19 +304,19 @@ TEST_F(ParserTest, ParseComplexExpression)
 
 TEST_F(ParserTest, ParseInvalidSyntaxThrows)
 {
-    // TODO: Verify parser throws on invalid syntax
+    /// @todo: Verify parser throws on invalid syntax
     GTEST_SKIP() << "Error handling tests not yet implemented";
 }
 
 TEST_F(ParserTest, ParseUnmatchedParenthesis)
 {
-    // TODO: Test error on unmatched parenthesis
+    /// @todo: Test error on unmatched parenthesis
     GTEST_SKIP() << "Parenthesis matching tests not yet implemented";
 }
 
 TEST_F(ParserTest, ParseUnexpectedEOF)
 {
-    // TODO: Test handling of unexpected end of file
+    /// @todo: Test handling of unexpected end of file
     GTEST_SKIP() << "EOF handling tests not yet implemented";
 }
 
@@ -326,19 +326,19 @@ TEST_F(ParserTest, ParseUnexpectedEOF)
 
 TEST_F(ParserTest, ParseEmptyInput)
 {
-    // TODO: Test parser behavior on empty input
+    /// @todo: Test parser behavior on empty input
     GTEST_SKIP() << "Empty input test not yet implemented";
 }
 
 TEST_F(ParserTest, ParseWhitespaceOnly)
 {
-    // TODO: Test parser with whitespace-only input
+    /// @todo: Test parser with whitespace-only input
     GTEST_SKIP() << "Whitespace handling test not yet implemented";
 }
 
 TEST_F(ParserTest, ParseVeryLongIdentifier)
 {
-    // TODO: Test with extremely long identifier names
+    /// @todo: Test with extremely long identifier names
     GTEST_SKIP() << "Long identifier test not yet implemented";
 }
 

@@ -11,7 +11,7 @@
 #include "../include/input/buffer/base.hpp"
 #include "../include/input/buffer/input_buffer.hpp"
 //#include "../include/input/file_manager.hpp"
-// TODO :remove
+/// @todo:remove
 #include "../include/input/file_manager.hpp"
 #include "../include/input/source_manager.hpp"
 #include "../include/lex/lexer.hpp"
@@ -30,7 +30,7 @@
 #include "../include/runtime/allocator/arena.hpp"
 #include "../include/runtime/object/object.hpp"
 #include "../include/runtime/vm/bytecode.hpp"
-#include "../include/runtime/vm/bytecode_compiler.hpp"
-#include "../include/runtime/vm/collector.hpp"
+#include "../include/runtime/vm/btcompiler.hpp"
+#include "../include/runtime/vm/gc.hpp"
 #include "../include/runtime/vm/jit.hpp"
 #include "../include/runtime/vm/vm.hpp"
