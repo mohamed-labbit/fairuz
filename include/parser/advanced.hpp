@@ -155,7 +155,7 @@ class DiagnosticEngine
 
   void addNote(std::int32_t line, const string_type& note);
 
-  // Generate LSP-compatible diagnostics
+  // Generate LSP-compatible diagnostic
   std::string toJSON() const;
 
   // Beautiful terminal output with colors

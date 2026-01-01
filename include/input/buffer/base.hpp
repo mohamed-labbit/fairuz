@@ -1,7 +1,9 @@
 #pragma once
 
+#include "../../../include/diag/diagnostic.hpp"
 #include "../../macros.hpp"
 #include "../file_manager.hpp"
+
 #include <fstream>
 #include <string>
 
@@ -23,7 +25,7 @@ class InputBufferBase
     buffers_[0].resize(cap + 1, BUFFER_END);
     buffers_[1].resize(cap + 1, BUFFER_END);
 
-    if (file_manager_ == nullptr || !file_manager_->is_open()) throw std::runtime_error("File is not open");
+    if (file_manager_ == nullptr || !file_manager_->is_open()) diagnostic::engine.panic("File is not open");
   }
 
   InputBufferBase() = default;

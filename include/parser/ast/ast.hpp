@@ -2,26 +2,26 @@
 
 #pragma once
 
+#include "../../lex/token.hpp"
 #include "macros.hpp"
+
 #include <array>
 #include <cassert>
 #include <memory>
 #include <string>
 #include <vector>
 
-
 // structs
 namespace mylang {
 namespace parser {
 namespace ast {
 
-struct Expr;
-struct Stmt;
+class Expr;
+class Stmt;
+class BlockStmt;
 
 typedef std::unique_ptr<Expr> ExprPtr;
 typedef std::unique_ptr<Stmt> StmtPtr;
-
-const unsigned MAX_ARGS = 10;  // TODO: change to comprehensive uppder bound
 
 struct ASTNode
 {
@@ -30,213 +30,476 @@ struct ASTNode
   virtual ~ASTNode() = default;
 };
 
-struct Expr: ASTNode
+class Expr: public ASTNode
 {
+ public:
   enum class Kind : int { BINARY, UNARY, LITERAL, NAME, CALL, ASSIGNMENT, LIST };
-  Kind kind;
+
+ protected:
+  Kind kind_;
+  string_type str_;
+
+ public:
+  explicit Expr() = default;
+
+  explicit Expr(string_type s) :
+      str_(s)
+  {
+  }
+
+  string_type getStr() const { return str_; }
+  Kind getKind() const { return kind_; }
 };
 
-struct Stmt: ASTNode
+class Stmt: public ASTNode
 {
+ public:
   enum class Kind : int { EXPR, ASSIGNMENT, IF, WHILE, FOR, FUNC, RETURN, BLOCK };
-  Kind kind;
+
+ protected:
+  Kind kind_;
+  string_type str_;
+
+ public:
+  explicit Stmt() = default;
+
+  explicit Stmt(string_type s) :
+      str_(s)
+  {
+  }
+
+  string_type getStr() const { return str_; }
+  Kind getKind() const { return kind_; }
 };
 
-struct BinaryExpr: Expr
+class BinaryExpr: public Expr
 {
-  ExprPtr left;
-  ExprPtr right;
-  string_type op;
+ private:
+  Expr* left_{nullptr};
+  Expr* right_{nullptr};
+  lex::tok::TokenType operator_{lex::tok::TokenType::INVALID};
 
-  BinaryExpr(ExprPtr l, ExprPtr r, string_type o) :
-      left(std::move(l)),
-      right(std::move(r)),
-      op(std::move(o))
+ public:
+  explicit BinaryExpr() = default;
+
+  explicit BinaryExpr(Expr* l, Expr* r, lex::tok::TokenType o) :
+      left_(std::move(l)),
+      right_(std::move(r)),
+      operator_(std::move(o))
   {
-    kind = Kind::BINARY;
+    kind_ = Kind::BINARY;
+
+    assert((left_ != nullptr) && "'left' argument to BinaryExpr is null");
+    assert((right_ != nullptr) && "'right' argument to BinaryExpr is null");
+  }
+
+  Expr* getLeft() const { return left_; }
+  Expr* getRight() const { return right_; }
+  lex::tok::TokenType getOperator() const { return operator_; }
+
+  ~BinaryExpr()
+  {
+    if (left_ != nullptr) delete left_;
+    if (right_ != nullptr) delete right_;
   }
 };
 
-struct UnaryExpr: Expr
+class UnaryExpr: public Expr
 {
-  ExprPtr self;
-  string_type op;
+ private:
+  Expr* operand_{nullptr};
+  lex::tok::TokenType operator_{lex::tok::TokenType::INVALID};
 
-  UnaryExpr(ExprPtr s, string_type o) :
-      self(std::move(s)),
-      op(std::move(o))
+ public:
+  explicit UnaryExpr() = default;
+
+  explicit UnaryExpr(Expr* operand, lex::tok::TokenType op) :
+      operand_(std::move(operand)),
+      operator_(std::move(op))
   {
-    kind = Kind::UNARY;
+    kind_ = Kind::UNARY;
+    assert((operand_ != nullptr) && "'operand' argument to UnaryExpr is null");
+  }
+
+  Expr* getOperand() const { return operand_; }
+  lex::tok::TokenType getOperator() const { return operator_; }
+
+  ~UnaryExpr()
+  {
+    if (operand_ != nullptr) delete operand_;
   }
 };
 
-struct LiteralExpr: Expr
+class LiteralExpr: public Expr
 {
-  enum class Type { NUMBER, STRING, BOOLEAN, NONE } type;
-  string_type literal;
+ public:
+  enum class Type { NUMBER, STRING, BOOLEAN, NONE };
 
-  LiteralExpr(Type t, string_type s) :
-      type(std::move(t)),
-      literal(std::move(s))
+ private:
+  Type type_{Type::NONE};
+  Expr* literal_{nullptr};
+
+ public:
+  explicit LiteralExpr() = default;
+
+  explicit LiteralExpr(Type t, Expr* lit) :
+      type_(std::move(t)),
+      literal_(std::move(lit))
   {
-    kind = Kind::LITERAL;
+    kind_ = Kind::LITERAL;
+    assert((literal_ != nullptr) && "'literal' argument to LiteralExpr is null");
+  }
+
+  Expr* getValue() const { return literal_; }
+  Type getType() const { return type_; }
+
+  ~LiteralExpr()
+  {
+    if (literal_ != nullptr) delete literal_;
   }
 };
 
-struct NameExpr: Expr
+class NameExpr: public Expr
 {
-  string_type name;
+ private:
+  Expr* value_{nullptr};
 
-  NameExpr(string_type n) :
-      name(std::move(n))
+ public:
+  explicit NameExpr() = default;
+
+  explicit NameExpr(Expr* n) :
+      value_(std::move(n))
   {
-    kind = Kind::NAME;
+    kind_ = Kind::NAME;
+    assert((value_ != nullptr) && "'name_' argument to NameExpr is null");
+  }
+
+  Expr* getValue() const { return value_; }
+
+  ~NameExpr()
+  {
+    if (value_ != nullptr) delete value_;
   }
 };
 
-struct CallExpr: Expr
+class CallExpr: public Expr
 {
-  ExprPtr callee;
-  std::vector<ExprPtr> args;
+ private:
+  Expr* callee_{nullptr};
+  std::vector<Expr*> args_{nullptr};
 
-  CallExpr(ExprPtr c, std::vector<ExprPtr> a) :
-      callee(std::move(c)),
-      args(std::move(a))
+ public:
+  explicit CallExpr() = default;
+
+  explicit CallExpr(Expr* c, std::optional<std::vector<Expr*>> a = std::nullopt) :
+      callee_(std::move(c)),
+      args_(std::move(a.value_or(std::vector<Expr*>())))
   {
-    kind = Kind::CALL;
+    kind_ = Kind::CALL;
+    assert((callee_ != nullptr) && "'callee' argument to CallExpr is null");
+  }
+
+  Expr* getCallee() const { return callee_; }
+  std::vector<Expr*> getArgs() const { return args_; }
+
+  ~CallExpr()
+  {
+    if (callee_ != nullptr) delete callee_;
+    for (auto* a : args_)
+    {
+      if (a != nullptr) delete a;
+    }
   }
 };
 
-#if 0
-struct TernaryExpr: Expr
+class AssignmentExpr: public Expr
 {
-};
-#endif
+ private:
+  NameExpr* target_{nullptr};
+  Expr* value_{nullptr};
 
-struct AssignmentExpr: Expr
-{
-  ExprPtr value;
-  NameExpr target;
+ public:
+  explicit AssignmentExpr() = default;
 
-  AssignmentExpr(NameExpr v, ExprPtr t) :
-      target(std::move(v)),
-      value(std::move(t))
+  explicit AssignmentExpr(NameExpr* target, Expr* value) :
+      target_(std::move(target)),
+      value_(std::move(value))
   {
-    kind = Kind::ASSIGNMENT;
+    kind_ = Kind::ASSIGNMENT;
+
+    assert((target_ != nullptr) && "'target' argument to AssignmentExpr is null");
+    assert((value_ != nullptr) && "'value' argument to AssignmentExpr is null");
+  }
+
+  NameExpr* getTarget() const { return target_; }
+  Expr* getValue() const { return value_; }
+
+  ~AssignmentExpr()
+  {
+    if (target_ != nullptr) delete target_;
+    if (value_ != nullptr) delete value_;
   }
 };  // ?
 
-struct ListExpr: Expr
-{
-  std::vector<ExprPtr> elements;
 
-  ListExpr(std::vector<ExprPtr> els) :
-      elements(std::move(els))
+class BlockStmt: public Stmt
+{
+ private:
+  std::vector<Stmt*> statements_{nullptr};
+
+ public:
+  explicit BlockStmt() = default;
+
+  explicit BlockStmt(std::vector<Stmt*> stmts) :
+      statements_(std::move(stmts))
   {
-    kind = Kind::LIST;
+    kind_ = Kind::BLOCK;
+
+    assert((!statements_.empty() && statements_[0] != nullptr) && "'statements' argument to BlockStmt is null");
+  }
+
+  std::vector<Stmt*> getStatements() const { return statements_; }
+
+  ~BlockStmt()
+  {
+    for (auto* stmt : statements_)
+    {
+      if (stmt != nullptr) delete stmt;
+    }
   }
 };
 
-struct ExprStmt: Stmt
+class ListExpr: public Expr
 {
-  ExprPtr expr;
+ private:
+  std::vector<Expr*> elements_{nullptr};
 
-  ExprStmt(ExprPtr e) :
-      expr(std::move(e))
+ public:
+  explicit ListExpr() = default;
+
+  explicit ListExpr(std::vector<Expr*> elements) :
+      elements_(std::move(elements))
   {
-    kind = Kind::EXPR;
+    kind_ = Kind::LIST;
+  }
+
+  std::vector<Expr*> getElements() const { return elements_; }
+
+  ~ListExpr()
+  {
+    for (auto* e : elements_)
+    {
+      if (e != nullptr) delete e;
+    }
   }
 };
 
-struct AssignmentStmt: Stmt
+class ExprStmt: public Stmt
 {
-  ExprPtr value;
-  NameExpr target;
+ private:
+  Expr* expr_{nullptr};
 
-  AssignmentStmt(NameExpr t, ExprPtr v) :
-      target(std::move(t)),
-      value(std::move(v))
+ public:
+  explicit ExprStmt() = default;
+
+  explicit ExprStmt(Expr* expr) :
+      expr_(std::move(expr))
   {
-    kind = Kind::ASSIGNMENT;
+    kind_ = Kind::EXPR;
+    assert((expr_ != nullptr) && "'expr' argument to ExprStmt is null");
+  }
+
+  Expr* getExpr() const { return expr_; }
+
+  ~ExprStmt()
+  {
+    if (expr_ != nullptr) delete expr_;
   }
 };
 
-struct IfStmt: Stmt
+class AssignmentStmt: public Stmt
 {
-  ExprPtr condition;
-  std::vector<StmtPtr> then_stmts;
-  std::vector<StmtPtr> else_stmts;
+ private:
+  Expr* value_{nullptr};
+  NameExpr* target_{nullptr};
 
-  IfStmt(ExprPtr c, std::vector<StmtPtr> t, std::vector<StmtPtr> e) :
-      condition(std::move(c)),
-      then_stmts(std::move(t)),
-      else_stmts(std::move(e))
+ public:
+  explicit AssignmentStmt() = default;
+
+  explicit AssignmentStmt(NameExpr* target, Expr* value) :
+      target_(std::move(target)),
+      value_(std::move(value))
   {
-    kind = Kind::IF;
+    kind_ = Kind::ASSIGNMENT;
+
+    assert((value_ != nullptr) && "'value' argument to AssignmentStmt is null");
+    assert((target_ != nullptr) && "'target' argument to AssignmentStmt is null");
+  }
+
+  Expr* getValue() const { return value_; }
+  NameExpr* getTarget() const { return target_; }
+
+  ~AssignmentStmt()
+  {
+    if (value_ != nullptr) delete value_;
+    if (target_ != nullptr) delete target_;
   }
 };
 
-struct WhileStmt: Stmt
+class IfStmt: public Stmt
 {
-  ExprPtr condition;
-  std::vector<StmtPtr> stmts;
+ private:
+  Expr* condition_{nullptr};
+  BlockStmt* then_block_{nullptr};
+  BlockStmt* else_block_{nullptr};
 
-  WhileStmt(ExprPtr c, std::vector<StmtPtr> s) :
-      condition(std::move(c)),
-      stmts(std::move(s))
+ public:
+  explicit IfStmt() = default;
+
+  explicit IfStmt(Expr* condition, BlockStmt* then_block, BlockStmt* else_block) :
+      condition_(std::move(condition)),
+      then_block_(std::move(then_block)),
+      else_block_(std::move(else_block))
   {
+    kind_ = Kind::IF;
+
+    assert((condition_ != nullptr) && "'condition' argument to IfStmt is null");
+    assert((then_block_ != nullptr) && "'then_block' argument to IfStmt is null");
+    assert((else_block_ != nullptr) && "'else_block' argument to IfStmt is null");
+  }
+
+  Expr* getCondition() const { return condition_; }
+  BlockStmt* getThenBlock() const { return then_block_; }
+  BlockStmt* getElseBlock() const { return else_block_; }
+
+  ~IfStmt()
+  {
+    if (condition_ != nullptr) delete condition_;
+    if (then_block_ != nullptr) delete then_block_;
+    if (else_block_ != nullptr) delete else_block_;
   }
 };
 
-struct ForStmt: Stmt
+class WhileStmt: public Stmt
 {
-  string_type target;
-  ExprPtr iter;
-  std::vector<StmtPtr> body;
+ private:
+  Expr* condition_{nullptr};
+  BlockStmt* block_{nullptr};
 
-  ForStmt(string_type t, ExprPtr i, std::vector<StmtPtr> b) :
-      target(std::move(t)),
-      iter(std::move(i)),
-      body(std::move(b))
+ public:
+  explicit WhileStmt() = default;
+
+  explicit WhileStmt(Expr* condition, BlockStmt* block) :
+      condition_(std::move(condition)),
+      block_(std::move(block))
   {
-    kind = Kind::FOR;
+    kind_ = Kind::WHILE;
+
+    assert((condition_ != nullptr) && "'condition' argument to WhileStmt is null");
+    assert((block_ != nullptr) && "'block' argument to WhileStmt is null");
+  }
+
+  Expr* getCondition() const { return condition_; }
+  BlockStmt* getBlock() const { return block_; }
+
+  ~WhileStmt()
+  {
+    if (condition_ != nullptr) delete condition_;
+    if (block_ != nullptr) delete block_;
   }
 };
 
-struct FunctionDef: Stmt
+class ForStmt: public Stmt
 {
-  string_type name;
-  std::vector<string_type> params;
-  std::vector<StmtPtr> body;
+ private:
+  Expr* target_{nullptr};
+  Expr* iter_{nullptr};
+  BlockStmt* block_{nullptr};
 
-  FunctionDef(string_type n, std::vector<string_type> p, std::vector<StmtPtr> b) :
-      name(std::move(n)),
-      params(std::move(p)),
-      body(std::move(b))
+ public:
+  explicit ForStmt() = default;
+
+  explicit ForStmt(Expr* target, Expr* iter, BlockStmt* block) :
+      target_(std::move(target)),
+      iter_(std::move(iter)),
+      block_(std::move(block))
   {
-    kind = Kind::FUNC;
+    kind_ = Kind::FOR;
+
+    assert((target_ != nullptr) && "'target' argument to ForStmt is null");
+    assert((iter_ != nullptr) && "'iter' argument to ForStmt is null");
+    assert((block_ != nullptr) && "'block' argument to ForStmt is null");
+  }
+
+  Expr* getTarget() const { return target_; }
+  Expr* getIter() const { return iter_; }
+  BlockStmt* getBlock() const { return block_; }
+
+  ~ForStmt()
+  {
+    if (target_ != nullptr) delete target_;
+    if (iter_ != nullptr) delete iter_;
+    if (block_ != nullptr) delete block_;
   }
 };
 
-struct ReturnStmt: Stmt
+class FunctionDef: public Stmt
 {
-  ExprPtr value;
+ private:
+  NameExpr* name_{nullptr};
+  std::vector<Expr*> params_{nullptr};
+  BlockStmt* body_{nullptr};
 
-  explicit ReturnStmt(ExprPtr v) :
-      value(std::move(v))
+ public:
+  explicit FunctionDef() = default;
+
+  explicit FunctionDef(NameExpr* name, std::vector<Expr*> params, BlockStmt* body) :
+      name_(std::move(name)),
+      params_(std::move(params)),
+      body_(std::move(body))
   {
-    kind = Kind::RETURN;
+    kind_ = Kind::FUNC;
+
+    assert((name_ != nullptr) && "'name' argument to FunctionDef is null");
+    assert((body_ != nullptr) && "'body' argument to FunctionDef is null");
+  }
+
+  NameExpr* getName() const { return name_; }
+  std::vector<Expr*> getParameters() const { return params_; }
+  BlockStmt* getBody() const { return body_; }
+
+  ~FunctionDef()
+  {
+    if (name_ != nullptr) delete name_;
+    if (body_ != nullptr) delete body_;
+
+    for (auto* p : params_)
+    {
+      if (p != nullptr) delete p;
+    }
   }
 };
 
-struct BlockStmt: Stmt
+class ReturnStmt: public Stmt
 {
-  std::vector<StmtPtr> statements;
+ private:
+  Expr* value_{nullptr};
 
-  explicit BlockStmt(std::vector<StmtPtr> stmts) :
-      statements(std::move(stmts))
+ public:
+  explicit ReturnStmt() = default;
+
+  explicit ReturnStmt(Expr* value) :
+      value_(std::move(value))
   {
-    kind = Kind::BLOCK;
+    kind_ = Kind::RETURN;
+    assert((value_ != nullptr) && "'value' argument to ReturnStmt is null");
+  }
+
+  Expr* getValue() const { return value_; }
+
+  ~ReturnStmt()
+  {
+    if (value_ != nullptr) delete value_;
   }
 };
 

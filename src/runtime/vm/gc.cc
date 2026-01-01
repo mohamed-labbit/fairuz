@@ -1,5 +1,5 @@
+#include "../../../include/runtime/vm/gc.hpp"
 #include "../../../include/diag/diagnostic.hpp"
-#include "../../../include/runtime/vm/vm.hpp"
 
 #include <unordered_set>
 
@@ -13,7 +13,7 @@ void GarbageCollector::registerObject(object::Value* obj)
   {
 #if DEBUG_PRINT
     // std::cerr << "-- DEBUG: a null object was pushed to the garbage collector" << std::endl;
-    diagnostics::diag_engine.emit("-- DEBUG : null object push to gc");
+    diagnostic::engine.emit("-- DEBUG : null object push to gc");
 #endif
     return;
   }
@@ -31,7 +31,7 @@ void GarbageCollector::addRoot(object::Value* root)
   {
 #if DEBUG_PRINT
     // std::cerr << "-- DEBUG: a null root was pushed to the garbage collector" << std::endl;
-    diagnostics::diag_engine.emit("-- DEBUG : null root push to gc");
+    diagnostic::engine.emit("-- DEBUG : null root push to gc");
 #endif
     return;
   }

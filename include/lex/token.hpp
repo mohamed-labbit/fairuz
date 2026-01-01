@@ -127,6 +127,25 @@ static const std::unordered_map<string_type, TokenType, util::U16StringHash, uti
   {u"بكل", TokenType::KW_FOR},     {u"اذا", TokenType::KW_IF},        {u"ليس", TokenType::KW_NOT},   {u"ارجع", TokenType::KW_RETURN},
   {u"طالما", TokenType::KW_WHILE}};
 
+static const string_type to_string(TokenType tt)
+{
+  switch (tt)
+  {
+  case TokenType::OP_EQ : return u"=";
+  case TokenType::OP_ASSIGN : return u":=";
+  case TokenType::OP_PLUS : return u"+";
+  case TokenType::OP_MINUS : return u"-";
+  case TokenType::OP_STAR : return u"*";
+  case TokenType::OP_SLASH : return u"/";
+  case TokenType::OP_LT : return u"<";
+  case TokenType::OP_GT : return u">";
+  case TokenType::OP_LTE : return u"<=";
+  case TokenType::OP_GTE : return u">=";
+  case TokenType::OP_NEQ : return u"!=";
+  default : return u"";
+  }
+}
+
 class Token
 {
  public:

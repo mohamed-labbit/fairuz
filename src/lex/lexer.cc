@@ -24,6 +24,14 @@ Lexer::Lexer(input::FileManager* file_manager) :
   configure_locale();
 }
 
+Lexer::Lexer(std::vector<tok::Token>& seq, const std::size_t s) :
+    tok_stream_(seq),
+    tok_index_(0),
+    indent_size_(0)
+{
+  configure_locale();
+}
+
 tok::Token Lexer::make_token(tok::TokenType tt,
                              std::optional<string_type> lexeme,
                              std::optional<std::size_t> line,
@@ -200,8 +208,8 @@ tok::Token Lexer::_handle_indentation(SourceManager& sm)
     tok::Token error_tok = make_token(tok::TokenType::INVALID, string_type(analysis.error_message.begin(), analysis.error_message.end()));
     store(std::move(error_tok));
     //std::cerr << "Indentation Error at line " << sm.line() << ", col " << sm.column() << ": " << utf8::utf16to8(analysis.error_message) << std::endl;
-    diagnostics::diag_engine.emit("Indentation Error at line" + std::to_string(sm.line()) + ", col" + std::to_string(sm.column()) + ": "
-                                  + utf8::utf16to8(analysis.error_message));
+    diagnostic::engine.emit("Indentation Error at line" + std::to_string(sm.line()) + ", col" + std::to_string(sm.column()) + ": "
+                            + utf8::utf16to8(analysis.error_message));
     return stream.back();
   }
   case IndentationAnalysis::Action::NONE :

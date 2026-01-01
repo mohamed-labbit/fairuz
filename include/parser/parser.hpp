@@ -1,0 +1,182 @@
+// parser rewrite
+// recursive descent parser
+//
+// This header defines the recursive-descent parser for mylang.
+// The parser consumes tokens produced by the lexer and builds
+// an abstract syntax tree (AST) representing expressions and statements.
+
+#pragma once
+
+#include "../input/file_manager.hpp"
+#include "../lex/lexer.hpp"
+#include "../lex/token.hpp"
+#include "ast/ast.hpp"
+
+#include <optional>
+#include <sstream>
+
+
+namespace mylang {
+namespace parser {
+
+/**
+ * @brief Exception type representing a parse-time error.
+ *
+ * ParseError carries precise source location information (line and column),
+ * optional source context, and a list of suggestions to aid error recovery
+ * or diagnostics.
+ */
+class ParseError: public std::runtime_error
+{
+ public:
+  std::int32_t line, column;             // Source location of the error
+  string_type context;                   // Source line where the error occurred
+  std::vector<string_type> suggestions;  // Optional recovery suggestions
+
+  /**
+   * @brief Constructs a parse error.
+   *
+   * @param msg  Error message (UTF-16)
+   * @param l    Line number
+   * @param c    Column number
+   * @param ctx  Optional source line context
+   * @param sugg Optional list of suggestions
+   */
+  ParseError(const string_type& msg, unsigned l, unsigned c, string_type ctx = u"", std::vector<string_type> sugg = {}) :
+      std::runtime_error(utf8::utf16to8(msg)),
+      line(l),
+      column(c),
+      context(std::move(ctx)),
+      suggestions(std::move(sugg))
+  {
+  }
+
+  /**
+   * @brief Formats the parse error into a user-readable message.
+   *
+   * The output includes:
+   *  - Line and column
+   *  - Error message
+   *  - Source line with a caret pointing at the error location
+   *  - Optional suggestions
+   *
+   * @return UTF-16 formatted error message
+   */
+  string_type format() const
+  {
+    std::stringstream ss;
+    ss << "Line " << line << ":" << column << " - " << what() << "\n";
+
+    if (!context.empty())
+    {
+      ss << "  | " << utf8::utf16to8(context) << "\n";
+      ss << "  | " << std::string(column - 1, ' ') << "^\n";
+    }
+
+    if (!suggestions.empty())
+    {
+      ss << "Suggestions:\n";
+      for (const string_type& s : suggestions)
+        ss << "  - " << utf8::utf16to8(s) << "\n";
+    }
+
+    return utf8::utf8to16(ss.str());
+  }
+};
+
+/**
+ * @brief Recursive-descent parser for mylang.
+ *
+ * The Parser consumes tokens from the lexer and produces AST nodes.
+ * It implements expression parsing using a combination of:
+ *  - Recursive descent
+ *  - Operator precedence climbing
+ *  - Specialized routines for different grammar constructs
+ */
+class Parser
+{
+ public:
+  // Constructors
+
+  /// @brief Constructs an empty parser
+  explicit Parser() = default;
+  /// @brief Constructs a parser bound to a file manager
+  explicit Parser(input::FileManager* file_manager);
+  /// @brief Constructs a parser from a pre-existing token sequence
+  explicit Parser(std::vector<lex::tok::Token> seq, std::optional<std::size_t> s = std::nullopt);
+
+  // Expression parsing entry points
+
+  /// @brief Parses a primary expression
+  ast::Expr* parsePrimary();
+  /// @brief Parses a unary expression
+  ast::Expr* parseUnary();
+  /// @brief Parses a parenthesized expression
+  ast::Expr* parseParenthesizedExpr();
+  /// @brief Parses a general expression
+  ast::Expr* parseExpression();
+  /// @brief Parses an assignment expression
+  ast::Expr* parseAssignmentExpr();
+  /// @brief Parses a list literal expression
+  ast::Expr* parseListLiteral();
+  /// @brief Parses a conditional (ternary-like) expression
+  ast::Expr* parseConditionalExpr();
+  /// @brief Parses logical expressions (AND / OR)
+  ast::Expr* parseLogicalExpr();
+  /// @brief Parses logical expressions using precedence climbing
+  ast::Expr* parseLogicalExprPrecedence(int min_precedence);
+  /// @brief Parses binary expressions using precedence climbing
+  ast::Expr* parseBinaryExprPrecedence(int min_precedence);
+  /// @brief Parses comparison expressions
+  ast::Expr* parseComparisonExpr();
+  /// @brief Parses binary expressions
+  ast::Expr* parseBinaryExpr();
+  /// @brief Parses unary expressions
+  ast::Expr* parseUnaryExpr();
+  /// @brief Parses primary expressions
+  ast::Expr* parsePrimaryExpr();
+  /// @brief Parses postfix expressions (calls, indexing, etc.)
+  ast::Expr* parsePostfixExpr();
+  /**
+   * @brief Parses the entire input into a sequence of statements.
+   *
+   * @return Vector of parsed statement AST nodes
+   */
+  std::vector<ast::StmtPtr> parse();
+
+ private:
+  lex::Lexer lex_;  // Underlying lexer providing tokens
+
+  /// @brief Checks whether a token represents a unary operator
+  static bool isUnaryOp(const lex::tok::Token tok);
+  /// @brief Checks whether a token represents a binary operator
+  static bool isBinaryOp(const lex::tok::Token tok);
+  /// @brief Peeks ahead in the token stream without consuming
+  lex::tok::Token peek(std::size_t offset = 1);
+  /// @brief Advances and returns the next token
+  lex::tok::Token advance();
+  /// @brief Matches and consumes a token if it is of the given type
+  bool match(const lex::tok::TokenType type);
+  /// @brief Checks whether the current token is of the given type
+  bool check(lex::tok::TokenType type);
+  /**
+   * @brief Consumes a token of the expected type or throws a ParseError.
+   *
+   * @param type Expected token type
+   * @param msg  Error message if the token does not match
+   */
+  lex::tok::Token consume(lex::tok::TokenType type, const string_type& msg);
+  /// @brief Skips newline tokens during parsing
+  void skipNewlines();
+  /// @brief Retrieves a source line for diagnostics
+  string_type getSourceLine(std::size_t line);
+  /// @brief Returns precedence of logical operators
+  int getLogicalOperatorPrecedence(lex::tok::TokenType tt);
+  /// @brief Returns precedence of arithmetic operators
+  int getArithmeticOperatorPrecedence(const lex::tok::TokenType type);
+  /// @brief Enters a new scope (currently a no-op)
+  void enterScope() {}
+};
+
+}  // namespace parser
+}  // namespace mylang

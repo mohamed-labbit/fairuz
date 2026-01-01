@@ -233,7 +233,7 @@ void InputBuffer::rewind_position_(char16_t ch)
   auto& cur_pos = current_position_;
   auto& cols = columns_;
   if (cur_pos.filepos == 0)
-    // TODO: ultimately should emit an error
+    /// @todo: ultimately should emit an error
     return;
   cur_pos.filepos = std::max<std::size_t>(0, cur_pos.filepos - 1);
   if (ch == u'\n')

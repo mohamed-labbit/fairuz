@@ -4,7 +4,7 @@
 // diagnostic_emitter.h
 //
 
-namespace diagnostics {
+namespace diagnostic {
 
 
 class DiagnosticEmitter

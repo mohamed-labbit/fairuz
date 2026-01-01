@@ -41,22 +41,22 @@ class EnhancedASTPrinter
 
     nodeCount++;
 
-    switch (expr->kind)
+    switch (expr->getKind())
     {
     case mylang::parser::ast::Expr::Kind::BINARY : {
       auto* e = static_cast<const mylang::parser::ast::BinaryExpr*>(expr);
       printIndent();
-      std::cout << colorize(u"BinaryOp", Color::BOLD, useColor) << " " << colorize(e->op, Color::YELLOW, useColor) << "\n";
+      std::cout << colorize(u"BinaryOp", Color::BOLD, useColor) << " " << colorize(lex::tok::to_string(e->getOperator()), Color::YELLOW, useColor) << "\n";
       indent++;
-      print(e->left.get());
-      print(e->right.get());
+      print(e->getLeft());
+      print(e->getRight());
       indent--;
       break;
     }
     case mylang::parser::ast::Expr::Kind::UNARY : {
       auto* e = static_cast<const mylang::parser::ast::UnaryExpr*>(expr);
       printIndent();
-      std::cout << colorize(u"UnaryOp", Color::BOLD, useColor) << " " << colorize(e->op, Color::YELLOW, useColor) << "\n";
+      std::cout << colorize(u"UnaryOp", Color::BOLD, useColor) << " " << colorize(lex::tok::to_string(e->getOperator()), Color::YELLOW, useColor) << "\n";
       indent++;
       print(e);
       indent--;
@@ -65,32 +65,32 @@ class EnhancedASTPrinter
     case mylang::parser::ast::Expr::Kind::LITERAL : {
       auto* e = static_cast<const mylang::parser::ast::LiteralExpr*>(expr);
       printIndent();
-      std::cout << colorize(u"Literal", Color::GREEN, useColor) << ": " << utf8::utf16to8(e->literal) << "\n";
+      std::cout << colorize(u"Literal", Color::GREEN, useColor) << ": " << utf8::utf16to8(e->getValue()->getStr()) << "\n";
       break;
     }
     case mylang::parser::ast::Expr::Kind::NAME : {
       auto* e = static_cast<const mylang::parser::ast::NameExpr*>(expr);
       printIndent();
-      std::cout << colorize(u"Var", Color::CYAN, useColor) << ": " << utf8::utf16to8(e->name) << "\n";
+      std::cout << colorize(u"Var", Color::CYAN, useColor) << ": " << utf8::utf16to8(e->getValue()->getStr()) << "\n";
       break;
     }
     case mylang::parser::ast::Expr::Kind::CALL : {
-      auto* e = static_cast<const mylang::parser::ast::CallExpr*>(expr);
+      auto* e = dynamic_cast<const mylang::parser::ast::CallExpr*>(expr);
       printIndent();
-      std::cout << colorize(u"Call", Color::MAGENTA, useColor) << " [" << e->args.size() << " args]\n";
+      std::cout << colorize(u"Call", Color::MAGENTA, useColor) << " [" << e->getArgs().size() << " args]\n";
       indent++;
-      print(e->callee.get());
-      for (const auto& arg : e->args)
+      print(e->getCallee());
+      for (const auto& arg : e->getArgs())
         print(arg.get());
       indent--;
       break;
     }
     case mylang::parser::ast::Expr::Kind::LIST : {
-      auto* e = static_cast<const mylang::parser::ast::ListExpr*>(expr);
+      auto* e = dynamic_cast<const mylang::parser::ast::ListExpr*>(expr);
       printIndent();
-      std::cout << colorize(u"List", Color::BLUE, useColor) << " [" << e->elements.size() << "]\n";
+      std::cout << colorize(u"List", Color::BLUE, useColor) << " [" << e->getElements().size() << "]\n";
       indent++;
-      for (const auto& elem : e->elements)
+      for (const auto& elem : e->getElements())
         print(elem.get());
       indent--;
       break;
@@ -105,14 +105,14 @@ class EnhancedASTPrinter
 
     nodeCount++;
 
-    switch (stmt->kind)
+    switch (stmt->getKind())
     {
     case mylang::parser::ast::Stmt::Kind::ASSIGNMENT : {
       auto* s = static_cast<const mylang::parser::ast::AssignmentStmt*>(stmt);
       printIndent();
-      std::cout << colorize(u"Assign", Color::BOLD, useColor) << " " << colorize(s->target.name, Color::CYAN, useColor) << "\n";
+      std::cout << colorize(u"Assign", Color::BOLD, useColor) << " " << colorize(s->getTarget()->getValue()->getStr(), Color::CYAN, useColor) << "\n";
       indent++;
-      print(s->value.get());
+      print(s->getValue());
       indent--;
       break;
     }
@@ -121,8 +121,8 @@ class EnhancedASTPrinter
       printIndent();
       std::cout << colorize(u"If", Color::BOLD, useColor) << "\n";
       indent++;
-      print(s->condition.get());
-      for (const auto& st : s->then_stmts)
+      print(s->getCondition());
+      for (const auto& st : s->getThenBlock()->getStatements())
         print(st.get());
       indent--;
       break;
@@ -132,8 +132,8 @@ class EnhancedASTPrinter
       printIndent();
       std::cout << colorize(u"While", Color::BOLD, useColor) << "\n";
       indent++;
-      print(s->condition.get());
-      for (const auto& st : s->stmts)
+      print(s->getCondition());
+      for (const auto& st : s->getBlock()->getStatements())
         print(st.get());
       indent--;
       break;
@@ -141,26 +141,26 @@ class EnhancedASTPrinter
     case mylang::parser::ast::Stmt::Kind::FOR : {
       auto* s = static_cast<const mylang::parser::ast::ForStmt*>(stmt);
       printIndent();
-      std::cout << colorize(u"For", Color::BOLD, useColor) << " " << utf8::utf16to8(s->target) << "\n";
+      std::cout << colorize(u"For", Color::BOLD, useColor) << " " << utf8::utf16to8(s->getTarget()->getStr()) << "\n";
       indent++;
-      print(s->iter.get());
-      for (const auto& st : s->body)
+      print(s->getIter());
+      for (const auto& st : s->getBlock()->getStatements())
         print(st.get());
       indent--;
       break;
     }
     case mylang::parser::ast::Stmt::Kind::FUNC : {
-      auto* s = static_cast<const mylang::parser::ast::FunctionDef*>(stmt);
+      auto* s = dynamic_cast<const mylang::parser::ast::FunctionDef*>(stmt);
       printIndent();
-      std::cout << colorize(u"Function", Color::BOLD, useColor) << " " << colorize(s->name, Color::GREEN, useColor) << "(";
-      for (std::size_t i = 0; i < s->params.size(); i++)
+      std::cout << colorize(u"Function", Color::BOLD, useColor) << " " << colorize(s->getName()->getValue()->getStr(), Color::GREEN, useColor) << "(";
+      for (std::size_t i = 0; i < s->getParameters().size(); i++)
       {
-        std::cout << utf8::utf16to8(s->params[i]);
-        if (i + 1 < s->params.size()) std::cout << ", ";
+        std::cout << utf8::utf16to8(s->getParameters()[i]);
+        if (i + 1 < s->getParameters().size()) std::cout << ", ";
       }
       std::cout << ")\n";
       indent++;
-      for (const auto& st : s->body)
+      for (const auto& st : s->getBody()->getStatements())
         print(st.get());
       indent--;
       break;
@@ -170,13 +170,13 @@ class EnhancedASTPrinter
       printIndent();
       std::cout << colorize(u"Return", Color::BOLD, useColor) << "\n";
       indent++;
-      print(s->value.get());
+      print(s->getValue());
       indent--;
       break;
     }
     case mylang::parser::ast::Stmt::Kind::EXPR : {
       auto* s = static_cast<const mylang::parser::ast::ExprStmt*>(stmt);
-      print(s->expr.get());
+      print(s->getExpr());
       break;
     }
     default : break;

@@ -139,7 +139,7 @@ offset_pair SourceManager::offset_map(const std::size_t& offset)
 #if DEBUG_PRINT
   std::cout << "-- DEBUG : SourceManager::offset_map() called!" << std::endl;
 #endif
-  // TODO : implement this using the new file manager
+  /// @todo : implement this using the new file manager
   std::size_t line = 1;
   std::size_t col = 1;
   return std::make_pair(line, col);

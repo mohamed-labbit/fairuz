@@ -161,13 +161,13 @@ class ArenaBlock
       size_(size)
   {
     // Validate alignment is a power of 2
-    if (alignment == 0 || (alignment & (alignment - 1)) != 0) throw std::invalid_argument("Alignment must be a power of two");
+    if (alignment == 0 || (alignment & (alignment - 1)) != 0) diagnostic::engine.panic("Alignment must be a power of two");
     // Round up size to multiple of alignment
     std::size_t mod = size_ % alignment;
     if (mod) size_ += (alignment - mod);
     // Allocate aligned memory
     void* mem = std::aligned_alloc(alignment, size_);
-    if (!mem) throw std::bad_alloc();
+    if (!mem) diagnostic::engine.panic("bad alloc");
     begin_ = reinterpret_cast<Pointer>(mem);
     next_.store(begin_, std::memory_order_relaxed);
   }
@@ -327,7 +327,9 @@ class ArenaBlock
     if (!begin_ || bytes == 0) return nullptr;
     std::size_t alignment_value = alignment.value_or(std::alignment_of<std::max_align_t>::value);
     // Validate alignment is a power of 2
-    if (alignment_value == 0 || (alignment_value & (alignment_value - 1)) != 0) throw std::invalid_argument("Invalid alignment!");
+    if (alignment_value == 0 || (alignment_value & (alignment_value - 1)) != 0)
+      /// @todo handle this more gracefully
+      diagnostic::engine.panic("Invalid argument to ArenaBlock::allocate()");
     // Lock-free allocation loop
     Pointer current_next = next_.load(std::memory_order_acquire);
     while (true)
@@ -421,7 +423,7 @@ class LockFreeFastAllocBlock
     actual_size = (actual_size + ObjectSize - 1) & ~(ObjectSize - 1);
     // Allocate aligned memory
     Pointer mem = reinterpret_cast<Pointer>(std::aligned_alloc(ObjectSize, actual_size));
-    if (!mem) throw std::bad_alloc();
+    if (!mem) diagnostic::engine.panic("bad alloc");
     // Store atomically
     size_.store(actual_size, std::memory_order_relaxed);
     begin_.store(mem, std::memory_order_relaxed);
@@ -540,7 +542,7 @@ class LockFreeFastAllocBlock
     if (!b)
     {
       // std::cerr << "Failed to load begin Pointer" << std::endl;
-      diagnostics::diag_engine.emit("Failed to load begin Pointer");
+      diagnostic::engine.emit("Failed to load begin Pointer");
       return nullptr;
     }
     Pointer current_next = next_.load(std::memory_order_acquire);
@@ -553,7 +555,7 @@ class LockFreeFastAllocBlock
       {
 
         // std::cerr << "Failed to allocate because there's not enough remaining bytes" << std::endl;
-        diagnostics::diag_engine.emit("Failed to load begin Pointer");
+        diagnostic::engine.emit("Failed to load begin Pointer");
         return nullptr;
       }
       Pointer new_next = current_next + alloc_size;
@@ -1037,6 +1039,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     std::unique_lock free_list_lock(free_list_mutex_);
     std::unique_lock alloc_map_lock(allocation_map_mutex_);
     std::unique_lock alloc_ptrs_lock(allocated_ptrs_mutex_);
+
     // Clear all containers (automatically frees memory via destructors)
     blocks_.clear();
     fast_pool8_.clear();
@@ -1052,7 +1055,9 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     free_list64_.clear();
     free_list128_.clear();
     free_list256_.clear();
+
     if (track_allocations_.load(std::memory_order_relaxed)) allocation_map_.clear();
+
     allocated_ptrs_.clear();
     // Reset statistics
     alloc_stats_.total_allocations.store(0, std::memory_order_relaxed);
@@ -1234,16 +1239,16 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     if (count > MAX_BLOCK_SIZE / sizeof(_Tp))
     {
       // std::cerr << "allocation size is too large!" << std::endl;
-      diagnostics::diag_engine.emit("Allocation size is too large!");
+      diagnostic::engine.emit("Allocation size is too large!");
       if (oom_handler_ && oom_handler_(count)) return allocate<_Tp>(count);
-      throw std::bad_alloc();
+      diagnostic::engine.panic("bad alloc");
     }
     std::size_t alloc_size = count * sizeof(_Tp);
     std::size_t align = std::max(std::alignment_of<_Tp>::value, min_alignment_);
     if (alloc_size > MAX_BLOCK_SIZE)
     {
       // std::cerr << "allocation size (after alignment) is too large!" << std::endl;
-      diagnostics::diag_engine.emit("Allocation size (after alignment) is too large");
+      diagnostic::engine.emit("Allocation size (after alignment) is too large");
       return nullptr;
     }
     Pointer mem = nullptr;
@@ -1269,7 +1274,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     if (!mem)
     {
       // std::cerr << "allocate_from_blocks() failed!" << std::endl;
-      diagnostics::diag_engine.emit("allocate_from_blocks() failed!");
+      diagnostic::engine.emit("allocate_from_blocks() failed!");
       return nullptr;
     }
     _Tp* region = reinterpret_cast<_Tp*>(mem);
@@ -1341,7 +1346,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
           // std::cerr << "ERROR: Double-free detected for Pointer " << ptr << std::endl;
           std::ostringstream oss;
           oss << std::hex << reinterpret_cast<uintptr_t>(ptr);
-          diagnostics::diag_engine.emit("Double-free detected for Pointer 0x" + oss.str());
+          diagnostic::engine.emit("Double-free detected for Pointer 0x" + oss.str());
         }
         return;
       }
@@ -1411,9 +1416,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
   }
 
  private:
-  //==========================================================================
   // Private Allocation Helpers
-  //==========================================================================
 
   /**
      * @brief Allocate from a fast pool
@@ -1437,7 +1440,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     if (!pool)
     {
       // std::cerr << "choose_pool() Failed!" << std::endl;
-      diagnostics::diag_engine.emit("choose_pool() failed!");
+      diagnostic::engine.emit("choose_pool() failed!");
       return nullptr;
     }
     // If pool is empty, allocate a new block
@@ -1448,7 +1451,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
       if (!allocate_fast_block<ObjectSize>(block_size))
       {
         // std::cerr << "allocate_fast_block() failed!" << std::endl;
-        diagnostics::diag_engine.emit("allocate_fast_block() failed!");
+        diagnostic::engine.emit("allocate_fast_block() failed!");
         return nullptr;
       }
       update_next_block_size();
@@ -1467,7 +1470,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
       if (!allocate_fast_block<ObjectSize>(block_size))
       {
         // std::cerr << "allocate_fast_block() failed!" << std::endl;
-        diagnostics::diag_engine.emit("allocate_fast_block() failed!");
+        diagnostic::engine.emit("allocate_fast_block() failed!");
         return nullptr;
       }
       update_next_block_size();
@@ -1569,7 +1572,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     {
       if (debug_features_.load(std::memory_order_relaxed))
         // std::cerr << "-- Failed to allocate block : ArenaAllocator::allocate_block()" << std::endl;
-        diagnostics::diag_engine.emit("Failed to allocate block : ArenaAllocator::allocate_block()");
+        diagnostic::engine.emit("Failed to allocate block : ArenaAllocator::allocate_block()");
       return nullptr;
     }
     update_next_block_size();
@@ -1579,7 +1582,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
 
   void update_next_block_size() MYLANG_NOEXCEPT
   {
-    // TODO : prevent overflow
+    /// @todo : prevent overflow
     if (growth_factor_.load(std::memory_order_relaxed) == GrowthStrategy::EXPONENTIAL)
     {
       std::size_t current = next_block_size_.load(std::memory_order_relaxed);

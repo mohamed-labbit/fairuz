@@ -4,7 +4,7 @@
 // diagnostic_engine.hpp
 //
 
-namespace diagnostics {
+namespace diagnostic {
 
 
 class DiagnosticEngine

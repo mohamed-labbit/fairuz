@@ -4,7 +4,7 @@
 // diagnostic_label.hpp
 //
 
-namespace diagnostics {
+namespace diagnostic {
 
 
 class DiagnosticLabel

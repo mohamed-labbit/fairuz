@@ -17,8 +17,8 @@ FileManager::FileManager(const std::string& filepath) :
     full_path_(filepath),
     stream_(full_path_, std::ios::binary)
 {
-  if (!fs::exists(fs::path(filepath))) throw error::file_error(to_string(FileManagerError::FILE_NOT_FOUND));
-  if (!stream_.is_open()) throw error::file_error(to_string(FileManagerError::FILE_NOT_OPEN));
+  if (!fs::exists(fs::path(filepath))) diagnostic::engine.panic(to_string(FileManagerError::FILE_NOT_FOUND));
+  if (!stream_.is_open()) diagnostic::engine.panic(to_string(FileManagerError::FILE_NOT_OPEN));
   last_known_write_time_ = fs::last_write_time(filepath);
 }
 
@@ -29,9 +29,7 @@ bool FileManager::is_open() const noexcept
 #endif
   bool ret = stream_.is_open() /*&& stream_.good()*/;
 #if DEBUG_PRINT
-  if (!ret)
-    // std::cerr << "-- DEBUG : FileManager::is_open() returns 'false'" << std::endl;
-    diagnostics::diag_engine.emit("-- DEBUG : FileManager::is_open() returns 'false'");
+  if (!ret) diagnostic::engine.emit("-- DEBUG : FileManager::is_open() returns 'false'");
 
 #endif
   return ret;
@@ -41,7 +39,7 @@ bool FileManager::is_changed_since_last_time() const noexcept
 {
 #if DEBUG_PRINT
   // std::cout << "-- DEBUG : FileManager::is_changed_since_last_time() called!" << std::endl;
-  diagnostics::diag_engine.emit("-- DEBUG : FileManager::is_open() return 'false'");
+  diagnostic::engine.emit("-- DEBUG : FileManager::is_open() return 'false'");
 #endif
   auto current_write_time = fs::last_write_time(full_path_);
   return current_write_time != last_known_write_time_;
@@ -73,7 +71,7 @@ void FileManager::seek_to_char(const std::size_t char_offset)
   std::cout << "-- DEBUG : FileManager::seek_to_char() called!" << std::endl;
 #endif
   if (char_offset == context_.char_offset) return;
-  // TODO  : revisit this stupid magic number
+  /// @todo  : revisit this stupid magic number
   if (char_offset < context_.char_offset || char_offset - context_.char_offset > 10000) reset();
   while (context_.char_offset < char_offset)
   {
@@ -95,7 +93,7 @@ string_type FileManager::read_window(const std::size_t size)
 #if DEBUG_PRINT
   std::cout << "-- DEBUG : FileManager::read_window() called!" << std::endl;
 #endif
-  // TODO : add cache validation
+  /// @todo : add cache validation
   return read_window_internal(size);
 }
 
@@ -142,8 +140,7 @@ string_type FileManager::read_window_internal(const std::size_t size)
   if (size == 0)
   {
 #if DEBUG_PRINT
-    // std::cerr << "-- DEBUG : argument 'size' is zero, an empty string is returned!" << std::endl;
-    diagnostics::diag_engine.emit("-- DEBUG : argument 'size' is zero, an empty string is returned!");
+    diagnostic::engine.emit("-- DEBUG : argument 'size' is zero, an empty string is returned!");
 #endif
     return string_type{};
   }
@@ -157,8 +154,7 @@ string_type FileManager::read_window_internal(const std::size_t size)
     if (stream_.eof())
     {
 #if DEBUG_PRINT
-      // std::cerr << "-- DEBUG : stream is empty!" << std::endl;
-      diagnostics::diag_engine.emit("-- DEBUG : stream is empty!");
+      diagnostic::engine.emit("-- DEBUG : stream is empty!");
 #endif
       return string_type{};
     }
@@ -288,7 +284,7 @@ typename FileManager::FileStats FileManager::compute_stats()
   FileStats stats;
   stats.total_bytes = fs::file_size(full_path_);
   stats.last_modified = fs::last_write_time(full_path_);
-  // TODO : detect file encoding
+  /// @todo : detect file encoding
   return stats;
 }
 
@@ -410,7 +406,7 @@ void FileManager::build_line_index()
       {
         max_len = std::max(max_len, current_len - 1);
         line_indices_.push_back(LineIndex{start_byte, start_char, current_len - 1});
-        // TODO: Handle CRLF
+        /// @todo: Handle CRLF
         if (c == u'\r' && char_pos + 1 < context_.char_offset)
         {
           // Peek next char (already in chunk if available)

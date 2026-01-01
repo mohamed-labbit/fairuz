@@ -4,6 +4,6 @@
 // diagnostic_codes.h
 //
 
-namespace diagnostics {
+namespace diagnostic {
 
 }
