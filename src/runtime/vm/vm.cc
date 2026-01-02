@@ -628,10 +628,10 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
       object::Value key = pop();
       dict[key.asString()] = val;
     }
-    std::shared_ptr<std::unordered_map<string_type, object::Value>> dictPtr = std::make_shared<std::unordered_map<string_type, object::Value>>(dict);
+    std::shared_ptr<std::unordered_map<string_type, object::Value>> dict* = std::make_shared<std::unordered_map<string_type, object::Value>>(dict);
     object::Value result;
     result.setType(object::Value::Type::DICT);
-    result.setData(dictPtr);
+    result.setData(dict*);
     push(result);
     break;
   }

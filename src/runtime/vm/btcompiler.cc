@@ -185,7 +185,7 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
   case parser::ast::Expr::Kind::CALL : {
     const parser::ast::CallExpr* call = static_cast<const parser::ast::CallExpr*>(expr);
     // Compile arguments first
-    for (const parser::ast::ExprPtr& arg : call->args)
+    for (const parser::ast::Expr*& arg : call->args)
       compileExpr(arg.get());
     // Compile callee
     compileExpr(call->callee.get());
@@ -199,7 +199,7 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
   case parser::ast::Expr::Kind::LIST : {
     const parser::ast::ListExpr* list = static_cast<const parser::ast::ListExpr*>(expr);
     // Compile all elements
-    for (const parser::ast::ExprPtr& elem : list->elements)
+    for (const parser::ast::Expr*& elem : list->elements)
       compileExpr(elem.get());
     // Build list from stack
     emit(bytecode::OpCode::BUILD_LIST, list->elements.size(), expr->line);
@@ -280,7 +280,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     std::int32_t jumpIfFalse = getCurrentPC();
     emit(bytecode::OpCode::POP_JUMP_IF_FALSE, 0, stmt->line);
     // Then block
-    for (const parser::ast::StmtPtr& s : ifStmt->then_stmts)
+    for (const parser::ast::Stmt*& s : ifStmt->then_stmts)
       compileStmt(s.get());
     if (!ifStmt->else_stmts.empty())
     {
@@ -288,7 +288,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
       emit(bytecode::OpCode::JUMP, 0, stmt->line);
       patchJump(jumpIfFalse);
       // Else block
-      for (const parser::ast::StmtPtr& s : ifStmt->else_stmts)
+      for (const parser::ast::Stmt*& s : ifStmt->else_stmts)
         compileStmt(s.get());
       patchJump(jumpEnd);
     }
@@ -314,7 +314,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     ctx.continueLabel = loopStart;
     ctx.breakLabel = -1;  // Will be patched
     loopStack_.push(ctx);
-    for (const parser::ast::StmtPtr& s : whileStmt->stmts)
+    for (const parser::ast::Stmt*& s : whileStmt->stmts)
       compileStmt(s.get());
     // Jump back to loop start
     emit(bytecode::OpCode::JUMP_BACKWARD, loopStart, stmt->line);
@@ -346,7 +346,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     ctx.continueLabel = loopStart;
     ctx.breakLabel = -1;
     loopStack_.push(ctx);
-    for (const parser::ast::StmtPtr& s : forStmt->body)
+    for (const parser::ast::Stmt*& s : forStmt->body)
       compileStmt(s.get());
     // Jump back
     emit(bytecode::OpCode::JUMP_BACKWARD, loopStart, stmt->line);
@@ -375,7 +375,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     currentStackDepth_ = 0;
     maxStackDepth_ = 0;
     // Compile function body
-    for (const parser::ast::StmtPtr& s : funcDef->body)
+    for (const parser::ast::Stmt*& s : funcDef->body)
       compileStmt(s.get());
     // Implicit return None if no return statement
     if (unit_.instructions.empty() || unit_.instructions.back().op != bytecode::OpCode::RETURN)
@@ -418,7 +418,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
 
   case parser::ast::Stmt::Kind::BLOCK : {
     const parser::ast::BlockStmt* block = static_cast<const parser::ast::BlockStmt*>(stmt);
-    for (const parser::ast::StmtPtr& s : block->statements)
+    for (const parser::ast::Stmt*& s : block->statements)
       compileStmt(s.get());
     break;
   }
@@ -427,7 +427,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
   }
 }
 
-typename BytecodeCompiler::CompilationUnit BytecodeCompiler::compile(const std::vector<parser::ast::StmtPtr>& ast)
+typename BytecodeCompiler::CompilationUnit BytecodeCompiler::compile(const std::vector<parser::ast::Stmt*>& ast)
 {
   // Reset state
   unit_ = CompilationUnit();
@@ -435,7 +435,7 @@ typename BytecodeCompiler::CompilationUnit BytecodeCompiler::compile(const std::
   currentStackDepth_ = 0;
   maxStackDepth_ = 0;
   // Compile all statements
-  for (const parser::ast::StmtPtr& stmt : ast)
+  for (const parser::ast::Stmt*& stmt : ast)
     compileStmt(stmt.get());
   // Add HALT at end
   emit(bytecode::OpCode::HALT, 0, 0);

@@ -142,7 +142,7 @@ class Parser
    *
    * @return Vector of parsed statement AST nodes
    */
-  std::vector<ast::StmtPtr> parse();
+  std::vector<ast::Stmt*> parse();
 
  private:
   lex::Lexer lex_;  // Underlying lexer providing tokens

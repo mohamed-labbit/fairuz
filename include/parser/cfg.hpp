@@ -17,7 +17,7 @@ class ControlFlowGraph
   struct BasicBlock
   {
     std::int32_t id;
-    std::vector<ast::StmtPtr*> statements;
+    std::vector<ast::Stmt**> statements;
     std::vector<std::int32_t> predecessors;
     std::vector<std::int32_t> successors;
     bool isReachable = false;

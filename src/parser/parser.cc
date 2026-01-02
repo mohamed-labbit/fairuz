@@ -44,12 +44,12 @@ ast::Expr* Parser::parseUnary()
   return parsePrimaryExpr();
 }
 /*
-ast::ExprPtr Parser::parsePrimary()
+ast::Expr* Parser::parsePrimary()
 {
 #if DEBUG_PRINT
   std::cout << "-- DEBUG : parse primary started!" << std::endl;
   #endif
-  ast::ExprPtr ret;
+  ast::Expr* ret;
   
   // number literal
   if (match(lex::tok::TokenType::NUMBER))
@@ -98,15 +98,15 @@ ast::ExprPtr Parser::parsePrimary()
 */
 /*
 /// @todo: remove
-ast::ExprPtr Parser::parseParenthesizedExpr()
+ast::Expr* Parser::parseParenthesizedExpr()
 {
   if (check(lex::tok::TokenType::RPAREN))
   {
     advance();
-    return std::make_unique<ast::ListExpr>(std::vector<ast::ExprPtr>());
+    return std::make_unique<ast::ListExpr>(std::vector<ast::Expr*>());
   }
 
-  ast::ExprPtr expr = parseExpression();
+  ast::Expr* expr = parseExpression();
   
   // check for tuple
   // ...
@@ -115,18 +115,18 @@ ast::ExprPtr Parser::parseParenthesizedExpr()
   return expr;
 }
 
-ast::ExprPtr Parser::parseExpression()
+ast::Expr* Parser::parseExpression()
 {
   /// @todo : starred
   // ...
   return parseAssignmentExpr();
 }
 
-ast::ExprPtr Parser::parseAssignmentExpr()
+ast::Expr* Parser::parseAssignmentExpr()
 {
   /// @todo
   // ...
-  return ast::ExprPtr();
+  return ast::Expr*();
 }
 */
 
@@ -143,7 +143,7 @@ ast::Expr* Parser::parseParenthesizedExpr()
 
   /// @todo: check for tuple (comma-separated expressions)
   // if (check(lex::tok::TokenType::COMMA)) {
-  //   std::vector<ast::ExprPtr> elements;
+  //   std::vector<ast::Expr*> elements;
   //   elements.push_back(std::move(expr));
   //   while (match(lex::tok::TokenType::COMMA)) {
   //     if (check(lex::tok::TokenType::RPAREN)) break; // trailing comma
@@ -203,9 +203,9 @@ ast::Expr* Parser::parseConditionalExpr()
   if (check(lex::tok::TokenType::KW_IF))
   {
     advance();
-    ast::ExprPtr condition = parseLogicalExpr();
+    ast::Expr* condition = parseLogicalExpr();
     // consume(lex::tok::TokenType::KW_ELSE, u"Expected 'else' in conditional expression");
-    ast::ExprPtr elseExpr = parseConditionalExpr();
+    ast::Expr* elseExpr = parseConditionalExpr();
     return std::make_unique<ast::Expr>(std::move(expr), std::move(condition));
   }
   */
@@ -224,7 +224,7 @@ ast::Expr* Parser::parseLogicalExprPrecedence(int min_precedence)
   {
     lex::tok::TokenType op = currentToken().type;
     advance();
-    ast::ExprPtr expr = parseLogicalExprPrecedence(getLogicalOperatorPrecedence(op));
+    ast::Expr* expr = parseLogicalExprPrecedence(getLogicalOperatorPrecedence(op));
     return std::make_unique<ast::UnaryExpr>(op, std::move(expr));
   }
   */
@@ -378,7 +378,7 @@ ast::Expr* Parser::parsePostfixExpr()
     {
       // Indexing
       advance();
-      ast::ExprPtr index = parseExpression();
+      ast::Expr* index = parseExpression();
       consume(lex::tok::TokenType::RBRACKET, u"Expected ']' after index");
       expr = std::make_unique<ast::IndexExpr>(std::move(expr), std::move(index));
     }
@@ -479,15 +479,15 @@ ast::Expr* Parser::parsePrimaryExpr()
   if (check(lex::tok::TokenType::LBRACE))
   {
     advance();
-    std::vector<std::pair<ast::ExprPtr, ast::ExprPtr>> pairs;
+    std::vector<std::pair<ast::Expr*, ast::Expr*>> pairs;
     
     if (!check(lex::tok::TokenType::RBRACE))
     {
       do
       {
-        ast::ExprPtr key = parseExpression();
+        ast::Expr* key = parseExpression();
         consume(lex::tok::TokenType::COLON, u"Expected ':' in dictionary literal");
-        ast::ExprPtr value = parseExpression();
+        ast::Expr* value = parseExpression();
         pairs.push_back({std::move(key), std::move(value)});
       } while (match(lex::tok::TokenType::COMMA));
     }

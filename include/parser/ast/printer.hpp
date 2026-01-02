@@ -46,7 +46,8 @@ class EnhancedASTPrinter
     case mylang::parser::ast::Expr::Kind::BINARY : {
       auto* e = static_cast<const mylang::parser::ast::BinaryExpr*>(expr);
       printIndent();
-      std::cout << colorize(u"BinaryOp", Color::BOLD, useColor) << " " << colorize(lex::tok::to_string(e->getOperator()), Color::YELLOW, useColor) << "\n";
+      std::cout << colorize(u"BinaryOp", Color::BOLD, useColor) << " " << colorize(lex::tok::to_string(e->getOperator()), Color::YELLOW, useColor)
+                << "\n";
       indent++;
       print(e->getLeft());
       print(e->getRight());
@@ -56,7 +57,8 @@ class EnhancedASTPrinter
     case mylang::parser::ast::Expr::Kind::UNARY : {
       auto* e = static_cast<const mylang::parser::ast::UnaryExpr*>(expr);
       printIndent();
-      std::cout << colorize(u"UnaryOp", Color::BOLD, useColor) << " " << colorize(lex::tok::to_string(e->getOperator()), Color::YELLOW, useColor) << "\n";
+      std::cout << colorize(u"UnaryOp", Color::BOLD, useColor) << " " << colorize(lex::tok::to_string(e->getOperator()), Color::YELLOW, useColor)
+                << "\n";
       indent++;
       print(e);
       indent--;

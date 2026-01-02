@@ -58,10 +58,10 @@ class VirtualMachine
    */
   struct Statistics
   {
-    std::int64_t instructionsExecuted {0};       // Total number of executed instructions
-    std::int64_t functionsCalled {0};            // Number of function calls
-    std::int64_t gcCollections {0};              // Garbage collection runs
-    std::int64_t jitCompilations {0};            // JIT compilation events
+    std::int64_t instructionsExecuted{0};        // Total number of executed instructions
+    std::int64_t functionsCalled{0};             // Number of function calls
+    std::int64_t gcCollections{0};               // Garbage collection runs
+    std::int64_t jitCompilations{0};             // JIT compilation events
     std::chrono::microseconds executionTime{0};  // Total execution time
   } stats_;
 

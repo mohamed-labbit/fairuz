@@ -171,7 +171,7 @@ class BytecodeCompiler
    * @param ast Vector of statement AST nodes
    * @return Fully populated CompilationUnit
    */
-  CompilationUnit compile(const std::vector<parser::ast::StmtPtr>& ast);
+  CompilationUnit compile(const std::vector<parser::ast::Stmt*>& ast);
 
   /// @brief Disassembles bytecode into a human-readable format
   void disassemble(const CompilationUnit& unit, std::ostream& out) const;
