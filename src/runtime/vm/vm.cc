@@ -94,8 +94,7 @@ void VirtualMachine::registerNativeFunctions()
     }
 
     std::vector<object::Value> result;
-    for (std::int64_t i = start; (step > 0) ? (i < stop) : (i > stop); i += step)
-      result.push_back(object::Value(i));
+    for (std::int64_t i = start; (step > 0) ? (i < stop) : (i > stop); i += step) result.push_back(object::Value(i));
     return object::Value(result);
   };
   // type
@@ -135,8 +134,7 @@ void VirtualMachine::registerNativeFunctions()
     if (args.empty()) diagnostic::engine.panic("sum() takes at least 1 argument");
     if (!args[0].isList()) diagnostic::engine.panic("sum() requires iterable");
     object::Value total = args.size() > 1 ? args[1] : object::Value(static_cast<std::int64_t>(0));
-    for (const object::Value& item : args[0].asList())
-      total = total + item;
+    for (const object::Value& item : args[0].asList()) total = total + item;
     return total;
   };
   // abs
@@ -221,8 +219,7 @@ void VirtualMachine::registerNativeFunctions()
     for (std::size_t i = 0; i < minLen; i++)
     {
       std::vector<object::Value> tuple;
-      for (const object::Value& arg : args)
-        tuple.push_back(arg.asList()[i]);
+      for (const object::Value& arg : args) tuple.push_back(arg.asList()[i]);
       result.push_back(object::Value(tuple));
     }
     return object::Value(result);
@@ -490,18 +487,19 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     {
       bool found = false;
       for (const object::Value& item : b.asList())
+      {
         if (item == a)
         {
           found = true;
           break;
         }
+      }
       push(object::Value(found));
     }
-    else if (b.isString()) { push(object::Value(b.asString().find(a.toString()) != std::string::npos)); }
+    else if (b.isString())
+      push(object::Value(b.asString().find(a.toString()) != std::string::npos));
     else
-    {
       diagnostic::engine.panic("'in' requires list or string");
-    }
     break;
   }
 
@@ -517,40 +515,20 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
   }
 
   // Logical operations
-  case bytecode::OpCode::AND : {
-    object::Value b = pop();
-    object::Value a = pop();
-    push(object::Value(a.toBool() && b.toBool()));
-    break;
-  }
-
-  case bytecode::OpCode::OR : {
-    object::Value b = pop();
-    object::Value a = pop();
-    push(object::Value(a.toBool() || b.toBool()));
-    break;
-  }
-
-  case bytecode::OpCode::NOT : {
-    object::Value a = pop();
-    push(!a);
-    break;
-  }
+  case bytecode::OpCode::AND : push(object::Value(pop().toBool() && pop().toBool())); break;
+  case bytecode::OpCode::OR : push(object::Value(pop().toBool() || pop().toBool())); break;
+  case bytecode::OpCode::NOT : push(!pop()); break;
 
   // Control flow
-  case bytecode::OpCode::JUMP :
-    ip_ = instr.arg - 1;  // -1 because ip++ at end of loop
-    break;
+  case bytecode::OpCode::JUMP : ip_ = instr.arg - 1; break;  // -1 because ip++ at end of loop
 
   case bytecode::OpCode::JUMP_IF_FALSE : {
-    object::Value cond = pop();
-    if (!cond.toBool()) ip_ = instr.arg - 1;
+    if (!pop().toBool()) ip_ = instr.arg - 1;
     break;
   }
 
   case bytecode::OpCode::JUMP_IF_TRUE : {
-    object::Value cond = pop();
-    if (cond.toBool()) ip_ = instr.arg - 1;
+    if (pop().toBool()) ip_ = instr.arg - 1;
     break;
   }
 
@@ -574,8 +552,7 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
   case bytecode::OpCode::CALL : {
     std::int32_t numArgs = instr.arg;
     std::vector<object::Value> args;
-    for (std::int32_t i = 0; i < numArgs; i++)
-      args.insert(args.begin(), pop());
+    for (std::int32_t i = 0; i < numArgs; i++) args.insert(args.begin(), pop());
     object::Value func = pop();
     // Check for native function
     if (func.isString())
@@ -614,8 +591,7 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     // Collections
   case bytecode::OpCode::BUILD_LIST : {
     std::vector<object::Value> elements;
-    for (std::int32_t i = 0; i < instr.arg; i++)
-      elements.insert(elements.begin(), pop());
+    for (std::int32_t i = 0; i < instr.arg; i++) elements.insert(elements.begin(), pop());
     push(object::Value(elements));
     break;
   }
@@ -628,10 +604,10 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
       object::Value key = pop();
       dict[key.asString()] = val;
     }
-    std::shared_ptr<std::unordered_map<string_type, object::Value>> dict* = std::make_shared<std::unordered_map<string_type, object::Value>>(dict);
+    std::shared_ptr<std::unordered_map<string_type, object::Value>> dict_ptr = std::make_shared<std::unordered_map<string_type, object::Value>>(dict);
     object::Value result;
     result.setType(object::Value::Type::DICT);
-    result.setData(dict*);
+    result.setData(dict_ptr);
     push(result);
     break;
   }
@@ -646,8 +622,7 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     if (!seq.isList()) diagnostic::engine.panic("Cannot unpack non-sequence");
     const std::vector<object::Value>& list = seq.asList();
     if (list.size() != instr.arg) diagnostic::engine.panic("Unpack size mismatch");
-    for (const object::Value& item : list)
-      push(item);
+    for (const object::Value& item : list) push(item);
     break;
   }
 
@@ -675,8 +650,7 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
   // Special operations
   case bytecode::OpCode::PRINT : {
     std::vector<object::Value> args;
-    for (std::int32_t i = 0; i < instr.arg; i++)
-      args.insert(args.begin(), pop());
+    for (std::int32_t i = 0; i < instr.arg; i++) args.insert(args.begin(), pop());
     for (std::size_t i = 0; i < args.size(); i++)
     {
       std::cout << args[i].repr();

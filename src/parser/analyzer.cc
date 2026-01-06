@@ -51,7 +51,7 @@ typename SymbolTable::DataType SemanticAnalyzer::inferType(const ast::Expr* expr
   return SymbolTable::DataType::UNKNOWN;
 }
 
-void SemanticAnalyzer::reportIssue(Issue::Severity sev, const string_type& msg, std::int32_t line, const string_type& sugg = u"")
+void SemanticAnalyzer::reportIssue(Issue::Severity sev, const string_type& msg, std::int32_t line, const string_type& sugg)
 {
   issues_.push_back({sev, msg, line, sugg});
 }
@@ -102,8 +102,7 @@ void SemanticAnalyzer::analyzeExpr(const ast::Expr* expr)
   case ast::Expr::Kind::CALL : {
     auto* call = dynamic_cast<const ast::CallExpr*>(expr);
     analyzeExpr(call->getCallee());
-    for (const auto& arg : call->getArgs())
-      analyzeExpr(arg);
+    for (const auto& arg : call->getArgs()) analyzeExpr(arg);
     // Check if calling undefined function
     if (call->getCallee()->getKind() == ast::Expr::Kind::NAME)
     {
@@ -117,8 +116,7 @@ void SemanticAnalyzer::analyzeExpr(const ast::Expr* expr)
 
   case ast::Expr::Kind::LIST : {
     auto* list = dynamic_cast<const ast::ListExpr*>(expr);
-    for (const auto& elem : list->getElements())
-      analyzeExpr(elem);
+    for (const auto& elem : list->getElements()) analyzeExpr(elem);
     break;
   }
   /*
@@ -166,10 +164,8 @@ void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
     // Check for constant conditions
     if (ifStmt->getCondition()->getKind() == ast::Expr::Kind::LITERAL)
       reportIssue(Issue::Severity::WARNING, u"Condition is always constant", stmt->line, u"Consider removing if statement");
-    for (const auto& s : ifStmt->getThenBlock()->getStatements())
-      analyzeStmt(s);
-    for (const auto& s : ifStmt->getElseBlock()->getStatements())
-      analyzeStmt(s);
+    for (const auto& s : ifStmt->getThenBlock()->getStatements()) analyzeStmt(s);
+    for (const auto& s : ifStmt->getElseBlock()->getStatements()) analyzeStmt(s);
     break;
   }
 
@@ -183,8 +179,7 @@ void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
       if (lit->getType() == ast::LiteralExpr::Type::BOOLEAN && lit->getValue() == u"true")
         reportIssue(Issue::Severity::WARNING, u"Infinite loop detected", stmt->line, u"Add a break condition");
     }
-    for (const auto& s : whileStmt->getBlock()->getStatements())
-      analyzeStmt(s);
+    for (const auto& s : whileStmt->getBlock()->getStatements()) analyzeStmt(s);
     break;
   }
 
@@ -197,8 +192,7 @@ void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
     loopVar.symbolType = SymbolTable::SymbolType::VARIABLE;
     loopVar.dataType = SymbolTable::DataType::ANY;
     currentScope_->define(forStmt->getTarget()->getValue(), loopVar);
-    for (const auto& s : forStmt->getBlock()->getStatements())
-      analyzeStmt(s);
+    for (const auto& s : forStmt->getBlock()->getStatements()) analyzeStmt(s);
     // Check if loop variable is shadowing
     if (currentScope_->parent && currentScope_->parent->lookupLocal(forStmt->getTarget()->getValue()))
       reportIssue(Issue::Severity::WARNING, u"Loop variable shadows outer variable", stmt->line);
@@ -223,8 +217,7 @@ void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
       paramSym.dataType = SymbolTable::DataType::ANY;
       currentScope_->define(param->getValue(), paramSym);
     }
-    for (const auto& s : funcDef->getBody()->getStatements())
-      analyzeStmt(s);
+    for (const auto& s : funcDef->getBody()->getStatements()) analyzeStmt(s);
     // Check for missing return statement
     bool hasReturn = false;
     for (const auto& s : funcDef->getBody()->getStatements())
@@ -265,8 +258,7 @@ SemanticAnalyzer::SemanticAnalyzer()
 
 void SemanticAnalyzer::analyze(const std::vector<ast::Stmt*>& statements_)
 {
-  for (const auto& stmt : statements_)
-    analyzeStmt(stmt);
+  for (const auto& stmt : statements_) analyzeStmt(stmt);
   // Check for unused variables
   auto unused = globalScope_->getUnusedSymbols();
   for (auto* sym : unused)

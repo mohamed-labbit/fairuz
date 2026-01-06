@@ -150,8 +150,7 @@ void InputBuffer::consume(std::size_t len)
 #if DEBUG_PRINT
   std::cout << "-- DEBUG : InputBuffer::consume() called!" << std::endl;
 #endif
-  while (len-- > 0)
-    consume_char();
+  while (len-- > 0) consume_char();
 }
 
 void InputBuffer::unget(char16_t ch)
@@ -180,8 +179,7 @@ void InputBuffer::reset()
   bufs[0][1] = BUFFER_END;
   cur = bufs[0].data();
   cur_pos = {1, 1, 0};
-  while (!cols.empty())
-    cols.pop();
+  while (!cols.empty()) cols.pop();
   cols.push(1);
 }
 

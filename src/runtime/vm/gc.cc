@@ -52,8 +52,7 @@ void GarbageCollector::collect()
     marked.insert(obj);
     // Mark children (if list, dict, etc.)
     if (obj->isList())
-      for (auto& item : obj->asList())
-        worklist.push_back(const_cast<object::Value*>(&item));
+      for (auto& item : obj->asList()) worklist.push_back(const_cast<object::Value*>(&item));
   }
 
   // Sweep phase

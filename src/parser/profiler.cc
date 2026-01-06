@@ -1,5 +1,5 @@
-#include "../../utfcpp/source/utf8.h"
 #include "../../include/parser/profiler.hpp"
+#include "../../utfcpp/source/utf8.h"
 
 #include <iomanip>
 #include <iostream>
@@ -16,8 +16,7 @@ void ParserProfiler::printReport() const
   std::cout << "║      Parser Performance Report        ║\n";
   std::cout << "╚═══════════════════════════════════════╝\n\n";
   double total = 0;
-  for (const auto& t : timings)
-    total += t.milliseconds;
+  for (const auto& t : timings) total += t.milliseconds;
   for (const auto& t : timings)
   {
     double percent = (t.milliseconds / total) * 100;

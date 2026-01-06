@@ -139,8 +139,7 @@ IndentationAnalysis Lexer::_analyze_indentation(SourceManager& sm)
       return result;
     }
     // Apply the dedents
-    for (std::size_t i = 0; i < dedent_count; ++i)
-      indent_ctx_.pop();
+    for (std::size_t i = 0; i < dedent_count; ++i) indent_ctx_.pop();
     result.action = IndentationAnalysis::Action::DEDENT;
     result.count = dedent_count;
     indent_ctx_.expecting_indent = false;
@@ -429,8 +428,7 @@ std::vector<tok::Token> Lexer::tokenize()
 #if DEBUG_PRINT
   std::cout << "-- DEBUG : Lexer::tokenize() called!" << std::endl;
 #endif
-  while (next().type() != tok::TokenType::ENDMARKER)
-    ;
+  while (next().type() != tok::TokenType::ENDMARKER);
   return this->tok_stream_;
 }
 
@@ -591,10 +589,15 @@ tok::Token Lexer::prev()
 
 tok::Token Lexer::current() const
 {
+  if (tok_stream_.back().is(tok::TokenType::ENDMARKER)) return tok_stream_.back();
 #if DEBUG_PRINT
   std::cout << "-- DEBUG : current() called!" << std::endl;
+  std::cout << ". DEBUG: tok_index = " << tok_index_ << ", tok_stream.size() = " << tok_stream_.size() << std::endl;
 #endif
   if (tok_index_ < tok_stream_.size()) return tok_stream_[tok_index_];
+#if DEBUG_PRINT
+  std::cout << ". DEBUG: ENDMARKER returned from current()" << std::endl;
+#endif
   return make_token(tok::TokenType::ENDMARKER);
 }
 

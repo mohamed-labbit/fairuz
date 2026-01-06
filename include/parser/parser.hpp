@@ -76,8 +76,7 @@ class ParseError: public std::runtime_error
     if (!suggestions.empty())
     {
       ss << "Suggestions:\n";
-      for (const string_type& s : suggestions)
-        ss << "  - " << utf8::utf16to8(s) << "\n";
+      for (const string_type& s : suggestions) ss << "  - " << utf8::utf16to8(s) << "\n";
     }
 
     return utf8::utf8to16(ss.str());
@@ -142,7 +141,7 @@ class Parser
    *
    * @return Vector of parsed statement AST nodes
    */
-  std::vector<ast::Stmt*> parse();
+  // std::vector<ast::Stmt*> parse();
 
  private:
   lex::Lexer lex_;  // Underlying lexer providing tokens
@@ -176,6 +175,8 @@ class Parser
   int getArithmeticOperatorPrecedence(const lex::tok::TokenType type);
   /// @brief Enters a new scope (currently a no-op)
   void enterScope() {}
+  /// @brief check wether or not we reached the end of the file so not to bother lookin for stuff to parse
+  bool weDone() const;
 };
 
 }  // namespace parser

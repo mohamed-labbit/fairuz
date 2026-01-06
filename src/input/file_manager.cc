@@ -29,7 +29,7 @@ bool FileManager::is_open() const noexcept
 #endif
   bool ret = stream_.is_open() /*&& stream_.good()*/;
 #if DEBUG_PRINT
-  if (!ret) diagnostic::engine.emit("-- DEBUG : FileManager::is_open() returns 'false'");
+  if (!ret) diagnostic::engine.emit(". DEBUG : FileManager::is_open() returns 'false'");
 
 #endif
   return ret;
@@ -38,8 +38,8 @@ bool FileManager::is_open() const noexcept
 bool FileManager::is_changed_since_last_time() const noexcept
 {
 #if DEBUG_PRINT
-  // std::cout << "-- DEBUG : FileManager::is_changed_since_last_time() called!" << std::endl;
-  diagnostic::engine.emit("-- DEBUG : FileManager::is_open() return 'false'");
+  std::cout << "-- DEBUG : FileManager::is_changed_since_last_time() called!" << std::endl;
+  diagnostic::engine.emit(". DEBUG : FileManager::is_open() return 'false'");
 #endif
   auto current_write_time = fs::last_write_time(full_path_);
   return current_write_time != last_known_write_time_;
@@ -254,8 +254,7 @@ std::vector<string_type> FileManager::read_lines(const std::size_t start, const 
   const std::size_t end = std::min(start + count, line_indices_.size());
   std::vector<string_type> lines;
   lines.reserve(end - start);
-  for (std::size_t i = start; i < end; ++i)
-    lines.push_back(std::move(read_line(i)));
+  for (std::size_t i = start; i < end; ++i) lines.push_back(std::move(read_line(i)));
   return lines;
 }
 

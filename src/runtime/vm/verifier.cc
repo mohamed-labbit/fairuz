@@ -43,8 +43,7 @@ void BytecodeVerifier::printErrors(std::ostream& out) const
     return;
   }
   out << "✗ Bytecode verification failed with " << errors_.size() << " error(s):\n";
-  for (const VerificationError& err : errors_)
-    out << "  PC " << err.pc << ": " << err.message << "\n";
+  for (const VerificationError& err : errors_) out << "  PC " << err.pc << ": " << err.message << "\n";
 }
 
 void BytecodeVerifier::verifyStackDepth(const BytecodeCompiler::CompilationUnit& unit,

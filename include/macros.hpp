@@ -15,7 +15,7 @@
 #define MYLANG_NODISCARD [[nodiscard]]
 #define MYLANG_NOEXCEPT noexcept
 
-#define DEBUG_PRINT 1
+#define DEBUG_PRINT 0
 
 namespace mylang {
 typedef std::u16string string_type;

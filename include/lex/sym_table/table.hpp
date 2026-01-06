@@ -86,8 +86,7 @@ class SymbolTable
     {
       const auto& current = this->scopes_.back();
       symbols.reserve(current.size());
-      for (const auto& pair : current)
-        symbols.push_back(pair.second);
+      for (const auto& pair : current) symbols.push_back(pair.second);
     }
     return symbols;
   }
@@ -118,8 +117,7 @@ class SymbolTable
     {
       const auto& scope = this->scopes_[level];
       symbols.reserve(scope.size());
-      for (const auto& pair : scope)
-        symbols.push_back(pair.second);
+      for (const auto& pair : scope) symbols.push_back(pair.second);
     }
     return symbols;
   }

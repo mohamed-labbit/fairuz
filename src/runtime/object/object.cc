@@ -214,15 +214,13 @@ object::Value object::Value::operator*(const Value& other) const
   if (isString() && other.isInt())
   {
     string_type result;
-    for (std::int64_t i = 0; i < other.asInt(); i++)
-      result += asString();
+    for (std::int64_t i = 0; i < other.asInt(); i++) result += asString();
     return Value(result);
   }
   if (isList() && other.isInt())
   {
     std::vector<Value> result;
-    for (std::int64_t i = 0; i < other.asInt(); i++)
-      result.insert(result.end(), asList().begin(), asList().end());
+    for (std::int64_t i = 0; i < other.asInt(); i++) result.insert(result.end(), asList().begin(), asList().end());
     return Value(result);
   }
   diagnostic::engine.panic("Unsupported operand types for *");

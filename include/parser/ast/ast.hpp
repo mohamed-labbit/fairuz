@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "../../diag/diagnostic.hpp"
 #include "../../lex/token.hpp"
 #include "../../runtime/allocator/arena.hpp"
 #include "macros.hpp"
@@ -12,6 +13,7 @@
 #include <random>
 #include <string>
 #include <vector>
+
 
 // structs
 namespace mylang {
@@ -37,7 +39,7 @@ class ASTAllocator
   }
 };
 
-extern ASTAllocator AST_allocator;
+inline ASTAllocator AST_allocator;
 
 class Expr;
 class Stmt;
@@ -62,18 +64,19 @@ class Expr: public ASTNode
 
  protected:
   Kind kind_;
-  // string_type str_;
+  string_type str_;
 
  public:
   explicit Expr() = default;
 
-  explicit Expr(string_type s)
-  // : str_(s)
+  explicit Expr(string_type s) :
+      str_(s)
   {
     kind_ = Kind::INVALID;
   }
 
-  // string_type getStr() const { return str_; }
+  void setStr(const string_type s) { str_ = s; }
+  string_type getStr() const { return str_; }
   Kind getKind() const { return kind_; }
 };
 
@@ -175,7 +178,7 @@ class LiteralExpr: public Expr
       literal_(std::move(lit))
   {
     kind_ = Kind::LITERAL;
-    assert((literal_ != u"") && "'literal' argument to LiteralExpr is null");
+    // assert((literal_ != u"") && "'literal' argument to LiteralExpr is null");
   }
 
   LiteralExpr(LiteralExpr&&) noexcept = delete;
@@ -188,50 +191,104 @@ class LiteralExpr: public Expr
 
 class NameExpr: public Expr
 {
- private:
-  string_type value_;
-
  public:
   explicit NameExpr() = default;
 
-  explicit NameExpr(string_type n) :
-      value_(std::move(n))
+  explicit NameExpr(const Expr* e) :
+      Expr(e->getStr())
   {
-    kind_ = Kind::NAME;
-    assert((value_ != u"") && "'name_' argument to NameExpr is null");
+    assert((str_ != u"") && "'str_' argument to NameExpr is null");
+  }
+
+  explicit NameExpr(const string_type s) :
+      Expr(s)
+  {
+    assert(!str_.empty() && "'str_' argument to NameExpr is null");
   }
 
   NameExpr(NameExpr&&) noexcept = delete;
   NameExpr(const NameExpr&) noexcept = delete;
   NameExpr& operator=(const NameExpr&) noexcept = delete;
 
-  string_type getValue() const { return value_; }
+  string_type getValue() const { return str_; }
+};
+
+class ListExpr: public Expr
+{
+ private:
+  std::vector<Expr*> elements_;
+
+ public:
+  explicit ListExpr() = default;
+
+  explicit ListExpr(std::vector<Expr*> elements) :
+      elements_(std::move(elements))
+  {
+    kind_ = Kind::LIST;
+    // assert(!elements_.empty() && "'elements' of ListExpr is null");
+    if (elements_.empty())
+      diagnostic::engine.emit("args of ListExpr is initially empty!", /*sv=*/diagnostic::DiagnosticEngine::Severity::NOTE);
+    else
+    {
+      std::stringstream os;
+      os << std::hex;
+      for (auto a : elements_) os << a << " ";
+      diagnostic::engine.emit("args of ListExpr are " + os.str(), /*sv=*/diagnostic::DiagnosticEngine::Severity::NOTE);
+    }
+  }
+
+  ListExpr(ListExpr&&) noexcept = delete;
+  ListExpr(const ListExpr&) noexcept = delete;
+  ListExpr& operator=(const ListExpr&) noexcept = delete;
+
+  const std::vector<Expr*>& getElements() const { return elements_; }
+  std::vector<Expr*>& getElementsMutable() { return elements_; }
+  bool isEmpty() const { return elements_.empty(); }
 };
 
 class CallExpr: public Expr
 {
+ public:
+  enum class CallLocation : int { GLOBAL, LOCAL };
+
  private:
-  Expr* callee_{nullptr};
-  std::vector<Expr*> args_;
+  NameExpr* callee_{nullptr};
+  ListExpr* args_;
+  CallLocation cl_;
 
  public:
   explicit CallExpr() = delete;
 
-  explicit CallExpr(Expr* c, std::optional<std::vector<Expr*>> a = std::nullopt) :
-      callee_(c),
-      args_(std::move(a.value_or(std::vector<Expr*>())))
+  explicit CallExpr(NameExpr* c, ListExpr* a = nullptr) :
+      callee_(c)
   {
+    args_ = AST_allocator.make<ListExpr>();
     kind_ = Kind::CALL;
-    assert((callee_ != nullptr) && "'callee' argument to CallExpr is null");
+#if DEBUG_PRINT
+    if (!args_ || args_->isEmpty())
+      diagnostic::engine.emit("args of CallExpr is initially empty!");
+
+    else
+    {
+      std::stringstream os;
+      os << std::hex;
+
+      for (auto a : args_->getElements()) { os << a << " "; }
+
+      diagnostic::engine.emit("args of CallExpr are " + os.str());
+    }
+#endif
   }
 
   CallExpr(CallExpr&&) noexcept = delete;
   CallExpr(const CallExpr&) noexcept = delete;
   CallExpr& operator=(const CallExpr&) noexcept = delete;
 
-  Expr* getCallee() const { return callee_; }
-  const std::vector<Expr*>& getArgs() const { return args_; }
-  std::vector<Expr*>& getArgsMutable() { return args_; }
+  NameExpr* getCallee() const { return callee_; }
+  const std::vector<Expr*>& getArgs() const { return args_->getElements(); }
+  std::vector<Expr*>& getArgsMutable() { return args_->getElementsMutable(); }
+
+  CallLocation getCallLocation() const { return cl_; }
 };
 
 class AssignmentExpr: public Expr
@@ -261,7 +318,6 @@ class AssignmentExpr: public Expr
   Expr* getValue() const { return value_; }
 };  // ?
 
-
 class BlockStmt: public Stmt
 {
  private:
@@ -284,28 +340,7 @@ class BlockStmt: public Stmt
 
   const std::vector<Stmt*>& getStatements() const { return statements_; }
   void setStatements(std::vector<Stmt*>& stmts) { statements_ = stmts; }
-};
-
-class ListExpr: public Expr
-{
- private:
-  std::vector<Expr*> elements_;
-
- public:
-  explicit ListExpr() = delete;
-
-  explicit ListExpr(std::vector<Expr*> elements) :
-      elements_(std::move(elements))
-  {
-    kind_ = Kind::LIST;
-  }
-
-  ListExpr(ListExpr&&) noexcept = delete;
-  ListExpr(const ListExpr&) noexcept = delete;
-  ListExpr& operator=(const ListExpr&) noexcept = delete;
-
-  const std::vector<Expr*>& getElements() const { return elements_; }
-  std::vector<Expr*>& getElementsMutable() { return elements_; }
+  bool isEmpty() const { return statements_.empty(); }
 };
 
 class ExprStmt: public Stmt

@@ -18,8 +18,7 @@ void LoopAnalyzer::detectLoops(const std::vector<bytecode::Instruction>& instruc
       loop.isInnerLoop = true;
       loop.nestingLevel = 1;
       // Collect loop body
-      for (std::int32_t pc = instr.arg; pc <= i; pc++)
-        loop.bodyPCs.push_back(pc);
+      for (std::int32_t pc = instr.arg; pc <= i; pc++) loop.bodyPCs.push_back(pc);
       loops_.push_back(loop);
     }
   }

@@ -1,4 +1,5 @@
 #include "../../include/parser/type_system.hpp"
+#include "../../include/diag/diagnostic.hpp"
 
 
 namespace mylang {

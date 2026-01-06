@@ -32,8 +32,8 @@ class DiagnosticEngine
 
   DiagnosticEngine() = default;
 
-  void emit(const string_type& msg, std::optional<Severity> sv = std::nullopt) { emit_error(utf8::utf16to8(msg), sv.value_or(Severity::ERROR)); }
-  void emit(const std::string& msg, std::optional<Severity> sv = std::nullopt) { emit_error(msg, sv.value_or(Severity::ERROR)); }
+  void emit(const string_type& msg, Severity sv = Severity::ERROR) { emit_error(utf8::utf16to8(msg), sv); }
+  void emit(const std::string& msg, Severity sv = Severity::ERROR) { emit_error(msg, sv); }
 
   [[noreturn]] void panic(const string_type& msg) { _panic(utf8::utf16to8(msg)); }
   [[noreturn]] void panic(const std::string& msg) { _panic(msg); }
@@ -129,8 +129,7 @@ class DiagnosticEngine
       if (!diag.suggestions.empty())
       {
         std::cout << "\n  \033[1mHelp:\033[0m\n";
-        for (const auto& sugg : diag.suggestions)
-          std::cout << "    • " << utf8::utf16to8(sugg) << "\n";
+        for (const auto& sugg : diag.suggestions) std::cout << "    • " << utf8::utf16to8(sugg) << "\n";
       }
       // Show notes
       for (const auto& [noteLine, noteMsg] : diag.notes)
@@ -158,10 +157,11 @@ class DiagnosticEngine
   {
     switch (sv)
     {
-    case Severity::FATAL : return "fatal";
-    case Severity::ERROR : return "error";
-    case Severity::WARNING : return "warning";
-    default : return "unknown";
+    case Severity::NOTE : return utf8::utf16to8(Color::BOLD) + utf8::utf16to8(Color::CYAN) + "note" + utf8::utf16to8(Color::RESET);
+    case Severity::FATAL : return utf8::utf16to8(Color::BOLD) + utf8::utf16to8(Color::RED) + "fatal" + utf8::utf16to8(Color::RESET);
+    case Severity::ERROR : return utf8::utf16to8(Color::BOLD) + utf8::utf16to8(Color::RED) + "error" + utf8::utf16to8(Color::RESET);
+    case Severity::WARNING : return utf8::utf16to8(Color::BOLD) + utf8::utf16to8(Color::YELLOW) + "warning" + utf8::utf16to8(Color::RESET);
+    default : return utf8::utf16to8(Color::BOLD) + "unknown" + utf8::utf16to8(Color::RESET);
     }
   }
 
@@ -170,13 +170,12 @@ class DiagnosticEngine
     std::vector<std::string> lines;
     std::stringstream ss(text);
     std::string line;
-    while (std::getline(ss, line))
-      lines.push_back(line);
+    while (std::getline(ss, line)) lines.push_back(line);
     return lines;
   }
 };
 
-extern DiagnosticEngine engine;
+inline DiagnosticEngine engine;
 
 }
 }

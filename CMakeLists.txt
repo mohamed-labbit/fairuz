@@ -8,9 +8,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # For LLVM/Clang on macOS, ensure we use the right standard library
 if(APPLE)
     # Use libc++ and ensure proper linkage
-    add_compile_options(-stdlib=libc++)
+    add_compile_options(-stdlib=libc++ -O0)
     add_link_options(-stdlib=libc++)
-    
+
     # Point to Homebrew LLVM's libc++
     link_directories(/opt/homebrew/opt/llvm/lib/c++)
     include_directories(/opt/homebrew/opt/llvm/include/c++/v1)
@@ -35,6 +35,7 @@ target_include_directories(mylang_objects PUBLIC
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/utfcpp/source
 )
+
 if(OpenMP_FOUND)
     target_compile_options(mylang_objects PRIVATE ${OpenMP_CXX_FLAGS})
 endif()
@@ -42,6 +43,7 @@ endif()
 # Find GTest (use system package if available, otherwise fall back to a minimal
 # bundled implementation so tests can still run in restricted environments)
 find_package(GTest CONFIG QUIET)
+
 if(NOT GTest_FOUND)
     add_library(minimal_gtest STATIC tests/support/minimal_gtest_main.cpp)
     target_include_directories(minimal_gtest PUBLIC ${CMAKE_SOURCE_DIR}/tests/support)
@@ -55,6 +57,11 @@ add_executable(mylang_tests
     tests/parser/test_parser.cpp
     tests/test_include_all.cpp
     $<TARGET_OBJECTS:mylang_objects>
+)
+
+target_compile_options(mylang_tests PRIVATE
+    $<$<CXX_COMPILER_ID:GNU,Clang>:-O0>
+    $<$<CXX_COMPILER_ID:MSVC>:/Od>
 )
 
 target_link_libraries(mylang_tests

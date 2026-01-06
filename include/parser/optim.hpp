@@ -137,7 +137,8 @@ class ASTOptimizer
         {
           stats_.strengthReductions++;
           // Clone left expression
-          auto leftClone = std::make_unique<ast::NameExpr>(static_cast<ast::NameExpr*>(left)->getValue());
+          // auto leftClone = std::make_unique<ast::NameExpr>(static_cast<ast::NameExpr*>(left)->getValue());
+          auto* leftClone = ast::AST_allocator.make<ast::NameExpr>(static_cast<ast::NameExpr*>(left)->getValue());
           return ast::AST_allocator.make<ast::BinaryExpr>(bin->getLeft(), leftClone, lex::tok::TokenType::OP_PLUS);
         }
       }
@@ -172,21 +173,19 @@ class ASTOptimizer
         if (innerUn->getOperator() == lex::tok::TokenType::OP_MINUS)
         {
           stats_.strengthReductions++;
-          return ast::AST_allocator.make<ast::Expr>(dynamic_cast<ast::Expr*>(innerUn));
+          return dynamic_cast<ast::Expr*>(innerUn);
         }
       }
     }
     else if (expr->getKind() == ast::Expr::Kind::CALL)
     {
       auto* call = static_cast<ast::CallExpr*>(expr);
-      for (auto& arg : call->getArgsMutable())
-        arg = optimizeConstantFolding(std::move(arg));
+      for (auto& arg : call->getArgsMutable()) arg = optimizeConstantFolding(std::move(arg));
     }
     else if (expr->getKind() == ast::Expr::Kind::LIST)
     {
       auto* list = static_cast<ast::ListExpr*>(expr);
-      for (auto& elem : list->getElementsMutable())
-        elem = optimizeConstantFolding(std::move(elem));
+      for (auto& elem : list->getElementsMutable()) elem = optimizeConstantFolding(std::move(elem));
     }
     /*
     else if (expr->kind == ast::Expr::Kind::TERNARY)
@@ -225,10 +224,10 @@ class ASTOptimizer
           stats_.deadCodeEliminations++;
           if (lit->getValue() == u"true")
             // Return then block as block statement
-            return ast::AST_allocator.make<ast::BlockStmt>(ifStmt->getThenBlock());
+            return dynamic_cast<ast::Stmt*>(ifStmt->getThenBlock());
           else
             // Return else block or nothing
-            if (!ifStmt->getElseBlock()->getStatements().empty()) return ast::AST_allocator.make<ast::BlockStmt>(ifStmt->getElseBlock());
+            if (!ifStmt->getElseBlock()->getStatements().empty()) return dynamic_cast<ast::Stmt*>(ifStmt->getElseBlock());
           /// @todo: return std::make_unique<Stmt*>();
         }
       }
