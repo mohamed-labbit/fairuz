@@ -14,9 +14,5 @@ Thanks to Mohamed Labbit and Mohamed Salem Eddah for pushing on testing and tigh
 
 ## Build and test
 ```bash
-mkdir -p build
-cd build
-cmake ..
-cmake --build .
-ctest
+bash test.sh -d
 ```
