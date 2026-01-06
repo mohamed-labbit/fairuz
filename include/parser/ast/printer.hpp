@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include "../../macros.hpp"
 #include "ast.hpp"
 #include <iostream>
 
@@ -10,7 +11,7 @@ namespace mylang {
 namespace parser {
 namespace ast {
 
-class EnhancedASTPrinter
+class ASTPrinter
 {
  private:
   std::uint8_t indent{0};
@@ -29,7 +30,7 @@ class EnhancedASTPrinter
   }
 
  public:
-  explicit EnhancedASTPrinter(bool color = true) :
+  explicit ASTPrinter(bool color = true) :
       useColor(color)
   {
   }

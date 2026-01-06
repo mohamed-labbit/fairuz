@@ -479,7 +479,7 @@ TEST(ArenaAllocatorTest, AllocateExceedsMaxBlockSize)
   constexpr std::size_t too_large = MAX_BLOCK_SIZE + 1024;
   // Should return nullptr as it exceeds limit
   char* ptr = nullptr;  // to silence no-discard warning
-  EXPECT_THROW((ptr = arena.allocate<char>(too_large)), std::bad_alloc);
+  EXPECT_THROW((ptr = arena.allocate<char>(too_large)), std::runtime_error);
 }
 
 TEST(ArenaAllocatorTest, MultipleBlocksRequired)
@@ -584,7 +584,7 @@ TEST(ArenaAllocatorTest, OOMHandlerCalledOnFailure)
   constexpr std::size_t too_large = MAX_BLOCK_SIZE + 1024;
   char* ptr = nullptr;
 
-  EXPECT_THROW((ptr = arena.allocate<char>(too_large)), std::bad_alloc);
+  EXPECT_THROW((ptr = arena.allocate<char>(too_large)), std::runtime_error);
   EXPECT_TRUE(handler_called);
   EXPECT_GT(requested_size, 0);
 }
@@ -604,7 +604,7 @@ TEST(ArenaAllocatorTest, OOMHandlerRetry)
   constexpr std::size_t too_large = MAX_BLOCK_SIZE + 1024;
   char* ptr = nullptr;
 
-  EXPECT_THROW((ptr = arena.allocate<char>(too_large)), std::bad_alloc);
+  EXPECT_THROW((ptr = arena.allocate<char>(too_large)), std::runtime_error);
   EXPECT_EQ(call_count, 2);  // Called twice (initial + 1 retry)
 }
 
@@ -807,8 +807,8 @@ TEST(ArenaBlockTest, BlockExhaustion)
 TEST(ArenaBlockTest, InvalidAlignment)
 {
   ArenaBlock block(1024);
-  EXPECT_THROW(block.allocate(64, /*alignment=*/-1), std::invalid_argument);
-  EXPECT_THROW(block.allocate(64, /*alignment=*/-1), std::invalid_argument);
+  EXPECT_THROW(block.allocate(64, /*alignment=*/-1), std::runtime_error);
+  EXPECT_THROW(block.allocate(64, /*alignment=*/-1), std::runtime_error);
 }
 
 TEST(ArenaBlockTest, MoveConstruction)

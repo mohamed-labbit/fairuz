@@ -10,6 +10,7 @@
 #include "../include/input/file_manager.hpp"
 #include "../include/lex/lexer.hpp"
 #include "../include/parser/ast/ast.hpp"
+#include "../include/parser/ast/printer.hpp"
 #include "../include/parser/parser.hpp"
 
 using string_type = mylang::string_type;
@@ -155,6 +156,8 @@ TEST_F(ParseErrorTest, LargeLineAndColumnNumbers)
 }
 #endif
 
+mylang::parser::ast::ASTPrinter AST_Printer;
+
 // Literal Expression Tests
 TEST_F(ParserTest, ParseNumberLiteral)
 {
@@ -162,6 +165,7 @@ TEST_F(ParserTest, ParseNumberLiteral)
   mylang::parser::Parser parser(&file_manager);
   mylang::parser::ast::Expr* expr = parser.parsePrimaryExpr();
   mylang::parser::ast::LiteralExpr* literal = parseAndCast<mylang::parser::ast::LiteralExpr>(parser, expr);
+  AST_Printer.print(literal);
   ASSERT_NE(literal, nullptr);
   EXPECT_EQ(literal->getType(), mylang::parser::ast::LiteralExpr::Type::NUMBER);
 }
@@ -172,11 +176,11 @@ TEST_F(ParserTest, ParseStringLiteral)
   mylang::parser::Parser parser(&file_manager);
   mylang::parser::ast::Expr* expr = parser.parsePrimaryExpr();
   mylang::parser::ast::LiteralExpr* literal = parseAndCast<mylang::parser::ast::LiteralExpr>(parser, expr);
+  AST_Printer.print(literal);
   ASSERT_NE(literal, nullptr);
   std::cout << static_cast<int>(literal->getType()) << std::endl;
   EXPECT_EQ(static_cast<int>(literal->getType()), static_cast<int>(mylang::parser::ast::LiteralExpr::Type::STRING));
 }
-
 
 TEST_F(ParserTest, ParseBooleanLiteralTrue)
 {
@@ -184,6 +188,7 @@ TEST_F(ParserTest, ParseBooleanLiteralTrue)
   mylang::parser::Parser parser(&file_manager);
   mylang::parser::ast::Expr* expr = parser.parsePrimaryExpr();
   mylang::parser::ast::LiteralExpr* literal = parseAndCast<mylang::parser::ast::LiteralExpr>(parser, expr);
+  AST_Printer.print(literal);
   ASSERT_NE(literal, nullptr);
   EXPECT_EQ(literal->getType(), mylang::parser::ast::LiteralExpr::Type::BOOLEAN);
 }
@@ -194,6 +199,7 @@ TEST_F(ParserTest, ParseBooleanLiteralFalse)
   mylang::parser::Parser parser(&file_manager);
   mylang::parser::ast::Expr* expr = parser.parsePrimaryExpr();
   mylang::parser::ast::LiteralExpr* literal = parseAndCast<mylang::parser::ast::LiteralExpr>(parser, expr);
+  AST_Printer.print(literal);
   ASSERT_NE(literal, nullptr);
   EXPECT_EQ(literal->getType(), mylang::parser::ast::LiteralExpr::Type::BOOLEAN);
 }
@@ -204,6 +210,7 @@ TEST_F(ParserTest, ParseNoneLiteral)
   mylang::parser::Parser parser(&file_manager);
   mylang::parser::ast::Expr* expr = parser.parsePrimaryExpr();
   mylang::parser::ast::LiteralExpr* literal = parseAndCast<mylang::parser::ast::LiteralExpr>(parser, expr);
+  AST_Printer.print(literal);
   ASSERT_NE(literal, nullptr);
   EXPECT_EQ(literal->getType(), mylang::parser::ast::LiteralExpr::Type::NONE);
 }
@@ -214,6 +221,7 @@ TEST_F(ParserTest, ParseParenthesizedNumberLiteral)
   mylang::parser::Parser parser(&file_manager);
   mylang::parser::ast::Expr* expr = parser.parsePrimaryExpr();
   mylang::parser::ast::LiteralExpr* literal = parseAndCast<mylang::parser::ast::LiteralExpr>(parser, expr);
+  AST_Printer.print(literal);
   ASSERT_NE(literal, nullptr);
   EXPECT_EQ(literal->getType(), mylang::parser::ast::LiteralExpr::Type::NUMBER);
 }
@@ -228,6 +236,7 @@ TEST_F(ParserTest, ParseIdentifier)
   mylang::parser::Parser parser(&file_manager);
   mylang::parser::ast::Expr* expr = parser.parsePrimaryExpr();
   mylang::parser::ast::NameExpr* name_expr = parseAndCast<mylang::parser::ast::NameExpr>(parser, expr);
+  AST_Printer.print(name_expr);
   ASSERT_NE(name_expr, nullptr);
   EXPECT_EQ(name_expr->getValue(), u"المتنبي");
 }
@@ -249,6 +258,7 @@ TEST_F(ParserTest, ParseCallExpressionNoArgs)
   mylang::parser::ast::Expr* expr = parser.parsePrimaryExpr();
   ASSERT_NE(expr, nullptr);
   mylang::parser::ast::CallExpr* call_expr = parseAndCast<mylang::parser::ast::CallExpr>(parser, expr);
+  AST_Printer.print(call_expr);
   ASSERT_NE(call_expr, nullptr);
   ASSERT_NE(call_expr->getCallee(), nullptr);
   mylang::parser::ast::NameExpr* callee_name = call_expr->getCallee();
@@ -264,6 +274,7 @@ TEST_F(ParserTest, ParseCallExpressionWithOneArg)
   mylang::parser::ast::Expr* expr = parser.parsePrimaryExpr();
   ASSERT_NE(expr, nullptr);
   mylang::parser::ast::CallExpr* call_expr = parseAndCast<mylang::parser::ast::CallExpr>(parser, expr);
+  AST_Printer.print(call_expr);
   ASSERT_NE(call_expr, nullptr);
   ASSERT_NE(call_expr->getCallee(), nullptr);
   mylang::parser::ast::NameExpr* callee_name = call_expr->getCallee();

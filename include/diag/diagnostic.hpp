@@ -95,23 +95,23 @@ class DiagnosticEngine
       {
       case Severity::NOTE :
         sevStr = u"note";
-        color = u"\033[36m";
+        color = Color::CYAN;
         break;
       case Severity::WARNING :
         sevStr = u"warning";
-        color = u"\033[33m";
+        color = Color::MAGENTA;
         break;
       case Severity::ERROR :
         sevStr = u"error";
-        color = u"\033[31m";
+        color = Color::RED;
         break;
       case Severity::FATAL :
         sevStr = u"fatal";
-        color = u"\033[1;31m";
+        color = Color::RED;
         break;
       }
 
-      std::cout << utf8::utf16to8(color) << utf8::utf16to8(sevStr) << "\033[0m";
+      std::cout << utf8::utf16to8(color) << utf8::utf16to8(sevStr) << utf8::utf16to8(Color::RESET);
       if (!diag.code.empty()) std::cout << "[" << utf8::utf16to8(diag.code) << "]";
       std::cout << ": " << utf8::utf16to8(diag.message) << "\n";
       // Show source line
@@ -123,18 +123,18 @@ class DiagnosticEngine
         std::cout << "   |\n";
         std::cout << std::setw(3) << diag.line << " | " << lines[diag.line - 1] << "\n";
         std::cout << "   | " << std::string(diag.column - 1, ' ') << utf8::utf16to8(color) << std::string(std::max(1, diag.length), '^')
-                  << "\033[0m\n";
+                  << utf8::utf16to8(Color::RESET) << '\n';
       }
       // Show suggestions
       if (!diag.suggestions.empty())
       {
-        std::cout << "\n  \033[1mHelp:\033[0m\n";
+        std::cout << utf8::utf16to8(Color::MAGENTA) << "Help" << utf8::utf16to8(Color::RESET) << std::endl;
         for (const auto& sugg : diag.suggestions) std::cout << "    • " << utf8::utf16to8(sugg) << "\n";
       }
       // Show notes
       for (const auto& [noteLine, noteMsg] : diag.notes)
       {
-        std::cout << "\n  \033[36mnote:\033[0m " << utf8::utf16to8(noteMsg) << "\n";
+        std::cout << utf8::utf16to8(Color::CYAN) << "note:" << utf8::utf16to8(Color::RESET) << std::endl;
         std::cout << "  --> line " << noteLine << "\n";
       }
       std::cout << "\n";
@@ -145,7 +145,11 @@ class DiagnosticEngine
   std::vector<Diagnostic> diagnostics_;
   string_type sourceCode_;
 
-  void emit_error(const std::string& msg, Severity sv) { std::cerr << svToStr(sv) << ": " << msg << std::endl; }
+  void emit_error(const std::string& msg, Severity sv)
+  {
+    std::cerr << svToStr(sv) << ": " << msg << std::endl;
+    if (sv == Severity::FATAL) throw std::runtime_error("");
+  }
 
   [[noreturn]] void _panic(const std::string& msg) const
   {

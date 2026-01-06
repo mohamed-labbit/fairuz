@@ -162,6 +162,7 @@ class Value
   bool isFunction() const { return type_ == Type::FUNCTION; }
   bool isCallable() const { return isFunction() || type_ == Type::NATIVE_FUNCTION; }
   bool isIterable() const { return isList() || isString() || isDict(); }
+
   // Getters with safety
   std::int64_t asInt() const;
   double asFloat() const;
@@ -181,12 +182,14 @@ class Value
   // Hash for use in dictionaries
   std::size_t hash() const;
   // Comparison operators
+
   bool operator==(const Value& other) const;
   bool operator<(const Value& other) const;
   bool operator>(const Value& other) const;
   bool operator<=(const Value& other) const;
   bool operator>=(const Value& other) const;
   bool operator!=(const Value& other) const;
+
   // Arithmetic operators with type promotion
   Value operator+(const Value& other) const;
   Value operator-(const Value& other) const;
@@ -199,10 +202,11 @@ class Value
   Value operator!() const;
   // Subscript operator
   Value getItem(const Value& key) const;
+
   void setItem(const Value& key, const Value& value);
   // Iterator support
-  Value getIterator() const;
   bool hasNext() const;
+  Value getIterator() const;
   Value next();
 };
 

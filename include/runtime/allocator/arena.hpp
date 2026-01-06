@@ -145,8 +145,8 @@ class ArenaBlock
      * @brief Construct an arena block with specified size and alignment
      * @param size Size of the block in bytes
      * @param alignment Required alignment (must be power of 2)
-     * @throws std::invalid_argument if alignment is not a power of 2
-     * @throws std::bad_alloc if memory allocation fails
+     * @throws emit error if alignment is not a power of 2
+     * @throws panic if memory allocation fails
      * 
      * The actual allocated size may be larger than requested to satisfy
      * alignment requirements.
@@ -155,13 +155,16 @@ class ArenaBlock
       size_(size)
   {
     // Validate alignment is a power of 2
-    if (alignment == 0 || (alignment & (alignment - 1)) != 0) throw std::invalid_argument("Alignment must be a power of two");
+    if (alignment == 0 || (alignment & (alignment - 1)) != 0)
+      diagnostic::engine.emit("Alignment must be a power of two", diagnostic::DiagnosticEngine::Severity::FATAL);
     // Round up size to multiple of alignment
     std::size_t mod = size_ % alignment;
     if (mod) size_ += (alignment - mod);
     // Allocate aligned memory
     void* mem = std::aligned_alloc(alignment, size_);
     if (!mem) throw std::bad_alloc();
+    /// @todo change after debug
+    // diagnostic::engine.panic("bad alloc");
     begin_ = reinterpret_cast<Pointer>(mem);
     next_.store(begin_, std::memory_order_relaxed);
   }
@@ -327,7 +330,8 @@ class ArenaBlock
 
     std::size_t alignment_value = alignment.value_or(std::alignment_of<std::max_align_t>::value);
     // Validate alignment is a power of 2
-    if (alignment_value == 0 || (alignment_value & (alignment_value - 1)) != 0) throw std::invalid_argument("Invalid alignment!");
+    if (alignment_value == 0 || (alignment_value & (alignment_value - 1)) != 0)
+      diagnostic::engine.emit("Invalid arguments to ArenaAllocator::allocate()", diagnostic::DiagnosticEngine::Severity::FATAL);
     // Lock-free allocation loop
     Pointer current_next = next_.load(std::memory_order_acquire);
 
@@ -412,7 +416,7 @@ class LockFreeFastAllocBlock
   /**
      * @brief Construct and allocate a block of specified size
      * @param size Requested size (will be rounded up to multiple of ObjectSize)
-     * @throws std::bad_alloc if allocation fails
+     * @throws panic if allocation fails
      * 
      * The block is automatically aligned to ObjectSize boundary.
      */
@@ -425,6 +429,8 @@ class LockFreeFastAllocBlock
     // Allocate aligned memory
     Pointer mem = reinterpret_cast<Pointer>(std::aligned_alloc(ObjectSize, actual_size));
     if (!mem) throw std::bad_alloc();
+    /// @todo change after debug
+    // diagnostic::engine.panic("bad alloc");
     // Store atomically
     size_.store(actual_size, std::memory_order_relaxed);
     begin_.store(mem, std::memory_order_relaxed);
@@ -1207,7 +1213,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
      * @tparam _Tp Type to allocate
      * @param count Number of objects (default: 1)
      * @return Pointer to allocated memory, or nullptr on failure
-     * @throws std::bad_alloc if count would cause overflow
+     * @throws panic if count would cause overflow
      * 
      * Features:
      * - Automatic type alignment
@@ -1245,9 +1251,11 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     // Check for overflow
     if (count > MAX_BLOCK_SIZE / sizeof(_Tp))
     {
-      diagnostic::engine.emit("allocation size is too large!", diagnostic::DiagnosticEngine::Severity::FATAL);
+      diagnostic::engine.emit("allocation size is too large!", diagnostic::DiagnosticEngine::Severity::ERROR);
       if (oom_handler_ && oom_handler_(count)) return allocate<_Tp>(count);
-      throw std::bad_alloc();
+      diagnostic::engine.emit("bad alloc!", diagnostic::DiagnosticEngine::Severity::FATAL);
+      /// @todo change after debug
+      // diagnostic::engine.panic("bad alloc");
     }
 
     std::size_t alloc_size = count * sizeof(_Tp);
