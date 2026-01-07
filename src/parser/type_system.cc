@@ -20,10 +20,10 @@ string_type TypeSystem::Type::toString() const
   case BaseType::Bool : return u"bool";
   case BaseType::None : return u"None";
   case BaseType::List :
-    if (!typeParams.empty()) return u"List[" + typeParams[0]->toString() + u"]";
+    if (!TypeParams.empty()) return u"List[" + TypeParams[0]->toString() + u"]";
     return u"List";
   case BaseType::Dict :
-    if (typeParams.size() >= 2) return u"Dict[" + typeParams[0]->toString() + u", " + typeParams[1]->toString() + u"]";
+    if (TypeParams.size() >= 2) return u"Dict[" + TypeParams[0]->toString() + u", " + TypeParams[1]->toString() + u"]";
     return u"Dict";
   default : return u"Any";
   }
@@ -47,7 +47,7 @@ void TypeSystem::TypeInference::unify(std::shared_ptr<TypeSystem::Type> t1, std:
   else if (t2->base == BaseType::Any) { *t2 = *t1; }
   else if (t1->base == BaseType::List && t2->base == BaseType::List)
   {
-    if (!t1->typeParams.empty() && !t2->typeParams.empty()) unify(t1->typeParams[0], t2->typeParams[0]);
+    if (!t1->TypeParams.empty() && !t2->TypeParams.empty()) unify(t1->TypeParams[0], t2->TypeParams[0]);
   }
   else
   {
@@ -100,7 +100,7 @@ std::shared_ptr<TypeSystem::Type> TypeSystem::TypeInference::inferExpr(const ast
     if (!list->getElements().empty())
     {
       auto elemType = inferExpr(list->getElements()[0]);
-      t->typeParams.push_back(elemType);
+      t->TypeParams.push_back(elemType);
     }
     return t;
   }

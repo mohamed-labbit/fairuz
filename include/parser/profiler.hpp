@@ -17,7 +17,7 @@ class ParserProfiler
     double milliseconds;
   };
 
-  std::vector<Timing> timings;
+  std::vector<Timing> Timings_;
 
  public:
   void recordPhase(const string_type& phase, double ms);

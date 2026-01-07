@@ -19,11 +19,11 @@ class PeepholeOptimizer
   struct Optimization
   {
     std::string name;
-    std::int32_t replacementCount;
+    std::int32_t ReplacementCount;
   };
 
  private:
-  std::vector<Optimization> optimizations_;
+  std::vector<Optimization> Optimizations_;
   bool matchPattern(const std::vector<bytecode::Instruction>& code, std::size_t pos, const std::vector<bytecode::OpCode>& pattern);
 
  public:

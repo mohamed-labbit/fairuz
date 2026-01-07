@@ -16,10 +16,10 @@ namespace runtime {
 class ConstantPool
 {
  private:
-  std::vector<object::Value> constants_;
-  std::unordered_map<string_type, std::int32_t> stringConstants_;
-  std::unordered_map<std::int64_t, std::int32_t> intConstants_;
-  std::unordered_map<double, std::int32_t> floatConstants_;
+  std::vector<object::Value> Constants_;
+  std::unordered_map<string_type, std::int32_t> StringConstants_;
+  std::unordered_map<std::int64_t, std::int32_t> IntConstants_;
+  std::unordered_map<double, std::int32_t> FloatConstants_;
 
  public:
   std::int32_t addConstant(const object::Value& val);

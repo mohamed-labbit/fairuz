@@ -22,20 +22,20 @@ class CompilerSymbolTable
     std::string name;
     std::int32_t index;
     SymbolScope scope;
-    bool isParameter;
-    bool isCaptured;  // Used in closure
-    bool isUsed;
+    bool IsParameter;
+    bool IsCaptured;  // Used in closure
+    bool IsUsed;
   };
 
  private:
-  std::unordered_map<std::string, Symbol> symbols_;
-  CompilerSymbolTable* parent_;
-  std::int32_t nextIndex_{0};
-  std::vector<std::string> freeVars;  // Closure variables
+  std::unordered_map<std::string, Symbol> Symbols_;
+  CompilerSymbolTable* Parent_;
+  std::int32_t NextIndex_{0};
+  std::vector<std::string> FreeVars;  // Closure variables
 
  public:
   explicit CompilerSymbolTable(CompilerSymbolTable* p = nullptr) :
-      parent_(p)
+      Parent_(p)
   {
   }
 

@@ -17,15 +17,15 @@ class JITCompiler
  private:
   struct HotSpot
   {
-    unsigned startPC;
-    unsigned endPC;
-    unsigned executionCount;
-    bool compiled;
-    void* nativeCode;
+    unsigned StartPC;
+    unsigned EndPC;
+    unsigned ExecutionCount;
+    bool Compiled;
+    void* NativeCode;
   };
 
-  std::unordered_map<std::int32_t, HotSpot> hotSpots_;
-  std::int32_t hotThreshold_ = 100;  // Compile after 100 executions
+  std::unordered_map<std::int32_t, HotSpot> HotSpots_;
+  std::int32_t HotThreshold_ = 100;  // Compile after 100 executions
 
  public:
   void recordExecution(std::int32_t pc);

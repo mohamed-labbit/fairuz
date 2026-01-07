@@ -19,12 +19,12 @@ class JumpResolver
  private:
   struct PendingJump
   {
-    std::int32_t instructionIndex;
-    std::string labelName;
+    std::int32_t InstructionIndex;
+    std::string LabelName;
   };
 
-  std::unordered_map<std::string, std::int32_t> labels_;
-  std::vector<PendingJump> pendingJumps_;
+  std::unordered_map<std::string, std::int32_t> Labels_;
+  std::vector<PendingJump> PendingJumps_;
 
  public:
   void defineLabel(const std::string& name, std::int32_t position);

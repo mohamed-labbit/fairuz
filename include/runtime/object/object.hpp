@@ -43,11 +43,11 @@ class Value
 
 
  private:
-  Type type_;
+  Type Type_;
 
   struct Function
   {
-    std::int32_t codeOffset;
+    std::int32_t CodeOffset;
     std::vector<string_type> params;
     std::vector<Value> defaults;
     std::vector<Value> closure;  // Captured variables
@@ -85,56 +85,56 @@ class Value
                Object,                                                   // Object instance
                Iterator                                                  // Iterator
                >
-    data_;
+    Data_;
 
   // Reference counting for memory management
-  mutable std::int32_t refCount_ = 0;
+  mutable std::int32_t RefCount_ = 0;
 
  public:
   Value() :
-      type_(Type::NONE)
+      Type_(Type::NONE)
   {
   }
   Value(std::int64_t v) :
-      type_(Type::INT),
-      data_(v)
+      Type_(Type::INT),
+      Data_(v)
   {
   }
   Value(double v) :
-      type_(Type::FLOAT),
-      data_(v)
+      Type_(Type::FLOAT),
+      Data_(v)
   {
   }
   Value(const string_type& v) :
-      type_(Type::STRING),
-      data_(std::make_shared<string_type>(v))
+      Type_(Type::STRING),
+      Data_(std::make_shared<string_type>(v))
   {
   }
   Value(bool v) :
-      type_(Type::BOOL),
-      data_(v)
+      Type_(Type::BOOL),
+      Data_(v)
   {
   }
   Value(const std::vector<Value>& v) :
-      type_(Type::LIST),
-      data_(std::make_shared<std::vector<Value>>(v))
+      Type_(Type::LIST),
+      Data_(std::make_shared<std::vector<Value>>(v))
   {
   }
   Value(std::shared_ptr<std::vector<Value>> v) :
-      type_(Type::LIST),
-      data_(v)
+      Type_(Type::LIST),
+      Data_(v)
   {
   }
 
   // Copy constructor with COW (Copy-On-Write)
   Value(const Value& other) :
-      type_(other.type_),
-      data_(other.data_)
+      Type_(other.Type_),
+      Data_(other.Data_)
   {
   }
 
-  Type getType() const { return type_; }
-  void setType(const Type type) { type_ = type; }
+  Type getType() const { return Type_; }
+  void setType(const Type type) { Type_ = type; }
   void setData(const std::variant<std::monostate,                                           // None
                                   std::int64_t,                                             // Int
                                   double,                                                   // Float
@@ -148,19 +148,19 @@ class Value
                                   Iterator                                                  // Iterator
                                   > data)
   {
-    data_ = data;
+    Data_ = data;
   }
   // Type checks
-  bool isNone() const { return type_ == Type::NONE; }
-  bool isInt() const { return type_ == Type::INT; }
-  bool isFloat() const { return type_ == Type::FLOAT; }
+  bool isNone() const { return Type_ == Type::NONE; }
+  bool isInt() const { return Type_ == Type::INT; }
+  bool isFloat() const { return Type_ == Type::FLOAT; }
   bool isNumber() const { return isInt() || isFloat(); }
-  bool isString() const { return type_ == Type::STRING; }
-  bool isBool() const { return type_ == Type::BOOL; }
-  bool isList() const { return type_ == Type::LIST; }
-  bool isDict() const { return type_ == Type::DICT; }
-  bool isFunction() const { return type_ == Type::FUNCTION; }
-  bool isCallable() const { return isFunction() || type_ == Type::NATIVE_FUNCTION; }
+  bool isString() const { return Type_ == Type::STRING; }
+  bool isBool() const { return Type_ == Type::BOOL; }
+  bool isList() const { return Type_ == Type::LIST; }
+  bool isDict() const { return Type_ == Type::DICT; }
+  bool isFunction() const { return Type_ == Type::FUNCTION; }
+  bool isCallable() const { return isFunction() || Type_ == Type::NATIVE_FUNCTION; }
   bool isIterable() const { return isList() || isString() || isDict(); }
 
   // Getters with safety

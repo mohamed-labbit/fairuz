@@ -38,16 +38,12 @@ class LanguageServer
 
   // Auto-completion at cursor position
   std::vector<CompletionItem> getCompletions(const string_type& source, Position pos);
-
   // Hover information
   Hover getHover(const string_type& source, Position pos);
-
   // Go to definition
   Position getDefinition(const string_type& source, Position pos);
-
   // Find all references
   std::vector<Range> getReferences(const string_type& source, Position pos);
-
   // Rename symbol
   std::unordered_map<string_type, string_type> rename(const string_type& source, Position pos, const string_type& newName);
 };

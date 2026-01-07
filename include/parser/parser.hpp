@@ -29,9 +29,9 @@ namespace parser {
 class ParseError: public std::runtime_error
 {
  public:
-  std::int32_t line, column;             // Source location of the error
-  string_type context;                   // Source line where the error occurred
-  std::vector<string_type> suggestions;  // Optional recovery suggestions
+  std::int32_t Line_, Column_;            // Source location of the error
+  string_type Context_;                   // Source line where the error occurred
+  std::vector<string_type> Suggestions_;  // Optional recovery suggestions
 
   /**
    * @brief Constructs a parse error.
@@ -44,10 +44,10 @@ class ParseError: public std::runtime_error
    */
   ParseError(const string_type& msg, unsigned l, unsigned c, string_type ctx = u"", std::vector<string_type> sugg = {}) :
       std::runtime_error(utf8::utf16to8(msg)),
-      line(l),
-      column(c),
-      context(std::move(ctx)),
-      suggestions(std::move(sugg))
+      Line_(l),
+      Column_(c),
+      Context_(std::move(ctx)),
+      Suggestions_(std::move(sugg))
   {
   }
 
@@ -65,18 +65,18 @@ class ParseError: public std::runtime_error
   string_type format() const
   {
     std::stringstream ss;
-    ss << "Line " << line << ":" << column << " - " << what() << "\n";
+    ss << "Line " << Line_ << ":" << Column_ << " - " << what() << "\n";
 
-    if (!context.empty())
+    if (!Context_.empty())
     {
-      ss << "  | " << utf8::utf16to8(context) << "\n";
-      ss << "  | " << std::string(column - 1, ' ') << "^\n";
+      ss << "  | " << utf8::utf16to8(Context_) << "\n";
+      ss << "  | " << std::string(Column_ - 1, ' ') << "^\n";
     }
 
-    if (!suggestions.empty())
+    if (!Suggestions_.empty())
     {
       ss << "Suggestions:\n";
-      for (const string_type& s : suggestions) ss << "  - " << utf8::utf16to8(s) << "\n";
+      for (const string_type& s : Suggestions_) ss << "  - " << utf8::utf16to8(s) << "\n";
     }
 
     return utf8::utf8to16(ss.str());
@@ -100,7 +100,7 @@ class Parser
   /// @brief Constructs an empty parser
   explicit Parser() = default;
   /// @brief Constructs a parser bound to a file manager
-  explicit Parser(input::FileManager* file_manager);
+  explicit Parser(input::FileManager* fm);
   /// @brief Constructs a parser from a pre-existing token sequence
   explicit Parser(std::vector<lex::tok::Token> seq, std::optional<std::size_t> s = std::nullopt);
 
@@ -144,7 +144,7 @@ class Parser
   // std::vector<ast::Stmt*> parse();
 
  private:
-  lex::Lexer lex_;  // Underlying lexer providing tokens
+  lex::Lexer Lexer_;  // Underlying lexer providing tokens
 
   /// @brief Checks whether a token represents a unary operator
   static bool isUnaryOp(const lex::tok::Token tok);

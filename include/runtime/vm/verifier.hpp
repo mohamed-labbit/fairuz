@@ -21,7 +21,7 @@ class BytecodeVerifier
   };
 
  private:
-  std::vector<VerificationError> errors_;
+  std::vector<VerificationError> Errors_;
 
  public:
   bool verify(const BytecodeCompiler::CompilationUnit& unit);

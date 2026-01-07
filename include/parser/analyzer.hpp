@@ -24,20 +24,20 @@ class SemanticAnalyzer
   };
 
  private:
-  SymbolTable* currentScope_;
-  std::unique_ptr<SymbolTable> globalScope_;
-  std::vector<Issue> issues_;
-  ControlFlowGraph cfg_;
+  SymbolTable* CurrentScope_;
+  std::unique_ptr<SymbolTable> GlobalScope_;
+  std::vector<Issue> Issues_;
+  ControlFlowGraph Cfg_;
 
   // Type inference engine
-  SymbolTable::DataType inferType(const ast::Expr* expr);
+  SymbolTable::DataType_t inferType(const ast::Expr* expr);
   void reportIssue(Issue::Severity sev, const string_type& msg, std::int32_t line, const string_type& sugg = u"");
   void analyzeExpr(const ast::Expr* expr);
   void analyzeStmt(const ast::Stmt* stmt);
 
  public:
   SemanticAnalyzer();
-  void analyze(const std::vector<ast::Stmt*>& statements_);
+  void analyze(const std::vector<ast::Stmt*>& Statements_);
   const std::vector<Issue>& getIssues() const;
   const SymbolTable* getGlobalScope() const;
   void printReport() const;

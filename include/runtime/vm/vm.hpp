@@ -34,19 +34,19 @@ class VirtualMachine
  private:
   // Execution state
 
-  std::vector<object::Value> stack_;    // Operand stack for expression evaluation
-  std::vector<object::Value> globals_;  // Global variables storage
+  std::vector<object::Value> Stack_;    // Operand stack for expression evaluation
+  std::vector<object::Value> Globals_;  // Global variables storage
 
   // Call frames representing nested function scopes.
   // Each frame maps variable names to their corresponding values.
-  std::vector<std::unordered_map<std::string, object::Value>> frames_;
+  std::vector<std::unordered_map<std::string, object::Value>> Frames_;
 
-  std::int32_t ip_ = 0;  // Instruction pointer (index into bytecode)
+  std::int32_t Ip_ = 0;  // Instruction pointer (index into bytecode)
 
   // Advanced runtime features
 
-  JITCompiler jit_;      // Just-In-Time compiler for hot code paths
-  GarbageCollector gc_;  // Garbage collector for managed objects
+  JITCompiler Jit_;      // Just-In-Time compiler for hot code paths
+  GarbageCollector Gc_;  // Garbage collector for managed objects
 
   // Performance monitoring and statistics
 
@@ -58,12 +58,12 @@ class VirtualMachine
    */
   struct Statistics
   {
-    std::int64_t instructionsExecuted{0};        // Total number of executed instructions
-    std::int64_t functionsCalled{0};             // Number of function calls
-    std::int64_t gcCollections{0};               // Garbage collection runs
-    std::int64_t jitCompilations{0};             // JIT compilation events
-    std::chrono::microseconds executionTime{0};  // Total execution time
-  } stats_;
+    std::int64_t InstructionsExecuted{0};        // Total number of executed instructions
+    std::int64_t FunctionsCalled{0};             // Number of function calls
+    std::int64_t GcCollections{0};               // Garbage collection runs
+    std::int64_t JitCompilations{0};             // JIT compilation events
+    std::chrono::microseconds ExecutionTime{0};  // Total execution time
+  } Stats_;
 
   // Instruction dispatch optimization
 
@@ -71,7 +71,7 @@ class VirtualMachine
   static constexpr std::size_t CACHE_SIZE_ = 256;
 
   // Cached dispatch table used to speed up instruction execution.
-  std::array<void*, CACHE_SIZE_> dispatchTable_;
+  std::array<void*, CACHE_SIZE_> DispatchTable_;
 
   // Stack manipulation helpers (with bounds checking)
 
@@ -127,13 +127,13 @@ class VirtualMachine
 
  public:
   /// @brief Returns collected runtime statistics
-  const Statistics& getStatistics() const { return stats_; }
+  const Statistics& getStatistics() const { return Stats_; }
   /// @brief Prints runtime statistics to the output
   void printStatistics() const;
   /// @brief Returns the current global variable table
-  const std::vector<object::Value>& getGlobals() const { return globals_; }
+  const std::vector<object::Value>& getGlobals() const { return Globals_; }
   /// @brief Returns the current VM operand stack
-  const std::vector<object::Value>& getStack() const { return stack_; }
+  const std::vector<object::Value>& getStack() const { return Stack_; }
 };  // VirtualMachine
 
 }  // namespace runtime

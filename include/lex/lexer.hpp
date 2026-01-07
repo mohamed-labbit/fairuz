@@ -28,13 +28,13 @@ namespace lex {
  */
 struct IndentationContext
 {
-  std::stack<std::size_t> indent_stack;  // Stack of indentation levels (in columns)
-  std::size_t current_level{0};          // Current indentation level
-  bool at_line_start{true};              // True if lexer is at beginning of a line
-  std::size_t in_parentheses{0};         // Nesting depth of (), [], {}
-  bool expecting_indent{false};          // True if previous line ended with ':'
-  std::size_t spaces_per_indent{4};      // Expected number of spaces per indent
-  bool mixed_indent_error{false};        // True if mixed tabs/spaces detected
+  std::stack<std::size_t> IndentStack;  // Stack of indentation levels (in columns)
+  std::size_t CurrentLevel{0};          // Current indentation level
+  bool AtLineStart{true};               // True if lexer is at beginning of a line
+  std::size_t InParentheses{0};         // Nesting depth of (), [], {}
+  bool ExpectingIndent{false};          // True if previous line ended with ':'
+  std::size_t SpacesPerIndent{4};       // Expected number of spaces per indent
+  bool MixedIndentError{false};         // True if mixed tabs/spaces detected
 
   /**
    * @brief Indentation style currently in use.
@@ -60,7 +60,7 @@ struct IndentationContext
    */
   IndentationContext()
   {
-    indent_stack.push(0);  // Base indentation level
+    IndentStack.push(0);  // Base indentation level
   }
 
   /**
@@ -70,9 +70,9 @@ struct IndentationContext
    * It examines the indentation string and sets the mode accordingly.
    *
    * If both spaces and tabs are found, the mode becomes MIXED and
-   * mixed_indent_error is set.
+   * MixedIndentError is set.
    */
-  void detect_indent_mode(const string_type& indent_str)
+  void detectIndentMode(const string_type& indent_str)
   {
     if (mode != IndentMode::UNDETECTED) return;
 
@@ -88,7 +88,7 @@ struct IndentationContext
     if (has_spaces && has_tabs)
     {
       mode = IndentMode::MIXED;
-      mixed_indent_error = true;
+      MixedIndentError = true;
     }
     else if (has_spaces)
     {
@@ -98,7 +98,7 @@ struct IndentationContext
         for (std::size_t width : {2, 4, 8})
           if (indent_str.length() % width == 0)
           {
-            spaces_per_indent = width;
+            SpacesPerIndent = width;
             break;
           }
     }
@@ -110,7 +110,7 @@ struct IndentationContext
    *
    * @return true if indentation is valid, false otherwise
    */
-  bool validate_indent(const string_type& indent_str) const
+  bool validateIndent(const string_type& indent_str) const
   {
     if (mode == IndentMode::MIXED) return false;
 
@@ -131,10 +131,10 @@ struct IndentationContext
   }
 
   /// @brief Returns the current indentation level (top of the stack)
-  std::size_t top() const { return indent_stack.top(); }
+  std::size_t top() const { return IndentStack.top(); }
 
   /// @brief Pushes a new indentation level onto the stack
-  void push(std::size_t level) { indent_stack.push(level); }
+  void push(std::size_t level) { IndentStack.push(level); }
 
   /**
    * @brief Pops the current indentation level.
@@ -145,17 +145,17 @@ struct IndentationContext
    */
   std::size_t pop()
   {
-    if (indent_stack.size() > 1)
+    if (IndentStack.size() > 1)
     {
-      std::size_t val = indent_stack.top();
-      indent_stack.pop();
+      std::size_t val = IndentStack.top();
+      IndentStack.pop();
       return val;
     }
     return 0;
   }
 
   /// @brief Returns the number of indentation levels currently tracked
-  std::size_t stack_size() const { return indent_stack.size(); }
+  std::size_t stack_size() const { return IndentStack.size(); }
 };
 
 /**
@@ -179,8 +179,8 @@ struct IndentationAnalysis
   Action action{Action::NONE};  // Required action
   std::size_t count{0};         // Number of INDENT/DEDENT tokens
   std::size_t column{0};        // Column where indentation ends
-  string_type error_message;    // Error message (if any)
-  string_type indent_string;    // Raw indentation characters
+  string_type ErrorMessage;     // Error message (if any)
+  string_type IndentString;     // Raw indentation characters
 };
 
 /**
@@ -213,11 +213,11 @@ class Lexer
   /// @brief Returns the previous token
   MYLANG_COMPILER_ABI tok::Token prev();
   /// @brief Returns the full token stream
-  MYLANG_COMPILER_ABI const std::vector<tok::Token>& tokenStream() const { return tok_stream_; }
+  MYLANG_COMPILER_ABI const std::vector<tok::Token>& tokenStream() const { return TokStream_; }
   /// @brief Tokenizes the entire input source
   MYLANG_COMPILER_ABI std::vector<tok::Token> tokenize();
   /// @brief Returns the current indentation size
-  MYLANG_COMPILER_ABI const std::size_t indent_size() const { return indent_size_; }
+  MYLANG_COMPILER_ABI const std::size_t indentSize() const { return IndentSize_; }
 
   /**
    * @brief Constructs a token with optional metadata.
@@ -232,41 +232,41 @@ class Lexer
                                             std::optional<std::string> file_path = std::nullopt) const;
 
  private:
-  SourceManager source_manager_;        // Manages source input and positions
-  std::size_t tok_index_;               // Current token index
-  std::size_t indent_size_;             // Current indentation size
-  std::vector<tok::Token> tok_stream_;  // Accumulated token stream
-  std::stack<unsigned> indent_stack_;   // Legacy indentation stack
-  IndentationContext indent_ctx_;       // Indentation tracking context
+  SourceManager SourceManager_;        // Manages source input and positions
+  std::size_t TokIndex_;               // Current token index
+  std::size_t IndentSize_;             // Current indentation size
+  std::vector<tok::Token> TokStream_;  // Accumulated token stream
+  std::stack<unsigned> IndentStack_;   // Legacy indentation stack
+  IndentationContext IndentCtx_;       // Indentation tracking context
 
   /// @brief Lexes a single token and stores it
-  MYLANG_COMPILER_ABI void lex_token_();
+  MYLANG_COMPILER_ABI tok::Token lexToken();
   /// @brief Handles indentation at the start of a line
-  MYLANG_COMPILER_ABI tok::Token _handle_indentation(SourceManager& sm);
+  // MYLANG_COMPILER_ABI tok::Token _handle_indentation(SourceManager& sm);
   /// @brief Lexes identifiers and keywords
-  MYLANG_COMPILER_ABI tok::Token _handle_identifier(char16_t c, SourceManager& sm);
+  // MYLANG_COMPILER_ABI tok::Token _handle_identifier(char16_t c, SourceManager& sm);
   /// @brief Lexes numeric literals
-  MYLANG_COMPILER_ABI tok::Token _handle_number(char16_t c, SourceManager& sm);
+  // MYLANG_COMPILER_ABI tok::Token _handle_number(char16_t c, SourceManager& sm);
   /// @brief Lexes operators
-  MYLANG_COMPILER_ABI tok::Token _handle_operator(char16_t c, SourceManager& sm);
+  // MYLANG_COMPILER_ABI tok::Token _handle_operator(char16_t c, SourceManager& sm);
   /// @brief Lexes punctuation and symbols
-  MYLANG_COMPILER_ABI tok::Token _handle_symbol(char16_t c, SourceManager& sm);
+  // MYLANG_COMPILER_ABI tok::Token _handle_symbol(char16_t c, SourceManager& sm);
   /// @brief Lexes string literals
-  MYLANG_COMPILER_ABI tok::Token _handle_string_literal(char16_t c, SourceManager& sm);
+  // MYLANG_COMPILER_ABI tok::Token _handle_string_literal(char16_t c, SourceManager& sm);
   /// @brief Handles newline characters
-  MYLANG_COMPILER_ABI tok::Token _handle_newline(char16_t c, SourceManager& sm);
+  // MYLANG_COMPILER_ABI tok::Token _handle_newline(char16_t c, SourceManager& sm);
   /// @brief Emits an invalid token
-  MYLANG_COMPILER_ABI tok::Token _emit_invalid(char16_t c, SourceManager& sm);
+  // MYLANG_COMPILER_ABI tok::Token _emit_invalid(char16_t c, SourceManager& sm);
   /// @brief Emits end-of-file token
-  MYLANG_COMPILER_ABI tok::Token _emit_eof(SourceManager& sm);
+  // MYLANG_COMPILER_ABI tok::Token _emit_eof(SourceManager& sm);
   /// @brief Emits start-of-file token
-  MYLANG_COMPILER_ABI tok::Token _emit_sof(SourceManager& sm);
+  // MYLANG_COMPILER_ABI tok::Token _emit_sof(SourceManager& sm);
   /// @brief Analyzes indentation and determines required action
-  MYLANG_COMPILER_ABI IndentationAnalysis _analyze_indentation(SourceManager& sm);
+  MYLANG_COMPILER_ABI IndentationAnalysis analyzeIndentation_(SourceManager& sm);
   /// @brief Updates indentation context based on emitted token
-  MYLANG_COMPILER_ABI void update_indentation_context(const tok::Token& token);
+  MYLANG_COMPILER_ABI void updateIndentationContext_(const tok::Token& token);
   /// @brief Consumes and returns the next character from the source
-  MYLANG_COMPILER_ABI char16_t consume_char() { return source_manager_.consume_char(); }
+  MYLANG_COMPILER_ABI char16_t consumeChar() { return SourceManager_.consumeChar(); }
   /// @brief Stores a token in the token stream
   MYLANG_COMPILER_ABI void store(tok::Token tok);
 

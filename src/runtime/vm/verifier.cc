@@ -8,14 +8,14 @@ namespace runtime {
 
 bool BytecodeVerifier::verify(const BytecodeCompiler::CompilationUnit& unit)
 {
-  errors_.clear();
+  Errors_.clear();
   // Check 1: Valid jump targets
   for (std::size_t i = 0; i < unit.instructions.size(); i++)
   {
     const bytecode::Instruction& instr = unit.instructions[i];
     if (isJumpInstruction(instr.op))
       if (instr.arg < 0 || instr.arg >= unit.instructions.size())
-        errors_.push_back({static_cast<std::int32_t>(i), "Jump target out of bounds: " + std::to_string(instr.arg)});
+        Errors_.push_back({static_cast<std::int32_t>(i), "Jump target out of bounds: " + std::to_string(instr.arg)});
   }
   // Check 2: Stack balance
   std::vector<std::int32_t> stackDepths(unit.instructions.size(), -1);
@@ -26,24 +26,24 @@ bool BytecodeVerifier::verify(const BytecodeCompiler::CompilationUnit& unit)
     const bytecode::Instruction& instr = unit.instructions[i];
     if (instr.op == bytecode::OpCode::LOAD_CONST)
       if (instr.arg < 0 || instr.arg >= unit.constants.size())
-        errors_.push_back({static_cast<std::int32_t>(i), "Constant index out of bounds: " + std::to_string(instr.arg)});
+        Errors_.push_back({static_cast<std::int32_t>(i), "Constant index out of bounds: " + std::to_string(instr.arg)});
   }
   // Check 4: All paths return (for functions)
   // Would implement dataflow analysis here
-  return errors_.empty();
+  return Errors_.empty();
 }
 
-const std::vector<typename BytecodeVerifier::VerificationError>& BytecodeVerifier::getErrors() const { return errors_; }
+const std::vector<typename BytecodeVerifier::VerificationError>& BytecodeVerifier::getErrors() const { return Errors_; }
 
 void BytecodeVerifier::printErrors(std::ostream& out) const
 {
-  if (errors_.empty())
+  if (Errors_.empty())
   {
     out << "✓ Bytecode verification passed\n";
     return;
   }
-  out << "✗ Bytecode verification failed with " << errors_.size() << " error(s):\n";
-  for (const VerificationError& err : errors_) out << "  PC " << err.pc << ": " << err.message << "\n";
+  out << "✗ Bytecode verification failed with " << Errors_.size() << " error(s):\n";
+  for (const VerificationError& err : Errors_) out << "  PC " << err.pc << ": " << err.message << "\n";
 }
 
 void BytecodeVerifier::verifyStackDepth(const BytecodeCompiler::CompilationUnit& unit,
@@ -59,11 +59,11 @@ void BytecodeVerifier::verifyStackDepth(const BytecodeCompiler::CompilationUnit&
   std::int32_t newDepth = depth + getStackEffect(instr.op, instr.arg);
   if (newDepth < 0)
   {
-    errors_.push_back({pc, "Stack underflow"});
+    Errors_.push_back({pc, "Stack underflow"});
     return;
   }
-  if (newDepth > unit.stackSize)
-    errors_.push_back({pc, "Stack overflow (depth " + std::to_string(newDepth) + " > " + std::to_string(unit.stackSize) + ")"});
+  if (newDepth > unit.StackSize)
+    Errors_.push_back({pc, "Stack overflow (depth " + std::to_string(newDepth) + " > " + std::to_string(unit.StackSize) + ")"});
   // Follow control flow
   if (instr.op == bytecode::OpCode::RETURN || instr.op == bytecode::OpCode::HALT) return;
   if (isJumpInstruction(instr.op))

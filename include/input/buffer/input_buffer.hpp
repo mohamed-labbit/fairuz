@@ -13,14 +13,14 @@ struct Position
 {
   std::size_t line{0};
   std::size_t column{0};
-  std::size_t filepos{0};
+  std::size_t FilePos{0};
 
   Position() = default;
 
   Position(const std::size_t line, const std::size_t col, std::size_t fpos) :
       line(line),
       column(col),
-      filepos(fpos)
+      FilePos(fpos)
   {
   }
 };
@@ -28,29 +28,29 @@ struct Position
 class InputBuffer: public InputBufferBase
 {
  public:
-  using pointer = char16_t*;
+  using Pointer = char16_t*;
 
   InputBuffer() = default;
 
   InputBuffer(input::FileManager* file_manager, std::size_t cap = DEFAULT_CAPACITY) :
-      capacity_(cap),
+      Capacity_(cap),
       InputBufferBase(file_manager, cap)
   {
-    buffers_[0].resize(capacity_ + 1, BUFFER_END);
-    buffers_[1].resize(capacity_ + 1, BUFFER_END);
+    Buffers_[0].resize(Capacity_ + 1, BUFFER_END);
+    Buffers_[1].resize(Capacity_ + 1, BUFFER_END);
     reset();
   }
 
   std::size_t size() const;
-  std::size_t buffer_offset() const;
+  std::size_t bufferOffset() const;
   bool empty() const;
   char16_t at(const std::size_t idx) const;
-  char16_t consume_char();
+  char16_t consumeChar();
   MYLANG_NODISCARD
   const char16_t& current();
   MYLANG_NODISCARD
   const char16_t& peek();
-  string_type n_peek(std::size_t n);
+  string_type nPeek(std::size_t n);
   void consume(std::size_t len);
   void unget(char16_t ch);
   void reset();
@@ -63,13 +63,13 @@ class InputBuffer: public InputBufferBase
     Position pos;
   };
 
-  std::size_t capacity_ = DEFAULT_CAPACITY;
-  pointer current_{nullptr};
-  uint8_t current_buffer_{0};
-  std::size_t file_pos_{0};
-  Position current_position_;
-  std::stack<std::size_t> columns_;
-  std::stack<PushbackEntry> unget_stack_;
+  std::size_t Capacity_ = DEFAULT_CAPACITY;
+  Pointer Current_{nullptr};
+  uint8_t CurrentBuffer_{0};
+  std::size_t FilePos_{0};
+  Position CurrentPosition_;
+  std::stack<std::size_t> Columns_;
+  std::stack<PushbackEntry> UngetStack_;
 
   void swap_buffers_();
   void advance_position_(char16_t ch);

@@ -8,7 +8,7 @@
 namespace mylang {
 namespace parser {
 
-void ParserProfiler::recordPhase(const string_type& phase, double ms) { timings.push_back({phase, ms}); }
+void ParserProfiler::recordPhase(const string_type& phase, double ms) { Timings_.push_back({phase, ms}); }
 
 void ParserProfiler::printReport() const
 {
@@ -16,8 +16,8 @@ void ParserProfiler::printReport() const
   std::cout << "║      Parser Performance Report        ║\n";
   std::cout << "╚═══════════════════════════════════════╝\n\n";
   double total = 0;
-  for (const auto& t : timings) total += t.milliseconds;
-  for (const auto& t : timings)
+  for (const auto& t : Timings_) total += t.milliseconds;
+  for (const auto& t : Timings_)
   {
     double percent = (t.milliseconds / total) * 100;
     std::cout << std::left << std::setw(20) << utf8::utf16to8(t.phase) << ": " << std::right << std::setw(8) << std::fixed << std::setprecision(2)

@@ -10,9 +10,9 @@ namespace parser {
 // semantic analyzer
 
 // Type inference engine
-typename SymbolTable::DataType SemanticAnalyzer::inferType(const ast::Expr* expr)
+typename SymbolTable::DataType_t SemanticAnalyzer::inferType(const ast::Expr* expr)
 {
-  if (!expr) return SymbolTable::DataType::UNKNOWN;
+  if (!expr) return SymbolTable::DataType_t::UNKNOWN;
 
   switch (expr->getKind())
   {
@@ -21,16 +21,16 @@ typename SymbolTable::DataType SemanticAnalyzer::inferType(const ast::Expr* expr
     switch (lit->getType())
     {
     case ast::LiteralExpr::Type::NUMBER :
-      return lit->getValue().find('.') != std::string::npos ? SymbolTable::DataType::FLOAT : SymbolTable::DataType::INTEGER;
-    case ast::LiteralExpr::Type::STRING : return SymbolTable::DataType::STRING;
-    case ast::LiteralExpr::Type::BOOLEAN : return SymbolTable::DataType::BOOLEAN;
-    case ast::LiteralExpr::Type::NONE : return SymbolTable::DataType::NONE;
+      return lit->getValue().find('.') != std::string::npos ? SymbolTable::DataType_t::FLOAT : SymbolTable::DataType_t::INTEGER;
+    case ast::LiteralExpr::Type::STRING : return SymbolTable::DataType_t::STRING;
+    case ast::LiteralExpr::Type::BOOLEAN : return SymbolTable::DataType_t::BOOLEAN;
+    case ast::LiteralExpr::Type::NONE : return SymbolTable::DataType_t::NONE;
     }
     break;
   }
   case ast::Expr::Kind::NAME : {
     auto* name = static_cast<const ast::NameExpr*>(expr);
-    if (auto* sym = currentScope_->lookup(name->getValue())) return sym->dataType;
+    if (auto* sym = CurrentScope_->lookup(name->getValue())) return sym->DataType;
     break;
   }
   case ast::Expr::Kind::BINARY : {
@@ -38,22 +38,23 @@ typename SymbolTable::DataType SemanticAnalyzer::inferType(const ast::Expr* expr
     auto leftType = inferType(bin->getLeft());
     auto rightType = inferType(bin->getRight());
     // Type promotion rules
-    if (leftType == SymbolTable::DataType::FLOAT || rightType == SymbolTable::DataType::FLOAT) return SymbolTable::DataType::FLOAT;
-    if (leftType == SymbolTable::DataType::INTEGER && rightType == SymbolTable::DataType::INTEGER) return SymbolTable::DataType::INTEGER;
-    if (bin->getOperator() == lex::tok::TokenType::OP_PLUS && leftType == SymbolTable::DataType::STRING) return SymbolTable::DataType::STRING;
-    if (bin->getOperator() == lex::tok::TokenType::KW_AND || bin->getOperator() == lex::tok::TokenType::KW_OR) return SymbolTable::DataType::BOOLEAN;
+    if (leftType == SymbolTable::DataType_t::FLOAT || rightType == SymbolTable::DataType_t::FLOAT) return SymbolTable::DataType_t::FLOAT;
+    if (leftType == SymbolTable::DataType_t::INTEGER && rightType == SymbolTable::DataType_t::INTEGER) return SymbolTable::DataType_t::INTEGER;
+    if (bin->getOperator() == lex::tok::TokenType::OP_PLUS && leftType == SymbolTable::DataType_t::STRING) return SymbolTable::DataType_t::STRING;
+    if (bin->getOperator() == lex::tok::TokenType::KW_AND || bin->getOperator() == lex::tok::TokenType::KW_OR)
+      return SymbolTable::DataType_t::BOOLEAN;
     break;
   }
-  case ast::Expr::Kind::LIST : return SymbolTable::DataType::LIST;
-  case ast::Expr::Kind::CALL : return SymbolTable::DataType::ANY;
+  case ast::Expr::Kind::LIST : return SymbolTable::DataType_t::LIST;
+  case ast::Expr::Kind::CALL : return SymbolTable::DataType_t::ANY;
   default : break;
   }
-  return SymbolTable::DataType::UNKNOWN;
+  return SymbolTable::DataType_t::UNKNOWN;
 }
 
 void SemanticAnalyzer::reportIssue(Issue::Severity sev, const string_type& msg, std::int32_t line, const string_type& sugg)
 {
-  issues_.push_back({sev, msg, line, sugg});
+  Issues_.push_back({sev, msg, line, sugg});
 }
 
 void SemanticAnalyzer::analyzeExpr(const ast::Expr* expr)
@@ -64,10 +65,10 @@ void SemanticAnalyzer::analyzeExpr(const ast::Expr* expr)
   {
   case ast::Expr::Kind::NAME : {
     auto* name = static_cast<const ast::NameExpr*>(expr);
-    if (!currentScope_->isDefined(name->getValue()))
+    if (!CurrentScope_->isDefined(name->getValue()))
       reportIssue(Issue::Severity::ERROR, u"Undefined variable: " + name->getValue(), expr->line, u"Did you forget to initialize it?");
     else
-      currentScope_->markUsed(name->getValue(), expr->line);
+      CurrentScope_->markUsed(name->getValue(), expr->line);
     break;
   }
 
@@ -78,11 +79,11 @@ void SemanticAnalyzer::analyzeExpr(const ast::Expr* expr)
     // Type compatibility checking
     auto leftType = inferType(bin->getLeft());
     auto rightType = inferType(bin->getRight());
-    if (leftType != rightType && leftType != SymbolTable::DataType::UNKNOWN && rightType != SymbolTable::DataType::UNKNOWN)
+    if (leftType != rightType && leftType != SymbolTable::DataType_t::UNKNOWN && rightType != SymbolTable::DataType_t::UNKNOWN)
       // Check for invalid operations
       if ((bin->getOperator() == lex::tok::TokenType::OP_MINUS || bin->getOperator() == lex::tok::TokenType::OP_STAR
            || bin->getOperator() == lex::tok::TokenType::OP_SLASH)
-          && (leftType == SymbolTable::DataType::STRING || rightType == SymbolTable::DataType::STRING))
+          && (leftType == SymbolTable::DataType_t::STRING || rightType == SymbolTable::DataType_t::STRING))
         reportIssue(Issue::Severity::ERROR, u"Invalid operation on string", expr->line, u"Strings don't support this operator");
     // Division by zero detection (constant folding)
     if (bin->getOperator() == lex::tok::TokenType::OP_SLASH && bin->getRight()->getKind() == ast::Expr::Kind::LITERAL)
@@ -107,8 +108,8 @@ void SemanticAnalyzer::analyzeExpr(const ast::Expr* expr)
     if (call->getCallee()->getKind() == ast::Expr::Kind::NAME)
     {
       auto* name = static_cast<const ast::NameExpr*>(call->getCallee());
-      if (auto* sym = currentScope_->lookup(name->getValue()))
-        if (sym->symbolType != SymbolTable::SymbolType::FUNCTION)
+      if (auto* sym = CurrentScope_->lookup(name->getValue()))
+        if (sym->SymbolType != SymbolTable::SymbolType::FUNCTION)
           reportIssue(Issue::Severity::ERROR, u"'" + name->getValue() + u"' is not callable", expr->line);
     }
     break;
@@ -143,10 +144,10 @@ void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
     analyzeExpr(assign->getValue());
     auto type = inferType(assign->getValue());
     SymbolTable::Symbol sym;
-    sym.symbolType = SymbolTable::SymbolType::VARIABLE;
-    sym.dataType = type;
-    sym.definitionLine = stmt->line;
-    currentScope_->define(assign->getTarget()->getValue(), sym);
+    sym.SymbolType = SymbolTable::SymbolType::VARIABLE;
+    sym.DataType = type;
+    sym.DefinitionLine = stmt->line;
+    CurrentScope_->define(assign->getTarget()->getValue(), sym);
     break;
   }
 
@@ -187,35 +188,35 @@ void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
     auto* forStmt = static_cast<const ast::ForStmt*>(stmt);
     analyzeExpr(forStmt->getIter());
     // Create new scope for loop variable
-    currentScope_ = currentScope_->createChild();
+    CurrentScope_ = CurrentScope_->createChild();
     SymbolTable::Symbol loopVar;
-    loopVar.symbolType = SymbolTable::SymbolType::VARIABLE;
-    loopVar.dataType = SymbolTable::DataType::ANY;
-    currentScope_->define(forStmt->getTarget()->getValue(), loopVar);
+    loopVar.SymbolType = SymbolTable::SymbolType::VARIABLE;
+    loopVar.DataType = SymbolTable::DataType_t::ANY;
+    CurrentScope_->define(forStmt->getTarget()->getValue(), loopVar);
     for (const auto& s : forStmt->getBlock()->getStatements()) analyzeStmt(s);
     // Check if loop variable is shadowing
-    if (currentScope_->parent && currentScope_->parent->lookupLocal(forStmt->getTarget()->getValue()))
+    if (CurrentScope_->parent && CurrentScope_->parent->lookupLocal(forStmt->getTarget()->getValue()))
       reportIssue(Issue::Severity::WARNING, u"Loop variable shadows outer variable", stmt->line);
     // Exit loop scope
-    currentScope_ = currentScope_->parent;
+    CurrentScope_ = CurrentScope_->parent;
     break;
   }
 
   case ast::Stmt::Kind::FUNC : {
     auto* funcDef = dynamic_cast<const ast::FunctionDef*>(stmt);
     SymbolTable::Symbol funcSym;
-    funcSym.symbolType = SymbolTable::SymbolType::FUNCTION;
-    funcSym.dataType = SymbolTable::DataType::FUNCTION;
-    funcSym.definitionLine = stmt->line;
-    currentScope_->define(funcDef->getName()->getValue(), funcSym);
+    funcSym.SymbolType = SymbolTable::SymbolType::FUNCTION;
+    funcSym.DataType = SymbolTable::DataType_t::FUNCTION;
+    funcSym.DefinitionLine = stmt->line;
+    CurrentScope_->define(funcDef->getName()->getValue(), funcSym);
     // Create function scope
-    currentScope_ = currentScope_->createChild();
+    CurrentScope_ = CurrentScope_->createChild();
     for (const auto& param : funcDef->getParameters())
     {
       SymbolTable::Symbol paramSym;
-      paramSym.symbolType = SymbolTable::SymbolType::VARIABLE;
-      paramSym.dataType = SymbolTable::DataType::ANY;
-      currentScope_->define(param->getValue(), paramSym);
+      paramSym.SymbolType = SymbolTable::SymbolType::VARIABLE;
+      paramSym.DataType = SymbolTable::DataType_t::ANY;
+      CurrentScope_->define(param->getValue(), paramSym);
     }
     for (const auto& s : funcDef->getBody()->getStatements()) analyzeStmt(s);
     // Check for missing return statement
@@ -230,7 +231,7 @@ void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
     }
     if (!hasReturn) reportIssue(Issue::Severity::INFO, u"Function may not return a value", stmt->line);
     // Exit function scope
-    currentScope_ = currentScope_->parent;
+    CurrentScope_ = CurrentScope_->parent;
     break;
   }
 
@@ -246,39 +247,39 @@ void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
 
 SemanticAnalyzer::SemanticAnalyzer()
 {
-  globalScope_ = std::make_unique<SymbolTable>();
-  currentScope_ = globalScope_.get();
+  GlobalScope_ = std::make_unique<SymbolTable>();
+  CurrentScope_ = GlobalScope_.get();
   // Add built-in functions
   SymbolTable::Symbol printSym;
   printSym.name = u"print";
-  printSym.symbolType = SymbolTable::SymbolType::FUNCTION;
-  printSym.dataType = SymbolTable::DataType::FUNCTION;
-  globalScope_->define(u"print", printSym);
+  printSym.SymbolType = SymbolTable::SymbolType::FUNCTION;
+  printSym.DataType = SymbolTable::DataType_t::FUNCTION;
+  GlobalScope_->define(u"print", printSym);
 }
 
-void SemanticAnalyzer::analyze(const std::vector<ast::Stmt*>& statements_)
+void SemanticAnalyzer::analyze(const std::vector<ast::Stmt*>& Statements_)
 {
-  for (const auto& stmt : statements_) analyzeStmt(stmt);
+  for (const auto& stmt : Statements_) analyzeStmt(stmt);
   // Check for unused variables
-  auto unused = globalScope_->getUnusedSymbols();
+  auto unused = GlobalScope_->getUnusedSymbols();
   for (auto* sym : unused)
-    reportIssue(Issue::Severity::WARNING, u"Unused variable: " + sym->name, sym->definitionLine, u"Consider removing if not needed");
+    reportIssue(Issue::Severity::WARNING, u"Unused variable: " + sym->name, sym->DefinitionLine, u"Consider removing if not needed");
 }
 
-const std::vector<typename SemanticAnalyzer::Issue>& SemanticAnalyzer::getIssues() const { return issues_; }
+const std::vector<typename SemanticAnalyzer::Issue>& SemanticAnalyzer::getIssues() const { return Issues_; }
 
-const SymbolTable* SemanticAnalyzer::getGlobalScope() const { return globalScope_.get(); }
+const SymbolTable* SemanticAnalyzer::getGlobalScope() const { return GlobalScope_.get(); }
 
 void SemanticAnalyzer::printReport() const
 {
-  if (issues_.empty())
+  if (Issues_.empty())
   {
     std::cout << "✓ No issues found\n";
     return;
   }
 
-  std::cout << "Found " << issues_.size() << " issue(s):\n\n";
-  for (const auto& issue : issues_)
+  std::cout << "Found " << Issues_.size() << " issue(s):\n\n";
+  for (const auto& issue : Issues_)
   {
     string_type sevStr;
     switch (issue.severity)

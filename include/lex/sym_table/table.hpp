@@ -23,16 +23,16 @@ class SymbolTable
   SymbolTable()
   {
     // Always start with global scope
-    this->scopes_.emplace_back();
+    this->Scopes_.emplace_back();
   }
 
   // Enter a new scope (e.g., function, block)
-  void enterScope() { this->scopes_.emplace_back(); }
+  void enterScope() { this->Scopes_.emplace_back(); }
 
   // Leave current scope
   void leaveScope()
   {
-    if (this->scopes_.size() > 1) this->scopes_.pop_back();
+    if (this->Scopes_.size() > 1) this->Scopes_.pop_back();
   }
 
   // Insert symbol into current scope
@@ -40,7 +40,7 @@ class SymbolTable
   // Returns true if successfully inserted
   bool insert(const string_type& lexeme, SymbolType st)
   {
-    Scope& current_scope = this->scopes_.back();
+    Scope& current_scope = this->Scopes_.back();
     // Check if symbol already exists in current scope
     if (current_scope.find(lexeme) != current_scope.end()) return false;
     // Insert into current scope
@@ -52,7 +52,7 @@ class SymbolTable
   // Lookup symbol (searches from innermost → outermost)
   std::optional<Entry> lookup(const string_type& name) const
   {
-    for (auto it = this->scopes_.rbegin(); it != this->scopes_.rend(); ++it)
+    for (auto it = this->Scopes_.rbegin(); it != this->Scopes_.rend(); ++it)
     {
       auto found = it->find(name);
       if (found != it->end()) return found->second;
@@ -61,30 +61,30 @@ class SymbolTable
   }
 
   // Check if a symbol is visible in the current scope chain
-  bool is_in_scope(const string_type& name) const { return lookup(name).has_value(); }
+  bool isInScope(const string_type& name) const { return lookup(name).has_value(); }
 
   // Check if a symbol exists at a specific scope level
-  bool is_in_scope(const string_type& name, std::optional<std::size_t> _scope) const
+  bool isInScope(const string_type& name, std::optional<std::size_t> _scope) const
   {
     // Default: check if symbol is visible anywhere in scope chain
     if (_scope == std::nullopt) return lookup(name).has_value();
     // Check if symbol exists at specific scope level
     std::size_t scope_level = _scope.value();
-    if (scope_level >= this->scopes_.size()) return false;
-    const Scope& scope = this->scopes_[scope_level];
+    if (scope_level >= this->Scopes_.size()) return false;
+    const Scope& scope = this->Scopes_[scope_level];
     return scope.find(name) != scope.end();
   }
 
   // Current nesting depth (0 = global scope)
-  std::int32_t scopeLevel() const { return static_cast<std::int32_t>(this->scopes_.size()) - 1; }
+  std::int32_t scopeLevel() const { return static_cast<std::int32_t>(this->Scopes_.size()) - 1; }
 
   // Get all symbols in current scope
   std::vector<Entry> getCurrentScopeSymbols() const
   {
     std::vector<Entry> symbols;
-    if (!this->scopes_.empty())
+    if (!this->Scopes_.empty())
     {
-      const auto& current = this->scopes_.back();
+      const auto& current = this->Scopes_.back();
       symbols.reserve(current.size());
       for (const auto& pair : current) symbols.push_back(pair.second);
     }
@@ -98,7 +98,7 @@ class SymbolTable
     std::vector<Entry> symbols;
     std::unordered_set<string_type> seen;
     // Iterate from innermost to outermost
-    for (auto it = this->scopes_.rbegin(); it != this->scopes_.rend(); ++it)
+    for (auto it = this->Scopes_.rbegin(); it != this->Scopes_.rend(); ++it)
       for (const auto& pair : *it)
         // Only add if not shadowed by inner scope
         if (seen.find(pair.first) == seen.end())
@@ -113,9 +113,9 @@ class SymbolTable
   std::vector<Entry> getSymbolsAtLevel(std::size_t level) const
   {
     std::vector<Entry> symbols;
-    if (level < this->scopes_.size())
+    if (level < this->Scopes_.size())
     {
-      const auto& scope = this->scopes_[level];
+      const auto& scope = this->Scopes_[level];
       symbols.reserve(scope.size());
       for (const auto& pair : scope) symbols.push_back(pair.second);
     }
@@ -123,7 +123,7 @@ class SymbolTable
   }
 
  private:
-  std::vector<Scope> scopes_;  // Stack of scopes (each scope is a map)
+  std::vector<Scope> Scopes_;  // Stack of scopes (each scope is a map)
 };
 
 };  // namespace lex

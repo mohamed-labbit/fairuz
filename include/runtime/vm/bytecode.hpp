@@ -117,12 +117,12 @@ struct Instruction
 {
   OpCode op;
   std::int8_t arg;
-  std::int32_t lineNumber;  // For debugging
+  std::int32_t LineNumber;  // For debugging
 
   Instruction(OpCode o, std::int32_t a = 0, std::int32_t ln = 0) :
       op(o),
       arg(static_cast<std::int8_t>(a)),
-      lineNumber(static_cast<std::int32_t>(ln))
+      LineNumber(static_cast<std::int32_t>(ln))
   {
   }
 };

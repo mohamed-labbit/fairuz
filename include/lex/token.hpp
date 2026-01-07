@@ -21,7 +21,7 @@ struct Location
   std::string filepath{""};
   std::size_t line{0};
   std::size_t column{0};
-  std::size_t filepos{0};
+  std::size_t FilePos{0};
 
   Location() = default;
 
@@ -29,7 +29,7 @@ struct Location
       filepath(fpath),
       line(line),
       column(col),
-      filepos(fpos)
+      FilePos(fpos)
   {
   }
 };
@@ -150,9 +150,9 @@ class Token
 {
  public:
   Token(string_type val, TokenType tt, std::size_t line, std::size_t col, std::size_t fpos, std::string fpath) :
-      value_(std::move(val)),
-      type_(tt),
-      location_(fpath, line, col, fpos)
+      Value_(std::move(val)),
+      Type_(tt),
+      Location_(fpath, line, col, fpos)
   {
   }
 
@@ -166,27 +166,27 @@ class Token
   Token& operator=(Token&&) MYLANG_NOEXCEPT = default;
   // Return const references to avoid copies
   const string_type& lexeme() const;
-  std::string utf8_lexeme() const;
+  std::string utf8Lexeme() const;
   const TokenType& type() const;
   std::size_t size() const;
   const std::size_t& line() const;
   const std::size_t& column() const;
   const Location& location() const;
   const std::string& filepath() const;
-  bool is(const TokenType tt) const { return tt == type_; }
+  bool is(const TokenType tt) const { return tt == Type_; }
 
   // friend ostream operator for pretty-printing in tests/logs
   friend std::ostream& operator<<(std::ostream& os, const Token& tok)
   {
-    os << "Token(\"" << utf8::utf16to8(tok.value_) << "\", type=" << static_cast<std::int32_t>(tok.type_) << ", line=" << tok.location_.line
-       << ", col=" << tok.location_.column << "\", file_pos=" << tok.location_.filepos << "\", file path=" << tok.location_.filepath << ")";
+    os << "Token(\"" << utf8::utf16to8(tok.Value_) << "\", type=" << static_cast<std::int32_t>(tok.Type_) << ", line=" << tok.Location_.line
+       << ", col=" << tok.Location_.column << "\", file_pos=" << tok.Location_.FilePos << "\", file path=" << tok.Location_.filepath << ")";
     return os;
   }
 
  private:
-  string_type value_;
-  TokenType type_;
-  Location location_;
+  string_type Value_;
+  TokenType Type_;
+  Location Location_;
 };
 }
 }  // lex

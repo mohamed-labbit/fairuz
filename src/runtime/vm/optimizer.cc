@@ -13,11 +13,11 @@ void BytecodeOptimizer::optimize(std::vector<bytecode::Instruction>& code, std::
   while (changed && iteration < maxIterations)
   {
     changed = false;
-    for (OptimizationPass& pass : passes_)
+    for (OptimizationPass& pass : Passes_)
     {
       if (pass.apply(code))
       {
-        pass.applicationsCount++;
+        pass.ApplicationsCount++;
         changed = true;
       }
     }
@@ -28,8 +28,8 @@ void BytecodeOptimizer::optimize(std::vector<bytecode::Instruction>& code, std::
 void BytecodeOptimizer::printReport(std::ostream& out) const
 {
   out << "\nBytecode Optimizer Report:\n";
-  for (const OptimizationPass& pass : passes_)
-    if (pass.applicationsCount > 0) out << "  • " << pass.name << ": " << pass.applicationsCount << " applications\n";
+  for (const OptimizationPass& pass : Passes_)
+    if (pass.ApplicationsCount > 0) out << "  • " << pass.name << ": " << pass.ApplicationsCount << " applications\n";
 }
 
 bool BytecodeOptimizer::isJumpTarget(const std::vector<bytecode::Instruction>& code, std::size_t pos)

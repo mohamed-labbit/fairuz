@@ -6,60 +6,60 @@ namespace runtime {
 
 typename CompilerSymbolTable::Symbol* CompilerSymbolTable::define(const std::string& name, bool isParam)
 {
-  if (symbols_.count(name)) return &symbols_[name];
+  if (Symbols_.count(name)) return &Symbols_[name];
 
   Symbol sym;
   sym.name = name;
-  sym.index = nextIndex_++;
-  sym.scope = parent_ ? SymbolScope::LOCAL : SymbolScope::GLOBAL;
-  sym.isParameter = isParam;
-  sym.isCaptured = false;
-  sym.isUsed = false;
+  sym.index = NextIndex_++;
+  sym.scope = Parent_ ? SymbolScope::LOCAL : SymbolScope::GLOBAL;
+  sym.IsParameter = isParam;
+  sym.IsCaptured = false;
+  sym.IsUsed = false;
 
-  symbols_[name] = sym;
-  return &symbols_[name];
+  Symbols_[name] = sym;
+  return &Symbols_[name];
 }
 
 typename CompilerSymbolTable::Symbol* CompilerSymbolTable::resolve(const std::string& name)
 {
   // Check local scope
-  auto it = symbols_.find(name);
-  if (it != symbols_.end())
+  auto it = Symbols_.find(name);
+  if (it != Symbols_.end())
   {
-    it->second.isUsed = true;
+    it->second.IsUsed = true;
     return &it->second;
   }
   // Check parent scopes
-  if (parent_)
+  if (Parent_)
   {
-    Symbol* parentSym = parent_->resolve(name);
+    Symbol* parentSym = Parent_->resolve(name);
     if (parentSym)
     {
       // Mark as captured for closure
-      parentSym->isCaptured = true;
+      parentSym->IsCaptured = true;
       // Create closure reference
       Symbol closureSym;
       closureSym.name = name;
-      closureSym.index = freeVars.size();
+      closureSym.index = FreeVars.size();
       closureSym.scope = SymbolScope::CLOSURE;
-      closureSym.isUsed = true;
-      freeVars.push_back(name);
-      symbols_[name] = closureSym;
-      return &symbols_[name];
+      closureSym.IsUsed = true;
+      FreeVars.push_back(name);
+      Symbols_[name] = closureSym;
+      return &Symbols_[name];
     }
   }
   return nullptr;
 }
 
-const std::vector<std::string>& CompilerSymbolTable::getFreeVars() const { return freeVars; }
+const std::vector<std::string>& CompilerSymbolTable::getFreeVars() const { return FreeVars; }
 
-std::int32_t CompilerSymbolTable::getLocalCount() const { return nextIndex_; }
+std::int32_t CompilerSymbolTable::getLocalCount() const { return NextIndex_; }
 
 std::vector<typename CompilerSymbolTable::Symbol> CompilerSymbolTable::getUnusedSymbols() const
 {
   std::vector<Symbol> unused;
-  for (const auto& [name, sym] : symbols_)
-    if (!sym.isUsed && !sym.isParameter) unused.push_back(sym);
+  for (const auto& [name, sym] : Symbols_)
+    if (!sym.IsUsed && !sym.IsParameter) unused.push_back(sym);
   return unused;
 }
 

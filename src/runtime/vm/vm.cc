@@ -13,28 +13,28 @@ namespace runtime {
 
 void VirtualMachine::push(const object::Value& val)
 {
-  if (stack_.size() >= 10000) diagnostic::engine.panic("Stack overflow");
-  stack_.push_back(val);
+  if (Stack_.size() >= 10000) diagnostic::engine.panic("Stack overflow");
+  Stack_.push_back(val);
 }
 
 object::Value VirtualMachine::pop()
 {
-  if (stack_.empty()) diagnostic::engine.panic("Stack underflow");
-  object::Value val = stack_.back();
-  stack_.pop_back();
+  if (Stack_.empty()) diagnostic::engine.panic("Stack underflow");
+  object::Value val = Stack_.back();
+  Stack_.pop_back();
   return val;
 }
 
 object::Value& VirtualMachine::top()
 {
-  if (stack_.empty()) diagnostic::engine.panic("Stack empty");
-  return stack_.back();
+  if (Stack_.empty()) diagnostic::engine.panic("Stack empty");
+  return Stack_.back();
 }
 
 object::Value& VirtualMachine::peek(std::int32_t offset)
 {
-  if (stack_.size() < offset + 1) diagnostic::engine.panic("Stack underflow in peek");
-  return stack_[stack_.size() - 1 - offset];
+  if (Stack_.size() < offset + 1) diagnostic::engine.panic("Stack underflow in peek");
+  return Stack_[Stack_.size() - 1 - offset];
 }
 
 // Fast integer operations (avoid type checking overhead)
@@ -265,32 +265,32 @@ void VirtualMachine::registerNativeFunctions()
 
 void VirtualMachine::execute(const BytecodeCompiler::CompilationUnit& code)
 {
-  globals_.resize(code.numCellVars);
-  stack_.clear();
-  stack_.reserve(1000);  // Pre-allocate for performance
-  ip_ = 0;
+  Globals_.resize(code.NumCellVars);
+  Stack_.clear();
+  Stack_.reserve(1000);  // Pre-allocate for performance
+  Ip_ = 0;
   auto startTime = std::chrono::high_resolution_clock::now();
   // Main execution loop with computed goto (if supported)
-  while (ip_ < code.instructions.size())
+  while (Ip_ < code.instructions.size())
   {
-    const bytecode::Instruction& instr = code.instructions[ip_];
-    stats_.instructionsExecuted++;
+    const bytecode::Instruction& instr = code.instructions[Ip_];
+    Stats_.InstructionsExecuted++;
     // JIT hot spot detection
-    if (stats_.instructionsExecuted % 100 == 0) jit_.recordExecution(ip_);
+    if (Stats_.InstructionsExecuted % 100 == 0) Jit_.recordExecution(Ip_);
     // Dispatch instruction
     try
     {
       executeInstruction(instr, code);
     } catch (const std::exception& e)
     {
-      // std::cerr << "Runtime error at line " << instr.lineNumber << ": " << e.what() << "\n";
-      diagnostic::engine.emit("runtime error at line" + std::to_string(instr.lineNumber) + ": " + e.what());
+      // std::cerr << "Runtime error at line " << instr.LineNumber << ": " << e.what() << "\n";
+      diagnostic::engine.emit("runtime error at line" + std::to_string(instr.LineNumber) + ": " + e.what());
       throw;
     }
-    ip_++;
+    Ip_++;
   }
   auto endTime = std::chrono::high_resolution_clock::now();
-  stats_.executionTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
+  Stats_.ExecutionTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
 }
 
 void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, const BytecodeCompiler::CompilationUnit& code)
@@ -300,18 +300,18 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
   case bytecode::OpCode::LOAD_CONST : push(code.constants[instr.arg]); break;
 
   case bytecode::OpCode::LOAD_VAR :
-    if (instr.arg >= globals_.size()) diagnostic::engine.panic("Variable index out of range");
-    push(globals_[instr.arg]);
+    if (instr.arg >= Globals_.size()) diagnostic::engine.panic("Variable index out of range");
+    push(Globals_[instr.arg]);
     break;
 
-  case bytecode::OpCode::LOAD_GLOBAL : push(globals_[instr.arg]); break;
+  case bytecode::OpCode::LOAD_GLOBAL : push(Globals_[instr.arg]); break;
 
   case bytecode::OpCode::STORE_VAR :
-    if (instr.arg >= globals_.size()) globals_.resize(instr.arg + 1);
-    globals_[instr.arg] = pop();
+    if (instr.arg >= Globals_.size()) Globals_.resize(instr.arg + 1);
+    Globals_[instr.arg] = pop();
     break;
 
-  case bytecode::OpCode::STORE_GLOBAL : globals_[instr.arg] = pop(); break;
+  case bytecode::OpCode::STORE_GLOBAL : Globals_[instr.arg] = pop(); break;
 
   case bytecode::OpCode::POP : pop(); break;
 
@@ -506,8 +506,8 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
   case bytecode::OpCode::NOT_IN : {
     object::Value b = pop();
     object::Value a = pop();
-    stack_.push_back(a);
-    stack_.push_back(b);
+    Stack_.push_back(a);
+    Stack_.push_back(b);
     executeInstruction({bytecode::OpCode::IN}, code);
     object::Value result = pop();
     push(!result);
@@ -520,20 +520,20 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
   case bytecode::OpCode::NOT : push(!pop()); break;
 
   // Control flow
-  case bytecode::OpCode::JUMP : ip_ = instr.arg - 1; break;  // -1 because ip++ at end of loop
+  case bytecode::OpCode::JUMP : Ip_ = instr.arg - 1; break;  // -1 because ip++ at end of loop
 
   case bytecode::OpCode::JUMP_IF_FALSE : {
-    if (!pop().toBool()) ip_ = instr.arg - 1;
+    if (!pop().toBool()) Ip_ = instr.arg - 1;
     break;
   }
 
   case bytecode::OpCode::JUMP_IF_TRUE : {
-    if (pop().toBool()) ip_ = instr.arg - 1;
+    if (pop().toBool()) Ip_ = instr.arg - 1;
     break;
   }
 
   case bytecode::OpCode::POP_JUMP_IF_FALSE : {
-    if (!top().toBool()) ip_ = instr.arg - 1;
+    if (!top().toBool()) Ip_ = instr.arg - 1;
     break;
   }
 
@@ -543,7 +543,7 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     else
     {
       pop();  // Remove exhausted iterator
-      ip_ = instr.arg - 1;
+      Ip_ = instr.arg - 1;
     }
     break;
   }
@@ -561,7 +561,7 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
       auto it = nativeFunctions.find(funcName);
       if (it != nativeFunctions.end())
       {
-        stats_.functionsCalled++;
+        Stats_.FunctionsCalled++;
         push(it->second(args));
       }
       else
@@ -572,7 +572,7 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     else if (func.isFunction())
     {
       // User-defined function (would need call frame management)
-      stats_.functionsCalled++;
+      Stats_.FunctionsCalled++;
       diagnostic::engine.panic("User functions not yet implemented");
     }
     else
@@ -681,23 +681,23 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
 
 void VirtualMachine::printStatistics() const
 {
-  std::cout << "\n╔═══════════════════════════════════════╗\n";
+  std::cout << '\n';
+  std::cout << "╔═══════════════════════════════════════╗\n";
   std::cout << "║     VM Execution Statistics           ║\n";
   std::cout << "╚═══════════════════════════════════════╝\n\n";
-  std::cout << "Instructions executed:  " << stats_.instructionsExecuted << "\n";
-  std::cout << "Functions called:       " << stats_.functionsCalled << "\n";
-  std::cout << "GC collections:         " << stats_.gcCollections << "\n";
-  std::cout << "JIT compilations:       " << stats_.jitCompilations << "\n";
-  std::cout << "Execution time:         " << stats_.executionTime.count() / 1000.0 << " ms\n";
-
-  if (stats_.instructionsExecuted > 0)
+  std::cout << "Instructions executed : " << Stats_.InstructionsExecuted << "\n";
+  std::cout << "Functions called      : " << Stats_.FunctionsCalled << "\n";
+  std::cout << "GC collections        : " << Stats_.GcCollections << "\n";
+  std::cout << "JIT compilations      : " << Stats_.JitCompilations << "\n";
+  std::cout << "Execution time        : " << Stats_.ExecutionTime.count() / 1000.0 << " ms\n";
+  std::cout << "-----------------------------------------" << std::endl;
+  if (Stats_.InstructionsExecuted > 0)
   {
-    double ips = stats_.instructionsExecuted / (stats_.executionTime.count() / 1000000.0);
-    std::cout << "Instructions/second:    " << static_cast<std::int64_t>(ips) << "\n";
+    double ips = Stats_.InstructionsExecuted / (Stats_.ExecutionTime.count() / 1000000.0);
+    std::cout << "Instructions/second : " << static_cast<std::int64_t>(ips) << "\n";
   }
-
-  std::cout << "\nStack size:            " << stack_.size() << "\n";
-  std::cout << "Global variables:       " << globals_.size() << "\n";
+  std::cout << "\nStack size          : " << Stack_.size() << "\n";
+  std::cout << "Global variables      : " << Globals_.size() << "\n";
 }
 
 }

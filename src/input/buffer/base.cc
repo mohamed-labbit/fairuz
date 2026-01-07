@@ -14,11 +14,11 @@ bool InputBufferBase::refresh_buffer(const std::uint32_t to_refresh)
 #if DEBUG_PRINT
   std::cout << "-- DEBUG : InputBufferBase::refresh_buffer() called!" << std::endl;
 #endif
-  if (!file_manager_->is_open()) return false;
+  if (!FileManager_->isOpen()) return false;
 
-  auto& bufs = this->buffers_;
+  auto& bufs = this->Buffers_;
   std::size_t max_chars = bufs[to_refresh].size() - 1;
-  buffer_t buf = file_manager_->read_window(max_chars);
+  buffer_t buf = FileManager_->readWindow(max_chars);
 
   if (buf.empty())
   {

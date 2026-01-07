@@ -20,14 +20,14 @@ class ASTOptimizer
  private:
   struct OptimizationStats
   {
-    std::size_t constantFolds{0};
-    std::size_t deadCodeEliminations{0};
-    std::size_t commonSubexprEliminations{0};
-    std::size_t loopInvariants{0};
-    std::size_t strengthReductions{0};
+    std::size_t ConstantFolds{0};
+    std::size_t DeadCodeEliminations{0};
+    std::size_t CommonSubexprEliminations{0};
+    std::size_t LoopInvariants{0};
+    std::size_t StrengthReductions{0};
   };
 
-  OptimizationStats stats_;
+  OptimizationStats Stats_;
 
   // Constant folding evaluator
   std::optional<double> evaluateConstant(const ast::Expr* expr)
@@ -91,7 +91,7 @@ class ASTOptimizer
       // Try to evaluate
       if (auto val = evaluateConstant(expr))
       {
-        stats_.constantFolds++;
+        Stats_.ConstantFolds++;
         return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER, utf8::utf8to16(std::to_string(*val)));
       }
       // Algebraic simplifications
@@ -104,7 +104,7 @@ class ASTOptimizer
         auto* lit = static_cast<ast::LiteralExpr*>(right);
         if (lit->getValue() == u"0")
         {
-          stats_.strengthReductions++;
+          Stats_.StrengthReductions++;
           return std::move(bin->getLeft());
         }
       }
@@ -115,7 +115,7 @@ class ASTOptimizer
         auto* lit = static_cast<ast::LiteralExpr*>(right);
         if (lit->getValue() == u"1")
         {
-          stats_.strengthReductions++;
+          Stats_.StrengthReductions++;
           return std::move(bin->getLeft());
         }
       }
@@ -125,7 +125,7 @@ class ASTOptimizer
         auto* lit = static_cast<ast::LiteralExpr*>(right);
         if (lit->getValue() == u"0")
         {
-          stats_.strengthReductions++;
+          Stats_.StrengthReductions++;
           return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER, u"0");
         }
       }
@@ -135,7 +135,7 @@ class ASTOptimizer
         auto* lit = static_cast<ast::LiteralExpr*>(right);
         if (lit->getValue() == u"2")
         {
-          stats_.strengthReductions++;
+          Stats_.StrengthReductions++;
           // Clone left expression
           // auto leftClone = std::make_unique<ast::NameExpr>(static_cast<ast::NameExpr*>(left)->getValue());
           auto* leftClone = ast::AST_allocator.make<ast::NameExpr>(static_cast<ast::NameExpr*>(left)->getValue());
@@ -150,7 +150,7 @@ class ASTOptimizer
         auto* rname = static_cast<ast::NameExpr*>(right);
         if (lname->getValue() == rname->getValue())
         {
-          stats_.strengthReductions++;
+          Stats_.StrengthReductions++;
           return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER, u"0");
         }
       }
@@ -163,7 +163,7 @@ class ASTOptimizer
 
       if (auto val = evaluateConstant(expr))
       {
-        stats_.constantFolds++;
+        Stats_.ConstantFolds++;
         return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER, utf8::utf8to16(std::to_string(*val)));
       }
       // Double negation: --x = x
@@ -172,7 +172,7 @@ class ASTOptimizer
         ast::UnaryExpr* innerUn = static_cast<ast::UnaryExpr*>(un);
         if (innerUn->getOperator() == lex::tok::TokenType::OP_MINUS)
         {
-          stats_.strengthReductions++;
+          Stats_.StrengthReductions++;
           return dynamic_cast<ast::Expr*>(innerUn);
         }
       }
@@ -199,7 +199,7 @@ class ASTOptimizer
         auto* lit = static_cast<ast::LiteralExpr*>(tern->condition.get());
         if (lit->litType == ast::LiteralExpr::Type::BOOLEAN)
         {
-          stats_.constantFolds++;
+          Stats_.ConstantFolds++;
           return lit->value == u"true" ? std::move(tern->trueExpr) : std::move(tern->falseExpr);
         }
       }
@@ -221,7 +221,7 @@ class ASTOptimizer
         auto* lit = static_cast<ast::LiteralExpr*>(ifStmt->getCondition());
         if (lit->getType() == ast::LiteralExpr::Type::BOOLEAN)
         {
-          stats_.deadCodeEliminations++;
+          Stats_.DeadCodeEliminations++;
           if (lit->getValue() == u"true")
             // Return then block as block statement
             return dynamic_cast<ast::Stmt*>(ifStmt->getThenBlock());
@@ -250,7 +250,7 @@ class ASTOptimizer
       if (whileStmt->getCondition()->getKind() == ast::Expr::Kind::LITERAL)
       {
         auto* lit = static_cast<ast::LiteralExpr*>(whileStmt->getCondition());
-        if (lit->getType() == ast::LiteralExpr::Type::BOOLEAN && lit->getValue() == u"false") stats_.deadCodeEliminations++;
+        if (lit->getType() == ast::LiteralExpr::Type::BOOLEAN && lit->getValue() == u"false") Stats_.DeadCodeEliminations++;
         /// @todo: return std::make_unique<PassStmt>();
       }
       std::vector<ast::Stmt*> newBody;
@@ -277,7 +277,7 @@ class ASTOptimizer
       {
         if (seenReturn)
         {
-          stats_.deadCodeEliminations++;
+          Stats_.DeadCodeEliminations++;
           continue;  // Skip statements after return
         }
         if (s->getKind() == ast::Stmt::Kind::RETURN) seenReturn = true;
@@ -294,8 +294,8 @@ class ASTOptimizer
   class CSEPass
   {
    private:
-    std::unordered_map<string_type, string_type> exprCache;
-    std::int32_t tempCounter = 0;
+    std::unordered_map<string_type, string_type> ExprCache_;
+    std::int32_t TempCounter_ = 0;
 
     string_type exprToString(const ast::Expr* expr)
     {
@@ -324,21 +324,21 @@ class ASTOptimizer
     }
 
    public:
-    string_type getTempVar() { return u"__cse_temp_" + utf8::utf8to16(std::to_string(tempCounter++)); }
+    string_type getTempVar() { return u"__cse_temp_" + utf8::utf8to16(std::to_string(TempCounter_++)); }
 
     std::optional<string_type> findCSE(const ast::Expr* expr)
     {
       string_type exprStr = exprToString(expr);
       if (exprStr.empty()) return std::nullopt;
-      auto it = exprCache.find(exprStr);
-      if (it != exprCache.end()) return it->second;
+      auto it = ExprCache_.find(exprStr);
+      if (it != ExprCache_.end()) return it->second;
       return std::nullopt;
     }
 
     void recordExpr(const ast::Expr* expr, const string_type& var)
     {
       string_type exprStr = exprToString(expr);
-      if (!exprStr.empty()) exprCache[exprStr] = var;
+      if (!exprStr.empty()) ExprCache_[exprStr] = var;
     }
   };
 
@@ -396,19 +396,19 @@ class ASTOptimizer
     return result;
   }
 
-  const OptimizationStats& getStats() const { return stats_; }
+  const OptimizationStats& getStats() const { return Stats_; }
 
   void printStats() const
   {
     std::cout << "\n=== Optimization Statistics ===\n";
-    std::cout << "Constant folds: " << stats_.constantFolds << "\n";
-    std::cout << "Dead code eliminations: " << stats_.deadCodeEliminations << "\n";
-    std::cout << "Strength reductions: " << stats_.strengthReductions << "\n";
-    std::cout << "Common subexpr eliminations: " << stats_.commonSubexprEliminations << "\n";
-    std::cout << "Loop invariants moved: " << stats_.loopInvariants << "\n";
+    std::cout << "Constant folds: " << Stats_.ConstantFolds << "\n";
+    std::cout << "Dead code eliminations: " << Stats_.DeadCodeEliminations << "\n";
+    std::cout << "Strength reductions: " << Stats_.StrengthReductions << "\n";
+    std::cout << "Common subexpr eliminations: " << Stats_.CommonSubexprEliminations << "\n";
+    std::cout << "Loop invariants moved: " << Stats_.LoopInvariants << "\n";
     std::cout << "Total optimizations: "
-              << (stats_.constantFolds + stats_.deadCodeEliminations + stats_.strengthReductions + stats_.commonSubexprEliminations
-                  + stats_.loopInvariants)
+              << (Stats_.ConstantFolds + Stats_.DeadCodeEliminations + Stats_.StrengthReductions + Stats_.CommonSubexprEliminations
+                  + Stats_.LoopInvariants)
               << "\n";
   }
 };

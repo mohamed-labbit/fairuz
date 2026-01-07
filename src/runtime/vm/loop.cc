@@ -13,30 +13,30 @@ void LoopAnalyzer::detectLoops(const std::vector<bytecode::Instruction>& instruc
     if ((instr.op == bytecode::OpCode::JUMP_BACKWARD || instr.op == bytecode::OpCode::FOR_ITER) && instr.arg < i)
     {
       Loop loop;
-      loop.headerPC = instr.arg;
-      loop.exitPC = i;
-      loop.isInnerLoop = true;
-      loop.nestingLevel = 1;
+      loop.HeaderPC = instr.arg;
+      loop.ExitPC = i;
+      loop.IsInnerLoop = true;
+      loop.NestingLevel = 1;
       // Collect loop body
-      for (std::int32_t pc = instr.arg; pc <= i; pc++) loop.bodyPCs.push_back(pc);
-      loops_.push_back(loop);
+      for (std::int32_t pc = instr.arg; pc <= i; pc++) loop.BodyPCs.push_back(pc);
+      Loops_.push_back(loop);
     }
   }
 
   // Calculate nesting levels
-  for (Loop& outer : loops_)
-    for (const Loop& inner : loops_)
-      if (inner.headerPC > outer.headerPC && inner.exitPC < outer.exitPC) outer.isInnerLoop = false;
+  for (Loop& outer : Loops_)
+    for (const Loop& inner : Loops_)
+      if (inner.HeaderPC > outer.HeaderPC && inner.ExitPC < outer.ExitPC) outer.IsInnerLoop = false;
   /// @todo: inner is nested in outer
 }
 
 void LoopAnalyzer::findInvariants(const std::vector<bytecode::Instruction>& instructions, const CompilerSymbolTable& symbols)
 {
-  for (Loop& loop : loops_)
+  for (Loop& loop : Loops_)
   {
     std::unordered_set<std::int32_t> modifiedVars;
     std::unordered_set<std::int32_t> usedVars;
-    for (std::int32_t pc : loop.bodyPCs)
+    for (std::int32_t pc : loop.BodyPCs)
     {
       const bytecode::Instruction& instr = instructions[pc];
       if (instr.op == bytecode::OpCode::STORE_VAR || instr.op == bytecode::OpCode::STORE_FAST) modifiedVars.insert(instr.arg);
@@ -47,7 +47,7 @@ void LoopAnalyzer::findInvariants(const std::vector<bytecode::Instruction>& inst
   }
 }
 
-const std::vector<typename LoopAnalyzer::Loop>& LoopAnalyzer::getLoops() const { return loops_; }
+const std::vector<typename LoopAnalyzer::Loop>& LoopAnalyzer::getLoops() const { return Loops_; }
 
 }
 }

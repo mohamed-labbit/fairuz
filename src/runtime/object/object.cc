@@ -11,55 +11,55 @@ namespace runtime {
 std::int64_t object::Value::asInt() const
 {
   if (!isInt()) diagnostic::engine.panic("Value is not an integer");
-  return std::get<std::int64_t>(data_);
+  return std::get<std::int64_t>(Data_);
 }
 
 double object::Value::asFloat() const
 {
   if (!isFloat()) diagnostic::engine.panic("Value is not a float");
-  return std::get<double>(data_);
+  return std::get<double>(Data_);
 }
 
 const string_type& object::Value::asString() const
 {
   if (!isString()) diagnostic::engine.panic("Value is not a string");
-  return *std::get<std::shared_ptr<string_type>>(data_);
+  return *std::get<std::shared_ptr<string_type>>(Data_);
 }
 
 bool object::Value::asBool() const
 {
   if (!isBool()) diagnostic::engine.panic("Value is not a boolean");
-  return std::get<bool>(data_);
+  return std::get<bool>(Data_);
 }
 
 std::vector<object::Value>& object::Value::asList()
 {
   if (!isList()) diagnostic::engine.panic("Value is not a list");
-  return *std::get<std::shared_ptr<std::vector<Value>>>(data_);
+  return *std::get<std::shared_ptr<std::vector<Value>>>(Data_);
 }
 
 const std::vector<object::Value>& object::Value::asList() const
 {
   if (!isList()) diagnostic::engine.panic("Value is not a list");
-  return *std::get<std::shared_ptr<std::vector<Value>>>(data_);
+  return *std::get<std::shared_ptr<std::vector<Value>>>(Data_);
 }
 
 std::unordered_map<string_type, object::Value>& object::Value::asDict() const
 {
   if (!isDict()) diagnostic::engine.panic("Value is not a dict");
-  return *std::get<std::shared_ptr<std::unordered_map<string_type, Value>>>(data_);
+  return *std::get<std::shared_ptr<std::unordered_map<string_type, Value>>>(Data_);
 }
 
 typename object::Value::Function& object::Value::asFunction()
 {
   if (!isFunction()) diagnostic::engine.panic("Value is not a function");
-  return std::get<Function>(data_);
+  return std::get<Function>(Data_);
 }
 
 typename object::Value::NativeFunction& object::Value::asNativeFunction()
 {
-  if (type_ != Type::NATIVE_FUNCTION) diagnostic::engine.panic("Not a native function");
-  return std::get<NativeFunction>(data_);
+  if (Type_ != Type::NATIVE_FUNCTION) diagnostic::engine.panic("Not a native function");
+  return std::get<NativeFunction>(Data_);
 }
 
 // Type conversions
@@ -82,7 +82,7 @@ std::int64_t object::Value::toInt() const
 
 bool object::Value::toBool() const
 {
-  switch (type_)
+  switch (Type_)
   {
   case Type::NONE : return false;
   case Type::INT : return asInt() != 0;
@@ -97,7 +97,7 @@ bool object::Value::toBool() const
 
 string_type object::Value::toString() const
 {
-  switch (type_)
+  switch (Type_)
   {
   case Type::NONE : return u"None";
   case Type::INT : return utf8::utf8to16(std::to_string(asInt()));
@@ -121,7 +121,7 @@ string_type object::Value::toString() const
   }
   case Type::DICT : {
     string_type result = u"{";
-    const auto& dict = std::get<std::shared_ptr<std::unordered_map<string_type, Value>>>(data_);
+    const auto& dict = std::get<std::shared_ptr<std::unordered_map<string_type, Value>>>(Data_);
     std::size_t count = 0;
     for (const auto& [k, v] : *dict)
     {
@@ -152,14 +152,14 @@ std::size_t object::Value::hash() const
 // Comparison operators
 bool object::Value::operator==(const Value& other) const
 {
-  if (type_ != other.type_)
+  if (Type_ != other.Type_)
   {
     // Handle numeric comparisons
     if (isNumber() && other.isNumber()) return toFloat() == other.toFloat();
     return false;
   }
 
-  switch (type_)
+  switch (Type_)
   {
   case Type::NONE : return true;
   case Type::INT : return asInt() == other.asInt();
@@ -316,11 +316,11 @@ object::Value object::Value::getIterator() const
   if (isList())
   {
     Iterator it;
-    it.items = std::get<std::shared_ptr<std::vector<Value>>>(data_);
+    it.items = std::get<std::shared_ptr<std::vector<Value>>>(Data_);
     it.index = 0;
     Value result;
-    result.type_ = Type::ITERATOR;
-    result.data_ = it;
+    result.Type_ = Type::ITERATOR;
+    result.Data_ = it;
     return result;
   }
   diagnostic::engine.panic("Object is not iterable");
@@ -328,9 +328,9 @@ object::Value object::Value::getIterator() const
 
 bool object::Value::hasNext() const
 {
-  if (type_ == Type::ITERATOR)
+  if (Type_ == Type::ITERATOR)
   {
-    const auto& it = std::get<Iterator>(data_);
+    const auto& it = std::get<Iterator>(Data_);
     return it.index < it.items->size();
   }
   return false;
@@ -338,9 +338,9 @@ bool object::Value::hasNext() const
 
 object::Value object::Value::next()
 {
-  if (type_ == Type::ITERATOR)
+  if (Type_ == Type::ITERATOR)
   {
-    auto& it = std::get<Iterator>(data_);
+    auto& it = std::get<Iterator>(Data_);
     if (it.index >= it.items->size()) diagnostic::engine.panic("Iterator exhausted");
     return (*it.items)[it.index++];
   }

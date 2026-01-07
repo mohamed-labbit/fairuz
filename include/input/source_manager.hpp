@@ -17,7 +17,7 @@ class SourceManager
 {
  public:
   explicit SourceManager() = default;
-  explicit SourceManager(input::FileManager* file_manager);
+  explicit SourceManager(input::FileManager* fm);
 
   ~SourceManager() = default;
 
@@ -28,16 +28,16 @@ class SourceManager
   mylang::lex::buffer::Position position() const;
   bool done() const;
   char16_t peek();
-  char16_t consume_char();
+  char16_t consumeChar();
   char16_t current();
-  std::pair<std::size_t, std::size_t> offset_map(const std::size_t& offset);
-  std::pair<std::size_t, std::size_t> offset_map_(const std::size_t& offset) const;
+  std::pair<std::size_t, std::size_t> offsetMap(const std::size_t& offset);
+  std::pair<std::size_t, std::size_t> offsetMap_(const std::size_t& offset) const;
 
  private:
-  std::string filepath_;
-  buffer::InputBuffer input_buffer_;
-  char16_t* current_{nullptr};
-  buffer::Position current_position_;
+  std::string FilePath_;
+  buffer::InputBuffer InputBuffer_;
+  char16_t* Current_{nullptr};
+  buffer::Position CurrentPosition_;
 };
 
 }  // lex

@@ -18,16 +18,16 @@ class LoopAnalyzer
  public:
   struct Loop
   {
-    std::int32_t headerPC;
-    std::int32_t exitPC;
-    std::vector<std::int32_t> bodyPCs;
+    std::int32_t HeaderPC;
+    std::int32_t ExitPC;
+    std::vector<std::int32_t> BodyPCs;
     std::unordered_set<std::int32_t> invariants;  // Loop-invariant variables
-    bool isInnerLoop;
-    std::int32_t nestingLevel;
+    bool IsInnerLoop;
+    std::int32_t NestingLevel;
   };
 
  private:
-  std::vector<Loop> loops_;
+  std::vector<Loop> Loops_;
 
  public:
   void detectLoops(const std::vector<bytecode::Instruction>& instructions);

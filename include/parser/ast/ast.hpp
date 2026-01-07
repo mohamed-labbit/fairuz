@@ -23,18 +23,18 @@ namespace ast {
 class ASTAllocator
 {
  private:
-  runtime::allocator::ArenaAllocator allocator_;
+  runtime::allocator::ArenaAllocator Allocator_;
 
  public:
   ASTAllocator() :
-      allocator_(static_cast<std::int32_t>(runtime::allocator::ArenaAllocator::GrowthStrategy::LINEAR))
+      Allocator_(static_cast<std::int32_t>(runtime::allocator::ArenaAllocator::GrowthStrategy::LINEAR))
   {
   }
 
   template<typename T, typename... Args>
   T* make(Args&&... args)
   {
-    void* mem = allocator_.allocate<std::byte>(sizeof(T));
+    void* mem = Allocator_.allocate<std::byte>(sizeof(T));
     return new (mem) T(std::forward<Args>(args)...);
   }
 };
@@ -63,21 +63,21 @@ class Expr: public ASTNode
   enum class Kind : int { INVALID, BINARY, UNARY, LITERAL, NAME, CALL, ASSIGNMENT, LIST };
 
  protected:
-  Kind kind_;
-  string_type str_;
+  Kind Kind_;
+  string_type Str_;
 
  public:
   explicit Expr() = default;
 
   explicit Expr(string_type s) :
-      str_(s)
+      Str_(s)
   {
-    kind_ = Kind::INVALID;
+    Kind_ = Kind::INVALID;
   }
 
-  void setStr(const string_type s) { str_ = s; }
-  string_type getStr() const { return str_; }
-  Kind getKind() const { return kind_; }
+  void setStr(const string_type s) { Str_ = s; }
+  string_type getStr() const { return Str_; }
+  Kind getKind() const { return Kind_; }
 };
 
 class Stmt: public ASTNode
@@ -86,79 +86,79 @@ class Stmt: public ASTNode
   enum class Kind : int { INVALID, EXPR, ASSIGNMENT, IF, WHILE, FOR, FUNC, RETURN, BLOCK };
 
  protected:
-  Kind kind_;
-  // string_type str_;
+  Kind Kind_;
+  // string_type Str_;
 
  public:
   explicit Stmt() = default;
 
   explicit Stmt(string_type s)
-  // : str_(s)
+  // : Str_(s)
   {
-    kind_ = Kind::INVALID;
+    Kind_ = Kind::INVALID;
   }
 
-  // string_type getStr() const { return str_; }
-  Kind getKind() const { return kind_; }
+  // string_type getStr() const { return Str_; }
+  Kind getKind() const { return Kind_; }
 };
 
 class BinaryExpr: public Expr
 {
  private:
-  Expr* left_{nullptr};
-  Expr* right_{nullptr};
-  lex::tok::TokenType operator_{lex::tok::TokenType::INVALID};
+  Expr* Left_{nullptr};
+  Expr* Right_{nullptr};
+  lex::tok::TokenType Operator_{lex::tok::TokenType::INVALID};
 
  public:
   explicit BinaryExpr() = delete;
 
   explicit BinaryExpr(Expr* left, Expr* right, lex::tok::TokenType op) :
-      left_(left),
-      right_(right),
-      operator_(op)
+      Left_(left),
+      Right_(right),
+      Operator_(op)
   {
-    kind_ = Kind::BINARY;
+    Kind_ = Kind::BINARY;
 
-    assert((left_ != nullptr) && "'left' argument to BinaryExpr is null");
-    assert((right_ != nullptr) && "'right' argument to BinaryExpr is null");
+    assert((Left_ != nullptr) && "'left' argument to BinaryExpr is null");
+    assert((Right_ != nullptr) && "'right' argument to BinaryExpr is null");
   }
 
   BinaryExpr(BinaryExpr&&) noexcept = delete;
   BinaryExpr(const BinaryExpr&) noexcept = delete;
   BinaryExpr& operator=(const BinaryExpr&) noexcept = delete;
 
-  Expr* getLeft() const { return left_; }
-  Expr* getRight() const { return right_; }
-  lex::tok::TokenType getOperator() const { return operator_; }
+  Expr* getLeft() const { return Left_; }
+  Expr* getRight() const { return Right_; }
+  lex::tok::TokenType getOperator() const { return Operator_; }
 
-  void setLeft(Expr* left) { left_ = left; }
-  void setRight(Expr* right) { right_ = right; }
-  void setOperator(lex::tok::TokenType op) { operator_ = op; }
+  void setLeft(Expr* left) { Left_ = left; }
+  void setRight(Expr* right) { Right_ = right; }
+  void setOperator(lex::tok::TokenType op) { Operator_ = op; }
 };
 
 class UnaryExpr: public Expr
 {
  private:
-  Expr* operand_{nullptr};
-  lex::tok::TokenType operator_{lex::tok::TokenType::INVALID};
+  Expr* Operand_{nullptr};
+  lex::tok::TokenType Operator_{lex::tok::TokenType::INVALID};
 
  public:
   explicit UnaryExpr() = delete;
 
   explicit UnaryExpr(Expr* operand, lex::tok::TokenType op) :
-      operand_(operand),
-      operator_(op)
+      Operand_(operand),
+      Operator_(op)
   {
-    kind_ = Kind::UNARY;
-    assert((operand_ != nullptr) && "'operand' argument to UnaryExpr is null");
+    Kind_ = Kind::UNARY;
+    assert((Operand_ != nullptr) && "'operand' argument to UnaryExpr is null");
   }
 
   UnaryExpr(UnaryExpr&&) noexcept = delete;
   UnaryExpr(const UnaryExpr&) noexcept = delete;
   UnaryExpr& operator=(const UnaryExpr&) noexcept = delete;
 
-  Expr* getOperand() const { return operand_; }
-  lex::tok::TokenType getOperator() const { return operator_; }
+  Expr* getOperand() const { return Operand_; }
+  lex::tok::TokenType getOperator() const { return Operator_; }
 };
 
 class LiteralExpr: public Expr
@@ -167,26 +167,26 @@ class LiteralExpr: public Expr
   enum class Type { NUMBER, STRING, BOOLEAN, NONE };
 
  private:
-  Type type_{Type::NONE};
-  string_type literal_;
+  Type Type_{Type::NONE};
+  string_type Literal_;
 
  public:
   explicit LiteralExpr() = default;
 
   explicit LiteralExpr(Type t, string_type lit) :
-      type_(std::move(t)),
-      literal_(std::move(lit))
+      Type_(std::move(t)),
+      Literal_(std::move(lit))
   {
-    kind_ = Kind::LITERAL;
-    // assert((literal_ != u"") && "'literal' argument to LiteralExpr is null");
+    Kind_ = Kind::LITERAL;
+    // assert((Literal_ != u"") && "'literal' argument to LiteralExpr is null");
   }
 
   LiteralExpr(LiteralExpr&&) noexcept = delete;
   LiteralExpr(const LiteralExpr&) noexcept = delete;
   LiteralExpr& operator=(const LiteralExpr&) noexcept = delete;
 
-  string_type getValue() const { return literal_; }
-  Type getType() const { return type_; }
+  string_type getValue() const { return Literal_; }
+  Type getType() const { return Type_; }
 };
 
 class NameExpr: public Expr
@@ -197,42 +197,42 @@ class NameExpr: public Expr
   explicit NameExpr(const Expr* e) :
       Expr(e->getStr())
   {
-    assert((str_ != u"") && "'str_' argument to NameExpr is null");
+    assert((Str_ != u"") && "'Str_' argument to NameExpr is null");
   }
 
   explicit NameExpr(const string_type s) :
       Expr(s)
   {
-    assert(!str_.empty() && "'str_' argument to NameExpr is null");
+    assert(!Str_.empty() && "'Str_' argument to NameExpr is null");
   }
 
   NameExpr(NameExpr&&) noexcept = delete;
   NameExpr(const NameExpr&) noexcept = delete;
   NameExpr& operator=(const NameExpr&) noexcept = delete;
 
-  string_type getValue() const { return str_; }
+  string_type getValue() const { return Str_; }
 };
 
 class ListExpr: public Expr
 {
  private:
-  std::vector<Expr*> elements_;
+  std::vector<Expr*> Elements_;
 
  public:
   explicit ListExpr() = default;
 
   explicit ListExpr(std::vector<Expr*> elements) :
-      elements_(std::move(elements))
+      Elements_(std::move(elements))
   {
-    kind_ = Kind::LIST;
-    // assert(!elements_.empty() && "'elements' of ListExpr is null");
-    if (elements_.empty())
+    Kind_ = Kind::LIST;
+    // assert(!Elements_.empty() && "'elements' of ListExpr is null");
+    if (Elements_.empty())
       diagnostic::engine.emit("args of ListExpr is initially empty!", /*sv=*/diagnostic::DiagnosticEngine::Severity::NOTE);
     else
     {
       std::stringstream os;
       os << std::hex;
-      for (auto a : elements_) os << a << " ";
+      for (auto a : Elements_) os << a << " ";
       diagnostic::engine.emit("args of ListExpr are " + os.str(), /*sv=*/diagnostic::DiagnosticEngine::Severity::NOTE);
     }
   }
@@ -241,9 +241,9 @@ class ListExpr: public Expr
   ListExpr(const ListExpr&) noexcept = delete;
   ListExpr& operator=(const ListExpr&) noexcept = delete;
 
-  const std::vector<Expr*>& getElements() const { return elements_; }
-  std::vector<Expr*>& getElementsMutable() { return elements_; }
-  bool isEmpty() const { return elements_.empty(); }
+  const std::vector<Expr*>& getElements() const { return Elements_; }
+  std::vector<Expr*>& getElementsMutable() { return Elements_; }
+  bool isEmpty() const { return Elements_.empty(); }
 };
 
 class CallExpr: public Expr
@@ -252,20 +252,20 @@ class CallExpr: public Expr
   enum class CallLocation : int { GLOBAL, LOCAL };
 
  private:
-  NameExpr* callee_{nullptr};
-  ListExpr* args_;
-  CallLocation cl_;
+  NameExpr* Callee_{nullptr};
+  ListExpr* Args_;
+  CallLocation CallLocation_;
 
  public:
   explicit CallExpr() = delete;
 
   explicit CallExpr(NameExpr* c, ListExpr* a = nullptr) :
-      callee_(c)
+      Callee_(c)
   {
-    args_ = AST_allocator.make<ListExpr>();
-    kind_ = Kind::CALL;
+    Args_ = AST_allocator.make<ListExpr>();
+    Kind_ = Kind::CALL;
 #if DEBUG_PRINT
-    if (!args_ || args_->isEmpty())
+    if (!Args_ || Args_->isEmpty())
       diagnostic::engine.emit("args of CallExpr is initially empty!");
 
     else
@@ -273,7 +273,7 @@ class CallExpr: public Expr
       std::stringstream os;
       os << std::hex;
 
-      for (auto a : args_->getElements()) { os << a << " "; }
+      for (auto a : Args_->getElements()) { os << a << " "; }
 
       diagnostic::engine.emit("args of CallExpr are " + os.str());
     }
@@ -284,262 +284,262 @@ class CallExpr: public Expr
   CallExpr(const CallExpr&) noexcept = delete;
   CallExpr& operator=(const CallExpr&) noexcept = delete;
 
-  NameExpr* getCallee() const { return callee_; }
-  const std::vector<Expr*>& getArgs() const { return args_->getElements(); }
-  std::vector<Expr*>& getArgsMutable() { return args_->getElementsMutable(); }
+  NameExpr* getCallee() const { return Callee_; }
+  const std::vector<Expr*>& getArgs() const { return Args_->getElements(); }
+  std::vector<Expr*>& getArgsMutable() { return Args_->getElementsMutable(); }
 
-  CallLocation getCallLocation() const { return cl_; }
+  CallLocation getCallLocation() const { return CallLocation_; }
 };
 
 class AssignmentExpr: public Expr
 {
  private:
-  NameExpr* target_{nullptr};
-  Expr* value_{nullptr};
+  NameExpr* Target_{nullptr};
+  Expr* Value_{nullptr};
 
  public:
   explicit AssignmentExpr() = delete;
 
   explicit AssignmentExpr(NameExpr* target, Expr* value) :
-      target_(target),
-      value_(value)
+      Target_(target),
+      Value_(value)
   {
-    kind_ = Kind::ASSIGNMENT;
+    Kind_ = Kind::ASSIGNMENT;
 
-    assert((target_ != nullptr) && "'target' argument to AssignmentExpr is null");
-    assert((value_ != nullptr) && "'value' argument to AssignmentExpr is null");
+    assert((Target_ != nullptr) && "'target' argument to AssignmentExpr is null");
+    assert((Value_ != nullptr) && "'value' argument to AssignmentExpr is null");
   }
 
   AssignmentExpr(AssignmentExpr&&) noexcept = delete;
   AssignmentExpr(const AssignmentExpr&) noexcept = delete;
   AssignmentExpr& operator=(const AssignmentExpr&) noexcept = delete;
 
-  NameExpr* getTarget() const { return target_; }
-  Expr* getValue() const { return value_; }
+  NameExpr* getTarget() const { return Target_; }
+  Expr* getValue() const { return Value_; }
 };  // ?
 
 class BlockStmt: public Stmt
 {
  private:
-  std::vector<Stmt*> statements_;
+  std::vector<Stmt*> Statements_;
 
  public:
   explicit BlockStmt() = delete;
 
   explicit BlockStmt(std::vector<Stmt*> stmts) :
-      statements_(std::move(stmts))
+      Statements_(std::move(stmts))
   {
-    kind_ = Kind::BLOCK;
+    Kind_ = Kind::BLOCK;
 
-    assert((!statements_.empty() && statements_[0] != nullptr) && "'statements' argument to BlockStmt is null");
+    assert((!Statements_.empty() && Statements_[0] != nullptr) && "'statements' argument to BlockStmt is null");
   }
 
   BlockStmt(BlockStmt&&) noexcept = delete;
   BlockStmt(const BlockStmt&) noexcept = delete;
   BlockStmt& operator=(const BlockStmt&) noexcept = delete;
 
-  const std::vector<Stmt*>& getStatements() const { return statements_; }
-  void setStatements(std::vector<Stmt*>& stmts) { statements_ = stmts; }
-  bool isEmpty() const { return statements_.empty(); }
+  const std::vector<Stmt*>& getStatements() const { return Statements_; }
+  void setStatements(std::vector<Stmt*>& stmts) { Statements_ = stmts; }
+  bool isEmpty() const { return Statements_.empty(); }
 };
 
 class ExprStmt: public Stmt
 {
  private:
-  Expr* expr_{nullptr};
+  Expr* Expr_{nullptr};
 
  public:
   explicit ExprStmt() = default;
 
   explicit ExprStmt(Expr* expr) :
-      expr_(expr)
+      Expr_(expr)
   {
-    kind_ = Kind::EXPR;
-    assert((expr_ != nullptr) && "'expr' argument to ExprStmt is null");
+    Kind_ = Kind::EXPR;
+    assert((Expr_ != nullptr) && "'expr' argument to ExprStmt is null");
   }
 
   ExprStmt(ExprStmt&&) noexcept = delete;
   ExprStmt(const ExprStmt&) noexcept = delete;
   ExprStmt& operator=(const ExprStmt&) noexcept = delete;
 
-  Expr* getExpr() const { return expr_; }
-  void setExpr(Expr* e) { expr_ = e; }
+  Expr* getExpr() const { return Expr_; }
+  void setExpr(Expr* e) { Expr_ = e; }
 };
 
 class AssignmentStmt: public Stmt
 {
  private:
-  Expr* value_{nullptr};
-  NameExpr* target_{nullptr};
+  Expr* Value_{nullptr};
+  NameExpr* Target_{nullptr};
 
  public:
   explicit AssignmentStmt() = delete;
 
   explicit AssignmentStmt(NameExpr* target, Expr* value) :
-      target_(target),
-      value_(value)
+      Target_(target),
+      Value_(value)
   {
-    kind_ = Kind::ASSIGNMENT;
+    Kind_ = Kind::ASSIGNMENT;
 
-    assert((value_ != nullptr) && "'value' argument to AssignmentStmt is null");
-    assert((target_ != nullptr) && "'target' argument to AssignmentStmt is null");
+    assert((Value_ != nullptr) && "'value' argument to AssignmentStmt is null");
+    assert((Target_ != nullptr) && "'target' argument to AssignmentStmt is null");
   }
 
   AssignmentStmt(AssignmentStmt&&) noexcept = delete;
   AssignmentStmt(const AssignmentStmt&) noexcept = delete;
   AssignmentStmt& operator=(const AssignmentStmt&) noexcept = delete;
 
-  Expr* getValue() const { return value_; }
-  NameExpr* getTarget() const { return target_; }
-  void setValue(Expr* v) { value_ = v; }
-  void setTarget(NameExpr* t) { target_ = t; }
+  Expr* getValue() const { return Value_; }
+  NameExpr* getTarget() const { return Target_; }
+  void setValue(Expr* v) { Value_ = v; }
+  void setTarget(NameExpr* t) { Target_ = t; }
 };
 
 class IfStmt: public Stmt
 {
  private:
-  Expr* condition_{nullptr};
-  BlockStmt* then_block_{nullptr};
-  BlockStmt* else_block_{nullptr};
+  Expr* Condition_{nullptr};
+  BlockStmt* ThenBlock_{nullptr};
+  BlockStmt* ElseBlock_{nullptr};
 
  public:
   explicit IfStmt() = delete;
 
   explicit IfStmt(Expr* condition, BlockStmt* then_block, BlockStmt* else_block) :
-      condition_(condition),
-      then_block_(then_block),
-      else_block_(else_block)
+      Condition_(condition),
+      ThenBlock_(then_block),
+      ElseBlock_(else_block)
   {
-    kind_ = Kind::IF;
+    Kind_ = Kind::IF;
 
-    assert((condition_ != nullptr) && "'condition' argument to IfStmt is null");
-    assert((then_block_ != nullptr) && "'then_block' argument to IfStmt is null");
-    assert((else_block_ != nullptr) && "'else_block' argument to IfStmt is null");
+    assert((Condition_ != nullptr) && "'condition' argument to IfStmt is null");
+    assert((ThenBlock_ != nullptr) && "'then_block' argument to IfStmt is null");
+    assert((ElseBlock_ != nullptr) && "'else_block' argument to IfStmt is null");
   }
 
   IfStmt(IfStmt&&) noexcept = delete;
   IfStmt(const IfStmt&) noexcept = delete;
   IfStmt& operator=(const IfStmt&) noexcept = delete;
 
-  Expr* getCondition() const { return condition_; }
-  BlockStmt* getThenBlock() const { return then_block_; }
-  BlockStmt* getElseBlock() const { return else_block_; }
+  Expr* getCondition() const { return Condition_; }
+  BlockStmt* getThenBlock() const { return ThenBlock_; }
+  BlockStmt* getElseBlock() const { return ElseBlock_; }
 
-  void setThenBlock(BlockStmt* t) { then_block_ = t; }
-  void setElseBlock(BlockStmt* e) { else_block_ = e; }
+  void setThenBlock(BlockStmt* t) { ThenBlock_ = t; }
+  void setElseBlock(BlockStmt* e) { ElseBlock_ = e; }
 };
 
 class WhileStmt: public Stmt
 {
  private:
-  Expr* condition_{nullptr};
-  BlockStmt* block_{nullptr};
+  Expr* Condition_{nullptr};
+  BlockStmt* Block_{nullptr};
 
  public:
   explicit WhileStmt() = delete;
 
   explicit WhileStmt(Expr* condition, BlockStmt* block) :
-      condition_(condition),
-      block_(block)
+      Condition_(condition),
+      Block_(block)
   {
-    kind_ = Kind::WHILE;
+    Kind_ = Kind::WHILE;
 
-    assert((condition_ != nullptr) && "'condition' argument to WhileStmt is null");
-    assert((block_ != nullptr) && "'block' argument to WhileStmt is null");
+    assert((Condition_ != nullptr) && "'condition' argument to WhileStmt is null");
+    assert((Block_ != nullptr) && "'block' argument to WhileStmt is null");
   }
 
   WhileStmt(WhileStmt&&) noexcept = delete;
   WhileStmt(const WhileStmt&) noexcept = delete;
   WhileStmt& operator=(const WhileStmt&) noexcept = delete;
 
-  Expr* getCondition() const { return condition_; }
-  BlockStmt* getBlock() const { return block_; }
-  BlockStmt*& getBlockMutable() { return std::ref<BlockStmt*>(block_); }
+  Expr* getCondition() const { return Condition_; }
+  BlockStmt* getBlock() const { return Block_; }
+  BlockStmt*& getBlockMutable() { return std::ref<BlockStmt*>(Block_); }
 };
 
 class ForStmt: public Stmt
 {
  private:
-  NameExpr* target_{nullptr};
-  Expr* iter_{nullptr};
-  BlockStmt* block_{nullptr};
+  NameExpr* Target_{nullptr};
+  Expr* Iter_{nullptr};
+  BlockStmt* Block_{nullptr};
 
  public:
   explicit ForStmt() = delete;
 
   explicit ForStmt(NameExpr* target, Expr* iter, BlockStmt* block) :
-      target_(target),
-      iter_(iter),
-      block_(block)
+      Target_(target),
+      Iter_(iter),
+      Block_(block)
   {
-    kind_ = Kind::FOR;
+    Kind_ = Kind::FOR;
 
-    assert((target_ != nullptr) && "'target' argument to ForStmt is null");
-    assert((iter_ != nullptr) && "'iter' argument to ForStmt is null");
-    assert((block_ != nullptr) && "'block' argument to ForStmt is null");
+    assert((Target_ != nullptr) && "'target' argument to ForStmt is null");
+    assert((Iter_ != nullptr) && "'iter' argument to ForStmt is null");
+    assert((Block_ != nullptr) && "'block' argument to ForStmt is null");
   }
 
   ForStmt(ForStmt&&) noexcept = delete;
   ForStmt(const ForStmt&) noexcept = delete;
   ForStmt& operator=(const ForStmt&) noexcept = delete;
 
-  NameExpr* getTarget() const { return target_; }
-  Expr* getIter() const { return iter_; }
-  BlockStmt* getBlock() const { return block_; }
-  void setBlock(BlockStmt* b) { block_ = b; }
+  NameExpr* getTarget() const { return Target_; }
+  Expr* getIter() const { return Iter_; }
+  BlockStmt* getBlock() const { return Block_; }
+  void setBlock(BlockStmt* b) { Block_ = b; }
 };
 
 class FunctionDef: public Stmt
 {
  private:
-  NameExpr* name_{nullptr};
-  std::vector<NameExpr*> params_;
-  BlockStmt* body_{nullptr};
+  NameExpr* Name_{nullptr};
+  std::vector<NameExpr*> Params_;
+  BlockStmt* Body_{nullptr};
 
  public:
   explicit FunctionDef() = delete;
 
   explicit FunctionDef(NameExpr* name, std::vector<NameExpr*> params, BlockStmt* body) :
-      name_(name),
-      params_(std::move(params)),
-      body_(body)
+      Name_(name),
+      Params_(std::move(params)),
+      Body_(body)
   {
-    kind_ = Kind::FUNC;
+    Kind_ = Kind::FUNC;
 
-    assert((name_ != nullptr) && "'name' argument to FunctionDef is null");
-    assert((body_ != nullptr) && "'body' argument to FunctionDef is null");
+    assert((Name_ != nullptr) && "'name' argument to FunctionDef is null");
+    assert((Body_ != nullptr) && "'body' argument to FunctionDef is null");
   }
 
   FunctionDef(FunctionDef&&) noexcept = delete;
   FunctionDef(const FunctionDef&) noexcept = delete;
   FunctionDef& operator=(const FunctionDef&) noexcept = delete;
 
-  NameExpr* getName() const { return name_; }
-  const std::vector<NameExpr*>& getParameters() const { return params_; }
-  BlockStmt* getBody() const { return body_; }
-  void setBody(BlockStmt* b) { body_ = b; }
+  NameExpr* getName() const { return Name_; }
+  const std::vector<NameExpr*>& getParameters() const { return Params_; }
+  BlockStmt* getBody() const { return Body_; }
+  void setBody(BlockStmt* b) { Body_ = b; }
 };
 
 class ReturnStmt: public Stmt
 {
  private:
-  Expr* value_{nullptr};
+  Expr* Value_{nullptr};
 
  public:
   explicit ReturnStmt() = delete;
 
   explicit ReturnStmt(Expr* value) :
-      value_(value)
+      Value_(value)
   {
-    kind_ = Kind::RETURN;
-    assert((value_ != nullptr) && "'value' argument to ReturnStmt is null");
+    Kind_ = Kind::RETURN;
+    assert((Value_ != nullptr) && "'value' argument to ReturnStmt is null");
   }
 
   ReturnStmt(ReturnStmt&&) noexcept = delete;
   ReturnStmt(const ReturnStmt&) noexcept = delete;
   ReturnStmt& operator=(const ReturnStmt&) noexcept = delete;
 
-  Expr* getValue() const { return value_; }
+  Expr* getValue() const { return Value_; }
 };
 
 }

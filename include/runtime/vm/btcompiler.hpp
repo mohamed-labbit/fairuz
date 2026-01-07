@@ -81,62 +81,62 @@ class BytecodeCompiler
     std::vector<object::Value> constants;             // Constant pool values
     std::vector<std::string> names;                   // Variable and symbol names
 
-    std::int32_t numLocals;    // Number of local variables
-    std::int32_t numCellVars;  // Number of closure variables
-    std::int32_t stackSize;    // Maximum operand stack depth
+    std::int32_t NumLocals;    // Number of local variables
+    std::int32_t NumCellVars;  // Number of closure variables
+    std::int32_t StackSize;    // Maximum operand stack depth
 
     // Metadata and debug information
 
     std::string filename;                   // Source filename
-    std::vector<std::int32_t> lineNumbers;  // PC -> source line mapping
+    std::vector<std::int32_t> LineNumbers;  // PC -> source line mapping
 
     // Program counter to source snippet mapping (debugging)
-    std::unordered_map<std::int32_t, std::string> pcToSourceMap;
+    std::unordered_map<std::int32_t, std::string> PcToSourceMap;
   };
 
  private:
   // Compilation state
 
-  CompilationUnit unit_;        // Output compilation unit
-  ConstantPool constants_;      // Constant pool manager
-  JumpResolver jumps_;          // Jump target resolution
-  PeepholeOptimizer peephole_;  // Peephole optimization pass
-  LoopAnalyzer loopAnalyzer_;   // Loop detection and analysis
+  CompilationUnit Unit_;        // Output compilation unit
+  ConstantPool Constants_;      // Constant pool manager
+  JumpResolver Jumps_;          // Jump target resolution
+  PeepholeOptimizer Peephole_;  // Peephole optimization pass
+  LoopAnalyzer LoopAnalyzer_;   // Loop detection and analysis
 
   // Symbol table management
-  std::unique_ptr<CompilerSymbolTable> currentScope_;
-  std::stack<CompilerSymbolTable*> scopeStack_;
+  std::unique_ptr<CompilerSymbolTable> CurrentScope_;
+  std::stack<CompilerSymbolTable*> ScopeStack_;
 
   // Control-flow graph blocks
-  std::vector<BytecodeBlock> blocks_;
-  std::int32_t currentBlock_{0};
+  std::vector<BytecodeBlock> Blocks_;
+  std::int32_t CurrentBlock_{0};
 
   // Stack depth tracking for optimization
 
-  std::int32_t currentStackDepth_{0};
-  std::int32_t maxStackDepth_{0};
+  std::int32_t CurrentStackDepth_{0};
+  std::int32_t MaxStackDepth_{0};
 
   // Loop context management
 
   struct LoopContext
   {
-    std::int32_t breakLabel;     // Jump target for break statements
-    std::int32_t continueLabel;  // Jump target for continue statements
-    std::int32_t startPC;        // Program counter at loop start
+    std::int32_t BreakLabel;     // Jump target for break statements
+    std::int32_t ContinueLabel;  // Jump target for continue statements
+    std::int32_t StartPC;        // Program counter at loop start
   };
 
-  std::stack<LoopContext> loopStack_;
+  std::stack<LoopContext> LoopStack_;
 
   // Compilation statistics
 
   struct Stats
   {
-    std::int32_t instructionsGenerated = 0;
-    std::int32_t constantsPoolSize = 0;
-    std::int32_t jumpsResolved = 0;
-    std::int32_t peepholeOptimizations = 0;
-    std::int32_t loopsDetected = 0;
-  } stats_;
+    std::int32_t InstructionsGenerated = 0;
+    std::int32_t ConstantsPoolSize = 0;
+    std::int32_t JumpsResolved = 0;
+    std::int32_t PeepholeOptimizations = 0;
+    std::int32_t LoopsDetected = 0;
+  } Stats_;
 
   // Internal helpers
 
@@ -163,7 +163,7 @@ class BytecodeCompiler
    *
    * Initializes the root symbol table.
    */
-  BytecodeCompiler() { currentScope_ = std::make_unique<CompilerSymbolTable>(); }
+  BytecodeCompiler() { CurrentScope_ = std::make_unique<CompilerSymbolTable>(); }
 
   /**
    * @brief Compiles an AST into a bytecode compilation unit.

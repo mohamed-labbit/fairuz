@@ -20,18 +20,18 @@ class ControlFlowGraph
     std::vector<ast::Stmt**> statements;
     std::vector<std::int32_t> predecessors;
     std::vector<std::int32_t> successors;
-    bool isReachable = false;
+    bool IsReachable = false;
     // Data flow analysis
-    std::unordered_set<string_type> defVars;  // Variables defined
-    std::unordered_set<string_type> useVars;  // Variables used
-    std::unordered_set<string_type> liveIn;   // Live at entry
-    std::unordered_set<string_type> liveOut;  // Live at exit
+    std::unordered_set<string_type> DefVars;  // Variables defined
+    std::unordered_set<string_type> UseVars;  // Variables used
+    std::unordered_set<string_type> LiveIn;   // Live at entry
+    std::unordered_set<string_type> LiveOut;  // Live at exit
   };
 
  private:
-  std::vector<BasicBlock> blocks_;
-  std::int32_t entryBlock_ = 0;
-  std::int32_t exitBlock_ = -1;
+  std::vector<BasicBlock> Blocks_;
+  std::int32_t EntryBlock_ = 0;
+  std::int32_t ExitBlock_ = -1;
 
  public:
   void addBlock(BasicBlock block);

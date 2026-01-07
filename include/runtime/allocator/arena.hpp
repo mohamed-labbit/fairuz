@@ -132,13 +132,13 @@ class ArenaBlock
 {
  private:
   /// Size of this memory block in bytes
-  std::size_t size_{DEFAULT_BLOCK_SIZE};
+  std::size_t Size_{DEFAULT_BLOCK_SIZE};
   /// Pointer to the beginning of allocated memory
-  Pointer begin_{nullptr};
+  Pointer Begin_{nullptr};
   /// Atomic Pointer to the next available byte (bump Pointer)
-  std::atomic<Pointer> next_{nullptr};
+  std::atomic<Pointer> Next_{nullptr};
   /// Mutex for protecting structural operations (not allocation)
-  mutable std::mutex mutex_;
+  mutable std::mutex Mutex_;
 
  public:
   /**
@@ -152,21 +152,21 @@ class ArenaBlock
      * alignment requirements.
      */
   explicit ArenaBlock(const std::size_t size = DEFAULT_BLOCK_SIZE, const std::size_t alignment = alignof(std::max_align_t)) :
-      size_(size)
+      Size_(size)
   {
     // Validate alignment is a power of 2
     if (alignment == 0 || (alignment & (alignment - 1)) != 0)
       diagnostic::engine.emit("Alignment must be a power of two", diagnostic::DiagnosticEngine::Severity::FATAL);
     // Round up size to multiple of alignment
-    std::size_t mod = size_ % alignment;
-    if (mod) size_ += (alignment - mod);
+    std::size_t mod = Size_ % alignment;
+    if (mod) Size_ += (alignment - mod);
     // Allocate aligned memory
-    void* mem = std::aligned_alloc(alignment, size_);
+    void* mem = std::aligned_alloc(alignment, Size_);
     if (!mem) throw std::bad_alloc();
     /// @todo change after debug
     // diagnostic::engine.panic("bad alloc");
-    begin_ = reinterpret_cast<Pointer>(mem);
-    next_.store(begin_, std::memory_order_relaxed);
+    Begin_ = reinterpret_cast<Pointer>(mem);
+    Next_.store(Begin_, std::memory_order_relaxed);
   }
 
   /**
@@ -178,12 +178,12 @@ class ArenaBlock
   ~ArenaBlock()
   {
     size_t number_of_frees = 0;
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (begin_)
+    std::lock_guard<std::mutex> lock(Mutex_);
+    if (Begin_)
     {
-      std::free(begin_);
-      begin_ = nullptr;
-      next_.store(nullptr, std::memory_order_relaxed);
+      std::free(Begin_);
+      Begin_ = nullptr;
+      Next_.store(nullptr, std::memory_order_relaxed);
     }
   }
 
@@ -200,14 +200,14 @@ class ArenaBlock
      */
   ArenaBlock(ArenaBlock&& other) MYLANG_NOEXCEPT
   {
-    std::lock_guard<std::mutex> lock(other.mutex_);
-    size_ = other.size_;
-    begin_ = other.begin_;
-    next_.store(other.next_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+    std::lock_guard<std::mutex> lock(other.Mutex_);
+    Size_ = other.Size_;
+    Begin_ = other.Begin_;
+    Next_.store(other.Next_.load(std::memory_order_relaxed), std::memory_order_relaxed);
     // Reset source
-    other.begin_ = nullptr;
-    other.next_.store(nullptr, std::memory_order_relaxed);
-    other.size_ = 0;
+    other.Begin_ = nullptr;
+    other.Next_.store(nullptr, std::memory_order_relaxed);
+    other.Size_ = 0;
   }
 
   /**
@@ -222,17 +222,17 @@ class ArenaBlock
   {
     if (this != &other)
     {
-      std::scoped_lock lock(mutex_, other.mutex_);
+      std::scoped_lock lock(Mutex_, other.Mutex_);
       // Free existing memory
-      if (begin_) std::free(begin_);
+      if (Begin_) std::free(Begin_);
       // Take ownership
-      size_ = other.size_;
-      begin_ = other.begin_;
-      next_.store(other.next_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+      Size_ = other.Size_;
+      Begin_ = other.Begin_;
+      Next_.store(other.Next_.load(std::memory_order_relaxed), std::memory_order_relaxed);
       // Reset source
-      other.begin_ = nullptr;
-      other.next_.store(nullptr, std::memory_order_relaxed);
-      other.size_ = 0;
+      other.Begin_ = nullptr;
+      other.Next_.store(nullptr, std::memory_order_relaxed);
+      other.Size_ = 0;
     }
     return *this;
   }
@@ -249,8 +249,8 @@ class ArenaBlock
      */
   Pointer begin() const
   {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return begin_;
+    std::lock_guard<std::mutex> lock(Mutex_);
+    return Begin_;
   }
 
   /**
@@ -261,8 +261,8 @@ class ArenaBlock
      */
   Pointer end() const
   {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return begin_ + size_;
+    std::lock_guard<std::mutex> lock(Mutex_);
+    return Begin_ + Size_;
   }
 
   /**
@@ -271,7 +271,7 @@ class ArenaBlock
      * 
      * Lock-free: uses atomic acquire ordering
      */
-  Pointer cnext() const { return next_.load(std::memory_order_acquire); }
+  Pointer cnext() const { return Next_.load(std::memory_order_acquire); }
 
   /**
      * @brief Get the total size of the block
@@ -281,8 +281,8 @@ class ArenaBlock
      */
   std::size_t size() const
   {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return size_;
+    std::lock_guard<std::mutex> lock(Mutex_);
+    return Size_;
   }
 
   /**
@@ -296,10 +296,10 @@ class ArenaBlock
      */
   std::size_t remaining() const
   {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (!begin_) return 0;
-    Pointer current_next = next_.load(std::memory_order_acquire);
-    return static_cast<std::size_t>(begin_ + size_ - current_next);
+    std::lock_guard<std::mutex> lock(Mutex_);
+    if (!Begin_) return 0;
+    Pointer current_next = Next_.load(std::memory_order_acquire);
+    return static_cast<std::size_t>(Begin_ + Size_ - current_next);
   }
 
   //==========================================================================
@@ -326,14 +326,14 @@ class ArenaBlock
      */
   Pointer allocate(std::size_t bytes, std::optional<std::size_t> alignment = std::nullopt)
   {
-    if (!begin_ || bytes == 0) return nullptr;
+    if (!Begin_ || bytes == 0) return nullptr;
 
     std::size_t alignment_value = alignment.value_or(std::alignment_of<std::max_align_t>::value);
     // Validate alignment is a power of 2
     if (alignment_value == 0 || (alignment_value & (alignment_value - 1)) != 0)
       diagnostic::engine.emit("Invalid arguments to ArenaAllocator::allocate()", diagnostic::DiagnosticEngine::Severity::FATAL);
     // Lock-free allocation loop
-    Pointer current_next = next_.load(std::memory_order_acquire);
+    Pointer current_next = Next_.load(std::memory_order_acquire);
 
     while (true)
     {
@@ -342,11 +342,11 @@ class ArenaBlock
       std::uintptr_t aligned = (cur + (alignment_value - 1)) & ~(alignment_value - 1);
       std::size_t pad = aligned - cur;
       // Check if we have enough space (including padding)
-      std::size_t remaining = begin_ + size_ - current_next;
+      std::size_t remaining = Begin_ + Size_ - current_next;
       if (remaining < bytes + pad) return nullptr;  // Not enough space
       Pointer new_next = reinterpret_cast<Pointer>(aligned + bytes);
       // Try to atomically update next Pointer
-      if (next_.compare_exchange_weak(current_next, new_next, std::memory_order_release, std::memory_order_acquire))
+      if (Next_.compare_exchange_weak(current_next, new_next, std::memory_order_release, std::memory_order_acquire))
         // Success! Return the aligned address
         return reinterpret_cast<Pointer>(aligned);
       // CAS failed - another thread allocated first
@@ -366,17 +366,17 @@ class ArenaBlock
      */
   Pointer reserve(const std::size_t bytes)
   {
-    if (!begin_ || bytes == 0) return nullptr;
+    if (!Begin_ || bytes == 0) return nullptr;
 
-    Pointer current_next = next_.load(std::memory_order_acquire);
+    Pointer current_next = Next_.load(std::memory_order_acquire);
 
     while (true)
     {
       // Check if we have enough space
-      std::size_t remaining = begin_ + size_ - current_next;
+      std::size_t remaining = Begin_ + Size_ - current_next;
       if (remaining < bytes) return nullptr;
       Pointer new_next = current_next + bytes;
-      if (next_.compare_exchange_weak(current_next, new_next, std::memory_order_release, std::memory_order_acquire)) return current_next;
+      if (Next_.compare_exchange_weak(current_next, new_next, std::memory_order_release, std::memory_order_acquire)) return current_next;
     }
   }
 };
@@ -403,11 +403,11 @@ class LockFreeFastAllocBlock
 {
  private:
   /// Size of the block (atomic for move operations)
-  std::atomic<std::size_t> size_{DEFAULT_BLOCK_SIZE};
+  std::atomic<std::size_t> Size_{DEFAULT_BLOCK_SIZE};
   /// Beginning of allocated memory (atomic)
-  std::atomic<Pointer> begin_{nullptr};
+  std::atomic<Pointer> Begin_{nullptr};
   /// Next available byte (atomic bump Pointer)
-  std::atomic<Pointer> next_{nullptr};
+  std::atomic<Pointer> Next_{nullptr};
 
  public:
   /// Default constructor - does not allocate
@@ -432,9 +432,9 @@ class LockFreeFastAllocBlock
     /// @todo change after debug
     // diagnostic::engine.panic("bad alloc");
     // Store atomically
-    size_.store(actual_size, std::memory_order_relaxed);
-    begin_.store(mem, std::memory_order_relaxed);
-    next_.store(mem, std::memory_order_relaxed);
+    Size_.store(actual_size, std::memory_order_relaxed);
+    Begin_.store(mem, std::memory_order_relaxed);
+    Next_.store(mem, std::memory_order_relaxed);
   }
 
   /**
@@ -444,12 +444,12 @@ class LockFreeFastAllocBlock
      */
   ~LockFreeFastAllocBlock()
   {
-    Pointer mem = begin_.load(std::memory_order_relaxed);
+    Pointer mem = Begin_.load(std::memory_order_relaxed);
     if (mem)
     {
       std::free(mem);
-      begin_.store(nullptr, std::memory_order_relaxed);
-      next_.store(nullptr, std::memory_order_relaxed);
+      Begin_.store(nullptr, std::memory_order_relaxed);
+      Next_.store(nullptr, std::memory_order_relaxed);
     }
   }
 
@@ -463,12 +463,12 @@ class LockFreeFastAllocBlock
      */
   LockFreeFastAllocBlock(LockFreeFastAllocBlock&& other) MYLANG_NOEXCEPT
   {
-    size_.store(other.size_.load(std::memory_order_relaxed), std::memory_order_relaxed);
-    begin_.store(other.begin_.load(std::memory_order_relaxed), std::memory_order_relaxed);
-    next_.store(other.next_.load(std::memory_order_relaxed), std::memory_order_relaxed);
-    other.begin_.store(nullptr, std::memory_order_relaxed);
-    other.next_.store(nullptr, std::memory_order_relaxed);
-    other.size_.store(0, std::memory_order_relaxed);
+    Size_.store(other.Size_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+    Begin_.store(other.Begin_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+    Next_.store(other.Next_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+    other.Begin_.store(nullptr, std::memory_order_relaxed);
+    other.Next_.store(nullptr, std::memory_order_relaxed);
+    other.Size_.store(0, std::memory_order_relaxed);
   }
 
   /**
@@ -481,16 +481,16 @@ class LockFreeFastAllocBlock
     if (this != &other)
     {
       // Free existing memory
-      Pointer old_mem = begin_.load(std::memory_order_relaxed);
+      Pointer old_mem = Begin_.load(std::memory_order_relaxed);
       if (old_mem) std::free(old_mem);
       // Transfer ownership atomically
-      size_.store(other.size_.load(std::memory_order_relaxed), std::memory_order_relaxed);
-      begin_.store(other.begin_.load(std::memory_order_relaxed), std::memory_order_relaxed);
-      next_.store(other.next_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+      Size_.store(other.Size_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+      Begin_.store(other.Begin_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+      Next_.store(other.Next_.load(std::memory_order_relaxed), std::memory_order_relaxed);
       // Reset source
-      other.begin_.store(nullptr, std::memory_order_relaxed);
-      other.next_.store(nullptr, std::memory_order_relaxed);
-      other.size_.store(0, std::memory_order_relaxed);
+      other.Begin_.store(nullptr, std::memory_order_relaxed);
+      other.Next_.store(nullptr, std::memory_order_relaxed);
+      other.Size_.store(0, std::memory_order_relaxed);
     }
     return *this;
   }
@@ -500,21 +500,21 @@ class LockFreeFastAllocBlock
   //==========================================================================
 
   /// Get beginning of block
-  Pointer begin() const { return begin_.load(std::memory_order_acquire); }
+  Pointer begin() const { return Begin_.load(std::memory_order_acquire); }
 
   /// Get end of block
   Pointer end() const
   {
-    Pointer b = begin_.load(std::memory_order_acquire);
-    std::size_t s = size_.load(std::memory_order_acquire);
+    Pointer b = Begin_.load(std::memory_order_acquire);
+    std::size_t s = Size_.load(std::memory_order_acquire);
     return b ? (b + s) : nullptr;
   }
 
   /// Get current next Pointer
-  Pointer cnext() const { return next_.load(std::memory_order_acquire); }
+  Pointer cnext() const { return Next_.load(std::memory_order_acquire); }
 
   /// Get block size
-  std::size_t size() const { return size_.load(std::memory_order_acquire); }
+  std::size_t size() const { return Size_.load(std::memory_order_acquire); }
 
   /**
      * @brief Get remaining free space
@@ -524,10 +524,10 @@ class LockFreeFastAllocBlock
      */
   std::size_t remaining() const
   {
-    Pointer b = begin_.load(std::memory_order_acquire);
+    Pointer b = Begin_.load(std::memory_order_acquire);
     if (!b) return 0;
-    Pointer current = next_.load(std::memory_order_acquire);
-    std::size_t s = size_.load(std::memory_order_acquire);
+    Pointer current = Next_.load(std::memory_order_acquire);
+    std::size_t s = Size_.load(std::memory_order_acquire);
     return static_cast<std::size_t>(b + s - current);
   }
 
@@ -545,15 +545,15 @@ class LockFreeFastAllocBlock
   Pointer allocate(std::size_t alloc_size)
   {
     if (alloc_size == 0) return nullptr;
-    Pointer b = begin_.load(std::memory_order_acquire);
+    Pointer b = Begin_.load(std::memory_order_acquire);
     if (!b)
     {
       std::cerr << "Failed to load begin Pointer" << std::endl;
       return nullptr;
     }
 
-    Pointer current_next = next_.load(std::memory_order_acquire);
-    std::size_t s = size_.load(std::memory_order_acquire);
+    Pointer current_next = Next_.load(std::memory_order_acquire);
+    std::size_t s = Size_.load(std::memory_order_acquire);
 
     // Lock-free allocation loop
     while (true)
@@ -567,7 +567,7 @@ class LockFreeFastAllocBlock
 
       Pointer new_next = current_next + alloc_size;
 
-      if (next_.compare_exchange_weak(current_next, new_next, std::memory_order_release, std::memory_order_acquire)) return current_next;
+      if (Next_.compare_exchange_weak(current_next, new_next, std::memory_order_release, std::memory_order_acquire)) return current_next;
     }
   }
 };
@@ -694,9 +694,9 @@ class FastAllocBlockFreeList
 {
  private:
   /// Ordered set of free regions (sorted by size, then address)
-  std::multiset<FreeListRegion> regions_;
+  std::multiset<FreeListRegion> Regions_;
   /// Mutex protecting the regions set
-  mutable std::mutex mutex_;
+  mutable std::mutex Mutex_;
 
  public:
   FastAllocBlockFreeList() = default;
@@ -707,7 +707,7 @@ class FastAllocBlockFreeList
      */
   explicit FastAllocBlockFreeList(const std::vector<FreeListRegion>& regions)
   {
-    for (const FreeListRegion& reg : regions) regions_.insert(reg);
+    for (const FreeListRegion& reg : regions) Regions_.insert(reg);
   }
 
   /**
@@ -718,8 +718,8 @@ class FastAllocBlockFreeList
      */
   FastAllocBlockFreeList(FastAllocBlockFreeList&& other) MYLANG_NOEXCEPT
   {
-    std::lock_guard<std::mutex> lock(other.mutex_);
-    regions_ = std::move(other.regions_);
+    std::lock_guard<std::mutex> lock(other.Mutex_);
+    Regions_ = std::move(other.Regions_);
   }
 
   /**
@@ -733,8 +733,8 @@ class FastAllocBlockFreeList
   {
     if (this != &other)
     {
-      std::scoped_lock lock(mutex_, other.mutex_);
-      regions_ = std::move(other.regions_);
+      std::scoped_lock lock(Mutex_, other.Mutex_);
+      Regions_ = std::move(other.Regions_);
     }
     return *this;
   }
@@ -748,8 +748,8 @@ class FastAllocBlockFreeList
      */
   void append(const FreeListRegion& reg)
   {
-    std::lock_guard<std::mutex> lock(mutex_);
-    regions_.insert(reg);
+    std::lock_guard<std::mutex> lock(Mutex_);
+    Regions_.insert(reg);
   }
 
   /**
@@ -760,8 +760,8 @@ class FastAllocBlockFreeList
      */
   bool empty() const
   {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return regions_.empty();
+    std::lock_guard<std::mutex> lock(Mutex_);
+    return Regions_.empty();
   }
 
   /**
@@ -771,8 +771,8 @@ class FastAllocBlockFreeList
      */
   void clear()
   {
-    std::lock_guard<std::mutex> lock(mutex_);
-    regions_.clear();
+    std::lock_guard<std::mutex> lock(Mutex_);
+    Regions_.clear();
   }
 
   /**
@@ -795,12 +795,12 @@ class FastAllocBlockFreeList
      */
   std::optional<FreeListRegion> find_and_extract(std::size_t size, std::size_t align)
   {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(Mutex_);
     // Find best fit (smallest region that can hold the allocation)
     FreeListRegion search_key(nullptr, size);
-    auto it = regions_.lower_bound(search_key);
+    auto it = Regions_.lower_bound(search_key);
 
-    while (it != regions_.end())
+    while (it != Regions_.end())
     {
       FreeListRegion reg = *it;
 
@@ -812,7 +812,7 @@ class FastAllocBlockFreeList
       if (reg.size >= size + padding)
       {
         // Found a suitable region
-        regions_.erase(it);
+        Regions_.erase(it);
 
         // Split if there's leftover space
         std::size_t used = size + padding;
@@ -820,7 +820,7 @@ class FastAllocBlockFreeList
         {
           Pointer remainder = reg.ptr + used;
           std::size_t remainder_size = reg.size - used;
-          regions_.insert(FreeListRegion(remainder, remainder_size));
+          Regions_.insert(FreeListRegion(remainder, remainder_size));
         }
 
         return reg;
@@ -938,48 +938,48 @@ class MYLANG_COMPILER_ABI ArenaAllocator
   };
 
   // Statistics
-  ArenaAllocStats alloc_stats_;  ///< Allocation statistics
+  ArenaAllocStats AllocStats_;  ///< Allocation statistics
   // General purpose blocks
-  std::vector<ArenaBlock> blocks_{};        ///< Main memory blocks
-  mutable std::shared_mutex blocks_mutex_;  ///< Protects blocks vector
+  std::vector<ArenaBlock> Blocks_{};       ///< Main memory blocks
+  mutable std::shared_mutex BlocksMutex_;  ///< Protects blocks vector
   // Fast pools for small allocations (8, 16, 32, 64, 128, 256 bytes)
-  std::vector<LockFreeFastAllocBlock<8>> fast_pool8_{};      ///< Pool for 8-byte objects
-  std::vector<LockFreeFastAllocBlock<16>> fast_pool16_{};    ///< Pool for 16-byte objects
-  std::vector<LockFreeFastAllocBlock<32>> fast_pool32_{};    ///< Pool for 32-byte objects
-  std::vector<LockFreeFastAllocBlock<64>> fast_pool64_{};    ///< Pool for 64-byte objects
-  std::vector<LockFreeFastAllocBlock<128>> fast_pool128_{};  ///< Pool for 128-byte objects
-  std::vector<LockFreeFastAllocBlock<256>> fast_pool256_{};  ///< Pool for 256-byte objects
-  mutable std::mutex fast_pool_mutex_;                       ///< Protects all fast pools
+  std::vector<LockFreeFastAllocBlock<8>> FastPool8_{};      ///< Pool for 8-byte objects
+  std::vector<LockFreeFastAllocBlock<16>> FastPool16_{};    ///< Pool for 16-byte objects
+  std::vector<LockFreeFastAllocBlock<32>> FastPool32_{};    ///< Pool for 32-byte objects
+  std::vector<LockFreeFastAllocBlock<64>> FastPool64_{};    ///< Pool for 64-byte objects
+  std::vector<LockFreeFastAllocBlock<128>> FastPool128_{};  ///< Pool for 128-byte objects
+  std::vector<LockFreeFastAllocBlock<256>> FastPool256_{};  ///< Pool for 256-byte objects
+  mutable std::mutex FastPoolMutex_;                        ///< Protects all fast pools
   // Free lists for memory reuse
-  FastAllocBlockFreeList<8> free_list8_;      ///< Free list for 8-byte objects
-  FastAllocBlockFreeList<16> free_list16_;    ///< Free list for 16-byte objects
-  FastAllocBlockFreeList<32> free_list32_;    ///< Free list for 32-byte objects
-  FastAllocBlockFreeList<64> free_list64_;    ///< Free list for 64-byte objects
-  FastAllocBlockFreeList<128> free_list128_;  ///< Free list for 128-byte objects
-  FastAllocBlockFreeList<256> free_list256_;  ///< Free list for 256-byte objects
+  FastAllocBlockFreeList<8> FreeList8_;      ///< Free list for 8-byte objects
+  FastAllocBlockFreeList<16> FreeList16_;    ///< Free list for 16-byte objects
+  FastAllocBlockFreeList<32> FreeList32_;    ///< Free list for 32-byte objects
+  FastAllocBlockFreeList<64> FreeList64_;    ///< Free list for 64-byte objects
+  FastAllocBlockFreeList<128> FreeList128_;  ///< Free list for 128-byte objects
+  FastAllocBlockFreeList<256> FreeList256_;  ///< Free list for 256-byte objects
   // Configuration
-  std::atomic<GrowthStrategy> growth_factor_{GrowthStrategy::LINEAR};  ///< Block growth strategy
-  std::size_t block_size_{DEFAULT_BLOCK_SIZE};                         ///< Initial block size
-  std::atomic<std::size_t> next_block_size_{DEFAULT_BLOCK_SIZE};       ///< Next block size to allocate
-  std::string name_{"arena"};                                          ///< Allocator name (for debugging)
+  std::atomic<GrowthStrategy> GrowthFactor_{GrowthStrategy::LINEAR};  ///< Block growth strategy
+  std::size_t BlockSize_{DEFAULT_BLOCK_SIZE};                         ///< Initial block size
+  std::atomic<std::size_t> NextBlockSize_{DEFAULT_BLOCK_SIZE};        ///< Next block size to allocate
+  std::string Name_{"arena"};                                         ///< Allocator name (for debugging)
   // Out-of-memory handling
-  OutOfMemoryHandler oom_handler_{nullptr};  ///< OOM callback
-  mutable std::mutex oom_handler_mutex_;     ///< Protects OOM handler calls
+  OutOfMemoryHandler OomHandler_{nullptr};  ///< OOM callback
+  mutable std::mutex OomHandlerMutex_;      ///< Protects OOM handler calls
   // General free list for large allocations
-  std::multiset<FreeListRegion> free_list_{};  ///< General purpose free list
-  mutable std::mutex free_list_mutex_;         ///< Protects general free list
+  std::multiset<FreeListRegion> FreeList_{};  ///< General purpose free list
+  mutable std::mutex FreeListMutex_;          ///< Protects general free list
   // Debugging and tracking
-  std::unordered_map<void*, AllocationHeader, VoidPtrHash, VoidPtrEqual> allocation_map_{};  ///< Allocation metadata
-  mutable std::shared_mutex allocation_map_mutex_;                                           ///< Protects allocation map
-  std::unordered_set<void*, VoidPtrHash, VoidPtrEqual> allocated_ptrs_{};                    ///< Active allocations (double-free protection)
-  mutable std::shared_mutex allocated_ptrs_mutex_;                                           ///< Protects allocated pointers set
+  std::unordered_map<void*, AllocationHeader, VoidPtrHash, VoidPtrEqual> AllocationMap_{};  ///< Allocation metadata
+  mutable std::shared_mutex AllocationMapMutex_;                                            ///< Protects allocation map
+  std::unordered_set<void*, VoidPtrHash, VoidPtrEqual> AllocatedPtrs_{};                    ///< Active allocations (double-free protection)
+  mutable std::shared_mutex AllocatedPtrsMutex_;                                            ///< Protects allocated pointers set
   // Feature flags
-  std::atomic<bool> track_allocations_{false};  ///< Enable allocation tracking
-  std::atomic<bool> debug_features_{false};     ///< Enable debug features
-  std::atomic<bool> enable_statistics_{true};   ///< Enable statistics collection
+  std::atomic<bool> TrackAllocations_{false};  ///< Enable allocation tracking
+  std::atomic<bool> DebugFeatures_{false};     ///< Enable debug features
+  std::atomic<bool> EnableStatistics_{true};   ///< Enable statistics collection
   // Alignment settings
-  std::size_t min_alignment_{std::alignment_of<std::max_align_t>::value};  ///< Minimum alignment
-  std::atomic<std::size_t> max_block_size_{MAX_BLOCK_SIZE};                ///< Maximum block size
+  std::size_t MinAlignment_{std::alignment_of<std::max_align_t>::value};  ///< Minimum alignment
+  std::atomic<std::size_t> MaxBlockSize_{MAX_BLOCK_SIZE};                 ///< Maximum block size
 
  public:
   //==========================================================================
@@ -1000,18 +1000,18 @@ class MYLANG_COMPILER_ABI ArenaAllocator
                  std::size_t min_align = std::alignment_of<std::max_align_t>::value,
                  OutOfMemoryHandler oom_handler = nullptr,
                  bool debug = false) :
-      growth_factor_(GrowthStrategy(growth_strategy)),
-      min_alignment_(min_align),
-      oom_handler_(oom_handler),
-      debug_features_(debug)
+      GrowthFactor_(GrowthStrategy(growth_strategy)),
+      MinAlignment_(min_align),
+      OomHandler_(oom_handler),
+      DebugFeatures_(debug)
   {
     // Validate alignment
-    if (min_alignment_ == 0 || (min_alignment_ & (min_alignment_ - 1)) != 0) min_alignment_ = alignof(std::max_align_t);
+    if (MinAlignment_ == 0 || (MinAlignment_ & (MinAlignment_ - 1)) != 0) MinAlignment_ = alignof(std::max_align_t);
     // Enable tracking in debug mode
-    if (debug_features_.load(std::memory_order_relaxed))
+    if (DebugFeatures_.load(std::memory_order_relaxed))
     {
-      track_allocations_.store(true, std::memory_order_relaxed);
-      enable_statistics_.store(true, std::memory_order_relaxed);
+      TrackAllocations_.store(true, std::memory_order_relaxed);
+      EnableStatistics_.store(true, std::memory_order_relaxed);
     }
   }
 
@@ -1048,57 +1048,57 @@ class MYLANG_COMPILER_ABI ArenaAllocator
   void reset()
   {
     // Acquire all locks in consistent order
-    std::unique_lock blocks_lock(blocks_mutex_);
-    std::unique_lock fast_pool_lock(fast_pool_mutex_);
-    std::unique_lock free_list_lock(free_list_mutex_);
-    std::unique_lock alloc_map_lock(allocation_map_mutex_);
-    std::unique_lock alloc_ptrs_lock(allocated_ptrs_mutex_);
+    std::unique_lock blocks_lock(BlocksMutex_);
+    std::unique_lock fast_pool_lock(FastPoolMutex_);
+    std::unique_lock free_list_lock(FreeListMutex_);
+    std::unique_lock alloc_map_lock(AllocationMapMutex_);
+    std::unique_lock alloc_ptrs_lock(AllocatedPtrsMutex_);
     // Clear all containers (automatically frees memory via destructors)
-    blocks_.clear();
-    fast_pool8_.clear();
-    fast_pool16_.clear();
-    fast_pool32_.clear();
-    fast_pool64_.clear();
-    fast_pool128_.clear();
-    fast_pool256_.clear();
-    free_list_.clear();
-    free_list8_.clear();
-    free_list16_.clear();
-    free_list32_.clear();
-    free_list64_.clear();
-    free_list128_.clear();
-    free_list256_.clear();
+    Blocks_.clear();
+    FastPool8_.clear();
+    FastPool16_.clear();
+    FastPool32_.clear();
+    FastPool64_.clear();
+    FastPool128_.clear();
+    FastPool256_.clear();
+    FreeList_.clear();
+    FreeList8_.clear();
+    FreeList16_.clear();
+    FreeList32_.clear();
+    FreeList64_.clear();
+    FreeList128_.clear();
+    FreeList256_.clear();
 
-    if (track_allocations_.load(std::memory_order_relaxed)) allocation_map_.clear();
+    if (TrackAllocations_.load(std::memory_order_relaxed)) AllocationMap_.clear();
 
-    allocated_ptrs_.clear();
+    AllocatedPtrs_.clear();
     // Reset statistics
-    alloc_stats_.total_allocations.store(0, std::memory_order_relaxed);
-    alloc_stats_.total_allocated.store(0, std::memory_order_relaxed);
-    alloc_stats_.total_free.store(0, std::memory_order_relaxed);
-    alloc_stats_.total_deallocations.store(0, std::memory_order_relaxed);
-    alloc_stats_.active_blocks.store(0, std::memory_order_relaxed);
+    AllocStats_.total_allocations.store(0, std::memory_order_relaxed);
+    AllocStats_.total_allocated.store(0, std::memory_order_relaxed);
+    AllocStats_.total_free.store(0, std::memory_order_relaxed);
+    AllocStats_.total_deallocations.store(0, std::memory_order_relaxed);
+    AllocStats_.active_blocks.store(0, std::memory_order_relaxed);
     // Reset block size
-    next_block_size_.store(block_size_, std::memory_order_relaxed);
+    NextBlockSize_.store(BlockSize_, std::memory_order_relaxed);
   }
 
   /**
      * @brief Get total bytes allocated (cumulative)
      * @return Total bytes allocated since construction or last reset
      */
-  std::size_t total_allocated() const { return alloc_stats_.total_allocated.load(std::memory_order_relaxed); }
+  std::size_t total_allocated() const { return AllocStats_.total_allocated.load(std::memory_order_relaxed); }
 
   /**
      * @brief Get total number of allocations
      * @return Number of allocation requests processed
      */
-  std::size_t total_allocations() const { return alloc_stats_.total_allocations.load(std::memory_order_relaxed); }
+  std::size_t total_allocations() const { return AllocStats_.total_allocations.load(std::memory_order_relaxed); }
 
   /**
      * @brief Get number of active memory blocks
      * @return Count of currently allocated blocks
      */
-  std::size_t active_blocks() const { return alloc_stats_.active_blocks.load(std::memory_order_relaxed); }
+  std::size_t active_blocks() const { return AllocStats_.active_blocks.load(std::memory_order_relaxed); }
 
   //==========================================================================
   // Block Allocation (Internal)
@@ -1124,17 +1124,17 @@ class MYLANG_COMPILER_ABI ArenaAllocator
   Pointer allocate_block(std::size_t requested, std::size_t alignment_ = alignof(std::max_align_t), bool retry_on_oom = true)
   {
     // Validate and fix alignment if needed
-    if (alignment_ == 0 || (alignment_ & (alignment_ - 1)) != 0) alignment_ = min_alignment_;
+    if (alignment_ == 0 || (alignment_ & (alignment_ - 1)) != 0) alignment_ = MinAlignment_;
     // Determine block size (including growth strategy)
-    std::size_t block_size = std::max(requested + alignment_, next_block_size_.load(std::memory_order_relaxed));
+    std::size_t block_size = std::max(requested + alignment_, NextBlockSize_.load(std::memory_order_relaxed));
 
     // Check against maximum
-    if (block_size > max_block_size_.load(std::memory_order_relaxed))
+    if (block_size > MaxBlockSize_.load(std::memory_order_relaxed))
     {
       if (retry_on_oom)
       {
-        std::lock_guard<std::mutex> oom_lock(oom_handler_mutex_);
-        if (oom_handler_ && oom_handler_(block_size)) return allocate_block(requested, alignment_, false);  // Retry once
+        std::lock_guard<std::mutex> oom_lock(OomHandlerMutex_);
+        if (OomHandler_ && OomHandler_(block_size)) return allocate_block(requested, alignment_, false);  // Retry once
       }
       return nullptr;
     }
@@ -1142,16 +1142,16 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     try
     {
       // Add new block to vector (requires exclusive lock)
-      std::unique_lock<std::shared_mutex> lock(blocks_mutex_);
-      blocks_.emplace_back(block_size, alignment_);
-      alloc_stats_.safe_increment(alloc_stats_.active_blocks);
-      return blocks_.back().begin();
+      std::unique_lock<std::shared_mutex> lock(BlocksMutex_);
+      Blocks_.emplace_back(block_size, alignment_);
+      AllocStats_.safe_increment(AllocStats_.active_blocks);
+      return Blocks_.back().begin();
     } catch (const std::bad_alloc&)
     {
       if (retry_on_oom)
       {
-        std::lock_guard<std::mutex> oom_lock(oom_handler_mutex_);
-        if (oom_handler_ && oom_handler_(block_size)) return allocate_block(requested, alignment_, false);  // Retry once
+        std::lock_guard<std::mutex> oom_lock(OomHandlerMutex_);
+        if (OomHandler_ && OomHandler_(block_size)) return allocate_block(requested, alignment_, false);  // Retry once
       }
       return nullptr;
     }
@@ -1177,8 +1177,8 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     {
       if (retry_on_oom)
       {
-        std::lock_guard<std::mutex> oom_lock(oom_handler_mutex_);
-        if (oom_handler_ && oom_handler_(alloc_size)) return allocate_fast_block<ObjectSize>(size, false);
+        std::lock_guard<std::mutex> oom_lock(OomHandlerMutex_);
+        if (OomHandler_ && OomHandler_(alloc_size)) return allocate_fast_block<ObjectSize>(size, false);
       }
       return nullptr;
     }
@@ -1186,19 +1186,19 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     try
     {
       LockFreeFastAllocBlock<ObjectSize> arena_block(alloc_size);
-      std::lock_guard<std::mutex> lock(fast_pool_mutex_);
+      std::lock_guard<std::mutex> lock(FastPoolMutex_);
       std::vector<LockFreeFastAllocBlock<ObjectSize>>* pool = choose_pool<ObjectSize>();
       if (!pool) return nullptr;
       Pointer ret = arena_block.begin();
       pool->push_back(std::move(arena_block));
-      alloc_stats_.safe_increment(alloc_stats_.active_blocks);
+      AllocStats_.safe_increment(AllocStats_.active_blocks);
       return ret;
     } catch (const std::bad_alloc&)
     {
       if (retry_on_oom)
       {
-        std::lock_guard<std::mutex> oom_lock(oom_handler_mutex_);
-        if (oom_handler_ && oom_handler_(alloc_size)) return allocate_fast_block<ObjectSize>(size, false);
+        std::lock_guard<std::mutex> oom_lock(OomHandlerMutex_);
+        if (OomHandler_ && OomHandler_(alloc_size)) return allocate_fast_block<ObjectSize>(size, false);
       }
       return nullptr;
     }
@@ -1252,14 +1252,14 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     if (count > MAX_BLOCK_SIZE / sizeof(_Tp))
     {
       diagnostic::engine.emit("allocation size is too large!", diagnostic::DiagnosticEngine::Severity::ERROR);
-      if (oom_handler_ && oom_handler_(count)) return allocate<_Tp>(count);
+      if (OomHandler_ && OomHandler_(count)) return allocate<_Tp>(count);
       diagnostic::engine.emit("bad alloc!", diagnostic::DiagnosticEngine::Severity::FATAL);
       /// @todo change after debug
       // diagnostic::engine.panic("bad alloc");
     }
 
     std::size_t alloc_size = count * sizeof(_Tp);
-    std::size_t align = std::max(std::alignment_of<_Tp>::value, min_alignment_);
+    std::size_t align = std::max(std::alignment_of<_Tp>::value, MinAlignment_);
 
     if (alloc_size > MAX_BLOCK_SIZE)
     {
@@ -1302,14 +1302,14 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     _Tp* region = reinterpret_cast<_Tp*>(mem);
 
     // Update statistics
-    if (enable_statistics_.load(std::memory_order_relaxed))
+    if (EnableStatistics_.load(std::memory_order_relaxed))
     {
-      alloc_stats_.safe_increment(alloc_stats_.total_allocations);
-      alloc_stats_.safe_increment(alloc_stats_.total_allocated, alloc_size);
+      AllocStats_.safe_increment(AllocStats_.total_allocations);
+      AllocStats_.safe_increment(AllocStats_.total_allocated, alloc_size);
     }
 
     // Track allocation if enabled
-    if (track_allocations_.load(std::memory_order_relaxed))
+    if (TrackAllocations_.load(std::memory_order_relaxed))
     {
       AllocationHeader header{};
       header.magic = AllocationHeader::MAGIC;
@@ -1317,14 +1317,14 @@ class MYLANG_COMPILER_ABI ArenaAllocator
       header.alignment = static_cast<std::uint32_t>(align);
       header.checksum = header.compute_checksum();
       header.timestamp = std::chrono::steady_clock::now();
-      std::unique_lock<std::shared_mutex> lock(allocation_map_mutex_);
-      allocation_map_[region] = header;
+      std::unique_lock<std::shared_mutex> lock(AllocationMapMutex_);
+      AllocationMap_[region] = header;
     }
 
     // Track Pointer for double-free protection
     {
-      std::unique_lock<std::shared_mutex> lock(allocated_ptrs_mutex_);
-      allocated_ptrs_.insert(region);
+      std::unique_lock<std::shared_mutex> lock(AllocatedPtrsMutex_);
+      AllocatedPtrs_.insert(region);
     }
 
     // Construct objects if needed
@@ -1363,15 +1363,15 @@ class MYLANG_COMPILER_ABI ArenaAllocator
 
     // Check for double-free
     {
-      std::unique_lock<std::shared_mutex> lock(allocated_ptrs_mutex_);
-      auto it = allocated_ptrs_.find(ptr);
-      if (it == allocated_ptrs_.end())
+      std::unique_lock<std::shared_mutex> lock(AllocatedPtrsMutex_);
+      auto it = AllocatedPtrs_.find(ptr);
+      if (it == AllocatedPtrs_.end())
       {
         // Double-free detected!
-        if (debug_features_.load(std::memory_order_relaxed)) std::cerr << "ERROR: Double-free detected for Pointer " << ptr << std::endl;
+        if (DebugFeatures_.load(std::memory_order_relaxed)) std::cerr << "ERROR: Double-free detected for Pointer " << ptr << std::endl;
         return;
       }
-      allocated_ptrs_.erase(it);
+      AllocatedPtrs_.erase(it);
     }
 
     std::size_t byte_size = count * sizeof(_Tp);
@@ -1402,24 +1402,24 @@ class MYLANG_COMPILER_ABI ArenaAllocator
         free_list->append(region);
       else
       {
-        std::lock_guard<std::mutex> lock(free_list_mutex_);
-        free_list_.insert(region);
+        std::lock_guard<std::mutex> lock(FreeListMutex_);
+        FreeList_.insert(region);
       }
     }
     else
     {
-      std::lock_guard<std::mutex> lock(free_list_mutex_);
-      free_list_.insert(region);
+      std::lock_guard<std::mutex> lock(FreeListMutex_);
+      FreeList_.insert(region);
     }
 
     // Update statistics
-    if (enable_statistics_.load(std::memory_order_relaxed)) alloc_stats_.safe_increment(alloc_stats_.total_deallocations);
+    if (EnableStatistics_.load(std::memory_order_relaxed)) AllocStats_.safe_increment(AllocStats_.total_deallocations);
 
     // Remove from tracking
-    if (track_allocations_.load(std::memory_order_relaxed) && ptr)
+    if (TrackAllocations_.load(std::memory_order_relaxed) && ptr)
     {
-      std::unique_lock<std::shared_mutex> lock(allocation_map_mutex_);
-      allocation_map_.erase(ptr);
+      std::unique_lock<std::shared_mutex> lock(AllocationMapMutex_);
+      AllocationMap_.erase(ptr);
     }
   }
 
@@ -1436,10 +1436,10 @@ class MYLANG_COMPILER_ABI ArenaAllocator
   MYLANG_NODISCARD
   bool verify_allocation(void* ptr) const
   {
-    if (!track_allocations_.load(std::memory_order_relaxed)) return true;
-    std::shared_lock<std::shared_mutex> lock(allocation_map_mutex_);
-    auto it = allocation_map_.find(ptr);
-    if (it == allocation_map_.end()) return false;
+    if (!TrackAllocations_.load(std::memory_order_relaxed)) return true;
+    std::shared_lock<std::shared_mutex> lock(AllocationMapMutex_);
+    auto it = AllocationMap_.find(ptr);
+    if (it == AllocationMap_.end()) return false;
     return it->second.is_valid();
   }
 
@@ -1465,7 +1465,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
   template<std::size_t ObjectSize>
   MYLANG_NODISCARD Pointer allocate_from_fast_pool(std::size_t alloc_size)
   {
-    std::unique_lock<std::mutex> lock(fast_pool_mutex_);
+    std::unique_lock<std::mutex> lock(FastPoolMutex_);
 
     std::vector<LockFreeFastAllocBlock<ObjectSize>>* pool = choose_pool<ObjectSize>();
     if (!pool)
@@ -1479,7 +1479,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     {
       lock.unlock();  // Release lock during recursive call
 
-      std::size_t block_size = std::max(alloc_size, next_block_size_.load(std::memory_order_relaxed));
+      std::size_t block_size = std::max(alloc_size, NextBlockSize_.load(std::memory_order_relaxed));
       if (!allocate_fast_block<ObjectSize>(block_size))
       {
         std::cerr << "allocate_fast_block() failed!" << std::endl;
@@ -1501,7 +1501,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     {
       lock.unlock();  // Release lock during recursive call
 
-      std::size_t block_size = std::max(alloc_size, next_block_size_.load(std::memory_order_relaxed));
+      std::size_t block_size = std::max(alloc_size, NextBlockSize_.load(std::memory_order_relaxed));
       if (!allocate_fast_block<ObjectSize>(block_size))
       {
         std::cerr << "allocate_fast_block() failed!" << std::endl;
@@ -1553,14 +1553,14 @@ class MYLANG_COMPILER_ABI ArenaAllocator
   MYLANG_NODISCARD
   Pointer allocate_using_free_list(std::size_t alloc_size, std::size_t align)
   {
-    std::lock_guard<std::mutex> lock(free_list_mutex_);
-    if (free_list_.empty()) return nullptr;
+    std::lock_guard<std::mutex> lock(FreeListMutex_);
+    if (FreeList_.empty()) return nullptr;
 
     // Find best fit using multiset's ordering
     FreeListRegion search_key(nullptr, alloc_size);
-    auto it = free_list_.lower_bound(search_key);
+    auto it = FreeList_.lower_bound(search_key);
 
-    while (it != free_list_.end())
+    while (it != FreeList_.end())
     {
       FreeListRegion reg = *it;
       // Check alignment of the Pointer
@@ -1572,7 +1572,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
       {
         Pointer result = reinterpret_cast<Pointer>(aligned);
         // Remove the used region
-        free_list_.erase(it);
+        FreeList_.erase(it);
         // If there's leftover space, split the region
         std::size_t used = alloc_size + padding;
 
@@ -1580,7 +1580,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
         {
           Pointer remainder = reg.ptr + used;
           std::size_t remainder_size = reg.size - used;
-          free_list_.insert(FreeListRegion(remainder, remainder_size));
+          FreeList_.insert(FreeListRegion(remainder, remainder_size));
         }
         return result;
       }
@@ -1593,56 +1593,56 @@ class MYLANG_COMPILER_ABI ArenaAllocator
   Pointer allocate_from_blocks(std::size_t alloc_size, std::size_t align)
   {
     // Validate alignment
-    align = min_alignment_;
+    align = MinAlignment_;
 
     if (align == 0 || (align & (align - 1)) != 0)
     {
-      std::shared_lock<std::shared_mutex> lock(blocks_mutex_);
-      if (!blocks_.empty())
+      std::shared_lock<std::shared_mutex> lock(BlocksMutex_);
+      if (!Blocks_.empty())
       {
         // Try free list first
         Pointer mem = allocate_using_free_list(alloc_size, align);
         if (mem) return mem;
         // Try current block
-        mem = blocks_.back().allocate(alloc_size, align);
+        mem = Blocks_.back().allocate(alloc_size, align);
         if (mem) return mem;
       }
     }
 
     // Need a new block
-    std::size_t new_block_size = std::max(alloc_size, next_block_size_.load(std::memory_order_relaxed));
+    std::size_t new_block_size = std::max(alloc_size, NextBlockSize_.load(std::memory_order_relaxed));
     if (!allocate_block(new_block_size, align))
     {
-      if (debug_features_.load(std::memory_order_relaxed)) std::cerr << "-- Failed to allocate block : ArenaAllocator::allocate_block()" << std::endl;
+      if (DebugFeatures_.load(std::memory_order_relaxed)) std::cerr << "-- Failed to allocate block : ArenaAllocator::allocate_block()" << std::endl;
       return nullptr;
     }
 
     update_next_block_size();
-    std::shared_lock<std::shared_mutex> lock(blocks_mutex_);
-    return blocks_.back().allocate(alloc_size, align);
+    std::shared_lock<std::shared_mutex> lock(BlocksMutex_);
+    return Blocks_.back().allocate(alloc_size, align);
   }
 
   void update_next_block_size() MYLANG_NOEXCEPT
   {
     // TODO : prevent overflow
-    if (growth_factor_.load(std::memory_order_relaxed) == GrowthStrategy::EXPONENTIAL)
+    if (GrowthFactor_.load(std::memory_order_relaxed) == GrowthStrategy::EXPONENTIAL)
     {
-      std::size_t current = next_block_size_.load(std::memory_order_relaxed);
-      std::size_t max_size = max_block_size_.load(std::memory_order_relaxed);
+      std::size_t current = NextBlockSize_.load(std::memory_order_relaxed);
+      std::size_t max_size = MaxBlockSize_.load(std::memory_order_relaxed);
       std::size_t new_size = std::min(current * 2, max_size);
-      next_block_size_.store(new_size, std::memory_order_relaxed);
+      NextBlockSize_.store(new_size, std::memory_order_relaxed);
     }
   }
 
   template<std::size_t ObjectSize>
   MYLANG_NODISCARD std::vector<LockFreeFastAllocBlock<ObjectSize>>* choose_pool() MYLANG_NOEXCEPT
   {
-    if constexpr (ObjectSize == 8) { return &fast_pool8_; }
-    else if constexpr (ObjectSize == 16) { return &fast_pool16_; }
-    else if constexpr (ObjectSize == 32) { return &fast_pool32_; }
-    else if constexpr (ObjectSize == 64) { return &fast_pool64_; }
-    else if constexpr (ObjectSize == 128) { return &fast_pool128_; }
-    else if constexpr (ObjectSize == 256) { return &fast_pool256_; }
+    if constexpr (ObjectSize == 8) { return &FastPool8_; }
+    else if constexpr (ObjectSize == 16) { return &FastPool16_; }
+    else if constexpr (ObjectSize == 32) { return &FastPool32_; }
+    else if constexpr (ObjectSize == 64) { return &FastPool64_; }
+    else if constexpr (ObjectSize == 128) { return &FastPool128_; }
+    else if constexpr (ObjectSize == 256) { return &FastPool256_; }
     else
       return nullptr;
   }
@@ -1650,12 +1650,12 @@ class MYLANG_COMPILER_ABI ArenaAllocator
   template<std::size_t ObjectSize>
   MYLANG_NODISCARD FastAllocBlockFreeList<ObjectSize>* choose_pool_free_list() MYLANG_NOEXCEPT
   {
-    if constexpr (ObjectSize == 8) { return &free_list8_; }
-    else if constexpr (ObjectSize == 16) { return &free_list16_; }
-    else if constexpr (ObjectSize == 32) { return &free_list32_; }
-    else if constexpr (ObjectSize == 64) { return &free_list64_; }
-    else if constexpr (ObjectSize == 128) { return &free_list128_; }
-    else if constexpr (ObjectSize == 256) { return &free_list256_; }
+    if constexpr (ObjectSize == 8) { return &FreeList8_; }
+    else if constexpr (ObjectSize == 16) { return &FreeList16_; }
+    else if constexpr (ObjectSize == 32) { return &FreeList32_; }
+    else if constexpr (ObjectSize == 64) { return &FreeList64_; }
+    else if constexpr (ObjectSize == 128) { return &FreeList128_; }
+    else if constexpr (ObjectSize == 256) { return &FreeList256_; }
     else
       return nullptr;
   }

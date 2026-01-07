@@ -21,18 +21,18 @@ class BytecodeOptimizer
   {
     std::string name;
     std::function<bool(std::vector<bytecode::Instruction>&)> apply;
-    std::int32_t applicationsCount = 0;
+    std::int32_t ApplicationsCount = 0;
   };
 
  private:
-  std::vector<OptimizationPass> passes_;
+  std::vector<OptimizationPass> Passes_;
 
  public:
   BytecodeOptimizer()
   {
     // Register optimization passes
     // Pass 1: Dead code elimination after returns
-    passes_.push_back({"Dead code after return", [](std::vector<bytecode::Instruction>& code) -> bool {
+    Passes_.push_back({"Dead code after return", [](std::vector<bytecode::Instruction>& code) -> bool {
                          bool changed = false;
                          for (std::size_t i = 0; i + 1 < code.size(); i++)
                            if (code[i].op == bytecode::OpCode::RETURN || code[i].op == bytecode::OpCode::HALT)
@@ -53,7 +53,7 @@ class BytecodeOptimizer
                          return changed;
                        }});
     // Pass 2: Constant folding in bytecode
-    passes_.push_back({"Constant folding", [](std::vector<bytecode::Instruction>& code) -> bool {
+    Passes_.push_back({"Constant folding", [](std::vector<bytecode::Instruction>& code) -> bool {
                          bool changed = false;
                          // Find LOAD_CONST, LOAD_CONST, binary_op patterns
                          for (std::size_t i = 0; i + 2 < code.size(); i++)
@@ -64,7 +64,7 @@ class BytecodeOptimizer
                          return changed;
                        }});
     // Pass 3: Jump threading
-    passes_.push_back({"Jump threading", [](std::vector<bytecode::Instruction>& code) -> bool {
+    Passes_.push_back({"Jump threading", [](std::vector<bytecode::Instruction>& code) -> bool {
                          bool changed = false;
                          // If jump target is another jump, redirect
                          for (auto& instr : code)
@@ -80,7 +80,7 @@ class BytecodeOptimizer
                          return changed;
                        }});
     // Pass 4: Remove NOPs
-    passes_.push_back({"NOP elimination", [](std::vector<bytecode::Instruction>& code) -> bool {
+    Passes_.push_back({"NOP elimination", [](std::vector<bytecode::Instruction>& code) -> bool {
                          auto it = std::remove_if(code.begin(), code.end(),
                                                   [](const bytecode::Instruction& instr) { return instr.op == bytecode::OpCode::NOP; });
                          bool changed = it != code.end();

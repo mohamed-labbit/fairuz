@@ -16,31 +16,31 @@ class SymbolTable
  public:
   enum class SymbolType { VARIABLE, FUNCTION, CLASS, MODULE, UNKNOWN };
 
-  enum class DataType { INTEGER, FLOAT, STRING, BOOLEAN, LIST, DICT, TUPLE, NONE, FUNCTION, ANY, UNKNOWN };
+  enum class DataType_t { INTEGER, FLOAT, STRING, BOOLEAN, LIST, DICT, TUPLE, NONE, FUNCTION, ANY, UNKNOWN };
 
   struct Symbol
   {
     string_type name;
-    SymbolType symbolType;
-    DataType dataType;
-    bool isConstant = false;
-    bool isGlobal = false;
-    bool isUsed = false;
-    std::int32_t definitionLine = 0;
-    std::vector<std::int32_t> usageLines;
+    SymbolType SymbolType;
+    DataType_t DataType;
+    bool IsConstant = false;
+    bool IsGlobal = false;
+    bool IsUsed = false;
+    std::int32_t DefinitionLine = 0;
+    std::vector<std::int32_t> UsageLines;
     // For functions
-    std::vector<DataType> paramTypes;
-    DataType returnType = DataType::UNKNOWN;
+    std::vector<DataType_t> ParamTypes;
+    DataType_t returnType = DataType_t::UNKNOWN;
     // For type inference
-    std::unordered_set<DataType> possibleTypes;
+    std::unordered_set<DataType_t> PossibleTypes;
   };
 
   SymbolTable* parent = nullptr;
 
  private:
-  std::unordered_map<string_type, Symbol> symbols_;
-  std::vector<std::unique_ptr<SymbolTable>> children_;
-  unsigned scopeLevel_ = 0;
+  std::unordered_map<string_type, Symbol> Symbols_;
+  std::vector<std::unique_ptr<SymbolTable>> Children_;
+  unsigned ScopeLevel_ = 0;
 
  public:
   explicit SymbolTable(SymbolTable* p = nullptr, std::int32_t level = 0);

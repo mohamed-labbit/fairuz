@@ -18,11 +18,11 @@ void GarbageCollector::registerObject(object::Value* obj)
     return;
   }
 
-  allObjects_.push_back(obj);
-  youngGen_.push_back(obj);
-  allocated_++;
+  AllObjects_.push_back(obj);
+  YoungGen_.push_back(obj);
+  Allocated_++;
 
-  if (allocated_ >= threshold_) collect();
+  if (Allocated_ >= Threshold_) collect();
 }
 
 void GarbageCollector::addRoot(object::Value* root)
@@ -35,14 +35,14 @@ void GarbageCollector::addRoot(object::Value* root)
 #endif
     return;
   }
-  roots_.push_back(root);
+  Roots_.push_back(root);
 }
 
 void GarbageCollector::collect()
 {
   // Mark phase
   std::unordered_set<object::Value*> marked;
-  std::vector<object::Value*> worklist = roots_;
+  std::vector<object::Value*> worklist = Roots_;
 
   while (!worklist.empty())
   {
@@ -56,14 +56,14 @@ void GarbageCollector::collect()
   }
 
   // Sweep phase
-  auto it = allObjects_.begin();
-  while (it != allObjects_.end())
+  auto it = AllObjects_.begin();
+  while (it != AllObjects_.end())
   {
     if (!marked.count(*it))
     {
       delete *it;
-      it = allObjects_.erase(it);
-      allocated_--;
+      it = AllObjects_.erase(it);
+      Allocated_--;
     }
     else
     {
@@ -71,9 +71,9 @@ void GarbageCollector::collect()
     }
   }
 
-  youngGenCollections_++;
+  YoungGenCollections_++;
   // Promote survivors to old generation every 5 collections
-  if (youngGenCollections_ % 5 == 0) promoteToOldGen();
+  if (YoungGenCollections_ % 5 == 0) promoteToOldGen();
 }
 
 }
