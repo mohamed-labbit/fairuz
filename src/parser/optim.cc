@@ -39,7 +39,7 @@ std::optional<double> ASTOptimizer::evaluateConstant(const ast::Expr* expr)
   else if (expr->getKind() == ast::Expr::Kind::UNARY)
   {
     const ast::UnaryExpr* un = static_cast<const ast::UnaryExpr*>(expr);
-    std::optional<double> operand = evaluateConstant(dynamic_cast<const ast::UnaryExpr*>(un));
+    std::optional<double> operand = evaluateConstant(static_cast<const ast::UnaryExpr*>(un));
     if (operand == std::nullopt) return std::nullopt;
     if (un->getOperator() == lex::tok::TokenType::OP_PLUS) return *operand;
     if (un->getOperator() == lex::tok::TokenType::OP_MINUS) return -*operand;
@@ -137,7 +137,7 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
       if (innerUn->getOperator() == lex::tok::TokenType::OP_MINUS)
       {
         Stats_.StrengthReductions++;
-        return dynamic_cast<ast::Expr*>(innerUn);
+        return static_cast<ast::Expr*>(innerUn);
       }
     }
   }
@@ -169,10 +169,10 @@ ast::Stmt* ASTOptimizer::eliminateDeadCode(ast::Stmt* stmt)
         Stats_.DeadCodeEliminations++;
         if (lit->getValue() == u"true")
           // Return then block as block statement
-          return dynamic_cast<ast::Stmt*>(ifStmt->getThenBlock());
+          return static_cast<ast::Stmt*>(ifStmt->getThenBlock());
         else
           // Return else block or nothing
-          if (!ifStmt->getElseBlock()->getStatements().empty()) return dynamic_cast<ast::Stmt*>(ifStmt->getElseBlock());
+          if (!ifStmt->getElseBlock()->getStatements().empty()) return static_cast<ast::Stmt*>(ifStmt->getElseBlock());
         /// TODO:: return std::make_unique<Stmt*>();
       }
     }

@@ -11,6 +11,7 @@ AllowShortCaseLabelsOnASingleLine: true
 AllowShortEnumsOnASingleLine: true
 AllowShortIfStatementsOnASingleLine: true
 AllowShortBlocksOnASingleLine: true
+AllowShortLoopsOnASingleLine: true
 AlwaysBreakTemplateDeclarations: Yes
 
 BasedOnStyle: WebKit

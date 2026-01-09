@@ -521,8 +521,8 @@ kwarg_or_starred:
 
 
 
-
-
+state 00 : index = 0, token[index] = sof, lexer.current() = sof
+state 01 : index = 1, token[index] = 1st, lexer.current() = 1st
 
 
 

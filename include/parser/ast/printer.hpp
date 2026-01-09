@@ -77,7 +77,7 @@ class ASTPrinter
       break;
     }
     case ast::Expr::Kind::CALL : {
-      const ast::CallExpr* e = dynamic_cast<const ast::CallExpr*>(expr);
+      const ast::CallExpr* e = static_cast<const ast::CallExpr*>(expr);
       printIndent();
       std::cout << colorize(u"Call", Color::MAGENTA, UseColor_) << " [" << e->getArgs().size() << " args]\n";
       Indent_++;
@@ -87,7 +87,7 @@ class ASTPrinter
       break;
     }
     case ast::Expr::Kind::LIST : {
-      const ast::ListExpr* e = dynamic_cast<const ast::ListExpr*>(expr);
+      const ast::ListExpr* e = static_cast<const ast::ListExpr*>(expr);
       printIndent();
       std::cout << colorize(u"List", Color::BLUE, UseColor_) << " [" << e->getElements().size() << "]\n";
       Indent_++;
@@ -147,7 +147,7 @@ class ASTPrinter
       break;
     }
     case ast::Stmt::Kind::FUNC : {
-      const ast::FunctionDef* s = dynamic_cast<const ast::FunctionDef*>(stmt);
+      const ast::FunctionDef* s = static_cast<const ast::FunctionDef*>(stmt);
       printIndent();
       std::cout << colorize(u"Function", Color::BOLD, UseColor_) << " " << colorize(s->getName()->getValue(), Color::GREEN, UseColor_) << "(";
       for (std::size_t i = 0; i < s->getParameters().size(); i++)

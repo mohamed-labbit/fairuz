@@ -95,45 +95,78 @@ class ParseError: public std::runtime_error
 class Parser
 {
  public:
-  // Constructors
-
   /// @brief Constructs an empty parser
   explicit Parser() = default;
+
   /// @brief Constructs a parser bound to a file manager
-  explicit Parser(input::FileManager* fm);
+  explicit Parser(input::FileManager* fm) :
+      Lexer_(fm)
+  {
+    if (fm == nullptr) diagnostic::engine.panic("file_manager is NULL!");
+
+    // Advance to the first real token
+    Lexer_.next();
+#if DEBUG_PRINT
+    std::cout << "-- DEBUG : Lexer_.next() = " << std::to_string(static_cast<int>(Lexer_.current().type())) << std::endl;
+    std::cout << "-- DEBUG : parser initialized successfully!" << std::endl;
+#endif
+  }
+
+
   /// @brief Constructs a parser from a pre-existing token sequence
   explicit Parser(std::vector<lex::tok::Token> seq, std::optional<std::size_t> s = std::nullopt);
 
   // Expression parsing entry points
 
+  /// @brief does exactly what it says
+  ast::ListExpr* parseFunctionArguments() { return static_cast<ast::ListExpr*>(parseParenthesizedExpr()); }
+
   /// @brief Parses a primary expression
   ast::Expr* parsePrimary();
+
   /// @brief Parses a unary expression
   ast::Expr* parseUnary();
+
   /// @brief Parses a parenthesized expression
   ast::Expr* parseParenthesizedExpr();
+
   /// @brief Parses a general expression
   ast::Expr* parseExpression();
+
   /// @brief Parses an assignment expression
   ast::Expr* parseAssignmentExpr();
+
   /// @brief Parses a list literal expression
   ast::Expr* parseListLiteral();
+
   /// @brief Parses a conditional (ternary-like) expression
-  ast::Expr* parseConditionalExpr();
+  ast::Expr* parseConditionalExpr()
+  {
+    return parseLogicalExpr();
+    /// TODO: Add ternary operator support here
+  }
+
   /// @brief Parses logical expressions (AND / OR)
-  ast::Expr* parseLogicalExpr();
+  ast::Expr* parseLogicalExpr() { return parseLogicalExprPrecedence(0); }
+
   /// @brief Parses logical expressions using precedence climbing
   ast::Expr* parseLogicalExprPrecedence(int min_precedence);
+
   /// @brief Parses binary expressions using precedence climbing
   ast::Expr* parseBinaryExprPrecedence(int min_precedence);
+
   /// @brief Parses comparison expressions
   ast::Expr* parseComparisonExpr();
+
   /// @brief Parses binary expressions
-  ast::Expr* parseBinaryExpr();
+  ast::Expr* parseBinaryExpr() { return parseBinaryExprPrecedence(0); }
+
   /// @brief Parses unary expressions
   ast::Expr* parseUnaryExpr();
+
   /// @brief Parses primary expressions
   ast::Expr* parsePrimaryExpr();
+
   /// @brief Parses postfix expressions (calls, indexing, etc.)
   ast::Expr* parsePostfixExpr();
   /**
@@ -144,22 +177,52 @@ class Parser
   // std::vector<ast::Stmt*> parse();
   /// TODO: not sure if these should be private
   /// @brief check wether or not we reached the end of the file so not to bother lookin for stuff to parse
-  bool weDone() const;
+  bool weDone() const { return Lexer_.current().is(lex::tok::TokenType::ENDMARKER); }
+
   /// @brief Checks whether the current token is of the given type
-  bool check(lex::tok::TokenType type);
-  ast::Expr* parse();
+  bool check(lex::tok::TokenType type)
+  {
+#if DEBUG_PRINT
+    std::cout << "-- DEBUG : check(" << std::to_string(static_cast<int>(type)) << ") called!" << std::endl;
+#endif
+    // if (weDone()) return false;
+    return Lexer_.current().is(type);
+  }
+
+  ast::Expr* parse() { return parseExpression(); }
 
  private:
   lex::Lexer Lexer_;  // Underlying lexer providing tokens
 
   /// @brief Checks whether a token represents a unary operator
-  static bool isUnaryOp(const lex::tok::Token tok);
+  static bool isUnaryOp(const lex::tok::Token tok)
+  {
+    return tok.type() == lex::tok::TokenType::OP_MINUS || tok.type() == lex::tok::TokenType::OP_BITNOT || tok.type() == lex::tok::TokenType::OP_PLUS;
+  }
+
+
   /// @brief Checks whether a token represents a binary operator
   static bool isBinaryOp(const lex::tok::Token tok);
+
   /// @brief Peeks ahead in the token stream without consuming
-  lex::tok::Token peek(std::size_t offset = 1);
+  lex::tok::Token peek(std::size_t offset = 1)
+  {
+#if DEBUG_PRINT
+    std::cout << "-- DEBUG : peek() called!" << std::endl;
+#endif
+    return Lexer_.peek(offset);
+  }
+
   /// @brief Advances and returns the next token
-  lex::tok::Token advance();
+  lex::tok::Token advance()
+  {
+#if DEBUG_PRINT
+    std::cout << "-- DEBUG : advance() called!" << std::endl;
+#endif
+    return Lexer_.next();
+  }
+
+
   /// @brief Matches and consumes a token if it is of the given type
   bool match(const lex::tok::TokenType type);
   /**
@@ -168,15 +231,33 @@ class Parser
    * @param type Expected token type
    * @param msg  Error message if the token does not match
    */
-  lex::tok::Token consume(lex::tok::TokenType type, const StringType& msg);
+  lex::tok::Token consume(lex::tok::TokenType type, const StringType& msg)
+  {
+#if DEBUG_PRINT
+    std::cout << "-- DEBUG : Parser::consume() called!" << std::endl;
+#endif
+    if (check(type)) return advance();
+    /// TODO: Implement proper error reporting
+    // For now, return empty token
+    return lex::tok::Token();
+  }
+
   /// @brief Skips newline tokens during parsing
-  void skipNewlines();
+  void skipNewlines() { while (match(lex::tok::TokenType::NEWLINE)); }
+
   /// @brief Retrieves a source line for diagnostics
-  StringType getSourceLine(std::size_t line);
+  StringType Parser::getSourceLine(std::size_t line)
+  {
+    /// TODO: Use the file manager to retrieve actual source line
+    return peek().lexeme();
+  }
+
   /// @brief Returns precedence of logical operators
   int getLogicalOperatorPrecedence(lex::tok::TokenType tt);
+
   /// @brief Returns precedence of arithmetic operators
   int getArithmeticOperatorPrecedence(const lex::tok::TokenType type);
+
   /// @brief Enters a new scope (currently a no-op)
   void enterScope() {}
 };

@@ -95,13 +95,13 @@ void SemanticAnalyzer::analyzeExpr(const ast::Expr* expr)
   }
 
   case ast::Expr::Kind::UNARY : {
-    const ast::UnaryExpr* un = dynamic_cast<const ast::UnaryExpr*>(expr);
-    analyzeExpr(dynamic_cast<const ast::Expr*>(un));
+    const ast::UnaryExpr* un = static_cast<const ast::UnaryExpr*>(expr);
+    analyzeExpr(static_cast<const ast::Expr*>(un));
     break;
   }
 
   case ast::Expr::Kind::CALL : {
-    const ast::CallExpr* call = dynamic_cast<const ast::CallExpr*>(expr);
+    const ast::CallExpr* call = static_cast<const ast::CallExpr*>(expr);
     analyzeExpr(call->getCallee());
     for (const ast::Expr* const& arg : call->getArgs()) analyzeExpr(arg);
     // Check if calling undefined function
@@ -116,7 +116,7 @@ void SemanticAnalyzer::analyzeExpr(const ast::Expr* expr)
   }
 
   case ast::Expr::Kind::LIST : {
-    const ast::ListExpr* list = dynamic_cast<const ast::ListExpr*>(expr);
+    const ast::ListExpr* list = static_cast<const ast::ListExpr*>(expr);
     for (const ast::Expr* const& elem : list->getElements()) analyzeExpr(elem);
     break;
   }
@@ -194,7 +194,7 @@ void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
   }
 
   case ast::Stmt::Kind::FUNC : {
-    const ast::FunctionDef* funcDef = dynamic_cast<const ast::FunctionDef*>(stmt);
+    const ast::FunctionDef* funcDef = static_cast<const ast::FunctionDef*>(stmt);
     SymbolTable::Symbol funcSym;
     funcSym.SymbolType = SymbolTable::SymbolType::FUNCTION;
     funcSym.DataType = SymbolTable::DataType_t::FUNCTION;
