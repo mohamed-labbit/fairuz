@@ -20,7 +20,7 @@ class TypeSystem
   struct Type
   {
     BaseType base;
-    std::vector<std::shared_ptr<Type>> TypeParams;                  // For generics: List[Int]
+    std::vector<std::shared_ptr<Type>> TypeParams;                 // For generics: List[Int]
     std::unordered_map<StringType, std::shared_ptr<Type>> fields;  // For classes
 
     // Function signature

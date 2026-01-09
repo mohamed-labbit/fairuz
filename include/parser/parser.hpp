@@ -147,6 +147,7 @@ class Parser
   bool weDone() const;
   /// @brief Checks whether the current token is of the given type
   bool check(lex::tok::TokenType type);
+
  private:
   lex::Lexer Lexer_;  // Underlying lexer providing tokens
 

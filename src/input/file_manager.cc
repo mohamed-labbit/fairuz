@@ -96,7 +96,7 @@ StringType FileManager::readWindow(const std::size_t size)
   return readWindowInternal(size);
 }
 
-constexpr std::size_t get_utf8_sequence_length(unsigned char first_byte)
+constexpr std::size_t getUtf8SequenceLength(unsigned char first_byte)
 {
 #if DEBUG_PRINT
   std::cout << "-- DEBUG : FileManager::get_utf8_sequence_length() called!" << std::endl;
@@ -122,7 +122,7 @@ std::size_t FileManager::validateUtf8Bound(std::span<const char> buffer) const
     if ((byte & 0x80) == 0) return 0;
     if ((byte & 0xC0) == 0xC0)
     {
-      const std::size_t expected = get_utf8_sequence_length(byte);
+      const std::size_t expected = getUtf8SequenceLength(byte);
       const std::size_t available = size - pos;
       if (available < expected) return i + 1;
       return 0;

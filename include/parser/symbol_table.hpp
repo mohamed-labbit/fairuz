@@ -40,7 +40,7 @@ class SymbolTable
  private:
   std::unordered_map<StringType, Symbol> Symbols_;
   std::vector<std::unique_ptr<SymbolTable>> Children_;
-  unsigned ScopeLevel_ {0};
+  unsigned ScopeLevel_{0};
 
  public:
   explicit SymbolTable(SymbolTable* p = nullptr, std::int32_t level = 0);

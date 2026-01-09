@@ -369,9 +369,7 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     push(a.pow(b));
     break;
   }
-  case bytecode::OpCode::NEG : 
-    push(-pop());
-    break;
+  case bytecode::OpCode::NEG : push(-pop()); break;
   case bytecode::OpCode::POS :
     // Unary + is a no-op
     break;
@@ -486,7 +484,7 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
   case bytecode::OpCode::NOT : push(!pop()); break;
   // Control flow
   case bytecode::OpCode::JUMP : Ip_ = instr.arg - 1; break;  // -1 because ip++ at end of loop
-  case bytecode::OpCode::JUMP_IF_FALSE : 
+  case bytecode::OpCode::JUMP_IF_FALSE :
     if (!pop().toBool()) Ip_ = instr.arg - 1;
     break;
   case bytecode::OpCode::JUMP_IF_TRUE :

@@ -15,10 +15,7 @@ LanguageServer::Position LanguageServer::getDefinition(const StringType& source,
 
 std::vector<LanguageServer::Range> LanguageServer::getReferences(const StringType& source, Position pos) { return {}; }
 
-std::unordered_map<StringType, StringType> LanguageServer::rename(const StringType& source, Position pos, const StringType& newName)
-{
-  return {};
-}
+std::unordered_map<StringType, StringType> LanguageServer::rename(const StringType& source, Position pos, const StringType& newName) { return {}; }
 
 /*
 std::vector<LanguageServer::CompletionItem> LanguageServer::getCompletions(const StringType& source, Position pos)

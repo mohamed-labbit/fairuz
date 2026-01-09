@@ -73,17 +73,17 @@ class Value
     std::size_t index;
   };
 
-  std::variant<std::monostate,                                           // None
-               std::int64_t,                                             // Int
-               double,                                                   // Float
+  std::variant<std::monostate,                                          // None
+               std::int64_t,                                            // Int
+               double,                                                  // Float
                std::shared_ptr<StringType>,                             // String (shared for efficiency)
-               bool,                                                     // Bool
-               std::shared_ptr<std::vector<Value>>,                      // List (shared)
+               bool,                                                    // Bool
+               std::shared_ptr<std::vector<Value>>,                     // List (shared)
                std::shared_ptr<std::unordered_map<StringType, Value>>,  // Dict
-               Function,                                                 // User function
-               NativeFunction,                                           // Native C++ function
-               Object,                                                   // Object instance
-               Iterator                                                  // Iterator
+               Function,                                                // User function
+               NativeFunction,                                          // Native C++ function
+               Object,                                                  // Object instance
+               Iterator                                                 // Iterator
                >
     Data_;
 
@@ -135,17 +135,17 @@ class Value
 
   Type getType() const { return Type_; }
   void setType(const Type type) { Type_ = type; }
-  void setData(const std::variant<std::monostate,                                           // None
-                                  std::int64_t,                                             // Int
-                                  double,                                                   // Float
+  void setData(const std::variant<std::monostate,                                          // None
+                                  std::int64_t,                                            // Int
+                                  double,                                                  // Float
                                   std::shared_ptr<StringType>,                             // String (shared for efficiency)
-                                  bool,                                                     // Bool
-                                  std::shared_ptr<std::vector<Value>>,                      // List (shared)
+                                  bool,                                                    // Bool
+                                  std::shared_ptr<std::vector<Value>>,                     // List (shared)
                                   std::shared_ptr<std::unordered_map<StringType, Value>>,  // Dict
-                                  Function,                                                 // User function
-                                  NativeFunction,                                           // Native C++ function
-                                  Object,                                                   // Object instance
-                                  Iterator                                                  // Iterator
+                                  Function,                                                // User function
+                                  NativeFunction,                                          // Native C++ function
+                                  Object,                                                  // Object instance
+                                  Iterator                                                 // Iterator
                                   > data)
   {
     Data_ = data;

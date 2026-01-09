@@ -134,8 +134,8 @@ class BytecodeCompiler
     std::int32_t InstructionsGenerated{0};
     std::int32_t ConstantsPoolSize{0};
     std::int32_t JumpsResolved{0};
-    std::int32_t PeepholeOptimizations {0};
-    std::int32_t LoopsDetected {0};
+    std::int32_t PeepholeOptimizations{0};
+    std::int32_t LoopsDetected{0};
   } Stats_;
 
   // Internal helpers
