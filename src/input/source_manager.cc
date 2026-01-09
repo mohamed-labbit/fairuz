@@ -69,9 +69,9 @@ char16_t SourceManager::peek()
   std::cout << "-- DEBUG : SourceManager::peek() called!" << std::endl;
 #endif
   return this->InputBuffer_.peek();
-  if (!Current_) return BUFFER_END;
+  if (Current_ == nullptr) return BUFFER_END;
   char16_t* forward = Current_ + 1;
-  if (!forward) return BUFFER_END;
+  if (forward == nullptr) return BUFFER_END;
   return *forward;
 }
 
@@ -139,7 +139,7 @@ offset_pair SourceManager::offsetMap(const std::size_t& offset)
 #if DEBUG_PRINT
   std::cout << "-- DEBUG : SourceManager::offset_map() called!" << std::endl;
 #endif
-  /// @todo : implement this using the new file manager
+  /// TODO: : implement this using the new file manager
   std::size_t line = 1;
   std::size_t col = 1;
   return std::make_pair(line, col);

@@ -184,7 +184,7 @@ TEST_F(ParserTest, ParseCallExpressionNoArgs)
 {
   mylang::input::FileManager file_manager(parser_test_cases_dir() / "call_expression.txt");
   mylang::parser::Parser parser(&file_manager);
-  mylang::parser::ast::Expr* expr = parser.parsePrimaryExpr();
+  mylang::parser::ast::Expr* expr = parser.parse();
   ASSERT_NE(expr, nullptr);
   mylang::parser::ast::CallExpr* call_expr = parseAndCast<mylang::parser::ast::CallExpr>(parser, expr);
   AST_Printer.print(call_expr);
@@ -200,7 +200,7 @@ TEST_F(ParserTest, ParseCallExpressionWithOneArg)
 {
   mylang::input::FileManager file_manager(parser_test_cases_dir() / "call_expression_with_one_argument.txt");
   mylang::parser::Parser parser(&file_manager);
-  mylang::parser::ast::Expr* expr = parser.parsePrimaryExpr();
+  mylang::parser::ast::Expr* expr = parser.parse();
   ASSERT_NE(expr, nullptr);
   mylang::parser::ast::CallExpr* call_expr = parseAndCast<mylang::parser::ast::CallExpr>(parser, expr);
   AST_Printer.print(call_expr);
@@ -211,12 +211,12 @@ TEST_F(ParserTest, ParseCallExpressionWithOneArg)
   EXPECT_EQ(callee_name->getValue(), u"اطبع");
   // const std::vector<mylang::parser::ast::Expr*>& args = call_expr->getArgs();
   // EXPECT_FALSE(args.empty());
-  /// @todo check for each argument and their order
+  /// TODO: check for each argument and their order
 }
 
 TEST_F(ParserTest, ParseNestedCallExpression)
 {
-  /// @todo: Add test for nested calls like f(g(x))
+  /// TODO:: Add test for nested calls like f(g(x))
   GTEST_SKIP() << "Nested call test not yet implemented";
 }
 
@@ -258,7 +258,6 @@ TEST_F(ParserTest, ParseSimpleAddition)
 
 TEST_F(ParserTest, ParseComplexExpression)
 {
-  GTEST_SKIP() << "ParseComplexExpression: not checked yet";
   // Test operator precedence: 2 + 3 * 4 should be 2 + (3 * 4)
   mylang::input::FileManager file_manager(parser_test_cases_dir() / "complex_expression.txt");
   mylang::parser::Parser parser(&file_manager);
@@ -297,7 +296,6 @@ TEST_F(ParserTest, ParseComplexExpression)
 
 TEST_F(ParserTest, ParseNestedParentheses)
 {
-  GTEST_SKIP() << "ParseNestedParentheses: not checked yet";
   // Test: ((2 + 3) * 4)
   mylang::input::FileManager file_manager(parser_test_cases_dir() / "nested_parens.txt");
   mylang::parser::Parser parser(&file_manager);
@@ -316,7 +314,6 @@ TEST_F(ParserTest, ParseNestedParentheses)
 
 TEST_F(ParserTest, ParseChainedComparison)
 {
-  GTEST_SKIP() << "ParseChainedComparison: not checked yet";
   // Test: a < b < c (should parse as (a < b) < c due to left associativity)
   mylang::input::FileManager file_manager(parser_test_cases_dir() / "chained_comparison.txt");
   mylang::parser::Parser parser(&file_manager);
@@ -334,7 +331,6 @@ TEST_F(ParserTest, ParseChainedComparison)
 
 TEST_F(ParserTest, ParseLogicalExpression)
 {
-  GTEST_SKIP() << "ParseLogicalExpression: not checked yet";
   // Test: a and b or c (should be (a and b) or c)
   mylang::input::FileManager file_manager(parser_test_cases_dir() / "logical_expression.txt");
   mylang::parser::Parser parser(&file_manager);
@@ -352,7 +348,6 @@ TEST_F(ParserTest, ParseLogicalExpression)
 
 TEST_F(ParserTest, ParseUnaryChain)
 {
-  GTEST_SKIP() << "ParseUnaryChain: not checked yet";
   // Test: --x (double negation)
   mylang::input::FileManager file_manager(parser_test_cases_dir() / "unary_chain.txt");
   mylang::parser::Parser parser(&file_manager);
@@ -371,7 +366,7 @@ TEST_F(ParserTest, ParseUnaryChain)
 
 TEST_F(ParserTest, ParseComplexFunctionCall)
 {
-  GTEST_SKIP() << "ParseComplexFunctionCall: not checked yet";
+  // GTEST_SKIP() << "ParseComplexFunctionCall: not checked yet";
   // Test: func(a + b, c * d)
   mylang::input::FileManager file_manager(parser_test_cases_dir() / "complex_function_call.txt");
   mylang::parser::Parser parser(&file_manager);
@@ -381,18 +376,40 @@ TEST_F(ParserTest, ParseComplexFunctionCall)
   ASSERT_NE(call, nullptr) << "Should be CallExpr";
   mylang::parser::ast::NameExpr* callee = call->getCallee();
   ASSERT_NE(callee, nullptr) << "Callee should not be null";
-  EXPECT_EQ(callee->getValue(), u"func");
+  EXPECT_EQ(callee->getValue(), u"علم");
   mylang::parser::ast::ListExpr* args = call->getArgsAsListExpr();
   ASSERT_NE(args, nullptr) << "Args should not be null";
-  const auto& arg_list = args->getElements();
+  ASSERT_FALSE(args->isEmpty());
+  const std::vector<mylang::parser::ast::Expr*>& arg_list = args->getElements();
   ASSERT_EQ(arg_list.size(), 2) << "Should have exactly 2 arguments";
   // First arg should be (a + b)
   mylang::parser::ast::BinaryExpr* arg1 = dynamic_cast<mylang::parser::ast::BinaryExpr*>(arg_list[0]);
   ASSERT_NE(arg1, nullptr) << "First arg should be BinaryExpr";
   EXPECT_EQ(arg1->getOperator(), mylang::lex::tok::TokenType::OP_PLUS);
+  mylang::parser::ast::Expr* first_lhs = arg1->getLeft();
+  mylang::parser::ast::Expr* first_rhs = arg1->getRight();
+  ASSERT_NE(first_lhs, nullptr);
+  ASSERT_NE(first_rhs, nullptr);
+  mylang::parser::ast::NameExpr* first_lhs_expr = dynamic_cast<mylang::parser::ast::NameExpr*>(first_lhs);
+  mylang::parser::ast::NameExpr* first_rhs_expr = dynamic_cast<mylang::parser::ast::NameExpr*>(first_rhs);
+  StringType first_lhs_name = first_lhs_expr->getValue();
+  StringType first_rhs_name = first_rhs_expr->getValue();
+  EXPECT_EQ(first_lhs_name, u"ا");
+  EXPECT_EQ(first_rhs_name, u"ب");
   // Second arg should be (c * d)
   mylang::parser::ast::BinaryExpr* arg2 = dynamic_cast<mylang::parser::ast::BinaryExpr*>(arg_list[1]);
   ASSERT_NE(arg2, nullptr) << "Second arg should be BinaryExpr";
+  EXPECT_EQ(arg1->getOperator(), mylang::lex::tok::TokenType::OP_STAR);
+  mylang::parser::ast::Expr* second_lhs = arg1->getLeft();
+  mylang::parser::ast::Expr* second_rhs = arg1->getRight();
+  ASSERT_NE(second_lhs, nullptr);
+  ASSERT_NE(second_rhs, nullptr);
+  mylang::parser::ast::NameExpr* second_lhs_expr = dynamic_cast<mylang::parser::ast::NameExpr*>(second_lhs);
+  mylang::parser::ast::NameExpr* second_rhs_expr = dynamic_cast<mylang::parser::ast::NameExpr*>(second_rhs);
+  StringType second_lhs_name = second_lhs_expr->getValue();
+  StringType second_rhs_name = second_rhs_expr->getValue();
+  EXPECT_EQ(second_lhs_name, u"ت");
+  EXPECT_EQ(second_rhs_name, u"ث");
   EXPECT_EQ(arg2->getOperator(), mylang::lex::tok::TokenType::OP_STAR);
   AST_Printer.print(expr);
 }

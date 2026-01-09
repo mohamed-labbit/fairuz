@@ -323,7 +323,6 @@ tok::Token Lexer::lexToken()
       return finish(tt, std::move(id), line, col);
     }
 
-    /// @todo float recongnition
     // Numbers
     else if (std::iswdigit(ch))
     {

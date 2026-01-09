@@ -141,7 +141,7 @@ class BytecodeCompiler
   // Internal helpers
 
   /// @brief Emits a bytecode instruction
-  void emit(bytecode::OpCode op, std::int32_t arg = 0, std::int32_t line = 0);
+  void emitInstruction(bytecode::OpCode op, std::int32_t arg = 0, std::int32_t line = 0);
   /// @brief Updates the current and maximum stack depth
   void updateStackDepth(bytecode::OpCode op);
   /// @brief Returns the current program counter

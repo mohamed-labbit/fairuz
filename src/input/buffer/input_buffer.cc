@@ -207,7 +207,7 @@ void InputBuffer::rewindPosition_(char16_t ch)
   std::cout << "-- DEBUG : InputBuffer::rewind_position_() called!" << std::endl;
 #endif
   if (CurrentPosition_.FilePos == 0)
-    /// @todo: ultimately should emit an error
+    /// TODO:: ultimately should emit an error
     return;
   CurrentPosition_.FilePos = std::max<std::size_t>(0, CurrentPosition_.FilePos - 1);
   if (ch == u'\n')

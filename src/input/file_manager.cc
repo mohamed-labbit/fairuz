@@ -70,7 +70,7 @@ void FileManager::seekToChar(const std::size_t CharOffset)
   std::cout << "-- DEBUG : FileManager::seek_to_char() called!" << std::endl;
 #endif
   if (CharOffset == Context_.CharOffset) return;
-  /// @todo  : revisit this stupid magic number
+  /// TODO:  : revisit this stupid magic number
   if (CharOffset < Context_.CharOffset || CharOffset - Context_.CharOffset > 10000) reset();
   while (Context_.CharOffset < CharOffset)
   {
@@ -92,7 +92,7 @@ StringType FileManager::readWindow(const std::size_t size)
 #if DEBUG_PRINT
   std::cout << "-- DEBUG : FileManager::readWindow() called!" << std::endl;
 #endif
-  /// @todo : add cache validation
+  /// TODO: : add cache validation
   return readWindowInternal(size);
 }
 
@@ -282,7 +282,7 @@ typename FileManager::FileStats FileManager::computeStats()
   FileStats stats;
   stats.TotalBytes = fs::file_size(FullPath_);
   stats.LastModified = fs::last_write_time(FullPath_);
-  /// @todo : detect file encoding
+  /// TODO: : detect file encoding
   return stats;
 }
 
@@ -404,7 +404,7 @@ void FileManager::buildLineIndex()
       {
         max_len = std::max(max_len, current_len - 1);
         LineIndices_.push_back(LineIndex{start_byte, start_char, current_len - 1});
-        /// @todo: Handle CRLF
+        /// TODO:: Handle CRLF
         if (c == u'\r' && char_pos + 1 < Context_.CharOffset)
         {
           // Peek next char (already in chunk if available)

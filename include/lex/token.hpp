@@ -50,7 +50,7 @@ enum class TokenType : std::int32_t {
   KW_FALSE,     // خطا
   KW_NONE,      // عدم
 
-  /// @todo reorder into binary and unary
+  /// TODO: reorder into binary and unary
   // Operators
   OP_PLUS,     // +
   OP_MINUS,    // -
@@ -195,13 +195,13 @@ class Token
 
   bool isBinaryOperator() const
   {
-    /// @todo
+    /// TODO:
     return true;
   }
 
   bool isUnaryOperator() const
   {
-    /// @todo
+    /// TODO:
     return true;
   }
 

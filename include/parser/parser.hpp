@@ -142,11 +142,12 @@ class Parser
    * @return Vector of parsed statement AST nodes
    */
   // std::vector<ast::Stmt*> parse();
-  /// @todo not sure if these should be private
+  /// TODO: not sure if these should be private
   /// @brief check wether or not we reached the end of the file so not to bother lookin for stuff to parse
   bool weDone() const;
   /// @brief Checks whether the current token is of the given type
   bool check(lex::tok::TokenType type);
+  ast::Expr* parse();
 
  private:
   lex::Lexer Lexer_;  // Underlying lexer providing tokens

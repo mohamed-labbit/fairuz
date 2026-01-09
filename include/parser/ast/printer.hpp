@@ -37,7 +37,7 @@ class ASTPrinter
 
   void print(const ast::Expr* expr)
   {
-    if (!expr) return;
+    if (expr == nullptr) return;
 
     NodeCount_++;
 
@@ -60,7 +60,7 @@ class ASTPrinter
       std::cout << colorize(u"UnaryOp", Color::BOLD, UseColor_) << " " << colorize(lex::tok::toString(e->getOperator()), Color::YELLOW, UseColor_)
                 << "\n";
       Indent_++;
-      print(e);
+      print(e->getOperand());  // FIX: Print the operand, not the UnaryExpr itself!
       Indent_--;
       break;
     }
@@ -101,7 +101,7 @@ class ASTPrinter
 
   void print(const ast::Stmt* stmt)
   {
-    if (!stmt) return;
+    if (stmt == nullptr) return;
 
     NodeCount_++;
 

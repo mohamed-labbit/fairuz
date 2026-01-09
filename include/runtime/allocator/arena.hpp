@@ -162,8 +162,8 @@ class ArenaBlock
     if (mod) Size_ += (alignment - mod);
     // Allocate aligned memory
     void* mem = std::aligned_alloc(alignment, Size_);
-    if (!mem) throw std::bad_alloc();
-    /// @todo change after debug
+    if (mem == nullptr) throw std::bad_alloc();
+    /// TODO: change after debug
     // diagnostic::engine.panic("bad alloc");
     Begin_ = reinterpret_cast<Pointer>(mem);
     Next_.store(Begin_, std::memory_order_relaxed);
@@ -179,7 +179,7 @@ class ArenaBlock
   {
     size_t number_of_frees = 0;
     std::lock_guard<std::mutex> lock(Mutex_);
-    if (Begin_)
+    if (Begin_ != nullptr)
     {
       std::free(Begin_);
       Begin_ = nullptr;
@@ -224,7 +224,7 @@ class ArenaBlock
     {
       std::scoped_lock lock(Mutex_, other.Mutex_);
       // Free existing memory
-      if (Begin_) std::free(Begin_);
+      if (Begin_ != nullptr) std::free(Begin_);
       // Take ownership
       Size_ = other.Size_;
       Begin_ = other.Begin_;
@@ -297,7 +297,7 @@ class ArenaBlock
   std::size_t remaining() const
   {
     std::lock_guard<std::mutex> lock(Mutex_);
-    if (!Begin_) return 0;
+    if (Begin_ == nullptr) return 0;
     Pointer current_next = Next_.load(std::memory_order_acquire);
     return static_cast<std::size_t>(Begin_ + Size_ - current_next);
   }
@@ -326,7 +326,7 @@ class ArenaBlock
      */
   Pointer allocate(std::size_t bytes, std::optional<std::size_t> alignment = std::nullopt)
   {
-    if (!Begin_ || bytes == 0) return nullptr;
+    if (Begin_ == nullptr || bytes == 0) return nullptr;
 
     std::size_t alignment_value = alignment.value_or(std::alignment_of<std::max_align_t>::value);
     // Validate alignment is a power of 2
@@ -366,7 +366,7 @@ class ArenaBlock
      */
   Pointer reserve(const std::size_t bytes)
   {
-    if (!Begin_ || bytes == 0) return nullptr;
+    if (Begin_ == nullptr || bytes == 0) return nullptr;
 
     Pointer current_next = Next_.load(std::memory_order_acquire);
 
@@ -428,8 +428,8 @@ class LockFreeFastAllocBlock
     actual_size = (actual_size + ObjectSize - 1) & ~(ObjectSize - 1);
     // Allocate aligned memory
     Pointer mem = reinterpret_cast<Pointer>(std::aligned_alloc(ObjectSize, actual_size));
-    if (!mem) throw std::bad_alloc();
-    /// @todo change after debug
+    if (mem == nullptr) throw std::bad_alloc();
+    /// TODO: change after debug
     // diagnostic::engine.panic("bad alloc");
     // Store atomically
     Size_.store(actual_size, std::memory_order_relaxed);
@@ -445,7 +445,7 @@ class LockFreeFastAllocBlock
   ~LockFreeFastAllocBlock()
   {
     Pointer mem = Begin_.load(std::memory_order_relaxed);
-    if (mem)
+    if (mem != nullptr)
     {
       std::free(mem);
       Begin_.store(nullptr, std::memory_order_relaxed);
@@ -482,7 +482,7 @@ class LockFreeFastAllocBlock
     {
       // Free existing memory
       Pointer old_mem = Begin_.load(std::memory_order_relaxed);
-      if (old_mem) std::free(old_mem);
+      if (old_mem != nullptr) std::free(old_mem);
       // Transfer ownership atomically
       Size_.store(other.Size_.load(std::memory_order_relaxed), std::memory_order_relaxed);
       Begin_.store(other.Begin_.load(std::memory_order_relaxed), std::memory_order_relaxed);
@@ -525,7 +525,7 @@ class LockFreeFastAllocBlock
   std::size_t remaining() const
   {
     Pointer b = Begin_.load(std::memory_order_acquire);
-    if (!b) return 0;
+    if (b == nullptr) return 0;
     Pointer current = Next_.load(std::memory_order_acquire);
     std::size_t s = Size_.load(std::memory_order_acquire);
     return static_cast<std::size_t>(b + s - current);
@@ -546,7 +546,7 @@ class LockFreeFastAllocBlock
   {
     if (alloc_size == 0) return nullptr;
     Pointer b = Begin_.load(std::memory_order_acquire);
-    if (!b)
+    if (b == nullptr)
     {
       std::cerr << "Failed to load begin Pointer" << std::endl;
       return nullptr;
@@ -1189,7 +1189,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
       LockFreeFastAllocBlock<ObjectSize> arena_block(alloc_size);
       std::lock_guard<std::mutex> lock(FastPoolMutex_);
       std::vector<LockFreeFastAllocBlock<ObjectSize>>* pool = choosePool<ObjectSize>();
-      if (!pool) return nullptr;
+      if (pool == nullptr) return nullptr;
       Pointer ret = arena_block.begin();
       pool->push_back(std::move(arena_block));
       AllocStats_.safe_increment(AllocStats_.ActiveBlocks);
@@ -1255,7 +1255,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
       diagnostic::engine.emit("allocation size is too large!", diagnostic::DiagnosticEngine::Severity::ERROR);
       if (OomHandler_ && OomHandler_(count)) return allocate<_Tp>(count);
       diagnostic::engine.emit("bad alloc!", diagnostic::DiagnosticEngine::Severity::FATAL);
-      /// @todo change after debug
+      /// TODO: change after debug
       // diagnostic::engine.panic("bad alloc");
     }
 
@@ -1287,14 +1287,14 @@ class MYLANG_COMPILER_ABI ArenaAllocator
       if (align <= pool_size)
       {
         mem = allocateFromFastPool<pool_size>(alloc_size);
-        if (!mem) std::cerr << "allocate_from_fast_pool() failed!" << std::endl;
+        if (mem == nullptr) std::cerr << "allocate_from_fast_pool() failed!" << std::endl;
       }
     }
 
     // Fall back to general blocks
-    if (!mem) mem = allocateFromBlocks(alloc_size, align);
+    if (mem == nullptr) mem = allocateFromBlocks(alloc_size, align);
 
-    if (!mem)
+    if (mem == nullptr)
     {
       std::cerr << "allocate_from_blocks() failed!" << std::endl;
       return nullptr;
@@ -1360,7 +1360,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
   template<typename _Tp>
   MYLANG_COMPILER_ABI void deallocate(_Tp* ptr, std::size_t count = 1)
   {
-    if (!ptr) return;
+    if (ptr == nullptr) return;
 
     // Check for double-free
     {
@@ -1399,7 +1399,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     if constexpr (use_fast_pool)
     {
       FastAllocBlockFreeList<pool_size>* free_list = choosePoolFreeList<pool_size>();
-      if (free_list)
+      if (free_list != nullptr)
         free_list->append(region);
       else
       {
@@ -1469,7 +1469,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     std::unique_lock<std::mutex> lock(FastPoolMutex_);
 
     std::vector<LockFreeFastAllocBlock<ObjectSize>>* pool = choosePool<ObjectSize>();
-    if (!pool)
+    if (pool == nullptr)
     {
       std::cerr << "choose_pool() Failed!" << std::endl;
       return nullptr;
@@ -1493,7 +1493,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
 
     // Try free list first
     Pointer mem = allocateUsingFastFreeList<ObjectSize>(alloc_size);
-    if (mem) return mem;
+    if (mem != nullptr) return mem;
 
     // Try current block
     LockFreeFastAllocBlock<ObjectSize>& fast_block = pool->back();
@@ -1503,7 +1503,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
       lock.unlock();  // Release lock during recursive call
 
       std::size_t block_size = std::max(alloc_size, NextBlockSize_.load(std::memory_order_relaxed));
-      if (!allocateFastBlock<ObjectSize>(block_size))
+      if (allocateFastBlock<ObjectSize>(block_size) == nullptr)
       {
         std::cerr << "allocate_fast_block() failed!" << std::endl;
         return nullptr;
@@ -1537,7 +1537,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
   MYLANG_NODISCARD Pointer allocateUsingFastFreeList(std::size_t alloc_size)
   {
     FastAllocBlockFreeList<ObjectSize>* free_list = choosePoolFreeList<ObjectSize>();
-    if (!free_list) return nullptr;
+    if (free_list == nullptr) return nullptr;
 
     std::optional<FreeListRegion> result = free_list->findAndExtract(alloc_size, ObjectSize);
     if (result.has_value())
@@ -1603,16 +1603,16 @@ class MYLANG_COMPILER_ABI ArenaAllocator
       {
         // Try free list first
         Pointer mem = allocateUsingFreeList(alloc_size, align);
-        if (mem) return mem;
+        if (mem != nullptr) return mem;
         // Try current block
         mem = Blocks_.back().allocate(alloc_size, align);
-        if (mem) return mem;
+        if (mem != nullptr) return mem;
       }
     }
 
     // Need a new block
     std::size_t new_block_size = std::max(alloc_size, NextBlockSize_.load(std::memory_order_relaxed));
-    if (!allocateBlock(new_block_size, align))
+    if (allocateBlock(new_block_size, align) == nullptr)
     {
       if (DebugFeatures_.load(std::memory_order_relaxed)) std::cerr << "-- Failed to allocate block : ArenaAllocator::allocate_block()" << std::endl;
       return nullptr;

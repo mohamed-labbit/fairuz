@@ -12,7 +12,7 @@ void JumpResolver::addJump(std::int32_t instrIndex, const std::string& target)
   auto it = Labels_.find(target);
   if (it != Labels_.end())
   {
-    /// @todo:
+    /// TODO::
     // Label already defined - immediate resolution
     // (Would patch instruction here)
   }

@@ -12,7 +12,7 @@ namespace parser {
 // Type inference engine
 typename SymbolTable::DataType_t SemanticAnalyzer::inferType(const ast::Expr* expr)
 {
-  if (!expr) return SymbolTable::DataType_t::UNKNOWN;
+  if (expr == nullptr) return SymbolTable::DataType_t::UNKNOWN;
 
   switch (expr->getKind())
   {
@@ -59,7 +59,7 @@ void SemanticAnalyzer::reportIssue(Issue::Severity sev, const StringType& msg, s
 
 void SemanticAnalyzer::analyzeExpr(const ast::Expr* expr)
 {
-  if (!expr) return;
+  if (expr == nullptr) return;
 
   switch (expr->getKind())
   {
@@ -120,22 +120,13 @@ void SemanticAnalyzer::analyzeExpr(const ast::Expr* expr)
     for (const ast::Expr* const& elem : list->getElements()) analyzeExpr(elem);
     break;
   }
-  /*
-    case ast::Expr::Kind::TERNARY : {
-      const ast::TernaryExpr* tern = static_cast<const ast::TernaryExpr*>(expr);
-      analyzeExpr(tern->condition.get());
-      analyzeExpr(tern->trueExpr.get());
-      analyzeExpr(tern->falseExpr.get());
-      break;
-    }
-    */
   default : break;
   }
 }
 
 void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
 {
-  if (!stmt) return;
+  if (stmt == nullptr) return;
 
   switch (stmt->getKind())
   {

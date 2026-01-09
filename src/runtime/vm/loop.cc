@@ -27,7 +27,7 @@ void LoopAnalyzer::detectLoops(const std::vector<bytecode::Instruction>& instruc
   for (Loop& outer : Loops_)
     for (const Loop& inner : Loops_)
       if (inner.HeaderPC > outer.HeaderPC && inner.ExitPC < outer.ExitPC) outer.IsInnerLoop = false;
-  /// @todo: inner is nested in outer
+  /// TODO:: inner is nested in outer
 }
 
 void LoopAnalyzer::findInvariants(const std::vector<bytecode::Instruction>& instructions, const CompilerSymbolTable& symbols)
