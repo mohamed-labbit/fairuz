@@ -50,6 +50,7 @@ enum class TokenType : std::int32_t {
   KW_FALSE,     // خطا
   KW_NONE,      // عدم
 
+  /// @todo reorder into binary and unary
   // Operators
   OP_PLUS,     // +
   OP_MINUS,    // -
@@ -98,6 +99,7 @@ enum class TokenType : std::int32_t {
 
   // Literals
   NUMBER,
+  FLOAT,
   STRING,
   NAME,
 
@@ -116,18 +118,18 @@ enum class TokenType : std::int32_t {
   INVALID
 };
 
-static const std::unordered_map<string_type, TokenType, util::U16StringHash, util::U16StringEqual> operators = {
+static const std::unordered_map<StringType, TokenType, util::U16StringHash, util::U16StringEqual> operators = {
   {u"=", TokenType::OP_EQ},   {u":=", TokenType::OP_ASSIGN}, {u"+", TokenType::OP_PLUS}, {u"-", TokenType::OP_MINUS},
   {u"*", TokenType::OP_STAR}, {u"/", TokenType::OP_SLASH},   {u"<", TokenType::OP_LT},   {u">", TokenType::OP_GT},
   {u"<=", TokenType::OP_LTE}, {u">=", TokenType::OP_GTE},    {u"!=", TokenType::OP_NEQ}};
 
-static const std::unordered_map<string_type, TokenType, util::U16StringHash, util::U16StringEqual> keywords = {
+static const std::unordered_map<StringType, TokenType, util::U16StringHash, util::U16StringEqual> keywords = {
   {u"خطا", TokenType::KW_FALSE},   {u"عدم", TokenType::KW_NONE},      {u"صحيح", TokenType::KW_TRUE}, {u"و", TokenType::KW_AND},
   {u"اخرج", TokenType::KW_RETURN}, {u"اكمل", TokenType::KW_CONTINUE}, {u"عرف", TokenType::KW_FN},    {u"او", TokenType::KW_OR},
   {u"بكل", TokenType::KW_FOR},     {u"اذا", TokenType::KW_IF},        {u"ليس", TokenType::KW_NOT},   {u"ارجع", TokenType::KW_RETURN},
   {u"طالما", TokenType::KW_WHILE}};
 
-static const string_type to_string(TokenType tt)
+static const StringType toString(TokenType tt)
 {
   switch (tt)
   {
@@ -149,7 +151,7 @@ static const string_type to_string(TokenType tt)
 class Token
 {
  public:
-  Token(string_type val, TokenType tt, std::size_t line, std::size_t col, std::size_t fpos, std::string fpath) :
+  Token(StringType val, TokenType tt, std::size_t line, std::size_t col, std::size_t fpos, std::string fpath) :
       Value_(std::move(val)),
       Type_(tt),
       Location_(fpath, line, col, fpos)
@@ -160,20 +162,48 @@ class Token
   Token(const Token&) = default;
   Token(Token&&) MYLANG_NOEXCEPT = default;
 
-  bool operator==(const Token& other) const;
-  bool operator!=(const Token& other) const;
+  bool operator==(const Token& other) const
+  {
+    return Value_ == other.Value_ && Type_ == other.Type_ && Location_.line == other.Location_.line && Location_.column == other.Location_.column;
+  }
+
+  bool operator!=(const Token& other) const { return !(*this == other); }
+
   Token& operator=(const Token&) = default;
   Token& operator=(Token&&) MYLANG_NOEXCEPT = default;
+
   // Return const references to avoid copies
-  const string_type& lexeme() const;
-  std::string utf8Lexeme() const;
-  const TokenType& type() const;
-  std::size_t size() const;
-  const std::size_t& line() const;
-  const std::size_t& column() const;
-  const Location& location() const;
-  const std::string& filepath() const;
+  const StringType& lexeme() const { return Value_; }
+
+  std::string utf8Lexeme() const { return utf8::utf16to8(Value_); }
+
+  const TokenType& type() const { return Type_; }
+
+  std::size_t size() const { return Value_.length(); }
+
+  const std::size_t& line() const { return Location_.line; }
+
+  const std::size_t& column() const { return Location_.column; }
+
+  const Location& location() const { return Location_; }
+
+  const std::string& filepath() const { return Location_.filepath; }
+
   bool is(const TokenType tt) const { return tt == Type_; }
+
+  bool isOperator() const { return Type_ > TokenType::OP_PLUS && Type_ < TokenType::OP_RSHIFTEQ; }
+
+  bool isBinaryOperator() const
+  {
+    /// @todo
+    return true;
+  }
+
+  bool isUnaryOperator() const
+  {
+    /// @todo
+    return true;
+  }
 
   // friend ostream operator for pretty-printing in tests/logs
   friend std::ostream& operator<<(std::ostream& os, const Token& tok)
@@ -184,7 +214,7 @@ class Token
   }
 
  private:
-  string_type Value_;
+  StringType Value_;
   TokenType Type_;
   Location Location_;
 };

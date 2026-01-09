@@ -100,7 +100,7 @@ void VirtualMachine::registerNativeFunctions()
   // type
   nativeFunctions["type"] = [](const std::vector<object::Value>& args) {
     if (args.size() != 1) diagnostic::engine.panic("type() takes 1 argument");
-    string_type typeName;
+    StringType typeName;
     switch (args[0].getType())
     {
     case object::Value::Type::NONE : typeName = u"<class 'NoneType'>"; break;
@@ -298,25 +298,18 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
   switch (instr.op)
   {
   case bytecode::OpCode::LOAD_CONST : push(code.constants[instr.arg]); break;
-
   case bytecode::OpCode::LOAD_VAR :
     if (instr.arg >= Globals_.size()) diagnostic::engine.panic("Variable index out of range");
     push(Globals_[instr.arg]);
     break;
-
   case bytecode::OpCode::LOAD_GLOBAL : push(Globals_[instr.arg]); break;
-
   case bytecode::OpCode::STORE_VAR :
     if (instr.arg >= Globals_.size()) Globals_.resize(instr.arg + 1);
     Globals_[instr.arg] = pop();
     break;
-
   case bytecode::OpCode::STORE_GLOBAL : Globals_[instr.arg] = pop(); break;
-
   case bytecode::OpCode::POP : pop(); break;
-
   case bytecode::OpCode::DUP : push(top()); break;
-
   case bytecode::OpCode::SWAP : {
     object::Value a = pop();
     object::Value b = pop();
@@ -324,7 +317,6 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     push(b);
     break;
   }
-
   case bytecode::OpCode::ROT_THREE : {
     object::Value a = pop();
     object::Value b = pop();
@@ -334,7 +326,6 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     push(b);
     break;
   }
-
   // Arithmetic operations (with fast path)
   case bytecode::OpCode::ADD : {
     object::Value b = pop();
@@ -342,101 +333,84 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     push(fastAdd(a, b));
     break;
   }
-
   case bytecode::OpCode::SUB : {
     object::Value b = pop();
     object::Value a = pop();
     push(fastSub(a, b));
     break;
   }
-
   case bytecode::OpCode::MUL : {
     object::Value b = pop();
     object::Value a = pop();
     push(fastMul(a, b));
     break;
   }
-
   case bytecode::OpCode::DIV : {
     object::Value b = pop();
     object::Value a = pop();
     push(a / b);
     break;
   }
-
   case bytecode::OpCode::FLOOR_DIV : {
     object::Value b = pop();
     object::Value a = pop();
     push(object::Value(static_cast<std::int64_t>(a.toFloat() / b.toFloat())));
     break;
   }
-
   case bytecode::OpCode::MOD : {
     object::Value b = pop();
     object::Value a = pop();
     push(a % b);
     break;
   }
-
   case bytecode::OpCode::POW : {
     object::Value b = pop();
     object::Value a = pop();
     push(a.pow(b));
     break;
   }
-
-  case bytecode::OpCode::NEG : {
-    object::Value a = pop();
-    push(-a);
+  case bytecode::OpCode::NEG : 
+    push(-pop());
     break;
-  }
-
   case bytecode::OpCode::POS :
     // Unary + is a no-op
     break;
-
-    // Bitwise operations
+  // Bitwise operations
   case bytecode::OpCode::BITAND : {
     object::Value b = pop();
     object::Value a = pop();
     push(object::Value(a.toInt() & b.toInt()));
     break;
   }
-
   case bytecode::OpCode::BITOR : {
     object::Value b = pop();
     object::Value a = pop();
     push(object::Value(a.toInt() | b.toInt()));
     break;
   }
-
   case bytecode::OpCode::BITXOR : {
     object::Value b = pop();
     object::Value a = pop();
     push(object::Value(a.toInt() ^ b.toInt()));
     break;
   }
-
   case bytecode::OpCode::BITNOT : {
     object::Value a = pop();
     push(object::Value(~a.toInt()));
     break;
   }
-
   case bytecode::OpCode::LSHIFT : {
     object::Value b = pop();
     object::Value a = pop();
     push(object::Value(a.toInt() << b.toInt()));
     break;
   }
-
   case bytecode::OpCode::RSHIFT : {
     object::Value b = pop();
     object::Value a = pop();
     push(object::Value(a.toInt() >> b.toInt()));
     break;
   }
-
   // Comparison operations
   case bytecode::OpCode::EQ : {
     object::Value b = pop();
@@ -444,42 +418,36 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     push(object::Value(a == b));
     break;
   }
-
   case bytecode::OpCode::NE : {
     object::Value b = pop();
     object::Value a = pop();
     push(object::Value(a != b));
     break;
   }
-
   case bytecode::OpCode::LT : {
     object::Value b = pop();
     object::Value a = pop();
     push(object::Value(a < b));
     break;
   }
-
   case bytecode::OpCode::GT : {
     object::Value b = pop();
     object::Value a = pop();
     push(object::Value(a > b));
     break;
   }
-
   case bytecode::OpCode::LE : {
     object::Value b = pop();
     object::Value a = pop();
     push(object::Value(a <= b));
     break;
   }
-
   case bytecode::OpCode::GE : {
     object::Value b = pop();
     object::Value a = pop();
     push(object::Value(a >= b));
     break;
   }
-
   case bytecode::OpCode::IN : {
     object::Value b = pop();  // Container
     object::Value a = pop();  // Item
@@ -502,7 +470,6 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
       diagnostic::engine.panic("'in' requires list or string");
     break;
   }
-
   case bytecode::OpCode::NOT_IN : {
     object::Value b = pop();
     object::Value a = pop();
@@ -513,30 +480,21 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     push(!result);
     break;
   }
-
   // Logical operations
   case bytecode::OpCode::AND : push(object::Value(pop().toBool() && pop().toBool())); break;
   case bytecode::OpCode::OR : push(object::Value(pop().toBool() || pop().toBool())); break;
   case bytecode::OpCode::NOT : push(!pop()); break;
-
   // Control flow
   case bytecode::OpCode::JUMP : Ip_ = instr.arg - 1; break;  // -1 because ip++ at end of loop
-
-  case bytecode::OpCode::JUMP_IF_FALSE : {
+  case bytecode::OpCode::JUMP_IF_FALSE : 
     if (!pop().toBool()) Ip_ = instr.arg - 1;
     break;
-  }
-
-  case bytecode::OpCode::JUMP_IF_TRUE : {
+  case bytecode::OpCode::JUMP_IF_TRUE :
     if (pop().toBool()) Ip_ = instr.arg - 1;
     break;
-  }
-
-  case bytecode::OpCode::POP_JUMP_IF_FALSE : {
+  case bytecode::OpCode::POP_JUMP_IF_FALSE :
     if (!top().toBool()) Ip_ = instr.arg - 1;
     break;
-  }
-
   case bytecode::OpCode::FOR_ITER : {
     object::Value& iterator = top();
     if (iterator.hasNext()) { push(iterator.next()); }
@@ -547,7 +505,6 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     }
     break;
   }
-
   // Function calls
   case bytecode::OpCode::CALL : {
     std::int32_t numArgs = instr.arg;
@@ -581,13 +538,10 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     }
     break;
   }
-
   case bytecode::OpCode::RETURN : return;  // Exit function
-
   case bytecode::OpCode::YIELD :
     // Generator support
     diagnostic::engine.panic("Generators not yet implemented");
-
     // Collections
   case bytecode::OpCode::BUILD_LIST : {
     std::vector<object::Value> elements;
@@ -595,28 +549,25 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     push(object::Value(elements));
     break;
   }
-
   case bytecode::OpCode::BUILD_DICT : {
-    std::unordered_map<string_type, object::Value> dict;
+    std::unordered_map<StringType, object::Value> dict;
     for (std::int32_t i = 0; i < instr.arg; i++)
     {
       object::Value val = pop();
       object::Value key = pop();
       dict[key.asString()] = val;
     }
-    std::shared_ptr<std::unordered_map<string_type, object::Value>> dict_ptr = std::make_shared<std::unordered_map<string_type, object::Value>>(dict);
+    std::shared_ptr<std::unordered_map<StringType, object::Value>> dict_ptr = std::make_shared<std::unordered_map<StringType, object::Value>>(dict);
     object::Value result;
     result.setType(object::Value::Type::DICT);
     result.setData(dict_ptr);
     push(result);
     break;
   }
-
   case bytecode::OpCode::BUILD_TUPLE :
     // Similar to BUILD_LIST but immutable
     executeInstruction({bytecode::OpCode::BUILD_LIST, instr.arg}, code);
     break;
-
   case bytecode::OpCode::UNPACK_SEQUENCE : {
     object::Value seq = pop();
     if (!seq.isList()) diagnostic::engine.panic("Cannot unpack non-sequence");
@@ -625,14 +576,12 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     for (const object::Value& item : list) push(item);
     break;
   }
-
   case bytecode::OpCode::GET_ITEM : {
     object::Value key = pop();
     object::Value obj = pop();
     push(obj.getItem(key));
     break;
   }
-
   case bytecode::OpCode::SET_ITEM : {
     object::Value val = pop();
     object::Value key = pop();
@@ -640,13 +589,11 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     obj.setItem(key, val);
     break;
   }
-
   case bytecode::OpCode::GET_ITER : {
     object::Value obj = pop();
     push(obj.getIterator());
     break;
   }
-
   // Special operations
   case bytecode::OpCode::PRINT : {
     std::vector<object::Value> args;
@@ -660,7 +607,6 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     push(object::Value());  // print returns None
     break;
   }
-
   case bytecode::OpCode::FORMAT : {
     // String formatting
     object::Value formatStr = pop();
@@ -668,13 +614,10 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     push(formatStr);
     break;
   }
-
   case bytecode::OpCode::NOP :
     // No operation
     break;
-
   case bytecode::OpCode::HALT : return;
-
   default : diagnostic::engine.panic("Unknown opcode: " + std::to_string(static_cast<std::int32_t>(instr.op)));
   }
 }

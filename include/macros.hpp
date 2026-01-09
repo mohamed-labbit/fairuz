@@ -18,7 +18,7 @@
 #define DEBUG_PRINT 0
 
 namespace mylang {
-typedef std::u16string string_type;
+typedef std::u16string StringType;
 }
 
 // Terminal colors

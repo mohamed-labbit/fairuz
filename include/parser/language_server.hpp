@@ -24,28 +24,28 @@ class LanguageServer
 
   struct CompletionItem
   {
-    string_type label;
-    string_type detail;
-    string_type documentation;
+    StringType label;
+    StringType detail;
+    StringType documentation;
     std::int32_t kind;  // Variable, Function, Class, etc.
   };
 
   struct Hover
   {
-    string_type contents;
+    StringType contents;
     Range range;
   };
 
   // Auto-completion at cursor position
-  std::vector<CompletionItem> getCompletions(const string_type& source, Position pos);
+  std::vector<CompletionItem> getCompletions(const StringType& source, Position pos);
   // Hover information
-  Hover getHover(const string_type& source, Position pos);
+  Hover getHover(const StringType& source, Position pos);
   // Go to definition
-  Position getDefinition(const string_type& source, Position pos);
+  Position getDefinition(const StringType& source, Position pos);
   // Find all references
-  std::vector<Range> getReferences(const string_type& source, Position pos);
+  std::vector<Range> getReferences(const StringType& source, Position pos);
   // Rename symbol
-  std::unordered_map<string_type, string_type> rename(const string_type& source, Position pos, const string_type& newName);
+  std::unordered_map<StringType, StringType> rename(const StringType& source, Position pos, const StringType& newName);
 };
 
 }

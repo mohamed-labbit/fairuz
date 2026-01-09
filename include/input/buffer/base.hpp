@@ -15,7 +15,7 @@ namespace buffer {
 class InputBufferBase
 {
  public:
-  using buffer_t = string_type;
+  using buffer_t = StringType;
 
   InputBufferBase(input::FileManager* fm, std::size_t cap = DEFAULT_CAPACITY) :
       FileManager_(fm),
@@ -31,7 +31,7 @@ class InputBufferBase
   InputBufferBase() = default;
 
   bool empty() const MYLANG_NOEXCEPT { return !FileManager_->isOpen() && FileManager_->remaining() > 0; }
-  bool refresh_buffer(const std::uint32_t to_refresh);
+  bool refreshBuffer(const std::uint32_t to_refresh);
 
  protected:
   input::FileManager* FileManager_{nullptr};

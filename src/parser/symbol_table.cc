@@ -5,37 +5,37 @@ namespace mylang {
 namespace parser {
 
 SymbolTable::SymbolTable(SymbolTable* p, std::int32_t level) :
-    parent(p),
+    Parent_(p),
     ScopeLevel_(level)
 {
 }
 
-void SymbolTable::define(const string_type& name, Symbol symbol)
+void SymbolTable::define(const StringType& name, Symbol symbol)
 {
   symbol.name = name;
   Symbols_[name] = std::move(symbol);
 }
 
-typename SymbolTable::Symbol* SymbolTable::lookup(const string_type& name)
+typename SymbolTable::Symbol* SymbolTable::lookup(const StringType& name)
 {
   auto it = Symbols_.find(name);
   if (it != Symbols_.end()) return &it->second;
-  return parent ? parent->lookup(name) : nullptr;
+  return Parent_ ? Parent_->lookup(name) : nullptr;
 }
 
-typename SymbolTable::Symbol* SymbolTable::lookupLocal(const string_type& name)
+typename SymbolTable::Symbol* SymbolTable::lookupLocal(const StringType& name)
 {
   auto it = Symbols_.find(name);
   return it != Symbols_.end() ? &it->second : nullptr;
 }
 
-bool SymbolTable::isDefined(const string_type& name) const
+bool SymbolTable::isDefined(const StringType& name) const
 {
   if (Symbols_.count(name)) return true;
-  return parent ? parent->isDefined(name) : false;
+  return Parent_ ? Parent_->isDefined(name) : false;
 }
 
-void SymbolTable::markUsed(const string_type& name, std::int32_t line)
+void SymbolTable::markUsed(const StringType& name, std::int32_t line)
 {
   if (auto* sym = lookup(name))
   {
@@ -60,7 +60,7 @@ std::vector<typename SymbolTable::Symbol*> SymbolTable::getUnusedSymbols()
   return unused;
 }
 
-const std::unordered_map<string_type, typename SymbolTable::Symbol>& SymbolTable::getSymbols() const { return Symbols_; }
+const std::unordered_map<StringType, typename SymbolTable::Symbol>& SymbolTable::getSymbols() const { return Symbols_; }
 
 }
 }

@@ -11,12 +11,12 @@
 
 
 using mylang::input::FileManager;
-using string_type = mylang::string_type;
+using StringType = mylang::StringType;
 
 namespace {
 const std::filesystem::path test_cases_path = std::filesystem::path(__FILE__).parent_path() / "test_cases" / "test_tokens";
 
-string_type load_source(const std::filesystem::path& path)
+StringType load_source(const std::filesystem::path& path)
 {
   std::ifstream file(path, std::ios::binary);
   std::string utf8_contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
@@ -48,6 +48,18 @@ TEST(LexerTest, RecognizesInteger)
   mylang::lex::Lexer lexer(&file_manager);
   auto tokens = lexer.tokenize();
   auto expected = lexer.make_token(mylang::lex::tok::TokenType::NUMBER, u"123", 1, 1);
+  EXPECT_EQ(tokens.size(), 3);
+  EXPECT_EQ(tokens[0].type(), mylang::lex::tok::TokenType::BEGINMARKER);
+  EXPECT_EQ(tokens[1], expected);
+  EXPECT_EQ(tokens[2].type(), mylang::lex::tok::TokenType::ENDMARKER);
+}
+
+TEST(LexerTest, RecognizesFloat)
+{
+  FileManager file_manager(test_cases_path / "recognizes_float.txt");
+  mylang::lex::Lexer lexer(&file_manager);
+  auto tokens = lexer.tokenize();
+  auto expected = lexer.make_token(mylang::lex::tok::TokenType::FLOAT, u"123.456", 1, 1);
   EXPECT_EQ(tokens.size(), 3);
   EXPECT_EQ(tokens[0].type(), mylang::lex::tok::TokenType::BEGINMARKER);
   EXPECT_EQ(tokens[1], expected);

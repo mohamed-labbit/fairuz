@@ -28,11 +28,11 @@ namespace parser {
   }
   */
 
-std::vector<std::vector<mylang::lex::tok::Token>> ParallelParser::splitIntoChunks(const std::vector<mylang::lex::tok::Token>& tokens)
+std::vector<std::vector<lex::tok::Token>> ParallelParser::splitIntoChunks(const std::vector<lex::tok::Token>& tokens)
 {
-  std::vector<std::vector<mylang::lex::tok::Token>> chunks;
-  std::vector<mylang::lex::tok::Token> current;
-  for (const auto& tok : tokens)
+  std::vector<std::vector<lex::tok::Token>> chunks;
+  std::vector<lex::tok::Token> current;
+  for (const lex::tok::Token& tok : tokens)
   {
     current.push_back(tok);
     if (tok.type() == lex::tok::TokenType::KW_FN && current.size() > 1)

@@ -50,7 +50,7 @@ class InputBuffer: public InputBufferBase
   const char16_t& current();
   MYLANG_NODISCARD
   const char16_t& peek();
-  string_type nPeek(std::size_t n);
+  StringType nPeek(std::size_t n);
   void consume(std::size_t len);
   void unget(char16_t ch);
   void reset();
@@ -71,9 +71,9 @@ class InputBuffer: public InputBufferBase
   std::stack<std::size_t> Columns_;
   std::stack<PushbackEntry> UngetStack_;
 
-  void swap_buffers_();
-  void advance_position_(char16_t ch);
-  void rewind_position_(char16_t ch);
+  void swapBuffers_();
+  void advancePosition_(char16_t ch);
+  void rewindPosition_(char16_t ch);
 };
 
 }

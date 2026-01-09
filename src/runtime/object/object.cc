@@ -20,10 +20,10 @@ double object::Value::asFloat() const
   return std::get<double>(Data_);
 }
 
-const string_type& object::Value::asString() const
+const StringType& object::Value::asString() const
 {
   if (!isString()) diagnostic::engine.panic("Value is not a string");
-  return *std::get<std::shared_ptr<string_type>>(Data_);
+  return *std::get<std::shared_ptr<StringType>>(Data_);
 }
 
 bool object::Value::asBool() const
@@ -44,10 +44,10 @@ const std::vector<object::Value>& object::Value::asList() const
   return *std::get<std::shared_ptr<std::vector<Value>>>(Data_);
 }
 
-std::unordered_map<string_type, object::Value>& object::Value::asDict() const
+std::unordered_map<StringType, object::Value>& object::Value::asDict() const
 {
   if (!isDict()) diagnostic::engine.panic("Value is not a dict");
-  return *std::get<std::shared_ptr<std::unordered_map<string_type, Value>>>(Data_);
+  return *std::get<std::shared_ptr<std::unordered_map<StringType, Value>>>(Data_);
 }
 
 typename object::Value::Function& object::Value::asFunction()
@@ -95,14 +95,14 @@ bool object::Value::toBool() const
   }
 }
 
-string_type object::Value::toString() const
+StringType object::Value::toString() const
 {
   switch (Type_)
   {
   case Type::NONE : return u"None";
   case Type::INT : return utf8::utf8to16(std::to_string(asInt()));
   case Type::FLOAT : {
-    auto s = utf8::utf8to16(std::to_string(asFloat()));
+    StringType s = utf8::utf8to16(std::to_string(asFloat()));
     s.erase(s.find_last_not_of('0') + 1);
     if (s.back() == '.') s += u"0";
     return s;
@@ -110,8 +110,8 @@ string_type object::Value::toString() const
   case Type::STRING : return asString();
   case Type::BOOL : return asBool() ? u"True" : u"False";
   case Type::LIST : {
-    string_type result = u"[";
-    const auto& list = asList();
+    StringType result = u"[";
+    const std::vector<object::Value>& list = asList();
     for (std::size_t i = 0; i < list.size(); i++)
     {
       result += list[i].toString();
@@ -120,8 +120,8 @@ string_type object::Value::toString() const
     return result + u"]";
   }
   case Type::DICT : {
-    string_type result = u"{";
-    const auto& dict = std::get<std::shared_ptr<std::unordered_map<string_type, Value>>>(Data_);
+    StringType result = u"{";
+    const std::shared_ptr<std::unordered_map<StringType, Value>>& dict = std::get<std::shared_ptr<std::unordered_map<StringType, Value>>>(Data_);
     std::size_t count = 0;
     for (const auto& [k, v] : *dict)
     {
@@ -145,7 +145,7 @@ std::string object::Value::repr() const
 // Hash for use in dictionaries
 std::size_t object::Value::hash() const
 {
-  std::hash<string_type> hasher;
+  std::hash<StringType> hasher;
   return hasher(toString());
 }
 
@@ -191,8 +191,8 @@ object::Value object::Value::operator+(const Value& other) const
   if (isString() || other.isString()) return Value(toString() + other.toString());
   if (isList() && other.isList())
   {
-    auto result = asList();
-    const auto& otherList = other.asList();
+    std::vector<object::Value> result = asList();
+    const std::vector<object::Value>& otherList = other.asList();
     result.insert(result.end(), otherList.begin(), otherList.end());
     return Value(result);
   }
@@ -213,7 +213,7 @@ object::Value object::Value::operator*(const Value& other) const
   // String/List repetition
   if (isString() && other.isInt())
   {
-    string_type result;
+    StringType result;
     for (std::int64_t i = 0; i < other.asInt(); i++) result += asString();
     return Value(result);
   }
@@ -270,14 +270,14 @@ object::Value object::Value::getItem(const Value& key) const
   if (isList())
   {
     std::int64_t index = key.toInt();
-    const auto& list = asList();
+    const std::vector<object::Value>& list = asList();
     if (index < 0) index += list.size();
     if (index < 0 || index >= list.size()) diagnostic::engine.panic("List index out of range");
     return list[index];
   }
   if (isDict())
   {
-    const auto& dict = asDict();
+    const std::unordered_map<StringType, object::Value>& dict = asDict();
     auto it = dict.find(key.toString());
     if (it == dict.end()) diagnostic::engine.panic("Key not found: " + utf8::utf16to8(key.toString()));
     return it->second;
@@ -285,10 +285,10 @@ object::Value object::Value::getItem(const Value& key) const
   if (isString())
   {
     std::int64_t index = key.toInt();
-    const auto& str = asString();
+    const StringType& str = asString();
     if (index < 0) index += str.size();
     if (index < 0 || index >= str.size()) diagnostic::engine.panic("String index out of range");
-    return Value(string_type(1, str[index]));
+    return Value(StringType(1, str[index]));
   }
   diagnostic::engine.panic("Object is not subscriptable");
 }
@@ -298,7 +298,7 @@ void object::Value::setItem(const Value& key, const Value& value)
   if (isList())
   {
     std::int64_t index = key.toInt();
-    auto& list = asList();
+    std::vector<object::Value>& list = asList();
     if (index < 0) index += list.size();
     if (index < 0 || index >= list.size()) diagnostic::engine.panic("List index out of range");
     list[index] = value;
@@ -330,7 +330,7 @@ bool object::Value::hasNext() const
 {
   if (Type_ == Type::ITERATOR)
   {
-    const auto& it = std::get<Iterator>(Data_);
+    const Iterator& it = std::get<Iterator>(Data_);
     return it.index < it.items->size();
   }
   return false;
@@ -340,7 +340,7 @@ object::Value object::Value::next()
 {
   if (Type_ == Type::ITERATOR)
   {
-    auto& it = std::get<Iterator>(Data_);
+    Iterator& it = std::get<Iterator>(Data_);
     if (it.index >= it.items->size()) diagnostic::engine.panic("Iterator exhausted");
     return (*it.items)[it.index++];
   }

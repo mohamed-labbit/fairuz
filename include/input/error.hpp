@@ -7,38 +7,38 @@
 namespace mylang {
 namespace error {
 
-class file_error: public std::exception
+class FileError: public std::exception
 {
  private:
-  std::string imp_;  // Stores the detailed error message
+  std::string Imp_;  // Stores the detailed error message
 
  public:
   // Constructors for initializing the error message
-  explicit file_error(const std::string& msg) :
-      imp_("File error occurred: " + msg)
+  explicit FileError(const std::string& msg) :
+      Imp_("File error occurred: " + msg)
   {
   }
-  explicit file_error(const char* msg) :
-      imp_("File error occurred: " + std::string(msg))
+  explicit FileError(const char* msg) :
+      Imp_("File error occurred: " + std::string(msg))
   {
   }
   // Copy constructor for safely duplicating error objects
-  file_error(const file_error& other) noexcept :
-      imp_(other.imp())
+  FileError(const FileError& other) noexcept :
+      Imp_(other.imp())
   {
   }
   // Copy assignment operator with self-assignment check
-  file_error& operator=(const file_error& other) noexcept
+  FileError& operator=(const FileError& other) noexcept
   {
-    if (this != &other) imp_ = other.imp();
+    if (this != &other) Imp_ = other.imp();
     return *this;
   }
   // Override base class destructor
-  ~file_error() override = default;
+  ~FileError() override = default;
   // Override `what()` to return a generic error message (not the detailed message)
-  const char* what() const noexcept override { return imp_.c_str(); }
+  const char* what() const noexcept override { return Imp_.c_str(); }
   // Provides access to the stored detailed message
-  const std::string& imp() const { return imp_; }
+  const std::string& imp() const { return Imp_; }
 };
 
 }

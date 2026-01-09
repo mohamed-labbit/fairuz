@@ -72,19 +72,16 @@ struct IndentationContext
    * If both spaces and tabs are found, the mode becomes MIXED and
    * MixedIndentError is set.
    */
-  void detectIndentMode(const string_type& indent_str)
+  void detectIndentMode(const StringType& indent_str)
   {
     if (mode != IndentMode::UNDETECTED) return;
-
     bool has_spaces = false;
     bool has_tabs = false;
-
     for (char16_t ch : indent_str)
     {
       if (ch == u' ') has_spaces = true;
       if (ch == u'\t') has_tabs = true;
     }
-
     if (has_spaces && has_tabs)
     {
       mode = IndentMode::MIXED;
@@ -95,12 +92,16 @@ struct IndentationContext
       mode = IndentMode::SPACES;
       // Attempt to infer spaces-per-indent using common widths
       if (indent_str.length() > 0)
+      {
         for (std::size_t width : {2, 4, 8})
+        {
           if (indent_str.length() % width == 0)
           {
             SpacesPerIndent = width;
             break;
           }
+        }
+      }
     }
     else if (has_tabs) { mode = IndentMode::TABS; }
   }
@@ -110,23 +111,19 @@ struct IndentationContext
    *
    * @return true if indentation is valid, false otherwise
    */
-  bool validateIndent(const string_type& indent_str) const
+  bool validateIndent(const StringType& indent_str) const
   {
     if (mode == IndentMode::MIXED) return false;
-
     bool has_spaces = false;
     bool has_tabs = false;
-
     for (char16_t ch : indent_str)
     {
       if (ch == u' ') has_spaces = true;
       if (ch == u'\t') has_tabs = true;
     }
-
     if (mode == IndentMode::SPACES && has_tabs) return false;
     if (mode == IndentMode::TABS && has_spaces) return false;
     if (has_spaces && has_tabs) return false;
-
     return true;
   }
 
@@ -155,7 +152,7 @@ struct IndentationContext
   }
 
   /// @brief Returns the number of indentation levels currently tracked
-  std::size_t stack_size() const { return IndentStack.size(); }
+  std::size_t stackSize() const { return IndentStack.size(); }
 };
 
 /**
@@ -179,8 +176,8 @@ struct IndentationAnalysis
   Action action{Action::NONE};  // Required action
   std::size_t count{0};         // Number of INDENT/DEDENT tokens
   std::size_t column{0};        // Column where indentation ends
-  string_type ErrorMessage;     // Error message (if any)
-  string_type IndentString;     // Raw indentation characters
+  StringType ErrorMessage;      // Error message (if any)
+  StringType IndentString;      // Raw indentation characters
 };
 
 /**
@@ -225,7 +222,7 @@ class Lexer
    * Any omitted fields are inferred from the current source position.
    */
   MYLANG_COMPILER_ABI tok::Token make_token(tok::TokenType tt,
-                                            std::optional<string_type> lexeme = std::nullopt,
+                                            std::optional<StringType> lexeme = std::nullopt,
                                             std::optional<std::size_t> line = std::nullopt,
                                             std::optional<std::size_t> col = std::nullopt,
                                             std::optional<std::size_t> file_pos = std::nullopt,
@@ -262,7 +259,7 @@ class Lexer
   /// @brief Emits start-of-file token
   // MYLANG_COMPILER_ABI tok::Token _emit_sof(SourceManager& sm);
   /// @brief Analyzes indentation and determines required action
-  MYLANG_COMPILER_ABI IndentationAnalysis analyzeIndentation_(SourceManager& sm);
+  MYLANG_COMPILER_ABI IndentationAnalysis analyzeIndentation_();
   /// @brief Updates indentation context based on emitted token
   MYLANG_COMPILER_ABI void updateIndentationContext_(const tok::Token& token);
   /// @brief Consumes and returns the next character from the source
@@ -276,7 +273,7 @@ class Lexer
    * Attempts to use Arabic UTF-8 locale, falling back to classic locale
    * if unavailable.
    */
-  static void configure_locale()
+  static void configureLocale()
   {
     try
     {

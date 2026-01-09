@@ -43,15 +43,15 @@ struct BytecodeBlock
   std::vector<std::int32_t> successors;
 
   // Loop-related metadata
-  bool isLoopHeader = false;
-  bool isLoopExit = false;
+  bool IsLoopHeader = false;
+  bool IsLoopExit = false;
 
   // Data-flow analysis sets
 
-  std::unordered_set<std::int32_t> liveIn;   // Live variables at block entry
-  std::unordered_set<std::int32_t> liveOut;  // Live variables at block exit
-  std::unordered_set<std::int32_t> defsIn;   // Variables defined in this block
-  std::unordered_set<std::int32_t> usesIn;   // Variables used in this block
+  std::unordered_set<std::int32_t> LiveIn;   // Live variables at block entry
+  std::unordered_set<std::int32_t> LiveOut;  // Live variables at block exit
+  std::unordered_set<std::int32_t> DefsIn;   // Variables defined in this block
+  std::unordered_set<std::int32_t> UsesIn;   // Variables used in this block
 };
 
 /**
@@ -131,11 +131,11 @@ class BytecodeCompiler
 
   struct Stats
   {
-    std::int32_t InstructionsGenerated = 0;
-    std::int32_t ConstantsPoolSize = 0;
-    std::int32_t JumpsResolved = 0;
-    std::int32_t PeepholeOptimizations = 0;
-    std::int32_t LoopsDetected = 0;
+    std::int32_t InstructionsGenerated{0};
+    std::int32_t ConstantsPoolSize{0};
+    std::int32_t JumpsResolved{0};
+    std::int32_t PeepholeOptimizations {0};
+    std::int32_t LoopsDetected {0};
   } Stats_;
 
   // Internal helpers

@@ -100,7 +100,7 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
     case parser::ast::LiteralExpr::Type::NONE : val = object::Value(); break;
     }
     std::int32_t idx = Constants_.addConstant(val);
-    emit(bytecode::OpCode::LOAD_CONST, idx, expr->line);
+    emit(bytecode::OpCode::LOAD_CONST, idx, expr->getLine());
     break;
   }
 
@@ -110,10 +110,10 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
     if (!sym) diagnostic::engine.panic("Undefined variable: " + utf8::utf16to8(name->getValue()));
     switch (sym->scope)
     {
-    case CompilerSymbolTable::SymbolScope::GLOBAL : emit(bytecode::OpCode::LOAD_GLOBAL, sym->index, expr->line); break;
-    case CompilerSymbolTable::SymbolScope::LOCAL : emit(bytecode::OpCode::LOAD_FAST, sym->index, expr->line); break;
-    case CompilerSymbolTable::SymbolScope::CLOSURE : emit(bytecode::OpCode::LOAD_CLOSURE, sym->index, expr->line); break;
-    default : emit(bytecode::OpCode::LOAD_VAR, sym->index, expr->line); break;
+    case CompilerSymbolTable::SymbolScope::GLOBAL : emit(bytecode::OpCode::LOAD_GLOBAL, sym->index, expr->getLine()); break;
+    case CompilerSymbolTable::SymbolScope::LOCAL : emit(bytecode::OpCode::LOAD_FAST, sym->index, expr->getLine()); break;
+    case CompilerSymbolTable::SymbolScope::CLOSURE : emit(bytecode::OpCode::LOAD_CLOSURE, sym->index, expr->getLine()); break;
+    default : emit(bytecode::OpCode::LOAD_VAR, sym->index, expr->getLine()); break;
     }
     break;
   }
@@ -124,10 +124,10 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
     if (bin->getOperator() == lex::tok::TokenType::KW_AND)
     {
       compileExpr(bin->getLeft());
-      emit(bytecode::OpCode::DUP, 0, expr->line);
+      emit(bytecode::OpCode::DUP, 0, expr->getLine());
       std::int32_t jumpIfFalse = getCurrentPC();
-      emit(bytecode::OpCode::POP_JUMP_IF_FALSE, 0, expr->line);
-      emit(bytecode::OpCode::POP, 0, expr->line);
+      emit(bytecode::OpCode::POP_JUMP_IF_FALSE, 0, expr->getLine());
+      emit(bytecode::OpCode::POP, 0, expr->getLine());
       compileExpr(bin->getRight());
       patchJump(jumpIfFalse);
       break;
@@ -135,10 +135,10 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
     if (bin->getOperator() == lex::tok::TokenType::KW_OR)
     {
       compileExpr(bin->getLeft());
-      emit(bytecode::OpCode::DUP, 0, expr->line);
+      emit(bytecode::OpCode::DUP, 0, expr->getLine());
       std::int32_t jumpIfTrue = getCurrentPC();
-      emit(bytecode::OpCode::POP_JUMP_IF_TRUE, 0, expr->line);
-      emit(bytecode::OpCode::POP, 0, expr->line);
+      emit(bytecode::OpCode::POP_JUMP_IF_TRUE, 0, expr->getLine());
+      emit(bytecode::OpCode::POP, 0, expr->getLine());
       compileExpr(bin->getRight());
       patchJump(jumpIfTrue);
       break;
@@ -147,34 +147,34 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
     compileExpr(bin->getLeft());
     compileExpr(bin->getRight());
     //if (bin->getOperator() == u"//") { emit(bytecode::OpCode::FLOOR_DIV, 0, expr->line); }
-    if (bin->getOperator() == lex::tok::TokenType::OP_PLUS) { emit(bytecode::OpCode::ADD, 0, expr->line); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_MINUS) { emit(bytecode::OpCode::SUB, 0, expr->line); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_STAR) { emit(bytecode::OpCode::MUL, 0, expr->line); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_SLASH) { emit(bytecode::OpCode::DIV, 0, expr->line); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_PERCENT) { emit(bytecode::OpCode::MOD, 0, expr->line); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_POWER) { emit(bytecode::OpCode::POW, 0, expr->line); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_EQ) { emit(bytecode::OpCode::EQ, 0, expr->line); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_NEQ) { emit(bytecode::OpCode::NE, 0, expr->line); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_LT) { emit(bytecode::OpCode::LT, 0, expr->line); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_GT) { emit(bytecode::OpCode::GT, 0, expr->line); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_LTE) { emit(bytecode::OpCode::LE, 0, expr->line); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_GTE) { emit(bytecode::OpCode::GE, 0, expr->line); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_BITAND) { emit(bytecode::OpCode::BITAND, 0, expr->line); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_BITOR) { emit(bytecode::OpCode::BITOR, 0, expr->line); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_BITXOR) { emit(bytecode::OpCode::BITXOR, 0, expr->line); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_LSHIFT) { emit(bytecode::OpCode::LSHIFT, 0, expr->line); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_RSHIFT) { emit(bytecode::OpCode::RSHIFT, 0, expr->line); }
-    else if (bin->getOperator() == lex::tok::TokenType::KW_IN) { emit(bytecode::OpCode::IN, 0, expr->line); }
+    if (bin->getOperator() == lex::tok::TokenType::OP_PLUS) { emit(bytecode::OpCode::ADD, 0, expr->getLine()); }
+    else if (bin->getOperator() == lex::tok::TokenType::OP_MINUS) { emit(bytecode::OpCode::SUB, 0, expr->getLine()); }
+    else if (bin->getOperator() == lex::tok::TokenType::OP_STAR) { emit(bytecode::OpCode::MUL, 0, expr->getLine()); }
+    else if (bin->getOperator() == lex::tok::TokenType::OP_SLASH) { emit(bytecode::OpCode::DIV, 0, expr->getLine()); }
+    else if (bin->getOperator() == lex::tok::TokenType::OP_PERCENT) { emit(bytecode::OpCode::MOD, 0, expr->getLine()); }
+    else if (bin->getOperator() == lex::tok::TokenType::OP_POWER) { emit(bytecode::OpCode::POW, 0, expr->getLine()); }
+    else if (bin->getOperator() == lex::tok::TokenType::OP_EQ) { emit(bytecode::OpCode::EQ, 0, expr->getLine()); }
+    else if (bin->getOperator() == lex::tok::TokenType::OP_NEQ) { emit(bytecode::OpCode::NE, 0, expr->getLine()); }
+    else if (bin->getOperator() == lex::tok::TokenType::OP_LT) { emit(bytecode::OpCode::LT, 0, expr->getLine()); }
+    else if (bin->getOperator() == lex::tok::TokenType::OP_GT) { emit(bytecode::OpCode::GT, 0, expr->getLine()); }
+    else if (bin->getOperator() == lex::tok::TokenType::OP_LTE) { emit(bytecode::OpCode::LE, 0, expr->getLine()); }
+    else if (bin->getOperator() == lex::tok::TokenType::OP_GTE) { emit(bytecode::OpCode::GE, 0, expr->getLine()); }
+    else if (bin->getOperator() == lex::tok::TokenType::OP_BITAND) { emit(bytecode::OpCode::BITAND, 0, expr->getLine()); }
+    else if (bin->getOperator() == lex::tok::TokenType::OP_BITOR) { emit(bytecode::OpCode::BITOR, 0, expr->getLine()); }
+    else if (bin->getOperator() == lex::tok::TokenType::OP_BITXOR) { emit(bytecode::OpCode::BITXOR, 0, expr->getLine()); }
+    else if (bin->getOperator() == lex::tok::TokenType::OP_LSHIFT) { emit(bytecode::OpCode::LSHIFT, 0, expr->getLine()); }
+    else if (bin->getOperator() == lex::tok::TokenType::OP_RSHIFT) { emit(bytecode::OpCode::RSHIFT, 0, expr->getLine()); }
+    else if (bin->getOperator() == lex::tok::TokenType::KW_IN) { emit(bytecode::OpCode::IN, 0, expr->getLine()); }
     break;
   }
 
   case parser::ast::Expr::Kind::UNARY : {
     const parser::ast::UnaryExpr* un = static_cast<const parser::ast::UnaryExpr*>(expr);
     compileExpr(un->getOperand());
-    if (un->getOperator() == lex::tok::TokenType::OP_MINUS) { emit(bytecode::OpCode::NEG, 0, expr->line); }
-    else if (un->getOperator() == lex::tok::TokenType::OP_PLUS) { emit(bytecode::OpCode::POS, 0, expr->line); }
-    else if (un->getOperator() == lex::tok::TokenType::OP_BITNOT) { emit(bytecode::OpCode::BITNOT, 0, expr->line); }
-    else if (un->getOperator() == lex::tok::TokenType::KW_NOT) { emit(bytecode::OpCode::NOT, 0, expr->line); }
+    if (un->getOperator() == lex::tok::TokenType::OP_MINUS) { emit(bytecode::OpCode::NEG, 0, expr->getLine()); }
+    else if (un->getOperator() == lex::tok::TokenType::OP_PLUS) { emit(bytecode::OpCode::POS, 0, expr->getLine()); }
+    else if (un->getOperator() == lex::tok::TokenType::OP_BITNOT) { emit(bytecode::OpCode::BITNOT, 0, expr->getLine()); }
+    else if (un->getOperator() == lex::tok::TokenType::KW_NOT) { emit(bytecode::OpCode::NOT, 0, expr->getLine()); }
     break;
   }
 
@@ -185,7 +185,7 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
     // Compile callee
     compileExpr(call->getCallee());
     // Emit call instruction
-    emit(bytecode::OpCode::CALL, call->getArgs().size(), expr->line);
+    emit(bytecode::OpCode::CALL, call->getArgs().size(), expr->getLine());
     // Adjust stack depth
     CurrentStackDepth_ -= call->getArgs().size();
     break;
@@ -196,7 +196,7 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
     // Compile all elements
     for (const parser::ast::Expr* elem : list->getElements()) compileExpr(elem);
     // Build list from stack
-    emit(bytecode::OpCode::BUILD_LIST, list->getElements().size(), expr->line);
+    emit(bytecode::OpCode::BUILD_LIST, list->getElements().size(), expr->getLine());
     // Adjust stack depth
     CurrentStackDepth_ -= list->getElements().size();
     CurrentStackDepth_++;
@@ -227,13 +227,13 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
     // Compile value
     compileExpr(assign->getValue());
     // Duplicate for expression result
-    emit(bytecode::OpCode::DUP, 0, expr->line);
+    emit(bytecode::OpCode::DUP, 0, expr->getLine());
     // Store
     CompilerSymbolTable::Symbol* sym = CurrentScope_->define(utf8::utf16to8(assign->getTarget()->getValue()));
     if (sym->scope == CompilerSymbolTable::SymbolScope::GLOBAL)
-      emit(bytecode::OpCode::STORE_GLOBAL, sym->index, expr->line);
+      emit(bytecode::OpCode::STORE_GLOBAL, sym->index, expr->getLine());
     else
-      emit(bytecode::OpCode::STORE_FAST, sym->index, expr->line);
+      emit(bytecode::OpCode::STORE_FAST, sym->index, expr->getLine());
     break;
   }
 
@@ -254,16 +254,16 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     // Store to variable
     CompilerSymbolTable::Symbol* sym = CurrentScope_->define(utf8::utf16to8(assign->getTarget()->getValue()));
     if (sym->scope == CompilerSymbolTable::SymbolScope::GLOBAL)
-      emit(bytecode::OpCode::STORE_GLOBAL, sym->index, stmt->line);
+      emit(bytecode::OpCode::STORE_GLOBAL, sym->index, stmt->getLine());
     else
-      emit(bytecode::OpCode::STORE_FAST, sym->index, stmt->line);
+      emit(bytecode::OpCode::STORE_FAST, sym->index, stmt->getLine());
     break;
   }
 
   case parser::ast::Stmt::Kind::EXPR : {
     const parser::ast::ExprStmt* exprStmt = static_cast<const parser::ast::ExprStmt*>(stmt);
     compileExpr(exprStmt->getExpr());
-    emit(bytecode::OpCode::POP, 0, stmt->line);  // Discard result
+    emit(bytecode::OpCode::POP, 0, stmt->getLine());  // Discard result
     break;
   }
 
@@ -272,13 +272,13 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     // Compile condition
     compileExpr(ifStmt->getCondition());
     std::int32_t jumpIfFalse = getCurrentPC();
-    emit(bytecode::OpCode::POP_JUMP_IF_FALSE, 0, stmt->line);
+    emit(bytecode::OpCode::POP_JUMP_IF_FALSE, 0, stmt->getLine());
     // Then block
     for (const parser::ast::Stmt* s : ifStmt->getThenBlock()->getStatements()) compileStmt(s);
     if (!ifStmt->getElseBlock()->isEmpty())
     {
       std::int32_t jumpEnd = getCurrentPC();
-      emit(bytecode::OpCode::JUMP, 0, stmt->line);
+      emit(bytecode::OpCode::JUMP, 0, stmt->getLine());
       patchJump(jumpIfFalse);
       // Else block
       for (const parser::ast::Stmt* s : ifStmt->getElseBlock()->getStatements()) compileStmt(s);
@@ -295,11 +295,11 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     const parser::ast::WhileStmt* whileStmt = static_cast<const parser::ast::WhileStmt*>(stmt);
     std::int32_t loopStart = getCurrentPC();
     // Mark as potential hot loop
-    emit(bytecode::OpCode::HOT_LOOP_START, 0, stmt->line);
+    emit(bytecode::OpCode::HOT_LOOP_START, 0, stmt->getLine());
     // Compile condition
     compileExpr(whileStmt->getCondition());
     std::int32_t jumpIfFalse = getCurrentPC();
-    emit(bytecode::OpCode::POP_JUMP_IF_FALSE, 0, stmt->line);
+    emit(bytecode::OpCode::POP_JUMP_IF_FALSE, 0, stmt->getLine());
     // Loop body
     LoopContext ctx;
     ctx.StartPC = loopStart;
@@ -308,9 +308,9 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     LoopStack_.push(ctx);
     for (const parser::ast::Stmt* s : whileStmt->getBlock()->getStatements()) compileStmt(s);
     // Jump back to loop start
-    emit(bytecode::OpCode::JUMP_BACKWARD, loopStart, stmt->line);
+    emit(bytecode::OpCode::JUMP_BACKWARD, loopStart, stmt->getLine());
     patchJump(jumpIfFalse);
-    emit(bytecode::OpCode::HOT_LOOP_END, 0, stmt->line);
+    emit(bytecode::OpCode::HOT_LOOP_END, 0, stmt->getLine());
     // Patch break statements
     if (LoopStack_.top().BreakLabel != -1) patchJump(LoopStack_.top().BreakLabel);
     LoopStack_.pop();
@@ -322,15 +322,15 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     const parser::ast::ForStmt* forStmt = static_cast<const parser::ast::ForStmt*>(stmt);
     // Compile iterator
     compileExpr(forStmt->getIter());
-    emit(bytecode::OpCode::GET_ITER, 0, stmt->line);
+    emit(bytecode::OpCode::GET_ITER, 0, stmt->getLine());
     std::int32_t loopStart = getCurrentPC();
-    emit(bytecode::OpCode::HOT_LOOP_START, 0, stmt->line);
+    emit(bytecode::OpCode::HOT_LOOP_START, 0, stmt->getLine());
     // FOR_ITER gets next item or jumps to end
     std::int32_t forIter = getCurrentPC();
-    emit(bytecode::OpCode::FOR_ITER_FAST, 0, stmt->line);
+    emit(bytecode::OpCode::FOR_ITER_FAST, 0, stmt->getLine());
     // Store loop variable
     CompilerSymbolTable::Symbol* sym = CurrentScope_->define(utf8::utf16to8(forStmt->getTarget()->getValue()));
-    emit(bytecode::OpCode::STORE_FAST, sym->index, stmt->line);
+    emit(bytecode::OpCode::STORE_FAST, sym->index, stmt->getLine());
     // Loop body
     LoopContext ctx;
     ctx.StartPC = loopStart;
@@ -339,10 +339,10 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     LoopStack_.push(ctx);
     for (const parser::ast::Stmt* s : forStmt->getBlock()->getStatements()) compileStmt(s);
     // Jump back
-    emit(bytecode::OpCode::JUMP_BACKWARD, loopStart, stmt->line);
+    emit(bytecode::OpCode::JUMP_BACKWARD, loopStart, stmt->getLine());
     // Patch FOR_ITER to jump here when exhausted
     patchJump(forIter);
-    emit(bytecode::OpCode::HOT_LOOP_END, 0, stmt->line);
+    emit(bytecode::OpCode::HOT_LOOP_END, 0, stmt->getLine());
     if (LoopStack_.top().BreakLabel != -1) patchJump(LoopStack_.top().BreakLabel);
     LoopStack_.pop();
     Stats_.LoopsDetected++;
@@ -369,8 +369,8 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     if (Unit_.instructions.empty() || Unit_.instructions.back().op != bytecode::OpCode::RETURN)
     {
       std::int32_t noneIdx = Constants_.addConstant(object::Value());
-      emit(bytecode::OpCode::LOAD_CONST, noneIdx, stmt->line);
-      emit(bytecode::OpCode::RETURN, 0, stmt->line);
+      emit(bytecode::OpCode::LOAD_CONST, noneIdx, stmt->getLine());
+      emit(bytecode::OpCode::RETURN, 0, stmt->getLine());
     }
     // Create function object
     std::vector<bytecode::Instruction>&& funcInstructions = std::move(Unit_.instructions);
@@ -383,11 +383,11 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     // Store function object as constant
     object::Value funcObj;  // Would create FunctionObject here
     std::int32_t funcIdx = Constants_.addConstant(funcObj);
-    emit(bytecode::OpCode::LOAD_CONST, funcIdx, stmt->line);
-    emit(bytecode::OpCode::MAKE_FUNCTION, funcDef->getParameters().size(), stmt->line);
+    emit(bytecode::OpCode::LOAD_CONST, funcIdx, stmt->getLine());
+    emit(bytecode::OpCode::MAKE_FUNCTION, funcDef->getParameters().size(), stmt->getLine());
     // Store function
     CompilerSymbolTable::Symbol* sym = CurrentScope_->define(utf8::utf16to8(funcDef->getName()->getValue()));
-    emit(bytecode::OpCode::STORE_FAST, sym->index, stmt->line);
+    emit(bytecode::OpCode::STORE_FAST, sym->index, stmt->getLine());
     exitScope();
     break;
   }
@@ -397,8 +397,8 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     if (ret->getValue())
       compileExpr(ret->getValue());
     else
-      emit(bytecode::OpCode::LOAD_CONST, Constants_.addConstant(object::Value()), stmt->line);
-    emit(bytecode::OpCode::RETURN, 0, stmt->line);
+      emit(bytecode::OpCode::LOAD_CONST, Constants_.addConstant(object::Value()), stmt->getLine());
+    emit(bytecode::OpCode::RETURN, 0, stmt->getLine());
     break;
   }
 

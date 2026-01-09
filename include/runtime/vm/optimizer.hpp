@@ -67,7 +67,7 @@ class BytecodeOptimizer
     Passes_.push_back({"Jump threading", [](std::vector<bytecode::Instruction>& code) -> bool {
                          bool changed = false;
                          // If jump target is another jump, redirect
-                         for (auto& instr : code)
+                         for (bytecode::Instruction& instr : code)
                            if (isJumpOp(instr.op))
                            {
                              std::int32_t target = instr.arg;
@@ -97,5 +97,6 @@ class BytecodeOptimizer
   static bool isJumpOp(bytecode::OpCode op);
   static bool isBinaryOp(bytecode::OpCode op);
 };  // BytecodeOptimizer
+
 }
 }

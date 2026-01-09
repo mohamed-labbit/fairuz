@@ -49,13 +49,13 @@ void ControlFlowGraph::computeLiveness()
 
     for (std::int32_t i = Blocks_.size() - 1; i >= 0; --i)
     {
-      auto& block = Blocks_[i];
+      ControlFlowGraph::BasicBlock& block = Blocks_[i];
       // liveOut = union of successors' liveIn
-      std::unordered_set<string_type> newLiveOut;
+      std::unordered_set<StringType> newLiveOut;
       for (std::int32_t succ : block.successors) newLiveOut.insert(Blocks_[succ].LiveIn.begin(), Blocks_[succ].LiveIn.end());
       // liveIn = use ∪ (liveOut - def)
-      std::unordered_set<string_type> newLiveIn = block.UseVars;
-      for (const string_type& var : newLiveOut)
+      std::unordered_set<StringType> newLiveIn = block.UseVars;
+      for (const StringType& var : newLiveOut)
         if (!block.DefVars.count(var)) newLiveIn.insert(var);
       if (newLiveIn != block.LiveIn || newLiveOut != block.LiveOut)
       {

@@ -10,25 +10,25 @@
 namespace mylang {
 namespace util {
 
-static inline bool is_whitespace(wchar_t ch) { return ch == u' ' || ch == u'\t' || ch == u'\r'; }
+static inline bool isWhitespace(wchar_t ch) { return ch == u' ' || ch == u'\t' || ch == u'\r'; }
 
-static inline bool is_operator_char(wchar_t ch)
+static inline bool isOperator(wchar_t ch)
 {
   static constexpr std::u16string_view ops = u"=<>!+-|&*/";
   return ops.find(ch) != std::u16string_view::npos;
 }
 
-static inline bool is_symbol_char(wchar_t ch)
+static inline bool isSymbol(wchar_t ch)
 {
   static constexpr std::u16string_view syms = u",[]().:";
   return syms.find(ch) != std::u16string_view::npos;
 }
 
-static inline bool isalpha_arabic(const wchar_t c) { return (c >= 0x0600 && c <= 0x06FF); }
+static inline bool isalphaArabic(const wchar_t c) { return (c >= 0x0600 && c <= 0x06FF); }
 
 struct U16StringHash
 {
-  std::size_t operator()(const string_type& s) const noexcept
+  std::size_t operator()(const StringType& s) const noexcept
   {
     // FNV-1a hash (simple, fast, decent distribution)
     std::size_t hash = 1469598103934665603ull;  // 64-bit FNV offset basis
@@ -43,14 +43,14 @@ struct U16StringHash
 
 struct U16StringEqual
 {
-  bool operator()(const string_type& a, const string_type& b) const noexcept { return a == b; }
+  bool operator()(const StringType& a, const StringType& b) const noexcept { return a == b; }
 };
 
 // utility function to parallelize the process of conversion
-static string_type buffer_toU16_string(const std::vector<char>& buf)
+static StringType bufferToU16String(const std::vector<char>& buf)
 {
   if (buf.empty()) return u"";
-  string_type ret = u"";
+  StringType ret = u"";
   ret.resize(buf.size());
   const char* __restrict bptr = buf.data();
   char16_t* __restrict rptr = ret.data();

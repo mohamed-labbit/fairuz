@@ -29,7 +29,7 @@ enum class FileManagerError {
 };
 
 /// @brief Convert error code to human-readable string
-constexpr const char* to_string(FileManagerError error) noexcept
+constexpr const char* toString(FileManagerError error) noexcept
 {
   switch (error)
   {
@@ -105,17 +105,17 @@ class FileManager
   void seekToChar(const std::size_t CharOffset);
   void seekToLine(const std::size_t line_number);
 
-  string_type readWindow(const std::size_t size);
-  string_type readWindowInternal(const std::size_t size);
-  string_type readLine(const std::size_t line_number);
-  string_type readNextLine();
-  std::vector<string_type> readLines(const std::size_t start, const std::size_t count);
-  string_type readAll();
+  StringType readWindow(const std::size_t size);
+  StringType readWindowInternal(const std::size_t size);
+  StringType readLine(const std::size_t line_number);
+  StringType readNextLine();
+  std::vector<StringType> readLines(const std::size_t start, const std::size_t count);
+  StringType readAll();
   void refreshStats();
   std::size_t getLineCount();
   std::size_t getCharCount();
   char16_t peekChar(const std::size_t CharOffset);
-  string_type peekRange(const std::size_t start_offset, const std::size_t length);
+  StringType peekRange(const std::size_t start_offset, const std::size_t length);
   std::string getPath() const noexcept;
   std::size_t remaining() { return static_cast<std::size_t>(Stream_.tellg()) - Context_.ByteOffset; }
   std::size_t fileSize() { return static_cast<std::size_t>(Stream_.tellg()); }

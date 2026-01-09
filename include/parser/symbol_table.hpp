@@ -20,7 +20,7 @@ class SymbolTable
 
   struct Symbol
   {
-    string_type name;
+    StringType name;
     SymbolType SymbolType;
     DataType_t DataType;
     bool IsConstant = false;
@@ -35,23 +35,23 @@ class SymbolTable
     std::unordered_set<DataType_t> PossibleTypes;
   };
 
-  SymbolTable* parent = nullptr;
+  SymbolTable* Parent_ = nullptr;
 
  private:
-  std::unordered_map<string_type, Symbol> Symbols_;
+  std::unordered_map<StringType, Symbol> Symbols_;
   std::vector<std::unique_ptr<SymbolTable>> Children_;
-  unsigned ScopeLevel_ = 0;
+  unsigned ScopeLevel_ {0};
 
  public:
   explicit SymbolTable(SymbolTable* p = nullptr, std::int32_t level = 0);
-  void define(const string_type& name, Symbol symbol);
-  Symbol* lookup(const string_type& name);
-  Symbol* lookupLocal(const string_type& name);
-  bool isDefined(const string_type& name) const;
-  void markUsed(const string_type& name, std::int32_t line);
+  void define(const StringType& name, Symbol symbol);
+  Symbol* lookup(const StringType& name);
+  Symbol* lookupLocal(const StringType& name);
+  bool isDefined(const StringType& name) const;
+  void markUsed(const StringType& name, std::int32_t line);
   SymbolTable* createChild();
   std::vector<Symbol*> getUnusedSymbols();
-  const std::unordered_map<string_type, Symbol>& getSymbols() const;
+  const std::unordered_map<StringType, Symbol>& getSymbols() const;
 };
 
 }

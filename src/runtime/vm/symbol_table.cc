@@ -40,10 +40,10 @@ typename CompilerSymbolTable::Symbol* CompilerSymbolTable::resolve(const std::st
       // Create closure reference
       Symbol closureSym;
       closureSym.name = name;
-      closureSym.index = FreeVars.size();
+      closureSym.index = FreeVars_.size();
       closureSym.scope = SymbolScope::CLOSURE;
       closureSym.IsUsed = true;
-      FreeVars.push_back(name);
+      FreeVars_.push_back(name);
       Symbols_[name] = closureSym;
       return &Symbols_[name];
     }
@@ -51,7 +51,7 @@ typename CompilerSymbolTable::Symbol* CompilerSymbolTable::resolve(const std::st
   return nullptr;
 }
 
-const std::vector<std::string>& CompilerSymbolTable::getFreeVars() const { return FreeVars; }
+const std::vector<std::string>& CompilerSymbolTable::getFreeVars() const { return FreeVars_; }
 
 std::int32_t CompilerSymbolTable::getLocalCount() const { return NextIndex_; }
 

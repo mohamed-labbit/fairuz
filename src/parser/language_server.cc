@@ -4,24 +4,24 @@
 namespace mylang {
 namespace parser {
 
-LanguageServer::Hover LanguageServer::getHover(const string_type& source, LanguageServer::Position pos)
+LanguageServer::Hover LanguageServer::getHover(const StringType& source, LanguageServer::Position pos)
 {
   Hover hover;
   hover.contents = u"Variable: x\nType: int";
   return hover;
 }
 
-LanguageServer::Position LanguageServer::getDefinition(const string_type& source, Position pos) { return {0, 0}; }
+LanguageServer::Position LanguageServer::getDefinition(const StringType& source, Position pos) { return {0, 0}; }
 
-std::vector<LanguageServer::Range> LanguageServer::getReferences(const string_type& source, Position pos) { return {}; }
+std::vector<LanguageServer::Range> LanguageServer::getReferences(const StringType& source, Position pos) { return {}; }
 
-std::unordered_map<string_type, string_type> LanguageServer::rename(const string_type& source, Position pos, const string_type& newName)
+std::unordered_map<StringType, StringType> LanguageServer::rename(const StringType& source, Position pos, const StringType& newName)
 {
   return {};
 }
 
 /*
-std::vector<LanguageServer::CompletionItem> LanguageServer::getCompletions(const string_type& source, Position pos)
+std::vector<LanguageServer::CompletionItem> LanguageServer::getCompletions(const StringType& source, Position pos)
 {
     std::vector<CompletionItem> items;
     // Parse and get symbol table

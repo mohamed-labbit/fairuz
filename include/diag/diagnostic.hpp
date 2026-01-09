@@ -24,23 +24,23 @@ class DiagnosticEngine
     Severity severity;
     std::int32_t line, column;
     std::int32_t length;
-    string_type message;
-    string_type code;  // Error code like E0001
-    std::vector<string_type> suggestions;
-    std::vector<std::pair<std::int32_t, string_type>> notes;  // Additional context
+    StringType message;
+    StringType code;  // Error code like E0001
+    std::vector<StringType> suggestions;
+    std::vector<std::pair<std::int32_t, StringType>> notes;  // Additional context
   };
 
   DiagnosticEngine() = default;
 
-  void emit(const string_type& msg, Severity sv = Severity::ERROR) { emit_error(utf8::utf16to8(msg), sv); }
-  void emit(const std::string& msg, Severity sv = Severity::ERROR) { emit_error(msg, sv); }
+  void emit(const StringType& msg, Severity sv = Severity::ERROR) { emitError(utf8::utf16to8(msg), sv); }
+  void emit(const std::string& msg, Severity sv = Severity::ERROR) { emitError(msg, sv); }
 
-  [[noreturn]] void panic(const string_type& msg) { _panic(utf8::utf16to8(msg)); }
+  [[noreturn]] void panic(const StringType& msg) { _panic(utf8::utf16to8(msg)); }
   [[noreturn]] void panic(const std::string& msg) { _panic(msg); }
 
-  void setSource(const string_type& source) { sourceCode_ = source; }
+  void setSource(const StringType& source) { sourceCode_ = source; }
 
-  void report(Severity sev, std::int32_t line, std::int32_t col, std::int32_t len, const string_type& msg, const string_type& code = u"")
+  void report(Severity sev, std::int32_t line, std::int32_t col, std::int32_t len, const StringType& msg, const StringType& code = u"")
   {
     Diagnostic diag;
     diag.severity = sev;
@@ -52,12 +52,12 @@ class DiagnosticEngine
     diagnostics_.push_back(diag);
   }
 
-  void addSuggestion(const string_type& suggestion)
+  void addSuggestion(const StringType& suggestion)
   {
     if (!diagnostics_.empty()) diagnostics_.back().suggestions.push_back(suggestion);
   }
 
-  void addNote(std::int32_t line, const string_type& note)
+  void addNote(std::int32_t line, const StringType& note)
   {
     if (!diagnostics_.empty()) diagnostics_.back().notes.push_back({line, note});
   }
@@ -68,7 +68,7 @@ class DiagnosticEngine
     ss << "[\n";
     for (std::size_t i = 0; i < diagnostics_.size(); i++)
     {
-      const auto& diag = diagnostics_[i];
+      const Diagnostic& diag = diagnostics_[i];
       ss << "  {\n";
       ss << "    \"severity\": " << static_cast<std::int32_t>(diag.severity) << ",\n";
       ss << "    \"line\": " << diag.line << ",\n";
@@ -86,10 +86,10 @@ class DiagnosticEngine
   // Beautiful terminal output with colors
   void prettyPrint() const
   {
-    for (const auto& diag : diagnostics_)
+    for (const Diagnostic& diag : diagnostics_)
     {
-      string_type sevStr;
-      string_type color;
+      StringType sevStr;
+      StringType color;
 
       switch (diag.severity)
       {
@@ -117,7 +117,7 @@ class DiagnosticEngine
       // Show source line
       std::cout << "  --> line " << diag.line << ":" << diag.column << "\n";
       // Extract and show the problematic line
-      auto lines = splitLines(utf8::utf16to8(sourceCode_));
+      std::vector<std::string> lines = splitLines(utf8::utf16to8(sourceCode_));
       if (diag.line > 0 && diag.line <= lines.size())
       {
         std::cout << "   |\n";
@@ -129,7 +129,7 @@ class DiagnosticEngine
       if (!diag.suggestions.empty())
       {
         std::cout << utf8::utf16to8(Color::MAGENTA) << "Help" << utf8::utf16to8(Color::RESET) << std::endl;
-        for (const auto& sugg : diag.suggestions) std::cout << "    • " << utf8::utf16to8(sugg) << "\n";
+        for (const StringType& sugg : diag.suggestions) std::cout << "    • " << utf8::utf16to8(sugg) << "\n";
       }
       // Show notes
       for (const auto& [noteLine, noteMsg] : diag.notes)
@@ -143,9 +143,9 @@ class DiagnosticEngine
 
  private:
   std::vector<Diagnostic> diagnostics_;
-  string_type sourceCode_;
+  StringType sourceCode_;
 
-  void emit_error(const std::string& msg, Severity sv)
+  void emitError(const std::string& msg, Severity sv)
   {
     std::cerr << svToStr(sv) << ": " << msg << std::endl;
     if (sv == Severity::FATAL) throw std::runtime_error("");

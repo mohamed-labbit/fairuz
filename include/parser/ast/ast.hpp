@@ -45,15 +45,26 @@ class Expr;
 class Stmt;
 class BlockStmt;
 
-struct ASTNode
+class ASTNode
 {
-  unsigned line{};
-  unsigned column{};
+ private:
+  std::size_t Line_{};
+  std::size_t Column_{};
+
+ public:
   ASTNode() = default;
   ASTNode(const ASTNode&) = delete;
-  ASTNode& operator=(const ASTNode&) = delete;
   ASTNode(ASTNode&&) = delete;
+
+  ASTNode& operator=(const ASTNode&) = delete;
   ASTNode& operator=(ASTNode&&) = delete;
+
+  std::size_t getLine() const { return Line_; }
+  std::size_t getColumn() const { return Column_; }
+
+  void setLine(std::size_t l) { Line_ = l; }
+  void setColumn(std::size_t c) { Column_ = c; }
+
   virtual ~ASTNode() = default;
 };
 
@@ -64,19 +75,19 @@ class Expr: public ASTNode
 
  protected:
   Kind Kind_;
-  string_type Str_;
+  StringType Str_;
 
  public:
   explicit Expr() = default;
 
-  explicit Expr(string_type s) :
+  explicit Expr(StringType s) :
       Str_(s)
   {
     Kind_ = Kind::INVALID;
   }
 
-  void setStr(const string_type s) { Str_ = s; }
-  string_type getStr() const { return Str_; }
+  void setStr(const StringType s) { Str_ = s; }
+  StringType getStr() const { return Str_; }
   Kind getKind() const { return Kind_; }
 };
 
@@ -87,18 +98,12 @@ class Stmt: public ASTNode
 
  protected:
   Kind Kind_;
-  // string_type Str_;
 
  public:
   explicit Stmt() = default;
 
-  explicit Stmt(string_type s)
-  // : Str_(s)
-  {
-    Kind_ = Kind::INVALID;
-  }
+  explicit Stmt(StringType s) { Kind_ = Kind::INVALID; }
 
-  // string_type getStr() const { return Str_; }
   Kind getKind() const { return Kind_; }
 };
 
@@ -168,12 +173,12 @@ class LiteralExpr: public Expr
 
  private:
   Type Type_{Type::NONE};
-  string_type Literal_;
+  StringType Literal_;
 
  public:
   explicit LiteralExpr() = default;
 
-  explicit LiteralExpr(Type t, string_type lit) :
+  explicit LiteralExpr(Type t, StringType lit) :
       Type_(std::move(t)),
       Literal_(std::move(lit))
   {
@@ -185,7 +190,7 @@ class LiteralExpr: public Expr
   LiteralExpr(const LiteralExpr&) noexcept = delete;
   LiteralExpr& operator=(const LiteralExpr&) noexcept = delete;
 
-  string_type getValue() const { return Literal_; }
+  StringType getValue() const { return Literal_; }
   Type getType() const { return Type_; }
 };
 
@@ -200,7 +205,7 @@ class NameExpr: public Expr
     assert((Str_ != u"") && "'Str_' argument to NameExpr is null");
   }
 
-  explicit NameExpr(const string_type s) :
+  explicit NameExpr(const StringType s) :
       Expr(s)
   {
     assert(!Str_.empty() && "'Str_' argument to NameExpr is null");
@@ -210,7 +215,7 @@ class NameExpr: public Expr
   NameExpr(const NameExpr&) noexcept = delete;
   NameExpr& operator=(const NameExpr&) noexcept = delete;
 
-  string_type getValue() const { return Str_; }
+  StringType getValue() const { return Str_; }
 };
 
 class ListExpr: public Expr
@@ -232,7 +237,7 @@ class ListExpr: public Expr
     {
       std::stringstream os;
       os << std::hex;
-      for (auto a : Elements_) os << a << " ";
+      for (ast::Expr* a : Elements_) os << a << " ";
       diagnostic::engine.emit("args of ListExpr are " + os.str(), /*sv=*/diagnostic::DiagnosticEngine::Severity::NOTE);
     }
   }
@@ -287,6 +292,7 @@ class CallExpr: public Expr
   NameExpr* getCallee() const { return Callee_; }
   const std::vector<Expr*>& getArgs() const { return Args_->getElements(); }
   std::vector<Expr*>& getArgsMutable() { return Args_->getElementsMutable(); }
+  ListExpr* getArgsAsListExpr() { return Args_; }
 
   CallLocation getCallLocation() const { return CallLocation_; }
 };

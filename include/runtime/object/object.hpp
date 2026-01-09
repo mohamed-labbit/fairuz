@@ -48,7 +48,7 @@ class Value
   struct Function
   {
     std::int32_t CodeOffset;
-    std::vector<string_type> params;
+    std::vector<StringType> params;
     std::vector<Value> defaults;
     std::vector<Value> closure;  // Captured variables
   };
@@ -56,14 +56,14 @@ class Value
   struct NativeFunction
   {
     std::function<Value(const std::vector<Value>&)> func;
-    string_type name;
+    StringType name;
     std::int32_t arity;
   };
 
   struct Object
   {
-    string_type className;
-    std::unordered_map<string_type, Value> attributes;
+    StringType className;
+    std::unordered_map<StringType, Value> attributes;
     std::shared_ptr<Value> parent;  // For inheritance
   };
 
@@ -76,10 +76,10 @@ class Value
   std::variant<std::monostate,                                           // None
                std::int64_t,                                             // Int
                double,                                                   // Float
-               std::shared_ptr<string_type>,                             // String (shared for efficiency)
+               std::shared_ptr<StringType>,                             // String (shared for efficiency)
                bool,                                                     // Bool
                std::shared_ptr<std::vector<Value>>,                      // List (shared)
-               std::shared_ptr<std::unordered_map<string_type, Value>>,  // Dict
+               std::shared_ptr<std::unordered_map<StringType, Value>>,  // Dict
                Function,                                                 // User function
                NativeFunction,                                           // Native C++ function
                Object,                                                   // Object instance
@@ -105,9 +105,9 @@ class Value
       Data_(v)
   {
   }
-  Value(const string_type& v) :
+  Value(const StringType& v) :
       Type_(Type::STRING),
-      Data_(std::make_shared<string_type>(v))
+      Data_(std::make_shared<StringType>(v))
   {
   }
   Value(bool v) :
@@ -138,10 +138,10 @@ class Value
   void setData(const std::variant<std::monostate,                                           // None
                                   std::int64_t,                                             // Int
                                   double,                                                   // Float
-                                  std::shared_ptr<string_type>,                             // String (shared for efficiency)
+                                  std::shared_ptr<StringType>,                             // String (shared for efficiency)
                                   bool,                                                     // Bool
                                   std::shared_ptr<std::vector<Value>>,                      // List (shared)
-                                  std::shared_ptr<std::unordered_map<string_type, Value>>,  // Dict
+                                  std::shared_ptr<std::unordered_map<StringType, Value>>,  // Dict
                                   Function,                                                 // User function
                                   NativeFunction,                                           // Native C++ function
                                   Object,                                                   // Object instance
@@ -166,18 +166,18 @@ class Value
   // Getters with safety
   std::int64_t asInt() const;
   double asFloat() const;
-  const string_type& asString() const;
+  const StringType& asString() const;
   bool asBool() const;
   std::vector<Value>& asList();
   const std::vector<Value>& asList() const;
-  std::unordered_map<string_type, Value>& asDict() const;
+  std::unordered_map<StringType, Value>& asDict() const;
   Function& asFunction();
   NativeFunction& asNativeFunction();
   // Type conversions
   double toFloat() const;
   std::int64_t toInt() const;
   bool toBool() const;
-  string_type toString() const;
+  StringType toString() const;
   std::string repr() const;
   // Hash for use in dictionaries
   std::size_t hash() const;

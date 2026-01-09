@@ -18,7 +18,7 @@ class SymbolTable
   using Entry = SymbolTableEntry;
 
   // Each scope = a map from lexeme to entry
-  using Scope = std::unordered_map<string_type, Entry>;
+  using Scope = std::unordered_map<StringType, Entry>;
 
   SymbolTable()
   {
@@ -38,7 +38,7 @@ class SymbolTable
   // Insert symbol into current scope
   // Returns false if symbol already exists in current scope
   // Returns true if successfully inserted
-  bool insert(const string_type& lexeme, SymbolType st)
+  bool insert(const StringType& lexeme, SymbolType st)
   {
     Scope& current_scope = this->Scopes_.back();
     // Check if symbol already exists in current scope
@@ -50,7 +50,7 @@ class SymbolTable
   }
 
   // Lookup symbol (searches from innermost → outermost)
-  std::optional<Entry> lookup(const string_type& name) const
+  std::optional<Entry> lookup(const StringType& name) const
   {
     for (auto it = this->Scopes_.rbegin(); it != this->Scopes_.rend(); ++it)
     {
@@ -61,10 +61,10 @@ class SymbolTable
   }
 
   // Check if a symbol is visible in the current scope chain
-  bool isInScope(const string_type& name) const { return lookup(name).has_value(); }
+  bool isInScope(const StringType& name) const { return lookup(name).has_value(); }
 
   // Check if a symbol exists at a specific scope level
-  bool isInScope(const string_type& name, std::optional<std::size_t> _scope) const
+  bool isInScope(const StringType& name, std::optional<std::size_t> _scope) const
   {
     // Default: check if symbol is visible anywhere in scope chain
     if (_scope == std::nullopt) return lookup(name).has_value();
@@ -84,9 +84,9 @@ class SymbolTable
     std::vector<Entry> symbols;
     if (!this->Scopes_.empty())
     {
-      const auto& current = this->Scopes_.back();
+      const Scope& current = this->Scopes_.back();
       symbols.reserve(current.size());
-      for (const auto& pair : current) symbols.push_back(pair.second);
+      for (const std::pair<StringType, Entry>& pair : current) symbols.push_back(pair.second);
     }
     return symbols;
   }
@@ -96,7 +96,7 @@ class SymbolTable
   std::vector<Entry> getAllVisibleSymbols() const
   {
     std::vector<Entry> symbols;
-    std::unordered_set<string_type> seen;
+    std::unordered_set<StringType> seen;
     // Iterate from innermost to outermost
     for (auto it = this->Scopes_.rbegin(); it != this->Scopes_.rend(); ++it)
       for (const auto& pair : *it)
@@ -115,9 +115,9 @@ class SymbolTable
     std::vector<Entry> symbols;
     if (level < this->Scopes_.size())
     {
-      const auto& scope = this->Scopes_[level];
+      const Scope& scope = this->Scopes_[level];
       symbols.reserve(scope.size());
-      for (const auto& pair : scope) symbols.push_back(pair.second);
+      for (const std::pair<StringType, Entry>& pair : scope) symbols.push_back(pair.second);
     }
     return symbols;
   }

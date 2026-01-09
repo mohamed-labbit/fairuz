@@ -13,14 +13,14 @@ class ParserProfiler
  private:
   struct Timing
   {
-    string_type phase;
+    StringType phase;
     double milliseconds;
   };
 
   std::vector<Timing> Timings_;
 
  public:
-  void recordPhase(const string_type& phase, double ms);
+  void recordPhase(const StringType& phase, double ms);
 
   void printReport() const;
 };

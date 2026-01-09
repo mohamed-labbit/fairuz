@@ -18,9 +18,9 @@ class SemanticAnalyzer
   {
     enum class Severity { ERROR, WARNING, INFO };
     Severity severity;
-    string_type message;
+    StringType message;
     std::int32_t line;
-    string_type suggestion;
+    StringType suggestion;
   };
 
  private:
@@ -31,7 +31,7 @@ class SemanticAnalyzer
 
   // Type inference engine
   SymbolTable::DataType_t inferType(const ast::Expr* expr);
-  void reportIssue(Issue::Severity sev, const string_type& msg, std::int32_t line, const string_type& sugg = u"");
+  void reportIssue(Issue::Severity sev, const StringType& msg, std::int32_t line, const StringType& sugg = u"");
   void analyzeExpr(const ast::Expr* expr);
   void analyzeStmt(const ast::Stmt* stmt);
 

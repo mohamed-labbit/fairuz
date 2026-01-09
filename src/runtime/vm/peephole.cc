@@ -121,7 +121,7 @@ void PeepholeOptimizer::printReport() const
     return;
   }
   std::cout << "  Peephole Optimizations:\n";
-  for (const auto& opt : Optimizations_) std::cout << "    • " << opt.name << ": " << opt.name << " replacements\n";
+  for (const PeepholeOptimizer::Optimization& opt : Optimizations_) std::cout << "    • " << opt.name << ": " << opt.name << " replacements\n";
 }
 
 }

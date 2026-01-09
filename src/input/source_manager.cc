@@ -70,7 +70,7 @@ char16_t SourceManager::peek()
 #endif
   return this->InputBuffer_.peek();
   if (!Current_) return BUFFER_END;
-  auto* forward = Current_ + 1;
+  char16_t* forward = Current_ + 1;
   if (!forward) return BUFFER_END;
   return *forward;
 }

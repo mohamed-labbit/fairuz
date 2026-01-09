@@ -29,9 +29,9 @@ namespace parser {
 class ParseError: public std::runtime_error
 {
  public:
-  std::int32_t Line_, Column_;            // Source location of the error
-  string_type Context_;                   // Source line where the error occurred
-  std::vector<string_type> Suggestions_;  // Optional recovery suggestions
+  std::int32_t Line_, Column_;           // Source location of the error
+  StringType Context_;                   // Source line where the error occurred
+  std::vector<StringType> Suggestions_;  // Optional recovery suggestions
 
   /**
    * @brief Constructs a parse error.
@@ -42,7 +42,7 @@ class ParseError: public std::runtime_error
    * @param ctx  Optional source line context
    * @param sugg Optional list of suggestions
    */
-  ParseError(const string_type& msg, unsigned l, unsigned c, string_type ctx = u"", std::vector<string_type> sugg = {}) :
+  ParseError(const StringType& msg, unsigned l, unsigned c, StringType ctx = u"", std::vector<StringType> sugg = {}) :
       std::runtime_error(utf8::utf16to8(msg)),
       Line_(l),
       Column_(c),
@@ -62,7 +62,7 @@ class ParseError: public std::runtime_error
    *
    * @return UTF-16 formatted error message
    */
-  string_type format() const
+  StringType format() const
   {
     std::stringstream ss;
     ss << "Line " << Line_ << ":" << Column_ << " - " << what() << "\n";
@@ -76,7 +76,7 @@ class ParseError: public std::runtime_error
     if (!Suggestions_.empty())
     {
       ss << "Suggestions:\n";
-      for (const string_type& s : Suggestions_) ss << "  - " << utf8::utf16to8(s) << "\n";
+      for (const StringType& s : Suggestions_) ss << "  - " << utf8::utf16to8(s) << "\n";
     }
 
     return utf8::utf8to16(ss.str());
@@ -142,7 +142,11 @@ class Parser
    * @return Vector of parsed statement AST nodes
    */
   // std::vector<ast::Stmt*> parse();
-
+  /// @todo not sure if these should be private
+  /// @brief check wether or not we reached the end of the file so not to bother lookin for stuff to parse
+  bool weDone() const;
+  /// @brief Checks whether the current token is of the given type
+  bool check(lex::tok::TokenType type);
  private:
   lex::Lexer Lexer_;  // Underlying lexer providing tokens
 
@@ -156,27 +160,23 @@ class Parser
   lex::tok::Token advance();
   /// @brief Matches and consumes a token if it is of the given type
   bool match(const lex::tok::TokenType type);
-  /// @brief Checks whether the current token is of the given type
-  bool check(lex::tok::TokenType type);
   /**
    * @brief Consumes a token of the expected type or throws a ParseError.
    *
    * @param type Expected token type
    * @param msg  Error message if the token does not match
    */
-  lex::tok::Token consume(lex::tok::TokenType type, const string_type& msg);
+  lex::tok::Token consume(lex::tok::TokenType type, const StringType& msg);
   /// @brief Skips newline tokens during parsing
   void skipNewlines();
   /// @brief Retrieves a source line for diagnostics
-  string_type getSourceLine(std::size_t line);
+  StringType getSourceLine(std::size_t line);
   /// @brief Returns precedence of logical operators
   int getLogicalOperatorPrecedence(lex::tok::TokenType tt);
   /// @brief Returns precedence of arithmetic operators
   int getArithmeticOperatorPrecedence(const lex::tok::TokenType type);
   /// @brief Enters a new scope (currently a no-op)
   void enterScope() {}
-  /// @brief check wether or not we reached the end of the file so not to bother lookin for stuff to parse
-  bool weDone() const;
 };
 
 }  // namespace parser

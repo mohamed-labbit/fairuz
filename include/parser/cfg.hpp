@@ -22,10 +22,10 @@ class ControlFlowGraph
     std::vector<std::int32_t> successors;
     bool IsReachable = false;
     // Data flow analysis
-    std::unordered_set<string_type> DefVars;  // Variables defined
-    std::unordered_set<string_type> UseVars;  // Variables used
-    std::unordered_set<string_type> LiveIn;   // Live at entry
-    std::unordered_set<string_type> LiveOut;  // Live at exit
+    std::unordered_set<StringType> DefVars;  // Variables defined
+    std::unordered_set<StringType> UseVars;  // Variables used
+    std::unordered_set<StringType> LiveIn;   // Live at entry
+    std::unordered_set<StringType> LiveOut;  // Live at exit
   };
 
  private:

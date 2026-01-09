@@ -30,7 +30,7 @@ std::int32_t ConstantPool::addConstant(const object::Value& val)
 
   if (val.isString())
   {
-    const string_type& v = val.asString();
+    const StringType& v = val.asString();
     auto it = StringConstants_.find(v);
     if (it != StringConstants_.end()) return it->second;
     std::int32_t idx = Constants_.size();

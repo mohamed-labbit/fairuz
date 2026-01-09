@@ -10,7 +10,7 @@ bool TypeSystem::Type::operator==(const Type& other) const
   return base == other.base;  // Simplified
 }
 
-string_type TypeSystem::Type::toString() const
+StringType TypeSystem::Type::toString() const
 {
   switch (base)
   {
@@ -33,7 +33,7 @@ string_type TypeSystem::Type::toString() const
 
 std::shared_ptr<TypeSystem::Type> TypeSystem::TypeInference::freshTypeVar()
 {
-  auto t = std::make_shared<Type>();
+  std::shared_ptr<TypeSystem::Type> t = std::make_shared<Type>();
   t->base = BaseType::Any;
   return t;
 }
@@ -55,15 +55,15 @@ void TypeSystem::TypeInference::unify(std::shared_ptr<TypeSystem::Type> t1, std:
   }
 }
 
-std::shared_ptr<TypeSystem::Type> TypeSystem::TypeInference::inferExpr(const ast::Expr* expr)
+std::shared_ptr<typename TypeSystem::Type> TypeSystem::TypeInference::inferExpr(const ast::Expr* expr)
 {
   if (!expr) return std::make_shared<Type>();
 
   switch (expr->getKind())
   {
   case ast::Expr::Kind::LITERAL : {
-    auto* lit = static_cast<const ast::LiteralExpr*>(expr);
-    auto t = std::make_shared<Type>();
+    const ast::LiteralExpr* lit = static_cast<const ast::LiteralExpr*>(expr);
+    std::shared_ptr<Type> t = std::make_shared<Type>();
     switch (lit->getType())
     {
     case ast::LiteralExpr::Type::NUMBER : t->base = lit->getValue().find('.') != std::string::npos ? BaseType::Float : BaseType::Int; break;
@@ -74,9 +74,9 @@ std::shared_ptr<TypeSystem::Type> TypeSystem::TypeInference::inferExpr(const ast
     return t;
   }
   case ast::Expr::Kind::BINARY : {
-    auto* bin = static_cast<const ast::BinaryExpr*>(expr);
-    auto leftType = inferExpr(bin->getLeft());
-    auto rightType = inferExpr(bin->getRight());
+    const ast::BinaryExpr* bin = static_cast<const ast::BinaryExpr*>(expr);
+    std::shared_ptr<Type> leftType = inferExpr(bin->getLeft());
+    std::shared_ptr<Type> rightType = inferExpr(bin->getRight());
     unify(leftType, rightType);
     // Result type based on operator
     if (bin->getOperator() == lex::tok::TokenType::OP_PLUS || bin->getOperator() == lex::tok::TokenType::OP_MINUS
@@ -87,19 +87,19 @@ std::shared_ptr<TypeSystem::Type> TypeSystem::TypeInference::inferExpr(const ast
     else if (bin->getOperator() == lex::tok::TokenType::OP_EQ || bin->getOperator() == lex::tok::TokenType::OP_NEQ
              || bin->getOperator() == lex::tok::TokenType::OP_LT || bin->getOperator() == lex::tok::TokenType::OP_GT)
     {
-      auto t = std::make_shared<Type>();
+      std::shared_ptr<Type> t = std::make_shared<Type>();
       t->base = BaseType::Bool;
       return t;
     }
     return leftType;
   }
   case ast::Expr::Kind::LIST : {
-    auto* list = static_cast<const ast::ListExpr*>(expr);
-    auto t = std::make_shared<Type>();
+    const ast::ListExpr* list = static_cast<const ast::ListExpr*>(expr);
+    std::shared_ptr<Type> t = std::make_shared<Type>();
     t->base = BaseType::List;
     if (!list->getElements().empty())
     {
-      auto elemType = inferExpr(list->getElements()[0]);
+      std::shared_ptr<Type> elemType = inferExpr(list->getElements()[0]);
       t->TypeParams.push_back(elemType);
     }
     return t;
