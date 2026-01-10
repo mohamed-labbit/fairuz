@@ -138,7 +138,12 @@ void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
     sym.SymbolType = SymbolTable::SymbolType::VARIABLE;
     sym.DataType = type;
     sym.DefinitionLine = stmt->getLine();
-    CurrentScope_->define(assign->getTarget()->getValue(), sym);
+    ast::Expr* target = assign->getTarget();
+    assert(target);
+    StringType target_name = u"";
+    /// TODO: check other type of target expressions
+    if (target->getKind() == ast::Expr::Kind::NAME) target_name = dynamic_cast<ast::NameExpr*>(target)->getValue();
+    CurrentScope_->define(target_name, sym);
     break;
   }
 
@@ -202,12 +207,12 @@ void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
     CurrentScope_->define(funcDef->getName()->getValue(), funcSym);
     // Create function scope
     CurrentScope_ = CurrentScope_->createChild();
-    for (const ast::NameExpr* const& param : funcDef->getParameters())
+    for (const ast::Expr* const& param : funcDef->getParameters())
     {
       SymbolTable::Symbol paramSym;
       paramSym.SymbolType = SymbolTable::SymbolType::VARIABLE;
       paramSym.DataType = SymbolTable::DataType_t::ANY;
-      CurrentScope_->define(param->getValue(), paramSym);
+      CurrentScope_->define(static_cast<const ast::NameExpr*>(param)->getValue(), paramSym);
     }
     for (const ast::Stmt* const& s : funcDef->getBody()->getStatements()) analyzeStmt(s);
     // Check for missing return statement

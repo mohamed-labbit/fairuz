@@ -116,10 +116,14 @@ class Parser
   /// @brief Constructs a parser from a pre-existing token sequence
   explicit Parser(std::vector<lex::tok::Token> seq, std::optional<std::size_t> s = std::nullopt);
 
+  ast::Expr* parseParenthesizedExprContent();
+
   // Expression parsing entry points
 
   /// @brief does exactly what it says
-  ast::ListExpr* parseFunctionArguments() { return static_cast<ast::ListExpr*>(parseParenthesizedExpr()); }
+  ast::ListExpr* parseFunctionArguments();
+
+  ast::Expr* parseCallExpr(ast::Expr* callee);
 
   /// @brief Parses a primary expression
   ast::Expr* parsePrimary();
@@ -246,7 +250,7 @@ class Parser
   void skipNewlines() { while (match(lex::tok::TokenType::NEWLINE)); }
 
   /// @brief Retrieves a source line for diagnostics
-  StringType Parser::getSourceLine(std::size_t line)
+  StringType getSourceLine(std::size_t line)
   {
     /// TODO: Use the file manager to retrieve actual source line
     return peek().lexeme();

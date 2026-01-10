@@ -251,7 +251,12 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     // Compile value
     compileExpr(assign->getValue());
     // Store to variable
-    CompilerSymbolTable::Symbol* sym = CurrentScope_->define(utf8::utf16to8(assign->getTarget()->getValue()));
+    parser::ast::Expr* target = assign->getTarget();
+    assert(target);
+    StringType target_name = u"";
+    /// TODO: check other type of target expressions
+    if (target->getKind() == parser::ast::Expr::Kind::NAME) target_name = dynamic_cast<parser::ast::NameExpr*>(target)->getValue();
+    CompilerSymbolTable::Symbol* sym = CurrentScope_->define(utf8::utf16to8(target_name));
     if (sym->scope == CompilerSymbolTable::SymbolScope::GLOBAL)
       emitInstruction(bytecode::OpCode::STORE_GLOBAL, sym->index, stmt->getLine());
     else
@@ -353,7 +358,8 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     // Enter new scope for function
     enterScope();
     // Define parameters
-    for (const parser::ast::NameExpr* param : funcDef->getParameters()) CurrentScope_->define(utf8::utf16to8(param->getValue()), true);
+    for (const parser::ast::Expr* param : funcDef->getParameters())
+      CurrentScope_->define(utf8::utf16to8(static_cast<const parser::ast::NameExpr*>(param)->getValue()), true);
     // Save current compilation state
     std::vector<bytecode::Instruction>&& savedInstructions = std::move(Unit_.instructions);
     ConstantPool savedConstants = Constants_;

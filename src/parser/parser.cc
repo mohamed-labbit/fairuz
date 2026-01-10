@@ -11,19 +11,25 @@ namespace parser {
 // REMOVED: parseUnary() - this was unused and buggy
 // The correct unary parsing is in parseUnaryExpr()
 
+/*
 ast::Expr* Parser::parseParenthesizedExpr()
 {
   // Handle empty parentheses - empty tuple
-  if (check(lex::tok::TokenType::RPAREN))
-  {
+  if (!check(lex::tok::TokenType::LPAREN))
+    return nullptr;
+    else
+    advance();
+    
+    if (check(lex::tok::TokenType::RPAREN))
+    {
     advance();
     std::vector<ast::Expr*> no_elems;
-    return static_cast<ast::Expr*>(ast::AST_allocator.make<ast::ListExpr>(no_elems));
+    return dynamic_cast<ast::Expr*>(ast::AST_allocator.make<ast::ListExpr>(no_elems));
   }
-
+  
   ast::Expr* expr = parseExpression();
   if (!expr) return nullptr;
-
+  
   // Check for tuple (comma-separated values)
   if (check(lex::tok::TokenType::COMMA))
   {
@@ -37,25 +43,25 @@ ast::Expr* Parser::parseParenthesizedExpr()
       if (!elem) return nullptr;
       elements.push_back(elem);
     }
-
+    
     consume(lex::tok::TokenType::RPAREN, u"Expected ')' after tuple");
-    return static_cast<ast::Expr*>(ast::AST_allocator.make<ast::ListExpr>(elements));
+    return dynamic_cast<ast::Expr*>(ast::AST_allocator.make<ast::ListExpr>(elements));
   }
 
   consume(lex::tok::TokenType::RPAREN, u"Expected ')' after expression");
-
+  
   // Handle nested call expression: (expr)(args)
   while (check(lex::tok::TokenType::LPAREN))
   {
     advance();  // consume '('
     std::vector<ast::Expr*> args;
-
+    
     if (!check(lex::tok::TokenType::RPAREN))
     {
       ast::Expr* arg = parseExpression();
       if (!arg) return nullptr;
       args.push_back(arg);
-
+      
       while (match(lex::tok::TokenType::COMMA))
       {
         if (check(lex::tok::TokenType::RPAREN)) break;  // trailing comma
@@ -64,20 +70,136 @@ ast::Expr* Parser::parseParenthesizedExpr()
         args.push_back(arg);
       }
     }
+    
+    consume(lex::tok::TokenType::RPAREN, u"Expected ')' after arguments");
+    
+    // Create call expression
+    ast::NameExpr* callee = dynamic_cast<ast::NameExpr*>(expr);
+    if (callee == nullptr)
+    // If expr is not a NameExpr, treat as generic callable
+    callee = ast::AST_allocator.make<ast::NameExpr>(u"<lambda>");
+    
+    ast::ListExpr* args_expr = ast::AST_allocator.make<ast::ListExpr>(args);
+    ast::CallExpr* call_expr = ast::AST_allocator.make<ast::CallExpr>(callee, args_expr);
+    expr = dynamic_cast<ast::Expr*>(call_expr);
+  }
+  
+  return ast::AST_allocator.make<ast::ListExpr>(&expr);
+}
+
+ast::Expr* Parser::parseParenthesizedExpr()
+{
+  consume(lex::tok::TokenType::LPAREN, u"Expected '('");
+  
+  ast::Expr* expr = parseParenthesizedExprContent();
+  if (!expr) return nullptr;
+  
+    consume(lex::tok::TokenType::RPAREN, u"Expected ')' after expression");
+    
+    // Check for immediate call: (expr)(args)
+    return parseCallExpr(expr);
+}
+*/
+  
+ast::Expr* Parser::parseParenthesizedExpr()
+{
+    consume(lex::tok::TokenType::LPAREN, u"Expected '('");
+
+    std::vector<ast::Expr*> elements;
+
+    // If empty parentheses
+    if (!check(lex::tok::TokenType::RPAREN))
+    {
+        do
+        {
+            ast::Expr* elem = parseExpression();
+            if (!elem) return nullptr;
+            elements.push_back(elem);
+        } while (match(lex::tok::TokenType::COMMA));
+    }
+
+    consume(lex::tok::TokenType::RPAREN, u"Expected ')' after expression(s)");
+
+    // Decide what to return
+    ast::Expr* expr = nullptr;
+    if (elements.size() == 0)
+    {
+        // ()
+        expr = ast::AST_allocator.make<ast::ListExpr>(elements);
+    }
+    else if (elements.size() == 1)
+    {
+        // (single expr)
+        expr = elements[0];
+    }
+    else
+    {
+        // (tuple)
+        expr = ast::AST_allocator.make<ast::ListExpr>(elements);
+    }
+
+    // Handle potential call: (expr)(args)
+    return parseCallExpr(expr);
+}
+
+// Returns either a single Expr* or a ListExpr* (tuple)
+ast::Expr* Parser::parseParenthesizedExprContent()
+{
+    if (check(lex::tok::TokenType::RPAREN)) 
+    {
+        // Empty ()
+        return ast::AST_allocator.make<ast::ListExpr>(std::vector<ast::Expr*>{});
+    }
+
+    ast::Expr* first = parseExpression();
+    if (!first) return nullptr;
+
+    // If there’s a comma, parse a tuple
+    if (match(lex::tok::TokenType::COMMA))
+    {
+        std::vector<ast::Expr*> elements;
+        elements.push_back(first);
+
+        while (!check(lex::tok::TokenType::RPAREN))
+        {
+            ast::Expr* elem = parseExpression();
+            if (!elem) return nullptr;
+            elements.push_back(elem);
+
+            if (!match(lex::tok::TokenType::COMMA)) break;
+        }
+
+        return ast::AST_allocator.make<ast::ListExpr>(elements);
+    }
+
+    // Single expression (not a tuple)
+    return first;
+}
+
+ast::Expr* Parser::parseCallExpr(ast::Expr* callee)
+{
+  while (check(lex::tok::TokenType::LPAREN))
+  {
+    advance();  // '('
+
+    std::vector<ast::Expr*> args;
+
+    if (!check(lex::tok::TokenType::RPAREN))
+    {
+      do
+      {
+        ast::Expr* arg = parseExpression();
+        if (!arg) return nullptr;
+        args.push_back(arg);
+      } while (match(lex::tok::TokenType::COMMA));
+    }
 
     consume(lex::tok::TokenType::RPAREN, u"Expected ')' after arguments");
-
-    // Create call expression
-    ast::NameExpr* callee = static_cast<ast::NameExpr*>(expr);
-    if (callee == nullptr)
-      // If expr is not a NameExpr, treat as generic callable
-      callee = ast::AST_allocator.make<ast::NameExpr>(u"<lambda>");
-
     ast::ListExpr* args_expr = ast::AST_allocator.make<ast::ListExpr>(args);
-    expr = static_cast<ast::Expr*>(ast::AST_allocator.make<ast::CallExpr>(callee, args_expr));
+    callee = ast::AST_allocator.make<ast::CallExpr>(dynamic_cast<ast::Expr*>(callee), args_expr);
   }
 
-  return expr;
+  return callee;
 }
 
 ast::Expr* Parser::parseExpression()
@@ -98,7 +220,7 @@ ast::Expr* Parser::parseAssignmentExpr()
   ast::Expr* left = parseConditionalExpr();
   if (!left) return nullptr;
 
-  ast::NameExpr* left_casted = static_cast<ast::NameExpr*>(left);
+  ast::NameExpr* left_casted = dynamic_cast<ast::NameExpr*>(left);
   if (!left_casted) return left;
 
   // Check for assignment operators
@@ -224,66 +346,89 @@ ast::Expr* Parser::parseUnaryExpr()
     advance();                           // consume operator
     ast::Expr* expr = parseUnaryExpr();  // parse right side
     if (!expr) return nullptr;
-    return static_cast<ast::Expr*>(ast::AST_allocator.make<ast::UnaryExpr>(expr, op));
+    return dynamic_cast<ast::Expr*>(ast::AST_allocator.make<ast::UnaryExpr>(expr, op));
   }
   return parsePostfixExpr();
 }
 
 ast::Expr* Parser::parsePostfixExpr()
 {
-  // std::cerr << "Unary sees token: " << utf8::utf16to8(Lexer_.current().lexeme()) << "\n";
   ast::Expr* expr = parsePrimaryExpr();
   if (!expr) return nullptr;
 
+  while (match(lex::tok::TokenType::LPAREN))
+  {
+    std::vector<ast::Expr*> args;
+
+    if (!check(lex::tok::TokenType::RPAREN))
+    {
+      do
+      {
+        // IMPORTANT: parseAssignmentExpr, NOT parseExpression
+        ast::Expr* arg = parseAssignmentExpr();
+        if (!arg) return nullptr;
+        args.push_back(arg);
+      } while (match(lex::tok::TokenType::COMMA));
+    }
+
+    consume(lex::tok::TokenType::RPAREN, u"Expected ')' after arguments");
+
+    expr = ast::AST_allocator.make<ast::CallExpr>(
+      expr,
+      ast::AST_allocator.make<ast::ListExpr>(args)
+    );
+  }
+
+  return expr;
+}
+/*
+ast::Expr* Parser::parsePostfixExpr()
+{
+  ast::Expr* expr = parsePrimaryExpr();
+  if (!expr) return nullptr;
+  
   while (true)
   {
-    if (check(lex::tok::TokenType::LPAREN))
+    if (match(lex::tok::TokenType::LPAREN))
     {
-      // Function call
-      advance();
-      ast::ListExpr* args = nullptr;
+      // Parse argument list
+      std::vector<ast::Expr*> args;
+      
       if (!check(lex::tok::TokenType::RPAREN))
       {
-        /*
         do
         {
           ast::Expr* arg = parseExpression();
           if (!arg) return nullptr;
           args.push_back(arg);
-          advance();
-        } while (check(lex::tok::TokenType::COMMA));
-        */
-
-        args = parseFunctionArguments();
+        } while (match(lex::tok::TokenType::COMMA));
       }
-
-      // consume(lex::tok::TokenType::RPAREN, u"Expected ')' after arguments");
-
-      // Create call expression properly
-      ast::NameExpr* callee = static_cast<ast::NameExpr*>(expr);
-      if (callee == nullptr)
-        /// TODO: Handle complex callees (like member access, etc.)
-        callee = ast::AST_allocator.make<ast::NameExpr>(u"<callable>");
-      expr = ast::AST_allocator.make<ast::CallExpr>(callee, args);
+      
+      consume(lex::tok::TokenType::RPAREN, u"Expected ')' after arguments");
+      
+      auto* args_expr = ast::AST_allocator.make<ast::ListExpr>(args);
+      
+      expr = ast::AST_allocator.make<ast::CallExpr>(expr, args_expr);
     }
     else
     {
       break;
     }
   }
+  
   return expr;
 }
 
 ast::Expr* Parser::parsePrimaryExpr()
 {
   if (weDone()) return nullptr;
-
+  
   // NUMBER literal
   if (check(lex::tok::TokenType::NUMBER))
   {
     StringType value = Lexer_.current().lexeme();
     advance();
-    return static_cast<ast::Expr*>(ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER, value));
+    return dynamic_cast<ast::Expr*>(ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER, value));
   }
 
   // STRING literal
@@ -291,59 +436,101 @@ ast::Expr* Parser::parsePrimaryExpr()
   {
     StringType value = Lexer_.current().lexeme();
     advance();
-    return static_cast<ast::Expr*>(ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::STRING, value));
+    return dynamic_cast<ast::Expr*>(ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::STRING, value));
   }
-
+  
   // BOOLEAN literal
   if (check(lex::tok::TokenType::KW_TRUE) || check(lex::tok::TokenType::KW_FALSE))
   {
     StringType value = Lexer_.current().lexeme();
     advance();
-    return static_cast<ast::Expr*>(ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::BOOLEAN, value));
+    return dynamic_cast<ast::Expr*>(ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::BOOLEAN, value));
   }
-
+  
   // NONE literal
   if (check(lex::tok::TokenType::KW_NONE))
   {
     advance();
-    return static_cast<ast::Expr*>(ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NONE, u""));
+    return dynamic_cast<ast::Expr*>(ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NONE, u""));
   }
-
+  
   // IDENTIFIER (variable or function name)
   if (check(lex::tok::TokenType::IDENTIFIER))
   {
     StringType name = Lexer_.current().lexeme();
     advance();
     // Just an identifier
-    return static_cast<ast::Expr*>(ast::AST_allocator.make<ast::NameExpr>(name));
+    return dynamic_cast<ast::Expr*>(ast::AST_allocator.make<ast::NameExpr>(name));
   }
 
   // Parenthesized expression or tuple
   if (check(lex::tok::TokenType::LPAREN))
   {
-    advance();
+    // advance();
     return parseParenthesizedExpr();
   }
-
-  // List literal
-  if (check(lex::tok::TokenType::LBRACKET))
-  {
-    advance();
-    std::vector<ast::Expr*> elements;
-    if (!check(lex::tok::TokenType::RBRACKET))
-    {
-      do
-      {
-        ast::Expr* elem = parseExpression();
-        if (!elem) return nullptr;
+ 
+ // List literal
+ if (check(lex::tok::TokenType::LBRACKET))
+ {
+   advance();
+   std::vector<ast::Expr*> elements;
+   if (!check(lex::tok::TokenType::RBRACKET))
+   {
+     do
+     {
+       ast::Expr* elem = parseExpression();
+       if (!elem) return nullptr;
         elements.push_back(elem);
       } while (match(lex::tok::TokenType::COMMA));
     }
     consume(lex::tok::TokenType::RBRACKET, u"Expected ']' after list elements");
-    return static_cast<ast::Expr*>(ast::AST_allocator.make<ast::ListExpr>(elements));
+    return dynamic_cast<ast::Expr*>(ast::AST_allocator.make<ast::ListExpr>(elements));
+  }
+  
+  // No valid primary expression found
+  return nullptr;
+}
+*/
+
+ast::Expr* Parser::parsePrimaryExpr()
+{
+  if (weDone()) return nullptr;
+
+  if (check(lex::tok::TokenType::NUMBER))
+  {
+    auto v = Lexer_.current().lexeme();
+    advance();
+    return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER, v);
   }
 
-  // No valid primary expression found
+  if (check(lex::tok::TokenType::STRING))
+  {
+    auto v = Lexer_.current().lexeme();
+    advance();
+    return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::STRING, v);
+  }
+
+  if (check(lex::tok::TokenType::KW_TRUE) || check(lex::tok::TokenType::KW_FALSE))
+  {
+    auto v = Lexer_.current().lexeme();
+    advance();
+    return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::BOOLEAN, v);
+  }
+
+  if (check(lex::tok::TokenType::KW_NONE))
+  {
+    advance();
+    return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NONE, u"");
+  }
+
+  if (check(lex::tok::TokenType::IDENTIFIER))
+  {
+    auto name = Lexer_.current().lexeme();
+    advance();
+    return ast::AST_allocator.make<ast::NameExpr>(name);
+  }
+
   return nullptr;
 }
 
@@ -365,7 +552,7 @@ ast::Expr* Parser::parseListLiteral()
   }
 
   consume(lex::tok::TokenType::RBRACKET, u"Expected ']' after list elements");
-  return static_cast<ast::Expr*>(ast::AST_allocator.make<ast::ListExpr>(elements));
+  return dynamic_cast<ast::Expr*>(ast::AST_allocator.make<ast::ListExpr>(elements));
 }
 
 // Helper methods
@@ -373,7 +560,7 @@ ast::Expr* Parser::parseListLiteral()
 bool Parser::match(const lex::tok::TokenType type)
 {
 #if DEBUG_PRINT
-  std::cout << "-- DEBUG : match(" << std::to_string(static_cast<int>(type)) << ") called!" << std::endl;
+  std::cout << "-- DEBUG : match(" << std::to_string(dynamic_cast<int>(type)) << ") called!" << std::endl;
 #endif
   if (check(type))
   {

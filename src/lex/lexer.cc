@@ -268,6 +268,10 @@ tok::Token Lexer::lexToken()
         return make_token(tok::TokenType::INVALID, std::move(str));
       return finish(tok::TokenType::STRING, std::move(str), line, col);
     }
+    case ',' :
+    case u'،' : 
+      SourceManager_.consumeChar();
+      return finish(tok::TokenType::COMMA, StringType(1, ch), line, col);
     default : break;
     }
 

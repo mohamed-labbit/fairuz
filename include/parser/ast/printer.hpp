@@ -5,7 +5,6 @@
 #include "ast.hpp"
 #include <iostream>
 
-// Advanced AST Printer with stats
 
 namespace mylang {
 namespace parser {
@@ -14,19 +13,120 @@ namespace ast {
 class ASTPrinter
 {
  private:
-  std::uint8_t Indent_{0};
-  std::uint8_t NodeCount_{0};
-  bool UseColor_{true};
+  bool UseColor_;
+  std::uint32_t NodeCount_ = 0;
 
-  std::string colorize(const StringType& text, const StringType color, bool enabled = true)
+  struct Prefix
   {
-    if (!enabled) return utf8::utf16to8(text);
-    return utf8::utf16to8(color + text + Color::RESET);
+    std::string indent;
+    bool last;
+  };
+
+  std::string glyph(bool last) const { return last ? "└─ " : "├─ "; }
+
+  std::string pipe(bool last) const { return last ? "   " : "│  "; }
+
+  std::string color(const StringType& s, const StringType& c) const
+  {
+    if (!UseColor_) return utf8::utf16to8(s);
+    return utf8::utf16to8(c + s + Color::RESET);
   }
 
-  void printIndent()
+  void printExpr(const Expr* e, Prefix p)
   {
-    for (int i = 0; i < Indent_; i++) std::cout << (UseColor_ ? "│ " : "| ");
+    if (!e) return;
+    NodeCount_++;
+
+    std::cout << p.indent << glyph(p.last);
+
+    switch (e->getKind())
+    {
+    case Expr::Kind::NAME : {
+      auto* n = static_cast<const NameExpr*>(e);
+      std::cout << color(u"Name", Color::CYAN) << "(" << utf8::utf16to8(n->getValue()) << ")\n";
+      break;
+    }
+
+    case Expr::Kind::LITERAL : {
+      auto* l = static_cast<const LiteralExpr*>(e);
+      std::cout << color(u"Literal", Color::GREEN) << "(" << utf8::utf16to8(l->getValue()) << ")\n";
+      break;
+    }
+
+    case Expr::Kind::UNARY : {
+      auto* u = static_cast<const UnaryExpr*>(e);
+      std::cout << color(u"Unary", Color::BOLD) << " " << utf8::utf16to8(lex::tok::toString(u->getOperator())) << "\n";
+      printExpr(u->getOperand(), {p.indent + pipe(p.last), true});
+      break;
+    }
+
+    case Expr::Kind::BINARY : {
+      auto* b = static_cast<const BinaryExpr*>(e);
+      std::cout << color(u"Binary", Color::BOLD) << " " << utf8::utf16to8(lex::tok::toString(b->getOperator())) << "\n";
+      printExpr(b->getLeft(), {p.indent + pipe(p.last), false});
+      printExpr(b->getRight(), {p.indent + pipe(p.last), true});
+      break;
+    }
+
+    case Expr::Kind::CALL : {
+      auto* c = static_cast<const CallExpr*>(e);
+      std::cout << color(u"Call", Color::MAGENTA) << " (" << c->getArgs().size() << " args)\n";
+      std::cout << p.indent + pipe(p.last) << "├─ callee:\n";
+      printExpr(c->getCallee(), {p.indent + pipe(p.last) + "│  ", true});
+      std::cout << p.indent + pipe(p.last) << "└─ args:\n";
+      for (std::size_t i = 0; i < c->getArgs().size(); ++i)
+        printExpr(c->getArgs()[i], {p.indent + pipe(p.last) + "   ", i + 1 == c->getArgs().size()});
+      break;
+    }
+
+    case Expr::Kind::LIST : {
+      auto* l = static_cast<const ListExpr*>(e);
+      std::cout << color(u"List", Color::BLUE) << " [" << l->getElements().size() << "]\n";
+      for (std::size_t i = 0; i < l->getElements().size(); ++i)
+        printExpr(l->getElements()[i], {p.indent + pipe(p.last), i + 1 == l->getElements().size()});
+      break;
+    }
+
+    default : std::cout << color(u"<unknown expr>", Color::RED) << "\n";
+    }
+  }
+
+  void printStmt(const Stmt* s, Prefix p)
+  {
+    if (!s) return;
+    NodeCount_++;
+
+    std::cout << p.indent << glyph(p.last);
+
+    switch (s->getKind())
+    {
+    case Stmt::Kind::FUNC : {
+      auto* f = static_cast<const FunctionDef*>(s);
+      std::cout << color(u"FunctionDef", Color::BOLD) << " " << utf8::utf16to8(f->getName()->getValue()) << "\n";
+      std::cout << p.indent + pipe(p.last) << "├─ params:\n";
+      for (std::size_t i = 0; i < f->getParameters().size(); ++i)
+        printExpr(f->getParameters()[i], {p.indent + pipe(p.last) + "│  ", i + 1 == f->getParameters().size()});
+      std::cout << p.indent + pipe(p.last) << "└─ body:\n";
+      for (const Stmt* st : f->getBody()->getStatements()) printStmt(st, {p.indent + pipe(p.last) + "   ", true});
+      break;
+    }
+
+    case Stmt::Kind::RETURN : {
+      auto* r = static_cast<const ReturnStmt*>(s);
+      std::cout << color(u"Return", Color::BOLD) << "\n";
+      printExpr(r->getValue(), {p.indent + pipe(p.last), true});
+      break;
+    }
+
+    case Stmt::Kind::EXPR : {
+      auto* e = static_cast<const ExprStmt*>(s);
+      std::cout << color(u"ExprStmt", Color::BOLD) << "\n";
+      printExpr(e->getExpr(), {p.indent + pipe(p.last), true});
+      break;
+    }
+
+    default : std::cout << color(u"<unknown stmt>", Color::RED) << "\n";
+    }
   }
 
  public:
@@ -35,151 +135,10 @@ class ASTPrinter
   {
   }
 
-  void print(const ast::Expr* expr)
-  {
-    if (expr == nullptr) return;
+  void print(const Expr* e) { printExpr(e, {"", true}); }
+  void print(const Stmt* s) { printStmt(s, {"", true}); }
 
-    NodeCount_++;
-
-    switch (expr->getKind())
-    {
-    case ast::Expr::Kind::BINARY : {
-      const ast::BinaryExpr* e = static_cast<const ast::BinaryExpr*>(expr);
-      printIndent();
-      std::cout << colorize(u"BinaryOp", Color::BOLD, UseColor_) << " " << colorize(lex::tok::toString(e->getOperator()), Color::YELLOW, UseColor_)
-                << "\n";
-      Indent_++;
-      print(e->getLeft());
-      print(e->getRight());
-      Indent_--;
-      break;
-    }
-    case ast::Expr::Kind::UNARY : {
-      const ast::UnaryExpr* e = static_cast<const ast::UnaryExpr*>(expr);
-      printIndent();
-      std::cout << colorize(u"UnaryOp", Color::BOLD, UseColor_) << " " << colorize(lex::tok::toString(e->getOperator()), Color::YELLOW, UseColor_)
-                << "\n";
-      Indent_++;
-      print(e->getOperand());  // FIX: Print the operand, not the UnaryExpr itself!
-      Indent_--;
-      break;
-    }
-    case ast::Expr::Kind::LITERAL : {
-      const ast::LiteralExpr* e = static_cast<const ast::LiteralExpr*>(expr);
-      printIndent();
-      std::cout << colorize(u"Literal", Color::GREEN, UseColor_) << ": " << utf8::utf16to8(e->getValue()) << "\n";
-      break;
-    }
-    case ast::Expr::Kind::NAME : {
-      const ast::NameExpr* e = static_cast<const ast::NameExpr*>(expr);
-      printIndent();
-      std::cout << colorize(u"Var", Color::CYAN, UseColor_) << ": " << utf8::utf16to8(e->getValue()) << "\n";
-      break;
-    }
-    case ast::Expr::Kind::CALL : {
-      const ast::CallExpr* e = static_cast<const ast::CallExpr*>(expr);
-      printIndent();
-      std::cout << colorize(u"Call", Color::MAGENTA, UseColor_) << " [" << e->getArgs().size() << " args]\n";
-      Indent_++;
-      print(e->getCallee());
-      for (const ast::Expr* const& arg : e->getArgs()) print(arg);
-      Indent_--;
-      break;
-    }
-    case ast::Expr::Kind::LIST : {
-      const ast::ListExpr* e = static_cast<const ast::ListExpr*>(expr);
-      printIndent();
-      std::cout << colorize(u"List", Color::BLUE, UseColor_) << " [" << e->getElements().size() << "]\n";
-      Indent_++;
-      for (const ast::Expr* const& elem : e->getElements()) print(elem);
-      Indent_--;
-      break;
-    }
-    default : break;
-    }
-  }
-
-  void print(const ast::Stmt* stmt)
-  {
-    if (stmt == nullptr) return;
-
-    NodeCount_++;
-
-    switch (stmt->getKind())
-    {
-    case ast::Stmt::Kind::ASSIGNMENT : {
-      const ast::AssignmentStmt* s = static_cast<const ast::AssignmentStmt*>(stmt);
-      printIndent();
-      std::cout << colorize(u"Assign", Color::BOLD, UseColor_) << " " << colorize(s->getTarget()->getValue(), Color::CYAN, UseColor_) << "\n";
-      Indent_++;
-      print(s->getValue());
-      Indent_--;
-      break;
-    }
-    case ast::Stmt::Kind::IF : {
-      const ast::IfStmt* s = static_cast<const ast::IfStmt*>(stmt);
-      printIndent();
-      std::cout << colorize(u"If", Color::BOLD, UseColor_) << "\n";
-      Indent_++;
-      print(s->getCondition());
-      for (const ast::Stmt* const& st : s->getThenBlock()->getStatements()) print(st);
-      Indent_--;
-      break;
-    }
-    case ast::Stmt::Kind::WHILE : {
-      const ast::WhileStmt* s = static_cast<const ast::WhileStmt*>(stmt);
-      printIndent();
-      std::cout << colorize(u"While", Color::BOLD, UseColor_) << "\n";
-      Indent_++;
-      print(s->getCondition());
-      for (const ast::Stmt* const& st : s->getBlock()->getStatements()) print(st);
-      Indent_--;
-      break;
-    }
-    case ast::Stmt::Kind::FOR : {
-      const ast::ForStmt* s = static_cast<const ast::ForStmt*>(stmt);
-      printIndent();
-      std::cout << colorize(u"For", Color::BOLD, UseColor_) << " " << utf8::utf16to8(s->getTarget()->getValue()) << "\n";
-      Indent_++;
-      print(s->getIter());
-      for (const ast::Stmt* const& st : s->getBlock()->getStatements()) print(st);
-      Indent_--;
-      break;
-    }
-    case ast::Stmt::Kind::FUNC : {
-      const ast::FunctionDef* s = static_cast<const ast::FunctionDef*>(stmt);
-      printIndent();
-      std::cout << colorize(u"Function", Color::BOLD, UseColor_) << " " << colorize(s->getName()->getValue(), Color::GREEN, UseColor_) << "(";
-      for (std::size_t i = 0; i < s->getParameters().size(); i++)
-      {
-        std::cout << utf8::utf16to8(s->getParameters()[i]->getValue());
-        if (i + 1 < s->getParameters().size()) std::cout << ", ";
-      }
-      std::cout << ")\n";
-      Indent_++;
-      for (const ast::Stmt* const& st : s->getBody()->getStatements()) print(st);
-      Indent_--;
-      break;
-    }
-    case ast::Stmt::Kind::RETURN : {
-      const ast::ReturnStmt* s = static_cast<const ast::ReturnStmt*>(stmt);
-      printIndent();
-      std::cout << colorize(u"Return", Color::BOLD, UseColor_) << "\n";
-      Indent_++;
-      print(s->getValue());
-      Indent_--;
-      break;
-    }
-    case ast::Stmt::Kind::EXPR : {
-      const ast::ExprStmt* s = static_cast<const ast::ExprStmt*>(stmt);
-      print(s->getExpr());
-      break;
-    }
-    default : break;
-    }
-  }
-
-  int getNodeCount() const { return NodeCount_; }
+  std::uint32_t getNodeCount() const { return NodeCount_; }
 };
 
 }  // ast
