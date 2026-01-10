@@ -28,7 +28,7 @@ static inline bool isalphaArabic(const wchar_t c) { return (c >= 0x0600 && c <= 
 
 struct U16StringHash
 {
-  std::size_t operator()(const StringType& s) const noexcept
+  std::size_t operator()(const StringType& s) const MYLANG_NOEXCEPT
   {
     // FNV-1a hash (simple, fast, decent distribution)
     std::size_t hash = 1469598103934665603ull;  // 64-bit FNV offset basis
@@ -43,7 +43,7 @@ struct U16StringHash
 
 struct U16StringEqual
 {
-  bool operator()(const StringType& a, const StringType& b) const noexcept { return a == b; }
+  bool operator()(const StringType& a, const StringType& b) const MYLANG_NOEXCEPT { return a == b; }
 };
 
 // utility function to parallelize the process of conversion

@@ -44,9 +44,9 @@ class BlockStmt: public Stmt
     assert((!Statements_.empty() && Statements_[0] != nullptr) && "'statements' argument to BlockStmt is null");
   }
 
-  BlockStmt(BlockStmt&&) noexcept = delete;
-  BlockStmt(const BlockStmt&) noexcept = delete;
-  BlockStmt& operator=(const BlockStmt&) noexcept = delete;
+  BlockStmt(BlockStmt&&) MYLANG_NOEXCEPT = delete;
+  BlockStmt(const BlockStmt&) MYLANG_NOEXCEPT = delete;
+  BlockStmt& operator=(const BlockStmt&) MYLANG_NOEXCEPT = delete;
 
   const std::vector<Stmt*>& getStatements() const { return Statements_; }
 
@@ -70,9 +70,9 @@ class ExprStmt: public Stmt
     assert((Expr_ != nullptr) && "'expr' argument to ExprStmt is null");
   }
 
-  ExprStmt(ExprStmt&&) noexcept = delete;
-  ExprStmt(const ExprStmt&) noexcept = delete;
-  ExprStmt& operator=(const ExprStmt&) noexcept = delete;
+  ExprStmt(ExprStmt&&) MYLANG_NOEXCEPT = delete;
+  ExprStmt(const ExprStmt&) MYLANG_NOEXCEPT = delete;
+  ExprStmt& operator=(const ExprStmt&) MYLANG_NOEXCEPT = delete;
 
   Expr* getExpr() const { return Expr_; }
 
@@ -98,9 +98,9 @@ class AssignmentStmt: public Stmt
     assert((Target_ != nullptr) && "'target' argument to AssignmentStmt is null");
   }
 
-  AssignmentStmt(AssignmentStmt&&) noexcept = delete;
-  AssignmentStmt(const AssignmentStmt&) noexcept = delete;
-  AssignmentStmt& operator=(const AssignmentStmt&) noexcept = delete;
+  AssignmentStmt(AssignmentStmt&&) MYLANG_NOEXCEPT = delete;
+  AssignmentStmt(const AssignmentStmt&) MYLANG_NOEXCEPT = delete;
+  AssignmentStmt& operator=(const AssignmentStmt&) MYLANG_NOEXCEPT = delete;
 
   Expr* getValue() const { return Value_; }
   Expr* getTarget() const { return Target_; }
@@ -131,9 +131,9 @@ class IfStmt: public Stmt
     assert((ElseBlock_ != nullptr) && "'else_block' argument to IfStmt is null");
   }
 
-  IfStmt(IfStmt&&) noexcept = delete;
-  IfStmt(const IfStmt&) noexcept = delete;
-  IfStmt& operator=(const IfStmt&) noexcept = delete;
+  IfStmt(IfStmt&&) MYLANG_NOEXCEPT = delete;
+  IfStmt(const IfStmt&) MYLANG_NOEXCEPT = delete;
+  IfStmt& operator=(const IfStmt&) MYLANG_NOEXCEPT = delete;
 
   Expr* getCondition() const { return Condition_; }
   BlockStmt* getThenBlock() const { return ThenBlock_; }
@@ -162,9 +162,9 @@ class WhileStmt: public Stmt
     assert((Block_ != nullptr) && "'block' argument to WhileStmt is null");
   }
 
-  WhileStmt(WhileStmt&&) noexcept = delete;
-  WhileStmt(const WhileStmt&) noexcept = delete;
-  WhileStmt& operator=(const WhileStmt&) noexcept = delete;
+  WhileStmt(WhileStmt&&) MYLANG_NOEXCEPT = delete;
+  WhileStmt(const WhileStmt&) MYLANG_NOEXCEPT = delete;
+  WhileStmt& operator=(const WhileStmt&) MYLANG_NOEXCEPT = delete;
 
   Expr* getCondition() const { return Condition_; }
   BlockStmt* getBlock() const { return Block_; }
@@ -193,9 +193,9 @@ class ForStmt: public Stmt
     assert((Block_ != nullptr) && "'block' argument to ForStmt is null");
   }
 
-  ForStmt(ForStmt&&) noexcept = delete;
-  ForStmt(const ForStmt&) noexcept = delete;
-  ForStmt& operator=(const ForStmt&) noexcept = delete;
+  ForStmt(ForStmt&&) MYLANG_NOEXCEPT = delete;
+  ForStmt(const ForStmt&) MYLANG_NOEXCEPT = delete;
+  ForStmt& operator=(const ForStmt&) MYLANG_NOEXCEPT = delete;
 
   NameExpr* getTarget() const { return Target_; }
   Expr* getIter() const { return Iter_; }
@@ -225,9 +225,9 @@ class FunctionDef: public Stmt
     assert((Body_ != nullptr) && "'body' argument to FunctionDef is null");
   }
 
-  FunctionDef(FunctionDef&&) noexcept = delete;
-  FunctionDef(const FunctionDef&) noexcept = delete;
-  FunctionDef& operator=(const FunctionDef&) noexcept = delete;
+  FunctionDef(FunctionDef&&) MYLANG_NOEXCEPT = delete;
+  FunctionDef(const FunctionDef&) MYLANG_NOEXCEPT = delete;
+  FunctionDef& operator=(const FunctionDef&) MYLANG_NOEXCEPT = delete;
 
   NameExpr* getName() const { return Name_; }
   const std::vector<Expr*>& getParameters() const { return Params_->getElements(); }
@@ -253,9 +253,9 @@ class ReturnStmt: public Stmt
     assert((Value_ != nullptr) && "'value' argument to ReturnStmt is null");
   }
 
-  ReturnStmt(ReturnStmt&&) noexcept = delete;
-  ReturnStmt(const ReturnStmt&) noexcept = delete;
-  ReturnStmt& operator=(const ReturnStmt&) noexcept = delete;
+  ReturnStmt(ReturnStmt&&) MYLANG_NOEXCEPT = delete;
+  ReturnStmt(const ReturnStmt&) MYLANG_NOEXCEPT = delete;
+  ReturnStmt& operator=(const ReturnStmt&) MYLANG_NOEXCEPT = delete;
 
   Expr* getValue() const { return Value_; }
 };

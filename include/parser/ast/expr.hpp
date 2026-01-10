@@ -56,9 +56,9 @@ class BinaryExpr: public Expr
     assert((Right_ != nullptr) && "'right' argument to BinaryExpr is null");
   }
 
-  BinaryExpr(BinaryExpr&&) noexcept = delete;
-  BinaryExpr(const BinaryExpr&) noexcept = delete;
-  BinaryExpr& operator=(const BinaryExpr&) noexcept = delete;
+  BinaryExpr(BinaryExpr&&) MYLANG_MYLANG_NOEXCEPT = delete;
+  BinaryExpr(const BinaryExpr&) MYLANG_MYLANG_NOEXCEPT = delete;
+  BinaryExpr& operator=(const BinaryExpr&) MYLANG_MYLANG_NOEXCEPT = delete;
 
   Expr* getLeft() const { return Left_; }
   Expr* getRight() const { return Right_; }
@@ -86,9 +86,9 @@ class UnaryExpr: public Expr
     assert((Operand_ != nullptr) && "'operand' argument to UnaryExpr is null");
   }
 
-  UnaryExpr(UnaryExpr&&) noexcept = delete;
-  UnaryExpr(const UnaryExpr&) noexcept = delete;
-  UnaryExpr& operator=(const UnaryExpr&) noexcept = delete;
+  UnaryExpr(UnaryExpr&&) MYLANG_MYLANG_NOEXCEPT = delete;
+  UnaryExpr(const UnaryExpr&) MYLANG_MYLANG_NOEXCEPT = delete;
+  UnaryExpr& operator=(const UnaryExpr&) MYLANG_MYLANG_NOEXCEPT = delete;
 
   Expr* getOperand() const { return Operand_; }
   lex::tok::TokenType getOperator() const { return Operator_; }
@@ -114,9 +114,9 @@ class LiteralExpr: public Expr
     // assert((Literal_ != u"") && "'literal' argument to LiteralExpr is null");
   }
 
-  LiteralExpr(LiteralExpr&&) noexcept = delete;
-  LiteralExpr(const LiteralExpr&) noexcept = delete;
-  LiteralExpr& operator=(const LiteralExpr&) noexcept = delete;
+  LiteralExpr(LiteralExpr&&) MYLANG_NOEXCEPT = delete;
+  LiteralExpr(const LiteralExpr&) MYLANG_NOEXCEPT = delete;
+  LiteralExpr& operator=(const LiteralExpr&) MYLANG_NOEXCEPT = delete;
 
   StringType getValue() const { return Literal_; }
   Type getType() const { return Type_; }
@@ -140,9 +140,9 @@ class NameExpr: public Expr
     assert(!Str_.empty() && "'Str_' argument to NameExpr is null");
   }
 
-  NameExpr(NameExpr&&) noexcept = delete;
-  NameExpr(const NameExpr&) noexcept = delete;
-  NameExpr& operator=(const NameExpr&) noexcept = delete;
+  NameExpr(NameExpr&&) MYLANG_NOEXCEPT = delete;
+  NameExpr(const NameExpr&) MYLANG_NOEXCEPT = delete;
+  NameExpr& operator=(const NameExpr&) MYLANG_NOEXCEPT = delete;
 
   StringType getValue() const { return Str_; }
 };
@@ -171,9 +171,9 @@ class ListExpr: public Expr
     }
   }
 
-  ListExpr(ListExpr&&) noexcept = delete;
-  ListExpr(const ListExpr&) noexcept = delete;
-  ListExpr& operator=(const ListExpr&) noexcept = delete;
+  ListExpr(ListExpr&&) MYLANG_NOEXCEPT = delete;
+  ListExpr(const ListExpr&) MYLANG_NOEXCEPT = delete;
+  ListExpr& operator=(const ListExpr&) MYLANG_NOEXCEPT = delete;
 
   const std::vector<Expr*>& getElements() const { return Elements_; }
   std::vector<Expr*>& getElementsMutable() { return Elements_; }
@@ -212,9 +212,9 @@ class CallExpr: public Expr
     }
   }
 
-  CallExpr(CallExpr&&) noexcept = delete;
-  CallExpr(const CallExpr&) noexcept = delete;
-  CallExpr& operator=(const CallExpr&) noexcept = delete;
+  CallExpr(CallExpr&&) MYLANG_NOEXCEPT = delete;
+  CallExpr(const CallExpr&) MYLANG_NOEXCEPT = delete;
+  CallExpr& operator=(const CallExpr&) MYLANG_NOEXCEPT = delete;
 
   Expr* getCallee() const { return Callee_; }
   const std::vector<Expr*>& getArgs() const { return Args_->getElements(); }
@@ -244,9 +244,9 @@ class AssignmentExpr: public Expr
     assert((Value_ != nullptr) && "'value' argument to AssignmentExpr is null");
   }
 
-  AssignmentExpr(AssignmentExpr&&) noexcept = delete;
-  AssignmentExpr(const AssignmentExpr&) noexcept = delete;
-  AssignmentExpr& operator=(const AssignmentExpr&) noexcept = delete;
+  AssignmentExpr(AssignmentExpr&&) MYLANG_NOEXCEPT = delete;
+  AssignmentExpr(const AssignmentExpr&) MYLANG_NOEXCEPT = delete;
+  AssignmentExpr& operator=(const AssignmentExpr&) MYLANG_NOEXCEPT = delete;
 
   NameExpr* getTarget() const { return Target_; }
   Expr* getValue() const { return Value_; }

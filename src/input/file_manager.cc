@@ -22,41 +22,8 @@ FileManager::FileManager(const std::string& filepath) :
   LastKnownWriteTime_ = fs::last_write_time(filepath);
 }
 
-bool FileManager::isOpen() const noexcept
-{
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : FileManager::isOpen() called!" << std::endl;
-#endif
-  bool ret = Stream_.is_open() /*&& Stream_.good()*/;
-#if DEBUG_PRINT
-  if (!ret) diagnostic::engine.emit(". DEBUG : FileManager::isOpen() returns 'false'");
-
-#endif
-  return ret;
-}
-
-bool FileManager::isChangedSinceLastTime() const noexcept
-{
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : FileManager::isChangedSinceLastTime() called!" << std::endl;
-  diagnostic::engine.emit(". DEBUG : FileManager::isOpen() return 'false'");
-#endif
-  return fs::last_write_time(FullPath_) != LastKnownWriteTime_;
-}
-
-typename FileManager::Context FileManager::getContext() const noexcept
-{
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : FileManager::get_context() called!" << std::endl;
-#endif
-  return Context_;
-}
-
 void FileManager::reset()
 {
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : FileManager::reset() called!" << std::endl;
-#endif
   if (!isOpen()) throw error::FileError(toString(FileManagerError::FILE_NOT_FOUND));
   Stream_.clear();
   Stream_.seekg(0, std::ios::beg);
@@ -66,9 +33,6 @@ void FileManager::reset()
 
 void FileManager::seekToChar(const std::size_t CharOffset)
 {
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : FileManager::seek_to_char() called!" << std::endl;
-#endif
   if (CharOffset == Context_.CharOffset) return;
   /// TODO:  : revisit this stupid magic number
   if (CharOffset < Context_.CharOffset || CharOffset - Context_.CharOffset > 10000) reset();
@@ -80,27 +44,8 @@ void FileManager::seekToChar(const std::size_t CharOffset)
   }
 }
 
-void FileManager::seekToLine(const std::size_t line_number)
-{
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : FileManager::seekToLine() called!" << std::endl;
-#endif
-}
-
-StringType FileManager::readWindow(const std::size_t size)
-{
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : FileManager::readWindow() called!" << std::endl;
-#endif
-  /// TODO: : add cache validation
-  return readWindowInternal(size);
-}
-
 constexpr std::size_t getUtf8SequenceLength(unsigned char first_byte)
 {
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : FileManager::get_utf8_sequence_length() called!" << std::endl;
-#endif
   if ((first_byte & 0x80) == 0) return 1;
   if ((first_byte & 0xE0) == 0xC0) return 2;
   if ((first_byte & 0xF0) == 0xE0) return 3;
@@ -110,9 +55,6 @@ constexpr std::size_t getUtf8SequenceLength(unsigned char first_byte)
 
 std::size_t FileManager::validateUtf8Bound(std::span<const char> buffer) const
 {
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : FileManager::validateUtf8Bound() called!" << std::endl;
-#endif
   if (buffer.empty()) return 0;
   const std::size_t size = buffer.size();
   for (std::size_t i = 0, n = std::min(MAX_UTF8_CHAR_BYTES, size); i < n; ++i)
@@ -133,16 +75,7 @@ std::size_t FileManager::validateUtf8Bound(std::span<const char> buffer) const
 
 StringType FileManager::readWindowInternal(const std::size_t size)
 {
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : FileManager::readWindowInternal() called!" << std::endl;
-#endif
-  if (size == 0)
-  {
-#if DEBUG_PRINT
-    diagnostic::engine.emit("-- DEBUG : argument 'size' is zero, an empty string is returned!");
-#endif
-    return StringType{};
-  }
+  if (size == 0) return StringType{};
   if (!isOpen()) throw error::FileError(toString(FileManagerError::FILE_NOT_OPEN));
   const std::size_t byte_chunk_size = size * MAX_UTF8_CHAR_BYTES;
   std::vector<char> byte_buffer(byte_chunk_size);
@@ -150,13 +83,7 @@ StringType FileManager::readWindowInternal(const std::size_t size)
   std::streamsize bytes_read = Stream_.gcount();
   if (bytes_read == 0)
   {
-    if (Stream_.eof())
-    {
-#if DEBUG_PRINT
-      diagnostic::engine.emit("-- DEBUG : stream is empty!");
-#endif
-      return StringType{};
-    }
+    if (Stream_.eof()) { return StringType{}; }
     else if (byte_buffer.empty()) { throw error::FileError(toString(FileManagerError::READ_ERROR)); }
   }
   if (bytes_read < 0) throw error::FileError(toString(FileManagerError::READ_ERROR));
@@ -184,17 +111,11 @@ StringType FileManager::readWindowInternal(const std::size_t size)
   }
   Context_.CharOffset += result.size();
   // Context_.chars_read_total += result.size();
-#if DEBUG_PRINT
-  std::cout << "--DEBUG : result = " << utf8::utf16to8(result) << std::endl;
-#endif
   return result;
 }
 
 StringType FileManager::readLine(const std::size_t line_number)
 {
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : FileManager::readLine() called!" << std::endl;
-#endif
   seekToLine(line_number);
   const std::size_t LineLength = LineIndices_[line_number].LineLength;
   return readWindowInternal(LineLength);
@@ -202,9 +123,6 @@ StringType FileManager::readLine(const std::size_t line_number)
 
 StringType FileManager::readNextLine()
 {
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : FileManager::readNextLine() called!" << std::endl;
-#endif
   StringType line;
   line.reserve(100);  // average
   while (true)
@@ -245,9 +163,6 @@ StringType FileManager::readNextLine()
 
 std::vector<StringType> FileManager::readLines(const std::size_t start, const std::size_t count)
 {
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : FileManager::readLines() called!" << std::endl;
-#endif
   if (!LineIndexBuilt_) buildLineIndex();
   if (start >= LineIndices_.size()) throw error::FileError(toString(FileManagerError::INVALID_LINE_NUMBER));
   const std::size_t end = std::min(start + count, LineIndices_.size());
@@ -259,9 +174,6 @@ std::vector<StringType> FileManager::readLines(const std::size_t start, const st
 
 StringType FileManager::readAll()
 {
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : FileManager::read_all() called!" << std::endl;
-#endif
   reset();
   StringType result;
   result.reserve(Stats_.TotalBytes / 2);
@@ -276,9 +188,6 @@ StringType FileManager::readAll()
 
 typename FileManager::FileStats FileManager::computeStats()
 {
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : FileManager::compute_stats() called!" << std::endl;
-#endif
   FileStats stats;
   stats.TotalBytes = fs::file_size(FullPath_);
   stats.LastModified = fs::last_write_time(FullPath_);
@@ -286,19 +195,8 @@ typename FileManager::FileStats FileManager::computeStats()
   return stats;
 }
 
-bool FileManager::isChangedSinceLastRead() const
-{
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : FileManager::is_changed_since_last_read() called!" << std::endl;
-#endif
-  return fs::last_write_time(FullPath_) != LastKnownWriteTime_;
-}
-
 void FileManager::refreshStats()
 {
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : FileManager::refreshStats() called!" << std::endl;
-#endif
   FileStats new_stats = computeStats();
   Stats_ = new_stats;
   LastKnownWriteTime_ = Stats_.LastModified;
@@ -311,47 +209,8 @@ void FileManager::refreshStats()
   }
 }
 
-std::size_t FileManager::getLineCount()
-{
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : FileManager::get_line_count() called!" << std::endl;
-#endif
-  if (!LineIndexBuilt_) buildLineIndex();
-  return Stats_.TotalLines;
-}
-
-std::size_t FileManager::getCharCount()
-{
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : FileManager::get_char_count() called!" << std::endl;
-#endif
-  if (!LineIndexBuilt_) buildLineIndex();
-  return Stats_.TotalCharacters;
-}
-
-void FileManager::pushPosition()
-{
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : FileManager::pushPosition() called!" << std::endl;
-#endif
-  PositionStack_.push_back(Context_);
-  // Limit stack size
-  if (PositionStack_.size() > 100) PositionStack_.erase(PositionStack_.begin());
-}
-
-void FileManager::popPosition()
-{
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : FileManager::popPosition() called!" << std::endl;
-#endif
-  if (!PositionStack_.empty()) PositionStack_.erase(PositionStack_.begin());
-}
-
 char16_t FileManager::peekChar(const std::size_t CharOffset)
 {
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : FileManager::peek_to_char() called!" << std::endl;
-#endif
   pushPosition();
   seekToChar(CharOffset);
   return readWindowInternal(1)[0];
@@ -359,9 +218,6 @@ char16_t FileManager::peekChar(const std::size_t CharOffset)
 
 StringType FileManager::peekRange(const std::size_t start_offset, const std::size_t length)
 {
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : FileManager::peek_range() called!" << std::endl;
-#endif
   pushPosition();
   seekToChar(start_offset);
   StringType result = readWindowInternal(length);
@@ -369,19 +225,8 @@ StringType FileManager::peekRange(const std::size_t start_offset, const std::siz
   return result;
 }
 
-std::string FileManager::getPath() const noexcept
-{
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : FileManager::get_path() called!" << std::endl;
-#endif
-  return FullPath_;
-}
-
 void FileManager::buildLineIndex()
 {
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : FileManager::buildLineIndex() called!" << std::endl;
-#endif
   if (LineIndexBuilt_) return;
   reset();
   LineIndices_.clear();

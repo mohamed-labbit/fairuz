@@ -41,20 +41,34 @@ class InputBuffer: public InputBufferBase
     reset();
   }
 
-  std::size_t size() const;
-  std::size_t bufferOffset() const;
-  bool empty() const;
-  char16_t at(const std::size_t idx) const;
+  std::size_t size() const { return Buffers_[CurrentBuffer_].length(); }
+
+  std::size_t bufferOffset() const { return static_cast<std::size_t>(Current_ - Buffers_[CurrentBuffer_].data()); }
+
+  bool empty() const { return (!FileManager_->isOpen() || Current_ == nullptr || Buffers_[CurrentBuffer_].empty()); }
+
+  char16_t at(const std::size_t idx) const { return Buffers_[CurrentBuffer_][idx]; }
+
   char16_t consumeChar();
+
   MYLANG_NODISCARD
   const char16_t& current();
+
   MYLANG_NODISCARD
   const char16_t& peek();
+
   StringType nPeek(std::size_t n);
-  void consume(std::size_t len);
+
+  void consume(std::size_t len)
+  {
+    while (len-- > 0) consumeChar();
+  }
+
   void unget(char16_t ch);
+
   void reset();
-  Position position() const MYLANG_NOEXCEPT;
+
+  Position position() const MYLANG_NOEXCEPT { return CurrentPosition_; }
 
  private:
   struct PushbackEntry

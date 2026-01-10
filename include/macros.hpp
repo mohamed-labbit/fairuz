@@ -10,10 +10,12 @@
 #define DEFAULT_CAPACITY 4096
 #define DEFAULT_BLOCK_SIZE 1024    // 1 KiB
 #define MAX_BLOCK_SIZE 4294967296  // 4 GiB
-#define MYLANG_COMPILER_ABI __attribute__((visibility("default")))
+/// TODO: chenge to none
+#define MYLANG_COMPILER_ABI __attribute__((visibility("default")))  
 #define MYLANG_INLINE inline
 #define MYLANG_NODISCARD [[nodiscard]]
 #define MYLANG_NOEXCEPT noexcept
+#define MYLANG_CONSTEXPR constexpr
 
 #define DEBUG_PRINT 0
 

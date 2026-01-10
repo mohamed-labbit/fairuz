@@ -585,15 +585,15 @@ class LockFreeFastAllocBlock
  */
 struct AllocationHeader
 {
-  uint_fast32_t magic;                              ///< Magic number for validation
-  uint_fast32_t size;                               ///< Allocation size in bytes
-  uint_fast32_t alignment;                          ///< Alignment requirement
-  uint_fast32_t checksum;                           ///< Simple checksum for corruption detection
-  std::chrono::steady_clock::time_point timestamp;  ///< When allocated
-  const char32_t* TypeName;                         ///< Type name (for debugging)
-  uint_fast32_t LineNumber;                         ///< Source line (for debugging)
-  const char32_t* filename;                         ///< Source file (for debugging)
-  static constexpr uint32_t MAGIC = 0xDEADC0DE;     ///< Expected magic value
+  uint_fast32_t magic;                                  ///< Magic number for validation
+  uint_fast32_t size;                                   ///< Allocation size in bytes
+  uint_fast32_t alignment;                              ///< Alignment requirement
+  uint_fast32_t checksum;                               ///< Simple checksum for corruption detection
+  std::chrono::steady_clock::time_point timestamp;      ///< When allocated
+  const char32_t* TypeName;                             ///< Type name (for debugging)
+  uint_fast32_t LineNumber;                             ///< Source line (for debugging)
+  const char32_t* filename;                             ///< Source file (for debugging)
+  static MYLANG_CONSTEXPR uint32_t MAGIC = 0xDEADC0DE;  ///< Expected magic value
 
   /// Compute checksum from header fields
   uint32_t compute_checksum() const { return magic ^ size ^ alignment; }
@@ -607,8 +607,8 @@ struct AllocationHeader
  */
 struct AllocationFooter
 {
-  uint32_t guard;                                ///< Guard value
-  static constexpr uint32_t GUARD = 0xFEEDFACE;  ///< Expected guard value
+  uint32_t guard;                                       ///< Guard value
+  static MYLANG_CONSTEXPR uint32_t GUARD = 0xFEEDFACE;  ///< Expected guard value
   /// Check if footer is intact
   bool is_valid() const { return guard == GUARD; }
 };
@@ -1271,18 +1271,18 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     Pointer mem = nullptr;
 
     // Try fast pool for small objects
-    constexpr std::size_t type_size = sizeof(_Tp);
-    constexpr std::size_t pool_size = type_size <= 8 ? 8
-      : type_size <= 16                              ? 16
-      : type_size <= 32                              ? 32
-      : type_size <= 64                              ? 64
-      : type_size <= 128                             ? 128
-      : type_size <= 256                             ? 256
-                                                     : 0;
+    MYLANG_CONSTEXPR std::size_t type_size = sizeof(_Tp);
+    MYLANG_CONSTEXPR std::size_t pool_size = type_size <= 8 ? 8
+      : type_size <= 16                                     ? 16
+      : type_size <= 32                                     ? 32
+      : type_size <= 64                                     ? 64
+      : type_size <= 128                                    ? 128
+      : type_size <= 256                                    ? 256
+                                                            : 0;
 
-    constexpr bool use_fast_pool = (pool_size > 0) && (pool_size >= type_size);
+    MYLANG_CONSTEXPR bool use_fast_pool = (pool_size > 0) && (pool_size >= type_size);
 
-    if constexpr (use_fast_pool)
+    if MYLANG_CONSTEXPR (use_fast_pool)
     {
       if (align <= pool_size)
       {
@@ -1329,7 +1329,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     }
 
     // Construct objects if needed
-    if constexpr (!std::is_trivially_constructible_v<_Tp>)
+    if MYLANG_CONSTEXPR (!std::is_trivially_constructible_v<_Tp>)
       for (std::size_t i = 0; i < count; ++i) new (region + i) _Tp();
 
     std::chrono::steady_clock::time_point end = std::chrono::high_resolution_clock::now();
@@ -1378,25 +1378,25 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     std::size_t byte_size = count * sizeof(_Tp);
 
     // Call destructors for non-trivial types
-    if constexpr (!std::is_trivially_destructible_v<_Tp>)
+    if MYLANG_CONSTEXPR (!std::is_trivially_destructible_v<_Tp>)
       for (std::size_t i = 0; i < count; ++i) ptr[i].~_Tp();
 
     // Determine which free list to use
-    constexpr std::size_t obj_size = sizeof(_Tp);
-    constexpr std::size_t pool_size = obj_size <= 8 ? 8
-      : obj_size <= 16                              ? 16
-      : obj_size <= 32                              ? 32
-      : obj_size <= 64                              ? 64
-      : obj_size <= 128                             ? 128
-      : obj_size <= 256                             ? 256
-                                                    : 0;
+    MYLANG_CONSTEXPR std::size_t obj_size = sizeof(_Tp);
+    MYLANG_CONSTEXPR std::size_t pool_size = obj_size <= 8 ? 8
+      : obj_size <= 16                                     ? 16
+      : obj_size <= 32                                     ? 32
+      : obj_size <= 64                                     ? 64
+      : obj_size <= 128                                    ? 128
+      : obj_size <= 256                                    ? 256
+                                                           : 0;
 
-    constexpr bool use_fast_pool = (pool_size > 0) && (pool_size >= obj_size);
+    MYLANG_CONSTEXPR bool use_fast_pool = (pool_size > 0) && (pool_size >= obj_size);
 
     FreeListRegion region(reinterpret_cast<Pointer>(ptr), byte_size);
 
     // Add to appropriate free list
-    if constexpr (use_fast_pool)
+    if MYLANG_CONSTEXPR (use_fast_pool)
     {
       FastAllocBlockFreeList<pool_size>* free_list = choosePoolFreeList<pool_size>();
       if (free_list != nullptr)
@@ -1638,12 +1638,12 @@ class MYLANG_COMPILER_ABI ArenaAllocator
   template<std::size_t ObjectSize>
   MYLANG_NODISCARD std::vector<LockFreeFastAllocBlock<ObjectSize>>* choosePool() MYLANG_NOEXCEPT
   {
-    if constexpr (ObjectSize == 8) { return &FastPool8_; }
-    else if constexpr (ObjectSize == 16) { return &FastPool16_; }
-    else if constexpr (ObjectSize == 32) { return &FastPool32_; }
-    else if constexpr (ObjectSize == 64) { return &FastPool64_; }
-    else if constexpr (ObjectSize == 128) { return &FastPool128_; }
-    else if constexpr (ObjectSize == 256) { return &FastPool256_; }
+    if MYLANG_CONSTEXPR (ObjectSize == 8) { return &FastPool8_; }
+    else if MYLANG_CONSTEXPR (ObjectSize == 16) { return &FastPool16_; }
+    else if MYLANG_CONSTEXPR (ObjectSize == 32) { return &FastPool32_; }
+    else if MYLANG_CONSTEXPR (ObjectSize == 64) { return &FastPool64_; }
+    else if MYLANG_CONSTEXPR (ObjectSize == 128) { return &FastPool128_; }
+    else if MYLANG_CONSTEXPR (ObjectSize == 256) { return &FastPool256_; }
     else
       return nullptr;
   }
@@ -1651,12 +1651,12 @@ class MYLANG_COMPILER_ABI ArenaAllocator
   template<std::size_t ObjectSize>
   MYLANG_NODISCARD FastAllocBlockFreeList<ObjectSize>* choosePoolFreeList() MYLANG_NOEXCEPT
   {
-    if constexpr (ObjectSize == 8) { return &FreeList8_; }
-    else if constexpr (ObjectSize == 16) { return &FreeList16_; }
-    else if constexpr (ObjectSize == 32) { return &FreeList32_; }
-    else if constexpr (ObjectSize == 64) { return &FreeList64_; }
-    else if constexpr (ObjectSize == 128) { return &FreeList128_; }
-    else if constexpr (ObjectSize == 256) { return &FreeList256_; }
+    if MYLANG_CONSTEXPR (ObjectSize == 8) { return &FreeList8_; }
+    else if MYLANG_CONSTEXPR (ObjectSize == 16) { return &FreeList16_; }
+    else if MYLANG_CONSTEXPR (ObjectSize == 32) { return &FreeList32_; }
+    else if MYLANG_CONSTEXPR (ObjectSize == 64) { return &FreeList64_; }
+    else if MYLANG_CONSTEXPR (ObjectSize == 128) { return &FreeList128_; }
+    else if MYLANG_CONSTEXPR (ObjectSize == 256) { return &FreeList256_; }
     else
       return nullptr;
   }

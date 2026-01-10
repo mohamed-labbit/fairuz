@@ -13,7 +13,6 @@ namespace parser {
 typename SymbolTable::DataType_t SemanticAnalyzer::inferType(const ast::Expr* expr)
 {
   if (expr == nullptr) return SymbolTable::DataType_t::UNKNOWN;
-
   switch (expr->getKind())
   {
   case ast::Expr::Kind::LITERAL : {

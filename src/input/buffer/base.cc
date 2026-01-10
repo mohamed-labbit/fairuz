@@ -11,9 +11,6 @@ namespace buffer {
 
 bool InputBufferBase::refreshBuffer(const std::uint32_t to_refresh)
 {
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : InputBufferBase::refresh_buffer() called!" << std::endl;
-#endif
   if (!FileManager_->isOpen()) return false;
 
   std::size_t max_chars = Buffers_[to_refresh].size() - 1;

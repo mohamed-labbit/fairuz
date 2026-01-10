@@ -1,12 +1,13 @@
 #pragma once
 
+#include "../macros.hpp"
+
 #include <filesystem>
 #include <fstream>
 #include <span>
 #include <string>
 #include <vector>
 
-#include "../macros.hpp"
 
 namespace mylang {
 namespace input {
@@ -29,7 +30,7 @@ enum class FileManagerError {
 };
 
 /// @brief Convert error code to human-readable string
-constexpr const char* toString(FileManagerError error) noexcept
+MYLANG_CONSTEXPR const char* toString(FileManagerError error) MYLANG_NOEXCEPT
 {
   switch (error)
   {
@@ -60,7 +61,7 @@ class FileManager
     std::size_t line{0};
     std::size_t column{0};
 
-    void reset() noexcept
+    void reset() MYLANG_NOEXCEPT
     {
       ByteOffset = 0;
       CharOffset = 0;
@@ -88,36 +89,67 @@ class FileManager
 
   explicit FileManager(const std::string& filepath);
 
-  FileManager(FileManager&&) noexcept = delete;
-  FileManager& operator=(FileManager&&) noexcept = delete;
+  FileManager(FileManager&&) MYLANG_NOEXCEPT = delete;
+  FileManager& operator=(FileManager&&) MYLANG_NOEXCEPT = delete;
 
-  FileManager(const FileManager&) noexcept = delete;
-  FileManager& operator=(FileManager&) noexcept = delete;
+  FileManager(const FileManager&) MYLANG_NOEXCEPT = delete;
+  FileManager& operator=(FileManager&) MYLANG_NOEXCEPT = delete;
 
   ~FileManager() = default;
 
-  bool isOpen() const noexcept;
-  bool isChangedSinceLastTime() const noexcept;
-  Context getContext() const noexcept;
+  bool isOpen() const MYLANG_NOEXCEPT { return Stream_.is_open() /*&& Stream_.good()*/; }
+
+  bool isChangedSinceLastTime() const MYLANG_NOEXCEPT { return fs::last_write_time(FullPath_) != LastKnownWriteTime_; }
+
+  Context getContext() const MYLANG_NOEXCEPT { return Context_; }
+
+  std::string getPath() const MYLANG_NOEXCEPT { return FullPath_; }
 
   void reset();
 
   void seekToChar(const std::size_t CharOffset);
-  void seekToLine(const std::size_t line_number);
 
-  StringType readWindow(const std::size_t size);
+  void seekToLine(const std::size_t line_number)
+  {
+    /// TODO:
+  }
+
+  StringType readWindow(const std::size_t size)
+  {
+    /// TODO: : add cache validation
+    return readWindowInternal(size);
+  }
+
   StringType readWindowInternal(const std::size_t size);
+
   StringType readLine(const std::size_t line_number);
+
   StringType readNextLine();
+
   std::vector<StringType> readLines(const std::size_t start, const std::size_t count);
+
   StringType readAll();
+
   void refreshStats();
-  std::size_t getLineCount();
-  std::size_t getCharCount();
+
+  std::size_t getLineCount()
+  {
+    if (!LineIndexBuilt_) buildLineIndex();
+    return Stats_.TotalLines;
+  }
+
+  std::size_t getCharCount()
+  {
+    if (!LineIndexBuilt_) buildLineIndex();
+    return Stats_.TotalCharacters;
+  }
+
   char16_t peekChar(const std::size_t CharOffset);
+
   StringType peekRange(const std::size_t start_offset, const std::size_t length);
-  std::string getPath() const noexcept;
+
   std::size_t remaining() { return static_cast<std::size_t>(Stream_.tellg()) - Context_.ByteOffset; }
+
   std::size_t fileSize() { return static_cast<std::size_t>(Stream_.tellg()); }
 
  private:
@@ -129,21 +161,34 @@ class FileManager
   FileStats Stats_;
 
   // private constants
-  static constexpr std::size_t DEFAULT_BUFFER_SIZE = 8192;
-  static constexpr std::size_t MAX_UTF8_CHAR_BYTES = 8;
-  static constexpr std::size_t SMALL_FILE_THRESHOLD = 1024 * 1024;        // 1 MB
-  static constexpr std::size_t LARGE_FILE_THRESHOLD = 1024 * 1024 * 100;  // 100 MB
-  static constexpr std::size_t LINE_INDEX_CHUNK = 10;
+  static MYLANG_CONSTEXPR std::size_t DEFAULT_BUFFER_SIZE = 8192;
+  static MYLANG_CONSTEXPR std::size_t MAX_UTF8_CHAR_BYTES = 8;
+  static MYLANG_CONSTEXPR std::size_t SMALL_FILE_THRESHOLD = 1024 * 1024;        // 1 MB
+  static MYLANG_CONSTEXPR std::size_t LARGE_FILE_THRESHOLD = 1024 * 1024 * 100;  // 100 MB
+  static MYLANG_CONSTEXPR std::size_t LINE_INDEX_CHUNK = 10;
 
   bool LineIndexBuilt_{false};
   std::filesystem::file_time_type LastKnownWriteTime_;
 
-  void popPosition();
-  void pushPosition();
+  void popPosition()
+  {
+    if (!PositionStack_.empty()) PositionStack_.erase(PositionStack_.begin());
+  }
+
+  void pushPosition()
+  {
+    PositionStack_.push_back(Context_);
+    // Limit stack size
+    if (PositionStack_.size() > 100) PositionStack_.erase(PositionStack_.begin());
+  }
+
   std::size_t validateUtf8Bound(std::span<const char> buffer) const;
+
   void buildLineIndex();
+
   FileStats computeStats();
-  bool isChangedSinceLastRead() const;
+
+  bool isChangedSinceLastRead() const { return fs::last_write_time(FullPath_) != LastKnownWriteTime_; }
 };
 
 }

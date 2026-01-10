@@ -43,9 +43,7 @@ tok::Token Lexer::make_token(tok::TokenType tt,
 
 IndentationAnalysis Lexer::analyzeIndentation_()
 {
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : Lexer::_analyze_indentation() called!" << std::endl;
-#endif
+
   std::size_t col = SourceManager_.column();
   std::size_t line = SourceManager_.line();
   IndentationAnalysis result;
@@ -154,9 +152,6 @@ IndentationAnalysis Lexer::analyzeIndentation_()
 // BUG FIX #1: Fixed parenthesis tracking - should increment/decrement, not assign bool
 void Lexer::updateIndentationContext_(const tok::Token& token)
 {
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : Lexer::update_indentation_context() called!" << std::endl;
-#endif
   switch (token.type())
   {
   case tok::TokenType::LPAREN :
@@ -177,9 +172,7 @@ void Lexer::updateIndentationContext_(const tok::Token& token)
 
 std::vector<tok::Token> Lexer::tokenize()
 {
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : Lexer::tokenize() called!" << std::endl;
-#endif
+
   while (next().type() != tok::TokenType::ENDMARKER);
   return this->TokStream_;
 }
@@ -214,10 +207,8 @@ tok::Token Lexer::lexToken()
   {
     char16_t ch = SourceManager_.current();
     if (ch == BUFFER_END) break;
-
     std::size_t line = SourceManager_.line();
     std::size_t col = SourceManager_.column();
-
     switch (ch)
     {
     case u'\n' : {
@@ -269,9 +260,7 @@ tok::Token Lexer::lexToken()
       return finish(tok::TokenType::STRING, std::move(str), line, col);
     }
     case ',' :
-    case u'،' : 
-      SourceManager_.consumeChar();
-      return finish(tok::TokenType::COMMA, StringType(1, ch), line, col);
+    case u'،' : SourceManager_.consumeChar(); return finish(tok::TokenType::COMMA, StringType(1, ch), line, col);
     default : break;
     }
 
@@ -430,9 +419,7 @@ tok::Token Lexer::lexToken()
 
 tok::Token Lexer::next()
 {
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : Lexer::next() called!" << std::endl;
-#endif
+
   // Advance the index first
   TokIndex_++;
   // Make sure we have a token at this position
@@ -452,9 +439,7 @@ tok::Token Lexer::next()
 
 tok::Token Lexer::prev()
 {
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : Lexer::prev() called!" << std::endl;
-#endif
+
   if (TokIndex_ > 0)
     TokIndex_ -= 1;
   else
@@ -465,14 +450,7 @@ tok::Token Lexer::prev()
 tok::Token Lexer::current() const
 {
   if (TokStream_.back().is(tok::TokenType::ENDMARKER)) return TokStream_.back();
-#if DEBUG_PRINT
-  std::cout << "-- DEBUG : current() called!" << std::endl;
-  std::cout << ". DEBUG: tok_index = " << TokIndex_ << ", tok_stream.size() = " << TokStream_.size() << std::endl;
-#endif
   if (TokIndex_ < TokStream_.size()) return TokStream_[TokIndex_];
-#if DEBUG_PRINT
-  std::cout << ". DEBUG: ENDMARKER returned from current()" << std::endl;
-#endif
   return make_token(tok::TokenType::ENDMARKER);
 }
 
