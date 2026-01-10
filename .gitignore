@@ -1,5 +1,7 @@
 .venv/        # ignore the virtual environment folder
+.cache/
+.vscode/
 build/        # ignore the build folder
 lines.cpp
-lines      
-some.cpp        
+lines
+some.cpp

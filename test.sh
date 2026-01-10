@@ -10,5 +10,4 @@ cd build || exit 1
 w
 cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug -DCMAKE_OSX_SYSROOT=$(xcrun --show-sdk-path) ..
 make
-# --gtest_filter=ParserTest.FailedTest
-./mylang_tests -v
+./mylang_tests -v #--gtest_filter=ParserTest.ParseComplexFunctionCall
