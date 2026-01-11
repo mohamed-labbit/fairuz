@@ -17,9 +17,9 @@ std::optional<double> ASTOptimizer::evaluateConstant(const ast::Expr* expr)
   }
   else if (expr->getKind() == ast::Expr::Kind::BINARY)
   {
-    const ast::BinaryExpr* bin = static_cast<const ast::BinaryExpr*>(expr);
-    std::optional<double> left = evaluateConstant(bin->getLeft());
-    std::optional<double> right = evaluateConstant(bin->getRight());
+    const ast::BinaryExpr* bin   = static_cast<const ast::BinaryExpr*>(expr);
+    std::optional<double>  left  = evaluateConstant(bin->getLeft());
+    std::optional<double>  right = evaluateConstant(bin->getRight());
     if (left == std::nullopt || right == std::nullopt) return std::nullopt;
     if (bin->getOperator() == lex::tok::TokenType::OP_PLUS) return *left + *right;
     if (bin->getOperator() == lex::tok::TokenType::OP_MINUS) return *left - *right;
@@ -38,7 +38,7 @@ std::optional<double> ASTOptimizer::evaluateConstant(const ast::Expr* expr)
   }
   else if (expr->getKind() == ast::Expr::Kind::UNARY)
   {
-    const ast::UnaryExpr* un = static_cast<const ast::UnaryExpr*>(expr);
+    const ast::UnaryExpr* un      = static_cast<const ast::UnaryExpr*>(expr);
     std::optional<double> operand = evaluateConstant(static_cast<const ast::UnaryExpr*>(un));
     if (operand == std::nullopt) return std::nullopt;
     if (un->getOperator() == lex::tok::TokenType::OP_PLUS) return *operand;
@@ -63,7 +63,7 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
       return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER, utf8::utf8to16(std::to_string(*val)));
     }
     // Algebraic simplifications
-    ast::Expr* left = bin->getLeft();
+    ast::Expr* left  = bin->getLeft();
     ast::Expr* right = bin->getRight();
     // x + 0 = x, x - 0 = x
     if ((bin->getOperator() == lex::tok::TokenType::OP_PLUS || bin->getOperator() == lex::tok::TokenType::OP_MINUS)
@@ -124,7 +124,7 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
   else if (expr->getKind() == ast::Expr::Kind::UNARY)
   {
     ast::UnaryExpr* un = static_cast<ast::UnaryExpr*>(expr);
-    un = static_cast<ast::UnaryExpr*>(optimizeConstantFolding(un));
+    un                 = static_cast<ast::UnaryExpr*>(optimizeConstantFolding(un));
     if (std::optional<double> val = evaluateConstant(expr))
     {
       Stats_.ConstantFolds++;
@@ -205,7 +205,7 @@ ast::Stmt* ASTOptimizer::eliminateDeadCode(ast::Stmt* stmt)
   }
   else if (stmt->getKind() == ast::Stmt::Kind::FOR)
   {
-    ast::ForStmt* forStmt = static_cast<ast::ForStmt*>(stmt);
+    ast::ForStmt*           forStmt = static_cast<ast::ForStmt*>(stmt);
     std::vector<ast::Stmt*> newBodyStmts;
     for (ast::Stmt* const& s : forStmt->getBlock()->getStatements())
       if (ast::Stmt* opt = eliminateDeadCode(s)) newBodyStmts.push_back(std::move(opt));
@@ -214,9 +214,9 @@ ast::Stmt* ASTOptimizer::eliminateDeadCode(ast::Stmt* stmt)
   }
   else if (stmt->getKind() == ast::Stmt::Kind::FUNC)
   {
-    ast::FunctionDef* funcDef = static_cast<ast::FunctionDef*>(stmt);
+    ast::FunctionDef*       funcDef = static_cast<ast::FunctionDef*>(stmt);
     std::vector<ast::Stmt*> newBodyStmts;
-    bool seenReturn = false;
+    bool                    seenReturn = false;
     for (ast::Stmt* const& s : funcDef->getBody()->getStatements())
     {
       if (seenReturn)

@@ -43,7 +43,7 @@ class ASTOptimizer
   {
    private:
     std::unordered_map<StringType, StringType> ExprCache_;
-    std::int32_t TempCounter_ = 0;
+    std::int32_t                               TempCounter_ = 0;
 
     StringType exprToString(const ast::Expr* expr);
 

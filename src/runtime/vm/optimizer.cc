@@ -8,7 +8,7 @@ namespace runtime {
 
 void BytecodeOptimizer::optimize(std::vector<bytecode::Instruction>& code, std::int32_t maxIterations)
 {
-  bool changed = true;
+  bool         changed   = true;
   std::int32_t iteration = 0;
   while (changed && iteration < maxIterations)
   {
@@ -43,14 +43,14 @@ bool BytecodeOptimizer::isJumpTarget(const std::vector<bytecode::Instruction>& c
 bool BytecodeOptimizer::isJumpOp(bytecode::OpCode op)
 {
   return op == bytecode::OpCode::JUMP || op == bytecode::OpCode::JUMP_FORWARD || op == bytecode::OpCode::JUMP_BACKWARD
-    || op == bytecode::OpCode::JUMP_IF_FALSE || op == bytecode::OpCode::JUMP_IF_TRUE || op == bytecode::OpCode::POP_JUMP_IF_FALSE
-    || op == bytecode::OpCode::POP_JUMP_IF_TRUE;
+         || op == bytecode::OpCode::JUMP_IF_FALSE || op == bytecode::OpCode::JUMP_IF_TRUE || op == bytecode::OpCode::POP_JUMP_IF_FALSE
+         || op == bytecode::OpCode::POP_JUMP_IF_TRUE;
 }
 
 bool BytecodeOptimizer::isBinaryOp(bytecode::OpCode op)
 {
   return op == bytecode::OpCode::ADD || op == bytecode::OpCode::SUB || op == bytecode::OpCode::MUL || op == bytecode::OpCode::DIV
-    || op == bytecode::OpCode::MOD || op == bytecode::OpCode::POW;
+         || op == bytecode::OpCode::MOD || op == bytecode::OpCode::POW;
 }
 
 }

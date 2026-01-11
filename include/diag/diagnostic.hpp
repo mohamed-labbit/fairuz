@@ -3,8 +3,8 @@
 #include "../../utfcpp/source/utf8.h"
 #include "../macros.hpp"
 
-#include <vector>
 #include <exception>
+#include <vector>
 
 
 namespace mylang {
@@ -17,12 +17,12 @@ class DiagnosticEngine
 
   struct Diagnostic
   {
-    Severity severity;
-    std::int32_t line, column;
-    std::int32_t length;
-    StringType message;
-    StringType code;  // Error code like E0001
-    std::vector<StringType> suggestions;
+    Severity                                         severity;
+    std::int32_t                                     line, column;
+    std::int32_t                                     length;
+    StringType                                       message;
+    StringType                                       code;  // Error code like E0001
+    std::vector<StringType>                          suggestions;
     std::vector<std::pair<std::int32_t, StringType>> notes;  // Additional context
   };
 
@@ -58,7 +58,7 @@ class DiagnosticEngine
 
  private:
   std::vector<Diagnostic> Diagnostics_;
-  StringType SourceCode_;
+  StringType              SourceCode_;
 
   void emitError(const std::string& msg, Severity sv)
   {
@@ -87,8 +87,8 @@ class DiagnosticEngine
   std::vector<std::string> splitLines(const std::string& text) const
   {
     std::vector<std::string> lines;
-    std::stringstream ss(text);
-    std::string line;
+    std::stringstream        ss(text);
+    std::string              line;
     while (std::getline(ss, line)) lines.push_back(line);
     return lines;
   }

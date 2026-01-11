@@ -34,7 +34,7 @@ StringType TypeSystem::Type::toString() const
 std::shared_ptr<TypeSystem::Type> TypeSystem::TypeInference::freshTypeVar()
 {
   std::shared_ptr<TypeSystem::Type> t = std::make_shared<Type>();
-  t->base = BaseType::Any;
+  t->base                             = BaseType::Any;
   return t;
 }
 
@@ -63,7 +63,7 @@ std::shared_ptr<typename TypeSystem::Type> TypeSystem::TypeInference::inferExpr(
   {
   case ast::Expr::Kind::LITERAL : {
     const ast::LiteralExpr* lit = static_cast<const ast::LiteralExpr*>(expr);
-    std::shared_ptr<Type> t = std::make_shared<Type>();
+    std::shared_ptr<Type>   t   = std::make_shared<Type>();
     switch (lit->getType())
     {
     case ast::LiteralExpr::Type::NUMBER : t->base = lit->getValue().find('.') != std::string::npos ? BaseType::Float : BaseType::Int; break;
@@ -74,9 +74,9 @@ std::shared_ptr<typename TypeSystem::Type> TypeSystem::TypeInference::inferExpr(
     return t;
   }
   case ast::Expr::Kind::BINARY : {
-    const ast::BinaryExpr* bin = static_cast<const ast::BinaryExpr*>(expr);
-    std::shared_ptr<Type> leftType = inferExpr(bin->getLeft());
-    std::shared_ptr<Type> rightType = inferExpr(bin->getRight());
+    const ast::BinaryExpr* bin       = static_cast<const ast::BinaryExpr*>(expr);
+    std::shared_ptr<Type>  leftType  = inferExpr(bin->getLeft());
+    std::shared_ptr<Type>  rightType = inferExpr(bin->getRight());
     unify(leftType, rightType);
     // Result type based on operator
     if (bin->getOperator() == lex::tok::TokenType::OP_PLUS || bin->getOperator() == lex::tok::TokenType::OP_MINUS
@@ -88,15 +88,15 @@ std::shared_ptr<typename TypeSystem::Type> TypeSystem::TypeInference::inferExpr(
              || bin->getOperator() == lex::tok::TokenType::OP_LT || bin->getOperator() == lex::tok::TokenType::OP_GT)
     {
       std::shared_ptr<Type> t = std::make_shared<Type>();
-      t->base = BaseType::Bool;
+      t->base                 = BaseType::Bool;
       return t;
     }
     return leftType;
   }
   case ast::Expr::Kind::LIST : {
-    const ast::ListExpr* list = static_cast<const ast::ListExpr*>(expr);
-    std::shared_ptr<Type> t = std::make_shared<Type>();
-    t->base = BaseType::List;
+    const ast::ListExpr*  list = static_cast<const ast::ListExpr*>(expr);
+    std::shared_ptr<Type> t    = std::make_shared<Type>();
+    t->base                    = BaseType::List;
     if (!list->getElements().empty())
     {
       std::shared_ptr<Type> elemType = inferExpr(list->getElements()[0]);

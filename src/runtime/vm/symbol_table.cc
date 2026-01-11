@@ -9,12 +9,12 @@ typename CompilerSymbolTable::Symbol* CompilerSymbolTable::define(const std::str
   if (Symbols_.count(name)) return &Symbols_[name];
 
   Symbol sym;
-  sym.name = name;
-  sym.index = NextIndex_++;
-  sym.scope = Parent_ ? SymbolScope::LOCAL : SymbolScope::GLOBAL;
+  sym.name        = name;
+  sym.index       = NextIndex_++;
+  sym.scope       = Parent_ ? SymbolScope::LOCAL : SymbolScope::GLOBAL;
   sym.IsParameter = isParam;
-  sym.IsCaptured = false;
-  sym.IsUsed = false;
+  sym.IsCaptured  = false;
+  sym.IsUsed      = false;
 
   Symbols_[name] = sym;
   return &Symbols_[name];
@@ -39,9 +39,9 @@ typename CompilerSymbolTable::Symbol* CompilerSymbolTable::resolve(const std::st
       parentSym->IsCaptured = true;
       // Create closure reference
       Symbol closureSym;
-      closureSym.name = name;
-      closureSym.index = FreeVars_.size();
-      closureSym.scope = SymbolScope::CLOSURE;
+      closureSym.name   = name;
+      closureSym.index  = FreeVars_.size();
+      closureSym.scope  = SymbolScope::CLOSURE;
       closureSym.IsUsed = true;
       FreeVars_.push_back(name);
       Symbols_[name] = closureSym;

@@ -45,8 +45,8 @@ class VirtualMachine
 
   // Advanced runtime features
 
-  JITCompiler Jit_;      // Just-In-Time compiler for hot code paths
-  GarbageCollector Gc_;  // Garbage collector for managed objects
+  JITCompiler      Jit_;  // Just-In-Time compiler for hot code paths
+  GarbageCollector Gc_;   // Garbage collector for managed objects
 
   // Performance monitoring and statistics
 
@@ -58,11 +58,11 @@ class VirtualMachine
    */
   struct Statistics
   {
-    std::int64_t InstructionsExecuted{0};        // Total number of executed instructions
-    std::int64_t FunctionsCalled{0};             // Number of function calls
-    std::int64_t GcCollections{0};               // Garbage collection runs
-    std::int64_t JitCompilations{0};             // JIT compilation events
-    std::chrono::microseconds ExecutionTime{0};  // Total execution time
+    std::int64_t              InstructionsExecuted{0};  // Total number of executed instructions
+    std::int64_t              FunctionsCalled{0};       // Number of function calls
+    std::int64_t              GcCollections{0};         // Garbage collection runs
+    std::int64_t              JitCompilations{0};       // JIT compilation events
+    std::chrono::microseconds ExecutionTime{0};         // Total execution time
   } Stats_;
 
   // Instruction dispatch optimization

@@ -24,16 +24,16 @@ class LanguageServer
 
   struct CompletionItem
   {
-    StringType label;
-    StringType detail;
-    StringType documentation;
+    StringType   label;
+    StringType   detail;
+    StringType   documentation;
     std::int32_t kind;  // Variable, Function, Class, etc.
   };
 
   struct Hover
   {
     StringType contents;
-    Range range;
+    Range      range;
   };
 
   // Auto-completion at cursor position

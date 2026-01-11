@@ -85,7 +85,7 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
   {
   case parser::ast::Expr::Kind::LITERAL : {
     const parser::ast::LiteralExpr* lit = static_cast<const parser::ast::LiteralExpr*>(expr);
-    object::Value val;
+    object::Value                   val;
     switch (lit->getType())
     {
     case parser::ast::LiteralExpr::Type::NUMBER : {
@@ -106,7 +106,7 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
 
   case parser::ast::Expr::Kind::NAME : {
     const parser::ast::NameExpr* name = static_cast<const parser::ast::NameExpr*>(expr);
-    CompilerSymbolTable::Symbol* sym = CurrentScope_->resolve(utf8::utf16to8(name->getValue()));
+    CompilerSymbolTable::Symbol* sym  = CurrentScope_->resolve(utf8::utf16to8(name->getValue()));
     if (!sym) diagnostic::engine.panic("Undefined variable: " + utf8::utf16to8(name->getValue()));
     switch (sym->scope)
     {
@@ -297,7 +297,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
 
   case parser::ast::Stmt::Kind::WHILE : {
     const parser::ast::WhileStmt* whileStmt = static_cast<const parser::ast::WhileStmt*>(stmt);
-    std::int32_t loopStart = getCurrentPC();
+    std::int32_t                  loopStart = getCurrentPC();
     // Mark as potential hot loop
     emitInstruction(bytecode::OpCode::HOT_LOOP_START, 0, stmt->getLine());
     // Compile condition
@@ -306,9 +306,9 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     emitInstruction(bytecode::OpCode::POP_JUMP_IF_FALSE, 0, stmt->getLine());
     // Loop body
     LoopContext ctx;
-    ctx.StartPC = loopStart;
+    ctx.StartPC       = loopStart;
     ctx.ContinueLabel = loopStart;
-    ctx.BreakLabel = -1;  // Will be patched
+    ctx.BreakLabel    = -1;  // Will be patched
     LoopStack_.push(ctx);
     for (const parser::ast::Stmt* s : whileStmt->getBlock()->getStatements()) compileStmt(s);
     // Jump back to loop start
@@ -337,9 +337,9 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     emitInstruction(bytecode::OpCode::STORE_FAST, sym->index, stmt->getLine());
     // Loop body
     LoopContext ctx;
-    ctx.StartPC = loopStart;
+    ctx.StartPC       = loopStart;
     ctx.ContinueLabel = loopStart;
-    ctx.BreakLabel = -1;
+    ctx.BreakLabel    = -1;
     LoopStack_.push(ctx);
     for (const parser::ast::Stmt* s : forStmt->getBlock()->getStatements()) compileStmt(s);
     // Jump back
@@ -361,13 +361,13 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     for (const parser::ast::Expr* param : funcDef->getParameters())
       CurrentScope_->define(utf8::utf16to8(static_cast<const parser::ast::NameExpr*>(param)->getValue()), true);
     // Save current compilation state
-    std::vector<bytecode::Instruction>&& savedInstructions = std::move(Unit_.instructions);
-    ConstantPool savedConstants = Constants_;
-    std::int32_t savedStackDepth = CurrentStackDepth_;
-    std::int32_t savedMaxStackDepth = MaxStackDepth_;
+    std::vector<bytecode::Instruction>&& savedInstructions  = std::move(Unit_.instructions);
+    ConstantPool                         savedConstants     = Constants_;
+    std::int32_t                         savedStackDepth    = CurrentStackDepth_;
+    std::int32_t                         savedMaxStackDepth = MaxStackDepth_;
     Unit_.instructions.clear();
     CurrentStackDepth_ = 0;
-    MaxStackDepth_ = 0;
+    MaxStackDepth_     = 0;
     // Compile function body
     for (const parser::ast::Stmt* s : funcDef->getBody()->getStatements()) compileStmt(s);
     // Implicit return None if no return statement
@@ -379,15 +379,15 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     }
     // Create function object
     std::vector<bytecode::Instruction>&& funcInstructions = std::move(Unit_.instructions);
-    std::int32_t funcStackSize = MaxStackDepth_;
+    std::int32_t                         funcStackSize    = MaxStackDepth_;
     // Restore compilation state
     Unit_.instructions = std::move(savedInstructions);
-    Constants_ = savedConstants;
+    Constants_         = savedConstants;
     CurrentStackDepth_ = savedStackDepth;
-    MaxStackDepth_ = savedMaxStackDepth;
+    MaxStackDepth_     = savedMaxStackDepth;
     // Store function object as constant
     object::Value funcObj;  // Would create FunctionObject here
-    std::int32_t funcIdx = Constants_.addConstant(funcObj);
+    std::int32_t  funcIdx = Constants_.addConstant(funcObj);
     emitInstruction(bytecode::OpCode::LOAD_CONST, funcIdx, stmt->getLine());
     emitInstruction(bytecode::OpCode::MAKE_FUNCTION, funcDef->getParameters().size(), stmt->getLine());
     // Store function
@@ -420,15 +420,15 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
 typename BytecodeCompiler::CompilationUnit BytecodeCompiler::compile(const std::vector<parser::ast::Stmt*>& ast)
 {
   // Reset state
-  Unit_ = CompilationUnit();
-  Stats_ = Stats();
+  Unit_              = CompilationUnit();
+  Stats_             = Stats();
   CurrentStackDepth_ = MaxStackDepth_ = 0;
   // Compile all statements
   for (const parser::ast::Stmt* stmt : ast) compileStmt(stmt);
   // Add HALT at end
   emitInstruction(bytecode::OpCode::HALT, 0, 0);
   // Finalize constant pool
-  Unit_.constants = Constants_.getConstants();
+  Unit_.constants          = Constants_.getConstants();
   Stats_.ConstantsPoolSize = Unit_.constants.size();
   // Resolve all jumps
   Jumps_.resolveJumps(Unit_.instructions);
@@ -510,8 +510,8 @@ void BytecodeCompiler::optimizationReport(std::ostream& out) const
   out << "  Stack size: " << MaxStackDepth_ << "\n\n";
   out << "Loop Optimizations:\n";
   out << "  Loops detected: " << Stats_.LoopsDetected << "\n";
-  const std::vector<LoopAnalyzer::Loop>& loops = LoopAnalyzer_.getLoops();
-  std::int32_t totalInvariants = 0;
+  const std::vector<LoopAnalyzer::Loop>& loops           = LoopAnalyzer_.getLoops();
+  std::int32_t                           totalInvariants = 0;
   for (const LoopAnalyzer::Loop& loop : loops) totalInvariants += loop.invariants.size();
   out << "  Hoistable invariants: " << totalInvariants << "\n\n";
   out << "Peephole Optimizations:\n";
@@ -602,8 +602,8 @@ std::string BytecodeCompiler::opcodeToString(bytecode::OpCode op) const
 bool BytecodeCompiler::needsArg(bytecode::OpCode op) const
 {
   return op != bytecode::OpCode::POP && op != bytecode::OpCode::DUP && op != bytecode::OpCode::ADD && op != bytecode::OpCode::SUB
-    && op != bytecode::OpCode::MUL && op != bytecode::OpCode::DIV && op != bytecode::OpCode::NEG && op != bytecode::OpCode::NOT
-    && op != bytecode::OpCode::RETURN && op != bytecode::OpCode::HALT && op != bytecode::OpCode::NOP;
+         && op != bytecode::OpCode::MUL && op != bytecode::OpCode::DIV && op != bytecode::OpCode::NEG && op != bytecode::OpCode::NOT
+         && op != bytecode::OpCode::RETURN && op != bytecode::OpCode::HALT && op != bytecode::OpCode::NOP;
 }
 
 }

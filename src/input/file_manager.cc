@@ -39,7 +39,7 @@ void FileManager::seekToChar(const std::size_t CharOffset)
   while (Context_.CharOffset < CharOffset)
   {
     const std::size_t chars_to_read = CharOffset - Context_.CharOffset;
-    StringType result = readWindowInternal(std::min(chars_to_read, std::size_t{1024}));
+    StringType        result        = readWindowInternal(std::min(chars_to_read, std::size_t{1024}));
     if (result.empty()) throw error::FileError(toString(FileManagerError::UNEXPECTED_EOF));
   }
 }
@@ -59,12 +59,12 @@ std::size_t FileManager::validateUtf8Bound(std::span<const char> buffer) const
   const std::size_t size = buffer.size();
   for (std::size_t i = 0, n = std::min(MAX_UTF8_CHAR_BYTES, size); i < n; ++i)
   {
-    const std::size_t pos = size - 1 - i;
+    const std::size_t   pos  = size - 1 - i;
     const unsigned char byte = static_cast<unsigned char>(buffer[pos]);
     if ((byte & 0x80) == 0) return 0;
     if ((byte & 0xC0) == 0xC0)
     {
-      const std::size_t expected = getUtf8SequenceLength(byte);
+      const std::size_t expected  = getUtf8SequenceLength(byte);
       const std::size_t available = size - pos;
       if (available < expected) return i + 1;
       return 0;
@@ -102,8 +102,8 @@ StringType FileManager::readWindowInternal(const std::size_t size)
   if (result.size() > size)
   {
     const std::size_t chars_to_trim = result.size() - size;
-    std::string trimmed_utf8;
-    auto start = result.begin() + static_cast<std::ptrdiff_t>(size);
+    std::string       trimmed_utf8;
+    auto              start = result.begin() + static_cast<std::ptrdiff_t>(size);
     utf8::utf16to8(start, result.end(), std::back_inserter(trimmed_utf8));
     Stream_.seekg(-static_cast<std::streamoff>(trimmed_utf8.size()), std::ios_base::cur);
     Context_.ByteOffset -= trimmed_utf8.size();
@@ -165,7 +165,7 @@ std::vector<StringType> FileManager::readLines(const std::size_t start, const st
 {
   if (!LineIndexBuilt_) buildLineIndex();
   if (start >= LineIndices_.size()) throw error::FileError(toString(FileManagerError::INVALID_LINE_NUMBER));
-  const std::size_t end = std::min(start + count, LineIndices_.size());
+  const std::size_t       end = std::min(start + count, LineIndices_.size());
   std::vector<StringType> lines;
   lines.reserve(end - start);
   for (std::size_t i = start; i < end; ++i) lines.push_back(std::move(readLine(i)));
@@ -189,7 +189,7 @@ StringType FileManager::readAll()
 typename FileManager::FileStats FileManager::computeStats()
 {
   FileStats stats;
-  stats.TotalBytes = fs::file_size(FullPath_);
+  stats.TotalBytes   = fs::file_size(FullPath_);
   stats.LastModified = fs::last_write_time(FullPath_);
   /// TODO: : detect file encoding
   return stats;
@@ -198,7 +198,7 @@ typename FileManager::FileStats FileManager::computeStats()
 void FileManager::refreshStats()
 {
   FileStats new_stats = computeStats();
-  Stats_ = new_stats;
+  Stats_              = new_stats;
   LastKnownWriteTime_ = Stats_.LastModified;
   // Invalidate line index if file changed
   if (isChangedSinceLastRead())
@@ -231,11 +231,11 @@ void FileManager::buildLineIndex()
   reset();
   LineIndices_.clear();
   LineIndices_.reserve(Stats_.TotalBytes / 80);  // roughly
-  std::size_t byte_pos = 0;
-  std::size_t char_pos = 0;
-  std::size_t start_byte = 0;
-  std::size_t start_char = 0;
-  std::size_t max_len = 0;
+  std::size_t byte_pos    = 0;
+  std::size_t char_pos    = 0;
+  std::size_t start_byte  = 0;
+  std::size_t start_char  = 0;
+  std::size_t max_len     = 0;
   std::size_t current_len = 0;
   while (true)
   {
@@ -255,8 +255,8 @@ void FileManager::buildLineIndex()
           // Peek next char (already in chunk if available)
           // This is simplified; in practice we'd need to handle this better
         }
-        start_byte = Context_.ByteOffset;
-        start_char = Context_.CharOffset;
+        start_byte  = Context_.ByteOffset;
+        start_char  = Context_.CharOffset;
         current_len = 0;
       }
       char_pos += 1;
@@ -267,7 +267,7 @@ void FileManager::buildLineIndex()
     max_len = std::max(max_len, current_len);
     LineIndices_.push_back(LineIndex{start_byte, start_char, current_len});
   }
-  Stats_.TotalLines = LineIndices_.size();
+  Stats_.TotalLines    = LineIndices_.size();
   Stats_.MaxLineLength = max_len;
   if (Stats_.TotalLines > 0) Stats_.AverageLineLength = Stats_.TotalCharacters / Stats_.TotalLines;
   LineIndexBuilt_ = true;

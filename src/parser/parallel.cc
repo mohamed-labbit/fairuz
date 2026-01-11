@@ -31,7 +31,7 @@ namespace parser {
 std::vector<std::vector<lex::tok::Token>> ParallelParser::splitIntoChunks(const std::vector<lex::tok::Token>& tokens)
 {
   std::vector<std::vector<lex::tok::Token>> chunks;
-  std::vector<lex::tok::Token> current;
+  std::vector<lex::tok::Token>              current;
   for (const lex::tok::Token& tok : tokens)
   {
     current.push_back(tok);

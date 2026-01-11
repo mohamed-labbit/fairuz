@@ -77,12 +77,12 @@ class InputBuffer: public InputBufferBase
     Position pos;
   };
 
-  std::size_t Capacity_ = DEFAULT_CAPACITY;
-  Pointer Current_{nullptr};
-  uint8_t CurrentBuffer_{0};
-  std::size_t FilePos_{0};
-  Position CurrentPosition_;
-  std::stack<std::size_t> Columns_;
+  std::size_t               Capacity_ = DEFAULT_CAPACITY;
+  Pointer                   Current_{nullptr};
+  uint8_t                   CurrentBuffer_{0};
+  std::size_t               FilePos_{0};
+  Position                  CurrentPosition_;
+  std::stack<std::size_t>   Columns_;
   std::stack<PushbackEntry> UngetStack_;
 
   void swapBuffers_();

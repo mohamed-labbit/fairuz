@@ -12,7 +12,7 @@ SymbolTable::SymbolTable(SymbolTable* p, std::int32_t level) :
 
 void SymbolTable::define(const StringType& name, Symbol symbol)
 {
-  symbol.name = name;
+  symbol.name    = name;
   Symbols_[name] = std::move(symbol);
 }
 
@@ -46,8 +46,8 @@ void SymbolTable::markUsed(const StringType& name, std::int32_t line)
 
 SymbolTable* SymbolTable::createChild()
 {
-  auto child = std::make_unique<SymbolTable>(this, ScopeLevel_ + 1);
-  auto* ptr = child.get();
+  auto  child = std::make_unique<SymbolTable>(this, ScopeLevel_ + 1);
+  auto* ptr   = child.get();
   Children_.push_back(std::move(child));
   return ptr;
 }

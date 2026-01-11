@@ -13,13 +13,13 @@ namespace ast {
 class ASTPrinter
 {
  private:
-  bool UseColor_;
+  bool          UseColor_;
   std::uint32_t NodeCount_ = 0;
 
   struct Prefix
   {
     std::string indent;
-    bool last;
+    bool        last;
   };
 
   std::string glyph(bool last) const { return last ? "└─ " : "├─ "; }

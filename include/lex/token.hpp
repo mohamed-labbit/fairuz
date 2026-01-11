@@ -158,8 +158,8 @@ class Token
   {
   }
 
-  Token() = default;
-  Token(const Token&) = default;
+  Token()                        = default;
+  Token(const Token&)            = default;
   Token(Token&&) MYLANG_NOEXCEPT = default;
 
   bool operator==(const Token& other) const
@@ -169,7 +169,7 @@ class Token
 
   bool operator!=(const Token& other) const { return !(*this == other); }
 
-  Token& operator=(const Token&) = default;
+  Token& operator=(const Token&)            = default;
   Token& operator=(Token&&) MYLANG_NOEXCEPT = default;
 
   // Return const references to avoid copies
@@ -215,8 +215,8 @@ class Token
 
  private:
   StringType Value_;
-  TokenType Type_;
-  Location Location_;
+  TokenType  Type_;
+  Location   Location_;
 };
 }
 }  // lex

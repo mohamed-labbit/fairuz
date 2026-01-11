@@ -1,8 +1,8 @@
 #include "../../include/diag/diagnostic.hpp"
 
-#include <sstream>
-#include <iostream>
 #include <iomanip>
+#include <iostream>
+#include <sstream>
 
 
 namespace mylang {
@@ -40,19 +40,19 @@ void DiagnosticEngine::prettyPrint() const
     {
     case Severity::NOTE :
       sevStr = u"note";
-      color = Color::CYAN;
+      color  = Color::CYAN;
       break;
     case Severity::WARNING :
       sevStr = u"warning";
-      color = Color::MAGENTA;
+      color  = Color::MAGENTA;
       break;
     case Severity::ERROR :
       sevStr = u"error";
-      color = Color::RED;
+      color  = Color::RED;
       break;
     case Severity::FATAL :
       sevStr = u"fatal";
-      color = Color::RED;
+      color  = Color::RED;
       break;
     }
 

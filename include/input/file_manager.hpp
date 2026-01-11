@@ -65,8 +65,8 @@ class FileManager
     {
       ByteOffset = 0;
       CharOffset = 0;
-      line = 0;
-      column = 0;
+      line       = 0;
+      column     = 0;
     }
   };
 
@@ -79,20 +79,20 @@ class FileManager
 
   struct FileStats
   {
-    std::size_t TotalBytes{0};
-    std::size_t TotalLines{0};
-    std::size_t MaxLineLength{0};
-    std::size_t AverageLineLength{0};
-    std::size_t TotalCharacters{0};
+    std::size_t                     TotalBytes{0};
+    std::size_t                     TotalLines{0};
+    std::size_t                     MaxLineLength{0};
+    std::size_t                     AverageLineLength{0};
+    std::size_t                     TotalCharacters{0};
     std::filesystem::file_time_type LastModified;
   };
 
   explicit FileManager(const std::string& filepath);
 
-  FileManager(FileManager&&) MYLANG_NOEXCEPT = delete;
+  FileManager(FileManager&&) MYLANG_NOEXCEPT            = delete;
   FileManager& operator=(FileManager&&) MYLANG_NOEXCEPT = delete;
 
-  FileManager(const FileManager&) MYLANG_NOEXCEPT = delete;
+  FileManager(const FileManager&) MYLANG_NOEXCEPT      = delete;
   FileManager& operator=(FileManager&) MYLANG_NOEXCEPT = delete;
 
   ~FileManager() = default;
@@ -153,21 +153,21 @@ class FileManager
   std::size_t fileSize() { return static_cast<std::size_t>(Stream_.tellg()); }
 
  private:
-  std::string FullPath_;
-  std::ifstream Stream_;
-  Context Context_;
-  std::vector<Context> PositionStack_;
+  std::string            FullPath_;
+  std::ifstream          Stream_;
+  Context                Context_;
+  std::vector<Context>   PositionStack_;
   std::vector<LineIndex> LineIndices_;
-  FileStats Stats_;
+  FileStats              Stats_;
 
   // private constants
-  static MYLANG_CONSTEXPR std::size_t DEFAULT_BUFFER_SIZE = 8192;
-  static MYLANG_CONSTEXPR std::size_t MAX_UTF8_CHAR_BYTES = 8;
+  static MYLANG_CONSTEXPR std::size_t DEFAULT_BUFFER_SIZE  = 8192;
+  static MYLANG_CONSTEXPR std::size_t MAX_UTF8_CHAR_BYTES  = 8;
   static MYLANG_CONSTEXPR std::size_t SMALL_FILE_THRESHOLD = 1024 * 1024;        // 1 MB
   static MYLANG_CONSTEXPR std::size_t LARGE_FILE_THRESHOLD = 1024 * 1024 * 100;  // 100 MB
-  static MYLANG_CONSTEXPR std::size_t LINE_INDEX_CHUNK = 10;
+  static MYLANG_CONSTEXPR std::size_t LINE_INDEX_CHUNK     = 10;
 
-  bool LineIndexBuilt_{false};
+  bool                            LineIndexBuilt_{false};
   std::filesystem::file_time_type LastKnownWriteTime_;
 
   void popPosition()

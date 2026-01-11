@@ -29,9 +29,9 @@ namespace parser {
 class ParseError: public std::runtime_error
 {
  public:
-  std::int32_t Line_, Column_;           // Source location of the error
-  StringType Context_;                   // Source line where the error occurred
-  std::vector<StringType> Suggestions_;  // Optional recovery suggestions
+  std::int32_t            Line_, Column_;  // Source location of the error
+  StringType              Context_;        // Source line where the error occurred
+  std::vector<StringType> Suggestions_;    // Optional recovery suggestions
 
   /**
    * @brief Constructs a parse error.
@@ -201,16 +201,10 @@ class Parser
   static bool isBinaryOp(const lex::tok::Token tok);
 
   /// @brief Peeks ahead in the token stream without consuming
-  lex::tok::Token peek(std::size_t offset = 1)
-  {
-    return Lexer_.peek(offset);
-  }
+  lex::tok::Token peek(std::size_t offset = 1) { return Lexer_.peek(offset); }
 
   /// @brief Advances and returns the next token
-  lex::tok::Token advance()
-  {
-    return Lexer_.next();
-  }
+  lex::tok::Token advance() { return Lexer_.next(); }
 
 
   /// @brief Matches and consumes a token if it is of the given type

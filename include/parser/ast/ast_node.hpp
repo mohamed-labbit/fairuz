@@ -13,12 +13,12 @@ class ASTNode
   std::size_t Column_{};
 
  public:
-  ASTNode() = default;
+  ASTNode()               = default;
   ASTNode(const ASTNode&) = delete;
-  ASTNode(ASTNode&&) = delete;
+  ASTNode(ASTNode&&)      = delete;
 
   ASTNode& operator=(const ASTNode&) = delete;
-  ASTNode& operator=(ASTNode&&) = delete;
+  ASTNode& operator=(ASTNode&&)      = delete;
 
   std::size_t getLine() const { return Line_; }
   std::size_t getColumn() const { return Column_; }

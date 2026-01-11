@@ -48,10 +48,10 @@ class SourceManager
   std::pair<std::size_t, std::size_t> offsetMap_(const std::size_t& offset) const;
 
  private:
-  std::string FilePath_;
+  std::string         FilePath_;
   buffer::InputBuffer InputBuffer_;
-  char16_t* Current_{nullptr};
-  buffer::Position CurrentPosition_;
+  char16_t*           Current_{nullptr};
+  buffer::Position    CurrentPosition_;
 };
 
 }  // lex

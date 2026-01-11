@@ -90,7 +90,7 @@ ast::Expr* Parser::parseCallExpr(ast::Expr* callee)
     }
     consume(lex::tok::TokenType::RPAREN, u"Expected ')' after arguments");
     ast::ListExpr* args_expr = ast::AST_allocator.make<ast::ListExpr>(args);
-    callee = ast::AST_allocator.make<ast::CallExpr>(dynamic_cast<ast::Expr*>(callee), args_expr);
+    callee                   = ast::AST_allocator.make<ast::CallExpr>(dynamic_cast<ast::Expr*>(callee), args_expr);
   }
   return callee;
 }
@@ -154,8 +154,8 @@ bool Parser::isBinaryOp(const lex::tok::Token tok)
 {
   lex::tok::TokenType tt = tok.type();
   return tt == lex::tok::TokenType::OP_BITAND || tt == lex::tok::TokenType::OP_BITXOR || tt == lex::tok::TokenType::OP_BITOR
-    || tt == lex::tok::TokenType::OP_PLUS || tt == lex::tok::TokenType::OP_STAR || tt == lex::tok::TokenType::OP_SLASH
-    || tt == lex::tok::TokenType::KW_AND || tt == lex::tok::TokenType::KW_OR;
+         || tt == lex::tok::TokenType::OP_PLUS || tt == lex::tok::TokenType::OP_STAR || tt == lex::tok::TokenType::OP_SLASH
+         || tt == lex::tok::TokenType::KW_AND || tt == lex::tok::TokenType::KW_OR;
 }
 
 int Parser::getLogicalOperatorPrecedence(lex::tok::TokenType tt)
@@ -207,8 +207,8 @@ ast::Expr* Parser::parseBinaryExprPrecedence(int min_precedence)
     advance();
 
     // Left associative: higher precedence for next level
-    int nextMinPrecedence = precedence + 1;
-    ast::Expr* right = parseBinaryExprPrecedence(nextMinPrecedence);
+    int        nextMinPrecedence = precedence + 1;
+    ast::Expr* right             = parseBinaryExprPrecedence(nextMinPrecedence);
     if (!right) return nullptr;
 
     left = ast::AST_allocator.make<ast::BinaryExpr>(left, right, op);

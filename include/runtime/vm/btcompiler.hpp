@@ -44,7 +44,7 @@ struct BytecodeBlock
 
   // Loop-related metadata
   bool IsLoopHeader = false;
-  bool IsLoopExit = false;
+  bool IsLoopExit   = false;
 
   // Data-flow analysis sets
 
@@ -78,8 +78,8 @@ class BytecodeCompiler
   struct CompilationUnit
   {
     std::vector<bytecode::Instruction> instructions;  // Bytecode instruction stream
-    std::vector<object::Value> constants;             // Constant pool values
-    std::vector<std::string> names;                   // Variable and symbol names
+    std::vector<object::Value>         constants;     // Constant pool values
+    std::vector<std::string>           names;         // Variable and symbol names
 
     std::int32_t NumLocals;    // Number of local variables
     std::int32_t NumCellVars;  // Number of closure variables
@@ -87,7 +87,7 @@ class BytecodeCompiler
 
     // Metadata and debug information
 
-    std::string filename;                   // Source filename
+    std::string               filename;     // Source filename
     std::vector<std::int32_t> LineNumbers;  // PC -> source line mapping
 
     // Program counter to source snippet mapping (debugging)
@@ -97,19 +97,19 @@ class BytecodeCompiler
  private:
   // Compilation state
 
-  CompilationUnit Unit_;        // Output compilation unit
-  ConstantPool Constants_;      // Constant pool manager
-  JumpResolver Jumps_;          // Jump target resolution
-  PeepholeOptimizer Peephole_;  // Peephole optimization pass
-  LoopAnalyzer LoopAnalyzer_;   // Loop detection and analysis
+  CompilationUnit   Unit_;          // Output compilation unit
+  ConstantPool      Constants_;     // Constant pool manager
+  JumpResolver      Jumps_;         // Jump target resolution
+  PeepholeOptimizer Peephole_;      // Peephole optimization pass
+  LoopAnalyzer      LoopAnalyzer_;  // Loop detection and analysis
 
   // Symbol table management
   std::unique_ptr<CompilerSymbolTable> CurrentScope_;
-  std::stack<CompilerSymbolTable*> ScopeStack_;
+  std::stack<CompilerSymbolTable*>     ScopeStack_;
 
   // Control-flow graph blocks
   std::vector<BytecodeBlock> Blocks_;
-  std::int32_t CurrentBlock_{0};
+  std::int32_t               CurrentBlock_{0};
 
   // Stack depth tracking for optimization
 

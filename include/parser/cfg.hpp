@@ -16,11 +16,11 @@ class ControlFlowGraph
  public:
   struct BasicBlock
   {
-    std::int32_t id;
-    std::vector<ast::Stmt*> statements;
+    std::int32_t              id;
+    std::vector<ast::Stmt*>   statements;
     std::vector<std::int32_t> predecessors;
     std::vector<std::int32_t> successors;
-    bool IsReachable = false;
+    bool                      IsReachable = false;
     // Data flow analysis
     std::unordered_set<StringType> DefVars;  // Variables defined
     std::unordered_set<StringType> UseVars;  // Variables used
@@ -30,8 +30,8 @@ class ControlFlowGraph
 
  private:
   std::vector<BasicBlock> Blocks_;
-  std::int32_t EntryBlock_ = 0;
-  std::int32_t ExitBlock_ = -1;
+  std::int32_t            EntryBlock_ = 0;
+  std::int32_t            ExitBlock_  = -1;
 
  public:
   void addBlock(BasicBlock block);
@@ -39,8 +39,8 @@ class ControlFlowGraph
   // Compute reachability
   void computeReachability();
   // Liveness analysis for dead code detection
-  void computeLiveness();
-  std::vector<std::int32_t> getUnreachableBlocks() const;
+  void                           computeLiveness();
+  std::vector<std::int32_t>      getUnreachableBlocks() const;
   const std::vector<BasicBlock>& getBlocks() const;
 };
 

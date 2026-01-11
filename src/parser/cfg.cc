@@ -20,7 +20,7 @@ void ControlFlowGraph::computeReachability()
 {
   if (Blocks_.empty()) return;
 
-  Blocks_[EntryBlock_].IsReachable = true;
+  Blocks_[EntryBlock_].IsReachable   = true;
   std::vector<std::int32_t> worklist = {EntryBlock_};
 
   while (!worklist.empty())
@@ -59,9 +59,9 @@ void ControlFlowGraph::computeLiveness()
         if (!block.DefVars.count(var)) newLiveIn.insert(var);
       if (newLiveIn != block.LiveIn || newLiveOut != block.LiveOut)
       {
-        block.LiveIn = std::move(newLiveIn);
+        block.LiveIn  = std::move(newLiveIn);
         block.LiveOut = std::move(newLiveOut);
-        changed = true;
+        changed       = true;
       }
     }
   }

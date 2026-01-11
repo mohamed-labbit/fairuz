@@ -15,7 +15,7 @@ char16_t InputBuffer::consumeChar()
   if (!UngetStack_.empty())
   {
     CurrentPosition_ = UngetStack_.top().pos;
-    ch = UngetStack_.top().ch;
+    ch               = UngetStack_.top().ch;
     UngetStack_.pop();
   }
   else
@@ -74,9 +74,9 @@ StringType InputBuffer::nPeek(std::size_t n)
 
   StringType out;
   if (n == 0) return out;
-  std::size_t rem = n;
+  std::size_t  rem     = n;
   std::int32_t buf_idx = CurrentBuffer_;
-  std::size_t offset = static_cast<std::size_t>(Current_ - Buffers_[buf_idx].data() + 1);
+  std::size_t  offset  = static_cast<std::size_t>(Current_ - Buffers_[buf_idx].data() + 1);
   while (rem > 0)
   {
     if (offset >= Buffers_[buf_idx].size() || Buffers_[buf_idx][offset] == BUFFER_END)
@@ -103,10 +103,10 @@ void InputBuffer::unget(char16_t ch)
 void InputBuffer::reset()
 {
 
-  CurrentBuffer_ = 0;
-  Buffers_[0][0] = BUFFER_END;
-  Buffers_[0][1] = BUFFER_END;
-  Current_ = Buffers_[0].data();
+  CurrentBuffer_   = 0;
+  Buffers_[0][0]   = BUFFER_END;
+  Buffers_[0][1]   = BUFFER_END;
+  Current_         = Buffers_[0].data();
   CurrentPosition_ = {1, 1, 0};
   while (!Columns_.empty()) Columns_.pop();
   Columns_.push(1);
@@ -146,7 +146,7 @@ void InputBuffer::rewindPosition_(char16_t ch)
   if (ch == u'\n')
   {
     if (!Columns_.empty()) Columns_.pop();
-    CurrentPosition_.line = std::max<std::size_t>(1, CurrentPosition_.line - 1);
+    CurrentPosition_.line   = std::max<std::size_t>(1, CurrentPosition_.line - 1);
     CurrentPosition_.column = Columns_.empty() ? 1 : Columns_.top();
   }
   else

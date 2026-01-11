@@ -84,13 +84,13 @@ void VirtualMachine::registerNativeFunctions()
     else if (args.size() == 2)
     {
       start = args[0].toInt();
-      stop = args[1].toInt();
+      stop  = args[1].toInt();
     }
     else
     {
       start = args[0].toInt();
-      stop = args[1].toInt();
-      step = args[2].toInt();
+      stop  = args[1].toInt();
+      step  = args[2].toInt();
     }
 
     std::vector<object::Value> result;
@@ -197,7 +197,7 @@ void VirtualMachine::registerNativeFunctions()
   nativeFunctions["enumerate"] = [](const std::vector<object::Value>& args) {
     if (args.size() != 1) diagnostic::engine.panic("enumerate() takes 1 argument");
     if (!args[0].isList()) diagnostic::engine.panic("enumerate() requires list");
-    std::vector<object::Value> result;
+    std::vector<object::Value>        result;
     const std::vector<object::Value>& list = args[0].asList();
     for (std::size_t i = 0; i < list.size(); i++)
     {
@@ -268,7 +268,7 @@ void VirtualMachine::execute(const BytecodeCompiler::CompilationUnit& code)
   Globals_.resize(code.NumCellVars);
   Stack_.clear();
   Stack_.reserve(1000);  // Pre-allocate for performance
-  Ip_ = 0;
+  Ip_            = 0;
   auto startTime = std::chrono::high_resolution_clock::now();
   // Main execution loop with computed goto (if supported)
   while (Ip_ < code.instructions.size())
@@ -289,7 +289,7 @@ void VirtualMachine::execute(const BytecodeCompiler::CompilationUnit& code)
     }
     Ip_++;
   }
-  auto endTime = std::chrono::high_resolution_clock::now();
+  auto endTime         = std::chrono::high_resolution_clock::now();
   Stats_.ExecutionTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
 }
 
@@ -505,7 +505,7 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
   }
   // Function calls
   case bytecode::OpCode::CALL : {
-    std::int32_t numArgs = instr.arg;
+    std::int32_t               numArgs = instr.arg;
     std::vector<object::Value> args;
     for (std::int32_t i = 0; i < numArgs; i++) args.insert(args.begin(), pop());
     object::Value func = pop();
@@ -513,7 +513,7 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     if (func.isString())
     {
       std::string funcName = utf8::utf16to8(func.asString());
-      auto it = nativeFunctions.find(funcName);
+      auto        it       = nativeFunctions.find(funcName);
       if (it != nativeFunctions.end())
       {
         Stats_.FunctionsCalled++;
@@ -551,12 +551,12 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     std::unordered_map<StringType, object::Value> dict;
     for (std::int32_t i = 0; i < instr.arg; i++)
     {
-      object::Value val = pop();
-      object::Value key = pop();
+      object::Value val    = pop();
+      object::Value key    = pop();
       dict[key.asString()] = val;
     }
     std::shared_ptr<std::unordered_map<StringType, object::Value>> dict_ptr = std::make_shared<std::unordered_map<StringType, object::Value>>(dict);
-    object::Value result;
+    object::Value                                                  result;
     result.setType(object::Value::Type::DICT);
     result.setData(dict_ptr);
     push(result);
@@ -581,8 +581,8 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     break;
   }
   case bytecode::OpCode::SET_ITEM : {
-    object::Value val = pop();
-    object::Value key = pop();
+    object::Value  val = pop();
+    object::Value  key = pop();
     object::Value& obj = top();
     obj.setItem(key, val);
     break;

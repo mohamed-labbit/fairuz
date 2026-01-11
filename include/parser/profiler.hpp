@@ -14,7 +14,7 @@ class ParserProfiler
   struct Timing
   {
     StringType phase;
-    double milliseconds;
+    double     milliseconds;
   };
 
   std::vector<Timing> Timings_;

@@ -19,9 +19,9 @@ class BytecodeOptimizer
  public:
   struct OptimizationPass
   {
-    std::string name;
+    std::string                                              name;
     std::function<bool(std::vector<bytecode::Instruction>&)> apply;
-    std::int32_t ApplicationsCount = 0;
+    std::int32_t                                             ApplicationsCount = 0;
   };
 
  private:
@@ -74,15 +74,15 @@ class BytecodeOptimizer
                              if (target < code.size() && code[target].op == bytecode::OpCode::JUMP)
                              {
                                instr.arg = code[target].arg;
-                               changed = true;
+                               changed   = true;
                              }
                            }
                          return changed;
                        }});
     // Pass 4: Remove NOPs
     Passes_.push_back({"NOP elimination", [](std::vector<bytecode::Instruction>& code) -> bool {
-                         auto it = std::remove_if(code.begin(), code.end(),
-                                                  [](const bytecode::Instruction& instr) { return instr.op == bytecode::OpCode::NOP; });
+                         auto it      = std::remove_if(code.begin(), code.end(),
+                                                       [](const bytecode::Instruction& instr) { return instr.op == bytecode::OpCode::NOP; });
                          bool changed = it != code.end();
                          code.erase(it, code.end());
                          return changed;

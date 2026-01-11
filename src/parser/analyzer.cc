@@ -33,8 +33,8 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(const ast::Expr* ex
     break;
   }
   case ast::Expr::Kind::BINARY : {
-    const ast::BinaryExpr* bin = static_cast<const ast::BinaryExpr*>(expr);
-    SymbolTable::DataType_t leftType = inferType(bin->getLeft());
+    const ast::BinaryExpr*  bin       = static_cast<const ast::BinaryExpr*>(expr);
+    SymbolTable::DataType_t leftType  = inferType(bin->getLeft());
     SymbolTable::DataType_t rightType = inferType(bin->getRight());
     // Type promotion rules
     if (leftType == SymbolTable::DataType_t::FLOAT || rightType == SymbolTable::DataType_t::FLOAT) return SymbolTable::DataType_t::FLOAT;
@@ -76,7 +76,7 @@ void SemanticAnalyzer::analyzeExpr(const ast::Expr* expr)
     analyzeExpr(bin->getLeft());
     analyzeExpr(bin->getRight());
     // Type compatibility checking
-    SymbolTable::DataType_t leftType = inferType(bin->getLeft());
+    SymbolTable::DataType_t leftType  = inferType(bin->getLeft());
     SymbolTable::DataType_t rightType = inferType(bin->getRight());
     if (leftType != rightType && leftType != SymbolTable::DataType_t::UNKNOWN && rightType != SymbolTable::DataType_t::UNKNOWN)
       // Check for invalid operations
@@ -133,11 +133,11 @@ void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
     const ast::AssignmentStmt* assign = static_cast<const ast::AssignmentStmt*>(stmt);
     analyzeExpr(assign->getValue());
     SymbolTable::DataType_t type = inferType(assign->getValue());
-    SymbolTable::Symbol sym;
-    sym.SymbolType = SymbolTable::SymbolType::VARIABLE;
-    sym.DataType = type;
+    SymbolTable::Symbol     sym;
+    sym.SymbolType     = SymbolTable::SymbolType::VARIABLE;
+    sym.DataType       = type;
     sym.DefinitionLine = stmt->getLine();
-    ast::Expr* target = assign->getTarget();
+    ast::Expr* target  = assign->getTarget();
     assert(target);
     StringType target_name = u"";
     /// TODO: check other type of target expressions
@@ -186,7 +186,7 @@ void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
     CurrentScope_ = CurrentScope_->createChild();
     SymbolTable::Symbol loopVar;
     loopVar.SymbolType = SymbolTable::SymbolType::VARIABLE;
-    loopVar.DataType = SymbolTable::DataType_t::ANY;
+    loopVar.DataType   = SymbolTable::DataType_t::ANY;
     CurrentScope_->define(forStmt->getTarget()->getValue(), loopVar);
     for (const ast::Stmt* const& s : forStmt->getBlock()->getStatements()) analyzeStmt(s);
     // Check if loop variable is shadowing
@@ -199,9 +199,9 @@ void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
 
   case ast::Stmt::Kind::FUNC : {
     const ast::FunctionDef* funcDef = static_cast<const ast::FunctionDef*>(stmt);
-    SymbolTable::Symbol funcSym;
-    funcSym.SymbolType = SymbolTable::SymbolType::FUNCTION;
-    funcSym.DataType = SymbolTable::DataType_t::FUNCTION;
+    SymbolTable::Symbol     funcSym;
+    funcSym.SymbolType     = SymbolTable::SymbolType::FUNCTION;
+    funcSym.DataType       = SymbolTable::DataType_t::FUNCTION;
     funcSym.DefinitionLine = stmt->getLine();
     CurrentScope_->define(funcDef->getName()->getValue(), funcSym);
     // Create function scope
@@ -210,7 +210,7 @@ void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
     {
       SymbolTable::Symbol paramSym;
       paramSym.SymbolType = SymbolTable::SymbolType::VARIABLE;
-      paramSym.DataType = SymbolTable::DataType_t::ANY;
+      paramSym.DataType   = SymbolTable::DataType_t::ANY;
       CurrentScope_->define(static_cast<const ast::NameExpr*>(param)->getValue(), paramSym);
     }
     for (const ast::Stmt* const& s : funcDef->getBody()->getStatements()) analyzeStmt(s);
@@ -242,13 +242,13 @@ void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
 
 SemanticAnalyzer::SemanticAnalyzer()
 {
-  GlobalScope_ = std::make_unique<SymbolTable>();
+  GlobalScope_  = std::make_unique<SymbolTable>();
   CurrentScope_ = GlobalScope_.get();
   // Add built-in functions
   SymbolTable::Symbol printSym;
-  printSym.name = u"print";
+  printSym.name       = u"print";
   printSym.SymbolType = SymbolTable::SymbolType::FUNCTION;
-  printSym.DataType = SymbolTable::DataType_t::FUNCTION;
+  printSym.DataType   = SymbolTable::DataType_t::FUNCTION;
   GlobalScope_->define(u"print", printSym);
 }
 

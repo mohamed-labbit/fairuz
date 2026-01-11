@@ -13,9 +13,9 @@ void LoopAnalyzer::detectLoops(const std::vector<bytecode::Instruction>& instruc
     if ((instr.op == bytecode::OpCode::JUMP_BACKWARD || instr.op == bytecode::OpCode::FOR_ITER) && instr.arg < i)
     {
       Loop loop;
-      loop.HeaderPC = instr.arg;
-      loop.ExitPC = i;
-      loop.IsInnerLoop = true;
+      loop.HeaderPC     = instr.arg;
+      loop.ExitPC       = i;
+      loop.IsInnerLoop  = true;
       loop.NestingLevel = 1;
       // Collect loop body
       for (std::int32_t pc = instr.arg; pc <= i; pc++) loop.BodyPCs.push_back(pc);

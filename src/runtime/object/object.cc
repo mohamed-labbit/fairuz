@@ -110,8 +110,8 @@ StringType object::Value::toString() const
   case Type::STRING : return asString();
   case Type::BOOL : return asBool() ? u"True" : u"False";
   case Type::LIST : {
-    StringType result = u"[";
-    const std::vector<object::Value>& list = asList();
+    StringType                        result = u"[";
+    const std::vector<object::Value>& list   = asList();
     for (std::size_t i = 0; i < list.size(); i++)
     {
       result += list[i].toString();
@@ -120,9 +120,9 @@ StringType object::Value::toString() const
     return result + u"]";
   }
   case Type::DICT : {
-    StringType result = u"{";
-    const std::shared_ptr<std::unordered_map<StringType, Value>>& dict = std::get<std::shared_ptr<std::unordered_map<StringType, Value>>>(Data_);
-    std::size_t count = 0;
+    StringType                                                    result = u"{";
+    const std::shared_ptr<std::unordered_map<StringType, Value>>& dict   = std::get<std::shared_ptr<std::unordered_map<StringType, Value>>>(Data_);
+    std::size_t                                                   count  = 0;
     for (const auto& [k, v] : *dict)
     {
       result += u"'" + k + u"': " + v.toString();
@@ -191,7 +191,7 @@ object::Value object::Value::operator+(const Value& other) const
   if (isString() || other.isString()) return Value(toString() + other.toString());
   if (isList() && other.isList())
   {
-    std::vector<object::Value> result = asList();
+    std::vector<object::Value>        result    = asList();
     const std::vector<object::Value>& otherList = other.asList();
     result.insert(result.end(), otherList.begin(), otherList.end());
     return Value(result);
@@ -269,8 +269,8 @@ object::Value object::Value::getItem(const Value& key) const
 {
   if (isList())
   {
-    std::int64_t index = key.toInt();
-    const std::vector<object::Value>& list = asList();
+    std::int64_t                      index = key.toInt();
+    const std::vector<object::Value>& list  = asList();
     if (index < 0) index += list.size();
     if (index < 0 || index >= list.size()) diagnostic::engine.panic("List index out of range");
     return list[index];
@@ -278,14 +278,14 @@ object::Value object::Value::getItem(const Value& key) const
   if (isDict())
   {
     const std::unordered_map<StringType, object::Value>& dict = asDict();
-    auto it = dict.find(key.toString());
+    auto                                                 it   = dict.find(key.toString());
     if (it == dict.end()) diagnostic::engine.panic("Key not found: " + utf8::utf16to8(key.toString()));
     return it->second;
   }
   if (isString())
   {
-    std::int64_t index = key.toInt();
-    const StringType& str = asString();
+    std::int64_t      index = key.toInt();
+    const StringType& str   = asString();
     if (index < 0) index += str.size();
     if (index < 0 || index >= str.size()) diagnostic::engine.panic("String index out of range");
     return Value(StringType(1, str[index]));
@@ -297,8 +297,8 @@ void object::Value::setItem(const Value& key, const Value& value)
 {
   if (isList())
   {
-    std::int64_t index = key.toInt();
-    std::vector<object::Value>& list = asList();
+    std::int64_t                index = key.toInt();
+    std::vector<object::Value>& list  = asList();
     if (index < 0) index += list.size();
     if (index < 0 || index >= list.size()) diagnostic::engine.panic("List index out of range");
     list[index] = value;

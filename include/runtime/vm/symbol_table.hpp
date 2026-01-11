@@ -19,19 +19,19 @@ class CompilerSymbolTable
 
   struct Symbol
   {
-    std::string name;
+    std::string  name;
     std::int32_t index;
-    SymbolScope scope;
-    bool IsParameter;
-    bool IsCaptured;  // Used in closure
-    bool IsUsed;
+    SymbolScope  scope;
+    bool         IsParameter;
+    bool         IsCaptured;  // Used in closure
+    bool         IsUsed;
   };
 
  private:
   std::unordered_map<std::string, Symbol> Symbols_;
-  CompilerSymbolTable* Parent_;
-  std::int32_t NextIndex_{0};
-  std::vector<std::string> FreeVars_;  // Closure variables
+  CompilerSymbolTable*                    Parent_;
+  std::int32_t                            NextIndex_{0};
+  std::vector<std::string>                FreeVars_;  // Closure variables
 
  public:
   explicit CompilerSymbolTable(CompilerSymbolTable* p = nullptr) :
@@ -39,11 +39,11 @@ class CompilerSymbolTable
   {
   }
 
-  Symbol* define(const std::string& name, bool isParam = false);
-  Symbol* resolve(const std::string& name);
+  Symbol*                         define(const std::string& name, bool isParam = false);
+  Symbol*                         resolve(const std::string& name);
   const std::vector<std::string>& getFreeVars() const;
-  std::int32_t getLocalCount() const;
-  std::vector<Symbol> getUnusedSymbols() const;
+  std::int32_t                    getLocalCount() const;
+  std::vector<Symbol>             getUnusedSymbols() const;
 };  // CompilerSymbolTable
 
 }

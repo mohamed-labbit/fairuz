@@ -18,7 +18,7 @@ class Expr: public ASTNode
   enum class Kind : int { INVALID, BINARY, UNARY, LITERAL, NAME, CALL, ASSIGNMENT, LIST };
 
  protected:
-  Kind Kind_;
+  Kind       Kind_;
   StringType Str_;
 
  public:
@@ -30,16 +30,16 @@ class Expr: public ASTNode
     Kind_ = Kind::INVALID;
   }
 
-  void setStr(const StringType s) { Str_ = s; }
+  void       setStr(const StringType s) { Str_ = s; }
   StringType getStr() const { return Str_; }
-  Kind getKind() const { return Kind_; }
+  Kind       getKind() const { return Kind_; }
 };
 
 class BinaryExpr: public Expr
 {
  private:
-  Expr* Left_{nullptr};
-  Expr* Right_{nullptr};
+  Expr*               Left_{nullptr};
+  Expr*               Right_{nullptr};
   lex::tok::TokenType Operator_{lex::tok::TokenType::INVALID};
 
  public:
@@ -56,12 +56,12 @@ class BinaryExpr: public Expr
     assert((Right_ != nullptr) && "'right' argument to BinaryExpr is null");
   }
 
-  BinaryExpr(BinaryExpr&&) MYLANG_MYLANG_NOEXCEPT = delete;
-  BinaryExpr(const BinaryExpr&) MYLANG_MYLANG_NOEXCEPT = delete;
+  BinaryExpr(BinaryExpr&&) MYLANG_MYLANG_NOEXCEPT                 = delete;
+  BinaryExpr(const BinaryExpr&) MYLANG_MYLANG_NOEXCEPT            = delete;
   BinaryExpr& operator=(const BinaryExpr&) MYLANG_MYLANG_NOEXCEPT = delete;
 
-  Expr* getLeft() const { return Left_; }
-  Expr* getRight() const { return Right_; }
+  Expr*               getLeft() const { return Left_; }
+  Expr*               getRight() const { return Right_; }
   lex::tok::TokenType getOperator() const { return Operator_; }
 
   void setLeft(Expr* left) { Left_ = left; }
@@ -72,7 +72,7 @@ class BinaryExpr: public Expr
 class UnaryExpr: public Expr
 {
  private:
-  Expr* Operand_{nullptr};
+  Expr*               Operand_{nullptr};
   lex::tok::TokenType Operator_{lex::tok::TokenType::INVALID};
 
  public:
@@ -86,11 +86,11 @@ class UnaryExpr: public Expr
     assert((Operand_ != nullptr) && "'operand' argument to UnaryExpr is null");
   }
 
-  UnaryExpr(UnaryExpr&&) MYLANG_MYLANG_NOEXCEPT = delete;
-  UnaryExpr(const UnaryExpr&) MYLANG_MYLANG_NOEXCEPT = delete;
+  UnaryExpr(UnaryExpr&&) MYLANG_MYLANG_NOEXCEPT                 = delete;
+  UnaryExpr(const UnaryExpr&) MYLANG_MYLANG_NOEXCEPT            = delete;
   UnaryExpr& operator=(const UnaryExpr&) MYLANG_MYLANG_NOEXCEPT = delete;
 
-  Expr* getOperand() const { return Operand_; }
+  Expr*               getOperand() const { return Operand_; }
   lex::tok::TokenType getOperator() const { return Operator_; }
 };
 
@@ -100,7 +100,7 @@ class LiteralExpr: public Expr
   enum class Type { NUMBER, STRING, BOOLEAN, NONE };
 
  private:
-  Type Type_{Type::NONE};
+  Type       Type_{Type::NONE};
   StringType Literal_;
 
  public:
@@ -114,12 +114,12 @@ class LiteralExpr: public Expr
     // assert((Literal_ != u"") && "'literal' argument to LiteralExpr is null");
   }
 
-  LiteralExpr(LiteralExpr&&) MYLANG_NOEXCEPT = delete;
-  LiteralExpr(const LiteralExpr&) MYLANG_NOEXCEPT = delete;
+  LiteralExpr(LiteralExpr&&) MYLANG_NOEXCEPT                 = delete;
+  LiteralExpr(const LiteralExpr&) MYLANG_NOEXCEPT            = delete;
   LiteralExpr& operator=(const LiteralExpr&) MYLANG_NOEXCEPT = delete;
 
   StringType getValue() const { return Literal_; }
-  Type getType() const { return Type_; }
+  Type       getType() const { return Type_; }
 };
 
 class NameExpr: public Expr
@@ -140,8 +140,8 @@ class NameExpr: public Expr
     assert(!Str_.empty() && "'Str_' argument to NameExpr is null");
   }
 
-  NameExpr(NameExpr&&) MYLANG_NOEXCEPT = delete;
-  NameExpr(const NameExpr&) MYLANG_NOEXCEPT = delete;
+  NameExpr(NameExpr&&) MYLANG_NOEXCEPT                 = delete;
+  NameExpr(const NameExpr&) MYLANG_NOEXCEPT            = delete;
   NameExpr& operator=(const NameExpr&) MYLANG_NOEXCEPT = delete;
 
   StringType getValue() const { return Str_; }
@@ -171,12 +171,12 @@ class ListExpr: public Expr
     }
   }
 
-  ListExpr(ListExpr&&) MYLANG_NOEXCEPT = delete;
-  ListExpr(const ListExpr&) MYLANG_NOEXCEPT = delete;
+  ListExpr(ListExpr&&) MYLANG_NOEXCEPT                 = delete;
+  ListExpr(const ListExpr&) MYLANG_NOEXCEPT            = delete;
   ListExpr& operator=(const ListExpr&) MYLANG_NOEXCEPT = delete;
 
   const std::vector<Expr*>& getElements() const { return Elements_; }
-  std::vector<Expr*>& getElementsMutable() { return Elements_; }
+  std::vector<Expr*>&       getElementsMutable() { return Elements_; }
 
   bool isEmpty() const { return Elements_.empty(); }
 };
@@ -187,8 +187,8 @@ class CallExpr: public Expr
   enum class CallLocation : int { GLOBAL, LOCAL };
 
  private:
-  Expr* Callee_{nullptr};
-  ListExpr* Args_;
+  Expr*        Callee_{nullptr};
+  ListExpr*    Args_;
   CallLocation CallLocation_;
 
  public:
@@ -212,15 +212,15 @@ class CallExpr: public Expr
     }
   }
 
-  CallExpr(CallExpr&&) MYLANG_NOEXCEPT = delete;
-  CallExpr(const CallExpr&) MYLANG_NOEXCEPT = delete;
+  CallExpr(CallExpr&&) MYLANG_NOEXCEPT                 = delete;
+  CallExpr(const CallExpr&) MYLANG_NOEXCEPT            = delete;
   CallExpr& operator=(const CallExpr&) MYLANG_NOEXCEPT = delete;
 
-  Expr* getCallee() const { return Callee_; }
+  Expr*                     getCallee() const { return Callee_; }
   const std::vector<Expr*>& getArgs() const { return Args_->getElements(); }
-  std::vector<Expr*>& getArgsMutable() { return Args_->getElementsMutable(); }
-  ListExpr* getArgsAsListExpr() { return Args_; }
-  CallLocation getCallLocation() const { return CallLocation_; }
+  std::vector<Expr*>&       getArgsMutable() { return Args_->getElementsMutable(); }
+  ListExpr*                 getArgsAsListExpr() { return Args_; }
+  CallLocation              getCallLocation() const { return CallLocation_; }
 
   bool hasArguments() const { return Args_ == nullptr || Args_->isEmpty(); }
 };
@@ -229,7 +229,7 @@ class AssignmentExpr: public Expr
 {
  private:
   NameExpr* Target_{nullptr};
-  Expr* Value_{nullptr};
+  Expr*     Value_{nullptr};
 
  public:
   explicit AssignmentExpr() = delete;
@@ -244,12 +244,12 @@ class AssignmentExpr: public Expr
     assert((Value_ != nullptr) && "'value' argument to AssignmentExpr is null");
   }
 
-  AssignmentExpr(AssignmentExpr&&) MYLANG_NOEXCEPT = delete;
-  AssignmentExpr(const AssignmentExpr&) MYLANG_NOEXCEPT = delete;
+  AssignmentExpr(AssignmentExpr&&) MYLANG_NOEXCEPT                 = delete;
+  AssignmentExpr(const AssignmentExpr&) MYLANG_NOEXCEPT            = delete;
   AssignmentExpr& operator=(const AssignmentExpr&) MYLANG_NOEXCEPT = delete;
 
   NameExpr* getTarget() const { return Target_; }
-  Expr* getValue() const { return Value_; }
+  Expr*     getValue() const { return Value_; }
 };  // ?
 
 }

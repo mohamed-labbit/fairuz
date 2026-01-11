@@ -30,8 +30,8 @@ Lexer::Lexer(std::vector<tok::Token>& seq, const std::size_t s) :
   configureLocale();
 }
 
-tok::Token Lexer::make_token(tok::TokenType tt,
-                             std::optional<StringType> lexeme,
+tok::Token Lexer::make_token(tok::TokenType             tt,
+                             std::optional<StringType>  lexeme,
                              std::optional<std::size_t> line,
                              std::optional<std::size_t> col,
                              std::optional<std::size_t> file_pos,
@@ -44,8 +44,8 @@ tok::Token Lexer::make_token(tok::TokenType tt,
 IndentationAnalysis Lexer::analyzeIndentation_()
 {
 
-  std::size_t col = SourceManager_.column();
-  std::size_t line = SourceManager_.line();
+  std::size_t         col  = SourceManager_.column();
+  std::size_t         line = SourceManager_.line();
   IndentationAnalysis result;
   // Skip indentation handling inside parentheses (implicit line joining)
   if (IndentCtx_.InParentheses > 0)
@@ -55,8 +55,8 @@ IndentationAnalysis Lexer::analyzeIndentation_()
   }
   // Measure indentation
   std::size_t indent_count = 0;
-  StringType indent_str;
-  char16_t ch = SourceManager_.current();
+  StringType  indent_str;
+  char16_t    ch = SourceManager_.current();
   while (ch == u' ' || ch == u'\t')
   {
     indent_str.push_back(ch);
@@ -68,7 +68,7 @@ IndentationAnalysis Lexer::analyzeIndentation_()
     ch = SourceManager_.current();
   }
   result.IndentString = indent_str;
-  result.column = col + indent_str.length();
+  result.column       = col + indent_str.length();
   // Check for blank line or comment-only line
   if (ch == u'\n' || ch == BUFFER_END || ch == u'\\')
   {
@@ -81,7 +81,7 @@ IndentationAnalysis Lexer::analyzeIndentation_()
     if (IndentCtx_.mode == IndentationContext::IndentMode::UNDETECTED) IndentCtx_.detectIndentMode(indent_str);
     if (!IndentCtx_.validateIndent(indent_str))
     {
-      result.action = IndentationAnalysis::Action::ERROR;
+      result.action       = IndentationAnalysis::Action::ERROR;
       result.ErrorMessage = u"Inconsistent use of tabs and spaces in indentation";
       return result;
     }
@@ -95,12 +95,12 @@ IndentationAnalysis Lexer::analyzeIndentation_()
     {
       IndentCtx_.push(indent_count);
       IndentCtx_.ExpectingIndent = false;
-      result.action = IndentationAnalysis::Action::INDENT;
-      result.count = 1;
+      result.action              = IndentationAnalysis::Action::INDENT;
+      result.count               = 1;
     }
     else
     {
-      result.action = IndentationAnalysis::Action::ERROR;
+      result.action       = IndentationAnalysis::Action::ERROR;
       result.ErrorMessage = u"Unexpected indent";
       return result;
     }
@@ -108,9 +108,9 @@ IndentationAnalysis Lexer::analyzeIndentation_()
   else if (indent_count < current_indent && indent_count != 0)
   {
     // DEDENT - potentially multiple levels
-    std::size_t dedent_count = 0;
-    std::stack<std::size_t> temp_stack = IndentCtx_.IndentStack;
-    bool found_match = false;
+    std::size_t             dedent_count = 0;
+    std::stack<std::size_t> temp_stack   = IndentCtx_.IndentStack;
+    bool                    found_match  = false;
     while (temp_stack.size() > 1)
     {
       std::size_t level = temp_stack.top();
@@ -121,7 +121,7 @@ IndentationAnalysis Lexer::analyzeIndentation_()
       }
       if (level < indent_count)
       {
-        result.action = IndentationAnalysis::Action::ERROR;
+        result.action       = IndentationAnalysis::Action::ERROR;
         result.ErrorMessage = u"Unindent does not match any outer indentation level";
         return result;
       }
@@ -130,20 +130,20 @@ IndentationAnalysis Lexer::analyzeIndentation_()
     }
     if (!found_match && temp_stack.top() != indent_count)
     {
-      result.action = IndentationAnalysis::Action::ERROR;
+      result.action       = IndentationAnalysis::Action::ERROR;
       result.ErrorMessage = u"Unindent does not match any outer indentation level";
       return result;
     }
     // Apply the dedents
     for (std::size_t i = 0; i < dedent_count; ++i) IndentCtx_.pop();
-    result.action = IndentationAnalysis::Action::DEDENT;
-    result.count = dedent_count;
+    result.action              = IndentationAnalysis::Action::DEDENT;
+    result.count               = dedent_count;
     IndentCtx_.ExpectingIndent = false;
   }
   else
   {
     // Same indentation level
-    result.action = IndentationAnalysis::Action::NONE;
+    result.action              = IndentationAnalysis::Action::NONE;
     IndentCtx_.ExpectingIndent = false;
   }
   return result;
@@ -208,7 +208,7 @@ tok::Token Lexer::lexToken()
     char16_t ch = SourceManager_.current();
     if (ch == BUFFER_END) break;
     std::size_t line = SourceManager_.line();
-    std::size_t col = SourceManager_.column();
+    std::size_t col  = SourceManager_.column();
     switch (ch)
     {
     case u'\n' : {
@@ -244,7 +244,7 @@ tok::Token Lexer::lexToken()
     case u'\'' :
     case u'"' : {
       StringType str;
-      char16_t quote = ch;
+      char16_t   quote = ch;
       SourceManager_.consumeChar();
       char16_t c2 = SourceManager_.current();
       while (c2 != u'\n' && c2 != BUFFER_END && c2 != quote)
@@ -368,7 +368,7 @@ tok::Token Lexer::lexToken()
     else if (util::isSymbol(ch))
     {
       tok::TokenType tt;
-      StringType sym(1, ch);
+      StringType     sym(1, ch);
       SourceManager_.consumeChar();
       switch (ch)
       {

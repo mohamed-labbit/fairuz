@@ -28,13 +28,13 @@ namespace lex {
  */
 struct IndentationContext
 {
-  std::stack<std::size_t> IndentStack;  // Stack of indentation levels (in columns)
-  std::size_t CurrentLevel{0};          // Current indentation level
-  bool AtLineStart{true};               // True if lexer is at beginning of a line
-  std::size_t InParentheses{0};         // Nesting depth of (), [], {}
-  bool ExpectingIndent{false};          // True if previous line ended with ':'
-  std::size_t SpacesPerIndent{4};       // Expected number of spaces per indent
-  bool MixedIndentError{false};         // True if mixed tabs/spaces detected
+  std::stack<std::size_t> IndentStack;              // Stack of indentation levels (in columns)
+  std::size_t             CurrentLevel{0};          // Current indentation level
+  bool                    AtLineStart{true};        // True if lexer is at beginning of a line
+  std::size_t             InParentheses{0};         // Nesting depth of (), [], {}
+  bool                    ExpectingIndent{false};   // True if previous line ended with ':'
+  std::size_t             SpacesPerIndent{4};       // Expected number of spaces per indent
+  bool                    MixedIndentError{false};  // True if mixed tabs/spaces detected
 
   /**
    * @brief Indentation style currently in use.
@@ -76,7 +76,7 @@ struct IndentationContext
   {
     if (mode != IndentMode::UNDETECTED) return;
     bool has_spaces = false;
-    bool has_tabs = false;
+    bool has_tabs   = false;
     for (char16_t ch : indent_str)
     {
       if (ch == u' ') has_spaces = true;
@@ -84,7 +84,7 @@ struct IndentationContext
     }
     if (has_spaces && has_tabs)
     {
-      mode = IndentMode::MIXED;
+      mode             = IndentMode::MIXED;
       MixedIndentError = true;
     }
     else if (has_spaces)
@@ -115,7 +115,7 @@ struct IndentationContext
   {
     if (mode == IndentMode::MIXED) return false;
     bool has_spaces = false;
-    bool has_tabs = false;
+    bool has_tabs   = false;
     for (char16_t ch : indent_str)
     {
       if (ch == u' ') has_spaces = true;
@@ -173,11 +173,11 @@ struct IndentationAnalysis
     ERROR    // Indentation error detected
   };
 
-  Action action{Action::NONE};  // Required action
-  std::size_t count{0};         // Number of INDENT/DEDENT tokens
-  std::size_t column{0};        // Column where indentation ends
-  StringType ErrorMessage;      // Error message (if any)
-  StringType IndentString;      // Raw indentation characters
+  Action      action{Action::NONE};  // Required action
+  std::size_t count{0};              // Number of INDENT/DEDENT tokens
+  std::size_t column{0};             // Column where indentation ends
+  StringType  ErrorMessage;          // Error message (if any)
+  StringType  IndentString;          // Raw indentation characters
 };
 
 /**
@@ -221,20 +221,20 @@ class Lexer
    *
    * Any omitted fields are inferred from the current source position.
    */
-  MYLANG_COMPILER_ABI tok::Token make_token(tok::TokenType tt,
-                                            std::optional<StringType> lexeme = std::nullopt,
-                                            std::optional<std::size_t> line = std::nullopt,
-                                            std::optional<std::size_t> col = std::nullopt,
-                                            std::optional<std::size_t> file_pos = std::nullopt,
+  MYLANG_COMPILER_ABI tok::Token make_token(tok::TokenType             tt,
+                                            std::optional<StringType>  lexeme    = std::nullopt,
+                                            std::optional<std::size_t> line      = std::nullopt,
+                                            std::optional<std::size_t> col       = std::nullopt,
+                                            std::optional<std::size_t> file_pos  = std::nullopt,
                                             std::optional<std::string> file_path = std::nullopt) const;
 
  private:
-  SourceManager SourceManager_;        // Manages source input and positions
-  std::size_t TokIndex_;               // Current token index
-  std::size_t IndentSize_;             // Current indentation size
-  std::vector<tok::Token> TokStream_;  // Accumulated token stream
-  std::stack<unsigned> IndentStack_;   // Legacy indentation stack
-  IndentationContext IndentCtx_;       // Indentation tracking context
+  SourceManager           SourceManager_;  // Manages source input and positions
+  std::size_t             TokIndex_;       // Current token index
+  std::size_t             IndentSize_;     // Current indentation size
+  std::vector<tok::Token> TokStream_;      // Accumulated token stream
+  std::stack<unsigned>    IndentStack_;    // Legacy indentation stack
+  IndentationContext      IndentCtx_;      // Indentation tracking context
 
   /// @brief Lexes a single token and stores it
   MYLANG_COMPILER_ABI tok::Token lexToken();

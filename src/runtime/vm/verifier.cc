@@ -47,16 +47,16 @@ void BytecodeVerifier::printErrors(std::ostream& out) const
 }
 
 void BytecodeVerifier::verifyStackDepth(const BytecodeCompiler::CompilationUnit& unit,
-                                        std::int32_t pc,
-                                        std::int32_t depth,
-                                        std::vector<std::int32_t>& depths)
+                                        std::int32_t                             pc,
+                                        std::int32_t                             depth,
+                                        std::vector<std::int32_t>&               depths)
 {
   if (pc >= unit.instructions.size()) return;
   // Already visited with same or greater depth
   if (depths[pc] >= depth) return;
-  depths[pc] = depth;
-  const bytecode::Instruction& instr = unit.instructions[pc];
-  std::int32_t newDepth = depth + getStackEffect(instr.op, instr.arg);
+  depths[pc]                            = depth;
+  const bytecode::Instruction& instr    = unit.instructions[pc];
+  std::int32_t                 newDepth = depth + getStackEffect(instr.op, instr.arg);
   if (newDepth < 0)
   {
     Errors_.push_back({pc, "Stack underflow"});
@@ -113,8 +113,8 @@ std::int32_t BytecodeVerifier::getStackEffect(bytecode::OpCode op, std::int32_t 
 bool BytecodeVerifier::isJumpInstruction(bytecode::OpCode op) const
 {
   return op == bytecode::OpCode::JUMP || op == bytecode::OpCode::JUMP_FORWARD || op == bytecode::OpCode::JUMP_BACKWARD
-    || op == bytecode::OpCode::JUMP_IF_FALSE || op == bytecode::OpCode::JUMP_IF_TRUE || op == bytecode::OpCode::POP_JUMP_IF_FALSE
-    || op == bytecode::OpCode::POP_JUMP_IF_TRUE || op == bytecode::OpCode::FOR_ITER;
+         || op == bytecode::OpCode::JUMP_IF_FALSE || op == bytecode::OpCode::JUMP_IF_TRUE || op == bytecode::OpCode::POP_JUMP_IF_FALSE
+         || op == bytecode::OpCode::POP_JUMP_IF_TRUE || op == bytecode::OpCode::FOR_ITER;
 }
 
 bool BytecodeVerifier::isUnconditionalJump(bytecode::OpCode op) const
