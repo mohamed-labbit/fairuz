@@ -9,6 +9,8 @@
 #include <vector>
 
 
+namespace fs = std::filesystem;
+
 namespace mylang {
 namespace input {
 

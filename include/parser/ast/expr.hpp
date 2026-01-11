@@ -56,9 +56,9 @@ class BinaryExpr: public Expr
     assert((Right_ != nullptr) && "'right' argument to BinaryExpr is null");
   }
 
-  BinaryExpr(BinaryExpr&&) MYLANG_MYLANG_NOEXCEPT                 = delete;
-  BinaryExpr(const BinaryExpr&) MYLANG_MYLANG_NOEXCEPT            = delete;
-  BinaryExpr& operator=(const BinaryExpr&) MYLANG_MYLANG_NOEXCEPT = delete;
+  BinaryExpr(BinaryExpr&&) MYLANG_NOEXCEPT                 = delete;
+  BinaryExpr(const BinaryExpr&) MYLANG_NOEXCEPT            = delete;
+  BinaryExpr& operator=(const BinaryExpr&) MYLANG_NOEXCEPT = delete;
 
   Expr*               getLeft() const { return Left_; }
   Expr*               getRight() const { return Right_; }
@@ -86,9 +86,9 @@ class UnaryExpr: public Expr
     assert((Operand_ != nullptr) && "'operand' argument to UnaryExpr is null");
   }
 
-  UnaryExpr(UnaryExpr&&) MYLANG_MYLANG_NOEXCEPT                 = delete;
-  UnaryExpr(const UnaryExpr&) MYLANG_MYLANG_NOEXCEPT            = delete;
-  UnaryExpr& operator=(const UnaryExpr&) MYLANG_MYLANG_NOEXCEPT = delete;
+  UnaryExpr(UnaryExpr&&) MYLANG_NOEXCEPT                 = delete;
+  UnaryExpr(const UnaryExpr&) MYLANG_NOEXCEPT            = delete;
+  UnaryExpr& operator=(const UnaryExpr&) MYLANG_NOEXCEPT = delete;
 
   Expr*               getOperand() const { return Operand_; }
   lex::tok::TokenType getOperator() const { return Operator_; }

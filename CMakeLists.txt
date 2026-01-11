@@ -8,7 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # For LLVM/Clang on macOS, ensure we use the right standard library
 if(APPLE)
     # Use libc++ and ensure proper linkage
-    add_compile_options(-stdlib=libc++ -O0)
+    add_compile_options(-stdlib=libc++ -g -O0)
     add_link_options(-stdlib=libc++)
 
     # Point to Homebrew LLVM's libc++
