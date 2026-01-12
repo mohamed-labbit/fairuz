@@ -4,9 +4,9 @@
 #include "../macros.hpp"
 
 #include <exception>
-#include <vector>
 #include <iostream>
 #include <sstream>
+#include <vector>
 
 
 namespace mylang {
