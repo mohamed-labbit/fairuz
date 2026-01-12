@@ -7,68 +7,53 @@
 namespace mylang {
 namespace parser {
 
+
 ast::Expr* Parser::parseParenthesizedExpr()
 {
   consume(lex::tok::TokenType::LPAREN, u"Expected '('");
 
-  std::vector<ast::Expr*> elements;
-
-  // If empty parentheses
-  if (!check(lex::tok::TokenType::RPAREN))
+  ast::Expr* content = nullptr;
+  // If empty parentheses - empty tuple
+  if (!check(lex::tok::TokenType::RPAREN)) 
   {
-    do
-    {
-      ast::Expr* elem = parseExpression();
-      if (!elem) return nullptr;
-      elements.push_back(elem);
-    } while (match(lex::tok::TokenType::COMMA));
+    content = parseExpression();
+    if (!content) return nullptr;
   }
 
   consume(lex::tok::TokenType::RPAREN, u"Expected ')' after expression(s)");
-
-  // Decide what to return
-  ast::Expr* expr = nullptr;
-  if (elements.size() == 0)
-  {
-    // ()
-    expr = ast::AST_allocator.make<ast::ListExpr>(elements);
-  }
-  else if (elements.size() == 1)
-  {
-    // (single expr)
-    expr = elements[0];
-  }
-  else
-  {
-    // (tuple)
-    expr = ast::AST_allocator.make<ast::ListExpr>(elements);
-  }
-
-  // Handle potential call: (expr)(args)
-  return parseCallExpr(expr);
+  
+  // Handle chained calls: (expr)(args)
+  return parseCallExpr(content);
 }
 
 // Returns either a single Expr* or a ListExpr* (tuple)
 ast::Expr* Parser::parseParenthesizedExprContent()
 {
-  // Empty ()
-  if (check(lex::tok::TokenType::RPAREN)) return ast::AST_allocator.make<ast::ListExpr>(std::vector<ast::Expr*>{});
+  if (check(lex::tok::TokenType::RPAREN))
+    // Empty ()
+    return ast::AST_allocator.make<ast::ListExpr>(std::vector<ast::Expr*>{});
+
   ast::Expr* first = parseExpression();
   if (!first) return nullptr;
-  // If there’s a comma, parse a tuple
+
+  // If there's a comma, parse a tuple
   if (match(lex::tok::TokenType::COMMA))
   {
     std::vector<ast::Expr*> elements;
     elements.push_back(first);
+
     while (!check(lex::tok::TokenType::RPAREN))
     {
       ast::Expr* elem = parseExpression();
       if (!elem) return nullptr;
       elements.push_back(elem);
+
       if (!match(lex::tok::TokenType::COMMA)) break;
     }
+
     return ast::AST_allocator.make<ast::ListExpr>(elements);
   }
+
   // Single expression (not a tuple)
   return first;
 }
@@ -78,7 +63,9 @@ ast::Expr* Parser::parseCallExpr(ast::Expr* callee)
   while (check(lex::tok::TokenType::LPAREN))
   {
     advance();  // '('
+
     std::vector<ast::Expr*> args;
+
     if (!check(lex::tok::TokenType::RPAREN))
     {
       do
@@ -88,10 +75,12 @@ ast::Expr* Parser::parseCallExpr(ast::Expr* callee)
         args.push_back(arg);
       } while (match(lex::tok::TokenType::COMMA));
     }
+
     consume(lex::tok::TokenType::RPAREN, u"Expected ')' after arguments");
     ast::ListExpr* args_expr = ast::AST_allocator.make<ast::ListExpr>(args);
-    callee                   = ast::AST_allocator.make<ast::CallExpr>(dynamic_cast<ast::Expr*>(callee), args_expr);
+    callee = ast::AST_allocator.make<ast::CallExpr>(callee, args_expr);
   }
+
   return callee;
 }
 
@@ -103,6 +92,7 @@ ast::Expr* Parser::parseExpression()
     advance();
     ast::Expr* inner = parseExpression();
     if (!inner) return nullptr;
+    // TODO: Create proper StarredExpr AST node
     return inner;  // For now, just return the inner expression
   }
   return parseAssignmentExpr();
@@ -128,6 +118,15 @@ ast::Expr* Parser::parseAssignmentExpr()
   return left;
 }
 
+/*
+// NEW: Handle ternary/conditional expressions (if needed)
+// For now, just forward to logical expressions
+ast::Expr* Parser::parseConditionalExpr()
+{
+  return parseLogicalExprPrecedence(0);
+}
+*/
+
 ast::Expr* Parser::parseLogicalExprPrecedence(int min_precedence)
 {
   ast::Expr* left = parseComparisonExpr();
@@ -150,14 +149,6 @@ ast::Expr* Parser::parseLogicalExprPrecedence(int min_precedence)
   return left;
 }
 
-bool Parser::isBinaryOp(const lex::tok::Token tok)
-{
-  lex::tok::TokenType tt = tok.type();
-  return tt == lex::tok::TokenType::OP_BITAND || tt == lex::tok::TokenType::OP_BITXOR || tt == lex::tok::TokenType::OP_BITOR
-         || tt == lex::tok::TokenType::OP_PLUS || tt == lex::tok::TokenType::OP_STAR || tt == lex::tok::TokenType::OP_SLASH
-         || tt == lex::tok::TokenType::KW_AND || tt == lex::tok::TokenType::KW_OR;
-}
-
 int Parser::getLogicalOperatorPrecedence(lex::tok::TokenType tt)
 {
   switch (tt)
@@ -165,11 +156,10 @@ int Parser::getLogicalOperatorPrecedence(lex::tok::TokenType tt)
   case lex::tok::TokenType::OP_BITOR :  // '|'
   case lex::tok::TokenType::KW_OR :     // 'or'
     return 1;
+  case lex::tok::TokenType::OP_BITXOR : // '^'
+    return 2;
   case lex::tok::TokenType::OP_BITAND :  // '&'
   case lex::tok::TokenType::KW_AND :     // 'and'
-    return 2;
-  case lex::tok::TokenType::OP_BITNOT :
-  case lex::tok::TokenType::KW_NOT :  // '!'
     return 3;
   default : return -1;  // Not a logical operator
   }
@@ -193,6 +183,14 @@ ast::Expr* Parser::parseComparisonExpr()
   return left;
 }
 
+/*
+// NEW: Forward to precedence-based parsing
+ast::Expr* Parser::parseBinaryExpr()
+{
+  return parseBinaryExprPrecedence(0);
+}
+*/
+
 ast::Expr* Parser::parseBinaryExprPrecedence(int min_precedence)
 {
   ast::Expr* left = parseUnaryExpr();
@@ -207,8 +205,8 @@ ast::Expr* Parser::parseBinaryExprPrecedence(int min_precedence)
     advance();
 
     // Left associative: higher precedence for next level
-    int        nextMinPrecedence = precedence + 1;
-    ast::Expr* right             = parseBinaryExprPrecedence(nextMinPrecedence);
+    int nextMinPrecedence = precedence + 1;
+    ast::Expr* right = parseBinaryExprPrecedence(nextMinPrecedence);
     if (!right) return nullptr;
 
     left = ast::AST_allocator.make<ast::BinaryExpr>(left, right, op);
@@ -233,13 +231,14 @@ int Parser::getArithmeticOperatorPrecedence(const lex::tok::TokenType type)
 ast::Expr* Parser::parseUnaryExpr()
 {
   // Check CURRENT token for unary operators
-  if (check(lex::tok::TokenType::OP_PLUS) || check(lex::tok::TokenType::OP_MINUS) || check(lex::tok::TokenType::OP_BITNOT))
+  if (check(lex::tok::TokenType::OP_PLUS) || check(lex::tok::TokenType::OP_MINUS) 
+      || check(lex::tok::TokenType::OP_BITNOT) || check(lex::tok::TokenType::KW_NOT))
   {
     lex::tok::TokenType op = Lexer_.current().type();
     advance();                           // consume operator
-    ast::Expr* expr = parseUnaryExpr();  // parse right side
+    ast::Expr* expr = parseUnaryExpr();  // parse right side recursively
     if (!expr) return nullptr;
-    return dynamic_cast<ast::Expr*>(ast::AST_allocator.make<ast::UnaryExpr>(expr, op));
+    return ast::AST_allocator.make<ast::UnaryExpr>(expr, op);
   }
   return parsePostfixExpr();
 }
@@ -257,7 +256,7 @@ ast::Expr* Parser::parsePostfixExpr()
     {
       do
       {
-        // IMPORTANT: parseAssignmentExpr, NOT parseExpression
+        // Parse full expressions as arguments (including assignments in some contexts)
         ast::Expr* arg = parseAssignmentExpr();
         if (!arg) return nullptr;
         args.push_back(arg);
@@ -310,6 +309,19 @@ ast::Expr* Parser::parsePrimaryExpr()
     return ast::AST_allocator.make<ast::NameExpr>(name);
   }
 
+  // FIXED: Handle parenthesized expressions
+  if (check(lex::tok::TokenType::LPAREN))
+  {
+    return parseParenthesizedExpr();
+  }
+
+  // FIXED: Handle list literals
+  if (check(lex::tok::TokenType::LBRACKET))
+  {
+    advance();
+    return parseListLiteral();
+  }
+
   return nullptr;
 }
 
@@ -331,13 +343,16 @@ ast::Expr* Parser::parseListLiteral()
   }
 
   consume(lex::tok::TokenType::RBRACKET, u"Expected ']' after list elements");
-  return dynamic_cast<ast::Expr*>(ast::AST_allocator.make<ast::ListExpr>(elements));
+  return ast::AST_allocator.make<ast::ListExpr>(elements);
 }
 
 // Helper methods
 
 bool Parser::match(const lex::tok::TokenType type)
 {
+#if DEBUG_PRINT
+  std::cout << "-- DEBUG : match(" << std::to_string(static_cast<int>(type)) << ") called!" << std::endl;
+#endif
   if (check(type))
   {
     advance();
