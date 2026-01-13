@@ -178,7 +178,7 @@ ast::Stmt* ASTOptimizer::eliminateDeadCode(ast::Stmt* stmt)
     }
     // Recursively eliminate in blocks
     std::vector<ast::Stmt*> newThenStmts;
-    std::vector<ast::Stmt*> newElseStmts;   
+    std::vector<ast::Stmt*> newElseStmts;
     for (ast::Stmt* const& s : ifStmt->getThenBlock()->getStatements())
       if (ast::Stmt* opt = eliminateDeadCode(std::move(s))) newThenStmts.push_back(std::move(opt));
     for (ast::Stmt* const& s : ifStmt->getElseBlock()->getStatements())

@@ -8,20 +8,74 @@ namespace mylang {
 namespace parser {
 
 
+std::vector<ast::Stmt*> Parser::parseProgram()
+{
+  std::vector<ast::Stmt*> statements;
+
+  while (!weDone())
+  {
+    skipNewlines();
+    if (weDone()) break;
+
+    ast::Stmt* stmt = parseStatement();
+    if (stmt)
+      statements.push_back(stmt);
+    else
+      // Error recovery: skip to next statement
+      // synchronize();
+      return {};
+  }
+
+  return statements;
+}
+
+// ============================================================================
+// STATEMENT PARSING
+// ============================================================================
+
+ast::Stmt* Parser::parseStatement()
+{
+  skipNewlines();
+
+  // TODO: Add other statement types as you implement them:
+  // - if (check(lex::tok::TokenType::KW_IF)) return parseIfStmt();
+  // - if (check(lex::tok::TokenType::KW_WHILE)) return parseWhileStmt();
+  // - if (check(lex::tok::TokenType::KW_RETURN)) return parseReturnStmt();
+  // - if (check(lex::tok::TokenType::KW_DEF)) return parseFunctionDef();
+  // etc.
+
+  // For now, treat everything as an expression statement
+  return parseExpressionStmt();
+}
+
+ast::Stmt* Parser::parseExpressionStmt()
+{
+  ast::Expr* expr = parseExpression();
+  if (!expr) return nullptr;
+
+  // Wrap the expression in an ExprStmt node
+  return ast::AST_allocator.make<ast::ExprStmt>(expr);
+}
+
+
+// ============================================================================
+// EXPRESSION PARSING (Keep existing logic - no changes needed)
+// ============================================================================
+
 ast::Expr* Parser::parseParenthesizedExpr()
 {
   consume(lex::tok::TokenType::LPAREN, u"Expected '('");
 
   ast::Expr* content = nullptr;
   // If empty parentheses - empty tuple
-  if (!check(lex::tok::TokenType::RPAREN)) 
+  if (!check(lex::tok::TokenType::RPAREN))
   {
     content = parseExpression();
     if (!content) return nullptr;
   }
 
   consume(lex::tok::TokenType::RPAREN, u"Expected ')' after expression(s)");
-  
+
   // Handle chained calls: (expr)(args)
   return parseCallExpr(content);
 }
@@ -118,15 +172,6 @@ ast::Expr* Parser::parseAssignmentExpr()
   return left;
 }
 
-/*
-// NEW: Handle ternary/conditional expressions (if needed)
-// For now, just forward to logical expressions
-ast::Expr* Parser::parseConditionalExpr()
-{
-  return parseLogicalExprPrecedence(0);
-}
-*/
-
 ast::Expr* Parser::parseLogicalExprPrecedence(int min_precedence)
 {
   ast::Expr* left = parseComparisonExpr();
@@ -156,7 +201,7 @@ int Parser::getLogicalOperatorPrecedence(lex::tok::TokenType tt)
   case lex::tok::TokenType::OP_BITOR :  // '|'
   case lex::tok::TokenType::KW_OR :     // 'or'
     return 1;
-  case lex::tok::TokenType::OP_BITXOR : // '^'
+  case lex::tok::TokenType::OP_BITXOR :  // '^'
     return 2;
   case lex::tok::TokenType::OP_BITAND :  // '&'
   case lex::tok::TokenType::KW_AND :     // 'and'
@@ -182,14 +227,6 @@ ast::Expr* Parser::parseComparisonExpr()
   }
   return left;
 }
-
-/*
-// NEW: Forward to precedence-based parsing
-ast::Expr* Parser::parseBinaryExpr()
-{
-  return parseBinaryExprPrecedence(0);
-}
-*/
 
 ast::Expr* Parser::parseBinaryExprPrecedence(int min_precedence)
 {
@@ -231,8 +268,8 @@ int Parser::getArithmeticOperatorPrecedence(const lex::tok::TokenType type)
 ast::Expr* Parser::parseUnaryExpr()
 {
   // Check CURRENT token for unary operators
-  if (check(lex::tok::TokenType::OP_PLUS) || check(lex::tok::TokenType::OP_MINUS) 
-      || check(lex::tok::TokenType::OP_BITNOT) || check(lex::tok::TokenType::KW_NOT))
+  if (check(lex::tok::TokenType::OP_PLUS) || check(lex::tok::TokenType::OP_MINUS) || check(lex::tok::TokenType::OP_BITNOT)
+      || check(lex::tok::TokenType::KW_NOT))
   {
     lex::tok::TokenType op = Lexer_.current().type();
     advance();                           // consume operator
@@ -310,10 +347,7 @@ ast::Expr* Parser::parsePrimaryExpr()
   }
 
   // FIXED: Handle parenthesized expressions
-  if (check(lex::tok::TokenType::LPAREN))
-  {
-    return parseParenthesizedExpr();
-  }
+  if (check(lex::tok::TokenType::LPAREN)) { return parseParenthesizedExpr(); }
 
   // FIXED: Handle list literals
   if (check(lex::tok::TokenType::LBRACKET))

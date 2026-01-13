@@ -171,6 +171,8 @@ class ListExpr: public Expr
     }
   }
 
+  Expr* operator[](const std::size_t i) { return Elements_[i]; }
+
   ListExpr(ListExpr&&) MYLANG_NOEXCEPT                 = delete;
   ListExpr(const ListExpr&) MYLANG_NOEXCEPT            = delete;
   ListExpr& operator=(const ListExpr&) MYLANG_NOEXCEPT = delete;

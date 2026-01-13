@@ -29,9 +29,9 @@ namespace parser {
 class ParseError: public std::runtime_error
 {
  public:
-  std::int32_t            Line_, Column_;  // Source location of the error
-  StringType              Context_;        // Source line where the error occurred
-  std::vector<StringType> Suggestions_;    // Optional recovery suggestions
+  std::int32_t Line_, Column_;           // Source location of the error
+  StringType Context_;                   // Source line where the error occurred
+  std::vector<StringType> Suggestions_;  // Optional recovery suggestions
 
   /**
    * @brief Constructs a parse error.
@@ -103,13 +103,24 @@ class Parser
       Lexer_(fm)
   {
     if (fm == nullptr) diagnostic::engine.panic("file_manager is NULL!");
+
     // Advance to the first real token
     Lexer_.next();
+#if DEBUG_PRINT
+    std::cout << "-- DEBUG : Lexer_.next() = " << std::to_string(static_cast<int>(Lexer_.current().type())) << std::endl;
+    std::cout << "-- DEBUG : parser initialized successfully!" << std::endl;
+#endif
   }
 
 
   /// @brief Constructs a parser from a pre-existing token sequence
   explicit Parser(std::vector<lex::tok::Token> seq, std::optional<std::size_t> s = std::nullopt);
+
+  std::vector<ast::Stmt*> parseProgram();
+
+  ast::Stmt* parseStatement();
+
+  ast::Stmt* parseExpressionStmt();
 
   ast::Expr* parseParenthesizedExprContent();
 
@@ -181,6 +192,9 @@ class Parser
   /// @brief Checks whether the current token is of the given type
   bool check(lex::tok::TokenType type)
   {
+#if DEBUG_PRINT
+    std::cout << "-- DEBUG : check(" << std::to_string(static_cast<int>(type)) << ") called!" << std::endl;
+#endif
     // if (weDone()) return false;
     return Lexer_.current().is(type);
   }
@@ -201,10 +215,22 @@ class Parser
   static bool isBinaryOp(const lex::tok::Token tok);
 
   /// @brief Peeks ahead in the token stream without consuming
-  lex::tok::Token peek(std::size_t offset = 1) { return Lexer_.peek(offset); }
+  lex::tok::Token peek(std::size_t offset = 1)
+  {
+#if DEBUG_PRINT
+    std::cout << "-- DEBUG : peek() called!" << std::endl;
+#endif
+    return Lexer_.peek(offset);
+  }
 
   /// @brief Advances and returns the next token
-  lex::tok::Token advance() { return Lexer_.next(); }
+  lex::tok::Token advance()
+  {
+#if DEBUG_PRINT
+    std::cout << "-- DEBUG : advance() called!" << std::endl;
+#endif
+    return Lexer_.next();
+  }
 
 
   /// @brief Matches and consumes a token if it is of the given type
@@ -217,6 +243,9 @@ class Parser
    */
   lex::tok::Token consume(lex::tok::TokenType type, const StringType& msg)
   {
+#if DEBUG_PRINT
+    std::cout << "-- DEBUG : Parser::consume() called!" << std::endl;
+#endif
     if (check(type)) return advance();
     /// TODO: Implement proper error reporting
     // For now, return empty token
