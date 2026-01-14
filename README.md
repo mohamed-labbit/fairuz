@@ -16,3 +16,7 @@ Thanks to Mohamed Labbit and Mohamed Salem Eddah for pushing on testing and tigh
 ```bash
 bash test.sh -d
 ```
+### print AST nodes
+```bash
+bash test.sh -d --print-ast
+```
