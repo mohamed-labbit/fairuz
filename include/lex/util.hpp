@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../utfcpp/source/utf8.h"
-#include "macros.hpp"
+#include "../macros.hpp"
 #include <omp.h>
 #include <string>
 #include <vector>

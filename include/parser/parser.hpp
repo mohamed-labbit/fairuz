@@ -29,9 +29,9 @@ namespace parser {
 class ParseError: public std::runtime_error
 {
  public:
-  std::int32_t Line_, Column_;           // Source location of the error
-  StringType Context_;                   // Source line where the error occurred
-  std::vector<StringType> Suggestions_;  // Optional recovery suggestions
+  std::int32_t            Line_, Column_;  // Source location of the error
+  StringType              Context_;        // Source line where the error occurred
+  std::vector<StringType> Suggestions_;    // Optional recovery suggestions
 
   /**
    * @brief Constructs a parse error.
@@ -103,13 +103,8 @@ class Parser
       Lexer_(fm)
   {
     if (fm == nullptr) diagnostic::engine.panic("file_manager is NULL!");
-
     // Advance to the first real token
     Lexer_.next();
-#if DEBUG_PRINT
-    std::cout << "-- DEBUG : Lexer_.next() = " << std::to_string(static_cast<int>(Lexer_.current().type())) << std::endl;
-    std::cout << "-- DEBUG : parser initialized successfully!" << std::endl;
-#endif
   }
 
 
@@ -121,6 +116,18 @@ class Parser
   ast::Stmt* parseStatement();
 
   ast::Stmt* parseExpressionStmt();
+
+  ast::Stmt* parseIfStmt();
+
+  ast::Stmt* parseWhileStmt();
+
+  ast::Stmt* parseReturnStmt();
+
+  ast::Stmt* parseFunctionDef();
+
+  ast::ListExpr* parseParametersList();
+
+  ast::BlockStmt* parseBlock();
 
   ast::Expr* parseParenthesizedExprContent();
 
@@ -160,10 +167,10 @@ class Parser
   ast::Expr* parseLogicalExpr() { return parseLogicalExprPrecedence(0); }
 
   /// @brief Parses logical expressions using precedence climbing
-  ast::Expr* parseLogicalExprPrecedence(int min_precedence);
+  ast::Expr* parseLogicalExprPrecedence(unsigned min_precedence);
 
   /// @brief Parses binary expressions using precedence climbing
-  ast::Expr* parseBinaryExprPrecedence(int min_precedence);
+  ast::Expr* parseBinaryExprPrecedence(unsigned min_precedence);
 
   /// @brief Parses comparison expressions
   ast::Expr* parseComparisonExpr();
@@ -179,6 +186,7 @@ class Parser
 
   /// @brief Parses postfix expressions (calls, indexing, etc.)
   ast::Expr* parsePostfixExpr();
+
   /**
    * @brief Parses the entire input into a sequence of statements.
    *
@@ -192,14 +200,13 @@ class Parser
   /// @brief Checks whether the current token is of the given type
   bool check(lex::tok::TokenType type)
   {
-#if DEBUG_PRINT
-    std::cout << "-- DEBUG : check(" << std::to_string(static_cast<int>(type)) << ") called!" << std::endl;
-#endif
     // if (weDone()) return false;
     return Lexer_.current().is(type);
   }
 
   ast::Expr* parse() { return parseExpression(); }
+
+  ast::BlockStmt* parseIndentedBlock();
 
  private:
   lex::Lexer Lexer_;  // Underlying lexer providing tokens
@@ -215,22 +222,10 @@ class Parser
   static bool isBinaryOp(const lex::tok::Token tok);
 
   /// @brief Peeks ahead in the token stream without consuming
-  lex::tok::Token peek(std::size_t offset = 1)
-  {
-#if DEBUG_PRINT
-    std::cout << "-- DEBUG : peek() called!" << std::endl;
-#endif
-    return Lexer_.peek(offset);
-  }
+  lex::tok::Token peek(std::size_t offset = 1) { return Lexer_.peek(offset); }
 
   /// @brief Advances and returns the next token
-  lex::tok::Token advance()
-  {
-#if DEBUG_PRINT
-    std::cout << "-- DEBUG : advance() called!" << std::endl;
-#endif
-    return Lexer_.next();
-  }
+  lex::tok::Token advance() { return Lexer_.next(); }
 
 
   /// @brief Matches and consumes a token if it is of the given type
@@ -243,9 +238,6 @@ class Parser
    */
   lex::tok::Token consume(lex::tok::TokenType type, const StringType& msg)
   {
-#if DEBUG_PRINT
-    std::cout << "-- DEBUG : Parser::consume() called!" << std::endl;
-#endif
     if (check(type)) return advance();
     /// TODO: Implement proper error reporting
     // For now, return empty token
@@ -270,6 +262,10 @@ class Parser
 
   /// @brief Enters a new scope (currently a no-op)
   void enterScope() {}
+
+  void reportError(const std::u16string& message);
+
+  void synchronize();
 };
 
 }  // namespace parser

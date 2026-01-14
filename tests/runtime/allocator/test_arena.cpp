@@ -869,13 +869,3 @@ TEST(ArenaAllocatorPerformance, ResetPerformance)
 
   EXPECT_EQ(arena.totalAllocations(), 0);
 }
-
-// ============================================================================
-// Main
-// ============================================================================
-
-int main(int argc, char** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}

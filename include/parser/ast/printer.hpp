@@ -87,6 +87,16 @@ class ASTPrinter
       break;
     }
 
+    case Expr::Kind::ASSIGNMENT : {
+      auto* a = static_cast<const AssignmentExpr*>(e);
+      std::cout << color(u"Assignment", Color::YELLOW) << " :=\n";
+      std::cout << p.indent + pipe(p.last) << "├─ target:\n";
+      printExpr(a->getTarget(), {p.indent + pipe(p.last) + "│  ", true});
+      std::cout << p.indent + pipe(p.last) << "└─ value:\n";
+      printExpr(a->getValue(), {p.indent + pipe(p.last) + "   ", true});
+      break;
+    }
+
     default : std::cout << color(u"<unknown expr>", Color::RED) << "\n";
     }
   }

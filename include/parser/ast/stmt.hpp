@@ -128,7 +128,6 @@ class IfStmt: public Stmt
 
     assert((Condition_ != nullptr) && "'condition' argument to IfStmt is null");
     assert((ThenBlock_ != nullptr) && "'then_block' argument to IfStmt is null");
-    assert((ElseBlock_ != nullptr) && "'else_block' argument to IfStmt is null");
   }
 
   IfStmt(IfStmt&&) MYLANG_NOEXCEPT                 = delete;
