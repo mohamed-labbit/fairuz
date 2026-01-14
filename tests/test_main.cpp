@@ -16,12 +16,7 @@ int main(int argc, char** argv)
   {
     std::string arg = argv[i];
 
-    if (arg == "--print-ast=true" /* && i + 1 < argc*/)
-    {
-      // FIXED: strcmp returns 0 when strings are equal
-      // test_config::print_ast = (strcmp(argv[++i], "true") == 0);
-      test_config::print_ast = true;
-    }
+    if (arg == "--print-ast") test_config::print_ast = true;
   }
 
   std::cout << (test_config::print_ast ? "true" : "false") << std::endl;
