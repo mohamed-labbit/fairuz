@@ -150,7 +150,7 @@ class Parser
   ast::Expr* parseParenthesizedExpr();
 
   /// @brief Parses a general expression
-  ast::Expr* parseExpression();
+  ast::Expr* parseExpression() { return parseAssignmentExpr(); }
 
   /// @brief Parses an assignment expression
   ast::Expr* parseAssignmentExpr();
@@ -234,8 +234,7 @@ class Parser
   {
     if (check(type))
       return advance();
-    /// TODO: Implement proper error reporting
-    // For now, return empty token
+    diagnostic::engine.emit(msg, diagnostic::DiagnosticEngine::Severity::ERROR);
     return lex::tok::Token();
   }
 

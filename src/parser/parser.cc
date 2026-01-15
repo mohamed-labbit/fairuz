@@ -7,7 +7,6 @@
 namespace mylang {
 namespace parser {
 
-
 std::vector<ast::Stmt*> Parser::parseProgram()
 {
   std::vector<ast::Stmt*> statements;
@@ -56,9 +55,7 @@ ast::Stmt* Parser::parseReturnStmt()
 
   // Handle return with no value (return None implicitly)
   if (check(lex::tok::TokenType::NEWLINE) || weDone())
-  {
-    return ast::AST_allocator.make<ast::ReturnStmt>(nullptr);
-  }
+    return nullptr;
 
   ast::Expr* value = parseExpression();
   return ast::AST_allocator.make<ast::ReturnStmt>(value);
@@ -250,8 +247,6 @@ ast::Stmt* Parser::parseExpressionStmt()
   // Wrap the expression in an ExprStmt node
   return ast::AST_allocator.make<ast::ExprStmt>(expr);
 }
-
-ast::Expr* Parser::parseExpression() { return parseAssignmentExpr(); }
 
 ast::Expr* Parser::parseAssignmentExpr()
 {
