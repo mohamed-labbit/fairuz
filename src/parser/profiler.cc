@@ -16,7 +16,8 @@ void ParserProfiler::printReport() const
   std::cout << "║      Parser Performance Report        ║\n";
   std::cout << "╚═══════════════════════════════════════╝\n\n";
   double total = 0;
-  for (const ParserProfiler::Timing& t : Timings_) total += t.milliseconds;
+  for (const ParserProfiler::Timing& t : Timings_)
+    total += t.milliseconds;
   for (const ParserProfiler::Timing& t : Timings_)
   {
     double percent = (t.milliseconds / total) * 100;

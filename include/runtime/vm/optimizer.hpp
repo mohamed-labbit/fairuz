@@ -41,7 +41,8 @@ class BytecodeOptimizer
                              std::size_t toRemove = 0;
                              for (std::size_t j = i + 1; j < code.size(); j++)
                              {
-                               if (isJumpTarget(code, j)) break;
+                               if (isJumpTarget(code, j))
+                                 break;
                                toRemove++;
                              }
                              if (toRemove > 0)

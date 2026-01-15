@@ -30,7 +30,8 @@ class FileError: public std::exception
   // Copy assignment operator with self-assignment check
   FileError& operator=(const FileError& other) noexcept
   {
-    if (this != &other) Imp_ = other.imp();
+    if (this != &other)
+      Imp_ = other.imp();
     return *this;
   }
   // Override base class destructor

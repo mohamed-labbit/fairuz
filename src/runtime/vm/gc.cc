@@ -9,16 +9,19 @@ namespace runtime {
 
 void GarbageCollector::registerObject(object::Value* obj)
 {
-  if (!obj) return;
+  if (obj == nullptr)
+    return;
   AllObjects_.push_back(obj);
   YoungGen_.push_back(obj);
   Allocated_++;
-  if (Allocated_ >= Threshold_) collect();
+  if (Allocated_ >= Threshold_)
+    collect();
 }
 
 void GarbageCollector::addRoot(object::Value* root)
 {
-  if (!root) return;
+  if (root == nullptr)
+    return;
   Roots_.push_back(root);
 }
 
@@ -31,11 +34,13 @@ void GarbageCollector::collect()
   {
     object::Value* obj = worklist.back();
     worklist.pop_back();
-    if (marked.count(obj)) continue;
+    if (marked.count(obj))
+      continue;
     marked.insert(obj);
     // Mark children (if list, dict, etc.)
     if (obj->isList())
-      for (object::Value& item : obj->asList()) worklist.push_back(const_cast<object::Value*>(&item));
+      for (object::Value& item : obj->asList())
+        worklist.push_back(const_cast<object::Value*>(&item));
   }
   // Sweep phase
   auto it = AllObjects_.begin();
@@ -54,7 +59,8 @@ void GarbageCollector::collect()
   }
   YoungGenCollections_++;
   // Promote survivors to old generation every 5 collections
-  if (YoungGenCollections_ % 5 == 0) promoteToOldGen();
+  if (YoungGenCollections_ % 5 == 0)
+    promoteToOldGen();
 }
 
 }

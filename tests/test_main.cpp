@@ -16,7 +16,8 @@ int main(int argc, char** argv)
   {
     std::string arg = argv[i];
 
-    if (arg == "--print-ast") test_config::print_ast = true;
+    if (arg == "--print-ast")
+      test_config::print_ast = true;
   }
 
   std::cout << (test_config::print_ast ? "true" : "false") << std::endl;

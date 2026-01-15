@@ -14,18 +14,26 @@ StringType TypeSystem::Type::toString() const
 {
   switch (base)
   {
-  case BaseType::Int : return u"int";
-  case BaseType::Float : return u"float";
-  case BaseType::String : return u"str";
-  case BaseType::Bool : return u"bool";
-  case BaseType::None : return u"None";
+  case BaseType::Int :
+    return u"int";
+  case BaseType::Float :
+    return u"float";
+  case BaseType::String :
+    return u"str";
+  case BaseType::Bool :
+    return u"bool";
+  case BaseType::None :
+    return u"None";
   case BaseType::List :
-    if (!TypeParams.empty()) return u"List[" + TypeParams[0]->toString() + u"]";
+    if (!TypeParams.empty())
+      return u"List[" + TypeParams[0]->toString() + u"]";
     return u"List";
   case BaseType::Dict :
-    if (TypeParams.size() >= 2) return u"Dict[" + TypeParams[0]->toString() + u", " + TypeParams[1]->toString() + u"]";
+    if (TypeParams.size() >= 2)
+      return u"Dict[" + TypeParams[0]->toString() + u", " + TypeParams[1]->toString() + u"]";
     return u"Dict";
-  default : return u"Any";
+  default :
+    return u"Any";
   }
 
   return u"Any";
@@ -40,14 +48,22 @@ std::shared_ptr<TypeSystem::Type> TypeSystem::TypeInference::freshTypeVar()
 
 void TypeSystem::TypeInference::unify(std::shared_ptr<TypeSystem::Type> t1, std::shared_ptr<TypeSystem::Type> t2)
 {
-  if (*t1 == *t2) return;
+  if (*t1 == *t2)
+    return;
 
   // Type variable substitution
-  if (t1->base == BaseType::Any) { *t1 = *t2; }
-  else if (t2->base == BaseType::Any) { *t2 = *t1; }
+  if (t1->base == BaseType::Any)
+  {
+    *t1 = *t2;
+  }
+  else if (t2->base == BaseType::Any)
+  {
+    *t2 = *t1;
+  }
   else if (t1->base == BaseType::List && t2->base == BaseType::List)
   {
-    if (!t1->TypeParams.empty() && !t2->TypeParams.empty()) unify(t1->TypeParams[0], t2->TypeParams[0]);
+    if (!t1->TypeParams.empty() && !t2->TypeParams.empty())
+      unify(t1->TypeParams[0], t2->TypeParams[0]);
   }
   else
   {
@@ -57,7 +73,8 @@ void TypeSystem::TypeInference::unify(std::shared_ptr<TypeSystem::Type> t1, std:
 
 std::shared_ptr<typename TypeSystem::Type> TypeSystem::TypeInference::inferExpr(const ast::Expr* expr)
 {
-  if (!expr) return std::make_shared<Type>();
+  if (!expr)
+    return std::make_shared<Type>();
 
   switch (expr->getKind())
   {
@@ -66,10 +83,18 @@ std::shared_ptr<typename TypeSystem::Type> TypeSystem::TypeInference::inferExpr(
     std::shared_ptr<Type>   t   = std::make_shared<Type>();
     switch (lit->getType())
     {
-    case ast::LiteralExpr::Type::NUMBER : t->base = lit->getValue().find('.') != std::string::npos ? BaseType::Float : BaseType::Int; break;
-    case ast::LiteralExpr::Type::STRING : t->base = BaseType::String; break;
-    case ast::LiteralExpr::Type::BOOLEAN : t->base = BaseType::Bool; break;
-    case ast::LiteralExpr::Type::NONE : t->base = BaseType::None; break;
+    case ast::LiteralExpr::Type::NUMBER :
+      t->base = lit->getValue().find('.') != std::string::npos ? BaseType::Float : BaseType::Int;
+      break;
+    case ast::LiteralExpr::Type::STRING :
+      t->base = BaseType::String;
+      break;
+    case ast::LiteralExpr::Type::BOOLEAN :
+      t->base = BaseType::Bool;
+      break;
+    case ast::LiteralExpr::Type::NONE :
+      t->base = BaseType::None;
+      break;
     }
     return t;
   }
@@ -104,7 +129,8 @@ std::shared_ptr<typename TypeSystem::Type> TypeSystem::TypeInference::inferExpr(
     }
     return t;
   }
-  default : return freshTypeVar();
+  default :
+    return freshTypeVar();
   }
 
   return freshTypeVar();

@@ -28,13 +28,15 @@ class ASTPrinter
 
   std::string color(const StringType& s, const StringType& c) const
   {
-    if (!UseColor_) return utf8::utf16to8(s);
+    if (!UseColor_)
+      return utf8::utf16to8(s);
     return utf8::utf16to8(c + s + Color::RESET);
   }
 
   void printExpr(const Expr* e, Prefix p)
   {
-    if (!e) return;
+    if (!e)
+      return;
     NodeCount_++;
 
     std::cout << p.indent << glyph(p.last);
@@ -97,13 +99,15 @@ class ASTPrinter
       break;
     }
 
-    default : std::cout << color(u"<unknown expr>", Color::RED) << "\n";
+    default :
+      std::cout << color(u"<unknown expr>", Color::RED) << "\n";
     }
   }
 
   void printStmt(const Stmt* s, Prefix p)
   {
-    if (!s) return;
+    if (!s)
+      return;
     NodeCount_++;
 
     std::cout << p.indent << glyph(p.last);
@@ -117,7 +121,8 @@ class ASTPrinter
       for (std::size_t i = 0; i < f->getParameters().size(); ++i)
         printExpr(f->getParameters()[i], {p.indent + pipe(p.last) + "│  ", i + 1 == f->getParameters().size()});
       std::cout << p.indent + pipe(p.last) << "└─ body:\n";
-      for (const Stmt* st : f->getBody()->getStatements()) printStmt(st, {p.indent + pipe(p.last) + "   ", true});
+      for (const Stmt* st : f->getBody()->getStatements())
+        printStmt(st, {p.indent + pipe(p.last) + "   ", true});
       break;
     }
 
@@ -135,7 +140,8 @@ class ASTPrinter
       break;
     }
 
-    default : std::cout << color(u"<unknown stmt>", Color::RED) << "\n";
+    default :
+      std::cout << color(u"<unknown stmt>", Color::RED) << "\n";
     }
   }
 

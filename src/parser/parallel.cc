@@ -42,7 +42,8 @@ std::vector<std::vector<lex::tok::Token>> ParallelParser::splitIntoChunks(const 
       current.push_back(tok);
     }
   }
-  if (!current.empty()) chunks.push_back(current);
+  if (!current.empty())
+    chunks.push_back(current);
   return chunks;
 }
 

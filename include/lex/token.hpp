@@ -133,18 +133,30 @@ static const StringType toString(TokenType tt)
 {
   switch (tt)
   {
-  case TokenType::OP_EQ : return u"=";
-  case TokenType::OP_ASSIGN : return u":=";
-  case TokenType::OP_PLUS : return u"+";
-  case TokenType::OP_MINUS : return u"-";
-  case TokenType::OP_STAR : return u"*";
-  case TokenType::OP_SLASH : return u"/";
-  case TokenType::OP_LT : return u"<";
-  case TokenType::OP_GT : return u">";
-  case TokenType::OP_LTE : return u"<=";
-  case TokenType::OP_GTE : return u">=";
-  case TokenType::OP_NEQ : return u"!=";
-  default : return u"";
+  case TokenType::OP_EQ :
+    return u"=";
+  case TokenType::OP_ASSIGN :
+    return u":=";
+  case TokenType::OP_PLUS :
+    return u"+";
+  case TokenType::OP_MINUS :
+    return u"-";
+  case TokenType::OP_STAR :
+    return u"*";
+  case TokenType::OP_SLASH :
+    return u"/";
+  case TokenType::OP_LT :
+    return u"<";
+  case TokenType::OP_GT :
+    return u">";
+  case TokenType::OP_LTE :
+    return u"<=";
+  case TokenType::OP_GTE :
+    return u">=";
+  case TokenType::OP_NEQ :
+    return u"!=";
+  default :
+    return u"";
   }
 }
 
@@ -193,16 +205,53 @@ class Token
 
   bool isOperator() const { return Type_ > TokenType::OP_PLUS && Type_ < TokenType::OP_RSHIFTEQ; }
 
-  bool isBinaryOperator() const
+  bool isUnaryOp() const
   {
-    /// TODO:
-    return true;
+    return Type_ == TokenType::OP_PLUS || Type_ == TokenType::OP_MINUS || Type_ == TokenType::OP_BITNOT || Type_ == TokenType::KW_NOT;
   }
 
-  bool isUnaryOperator() const
+  bool isBinaryOp() const
   {
-    /// TODO:
-    return true;
+    // well?
+    return !isUnaryOp();
+  }
+
+  bool isComparisonOp() const
+  {
+    return Type_ == TokenType::OP_EQ || Type_ == TokenType::OP_NEQ || Type_ == TokenType::OP_LT || Type_ == TokenType::OP_GT
+           || Type_ == TokenType::OP_LTE || Type_ == TokenType::OP_GTE;
+  }
+
+  int getArithmeticOpPrecedence() const
+  {
+    switch (Type_)
+    {
+    case TokenType::OP_STAR :   // *
+    case TokenType::OP_SLASH :  // /
+      return 3;
+    case TokenType::OP_PLUS :   // +
+    case TokenType::OP_MINUS :  // -
+      return 2;
+    default :
+      return -1;  // Not an arithmetic operator
+    }
+  }
+
+  int getLogicalOpPrecedence()
+  {
+    switch (Type_)
+    {
+    case TokenType::OP_BITOR :  // '|'
+    case TokenType::KW_OR :     // 'or'
+      return 1;
+    case TokenType::OP_BITXOR :  // '^'
+      return 2;
+    case TokenType::OP_BITAND :  // '&'
+    case TokenType::KW_AND :     // 'and'
+      return 3;
+    default :
+      return -1;  // Not a logical operator
+    }
   }
 
   // friend ostream operator for pretty-printing in tests/logs

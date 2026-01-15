@@ -15,7 +15,8 @@ std::vector<ast::Stmt*> Parser::parseProgram()
   while (!weDone())
   {
     skipNewlines();
-    if (weDone()) break;
+    if (weDone())
+      break;
 
     ast::Stmt* stmt = parseStatement();
     if (stmt != nullptr)
@@ -24,7 +25,8 @@ std::vector<ast::Stmt*> Parser::parseProgram()
     {
       // Error recovery: skip to next statement
       synchronize();
-      if (weDone()) break;
+      if (weDone())
+        break;
     }
   }
 
@@ -35,10 +37,14 @@ ast::Stmt* Parser::parseStatement()
 {
   skipNewlines();
 
-  if (check(lex::tok::TokenType::KW_IF)) return parseIfStmt();
-  if (check(lex::tok::TokenType::KW_WHILE)) return parseWhileStmt();
-  if (check(lex::tok::TokenType::KW_RETURN)) return parseReturnStmt();
-  if (check(lex::tok::TokenType::KW_FN)) return parseFunctionDef();
+  if (check(lex::tok::TokenType::KW_IF))
+    return parseIfStmt();
+  if (check(lex::tok::TokenType::KW_WHILE))
+    return parseWhileStmt();
+  if (check(lex::tok::TokenType::KW_RETURN))
+    return parseReturnStmt();
+  if (check(lex::tok::TokenType::KW_FN))
+    return parseFunctionDef();
 
   // For now, treat everything else as ExprStmt
   return parseExpressionStmt();
@@ -47,13 +53,13 @@ ast::Stmt* Parser::parseStatement()
 ast::Stmt* Parser::parseReturnStmt()
 {
   consume(lex::tok::TokenType::KW_RETURN, u"Expected 'return' statement");
-  
+
   // Handle return with no value (return None implicitly)
   if (check(lex::tok::TokenType::NEWLINE) || weDone())
   {
     return ast::AST_allocator.make<ast::ReturnStmt>(nullptr);
   }
-  
+
   ast::Expr* value = parseExpression();
   return ast::AST_allocator.make<ast::ReturnStmt>(value);
 }
@@ -65,16 +71,16 @@ ast::Stmt* Parser::parseWhileStmt()
   ast::Expr* condition = parseExpression();
   if (condition == nullptr)
   {
-    reportError(u"Expected condition expression after 'while'");
+    diagnostic::engine.emit("Expected condition expression after 'while'", diagnostic::DiagnosticEngine::Severity::ERROR);
     return nullptr;
   }
 
   consume(lex::tok::TokenType::COLON, u"Expected ':' after while condition");
-  
+
   ast::BlockStmt* while_block = parseIndentedBlock();
   if (while_block == nullptr)
   {
-    reportError(u"Expected indented block after while statement");
+    diagnostic::engine.emit("Expected indented block after while statement", diagnostic::DiagnosticEngine::Severity::ERROR);
     return nullptr;
   }
 
@@ -90,14 +96,15 @@ ast::BlockStmt* Parser::parseIndentedBlock()
   // Check for empty block (immediate DEDENT after INDENT)
   if (check(lex::tok::TokenType::DEDENT))
   {
-    advance();  // consume DEDENT
+    advance();                                                   // consume DEDENT
     return ast::AST_allocator.make<ast::BlockStmt>(statements);  // Empty block
   }
 
   while (!check(lex::tok::TokenType::DEDENT) && !weDone())
   {
     skipNewlines();
-    if (check(lex::tok::TokenType::DEDENT)) break;
+    if (check(lex::tok::TokenType::DEDENT))
+      break;
 
     ast::Stmt* stmt = parseStatement();
     if (stmt != nullptr)
@@ -108,7 +115,8 @@ ast::BlockStmt* Parser::parseIndentedBlock()
     {
       // Error recovery: skip to next statement in block
       synchronize();
-      if (check(lex::tok::TokenType::DEDENT) || weDone()) break;
+      if (check(lex::tok::TokenType::DEDENT) || weDone())
+        break;
     }
   }
 
@@ -129,12 +137,13 @@ ast::ListExpr* Parser::parseParametersList()
     do
     {
       skipNewlines();
-      if (check(lex::tok::TokenType::RPAREN)) break;
+      if (check(lex::tok::TokenType::RPAREN))
+        break;
 
       // Each parameter must be an identifier
       if (!check(lex::tok::TokenType::IDENTIFIER))
       {
-        reportError(u"Expected parameter name");
+        diagnostic::engine.emit("Expected parameter name", diagnostic::DiagnosticEngine::Severity::ERROR);
         return nullptr;
       }
 
@@ -160,9 +169,10 @@ ast::Stmt* Parser::parseFunctionDef()
   // Parse function name (must be an identifier)
   if (!check(lex::tok::TokenType::IDENTIFIER))
   {
-    reportError(u"Expected function name after 'fn'");
+    diagnostic::engine.emit("Expected function name after 'fn'", diagnostic::DiagnosticEngine::Severity::ERROR);
     return nullptr;
   }
+
   std::u16string function_name = Lexer_.current().lexeme();
   advance();
 
@@ -170,7 +180,7 @@ ast::Stmt* Parser::parseFunctionDef()
   ast::ListExpr* parameters_list = parseParametersList();
   if (parameters_list == nullptr)
   {
-    reportError(u"Failed to parse parameter list");
+    diagnostic::engine.emit("Failed to parse parameter list", diagnostic::DiagnosticEngine::Severity::ERROR);
     return nullptr;
   }
 
@@ -181,7 +191,7 @@ ast::Stmt* Parser::parseFunctionDef()
   ast::BlockStmt* function_body = parseIndentedBlock();
   if (function_body == nullptr)
   {
-    reportError(u"Failed to parse function body");
+    diagnostic::engine.emit("Failed to parse function body", diagnostic::DiagnosticEngine::Severity::ERROR);
     return nullptr;
   }
 
@@ -198,7 +208,7 @@ ast::Stmt* Parser::parseIfStmt()
   ast::Expr* condition = parseExpression();
   if (condition == nullptr)
   {
-    reportError(u"Expected condition expression after 'if'");
+    diagnostic::engine.emit("Expected condition expression after 'if'", diagnostic::DiagnosticEngine::Severity::ERROR);
     return nullptr;
   }
 
@@ -208,7 +218,7 @@ ast::Stmt* Parser::parseIfStmt()
   ast::BlockStmt* then_block = parseIndentedBlock();
   if (then_block == nullptr)
   {
-    reportError(u"Expected indented block after if statement");
+    diagnostic::engine.emit("Expected indented block after if statement", diagnostic::DiagnosticEngine::Severity::ERROR);
     return nullptr;
   }
 
@@ -235,20 +245,19 @@ ast::Stmt* Parser::parseIfStmt()
 ast::Stmt* Parser::parseExpressionStmt()
 {
   ast::Expr* expr = parseExpression();
-  if (expr == nullptr) return nullptr;
+  if (expr == nullptr)
+    return nullptr;
   // Wrap the expression in an ExprStmt node
   return ast::AST_allocator.make<ast::ExprStmt>(expr);
 }
 
-ast::Expr* Parser::parseExpression()
-{
-  return parseAssignmentExpr();
-}
+ast::Expr* Parser::parseExpression() { return parseAssignmentExpr(); }
 
 ast::Expr* Parser::parseAssignmentExpr()
 {
   ast::Expr* left = parseConditionalExpr();
-  if (left == nullptr) return nullptr;
+  if (left == nullptr)
+    return nullptr;
 
   // Check for assignment operators
   if (check(lex::tok::TokenType::OP_ASSIGN))
@@ -257,29 +266,32 @@ ast::Expr* Parser::parseAssignmentExpr()
     ast::NameExpr* left_casted = dynamic_cast<ast::NameExpr*>(left);
     if (left_casted == nullptr)
     {
-      reportError(u"Invalid assignment target");
+      diagnostic::engine.emit("Invalid assignment target", diagnostic::DiagnosticEngine::Severity::ERROR);
       return nullptr;
     }
-    
-    advance(); // consume '='
+
+    advance();                                 // consume '='
     ast::Expr* right = parseAssignmentExpr();  // Right associative
-    if (right == nullptr) return nullptr;
-    
+    if (right == nullptr)
+      return nullptr;
+
     return ast::AST_allocator.make<ast::AssignmentExpr>(left_casted, right);
   }
-  
+
   return left;
 }
 
 ast::Expr* Parser::parseLogicalExprPrecedence(unsigned min_precedence)
 {
   ast::Expr* left = parseComparisonExpr();
-  if (left == nullptr) return nullptr;
+  if (left == nullptr)
+    return nullptr;
 
   while (true)
   {
-    int precedence = getLogicalOperatorPrecedence(Lexer_.current().type());
-    if (precedence < 0 || precedence < static_cast<int>(min_precedence)) break;
+    int precedence = currentToken().getLogicalOpPrecedence();
+    if (precedence < 0 || precedence < static_cast<int>(min_precedence))
+      break;
 
     lex::tok::TokenType op = Lexer_.current().type();
     advance();
@@ -288,7 +300,7 @@ ast::Expr* Parser::parseLogicalExprPrecedence(unsigned min_precedence)
     ast::Expr* right = parseLogicalExprPrecedence(precedence + 1);
     if (right == nullptr)
     {
-      reportError(u"Expected expression after logical operator");
+      diagnostic::engine.emit("Expected expression after logical operator", diagnostic::DiagnosticEngine::Severity::ERROR);
       return nullptr;
     }
 
@@ -297,68 +309,52 @@ ast::Expr* Parser::parseLogicalExprPrecedence(unsigned min_precedence)
   return left;
 }
 
-int Parser::getLogicalOperatorPrecedence(lex::tok::TokenType tt)
-{
-  switch (tt)
-  {
-  case lex::tok::TokenType::OP_BITOR:   // '|'
-  case lex::tok::TokenType::KW_OR:      // 'or'
-    return 1;
-  case lex::tok::TokenType::OP_BITXOR:  // '^'
-    return 2;
-  case lex::tok::TokenType::OP_BITAND:  // '&'
-  case lex::tok::TokenType::KW_AND:     // 'and'
-    return 3;
-  default:
-    return -1;  // Not a logical operator
-  }
-}
-
 ast::Expr* Parser::parseComparisonExpr()
 {
   ast::Expr* left = parseBinaryExpr();
-  if (left == nullptr) return nullptr;
+  if (left == nullptr)
+    return nullptr;
 
   // Comparison operators are non-associative (a < b < c is parsed as (a < b) and (b < c) in Python)
   // For simplicity, we only allow single comparison for now
-  if (check(lex::tok::TokenType::OP_EQ) || check(lex::tok::TokenType::OP_NEQ) ||
-      check(lex::tok::TokenType::OP_LT) || check(lex::tok::TokenType::OP_GT) ||
-      check(lex::tok::TokenType::OP_LTE) || check(lex::tok::TokenType::OP_GTE))
+  if (currentToken().isComparisonOp())
   {
     lex::tok::TokenType op = Lexer_.current().type();
     advance();
     ast::Expr* right = parseBinaryExpr();
     if (right == nullptr)
     {
-      reportError(u"Expected expression after comparison operator");
+      diagnostic::engine.emit("Expected expression after comparison operator", diagnostic::DiagnosticEngine::Severity::ERROR);
       return nullptr;
     }
 
     left = ast::AST_allocator.make<ast::BinaryExpr>(left, right, op);
   }
-  
+
   return left;
 }
 
 ast::Expr* Parser::parseBinaryExprPrecedence(unsigned min_precedence)
 {
   ast::Expr* left = parseUnaryExpr();
-  if (left == nullptr) return nullptr;
+  if (left == nullptr)
+    return nullptr;
 
   while (true)
   {
-    int precedence = getArithmeticOperatorPrecedence(Lexer_.current().type());
-    if (precedence < 0 || precedence < static_cast<int>(min_precedence)) break;
+    int precedence = currentToken().getArithmeticOpPrecedence();
+    if (precedence < 0 || precedence < static_cast<int>(min_precedence))
+      break;
 
     lex::tok::TokenType op = Lexer_.current().type();
     advance();
 
     // Left associative: higher precedence for next level
-    int nextMinPrecedence = precedence + 1;
-    ast::Expr* right = parseBinaryExprPrecedence(nextMinPrecedence);
+    int        nextMinPrecedence = precedence + 1;
+    ast::Expr* right             = parseBinaryExprPrecedence(nextMinPrecedence);
     if (right == nullptr)
     {
-      reportError(u"Expected expression after binary operator");
+      diagnostic::engine.emit("Expected expression after binary operator", diagnostic::DiagnosticEngine::Severity::ERROR);
       return nullptr;
     }
 
@@ -367,33 +363,17 @@ ast::Expr* Parser::parseBinaryExprPrecedence(unsigned min_precedence)
   return left;
 }
 
-int Parser::getArithmeticOperatorPrecedence(const lex::tok::TokenType type)
-{
-  switch (type)
-  {
-  case lex::tok::TokenType::OP_STAR:    // *
-  case lex::tok::TokenType::OP_SLASH:   // /
-    return 3;
-  case lex::tok::TokenType::OP_PLUS:    // +
-  case lex::tok::TokenType::OP_MINUS:   // -
-    return 2;
-  default:
-    return -1;  // Not an arithmetic operator
-  }
-}
-
 ast::Expr* Parser::parseUnaryExpr()
 {
   // Check CURRENT token for unary operators
-  if (check(lex::tok::TokenType::OP_PLUS) || check(lex::tok::TokenType::OP_MINUS) ||
-      check(lex::tok::TokenType::OP_BITNOT) || check(lex::tok::TokenType::KW_NOT))
+  if (currentToken().isUnaryOp())
   {
     lex::tok::TokenType op = Lexer_.current().type();
-    advance();  // consume operator
+    advance();                           // consume operator
     ast::Expr* expr = parseUnaryExpr();  // parse right side recursively
     if (expr == nullptr)
     {
-      reportError(u"Expected expression after unary operator");
+      diagnostic::engine.emit("Expected expression after unary operator", diagnostic::DiagnosticEngine::Severity::ERROR);
       return nullptr;
     }
     return ast::AST_allocator.make<ast::UnaryExpr>(expr, op);
@@ -404,7 +384,8 @@ ast::Expr* Parser::parseUnaryExpr()
 ast::Expr* Parser::parsePostfixExpr()
 {
   ast::Expr* expr = parsePrimaryExpr();
-  if (expr == nullptr) return nullptr;
+  if (expr == nullptr)
+    return nullptr;
 
   // Handle function calls
   while (check(lex::tok::TokenType::LPAREN))
@@ -417,26 +398,24 @@ ast::Expr* Parser::parsePostfixExpr()
       do
       {
         skipNewlines();
-        if (check(lex::tok::TokenType::RPAREN)) break;
-        
+        if (check(lex::tok::TokenType::RPAREN))
+          break;
+
         ast::Expr* arg = parseExpression();
         if (arg == nullptr)
         {
-          reportError(u"Expected expression in argument list");
+          diagnostic::engine.emit("Expected expression in argument list", diagnostic::DiagnosticEngine::Severity::ERROR);
           return nullptr;
         }
         args.push_back(arg);
-        
+
         skipNewlines();
       } while (match(lex::tok::TokenType::COMMA));
     }
 
     consume(lex::tok::TokenType::RPAREN, u"Expected ')' after arguments");
 
-    expr = ast::AST_allocator.make<ast::CallExpr>(
-      expr, 
-      ast::AST_allocator.make<ast::ListExpr>(args)
-    );
+    expr = ast::AST_allocator.make<ast::CallExpr>(expr, ast::AST_allocator.make<ast::ListExpr>(args));
   }
 
   return expr;
@@ -446,7 +425,7 @@ ast::Expr* Parser::parsePrimaryExpr()
 {
   if (weDone())
   {
-    reportError(u"Unexpected end of input");
+    diagnostic::engine.emit("Unexpected end of input", diagnostic::DiagnosticEngine::Severity::ERROR);
     return nullptr;
   }
 
@@ -488,17 +467,18 @@ ast::Expr* Parser::parsePrimaryExpr()
   if (check(lex::tok::TokenType::LPAREN))
   {
     advance();  // consume '('
-    
+
     // Empty parentheses - empty tuple
     if (check(lex::tok::TokenType::RPAREN))
     {
       advance();
       return ast::AST_allocator.make<ast::ListExpr>(std::vector<ast::Expr*>{});
     }
-    
+
     ast::Expr* expr = parseExpression();
-    if (expr == nullptr) return nullptr;
-    
+    if (expr == nullptr)
+      return nullptr;
+
     consume(lex::tok::TokenType::RPAREN, u"Expected ')' after expression");
     return expr;
   }
@@ -510,7 +490,7 @@ ast::Expr* Parser::parsePrimaryExpr()
     return parseListLiteral();
   }
 
-  reportError(u"Expected expression");
+  diagnostic::engine.emit("Expected expression", diagnostic::DiagnosticEngine::Severity::ERROR);
   return nullptr;
 }
 
@@ -523,16 +503,17 @@ ast::Expr* Parser::parseListLiteral()
     do
     {
       skipNewlines();
-      if (check(lex::tok::TokenType::RBRACKET)) break;
-      
+      if (check(lex::tok::TokenType::RBRACKET))
+        break;
+
       ast::Expr* elem = parseExpression();
       if (elem == nullptr)
       {
-        reportError(u"Expected expression in list literal");
+        diagnostic::engine.emit("Expected expression in list literal", diagnostic::DiagnosticEngine::Severity::ERROR);
         return nullptr;
       }
       elements.push_back(elem);
-      
+
       skipNewlines();
     } while (match(lex::tok::TokenType::COMMA));
   }
@@ -559,32 +540,21 @@ void Parser::synchronize()
   while (!weDone())
   {
     // Stop at newline or dedent (statement boundaries)
-    if (check(lex::tok::TokenType::NEWLINE) || 
-        check(lex::tok::TokenType::DEDENT))
+    if (check(lex::tok::TokenType::NEWLINE) || check(lex::tok::TokenType::DEDENT))
     {
       advance();
       return;
     }
-    
+
     // Stop before statement keywords
-    if (check(lex::tok::TokenType::KW_IF) ||
-        check(lex::tok::TokenType::KW_WHILE) ||
-        check(lex::tok::TokenType::KW_RETURN) ||
-        check(lex::tok::TokenType::KW_FN))
+    if (check(lex::tok::TokenType::KW_IF) || check(lex::tok::TokenType::KW_WHILE) || check(lex::tok::TokenType::KW_RETURN)
+        || check(lex::tok::TokenType::KW_FN))
     {
       return;
     }
-    
+
     advance();
   }
-}
-
-void Parser::reportError(const std::u16string& message)
-{
-  // Implement error reporting - this is a placeholder
-  // In a real implementation, this would use the diagnostic system
-  // For now, we'll assume there's a mechanism to report errors
-  // that's part of the Parser class or accessible to it
 }
 
 }  // namespace parser

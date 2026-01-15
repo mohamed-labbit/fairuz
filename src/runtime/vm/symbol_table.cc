@@ -6,7 +6,8 @@ namespace runtime {
 
 typename CompilerSymbolTable::Symbol* CompilerSymbolTable::define(const std::string& name, bool isParam)
 {
-  if (Symbols_.count(name)) return &Symbols_[name];
+  if (Symbols_.count(name))
+    return &Symbols_[name];
 
   Symbol sym;
   sym.name        = name;
@@ -30,10 +31,10 @@ typename CompilerSymbolTable::Symbol* CompilerSymbolTable::resolve(const std::st
     return &it->second;
   }
   // Check parent scopes
-  if (Parent_)
+  if (Parent_ != nullptr)
   {
     Symbol* parentSym = Parent_->resolve(name);
-    if (parentSym)
+    if (parentSym != nullptr)
     {
       // Mark as captured for closure
       parentSym->IsCaptured = true;
@@ -59,7 +60,8 @@ std::vector<typename CompilerSymbolTable::Symbol> CompilerSymbolTable::getUnused
 {
   std::vector<Symbol> unused;
   for (const auto& [name, sym] : Symbols_)
-    if (!sym.IsUsed && !sym.IsParameter) unused.push_back(sym);
+    if (!sym.IsUsed && !sym.IsParameter)
+      unused.push_back(sym);
   return unused;
 }
 

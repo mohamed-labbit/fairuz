@@ -31,7 +31,8 @@ class GarbageCollector
  private:
   void promoteToOldGen()
   {
-    for (object::Value* obj : YoungGen_) OldGen_.push_back(obj);
+    for (object::Value* obj : YoungGen_)
+      OldGen_.push_back(obj);
     YoungGen_.clear();
   }
 };

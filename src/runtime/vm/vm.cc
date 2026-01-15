@@ -13,13 +13,15 @@ namespace runtime {
 
 void VirtualMachine::push(const object::Value& val)
 {
-  if (Stack_.size() >= 10000) diagnostic::engine.panic("Stack overflow");
+  if (Stack_.size() >= 10000)
+    diagnostic::engine.panic("Stack overflow");
   Stack_.push_back(val);
 }
 
 object::Value VirtualMachine::pop()
 {
-  if (Stack_.empty()) diagnostic::engine.panic("Stack underflow");
+  if (Stack_.empty())
+    diagnostic::engine.panic("Stack underflow");
   object::Value val = Stack_.back();
   Stack_.pop_back();
   return val;
@@ -27,32 +29,37 @@ object::Value VirtualMachine::pop()
 
 object::Value& VirtualMachine::top()
 {
-  if (Stack_.empty()) diagnostic::engine.panic("Stack empty");
+  if (Stack_.empty())
+    diagnostic::engine.panic("Stack empty");
   return Stack_.back();
 }
 
 object::Value& VirtualMachine::peek(std::int32_t offset)
 {
-  if (Stack_.size() < offset + 1) diagnostic::engine.panic("Stack underflow in peek");
+  if (Stack_.size() < offset + 1)
+    diagnostic::engine.panic("Stack underflow in peek");
   return Stack_[Stack_.size() - 1 - offset];
 }
 
 // Fast integer operations (avoid type checking overhead)
 object::Value VirtualMachine::fastAdd(const object::Value& a, const object::Value& b)
 {
-  if (a.isInt() && b.isInt()) return object::Value(a.asInt() + b.asInt());
+  if (a.isInt() && b.isInt())
+    return object::Value(a.asInt() + b.asInt());
   return a + b;
 }
 
 object::Value VirtualMachine::fastSub(const object::Value& a, const object::Value& b)
 {
-  if (a.isInt() && b.isInt()) return object::Value(a.asInt() - b.asInt());
+  if (a.isInt() && b.isInt())
+    return object::Value(a.asInt() - b.asInt());
   return a - b;
 }
 
 object::Value VirtualMachine::fastMul(const object::Value& a, const object::Value& b)
 {
-  if (a.isInt() && b.isInt()) return object::Value(a.asInt() * b.asInt());
+  if (a.isInt() && b.isInt())
+    return object::Value(a.asInt() * b.asInt());
   return a * b;
 }
 
@@ -63,24 +70,32 @@ void VirtualMachine::registerNativeFunctions()
     for (std::size_t i = 0; i < args.size(); i++)
     {
       std::cout << args[i].repr();
-      if (i + 1 < args.size()) std::cout << " ";
+      if (i + 1 < args.size())
+        std::cout << " ";
     }
     std::cout << "\n";
     return object::Value();
   };
   // len
   nativeFunctions["len"] = [](const std::vector<object::Value>& args) {
-    if (args.size() != 1) diagnostic::engine.panic("len() takes 1 argument");
-    if (args[0].isList()) return object::Value(static_cast<std::int64_t>(args[0].asList().size()));
-    if (args[0].isString()) return object::Value(static_cast<std::int64_t>(args[0].asString().size()));
+    if (args.size() != 1)
+      diagnostic::engine.panic("len() takes 1 argument");
+    if (args[0].isList())
+      return object::Value(static_cast<std::int64_t>(args[0].asList().size()));
+    if (args[0].isString())
+      return object::Value(static_cast<std::int64_t>(args[0].asString().size()));
     diagnostic::engine.panic("len() requires list or string");
   };
   // range
   nativeFunctions["range"] = [](const std::vector<object::Value>& args) {
-    if (args.empty() || args.size() > 3) diagnostic::engine.panic("range() takes 1-3 arguments");
+    if (args.empty() || args.size() > 3)
+      diagnostic::engine.panic("range() takes 1-3 arguments");
 
     std::int64_t start = 0, stop, step = 1;
-    if (args.size() == 1) { stop = args[0].toInt(); }
+    if (args.size() == 1)
+    {
+      stop = args[0].toInt();
+    }
     else if (args.size() == 2)
     {
       start = args[0].toInt();
@@ -94,109 +109,149 @@ void VirtualMachine::registerNativeFunctions()
     }
 
     std::vector<object::Value> result;
-    for (std::int64_t i = start; (step > 0) ? (i < stop) : (i > stop); i += step) result.push_back(object::Value(i));
+    for (std::int64_t i = start; (step > 0) ? (i < stop) : (i > stop); i += step)
+      result.push_back(object::Value(i));
     return object::Value(result);
   };
   // type
   nativeFunctions["type"] = [](const std::vector<object::Value>& args) {
-    if (args.size() != 1) diagnostic::engine.panic("type() takes 1 argument");
+    if (args.size() != 1)
+      diagnostic::engine.panic("type() takes 1 argument");
     StringType typeName;
     switch (args[0].getType())
     {
-    case object::Value::Type::NONE : typeName = u"<class 'NoneType'>"; break;
-    case object::Value::Type::INT : typeName = u"<class 'int'>"; break;
-    case object::Value::Type::FLOAT : typeName = u"<class 'float'>"; break;
-    case object::Value::Type::STRING : typeName = u"<class 'str'>"; break;
-    case object::Value::Type::BOOL : typeName = u"<class 'bool'>"; break;
-    case object::Value::Type::LIST : typeName = u"<class 'list'>"; break;
-    case object::Value::Type::DICT : typeName = u"<class 'dict'>"; break;
-    default : typeName = u"<class 'object'>"; break;
+    case object::Value::Type::NONE :
+      typeName = u"<class 'NoneType'>";
+      break;
+    case object::Value::Type::INT :
+      typeName = u"<class 'int'>";
+      break;
+    case object::Value::Type::FLOAT :
+      typeName = u"<class 'float'>";
+      break;
+    case object::Value::Type::STRING :
+      typeName = u"<class 'str'>";
+      break;
+    case object::Value::Type::BOOL :
+      typeName = u"<class 'bool'>";
+      break;
+    case object::Value::Type::LIST :
+      typeName = u"<class 'list'>";
+      break;
+    case object::Value::Type::DICT :
+      typeName = u"<class 'dict'>";
+      break;
+    default :
+      typeName = u"<class 'object'>";
+      break;
     }
     return object::Value(typeName);
   };
   // str
   nativeFunctions["str"] = [](const std::vector<object::Value>& args) {
-    if (args.size() != 1) diagnostic::engine.panic("str() takes 1 argument");
+    if (args.size() != 1)
+      diagnostic::engine.panic("str() takes 1 argument");
     return object::Value(args[0].asString());
   };
   // int
   nativeFunctions["int"] = [](const std::vector<object::Value>& args) {
-    if (args.size() != 1) diagnostic::engine.panic("int() takes 1 argument");
+    if (args.size() != 1)
+      diagnostic::engine.panic("int() takes 1 argument");
     return object::Value(args[0].toInt());
   };
   // float
   nativeFunctions["float"] = [](const std::vector<object::Value>& args) {
-    if (args.size() != 1) diagnostic::engine.panic("float() takes 1 argument");
+    if (args.size() != 1)
+      diagnostic::engine.panic("float() takes 1 argument");
     return object::Value(args[0].toFloat());
   };
   // sum
   nativeFunctions["sum"] = [](const std::vector<object::Value>& args) {
-    if (args.empty()) diagnostic::engine.panic("sum() takes at least 1 argument");
-    if (!args[0].isList()) diagnostic::engine.panic("sum() requires iterable");
+    if (args.empty())
+      diagnostic::engine.panic("sum() takes at least 1 argument");
+    if (!args[0].isList())
+      diagnostic::engine.panic("sum() requires iterable");
     object::Value total = args.size() > 1 ? args[1] : object::Value(static_cast<std::int64_t>(0));
-    for (const object::Value& item : args[0].asList()) total = total + item;
+    for (const object::Value& item : args[0].asList())
+      total = total + item;
     return total;
   };
   // abs
   nativeFunctions["abs"] = [](const std::vector<object::Value>& args) {
-    if (args.size() != 1) diagnostic::engine.panic("abs() takes 1 argument");
-    if (args[0].isInt()) return object::Value(std::abs(args[0].asInt()));
+    if (args.size() != 1)
+      diagnostic::engine.panic("abs() takes 1 argument");
+    if (args[0].isInt())
+      return object::Value(std::abs(args[0].asInt()));
     return object::Value(std::abs(args[0].toFloat()));
   };
   // min
   nativeFunctions["min"] = [](const std::vector<object::Value>& args) {
-    if (args.empty()) diagnostic::engine.panic("min() requires at least 1 argument");
+    if (args.empty())
+      diagnostic::engine.panic("min() requires at least 1 argument");
     if (args.size() == 1 && args[0].isList())
     {
       const std::vector<object::Value>& list = args[0].asList();
-      if (list.empty()) diagnostic::engine.panic("min() arg is empty sequence");
+      if (list.empty())
+        diagnostic::engine.panic("min() arg is empty sequence");
       object::Value minVal = list[0];
       for (std::size_t i = 1; i < list.size(); i++)
-        if (list[i] < minVal) minVal = list[i];
+        if (list[i] < minVal)
+          minVal = list[i];
       return minVal;
     }
     object::Value minVal = args[0];
     for (std::size_t i = 1; i < args.size(); i++)
-      if (args[i] < minVal) minVal = args[i];
+      if (args[i] < minVal)
+        minVal = args[i];
     return minVal;
   };
   // max
   nativeFunctions["max"] = [](const std::vector<object::Value>& args) {
-    if (args.empty()) diagnostic::engine.panic("max() requires at least 1 argument");
+    if (args.empty())
+      diagnostic::engine.panic("max() requires at least 1 argument");
     if (args.size() == 1 && args[0].isList())
     {
       const std::vector<object::Value>& list = args[0].asList();
-      if (list.empty()) diagnostic::engine.panic("max() arg is empty sequence");
+      if (list.empty())
+        diagnostic::engine.panic("max() arg is empty sequence");
       object::Value maxVal = list[0];
       for (std::size_t i = 1; i < list.size(); i++)
-        if (list[i] > maxVal) maxVal = list[i];
+        if (list[i] > maxVal)
+          maxVal = list[i];
       return maxVal;
     }
     object::Value maxVal = args[0];
     for (std::size_t i = 1; i < args.size(); i++)
-      if (args[i] > maxVal) maxVal = args[i];
+      if (args[i] > maxVal)
+        maxVal = args[i];
     return maxVal;
   };
   // sorted
   nativeFunctions["sorted"] = [](const std::vector<object::Value>& args) {
-    if (args.size() != 1) diagnostic::engine.panic("sorted() takes 1 argument");
-    if (!args[0].isList()) diagnostic::engine.panic("sorted() requires list");
+    if (args.size() != 1)
+      diagnostic::engine.panic("sorted() takes 1 argument");
+    if (!args[0].isList())
+      diagnostic::engine.panic("sorted() requires list");
     std::vector<object::Value> result = args[0].asList();
     std::sort(result.begin(), result.end());
     return object::Value(result);
   };
   // reversed
   nativeFunctions["reversed"] = [](const std::vector<object::Value>& args) {
-    if (args.size() != 1) diagnostic::engine.panic("reversed() takes 1 argument");
-    if (!args[0].isList()) diagnostic::engine.panic("reversed() requires list");
+    if (args.size() != 1)
+      diagnostic::engine.panic("reversed() takes 1 argument");
+    if (!args[0].isList())
+      diagnostic::engine.panic("reversed() requires list");
     std::vector<object::Value> result = args[0].asList();
     std::reverse(result.begin(), result.end());
     return object::Value(result);
   };
   // enumerate
   nativeFunctions["enumerate"] = [](const std::vector<object::Value>& args) {
-    if (args.size() != 1) diagnostic::engine.panic("enumerate() takes 1 argument");
-    if (!args[0].isList()) diagnostic::engine.panic("enumerate() requires list");
+    if (args.size() != 1)
+      diagnostic::engine.panic("enumerate() takes 1 argument");
+    if (!args[0].isList())
+      diagnostic::engine.panic("enumerate() requires list");
     std::vector<object::Value>        result;
     const std::vector<object::Value>& list = args[0].asList();
     for (std::size_t i = 0; i < list.size(); i++)
@@ -208,57 +263,70 @@ void VirtualMachine::registerNativeFunctions()
   };
   // zip
   nativeFunctions["zip"] = [](const std::vector<object::Value>& args) {
-    if (args.size() < 2) diagnostic::engine.panic("zip() requires at least 2 arguments");
+    if (args.size() < 2)
+      diagnostic::engine.panic("zip() requires at least 2 arguments");
     std::size_t minLen = SIZE_MAX;
     for (const object::Value& arg : args)
     {
-      if (!arg.isList()) diagnostic::engine.panic("zip() requires lists");
+      if (!arg.isList())
+        diagnostic::engine.panic("zip() requires lists");
       minLen = std::min(minLen, arg.asList().size());
     }
     std::vector<object::Value> result;
     for (std::size_t i = 0; i < minLen; i++)
     {
       std::vector<object::Value> tuple;
-      for (const object::Value& arg : args) tuple.push_back(arg.asList()[i]);
+      for (const object::Value& arg : args)
+        tuple.push_back(arg.asList()[i]);
       result.push_back(object::Value(tuple));
     }
     return object::Value(result);
   };
   // all
   nativeFunctions["all"] = [](const std::vector<object::Value>& args) {
-    if (args.size() != 1) diagnostic::engine.panic("all() takes 1 argument");
-    if (!args[0].isList()) diagnostic::engine.panic("all() requires list");
+    if (args.size() != 1)
+      diagnostic::engine.panic("all() takes 1 argument");
+    if (!args[0].isList())
+      diagnostic::engine.panic("all() requires list");
     for (const object::Value& item : args[0].asList())
-      if (!item.toBool()) return object::Value(false);
+      if (!item.toBool())
+        return object::Value(false);
     return object::Value(true);
   };
   // any
   nativeFunctions["any"] = [](const std::vector<object::Value>& args) {
-    if (args.size() != 1) diagnostic::engine.panic("any() takes 1 argument");
-    if (!args[0].isList()) diagnostic::engine.panic("any() requires list");
+    if (args.size() != 1)
+      diagnostic::engine.panic("any() takes 1 argument");
+    if (!args[0].isList())
+      diagnostic::engine.panic("any() requires list");
     for (const object::Value& item : args[0].asList())
-      if (item.toBool()) return object::Value(true);
+      if (item.toBool())
+        return object::Value(true);
     return object::Value(false);
   };
   // map, filter
   nativeFunctions["map"] = [](const std::vector<object::Value>& args) {
-    if (args.size() != 2) diagnostic::engine.panic("map() takes 2 arguments");
+    if (args.size() != 2)
+      diagnostic::engine.panic("map() takes 2 arguments");
     // Would need to handle function calls properly
     return object::Value();
   };
   // sqrt
   nativeFunctions["sqrt"] = [](const std::vector<object::Value>& args) {
-    if (args.size() != 1) diagnostic::engine.panic("sqrt() takes 1 argument");
+    if (args.size() != 1)
+      diagnostic::engine.panic("sqrt() takes 1 argument");
     return object::Value(std::sqrt(args[0].toFloat()));
   };
   // pow
   nativeFunctions["pow"] = [](const std::vector<object::Value>& args) {
-    if (args.size() != 2) diagnostic::engine.panic("pow() takes 2 arguments");
+    if (args.size() != 2)
+      diagnostic::engine.panic("pow() takes 2 arguments");
     return object::Value(std::pow(args[0].toFloat(), args[1].toFloat()));
   };
   // round
   nativeFunctions["round"] = [](const std::vector<object::Value>& args) {
-    if (args.size() != 1) diagnostic::engine.panic("round() takes 1 argument");
+    if (args.size() != 1)
+      diagnostic::engine.panic("round() takes 1 argument");
     return object::Value(static_cast<std::int64_t>(std::round(args[0].toFloat())));
   };
 }
@@ -276,7 +344,8 @@ void VirtualMachine::execute(const BytecodeCompiler::CompilationUnit& code)
     const bytecode::Instruction& instr = code.instructions[Ip_];
     Stats_.InstructionsExecuted++;
     // JIT hot spot detection
-    if (Stats_.InstructionsExecuted % 100 == 0) Jit_.recordExecution(Ip_);
+    if (Stats_.InstructionsExecuted % 100 == 0)
+      Jit_.recordExecution(Ip_);
     // Dispatch instruction
     try
     {
@@ -297,19 +366,31 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
 {
   switch (instr.op)
   {
-  case bytecode::OpCode::LOAD_CONST : push(code.constants[instr.arg]); break;
+  case bytecode::OpCode::LOAD_CONST :
+    push(code.constants[instr.arg]);
+    break;
   case bytecode::OpCode::LOAD_VAR :
-    if (instr.arg >= Globals_.size()) diagnostic::engine.panic("Variable index out of range");
+    if (instr.arg >= Globals_.size())
+      diagnostic::engine.panic("Variable index out of range");
     push(Globals_[instr.arg]);
     break;
-  case bytecode::OpCode::LOAD_GLOBAL : push(Globals_[instr.arg]); break;
+  case bytecode::OpCode::LOAD_GLOBAL :
+    push(Globals_[instr.arg]);
+    break;
   case bytecode::OpCode::STORE_VAR :
-    if (instr.arg >= Globals_.size()) Globals_.resize(instr.arg + 1);
+    if (instr.arg >= Globals_.size())
+      Globals_.resize(instr.arg + 1);
     Globals_[instr.arg] = pop();
     break;
-  case bytecode::OpCode::STORE_GLOBAL : Globals_[instr.arg] = pop(); break;
-  case bytecode::OpCode::POP : pop(); break;
-  case bytecode::OpCode::DUP : push(top()); break;
+  case bytecode::OpCode::STORE_GLOBAL :
+    Globals_[instr.arg] = pop();
+    break;
+  case bytecode::OpCode::POP :
+    pop();
+    break;
+  case bytecode::OpCode::DUP :
+    push(top());
+    break;
   case bytecode::OpCode::SWAP : {
     object::Value a = pop();
     object::Value b = pop();
@@ -369,7 +450,9 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     push(a.pow(b));
     break;
   }
-  case bytecode::OpCode::NEG : push(-pop()); break;
+  case bytecode::OpCode::NEG :
+    push(-pop());
+    break;
   case bytecode::OpCode::POS :
     // Unary + is a no-op
     break;
@@ -479,23 +562,37 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     break;
   }
   // Logical operations
-  case bytecode::OpCode::AND : push(object::Value(pop().toBool() && pop().toBool())); break;
-  case bytecode::OpCode::OR : push(object::Value(pop().toBool() || pop().toBool())); break;
-  case bytecode::OpCode::NOT : push(!pop()); break;
+  case bytecode::OpCode::AND :
+    push(object::Value(pop().toBool() && pop().toBool()));
+    break;
+  case bytecode::OpCode::OR :
+    push(object::Value(pop().toBool() || pop().toBool()));
+    break;
+  case bytecode::OpCode::NOT :
+    push(!pop());
+    break;
   // Control flow
-  case bytecode::OpCode::JUMP : Ip_ = instr.arg - 1; break;  // -1 because ip++ at end of loop
+  case bytecode::OpCode::JUMP :
+    Ip_ = instr.arg - 1;
+    break;  // -1 because ip++ at end of loop
   case bytecode::OpCode::JUMP_IF_FALSE :
-    if (!pop().toBool()) Ip_ = instr.arg - 1;
+    if (!pop().toBool())
+      Ip_ = instr.arg - 1;
     break;
   case bytecode::OpCode::JUMP_IF_TRUE :
-    if (pop().toBool()) Ip_ = instr.arg - 1;
+    if (pop().toBool())
+      Ip_ = instr.arg - 1;
     break;
   case bytecode::OpCode::POP_JUMP_IF_FALSE :
-    if (!top().toBool()) Ip_ = instr.arg - 1;
+    if (!top().toBool())
+      Ip_ = instr.arg - 1;
     break;
   case bytecode::OpCode::FOR_ITER : {
     object::Value& iterator = top();
-    if (iterator.hasNext()) { push(iterator.next()); }
+    if (iterator.hasNext())
+    {
+      push(iterator.next());
+    }
     else
     {
       pop();  // Remove exhausted iterator
@@ -507,7 +604,8 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
   case bytecode::OpCode::CALL : {
     std::int32_t               numArgs = instr.arg;
     std::vector<object::Value> args;
-    for (std::int32_t i = 0; i < numArgs; i++) args.insert(args.begin(), pop());
+    for (std::int32_t i = 0; i < numArgs; i++)
+      args.insert(args.begin(), pop());
     object::Value func = pop();
     // Check for native function
     if (func.isString())
@@ -536,14 +634,16 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     }
     break;
   }
-  case bytecode::OpCode::RETURN : return;  // Exit function
+  case bytecode::OpCode::RETURN :
+    return;  // Exit function
   case bytecode::OpCode::YIELD :
     // Generator support
     diagnostic::engine.panic("Generators not yet implemented");
     // Collections
   case bytecode::OpCode::BUILD_LIST : {
     std::vector<object::Value> elements;
-    for (std::int32_t i = 0; i < instr.arg; i++) elements.insert(elements.begin(), pop());
+    for (std::int32_t i = 0; i < instr.arg; i++)
+      elements.insert(elements.begin(), pop());
     push(object::Value(elements));
     break;
   }
@@ -568,10 +668,13 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     break;
   case bytecode::OpCode::UNPACK_SEQUENCE : {
     object::Value seq = pop();
-    if (!seq.isList()) diagnostic::engine.panic("Cannot unpack non-sequence");
+    if (!seq.isList())
+      diagnostic::engine.panic("Cannot unpack non-sequence");
     const std::vector<object::Value>& list = seq.asList();
-    if (list.size() != instr.arg) diagnostic::engine.panic("Unpack size mismatch");
-    for (const object::Value& item : list) push(item);
+    if (list.size() != instr.arg)
+      diagnostic::engine.panic("Unpack size mismatch");
+    for (const object::Value& item : list)
+      push(item);
     break;
   }
   case bytecode::OpCode::GET_ITEM : {
@@ -595,11 +698,13 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
   // Special operations
   case bytecode::OpCode::PRINT : {
     std::vector<object::Value> args;
-    for (std::int32_t i = 0; i < instr.arg; i++) args.insert(args.begin(), pop());
+    for (std::int32_t i = 0; i < instr.arg; i++)
+      args.insert(args.begin(), pop());
     for (std::size_t i = 0; i < args.size(); i++)
     {
       std::cout << args[i].repr();
-      if (i + 1 < args.size()) std::cout << " ";
+      if (i + 1 < args.size())
+        std::cout << " ";
     }
     std::cout << "\n";
     push(object::Value());  // print returns None
@@ -615,8 +720,10 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
   case bytecode::OpCode::NOP :
     // No operation
     break;
-  case bytecode::OpCode::HALT : return;
-  default : diagnostic::engine.panic("Unknown opcode: " + std::to_string(static_cast<std::int32_t>(instr.op)));
+  case bytecode::OpCode::HALT :
+    return;
+  default :
+    diagnostic::engine.panic("Unknown opcode: " + std::to_string(static_cast<std::int32_t>(instr.op)));
   }
 }
 

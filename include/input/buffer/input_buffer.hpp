@@ -61,7 +61,8 @@ class InputBuffer: public InputBufferBase
 
   void consume(std::size_t len)
   {
-    while (len-- > 0) consumeChar();
+    while (len-- > 0)
+      consumeChar();
   }
 
   void unget(char16_t ch);

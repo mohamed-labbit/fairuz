@@ -166,7 +166,8 @@ class ListExpr: public Expr
     {
       std::stringstream os;
       os << std::hex;
-      for (ast::Expr* a : Elements_) os << a << " ";
+      for (ast::Expr* a : Elements_)
+        os << a << " ";
       diagnostic::engine.emit("args of ListExpr are " + os.str(), /*sv=*/diagnostic::DiagnosticEngine::Severity::NOTE);
     }
   }
@@ -208,7 +209,10 @@ class CallExpr: public Expr
       std::stringstream os;
       os << std::hex;
 
-      for (auto a : Args_->getElements()) { os << a << " "; }
+      for (auto a : Args_->getElements())
+      {
+        os << a << " ";
+      }
 
       diagnostic::engine.emit("args of CallExpr are " + os.str(), diagnostic::DiagnosticEngine::Severity::NOTE);
     }

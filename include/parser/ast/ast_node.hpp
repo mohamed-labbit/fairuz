@@ -27,7 +27,7 @@ class ASTNode
   ASTNode& operator=(ASTNode&&)      = delete;
 
   NodeType getNodeType() const { return NodeType_; }
-  void setNodeType(const NodeType t) { NodeType_ = t; }
+  void     setNodeType(const NodeType t) { NodeType_ = t; }
 
   std::size_t getLine() const { return Line_; }
   std::size_t getColumn() const { return Column_; }

@@ -74,13 +74,16 @@ struct IndentationContext
    */
   void detectIndentMode(const StringType& indent_str)
   {
-    if (mode != IndentMode::UNDETECTED) return;
+    if (mode != IndentMode::UNDETECTED)
+      return;
     bool has_spaces = false;
     bool has_tabs   = false;
     for (char16_t ch : indent_str)
     {
-      if (ch == u' ') has_spaces = true;
-      if (ch == u'\t') has_tabs = true;
+      if (ch == u' ')
+        has_spaces = true;
+      if (ch == u'\t')
+        has_tabs = true;
     }
     if (has_spaces && has_tabs)
     {
@@ -103,7 +106,10 @@ struct IndentationContext
         }
       }
     }
-    else if (has_tabs) { mode = IndentMode::TABS; }
+    else if (has_tabs)
+    {
+      mode = IndentMode::TABS;
+    }
   }
 
   /**
@@ -113,17 +119,23 @@ struct IndentationContext
    */
   bool validateIndent(const StringType& indent_str) const
   {
-    if (mode == IndentMode::MIXED) return false;
+    if (mode == IndentMode::MIXED)
+      return false;
     bool has_spaces = false;
     bool has_tabs   = false;
     for (char16_t ch : indent_str)
     {
-      if (ch == u' ') has_spaces = true;
-      if (ch == u'\t') has_tabs = true;
+      if (ch == u' ')
+        has_spaces = true;
+      if (ch == u'\t')
+        has_tabs = true;
     }
-    if (mode == IndentMode::SPACES && has_tabs) return false;
-    if (mode == IndentMode::TABS && has_spaces) return false;
-    if (has_spaces && has_tabs) return false;
+    if (mode == IndentMode::SPACES && has_tabs)
+      return false;
+    if (mode == IndentMode::TABS && has_spaces)
+      return false;
+    if (has_spaces && has_tabs)
+      return false;
     return true;
   }
 
@@ -238,26 +250,6 @@ class Lexer
 
   /// @brief Lexes a single token and stores it
   MYLANG_COMPILER_ABI tok::Token lexToken();
-  /// @brief Handles indentation at the start of a line
-  // MYLANG_COMPILER_ABI tok::Token _handle_indentation(SourceManager& sm);
-  /// @brief Lexes identifiers and keywords
-  // MYLANG_COMPILER_ABI tok::Token _handle_identifier(char16_t c, SourceManager& sm);
-  /// @brief Lexes numeric literals
-  // MYLANG_COMPILER_ABI tok::Token _handle_number(char16_t c, SourceManager& sm);
-  /// @brief Lexes operators
-  // MYLANG_COMPILER_ABI tok::Token _handle_operator(char16_t c, SourceManager& sm);
-  /// @brief Lexes punctuation and symbols
-  // MYLANG_COMPILER_ABI tok::Token _handle_symbol(char16_t c, SourceManager& sm);
-  /// @brief Lexes string literals
-  // MYLANG_COMPILER_ABI tok::Token _handle_string_literal(char16_t c, SourceManager& sm);
-  /// @brief Handles newline characters
-  // MYLANG_COMPILER_ABI tok::Token _handle_newline(char16_t c, SourceManager& sm);
-  /// @brief Emits an invalid token
-  // MYLANG_COMPILER_ABI tok::Token _emit_invalid(char16_t c, SourceManager& sm);
-  /// @brief Emits end-of-file token
-  // MYLANG_COMPILER_ABI tok::Token _emit_eof(SourceManager& sm);
-  /// @brief Emits start-of-file token
-  // MYLANG_COMPILER_ABI tok::Token _emit_sof(SourceManager& sm);
   /// @brief Analyzes indentation and determines required action
   MYLANG_COMPILER_ABI IndentationAnalysis analyzeIndentation_();
   /// @brief Updates indentation context based on emitted token
@@ -278,7 +270,10 @@ class Lexer
     try
     {
       std::locale::global(std::locale("ar_SA.UTF-8"));
-    } catch (const std::runtime_error&) { std::locale::global(std::locale::classic()); }
+    } catch (const std::runtime_error&)
+    {
+      std::locale::global(std::locale::classic());
+    }
   }
 };
 

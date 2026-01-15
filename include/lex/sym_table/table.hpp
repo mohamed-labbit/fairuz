@@ -32,7 +32,8 @@ class SymbolTable
   // Leave current scope
   void leaveScope()
   {
-    if (this->Scopes_.size() > 1) this->Scopes_.pop_back();
+    if (this->Scopes_.size() > 1)
+      this->Scopes_.pop_back();
   }
 
   // Insert symbol into current scope
@@ -42,7 +43,8 @@ class SymbolTable
   {
     Scope& current_scope = this->Scopes_.back();
     // Check if symbol already exists in current scope
-    if (current_scope.find(lexeme) != current_scope.end()) return false;
+    if (current_scope.find(lexeme) != current_scope.end())
+      return false;
     // Insert into current scope
     Entry e(st, static_cast<std::size_t>(scopeLevel()));
     current_scope[lexeme] = e;
@@ -55,7 +57,8 @@ class SymbolTable
     for (auto it = this->Scopes_.rbegin(); it != this->Scopes_.rend(); ++it)
     {
       auto found = it->find(name);
-      if (found != it->end()) return found->second;
+      if (found != it->end())
+        return found->second;
     }
     return std::nullopt;  // not found
   }
@@ -67,10 +70,12 @@ class SymbolTable
   bool isInScope(const StringType& name, std::optional<std::size_t> _scope) const
   {
     // Default: check if symbol is visible anywhere in scope chain
-    if (_scope == std::nullopt) return lookup(name).has_value();
+    if (_scope == std::nullopt)
+      return lookup(name).has_value();
     // Check if symbol exists at specific scope level
     std::size_t scope_level = _scope.value();
-    if (scope_level >= this->Scopes_.size()) return false;
+    if (scope_level >= this->Scopes_.size())
+      return false;
     const Scope& scope = this->Scopes_[scope_level];
     return scope.find(name) != scope.end();
   }
@@ -86,7 +91,8 @@ class SymbolTable
     {
       const Scope& current = this->Scopes_.back();
       symbols.reserve(current.size());
-      for (const std::pair<StringType, Entry>& pair : current) symbols.push_back(pair.second);
+      for (const std::pair<StringType, Entry>& pair : current)
+        symbols.push_back(pair.second);
     }
     return symbols;
   }
@@ -117,7 +123,8 @@ class SymbolTable
     {
       const Scope& scope = this->Scopes_[level];
       symbols.reserve(scope.size());
-      for (const std::pair<StringType, Entry>& pair : scope) symbols.push_back(pair.second);
+      for (const std::pair<StringType, Entry>& pair : scope)
+        symbols.push_back(pair.second);
     }
     return symbols;
   }

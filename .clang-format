@@ -7,11 +7,11 @@ AlignOperands: true
 AlignTrailingComments: true
 
 AllowAllParametersOfDeclarationOnNextLine: true
-AllowShortCaseLabelsOnASingleLine: true
+AllowShortCaseLabelsOnASingleLine: false
 AllowShortEnumsOnASingleLine: true
-AllowShortIfStatementsOnASingleLine: true
-AllowShortBlocksOnASingleLine: true
-AllowShortLoopsOnASingleLine: true
+AllowShortIfStatementsOnASingleLine: false
+AllowShortBlocksOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
 AlwaysBreakTemplateDeclarations: Yes
 
 BasedOnStyle: WebKit

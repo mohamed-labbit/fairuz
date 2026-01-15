@@ -16,7 +16,8 @@ void BytecodeCompiler::emitInstruction(bytecode::OpCode op, std::int32_t arg, st
   // Track stack depth
   updateStackDepth(op);
   // Track line numbers
-  if (line > 0) Unit_.LineNumbers.push_back(line);
+  if (line > 0)
+    Unit_.LineNumbers.push_back(line);
 }
 
 void BytecodeCompiler::updateStackDepth(bytecode::OpCode op)
@@ -28,11 +29,15 @@ void BytecodeCompiler::updateStackDepth(bytecode::OpCode op)
   case bytecode::OpCode::LOAD_VAR :
   case bytecode::OpCode::LOAD_GLOBAL :
   case bytecode::OpCode::LOAD_FAST :
-  case bytecode::OpCode::DUP : CurrentStackDepth_++; break;
+  case bytecode::OpCode::DUP :
+    CurrentStackDepth_++;
+    break;
   case bytecode::OpCode::POP :
   case bytecode::OpCode::STORE_VAR :
   case bytecode::OpCode::STORE_GLOBAL :
-  case bytecode::OpCode::STORE_FAST : CurrentStackDepth_--; break;
+  case bytecode::OpCode::STORE_FAST :
+    CurrentStackDepth_--;
+    break;
   case bytecode::OpCode::ADD :
   case bytecode::OpCode::SUB :
   case bytecode::OpCode::MUL :
@@ -46,12 +51,15 @@ void BytecodeCompiler::updateStackDepth(bytecode::OpCode op)
   case bytecode::OpCode::LE :
   case bytecode::OpCode::GE :
   case bytecode::OpCode::AND :
-  case bytecode::OpCode::OR : CurrentStackDepth_--; break;
+  case bytecode::OpCode::OR :
+    CurrentStackDepth_--;
+    break;
   case bytecode::OpCode::CALL :
     // Function + args -> result
     /// TODO:: Stack depth change handled separately
     break;
-  default : break;
+  default :
+    break;
   }
 
   MaxStackDepth_ = std::max(MaxStackDepth_, CurrentStackDepth_);
@@ -64,7 +72,8 @@ void BytecodeCompiler::patchJump(std::int32_t jumpIndex) { Unit_.instructions[ju
 void BytecodeCompiler::enterScope()
 {
   CompilerSymbolTable* newScope = new CompilerSymbolTable(CurrentScope_.get());
-  if (CurrentScope_) ScopeStack_.push(CurrentScope_.release());
+  if (CurrentScope_ != nullptr)
+    ScopeStack_.push(CurrentScope_.release());
   CurrentScope_.reset(newScope);
 }
 
@@ -79,7 +88,8 @@ void BytecodeCompiler::exitScope()
 
 void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
 {
-  if (!expr) return;
+  if (expr == nullptr)
+    return;
 
   switch (expr->getKind())
   {
@@ -95,9 +105,15 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
         val = object::Value(static_cast<std::int64_t>(std::stoll(utf8::utf16to8(lit->getValue()))));
       break;
     }
-    case parser::ast::LiteralExpr::Type::STRING : val = object::Value(lit->getValue()); break;
-    case parser::ast::LiteralExpr::Type::BOOLEAN : val = object::Value(lit->getValue() == u"true" || lit->getValue() == u"صحيح"); break;
-    case parser::ast::LiteralExpr::Type::NONE : val = object::Value(); break;
+    case parser::ast::LiteralExpr::Type::STRING :
+      val = object::Value(lit->getValue());
+      break;
+    case parser::ast::LiteralExpr::Type::BOOLEAN :
+      val = object::Value(lit->getValue() == u"true" || lit->getValue() == u"صحيح");
+      break;
+    case parser::ast::LiteralExpr::Type::NONE :
+      val = object::Value();
+      break;
     }
     std::int32_t idx = Constants_.addConstant(val);
     emitInstruction(bytecode::OpCode::LOAD_CONST, idx, expr->getLine());
@@ -107,13 +123,22 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
   case parser::ast::Expr::Kind::NAME : {
     const parser::ast::NameExpr* name = static_cast<const parser::ast::NameExpr*>(expr);
     CompilerSymbolTable::Symbol* sym  = CurrentScope_->resolve(utf8::utf16to8(name->getValue()));
-    if (!sym) diagnostic::engine.panic("Undefined variable: " + utf8::utf16to8(name->getValue()));
+    if (sym == nullptr)
+      diagnostic::engine.panic("Undefined variable: " + utf8::utf16to8(name->getValue()));
     switch (sym->scope)
     {
-    case CompilerSymbolTable::SymbolScope::GLOBAL : emitInstruction(bytecode::OpCode::LOAD_GLOBAL, sym->index, expr->getLine()); break;
-    case CompilerSymbolTable::SymbolScope::LOCAL : emitInstruction(bytecode::OpCode::LOAD_FAST, sym->index, expr->getLine()); break;
-    case CompilerSymbolTable::SymbolScope::CLOSURE : emitInstruction(bytecode::OpCode::LOAD_CLOSURE, sym->index, expr->getLine()); break;
-    default : emitInstruction(bytecode::OpCode::LOAD_VAR, sym->index, expr->getLine()); break;
+    case CompilerSymbolTable::SymbolScope::GLOBAL :
+      emitInstruction(bytecode::OpCode::LOAD_GLOBAL, sym->index, expr->getLine());
+      break;
+    case CompilerSymbolTable::SymbolScope::LOCAL :
+      emitInstruction(bytecode::OpCode::LOAD_FAST, sym->index, expr->getLine());
+      break;
+    case CompilerSymbolTable::SymbolScope::CLOSURE :
+      emitInstruction(bytecode::OpCode::LOAD_CLOSURE, sym->index, expr->getLine());
+      break;
+    default :
+      emitInstruction(bytecode::OpCode::LOAD_VAR, sym->index, expr->getLine());
+      break;
     }
     break;
   }
@@ -146,41 +171,64 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
     // Regular binary operations
     compileExpr(bin->getLeft());
     compileExpr(bin->getRight());
-    if (bin->getOperator() == lex::tok::TokenType::OP_PLUS) { emitInstruction(bytecode::OpCode::ADD, 0, expr->getLine()); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_MINUS) { emitInstruction(bytecode::OpCode::SUB, 0, expr->getLine()); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_STAR) { emitInstruction(bytecode::OpCode::MUL, 0, expr->getLine()); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_SLASH) { emitInstruction(bytecode::OpCode::DIV, 0, expr->getLine()); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_PERCENT) { emitInstruction(bytecode::OpCode::MOD, 0, expr->getLine()); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_POWER) { emitInstruction(bytecode::OpCode::POW, 0, expr->getLine()); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_EQ) { emitInstruction(bytecode::OpCode::EQ, 0, expr->getLine()); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_NEQ) { emitInstruction(bytecode::OpCode::NE, 0, expr->getLine()); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_LT) { emitInstruction(bytecode::OpCode::LT, 0, expr->getLine()); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_GT) { emitInstruction(bytecode::OpCode::GT, 0, expr->getLine()); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_LTE) { emitInstruction(bytecode::OpCode::LE, 0, expr->getLine()); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_GTE) { emitInstruction(bytecode::OpCode::GE, 0, expr->getLine()); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_BITAND) { emitInstruction(bytecode::OpCode::BITAND, 0, expr->getLine()); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_BITOR) { emitInstruction(bytecode::OpCode::BITOR, 0, expr->getLine()); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_BITXOR) { emitInstruction(bytecode::OpCode::BITXOR, 0, expr->getLine()); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_LSHIFT) { emitInstruction(bytecode::OpCode::LSHIFT, 0, expr->getLine()); }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_RSHIFT) { emitInstruction(bytecode::OpCode::RSHIFT, 0, expr->getLine()); }
-    else if (bin->getOperator() == lex::tok::TokenType::KW_IN) { emitInstruction(bytecode::OpCode::IN, 0, expr->getLine()); }
+    if (bin->getOperator() == lex::tok::TokenType::OP_PLUS)
+      emitInstruction(bytecode::OpCode::ADD, 0, expr->getLine());
+    else if (bin->getOperator() == lex::tok::TokenType::OP_MINUS)
+      emitInstruction(bytecode::OpCode::SUB, 0, expr->getLine());
+    else if (bin->getOperator() == lex::tok::TokenType::OP_STAR)
+      emitInstruction(bytecode::OpCode::MUL, 0, expr->getLine());
+    else if (bin->getOperator() == lex::tok::TokenType::OP_SLASH)
+      emitInstruction(bytecode::OpCode::DIV, 0, expr->getLine());
+    else if (bin->getOperator() == lex::tok::TokenType::OP_PERCENT)
+      emitInstruction(bytecode::OpCode::MOD, 0, expr->getLine());
+    else if (bin->getOperator() == lex::tok::TokenType::OP_POWER)
+      emitInstruction(bytecode::OpCode::POW, 0, expr->getLine());
+    else if (bin->getOperator() == lex::tok::TokenType::OP_EQ)
+      emitInstruction(bytecode::OpCode::EQ, 0, expr->getLine());
+    else if (bin->getOperator() == lex::tok::TokenType::OP_NEQ)
+      emitInstruction(bytecode::OpCode::NE, 0, expr->getLine());
+    else if (bin->getOperator() == lex::tok::TokenType::OP_LT)
+      emitInstruction(bytecode::OpCode::LT, 0, expr->getLine());
+    else if (bin->getOperator() == lex::tok::TokenType::OP_GT)
+      emitInstruction(bytecode::OpCode::GT, 0, expr->getLine());
+    else if (bin->getOperator() == lex::tok::TokenType::OP_LTE)
+      emitInstruction(bytecode::OpCode::LE, 0, expr->getLine());
+    else if (bin->getOperator() == lex::tok::TokenType::OP_GTE)
+      emitInstruction(bytecode::OpCode::GE, 0, expr->getLine());
+    else if (bin->getOperator() == lex::tok::TokenType::OP_BITAND)
+      emitInstruction(bytecode::OpCode::BITAND, 0, expr->getLine());
+    else if (bin->getOperator() == lex::tok::TokenType::OP_BITOR)
+      emitInstruction(bytecode::OpCode::BITOR, 0, expr->getLine());
+    else if (bin->getOperator() == lex::tok::TokenType::OP_BITXOR)
+      emitInstruction(bytecode::OpCode::BITXOR, 0, expr->getLine());
+    else if (bin->getOperator() == lex::tok::TokenType::OP_LSHIFT)
+      emitInstruction(bytecode::OpCode::LSHIFT, 0, expr->getLine());
+    else if (bin->getOperator() == lex::tok::TokenType::OP_RSHIFT)
+      emitInstruction(bytecode::OpCode::RSHIFT, 0, expr->getLine());
+    else if (bin->getOperator() == lex::tok::TokenType::KW_IN)
+      emitInstruction(bytecode::OpCode::IN, 0, expr->getLine());
     break;
   }
 
   case parser::ast::Expr::Kind::UNARY : {
     const parser::ast::UnaryExpr* un = static_cast<const parser::ast::UnaryExpr*>(expr);
     compileExpr(un->getOperand());
-    if (un->getOperator() == lex::tok::TokenType::OP_MINUS) { emitInstruction(bytecode::OpCode::NEG, 0, expr->getLine()); }
-    else if (un->getOperator() == lex::tok::TokenType::OP_PLUS) { emitInstruction(bytecode::OpCode::POS, 0, expr->getLine()); }
-    else if (un->getOperator() == lex::tok::TokenType::OP_BITNOT) { emitInstruction(bytecode::OpCode::BITNOT, 0, expr->getLine()); }
-    else if (un->getOperator() == lex::tok::TokenType::KW_NOT) { emitInstruction(bytecode::OpCode::NOT, 0, expr->getLine()); }
+    if (un->getOperator() == lex::tok::TokenType::OP_MINUS)
+      emitInstruction(bytecode::OpCode::NEG, 0, expr->getLine());
+    else if (un->getOperator() == lex::tok::TokenType::OP_PLUS)
+      emitInstruction(bytecode::OpCode::POS, 0, expr->getLine());
+    else if (un->getOperator() == lex::tok::TokenType::OP_BITNOT)
+      emitInstruction(bytecode::OpCode::BITNOT, 0, expr->getLine());
+    else if (un->getOperator() == lex::tok::TokenType::KW_NOT)
+      emitInstruction(bytecode::OpCode::NOT, 0, expr->getLine());
     break;
   }
 
   case parser::ast::Expr::Kind::CALL : {
     const parser::ast::CallExpr* call = static_cast<const parser::ast::CallExpr*>(expr);
     // Compile arguments first
-    for (const parser::ast::Expr* arg : call->getArgs()) compileExpr(arg);
+    for (const parser::ast::Expr* arg : call->getArgs())
+      compileExpr(arg);
     // Compile callee
     compileExpr(call->getCallee());
     // Emit call instruction
@@ -193,7 +241,8 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
   case parser::ast::Expr::Kind::LIST : {
     const parser::ast::ListExpr* list = static_cast<const parser::ast::ListExpr*>(expr);
     // Compile all elements
-    for (const parser::ast::Expr* elem : list->getElements()) compileExpr(elem);
+    for (const parser::ast::Expr* elem : list->getElements())
+      compileExpr(elem);
     // Build list from stack
     emitInstruction(bytecode::OpCode::BUILD_LIST, list->getElements().size(), expr->getLine());
     // Adjust stack depth
@@ -201,25 +250,6 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
     CurrentStackDepth_++;
     break;
   }
-
-    /*
-  case parser::ast::Expr::Kind::TERNARY : {
-    const parser::ast::TernaryExpr* tern = static_cast<const parser::ast::TernaryExpr*>(expr);
-    // Compile condition
-    compileExpr(tern->condition.get());
-    std::int32_t jumpIfFalse = getCurrentPC();
-    emitInstruction(bytecode::OpCode::POP_JUMP_IF_FALSE, 0, expr->line);
-    // True branch
-    compileExpr(tern->trueExpr.get());
-    std::int32_t jumpEnd = getCurrentPC();
-    emitInstruction(bytecode::OpCode::JUMP, 0, expr->line);
-    // False branch
-    patchJump(jumpIfFalse);
-    if (tern->falseExpr) compileExpr(tern->falseExpr.get());
-    patchJump(jumpEnd);
-    break;
-  }
-  */
 
   case parser::ast::Expr::Kind::ASSIGNMENT : {
     const parser::ast::AssignmentExpr* assign = static_cast<const parser::ast::AssignmentExpr*>(expr);
@@ -236,13 +266,15 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
     break;
   }
 
-  default : diagnostic::engine.panic("Unsupported expression type");
+  default :
+    diagnostic::engine.panic("Unsupported expression type");
   }
 }
 
 void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
 {
-  if (!stmt) return;
+  if (stmt == nullptr)
+    return;
 
   switch (stmt->getKind())
   {
@@ -255,7 +287,8 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     assert(target);
     StringType target_name = u"";
     /// TODO: check other type of target expressions
-    if (target->getKind() == parser::ast::Expr::Kind::NAME) target_name = dynamic_cast<parser::ast::NameExpr*>(target)->getValue();
+    if (target->getKind() == parser::ast::Expr::Kind::NAME)
+      target_name = dynamic_cast<parser::ast::NameExpr*>(target)->getValue();
     CompilerSymbolTable::Symbol* sym = CurrentScope_->define(utf8::utf16to8(target_name));
     if (sym->scope == CompilerSymbolTable::SymbolScope::GLOBAL)
       emitInstruction(bytecode::OpCode::STORE_GLOBAL, sym->index, stmt->getLine());
@@ -278,14 +311,16 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     std::int32_t jumpIfFalse = getCurrentPC();
     emitInstruction(bytecode::OpCode::POP_JUMP_IF_FALSE, 0, stmt->getLine());
     // Then block
-    for (const parser::ast::Stmt* s : ifStmt->getThenBlock()->getStatements()) compileStmt(s);
+    for (const parser::ast::Stmt* s : ifStmt->getThenBlock()->getStatements())
+      compileStmt(s);
     if (!ifStmt->getElseBlock()->isEmpty())
     {
       std::int32_t jumpEnd = getCurrentPC();
       emitInstruction(bytecode::OpCode::JUMP, 0, stmt->getLine());
       patchJump(jumpIfFalse);
       // Else block
-      for (const parser::ast::Stmt* s : ifStmt->getElseBlock()->getStatements()) compileStmt(s);
+      for (const parser::ast::Stmt* s : ifStmt->getElseBlock()->getStatements())
+        compileStmt(s);
       patchJump(jumpEnd);
     }
     else
@@ -310,13 +345,15 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     ctx.ContinueLabel = loopStart;
     ctx.BreakLabel    = -1;  // Will be patched
     LoopStack_.push(ctx);
-    for (const parser::ast::Stmt* s : whileStmt->getBlock()->getStatements()) compileStmt(s);
+    for (const parser::ast::Stmt* s : whileStmt->getBlock()->getStatements())
+      compileStmt(s);
     // Jump back to loop start
     emitInstruction(bytecode::OpCode::JUMP_BACKWARD, loopStart, stmt->getLine());
     patchJump(jumpIfFalse);
     emitInstruction(bytecode::OpCode::HOT_LOOP_END, 0, stmt->getLine());
     // Patch break statements
-    if (LoopStack_.top().BreakLabel != -1) patchJump(LoopStack_.top().BreakLabel);
+    if (LoopStack_.top().BreakLabel != -1)
+      patchJump(LoopStack_.top().BreakLabel);
     LoopStack_.pop();
     Stats_.LoopsDetected++;
     break;
@@ -341,13 +378,15 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     ctx.ContinueLabel = loopStart;
     ctx.BreakLabel    = -1;
     LoopStack_.push(ctx);
-    for (const parser::ast::Stmt* s : forStmt->getBlock()->getStatements()) compileStmt(s);
+    for (const parser::ast::Stmt* s : forStmt->getBlock()->getStatements())
+      compileStmt(s);
     // Jump back
     emitInstruction(bytecode::OpCode::JUMP_BACKWARD, loopStart, stmt->getLine());
     // Patch FOR_ITER to jump here when exhausted
     patchJump(forIter);
     emitInstruction(bytecode::OpCode::HOT_LOOP_END, 0, stmt->getLine());
-    if (LoopStack_.top().BreakLabel != -1) patchJump(LoopStack_.top().BreakLabel);
+    if (LoopStack_.top().BreakLabel != -1)
+      patchJump(LoopStack_.top().BreakLabel);
     LoopStack_.pop();
     Stats_.LoopsDetected++;
     break;
@@ -369,7 +408,8 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     CurrentStackDepth_ = 0;
     MaxStackDepth_     = 0;
     // Compile function body
-    for (const parser::ast::Stmt* s : funcDef->getBody()->getStatements()) compileStmt(s);
+    for (const parser::ast::Stmt* s : funcDef->getBody()->getStatements())
+      compileStmt(s);
     // Implicit return None if no return statement
     if (Unit_.instructions.empty() || Unit_.instructions.back().op != bytecode::OpCode::RETURN)
     {
@@ -399,7 +439,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
 
   case parser::ast::Stmt::Kind::RETURN : {
     const parser::ast::ReturnStmt* ret = static_cast<const parser::ast::ReturnStmt*>(stmt);
-    if (ret->getValue())
+    if (ret->getValue() != nullptr)
       compileExpr(ret->getValue());
     else
       emitInstruction(bytecode::OpCode::LOAD_CONST, Constants_.addConstant(object::Value()), stmt->getLine());
@@ -409,11 +449,13 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
 
   case parser::ast::Stmt::Kind::BLOCK : {
     const parser::ast::BlockStmt* block = static_cast<const parser::ast::BlockStmt*>(stmt);
-    for (const parser::ast::Stmt* s : block->getStatements()) compileStmt(s);
+    for (const parser::ast::Stmt* s : block->getStatements())
+      compileStmt(s);
     break;
   }
 
-  default : diagnostic::engine.panic("Unsupported statement type");
+  default :
+    diagnostic::engine.panic("Unsupported statement type");
   }
 }
 
@@ -424,7 +466,8 @@ typename BytecodeCompiler::CompilationUnit BytecodeCompiler::compile(const std::
   Stats_             = Stats();
   CurrentStackDepth_ = MaxStackDepth_ = 0;
   // Compile all statements
-  for (const parser::ast::Stmt* stmt : ast) compileStmt(stmt);
+  for (const parser::ast::Stmt* stmt : ast)
+    compileStmt(stmt);
   // Add HALT at end
   emitInstruction(bytecode::OpCode::HALT, 0, 0);
   // Finalize constant pool
@@ -443,7 +486,8 @@ typename BytecodeCompiler::CompilationUnit BytecodeCompiler::compile(const std::
   Unit_.StackSize = MaxStackDepth_;
   // Report unused variables
   std::vector<CompilerSymbolTable::Symbol> unused = CurrentScope_->getUnusedSymbols();
-  if (!unused.empty()) std::cout << "[Compiler] Warning: " << unused.size() << " unused variables detected\n";
+  if (!unused.empty())
+    std::cout << "[Compiler] Warning: " << unused.size() << " unused variables detected\n";
   return Unit_;
 }
 
@@ -451,7 +495,8 @@ void BytecodeCompiler::disassemble(const CompilationUnit& unit, std::ostream& ou
 {
   out << "=== Bytecode Disassembly ===\n\n";
   out << "Constants Pool (" << unit.constants.size() << " entries):\n";
-  for (std::size_t i = 0; i < unit.constants.size(); i++) out << "  [" << i << "] " << unit.constants[i].repr() << "\n";
+  for (std::size_t i = 0; i < unit.constants.size(); i++)
+    out << "  [" << i << "] " << unit.constants[i].repr() << "\n";
   out << "\nCode (" << unit.instructions.size() << " instructions):\n";
   out << "Stack size: " << unit.StackSize << "\n";
   out << "Locals: " << unit.NumLocals << "\n\n";
@@ -472,7 +517,8 @@ void BytecodeCompiler::disassemble(const CompilationUnit& unit, std::ostream& ou
     {
       out << std::setw(6) << instr.arg;
       // Show constant value for LOAD_CONST
-      if (instr.op == bytecode::OpCode::LOAD_CONST && instr.arg < unit.constants.size()) out << "  ; " << unit.constants[instr.arg].repr();
+      if (instr.op == bytecode::OpCode::LOAD_CONST && instr.arg < unit.constants.size())
+        out << "  ; " << unit.constants[instr.arg].repr();
     }
     out << "\n";
   }
@@ -512,7 +558,8 @@ void BytecodeCompiler::optimizationReport(std::ostream& out) const
   out << "  Loops detected: " << Stats_.LoopsDetected << "\n";
   const std::vector<LoopAnalyzer::Loop>& loops           = LoopAnalyzer_.getLoops();
   std::int32_t                           totalInvariants = 0;
-  for (const LoopAnalyzer::Loop& loop : loops) totalInvariants += loop.invariants.size();
+  for (const LoopAnalyzer::Loop& loop : loops)
+    totalInvariants += loop.invariants.size();
   out << "  Hoistable invariants: " << totalInvariants << "\n\n";
   out << "Peephole Optimizations:\n";
   if (Stats_.PeepholeOptimizations > 0)
@@ -525,77 +572,148 @@ std::string BytecodeCompiler::opcodeToString(bytecode::OpCode op) const
 {
   switch (op)
   {
-  case bytecode::OpCode::LOAD_CONST : return "LOAD_CONST";
-  case bytecode::OpCode::LOAD_VAR : return "LOAD_VAR";
-  case bytecode::OpCode::LOAD_GLOBAL : return "LOAD_GLOBAL";
-  case bytecode::OpCode::LOAD_FAST : return "LOAD_FAST";
-  case bytecode::OpCode::STORE_VAR : return "STORE_VAR";
-  case bytecode::OpCode::STORE_GLOBAL : return "STORE_GLOBAL";
-  case bytecode::OpCode::STORE_FAST : return "STORE_FAST";
-  case bytecode::OpCode::POP : return "POP";
-  case bytecode::OpCode::DUP : return "DUP";
-  case bytecode::OpCode::SWAP : return "SWAP";
-  case bytecode::OpCode::ROT_THREE : return "ROT_THREE";
-  case bytecode::OpCode::ADD : return "ADD";
-  case bytecode::OpCode::ADD_FAST : return "ADD_FAST";
-  case bytecode::OpCode::SUB : return "SUB";
-  case bytecode::OpCode::SUB_FAST : return "SUB_FAST";
-  case bytecode::OpCode::MUL : return "MUL";
-  case bytecode::OpCode::MUL_FAST : return "MUL_FAST";
-  case bytecode::OpCode::DIV : return "DIV";
-  case bytecode::OpCode::FLOOR_DIV : return "FLOOR_DIV";
-  case bytecode::OpCode::MOD : return "MOD";
-  case bytecode::OpCode::POW : return "POW";
-  case bytecode::OpCode::NEG : return "NEG";
-  case bytecode::OpCode::POS : return "POS";
-  case bytecode::OpCode::BITAND : return "BITAND";
-  case bytecode::OpCode::BITOR : return "BITOR";
-  case bytecode::OpCode::BITXOR : return "BITXOR";
-  case bytecode::OpCode::BITNOT : return "BITNOT";
-  case bytecode::OpCode::LSHIFT : return "LSHIFT";
-  case bytecode::OpCode::RSHIFT : return "RSHIFT";
-  case bytecode::OpCode::EQ : return "EQ";
-  case bytecode::OpCode::NE : return "NE";
-  case bytecode::OpCode::LT : return "LT";
-  case bytecode::OpCode::GT : return "GT";
-  case bytecode::OpCode::LE : return "LE";
-  case bytecode::OpCode::GE : return "GE";
-  case bytecode::OpCode::IN : return "IN";
-  case bytecode::OpCode::NOT_IN : return "NOT_IN";
-  case bytecode::OpCode::IS : return "IS";
-  case bytecode::OpCode::IS_NOT : return "IS_NOT";
-  case bytecode::OpCode::AND : return "AND";
-  case bytecode::OpCode::OR : return "OR";
-  case bytecode::OpCode::NOT : return "NOT";
-  case bytecode::OpCode::JUMP : return "JUMP";
-  case bytecode::OpCode::JUMP_FORWARD : return "JUMP_FORWARD";
-  case bytecode::OpCode::JUMP_BACKWARD : return "JUMP_BACKWARD";
-  case bytecode::OpCode::JUMP_IF_FALSE : return "JUMP_IF_FALSE";
-  case bytecode::OpCode::JUMP_IF_TRUE : return "JUMP_IF_TRUE";
-  case bytecode::OpCode::POP_JUMP_IF_FALSE : return "POP_JUMP_IF_FALSE";
-  case bytecode::OpCode::POP_JUMP_IF_TRUE : return "POP_JUMP_IF_TRUE";
-  case bytecode::OpCode::FOR_ITER : return "FOR_ITER";
-  case bytecode::OpCode::FOR_ITER_FAST : return "FOR_ITER_FAST";
-  case bytecode::OpCode::CALL : return "CALL";
-  case bytecode::OpCode::CALL_FAST : return "CALL_FAST";
-  case bytecode::OpCode::RETURN : return "RETURN";
-  case bytecode::OpCode::YIELD : return "YIELD";
-  case bytecode::OpCode::BUILD_LIST : return "BUILD_LIST";
-  case bytecode::OpCode::BUILD_DICT : return "BUILD_DICT";
-  case bytecode::OpCode::BUILD_TUPLE : return "BUILD_TUPLE";
-  case bytecode::OpCode::BUILD_SET : return "BUILD_SET";
-  case bytecode::OpCode::UNPACK_SEQUENCE : return "UNPACK_SEQUENCE";
-  case bytecode::OpCode::GET_ITEM : return "GET_ITEM";
-  case bytecode::OpCode::SET_ITEM : return "SET_ITEM";
-  case bytecode::OpCode::GET_ITER : return "GET_ITER";
-  case bytecode::OpCode::MAKE_FUNCTION : return "MAKE_FUNCTION";
-  case bytecode::OpCode::LOAD_CLOSURE : return "LOAD_CLOSURE";
-  case bytecode::OpCode::PRINT : return "PRINT";
-  case bytecode::OpCode::NOP : return "NOP";
-  case bytecode::OpCode::HALT : return "HALT";
-  case bytecode::OpCode::HOT_LOOP_START : return "HOT_LOOP_START";
-  case bytecode::OpCode::HOT_LOOP_END : return "HOT_LOOP_END";
-  default : return "UNKNOWN";
+  case bytecode::OpCode::LOAD_CONST :
+    return "LOAD_CONST";
+  case bytecode::OpCode::LOAD_VAR :
+    return "LOAD_VAR";
+  case bytecode::OpCode::LOAD_GLOBAL :
+    return "LOAD_GLOBAL";
+  case bytecode::OpCode::LOAD_FAST :
+    return "LOAD_FAST";
+  case bytecode::OpCode::STORE_VAR :
+    return "STORE_VAR";
+  case bytecode::OpCode::STORE_GLOBAL :
+    return "STORE_GLOBAL";
+  case bytecode::OpCode::STORE_FAST :
+    return "STORE_FAST";
+  case bytecode::OpCode::POP :
+    return "POP";
+  case bytecode::OpCode::DUP :
+    return "DUP";
+  case bytecode::OpCode::SWAP :
+    return "SWAP";
+  case bytecode::OpCode::ROT_THREE :
+    return "ROT_THREE";
+  case bytecode::OpCode::ADD :
+    return "ADD";
+  case bytecode::OpCode::ADD_FAST :
+    return "ADD_FAST";
+  case bytecode::OpCode::SUB :
+    return "SUB";
+  case bytecode::OpCode::SUB_FAST :
+    return "SUB_FAST";
+  case bytecode::OpCode::MUL :
+    return "MUL";
+  case bytecode::OpCode::MUL_FAST :
+    return "MUL_FAST";
+  case bytecode::OpCode::DIV :
+    return "DIV";
+  case bytecode::OpCode::FLOOR_DIV :
+    return "FLOOR_DIV";
+  case bytecode::OpCode::MOD :
+    return "MOD";
+  case bytecode::OpCode::POW :
+    return "POW";
+  case bytecode::OpCode::NEG :
+    return "NEG";
+  case bytecode::OpCode::POS :
+    return "POS";
+  case bytecode::OpCode::BITAND :
+    return "BITAND";
+  case bytecode::OpCode::BITOR :
+    return "BITOR";
+  case bytecode::OpCode::BITXOR :
+    return "BITXOR";
+  case bytecode::OpCode::BITNOT :
+    return "BITNOT";
+  case bytecode::OpCode::LSHIFT :
+    return "LSHIFT";
+  case bytecode::OpCode::RSHIFT :
+    return "RSHIFT";
+  case bytecode::OpCode::EQ :
+    return "EQ";
+  case bytecode::OpCode::NE :
+    return "NE";
+  case bytecode::OpCode::LT :
+    return "LT";
+  case bytecode::OpCode::GT :
+    return "GT";
+  case bytecode::OpCode::LE :
+    return "LE";
+  case bytecode::OpCode::GE :
+    return "GE";
+  case bytecode::OpCode::IN :
+    return "IN";
+  case bytecode::OpCode::NOT_IN :
+    return "NOT_IN";
+  case bytecode::OpCode::IS :
+    return "IS";
+  case bytecode::OpCode::IS_NOT :
+    return "IS_NOT";
+  case bytecode::OpCode::AND :
+    return "AND";
+  case bytecode::OpCode::OR :
+    return "OR";
+  case bytecode::OpCode::NOT :
+    return "NOT";
+  case bytecode::OpCode::JUMP :
+    return "JUMP";
+  case bytecode::OpCode::JUMP_FORWARD :
+    return "JUMP_FORWARD";
+  case bytecode::OpCode::JUMP_BACKWARD :
+    return "JUMP_BACKWARD";
+  case bytecode::OpCode::JUMP_IF_FALSE :
+    return "JUMP_IF_FALSE";
+  case bytecode::OpCode::JUMP_IF_TRUE :
+    return "JUMP_IF_TRUE";
+  case bytecode::OpCode::POP_JUMP_IF_FALSE :
+    return "POP_JUMP_IF_FALSE";
+  case bytecode::OpCode::POP_JUMP_IF_TRUE :
+    return "POP_JUMP_IF_TRUE";
+  case bytecode::OpCode::FOR_ITER :
+    return "FOR_ITER";
+  case bytecode::OpCode::FOR_ITER_FAST :
+    return "FOR_ITER_FAST";
+  case bytecode::OpCode::CALL :
+    return "CALL";
+  case bytecode::OpCode::CALL_FAST :
+    return "CALL_FAST";
+  case bytecode::OpCode::RETURN :
+    return "RETURN";
+  case bytecode::OpCode::YIELD :
+    return "YIELD";
+  case bytecode::OpCode::BUILD_LIST :
+    return "BUILD_LIST";
+  case bytecode::OpCode::BUILD_DICT :
+    return "BUILD_DICT";
+  case bytecode::OpCode::BUILD_TUPLE :
+    return "BUILD_TUPLE";
+  case bytecode::OpCode::BUILD_SET :
+    return "BUILD_SET";
+  case bytecode::OpCode::UNPACK_SEQUENCE :
+    return "UNPACK_SEQUENCE";
+  case bytecode::OpCode::GET_ITEM :
+    return "GET_ITEM";
+  case bytecode::OpCode::SET_ITEM :
+    return "SET_ITEM";
+  case bytecode::OpCode::GET_ITER :
+    return "GET_ITER";
+  case bytecode::OpCode::MAKE_FUNCTION :
+    return "MAKE_FUNCTION";
+  case bytecode::OpCode::LOAD_CLOSURE :
+    return "LOAD_CLOSURE";
+  case bytecode::OpCode::PRINT :
+    return "PRINT";
+  case bytecode::OpCode::NOP :
+    return "NOP";
+  case bytecode::OpCode::HALT :
+    return "HALT";
+  case bytecode::OpCode::HOT_LOOP_START :
+    return "HOT_LOOP_START";
+  case bytecode::OpCode::HOT_LOOP_END :
+    return "HOT_LOOP_END";
+  default :
+    return "UNKNOWN";
   }
 }
 

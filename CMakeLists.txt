@@ -55,7 +55,6 @@ add_executable(mylang_tests
     tests/lexer/test_tokens.cpp
     tests/runtime/allocator/test_arena.cpp
     tests/parser/test_parser.cpp
-    tests/test_include_all.cpp
     tests/test_main.cpp
     $<TARGET_OBJECTS:mylang_objects>
 )

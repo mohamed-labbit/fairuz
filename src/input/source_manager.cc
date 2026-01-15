@@ -13,16 +13,19 @@ char16_t SourceManager::peek()
 {
 
   return this->InputBuffer_.peek();
-  if (Current_ == nullptr) return BUFFER_END;
+  if (Current_ == nullptr)
+    return BUFFER_END;
   char16_t* forward = Current_ + 1;
-  if (forward == nullptr) return BUFFER_END;
+  if (forward == nullptr)
+    return BUFFER_END;
   return *forward;
 }
 
 offset_pair SourceManager::offsetMap_(const std::size_t& offset) const
 {
 
-  if (offset == InputBuffer_.bufferOffset()) return std::make_pair(InputBuffer_.position().line, InputBuffer_.position().column);
+  if (offset == InputBuffer_.bufferOffset())
+    return std::make_pair(InputBuffer_.position().line, InputBuffer_.position().column);
 
   std::size_t iter = 0;
   std::size_t diff = 0;
@@ -30,7 +33,8 @@ offset_pair SourceManager::offsetMap_(const std::size_t& offset) const
   // Count lines before buffer start
   while (iter < InputBuffer_.bufferOffset())
   {
-    if (InputBuffer_.at(iter) == u'\n') diff += 1;
+    if (InputBuffer_.at(iter) == u'\n')
+      diff += 1;
     iter += 1;
   }
 

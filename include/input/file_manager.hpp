@@ -36,20 +36,34 @@ MYLANG_CONSTEXPR const char* toString(FileManagerError error) MYLANG_NOEXCEPT
 {
   switch (error)
   {
-  case FileManagerError::FILE_NOT_FOUND : return "File not found";
-  case FileManagerError::FILE_NOT_OPEN : return "File is not open";
-  case FileManagerError::SEEK_OUT_OF_BOUND : return "Seek position out of bounds";
-  case FileManagerError::READ_ERROR : return "Failed to read from file";
-  case FileManagerError::INVALID_UTF8 : return "Invalid UTF-8 sequence encountered";
-  case FileManagerError::INVALID_CHAR_OFFSET : return "Invalid character offset";
-  case FileManagerError::PERMISSION_DENIED : return "Permission denied";
-  case FileManagerError::UNEXPECTED_EOF : return "Unexpected end of file";
-  case FileManagerError::SYSTEM_ERROR : return "System error occurred";
-  case FileManagerError::ENCODING_ERROR : return "Encoding conversion error";
-  case FileManagerError::CACHE_ERROR : return "Cache operation failed";
-  case FileManagerError::INVALID_LINE_NUMBER : return "Invalid line number";
-  case FileManagerError::BUFFER_TOO_SMALL : return "Buffer too small for operation";
-  default : return "Unknown error";
+  case FileManagerError::FILE_NOT_FOUND :
+    return "File not found";
+  case FileManagerError::FILE_NOT_OPEN :
+    return "File is not open";
+  case FileManagerError::SEEK_OUT_OF_BOUND :
+    return "Seek position out of bounds";
+  case FileManagerError::READ_ERROR :
+    return "Failed to read from file";
+  case FileManagerError::INVALID_UTF8 :
+    return "Invalid UTF-8 sequence encountered";
+  case FileManagerError::INVALID_CHAR_OFFSET :
+    return "Invalid character offset";
+  case FileManagerError::PERMISSION_DENIED :
+    return "Permission denied";
+  case FileManagerError::UNEXPECTED_EOF :
+    return "Unexpected end of file";
+  case FileManagerError::SYSTEM_ERROR :
+    return "System error occurred";
+  case FileManagerError::ENCODING_ERROR :
+    return "Encoding conversion error";
+  case FileManagerError::CACHE_ERROR :
+    return "Cache operation failed";
+  case FileManagerError::INVALID_LINE_NUMBER :
+    return "Invalid line number";
+  case FileManagerError::BUFFER_TOO_SMALL :
+    return "Buffer too small for operation";
+  default :
+    return "Unknown error";
   }
 }
 
@@ -136,13 +150,15 @@ class FileManager
 
   std::size_t getLineCount()
   {
-    if (!LineIndexBuilt_) buildLineIndex();
+    if (!LineIndexBuilt_)
+      buildLineIndex();
     return Stats_.TotalLines;
   }
 
   std::size_t getCharCount()
   {
-    if (!LineIndexBuilt_) buildLineIndex();
+    if (!LineIndexBuilt_)
+      buildLineIndex();
     return Stats_.TotalCharacters;
   }
 
@@ -174,14 +190,16 @@ class FileManager
 
   void popPosition()
   {
-    if (!PositionStack_.empty()) PositionStack_.erase(PositionStack_.begin());
+    if (!PositionStack_.empty())
+      PositionStack_.erase(PositionStack_.begin());
   }
 
   void pushPosition()
   {
     PositionStack_.push_back(Context_);
     // Limit stack size
-    if (PositionStack_.size() > 100) PositionStack_.erase(PositionStack_.begin());
+    if (PositionStack_.size() > 100)
+      PositionStack_.erase(PositionStack_.begin());
   }
 
   std::size_t validateUtf8Bound(std::span<const char> buffer) const;

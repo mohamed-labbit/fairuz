@@ -11,7 +11,8 @@ namespace buffer {
 
 bool InputBufferBase::refreshBuffer(const std::uint32_t to_refresh)
 {
-  if (!FileManager_->isOpen()) return false;
+  if (!FileManager_->isOpen())
+    return false;
 
   std::size_t max_chars = Buffers_[to_refresh].size() - 1;
   buffer_t    buf       = FileManager_->readWindow(max_chars);

@@ -76,7 +76,8 @@ class ParseError: public std::runtime_error
     if (!Suggestions_.empty())
     {
       ss << "Suggestions:\n";
-      for (const StringType& s : Suggestions_) ss << "  - " << utf8::utf16to8(s) << "\n";
+      for (const StringType& s : Suggestions_)
+        ss << "  - " << utf8::utf16to8(s) << "\n";
     }
 
     return utf8::utf8to16(ss.str());
@@ -102,7 +103,8 @@ class Parser
   explicit Parser(input::FileManager* fm) :
       Lexer_(fm)
   {
-    if (fm == nullptr) diagnostic::engine.panic("file_manager is NULL!");
+    if (fm == nullptr)
+      diagnostic::engine.panic("file_manager is NULL!");
     // Advance to the first real token
     Lexer_.next();
   }
@@ -160,7 +162,7 @@ class Parser
   ast::Expr* parseConditionalExpr()
   {
     return parseLogicalExpr();
-    /// TODO: Add ternary operator support here
+    /// TODO: Ternary?
   }
 
   /// @brief Parses logical expressions (AND / OR)
@@ -204,22 +206,14 @@ class Parser
     return Lexer_.current().is(type);
   }
 
+  lex::tok::Token currentToken() { return Lexer_.current(); }
+
   ast::Expr* parse() { return parseExpression(); }
 
   ast::BlockStmt* parseIndentedBlock();
 
  private:
   lex::Lexer Lexer_;  // Underlying lexer providing tokens
-
-  /// @brief Checks whether a token represents a unary operator
-  static bool isUnaryOp(const lex::tok::Token tok)
-  {
-    return tok.type() == lex::tok::TokenType::OP_MINUS || tok.type() == lex::tok::TokenType::OP_BITNOT || tok.type() == lex::tok::TokenType::OP_PLUS;
-  }
-
-
-  /// @brief Checks whether a token represents a binary operator
-  static bool isBinaryOp(const lex::tok::Token tok);
 
   /// @brief Peeks ahead in the token stream without consuming
   lex::tok::Token peek(std::size_t offset = 1) { return Lexer_.peek(offset); }
@@ -238,14 +232,19 @@ class Parser
    */
   lex::tok::Token consume(lex::tok::TokenType type, const StringType& msg)
   {
-    if (check(type)) return advance();
+    if (check(type))
+      return advance();
     /// TODO: Implement proper error reporting
     // For now, return empty token
     return lex::tok::Token();
   }
 
   /// @brief Skips newline tokens during parsing
-  void skipNewlines() { while (match(lex::tok::TokenType::NEWLINE)); }
+  void skipNewlines()
+  {
+    while (match(lex::tok::TokenType::NEWLINE))
+      ;
+  }
 
   /// @brief Retrieves a source line for diagnostics
   StringType getSourceLine(std::size_t line)
@@ -254,16 +253,8 @@ class Parser
     return peek().lexeme();
   }
 
-  /// @brief Returns precedence of logical operators
-  int getLogicalOperatorPrecedence(lex::tok::TokenType tt);
-
-  /// @brief Returns precedence of arithmetic operators
-  int getArithmeticOperatorPrecedence(const lex::tok::TokenType type);
-
   /// @brief Enters a new scope (currently a no-op)
   void enterScope() {}
-
-  void reportError(const std::u16string& message);
 
   void synchronize();
 };
