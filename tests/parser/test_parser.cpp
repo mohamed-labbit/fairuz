@@ -938,3 +938,21 @@ TEST_F(ParserTest, ParseDeeplyNestedExpression)
   if (test_config::print_ast)
     AST_Printer.print(expr);
 }
+
+TEST_F(ParserTest, ParseWhileLoop)
+{
+  input::FileManager file_manager(parser_test_cases_dir() / "while_loop.txt");
+  parser::Parser     parser(&file_manager);
+  parser::ast::Stmt* stmt = parser.parseWhileStmt();
+  ASSERT_NE(stmt, nullptr) << "Should parse while loop statement";
+  if (test_config::print_ast)
+    AST_Printer.print(stmt);
+  parser::ast::WhileStmt* while_stmt = dynamic_cast<parser::ast::WhileStmt*>(stmt);
+  ASSERT_NE(while_stmt, nullptr) << "Should parse while loop statement";
+  parser::ast::Expr* condition_expr = while_stmt->getCondition();
+  ASSERT_NE(condition_expr, nullptr) << "Should parse while loop condition expression";
+  /// TODO: check the condition itself
+  parser::ast::BlockStmt* block = while_stmt->getBlock();
+  ASSERT_NE(block, nullptr) << "Should parse while loop indented block";
+  /// TODO: check the block itself
+}

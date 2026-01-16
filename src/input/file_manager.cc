@@ -5,6 +5,7 @@
 
 #include <filesystem>
 #include <iostream>
+#include <span>
 
 
 namespace fs = std::filesystem;
@@ -100,13 +101,9 @@ StringType FileManager::readWindowInternal(const std::size_t size)
   if (bytes_read == 0)
   {
     if (Stream_.eof())
-    {
       return StringType{};
-    }
     else if (byte_buffer.empty())
-    {
       throw error::FileError(toString(FileManagerError::READ_ERROR));
-    }
   }
   if (bytes_read < 0)
     throw error::FileError(toString(FileManagerError::READ_ERROR));
@@ -166,9 +163,8 @@ StringType FileManager::readNextLine()
     {
       StringType peek = readWindowInternal(1);
       if (!peek.empty() && peek[0] == u'\n')
-      {
         // consume \n
-      }
+        ;
       else
       {
         // rewind

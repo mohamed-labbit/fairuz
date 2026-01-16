@@ -20,7 +20,5 @@ int main(int argc, char** argv)
       test_config::print_ast = true;
   }
 
-  std::cout << (test_config::print_ast ? "true" : "false") << std::endl;
-
   return RUN_ALL_TESTS();
 }
