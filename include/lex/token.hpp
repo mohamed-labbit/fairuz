@@ -176,6 +176,8 @@ class Token
 
   bool operator==(const Token& other) const
   {
+    if (Type_ == TokenType::INDENT || Type_ == TokenType::DEDENT)
+      return Type_ == other.Type_;
     return Value_ == other.Value_ && Type_ == other.Type_ && Location_.line == other.Location_.line && Location_.column == other.Location_.column;
   }
 
@@ -202,6 +204,9 @@ class Token
   const std::string& filepath() const { return Location_.filepath; }
 
   bool is(const TokenType tt) const { return tt == Type_; }
+
+  // is at beginning of a new line
+  bool atbol() const { return Atbol_; }
 
   bool isOperator() const { return Type_ > TokenType::OP_PLUS && Type_ < TokenType::OP_RSHIFTEQ; }
 
@@ -266,6 +271,8 @@ class Token
   StringType Value_;
   TokenType  Type_;
   Location   Location_;
+
+  bool Atbol_;
 };
 }
 }  // lex

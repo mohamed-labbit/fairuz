@@ -29,10 +29,13 @@ void FileManager::reset()
 {
   if (!isOpen())
     throw error::FileError(toString(FileManagerError::FILE_NOT_FOUND));
+
   Stream_.clear();
   Stream_.seekg(0, std::ios::beg);
+
   if (Stream_.fail())
     throw error::FileError(toString(FileManagerError::SEEK_OUT_OF_BOUND));
+
   Context_.reset();
 }
 
@@ -40,9 +43,11 @@ void FileManager::seekToChar(const std::size_t CharOffset)
 {
   if (CharOffset == Context_.CharOffset)
     return;
+
   /// TODO:  : revisit this stupid magic number
   if (CharOffset < Context_.CharOffset || CharOffset - Context_.CharOffset > 10000)
     reset();
+
   while (Context_.CharOffset < CharOffset)
   {
     const std::size_t chars_to_read = CharOffset - Context_.CharOffset;
@@ -69,22 +74,29 @@ std::size_t FileManager::validateUtf8Bound(std::span<const char> buffer) const
 {
   if (buffer.empty())
     return 0;
+
   const std::size_t size = buffer.size();
+
   for (std::size_t i = 0, n = std::min(MAX_UTF8_CHAR_BYTES, size); i < n; ++i)
   {
     const std::size_t   pos  = size - 1 - i;
     const unsigned char byte = static_cast<unsigned char>(buffer[pos]);
+
     if ((byte & 0x80) == 0)
       return 0;
+
     if ((byte & 0xC0) == 0xC0)
     {
       const std::size_t expected  = getUtf8SequenceLength(byte);
       const std::size_t available = size - pos;
+
       if (available < expected)
         return i + 1;
+
       return 0;
     }
   }
+
   return std::min(MAX_UTF8_CHAR_BYTES, size);
 }
 
@@ -92,12 +104,15 @@ StringType FileManager::readWindowInternal(const std::size_t size)
 {
   if (size == 0)
     return StringType{};
+
   if (!isOpen())
     throw error::FileError(toString(FileManagerError::FILE_NOT_OPEN));
+
   const std::size_t byte_chunk_size = size * MAX_UTF8_CHAR_BYTES;
   std::vector<char> byte_buffer(byte_chunk_size);
   Stream_.read(byte_buffer.data(), byte_chunk_size);
   std::streamsize bytes_read = Stream_.gcount();
+
   if (bytes_read == 0)
   {
     if (Stream_.eof())
@@ -105,21 +120,27 @@ StringType FileManager::readWindowInternal(const std::size_t size)
     else if (byte_buffer.empty())
       throw error::FileError(toString(FileManagerError::READ_ERROR));
   }
+
   if (bytes_read < 0)
     throw error::FileError(toString(FileManagerError::READ_ERROR));
+
   byte_buffer.resize(static_cast<std::size_t>(bytes_read));
   const std::size_t bytes_to_rewind = validateUtf8Bound(byte_buffer);
+
   if (bytes_to_rewind > 0)
   {
     byte_buffer.resize(bytes_read - bytes_to_rewind);
     Stream_.seekg(-static_cast<std::streamoff>(bytes_to_rewind), std::ios_base::cur);
+
     if (Stream_.fail())
       throw error::FileError(toString(FileManagerError::SEEK_OUT_OF_BOUND));
   }
+
   const std::size_t valid_bytes = byte_buffer.size();
   Context_.ByteOffset += valid_bytes;
   // Context_.bytes_read_total += valid_bytes
   StringType result = utf8::utf8to16(std::string(byte_buffer.begin(), byte_buffer.end()));
+
   if (result.size() > size)
   {
     const std::size_t chars_to_trim = result.size() - size;
@@ -130,6 +151,7 @@ StringType FileManager::readWindowInternal(const std::size_t size)
     Context_.ByteOffset -= trimmed_utf8.size();
     result.resize(size);
   }
+
   Context_.CharOffset += result.size();
   // Context_.chars_read_total += result.size();
   return result;
@@ -146,19 +168,23 @@ StringType FileManager::readNextLine()
 {
   StringType line;
   line.reserve(100);  // average
-  while (true)
+
+  for (;;)
   {
     // check line is not empty
     StringType chunk = readWindowInternal(1);
     if (chunk.empty())
       break;
+
     const char16_t c = chunk[0];
+
     if (c == u'\n')
     {
       Context_.line += 1;
       Context_.column = 0;
       break;
     }
+
     if (c == u'\r')
     {
       StringType peek = readWindowInternal(1);
@@ -176,9 +202,11 @@ StringType FileManager::readNextLine()
       Context_.column = 0;
       break;
     }
+
     line += c;
     Context_.column += 1;
   }
+
   return line;
 }
 
@@ -186,13 +214,17 @@ std::vector<StringType> FileManager::readLines(const std::size_t start, const st
 {
   if (!LineIndexBuilt_)
     buildLineIndex();
+
   if (start >= LineIndices_.size())
     throw error::FileError(toString(FileManagerError::INVALID_LINE_NUMBER));
+
   const std::size_t       end = std::min(start + count, LineIndices_.size());
   std::vector<StringType> lines;
   lines.reserve(end - start);
+
   for (std::size_t i = start; i < end; ++i)
     lines.push_back(std::move(readLine(i)));
+
   return lines;
 }
 
@@ -201,13 +233,15 @@ StringType FileManager::readAll()
   reset();
   StringType result;
   result.reserve(Stats_.TotalBytes / 2);
-  while (true)
+
+  for (;;)
   {
     StringType chunk = readWindowInternal(4096);  // 4 MB
     if (chunk.empty())
       break;
     result.append(chunk);
   }
+
   return result;
 }
 
@@ -254,16 +288,19 @@ void FileManager::buildLineIndex()
 {
   if (LineIndexBuilt_)
     return;
+
   reset();
   LineIndices_.clear();
   LineIndices_.reserve(Stats_.TotalBytes / 80);  // roughly
+
   std::size_t byte_pos    = 0;
   std::size_t char_pos    = 0;
   std::size_t start_byte  = 0;
   std::size_t start_char  = 0;
   std::size_t max_len     = 0;
   std::size_t current_len = 0;
-  while (true)
+
+  for (;;)
   {
     StringType chunk = readWindowInternal(LINE_INDEX_CHUNK);
     if (chunk.empty())
@@ -276,28 +313,35 @@ void FileManager::buildLineIndex()
       {
         max_len = std::max(max_len, current_len - 1);
         LineIndices_.push_back(LineIndex{start_byte, start_char, current_len - 1});
+
         /// TODO:: Handle CRLF
         if (c == u'\r' && char_pos + 1 < Context_.CharOffset)
         {
           // Peek next char (already in chunk if available)
           // This is simplified; in practice we'd need to handle this better
         }
+
         start_byte  = Context_.ByteOffset;
         start_char  = Context_.CharOffset;
         current_len = 0;
       }
+
       char_pos += 1;
     }
   }
+
   if (current_len > 0)
   {
     max_len = std::max(max_len, current_len);
     LineIndices_.push_back(LineIndex{start_byte, start_char, current_len});
   }
+
   Stats_.TotalLines    = LineIndices_.size();
   Stats_.MaxLineLength = max_len;
+
   if (Stats_.TotalLines > 0)
     Stats_.AverageLineLength = Stats_.TotalCharacters / Stats_.TotalLines;
+
   LineIndexBuilt_ = true;
   reset();
 }

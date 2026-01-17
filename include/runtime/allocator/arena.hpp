@@ -341,7 +341,7 @@ class ArenaBlock
     // Lock-free allocation loop
     Pointer current_next = Next_.load(std::memory_order_acquire);
 
-    while (true)
+    for (;;)
     {
       // Calculate aligned address
       std::uintptr_t cur     = reinterpret_cast<std::uintptr_t>(current_next);
@@ -378,7 +378,7 @@ class ArenaBlock
 
     Pointer current_next = Next_.load(std::memory_order_acquire);
 
-    while (true)
+    for (;;)
     {
       // Check if we have enough space
       std::size_t remaining = Begin_ + Size_ - current_next;
@@ -571,7 +571,7 @@ class LockFreeFastAllocBlock
     std::size_t s            = Size_.load(std::memory_order_acquire);
 
     // Lock-free allocation loop
-    while (true)
+    for (;;)
     {
       std::size_t remaining = b + s - current_next;
       if (remaining < alloc_size)

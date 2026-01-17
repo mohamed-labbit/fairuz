@@ -282,7 +282,7 @@ ast::Expr* Parser::parseLogicalExprPrecedence(unsigned min_precedence)
   if (left == nullptr)
     return nullptr;
 
-  while (true)
+  for (;;)
   {
     int precedence = currentToken().getLogicalOpPrecedence();
     if (precedence < 0 || precedence < static_cast<int>(min_precedence))
@@ -335,8 +335,8 @@ ast::Expr* Parser::parseBinaryExprPrecedence(unsigned min_precedence)
   if (left == nullptr)
     return nullptr;
 
-  while (true)
-  {
+  for (;;)
+  { 
     int precedence = currentToken().getArithmeticOpPrecedence();
     if (precedence < 0 || precedence < static_cast<int>(min_precedence))
       break;

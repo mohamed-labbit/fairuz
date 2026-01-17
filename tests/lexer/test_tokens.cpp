@@ -212,9 +212,8 @@ TEST(LexerTest, RecognizesStmt04)
     lexer.make_token(lex::tok::TokenType::BEGINMARKER, u"", 1, 1),   lexer.make_token(lex::tok::TokenType::KW_IF, u"اذا", 1, 1),
     lexer.make_token(lex::tok::TokenType::IDENTIFIER, u"ا", 1, 5),   lexer.make_token(lex::tok::TokenType::OP_EQ, u"=", 1, 7),
     lexer.make_token(lex::tok::TokenType::NUMBER, u"3", 1, 9),       lexer.make_token(lex::tok::TokenType::COLON, u":", 1, 10),
-    lexer.make_token(lex::tok::TokenType::NEWLINE, u"\n", 1, 11),    lexer.make_token(lex::tok::TokenType::INDENT, u"    ", 2, 5),
-    lexer.make_token(lex::tok::TokenType::KW_RETURN, u"اخرج", 2, 5), lexer.make_token(lex::tok::TokenType::DEDENT, u"", 2, 9),
-    lexer.make_token(lex::tok::TokenType::ENDMARKER, u"", 2, 8)};
+    lexer.make_token(lex::tok::TokenType::NEWLINE, u"\n", 1, 11),    lexer.make_token(lex::tok::TokenType::INDENT, u""),
+    lexer.make_token(lex::tok::TokenType::KW_RETURN, u"اخرج", 2, 5), lexer.make_token(lex::tok::TokenType::ENDMARKER, u"", 2, 8)};
   EXPECT_EQ(tokens.size(), expected.size());
   EXPECT_EQ(tokens, expected);
 }
