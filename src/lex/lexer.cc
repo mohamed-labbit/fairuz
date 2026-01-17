@@ -70,14 +70,6 @@ tok::Token Lexer::lexToken()
     return TokStream_.back();
   };
 
-  /*
-  if (TokIndex_ < TokStream_.size() - 2)
-  {
-    TokIndex_++;
-    return TokStream_.at(TokIndex_);
-  }
-  */
-
   if (TokStream_.empty())
   {
     tok::Token ret = make_token(tok::TokenType::BEGINMARKER, std::nullopt, 1, 1);

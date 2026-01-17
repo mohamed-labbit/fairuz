@@ -56,6 +56,7 @@ add_executable(mylang_tests
     tests/runtime/allocator/test_arena.cpp
     tests/parser/test_parser.cpp
     tests/test_main.cpp
+    tests/lexer/test_indentation.cpp
     $<TARGET_OBJECTS:mylang_objects>
 )
 
