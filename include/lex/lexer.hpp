@@ -82,6 +82,13 @@ class Lexer
   MYLANG_COMPILER_ABI void updateIndentationContext_(const tok::Token& token);
   /// @brief Consumes and returns the next character from the source
   MYLANG_COMPILER_ABI char16_t consumeChar() { return SourceManager_.consumeChar(); }
+  MYLANG_COMPILER_ABI char16_t currentChar() { return SourceManager_.current(); }
+  MYLANG_COMPILER_ABI char16_t nextChar()
+  {
+    SourceManager_.consumeChar();
+    return SourceManager_.current();
+  }
+  MYLANG_COMPILER_ABI char16_t peekChar() { return SourceManager_.peek(); }
   /// @brief Stores a token in the token stream
   MYLANG_COMPILER_ABI void store(tok::Token tok);
 

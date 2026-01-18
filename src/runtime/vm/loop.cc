@@ -26,9 +26,13 @@ void LoopAnalyzer::detectLoops(const std::vector<bytecode::Instruction>& instruc
 
   // Calculate nesting levels
   for (Loop& outer : Loops_)
+  {
     for (const Loop& inner : Loops_)
+    {
       if (inner.HeaderPC > outer.HeaderPC && inner.ExitPC < outer.ExitPC)
         outer.IsInnerLoop = false;
+    }
+  }
   /// TODO:: inner is nested in outer
 }
 
@@ -47,8 +51,10 @@ void LoopAnalyzer::findInvariants(const std::vector<bytecode::Instruction>& inst
         usedVars.insert(instr.arg);
     }
     for (std::int32_t var : usedVars)
+    {
       if (!modifiedVars.count(var))
         loop.invariants.insert(var);
+    }
   }
 }
 

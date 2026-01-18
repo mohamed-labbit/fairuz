@@ -35,7 +35,6 @@ std::vector<ast::Stmt*> Parser::parseProgram()
 ast::Stmt* Parser::parseStatement()
 {
   skipNewlines();
-
   if (check(lex::tok::TokenType::KW_IF))
     return parseIfStmt();
   if (check(lex::tok::TokenType::KW_WHILE))
@@ -44,7 +43,6 @@ ast::Stmt* Parser::parseStatement()
     return parseReturnStmt();
   if (check(lex::tok::TokenType::KW_FN))
     return parseFunctionDef();
-
   // For now, treat everything else as ExprStmt
   return parseExpressionStmt();
 }
@@ -52,11 +50,9 @@ ast::Stmt* Parser::parseStatement()
 ast::Stmt* Parser::parseReturnStmt()
 {
   consume(lex::tok::TokenType::KW_RETURN, u"Expected 'return' statement");
-
   // Handle return with no value (return None implicitly)
   if (check(lex::tok::TokenType::NEWLINE) || weDone())
     return nullptr;
-
   ast::Expr* value = parseExpression();
   return ast::AST_allocator.make<ast::ReturnStmt>(value);
 }
@@ -336,7 +332,7 @@ ast::Expr* Parser::parseBinaryExprPrecedence(unsigned min_precedence)
     return nullptr;
 
   for (;;)
-  { 
+  {
     int precedence = currentToken().getArithmeticOpPrecedence();
     if (precedence < 0 || precedence < static_cast<int>(min_precedence))
       break;
@@ -544,9 +540,7 @@ void Parser::synchronize()
     // Stop before statement keywords
     if (check(lex::tok::TokenType::KW_IF) || check(lex::tok::TokenType::KW_WHILE) || check(lex::tok::TokenType::KW_RETURN)
         || check(lex::tok::TokenType::KW_FN))
-    {
       return;
-    }
 
     advance();
   }

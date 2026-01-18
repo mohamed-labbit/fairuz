@@ -11,8 +11,10 @@ bool PeepholeOptimizer::matchPattern(const std::vector<bytecode::Instruction>& c
   if (pos + pattern.size() > code.size())
     return false;
   for (std::size_t i = 0; i < pattern.size(); i++)
+  {
     if (code[pos + i].op != pattern[i])
       return false;
+  }
   return true;
 }
 

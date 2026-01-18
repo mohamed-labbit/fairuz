@@ -58,8 +58,10 @@ std::vector<typename SymbolTable::Symbol*> SymbolTable::getUnusedSymbols()
 {
   std::vector<Symbol*> unused;
   for (auto& [name, sym] : Symbols_)
+  {
     if (!sym.IsUsed && sym.SymbolType == SymbolType::VARIABLE)
       unused.push_back(&sym);
+  }
   return unused;
 }
 

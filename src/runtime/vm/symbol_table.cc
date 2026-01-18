@@ -60,8 +60,10 @@ std::vector<typename CompilerSymbolTable::Symbol> CompilerSymbolTable::getUnused
 {
   std::vector<Symbol> unused;
   for (const auto& [name, sym] : Symbols_)
+  {
     if (!sym.IsUsed && !sym.IsParameter)
       unused.push_back(sym);
+  }
   return unused;
 }
 

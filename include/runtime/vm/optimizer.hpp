@@ -35,6 +35,7 @@ class BytecodeOptimizer
     Passes_.push_back({"Dead code after return", [](std::vector<bytecode::Instruction>& code) -> bool {
                          bool changed = false;
                          for (std::size_t i = 0; i + 1 < code.size(); i++)
+                         {
                            if (code[i].op == bytecode::OpCode::RETURN || code[i].op == bytecode::OpCode::HALT)
                            {
                              // Remove instructions until next label/jump target
@@ -51,6 +52,7 @@ class BytecodeOptimizer
                                changed = true;
                              }
                            }
+                         }
                          return changed;
                        }});
     // Pass 2: Constant folding in bytecode
@@ -58,10 +60,12 @@ class BytecodeOptimizer
                          bool changed = false;
                          // Find LOAD_CONST, LOAD_CONST, binary_op patterns
                          for (std::size_t i = 0; i + 2 < code.size(); i++)
+                         {
                            if (code[i].op == bytecode::OpCode::LOAD_CONST && code[i + 1].op == bytecode::OpCode::LOAD_CONST
                                && isBinaryOp(code[i + 2].op))
                              // Would fold constants here
                              changed = true;
+                         }
                          return changed;
                        }});
     // Pass 3: Jump threading
@@ -69,6 +73,7 @@ class BytecodeOptimizer
                          bool changed = false;
                          // If jump target is another jump, redirect
                          for (bytecode::Instruction& instr : code)
+                         {
                            if (isJumpOp(instr.op))
                            {
                              std::int32_t target = instr.arg;
@@ -78,6 +83,7 @@ class BytecodeOptimizer
                                changed   = true;
                              }
                            }
+                         }
                          return changed;
                        }});
     // Pass 4: Remove NOPs

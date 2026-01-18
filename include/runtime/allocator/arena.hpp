@@ -1,7 +1,5 @@
-#pragma once
-
 /**
- * @file arena_allocator.h
+ * @file arena.h
  * @brief Thread-safe arena/region-based memory allocator with fast path optimization
  * 
  * This allocator implements a sophisticated memory management system with:
@@ -17,42 +15,24 @@
  * @version 2.0
  */
 
-#include "../../diag/diagnostic.hpp"
-#include "../../macros.hpp"
+#pragma once
 
-#include <atomic>
-#include <cassert>
-#include <chrono>
+#include "arena_block.hpp"
+#include "fast_arena_block.hpp"
+#include "fast_free_list.hpp"
+#include "meta.hpp"
+
 #include <functional>
-#include <iostream>
-#include <iterator>
-#include <limits>
-#include <mutex>
-#include <optional>
-#include <set>
 #include <shared_mutex>
-#include <stdexcept>
-#include <type_traits>
 #include <unordered_set>
-#include <vector>
+
 
 namespace mylang {
 namespace runtime {
 namespace allocator {
 
-//==============================================================================
-// Type Aliases
-//==============================================================================
-
-/// Single byte type for Pointer arithmetic
-using byte = std::uint_fast8_t;
-
-/// Generic Pointer type for arena memory
-using Pointer = byte*;
-
-//==============================================================================
-// Configuration Constants
-//==============================================================================
+using byte    = std::uint_fast8_t;  /// Single byte type for Pointer arithmetic
+using Pointer = byte*;              /// Generic Pointer type for arena memory
 
 /// Default block size for new allocations (64KB)
 #ifndef DEFAULT_BLOCK_SIZE
@@ -63,796 +43,6 @@ using Pointer = byte*;
 #ifndef MAX_BLOCK_SIZE
   #define MAX_BLOCK_SIZE (16 * 1024 * 1024)
 #endif
-
-//==============================================================================
-// Statistics Tracking
-//==============================================================================
-
-/**
- * @struct ArenaAllocStats
- * @brief Thread-safe statistics for allocation tracking
- * 
- * All counters are atomic to allow lock-free updates from multiple threads.
- * Uses relaxed memory ordering for performance.
- */
-struct ArenaAllocStats
-{
-  /// Total number of allocation requests
-  std::atomic<std::size_t> TotalAllocations{0};
-  /// Total bytes allocated (cumulative)
-  std::atomic<std::size_t> TotalAllocated{0};
-  /// Total bytes freed (for future use)
-  std::atomic<std::size_t> TotalFree{0};
-  /// Total number of deallocation requests
-  std::atomic<std::size_t> TotalDeallocations{0};
-  /// Number of currently active memory blocks
-  std::atomic<std::size_t> ActiveBlocks{0};
-
-  ArenaAllocStats() = default;
-
-  /**
-     * @brief Safely increment an atomic counter with overflow protection
-     * @param counter The atomic counter to increment
-     * @param amount The amount to add (default: 1)
-     * 
-     * Implements saturation arithmetic - if overflow would occur, the counter
-     * remains at its maximum value instead of wrapping around.
-     */
-  void safe_increment(std::atomic<std::size_t>& counter, std::size_t amount = 1)
-  {
-    std::size_t old_val = counter.load(std::memory_order_relaxed);
-    std::size_t new_val;
-    do
-    {
-      // Check for overflow before incrementing
-      if (old_val > std::numeric_limits<std::size_t>::max() - amount)
-        return;  // Would overflow, saturate at current value
-      new_val = old_val + amount;
-    } while (!counter.compare_exchange_weak(old_val, new_val, std::memory_order_relaxed, std::memory_order_relaxed));
-  }
-};
-
-//==============================================================================
-// Arena Block - Basic Memory Block with Lock-Free Allocation
-//==============================================================================
-
-/**
- * @class ArenaBlock
- * @brief A contiguous block of memory with thread-safe bump-Pointer allocation
- * 
- * Features:
- * - Lock-free allocation using atomic CAS operations
- * - Automatic alignment handling
- * - Move semantics for efficient container storage
- * - Thread-safe through atomic operations and minimal locking
- * 
- * @note Individual blocks are NOT thread-safe for concurrent allocations
- *       between different blocks. The ArenaAllocator handles this.
- */
-class ArenaBlock
-{
- private:
-  /// Size of this memory block in bytes
-  std::size_t Size_{DEFAULT_BLOCK_SIZE};
-  /// Pointer to the beginning of allocated memory
-  Pointer Begin_{nullptr};
-  /// Atomic Pointer to the next available byte (bump Pointer)
-  std::atomic<Pointer> Next_{nullptr};
-  /// Mutex for protecting structural operations (not allocation)
-  mutable std::mutex Mutex_;
-
- public:
-  /**
-     * @brief Construct an arena block with specified size and alignment
-     * @param size Size of the block in bytes
-     * @param alignment Required alignment (must be power of 2)
-     * @throws emit error if alignment is not a power of 2
-     * @throws panic if memory allocation fails
-     * 
-     * The actual allocated size may be larger than requested to satisfy
-     * alignment requirements.
-     */
-  explicit ArenaBlock(const std::size_t size = DEFAULT_BLOCK_SIZE, const std::size_t alignment = alignof(std::max_align_t)) :
-      Size_(size)
-  {
-    // Validate alignment is a power of 2
-    if (alignment == 0 || (alignment & (alignment - 1)) != 0)
-      diagnostic::engine.emit("Alignment must be a power of two", diagnostic::DiagnosticEngine::Severity::FATAL);
-    // Round up size to multiple of alignment
-    std::size_t mod = Size_ % alignment;
-    if (mod)
-      Size_ += (alignment - mod);
-    // Allocate aligned memory
-    void* mem = std::aligned_alloc(alignment, Size_);
-    if (mem == nullptr)
-      throw std::bad_alloc();
-    /// TODO: change after debug
-    // diagnostic::engine.panic("bad alloc");
-    Begin_ = reinterpret_cast<Pointer>(mem);
-    Next_.store(Begin_, std::memory_order_relaxed);
-  }
-
-  /**
-     * @brief Destructor - frees the allocated memory
-     * 
-     * Thread-safe: acquires mutex before freeing to prevent
-     * concurrent access during destruction.
-     */
-  ~ArenaBlock()
-  {
-    size_t                      number_of_frees = 0;
-    std::lock_guard<std::mutex> lock(Mutex_);
-    if (Begin_ != nullptr)
-    {
-      std::free(Begin_);
-      Begin_ = nullptr;
-      Next_.store(nullptr, std::memory_order_relaxed);
-    }
-  }
-
-  // Non-copyable
-  ArenaBlock(const ArenaBlock&)            = delete;
-  ArenaBlock& operator=(const ArenaBlock&) = delete;
-
-  /**
-     * @brief Move constructor - transfers ownership of memory
-     * @param other The block to move from
-     * 
-     * Thread-safe: locks the source block during the move.
-     * After the move, the source block is left in a valid but empty state.
-     */
-  ArenaBlock(ArenaBlock&& other) MYLANG_NOEXCEPT
-  {
-    std::lock_guard<std::mutex> lock(other.Mutex_);
-    Size_  = other.Size_;
-    Begin_ = other.Begin_;
-    Next_.store(other.Next_.load(std::memory_order_relaxed), std::memory_order_relaxed);
-    // Reset source
-    other.Begin_ = nullptr;
-    other.Next_.store(nullptr, std::memory_order_relaxed);
-    other.Size_ = 0;
-  }
-
-  /**
-     * @brief Move assignment operator
-     * @param other The block to move from
-     * @return Reference to this block
-     * 
-     * Thread-safe: locks both blocks during the operation.
-     * Frees any existing memory before taking ownership of the source's memory.
-     */
-  ArenaBlock& operator=(ArenaBlock&& other) MYLANG_NOEXCEPT
-  {
-    if (this != &other)
-    {
-      std::scoped_lock lock(Mutex_, other.Mutex_);
-      // Free existing memory
-      if (Begin_ != nullptr)
-        std::free(Begin_);
-      // Take ownership
-      Size_  = other.Size_;
-      Begin_ = other.Begin_;
-      Next_.store(other.Next_.load(std::memory_order_relaxed), std::memory_order_relaxed);
-      // Reset source
-      other.Begin_ = nullptr;
-      other.Next_.store(nullptr, std::memory_order_relaxed);
-      other.Size_ = 0;
-    }
-    return *this;
-  }
-
-  //==========================================================================
-  // Accessors
-  //==========================================================================
-
-  /**
-     * @brief Get Pointer to the beginning of the block
-     * @return Pointer to start of memory block
-     * 
-     * Thread-safe: protected by mutex
-     */
-  Pointer begin() const
-  {
-    std::lock_guard<std::mutex> lock(Mutex_);
-    return Begin_;
-  }
-
-  /**
-     * @brief Get Pointer to the end of the block
-     * @return Pointer to one past the last byte
-     * 
-     * Thread-safe: protected by mutex
-     */
-  Pointer end() const
-  {
-    std::lock_guard<std::mutex> lock(Mutex_);
-    return Begin_ + Size_;
-  }
-
-  /**
-     * @brief Get the current next Pointer (for inspection)
-     * @return Current value of the bump Pointer
-     * 
-     * Lock-free: uses atomic acquire ordering
-     */
-  Pointer cNext() const { return Next_.load(std::memory_order_acquire); }
-
-  /**
-     * @brief Get the total size of the block
-     * @return Size in bytes
-     * 
-     * Thread-safe: protected by mutex
-     */
-  std::size_t size() const
-  {
-    std::lock_guard<std::mutex> lock(Mutex_);
-    return Size_;
-  }
-
-  /**
-     * @brief Calculate remaining free space in the block
-     * @return Number of bytes still available for allocation
-     * 
-     * Thread-safe: combines locked and atomic operations
-     * 
-     * @note This is a snapshot value - by the time you use it,
-     *       another thread may have consumed the space.
-     */
-  std::size_t remaining() const
-  {
-    std::lock_guard<std::mutex> lock(Mutex_);
-    if (Begin_ == nullptr)
-      return 0;
-    Pointer current_next = Next_.load(std::memory_order_acquire);
-    return static_cast<std::size_t>(Begin_ + Size_ - current_next);
-  }
-
-  //==========================================================================
-  // Allocation Methods
-  //==========================================================================
-
-  /**
-     * @brief Allocate memory from this block with alignment
-     * @param bytes Number of bytes to allocate
-     * @param alignment Optional alignment requirement
-     * @return Pointer to allocated memory, or nullptr if insufficient space
-     * @throws std::invalid_argument if alignment is invalid
-     * 
-     * Thread-safe: uses lock-free CAS (Compare-And-Swap) loop
-     * 
-     * Algorithm:
-     * 1. Load current next Pointer
-     * 2. Calculate aligned address and padding
-     * 3. Check if enough space remains
-     * 4. Attempt to atomically update next Pointer
-     * 5. If CAS fails, retry (another thread allocated first)
-     * 
-     * @performance O(1) in the uncontended case, O(n) with high contention
-     */
-  Pointer allocate(std::size_t bytes, std::optional<std::size_t> alignment = std::nullopt)
-  {
-    if (Begin_ == nullptr || bytes == 0)
-      return nullptr;
-
-    std::size_t alignment_value = alignment.value_or(std::alignment_of<std::max_align_t>::value);
-    // Validate alignment is a power of 2
-    if (alignment_value == 0 || (alignment_value & (alignment_value - 1)) != 0)
-      diagnostic::engine.emit("Invalid arguments to ArenaAllocator::allocate()", diagnostic::DiagnosticEngine::Severity::FATAL);
-    // Lock-free allocation loop
-    Pointer current_next = Next_.load(std::memory_order_acquire);
-
-    for (;;)
-    {
-      // Calculate aligned address
-      std::uintptr_t cur     = reinterpret_cast<std::uintptr_t>(current_next);
-      std::uintptr_t aligned = (cur + (alignment_value - 1)) & ~(alignment_value - 1);
-      std::size_t    pad     = aligned - cur;
-      // Check if we have enough space (including padding)
-      std::size_t remaining = Begin_ + Size_ - current_next;
-      if (remaining < bytes + pad)
-        return nullptr;  // Not enough space
-      Pointer new_next = reinterpret_cast<Pointer>(aligned + bytes);
-      // Try to atomically update next Pointer
-      if (Next_.compare_exchange_weak(current_next, new_next, std::memory_order_release, std::memory_order_acquire))
-        // Success! Return the aligned address
-        return reinterpret_cast<Pointer>(aligned);
-      // CAS failed - another thread allocated first
-      // current_next was updated by compare_exchange_weak, retry
-    }
-  }
-
-  /**
-     * @brief Reserve memory without alignment (faster)
-     * @param bytes Number of bytes to reserve
-     * @return Pointer to reserved memory, or nullptr if insufficient space
-     * 
-     * Lock-free: uses atomic CAS without alignment calculation
-     * 
-     * @warning Returned Pointer may not be aligned!
-     * @note Prefer allocate() for most use cases
-     */
-  Pointer reserve(const std::size_t bytes)
-  {
-    if (Begin_ == nullptr || bytes == 0)
-      return nullptr;
-
-    Pointer current_next = Next_.load(std::memory_order_acquire);
-
-    for (;;)
-    {
-      // Check if we have enough space
-      std::size_t remaining = Begin_ + Size_ - current_next;
-      if (remaining < bytes)
-        return nullptr;
-      Pointer new_next = current_next + bytes;
-      if (Next_.compare_exchange_weak(current_next, new_next, std::memory_order_release, std::memory_order_acquire))
-        return current_next;
-    }
-  }
-};
-
-//==============================================================================
-// Fast Allocation Block - Size-Specific Lock-Free Block
-//==============================================================================
-
-/**
- * @class LockFreeFastAllocBlock
- * @brief Optimized memory block for fixed-size allocations
- * @tparam ObjectSize Size category (8, 16, 32, 64, 128, 256 bytes)
- * 
- * Features:
- * - Completely lock-free allocation
- * - All members are atomic for maximum concurrency
- * - Optimized for small, frequent allocations
- * - No alignment calculation overhead
- * 
- * @note This class is fully thread-safe without mutexes
- */
-template<std::size_t ObjectSize>
-class LockFreeFastAllocBlock
-{
- private:
-  /// Size of the block (atomic for move operations)
-  std::atomic<std::size_t> Size_{DEFAULT_BLOCK_SIZE};
-  /// Beginning of allocated memory (atomic)
-  std::atomic<Pointer> Begin_{nullptr};
-  /// Next available byte (atomic bump Pointer)
-  std::atomic<Pointer> Next_{nullptr};
-
- public:
-  /// Default constructor - does not allocate
-  LockFreeFastAllocBlock() = default;
-
-  /**
-     * @brief Construct and allocate a block of specified size
-     * @param size Requested size (will be rounded up to multiple of ObjectSize)
-     * @throws panic if allocation fails
-     * 
-     * The block is automatically aligned to ObjectSize boundary.
-     */
-  explicit LockFreeFastAllocBlock(std::size_t size)
-  {
-    // Use at least DEFAULT_BLOCK_SIZE
-    std::size_t actual_size = size > DEFAULT_BLOCK_SIZE ? size : DEFAULT_BLOCK_SIZE;
-    // Round up to multiple of ObjectSize
-    actual_size = (actual_size + ObjectSize - 1) & ~(ObjectSize - 1);
-    // Allocate aligned memory
-    Pointer mem = reinterpret_cast<Pointer>(std::aligned_alloc(ObjectSize, actual_size));
-    if (mem == nullptr)
-      throw std::bad_alloc();
-    /// TODO: change after debug
-    // diagnostic::engine.panic("bad alloc");
-    // Store atomically
-    Size_.store(actual_size, std::memory_order_relaxed);
-    Begin_.store(mem, std::memory_order_relaxed);
-    Next_.store(mem, std::memory_order_relaxed);
-  }
-
-  /**
-     * @brief Destructor - frees memory if allocated
-     * 
-     * Thread-safe: atomic operations ensure no race conditions
-     */
-  ~LockFreeFastAllocBlock()
-  {
-    Pointer mem = Begin_.load(std::memory_order_relaxed);
-    if (mem != nullptr)
-    {
-      std::free(mem);
-      Begin_.store(nullptr, std::memory_order_relaxed);
-      Next_.store(nullptr, std::memory_order_relaxed);
-    }
-  }
-
-  // Non-copyable
-  LockFreeFastAllocBlock(const LockFreeFastAllocBlock&)            = delete;
-  LockFreeFastAllocBlock& operator=(const LockFreeFastAllocBlock&) = delete;
-
-  /**
-     * @brief Move constructor - atomically transfers ownership
-     * @param other Source block to move from
-     */
-  LockFreeFastAllocBlock(LockFreeFastAllocBlock&& other) MYLANG_NOEXCEPT
-  {
-    Size_.store(other.Size_.load(std::memory_order_relaxed), std::memory_order_relaxed);
-    Begin_.store(other.Begin_.load(std::memory_order_relaxed), std::memory_order_relaxed);
-    Next_.store(other.Next_.load(std::memory_order_relaxed), std::memory_order_relaxed);
-    other.Begin_.store(nullptr, std::memory_order_relaxed);
-    other.Next_.store(nullptr, std::memory_order_relaxed);
-    other.Size_.store(0, std::memory_order_relaxed);
-  }
-
-  /**
-     * @brief Move assignment operator
-     * @param other Source block to move from
-     * @return Reference to this block
-     */
-  LockFreeFastAllocBlock& operator=(LockFreeFastAllocBlock&& other) MYLANG_NOEXCEPT
-  {
-    if (this != &other)
-    {
-      // Free existing memory
-      Pointer old_mem = Begin_.load(std::memory_order_relaxed);
-      if (old_mem != nullptr)
-        std::free(old_mem);
-      // Transfer ownership atomically
-      Size_.store(other.Size_.load(std::memory_order_relaxed), std::memory_order_relaxed);
-      Begin_.store(other.Begin_.load(std::memory_order_relaxed), std::memory_order_relaxed);
-      Next_.store(other.Next_.load(std::memory_order_relaxed), std::memory_order_relaxed);
-      // Reset source
-      other.Begin_.store(nullptr, std::memory_order_relaxed);
-      other.Next_.store(nullptr, std::memory_order_relaxed);
-      other.Size_.store(0, std::memory_order_relaxed);
-    }
-    return *this;
-  }
-
-  //==========================================================================
-  // Accessors (All Lock-Free)
-  //==========================================================================
-
-  /// Get beginning of block
-  Pointer begin() const { return Begin_.load(std::memory_order_acquire); }
-
-  /// Get end of block
-  Pointer end() const
-  {
-    Pointer     b = Begin_.load(std::memory_order_acquire);
-    std::size_t s = Size_.load(std::memory_order_acquire);
-    return b ? (b + s) : nullptr;
-  }
-
-  /// Get current next Pointer
-  Pointer cnext() const { return Next_.load(std::memory_order_acquire); }
-
-  /// Get block size
-  std::size_t size() const { return Size_.load(std::memory_order_acquire); }
-
-  /**
-     * @brief Get remaining free space
-     * @return Bytes available for allocation
-     * 
-     * Lock-free: all operations are atomic
-     */
-  std::size_t remaining() const
-  {
-    Pointer b = Begin_.load(std::memory_order_acquire);
-    if (b == nullptr)
-      return 0;
-    Pointer     current = Next_.load(std::memory_order_acquire);
-    std::size_t s       = Size_.load(std::memory_order_acquire);
-    return static_cast<std::size_t>(b + s - current);
-  }
-
-  /**
-     * @brief Allocate memory from this block
-     * @param alloc_size Number of bytes to allocate
-     * @return Pointer to allocated memory, or nullptr if insufficient space
-     * 
-     * Lock-free: uses atomic CAS loop for allocation
-     * 
-     * @note No alignment calculation - assumes ObjectSize alignment is sufficient
-     * @performance Extremely fast in the uncontended case
-     */
-  MYLANG_NODISCARD
-  Pointer allocate(std::size_t alloc_size)
-  {
-    if (alloc_size == 0)
-      return nullptr;
-
-    Pointer b = Begin_.load(std::memory_order_acquire);
-    if (b == nullptr)
-    {
-      std::cerr << "Failed to load begin Pointer" << std::endl;
-      return nullptr;
-    }
-
-    Pointer     current_next = Next_.load(std::memory_order_acquire);
-    std::size_t s            = Size_.load(std::memory_order_acquire);
-
-    // Lock-free allocation loop
-    for (;;)
-    {
-      std::size_t remaining = b + s - current_next;
-      if (remaining < alloc_size)
-      {
-        std::cerr << "Failed to allocate because there's not enough remaining bytes" << std::endl;
-        return nullptr;
-      }
-
-      Pointer new_next = current_next + alloc_size;
-
-      if (Next_.compare_exchange_weak(current_next, new_next, std::memory_order_release, std::memory_order_acquire))
-        return current_next;
-    }
-  }
-};
-
-//==============================================================================
-// Debugging and Tracking Structures
-//==============================================================================
-
-/**
- * @struct AllocationHeader
- * @brief Metadata for allocation tracking and debugging
- * 
- * Contains magic numbers, checksums, and timing information
- * to detect memory corruption and track allocation patterns.
- */
-struct AllocationHeader
-{
-  uint_fast32_t                         magic;               ///< Magic number for validation
-  uint_fast32_t                         size;                ///< Allocation size in bytes
-  uint_fast32_t                         alignment;           ///< Alignment requirement
-  uint_fast32_t                         checksum;            ///< Simple checksum for corruption detection
-  std::chrono::steady_clock::time_point timestamp;           ///< When allocated
-  const char32_t*                       TypeName;            ///< Type name (for debugging)
-  uint_fast32_t                         LineNumber;          ///< Source line (for debugging)
-  const char32_t*                       filename;            ///< Source file (for debugging)
-  static MYLANG_CONSTEXPR uint32_t      MAGIC = 0xDEADC0DE;  ///< Expected magic value
-
-  /// Compute checksum from header fields
-  uint32_t compute_checksum() const { return magic ^ size ^ alignment; }
-  /// Validate header integrity
-  bool is_valid() const { return magic == MAGIC && checksum == compute_checksum(); }
-};
-
-/**
- * @struct AllocationFooter
- * @brief Guard value placed after allocations to detect buffer overruns
- */
-struct AllocationFooter
-{
-  uint32_t                         guard;               ///< Guard value
-  static MYLANG_CONSTEXPR uint32_t GUARD = 0xFEEDFACE;  ///< Expected guard value
-  /// Check if footer is intact
-  bool is_valid() const { return guard == GUARD; }
-};
-
-//==============================================================================
-// Free List Management
-//==============================================================================
-
-/**
- * @struct FreeListRegion
- * @brief Represents a freed memory region available for reuse
- * 
- * Used in free lists to track deallocated memory that can be
- * recycled for future allocations. Supports best-fit allocation
- * through ordering by size.
- */
-struct FreeListRegion
-{
-  Pointer     ptr;   ///< Pointer to freed memory
-  std::size_t size;  ///< Size in bytes
-
-  FreeListRegion() = default;
-
-  /**
-     * @brief Construct a free region
-     * @param p Pointer to the freed memory
-     * @param s Size of the region in bytes
-     */
-  FreeListRegion(Pointer p, std::size_t s) :
-      ptr(p),
-      size(s)
-  {
-  }
-
-  FreeListRegion(const FreeListRegion&) = default;
-
-  /**
-     * @brief Move constructor - transfers ownership
-     * @param other Source region to move from
-     */
-  FreeListRegion(FreeListRegion&& other) MYLANG_NOEXCEPT: ptr(other.ptr), size(other.size)
-  {
-    other.ptr  = nullptr;
-    other.size = 0;
-  }
-
-  FreeListRegion& operator=(const FreeListRegion&)            = default;
-  FreeListRegion& operator=(FreeListRegion&&) MYLANG_NOEXCEPT = default;
-
-  /**
-     * @brief Check if this region can hold an allocation
-     * @param size Required size in bytes
-     * @return true if this region is large enough
-     */
-  bool hasSpaceFor(std::size_t size) const { return size >= this->size; }
-
-  /**
-     * @brief Comparison operator for ordered containers
-     * @param other Region to compare with
-     * @return true if this region should be ordered before other
-     * 
-     * Orders by size first (for best-fit), then by address (for stability)
-     */
-  bool operator<(const FreeListRegion& other) const
-  {
-    if (size != other.size)
-      return size < other.size;
-    return ptr < other.ptr;
-  }
-};
-
-/**
- * @class FastAllocBlockFreeList
- * @brief Thread-safe free list for a specific size category
- * @tparam ObjectSize Size category (8, 16, 32, 64, 128, 256 bytes)
- * 
- * Uses a multiset for O(log n) best-fit allocation.
- * Best-fit minimizes fragmentation compared to first-fit.
- * 
- * Thread-safety: Protected by internal mutex
- */
-template<std::size_t ObjectSize>
-class FastAllocBlockFreeList
-{
- private:
-  /// Ordered set of free regions (sorted by size, then address)
-  std::multiset<FreeListRegion> Regions_;
-  /// Mutex protecting the regions set
-  mutable std::mutex Mutex_;
-
- public:
-  FastAllocBlockFreeList() = default;
-
-  /**
-     * @brief Construct from a vector of regions
-     * @param regions Initial regions to add to the free list
-     */
-  explicit FastAllocBlockFreeList(const std::vector<FreeListRegion>& regions)
-  {
-    for (const FreeListRegion& reg : regions)
-      Regions_.insert(reg);
-  }
-
-  /**
-     * @brief Move constructor
-     * @param other Source free list to move from
-     * 
-     * Thread-safe: locks the source during move
-     */
-  FastAllocBlockFreeList(FastAllocBlockFreeList&& other) MYLANG_NOEXCEPT
-  {
-    std::lock_guard<std::mutex> lock(other.Mutex_);
-    Regions_ = std::move(other.Regions_);
-  }
-
-  /**
-     * @brief Move assignment operator
-     * @param other Source free list to move from
-     * @return Reference to this free list
-     * 
-     * Thread-safe: locks both lists during operation
-     */
-  FastAllocBlockFreeList& operator=(FastAllocBlockFreeList&& other) MYLANG_NOEXCEPT
-  {
-    if (this != &other)
-    {
-      std::scoped_lock lock(Mutex_, other.Mutex_);
-      Regions_ = std::move(other.Regions_);
-    }
-    return *this;
-  }
-
-  /**
-     * @brief Add a region to the free list
-     * @param reg Region to add
-     * 
-     * Thread-safe: protected by mutex
-     * Complexity: O(log n) for insertion into multiset
-     */
-  void append(const FreeListRegion& reg)
-  {
-    std::lock_guard<std::mutex> lock(Mutex_);
-    Regions_.insert(reg);
-  }
-
-  /**
-     * @brief Check if the free list is empty
-     * @return true if no free regions available
-     * 
-     * Thread-safe: protected by mutex
-     */
-  bool empty() const
-  {
-    std::lock_guard<std::mutex> lock(Mutex_);
-    return Regions_.empty();
-  }
-
-  /**
-     * @brief Remove all regions from the free list
-     * 
-     * Thread-safe: protected by mutex
-     */
-  void clear()
-  {
-    std::lock_guard<std::mutex> lock(Mutex_);
-    Regions_.clear();
-  }
-
-  /**
-     * @brief Find and remove a suitable region for allocation
-     * @param size Required size in bytes
-     * @param align Required alignment
-     * @return Optional containing the region if found, nullopt otherwise
-     * 
-     * Thread-safe: protected by mutex
-     * 
-     * Algorithm:
-     * 1. Use lower_bound to find smallest region that might fit
-     * 2. Iterate forward checking each region
-     * 3. Account for alignment padding when checking fit
-     * 4. Remove the selected region from the set
-     * 5. If region is larger than needed, split it and return remainder
-     * 
-     * Complexity: O(log n) for lower_bound + O(k) for iteration where
-     *             k is the number of regions with similar sizes
-     */
-  std::optional<FreeListRegion> findAndExtract(std::size_t size, std::size_t align)
-  {
-    std::lock_guard<std::mutex> lock(Mutex_);
-    // Find best fit (smallest region that can hold the allocation)
-    FreeListRegion search_key(nullptr, size);
-    auto           it = Regions_.lower_bound(search_key);
-
-    while (it != Regions_.end())
-    {
-      FreeListRegion reg = *it;
-
-      // Calculate alignment padding
-      std::uintptr_t addr    = reinterpret_cast<std::uintptr_t>(reg.ptr);
-      std::uintptr_t aligned = (addr + (align - 1)) & ~(align - 1);
-      std::size_t    padding = aligned - addr;
-
-      if (reg.size >= size + padding)
-      {
-        // Found a suitable region
-        Regions_.erase(it);
-
-        // Split if there's leftover space
-        std::size_t used = size + padding;
-        if (reg.size > used)
-        {
-          Pointer     remainder      = reg.ptr + used;
-          std::size_t remainder_size = reg.size - used;
-          Regions_.insert(FreeListRegion(remainder, remainder_size));
-        }
-
-        return reg;
-      }
-      ++it;
-    }
-
-    return std::nullopt;
-  }
-};
-
-//==============================================================================
-// Main Arena Allocator
-//==============================================================================
 
 /**
  * @class ArenaAllocator
@@ -905,10 +95,6 @@ class FastAllocBlockFreeList
 class MYLANG_COMPILER_ABI ArenaAllocator
 {
  public:
-  //==========================================================================
-  // Public Types
-  //==========================================================================
-
   /**
      * @enum GrowthStrategy
      * @brief Strategy for expanding block size as allocations grow
@@ -996,8 +182,8 @@ class MYLANG_COMPILER_ABI ArenaAllocator
   std::atomic<bool> DebugFeatures_{false};     ///< Enable debug features
   std::atomic<bool> EnableStatistics_{true};   ///< Enable statistics collection
   // Alignment settings
-  std::size_t              MinAlignment_{std::alignment_of<std::max_align_t>::value};  ///< Minimum alignment
-  std::atomic<std::size_t> MaxBlockSize_{MAX_BLOCK_SIZE};                              ///< Maximum block size
+  std::size_t              MinAlignment_{alignof(std::max_align_t)};  ///< Minimum alignment
+  std::atomic<std::size_t> MaxBlockSize_{MAX_BLOCK_SIZE};             ///< Maximum block size
 
  public:
   //==========================================================================
@@ -1015,25 +201,9 @@ class MYLANG_COMPILER_ABI ArenaAllocator
      * Debug mode enables allocation tracking and double-free detection.
      */
   ArenaAllocator(std::int32_t       growth_strategy = static_cast<std::int32_t>(GrowthStrategy::EXPONENTIAL),
-                 std::size_t        min_align       = std::alignment_of<std::max_align_t>::value,
+                 std::size_t        min_align       = alignof(std::max_align_t),
                  OutOfMemoryHandler oom_handler     = nullptr,
-                 bool               debug           = false) :
-      GrowthFactor_(GrowthStrategy(growth_strategy)),
-      MinAlignment_(min_align),
-      OomHandler_(oom_handler),
-      DebugFeatures_(debug)
-  {
-    // Validate alignment
-    if (MinAlignment_ == 0 || (MinAlignment_ & (MinAlignment_ - 1)) != 0)
-      MinAlignment_ = alignof(std::max_align_t);
-    // Enable tracking in debug mode
-    if (DebugFeatures_.load(std::memory_order_relaxed))
-    {
-      TrackAllocations_.store(true, std::memory_order_relaxed);
-      EnableStatistics_.store(true, std::memory_order_relaxed);
-    }
-  }
-
+                 bool               debug           = false);
   /**
      * @brief Destructor - frees all memory
      * 
@@ -1064,44 +234,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
      * 
      * @warning All previously allocated pointers become invalid!
      */
-  void reset()
-  {
-    // Acquire all locks in consistent order
-    std::unique_lock blocks_lock(BlocksMutex_);
-    std::unique_lock fast_pool_lock(FastPoolMutex_);
-    std::unique_lock free_list_lock(FreeListMutex_);
-    std::unique_lock alloc_map_lock(AllocationMapMutex_);
-    std::unique_lock alloc_ptrs_lock(AllocatedPtrsMutex_);
-
-    // Clear all containers (automatically frees memory via destructors)
-    Blocks_.clear();
-    FastPool8_.clear();
-    FastPool16_.clear();
-    FastPool32_.clear();
-    FastPool64_.clear();
-    FastPool128_.clear();
-    FastPool256_.clear();
-    FreeList_.clear();
-    FreeList8_.clear();
-    FreeList16_.clear();
-    FreeList32_.clear();
-    FreeList64_.clear();
-    FreeList128_.clear();
-    FreeList256_.clear();
-
-    if (TrackAllocations_.load(std::memory_order_relaxed))
-      AllocationMap_.clear();
-
-    AllocatedPtrs_.clear();
-    // Reset statistics
-    AllocStats_.TotalAllocations.store(0, std::memory_order_relaxed);
-    AllocStats_.TotalAllocated.store(0, std::memory_order_relaxed);
-    AllocStats_.TotalFree.store(0, std::memory_order_relaxed);
-    AllocStats_.TotalDeallocations.store(0, std::memory_order_relaxed);
-    AllocStats_.ActiveBlocks.store(0, std::memory_order_relaxed);
-    // Reset block size
-    NextBlockSize_.store(BlockSize_, std::memory_order_relaxed);
-  }
+  void reset();
 
   /**
      * @brief Get total bytes allocated (cumulative)
@@ -1142,44 +275,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
      * - Meet minimum block size
      */
   MYLANG_NODISCARD
-  Pointer allocateBlock(std::size_t requested, std::size_t alignment_ = alignof(std::max_align_t), bool retry_on_oom = true)
-  {
-    // Validate and fix alignment if needed
-    if (alignment_ == 0 || (alignment_ & (alignment_ - 1)) != 0)
-      alignment_ = MinAlignment_;
-    // Determine block size (including growth strategy)
-    std::size_t block_size = std::max(requested + alignment_, NextBlockSize_.load(std::memory_order_relaxed));
-
-    // Check against maximum
-    if (block_size > MaxBlockSize_.load(std::memory_order_relaxed))
-    {
-      if (retry_on_oom)
-      {
-        std::lock_guard<std::mutex> oom_lock(OomHandlerMutex_);
-        if (OomHandler_ && OomHandler_(block_size))
-          return allocateBlock(requested, alignment_, false);  // Retry once
-      }
-      return nullptr;
-    }
-
-    try
-    {
-      // Add new block to vector (requires exclusive lock)
-      std::unique_lock<std::shared_mutex> lock(BlocksMutex_);
-      Blocks_.emplace_back(block_size, alignment_);
-      AllocStats_.safe_increment(AllocStats_.ActiveBlocks);
-      return Blocks_.back().begin();
-    } catch (const std::bad_alloc&)
-    {
-      if (retry_on_oom)
-      {
-        std::lock_guard<std::mutex> oom_lock(OomHandlerMutex_);
-        if (OomHandler_ && OomHandler_(block_size))
-          return allocateBlock(requested, alignment_, false);  // Retry once
-      }
-      return nullptr;
-    }
-  }
+  Pointer allocateBlock(std::size_t requested, std::size_t alignment_ = alignof(std::max_align_t), bool retry_on_oom = true);
 
   /**
      * @brief Allocate a fast block for small objects
@@ -1231,10 +327,6 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     }
   }
 
-  //==========================================================================
-  // Public Allocation API
-  //==========================================================================
-
   /**
      * @brief Allocate memory for objects of type T
      * @tparam _Tp Type to allocate
@@ -1273,9 +365,11 @@ class MYLANG_COMPILER_ABI ArenaAllocator
   MYLANG_NODISCARD MYLANG_COMPILER_ABI _Tp* allocate(std::size_t count = 1)
   {
     std::chrono::steady_clock::time_point start = std::chrono::high_resolution_clock::now();
+
     // Validate count
     if (count == 0)
       return nullptr;
+
     // Check for overflow
     if (count > MAX_BLOCK_SIZE / sizeof(_Tp))
     {
@@ -1288,7 +382,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     }
 
     std::size_t alloc_size = count * sizeof(_Tp);
-    std::size_t align      = std::max(std::alignment_of<_Tp>::value, MinAlignment_);
+    std::size_t align      = std::max(alignof(_Tp), MinAlignment_);
 
     if (alloc_size > MAX_BLOCK_SIZE)
     {
@@ -1353,15 +447,15 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     }
 
     // Track Pointer for double-free protection
-    {
-      std::unique_lock<std::shared_mutex> lock(AllocatedPtrsMutex_);
-      AllocatedPtrs_.insert(region);
-    }
+    std::unique_lock<std::shared_mutex> lock(AllocatedPtrsMutex_);
+    AllocatedPtrs_.insert(region);
 
     // Construct objects if needed
     if MYLANG_CONSTEXPR (!std::is_trivially_constructible_v<_Tp>)
+    {
       for (std::size_t i = 0; i < count; ++i)
         new (region + i) _Tp();
+    }
 
     std::chrono::steady_clock::time_point end = std::chrono::high_resolution_clock::now();
     return region;
@@ -1395,25 +489,25 @@ class MYLANG_COMPILER_ABI ArenaAllocator
       return;
 
     // Check for double-free
+    std::unique_lock<std::shared_mutex> lock(AllocatedPtrsMutex_);
+    auto                                it = AllocatedPtrs_.find(ptr);
+    if (it == AllocatedPtrs_.end())
     {
-      std::unique_lock<std::shared_mutex> lock(AllocatedPtrsMutex_);
-      auto                                it = AllocatedPtrs_.find(ptr);
-      if (it == AllocatedPtrs_.end())
-      {
-        // Double-free detected!
-        if (DebugFeatures_.load(std::memory_order_relaxed))
-          std::cerr << "ERROR: Double-free detected for Pointer " << ptr << std::endl;
-        return;
-      }
-      AllocatedPtrs_.erase(it);
+      // Double-free detected!
+      if (DebugFeatures_.load(std::memory_order_relaxed))
+        std::cerr << "ERROR: Double-free detected for Pointer " << ptr << std::endl;
+      return;
     }
+    AllocatedPtrs_.erase(it);
 
     std::size_t byte_size = count * sizeof(_Tp);
 
     // Call destructors for non-trivial types
     if MYLANG_CONSTEXPR (!std::is_trivially_destructible_v<_Tp>)
+    {
       for (std::size_t i = 0; i < count; ++i)
         ptr[i].~_Tp();
+    }
 
     // Determine which free list to use
     MYLANG_CONSTEXPR std::size_t obj_size  = sizeof(_Tp);
@@ -1434,7 +528,9 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     {
       FastAllocBlockFreeList<pool_size>* free_list = choosePoolFreeList<pool_size>();
       if (free_list != nullptr)
+      {
         free_list->append(region);
+      }
       else
       {
         std::lock_guard<std::mutex> lock(FreeListMutex_);
@@ -1470,16 +566,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
      * Thread-safe: Yes (read-only operation)
      */
   MYLANG_NODISCARD
-  bool verifyAllocation(void* ptr) const
-  {
-    if (!TrackAllocations_.load(std::memory_order_relaxed))
-      return true;
-    std::shared_lock<std::shared_mutex> lock(AllocationMapMutex_);
-    auto                                it = AllocationMap_.find(ptr);
-    if (it == AllocationMap_.end())
-      return false;
-    return it->second.is_valid();
-  }
+  bool verifyAllocation(void* ptr) const;
 
  private:
   //==========================================================================
@@ -1551,15 +638,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
       lock.lock();  // Reacquire
     }
 
-    Pointer ret = pool->back().allocate(alloc_size);
-    /*
-         * 
-        std::string print_value =
-          ret != nullptr ? std::to_string(reinterpret_cast<std::uintptr_t>(ret)) : "nullptr";
-        std::cout << ". DEBUG : allocate_from_fast_pool() returned with ret = " << print_value
-                  << std::endl;
-         */
-    return ret;
+    return pool->back().allocate(alloc_size);
   }
 
   /**
@@ -1591,92 +670,12 @@ class MYLANG_COMPILER_ABI ArenaAllocator
   }
 
   MYLANG_NODISCARD
-  Pointer allocateUsingFreeList(std::size_t alloc_size, std::size_t align)
-  {
-    std::lock_guard<std::mutex> lock(FreeListMutex_);
-    if (FreeList_.empty())
-      return nullptr;
-
-    // Find best fit using multiset's ordering
-    FreeListRegion search_key(nullptr, alloc_size);
-    auto           it = FreeList_.lower_bound(search_key);
-
-    while (it != FreeList_.end())
-    {
-      FreeListRegion reg = *it;
-      // Check alignment of the Pointer
-      std::uintptr_t addr    = reinterpret_cast<std::uintptr_t>(reg.ptr);
-      std::uintptr_t aligned = (addr + (align - 1)) & ~(align - 1);
-      std::size_t    padding = aligned - addr;
-
-      if (reg.size >= alloc_size + padding)
-      {
-        Pointer result = reinterpret_cast<Pointer>(aligned);
-        // Remove the used region
-        FreeList_.erase(it);
-        // If there's leftover space, split the region
-        std::size_t used = alloc_size + padding;
-
-        if (reg.size > used)
-        {
-          Pointer     remainder      = reg.ptr + used;
-          std::size_t remainder_size = reg.size - used;
-          FreeList_.insert(FreeListRegion(remainder, remainder_size));
-        }
-        return result;
-      }
-      ++it;
-    }
-    return nullptr;
-  }
+  Pointer allocateUsingFreeList(std::size_t alloc_size, std::size_t align);
 
   MYLANG_NODISCARD
-  Pointer allocateFromBlocks(std::size_t alloc_size, std::size_t align)
-  {
-    // Validate alignment
-    align = MinAlignment_;
+  Pointer allocateFromBlocks(std::size_t alloc_size, std::size_t align);
 
-    if (align == 0 || (align & (align - 1)) != 0)
-    {
-      std::shared_lock<std::shared_mutex> lock(BlocksMutex_);
-      if (!Blocks_.empty())
-      {
-        // Try free list first
-        Pointer mem = allocateUsingFreeList(alloc_size, align);
-        if (mem != nullptr)
-          return mem;
-        // Try current block
-        mem = Blocks_.back().allocate(alloc_size, align);
-        if (mem != nullptr)
-          return mem;
-      }
-    }
-
-    // Need a new block
-    std::size_t new_block_size = std::max(alloc_size, NextBlockSize_.load(std::memory_order_relaxed));
-    if (allocateBlock(new_block_size, align) == nullptr)
-    {
-      if (DebugFeatures_.load(std::memory_order_relaxed))
-        std::cerr << "-- Failed to allocate block : ArenaAllocator::allocate_block()" << std::endl;
-      return nullptr;
-    }
-
-    updateNextBlockSize();
-    std::shared_lock<std::shared_mutex> lock(BlocksMutex_);
-    return Blocks_.back().allocate(alloc_size, align);
-  }
-
-  void updateNextBlockSize() MYLANG_NOEXCEPT
-  {
-    // TODO : prevent overflow
-    if (GrowthFactor_.load(std::memory_order_relaxed) == GrowthStrategy::EXPONENTIAL)
-    {
-      std::size_t current  = NextBlockSize_.load(std::memory_order_relaxed);
-      std::size_t max_size = MaxBlockSize_.load(std::memory_order_relaxed);
-      std::size_t new_size = std::min(current * 2, max_size);
-      NextBlockSize_.store(new_size, std::memory_order_relaxed);
-    }
-  }
+  void updateNextBlockSize() MYLANG_NOEXCEPT;
 
   template<std::size_t ObjectSize>
   MYLANG_NODISCARD std::vector<LockFreeFastAllocBlock<ObjectSize>>* choosePool() MYLANG_NOEXCEPT

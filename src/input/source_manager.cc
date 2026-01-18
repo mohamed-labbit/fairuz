@@ -34,8 +34,8 @@ offset_pair SourceManager::offsetMap_(const std::size_t& offset) const
   while (iter < InputBuffer_.bufferOffset())
   {
     if (InputBuffer_.at(iter) == u'\n')
-      diff += 1;
-    iter += 1;
+      diff++;
+    iter++;
   }
 
   std::size_t base_line   = InputBuffer_.position().line - diff;
@@ -48,15 +48,10 @@ offset_pair SourceManager::offsetMap_(const std::size_t& offset) const
   {
     char16_t c = InputBuffer_.at(iter);
     if (c == u'\n')
-    {
-      line += 1;
-      col = 1;
-    }
+      line++, col = 1;
     else
-    {
-      col += 1;
-    }
-    iter += 1;
+      col++;
+    iter++;
   }
 
   // combine with base line
@@ -67,8 +62,7 @@ offset_pair SourceManager::offsetMap_(const std::size_t& offset) const
 offset_pair SourceManager::offsetMap(const std::size_t& offset)
 {
   /// TODO: : implement this using the new file manager
-  std::size_t line = 1;
-  std::size_t col  = 1;
+  std::size_t line = 1, col = 1;
   return std::make_pair(line, col);
 }
 

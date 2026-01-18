@@ -14,8 +14,10 @@ bool BytecodeVerifier::verify(const BytecodeCompiler::CompilationUnit& unit)
   {
     const bytecode::Instruction& instr = unit.instructions[i];
     if (isJumpInstruction(instr.op))
+    {
       if (instr.arg < 0 || instr.arg >= unit.instructions.size())
         Errors_.push_back({static_cast<std::int32_t>(i), "Jump target out of bounds: " + std::to_string(instr.arg)});
+    }
   }
   // Check 2: Stack balance
   std::vector<std::int32_t> stackDepths(unit.instructions.size(), -1);
@@ -25,8 +27,10 @@ bool BytecodeVerifier::verify(const BytecodeCompiler::CompilationUnit& unit)
   {
     const bytecode::Instruction& instr = unit.instructions[i];
     if (instr.op == bytecode::OpCode::LOAD_CONST)
+    {
       if (instr.arg < 0 || instr.arg >= unit.constants.size())
         Errors_.push_back({static_cast<std::int32_t>(i), "Constant index out of bounds: " + std::to_string(instr.arg)});
+    }
   }
   // Check 4: All paths return (for functions)
   // Would implement dataflow analysis here

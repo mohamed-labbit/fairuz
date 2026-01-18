@@ -37,8 +37,10 @@ bool BytecodeOptimizer::isJumpTarget(const std::vector<bytecode::Instruction>& c
 {
   // Check if any instruction jumps to this position
   for (const bytecode::Instruction& instr : code)
+  {
     if (isJumpOp(instr.op) && instr.arg == pos)
       return true;
+  }
   return false;
 }
 

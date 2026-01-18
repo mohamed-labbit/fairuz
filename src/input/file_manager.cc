@@ -180,7 +180,7 @@ StringType FileManager::readNextLine()
 
     if (c == u'\n')
     {
-      Context_.line += 1;
+      Context_.line++;
       Context_.column = 0;
       break;
     }
@@ -189,22 +189,22 @@ StringType FileManager::readNextLine()
     {
       StringType peek = readWindowInternal(1);
       if (!peek.empty() && peek[0] == u'\n')
-        // consume \n
+      {  // consume \n
         ;
+      }
       else
       {
         // rewind
         Stream_.seekg(-1, std::ios_base::cur);
-        Context_.ByteOffset -= 1;
-        Context_.CharOffset -= 1;
+        Context_.ByteOffset--, Context_.CharOffset--;
       }
-      Context_.line += 1;
+      Context_.line++;
       Context_.column = 0;
       break;
     }
 
     line += c;
-    Context_.column += 1;
+    Context_.column++;
   }
 
   return line;
@@ -308,7 +308,8 @@ void FileManager::buildLineIndex()
 
     for (char16_t c : chunk)
     {
-      current_len += 1;
+      current_len++;
+
       if (c == u'\n' || c == u'\r')
       {
         max_len = std::max(max_len, current_len - 1);
@@ -326,7 +327,7 @@ void FileManager::buildLineIndex()
         current_len = 0;
       }
 
-      char_pos += 1;
+      char_pos++;
     }
   }
 

@@ -16,7 +16,7 @@ std::string DiagnosticEngine::toJSON() const
   {
     const Diagnostic& diag = Diagnostics_[i];
     ss << "  {\n";
-    ss << "    \"severity\": " << static_cast<std::int32_t>(diag.severity) << ",\n";
+    ss << "    \"severity: " << static_cast<std::int32_t>(diag.severity) << ",\n";
     ss << "    \"line\": " << diag.line << ",\n";
     ss << "    \"column\": " << diag.column << ",\n";
     ss << "    \"message\": \"" << utf8::utf16to8(diag.message) << "\",\n";

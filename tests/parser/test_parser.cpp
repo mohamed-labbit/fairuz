@@ -843,8 +843,8 @@ TEST_F(ParserTest, ParseChainedAssignment)
 
 TEST_F(ParserTest, ParseChainedAssignmentWithExpr)
 {
-  // Test: x = y = (a + b)
-  // This should parse as: x = (y = (a + b))
+  // Test: x := y := (a + b)
+  // This should parse as: x := (y := (a + b))
   // Due to right-associativity of assignment
   input::FileManager file_manager(parser_test_cases_dir() / "chained_assignment_with_expression.txt");
   parser::Parser     parser(&file_manager);
@@ -949,10 +949,29 @@ TEST_F(ParserTest, ParseWhileLoop)
     AST_Printer.print(stmt);
   parser::ast::WhileStmt* while_stmt = dynamic_cast<parser::ast::WhileStmt*>(stmt);
   ASSERT_NE(while_stmt, nullptr) << "Should parse while loop statement";
-  parser::ast::Expr* condition_expr = while_stmt->getCondition();
+  parser::ast::BinaryExpr* condition_expr = dynamic_cast<parser::ast::BinaryExpr*>(while_stmt->getCondition());
   ASSERT_NE(condition_expr, nullptr) << "Should parse while loop condition expression";
+  if (test_config::print_ast)
+    AST_Printer.print(condition_expr);
   /// TODO: check the condition itself
+  parser::ast::NameExpr* left  = dynamic_cast<parser::ast::NameExpr*>(condition_expr->getLeft());
+  parser::ast::NameExpr* right = dynamic_cast<parser::ast::NameExpr*>(condition_expr->getRight());
+  ASSERT_NE(left, nullptr);
+  ASSERT_NE(right, nullptr);
+  EXPECT_EQ(left->getValue(), u"شيء");
+  EXPECT_EQ(right->getValue(), u"صحيح");
+  EXPECT_EQ(condition_expr->getOperator(), lex::tok::TokenType::OP_EQ);
   parser::ast::BlockStmt* block = while_stmt->getBlock();
   ASSERT_NE(block, nullptr) << "Should parse while loop indented block";
+  if (test_config::print_ast)
+    AST_Printer.print(block);
   /// TODO: check the block itself
+  parser::ast::AssignmentStmt* assign_stmt = dynamic_cast<parser::ast::AssignmentStmt*>(block->getStatements()[0]);
+  ASSERT_NE(assign_stmt, nullptr);
+  parser::ast::NameExpr* target = dynamic_cast<parser::ast::NameExpr*>(assign_stmt->getTarget());
+  parser::ast::NameExpr* value  = dynamic_cast<parser::ast::NameExpr*>(assign_stmt->getValue());
+  ASSERT_NE(target, nullptr);
+  ASSERT_NE(value, nullptr);
+  EXPECT_EQ(target->getValue(), u"بسبسمياو");
+  EXPECT_EQ(value->getValue(), u"خطا");
 }

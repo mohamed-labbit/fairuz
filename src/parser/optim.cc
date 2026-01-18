@@ -12,13 +12,7 @@ std::optional<double> ASTOptimizer::evaluateConstant(const ast::Expr* expr)
   {
     const ast::LiteralExpr* lit = static_cast<const ast::LiteralExpr*>(expr);
     if (lit->getType() == ast::LiteralExpr::Type::NUMBER)
-      try
-      {
-        return std::stod(utf8::utf16to8(lit->getValue()));
-      } catch (...)
-      {
-        return std::nullopt;
-      }
+      return std::stod(utf8::utf16to8(lit->getValue()));
   }
   else if (expr->getKind() == ast::Expr::Kind::BINARY)
   {
@@ -223,8 +217,10 @@ ast::Stmt* ASTOptimizer::eliminateDeadCode(ast::Stmt* stmt)
     }
     std::vector<ast::Stmt*> newBody;
     for (ast::Stmt* const& s : whileStmt->getBlock()->getStatements())
+    {
       if (ast::Stmt* opt = eliminateDeadCode(std::move(s)))
         newBody.push_back(std::move(opt));
+    }
     whileStmt->getBlockMutable()->setStatements(newBody);
   }
   else if (stmt->getKind() == ast::Stmt::Kind::FOR)
@@ -232,8 +228,10 @@ ast::Stmt* ASTOptimizer::eliminateDeadCode(ast::Stmt* stmt)
     ast::ForStmt*           forStmt = static_cast<ast::ForStmt*>(stmt);
     std::vector<ast::Stmt*> newBodyStmts;
     for (ast::Stmt* const& s : forStmt->getBlock()->getStatements())
+    {
       if (ast::Stmt* opt = eliminateDeadCode(s))
         newBodyStmts.push_back(std::move(opt));
+    }
     ast::BlockStmt* newBody = ast::AST_allocator.make<ast::BlockStmt>(newBodyStmts);
     forStmt->setBlock(newBody);
   }
@@ -328,7 +326,9 @@ bool ASTOptimizer::isLoopInvariant(const ast::Expr* expr, const std::unordered_s
     return isLoopInvariant(un, loopVars);
   }
   else if (expr->getKind() == ast::Expr::Kind::LITERAL)
+  {
     return true;
+  }
   return false;
 }
 

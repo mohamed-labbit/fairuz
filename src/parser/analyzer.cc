@@ -91,11 +91,12 @@ void SemanticAnalyzer::analyzeExpr(const ast::Expr* expr)
     SymbolTable::DataType_t leftType  = inferType(bin->getLeft());
     SymbolTable::DataType_t rightType = inferType(bin->getRight());
     if (leftType != rightType && leftType != SymbolTable::DataType_t::UNKNOWN && rightType != SymbolTable::DataType_t::UNKNOWN)
-      // Check for invalid operations
+    {  // Check for invalid operations
       if ((bin->getOperator() == lex::tok::TokenType::OP_MINUS || bin->getOperator() == lex::tok::TokenType::OP_STAR
            || bin->getOperator() == lex::tok::TokenType::OP_SLASH)
           && (leftType == SymbolTable::DataType_t::STRING || rightType == SymbolTable::DataType_t::STRING))
         reportIssue(Issue::Severity::ERROR, u"Invalid operation on string", expr->getLine(), u"Strings don't support this operator");
+    }
     // Division by zero detection (constant folding)
     if (bin->getOperator() == lex::tok::TokenType::OP_SLASH && bin->getRight()->getKind() == ast::Expr::Kind::LITERAL)
     {
@@ -122,8 +123,10 @@ void SemanticAnalyzer::analyzeExpr(const ast::Expr* expr)
     {
       const ast::NameExpr* name = static_cast<const ast::NameExpr*>(call->getCallee());
       if (SymbolTable::Symbol* sym = CurrentScope_->lookup(name->getValue()))
+      {
         if (sym->SymbolType != SymbolTable::SymbolType::FUNCTION)
           reportIssue(Issue::Severity::ERROR, u"'" + name->getValue() + u"' is not callable", expr->getLine());
+      }
     }
     break;
   }

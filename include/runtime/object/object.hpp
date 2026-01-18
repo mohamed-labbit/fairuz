@@ -173,16 +173,18 @@ class Value
   std::unordered_map<StringType, Value>& asDict() const;
   Function&                              asFunction();
   NativeFunction&                        asNativeFunction();
-  // Type conversions
-  double       toFloat() const;
+
+  double       toFloat() const;  // Type conversions
   std::int64_t toInt() const;
   bool         toBool() const;
   StringType   toString() const;
-  std::string  repr() const;
-  // Hash for use in dictionaries
-  std::size_t hash() const;
-  // Comparison operators
 
+  std::string repr() const;
+  std::size_t hash() const;  // Hash for use in dictionaries
+
+  bool hasNext() const;
+
+  // Comparison operators
   bool operator==(const Value& other) const;
   bool operator<(const Value& other) const;
   bool operator>(const Value& other) const;
@@ -197,15 +199,11 @@ class Value
   Value operator/(const Value& other) const;
   Value operator%(const Value& other) const;
   Value pow(const Value& other) const;
-  // Unary operators
-  Value operator-() const;
+  Value operator-() const;  // Unary operators
   Value operator!() const;
-  // Subscript operator
-  Value getItem(const Value& key) const;
+  Value getItem(const Value& key) const;  // Subscript operator
 
-  void setItem(const Value& key, const Value& value);
-  // Iterator support
-  bool  hasNext() const;
+  void  setItem(const Value& key, const Value& value);
   Value getIterator() const;
   Value next();
 };

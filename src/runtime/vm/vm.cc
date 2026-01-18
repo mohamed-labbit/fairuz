@@ -195,14 +195,18 @@ void VirtualMachine::registerNativeFunctions()
         diagnostic::engine.panic("min() arg is empty sequence");
       object::Value minVal = list[0];
       for (std::size_t i = 1; i < list.size(); i++)
+      {
         if (list[i] < minVal)
           minVal = list[i];
+      }
       return minVal;
     }
     object::Value minVal = args[0];
     for (std::size_t i = 1; i < args.size(); i++)
+    {
       if (args[i] < minVal)
         minVal = args[i];
+    }
     return minVal;
   };
   // max
@@ -216,14 +220,18 @@ void VirtualMachine::registerNativeFunctions()
         diagnostic::engine.panic("max() arg is empty sequence");
       object::Value maxVal = list[0];
       for (std::size_t i = 1; i < list.size(); i++)
+      {
         if (list[i] > maxVal)
           maxVal = list[i];
+      }
       return maxVal;
     }
     object::Value maxVal = args[0];
     for (std::size_t i = 1; i < args.size(); i++)
+    {
       if (args[i] > maxVal)
         maxVal = args[i];
+    }
     return maxVal;
   };
   // sorted
@@ -289,8 +297,10 @@ void VirtualMachine::registerNativeFunctions()
     if (!args[0].isList())
       diagnostic::engine.panic("all() requires list");
     for (const object::Value& item : args[0].asList())
+    {
       if (!item.toBool())
         return object::Value(false);
+    }
     return object::Value(true);
   };
   // any
@@ -300,8 +310,10 @@ void VirtualMachine::registerNativeFunctions()
     if (!args[0].isList())
       diagnostic::engine.panic("any() requires list");
     for (const object::Value& item : args[0].asList())
+    {
       if (item.toBool())
         return object::Value(true);
+    }
     return object::Value(false);
   };
   // map, filter
