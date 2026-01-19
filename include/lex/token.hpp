@@ -13,7 +13,6 @@
 
 
 namespace mylang {
-namespace lex {
 namespace tok {
 
 struct Location
@@ -34,7 +33,7 @@ struct Location
   }
 };
 
-enum class TokenType : std::int32_t {
+enum class TokenType : int {
   // Keywords (Arabic)
   KW_IF,        // اذا
   KW_WHILE,     // طالما
@@ -274,6 +273,6 @@ class Token
 
   bool Atbol_;
 };
-}
-}  // lex
+
+}  // tok
 }  // mylang

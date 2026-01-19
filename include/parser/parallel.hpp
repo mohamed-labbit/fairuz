@@ -11,10 +11,10 @@ namespace parser {
 class ParallelParser
 {
  public:
-  static std::vector<ast::Stmt*> parseParallel(const std::vector<mylang::lex::tok::Token>& tokens, std::int32_t threadCount = 4);
+  static std::vector<ast::Stmt*> parseParallel(const std::vector<tok::Token>& tokens, std::int32_t threadCount = 4);
 
  private:
-  static std::vector<std::vector<mylang::lex::tok::Token>> splitIntoChunks(const std::vector<mylang::lex::tok::Token>& tokens);
+  static std::vector<std::vector<tok::Token>> splitIntoChunks(const std::vector<tok::Token>& tokens);
 };
 
 }

@@ -46,11 +46,11 @@ class ParserTest: public ::testing::Test
     ASSERT_TRUE(std::filesystem::exists(parser_test_cases_dir())) << "Test cases directory not found: " << parser_test_cases_dir();
   }
 
-  std::vector<lex::tok::Token> createTokens(std::initializer_list<lex::tok::TokenType> types)
+  std::vector<tok::Token> createTokens(std::initializer_list<tok::TokenType> types)
   {
     lex::Lexer                   lexer;
-    std::vector<lex::tok::Token> tokens;
-    tokens.emplace_back(lexer.make_token(lex::tok::TokenType::BEGINMARKER, u"", 1, 1));
+    std::vector<tok::Token> tokens;
+    tokens.emplace_back(lexer.make_token(tok::TokenType::BEGINMARKER, u"", 1, 1));
     int line = 1, col = 2;
 
     for (auto type : types)
@@ -59,11 +59,11 @@ class ParserTest: public ::testing::Test
       col++;
     }
 
-    tokens.emplace_back(lexer.make_token(lex::tok::TokenType::ENDMARKER, u"", line, col));
+    tokens.emplace_back(lexer.make_token(tok::TokenType::ENDMARKER, u"", line, col));
     return tokens;
   }
 
-  lex::tok::Token makeToken(lex::tok::TokenType type, const StringType& value = u"", int line = 1, int col = 1)
+  tok::Token makeToken(tok::TokenType type, const StringType& value = u"", int line = 1, int col = 1)
   {
     lex::Lexer lexer;
     return lexer.make_token(type, value, line, col);
@@ -186,7 +186,7 @@ TEST_F(ParserTest, ParseSimpleIdentifier)
 {
   GTEST_SKIP() << "not supported";
   // Test with a simple ASCII identifier when supported
-  auto tokens = createTokens({lex::tok::TokenType::NAME});
+  auto tokens = createTokens({tok::TokenType::NAME});
   // ...
 }
 */
@@ -282,7 +282,7 @@ TEST_F(ParserTest, ParseSimpleAddition)
   EXPECT_NE(add_expr->getRight(), nullptr) << "should get right hand side";
   parser::ast::Expr*     left_expr      = add_expr->getLeft();
   parser::ast::Expr*     right_expr     = add_expr->getRight();
-  lex::tok::TokenType    operator_value = add_expr->getOperator();
+  tok::TokenType    operator_value = add_expr->getOperator();
   parser::ast::NameExpr* left_name      = dynamic_cast<parser::ast::NameExpr*>(left_expr);
   parser::ast::NameExpr* right_name     = dynamic_cast<parser::ast::NameExpr*>(right_expr);
   EXPECT_NE(left_name, nullptr) << "Should parse left hand side of expression";
@@ -291,7 +291,7 @@ TEST_F(ParserTest, ParseSimpleAddition)
   StringType          expected_right_name     = u"ب";
   StringType          left_name_value         = left_name->getValue();
   StringType          right_name_value        = right_name->getValue();
-  lex::tok::TokenType expected_operator_value = lex::tok::TokenType::OP_PLUS;
+  tok::TokenType expected_operator_value = tok::TokenType::OP_PLUS;
   EXPECT_EQ(left_name_value, expected_left_name) << "left hand side not parsed correctly";
   EXPECT_EQ(right_name_value, expected_right_name) << "right hand side not parsed correctly";
   EXPECT_EQ(operator_value, expected_operator_value) << "binary operator not parsed correctly";
@@ -311,7 +311,7 @@ TEST_F(ParserTest, ParseSimpleMultiplication)
   EXPECT_NE(add_expr->getRight(), nullptr) << "should get right hand side";
   parser::ast::Expr*     left_expr      = add_expr->getLeft();
   parser::ast::Expr*     right_expr     = add_expr->getRight();
-  lex::tok::TokenType    operator_value = add_expr->getOperator();
+  tok::TokenType    operator_value = add_expr->getOperator();
   parser::ast::NameExpr* left_name      = dynamic_cast<parser::ast::NameExpr*>(left_expr);
   parser::ast::NameExpr* right_name     = dynamic_cast<parser::ast::NameExpr*>(right_expr);
   EXPECT_NE(left_name, nullptr) << "Should parse left hand side of expression";
@@ -320,7 +320,7 @@ TEST_F(ParserTest, ParseSimpleMultiplication)
   StringType          expected_right_name     = u"ب";
   StringType          left_name_value         = left_name->getValue();
   StringType          right_name_value        = right_name->getValue();
-  lex::tok::TokenType expected_operator_value = lex::tok::TokenType::OP_STAR;
+  tok::TokenType expected_operator_value = tok::TokenType::OP_STAR;
   EXPECT_EQ(left_name_value, expected_left_name) << "left hand side not parsed correctly";
   EXPECT_EQ(right_name_value, expected_right_name) << "right hand side not parsed correctly";
   EXPECT_EQ(operator_value, expected_operator_value) << "binary operator not parsed correctly";
@@ -340,7 +340,7 @@ TEST_F(ParserTest, ParseSimpleSubtraction)
   EXPECT_NE(add_expr->getRight(), nullptr) << "should get right hand side";
   parser::ast::Expr*     left_expr      = add_expr->getLeft();
   parser::ast::Expr*     right_expr     = add_expr->getRight();
-  lex::tok::TokenType    operator_value = add_expr->getOperator();
+  tok::TokenType    operator_value = add_expr->getOperator();
   parser::ast::NameExpr* left_name      = dynamic_cast<parser::ast::NameExpr*>(left_expr);
   parser::ast::NameExpr* right_name     = dynamic_cast<parser::ast::NameExpr*>(right_expr);
   EXPECT_NE(left_name, nullptr) << "Should parse left hand side of expression";
@@ -349,7 +349,7 @@ TEST_F(ParserTest, ParseSimpleSubtraction)
   StringType          expected_right_name     = u"ب";
   StringType          left_name_value         = left_name->getValue();
   StringType          right_name_value        = right_name->getValue();
-  lex::tok::TokenType expected_operator_value = lex::tok::TokenType::OP_MINUS;
+  tok::TokenType expected_operator_value = tok::TokenType::OP_MINUS;
   EXPECT_EQ(left_name_value, expected_left_name) << "left hand side not parsed correctly";
   EXPECT_EQ(right_name_value, expected_right_name) << "right hand side not parsed correctly";
   EXPECT_EQ(operator_value, expected_operator_value) << "binary operator not parsed correctly";
@@ -369,7 +369,7 @@ TEST_F(ParserTest, ParseSimpleDivision)
   EXPECT_NE(add_expr->getRight(), nullptr) << "should get right hand side";
   parser::ast::Expr*     left_expr      = add_expr->getLeft();
   parser::ast::Expr*     right_expr     = add_expr->getRight();
-  lex::tok::TokenType    operator_value = add_expr->getOperator();
+  tok::TokenType    operator_value = add_expr->getOperator();
   parser::ast::NameExpr* left_name      = dynamic_cast<parser::ast::NameExpr*>(left_expr);
   parser::ast::NameExpr* right_name     = dynamic_cast<parser::ast::NameExpr*>(right_expr);
   EXPECT_NE(left_name, nullptr) << "Should parse left hand side of expression";
@@ -378,7 +378,7 @@ TEST_F(ParserTest, ParseSimpleDivision)
   StringType          expected_right_name     = u"ب";
   StringType          left_name_value         = left_name->getValue();
   StringType          right_name_value        = right_name->getValue();
-  lex::tok::TokenType expected_operator_value = lex::tok::TokenType::OP_SLASH;
+  tok::TokenType expected_operator_value = tok::TokenType::OP_SLASH;
   EXPECT_EQ(left_name_value, expected_left_name) << "left hand side not parsed correctly";
   EXPECT_EQ(right_name_value, expected_right_name) << "right hand side not parsed correctly";
   EXPECT_EQ(operator_value, expected_operator_value) << "binary operator not parsed correctly";
@@ -396,7 +396,7 @@ TEST_F(ParserTest, ParseComplexExpression)
   // Should be: BinaryExpr(2, +, BinaryExpr(3, *, 4))
   parser::ast::BinaryExpr* root = dynamic_cast<parser::ast::BinaryExpr*>(expr);
   ASSERT_NE(root, nullptr) << "Root should be a BinaryExpr";
-  EXPECT_EQ(root->getOperator(), lex::tok::TokenType::OP_PLUS) << "Root operator should be OP_PLUS";
+  EXPECT_EQ(root->getOperator(), tok::TokenType::OP_PLUS) << "Root operator should be OP_PLUS";
   // Check left side: should be literal 2
   parser::ast::Expr* left_expr = root->getLeft();
   ASSERT_NE(left_expr, nullptr) << "Left expression is null";
@@ -409,7 +409,7 @@ TEST_F(ParserTest, ParseComplexExpression)
   ASSERT_NE(right_expr, nullptr) << "Right expression is null";
   parser::ast::BinaryExpr* right_binary = dynamic_cast<parser::ast::BinaryExpr*>(right_expr);
   ASSERT_NE(right_binary, nullptr) << "Right should be a BinaryExpr for multiplication";
-  EXPECT_EQ(right_binary->getOperator(), lex::tok::TokenType::OP_STAR) << "Right operator should be OP_STAR";
+  EXPECT_EQ(right_binary->getOperator(), tok::TokenType::OP_STAR) << "Right operator should be OP_STAR";
   // Check multiplication operands
   parser::ast::Expr* mult_left  = right_binary->getLeft();
   parser::ast::Expr* mult_right = right_binary->getRight();
@@ -435,11 +435,11 @@ TEST_F(ParserTest, ParseNestedParentheses)
   // Should be: BinaryExpr((2 + 3), *, 4)
   parser::ast::BinaryExpr* root = dynamic_cast<parser::ast::BinaryExpr*>(expr);
   ASSERT_NE(root, nullptr) << "Root should be a BinaryExpr";
-  EXPECT_EQ(root->getOperator(), lex::tok::TokenType::OP_STAR);
+  EXPECT_EQ(root->getOperator(), tok::TokenType::OP_STAR);
   // Left should be (2 + 3)
   parser::ast::BinaryExpr* left_add = dynamic_cast<parser::ast::BinaryExpr*>(root->getLeft());
   ASSERT_NE(left_add, nullptr) << "Left should be addition expression";
-  EXPECT_EQ(left_add->getOperator(), lex::tok::TokenType::OP_PLUS);
+  EXPECT_EQ(left_add->getOperator(), tok::TokenType::OP_PLUS);
   if (test_config::print_ast)
     AST_Printer.print(expr);
 }
@@ -454,11 +454,11 @@ TEST_F(ParserTest, ParseChainedComparison)
   ASSERT_NE(expr, nullptr) << "Failed to parse chained comparison";
   parser::ast::BinaryExpr* root = dynamic_cast<parser::ast::BinaryExpr*>(expr);
   ASSERT_NE(root, nullptr) << "Root should be BinaryExpr";
-  EXPECT_EQ(root->getOperator(), lex::tok::TokenType::OP_LT);
+  EXPECT_EQ(root->getOperator(), tok::TokenType::OP_LT);
   // Left should be another comparison
   parser::ast::BinaryExpr* left_comp = dynamic_cast<parser::ast::BinaryExpr*>(root->getLeft());
   ASSERT_NE(left_comp, nullptr) << "Left should be comparison expression";
-  EXPECT_EQ(left_comp->getOperator(), lex::tok::TokenType::OP_LT);
+  EXPECT_EQ(left_comp->getOperator(), tok::TokenType::OP_LT);
   if (test_config::print_ast)
     AST_Printer.print(expr);
 }
@@ -472,11 +472,11 @@ TEST_F(ParserTest, ParseLogicalExpression)
   ASSERT_NE(expr, nullptr) << "Failed to parse logical expression";
   parser::ast::BinaryExpr* root = dynamic_cast<parser::ast::BinaryExpr*>(expr);
   ASSERT_NE(root, nullptr) << "Root should be BinaryExpr";
-  EXPECT_EQ(root->getOperator(), lex::tok::TokenType::KW_OR) << "Root should be OR (lower precedence)";
+  EXPECT_EQ(root->getOperator(), tok::TokenType::KW_OR) << "Root should be OR (lower precedence)";
   // Left should be (a and b)
   parser::ast::BinaryExpr* left_and = dynamic_cast<parser::ast::BinaryExpr*>(root->getLeft());
   ASSERT_NE(left_and, nullptr) << "Left should be AND expression";
-  EXPECT_EQ(left_and->getOperator(), lex::tok::TokenType::KW_AND);
+  EXPECT_EQ(left_and->getOperator(), tok::TokenType::KW_AND);
   if (test_config::print_ast)
     AST_Printer.print(expr);
 }
@@ -490,10 +490,10 @@ TEST_F(ParserTest, ParseUnaryChain)
   ASSERT_NE(expr, nullptr) << "Failed to parse unary chain";
   parser::ast::UnaryExpr* outer = dynamic_cast<parser::ast::UnaryExpr*>(expr);
   ASSERT_NE(outer, nullptr) << "Outer should be UnaryExpr";
-  EXPECT_EQ(outer->getOperator(), lex::tok::TokenType::OP_MINUS);
+  EXPECT_EQ(outer->getOperator(), tok::TokenType::OP_MINUS);
   parser::ast::UnaryExpr* inner = dynamic_cast<parser::ast::UnaryExpr*>(outer->getOperand());
   ASSERT_NE(inner, nullptr) << "Inner should be UnaryExpr";
-  EXPECT_EQ(inner->getOperator(), lex::tok::TokenType::OP_MINUS);
+  EXPECT_EQ(inner->getOperator(), tok::TokenType::OP_MINUS);
   parser::ast::NameExpr* name = dynamic_cast<parser::ast::NameExpr*>(inner->getOperand());
   ASSERT_NE(name, nullptr) << "Innermost should be NameExpr";
   if (test_config::print_ast)
@@ -520,7 +520,7 @@ TEST_F(ParserTest, ParseComplexFunctionCall)
   // First arg should be (a + b)
   parser::ast::BinaryExpr* arg1 = dynamic_cast<parser::ast::BinaryExpr*>(arg_list[0]);
   ASSERT_NE(arg1, nullptr) << "First arg should be BinaryExpr";
-  EXPECT_EQ(arg1->getOperator(), lex::tok::TokenType::OP_PLUS);
+  EXPECT_EQ(arg1->getOperator(), tok::TokenType::OP_PLUS);
   parser::ast::Expr* first_lhs = arg1->getLeft();
   parser::ast::Expr* first_rhs = arg1->getRight();
   ASSERT_NE(first_lhs, nullptr);
@@ -534,7 +534,7 @@ TEST_F(ParserTest, ParseComplexFunctionCall)
   // Second arg should be (c * d)
   parser::ast::BinaryExpr* arg2 = dynamic_cast<parser::ast::BinaryExpr*>(arg_list[1]);
   ASSERT_NE(arg2, nullptr) << "Second arg should be BinaryExpr";
-  EXPECT_EQ(arg2->getOperator(), lex::tok::TokenType::OP_STAR);
+  EXPECT_EQ(arg2->getOperator(), tok::TokenType::OP_STAR);
   parser::ast::Expr* second_lhs = arg2->getLeft();
   parser::ast::Expr* second_rhs = arg2->getRight();
   ASSERT_NE(second_lhs, nullptr);
@@ -545,7 +545,7 @@ TEST_F(ParserTest, ParseComplexFunctionCall)
   StringType             second_rhs_name = second_rhs_expr->getValue();
   EXPECT_EQ(second_lhs_name, u"ت");
   EXPECT_EQ(second_rhs_name, u"ث");
-  EXPECT_EQ(arg2->getOperator(), lex::tok::TokenType::OP_STAR);
+  EXPECT_EQ(arg2->getOperator(), tok::TokenType::OP_STAR);
   if (test_config::print_ast)
     AST_Printer.print(expr);
 }
@@ -609,7 +609,7 @@ TEST_F(ParserTest, ParseExtraClosingParenthesis)
   ASSERT_NE(expr, nullptr) << "Should parse the valid part";
   // Verify there's still a ')' token left
   EXPECT_FALSE(parser.weDone()) << "Should have unparsed tokens remaining";
-  EXPECT_TRUE(parser.check(lex::tok::TokenType::RPAREN)) << "Remaining token should be RPAREN";
+  EXPECT_TRUE(parser.check(tok::TokenType::RPAREN)) << "Remaining token should be RPAREN";
   if (test_config::print_ast)
     AST_Printer.print(expr);
 }
@@ -866,7 +866,7 @@ TEST_F(ParserTest, ParseChainedAssignmentWithExpr)
   ASSERT_NE(value->getRight(), nullptr) << "Should get right hand side";
   parser::ast::Expr*     left_expr      = value->getLeft();
   parser::ast::Expr*     right_expr     = value->getRight();
-  lex::tok::TokenType    operator_value = value->getOperator();
+  tok::TokenType    operator_value = value->getOperator();
   parser::ast::NameExpr* left_name      = dynamic_cast<parser::ast::NameExpr*>(left_expr);
   parser::ast::NameExpr* right_name     = dynamic_cast<parser::ast::NameExpr*>(right_expr);
   ASSERT_NE(left_name, nullptr) << "Should parse left hand side of expression";
@@ -875,7 +875,7 @@ TEST_F(ParserTest, ParseChainedAssignmentWithExpr)
   StringType          expected_right_name     = u"ل";
   StringType          left_name_value         = left_name->getValue();
   StringType          right_name_value        = right_name->getValue();
-  lex::tok::TokenType expected_operator_value = lex::tok::TokenType::OP_PLUS;
+  tok::TokenType expected_operator_value = tok::TokenType::OP_PLUS;
   EXPECT_EQ(left_name_value, expected_left_name) << "Left hand side not parsed correctly";
   EXPECT_EQ(right_name_value, expected_right_name) << "Right hand side not parsed correctly";
   EXPECT_EQ(operator_value, expected_operator_value) << "Binary operator not parsed correctly";
@@ -960,7 +960,7 @@ TEST_F(ParserTest, ParseWhileLoop)
   ASSERT_NE(right, nullptr);
   EXPECT_EQ(left->getValue(), u"شيء");
   EXPECT_EQ(right->getValue(), u"صحيح");
-  EXPECT_EQ(condition_expr->getOperator(), lex::tok::TokenType::OP_EQ);
+  EXPECT_EQ(condition_expr->getOperator(), tok::TokenType::OP_EQ);
   parser::ast::BlockStmt* block = while_stmt->getBlock();
   ASSERT_NE(block, nullptr) << "Should parse while loop indented block";
   if (test_config::print_ast)

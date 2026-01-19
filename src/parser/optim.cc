@@ -21,25 +21,25 @@ std::optional<double> ASTOptimizer::evaluateConstant(const ast::Expr* expr)
     std::optional<double>  right = evaluateConstant(bin->getRight());
     if (left == std::nullopt || right == std::nullopt)
       return std::nullopt;
-    if (bin->getOperator() == lex::tok::TokenType::OP_PLUS)
+    if (bin->getOperator() == tok::TokenType::OP_PLUS)
       return *left + *right;
-    if (bin->getOperator() == lex::tok::TokenType::OP_MINUS)
+    if (bin->getOperator() == tok::TokenType::OP_MINUS)
       return *left - *right;
-    if (bin->getOperator() == lex::tok::TokenType::OP_STAR)
+    if (bin->getOperator() == tok::TokenType::OP_STAR)
       return *left * *right;
-    if (bin->getOperator() == lex::tok::TokenType::OP_SLASH)
+    if (bin->getOperator() == tok::TokenType::OP_SLASH)
     {
       if (*right == 0.0)
         return std::nullopt;
       return *left / *right;
     }
-    if (bin->getOperator() == lex::tok::TokenType::OP_PERCENT)
+    if (bin->getOperator() == tok::TokenType::OP_PERCENT)
     {
       if (*right == 0.0)
         return std::nullopt;
       return std::fmod(*left, *right);
     }
-    if (bin->getOperator() == lex::tok::TokenType::OP_POWER)
+    if (bin->getOperator() == tok::TokenType::OP_POWER)
       return std::pow(*left, *right);
   }
   else if (expr->getKind() == ast::Expr::Kind::UNARY)
@@ -48,9 +48,9 @@ std::optional<double> ASTOptimizer::evaluateConstant(const ast::Expr* expr)
     std::optional<double> operand = evaluateConstant(static_cast<const ast::UnaryExpr*>(un));
     if (operand == std::nullopt)
       return std::nullopt;
-    if (un->getOperator() == lex::tok::TokenType::OP_PLUS)
+    if (un->getOperator() == tok::TokenType::OP_PLUS)
       return *operand;
-    if (un->getOperator() == lex::tok::TokenType::OP_MINUS)
+    if (un->getOperator() == tok::TokenType::OP_MINUS)
       return -*operand;
   }
   return std::nullopt;
@@ -76,7 +76,7 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
     ast::Expr* left  = bin->getLeft();
     ast::Expr* right = bin->getRight();
     // x + 0 = x, x - 0 = x
-    if ((bin->getOperator() == lex::tok::TokenType::OP_PLUS || bin->getOperator() == lex::tok::TokenType::OP_MINUS)
+    if ((bin->getOperator() == tok::TokenType::OP_PLUS || bin->getOperator() == tok::TokenType::OP_MINUS)
         && right->getKind() == ast::Expr::Kind::LITERAL)
     {
       ast::LiteralExpr* lit = static_cast<ast::LiteralExpr*>(right);
@@ -87,7 +87,7 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
       }
     }
     // x * 1 = x, x / 1 = x
-    if ((bin->getOperator() == lex::tok::TokenType::OP_STAR || bin->getOperator() == lex::tok::TokenType::OP_SLASH)
+    if ((bin->getOperator() == tok::TokenType::OP_STAR || bin->getOperator() == tok::TokenType::OP_SLASH)
         && right->getKind() == ast::Expr::Kind::LITERAL)
     {
       ast::LiteralExpr* lit = static_cast<ast::LiteralExpr*>(right);
@@ -98,7 +98,7 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
       }
     }
     // x * 0 = 0
-    if (bin->getOperator() == lex::tok::TokenType::OP_STAR && right->getKind() == ast::Expr::Kind::LITERAL)
+    if (bin->getOperator() == tok::TokenType::OP_STAR && right->getKind() == ast::Expr::Kind::LITERAL)
     {
       ast::LiteralExpr* lit = static_cast<ast::LiteralExpr*>(right);
       if (lit->getValue() == u"0")
@@ -108,18 +108,18 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
       }
     }
     // x * 2 = x + x (strength reduction)
-    if (bin->getOperator() == lex::tok::TokenType::OP_STAR && right->getKind() == ast::Expr::Kind::LITERAL)
+    if (bin->getOperator() == tok::TokenType::OP_STAR && right->getKind() == ast::Expr::Kind::LITERAL)
     {
       auto* lit = static_cast<ast::LiteralExpr*>(right);
       if (lit->getValue() == u"2")
       {
         Stats_.StrengthReductions++;
         ast::NameExpr* leftClone = ast::AST_allocator.make<ast::NameExpr>(static_cast<ast::NameExpr*>(left)->getValue());
-        return ast::AST_allocator.make<ast::BinaryExpr>(bin->getLeft(), leftClone, lex::tok::TokenType::OP_PLUS);
+        return ast::AST_allocator.make<ast::BinaryExpr>(bin->getLeft(), leftClone, tok::TokenType::OP_PLUS);
       }
     }
     // x - x = 0
-    if (bin->getOperator() == lex::tok::TokenType::OP_MINUS && left->getKind() == ast::Expr::Kind::NAME && right->getKind() == ast::Expr::Kind::NAME)
+    if (bin->getOperator() == tok::TokenType::OP_MINUS && left->getKind() == ast::Expr::Kind::NAME && right->getKind() == ast::Expr::Kind::NAME)
     {
       ast::NameExpr* lname = static_cast<ast::NameExpr*>(left);
       ast::NameExpr* rname = static_cast<ast::NameExpr*>(right);
@@ -141,10 +141,10 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
       return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER, utf8::utf8to16(std::to_string(*val)));
     }
     // Double negation: --x = x
-    if (un->getOperator() == lex::tok::TokenType::OP_MINUS && un->getKind() == ast::Expr::Kind::UNARY)
+    if (un->getOperator() == tok::TokenType::OP_MINUS && un->getKind() == ast::Expr::Kind::UNARY)
     {
       ast::UnaryExpr* innerUn = static_cast<ast::UnaryExpr*>(un);
-      if (innerUn->getOperator() == lex::tok::TokenType::OP_MINUS)
+      if (innerUn->getOperator() == tok::TokenType::OP_MINUS)
       {
         Stats_.StrengthReductions++;
         return static_cast<ast::Expr*>(innerUn);
@@ -275,11 +275,11 @@ StringType ASTOptimizer::CSEPass::exprToString(const ast::Expr* expr)
   }
   case ast::Expr::Kind::BINARY : {
     const ast::BinaryExpr* bin = static_cast<const ast::BinaryExpr*>(expr);
-    return u"(" + exprToString(bin->getLeft()) + u" " + lex::tok::toString(bin->getOperator()) + u" " + exprToString(bin->getRight()) + u")";
+    return u"(" + exprToString(bin->getLeft()) + u" " + tok::toString(bin->getOperator()) + u" " + exprToString(bin->getRight()) + u")";
   }
   case ast::Expr::Kind::UNARY : {
     const ast::UnaryExpr* un = static_cast<const ast::UnaryExpr*>(expr);
-    return lex::tok::toString(un->getOperator()) + exprToString(un);
+    return tok::toString(un->getOperator()) + exprToString(un);
   }
   default :
     return u"";

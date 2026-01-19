@@ -40,12 +40,12 @@ class BinaryExpr: public Expr
  private:
   Expr*               Left_{nullptr};
   Expr*               Right_{nullptr};
-  lex::tok::TokenType Operator_{lex::tok::TokenType::INVALID};
+  tok::TokenType Operator_{tok::TokenType::INVALID};
 
  public:
   explicit BinaryExpr() = delete;
 
-  explicit BinaryExpr(Expr* left, Expr* right, lex::tok::TokenType op) :
+  explicit BinaryExpr(Expr* left, Expr* right, tok::TokenType op) :
       Left_(left),
       Right_(right),
       Operator_(op)
@@ -62,23 +62,23 @@ class BinaryExpr: public Expr
 
   Expr*               getLeft() const { return Left_; }
   Expr*               getRight() const { return Right_; }
-  lex::tok::TokenType getOperator() const { return Operator_; }
+  tok::TokenType getOperator() const { return Operator_; }
 
   void setLeft(Expr* left) { Left_ = left; }
   void setRight(Expr* right) { Right_ = right; }
-  void setOperator(lex::tok::TokenType op) { Operator_ = op; }
+  void setOperator(tok::TokenType op) { Operator_ = op; }
 };
 
 class UnaryExpr: public Expr
 {
  private:
   Expr*               Operand_{nullptr};
-  lex::tok::TokenType Operator_{lex::tok::TokenType::INVALID};
+  tok::TokenType Operator_{tok::TokenType::INVALID};
 
  public:
   explicit UnaryExpr() = delete;
 
-  explicit UnaryExpr(Expr* operand, lex::tok::TokenType op) :
+  explicit UnaryExpr(Expr* operand, tok::TokenType op) :
       Operand_(operand),
       Operator_(op)
   {
@@ -91,7 +91,7 @@ class UnaryExpr: public Expr
   UnaryExpr& operator=(const UnaryExpr&) MYLANG_NOEXCEPT = delete;
 
   Expr*               getOperand() const { return Operand_; }
-  lex::tok::TokenType getOperator() const { return Operator_; }
+  tok::TokenType getOperator() const { return Operator_; }
 };
 
 class LiteralExpr: public Expr

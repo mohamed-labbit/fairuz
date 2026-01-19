@@ -104,13 +104,13 @@ std::shared_ptr<typename TypeSystem::Type> TypeSystem::TypeInference::inferExpr(
     std::shared_ptr<Type>  rightType = inferExpr(bin->getRight());
     unify(leftType, rightType);
     // Result type based on operator
-    if (bin->getOperator() == lex::tok::TokenType::OP_PLUS || bin->getOperator() == lex::tok::TokenType::OP_MINUS
-        || bin->getOperator() == lex::tok::TokenType::OP_STAR || bin->getOperator() == lex::tok::TokenType::OP_SLASH)
+    if (bin->getOperator() == tok::TokenType::OP_PLUS || bin->getOperator() == tok::TokenType::OP_MINUS
+        || bin->getOperator() == tok::TokenType::OP_STAR || bin->getOperator() == tok::TokenType::OP_SLASH)
     {
       return leftType;
     }
-    else if (bin->getOperator() == lex::tok::TokenType::OP_EQ || bin->getOperator() == lex::tok::TokenType::OP_NEQ
-             || bin->getOperator() == lex::tok::TokenType::OP_LT || bin->getOperator() == lex::tok::TokenType::OP_GT)
+    else if (bin->getOperator() == tok::TokenType::OP_EQ || bin->getOperator() == tok::TokenType::OP_NEQ
+             || bin->getOperator() == tok::TokenType::OP_LT || bin->getOperator() == tok::TokenType::OP_GT)
     {
       std::shared_ptr<Type> t = std::make_shared<Type>();
       t->base                 = BaseType::Bool;

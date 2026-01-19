@@ -46,9 +46,9 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(const ast::Expr* ex
       return SymbolTable::DataType_t::FLOAT;
     if (leftType == SymbolTable::DataType_t::INTEGER && rightType == SymbolTable::DataType_t::INTEGER)
       return SymbolTable::DataType_t::INTEGER;
-    if (bin->getOperator() == lex::tok::TokenType::OP_PLUS && leftType == SymbolTable::DataType_t::STRING)
+    if (bin->getOperator() == tok::TokenType::OP_PLUS && leftType == SymbolTable::DataType_t::STRING)
       return SymbolTable::DataType_t::STRING;
-    if (bin->getOperator() == lex::tok::TokenType::KW_AND || bin->getOperator() == lex::tok::TokenType::KW_OR)
+    if (bin->getOperator() == tok::TokenType::KW_AND || bin->getOperator() == tok::TokenType::KW_OR)
       return SymbolTable::DataType_t::BOOLEAN;
     break;
   }
@@ -92,13 +92,13 @@ void SemanticAnalyzer::analyzeExpr(const ast::Expr* expr)
     SymbolTable::DataType_t rightType = inferType(bin->getRight());
     if (leftType != rightType && leftType != SymbolTable::DataType_t::UNKNOWN && rightType != SymbolTable::DataType_t::UNKNOWN)
     {  // Check for invalid operations
-      if ((bin->getOperator() == lex::tok::TokenType::OP_MINUS || bin->getOperator() == lex::tok::TokenType::OP_STAR
-           || bin->getOperator() == lex::tok::TokenType::OP_SLASH)
+      if ((bin->getOperator() == tok::TokenType::OP_MINUS || bin->getOperator() == tok::TokenType::OP_STAR
+           || bin->getOperator() == tok::TokenType::OP_SLASH)
           && (leftType == SymbolTable::DataType_t::STRING || rightType == SymbolTable::DataType_t::STRING))
         reportIssue(Issue::Severity::ERROR, u"Invalid operation on string", expr->getLine(), u"Strings don't support this operator");
     }
     // Division by zero detection (constant folding)
-    if (bin->getOperator() == lex::tok::TokenType::OP_SLASH && bin->getRight()->getKind() == ast::Expr::Kind::LITERAL)
+    if (bin->getOperator() == tok::TokenType::OP_SLASH && bin->getRight()->getKind() == ast::Expr::Kind::LITERAL)
     {
       const ast::LiteralExpr* lit = static_cast<const ast::LiteralExpr*>(bin->getRight());
       if (lit->getValue() == u"0")

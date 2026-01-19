@@ -111,7 +111,7 @@ class Parser
 
 
   /// @brief Constructs a parser from a pre-existing token sequence
-  explicit Parser(std::vector<lex::tok::Token> seq, std::optional<std::size_t> s = std::nullopt);
+  explicit Parser(std::vector<tok::Token> seq, std::optional<std::size_t> s = std::nullopt);
 
   std::vector<ast::Stmt*> parseProgram();
 
@@ -197,16 +197,16 @@ class Parser
   // std::vector<ast::Stmt*> parse();
   /// TODO: not sure if these should be private
   /// @brief check wether or not we reached the end of the file so not to bother lookin for stuff to parse
-  bool weDone() const { return Lexer_.current().is(lex::tok::TokenType::ENDMARKER); }
+  bool weDone() const { return Lexer_.current().is(tok::TokenType::ENDMARKER); }
 
   /// @brief Checks whether the current token is of the given type
-  bool check(lex::tok::TokenType type)
+  bool check(tok::TokenType type)
   {
     // if (weDone()) return false;
     return Lexer_.current().is(type);
   }
 
-  lex::tok::Token currentToken() { return Lexer_.current(); }
+  tok::Token currentToken() { return Lexer_.current(); }
 
   ast::Expr* parse() { return parseExpression(); }
 
@@ -216,32 +216,32 @@ class Parser
   lex::Lexer Lexer_;  // Underlying lexer providing tokens
 
   /// @brief Peeks ahead in the token stream without consuming
-  lex::tok::Token peek(std::size_t offset = 1) { return Lexer_.peek(offset); }
+  tok::Token peek(std::size_t offset = 1) { return Lexer_.peek(offset); }
 
   /// @brief Advances and returns the next token
-  lex::tok::Token advance() { return Lexer_.next(); }
+  tok::Token advance() { return Lexer_.next(); }
 
 
   /// @brief Matches and consumes a token if it is of the given type
-  bool match(const lex::tok::TokenType type);
+  bool match(const tok::TokenType type);
   /**
    * @brief Consumes a token of the expected type or throws a ParseError.
    *
    * @param type Expected token type
    * @param msg  Error message if the token does not match
    */
-  lex::tok::Token consume(lex::tok::TokenType type, const StringType& msg)
+  tok::Token consume(tok::TokenType type, const StringType& msg)
   {
     if (check(type))
       return advance();
     diagnostic::engine.emit(msg, diagnostic::DiagnosticEngine::Severity::ERROR);
-    return lex::tok::Token();
+    return tok::Token();
   }
 
   /// @brief Skips newline tokens during parsing
   void skipNewlines()
   {
-    while (match(lex::tok::TokenType::NEWLINE))
+    while (match(tok::TokenType::NEWLINE))
       ;
   }
 

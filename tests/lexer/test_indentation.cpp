@@ -17,11 +17,11 @@ TEST(LexerTest, TestIndentationLevel0)
   input::FileManager file_manager(lexer_test_cases_dir() / "recognizes_indentation_level0.txt");
   lex::Lexer         lexer(&file_manager);
   auto               tokens   = lexer.tokenize();
-  auto               expected = lexer.make_token(lex::tok::TokenType::IDENTIFIER, u"ا", 1, 1);
+  auto               expected = lexer.make_token(tok::TokenType::IDENTIFIER, u"ا", 1, 1);
   EXPECT_EQ(tokens.size(), 3);
-  EXPECT_EQ(tokens[0].type(), lex::tok::TokenType::BEGINMARKER);
+  EXPECT_EQ(tokens[0].type(), tok::TokenType::BEGINMARKER);
   EXPECT_EQ(tokens[1], expected);
-  EXPECT_EQ(tokens[2].type(), lex::tok::TokenType::ENDMARKER);
+  EXPECT_EQ(tokens[2].type(), tok::TokenType::ENDMARKER);
 }
 
 TEST(LexerTest, TestIndentationLevel1)
@@ -29,18 +29,18 @@ TEST(LexerTest, TestIndentationLevel1)
   input::FileManager           file_manager(lexer_test_cases_dir() / "recognizes_indentation_level1.txt");
   lex::Lexer                   lexer(&file_manager);
   auto                         tokens   = lexer.tokenize();
-  std::vector<lex::tok::Token> expected = {lexer.make_token(lex::tok::TokenType::IDENTIFIER, u"ا", 1, 1),
-                                           lexer.make_token(lex::tok::TokenType::NEWLINE, u"\n", 1, 2),
-                                           lexer.make_token(lex::tok::TokenType::INDENT),
-                                           lexer.make_token(lex::tok::TokenType::IDENTIFIER, u"ا", 2, 5),
-                                           lexer.make_token(lex::tok::TokenType::NEWLINE, u"\n", 2, 6),
-                                           lexer.make_token(lex::tok::TokenType::DEDENT),
-                                           lexer.make_token(lex::tok::TokenType::DEDENT),
-                                           lexer.make_token(lex::tok::TokenType::ENDMARKER, std::nullopt, 3, 1)};
-  EXPECT_EQ(tokens[0].type(), lex::tok::TokenType::BEGINMARKER);
+  std::vector<tok::Token> expected = {lexer.make_token(tok::TokenType::IDENTIFIER, u"ا", 1, 1),
+                                           lexer.make_token(tok::TokenType::NEWLINE, u"\n", 1, 2),
+                                           lexer.make_token(tok::TokenType::INDENT),
+                                           lexer.make_token(tok::TokenType::IDENTIFIER, u"ا", 2, 5),
+                                           lexer.make_token(tok::TokenType::NEWLINE, u"\n", 2, 6),
+                                           lexer.make_token(tok::TokenType::DEDENT),
+                                           lexer.make_token(tok::TokenType::DEDENT),
+                                           lexer.make_token(tok::TokenType::ENDMARKER, std::nullopt, 3, 1)};
+  EXPECT_EQ(tokens[0].type(), tok::TokenType::BEGINMARKER);
   for (int i = 1; i < tokens.size() - 1; ++i)
     EXPECT_EQ(expected[i - 1], tokens[i]);
-  EXPECT_EQ(tokens.back().type(), lex::tok::TokenType::ENDMARKER);
+  EXPECT_EQ(tokens.back().type(), tok::TokenType::ENDMARKER);
 }
 
 TEST(LexerTest, TestIndentationLevel2)
@@ -48,19 +48,19 @@ TEST(LexerTest, TestIndentationLevel2)
   input::FileManager           file_manager(lexer_test_cases_dir() / "recognizes_indentation_level1.txt");
   lex::Lexer                   lexer(&file_manager);
   auto                         tokens   = lexer.tokenize();
-  std::vector<lex::tok::Token> expected = {lexer.make_token(lex::tok::TokenType::IDENTIFIER, u"ا", 1, 1),
-                                           lexer.make_token(lex::tok::TokenType::NEWLINE, u"\n", 1, 2),
-                                           lexer.make_token(lex::tok::TokenType::INDENT),
-                                           lexer.make_token(lex::tok::TokenType::IDENTIFIER, u"ا", 2, 5),
-                                           lexer.make_token(lex::tok::TokenType::NEWLINE, u"\n", 2, 6),
-                                           lexer.make_token(lex::tok::TokenType::INDENT),
-                                           lexer.make_token(lex::tok::TokenType::IDENTIFIER, u"ا", 3, 9),
-                                           lexer.make_token(lex::tok::TokenType::NEWLINE, u"\n", 3, 10),
-                                           lexer.make_token(lex::tok::TokenType::DEDENT),
-                                           lexer.make_token(lex::tok::TokenType::DEDENT),
-                                           lexer.make_token(lex::tok::TokenType::ENDMARKER, std::nullopt, 4, 1)};
-  EXPECT_EQ(tokens[0].type(), lex::tok::TokenType::BEGINMARKER);
+  std::vector<tok::Token> expected = {lexer.make_token(tok::TokenType::IDENTIFIER, u"ا", 1, 1),
+                                           lexer.make_token(tok::TokenType::NEWLINE, u"\n", 1, 2),
+                                           lexer.make_token(tok::TokenType::INDENT),
+                                           lexer.make_token(tok::TokenType::IDENTIFIER, u"ا", 2, 5),
+                                           lexer.make_token(tok::TokenType::NEWLINE, u"\n", 2, 6),
+                                           lexer.make_token(tok::TokenType::INDENT),
+                                           lexer.make_token(tok::TokenType::IDENTIFIER, u"ا", 3, 9),
+                                           lexer.make_token(tok::TokenType::NEWLINE, u"\n", 3, 10),
+                                           lexer.make_token(tok::TokenType::DEDENT),
+                                           lexer.make_token(tok::TokenType::DEDENT),
+                                           lexer.make_token(tok::TokenType::ENDMARKER, std::nullopt, 4, 1)};
+  EXPECT_EQ(tokens[0].type(), tok::TokenType::BEGINMARKER);
   for (int i = 1; i < tokens.size() - 1; ++i)
     EXPECT_EQ(expected[i - 1], tokens[i]);
-  EXPECT_EQ(tokens.back().type(), lex::tok::TokenType::ENDMARKER);
+  EXPECT_EQ(tokens.back().type(), tok::TokenType::ENDMARKER);
 }

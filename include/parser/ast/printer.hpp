@@ -57,14 +57,14 @@ class ASTPrinter
 
     case Expr::Kind::UNARY : {
       auto* u = static_cast<const UnaryExpr*>(e);
-      std::cout << color(u"Unary", Color::BOLD) << " " << utf8::utf16to8(lex::tok::toString(u->getOperator())) << "\n";
+      std::cout << color(u"Unary", Color::BOLD) << " " << utf8::utf16to8(tok::toString(u->getOperator())) << "\n";
       printExpr(u->getOperand(), {p.indent + pipe(p.last), true});
       break;
     }
 
     case Expr::Kind::BINARY : {
       auto* b = static_cast<const BinaryExpr*>(e);
-      std::cout << color(u"Binary", Color::BOLD) << " " << utf8::utf16to8(lex::tok::toString(b->getOperator())) << "\n";
+      std::cout << color(u"Binary", Color::BOLD) << " " << utf8::utf16to8(tok::toString(b->getOperator())) << "\n";
       printExpr(b->getLeft(), {p.indent + pipe(p.last), false});
       printExpr(b->getRight(), {p.indent + pipe(p.last), true});
       break;

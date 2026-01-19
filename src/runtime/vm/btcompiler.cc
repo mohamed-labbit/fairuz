@@ -146,7 +146,7 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
   case parser::ast::Expr::Kind::BINARY : {
     const parser::ast::BinaryExpr* bin = static_cast<const parser::ast::BinaryExpr*>(expr);
     // Short-circuit evaluation for logical operators
-    if (bin->getOperator() == lex::tok::TokenType::KW_AND)
+    if (bin->getOperator() == tok::TokenType::KW_AND)
     {
       compileExpr(bin->getLeft());
       emitInstruction(bytecode::OpCode::DUP, 0, expr->getLine());
@@ -157,7 +157,7 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
       patchJump(jumpIfFalse);
       break;
     }
-    if (bin->getOperator() == lex::tok::TokenType::KW_OR)
+    if (bin->getOperator() == tok::TokenType::KW_OR)
     {
       compileExpr(bin->getLeft());
       emitInstruction(bytecode::OpCode::DUP, 0, expr->getLine());
@@ -171,41 +171,41 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
     // Regular binary operations
     compileExpr(bin->getLeft());
     compileExpr(bin->getRight());
-    if (bin->getOperator() == lex::tok::TokenType::OP_PLUS)
+    if (bin->getOperator() == tok::TokenType::OP_PLUS)
       emitInstruction(bytecode::OpCode::ADD, 0, expr->getLine());
-    else if (bin->getOperator() == lex::tok::TokenType::OP_MINUS)
+    else if (bin->getOperator() == tok::TokenType::OP_MINUS)
       emitInstruction(bytecode::OpCode::SUB, 0, expr->getLine());
-    else if (bin->getOperator() == lex::tok::TokenType::OP_STAR)
+    else if (bin->getOperator() == tok::TokenType::OP_STAR)
       emitInstruction(bytecode::OpCode::MUL, 0, expr->getLine());
-    else if (bin->getOperator() == lex::tok::TokenType::OP_SLASH)
+    else if (bin->getOperator() == tok::TokenType::OP_SLASH)
       emitInstruction(bytecode::OpCode::DIV, 0, expr->getLine());
-    else if (bin->getOperator() == lex::tok::TokenType::OP_PERCENT)
+    else if (bin->getOperator() == tok::TokenType::OP_PERCENT)
       emitInstruction(bytecode::OpCode::MOD, 0, expr->getLine());
-    else if (bin->getOperator() == lex::tok::TokenType::OP_POWER)
+    else if (bin->getOperator() == tok::TokenType::OP_POWER)
       emitInstruction(bytecode::OpCode::POW, 0, expr->getLine());
-    else if (bin->getOperator() == lex::tok::TokenType::OP_EQ)
+    else if (bin->getOperator() == tok::TokenType::OP_EQ)
       emitInstruction(bytecode::OpCode::EQ, 0, expr->getLine());
-    else if (bin->getOperator() == lex::tok::TokenType::OP_NEQ)
+    else if (bin->getOperator() == tok::TokenType::OP_NEQ)
       emitInstruction(bytecode::OpCode::NE, 0, expr->getLine());
-    else if (bin->getOperator() == lex::tok::TokenType::OP_LT)
+    else if (bin->getOperator() == tok::TokenType::OP_LT)
       emitInstruction(bytecode::OpCode::LT, 0, expr->getLine());
-    else if (bin->getOperator() == lex::tok::TokenType::OP_GT)
+    else if (bin->getOperator() == tok::TokenType::OP_GT)
       emitInstruction(bytecode::OpCode::GT, 0, expr->getLine());
-    else if (bin->getOperator() == lex::tok::TokenType::OP_LTE)
+    else if (bin->getOperator() == tok::TokenType::OP_LTE)
       emitInstruction(bytecode::OpCode::LE, 0, expr->getLine());
-    else if (bin->getOperator() == lex::tok::TokenType::OP_GTE)
+    else if (bin->getOperator() == tok::TokenType::OP_GTE)
       emitInstruction(bytecode::OpCode::GE, 0, expr->getLine());
-    else if (bin->getOperator() == lex::tok::TokenType::OP_BITAND)
+    else if (bin->getOperator() == tok::TokenType::OP_BITAND)
       emitInstruction(bytecode::OpCode::BITAND, 0, expr->getLine());
-    else if (bin->getOperator() == lex::tok::TokenType::OP_BITOR)
+    else if (bin->getOperator() == tok::TokenType::OP_BITOR)
       emitInstruction(bytecode::OpCode::BITOR, 0, expr->getLine());
-    else if (bin->getOperator() == lex::tok::TokenType::OP_BITXOR)
+    else if (bin->getOperator() == tok::TokenType::OP_BITXOR)
       emitInstruction(bytecode::OpCode::BITXOR, 0, expr->getLine());
-    else if (bin->getOperator() == lex::tok::TokenType::OP_LSHIFT)
+    else if (bin->getOperator() == tok::TokenType::OP_LSHIFT)
       emitInstruction(bytecode::OpCode::LSHIFT, 0, expr->getLine());
-    else if (bin->getOperator() == lex::tok::TokenType::OP_RSHIFT)
+    else if (bin->getOperator() == tok::TokenType::OP_RSHIFT)
       emitInstruction(bytecode::OpCode::RSHIFT, 0, expr->getLine());
-    else if (bin->getOperator() == lex::tok::TokenType::KW_IN)
+    else if (bin->getOperator() == tok::TokenType::KW_IN)
       emitInstruction(bytecode::OpCode::IN, 0, expr->getLine());
     break;
   }
@@ -213,13 +213,13 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
   case parser::ast::Expr::Kind::UNARY : {
     const parser::ast::UnaryExpr* un = static_cast<const parser::ast::UnaryExpr*>(expr);
     compileExpr(un->getOperand());
-    if (un->getOperator() == lex::tok::TokenType::OP_MINUS)
+    if (un->getOperator() == tok::TokenType::OP_MINUS)
       emitInstruction(bytecode::OpCode::NEG, 0, expr->getLine());
-    else if (un->getOperator() == lex::tok::TokenType::OP_PLUS)
+    else if (un->getOperator() == tok::TokenType::OP_PLUS)
       emitInstruction(bytecode::OpCode::POS, 0, expr->getLine());
-    else if (un->getOperator() == lex::tok::TokenType::OP_BITNOT)
+    else if (un->getOperator() == tok::TokenType::OP_BITNOT)
       emitInstruction(bytecode::OpCode::BITNOT, 0, expr->getLine());
-    else if (un->getOperator() == lex::tok::TokenType::KW_NOT)
+    else if (un->getOperator() == tok::TokenType::KW_NOT)
       emitInstruction(bytecode::OpCode::NOT, 0, expr->getLine());
     break;
   }

@@ -8,10 +8,10 @@ namespace mylang {
 namespace parser {
 
 /*
-std::vector<ast::Stmt*> ParallelParser::parseParallel(const std::vector<mylang::lex::tok::Token>& tokens, std::int32_t threadCount)
+std::vector<ast::Stmt*> ParallelParser::parseParallel(const std::vector<mylang::tok::Token>& tokens, std::int32_t threadCount)
 {
   // Split tokens by top-level definitions
-  std::vector<std::vector<mylang::lex::tok::Token>> chunks = splitIntoChunks(tokens);
+  std::vector<std::vector<mylang::tok::Token>> chunks = splitIntoChunks(tokens);
   std::vector<std::future<ast::Stmt*>> futures;
   for (auto& chunk : chunks)
   {
@@ -28,14 +28,14 @@ std::vector<ast::Stmt*> ParallelParser::parseParallel(const std::vector<mylang::
 }
 */
 
-std::vector<std::vector<lex::tok::Token>> ParallelParser::splitIntoChunks(const std::vector<lex::tok::Token>& tokens)
+std::vector<std::vector<tok::Token>> ParallelParser::splitIntoChunks(const std::vector<tok::Token>& tokens)
 {
-  std::vector<std::vector<lex::tok::Token>> chunks;
-  std::vector<lex::tok::Token>              current;
-  for (const lex::tok::Token& tok : tokens)
+  std::vector<std::vector<tok::Token>> chunks;
+  std::vector<tok::Token>              current;
+  for (const tok::Token& tok : tokens)
   {
     current.push_back(tok);
-    if (tok.type() == lex::tok::TokenType::KW_FN && current.size() > 1)
+    if (tok.type() == tok::TokenType::KW_FN && current.size() > 1)
     {
       chunks.push_back(current);
       current.clear();
