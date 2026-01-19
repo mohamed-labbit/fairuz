@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "bytecode.hpp"
+#include "../../macros.hpp"
 
 
 // ============================================================================
@@ -24,7 +25,7 @@ class PeepholeOptimizer
 
  private:
   std::vector<Optimization> Optimizations_;
-  bool matchPattern(const std::vector<bytecode::Instruction>& code, std::size_t pos, const std::vector<bytecode::OpCode>& pattern);
+  bool                      matchPattern(const std::vector<bytecode::Instruction>& code, SizeType pos, const std::vector<bytecode::OpCode>& pattern);
 
  public:
   void                             optimize(std::vector<bytecode::Instruction>& instructions);

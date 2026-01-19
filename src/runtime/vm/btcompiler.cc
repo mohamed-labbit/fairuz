@@ -495,13 +495,13 @@ void BytecodeCompiler::disassemble(const CompilationUnit& unit, std::ostream& ou
 {
   out << "=== Bytecode Disassembly ===\n\n";
   out << "Constants Pool (" << unit.constants.size() << " entries):\n";
-  for (std::size_t i = 0; i < unit.constants.size(); i++)
+  for (SizeType i = 0; i < unit.constants.size(); i++)
     out << "  [" << i << "] " << unit.constants[i].repr() << "\n";
   out << "\nCode (" << unit.instructions.size() << " instructions):\n";
   out << "Stack size: " << unit.StackSize << "\n";
   out << "Locals: " << unit.NumLocals << "\n\n";
 
-  for (std::size_t i = 0; i < unit.instructions.size(); i++)
+  for (SizeType i = 0; i < unit.instructions.size(); i++)
   {
     const bytecode::Instruction& instr = unit.instructions[i];
     out << std::setw(6) << i << "  ";
@@ -533,7 +533,7 @@ void BytecodeCompiler::disassemble(const CompilationUnit& unit, std::ostream& ou
   if (!loops.empty())
   {
     out << "\nLoop Analysis:\n";
-    for (std::size_t i = 0; i < loops.size(); i++)
+    for (SizeType i = 0; i < loops.size(); i++)
     {
       const LoopAnalyzer::Loop& loop = loops[i];
       out << "  Loop " << i << ": PC " << loop.HeaderPC << " -> " << loop.ExitPC << " (nesting: " << loop.NestingLevel << ")\n";

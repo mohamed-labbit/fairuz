@@ -38,8 +38,8 @@ class Expr: public ASTNode
 class BinaryExpr: public Expr
 {
  private:
-  Expr*               Left_{nullptr};
-  Expr*               Right_{nullptr};
+  Expr*          Left_{nullptr};
+  Expr*          Right_{nullptr};
   tok::TokenType Operator_{tok::TokenType::INVALID};
 
  public:
@@ -60,8 +60,8 @@ class BinaryExpr: public Expr
   BinaryExpr(const BinaryExpr&) MYLANG_NOEXCEPT            = delete;
   BinaryExpr& operator=(const BinaryExpr&) MYLANG_NOEXCEPT = delete;
 
-  Expr*               getLeft() const { return Left_; }
-  Expr*               getRight() const { return Right_; }
+  Expr*          getLeft() const { return Left_; }
+  Expr*          getRight() const { return Right_; }
   tok::TokenType getOperator() const { return Operator_; }
 
   void setLeft(Expr* left) { Left_ = left; }
@@ -72,7 +72,7 @@ class BinaryExpr: public Expr
 class UnaryExpr: public Expr
 {
  private:
-  Expr*               Operand_{nullptr};
+  Expr*          Operand_{nullptr};
   tok::TokenType Operator_{tok::TokenType::INVALID};
 
  public:
@@ -90,7 +90,7 @@ class UnaryExpr: public Expr
   UnaryExpr(const UnaryExpr&) MYLANG_NOEXCEPT            = delete;
   UnaryExpr& operator=(const UnaryExpr&) MYLANG_NOEXCEPT = delete;
 
-  Expr*               getOperand() const { return Operand_; }
+  Expr*          getOperand() const { return Operand_; }
   tok::TokenType getOperator() const { return Operator_; }
 };
 
@@ -160,19 +160,9 @@ class ListExpr: public Expr
   {
     Kind_ = Kind::LIST;
     // assert(!Elements_.empty() && "'elements' of ListExpr is null");
-    if (Elements_.empty())
-      diagnostic::engine.emit("args of ListExpr is initially empty!", /*sv=*/diagnostic::DiagnosticEngine::Severity::NOTE);
-    else
-    {
-      std::stringstream os;
-      os << std::hex;
-      for (ast::Expr* a : Elements_)
-        os << a << " ";
-      diagnostic::engine.emit("args of ListExpr are " + os.str(), /*sv=*/diagnostic::DiagnosticEngine::Severity::NOTE);
-    }
   }
 
-  Expr* operator[](const std::size_t i) { return Elements_[i]; }
+  Expr* operator[](const SizeType i) { return Elements_[i]; }
 
   ListExpr(ListExpr&&) MYLANG_NOEXCEPT                 = delete;
   ListExpr(const ListExpr&) MYLANG_NOEXCEPT            = delete;
@@ -202,20 +192,6 @@ class CallExpr: public Expr
       Args_(a)
   {
     Kind_ = Kind::CALL;
-    if (Args_ == nullptr || Args_->isEmpty())
-      diagnostic::engine.emit("args of CallExpr is initially empty!", diagnostic::DiagnosticEngine::Severity::NOTE);
-    else
-    {
-      std::stringstream os;
-      os << std::hex;
-
-      for (auto a : Args_->getElements())
-      {
-        os << a << " ";
-      }
-
-      diagnostic::engine.emit("args of CallExpr are " + os.str(), diagnostic::DiagnosticEngine::Severity::NOTE);
-    }
   }
 
   CallExpr(CallExpr&&) MYLANG_NOEXCEPT                 = delete;

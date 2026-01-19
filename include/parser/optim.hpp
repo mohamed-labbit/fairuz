@@ -19,11 +19,11 @@ class ASTOptimizer
  private:
   struct OptimizationStats
   {
-    std::size_t ConstantFolds{0};
-    std::size_t DeadCodeEliminations{0};
-    std::size_t CommonSubexprEliminations{0};
-    std::size_t LoopInvariants{0};
-    std::size_t StrengthReductions{0};
+    SizeType ConstantFolds{0};
+    SizeType DeadCodeEliminations{0};
+    SizeType CommonSubexprEliminations{0};
+    SizeType LoopInvariants{0};
+    SizeType StrengthReductions{0};
   };
 
   OptimizationStats Stats_;

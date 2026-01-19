@@ -12,13 +12,13 @@ enum class SymbolType : std::int32_t { VARIABLE, PARAMETER, KEYWORD, FUNCTION, C
 struct SymbolTableEntry
 {
 
-  SymbolType  type;
-  std::size_t scope;  // nesting_level
+  SymbolType type;
+  SizeType   scope;  // nesting_level
 
 
   SymbolTableEntry() = default;
 
-  SymbolTableEntry(SymbolType type, std::size_t scope) :
+  SymbolTableEntry(SymbolType type, SizeType scope) :
       type(type),
       scope(scope)
   {

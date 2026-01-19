@@ -30,7 +30,7 @@ class ArenaBlock
 {
  private:
   /// Size of this memory block in bytes
-  std::size_t Size_{DEFAULT_BLOCK_SIZE};
+  SizeType Size_{DEFAULT_BLOCK_SIZE};
   /// Pointer to the beginning of allocated memory
   Pointer Begin_{nullptr};
   /// Atomic Pointer to the next available byte (bump Pointer)
@@ -49,7 +49,7 @@ class ArenaBlock
      * The actual allocated size may be larger than requested to satisfy
      * alignment requirements.
      */
-  explicit ArenaBlock(const std::size_t size = DEFAULT_BLOCK_SIZE, const std::size_t alignment = alignof(std::max_align_t));
+  explicit ArenaBlock(const SizeType size = DEFAULT_BLOCK_SIZE, const SizeType alignment = alignof(std::max_align_t));
 
   /**
      * @brief Destructor - frees the allocated memory
@@ -120,7 +120,7 @@ class ArenaBlock
      * 
      * Thread-safe: protected by mutex
      */
-  std::size_t size() const
+  SizeType size() const
   {
     std::lock_guard<std::mutex> lock(Mutex_);
     return Size_;
@@ -135,13 +135,13 @@ class ArenaBlock
      * @note This is a snapshot value - by the time you use it,
      *       another thread may have consumed the space.
      */
-  std::size_t remaining() const
+  SizeType remaining() const
   {
     std::lock_guard<std::mutex> lock(Mutex_);
     if (Begin_ == nullptr)
       return 0;
     Pointer current_next = Next_.load(std::memory_order_acquire);
-    return static_cast<std::size_t>(Begin_ + Size_ - current_next);
+    return static_cast<SizeType>(Begin_ + Size_ - current_next);
   }
 
   /**
@@ -162,7 +162,7 @@ class ArenaBlock
      * 
      * @performance O(1) in the uncontended case, O(n) with high contention
      */
-  Pointer allocate(std::size_t bytes, std::optional<std::size_t> alignment = std::nullopt);
+  Pointer allocate(SizeType bytes, std::optional<SizeType> alignment = std::nullopt);
 
   /**
      * @brief Reserve memory without alignment (faster)
@@ -174,7 +174,7 @@ class ArenaBlock
      * @warning Returned Pointer may not be aligned!
      * @note Prefer allocate() for most use cases
      */
-  Pointer reserve(const std::size_t bytes);
+  Pointer reserve(const SizeType bytes);
 };  // ArenaBlock
 
 }

@@ -25,11 +25,11 @@ class SourceManager
 
   ~SourceManager() = default;
 
-  std::size_t line() const { return this->InputBuffer_.position().line; }
+  SizeType line() const { return this->InputBuffer_.position().line; }
 
-  std::size_t column() const { return this->InputBuffer_.position().column; }
+  SizeType column() const { return this->InputBuffer_.position().column; }
 
-  std::size_t fpos() const { return this->InputBuffer_.position().FilePos; }
+  SizeType fpos() const { return this->InputBuffer_.position().FilePos; }
 
   const std::string fpath() const MYLANG_NOEXCEPT { return this->FilePath_; }
 
@@ -37,20 +37,20 @@ class SourceManager
 
   bool done() const { return this->InputBuffer_.empty(); }
 
-  char16_t peek();
+  CharType peek();
 
-  char16_t consumeChar() { return this->InputBuffer_.consumeChar(); }
+  CharType consumeChar() { return this->InputBuffer_.consumeChar(); }
 
-  char16_t current() { return InputBuffer_.current(); }
+  CharType current() { return InputBuffer_.current(); }
 
-  std::pair<std::size_t, std::size_t> offsetMap(const std::size_t& offset);
+  std::pair<SizeType, SizeType> offsetMap(const SizeType& offset);
 
-  std::pair<std::size_t, std::size_t> offsetMap_(const std::size_t& offset) const;
+  std::pair<SizeType, SizeType> offsetMap_(const SizeType& offset) const;
 
  private:
   std::string         FilePath_;
   buffer::InputBuffer InputBuffer_;
-  char16_t*           Current_{nullptr};
+  CharType*           Current_{nullptr};
   buffer::Position    CurrentPosition_;
 };
 

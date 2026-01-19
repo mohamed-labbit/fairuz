@@ -48,7 +48,7 @@ class ParserTest: public ::testing::Test
 
   std::vector<tok::Token> createTokens(std::initializer_list<tok::TokenType> types)
   {
-    lex::Lexer                   lexer;
+    lex::Lexer              lexer;
     std::vector<tok::Token> tokens;
     tokens.emplace_back(lexer.make_token(tok::TokenType::BEGINMARKER, u"", 1, 1));
     int line = 1, col = 2;
@@ -282,15 +282,15 @@ TEST_F(ParserTest, ParseSimpleAddition)
   EXPECT_NE(add_expr->getRight(), nullptr) << "should get right hand side";
   parser::ast::Expr*     left_expr      = add_expr->getLeft();
   parser::ast::Expr*     right_expr     = add_expr->getRight();
-  tok::TokenType    operator_value = add_expr->getOperator();
+  tok::TokenType         operator_value = add_expr->getOperator();
   parser::ast::NameExpr* left_name      = dynamic_cast<parser::ast::NameExpr*>(left_expr);
   parser::ast::NameExpr* right_name     = dynamic_cast<parser::ast::NameExpr*>(right_expr);
   EXPECT_NE(left_name, nullptr) << "Should parse left hand side of expression";
   EXPECT_NE(right_name, nullptr) << "Should parse right hand side of expression";
-  StringType          expected_left_name      = u"ا";
-  StringType          expected_right_name     = u"ب";
-  StringType          left_name_value         = left_name->getValue();
-  StringType          right_name_value        = right_name->getValue();
+  StringType     expected_left_name      = u"ا";
+  StringType     expected_right_name     = u"ب";
+  StringType     left_name_value         = left_name->getValue();
+  StringType     right_name_value        = right_name->getValue();
   tok::TokenType expected_operator_value = tok::TokenType::OP_PLUS;
   EXPECT_EQ(left_name_value, expected_left_name) << "left hand side not parsed correctly";
   EXPECT_EQ(right_name_value, expected_right_name) << "right hand side not parsed correctly";
@@ -311,15 +311,15 @@ TEST_F(ParserTest, ParseSimpleMultiplication)
   EXPECT_NE(add_expr->getRight(), nullptr) << "should get right hand side";
   parser::ast::Expr*     left_expr      = add_expr->getLeft();
   parser::ast::Expr*     right_expr     = add_expr->getRight();
-  tok::TokenType    operator_value = add_expr->getOperator();
+  tok::TokenType         operator_value = add_expr->getOperator();
   parser::ast::NameExpr* left_name      = dynamic_cast<parser::ast::NameExpr*>(left_expr);
   parser::ast::NameExpr* right_name     = dynamic_cast<parser::ast::NameExpr*>(right_expr);
   EXPECT_NE(left_name, nullptr) << "Should parse left hand side of expression";
   EXPECT_NE(right_name, nullptr) << "Should parse right hand side of expression";
-  StringType          expected_left_name      = u"ا";
-  StringType          expected_right_name     = u"ب";
-  StringType          left_name_value         = left_name->getValue();
-  StringType          right_name_value        = right_name->getValue();
+  StringType     expected_left_name      = u"ا";
+  StringType     expected_right_name     = u"ب";
+  StringType     left_name_value         = left_name->getValue();
+  StringType     right_name_value        = right_name->getValue();
   tok::TokenType expected_operator_value = tok::TokenType::OP_STAR;
   EXPECT_EQ(left_name_value, expected_left_name) << "left hand side not parsed correctly";
   EXPECT_EQ(right_name_value, expected_right_name) << "right hand side not parsed correctly";
@@ -340,15 +340,15 @@ TEST_F(ParserTest, ParseSimpleSubtraction)
   EXPECT_NE(add_expr->getRight(), nullptr) << "should get right hand side";
   parser::ast::Expr*     left_expr      = add_expr->getLeft();
   parser::ast::Expr*     right_expr     = add_expr->getRight();
-  tok::TokenType    operator_value = add_expr->getOperator();
+  tok::TokenType         operator_value = add_expr->getOperator();
   parser::ast::NameExpr* left_name      = dynamic_cast<parser::ast::NameExpr*>(left_expr);
   parser::ast::NameExpr* right_name     = dynamic_cast<parser::ast::NameExpr*>(right_expr);
   EXPECT_NE(left_name, nullptr) << "Should parse left hand side of expression";
   EXPECT_NE(right_name, nullptr) << "Should parse right hand side of expression";
-  StringType          expected_left_name      = u"ا";
-  StringType          expected_right_name     = u"ب";
-  StringType          left_name_value         = left_name->getValue();
-  StringType          right_name_value        = right_name->getValue();
+  StringType     expected_left_name      = u"ا";
+  StringType     expected_right_name     = u"ب";
+  StringType     left_name_value         = left_name->getValue();
+  StringType     right_name_value        = right_name->getValue();
   tok::TokenType expected_operator_value = tok::TokenType::OP_MINUS;
   EXPECT_EQ(left_name_value, expected_left_name) << "left hand side not parsed correctly";
   EXPECT_EQ(right_name_value, expected_right_name) << "right hand side not parsed correctly";
@@ -369,15 +369,15 @@ TEST_F(ParserTest, ParseSimpleDivision)
   EXPECT_NE(add_expr->getRight(), nullptr) << "should get right hand side";
   parser::ast::Expr*     left_expr      = add_expr->getLeft();
   parser::ast::Expr*     right_expr     = add_expr->getRight();
-  tok::TokenType    operator_value = add_expr->getOperator();
+  tok::TokenType         operator_value = add_expr->getOperator();
   parser::ast::NameExpr* left_name      = dynamic_cast<parser::ast::NameExpr*>(left_expr);
   parser::ast::NameExpr* right_name     = dynamic_cast<parser::ast::NameExpr*>(right_expr);
   EXPECT_NE(left_name, nullptr) << "Should parse left hand side of expression";
   EXPECT_NE(right_name, nullptr) << "Should parse right hand side of expression";
-  StringType          expected_left_name      = u"ا";
-  StringType          expected_right_name     = u"ب";
-  StringType          left_name_value         = left_name->getValue();
-  StringType          right_name_value        = right_name->getValue();
+  StringType     expected_left_name      = u"ا";
+  StringType     expected_right_name     = u"ب";
+  StringType     left_name_value         = left_name->getValue();
+  StringType     right_name_value        = right_name->getValue();
   tok::TokenType expected_operator_value = tok::TokenType::OP_SLASH;
   EXPECT_EQ(left_name_value, expected_left_name) << "left hand side not parsed correctly";
   EXPECT_EQ(right_name_value, expected_right_name) << "right hand side not parsed correctly";
@@ -713,7 +713,7 @@ TEST_F(ParserTest, ParseVeryLongIdentifier)
   EXPECT_GT(value.length(), 100) << "Identifier should be very long";
   EXPECT_LT(value.length(), 10000) << "Identifier should have reasonable upper bound";
   // Verify it's all valid identifier characters
-  for (auto ch : value)
+  for (CharType ch : value)
     EXPECT_TRUE(std::isalnum(ch) || ch == U'_' || ch > 127) << "All characters should be valid identifier chars";
   if (test_config::print_ast)
     AST_Printer.print(expr);
@@ -866,15 +866,15 @@ TEST_F(ParserTest, ParseChainedAssignmentWithExpr)
   ASSERT_NE(value->getRight(), nullptr) << "Should get right hand side";
   parser::ast::Expr*     left_expr      = value->getLeft();
   parser::ast::Expr*     right_expr     = value->getRight();
-  tok::TokenType    operator_value = value->getOperator();
+  tok::TokenType         operator_value = value->getOperator();
   parser::ast::NameExpr* left_name      = dynamic_cast<parser::ast::NameExpr*>(left_expr);
   parser::ast::NameExpr* right_name     = dynamic_cast<parser::ast::NameExpr*>(right_expr);
   ASSERT_NE(left_name, nullptr) << "Should parse left hand side of expression";
   ASSERT_NE(right_name, nullptr) << "Should parse right hand side of expression";
-  StringType          expected_left_name      = u"م";
-  StringType          expected_right_name     = u"ل";
-  StringType          left_name_value         = left_name->getValue();
-  StringType          right_name_value        = right_name->getValue();
+  StringType     expected_left_name      = u"م";
+  StringType     expected_right_name     = u"ل";
+  StringType     left_name_value         = left_name->getValue();
+  StringType     right_name_value        = right_name->getValue();
   tok::TokenType expected_operator_value = tok::TokenType::OP_PLUS;
   EXPECT_EQ(left_name_value, expected_left_name) << "Left hand side not parsed correctly";
   EXPECT_EQ(right_name_value, expected_right_name) << "Right hand side not parsed correctly";
@@ -945,33 +945,105 @@ TEST_F(ParserTest, ParseWhileLoop)
   parser::Parser     parser(&file_manager);
   parser::ast::Stmt* stmt = parser.parseWhileStmt();
   ASSERT_NE(stmt, nullptr) << "Should parse while loop statement";
+
   if (test_config::print_ast)
     AST_Printer.print(stmt);
+
   parser::ast::WhileStmt* while_stmt = dynamic_cast<parser::ast::WhileStmt*>(stmt);
   ASSERT_NE(while_stmt, nullptr) << "Should parse while loop statement";
+
+  // Check condition
   parser::ast::BinaryExpr* condition_expr = dynamic_cast<parser::ast::BinaryExpr*>(while_stmt->getCondition());
   ASSERT_NE(condition_expr, nullptr) << "Should parse while loop condition expression";
-  if (test_config::print_ast)
-    AST_Printer.print(condition_expr);
-  /// TODO: check the condition itself
-  parser::ast::NameExpr* left  = dynamic_cast<parser::ast::NameExpr*>(condition_expr->getLeft());
-  parser::ast::NameExpr* right = dynamic_cast<parser::ast::NameExpr*>(condition_expr->getRight());
-  ASSERT_NE(left, nullptr);
-  ASSERT_NE(right, nullptr);
+
+  // Check condition operands: left is Name, right is Literal
+  parser::ast::NameExpr*    left  = dynamic_cast<parser::ast::NameExpr*>(condition_expr->getLeft());
+  parser::ast::LiteralExpr* right = dynamic_cast<parser::ast::LiteralExpr*>(condition_expr->getRight());
+  ASSERT_NE(left, nullptr) << "Left operand should be a NameExpr";
+  ASSERT_NE(right, nullptr) << "Right operand should be a LiteralExpr";
   EXPECT_EQ(left->getValue(), u"شيء");
   EXPECT_EQ(right->getValue(), u"صحيح");
   EXPECT_EQ(condition_expr->getOperator(), tok::TokenType::OP_EQ);
-  parser::ast::BlockStmt* block = while_stmt->getBlock();
-  ASSERT_NE(block, nullptr) << "Should parse while loop indented block";
+
+  // Check body (using getBody() instead of getBlock())
+  parser::ast::BlockStmt* block = dynamic_cast<parser::ast::BlockStmt*>(while_stmt->getBlock());
+  ASSERT_NE(block, nullptr) << "Should parse while loop body block";
+
+  // Check block has statements
+  ASSERT_GT(block->getStatements().size(), 0) << "Block should have at least one statement";
+
+  // Check assignment statement (wrapped in ExprStmt)
+  parser::ast::ExprStmt* expr_stmt = dynamic_cast<parser::ast::ExprStmt*>(block->getStatements()[0]);
+  ASSERT_NE(expr_stmt, nullptr) << "First statement should be an expression statement";
+
+  parser::ast::AssignmentExpr* assign_expr = dynamic_cast<parser::ast::AssignmentExpr*>(expr_stmt->getExpr());
+  ASSERT_NE(assign_expr, nullptr) << "Expression should be an assignment";
+
+  // Check assignment: target is Name, value is Literal
+  parser::ast::NameExpr*    target = dynamic_cast<parser::ast::NameExpr*>(assign_expr->getTarget());
+  parser::ast::LiteralExpr* value  = dynamic_cast<parser::ast::LiteralExpr*>(assign_expr->getValue());
+  ASSERT_NE(target, nullptr) << "Assignment target should be a NameExpr";
+  ASSERT_NE(value, nullptr) << "Assignment value should be a LiteralExpr";
+  EXPECT_EQ(target->getValue(), u"بسبسمياو");
+  EXPECT_EQ(value->getValue(), u"خطا");
+}
+
+TEST_F(ParserTest, ParseComplexeIfStatement)
+{
+  input::FileManager file_manager(parser_test_cases_dir() / "complexe_if_statement.txt");
+  parser::Parser     parser(&file_manager);
+
+  parser::ast::Stmt* stmt = parser.parseIfStmt();
+  ASSERT_NE(stmt, nullptr) << "Should parse if statement";
+
   if (test_config::print_ast)
-    AST_Printer.print(block);
-  /// TODO: check the block itself
-  parser::ast::AssignmentStmt* assign_stmt = dynamic_cast<parser::ast::AssignmentStmt*>(block->getStatements()[0]);
-  ASSERT_NE(assign_stmt, nullptr);
-  parser::ast::NameExpr* target = dynamic_cast<parser::ast::NameExpr*>(assign_stmt->getTarget());
-  parser::ast::NameExpr* value  = dynamic_cast<parser::ast::NameExpr*>(assign_stmt->getValue());
-  ASSERT_NE(target, nullptr);
-  ASSERT_NE(value, nullptr);
+    AST_Printer.print(stmt);
+
+  parser::ast::IfStmt* if_stmt = dynamic_cast<parser::ast::IfStmt*>(stmt);
+  ASSERT_NE(if_stmt, nullptr) << "Conversion to if statement failed";
+  
+  parser::ast::BinaryExpr* first_condition_expr = dynamic_cast<parser::ast::BinaryExpr*>(if_stmt->getCondition());
+  ASSERT_NE(first_condition_expr, nullptr);
+
+  EXPECT_EQ(dynamic_cast<parser::ast::NameExpr*>(first_condition_expr->getLeft())->getValue(), u"شيء");
+  EXPECT_EQ(dynamic_cast<parser::ast::LiteralExpr*>(first_condition_expr->getRight())->getValue(), u"صحيح");
+  EXPECT_EQ(first_condition_expr->getOperator(), tok::TokenType::OP_NEQ);
+
+  parser::ast::WhileStmt* while_stmt = dynamic_cast<parser::ast::WhileStmt*>(if_stmt->getThenBlock()->getStatements()[0]);
+  ASSERT_NE(while_stmt, nullptr) << "Should parse while loop statement";
+
+  // Check condition
+  parser::ast::BinaryExpr* condition_expr = dynamic_cast<parser::ast::BinaryExpr*>(while_stmt->getCondition());
+  ASSERT_NE(condition_expr, nullptr) << "Should parse while loop condition expression";
+
+  // Check condition operands: left is Name, right is Literal
+  parser::ast::NameExpr*    left  = dynamic_cast<parser::ast::NameExpr*>(condition_expr->getLeft());
+  parser::ast::LiteralExpr* right = dynamic_cast<parser::ast::LiteralExpr*>(condition_expr->getRight());
+  ASSERT_NE(left, nullptr) << "Left operand should be a NameExpr";
+  ASSERT_NE(right, nullptr) << "Right operand should be a LiteralExpr";
+  EXPECT_EQ(left->getValue(), u"شيء");
+  EXPECT_EQ(right->getValue(), u"صحيح");
+  EXPECT_EQ(condition_expr->getOperator(), tok::TokenType::OP_EQ);
+
+  // Check body (using getBody() instead of getBlock())
+  parser::ast::BlockStmt* block = dynamic_cast<parser::ast::BlockStmt*>(while_stmt->getBlock());
+  ASSERT_NE(block, nullptr) << "Should parse while loop body block";
+
+  // Check block has statements
+  ASSERT_GT(block->getStatements().size(), 0) << "Block should have at least one statement";
+
+  // Check assignment statement (wrapped in ExprStmt)
+  parser::ast::ExprStmt* expr_stmt = dynamic_cast<parser::ast::ExprStmt*>(block->getStatements()[0]);
+  ASSERT_NE(expr_stmt, nullptr) << "First statement should be an expression statement";
+
+  parser::ast::AssignmentExpr* assign_expr = dynamic_cast<parser::ast::AssignmentExpr*>(expr_stmt->getExpr());
+  ASSERT_NE(assign_expr, nullptr) << "Expression should be an assignment";
+
+  // Check assignment: target is Name, value is Literal
+  parser::ast::NameExpr*    target = dynamic_cast<parser::ast::NameExpr*>(assign_expr->getTarget());
+  parser::ast::LiteralExpr* value  = dynamic_cast<parser::ast::LiteralExpr*>(assign_expr->getValue());
+  ASSERT_NE(target, nullptr) << "Assignment target should be a NameExpr";
+  ASSERT_NE(value, nullptr) << "Assignment value should be a LiteralExpr";
   EXPECT_EQ(target->getValue(), u"بسبسمياو");
   EXPECT_EQ(value->getValue(), u"خطا");
 }

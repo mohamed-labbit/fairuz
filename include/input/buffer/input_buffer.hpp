@@ -11,13 +11,13 @@ namespace buffer {
 
 struct Position
 {
-  std::size_t line{0};
-  std::size_t column{0};
-  std::size_t FilePos{0};
+  SizeType line{0};
+  SizeType column{0};
+  SizeType FilePos{0};
 
   Position() = default;
 
-  Position(const std::size_t line, const std::size_t col, std::size_t fpos) :
+  Position(const SizeType line, const SizeType col, SizeType fpos) :
       line(line),
       column(col),
       FilePos(fpos)
@@ -28,11 +28,11 @@ struct Position
 class InputBuffer: public InputBufferBase
 {
  public:
-  using Pointer = char16_t*;
+  using Pointer = CharType*;
 
   InputBuffer() = default;
 
-  InputBuffer(input::FileManager* file_manager, std::size_t cap = DEFAULT_CAPACITY) :
+  InputBuffer(input::FileManager* file_manager, SizeType cap = DEFAULT_CAPACITY) :
       Capacity_(cap),
       InputBufferBase(file_manager, cap)
   {
@@ -41,31 +41,31 @@ class InputBuffer: public InputBufferBase
     reset();
   }
 
-  std::size_t size() const { return Buffers_[CurrentBuffer_].length(); }
+  SizeType size() const { return Buffers_[CurrentBuffer_].length(); }
 
-  std::size_t bufferOffset() const { return static_cast<std::size_t>(Current_ - Buffers_[CurrentBuffer_].data()); }
+  SizeType bufferOffset() const { return static_cast<SizeType>(Current_ - Buffers_[CurrentBuffer_].data()); }
 
   bool empty() const { return (!FileManager_->isOpen() || Current_ == nullptr || Buffers_[CurrentBuffer_].empty()); }
 
-  char16_t at(const std::size_t idx) const { return Buffers_[CurrentBuffer_][idx]; }
+  CharType at(const SizeType idx) const { return Buffers_[CurrentBuffer_][idx]; }
 
-  char16_t consumeChar();
-
-  MYLANG_NODISCARD
-  const char16_t& current();
+  CharType consumeChar();
 
   MYLANG_NODISCARD
-  const char16_t& peek();
+  const CharType& current();
 
-  StringType nPeek(std::size_t n);
+  MYLANG_NODISCARD
+  const CharType& peek();
 
-  void consume(std::size_t len)
+  StringType nPeek(SizeType n);
+
+  void consume(SizeType len)
   {
     while (len-- > 0)
       consumeChar();
   }
 
-  void unget(char16_t ch);
+  void unget(CharType ch);
 
   void reset();
 
@@ -74,21 +74,21 @@ class InputBuffer: public InputBufferBase
  private:
   struct PushbackEntry
   {
-    char16_t ch;
+    CharType ch;
     Position pos;
   };
 
-  std::size_t               Capacity_ = DEFAULT_CAPACITY;
+  SizeType                  Capacity_ = DEFAULT_CAPACITY;
   Pointer                   Current_{nullptr};
   uint8_t                   CurrentBuffer_{0};
-  std::size_t               FilePos_{0};
+  SizeType                  FilePos_{0};
   Position                  CurrentPosition_;
-  std::stack<std::size_t>   Columns_;
+  std::stack<SizeType>      Columns_;
   std::stack<PushbackEntry> UngetStack_;
 
   void swapBuffers_();
-  void advancePosition_(char16_t ch);
-  void rewindPosition_(char16_t ch);
+  void advancePosition_(CharType ch);
+  void rewindPosition_(CharType ch);
 };
 
 }

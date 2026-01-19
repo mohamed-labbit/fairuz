@@ -17,7 +17,7 @@ class InputBufferBase
  public:
   using buffer_t = StringType;
 
-  InputBufferBase(input::FileManager* fm, std::size_t cap = DEFAULT_CAPACITY) :
+  InputBufferBase(input::FileManager* fm, SizeType cap = DEFAULT_CAPACITY) :
       FileManager_(fm),
       BytePosition_(0),
       CharCount_(0)
@@ -37,8 +37,8 @@ class InputBufferBase
  protected:
   input::FileManager* FileManager_{nullptr};
   buffer_t            Buffers_[2];
-  std::size_t         BytePosition_;  // Current byte position in file
-  std::size_t         CharCount_;     // Total characters read so far
+  SizeType            BytePosition_;  // Current byte position in file
+  SizeType            CharCount_;     // Total characters read so far
 };
 }
 }  // lex

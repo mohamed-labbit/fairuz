@@ -39,7 +39,7 @@ void FileManager::reset()
   Context_.reset();
 }
 
-void FileManager::seekToChar(const std::size_t CharOffset)
+void FileManager::seekToChar(const SizeType CharOffset)
 {
   if (CharOffset == Context_.CharOffset)
     return;
@@ -50,14 +50,14 @@ void FileManager::seekToChar(const std::size_t CharOffset)
 
   while (Context_.CharOffset < CharOffset)
   {
-    const std::size_t chars_to_read = CharOffset - Context_.CharOffset;
-    StringType        result        = readWindowInternal(std::min(chars_to_read, std::size_t{1024}));
+    const SizeType chars_to_read = CharOffset - Context_.CharOffset;
+    StringType     result        = readWindowInternal(std::min(chars_to_read, SizeType{1024}));
     if (result.empty())
       throw error::FileError(toString(FileManagerError::UNEXPECTED_EOF));
   }
 }
 
-constexpr std::size_t getUtf8SequenceLength(unsigned char first_byte)
+constexpr SizeType getUtf8SequenceLength(unsigned char first_byte)
 {
   if ((first_byte & 0x80) == 0)
     return 1;
@@ -70,16 +70,16 @@ constexpr std::size_t getUtf8SequenceLength(unsigned char first_byte)
   return 1;
 }
 
-std::size_t FileManager::validateUtf8Bound(std::span<const char> buffer) const
+SizeType FileManager::validateUtf8Bound(std::span<const char> buffer) const
 {
   if (buffer.empty())
     return 0;
 
-  const std::size_t size = buffer.size();
+  const SizeType size = buffer.size();
 
-  for (std::size_t i = 0, n = std::min(MAX_UTF8_CHAR_BYTES, size); i < n; ++i)
+  for (SizeType i = 0, n = std::min(MAX_UTF8_CHAR_BYTES, size); i < n; ++i)
   {
-    const std::size_t   pos  = size - 1 - i;
+    const SizeType      pos  = size - 1 - i;
     const unsigned char byte = static_cast<unsigned char>(buffer[pos]);
 
     if ((byte & 0x80) == 0)
@@ -87,8 +87,8 @@ std::size_t FileManager::validateUtf8Bound(std::span<const char> buffer) const
 
     if ((byte & 0xC0) == 0xC0)
     {
-      const std::size_t expected  = getUtf8SequenceLength(byte);
-      const std::size_t available = size - pos;
+      const SizeType expected  = getUtf8SequenceLength(byte);
+      const SizeType available = size - pos;
 
       if (available < expected)
         return i + 1;
@@ -100,7 +100,7 @@ std::size_t FileManager::validateUtf8Bound(std::span<const char> buffer) const
   return std::min(MAX_UTF8_CHAR_BYTES, size);
 }
 
-StringType FileManager::readWindowInternal(const std::size_t size)
+StringType FileManager::readWindowInternal(const SizeType size)
 {
   if (size == 0)
     return StringType{};
@@ -108,7 +108,7 @@ StringType FileManager::readWindowInternal(const std::size_t size)
   if (!isOpen())
     throw error::FileError(toString(FileManagerError::FILE_NOT_OPEN));
 
-  const std::size_t byte_chunk_size = size * MAX_UTF8_CHAR_BYTES;
+  const SizeType    byte_chunk_size = size * MAX_UTF8_CHAR_BYTES;
   std::vector<char> byte_buffer(byte_chunk_size);
   Stream_.read(byte_buffer.data(), byte_chunk_size);
   std::streamsize bytes_read = Stream_.gcount();
@@ -124,8 +124,8 @@ StringType FileManager::readWindowInternal(const std::size_t size)
   if (bytes_read < 0)
     throw error::FileError(toString(FileManagerError::READ_ERROR));
 
-  byte_buffer.resize(static_cast<std::size_t>(bytes_read));
-  const std::size_t bytes_to_rewind = validateUtf8Bound(byte_buffer);
+  byte_buffer.resize(static_cast<SizeType>(bytes_read));
+  const SizeType bytes_to_rewind = validateUtf8Bound(byte_buffer);
 
   if (bytes_to_rewind > 0)
   {
@@ -136,16 +136,16 @@ StringType FileManager::readWindowInternal(const std::size_t size)
       throw error::FileError(toString(FileManagerError::SEEK_OUT_OF_BOUND));
   }
 
-  const std::size_t valid_bytes = byte_buffer.size();
+  const SizeType valid_bytes = byte_buffer.size();
   Context_.ByteOffset += valid_bytes;
   // Context_.bytes_read_total += valid_bytes
   StringType result = utf8::utf8to16(std::string(byte_buffer.begin(), byte_buffer.end()));
 
   if (result.size() > size)
   {
-    const std::size_t chars_to_trim = result.size() - size;
-    std::string       trimmed_utf8;
-    auto              start = result.begin() + static_cast<std::ptrdiff_t>(size);
+    const SizeType chars_to_trim = result.size() - size;
+    std::string    trimmed_utf8;
+    auto           start = result.begin() + static_cast<std::ptrdiff_t>(size);
     utf8::utf16to8(start, result.end(), std::back_inserter(trimmed_utf8));
     Stream_.seekg(-static_cast<std::streamoff>(trimmed_utf8.size()), std::ios_base::cur);
     Context_.ByteOffset -= trimmed_utf8.size();
@@ -157,10 +157,10 @@ StringType FileManager::readWindowInternal(const std::size_t size)
   return result;
 }
 
-StringType FileManager::readLine(const std::size_t line_number)
+StringType FileManager::readLine(const SizeType line_number)
 {
   seekToLine(line_number);
-  const std::size_t LineLength = LineIndices_[line_number].LineLength;
+  const SizeType LineLength = LineIndices_[line_number].LineLength;
   return readWindowInternal(LineLength);
 }
 
@@ -176,7 +176,7 @@ StringType FileManager::readNextLine()
     if (chunk.empty())
       break;
 
-    const char16_t c = chunk[0];
+    const CharType c = chunk[0];
 
     if (c == u'\n')
     {
@@ -210,7 +210,7 @@ StringType FileManager::readNextLine()
   return line;
 }
 
-std::vector<StringType> FileManager::readLines(const std::size_t start, const std::size_t count)
+std::vector<StringType> FileManager::readLines(const SizeType start, const SizeType count)
 {
   if (!LineIndexBuilt_)
     buildLineIndex();
@@ -218,11 +218,11 @@ std::vector<StringType> FileManager::readLines(const std::size_t start, const st
   if (start >= LineIndices_.size())
     throw error::FileError(toString(FileManagerError::INVALID_LINE_NUMBER));
 
-  const std::size_t       end = std::min(start + count, LineIndices_.size());
+  const SizeType          end = std::min(start + count, LineIndices_.size());
   std::vector<StringType> lines;
   lines.reserve(end - start);
 
-  for (std::size_t i = start; i < end; ++i)
+  for (SizeType i = start; i < end; ++i)
     lines.push_back(std::move(readLine(i)));
 
   return lines;
@@ -268,14 +268,14 @@ void FileManager::refreshStats()
   }
 }
 
-char16_t FileManager::peekChar(const std::size_t CharOffset)
+CharType FileManager::peekChar(const SizeType CharOffset)
 {
   pushPosition();
   seekToChar(CharOffset);
   return readWindowInternal(1)[0];
 }
 
-StringType FileManager::peekRange(const std::size_t start_offset, const std::size_t length)
+StringType FileManager::peekRange(const SizeType start_offset, const SizeType length)
 {
   pushPosition();
   seekToChar(start_offset);
@@ -293,12 +293,12 @@ void FileManager::buildLineIndex()
   LineIndices_.clear();
   LineIndices_.reserve(Stats_.TotalBytes / 80);  // roughly
 
-  std::size_t byte_pos    = 0;
-  std::size_t char_pos    = 0;
-  std::size_t start_byte  = 0;
-  std::size_t start_char  = 0;
-  std::size_t max_len     = 0;
-  std::size_t current_len = 0;
+  SizeType byte_pos    = 0;
+  SizeType char_pos    = 0;
+  SizeType start_byte  = 0;
+  SizeType start_char  = 0;
+  SizeType max_len     = 0;
+  SizeType current_len = 0;
 
   for (;;)
   {
@@ -306,7 +306,7 @@ void FileManager::buildLineIndex()
     if (chunk.empty())
       break;
 
-    for (char16_t c : chunk)
+    for (CharType c : chunk)
     {
       current_len++;
 

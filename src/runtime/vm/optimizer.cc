@@ -33,7 +33,7 @@ void BytecodeOptimizer::printReport(std::ostream& out) const
       out << "  • " << pass.name << ": " << pass.ApplicationsCount << " applications\n";
 }
 
-bool BytecodeOptimizer::isJumpTarget(const std::vector<bytecode::Instruction>& code, std::size_t pos)
+bool BytecodeOptimizer::isJumpTarget(const std::vector<bytecode::Instruction>& code, SizeType pos)
 {
   // Check if any instruction jumps to this position
   for (const bytecode::Instruction& instr : code)

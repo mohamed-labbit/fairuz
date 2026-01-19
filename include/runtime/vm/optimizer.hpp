@@ -5,6 +5,7 @@
 #include <string>
 
 #include "bytecode.hpp"
+#include "../../macros.hpp"
 
 
 namespace mylang {
@@ -34,13 +35,13 @@ class BytecodeOptimizer
     // Pass 1: Dead code elimination after returns
     Passes_.push_back({"Dead code after return", [](std::vector<bytecode::Instruction>& code) -> bool {
                          bool changed = false;
-                         for (std::size_t i = 0; i + 1 < code.size(); i++)
+                         for (SizeType i = 0; i + 1 < code.size(); i++)
                          {
                            if (code[i].op == bytecode::OpCode::RETURN || code[i].op == bytecode::OpCode::HALT)
                            {
                              // Remove instructions until next label/jump target
-                             std::size_t toRemove = 0;
-                             for (std::size_t j = i + 1; j < code.size(); j++)
+                             SizeType toRemove = 0;
+                             for (SizeType j = i + 1; j < code.size(); j++)
                              {
                                if (isJumpTarget(code, j))
                                  break;
@@ -59,7 +60,7 @@ class BytecodeOptimizer
     Passes_.push_back({"Constant folding", [](std::vector<bytecode::Instruction>& code) -> bool {
                          bool changed = false;
                          // Find LOAD_CONST, LOAD_CONST, binary_op patterns
-                         for (std::size_t i = 0; i + 2 < code.size(); i++)
+                         for (SizeType i = 0; i + 2 < code.size(); i++)
                          {
                            if (code[i].op == bytecode::OpCode::LOAD_CONST && code[i + 1].op == bytecode::OpCode::LOAD_CONST
                                && isBinaryOp(code[i + 2].op))
@@ -100,7 +101,7 @@ class BytecodeOptimizer
   void printReport(std::ostream& out) const;
 
  private:
-  static bool isJumpTarget(const std::vector<bytecode::Instruction>& code, std::size_t pos);
+  static bool isJumpTarget(const std::vector<bytecode::Instruction>& code, SizeType pos);
   static bool isJumpOp(bytecode::OpCode op);
   static bool isBinaryOp(bytecode::OpCode op);
 };  // BytecodeOptimizer

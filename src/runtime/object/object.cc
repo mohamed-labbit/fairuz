@@ -141,7 +141,7 @@ StringType object::Value::toString() const
   case Type::LIST : {
     StringType                        result = u"[";
     const std::vector<object::Value>& list   = asList();
-    for (std::size_t i = 0; i < list.size(); i++)
+    for (SizeType i = 0; i < list.size(); i++)
     {
       result += list[i].toString();
       if (i + 1 < list.size())
@@ -152,7 +152,7 @@ StringType object::Value::toString() const
   case Type::DICT : {
     StringType                                                    result = u"{";
     const std::shared_ptr<std::unordered_map<StringType, Value>>& dict   = std::get<std::shared_ptr<std::unordered_map<StringType, Value>>>(Data_);
-    std::size_t                                                   count  = 0;
+    SizeType                                                      count  = 0;
     for (const auto& [k, v] : *dict)
     {
       result += u"'" + k + u"': " + v.toString();
@@ -178,7 +178,7 @@ std::string object::Value::repr() const
 }
 
 // Hash for use in dictionaries
-std::size_t object::Value::hash() const
+SizeType object::Value::hash() const
 {
   std::hash<StringType> hasher;
   return hasher(toString());

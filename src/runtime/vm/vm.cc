@@ -67,7 +67,7 @@ void VirtualMachine::registerNativeFunctions()
 {
   // print
   nativeFunctions["print"] = [](const std::vector<object::Value>& args) {
-    for (std::size_t i = 0; i < args.size(); i++)
+    for (SizeType i = 0; i < args.size(); i++)
     {
       std::cout << args[i].repr();
       if (i + 1 < args.size())
@@ -194,7 +194,7 @@ void VirtualMachine::registerNativeFunctions()
       if (list.empty())
         diagnostic::engine.panic("min() arg is empty sequence");
       object::Value minVal = list[0];
-      for (std::size_t i = 1; i < list.size(); i++)
+      for (SizeType i = 1; i < list.size(); i++)
       {
         if (list[i] < minVal)
           minVal = list[i];
@@ -202,7 +202,7 @@ void VirtualMachine::registerNativeFunctions()
       return minVal;
     }
     object::Value minVal = args[0];
-    for (std::size_t i = 1; i < args.size(); i++)
+    for (SizeType i = 1; i < args.size(); i++)
     {
       if (args[i] < minVal)
         minVal = args[i];
@@ -219,7 +219,7 @@ void VirtualMachine::registerNativeFunctions()
       if (list.empty())
         diagnostic::engine.panic("max() arg is empty sequence");
       object::Value maxVal = list[0];
-      for (std::size_t i = 1; i < list.size(); i++)
+      for (SizeType i = 1; i < list.size(); i++)
       {
         if (list[i] > maxVal)
           maxVal = list[i];
@@ -227,7 +227,7 @@ void VirtualMachine::registerNativeFunctions()
       return maxVal;
     }
     object::Value maxVal = args[0];
-    for (std::size_t i = 1; i < args.size(); i++)
+    for (SizeType i = 1; i < args.size(); i++)
     {
       if (args[i] > maxVal)
         maxVal = args[i];
@@ -262,7 +262,7 @@ void VirtualMachine::registerNativeFunctions()
       diagnostic::engine.panic("enumerate() requires list");
     std::vector<object::Value>        result;
     const std::vector<object::Value>& list = args[0].asList();
-    for (std::size_t i = 0; i < list.size(); i++)
+    for (SizeType i = 0; i < list.size(); i++)
     {
       std::vector<object::Value> pair = {object::Value(static_cast<std::int64_t>(i)), list[i]};
       result.push_back(object::Value(pair));
@@ -273,7 +273,7 @@ void VirtualMachine::registerNativeFunctions()
   nativeFunctions["zip"] = [](const std::vector<object::Value>& args) {
     if (args.size() < 2)
       diagnostic::engine.panic("zip() requires at least 2 arguments");
-    std::size_t minLen = SIZE_MAX;
+    SizeType minLen = SIZE_MAX;
     for (const object::Value& arg : args)
     {
       if (!arg.isList())
@@ -281,7 +281,7 @@ void VirtualMachine::registerNativeFunctions()
       minLen = std::min(minLen, arg.asList().size());
     }
     std::vector<object::Value> result;
-    for (std::size_t i = 0; i < minLen; i++)
+    for (SizeType i = 0; i < minLen; i++)
     {
       std::vector<object::Value> tuple;
       for (const object::Value& arg : args)
@@ -712,7 +712,7 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     std::vector<object::Value> args;
     for (std::int32_t i = 0; i < instr.arg; i++)
       args.insert(args.begin(), pop());
-    for (std::size_t i = 0; i < args.size(); i++)
+    for (SizeType i = 0; i < args.size(); i++)
     {
       std::cout << args[i].repr();
       if (i + 1 < args.size())

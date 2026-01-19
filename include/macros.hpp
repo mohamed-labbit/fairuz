@@ -21,6 +21,8 @@
 
 namespace mylang {
 typedef std::u16string StringType;
+typedef char16_t       CharType;
+typedef std::size_t    SizeType;
 }
 
 // Terminal colors

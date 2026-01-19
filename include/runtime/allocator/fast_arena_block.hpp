@@ -25,12 +25,12 @@ using Pointer = Byte*;              /// Generic Pointer type for arena memory
  * 
  * @note This class is fully thread-safe without mutexes
  */
-template<std::size_t ObjectSize>
+template<SizeType ObjectSize>
 class LockFreeFastAllocBlock
 {
  private:
   /// Size of the block (atomic for move operations)
-  std::atomic<std::size_t> Size_{DEFAULT_BLOCK_SIZE};
+  std::atomic<SizeType> Size_{DEFAULT_BLOCK_SIZE};
   /// Beginning of allocated memory (atomic)
   std::atomic<Pointer> Begin_{nullptr};
   /// Next available byte (atomic bump Pointer)
@@ -47,10 +47,10 @@ class LockFreeFastAllocBlock
      * 
      * The block is automatically aligned to ObjectSize boundary.
      */
-  explicit LockFreeFastAllocBlock(std::size_t size)
+  explicit LockFreeFastAllocBlock(SizeType size)
   {
     // Use at least DEFAULT_BLOCK_SIZE
-    std::size_t actual_size = size > DEFAULT_BLOCK_SIZE ? size : DEFAULT_BLOCK_SIZE;
+    SizeType actual_size = size > DEFAULT_BLOCK_SIZE ? size : DEFAULT_BLOCK_SIZE;
     // Round up to multiple of ObjectSize
     actual_size = (actual_size + ObjectSize - 1) & ~(ObjectSize - 1);
     // Allocate aligned memory
@@ -130,8 +130,8 @@ class LockFreeFastAllocBlock
   /// Get end of block
   Pointer end() const
   {
-    Pointer     b = Begin_.load(std::memory_order_acquire);
-    std::size_t s = Size_.load(std::memory_order_acquire);
+    Pointer  b = Begin_.load(std::memory_order_acquire);
+    SizeType s = Size_.load(std::memory_order_acquire);
     return b ? (b + s) : nullptr;
   }
 
@@ -139,7 +139,7 @@ class LockFreeFastAllocBlock
   Pointer cnext() const { return Next_.load(std::memory_order_acquire); }
 
   /// Get block size
-  std::size_t size() const { return Size_.load(std::memory_order_acquire); }
+  SizeType size() const { return Size_.load(std::memory_order_acquire); }
 
   /**
      * @brief Get remaining free space
@@ -147,14 +147,14 @@ class LockFreeFastAllocBlock
      * 
      * Lock-free: all operations are atomic
      */
-  std::size_t remaining() const
+  SizeType remaining() const
   {
     Pointer b = Begin_.load(std::memory_order_acquire);
     if (b == nullptr)
       return 0;
-    Pointer     current = Next_.load(std::memory_order_acquire);
-    std::size_t s       = Size_.load(std::memory_order_acquire);
-    return static_cast<std::size_t>(b + s - current);
+    Pointer  current = Next_.load(std::memory_order_acquire);
+    SizeType s       = Size_.load(std::memory_order_acquire);
+    return static_cast<SizeType>(b + s - current);
   }
 
   /**
@@ -168,7 +168,7 @@ class LockFreeFastAllocBlock
      * @performance Extremely fast in the uncontended case
      */
   MYLANG_NODISCARD
-  Pointer allocate(std::size_t alloc_size)
+  Pointer allocate(SizeType alloc_size)
   {
     if (alloc_size == 0)
       return nullptr;
@@ -180,13 +180,13 @@ class LockFreeFastAllocBlock
       return nullptr;
     }
 
-    Pointer     current_next = Next_.load(std::memory_order_acquire);
-    std::size_t s            = Size_.load(std::memory_order_acquire);
+    Pointer  current_next = Next_.load(std::memory_order_acquire);
+    SizeType s            = Size_.load(std::memory_order_acquire);
 
     // Lock-free allocation loop
     for (;;)
     {
-      std::size_t remaining = b + s - current_next;
+      SizeType remaining = b + s - current_next;
       if (remaining < alloc_size)
       {
         std::cerr << "Failed to allocate because there's not enough remaining bytes" << std::endl;

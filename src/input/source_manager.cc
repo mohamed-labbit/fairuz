@@ -7,28 +7,28 @@
 namespace mylang {
 namespace lex {
 
-using offset_pair = std::pair<std::size_t, std::size_t>;
+using offset_pair = std::pair<SizeType, SizeType>;
 
-char16_t SourceManager::peek()
+CharType SourceManager::peek()
 {
 
   return this->InputBuffer_.peek();
   if (Current_ == nullptr)
     return BUFFER_END;
-  char16_t* forward = Current_ + 1;
+  CharType* forward = Current_ + 1;
   if (forward == nullptr)
     return BUFFER_END;
   return *forward;
 }
 
-offset_pair SourceManager::offsetMap_(const std::size_t& offset) const
+offset_pair SourceManager::offsetMap_(const SizeType& offset) const
 {
 
   if (offset == InputBuffer_.bufferOffset())
     return std::make_pair(InputBuffer_.position().line, InputBuffer_.position().column);
 
-  std::size_t iter = 0;
-  std::size_t diff = 0;
+  SizeType iter = 0;
+  SizeType diff = 0;
 
   // Count lines before buffer start
   while (iter < InputBuffer_.bufferOffset())
@@ -38,15 +38,15 @@ offset_pair SourceManager::offsetMap_(const std::size_t& offset) const
     iter++;
   }
 
-  std::size_t base_line   = InputBuffer_.position().line - diff;
-  iter                    = 0;
-  std::size_t       line  = 1;
-  std::size_t       col   = 1;
-  const std::size_t limit = std::min(offset, InputBuffer_.size() - 1);
+  SizeType base_line   = InputBuffer_.position().line - diff;
+  iter                 = 0;
+  SizeType       line  = 1;
+  SizeType       col   = 1;
+  const SizeType limit = std::min(offset, InputBuffer_.size() - 1);
 
   while (iter < limit)
   {
-    char16_t c = InputBuffer_.at(iter);
+    CharType c = InputBuffer_.at(iter);
     if (c == u'\n')
       line++, col = 1;
     else
@@ -59,10 +59,10 @@ offset_pair SourceManager::offsetMap_(const std::size_t& offset) const
   return std::make_pair(line, col);
 }
 
-offset_pair SourceManager::offsetMap(const std::size_t& offset)
+offset_pair SourceManager::offsetMap(const SizeType& offset)
 {
   /// TODO: : implement this using the new file manager
-  std::size_t line = 1, col = 1;
+  SizeType line = 1, col = 1;
   return std::make_pair(line, col);
 }
 

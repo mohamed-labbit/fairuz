@@ -68,7 +68,7 @@ class VirtualMachine
   // Instruction dispatch optimization
 
   // Size of the instruction dispatch cache.
-  static constexpr std::size_t CACHE_SIZE_ = 256;
+  static constexpr SizeType CACHE_SIZE_ = 256;
 
   // Cached dispatch table used to speed up instruction execution.
   std::array<void*, CACHE_SIZE_> DispatchTable_;

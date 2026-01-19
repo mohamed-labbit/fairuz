@@ -20,8 +20,8 @@ using Pointer = Byte*;              /// Generic Pointer type for arena memory
  */
 struct FreeListRegion
 {
-  Pointer     ptr;   ///< Pointer to freed memory
-  std::size_t size;  ///< Size in bytes
+  Pointer  ptr;   ///< Pointer to freed memory
+  SizeType size;  ///< Size in bytes
 
   FreeListRegion() = default;
 
@@ -30,7 +30,7 @@ struct FreeListRegion
      * @param p Pointer to the freed memory
      * @param s Size of the region in bytes
      */
-  FreeListRegion(Pointer p, std::size_t s) :
+  FreeListRegion(Pointer p, SizeType s) :
       ptr(p),
       size(s)
   {
@@ -56,7 +56,7 @@ struct FreeListRegion
      * @param size Required size in bytes
      * @return true if this region is large enough
      */
-  bool hasSpaceFor(std::size_t size) const { return size >= this->size; }
+  bool hasSpaceFor(SizeType size) const { return size >= this->size; }
 
   /**
      * @brief Comparison operator for ordered containers

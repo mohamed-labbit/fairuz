@@ -79,7 +79,7 @@ void ControlFlowGraph::computeLiveness()
 std::vector<std::int32_t> ControlFlowGraph::getUnreachableBlocks() const
 {
   std::vector<std::int32_t> unreachable;
-  for (std::size_t i = 0; i < Blocks_.size(); ++i)
+  for (SizeType i = 0; i < Blocks_.size(); ++i)
   {
     if (!Blocks_[i].IsReachable)
       unreachable.push_back(i);

@@ -19,15 +19,15 @@ namespace allocator {
 struct ArenaAllocStats
 {
   /// Total number of allocation requests
-  std::atomic<std::size_t> TotalAllocations{0};
+  std::atomic<SizeType> TotalAllocations{0};
   /// Total bytes allocated (cumulative)
-  std::atomic<std::size_t> TotalAllocated{0};
+  std::atomic<SizeType> TotalAllocated{0};
   /// Total bytes freed (for future use)
-  std::atomic<std::size_t> TotalFree{0};
+  std::atomic<SizeType> TotalFree{0};
   /// Total number of deallocation requests
-  std::atomic<std::size_t> TotalDeallocations{0};
+  std::atomic<SizeType> TotalDeallocations{0};
   /// Number of currently active memory blocks
-  std::atomic<std::size_t> ActiveBlocks{0};
+  std::atomic<SizeType> ActiveBlocks{0};
 
   ArenaAllocStats() = default;
 
@@ -39,14 +39,14 @@ struct ArenaAllocStats
      * Implements saturation arithmetic - if overflow would occur, the counter
      * remains at its maximum value instead of wrapping around.
      */
-  void safe_increment(std::atomic<std::size_t>& counter, std::size_t amount = 1)
+  void safe_increment(std::atomic<SizeType>& counter, SizeType amount = 1)
   {
-    std::size_t old_val = counter.load(std::memory_order_relaxed);
-    std::size_t new_val;
+    SizeType old_val = counter.load(std::memory_order_relaxed);
+    SizeType new_val;
     do
     {
       // Check for overflow before incrementing
-      if (old_val > std::numeric_limits<std::size_t>::max() - amount)
+      if (old_val > std::numeric_limits<SizeType>::max() - amount)
         return;  // Would overflow, saturate at current value
       new_val = old_val + amount;
     } while (!counter.compare_exchange_weak(old_val, new_val, std::memory_order_relaxed, std::memory_order_relaxed));

@@ -35,7 +35,7 @@ class Lexer
   /// @brief Copying a lexer is not allowed
   explicit Lexer(const Lexer&) = delete;
   /// @brief Constructs a lexer from an existing token sequence
-  explicit Lexer(std::vector<tok::Token>& seq, const std::size_t s);
+  explicit Lexer(std::vector<tok::Token>& seq, const SizeType s);
 
   /// @brief Returns the next token (call operator convenience)
   MYLANG_COMPILER_ABI tok::Token operator()() { return next(); }
@@ -44,7 +44,7 @@ class Lexer
   /// @brief Advances and returns the next token
   MYLANG_COMPILER_ABI tok::Token next();
   /// @brief Peeks ahead n tokens without advancing
-  MYLANG_COMPILER_ABI tok::Token peek(std::size_t n = 1);
+  MYLANG_COMPILER_ABI tok::Token peek(SizeType n = 1);
   /// @brief Returns the previous token
   MYLANG_COMPILER_ABI tok::Token prev();
   /// @brief Returns the full token stream
@@ -52,7 +52,7 @@ class Lexer
   /// @brief Tokenizes the entire input source
   MYLANG_COMPILER_ABI std::vector<tok::Token> tokenize();
   /// @brief Returns the current indentation size
-  MYLANG_COMPILER_ABI const std::size_t indentSize() const { return IndentSize_; }
+  MYLANG_COMPILER_ABI const SizeType indentSize() const { return IndentSize_; }
 
   /**
    * @brief Constructs a token with optional metadata.
@@ -61,14 +61,14 @@ class Lexer
    */
   MYLANG_COMPILER_ABI tok::Token make_token(tok::TokenType             tt,
                                             std::optional<StringType>  lexeme    = std::nullopt,
-                                            std::optional<std::size_t> line      = std::nullopt,
-                                            std::optional<std::size_t> col       = std::nullopt,
-                                            std::optional<std::size_t> file_pos  = std::nullopt,
+                                            std::optional<SizeType>    line      = std::nullopt,
+                                            std::optional<SizeType>    col       = std::nullopt,
+                                            std::optional<SizeType>    file_pos  = std::nullopt,
                                             std::optional<std::string> file_path = std::nullopt) const;
 
  private:
   SourceManager           SourceManager_;   // Manages source input and positions
-  std::size_t             TokIndex_{0};     // Current token index
+  SizeType                TokIndex_{0};     // Current token index
   unsigned                IndentSize_{0};   // Current indentation size
   unsigned                IndentLevel_{0};  // current level of indentation
   std::vector<tok::Token> TokStream_;       // Accumulated token stream
@@ -81,14 +81,14 @@ class Lexer
   /// @brief Updates indentation context based on emitted token
   MYLANG_COMPILER_ABI void updateIndentationContext_(const tok::Token& token);
   /// @brief Consumes and returns the next character from the source
-  MYLANG_COMPILER_ABI char16_t consumeChar() { return SourceManager_.consumeChar(); }
-  MYLANG_COMPILER_ABI char16_t currentChar() { return SourceManager_.current(); }
-  MYLANG_COMPILER_ABI char16_t nextChar()
+  MYLANG_COMPILER_ABI CharType consumeChar() { return SourceManager_.consumeChar(); }
+  MYLANG_COMPILER_ABI CharType currentChar() { return SourceManager_.current(); }
+  MYLANG_COMPILER_ABI CharType nextChar()
   {
     SourceManager_.consumeChar();
     return SourceManager_.current();
   }
-  MYLANG_COMPILER_ABI char16_t peekChar() { return SourceManager_.peek(); }
+  MYLANG_COMPILER_ABI CharType peekChar() { return SourceManager_.peek(); }
   /// @brief Stores a token in the token stream
   MYLANG_COMPILER_ABI void store(tok::Token tok);
 

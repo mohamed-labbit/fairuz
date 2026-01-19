@@ -5,13 +5,14 @@
 #include <new>
 
 
-using namespace mylang::runtime::allocator;
+using namespace mylang;
+
 
 // Basic Allocation Tests
 
 TEST(ArenaAllocatorTest, DefaultConstruction)
 {
-  ArenaAllocator arena;
+  runtime::allocator::ArenaAllocator arena;
   EXPECT_EQ(arena.totalAllocations(), 0);
   EXPECT_EQ(arena.totalAllocated(), 0);
   EXPECT_EQ(arena.activeBlocks(), 0);
@@ -19,8 +20,8 @@ TEST(ArenaAllocatorTest, DefaultConstruction)
 
 TEST(ArenaAllocatorTest, SingleIntAllocation)
 {
-  ArenaAllocator arena;
-  int*           ptr = arena.allocate<int>();
+  runtime::allocator::ArenaAllocator arena;
+  int*                               ptr = arena.allocate<int>();
   ASSERT_NE(ptr, nullptr);
   *ptr = 42;
   EXPECT_EQ(*ptr, 42);
@@ -29,10 +30,10 @@ TEST(ArenaAllocatorTest, SingleIntAllocation)
 
 TEST(ArenaAllocatorTest, MultipleIntAllocations)
 {
-  ArenaAllocator arena;
-  int*           ptr1 = arena.allocate<int>();
-  int*           ptr2 = arena.allocate<int>();
-  int*           ptr3 = arena.allocate<int>();
+  runtime::allocator::ArenaAllocator arena;
+  int*                               ptr1 = arena.allocate<int>();
+  int*                               ptr2 = arena.allocate<int>();
+  int*                               ptr3 = arena.allocate<int>();
 
   ASSERT_NE(ptr1, nullptr);
   ASSERT_NE(ptr2, nullptr);
@@ -50,25 +51,25 @@ TEST(ArenaAllocatorTest, MultipleIntAllocations)
 
 TEST(ArenaAllocatorTest, AllocateZeroCount)
 {
-  ArenaAllocator arena;
-  int*           ptr = arena.allocate<int>(0);
+  runtime::allocator::ArenaAllocator arena;
+  int*                               ptr = arena.allocate<int>(0);
   EXPECT_EQ(ptr, nullptr);
 }
 
 TEST(ArenaAllocatorTest, AllocateArrayOfInts)
 {
-  ArenaAllocator        arena;
-  constexpr std::size_t count = 100;
-  int*                  arr   = arena.allocate<int>(count);
+  runtime::allocator::ArenaAllocator arena;
+  constexpr SizeType                 count = 100;
+  int*                               arr   = arena.allocate<int>(count);
 
   ASSERT_NE(arr, nullptr);
 
-  for (std::size_t i = 0; i < count; ++i)
+  for (SizeType i = 0; i < count; ++i)
   {
     arr[i] = static_cast<int>(i);
   }
 
-  for (std::size_t i = 0; i < count; ++i)
+  for (SizeType i = 0; i < count; ++i)
   {
     EXPECT_EQ(arr[i], static_cast<int>(i));
   }
@@ -76,13 +77,13 @@ TEST(ArenaAllocatorTest, AllocateArrayOfInts)
 
 TEST(ArenaAllocatorTest, AllocateLargeArray)
 {
-  ArenaAllocator   arena;
-  constexpr size_t count = 10000;
-  double*          arr   = arena.allocate<double>(count);
+  runtime::allocator::ArenaAllocator arena;
+  constexpr size_t                   count = 10000;
+  double*                            arr   = arena.allocate<double>(count);
 
   ASSERT_NE(arr, nullptr);
 
-  for (std::size_t i = 0; i < count; ++i)
+  for (SizeType i = 0; i < count; ++i)
   {
     arr[i] = static_cast<double>(i) * 1.5;
   }
@@ -95,8 +96,8 @@ TEST(ArenaAllocatorTest, AllocateLargeArray)
 
 TEST(ArenaAllocatorTest, AllocateChar)
 {
-  ArenaAllocator arena;
-  char*          ptr = arena.allocate<char>();
+  runtime::allocator::ArenaAllocator arena;
+  char*                              ptr = arena.allocate<char>();
   ASSERT_NE(ptr, nullptr);
   *ptr = 'A';
   EXPECT_EQ(*ptr, 'A');
@@ -104,8 +105,8 @@ TEST(ArenaAllocatorTest, AllocateChar)
 
 TEST(ArenaAllocatorTest, AllocateDouble)
 {
-  ArenaAllocator arena;
-  double*        ptr = arena.allocate<double>();
+  runtime::allocator::ArenaAllocator arena;
+  double*                            ptr = arena.allocate<double>();
   ASSERT_NE(ptr, nullptr);
   *ptr = 3.14159;
   EXPECT_DOUBLE_EQ(*ptr, 3.14159);
@@ -113,8 +114,8 @@ TEST(ArenaAllocatorTest, AllocateDouble)
 
 TEST(ArenaAllocatorTest, AllocateFloat)
 {
-  ArenaAllocator arena;
-  float*         ptr = arena.allocate<float>();
+  runtime::allocator::ArenaAllocator arena;
+  float*                             ptr = arena.allocate<float>();
   ASSERT_NE(ptr, nullptr);
   *ptr = 2.71828f;
   EXPECT_FLOAT_EQ(*ptr, 2.71828f);
@@ -122,8 +123,8 @@ TEST(ArenaAllocatorTest, AllocateFloat)
 
 TEST(ArenaAllocatorTest, AllocateLongLong)
 {
-  ArenaAllocator arena;
-  std::int64_t*  ptr = arena.allocate<std::int64_t>();
+  runtime::allocator::ArenaAllocator arena;
+  std::int64_t*                      ptr = arena.allocate<std::int64_t>();
   ASSERT_NE(ptr, nullptr);
   *ptr = 9223372036854775807LL;
   EXPECT_EQ(*ptr, 9223372036854775807LL);
@@ -137,8 +138,8 @@ struct Point
 
 TEST(ArenaAllocatorTest, AllocatePODStruct)
 {
-  ArenaAllocator arena;
-  Point*         ptr = arena.allocate<Point>();
+  runtime::allocator::ArenaAllocator arena;
+  Point*                             ptr = arena.allocate<Point>();
   ASSERT_NE(ptr, nullptr);
   ptr->x = 1.0;
   ptr->y = 2.0;
@@ -155,8 +156,8 @@ struct LargeStruct
 
 TEST(ArenaAllocatorTest, AllocateLargeStruct)
 {
-  ArenaAllocator arena;
-  LargeStruct*   ptr = arena.allocate<LargeStruct>();
+  runtime::allocator::ArenaAllocator arena;
+  LargeStruct*                       ptr = arena.allocate<LargeStruct>();
   ASSERT_NE(ptr, nullptr);
   ptr->data[0]    = 'X';
   ptr->data[1023] = 'Y';
@@ -170,7 +171,7 @@ TEST(ArenaAllocatorTest, AllocateLargeStruct)
 
 TEST(ArenaAllocatorTest, FastPool8Bytes)
 {
-  ArenaAllocator arena;
+  runtime::allocator::ArenaAllocator arena;
   struct Small8
   {
     char data[8];
@@ -183,7 +184,7 @@ TEST(ArenaAllocatorTest, FastPool8Bytes)
 
 TEST(ArenaAllocatorTest, FastPool16Bytes)
 {
-  ArenaAllocator arena;
+  runtime::allocator::ArenaAllocator arena;
   struct Small16
   {
     char data[16];
@@ -194,7 +195,7 @@ TEST(ArenaAllocatorTest, FastPool16Bytes)
 
 TEST(ArenaAllocatorTest, FastPool32Bytes)
 {
-  ArenaAllocator arena;
+  runtime::allocator::ArenaAllocator arena;
   struct Small32
   {
     char data[32];
@@ -205,7 +206,7 @@ TEST(ArenaAllocatorTest, FastPool32Bytes)
 
 TEST(ArenaAllocatorTest, FastPool64Bytes)
 {
-  ArenaAllocator arena;
+  runtime::allocator::ArenaAllocator arena;
   struct Small64
   {
     char data[64];
@@ -216,7 +217,7 @@ TEST(ArenaAllocatorTest, FastPool64Bytes)
 
 TEST(ArenaAllocatorTest, FastPool128Bytes)
 {
-  ArenaAllocator arena;
+  runtime::allocator::ArenaAllocator arena;
   struct Small128
   {
     char data[128];
@@ -227,7 +228,7 @@ TEST(ArenaAllocatorTest, FastPool128Bytes)
 
 TEST(ArenaAllocatorTest, FastPool256Bytes)
 {
-  ArenaAllocator arena;
+  runtime::allocator::ArenaAllocator arena;
   struct Small256
   {
     char data[256];
@@ -238,7 +239,7 @@ TEST(ArenaAllocatorTest, FastPool256Bytes)
 
 TEST(ArenaAllocatorTest, FastPoolMixedSizes)
 {
-  ArenaAllocator arena;
+  runtime::allocator::ArenaAllocator arena;
 
   struct S8
   {
@@ -272,7 +273,7 @@ TEST(ArenaAllocatorTest, FastPoolMixedSizes)
 
 TEST(ArenaAllocatorTest, ResetClearsAllocations)
 {
-  ArenaAllocator arena;
+  runtime::allocator::ArenaAllocator arena;
 
   int* ptr1 = arena.allocate<int>(100);
   ASSERT_NE(ptr1, nullptr);
@@ -287,9 +288,9 @@ TEST(ArenaAllocatorTest, ResetClearsAllocations)
 
 TEST(ArenaAllocatorTest, ReuseAfterReset)
 {
-  ArenaAllocator arena;
-  int*           ptr1 = arena.allocate<int>();
-  *ptr1               = 42;
+  runtime::allocator::ArenaAllocator arena;
+  int*                               ptr1 = arena.allocate<int>();
+  *ptr1                                   = 42;
   EXPECT_EQ(*ptr1, 42);
 
   arena.reset();
@@ -301,7 +302,7 @@ TEST(ArenaAllocatorTest, ReuseAfterReset)
 
 TEST(ArenaAllocatorTest, MultipleResets)
 {
-  ArenaAllocator arena;
+  runtime::allocator::ArenaAllocator arena;
 
   for (int i = 0; i < 10; ++i)
   {
@@ -316,7 +317,7 @@ TEST(ArenaAllocatorTest, MultipleResets)
 
 TEST(ArenaAllocatorTest, StatisticsTracking)
 {
-  ArenaAllocator arena;
+  runtime::allocator::ArenaAllocator arena;
 
   EXPECT_EQ(arena.totalAllocations(), 0);
   EXPECT_EQ(arena.totalAllocated(), 0);
@@ -332,7 +333,7 @@ TEST(ArenaAllocatorTest, StatisticsTracking)
 
 TEST(ArenaAllocatorTest, ActiveBlocksCount)
 {
-  ArenaAllocator arena;
+  runtime::allocator::ArenaAllocator arena;
 
   EXPECT_EQ(arena.activeBlocks(), 0);
 
@@ -340,24 +341,20 @@ TEST(ArenaAllocatorTest, ActiveBlocksCount)
   int* ptr1 = arena.allocate<int>();
   EXPECT_GT(arena.activeBlocks(), 0);
 
-  std::size_t initial_blocks = arena.activeBlocks();
+  SizeType initial_blocks = arena.activeBlocks();
 
   // Many small allocations might stay in same block
   for (int i = 0; i < 10; ++i)
   {
-    auto p = arena.allocate<int>();
+    int* p = arena.allocate<int>();
     if (!p)
-    {
       throw std::bad_alloc();
-    }
   }
 
   // Large allocation forces new block
-  auto p = arena.allocate<char>(1024 * 1024);
+  char* p = arena.allocate<char>(1024 * 1024);
   if (!p)
-  {
     throw std::bad_alloc();
-  }
   EXPECT_GT(arena.activeBlocks(), initial_blocks);
 }
 
@@ -365,13 +362,13 @@ TEST(ArenaAllocatorTest, ActiveBlocksCount)
 
 TEST(ArenaAllocatorTest, DeallocateIsNoOp)
 {
-  ArenaAllocator arena;
+  runtime::allocator::ArenaAllocator arena;
 
   int* ptr = arena.allocate<int>();
   ASSERT_NE(ptr, nullptr);
   *ptr = 42;
 
-  std::size_t allocations_before = arena.totalAllocations();
+  SizeType allocations_before = arena.totalAllocations();
 
   arena.deallocate(ptr);
 
@@ -381,7 +378,7 @@ TEST(ArenaAllocatorTest, DeallocateIsNoOp)
 
 TEST(ArenaAllocatorTest, DeallocateNullptr)
 {
-  ArenaAllocator arena;
+  runtime::allocator::ArenaAllocator arena;
   arena.deallocate<int>(nullptr);
   // Should not crash
 }
@@ -390,7 +387,7 @@ TEST(ArenaAllocatorTest, DeallocateNullptr)
 
 TEST(ArenaAllocatorTest, ProperAlignment)
 {
-  ArenaAllocator arena;
+  runtime::allocator::ArenaAllocator arena;
 
   double* d = arena.allocate<double>();
   ASSERT_NE(d, nullptr);
@@ -408,8 +405,8 @@ struct alignas(64) AlignedStruct
 
 TEST(ArenaAllocatorTest, CustomAlignment)
 {
-  ArenaAllocator arena;
-  AlignedStruct* ptr = arena.allocate<AlignedStruct>();
+  runtime::allocator::ArenaAllocator arena;
+  AlignedStruct*                     ptr = arena.allocate<AlignedStruct>();
   ASSERT_NE(ptr, nullptr);
   EXPECT_EQ(reinterpret_cast<uintptr_t>(ptr) % 64, 0);
 }
@@ -418,7 +415,7 @@ TEST(ArenaAllocatorTest, CustomAlignment)
 
 TEST(ArenaAllocatorTest, ExponentialGrowth)
 {
-  ArenaAllocator arena(static_cast<int>(ArenaAllocator::GrowthStrategy::EXPONENTIAL));
+  runtime::allocator::ArenaAllocator arena(static_cast<int>(runtime::allocator::ArenaAllocator::GrowthStrategy::EXPONENTIAL));
 
   // Force multiple block allocations
   for (int i = 0; i < 10; ++i)
@@ -432,7 +429,7 @@ TEST(ArenaAllocatorTest, ExponentialGrowth)
 
 TEST(ArenaAllocatorTest, LinearGrowth)
 {
-  ArenaAllocator arena(static_cast<int>(ArenaAllocator::GrowthStrategy::LINEAR));
+  runtime::allocator::ArenaAllocator arena(static_cast<int>(runtime::allocator::ArenaAllocator::GrowthStrategy::LINEAR));
 
   // Force multiple block allocations
   for (int i = 0; i < 10; ++i)
@@ -450,9 +447,9 @@ TEST(ArenaAllocatorTest, AllocateMaxBlockSize)
 {
 
   // Allocate close to MAX_BLOCK_SIZE
-  constexpr std::size_t large_size = MAX_BLOCK_SIZE / sizeof(char32_t);
-  ArenaAllocator        arena;
-  char32_t*             ptr = arena.allocate<char32_t>(large_size);
+  constexpr SizeType                 large_size = MAX_BLOCK_SIZE / sizeof(char32_t);
+  runtime::allocator::ArenaAllocator arena;
+  char32_t*                          ptr = arena.allocate<char32_t>(large_size);
   ASSERT_NE(ptr, nullptr);
 
   ptr[0]              = 'A';
@@ -464,9 +461,9 @@ TEST(ArenaAllocatorTest, AllocateMaxBlockSize)
 
 TEST(ArenaAllocatorTest, AllocateExceedsMaxBlockSize)
 {
-  ArenaAllocator arena;
+  runtime::allocator::ArenaAllocator arena;
   // Try to allocate more than MAX_BLOCK_SIZE
-  constexpr std::size_t too_large = MAX_BLOCK_SIZE + 1024;
+  constexpr SizeType too_large = MAX_BLOCK_SIZE + 1024;
   // Should return nullptr as it exceeds limit
   char* ptr = nullptr;  // to silence no-discard warning
   EXPECT_THROW((ptr = arena.allocate<char>(too_large)), std::runtime_error);
@@ -474,7 +471,7 @@ TEST(ArenaAllocatorTest, AllocateExceedsMaxBlockSize)
 
 TEST(ArenaAllocatorTest, MultipleBlocksRequired)
 {
-  ArenaAllocator arena;
+  runtime::allocator::ArenaAllocator arena;
 
   std::vector<int*> ptrs;
 
@@ -500,8 +497,9 @@ TEST(ArenaAllocatorTest, MultipleBlocksRequired)
 
 TEST(ArenaAllocatorTest, DebugModeEnabled)
 {
-  ArenaAllocator arena(static_cast<int>(ArenaAllocator::GrowthStrategy::EXPONENTIAL), alignof(std::max_align_t), nullptr,
-                       true  // Enable debug
+  runtime::allocator::ArenaAllocator arena(static_cast<int>(runtime::allocator::ArenaAllocator::GrowthStrategy::EXPONENTIAL),
+                                           alignof(std::max_align_t), nullptr,
+                                           true  // Enable debug
   );
 
   int* ptr = arena.allocate<int>();
@@ -513,8 +511,9 @@ TEST(ArenaAllocatorTest, DebugModeEnabled)
 
 TEST(ArenaAllocatorTest, DebugModeDisabled)
 {
-  ArenaAllocator arena(static_cast<int>(ArenaAllocator::GrowthStrategy::EXPONENTIAL), alignof(std::max_align_t), nullptr,
-                       false  // Disable debug
+  runtime::allocator::ArenaAllocator arena(static_cast<int>(runtime::allocator::ArenaAllocator::GrowthStrategy::EXPONENTIAL),
+                                           alignof(std::max_align_t), nullptr,
+                                           false  // Disable debug
   );
 
   int* ptr = arena.allocate<int>();
@@ -526,8 +525,9 @@ TEST(ArenaAllocatorTest, DebugModeDisabled)
 
 TEST(ArenaAllocatorTest, VerifyInvalidPointer)
 {
-  ArenaAllocator arena(static_cast<int>(ArenaAllocator::GrowthStrategy::EXPONENTIAL), alignof(std::max_align_t), nullptr,
-                       true  // Enable debug
+  runtime::allocator::ArenaAllocator arena(static_cast<int>(runtime::allocator::ArenaAllocator::GrowthStrategy::EXPONENTIAL),
+                                           alignof(std::max_align_t), nullptr,
+                                           true  // Enable debug
   );
 
   int stack_var = 42;
@@ -541,12 +541,13 @@ TEST(ArenaAllocatorTest, VerifyInvalidPointer)
 TEST(ArenaAllocatorTest, OOMHandlerNotCalled)
 {
   bool handler_called = false;
-  auto oom_handler    = [&](std::size_t requested) {
+  auto oom_handler    = [&](SizeType requested) {
     handler_called = true;
     return false;
   };
 
-  ArenaAllocator arena(static_cast<int>(ArenaAllocator::GrowthStrategy::EXPONENTIAL), alignof(std::max_align_t), oom_handler);
+  runtime::allocator::ArenaAllocator arena(static_cast<int>(runtime::allocator::ArenaAllocator::GrowthStrategy::EXPONENTIAL),
+                                           alignof(std::max_align_t), oom_handler);
 
   int* ptr = arena.allocate<int>();
   ASSERT_NE(ptr, nullptr);
@@ -555,20 +556,21 @@ TEST(ArenaAllocatorTest, OOMHandlerNotCalled)
 
 TEST(ArenaAllocatorTest, OOMHandlerCalledOnFailure)
 {
-  bool        handler_called = false;
-  std::size_t requested_size = 0;
+  bool     handler_called = false;
+  SizeType requested_size = 0;
 
-  auto oom_handler = [&](std::size_t requested) {
+  auto oom_handler = [&](SizeType requested) {
     handler_called = true;
     requested_size = requested;
     return false;  // Don't retry
   };
 
-  ArenaAllocator arena(static_cast<int>(ArenaAllocator::GrowthStrategy::EXPONENTIAL), alignof(std::max_align_t), oom_handler);
+  runtime::allocator::ArenaAllocator arena(static_cast<int>(runtime::allocator::ArenaAllocator::GrowthStrategy::EXPONENTIAL),
+                                           alignof(std::max_align_t), oom_handler);
 
   // Try to allocate more than allowed
-  constexpr std::size_t too_large = MAX_BLOCK_SIZE + 1024;
-  char*                 ptr       = nullptr;
+  constexpr SizeType too_large = MAX_BLOCK_SIZE + 1024;
+  char*              ptr       = nullptr;
 
   EXPECT_THROW((ptr = arena.allocate<char>(too_large)), std::runtime_error);
   EXPECT_TRUE(handler_called);
@@ -579,16 +581,17 @@ TEST(ArenaAllocatorTest, OOMHandlerRetry)
 {
   int call_count = 0;
 
-  auto oom_handler = [&](std::size_t requested) {
+  auto oom_handler = [&](SizeType requested) {
     call_count++;
     return call_count < 2;  // Retry once
   };
 
-  ArenaAllocator arena(static_cast<int>(ArenaAllocator::GrowthStrategy::EXPONENTIAL), alignof(std::max_align_t), oom_handler);
+  runtime::allocator::ArenaAllocator arena(static_cast<int>(runtime::allocator::ArenaAllocator::GrowthStrategy::EXPONENTIAL),
+                                           alignof(std::max_align_t), oom_handler);
 
   // Allocate oversized
-  constexpr std::size_t too_large = MAX_BLOCK_SIZE + 1024;
-  char*                 ptr       = nullptr;
+  constexpr SizeType too_large = MAX_BLOCK_SIZE + 1024;
+  char*              ptr       = nullptr;
 
   EXPECT_THROW((ptr = arena.allocate<char>(too_large)), std::runtime_error);
   EXPECT_EQ(call_count, 2);  // Called twice (initial + 1 retry)
@@ -596,7 +599,7 @@ TEST(ArenaAllocatorTest, OOMHandlerRetry)
 
 TEST(ArenaAllocatorTest, ManySmallAllocations)
 {
-  ArenaAllocator arena;
+  runtime::allocator::ArenaAllocator arena;
 
   constexpr int     count = 10;
   std::vector<int*> ptrs;
@@ -619,13 +622,13 @@ TEST(ArenaAllocatorTest, ManySmallAllocations)
 
 TEST(ArenaAllocatorTest, MixedSizeAllocations)
 {
-  ArenaAllocator arena;
+  runtime::allocator::ArenaAllocator arena;
 
   std::vector<void*> ptrs;
 
   for (int i = 0; i < 10; ++i)
   {
-    std::size_t size = (i % 10) + 1;
+    SizeType size = (i % 10) + 1;
     if (i % 3 == 0)
     {
       int* ptr = arena.allocate<int>(size);
@@ -651,8 +654,8 @@ TEST(ArenaAllocatorTest, MixedSizeAllocations)
 
 TEST(ArenaAllocatorTest, AlternatingLargeSmall)
 {
-  ArenaAllocator arena;
-  std::size_t    large_amount = 10000, small_amount = 1;
+  runtime::allocator::ArenaAllocator arena;
+  SizeType                           large_amount = 10000, small_amount = 1;
 
   for (int i = 0; i < 10; ++i)
   {
@@ -675,7 +678,7 @@ TEST(ArenaAllocatorTest, AlternatingLargeSmall)
 
 TEST(ArenaAllocatorTest, AllocateBlockDirect)
 {
-  ArenaAllocator arena;
+  runtime::allocator::ArenaAllocator arena;
 
   unsigned char* ptr = arena.allocateBlock(1024);
   ASSERT_NE(ptr, nullptr);
@@ -689,7 +692,7 @@ TEST(ArenaAllocatorTest, AllocateBlockDirect)
 
 TEST(ArenaAllocatorTest, AllocateFastBlock)
 {
-  ArenaAllocator arena;
+  runtime::allocator::ArenaAllocator arena;
 
   unsigned char* ptr = arena.allocateFastBlock<64>(1024);
   ASSERT_NE(ptr, nullptr);
@@ -700,8 +703,8 @@ TEST(ArenaAllocatorTest, AllocateFastBlock)
 
 TEST(ArenaAllocatorTest, AllocateOne)
 {
-  ArenaAllocator arena;
-  char*          ptr = arena.allocate<char>(1);
+  runtime::allocator::ArenaAllocator arena;
+  char*                              ptr = arena.allocate<char>(1);
   ASSERT_NE(ptr, nullptr);
   *ptr = 'X';
   EXPECT_EQ(*ptr, 'X');
@@ -709,7 +712,7 @@ TEST(ArenaAllocatorTest, AllocateOne)
 
 TEST(ArenaAllocatorTest, ConsecutiveAllocations)
 {
-  ArenaAllocator arena;
+  runtime::allocator::ArenaAllocator arena;
 
   int* ptr1 = arena.allocate<int>();
   int* ptr2 = arena.allocate<int>();
@@ -721,8 +724,8 @@ TEST(ArenaAllocatorTest, ConsecutiveAllocations)
 
   // Should be consecutive in memory (arena bump allocator)
   // Note: This might not always be true due to alignment
-  std::size_t diff1 = reinterpret_cast<uintptr_t>(ptr2) - reinterpret_cast<uintptr_t>(ptr1);
-  std::size_t diff2 = reinterpret_cast<uintptr_t>(ptr3) - reinterpret_cast<uintptr_t>(ptr2);
+  SizeType diff1 = reinterpret_cast<uintptr_t>(ptr2) - reinterpret_cast<uintptr_t>(ptr1);
+  SizeType diff2 = reinterpret_cast<uintptr_t>(ptr3) - reinterpret_cast<uintptr_t>(ptr2);
 
   EXPECT_GE(diff1, sizeof(int));
   EXPECT_GE(diff2, sizeof(int));
@@ -730,7 +733,7 @@ TEST(ArenaAllocatorTest, ConsecutiveAllocations)
 
 TEST(ArenaAllocatorTest, ResetAndAllocateAgain)
 {
-  ArenaAllocator arena;
+  runtime::allocator::ArenaAllocator arena;
 
   for (int round = 0; round < 5; ++round)
   {
@@ -747,33 +750,33 @@ TEST(ArenaAllocatorTest, ResetAndAllocateAgain)
   }
 }
 
-// ArenaBlock Tests
+// runtime::allocator::ArenaBlock Tests
 
 TEST(ArenaBlockTest, DefaultConstruction)
 {
-  ArenaBlock block;
+  runtime::allocator::ArenaBlock block;
   EXPECT_EQ(block.size(), DEFAULT_BLOCK_SIZE);
   EXPECT_NE(block.begin(), nullptr);
 }
 
 TEST(ArenaBlockTest, CustomSize)
 {
-  ArenaBlock block(1024);
+  runtime::allocator::ArenaBlock block(1024);
   EXPECT_EQ(block.size(), 1024);
 }
 
 TEST(ArenaBlockTest, AllocateFromBlock)
 {
-  ArenaBlock     block(1024);
-  unsigned char* ptr = block.reserve(128);
+  runtime::allocator::ArenaBlock block(1024);
+  unsigned char*                 ptr = block.reserve(128);
   ASSERT_NE(ptr, nullptr);
   EXPECT_LE(block.remaining(), 1024);
 }
 
 TEST(ArenaBlockTest, BlockExhaustion)
 {
-  ArenaBlock     block(128);
-  unsigned char* ptr1 = block.reserve(64);
+  runtime::allocator::ArenaBlock block(128);
+  unsigned char*                 ptr1 = block.reserve(64);
   ASSERT_NE(ptr1, nullptr);
 
   unsigned char* ptr2 = block.reserve(64);
@@ -786,18 +789,18 @@ TEST(ArenaBlockTest, BlockExhaustion)
 
 TEST(ArenaBlockTest, InvalidAlignment)
 {
-  ArenaBlock block(1024);
+  runtime::allocator::ArenaBlock block(1024);
   EXPECT_THROW(block.allocate(64, /*alignment=*/-1), std::runtime_error);
   EXPECT_THROW(block.allocate(64, /*alignment=*/-1), std::runtime_error);
 }
 
 TEST(ArenaBlockTest, MoveConstruction)
 {
-  ArenaBlock     block1(1024);
-  unsigned char* ptr = block1.reserve(128);
+  runtime::allocator::ArenaBlock block1(1024);
+  unsigned char*                 ptr = block1.reserve(128);
   ASSERT_NE(ptr, nullptr);
 
-  ArenaBlock block2(std::move(block1));
+  runtime::allocator::ArenaBlock block2(std::move(block1));
   EXPECT_EQ(block2.size(), 1024);
   EXPECT_EQ(block1.size(), 0);
   EXPECT_EQ(block1.begin(), nullptr);
@@ -809,7 +812,7 @@ TEST(ArenaBlockTest, MoveConstruction)
  *
 TEST(ArenaAllocatorPerformance, AllocateMillionInts)
 {
-    ArenaAllocator arena;
+    runtime::allocator::ArenaAllocator arena;
 
     auto start = std::chrono::high_resolution_clock::now();
 
@@ -829,12 +832,12 @@ TEST(ArenaAllocatorPerformance, AllocateMillionInts)
 
 TEST(ArenaAllocatorPerformance, ResetPerformance)
 {
-  ArenaAllocator arena;
+  runtime::allocator::ArenaAllocator arena;
 
   // Allocate lots of memory
   for (int i = 0; i < 10; ++i)
   {
-    auto p = arena.allocate<char>(1024);
+    char* p = arena.allocate<char>(1024);
     if (p == nullptr)
       throw std::bad_alloc();
   }

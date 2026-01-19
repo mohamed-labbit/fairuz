@@ -24,7 +24,7 @@ Lexer::Lexer(input::FileManager* file_manager) :
   configureLocale();
 }
 
-Lexer::Lexer(std::vector<tok::Token>& seq, const std::size_t s) :
+Lexer::Lexer(std::vector<tok::Token>& seq, const SizeType s) :
     TokStream_(seq),
     TokIndex_(0),
     IndentSize_(0)
@@ -34,9 +34,9 @@ Lexer::Lexer(std::vector<tok::Token>& seq, const std::size_t s) :
 
 tok::Token Lexer::make_token(tok::TokenType             tt,
                              std::optional<StringType>  lexeme,
-                             std::optional<std::size_t> line,
-                             std::optional<std::size_t> col,
-                             std::optional<std::size_t> file_pos,
+                             std::optional<SizeType>    line,
+                             std::optional<SizeType>    col,
+                             std::optional<SizeType>    file_pos,
                              std::optional<std::string> file_path) const
 {
   return tok::Token(lexeme.value_or(u""), tt, line.value_or(this->SourceManager_.line()), col.value_or(this->SourceManager_.column()),
@@ -51,7 +51,7 @@ std::vector<tok::Token> Lexer::tokenize()
   return this->TokStream_;
 }
 
-tok::Token Lexer::peek(std::size_t n)
+tok::Token Lexer::peek(SizeType n)
 {
   while (TokIndex_ + n >= TokStream_.size())
   {
@@ -64,7 +64,7 @@ tok::Token Lexer::peek(std::size_t n)
 
 tok::Token Lexer::lexToken()
 {
-  auto finish = [this](tok::TokenType tt, StringType str, std::size_t l, std::size_t c) {
+  auto finish = [this](tok::TokenType tt, StringType str, SizeType l, SizeType c) {
     tok::Token ret = make_token(tt, std::move(str), l, c);
     store(std::move(ret));
     return TokStream_.back();
@@ -79,13 +79,13 @@ tok::Token Lexer::lexToken()
 
   for (;;)
   {
-    char16_t ch = currentChar();
+    CharType ch = currentChar();
 
     if (ch == BUFFER_END)
       break;
 
-    std::size_t line = SourceManager_.line();
-    std::size_t col  = SourceManager_.column();
+    SizeType line = SourceManager_.line();
+    SizeType col  = SourceManager_.column();
 
     switch (ch)
     {
@@ -206,7 +206,7 @@ tok::Token Lexer::lexToken()
       continue;
 
     case u'\\' : {
-      char16_t lookahead = peekChar();
+      CharType lookahead = peekChar();
       if (lookahead == ch)
       {
         consumeChar();
@@ -214,7 +214,7 @@ tok::Token Lexer::lexToken()
 
         for (;;)
         {
-          char16_t c2 = SourceManager_.peek();
+          CharType c2 = SourceManager_.peek();
           if (c2 == u'\n' || c2 == BUFFER_END)
             break;
 
@@ -228,8 +228,8 @@ tok::Token Lexer::lexToken()
     case u'\'' :
     case u'"' : {
       StringType str;
-      char16_t   quote = ch;
-      char16_t   c2    = nextChar();
+      CharType   quote = ch;
+      CharType   c2    = nextChar();
 
       while (c2 != u'\n' && c2 != BUFFER_END && c2 != quote)
       {
@@ -256,7 +256,7 @@ tok::Token Lexer::lexToken()
     if (util::isalphaArabic(ch) || ch == u'_')
     {
       StringType id(1, ch);
-      char16_t   c2 = nextChar();
+      CharType   c2 = nextChar();
 
       while (util::isalphaArabic(c2) || c2 == u'_' || std::iswdigit(c2))
       {
@@ -275,7 +275,7 @@ tok::Token Lexer::lexToken()
     else if (std::iswdigit(ch))
     {
       StringType num(1, ch);
-      char16_t   c2 = nextChar();
+      CharType   c2 = nextChar();
 
       // Check for special number bases (hex, octal, binary)
       if (ch == '0')
@@ -453,7 +453,7 @@ tok::Token Lexer::lexToken()
     else if (util::isOperator(ch))
     {
       StringType op(1, ch);
-      char16_t   nxt = nextChar();
+      CharType   nxt = nextChar();
 
       if (nxt != BUFFER_END)
       {

@@ -46,7 +46,7 @@ class SymbolTable
     if (current_scope.find(lexeme) != current_scope.end())
       return false;
     // Insert into current scope
-    Entry e(st, static_cast<std::size_t>(scopeLevel()));
+    Entry e(st, static_cast<SizeType>(scopeLevel()));
     current_scope[lexeme] = e;
     return true;
   }
@@ -67,13 +67,13 @@ class SymbolTable
   bool isInScope(const StringType& name) const { return lookup(name).has_value(); }
 
   // Check if a symbol exists at a specific scope level
-  bool isInScope(const StringType& name, std::optional<std::size_t> _scope) const
+  bool isInScope(const StringType& name, std::optional<SizeType> _scope) const
   {
     // Default: check if symbol is visible anywhere in scope chain
     if (_scope == std::nullopt)
       return lookup(name).has_value();
     // Check if symbol exists at specific scope level
-    std::size_t scope_level = _scope.value();
+    SizeType scope_level = _scope.value();
     if (scope_level >= this->Scopes_.size())
       return false;
     const Scope& scope = this->Scopes_[scope_level];
@@ -105,18 +105,21 @@ class SymbolTable
     std::unordered_set<StringType> seen;
     // Iterate from innermost to outermost
     for (auto it = this->Scopes_.rbegin(); it != this->Scopes_.rend(); ++it)
+    {
       for (const auto& pair : *it)
-        // Only add if not shadowed by inner scope
+      {  // Only add if not shadowed by inner scope
         if (seen.find(pair.first) == seen.end())
         {
           symbols.push_back(pair.second);
           seen.insert(pair.first);
         }
+      }
+    }
     return symbols;
   }
 
   // Get all symbols at a specific scope level
-  std::vector<Entry> getSymbolsAtLevel(std::size_t level) const
+  std::vector<Entry> getSymbolsAtLevel(SizeType level) const
   {
     std::vector<Entry> symbols;
     if (level < this->Scopes_.size())

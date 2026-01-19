@@ -28,13 +28,13 @@ static inline bool isalphaArabic(const wchar_t c) { return (c >= 0x0600 && c <= 
 
 struct U16StringHash
 {
-  std::size_t operator()(const StringType& s) const MYLANG_NOEXCEPT
+  SizeType operator()(const StringType& s) const MYLANG_NOEXCEPT
   {
     // FNV-1a hash (simple, fast, decent distribution)
-    std::size_t hash = 1469598103934665603ull;  // 64-bit FNV offset basis
-    for (char16_t c : s)
+    SizeType hash = 1469598103934665603ull;  // 64-bit FNV offset basis
+    for (CharType c : s)
     {
-      hash ^= static_cast<std::size_t>(c);
+      hash ^= static_cast<SizeType>(c);
       hash *= 1099511628211ull;  // FNV prime
     }
     return hash;
@@ -54,8 +54,8 @@ static StringType bufferToU16String(const std::vector<char>& buf)
   StringType ret = u"";
   ret.resize(buf.size());
   const char* __restrict bptr = buf.data();
-  char16_t* __restrict rptr   = ret.data();
-  for (std::size_t i = 0, n = buf.size(); i < n; ++i)
+  CharType* __restrict rptr   = ret.data();
+  for (SizeType i = 0, n = buf.size(); i < n; ++i)
     rptr[i] = *utf8::utf8to16(std::string(reinterpret_cast<char*>(bptr[i]))).data();
   return ret;
 }

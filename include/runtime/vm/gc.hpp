@@ -15,8 +15,8 @@ class GarbageCollector
  private:
   std::vector<object::Value*> AllObjects_;
   std::vector<object::Value*> Roots_;
-  std::size_t                 Threshold_ = 1000;
-  std::size_t                 Allocated_ = 0;
+  SizeType                    Threshold_ = 1000;
+  SizeType                    Allocated_ = 0;
 
   // Generational: young, old
   std::vector<object::Value*> YoungGen_;

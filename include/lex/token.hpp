@@ -18,13 +18,13 @@ namespace tok {
 struct Location
 {
   std::string filepath{""};
-  std::size_t line{0};
-  std::size_t column{0};
-  std::size_t FilePos{0};
+  SizeType    line{0};
+  SizeType    column{0};
+  SizeType    FilePos{0};
 
   Location() = default;
 
-  Location(std::string fpath, std::size_t line, std::size_t col, std::size_t fpos) :
+  Location(std::string fpath, SizeType line, SizeType col, SizeType fpos) :
       filepath(fpath),
       line(line),
       column(col),
@@ -162,7 +162,7 @@ static const StringType toString(TokenType tt)
 class Token
 {
  public:
-  Token(StringType val, TokenType tt, std::size_t line, std::size_t col, std::size_t fpos, std::string fpath) :
+  Token(StringType val, TokenType tt, SizeType line, SizeType col, SizeType fpos, std::string fpath) :
       Value_(std::move(val)),
       Type_(tt),
       Location_(fpath, line, col, fpos)
@@ -192,11 +192,11 @@ class Token
 
   const TokenType& type() const { return Type_; }
 
-  std::size_t size() const { return Value_.length(); }
+  SizeType size() const { return Value_.length(); }
 
-  const std::size_t& line() const { return Location_.line; }
+  const SizeType& line() const { return Location_.line; }
 
-  const std::size_t& column() const { return Location_.column; }
+  const SizeType& column() const { return Location_.column; }
 
   const Location& location() const { return Location_; }
 

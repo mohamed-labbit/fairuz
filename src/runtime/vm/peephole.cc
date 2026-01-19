@@ -6,11 +6,11 @@
 namespace mylang {
 namespace runtime {
 
-bool PeepholeOptimizer::matchPattern(const std::vector<bytecode::Instruction>& code, std::size_t pos, const std::vector<bytecode::OpCode>& pattern)
+bool PeepholeOptimizer::matchPattern(const std::vector<bytecode::Instruction>& code, SizeType pos, const std::vector<bytecode::OpCode>& pattern)
 {
   if (pos + pattern.size() > code.size())
     return false;
-  for (std::size_t i = 0; i < pattern.size(); i++)
+  for (SizeType i = 0; i < pattern.size(); i++)
   {
     if (code[pos + i].op != pattern[i])
       return false;
@@ -22,7 +22,7 @@ void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instruction
 {
   std::int32_t replacements = 0;
   // Pattern 1: LOAD_CONST followed by POP -> remove both
-  for (std::size_t i = 0; i + 1 < instructions.size();)
+  for (SizeType i = 0; i + 1 < instructions.size();)
   {
     if (instructions[i].op == bytecode::OpCode::LOAD_CONST && instructions[i + 1].op == bytecode::OpCode::POP)
     {
@@ -36,7 +36,7 @@ void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instruction
     Optimizations_.push_back({"Const-Pop elimination", replacements});
   // Pattern 2: LOAD x, STORE x -> remove (redundant load-store)
   replacements = 0;
-  for (std::size_t i = 0; i + 1 < instructions.size();)
+  for (SizeType i = 0; i + 1 < instructions.size();)
   {
     bytecode::Instruction& instr1 = instructions[i];
     bytecode::Instruction& instr2 = instructions[i + 1];
@@ -57,7 +57,7 @@ void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instruction
     Optimizations_.push_back({"Load-Store elimination", replacements});
   // Pattern 3: DUP, POP -> remove both (useless dup)
   replacements = 0;
-  for (std::size_t i = 0; i + 1 < instructions.size();)
+  for (SizeType i = 0; i + 1 < instructions.size();)
   {
     if (instructions[i].op == bytecode::OpCode::DUP && instructions[i + 1].op == bytecode::OpCode::POP)
     {
@@ -71,7 +71,7 @@ void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instruction
     Optimizations_.push_back({"Dup-Pop elimination", replacements});
   // Pattern 4: JUMP to next instruction -> remove
   replacements = 0;
-  for (std::size_t i = 0; i < instructions.size();)
+  for (SizeType i = 0; i < instructions.size();)
   {
     if (instructions[i].op == bytecode::OpCode::JUMP && instructions[i].arg == i + 1)
     {
@@ -85,7 +85,7 @@ void PeepholeOptimizer::optimize(std::vector<bytecode::Instruction>& instruction
     Optimizations_.push_back({"Redundant jump elimination", replacements});
   // Pattern 5: NOT, NOT -> remove both (double negation)
   replacements = 0;
-  for (std::size_t i = 0; i + 1 < instructions.size();)
+  for (SizeType i = 0; i + 1 < instructions.size();)
   {
     if (instructions[i].op == bytecode::OpCode::NOT && instructions[i + 1].op == bytecode::OpCode::NOT)
     {

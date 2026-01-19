@@ -5,14 +5,14 @@ namespace mylang {
 namespace runtime {
 namespace allocator {
 
-ArenaBlock::ArenaBlock(const std::size_t size, const std::size_t alignment) :
+ArenaBlock::ArenaBlock(const SizeType size, const SizeType alignment) :
     Size_(size)
 {
   // Validate alignment is a power of 2
   if (alignment == 0 || (alignment & (alignment - 1)) != 0)
     diagnostic::engine.emit("Alignment must be a power of two", diagnostic::DiagnosticEngine::Severity::FATAL);
   // Round up size to multiple of alignment
-  std::size_t mod = Size_ % alignment;
+  SizeType mod = Size_ % alignment;
   if (mod)
     Size_ += (alignment - mod);
   // Allocate aligned memory
@@ -69,12 +69,12 @@ ArenaBlock& ArenaBlock::operator=(ArenaBlock&& other) MYLANG_NOEXCEPT
   return *this;
 }
 
-Pointer ArenaBlock::allocate(std::size_t bytes, std::optional<std::size_t> alignment)
+Pointer ArenaBlock::allocate(SizeType bytes, std::optional<SizeType> alignment)
 {
   if (Begin_ == nullptr || bytes == 0)
     return nullptr;
 
-  std::size_t alignment_value = alignment.value_or(alignof(std::max_align_t));
+  SizeType alignment_value = alignment.value_or(alignof(std::max_align_t));
   // Validate alignment is a power of 2
   if (alignment_value == 0 || (alignment_value & (alignment_value - 1)) != 0)
     diagnostic::engine.emit("Invalid arguments to ArenaAllocator::allocate()", diagnostic::DiagnosticEngine::Severity::FATAL);
@@ -86,9 +86,9 @@ Pointer ArenaBlock::allocate(std::size_t bytes, std::optional<std::size_t> align
     // Calculate aligned address
     std::uintptr_t cur     = reinterpret_cast<std::uintptr_t>(current_next);
     std::uintptr_t aligned = (cur + (alignment_value - 1)) & ~(alignment_value - 1);
-    std::size_t    pad     = aligned - cur;
+    SizeType       pad     = aligned - cur;
     // Check if we have enough space (including padding)
-    std::size_t remaining = Begin_ + Size_ - current_next;
+    SizeType remaining = Begin_ + Size_ - current_next;
     if (remaining < bytes + pad)
       return nullptr;  // Not enough space
     Pointer new_next = reinterpret_cast<Pointer>(aligned + bytes);
@@ -101,7 +101,7 @@ Pointer ArenaBlock::allocate(std::size_t bytes, std::optional<std::size_t> align
   }
 }
 
-Pointer ArenaBlock::reserve(const std::size_t bytes)
+Pointer ArenaBlock::reserve(const SizeType bytes)
 {
   if (Begin_ == nullptr || bytes == 0)
     return nullptr;
@@ -111,7 +111,7 @@ Pointer ArenaBlock::reserve(const std::size_t bytes)
   for (;;)
   {
     // Check if we have enough space
-    std::size_t remaining = Begin_ + Size_ - current_next;
+    SizeType remaining = Begin_ + Size_ - current_next;
     if (remaining < bytes)
       return nullptr;
     Pointer new_next = current_next + bytes;

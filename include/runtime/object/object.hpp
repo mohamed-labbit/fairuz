@@ -70,7 +70,7 @@ class Value
   struct Iterator
   {
     std::shared_ptr<std::vector<Value>> items;
-    std::size_t                         index;
+    SizeType                            index;
   };
 
   std::variant<std::monostate,                                          // None
@@ -180,7 +180,7 @@ class Value
   StringType   toString() const;
 
   std::string repr() const;
-  std::size_t hash() const;  // Hash for use in dictionaries
+  SizeType    hash() const;  // Hash for use in dictionaries
 
   bool hasNext() const;
 

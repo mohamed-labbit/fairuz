@@ -5,7 +5,7 @@ namespace mylang {
 namespace runtime {
 namespace allocator {
 
-ArenaAllocator::ArenaAllocator(std::int32_t growth_strategy, std::size_t min_align, OutOfMemoryHandler oom_handler, bool debug) :
+ArenaAllocator::ArenaAllocator(std::int32_t growth_strategy, SizeType min_align, OutOfMemoryHandler oom_handler, bool debug) :
     GrowthFactor_(GrowthStrategy(growth_strategy)),
     MinAlignment_(min_align),
     OomHandler_(oom_handler),
@@ -62,14 +62,14 @@ void ArenaAllocator::reset()
 }
 
 MYLANG_NODISCARD
-Pointer ArenaAllocator::allocateBlock(std::size_t requested, std::size_t alignment_, bool retry_on_oom)
+Pointer ArenaAllocator::allocateBlock(SizeType requested, SizeType alignment_, bool retry_on_oom)
 {
   // Validate and fix alignment if needed
   if (alignment_ == 0 || (alignment_ & (alignment_ - 1)) != 0)
     alignment_ = MinAlignment_;
 
   // Determine block size (including growth strategy)
-  std::size_t block_size = std::max(requested + alignment_, NextBlockSize_.load(std::memory_order_relaxed));
+  SizeType block_size = std::max(requested + alignment_, NextBlockSize_.load(std::memory_order_relaxed));
 
   // Check against maximum
   if (block_size > MaxBlockSize_.load(std::memory_order_relaxed))
@@ -115,7 +115,7 @@ bool ArenaAllocator::verifyAllocation(void* ptr) const
 }
 
 MYLANG_NODISCARD
-Pointer ArenaAllocator::allocateUsingFreeList(std::size_t alloc_size, std::size_t align)
+Pointer ArenaAllocator::allocateUsingFreeList(SizeType alloc_size, SizeType align)
 {
   std::lock_guard<std::mutex> lock(FreeListMutex_);
   if (FreeList_.empty())
@@ -131,7 +131,7 @@ Pointer ArenaAllocator::allocateUsingFreeList(std::size_t alloc_size, std::size_
     // Check alignment of the Pointer
     std::uintptr_t addr    = reinterpret_cast<std::uintptr_t>(reg.ptr);
     std::uintptr_t aligned = (addr + (align - 1)) & ~(align - 1);
-    std::size_t    padding = aligned - addr;
+    SizeType       padding = aligned - addr;
 
     if (reg.size >= alloc_size + padding)
     {
@@ -139,12 +139,12 @@ Pointer ArenaAllocator::allocateUsingFreeList(std::size_t alloc_size, std::size_
       // Remove the used region
       FreeList_.erase(it);
       // If there's leftover space, split the region
-      std::size_t used = alloc_size + padding;
+      SizeType used = alloc_size + padding;
 
       if (reg.size > used)
       {
-        Pointer     remainder      = reg.ptr + used;
-        std::size_t remainder_size = reg.size - used;
+        Pointer  remainder      = reg.ptr + used;
+        SizeType remainder_size = reg.size - used;
         FreeList_.insert(FreeListRegion(remainder, remainder_size));
       }
       return result;
@@ -155,7 +155,7 @@ Pointer ArenaAllocator::allocateUsingFreeList(std::size_t alloc_size, std::size_
 }
 
 MYLANG_NODISCARD
-Pointer ArenaAllocator::allocateFromBlocks(std::size_t alloc_size, std::size_t align)
+Pointer ArenaAllocator::allocateFromBlocks(SizeType alloc_size, SizeType align)
 {
   // Validate alignment
   align = MinAlignment_;
@@ -177,7 +177,7 @@ Pointer ArenaAllocator::allocateFromBlocks(std::size_t alloc_size, std::size_t a
   }
 
   // Need a new block
-  std::size_t new_block_size = std::max(alloc_size, NextBlockSize_.load(std::memory_order_relaxed));
+  SizeType new_block_size = std::max(alloc_size, NextBlockSize_.load(std::memory_order_relaxed));
   if (allocateBlock(new_block_size, align) == nullptr)
   {
     if (DebugFeatures_.load(std::memory_order_relaxed))
@@ -195,9 +195,9 @@ void ArenaAllocator::updateNextBlockSize() MYLANG_NOEXCEPT
   /// TODO: prevent overflow
   if (GrowthFactor_.load(std::memory_order_relaxed) == GrowthStrategy::EXPONENTIAL)
   {
-    std::size_t current  = NextBlockSize_.load(std::memory_order_relaxed);
-    std::size_t max_size = MaxBlockSize_.load(std::memory_order_relaxed);
-    std::size_t new_size = std::min(current * 2, max_size);
+    SizeType current  = NextBlockSize_.load(std::memory_order_relaxed);
+    SizeType max_size = MaxBlockSize_.load(std::memory_order_relaxed);
+    SizeType new_size = std::min(current * 2, max_size);
     NextBlockSize_.store(new_size, std::memory_order_relaxed);
   }
 }

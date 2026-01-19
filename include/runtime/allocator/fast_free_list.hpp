@@ -21,7 +21,7 @@ namespace allocator {
  * 
  * Thread-safety: Protected by internal mutex
  */
-template<std::size_t ObjectSize>
+template<SizeType ObjectSize>
 class FastAllocBlockFreeList
 {
  private:
@@ -126,7 +126,7 @@ class FastAllocBlockFreeList
      * Complexity: O(log n) for lower_bound + O(k) for iteration where
      *             k is the number of regions with similar sizes
      */
-  std::optional<FreeListRegion> findAndExtract(std::size_t size, std::size_t align)
+  std::optional<FreeListRegion> findAndExtract(SizeType size, SizeType align)
   {
     std::lock_guard<std::mutex> lock(Mutex_);
     // Find best fit (smallest region that can hold the allocation)
@@ -140,7 +140,7 @@ class FastAllocBlockFreeList
       // Calculate alignment padding
       std::uintptr_t addr    = reinterpret_cast<std::uintptr_t>(reg.ptr);
       std::uintptr_t aligned = (addr + (align - 1)) & ~(align - 1);
-      std::size_t    padding = aligned - addr;
+      SizeType       padding = aligned - addr;
 
       if (reg.size >= size + padding)
       {
@@ -148,11 +148,11 @@ class FastAllocBlockFreeList
         Regions_.erase(it);
 
         // Split if there's leftover space
-        std::size_t used = size + padding;
+        SizeType used = size + padding;
         if (reg.size > used)
         {
-          Pointer     remainder      = reg.ptr + used;
-          std::size_t remainder_size = reg.size - used;
+          Pointer  remainder      = reg.ptr + used;
+          SizeType remainder_size = reg.size - used;
           Regions_.insert(FreeListRegion(remainder, remainder_size));
         }
 

@@ -19,7 +19,9 @@ std::vector<ast::Stmt*> Parser::parseProgram()
 
     ast::Stmt* stmt = parseStatement();
     if (stmt != nullptr)
+    {
       statements.push_back(stmt);
+    }
     else
     {
       // Error recovery: skip to next statement
@@ -82,6 +84,9 @@ ast::Stmt* Parser::parseWhileStmt()
 
 ast::BlockStmt* Parser::parseIndentedBlock()
 {
+  if (check(tok::TokenType::NEWLINE))
+    advance();
+
   consume(tok::TokenType::INDENT, u"Expected indented block");
 
   std::vector<ast::Stmt*> statements;
@@ -113,7 +118,10 @@ ast::BlockStmt* Parser::parseIndentedBlock()
     }
   }
 
-  consume(tok::TokenType::DEDENT, u"Expected dedent after block");
+  if (check(tok::TokenType::ENDMARKER))
+    return ast::AST_allocator.make<ast::BlockStmt>(statements);
+  else
+    consume(tok::TokenType::DEDENT, u"Expected dedent after block");
 
   return ast::AST_allocator.make<ast::BlockStmt>(statements);
 }
@@ -538,8 +546,7 @@ void Parser::synchronize()
     }
 
     // Stop before statement keywords
-    if (check(tok::TokenType::KW_IF) || check(tok::TokenType::KW_WHILE) || check(tok::TokenType::KW_RETURN)
-        || check(tok::TokenType::KW_FN))
+    if (check(tok::TokenType::KW_IF) || check(tok::TokenType::KW_WHILE) || check(tok::TokenType::KW_RETURN) || check(tok::TokenType::KW_FN))
       return;
 
     advance();

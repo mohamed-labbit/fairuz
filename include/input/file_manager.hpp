@@ -72,10 +72,10 @@ class FileManager
  public:
   struct Context
   {
-    std::size_t ByteOffset{0};
-    std::size_t CharOffset{0};
-    std::size_t line{0};
-    std::size_t column{0};
+    SizeType ByteOffset{0};
+    SizeType CharOffset{0};
+    SizeType line{0};
+    SizeType column{0};
 
     void reset() MYLANG_NOEXCEPT
     {
@@ -88,18 +88,18 @@ class FileManager
 
   struct LineIndex
   {
-    std::size_t ByteOffset{0};
-    std::size_t CharOffset{0};
-    std::size_t LineLength{0};
+    SizeType ByteOffset{0};
+    SizeType CharOffset{0};
+    SizeType LineLength{0};
   };
 
   struct FileStats
   {
-    std::size_t                     TotalBytes{0};
-    std::size_t                     TotalLines{0};
-    std::size_t                     MaxLineLength{0};
-    std::size_t                     AverageLineLength{0};
-    std::size_t                     TotalCharacters{0};
+    SizeType                        TotalBytes{0};
+    SizeType                        TotalLines{0};
+    SizeType                        MaxLineLength{0};
+    SizeType                        AverageLineLength{0};
+    SizeType                        TotalCharacters{0};
     std::filesystem::file_time_type LastModified;
   };
 
@@ -123,52 +123,52 @@ class FileManager
 
   void reset();
 
-  void seekToChar(const std::size_t CharOffset);
+  void seekToChar(const SizeType CharOffset);
 
-  void seekToLine(const std::size_t line_number)
+  void seekToLine(const SizeType line_number)
   {
     /// TODO:
   }
 
-  StringType readWindow(const std::size_t size)
+  StringType readWindow(const SizeType size)
   {
     /// TODO: : add cache validation
     return readWindowInternal(size);
   }
 
-  StringType readWindowInternal(const std::size_t size);
+  StringType readWindowInternal(const SizeType size);
 
-  StringType readLine(const std::size_t line_number);
+  StringType readLine(const SizeType line_number);
 
   StringType readNextLine();
 
-  std::vector<StringType> readLines(const std::size_t start, const std::size_t count);
+  std::vector<StringType> readLines(const SizeType start, const SizeType count);
 
   StringType readAll();
 
   void refreshStats();
 
-  std::size_t getLineCount()
+  SizeType getLineCount()
   {
     if (!LineIndexBuilt_)
       buildLineIndex();
     return Stats_.TotalLines;
   }
 
-  std::size_t getCharCount()
+  SizeType getCharCount()
   {
     if (!LineIndexBuilt_)
       buildLineIndex();
     return Stats_.TotalCharacters;
   }
 
-  char16_t peekChar(const std::size_t CharOffset);
+  CharType peekChar(const SizeType CharOffset);
 
-  StringType peekRange(const std::size_t start_offset, const std::size_t length);
+  StringType peekRange(const SizeType start_offset, const SizeType length);
 
-  std::size_t remaining() { return static_cast<std::size_t>(Stream_.tellg()) - Context_.ByteOffset; }
+  SizeType remaining() { return static_cast<SizeType>(Stream_.tellg()) - Context_.ByteOffset; }
 
-  std::size_t fileSize() { return static_cast<std::size_t>(Stream_.tellg()); }
+  SizeType fileSize() { return static_cast<SizeType>(Stream_.tellg()); }
 
  private:
   std::string            FullPath_;
@@ -179,11 +179,11 @@ class FileManager
   FileStats              Stats_;
 
   // private constants
-  static MYLANG_CONSTEXPR std::size_t DEFAULT_BUFFER_SIZE  = 8192;
-  static MYLANG_CONSTEXPR std::size_t MAX_UTF8_CHAR_BYTES  = 8;
-  static MYLANG_CONSTEXPR std::size_t SMALL_FILE_THRESHOLD = 1024 * 1024;        // 1 MB
-  static MYLANG_CONSTEXPR std::size_t LARGE_FILE_THRESHOLD = 1024 * 1024 * 100;  // 100 MB
-  static MYLANG_CONSTEXPR std::size_t LINE_INDEX_CHUNK     = 10;
+  static MYLANG_CONSTEXPR SizeType DEFAULT_BUFFER_SIZE  = 8192;
+  static MYLANG_CONSTEXPR SizeType MAX_UTF8_CHAR_BYTES  = 8;
+  static MYLANG_CONSTEXPR SizeType SMALL_FILE_THRESHOLD = 1024 * 1024;        // 1 MB
+  static MYLANG_CONSTEXPR SizeType LARGE_FILE_THRESHOLD = 1024 * 1024 * 100;  // 100 MB
+  static MYLANG_CONSTEXPR SizeType LINE_INDEX_CHUNK     = 10;
 
   bool                            LineIndexBuilt_{false};
   std::filesystem::file_time_type LastKnownWriteTime_;
@@ -202,7 +202,7 @@ class FileManager
       PositionStack_.erase(PositionStack_.begin());
   }
 
-  std::size_t validateUtf8Bound(std::span<const char> buffer) const;
+  SizeType validateUtf8Bound(std::span<const char> buffer) const;
 
   void buildLineIndex();
 

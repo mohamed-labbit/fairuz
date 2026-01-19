@@ -111,7 +111,7 @@ class Parser
 
 
   /// @brief Constructs a parser from a pre-existing token sequence
-  explicit Parser(std::vector<tok::Token> seq, std::optional<std::size_t> s = std::nullopt);
+  explicit Parser(std::vector<tok::Token> seq, std::optional<SizeType> s = std::nullopt);
 
   std::vector<ast::Stmt*> parseProgram();
 
@@ -216,7 +216,7 @@ class Parser
   lex::Lexer Lexer_;  // Underlying lexer providing tokens
 
   /// @brief Peeks ahead in the token stream without consuming
-  tok::Token peek(std::size_t offset = 1) { return Lexer_.peek(offset); }
+  tok::Token peek(SizeType offset = 1) { return Lexer_.peek(offset); }
 
   /// @brief Advances and returns the next token
   tok::Token advance() { return Lexer_.next(); }
@@ -246,7 +246,7 @@ class Parser
   }
 
   /// @brief Retrieves a source line for diagnostics
-  StringType getSourceLine(std::size_t line)
+  StringType getSourceLine(SizeType line)
   {
     /// TODO: Use the file manager to retrieve actual source line
     return peek().lexeme();

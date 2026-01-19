@@ -116,7 +116,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
      * - Growing max block size
      * - Logging and failing gracefully
      */
-  using OutOfMemoryHandler = std::function<bool(std::size_t requested)>;
+  using OutOfMemoryHandler = std::function<bool(SizeType requested)>;
 
  private:
   //==========================================================================
@@ -129,7 +129,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
      */
   struct VoidPtrHash
   {
-    std::size_t operator()(const void* ptr) const MYLANG_NOEXCEPT { return std::hash<std::uintptr_t>()(reinterpret_cast<std::uintptr_t>(ptr)); }
+    SizeType operator()(const void* ptr) const MYLANG_NOEXCEPT { return std::hash<std::uintptr_t>()(reinterpret_cast<std::uintptr_t>(ptr)); }
   };
 
   /**
@@ -163,8 +163,8 @@ class MYLANG_COMPILER_ABI ArenaAllocator
   FastAllocBlockFreeList<256> FreeList256_;  ///< Free list for 256-byte objects
   // Configuration
   std::atomic<GrowthStrategy> GrowthFactor_{GrowthStrategy::LINEAR};  ///< Block growth strategy
-  std::size_t                 BlockSize_{DEFAULT_BLOCK_SIZE};         ///< Initial block size
-  std::atomic<std::size_t>    NextBlockSize_{DEFAULT_BLOCK_SIZE};     ///< Next block size to allocate
+  SizeType                    BlockSize_{DEFAULT_BLOCK_SIZE};         ///< Initial block size
+  std::atomic<SizeType>       NextBlockSize_{DEFAULT_BLOCK_SIZE};     ///< Next block size to allocate
   std::string                 Name_{"arena"};                         ///< Allocator name (for debugging)
   // Out-of-memory handling
   OutOfMemoryHandler OomHandler_{nullptr};  ///< OOM callback
@@ -182,8 +182,8 @@ class MYLANG_COMPILER_ABI ArenaAllocator
   std::atomic<bool> DebugFeatures_{false};     ///< Enable debug features
   std::atomic<bool> EnableStatistics_{true};   ///< Enable statistics collection
   // Alignment settings
-  std::size_t              MinAlignment_{alignof(std::max_align_t)};  ///< Minimum alignment
-  std::atomic<std::size_t> MaxBlockSize_{MAX_BLOCK_SIZE};             ///< Maximum block size
+  SizeType              MinAlignment_{alignof(std::max_align_t)};  ///< Minimum alignment
+  std::atomic<SizeType> MaxBlockSize_{MAX_BLOCK_SIZE};             ///< Maximum block size
 
  public:
   //==========================================================================
@@ -201,7 +201,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
      * Debug mode enables allocation tracking and double-free detection.
      */
   ArenaAllocator(std::int32_t       growth_strategy = static_cast<std::int32_t>(GrowthStrategy::EXPONENTIAL),
-                 std::size_t        min_align       = alignof(std::max_align_t),
+                 SizeType           min_align       = alignof(std::max_align_t),
                  OutOfMemoryHandler oom_handler     = nullptr,
                  bool               debug           = false);
   /**
@@ -240,19 +240,19 @@ class MYLANG_COMPILER_ABI ArenaAllocator
      * @brief Get total bytes allocated (cumulative)
      * @return Total bytes allocated since construction or last reset
      */
-  std::size_t totalAllocated() const { return AllocStats_.TotalAllocated.load(std::memory_order_relaxed); }
+  SizeType totalAllocated() const { return AllocStats_.TotalAllocated.load(std::memory_order_relaxed); }
 
   /**
      * @brief Get total number of allocations
      * @return Number of allocation requests processed
      */
-  std::size_t totalAllocations() const { return AllocStats_.TotalAllocations.load(std::memory_order_relaxed); }
+  SizeType totalAllocations() const { return AllocStats_.TotalAllocations.load(std::memory_order_relaxed); }
 
   /**
      * @brief Get number of active memory blocks
      * @return Count of currently allocated blocks
      */
-  std::size_t activeBlocks() const { return AllocStats_.ActiveBlocks.load(std::memory_order_relaxed); }
+  SizeType activeBlocks() const { return AllocStats_.ActiveBlocks.load(std::memory_order_relaxed); }
 
   //==========================================================================
   // Block Allocation (Internal)
@@ -275,7 +275,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
      * - Meet minimum block size
      */
   MYLANG_NODISCARD
-  Pointer allocateBlock(std::size_t requested, std::size_t alignment_ = alignof(std::max_align_t), bool retry_on_oom = true);
+  Pointer allocateBlock(SizeType requested, SizeType alignment_ = alignof(std::max_align_t), bool retry_on_oom = true);
 
   /**
      * @brief Allocate a fast block for small objects
@@ -288,10 +288,10 @@ class MYLANG_COMPILER_ABI ArenaAllocator
      * 
      * Thread-safe: Protected by fast_pool_mutex.
      */
-  template<std::size_t ObjectSize>
-  MYLANG_NODISCARD Pointer allocateFastBlock(std::size_t size, bool retry_on_oom = true)
+  template<SizeType ObjectSize>
+  MYLANG_NODISCARD Pointer allocateFastBlock(SizeType size, bool retry_on_oom = true)
   {
-    std::size_t alloc_size = std::max(size, static_cast<std::size_t>(DEFAULT_BLOCK_SIZE));
+    SizeType alloc_size = std::max(size, static_cast<SizeType>(DEFAULT_BLOCK_SIZE));
 
     if (alloc_size > MAX_BLOCK_SIZE)
     {
@@ -362,7 +362,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
      * @endcode
      */
   template<typename _Tp>
-  MYLANG_NODISCARD MYLANG_COMPILER_ABI _Tp* allocate(std::size_t count = 1)
+  MYLANG_NODISCARD MYLANG_COMPILER_ABI _Tp* allocate(SizeType count = 1)
   {
     std::chrono::steady_clock::time_point start = std::chrono::high_resolution_clock::now();
 
@@ -381,8 +381,8 @@ class MYLANG_COMPILER_ABI ArenaAllocator
       // diagnostic::engine.panic("bad alloc");
     }
 
-    std::size_t alloc_size = count * sizeof(_Tp);
-    std::size_t align      = std::max(alignof(_Tp), MinAlignment_);
+    SizeType alloc_size = count * sizeof(_Tp);
+    SizeType align      = std::max(alignof(_Tp), MinAlignment_);
 
     if (alloc_size > MAX_BLOCK_SIZE)
     {
@@ -393,14 +393,14 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     Pointer mem = nullptr;
 
     // Try fast pool for small objects
-    MYLANG_CONSTEXPR std::size_t type_size = sizeof(_Tp);
-    MYLANG_CONSTEXPR std::size_t pool_size = type_size <= 8     ? 8
-                                             : type_size <= 16  ? 16
-                                             : type_size <= 32  ? 32
-                                             : type_size <= 64  ? 64
-                                             : type_size <= 128 ? 128
-                                             : type_size <= 256 ? 256
-                                                                : 0;
+    MYLANG_CONSTEXPR SizeType type_size = sizeof(_Tp);
+    MYLANG_CONSTEXPR SizeType pool_size = type_size <= 8     ? 8
+                                          : type_size <= 16  ? 16
+                                          : type_size <= 32  ? 32
+                                          : type_size <= 64  ? 64
+                                          : type_size <= 128 ? 128
+                                          : type_size <= 256 ? 256
+                                                             : 0;
 
     MYLANG_CONSTEXPR bool use_fast_pool = (pool_size > 0) && (pool_size >= type_size);
 
@@ -453,7 +453,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     // Construct objects if needed
     if MYLANG_CONSTEXPR (!std::is_trivially_constructible_v<_Tp>)
     {
-      for (std::size_t i = 0; i < count; ++i)
+      for (SizeType i = 0; i < count; ++i)
         new (region + i) _Tp();
     }
 
@@ -483,7 +483,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
      *       in free lists for reuse.
      */
   template<typename _Tp>
-  MYLANG_COMPILER_ABI void deallocate(_Tp* ptr, std::size_t count = 1)
+  MYLANG_COMPILER_ABI void deallocate(_Tp* ptr, SizeType count = 1)
   {
     if (ptr == nullptr)
       return;
@@ -500,24 +500,24 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     }
     AllocatedPtrs_.erase(it);
 
-    std::size_t byte_size = count * sizeof(_Tp);
+    SizeType byte_size = count * sizeof(_Tp);
 
     // Call destructors for non-trivial types
     if MYLANG_CONSTEXPR (!std::is_trivially_destructible_v<_Tp>)
     {
-      for (std::size_t i = 0; i < count; ++i)
+      for (SizeType i = 0; i < count; ++i)
         ptr[i].~_Tp();
     }
 
     // Determine which free list to use
-    MYLANG_CONSTEXPR std::size_t obj_size  = sizeof(_Tp);
-    MYLANG_CONSTEXPR std::size_t pool_size = obj_size <= 8     ? 8
-                                             : obj_size <= 16  ? 16
-                                             : obj_size <= 32  ? 32
-                                             : obj_size <= 64  ? 64
-                                             : obj_size <= 128 ? 128
-                                             : obj_size <= 256 ? 256
-                                                               : 0;
+    MYLANG_CONSTEXPR SizeType obj_size  = sizeof(_Tp);
+    MYLANG_CONSTEXPR SizeType pool_size = obj_size <= 8     ? 8
+                                          : obj_size <= 16  ? 16
+                                          : obj_size <= 32  ? 32
+                                          : obj_size <= 64  ? 64
+                                          : obj_size <= 128 ? 128
+                                          : obj_size <= 256 ? 256
+                                                            : 0;
 
     MYLANG_CONSTEXPR bool use_fast_pool = (pool_size > 0) && (pool_size >= obj_size);
 
@@ -587,8 +587,8 @@ class MYLANG_COMPILER_ABI ArenaAllocator
      * 
      * Thread-safe: Uses fast_pool_mutex, releases during recursive calls
      */
-  template<std::size_t ObjectSize>
-  MYLANG_NODISCARD Pointer allocateFromFastPool(std::size_t alloc_size)
+  template<SizeType ObjectSize>
+  MYLANG_NODISCARD Pointer allocateFromFastPool(SizeType alloc_size)
   {
     std::unique_lock<std::mutex> lock(FastPoolMutex_);
 
@@ -604,7 +604,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     {
       lock.unlock();  // Release lock during recursive call
 
-      std::size_t block_size = std::max(alloc_size, NextBlockSize_.load(std::memory_order_relaxed));
+      SizeType block_size = std::max(alloc_size, NextBlockSize_.load(std::memory_order_relaxed));
       if (!allocateFastBlock<ObjectSize>(block_size))
       {
         std::cerr << "allocate_fast_block() failed!" << std::endl;
@@ -627,7 +627,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     {
       lock.unlock();  // Release lock during recursive call
 
-      std::size_t block_size = std::max(alloc_size, NextBlockSize_.load(std::memory_order_relaxed));
+      SizeType block_size = std::max(alloc_size, NextBlockSize_.load(std::memory_order_relaxed));
       if (allocateFastBlock<ObjectSize>(block_size) == nullptr)
       {
         std::cerr << "allocate_fast_block() failed!" << std::endl;
@@ -650,8 +650,8 @@ class MYLANG_COMPILER_ABI ArenaAllocator
      * Implements best-fit allocation from freed memory.
      * Thread-safe: Free list has internal locking
      */
-  template<std::size_t ObjectSize>
-  MYLANG_NODISCARD Pointer allocateUsingFastFreeList(std::size_t alloc_size)
+  template<SizeType ObjectSize>
+  MYLANG_NODISCARD Pointer allocateUsingFastFreeList(SizeType alloc_size)
   {
     FastAllocBlockFreeList<ObjectSize>* free_list = choosePoolFreeList<ObjectSize>();
     if (free_list == nullptr)
@@ -670,14 +670,14 @@ class MYLANG_COMPILER_ABI ArenaAllocator
   }
 
   MYLANG_NODISCARD
-  Pointer allocateUsingFreeList(std::size_t alloc_size, std::size_t align);
+  Pointer allocateUsingFreeList(SizeType alloc_size, SizeType align);
 
   MYLANG_NODISCARD
-  Pointer allocateFromBlocks(std::size_t alloc_size, std::size_t align);
+  Pointer allocateFromBlocks(SizeType alloc_size, SizeType align);
 
   void updateNextBlockSize() MYLANG_NOEXCEPT;
 
-  template<std::size_t ObjectSize>
+  template<SizeType ObjectSize>
   MYLANG_NODISCARD std::vector<LockFreeFastAllocBlock<ObjectSize>>* choosePool() MYLANG_NOEXCEPT
   {
     if MYLANG_CONSTEXPR (ObjectSize == 8)
@@ -696,7 +696,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
       return nullptr;
   }
 
-  template<std::size_t ObjectSize>
+  template<SizeType ObjectSize>
   MYLANG_NODISCARD FastAllocBlockFreeList<ObjectSize>* choosePoolFreeList() MYLANG_NOEXCEPT
   {
     if MYLANG_CONSTEXPR (ObjectSize == 8)

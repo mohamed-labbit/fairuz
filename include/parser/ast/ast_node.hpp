@@ -13,8 +13,8 @@ class ASTNode
   enum NodeType { EXPRESSION, STATEMENT };
 
  private:
-  std::size_t Line_{};
-  std::size_t Column_{};
+  SizeType Line_{};
+  SizeType Column_{};
 
   NodeType NodeType_;
 
@@ -29,11 +29,11 @@ class ASTNode
   NodeType getNodeType() const { return NodeType_; }
   void     setNodeType(const NodeType t) { NodeType_ = t; }
 
-  std::size_t getLine() const { return Line_; }
-  std::size_t getColumn() const { return Column_; }
+  SizeType getLine() const { return Line_; }
+  SizeType getColumn() const { return Column_; }
 
-  void setLine(std::size_t l) { Line_ = l; }
-  void setColumn(std::size_t c) { Column_ = c; }
+  void setLine(SizeType l) { Line_ = l; }
+  void setColumn(SizeType c) { Column_ = c; }
 
   virtual ~ASTNode() = default;
 };

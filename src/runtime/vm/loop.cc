@@ -1,4 +1,5 @@
 #include "../../../include/runtime/vm/loop.hpp"
+#include "../../../include/macros.hpp"
 
 
 namespace mylang {
@@ -7,7 +8,7 @@ namespace runtime {
 void LoopAnalyzer::detectLoops(const std::vector<bytecode::Instruction>& instructions)
 {
   // Detect back-edges (jumps to earlier instructions)
-  for (std::size_t i = 0; i < instructions.size(); i++)
+  for (SizeType i = 0; i < instructions.size(); i++)
   {
     const bytecode::Instruction& instr = instructions[i];
     if ((instr.op == bytecode::OpCode::JUMP_BACKWARD || instr.op == bytecode::OpCode::FOR_ITER) && instr.arg < i)
