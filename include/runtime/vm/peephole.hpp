@@ -3,8 +3,8 @@
 #include <string>
 #include <vector>
 
-#include "bytecode.hpp"
 #include "../../macros.hpp"
+#include "bytecode.hpp"
 
 
 // ============================================================================

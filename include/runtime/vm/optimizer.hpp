@@ -4,8 +4,8 @@
 #include <functional>
 #include <string>
 
-#include "bytecode.hpp"
 #include "../../macros.hpp"
+#include "bytecode.hpp"
 
 
 namespace mylang {
