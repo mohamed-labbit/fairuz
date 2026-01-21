@@ -28,6 +28,6 @@ class ASTAllocator
 
 inline ASTAllocator AST_allocator;
 
-}
-}
-}
+}  // ast
+}  // parser
+}  // mylang

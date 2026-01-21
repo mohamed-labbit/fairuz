@@ -38,6 +38,6 @@ class ASTNode
   virtual ~ASTNode() = default;
 };
 
-}
-}
-}
+}  // namespace ast
+}  // namespace parser
+}  // namespace mylang

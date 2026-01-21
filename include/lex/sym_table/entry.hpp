@@ -38,5 +38,5 @@ struct SymbolTableEntry
   }
 };
 
-}
-}
+}  // namespace lex
+}  // namespace mylang

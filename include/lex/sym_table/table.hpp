@@ -134,7 +134,7 @@ class SymbolTable
 
  private:
   std::vector<Scope> Scopes_;  // Stack of scopes (each scope is a map)
-};
+};  // class SymbolTable
 
 };  // namespace lex
 };  // namespace mylang

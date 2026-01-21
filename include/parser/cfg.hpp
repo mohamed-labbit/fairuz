@@ -44,5 +44,5 @@ class ControlFlowGraph
   const std::vector<BasicBlock>& getBlocks() const;
 };
 
-}
-}
+}  // parser
+}  // mylang

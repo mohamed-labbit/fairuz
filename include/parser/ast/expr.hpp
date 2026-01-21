@@ -234,6 +234,6 @@ class AssignmentExpr: public Expr
   Expr*     getValue() const { return Value_; }
 };  // ?
 
-}
-}
-}
+}  // namespace ast
+}  // namespace parser
+}  // namespace mylang

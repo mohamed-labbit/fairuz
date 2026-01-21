@@ -108,7 +108,7 @@ class Lexer
       std::locale::global(std::locale::classic());
     }
   }
-};
+};  // class Lexer
 
 
 }  // namespace lex

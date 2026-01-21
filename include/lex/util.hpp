@@ -60,5 +60,5 @@ static StringType bufferToU16String(const std::vector<char>& buf)
   return ret;
 }
 
-}
-}
+}  // util
+}  // mylang

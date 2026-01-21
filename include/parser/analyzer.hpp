@@ -43,5 +43,5 @@ class SemanticAnalyzer
   void                      printReport() const;
 };
 
-}
-}
+}  // parser
+}  // mylang

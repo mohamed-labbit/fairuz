@@ -4,6 +4,7 @@
 #include <string>
 
 
+namespace mylang {
 #define BUFFER_END u'\0'
 #define TABWIDTH 8
 #define MAX_ALLOWED_INDENT 100
@@ -19,11 +20,9 @@
 
 #define DEBUG_PRINT 0
 
-namespace mylang {
 typedef std::u16string StringType;
 typedef char16_t       CharType;
 typedef std::size_t    SizeType;
-}
 
 // Terminal colors
 namespace Color {
@@ -36,4 +35,6 @@ const std::u16string BLUE    = u"\033[34m";
 const std::u16string MAGENTA = u"\033[35m";
 const std::u16string CYAN    = u"\033[36m";
 const std::u16string GRAY    = u"\033[90m";
-}
+}  // Color
+
+}  // mylang
