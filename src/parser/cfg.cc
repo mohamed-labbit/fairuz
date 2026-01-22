@@ -19,7 +19,9 @@ void ControlFlowGraph::addEdge(std::int32_t from, std::int32_t to)
 void ControlFlowGraph::computeReachability()
 {
   if (Blocks_.empty())
+  {
     return;
+  }
 
   Blocks_[EntryBlock_].IsReachable   = true;
   std::vector<std::int32_t> worklist = {EntryBlock_};
@@ -56,14 +58,18 @@ void ControlFlowGraph::computeLiveness()
       // liveOut = union of successors' liveIn
       std::unordered_set<StringType> newLiveOut;
       for (std::int32_t succ : block.successors)
+      {
         newLiveOut.insert(Blocks_[succ].LiveIn.begin(), Blocks_[succ].LiveIn.end());
+      }
 
       // liveIn = use ∪ (liveOut - def)
       std::unordered_set<StringType> newLiveIn = block.UseVars;
       for (const StringType& var : newLiveOut)
       {
         if (!block.DefVars.count(var))
+        {
           newLiveIn.insert(var);
+        }
       }
 
       if (newLiveIn != block.LiveIn || newLiveOut != block.LiveOut)
@@ -82,7 +88,9 @@ std::vector<std::int32_t> ControlFlowGraph::getUnreachableBlocks() const
   for (SizeType i = 0; i < Blocks_.size(); ++i)
   {
     if (!Blocks_[i].IsReachable)
+    {
       unreachable.push_back(i);
+    }
   }
   return unreachable;
 }

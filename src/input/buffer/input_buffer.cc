@@ -23,7 +23,9 @@ CharType InputBuffer::consumeChar()
     if (*Current_ == BUFFER_END)
     {
       if (!refreshBuffer(CurrentBuffer_ ^ 1))
+      {
         return BUFFER_END;
+      }
       swapBuffers_();
     }
     ch = *Current_;
@@ -43,7 +45,9 @@ const CharType& InputBuffer::current()
   if (*Current_ == BUFFER_END)
   {
     if (!refreshBuffer(CurrentBuffer_ ^ 1))
+    {
       return end;
+    }
     swapBuffers_();
   }
 
@@ -56,13 +60,17 @@ const CharType& InputBuffer::peek()
   static const CharType end = BUFFER_END;
 
   if (Current_ == nullptr)
+  {
     return end;
+  }
 
   Pointer forward = Current_ + 1;
   if (*Current_ == BUFFER_END)
   {
     if (!refreshBuffer(CurrentBuffer_ ^ 1))
+    {
       return end;
+    }
     swapBuffers_();
     forward = Current_ + 1;
   }
@@ -70,7 +78,9 @@ const CharType& InputBuffer::peek()
   if (*forward == BUFFER_END)
   {
     if (!refreshBuffer(CurrentBuffer_ ^ 1))
+    {
       return end;
+    }
     swapBuffers_();
     forward = Current_ + 1;
   }
@@ -83,7 +93,9 @@ StringType InputBuffer::nPeek(SizeType n)
 
   StringType out;
   if (n == 0)
+  {
     return out;
+  }
 
   SizeType     rem     = n;
   std::int32_t buf_idx = CurrentBuffer_;
@@ -94,7 +106,9 @@ StringType InputBuffer::nPeek(SizeType n)
     if (offset >= Buffers_[buf_idx].size() || Buffers_[buf_idx][offset] == BUFFER_END)
     {
       if (!refreshBuffer(buf_idx ^ 1))
+      {
         break;
+      }
       buf_idx ^= 1;
       offset = 0;
     }
@@ -122,7 +136,9 @@ void InputBuffer::reset()
   Current_         = Buffers_[0].data();
   CurrentPosition_ = {1, 1, 0};
   while (!Columns_.empty())
+  {
     Columns_.pop();
+  }
   Columns_.push(1);
 }
 
@@ -131,7 +147,9 @@ void InputBuffer::swapBuffers_()
   CurrentBuffer_ ^= 1;
   Current_ = Buffers_[CurrentBuffer_].data();
   if (Columns_.empty())
+  {
     Columns_.push(1);
+  }
 }
 
 void InputBuffer::advancePosition_(CharType ch)
@@ -147,9 +165,13 @@ void InputBuffer::advancePosition_(CharType ch)
   {
     CurrentPosition_.column++;
     if (!Columns_.empty())
+    {
       Columns_.top() = CurrentPosition_.column;
+    }
     else
+    {
       Columns_.push(CurrentPosition_.column);
+    }
   }
 }
 
@@ -157,12 +179,16 @@ void InputBuffer::rewindPosition_(CharType ch)
 {
   /// TODO:: ultimately should emit an error
   if (CurrentPosition_.FilePos == 0)
+  {
     return;
+  }
   CurrentPosition_.FilePos = std::max<SizeType>(0, CurrentPosition_.FilePos - 1);
   if (ch == u'\n')
   {
     if (!Columns_.empty())
+    {
       Columns_.pop();
+    }
     CurrentPosition_.line   = std::max<SizeType>(1, CurrentPosition_.line - 1);
     CurrentPosition_.column = Columns_.empty() ? 1 : Columns_.top();
   }
@@ -170,7 +196,9 @@ void InputBuffer::rewindPosition_(CharType ch)
   {
     CurrentPosition_.column = (CurrentPosition_.column > 0 ? CurrentPosition_.column - 1 : 0);
     if (!Columns_.empty())
+    {
       Columns_.top() = CurrentPosition_.column;
+    }
   }
 }
 

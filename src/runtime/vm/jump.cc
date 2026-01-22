@@ -28,9 +28,13 @@ void JumpResolver::resolveJumps(std::vector<bytecode::Instruction>& instructions
   {
     auto it = Labels_.find(jump.LabelName);
     if (it != Labels_.end())
+    {
       instructions[jump.InstructionIndex].arg = it->second;
+    }
     else
+    {
       diagnostic::engine.panic("Undefined label: " + jump.LabelName);
+    }
   }
 }
 

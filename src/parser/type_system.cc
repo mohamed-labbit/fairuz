@@ -26,11 +26,15 @@ StringType TypeSystem::Type::toString() const
     return u"None";
   case BaseType::List :
     if (!TypeParams.empty())
+    {
       return u"List[" + TypeParams[0]->toString() + u"]";
+    }
     return u"List";
   case BaseType::Dict :
     if (TypeParams.size() >= 2)
+    {
       return u"Dict[" + TypeParams[0]->toString() + u", " + TypeParams[1]->toString() + u"]";
+    }
     return u"Dict";
   default :
     return u"Any";
@@ -49,7 +53,9 @@ std::shared_ptr<TypeSystem::Type> TypeSystem::TypeInference::freshTypeVar()
 void TypeSystem::TypeInference::unify(std::shared_ptr<TypeSystem::Type> t1, std::shared_ptr<TypeSystem::Type> t2)
 {
   if (*t1 == *t2)
+  {
     return;
+  }
 
   // Type variable substitution
   if (t1->base == BaseType::Any)
@@ -63,7 +69,9 @@ void TypeSystem::TypeInference::unify(std::shared_ptr<TypeSystem::Type> t1, std:
   else if (t1->base == BaseType::List && t2->base == BaseType::List)
   {
     if (!t1->TypeParams.empty() && !t2->TypeParams.empty())
+    {
       unify(t1->TypeParams[0], t2->TypeParams[0]);
+    }
   }
   else
   {
@@ -74,7 +82,9 @@ void TypeSystem::TypeInference::unify(std::shared_ptr<TypeSystem::Type> t1, std:
 std::shared_ptr<typename TypeSystem::Type> TypeSystem::TypeInference::inferExpr(const ast::Expr* expr)
 {
   if (!expr)
+  {
     return std::make_shared<Type>();
+  }
 
   switch (expr->getKind())
   {

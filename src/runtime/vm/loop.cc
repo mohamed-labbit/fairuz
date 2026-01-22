@@ -20,7 +20,9 @@ void LoopAnalyzer::detectLoops(const std::vector<bytecode::Instruction>& instruc
       loop.NestingLevel = 1;
       // Collect loop body
       for (std::int32_t pc = instr.arg; pc <= i; pc++)
+      {
         loop.BodyPCs.push_back(pc);
+      }
       Loops_.push_back(loop);
     }
   }
@@ -31,7 +33,9 @@ void LoopAnalyzer::detectLoops(const std::vector<bytecode::Instruction>& instruc
     for (const Loop& inner : Loops_)
     {
       if (inner.HeaderPC > outer.HeaderPC && inner.ExitPC < outer.ExitPC)
+      {
         outer.IsInnerLoop = false;
+      }
     }
   }
   /// TODO:: inner is nested in outer
@@ -47,14 +51,20 @@ void LoopAnalyzer::findInvariants(const std::vector<bytecode::Instruction>& inst
     {
       const bytecode::Instruction& instr = instructions[pc];
       if (instr.op == bytecode::OpCode::STORE_VAR || instr.op == bytecode::OpCode::STORE_FAST)
+      {
         modifiedVars.insert(instr.arg);
+      }
       if (instr.op == bytecode::OpCode::LOAD_VAR || instr.op == bytecode::OpCode::LOAD_FAST)
+      {
         usedVars.insert(instr.arg);
+      }
     }
     for (std::int32_t var : usedVars)
     {
       if (!modifiedVars.count(var))
+      {
         loop.invariants.insert(var);
+      }
     }
   }
 }

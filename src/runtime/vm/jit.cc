@@ -13,7 +13,9 @@ void JITCompiler::recordExecution(std::int32_t pc)
   {
     it->second.ExecutionCount++;
     if (it->second.ExecutionCount >= HotThreshold_ && !it->second.Compiled)
+    {
       compileHotSpot(it->second);
+    }
   }
 }
 

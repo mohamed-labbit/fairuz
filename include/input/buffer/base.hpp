@@ -26,7 +26,9 @@ class InputBufferBase
     Buffers_[1].resize(cap + 1, BUFFER_END);
 
     if (FileManager_ == nullptr || !FileManager_->isOpen())
+    {
       diagnostic::engine.panic("File is not open");
+    }
   }
 
   InputBufferBase() = default;

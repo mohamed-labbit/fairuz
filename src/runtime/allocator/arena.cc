@@ -13,7 +13,9 @@ ArenaAllocator::ArenaAllocator(std::int32_t growth_strategy, SizeType min_align,
 {
   // Validate alignment
   if (MinAlignment_ == 0 || (MinAlignment_ & (MinAlignment_ - 1)) != 0)
+  {
     MinAlignment_ = alignof(std::max_align_t);
+  }
   // Enable tracking in debug mode
   if (DebugFeatures_.load(std::memory_order_relaxed))
   {
@@ -48,7 +50,9 @@ void ArenaAllocator::reset()
   FreeList256_.clear();
 
   if (TrackAllocations_.load(std::memory_order_relaxed))
+  {
     AllocationMap_.clear();
+  }
 
   AllocatedPtrs_.clear();
   // Reset statistics
@@ -66,7 +70,9 @@ Pointer ArenaAllocator::allocateBlock(SizeType requested, SizeType alignment_, b
 {
   // Validate and fix alignment if needed
   if (alignment_ == 0 || (alignment_ & (alignment_ - 1)) != 0)
+  {
     alignment_ = MinAlignment_;
+  }
 
   // Determine block size (including growth strategy)
   SizeType block_size = std::max(requested + alignment_, NextBlockSize_.load(std::memory_order_relaxed));
@@ -78,7 +84,9 @@ Pointer ArenaAllocator::allocateBlock(SizeType requested, SizeType alignment_, b
     {
       std::lock_guard<std::mutex> oom_lock(OomHandlerMutex_);
       if (OomHandler_ && OomHandler_(block_size))
+      {
         return allocateBlock(requested, alignment_, false);  // Retry once
+      }
     }
     return nullptr;
   }
@@ -96,7 +104,9 @@ Pointer ArenaAllocator::allocateBlock(SizeType requested, SizeType alignment_, b
     {
       std::lock_guard<std::mutex> oom_lock(OomHandlerMutex_);
       if (OomHandler_ && OomHandler_(block_size))
+      {
         return allocateBlock(requested, alignment_, false);  // Retry once
+      }
     }
     return nullptr;
   }
@@ -106,11 +116,15 @@ MYLANG_NODISCARD
 bool ArenaAllocator::verifyAllocation(void* ptr) const
 {
   if (!TrackAllocations_.load(std::memory_order_relaxed))
+  {
     return true;
+  }
   std::shared_lock<std::shared_mutex> lock(AllocationMapMutex_);
   auto                                it = AllocationMap_.find(ptr);
   if (it == AllocationMap_.end())
+  {
     return false;
+  }
   return it->second.is_valid();
 }
 
@@ -119,7 +133,9 @@ Pointer ArenaAllocator::allocateUsingFreeList(SizeType alloc_size, SizeType alig
 {
   std::lock_guard<std::mutex> lock(FreeListMutex_);
   if (FreeList_.empty())
+  {
     return nullptr;
+  }
 
   // Find best fit using multiset's ordering
   FreeListRegion search_key(nullptr, alloc_size);
@@ -168,11 +184,15 @@ Pointer ArenaAllocator::allocateFromBlocks(SizeType alloc_size, SizeType align)
       // Try free list first
       Pointer mem = allocateUsingFreeList(alloc_size, align);
       if (mem != nullptr)
+      {
         return mem;
+      }
       // Try current block
       mem = Blocks_.back().allocate(alloc_size, align);
       if (mem != nullptr)
+      {
         return mem;
+      }
     }
   }
 
@@ -181,7 +201,9 @@ Pointer ArenaAllocator::allocateFromBlocks(SizeType alloc_size, SizeType align)
   if (allocateBlock(new_block_size, align) == nullptr)
   {
     if (DebugFeatures_.load(std::memory_order_relaxed))
+    {
       std::cerr << "-- Failed to allocate block : ArenaAllocator::allocate_block()" << std::endl;
+    }
     return nullptr;
   }
 

@@ -23,7 +23,9 @@ std::string DiagnosticEngine::toJSON() const
     ss << "    \"code\": \"" << utf8::utf16to8(diag.code) << "\"\n";
     ss << "  }";
     if (i + 1 < Diagnostics_.size())
+    {
       ss << ",";
+    }
     ss << "\n";
   }
   ss << "]\n";
@@ -59,7 +61,9 @@ void DiagnosticEngine::prettyPrint() const
 
     std::cout << utf8::utf16to8(color) << utf8::utf16to8(sevStr) << utf8::utf16to8(Color::RESET);
     if (!diag.code.empty())
+    {
       std::cout << "[" << utf8::utf16to8(diag.code) << "]";
+    }
     std::cout << ": " << utf8::utf16to8(diag.message) << "\n";
     // Show source line
     std::cout << "  --> line " << diag.line << ":" << diag.column << "\n";
@@ -77,7 +81,9 @@ void DiagnosticEngine::prettyPrint() const
     {
       std::cout << utf8::utf16to8(Color::MAGENTA) << "Help" << utf8::utf16to8(Color::RESET) << std::endl;
       for (const StringType& sugg : diag.suggestions)
+      {
         std::cout << "    • " << utf8::utf16to8(sugg) << "\n";
+      }
     }
     // Show notes
     for (const auto& [noteLine, noteMsg] : diag.notes)

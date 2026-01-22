@@ -11,7 +11,9 @@ std::int32_t ConstantPool::addConstant(const object::Value& val)
     std::int64_t v  = val.asInt();
     auto         it = IntConstants_.find(v);
     if (it != IntConstants_.end())
+    {
       return it->second;
+    }
     std::int32_t idx = Constants_.size();
     Constants_.push_back(val);
     IntConstants_[v] = idx;
@@ -23,7 +25,9 @@ std::int32_t ConstantPool::addConstant(const object::Value& val)
     double v  = val.asFloat();
     auto   it = FloatConstants_.find(v);
     if (it != FloatConstants_.end())
+    {
       return it->second;
+    }
     std::int32_t idx = Constants_.size();
     Constants_.push_back(val);
     FloatConstants_[v] = idx;
@@ -35,7 +39,9 @@ std::int32_t ConstantPool::addConstant(const object::Value& val)
     const StringType& v  = val.asString();
     auto              it = StringConstants_.find(v);
     if (it != StringConstants_.end())
+    {
       return it->second;
+    }
     std::int32_t idx = Constants_.size();
     Constants_.push_back(val);
     StringConstants_[v] = idx;

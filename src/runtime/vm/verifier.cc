@@ -16,7 +16,9 @@ bool BytecodeVerifier::verify(const BytecodeCompiler::CompilationUnit& unit)
     if (isJumpInstruction(instr.op))
     {
       if (instr.arg < 0 || instr.arg >= unit.instructions.size())
+      {
         Errors_.push_back({static_cast<std::int32_t>(i), "Jump target out of bounds: " + std::to_string(instr.arg)});
+      }
     }
   }
   // Check 2: Stack balance
@@ -29,7 +31,9 @@ bool BytecodeVerifier::verify(const BytecodeCompiler::CompilationUnit& unit)
     if (instr.op == bytecode::OpCode::LOAD_CONST)
     {
       if (instr.arg < 0 || instr.arg >= unit.constants.size())
+      {
         Errors_.push_back({static_cast<std::int32_t>(i), "Constant index out of bounds: " + std::to_string(instr.arg)});
+      }
     }
   }
   // Check 4: All paths return (for functions)
@@ -48,7 +52,9 @@ void BytecodeVerifier::printErrors(std::ostream& out) const
   }
   out << "✗ Bytecode verification failed with " << Errors_.size() << " error(s):\n";
   for (const VerificationError& err : Errors_)
+  {
     out << "  PC " << err.pc << ": " << err.message << "\n";
+  }
 }
 
 void BytecodeVerifier::verifyStackDepth(const BytecodeCompiler::CompilationUnit& unit,
@@ -57,10 +63,14 @@ void BytecodeVerifier::verifyStackDepth(const BytecodeCompiler::CompilationUnit&
                                         std::vector<std::int32_t>&               depths)
 {
   if (pc >= unit.instructions.size())
+  {
     return;
+  }
   // Already visited with same or greater depth
   if (depths[pc] >= depth)
+  {
     return;
+  }
   depths[pc]                            = depth;
   const bytecode::Instruction& instr    = unit.instructions[pc];
   std::int32_t                 newDepth = depth + getStackEffect(instr.op, instr.arg);
@@ -70,15 +80,21 @@ void BytecodeVerifier::verifyStackDepth(const BytecodeCompiler::CompilationUnit&
     return;
   }
   if (newDepth > unit.StackSize)
+  {
     Errors_.push_back({pc, "Stack overflow (depth " + std::to_string(newDepth) + " > " + std::to_string(unit.StackSize) + ")"});
+  }
   // Follow control flow
   if (instr.op == bytecode::OpCode::RETURN || instr.op == bytecode::OpCode::HALT)
+  {
     return;
+  }
   if (isJumpInstruction(instr.op))
   {
     verifyStackDepth(unit, instr.arg, newDepth, depths);
     if (!isUnconditionalJump(instr.op))
+    {
       verifyStackDepth(unit, pc + 1, newDepth, depths);
+    }
   }
   else
   {

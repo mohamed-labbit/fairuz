@@ -299,7 +299,9 @@ class MYLANG_COMPILER_ABI ArenaAllocator
       {
         std::lock_guard<std::mutex> oom_lock(OomHandlerMutex_);
         if (OomHandler_ && OomHandler_(alloc_size))
+        {
           return allocateFastBlock<ObjectSize>(size, false);
+        }
       }
       return nullptr;
     }
@@ -310,7 +312,9 @@ class MYLANG_COMPILER_ABI ArenaAllocator
       std::lock_guard<std::mutex>                      lock(FastPoolMutex_);
       std::vector<LockFreeFastAllocBlock<ObjectSize>>* pool = choosePool<ObjectSize>();
       if (pool == nullptr)
+      {
         return nullptr;
+      }
       Pointer ret = arena_block.begin();
       pool->push_back(std::move(arena_block));
       AllocStats_.safe_increment(AllocStats_.ActiveBlocks);
@@ -321,7 +325,9 @@ class MYLANG_COMPILER_ABI ArenaAllocator
       {
         std::lock_guard<std::mutex> oom_lock(OomHandlerMutex_);
         if (OomHandler_ && OomHandler_(alloc_size))
+        {
           return allocateFastBlock<ObjectSize>(size, false);
+        }
       }
       return nullptr;
     }
@@ -368,14 +374,18 @@ class MYLANG_COMPILER_ABI ArenaAllocator
 
     // Validate count
     if (count == 0)
+    {
       return nullptr;
+    }
 
     // Check for overflow
     if (count > MAX_BLOCK_SIZE / sizeof(_Tp))
     {
       diagnostic::engine.emit("allocation size is too large!", diagnostic::DiagnosticEngine::Severity::ERROR);
       if (OomHandler_ && OomHandler_(count))
+      {
         return allocate<_Tp>(count);
+      }
       diagnostic::engine.emit("bad alloc!", diagnostic::DiagnosticEngine::Severity::FATAL);
       /// TODO: change after debug
       // diagnostic::engine.panic("bad alloc");
@@ -410,13 +420,17 @@ class MYLANG_COMPILER_ABI ArenaAllocator
       {
         mem = allocateFromFastPool<pool_size>(alloc_size);
         if (mem == nullptr)
+        {
           std::cerr << "allocate_from_fast_pool() failed!" << std::endl;
+        }
       }
     }
 
     // Fall back to general blocks
     if (mem == nullptr)
+    {
       mem = allocateFromBlocks(alloc_size, align);
+    }
 
     if (mem == nullptr)
     {
@@ -454,7 +468,9 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     if MYLANG_CONSTEXPR (!std::is_trivially_constructible_v<_Tp>)
     {
       for (SizeType i = 0; i < count; ++i)
+      {
         new (region + i) _Tp();
+      }
     }
 
     std::chrono::steady_clock::time_point end = std::chrono::high_resolution_clock::now();
@@ -486,7 +502,9 @@ class MYLANG_COMPILER_ABI ArenaAllocator
   MYLANG_COMPILER_ABI void deallocate(_Tp* ptr, SizeType count = 1)
   {
     if (ptr == nullptr)
+    {
       return;
+    }
 
     // Check for double-free
     std::unique_lock<std::shared_mutex> lock(AllocatedPtrsMutex_);
@@ -495,7 +513,9 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     {
       // Double-free detected!
       if (DebugFeatures_.load(std::memory_order_relaxed))
+      {
         std::cerr << "ERROR: Double-free detected for Pointer " << ptr << std::endl;
+      }
       return;
     }
     AllocatedPtrs_.erase(it);
@@ -506,7 +526,9 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     if MYLANG_CONSTEXPR (!std::is_trivially_destructible_v<_Tp>)
     {
       for (SizeType i = 0; i < count; ++i)
+      {
         ptr[i].~_Tp();
+      }
     }
 
     // Determine which free list to use
@@ -545,7 +567,9 @@ class MYLANG_COMPILER_ABI ArenaAllocator
 
     // Update statistics
     if (EnableStatistics_.load(std::memory_order_relaxed))
+    {
       AllocStats_.safe_increment(AllocStats_.TotalDeallocations);
+    }
 
     // Remove from tracking
     if (TrackAllocations_.load(std::memory_order_relaxed) && ptr)
@@ -618,7 +642,9 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     // Try free list first
     Pointer mem = allocateUsingFastFreeList<ObjectSize>(alloc_size);
     if (mem != nullptr)
+    {
       return mem;
+    }
 
     // Try current block
     LockFreeFastAllocBlock<ObjectSize>& fast_block = pool->back();
@@ -655,7 +681,9 @@ class MYLANG_COMPILER_ABI ArenaAllocator
   {
     FastAllocBlockFreeList<ObjectSize>* free_list = choosePoolFreeList<ObjectSize>();
     if (free_list == nullptr)
+    {
       return nullptr;
+    }
 
     std::optional<FreeListRegion> result = free_list->findAndExtract(alloc_size, ObjectSize);
     if (result.has_value())
@@ -681,38 +709,66 @@ class MYLANG_COMPILER_ABI ArenaAllocator
   MYLANG_NODISCARD std::vector<LockFreeFastAllocBlock<ObjectSize>>* choosePool() MYLANG_NOEXCEPT
   {
     if MYLANG_CONSTEXPR (ObjectSize == 8)
+    {
       return &FastPool8_;
+    }
     else if MYLANG_CONSTEXPR (ObjectSize == 16)
+    {
       return &FastPool16_;
+    }
     else if MYLANG_CONSTEXPR (ObjectSize == 32)
+    {
       return &FastPool32_;
+    }
     else if MYLANG_CONSTEXPR (ObjectSize == 64)
+    {
       return &FastPool64_;
+    }
     else if MYLANG_CONSTEXPR (ObjectSize == 128)
+    {
       return &FastPool128_;
+    }
     else if MYLANG_CONSTEXPR (ObjectSize == 256)
+    {
       return &FastPool256_;
+    }
     else
+    {
       return nullptr;
+    }
   }
 
   template<SizeType ObjectSize>
   MYLANG_NODISCARD FastAllocBlockFreeList<ObjectSize>* choosePoolFreeList() MYLANG_NOEXCEPT
   {
     if MYLANG_CONSTEXPR (ObjectSize == 8)
+    {
       return &FreeList8_;
+    }
     else if MYLANG_CONSTEXPR (ObjectSize == 16)
+    {
       return &FreeList16_;
+    }
     else if MYLANG_CONSTEXPR (ObjectSize == 32)
+    {
       return &FreeList32_;
+    }
     else if MYLANG_CONSTEXPR (ObjectSize == 64)
+    {
       return &FreeList64_;
+    }
     else if MYLANG_CONSTEXPR (ObjectSize == 128)
+    {
       return &FreeList128_;
+    }
     else if MYLANG_CONSTEXPR (ObjectSize == 256)
+    {
       return &FreeList256_;
+    }
     else
+    {
       return nullptr;
+    }
   }
 };
 

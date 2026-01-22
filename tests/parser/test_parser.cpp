@@ -29,7 +29,9 @@ StringType load_source(const std::string& filename)
   auto          filepath = parser_test_cases_dir() / filename;
   std::ifstream file(filepath, std::ios::binary);
   if (!file.is_open())
+  {
     ADD_FAILURE() << "Failed to open test file: " << filepath;
+  }
   std::string utf8_contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
   return utf8::utf8to16(utf8_contents);
 }
@@ -74,7 +76,9 @@ class ParserTest: public ::testing::Test
     auto          filepath = parser_test_cases_dir() / filename;
     std::ifstream file(filepath, std::ios::binary);
     if (!file.is_open())
+    {
       ADD_FAILURE() << "Failed to open test file: " << filepath;
+    }
     return file;
   }
 
@@ -83,7 +87,9 @@ class ParserTest: public ::testing::Test
   {
     EXPECT_NE(expr, nullptr) << "Expression should not be null";
     if (!expr)
+    {
       return nullptr;
+    }
     T* casted = reinterpret_cast<T*>(expr);
     EXPECT_NE(casted, nullptr) << "Failed to cast to expected type";
     return casted;
@@ -100,7 +106,9 @@ TEST_F(ParserTest, ParseNumberLiteral)
   parser::ast::Expr*        expr    = parser.parse();
   parser::ast::LiteralExpr* literal = dynamic_cast<parser::ast::LiteralExpr*>(expr);
   if (test_config::print_ast)
+  {
     AST_Printer.print(literal);
+  }
   ASSERT_NE(literal, nullptr);
   EXPECT_EQ(literal->getType(), parser::ast::LiteralExpr::Type::NUMBER);
 }
@@ -112,7 +120,9 @@ TEST_F(ParserTest, ParseStringLiteral)
   parser::ast::Expr*        expr    = parser.parse();
   parser::ast::LiteralExpr* literal = dynamic_cast<parser::ast::LiteralExpr*>(expr);
   if (test_config::print_ast)
+  {
     AST_Printer.print(literal);
+  }
   ASSERT_NE(literal, nullptr);
   std::cout << static_cast<int>(literal->getType()) << std::endl;
   EXPECT_EQ(static_cast<int>(literal->getType()), static_cast<int>(parser::ast::LiteralExpr::Type::STRING));
@@ -125,7 +135,9 @@ TEST_F(ParserTest, ParseBooleanLiteralTrue)
   parser::ast::Expr*        expr    = parser.parse();
   parser::ast::LiteralExpr* literal = dynamic_cast<parser::ast::LiteralExpr*>(expr);
   if (test_config::print_ast)
+  {
     AST_Printer.print(literal);
+  }
   ASSERT_NE(literal, nullptr);
   EXPECT_EQ(literal->getType(), parser::ast::LiteralExpr::Type::BOOLEAN);
 }
@@ -137,7 +149,9 @@ TEST_F(ParserTest, ParseBooleanLiteralFalse)
   parser::ast::Expr*        expr    = parser.parse();
   parser::ast::LiteralExpr* literal = dynamic_cast<parser::ast::LiteralExpr*>(expr);
   if (test_config::print_ast)
+  {
     AST_Printer.print(literal);
+  }
   ASSERT_NE(literal, nullptr);
   EXPECT_EQ(literal->getType(), parser::ast::LiteralExpr::Type::BOOLEAN);
 }
@@ -149,7 +163,9 @@ TEST_F(ParserTest, ParseNoneLiteral)
   parser::ast::Expr*        expr    = parser.parse();
   parser::ast::LiteralExpr* literal = dynamic_cast<parser::ast::LiteralExpr*>(expr);
   if (test_config::print_ast)
+  {
     AST_Printer.print(literal);
+  }
   ASSERT_NE(literal, nullptr);
   EXPECT_EQ(literal->getType(), parser::ast::LiteralExpr::Type::NONE);
 }
@@ -162,7 +178,9 @@ TEST_F(ParserTest, ParseParenthesizedNumberLiteral)
   parser::ast::Expr*        expr    = parser.parse();
   parser::ast::LiteralExpr* literal = dynamic_cast<parser::ast::LiteralExpr*>(expr);
   if (test_config::print_ast)
+  {
     AST_Printer.print(literal);
+  }
   ASSERT_NE(literal, nullptr);
   EXPECT_EQ(literal->getType(), parser::ast::LiteralExpr::Type::NUMBER);
 }
@@ -176,7 +194,9 @@ TEST_F(ParserTest, ParseIdentifier)
   parser::ast::Expr*     expr      = parser.parse();
   parser::ast::NameExpr* name_expr = dynamic_cast<parser::ast::NameExpr*>(expr);
   if (test_config::print_ast)
+  {
     AST_Printer.print(name_expr);
+  }
   ASSERT_NE(name_expr, nullptr);
   EXPECT_EQ(name_expr->getValue(), u"المتنبي");
 }
@@ -200,7 +220,9 @@ TEST_F(ParserTest, ParseCallExpressionNoArgs)
   ASSERT_NE(expr, nullptr);
   parser::ast::CallExpr* call_expr = dynamic_cast<parser::ast::CallExpr*>(expr);
   if (test_config::print_ast)
+  {
     AST_Printer.print(call_expr);
+  }
   ASSERT_NE(call_expr, nullptr);
   ASSERT_NE(call_expr->getCallee(), nullptr);
   parser::ast::NameExpr* callee_name = dynamic_cast<parser::ast::NameExpr*>(call_expr->getCallee());
@@ -217,7 +239,9 @@ TEST_F(ParserTest, ParseCallExpressionWithOneArg)
   ASSERT_NE(expr, nullptr);
   parser::ast::CallExpr* call_expr = dynamic_cast<parser::ast::CallExpr*>(expr);
   if (test_config::print_ast)
+  {
     AST_Printer.print(call_expr);
+  }
   ASSERT_NE(call_expr, nullptr);
   ASSERT_NE(call_expr->getCallee(), nullptr);
   parser::ast::NameExpr* callee_name = dynamic_cast<parser::ast::NameExpr*>(call_expr->getCallee());
@@ -239,7 +263,9 @@ TEST_F(ParserTest, ParseNestedCallExpression)
   parser::ast::CallExpr* call_expr = dynamic_cast<parser::ast::CallExpr*>(expr);
   EXPECT_NE(call_expr, nullptr);
   if (test_config::print_ast)
+  {
     AST_Printer.print(call_expr);
+  }
   parser::ast::Expr*     callee = call_expr->getCallee();
   parser::ast::ListExpr* args   = call_expr->getArgsAsListExpr();
   EXPECT_NE(callee, nullptr) << "Callee should not be null";
@@ -276,7 +302,9 @@ TEST_F(ParserTest, ParseSimpleAddition)
   EXPECT_NE(expr, nullptr) << "Should parse expression";
   parser::ast::BinaryExpr* add_expr = dynamic_cast<parser::ast::BinaryExpr*>(expr);
   if (test_config::print_ast)
+  {
     AST_Printer.print(add_expr);
+  }
   EXPECT_NE(add_expr, nullptr) << "Should cast expression";
   EXPECT_NE(add_expr->getLeft(), nullptr) << "Should get left hand side";
   EXPECT_NE(add_expr->getRight(), nullptr) << "should get right hand side";
@@ -305,7 +333,9 @@ TEST_F(ParserTest, ParseSimpleMultiplication)
   EXPECT_NE(expr, nullptr) << "Should parse expression";
   parser::ast::BinaryExpr* add_expr = dynamic_cast<parser::ast::BinaryExpr*>(expr);
   if (test_config::print_ast)
+  {
     AST_Printer.print(add_expr);
+  }
   EXPECT_NE(add_expr, nullptr) << "Should cast expression";
   EXPECT_NE(add_expr->getLeft(), nullptr) << "Should get left hand side";
   EXPECT_NE(add_expr->getRight(), nullptr) << "should get right hand side";
@@ -334,7 +364,9 @@ TEST_F(ParserTest, ParseSimpleSubtraction)
   EXPECT_NE(expr, nullptr) << "Should parse expression";
   parser::ast::BinaryExpr* add_expr = dynamic_cast<parser::ast::BinaryExpr*>(expr);
   if (test_config::print_ast)
+  {
     AST_Printer.print(add_expr);
+  }
   EXPECT_NE(add_expr, nullptr) << "Should cast expression";
   EXPECT_NE(add_expr->getLeft(), nullptr) << "Should get left hand side";
   EXPECT_NE(add_expr->getRight(), nullptr) << "should get right hand side";
@@ -363,7 +395,9 @@ TEST_F(ParserTest, ParseSimpleDivision)
   EXPECT_NE(expr, nullptr) << "Should parse expression";
   parser::ast::BinaryExpr* add_expr = dynamic_cast<parser::ast::BinaryExpr*>(expr);
   if (test_config::print_ast)
+  {
     AST_Printer.print(add_expr);
+  }
   EXPECT_NE(add_expr, nullptr) << "Should cast expression";
   EXPECT_NE(add_expr->getLeft(), nullptr) << "Should get left hand side";
   EXPECT_NE(add_expr->getRight(), nullptr) << "should get right hand side";
@@ -422,7 +456,9 @@ TEST_F(ParserTest, ParseComplexExpression)
   EXPECT_EQ(mult_left_lit->getValue(), u"3");
   EXPECT_EQ(mult_right_lit->getValue(), u"4");
   if (test_config::print_ast)
+  {
     AST_Printer.print(expr);
+  }
 }
 
 TEST_F(ParserTest, ParseNestedParentheses)
@@ -441,7 +477,9 @@ TEST_F(ParserTest, ParseNestedParentheses)
   ASSERT_NE(left_add, nullptr) << "Left should be addition expression";
   EXPECT_EQ(left_add->getOperator(), tok::TokenType::OP_PLUS);
   if (test_config::print_ast)
+  {
     AST_Printer.print(expr);
+  }
 }
 
 TEST_F(ParserTest, ParseChainedComparison)
@@ -460,7 +498,9 @@ TEST_F(ParserTest, ParseChainedComparison)
   ASSERT_NE(left_comp, nullptr) << "Left should be comparison expression";
   EXPECT_EQ(left_comp->getOperator(), tok::TokenType::OP_LT);
   if (test_config::print_ast)
+  {
     AST_Printer.print(expr);
+  }
 }
 
 TEST_F(ParserTest, ParseLogicalExpression)
@@ -478,7 +518,9 @@ TEST_F(ParserTest, ParseLogicalExpression)
   ASSERT_NE(left_and, nullptr) << "Left should be AND expression";
   EXPECT_EQ(left_and->getOperator(), tok::TokenType::KW_AND);
   if (test_config::print_ast)
+  {
     AST_Printer.print(expr);
+  }
 }
 
 TEST_F(ParserTest, ParseUnaryChain)
@@ -497,7 +539,9 @@ TEST_F(ParserTest, ParseUnaryChain)
   parser::ast::NameExpr* name = dynamic_cast<parser::ast::NameExpr*>(inner->getOperand());
   ASSERT_NE(name, nullptr) << "Innermost should be NameExpr";
   if (test_config::print_ast)
+  {
     AST_Printer.print(expr);
+  }
 }
 
 TEST_F(ParserTest, ParseComplexFunctionCall)
@@ -547,7 +591,9 @@ TEST_F(ParserTest, ParseComplexFunctionCall)
   EXPECT_EQ(second_rhs_name, u"ث");
   EXPECT_EQ(arg2->getOperator(), tok::TokenType::OP_STAR);
   if (test_config::print_ast)
+  {
     AST_Printer.print(expr);
+  }
 }
 
 // Error Handling Tests
@@ -562,7 +608,9 @@ TEST_F(ParserTest, ParseInvalidSyntaxThrows)
   // Depending on implementation, might return nullptr or throw
   EXPECT_EQ(expr, nullptr) << "Parser should return nullptr for invalid syntax";
   if (test_config::print_ast)
+  {
     AST_Printer.print(expr);
+  }
 }
 
 TEST_F(ParserTest, ParseMissingOperand)
@@ -578,12 +626,15 @@ TEST_F(ParserTest, ParseMissingOperand)
     // If it parsed something, verify it's not complete
     parser::ast::BinaryExpr* binary = dynamic_cast<parser::ast::BinaryExpr*>(expr);
     if (binary != nullptr)
-      // Right side might be null or invalid
+    {  // Right side might be null or invalid
       EXPECT_TRUE(binary->getRight() == nullptr || dynamic_cast<parser::ast::NameExpr*>(binary->getRight()) == nullptr)
         << "Parser should not create valid expression with missing operand";
+    }
   }
   if (test_config::print_ast)
+  {
     AST_Printer.print(expr);
+  }
 }
 
 TEST_F(ParserTest, ParseUnmatchedParenthesis)
@@ -596,7 +647,9 @@ TEST_F(ParserTest, ParseUnmatchedParenthesis)
   // Should fail to parse or return incomplete expression
   EXPECT_TRUE(expr == nullptr || !parser.weDone()) << "Parser should detect unmatched parenthesis";
   if (test_config::print_ast)
+  {
     AST_Printer.print(expr);
+  }
 }
 
 TEST_F(ParserTest, ParseExtraClosingParenthesis)
@@ -611,7 +664,9 @@ TEST_F(ParserTest, ParseExtraClosingParenthesis)
   EXPECT_FALSE(parser.weDone()) << "Should have unparsed tokens remaining";
   EXPECT_TRUE(parser.check(tok::TokenType::RPAREN)) << "Remaining token should be RPAREN";
   if (test_config::print_ast)
+  {
     AST_Printer.print(expr);
+  }
 }
 
 TEST_F(ParserTest, ParseUnexpectedEOF)
@@ -626,11 +681,14 @@ TEST_F(ParserTest, ParseUnexpectedEOF)
   {
     parser::ast::BinaryExpr* binary = dynamic_cast<parser::ast::BinaryExpr*>(expr);
     if (binary != nullptr)
-      // If it's a binary expression, right side might be incomplete
+    {  // If it's a binary expression, right side might be incomplete
       EXPECT_TRUE(binary->getRight() == nullptr) << "Right side should be null due to unexpected EOF";
+    }
   }
   if (test_config::print_ast)
+  {
     AST_Printer.print(expr);
+  }
 }
 
 TEST_F(ParserTest, ParseInvalidOperatorSequence)
@@ -644,7 +702,9 @@ TEST_F(ParserTest, ParseInvalidOperatorSequence)
   if (expr != nullptr)
   {
     if (test_config::print_ast)
+    {
       AST_Printer.print(expr);
+    }
     // Verify structure makes sense even if semantically wrong
     parser::ast::BinaryExpr* binary = dynamic_cast<parser::ast::BinaryExpr*>(expr);
     if (binary != nullptr)
@@ -654,7 +714,9 @@ TEST_F(ParserTest, ParseInvalidOperatorSequence)
     }
   }
   if (test_config::print_ast)
+  {
     AST_Printer.print(expr);
+  }
 }
 
 // Edge Cases
@@ -669,7 +731,9 @@ TEST_F(ParserTest, ParseEmptyInput)
   parser::ast::Expr* expr = parser.parse();
   EXPECT_EQ(expr, nullptr) << "Should return nullptr for empty input";
   if (test_config::print_ast)
+  {
     AST_Printer.print(expr);
+  }
 }
 
 TEST_F(ParserTest, ParseWhitespaceOnly)
@@ -682,7 +746,9 @@ TEST_F(ParserTest, ParseWhitespaceOnly)
   EXPECT_EQ(expr, nullptr) << "Should return nullptr for whitespace-only input";
   // EXPECT_TRUE(parser.weDone()) << "Should reach end marker after whitespace";
   if (test_config::print_ast)
+  {
     AST_Printer.print(expr);
+  }
 }
 
 TEST_F(ParserTest, ParseSingleIdentifier)
@@ -697,7 +763,9 @@ TEST_F(ParserTest, ParseSingleIdentifier)
   EXPECT_EQ(name->getValue(), u"ا") << "Identifier value should be 'x'";
   EXPECT_TRUE(parser.weDone()) << "Should be at end after single identifier";
   if (test_config::print_ast)
+  {
     AST_Printer.print(expr);
+  }
 }
 
 TEST_F(ParserTest, ParseVeryLongIdentifier)
@@ -714,9 +782,13 @@ TEST_F(ParserTest, ParseVeryLongIdentifier)
   EXPECT_LT(value.length(), 10000) << "Identifier should have reasonable upper bound";
   // Verify it's all valid identifier characters
   for (CharType ch : value)
+  {
     EXPECT_TRUE(std::isalnum(ch) || ch == U'_' || ch > 127) << "All characters should be valid identifier chars";
+  }
   if (test_config::print_ast)
+  {
     AST_Printer.print(expr);
+  }
 }
 
 TEST_F(ParserTest, ParseUnicodeIdentifiers)
@@ -736,7 +808,9 @@ TEST_F(ParserTest, ParseUnicodeIdentifiers)
   EXPECT_GT(left->getValue().length(), 0) << "Left identifier should not be empty";
   EXPECT_GT(right->getValue().length(), 0) << "Right identifier should not be empty";
   if (test_config::print_ast)
+  {
     AST_Printer.print(expr);
+  }
 }
 
 TEST_F(ParserTest, ParseEmptyList)
@@ -750,7 +824,9 @@ TEST_F(ParserTest, ParseEmptyList)
   ASSERT_NE(list, nullptr) << "Should be ListExpr";
   EXPECT_EQ(list->getElements().size(), 0) << "List should be empty";
   if (test_config::print_ast)
+  {
     AST_Printer.print(expr);
+  }
 }
 
 TEST_F(ParserTest, ParseEmptyTuple)
@@ -764,7 +840,9 @@ TEST_F(ParserTest, ParseEmptyTuple)
   ASSERT_NE(tuple, nullptr) << "Should be ListExpr (representing tuple)";
   EXPECT_EQ(tuple->getElements().size(), 0) << "Tuple should be empty";
   if (test_config::print_ast)
+  {
     AST_Printer.print(expr);
+  }
 }
 
 TEST_F(ParserTest, ParseListWithTrailingComma)
@@ -779,7 +857,9 @@ TEST_F(ParserTest, ParseListWithTrailingComma)
   ASSERT_NE(list, nullptr) << "Should be ListExpr";
   EXPECT_EQ(list->getElements().size(), 3) << "Should have 3 elements despite trailing comma";
   if (test_config::print_ast)
+  {
     AST_Printer.print(expr);
+  }
 }
 
 TEST_F(ParserTest, ParseNestedLists)
@@ -802,7 +882,9 @@ TEST_F(ParserTest, ParseNestedLists)
   ASSERT_NE(inner2, nullptr) << "Second element should be ListExpr";
   EXPECT_EQ(inner2->getElements().size(), 2) << "Second inner list should have 2 elements";
   if (test_config::print_ast)
+  {
     AST_Printer.print(expr);
+  }
 }
 
 TEST_F(ParserTest, ParseAssignment)
@@ -821,7 +903,9 @@ TEST_F(ParserTest, ParseAssignment)
   ASSERT_NE(value, nullptr) << "Value should be LiteralExpr";
   EXPECT_EQ(value->getValue(), u"42");
   if (test_config::print_ast)
+  {
     AST_Printer.print(assign);
+  }
 }
 
 TEST_F(ParserTest, ParseChainedAssignment)
@@ -838,7 +922,9 @@ TEST_F(ParserTest, ParseChainedAssignment)
   ASSERT_NE(inner, nullptr) << "Inner value should be AssignmentExpr";
   EXPECT_EQ(inner->getTarget()->getValue(), u"ب");
   if (test_config::print_ast)
+  {
     AST_Printer.print(expr);
+  }
 }
 
 TEST_F(ParserTest, ParseChainedAssignmentWithExpr)
@@ -851,7 +937,9 @@ TEST_F(ParserTest, ParseChainedAssignmentWithExpr)
   parser::ast::Expr* expr = parser.parse();
   ASSERT_NE(expr, nullptr) << "Should parse chained assignment";
   if (test_config::print_ast)
+  {
     AST_Printer.print(expr);  // <-- DEBUG
+  }
   parser::ast::AssignmentExpr* outer = dynamic_cast<parser::ast::AssignmentExpr*>(expr);
   ASSERT_NE(outer, nullptr) << "Outer should be AssignmentExpr";
   EXPECT_EQ(outer->getTarget()->getValue(), u"ا") << "Outer target should be 'ا'";
@@ -896,9 +984,13 @@ TEST_F(ParserTest, DISABLED_ParseLargeFile)
   {
     parser::ast::Expr* expr = parser.parse();
     if (expr != nullptr)
+    {
       expr_count++;
+    }
     else
+    {
       break;
+    }
   }
   auto end      = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
@@ -936,7 +1028,9 @@ TEST_F(ParserTest, ParseDeeplyNestedExpression)
   EXPECT_GT(depth, 50) << "Should have significant nesting depth";
   */
   if (test_config::print_ast)
+  {
     AST_Printer.print(expr);
+  }
 }
 
 TEST_F(ParserTest, ParseWhileLoop)
@@ -947,7 +1041,9 @@ TEST_F(ParserTest, ParseWhileLoop)
   ASSERT_NE(stmt, nullptr) << "Should parse while loop statement";
 
   if (test_config::print_ast)
+  {
     AST_Printer.print(stmt);
+  }
 
   parser::ast::WhileStmt* while_stmt = dynamic_cast<parser::ast::WhileStmt*>(stmt);
   ASSERT_NE(while_stmt, nullptr) << "Should parse while loop statement";
@@ -997,11 +1093,13 @@ TEST_F(ParserTest, ParseComplexeIfStatement)
   ASSERT_NE(stmt, nullptr) << "Should parse if statement";
 
   if (test_config::print_ast)
+  {
     AST_Printer.print(stmt);
+  }
 
   parser::ast::IfStmt* if_stmt = dynamic_cast<parser::ast::IfStmt*>(stmt);
   ASSERT_NE(if_stmt, nullptr) << "Conversion to if statement failed";
-  
+
   parser::ast::BinaryExpr* first_condition_expr = dynamic_cast<parser::ast::BinaryExpr*>(if_stmt->getCondition());
   ASSERT_NE(first_condition_expr, nullptr);
 

@@ -44,7 +44,9 @@ class BytecodeOptimizer
                              for (SizeType j = i + 1; j < code.size(); j++)
                              {
                                if (isJumpTarget(code, j))
+                               {
                                  break;
+                               }
                                toRemove++;
                              }
                              if (toRemove > 0)
@@ -64,8 +66,10 @@ class BytecodeOptimizer
                          {
                            if (code[i].op == bytecode::OpCode::LOAD_CONST && code[i + 1].op == bytecode::OpCode::LOAD_CONST
                                && isBinaryOp(code[i + 2].op))
-                             // Would fold constants here
+                           // Would fold constants here
+                           {
                              changed = true;
+                           }
                          }
                          return changed;
                        }});

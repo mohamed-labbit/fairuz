@@ -21,7 +21,6 @@ class Stmt: public ASTNode
 
  public:
   explicit Stmt() = default;
-
   explicit Stmt(StringType s) { Kind_ = Kind::INVALID; }
 
   Kind getKind() const { return Kind_; }

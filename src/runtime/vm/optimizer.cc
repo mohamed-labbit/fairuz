@@ -29,8 +29,12 @@ void BytecodeOptimizer::printReport(std::ostream& out) const
 {
   out << "\nBytecode Optimizer Report:\n";
   for (const OptimizationPass& pass : Passes_)
+  {
     if (pass.ApplicationsCount > 0)
+    {
       out << "  • " << pass.name << ": " << pass.ApplicationsCount << " applications\n";
+    }
+  }
 }
 
 bool BytecodeOptimizer::isJumpTarget(const std::vector<bytecode::Instruction>& code, SizeType pos)
@@ -39,7 +43,9 @@ bool BytecodeOptimizer::isJumpTarget(const std::vector<bytecode::Instruction>& c
   for (const bytecode::Instruction& instr : code)
   {
     if (isJumpOp(instr.op) && instr.arg == pos)
+    {
       return true;
+    }
   }
   return false;
 }

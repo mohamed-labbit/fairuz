@@ -33,7 +33,9 @@ class SymbolTable
   void leaveScope()
   {
     if (this->Scopes_.size() > 1)
+    {
       this->Scopes_.pop_back();
+    }
   }
 
   // Insert symbol into current scope
@@ -44,7 +46,9 @@ class SymbolTable
     Scope& current_scope = this->Scopes_.back();
     // Check if symbol already exists in current scope
     if (current_scope.find(lexeme) != current_scope.end())
+    {
       return false;
+    }
     // Insert into current scope
     Entry e(st, static_cast<SizeType>(scopeLevel()));
     current_scope[lexeme] = e;
@@ -58,7 +62,9 @@ class SymbolTable
     {
       auto found = it->find(name);
       if (found != it->end())
+      {
         return found->second;
+      }
     }
     return std::nullopt;  // not found
   }
@@ -71,11 +77,15 @@ class SymbolTable
   {
     // Default: check if symbol is visible anywhere in scope chain
     if (_scope == std::nullopt)
+    {
       return lookup(name).has_value();
+    }
     // Check if symbol exists at specific scope level
     SizeType scope_level = _scope.value();
     if (scope_level >= this->Scopes_.size())
+    {
       return false;
+    }
     const Scope& scope = this->Scopes_[scope_level];
     return scope.find(name) != scope.end();
   }
@@ -92,7 +102,9 @@ class SymbolTable
       const Scope& current = this->Scopes_.back();
       symbols.reserve(current.size());
       for (const std::pair<StringType, Entry>& pair : current)
+      {
         symbols.push_back(pair.second);
+      }
     }
     return symbols;
   }
@@ -127,7 +139,9 @@ class SymbolTable
       const Scope& scope = this->Scopes_[level];
       symbols.reserve(scope.size());
       for (const std::pair<StringType, Entry>& pair : scope)
+      {
         symbols.push_back(pair.second);
+      }
     }
     return symbols;
   }

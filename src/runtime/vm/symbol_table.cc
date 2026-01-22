@@ -7,7 +7,9 @@ namespace runtime {
 typename CompilerSymbolTable::Symbol* CompilerSymbolTable::define(const std::string& name, bool isParam)
 {
   if (Symbols_.count(name))
+  {
     return &Symbols_[name];
+  }
 
   Symbol sym;
   sym.name        = name;
@@ -62,7 +64,9 @@ std::vector<typename CompilerSymbolTable::Symbol> CompilerSymbolTable::getUnused
   for (const auto& [name, sym] : Symbols_)
   {
     if (!sym.IsUsed && !sym.IsParameter)
+    {
       unused.push_back(sym);
+    }
   }
   return unused;
 }

@@ -13,7 +13,9 @@ namespace parser {
 typename SymbolTable::DataType_t SemanticAnalyzer::inferType(const ast::Expr* expr)
 {
   if (expr == nullptr)
+  {
     return SymbolTable::DataType_t::UNKNOWN;
+  }
   switch (expr->getKind())
   {
   case ast::Expr::Kind::LITERAL : {
@@ -34,7 +36,9 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(const ast::Expr* ex
   case ast::Expr::Kind::NAME : {
     const ast::NameExpr* name = static_cast<const ast::NameExpr*>(expr);
     if (SymbolTable::Symbol* sym = CurrentScope_->lookup(name->getValue()))
+    {
       return sym->DataType;
+    }
     break;
   }
   case ast::Expr::Kind::BINARY : {
@@ -43,13 +47,21 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(const ast::Expr* ex
     SymbolTable::DataType_t rightType = inferType(bin->getRight());
     // Type promotion rules
     if (leftType == SymbolTable::DataType_t::FLOAT || rightType == SymbolTable::DataType_t::FLOAT)
+    {
       return SymbolTable::DataType_t::FLOAT;
+    }
     if (leftType == SymbolTable::DataType_t::INTEGER && rightType == SymbolTable::DataType_t::INTEGER)
+    {
       return SymbolTable::DataType_t::INTEGER;
+    }
     if (bin->getOperator() == tok::TokenType::OP_PLUS && leftType == SymbolTable::DataType_t::STRING)
+    {
       return SymbolTable::DataType_t::STRING;
+    }
     if (bin->getOperator() == tok::TokenType::KW_AND || bin->getOperator() == tok::TokenType::KW_OR)
+    {
       return SymbolTable::DataType_t::BOOLEAN;
+    }
     break;
   }
   case ast::Expr::Kind::LIST :
@@ -70,16 +82,22 @@ void SemanticAnalyzer::reportIssue(Issue::Severity sev, const StringType& msg, s
 void SemanticAnalyzer::analyzeExpr(const ast::Expr* expr)
 {
   if (expr == nullptr)
+  {
     return;
+  }
 
   switch (expr->getKind())
   {
   case ast::Expr::Kind::NAME : {
     const ast::NameExpr* name = static_cast<const ast::NameExpr*>(expr);
     if (!CurrentScope_->isDefined(name->getValue()))
+    {
       reportIssue(Issue::Severity::ERROR, u"Undefined variable: " + name->getValue(), expr->getLine(), u"Did you forget to initialize it?");
+    }
     else
+    {
       CurrentScope_->markUsed(name->getValue(), expr->getLine());
+    }
     break;
   }
 
@@ -95,14 +113,18 @@ void SemanticAnalyzer::analyzeExpr(const ast::Expr* expr)
       if ((bin->getOperator() == tok::TokenType::OP_MINUS || bin->getOperator() == tok::TokenType::OP_STAR
            || bin->getOperator() == tok::TokenType::OP_SLASH)
           && (leftType == SymbolTable::DataType_t::STRING || rightType == SymbolTable::DataType_t::STRING))
+      {
         reportIssue(Issue::Severity::ERROR, u"Invalid operation on string", expr->getLine(), u"Strings don't support this operator");
+      }
     }
     // Division by zero detection (constant folding)
     if (bin->getOperator() == tok::TokenType::OP_SLASH && bin->getRight()->getKind() == ast::Expr::Kind::LITERAL)
     {
       const ast::LiteralExpr* lit = static_cast<const ast::LiteralExpr*>(bin->getRight());
       if (lit->getValue() == u"0")
+      {
         reportIssue(Issue::Severity::ERROR, u"Division by zero", expr->getLine(), u"This will cause a runtime error");
+      }
     }
     break;
   }
@@ -117,7 +139,9 @@ void SemanticAnalyzer::analyzeExpr(const ast::Expr* expr)
     const ast::CallExpr* call = static_cast<const ast::CallExpr*>(expr);
     analyzeExpr(call->getCallee());
     for (const ast::Expr* const& arg : call->getArgs())
+    {
       analyzeExpr(arg);
+    }
     // Check if calling undefined function
     if (call->getCallee()->getKind() == ast::Expr::Kind::NAME)
     {
@@ -125,7 +149,9 @@ void SemanticAnalyzer::analyzeExpr(const ast::Expr* expr)
       if (SymbolTable::Symbol* sym = CurrentScope_->lookup(name->getValue()))
       {
         if (sym->SymbolType != SymbolTable::SymbolType::FUNCTION)
+        {
           reportIssue(Issue::Severity::ERROR, u"'" + name->getValue() + u"' is not callable", expr->getLine());
+        }
       }
     }
     break;
@@ -134,7 +160,9 @@ void SemanticAnalyzer::analyzeExpr(const ast::Expr* expr)
   case ast::Expr::Kind::LIST : {
     const ast::ListExpr* list = static_cast<const ast::ListExpr*>(expr);
     for (const ast::Expr* const& elem : list->getElements())
+    {
       analyzeExpr(elem);
+    }
     break;
   }
   default :
@@ -145,7 +173,9 @@ void SemanticAnalyzer::analyzeExpr(const ast::Expr* expr)
 void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
 {
   if (stmt == nullptr)
+  {
     return;
+  }
 
   switch (stmt->getKind())
   {
@@ -162,7 +192,9 @@ void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
     StringType target_name = u"";
     /// TODO: check other type of target expressions
     if (target->getKind() == ast::Expr::Kind::NAME)
+    {
       target_name = dynamic_cast<ast::NameExpr*>(target)->getValue();
+    }
     CurrentScope_->define(target_name, sym);
     break;
   }
@@ -172,7 +204,9 @@ void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
     analyzeExpr(exprStmt->getExpr());
     // Warn about unused expression results
     if (exprStmt->getExpr()->getKind() != ast::Expr::Kind::CALL)
+    {
       reportIssue(Issue::Severity::INFO, u"Expression result not used", stmt->getLine());
+    }
     break;
   }
 
@@ -181,11 +215,17 @@ void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
     analyzeExpr(ifStmt->getCondition());
     // Check for constant conditions
     if (ifStmt->getCondition()->getKind() == ast::Expr::Kind::LITERAL)
+    {
       reportIssue(Issue::Severity::WARNING, u"Condition is always constant", stmt->getLine(), u"Consider removing if statement");
+    }
     for (const ast::Stmt* const& s : ifStmt->getThenBlock()->getStatements())
+    {
       analyzeStmt(s);
+    }
     for (const ast::Stmt* const& s : ifStmt->getElseBlock()->getStatements())
+    {
       analyzeStmt(s);
+    }
     break;
   }
 
@@ -197,10 +237,14 @@ void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
     {
       const ast::LiteralExpr* lit = static_cast<const ast::LiteralExpr*>(whileStmt->getCondition());
       if (lit->getType() == ast::LiteralExpr::Type::BOOLEAN && lit->getValue() == u"true")
+      {
         reportIssue(Issue::Severity::WARNING, u"Infinite loop detected", stmt->getLine(), u"Add a break condition");
+      }
     }
     for (const ast::Stmt* const& s : whileStmt->getBlock()->getStatements())
+    {
       analyzeStmt(s);
+    }
     break;
   }
 
@@ -214,10 +258,14 @@ void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
     loopVar.DataType   = SymbolTable::DataType_t::ANY;
     CurrentScope_->define(forStmt->getTarget()->getValue(), loopVar);
     for (const ast::Stmt* const& s : forStmt->getBlock()->getStatements())
+    {
       analyzeStmt(s);
+    }
     // Check if loop variable is shadowing
     if (CurrentScope_->Parent_ && CurrentScope_->Parent_->lookupLocal(forStmt->getTarget()->getValue()))
+    {
       reportIssue(Issue::Severity::WARNING, u"Loop variable shadows outer variable", stmt->getLine());
+    }
     // Exit loop scope
     CurrentScope_ = CurrentScope_->Parent_;
     break;
@@ -240,7 +288,9 @@ void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
       CurrentScope_->define(static_cast<const ast::NameExpr*>(param)->getValue(), paramSym);
     }
     for (const ast::Stmt* const& s : funcDef->getBody()->getStatements())
+    {
       analyzeStmt(s);
+    }
     // Check for missing return statement
     bool hasReturn = false;
     for (const ast::Stmt* const& s : funcDef->getBody()->getStatements())
@@ -252,7 +302,9 @@ void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
       }
     }
     if (!hasReturn)
+    {
       reportIssue(Issue::Severity::INFO, u"Function may not return a value", stmt->getLine());
+    }
     // Exit function scope
     CurrentScope_ = CurrentScope_->Parent_;
     break;
@@ -284,11 +336,15 @@ SemanticAnalyzer::SemanticAnalyzer()
 void SemanticAnalyzer::analyze(const std::vector<ast::Stmt*>& Statements_)
 {
   for (const ast::Stmt* const& stmt : Statements_)
+  {
     analyzeStmt(stmt);
+  }
   // Check for unused variables
   std::vector<SymbolTable::Symbol*> unused = GlobalScope_->getUnusedSymbols();
   for (SymbolTable::Symbol* sym : unused)
+  {
     reportIssue(Issue::Severity::WARNING, u"Unused variable: " + sym->name, sym->DefinitionLine, u"Consider removing if not needed");
+  }
 }
 
 const std::vector<typename SemanticAnalyzer::Issue>& SemanticAnalyzer::getIssues() const { return Issues_; }
@@ -321,7 +377,9 @@ void SemanticAnalyzer::printReport() const
     }
     std::cout << "[" << utf8::utf16to8(sevStr) << "] Line " << issue.line << ": " << utf8::utf16to8(issue.message) << "\n";
     if (!issue.suggestion.empty())
+    {
       std::cout << "  → " << utf8::utf16to8(issue.suggestion) << "\n";
+    }
     std::cout << "\n";
   }
 }

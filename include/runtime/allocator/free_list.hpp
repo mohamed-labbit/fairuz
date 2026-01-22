@@ -68,7 +68,9 @@ struct FreeListRegion
   bool operator<(const FreeListRegion& other) const
   {
     if (size != other.size)
+    {
       return size < other.size;
+    }
     return ptr < other.ptr;
   }
 };

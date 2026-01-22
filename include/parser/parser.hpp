@@ -77,7 +77,9 @@ class ParseError: public std::runtime_error
     {
       ss << "Suggestions:\n";
       for (const StringType& s : Suggestions_)
+      {
         ss << "  - " << utf8::utf16to8(s) << "\n";
+      }
     }
 
     return utf8::utf8to16(ss.str());
@@ -104,7 +106,9 @@ class Parser
       Lexer_(fm)
   {
     if (fm == nullptr)
+    {
       diagnostic::engine.panic("file_manager is NULL!");
+    }
     // Advance to the first real token
     Lexer_.next();
   }
@@ -233,7 +237,9 @@ class Parser
   tok::Token consume(tok::TokenType type, const StringType& msg)
   {
     if (check(type))
+    {
       return advance();
+    }
     diagnostic::engine.emit(msg, diagnostic::DiagnosticEngine::Severity::ERROR);
     return tok::Token();
   }

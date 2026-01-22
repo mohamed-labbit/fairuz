@@ -111,7 +111,9 @@ class LockFreeFastAllocBlock
       // Free existing memory
       Pointer old_mem = Begin_.load(std::memory_order_relaxed);
       if (old_mem != nullptr)
+      {
         std::free(old_mem);
+      }
       // Transfer ownership atomically
       Size_.store(other.Size_.load(std::memory_order_relaxed), std::memory_order_relaxed);
       Begin_.store(other.Begin_.load(std::memory_order_relaxed), std::memory_order_relaxed);
@@ -151,7 +153,9 @@ class LockFreeFastAllocBlock
   {
     Pointer b = Begin_.load(std::memory_order_acquire);
     if (b == nullptr)
+    {
       return 0;
+    }
     Pointer  current = Next_.load(std::memory_order_acquire);
     SizeType s       = Size_.load(std::memory_order_acquire);
     return static_cast<SizeType>(b + s - current);
@@ -171,7 +175,9 @@ class LockFreeFastAllocBlock
   Pointer allocate(SizeType alloc_size)
   {
     if (alloc_size == 0)
+    {
       return nullptr;
+    }
 
     Pointer b = Begin_.load(std::memory_order_acquire);
     if (b == nullptr)
@@ -196,7 +202,9 @@ class LockFreeFastAllocBlock
       Pointer new_next = current_next + alloc_size;
 
       if (Next_.compare_exchange_weak(current_next, new_next, std::memory_order_release, std::memory_order_acquire))
+      {
         return current_next;
+      }
     }
   }
 };

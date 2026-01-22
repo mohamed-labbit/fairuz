@@ -50,13 +50,17 @@ struct U16StringEqual
 static StringType bufferToU16String(const std::vector<char>& buf)
 {
   if (buf.empty())
+  {
     return u"";
+  }
   StringType ret = u"";
   ret.resize(buf.size());
   const char* __restrict bptr = buf.data();
   CharType* __restrict rptr   = ret.data();
   for (SizeType i = 0, n = buf.size(); i < n; ++i)
+  {
     rptr[i] = *utf8::utf8to16(std::string(reinterpret_cast<char*>(bptr[i]))).data();
+  }
   return ret;
 }
 
