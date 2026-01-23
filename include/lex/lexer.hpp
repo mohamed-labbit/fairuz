@@ -76,9 +76,7 @@ class Lexer
                                             std::optional<SizeType>    file_pos  = std::nullopt,
                                             std::optional<std::string> file_path = std::nullopt) const;
 
-  MYLANG_COMPILER_ABI StringType getSourceLine(const SizeType line) {
-    return SourceManager_.getSourceLine(line);
-  }
+  MYLANG_COMPILER_ABI StringType getSourceLine(const SizeType line) { return SourceManager_.getSourceLine(line); }
 
  private:
   SourceManager           SourceManager_;   // Manages source input and positions

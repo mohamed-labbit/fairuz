@@ -93,9 +93,9 @@ class VirtualMachine
   // types, avoiding repeated dynamic type checks.
 
   object::Value fastAdd(const object::Value& a, const object::Value& b);
-  
+
   object::Value fastSub(const object::Value& a, const object::Value& b);
-  
+
   object::Value fastMul(const object::Value& a, const object::Value& b);
 
   // Native function support

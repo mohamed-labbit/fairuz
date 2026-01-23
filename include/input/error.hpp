@@ -37,7 +37,7 @@ class FileError: public std::exception
     }
     return *this;
   }
-  
+
   // Override base class destructor
   ~FileError() override = default;
 

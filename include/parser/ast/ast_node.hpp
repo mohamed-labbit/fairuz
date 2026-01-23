@@ -28,14 +28,14 @@ class ASTNode
 
   NodeType getNodeType() const { return NodeType_; }
 
-  void     setNodeType(const NodeType t) { NodeType_ = t; }
+  void setNodeType(const NodeType t) { NodeType_ = t; }
 
   SizeType getLine() const { return Line_; }
 
   SizeType getColumn() const { return Column_; }
 
   void setLine(SizeType l) { Line_ = l; }
-  
+
   void setColumn(SizeType c) { Column_ = c; }
 
   virtual ~ASTNode() = default;

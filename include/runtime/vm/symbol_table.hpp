@@ -39,15 +39,15 @@ class CompilerSymbolTable
   {
   }
 
-  Symbol*                         define(const std::string& name, bool isParam = false);
-  
-  Symbol*                         resolve(const std::string& name);
-  
+  Symbol* define(const std::string& name, bool isParam = false);
+
+  Symbol* resolve(const std::string& name);
+
   const std::vector<std::string>& getFreeVars() const;
-  
-  std::int32_t                    getLocalCount() const;
-  
-  std::vector<Symbol>             getUnusedSymbols() const;
+
+  std::int32_t getLocalCount() const;
+
+  std::vector<Symbol> getUnusedSymbols() const;
 };  // CompilerSymbolTable
 
 }

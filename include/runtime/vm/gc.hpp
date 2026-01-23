@@ -27,7 +27,7 @@ class GarbageCollector
   void registerObject(object::Value* obj);
 
   void addRoot(object::Value* root);
-  
+
   void collect();
 
  private:

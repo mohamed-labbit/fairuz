@@ -228,7 +228,7 @@ class Parser
 
   /// @brief Matches and consumes a token if it is of the given type
   bool match(const tok::TokenType type);
-  
+
   /**
    * @brief Consumes a token of the expected type or throws a ParseError.
    *

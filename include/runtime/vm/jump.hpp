@@ -27,12 +27,12 @@ class JumpResolver
   std::vector<PendingJump>                      PendingJumps_;
 
  public:
-  void         defineLabel(const std::string& name, std::int32_t position);
-  
-  void         addJump(std::int32_t instrIndex, const std::string& target);
-  
-  void         resolveJumps(std::vector<bytecode::Instruction>& instructions);
-  
+  void defineLabel(const std::string& name, std::int32_t position);
+
+  void addJump(std::int32_t instrIndex, const std::string& target);
+
+  void resolveJumps(std::vector<bytecode::Instruction>& instructions);
+
   std::int32_t getLabel(const std::string& name) const;
 };  // JumpResolver
 

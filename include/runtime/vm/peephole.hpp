@@ -28,11 +28,11 @@ class PeepholeOptimizer
   bool                      matchPattern(const std::vector<bytecode::Instruction>& code, SizeType pos, const std::vector<bytecode::OpCode>& pattern);
 
  public:
-  void                             optimize(std::vector<bytecode::Instruction>& instructions);
-  
+  void optimize(std::vector<bytecode::Instruction>& instructions);
+
   const std::vector<Optimization>& getOptimizations() const;
-  
-  void                             printReport() const;
+
+  void printReport() const;
 };  // PeepholeOptimizer
 
 }

@@ -30,10 +30,10 @@ class LoopAnalyzer
   std::vector<Loop> Loops_;
 
  public:
-  void                     detectLoops(const std::vector<bytecode::Instruction>& instructions);
-  
-  void                     findInvariants(const std::vector<bytecode::Instruction>& instructions, const CompilerSymbolTable& symbols);
-  
+  void detectLoops(const std::vector<bytecode::Instruction>& instructions);
+
+  void findInvariants(const std::vector<bytecode::Instruction>& instructions, const CompilerSymbolTable& symbols);
+
   const std::vector<Loop>& getLoops() const;
 };  // LoopAnalyzer
 
