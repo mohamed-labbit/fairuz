@@ -403,5 +403,19 @@ void FileManager::buildLineIndex()
   reset();
 }
 
+StringType FileManager::getSourceLine(const SizeType line)
+{
+  std::string ret;
+  SizeType    s = line;
+
+  while (s > 0)
+  {
+    std::getline(Stream_, ret);
+    s--;
+  }
+
+  return utf8::utf8to16(ret);
+}
+
 }
 }

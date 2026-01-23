@@ -134,7 +134,9 @@ class Value
   }
 
   Type getType() const { return Type_; }
+
   void setType(const Type type) { Type_ = type; }
+
   void setData(const std::variant<std::monostate,                                          // None
                                   std::int64_t,                                            // Int
                                   double,                                                  // Float
@@ -152,35 +154,57 @@ class Value
   }
   // Type checks
   bool isNone() const { return Type_ == Type::NONE; }
+
   bool isInt() const { return Type_ == Type::INT; }
+
   bool isFloat() const { return Type_ == Type::FLOAT; }
+
   bool isNumber() const { return isInt() || isFloat(); }
+
   bool isString() const { return Type_ == Type::STRING; }
+
   bool isBool() const { return Type_ == Type::BOOL; }
+
   bool isList() const { return Type_ == Type::LIST; }
+
   bool isDict() const { return Type_ == Type::DICT; }
+
   bool isFunction() const { return Type_ == Type::FUNCTION; }
+
   bool isCallable() const { return isFunction() || Type_ == Type::NATIVE_FUNCTION; }
+
   bool isIterable() const { return isList() || isString() || isDict(); }
 
   // Getters with safety
-  std::int64_t                           asInt() const;
-  double                                 asFloat() const;
-  const StringType&                      asString() const;
-  bool                                   asBool() const;
-  std::vector<Value>&                    asList();
-  const std::vector<Value>&              asList() const;
-  std::unordered_map<StringType, Value>& asDict() const;
-  Function&                              asFunction();
-  NativeFunction&                        asNativeFunction();
+  std::int64_t asInt() const;
 
-  double       toFloat() const;  // Type conversions
+  double asFloat() const;
+
+  const StringType& asString() const;
+
+  bool asBool() const;
+
+  std::vector<Value>& asList();
+
+  const std::vector<Value>& asList() const;
+
+  std::unordered_map<StringType, Value>& asDict() const;
+
+  Function& asFunction();
+
+  NativeFunction& asNativeFunction();
+
+  double toFloat() const;  // Type conversions
+
   std::int64_t toInt() const;
-  bool         toBool() const;
-  StringType   toString() const;
+
+  bool toBool() const;
+
+  StringType toString() const;
 
   std::string repr() const;
-  SizeType    hash() const;  // Hash for use in dictionaries
+
+  SizeType hash() const;  // Hash for use in dictionaries
 
   bool hasNext() const;
 

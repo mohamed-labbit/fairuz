@@ -31,9 +31,11 @@ class DiagnosticEngine
   DiagnosticEngine() = default;
 
   void emit(const StringType& msg, Severity sv = Severity::ERROR) { emitError(utf8::utf16to8(msg), sv); }
+
   void emit(const std::string& msg, Severity sv = Severity::ERROR) { emitError(msg, sv); }
 
   [[noreturn]] void panic(const StringType& msg) { _panic(utf8::utf16to8(msg)); }
+
   [[noreturn]] void panic(const std::string& msg) { _panic(msg); }
 
   void setSource(const StringType& source) { SourceCode_ = source; }
@@ -46,13 +48,17 @@ class DiagnosticEngine
   void addSuggestion(const StringType& suggestion)
   {
     if (!Diagnostics_.empty())
+    {
       Diagnostics_.back().suggestions.push_back(suggestion);
+    }
   }
 
   void addNote(std::int32_t line, const StringType& note)
   {
     if (!Diagnostics_.empty())
+    {
       Diagnostics_.back().notes.push_back({line, note});
+    }
   }
 
   std::string toJSON() const;
@@ -68,7 +74,9 @@ class DiagnosticEngine
   {
     std::cerr << svToStr(sv) << ": " << msg << std::endl;
     if (sv == Severity::FATAL)
+    {
       throw std::runtime_error("");
+    }
   }
 
   [[noreturn]] void _panic(const std::string& msg) const
@@ -83,12 +91,16 @@ class DiagnosticEngine
     {
     case Severity::NOTE :
       return utf8::utf16to8(Color::BOLD) + utf8::utf16to8(Color::CYAN) + "note" + utf8::utf16to8(Color::RESET);
+
     case Severity::FATAL :
       return utf8::utf16to8(Color::BOLD) + utf8::utf16to8(Color::RED) + "fatal" + utf8::utf16to8(Color::RESET);
+
     case Severity::ERROR :
       return utf8::utf16to8(Color::BOLD) + utf8::utf16to8(Color::RED) + "error" + utf8::utf16to8(Color::RESET);
+
     case Severity::WARNING :
       return utf8::utf16to8(Color::BOLD) + utf8::utf16to8(Color::YELLOW) + "warning" + utf8::utf16to8(Color::RESET);
+
     default :
       return utf8::utf16to8(Color::BOLD) + "unknown" + utf8::utf16to8(Color::RESET);
     }
@@ -99,8 +111,12 @@ class DiagnosticEngine
     std::vector<std::string> lines;
     std::stringstream        ss(text);
     std::string              line;
+
     while (std::getline(ss, line))
+    {
       lines.push_back(line);
+    }
+
     return lines;
   }
 };

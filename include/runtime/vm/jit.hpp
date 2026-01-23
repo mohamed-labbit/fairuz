@@ -29,6 +29,7 @@ class JITCompiler
 
  public:
   void recordExecution(std::int32_t pc);
+  
   bool isHotSpot(std::int32_t pc) const;
 
  private:

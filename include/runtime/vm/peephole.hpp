@@ -29,7 +29,9 @@ class PeepholeOptimizer
 
  public:
   void                             optimize(std::vector<bytecode::Instruction>& instructions);
+  
   const std::vector<Optimization>& getOptimizations() const;
+  
   void                             printReport() const;
 };  // PeepholeOptimizer
 

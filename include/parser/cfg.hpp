@@ -35,12 +35,17 @@ class ControlFlowGraph
 
  public:
   void addBlock(BasicBlock block);
+
   void addEdge(std::int32_t from, std::int32_t to);
+
   // Compute reachability
   void computeReachability();
+
   // Liveness analysis for dead code detection
-  void                           computeLiveness();
-  std::vector<std::int32_t>      getUnreachableBlocks() const;
+  void computeLiveness();
+
+  std::vector<std::int32_t> getUnreachableBlocks() const;
+
   const std::vector<BasicBlock>& getBlocks() const;
 };
 

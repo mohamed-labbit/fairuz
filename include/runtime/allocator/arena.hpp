@@ -214,6 +214,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
   // Non-copyable and non-movable (contains mutexes)
   ArenaAllocator(const ArenaAllocator&)                       = delete;
   ArenaAllocator& operator=(const ArenaAllocator&)            = delete;
+  
   ArenaAllocator(ArenaAllocator&&) MYLANG_NOEXCEPT            = delete;
   ArenaAllocator& operator=(ArenaAllocator&&) MYLANG_NOEXCEPT = delete;
 

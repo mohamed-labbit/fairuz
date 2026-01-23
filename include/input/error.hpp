@@ -27,6 +27,7 @@ class FileError: public std::exception
       Imp_(other.imp())
   {
   }
+
   // Copy assignment operator with self-assignment check
   FileError& operator=(const FileError& other) noexcept
   {
@@ -36,10 +37,13 @@ class FileError: public std::exception
     }
     return *this;
   }
+  
   // Override base class destructor
   ~FileError() override = default;
+
   // Override `what()` to return a generic error message (not the detailed message)
   const char* what() const noexcept override { return Imp_.c_str(); }
+
   // Provides access to the stored detailed message
   const std::string& imp() const { return Imp_; }
 };

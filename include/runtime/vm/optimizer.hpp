@@ -102,11 +102,14 @@ class BytecodeOptimizer
   }
 
   void optimize(std::vector<bytecode::Instruction>& code, std::int32_t maxIterations = 10);
+  
   void printReport(std::ostream& out) const;
 
  private:
   static bool isJumpTarget(const std::vector<bytecode::Instruction>& code, SizeType pos);
+ 
   static bool isJumpOp(bytecode::OpCode op);
+ 
   static bool isBinaryOp(bytecode::OpCode op);
 };  // BytecodeOptimizer
 

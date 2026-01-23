@@ -142,18 +142,26 @@ class BytecodeCompiler
 
   /// @brief Emits a bytecode instruction
   void emitInstruction(bytecode::OpCode op, std::int32_t arg = 0, std::int32_t line = 0);
+
   /// @brief Updates the current and maximum stack depth
   void updateStackDepth(bytecode::OpCode op);
+
   /// @brief Returns the current program counter
   std::int32_t getCurrentPC() const;
+
   /// @brief Patches a previously emitted jump instruction
   void patchJump(std::int32_t jumpIndex);
+
   /// @brief Enters a new lexical scope
   void enterScope();
+
   /// @brief Exits the current lexical scope
   void exitScope();
+
   /// @brief Compiles an expression AST node
+
   void compileExpr(const parser::ast::Expr* expr);
+
   /// @brief Compiles a statement AST node
   void compileStmt(const parser::ast::Stmt* stmt);
 
@@ -175,12 +183,14 @@ class BytecodeCompiler
 
   /// @brief Disassembles bytecode into a human-readable format
   void disassemble(const CompilationUnit& unit, std::ostream& out) const;
+
   /// @brief Prints an optimization and compilation report
   void optimizationReport(std::ostream& out) const;
 
  private:
   /// @brief Converts an opcode to a string representation
   std::string opcodeToString(bytecode::OpCode op) const;
+
   /// @brief Returns whether an opcode requires an argument
   bool needsArg(bytecode::OpCode op) const;
 };  // BytecodeCompiler

@@ -30,9 +30,11 @@ class Expr: public ASTNode
     Kind_ = Kind::INVALID;
   }
 
-  void       setStr(const StringType s) { Str_ = s; }
+  void setStr(const StringType s) { Str_ = s; }
+
   StringType getStr() const { return Str_; }
-  Kind       getKind() const { return Kind_; }
+
+  Kind getKind() const { return Kind_; }
 };
 
 class BinaryExpr: public Expr
@@ -60,12 +62,16 @@ class BinaryExpr: public Expr
   BinaryExpr(const BinaryExpr&) MYLANG_NOEXCEPT            = delete;
   BinaryExpr& operator=(const BinaryExpr&) MYLANG_NOEXCEPT = delete;
 
-  Expr*          getLeft() const { return Left_; }
-  Expr*          getRight() const { return Right_; }
+  Expr* getLeft() const { return Left_; }
+
+  Expr* getRight() const { return Right_; }
+
   tok::TokenType getOperator() const { return Operator_; }
 
   void setLeft(Expr* left) { Left_ = left; }
+
   void setRight(Expr* right) { Right_ = right; }
+
   void setOperator(tok::TokenType op) { Operator_ = op; }
 };
 
@@ -90,7 +96,8 @@ class UnaryExpr: public Expr
   UnaryExpr(const UnaryExpr&) MYLANG_NOEXCEPT            = delete;
   UnaryExpr& operator=(const UnaryExpr&) MYLANG_NOEXCEPT = delete;
 
-  Expr*          getOperand() const { return Operand_; }
+  Expr* getOperand() const { return Operand_; }
+
   tok::TokenType getOperator() const { return Operator_; }
 };
 
@@ -119,7 +126,8 @@ class LiteralExpr: public Expr
   LiteralExpr& operator=(const LiteralExpr&) MYLANG_NOEXCEPT = delete;
 
   StringType getValue() const { return Literal_; }
-  Type       getType() const { return Type_; }
+
+  Type getType() const { return Type_; }
 };
 
 class NameExpr: public Expr
@@ -169,7 +177,8 @@ class ListExpr: public Expr
   ListExpr& operator=(const ListExpr&) MYLANG_NOEXCEPT = delete;
 
   const std::vector<Expr*>& getElements() const { return Elements_; }
-  std::vector<Expr*>&       getElementsMutable() { return Elements_; }
+
+  std::vector<Expr*>& getElementsMutable() { return Elements_; }
 
   bool isEmpty() const { return Elements_.empty(); }
 };
@@ -198,11 +207,15 @@ class CallExpr: public Expr
   CallExpr(const CallExpr&) MYLANG_NOEXCEPT            = delete;
   CallExpr& operator=(const CallExpr&) MYLANG_NOEXCEPT = delete;
 
-  Expr*                     getCallee() const { return Callee_; }
+  Expr* getCallee() const { return Callee_; }
+
   const std::vector<Expr*>& getArgs() const { return Args_->getElements(); }
-  std::vector<Expr*>&       getArgsMutable() { return Args_->getElementsMutable(); }
-  ListExpr*                 getArgsAsListExpr() { return Args_; }
-  CallLocation              getCallLocation() const { return CallLocation_; }
+
+  std::vector<Expr*>& getArgsMutable() { return Args_->getElementsMutable(); }
+
+  ListExpr* getArgsAsListExpr() { return Args_; }
+
+  CallLocation getCallLocation() const { return CallLocation_; }
 
   bool hasArguments() const { return Args_ == nullptr || Args_->isEmpty(); }
 };
@@ -231,7 +244,8 @@ class AssignmentExpr: public Expr
   AssignmentExpr& operator=(const AssignmentExpr&) MYLANG_NOEXCEPT = delete;
 
   NameExpr* getTarget() const { return Target_; }
-  Expr*     getValue() const { return Value_; }
+
+  Expr* getValue() const { return Value_; }
 };  // ?
 
 }  // namespace ast

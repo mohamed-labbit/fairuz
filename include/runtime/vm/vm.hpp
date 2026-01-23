@@ -77,10 +77,13 @@ class VirtualMachine
 
   /// @brief Pushes a value onto the VM stack
   void push(const object::Value& val);
+
   /// @brief Pops the top value from the VM stack
   object::Value pop();
+
   /// @brief Returns a reference to the top stack value
   object::Value& top();
+
   /// @brief Returns a reference to a value at a given offset from the top
   object::Value& peek(std::int32_t offset);
 
@@ -90,7 +93,9 @@ class VirtualMachine
   // types, avoiding repeated dynamic type checks.
 
   object::Value fastAdd(const object::Value& a, const object::Value& b);
+  
   object::Value fastSub(const object::Value& a, const object::Value& b);
+  
   object::Value fastMul(const object::Value& a, const object::Value& b);
 
   // Native function support
@@ -128,10 +133,13 @@ class VirtualMachine
  public:
   /// @brief Returns collected runtime statistics
   const Statistics& getStatistics() const { return Stats_; }
+
   /// @brief Prints runtime statistics to the output
   void printStatistics() const;
+
   /// @brief Returns the current global variable table
   const std::vector<object::Value>& getGlobals() const { return Globals_; }
+
   /// @brief Returns the current VM operand stack
   const std::vector<object::Value>& getStack() const { return Stack_; }
 };  // VirtualMachine

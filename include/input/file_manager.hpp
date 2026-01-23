@@ -132,7 +132,7 @@ class FileManager
 
   StringType readWindow(const SizeType size)
   {
-    /// TODO: : add cache validation
+    /// TODO: : add caching
     return readWindowInternal(size);
   }
 
@@ -173,6 +173,8 @@ class FileManager
   SizeType remaining() { return static_cast<SizeType>(Stream_.tellg()) - Context_.ByteOffset; }
 
   SizeType fileSize() { return static_cast<SizeType>(Stream_.tellg()); }
+
+  StringType getSourceLine(const SizeType line);
 
  private:
   std::string            FullPath_;

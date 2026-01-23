@@ -30,27 +30,37 @@ class Lexer
  public:
   /// @brief Constructs an empty lexer
   explicit Lexer() = default;
+
   /// @brief Constructs a lexer bound to a file manager
   explicit Lexer(input::FileManager* file_manager);
+
   /// @brief Copying a lexer is not allowed
   explicit Lexer(const Lexer&) = delete;
+
   /// @brief Constructs a lexer from an existing token sequence
   explicit Lexer(std::vector<tok::Token>& seq, const SizeType s);
 
   /// @brief Returns the next token (call operator convenience)
   MYLANG_COMPILER_ABI tok::Token operator()() { return next(); }
+
   /// @brief Returns the current token without advancing
   MYLANG_COMPILER_ABI tok::Token current() const;
+
   /// @brief Advances and returns the next token
   MYLANG_COMPILER_ABI tok::Token next();
+
   /// @brief Peeks ahead n tokens without advancing
   MYLANG_COMPILER_ABI tok::Token peek(SizeType n = 1);
+
   /// @brief Returns the previous token
   MYLANG_COMPILER_ABI tok::Token prev();
+
   /// @brief Returns the full token stream
   MYLANG_COMPILER_ABI const std::vector<tok::Token>& tokenStream() const { return TokStream_; }
+
   /// @brief Tokenizes the entire input source
   MYLANG_COMPILER_ABI std::vector<tok::Token> tokenize();
+
   /// @brief Returns the current indentation size
   MYLANG_COMPILER_ABI const SizeType indentSize() const { return IndentSize_; }
 
@@ -66,6 +76,10 @@ class Lexer
                                             std::optional<SizeType>    file_pos  = std::nullopt,
                                             std::optional<std::string> file_path = std::nullopt) const;
 
+  MYLANG_COMPILER_ABI StringType getSourceLine(const SizeType line) {
+    return SourceManager_.getSourceLine(line);
+  }
+
  private:
   SourceManager           SourceManager_;   // Manages source input and positions
   SizeType                TokIndex_{0};     // Current token index
@@ -78,17 +92,23 @@ class Lexer
 
   /// @brief Lexes a single token and stores it
   MYLANG_COMPILER_ABI tok::Token lexToken();
+
   /// @brief Updates indentation context based on emitted token
   MYLANG_COMPILER_ABI void updateIndentationContext_(const tok::Token& token);
+
   /// @brief Consumes and returns the next character from the source
   MYLANG_COMPILER_ABI CharType consumeChar() { return SourceManager_.consumeChar(); }
+
   MYLANG_COMPILER_ABI CharType currentChar() { return SourceManager_.current(); }
+
   MYLANG_COMPILER_ABI CharType nextChar()
   {
     SourceManager_.consumeChar();
     return SourceManager_.current();
   }
+
   MYLANG_COMPILER_ABI CharType peekChar() { return SourceManager_.peek(); }
+
   /// @brief Stores a token in the token stream
   MYLANG_COMPILER_ABI void store(tok::Token tok);
 

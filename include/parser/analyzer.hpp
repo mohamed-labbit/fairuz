@@ -31,16 +31,23 @@ class SemanticAnalyzer
 
   // Type inference engine
   SymbolTable::DataType_t inferType(const ast::Expr* expr);
-  void                    reportIssue(Issue::Severity sev, const StringType& msg, std::int32_t line, const StringType& sugg = u"");
-  void                    analyzeExpr(const ast::Expr* expr);
-  void                    analyzeStmt(const ast::Stmt* stmt);
+
+  void reportIssue(Issue::Severity sev, const StringType& msg, std::int32_t line, const StringType& sugg = u"");
+
+  void analyzeExpr(const ast::Expr* expr);
+
+  void analyzeStmt(const ast::Stmt* stmt);
 
  public:
   SemanticAnalyzer();
-  void                      analyze(const std::vector<ast::Stmt*>& Statements_);
+
+  void analyze(const std::vector<ast::Stmt*>& Statements_);
+
   const std::vector<Issue>& getIssues() const;
-  const SymbolTable*        getGlobalScope() const;
-  void                      printReport() const;
+
+  const SymbolTable* getGlobalScope() const;
+
+  void printReport() const;
 };
 
 }  // parser

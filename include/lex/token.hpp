@@ -49,7 +49,6 @@ enum class TokenType : int {
   KW_FALSE,     // خطا
   KW_NONE,      // عدم
 
-  /// TODO: reorder into binary and unary
   // Operators
   OP_PLUS,     // +
   OP_MINUS,    // -

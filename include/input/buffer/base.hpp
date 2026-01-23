@@ -34,6 +34,7 @@ class InputBufferBase
   InputBufferBase() = default;
 
   bool empty() const MYLANG_NOEXCEPT { return !FileManager_->isOpen() && FileManager_->remaining() > 0; }
+
   bool refreshBuffer(const std::uint32_t to_refresh);
 
  protected:

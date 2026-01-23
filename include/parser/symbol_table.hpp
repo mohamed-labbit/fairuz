@@ -44,13 +44,21 @@ class SymbolTable
 
  public:
   explicit SymbolTable(SymbolTable* p = nullptr, std::int32_t level = 0);
-  void                                          define(const StringType& name, Symbol symbol);
-  Symbol*                                       lookup(const StringType& name);
-  Symbol*                                       lookupLocal(const StringType& name);
-  bool                                          isDefined(const StringType& name) const;
-  void                                          markUsed(const StringType& name, std::int32_t line);
-  SymbolTable*                                  createChild();
-  std::vector<Symbol*>                          getUnusedSymbols();
+
+  void define(const StringType& name, Symbol symbol);
+
+  Symbol* lookup(const StringType& name);
+
+  Symbol* lookupLocal(const StringType& name);
+
+  bool isDefined(const StringType& name) const;
+
+  void markUsed(const StringType& name, std::int32_t line);
+
+  SymbolTable* createChild();
+
+  std::vector<Symbol*> getUnusedSymbols();
+
   const std::unordered_map<StringType, Symbol>& getSymbols() const;
 };
 

@@ -45,11 +45,11 @@ tok::Token Lexer::make_token(tok::TokenType             tt,
 
 std::vector<tok::Token> Lexer::tokenize()
 {
-
   while (next().type() != tok::TokenType::ENDMARKER)
   {
     ;
   }
+
   return this->TokStream_;
 }
 
@@ -63,6 +63,7 @@ tok::Token Lexer::peek(SizeType n)
     }
     lexToken();
   }
+
   return TokStream_[TokIndex_ + n];
 }
 
@@ -185,15 +186,18 @@ tok::Token Lexer::lexToken()
             {
               diagnostic::engine.panic("Inconsistent indentation (tabs/spaces)");
             }
+
             IndentLevel_++;
             IndentStack_.push_back(size);
             AltIndentStack_.push_back(alt_size);
+
             return finish(tok::TokenType::INDENT, u"", line, col);
           }
           else
           {
             // Dedent - can be multiple levels
             int dedent_count = 0;
+
             while (IndentLevel_ > 0 && size < IndentStack_.back())
             {
               IndentLevel_--;
@@ -201,18 +205,22 @@ tok::Token Lexer::lexToken()
               AltIndentStack_.pop_back();
               dedent_count++;
             }
+
             if (size != IndentStack_.back())
             {
               diagnostic::engine.panic("Unindent does not match any outer indentation level");
             }
+
             if (alt_size != AltIndentStack_.back())
             {
               diagnostic::engine.panic("Inconsistent indentation");
             }
+
             for (int i = 0; i < dedent_count; i++)
             {
               store(make_token(tok::TokenType::DEDENT, u"", line, col));
             }
+
             return TokStream_[TokIndex_++];
           }
         }
@@ -241,7 +249,6 @@ tok::Token Lexer::lexToken()
           {
             break;
           }
-
           consumeChar();
         }
 
@@ -362,6 +369,7 @@ tok::Token Lexer::lexToken()
               c2 = nextChar();
               continue;
             }
+
             // Check for valid octal digit (0-7)
             if (c2 >= '0' && c2 <= '7')
             {
@@ -582,7 +590,6 @@ tok::Token Lexer::next()
   while (TokIndex_ >= TokStream_.size())
   {
     lexToken();
-
     // After lexing, check if we hit ENDMARKER
     if (!TokStream_.empty() && TokStream_.back().type() == tok::TokenType::ENDMARKER)
     {
@@ -605,6 +612,7 @@ tok::Token Lexer::prev()
   {
     return make_token(tok::TokenType::ENDMARKER);
   }
+
   return TokStream_[TokIndex_];
 }
 
@@ -614,10 +622,12 @@ tok::Token Lexer::current() const
   {
     return TokStream_.back();
   }
+
   if (TokIndex_ < TokStream_.size())
   {
     return TokStream_[TokIndex_];
   }
+
   return make_token(tok::TokenType::ENDMARKER);
 }
 

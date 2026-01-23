@@ -22,9 +22,11 @@ class ConstantPool
   std::unordered_map<double, std::int32_t>       FloatConstants_;
 
  public:
-  std::int32_t                      addConstant(const object::Value& val);
+  std::int32_t addConstant(const object::Value& val);
+
   const std::vector<object::Value>& getConstants() const;
-  void                              optimize();
+
+  void optimize();
 };
 
 }

@@ -13,8 +13,10 @@ void BytecodeCompiler::emitInstruction(bytecode::OpCode op, std::int32_t arg, st
   bytecode::Instruction instr(op, arg, line);
   Unit_.instructions.push_back(instr);
   Stats_.InstructionsGenerated++;
+  
   // Track stack depth
   updateStackDepth(op);
+
   // Track line numbers
   if (line > 0)
   {
@@ -282,11 +284,13 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
 
   case parser::ast::Expr::Kind::CALL : {
     const parser::ast::CallExpr* call = static_cast<const parser::ast::CallExpr*>(expr);
+    
     // Compile arguments first
     for (const parser::ast::Expr* arg : call->getArgs())
     {
       compileExpr(arg);
     }
+    
     // Compile callee
     compileExpr(call->getCallee());
     // Emit call instruction
@@ -298,11 +302,13 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
 
   case parser::ast::Expr::Kind::LIST : {
     const parser::ast::ListExpr* list = static_cast<const parser::ast::ListExpr*>(expr);
+    
     // Compile all elements
     for (const parser::ast::Expr* elem : list->getElements())
     {
       compileExpr(elem);
     }
+    
     // Build list from stack
     emitInstruction(bytecode::OpCode::BUILD_LIST, list->getElements().size(), expr->getLine());
     // Adjust stack depth
@@ -317,6 +323,7 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
     compileExpr(assign->getValue());
     // Duplicate for expression result
     emitInstruction(bytecode::OpCode::DUP, 0, expr->getLine());
+    
     // Store
     CompilerSymbolTable::Symbol* sym = CurrentScope_->define(utf8::utf16to8(assign->getTarget()->getValue()));
     if (sym->scope == CompilerSymbolTable::SymbolScope::GLOBAL)
@@ -352,11 +359,13 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     parser::ast::Expr* target = assign->getTarget();
     assert(target);
     StringType target_name = u"";
+    
     /// TODO: check other type of target expressions
     if (target->getKind() == parser::ast::Expr::Kind::NAME)
     {
       target_name = dynamic_cast<parser::ast::NameExpr*>(target)->getValue();
     }
+    
     CompilerSymbolTable::Symbol* sym = CurrentScope_->define(utf8::utf16to8(target_name));
     if (sym->scope == CompilerSymbolTable::SymbolScope::GLOBAL)
     {
@@ -382,16 +391,19 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     compileExpr(ifStmt->getCondition());
     std::int32_t jumpIfFalse = getCurrentPC();
     emitInstruction(bytecode::OpCode::POP_JUMP_IF_FALSE, 0, stmt->getLine());
+    
     // Then block
     for (const parser::ast::Stmt* s : ifStmt->getThenBlock()->getStatements())
     {
       compileStmt(s);
     }
+    
     if (!ifStmt->getElseBlock()->isEmpty())
     {
       std::int32_t jumpEnd = getCurrentPC();
       emitInstruction(bytecode::OpCode::JUMP, 0, stmt->getLine());
       patchJump(jumpIfFalse);
+    
       // Else block
       for (const parser::ast::Stmt* s : ifStmt->getElseBlock()->getStatements())
       {
@@ -409,31 +421,37 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
   case parser::ast::Stmt::Kind::WHILE : {
     const parser::ast::WhileStmt* whileStmt = static_cast<const parser::ast::WhileStmt*>(stmt);
     std::int32_t                  loopStart = getCurrentPC();
+    
     // Mark as potential hot loop
     emitInstruction(bytecode::OpCode::HOT_LOOP_START, 0, stmt->getLine());
     // Compile condition
     compileExpr(whileStmt->getCondition());
     std::int32_t jumpIfFalse = getCurrentPC();
     emitInstruction(bytecode::OpCode::POP_JUMP_IF_FALSE, 0, stmt->getLine());
+    
     // Loop body
     LoopContext ctx;
     ctx.StartPC       = loopStart;
     ctx.ContinueLabel = loopStart;
     ctx.BreakLabel    = -1;  // Will be patched
     LoopStack_.push(ctx);
+    
     for (const parser::ast::Stmt* s : whileStmt->getBlock()->getStatements())
     {
       compileStmt(s);
     }
+    
     // Jump back to loop start
     emitInstruction(bytecode::OpCode::JUMP_BACKWARD, loopStart, stmt->getLine());
     patchJump(jumpIfFalse);
     emitInstruction(bytecode::OpCode::HOT_LOOP_END, 0, stmt->getLine());
+    
     // Patch break statements
     if (LoopStack_.top().BreakLabel != -1)
     {
       patchJump(LoopStack_.top().BreakLabel);
     }
+    
     LoopStack_.pop();
     Stats_.LoopsDetected++;
     break;
@@ -441,6 +459,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
 
   case parser::ast::Stmt::Kind::FOR : {
     const parser::ast::ForStmt* forStmt = static_cast<const parser::ast::ForStmt*>(stmt);
+    
     // Compile iterator
     compileExpr(forStmt->getIter());
     emitInstruction(bytecode::OpCode::GET_ITER, 0, stmt->getLine());
@@ -449,28 +468,34 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     // FOR_ITER gets next item or jumps to end
     std::int32_t forIter = getCurrentPC();
     emitInstruction(bytecode::OpCode::FOR_ITER_FAST, 0, stmt->getLine());
+    
     // Store loop variable
     CompilerSymbolTable::Symbol* sym = CurrentScope_->define(utf8::utf16to8(forStmt->getTarget()->getValue()));
     emitInstruction(bytecode::OpCode::STORE_FAST, sym->index, stmt->getLine());
+    
     // Loop body
     LoopContext ctx;
     ctx.StartPC       = loopStart;
     ctx.ContinueLabel = loopStart;
     ctx.BreakLabel    = -1;
     LoopStack_.push(ctx);
+    
     for (const parser::ast::Stmt* s : forStmt->getBlock()->getStatements())
     {
       compileStmt(s);
     }
+    
     // Jump back
     emitInstruction(bytecode::OpCode::JUMP_BACKWARD, loopStart, stmt->getLine());
     // Patch FOR_ITER to jump here when exhausted
     patchJump(forIter);
     emitInstruction(bytecode::OpCode::HOT_LOOP_END, 0, stmt->getLine());
+    
     if (LoopStack_.top().BreakLabel != -1)
     {
       patchJump(LoopStack_.top().BreakLabel);
     }
+    
     LoopStack_.pop();
     Stats_.LoopsDetected++;
     break;
@@ -480,11 +505,13 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     const parser::ast::FunctionDef* funcDef = static_cast<const parser::ast::FunctionDef*>(stmt);
     // Enter new scope for function
     enterScope();
+    
     // Define parameters
     for (const parser::ast::Expr* param : funcDef->getParameters())
     {
       CurrentScope_->define(utf8::utf16to8(static_cast<const parser::ast::NameExpr*>(param)->getValue()), true);
     }
+    
     // Save current compilation state
     std::vector<bytecode::Instruction>&& savedInstructions  = std::move(Unit_.instructions);
     ConstantPool                         savedConstants     = Constants_;
@@ -493,11 +520,13 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     Unit_.instructions.clear();
     CurrentStackDepth_ = 0;
     MaxStackDepth_     = 0;
+    
     // Compile function body
     for (const parser::ast::Stmt* s : funcDef->getBody()->getStatements())
     {
       compileStmt(s);
     }
+    
     // Implicit return None if no return statement
     if (Unit_.instructions.empty() || Unit_.instructions.back().op != bytecode::OpCode::RETURN)
     {
@@ -505,19 +534,23 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
       emitInstruction(bytecode::OpCode::LOAD_CONST, noneIdx, stmt->getLine());
       emitInstruction(bytecode::OpCode::RETURN, 0, stmt->getLine());
     }
+    
     // Create function object
     std::vector<bytecode::Instruction>&& funcInstructions = std::move(Unit_.instructions);
     std::int32_t                         funcStackSize    = MaxStackDepth_;
+    
     // Restore compilation state
     Unit_.instructions = std::move(savedInstructions);
     Constants_         = savedConstants;
     CurrentStackDepth_ = savedStackDepth;
     MaxStackDepth_     = savedMaxStackDepth;
+    
     // Store function object as constant
     object::Value funcObj;  // Would create FunctionObject here
     std::int32_t  funcIdx = Constants_.addConstant(funcObj);
     emitInstruction(bytecode::OpCode::LOAD_CONST, funcIdx, stmt->getLine());
     emitInstruction(bytecode::OpCode::MAKE_FUNCTION, funcDef->getParameters().size(), stmt->getLine());
+    
     // Store function
     CompilerSymbolTable::Symbol* sym = CurrentScope_->define(utf8::utf16to8(funcDef->getName()->getValue()));
     emitInstruction(bytecode::OpCode::STORE_FAST, sym->index, stmt->getLine());
@@ -559,33 +592,42 @@ typename BytecodeCompiler::CompilationUnit BytecodeCompiler::compile(const std::
   Unit_              = CompilationUnit();
   Stats_             = Stats();
   CurrentStackDepth_ = MaxStackDepth_ = 0;
+  
   // Compile all statements
   for (const parser::ast::Stmt* stmt : ast)
   {
     compileStmt(stmt);
   }
+  
   // Add HALT at end
   emitInstruction(bytecode::OpCode::HALT, 0, 0);
+  
   // Finalize constant pool
   Unit_.constants          = Constants_.getConstants();
   Stats_.ConstantsPoolSize = Unit_.constants.size();
+  
   // Resolve all jumps
   Jumps_.resolveJumps(Unit_.instructions);
+  
   // Detect loops for optimization
   LoopAnalyzer_.detectLoops(Unit_.instructions);
   LoopAnalyzer_.findInvariants(Unit_.instructions, *CurrentScope_);
+  
   // Apply peephole optimizations
   Peephole_.optimize(Unit_.instructions);
   Stats_.PeepholeOptimizations = Peephole_.getOptimizations().size();
+  
   // Set metadata
   Unit_.NumLocals = CurrentScope_->getLocalCount();
   Unit_.StackSize = MaxStackDepth_;
+  
   // Report unused variables
   std::vector<CompilerSymbolTable::Symbol> unused = CurrentScope_->getUnusedSymbols();
   if (!unused.empty())
   {
     std::cout << "[Compiler] Warning: " << unused.size() << " unused variables detected\n";
   }
+  
   return Unit_;
 }
 

@@ -5,6 +5,7 @@
 
 
 namespace mylang {
+
 #define BUFFER_END u'\0'
 #define TABWIDTH 8
 #define MAX_ALLOWED_INDENT 100
@@ -26,6 +27,7 @@ typedef std::size_t    SizeType;
 
 // Terminal colors
 namespace Color {
+
 const std::u16string RESET   = u"\033[0m";
 const std::u16string BOLD    = u"\033[1m";
 const std::u16string RED     = u"\033[31m";
@@ -35,6 +37,7 @@ const std::u16string BLUE    = u"\033[34m";
 const std::u16string MAGENTA = u"\033[35m";
 const std::u16string CYAN    = u"\033[36m";
 const std::u16string GRAY    = u"\033[90m";
+
 }  // Color
 
 }  // mylang

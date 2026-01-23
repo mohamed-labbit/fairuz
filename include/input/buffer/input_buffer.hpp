@@ -62,7 +62,9 @@ class InputBuffer: public InputBufferBase
   void consume(SizeType len)
   {
     while (len-- > 0)
+    {
       consumeChar();
+    }
   }
 
   void unget(CharType ch);
@@ -70,6 +72,8 @@ class InputBuffer: public InputBufferBase
   void reset();
 
   Position position() const MYLANG_NOEXCEPT { return CurrentPosition_; }
+
+  StringType getSourceLine(const SizeType line) { return FileManager_->getSourceLine(line); }
 
  private:
   struct PushbackEntry
@@ -87,7 +91,9 @@ class InputBuffer: public InputBufferBase
   std::stack<PushbackEntry> UngetStack_;
 
   void swapBuffers_();
+
   void advancePosition_(CharType ch);
+
   void rewindPosition_(CharType ch);
 };
 

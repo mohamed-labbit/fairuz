@@ -228,6 +228,7 @@ class Parser
 
   /// @brief Matches and consumes a token if it is of the given type
   bool match(const tok::TokenType type);
+  
   /**
    * @brief Consumes a token of the expected type or throws a ParseError.
    *
@@ -248,15 +249,13 @@ class Parser
   void skipNewlines()
   {
     while (match(tok::TokenType::NEWLINE))
+    {
       ;
+    }
   }
 
   /// @brief Retrieves a source line for diagnostics
-  StringType getSourceLine(SizeType line)
-  {
-    /// TODO: Use the file manager to retrieve actual source line
-    return peek().lexeme();
-  }
+  StringType getSourceLine(SizeType line) { return Lexer_.getSourceLine(line); }
 
   /// @brief Enters a new scope (currently a no-op)
   void enterScope() {}

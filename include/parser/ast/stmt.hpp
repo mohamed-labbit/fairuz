@@ -102,9 +102,11 @@ class AssignmentStmt: public Stmt
   AssignmentStmt& operator=(const AssignmentStmt&) MYLANG_NOEXCEPT = delete;
 
   Expr* getValue() const { return Value_; }
+
   Expr* getTarget() const { return Target_; }
 
   void setValue(Expr* v) { Value_ = v; }
+
   void setTarget(NameExpr* t) { Target_ = t; }
 };
 
@@ -133,11 +135,14 @@ class IfStmt: public Stmt
   IfStmt(const IfStmt&) MYLANG_NOEXCEPT            = delete;
   IfStmt& operator=(const IfStmt&) MYLANG_NOEXCEPT = delete;
 
-  Expr*      getCondition() const { return Condition_; }
+  Expr* getCondition() const { return Condition_; }
+
   BlockStmt* getThenBlock() const { return ThenBlock_; }
+
   BlockStmt* getElseBlock() const { return ElseBlock_; }
 
   void setThenBlock(BlockStmt* t) { ThenBlock_ = t; }
+
   void setElseBlock(BlockStmt* e) { ElseBlock_ = e; }
 };
 
@@ -164,8 +169,10 @@ class WhileStmt: public Stmt
   WhileStmt(const WhileStmt&) MYLANG_NOEXCEPT            = delete;
   WhileStmt& operator=(const WhileStmt&) MYLANG_NOEXCEPT = delete;
 
-  Expr*       getCondition() const { return Condition_; }
-  BlockStmt*  getBlock() const { return Block_; }
+  Expr* getCondition() const { return Condition_; }
+
+  BlockStmt* getBlock() const { return Block_; }
+
   BlockStmt*& getBlockMutable() { return std::ref<BlockStmt*>(Block_); }
 };
 
@@ -195,8 +202,10 @@ class ForStmt: public Stmt
   ForStmt(const ForStmt&) MYLANG_NOEXCEPT            = delete;
   ForStmt& operator=(const ForStmt&) MYLANG_NOEXCEPT = delete;
 
-  NameExpr*  getTarget() const { return Target_; }
-  Expr*      getIter() const { return Iter_; }
+  NameExpr* getTarget() const { return Target_; }
+
+  Expr* getIter() const { return Iter_; }
+
   BlockStmt* getBlock() const { return Block_; }
 
   void setBlock(BlockStmt* b) { Block_ = b; }
@@ -227,9 +236,11 @@ class FunctionDef: public Stmt
   FunctionDef(const FunctionDef&) MYLANG_NOEXCEPT            = delete;
   FunctionDef& operator=(const FunctionDef&) MYLANG_NOEXCEPT = delete;
 
-  NameExpr*                 getName() const { return Name_; }
+  NameExpr* getName() const { return Name_; }
+
   const std::vector<Expr*>& getParameters() const { return Params_->getElements(); }
-  BlockStmt*                getBody() const { return Body_; }
+
+  BlockStmt* getBody() const { return Body_; }
 
   void setBody(BlockStmt* b) { Body_ = b; }
 

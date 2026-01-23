@@ -44,11 +44,13 @@ class SymbolTable
   bool insert(const StringType& lexeme, SymbolType st)
   {
     Scope& current_scope = this->Scopes_.back();
+
     // Check if symbol already exists in current scope
     if (current_scope.find(lexeme) != current_scope.end())
     {
       return false;
     }
+
     // Insert into current scope
     Entry e(st, static_cast<SizeType>(scopeLevel()));
     current_scope[lexeme] = e;
@@ -80,12 +82,14 @@ class SymbolTable
     {
       return lookup(name).has_value();
     }
+
     // Check if symbol exists at specific scope level
     SizeType scope_level = _scope.value();
     if (scope_level >= this->Scopes_.size())
     {
       return false;
     }
+
     const Scope& scope = this->Scopes_[scope_level];
     return scope.find(name) != scope.end();
   }
@@ -115,6 +119,7 @@ class SymbolTable
   {
     std::vector<Entry>             symbols;
     std::unordered_set<StringType> seen;
+
     // Iterate from innermost to outermost
     for (auto it = this->Scopes_.rbegin(); it != this->Scopes_.rend(); ++it)
     {
@@ -127,6 +132,7 @@ class SymbolTable
         }
       }
     }
+
     return symbols;
   }
 
