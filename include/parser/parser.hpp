@@ -235,14 +235,16 @@ class Parser
    * @param type Expected token type
    * @param msg  Error message if the token does not match
    */
-  tok::Token consume(tok::TokenType type, const StringType& msg)
+  MYLANG_NODISCARD
+  bool consume(tok::TokenType type, const StringType& msg)
   {
     if (check(type))
     {
-      return advance();
+      advance();
+      return true;
     }
     diagnostic::engine.emit(msg, diagnostic::DiagnosticEngine::Severity::ERROR);
-    return tok::Token();
+    return false;
   }
 
   /// @brief Skips newline tokens during parsing

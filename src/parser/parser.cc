@@ -63,7 +63,11 @@ ast::Stmt* Parser::parseStatement()
 
 ast::Stmt* Parser::parseReturnStmt()
 {
-  consume(tok::TokenType::KW_RETURN, u"Expected 'return' statement");
+  if (!consume(tok::TokenType::KW_RETURN, u"Expected 'return' statement"))
+  {
+    return nullptr;
+  }
+
   // Handle return with no value (return None implicitly)
   if (check(tok::TokenType::NEWLINE) || weDone())
   {
@@ -75,7 +79,10 @@ ast::Stmt* Parser::parseReturnStmt()
 
 ast::Stmt* Parser::parseWhileStmt()
 {
-  consume(tok::TokenType::KW_WHILE, u"Expected 'while' keyword");
+  if (!consume(tok::TokenType::KW_WHILE, u"Expected 'while' keyword"))
+  {
+    return nullptr;
+  }
 
   ast::Expr* condition = parseExpression();
   if (condition == nullptr)
@@ -84,7 +91,10 @@ ast::Stmt* Parser::parseWhileStmt()
     return nullptr;
   }
 
-  consume(tok::TokenType::COLON, u"Expected ':' after while condition");
+  if (!consume(tok::TokenType::COLON, u"Expected ':' after while condition"))
+  {
+    return nullptr;
+  }
 
   ast::BlockStmt* while_block = parseIndentedBlock();
   if (while_block == nullptr)
@@ -103,7 +113,10 @@ ast::BlockStmt* Parser::parseIndentedBlock()
     advance();
   }
 
-  consume(tok::TokenType::INDENT, u"Expected indented block");
+  if (!consume(tok::TokenType::INDENT, u"Expected indented block"))
+  {
+    return nullptr;
+  }
 
   std::vector<ast::Stmt*> statements;
 
@@ -144,7 +157,10 @@ ast::BlockStmt* Parser::parseIndentedBlock()
   }
   else
   {
-    consume(tok::TokenType::DEDENT, u"Expected dedent after block");
+    if (!consume(tok::TokenType::DEDENT, u"Expected dedent after block"))
+    {
+      return nullptr;
+    }
   }
 
   return ast::AST_allocator.make<ast::BlockStmt>(statements);
@@ -152,7 +168,10 @@ ast::BlockStmt* Parser::parseIndentedBlock()
 
 ast::ListExpr* Parser::parseParametersList()
 {
-  consume(tok::TokenType::LPAREN, u"Expected '(' before parameters");
+  if (!consume(tok::TokenType::LPAREN, u"Expected '(' before parameters"))
+  {
+    return nullptr;
+  }
 
   std::vector<ast::Expr*> parameters;
 
@@ -184,14 +203,20 @@ ast::ListExpr* Parser::parseParametersList()
     } while (match(tok::TokenType::COMMA));
   }
 
-  consume(tok::TokenType::RPAREN, u"Expected ')' after parameters");
+  if (!consume(tok::TokenType::RPAREN, u"Expected ')' after parameters"))
+  {
+    return nullptr;
+  }
 
   return ast::AST_allocator.make<ast::ListExpr>(parameters);
 }
 
 ast::Stmt* Parser::parseFunctionDef()
 {
-  consume(tok::TokenType::KW_FN, u"Expected 'fn' keyword");
+  if (!consume(tok::TokenType::KW_FN, u"Expected 'fn' keyword"))
+  {
+    return nullptr;
+  }
 
   // Parse function name (must be an identifier)
   if (!check(tok::TokenType::IDENTIFIER))
@@ -212,7 +237,10 @@ ast::Stmt* Parser::parseFunctionDef()
   }
 
   // Expect colon after parameters
-  consume(tok::TokenType::COLON, u"Expected ':' after function parameters");
+  if (!consume(tok::TokenType::COLON, u"Expected ':' after function parameters"))
+  {
+    return nullptr;
+  }
 
   // Parse function body block
   ast::BlockStmt* function_body = parseIndentedBlock();
@@ -230,7 +258,10 @@ ast::Stmt* Parser::parseFunctionDef()
 
 ast::Stmt* Parser::parseIfStmt()
 {
-  consume(tok::TokenType::KW_IF, u"Expected 'if' keyword");
+  if (!consume(tok::TokenType::KW_IF, u"Expected 'if' keyword"))
+  {
+    return nullptr;
+  }
 
   ast::Expr* condition = parseExpression();
   if (condition == nullptr)
@@ -239,7 +270,10 @@ ast::Stmt* Parser::parseIfStmt()
     return nullptr;
   }
 
-  consume(tok::TokenType::COLON, u"Expected ':' after if condition");
+  if (!consume(tok::TokenType::COLON, u"Expected ':' after if condition"))
+  {
+    return nullptr;
+  }
 
   // Parse the then-block
   ast::BlockStmt* then_block = parseIndentedBlock();
@@ -252,19 +286,6 @@ ast::Stmt* Parser::parseIfStmt()
   // Handle else clause
   ast::BlockStmt* else_block = nullptr;
   skipNewlines();
-
-  /*
-  if (match(tok::TokenType::KW_ELSE))
-  {
-    consume(tok::TokenType::COLON, u"Expected ':' after 'else'");
-    else_block = parseIndentedBlock();
-    if (else_block == nullptr)
-    {
-      reportError(u"Expected indented block after else statement");
-      return nullptr;
-    }
-  }
-  */
 
   return ast::AST_allocator.make<ast::IfStmt>(condition, then_block, else_block);
 }
@@ -458,7 +479,10 @@ ast::Expr* Parser::parsePostfixExpr()
       } while (match(tok::TokenType::COMMA));
     }
 
-    consume(tok::TokenType::RPAREN, u"Expected ')' after arguments");
+    if (!consume(tok::TokenType::RPAREN, u"Expected ')' after arguments"))
+    {
+      return nullptr;
+    }
 
     expr = ast::AST_allocator.make<ast::CallExpr>(expr, ast::AST_allocator.make<ast::ListExpr>(args));
   }
@@ -526,7 +550,11 @@ ast::Expr* Parser::parsePrimaryExpr()
       return nullptr;
     }
 
-    consume(tok::TokenType::RPAREN, u"Expected ')' after expression");
+    if (!consume(tok::TokenType::RPAREN, u"Expected ')' after expression"))
+    {
+      return nullptr;
+    }
+
     return expr;
   }
 
@@ -567,7 +595,10 @@ ast::Expr* Parser::parseListLiteral()
     } while (match(tok::TokenType::COMMA));
   }
 
-  consume(tok::TokenType::RBRACKET, u"Expected ']' after list elements");
+  if (!consume(tok::TokenType::RBRACKET, u"Expected ']' after list elements"))
+  {
+    return nullptr;
+  }
   return ast::AST_allocator.make<ast::ListExpr>(elements);
 }
 
