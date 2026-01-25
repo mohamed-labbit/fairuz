@@ -358,7 +358,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     // Store to variable
     parser::ast::Expr* target = assign->getTarget();
     assert(target);
-    StringType target_name = u"";
+    StringRef target_name = u"";
 
     /// TODO: check other type of target expressions
     if (target->getKind() == parser::ast::Expr::Kind::NAME)

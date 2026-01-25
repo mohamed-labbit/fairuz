@@ -315,7 +315,7 @@ ast::Stmt* ASTOptimizer::eliminateDeadCode(ast::Stmt* stmt)
   return stmt;
 }
 
-StringType ASTOptimizer::CSEPass::exprToString(const ast::Expr* expr)
+StringRef ASTOptimizer::CSEPass::exprToString(const ast::Expr* expr)
 {
   if (expr == nullptr)
   {
@@ -344,11 +344,11 @@ StringType ASTOptimizer::CSEPass::exprToString(const ast::Expr* expr)
   }
 }
 
-StringType ASTOptimizer::CSEPass::getTempVar() { return u"__cse_temp_" + utf8::utf8to16(std::to_string(TempCounter_++)); }
+StringRef ASTOptimizer::CSEPass::getTempVar() { return u"__cse_temp_" + utf8::utf8to16(std::to_string(TempCounter_++)); }
 
-std::optional<StringType> ASTOptimizer::CSEPass::findCSE(const ast::Expr* expr)
+std::optional<StringRef> ASTOptimizer::CSEPass::findCSE(const ast::Expr* expr)
 {
-  StringType exprStr = exprToString(expr);
+  StringRef exprStr = exprToString(expr);
   if (exprStr.empty())
   {
     return std::nullopt;
@@ -361,16 +361,16 @@ std::optional<StringType> ASTOptimizer::CSEPass::findCSE(const ast::Expr* expr)
   return std::nullopt;
 }
 
-void ASTOptimizer::CSEPass::recordExpr(const ast::Expr* expr, const StringType& var)
+void ASTOptimizer::CSEPass::recordExpr(const ast::Expr* expr, const StringRef& var)
 {
-  StringType exprStr = exprToString(expr);
+  StringRef exprStr = exprToString(expr);
   if (!exprStr.empty())
   {
     ExprCache_[exprStr] = var;
   }
 }
 
-bool ASTOptimizer::isLoopInvariant(const ast::Expr* expr, const std::unordered_set<StringType>& loopVars)
+bool ASTOptimizer::isLoopInvariant(const ast::Expr* expr, const std::unordered_set<StringRef>& loopVars)
 {
   if (expr == nullptr)
   {

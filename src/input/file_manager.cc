@@ -63,7 +63,7 @@ void FileManager::seekToChar(const SizeType CharOffset)
   while (Context_.CharOffset < CharOffset)
   {
     const SizeType chars_to_read = CharOffset - Context_.CharOffset;
-    StringType     result        = readWindowInternal(std::min(chars_to_read, SizeType{1024}));
+    StringRef      result        = readWindowInternal(std::min(chars_to_read, SizeType{1024}));
     if (result.empty())
     {
       throw error::FileError(toString(FileManagerError::UNEXPECTED_EOF));
@@ -128,11 +128,11 @@ SizeType FileManager::validateUtf8Bound(std::span<const char> buffer) const
   return std::min(MAX_UTF8_CHAR_BYTES, size);
 }
 
-StringType FileManager::readWindowInternal(const SizeType size)
+StringRef FileManager::readWindowInternal(const SizeType size)
 {
   if (size == 0)
   {
-    return StringType{};
+    return StringRef{};
   }
 
   if (!isOpen())
@@ -149,7 +149,7 @@ StringType FileManager::readWindowInternal(const SizeType size)
   {
     if (Stream_.eof())
     {
-      return StringType{};
+      return StringRef{};
     }
     else if (byte_buffer.empty())
     {
@@ -179,7 +179,7 @@ StringType FileManager::readWindowInternal(const SizeType size)
   const SizeType valid_bytes = byte_buffer.size();
   Context_.ByteOffset += valid_bytes;
   // Context_.bytes_read_total += valid_bytes
-  StringType result = utf8::utf8to16(std::string(byte_buffer.begin(), byte_buffer.end()));
+  StringRef result = utf8::utf8to16(std::string(byte_buffer.begin(), byte_buffer.end()));
 
   if (result.size() > size)
   {
@@ -197,22 +197,22 @@ StringType FileManager::readWindowInternal(const SizeType size)
   return result;
 }
 
-StringType FileManager::readLine(const SizeType line_number)
+StringRef FileManager::readLine(const SizeType line_number)
 {
   seekToLine(line_number);
   const SizeType LineLength = LineIndices_[line_number].LineLength;
   return readWindowInternal(LineLength);
 }
 
-StringType FileManager::readNextLine()
+StringRef FileManager::readNextLine()
 {
-  StringType line;
+  StringRef line;
   line.reserve(100);  // average
 
   for (;;)
   {
     // check line is not empty
-    StringType chunk = readWindowInternal(1);
+    StringRef chunk = readWindowInternal(1);
     if (chunk.empty())
     {
       break;
@@ -229,7 +229,7 @@ StringType FileManager::readNextLine()
 
     if (c == u'\r')
     {
-      StringType peek = readWindowInternal(1);
+      StringRef peek = readWindowInternal(1);
       if (!peek.empty() && peek[0] == u'\n')
       {  // consume \n
         ;
@@ -252,7 +252,7 @@ StringType FileManager::readNextLine()
   return line;
 }
 
-std::vector<StringType> FileManager::readLines(const SizeType start, const SizeType count)
+std::vector<StringRef> FileManager::readLines(const SizeType start, const SizeType count)
 {
   if (!LineIndexBuilt_)
   {
@@ -264,8 +264,8 @@ std::vector<StringType> FileManager::readLines(const SizeType start, const SizeT
     throw error::FileError(toString(FileManagerError::INVALID_LINE_NUMBER));
   }
 
-  const SizeType          end = std::min(start + count, LineIndices_.size());
-  std::vector<StringType> lines;
+  const SizeType         end = std::min(start + count, LineIndices_.size());
+  std::vector<StringRef> lines;
   lines.reserve(end - start);
 
   for (SizeType i = start; i < end; ++i)
@@ -276,15 +276,15 @@ std::vector<StringType> FileManager::readLines(const SizeType start, const SizeT
   return lines;
 }
 
-StringType FileManager::readAll()
+StringRef FileManager::readAll()
 {
   reset();
-  StringType result;
+  StringRef result;
   result.reserve(Stats_.TotalBytes / 2);
 
   for (;;)
   {
-    StringType chunk = readWindowInternal(4096);  // 4 MB
+    StringRef chunk = readWindowInternal(4096);  // 4 MB
     if (chunk.empty())
     {
       break;
@@ -325,11 +325,11 @@ CharType FileManager::peekChar(const SizeType CharOffset)
   return readWindowInternal(1)[0];
 }
 
-StringType FileManager::peekRange(const SizeType start_offset, const SizeType length)
+StringRef FileManager::peekRange(const SizeType start_offset, const SizeType length)
 {
   pushPosition();
   seekToChar(start_offset);
-  StringType result = readWindowInternal(length);
+  StringRef result = readWindowInternal(length);
   popPosition();
   return result;
 }
@@ -354,7 +354,7 @@ void FileManager::buildLineIndex()
 
   for (;;)
   {
-    StringType chunk = readWindowInternal(LINE_INDEX_CHUNK);
+    StringRef chunk = readWindowInternal(LINE_INDEX_CHUNK);
     if (chunk.empty())
     {
       break;
@@ -403,7 +403,7 @@ void FileManager::buildLineIndex()
   reset();
 }
 
-StringType FileManager::getSourceLine(const SizeType line)
+StringRef FileManager::getSourceLine(const SizeType line)
 {
   std::string ret;
   SizeType    s = line;

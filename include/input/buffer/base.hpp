@@ -2,6 +2,7 @@
 
 #include "../../../include/diag/diagnostic.hpp"
 #include "../../macros.hpp"
+#include "../../types.hpp"
 #include "../file_manager.hpp"
 
 #include <fstream>
@@ -15,15 +16,15 @@ namespace buffer {
 class InputBufferBase
 {
  public:
-  using buffer_t = StringType;
+  using buffer_t = StringRef;
 
   InputBufferBase(input::FileManager* fm, SizeType cap = DEFAULT_CAPACITY) :
       FileManager_(fm),
       BytePosition_(0),
       CharCount_(0)
   {
-    Buffers_[0].resize(cap + 1, BUFFER_END);
-    Buffers_[1].resize(cap + 1, BUFFER_END);
+    Buffers_[0] = StringRef(cap + 1);
+    Buffers_[1] = StringRef(cap + 1);
 
     if (FileManager_ == nullptr || !FileManager_->isOpen())
     {

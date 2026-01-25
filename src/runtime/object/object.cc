@@ -26,13 +26,13 @@ double object::Value::asFloat() const
   return std::get<double>(Data_);
 }
 
-const StringType& object::Value::asString() const
+const StringRef& object::Value::asString() const
 {
   if (!isString())
   {
     diagnostic::engine.panic("Value is not a string");
   }
-  return *std::get<std::shared_ptr<StringType>>(Data_);
+  return *std::get<std::shared_ptr<StringRef>>(Data_);
 }
 
 bool object::Value::asBool() const
@@ -62,13 +62,13 @@ const std::vector<object::Value>& object::Value::asList() const
   return *std::get<std::shared_ptr<std::vector<Value>>>(Data_);
 }
 
-std::unordered_map<StringType, object::Value>& object::Value::asDict() const
+std::unordered_map<StringRef, object::Value>& object::Value::asDict() const
 {
   if (!isDict())
   {
     diagnostic::engine.panic("Value is not a dict");
   }
-  return *std::get<std::shared_ptr<std::unordered_map<StringType, Value>>>(Data_);
+  return *std::get<std::shared_ptr<std::unordered_map<StringRef, Value>>>(Data_);
 }
 
 typename object::Value::Function& object::Value::asFunction()
@@ -151,7 +151,7 @@ bool object::Value::toBool() const
   }
 }
 
-StringType object::Value::toString() const
+StringRef object::Value::toString() const
 {
   switch (Type_)
   {
@@ -160,7 +160,7 @@ StringType object::Value::toString() const
   case Type::INT :
     return utf8::utf8to16(std::to_string(asInt()));
   case Type::FLOAT : {
-    StringType s = utf8::utf8to16(std::to_string(asFloat()));
+    StringRef s = utf8::utf8to16(std::to_string(asFloat()));
     s.erase(s.find_last_not_of('0') + 1);
     if (s.back() == '.')
       s += u"0";
@@ -171,7 +171,7 @@ StringType object::Value::toString() const
   case Type::BOOL :
     return asBool() ? u"True" : u"False";
   case Type::LIST : {
-    StringType                        result = u"[";
+    StringRef                         result = u"[";
     const std::vector<object::Value>& list   = asList();
     for (SizeType i = 0; i < list.size(); i++)
     {
@@ -184,9 +184,9 @@ StringType object::Value::toString() const
     return result + u"]";
   }
   case Type::DICT : {
-    StringType                                                    result = u"{";
-    const std::shared_ptr<std::unordered_map<StringType, Value>>& dict   = std::get<std::shared_ptr<std::unordered_map<StringType, Value>>>(Data_);
-    SizeType                                                      count  = 0;
+    StringRef                                                    result = u"{";
+    const std::shared_ptr<std::unordered_map<StringRef, Value>>& dict   = std::get<std::shared_ptr<std::unordered_map<StringRef, Value>>>(Data_);
+    SizeType                                                     count  = 0;
     for (const auto& [k, v] : *dict)
     {
       result += u"'" + k + u"': " + v.toString();
@@ -218,7 +218,7 @@ std::string object::Value::repr() const
 // Hash for use in dictionaries
 SizeType object::Value::hash() const
 {
-  std::hash<StringType> hasher;
+  std::hash<StringRef> hasher;
   return hasher(toString());
 }
 
@@ -323,7 +323,7 @@ object::Value object::Value::operator*(const Value& other) const
   // String/List repetition
   if (isString() && other.isInt())
   {
-    StringType result;
+    StringRef result;
     for (std::int64_t i = 0; i < other.asInt(); i++)
     {
       result += asString();
@@ -417,8 +417,8 @@ object::Value object::Value::getItem(const Value& key) const
   }
   if (isDict())
   {
-    const std::unordered_map<StringType, object::Value>& dict = asDict();
-    auto                                                 it   = dict.find(key.toString());
+    const std::unordered_map<StringRef, object::Value>& dict = asDict();
+    auto                                                it   = dict.find(key.toString());
     if (it == dict.end())
     {
       diagnostic::engine.panic("Key not found: " + utf8::utf16to8(key.toString()));
@@ -427,8 +427,8 @@ object::Value object::Value::getItem(const Value& key) const
   }
   if (isString())
   {
-    std::int64_t      index = key.toInt();
-    const StringType& str   = asString();
+    std::int64_t     index = key.toInt();
+    const StringRef& str   = asString();
     if (index < 0)
     {
       index += str.size();
@@ -437,7 +437,7 @@ object::Value object::Value::getItem(const Value& key) const
     {
       diagnostic::engine.panic("String index out of range");
     }
-    return Value(StringType(1, str[index]));
+    return Value(StringRef(1, str[index]));
   }
   diagnostic::engine.panic("Object is not subscriptable");
 }

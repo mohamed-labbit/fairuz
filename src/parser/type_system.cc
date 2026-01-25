@@ -10,7 +10,7 @@ bool TypeSystem::Type::operator==(const Type& other) const
   return base == other.base;  // Simplified
 }
 
-StringType TypeSystem::Type::toString() const
+StringRef TypeSystem::Type::toString() const
 {
   switch (base)
   {

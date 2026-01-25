@@ -29,9 +29,9 @@ namespace parser {
 class ParseError: public std::runtime_error
 {
  public:
-  std::int32_t            Line_, Column_;  // Source location of the error
-  StringType              Context_;        // Source line where the error occurred
-  std::vector<StringType> Suggestions_;    // Optional recovery suggestions
+  std::int32_t           Line_, Column_;  // Source location of the error
+  StringRef              Context_;        // Source line where the error occurred
+  std::vector<StringRef> Suggestions_;    // Optional recovery suggestions
 
   /**
    * @brief Constructs a parse error.
@@ -42,7 +42,7 @@ class ParseError: public std::runtime_error
    * @param ctx  Optional source line context
    * @param sugg Optional list of suggestions
    */
-  ParseError(const StringType& msg, unsigned l, unsigned c, StringType ctx = u"", std::vector<StringType> sugg = {}) :
+  ParseError(const StringRef& msg, unsigned l, unsigned c, StringRef ctx = u"", std::vector<StringRef> sugg = {}) :
       std::runtime_error(utf8::utf16to8(msg)),
       Line_(l),
       Column_(c),
@@ -62,7 +62,7 @@ class ParseError: public std::runtime_error
    *
    * @return UTF-16 formatted error message
    */
-  StringType format() const
+  StringRef format() const
   {
     std::stringstream ss;
     ss << "Line " << Line_ << ":" << Column_ << " - " << what() << "\n";
@@ -76,7 +76,7 @@ class ParseError: public std::runtime_error
     if (!Suggestions_.empty())
     {
       ss << "Suggestions:\n";
-      for (const StringType& s : Suggestions_)
+      for (const StringRef& s : Suggestions_)
       {
         ss << "  - " << utf8::utf16to8(s) << "\n";
       }
@@ -236,7 +236,7 @@ class Parser
    * @param msg  Error message if the token does not match
    */
   MYLANG_NODISCARD
-  bool consume(tok::TokenType type, const StringType& msg)
+  bool consume(tok::TokenType type, const StringRef& msg)
   {
     if (check(type))
     {
@@ -257,7 +257,7 @@ class Parser
   }
 
   /// @brief Retrieves a source line for diagnostics
-  StringType getSourceLine(SizeType line) { return Lexer_.getSourceLine(line); }
+  StringRef getSourceLine(SizeType line) { return Lexer_.getSourceLine(line); }
 
   /// @brief Enters a new scope (currently a no-op)
   void enterScope() {}

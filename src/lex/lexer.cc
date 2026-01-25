@@ -33,7 +33,7 @@ Lexer::Lexer(std::vector<tok::Token>& seq, const SizeType s) :
 }
 
 tok::Token Lexer::make_token(tok::TokenType             tt,
-                             std::optional<StringType>  lexeme,
+                             std::optional<StringRef>   lexeme,
                              std::optional<SizeType>    line,
                              std::optional<SizeType>    col,
                              std::optional<SizeType>    file_pos,
@@ -69,7 +69,7 @@ tok::Token Lexer::peek(SizeType n)
 
 tok::Token Lexer::lexToken()
 {
-  auto finish = [this](tok::TokenType tt, StringType str, SizeType l, SizeType c) {
+  auto finish = [this](tok::TokenType tt, StringRef str, SizeType l, SizeType c) {
     tok::Token ret = make_token(tt, std::move(str), l, c);
     store(std::move(ret));
     return TokStream_.back();
@@ -258,9 +258,9 @@ tok::Token Lexer::lexToken()
     break;
     case u'\'' :
     case u'"' : {
-      StringType str;
-      CharType   quote = ch;
-      CharType   c2    = nextChar();
+      StringRef str;
+      CharType  quote = ch;
+      CharType  c2    = nextChar();
 
       while (c2 != u'\n' && c2 != BUFFER_END && c2 != quote)
       {
@@ -282,7 +282,7 @@ tok::Token Lexer::lexToken()
     case ',' :
     case u'،' :
       consumeChar();
-      return finish(tok::TokenType::COMMA, StringType(1, ch), line, col);
+      return finish(tok::TokenType::COMMA, StringRef(1, ch), line, col);
     default :
       break;
     }
@@ -290,8 +290,8 @@ tok::Token Lexer::lexToken()
     // Identifiers
     if ((ch >= 0x0600 && ch <= 0x06FF) || ch == u'_')
     {
-      StringType id(1, ch);
-      CharType   c2 = nextChar();
+      StringRef id(1, ch);
+      CharType  c2 = nextChar();
 
       while (util::isalphaArabic(c2) || c2 == u'_' || std::iswdigit(c2))
       {
@@ -311,8 +311,8 @@ tok::Token Lexer::lexToken()
     // Numbers
     else if (std::iswdigit(ch))
     {
-      StringType num(1, ch);
-      CharType   c2 = nextChar();
+      StringRef num(1, ch);
+      CharType  c2 = nextChar();
 
       // Check for special number bases (hex, octal, binary)
       if (ch == '0')
@@ -380,7 +380,7 @@ tok::Token Lexer::lexToken()
             else if (std::iswdigit(c2))
             {
               // Invalid octal digit (8 or 9)
-              diagnostic::engine.panic("Invalid digit '" + utf8::utf16to8(StringType(1, c2)) + "' in octal literal");
+              diagnostic::engine.panic("Invalid digit '" + utf8::utf16to8(StringRef(1, c2)) + "' in octal literal");
             }
             else
             {
@@ -422,7 +422,7 @@ tok::Token Lexer::lexToken()
             else if (std::iswdigit(c2))
             {
               // Invalid binary digit (2-9)
-              diagnostic::engine.panic("Invalid digit '" + utf8::utf16to8(StringType(1, c2)) + "' in binary literal");
+              diagnostic::engine.panic("Invalid digit '" + utf8::utf16to8(StringRef(1, c2)) + "' in binary literal");
             }
             else
             {
@@ -496,12 +496,12 @@ tok::Token Lexer::lexToken()
     // Operators
     else if (util::isOperator(ch))
     {
-      StringType op(1, ch);
-      CharType   nxt = nextChar();
+      StringRef op(1, ch);
+      CharType  nxt = nextChar();
 
       if (nxt != BUFFER_END)
       {
-        StringType two = op;
+        StringRef two = op;
         two += nxt;
 
         if (tok::operators.count(two))
@@ -518,7 +518,7 @@ tok::Token Lexer::lexToken()
     else if (util::isSymbol(ch))
     {
       tok::TokenType tt;
-      StringType     sym(1, ch);
+      StringRef      sym(1, ch);
       consumeChar();
 
       switch (ch)
@@ -560,7 +560,7 @@ tok::Token Lexer::lexToken()
 
     // Unknown
     consumeChar();
-    return finish(tok::TokenType::INVALID, StringType(1, ch), line, col);
+    return finish(tok::TokenType::INVALID, StringRef(1, ch), line, col);
   }
 
   if (!TokStream_.empty() && TokStream_.back().type() == tok::TokenType::ENDMARKER)

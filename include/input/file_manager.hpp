@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../macros.hpp"
+#include "../types.hpp"
 
 #include <filesystem>
 #include <fstream>
@@ -130,21 +131,21 @@ class FileManager
     /// TODO:
   }
 
-  StringType readWindow(const SizeType size)
+  StringRef readWindow(const SizeType size)
   {
     /// TODO: : add caching
     return readWindowInternal(size);
   }
 
-  StringType readWindowInternal(const SizeType size);
+  StringRef readWindowInternal(const SizeType size);
 
-  StringType readLine(const SizeType line_number);
+  StringRef readLine(const SizeType line_number);
 
-  StringType readNextLine();
+  StringRef readNextLine();
 
-  std::vector<StringType> readLines(const SizeType start, const SizeType count);
+  std::vector<StringRef> readLines(const SizeType start, const SizeType count);
 
-  StringType readAll();
+  StringRef readAll();
 
   void refreshStats();
 
@@ -168,13 +169,13 @@ class FileManager
 
   CharType peekChar(const SizeType CharOffset);
 
-  StringType peekRange(const SizeType start_offset, const SizeType length);
+  StringRef peekRange(const SizeType start_offset, const SizeType length);
 
   SizeType remaining() { return static_cast<SizeType>(Stream_.tellg()) - Context_.ByteOffset; }
 
   SizeType fileSize() { return static_cast<SizeType>(Stream_.tellg()); }
 
-  StringType getSourceLine(const SizeType line);
+  StringRef getSourceLine(const SizeType line);
 
  private:
   std::string            FullPath_;

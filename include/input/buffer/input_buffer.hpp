@@ -57,7 +57,7 @@ class InputBuffer: public InputBufferBase
   MYLANG_NODISCARD
   const CharType& peek();
 
-  StringType nPeek(SizeType n);
+  StringRef nPeek(SizeType n);
 
   void consume(SizeType len)
   {
@@ -73,7 +73,7 @@ class InputBuffer: public InputBufferBase
 
   Position position() const MYLANG_NOEXCEPT { return CurrentPosition_; }
 
-  StringType getSourceLine(const SizeType line) { return FileManager_->getSourceLine(line); }
+  StringRef getSourceLine(const SizeType line) { return FileManager_->getSourceLine(line); }
 
  private:
   struct PushbackEntry

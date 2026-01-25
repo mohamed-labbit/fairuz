@@ -28,7 +28,7 @@ static inline bool isalphaArabic(const wchar_t c) { return (c >= 0x0600 && c <= 
 
 struct U16StringHash
 {
-  SizeType operator()(const StringType& s) const MYLANG_NOEXCEPT
+  SizeType operator()(const StringRef& s) const MYLANG_NOEXCEPT
   {
     // FNV-1a hash (simple, fast, decent distribution)
     SizeType hash = 1469598103934665603ull;  // 64-bit FNV offset basis
@@ -43,17 +43,17 @@ struct U16StringHash
 
 struct U16StringEqual
 {
-  bool operator()(const StringType& a, const StringType& b) const MYLANG_NOEXCEPT { return a == b; }
+  bool operator()(const StringRef& a, const StringRef& b) const MYLANG_NOEXCEPT { return a == b; }
 };
 
 // utility function to parallelize the process of conversion
-static StringType bufferToU16String(const std::vector<char>& buf)
+static StringRef bufferToU16String(const std::vector<char>& buf)
 {
   if (buf.empty())
   {
     return u"";
   }
-  StringType ret = u"";
+  StringRef ret = u"";
   ret.resize(buf.size());
   const char* __restrict bptr = buf.data();
   CharType* __restrict rptr   = ret.data();

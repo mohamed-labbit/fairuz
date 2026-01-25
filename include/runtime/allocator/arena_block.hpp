@@ -4,6 +4,8 @@
 #include "../../macros.hpp"
 
 #include <mutex>
+#include <atomic>
+#include <optional>
 
 
 namespace mylang {

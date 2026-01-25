@@ -18,21 +18,21 @@ class Expr: public ASTNode
   enum class Kind : int { INVALID, BINARY, UNARY, LITERAL, NAME, CALL, ASSIGNMENT, LIST };
 
  protected:
-  Kind       Kind_;
-  StringType Str_;
+  Kind      Kind_;
+  StringRef Str_;
 
  public:
   explicit Expr() = default;
 
-  explicit Expr(StringType s) :
+  explicit Expr(StringRef s) :
       Str_(s)
   {
     Kind_ = Kind::INVALID;
   }
 
-  void setStr(const StringType s) { Str_ = s; }
+  void setStr(const StringRef s) { Str_ = s; }
 
-  StringType getStr() const { return Str_; }
+  StringRef getStr() const { return Str_; }
 
   Kind getKind() const { return Kind_; }
 };
@@ -107,13 +107,13 @@ class LiteralExpr: public Expr
   enum class Type { NUMBER, STRING, BOOLEAN, NONE };
 
  private:
-  Type       Type_{Type::NONE};
-  StringType Literal_;
+  Type      Type_{Type::NONE};
+  StringRef Literal_;
 
  public:
   explicit LiteralExpr() = default;
 
-  explicit LiteralExpr(Type t, StringType lit) :
+  explicit LiteralExpr(Type t, StringRef lit) :
       Type_(t),
       Literal_(lit)
   {
@@ -125,7 +125,7 @@ class LiteralExpr: public Expr
   LiteralExpr(const LiteralExpr&) MYLANG_NOEXCEPT            = delete;
   LiteralExpr& operator=(const LiteralExpr&) MYLANG_NOEXCEPT = delete;
 
-  StringType getValue() const { return Literal_; }
+  StringRef getValue() const { return Literal_; }
 
   Type getType() const { return Type_; }
 };
@@ -141,7 +141,7 @@ class NameExpr: public Expr
     assert((Str_ != u"") && "'Str_' argument to NameExpr is null");
   }
 
-  explicit NameExpr(const StringType s) :
+  explicit NameExpr(const StringRef s) :
       Expr(s)
   {
     Kind_ = Kind::NAME;
@@ -152,7 +152,7 @@ class NameExpr: public Expr
   NameExpr(const NameExpr&) MYLANG_NOEXCEPT            = delete;
   NameExpr& operator=(const NameExpr&) MYLANG_NOEXCEPT = delete;
 
-  StringType getValue() const { return Str_; }
+  StringRef getValue() const { return Str_; }
 };
 
 class ListExpr: public Expr

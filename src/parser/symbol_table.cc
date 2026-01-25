@@ -10,13 +10,13 @@ SymbolTable::SymbolTable(SymbolTable* p, std::int32_t level) :
 {
 }
 
-void SymbolTable::define(const StringType& name, Symbol symbol)
+void SymbolTable::define(const StringRef& name, Symbol symbol)
 {
   symbol.name    = name;
   Symbols_[name] = std::move(symbol);
 }
 
-typename SymbolTable::Symbol* SymbolTable::lookup(const StringType& name)
+typename SymbolTable::Symbol* SymbolTable::lookup(const StringRef& name)
 {
   auto it = Symbols_.find(name);
   if (it != Symbols_.end())
@@ -26,13 +26,13 @@ typename SymbolTable::Symbol* SymbolTable::lookup(const StringType& name)
   return Parent_ ? Parent_->lookup(name) : nullptr;
 }
 
-typename SymbolTable::Symbol* SymbolTable::lookupLocal(const StringType& name)
+typename SymbolTable::Symbol* SymbolTable::lookupLocal(const StringRef& name)
 {
   auto it = Symbols_.find(name);
   return it != Symbols_.end() ? &it->second : nullptr;
 }
 
-bool SymbolTable::isDefined(const StringType& name) const
+bool SymbolTable::isDefined(const StringRef& name) const
 {
   if (Symbols_.count(name))
   {
@@ -41,7 +41,7 @@ bool SymbolTable::isDefined(const StringType& name) const
   return Parent_ ? Parent_->isDefined(name) : false;
 }
 
-void SymbolTable::markUsed(const StringType& name, std::int32_t line)
+void SymbolTable::markUsed(const StringRef& name, std::int32_t line)
 {
   if (auto* sym = lookup(name))
   {
@@ -71,7 +71,7 @@ std::vector<typename SymbolTable::Symbol*> SymbolTable::getUnusedSymbols()
   return unused;
 }
 
-const std::unordered_map<StringType, typename SymbolTable::Symbol>& SymbolTable::getSymbols() const { return Symbols_; }
+const std::unordered_map<StringRef, typename SymbolTable::Symbol>& SymbolTable::getSymbols() const { return Symbols_; }
 
 }
 }

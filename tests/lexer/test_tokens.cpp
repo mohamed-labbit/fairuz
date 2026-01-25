@@ -11,13 +11,13 @@
 
 using namespace mylang;
 using input::FileManager;
-using StringType = StringType;
+using StringRef = StringRef;
 
 
 namespace {
 const std::filesystem::path test_cases_path = std::filesystem::path(__FILE__).parent_path() / "test_cases" / "test_tokens";
 
-StringType load_source(const std::filesystem::path& path)
+StringRef load_source(const std::filesystem::path& path)
 {
   std::ifstream file(path, std::ios::binary);
   std::string   utf8_contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());

@@ -92,7 +92,7 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(const ast::Expr* ex
   return SymbolTable::DataType_t::UNKNOWN;
 }
 
-void SemanticAnalyzer::reportIssue(Issue::Severity sev, const StringType& msg, std::int32_t line, const StringType& sugg)
+void SemanticAnalyzer::reportIssue(Issue::Severity sev, const StringRef& msg, std::int32_t line, const StringRef& sugg)
 {
   Issues_.push_back({sev, msg, line, sugg});
 }
@@ -219,7 +219,7 @@ void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
 
     ast::Expr* target = assign->getTarget();
     assert(target != nullptr);
-    StringType target_name = u"";
+    StringRef target_name = u"";
 
     /// TODO: check other type of target expressions
     if (target->getKind() == ast::Expr::Kind::NAME)
@@ -410,7 +410,7 @@ void SemanticAnalyzer::printReport() const
   std::cout << "Found " << Issues_.size() << " issue(s):\n\n";
   for (const SemanticAnalyzer::Issue& issue : Issues_)
   {
-    StringType sevStr;
+    StringRef sevStr;
     switch (issue.severity)
     {
     case Issue::Severity::ERROR :

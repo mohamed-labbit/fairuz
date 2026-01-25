@@ -17,13 +17,13 @@ class IncrementalParser
   };
 
   std::vector<ParseNode> Cache_;
-  StringType             LastSource_;
+  StringRef              LastSource_;
 
-  SizeType hashRegion(const StringType& source, SizeType start, SizeType end);
+  SizeType hashRegion(const StringRef& source, SizeType start, SizeType end);
 
  public:
   // Only reparse changed regions
-  std::vector<ast::Stmt*> parseIncremental(const StringType& newSource, const std::vector<SizeType>& changedLines);
+  std::vector<ast::Stmt*> parseIncremental(const StringRef& newSource, const std::vector<SizeType>& changedLines);
 };
 
 }

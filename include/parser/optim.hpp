@@ -42,21 +42,21 @@ class ASTOptimizer
   class CSEPass
   {
    private:
-    std::unordered_map<StringType, StringType> ExprCache_;
-    std::int32_t                               TempCounter_ = 0;
+    std::unordered_map<StringRef, StringRef> ExprCache_;
+    std::int32_t                             TempCounter_ = 0;
 
-    StringType exprToString(const ast::Expr* expr);
+    StringRef exprToString(const ast::Expr* expr);
 
    public:
-    StringType getTempVar();
+    StringRef getTempVar();
 
-    std::optional<StringType> findCSE(const ast::Expr* expr);
+    std::optional<StringRef> findCSE(const ast::Expr* expr);
 
-    void recordExpr(const ast::Expr* expr, const StringType& var);
+    void recordExpr(const ast::Expr* expr, const StringRef& var);
   };
 
   // Pass 4: Loop Invariant Code Motion
-  bool isLoopInvariant(const ast::Expr* expr, const std::unordered_set<StringType>& loopVars);
+  bool isLoopInvariant(const ast::Expr* expr, const std::unordered_set<StringRef>& loopVars);
 
  public:
   // Main optimization pipeline

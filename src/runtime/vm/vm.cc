@@ -145,7 +145,7 @@ void VirtualMachine::registerNativeFunctions()
     {
       diagnostic::engine.panic("type() takes 1 argument");
     }
-    StringType typeName;
+    StringRef typeName;
     switch (args[0].getType())
     {
     case object::Value::Type::NONE :
@@ -778,15 +778,15 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     break;
   }
   case bytecode::OpCode::BUILD_DICT : {
-    std::unordered_map<StringType, object::Value> dict;
+    std::unordered_map<StringRef, object::Value> dict;
     for (std::int32_t i = 0; i < instr.arg; i++)
     {
       object::Value val    = pop();
       object::Value key    = pop();
       dict[key.asString()] = val;
     }
-    std::shared_ptr<std::unordered_map<StringType, object::Value>> dict_ptr = std::make_shared<std::unordered_map<StringType, object::Value>>(dict);
-    object::Value                                                  result;
+    std::shared_ptr<std::unordered_map<StringRef, object::Value>> dict_ptr = std::make_shared<std::unordered_map<StringRef, object::Value>>(dict);
+    object::Value                                                 result;
     result.setType(object::Value::Type::DICT);
     result.setData(dict_ptr);
     push(result);

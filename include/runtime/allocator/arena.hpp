@@ -21,6 +21,7 @@
 #include "fast_arena_block.hpp"
 #include "fast_free_list.hpp"
 #include "meta.hpp"
+#include "../../diag/diagnostic.hpp"
 
 #include <functional>
 #include <shared_mutex>
@@ -772,6 +773,8 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     }
   }
 };
+
+extern ArenaAllocator arena_allocator;
 
 }  // namespace allocator
 }  // namespace runtime

@@ -8,7 +8,7 @@
 namespace mylang {
 namespace parser {
 
-void ParserProfiler::recordPhase(const StringType& phase, double ms) { Timings_.push_back({phase, ms}); }
+void ParserProfiler::recordPhase(const StringRef& phase, double ms) { Timings_.push_back({phase, ms}); }
 
 void ParserProfiler::printReport() const
 {

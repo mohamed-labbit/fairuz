@@ -14,7 +14,7 @@
 
 
 using namespace mylang;
-using StringType = StringType;
+using StringRef = StringRef;
 
 
 namespace {
@@ -24,7 +24,7 @@ std::filesystem::path parser_test_cases_dir()
   return dir;
 }
 
-StringType load_source(const std::string& filename)
+StringRef load_source(const std::string& filename)
 {
   auto          filepath = parser_test_cases_dir() / filename;
   std::ifstream file(filepath, std::ios::binary);
@@ -65,7 +65,7 @@ class ParserTest: public ::testing::Test
     return tokens;
   }
 
-  tok::Token makeToken(tok::TokenType type, const StringType& value = u"", int line = 1, int col = 1)
+  tok::Token makeToken(tok::TokenType type, const StringRef& value = u"", int line = 1, int col = 1)
   {
     lex::Lexer lexer;
     return lexer.make_token(type, value, line, col);
@@ -302,8 +302,8 @@ TEST_F(ParserTest, ParseNestedCallExpression)
   EXPECT_NE(callee, nullptr) << "Callee should not be null";
   EXPECT_NE(args, nullptr) << "Arguments list should not be null";
 
-  StringType             callee_name          = dynamic_cast<parser::ast::NameExpr*>(callee)->getValue();
-  StringType             expected_callee_name = u"ا";
+  StringRef              callee_name          = dynamic_cast<parser::ast::NameExpr*>(callee)->getValue();
+  StringRef              expected_callee_name = u"ا";
   parser::ast::CallExpr* nested_call_expr     = dynamic_cast<parser::ast::CallExpr*>(args->getElements()[0]);
 
   EXPECT_NE(nested_call_expr, nullptr);
@@ -318,15 +318,15 @@ TEST_F(ParserTest, ParseNestedCallExpression)
 
   EXPECT_NE(nested_callee_name_expr, nullptr);
 
-  StringType             nested_callee_name          = nested_callee_name_expr->getValue();
-  StringType             expected_nested_callee_name = u"ب";
+  StringRef              nested_callee_name          = nested_callee_name_expr->getValue();
+  StringRef              expected_nested_callee_name = u"ب";
   parser::ast::Expr*     only_arg_expr               = (*nested_args)[0];
   parser::ast::NameExpr* arg_name_expr               = dynamic_cast<parser::ast::NameExpr*>(only_arg_expr);
 
   EXPECT_NE(arg_name_expr, nullptr);
 
-  StringType arg_name          = arg_name_expr->getValue();
-  StringType expected_arg_name = u"د";
+  StringRef arg_name          = arg_name_expr->getValue();
+  StringRef expected_arg_name = u"د";
 
   EXPECT_EQ(callee_name, expected_callee_name);
   EXPECT_EQ(nested_callee_name, expected_nested_callee_name);
@@ -362,10 +362,10 @@ TEST_F(ParserTest, ParseSimpleAddition)
   EXPECT_NE(left_name, nullptr) << "Should parse left hand side of expression";
   EXPECT_NE(right_name, nullptr) << "Should parse right hand side of expression";
 
-  StringType     expected_left_name      = u"ا";
-  StringType     expected_right_name     = u"ب";
-  StringType     left_name_value         = left_name->getValue();
-  StringType     right_name_value        = right_name->getValue();
+  StringRef      expected_left_name      = u"ا";
+  StringRef      expected_right_name     = u"ب";
+  StringRef      left_name_value         = left_name->getValue();
+  StringRef      right_name_value        = right_name->getValue();
   tok::TokenType expected_operator_value = tok::TokenType::OP_PLUS;
 
   EXPECT_EQ(left_name_value, expected_left_name) << "left hand side not parsed correctly";
@@ -400,10 +400,10 @@ TEST_F(ParserTest, ParseSimpleMultiplication)
   EXPECT_NE(left_name, nullptr) << "Should parse left hand side of expression";
   EXPECT_NE(right_name, nullptr) << "Should parse right hand side of expression";
 
-  StringType     expected_left_name      = u"ا";
-  StringType     expected_right_name     = u"ب";
-  StringType     left_name_value         = left_name->getValue();
-  StringType     right_name_value        = right_name->getValue();
+  StringRef      expected_left_name      = u"ا";
+  StringRef      expected_right_name     = u"ب";
+  StringRef      left_name_value         = left_name->getValue();
+  StringRef      right_name_value        = right_name->getValue();
   tok::TokenType expected_operator_value = tok::TokenType::OP_STAR;
 
   EXPECT_EQ(left_name_value, expected_left_name) << "left hand side not parsed correctly";
@@ -438,10 +438,10 @@ TEST_F(ParserTest, ParseSimpleSubtraction)
   EXPECT_NE(left_name, nullptr) << "Should parse left hand side of expression";
   EXPECT_NE(right_name, nullptr) << "Should parse right hand side of expression";
 
-  StringType     expected_left_name      = u"ا";
-  StringType     expected_right_name     = u"ب";
-  StringType     left_name_value         = left_name->getValue();
-  StringType     right_name_value        = right_name->getValue();
+  StringRef      expected_left_name      = u"ا";
+  StringRef      expected_right_name     = u"ب";
+  StringRef      left_name_value         = left_name->getValue();
+  StringRef      right_name_value        = right_name->getValue();
   tok::TokenType expected_operator_value = tok::TokenType::OP_MINUS;
 
   EXPECT_EQ(left_name_value, expected_left_name) << "left hand side not parsed correctly";
@@ -476,10 +476,10 @@ TEST_F(ParserTest, ParseSimpleDivision)
   EXPECT_NE(left_name, nullptr) << "Should parse left hand side of expression";
   EXPECT_NE(right_name, nullptr) << "Should parse right hand side of expression";
 
-  StringType     expected_left_name      = u"ا";
-  StringType     expected_right_name     = u"ب";
-  StringType     left_name_value         = left_name->getValue();
-  StringType     right_name_value        = right_name->getValue();
+  StringRef      expected_left_name      = u"ا";
+  StringRef      expected_right_name     = u"ب";
+  StringRef      left_name_value         = left_name->getValue();
+  StringRef      right_name_value        = right_name->getValue();
   tok::TokenType expected_operator_value = tok::TokenType::OP_SLASH;
 
   EXPECT_EQ(left_name_value, expected_left_name) << "left hand side not parsed correctly";
@@ -696,8 +696,8 @@ TEST_F(ParserTest, ParseComplexFunctionCall)
 
   parser::ast::NameExpr* first_lhs_expr = dynamic_cast<parser::ast::NameExpr*>(first_lhs);
   parser::ast::NameExpr* first_rhs_expr = dynamic_cast<parser::ast::NameExpr*>(first_rhs);
-  StringType             first_lhs_name = first_lhs_expr->getValue();
-  StringType             first_rhs_name = first_rhs_expr->getValue();
+  StringRef              first_lhs_name = first_lhs_expr->getValue();
+  StringRef              first_rhs_name = first_rhs_expr->getValue();
 
   EXPECT_EQ(first_lhs_name, u"ا");
   EXPECT_EQ(first_rhs_name, u"ب");
@@ -716,8 +716,8 @@ TEST_F(ParserTest, ParseComplexFunctionCall)
 
   parser::ast::NameExpr* second_lhs_expr = dynamic_cast<parser::ast::NameExpr*>(second_lhs);
   parser::ast::NameExpr* second_rhs_expr = dynamic_cast<parser::ast::NameExpr*>(second_rhs);
-  StringType             second_lhs_name = second_lhs_expr->getValue();
-  StringType             second_rhs_name = second_rhs_expr->getValue();
+  StringRef              second_lhs_name = second_lhs_expr->getValue();
+  StringRef              second_rhs_name = second_rhs_expr->getValue();
 
   EXPECT_EQ(second_lhs_name, u"ت");
   EXPECT_EQ(second_rhs_name, u"ث");
@@ -935,7 +935,7 @@ TEST_F(ParserTest, ParseVeryLongIdentifier)
 
   ASSERT_NE(name, nullptr) << "Should be NameExpr";
 
-  StringType value = name->getValue();
+  StringRef value = name->getValue();
 
   EXPECT_GT(value.length(), 100) << "Identifier should be very long";
   EXPECT_LT(value.length(), 10000) << "Identifier should have reasonable upper bound";
@@ -1171,10 +1171,10 @@ TEST_F(ParserTest, ParseChainedAssignmentWithExpr)
   ASSERT_NE(left_name, nullptr) << "Should parse left hand side of expression";
   ASSERT_NE(right_name, nullptr) << "Should parse right hand side of expression";
 
-  StringType     expected_left_name      = u"م";
-  StringType     expected_right_name     = u"ل";
-  StringType     left_name_value         = left_name->getValue();
-  StringType     right_name_value        = right_name->getValue();
+  StringRef      expected_left_name      = u"م";
+  StringRef      expected_right_name     = u"ل";
+  StringRef      left_name_value         = left_name->getValue();
+  StringRef      right_name_value        = right_name->getValue();
   tok::TokenType expected_operator_value = tok::TokenType::OP_PLUS;
 
   EXPECT_EQ(left_name_value, expected_left_name) << "Left hand side not parsed correctly";

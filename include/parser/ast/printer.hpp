@@ -26,7 +26,7 @@ class ASTPrinter
 
   std::string pipe(bool last) const { return last ? "   " : "│  "; }
 
-  std::string color(const StringType& s, const StringType& c) const
+  std::string color(const StringRef& s, const StringRef& c) const
   {
     if (!UseColor_)
     {

@@ -3,6 +3,8 @@
 #include "../../diag/diagnostic.hpp"
 
 #include <atomic>
+#include <cstdlib>
+#include <iostream>
 
 
 namespace mylang {

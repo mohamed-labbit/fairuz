@@ -17,7 +17,7 @@ class ConstantPool
 {
  private:
   std::vector<object::Value>                     Constants_;
-  std::unordered_map<StringType, std::int32_t>   StringConstants_;
+  std::unordered_map<StringRef, std::int32_t>    StringConstants_;
   std::unordered_map<std::int64_t, std::int32_t> IntConstants_;
   std::unordered_map<double, std::int32_t>       FloatConstants_;
 

@@ -70,13 +70,13 @@ class Lexer
    * Any omitted fields are inferred from the current source position.
    */
   MYLANG_COMPILER_ABI tok::Token make_token(tok::TokenType             tt,
-                                            std::optional<StringType>  lexeme    = std::nullopt,
+                                            std::optional<StringRef>   lexeme    = std::nullopt,
                                             std::optional<SizeType>    line      = std::nullopt,
                                             std::optional<SizeType>    col       = std::nullopt,
                                             std::optional<SizeType>    file_pos  = std::nullopt,
                                             std::optional<std::string> file_path = std::nullopt) const;
 
-  MYLANG_COMPILER_ABI StringType getSourceLine(const SizeType line) { return SourceManager_.getSourceLine(line); }
+  MYLANG_COMPILER_ABI StringRef getSourceLine(const SizeType line) { return SourceManager_.getSourceLine(line); }
 
  private:
   SourceManager           SourceManager_;   // Manages source input and positions

@@ -34,6 +34,8 @@ class DiagnosticEngine
 
   [[noreturn]] void panic(const std::string& msg) { _panic(msg); }
 
+  void setSource(const std::string& source) { SourceCode_ = source; }
+
   /*
   */
   void report(Severity sev, std::int32_t line, std::int32_t col, std::int32_t len, const std::string& msg, const std::string& code = "")
@@ -64,6 +66,7 @@ class DiagnosticEngine
 
  private:
   std::vector<Diagnostic> Diagnostics_;
+  std::string             SourceCode_;
 
   void emitError(const std::string& msg, Severity sv)
   {

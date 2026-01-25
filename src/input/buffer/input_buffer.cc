@@ -88,10 +88,10 @@ const CharType& InputBuffer::peek()
   return *forward;
 }
 
-StringType InputBuffer::nPeek(SizeType n)
+StringRef InputBuffer::nPeek(SizeType n)
 {
 
-  StringType out;
+  StringRef out;
   if (n == 0)
   {
     return out;
