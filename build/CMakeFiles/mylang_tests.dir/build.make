@@ -86,10 +86,24 @@ CMakeFiles/mylang_tests.dir/tests/test_main.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/mylang_tests.dir/tests/test_main.cpp.s"
 	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/mohamedrabbit/code/mylang/tests/test_main.cpp -o CMakeFiles/mylang_tests.dir/tests/test_main.cpp.s
 
+CMakeFiles/mylang_tests.dir/tests/runtime/allocator/test_arena.cpp.o: CMakeFiles/mylang_tests.dir/flags.make
+CMakeFiles/mylang_tests.dir/tests/runtime/allocator/test_arena.cpp.o: /Users/mohamedrabbit/code/mylang/tests/runtime/allocator/test_arena.cpp
+CMakeFiles/mylang_tests.dir/tests/runtime/allocator/test_arena.cpp.o: CMakeFiles/mylang_tests.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mohamedrabbit/code/mylang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/mylang_tests.dir/tests/runtime/allocator/test_arena.cpp.o"
+	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mylang_tests.dir/tests/runtime/allocator/test_arena.cpp.o -MF CMakeFiles/mylang_tests.dir/tests/runtime/allocator/test_arena.cpp.o.d -o CMakeFiles/mylang_tests.dir/tests/runtime/allocator/test_arena.cpp.o -c /Users/mohamedrabbit/code/mylang/tests/runtime/allocator/test_arena.cpp
+
+CMakeFiles/mylang_tests.dir/tests/runtime/allocator/test_arena.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/mylang_tests.dir/tests/runtime/allocator/test_arena.cpp.i"
+	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/mohamedrabbit/code/mylang/tests/runtime/allocator/test_arena.cpp > CMakeFiles/mylang_tests.dir/tests/runtime/allocator/test_arena.cpp.i
+
+CMakeFiles/mylang_tests.dir/tests/runtime/allocator/test_arena.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/mylang_tests.dir/tests/runtime/allocator/test_arena.cpp.s"
+	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/mohamedrabbit/code/mylang/tests/runtime/allocator/test_arena.cpp -o CMakeFiles/mylang_tests.dir/tests/runtime/allocator/test_arena.cpp.s
+
 CMakeFiles/mylang_tests.dir/tests/string/test_string.cpp.o: CMakeFiles/mylang_tests.dir/flags.make
 CMakeFiles/mylang_tests.dir/tests/string/test_string.cpp.o: /Users/mohamedrabbit/code/mylang/tests/string/test_string.cpp
 CMakeFiles/mylang_tests.dir/tests/string/test_string.cpp.o: CMakeFiles/mylang_tests.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mohamedrabbit/code/mylang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/mylang_tests.dir/tests/string/test_string.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mohamedrabbit/code/mylang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/mylang_tests.dir/tests/string/test_string.cpp.o"
 	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mylang_tests.dir/tests/string/test_string.cpp.o -MF CMakeFiles/mylang_tests.dir/tests/string/test_string.cpp.o.d -o CMakeFiles/mylang_tests.dir/tests/string/test_string.cpp.o -c /Users/mohamedrabbit/code/mylang/tests/string/test_string.cpp
 
 CMakeFiles/mylang_tests.dir/tests/string/test_string.cpp.i: cmake_force
@@ -100,10 +114,56 @@ CMakeFiles/mylang_tests.dir/tests/string/test_string.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/mylang_tests.dir/tests/string/test_string.cpp.s"
 	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/mohamedrabbit/code/mylang/tests/string/test_string.cpp -o CMakeFiles/mylang_tests.dir/tests/string/test_string.cpp.s
 
+CMakeFiles/mylang_tests.dir/tests/lexer/test_tokens.cpp.o: CMakeFiles/mylang_tests.dir/flags.make
+CMakeFiles/mylang_tests.dir/tests/lexer/test_tokens.cpp.o: /Users/mohamedrabbit/code/mylang/tests/lexer/test_tokens.cpp
+CMakeFiles/mylang_tests.dir/tests/lexer/test_tokens.cpp.o: CMakeFiles/mylang_tests.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mohamedrabbit/code/mylang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/mylang_tests.dir/tests/lexer/test_tokens.cpp.o"
+	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mylang_tests.dir/tests/lexer/test_tokens.cpp.o -MF CMakeFiles/mylang_tests.dir/tests/lexer/test_tokens.cpp.o.d -o CMakeFiles/mylang_tests.dir/tests/lexer/test_tokens.cpp.o -c /Users/mohamedrabbit/code/mylang/tests/lexer/test_tokens.cpp
+
+CMakeFiles/mylang_tests.dir/tests/lexer/test_tokens.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/mylang_tests.dir/tests/lexer/test_tokens.cpp.i"
+	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/mohamedrabbit/code/mylang/tests/lexer/test_tokens.cpp > CMakeFiles/mylang_tests.dir/tests/lexer/test_tokens.cpp.i
+
+CMakeFiles/mylang_tests.dir/tests/lexer/test_tokens.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/mylang_tests.dir/tests/lexer/test_tokens.cpp.s"
+	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/mohamedrabbit/code/mylang/tests/lexer/test_tokens.cpp -o CMakeFiles/mylang_tests.dir/tests/lexer/test_tokens.cpp.s
+
+CMakeFiles/mylang_tests.dir/tests/lexer/test_indentation.cpp.o: CMakeFiles/mylang_tests.dir/flags.make
+CMakeFiles/mylang_tests.dir/tests/lexer/test_indentation.cpp.o: /Users/mohamedrabbit/code/mylang/tests/lexer/test_indentation.cpp
+CMakeFiles/mylang_tests.dir/tests/lexer/test_indentation.cpp.o: CMakeFiles/mylang_tests.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mohamedrabbit/code/mylang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/mylang_tests.dir/tests/lexer/test_indentation.cpp.o"
+	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mylang_tests.dir/tests/lexer/test_indentation.cpp.o -MF CMakeFiles/mylang_tests.dir/tests/lexer/test_indentation.cpp.o.d -o CMakeFiles/mylang_tests.dir/tests/lexer/test_indentation.cpp.o -c /Users/mohamedrabbit/code/mylang/tests/lexer/test_indentation.cpp
+
+CMakeFiles/mylang_tests.dir/tests/lexer/test_indentation.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/mylang_tests.dir/tests/lexer/test_indentation.cpp.i"
+	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/mohamedrabbit/code/mylang/tests/lexer/test_indentation.cpp > CMakeFiles/mylang_tests.dir/tests/lexer/test_indentation.cpp.i
+
+CMakeFiles/mylang_tests.dir/tests/lexer/test_indentation.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/mylang_tests.dir/tests/lexer/test_indentation.cpp.s"
+	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/mohamedrabbit/code/mylang/tests/lexer/test_indentation.cpp -o CMakeFiles/mylang_tests.dir/tests/lexer/test_indentation.cpp.s
+
+CMakeFiles/mylang_tests.dir/tests/parser/test_parser.cpp.o: CMakeFiles/mylang_tests.dir/flags.make
+CMakeFiles/mylang_tests.dir/tests/parser/test_parser.cpp.o: /Users/mohamedrabbit/code/mylang/tests/parser/test_parser.cpp
+CMakeFiles/mylang_tests.dir/tests/parser/test_parser.cpp.o: CMakeFiles/mylang_tests.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/Users/mohamedrabbit/code/mylang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/mylang_tests.dir/tests/parser/test_parser.cpp.o"
+	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/mylang_tests.dir/tests/parser/test_parser.cpp.o -MF CMakeFiles/mylang_tests.dir/tests/parser/test_parser.cpp.o.d -o CMakeFiles/mylang_tests.dir/tests/parser/test_parser.cpp.o -c /Users/mohamedrabbit/code/mylang/tests/parser/test_parser.cpp
+
+CMakeFiles/mylang_tests.dir/tests/parser/test_parser.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/mylang_tests.dir/tests/parser/test_parser.cpp.i"
+	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /Users/mohamedrabbit/code/mylang/tests/parser/test_parser.cpp > CMakeFiles/mylang_tests.dir/tests/parser/test_parser.cpp.i
+
+CMakeFiles/mylang_tests.dir/tests/parser/test_parser.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/mylang_tests.dir/tests/parser/test_parser.cpp.s"
+	/opt/homebrew/opt/llvm/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /Users/mohamedrabbit/code/mylang/tests/parser/test_parser.cpp -o CMakeFiles/mylang_tests.dir/tests/parser/test_parser.cpp.s
+
 # Object files for target mylang_tests
 mylang_tests_OBJECTS = \
 "CMakeFiles/mylang_tests.dir/tests/test_main.cpp.o" \
-"CMakeFiles/mylang_tests.dir/tests/string/test_string.cpp.o"
+"CMakeFiles/mylang_tests.dir/tests/runtime/allocator/test_arena.cpp.o" \
+"CMakeFiles/mylang_tests.dir/tests/string/test_string.cpp.o" \
+"CMakeFiles/mylang_tests.dir/tests/lexer/test_tokens.cpp.o" \
+"CMakeFiles/mylang_tests.dir/tests/lexer/test_indentation.cpp.o" \
+"CMakeFiles/mylang_tests.dir/tests/parser/test_parser.cpp.o"
 
 # External object files for target mylang_tests
 mylang_tests_EXTERNAL_OBJECTS = \
@@ -150,7 +210,11 @@ mylang_tests_EXTERNAL_OBJECTS = \
 "/Users/mohamedrabbit/code/mylang/build/CMakeFiles/mylang_objects.dir/src/runtime/vm/vm.cc.o"
 
 mylang_tests: CMakeFiles/mylang_tests.dir/tests/test_main.cpp.o
+mylang_tests: CMakeFiles/mylang_tests.dir/tests/runtime/allocator/test_arena.cpp.o
 mylang_tests: CMakeFiles/mylang_tests.dir/tests/string/test_string.cpp.o
+mylang_tests: CMakeFiles/mylang_tests.dir/tests/lexer/test_tokens.cpp.o
+mylang_tests: CMakeFiles/mylang_tests.dir/tests/lexer/test_indentation.cpp.o
+mylang_tests: CMakeFiles/mylang_tests.dir/tests/parser/test_parser.cpp.o
 mylang_tests: CMakeFiles/mylang_objects.dir/src/diag/diagnostic.cc.o
 mylang_tests: CMakeFiles/mylang_objects.dir/src/diag/diagnostic_codes.cc.o
 mylang_tests: CMakeFiles/mylang_objects.dir/src/diag/diagnostic_emitter.cc.o
@@ -197,7 +261,7 @@ mylang_tests: /opt/homebrew/lib/libgtest_main.a
 mylang_tests: /opt/homebrew/lib/libgtest.a
 mylang_tests: /opt/homebrew/opt/libomp/lib/libomp.dylib
 mylang_tests: CMakeFiles/mylang_tests.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/Users/mohamedrabbit/code/mylang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Linking CXX executable mylang_tests"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/Users/mohamedrabbit/code/mylang/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Linking CXX executable mylang_tests"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/mylang_tests.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

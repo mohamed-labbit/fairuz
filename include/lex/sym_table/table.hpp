@@ -117,7 +117,7 @@ class SymbolTable
   // Respects shadowing - inner scope symbols hide outer ones with same name
   std::vector<Entry> getAllVisibleSymbols() const
   {
-    std::vector<Entry>            symbols;
+    std::vector<Entry>                                           symbols;
     std::unordered_set<StringRef, StringRefHash, StringRefEqual> seen;
 
     // Iterate from innermost to outermost

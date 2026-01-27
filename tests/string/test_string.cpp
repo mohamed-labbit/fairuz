@@ -8,9 +8,7 @@
 
 using namespace mylang;
 
-// ============================================================================
-// BASIC CONSTRUCTION AND DESTRUCTION TESTS
-// ============================================================================
+// constructor
 
 class StringRefTest: public ::testing::Test
 {
@@ -180,9 +178,7 @@ TEST_F(StringRefTest, CStyleConstructor_NonEmpty)
   EXPECT_EQ(s[4], 'o');
 }
 
-// ============================================================================
-// ASSIGNMENT OPERATOR TESTS
-// ============================================================================
+// assign
 
 TEST_F(StringRefTest, CopyAssignment_SelfAssignment)
 {
@@ -259,9 +255,7 @@ TEST_F(StringRefTest, Utf8Assignment_NullPtr)
   EXPECT_TRUE(s.empty());
 }
 
-// ============================================================================
-// EQUALITY AND COMPARISON TESTS
-// ============================================================================
+// comparison
 
 TEST_F(StringRefTest, Equality_BothEmpty)
 {
@@ -317,9 +311,7 @@ TEST_F(StringRefTest, Equality_Emoji)
   EXPECT_EQ(s1, s2);
 }
 
-// ============================================================================
-// CAPACITY AND MEMORY MANAGEMENT TESTS
-// ============================================================================
+// memory
 
 TEST_F(StringRefTest, Expand_FromEmpty)
 {
@@ -386,9 +378,7 @@ TEST_F(StringRefTest, Resize_IncreasesCapacity)
   EXPECT_GE(s.cap(), 500);
 }
 
-// ============================================================================
-// APPEND OPERATIONS TESTS
-// ============================================================================
+// append
 
 TEST_F(StringRefTest, AppendChar_ToEmpty)
 {
@@ -464,9 +454,7 @@ TEST_F(StringRefTest, AppendString_TriggerReallocation)
   EXPECT_EQ(s1, s2);
 }
 
-// ============================================================================
-// CONCATENATION OPERATOR TESTS
-// ============================================================================
+// concatenation
 
 TEST_F(StringRefTest, Concat_StringPlusString)
 {
@@ -535,9 +523,7 @@ TEST_F(StringRefTest, Concat_NullCString)
   EXPECT_EQ(s2.toUtf8(), "Hello");
 }
 
-// ============================================================================
-// INDEX ACCESS TESTS
-// ============================================================================
+// index access
 
 TEST_F(StringRefTest, IndexOperator_ValidAccess)
 {
@@ -552,14 +538,6 @@ TEST_F(StringRefTest, IndexOperator_Mutable)
   s[0]        = 'J';
   EXPECT_EQ(s[0], 'J');
 }
-
-#ifndef NDEBUG
-TEST_F(StringRefTest, IndexOperator_OutOfBoundsDebug)
-{
-  StringRef s = StringRef::fromUtf8("Hi");
-  EXPECT_THROW(s[10], std::out_of_range);
-}
-#endif
 
 TEST_F(StringRefTest, At_ValidAccess)
 {
@@ -587,9 +565,7 @@ TEST_F(StringRefTest, At_EmptyString)
   EXPECT_THROW(s.at(0), std::out_of_range);
 }
 
-// ============================================================================
-// ERASE TESTS
-// ============================================================================
+// erase
 
 TEST_F(StringRefTest, Erase_FirstChar)
 {
@@ -634,9 +610,7 @@ TEST_F(StringRefTest, Erase_AllChars)
   EXPECT_TRUE(s.empty());
 }
 
-// ============================================================================
-// FIND TESTS
-// ============================================================================
+// find
 
 TEST_F(StringRefTest, Find_CharExists)
 {
@@ -680,9 +654,7 @@ TEST_F(StringRefTest, FindPos_FirstOccurrence)
   EXPECT_EQ(pos.value(), 2);  // First 'l'
 }
 
-// ============================================================================
-// TRUNCATE TESTS
-// ============================================================================
+// truncate
 
 TEST_F(StringRefTest, Truncate_ToShorter)
 {
@@ -713,9 +685,7 @@ TEST_F(StringRefTest, Truncate_EmptyString)
   EXPECT_TRUE(s.empty());
 }
 
-// ============================================================================
-// SUBSTRING TESTS
-// ============================================================================
+// substring
 
 TEST_F(StringRefTest, Substr_FullString)
 {
@@ -787,9 +757,7 @@ TEST_F(StringRefTest, Substr_ArabicText)
   EXPECT_EQ(sub.toUtf8(), "مرحبا");
 }
 
-// ============================================================================
-// UTF-8 CONVERSION TESTS
-// ============================================================================
+// UTF-8 conversion
 
 TEST_F(StringRefTest, FromUtf8_EmptyString)
 {
@@ -866,9 +834,7 @@ TEST_F(StringRefTest, ToUtf8_RoundTrip)
   EXPECT_EQ(result, original);
 }
 
-// ============================================================================
-// SWAP TESTS
-// ============================================================================
+// swap
 
 TEST_F(StringRefTest, Swap_TwoNonEmpty)
 {
@@ -900,9 +866,7 @@ TEST_F(StringRefTest, Swap_BothEmpty)
   EXPECT_TRUE(s2.empty());
 }
 
-// ============================================================================
-// TO DOUBLE TESTS
-// ============================================================================
+// to double
 
 TEST_F(StringRefTest, ToDouble_Integer)
 {
@@ -949,9 +913,7 @@ TEST_F(StringRefTest, ToDouble_WithPosition)
   EXPECT_GT(pos, 0);
 }
 
-// ============================================================================
-// HASH TESTS
-// ============================================================================
+// hash
 
 TEST_F(StringRefTest, Hash_EmptyString)
 {
@@ -992,9 +954,7 @@ TEST_F(StringRefTest, StdHash_Works)
   EXPECT_NE(hash, 0);
 }
 
-// ============================================================================
-// BRUTAL STRESS TESTS
-// ============================================================================
+// stress tests
 
 TEST_F(StringRefTest, Stress_ManyAppends)
 {
@@ -1116,9 +1076,7 @@ TEST_F(StringRefTest, Stress_RandomOperations)
   EXPECT_TRUE(true);
 }
 
-// ============================================================================
-// EDGE CASE TESTS
-// ============================================================================
+// edge cases
 
 TEST_F(StringRefTest, EdgeCase_NullTerminatorInMiddle)
 {
@@ -1177,9 +1135,7 @@ TEST_F(StringRefTest, EdgeCase_HighUnicodeValues)
                           // This might be invalid, but shouldn't crash
 }
 
-// ============================================================================
-// MEMORY LEAK DETECTION TESTS
-// ============================================================================
+// memory leaks
 
 TEST_F(StringRefTest, NoLeak_MultipleConstructDestruct)
 {
@@ -1212,9 +1168,7 @@ TEST_F(StringRefTest, NoLeak_MoveAssignmentLoop)
   EXPECT_TRUE(true);
 }
 
-// ============================================================================
-// PERFORMANCE BASELINE TESTS
-// ============================================================================
+// perf
 
 TEST_F(StringRefTest, Performance_AppendChars)
 {

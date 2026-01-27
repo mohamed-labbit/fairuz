@@ -5,7 +5,7 @@ CMakeFiles/mylang_objects.dir/src/runtime/allocator/arena_block.cc.o: \
   /Users/mohamedrabbit/code/mylang/src/runtime/allocator/../../../include/runtime/allocator/../../diag/../../utfcpp/source/utf8.h \
   /Users/mohamedrabbit/code/mylang/src/runtime/allocator/../../../include/runtime/allocator/../../diag/../../utfcpp/source/utf8/checked.h \
   /Users/mohamedrabbit/code/mylang/src/runtime/allocator/../../../include/runtime/allocator/../../diag/../../utfcpp/source/utf8/core.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/cstring \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/iterator \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__config \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__config_site \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__configuration/abi.h \
@@ -13,54 +13,8 @@ CMakeFiles/mylang_objects.dir/src/runtime/allocator/arena_block.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__configuration/platform.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__configuration/availability.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__configuration/language.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__cstddef/size_t.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__type_traits/is_constant_evaluated.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/string.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/string.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_string.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_bounds.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/cdefs.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_symbol_aliasing.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_posix_availability.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/machine/_types.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/arm/_types.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_ptrdiff_t.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/stddef.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include/stddef.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/stddef.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include/__stddef_ptrdiff_t.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_size_t.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include/__stddef_size_t.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_va_list.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include/stdarg.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include/__stdarg_va_list.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_wchar_t.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include/__stddef_wchar_t.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_null.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include/__stddef_null.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_pthread/_pthread_types.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/Availability.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/AvailabilityVersions.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/AvailabilityInternal.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/AvailabilityInternalLegacy.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_ssize_t.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/machine/types.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/arm/types.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_int8_t.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_int16_t.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_int32_t.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_int64_t.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int8_t.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int16_t.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int32_t.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int64_t.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_intptr_t.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_uintptr_t.h \
-  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_strings.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/iterator \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__iterator/access.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__cstddef/size_t.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__iterator/advance.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__assert \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__assertion_handler \
@@ -218,13 +172,41 @@ CMakeFiles/mylang_objects.dir/src/runtime/allocator/arena_block.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/cstdint \
   /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include/stdint.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/stdint.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_int8_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_int16_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_int32_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_int64_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types/_uint8_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types/_uint16_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types/_uint32_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types/_uint64_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/cdefs.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_symbol_aliasing.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_posix_availability.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/machine/_types.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/arm/_types.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_ptrdiff_t.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/stddef.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include/stddef.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/stddef.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include/__stddef_ptrdiff_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_size_t.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include/__stddef_size_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_va_list.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include/stdarg.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include/__stdarg_va_list.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_wchar_t.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include/__stddef_wchar_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_null.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include/__stddef_null.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_pthread/_pthread_types.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_intptr_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_uintptr_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types/_intmax_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types/_uintmax_t.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__type_traits/is_assignable.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__type_traits/is_constant_evaluated.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__type_traits/is_equality_comparable.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__type_traits/is_trivially_lexicographically_comparable.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__fwd/byte.h \
@@ -237,7 +219,9 @@ CMakeFiles/mylang_objects.dir/src/runtime/allocator/arena_block.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/ctype.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/ctype.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_ctype.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_bounds.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/runetype.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_ct_rune_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_rune_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_wint_t.h \
@@ -251,7 +235,17 @@ CMakeFiles/mylang_objects.dir/src/runtime/allocator/arena_block.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/wchar.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/wchar.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_wchar.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/Availability.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/AvailabilityVersions.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/AvailabilityInternal.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/AvailabilityInternalLegacy.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_mbstate_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/machine/types.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/arm/types.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int8_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int16_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int32_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int64_t.h \
   /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include/__stdarg_header_macro.h \
   /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include/__stdarg___gnuc_va_list.h \
   /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include/__stdarg_va_arg.h \
@@ -265,6 +259,7 @@ CMakeFiles/mylang_objects.dir/src/runtime/allocator/arena_block.cc.o: \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_seek_set.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_ctermid.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_off_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_ssize_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/time.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_time.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_clock_t.h \
@@ -306,6 +301,11 @@ CMakeFiles/mylang_objects.dir/src/runtime/allocator/arena_block.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__cstddef/nullptr_t.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__functional/unary_function.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__type_traits/is_unqualified.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/cstring \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/string.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/string.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_string.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_strings.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__std_mbstate_t.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/cstdio \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/iosfwd \
@@ -725,9 +725,10 @@ CMakeFiles/mylang_objects.dir/src/runtime/allocator/arena_block.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__vector/erase.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__vector/vector_bool_formatter.h \
   /Users/mohamedrabbit/code/mylang/src/runtime/allocator/../../../include/runtime/allocator/../../macros.hpp \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/mutex \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__condition_variable/condition_variable.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__mutex/mutex.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/atomic \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/aliases.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/atomic_lock_free.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/atomic_flag.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__thread/support.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__thread/support/pthread.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__chrono/convert_to_timespec.h \
@@ -738,16 +739,15 @@ CMakeFiles/mylang_objects.dir/src/runtime/allocator/arena_block.cc.o: \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/qos.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_mach_port_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sched.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__mutex/unique_lock.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__mutex/tag_types.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__mutex/lock_guard.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__thread/id.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/atomic \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/aliases.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/atomic_lock_free.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/atomic_flag.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/atomic_init.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/fence.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/kill_dependency.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/atomic_ref.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__type_traits/has_unique_object_representation.h
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__type_traits/has_unique_object_representation.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/mutex \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__condition_variable/condition_variable.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__mutex/mutex.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__mutex/unique_lock.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__mutex/tag_types.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__mutex/lock_guard.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__thread/id.h

@@ -43,7 +43,7 @@ class ASTOptimizer
   {
    private:
     std::unordered_map<StringRef, StringRef, StringRefHash, StringRefEqual> ExprCache_;
-    std::int32_t                             TempCounter_ = 0;
+    std::int32_t                                                            TempCounter_ = 0;
 
     StringRef exprToString(const ast::Expr* expr);
 

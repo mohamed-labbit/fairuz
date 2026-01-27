@@ -3,8 +3,8 @@
 #include "../../diag/diagnostic.hpp"
 #include "../../macros.hpp"
 
-#include <mutex>
 #include <atomic>
+#include <mutex>
 #include <optional>
 
 

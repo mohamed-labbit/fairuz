@@ -19,9 +19,7 @@ void BytecodeCompiler::emitInstruction(bytecode::OpCode op, std::int32_t arg, st
 
   // Track line numbers
   if (line > 0)
-  {
     Unit_.LineNumbers.push_back(line);
-  }
 }
 
 void BytecodeCompiler::updateStackDepth(bytecode::OpCode op)
@@ -77,9 +75,7 @@ void BytecodeCompiler::enterScope()
 {
   CompilerSymbolTable* newScope = new CompilerSymbolTable(CurrentScope_.get());
   if (CurrentScope_ != nullptr)
-  {
     ScopeStack_.push(CurrentScope_.release());
-  }
   CurrentScope_.reset(newScope);
 }
 
@@ -95,9 +91,7 @@ void BytecodeCompiler::exitScope()
 void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
 {
   if (expr == nullptr)
-  {
     return;
-  }
 
   switch (expr->getKind())
   {
@@ -108,13 +102,9 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
     {
     case parser::ast::LiteralExpr::Type::NUMBER : {
       if (lit->getValue().find('.'))
-      {
         val = object::Value(std::stod(lit->getValue().toUtf8()));
-      }
       else
-      {
         val = object::Value(static_cast<std::int64_t>(std::stoll(lit->getValue().toUtf8())));
-      }
       break;
     }
     case parser::ast::LiteralExpr::Type::STRING :
@@ -136,9 +126,7 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
     const parser::ast::NameExpr* name = static_cast<const parser::ast::NameExpr*>(expr);
     CompilerSymbolTable::Symbol* sym  = CurrentScope_->resolve(name->getValue().toUtf8());
     if (sym == nullptr)
-    {
       diagnostic::engine.panic("Undefined variable: " + name->getValue().toUtf8());
-    }
     switch (sym->scope)
     {
     case CompilerSymbolTable::SymbolScope::GLOBAL :
@@ -186,77 +174,41 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
     compileExpr(bin->getLeft());
     compileExpr(bin->getRight());
     if (bin->getOperator() == tok::TokenType::OP_PLUS)
-    {
       emitInstruction(bytecode::OpCode::ADD, 0, expr->getLine());
-    }
     else if (bin->getOperator() == tok::TokenType::OP_MINUS)
-    {
       emitInstruction(bytecode::OpCode::SUB, 0, expr->getLine());
-    }
     else if (bin->getOperator() == tok::TokenType::OP_STAR)
-    {
       emitInstruction(bytecode::OpCode::MUL, 0, expr->getLine());
-    }
     else if (bin->getOperator() == tok::TokenType::OP_SLASH)
-    {
       emitInstruction(bytecode::OpCode::DIV, 0, expr->getLine());
-    }
     else if (bin->getOperator() == tok::TokenType::OP_PERCENT)
-    {
       emitInstruction(bytecode::OpCode::MOD, 0, expr->getLine());
-    }
     else if (bin->getOperator() == tok::TokenType::OP_POWER)
-    {
       emitInstruction(bytecode::OpCode::POW, 0, expr->getLine());
-    }
     else if (bin->getOperator() == tok::TokenType::OP_EQ)
-    {
       emitInstruction(bytecode::OpCode::EQ, 0, expr->getLine());
-    }
     else if (bin->getOperator() == tok::TokenType::OP_NEQ)
-    {
       emitInstruction(bytecode::OpCode::NE, 0, expr->getLine());
-    }
     else if (bin->getOperator() == tok::TokenType::OP_LT)
-    {
       emitInstruction(bytecode::OpCode::LT, 0, expr->getLine());
-    }
     else if (bin->getOperator() == tok::TokenType::OP_GT)
-    {
       emitInstruction(bytecode::OpCode::GT, 0, expr->getLine());
-    }
     else if (bin->getOperator() == tok::TokenType::OP_LTE)
-    {
       emitInstruction(bytecode::OpCode::LE, 0, expr->getLine());
-    }
     else if (bin->getOperator() == tok::TokenType::OP_GTE)
-    {
       emitInstruction(bytecode::OpCode::GE, 0, expr->getLine());
-    }
     else if (bin->getOperator() == tok::TokenType::OP_BITAND)
-    {
       emitInstruction(bytecode::OpCode::BITAND, 0, expr->getLine());
-    }
     else if (bin->getOperator() == tok::TokenType::OP_BITOR)
-    {
       emitInstruction(bytecode::OpCode::BITOR, 0, expr->getLine());
-    }
     else if (bin->getOperator() == tok::TokenType::OP_BITXOR)
-    {
       emitInstruction(bytecode::OpCode::BITXOR, 0, expr->getLine());
-    }
     else if (bin->getOperator() == tok::TokenType::OP_LSHIFT)
-    {
       emitInstruction(bytecode::OpCode::LSHIFT, 0, expr->getLine());
-    }
     else if (bin->getOperator() == tok::TokenType::OP_RSHIFT)
-    {
       emitInstruction(bytecode::OpCode::RSHIFT, 0, expr->getLine());
-    }
     else if (bin->getOperator() == tok::TokenType::KW_IN)
-    {
       emitInstruction(bytecode::OpCode::IN, 0, expr->getLine());
-    }
     break;
   }
 
@@ -264,21 +216,13 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
     const parser::ast::UnaryExpr* un = static_cast<const parser::ast::UnaryExpr*>(expr);
     compileExpr(un->getOperand());
     if (un->getOperator() == tok::TokenType::OP_MINUS)
-    {
       emitInstruction(bytecode::OpCode::NEG, 0, expr->getLine());
-    }
     else if (un->getOperator() == tok::TokenType::OP_PLUS)
-    {
       emitInstruction(bytecode::OpCode::POS, 0, expr->getLine());
-    }
     else if (un->getOperator() == tok::TokenType::OP_BITNOT)
-    {
       emitInstruction(bytecode::OpCode::BITNOT, 0, expr->getLine());
-    }
     else if (un->getOperator() == tok::TokenType::KW_NOT)
-    {
       emitInstruction(bytecode::OpCode::NOT, 0, expr->getLine());
-    }
     break;
   }
 
@@ -287,9 +231,7 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
 
     // Compile arguments first
     for (const parser::ast::Expr* arg : call->getArgs())
-    {
       compileExpr(arg);
-    }
 
     // Compile callee
     compileExpr(call->getCallee());
@@ -305,9 +247,7 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
 
     // Compile all elements
     for (const parser::ast::Expr* elem : list->getElements())
-    {
       compileExpr(elem);
-    }
 
     // Build list from stack
     emitInstruction(bytecode::OpCode::BUILD_LIST, list->getElements().size(), expr->getLine());
@@ -327,13 +267,9 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
     // Store
     CompilerSymbolTable::Symbol* sym = CurrentScope_->define(assign->getTarget()->getValue().toUtf8());
     if (sym->scope == CompilerSymbolTable::SymbolScope::GLOBAL)
-    {
       emitInstruction(bytecode::OpCode::STORE_GLOBAL, sym->index, expr->getLine());
-    }
     else
-    {
       emitInstruction(bytecode::OpCode::STORE_FAST, sym->index, expr->getLine());
-    }
     break;
   }
 
@@ -345,9 +281,7 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
 void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
 {
   if (stmt == nullptr)
-  {
     return;
-  }
 
   switch (stmt->getKind())
   {
@@ -362,19 +296,13 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
 
     /// TODO: check other type of target expressions
     if (target->getKind() == parser::ast::Expr::Kind::NAME)
-    {
       target_name = dynamic_cast<parser::ast::NameExpr*>(target)->getValue();
-    }
 
     CompilerSymbolTable::Symbol* sym = CurrentScope_->define(target_name.toUtf8());
     if (sym->scope == CompilerSymbolTable::SymbolScope::GLOBAL)
-    {
       emitInstruction(bytecode::OpCode::STORE_GLOBAL, sym->index, stmt->getLine());
-    }
     else
-    {
       emitInstruction(bytecode::OpCode::STORE_FAST, sym->index, stmt->getLine());
-    }
     break;
   }
 
@@ -394,9 +322,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
 
     // Then block
     for (const parser::ast::Stmt* s : ifStmt->getThenBlock()->getStatements())
-    {
       compileStmt(s);
-    }
 
     if (!ifStmt->getElseBlock()->isEmpty())
     {
@@ -406,15 +332,11 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
 
       // Else block
       for (const parser::ast::Stmt* s : ifStmt->getElseBlock()->getStatements())
-      {
         compileStmt(s);
-      }
       patchJump(jumpEnd);
     }
     else
-    {
       patchJump(jumpIfFalse);
-    }
     break;
   }
 
@@ -437,9 +359,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     LoopStack_.push(ctx);
 
     for (const parser::ast::Stmt* s : whileStmt->getBlock()->getStatements())
-    {
       compileStmt(s);
-    }
 
     // Jump back to loop start
     emitInstruction(bytecode::OpCode::JUMP_BACKWARD, loopStart, stmt->getLine());
@@ -448,9 +368,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
 
     // Patch break statements
     if (LoopStack_.top().BreakLabel != -1)
-    {
       patchJump(LoopStack_.top().BreakLabel);
-    }
 
     LoopStack_.pop();
     Stats_.LoopsDetected++;
@@ -481,9 +399,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     LoopStack_.push(ctx);
 
     for (const parser::ast::Stmt* s : forStmt->getBlock()->getStatements())
-    {
       compileStmt(s);
-    }
 
     // Jump back
     emitInstruction(bytecode::OpCode::JUMP_BACKWARD, loopStart, stmt->getLine());
@@ -492,9 +408,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     emitInstruction(bytecode::OpCode::HOT_LOOP_END, 0, stmt->getLine());
 
     if (LoopStack_.top().BreakLabel != -1)
-    {
       patchJump(LoopStack_.top().BreakLabel);
-    }
 
     LoopStack_.pop();
     Stats_.LoopsDetected++;
@@ -508,9 +422,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
 
     // Define parameters
     for (const parser::ast::Expr* param : funcDef->getParameters())
-    {
       CurrentScope_->define(static_cast<const parser::ast::NameExpr*>(param)->getValue().toUtf8(), true);
-    }
 
     // Save current compilation state
     std::vector<bytecode::Instruction>&& savedInstructions  = std::move(Unit_.instructions);
@@ -524,9 +436,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
 
     // Compile function body
     for (const parser::ast::Stmt* s : funcDef->getBody()->getStatements())
-    {
       compileStmt(s);
-    }
 
     // Implicit return None if no return statement
     if (Unit_.instructions.empty() || Unit_.instructions.back().op != bytecode::OpCode::RETURN)
@@ -562,13 +472,9 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
   case parser::ast::Stmt::Kind::RETURN : {
     const parser::ast::ReturnStmt* ret = static_cast<const parser::ast::ReturnStmt*>(stmt);
     if (ret->getValue() != nullptr)
-    {
       compileExpr(ret->getValue());
-    }
     else
-    {
       emitInstruction(bytecode::OpCode::LOAD_CONST, Constants_.addConstant(object::Value()), stmt->getLine());
-    }
     emitInstruction(bytecode::OpCode::RETURN, 0, stmt->getLine());
     break;
   }
@@ -576,9 +482,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
   case parser::ast::Stmt::Kind::BLOCK : {
     const parser::ast::BlockStmt* block = static_cast<const parser::ast::BlockStmt*>(stmt);
     for (const parser::ast::Stmt* s : block->getStatements())
-    {
       compileStmt(s);
-    }
     break;
   }
 
@@ -596,9 +500,7 @@ typename BytecodeCompiler::CompilationUnit BytecodeCompiler::compile(const std::
 
   // Compile all statements
   for (const parser::ast::Stmt* stmt : ast)
-  {
     compileStmt(stmt);
-  }
 
   // Add HALT at end
   emitInstruction(bytecode::OpCode::HALT, 0, 0);
@@ -625,9 +527,7 @@ typename BytecodeCompiler::CompilationUnit BytecodeCompiler::compile(const std::
   // Report unused variables
   std::vector<CompilerSymbolTable::Symbol> unused = CurrentScope_->getUnusedSymbols();
   if (!unused.empty())
-  {
     std::cout << "[Compiler] Warning: " << unused.size() << " unused variables detected\n";
-  }
 
   return Unit_;
 }
@@ -650,13 +550,9 @@ void BytecodeCompiler::disassemble(const CompilationUnit& unit, std::ostream& ou
     out << std::setw(6) << i << "  ";
     // Line number
     if (instr.LineNumber > 0)
-    {
       out << std::setw(4) << instr.LineNumber << "  ";
-    }
     else
-    {
       out << "      ";
-    }
     // Opcode name
     out << std::left << std::setw(20) << opcodeToString(instr.op);
     // Argument
@@ -665,9 +561,7 @@ void BytecodeCompiler::disassemble(const CompilationUnit& unit, std::ostream& ou
       out << std::setw(6) << instr.arg;
       // Show constant value for LOAD_CONST
       if (instr.op == bytecode::OpCode::LOAD_CONST && instr.arg < unit.constants.size())
-      {
         out << "  ; " << unit.constants[instr.arg].repr();
-      }
     }
     out << "\n";
   }
@@ -708,19 +602,13 @@ void BytecodeCompiler::optimizationReport(std::ostream& out) const
   const std::vector<LoopAnalyzer::Loop>& loops           = LoopAnalyzer_.getLoops();
   std::int32_t                           totalInvariants = 0;
   for (const LoopAnalyzer::Loop& loop : loops)
-  {
     totalInvariants += loop.invariants.size();
-  }
   out << "  Hoistable invariants: " << totalInvariants << "\n\n";
   out << "Peephole Optimizations:\n";
   if (Stats_.PeepholeOptimizations > 0)
-  {
     Peephole_.printReport();
-  }
   else
-  {
     out << "  None applied\n";
-  }
 }
 
 std::string BytecodeCompiler::opcodeToString(bytecode::OpCode op) const

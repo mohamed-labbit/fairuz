@@ -1,0 +1,575 @@
+{
+	"artifacts" : 
+	[
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/diag/diagnostic.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/diag/diagnostic_codes.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/diag/diagnostic_emitter.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/diag/diagnostic_engine.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/diag/diagnostic_label.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/diag/fixit.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/diag/severity.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/input/buffer/base.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/input/buffer/input_buffer.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/input/file_manager.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/input/source_manager.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/lex/lexer.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/parser/analyzer.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/parser/cfg.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/parser/codegen.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/parser/incremental.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/parser/language_server.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/parser/optim.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/parser/parallel.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/parser/parser.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/parser/profiler.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/parser/symbol_table.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/parser/token.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/parser/type_system.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/runtime/allocator/arena.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/runtime/allocator/arena_block.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/runtime/allocator/fast_arena_block.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/runtime/allocator/fast_free_list.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/runtime/allocator/free_list.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/runtime/object/object.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/runtime/vm/btcompiler.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/runtime/vm/constant_pool.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/runtime/vm/gc.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/runtime/vm/jit.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/runtime/vm/jump.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/runtime/vm/loop.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/runtime/vm/optimizer.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/runtime/vm/peephole.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/runtime/vm/symbol_table.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/runtime/vm/verifier.cc.o"
+		},
+		{
+			"path" : "CMakeFiles/mylang_objects.dir/src/runtime/vm/vm.cc.o"
+		}
+	],
+	"backtrace" : 1,
+	"backtraceGraph" : 
+	{
+		"commands" : 
+		[
+			"add_library",
+			"add_compile_options",
+			"target_compile_options",
+			"include_directories",
+			"target_include_directories"
+		],
+		"files" : 
+		[
+			"CMakeLists.txt"
+		],
+		"nodes" : 
+		[
+			{
+				"file" : 0
+			},
+			{
+				"command" : 0,
+				"file" : 0,
+				"line" : 33,
+				"parent" : 0
+			},
+			{
+				"command" : 1,
+				"file" : 0,
+				"line" : 11,
+				"parent" : 0
+			},
+			{
+				"command" : 2,
+				"file" : 0,
+				"line" : 40,
+				"parent" : 0
+			},
+			{
+				"command" : 3,
+				"file" : 0,
+				"line" : 20,
+				"parent" : 0
+			},
+			{
+				"command" : 4,
+				"file" : 0,
+				"line" : 34,
+				"parent" : 0
+			}
+		]
+	},
+	"codemodelVersion" : 
+	{
+		"major" : 2,
+		"minor" : 9
+	},
+	"compileGroups" : 
+	[
+		{
+			"compileCommandFragments" : 
+			[
+				{
+					"fragment" : "-g -std=c++23 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"
+				},
+				{
+					"backtrace" : 2,
+					"fragment" : "-stdlib=libc++"
+				},
+				{
+					"backtrace" : 3,
+					"fragment" : "-fopenmp=libomp"
+				}
+			],
+			"includes" : 
+			[
+				{
+					"backtrace" : 4,
+					"path" : "/Users/mohamedrabbit/code/mylang/include"
+				},
+				{
+					"backtrace" : 5,
+					"path" : "/Users/mohamedrabbit/code/mylang/utfcpp/source"
+				}
+			],
+			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					1
+				],
+				"standard" : "23"
+			},
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10,
+				11,
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22,
+				23,
+				24,
+				25,
+				26,
+				27,
+				28,
+				29,
+				30,
+				31,
+				32,
+				33,
+				34,
+				35,
+				36,
+				37,
+				38,
+				39,
+				40
+			]
+		}
+	],
+	"id" : "mylang_objects::@6890427a1f51a3e7e1df",
+	"name" : "mylang_objects",
+	"paths" : 
+	{
+		"build" : ".",
+		"source" : "."
+	},
+	"sourceGroups" : 
+	[
+		{
+			"name" : "Source Files",
+			"sourceIndexes" : 
+			[
+				0,
+				1,
+				2,
+				3,
+				4,
+				5,
+				6,
+				7,
+				8,
+				9,
+				10,
+				11,
+				12,
+				13,
+				14,
+				15,
+				16,
+				17,
+				18,
+				19,
+				20,
+				21,
+				22,
+				23,
+				24,
+				25,
+				26,
+				27,
+				28,
+				29,
+				30,
+				31,
+				32,
+				33,
+				34,
+				35,
+				36,
+				37,
+				38,
+				39,
+				40
+			]
+		}
+	],
+	"sources" : 
+	[
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/diag/diagnostic.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/diag/diagnostic_codes.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/diag/diagnostic_emitter.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/diag/diagnostic_engine.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/diag/diagnostic_label.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/diag/fixit.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/diag/severity.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/input/buffer/base.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/input/buffer/input_buffer.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/input/file_manager.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/input/source_manager.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/lex/lexer.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/parser/analyzer.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/parser/cfg.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/parser/codegen.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/parser/incremental.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/parser/language_server.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/parser/optim.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/parser/parallel.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/parser/parser.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/parser/profiler.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/parser/symbol_table.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/parser/token.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/parser/type_system.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/runtime/allocator/arena.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/runtime/allocator/arena_block.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/runtime/allocator/fast_arena_block.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/runtime/allocator/fast_free_list.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/runtime/allocator/free_list.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/runtime/object/object.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/runtime/vm/btcompiler.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/runtime/vm/constant_pool.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/runtime/vm/gc.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/runtime/vm/jit.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/runtime/vm/jump.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/runtime/vm/loop.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/runtime/vm/optimizer.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/runtime/vm/peephole.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/runtime/vm/symbol_table.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/runtime/vm/verifier.cc",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 1,
+			"compileGroupIndex" : 0,
+			"path" : "src/runtime/vm/vm.cc",
+			"sourceGroupIndex" : 0
+		}
+	],
+	"type" : "OBJECT_LIBRARY"
+}

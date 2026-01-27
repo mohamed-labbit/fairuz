@@ -137,7 +137,7 @@ class FileManager
     return readWindowInternal(size);
   }
 
-  StringRef readWindowInternal(const SizeType size);
+  StringRef readWindowInternal(SizeType size);
 
   StringRef readLine(const SizeType line_number);
 
@@ -213,7 +213,7 @@ class FileManager
     }
   }
 
-  SizeType validateUtf8Bound(std::span<const char> buffer) const;
+  SizeType validateUtf8Bound(std::span<const std::byte> buffer) const;
 
   void buildLineIndex();
 

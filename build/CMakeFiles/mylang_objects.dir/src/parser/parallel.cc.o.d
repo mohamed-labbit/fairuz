@@ -388,7 +388,7 @@ CMakeFiles/mylang_objects.dir/src/parser/parallel.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__iterator/empty.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__iterator/reverse_access.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__iterator/size.h \
-  /Users/mohamedrabbit/code/mylang/src/parser/../../include/parser/../lex/util.hpp \
+  /Users/mohamedrabbit/code/mylang/src/parser/../../include/parser/../lex/../types.hpp \
   /Users/mohamedrabbit/code/mylang/src/parser/../../include/parser/../lex/../../utfcpp/source/utf8.h \
   /Users/mohamedrabbit/code/mylang/src/parser/../../include/parser/../lex/../../utfcpp/source/utf8/checked.h \
   /Users/mohamedrabbit/code/mylang/src/parser/../../include/parser/../lex/../../utfcpp/source/utf8/core.h \
@@ -429,7 +429,6 @@ CMakeFiles/mylang_objects.dir/src/parser/parallel.cc.o: \
   /Users/mohamedrabbit/code/mylang/src/parser/../../include/parser/../lex/../../utfcpp/source/utf8/cpp17.h \
   /Users/mohamedrabbit/code/mylang/src/parser/../../include/parser/../lex/../../utfcpp/source/utf8/cpp11.h \
   /Users/mohamedrabbit/code/mylang/src/parser/../../include/parser/../lex/../../utfcpp/source/utf8/unchecked.h \
-  /Users/mohamedrabbit/code/mylang/src/parser/../../include/parser/../lex/../types.hpp \
   /Users/mohamedrabbit/code/mylang/src/parser/../../include/parser/../lex/../runtime/allocator/arena.hpp \
   /Users/mohamedrabbit/code/mylang/src/parser/../../include/parser/../lex/../runtime/allocator/../../diag/diagnostic.hpp \
   /Users/mohamedrabbit/code/mylang/src/parser/../../include/parser/../lex/../runtime/allocator/../../diag/../../utfcpp/source/utf8.h \
@@ -732,9 +731,10 @@ CMakeFiles/mylang_objects.dir/src/parser/parallel.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__vector/vector_bool_formatter.h \
   /Users/mohamedrabbit/code/mylang/src/parser/../../include/parser/../lex/../runtime/allocator/arena_block.hpp \
   /Users/mohamedrabbit/code/mylang/src/parser/../../include/parser/../lex/../runtime/allocator/../../macros.hpp \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/mutex \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__condition_variable/condition_variable.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__mutex/mutex.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/atomic \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/aliases.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/atomic_lock_free.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/atomic_flag.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__thread/support.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__thread/support/pthread.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__chrono/convert_to_timespec.h \
@@ -745,32 +745,18 @@ CMakeFiles/mylang_objects.dir/src/parser/parallel.cc.o: \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/qos.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_mach_port_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sched.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__mutex/unique_lock.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__mutex/tag_types.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__mutex/lock_guard.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__thread/id.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/atomic \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/aliases.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/atomic_lock_free.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/atomic_flag.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/atomic_init.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/fence.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/kill_dependency.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/atomic_ref.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__type_traits/has_unique_object_representation.h \
-  /Users/mohamedrabbit/code/mylang/src/parser/../../include/parser/../lex/../runtime/allocator/fast_arena_block.hpp \
-  /Users/mohamedrabbit/code/mylang/src/parser/../../include/parser/../lex/../runtime/allocator/fast_free_list.hpp \
-  /Users/mohamedrabbit/code/mylang/src/parser/../../include/parser/../lex/../runtime/allocator/free_list.hpp \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/set \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__functional/is_transparent.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__fwd/set.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__iterator/erase_if_container.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__iterator/ranges_iterator_traits.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__node_handle \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__tree \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__fwd/map.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__type_traits/can_extract_key.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__type_traits/remove_const_ref.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/mutex \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__condition_variable/condition_variable.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__mutex/mutex.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__mutex/unique_lock.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__mutex/tag_types.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__mutex/lock_guard.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__thread/id.h \
   /Users/mohamedrabbit/code/mylang/src/parser/../../include/parser/../lex/../runtime/allocator/meta.hpp \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/functional \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__functional/binary_negate.h \
@@ -792,8 +778,14 @@ CMakeFiles/mylang_objects.dir/src/parser/parallel.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__memory/allocator_destructor.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/unordered_map \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__algorithm/is_permutation.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__functional/is_transparent.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__hash_table \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__new/launder.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__type_traits/can_extract_key.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__type_traits/remove_const_ref.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__iterator/erase_if_container.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__iterator/ranges_iterator_traits.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__node_handle \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__functional/default_searcher.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__algorithm/search.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__functional/not_fn.h \
@@ -807,6 +799,7 @@ CMakeFiles/mylang_objects.dir/src/parser/parallel.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__utility/rel_ops.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__utility/as_const.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__utility/cmp.h \
+  /Users/mohamedrabbit/code/mylang/src/parser/../../include/parser/../lex/util.hpp \
   /opt/homebrew/opt/libomp/include/omp.h \
   /Users/mohamedrabbit/code/mylang/src/parser/../../include/parser/ast/ast.hpp \
   /Users/mohamedrabbit/code/mylang/src/parser/../../include/parser/ast/AST_allocator.hpp \

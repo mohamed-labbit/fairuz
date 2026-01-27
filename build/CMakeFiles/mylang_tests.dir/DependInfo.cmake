@@ -8,6 +8,10 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
+  "/Users/mohamedrabbit/code/mylang/tests/lexer/test_indentation.cpp" "CMakeFiles/mylang_tests.dir/tests/lexer/test_indentation.cpp.o" "gcc" "CMakeFiles/mylang_tests.dir/tests/lexer/test_indentation.cpp.o.d"
+  "/Users/mohamedrabbit/code/mylang/tests/lexer/test_tokens.cpp" "CMakeFiles/mylang_tests.dir/tests/lexer/test_tokens.cpp.o" "gcc" "CMakeFiles/mylang_tests.dir/tests/lexer/test_tokens.cpp.o.d"
+  "/Users/mohamedrabbit/code/mylang/tests/parser/test_parser.cpp" "CMakeFiles/mylang_tests.dir/tests/parser/test_parser.cpp.o" "gcc" "CMakeFiles/mylang_tests.dir/tests/parser/test_parser.cpp.o.d"
+  "/Users/mohamedrabbit/code/mylang/tests/runtime/allocator/test_arena.cpp" "CMakeFiles/mylang_tests.dir/tests/runtime/allocator/test_arena.cpp.o" "gcc" "CMakeFiles/mylang_tests.dir/tests/runtime/allocator/test_arena.cpp.o.d"
   "/Users/mohamedrabbit/code/mylang/tests/string/test_string.cpp" "CMakeFiles/mylang_tests.dir/tests/string/test_string.cpp.o" "gcc" "CMakeFiles/mylang_tests.dir/tests/string/test_string.cpp.o.d"
   "/Users/mohamedrabbit/code/mylang/tests/test_main.cpp" "CMakeFiles/mylang_tests.dir/tests/test_main.cpp.o" "gcc" "CMakeFiles/mylang_tests.dir/tests/test_main.cpp.o.d"
   )

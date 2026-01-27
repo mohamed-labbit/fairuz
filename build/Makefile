@@ -1136,6 +1136,102 @@ src/runtime/vm/vm.cc.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_objects.dir/build.make CMakeFiles/mylang_objects.dir/src/runtime/vm/vm.cc.s
 .PHONY : src/runtime/vm/vm.cc.s
 
+tests/lexer/test_indentation.o: tests/lexer/test_indentation.cpp.o
+.PHONY : tests/lexer/test_indentation.o
+
+# target to build an object file
+tests/lexer/test_indentation.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_tests.dir/build.make CMakeFiles/mylang_tests.dir/tests/lexer/test_indentation.cpp.o
+.PHONY : tests/lexer/test_indentation.cpp.o
+
+tests/lexer/test_indentation.i: tests/lexer/test_indentation.cpp.i
+.PHONY : tests/lexer/test_indentation.i
+
+# target to preprocess a source file
+tests/lexer/test_indentation.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_tests.dir/build.make CMakeFiles/mylang_tests.dir/tests/lexer/test_indentation.cpp.i
+.PHONY : tests/lexer/test_indentation.cpp.i
+
+tests/lexer/test_indentation.s: tests/lexer/test_indentation.cpp.s
+.PHONY : tests/lexer/test_indentation.s
+
+# target to generate assembly for a file
+tests/lexer/test_indentation.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_tests.dir/build.make CMakeFiles/mylang_tests.dir/tests/lexer/test_indentation.cpp.s
+.PHONY : tests/lexer/test_indentation.cpp.s
+
+tests/lexer/test_tokens.o: tests/lexer/test_tokens.cpp.o
+.PHONY : tests/lexer/test_tokens.o
+
+# target to build an object file
+tests/lexer/test_tokens.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_tests.dir/build.make CMakeFiles/mylang_tests.dir/tests/lexer/test_tokens.cpp.o
+.PHONY : tests/lexer/test_tokens.cpp.o
+
+tests/lexer/test_tokens.i: tests/lexer/test_tokens.cpp.i
+.PHONY : tests/lexer/test_tokens.i
+
+# target to preprocess a source file
+tests/lexer/test_tokens.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_tests.dir/build.make CMakeFiles/mylang_tests.dir/tests/lexer/test_tokens.cpp.i
+.PHONY : tests/lexer/test_tokens.cpp.i
+
+tests/lexer/test_tokens.s: tests/lexer/test_tokens.cpp.s
+.PHONY : tests/lexer/test_tokens.s
+
+# target to generate assembly for a file
+tests/lexer/test_tokens.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_tests.dir/build.make CMakeFiles/mylang_tests.dir/tests/lexer/test_tokens.cpp.s
+.PHONY : tests/lexer/test_tokens.cpp.s
+
+tests/parser/test_parser.o: tests/parser/test_parser.cpp.o
+.PHONY : tests/parser/test_parser.o
+
+# target to build an object file
+tests/parser/test_parser.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_tests.dir/build.make CMakeFiles/mylang_tests.dir/tests/parser/test_parser.cpp.o
+.PHONY : tests/parser/test_parser.cpp.o
+
+tests/parser/test_parser.i: tests/parser/test_parser.cpp.i
+.PHONY : tests/parser/test_parser.i
+
+# target to preprocess a source file
+tests/parser/test_parser.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_tests.dir/build.make CMakeFiles/mylang_tests.dir/tests/parser/test_parser.cpp.i
+.PHONY : tests/parser/test_parser.cpp.i
+
+tests/parser/test_parser.s: tests/parser/test_parser.cpp.s
+.PHONY : tests/parser/test_parser.s
+
+# target to generate assembly for a file
+tests/parser/test_parser.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_tests.dir/build.make CMakeFiles/mylang_tests.dir/tests/parser/test_parser.cpp.s
+.PHONY : tests/parser/test_parser.cpp.s
+
+tests/runtime/allocator/test_arena.o: tests/runtime/allocator/test_arena.cpp.o
+.PHONY : tests/runtime/allocator/test_arena.o
+
+# target to build an object file
+tests/runtime/allocator/test_arena.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_tests.dir/build.make CMakeFiles/mylang_tests.dir/tests/runtime/allocator/test_arena.cpp.o
+.PHONY : tests/runtime/allocator/test_arena.cpp.o
+
+tests/runtime/allocator/test_arena.i: tests/runtime/allocator/test_arena.cpp.i
+.PHONY : tests/runtime/allocator/test_arena.i
+
+# target to preprocess a source file
+tests/runtime/allocator/test_arena.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_tests.dir/build.make CMakeFiles/mylang_tests.dir/tests/runtime/allocator/test_arena.cpp.i
+.PHONY : tests/runtime/allocator/test_arena.cpp.i
+
+tests/runtime/allocator/test_arena.s: tests/runtime/allocator/test_arena.cpp.s
+.PHONY : tests/runtime/allocator/test_arena.s
+
+# target to generate assembly for a file
+tests/runtime/allocator/test_arena.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_tests.dir/build.make CMakeFiles/mylang_tests.dir/tests/runtime/allocator/test_arena.cpp.s
+.PHONY : tests/runtime/allocator/test_arena.cpp.s
+
 tests/string/test_string.o: tests/string/test_string.cpp.o
 .PHONY : tests/string/test_string.o
 
@@ -1318,6 +1414,18 @@ help:
 	@echo "... src/runtime/vm/vm.o"
 	@echo "... src/runtime/vm/vm.i"
 	@echo "... src/runtime/vm/vm.s"
+	@echo "... tests/lexer/test_indentation.o"
+	@echo "... tests/lexer/test_indentation.i"
+	@echo "... tests/lexer/test_indentation.s"
+	@echo "... tests/lexer/test_tokens.o"
+	@echo "... tests/lexer/test_tokens.i"
+	@echo "... tests/lexer/test_tokens.s"
+	@echo "... tests/parser/test_parser.o"
+	@echo "... tests/parser/test_parser.i"
+	@echo "... tests/parser/test_parser.s"
+	@echo "... tests/runtime/allocator/test_arena.o"
+	@echo "... tests/runtime/allocator/test_arena.i"
+	@echo "... tests/runtime/allocator/test_arena.s"
 	@echo "... tests/string/test_string.o"
 	@echo "... tests/string/test_string.i"
 	@echo "... tests/string/test_string.s"

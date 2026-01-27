@@ -28,9 +28,9 @@ class StringAllocator
   }
 
   template<typename T, typename... Args>
-  T* allocate(Args&&... args)
+  T* allocate(SizeType count, Args&&... args)
   {
-    void* mem = Allocator_.allocate<std::byte>(sizeof(T));
+    void* mem = Allocator_.allocate(count * sizeof(T));
     return new (mem) T(std::forward<Args>(args)...);
   }
 };
@@ -242,8 +242,6 @@ class StringRef
   typedef StringRef&       Reference;
   typedef const StringRef& ConstReference;
 
-  static constexpr CharType NUL_TERMINATOR = u'\0';
-
   CharType* Ptr_{nullptr};
   SizeType  Len_{0};       // length of the string (not including null terminator)
   SizeType  Capacity_{0};  // allocated memory (including space for null terminator)
@@ -273,7 +271,7 @@ class StringRef
 
     Capacity_ = s + 1;
     Len_      = 0;
-    Ptr_[0]   = NUL_TERMINATOR;  // Ensure null termination
+    Ptr_[0]   = BUFFER_END;  // Ensure null termination
   }
 
   // Copy constructor - FIXED: copy correct amount and set capacity
@@ -295,7 +293,7 @@ class StringRef
     Capacity_ = other.len() + 1;
 
     // Ensure null termination
-    Ptr_[Len_] = NUL_TERMINATOR;
+    Ptr_[Len_] = BUFFER_END;
   }
 
   // Move constructor
@@ -317,7 +315,7 @@ class StringRef
 
     // Calculate length of the null-terminated string
     SizeType length = 0;
-    while (lit[length] != NUL_TERMINATOR)
+    while (lit[length] != BUFFER_END)
       ++length;
 
     // Handle empty string
@@ -333,7 +331,7 @@ class StringRef
     std::memcpy(Ptr_, lit, length * sizeof(CharType));
     Len_       = length;
     Capacity_  = length + 1;
-    Ptr_[Len_] = NUL_TERMINATOR;
+    Ptr_[Len_] = BUFFER_END;
   }
 
   /*
@@ -372,7 +370,7 @@ class StringRef
     std::cout << "s1 from inside after copy : " << other << std::endl;
     Len_       = other.len();
     Capacity_  = other.len() + 1;
-    Ptr_[Len_] = NUL_TERMINATOR;
+    Ptr_[Len_] = BUFFER_END;
     
     return *this;
   }
@@ -408,7 +406,7 @@ class StringRef
     for (SizeType i = 0; i < other.len(); i++)
       new_ptr[i] = other[i];
 
-    new_ptr[other.len()] = NUL_TERMINATOR;
+    new_ptr[other.len()] = BUFFER_END;
 
     // NOW deallocate old memory (after we've copied other)
     // if (Ptr_ != nullptr)
@@ -537,7 +535,7 @@ class StringRef
 
     // Ensure null termination
     if (Len_ < Capacity_)
-      Ptr_[Len_] = NUL_TERMINATOR;
+      Ptr_[Len_] = BUFFER_END;
   }
 
   // Reserve capacity (doesn't change length, only capacity)
@@ -558,7 +556,7 @@ class StringRef
       Ptr_[i] = Ptr_[i + 1];
 
     Len_--;
-    Ptr_[Len_] = NUL_TERMINATOR;
+    Ptr_[Len_] = BUFFER_END;
   }
 
   // Append another StringRef
@@ -574,7 +572,7 @@ class StringRef
 
     std::memcpy(Ptr_ + Len_, other.cget(), other.len() * sizeof(CharType));
     Len_       = new_len;
-    Ptr_[Len_] = NUL_TERMINATOR;
+    Ptr_[Len_] = BUFFER_END;
 
     return *this;
   }
@@ -587,7 +585,7 @@ class StringRef
       expand(Len_ + 2);
 
     Ptr_[Len_]     = c;
-    Ptr_[Len_ + 1] = NUL_TERMINATOR;
+    Ptr_[Len_ + 1] = BUFFER_END;
     Len_++;
 
     return *this;
@@ -659,7 +657,7 @@ class StringRef
 
 
     result.Len_          = new_len;
-    result.Ptr_[new_len] = NUL_TERMINATOR;
+    result.Ptr_[new_len] = BUFFER_END;
 
     return result;
   }
@@ -667,7 +665,7 @@ class StringRef
   // StringRef + const char* (UTF-8 string)
   friend StringRef operator+(ConstReference lhs, const char* rhs)
   {
-    if (rhs == nullptr || rhs[0] == NUL_TERMINATOR)
+    if (rhs == nullptr || rhs[0] == BUFFER_END)
       return StringRef(lhs);
 
     StringRef rhs_str = fromUtf8(rhs);
@@ -677,7 +675,7 @@ class StringRef
   // const char* + StringRef
   friend StringRef operator+(const char* lhs, ConstReference rhs)
   {
-    if (lhs == nullptr || lhs[0] == NUL_TERMINATOR)
+    if (lhs == nullptr || lhs[0] == BUFFER_END)
       return StringRef(rhs);
 
     StringRef lhs_str = fromUtf8(lhs);
@@ -725,7 +723,7 @@ class StringRef
   void clear() noexcept
   {
     if (Ptr_ != nullptr && Capacity_ > 0)
-      Ptr_[0] = NUL_TERMINATOR;
+      Ptr_[0] = BUFFER_END;
     Len_ = 0;
   }
 
@@ -763,7 +761,7 @@ class StringRef
   {
     if (s < Len_ && Ptr_ != nullptr)
     {
-      Ptr_[s] = NUL_TERMINATOR;
+      Ptr_[s] = BUFFER_END;
       Len_    = s;
     }
     return *this;
@@ -796,7 +794,7 @@ class StringRef
     StringRef ret(ret_len);
     std::memcpy(ret.Ptr_, Ptr_ + start_val, ret_len * sizeof(CharType));
     ret.Len_          = ret_len;
-    ret.Ptr_[ret_len] = NUL_TERMINATOR;
+    ret.Ptr_[ret_len] = BUFFER_END;
 
     return ret;
   }
@@ -887,7 +885,7 @@ class StringRef
     // std::memcpy(result.Ptr_, utf16_str.data(), utf16_str.size() * sizeof(CharType));
 
     // result.Len_                     = utf16_str.length();
-    // result.Ptr_[utf16_str.length()] = NUL_TERMINATOR;
+    // result.Ptr_[utf16_str.length()] = BUFFER_END;
 
     return StringRef(utf16_str.data());
   }

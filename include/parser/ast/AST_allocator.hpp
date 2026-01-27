@@ -21,7 +21,9 @@ class ASTAllocator
   template<typename T, typename... Args>
   T* make(Args&&... args)
   {
-    void* mem = Allocator_.allocate<std::byte>(sizeof(T));
+    void* mem = Allocator_.allocate(sizeof(T));
+    if (!mem)
+      return nullptr;
     return new (mem) T(std::forward<Args>(args)...);
   }
 };

@@ -743,9 +743,10 @@ CMakeFiles/mylang_objects.dir/src/runtime/vm/verifier.cc.o: \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/sstream \
   /Users/mohamedrabbit/code/mylang/src/runtime/vm/../../../include/runtime/vm/../../parser/ast/../../runtime/allocator/arena_block.hpp \
   /Users/mohamedrabbit/code/mylang/src/runtime/vm/../../../include/runtime/vm/../../parser/ast/../../runtime/allocator/../../macros.hpp \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/mutex \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__condition_variable/condition_variable.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__mutex/mutex.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/atomic \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/aliases.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/atomic_lock_free.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/atomic_flag.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__thread/support.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__thread/support/pthread.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__chrono/convert_to_timespec.h \
@@ -756,26 +757,18 @@ CMakeFiles/mylang_objects.dir/src/runtime/vm/verifier.cc.o: \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/qos.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_mach_port_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sched.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__mutex/unique_lock.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__mutex/tag_types.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__mutex/lock_guard.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__thread/id.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/atomic \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/aliases.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/atomic_lock_free.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/atomic_flag.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/atomic_init.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/fence.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/kill_dependency.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__atomic/atomic_ref.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__type_traits/has_unique_object_representation.h \
-  /Users/mohamedrabbit/code/mylang/src/runtime/vm/../../../include/runtime/vm/../../parser/ast/../../runtime/allocator/fast_arena_block.hpp \
-  /Users/mohamedrabbit/code/mylang/src/runtime/vm/../../../include/runtime/vm/../../parser/ast/../../runtime/allocator/fast_free_list.hpp \
-  /Users/mohamedrabbit/code/mylang/src/runtime/vm/../../../include/runtime/vm/../../parser/ast/../../runtime/allocator/free_list.hpp \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/set \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__fwd/set.h \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__tree \
-  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__fwd/map.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/mutex \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__condition_variable/condition_variable.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__mutex/mutex.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__mutex/unique_lock.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__mutex/tag_types.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__mutex/lock_guard.h \
+  /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__thread/id.h \
   /Users/mohamedrabbit/code/mylang/src/runtime/vm/../../../include/runtime/vm/../../parser/ast/../../runtime/allocator/meta.hpp \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/functional \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__functional/binary_negate.h \
@@ -807,14 +800,14 @@ CMakeFiles/mylang_objects.dir/src/runtime/vm/verifier.cc.o: \
   /Users/mohamedrabbit/code/mylang/src/runtime/vm/../../../include/runtime/vm/../../parser/ast/../../diag/diagnostic.hpp \
   /Users/mohamedrabbit/code/mylang/src/runtime/vm/../../../include/runtime/vm/../../parser/ast/../../lex/token.hpp \
   /Users/mohamedrabbit/code/mylang/src/runtime/vm/../../../include/runtime/vm/../../parser/ast/../../lex/../macros.hpp \
-  /Users/mohamedrabbit/code/mylang/src/runtime/vm/../../../include/runtime/vm/../../parser/ast/../../lex/util.hpp \
-  /Users/mohamedrabbit/code/mylang/src/runtime/vm/../../../include/runtime/vm/../../parser/ast/../../lex/../../utfcpp/source/utf8.h \
   /Users/mohamedrabbit/code/mylang/src/runtime/vm/../../../include/runtime/vm/../../parser/ast/../../lex/../types.hpp \
+  /Users/mohamedrabbit/code/mylang/src/runtime/vm/../../../include/runtime/vm/../../parser/ast/../../lex/../../utfcpp/source/utf8.h \
   /Users/mohamedrabbit/code/mylang/src/runtime/vm/../../../include/runtime/vm/../../parser/ast/../../lex/../runtime/allocator/arena.hpp \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/utility \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__utility/rel_ops.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__utility/as_const.h \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/__utility/cmp.h \
+  /Users/mohamedrabbit/code/mylang/src/runtime/vm/../../../include/runtime/vm/../../parser/ast/../../lex/util.hpp \
   /opt/homebrew/opt/libomp/include/omp.h \
   /Users/mohamedrabbit/code/mylang/src/runtime/vm/../../../include/runtime/vm/../../parser/ast/ast_node.hpp \
   /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1/cassert \

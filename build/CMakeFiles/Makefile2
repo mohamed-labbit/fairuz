@@ -120,12 +120,12 @@ CMakeFiles/mylang_objects.dir/clean:
 CMakeFiles/mylang_tests.dir/all: CMakeFiles/mylang_objects.dir/all
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_tests.dir/build.make CMakeFiles/mylang_tests.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_tests.dir/build.make CMakeFiles/mylang_tests.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/mohamedrabbit/code/mylang/build/CMakeFiles --progress-num=42,43,44 "Built target mylang_tests"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/mohamedrabbit/code/mylang/build/CMakeFiles --progress-num=42,43,44,45,46,47,48 "Built target mylang_tests"
 .PHONY : CMakeFiles/mylang_tests.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/mylang_tests.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /Users/mohamedrabbit/code/mylang/build/CMakeFiles 44
+	$(CMAKE_COMMAND) -E cmake_progress_start /Users/mohamedrabbit/code/mylang/build/CMakeFiles 48
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/mylang_tests.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /Users/mohamedrabbit/code/mylang/build/CMakeFiles 0
 .PHONY : CMakeFiles/mylang_tests.dir/rule
@@ -137,7 +137,7 @@ mylang_tests: CMakeFiles/mylang_tests.dir/rule
 # codegen rule for target.
 CMakeFiles/mylang_tests.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/mylang_tests.dir/build.make CMakeFiles/mylang_tests.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/mohamedrabbit/code/mylang/build/CMakeFiles --progress-num=42,43,44 "Finished codegen for target mylang_tests"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/Users/mohamedrabbit/code/mylang/build/CMakeFiles --progress-num=42,43,44,45,46,47,48 "Finished codegen for target mylang_tests"
 .PHONY : CMakeFiles/mylang_tests.dir/codegen
 
 # clean rule for target.
