@@ -99,11 +99,11 @@ StringRef InputBuffer::nPeek(SizeType n)
 
   SizeType     rem     = n;
   std::int32_t buf_idx = CurrentBuffer_;
-  SizeType     offset  = static_cast<SizeType>(Current_ - Buffers_[buf_idx].data() + 1);
+  SizeType     offset  = static_cast<SizeType>(Current_ - Buffers_[buf_idx].get() + 1);
 
   while (rem > 0)
   {
-    if (offset >= Buffers_[buf_idx].size() || Buffers_[buf_idx][offset] == BUFFER_END)
+    if (offset >= Buffers_[buf_idx].len() || Buffers_[buf_idx][offset] == BUFFER_END)
     {
       if (!refreshBuffer(buf_idx ^ 1))
       {
@@ -112,7 +112,7 @@ StringRef InputBuffer::nPeek(SizeType n)
       buf_idx ^= 1;
       offset = 0;
     }
-    out.push_back(Buffers_[buf_idx][offset]);
+    out += Buffers_[buf_idx][offset];
     offset++, rem--;
   }
 
@@ -130,10 +130,10 @@ void InputBuffer::unget(CharType ch)
 void InputBuffer::reset()
 {
 
-  CurrentBuffer_   = 0;
-  Buffers_[0][0]   = BUFFER_END;
-  Buffers_[0][1]   = BUFFER_END;
-  Current_         = Buffers_[0].data();
+  CurrentBuffer_ = 0;
+  Buffers_[0].clear();
+  Buffers_[0].clear();
+  Current_         = Buffers_[0].get();
   CurrentPosition_ = {1, 1, 0};
   while (!Columns_.empty())
   {
@@ -145,7 +145,7 @@ void InputBuffer::reset()
 void InputBuffer::swapBuffers_()
 {
   CurrentBuffer_ ^= 1;
-  Current_ = Buffers_[CurrentBuffer_].data();
+  Current_ = Buffers_[CurrentBuffer_].get();
   if (Columns_.empty())
   {
     Columns_.push(1);

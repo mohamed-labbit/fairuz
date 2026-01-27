@@ -71,7 +71,7 @@ std::vector<typename SymbolTable::Symbol*> SymbolTable::getUnusedSymbols()
   return unused;
 }
 
-const std::unordered_map<StringRef, typename SymbolTable::Symbol>& SymbolTable::getSymbols() const { return Symbols_; }
+const std::unordered_map<StringRef, typename SymbolTable::Symbol, StringRefHash, StringRefEqual>& SymbolTable::getSymbols() const { return Symbols_; }
 
 }
 }

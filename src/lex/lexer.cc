@@ -282,7 +282,7 @@ tok::Token Lexer::lexToken()
     case ',' :
     case u'،' :
       consumeChar();
-      return finish(tok::TokenType::COMMA, StringRef(1, ch), line, col);
+      return finish(tok::TokenType::COMMA, StringRef(ch), line, col);
     default :
       break;
     }
@@ -290,8 +290,9 @@ tok::Token Lexer::lexToken()
     // Identifiers
     if ((ch >= 0x0600 && ch <= 0x06FF) || ch == u'_')
     {
-      StringRef id(1, ch);
-      CharType  c2 = nextChar();
+      StringRef id;
+      id += ch;
+      CharType c2 = nextChar();
 
       while (util::isalphaArabic(c2) || c2 == u'_' || std::iswdigit(c2))
       {
@@ -311,8 +312,9 @@ tok::Token Lexer::lexToken()
     // Numbers
     else if (std::iswdigit(ch))
     {
-      StringRef num(1, ch);
-      CharType  c2 = nextChar();
+      StringRef num;
+      num += ch;
+      CharType c2 = nextChar();
 
       // Check for special number bases (hex, octal, binary)
       if (ch == '0')
@@ -325,7 +327,7 @@ tok::Token Lexer::lexToken()
 
           bool hasDigits = false;
 
-          while (true)
+          for (;;)
           {
             // Skip underscores
             if (c2 == '_')
@@ -361,7 +363,7 @@ tok::Token Lexer::lexToken()
 
           bool hasDigits = false;
 
-          while (true)
+          for (;;)
           {
             // Skip underscores
             if (c2 == '_')
@@ -380,7 +382,7 @@ tok::Token Lexer::lexToken()
             else if (std::iswdigit(c2))
             {
               // Invalid octal digit (8 or 9)
-              diagnostic::engine.panic("Invalid digit '" + utf8::utf16to8(StringRef(1, c2)) + "' in octal literal");
+              diagnostic::engine.panic("Invalid digit '" + std::string(1, c2) + "' in octal literal");
             }
             else
             {
@@ -403,7 +405,7 @@ tok::Token Lexer::lexToken()
 
           bool hasDigits = false;
 
-          while (true)
+          for (;;)
           {
             // Skip underscores
             if (c2 == '_')
@@ -422,7 +424,7 @@ tok::Token Lexer::lexToken()
             else if (std::iswdigit(c2))
             {
               // Invalid binary digit (2-9)
-              diagnostic::engine.panic("Invalid digit '" + utf8::utf16to8(StringRef(1, c2)) + "' in binary literal");
+              diagnostic::engine.panic("Invalid digit '" + std::string(1, c2) + "' in binary literal");
             }
             else
             {
@@ -441,7 +443,7 @@ tok::Token Lexer::lexToken()
       }
 
       // Decimal integer part (with optional underscores)
-      while (true)
+      for (;;)
       {
         if (c2 == '_')
         {
@@ -468,7 +470,7 @@ tok::Token Lexer::lexToken()
         c2 = nextChar();
 
         // Fractional part (with optional underscores)
-        while (true)
+        for (;;)
         {
           if (c2 == '_')
           {
@@ -496,8 +498,9 @@ tok::Token Lexer::lexToken()
     // Operators
     else if (util::isOperator(ch))
     {
-      StringRef op(1, ch);
-      CharType  nxt = nextChar();
+      StringRef op;
+      op += ch;
+      CharType nxt = nextChar();
 
       if (nxt != BUFFER_END)
       {
@@ -518,7 +521,8 @@ tok::Token Lexer::lexToken()
     else if (util::isSymbol(ch))
     {
       tok::TokenType tt;
-      StringRef      sym(1, ch);
+      StringRef      sym;
+      sym += ch;
       consumeChar();
 
       switch (ch)
@@ -560,7 +564,7 @@ tok::Token Lexer::lexToken()
 
     // Unknown
     consumeChar();
-    return finish(tok::TokenType::INVALID, StringRef(1, ch), line, col);
+    return finish(tok::TokenType::INVALID, StringRef(ch), line, col);
   }
 
   if (!TokStream_.empty() && TokStream_.back().type() == tok::TokenType::ENDMARKER)

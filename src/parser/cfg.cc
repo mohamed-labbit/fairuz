@@ -56,14 +56,14 @@ void ControlFlowGraph::computeLiveness()
       ControlFlowGraph::BasicBlock& block = Blocks_[i];
 
       // liveOut = union of successors' liveIn
-      std::unordered_set<StringRef> newLiveOut;
+      std::unordered_set<StringRef, StringRefHash, StringRefEqual> newLiveOut;
       for (std::int32_t succ : block.successors)
       {
         newLiveOut.insert(Blocks_[succ].LiveIn.begin(), Blocks_[succ].LiveIn.end());
       }
 
       // liveIn = use ∪ (liveOut - def)
-      std::unordered_set<StringRef> newLiveIn = block.UseVars;
+      std::unordered_set<StringRef, StringRefHash, StringRefEqual> newLiveIn = block.UseVars;
       for (const StringRef& var : newLiveOut)
       {
         if (!block.DefVars.count(var))

@@ -26,6 +26,8 @@
 #include <functional>
 #include <shared_mutex>
 #include <unordered_set>
+#include <iostream>
+#include <iomanip>
 
 
 namespace mylang {
@@ -516,7 +518,8 @@ class MYLANG_COMPILER_ABI ArenaAllocator
       // Double-free detected!
       if (DebugFeatures_.load(std::memory_order_relaxed))
       {
-        std::cerr << "ERROR: Double-free detected for Pointer " << ptr << std::endl;
+        
+        std::cerr << "ERROR: Double-free detected for Pointer " << std::hex << std::showbase << static_cast<void*>(ptr) << std::endl;
       }
       return;
     }
@@ -773,8 +776,6 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     }
   }
 };
-
-extern ArenaAllocator arena_allocator;
 
 }  // namespace allocator
 }  // namespace runtime

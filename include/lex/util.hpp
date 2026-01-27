@@ -2,6 +2,7 @@
 
 #include "../../utfcpp/source/utf8.h"
 #include "../macros.hpp"
+#include "../types.hpp"
 #include <omp.h>
 #include <string>
 #include <vector>
@@ -32,9 +33,10 @@ struct U16StringHash
   {
     // FNV-1a hash (simple, fast, decent distribution)
     SizeType hash = 1469598103934665603ull;  // 64-bit FNV offset basis
-    for (CharType c : s)
+    SizeType i    = 0;
+    for (; i < s.len(); ++i)
     {
-      hash ^= static_cast<SizeType>(c);
+      hash ^= static_cast<SizeType>(s[i]);
       hash *= 1099511628211ull;  // FNV prime
     }
     return hash;
@@ -46,23 +48,6 @@ struct U16StringEqual
   bool operator()(const StringRef& a, const StringRef& b) const MYLANG_NOEXCEPT { return a == b; }
 };
 
-// utility function to parallelize the process of conversion
-static StringRef bufferToU16String(const std::vector<char>& buf)
-{
-  if (buf.empty())
-  {
-    return u"";
-  }
-  StringRef ret = u"";
-  ret.resize(buf.size());
-  const char* __restrict bptr = buf.data();
-  CharType* __restrict rptr   = ret.data();
-  for (SizeType i = 0, n = buf.size(); i < n; ++i)
-  {
-    rptr[i] = *utf8::utf8to16(std::string(reinterpret_cast<char*>(bptr[i]))).data();
-  }
-  return ret;
-}
 
 }  // util
 }  // mylang

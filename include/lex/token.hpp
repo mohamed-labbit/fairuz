@@ -116,12 +116,12 @@ enum class TokenType : int {
   INVALID
 };
 
-static const std::unordered_map<StringRef, TokenType, util::U16StringHash, util::U16StringEqual> operators = {
+static const std::unordered_map<StringRef, TokenType, StringRefHash, StringRefEqual> operators = {
   {u"=", TokenType::OP_EQ},   {u":=", TokenType::OP_ASSIGN}, {u"+", TokenType::OP_PLUS}, {u"-", TokenType::OP_MINUS},
   {u"*", TokenType::OP_STAR}, {u"/", TokenType::OP_SLASH},   {u"<", TokenType::OP_LT},   {u">", TokenType::OP_GT},
   {u"<=", TokenType::OP_LTE}, {u">=", TokenType::OP_GTE},    {u"!=", TokenType::OP_NEQ}};
 
-static const std::unordered_map<StringRef, TokenType, util::U16StringHash, util::U16StringEqual> keywords = {
+static const std::unordered_map<StringRef, TokenType, StringRefHash, StringRefEqual> keywords = {
   {u"خطا", TokenType::KW_FALSE},   {u"عدم", TokenType::KW_NONE},      {u"صحيح", TokenType::KW_TRUE}, {u"و", TokenType::KW_AND},
   {u"اخرج", TokenType::KW_RETURN}, {u"اكمل", TokenType::KW_CONTINUE}, {u"عرف", TokenType::KW_FN},    {u"او", TokenType::KW_OR},
   {u"بكل", TokenType::KW_FOR},     {u"اذا", TokenType::KW_IF},        {u"ليس", TokenType::KW_NOT},   {u"ارجع", TokenType::KW_RETURN},

@@ -62,13 +62,13 @@ const std::vector<object::Value>& object::Value::asList() const
   return *std::get<std::shared_ptr<std::vector<Value>>>(Data_);
 }
 
-std::unordered_map<StringRef, object::Value>& object::Value::asDict() const
+std::unordered_map<StringRef, object::Value, StringRefHash, StringRefEqual>& object::Value::asDict() const
 {
   if (!isDict())
   {
     diagnostic::engine.panic("Value is not a dict");
   }
-  return *std::get<std::shared_ptr<std::unordered_map<StringRef, Value>>>(Data_);
+  return *std::get<std::shared_ptr<std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>>>(Data_);
 }
 
 typename object::Value::Function& object::Value::asFunction()
@@ -123,7 +123,7 @@ std::int64_t object::Value::toInt() const
   }
   if (isString())
   {
-    return std::stoll(utf8::utf16to8(asString()));
+    return std::stoll(asString().toUtf8());
   }
   diagnostic::engine.panic("Cannot convert to int");
 }
@@ -153,17 +153,32 @@ bool object::Value::toBool() const
 
 StringRef object::Value::toString() const
 {
+  StringRef ret;
+
   switch (Type_)
   {
   case Type::NONE :
     return u"None";
   case Type::INT :
-    return utf8::utf8to16(std::to_string(asInt()));
+    return ret.fromUtf8(std::to_string(asInt()));
   case Type::FLOAT : {
-    StringRef s = utf8::utf8to16(std::to_string(asFloat()));
-    s.erase(s.find_last_not_of('0') + 1);
-    if (s.back() == '.')
-      s += u"0";
+    StringRef s;
+    s = s.fromUtf8(std::to_string(asFloat()));
+    for (SizeType i = s.len() - 1; i > 0; i--)
+    {
+      if (s[i] == u'0')
+      {
+        s.erase(i);
+      }
+      else
+      {
+        if (s[i] == '.')
+        {
+          s += u'0';
+        }
+        break;
+      }
+    }
     return s;
   }
   case Type::STRING :
@@ -184,9 +199,10 @@ StringRef object::Value::toString() const
     return result + u"]";
   }
   case Type::DICT : {
-    StringRef                                                    result = u"{";
-    const std::shared_ptr<std::unordered_map<StringRef, Value>>& dict   = std::get<std::shared_ptr<std::unordered_map<StringRef, Value>>>(Data_);
-    SizeType                                                     count  = 0;
+    StringRef                                                                                   result = u"{";
+    const std::shared_ptr<std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>>& dict =
+      std::get<std::shared_ptr<std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>>>(Data_);
+    SizeType count = 0;
     for (const auto& [k, v] : *dict)
     {
       result += u"'" + k + u"': " + v.toString();
@@ -210,9 +226,9 @@ std::string object::Value::repr() const
 {
   if (isString())
   {
-    return "'" + utf8::utf16to8(asString()) + "'";
+    return "'" + asString().toUtf8() + "'";
   }
-  return utf8::utf16to8(toString());
+  return toString().toUtf8();
 }
 
 // Hash for use in dictionaries
@@ -260,10 +276,10 @@ bool object::Value::operator<(const Value& other) const
   {
     return toFloat() < other.toFloat();
   }
-  if (isString() && other.isString())
-  {
-    return asString() < other.asString();
-  }
+  // if (isString() && other.isString())
+  // {
+  //   return asString() < other.asString();
+  // }
   diagnostic::engine.panic("Cannot compare types");
 }
 
@@ -417,11 +433,11 @@ object::Value object::Value::getItem(const Value& key) const
   }
   if (isDict())
   {
-    const std::unordered_map<StringRef, object::Value>& dict = asDict();
-    auto                                                it   = dict.find(key.toString());
+    const std::unordered_map<StringRef, object::Value, StringRefHash, StringRefEqual>& dict = asDict();
+    auto                                                                               it   = dict.find(key.toString());
     if (it == dict.end())
     {
-      diagnostic::engine.panic("Key not found: " + utf8::utf16to8(key.toString()));
+      diagnostic::engine.panic("Key not found: " /*+ key.toString()*/);
     }
     return it->second;
   }
@@ -431,13 +447,13 @@ object::Value object::Value::getItem(const Value& key) const
     const StringRef& str   = asString();
     if (index < 0)
     {
-      index += str.size();
+      index += str.len();
     }
-    if (index < 0 || index >= str.size())
+    if (index < 0 || index >= str.len())
     {
       diagnostic::engine.panic("String index out of range");
     }
-    return Value(StringRef(1, str[index]));
+    return Value(StringRef(str[index]));
   }
   diagnostic::engine.panic("Object is not subscriptable");
 }

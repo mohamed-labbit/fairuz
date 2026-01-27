@@ -36,14 +36,14 @@ class InputBuffer: public InputBufferBase
       Capacity_(cap),
       InputBufferBase(file_manager, cap)
   {
-    Buffers_[0].resize(Capacity_ + 1, BUFFER_END);
-    Buffers_[1].resize(Capacity_ + 1, BUFFER_END);
+    Buffers_[0].resize(Capacity_ + 1);
+    Buffers_[1].resize(Capacity_ + 1);
     reset();
   }
 
-  SizeType size() const { return Buffers_[CurrentBuffer_].length(); }
+  SizeType size() const { return Buffers_[CurrentBuffer_].len(); }
 
-  SizeType bufferOffset() const { return static_cast<SizeType>(Current_ - Buffers_[CurrentBuffer_].data()); }
+  SizeType bufferOffset() const { return static_cast<SizeType>(Current_ - Buffers_[CurrentBuffer_].get()); }
 
   bool empty() const { return (!FileManager_->isOpen() || Current_ == nullptr || Buffers_[CurrentBuffer_].empty()); }
 

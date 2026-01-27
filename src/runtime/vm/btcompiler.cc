@@ -107,13 +107,13 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
     switch (lit->getType())
     {
     case parser::ast::LiteralExpr::Type::NUMBER : {
-      if (lit->getValue().find('.') != std::string::npos)
+      if (lit->getValue().find('.'))
       {
-        val = object::Value(std::stod(utf8::utf16to8(lit->getValue())));
+        val = object::Value(std::stod(lit->getValue().toUtf8()));
       }
       else
       {
-        val = object::Value(static_cast<std::int64_t>(std::stoll(utf8::utf16to8(lit->getValue()))));
+        val = object::Value(static_cast<std::int64_t>(std::stoll(lit->getValue().toUtf8())));
       }
       break;
     }
@@ -134,10 +134,10 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
 
   case parser::ast::Expr::Kind::NAME : {
     const parser::ast::NameExpr* name = static_cast<const parser::ast::NameExpr*>(expr);
-    CompilerSymbolTable::Symbol* sym  = CurrentScope_->resolve(utf8::utf16to8(name->getValue()));
+    CompilerSymbolTable::Symbol* sym  = CurrentScope_->resolve(name->getValue().toUtf8());
     if (sym == nullptr)
     {
-      diagnostic::engine.panic("Undefined variable: " + utf8::utf16to8(name->getValue()));
+      diagnostic::engine.panic("Undefined variable: " + name->getValue().toUtf8());
     }
     switch (sym->scope)
     {
@@ -325,7 +325,7 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
     emitInstruction(bytecode::OpCode::DUP, 0, expr->getLine());
 
     // Store
-    CompilerSymbolTable::Symbol* sym = CurrentScope_->define(utf8::utf16to8(assign->getTarget()->getValue()));
+    CompilerSymbolTable::Symbol* sym = CurrentScope_->define(assign->getTarget()->getValue().toUtf8());
     if (sym->scope == CompilerSymbolTable::SymbolScope::GLOBAL)
     {
       emitInstruction(bytecode::OpCode::STORE_GLOBAL, sym->index, expr->getLine());
@@ -366,7 +366,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
       target_name = dynamic_cast<parser::ast::NameExpr*>(target)->getValue();
     }
 
-    CompilerSymbolTable::Symbol* sym = CurrentScope_->define(utf8::utf16to8(target_name));
+    CompilerSymbolTable::Symbol* sym = CurrentScope_->define(target_name.toUtf8());
     if (sym->scope == CompilerSymbolTable::SymbolScope::GLOBAL)
     {
       emitInstruction(bytecode::OpCode::STORE_GLOBAL, sym->index, stmt->getLine());
@@ -470,7 +470,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     emitInstruction(bytecode::OpCode::FOR_ITER_FAST, 0, stmt->getLine());
 
     // Store loop variable
-    CompilerSymbolTable::Symbol* sym = CurrentScope_->define(utf8::utf16to8(forStmt->getTarget()->getValue()));
+    CompilerSymbolTable::Symbol* sym = CurrentScope_->define(forStmt->getTarget()->getValue().toUtf8());
     emitInstruction(bytecode::OpCode::STORE_FAST, sym->index, stmt->getLine());
 
     // Loop body
@@ -509,7 +509,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     // Define parameters
     for (const parser::ast::Expr* param : funcDef->getParameters())
     {
-      CurrentScope_->define(utf8::utf16to8(static_cast<const parser::ast::NameExpr*>(param)->getValue()), true);
+      CurrentScope_->define(static_cast<const parser::ast::NameExpr*>(param)->getValue().toUtf8(), true);
     }
 
     // Save current compilation state
@@ -517,6 +517,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     ConstantPool                         savedConstants     = Constants_;
     std::int32_t                         savedStackDepth    = CurrentStackDepth_;
     std::int32_t                         savedMaxStackDepth = MaxStackDepth_;
+
     Unit_.instructions.clear();
     CurrentStackDepth_ = 0;
     MaxStackDepth_     = 0;
@@ -552,7 +553,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     emitInstruction(bytecode::OpCode::MAKE_FUNCTION, funcDef->getParameters().size(), stmt->getLine());
 
     // Store function
-    CompilerSymbolTable::Symbol* sym = CurrentScope_->define(utf8::utf16to8(funcDef->getName()->getValue()));
+    CompilerSymbolTable::Symbol* sym = CurrentScope_->define(funcDef->getName()->getValue().toUtf8());
     emitInstruction(bytecode::OpCode::STORE_FAST, sym->index, stmt->getLine());
     exitScope();
     break;

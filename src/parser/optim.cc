@@ -15,7 +15,7 @@ std::optional<double> ASTOptimizer::evaluateConstant(const ast::Expr* expr)
     const ast::LiteralExpr* lit = static_cast<const ast::LiteralExpr*>(expr);
     if (lit->getType() == ast::LiteralExpr::Type::NUMBER)
     {
-      return std::stod(utf8::utf16to8(lit->getValue()));
+      return lit->getValue().toDouble();
     }
   }
   else if (expr->getKind() == ast::Expr::Kind::BINARY)
@@ -96,7 +96,7 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
     if (std::optional<double> val = evaluateConstant(expr))
     {
       Stats_.ConstantFolds++;
-      return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER, utf8::utf8to16(std::to_string(*val)));
+      return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER, StringRef(std::to_string(*val).data()));
     }
     // Algebraic simplifications
     ast::Expr* left  = bin->getLeft();
@@ -164,7 +164,7 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
     if (std::optional<double> val = evaluateConstant(expr))
     {
       Stats_.ConstantFolds++;
-      return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER, utf8::utf8to16(std::to_string(*val)));
+      return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER, StringRef(std::to_string(*val).data()));
     }
     // Double negation: --x = x
     if (un->getOperator() == tok::TokenType::OP_MINUS && un->getKind() == ast::Expr::Kind::UNARY)
@@ -344,7 +344,7 @@ StringRef ASTOptimizer::CSEPass::exprToString(const ast::Expr* expr)
   }
 }
 
-StringRef ASTOptimizer::CSEPass::getTempVar() { return u"__cse_temp_" + utf8::utf8to16(std::to_string(TempCounter_++)); }
+StringRef ASTOptimizer::CSEPass::getTempVar() { return StringRef("__cse_temp_") + static_cast<CharType>(TempCounter_++); }
 
 std::optional<StringRef> ASTOptimizer::CSEPass::findCSE(const ast::Expr* expr)
 {
@@ -370,7 +370,7 @@ void ASTOptimizer::CSEPass::recordExpr(const ast::Expr* expr, const StringRef& v
   }
 }
 
-bool ASTOptimizer::isLoopInvariant(const ast::Expr* expr, const std::unordered_set<StringRef>& loopVars)
+bool ASTOptimizer::isLoopInvariant(const ast::Expr* expr, const std::unordered_set<StringRef, StringRefHash, StringRefEqual>& loopVars)
 {
   if (expr == nullptr)
   {

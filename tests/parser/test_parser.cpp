@@ -33,7 +33,7 @@ StringRef load_source(const std::string& filename)
     ADD_FAILURE() << "Failed to open test file: " << filepath;
   }
   std::string utf8_contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-  return utf8::utf8to16(utf8_contents);
+  return StringRef().fromUtf8(utf8_contents);
 }
 
 }  // anonymous namespace
@@ -937,13 +937,14 @@ TEST_F(ParserTest, ParseVeryLongIdentifier)
 
   StringRef value = name->getValue();
 
-  EXPECT_GT(value.length(), 100) << "Identifier should be very long";
-  EXPECT_LT(value.length(), 10000) << "Identifier should have reasonable upper bound";
+  EXPECT_GT(value.len(), 100) << "Identifier should be very long";
+  EXPECT_LT(value.len(), 10000) << "Identifier should have reasonable upper bound";
 
   // Verify it's all valid identifier characters
-  for (CharType ch : value)
+
+  for (SizeType i = 0; i < value.len(); ++i)
   {
-    EXPECT_TRUE(std::isalnum(ch) || ch == U'_' || ch > 127) << "All characters should be valid identifier chars";
+    EXPECT_TRUE(std::isalnum(value[i]) || value[i] == u'_' || value[i] > 127) << "All characters should be valid identifier chars";
   }
 
   if (test_config::print_ast)
@@ -973,8 +974,8 @@ TEST_F(ParserTest, ParseUnicodeIdentifiers)
 
   // Verify Unicode preservation
 
-  EXPECT_GT(left->getValue().length(), 0) << "Left identifier should not be empty";
-  EXPECT_GT(right->getValue().length(), 0) << "Right identifier should not be empty";
+  EXPECT_GT(left->getValue().len(), 0) << "Left identifier should not be empty";
+  EXPECT_GT(right->getValue().len(), 0) << "Right identifier should not be empty";
 
   if (test_config::print_ast)
   {

@@ -18,7 +18,7 @@ class SymbolTable
   using Entry = SymbolTableEntry;
 
   // Each scope = a map from lexeme to entry
-  using Scope = std::unordered_map<StringRef, Entry>;
+  using Scope = std::unordered_map<StringRef, Entry, StringRefHash, StringRefEqual>;
 
   SymbolTable()
   {
@@ -118,7 +118,7 @@ class SymbolTable
   std::vector<Entry> getAllVisibleSymbols() const
   {
     std::vector<Entry>            symbols;
-    std::unordered_set<StringRef> seen;
+    std::unordered_set<StringRef, StringRefHash, StringRefEqual> seen;
 
     // Iterate from innermost to outermost
     for (auto it = this->Scopes_.rbegin(); it != this->Scopes_.rend(); ++it)

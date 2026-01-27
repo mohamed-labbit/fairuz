@@ -43,11 +43,11 @@ class ParseError: public std::runtime_error
    * @param sugg Optional list of suggestions
    */
   ParseError(const StringRef& msg, unsigned l, unsigned c, StringRef ctx = u"", std::vector<StringRef> sugg = {}) :
-      std::runtime_error(utf8::utf16to8(msg)),
       Line_(l),
       Column_(c),
       Context_(std::move(ctx)),
-      Suggestions_(std::move(sugg))
+      Suggestions_(std::move(sugg)),
+      std::runtime_error("")
   {
   }
 
@@ -69,7 +69,7 @@ class ParseError: public std::runtime_error
 
     if (!Context_.empty())
     {
-      ss << "  | " << utf8::utf16to8(Context_) << "\n";
+      ss << "  | " << Context_ << "\n";
       ss << "  | " << std::string(Column_ - 1, ' ') << "^\n";
     }
 
@@ -78,11 +78,11 @@ class ParseError: public std::runtime_error
       ss << "Suggestions:\n";
       for (const StringRef& s : Suggestions_)
       {
-        ss << "  - " << utf8::utf16to8(s) << "\n";
+        ss << "  - " << s << "\n";
       }
     }
 
-    return utf8::utf8to16(ss.str());
+    return StringRef(ss.str().data());
   }
 };
 
@@ -243,7 +243,7 @@ class Parser
       advance();
       return true;
     }
-    diagnostic::engine.emit(msg, diagnostic::DiagnosticEngine::Severity::ERROR);
+    // diagnostic::engine.emit(msg, diagnostic::DiagnosticEngine::Severity::ERROR);
     return false;
   }
 

@@ -25,7 +25,7 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(const ast::Expr* ex
     switch (lit->getType())
     {
     case ast::LiteralExpr::Type::NUMBER :
-      return lit->getValue().find('.') != std::string::npos ? SymbolTable::DataType_t::FLOAT : SymbolTable::DataType_t::INTEGER;
+      return lit->getValue().find('.') ? SymbolTable::DataType_t::FLOAT : SymbolTable::DataType_t::INTEGER;
 
     case ast::LiteralExpr::Type::STRING :
       return SymbolTable::DataType_t::STRING;
@@ -426,11 +426,11 @@ void SemanticAnalyzer::printReport() const
       break;
     }
 
-    std::cout << "[" << utf8::utf16to8(sevStr) << "] Line " << issue.line << ": " << utf8::utf16to8(issue.message) << "\n";
+    std::cout << "[" << sevStr << "] Line " << issue.line << ": " << issue.message << "\n";
 
     if (!issue.suggestion.empty())
     {
-      std::cout << "  → " << utf8::utf16to8(issue.suggestion) << "\n";
+      std::cout << "  → " << issue.suggestion << "\n";
     }
 
     std::cout << "\n";

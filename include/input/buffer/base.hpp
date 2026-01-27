@@ -40,7 +40,7 @@ class InputBufferBase
 
  protected:
   input::FileManager* FileManager_{nullptr};
-  buffer_t            Buffers_[2];
+  StringRef           Buffers_[2];
   SizeType            BytePosition_;  // Current byte position in file
   SizeType            CharCount_;     // Total characters read so far
 };

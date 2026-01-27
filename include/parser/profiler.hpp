@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../macros.hpp"
+#include "../types.hpp"
 
 #include <vector>
 

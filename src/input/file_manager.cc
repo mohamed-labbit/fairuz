@@ -62,7 +62,7 @@ void FileManager::seekToChar(const SizeType CharOffset)
 
   while (Context_.CharOffset < CharOffset)
   {
-    const SizeType chars_to_read = CharOffset - Context_.CharOffset;
+    const SizeType chars_to_read = std::max<SizeType>(0, CharOffset - Context_.CharOffset);
     StringRef      result        = readWindowInternal(std::min(chars_to_read, SizeType{1024}));
     if (result.empty())
     {
@@ -127,7 +127,7 @@ SizeType FileManager::validateUtf8Bound(std::span<const char> buffer) const
 
   return std::min(MAX_UTF8_CHAR_BYTES, size);
 }
-
+/*
 StringRef FileManager::readWindowInternal(const SizeType size)
 {
   if (size == 0)
@@ -135,12 +135,29 @@ StringRef FileManager::readWindowInternal(const SizeType size)
     return StringRef{};
   }
 
+  SizeType to_read = size;
+
+  // Validate size to prevent overflow
+  constexpr SizeType MAX_REASONABLE_SIZE = std::numeric_limits<SizeType>::max() / MAX_UTF8_CHAR_BYTES;
+  if (size > MAX_REASONABLE_SIZE || size == std::numeric_limits<SizeType>::max())
+  {
+    // throw error::FileError("Invalid read size: size too large or invalid (-1) : " + std::to_string(size));
+    to_read = MAX_REASONABLE_SIZE;
+  }
+
   if (!isOpen())
   {
     throw error::FileError(toString(FileManagerError::FILE_NOT_OPEN));
   }
 
-  const SizeType    byte_chunk_size = size * MAX_UTF8_CHAR_BYTES;
+  const SizeType byte_chunk_size = to_read * MAX_UTF8_CHAR_BYTES;
+
+  // Double-check the multiplication didn't overflow
+  if (byte_chunk_size < to_read)
+  {
+    throw error::FileError("Buffer size overflow");
+  }
+
   std::vector<char> byte_buffer(byte_chunk_size);
   Stream_.read(byte_buffer.data(), byte_chunk_size);
   std::streamsize bytes_read = Stream_.gcount();
@@ -178,23 +195,158 @@ StringRef FileManager::readWindowInternal(const SizeType size)
 
   const SizeType valid_bytes = byte_buffer.size();
   Context_.ByteOffset += valid_bytes;
-  // Context_.bytes_read_total += valid_bytes
-  StringRef result = utf8::utf8to16(std::string(byte_buffer.begin(), byte_buffer.end()));
 
-  if (result.size() > size)
+  // Convert UTF-8 to UTF-16 (StringRef)
+  // Create a null-terminated string for the constructor
+  std::string utf8_string(byte_buffer.begin(), byte_buffer.end());
+  StringRef   result = StringRef::fromUtf8(utf8_string);
+
+  if (result.len() > to_read)
   {
-    const SizeType chars_to_trim = result.size() - size;
-    std::string    trimmed_utf8;
-    auto           start = result.begin() + static_cast<std::ptrdiff_t>(size);
-    utf8::utf16to8(start, result.end(), std::back_inserter(trimmed_utf8));
-    Stream_.seekg(-static_cast<std::streamoff>(trimmed_utf8.size()), std::ios_base::cur);
-    Context_.ByteOffset -= trimmed_utf8.size();
-    result.resize(size);
+    // Calculate how many UTF-8 bytes the trimmed characters represent
+    SizeType trimmed_utf8_bytes = 0;
+    for (SizeType i = to_read; i < result.len(); ++i)
+    {
+      CharType ch = result[i];
+
+      if (ch <= utf::CODEPOINT_MAX_1BYTE)
+      {
+        trimmed_utf8_bytes += 1;
+      }
+      else if (ch <= utf::CODEPOINT_MAX_2BYTE)
+      {
+        trimmed_utf8_bytes += 2;
+      }
+      else if (utf::isHighSurrogate(ch))  // High surrogate
+      {
+        trimmed_utf8_bytes += 4;
+        i++;  // Skip low surrogate
+      }
+      else
+      {
+        trimmed_utf8_bytes += 3;
+      }
+    }
+
+    Stream_.seekg(-static_cast<std::streamoff>(trimmed_utf8_bytes), std::ios_base::cur);
+    Context_.ByteOffset -= trimmed_utf8_bytes;
+
+    // Create a new StringRef with only the first 'size' characters
+    StringRef trimmed_result(to_read + 1);  // +1 for null terminator
+    std::memcpy(trimmed_result.get(), result.get(), to_read * sizeof(CharType));
+    trimmed_result.len()       = to_read;
+    trimmed_result.get()[to_read] = '\0';
+
+    result = trimmed_result;
   }
 
-  Context_.CharOffset += result.size();
-  // Context_.chars_read_total += result.size();
+  Context_.CharOffset += result.len();
   return result;
+}
+*/
+
+StringRef FileManager::readWindowInternal(SizeType size)
+{
+  if (size == 0)
+  {
+    return StringRef{};
+  }
+
+  if (!isOpen())
+  {
+    throw error::FileError(toString(FileManagerError::FILE_NOT_OPEN));
+  }
+
+  constexpr SizeType MAX_REASONABLE_SIZE = std::numeric_limits<SizeType>::max() / MAX_UTF8_CHAR_BYTES;
+
+  if (size > MAX_REASONABLE_SIZE)
+    throw error::FileError("Invalid read size");
+
+  const SizeType byte_chunk_size = size * MAX_UTF8_CHAR_BYTES;
+
+  std::vector<char> byte_buffer(byte_chunk_size);
+
+  Stream_.read(byte_buffer.data(), static_cast<std::streamsize>(byte_chunk_size));
+
+  const std::streamsize bytes_read = Stream_.gcount();
+
+  if (bytes_read == 0)
+  {
+    if (Stream_.eof())
+    {
+      return StringRef{};
+    }
+    throw error::FileError(toString(FileManagerError::READ_ERROR));
+  }
+
+  if (Stream_.bad())
+  {
+    throw error::FileError(toString(FileManagerError::READ_ERROR));
+  }
+
+  byte_buffer.resize(static_cast<SizeType>(bytes_read));
+
+  // --- UTF-8 boundary fix ---
+  const SizeType rewind_utf8 = validateUtf8Bound(byte_buffer);
+
+  if (rewind_utf8 > 0)
+  {
+    byte_buffer.resize(byte_buffer.size() - rewind_utf8);
+    Stream_.seekg(-static_cast<std::streamoff>(rewind_utf8), std::ios_base::cur);
+
+    if (Stream_.fail())
+    {
+      throw error::FileError(toString(FileManagerError::SEEK_OUT_OF_BOUND));
+    }
+  }
+
+  // --- Decode ---
+  StringRef decoded = StringRef::fromUtf8(byte_buffer.data());
+
+  // --- Enforce character window ---
+  if (decoded.len() > size)
+  {
+    // Determine exact UTF-8 byte length of extra chars
+    SizeType extra_bytes = 0;
+
+    for (SizeType i = size; i < decoded.len(); ++i)
+    {
+      CharType ch = decoded[i];
+
+      if (utf::isHighSurrogate(ch))
+      {
+        extra_bytes += 4;
+        ++i;  // skip low surrogate
+      }
+      else if (ch <= 0x7F)
+      {
+        extra_bytes += 1;
+      }
+      else if (ch <= 0x7FF)
+      {
+        extra_bytes += 2;
+      }
+      else
+      {
+        extra_bytes += 3;
+      }
+    }
+
+    Stream_.seekg(-static_cast<std::streamoff>(extra_bytes), std::ios_base::cur);
+
+    if (Stream_.fail())
+    {
+      throw error::FileError(toString(FileManagerError::SEEK_OUT_OF_BOUND));
+    }
+
+    decoded.truncate(size);
+    Context_.ByteOffset -= extra_bytes;
+  }
+
+  Context_.ByteOffset += byte_buffer.size();
+  Context_.CharOffset += decoded.len();
+
+  return decoded;
 }
 
 StringRef FileManager::readLine(const SizeType line_number)
@@ -207,7 +359,7 @@ StringRef FileManager::readLine(const SizeType line_number)
 StringRef FileManager::readNextLine()
 {
   StringRef line;
-  line.reserve(100);  // average
+  line.resize(100);  // average
 
   for (;;)
   {
@@ -280,7 +432,7 @@ StringRef FileManager::readAll()
 {
   reset();
   StringRef result;
-  result.reserve(Stats_.TotalBytes / 2);
+  result.resize(Stats_.TotalBytes / 2);
 
   for (;;)
   {
@@ -289,7 +441,7 @@ StringRef FileManager::readAll()
     {
       break;
     }
-    result.append(chunk);
+    result += chunk;
   }
 
   return result;
@@ -360,17 +512,18 @@ void FileManager::buildLineIndex()
       break;
     }
 
-    for (CharType c : chunk)
+    SizeType i = 0;
+    for (; i < chunk.len(); ++i)
     {
       current_len++;
 
-      if (c == u'\n' || c == u'\r')
+      if (chunk[i] == u'\n' || chunk[i] == u'\r')
       {
         max_len = std::max(max_len, current_len - 1);
         LineIndices_.push_back(LineIndex{start_byte, start_char, current_len - 1});
 
         /// TODO:: Handle CRLF
-        if (c == u'\r' && char_pos + 1 < Context_.CharOffset)
+        if (chunk[i] == u'\r' && char_pos + 1 < Context_.CharOffset)
         {
           // Peek next char (already in chunk if available)
           // This is simplified; in practice we'd need to handle this better
@@ -414,7 +567,7 @@ StringRef FileManager::getSourceLine(const SizeType line)
     s--;
   }
 
-  return utf8::utf8to16(ret);
+  return ret.data();
 }
 
 }

@@ -19,9 +19,9 @@ class TypeSystem
 
   struct Type
   {
-    BaseType                                             base;
-    std::vector<std::shared_ptr<Type>>                   TypeParams;  // For generics: List[Int]
-    std::unordered_map<StringRef, std::shared_ptr<Type>> fields;      // For classes
+    BaseType                                                                            base;
+    std::vector<std::shared_ptr<Type>>                                                  TypeParams;  // For generics: List[Int]
+    std::unordered_map<StringRef, std::shared_ptr<Type>, StringRefHash, StringRefEqual> fields;      // For classes
 
     // Function signature
     std::vector<std::shared_ptr<Type>> ParamTypes;
@@ -35,8 +35,8 @@ class TypeSystem
   class TypeInference
   {
    private:
-    std::int32_t                                         FreshVarCounter_{0};
-    std::unordered_map<StringRef, std::shared_ptr<Type>> Substitutions_;
+    std::int32_t                                                                        FreshVarCounter_{0};
+    std::unordered_map<StringRef, std::shared_ptr<Type>, StringRefHash, StringRefEqual> Substitutions_;
 
     std::shared_ptr<Type> freshTypeVar();
     void                  unify(std::shared_ptr<Type> t1, std::shared_ptr<Type> t2);

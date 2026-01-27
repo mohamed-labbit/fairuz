@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../macros.hpp"
+#include "../types.hpp"
 
 #include <unordered_map>
 #include <unordered_set>
@@ -38,9 +39,9 @@ class SymbolTable
   SymbolTable* Parent_ = nullptr;
 
  private:
-  std::unordered_map<StringRef, Symbol>     Symbols_;
-  std::vector<std::unique_ptr<SymbolTable>> Children_;
-  unsigned                                  ScopeLevel_{0};
+  std::unordered_map<StringRef, Symbol, StringRefHash, StringRefEqual> Symbols_;
+  std::vector<std::unique_ptr<SymbolTable>>                            Children_;
+  unsigned                                                             ScopeLevel_{0};
 
  public:
   explicit SymbolTable(SymbolTable* p = nullptr, std::int32_t level = 0);
@@ -59,7 +60,7 @@ class SymbolTable
 
   std::vector<Symbol*> getUnusedSymbols();
 
-  const std::unordered_map<StringRef, Symbol>& getSymbols() const;
+  const std::unordered_map<StringRef, Symbol, StringRefHash, StringRefEqual>& getSymbols() const;
 };
 
 }

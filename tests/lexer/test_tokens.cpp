@@ -21,14 +21,13 @@ StringRef load_source(const std::filesystem::path& path)
 {
   std::ifstream file(path, std::ios::binary);
   std::string   utf8_contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-  return utf8::utf8to16(utf8_contents);
+  return StringRef().fromUtf8(utf8_contents);
 }
 }
 
 inline void PrintTo(const tok::Token& tok, std::ostream* os)
 {
-  *os << "tok::Token(\"" << utf8::utf16to8(tok.lexeme()) << "\", type=" << static_cast<int>(tok.type()) << ", line=" << tok.line()
-      << ", col=" << tok.column() << ")";
+  *os << "tok::Token(\"" << tok.lexeme() << "\", type=" << static_cast<int>(tok.type()) << ", line=" << tok.line() << ", col=" << tok.column() << ")";
 }
 
 TEST(LexerTest, RecognizesPlus)
