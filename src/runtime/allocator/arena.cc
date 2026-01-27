@@ -182,11 +182,14 @@ Pointer ArenaAllocator::allocateFromBlocks(SizeType alloc_size, SizeType align)
     if (!Blocks_.empty())
     {
       // Try free list first
-      Pointer mem = allocateUsingFreeList(alloc_size, align);
+      Pointer mem = nullptr;
+#if USE_FREE_LIST
+      mem = allocateUsingFreeList(alloc_size, align);
       if (mem != nullptr)
       {
         return mem;
       }
+#endif
       // Try current block
       mem = Blocks_.back().allocate(alloc_size, align);
       if (mem != nullptr)

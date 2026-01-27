@@ -301,7 +301,9 @@ StringRef FileManager::readWindowInternal(SizeType size)
   }
 
   // --- Decode ---
-  StringRef decoded = StringRef::fromUtf8(byte_buffer.data());
+  // FIXED: Create a properly sized string, not relying on null termination
+  std::string utf8_str(byte_buffer.begin(), byte_buffer.end());
+  StringRef   decoded = StringRef::fromUtf8(utf8_str);
 
   // --- Enforce character window ---
   if (decoded.len() > size)

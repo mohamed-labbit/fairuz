@@ -76,7 +76,7 @@ ArenaBlock& ArenaBlock::operator=(ArenaBlock&& other) MYLANG_NOEXCEPT
   }
   return *this;
 }
-
+/*
 Pointer ArenaBlock::allocate(SizeType bytes, std::optional<SizeType> alignment)
 {
   if (Begin_ == nullptr || bytes == 0)
@@ -110,6 +110,61 @@ Pointer ArenaBlock::allocate(SizeType bytes, std::optional<SizeType> alignment)
     if (Next_.compare_exchange_weak(current_next, new_next, std::memory_order_release, std::memory_order_acquire))
     // Success! Return the aligned address
     {
+      return reinterpret_cast<Pointer>(aligned);
+    }
+    // CAS failed - another thread allocated first
+    // current_next was updated by compare_exchange_weak, retry
+  }
+}
+*/
+
+Pointer ArenaBlock::allocate(SizeType bytes, std::optional<SizeType> alignment)
+{
+  if (Begin_ == nullptr || bytes == 0)
+  {
+    return nullptr;
+  }
+
+  SizeType alignment_value = alignment.value_or(alignof(std::max_align_t));
+  // Validate alignment is a power of 2
+  if (alignment_value == 0 || (alignment_value & (alignment_value - 1)) != 0)
+  {
+    diagnostic::engine.emit("Invalid arguments to ArenaAllocator::allocate()", diagnostic::DiagnosticEngine::Severity::FATAL);
+  }
+
+  // Lock-free allocation loop
+  Pointer current_next = Next_.load(std::memory_order_acquire);
+
+  for (;;)
+  {
+    // Calculate aligned address
+    std::uintptr_t cur     = reinterpret_cast<std::uintptr_t>(current_next);
+    std::uintptr_t aligned = (cur + (alignment_value - 1)) & ~(alignment_value - 1);
+    SizeType       pad     = aligned - cur;
+
+    // Check if we have enough space (including padding)
+    // FIXED: Calculate remaining bytes correctly
+    std::uintptr_t end_addr = reinterpret_cast<std::uintptr_t>(Begin_) + Size_;
+    std::uintptr_t cur_addr = reinterpret_cast<std::uintptr_t>(current_next);
+
+    if (cur_addr > end_addr)
+    {
+      return nullptr;  // Current pointer is beyond block end
+    }
+
+    SizeType remaining = end_addr - cur_addr;
+
+    if (remaining < bytes + pad)
+    {
+      return nullptr;  // Not enough space
+    }
+
+    Pointer new_next = reinterpret_cast<Pointer>(aligned + bytes);
+
+    // Try to atomically update next Pointer
+    if (Next_.compare_exchange_weak(current_next, new_next, std::memory_order_release, std::memory_order_acquire))
+    {
+      // Success! Return the aligned address
       return reinterpret_cast<Pointer>(aligned);
     }
     // CAS failed - another thread allocated first

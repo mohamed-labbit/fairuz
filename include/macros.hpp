@@ -21,6 +21,8 @@ namespace mylang {
 #define MYLANG_CONSTEXPR constexpr
 
 #define DEBUG_PRINT 0
+#define USE_FREE_LIST 0
+#define USE_FAST_POOL 0
 
 typedef std::u16string StringType;
 typedef char16_t       CharType;

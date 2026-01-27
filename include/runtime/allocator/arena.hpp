@@ -17,17 +17,17 @@
 
 #pragma once
 
+#include "../../diag/diagnostic.hpp"
 #include "arena_block.hpp"
 #include "fast_arena_block.hpp"
 #include "fast_free_list.hpp"
 #include "meta.hpp"
-#include "../../diag/diagnostic.hpp"
 
 #include <functional>
+#include <iomanip>
+#include <iostream>
 #include <shared_mutex>
 #include <unordered_set>
-#include <iostream>
-#include <iomanip>
 
 
 namespace mylang {
@@ -416,6 +416,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
                                           : type_size <= 256 ? 256
                                                              : 0;
 
+#if USE_FAST_POOL
     MYLANG_CONSTEXPR bool use_fast_pool = (pool_size > 0) && (pool_size >= type_size);
 
     if MYLANG_CONSTEXPR (use_fast_pool)
@@ -429,7 +430,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
         }
       }
     }
-
+#endif
     // Fall back to general blocks
     if (mem == nullptr)
     {
@@ -466,7 +467,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
 
     // Track Pointer for double-free protection
     std::unique_lock<std::shared_mutex> lock(AllocatedPtrsMutex_);
-    AllocatedPtrs_.insert(region);
+    AllocatedPtrs_.insert(static_cast<void*>(region));
 
     // Construct objects if needed
     if MYLANG_CONSTEXPR (!std::is_trivially_constructible_v<_Tp>)
@@ -518,7 +519,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
       // Double-free detected!
       if (DebugFeatures_.load(std::memory_order_relaxed))
       {
-        
+
         std::cerr << "ERROR: Double-free detected for Pointer " << std::hex << std::showbase << static_cast<void*>(ptr) << std::endl;
       }
       return;
@@ -643,14 +644,14 @@ class MYLANG_COMPILER_ABI ArenaAllocator
       updateNextBlockSize();
       lock.lock();  // Reacquire
     }
-
+#if USE_FREE_LIST
     // Try free list first
     Pointer mem = allocateUsingFastFreeList<ObjectSize>(alloc_size);
     if (mem != nullptr)
     {
       return mem;
     }
-
+#endif
     // Try current block
     LockFreeFastAllocBlock<ObjectSize>& fast_block = pool->back();
 

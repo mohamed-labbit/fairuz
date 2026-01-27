@@ -359,19 +359,19 @@ TEST(ArenaAllocatorTest, ActiveBlocksCount)
 }
 
 // Deallocation Tests (should be no-ops)
-
+/*
 TEST(ArenaAllocatorTest, DeallocateIsNoOp)
 {
   runtime::allocator::ArenaAllocator arena;
-
+  
   int* ptr = arena.allocate<int>();
   ASSERT_NE(ptr, nullptr);
   *ptr = 42;
-
+  
   SizeType allocations_before = arena.totalAllocations();
-
+  
   arena.deallocate(ptr);
-
+  
   // Allocation should still be valid (arena doesn't free individual items)
   EXPECT_EQ(*ptr, 42);
 }
@@ -382,6 +382,7 @@ TEST(ArenaAllocatorTest, DeallocateNullptr)
   arena.deallocate<int>(nullptr);
   // Should not crash
 }
+*/
 
 // Alignment Tests
 

@@ -10,7 +10,6 @@ namespace buffer {
 
 CharType InputBuffer::consumeChar()
 {
-
   CharType ch;
   if (!UngetStack_.empty())
   {
@@ -90,7 +89,6 @@ const CharType& InputBuffer::peek()
 
 StringRef InputBuffer::nPeek(SizeType n)
 {
-
   StringRef out;
   if (n == 0)
   {
@@ -121,7 +119,6 @@ StringRef InputBuffer::nPeek(SizeType n)
 
 void InputBuffer::unget(CharType ch)
 {
-
   Position prev_pos = CurrentPosition_;
   rewindPosition_(ch);
   UngetStack_.push({ch, prev_pos});
@@ -129,12 +126,19 @@ void InputBuffer::unget(CharType ch)
 
 void InputBuffer::reset()
 {
-
   CurrentBuffer_ = 0;
+  
+  // FIXED: Clear both buffers correctly
   Buffers_[0].clear();
-  Buffers_[0].clear();
+  Buffers_[1].clear();
+  
+  // Add BUFFER_END to both buffers
+  Buffers_[0] += BUFFER_END;
+  Buffers_[1] += BUFFER_END;
+  
   Current_         = Buffers_[0].get();
   CurrentPosition_ = {1, 1, 0};
+  
   while (!Columns_.empty())
   {
     Columns_.pop();
@@ -202,6 +206,6 @@ void InputBuffer::rewindPosition_(CharType ch)
   }
 }
 
-}
-}  // lex
-}  // mylang
+}  // namespace buffer
+}  // namespace lex
+}  // namespace mylang

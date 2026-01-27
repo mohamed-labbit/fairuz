@@ -1,5 +1,4 @@
 #include "../../../include/input/buffer/base.hpp"
-#include "../../../utfcpp/source/utf8.h"
 
 #include <iostream>
 #include <vector>
@@ -9,7 +8,6 @@ namespace mylang {
 namespace lex {
 namespace buffer {
 
-/*
 bool InputBufferBase::refreshBuffer(const std::uint32_t to_refresh)
 {
   if (!FileManager_->isOpen())
@@ -17,38 +15,26 @@ bool InputBufferBase::refreshBuffer(const std::uint32_t to_refresh)
     return false;
   }
 
-  SizeType  max_chars = Buffers_[to_refresh].len() - 1;
-  StringRef buf       = FileManager_->readWindow(max_chars);
-
-  if (buf.empty())
+  // FIXED: Prevent unsigned integer underflow when buffer is empty
+  SizeType max_chars = 0;
+  SizeType current_len = Buffers_[to_refresh].len();
+  
+  if (current_len > 0)
   {
-    Buffers_[to_refresh].clear();
-    Buffers_[to_refresh] += BUFFER_END;
-    return false;
+    max_chars = current_len - 1;
   }
-
-  Buffers_[to_refresh] = buf;
-  Buffers_[to_refresh] += BUFFER_END;
-  return true;
-}
-*/
-
-bool InputBufferBase::refreshBuffer(const std::uint32_t to_refresh)
-{
-  if (!FileManager_->isOpen())
+  else
   {
-    return false;
-  }
-
-  // Get current capacity or use a sensible default
-  SizeType max_chars = Buffers_[to_refresh].cap();
-  if (max_chars == 0)
-  {
-    max_chars = 4096;  // Default buffer size
-  }
-  else if (max_chars > 0)
-  {
-    max_chars -= 1;  // Leave room for BUFFER_END
+    // Buffer is empty or uninitialized, use capacity if available
+    SizeType cap = Buffers_[to_refresh].cap();
+    if (cap > 1)
+    {
+      max_chars = cap - 1;  // Reserve space for BUFFER_END
+    }
+    else
+    {
+      max_chars = 4096;  // Default buffer size
+    }
   }
 
   StringRef buf = FileManager_->readWindow(max_chars);
@@ -65,6 +51,6 @@ bool InputBufferBase::refreshBuffer(const std::uint32_t to_refresh)
   return true;
 }
 
-}
-}  // lex
-}  // mylang
+}  // namespace buffer
+}  // namespace lex
+}  // namespace mylang
