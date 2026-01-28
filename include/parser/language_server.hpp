@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../macros.hpp"
+#include "../types.hpp"
 
 #include <unordered_map>
 #include <vector>
@@ -24,32 +25,32 @@ class LanguageServer
 
   struct CompletionItem
   {
-    StringType   label;
-    StringType   detail;
-    StringType   documentation;
+    StringRef    label;
+    StringRef    detail;
+    StringRef    documentation;
     std::int32_t kind;  // Variable, Function, Class, etc.
   };
 
   struct Hover
   {
-    StringType contents;
-    Range      range;
+    StringRef contents;
+    Range     range;
   };
 
   // Auto-completion at cursor position
-  std::vector<CompletionItem> getCompletions(const StringType& source, Position pos);
+  std::vector<CompletionItem> getCompletions(const StringRef& source, Position pos);
 
   // Hover information
-  Hover getHover(const StringType& source, Position pos);
+  Hover getHover(const StringRef& source, Position pos);
 
   // Go to definition
-  Position getDefinition(const StringType& source, Position pos);
+  Position getDefinition(const StringRef& source, Position pos);
 
   // Find all references
-  std::vector<Range> getReferences(const StringType& source, Position pos);
+  std::vector<Range> getReferences(const StringRef& source, Position pos);
 
   // Rename symbol
-  std::unordered_map<StringType, StringType> rename(const StringType& source, Position pos, const StringType& newName);
+  std::unordered_map<StringRef, StringRef, StringRefHash, StringRefEqual> rename(const StringRef& source, Position pos, const StringRef& newName);
 };
 
 }

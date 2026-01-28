@@ -47,7 +47,7 @@ class SourceManager
 
   std::pair<SizeType, SizeType> offsetMap_(const SizeType& offset) const;
 
-  StringType getSourceLine(const SizeType line) { return InputBuffer_.getSourceLine(line); }
+  StringRef getSourceLine(const SizeType line) { return InputBuffer_.getSourceLine(line); }
 
  private:
   std::string         FilePath_;

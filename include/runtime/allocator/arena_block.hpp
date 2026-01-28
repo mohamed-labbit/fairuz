@@ -3,7 +3,9 @@
 #include "../../diag/diagnostic.hpp"
 #include "../../macros.hpp"
 
+#include <atomic>
 #include <mutex>
+#include <optional>
 
 
 namespace mylang {

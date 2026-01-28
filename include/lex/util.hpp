@@ -2,6 +2,7 @@
 
 #include "../../utfcpp/source/utf8.h"
 #include "../macros.hpp"
+#include "../types.hpp"
 #include <omp.h>
 #include <string>
 #include <vector>
@@ -28,13 +29,14 @@ static inline bool isalphaArabic(const wchar_t c) { return (c >= 0x0600 && c <= 
 
 struct U16StringHash
 {
-  SizeType operator()(const StringType& s) const MYLANG_NOEXCEPT
+  SizeType operator()(const StringRef& s) const MYLANG_NOEXCEPT
   {
     // FNV-1a hash (simple, fast, decent distribution)
     SizeType hash = 1469598103934665603ull;  // 64-bit FNV offset basis
-    for (CharType c : s)
+    SizeType i    = 0;
+    for (; i < s.len(); ++i)
     {
-      hash ^= static_cast<SizeType>(c);
+      hash ^= static_cast<SizeType>(s[i]);
       hash *= 1099511628211ull;  // FNV prime
     }
     return hash;
@@ -43,26 +45,9 @@ struct U16StringHash
 
 struct U16StringEqual
 {
-  bool operator()(const StringType& a, const StringType& b) const MYLANG_NOEXCEPT { return a == b; }
+  bool operator()(const StringRef& a, const StringRef& b) const MYLANG_NOEXCEPT { return a == b; }
 };
 
-// utility function to parallelize the process of conversion
-static StringType bufferToU16String(const std::vector<char>& buf)
-{
-  if (buf.empty())
-  {
-    return u"";
-  }
-  StringType ret = u"";
-  ret.resize(buf.size());
-  const char* __restrict bptr = buf.data();
-  CharType* __restrict rptr   = ret.data();
-  for (SizeType i = 0, n = buf.size(); i < n; ++i)
-  {
-    rptr[i] = *utf8::utf8to16(std::string(reinterpret_cast<char*>(bptr[i]))).data();
-  }
-  return ret;
-}
 
 }  // util
 }  // mylang

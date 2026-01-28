@@ -3,6 +3,7 @@
 
 #include "../../../utfcpp/source/utf8.h"
 #include "../../macros.hpp"
+#include "../../types.hpp"
 
 #include <cstdint>
 #include <functional>
@@ -47,24 +48,24 @@ class Value
 
   struct Function
   {
-    std::int32_t            CodeOffset;
-    std::vector<StringType> params;
-    std::vector<Value>      defaults;
-    std::vector<Value>      closure;  // Captured variables
+    std::int32_t           CodeOffset;
+    std::vector<StringRef> params;
+    std::vector<Value>     defaults;
+    std::vector<Value>     closure;  // Captured variables
   };
 
   struct NativeFunction
   {
     std::function<Value(const std::vector<Value>&)> func;
-    StringType                                      name;
+    StringRef                                       name;
     std::int32_t                                    arity;
   };
 
   struct Object
   {
-    StringType                            className;
-    std::unordered_map<StringType, Value> attributes;
-    std::shared_ptr<Value>                parent;  // For inheritance
+    StringRef                                                           className;
+    std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual> attributes;
+    std::shared_ptr<Value>                                              parent;  // For inheritance
   };
 
   struct Iterator
@@ -73,17 +74,17 @@ class Value
     SizeType                            index;
   };
 
-  std::variant<std::monostate,                                          // None
-               std::int64_t,                                            // Int
-               double,                                                  // Float
-               std::shared_ptr<StringType>,                             // String (shared for efficiency)
-               bool,                                                    // Bool
-               std::shared_ptr<std::vector<Value>>,                     // List (shared)
-               std::shared_ptr<std::unordered_map<StringType, Value>>,  // Dict
-               Function,                                                // User function
-               NativeFunction,                                          // Native C++ function
-               Object,                                                  // Object instance
-               Iterator                                                 // Iterator
+  std::variant<std::monostate,                                                                        // None
+               std::int64_t,                                                                          // Int
+               double,                                                                                // Float
+               std::shared_ptr<StringRef>,                                                            // String (shared for efficiency)
+               bool,                                                                                  // Bool
+               std::shared_ptr<std::vector<Value>>,                                                   // List (shared)
+               std::shared_ptr<std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>>,  // Dict
+               Function,                                                                              // User function
+               NativeFunction,                                                                        // Native C++ function
+               Object,                                                                                // Object instance
+               Iterator                                                                               // Iterator
                >
     Data_;
 
@@ -105,9 +106,9 @@ class Value
       Data_(v)
   {
   }
-  Value(const StringType& v) :
+  Value(const StringRef& v) :
       Type_(Type::STRING),
-      Data_(std::make_shared<StringType>(v))
+      Data_(std::make_shared<StringRef>(v))
   {
   }
   Value(bool v) :
@@ -137,17 +138,17 @@ class Value
 
   void setType(const Type type) { Type_ = type; }
 
-  void setData(const std::variant<std::monostate,                                          // None
-                                  std::int64_t,                                            // Int
-                                  double,                                                  // Float
-                                  std::shared_ptr<StringType>,                             // String (shared for efficiency)
-                                  bool,                                                    // Bool
-                                  std::shared_ptr<std::vector<Value>>,                     // List (shared)
-                                  std::shared_ptr<std::unordered_map<StringType, Value>>,  // Dict
-                                  Function,                                                // User function
-                                  NativeFunction,                                          // Native C++ function
-                                  Object,                                                  // Object instance
-                                  Iterator                                                 // Iterator
+  void setData(const std::variant<std::monostate,                       // None
+                                  std::int64_t,                         // Int
+                                  double,                               // Float
+                                  std::shared_ptr<StringRef>,           // String (shared for efficiency)
+                                  bool,                                 // Bool
+                                  std::shared_ptr<std::vector<Value>>,  // List (shared)
+                                  std::shared_ptr<std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>>,  // Dict
+                                  Function,                                                                              // User function
+                                  NativeFunction,                                                                        // Native C++ function
+                                  Object,                                                                                // Object instance
+                                  Iterator                                                                               // Iterator
                                   > data)
   {
     Data_ = data;
@@ -180,7 +181,7 @@ class Value
 
   double asFloat() const;
 
-  const StringType& asString() const;
+  const StringRef& asString() const;
 
   bool asBool() const;
 
@@ -188,7 +189,7 @@ class Value
 
   const std::vector<Value>& asList() const;
 
-  std::unordered_map<StringType, Value>& asDict() const;
+  std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>& asDict() const;
 
   Function& asFunction();
 
@@ -200,7 +201,7 @@ class Value
 
   bool toBool() const;
 
-  StringType toString() const;
+  StringRef toString() const;
 
   std::string repr() const;
 

@@ -19,8 +19,8 @@ std::string DiagnosticEngine::toJSON() const
     ss << "    \"severity: " << static_cast<std::int32_t>(diag.severity) << ",\n";
     ss << "    \"line\": " << diag.line << ",\n";
     ss << "    \"column\": " << diag.column << ",\n";
-    ss << "    \"message\": \"" << utf8::utf16to8(diag.message) << "\",\n";
-    ss << "    \"code\": \"" << utf8::utf16to8(diag.code) << "\"\n";
+    ss << "    \"message\": \"" << diag.message << "\",\n";
+    ss << "    \"code\": \"" << diag.code << "\"\n";
     ss << "  }";
     if (i + 1 < Diagnostics_.size())
     {
@@ -36,59 +36,61 @@ void DiagnosticEngine::prettyPrint() const
 {
   for (const Diagnostic& diag : Diagnostics_)
   {
-    StringType sevStr;
-    StringType color;
+    std::string sevStr;
+    std::string color;
 
     switch (diag.severity)
     {
     case Severity::NOTE :
-      sevStr = u"note";
+      sevStr = "note";
       color  = Color::CYAN;
       break;
     case Severity::WARNING :
-      sevStr = u"warning";
+      sevStr = "warning";
       color  = Color::MAGENTA;
       break;
     case Severity::ERROR :
-      sevStr = u"error";
+      sevStr = "error";
       color  = Color::RED;
       break;
     case Severity::FATAL :
-      sevStr = u"fatal";
+      sevStr = "fatal";
       color  = Color::RED;
       break;
     }
 
-    std::cout << utf8::utf16to8(color) << utf8::utf16to8(sevStr) << utf8::utf16to8(Color::RESET);
+    std::cout << color << sevStr << Color::RESET;
     if (!diag.code.empty())
     {
-      std::cout << "[" << utf8::utf16to8(diag.code) << "]";
+      std::cout << "[" << diag.code << "]";
     }
-    std::cout << ": " << utf8::utf16to8(diag.message) << "\n";
+    std::cout << ": " << diag.message << "\n";
     // Show source line
     std::cout << "  --> line " << diag.line << ":" << diag.column << "\n";
     // Extract and show the problematic line
-    std::vector<std::string> lines = splitLines(utf8::utf16to8(SourceCode_));
+    /*
+    std::vector<std::string> lines = splitLines(SourceCode_);
     if (diag.line > 0 && diag.line <= lines.size())
     {
       std::cout << "   |\n";
       std::cout << std::setw(3) << diag.line << " | " << lines[diag.line - 1] << "\n";
-      std::cout << "   | " << std::string(diag.column - 1, ' ') << utf8::utf16to8(color) << std::string(std::max(1, diag.length), '^')
-                << utf8::utf16to8(Color::RESET) << '\n';
+      std::cout << "   | " << std::string(diag.column - 1, ' ') << color << std::string(std::max(1, diag.length), '^')
+      << Color::RESET << '\n';
     }
+    */
     // Show suggestions
     if (!diag.suggestions.empty())
     {
-      std::cout << utf8::utf16to8(Color::MAGENTA) << "Help" << utf8::utf16to8(Color::RESET) << std::endl;
-      for (const StringType& sugg : diag.suggestions)
+      std::cout << Color::MAGENTA << "Help" << Color::RESET << std::endl;
+      for (const std::string& sugg : diag.suggestions)
       {
-        std::cout << "    • " << utf8::utf16to8(sugg) << "\n";
+        std::cout << "    • " << sugg << "\n";
       }
     }
     // Show notes
     for (const auto& [noteLine, noteMsg] : diag.notes)
     {
-      std::cout << utf8::utf16to8(Color::CYAN) << "note:" << utf8::utf16to8(Color::RESET) << std::endl;
+      std::cout << Color::CYAN << "note:" << Color::RESET << std::endl;
       std::cout << "  --> line " << noteLine << "\n";
     }
     std::cout << "\n";

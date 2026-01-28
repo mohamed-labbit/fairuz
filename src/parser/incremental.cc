@@ -4,14 +4,14 @@
 namespace mylang {
 namespace parser {
 
-SizeType IncrementalParser::hashRegion(const StringType& source, SizeType start, SizeType end)
+SizeType IncrementalParser::hashRegion(const StringRef& source, SizeType start, SizeType end)
 {
-  std::hash<StringType> hasher;
+  std::hash<StringRef> hasher;
   return hasher(source.substr(start, end - start));
 }
 
 // Only reparse changed regions
-std::vector<ast::Stmt*> IncrementalParser::parseIncremental(const StringType& newSource, const std::vector<SizeType>& changedLines)
+std::vector<ast::Stmt*> IncrementalParser::parseIncremental(const StringRef& newSource, const std::vector<SizeType>& changedLines)
 {
   // Identify unchanged regions and reuse cached AST
   std::vector<ast::Stmt*> result;

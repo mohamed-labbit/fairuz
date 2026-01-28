@@ -1,0 +1,3387 @@
+
+---
+events:
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineSystem.cmake:12 (find_program)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_UNAME"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "FIRST"
+      SearchAppBundle: "FIRST"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "uname"
+    candidate_directories:
+      - "/opt/homebrew/opt/libomp/bin/"
+      - "/opt/homebrew/opt/libomp/sbin/"
+      - "/opt/homebrew/opt/libomp/"
+      - "/Users/mohamedrabbit/.pyenv/shims/"
+      - "/Users/mohamedrabbit/.pyenv/bin/"
+      - "/opt/homebrew/bin/"
+      - "/opt/homebrew/opt/llvm/bin/"
+      - "/usr/local/bin/"
+      - "/Users/mohamedrabbit/vcpkg/"
+      - "/opt/homebrew/sbin/"
+      - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/"
+      - "/opt/pmk/env/global/bin/"
+      - "/Library/Apple/usr/bin/"
+      - "/Applications/VMware Fusion.app/Contents/Public/"
+      - "/Users/mohamedrabbit/.cargo/bin/"
+      - "/Users/mohamedrabbit/.local/bin/"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/"
+    searched_directories:
+      - "/opt/homebrew/opt/libomp/bin/uname"
+      - "/opt/homebrew/opt/libomp/sbin/uname"
+      - "/opt/homebrew/opt/libomp/uname"
+      - "/Users/mohamedrabbit/.pyenv/shims/uname"
+      - "/Users/mohamedrabbit/.pyenv/bin/uname"
+      - "/opt/homebrew/bin/uname"
+      - "/opt/homebrew/opt/llvm/bin/uname"
+      - "/usr/local/bin/uname"
+      - "/Users/mohamedrabbit/vcpkg/uname"
+      - "/opt/homebrew/sbin/uname"
+      - "/System/Cryptexes/App/usr/bin/uname"
+    found: "/usr/bin/uname"
+    search_context:
+      ENV{CMAKE_PREFIX_PATH}:
+        - "/opt/homebrew/opt/libomp"
+      ENV{PATH}:
+        - "/Users/mohamedrabbit/.pyenv/shims"
+        - "/Users/mohamedrabbit/.pyenv/bin"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/opt/llvm/bin"
+        - "/usr/local/bin"
+        - "/Users/mohamedrabbit/vcpkg"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/sbin"
+        - "/usr/local/bin"
+        - "/System/Cryptexes/App/usr/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/sbin"
+        - "/sbin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
+        - "/opt/pmk/env/global/bin"
+        - "/Library/Apple/usr/bin"
+        - "/Applications/VMware Fusion.app/Contents/Public"
+        - "/Users/mohamedrabbit/.cargo/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineSystem.cmake:212 (message)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      The system is: Darwin - 25.1.0 - arm64
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeUnixFindMake.cmake:5 (find_program)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_MAKE_PROGRAM"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "FIRST"
+      SearchAppBundle: "FIRST"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "gmake"
+      - "make"
+      - "smake"
+    candidate_directories:
+      - "/opt/homebrew/opt/libomp/bin/"
+      - "/opt/homebrew/opt/libomp/sbin/"
+      - "/opt/homebrew/opt/libomp/"
+      - "/Users/mohamedrabbit/.pyenv/shims/"
+      - "/Users/mohamedrabbit/.pyenv/bin/"
+      - "/opt/homebrew/bin/"
+      - "/opt/homebrew/opt/llvm/bin/"
+      - "/usr/local/bin/"
+      - "/Users/mohamedrabbit/vcpkg/"
+      - "/opt/homebrew/sbin/"
+      - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/"
+      - "/opt/pmk/env/global/bin/"
+      - "/Library/Apple/usr/bin/"
+      - "/Applications/VMware Fusion.app/Contents/Public/"
+      - "/Users/mohamedrabbit/.cargo/bin/"
+      - "/Users/mohamedrabbit/.local/bin/"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/"
+    searched_directories:
+      - "/opt/homebrew/opt/libomp/bin/gmake"
+      - "/opt/homebrew/opt/libomp/sbin/gmake"
+      - "/opt/homebrew/opt/libomp/gmake"
+      - "/Users/mohamedrabbit/.pyenv/shims/gmake"
+      - "/Users/mohamedrabbit/.pyenv/bin/gmake"
+      - "/opt/homebrew/bin/gmake"
+      - "/opt/homebrew/opt/llvm/bin/gmake"
+      - "/usr/local/bin/gmake"
+      - "/Users/mohamedrabbit/vcpkg/gmake"
+      - "/opt/homebrew/sbin/gmake"
+      - "/System/Cryptexes/App/usr/bin/gmake"
+      - "/usr/bin/gmake"
+      - "/bin/gmake"
+      - "/usr/sbin/gmake"
+      - "/sbin/gmake"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/gmake"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/gmake"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/gmake"
+      - "/opt/pmk/env/global/bin/gmake"
+      - "/Library/Apple/usr/bin/gmake"
+      - "/Applications/VMware Fusion.app/Contents/Public/gmake"
+      - "/Users/mohamedrabbit/.cargo/bin/gmake"
+      - "/Users/mohamedrabbit/.local/bin/gmake"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/gmake"
+      - "/opt/homebrew/opt/libomp/bin/make"
+      - "/opt/homebrew/opt/libomp/sbin/make"
+      - "/opt/homebrew/opt/libomp/make"
+      - "/Users/mohamedrabbit/.pyenv/shims/make"
+      - "/Users/mohamedrabbit/.pyenv/bin/make"
+      - "/opt/homebrew/bin/make"
+      - "/opt/homebrew/opt/llvm/bin/make"
+      - "/usr/local/bin/make"
+      - "/Users/mohamedrabbit/vcpkg/make"
+      - "/opt/homebrew/sbin/make"
+      - "/System/Cryptexes/App/usr/bin/make"
+    found: "/usr/bin/make"
+    search_context:
+      ENV{CMAKE_PREFIX_PATH}:
+        - "/opt/homebrew/opt/libomp"
+      ENV{PATH}:
+        - "/Users/mohamedrabbit/.pyenv/shims"
+        - "/Users/mohamedrabbit/.pyenv/bin"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/opt/llvm/bin"
+        - "/usr/local/bin"
+        - "/Users/mohamedrabbit/vcpkg"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/sbin"
+        - "/usr/local/bin"
+        - "/System/Cryptexes/App/usr/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/sbin"
+        - "/sbin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
+        - "/opt/pmk/env/global/bin"
+        - "/Library/Apple/usr/bin"
+        - "/Applications/VMware Fusion.app/Contents/Public"
+        - "/Users/mohamedrabbit/.cargo/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompiler.cmake:115 (find_program)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCCompiler.cmake:67 (_cmake_find_compiler_path)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_C_COMPILER_WITH_PATH"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "FIRST"
+      SearchAppBundle: "FIRST"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "clang"
+    candidate_directories:
+      - "/opt/homebrew/opt/libomp/bin/"
+      - "/opt/homebrew/opt/libomp/sbin/"
+      - "/opt/homebrew/opt/libomp/"
+      - "/Users/mohamedrabbit/.pyenv/shims/"
+      - "/Users/mohamedrabbit/.pyenv/bin/"
+      - "/opt/homebrew/bin/"
+      - "/opt/homebrew/opt/llvm/bin/"
+      - "/usr/local/bin/"
+      - "/Users/mohamedrabbit/vcpkg/"
+      - "/opt/homebrew/sbin/"
+      - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/"
+      - "/opt/pmk/env/global/bin/"
+      - "/Library/Apple/usr/bin/"
+      - "/Applications/VMware Fusion.app/Contents/Public/"
+      - "/Users/mohamedrabbit/.cargo/bin/"
+      - "/Users/mohamedrabbit/.local/bin/"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/"
+    searched_directories:
+      - "/opt/homebrew/opt/libomp/bin/clang"
+      - "/opt/homebrew/opt/libomp/sbin/clang"
+      - "/opt/homebrew/opt/libomp/clang"
+      - "/Users/mohamedrabbit/.pyenv/shims/clang"
+      - "/Users/mohamedrabbit/.pyenv/bin/clang"
+      - "/opt/homebrew/bin/clang"
+    found: "/opt/homebrew/opt/llvm/bin/clang"
+    search_context:
+      ENV{CMAKE_PREFIX_PATH}:
+        - "/opt/homebrew/opt/libomp"
+      ENV{PATH}:
+        - "/Users/mohamedrabbit/.pyenv/shims"
+        - "/Users/mohamedrabbit/.pyenv/bin"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/opt/llvm/bin"
+        - "/usr/local/bin"
+        - "/Users/mohamedrabbit/vcpkg"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/sbin"
+        - "/usr/local/bin"
+        - "/System/Cryptexes/App/usr/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/sbin"
+        - "/sbin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
+        - "/opt/pmk/env/global/bin"
+        - "/Library/Apple/usr/bin"
+        - "/Applications/VMware Fusion.app/Contents/Public"
+        - "/Users/mohamedrabbit/.cargo/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerId.cmake:462 (find_file)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerId.cmake:500 (CMAKE_DETERMINE_COMPILER_ID_WRITE)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerId.cmake:8 (CMAKE_DETERMINE_COMPILER_ID_BUILD)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCCompiler.cmake:122 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "file"
+    variable: "src_in"
+    description: "Path to a file."
+    settings:
+      SearchFramework: "FIRST"
+      SearchAppBundle: "FIRST"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "CMakeCCompilerId.c.in"
+    candidate_directories:
+      - "/opt/homebrew/share/cmake/Modules/"
+    found: "/opt/homebrew/share/cmake/Modules/CMakeCCompilerId.c.in"
+    search_context:
+      ENV{CMAKE_PREFIX_PATH}:
+        - "/opt/homebrew/opt/libomp"
+      ENV{PATH}:
+        - "/Users/mohamedrabbit/.pyenv/shims"
+        - "/Users/mohamedrabbit/.pyenv/bin"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/opt/llvm/bin"
+        - "/usr/local/bin"
+        - "/Users/mohamedrabbit/vcpkg"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/sbin"
+        - "/usr/local/bin"
+        - "/System/Cryptexes/App/usr/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/sbin"
+        - "/sbin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
+        - "/opt/pmk/env/global/bin"
+        - "/Library/Apple/usr/bin"
+        - "/Applications/VMware Fusion.app/Contents/Public"
+        - "/Users/mohamedrabbit/.cargo/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCCompiler.cmake:122 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+      Compiler: /opt/homebrew/opt/llvm/bin/clang 
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      0
+      
+      
+      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "a.out"
+      
+      The C compiler identification is Clang, found in:
+        /Users/mohamedrabbit/code/mylang/build/CMakeFiles/4.2.2/CompilerIdC/a.out
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerId.cmake:290 (message)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCCompiler.cmake:122 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Detecting C compiler apple sysroot: "/opt/homebrew/opt/llvm/bin/clang" "-E" "apple-sdk.c"
+        # 1 "apple-sdk.c"
+        # 1 "<built-in>" 1
+        # 1 "<built-in>" 3
+        # 469 "<built-in>" 3
+        # 1 "<command line>" 1
+        # 1 "<built-in>" 2
+        # 1 "apple-sdk.c" 2
+        # 1 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityMacros.h" 1 3 4
+        # 89 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityMacros.h" 3 4
+        # 1 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityVersions.h" 1 3 4
+        # 90 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityMacros.h" 2 3 4
+        # 1 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/TargetConditionals.h" 1 3 4
+        # 91 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityMacros.h" 2 3 4
+        # 207 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityMacros.h" 3 4
+        # 1 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/Availability.h" 1 3 4
+        # 196 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/Availability.h" 3 4
+        # 1 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityVersions.h" 1 3 4
+        # 197 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/Availability.h" 2 3 4
+        # 1 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityInternal.h" 1 3 4
+        # 33 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityInternal.h" 3 4
+        # 1 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityVersions.h" 1 3 4
+        # 34 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityInternal.h" 2 3 4
+        # 198 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/Availability.h" 2 3 4
+        # 1 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityInternalLegacy.h" 1 3 4
+        # 34 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityInternalLegacy.h" 3 4
+        # 1 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityInternal.h" 1 3 4
+        # 35 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityInternalLegacy.h" 2 3 4
+        # 199 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/Availability.h" 2 3 4
+        # 208 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityMacros.h" 2 3 4
+        # 2 "apple-sdk.c" 2
+        
+        
+      Found apple sysroot: /Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_AR"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "FIRST"
+      SearchAppBundle: "FIRST"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "ar"
+    candidate_directories:
+      - "/opt/homebrew/opt/llvm/bin/"
+      - "/Users/mohamedrabbit/.pyenv/shims/"
+      - "/Users/mohamedrabbit/.pyenv/bin/"
+      - "/opt/homebrew/bin/"
+      - "/usr/local/bin/"
+      - "/Users/mohamedrabbit/vcpkg/"
+      - "/opt/homebrew/sbin/"
+      - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/"
+      - "/opt/pmk/env/global/bin/"
+      - "/Library/Apple/usr/bin/"
+      - "/Applications/VMware Fusion.app/Contents/Public/"
+      - "/Users/mohamedrabbit/.cargo/bin/"
+      - "/Users/mohamedrabbit/.local/bin/"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/"
+    searched_directories:
+      - "/opt/homebrew/opt/llvm/bin/ar"
+      - "/Users/mohamedrabbit/.pyenv/shims/ar"
+      - "/Users/mohamedrabbit/.pyenv/bin/ar"
+      - "/opt/homebrew/bin/ar"
+      - "/usr/local/bin/ar"
+      - "/Users/mohamedrabbit/vcpkg/ar"
+      - "/opt/homebrew/sbin/ar"
+      - "/System/Cryptexes/App/usr/bin/ar"
+    found: "/usr/bin/ar"
+    search_context:
+      ENV{CMAKE_PREFIX_PATH}:
+        - "/opt/homebrew/opt/libomp"
+      ENV{PATH}:
+        - "/Users/mohamedrabbit/.pyenv/shims"
+        - "/Users/mohamedrabbit/.pyenv/bin"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/opt/llvm/bin"
+        - "/usr/local/bin"
+        - "/Users/mohamedrabbit/vcpkg"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/sbin"
+        - "/usr/local/bin"
+        - "/System/Cryptexes/App/usr/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/sbin"
+        - "/sbin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
+        - "/opt/pmk/env/global/bin"
+        - "/Library/Apple/usr/bin"
+        - "/Applications/VMware Fusion.app/Contents/Public"
+        - "/Users/mohamedrabbit/.cargo/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_RANLIB"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "FIRST"
+      SearchAppBundle: "FIRST"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "llvm-ranlib"
+      - "ranlib"
+    candidate_directories:
+      - "/opt/homebrew/opt/llvm/bin/"
+      - "/Users/mohamedrabbit/.pyenv/shims/"
+      - "/Users/mohamedrabbit/.pyenv/bin/"
+      - "/opt/homebrew/bin/"
+      - "/usr/local/bin/"
+      - "/Users/mohamedrabbit/vcpkg/"
+      - "/opt/homebrew/sbin/"
+      - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/"
+      - "/opt/pmk/env/global/bin/"
+      - "/Library/Apple/usr/bin/"
+      - "/Applications/VMware Fusion.app/Contents/Public/"
+      - "/Users/mohamedrabbit/.cargo/bin/"
+      - "/Users/mohamedrabbit/.local/bin/"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/"
+    found: "/opt/homebrew/opt/llvm/bin/llvm-ranlib"
+    search_context:
+      ENV{CMAKE_PREFIX_PATH}:
+        - "/opt/homebrew/opt/libomp"
+      ENV{PATH}:
+        - "/Users/mohamedrabbit/.pyenv/shims"
+        - "/Users/mohamedrabbit/.pyenv/bin"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/opt/llvm/bin"
+        - "/usr/local/bin"
+        - "/Users/mohamedrabbit/vcpkg"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/sbin"
+        - "/usr/local/bin"
+        - "/System/Cryptexes/App/usr/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/sbin"
+        - "/sbin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
+        - "/opt/pmk/env/global/bin"
+        - "/Library/Apple/usr/bin"
+        - "/Applications/VMware Fusion.app/Contents/Public"
+        - "/Users/mohamedrabbit/.cargo/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_STRIP"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "FIRST"
+      SearchAppBundle: "FIRST"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "strip"
+    candidate_directories:
+      - "/opt/homebrew/opt/llvm/bin/"
+      - "/Users/mohamedrabbit/.pyenv/shims/"
+      - "/Users/mohamedrabbit/.pyenv/bin/"
+      - "/opt/homebrew/bin/"
+      - "/usr/local/bin/"
+      - "/Users/mohamedrabbit/vcpkg/"
+      - "/opt/homebrew/sbin/"
+      - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/"
+      - "/opt/pmk/env/global/bin/"
+      - "/Library/Apple/usr/bin/"
+      - "/Applications/VMware Fusion.app/Contents/Public/"
+      - "/Users/mohamedrabbit/.cargo/bin/"
+      - "/Users/mohamedrabbit/.local/bin/"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/"
+    searched_directories:
+      - "/opt/homebrew/opt/llvm/bin/strip"
+      - "/Users/mohamedrabbit/.pyenv/shims/strip"
+      - "/Users/mohamedrabbit/.pyenv/bin/strip"
+      - "/opt/homebrew/bin/strip"
+      - "/usr/local/bin/strip"
+      - "/Users/mohamedrabbit/vcpkg/strip"
+      - "/opt/homebrew/sbin/strip"
+      - "/System/Cryptexes/App/usr/bin/strip"
+    found: "/usr/bin/strip"
+    search_context:
+      ENV{CMAKE_PREFIX_PATH}:
+        - "/opt/homebrew/opt/libomp"
+      ENV{PATH}:
+        - "/Users/mohamedrabbit/.pyenv/shims"
+        - "/Users/mohamedrabbit/.pyenv/bin"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/opt/llvm/bin"
+        - "/usr/local/bin"
+        - "/Users/mohamedrabbit/vcpkg"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/sbin"
+        - "/usr/local/bin"
+        - "/System/Cryptexes/App/usr/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/sbin"
+        - "/sbin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
+        - "/opt/pmk/env/global/bin"
+        - "/Library/Apple/usr/bin"
+        - "/Applications/VMware Fusion.app/Contents/Public"
+        - "/Users/mohamedrabbit/.cargo/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_LINKER"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "FIRST"
+      SearchAppBundle: "FIRST"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "ld"
+    candidate_directories:
+      - "/opt/homebrew/opt/llvm/bin/"
+      - "/Users/mohamedrabbit/.pyenv/shims/"
+      - "/Users/mohamedrabbit/.pyenv/bin/"
+      - "/opt/homebrew/bin/"
+      - "/usr/local/bin/"
+      - "/Users/mohamedrabbit/vcpkg/"
+      - "/opt/homebrew/sbin/"
+      - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/"
+      - "/opt/pmk/env/global/bin/"
+      - "/Library/Apple/usr/bin/"
+      - "/Applications/VMware Fusion.app/Contents/Public/"
+      - "/Users/mohamedrabbit/.cargo/bin/"
+      - "/Users/mohamedrabbit/.local/bin/"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/"
+    searched_directories:
+      - "/opt/homebrew/opt/llvm/bin/ld"
+      - "/Users/mohamedrabbit/.pyenv/shims/ld"
+      - "/Users/mohamedrabbit/.pyenv/bin/ld"
+      - "/opt/homebrew/bin/ld"
+      - "/usr/local/bin/ld"
+      - "/Users/mohamedrabbit/vcpkg/ld"
+      - "/opt/homebrew/sbin/ld"
+      - "/System/Cryptexes/App/usr/bin/ld"
+    found: "/usr/bin/ld"
+    search_context:
+      ENV{CMAKE_PREFIX_PATH}:
+        - "/opt/homebrew/opt/libomp"
+      ENV{PATH}:
+        - "/Users/mohamedrabbit/.pyenv/shims"
+        - "/Users/mohamedrabbit/.pyenv/bin"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/opt/llvm/bin"
+        - "/usr/local/bin"
+        - "/Users/mohamedrabbit/vcpkg"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/sbin"
+        - "/usr/local/bin"
+        - "/System/Cryptexes/App/usr/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/sbin"
+        - "/sbin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
+        - "/opt/pmk/env/global/bin"
+        - "/Library/Apple/usr/bin"
+        - "/Applications/VMware Fusion.app/Contents/Public"
+        - "/Users/mohamedrabbit/.cargo/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_NM"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "FIRST"
+      SearchAppBundle: "FIRST"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "llvm-nm"
+      - "nm"
+    candidate_directories:
+      - "/opt/homebrew/opt/llvm/bin/"
+      - "/Users/mohamedrabbit/.pyenv/shims/"
+      - "/Users/mohamedrabbit/.pyenv/bin/"
+      - "/opt/homebrew/bin/"
+      - "/usr/local/bin/"
+      - "/Users/mohamedrabbit/vcpkg/"
+      - "/opt/homebrew/sbin/"
+      - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/"
+      - "/opt/pmk/env/global/bin/"
+      - "/Library/Apple/usr/bin/"
+      - "/Applications/VMware Fusion.app/Contents/Public/"
+      - "/Users/mohamedrabbit/.cargo/bin/"
+      - "/Users/mohamedrabbit/.local/bin/"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/"
+    found: "/opt/homebrew/opt/llvm/bin/llvm-nm"
+    search_context:
+      ENV{CMAKE_PREFIX_PATH}:
+        - "/opt/homebrew/opt/libomp"
+      ENV{PATH}:
+        - "/Users/mohamedrabbit/.pyenv/shims"
+        - "/Users/mohamedrabbit/.pyenv/bin"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/opt/llvm/bin"
+        - "/usr/local/bin"
+        - "/Users/mohamedrabbit/vcpkg"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/sbin"
+        - "/usr/local/bin"
+        - "/System/Cryptexes/App/usr/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/sbin"
+        - "/sbin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
+        - "/opt/pmk/env/global/bin"
+        - "/Library/Apple/usr/bin"
+        - "/Applications/VMware Fusion.app/Contents/Public"
+        - "/Users/mohamedrabbit/.cargo/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_OBJDUMP"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "FIRST"
+      SearchAppBundle: "FIRST"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "llvm-objdump"
+      - "objdump"
+    candidate_directories:
+      - "/opt/homebrew/opt/llvm/bin/"
+      - "/Users/mohamedrabbit/.pyenv/shims/"
+      - "/Users/mohamedrabbit/.pyenv/bin/"
+      - "/opt/homebrew/bin/"
+      - "/usr/local/bin/"
+      - "/Users/mohamedrabbit/vcpkg/"
+      - "/opt/homebrew/sbin/"
+      - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/"
+      - "/opt/pmk/env/global/bin/"
+      - "/Library/Apple/usr/bin/"
+      - "/Applications/VMware Fusion.app/Contents/Public/"
+      - "/Users/mohamedrabbit/.cargo/bin/"
+      - "/Users/mohamedrabbit/.local/bin/"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/"
+    found: "/opt/homebrew/opt/llvm/bin/llvm-objdump"
+    search_context:
+      ENV{CMAKE_PREFIX_PATH}:
+        - "/opt/homebrew/opt/libomp"
+      ENV{PATH}:
+        - "/Users/mohamedrabbit/.pyenv/shims"
+        - "/Users/mohamedrabbit/.pyenv/bin"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/opt/llvm/bin"
+        - "/usr/local/bin"
+        - "/Users/mohamedrabbit/vcpkg"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/sbin"
+        - "/usr/local/bin"
+        - "/System/Cryptexes/App/usr/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/sbin"
+        - "/sbin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
+        - "/opt/pmk/env/global/bin"
+        - "/Library/Apple/usr/bin"
+        - "/Applications/VMware Fusion.app/Contents/Public"
+        - "/Users/mohamedrabbit/.cargo/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_OBJCOPY"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "FIRST"
+      SearchAppBundle: "FIRST"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "llvm-objcopy"
+      - "objcopy"
+    candidate_directories:
+      - "/opt/homebrew/opt/llvm/bin/"
+      - "/Users/mohamedrabbit/.pyenv/shims/"
+      - "/Users/mohamedrabbit/.pyenv/bin/"
+      - "/opt/homebrew/bin/"
+      - "/usr/local/bin/"
+      - "/Users/mohamedrabbit/vcpkg/"
+      - "/opt/homebrew/sbin/"
+      - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/"
+      - "/opt/pmk/env/global/bin/"
+      - "/Library/Apple/usr/bin/"
+      - "/Applications/VMware Fusion.app/Contents/Public/"
+      - "/Users/mohamedrabbit/.cargo/bin/"
+      - "/Users/mohamedrabbit/.local/bin/"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/"
+    found: "/opt/homebrew/opt/llvm/bin/llvm-objcopy"
+    search_context:
+      ENV{CMAKE_PREFIX_PATH}:
+        - "/opt/homebrew/opt/libomp"
+      ENV{PATH}:
+        - "/Users/mohamedrabbit/.pyenv/shims"
+        - "/Users/mohamedrabbit/.pyenv/bin"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/opt/llvm/bin"
+        - "/usr/local/bin"
+        - "/Users/mohamedrabbit/vcpkg"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/sbin"
+        - "/usr/local/bin"
+        - "/System/Cryptexes/App/usr/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/sbin"
+        - "/sbin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
+        - "/opt/pmk/env/global/bin"
+        - "/Library/Apple/usr/bin"
+        - "/Applications/VMware Fusion.app/Contents/Public"
+        - "/Users/mohamedrabbit/.cargo/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_READELF"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "FIRST"
+      SearchAppBundle: "FIRST"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "llvm-readelf"
+      - "readelf"
+    candidate_directories:
+      - "/opt/homebrew/opt/llvm/bin/"
+      - "/Users/mohamedrabbit/.pyenv/shims/"
+      - "/Users/mohamedrabbit/.pyenv/bin/"
+      - "/opt/homebrew/bin/"
+      - "/usr/local/bin/"
+      - "/Users/mohamedrabbit/vcpkg/"
+      - "/opt/homebrew/sbin/"
+      - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/"
+      - "/opt/pmk/env/global/bin/"
+      - "/Library/Apple/usr/bin/"
+      - "/Applications/VMware Fusion.app/Contents/Public/"
+      - "/Users/mohamedrabbit/.cargo/bin/"
+      - "/Users/mohamedrabbit/.local/bin/"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/"
+    found: "/opt/homebrew/opt/llvm/bin/llvm-readelf"
+    search_context:
+      ENV{CMAKE_PREFIX_PATH}:
+        - "/opt/homebrew/opt/libomp"
+      ENV{PATH}:
+        - "/Users/mohamedrabbit/.pyenv/shims"
+        - "/Users/mohamedrabbit/.pyenv/bin"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/opt/llvm/bin"
+        - "/usr/local/bin"
+        - "/Users/mohamedrabbit/vcpkg"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/sbin"
+        - "/usr/local/bin"
+        - "/System/Cryptexes/App/usr/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/sbin"
+        - "/sbin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
+        - "/opt/pmk/env/global/bin"
+        - "/Library/Apple/usr/bin"
+        - "/Applications/VMware Fusion.app/Contents/Public"
+        - "/Users/mohamedrabbit/.cargo/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_DLLTOOL"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "FIRST"
+      SearchAppBundle: "FIRST"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "llvm-dlltool"
+      - "dlltool"
+    candidate_directories:
+      - "/opt/homebrew/opt/llvm/bin/"
+      - "/Users/mohamedrabbit/.pyenv/shims/"
+      - "/Users/mohamedrabbit/.pyenv/bin/"
+      - "/opt/homebrew/bin/"
+      - "/usr/local/bin/"
+      - "/Users/mohamedrabbit/vcpkg/"
+      - "/opt/homebrew/sbin/"
+      - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/"
+      - "/opt/pmk/env/global/bin/"
+      - "/Library/Apple/usr/bin/"
+      - "/Applications/VMware Fusion.app/Contents/Public/"
+      - "/Users/mohamedrabbit/.cargo/bin/"
+      - "/Users/mohamedrabbit/.local/bin/"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/"
+    found: "/opt/homebrew/opt/llvm/bin/llvm-dlltool"
+    search_context:
+      ENV{CMAKE_PREFIX_PATH}:
+        - "/opt/homebrew/opt/libomp"
+      ENV{PATH}:
+        - "/Users/mohamedrabbit/.pyenv/shims"
+        - "/Users/mohamedrabbit/.pyenv/bin"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/opt/llvm/bin"
+        - "/usr/local/bin"
+        - "/Users/mohamedrabbit/vcpkg"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/sbin"
+        - "/usr/local/bin"
+        - "/System/Cryptexes/App/usr/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/sbin"
+        - "/sbin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
+        - "/opt/pmk/env/global/bin"
+        - "/Library/Apple/usr/bin"
+        - "/Applications/VMware Fusion.app/Contents/Public"
+        - "/Users/mohamedrabbit/.cargo/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_ADDR2LINE"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "FIRST"
+      SearchAppBundle: "FIRST"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "llvm-addr2line"
+      - "addr2line"
+    candidate_directories:
+      - "/opt/homebrew/opt/llvm/bin/"
+      - "/Users/mohamedrabbit/.pyenv/shims/"
+      - "/Users/mohamedrabbit/.pyenv/bin/"
+      - "/opt/homebrew/bin/"
+      - "/usr/local/bin/"
+      - "/Users/mohamedrabbit/vcpkg/"
+      - "/opt/homebrew/sbin/"
+      - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/"
+      - "/opt/pmk/env/global/bin/"
+      - "/Library/Apple/usr/bin/"
+      - "/Applications/VMware Fusion.app/Contents/Public/"
+      - "/Users/mohamedrabbit/.cargo/bin/"
+      - "/Users/mohamedrabbit/.local/bin/"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/"
+    found: "/opt/homebrew/opt/llvm/bin/llvm-addr2line"
+    search_context:
+      ENV{CMAKE_PREFIX_PATH}:
+        - "/opt/homebrew/opt/libomp"
+      ENV{PATH}:
+        - "/Users/mohamedrabbit/.pyenv/shims"
+        - "/Users/mohamedrabbit/.pyenv/bin"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/opt/llvm/bin"
+        - "/usr/local/bin"
+        - "/Users/mohamedrabbit/vcpkg"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/sbin"
+        - "/usr/local/bin"
+        - "/System/Cryptexes/App/usr/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/sbin"
+        - "/sbin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
+        - "/opt/pmk/env/global/bin"
+        - "/Library/Apple/usr/bin"
+        - "/Applications/VMware Fusion.app/Contents/Public"
+        - "/Users/mohamedrabbit/.cargo/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_TAPI"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "FIRST"
+      SearchAppBundle: "FIRST"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "tapi"
+    candidate_directories:
+      - "/opt/homebrew/opt/llvm/bin/"
+      - "/Users/mohamedrabbit/.pyenv/shims/"
+      - "/Users/mohamedrabbit/.pyenv/bin/"
+      - "/opt/homebrew/bin/"
+      - "/usr/local/bin/"
+      - "/Users/mohamedrabbit/vcpkg/"
+      - "/opt/homebrew/sbin/"
+      - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/"
+      - "/opt/pmk/env/global/bin/"
+      - "/Library/Apple/usr/bin/"
+      - "/Applications/VMware Fusion.app/Contents/Public/"
+      - "/Users/mohamedrabbit/.cargo/bin/"
+      - "/Users/mohamedrabbit/.local/bin/"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/"
+    searched_directories:
+      - "/opt/homebrew/opt/llvm/bin/tapi"
+      - "/Users/mohamedrabbit/.pyenv/shims/tapi"
+      - "/Users/mohamedrabbit/.pyenv/bin/tapi"
+      - "/opt/homebrew/bin/tapi"
+      - "/usr/local/bin/tapi"
+      - "/Users/mohamedrabbit/vcpkg/tapi"
+      - "/opt/homebrew/sbin/tapi"
+      - "/System/Cryptexes/App/usr/bin/tapi"
+      - "/usr/bin/tapi"
+      - "/bin/tapi"
+      - "/usr/sbin/tapi"
+      - "/sbin/tapi"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/tapi"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/tapi"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/tapi"
+      - "/opt/pmk/env/global/bin/tapi"
+      - "/Library/Apple/usr/bin/tapi"
+      - "/Applications/VMware Fusion.app/Contents/Public/tapi"
+      - "/Users/mohamedrabbit/.cargo/bin/tapi"
+      - "/Users/mohamedrabbit/.local/bin/tapi"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/tapi"
+    found: false
+    search_context:
+      ENV{CMAKE_PREFIX_PATH}:
+        - "/opt/homebrew/opt/libomp"
+      ENV{PATH}:
+        - "/Users/mohamedrabbit/.pyenv/shims"
+        - "/Users/mohamedrabbit/.pyenv/bin"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/opt/llvm/bin"
+        - "/usr/local/bin"
+        - "/Users/mohamedrabbit/vcpkg"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/sbin"
+        - "/usr/local/bin"
+        - "/System/Cryptexes/App/usr/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/sbin"
+        - "/sbin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
+        - "/opt/pmk/env/global/bin"
+        - "/Library/Apple/usr/bin"
+        - "/Applications/VMware Fusion.app/Contents/Public"
+        - "/Users/mohamedrabbit/.cargo/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/Compiler/Clang-FindBinUtils.cmake:26 (find_program)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCCompiler.cmake:201 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_C_COMPILER_AR"
+    description: "LLVM archiver"
+    settings:
+      SearchFramework: "FIRST"
+      SearchAppBundle: "FIRST"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "llvm-ar-21.1"
+      - "llvm-ar-21"
+      - "llvm-ar21"
+      - "llvm-ar"
+    candidate_directories:
+      - "/opt/homebrew/Cellar/llvm/21.1.8/bin/"
+      - "/opt/homebrew/opt/llvm/bin/"
+      - "/Users/mohamedrabbit/.pyenv/shims/"
+      - "/Users/mohamedrabbit/.pyenv/bin/"
+      - "/opt/homebrew/bin/"
+      - "/usr/local/bin/"
+      - "/Users/mohamedrabbit/vcpkg/"
+      - "/opt/homebrew/sbin/"
+      - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/"
+      - "/opt/pmk/env/global/bin/"
+      - "/Library/Apple/usr/bin/"
+      - "/Applications/VMware Fusion.app/Contents/Public/"
+      - "/Users/mohamedrabbit/.cargo/bin/"
+      - "/Users/mohamedrabbit/.local/bin/"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/"
+    searched_directories:
+      - "/opt/homebrew/Cellar/llvm/21.1.8/bin/llvm-ar-21.1"
+      - "/opt/homebrew/opt/llvm/bin/llvm-ar-21.1"
+      - "/Users/mohamedrabbit/.pyenv/shims/llvm-ar-21.1"
+      - "/Users/mohamedrabbit/.pyenv/bin/llvm-ar-21.1"
+      - "/opt/homebrew/bin/llvm-ar-21.1"
+      - "/usr/local/bin/llvm-ar-21.1"
+      - "/Users/mohamedrabbit/vcpkg/llvm-ar-21.1"
+      - "/opt/homebrew/sbin/llvm-ar-21.1"
+      - "/System/Cryptexes/App/usr/bin/llvm-ar-21.1"
+      - "/usr/bin/llvm-ar-21.1"
+      - "/bin/llvm-ar-21.1"
+      - "/usr/sbin/llvm-ar-21.1"
+      - "/sbin/llvm-ar-21.1"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/llvm-ar-21.1"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/llvm-ar-21.1"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/llvm-ar-21.1"
+      - "/opt/pmk/env/global/bin/llvm-ar-21.1"
+      - "/Library/Apple/usr/bin/llvm-ar-21.1"
+      - "/Applications/VMware Fusion.app/Contents/Public/llvm-ar-21.1"
+      - "/Users/mohamedrabbit/.cargo/bin/llvm-ar-21.1"
+      - "/Users/mohamedrabbit/.local/bin/llvm-ar-21.1"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/llvm-ar-21.1"
+      - "/opt/homebrew/Cellar/llvm/21.1.8/bin/llvm-ar-21"
+      - "/opt/homebrew/opt/llvm/bin/llvm-ar-21"
+      - "/Users/mohamedrabbit/.pyenv/shims/llvm-ar-21"
+      - "/Users/mohamedrabbit/.pyenv/bin/llvm-ar-21"
+      - "/opt/homebrew/bin/llvm-ar-21"
+      - "/usr/local/bin/llvm-ar-21"
+      - "/Users/mohamedrabbit/vcpkg/llvm-ar-21"
+      - "/opt/homebrew/sbin/llvm-ar-21"
+      - "/System/Cryptexes/App/usr/bin/llvm-ar-21"
+      - "/usr/bin/llvm-ar-21"
+      - "/bin/llvm-ar-21"
+      - "/usr/sbin/llvm-ar-21"
+      - "/sbin/llvm-ar-21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/llvm-ar-21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/llvm-ar-21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/llvm-ar-21"
+      - "/opt/pmk/env/global/bin/llvm-ar-21"
+      - "/Library/Apple/usr/bin/llvm-ar-21"
+      - "/Applications/VMware Fusion.app/Contents/Public/llvm-ar-21"
+      - "/Users/mohamedrabbit/.cargo/bin/llvm-ar-21"
+      - "/Users/mohamedrabbit/.local/bin/llvm-ar-21"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/llvm-ar-21"
+      - "/opt/homebrew/Cellar/llvm/21.1.8/bin/llvm-ar21"
+      - "/opt/homebrew/opt/llvm/bin/llvm-ar21"
+      - "/Users/mohamedrabbit/.pyenv/shims/llvm-ar21"
+      - "/Users/mohamedrabbit/.pyenv/bin/llvm-ar21"
+      - "/opt/homebrew/bin/llvm-ar21"
+      - "/usr/local/bin/llvm-ar21"
+      - "/Users/mohamedrabbit/vcpkg/llvm-ar21"
+      - "/opt/homebrew/sbin/llvm-ar21"
+      - "/System/Cryptexes/App/usr/bin/llvm-ar21"
+      - "/usr/bin/llvm-ar21"
+      - "/bin/llvm-ar21"
+      - "/usr/sbin/llvm-ar21"
+      - "/sbin/llvm-ar21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/llvm-ar21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/llvm-ar21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/llvm-ar21"
+      - "/opt/pmk/env/global/bin/llvm-ar21"
+      - "/Library/Apple/usr/bin/llvm-ar21"
+      - "/Applications/VMware Fusion.app/Contents/Public/llvm-ar21"
+      - "/Users/mohamedrabbit/.cargo/bin/llvm-ar21"
+      - "/Users/mohamedrabbit/.local/bin/llvm-ar21"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/llvm-ar21"
+    found: "/opt/homebrew/Cellar/llvm/21.1.8/bin/llvm-ar"
+    search_context:
+      ENV{CMAKE_PREFIX_PATH}:
+        - "/opt/homebrew/opt/libomp"
+      ENV{PATH}:
+        - "/Users/mohamedrabbit/.pyenv/shims"
+        - "/Users/mohamedrabbit/.pyenv/bin"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/opt/llvm/bin"
+        - "/usr/local/bin"
+        - "/Users/mohamedrabbit/vcpkg"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/sbin"
+        - "/usr/local/bin"
+        - "/System/Cryptexes/App/usr/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/sbin"
+        - "/sbin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
+        - "/opt/pmk/env/global/bin"
+        - "/Library/Apple/usr/bin"
+        - "/Applications/VMware Fusion.app/Contents/Public"
+        - "/Users/mohamedrabbit/.cargo/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/Compiler/Clang-FindBinUtils.cmake:38 (find_program)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCCompiler.cmake:201 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_C_COMPILER_RANLIB"
+    description: "Generate index for LLVM archive"
+    settings:
+      SearchFramework: "FIRST"
+      SearchAppBundle: "FIRST"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "llvm-ranlib-21.1"
+      - "llvm-ranlib-21"
+      - "llvm-ranlib21"
+      - "llvm-ranlib"
+    candidate_directories:
+      - "/opt/homebrew/Cellar/llvm/21.1.8/bin/"
+      - "/opt/homebrew/opt/llvm/bin/"
+      - "/Users/mohamedrabbit/.pyenv/shims/"
+      - "/Users/mohamedrabbit/.pyenv/bin/"
+      - "/opt/homebrew/bin/"
+      - "/usr/local/bin/"
+      - "/Users/mohamedrabbit/vcpkg/"
+      - "/opt/homebrew/sbin/"
+      - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/"
+      - "/opt/pmk/env/global/bin/"
+      - "/Library/Apple/usr/bin/"
+      - "/Applications/VMware Fusion.app/Contents/Public/"
+      - "/Users/mohamedrabbit/.cargo/bin/"
+      - "/Users/mohamedrabbit/.local/bin/"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/"
+    searched_directories:
+      - "/opt/homebrew/Cellar/llvm/21.1.8/bin/llvm-ranlib-21.1"
+      - "/opt/homebrew/opt/llvm/bin/llvm-ranlib-21.1"
+      - "/Users/mohamedrabbit/.pyenv/shims/llvm-ranlib-21.1"
+      - "/Users/mohamedrabbit/.pyenv/bin/llvm-ranlib-21.1"
+      - "/opt/homebrew/bin/llvm-ranlib-21.1"
+      - "/usr/local/bin/llvm-ranlib-21.1"
+      - "/Users/mohamedrabbit/vcpkg/llvm-ranlib-21.1"
+      - "/opt/homebrew/sbin/llvm-ranlib-21.1"
+      - "/System/Cryptexes/App/usr/bin/llvm-ranlib-21.1"
+      - "/usr/bin/llvm-ranlib-21.1"
+      - "/bin/llvm-ranlib-21.1"
+      - "/usr/sbin/llvm-ranlib-21.1"
+      - "/sbin/llvm-ranlib-21.1"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/llvm-ranlib-21.1"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/llvm-ranlib-21.1"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/llvm-ranlib-21.1"
+      - "/opt/pmk/env/global/bin/llvm-ranlib-21.1"
+      - "/Library/Apple/usr/bin/llvm-ranlib-21.1"
+      - "/Applications/VMware Fusion.app/Contents/Public/llvm-ranlib-21.1"
+      - "/Users/mohamedrabbit/.cargo/bin/llvm-ranlib-21.1"
+      - "/Users/mohamedrabbit/.local/bin/llvm-ranlib-21.1"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/llvm-ranlib-21.1"
+      - "/opt/homebrew/Cellar/llvm/21.1.8/bin/llvm-ranlib-21"
+      - "/opt/homebrew/opt/llvm/bin/llvm-ranlib-21"
+      - "/Users/mohamedrabbit/.pyenv/shims/llvm-ranlib-21"
+      - "/Users/mohamedrabbit/.pyenv/bin/llvm-ranlib-21"
+      - "/opt/homebrew/bin/llvm-ranlib-21"
+      - "/usr/local/bin/llvm-ranlib-21"
+      - "/Users/mohamedrabbit/vcpkg/llvm-ranlib-21"
+      - "/opt/homebrew/sbin/llvm-ranlib-21"
+      - "/System/Cryptexes/App/usr/bin/llvm-ranlib-21"
+      - "/usr/bin/llvm-ranlib-21"
+      - "/bin/llvm-ranlib-21"
+      - "/usr/sbin/llvm-ranlib-21"
+      - "/sbin/llvm-ranlib-21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/llvm-ranlib-21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/llvm-ranlib-21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/llvm-ranlib-21"
+      - "/opt/pmk/env/global/bin/llvm-ranlib-21"
+      - "/Library/Apple/usr/bin/llvm-ranlib-21"
+      - "/Applications/VMware Fusion.app/Contents/Public/llvm-ranlib-21"
+      - "/Users/mohamedrabbit/.cargo/bin/llvm-ranlib-21"
+      - "/Users/mohamedrabbit/.local/bin/llvm-ranlib-21"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/llvm-ranlib-21"
+      - "/opt/homebrew/Cellar/llvm/21.1.8/bin/llvm-ranlib21"
+      - "/opt/homebrew/opt/llvm/bin/llvm-ranlib21"
+      - "/Users/mohamedrabbit/.pyenv/shims/llvm-ranlib21"
+      - "/Users/mohamedrabbit/.pyenv/bin/llvm-ranlib21"
+      - "/opt/homebrew/bin/llvm-ranlib21"
+      - "/usr/local/bin/llvm-ranlib21"
+      - "/Users/mohamedrabbit/vcpkg/llvm-ranlib21"
+      - "/opt/homebrew/sbin/llvm-ranlib21"
+      - "/System/Cryptexes/App/usr/bin/llvm-ranlib21"
+      - "/usr/bin/llvm-ranlib21"
+      - "/bin/llvm-ranlib21"
+      - "/usr/sbin/llvm-ranlib21"
+      - "/sbin/llvm-ranlib21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/llvm-ranlib21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/llvm-ranlib21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/llvm-ranlib21"
+      - "/opt/pmk/env/global/bin/llvm-ranlib21"
+      - "/Library/Apple/usr/bin/llvm-ranlib21"
+      - "/Applications/VMware Fusion.app/Contents/Public/llvm-ranlib21"
+      - "/Users/mohamedrabbit/.cargo/bin/llvm-ranlib21"
+      - "/Users/mohamedrabbit/.local/bin/llvm-ranlib21"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/llvm-ranlib21"
+    found: "/opt/homebrew/Cellar/llvm/21.1.8/bin/llvm-ranlib"
+    search_context:
+      ENV{CMAKE_PREFIX_PATH}:
+        - "/opt/homebrew/opt/libomp"
+      ENV{PATH}:
+        - "/Users/mohamedrabbit/.pyenv/shims"
+        - "/Users/mohamedrabbit/.pyenv/bin"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/opt/llvm/bin"
+        - "/usr/local/bin"
+        - "/Users/mohamedrabbit/vcpkg"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/sbin"
+        - "/usr/local/bin"
+        - "/System/Cryptexes/App/usr/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/sbin"
+        - "/sbin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
+        - "/opt/pmk/env/global/bin"
+        - "/Library/Apple/usr/bin"
+        - "/Applications/VMware Fusion.app/Contents/Public"
+        - "/Users/mohamedrabbit/.cargo/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/Compiler/Clang-FindBinUtils.cmake:50 (find_program)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCCompiler.cmake:201 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_C_COMPILER_CLANG_SCAN_DEPS"
+    description: "`clang-scan-deps` dependency scanner"
+    settings:
+      SearchFramework: "FIRST"
+      SearchAppBundle: "FIRST"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "clang-scan-deps-21.1"
+      - "clang-scan-deps-21"
+      - "clang-scan-deps21"
+      - "clang-scan-deps"
+    candidate_directories:
+      - "/opt/homebrew/Cellar/llvm/21.1.8/bin/"
+      - "/opt/homebrew/opt/llvm/bin/"
+      - "/Users/mohamedrabbit/.pyenv/shims/"
+      - "/Users/mohamedrabbit/.pyenv/bin/"
+      - "/opt/homebrew/bin/"
+      - "/usr/local/bin/"
+      - "/Users/mohamedrabbit/vcpkg/"
+      - "/opt/homebrew/sbin/"
+      - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/"
+      - "/opt/pmk/env/global/bin/"
+      - "/Library/Apple/usr/bin/"
+      - "/Applications/VMware Fusion.app/Contents/Public/"
+      - "/Users/mohamedrabbit/.cargo/bin/"
+      - "/Users/mohamedrabbit/.local/bin/"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/"
+    searched_directories:
+      - "/opt/homebrew/Cellar/llvm/21.1.8/bin/clang-scan-deps-21.1"
+      - "/opt/homebrew/opt/llvm/bin/clang-scan-deps-21.1"
+      - "/Users/mohamedrabbit/.pyenv/shims/clang-scan-deps-21.1"
+      - "/Users/mohamedrabbit/.pyenv/bin/clang-scan-deps-21.1"
+      - "/opt/homebrew/bin/clang-scan-deps-21.1"
+      - "/usr/local/bin/clang-scan-deps-21.1"
+      - "/Users/mohamedrabbit/vcpkg/clang-scan-deps-21.1"
+      - "/opt/homebrew/sbin/clang-scan-deps-21.1"
+      - "/System/Cryptexes/App/usr/bin/clang-scan-deps-21.1"
+      - "/usr/bin/clang-scan-deps-21.1"
+      - "/bin/clang-scan-deps-21.1"
+      - "/usr/sbin/clang-scan-deps-21.1"
+      - "/sbin/clang-scan-deps-21.1"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/clang-scan-deps-21.1"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/clang-scan-deps-21.1"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/clang-scan-deps-21.1"
+      - "/opt/pmk/env/global/bin/clang-scan-deps-21.1"
+      - "/Library/Apple/usr/bin/clang-scan-deps-21.1"
+      - "/Applications/VMware Fusion.app/Contents/Public/clang-scan-deps-21.1"
+      - "/Users/mohamedrabbit/.cargo/bin/clang-scan-deps-21.1"
+      - "/Users/mohamedrabbit/.local/bin/clang-scan-deps-21.1"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/clang-scan-deps-21.1"
+      - "/opt/homebrew/Cellar/llvm/21.1.8/bin/clang-scan-deps-21"
+      - "/opt/homebrew/opt/llvm/bin/clang-scan-deps-21"
+      - "/Users/mohamedrabbit/.pyenv/shims/clang-scan-deps-21"
+      - "/Users/mohamedrabbit/.pyenv/bin/clang-scan-deps-21"
+      - "/opt/homebrew/bin/clang-scan-deps-21"
+      - "/usr/local/bin/clang-scan-deps-21"
+      - "/Users/mohamedrabbit/vcpkg/clang-scan-deps-21"
+      - "/opt/homebrew/sbin/clang-scan-deps-21"
+      - "/System/Cryptexes/App/usr/bin/clang-scan-deps-21"
+      - "/usr/bin/clang-scan-deps-21"
+      - "/bin/clang-scan-deps-21"
+      - "/usr/sbin/clang-scan-deps-21"
+      - "/sbin/clang-scan-deps-21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/clang-scan-deps-21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/clang-scan-deps-21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/clang-scan-deps-21"
+      - "/opt/pmk/env/global/bin/clang-scan-deps-21"
+      - "/Library/Apple/usr/bin/clang-scan-deps-21"
+      - "/Applications/VMware Fusion.app/Contents/Public/clang-scan-deps-21"
+      - "/Users/mohamedrabbit/.cargo/bin/clang-scan-deps-21"
+      - "/Users/mohamedrabbit/.local/bin/clang-scan-deps-21"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/clang-scan-deps-21"
+      - "/opt/homebrew/Cellar/llvm/21.1.8/bin/clang-scan-deps21"
+      - "/opt/homebrew/opt/llvm/bin/clang-scan-deps21"
+      - "/Users/mohamedrabbit/.pyenv/shims/clang-scan-deps21"
+      - "/Users/mohamedrabbit/.pyenv/bin/clang-scan-deps21"
+      - "/opt/homebrew/bin/clang-scan-deps21"
+      - "/usr/local/bin/clang-scan-deps21"
+      - "/Users/mohamedrabbit/vcpkg/clang-scan-deps21"
+      - "/opt/homebrew/sbin/clang-scan-deps21"
+      - "/System/Cryptexes/App/usr/bin/clang-scan-deps21"
+      - "/usr/bin/clang-scan-deps21"
+      - "/bin/clang-scan-deps21"
+      - "/usr/sbin/clang-scan-deps21"
+      - "/sbin/clang-scan-deps21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/clang-scan-deps21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/clang-scan-deps21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/clang-scan-deps21"
+      - "/opt/pmk/env/global/bin/clang-scan-deps21"
+      - "/Library/Apple/usr/bin/clang-scan-deps21"
+      - "/Applications/VMware Fusion.app/Contents/Public/clang-scan-deps21"
+      - "/Users/mohamedrabbit/.cargo/bin/clang-scan-deps21"
+      - "/Users/mohamedrabbit/.local/bin/clang-scan-deps21"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/clang-scan-deps21"
+    found: "/opt/homebrew/Cellar/llvm/21.1.8/bin/clang-scan-deps"
+    search_context:
+      ENV{CMAKE_PREFIX_PATH}:
+        - "/opt/homebrew/opt/libomp"
+      ENV{PATH}:
+        - "/Users/mohamedrabbit/.pyenv/shims"
+        - "/Users/mohamedrabbit/.pyenv/bin"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/opt/llvm/bin"
+        - "/usr/local/bin"
+        - "/Users/mohamedrabbit/vcpkg"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/sbin"
+        - "/usr/local/bin"
+        - "/System/Cryptexes/App/usr/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/sbin"
+        - "/sbin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
+        - "/opt/pmk/env/global/bin"
+        - "/Library/Apple/usr/bin"
+        - "/Applications/VMware Fusion.app/Contents/Public"
+        - "/Users/mohamedrabbit/.cargo/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompiler.cmake:115 (find_program)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCXXCompiler.cmake:71 (_cmake_find_compiler_path)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_CXX_COMPILER_WITH_PATH"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "FIRST"
+      SearchAppBundle: "FIRST"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "clang++"
+    candidate_directories:
+      - "/opt/homebrew/opt/libomp/bin/"
+      - "/opt/homebrew/opt/libomp/sbin/"
+      - "/opt/homebrew/opt/libomp/"
+      - "/Users/mohamedrabbit/.pyenv/shims/"
+      - "/Users/mohamedrabbit/.pyenv/bin/"
+      - "/opt/homebrew/bin/"
+      - "/opt/homebrew/opt/llvm/bin/"
+      - "/usr/local/bin/"
+      - "/Users/mohamedrabbit/vcpkg/"
+      - "/opt/homebrew/sbin/"
+      - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/"
+      - "/opt/pmk/env/global/bin/"
+      - "/Library/Apple/usr/bin/"
+      - "/Applications/VMware Fusion.app/Contents/Public/"
+      - "/Users/mohamedrabbit/.cargo/bin/"
+      - "/Users/mohamedrabbit/.local/bin/"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/"
+    searched_directories:
+      - "/opt/homebrew/opt/libomp/bin/clang++"
+      - "/opt/homebrew/opt/libomp/sbin/clang++"
+      - "/opt/homebrew/opt/libomp/clang++"
+      - "/Users/mohamedrabbit/.pyenv/shims/clang++"
+      - "/Users/mohamedrabbit/.pyenv/bin/clang++"
+      - "/opt/homebrew/bin/clang++"
+    found: "/opt/homebrew/opt/llvm/bin/clang++"
+    search_context:
+      ENV{CMAKE_PREFIX_PATH}:
+        - "/opt/homebrew/opt/libomp"
+      ENV{PATH}:
+        - "/Users/mohamedrabbit/.pyenv/shims"
+        - "/Users/mohamedrabbit/.pyenv/bin"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/opt/llvm/bin"
+        - "/usr/local/bin"
+        - "/Users/mohamedrabbit/vcpkg"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/sbin"
+        - "/usr/local/bin"
+        - "/System/Cryptexes/App/usr/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/sbin"
+        - "/sbin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
+        - "/opt/pmk/env/global/bin"
+        - "/Library/Apple/usr/bin"
+        - "/Applications/VMware Fusion.app/Contents/Public"
+        - "/Users/mohamedrabbit/.cargo/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerId.cmake:462 (find_file)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerId.cmake:500 (CMAKE_DETERMINE_COMPILER_ID_WRITE)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerId.cmake:8 (CMAKE_DETERMINE_COMPILER_ID_BUILD)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCXXCompiler.cmake:125 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "file"
+    variable: "src_in"
+    description: "Path to a file."
+    settings:
+      SearchFramework: "FIRST"
+      SearchAppBundle: "FIRST"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "CMakeCXXCompilerId.cpp.in"
+    candidate_directories:
+      - "/opt/homebrew/share/cmake/Modules/"
+    found: "/opt/homebrew/share/cmake/Modules/CMakeCXXCompilerId.cpp.in"
+    search_context:
+      ENV{CMAKE_PREFIX_PATH}:
+        - "/opt/homebrew/opt/libomp"
+      ENV{PATH}:
+        - "/Users/mohamedrabbit/.pyenv/shims"
+        - "/Users/mohamedrabbit/.pyenv/bin"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/opt/llvm/bin"
+        - "/usr/local/bin"
+        - "/Users/mohamedrabbit/vcpkg"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/sbin"
+        - "/usr/local/bin"
+        - "/System/Cryptexes/App/usr/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/sbin"
+        - "/sbin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
+        - "/opt/pmk/env/global/bin"
+        - "/Library/Apple/usr/bin"
+        - "/Applications/VMware Fusion.app/Contents/Public"
+        - "/Users/mohamedrabbit/.cargo/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCXXCompiler.cmake:125 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+      Compiler: /opt/homebrew/opt/llvm/bin/clang++ 
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      0
+      
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "a.out"
+      
+      The CXX compiler identification is Clang, found in:
+        /Users/mohamedrabbit/code/mylang/build/CMakeFiles/4.2.2/CompilerIdCXX/a.out
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerId.cmake:290 (message)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCXXCompiler.cmake:125 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Detecting CXX compiler apple sysroot: "/opt/homebrew/opt/llvm/bin/clang++" "-E" "apple-sdk.cpp"
+        # 1 "apple-sdk.cpp"
+        # 1 "<built-in>" 1
+        # 1 "<built-in>" 3
+        # 537 "<built-in>" 3
+        # 1 "<command line>" 1
+        # 1 "<built-in>" 2
+        # 1 "apple-sdk.cpp" 2
+        # 1 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityMacros.h" 1 3 4
+        # 89 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityMacros.h" 3 4
+        # 1 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityVersions.h" 1 3 4
+        # 90 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityMacros.h" 2 3 4
+        # 1 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/TargetConditionals.h" 1 3 4
+        # 91 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityMacros.h" 2 3 4
+        # 207 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityMacros.h" 3 4
+        # 1 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/Availability.h" 1 3 4
+        # 196 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/Availability.h" 3 4
+        # 1 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityVersions.h" 1 3 4
+        # 197 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/Availability.h" 2 3 4
+        # 1 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityInternal.h" 1 3 4
+        # 33 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityInternal.h" 3 4
+        # 1 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityVersions.h" 1 3 4
+        # 34 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityInternal.h" 2 3 4
+        # 198 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/Availability.h" 2 3 4
+        # 1 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityInternalLegacy.h" 1 3 4
+        # 34 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityInternalLegacy.h" 3 4
+        # 1 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityInternal.h" 1 3 4
+        # 35 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityInternalLegacy.h" 2 3 4
+        # 199 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/Availability.h" 2 3 4
+        # 208 "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include/AvailabilityMacros.h" 2 3 4
+        # 2 "apple-sdk.cpp" 2
+        
+        
+      Found apple sysroot: /Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/Compiler/Clang-FindBinUtils.cmake:26 (find_program)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCXXCompiler.cmake:207 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_CXX_COMPILER_AR"
+    description: "LLVM archiver"
+    settings:
+      SearchFramework: "FIRST"
+      SearchAppBundle: "FIRST"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "llvm-ar-21.1"
+      - "llvm-ar-21"
+      - "llvm-ar21"
+      - "llvm-ar"
+    candidate_directories:
+      - "/opt/homebrew/Cellar/llvm/21.1.8/bin/"
+      - "/opt/homebrew/opt/llvm/bin/"
+      - "/Users/mohamedrabbit/.pyenv/shims/"
+      - "/Users/mohamedrabbit/.pyenv/bin/"
+      - "/opt/homebrew/bin/"
+      - "/usr/local/bin/"
+      - "/Users/mohamedrabbit/vcpkg/"
+      - "/opt/homebrew/sbin/"
+      - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/"
+      - "/opt/pmk/env/global/bin/"
+      - "/Library/Apple/usr/bin/"
+      - "/Applications/VMware Fusion.app/Contents/Public/"
+      - "/Users/mohamedrabbit/.cargo/bin/"
+      - "/Users/mohamedrabbit/.local/bin/"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/"
+    searched_directories:
+      - "/opt/homebrew/Cellar/llvm/21.1.8/bin/llvm-ar-21.1"
+      - "/opt/homebrew/opt/llvm/bin/llvm-ar-21.1"
+      - "/Users/mohamedrabbit/.pyenv/shims/llvm-ar-21.1"
+      - "/Users/mohamedrabbit/.pyenv/bin/llvm-ar-21.1"
+      - "/opt/homebrew/bin/llvm-ar-21.1"
+      - "/usr/local/bin/llvm-ar-21.1"
+      - "/Users/mohamedrabbit/vcpkg/llvm-ar-21.1"
+      - "/opt/homebrew/sbin/llvm-ar-21.1"
+      - "/System/Cryptexes/App/usr/bin/llvm-ar-21.1"
+      - "/usr/bin/llvm-ar-21.1"
+      - "/bin/llvm-ar-21.1"
+      - "/usr/sbin/llvm-ar-21.1"
+      - "/sbin/llvm-ar-21.1"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/llvm-ar-21.1"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/llvm-ar-21.1"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/llvm-ar-21.1"
+      - "/opt/pmk/env/global/bin/llvm-ar-21.1"
+      - "/Library/Apple/usr/bin/llvm-ar-21.1"
+      - "/Applications/VMware Fusion.app/Contents/Public/llvm-ar-21.1"
+      - "/Users/mohamedrabbit/.cargo/bin/llvm-ar-21.1"
+      - "/Users/mohamedrabbit/.local/bin/llvm-ar-21.1"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/llvm-ar-21.1"
+      - "/opt/homebrew/Cellar/llvm/21.1.8/bin/llvm-ar-21"
+      - "/opt/homebrew/opt/llvm/bin/llvm-ar-21"
+      - "/Users/mohamedrabbit/.pyenv/shims/llvm-ar-21"
+      - "/Users/mohamedrabbit/.pyenv/bin/llvm-ar-21"
+      - "/opt/homebrew/bin/llvm-ar-21"
+      - "/usr/local/bin/llvm-ar-21"
+      - "/Users/mohamedrabbit/vcpkg/llvm-ar-21"
+      - "/opt/homebrew/sbin/llvm-ar-21"
+      - "/System/Cryptexes/App/usr/bin/llvm-ar-21"
+      - "/usr/bin/llvm-ar-21"
+      - "/bin/llvm-ar-21"
+      - "/usr/sbin/llvm-ar-21"
+      - "/sbin/llvm-ar-21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/llvm-ar-21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/llvm-ar-21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/llvm-ar-21"
+      - "/opt/pmk/env/global/bin/llvm-ar-21"
+      - "/Library/Apple/usr/bin/llvm-ar-21"
+      - "/Applications/VMware Fusion.app/Contents/Public/llvm-ar-21"
+      - "/Users/mohamedrabbit/.cargo/bin/llvm-ar-21"
+      - "/Users/mohamedrabbit/.local/bin/llvm-ar-21"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/llvm-ar-21"
+      - "/opt/homebrew/Cellar/llvm/21.1.8/bin/llvm-ar21"
+      - "/opt/homebrew/opt/llvm/bin/llvm-ar21"
+      - "/Users/mohamedrabbit/.pyenv/shims/llvm-ar21"
+      - "/Users/mohamedrabbit/.pyenv/bin/llvm-ar21"
+      - "/opt/homebrew/bin/llvm-ar21"
+      - "/usr/local/bin/llvm-ar21"
+      - "/Users/mohamedrabbit/vcpkg/llvm-ar21"
+      - "/opt/homebrew/sbin/llvm-ar21"
+      - "/System/Cryptexes/App/usr/bin/llvm-ar21"
+      - "/usr/bin/llvm-ar21"
+      - "/bin/llvm-ar21"
+      - "/usr/sbin/llvm-ar21"
+      - "/sbin/llvm-ar21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/llvm-ar21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/llvm-ar21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/llvm-ar21"
+      - "/opt/pmk/env/global/bin/llvm-ar21"
+      - "/Library/Apple/usr/bin/llvm-ar21"
+      - "/Applications/VMware Fusion.app/Contents/Public/llvm-ar21"
+      - "/Users/mohamedrabbit/.cargo/bin/llvm-ar21"
+      - "/Users/mohamedrabbit/.local/bin/llvm-ar21"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/llvm-ar21"
+    found: "/opt/homebrew/Cellar/llvm/21.1.8/bin/llvm-ar"
+    search_context:
+      ENV{CMAKE_PREFIX_PATH}:
+        - "/opt/homebrew/opt/libomp"
+      ENV{PATH}:
+        - "/Users/mohamedrabbit/.pyenv/shims"
+        - "/Users/mohamedrabbit/.pyenv/bin"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/opt/llvm/bin"
+        - "/usr/local/bin"
+        - "/Users/mohamedrabbit/vcpkg"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/sbin"
+        - "/usr/local/bin"
+        - "/System/Cryptexes/App/usr/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/sbin"
+        - "/sbin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
+        - "/opt/pmk/env/global/bin"
+        - "/Library/Apple/usr/bin"
+        - "/Applications/VMware Fusion.app/Contents/Public"
+        - "/Users/mohamedrabbit/.cargo/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/Compiler/Clang-FindBinUtils.cmake:38 (find_program)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCXXCompiler.cmake:207 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_CXX_COMPILER_RANLIB"
+    description: "Generate index for LLVM archive"
+    settings:
+      SearchFramework: "FIRST"
+      SearchAppBundle: "FIRST"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "llvm-ranlib-21.1"
+      - "llvm-ranlib-21"
+      - "llvm-ranlib21"
+      - "llvm-ranlib"
+    candidate_directories:
+      - "/opt/homebrew/Cellar/llvm/21.1.8/bin/"
+      - "/opt/homebrew/opt/llvm/bin/"
+      - "/Users/mohamedrabbit/.pyenv/shims/"
+      - "/Users/mohamedrabbit/.pyenv/bin/"
+      - "/opt/homebrew/bin/"
+      - "/usr/local/bin/"
+      - "/Users/mohamedrabbit/vcpkg/"
+      - "/opt/homebrew/sbin/"
+      - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/"
+      - "/opt/pmk/env/global/bin/"
+      - "/Library/Apple/usr/bin/"
+      - "/Applications/VMware Fusion.app/Contents/Public/"
+      - "/Users/mohamedrabbit/.cargo/bin/"
+      - "/Users/mohamedrabbit/.local/bin/"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/"
+    searched_directories:
+      - "/opt/homebrew/Cellar/llvm/21.1.8/bin/llvm-ranlib-21.1"
+      - "/opt/homebrew/opt/llvm/bin/llvm-ranlib-21.1"
+      - "/Users/mohamedrabbit/.pyenv/shims/llvm-ranlib-21.1"
+      - "/Users/mohamedrabbit/.pyenv/bin/llvm-ranlib-21.1"
+      - "/opt/homebrew/bin/llvm-ranlib-21.1"
+      - "/usr/local/bin/llvm-ranlib-21.1"
+      - "/Users/mohamedrabbit/vcpkg/llvm-ranlib-21.1"
+      - "/opt/homebrew/sbin/llvm-ranlib-21.1"
+      - "/System/Cryptexes/App/usr/bin/llvm-ranlib-21.1"
+      - "/usr/bin/llvm-ranlib-21.1"
+      - "/bin/llvm-ranlib-21.1"
+      - "/usr/sbin/llvm-ranlib-21.1"
+      - "/sbin/llvm-ranlib-21.1"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/llvm-ranlib-21.1"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/llvm-ranlib-21.1"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/llvm-ranlib-21.1"
+      - "/opt/pmk/env/global/bin/llvm-ranlib-21.1"
+      - "/Library/Apple/usr/bin/llvm-ranlib-21.1"
+      - "/Applications/VMware Fusion.app/Contents/Public/llvm-ranlib-21.1"
+      - "/Users/mohamedrabbit/.cargo/bin/llvm-ranlib-21.1"
+      - "/Users/mohamedrabbit/.local/bin/llvm-ranlib-21.1"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/llvm-ranlib-21.1"
+      - "/opt/homebrew/Cellar/llvm/21.1.8/bin/llvm-ranlib-21"
+      - "/opt/homebrew/opt/llvm/bin/llvm-ranlib-21"
+      - "/Users/mohamedrabbit/.pyenv/shims/llvm-ranlib-21"
+      - "/Users/mohamedrabbit/.pyenv/bin/llvm-ranlib-21"
+      - "/opt/homebrew/bin/llvm-ranlib-21"
+      - "/usr/local/bin/llvm-ranlib-21"
+      - "/Users/mohamedrabbit/vcpkg/llvm-ranlib-21"
+      - "/opt/homebrew/sbin/llvm-ranlib-21"
+      - "/System/Cryptexes/App/usr/bin/llvm-ranlib-21"
+      - "/usr/bin/llvm-ranlib-21"
+      - "/bin/llvm-ranlib-21"
+      - "/usr/sbin/llvm-ranlib-21"
+      - "/sbin/llvm-ranlib-21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/llvm-ranlib-21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/llvm-ranlib-21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/llvm-ranlib-21"
+      - "/opt/pmk/env/global/bin/llvm-ranlib-21"
+      - "/Library/Apple/usr/bin/llvm-ranlib-21"
+      - "/Applications/VMware Fusion.app/Contents/Public/llvm-ranlib-21"
+      - "/Users/mohamedrabbit/.cargo/bin/llvm-ranlib-21"
+      - "/Users/mohamedrabbit/.local/bin/llvm-ranlib-21"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/llvm-ranlib-21"
+      - "/opt/homebrew/Cellar/llvm/21.1.8/bin/llvm-ranlib21"
+      - "/opt/homebrew/opt/llvm/bin/llvm-ranlib21"
+      - "/Users/mohamedrabbit/.pyenv/shims/llvm-ranlib21"
+      - "/Users/mohamedrabbit/.pyenv/bin/llvm-ranlib21"
+      - "/opt/homebrew/bin/llvm-ranlib21"
+      - "/usr/local/bin/llvm-ranlib21"
+      - "/Users/mohamedrabbit/vcpkg/llvm-ranlib21"
+      - "/opt/homebrew/sbin/llvm-ranlib21"
+      - "/System/Cryptexes/App/usr/bin/llvm-ranlib21"
+      - "/usr/bin/llvm-ranlib21"
+      - "/bin/llvm-ranlib21"
+      - "/usr/sbin/llvm-ranlib21"
+      - "/sbin/llvm-ranlib21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/llvm-ranlib21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/llvm-ranlib21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/llvm-ranlib21"
+      - "/opt/pmk/env/global/bin/llvm-ranlib21"
+      - "/Library/Apple/usr/bin/llvm-ranlib21"
+      - "/Applications/VMware Fusion.app/Contents/Public/llvm-ranlib21"
+      - "/Users/mohamedrabbit/.cargo/bin/llvm-ranlib21"
+      - "/Users/mohamedrabbit/.local/bin/llvm-ranlib21"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/llvm-ranlib21"
+    found: "/opt/homebrew/Cellar/llvm/21.1.8/bin/llvm-ranlib"
+    search_context:
+      ENV{CMAKE_PREFIX_PATH}:
+        - "/opt/homebrew/opt/libomp"
+      ENV{PATH}:
+        - "/Users/mohamedrabbit/.pyenv/shims"
+        - "/Users/mohamedrabbit/.pyenv/bin"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/opt/llvm/bin"
+        - "/usr/local/bin"
+        - "/Users/mohamedrabbit/vcpkg"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/sbin"
+        - "/usr/local/bin"
+        - "/System/Cryptexes/App/usr/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/sbin"
+        - "/sbin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
+        - "/opt/pmk/env/global/bin"
+        - "/Library/Apple/usr/bin"
+        - "/Applications/VMware Fusion.app/Contents/Public"
+        - "/Users/mohamedrabbit/.cargo/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/Compiler/Clang-FindBinUtils.cmake:50 (find_program)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCXXCompiler.cmake:207 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS"
+    description: "`clang-scan-deps` dependency scanner"
+    settings:
+      SearchFramework: "FIRST"
+      SearchAppBundle: "FIRST"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "clang-scan-deps-21.1"
+      - "clang-scan-deps-21"
+      - "clang-scan-deps21"
+      - "clang-scan-deps"
+    candidate_directories:
+      - "/opt/homebrew/Cellar/llvm/21.1.8/bin/"
+      - "/opt/homebrew/opt/llvm/bin/"
+      - "/Users/mohamedrabbit/.pyenv/shims/"
+      - "/Users/mohamedrabbit/.pyenv/bin/"
+      - "/opt/homebrew/bin/"
+      - "/usr/local/bin/"
+      - "/Users/mohamedrabbit/vcpkg/"
+      - "/opt/homebrew/sbin/"
+      - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/"
+      - "/opt/pmk/env/global/bin/"
+      - "/Library/Apple/usr/bin/"
+      - "/Applications/VMware Fusion.app/Contents/Public/"
+      - "/Users/mohamedrabbit/.cargo/bin/"
+      - "/Users/mohamedrabbit/.local/bin/"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/"
+    searched_directories:
+      - "/opt/homebrew/Cellar/llvm/21.1.8/bin/clang-scan-deps-21.1"
+      - "/opt/homebrew/opt/llvm/bin/clang-scan-deps-21.1"
+      - "/Users/mohamedrabbit/.pyenv/shims/clang-scan-deps-21.1"
+      - "/Users/mohamedrabbit/.pyenv/bin/clang-scan-deps-21.1"
+      - "/opt/homebrew/bin/clang-scan-deps-21.1"
+      - "/usr/local/bin/clang-scan-deps-21.1"
+      - "/Users/mohamedrabbit/vcpkg/clang-scan-deps-21.1"
+      - "/opt/homebrew/sbin/clang-scan-deps-21.1"
+      - "/System/Cryptexes/App/usr/bin/clang-scan-deps-21.1"
+      - "/usr/bin/clang-scan-deps-21.1"
+      - "/bin/clang-scan-deps-21.1"
+      - "/usr/sbin/clang-scan-deps-21.1"
+      - "/sbin/clang-scan-deps-21.1"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/clang-scan-deps-21.1"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/clang-scan-deps-21.1"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/clang-scan-deps-21.1"
+      - "/opt/pmk/env/global/bin/clang-scan-deps-21.1"
+      - "/Library/Apple/usr/bin/clang-scan-deps-21.1"
+      - "/Applications/VMware Fusion.app/Contents/Public/clang-scan-deps-21.1"
+      - "/Users/mohamedrabbit/.cargo/bin/clang-scan-deps-21.1"
+      - "/Users/mohamedrabbit/.local/bin/clang-scan-deps-21.1"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/clang-scan-deps-21.1"
+      - "/opt/homebrew/Cellar/llvm/21.1.8/bin/clang-scan-deps-21"
+      - "/opt/homebrew/opt/llvm/bin/clang-scan-deps-21"
+      - "/Users/mohamedrabbit/.pyenv/shims/clang-scan-deps-21"
+      - "/Users/mohamedrabbit/.pyenv/bin/clang-scan-deps-21"
+      - "/opt/homebrew/bin/clang-scan-deps-21"
+      - "/usr/local/bin/clang-scan-deps-21"
+      - "/Users/mohamedrabbit/vcpkg/clang-scan-deps-21"
+      - "/opt/homebrew/sbin/clang-scan-deps-21"
+      - "/System/Cryptexes/App/usr/bin/clang-scan-deps-21"
+      - "/usr/bin/clang-scan-deps-21"
+      - "/bin/clang-scan-deps-21"
+      - "/usr/sbin/clang-scan-deps-21"
+      - "/sbin/clang-scan-deps-21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/clang-scan-deps-21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/clang-scan-deps-21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/clang-scan-deps-21"
+      - "/opt/pmk/env/global/bin/clang-scan-deps-21"
+      - "/Library/Apple/usr/bin/clang-scan-deps-21"
+      - "/Applications/VMware Fusion.app/Contents/Public/clang-scan-deps-21"
+      - "/Users/mohamedrabbit/.cargo/bin/clang-scan-deps-21"
+      - "/Users/mohamedrabbit/.local/bin/clang-scan-deps-21"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/clang-scan-deps-21"
+      - "/opt/homebrew/Cellar/llvm/21.1.8/bin/clang-scan-deps21"
+      - "/opt/homebrew/opt/llvm/bin/clang-scan-deps21"
+      - "/Users/mohamedrabbit/.pyenv/shims/clang-scan-deps21"
+      - "/Users/mohamedrabbit/.pyenv/bin/clang-scan-deps21"
+      - "/opt/homebrew/bin/clang-scan-deps21"
+      - "/usr/local/bin/clang-scan-deps21"
+      - "/Users/mohamedrabbit/vcpkg/clang-scan-deps21"
+      - "/opt/homebrew/sbin/clang-scan-deps21"
+      - "/System/Cryptexes/App/usr/bin/clang-scan-deps21"
+      - "/usr/bin/clang-scan-deps21"
+      - "/bin/clang-scan-deps21"
+      - "/usr/sbin/clang-scan-deps21"
+      - "/sbin/clang-scan-deps21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/clang-scan-deps21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/clang-scan-deps21"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/clang-scan-deps21"
+      - "/opt/pmk/env/global/bin/clang-scan-deps21"
+      - "/Library/Apple/usr/bin/clang-scan-deps21"
+      - "/Applications/VMware Fusion.app/Contents/Public/clang-scan-deps21"
+      - "/Users/mohamedrabbit/.cargo/bin/clang-scan-deps21"
+      - "/Users/mohamedrabbit/.local/bin/clang-scan-deps21"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/clang-scan-deps21"
+    found: "/opt/homebrew/Cellar/llvm/21.1.8/bin/clang-scan-deps"
+    search_context:
+      ENV{CMAKE_PREFIX_PATH}:
+        - "/opt/homebrew/opt/libomp"
+      ENV{PATH}:
+        - "/Users/mohamedrabbit/.pyenv/shims"
+        - "/Users/mohamedrabbit/.pyenv/bin"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/opt/llvm/bin"
+        - "/usr/local/bin"
+        - "/Users/mohamedrabbit/vcpkg"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/sbin"
+        - "/usr/local/bin"
+        - "/System/Cryptexes/App/usr/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/sbin"
+        - "/sbin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
+        - "/opt/pmk/env/global/bin"
+        - "/Library/Apple/usr/bin"
+        - "/Applications/VMware Fusion.app/Contents/Public"
+        - "/Users/mohamedrabbit/.cargo/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/Platform/Darwin.cmake:76 (find_program)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeSystemSpecificInformation.cmake:32 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_INSTALL_NAME_TOOL"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "FIRST"
+      SearchAppBundle: "FIRST"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "install_name_tool"
+    candidate_directories:
+      - "/opt/homebrew/opt/libomp/bin/"
+      - "/opt/homebrew/opt/libomp/sbin/"
+      - "/opt/homebrew/opt/libomp/"
+      - "/Users/mohamedrabbit/.pyenv/shims/"
+      - "/Users/mohamedrabbit/.pyenv/bin/"
+      - "/opt/homebrew/bin/"
+      - "/opt/homebrew/opt/llvm/bin/"
+      - "/usr/local/bin/"
+      - "/Users/mohamedrabbit/vcpkg/"
+      - "/opt/homebrew/sbin/"
+      - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin/"
+      - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin/"
+      - "/opt/pmk/env/global/bin/"
+      - "/Library/Apple/usr/bin/"
+      - "/Applications/VMware Fusion.app/Contents/Public/"
+      - "/Users/mohamedrabbit/.cargo/bin/"
+      - "/Users/mohamedrabbit/.local/bin/"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/"
+    searched_directories:
+      - "/opt/homebrew/opt/libomp/bin/install_name_tool"
+      - "/opt/homebrew/opt/libomp/sbin/install_name_tool"
+      - "/opt/homebrew/opt/libomp/install_name_tool"
+      - "/Users/mohamedrabbit/.pyenv/shims/install_name_tool"
+      - "/Users/mohamedrabbit/.pyenv/bin/install_name_tool"
+      - "/opt/homebrew/bin/install_name_tool"
+      - "/opt/homebrew/opt/llvm/bin/install_name_tool"
+      - "/usr/local/bin/install_name_tool"
+      - "/Users/mohamedrabbit/vcpkg/install_name_tool"
+      - "/opt/homebrew/sbin/install_name_tool"
+      - "/System/Cryptexes/App/usr/bin/install_name_tool"
+    found: "/usr/bin/install_name_tool"
+    search_context:
+      ENV{CMAKE_PREFIX_PATH}:
+        - "/opt/homebrew/opt/libomp"
+      ENV{PATH}:
+        - "/Users/mohamedrabbit/.pyenv/shims"
+        - "/Users/mohamedrabbit/.pyenv/bin"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/opt/llvm/bin"
+        - "/usr/local/bin"
+        - "/Users/mohamedrabbit/vcpkg"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/sbin"
+        - "/usr/local/bin"
+        - "/System/Cryptexes/App/usr/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/sbin"
+        - "/sbin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
+        - "/opt/pmk/env/global/bin"
+        - "/Library/Apple/usr/bin"
+        - "/Applications/VMware Fusion.app/Contents/Public"
+        - "/Users/mohamedrabbit/.cargo/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+      CMAKE_INSTALL_PREFIX: "/usr/local"
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:83 (try_compile)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    checks:
+      - "Detecting C compiler ABI info"
+    directories:
+      source: "/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-lsypoV"
+      binary: "/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-lsypoV"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/opt/homebrew/Cellar/llvm/21.1.8/bin/clang-scan-deps"
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-L/opt/homebrew/opt/libomp/lib"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"
+    buildResult:
+      variable: "CMAKE_C_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-lsypoV'
+        
+        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_e159c/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_e159c.dir/build.make CMakeFiles/cmTC_e159c.dir/build
+        Building C object CMakeFiles/cmTC_e159c.dir/CMakeCCompilerABI.c.o
+        /opt/homebrew/opt/llvm/bin/clang   -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk   -v -Wl,-v -MD -MT CMakeFiles/cmTC_e159c.dir/CMakeCCompilerABI.c.o -MF CMakeFiles/cmTC_e159c.dir/CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_e159c.dir/CMakeCCompilerABI.c.o -c /opt/homebrew/share/cmake/Modules/CMakeCCompilerABI.c
+        Homebrew clang version 21.1.8
+        Target: arm64-apple-darwin25.1.0
+        Thread model: posix
+        InstalledDir: /opt/homebrew/Cellar/llvm/21.1.8/bin
+        Configuration file: /opt/homebrew/etc/clang/arm64-apple-darwin25.cfg
+        System configuration file directory: /opt/homebrew/etc/clang
+        User configuration file directory: /Users/mohamedrabbit/.config/clang
+        clang: warning: -Wl,-v: 'linker' input unused [-Wunused-command-line-argument]
+         (in-process)
+         "/opt/homebrew/Cellar/llvm/21.1.8/bin/clang-21" -cc1 -triple arm64-apple-macosx26.0.0 -Wundef-prefix=TARGET_OS_ -Werror=undef-prefix -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -mframe-pointer=non-leaf -ffp-contract=on -fno-rounding-math -funwind-tables=1 -target-sdk-version=26.0 -fcompatibility-qualified-id-block-type-checking -fvisibility-inlines-hidden-static-local-var -fdefine-target-os-macros -fno-modulemap-allow-subdirectory-search -enable-tlsdesc -target-cpu apple-m1 -target-feature +v8.4a -target-feature +aes -target-feature +altnzcv -target-feature +ccdp -target-feature +ccpp -target-feature +complxnum -target-feature +crc -target-feature +dotprod -target-feature +flagm -target-feature +fp-armv8 -target-feature +fp16fml -target-feature +fptoint -target-feature +fullfp16 -target-feature +jsconv -target-feature +lse -target-feature +neon -target-feature +pauth -target-feature +perfmon -target-feature +predres -target-feature +ras -target-feature +rcpc -target-feature +rdm -target-feature +sb -target-feature +sha2 -target-feature +sha3 -target-feature +specrestrict -target-feature +ssbs -target-abi darwinpcs -debugger-tuning=lldb -fdebug-compilation-dir=/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-lsypoV -target-linker-version 1230.1 -v -fcoverage-compilation-dir=/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-lsypoV -resource-dir /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21 -dependency-file CMakeFiles/cmTC_e159c.dir/CMakeCCompilerABI.c.o.d -MT CMakeFiles/cmTC_e159c.dir/CMakeCCompilerABI.c.o -sys-header-deps -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -I/opt/homebrew/opt/libomp/include -I. -internal-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/local/include -internal-isystem /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include -internal-externc-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include -internal-iframework /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks -internal-iframework /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/SubFrameworks -internal-iframework /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/Library/Frameworks -ferror-limit 19 -stack-protector 1 -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -fmax-type-align=16 -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_e159c.dir/CMakeCCompilerABI.c.o -x c /opt/homebrew/share/cmake/Modules/CMakeCCompilerABI.c
+        clang -cc1 version 21.1.8 based upon LLVM 21.1.8 default target arm64-apple-darwin25.1.0
+        ignoring nonexistent directory "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/local/include"
+        ignoring nonexistent directory "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/Library/Frameworks"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         /opt/homebrew/opt/libomp/include
+         .
+         /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include
+         /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include
+         /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks (framework directory)
+         /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/SubFrameworks (framework directory)
+        End of search list.
+        Linking C executable cmTC_e159c
+        /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/cmTC_e159c.dir/link.txt --verbose=1
+        Homebrew clang version 21.1.8
+        Target: arm64-apple-darwin25.1.0
+        Thread model: posix
+        InstalledDir: /opt/homebrew/Cellar/llvm/21.1.8/bin
+        Configuration file: /opt/homebrew/etc/clang/arm64-apple-darwin25.cfg
+        System configuration file directory: /opt/homebrew/etc/clang
+        User configuration file directory: /Users/mohamedrabbit/.config/clang
+         "/usr/bin/ld" -demangle -lto_library /opt/homebrew/Cellar/llvm/21.1.8/lib/libLTO.dylib -dynamic -arch arm64 -platform_version macos 26.0.0 26.0 -syslibroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -mllvm -enable-linkonceodr-outlining -o cmTC_e159c -L/opt/homebrew/opt/libomp/lib -L/opt/homebrew/opt/libomp/lib -L. -search_paths_first -headerpad_max_install_names -v CMakeFiles/cmTC_e159c.dir/CMakeCCompilerABI.c.o -lSystem /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/lib/darwin/libclang_rt.osx.a
+        @(#)PROGRAM:ld PROJECT:ld-1221.4
+        BUILD 16:29:08 Aug 11 2025
+        configured to support archs: armv6 armv7 armv7s arm64 arm64e arm64_32 i386 x86_64 x86_64h armv6m armv7k armv7m armv7em armv8m.main armv8.1m.main
+        will use ld-classic for: armv6 armv7 armv7s i386 armv6m armv7k armv7m armv7em
+        LTO support using: LLVM version 21.1.8 (static support for 29, runtime is 30)
+        TAPI support using: Apple TAPI version 17.0.0 (tapi-1700.3.8)
+        Library search paths:
+        	/opt/homebrew/opt/libomp/lib
+        	.
+        	/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib
+        	/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/swift
+        Framework search paths:
+        	/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks
+        /opt/homebrew/opt/llvm/bin/clang  -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names -L/opt/homebrew/opt/libomp/lib -v -Wl,-v CMakeFiles/cmTC_e159c.dir/CMakeCCompilerABI.c.o -o cmTC_e159c
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:122 (message)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Effective list of requested architectures (possibly empty)  : ""
+      Effective list of architectures found in the ABI info binary: "arm64"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:217 (message)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Parsed C implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [/opt/homebrew/opt/libomp/include]
+          add: [.]
+          add: [/opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include]
+          add: [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include]
+        end of search list found
+        collapse include dir [/opt/homebrew/opt/libomp/include] ==> [/opt/homebrew/opt/libomp/include]
+        skipping relative include dir [.]
+        collapse include dir [/opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include] ==> [/opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include]
+        collapse include dir [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include] ==> [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include]
+        implicit include dirs: [/opt/homebrew/opt/libomp/include;/opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include;/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:253 (message)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Parsed C implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|"|[0-9]+>[ 	-]*Build:[ 	0-9]+ ms[ 	]*)?[ 	]*(([^"]*[/\\])?(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)))("|,| |$)]
+        ignore line: [Change Dir: '/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-lsypoV']
+        ignore line: []
+        ignore line: [Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_e159c/fast]
+        ignore line: [/Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_e159c.dir/build.make CMakeFiles/cmTC_e159c.dir/build]
+        ignore line: [Building C object CMakeFiles/cmTC_e159c.dir/CMakeCCompilerABI.c.o]
+        ignore line: [/opt/homebrew/opt/llvm/bin/clang   -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk   -v -Wl -v -MD -MT CMakeFiles/cmTC_e159c.dir/CMakeCCompilerABI.c.o -MF CMakeFiles/cmTC_e159c.dir/CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_e159c.dir/CMakeCCompilerABI.c.o -c /opt/homebrew/share/cmake/Modules/CMakeCCompilerABI.c]
+        ignore line: [Homebrew clang version 21.1.8]
+        ignore line: [Target: arm64-apple-darwin25.1.0]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /opt/homebrew/Cellar/llvm/21.1.8/bin]
+        ignore line: [Configuration file: /opt/homebrew/etc/clang/arm64-apple-darwin25.cfg]
+        ignore line: [System configuration file directory: /opt/homebrew/etc/clang]
+        ignore line: [User configuration file directory: /Users/mohamedrabbit/.config/clang]
+        ignore line: [clang: warning: -Wl -v: 'linker' input unused [-Wunused-command-line-argument]]
+        ignore line: [ (in-process)]
+        ignore line: [ "/opt/homebrew/Cellar/llvm/21.1.8/bin/clang-21" -cc1 -triple arm64-apple-macosx26.0.0 -Wundef-prefix=TARGET_OS_ -Werror=undef-prefix -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -mframe-pointer=non-leaf -ffp-contract=on -fno-rounding-math -funwind-tables=1 -target-sdk-version=26.0 -fcompatibility-qualified-id-block-type-checking -fvisibility-inlines-hidden-static-local-var -fdefine-target-os-macros -fno-modulemap-allow-subdirectory-search -enable-tlsdesc -target-cpu apple-m1 -target-feature +v8.4a -target-feature +aes -target-feature +altnzcv -target-feature +ccdp -target-feature +ccpp -target-feature +complxnum -target-feature +crc -target-feature +dotprod -target-feature +flagm -target-feature +fp-armv8 -target-feature +fp16fml -target-feature +fptoint -target-feature +fullfp16 -target-feature +jsconv -target-feature +lse -target-feature +neon -target-feature +pauth -target-feature +perfmon -target-feature +predres -target-feature +ras -target-feature +rcpc -target-feature +rdm -target-feature +sb -target-feature +sha2 -target-feature +sha3 -target-feature +specrestrict -target-feature +ssbs -target-abi darwinpcs -debugger-tuning=lldb -fdebug-compilation-dir=/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-lsypoV -target-linker-version 1230.1 -v -fcoverage-compilation-dir=/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-lsypoV -resource-dir /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21 -dependency-file CMakeFiles/cmTC_e159c.dir/CMakeCCompilerABI.c.o.d -MT CMakeFiles/cmTC_e159c.dir/CMakeCCompilerABI.c.o -sys-header-deps -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -I/opt/homebrew/opt/libomp/include -I. -internal-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/local/include -internal-isystem /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include -internal-externc-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include -internal-iframework /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks -internal-iframework /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/SubFrameworks -internal-iframework /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/Library/Frameworks -ferror-limit 19 -stack-protector 1 -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -fmax-type-align=16 -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_e159c.dir/CMakeCCompilerABI.c.o -x c /opt/homebrew/share/cmake/Modules/CMakeCCompilerABI.c]
+        ignore line: [clang -cc1 version 21.1.8 based upon LLVM 21.1.8 default target arm64-apple-darwin25.1.0]
+        ignore line: [ignoring nonexistent directory "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/local/include"]
+        ignore line: [ignoring nonexistent directory "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/Library/Frameworks"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ /opt/homebrew/opt/libomp/include]
+        ignore line: [ .]
+        ignore line: [ /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include]
+        ignore line: [ /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include]
+        ignore line: [ /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks (framework directory)]
+        ignore line: [ /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/SubFrameworks (framework directory)]
+        ignore line: [End of search list.]
+        ignore line: [Linking C executable cmTC_e159c]
+        ignore line: [/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/cmTC_e159c.dir/link.txt --verbose=1]
+        ignore line: [Homebrew clang version 21.1.8]
+        ignore line: [Target: arm64-apple-darwin25.1.0]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /opt/homebrew/Cellar/llvm/21.1.8/bin]
+        ignore line: [Configuration file: /opt/homebrew/etc/clang/arm64-apple-darwin25.cfg]
+        ignore line: [System configuration file directory: /opt/homebrew/etc/clang]
+        ignore line: [User configuration file directory: /Users/mohamedrabbit/.config/clang]
+        link line: [ "/usr/bin/ld" -demangle -lto_library /opt/homebrew/Cellar/llvm/21.1.8/lib/libLTO.dylib -dynamic -arch arm64 -platform_version macos 26.0.0 26.0 -syslibroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -mllvm -enable-linkonceodr-outlining -o cmTC_e159c -L/opt/homebrew/opt/libomp/lib -L/opt/homebrew/opt/libomp/lib -L. -search_paths_first -headerpad_max_install_names -v CMakeFiles/cmTC_e159c.dir/CMakeCCompilerABI.c.o -lSystem /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/lib/darwin/libclang_rt.osx.a]
+          arg [/usr/bin/ld] ==> ignore
+          arg [-demangle] ==> ignore
+          arg [-lto_library] ==> ignore, skip following value
+          arg [/opt/homebrew/Cellar/llvm/21.1.8/lib/libLTO.dylib] ==> skip value of -lto_library
+          arg [-dynamic] ==> ignore
+          arg [-arch] ==> ignore
+          arg [arm64] ==> ignore
+          arg [-platform_version] ==> ignore
+          arg [macos] ==> ignore
+          arg [26.0.0] ==> ignore
+          arg [26.0] ==> ignore
+          arg [-syslibroot] ==> ignore
+          arg [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk] ==> ignore
+          arg [-mllvm] ==> ignore
+          arg [-enable-linkonceodr-outlining] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_e159c] ==> ignore
+          arg [-L/opt/homebrew/opt/libomp/lib] ==> dir [/opt/homebrew/opt/libomp/lib]
+          arg [-L/opt/homebrew/opt/libomp/lib] ==> dir [/opt/homebrew/opt/libomp/lib]
+          arg [-L.] ==> ignore
+          arg [-search_paths_first] ==> ignore
+          arg [-headerpad_max_install_names] ==> ignore
+          arg [-v] ==> ignore
+          arg [CMakeFiles/cmTC_e159c.dir/CMakeCCompilerABI.c.o] ==> ignore
+          arg [-lSystem] ==> lib [System]
+          arg [/opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/lib/darwin/libclang_rt.osx.a] ==> lib [/opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/lib/darwin/libclang_rt.osx.a]
+        linker tool for 'C': /usr/bin/ld
+        Library search paths: [;/opt/homebrew/opt/libomp/lib;.;/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib;/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/swift]
+        Framework search paths: [;/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks]
+        remove lib [System]
+        remove lib [/opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/lib/darwin/libclang_rt.osx.a]
+        collapse library dir [/opt/homebrew/opt/libomp/lib] ==> [/opt/homebrew/opt/libomp/lib]
+        collapse library dir [/opt/homebrew/opt/libomp/lib] ==> [/opt/homebrew/opt/libomp/lib]
+        collapse library dir [/opt/homebrew/opt/libomp/lib] ==> [/opt/homebrew/opt/libomp/lib]
+        collapse library dir [.] ==> [/Users/mohamedrabbit/code/mylang]
+        collapse library dir [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib] ==> [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib]
+        collapse library dir [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/swift] ==> [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/swift]
+        collapse framework dir [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks] ==> [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks]
+        implicit libs: []
+        implicit objs: []
+        implicit dirs: [/opt/homebrew/opt/libomp/lib;/Users/mohamedrabbit/code/mylang;/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib;/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/swift]
+        implicit fwks: [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/Internal/CMakeDetermineLinkerId.cmake:38 (message)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:299 (cmake_determine_linker_id)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Running the C compiler's linker: "/usr/bin/ld" "-v"
+      @(#)PROGRAM:ld PROJECT:ld-1221.4
+      BUILD 16:29:08 Aug 11 2025
+      configured to support archs: armv6 armv7 armv7s arm64 arm64e arm64_32 i386 x86_64 x86_64h armv6m armv7k armv7m armv7em armv8m.main armv8.1m.main
+      will use ld-classic for: armv6 armv7 armv7s i386 armv6m armv7k armv7m armv7em
+      LTO support using: LLVM version 17.0.0 (static support for 29, runtime is 29)
+      TAPI support using: Apple TAPI version 17.0.0 (tapi-1700.3.8)
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:83 (try_compile)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    checks:
+      - "Detecting CXX compiler ABI info"
+    directories:
+      source: "/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-xVB3xj"
+      binary: "/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-xVB3xj"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/opt/homebrew/Cellar/llvm/21.1.8/bin/clang-scan-deps"
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_CXX_SCAN_FOR_MODULES: "OFF"
+      CMAKE_EXE_LINKER_FLAGS: "-L/opt/homebrew/opt/libomp/lib"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"
+    buildResult:
+      variable: "CMAKE_CXX_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-xVB3xj'
+        
+        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_1e04d/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_1e04d.dir/build.make CMakeFiles/cmTC_1e04d.dir/build
+        Building CXX object CMakeFiles/cmTC_1e04d.dir/CMakeCXXCompilerABI.cpp.o
+        /opt/homebrew/opt/llvm/bin/clang++   -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk   -v -Wl,-v -MD -MT CMakeFiles/cmTC_1e04d.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles/cmTC_1e04d.dir/CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_1e04d.dir/CMakeCXXCompilerABI.cpp.o -c /opt/homebrew/share/cmake/Modules/CMakeCXXCompilerABI.cpp
+        Homebrew clang version 21.1.8
+        Target: arm64-apple-darwin25.1.0
+        Thread model: posix
+        InstalledDir: /opt/homebrew/Cellar/llvm/21.1.8/bin
+        Configuration file: /opt/homebrew/etc/clang/arm64-apple-darwin25.cfg
+        System configuration file directory: /opt/homebrew/etc/clang
+        User configuration file directory: /Users/mohamedrabbit/.config/clang
+        clang++: warning: -Wl,-v: 'linker' input unused [-Wunused-command-line-argument]
+         (in-process)
+         "/opt/homebrew/Cellar/llvm/21.1.8/bin/clang-21" -cc1 -triple arm64-apple-macosx26.0.0 -Wundef-prefix=TARGET_OS_ -Werror=undef-prefix -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -mframe-pointer=non-leaf -ffp-contract=on -fno-rounding-math -funwind-tables=1 -target-sdk-version=26.0 -fcompatibility-qualified-id-block-type-checking -fvisibility-inlines-hidden-static-local-var -fdefine-target-os-macros -fno-modulemap-allow-subdirectory-search -enable-tlsdesc -target-cpu apple-m1 -target-feature +v8.4a -target-feature +aes -target-feature +altnzcv -target-feature +ccdp -target-feature +ccpp -target-feature +complxnum -target-feature +crc -target-feature +dotprod -target-feature +flagm -target-feature +fp-armv8 -target-feature +fp16fml -target-feature +fptoint -target-feature +fullfp16 -target-feature +jsconv -target-feature +lse -target-feature +neon -target-feature +pauth -target-feature +perfmon -target-feature +predres -target-feature +ras -target-feature +rcpc -target-feature +rdm -target-feature +sb -target-feature +sha2 -target-feature +sha3 -target-feature +specrestrict -target-feature +ssbs -target-abi darwinpcs -debugger-tuning=lldb -fdebug-compilation-dir=/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-xVB3xj -target-linker-version 1230.1 -v -fcoverage-compilation-dir=/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-xVB3xj -resource-dir /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21 -dependency-file CMakeFiles/cmTC_1e04d.dir/CMakeCXXCompilerABI.cpp.o.d -MT CMakeFiles/cmTC_1e04d.dir/CMakeCXXCompilerABI.cpp.o -sys-header-deps -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -I/opt/homebrew/opt/libomp/include -I. -internal-isystem /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1 -internal-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/local/include -internal-isystem /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include -internal-externc-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include -internal-iframework /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks -internal-iframework /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/SubFrameworks -internal-iframework /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/Library/Frameworks -fdeprecated-macro -ferror-limit 19 -stack-protector 1 -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -fcxx-exceptions -fexceptions -fmax-type-align=16 -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_1e04d.dir/CMakeCXXCompilerABI.cpp.o -x c++ /opt/homebrew/share/cmake/Modules/CMakeCXXCompilerABI.cpp
+        clang -cc1 version 21.1.8 based upon LLVM 21.1.8 default target arm64-apple-darwin25.1.0
+        ignoring nonexistent directory "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/local/include"
+        ignoring nonexistent directory "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/Library/Frameworks"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         /opt/homebrew/opt/libomp/include
+         .
+         /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1
+         /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include
+         /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include
+         /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks (framework directory)
+         /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/SubFrameworks (framework directory)
+        End of search list.
+        Linking CXX executable cmTC_1e04d
+        /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/cmTC_1e04d.dir/link.txt --verbose=1
+        Homebrew clang version 21.1.8
+        Target: arm64-apple-darwin25.1.0
+        Thread model: posix
+        InstalledDir: /opt/homebrew/Cellar/llvm/21.1.8/bin
+        Configuration file: /opt/homebrew/etc/clang/arm64-apple-darwin25.cfg
+        System configuration file directory: /opt/homebrew/etc/clang
+        User configuration file directory: /Users/mohamedrabbit/.config/clang
+         "/usr/bin/ld" -demangle -lto_library /opt/homebrew/Cellar/llvm/21.1.8/lib/libLTO.dylib -dynamic -arch arm64 -platform_version macos 26.0.0 26.0 -syslibroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -mllvm -enable-linkonceodr-outlining -o cmTC_1e04d -L/opt/homebrew/opt/libomp/lib -L/opt/homebrew/opt/libomp/lib -L. -search_paths_first -headerpad_max_install_names -v CMakeFiles/cmTC_1e04d.dir/CMakeCXXCompilerABI.cpp.o -lc++ -lSystem /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/lib/darwin/libclang_rt.osx.a
+        @(#)PROGRAM:ld PROJECT:ld-1221.4
+        BUILD 16:29:08 Aug 11 2025
+        configured to support archs: armv6 armv7 armv7s arm64 arm64e arm64_32 i386 x86_64 x86_64h armv6m armv7k armv7m armv7em armv8m.main armv8.1m.main
+        will use ld-classic for: armv6 armv7 armv7s i386 armv6m armv7k armv7m armv7em
+        LTO support using: LLVM version 21.1.8 (static support for 29, runtime is 30)
+        TAPI support using: Apple TAPI version 17.0.0 (tapi-1700.3.8)
+        Library search paths:
+        	/opt/homebrew/opt/libomp/lib
+        	.
+        	/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib
+        	/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/swift
+        Framework search paths:
+        	/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks
+        /opt/homebrew/opt/llvm/bin/clang++  -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names -L/opt/homebrew/opt/libomp/lib -v -Wl,-v CMakeFiles/cmTC_1e04d.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_1e04d
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:122 (message)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Effective list of requested architectures (possibly empty)  : ""
+      Effective list of architectures found in the ABI info binary: "arm64"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:217 (message)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Parsed CXX implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [/opt/homebrew/opt/libomp/include]
+          add: [.]
+          add: [/opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1]
+          add: [/opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include]
+          add: [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include]
+        end of search list found
+        collapse include dir [/opt/homebrew/opt/libomp/include] ==> [/opt/homebrew/opt/libomp/include]
+        skipping relative include dir [.]
+        collapse include dir [/opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1] ==> [/opt/homebrew/Cellar/llvm/21.1.8/include/c++/v1]
+        collapse include dir [/opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include] ==> [/opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include]
+        collapse include dir [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include] ==> [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include]
+        implicit include dirs: [/opt/homebrew/opt/libomp/include;/opt/homebrew/Cellar/llvm/21.1.8/include/c++/v1;/opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include;/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:253 (message)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Parsed CXX implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|"|[0-9]+>[ 	-]*Build:[ 	0-9]+ ms[ 	]*)?[ 	]*(([^"]*[/\\])?(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)))("|,| |$)]
+        ignore line: [Change Dir: '/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-xVB3xj']
+        ignore line: []
+        ignore line: [Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_1e04d/fast]
+        ignore line: [/Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_1e04d.dir/build.make CMakeFiles/cmTC_1e04d.dir/build]
+        ignore line: [Building CXX object CMakeFiles/cmTC_1e04d.dir/CMakeCXXCompilerABI.cpp.o]
+        ignore line: [/opt/homebrew/opt/llvm/bin/clang++   -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk   -v -Wl -v -MD -MT CMakeFiles/cmTC_1e04d.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles/cmTC_1e04d.dir/CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_1e04d.dir/CMakeCXXCompilerABI.cpp.o -c /opt/homebrew/share/cmake/Modules/CMakeCXXCompilerABI.cpp]
+        ignore line: [Homebrew clang version 21.1.8]
+        ignore line: [Target: arm64-apple-darwin25.1.0]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /opt/homebrew/Cellar/llvm/21.1.8/bin]
+        ignore line: [Configuration file: /opt/homebrew/etc/clang/arm64-apple-darwin25.cfg]
+        ignore line: [System configuration file directory: /opt/homebrew/etc/clang]
+        ignore line: [User configuration file directory: /Users/mohamedrabbit/.config/clang]
+        ignore line: [clang++: warning: -Wl -v: 'linker' input unused [-Wunused-command-line-argument]]
+        ignore line: [ (in-process)]
+        ignore line: [ "/opt/homebrew/Cellar/llvm/21.1.8/bin/clang-21" -cc1 -triple arm64-apple-macosx26.0.0 -Wundef-prefix=TARGET_OS_ -Werror=undef-prefix -Wdeprecated-objc-isa-usage -Werror=deprecated-objc-isa-usage -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -mframe-pointer=non-leaf -ffp-contract=on -fno-rounding-math -funwind-tables=1 -target-sdk-version=26.0 -fcompatibility-qualified-id-block-type-checking -fvisibility-inlines-hidden-static-local-var -fdefine-target-os-macros -fno-modulemap-allow-subdirectory-search -enable-tlsdesc -target-cpu apple-m1 -target-feature +v8.4a -target-feature +aes -target-feature +altnzcv -target-feature +ccdp -target-feature +ccpp -target-feature +complxnum -target-feature +crc -target-feature +dotprod -target-feature +flagm -target-feature +fp-armv8 -target-feature +fp16fml -target-feature +fptoint -target-feature +fullfp16 -target-feature +jsconv -target-feature +lse -target-feature +neon -target-feature +pauth -target-feature +perfmon -target-feature +predres -target-feature +ras -target-feature +rcpc -target-feature +rdm -target-feature +sb -target-feature +sha2 -target-feature +sha3 -target-feature +specrestrict -target-feature +ssbs -target-abi darwinpcs -debugger-tuning=lldb -fdebug-compilation-dir=/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-xVB3xj -target-linker-version 1230.1 -v -fcoverage-compilation-dir=/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-xVB3xj -resource-dir /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21 -dependency-file CMakeFiles/cmTC_1e04d.dir/CMakeCXXCompilerABI.cpp.o.d -MT CMakeFiles/cmTC_1e04d.dir/CMakeCXXCompilerABI.cpp.o -sys-header-deps -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -I/opt/homebrew/opt/libomp/include -I. -internal-isystem /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1 -internal-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/local/include -internal-isystem /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include -internal-externc-isystem /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include -internal-iframework /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks -internal-iframework /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/SubFrameworks -internal-iframework /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/Library/Frameworks -fdeprecated-macro -ferror-limit 19 -stack-protector 1 -fblocks -fencode-extended-block-signature -fregister-global-dtors-with-atexit -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -fcxx-exceptions -fexceptions -fmax-type-align=16 -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_1e04d.dir/CMakeCXXCompilerABI.cpp.o -x c++ /opt/homebrew/share/cmake/Modules/CMakeCXXCompilerABI.cpp]
+        ignore line: [clang -cc1 version 21.1.8 based upon LLVM 21.1.8 default target arm64-apple-darwin25.1.0]
+        ignore line: [ignoring nonexistent directory "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/local/include"]
+        ignore line: [ignoring nonexistent directory "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/Library/Frameworks"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ /opt/homebrew/opt/libomp/include]
+        ignore line: [ .]
+        ignore line: [ /opt/homebrew/Cellar/llvm/21.1.8/bin/../include/c++/v1]
+        ignore line: [ /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/include]
+        ignore line: [ /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include]
+        ignore line: [ /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks (framework directory)]
+        ignore line: [ /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/SubFrameworks (framework directory)]
+        ignore line: [End of search list.]
+        ignore line: [Linking CXX executable cmTC_1e04d]
+        ignore line: [/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/cmTC_1e04d.dir/link.txt --verbose=1]
+        ignore line: [Homebrew clang version 21.1.8]
+        ignore line: [Target: arm64-apple-darwin25.1.0]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /opt/homebrew/Cellar/llvm/21.1.8/bin]
+        ignore line: [Configuration file: /opt/homebrew/etc/clang/arm64-apple-darwin25.cfg]
+        ignore line: [System configuration file directory: /opt/homebrew/etc/clang]
+        ignore line: [User configuration file directory: /Users/mohamedrabbit/.config/clang]
+        link line: [ "/usr/bin/ld" -demangle -lto_library /opt/homebrew/Cellar/llvm/21.1.8/lib/libLTO.dylib -dynamic -arch arm64 -platform_version macos 26.0.0 26.0 -syslibroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -mllvm -enable-linkonceodr-outlining -o cmTC_1e04d -L/opt/homebrew/opt/libomp/lib -L/opt/homebrew/opt/libomp/lib -L. -search_paths_first -headerpad_max_install_names -v CMakeFiles/cmTC_1e04d.dir/CMakeCXXCompilerABI.cpp.o -lc++ -lSystem /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/lib/darwin/libclang_rt.osx.a]
+          arg [/usr/bin/ld] ==> ignore
+          arg [-demangle] ==> ignore
+          arg [-lto_library] ==> ignore, skip following value
+          arg [/opt/homebrew/Cellar/llvm/21.1.8/lib/libLTO.dylib] ==> skip value of -lto_library
+          arg [-dynamic] ==> ignore
+          arg [-arch] ==> ignore
+          arg [arm64] ==> ignore
+          arg [-platform_version] ==> ignore
+          arg [macos] ==> ignore
+          arg [26.0.0] ==> ignore
+          arg [26.0] ==> ignore
+          arg [-syslibroot] ==> ignore
+          arg [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk] ==> ignore
+          arg [-mllvm] ==> ignore
+          arg [-enable-linkonceodr-outlining] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_1e04d] ==> ignore
+          arg [-L/opt/homebrew/opt/libomp/lib] ==> dir [/opt/homebrew/opt/libomp/lib]
+          arg [-L/opt/homebrew/opt/libomp/lib] ==> dir [/opt/homebrew/opt/libomp/lib]
+          arg [-L.] ==> ignore
+          arg [-search_paths_first] ==> ignore
+          arg [-headerpad_max_install_names] ==> ignore
+          arg [-v] ==> ignore
+          arg [CMakeFiles/cmTC_1e04d.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
+          arg [-lc++] ==> lib [c++]
+          arg [-lSystem] ==> lib [System]
+          arg [/opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/lib/darwin/libclang_rt.osx.a] ==> lib [/opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/lib/darwin/libclang_rt.osx.a]
+        linker tool for 'CXX': /usr/bin/ld
+        Library search paths: [;/opt/homebrew/opt/libomp/lib;.;/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib;/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/swift]
+        Framework search paths: [;/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks]
+        remove lib [System]
+        remove lib [/opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/lib/darwin/libclang_rt.osx.a]
+        collapse library dir [/opt/homebrew/opt/libomp/lib] ==> [/opt/homebrew/opt/libomp/lib]
+        collapse library dir [/opt/homebrew/opt/libomp/lib] ==> [/opt/homebrew/opt/libomp/lib]
+        collapse library dir [/opt/homebrew/opt/libomp/lib] ==> [/opt/homebrew/opt/libomp/lib]
+        collapse library dir [.] ==> [/Users/mohamedrabbit/code/mylang]
+        collapse library dir [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib] ==> [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib]
+        collapse library dir [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/swift] ==> [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/swift]
+        collapse framework dir [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks] ==> [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks]
+        implicit libs: [c++]
+        implicit objs: []
+        implicit dirs: [/opt/homebrew/opt/libomp/lib;/Users/mohamedrabbit/code/mylang;/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib;/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/swift]
+        implicit fwks: [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/Internal/CMakeDetermineLinkerId.cmake:38 (message)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:299 (cmake_determine_linker_id)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Running the CXX compiler's linker: "/usr/bin/ld" "-v"
+      @(#)PROGRAM:ld PROJECT:ld-1221.4
+      BUILD 16:29:08 Aug 11 2025
+      configured to support archs: armv6 armv7 armv7s arm64 arm64e arm64_32 i386 x86_64 x86_64h armv6m armv7k armv7m armv7em armv8m.main armv8.1m.main
+      will use ld-classic for: armv6 armv7 armv7s i386 armv6m armv7k armv7m armv7em
+      LTO support using: LLVM version 17.0.0 (static support for 29, runtime is 29)
+      TAPI support using: Apple TAPI version 17.0.0 (tapi-1700.3.8)
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/FindOpenMP.cmake:333 (try_compile)"
+      - "/opt/homebrew/share/cmake/Modules/FindOpenMP.cmake:640 (_OPENMP_GET_FLAGS)"
+      - "CMakeLists.txt:23 (find_package)"
+    description: "Detecting C OpenMP compiler info"
+    directories:
+      source: "/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-McFKkC"
+      binary: "/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-McFKkC"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/opt/homebrew/Cellar/llvm/21.1.8/bin/clang-scan-deps"
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-L/opt/homebrew/opt/libomp/lib"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"
+    buildResult:
+      variable: "OpenMP_COMPILE_RESULT_C_fopenmplibomp"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-McFKkC'
+        
+        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_81719/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_81719.dir/build.make CMakeFiles/cmTC_81719.dir/build
+        Building C object CMakeFiles/cmTC_81719.dir/OpenMPTryFlag.c.o
+        /opt/homebrew/opt/llvm/bin/clang   -fopenmp=libomp -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -MD -MT CMakeFiles/cmTC_81719.dir/OpenMPTryFlag.c.o -MF CMakeFiles/cmTC_81719.dir/OpenMPTryFlag.c.o.d -o CMakeFiles/cmTC_81719.dir/OpenMPTryFlag.c.o -c /Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-McFKkC/OpenMPTryFlag.c
+        Linking C executable cmTC_81719
+        /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/cmTC_81719.dir/link.txt --verbose=1
+        Homebrew clang version 21.1.8
+        Target: arm64-apple-darwin25.1.0
+        Thread model: posix
+        InstalledDir: /opt/homebrew/Cellar/llvm/21.1.8/bin
+        Configuration file: /opt/homebrew/etc/clang/arm64-apple-darwin25.cfg
+        System configuration file directory: /opt/homebrew/etc/clang
+        User configuration file directory: /Users/mohamedrabbit/.config/clang
+         "/usr/bin/ld" -demangle -lto_library /opt/homebrew/Cellar/llvm/21.1.8/lib/libLTO.dylib -dynamic -arch arm64 -platform_version macos 26.0.0 26.0 -syslibroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -mllvm -enable-linkonceodr-outlining -o cmTC_81719 -L/opt/homebrew/opt/libomp/lib -L/opt/homebrew/opt/libomp/lib -L. -search_paths_first -headerpad_max_install_names -v CMakeFiles/cmTC_81719.dir/OpenMPTryFlag.c.o -lomp -L/opt/homebrew/Cellar/llvm/21.1.8/lib -lSystem /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/lib/darwin/libclang_rt.osx.a
+        @(#)PROGRAM:ld PROJECT:ld-1221.4
+        BUILD 16:29:08 Aug 11 2025
+        configured to support archs: armv6 armv7 armv7s arm64 arm64e arm64_32 i386 x86_64 x86_64h armv6m armv7k armv7m armv7em armv8m.main armv8.1m.main
+        will use ld-classic for: armv6 armv7 armv7s i386 armv6m armv7k armv7m armv7em
+        LTO support using: LLVM version 21.1.8 (static support for 29, runtime is 30)
+        TAPI support using: Apple TAPI version 17.0.0 (tapi-1700.3.8)
+        Library search paths:
+        	/opt/homebrew/opt/libomp/lib
+        	.
+        	/opt/homebrew/Cellar/llvm/21.1.8/lib
+        	/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib
+        	/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/swift
+        Framework search paths:
+        	/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks
+        /opt/homebrew/opt/llvm/bin/clang  -fopenmp=libomp -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names -L/opt/homebrew/opt/libomp/lib  -v -Wl,-v CMakeFiles/cmTC_81719.dir/OpenMPTryFlag.c.o -o cmTC_81719
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/FindOpenMP.cmake:377 (message)"
+      - "/opt/homebrew/share/cmake/Modules/FindOpenMP.cmake:640 (_OPENMP_GET_FLAGS)"
+      - "CMakeLists.txt:23 (find_package)"
+    message: |
+      Parsed C OpenMP implicit link information from above output:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        ignore line: [Change Dir: '/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-McFKkC']
+        ignore line: []
+        ignore line: [Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_81719/fast]
+        ignore line: [/Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_81719.dir/build.make CMakeFiles/cmTC_81719.dir/build]
+        ignore line: [Building C object CMakeFiles/cmTC_81719.dir/OpenMPTryFlag.c.o]
+        ignore line: [/opt/homebrew/opt/llvm/bin/clang   -fopenmp=libomp -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -MD -MT CMakeFiles/cmTC_81719.dir/OpenMPTryFlag.c.o -MF CMakeFiles/cmTC_81719.dir/OpenMPTryFlag.c.o.d -o CMakeFiles/cmTC_81719.dir/OpenMPTryFlag.c.o -c /Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-McFKkC/OpenMPTryFlag.c]
+        ignore line: [Linking C executable cmTC_81719]
+        ignore line: [/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/cmTC_81719.dir/link.txt --verbose=1]
+        ignore line: [Homebrew clang version 21.1.8]
+        ignore line: [Target: arm64-apple-darwin25.1.0]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /opt/homebrew/Cellar/llvm/21.1.8/bin]
+        ignore line: [Configuration file: /opt/homebrew/etc/clang/arm64-apple-darwin25.cfg]
+        ignore line: [System configuration file directory: /opt/homebrew/etc/clang]
+        ignore line: [User configuration file directory: /Users/mohamedrabbit/.config/clang]
+        link line: [ "/usr/bin/ld" -demangle -lto_library /opt/homebrew/Cellar/llvm/21.1.8/lib/libLTO.dylib -dynamic -arch arm64 -platform_version macos 26.0.0 26.0 -syslibroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -mllvm -enable-linkonceodr-outlining -o cmTC_81719 -L/opt/homebrew/opt/libomp/lib -L/opt/homebrew/opt/libomp/lib -L. -search_paths_first -headerpad_max_install_names -v CMakeFiles/cmTC_81719.dir/OpenMPTryFlag.c.o -lomp -L/opt/homebrew/Cellar/llvm/21.1.8/lib -lSystem /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/lib/darwin/libclang_rt.osx.a]
+          arg [/usr/bin/ld] ==> ignore
+          arg [-demangle] ==> ignore
+          arg [-lto_library] ==> ignore, skip following value
+          arg [/opt/homebrew/Cellar/llvm/21.1.8/lib/libLTO.dylib] ==> skip value of -lto_library
+          arg [-dynamic] ==> ignore
+          arg [-arch] ==> ignore
+          arg [arm64] ==> ignore
+          arg [-platform_version] ==> ignore
+          arg [macos] ==> ignore
+          arg [26.0.0] ==> ignore
+          arg [26.0] ==> ignore
+          arg [-syslibroot] ==> ignore
+          arg [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk] ==> ignore
+          arg [-mllvm] ==> ignore
+          arg [-enable-linkonceodr-outlining] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_81719] ==> ignore
+          arg [-L/opt/homebrew/opt/libomp/lib] ==> dir [/opt/homebrew/opt/libomp/lib]
+          arg [-L/opt/homebrew/opt/libomp/lib] ==> dir [/opt/homebrew/opt/libomp/lib]
+          arg [-L.] ==> ignore
+          arg [-search_paths_first] ==> ignore
+          arg [-headerpad_max_install_names] ==> ignore
+          arg [-v] ==> ignore
+          arg [CMakeFiles/cmTC_81719.dir/OpenMPTryFlag.c.o] ==> ignore
+          arg [-lomp] ==> lib [omp]
+          arg [-L/opt/homebrew/Cellar/llvm/21.1.8/lib] ==> dir [/opt/homebrew/Cellar/llvm/21.1.8/lib]
+          arg [-lSystem] ==> lib [System]
+          arg [/opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/lib/darwin/libclang_rt.osx.a] ==> lib [/opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/lib/darwin/libclang_rt.osx.a]
+        Library search paths: [;/opt/homebrew/opt/libomp/lib;.;/opt/homebrew/Cellar/llvm/21.1.8/lib;/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib;/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/swift]
+        Framework search paths: [;/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks]
+        remove lib [System]
+        remove lib [/opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/lib/darwin/libclang_rt.osx.a]
+        collapse library dir [/opt/homebrew/opt/libomp/lib] ==> [/opt/homebrew/opt/libomp/lib]
+        collapse library dir [/opt/homebrew/opt/libomp/lib] ==> [/opt/homebrew/opt/libomp/lib]
+        collapse library dir [/opt/homebrew/Cellar/llvm/21.1.8/lib] ==> [/opt/homebrew/Cellar/llvm/21.1.8/lib]
+        collapse library dir [/opt/homebrew/opt/libomp/lib] ==> [/opt/homebrew/opt/libomp/lib]
+        collapse library dir [.] ==> [/Users/mohamedrabbit/code/mylang]
+        collapse library dir [/opt/homebrew/Cellar/llvm/21.1.8/lib] ==> [/opt/homebrew/Cellar/llvm/21.1.8/lib]
+        collapse library dir [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib] ==> [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib]
+        collapse library dir [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/swift] ==> [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/swift]
+        collapse framework dir [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks] ==> [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks]
+        implicit libs: [omp]
+        implicit objs: []
+        implicit dirs: [/opt/homebrew/opt/libomp/lib;/opt/homebrew/Cellar/llvm/21.1.8/lib;/Users/mohamedrabbit/code/mylang;/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib;/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/swift]
+        implicit fwks: [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks]
+      
+      
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/FindOpenMP.cmake:395 (find_library)"
+      - "/opt/homebrew/share/cmake/Modules/FindOpenMP.cmake:640 (_OPENMP_GET_FLAGS)"
+      - "CMakeLists.txt:23 (find_package)"
+    mode: "library"
+    variable: "OpenMP_omp_LIBRARY"
+    description: "Path to the omp library for OpenMP"
+    settings:
+      SearchFramework: "FIRST"
+      SearchAppBundle: "FIRST"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "omp"
+    candidate_directories:
+      - "/opt/homebrew/opt/libomp/lib/"
+      - "/opt/homebrew/Cellar/llvm/21.1.8/lib/"
+      - "/Users/mohamedrabbit/code/mylang/"
+      - "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/"
+      - "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/swift/"
+      - "/Users/mohamedrabbit/.pyenv/shims/"
+      - "/opt/homebrew/bin/"
+      - "/opt/homebrew/opt/llvm/bin/"
+      - "/usr/local/bin/"
+      - "/opt/homebrew/sbin/"
+      - "/System/Cryptexes/App/usr/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/usr/sbin/"
+      - "/sbin/"
+      - "/Users/mohamedrabbit/.cargo/bin/"
+      - "/Users/mohamedrabbit/.local/bin/"
+      - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/"
+      - "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/"
+      - "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/"
+      - "/opt/homebrew/lib/"
+      - "/opt/homebrew/"
+      - "/usr/local/lib/"
+      - "/usr/local/"
+      - "/usr/lib/"
+      - "/usr/"
+      - "/usr/X11R6/"
+      - "/opt/"
+      - "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks/"
+      - "/Library/Developer/CommandLineTools/Library/Frameworks/"
+      - "/Library/Frameworks/"
+      - "/System/Library/Frameworks/"
+    found: "/opt/homebrew/opt/libomp/lib/libomp.dylib"
+    search_context:
+      ENV{CMAKE_PREFIX_PATH}:
+        - "/opt/homebrew/opt/libomp"
+      ENV{PATH}:
+        - "/Users/mohamedrabbit/.pyenv/shims"
+        - "/Users/mohamedrabbit/.pyenv/bin"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/opt/llvm/bin"
+        - "/usr/local/bin"
+        - "/Users/mohamedrabbit/vcpkg"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/sbin"
+        - "/usr/local/bin"
+        - "/System/Cryptexes/App/usr/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/sbin"
+        - "/sbin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
+        - "/opt/pmk/env/global/bin"
+        - "/Library/Apple/usr/bin"
+        - "/Applications/VMware Fusion.app/Contents/Public"
+        - "/Users/mohamedrabbit/.cargo/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+      CMAKE_INSTALL_PREFIX: "/usr/local"
+      CMAKE_SYSTEM_PREFIX_PATH:
+        - "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr"
+        - "/opt/homebrew"
+        - "/usr/local"
+        - "/usr"
+        - "/"
+        - "/opt/homebrew"
+        - "/usr/local"
+        - "/usr/X11R6"
+        - "/usr/pkg"
+        - "/opt"
+        - "/sw"
+        - "/opt/local"
+      CMAKE_SYSTEM_LIBRARY_PATH:
+        - "/usr/lib/X11"
+      CMAKE_SYSTEM_FRAMEWORK_PATH:
+        - "~/Library/Frameworks"
+        - "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/Library/Frameworks"
+        - "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/Network/Library/Frameworks"
+        - "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks"
+        - "/Library/Developer/CommandLineTools/Library/Frameworks"
+        - "/Library/Developer/CommandLineTools/Library/Frameworks"
+        - "/Library/Frameworks"
+        - "/Network/Library/Frameworks"
+        - "/System/Library/Frameworks"
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/FindOpenMP.cmake:333 (try_compile)"
+      - "/opt/homebrew/share/cmake/Modules/FindOpenMP.cmake:640 (_OPENMP_GET_FLAGS)"
+      - "CMakeLists.txt:23 (find_package)"
+    description: "Detecting CXX OpenMP compiler info"
+    directories:
+      source: "/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-wvxGWn"
+      binary: "/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-wvxGWn"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/opt/homebrew/Cellar/llvm/21.1.8/bin/clang-scan-deps"
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-L/opt/homebrew/opt/libomp/lib"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"
+    buildResult:
+      variable: "OpenMP_COMPILE_RESULT_CXX_fopenmplibomp"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-wvxGWn'
+        
+        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_20d2f/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_20d2f.dir/build.make CMakeFiles/cmTC_20d2f.dir/build
+        Building CXX object CMakeFiles/cmTC_20d2f.dir/OpenMPTryFlag.cpp.o
+        /opt/homebrew/opt/llvm/bin/clang++   -fopenmp=libomp -std=c++23 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -MD -MT CMakeFiles/cmTC_20d2f.dir/OpenMPTryFlag.cpp.o -MF CMakeFiles/cmTC_20d2f.dir/OpenMPTryFlag.cpp.o.d -o CMakeFiles/cmTC_20d2f.dir/OpenMPTryFlag.cpp.o -c /Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-wvxGWn/OpenMPTryFlag.cpp
+        Linking CXX executable cmTC_20d2f
+        /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/cmTC_20d2f.dir/link.txt --verbose=1
+        Homebrew clang version 21.1.8
+        Target: arm64-apple-darwin25.1.0
+        Thread model: posix
+        InstalledDir: /opt/homebrew/Cellar/llvm/21.1.8/bin
+        Configuration file: /opt/homebrew/etc/clang/arm64-apple-darwin25.cfg
+        System configuration file directory: /opt/homebrew/etc/clang
+        User configuration file directory: /Users/mohamedrabbit/.config/clang
+         "/usr/bin/ld" -demangle -lto_library /opt/homebrew/Cellar/llvm/21.1.8/lib/libLTO.dylib -dynamic -arch arm64 -platform_version macos 26.0.0 26.0 -syslibroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -mllvm -enable-linkonceodr-outlining -o cmTC_20d2f -L/opt/homebrew/opt/libomp/lib -L/opt/homebrew/opt/libomp/lib -L. -search_paths_first -headerpad_max_install_names -v CMakeFiles/cmTC_20d2f.dir/OpenMPTryFlag.cpp.o -lomp -L/opt/homebrew/Cellar/llvm/21.1.8/lib -lc++ -lSystem /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/lib/darwin/libclang_rt.osx.a
+        @(#)PROGRAM:ld PROJECT:ld-1221.4
+        BUILD 16:29:08 Aug 11 2025
+        configured to support archs: armv6 armv7 armv7s arm64 arm64e arm64_32 i386 x86_64 x86_64h armv6m armv7k armv7m armv7em armv8m.main armv8.1m.main
+        will use ld-classic for: armv6 armv7 armv7s i386 armv6m armv7k armv7m armv7em
+        LTO support using: LLVM version 21.1.8 (static support for 29, runtime is 30)
+        TAPI support using: Apple TAPI version 17.0.0 (tapi-1700.3.8)
+        Library search paths:
+        	/opt/homebrew/opt/libomp/lib
+        	.
+        	/opt/homebrew/Cellar/llvm/21.1.8/lib
+        	/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib
+        	/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/swift
+        Framework search paths:
+        	/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks
+        /opt/homebrew/opt/llvm/bin/clang++  -fopenmp=libomp -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names -L/opt/homebrew/opt/libomp/lib  -v -Wl,-v CMakeFiles/cmTC_20d2f.dir/OpenMPTryFlag.cpp.o -o cmTC_20d2f
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/FindOpenMP.cmake:377 (message)"
+      - "/opt/homebrew/share/cmake/Modules/FindOpenMP.cmake:640 (_OPENMP_GET_FLAGS)"
+      - "CMakeLists.txt:23 (find_package)"
+    message: |
+      Parsed CXX OpenMP implicit link information from above output:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        ignore line: [Change Dir: '/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-wvxGWn']
+        ignore line: []
+        ignore line: [Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_20d2f/fast]
+        ignore line: [/Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_20d2f.dir/build.make CMakeFiles/cmTC_20d2f.dir/build]
+        ignore line: [Building CXX object CMakeFiles/cmTC_20d2f.dir/OpenMPTryFlag.cpp.o]
+        ignore line: [/opt/homebrew/opt/llvm/bin/clang++   -fopenmp=libomp -std=c++23 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -MD -MT CMakeFiles/cmTC_20d2f.dir/OpenMPTryFlag.cpp.o -MF CMakeFiles/cmTC_20d2f.dir/OpenMPTryFlag.cpp.o.d -o CMakeFiles/cmTC_20d2f.dir/OpenMPTryFlag.cpp.o -c /Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-wvxGWn/OpenMPTryFlag.cpp]
+        ignore line: [Linking CXX executable cmTC_20d2f]
+        ignore line: [/opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/cmTC_20d2f.dir/link.txt --verbose=1]
+        ignore line: [Homebrew clang version 21.1.8]
+        ignore line: [Target: arm64-apple-darwin25.1.0]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /opt/homebrew/Cellar/llvm/21.1.8/bin]
+        ignore line: [Configuration file: /opt/homebrew/etc/clang/arm64-apple-darwin25.cfg]
+        ignore line: [System configuration file directory: /opt/homebrew/etc/clang]
+        ignore line: [User configuration file directory: /Users/mohamedrabbit/.config/clang]
+        link line: [ "/usr/bin/ld" -demangle -lto_library /opt/homebrew/Cellar/llvm/21.1.8/lib/libLTO.dylib -dynamic -arch arm64 -platform_version macos 26.0.0 26.0 -syslibroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -mllvm -enable-linkonceodr-outlining -o cmTC_20d2f -L/opt/homebrew/opt/libomp/lib -L/opt/homebrew/opt/libomp/lib -L. -search_paths_first -headerpad_max_install_names -v CMakeFiles/cmTC_20d2f.dir/OpenMPTryFlag.cpp.o -lomp -L/opt/homebrew/Cellar/llvm/21.1.8/lib -lc++ -lSystem /opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/lib/darwin/libclang_rt.osx.a]
+          arg [/usr/bin/ld] ==> ignore
+          arg [-demangle] ==> ignore
+          arg [-lto_library] ==> ignore, skip following value
+          arg [/opt/homebrew/Cellar/llvm/21.1.8/lib/libLTO.dylib] ==> skip value of -lto_library
+          arg [-dynamic] ==> ignore
+          arg [-arch] ==> ignore
+          arg [arm64] ==> ignore
+          arg [-platform_version] ==> ignore
+          arg [macos] ==> ignore
+          arg [26.0.0] ==> ignore
+          arg [26.0] ==> ignore
+          arg [-syslibroot] ==> ignore
+          arg [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk] ==> ignore
+          arg [-mllvm] ==> ignore
+          arg [-enable-linkonceodr-outlining] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_20d2f] ==> ignore
+          arg [-L/opt/homebrew/opt/libomp/lib] ==> dir [/opt/homebrew/opt/libomp/lib]
+          arg [-L/opt/homebrew/opt/libomp/lib] ==> dir [/opt/homebrew/opt/libomp/lib]
+          arg [-L.] ==> ignore
+          arg [-search_paths_first] ==> ignore
+          arg [-headerpad_max_install_names] ==> ignore
+          arg [-v] ==> ignore
+          arg [CMakeFiles/cmTC_20d2f.dir/OpenMPTryFlag.cpp.o] ==> ignore
+          arg [-lomp] ==> lib [omp]
+          arg [-L/opt/homebrew/Cellar/llvm/21.1.8/lib] ==> dir [/opt/homebrew/Cellar/llvm/21.1.8/lib]
+          arg [-lc++] ==> lib [c++]
+          arg [-lSystem] ==> lib [System]
+          arg [/opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/lib/darwin/libclang_rt.osx.a] ==> lib [/opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/lib/darwin/libclang_rt.osx.a]
+        Library search paths: [;/opt/homebrew/opt/libomp/lib;.;/opt/homebrew/Cellar/llvm/21.1.8/lib;/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib;/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/swift]
+        Framework search paths: [;/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks]
+        remove lib [System]
+        remove lib [/opt/homebrew/Cellar/llvm/21.1.8/lib/clang/21/lib/darwin/libclang_rt.osx.a]
+        collapse library dir [/opt/homebrew/opt/libomp/lib] ==> [/opt/homebrew/opt/libomp/lib]
+        collapse library dir [/opt/homebrew/opt/libomp/lib] ==> [/opt/homebrew/opt/libomp/lib]
+        collapse library dir [/opt/homebrew/Cellar/llvm/21.1.8/lib] ==> [/opt/homebrew/Cellar/llvm/21.1.8/lib]
+        collapse library dir [/opt/homebrew/opt/libomp/lib] ==> [/opt/homebrew/opt/libomp/lib]
+        collapse library dir [.] ==> [/Users/mohamedrabbit/code/mylang]
+        collapse library dir [/opt/homebrew/Cellar/llvm/21.1.8/lib] ==> [/opt/homebrew/Cellar/llvm/21.1.8/lib]
+        collapse library dir [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib] ==> [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib]
+        collapse library dir [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/swift] ==> [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/swift]
+        collapse framework dir [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks] ==> [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks]
+        implicit libs: [omp;c++]
+        implicit objs: []
+        implicit dirs: [/opt/homebrew/opt/libomp/lib;/opt/homebrew/Cellar/llvm/21.1.8/lib;/Users/mohamedrabbit/code/mylang;/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib;/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/swift]
+        implicit fwks: [/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks]
+      
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/FindOpenMP.cmake:574 (try_compile)"
+      - "/opt/homebrew/share/cmake/Modules/FindOpenMP.cmake:714 (_OPENMP_GET_SPEC_DATE)"
+      - "CMakeLists.txt:23 (find_package)"
+    description: "Detecting C OpenMP version"
+    directories:
+      source: "/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-XknPPi"
+      binary: "/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-XknPPi"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/opt/homebrew/Cellar/llvm/21.1.8/bin/clang-scan-deps"
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-L/opt/homebrew/opt/libomp/lib"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"
+    buildResult:
+      variable: "OpenMP_SPECTEST_C_"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-XknPPi'
+        
+        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_e61c1/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_e61c1.dir/build.make CMakeFiles/cmTC_e61c1.dir/build
+        Building C object CMakeFiles/cmTC_e61c1.dir/OpenMPCheckVersion.c.o
+        /opt/homebrew/opt/llvm/bin/clang   -fopenmp=libomp -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -MD -MT CMakeFiles/cmTC_e61c1.dir/OpenMPCheckVersion.c.o -MF CMakeFiles/cmTC_e61c1.dir/OpenMPCheckVersion.c.o.d -o CMakeFiles/cmTC_e61c1.dir/OpenMPCheckVersion.c.o -c /Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-XknPPi/OpenMPCheckVersion.c
+        Linking C executable cmTC_e61c1
+        /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/cmTC_e61c1.dir/link.txt --verbose=1
+        /opt/homebrew/opt/llvm/bin/clang  -fopenmp=libomp -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names -L/opt/homebrew/opt/libomp/lib  CMakeFiles/cmTC_e61c1.dir/OpenMPCheckVersion.c.o -o cmTC_e61c1
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/FindOpenMP.cmake:574 (try_compile)"
+      - "/opt/homebrew/share/cmake/Modules/FindOpenMP.cmake:714 (_OPENMP_GET_SPEC_DATE)"
+      - "CMakeLists.txt:23 (find_package)"
+    description: "Detecting CXX OpenMP version"
+    directories:
+      source: "/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-KFQ6O5"
+      binary: "/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-KFQ6O5"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/opt/homebrew/Cellar/llvm/21.1.8/bin/clang-scan-deps"
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-L/opt/homebrew/opt/libomp/lib"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"
+    buildResult:
+      variable: "OpenMP_SPECTEST_CXX_"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-KFQ6O5'
+        
+        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_402fa/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_402fa.dir/build.make CMakeFiles/cmTC_402fa.dir/build
+        Building CXX object CMakeFiles/cmTC_402fa.dir/OpenMPCheckVersion.cpp.o
+        /opt/homebrew/opt/llvm/bin/clang++   -fopenmp=libomp -std=c++23 -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -MD -MT CMakeFiles/cmTC_402fa.dir/OpenMPCheckVersion.cpp.o -MF CMakeFiles/cmTC_402fa.dir/OpenMPCheckVersion.cpp.o.d -o CMakeFiles/cmTC_402fa.dir/OpenMPCheckVersion.cpp.o -c /Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-KFQ6O5/OpenMPCheckVersion.cpp
+        Linking CXX executable cmTC_402fa
+        /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/cmTC_402fa.dir/link.txt --verbose=1
+        /opt/homebrew/opt/llvm/bin/clang++  -fopenmp=libomp -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names -L/opt/homebrew/opt/libomp/lib  CMakeFiles/cmTC_402fa.dir/OpenMPCheckVersion.cpp.o -o cmTC_402fa
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/opt/homebrew/share/cmake/Modules/Internal/CheckSourceCompiles.cmake:104 (try_compile)"
+      - "/opt/homebrew/share/cmake/Modules/CheckCSourceCompiles.cmake:103 (cmake_check_source_compiles)"
+      - "/opt/homebrew/share/cmake/Modules/FindThreads.cmake:160 (check_c_source_compiles)"
+      - "/opt/homebrew/share/cmake/Modules/FindThreads.cmake:226 (_threads_check_libc)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeFindDependencyMacro.cmake:93 (find_package)"
+      - "/opt/homebrew/share/cmake/Modules/CMakeFindDependencyMacro.cmake:125 (__find_dependency_common)"
+      - "/opt/homebrew/lib/cmake/GTest/GTestConfig.cmake:29 (find_dependency)"
+      - "CMakeLists.txt:45 (find_package)"
+    directories:
+      source: "/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-Ql7Xjy"
+      binary: "/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-Ql7Xjy"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/opt/homebrew/Cellar/llvm/21.1.8/bin/clang-scan-deps"
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: "-L/opt/homebrew/opt/libomp/lib"
+      CMAKE_OSX_ARCHITECTURES: ""
+      CMAKE_OSX_DEPLOYMENT_TARGET: ""
+      CMAKE_OSX_SYSROOT: "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"
+    buildResult:
+      variable: "CMAKE_HAVE_LIBC_PTHREAD"
+      cached: true
+      stdout: |
+        Change Dir: '/Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-Ql7Xjy'
+        
+        Run Build Command(s): /opt/homebrew/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_b6e37/fast
+        /Library/Developer/CommandLineTools/usr/bin/make  -f CMakeFiles/cmTC_b6e37.dir/build.make CMakeFiles/cmTC_b6e37.dir/build
+        Building C object CMakeFiles/cmTC_b6e37.dir/src.c.o
+        /opt/homebrew/opt/llvm/bin/clang -DCMAKE_HAVE_LIBC_PTHREAD  -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -MD -MT CMakeFiles/cmTC_b6e37.dir/src.c.o -MF CMakeFiles/cmTC_b6e37.dir/src.c.o.d -o CMakeFiles/cmTC_b6e37.dir/src.c.o -c /Users/mohamedrabbit/code/mylang/build/CMakeFiles/CMakeScratch/TryCompile-Ql7Xjy/src.c
+        Linking C executable cmTC_b6e37
+        /opt/homebrew/bin/cmake -E cmake_link_script CMakeFiles/cmTC_b6e37.dir/link.txt --verbose=1
+        /opt/homebrew/opt/llvm/bin/clang  -arch arm64 -isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk -Wl,-search_paths_first -Wl,-headerpad_max_install_names -L/opt/homebrew/opt/libomp/lib  CMakeFiles/cmTC_b6e37.dir/src.c.o -o cmTC_b6e37
+        
+      exitCode: 0
+  -
+    kind: "find_package-v1"
+    backtrace:
+      - "CMakeLists.txt:45 (find_package)"
+    name: "GTest"
+    configs:
+      -
+        filename: "GTestConfig.cmake"
+        kind: "cmake"
+      -
+        filename: "gtest-config.cmake"
+        kind: "cmake"
+    version_request:
+      exact: false
+    settings:
+      required: "optional"
+      quiet: true
+      global: false
+      policy_scope: true
+      bypass_provider: false
+      names:
+        - "GTest"
+      path_suffixes:
+        - ""
+      paths:
+        CMAKE_FIND_USE_CMAKE_PATH: true
+        CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+        CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+        CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+        CMAKE_FIND_USE_INSTALL_PREFIX: true
+        CMAKE_FIND_USE_PACKAGE_ROOT_PATH: true
+        CMAKE_FIND_USE_CMAKE_PACKAGE_REGISTRY: true
+        CMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY: true
+        CMAKE_FIND_ROOT_PATH_MODE: "BOTH"
+    candidates:
+      -
+        path: "/Users/mohamedrabbit/code/mylang/build/CMakeFiles/pkgRedirects/GTestConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/Users/mohamedrabbit/code/mylang/build/CMakeFiles/pkgRedirects/gtest-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/opt/homebrew/opt/libomp/GTestConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/opt/homebrew/opt/libomp/gtest-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/Users/mohamedrabbit/.pyenv/shims/GTestConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/Users/mohamedrabbit/.pyenv/shims/gtest-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/Users/mohamedrabbit/.pyenv/GTestConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/Users/mohamedrabbit/.pyenv/gtest-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/opt/homebrew/GTestConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/opt/homebrew/gtest-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+    found:
+      path: "/opt/homebrew/lib/cmake/GTest/GTestConfig.cmake"
+      mode: "config"
+      version: "1.17.0"
+    search_context:
+      ENV{CMAKE_PREFIX_PATH}:
+        - "/opt/homebrew/opt/libomp"
+      ENV{PATH}:
+        - "/Users/mohamedrabbit/.pyenv/shims"
+        - "/Users/mohamedrabbit/.pyenv/bin"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/opt/llvm/bin"
+        - "/usr/local/bin"
+        - "/Users/mohamedrabbit/vcpkg"
+        - "/opt/homebrew/bin"
+        - "/opt/homebrew/sbin"
+        - "/usr/local/bin"
+        - "/System/Cryptexes/App/usr/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/usr/sbin"
+        - "/sbin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin"
+        - "/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
+        - "/opt/pmk/env/global/bin"
+        - "/Library/Apple/usr/bin"
+        - "/Applications/VMware Fusion.app/Contents/Public"
+        - "/Users/mohamedrabbit/.cargo/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Users/mohamedrabbit/.local/bin"
+        - "/Applications/Visual Studio Code.app/Contents/Resources/app/bin"
+      CMAKE_INSTALL_PREFIX: "/usr/local"
+      CMAKE_SYSTEM_PREFIX_PATH:
+        - "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr"
+        - "/opt/homebrew"
+        - "/usr/local"
+        - "/usr"
+        - "/"
+        - "/opt/homebrew"
+        - "/usr/local"
+        - "/usr/X11R6"
+        - "/usr/pkg"
+        - "/opt"
+        - "/sw"
+        - "/opt/local"
+      CMAKE_SYSTEM_FRAMEWORK_PATH:
+        - "~/Library/Frameworks"
+        - "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/Library/Frameworks"
+        - "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/Network/Library/Frameworks"
+        - "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks"
+        - "/Library/Developer/CommandLineTools/Library/Frameworks"
+        - "/Library/Developer/CommandLineTools/Library/Frameworks"
+        - "/Library/Frameworks"
+        - "/Network/Library/Frameworks"
+        - "/System/Library/Frameworks"
+...

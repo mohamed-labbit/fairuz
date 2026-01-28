@@ -193,7 +193,7 @@ ast::ListExpr* Parser::parseParametersList()
         return nullptr;
       }
 
-      std::u16string param_name = Lexer_.current().lexeme();
+      StringRef param_name = Lexer_.current().lexeme();
       advance();
 
       ast::NameExpr* param = ast::AST_allocator.make<ast::NameExpr>(param_name);
@@ -225,7 +225,7 @@ ast::Stmt* Parser::parseFunctionDef()
     return nullptr;
   }
 
-  std::u16string function_name = Lexer_.current().lexeme();
+  StringRef function_name = Lexer_.current().lexeme();
   advance();
 
   // Parse parameter list

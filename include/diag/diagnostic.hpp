@@ -19,33 +19,29 @@ class DiagnosticEngine
 
   struct Diagnostic
   {
-    Severity                                         severity;
-    std::int32_t                                     line, column;
-    std::int32_t                                     length;
-    StringType                                       message;
-    StringType                                       code;  // Error code like E0001
-    std::vector<StringType>                          suggestions;
-    std::vector<std::pair<std::int32_t, StringType>> notes;  // Additional context
+    Severity                                          severity;
+    std::int32_t                                      line, column;
+    std::int32_t                                      length;
+    std::string                                       message;
+    std::string                                       code;  // Error code like E0001
+    std::vector<std::string>                          suggestions;
+    std::vector<std::pair<std::int32_t, std::string>> notes;  // Additional context
   };
 
   DiagnosticEngine() = default;
 
-  void emit(const StringType& msg, Severity sv = Severity::ERROR) { emitError(utf8::utf16to8(msg), sv); }
-
   void emit(const std::string& msg, Severity sv = Severity::ERROR) { emitError(msg, sv); }
-
-  [[noreturn]] void panic(const StringType& msg) { _panic(utf8::utf16to8(msg)); }
 
   [[noreturn]] void panic(const std::string& msg) { _panic(msg); }
 
-  void setSource(const StringType& source) { SourceCode_ = source; }
-
-  void report(Severity sev, std::int32_t line, std::int32_t col, std::int32_t len, const StringType& msg, const StringType& code = u"")
+  /*
+  */
+  void report(Severity sev, std::int32_t line, std::int32_t col, std::int32_t len, const std::string& msg, const std::string& code = "")
   {
     Diagnostics_.push_back({sev, line, col, len, msg, code});
   }
 
-  void addSuggestion(const StringType& suggestion)
+  void addSuggestion(const std::string& suggestion)
   {
     if (!Diagnostics_.empty())
     {
@@ -53,7 +49,7 @@ class DiagnosticEngine
     }
   }
 
-  void addNote(std::int32_t line, const StringType& note)
+  void addNote(std::int32_t line, const std::string& note)
   {
     if (!Diagnostics_.empty())
     {
@@ -68,7 +64,6 @@ class DiagnosticEngine
 
  private:
   std::vector<Diagnostic> Diagnostics_;
-  StringType              SourceCode_;
 
   void emitError(const std::string& msg, Severity sv)
   {
@@ -90,19 +85,19 @@ class DiagnosticEngine
     switch (sv)
     {
     case Severity::NOTE :
-      return utf8::utf16to8(Color::BOLD) + utf8::utf16to8(Color::CYAN) + "note" + utf8::utf16to8(Color::RESET);
+      return Color::BOLD + Color::CYAN + "note" + Color::RESET;
 
     case Severity::FATAL :
-      return utf8::utf16to8(Color::BOLD) + utf8::utf16to8(Color::RED) + "fatal" + utf8::utf16to8(Color::RESET);
+      return Color::BOLD + Color::RED + "fatal" + Color::RESET;
 
     case Severity::ERROR :
-      return utf8::utf16to8(Color::BOLD) + utf8::utf16to8(Color::RED) + "error" + utf8::utf16to8(Color::RESET);
+      return Color::BOLD + Color::RED + "error" + Color::RESET;
 
     case Severity::WARNING :
-      return utf8::utf16to8(Color::BOLD) + utf8::utf16to8(Color::YELLOW) + "warning" + utf8::utf16to8(Color::RESET);
+      return Color::BOLD + Color::YELLOW + "warning" + Color::RESET;
 
     default :
-      return utf8::utf16to8(Color::BOLD) + "unknown" + utf8::utf16to8(Color::RESET);
+      return Color::BOLD + "unknown" + Color::RESET;
     }
   }
 

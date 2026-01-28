@@ -3,6 +3,8 @@
 #include "../../diag/diagnostic.hpp"
 
 #include <atomic>
+#include <cstdlib>
+#include <iostream>
 
 
 namespace mylang {
@@ -56,7 +58,9 @@ class LockFreeFastAllocBlock
     // Allocate aligned memory
     Pointer mem = reinterpret_cast<Pointer>(std::aligned_alloc(ObjectSize, actual_size));
     if (mem == nullptr)
+    {
       throw std::bad_alloc();
+    }
     /// TODO: change after debug
     // diagnostic::engine.panic("bad alloc");
     // Store atomically

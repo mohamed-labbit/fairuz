@@ -36,8 +36,8 @@ std::int32_t ConstantPool::addConstant(const object::Value& val)
 
   if (val.isString())
   {
-    const StringType& v  = val.asString();
-    auto              it = StringConstants_.find(v);
+    const StringRef& v  = val.asString();
+    auto             it = StringConstants_.find(v);
     if (it != StringConstants_.end())
     {
       return it->second;

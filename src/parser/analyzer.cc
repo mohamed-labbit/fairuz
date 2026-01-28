@@ -25,7 +25,7 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(const ast::Expr* ex
     switch (lit->getType())
     {
     case ast::LiteralExpr::Type::NUMBER :
-      return lit->getValue().find('.') != std::string::npos ? SymbolTable::DataType_t::FLOAT : SymbolTable::DataType_t::INTEGER;
+      return lit->getValue().find('.') ? SymbolTable::DataType_t::FLOAT : SymbolTable::DataType_t::INTEGER;
 
     case ast::LiteralExpr::Type::STRING :
       return SymbolTable::DataType_t::STRING;
@@ -92,7 +92,7 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(const ast::Expr* ex
   return SymbolTable::DataType_t::UNKNOWN;
 }
 
-void SemanticAnalyzer::reportIssue(Issue::Severity sev, const StringType& msg, std::int32_t line, const StringType& sugg)
+void SemanticAnalyzer::reportIssue(Issue::Severity sev, const StringRef& msg, std::int32_t line, const StringRef& sugg)
 {
   Issues_.push_back({sev, msg, line, sugg});
 }
@@ -219,7 +219,7 @@ void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
 
     ast::Expr* target = assign->getTarget();
     assert(target != nullptr);
-    StringType target_name = u"";
+    StringRef target_name = u"";
 
     /// TODO: check other type of target expressions
     if (target->getKind() == ast::Expr::Kind::NAME)
@@ -410,7 +410,7 @@ void SemanticAnalyzer::printReport() const
   std::cout << "Found " << Issues_.size() << " issue(s):\n\n";
   for (const SemanticAnalyzer::Issue& issue : Issues_)
   {
-    StringType sevStr;
+    StringRef sevStr;
     switch (issue.severity)
     {
     case Issue::Severity::ERROR :
@@ -426,11 +426,11 @@ void SemanticAnalyzer::printReport() const
       break;
     }
 
-    std::cout << "[" << utf8::utf16to8(sevStr) << "] Line " << issue.line << ": " << utf8::utf16to8(issue.message) << "\n";
+    std::cout << "[" << sevStr << "] Line " << issue.line << ": " << issue.message << "\n";
 
     if (!issue.suggestion.empty())
     {
-      std::cout << "  → " << utf8::utf16to8(issue.suggestion) << "\n";
+      std::cout << "  → " << issue.suggestion << "\n";
     }
 
     std::cout << "\n";

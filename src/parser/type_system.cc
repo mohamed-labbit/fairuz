@@ -10,7 +10,7 @@ bool TypeSystem::Type::operator==(const Type& other) const
   return base == other.base;  // Simplified
 }
 
-StringType TypeSystem::Type::toString() const
+StringRef TypeSystem::Type::toString() const
 {
   switch (base)
   {
@@ -75,7 +75,7 @@ void TypeSystem::TypeInference::unify(std::shared_ptr<TypeSystem::Type> t1, std:
   }
   else
   {
-    diagnostic::engine.panic("Type mismatch: " + utf8::utf16to8(t1->toString()) + " vs " + utf8::utf16to8(t2->toString()));
+    /// TODO: diagnostic::engine.panic(StringRef("Type mismatch: ") + t1->toString() + " vs " + t2->toString());
   }
 }
 
@@ -94,7 +94,7 @@ std::shared_ptr<typename TypeSystem::Type> TypeSystem::TypeInference::inferExpr(
     switch (lit->getType())
     {
     case ast::LiteralExpr::Type::NUMBER :
-      t->base = lit->getValue().find('.') != std::string::npos ? BaseType::Float : BaseType::Int;
+      t->base = lit->getValue().find('.') ? BaseType::Float : BaseType::Int;
       break;
     case ast::LiteralExpr::Type::STRING :
       t->base = BaseType::String;

@@ -5,17 +5,11 @@ namespace mylang {
 namespace runtime {
 namespace allocator {
 
-ArenaAllocator::ArenaAllocator(std::int32_t growth_strategy, SizeType min_align, OutOfMemoryHandler oom_handler, bool debug) :
+ArenaAllocator::ArenaAllocator(std::int32_t growth_strategy, OutOfMemoryHandler oom_handler, bool debug) :
     GrowthFactor_(GrowthStrategy(growth_strategy)),
-    MinAlignment_(min_align),
     OomHandler_(oom_handler),
     DebugFeatures_(debug)
 {
-  // Validate alignment
-  if (MinAlignment_ == 0 || (MinAlignment_ & (MinAlignment_ - 1)) != 0)
-  {
-    MinAlignment_ = alignof(std::max_align_t);
-  }
   // Enable tracking in debug mode
   if (DebugFeatures_.load(std::memory_order_relaxed))
   {
@@ -35,24 +29,9 @@ void ArenaAllocator::reset()
 
   // Clear all containers (automatically frees memory via destructors)
   Blocks_.clear();
-  FastPool8_.clear();
-  FastPool16_.clear();
-  FastPool32_.clear();
-  FastPool64_.clear();
-  FastPool128_.clear();
-  FastPool256_.clear();
-  FreeList_.clear();
-  FreeList8_.clear();
-  FreeList16_.clear();
-  FreeList32_.clear();
-  FreeList64_.clear();
-  FreeList128_.clear();
-  FreeList256_.clear();
 
   if (TrackAllocations_.load(std::memory_order_relaxed))
-  {
     AllocationMap_.clear();
-  }
 
   AllocatedPtrs_.clear();
   // Reset statistics
@@ -69,10 +48,9 @@ MYLANG_NODISCARD
 Pointer ArenaAllocator::allocateBlock(SizeType requested, SizeType alignment_, bool retry_on_oom)
 {
   // Validate and fix alignment if needed
-  if (alignment_ == 0 || (alignment_ & (alignment_ - 1)) != 0)
-  {
-    alignment_ = MinAlignment_;
-  }
+  SizeType min_align = alignof(std::max_align_t);
+  if (alignment_ != ((requested + min_align - 1) & ~(min_align - 1)))
+    alignment_ = min_align;
 
   // Determine block size (including growth strategy)
   SizeType block_size = std::max(requested + alignment_, NextBlockSize_.load(std::memory_order_relaxed));
@@ -84,9 +62,7 @@ Pointer ArenaAllocator::allocateBlock(SizeType requested, SizeType alignment_, b
     {
       std::lock_guard<std::mutex> oom_lock(OomHandlerMutex_);
       if (OomHandler_ && OomHandler_(block_size))
-      {
         return allocateBlock(requested, alignment_, false);  // Retry once
-      }
     }
     return nullptr;
   }
@@ -104,95 +80,107 @@ Pointer ArenaAllocator::allocateBlock(SizeType requested, SizeType alignment_, b
     {
       std::lock_guard<std::mutex> oom_lock(OomHandlerMutex_);
       if (OomHandler_ && OomHandler_(block_size))
-      {
         return allocateBlock(requested, alignment_, false);  // Retry once
-      }
     }
     return nullptr;
   }
+}
+
+MYLANG_NODISCARD MYLANG_COMPILER_ABI void* ArenaAllocator::allocate(const SizeType size, const SizeType alignment)
+{
+  std::chrono::steady_clock::time_point start = std::chrono::high_resolution_clock::now();
+
+  // Validate count
+  if (size == 0)
+    return nullptr;
+
+  // Check size
+  if (size > MAX_BLOCK_SIZE)
+  {
+    diagnostic::engine.emit("allocation size is too large : " + std::to_string(size), diagnostic::DiagnosticEngine::Severity::ERROR);
+    if (OomHandler_ && OomHandler_(size))
+    {
+      return allocate(size);
+    }
+    diagnostic::engine.emit("bad alloc!", diagnostic::DiagnosticEngine::Severity::FATAL);
+    /// TODO: change after debug
+    // diagnostic::engine.panic("bad alloc");
+  }
+
+  /// TODO: validate alignment
+
+  SizeType aligned_size = getAligned(size, alignment);
+
+  if (aligned_size > MAX_BLOCK_SIZE)
+  {
+    std::cerr << "allocation size (after alignment) is too large!" << std::endl;
+    return nullptr;
+  }
+
+  Pointer mem = allocateFromBlocks(aligned_size);
+  if (mem == nullptr)
+  {
+    std::cerr << "allocate_from_blocks() failed!" << std::endl;
+    return nullptr;
+  }
+
+  // _Tp* region = reinterpret_cast<_Tp*>(mem);
+
+  // Update statistics
+  if (EnableStatistics_.load(std::memory_order_relaxed))
+  {
+    AllocStats_.safe_increment(AllocStats_.TotalAllocations);
+    AllocStats_.safe_increment(AllocStats_.TotalAllocated, aligned_size);
+  }
+
+  // Track allocation if enabled
+  if (TrackAllocations_.load(std::memory_order_relaxed))
+  {
+    AllocationHeader header{};
+    header.magic     = AllocationHeader::MAGIC;
+    header.size      = static_cast<std::uint32_t>(aligned_size);
+    header.alignment = static_cast<std::uint32_t>(alignment);
+    header.checksum  = header.compute_checksum();
+    header.timestamp = std::chrono::steady_clock::now();
+    std::unique_lock<std::shared_mutex> lock(AllocationMapMutex_);
+    AllocationMap_[mem] = header;
+  }
+
+  // Track Pointer for double-free protection
+  std::unique_lock<std::shared_mutex> lock(AllocatedPtrsMutex_);
+  AllocatedPtrs_.insert(mem);
+
+  // Construct objects if needed
+
+  std::chrono::steady_clock::time_point end = std::chrono::high_resolution_clock::now();
+  return static_cast<void*>(mem);
 }
 
 MYLANG_NODISCARD
 bool ArenaAllocator::verifyAllocation(void* ptr) const
 {
   if (!TrackAllocations_.load(std::memory_order_relaxed))
-  {
     return true;
-  }
+
   std::shared_lock<std::shared_mutex> lock(AllocationMapMutex_);
   auto                                it = AllocationMap_.find(ptr);
   if (it == AllocationMap_.end())
-  {
     return false;
-  }
+
   return it->second.is_valid();
-}
-
-MYLANG_NODISCARD
-Pointer ArenaAllocator::allocateUsingFreeList(SizeType alloc_size, SizeType align)
-{
-  std::lock_guard<std::mutex> lock(FreeListMutex_);
-  if (FreeList_.empty())
-  {
-    return nullptr;
-  }
-
-  // Find best fit using multiset's ordering
-  FreeListRegion search_key(nullptr, alloc_size);
-  auto           it = FreeList_.lower_bound(search_key);
-
-  while (it != FreeList_.end())
-  {
-    FreeListRegion reg = *it;
-    // Check alignment of the Pointer
-    std::uintptr_t addr    = reinterpret_cast<std::uintptr_t>(reg.ptr);
-    std::uintptr_t aligned = (addr + (align - 1)) & ~(align - 1);
-    SizeType       padding = aligned - addr;
-
-    if (reg.size >= alloc_size + padding)
-    {
-      Pointer result = reinterpret_cast<Pointer>(aligned);
-      // Remove the used region
-      FreeList_.erase(it);
-      // If there's leftover space, split the region
-      SizeType used = alloc_size + padding;
-
-      if (reg.size > used)
-      {
-        Pointer  remainder      = reg.ptr + used;
-        SizeType remainder_size = reg.size - used;
-        FreeList_.insert(FreeListRegion(remainder, remainder_size));
-      }
-      return result;
-    }
-    ++it;
-  }
-  return nullptr;
 }
 
 MYLANG_NODISCARD
 Pointer ArenaAllocator::allocateFromBlocks(SizeType alloc_size, SizeType align)
 {
-  // Validate alignment
-  align = MinAlignment_;
-
-  if (align == 0 || (align & (align - 1)) != 0)
   {
     std::shared_lock<std::shared_mutex> lock(BlocksMutex_);
     if (!Blocks_.empty())
     {
       // Try free list first
-      Pointer mem = allocateUsingFreeList(alloc_size, align);
-      if (mem != nullptr)
-      {
+      Pointer mem = Blocks_.back().allocate(alloc_size, align);
+      if (mem)
         return mem;
-      }
-      // Try current block
-      mem = Blocks_.back().allocate(alloc_size, align);
-      if (mem != nullptr)
-      {
-        return mem;
-      }
     }
   }
 
@@ -201,9 +189,7 @@ Pointer ArenaAllocator::allocateFromBlocks(SizeType alloc_size, SizeType align)
   if (allocateBlock(new_block_size, align) == nullptr)
   {
     if (DebugFeatures_.load(std::memory_order_relaxed))
-    {
       std::cerr << "-- Failed to allocate block : ArenaAllocator::allocate_block()" << std::endl;
-    }
     return nullptr;
   }
 

@@ -36,14 +36,12 @@ class InputBuffer: public InputBufferBase
       Capacity_(cap),
       InputBufferBase(file_manager, cap)
   {
-    Buffers_[0].resize(Capacity_ + 1, BUFFER_END);
-    Buffers_[1].resize(Capacity_ + 1, BUFFER_END);
     reset();
   }
 
-  SizeType size() const { return Buffers_[CurrentBuffer_].length(); }
+  SizeType size() const { return Buffers_[CurrentBuffer_].len(); }
 
-  SizeType bufferOffset() const { return static_cast<SizeType>(Current_ - Buffers_[CurrentBuffer_].data()); }
+  SizeType bufferOffset() const { return static_cast<SizeType>(Current_ - Buffers_[CurrentBuffer_].cget()); }
 
   bool empty() const { return (!FileManager_->isOpen() || Current_ == nullptr || Buffers_[CurrentBuffer_].empty()); }
 
@@ -57,7 +55,7 @@ class InputBuffer: public InputBufferBase
   MYLANG_NODISCARD
   const CharType& peek();
 
-  StringType nPeek(SizeType n);
+  StringRef nPeek(SizeType n);
 
   void consume(SizeType len)
   {
@@ -73,7 +71,7 @@ class InputBuffer: public InputBufferBase
 
   Position position() const MYLANG_NOEXCEPT { return CurrentPosition_; }
 
-  StringType getSourceLine(const SizeType line) { return FileManager_->getSourceLine(line); }
+  StringRef getSourceLine(const SizeType line) { return FileManager_->getSourceLine(line); }
 
  private:
   struct PushbackEntry

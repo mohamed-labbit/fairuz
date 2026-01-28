@@ -52,11 +52,13 @@ endif()
 
 # Define the test executable
 add_executable(mylang_tests
-    tests/lexer/test_tokens.cpp
-    tests/runtime/allocator/test_arena.cpp
-    tests/parser/test_parser.cpp
+
     tests/test_main.cpp
+    tests/runtime/allocator/test_arena.cpp
+    tests/string/test_string.cpp
+    tests/lexer/test_tokens.cpp
     tests/lexer/test_indentation.cpp
+    tests/parser/test_parser.cpp
     $<TARGET_OBJECTS:mylang_objects>
 )
 

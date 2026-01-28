@@ -104,7 +104,7 @@ void VirtualMachine::registerNativeFunctions()
     }
     if (args[0].isString())
     {
-      return object::Value(static_cast<std::int64_t>(args[0].asString().size()));
+      return object::Value(static_cast<std::int64_t>(args[0].asString().len()));
     }
     diagnostic::engine.panic("len() requires list or string");
   };
@@ -145,7 +145,7 @@ void VirtualMachine::registerNativeFunctions()
     {
       diagnostic::engine.panic("type() takes 1 argument");
     }
-    StringType typeName;
+    StringRef typeName;
     switch (args[0].getType())
     {
     case object::Value::Type::NONE :
@@ -663,7 +663,7 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     }
     else if (b.isString())
     {
-      push(object::Value(b.asString().find(a.toString()) != std::string::npos));
+      // push(object::Value(b.asString().find(a.toString()) != std::string::npos));
     }
     else
     {
@@ -738,8 +738,8 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     // Check for native function
     if (func.isString())
     {
-      std::string funcName = utf8::utf16to8(func.asString());
-      auto        it       = nativeFunctions.find(funcName);
+      std::string funcName;  //  = func.asString();
+      auto        it = nativeFunctions.find(funcName);
       if (it != nativeFunctions.end())
       {
         Stats_.FunctionsCalled++;
@@ -778,15 +778,16 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     break;
   }
   case bytecode::OpCode::BUILD_DICT : {
-    std::unordered_map<StringType, object::Value> dict;
+    std::unordered_map<StringRef, object::Value, StringRefHash, StringRefEqual> dict;
     for (std::int32_t i = 0; i < instr.arg; i++)
     {
       object::Value val    = pop();
       object::Value key    = pop();
       dict[key.asString()] = val;
     }
-    std::shared_ptr<std::unordered_map<StringType, object::Value>> dict_ptr = std::make_shared<std::unordered_map<StringType, object::Value>>(dict);
-    object::Value                                                  result;
+    std::shared_ptr<std::unordered_map<StringRef, object::Value, StringRefHash, StringRefEqual>> dict_ptr =
+      std::make_shared<std::unordered_map<StringRef, object::Value, StringRefHash, StringRefEqual>>(dict);
+    object::Value result;
     result.setType(object::Value::Type::DICT);
     result.setData(dict_ptr);
     push(result);

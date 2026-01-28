@@ -29,9 +29,9 @@ namespace parser {
 class ParseError: public std::runtime_error
 {
  public:
-  std::int32_t            Line_, Column_;  // Source location of the error
-  StringType              Context_;        // Source line where the error occurred
-  std::vector<StringType> Suggestions_;    // Optional recovery suggestions
+  std::int32_t           Line_, Column_;  // Source location of the error
+  StringRef              Context_;        // Source line where the error occurred
+  std::vector<StringRef> Suggestions_;    // Optional recovery suggestions
 
   /**
    * @brief Constructs a parse error.
@@ -42,12 +42,12 @@ class ParseError: public std::runtime_error
    * @param ctx  Optional source line context
    * @param sugg Optional list of suggestions
    */
-  ParseError(const StringType& msg, unsigned l, unsigned c, StringType ctx = u"", std::vector<StringType> sugg = {}) :
-      std::runtime_error(utf8::utf16to8(msg)),
+  ParseError(const StringRef& msg, unsigned l, unsigned c, StringRef ctx = u"", std::vector<StringRef> sugg = {}) :
       Line_(l),
       Column_(c),
       Context_(std::move(ctx)),
-      Suggestions_(std::move(sugg))
+      Suggestions_(std::move(sugg)),
+      std::runtime_error("")
   {
   }
 
@@ -62,27 +62,27 @@ class ParseError: public std::runtime_error
    *
    * @return UTF-16 formatted error message
    */
-  StringType format() const
+  StringRef format() const
   {
     std::stringstream ss;
     ss << "Line " << Line_ << ":" << Column_ << " - " << what() << "\n";
 
     if (!Context_.empty())
     {
-      ss << "  | " << utf8::utf16to8(Context_) << "\n";
+      ss << "  | " << Context_ << "\n";
       ss << "  | " << std::string(Column_ - 1, ' ') << "^\n";
     }
 
     if (!Suggestions_.empty())
     {
       ss << "Suggestions:\n";
-      for (const StringType& s : Suggestions_)
+      for (const StringRef& s : Suggestions_)
       {
-        ss << "  - " << utf8::utf16to8(s) << "\n";
+        ss << "  - " << s << "\n";
       }
     }
 
-    return utf8::utf8to16(ss.str());
+    return StringRef(ss.str().data());
   }
 };
 
@@ -236,14 +236,14 @@ class Parser
    * @param msg  Error message if the token does not match
    */
   MYLANG_NODISCARD
-  bool consume(tok::TokenType type, const StringType& msg)
+  bool consume(tok::TokenType type, const StringRef& msg)
   {
     if (check(type))
     {
       advance();
       return true;
     }
-    diagnostic::engine.emit(msg, diagnostic::DiagnosticEngine::Severity::ERROR);
+    // diagnostic::engine.emit(msg, diagnostic::DiagnosticEngine::Severity::ERROR);
     return false;
   }
 
@@ -257,7 +257,7 @@ class Parser
   }
 
   /// @brief Retrieves a source line for diagnostics
-  StringType getSourceLine(SizeType line) { return Lexer_.getSourceLine(line); }
+  StringRef getSourceLine(SizeType line) { return Lexer_.getSourceLine(line); }
 
   /// @brief Enters a new scope (currently a no-op)
   void enterScope() {}
