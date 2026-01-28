@@ -23,9 +23,7 @@ std::string DiagnosticEngine::toJSON() const
     ss << "    \"code\": \"" << diag.code << "\"\n";
     ss << "  }";
     if (i + 1 < Diagnostics_.size())
-    {
       ss << ",";
-    }
     ss << "\n";
   }
   ss << "]\n";
@@ -61,9 +59,7 @@ void DiagnosticEngine::prettyPrint() const
 
     std::cout << color << sevStr << Color::RESET;
     if (!diag.code.empty())
-    {
       std::cout << "[" << diag.code << "]";
-    }
     std::cout << ": " << diag.message << "\n";
     // Show source line
     std::cout << "  --> line " << diag.line << ":" << diag.column << "\n";
@@ -83,9 +79,7 @@ void DiagnosticEngine::prettyPrint() const
     {
       std::cout << Color::MAGENTA << "Help" << Color::RESET << std::endl;
       for (const std::string& sugg : diag.suggestions)
-      {
         std::cout << "    • " << sugg << "\n";
-      }
     }
     // Show notes
     for (const auto& [noteLine, noteMsg] : diag.notes)

@@ -32,9 +32,7 @@ class FileError: public std::exception
   FileError& operator=(const FileError& other) noexcept
   {
     if (this != &other)
-    {
       Imp_ = other.imp();
-    }
     return *this;
   }
 

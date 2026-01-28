@@ -175,9 +175,7 @@ class Token
   bool operator==(const Token& other) const
   {
     if (Type_ == TokenType::INDENT || Type_ == TokenType::DEDENT)
-    {
       return Type_ == other.Type_;
-    }
     return Value_ == other.Value_ && Type_ == other.Type_ && Location_.line == other.Location_.line && Location_.column == other.Location_.column;
   }
 

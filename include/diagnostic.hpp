@@ -46,17 +46,13 @@ class DiagnosticEngine
   void addSuggestion(const std::string& suggestion)
   {
     if (!Diagnostics_.empty())
-    {
       Diagnostics_.back().suggestions.push_back(suggestion);
-    }
   }
 
   void addNote(std::int32_t line, const std::string& note)
   {
     if (!Diagnostics_.empty())
-    {
       Diagnostics_.back().notes.push_back({line, note});
-    }
   }
 
   std::string toJSON() const;
@@ -72,9 +68,7 @@ class DiagnosticEngine
   {
     std::cerr << svToStr(sv) << ": " << msg << std::endl;
     if (sv == Severity::FATAL)
-    {
       throw std::runtime_error("");
-    }
   }
 
   [[noreturn]] void _panic(const std::string& msg) const
@@ -89,16 +83,12 @@ class DiagnosticEngine
     {
     case Severity::NOTE :
       return Color::BOLD + Color::CYAN + "note" + Color::RESET;
-
     case Severity::FATAL :
       return Color::BOLD + Color::RED + "fatal" + Color::RESET;
-
     case Severity::ERROR :
       return Color::BOLD + Color::RED + "error" + Color::RESET;
-
     case Severity::WARNING :
       return Color::BOLD + Color::YELLOW + "warning" + Color::RESET;
-
     default :
       return Color::BOLD + "unknown" + Color::RESET;
     }
@@ -111,9 +101,7 @@ class DiagnosticEngine
     std::string              line;
 
     while (std::getline(ss, line))
-    {
       lines.push_back(line);
-    }
 
     return lines;
   }

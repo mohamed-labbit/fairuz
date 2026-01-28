@@ -77,9 +77,7 @@ class ParseError: public std::runtime_error
     {
       ss << "Suggestions:\n";
       for (const StringRef& s : Suggestions_)
-      {
         ss << "  - " << s << "\n";
-      }
     }
 
     return StringRef(ss.str().data());
@@ -106,9 +104,7 @@ class Parser
       Lexer_(fm)
   {
     if (fm == nullptr)
-    {
       diagnostic::engine.panic("file_manager is NULL!");
-    }
     // Advance to the first real token
     Lexer_.next();
   }
@@ -251,9 +247,7 @@ class Parser
   void skipNewlines()
   {
     while (match(tok::TokenType::NEWLINE))
-    {
       ;
-    }
   }
 
   /// @brief Retrieves a source line for diagnostics

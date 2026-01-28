@@ -29,18 +29,14 @@ class ASTPrinter
   std::string color(const std::string& s, const std::string& c) const
   {
     if (!UseColor_)
-    {
       return s;
-    }
     return c + s + Color::RESET;
   }
 
   void printExpr(const Expr* e, Prefix p)
   {
     if (!e)
-    {
       return;
-    }
 
     NodeCount_++;
 
@@ -82,9 +78,7 @@ class ASTPrinter
       printExpr(c->getCallee(), {p.indent + pipe(p.last) + "│  ", true});
       std::cout << p.indent + pipe(p.last) << "└─ args:\n";
       for (SizeType i = 0; i < c->getArgs().size(); ++i)
-      {
         printExpr(c->getArgs()[i], {p.indent + pipe(p.last) + "   ", i + 1 == c->getArgs().size()});
-      }
       break;
     }
 
@@ -92,9 +86,7 @@ class ASTPrinter
       const ListExpr* l = static_cast<const ListExpr*>(e);
       std::cout << color("List", Color::BLUE) << " [" << l->getElements().size() << "]\n";
       for (SizeType i = 0; i < l->getElements().size(); ++i)
-      {
         printExpr(l->getElements()[i], {p.indent + pipe(p.last), i + 1 == l->getElements().size()});
-      }
       break;
     }
 
@@ -116,9 +108,7 @@ class ASTPrinter
   void printStmt(const Stmt* s, Prefix p)
   {
     if (s == nullptr)
-    {
       return;
-    }
 
     NodeCount_++;
 
@@ -131,14 +121,10 @@ class ASTPrinter
       std::cout << color("FunctionDef", Color::BOLD) << " " << f->getName()->getValue() << "\n";
       std::cout << p.indent + pipe(p.last) << "├─ params:\n";
       for (SizeType i = 0; i < f->getParameters().size(); ++i)
-      {
         printExpr(f->getParameters()[i], {p.indent + pipe(p.last) + "│  ", i + 1 == f->getParameters().size()});
-      }
       std::cout << p.indent + pipe(p.last) << "└─ body:\n";
       for (SizeType i = 0; i < f->getBody()->getStatements().size(); ++i)
-      {
         printStmt(f->getBody()->getStatements()[i], {p.indent + pipe(p.last) + "   ", i + 1 == f->getBody()->getStatements().size()});
-      }
       break;
     }
 
@@ -202,9 +188,7 @@ class ASTPrinter
       const BlockStmt* b = static_cast<const BlockStmt*>(s);
       std::cout << color("Block", Color::BOLD) << " {" << b->getStatements().size() << " stmts}\n";
       for (SizeType i = 0; i < b->getStatements().size(); ++i)
-      {
         printStmt(b->getStatements()[i], {p.indent + pipe(p.last), i + 1 == b->getStatements().size()});
-      }
       break;
     }
 

@@ -483,10 +483,8 @@ class StringRef
     // Deep comparison
     // return std::memcmp(Ptr_, other.cget(), Len_ * sizeof(CharType)) == 0;
     for (SizeType i = 0; i < Len_; ++i)
-    {
       if (Ptr_[i] != other[i])
         return false;
-    }
 
     return true;
   }
@@ -655,7 +653,6 @@ class StringRef
     for (SizeType k = 0; k < rhs.len(); k++)
       result[i++] = rhs[k];
 
-
     result.Len_          = new_len;
     result.Ptr_[new_len] = BUFFER_END;
 
@@ -738,10 +735,8 @@ class StringRef
   MYLANG_NODISCARD bool find(const CharType c) const noexcept
   {
     for (SizeType i = 0; i < Len_; ++i)
-    {
       if (Ptr_[i] == c)
         return true;
-    }
     return false;
   }
 
@@ -749,10 +744,8 @@ class StringRef
   MYLANG_NODISCARD std::optional<SizeType> find_pos(const CharType c) const noexcept
   {
     for (SizeType i = 0; i < Len_; ++i)
-    {
       if (Ptr_[i] == c)
         return i;
-    }
     return std::nullopt;
   }
 
@@ -769,7 +762,7 @@ class StringRef
 
   // Substring - FIXED: optimized to use memcpy instead of character-by-character
   // Returns substring from start (inclusive) to end (inclusive)
-  MYLANG_NODISCARD StringRef substr(std::optional<SizeType> start, std::optional<SizeType> end) const
+  StringRef substr(std::optional<SizeType> start, std::optional<SizeType> end) const
   {
     if (empty())
       return StringRef{};
@@ -800,10 +793,10 @@ class StringRef
   }
 
   // Overload for convenience: substr(start) returns from start to end
-  MYLANG_NODISCARD StringRef substr(SizeType start) const { return substr(std::optional<SizeType>(start), std::nullopt); }
+  StringRef substr(SizeType start) const { return substr(std::optional<SizeType>(start), std::nullopt); }
 
   // Convert to double - improved error handling
-  MYLANG_NODISCARD double toDouble(SizeType* pos = nullptr) const
+  double toDouble(SizeType* pos = nullptr) const
   {
     if (empty() || Len_ == 0)
       throw std::invalid_argument("StringRef::toDouble: empty string");
@@ -858,9 +851,7 @@ class StringRef
   MYLANG_NODISCARD static StringRef fromUtf8(const std::string& utf8_str)
   {
     if (utf8_str.empty())
-    {
       return StringRef{};
-    }
 
     // First, convert to UTF-16
     // std::vector<CharType> utf16_buffer;

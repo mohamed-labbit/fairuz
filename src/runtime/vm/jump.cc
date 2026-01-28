@@ -17,9 +17,7 @@ void JumpResolver::addJump(std::int32_t instrIndex, const std::string& target)
     // (Would patch instruction here)
   }
   else
-  {
     PendingJumps_.push_back({instrIndex, target});
-  }
 }
 
 void JumpResolver::resolveJumps(std::vector<bytecode::Instruction>& instructions)
@@ -28,13 +26,9 @@ void JumpResolver::resolveJumps(std::vector<bytecode::Instruction>& instructions
   {
     auto it = Labels_.find(jump.LabelName);
     if (it != Labels_.end())
-    {
       instructions[jump.InstructionIndex].arg = it->second;
-    }
     else
-    {
       diagnostic::engine.panic("Undefined label: " + jump.LabelName);
-    }
   }
 }
 

@@ -46,10 +46,7 @@ tok::Token Lexer::make_token(tok::TokenType             tt,
 std::vector<tok::Token> Lexer::tokenize()
 {
   while (next().type() != tok::TokenType::ENDMARKER)
-  {
     ;
-  }
-
   return this->TokStream_;
 }
 
@@ -58,9 +55,7 @@ tok::Token Lexer::peek(SizeType n)
   while (TokIndex_ + n >= TokStream_.size())
   {
     if (!TokStream_.empty() && TokStream_.back().type() == tok::TokenType::ENDMARKER)
-    {
       return TokStream_.back();
-    }
     lexToken();
   }
 
@@ -87,9 +82,7 @@ tok::Token Lexer::lexToken()
     CharType ch = currentChar();
 
     if (ch == BUFFER_END)
-    {
       break;
-    }
 
     SizeType line = SourceManager_.line();
     SizeType col  = SourceManager_.column();
@@ -142,25 +135,17 @@ tok::Token Lexer::lexToken()
             // Handle continuation line if needed
           }
           else if (ch == BUFFER_END)
-          {
             diagnostic::engine.panic("Unexpected EOF");
-          }
           else
-          {
             break;
-          }
         }
         // Check for blank lines (comments/whitespace only)
         if (ch == '#' || ch == '\n' || ch == '\r')
         {
           if (size == 0 && ch == '\n')
-          {
             blankline = false;  // Empty line
-          }
           else
-          {
             blankline = true;  // Comment or whitespace-only
-          }
         }
         // Process indentation changes
         if (!blankline)
@@ -171,21 +156,15 @@ tok::Token Lexer::lexToken()
           {
             // No change - check consistency
             if (alt_size != AltIndentStack_.back())
-            {
               diagnostic::engine.panic("Inconsistent indentation");
-            }
           }
           else if (size > IndentStack_.back())
           {
             // Indent
             if (IndentLevel_ + 1 >= MAX_ALLOWED_INDENT)
-            {
               diagnostic::engine.panic("Too many indentation levels");
-            }
             if (alt_size <= AltIndentStack_.back())
-            {
               diagnostic::engine.panic("Inconsistent indentation (tabs/spaces)");
-            }
 
             IndentLevel_++;
             IndentStack_.push_back(size);
@@ -207,19 +186,13 @@ tok::Token Lexer::lexToken()
             }
 
             if (size != IndentStack_.back())
-            {
               diagnostic::engine.panic("Unindent does not match any outer indentation level");
-            }
 
             if (alt_size != AltIndentStack_.back())
-            {
               diagnostic::engine.panic("Inconsistent indentation");
-            }
 
             for (int i = 0; i < dedent_count; i++)
-            {
               store(make_token(tok::TokenType::DEDENT, u"", line, col));
-            }
 
             return TokStream_[TokIndex_++];
           }
@@ -246,9 +219,7 @@ tok::Token Lexer::lexToken()
         {
           CharType c2 = SourceManager_.peek();
           if (c2 == u'\n' || c2 == BUFFER_END)
-          {
             break;
-          }
           consumeChar();
         }
 
@@ -269,13 +240,9 @@ tok::Token Lexer::lexToken()
       }
 
       if (c2 == quote)
-      {
         consumeChar();
-      }
       else
-      {
         return make_token(tok::TokenType::INVALID, std::move(str));
-      }
 
       return finish(tok::TokenType::STRING, std::move(str), line, col);
     }
@@ -302,9 +269,7 @@ tok::Token Lexer::lexToken()
 
       tok::TokenType tt = tok::TokenType::IDENTIFIER;
       if (tok::keywords.count(id))
-      {
         tt = tok::keywords.at(id);
-      }
 
       return finish(tt, std::move(id), line, col);
     }
@@ -343,15 +308,11 @@ tok::Token Lexer::lexToken()
               c2        = nextChar();
             }
             else
-            {
               break;
-            }
           }
 
           if (!hasDigits)
-          {
             diagnostic::engine.panic("Invalid hexadecimal literal: no digits after 0x");
-          }
 
           return finish(tok::TokenType::NUMBER, std::move(num), line, col);
         }
@@ -380,20 +341,14 @@ tok::Token Lexer::lexToken()
               c2        = nextChar();
             }
             else if (std::iswdigit(c2))
-            {
               // Invalid octal digit (8 or 9)
               diagnostic::engine.panic("Invalid digit '" + std::string(1, c2) + "' in octal literal");
-            }
             else
-            {
               break;
-            }
           }
 
           if (!hasDigits)
-          {
             diagnostic::engine.panic("Invalid octal literal: no digits after 0o");
-          }
 
           return finish(tok::TokenType::NUMBER, std::move(num), line, col);
         }
@@ -422,20 +377,14 @@ tok::Token Lexer::lexToken()
               c2        = nextChar();
             }
             else if (std::iswdigit(c2))
-            {
               // Invalid binary digit (2-9)
               diagnostic::engine.panic("Invalid digit '" + std::string(1, c2) + "' in binary literal");
-            }
             else
-            {
               break;
-            }
           }
 
           if (!hasDigits)
-          {
             diagnostic::engine.panic("Invalid binary literal: no digits after 0b");
-          }
 
           return finish(tok::TokenType::NUMBER, std::move(num), line, col);
         }
@@ -458,9 +407,7 @@ tok::Token Lexer::lexToken()
           c2 = nextChar();
         }
         else
-        {
           break;
-        }
       }
 
       // Check for decimal point (floating-point number)
@@ -484,9 +431,7 @@ tok::Token Lexer::lexToken()
             c2 = nextChar();
           }
           else
-          {
             break;
-          }
         }
 
         return finish(tok::TokenType::FLOAT, std::move(num), line, col);
@@ -550,9 +495,7 @@ tok::Token Lexer::lexToken()
           tt = tok::TokenType::OP_ASSIGN;
         }
         else
-        {
           tt = tok::TokenType::COLON;
-        }
         break;
       default :
         tt = tok::TokenType::INVALID;
@@ -568,17 +511,13 @@ tok::Token Lexer::lexToken()
   }
 
   if (!TokStream_.empty() && TokStream_.back().type() == tok::TokenType::ENDMARKER)
-  {
     return TokStream_.back();
-  }
 
   // not calling finish since update context is useless at end
   consumeChar();
 
   if (!TokStream_.empty() && TokStream_.back().type() == tok::TokenType::ENDMARKER)
-  {
     return TokStream_.back();
-  }
 
   tok::Token ret = make_token(tok::TokenType::ENDMARKER, std::nullopt, std::nullopt, SourceManager_.column() - 1);
   store(std::move(ret));
@@ -609,13 +548,9 @@ tok::Token Lexer::next()
 tok::Token Lexer::prev()
 {
   if (TokIndex_ > 0)
-  {
     TokIndex_--;
-  }
   else
-  {
     return make_token(tok::TokenType::ENDMARKER);
-  }
 
   return TokStream_[TokIndex_];
 }
@@ -623,14 +558,10 @@ tok::Token Lexer::prev()
 tok::Token Lexer::current() const
 {
   if (TokStream_.back().is(tok::TokenType::ENDMARKER))
-  {
     return TokStream_.back();
-  }
 
   if (TokIndex_ < TokStream_.size())
-  {
     return TokStream_[TokIndex_];
-  }
 
   return make_token(tok::TokenType::ENDMARKER);
 }

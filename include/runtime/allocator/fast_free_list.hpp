@@ -40,9 +40,7 @@ class FastAllocBlockFreeList
   explicit FastAllocBlockFreeList(const std::vector<FreeListRegion>& regions)
   {
     for (const FreeListRegion& reg : regions)
-    {
       Regions_.insert(reg);
-    }
   }
 
   /**

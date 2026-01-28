@@ -43,9 +43,7 @@ std::vector<std::vector<tok::Token>> ParallelParser::splitIntoChunks(const std::
     }
   }
   if (!current.empty())
-  {
     chunks.push_back(current);
-  }
   return chunks;
 }
 

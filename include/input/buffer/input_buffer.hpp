@@ -60,9 +60,7 @@ class InputBuffer: public InputBufferBase
   void consume(SizeType len)
   {
     while (len-- > 0)
-    {
       consumeChar();
-    }
   }
 
   void unget(CharType ch);

@@ -152,18 +152,14 @@ class FileManager
   SizeType getLineCount()
   {
     if (!LineIndexBuilt_)
-    {
       buildLineIndex();
-    }
     return Stats_.TotalLines;
   }
 
   SizeType getCharCount()
   {
     if (!LineIndexBuilt_)
-    {
       buildLineIndex();
-    }
     return Stats_.TotalCharacters;
   }
 
@@ -198,9 +194,7 @@ class FileManager
   void popPosition()
   {
     if (!PositionStack_.empty())
-    {
       PositionStack_.erase(PositionStack_.begin());
-    }
   }
 
   void pushPosition()
@@ -208,9 +202,7 @@ class FileManager
     PositionStack_.push_back(Context_);
     // Limit stack size
     if (PositionStack_.size() > 100)
-    {
       PositionStack_.erase(PositionStack_.begin());
-    }
   }
 
   SizeType validateUtf8Bound(std::span<const std::byte> buffer) const;

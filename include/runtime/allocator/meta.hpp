@@ -47,9 +47,7 @@ struct ArenaAllocStats
     {
       // Check for overflow before incrementing
       if (old_val > std::numeric_limits<SizeType>::max() - amount)
-      {
         return;  // Would overflow, saturate at current value
-      }
       new_val = old_val + amount;
     } while (!counter.compare_exchange_weak(old_val, new_val, std::memory_order_relaxed, std::memory_order_relaxed));
   }

@@ -14,14 +14,12 @@ CharType SourceManager::peek()
 
   return this->InputBuffer_.peek();
   if (Current_ == nullptr)
-  {
     return BUFFER_END;
-  }
+
   CharType* forward = Current_ + 1;
   if (forward == nullptr)
-  {
     return BUFFER_END;
-  }
+
   return *forward;
 }
 
@@ -40,9 +38,7 @@ offset_pair SourceManager::offsetMap_(const SizeType& offset) const
   while (iter < InputBuffer_.bufferOffset())
   {
     if (InputBuffer_.at(iter) == u'\n')
-    {
       diff++;
-    }
     iter++;
   }
 
@@ -56,13 +52,9 @@ offset_pair SourceManager::offsetMap_(const SizeType& offset) const
   {
     CharType c = InputBuffer_.at(iter);
     if (c == u'\n')
-    {
       line++, col = 1;
-    }
     else
-    {
       col++;
-    }
     iter++;
   }
 

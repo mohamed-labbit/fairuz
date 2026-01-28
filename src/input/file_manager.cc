@@ -19,30 +19,22 @@ FileManager::FileManager(const std::string& filepath) :
     Stream_(FullPath_, std::ios::binary)
 {
   if (!fs::exists(fs::path(filepath)))
-  {
     diagnostic::engine.panic(toString(FileManagerError::FILE_NOT_FOUND));
-  }
   if (!Stream_.is_open())
-  {
     diagnostic::engine.panic(toString(FileManagerError::FILE_NOT_OPEN));
-  }
   LastKnownWriteTime_ = fs::last_write_time(filepath);
 }
 
 void FileManager::reset()
 {
   if (!isOpen())
-  {
     throw error::FileError(toString(FileManagerError::FILE_NOT_FOUND));
-  }
 
   Stream_.clear();
   Stream_.seekg(0, std::ios::beg);
 
   if (Stream_.fail())
-  {
     throw error::FileError(toString(FileManagerError::SEEK_OUT_OF_BOUND));
-  }
 
   Context_.reset();
 }
@@ -50,45 +42,31 @@ void FileManager::reset()
 void FileManager::seekToChar(const SizeType CharOffset)
 {
   if (CharOffset == Context_.CharOffset)
-  {
     return;
-  }
 
   /// TODO:  : revisit this stupid magic number
   if (CharOffset < Context_.CharOffset || CharOffset - Context_.CharOffset > 10000)
-  {
     reset();
-  }
 
   while (Context_.CharOffset < CharOffset)
   {
     const SizeType chars_to_read = std::max<SizeType>(0, CharOffset - Context_.CharOffset);
     StringRef      result        = readWindowInternal(std::min(chars_to_read, SizeType{1024}));
     if (result.empty())
-    {
       throw error::FileError(toString(FileManagerError::UNEXPECTED_EOF));
-    }
   }
 }
 
 constexpr SizeType getUtf8SequenceLength(unsigned char first_byte)
 {
   if ((first_byte & 0x80) == 0)
-  {
     return 1;
-  }
   if ((first_byte & 0xE0) == 0xC0)
-  {
     return 2;
-  }
   if ((first_byte & 0xF0) == 0xE0)
-  {
     return 3;
-  }
   if ((first_byte & 0xF8) == 0xF0)
-  {
     return 4;
-  }
   return 1;
 }
 
@@ -189,7 +167,7 @@ StringRef FileManager::readWindowInternal(SizeType size)
 
   // UTF-8 → UTF-16
   const std::string utf8_string(reinterpret_cast<const char*>(byte_buffer.data()), byte_buffer.size());
-  StringRef result = StringRef::fromUtf8(utf8_string);
+  StringRef         result = StringRef::fromUtf8(utf8_string);
 
   // Enforce UTF-16 character window
   if (result.len() > size)
@@ -239,9 +217,7 @@ StringRef FileManager::readNextLine()
     // check line is not empty
     StringRef chunk = readWindowInternal(1);
     if (chunk.empty())
-    {
       break;
-    }
 
     const CharType c = chunk[0];
 
@@ -256,9 +232,8 @@ StringRef FileManager::readNextLine()
     {
       StringRef peek = readWindowInternal(1);
       if (!peek.empty() && peek[0] == u'\n')
-      {  // consume \n
+        // consume \n
         ;
-      }
       else
       {
         // rewind
@@ -280,23 +255,17 @@ StringRef FileManager::readNextLine()
 std::vector<StringRef> FileManager::readLines(const SizeType start, const SizeType count)
 {
   if (!LineIndexBuilt_)
-  {
     buildLineIndex();
-  }
 
   if (start >= LineIndices_.size())
-  {
     throw error::FileError(toString(FileManagerError::INVALID_LINE_NUMBER));
-  }
 
   const SizeType         end = std::min(start + count, LineIndices_.size());
   std::vector<StringRef> lines;
   lines.reserve(end - start);
 
   for (SizeType i = start; i < end; ++i)
-  {
     lines.push_back(std::move(readLine(i)));
-  }
 
   return lines;
 }
@@ -311,9 +280,7 @@ StringRef FileManager::readAll()
   {
     StringRef chunk = readWindowInternal(4096);  // 4 MB
     if (chunk.empty())
-    {
       break;
-    }
     result += chunk;
   }
 
@@ -362,9 +329,7 @@ StringRef FileManager::peekRange(const SizeType start_offset, const SizeType len
 void FileManager::buildLineIndex()
 {
   if (LineIndexBuilt_)
-  {
     return;
-  }
 
   reset();
   LineIndices_.clear();
@@ -381,9 +346,7 @@ void FileManager::buildLineIndex()
   {
     StringRef chunk = readWindowInternal(LINE_INDEX_CHUNK);
     if (chunk.empty())
-    {
       break;
-    }
 
     SizeType i = 0;
     for (; i < chunk.len(); ++i)
@@ -421,9 +384,7 @@ void FileManager::buildLineIndex()
   Stats_.MaxLineLength = max_len;
 
   if (Stats_.TotalLines > 0)
-  {
     Stats_.AverageLineLength = Stats_.TotalCharacters / Stats_.TotalLines;
-  }
 
   LineIndexBuilt_ = true;
   reset();
