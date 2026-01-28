@@ -34,12 +34,12 @@ TEST(LexerTest, RecognizesPlus)
 {
   FileManager             file_manager(test_cases_path / "recognizes_plus.txt");
   lex::Lexer              lexer(&file_manager);
-  std::vector<tok::Token> tokens   = lexer.tokenize();
-  tok::Token              expected = lexer.make_token(tok::TokenType::OP_PLUS, u"+", 1, 1);
+  std::vector<const tok::Token*> tokens   = lexer.tokenize();
+  const tok::Token*              expected = lexer.make_token(tok::TokenType::OP_PLUS, u"+", 1, 1);
   EXPECT_EQ(tokens.size(), 3);
-  EXPECT_EQ(tokens[0].type(), tok::TokenType::BEGINMARKER);
+  EXPECT_EQ(tokens[0]->type(), tok::TokenType::BEGINMARKER);
   EXPECT_EQ(tokens[1], expected);
-  EXPECT_EQ(tokens[2].type(), tok::TokenType::ENDMARKER);
+  EXPECT_EQ(tokens[2]->type(), tok::TokenType::ENDMARKER);
 }
 
 TEST(LexerTest, RecognizesInteger)

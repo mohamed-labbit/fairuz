@@ -149,7 +149,7 @@ ast::ListExpr* Parser::parseParametersList()
         return nullptr;
       }
 
-      StringRef param_name = Lexer_.current().lexeme();
+      StringRef param_name = Lexer_.current()->lexeme();
       advance();
 
       ast::NameExpr* param = ast::AST_allocator.make<ast::NameExpr>(param_name);
@@ -177,7 +177,7 @@ ast::Stmt* Parser::parseFunctionDef()
     return nullptr;
   }
 
-  StringRef function_name = Lexer_.current().lexeme();
+  StringRef function_name = Lexer_.current()->lexeme();
   advance();
 
   // Parse parameter list
@@ -281,11 +281,11 @@ ast::Expr* Parser::parseLogicalExprPrecedence(unsigned min_precedence)
 
   for (;;)
   {
-    int precedence = currentToken().getLogicalOpPrecedence();
+    int precedence = currentToken()->getLogicalOpPrecedence();
     if (precedence < 0 || precedence < static_cast<int>(min_precedence))
       break;
 
-    tok::TokenType op = Lexer_.current().type();
+    tok::TokenType op = Lexer_.current()->type();
     advance();
 
     // All logical operators are left associative
@@ -309,9 +309,9 @@ ast::Expr* Parser::parseComparisonExpr()
 
   // Comparison operators are non-associative (a < b < c is parsed as (a < b) and (b < c) in Python)
   // For simplicity, we only allow single comparison for now
-  if (currentToken().isComparisonOp())
+  if (currentToken()->isComparisonOp())
   {
-    tok::TokenType op = Lexer_.current().type();
+    tok::TokenType op = Lexer_.current()->type();
     advance();
     ast::Expr* right = parseBinaryExpr();
     if (!right)
@@ -334,11 +334,11 @@ ast::Expr* Parser::parseBinaryExprPrecedence(unsigned min_precedence)
 
   for (;;)
   {
-    int precedence = currentToken().getArithmeticOpPrecedence();
+    int precedence = currentToken()->getArithmeticOpPrecedence();
     if (precedence < 0 || precedence < static_cast<int>(min_precedence))
       break;
 
-    tok::TokenType op = Lexer_.current().type();
+    tok::TokenType op = Lexer_.current()->type();
     advance();
 
     // Left associative: higher precedence for next level
@@ -358,9 +358,9 @@ ast::Expr* Parser::parseBinaryExprPrecedence(unsigned min_precedence)
 ast::Expr* Parser::parseUnaryExpr()
 {
   // Check CURRENT token for unary operators
-  if (currentToken().isUnaryOp())
+  if (currentToken()->isUnaryOp())
   {
-    tok::TokenType op = Lexer_.current().type();
+    tok::TokenType op = Lexer_.current()->type();
     advance();                           // consume operator
     ast::Expr* expr = parseUnaryExpr();  // parse right side recursively
     if (!expr)
@@ -424,21 +424,21 @@ ast::Expr* Parser::parsePrimaryExpr()
 
   if (check(tok::TokenType::NUMBER))
   {
-    auto v = Lexer_.current().lexeme();
+    auto v = Lexer_.current()->lexeme();
     advance();
     return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER, v);
   }
 
   if (check(tok::TokenType::STRING))
   {
-    auto v = Lexer_.current().lexeme();
+    auto v = Lexer_.current()->lexeme();
     advance();
     return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::STRING, v);
   }
 
   if (check(tok::TokenType::KW_TRUE) || check(tok::TokenType::KW_FALSE))
   {
-    auto v = Lexer_.current().lexeme();
+    auto v = Lexer_.current()->lexeme();
     advance();
     return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::BOOLEAN, v);
   }
@@ -451,7 +451,7 @@ ast::Expr* Parser::parsePrimaryExpr()
 
   if (check(tok::TokenType::IDENTIFIER))
   {
-    auto name = Lexer_.current().lexeme();
+    auto name = Lexer_.current()->lexeme();
     advance();
     return ast::AST_allocator.make<ast::NameExpr>(name);
   }

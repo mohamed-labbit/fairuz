@@ -197,16 +197,16 @@ class Parser
   // std::vector<ast::Stmt*> parse();
   /// TODO: not sure if these should be private
   /// @brief check wether or not we reached the end of the file so not to bother lookin for stuff to parse
-  bool weDone() const { return Lexer_.current().is(tok::TokenType::ENDMARKER); }
+  bool weDone() const { return Lexer_.current()->is(tok::TokenType::ENDMARKER); }
 
   /// @brief Checks whether the current token is of the given type
   bool check(tok::TokenType type)
   {
     // if (weDone()) return false;
-    return Lexer_.current().is(type);
+    return Lexer_.current()->is(type);
   }
 
-  tok::Token currentToken() { return Lexer_.current(); }
+  const tok::Token* currentToken() { return Lexer_.current(); }
 
   ast::Expr* parse() { return parseExpression(); }
 
@@ -216,10 +216,10 @@ class Parser
   lex::Lexer Lexer_;  // Underlying lexer providing tokens
 
   /// @brief Peeks ahead in the token stream without consuming
-  tok::Token peek(SizeType offset = 1) { return Lexer_.peek(offset); }
+  const tok::Token* peek(SizeType offset = 1) { return Lexer_.peek(offset); }
 
   /// @brief Advances and returns the next token
-  tok::Token advance() { return Lexer_.next(); }
+  const tok::Token* advance() { return Lexer_.next(); }
 
 
   /// @brief Matches and consumes a token if it is of the given type

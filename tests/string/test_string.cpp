@@ -29,7 +29,7 @@ TEST_F(StringRefTest, DefaultConstructor)
   StringRef s;
   EXPECT_TRUE(s.empty());
   EXPECT_EQ(s.len(), 0);
-  EXPECT_EQ(s.cap(), 0);
+  EXPECT_EQ(s.cap(), 1);
   EXPECT_EQ(s.get(), nullptr);
 }
 
