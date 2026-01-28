@@ -48,40 +48,6 @@ class ParserTest: public ::testing::Test
     ASSERT_TRUE(std::filesystem::exists(parser_test_cases_dir())) << "Test cases directory not found: " << parser_test_cases_dir();
   }
 
-  std::vector<tok::Token> createTokens(std::initializer_list<tok::TokenType> types)
-  {
-    lex::Lexer              lexer;
-    std::vector<tok::Token> tokens;
-    tokens.emplace_back(lexer.make_token(tok::TokenType::BEGINMARKER, u"", 1, 1));
-    int line = 1, col = 2;
-
-    for (auto type : types)
-    {
-      tokens.emplace_back(lexer.make_token(type, u"", line, col));
-      col++;
-    }
-
-    tokens.emplace_back(lexer.make_token(tok::TokenType::ENDMARKER, u"", line, col));
-    return tokens;
-  }
-
-  tok::Token makeToken(tok::TokenType type, const StringRef& value = u"", int line = 1, int col = 1)
-  {
-    lex::Lexer lexer;
-    return lexer.make_token(type, value, line, col);
-  }
-
-  std::ifstream openTestFile(const std::string& filename)
-  {
-    auto          filepath = parser_test_cases_dir() / filename;
-    std::ifstream file(filepath, std::ios::binary);
-    if (!file.is_open())
-    {
-      ADD_FAILURE() << "Failed to open test file: " << filepath;
-    }
-    return file;
-  }
-
   template<typename T>
   T* parseAndCast(parser::Parser& parser, parser::ast::Expr*& expr)
   {
