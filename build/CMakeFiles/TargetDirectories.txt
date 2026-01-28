@@ -1,5 +1,0 @@
-/Users/mohamedrabbit/code/mylang/build/CMakeFiles/mylang_objects.dir
-/Users/mohamedrabbit/code/mylang/build/CMakeFiles/mylang_tests.dir
-/Users/mohamedrabbit/code/mylang/build/CMakeFiles/test.dir
-/Users/mohamedrabbit/code/mylang/build/CMakeFiles/edit_cache.dir
-/Users/mohamedrabbit/code/mylang/build/CMakeFiles/rebuild_cache.dir
