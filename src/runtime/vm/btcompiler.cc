@@ -32,13 +32,13 @@ void BytecodeCompiler::updateStackDepth(bytecode::OpCode op)
   case bytecode::OpCode::LOAD_GLOBAL :
   case bytecode::OpCode::LOAD_FAST :
   case bytecode::OpCode::DUP :
-    CurrentStackDepth_++;
+    ++CurrentStackDepth_;
     break;
   case bytecode::OpCode::POP :
   case bytecode::OpCode::STORE_VAR :
   case bytecode::OpCode::STORE_GLOBAL :
   case bytecode::OpCode::STORE_FAST :
-    CurrentStackDepth_--;
+    --CurrentStackDepth_;
     break;
   case bytecode::OpCode::ADD :
   case bytecode::OpCode::SUB :
@@ -54,7 +54,7 @@ void BytecodeCompiler::updateStackDepth(bytecode::OpCode op)
   case bytecode::OpCode::GE :
   case bytecode::OpCode::AND :
   case bytecode::OpCode::OR :
-    CurrentStackDepth_--;
+    --CurrentStackDepth_;
     break;
   case bytecode::OpCode::CALL :
     // Function + args -> result
@@ -74,7 +74,7 @@ void BytecodeCompiler::patchJump(std::int32_t jumpIndex) { Unit_.instructions[ju
 void BytecodeCompiler::enterScope()
 {
   CompilerSymbolTable* newScope = new CompilerSymbolTable(CurrentScope_.get());
-  if (CurrentScope_ != nullptr)
+  if (CurrentScope_)
     ScopeStack_.push(CurrentScope_.release());
   CurrentScope_.reset(newScope);
 }
@@ -90,7 +90,7 @@ void BytecodeCompiler::exitScope()
 
 void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
 {
-  if (expr == nullptr)
+  if (!expr)
     return;
 
   switch (expr->getKind())
@@ -125,7 +125,7 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
   case parser::ast::Expr::Kind::NAME : {
     const parser::ast::NameExpr* name = static_cast<const parser::ast::NameExpr*>(expr);
     CompilerSymbolTable::Symbol* sym  = CurrentScope_->resolve(name->getValue().toUtf8());
-    if (sym == nullptr)
+    if (!sym)
       diagnostic::engine.panic("Undefined variable: " + name->getValue().toUtf8());
     switch (sym->scope)
     {
@@ -253,7 +253,7 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
     emitInstruction(bytecode::OpCode::BUILD_LIST, list->getElements().size(), expr->getLine());
     // Adjust stack depth
     CurrentStackDepth_ -= list->getElements().size();
-    CurrentStackDepth_++;
+    ++CurrentStackDepth_;
     break;
   }
 
@@ -280,7 +280,7 @@ void BytecodeCompiler::compileExpr(const parser::ast::Expr* expr)
 
 void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
 {
-  if (stmt == nullptr)
+  if (!stmt)
     return;
 
   switch (stmt->getKind())
@@ -371,7 +371,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
       patchJump(LoopStack_.top().BreakLabel);
 
     LoopStack_.pop();
-    Stats_.LoopsDetected++;
+    ++Stats_.LoopsDetected;
     break;
   }
 
@@ -411,7 +411,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
       patchJump(LoopStack_.top().BreakLabel);
 
     LoopStack_.pop();
-    Stats_.LoopsDetected++;
+    ++Stats_.LoopsDetected;
     break;
   }
 
@@ -471,7 +471,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
 
   case parser::ast::Stmt::Kind::RETURN : {
     const parser::ast::ReturnStmt* ret = static_cast<const parser::ast::ReturnStmt*>(stmt);
-    if (ret->getValue() != nullptr)
+    if (ret->getValue())
       compileExpr(ret->getValue());
     else
       emitInstruction(bytecode::OpCode::LOAD_CONST, Constants_.addConstant(object::Value()), stmt->getLine());
@@ -536,15 +536,13 @@ void BytecodeCompiler::disassemble(const CompilationUnit& unit, std::ostream& ou
 {
   out << "=== Bytecode Disassembly ===\n\n";
   out << "Constants Pool (" << unit.constants.size() << " entries):\n";
-  for (SizeType i = 0; i < unit.constants.size(); i++)
-  {
+  for (SizeType i = 0; i < unit.constants.size(); ++i)
     out << "  [" << i << "] " << unit.constants[i].repr() << "\n";
-  }
   out << "\nCode (" << unit.instructions.size() << " instructions):\n";
   out << "Stack size: " << unit.StackSize << "\n";
   out << "Locals: " << unit.NumLocals << "\n\n";
 
-  for (SizeType i = 0; i < unit.instructions.size(); i++)
+  for (SizeType i = 0; i < unit.instructions.size(); ++i)
   {
     const bytecode::Instruction& instr = unit.instructions[i];
     out << std::setw(6) << i << "  ";
@@ -576,7 +574,7 @@ void BytecodeCompiler::disassemble(const CompilationUnit& unit, std::ostream& ou
   if (!loops.empty())
   {
     out << "\nLoop Analysis:\n";
-    for (SizeType i = 0; i < loops.size(); i++)
+    for (SizeType i = 0; i < loops.size(); ++i)
     {
       const LoopAnalyzer::Loop& loop = loops[i];
       out << "  Loop " << i << ": PC " << loop.HeaderPC << " -> " << loop.ExitPC << " (nesting: " << loop.NestingLevel << ")\n";

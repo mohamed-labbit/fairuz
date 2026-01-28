@@ -34,7 +34,7 @@ CharType InputBuffer::consumeChar()
   }
 
   ch = *Current_;
-  Current_++;
+  ++Current_;
   advancePosition_(ch);
 
   return ch;
@@ -44,7 +44,7 @@ MYLANG_NODISCARD const CharType& InputBuffer::current()
 {
   static const CharType end = BUFFER_END;
 
-  if (Current_ == nullptr)
+  if (!Current_)
     return end;
 
   if (*Current_ == BUFFER_END)
@@ -61,7 +61,7 @@ MYLANG_NODISCARD const CharType& InputBuffer::peek()
 {
   static const CharType end = BUFFER_END;
 
-  if (Current_ == nullptr)
+  if (!Current_)
     return end;
 
   // Ensure current buffer is valid
@@ -101,14 +101,14 @@ StringRef InputBuffer::nPeek(SizeType n)
     return out;
 
   // Ensure current buffer is valid
-  if (Current_ != nullptr && *Current_ == BUFFER_END)
+  if (Current_ && *Current_ == BUFFER_END)
   {
     if (!refreshBuffer(CurrentBuffer_ ^ 1))
       return out;
     swapBuffers_();
   }
 
-  if (Current_ == nullptr)
+  if (!Current_)
     return out;
 
   SizeType     rem     = n;
@@ -130,8 +130,8 @@ StringRef InputBuffer::nPeek(SizeType n)
 
     // Append character and continue
     out += Buffers_[buf_idx][offset];
-    offset++;
-    rem--;
+    ++offset;
+    --rem;
   }
 
   return out;
@@ -151,10 +151,6 @@ void InputBuffer::reset()
   // Clear both buffers properly
   Buffers_[0].clear();
   Buffers_[1].clear();
-
-  // Add BUFFER_END to both buffers
-  Buffers_[0] += BUFFER_END;
-  Buffers_[1] += BUFFER_END;
 
   Current_         = Buffers_[0].get();
   CurrentPosition_ = {1, 1, 0};
@@ -181,17 +177,17 @@ void InputBuffer::swapBuffers_()
 
 void InputBuffer::advancePosition_(CharType ch)
 {
-  CurrentPosition_.FilePos++;
+  ++CurrentPosition_.FilePos;
 
   if (ch == u'\n')
   {
-    CurrentPosition_.line++;
+    ++CurrentPosition_.line;
     CurrentPosition_.column = 1;
     Columns_.push(1);
   }
   else
   {
-    CurrentPosition_.column++;
+    ++CurrentPosition_.column;
 
     if (!Columns_.empty())
       Columns_.top() = CurrentPosition_.column;

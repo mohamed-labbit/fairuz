@@ -32,17 +32,6 @@ Lexer::Lexer(std::vector<tok::Token>& seq, const SizeType s) :
   configureLocale();
 }
 
-tok::Token Lexer::make_token(tok::TokenType             tt,
-                             std::optional<StringRef>   lexeme,
-                             std::optional<SizeType>    line,
-                             std::optional<SizeType>    col,
-                             std::optional<SizeType>    file_pos,
-                             std::optional<std::string> file_path) const
-{
-  return tok::Token(lexeme.value_or(u""), tt, line.value_or(this->SourceManager_.line()), col.value_or(this->SourceManager_.column()),
-                    file_pos.value_or(this->SourceManager_.fpos()), file_path.value_or(this->SourceManager_.fpath()));
-}
-
 std::vector<tok::Token> Lexer::tokenize()
 {
   while (next().type() != tok::TokenType::ENDMARKER)
@@ -114,7 +103,7 @@ tok::Token Lexer::lexToken()
           ch = peekChar();
           if (ch == ' ')
           {
-            size++, alt_size++;
+            ++size, ++alt_size;
             consumeChar();
           }
           else if (ch == '\t')
@@ -166,7 +155,7 @@ tok::Token Lexer::lexToken()
             if (alt_size <= AltIndentStack_.back())
               diagnostic::engine.panic("Inconsistent indentation (tabs/spaces)");
 
-            IndentLevel_++;
+            ++IndentLevel_;
             IndentStack_.push_back(size);
             AltIndentStack_.push_back(alt_size);
 
@@ -179,10 +168,10 @@ tok::Token Lexer::lexToken()
 
             while (IndentLevel_ > 0 && size < IndentStack_.back())
             {
-              IndentLevel_--;
+              --IndentLevel_;
               IndentStack_.pop_back();
               AltIndentStack_.pop_back();
-              dedent_count++;
+              ++dedent_count;
             }
 
             if (size != IndentStack_.back())
@@ -191,10 +180,10 @@ tok::Token Lexer::lexToken()
             if (alt_size != AltIndentStack_.back())
               diagnostic::engine.panic("Inconsistent indentation");
 
-            for (int i = 0; i < dedent_count; i++)
+            for (int i = 0; i < dedent_count; ++i)
               store(make_token(tok::TokenType::DEDENT, u"", line, col));
 
-            return TokStream_[TokIndex_++];
+            return TokStream_[++TokIndex_];
           }
         }
       }
@@ -462,6 +451,7 @@ tok::Token Lexer::lexToken()
       tok::TokenType tt = tok::operators.count(op) ? tok::operators.at(op) : tok::TokenType::IDENTIFIER;
       return finish(tt, std::move(op), line, col);
     }
+
     // Symbols
     else if (util::isSymbol(ch))
     {
@@ -527,7 +517,7 @@ tok::Token Lexer::lexToken()
 tok::Token Lexer::next()
 {
   // Advance the index first
-  TokIndex_++;
+  ++TokIndex_;
 
   // Make sure we have a token at this position
   while (TokIndex_ >= TokStream_.size())
@@ -548,7 +538,7 @@ tok::Token Lexer::next()
 tok::Token Lexer::prev()
 {
   if (TokIndex_ > 0)
-    TokIndex_--;
+    --TokIndex_;
   else
     return make_token(tok::TokenType::ENDMARKER);
 

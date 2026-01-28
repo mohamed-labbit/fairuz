@@ -17,11 +17,11 @@ void BytecodeOptimizer::optimize(std::vector<bytecode::Instruction>& code, std::
     {
       if (pass.apply(code))
       {
-        pass.ApplicationsCount++;
+        ++pass.ApplicationsCount;
         changed = true;
       }
     }
-    iteration++;
+    ++iteration;
   }
 }
 

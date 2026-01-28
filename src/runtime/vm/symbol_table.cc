@@ -31,10 +31,10 @@ typename CompilerSymbolTable::Symbol* CompilerSymbolTable::resolve(const std::st
     return &it->second;
   }
   // Check parent scopes
-  if (Parent_ != nullptr)
+  if (Parent_)
   {
     Symbol* parentSym = Parent_->resolve(name);
-    if (parentSym != nullptr)
+    if (parentSym)
     {
       // Mark as captured for closure
       parentSym->IsCaptured = true;

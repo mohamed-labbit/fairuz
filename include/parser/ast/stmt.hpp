@@ -40,7 +40,7 @@ class BlockStmt: public Stmt
   {
     Kind_ = Kind::BLOCK;
 
-    // assert((!Statements_.empty() && Statements_[0] != nullptr) && "'statements' argument to BlockStmt is null");
+    // assert((!Statements_.empty() && Statements_[0]) && "'statements' argument to BlockStmt is null");
   }
 
   BlockStmt(BlockStmt&&) MYLANG_NOEXCEPT                 = delete;
@@ -66,7 +66,6 @@ class ExprStmt: public Stmt
       Expr_(expr)
   {
     Kind_ = Kind::EXPR;
-    // assert((Expr_ != nullptr) && "'expr' argument to ExprStmt is null");
   }
 
   ExprStmt(ExprStmt&&) MYLANG_NOEXCEPT                 = delete;
@@ -92,9 +91,6 @@ class AssignmentStmt: public Stmt
       Value_(value)
   {
     Kind_ = Kind::ASSIGNMENT;
-
-    // assert((Value_ != nullptr) && "'value' argument to AssignmentStmt is null");
-    // assert((Target_ != nullptr) && "'target' argument to AssignmentStmt is null");
   }
 
   AssignmentStmt(AssignmentStmt&&) MYLANG_NOEXCEPT                 = delete;
@@ -126,9 +122,6 @@ class IfStmt: public Stmt
       ElseBlock_(else_block)
   {
     Kind_ = Kind::IF;
-
-    // assert((Condition_ != nullptr) && "'condition' argument to IfStmt is null");
-    // assert((ThenBlock_ != nullptr) && "'then_block' argument to IfStmt is null");
   }
 
   IfStmt(IfStmt&&) MYLANG_NOEXCEPT                 = delete;
@@ -160,9 +153,6 @@ class WhileStmt: public Stmt
       Block_(block)
   {
     Kind_ = Kind::WHILE;
-
-    // assert((Condition_ != nullptr) && "'condition' argument to WhileStmt is null");
-    // assert((Block_ != nullptr) && "'block' argument to WhileStmt is null");
   }
 
   WhileStmt(WhileStmt&&) MYLANG_NOEXCEPT                 = delete;
@@ -192,10 +182,6 @@ class ForStmt: public Stmt
       Block_(block)
   {
     Kind_ = Kind::FOR;
-
-    // assert((Target_ != nullptr) && "'target' argument to ForStmt is null");
-    // assert((Iter_ != nullptr) && "'iter' argument to ForStmt is null");
-    // assert((Block_ != nullptr) && "'block' argument to ForStmt is null");
   }
 
   ForStmt(ForStmt&&) MYLANG_NOEXCEPT                 = delete;
@@ -227,9 +213,6 @@ class FunctionDef: public Stmt
       Body_(body)
   {
     Kind_ = Kind::FUNC;
-
-    // assert((Name_ != nullptr) && "'name' argument to FunctionDef is null");
-    // assert((Body_ != nullptr) && "'body' argument to FunctionDef is null");
   }
 
   FunctionDef(FunctionDef&&) MYLANG_NOEXCEPT                 = delete;
@@ -244,7 +227,7 @@ class FunctionDef: public Stmt
 
   void setBody(BlockStmt* b) { Body_ = b; }
 
-  bool hasParameters() const { return Params_ == nullptr || Params_->isEmpty(); }
+  bool hasParameters() const { return !Params_ || Params_->isEmpty(); }
 };
 
 class ReturnStmt: public Stmt
@@ -259,7 +242,6 @@ class ReturnStmt: public Stmt
       Value_(value)
   {
     Kind_ = Kind::RETURN;
-    // assert((Value_ != nullptr) && "'value' argument to ReturnStmt is null");
   }
 
   ReturnStmt(ReturnStmt&&) MYLANG_NOEXCEPT                 = delete;

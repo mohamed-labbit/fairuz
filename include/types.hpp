@@ -244,297 +244,28 @@ class StringRef
 
   CharType* Ptr_{nullptr};
   SizeType  Len_{0};       // length of the string (not including null terminator)
-  SizeType  Capacity_{0};  // allocated memory (including space for null terminator)
-
-  // Helper to check bounds in debug mode
-  void checkBounds(SizeType index) const
-  {
-#ifndef NDEBUG
-    if (index >= Len_)
-      throw std::out_of_range("StringRef: index out of bounds");
-#endif
-  }
+  SizeType  Capacity_{1};  // allocated memory (including space for null terminator)
 
  public:
   // Default constructor
   StringRef() = default;
 
-  // Constructor with size (allocates capacity for s characters + null terminator)
-  explicit StringRef(const SizeType s)
-  {
-    if (s == 0)
-      return;
+  explicit StringRef(const SizeType s);
+  StringRef(ConstReference other);
+  StringRef(StringRef&& other) noexcept;
+  StringRef(ConstPointer lit);
+  StringRef(const char* c_str) { *this = fromUtf8(c_str); }
+  StringRef(const SizeType s, const CharType c);
 
-    Ptr_ = string_allocator.allocate<CharType>(s + 1);  // +1 for null terminator
-    if (Ptr_ == nullptr)
-      throw std::bad_alloc();
-
-    Capacity_ = s + 1;
-    Len_      = 0;
-    Ptr_[0]   = BUFFER_END;  // Ensure null termination
-  }
-
-  // Copy constructor - FIXED: copy correct amount and set capacity
-  StringRef(ConstReference other)
-  {
-    if (other.len() == 0)
-      return;
-
-    // Allocate space for string + null terminator
-    Ptr_ = string_allocator.allocate<CharType>(other.len() + 1);
-    if (Ptr_ == nullptr)
-      throw std::bad_alloc();
-
-    // using std::memcpy just ruined the buffer somehow
-    for (SizeType i = 0; i < other.len(); i++)
-      Ptr_[i] = other[i];
-
-    Len_      = other.len();
-    Capacity_ = other.len() + 1;
-
-    // Ensure null termination
-    Ptr_[Len_] = BUFFER_END;
-  }
-
-  // Move constructor
-  StringRef(StringRef&& other) noexcept :
-      Ptr_(other.Ptr_),
-      Len_(other.Len_),
-      Capacity_(other.Capacity_)
-  {
-    other.Ptr_      = nullptr;
-    other.Len_      = 0;
-    other.Capacity_ = 0;
-  }
-
-  // Constructor from C-style CharType string
-  StringRef(ConstPointer lit)
-  {
-    if (lit == nullptr)
-      return;
-
-    // Calculate length of the null-terminated string
-    SizeType length = 0;
-    while (lit[length] != BUFFER_END)
-      ++length;
-
-    // Handle empty string
-    if (length == 0)
-      return;
-
-    // Allocate with space for null terminator
-    Ptr_ = string_allocator.allocate<CharType>(length + 1);
-    if (Ptr_ == nullptr)
-      throw std::bad_alloc();
-
-    // Copy the string data
-    std::memcpy(Ptr_, lit, length * sizeof(CharType));
-    Len_       = length;
-    Capacity_  = length + 1;
-    Ptr_[Len_] = BUFFER_END;
-  }
-
-  /*
-  Reference operator=(ConstReference other)
-  {
-    if (this == &other)
-    return *this;  // Self-assignment guard
-    
-    if (other.len() == 0)
-    {
-      // Clear current string
-      // if (Ptr_ != nullptr)
-        // string_allocator.deallocate<CharType>(Ptr_, Capacity_);
-        
-        Ptr_      = nullptr;
-        Len_      = 0;
-        Capacity_ = 0;
-        return *this;
-      }
-      
-    // Deallocate old memory if it exists
-    // if (Ptr_ != nullptr)
-    // string_allocator.deallocate<CharType>(Ptr_, Capacity_);
-    
-    // Allocate new memory
-    Ptr_ = string_allocator.allocate<CharType>(other.len() + 1);
-    if (Ptr_ == nullptr)
-    throw std::bad_alloc();
-    
-    // std::memcpy(Ptr_, other.get(), other.len() * sizeof(CharType));
-    
-    std::cout << "s1 from inside before copy : " << other << std::endl;
-    for (SizeType i = 0; i < other.len(); i++)
-      Ptr_[i] = other[i];
-    
-    std::cout << "s1 from inside after copy : " << other << std::endl;
-    Len_       = other.len();
-    Capacity_  = other.len() + 1;
-    Ptr_[Len_] = BUFFER_END;
-    
-    return *this;
-  }
-  */
-
-  Reference operator=(ConstReference other)
-  {
-    if (this == &other)
-      return *this;  // Self-assignment guard
-
-    if (other.len() == 0)
-    {
-      // Clear current string
-      // if (Ptr_ != nullptr)
-      // string_allocator.deallocate<CharType>(Ptr_, Capacity_);
-
-      Ptr_      = nullptr;
-      Len_      = 0;
-      Capacity_ = 0;
-      return *this;
-    }
-
-    // FIXED: Allocate NEW memory FIRST, before deallocating old
-    Pointer new_ptr = string_allocator.allocate<CharType>(other.len() + 1);
-    if (new_ptr == nullptr)
-      throw std::bad_alloc();
-
-    // std::cout << "other pointer : " << std::hex << std::showbase << static_cast<const void*>(other.cget()) << std::endl;
-    // std::cout << "new pointer   : " << std::hex << std::showbase << static_cast<const void*>(new_ptr) << std::endl;
-
-    // Copy data to NEW memory (other is still intact)
-    // std::memcpy(new_ptr, other.cget(), other.len() * sizeof(CharType));
-    for (SizeType i = 0; i < other.len(); i++)
-      new_ptr[i] = other[i];
-
-    new_ptr[other.len()] = BUFFER_END;
-
-    // NOW deallocate old memory (after we've copied other)
-    // if (Ptr_ != nullptr)
-    // string_allocator.deallocate<CharType>(Ptr_, Capacity_);
-
-    // Update pointers
-    Ptr_      = new_ptr;
-    Len_      = other.len();
-    Capacity_ = other.len() + 1;
-
-    return *this;
-  }
-
-  // Move assignment operator
-  Reference operator=(StringRef&& other) noexcept
-  {
-    if (this == &other)
-      return *this;
-
-    // Deallocate our current memory
-    // if (Ptr_ != nullptr)
-    // string_allocator.deallocate<CharType>(Ptr_, Capacity_);
-
-    // Take ownership of other's resources
-    Ptr_      = other.Ptr_;
-    Len_      = other.Len_;
-    Capacity_ = other.Capacity_;
-
-    // Leave other in valid empty state
-    other.Ptr_      = nullptr;
-    other.Len_      = 0;
-    other.Capacity_ = 0;
-
-    return *this;
-  }
-
-  // Constructor from UTF-8 string
-  StringRef(const char* utf8_str) { *this = fromUtf8(utf8_str); }
-
-  // Assignment from UTF-8 string
-  Reference operator=(const char* utf8_str)
-  {
-    *this = fromUtf8(utf8_str);
-    return *this;
-  }
-
-  // Destructor - deallocates memory
-  ~StringRef()
-  {
-    if (Ptr_ != nullptr)
-    {
-      // string_allocator.deallocate<CharType>(Ptr_, Capacity_);
-      Ptr_      = nullptr;
-      Len_      = 0;
-      Capacity_ = 0;
-    }
-  }
+  Reference operator=(ConstReference other);
+  Reference operator=(StringRef&& other) noexcept;
 
   // Equality operator
-  bool operator==(ConstReference other) const noexcept
-  {
-    // Different lengths
-    if (Len_ != other.len())
-      return false;
-
-    // Both empty
-    if (Len_ == 0)
-      return true;
-
-    // Self comparison
-    if (Ptr_ == other.cget())
-      return true;
-
-    // Deep comparison
-    // return std::memcmp(Ptr_, other.cget(), Len_ * sizeof(CharType)) == 0;
-    for (SizeType i = 0; i < Len_; ++i)
-      if (Ptr_[i] != other[i])
-        return false;
-
-    return true;
-  }
-
+  bool operator==(ConstReference other) const noexcept;
   bool operator!=(ConstReference other) const noexcept { return !(*this == other); }
 
-  // Expand capacity - FIXED: properly track old capacity and check overflow
-  void expand(const SizeType new_size)
-  {
-    if (new_size <= Capacity_)
-      return;  // Already have enough capacity
-
-    SizeType old_capacity = Capacity_;
-    Pointer  old_ptr      = Ptr_;
-    SizeType new_capacity;
-
-    // FIXED: Check for overflow before multiplication
-    // If new_size > (SIZE_MAX / 3) * 2, then new_size * 1.5 would overflow
-    constexpr SizeType overflow_threshold = (std::numeric_limits<SizeType>::max() / 3) * 2;
-
-    if (new_size > overflow_threshold)
-      // Near overflow, use exact size
-      new_capacity = new_size + 1;
-    else
-      // Try to allocate 1.5x the requested size + 1 for null terminator
-      new_capacity = static_cast<SizeType>(new_size * 1.5 + 1);
-
-    Ptr_ = string_allocator.allocate<CharType>(new_capacity);
-    if (Ptr_ == nullptr)
-    {
-      // Fallback to exact size
-      new_capacity = new_size + 1;
-      Ptr_         = string_allocator.allocate<CharType>(new_capacity);
-      if (Ptr_ == nullptr)
-        throw std::bad_alloc();
-    }
-
-    // Copy old data if it exists
-    if (old_ptr != nullptr)
-    {
-      std::memcpy(Ptr_, old_ptr, Len_ * sizeof(CharType));
-      // string_allocator.deallocate<CharType>(old_ptr, old_capacity);
-    }
-
-    Capacity_ = new_capacity;
-
-    // Ensure null termination
-    if (Len_ < Capacity_)
-      Ptr_[Len_] = BUFFER_END;
-  }
+  // Expand capacity
+  void expand(const SizeType new_size);
 
   // Reserve capacity (doesn't change length, only capacity)
   void reserve(const SizeType new_capacity)
@@ -544,64 +275,14 @@ class StringRef
   }
 
   // Erase character at position
-  void erase(const SizeType at)
-  {
-    if (at >= Len_ || Ptr_ == nullptr)
-      return;  // Out of bounds or empty string
-
-    // Shift characters left
-    for (SizeType i = at; i < Len_ - 1; i++)
-      Ptr_[i] = Ptr_[i + 1];
-
-    Len_--;
-    Ptr_[Len_] = BUFFER_END;
-  }
+  void erase(const SizeType at);
 
   // Append another StringRef
-  Reference operator+=(ConstReference other)
-  {
-    if (other.len() == 0)
-      return *this;
+  Reference operator+=(ConstReference other);
+  Reference operator+=(CharType c);
 
-    SizeType new_len = Len_ + other.len();
-
-    if (new_len + 1 > Capacity_)  // +1 for null terminator
-      expand(new_len + 1);
-
-    std::memcpy(Ptr_ + Len_, other.cget(), other.len() * sizeof(CharType));
-    Len_       = new_len;
-    Ptr_[Len_] = BUFFER_END;
-
-    return *this;
-  }
-
-  // Append a single character - FIXED: correct capacity check
-  Reference operator+=(CharType c)
-  {
-    // FIXED: Need Len_ + 2 to have space for new char + null terminator
-    if (Len_ + 2 > Capacity_)
-      expand(Len_ + 2);
-
-    Ptr_[Len_]     = c;
-    Ptr_[Len_ + 1] = BUFFER_END;
-    Len_++;
-
-    return *this;
-  }
-
-  // Index operator (const) - FIXED: added bounds checking
-  CharType operator[](const SizeType i) const
-  {
-    // checkBounds(i);
-    return Ptr_[i];
-  }
-
-  // Index operator (non-const) - FIXED: added bounds checking
-  CharType& operator[](const SizeType i)
-  {
-    // checkBounds(i);
-    return Ptr_[i];
-  }
+  CharType  operator[](const SizeType i) const { return Ptr_[i]; }
+  CharType& operator[](const SizeType i) { return Ptr_[i]; }
 
   // Safe access with bounds checking (always checked)
   MYLANG_NODISCARD CharType at(const SizeType i) const
@@ -662,7 +343,7 @@ class StringRef
   // StringRef + const char* (UTF-8 string)
   friend StringRef operator+(ConstReference lhs, const char* rhs)
   {
-    if (rhs == nullptr || rhs[0] == BUFFER_END)
+    if (!rhs || rhs[0] == BUFFER_END)
       return StringRef(lhs);
 
     StringRef rhs_str = fromUtf8(rhs);
@@ -672,7 +353,7 @@ class StringRef
   // const char* + StringRef
   friend StringRef operator+(const char* lhs, ConstReference rhs)
   {
-    if (lhs == nullptr || lhs[0] == BUFFER_END)
+    if (!lhs || lhs[0] == BUFFER_END)
       return StringRef(rhs);
 
     StringRef lhs_str = fromUtf8(lhs);
@@ -711,7 +392,6 @@ class StringRef
   {
     if (str.empty())
       return os;
-
     os << str.toUtf8();
     return os;
   }
@@ -719,7 +399,7 @@ class StringRef
   // Clear the string (doesn't deallocate memory)
   void clear() noexcept
   {
-    if (Ptr_ != nullptr && Capacity_ > 0)
+    if (Ptr_ && Capacity_ > 0)
       Ptr_[0] = BUFFER_END;
     Len_ = 0;
   }
@@ -752,7 +432,7 @@ class StringRef
   // Truncate string to specified length
   StringRef& truncate(const SizeType s)
   {
-    if (s < Len_ && Ptr_ != nullptr)
+    if (s < Len_ && Ptr_)
     {
       Ptr_[s] = BUFFER_END;
       Len_    = s;
@@ -760,131 +440,19 @@ class StringRef
     return *this;
   }
 
-  // Substring - FIXED: optimized to use memcpy instead of character-by-character
-  // Returns substring from start (inclusive) to end (inclusive)
-  StringRef substr(std::optional<SizeType> start, std::optional<SizeType> end) const
-  {
-    if (empty())
-      return StringRef{};
-
-    SizeType start_val = start.value_or(0);
-    SizeType end_val   = end.value_or(Len_ - 1);
-
-    // Bounds checking
-    if (start_val >= Len_)
-      throw std::out_of_range("StringRef::substr: start index out of range");
-
-    if (end_val >= Len_)
-      end_val = Len_ - 1;  // Clamp to valid range
-
-    if (end_val < start_val)
-      throw std::invalid_argument("StringRef::substr: end must be >= start");
-
-    // Calculate length (end is inclusive)
-    SizeType ret_len = end_val - start_val + 1;
-
-    // FIXED: Optimized - use direct memory copy
-    StringRef ret(ret_len);
-    std::memcpy(ret.Ptr_, Ptr_ + start_val, ret_len * sizeof(CharType));
-    ret.Len_          = ret_len;
-    ret.Ptr_[ret_len] = BUFFER_END;
-
-    return ret;
-  }
-
-  // Overload for convenience: substr(start) returns from start to end
+  StringRef substr(std::optional<SizeType> start, std::optional<SizeType> end) const;
   StringRef substr(SizeType start) const { return substr(std::optional<SizeType>(start), std::nullopt); }
 
   // Convert to double - improved error handling
-  double toDouble(SizeType* pos = nullptr) const
-  {
-    if (empty() || Len_ == 0)
-      throw std::invalid_argument("StringRef::toDouble: empty string");
+  double toDouble(SizeType* pos = nullptr) const;
 
-    // Convert UTF-16 to UTF-8 for standard library parsing
-    std::string utf8_str = toUtf8();
-
-    // Use std::stod on the UTF-8 string
-    std::size_t utf8_pos = 0;
-    double      result;
-
-    try
-    {
-      result = std::stod(utf8_str, &utf8_pos);
-    } catch (const std::invalid_argument&)
-    {
-      throw std::invalid_argument("StringRef::toDouble: invalid number format");
-    } catch (const std::out_of_range&)
-    {
-      throw std::out_of_range("StringRef::toDouble: number out of range");
-    }
-
-    // Convert UTF-8 position back to UTF-16 position if requested
-    // This is approximate and may not be exact for multi-byte characters
-    if (pos != nullptr)
-      *pos = static_cast<SizeType>(utf8_pos);
-
-    return result;
-  }
-
-  // Convert UTF-16 to UTF-8 using embedded utf8cpp logic
-  MYLANG_NODISCARD std::string toUtf8() const
-  {
-    if (empty() || Len_ == 0)
-      return std::string{};
-
-    std::string result;
-
-    try
-    {
-      // Use embedded utf16to8 conversion
-      utf8::utf16to8(Ptr_, Ptr_ + Len_, std::back_inserter(result));
-    } catch (const std::runtime_error& e)
-    {
-      throw std::runtime_error(std::string("UTF-16 to UTF-8 conversion failed: ") + e.what());
-    }
-
-    return result;
-  }
-
-  // Convert UTF-8 to UTF-16 using embedded utf8cpp logic - FIXED: optimized
-  MYLANG_NODISCARD static StringRef fromUtf8(const std::string& utf8_str)
-  {
-    if (utf8_str.empty())
-      return StringRef{};
-
-    // First, convert to UTF-16
-    // std::vector<CharType> utf16_buffer;
-
-    std::u16string utf16_str = u"";
-
-    try
-    {
-      // utf8::utf8to16(utf8_str.begin(), utf8_str.end(), std::back_inserter(utf16_buffer));
-      utf16_str = utf8::utf8to16(utf8_str);
-    } catch (const std::runtime_error& e)
-    {
-      throw std::runtime_error(std::string("UTF-8 to UTF-16 conversion failed: ") + e.what());
-    }
-
-    // Create StringRef from the converted data
-    // if (utf16_str.empty())
-    //   return StringRef{};
-
-    // FIXED: Optimized - use direct memory copy instead of character-by-character
-    // StringRef result(utf16_str.length());
-    // std::memcpy(result.Ptr_, utf16_str.data(), utf16_str.size() * sizeof(CharType));
-
-    // result.Len_                     = utf16_str.length();
-    // result.Ptr_[utf16_str.length()] = BUFFER_END;
-
-    return StringRef(utf16_str.data());
-  }
+  MYLANG_NODISCARD std::string      toUtf8() const;
+  MYLANG_NODISCARD static StringRef fromUtf8(const std::string& utf8_str);
 
   // Convenience overload for C strings
   MYLANG_NODISCARD static StringRef fromUtf8(const char* utf8_cstr)
   {
-    if (utf8_cstr == nullptr)
+    if (!utf8_cstr)
       return StringRef{};
     return fromUtf8(std::string(utf8_cstr));
   }

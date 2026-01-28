@@ -80,7 +80,7 @@ class ParseError: public std::runtime_error
         ss << "  - " << s << "\n";
     }
 
-    return StringRef(ss.str().data());
+    return StringRef::fromUtf8(ss.str());
   }
 };
 
@@ -103,7 +103,7 @@ class Parser
   explicit Parser(input::FileManager* fm) :
       Lexer_(fm)
   {
-    if (fm == nullptr)
+    if (!fm)
       diagnostic::engine.panic("file_manager is NULL!");
     // Advance to the first real token
     Lexer_.next();

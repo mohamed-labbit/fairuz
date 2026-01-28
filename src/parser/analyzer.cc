@@ -12,7 +12,7 @@ namespace parser {
 // Type inference engine
 typename SymbolTable::DataType_t SemanticAnalyzer::inferType(const ast::Expr* expr)
 {
-  if (expr == nullptr)
+  if (!expr)
     return SymbolTable::DataType_t::UNKNOWN;
 
   switch (expr->getKind())
@@ -38,7 +38,7 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(const ast::Expr* ex
   case ast::Expr::Kind::NAME : {
     const ast::NameExpr* name = static_cast<const ast::NameExpr*>(expr);
     SymbolTable::Symbol* sym  = CurrentScope_->lookup(name->getValue());
-    if (sym != nullptr)
+    if (sym)
       return sym->DataType;
     break;
   }
@@ -84,7 +84,7 @@ void SemanticAnalyzer::reportIssue(Issue::Severity sev, const StringRef& msg, st
 
 void SemanticAnalyzer::analyzeExpr(const ast::Expr* expr)
 {
-  if (expr == nullptr)
+  if (!expr)
     return;
 
   switch (expr->getKind())
@@ -167,7 +167,7 @@ void SemanticAnalyzer::analyzeExpr(const ast::Expr* expr)
 
 void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
 {
-  if (stmt == nullptr)
+  if (!stmt)
     return;
 
   switch (stmt->getKind())
@@ -183,7 +183,7 @@ void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
     sym.DefinitionLine = stmt->getLine();
 
     ast::Expr* target = assign->getTarget();
-    assert(target != nullptr);
+    assert(target);
     StringRef target_name = u"";
 
     /// TODO: check other type of target expressions

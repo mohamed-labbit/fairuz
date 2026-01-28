@@ -128,6 +128,16 @@ class Lexer
   }
 };  // class Lexer
 
+inline tok::Token Lexer::make_token(tok::TokenType             tt,
+                                    std::optional<StringRef>   lexeme,
+                                    std::optional<SizeType>    line,
+                                    std::optional<SizeType>    col,
+                                    std::optional<SizeType>    file_pos,
+                                    std::optional<std::string> file_path) const
+{
+  return tok::Token(lexeme.value_or(u""), tt, line.value_or(this->SourceManager_.line()), col.value_or(this->SourceManager_.column()),
+                    file_pos.value_or(this->SourceManager_.fpos()), file_path.value_or(this->SourceManager_.fpath()));
+}
 
 }  // namespace lex
 }  // namespace mylang

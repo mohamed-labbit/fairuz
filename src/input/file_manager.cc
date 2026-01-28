@@ -179,7 +179,7 @@ StringRef FileManager::readWindowInternal(SizeType size)
       CharType ch = result[i];
 
       if (ch <= utf::CODEPOINT_MAX_1BYTE)
-        trimmed_utf8_bytes += 1;
+        ++trimmed_utf8_bytes;
       else if (ch <= utf::CODEPOINT_MAX_2BYTE)
         trimmed_utf8_bytes += 2;
       else if (utf::isHighSurrogate(ch))
@@ -223,7 +223,7 @@ StringRef FileManager::readNextLine()
 
     if (c == u'\n')
     {
-      Context_.line++;
+      ++Context_.line;
       Context_.column = 0;
       break;
     }
@@ -238,15 +238,15 @@ StringRef FileManager::readNextLine()
       {
         // rewind
         Stream_.seekg(-1, std::ios_base::cur);
-        Context_.ByteOffset--, Context_.CharOffset--;
+        --Context_.ByteOffset, --Context_.CharOffset;
       }
-      Context_.line++;
+      ++Context_.line;
       Context_.column = 0;
       break;
     }
 
     line += c;
-    Context_.column++;
+    ++Context_.column;
   }
 
   return line;
@@ -351,7 +351,7 @@ void FileManager::buildLineIndex()
     SizeType i = 0;
     for (; i < chunk.len(); ++i)
     {
-      current_len++;
+      ++current_len;
 
       if (chunk[i] == u'\n' || chunk[i] == u'\r')
       {
@@ -370,7 +370,7 @@ void FileManager::buildLineIndex()
         current_len = 0;
       }
 
-      char_pos++;
+      ++char_pos;
     }
   }
 
@@ -398,10 +398,10 @@ StringRef FileManager::getSourceLine(const SizeType line)
   while (s > 0)
   {
     std::getline(Stream_, ret);
-    s--;
+    --s;
   }
 
-  return ret.data();
+  return StringRef::fromUtf8(ret.data());
 }
 
 }

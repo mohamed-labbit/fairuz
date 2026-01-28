@@ -118,7 +118,7 @@ MYLANG_NODISCARD MYLANG_COMPILER_ABI void* ArenaAllocator::allocate(const SizeTy
   }
 
   Pointer mem = allocateFromBlocks(aligned_size);
-  if (mem == nullptr)
+  if (!mem)
   {
     std::cerr << "allocate_from_blocks() failed!" << std::endl;
     return nullptr;
@@ -186,7 +186,7 @@ Pointer ArenaAllocator::allocateFromBlocks(SizeType alloc_size, SizeType align)
 
   // Need a new block
   SizeType new_block_size = std::max(alloc_size, NextBlockSize_.load(std::memory_order_relaxed));
-  if (allocateBlock(new_block_size, align) == nullptr)
+  if (!allocateBlock(new_block_size, align))
   {
     if (DebugFeatures_.load(std::memory_order_relaxed))
       std::cerr << "-- Failed to allocate block : ArenaAllocator::allocate_block()" << std::endl;

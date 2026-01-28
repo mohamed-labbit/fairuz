@@ -140,7 +140,7 @@ class ArenaBlock
   SizeType remaining() const
   {
     std::lock_guard<std::mutex> lock(Mutex_);
-    if (Begin_ == nullptr)
+    if (!Begin_)
       return 0;
     Pointer current_next = Next_.load(std::memory_order_acquire);
     return static_cast<SizeType>(Begin_ + Size_ - current_next);

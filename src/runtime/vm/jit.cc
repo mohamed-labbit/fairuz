@@ -11,7 +11,7 @@ void JITCompiler::recordExecution(std::int32_t pc)
   auto it = HotSpots_.find(pc);
   if (it != HotSpots_.end())
   {
-    it->second.ExecutionCount++;
+    ++it->second.ExecutionCount;
     if (it->second.ExecutionCount >= HotThreshold_ && !it->second.Compiled)
       compileHotSpot(it->second);
   }

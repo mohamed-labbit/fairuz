@@ -9,18 +9,18 @@ namespace runtime {
 
 void GarbageCollector::registerObject(object::Value* obj)
 {
-  if (obj == nullptr)
+  if (!obj)
     return;
   AllObjects_.push_back(obj);
   YoungGen_.push_back(obj);
-  Allocated_++;
+  ++Allocated_;
   if (Allocated_ >= Threshold_)
     collect();
 }
 
 void GarbageCollector::addRoot(object::Value* root)
 {
-  if (root == nullptr)
+  if (!root)
     return;
   Roots_.push_back(root);
 }
@@ -50,12 +50,12 @@ void GarbageCollector::collect()
     {
       delete *it;
       it = AllObjects_.erase(it);
-      Allocated_--;
+      --Allocated_;
     }
     else
       ++it;
   }
-  YoungGenCollections_++;
+  ++YoungGenCollections_;
   // Promote survivors to old generation every 5 collections
   if (YoungGenCollections_ % 5 == 0)
     promoteToOldGen();

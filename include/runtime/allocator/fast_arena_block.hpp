@@ -57,7 +57,7 @@ class LockFreeFastAllocBlock
     actual_size = (actual_size + ObjectSize - 1) & ~(ObjectSize - 1);
     // Allocate aligned memory
     Pointer mem = reinterpret_cast<Pointer>(std::aligned_alloc(ObjectSize, actual_size));
-    if (mem == nullptr)
+    if (!mem)
       throw std::bad_alloc();
     /// TODO: change after debug
     // diagnostic::engine.panic("bad alloc");
@@ -75,7 +75,7 @@ class LockFreeFastAllocBlock
   ~LockFreeFastAllocBlock()
   {
     Pointer mem = Begin_.load(std::memory_order_relaxed);
-    if (mem != nullptr)
+    if (mem)
     {
       std::free(mem);
       Begin_.store(nullptr, std::memory_order_relaxed);
@@ -112,7 +112,7 @@ class LockFreeFastAllocBlock
     {
       // Free existing memory
       Pointer old_mem = Begin_.load(std::memory_order_relaxed);
-      if (old_mem != nullptr)
+      if (old_mem)
         std::free(old_mem);
       // Transfer ownership atomically
       Size_.store(other.Size_.load(std::memory_order_relaxed), std::memory_order_relaxed);
@@ -152,7 +152,7 @@ class LockFreeFastAllocBlock
   SizeType remaining() const
   {
     Pointer b = Begin_.load(std::memory_order_acquire);
-    if (b == nullptr)
+    if (!b)
       return 0;
     Pointer  current = Next_.load(std::memory_order_acquire);
     SizeType s       = Size_.load(std::memory_order_acquire);
@@ -176,7 +176,7 @@ class LockFreeFastAllocBlock
       return nullptr;
 
     Pointer b = Begin_.load(std::memory_order_acquire);
-    if (b == nullptr)
+    if (!b)
     {
       std::cerr << "Failed to load begin Pointer" << std::endl;
       return nullptr;

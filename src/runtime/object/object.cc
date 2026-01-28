@@ -132,7 +132,7 @@ StringRef object::Value::toString() const
   case Type::FLOAT : {
     StringRef s;
     s = s.fromUtf8(std::to_string(asFloat()));
-    for (SizeType i = s.len() - 1; i > 0; i--)
+    for (SizeType i = s.len() - 1; i > 0; --i)
     {
       if (s[i] == u'0')
         s.erase(i);
@@ -152,7 +152,7 @@ StringRef object::Value::toString() const
   case Type::LIST : {
     StringRef                         result = u"[";
     const std::vector<object::Value>& list   = asList();
-    for (SizeType i = 0; i < list.size(); i++)
+    for (SizeType i = 0; i < list.size(); ++i)
     {
       result += list[i].toString();
       if (i + 1 < list.size())
@@ -281,14 +281,14 @@ object::Value object::Value::operator*(const Value& other) const
   if (isString() && other.isInt())
   {
     StringRef result;
-    for (std::int64_t i = 0; i < other.asInt(); i++)
+    for (std::int64_t i = 0; i < other.asInt(); ++i)
       result += asString();
     return Value(result);
   }
   if (isList() && other.isInt())
   {
     std::vector<Value> result;
-    for (std::int64_t i = 0; i < other.asInt(); i++)
+    for (std::int64_t i = 0; i < other.asInt(); ++i)
       result.insert(result.end(), asList().begin(), asList().end());
     return Value(result);
   }

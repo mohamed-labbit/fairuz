@@ -18,7 +18,7 @@ std::vector<ast::Stmt*> Parser::parseProgram()
       break;
 
     ast::Stmt* stmt = parseStatement();
-    if (stmt != nullptr)
+    if (stmt)
       statements.push_back(stmt);
     else
     {
@@ -64,7 +64,7 @@ ast::Stmt* Parser::parseWhileStmt()
     return nullptr;
 
   ast::Expr* condition = parseExpression();
-  if (condition == nullptr)
+  if (!condition)
   {
     diagnostic::engine.emit("Expected condition expression after 'while'", diagnostic::DiagnosticEngine::Severity::ERROR);
     return nullptr;
@@ -74,7 +74,7 @@ ast::Stmt* Parser::parseWhileStmt()
     return nullptr;
 
   ast::BlockStmt* while_block = parseIndentedBlock();
-  if (while_block == nullptr)
+  if (!while_block)
   {
     diagnostic::engine.emit("Expected indented block after while statement", diagnostic::DiagnosticEngine::Severity::ERROR);
     return nullptr;
@@ -107,7 +107,7 @@ ast::BlockStmt* Parser::parseIndentedBlock()
       break;
 
     ast::Stmt* stmt = parseStatement();
-    if (stmt != nullptr)
+    if (stmt)
       statements.push_back(stmt);
     else
     {
@@ -182,7 +182,7 @@ ast::Stmt* Parser::parseFunctionDef()
 
   // Parse parameter list
   ast::ListExpr* parameters_list = parseParametersList();
-  if (parameters_list == nullptr)
+  if (!parameters_list)
   {
     diagnostic::engine.emit("Failed to parse parameter list", diagnostic::DiagnosticEngine::Severity::ERROR);
     return nullptr;
@@ -194,7 +194,7 @@ ast::Stmt* Parser::parseFunctionDef()
 
   // Parse function body block
   ast::BlockStmt* function_body = parseIndentedBlock();
-  if (function_body == nullptr)
+  if (!function_body)
   {
     diagnostic::engine.emit("Failed to parse function body", diagnostic::DiagnosticEngine::Severity::ERROR);
     return nullptr;
@@ -212,7 +212,7 @@ ast::Stmt* Parser::parseIfStmt()
     return nullptr;
 
   ast::Expr* condition = parseExpression();
-  if (condition == nullptr)
+  if (!condition)
   {
     diagnostic::engine.emit("Expected condition expression after 'if'", diagnostic::DiagnosticEngine::Severity::ERROR);
     return nullptr;
@@ -223,7 +223,7 @@ ast::Stmt* Parser::parseIfStmt()
 
   // Parse the then-block
   ast::BlockStmt* then_block = parseIndentedBlock();
-  if (then_block == nullptr)
+  if (!then_block)
   {
     diagnostic::engine.emit("Expected indented block after if statement", diagnostic::DiagnosticEngine::Severity::ERROR);
     return nullptr;
@@ -239,7 +239,7 @@ ast::Stmt* Parser::parseIfStmt()
 ast::Stmt* Parser::parseExpressionStmt()
 {
   ast::Expr* expr = parseExpression();
-  if (expr == nullptr)
+  if (!expr)
     return nullptr;
   // Wrap the expression in an ExprStmt node
   return ast::AST_allocator.make<ast::ExprStmt>(expr);
@@ -248,7 +248,7 @@ ast::Stmt* Parser::parseExpressionStmt()
 ast::Expr* Parser::parseAssignmentExpr()
 {
   ast::Expr* left = parseConditionalExpr();
-  if (left == nullptr)
+  if (!left)
     return nullptr;
 
   // Check for assignment operators
@@ -256,7 +256,7 @@ ast::Expr* Parser::parseAssignmentExpr()
   {
     // Left side must be a valid lvalue (for now, just NameExpr)
     ast::NameExpr* left_casted = dynamic_cast<ast::NameExpr*>(left);
-    if (left_casted == nullptr)
+    if (!left_casted)
     {
       diagnostic::engine.emit("Invalid assignment target", diagnostic::DiagnosticEngine::Severity::ERROR);
       return nullptr;
@@ -264,7 +264,7 @@ ast::Expr* Parser::parseAssignmentExpr()
 
     advance();                                 // consume '='
     ast::Expr* right = parseAssignmentExpr();  // Right associative
-    if (right == nullptr)
+    if (!right)
       return nullptr;
 
     return ast::AST_allocator.make<ast::AssignmentExpr>(left_casted, right);
@@ -276,7 +276,7 @@ ast::Expr* Parser::parseAssignmentExpr()
 ast::Expr* Parser::parseLogicalExprPrecedence(unsigned min_precedence)
 {
   ast::Expr* left = parseComparisonExpr();
-  if (left == nullptr)
+  if (!left)
     return nullptr;
 
   for (;;)
@@ -290,7 +290,7 @@ ast::Expr* Parser::parseLogicalExprPrecedence(unsigned min_precedence)
 
     // All logical operators are left associative
     ast::Expr* right = parseLogicalExprPrecedence(precedence + 1);
-    if (right == nullptr)
+    if (!right)
     {
       diagnostic::engine.emit("Expected expression after logical operator", diagnostic::DiagnosticEngine::Severity::ERROR);
       return nullptr;
@@ -304,7 +304,7 @@ ast::Expr* Parser::parseLogicalExprPrecedence(unsigned min_precedence)
 ast::Expr* Parser::parseComparisonExpr()
 {
   ast::Expr* left = parseBinaryExpr();
-  if (left == nullptr)
+  if (!left)
     return nullptr;
 
   // Comparison operators are non-associative (a < b < c is parsed as (a < b) and (b < c) in Python)
@@ -314,7 +314,7 @@ ast::Expr* Parser::parseComparisonExpr()
     tok::TokenType op = Lexer_.current().type();
     advance();
     ast::Expr* right = parseBinaryExpr();
-    if (right == nullptr)
+    if (!right)
     {
       diagnostic::engine.emit("Expected expression after comparison operator", diagnostic::DiagnosticEngine::Severity::ERROR);
       return nullptr;
@@ -329,7 +329,7 @@ ast::Expr* Parser::parseComparisonExpr()
 ast::Expr* Parser::parseBinaryExprPrecedence(unsigned min_precedence)
 {
   ast::Expr* left = parseUnaryExpr();
-  if (left == nullptr)
+  if (!left)
     return nullptr;
 
   for (;;)
@@ -344,7 +344,7 @@ ast::Expr* Parser::parseBinaryExprPrecedence(unsigned min_precedence)
     // Left associative: higher precedence for next level
     int        nextMinPrecedence = precedence + 1;
     ast::Expr* right             = parseBinaryExprPrecedence(nextMinPrecedence);
-    if (right == nullptr)
+    if (!right)
     {
       diagnostic::engine.emit("Expected expression after binary operator", diagnostic::DiagnosticEngine::Severity::ERROR);
       return nullptr;
@@ -363,7 +363,7 @@ ast::Expr* Parser::parseUnaryExpr()
     tok::TokenType op = Lexer_.current().type();
     advance();                           // consume operator
     ast::Expr* expr = parseUnaryExpr();  // parse right side recursively
-    if (expr == nullptr)
+    if (!expr)
     {
       diagnostic::engine.emit("Expected expression after unary operator", diagnostic::DiagnosticEngine::Severity::ERROR);
       return nullptr;
@@ -376,7 +376,7 @@ ast::Expr* Parser::parseUnaryExpr()
 ast::Expr* Parser::parsePostfixExpr()
 {
   ast::Expr* expr = parsePrimaryExpr();
-  if (expr == nullptr)
+  if (!expr)
     return nullptr;
 
   // Handle function calls
@@ -394,7 +394,7 @@ ast::Expr* Parser::parsePostfixExpr()
           break;
 
         ast::Expr* arg = parseExpression();
-        if (arg == nullptr)
+        if (!arg)
         {
           diagnostic::engine.emit("Expected expression in argument list", diagnostic::DiagnosticEngine::Severity::ERROR);
           return nullptr;
@@ -469,7 +469,7 @@ ast::Expr* Parser::parsePrimaryExpr()
     }
 
     ast::Expr* expr = parseExpression();
-    if (expr == nullptr)
+    if (!expr)
       return nullptr;
 
     if (!consume(tok::TokenType::RPAREN, u"Expected ')' after expression"))
@@ -502,7 +502,7 @@ ast::Expr* Parser::parseListLiteral()
         break;
 
       ast::Expr* elem = parseExpression();
-      if (elem == nullptr)
+      if (!elem)
       {
         diagnostic::engine.emit("Expected expression in list literal", diagnostic::DiagnosticEngine::Severity::ERROR);
         return nullptr;

@@ -10,7 +10,7 @@ bool BytecodeVerifier::verify(const BytecodeCompiler::CompilationUnit& unit)
 {
   Errors_.clear();
   // Check 1: Valid jump targets
-  for (SizeType i = 0; i < unit.instructions.size(); i++)
+  for (SizeType i = 0; i < unit.instructions.size(); ++i)
   {
     const bytecode::Instruction& instr = unit.instructions[i];
     if (isJumpInstruction(instr.op))
@@ -21,7 +21,7 @@ bool BytecodeVerifier::verify(const BytecodeCompiler::CompilationUnit& unit)
   std::vector<std::int32_t> stackDepths(unit.instructions.size(), -1);
   verifyStackDepth(unit, 0, 0, stackDepths);
   // Check 3: Constant pool bounds
-  for (SizeType i = 0; i < unit.instructions.size(); i++)
+  for (SizeType i = 0; i < unit.instructions.size(); ++i)
   {
     const bytecode::Instruction& instr = unit.instructions[i];
     if (instr.op == bytecode::OpCode::LOAD_CONST)

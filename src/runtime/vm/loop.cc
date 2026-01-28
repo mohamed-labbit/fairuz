@@ -8,7 +8,7 @@ namespace runtime {
 void LoopAnalyzer::detectLoops(const std::vector<bytecode::Instruction>& instructions)
 {
   // Detect back-edges (jumps to earlier instructions)
-  for (SizeType i = 0; i < instructions.size(); i++)
+  for (SizeType i = 0; i < instructions.size(); ++i)
   {
     const bytecode::Instruction& instr = instructions[i];
     if ((instr.op == bytecode::OpCode::JUMP_BACKWARD || instr.op == bytecode::OpCode::FOR_ITER) && instr.arg < i)
@@ -19,7 +19,7 @@ void LoopAnalyzer::detectLoops(const std::vector<bytecode::Instruction>& instruc
       loop.IsInnerLoop  = true;
       loop.NestingLevel = 1;
       // Collect loop body
-      for (std::int32_t pc = instr.arg; pc <= i; pc++)
+      for (std::int32_t pc = instr.arg; pc <= i; ++pc)
         loop.BodyPCs.push_back(pc);
       Loops_.push_back(loop);
     }

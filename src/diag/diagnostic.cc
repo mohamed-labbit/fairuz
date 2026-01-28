@@ -12,7 +12,7 @@ std::string DiagnosticEngine::toJSON() const
 {
   std::stringstream ss;
   ss << "[\n";
-  for (SizeType i = 0; i < Diagnostics_.size(); i++)
+  for (SizeType i = 0; i < Diagnostics_.size(); ++i)
   {
     const Diagnostic& diag = Diagnostics_[i];
     ss << "  {\n";

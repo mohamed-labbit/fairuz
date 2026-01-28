@@ -25,7 +25,7 @@ struct Location
   Location() = default;
 
   Location(std::string fpath, SizeType line, SizeType col, SizeType fpos) :
-      filepath(fpath),
+      filepath(std::move(fpath)),
       line(line),
       column(col),
       FilePos(fpos)
@@ -105,9 +105,8 @@ enum class TokenType : int {
   NEWLINE,
   INDENT,
   DEDENT,
-  ENDMARKER,
   BEGINMARKER,
-  TYPE_COMMENT,
+  ENDMARKER,
 
   // identifier
   IDENTIFIER,
@@ -143,6 +142,10 @@ static const StringRef toString(TokenType tt)
     return u"*";
   case TokenType::OP_SLASH :
     return u"/";
+  case TokenType::OP_PERCENT :
+    return u"%";
+  case TokenType::OP_POWER :
+    return u"**";
   case TokenType::OP_LT :
     return u"<";
   case TokenType::OP_GT :
@@ -153,6 +156,38 @@ static const StringRef toString(TokenType tt)
     return u">=";
   case TokenType::OP_NEQ :
     return u"!=";
+  case TokenType::OP_BITAND :
+    return u"&";
+  case TokenType::OP_BITOR :
+    return u"|";
+  case TokenType::OP_BITXOR :
+    return u"^";
+  case TokenType::OP_BITNOT :
+    return u"~";
+  case TokenType::OP_LSHIFT :
+    return u"<<";
+  case TokenType::OP_RSHIFT :
+    return u">>";
+  case TokenType::OP_PLUSEQ :
+    return u"+=";
+  case TokenType::OP_MINUSEQ :
+    return u"-=";
+  case TokenType::OP_STAREQ :
+    return u"*=";
+  case TokenType::OP_SLASHEQ :
+    return u"/=";
+  case TokenType::OP_PERCENTEQ :
+    return u"%=";
+  case TokenType::OP_ANDEQ :
+    return u"&=";
+  case TokenType::OP_OREQ :
+    return u"|=";
+  case TokenType::OP_XOREQ :
+    return u"^=";
+  case TokenType::OP_LSHIFTEQ :
+    return u"<<=";
+  case TokenType::OP_RSHIFTEQ :
+    return u">>=";
   default :
     return u"";
   }
@@ -161,14 +196,22 @@ static const StringRef toString(TokenType tt)
 class Token
 {
  public:
-  Token(StringRef val, TokenType tt, SizeType line, SizeType col, SizeType fpos, std::string fpath) :
-      Value_(std::move(val)),
+  Token(StringRef val, TokenType tt, SizeType line, SizeType col, SizeType fpos, std::string fpath, bool atbol = false) :
+      Value_(val),
       Type_(tt),
-      Location_(fpath, line, col, fpos)
+      Location_(std::move(fpath), line, col, fpos),
+      Atbol_(atbol)
   {
   }
 
-  Token()                        = default;
+  Token() :
+      Value_(),
+      Type_(TokenType::INVALID),
+      Location_(),
+      Atbol_(false)
+  {
+  }
+
   Token(const Token&)            = default;
   Token(Token&&) MYLANG_NOEXCEPT = default;
 
@@ -204,17 +247,20 @@ class Token
   // is at beginning of a new line
   bool atbol() const { return Atbol_; }
 
-  bool isOperator() const { return Type_ > TokenType::OP_PLUS && Type_ < TokenType::OP_RSHIFTEQ; }
+  // FIXED: Correct operator range check
+  bool isOperator() const { return (Type_ >= TokenType::OP_PLUS && Type_ <= TokenType::OP_RSHIFTEQ); }
 
   bool isUnaryOp() const
   {
     return Type_ == TokenType::OP_PLUS || Type_ == TokenType::OP_MINUS || Type_ == TokenType::OP_BITNOT || Type_ == TokenType::KW_NOT;
   }
 
+  // FIXED: Proper binary operator check
   bool isBinaryOp() const
   {
-    // well?
-    return !isUnaryOp();
+    // Binary operators are operators that are not unary
+    // This excludes unary operators and non-operators
+    return isOperator() && !isUnaryOp();
   }
 
   bool isComparisonOp() const
@@ -227,8 +273,11 @@ class Token
   {
     switch (Type_)
     {
-    case TokenType::OP_STAR :   // *
-    case TokenType::OP_SLASH :  // /
+    case TokenType::OP_POWER :  // **
+      return 4;
+    case TokenType::OP_STAR :     // *
+    case TokenType::OP_SLASH :    // /
+    case TokenType::OP_PERCENT :  // %
       return 3;
     case TokenType::OP_PLUS :   // +
     case TokenType::OP_MINUS :  // -
@@ -238,7 +287,8 @@ class Token
     }
   }
 
-  int getLogicalOpPrecedence()
+  // FIXED: Added const qualifier
+  int getLogicalOpPrecedence() const
   {
     switch (Type_)
     {
@@ -259,7 +309,7 @@ class Token
   friend std::ostream& operator<<(std::ostream& os, const Token& tok)
   {
     os << "Token(\"" << tok.Value_ << "\", type=" << static_cast<std::int32_t>(tok.Type_) << ", line=" << tok.Location_.line
-       << ", col=" << tok.Location_.column << "\", file_pos=" << tok.Location_.FilePos << "\", file path=" << tok.Location_.filepath << ")";
+       << ", col=" << tok.Location_.column << ", file_pos=" << tok.Location_.FilePos << ", file_path=" << tok.Location_.filepath << ")";
     return os;
   }
 
@@ -267,9 +317,8 @@ class Token
   StringRef Value_;
   TokenType Type_;
   Location  Location_;
-
-  bool Atbol_;
+  bool      Atbol_;  // FIXED: Now properly initialized
 };
 
-}  // tok
-}  // mylang
+}  // namespace tok
+}  // namespace mylang

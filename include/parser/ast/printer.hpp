@@ -107,7 +107,7 @@ class ASTPrinter
 
   void printStmt(const Stmt* s, Prefix p)
   {
-    if (s == nullptr)
+    if (!s)
       return;
 
     NodeCount_++;

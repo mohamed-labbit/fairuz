@@ -7,29 +7,25 @@
 namespace mylang {
 namespace lex {
 
-using offset_pair = std::pair<SizeType, SizeType>;
-
 CharType SourceManager::peek()
 {
 
   return this->InputBuffer_.peek();
-  if (Current_ == nullptr)
+  if (!Current_)
     return BUFFER_END;
 
   CharType* forward = Current_ + 1;
-  if (forward == nullptr)
+  if (!forward)
     return BUFFER_END;
 
   return *forward;
 }
 
-offset_pair SourceManager::offsetMap_(const SizeType& offset) const
+std::pair<SizeType, SizeType> SourceManager::offsetMap_(const SizeType& offset) const
 {
 
   if (offset == InputBuffer_.bufferOffset())
-  {
     return std::make_pair(InputBuffer_.position().line, InputBuffer_.position().column);
-  }
 
   SizeType iter = 0;
   SizeType diff = 0;
@@ -38,8 +34,8 @@ offset_pair SourceManager::offsetMap_(const SizeType& offset) const
   while (iter < InputBuffer_.bufferOffset())
   {
     if (InputBuffer_.at(iter) == u'\n')
-      diff++;
-    iter++;
+      ++diff;
+    ++iter;
   }
 
   SizeType base_line   = InputBuffer_.position().line - diff;
@@ -52,10 +48,10 @@ offset_pair SourceManager::offsetMap_(const SizeType& offset) const
   {
     CharType c = InputBuffer_.at(iter);
     if (c == u'\n')
-      line++, col = 1;
+      ++line, col = 1;
     else
-      col++;
-    iter++;
+      ++col;
+    ++iter;
   }
 
   // combine with base line
@@ -63,7 +59,7 @@ offset_pair SourceManager::offsetMap_(const SizeType& offset) const
   return std::make_pair(line, col);
 }
 
-offset_pair SourceManager::offsetMap(const SizeType& offset)
+std::pair<SizeType, SizeType> SourceManager::offsetMap(const SizeType& offset)
 {
   /// TODO: : implement this using the new file manager
   SizeType line = 1, col = 1;

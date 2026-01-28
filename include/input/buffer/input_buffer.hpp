@@ -43,7 +43,7 @@ class InputBuffer: public InputBufferBase
 
   SizeType bufferOffset() const { return static_cast<SizeType>(Current_ - Buffers_[CurrentBuffer_].cget()); }
 
-  bool empty() const { return (!FileManager_->isOpen() || Current_ == nullptr || Buffers_[CurrentBuffer_].empty()); }
+  bool empty() const { return (!FileManager_->isOpen() || !Current_ || Buffers_[CurrentBuffer_].empty()); }
 
   CharType at(const SizeType idx) const { return Buffers_[CurrentBuffer_][idx]; }
 

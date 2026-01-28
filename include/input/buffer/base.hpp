@@ -26,7 +26,7 @@ class InputBufferBase
     Buffers_[0] = StringRef(cap + 1);
     Buffers_[1] = StringRef(cap + 1);
 
-    if (FileManager_ == nullptr || !FileManager_->isOpen())
+    if (!FileManager_ || !FileManager_->isOpen())
       diagnostic::engine.panic("File is not open");
   }
 

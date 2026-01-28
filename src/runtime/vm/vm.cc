@@ -67,7 +67,7 @@ void VirtualMachine::registerNativeFunctions()
 {
   // print
   nativeFunctions["print"] = [](const std::vector<object::Value>& args) {
-    for (SizeType i = 0; i < args.size(); i++)
+    for (SizeType i = 0; i < args.size(); ++i)
     {
       std::cout << args[i].repr();
       if (i + 1 < args.size())
@@ -192,13 +192,13 @@ void VirtualMachine::registerNativeFunctions()
       if (list.empty())
         diagnostic::engine.panic("min() arg is empty sequence");
       object::Value minVal = list[0];
-      for (SizeType i = 1; i < list.size(); i++)
+      for (SizeType i = 1; i < list.size(); ++i)
         if (list[i] < minVal)
           minVal = list[i];
       return minVal;
     }
     object::Value minVal = args[0];
-    for (SizeType i = 1; i < args.size(); i++)
+    for (SizeType i = 1; i < args.size(); ++i)
       if (args[i] < minVal)
         minVal = args[i];
     return minVal;
@@ -213,13 +213,13 @@ void VirtualMachine::registerNativeFunctions()
       if (list.empty())
         diagnostic::engine.panic("max() arg is empty sequence");
       object::Value maxVal = list[0];
-      for (SizeType i = 1; i < list.size(); i++)
+      for (SizeType i = 1; i < list.size(); ++i)
         if (list[i] > maxVal)
           maxVal = list[i];
       return maxVal;
     }
     object::Value maxVal = args[0];
-    for (SizeType i = 1; i < args.size(); i++)
+    for (SizeType i = 1; i < args.size(); ++i)
       if (args[i] > maxVal)
         maxVal = args[i];
     return maxVal;
@@ -252,7 +252,7 @@ void VirtualMachine::registerNativeFunctions()
       diagnostic::engine.panic("enumerate() requires list");
     std::vector<object::Value>        result;
     const std::vector<object::Value>& list = args[0].asList();
-    for (SizeType i = 0; i < list.size(); i++)
+    for (SizeType i = 0; i < list.size(); ++i)
     {
       std::vector<object::Value> pair = {object::Value(static_cast<std::int64_t>(i)), list[i]};
       result.push_back(object::Value(pair));
@@ -271,7 +271,7 @@ void VirtualMachine::registerNativeFunctions()
       minLen = std::min(minLen, arg.asList().size());
     }
     std::vector<object::Value> result;
-    for (SizeType i = 0; i < minLen; i++)
+    for (SizeType i = 0; i < minLen; ++i)
     {
       std::vector<object::Value> tuple;
       for (const object::Value& arg : args)
@@ -340,7 +340,7 @@ void VirtualMachine::execute(const BytecodeCompiler::CompilationUnit& code)
   while (Ip_ < code.instructions.size())
   {
     const bytecode::Instruction& instr = code.instructions[Ip_];
-    Stats_.InstructionsExecuted++;
+    ++Stats_.InstructionsExecuted;
     // JIT hot spot detection
     if (Stats_.InstructionsExecuted % 100 == 0)
       Jit_.recordExecution(Ip_);
@@ -354,7 +354,7 @@ void VirtualMachine::execute(const BytecodeCompiler::CompilationUnit& code)
       diagnostic::engine.emit("runtime error at line" + std::to_string(instr.LineNumber) + ": " + e.what());
       throw;
     }
-    Ip_++;
+    ++Ip_;
   }
   auto endTime         = std::chrono::high_resolution_clock::now();
   Stats_.ExecutionTime = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
@@ -606,7 +606,7 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
   case bytecode::OpCode::CALL : {
     std::int32_t               numArgs = instr.arg;
     std::vector<object::Value> args;
-    for (std::int32_t i = 0; i < numArgs; i++)
+    for (std::int32_t i = 0; i < numArgs; ++i)
       args.insert(args.begin(), pop());
     object::Value func = pop();
     // Check for native function
@@ -616,7 +616,7 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
       auto        it = nativeFunctions.find(funcName);
       if (it != nativeFunctions.end())
       {
-        Stats_.FunctionsCalled++;
+        ++Stats_.FunctionsCalled;
         push(it->second(args));
       }
       else
@@ -625,7 +625,7 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     else if (func.isFunction())
     {
       // User-defined function (would need call frame management)
-      Stats_.FunctionsCalled++;
+      ++Stats_.FunctionsCalled;
       diagnostic::engine.panic("User functions not yet implemented");
     }
     else
@@ -640,14 +640,14 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
     // Collections
   case bytecode::OpCode::BUILD_LIST : {
     std::vector<object::Value> elements;
-    for (std::int32_t i = 0; i < instr.arg; i++)
+    for (std::int32_t i = 0; i < instr.arg; ++i)
       elements.insert(elements.begin(), pop());
     push(object::Value(elements));
     break;
   }
   case bytecode::OpCode::BUILD_DICT : {
     std::unordered_map<StringRef, object::Value, StringRefHash, StringRefEqual> dict;
-    for (std::int32_t i = 0; i < instr.arg; i++)
+    for (std::int32_t i = 0; i < instr.arg; ++i)
     {
       object::Value val    = pop();
       object::Value key    = pop();
@@ -697,9 +697,9 @@ void VirtualMachine::executeInstruction(const bytecode::Instruction& instr, cons
   // Special operations
   case bytecode::OpCode::PRINT : {
     std::vector<object::Value> args;
-    for (std::int32_t i = 0; i < instr.arg; i++)
+    for (std::int32_t i = 0; i < instr.arg; ++i)
       args.insert(args.begin(), pop());
-    for (SizeType i = 0; i < args.size(); i++)
+    for (SizeType i = 0; i < args.size(); ++i)
     {
       std::cout << args[i].repr();
       if (i + 1 < args.size())
