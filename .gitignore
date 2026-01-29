@@ -65,3 +65,4 @@ if __name__ == "__main__":
     test_dir = Path("test/parser_test_cases")
     create_test_files(test_dir)build/
 .DS_Store
+build/
