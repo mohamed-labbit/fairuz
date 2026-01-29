@@ -5,95 +5,17 @@ namespace mylang {
 
 // constructors
 
-StringRef::StringRef(const SizeType s)
-{
-  if (s == 0)
-    return;
-
-  Ptr_ = string_allocator.allocate<CharType>(s + 1);  // +1 for null terminator
-  if (!Ptr_)
-    throw std::bad_alloc();
-
-  Capacity_ = s + 1;
-  Len_      = 0;
-  Ptr_[0]   = BUFFER_END;  // Ensure null termination
-}
+StringRef::StringRef(const SizeType s) { StringData_ = string_allocator.allocate(s); }
 
 StringRef::StringRef(ConstReference other)
 {
-  if (other.len() == 0)
-    return;
-
-  // Allocate space for string + null terminator
-  Ptr_ = string_allocator.allocate<CharType>(other.len() + 1);
-  if (!Ptr_)
-    throw std::bad_alloc();
-
-  // using std::memcpy just ruined the buffer somehow
-  for (SizeType i = 0; i < other.len(); ++i)
-    Ptr_[i] = other[i];
-
-  Len_      = other.len();
-  Capacity_ = other.len() + 1;
-
-  // Ensure null termination
-  Ptr_[Len_] = BUFFER_END;
+  StringData_ = other.get();
+  StringData_->increment();
 }
 
-StringRef::StringRef(StringRef&& other) noexcept :
-    Ptr_(other.Ptr_),
-    Len_(other.Len_),
-    Capacity_(other.Capacity_)
-{
-  other.Ptr_      = nullptr;
-  other.Len_      = 0;
-  other.Capacity_ = 0;
-}
+StringRef::StringRef(ConstPointer lit) { StringData_ = string_allocator.allocate(lit); }
 
-StringRef::StringRef(ConstPointer lit)
-{
-  if (!lit)
-    return;
-
-  // Calculate length of the null-terminated string
-  SizeType length = 0;
-  while (lit[length] != BUFFER_END)
-    ++length;
-
-  // Handle empty string
-  if (length == 0)
-    return;
-
-  // Allocate with space for null terminator
-  Ptr_ = string_allocator.allocate<CharType>(length + 1);
-  if (!Ptr_)
-    throw std::bad_alloc();
-
-  // Copy the string data
-  std::memcpy(Ptr_, lit, length * sizeof(CharType));
-  Len_       = length;
-  Capacity_  = length + 1;
-  Ptr_[Len_] = BUFFER_END;
-}
-
-StringRef::StringRef(const SizeType s, const CharType c)
-{
-  if (s == 0)
-  {
-    *this = StringRef();
-    return;
-  }
-
-  Ptr_ = string_allocator.allocate<CharType>(s + 1);
-  if (!Ptr_)
-    throw std::bad_alloc();
-
-  for (SizeType i = 0; i < s; ++i)
-    Ptr_[i] = c;
-
-  Ptr_[s]   = BUFFER_END;
-  Capacity_ = s + 1;
-}
+StringRef::StringRef(const SizeType s, const CharType c) { StringData_ = string_allocator.allocate(s, c); }
 
 // operators
 
@@ -104,88 +26,34 @@ typename StringRef::Reference StringRef::operator=(ConstReference other)
   if (this == &other)
     return *this;  // Self-assignment guard
 
-  if (other.len() == 0)
-  {
-    Ptr_      = nullptr;
-    Len_      = 0;
-    Capacity_ = 0;
-    return *this;
-  }
-
-  // FIXED: Allocate NEW memory FIRST, before deallocating old
-  Pointer new_ptr = string_allocator.allocate<CharType>(other.len() + 1);
-  if (!new_ptr)
-    throw std::bad_alloc();
-
-  // Copy data to NEW memory (other is still intact)
-  // std::memcpy(new_ptr, other.cget(), other.len() * sizeof(CharType));
-  for (SizeType i = 0; i < other.len(); ++i)
-    new_ptr[i] = other[i];
-
-  new_ptr[other.len()] = BUFFER_END;
-
-  // Update pointers
-  Ptr_      = new_ptr;
-  Len_      = other.len();
-  Capacity_ = other.len() + 1;
+  StringData_ = other.get();
+  StringData_->increment();
 
   return *this;
 }
 
-typename StringRef::Reference StringRef::operator=(StringRef&& other) noexcept
-{
-  if (this == &other)
-    return *this;
-
-  // Take ownership of other's resources
-  Ptr_      = other.Ptr_;
-  Len_      = other.Len_;
-  Capacity_ = other.Capacity_;
-
-  // Leave other in valid empty state
-  other.Ptr_      = nullptr;
-  other.Len_      = 0;
-  other.Capacity_ = 0;
-
-  return *this;
-}
-
-bool StringRef::operator==(ConstReference other) const noexcept
-{
-  // Different lengths
-  if (Len_ != other.len())
-    return false;
-
-  // Both empty
-  if (Len_ == 0)
-    return true;
-
-  // Self comparison
-  if (Ptr_ == other.cget())
-    return true;
-
-  // Deep comparison
-  // return std::memcmp(Ptr_, other.cget(), Len_ * sizeof(CharType)) == 0;
-  for (SizeType i = 0; i < Len_; ++i)
-    if (Ptr_[i] != other[i])
-      return false;
-
-  return true;
-}
+bool StringRef::operator==(ConstReference other) const noexcept { return *StringData_ == *other.get(); }
 
 typename StringRef::Reference StringRef::operator+=(ConstReference other)
 {
+  if (StringData_->referenceCount() > 1)
+  {
+    String* p   = StringData_;
+    StringData_ = string_allocator.allocate(*p);
+    p->decrement();
+  }
+
   if (other.len() == 0)
     return *this;
 
-  SizeType new_len = Len_ + other.len();
+  SizeType new_len = StringData_->len + other.len();
 
-  if (new_len + 1 > Capacity_)  // +1 for null terminator
+  if (new_len + 1 > StringData_->cap)  // +1 for null terminator
     expand(new_len + 1);
 
-  std::memcpy(Ptr_ + Len_, other.cget(), other.len() * sizeof(CharType));
-  Len_       = new_len;
-  Ptr_[Len_] = BUFFER_END;
+  std::memcpy(StringData_->ptr + StringData_->len, other.get(), other.len() * sizeof(CharType));
+  StringData_->len                   = new_len;
+  StringData_->ptr[StringData_->len] = BUFFER_END;
 
   return *this;
 }
@@ -307,9 +175,7 @@ void StringRef::erase(const SizeType at)
   if (at >= Len_ || !Ptr_)
     return;  // Out of bounds or empty string
 
-  // Shift characters left
-  for (SizeType i = at; i < Len_ - 1; ++i)
-    Ptr_[i] = Ptr_[i + 1];
+  std::memmove(Ptr_ + at, Ptr_ + at + 1, (Len_ - at - 1) * sizeof(*Ptr_));
 
   --Len_;
   Ptr_[Len_] = BUFFER_END;

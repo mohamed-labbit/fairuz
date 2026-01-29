@@ -1,0 +1,446 @@
+/**
+ * COPY-ON-WRITE (COW) EXPLAINED
+ * ==============================
+ * 
+ * A detailed walkthrough of how COW StringRef works
+ */
+
+// ============================================================================
+// PART 1: THE PROBLEM WITH NORMAL STRINGS
+// ============================================================================
+
+/*
+NORMAL STRING (Deep Copy):
+
+Code:
+    StringRef s1 = "Hello";
+    StringRef s2 = s1;  // Copy constructor
+
+Memory layout:
+
+    Stack:
+    ┌─────────────┐
+    │ s1          │
+    │  Ptr_   ────┼──────┐
+    │  Len_: 5    │      │
+    │  Cap_: 6    │      │
+    └─────────────┘      │
+                         ▼
+                    Heap Block #1:
+                    ┌─────────────────────┐
+                    │ H │ e │ l │ l │ o │\0│
+                    └─────────────────────┘
+    
+    ┌─────────────┐
+    │ s2          │
+    │  Ptr_   ────┼──────┐
+    │  Len_: 5    │      │
+    │  Cap_: 6    │      │
+    └─────────────┘      │
+                         ▼
+                    Heap Block #2:
+                    ┌─────────────────────┐
+                    │ H │ e │ l │ l │ o │\0│  ← DUPLICATE!
+                    └─────────────────────┘
+
+PROBLEM:
+- Two identical copies in memory (wasteful!)
+- Copying is expensive: O(n) time
+- What if we have 100 copies? 100x memory!
+*/
+
+
+// ============================================================================
+// PART 2: COW SOLUTION - SHARED MEMORY
+// ============================================================================
+
+/*
+COPY-ON-WRITE STRING (Shallow Copy with Reference Counting):
+
+Code:
+    StringRef s1 = "Hello";
+    StringRef s2 = s1;  // SHALLOW copy
+
+Memory layout:
+
+    Stack:
+    ┌─────────────┐
+    │ s1          │
+    │  data_  ────┼──────┐
+    └─────────────┘      │
+                         │
+    ┌─────────────┐      │
+    │ s2          │      │    Heap: StringData object
+    │  data_  ────┼──────┤    ┌──────────────────────────┐
+    └─────────────┘      └───►│ ref_count: 2             │ ← TWO refs!
+                              │ length: 5                │
+                              │ capacity: 6              │
+                              │ data ───────────────────┐│
+                              └─────────────────────────┼┘
+                                                        │
+                                                        ▼
+                                      Heap: Character array
+                                      ┌─────────────────────┐
+                                      │ H │ e │ l │ l │ o │\0│
+                                      └─────────────────────┘
+
+BENEFITS:
+- Only ONE copy of "Hello" in memory
+- s1 and s2 SHARE the same data
+- Copying is cheap: O(1) time (just increment ref_count)
+- ref_count tracks how many StringRefs point to this data
+*/
+
+
+// ============================================================================
+// PART 3: STEP-BY-STEP WALKTHROUGH
+// ============================================================================
+
+/*
+STEP 1: Create first string
+----------------------------
+
+Code:
+    StringRef s1 = "Hello";
+
+What happens:
+    1. Allocate StringData object
+    2. Allocate character array
+    3. Copy "Hello" into array
+    4. Set ref_count = 1
+
+Memory:
+    s1.data_ ──► [ref_count: 1][length: 5][capacity: 6][data ──► [H][e][l][l][o][\0]]
+    
+    1 StringRef pointing to this data
+*/
+
+/*
+STEP 2: Copy the string
+-----------------------
+
+Code:
+    StringRef s2 = s1;  // Copy constructor
+
+What happens:
+    1. s2.data_ = s1.data_;  // JUST COPY THE POINTER!
+    2. s1.data_->ref_count++;  // Increment: 1 → 2
+    
+    NO DATA IS COPIED! Just the pointer!
+
+Memory:
+                    ┌─────► [ref_count: 2][length: 5][data ──► [H][e][l][l][o][\0]]
+                    │
+    s1.data_ ───────┘
+    s2.data_ ───────┘
+    
+    2 StringRefs pointing to SAME data
+    
+    Cost: O(1) - just copied a pointer and incremented a counter!
+*/
+
+/*
+STEP 3: Read from strings (no copy)
+------------------------------------
+
+Code:
+    char c1 = s1[0];  // Read 'H'
+    char c2 = s2[0];  // Read 'H'
+
+What happens:
+    1. Both read from the SAME memory location
+    2. No copying occurs
+    3. ref_count stays at 2
+
+Memory: (unchanged)
+    s1.data_ ───┐
+                ├───► [ref_count: 2][data ──► [H][e][l][l][o][\0]]
+    s2.data_ ───┘
+*/
+
+/*
+STEP 4: Modify s2 - COPY-ON-WRITE TRIGGERED!
+---------------------------------------------
+
+Code:
+    s2[0] = 'J';  // Modify s2
+
+What happens:
+    1. Check: is data shared? (ref_count > 1)
+       YES! ref_count = 2
+    
+    2. COPY THE DATA:
+       - Allocate new StringData
+       - Allocate new character array
+       - Copy "Hello" to new array
+       - Set new ref_count = 1
+    
+    3. UPDATE s2:
+       - s2.data_ = new StringData (point to new copy)
+    
+    4. UPDATE OLD DATA:
+       - Decrement old ref_count: 2 → 1
+    
+    5. MODIFY NEW COPY:
+       - new_data->data[0] = 'J'
+
+Memory AFTER:
+    
+    s1.data_ ──► [ref_count: 1][data ──► [H][e][l][l][o][\0]]  ← Original
+    
+    s2.data_ ──► [ref_count: 1][data ──► [J][e][l][l][o][\0]]  ← NEW copy!
+    
+    Now they're independent!
+*/
+
+
+// ============================================================================
+// PART 4: REFERENCE COUNTING IN DETAIL
+// ============================================================================
+
+/*
+The ref_count tracks how many StringRefs are using this data.
+
+RULE: When ref_count reaches 0, delete the data.
+
+Example:
+
+Initial:
+    s1 created
+    ┌────► [ref_count: 1][data]
+    │
+    s1 ──┘
+
+After s2 = s1:
+    ┌────► [ref_count: 2][data]  ← Incremented!
+    │
+    s1 ──┤
+    s2 ──┘
+
+After s3 = s1:
+    ┌────► [ref_count: 3][data]  ← Incremented again!
+    │
+    s1 ──┤
+    s2 ──┤
+    s3 ──┘
+
+When s2 goes out of scope:
+    s2.~StringRef() called
+    ref_count--  (3 → 2)
+    Still > 0, so DON'T delete data
+    
+    ┌────► [ref_count: 2][data]  ← Decremented
+    │
+    s1 ──┤
+    s3 ──┘
+
+When s3 goes out of scope:
+    ref_count--  (2 → 1)
+    
+    ┌────► [ref_count: 1][data]
+    │
+    s1 ──┘
+
+When s1 goes out of scope:
+    ref_count--  (1 → 0)
+    ref_count == 0, so DELETE the data!
+    
+    [deleted] ← Memory freed!
+*/
+
+
+// ============================================================================
+// PART 5: THE COPY-ON-WRITE ALGORITHM
+// ============================================================================
+
+void copy_on_write() {
+    // STEP 1: Check if we need to copy
+    if (!data_) {
+        return;  // Empty string, nothing to do
+    }
+    
+    if (!data_->is_shared()) {
+        return;  // We're the only owner, no need to copy
+    }
+    
+    // STEP 2: We're sharing data, so make our own copy
+    
+    // Allocate new StringData
+    StringData* new_data = new StringData(data_->length, data_->capacity);
+    
+    // Copy the character data
+    std::memcpy(new_data->data, data_->data, data_->length * sizeof(CharType));
+    new_data->data[data_->length] = '\0';
+    
+    // STEP 3: Release our reference to the old data
+    data_->ref_count--;  // Decrement
+    
+    if (data_->ref_count == 0) {
+        delete data_;  // We were the last one, clean up
+    }
+    
+    // STEP 4: Point to our new private copy
+    data_ = new_data;  // Now we own this exclusively (ref_count = 1)
+}
+
+
+// ============================================================================
+// PART 6: COMPLETE EXAMPLE WITH TIMELINE
+// ============================================================================
+
+/*
+Code:
+    StringRef s1 = "Hello";    // T1
+    StringRef s2 = s1;         // T2
+    StringRef s3 = s1;         // T3
+    s2[0] = 'J';               // T4
+    s3 += '!';                 // T5
+    
+Timeline:
+
+T1: s1 created
+    s1 ──► [ref=1]["Hello"]
+
+T2: s2 = s1 (SHALLOW COPY)
+    s1 ──┐
+         ├──► [ref=2]["Hello"]
+    s2 ──┘
+
+T3: s3 = s1 (SHALLOW COPY)
+    s1 ──┐
+         │
+    s2 ──┼──► [ref=3]["Hello"]
+         │
+    s3 ──┘
+
+T4: s2[0] = 'J' (COW TRIGGERED!)
+    s1 ──┐
+         ├──► [ref=2]["Hello"]
+    s3 ──┘
+    
+    s2 ──► [ref=1]["Jello"]  ← NEW copy!
+
+T5: s3 += '!' (COW TRIGGERED!)
+    s1 ──► [ref=1]["Hello"]
+    
+    s2 ──► [ref=1]["Jello"]
+    
+    s3 ──► [ref=1]["Hello!"]  ← NEW copy!
+
+Final state: 3 independent strings in memory
+*/
+
+
+// ============================================================================
+// PART 7: PERFORMANCE ANALYSIS
+// ============================================================================
+
+/*
+OPERATION        | NORMAL COPY | COW
+-----------------+-------------+------------------
+Create           | O(n)        | O(n)
+Copy             | O(n)        | O(1) ⚡ FAST!
+Read             | O(1)        | O(1)
+First modify     | O(1)        | O(n) (copy triggered)
+Subsequent mod   | O(1)        | O(1)
+Destructor       | O(1)        | O(1) (or O(n) if last)
+
+WHEN COW WINS:
+- Many copies, few modifications
+- Passing strings by value
+- Storing strings in containers
+
+Example:
+    vector<StringRef> vec;
+    for (int i = 0; i < 1000; i++) {
+        vec.push_back(original);  // 1000 copies!
+    }
+    
+    Normal: 1000 × O(n) = O(1000n) ❌ Slow!
+    COW:    1000 × O(1) = O(1000)  ✅ Fast!
+*/
+
+
+// ============================================================================
+// PART 8: THREAD SAFETY
+// ============================================================================
+
+/*
+Using std::atomic for ref_count makes it thread-safe:
+
+Thread 1:                   Thread 2:
+StringRef s1 = "Hello";     
+                            StringRef s2 = s1;  ← Atomic increment
+s1[0] = 'J';                                    ← Atomic decrement + copy
+                            s2[1] = 'a';        ← Atomic decrement + copy
+
+std::atomic ensures:
+- No race conditions on ref_count
+- Proper memory ordering
+- Safe concurrent copying
+
+BUT: The string DATA itself is NOT thread-safe!
+- Two threads modifying same StringRef = undefined behavior
+- Two threads modifying different StringRefs sharing data = COW protects you
+*/
+
+
+// ============================================================================
+// PART 9: COMPARISON WITH std::shared_ptr
+// ============================================================================
+
+/*
+COW StringRef is similar to std::shared_ptr but with automatic copying:
+
+std::shared_ptr<string>:
+    - Multiple pointers to same data
+    - Modifying affects ALL pointers
+    - Manual copying required
+
+COW StringRef:
+    - Multiple StringRefs share data
+    - Modifying creates private copy automatically
+    - Transparent COW
+
+Example:
+
+shared_ptr:
+    auto s1 = make_shared<string>("Hello");
+    auto s2 = s1;  // Share
+    (*s2)[0] = 'J';  // s1 ALSO becomes "Jello"! ❌
+
+COW StringRef:
+    StringRef s1 = "Hello";
+    StringRef s2 = s1;  // Share
+    s2[0] = 'J';  // Only s2 becomes "Jello", s1 stays "Hello" ✅
+*/
+
+
+// ============================================================================
+// SUMMARY
+// ============================================================================
+
+/*
+Copy-on-Write is a lazy optimization:
+
+1. COPYING: Share data (cheap)
+2. READING: Read from shared data (no copy)
+3. WRITING: Make private copy only when needed (lazy)
+
+Key insight: Most copies are never modified!
+
+Benefits:
+✅ Fast copying (O(1))
+✅ Memory efficient (shared data)
+✅ Transparent (looks like normal string)
+
+Trade-offs:
+⚠️ First modification is slower (copy penalty)
+⚠️ Extra pointer indirection
+⚠️ Reference counting overhead
+
+Perfect for:
+- Passing strings by value
+- Many readers, few writers
+- Functional programming style
+*/

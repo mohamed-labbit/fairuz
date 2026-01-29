@@ -16,6 +16,8 @@
 
 namespace mylang {
 
+struct String;
+
 class StringAllocator
 {
  private:
@@ -27,11 +29,13 @@ class StringAllocator
   {
   }
 
-  template<typename T, typename... Args>
-  T* allocate(SizeType count, Args&&... args)
+  template<typename... Args>
+  String* allocate(Args&&... args)
   {
-    void* mem = Allocator_.allocate(count * sizeof(T));
-    return new (mem) T(std::forward<Args>(args)...);
+    void* mem = Allocator_.allocate(sizeof(String));
+    if (!mem)
+      throw std::bad_alloc();
+    return new (mem) String(std::forward<Args>(args)...);
   }
 };
 
@@ -234,6 +238,108 @@ static U16Iterator utf8to16(U8Iterator start, U8Iterator end, U16Iterator result
 }  // namespace utf_internal
 */
 
+
+struct String
+{
+ public:
+  typedef CharType*       Pointer;
+  typedef const CharType* ConstPointer;
+
+  Pointer  ptr{nullptr};
+  SizeType len{0};
+  SizeType cap{0};
+
+  mutable SizeType RefCount{1};
+
+  String() = default;
+
+  String(const String& other)
+  {
+    if (other.len)
+    {
+      ptr = string_allocator.allocate<CharType>(other.len + 1);
+      std::memcpy(ptr, other.ptr, other.len * sizeof(CharType));
+      len = other.len;
+      cap = other.cap;
+      // terminate
+      ptr[len] = BUFFER_END;
+    }
+  }
+
+  String(const SizeType s)
+  {
+    if (s)
+    {
+      ptr = string_allocator.allocate<CharType>(s + 1);
+      cap = s + 1;
+      len = 0;
+      // terminate
+      ptr[0] = BUFFER_END;
+    }
+  }
+
+  String(ConstPointer s)
+  {
+    // calculate len because the damn libc doesn't provide strlen for utf16
+    ConstPointer p = s;
+    while (*p++)
+      ;
+    len = p - s - 1;
+    cap = len + 1;
+    ptr = string_allocator.allocate<CharType>(cap);
+    std::memcpy(ptr, s, len * sizeof(CharType));
+    ptr[len] = BUFFER_END;
+  }
+
+  String(const SizeType s, const SizeType c)
+  {
+    len = s;
+    cap = len + 1;
+    ptr = string_allocator.allocate<CharType>(cap);
+
+    Pointer p = ptr;
+    while (p < ptr + len)
+      *p++ = c;
+
+    ptr[len] = BUFFER_END;
+  }
+
+  String operator=(const String& other)
+  {
+    if (this != &other && other.len)
+    {
+      ptr = string_allocator.allocate<CharType>(other.len + 1);
+      std::memcpy(ptr, other.ptr, other.len * sizeof(CharType));
+      len = other.len;
+      cap = other.len + 1;
+      // terminate
+      ptr[len] = BUFFER_END;
+    }
+  }
+
+  bool operator==(const String& other) const noexcept
+  {
+    // Different lengths
+    if (len != other.len)
+      return false;
+
+    // Both empty
+    if (len == 0)
+      return true;
+
+    // Self comparison
+    if (ptr == other.ptr)
+      return true;
+
+    return std::memcmp(ptr, other.ptr, len * sizeof(CharType)) == 0;
+  }
+
+
+  void     increment() { RefCount++; }
+  void     decrement() { RefCount--; }
+  SizeType referenceCount() const { return RefCount; }
+};
+
 class StringRef
 {
  private:
@@ -242,9 +348,7 @@ class StringRef
   typedef StringRef&       Reference;
   typedef const StringRef& ConstReference;
 
-  CharType* Ptr_{nullptr};
-  SizeType  Len_{0};       // length of the string (not including null terminator)
-  SizeType  Capacity_{1};  // allocated memory (including space for null terminator)
+  String* StringData_;
 
  public:
   // Default constructor
@@ -324,15 +428,8 @@ class StringRef
     SizeType  new_len = lhs.len() + rhs.len();
     StringRef result(new_len);  // Allocate exact size needed
 
-    // std::memcpy(result.get(), lhs.cget(), lhs.len() * sizeof(CharType));
-    // std::memcpy(result.get() + lhs.len(), rhs.cget(), rhs.len() * sizeof(CharType));
-
-    SizeType i = 0;
-    for (; i < lhs.len(); i++)
-      result[i] = lhs[i];
-
-    for (SizeType k = 0; k < rhs.len(); k++)
-      result[i++] = rhs[k];
+    std::memcpy(result.get(), lhs.cget(), lhs.len() * sizeof(CharType));
+    std::memcpy(result.get() + lhs.len(), rhs.cget(), rhs.len() * sizeof(CharType));
 
     result.Len_          = new_len;
     result.Ptr_[new_len] = BUFFER_END;
@@ -378,11 +475,11 @@ class StringRef
   }
 
   // Accessors
-  MYLANG_NODISCARD SizeType     len() const noexcept { return Len_; }
-  MYLANG_NODISCARD SizeType     cap() const noexcept { return Capacity_; }
-  MYLANG_NODISCARD Pointer      get() noexcept { return Ptr_; }
-  MYLANG_NODISCARD ConstPointer cget() const noexcept { return Ptr_; }
-  MYLANG_NODISCARD bool         empty() const noexcept { return Len_ == 0; }
+  MYLANG_NODISCARD SizeType      len() const noexcept { return Len_; }
+  MYLANG_NODISCARD SizeType      cap() const noexcept { return Capacity_; }
+  MYLANG_NODISCARD String*       get() const noexcept { return StringData_; }
+  MYLANG_NODISCARD const String* cget() const noexcept { return StringData_; }
+  MYLANG_NODISCARD bool          empty() const noexcept { return Len_ == 0; }
 
   // Mutable accessors (use with caution)
   SizeType& len_ref() { return Len_; }
@@ -414,6 +511,7 @@ class StringRef
   // Find a character
   MYLANG_NODISCARD bool find(const CharType c) const noexcept
   {
+    // return std::strchr(Ptr_, c);
     for (SizeType i = 0; i < Len_; ++i)
       if (Ptr_[i] == c)
         return true;
