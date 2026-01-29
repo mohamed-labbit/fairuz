@@ -324,15 +324,8 @@ class StringRef
     SizeType  new_len = lhs.len() + rhs.len();
     StringRef result(new_len);  // Allocate exact size needed
 
-    // std::memcpy(result.get(), lhs.cget(), lhs.len() * sizeof(CharType));
-    // std::memcpy(result.get() + lhs.len(), rhs.cget(), rhs.len() * sizeof(CharType));
-
-    SizeType i = 0;
-    for (; i < lhs.len(); i++)
-      result[i] = lhs[i];
-
-    for (SizeType k = 0; k < rhs.len(); k++)
-      result[i++] = rhs[k];
+    std::memcpy(result.get(), lhs.cget(), lhs.len() * sizeof(CharType));
+    std::memcpy(result.get() + lhs.len(), rhs.cget(), rhs.len() * sizeof(CharType));
 
     result.Len_          = new_len;
     result.Ptr_[new_len] = BUFFER_END;
