@@ -89,7 +89,7 @@ struct String
       cap = s + 1;
       len = 0;
       // terminate
-      ptr[0] = BUFFER_END;
+      terminate();
     }
   }
 
@@ -106,7 +106,7 @@ struct String
     cap = len + 1;
     ptr = string_allocator.allocateArray<CharType>(cap);
     std::memcpy(ptr, s, len * sizeof(CharType));
-    ptr[len] = BUFFER_END;
+    terminate();
   }
 
   String(const SizeType s, const CharType c)
@@ -119,7 +119,7 @@ struct String
     while (p < ptr + len)
       *p++ = c;
 
-    ptr[len] = BUFFER_END;
+    terminate();
   }
 
   String& operator=(const String&) = delete;
@@ -143,7 +143,6 @@ struct String
 
   CharType operator[](const SizeType i) const { return ptr[i]; }
 
-  // 🔴 CRITICAL FIX: decrement() was incrementing!
   void     increment() const noexcept { RefCount++; }
   void     decrement() const noexcept { RefCount--; }  // FIXED: was RefCount++
   SizeType referenceCount() const noexcept { return RefCount; }
@@ -324,8 +323,8 @@ class StringRef
       expand(new_len);
 
     std::memcpy(StringData_->ptr + StringData_->len, other.data(), other.len() * sizeof(CharType));
-    StringData_->len                   = new_len;
-    StringData_->ptr[StringData_->len] = BUFFER_END;
+    StringData_->len = new_len;
+    StringData_->terminate();
 
     return *this;
   }
@@ -337,9 +336,9 @@ class StringRef
     if (len() + 2 > cap())
       expand(len() + 1);  // expand does account for nul
 
-    StringData_->ptr[len()]     = c;
-    StringData_->ptr[len() + 1] = BUFFER_END;
+    StringData_->ptr[len()] = c;
     ++StringData_->len;
+    StringData_->terminate();
 
     return *this;
   }
@@ -401,8 +400,8 @@ class StringRef
     std::memcpy(result->ptr, lhs.data(), lhs.len() * sizeof(CharType));
     std::memcpy(result->ptr + lhs.len(), rhs.data(), rhs.len() * sizeof(CharType));
 
-    result->len             = actual_len;  // FIXED: No +1 here
-    result->ptr[actual_len] = BUFFER_END;
+    result->len = actual_len;  // FIXED: No +1 here
+    result->terminate();
 
     return StringRef(result);
   }
@@ -513,8 +512,8 @@ class StringRef
     COW();
     if (s < len() && StringData_->ptr)
     {
-      StringData_->ptr[s] = BUFFER_END;
-      StringData_->len    = s;
+      StringData_->len = s;
+      StringData_->terminate();
     }
     return *this;
   }
