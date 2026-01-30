@@ -14,7 +14,6 @@
 #include <locale>
 #include <optional>
 
-
 namespace mylang {
 namespace lex {
 
@@ -38,28 +37,28 @@ class Lexer
   explicit Lexer(const Lexer&) = delete;
 
   /// @brief Constructs a lexer from an existing token sequence
-  explicit Lexer(std::vector<tok::Token>& seq, const SizeType s);
+  explicit Lexer(std::vector<const tok::Token*>& seq, const SizeType s);
 
   /// @brief Returns the next token (call operator convenience)
-  MYLANG_COMPILER_ABI tok::Token operator()() { return next(); }
+  MYLANG_COMPILER_ABI const tok::Token* operator()() { return next(); }
 
   /// @brief Returns the current token without advancing
-  MYLANG_COMPILER_ABI tok::Token current() const;
+  MYLANG_COMPILER_ABI const tok::Token* current() const;
 
   /// @brief Advances and returns the next token
-  MYLANG_COMPILER_ABI tok::Token next();
+  MYLANG_COMPILER_ABI const tok::Token* next();
 
   /// @brief Peeks ahead n tokens without advancing
-  MYLANG_COMPILER_ABI tok::Token peek(SizeType n = 1);
+  MYLANG_COMPILER_ABI const tok::Token* peek(SizeType n = 1);
 
   /// @brief Returns the previous token
-  MYLANG_COMPILER_ABI tok::Token prev();
+  MYLANG_COMPILER_ABI const tok::Token* prev();
 
   /// @brief Returns the full token stream
-  MYLANG_COMPILER_ABI const std::vector<tok::Token>& tokenStream() const { return TokStream_; }
+  MYLANG_COMPILER_ABI const std::vector<const tok::Token*>& tokenStream() const { return TokStream_; }
 
   /// @brief Tokenizes the entire input source
-  MYLANG_COMPILER_ABI std::vector<tok::Token> tokenize();
+  MYLANG_COMPILER_ABI std::vector<const tok::Token*> tokenize();
 
   /// @brief Returns the current indentation size
   MYLANG_COMPILER_ABI const SizeType indentSize() const { return IndentSize_; }
@@ -69,27 +68,27 @@ class Lexer
    *
    * Any omitted fields are inferred from the current source position.
    */
-  MYLANG_COMPILER_ABI tok::Token make_token(tok::TokenType             tt,
-                                            std::optional<StringRef>   lexeme    = std::nullopt,
-                                            std::optional<SizeType>    line      = std::nullopt,
-                                            std::optional<SizeType>    col       = std::nullopt,
-                                            std::optional<SizeType>    file_pos  = std::nullopt,
-                                            std::optional<std::string> file_path = std::nullopt) const;
+  MYLANG_COMPILER_ABI tok::Token* make_token(tok::TokenType             tt,
+                                             std::optional<StringRef>   lexeme    = std::nullopt,
+                                             std::optional<SizeType>    line      = std::nullopt,
+                                             std::optional<SizeType>    col       = std::nullopt,
+                                             std::optional<SizeType>    file_pos  = std::nullopt,
+                                             std::optional<std::string> file_path = std::nullopt) const;
 
   MYLANG_COMPILER_ABI StringRef getSourceLine(const SizeType line) { return SourceManager_.getSourceLine(line); }
 
  private:
-  SourceManager           SourceManager_;   // Manages source input and positions
-  SizeType                TokIndex_{0};     // Current token index
-  unsigned                IndentSize_{0};   // Current indentation size
-  unsigned                IndentLevel_{0};  // current level of indentation
-  std::vector<tok::Token> TokStream_;       // Accumulated token stream
-  std::vector<unsigned>   IndentStack_;     // Legacy indentation stack
-  std::vector<unsigned>   AltIndentStack_;  // Alternative indentation stack for consistency
-  bool                    AtBOL_{false};    // at beginning of a new line
+  SourceManager                  SourceManager_;   // Manages source input and positions
+  SizeType                       TokIndex_{0};     // Current token index
+  unsigned                       IndentSize_{0};   // Current indentation size
+  unsigned                       IndentLevel_{0};  // current level of indentation
+  std::vector<const tok::Token*> TokStream_;       // Accumulated token stream
+  std::vector<unsigned>          IndentStack_;     // Legacy indentation stack
+  std::vector<unsigned>          AltIndentStack_;  // Alternative indentation stack for consistency
+  bool                           AtBOL_{false};    // at beginning of a new line
 
   /// @brief Lexes a single token and stores it
-  MYLANG_COMPILER_ABI tok::Token lexToken();
+  MYLANG_COMPILER_ABI const tok::Token* lexToken();
 
   /// @brief Updates indentation context based on emitted token
   MYLANG_COMPILER_ABI void updateIndentationContext_(const tok::Token& token);
@@ -108,7 +107,7 @@ class Lexer
   MYLANG_COMPILER_ABI CharType peekChar() { return SourceManager_.peek(); }
 
   /// @brief Stores a token in the token stream
-  MYLANG_COMPILER_ABI void store(tok::Token tok);
+  MYLANG_COMPILER_ABI void store(const tok::Token* tok);
 
   /**
    * @brief Configures the global locale for Unicode handling.
@@ -128,15 +127,42 @@ class Lexer
   }
 };  // class Lexer
 
-inline tok::Token Lexer::make_token(tok::TokenType             tt,
-                                    std::optional<StringRef>   lexeme,
-                                    std::optional<SizeType>    line,
-                                    std::optional<SizeType>    col,
-                                    std::optional<SizeType>    file_pos,
-                                    std::optional<std::string> file_path) const
+struct TokenAllocator
 {
-  return tok::Token(lexeme.value_or(u""), tt, line.value_or(this->SourceManager_.line()), col.value_or(this->SourceManager_.column()),
-                    file_pos.value_or(this->SourceManager_.fpos()), file_path.value_or(this->SourceManager_.fpath()));
+ private:
+  runtime::allocator::ArenaAllocator Allocator_;
+
+ public:
+  TokenAllocator() :
+      Allocator_(static_cast<int>(runtime::allocator::ArenaAllocator::GrowthStrategy::LINEAR))
+  {
+  }
+
+  template<typename... Args>
+  tok::Token* make(Args&&... args)
+  {
+    void* mem = Allocator_.allocate(sizeof(tok::Token));
+    if (!mem)
+      return nullptr;
+    return new (mem) tok::Token(std::forward<Args>(args)...);
+  }
+};
+
+inline TokenAllocator token_allocator;
+
+inline tok::Token* Lexer::make_token(tok::TokenType             tt,
+                                     std::optional<StringRef>   lexeme,
+                                     std::optional<SizeType>    line,
+                                     std::optional<SizeType>    col,
+                                     std::optional<SizeType>    file_pos,
+                                     std::optional<std::string> file_path) const
+{
+  tok::Token* ret =
+    token_allocator.make(lexeme.value_or(u""), tt, line.value_or(this->SourceManager_.line()), col.value_or(this->SourceManager_.column()),
+                         file_pos.value_or(this->SourceManager_.fpos()), file_path.value_or(this->SourceManager_.fpath()));
+  if (!ret) // protect against bad access
+    throw std::bad_alloc();
+  return ret;
 }
 
 }  // namespace lex

@@ -4,6 +4,7 @@
 #include "macros.hpp"
 #include "runtime/allocator/arena.hpp"
 
+#include <atomic>
 #include <iomanip>
 #include <iostream>
 #include <optional>
@@ -23,216 +24,131 @@ class StringAllocator
 
  public:
   StringAllocator() :
-      Allocator_(static_cast<std::int32_t>(runtime::allocator::ArenaAllocator::GrowthStrategy::LINEAR))
+      Allocator_(static_cast<std::int32_t>(runtime::allocator::ArenaAllocator::GrowthStrategy::EXPONENTIAL))
   {
   }
 
-  template<typename T, typename... Args>
-  T* allocate(SizeType count, Args&&... args)
+  void* allocateBytes(const SizeType size)
   {
-    void* mem = Allocator_.allocate(count * sizeof(T));
-    return new (mem) T(std::forward<Args>(args)...);
+    void* mem = Allocator_.allocate(size);
+    if (!mem)
+      throw std::bad_alloc();
+    return mem;
   }
+
+  template<typename T>
+  T* allocateArray(const SizeType count)
+  {
+    return static_cast<T*>(allocateBytes(count * sizeof(T)));
+  }
+
+  template<typename T, typename... Args>
+  MYLANG_NODISCARD T* allocateObject(Args&&... args)
+  {
+    static_assert(std::is_constructible_v<T, Args...>, "T must be constructible with Args...");
+    void* mem = allocateBytes(sizeof(T));
+    return ::new (mem) T(std::forward<Args>(args)...);
+  }
+
+  std::string toString(bool verbose) const { return Allocator_.toString(verbose); }
 };
 
 inline StringAllocator string_allocator;
 
-/*
-namespace utf_internal {
-
-// Constants from utf8cpp
-static constexpr uint32_t LEAD_SURROGATE_MIN  = 0xd800u;
-static constexpr uint32_t LEAD_SURROGATE_MAX  = 0xdbffu;
-static constexpr uint32_t TRAIL_SURROGATE_MIN = 0xdc00u;
-static constexpr uint32_t TRAIL_SURROGATE_MAX = 0xdfffu;
-static constexpr uint32_t LEAD_OFFSET         = 0xd800u - (0x10000 >> 10);
-static constexpr uint32_t SURROGATE_OFFSET    = 0x10000u - (0xd800u << 10) - 0xdc00u;
-
-static constexpr uint32_t CODE_POINT_MAX = 0x10ffff;
-
-// UTF-8 byte markers
-static constexpr uint8_t TRAIL_BYTE_MASK = 0xc0u;
-static constexpr uint8_t TRAIL_BYTE_MARK = 0x80u;
-
-// Check if a UTF-16 value is a lead surrogate
-static inline bool is_lead_surrogate(uint16_t cp) noexcept { return cp >= LEAD_SURROGATE_MIN && cp <= LEAD_SURROGATE_MAX; }
-
-// Check if a UTF-16 value is a trail surrogate
-static inline bool is_trail_surrogate(uint16_t cp) noexcept { return cp >= TRAIL_SURROGATE_MIN && cp <= TRAIL_SURROGATE_MAX; }
-
-// Check if a UTF-8 byte is a trail byte
-static inline bool is_trail(uint8_t octet) noexcept { return (octet & TRAIL_BYTE_MASK) == TRAIL_BYTE_MARK; }
-
-// Check if a code point is valid
-static inline bool is_code_point_valid(uint32_t cp) noexcept { return cp <= CODE_POINT_MAX && !is_lead_surrogate(cp) && !is_trail_surrogate(cp); }
-
-// Mask a 16-bit value
-static inline uint16_t mask16(uint16_t val) noexcept { return val; }
-
-// Get sequence length from first UTF-8 byte
-static inline size_t sequence_length(uint8_t lead) noexcept
+struct String
 {
-  if (lead < 0x80)
-    return 1;
-  else if ((lead >> 5) == 0x6)
-    return 2;
-  else if ((lead >> 4) == 0xe)
-    return 3;
-  else if ((lead >> 3) == 0x1e)
-    return 4;
-  else
-    return 0;
-}
+ public:
+  typedef CharType*       Pointer;
+  typedef const CharType* ConstPointer;
 
-// Append a code point to UTF-8
-template<typename OutputIterator>
-static OutputIterator append_utf8(uint32_t cp, OutputIterator result)
-{
-  if (!is_code_point_valid(cp))
-    throw std::runtime_error("Invalid code point");
+  Pointer  ptr{nullptr};
+  SizeType len{0};
+  SizeType cap{0};
 
-  if (cp < 0x80)
-    // 1-byte sequence
-    *result++ = static_cast<uint8_t>(cp);
-  else if (cp < 0x800)
-  {  // 2-byte sequence
-    *result++ = static_cast<uint8_t>((cp >> 6) | 0xc0);
-    *result++ = static_cast<uint8_t>((cp & 0x3f) | 0x80);
-  }
-  else if (cp < 0x10000)
-  {  // 3-byte sequence
-    *result++ = static_cast<uint8_t>((cp >> 12) | 0xe0);
-    *result++ = static_cast<uint8_t>(((cp >> 6) & 0x3f) | 0x80);
-    *result++ = static_cast<uint8_t>((cp & 0x3f) | 0x80);
-  }
-  else
-  {  // 4-byte sequence
-    *result++ = static_cast<uint8_t>((cp >> 18) | 0xf0);
-    *result++ = static_cast<uint8_t>(((cp >> 12) & 0x3f) | 0x80);
-    *result++ = static_cast<uint8_t>(((cp >> 6) & 0x3f) | 0x80);
-    *result++ = static_cast<uint8_t>((cp & 0x3f) | 0x80);
-  }
-  return result;
-}
+  mutable SizeType RefCount{1};
 
-template<typename Iterator>
-static uint32_t next_utf8(Iterator& it, Iterator end)
-{
-  if (it >= end)
-    throw std::runtime_error("Not enough room");
+  String() = default;
 
-  uint32_t cp = static_cast<uint8_t>(*it);
-  size_t length = sequence_length(static_cast<uint8_t>(*it));
-
-  switch (length)
+  String(const String& other) :
+      len(other.len),
+      cap(other.cap),
+      RefCount(1)
   {
-  case 1:
-    ++it;
-    break;
-  case 2:
-    ++it;
-    if (it == end || !is_trail(*it))
-      throw std::runtime_error("Invalid UTF-8");
-    cp = ((cp & 0x1f) << 6) | ((*it) & 0x3f);
-    ++it;
-    if (cp < 0x80)  // Overlong check
-      throw std::runtime_error("Overlong UTF-8 sequence");
-    break;
-  case 3:
-    ++it;
-    if (it == end || !is_trail(*it))
-      throw std::runtime_error("Invalid UTF-8");
-    cp = ((cp & 0x0f) << 12) | ((static_cast<uint8_t>(*it) & 0x3f) << 6);
-    ++it;
-    if (it == end || !is_trail(*it))
-      throw std::runtime_error("Invalid UTF-8");
-    cp |= (*it) & 0x3f;
-    ++it;
-    if (cp < 0x800 || (cp >= 0xd800 && cp <= 0xdfff))
-      throw std::runtime_error("Invalid UTF-8");
-    break;
-  case 4:
-    ++it;
-    if (it == end || !is_trail(*it))
-      throw std::runtime_error("Invalid UTF-8");
-    cp = ((cp & 0x07) << 18) | ((static_cast<uint8_t>(*it) & 0x3f) << 12);
-    ++it;
-    if (it == end || !is_trail(*it))
-      throw std::runtime_error("Invalid UTF-8");
-    cp |= (static_cast<uint8_t>(*it) & 0x3f) << 6;
-    ++it;
-    if (it == end || !is_trail(*it))
-      throw std::runtime_error("Invalid UTF-8");
-    cp |= (*it) & 0x3f;
-    ++it;
-    if (cp < 0x10000 || cp > 0x10ffff)
-      throw std::runtime_error("Invalid UTF-8");
-    break;
-  default:
-    throw std::runtime_error("Invalid UTF-8");
-  }
-
-  if (!is_code_point_valid(cp))
-    throw std::runtime_error("Invalid code point");
-
-  return cp;
-}
-
-// UTF-16 to UTF-8 conversion (based on utf8cpp::utf16to8)
-template<typename U16Iterator, typename U8Iterator>
-static U8Iterator utf16to8(U16Iterator start, U16Iterator end, U8Iterator result)
-{
-  while (start != end)
-  {
-    uint32_t cp = static_cast<uint32_t>(mask16(*start++));
-
-    // Handle surrogate pairs
-    if (is_lead_surrogate(cp))
+    if (cap)
     {
-      if (start != end)
-      {
-        const uint32_t trail_surrogate = static_cast<uint32_t>(mask16(*start++));
-        if (is_trail_surrogate(trail_surrogate))
-        {
-          // Decode: cp = ((lead - 0xD800) << 10) + (trail - 0xDC00) + 0x10000
-          cp = ((cp - LEAD_SURROGATE_MIN) << 10) + 
-               (trail_surrogate - TRAIL_SURROGATE_MIN) + 0x10000;
-        }
-        else
-          throw std::runtime_error("Invalid UTF-16: expected trail surrogate");
-      }
-      else
-        throw std::runtime_error("Invalid UTF-16: lone lead surrogate");
+      ptr = string_allocator.allocateArray<CharType>(cap);
+      std::memcpy(ptr, other.ptr, (len + 1) * sizeof(CharType));
     }
-    // Lone trail surrogate
-    else if (is_trail_surrogate(cp))
-      throw std::runtime_error("Invalid UTF-16: lone trail surrogate");
-
-    result = append_utf8(cp, result);
   }
-  return result;
-}
 
-// UTF-8 to UTF-16 conversion (based on utf8cpp::utf8to16)
-template<typename U8Iterator, typename U16Iterator>
-static U16Iterator utf8to16(U8Iterator start, U8Iterator end, U16Iterator result)
-{
-  while (start < end)
+  String(const SizeType s)
   {
-    const uint32_t cp = next_utf8(start, end);
-
-    if (cp > 0xffff)
-    {  // Make a surrogate pair
-      *result++ = static_cast<uint16_t>((cp >> 10) + LEAD_OFFSET);
-      *result++ = static_cast<uint16_t>((cp & 0x3ff) + TRAIL_SURROGATE_MIN);
+    if (s)
+    {
+      ptr = string_allocator.allocateArray<CharType>(s + 1);
+      cap = s + 1;
+      len = 0;
+      // terminate
+      ptr[0] = BUFFER_END;
     }
-    else
-      *result++ = static_cast<uint16_t>(cp);
   }
-  return result;
-}
-}  // namespace utf_internal
-*/
+
+  String(ConstPointer s)
+  {
+    if (!s)
+      return;
+
+    // calculate len because the damn libc doesn't provide strlen for utf16
+    ConstPointer p = s;
+    while (*p++)
+      ;
+    len = p - s - 1;
+    cap = len + 1;
+    ptr = string_allocator.allocateArray<CharType>(cap);
+    std::memcpy(ptr, s, len * sizeof(CharType));
+    ptr[len] = BUFFER_END;
+  }
+
+  String(const SizeType s, const CharType c)
+  {
+    len = s;
+    cap = len + 1;
+    ptr = string_allocator.allocateArray<CharType>(cap);
+
+    Pointer p = ptr;
+    while (p < ptr + len)
+      *p++ = c;
+
+    ptr[len] = BUFFER_END;
+  }
+
+  String& operator=(const String&) = delete;
+
+  bool operator==(const String& other) const noexcept
+  {
+    // Different lengths
+    if (len != other.len)
+      return false;
+
+    // Both empty
+    if (len == 0)
+      return true;
+
+    // Self comparison
+    if (ptr == other.ptr)
+      return true;
+
+    return std::memcmp(ptr, other.ptr, len * sizeof(CharType)) == 0;
+  }
+
+  CharType operator[](const SizeType i) const { return ptr[i]; }
+
+  // 🔴 CRITICAL FIX: decrement() was incrementing!
+  void     increment() const noexcept { RefCount++; }
+  void     decrement() const noexcept { RefCount--; }  // FIXED: was RefCount++
+  SizeType referenceCount() const noexcept { return RefCount; }
+  void     terminate() noexcept { ptr[len] = BUFFER_END; }
+};
 
 class StringRef
 {
@@ -242,69 +158,226 @@ class StringRef
   typedef StringRef&       Reference;
   typedef const StringRef& ConstReference;
 
-  CharType* Ptr_{nullptr};
-  SizeType  Len_{0};       // length of the string (not including null terminator)
-  SizeType  Capacity_{1};  // allocated memory (including space for null terminator)
+  String* StringData_;
+
+  // Helper to create empty string
+  static String* createEmpty()
+  {
+    String* s = string_allocator.allocateObject<String>();
+    return s;
+  }
 
  public:
-  // Default constructor
-  StringRef() = default;
+  // FIXED: Initialize StringData_ properly
+  StringRef() :
+      StringData_(createEmpty())
+  {
+  }
 
-  explicit StringRef(const SizeType s);
-  StringRef(ConstReference other);
-  StringRef(StringRef&& other) noexcept;
-  StringRef(ConstPointer lit);
-  StringRef(const char* c_str) { *this = fromUtf8(c_str); }
-  StringRef(const SizeType s, const CharType c);
+  explicit StringRef(const SizeType s) :
+      StringData_(string_allocator.allocateObject<String>(s))
+  {
+  }
 
-  Reference operator=(ConstReference other);
-  Reference operator=(StringRef&& other) noexcept;
+  StringRef(ConstReference other) :
+      StringData_(other.get())
+  {
+    if (StringData_)
+      StringData_->increment();
+  }
+
+  StringRef(ConstPointer lit) :
+      StringData_(string_allocator.allocateObject<String>(lit))
+  {
+  }
+
+  StringRef(const char* c_str) :
+      StringData_(nullptr)  // 🔴 CRITICAL: Initialize before use!
+  {
+    if (!c_str || !c_str[0])
+      StringData_ = createEmpty();
+    else
+    {
+      // Don't use operator= on uninitialized object!
+      StringRef temp = fromUtf8(c_str);
+      StringData_    = temp.StringData_;
+      if (StringData_)
+        StringData_->increment();
+      // temp's destructor will decrement, so we increment to maintain balance
+    }
+  }
+
+  StringRef(const SizeType s, const CharType c) :
+      StringData_(string_allocator.allocateObject<String>(s, c))
+  {
+  }
+
+  explicit StringRef(String* data) :
+      StringData_(data ? data : createEmpty())
+  {
+  }
+
+  ~StringRef()
+  {
+    if (StringData_)
+    {
+      StringData_->decrement();
+      /// NOTE: Arena allocator limitation - memory persists until allocator destruction
+    }
+  }
+
+  // FIXED: Properly decrement old reference before assignment
+  Reference operator=(ConstReference other)
+  {
+    if (this == &other)
+      return *this;
+
+    // Decrement old reference
+    if (StringData_)
+      StringData_->decrement();
+
+    // Assign new reference
+    StringData_ = other.get();
+    if (StringData_)
+      StringData_->increment();
+
+    return *this;
+  }
 
   // Equality operator
-  bool operator==(ConstReference other) const noexcept;
+  bool operator==(ConstReference other) const noexcept
+  {
+    if (!StringData_ || !other.StringData_)
+      return StringData_ == other.StringData_;
+    return *StringData_ == *other.get();
+  }
+
   bool operator!=(ConstReference other) const noexcept { return !(*this == other); }
 
   // Expand capacity
-  void expand(const SizeType new_size);
+  void expand(const SizeType new_size)
+  {
+    COW();
+    if (new_size <= cap())
+      return;  // Already have enough capacity
+
+    ConstPointer old_ptr = data();
+    SizeType     new_capacity;
+
+    // FIXED: Check for overflow before multiplication
+    constexpr SizeType overflow_threshold = (std::numeric_limits<SizeType>::max() / 3) * 2;
+
+    if (new_size > overflow_threshold)
+      new_capacity = new_size + 1;
+    else
+      new_capacity = static_cast<SizeType>(new_size * 1.5 + 1);
+
+    // FIXED: Single allocation with proper error handling
+    Pointer new_ptr = string_allocator.allocateArray<CharType>(new_capacity);
+
+    // Copy old data if it exists
+    if (old_ptr && len() > 0)
+      std::memcpy(new_ptr, old_ptr, len() * sizeof(CharType));
+
+    StringData_->ptr = new_ptr;
+    StringData_->cap = new_capacity;
+
+    // Ensure null termination
+    if (len() < cap())
+      StringData_->terminate();
+  }
 
   // Reserve capacity (doesn't change length, only capacity)
   void reserve(const SizeType new_capacity)
   {
-    if (new_capacity > Capacity_)
+    if (new_capacity > cap())
+    {
+      COW();
       expand(new_capacity);
+    }
   }
 
   // Erase character at position
-  void erase(const SizeType at);
+  void erase(const SizeType at)
+  {
+    COW();
+    if (at >= len() || !data())
+      return;  // Out of bounds or empty string
+
+    std::memmove(StringData_->ptr + at, data() + at + 1, (len() - at - 1) * sizeof(CharType));
+
+    --StringData_->len;
+    StringData_->terminate();
+  }
 
   // Append another StringRef
-  Reference operator+=(ConstReference other);
-  Reference operator+=(CharType c);
+  Reference operator+=(ConstReference other)
+  {
+    COW();
 
-  CharType  operator[](const SizeType i) const { return Ptr_[i]; }
-  CharType& operator[](const SizeType i) { return Ptr_[i]; }
+    if (other.len() == 0)
+      return *this;
+
+    SizeType new_len = len() + other.len();
+
+    if (new_len + 1 > cap())  // +1 for null terminator
+      expand(new_len);
+
+    std::memcpy(StringData_->ptr + StringData_->len, other.data(), other.len() * sizeof(CharType));
+    StringData_->len                   = new_len;
+    StringData_->ptr[StringData_->len] = BUFFER_END;
+
+    return *this;
+  }
+
+  Reference operator+=(CharType c)
+  {
+    COW();
+
+    if (len() + 2 > cap())
+      expand(len() + 1);  // expand does account for nul
+
+    StringData_->ptr[len()]     = c;
+    StringData_->ptr[len() + 1] = BUFFER_END;
+    ++StringData_->len;
+
+    return *this;
+  }
+
+  // FIXED: Add null checks
+  CharType operator[](const SizeType i) const
+  {
+    if (!StringData_ || !StringData_->ptr)
+      throw std::runtime_error("StringRef::operator[]: null string data");
+    return (*StringData_)[i];
+  }
+
+  CharType& operator[](const SizeType i)
+  {
+    COW();
+    if (!StringData_ || !StringData_->ptr)
+      throw std::runtime_error("StringRef::operator[]: null string data");
+    return StringData_->ptr[i];
+  }
 
   // Safe access with bounds checking (always checked)
   MYLANG_NODISCARD CharType at(const SizeType i) const
   {
-    if (i >= Len_)
+    if (!StringData_ || !StringData_->ptr)
+      throw std::runtime_error("StringRef::at: null string data");
+    if (i >= len())
       throw std::out_of_range("StringRef::at: index out of bounds");
-    return Ptr_[i];
+    return StringData_->ptr[i];
   }
 
   CharType& at(const SizeType i)
   {
-    if (i >= Len_)
+    COW();
+    if (!StringData_ || !StringData_->ptr)
+      throw std::runtime_error("StringRef::at: null string data");
+    if (i >= len())
       throw std::out_of_range("StringRef::at: index out of bounds");
-    return Ptr_[i];
-  }
-
-  // Swap with another StringRef (noexcept)
-  void swap(StringRef& other) noexcept
-  {
-    std::swap(Ptr_, other.Ptr_);
-    std::swap(Len_, other.Len_);
-    std::swap(Capacity_, other.Capacity_);
+    return StringData_->ptr[i];
   }
 
   // Concatenation operators
@@ -321,22 +394,23 @@ class StringRef
     if (rhs.empty())
       return StringRef(lhs);
 
-    SizeType  new_len = lhs.len() + rhs.len();
-    StringRef result(new_len);  // Allocate exact size needed
+    // FIXED: Correct length calculation
+    SizeType actual_len = lhs.len() + rhs.len();
+    String*  result     = string_allocator.allocateObject<String>(actual_len);
 
-    std::memcpy(result.get(), lhs.cget(), lhs.len() * sizeof(CharType));
-    std::memcpy(result.get() + lhs.len(), rhs.cget(), rhs.len() * sizeof(CharType));
+    std::memcpy(result->ptr, lhs.data(), lhs.len() * sizeof(CharType));
+    std::memcpy(result->ptr + lhs.len(), rhs.data(), rhs.len() * sizeof(CharType));
 
-    result.Len_          = new_len;
-    result.Ptr_[new_len] = BUFFER_END;
+    result->len             = actual_len;  // FIXED: No +1 here
+    result->ptr[actual_len] = BUFFER_END;
 
-    return result;
+    return StringRef(result);
   }
 
   // StringRef + const char* (UTF-8 string)
   friend StringRef operator+(ConstReference lhs, const char* rhs)
   {
-    if (!rhs || rhs[0] == BUFFER_END)
+    if (!rhs || !rhs[0])
       return StringRef(lhs);
 
     StringRef rhs_str = fromUtf8(rhs);
@@ -346,7 +420,7 @@ class StringRef
   // const char* + StringRef
   friend StringRef operator+(const char* lhs, ConstReference rhs)
   {
-    if (!lhs || lhs[0] == BUFFER_END)
+    if (!lhs || !lhs[0])
       return StringRef(rhs);
 
     StringRef lhs_str = fromUtf8(lhs);
@@ -364,21 +438,24 @@ class StringRef
   // CharType + StringRef
   friend StringRef operator+(CharType lhs, ConstReference rhs)
   {
-    StringRef result(1);
+    StringRef result(1, BUFFER_END);
+    result.clear();
     result += lhs;
     result += rhs;
     return result;
   }
 
   // Accessors
-  MYLANG_NODISCARD SizeType     len() const noexcept { return Len_; }
-  MYLANG_NODISCARD SizeType     cap() const noexcept { return Capacity_; }
-  MYLANG_NODISCARD Pointer      get() noexcept { return Ptr_; }
-  MYLANG_NODISCARD ConstPointer cget() const noexcept { return Ptr_; }
-  MYLANG_NODISCARD bool         empty() const noexcept { return Len_ == 0; }
-
-  // Mutable accessors (use with caution)
-  SizeType& len_ref() { return Len_; }
+  MYLANG_NODISCARD SizeType len() const noexcept { return StringData_ ? StringData_->len : 0; }
+  MYLANG_NODISCARD SizeType cap() const noexcept { return StringData_ ? StringData_->cap : 0; }
+  MYLANG_NODISCARD String*  get() const noexcept { return StringData_; }
+  MYLANG_NODISCARD bool     empty() const noexcept { return !StringData_ || StringData_->len == 0; }
+  ConstPointer              data() const noexcept { return StringData_ ? StringData_->ptr : nullptr; }
+  Pointer                   data() noexcept
+  {
+    COW();
+    return StringData_ ? StringData_->ptr : nullptr;
+  }
 
   // Output stream operator
   friend std::ostream& operator<<(std::ostream& os, ConstReference str)
@@ -392,55 +469,158 @@ class StringRef
   // Clear the string (doesn't deallocate memory)
   void clear() noexcept
   {
-    if (Ptr_ && Capacity_ > 0)
-      Ptr_[0] = BUFFER_END;
-    Len_ = 0;
+    COW();
+    if (data() && cap() > 0)
+      StringData_->ptr[0] = BUFFER_END;
+    StringData_->len = 0;
   }
 
   // Resize capacity (preserves content)
   void resize(const SizeType s)
   {
-    if (s > Capacity_)
+    COW();
+    if (s > cap())
       expand(s);
   }
 
   // Find a character
   MYLANG_NODISCARD bool find(const CharType c) const noexcept
   {
-    for (SizeType i = 0; i < Len_; ++i)
-      if (Ptr_[i] == c)
-        return true;
-    return false;
+    if (!StringData_ || !StringData_->ptr)
+      return false;
+
+    Pointer p = StringData_->ptr;
+    while (*p && *p != c)
+      ++p;
+    return *p == c;
   }
 
   // Find position of a character (returns optional index)
   MYLANG_NODISCARD std::optional<SizeType> find_pos(const CharType c) const noexcept
   {
-    for (SizeType i = 0; i < Len_; ++i)
-      if (Ptr_[i] == c)
-        return i;
-    return std::nullopt;
+    if (!StringData_ || !StringData_->ptr)
+      return std::nullopt;
+
+    Pointer p = StringData_->ptr;
+    while (*p && *p != c)
+      ++p;
+    return *p == c ? std::optional<SizeType>(p - StringData_->ptr) : std::nullopt;
   }
 
   // Truncate string to specified length
   StringRef& truncate(const SizeType s)
   {
-    if (s < Len_ && Ptr_)
+    COW();
+    if (s < len() && StringData_->ptr)
     {
-      Ptr_[s] = BUFFER_END;
-      Len_    = s;
+      StringData_->ptr[s] = BUFFER_END;
+      StringData_->len    = s;
     }
     return *this;
   }
 
-  StringRef substr(std::optional<SizeType> start, std::optional<SizeType> end) const;
+  StringRef substr(std::optional<SizeType> start, std::optional<SizeType> end) const
+  {
+    if (empty())
+      return StringRef{};
+
+    SizeType start_val = start.value_or(0);
+    SizeType end_val   = end.value_or(len() - 1);
+
+    // Bounds checking
+    if (start_val >= len())
+      throw std::out_of_range("StringRef::substr: start index out of range");
+
+    if (end_val >= len())
+      end_val = len() - 1;  // Clamp to valid range
+
+    if (end_val < start_val)
+      throw std::invalid_argument("StringRef::substr: end must be >= start");
+
+    // Calculate length (end is inclusive)
+    SizeType ret_len = end_val - start_val + 1;
+
+    // Optimized - use direct memory copy
+    String* ret_data = string_allocator.allocateObject<String>(ret_len);
+    std::memcpy(ret_data->ptr, data() + start_val, ret_len * sizeof(CharType));
+    ret_data->len = ret_len;
+    ret_data->terminate();
+
+    return StringRef(ret_data);
+  }
+
   StringRef substr(SizeType start) const { return substr(std::optional<SizeType>(start), std::nullopt); }
 
   // Convert to double - improved error handling
-  double toDouble(SizeType* pos = nullptr) const;
+  double toDouble(SizeType* pos = nullptr) const
+  {
+    if (empty() || len() == 0)
+      throw std::invalid_argument("StringRef::toDouble: empty string");
 
-  MYLANG_NODISCARD std::string      toUtf8() const;
-  MYLANG_NODISCARD static StringRef fromUtf8(const std::string& utf8_str);
+    // Convert UTF-16 to UTF-8 for standard library parsing
+    std::string utf8_str = toUtf8();
+
+    // Use std::stod on the UTF-8 string
+    std::size_t utf8_pos = 0;
+    double      result;
+
+    try
+    {
+      result = std::stod(utf8_str, &utf8_pos);
+    } catch (const std::invalid_argument&)
+    {
+      throw std::invalid_argument("StringRef::toDouble: invalid number format");
+    } catch (const std::out_of_range&)
+    {
+      throw std::out_of_range("StringRef::toDouble: number out of range");
+    }
+
+    // Convert UTF-8 position back to UTF-16 position if requested
+    // This is approximate and may not be exact for multi-byte characters
+    if (pos)
+      *pos = static_cast<SizeType>(utf8_pos);
+
+    return result;
+  }
+
+  MYLANG_NODISCARD std::string toUtf8() const
+  {
+    if (empty() || len() == 0)
+      return std::string{};
+
+    std::string result;
+    result.reserve(len());  // PERFORMANCE: Pre-allocate approximate size
+
+    try
+    {
+      // Use embedded utf16to8 conversion
+      utf8::utf16to8(data(), data() + len(), std::back_inserter(result));
+    } catch (const std::runtime_error& e)
+    {
+      throw std::runtime_error(std::string("UTF-16 to UTF-8 conversion failed: ") + e.what());
+    }
+
+    return result;
+  }
+
+  MYLANG_NODISCARD static StringRef fromUtf8(const std::string& utf8_str)
+  {
+    if (utf8_str.empty())
+      return StringRef{};
+
+    std::u16string utf16_str;
+    utf16_str.reserve(utf8_str.size());  // PERFORMANCE: Pre-allocate
+
+    try
+    {
+      utf8::utf8to16(utf8_str.begin(), utf8_str.end(), std::back_inserter(utf16_str));
+    } catch (const std::runtime_error& e)
+    {
+      throw std::runtime_error(std::string("UTF-8 to UTF-16 conversion failed: ") + e.what());
+    }
+
+    return StringRef(utf16_str.data());
+  }
 
   // Convenience overload for C strings
   MYLANG_NODISCARD static StringRef fromUtf8(const char* utf8_cstr)
@@ -448,6 +628,20 @@ class StringRef
     if (!utf8_cstr)
       return StringRef{};
     return fromUtf8(std::string(utf8_cstr));
+  }
+
+  // PERFORMANCE: Only copy when actually shared
+  void COW()
+  {
+    if (!StringData_)
+      return;
+
+    if (StringData_->referenceCount() > 1)
+    {
+      String* s = string_allocator.allocateObject<String>(*StringData_);
+      StringData_->decrement();
+      StringData_ = s;
+    }
   }
 };  // StringRef
 
@@ -463,7 +657,7 @@ struct StringRefHash
     std::size_t       hash  = 14695981039346656037ULL;  // FNV offset basis
     const std::size_t prime = 1099511628211ULL;         // FNV prime
 
-    const CharType* data = str.cget();
+    const CharType* data = str.data();
     const SizeType  len  = str.len();
 
     // Hash the raw bytes of char16_t data
@@ -503,7 +697,7 @@ struct hash<mylang::StringRef>
     std::size_t       hash_value = 14695981039346656037ULL;
     const std::size_t prime      = 1099511628211ULL;
 
-    const mylang::CharType* data = str.cget();
+    const mylang::CharType* data = str.data();
     const mylang::SizeType  len  = str.len();
 
     const unsigned char* bytes      = reinterpret_cast<const unsigned char*>(data);

@@ -25,7 +25,7 @@ struct Location
   Location() = default;
 
   Location(std::string fpath, SizeType line, SizeType col, SizeType fpos) :
-      filepath(std::move(fpath)),
+      filepath(fpath),
       line(line),
       column(col),
       FilePos(fpos)
@@ -199,7 +199,7 @@ class Token
   Token(StringRef val, TokenType tt, SizeType line, SizeType col, SizeType fpos, std::string fpath, bool atbol = false) :
       Value_(val),
       Type_(tt),
-      Location_(std::move(fpath), line, col, fpos),
+      Location_(fpath, line, col, fpos),
       Atbol_(atbol)
   {
   }

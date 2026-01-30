@@ -13,7 +13,7 @@ SymbolTable::SymbolTable(SymbolTable* p, std::int32_t level) :
 void SymbolTable::define(const StringRef& name, Symbol symbol)
 {
   symbol.name    = name;
-  Symbols_[name] = std::move(symbol);
+  Symbols_[name] = symbol;
 }
 
 typename SymbolTable::Symbol* SymbolTable::lookup(const StringRef& name)

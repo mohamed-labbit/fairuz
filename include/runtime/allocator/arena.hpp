@@ -316,6 +316,98 @@ class MYLANG_COMPILER_ABI ArenaAllocator
   MYLANG_NODISCARD
   bool verifyAllocation(void* ptr) const;
 
+  std::string toString(bool verbose) const
+  {
+    std::ostringstream oss;
+    dumpStats(oss, verbose);
+    return oss.str();
+  }
+
+  void dumpStats(std::ostream& os, bool verbose) const
+  {
+    using std::setw;
+    using std::left;
+    using std::right;
+
+    constexpr int LABEL_W = 28;
+    constexpr int VALUE_W = 14;
+
+    auto bytes = [](SizeType b) -> std::string {
+      constexpr const char* suffix[] = {"B", "KB", "MB", "GB"};
+      double                value    = static_cast<double>(b);
+      int                   idx      = 0;
+      while (value >= 1024.0 && idx < 3)
+      {
+        value /= 1024.0;
+        ++idx;
+      }
+      std::ostringstream ss;
+      ss << std::fixed << std::setprecision(2) << value << suffix[idx];
+      return ss.str();
+    };
+
+    os << "\n";
+    os << "═══════════════════════════════════════════════════════\n";
+    os << " Arena Allocator Statistics [" << Name_ << "]\n";
+    os << "═══════════════════════════════════════════════════════\n";
+
+    // Core statistics
+    os << left << setw(LABEL_W) << "Total allocations" << right << setw(VALUE_W) << AllocStats_.TotalAllocations.load() << "\n";
+    os << left << setw(LABEL_W) << "Total bytes allocated" << right << setw(VALUE_W) << bytes(AllocStats_.TotalAllocated.load()) << "\n";
+    os << left << setw(LABEL_W) << "Active blocks" << right << setw(VALUE_W) << AllocStats_.ActiveBlocks.load() << "\n";
+    // os << left << setw(LABEL_W) << "Peak blocks" << right << setw(VALUE_W) << AllocStats_.PeakBlocks.load() << "\n";
+    os << left << setw(LABEL_W) << "Current block size" << right << setw(VALUE_W) << bytes(BlockSize_) << "\n";
+    os << left << setw(LABEL_W) << "Next block size" << right << setw(VALUE_W) << bytes(NextBlockSize_.load()) << "\n";
+    os << left << setw(LABEL_W) << "Max block size" << right << setw(VALUE_W) << bytes(MaxBlockSize_.load()) << "\n";
+    os << left << setw(LABEL_W) << "Growth strategy" << right << setw(VALUE_W)
+       << (GrowthFactor_.load() == GrowthStrategy::EXPONENTIAL ? "Exponential" : "Linear") << "\n";
+
+    // Feature flags
+    os << "\n";
+    os << " Features\n";
+    os << " ───────────────────────────────────────────────────\n";
+    os << left << setw(LABEL_W) << "Statistics enabled" << right << setw(VALUE_W) << (EnableStatistics_.load() ? "yes" : "no") << "\n";
+    os << left << setw(LABEL_W) << "Allocation tracking" << right << setw(VALUE_W) << (TrackAllocations_.load() ? "yes" : "no") << "\n";
+    os << left << setw(LABEL_W) << "Debug features" << right << setw(VALUE_W) << (DebugFeatures_.load() ? "yes" : "no") << "\n";
+
+    // Allocation tracking
+    if (verbose && TrackAllocations_.load())
+    {
+      std::shared_lock mapLock(AllocationMapMutex_);
+      std::shared_lock ptrLock(AllocatedPtrsMutex_);
+      os << "\n";
+      os << " Allocation Tracking\n";
+      os << " ───────────────────────────────────────────────────\n";
+      os << left << setw(LABEL_W) << "Live allocations" << right << setw(VALUE_W) << AllocationMap_.size() << "\n";
+      os << left << setw(LABEL_W) << "Tracked pointers" << right << setw(VALUE_W) << AllocatedPtrs_.size() << "\n";
+    }
+
+    // Block details
+    if (verbose)
+    {
+      std::shared_lock blocksLock(BlocksMutex_);
+      SizeType         totalCapacity = 0;
+      SizeType         totalUsed     = 0;
+      for (const auto& block : Blocks_)
+      {
+        totalCapacity += block.size();
+        totalUsed += block.used();
+      }
+      os << "\n";
+      os << " Memory Blocks\n";
+      os << " ───────────────────────────────────────────────────\n";
+      os << left << setw(LABEL_W) << "Block count" << right << setw(VALUE_W) << Blocks_.size() << "\n";
+      os << left << setw(LABEL_W) << "Total capacity" << right << setw(VALUE_W) << bytes(totalCapacity) << "\n";
+      os << left << setw(LABEL_W) << "Total used" << right << setw(VALUE_W) << bytes(totalUsed) << "\n";
+      if (totalCapacity > 0)
+      {
+        double usage = (100.0 * totalUsed) / totalCapacity;
+        os << left << setw(LABEL_W) << "Utilization" << right << setw(VALUE_W) << std::fixed << std::setprecision(2) << usage << "%" << "\n";
+      }
+    }
+    os << "═══════════════════════════════════════════════════════\n";
+  }
+
  private:
   MYLANG_NODISCARD
   Pointer allocateFromBlocks(SizeType alloc_size, SizeType align = alignof(std::max_align_t));

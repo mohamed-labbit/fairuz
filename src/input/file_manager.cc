@@ -265,7 +265,7 @@ std::vector<StringRef> FileManager::readLines(const SizeType start, const SizeTy
   lines.reserve(end - start);
 
   for (SizeType i = start; i < end; ++i)
-    lines.push_back(std::move(readLine(i)));
+    lines.push_back(readLine(i));
 
   return lines;
 }

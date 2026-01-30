@@ -24,7 +24,7 @@ Lexer::Lexer(input::FileManager* file_manager) :
   configureLocale();
 }
 
-Lexer::Lexer(std::vector<tok::Token>& seq, const SizeType s) :
+Lexer::Lexer(std::vector<const tok::Token*>& seq, const SizeType s) :
     TokStream_(seq),
     TokIndex_(0),
     IndentSize_(0)
@@ -32,18 +32,18 @@ Lexer::Lexer(std::vector<tok::Token>& seq, const SizeType s) :
   configureLocale();
 }
 
-std::vector<tok::Token> Lexer::tokenize()
+std::vector<const tok::Token*> Lexer::tokenize()
 {
-  while (next().type() != tok::TokenType::ENDMARKER)
+  while (next()->type() != tok::TokenType::ENDMARKER)
     ;
   return this->TokStream_;
 }
 
-tok::Token Lexer::peek(SizeType n)
+const tok::Token* Lexer::peek(SizeType n)
 {
   while (TokIndex_ + n >= TokStream_.size())
   {
-    if (!TokStream_.empty() && TokStream_.back().type() == tok::TokenType::ENDMARKER)
+    if (!TokStream_.empty() && TokStream_.back()->type() == tok::TokenType::ENDMARKER)
       return TokStream_.back();
     lexToken();
   }
@@ -51,18 +51,18 @@ tok::Token Lexer::peek(SizeType n)
   return TokStream_[TokIndex_ + n];
 }
 
-tok::Token Lexer::lexToken()
+const tok::Token* Lexer::lexToken()
 {
   auto finish = [this](tok::TokenType tt, StringRef str, SizeType l, SizeType c) {
-    tok::Token ret = make_token(tt, std::move(str), l, c);
-    store(std::move(ret));
+    tok::Token* ret = make_token(tt, str, l, c);
+    store(ret);
     return TokStream_.back();
   };
 
   if (TokStream_.empty())
   {
-    tok::Token ret = make_token(tok::TokenType::BEGINMARKER, std::nullopt, 1, 1);
-    store(std::move(ret));
+    tok::Token* ret = make_token(tok::TokenType::BEGINMARKER, std::nullopt, 1, 1);
+    store(ret);
     return TokStream_.back();
   }
 
@@ -231,9 +231,9 @@ tok::Token Lexer::lexToken()
       if (c2 == quote)
         consumeChar();
       else
-        return make_token(tok::TokenType::INVALID, std::move(str));
+        return make_token(tok::TokenType::INVALID, str);
 
-      return finish(tok::TokenType::STRING, std::move(str), line, col);
+      return finish(tok::TokenType::STRING, str, line, col);
     }
     case ',' :
     case u'،' :
@@ -260,7 +260,7 @@ tok::Token Lexer::lexToken()
       if (tok::keywords.count(id))
         tt = tok::keywords.at(id);
 
-      return finish(tt, std::move(id), line, col);
+      return finish(tt, id, line, col);
     }
 
     // Numbers
@@ -303,7 +303,7 @@ tok::Token Lexer::lexToken()
           if (!hasDigits)
             diagnostic::engine.panic("Invalid hexadecimal literal: no digits after 0x");
 
-          return finish(tok::TokenType::NUMBER, std::move(num), line, col);
+          return finish(tok::TokenType::NUMBER, num, line, col);
         }
         else if (c2 == 'o' || c2 == 'O')
         {
@@ -339,7 +339,7 @@ tok::Token Lexer::lexToken()
           if (!hasDigits)
             diagnostic::engine.panic("Invalid octal literal: no digits after 0o");
 
-          return finish(tok::TokenType::NUMBER, std::move(num), line, col);
+          return finish(tok::TokenType::NUMBER, num, line, col);
         }
         else if (c2 == 'b' || c2 == 'B')
         {
@@ -375,7 +375,7 @@ tok::Token Lexer::lexToken()
           if (!hasDigits)
             diagnostic::engine.panic("Invalid binary literal: no digits after 0b");
 
-          return finish(tok::TokenType::NUMBER, std::move(num), line, col);
+          return finish(tok::TokenType::NUMBER, num, line, col);
         }
         // If it's just '0' followed by regular digits or '.', fall through to decimal parsing
       }
@@ -423,10 +423,10 @@ tok::Token Lexer::lexToken()
             break;
         }
 
-        return finish(tok::TokenType::FLOAT, std::move(num), line, col);
+        return finish(tok::TokenType::FLOAT, num, line, col);
       }
 
-      return finish(tok::TokenType::NUMBER, std::move(num), line, col);
+      return finish(tok::TokenType::NUMBER, num, line, col);
     }
 
     // Operators
@@ -449,7 +449,7 @@ tok::Token Lexer::lexToken()
       }
 
       tok::TokenType tt = tok::operators.count(op) ? tok::operators.at(op) : tok::TokenType::IDENTIFIER;
-      return finish(tt, std::move(op), line, col);
+      return finish(tt, op, line, col);
     }
 
     // Symbols
@@ -492,7 +492,7 @@ tok::Token Lexer::lexToken()
         break;
       }
 
-      return finish(tt, std::move(sym), line, col);
+      return finish(tt, sym, line, col);
     }
 
     // Unknown
@@ -500,21 +500,21 @@ tok::Token Lexer::lexToken()
     return finish(tok::TokenType::INVALID, StringRef(ch), line, col);
   }
 
-  if (!TokStream_.empty() && TokStream_.back().type() == tok::TokenType::ENDMARKER)
+  if (!TokStream_.empty() && TokStream_.back()->type() == tok::TokenType::ENDMARKER)
     return TokStream_.back();
 
   // not calling finish since update context is useless at end
   consumeChar();
 
-  if (!TokStream_.empty() && TokStream_.back().type() == tok::TokenType::ENDMARKER)
+  if (!TokStream_.empty() && TokStream_.back()->type() == tok::TokenType::ENDMARKER)
     return TokStream_.back();
 
-  tok::Token ret = make_token(tok::TokenType::ENDMARKER, std::nullopt, std::nullopt, SourceManager_.column() - 1);
-  store(std::move(ret));
+  const tok::Token* ret = make_token(tok::TokenType::ENDMARKER, std::nullopt, std::nullopt, SourceManager_.column() - 1);
+  store(ret);
   return TokStream_.back();
 }
 
-tok::Token Lexer::next()
+const tok::Token* Lexer::next()
 {
   // Advance the index first
   ++TokIndex_;
@@ -524,7 +524,7 @@ tok::Token Lexer::next()
   {
     lexToken();
     // After lexing, check if we hit ENDMARKER
-    if (!TokStream_.empty() && TokStream_.back().type() == tok::TokenType::ENDMARKER)
+    if (!TokStream_.empty() && TokStream_.back()->type() == tok::TokenType::ENDMARKER)
     {
       // We've reached EOF, stay at ENDMARKER
       TokIndex_ = TokStream_.size() - 1;
@@ -535,7 +535,7 @@ tok::Token Lexer::next()
   return TokStream_[TokIndex_];
 }
 
-tok::Token Lexer::prev()
+const tok::Token* Lexer::prev()
 {
   if (TokIndex_ > 0)
     --TokIndex_;
@@ -545,9 +545,9 @@ tok::Token Lexer::prev()
   return TokStream_[TokIndex_];
 }
 
-tok::Token Lexer::current() const
+const tok::Token* Lexer::current() const
 {
-  if (TokStream_.back().is(tok::TokenType::ENDMARKER))
+  if (TokStream_.back()->is(tok::TokenType::ENDMARKER))
     return TokStream_.back();
 
   if (TokIndex_ < TokStream_.size())
@@ -556,10 +556,10 @@ tok::Token Lexer::current() const
   return make_token(tok::TokenType::ENDMARKER);
 }
 
-void Lexer::store(tok::Token tok)
+void Lexer::store(const tok::Token* tok)
 {
   // push and update index
-  TokStream_.push_back(std::move(tok));
+  TokStream_.push_back(tok);
 }
 
 }  // namespace lex
