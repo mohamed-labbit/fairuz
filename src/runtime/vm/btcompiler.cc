@@ -451,7 +451,7 @@ void BytecodeCompiler::compileStmt(const parser::ast::Stmt* stmt)
     std::int32_t                         funcStackSize    = MaxStackDepth_;
 
     // Restore compilation state
-    Unit_.instructions = std::move(savedInstructions);
+    Unit_.instructions = savedInstructions;
     Constants_         = savedConstants;
     CurrentStackDepth_ = savedStackDepth;
     MaxStackDepth_     = savedMaxStackDepth;

@@ -181,7 +181,7 @@ class ListExpr: public Expr
   ListExpr() = default;
 
   explicit ListExpr(std::vector<Expr*> elements) :
-      Elements_(std::move(elements))
+      Elements_(elements)
   {
     Kind_ = Kind::LIST;
     // Note: Empty lists can be valid

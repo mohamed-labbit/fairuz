@@ -113,7 +113,7 @@ StringRef InputBuffer::nPeek(SizeType n)
 
   SizeType     rem     = n;
   std::int32_t buf_idx = CurrentBuffer_;
-  SizeType     offset  = static_cast<SizeType>(Current_ - Buffers_[buf_idx].get() + 1);
+  SizeType     offset  = static_cast<SizeType>(Current_ - Buffers_[buf_idx].data() + 1);
 
   while (rem > 0)
   {
@@ -152,7 +152,7 @@ void InputBuffer::reset()
   Buffers_[0].clear();
   Buffers_[1].clear();
 
-  Current_         = Buffers_[0].get();
+  Current_         = Buffers_[0].data();
   CurrentPosition_ = {1, 1, 0};
 
   // Clear column stack and initialize
@@ -168,7 +168,7 @@ void InputBuffer::reset()
 void InputBuffer::swapBuffers_()
 {
   CurrentBuffer_ ^= 1;
-  Current_ = Buffers_[CurrentBuffer_].get();
+  Current_ = Buffers_[CurrentBuffer_].data();
 
   // Ensure column stack is never empty
   if (Columns_.empty())

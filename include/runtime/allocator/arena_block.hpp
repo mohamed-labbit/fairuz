@@ -128,6 +128,14 @@ class ArenaBlock
     return Size_;
   }
 
+  SizeType used() const
+  {
+    Pointer current = Next_.load(std::memory_order_acquire);
+    if (!Begin_ || current < Begin_)
+      return 0;
+    return static_cast<SizeType>(current - Begin_);
+  }
+
   /**
      * @brief Calculate remaining free space in the block
      * @return Number of bytes still available for allocation

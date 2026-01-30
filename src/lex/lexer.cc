@@ -54,7 +54,7 @@ const tok::Token* Lexer::peek(SizeType n)
 const tok::Token* Lexer::lexToken()
 {
   auto finish = [this](tok::TokenType tt, StringRef str, SizeType l, SizeType c) {
-    tok::Token* ret = make_token(tt, std::move(str), l, c);
+    tok::Token* ret = make_token(tt, str, l, c);
     store(ret);
     return TokStream_.back();
   };
@@ -231,9 +231,9 @@ const tok::Token* Lexer::lexToken()
       if (c2 == quote)
         consumeChar();
       else
-        return make_token(tok::TokenType::INVALID, std::move(str));
+        return make_token(tok::TokenType::INVALID, str);
 
-      return finish(tok::TokenType::STRING, std::move(str), line, col);
+      return finish(tok::TokenType::STRING, str, line, col);
     }
     case ',' :
     case u'،' :
@@ -260,7 +260,7 @@ const tok::Token* Lexer::lexToken()
       if (tok::keywords.count(id))
         tt = tok::keywords.at(id);
 
-      return finish(tt, std::move(id), line, col);
+      return finish(tt, id, line, col);
     }
 
     // Numbers
@@ -303,7 +303,7 @@ const tok::Token* Lexer::lexToken()
           if (!hasDigits)
             diagnostic::engine.panic("Invalid hexadecimal literal: no digits after 0x");
 
-          return finish(tok::TokenType::NUMBER, std::move(num), line, col);
+          return finish(tok::TokenType::NUMBER, num, line, col);
         }
         else if (c2 == 'o' || c2 == 'O')
         {
@@ -339,7 +339,7 @@ const tok::Token* Lexer::lexToken()
           if (!hasDigits)
             diagnostic::engine.panic("Invalid octal literal: no digits after 0o");
 
-          return finish(tok::TokenType::NUMBER, std::move(num), line, col);
+          return finish(tok::TokenType::NUMBER, num, line, col);
         }
         else if (c2 == 'b' || c2 == 'B')
         {
@@ -375,7 +375,7 @@ const tok::Token* Lexer::lexToken()
           if (!hasDigits)
             diagnostic::engine.panic("Invalid binary literal: no digits after 0b");
 
-          return finish(tok::TokenType::NUMBER, std::move(num), line, col);
+          return finish(tok::TokenType::NUMBER, num, line, col);
         }
         // If it's just '0' followed by regular digits or '.', fall through to decimal parsing
       }
@@ -423,10 +423,10 @@ const tok::Token* Lexer::lexToken()
             break;
         }
 
-        return finish(tok::TokenType::FLOAT, std::move(num), line, col);
+        return finish(tok::TokenType::FLOAT, num, line, col);
       }
 
-      return finish(tok::TokenType::NUMBER, std::move(num), line, col);
+      return finish(tok::TokenType::NUMBER, num, line, col);
     }
 
     // Operators
@@ -449,7 +449,7 @@ const tok::Token* Lexer::lexToken()
       }
 
       tok::TokenType tt = tok::operators.count(op) ? tok::operators.at(op) : tok::TokenType::IDENTIFIER;
-      return finish(tt, std::move(op), line, col);
+      return finish(tt, op, line, col);
     }
 
     // Symbols
@@ -492,7 +492,7 @@ const tok::Token* Lexer::lexToken()
         break;
       }
 
-      return finish(tt, std::move(sym), line, col);
+      return finish(tt, sym, line, col);
     }
 
     // Unknown

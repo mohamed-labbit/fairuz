@@ -14,8 +14,8 @@ std::filesystem::path lexer_test_cases_dir()
 
 TEST(LexerTest, TestIndentationLevel0)
 {
-  input::FileManager             file_manager(lexer_test_cases_dir() / "recognizes_indentation_level0.txt");
-  lex::Lexer                     lexer(&file_manager);
+  input::FileManager file_manager(lexer_test_cases_dir() / "recognizes_indentation_level0.txt");
+  lex::Lexer         lexer(&file_manager);
   std::vector<const tok::Token*> tokens   = lexer.tokenize();
   const tok::Token*              expected = lexer.make_token(tok::TokenType::IDENTIFIER, u"ا", 1, 1);
   EXPECT_EQ(tokens.size(), 3);

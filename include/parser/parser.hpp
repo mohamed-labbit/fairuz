@@ -45,8 +45,8 @@ class ParseError: public std::runtime_error
   ParseError(const StringRef& msg, unsigned l, unsigned c, StringRef ctx = u"", std::vector<StringRef> sugg = {}) :
       Line_(l),
       Column_(c),
-      Context_(std::move(ctx)),
-      Suggestions_(std::move(sugg)),
+      Context_(ctx),
+      Suggestions_(sugg),
       std::runtime_error("")
   {
   }

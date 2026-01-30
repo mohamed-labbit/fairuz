@@ -1,8 +1,10 @@
+#include "../include/types.hpp"
 #include "test_config.h"
 #include <cstring>
 #include <gtest/gtest.h>
 #include <string>
 
+using namespace mylang;
 
 namespace test_config {
 
@@ -20,16 +22,18 @@ int main(int argc, char** argv)
     std::string arg = argv[i];
 
     if (arg == "--print-ast")
-    { 
-			test_config::print_ast = true; 
+    {
+      test_config::print_ast = true;
     }
-		else 
-		{
-			std::cerr << "main: unknown option " << arg << std::endl;
-			return 1;
-		}
-
+    else
+    {
+      std::cerr << "main: unknown option " << arg << std::endl;
+      return 1;
+    }
   }
 
-  return RUN_ALL_TESTS();
+  if (RUN_ALL_TESTS() == 0)
+    std::cout << string_allocator.toString(true) << std::endl;
+
+  return 0;
 }

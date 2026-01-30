@@ -66,8 +66,8 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
   if (expr->getKind() == ast::Expr::Kind::BINARY)
   {
     ast::BinaryExpr* bin = static_cast<ast::BinaryExpr*>(expr);
-    bin->setLeft(optimizeConstantFolding(std::move(bin->getLeft())));
-    bin->setRight(optimizeConstantFolding(std::move(bin->getRight())));
+    bin->setLeft(optimizeConstantFolding(bin->getLeft()));
+    bin->setRight(optimizeConstantFolding(bin->getRight()));
     // Try to evaluate
     if (std::optional<double> val = evaluateConstant(expr))
     {
@@ -85,7 +85,7 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
       if (lit->getValue() == u"0")
       {
         ++Stats_.StrengthReductions;
-        return std::move(bin->getLeft());
+        return bin->getLeft();
       }
     }
     // x * 1 = x, x / 1 = x
@@ -96,7 +96,7 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
       if (lit->getValue() == u"1")
       {
         ++Stats_.StrengthReductions;
-        return std::move(bin->getLeft());
+        return bin->getLeft();
       }
     }
     // x * 0 = 0
@@ -157,13 +157,13 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
   {
     ast::CallExpr* call = static_cast<ast::CallExpr*>(expr);
     for (ast::Expr*& arg : call->getArgsMutable())
-      arg = optimizeConstantFolding(std::move(arg));
+      arg = optimizeConstantFolding(arg);
   }
   else if (expr->getKind() == ast::Expr::Kind::LIST)
   {
     ast::ListExpr* list = static_cast<ast::ListExpr*>(expr);
     for (ast::Expr*& elem : list->getElementsMutable())
-      elem = optimizeConstantFolding(std::move(elem));
+      elem = optimizeConstantFolding(elem);
   }
   return expr;
 }
@@ -200,12 +200,12 @@ ast::Stmt* ASTOptimizer::eliminateDeadCode(ast::Stmt* stmt)
     std::vector<ast::Stmt*> newElseStmts;
 
     for (ast::Stmt* const& s : ifStmt->getThenBlock()->getStatements())
-      if (ast::Stmt* opt = eliminateDeadCode(std::move(s)))
-        newThenStmts.push_back(std::move(opt));
+      if (ast::Stmt* opt = eliminateDeadCode(s))
+        newThenStmts.push_back(opt);
 
     for (ast::Stmt* const& s : ifStmt->getElseBlock()->getStatements())
-      if (ast::Stmt* opt = eliminateDeadCode(std::move(s)))
-        newElseStmts.push_back(std::move(opt));
+      if (ast::Stmt* opt = eliminateDeadCode(s))
+        newElseStmts.push_back(opt);
 
     ast::BlockStmt* newThen = ast::AST_allocator.make<ast::BlockStmt>(newThenStmts);
     ast::BlockStmt* newElse = ast::AST_allocator.make<ast::BlockStmt>(newElseStmts);
@@ -225,8 +225,8 @@ ast::Stmt* ASTOptimizer::eliminateDeadCode(ast::Stmt* stmt)
     }
     std::vector<ast::Stmt*> newBody;
     for (ast::Stmt* const& s : whileStmt->getBlock()->getStatements())
-      if (ast::Stmt* opt = eliminateDeadCode(std::move(s)))
-        newBody.push_back(std::move(opt));
+      if (ast::Stmt* opt = eliminateDeadCode(s))
+        newBody.push_back(opt);
     whileStmt->getBlockMutable()->setStatements(newBody);
   }
   else if (stmt->getKind() == ast::Stmt::Kind::FOR)
@@ -235,7 +235,7 @@ ast::Stmt* ASTOptimizer::eliminateDeadCode(ast::Stmt* stmt)
     std::vector<ast::Stmt*> newBodyStmts;
     for (ast::Stmt* const& s : forStmt->getBlock()->getStatements())
       if (ast::Stmt* opt = eliminateDeadCode(s))
-        newBodyStmts.push_back(std::move(opt));
+        newBodyStmts.push_back(opt);
     ast::BlockStmt* newBody = ast::AST_allocator.make<ast::BlockStmt>(newBodyStmts);
     forStmt->setBlock(newBody);
   }
@@ -253,8 +253,8 @@ ast::Stmt* ASTOptimizer::eliminateDeadCode(ast::Stmt* stmt)
       }
       if (s->getKind() == ast::Stmt::Kind::RETURN)
         seenReturn = true;
-      if (ast::Stmt* opt = eliminateDeadCode(std::move(s)))
-        newBodyStmts.push_back(std::move(opt));
+      if (ast::Stmt* opt = eliminateDeadCode(s))
+        newBodyStmts.push_back(opt);
     }
     ast::BlockStmt* newBody = ast::AST_allocator.make<ast::BlockStmt>(newBodyStmts);
     funcDef->setBody(newBody);
@@ -358,9 +358,9 @@ std::vector<ast::Stmt*> ASTOptimizer::optimize(std::vector<ast::Stmt*> statement
     }
     // O2: Dead code elimination
     if (level >= 2)
-      stmt = eliminateDeadCode(std::move(stmt));
+      stmt = eliminateDeadCode(stmt);
     if (stmt)
-      result.push_back(std::move(stmt));
+      result.push_back(stmt);
   }
   return result;
 }
