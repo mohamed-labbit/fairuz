@@ -136,6 +136,20 @@ class ArenaBlock
     return static_cast<SizeType>(current - Begin_);
   }
 
+  bool pop(SizeType bytes)
+  {
+    Pointer current = Next_.load(std::memory_order_acquire);
+    while (true)
+    {
+      if (!Begin_ || current < Begin_ + bytes)
+        return false;
+      Pointer desired = current - bytes;
+      if (Next_.compare_exchange_weak(current, desired, std::memory_order_acq_rel, std::memory_order_acquire))
+        return true;
+      // current updated automatically, retry
+    }
+  }
+
   /**
      * @brief Calculate remaining free space in the block
      * @return Number of bytes still available for allocation

@@ -170,6 +170,8 @@ class MYLANG_COMPILER_ABI ArenaAllocator
   // Alignment settings
   static constexpr SizeType Alignment_ = alignof(std::max_align_t);  ///< Minimum alignment
   std::atomic<SizeType>     MaxBlockSize_{MAX_BLOCK_SIZE};           ///< Maximum block size
+  // for deallocation
+  std::atomic<void*> LastPtr_{nullptr};
 
  public:
   //==========================================================================
@@ -300,8 +302,7 @@ class MYLANG_COMPILER_ABI ArenaAllocator
      * @note Does NOT actually free memory to the OS - memory is retained
      *       in free lists for reuse.
      */
-  template<typename _Tp>
-  MYLANG_COMPILER_ABI void deallocate(_Tp* ptr, SizeType count);
+  MYLANG_COMPILER_ABI void deallocate(void* ptr, const SizeType size);
 
   /**
      * @brief Verify allocation integrity (debug feature)
@@ -352,23 +353,31 @@ class MYLANG_COMPILER_ABI ArenaAllocator
     os << "═══════════════════════════════════════════════════════\n";
 
     // Core statistics
-    os << left << setw(LABEL_W) << "Total allocations" << right << setw(VALUE_W) << AllocStats_.TotalAllocations.load() << "\n";
-    os << left << setw(LABEL_W) << "Total bytes allocated" << right << setw(VALUE_W) << bytes(AllocStats_.TotalAllocated.load()) << "\n";
-    os << left << setw(LABEL_W) << "Active blocks" << right << setw(VALUE_W) << AllocStats_.ActiveBlocks.load() << "\n";
-    // os << left << setw(LABEL_W) << "Peak blocks" << right << setw(VALUE_W) << AllocStats_.PeakBlocks.load() << "\n";
-    os << left << setw(LABEL_W) << "Current block size" << right << setw(VALUE_W) << bytes(BlockSize_) << "\n";
-    os << left << setw(LABEL_W) << "Next block size" << right << setw(VALUE_W) << bytes(NextBlockSize_.load()) << "\n";
-    os << left << setw(LABEL_W) << "Max block size" << right << setw(VALUE_W) << bytes(MaxBlockSize_.load()) << "\n";
-    os << left << setw(LABEL_W) << "Growth strategy" << right << setw(VALUE_W)
+    os << Color::BOLD << Color::CYAN << left << setw(LABEL_W) << "Total allocations" << Color::RESET << right << setw(VALUE_W)
+       << AllocStats_.TotalAllocations.load() << "\n";
+    os << Color::BOLD << Color::CYAN << left << setw(LABEL_W) << "Total bytes allocated" << Color::RESET << right << setw(VALUE_W)
+       << bytes(AllocStats_.TotalAllocated.load()) << "\n";
+    os << Color::BOLD << Color::CYAN << left << setw(LABEL_W) << "Active blocks" << Color::RESET << right << setw(VALUE_W)
+       << AllocStats_.ActiveBlocks.load() << "\n";
+    os << Color::BOLD << Color::CYAN << left << setw(LABEL_W) << "Current block size" << Color::RESET << right << setw(VALUE_W) << bytes(BlockSize_)
+       << "\n";
+    os << Color::BOLD << Color::CYAN << left << setw(LABEL_W) << "Next block size" << Color::RESET << right << setw(VALUE_W)
+       << bytes(NextBlockSize_.load()) << "\n";
+    os << Color::BOLD << Color::CYAN << left << setw(LABEL_W) << "Max block size" << Color::RESET << right << setw(VALUE_W)
+       << bytes(MaxBlockSize_.load()) << "\n";
+    os << Color::BOLD << Color::CYAN << left << setw(LABEL_W) << "Growth strategy" << Color::RESET << right << setw(VALUE_W)
        << (GrowthFactor_.load() == GrowthStrategy::EXPONENTIAL ? "Exponential" : "Linear") << "\n";
 
     // Feature flags
     os << "\n";
     os << " Features\n";
     os << " ───────────────────────────────────────────────────\n";
-    os << left << setw(LABEL_W) << "Statistics enabled" << right << setw(VALUE_W) << (EnableStatistics_.load() ? "yes" : "no") << "\n";
-    os << left << setw(LABEL_W) << "Allocation tracking" << right << setw(VALUE_W) << (TrackAllocations_.load() ? "yes" : "no") << "\n";
-    os << left << setw(LABEL_W) << "Debug features" << right << setw(VALUE_W) << (DebugFeatures_.load() ? "yes" : "no") << "\n";
+    os << Color::BOLD << Color::GREEN << left << setw(LABEL_W) << "Statistics enabled" << Color::RESET << right << setw(VALUE_W)
+       << (EnableStatistics_.load() ? "yes" : "no") << "\n";
+    os << Color::BOLD << Color::GREEN << left << setw(LABEL_W) << "Allocation tracking" << Color::RESET << right << setw(VALUE_W)
+       << (TrackAllocations_.load() ? "yes" : "no") << "\n";
+    os << Color::BOLD << Color::GREEN << left << setw(LABEL_W) << "Debug features" << Color::RESET << right << setw(VALUE_W)
+       << (DebugFeatures_.load() ? "yes" : "no") << "\n";
 
     // Allocation tracking
     if (verbose && TrackAllocations_.load())
@@ -378,8 +387,10 @@ class MYLANG_COMPILER_ABI ArenaAllocator
       os << "\n";
       os << " Allocation Tracking\n";
       os << " ───────────────────────────────────────────────────\n";
-      os << left << setw(LABEL_W) << "Live allocations" << right << setw(VALUE_W) << AllocationMap_.size() << "\n";
-      os << left << setw(LABEL_W) << "Tracked pointers" << right << setw(VALUE_W) << AllocatedPtrs_.size() << "\n";
+      os << Color::BOLD << Color::MAGENTA << left << setw(LABEL_W) << "Live allocations" << Color::RESET << right << setw(VALUE_W)
+         << AllocationMap_.size() << "\n";
+      os << Color::BOLD << Color::MAGENTA << left << setw(LABEL_W) << "Tracked pointers" << Color::RESET << right << setw(VALUE_W)
+         << AllocatedPtrs_.size() << "\n";
     }
 
     // Block details
@@ -396,13 +407,17 @@ class MYLANG_COMPILER_ABI ArenaAllocator
       os << "\n";
       os << " Memory Blocks\n";
       os << " ───────────────────────────────────────────────────\n";
-      os << left << setw(LABEL_W) << "Block count" << right << setw(VALUE_W) << Blocks_.size() << "\n";
-      os << left << setw(LABEL_W) << "Total capacity" << right << setw(VALUE_W) << bytes(totalCapacity) << "\n";
-      os << left << setw(LABEL_W) << "Total used" << right << setw(VALUE_W) << bytes(totalUsed) << "\n";
+      os << Color::BOLD << Color::YELLOW << left << setw(LABEL_W) << "Block count" << Color::RESET << right << setw(VALUE_W) << Blocks_.size()
+         << "\n";
+      os << Color::BOLD << Color::YELLOW << left << setw(LABEL_W) << "Total capacity" << Color::RESET << right << setw(VALUE_W)
+         << bytes(totalCapacity) << "\n";
+      os << Color::BOLD << Color::YELLOW << left << setw(LABEL_W) << "Total used" << Color::RESET << right << setw(VALUE_W) << bytes(totalUsed)
+         << "\n";
       if (totalCapacity > 0)
       {
         double usage = (100.0 * totalUsed) / totalCapacity;
-        os << left << setw(LABEL_W) << "Utilization" << right << setw(VALUE_W) << std::fixed << std::setprecision(2) << usage << "%" << "\n";
+        os << Color::BOLD << Color::YELLOW << left << setw(LABEL_W) << "Utilization" << Color::RESET << right << setw(VALUE_W) << std::fixed
+           << std::setprecision(2) << usage << "%" << "\n";
       }
     }
     os << "═══════════════════════════════════════════════════════\n";

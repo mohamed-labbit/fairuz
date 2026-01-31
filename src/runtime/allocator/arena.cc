@@ -153,7 +153,30 @@ MYLANG_NODISCARD MYLANG_COMPILER_ABI void* ArenaAllocator::allocate(const SizeTy
   // Construct objects if needed
 
   std::chrono::steady_clock::time_point end = std::chrono::high_resolution_clock::now();
-  return static_cast<void*>(mem);
+
+  LastPtr_ = static_cast<void*>(mem);
+  return LastPtr_;
+}
+
+MYLANG_COMPILER_ABI
+void ArenaAllocator::deallocate(void* ptr, const SizeType size)
+{
+  if (!ptr || size == 0)
+    return;
+  // Strict LIFO check
+  Pointer expected = static_cast<Pointer>(ptr);
+  Pointer last     = static_cast<Pointer>(LastPtr_.load(std::memory_order_acquire));
+  if (expected != last)
+    return;
+  // We MUST operate on the last block
+  std::unique_lock<std::shared_mutex> lock(BlocksMutex_);
+  if (Blocks_.empty())
+    return;
+  ArenaBlock& block = Blocks_.back();
+  // CAS-based pop (must be safe)
+  bool ok = block.pop(size);
+  // Clear LastPtr_ (important!)
+  LastPtr_.store(nullptr, std::memory_order_release);
 }
 
 MYLANG_NODISCARD
