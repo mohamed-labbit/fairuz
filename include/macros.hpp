@@ -7,6 +7,7 @@
 namespace mylang {
 
 #define BUFFER_END u'\0'
+#define SSO_SIZE 20  // to make sizeof(String) = 64 bytes
 #define TABWIDTH 8
 #define MAX_ALLOWED_INDENT 100
 #define DEFAULT_CAPACITY 4096

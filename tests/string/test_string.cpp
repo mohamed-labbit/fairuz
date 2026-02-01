@@ -29,8 +29,8 @@ TEST_F(StringRefTest, DefaultConstructor)
   StringRef s;
   EXPECT_TRUE(s.empty());
   EXPECT_EQ(s.len(), 0);
-  EXPECT_EQ(s.cap(), 0);
-  EXPECT_EQ(s.data(), nullptr);
+  EXPECT_EQ(s.cap(), SSO_SIZE - 1);  // defaults to stack
+  EXPECT_NE(s.data(), nullptr);      // should make an empty stack
 }
 
 TEST_F(StringRefTest, SizeConstructor_Zero)
@@ -45,7 +45,7 @@ TEST_F(StringRefTest, SizeConstructor_SmallSize)
   StringRef s(10);
   EXPECT_TRUE(s.empty());
   EXPECT_EQ(s.len(), 0);
-  EXPECT_GE(s.cap(), 11);  // Should have space for 10 chars + null
+  EXPECT_GE(s.cap(), 10);  
 }
 
 TEST_F(StringRefTest, SizeConstructor_LargeSize)
@@ -53,7 +53,7 @@ TEST_F(StringRefTest, SizeConstructor_LargeSize)
   StringRef s(10000);
   EXPECT_TRUE(s.empty());
   EXPECT_EQ(s.len(), 0);
-  EXPECT_GE(s.cap(), 10001);
+  EXPECT_GE(s.cap(), 10000);
 }
 
 TEST_F(StringRefTest, CopyConstructor_Empty)
@@ -565,7 +565,7 @@ TEST_F(StringRefTest, At_MutableAccess)
 TEST_F(StringRefTest, At_EmptyString)
 {
   StringRef s;
-  EXPECT_THROW(s.at(0), std::runtime_error);
+  EXPECT_THROW(s.at(0), std::out_of_range);
 }
 
 // erase

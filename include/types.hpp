@@ -42,6 +42,12 @@ class StringAllocator
     return static_cast<T*>(allocateBytes(count * sizeof(T)));
   }
 
+  template<typename T>
+  void deallocateArray(T* p, const SizeType count)
+  {
+    Allocator_.deallocate((void*) p, count * sizeof(T));
+  }
+
   template<typename T, typename... Args>
   MYLANG_NODISCARD T* allocateObject(Args&&... args)
   {
@@ -50,103 +56,220 @@ class StringAllocator
     return ::new (mem) T(std::forward<Args>(args)...);
   }
 
+  template<typename T>
+  void deallocateObject(T* obj)
+  {
+    Allocator_.deallocate((void*) obj, sizeof(T));
+  }
+
   std::string toString(bool verbose) const { return Allocator_.toString(verbose); }
 };
 
 inline StringAllocator string_allocator;
 
-struct String
+class StringRef;
+
+class String
 {
- public:
-  typedef CharType*       Pointer;
-  typedef const CharType* ConstPointer;
+  friend class StringRef;
 
-  Pointer  ptr{nullptr};
-  SizeType len{0};
-  SizeType cap{0};
+  using Pointer      = CharType*;
+  using ConstPointer = const CharType*;
 
+ private:
+  // static constexpr SizeType SSO_FLAG = SizeType(1) << (sizeof(SizeType) * 8 - 1);
+
+  union Storage {
+    struct
+    {
+      Pointer  ptr;
+      SizeType cap;
+    } heap;
+
+    CharType sso[SSO_SIZE];
+
+    Storage() :
+        heap{nullptr, 0}
+    {
+    }
+  } storage_;
+
+  bool             is_heap;
+  SizeType         len_{0};  // includes SSO_FLAG
   mutable SizeType RefCount{1};
 
-  String() = default;
+ public:
+  String() :
+      is_heap{false}
+  {
+    len_            = 0;
+    storage_.sso[0] = BUFFER_END;
+  }
+
+  ~String()
+  {
+    if (isHeap())
+      string_allocator.deallocateArray<CharType>(storage_.heap.ptr, storage_.heap.cap);
+  }
+
+  // ---- helpers ----
+
+  SizeType length() const noexcept { return len_; }
+
+  bool isHeap() const noexcept { return is_heap; }
+
+  bool isInlined() const noexcept { return !isHeap(); }
+
+  Pointer ptr() noexcept { return isHeap() ? storage_.heap.ptr : storage_.sso; }
+
+  ConstPointer ptr() const noexcept { return isHeap() ? storage_.heap.ptr : storage_.sso; }
+
+  SizeType cap() const noexcept { return isHeap() ? storage_.heap.cap - 1 /*subtract the nul terminator*/ : SSO_SIZE - 1; }
+
+  void setLen(const SizeType n)
+  {
+    if (!isHeap() && n > cap())
+      throw std::invalid_argument("String::setLen(unsigned long n = " + std::to_string(n) + ") : invalid length");
+    len_ = n;
+  }
+
+  void terminate() noexcept { ptr()[length()] = BUFFER_END; }
+
+  // ---- constructors ----
 
   String(const String& other) :
-      len(other.len),
-      cap(other.cap),
-      RefCount(1)
+      is_heap(other.isHeap())
   {
-    if (cap)
+    setLen(other.length());
+
+    if (other.isInlined())
+      ::memcpy(storage_.sso, other.storage_.sso, (length() + 1) * sizeof(CharType));
+    else
     {
-      ptr = string_allocator.allocateArray<CharType>(cap);
-      std::memcpy(ptr, other.ptr, (len + 1) * sizeof(CharType));
+      storage_.heap.cap = other.storage_.heap.cap;
+      storage_.heap.ptr = string_allocator.allocateArray<CharType>(storage_.heap.cap);
+
+      ::memcpy(storage_.heap.ptr, other.storage_.heap.ptr, (length() + 1) * sizeof(CharType));
     }
   }
 
   String(const SizeType s)
   {
-    if (s)
+    if (s < SSO_SIZE)
     {
-      ptr = string_allocator.allocateArray<CharType>(s + 1);
-      cap = s + 1;
-      len = 0;
-      // terminate
-      terminate();
+      is_heap = false;
+      setLen(0);
     }
-  }
-
-  String(ConstPointer s)
-  {
-    if (!s)
-      return;
-
-    // calculate len because the damn libc doesn't provide strlen for utf16
-    ConstPointer p = s;
-    while (*p++)
-      ;
-    len = p - s - 1;
-    cap = len + 1;
-    ptr = string_allocator.allocateArray<CharType>(cap);
-    std::memcpy(ptr, s, len * sizeof(CharType));
+    else
+    {
+      is_heap = true;
+      setLen(0);
+      storage_.heap.cap = s + 1;
+      storage_.heap.ptr = string_allocator.allocateArray<CharType>(storage_.heap.cap);
+    }
     terminate();
   }
 
   String(const SizeType s, const CharType c)
   {
-    len = s;
-    cap = len + 1;
-    ptr = string_allocator.allocateArray<CharType>(cap);
-
-    Pointer p = ptr;
-    while (p < ptr + len)
-      *p++ = c;
+    if (s < SSO_SIZE)
+    {
+      is_heap = false;
+      ::memset(storage_.sso, c, s);
+      setLen(s);
+    }
+    else
+    {
+      is_heap           = true;
+      storage_.heap.cap = s + 1;
+      storage_.heap.ptr = string_allocator.allocateArray<CharType>(storage_.heap.cap);
+      ::memset(storage_.heap.ptr, c, s);
+      setLen(s);
+    }
 
     terminate();
   }
 
-  String& operator=(const String&) = delete;
+  String(ConstPointer s, SizeType n)
+  {
+    if (!s || n == 0)
+    {
+      is_heap = false;
+      setLen(0);
+      terminate();
+      return;
+    }
+
+    if (n < SSO_SIZE)
+    {
+      is_heap = false;
+      setLen(n);
+      ::memcpy(storage_.sso, s, n * sizeof(CharType));
+    }
+    else
+    {
+      is_heap           = true;
+      storage_.heap.cap = n + 1;
+      storage_.heap.ptr = string_allocator.allocateArray<CharType>(storage_.heap.cap);
+      ::memcpy(storage_.heap.ptr, s, n * sizeof(CharType));
+    }
+
+    terminate();
+  }
+
+  String(ConstPointer s)
+  {
+    if (!s)
+    {
+      len_            = 0;
+      storage_.sso[0] = BUFFER_END;
+      return;
+    }
+
+    ConstPointer p = s;
+    while (*p++)
+      ;
+
+    SizeType n = p - s - 1;
+
+    if (n < SSO_SIZE)
+    {
+      is_heap = false;
+      setLen(n);
+      ::memcpy(storage_.sso, s, n * sizeof(CharType));
+    }
+    else
+    {
+      is_heap = true;
+      setLen(n);
+      storage_.heap.cap = n + 1;
+      storage_.heap.ptr = string_allocator.allocateArray<CharType>(storage_.heap.cap);
+      ::memcpy(storage_.heap.ptr, s, (n + 1) * sizeof(CharType));
+    }
+
+    terminate();
+  }
+
+
+  // ---- ops ----
 
   bool operator==(const String& other) const noexcept
   {
-    // Different lengths
-    if (len != other.len)
+    if (length() != other.length())
       return false;
 
-    // Both empty
-    if (len == 0)
+    if (length() == 0)
       return true;
 
-    // Self comparison
-    if (ptr == other.ptr)
-      return true;
-
-    return std::memcmp(ptr, other.ptr, len * sizeof(CharType)) == 0;
+    return ::memcmp(ptr(), other.ptr(), length() * sizeof(CharType)) == 0;
   }
 
-  CharType operator[](const SizeType i) const { return ptr[i]; }
+  CharType  operator[](const SizeType i) const noexcept { return ptr()[i]; }
+  CharType& operator[](const SizeType i) noexcept { return ptr()[i]; }
 
-  void     increment() const noexcept { RefCount++; }
-  void     decrement() const noexcept { RefCount--; }  // FIXED: was RefCount++
+  void     increment() const noexcept { ++RefCount; }
+  void     decrement() const noexcept { --RefCount; }
   SizeType referenceCount() const noexcept { return RefCount; }
-  void     terminate() noexcept { ptr[len] = BUFFER_END; }
 };
 
 class StringRef
@@ -191,7 +314,7 @@ class StringRef
   }
 
   StringRef(const char* c_str) :
-      StringData_(nullptr)  // 🔴 CRITICAL: Initialize before use!
+      StringData_(nullptr)
   {
     if (!c_str || !c_str[0])
       StringData_ = createEmpty();
@@ -202,7 +325,6 @@ class StringRef
       StringData_    = temp.StringData_;
       if (StringData_)
         StringData_->increment();
-      // temp's destructor will decrement, so we increment to maintain balance
     }
   }
 
@@ -220,8 +342,14 @@ class StringRef
   {
     if (StringData_)
     {
+      /// NOTE: this will only be deallocated if it's the last pointer in the arena
+      /// we should probably make a better allocator for that ...
       StringData_->decrement();
-      /// NOTE: Arena allocator limitation - memory persists until allocator destruction
+      if (StringData_->referenceCount() == 0)
+      {
+        StringData_->~String();  // deallocate if possible the string array
+        string_allocator.deallocateObject<String>(StringData_);
+      }
     }
   }
 
@@ -257,13 +385,14 @@ class StringRef
   void expand(const SizeType new_size)
   {
     COW();
+
     if (new_size <= cap())
-      return;  // Already have enough capacity
+      return;
 
     ConstPointer old_ptr = data();
+    SizeType     old_len = len();
     SizeType     new_capacity;
 
-    // FIXED: Check for overflow before multiplication
     constexpr SizeType overflow_threshold = (std::numeric_limits<SizeType>::max() / 3) * 2;
 
     if (new_size > overflow_threshold)
@@ -271,20 +400,25 @@ class StringRef
     else
       new_capacity = static_cast<SizeType>(new_size * 1.5 + 1);
 
-    // FIXED: Single allocation with proper error handling
     Pointer new_ptr = string_allocator.allocateArray<CharType>(new_capacity);
 
-    // Copy old data if it exists
-    if (old_ptr && len() > 0)
-      std::memcpy(new_ptr, old_ptr, len() * sizeof(CharType));
+    // Copy old data
+    if (old_ptr && old_len > 0)
+      ::memcpy(new_ptr, old_ptr, old_len * sizeof(CharType));
 
-    StringData_->ptr = new_ptr;
-    StringData_->cap = new_capacity;
+    if (StringData_->isHeap() && StringData_->storage_.heap.ptr)
+      string_allocator.deallocateArray<CharType>(StringData_->storage_.heap.ptr, StringData_->storage_.heap.cap);
+
+    // Now set heap storage
+    StringData_->storage_.heap.ptr = new_ptr;
+    StringData_->storage_.heap.cap = new_capacity;
+    StringData_->is_heap           = true;
 
     // Ensure null termination
-    if (len() < cap())
+    if (old_len < new_capacity)
       StringData_->terminate();
   }
+
 
   // Reserve capacity (doesn't change length, only capacity)
   void reserve(const SizeType new_capacity)
@@ -303,9 +437,9 @@ class StringRef
     if (at >= len() || !data())
       return;  // Out of bounds or empty string
 
-    std::memmove(StringData_->ptr + at, data() + at + 1, (len() - at - 1) * sizeof(CharType));
+    ::memmove(StringData_->ptr() + at, data() + at + 1, (len() - at - 1) * sizeof(CharType));
 
-    --StringData_->len;
+    StringData_->setLen(len() - 1);
     StringData_->terminate();
   }
 
@@ -319,16 +453,20 @@ class StringRef
 
     SizeType new_len = len() + other.len();
 
-    if (new_len + 1 > cap())  // +1 for null terminator
-      expand(new_len);
+    if (new_len > cap())
+      expand(new_len);  // Handles SSO→heap transition correctly
 
-    std::memcpy(StringData_->ptr + StringData_->len, other.data(), other.len() * sizeof(CharType));
-    StringData_->len = new_len;
+    ::memcpy(StringData_->ptr() + len(), other.data(), other.len() * sizeof(CharType));
+
+    // REMOVED: StringData_->len_ |= String::SSO_FLAG;
+    // The expand() method already sets this flag when transitioning to heap
+    // The setLen() method preserves it correctly
+
+    StringData_->setLen(new_len);
     StringData_->terminate();
 
     return *this;
   }
-
   Reference operator+=(CharType c)
   {
     COW();
@@ -336,8 +474,8 @@ class StringRef
     if (len() + 2 > cap())
       expand(len() + 1);  // expand does account for nul
 
-    StringData_->ptr[len()] = c;
-    ++StringData_->len;
+    (*StringData_)[len()] = c;
+    StringData_->setLen(len() + 1);
     StringData_->terminate();
 
     return *this;
@@ -346,7 +484,7 @@ class StringRef
   // FIXED: Add null checks
   CharType operator[](const SizeType i) const
   {
-    if (!StringData_ || !StringData_->ptr)
+    if (!StringData_ || !StringData_->ptr())
       throw std::runtime_error("StringRef::operator[]: null string data");
     return (*StringData_)[i];
   }
@@ -354,29 +492,29 @@ class StringRef
   CharType& operator[](const SizeType i)
   {
     COW();
-    if (!StringData_ || !StringData_->ptr)
+    if (!StringData_ || !StringData_->ptr())
       throw std::runtime_error("StringRef::operator[]: null string data");
-    return StringData_->ptr[i];
+    return (*StringData_)[i];
   }
 
   // Safe access with bounds checking (always checked)
   MYLANG_NODISCARD CharType at(const SizeType i) const
   {
-    if (!StringData_ || !StringData_->ptr)
+    if (!StringData_ || !StringData_->ptr())
       throw std::runtime_error("StringRef::at: null string data");
     if (i >= len())
       throw std::out_of_range("StringRef::at: index out of bounds");
-    return StringData_->ptr[i];
+    return (*StringData_)[i];
   }
 
   CharType& at(const SizeType i)
   {
     COW();
-    if (!StringData_ || !StringData_->ptr)
+    if (!StringData_ || !StringData_->ptr())
       throw std::runtime_error("StringRef::at: null string data");
     if (i >= len())
       throw std::out_of_range("StringRef::at: index out of bounds");
-    return StringData_->ptr[i];
+    return (*StringData_)[i];
   }
 
   // Concatenation operators
@@ -397,10 +535,10 @@ class StringRef
     SizeType actual_len = lhs.len() + rhs.len();
     String*  result     = string_allocator.allocateObject<String>(actual_len);
 
-    std::memcpy(result->ptr, lhs.data(), lhs.len() * sizeof(CharType));
-    std::memcpy(result->ptr + lhs.len(), rhs.data(), rhs.len() * sizeof(CharType));
+    ::memcpy(result->ptr(), lhs.data(), lhs.len() * sizeof(CharType));
+    ::memcpy(result->ptr() + lhs.len(), rhs.data(), rhs.len() * sizeof(CharType));
 
-    result->len = actual_len;  // FIXED: No +1 here
+    result->setLen(actual_len);
     result->terminate();
 
     return StringRef(result);
@@ -445,15 +583,16 @@ class StringRef
   }
 
   // Accessors
-  MYLANG_NODISCARD SizeType len() const noexcept { return StringData_ ? StringData_->len : 0; }
-  MYLANG_NODISCARD SizeType cap() const noexcept { return StringData_ ? StringData_->cap : 0; }
+  MYLANG_NODISCARD SizeType len() const noexcept { return StringData_ ? StringData_->length() : 0; }
+  MYLANG_NODISCARD SizeType cap() const noexcept { return StringData_ ? StringData_->cap() : 0; }
   MYLANG_NODISCARD String*  get() const noexcept { return StringData_; }
-  MYLANG_NODISCARD bool     empty() const noexcept { return !StringData_ || StringData_->len == 0; }
-  ConstPointer              data() const noexcept { return StringData_ ? StringData_->ptr : nullptr; }
-  Pointer                   data() noexcept
+  MYLANG_NODISCARD bool     empty() const noexcept { return StringData_ ? StringData_->length() == 0 : true; }
+  ConstPointer              data() const noexcept { return StringData_ ? StringData_->ptr() : nullptr; }
+
+  Pointer data() noexcept
   {
     COW();
-    return StringData_ ? StringData_->ptr : nullptr;
+    return StringData_ ? StringData_->ptr() : nullptr;
   }
 
   // Output stream operator
@@ -470,8 +609,8 @@ class StringRef
   {
     COW();
     if (data() && cap() > 0)
-      StringData_->ptr[0] = BUFFER_END;
-    StringData_->len = 0;
+      (*StringData_)[0] = BUFFER_END;
+    StringData_->setLen(0);
   }
 
   // Resize capacity (preserves content)
@@ -485,10 +624,10 @@ class StringRef
   // Find a character
   MYLANG_NODISCARD bool find(const CharType c) const noexcept
   {
-    if (!StringData_ || !StringData_->ptr)
+    if (!StringData_ || !StringData_->ptr())
       return false;
 
-    Pointer p = StringData_->ptr;
+    Pointer p = StringData_->ptr();
     while (*p && *p != c)
       ++p;
     return *p == c;
@@ -497,22 +636,22 @@ class StringRef
   // Find position of a character (returns optional index)
   MYLANG_NODISCARD std::optional<SizeType> find_pos(const CharType c) const noexcept
   {
-    if (!StringData_ || !StringData_->ptr)
+    if (!StringData_ || !StringData_->ptr())
       return std::nullopt;
 
-    Pointer p = StringData_->ptr;
+    Pointer p = StringData_->ptr();
     while (*p && *p != c)
       ++p;
-    return *p == c ? std::optional<SizeType>(p - StringData_->ptr) : std::nullopt;
+    return *p == c ? std::optional<SizeType>(p - StringData_->ptr()) : std::nullopt;
   }
 
   // Truncate string to specified length
   StringRef& truncate(const SizeType s)
   {
     COW();
-    if (s < len() && StringData_->ptr)
+    if (s < len() && StringData_->ptr())
     {
-      StringData_->len = s;
+      StringData_->setLen(s);
       StringData_->terminate();
     }
     return *this;
@@ -526,23 +665,32 @@ class StringRef
     SizeType start_val = start.value_or(0);
     SizeType end_val   = end.value_or(len() - 1);
 
-    // Bounds checking
     if (start_val >= len())
       throw std::out_of_range("StringRef::substr: start index out of range");
 
     if (end_val >= len())
-      end_val = len() - 1;  // Clamp to valid range
+      end_val = len() - 1;
 
     if (end_val < start_val)
       throw std::invalid_argument("StringRef::substr: end must be >= start");
 
-    // Calculate length (end is inclusive)
-    SizeType ret_len = end_val - start_val + 1;
+    SizeType ret_len  = end_val - start_val + 1;
+    String*  ret_data = string_allocator.allocateObject<String>();
 
-    // Optimized - use direct memory copy
-    String* ret_data = string_allocator.allocateObject<String>(ret_len);
-    std::memcpy(ret_data->ptr, data() + start_val, ret_len * sizeof(CharType));
-    ret_data->len = ret_len;
+    if (ret_len < SSO_SIZE)
+    {
+      ret_data->is_heap = false;  // ✓ Set flag
+      ::memcpy(ret_data->storage_.sso, data() + start_val, ret_len * sizeof(CharType));
+    }
+    else
+    {
+      ret_data->is_heap           = true;  // ✓ Set flag
+      ret_data->storage_.heap.cap = ret_len + 1;
+      ret_data->storage_.heap.ptr = string_allocator.allocateArray<CharType>(ret_data->storage_.heap.cap);
+      ::memcpy(ret_data->storage_.heap.ptr, data() + start_val, ret_len * sizeof(CharType));
+    }
+
+    ret_data->setLen(ret_len);
     ret_data->terminate();
 
     return StringRef(ret_data);
@@ -632,6 +780,7 @@ class StringRef
   // PERFORMANCE: Only copy when actually shared
   void COW()
   {
+    /// TODO: add sso support
     if (!StringData_)
       return;
 

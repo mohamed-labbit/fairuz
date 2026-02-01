@@ -327,6 +327,7 @@ class StatsFormatter
   }
 };
 
+
 /**
  * @class StatsPrinter
  * @brief Comprehensive statistics printer with multiple output formats
@@ -408,7 +409,7 @@ class StatsPrinter
     os << "\n+-- Core Metrics --------------------------------------------------------------------+\n";
     printMetric(os, "Total Allocations", StatsFormatter::formatNumber(stats_.TotalAllocations));
     printMetric(os, "Total Deallocations", StatsFormatter::formatNumber(stats_.TotalDeallocations));
-    printMetric(os, "Live Allocations", StatsFormatter::formatNumber(stats_.CurrentlyAllocated - stats_.TotalDeallocations));
+    printMetric(os, "Live Allocations", StatsFormatter::formatNumber(stats_.TotalAllocations - stats_.TotalDeallocations));
     os << "+------------------------------------------------------------------------------------+\n";
     printMetric(os, "Total Bytes Allocated", StatsFormatter::formatBytes(stats_.TotalAllocated));
     printMetric(os, "Currently In Use", StatsFormatter::formatBytes(stats_.CurrentlyAllocated));
@@ -542,9 +543,9 @@ class StatsPrinter
     if (stats_.TotalDeallocations > 0 && stats_.TotalDeallocTimeNs > 0)
     {
       os << "+------------------------------------------------------------------------------------+\n";
-      std::uint64_t avg_dealloc = total_dealloc_time / total_deallocs;
+      std::uint64_t avg_dealloc = stats_.TotalDeallocTimeNs / stats_.TotalDeallocations;
       printMetric(os, "Deallocation Time (avg)", StatsFormatter::formatTime(avg_dealloc));
-      printMetric(os, "  Total", StatsFormatter::formatTime(total_dealloc_time));
+      printMetric(os, "  Total", StatsFormatter::formatTime(stats_.TotalDeallocTimeNs));
     }
 
     os << "+------------------------------------------------------------------------------------+\n";
@@ -552,24 +553,19 @@ class StatsPrinter
 
   void printErrorStatistics(std::ostream& os) const
   {
-    std::uint64_t failures      = stats_.AllocationFailures.load(std::memory_order_relaxed);
-    std::uint64_t double_frees  = stats_.DoubleFreeAttempts.load(std::memory_order_relaxed);
-    std::uint64_t invalid_frees = stats_.InvalidFreeAttempts.load(std::memory_order_relaxed);
-    std::uint64_t zero_byte     = stats_.ZeroByteRequests.load(std::memory_order_relaxed);
-
-    if (failures == 0 && double_frees == 0 && invalid_frees == 0 && zero_byte == 0)
+    if (stats_.AllocationFailures == 0 && stats_.DoubleFreeAttempts == 0 && stats_.InvalidFreeAttempts == 0 && stats_.ZeroByteRequests == 0)
       return;
 
     os << "\n+-- Error Statistics ----------------------------------------------------------------+\n";
 
-    if (failures > 0)
-      printMetric(os, "Allocation Failures", std::to_string(failures), true);
-    if (double_frees > 0)
-      printMetric(os, "Double-Free Attempts", std::to_string(double_frees), true);
-    if (invalid_frees > 0)
-      printMetric(os, "Invalid Free Attempts", std::to_string(invalid_frees), true);
-    if (zero_byte > 0)
-      printMetric(os, "Zero-Byte Requests", std::to_string(zero_byte), false);
+    if (stats_.AllocationFailures > 0)
+      printMetric(os, "Allocation Failures", std::to_string(stats_.AllocationFailures), true);
+    if (stats_.DoubleFreeAttempts > 0)
+      printMetric(os, "Double-Free Attempts", std::to_string(stats_.DoubleFreeAttempts), true);
+    if (stats_.InvalidFreeAttempts > 0)
+      printMetric(os, "Invalid Free Attempts", std::to_string(stats_.InvalidFreeAttempts), true);
+    if (stats_.ZeroByteRequests > 0)
+      printMetric(os, "Zero-Byte Requests", std::to_string(stats_.ZeroByteRequests), false);
 
     os << "+------------------------------------------------------------------------------------+\n";
   }

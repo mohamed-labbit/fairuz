@@ -3,6 +3,7 @@
 
 namespace test_config {
 extern bool print_ast;
+extern bool verbose;
 }
 
 #endif

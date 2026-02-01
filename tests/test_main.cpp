@@ -9,6 +9,7 @@ using namespace mylang;
 namespace test_config {
 
 bool print_ast = false;
+bool verbose   = false;
 
 }
 
@@ -22,9 +23,9 @@ int main(int argc, char** argv)
     std::string arg = argv[i];
 
     if (arg == "--print-ast")
-    {
       test_config::print_ast = true;
-    }
+    else if (arg == "-v")
+      test_config::verbose = true;
     else
     {
       std::cerr << "main: unknown option " << arg << std::endl;
@@ -32,8 +33,10 @@ int main(int argc, char** argv)
     }
   }
 
-  if (RUN_ALL_TESTS() == 0)
+  int ret = RUN_ALL_TESTS();
+
+  if (test_config::verbose)
     std::cout << string_allocator.toString(true) << std::endl;
 
-  return 0;
+  return ret;
 }

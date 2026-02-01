@@ -15,6 +15,7 @@ ArenaAllocator::ArenaAllocator(std::int32_t growth_strategy, OutOfMemoryHandler 
   {
     TrackAllocations_.store(true, std::memory_order_relaxed);
     EnableStatistics_.store(true, std::memory_order_relaxed);
+    AllocStats_.reset();
   }
 }
 
@@ -35,11 +36,7 @@ void ArenaAllocator::reset()
 
   AllocatedPtrs_.clear();
   // Reset statistics
-  AllocStats_.TotalAllocations.store(0, std::memory_order_relaxed);
-  AllocStats_.TotalAllocated.store(0, std::memory_order_relaxed);
-  AllocStats_.TotalFree.store(0, std::memory_order_relaxed);
-  AllocStats_.TotalDeallocations.store(0, std::memory_order_relaxed);
-  AllocStats_.ActiveBlocks.store(0, std::memory_order_relaxed);
+  AllocStats_.reset();
   // Reset block size
   NextBlockSize_.store(BlockSize_, std::memory_order_relaxed);
 }
@@ -72,7 +69,7 @@ Pointer ArenaAllocator::allocateBlock(SizeType requested, SizeType alignment_, b
     // Add new block to vector (requires exclusive lock)
     std::unique_lock<std::shared_mutex> lock(BlocksMutex_);
     Blocks_.emplace_back(block_size, alignment_);
-    AllocStats_.safe_increment(AllocStats_.ActiveBlocks);
+    AllocStats_.ActiveBlocks++;
     return Blocks_.back().begin();
   } catch (const std::bad_alloc&)
   {
@@ -126,12 +123,6 @@ MYLANG_NODISCARD MYLANG_COMPILER_ABI void* ArenaAllocator::allocate(const SizeTy
 
   // _Tp* region = reinterpret_cast<_Tp*>(mem);
 
-  // Update statistics
-  if (EnableStatistics_.load(std::memory_order_relaxed))
-  {
-    AllocStats_.safe_increment(AllocStats_.TotalAllocations);
-    AllocStats_.safe_increment(AllocStats_.TotalAllocated, aligned_size);
-  }
 
   // Track allocation if enabled
   if (TrackAllocations_.load(std::memory_order_relaxed))
@@ -152,15 +143,29 @@ MYLANG_NODISCARD MYLANG_COMPILER_ABI void* ArenaAllocator::allocate(const SizeTy
 
   // Construct objects if needed
 
-  std::chrono::steady_clock::time_point end = std::chrono::high_resolution_clock::now();
+  std::chrono::steady_clock::time_point end      = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double>         duration = end - start;
 
   LastPtr_ = static_cast<void*>(mem);
+
+  // Update statistics
+  if (EnableStatistics_.load(std::memory_order_relaxed))
+  {
+    AllocStats_.TotalAllocations++;
+    AllocStats_.TotalAllocated += aligned_size;
+    AllocStats_.CurrentlyAllocated += aligned_size;
+    AllocStats_.recordAllocationSize(aligned_size);
+    AllocStats_.updatePeak(aligned_size);
+    AllocStats_.recordAllocTime(duration.count() * 1000000);
+  }
+
   return LastPtr_;
 }
 
 MYLANG_COMPILER_ABI
 void ArenaAllocator::deallocate(void* ptr, const SizeType size)
 {
+  auto start = std::chrono::high_resolution_clock::now();
   if (!ptr || size == 0)
     return;
   // Strict LIFO check
@@ -175,8 +180,21 @@ void ArenaAllocator::deallocate(void* ptr, const SizeType size)
   ArenaBlock& block = Blocks_.back();
   // CAS-based pop (must be safe)
   bool ok = block.pop(size);
+  /// TODO: implement safe decrement
+  AllocStats_.CurrentlyAllocated -= size;
+  AllocStats_.TotalDeallocated -= size;
+  ++AllocStats_.TotalDeallocations;
+  if (block.cNext() == block.begin())
+    Blocks_.back();
+  /// TODO: implement safe decrement
+  if (AllocStats_.ActiveBlocks)
+    AllocStats_.ActiveBlocks--;
   // Clear LastPtr_ (important!)
   LastPtr_.store(nullptr, std::memory_order_release);
+  auto                          end      = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> duration = end - start;
+  double                        seconds  = duration.count();
+  AllocStats_.TotalDeallocTimeNs += seconds * 1000000;
 }
 
 MYLANG_NODISCARD
