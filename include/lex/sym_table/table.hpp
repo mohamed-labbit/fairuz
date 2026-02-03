@@ -2,6 +2,7 @@
 
 #include "../token.hpp"
 #include "entry.hpp"
+#include <algorithm>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -95,8 +96,7 @@ class SymbolTable
     {
       const Scope& current = this->Scopes_.back();
       symbols.reserve(current.size());
-      for (const std::pair<StringRef, Entry>& pair : current)
-        symbols.push_back(pair.second);
+      std::transform(current.begin(), current.end(), std::back_inserter(symbols), [](auto const& pair) { return pair.second; });
     }
     return symbols;
   }
@@ -132,8 +132,7 @@ class SymbolTable
     {
       const Scope& scope = this->Scopes_[level];
       symbols.reserve(scope.size());
-      for (const std::pair<StringRef, Entry>& pair : scope)
-        symbols.push_back(pair.second);
+      std::transform(scope.begin(), scope.end(), std::back_inserter(symbols), [](const auto& pair) { return pair.second; });
     }
     return symbols;
   }

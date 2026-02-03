@@ -66,3 +66,4 @@ if __name__ == "__main__":
     create_test_files(test_dir)build/
 .DS_Store
 build/
+lines.py
