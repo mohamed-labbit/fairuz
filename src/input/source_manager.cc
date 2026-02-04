@@ -38,12 +38,12 @@ std::pair<SizeType, SizeType> SourceManager::offsetMap_(const SizeType& offset) 
     ++iter;
   }
 
-  SizeType base_line   = InputBuffer_.position().line - diff;
-  iter                 = 0;
-  SizeType       line  = 1;
-  SizeType       col   = 1;
-  const SizeType limit = std::min(offset, InputBuffer_.size() - 1);
+  SizeType       base_line = InputBuffer_.position().line - diff;
+  SizeType       line      = 1;
+  SizeType       col       = 1;
+  const SizeType limit     = std::min(offset, InputBuffer_.size() - 1);
 
+  iter = 0;
   while (iter < limit)
   {
     CharType c = InputBuffer_.at(iter);
