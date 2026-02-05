@@ -57,11 +57,11 @@ std::unordered_map<StringRef, object::Value, StringRefHash, StringRefEqual>& obj
   return *std::get<std::shared_ptr<std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>>>(Data_);
 }
 
-typename object::Value::Function& object::Value::asFunction()
+typename object::Value::Function& object::Value::asFunction() const 
 {
   if (!isFunction())
     diagnostic::engine.panic("Value is not a function");
-  return std::get<Function>(Data_);
+  return std::get<Function&>(Data_);
 }
 
 typename object::Value::NativeFunction& object::Value::asNativeFunction()

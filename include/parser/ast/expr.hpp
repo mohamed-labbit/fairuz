@@ -30,7 +30,6 @@ class Expr: public ASTNode
   {
   }
 
-  // FIXED: Added virtual destructor for polymorphic base class
   virtual ~Expr() = default;
 
   void setStr(const StringRef s) { Str_ = s; }

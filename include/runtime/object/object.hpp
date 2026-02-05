@@ -42,10 +42,6 @@ class Value
     COROUTINE
   };
 
-
- private:
-  Type Type_;
-
   struct Function
   {
     std::int32_t           CodeOffset;
@@ -73,6 +69,9 @@ class Value
     std::shared_ptr<std::vector<Value>> items;
     SizeType                            index;
   };
+
+ private:
+  Type Type_;
 
   std::variant<std::monostate,                                                                        // None
                std::int64_t,                                                                          // Int
@@ -191,7 +190,7 @@ class Value
 
   std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>& asDict() const;
 
-  Function& asFunction();
+  Function& asFunction() const;
 
   NativeFunction& asNativeFunction();
 
