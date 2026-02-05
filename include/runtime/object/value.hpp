@@ -17,9 +17,6 @@ namespace mylang {
 namespace runtime {
 namespace object {
 
-// ============================================================================
-// ADVANCED VALUE SYSTEM - Full Python-like dynamic typing
-// ============================================================================
 class Value
 {
  public:
@@ -70,22 +67,23 @@ class Value
     SizeType                            index;
   };
 
+  using ValueData = std::variant<std::monostate,                                                       // None
+                                 std::int64_t,                                                         // Int
+                                 double,                                                               // Float
+                                 StringRef,                                                            // String (shared for efficiency)
+                                 bool,                                                                 // Bool
+                                 std::vector<Value>,                                                   // List (shared)
+                                 std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>,  // Dict
+                                 Function,                                                             // User function
+                                 NativeFunction,                                                       // Native C++ function
+                                 Object,                                                               // Object instance
+                                 Iterator                                                              // Iterator
+                                 >;
+
  private:
   Type Type_;
 
-  std::variant<std::monostate,                                                                        // None
-               std::int64_t,                                                                          // Int
-               double,                                                                                // Float
-               std::shared_ptr<StringRef>,                                                            // String (shared for efficiency)
-               bool,                                                                                  // Bool
-               std::shared_ptr<std::vector<Value>>,                                                   // List (shared)
-               std::shared_ptr<std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>>,  // Dict
-               Function,                                                                              // User function
-               NativeFunction,                                                                        // Native C++ function
-               Object,                                                                                // Object instance
-               Iterator                                                                               // Iterator
-               >
-    Data_;
+  ValueData Data_;
 
   // Reference counting for memory management
   mutable std::int32_t RefCount_ = 0;
@@ -97,32 +95,32 @@ class Value
   }
   Value(std::int64_t v) :
       Type_(Type::INT),
-      Data_(v)
+      Data_(std::in_place_type<std::int64_t>, v)
   {
   }
   Value(double v) :
       Type_(Type::FLOAT),
-      Data_(v)
+      Data_(std::in_place_type<double>, v)
   {
   }
   Value(const StringRef& v) :
       Type_(Type::STRING),
-      Data_(std::make_shared<StringRef>(v))
+      Data_(std::in_place_type<StringRef>, v)
   {
   }
   Value(bool v) :
       Type_(Type::BOOL),
-      Data_(v)
+      Data_(std::in_place_type<bool>, v)
   {
   }
-  Value(const std::vector<Value>& v) :
+  Value(std::vector<Value> v) :
       Type_(Type::LIST),
-      Data_(std::make_shared<std::vector<Value>>(v))
+      Data_(std::in_place_type<std::vector<Value>>, v)
   {
   }
-  Value(std::shared_ptr<std::vector<Value>> v) :
-      Type_(Type::LIST),
-      Data_(v)
+  Value(std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual> v) :
+      Type_(Type::DICT),
+      Data_(std::in_place_type<std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>>, v)
   {
   }
 
@@ -137,17 +135,17 @@ class Value
 
   void setType(const Type type) { Type_ = type; }
 
-  void setData(const std::variant<std::monostate,                       // None
-                                  std::int64_t,                         // Int
-                                  double,                               // Float
-                                  std::shared_ptr<StringRef>,           // String (shared for efficiency)
-                                  bool,                                 // Bool
-                                  std::shared_ptr<std::vector<Value>>,  // List (shared)
-                                  std::shared_ptr<std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>>,  // Dict
-                                  Function,                                                                              // User function
-                                  NativeFunction,                                                                        // Native C++ function
-                                  Object,                                                                                // Object instance
-                                  Iterator                                                                               // Iterator
+  void setData(const std::variant<std::monostate,                                                       // None
+                                  std::int64_t,                                                         // Int
+                                  double,                                                               // Float
+                                  StringRef,                                                            // String (shared for efficiency)
+                                  bool,                                                                 // Bool
+                                  std::vector<Value>,                                                   // List (shared)
+                                  std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>,  // Dict
+                                  Function,                                                             // User function
+                                  NativeFunction,                                                       // Native C++ function
+                                  Object,                                                               // Object instance
+                                  Iterator                                                              // Iterator
                                   > data)
   {
     Data_ = data;
@@ -230,6 +228,8 @@ class Value
   void  setItem(const Value& key, const Value& value);
   Value getIterator() const;
   Value next();
+
+  static Value makeList(std::vector<Value> list);
 };
 
 }

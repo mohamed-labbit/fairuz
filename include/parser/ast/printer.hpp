@@ -100,8 +100,7 @@ class ASTPrinter
       break;
     }
 
-    default :
-      std::cout << color("<unknown expr>", Color::RED) << "\n";
+    default : std::cout << color("<unknown expr>", Color::RED) << "\n";
     }
   }
 
@@ -192,8 +191,7 @@ class ASTPrinter
       break;
     }
 
-    default :
-      std::cout << color("<unknown stmt>", Color::RED) << "\n";
+    default : std::cout << color("<unknown stmt>", Color::RED) << "\n";
     }
   }
 

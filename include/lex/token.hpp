@@ -130,66 +130,36 @@ static const StringRef toString(TokenType tt)
 {
   switch (tt)
   {
-  case TokenType::OP_EQ :
-    return u"=";
-  case TokenType::OP_ASSIGN :
-    return u":=";
-  case TokenType::OP_PLUS :
-    return u"+";
-  case TokenType::OP_MINUS :
-    return u"-";
-  case TokenType::OP_STAR :
-    return u"*";
-  case TokenType::OP_SLASH :
-    return u"/";
-  case TokenType::OP_PERCENT :
-    return u"%";
-  case TokenType::OP_POWER :
-    return u"**";
-  case TokenType::OP_LT :
-    return u"<";
-  case TokenType::OP_GT :
-    return u">";
-  case TokenType::OP_LTE :
-    return u"<=";
-  case TokenType::OP_GTE :
-    return u">=";
-  case TokenType::OP_NEQ :
-    return u"!=";
-  case TokenType::OP_BITAND :
-    return u"&";
-  case TokenType::OP_BITOR :
-    return u"|";
-  case TokenType::OP_BITXOR :
-    return u"^";
-  case TokenType::OP_BITNOT :
-    return u"~";
-  case TokenType::OP_LSHIFT :
-    return u"<<";
-  case TokenType::OP_RSHIFT :
-    return u">>";
-  case TokenType::OP_PLUSEQ :
-    return u"+=";
-  case TokenType::OP_MINUSEQ :
-    return u"-=";
-  case TokenType::OP_STAREQ :
-    return u"*=";
-  case TokenType::OP_SLASHEQ :
-    return u"/=";
-  case TokenType::OP_PERCENTEQ :
-    return u"%=";
-  case TokenType::OP_ANDEQ :
-    return u"&=";
-  case TokenType::OP_OREQ :
-    return u"|=";
-  case TokenType::OP_XOREQ :
-    return u"^=";
-  case TokenType::OP_LSHIFTEQ :
-    return u"<<=";
-  case TokenType::OP_RSHIFTEQ :
-    return u">>=";
-  default :
-    return u"";
+  case TokenType::OP_EQ : return u"=";
+  case TokenType::OP_ASSIGN : return u":=";
+  case TokenType::OP_PLUS : return u"+";
+  case TokenType::OP_MINUS : return u"-";
+  case TokenType::OP_STAR : return u"*";
+  case TokenType::OP_SLASH : return u"/";
+  case TokenType::OP_PERCENT : return u"%";
+  case TokenType::OP_POWER : return u"**";
+  case TokenType::OP_LT : return u"<";
+  case TokenType::OP_GT : return u">";
+  case TokenType::OP_LTE : return u"<=";
+  case TokenType::OP_GTE : return u">=";
+  case TokenType::OP_NEQ : return u"!=";
+  case TokenType::OP_BITAND : return u"&";
+  case TokenType::OP_BITOR : return u"|";
+  case TokenType::OP_BITXOR : return u"^";
+  case TokenType::OP_BITNOT : return u"~";
+  case TokenType::OP_LSHIFT : return u"<<";
+  case TokenType::OP_RSHIFT : return u">>";
+  case TokenType::OP_PLUSEQ : return u"+=";
+  case TokenType::OP_MINUSEQ : return u"-=";
+  case TokenType::OP_STAREQ : return u"*=";
+  case TokenType::OP_SLASHEQ : return u"/=";
+  case TokenType::OP_PERCENTEQ : return u"%=";
+  case TokenType::OP_ANDEQ : return u"&=";
+  case TokenType::OP_OREQ : return u"|=";
+  case TokenType::OP_XOREQ : return u"^=";
+  case TokenType::OP_LSHIFTEQ : return u"<<=";
+  case TokenType::OP_RSHIFTEQ : return u">>=";
+  default : return u"";
   }
 }
 
@@ -282,8 +252,7 @@ class Token
     case TokenType::OP_PLUS :   // +
     case TokenType::OP_MINUS :  // -
       return 2;
-    default :
-      return -1;  // Not an arithmetic operator
+    default : return -1;  // Not an arithmetic operator
     }
   }
 
@@ -300,8 +269,7 @@ class Token
     case TokenType::OP_BITAND :  // '&'
     case TokenType::KW_AND :     // 'and'
       return 3;
-    default :
-      return -1;  // Not a logical operator
+    default : return -1;  // Not a logical operator
     }
   }
 

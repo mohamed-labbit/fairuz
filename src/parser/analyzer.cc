@@ -22,14 +22,10 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(const ast::Expr* ex
 
     switch (lit->getType())
     {
-    case ast::LiteralExpr::Type::NUMBER :
-      return lit->getValue().find('.') ? SymbolTable::DataType_t::FLOAT : SymbolTable::DataType_t::INTEGER;
-    case ast::LiteralExpr::Type::STRING :
-      return SymbolTable::DataType_t::STRING;
-    case ast::LiteralExpr::Type::BOOLEAN :
-      return SymbolTable::DataType_t::BOOLEAN;
-    case ast::LiteralExpr::Type::NONE :
-      return SymbolTable::DataType_t::NONE;
+    case ast::LiteralExpr::Type::NUMBER : return lit->getValue().find('.') ? SymbolTable::DataType_t::FLOAT : SymbolTable::DataType_t::INTEGER;
+    case ast::LiteralExpr::Type::STRING : return SymbolTable::DataType_t::STRING;
+    case ast::LiteralExpr::Type::BOOLEAN : return SymbolTable::DataType_t::BOOLEAN;
+    case ast::LiteralExpr::Type::NONE : return SymbolTable::DataType_t::NONE;
     }
 
     break;
@@ -64,14 +60,11 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(const ast::Expr* ex
     break;
   }
 
-  case ast::Expr::Kind::LIST :
-    return SymbolTable::DataType_t::LIST;
+  case ast::Expr::Kind::LIST : return SymbolTable::DataType_t::LIST;
 
-  case ast::Expr::Kind::CALL :
-    return SymbolTable::DataType_t::ANY;
+  case ast::Expr::Kind::CALL : return SymbolTable::DataType_t::ANY;
 
-  default :
-    break;
+  default : break;
   }
 
   return SymbolTable::DataType_t::UNKNOWN;
@@ -160,8 +153,7 @@ void SemanticAnalyzer::analyzeExpr(const ast::Expr* expr)
     break;
   }
 
-  default :
-    break;
+  default : break;
   }
 }
 
@@ -184,7 +176,7 @@ void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
 
     ast::Expr* target = assign->getTarget();
     assert(target);
-    StringRef target_name = u"";
+    StringRef target_name = "";
 
     /// TODO: check other type of target expressions
     if (target->getKind() == ast::Expr::Kind::NAME)
@@ -305,8 +297,7 @@ void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
     break;
   }
 
-  default :
-    break;
+  default : break;
   }
 }
 
@@ -352,15 +343,9 @@ void SemanticAnalyzer::printReport() const
     StringRef sevStr;
     switch (issue.severity)
     {
-    case Issue::Severity::ERROR :
-      sevStr = u"ERROR";
-      break;
-    case Issue::Severity::WARNING :
-      sevStr = u"WARNING";
-      break;
-    case Issue::Severity::INFO :
-      sevStr = u"INFO";
-      break;
+    case Issue::Severity::ERROR : sevStr = u"ERROR"; break;
+    case Issue::Severity::WARNING : sevStr = u"WARNING"; break;
+    case Issue::Severity::INFO : sevStr = u"INFO"; break;
     }
 
     std::cout << "[" << sevStr << "] Line " << issue.line << ": " << issue.message << "\n";

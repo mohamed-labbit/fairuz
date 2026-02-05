@@ -1,4 +1,4 @@
-#include "../../../include/runtime/object/object.hpp"
+#include "../../../include/runtime/object/value.hpp"
 #include "../../../include/diag/diagnostic.hpp"
 
 #include <cmath>
@@ -57,7 +57,7 @@ std::unordered_map<StringRef, object::Value, StringRefHash, StringRefEqual>& obj
   return *std::get<std::shared_ptr<std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>>>(Data_);
 }
 
-typename object::Value::Function& object::Value::asFunction() const 
+typename object::Value::Function& object::Value::asFunction() const
 {
   if (!isFunction())
     diagnostic::engine.panic("Value is not a function");
@@ -100,22 +100,14 @@ bool object::Value::toBool() const
 {
   switch (Type_)
   {
-  case Type::NONE :
-    return false;
-  case Type::INT :
-    return asInt() != 0;
-  case Type::FLOAT :
-    return asFloat() != 0.0;
-  case Type::STRING :
-    return !asString().empty();
-  case Type::BOOL :
-    return asBool();
-  case Type::LIST :
-    return !asList().empty();
-  case Type::DICT :
-    return !(asDict().empty());
-  default :
-    return true;
+  case Type::NONE : return false;
+  case Type::INT : return asInt() != 0;
+  case Type::FLOAT : return asFloat() != 0.0;
+  case Type::STRING : return !asString().empty();
+  case Type::BOOL : return asBool();
+  case Type::LIST : return !asList().empty();
+  case Type::DICT : return !(asDict().empty());
+  default : return true;
   }
 }
 
@@ -125,10 +117,8 @@ StringRef object::Value::toString() const
 
   switch (Type_)
   {
-  case Type::NONE :
-    return u"None";
-  case Type::INT :
-    return ret.fromUtf8(std::to_string(asInt()));
+  case Type::NONE : return u"None";
+  case Type::INT : return ret.fromUtf8(std::to_string(asInt()));
   case Type::FLOAT : {
     StringRef s;
     s = s.fromUtf8(std::to_string(asFloat()));
@@ -145,10 +135,8 @@ StringRef object::Value::toString() const
     }
     return s;
   }
-  case Type::STRING :
-    return asString();
-  case Type::BOOL :
-    return asBool() ? u"True" : u"False";
+  case Type::STRING : return asString();
+  case Type::BOOL : return asBool() ? u"True" : u"False";
   case Type::LIST : {
     StringRef                         result = u"[";
     const std::vector<object::Value>& list   = asList();
@@ -173,12 +161,9 @@ StringRef object::Value::toString() const
     }
     return result + u"}";
   }
-  case Type::FUNCTION :
-    return u"<function>";
-  case Type::NATIVE_FUNCTION :
-    return u"<native function>";
-  default :
-    return u"<object>";
+  case Type::FUNCTION : return u"<function>";
+  case Type::NATIVE_FUNCTION : return u"<native function>";
+  default : return u"<object>";
   }
 }
 
@@ -209,20 +194,13 @@ bool object::Value::operator==(const Value& other) const
 
   switch (Type_)
   {
-  case Type::NONE :
-    return true;
-  case Type::INT :
-    return asInt() == other.asInt();
-  case Type::FLOAT :
-    return asFloat() == other.asFloat();
-  case Type::STRING :
-    return asString() == other.asString();
-  case Type::BOOL :
-    return asBool() == other.asBool();
-  case Type::LIST :
-    return asList() == other.asList();
-  default :
-    return false;
+  case Type::NONE : return true;
+  case Type::INT : return asInt() == other.asInt();
+  case Type::FLOAT : return asFloat() == other.asFloat();
+  case Type::STRING : return asString() == other.asString();
+  case Type::BOOL : return asBool() == other.asBool();
+  case Type::LIST : return asList() == other.asList();
+  default : return false;
   }
 }
 

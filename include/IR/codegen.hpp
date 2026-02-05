@@ -1,7 +1,9 @@
 #pragma once
 
 #include "../parser/ast/ast.hpp"
-#include "../runtime/object/object.hpp"
+#include "../runtime/object/value.hpp"
+#include "env.hpp"
+
 #include <builtins.h>
 #include <functional>
 
@@ -25,55 +27,64 @@ class CodeGenerator
     switch (type)
     {
     case ast::ASTNode::NodeType::EXPRESSION : {
-      ast::Expr* expr = dynamic_cast<ast::Expr*>(node);
+      const ast::Expr* expr = dynamic_cast<const ast::Expr*>(node);
       if (!expr)
         return object::Value();
+
       ast::Expr::Kind kind = expr->getKind();
       switch (kind)
       {
       case ast::Expr::Kind::ASSIGNMENT : {
-        ast::AssignmentExpr* assignment_expr = dynamic_cast<ast::AssignmentExpr*>(expr);
+        const ast::AssignmentExpr* assignment_expr = dynamic_cast<const ast::AssignmentExpr*>(expr);
         if (!assignment_expr)
           return object::Value();
 
-        object::Value target = eval(assignment_expr->getTarget());
-        object::Value value  = eval(assignment_expr->getValue());
+        // Get the target name
+        const ast::NameExpr* target = dynamic_cast<const ast::NameExpr*>(assignment_expr->getTarget());
+        if (!target)
+          throw std::runtime_error("Invalid assignment target");
+
+        // Evaluate the value
+        object::Value value = eval(assignment_expr->getValue());
+
+        // Store in environment
+        env_->set(target->getValue(), value);
 
         return value;
       }
-      break;
+
       case ast::Expr::Kind::BINARY : {
-        ast::BinaryExpr* binary_expr = dynamic_cast<ast::BinaryExpr*>(expr);
+        const ast::BinaryExpr* binary_expr = dynamic_cast<const ast::BinaryExpr*>(expr);
         if (!binary_expr)
           return object::Value();
 
-        object::Value left  = eval(binary_expr->getLeft());
-        object::Value right = eval(binary_expr->getRight());
+        object::Value lhs = eval(binary_expr->getLeft());
+        object::Value rhs = eval(binary_expr->getRight());
 
-        tok::TokenType tt = binary_expr->getOperator();
+        tok::TokenType op = binary_expr->getOperator();
 
-        switch (tt)
+        switch (op)
         {
-        case tok::TokenType::OP_PLUS :
-          return left + right;
-        case tok::TokenType::OP_MINUS :
-          return left - right;
-        case tok::TokenType::OP_STAR :
-          return left * right;
-        case tok::TokenType::OP_SLASH :
-          return left / right;
-          /// TODO: ...
+        case tok::TokenType::OP_PLUS : return lhs + rhs;
+        case tok::TokenType::OP_MINUS : return lhs - rhs;
+        case tok::TokenType::OP_STAR : return lhs * rhs;
+        case tok::TokenType::OP_SLASH : return lhs / rhs;
+        case tok::TokenType::OP_EQ : return lhs == rhs;
+        case tok::TokenType::OP_GT : return lhs > rhs;
+        case tok::TokenType::OP_GTE : return lhs >= rhs;
+        case tok::TokenType::OP_LT : return lhs < rhs;
+        case tok::TokenType::OP_LTE : return lhs <= rhs;
+        default : throw std::runtime_error("Unknown binary operator");
         }
-        // all control paths should be handled in switch
       }
-      break;
+
       case ast::Expr::Kind::CALL : {
-        ast::CallExpr* call_expr = dynamic_cast<ast::CallExpr*>(expr);
+        const ast::CallExpr* call_expr = dynamic_cast<const ast::CallExpr*>(expr);
         if (!call_expr)
           return object::Value();
 
         // Get function name
-        ast::NameExpr* name_expr = dynamic_cast<parser::ast::NameExpr*>(call_expr->getCallee());
+        ast::NameExpr* name_expr = dynamic_cast<ast::NameExpr*>(call_expr->getCallee());
         if (!name_expr)
           throw std::runtime_error("Invalid function call");
 
@@ -96,45 +107,70 @@ class CodeGenerator
             return callUserFunction(funcValue, args);
         }
 
-        throw std::runtime_error("Undefined function: " + func_name);
+        throw std::runtime_error("Undefined function: " + func_name.toUtf8());
       }
-      break;
+
       case ast::Expr::Kind::LIST : {
-        ast::ListExpr* list_expr = dynamic_cast<ast::ListExpr*>(expr);
-        if (!list_expr)
-          return object::Value();
+        const ast::ListExpr* list_expr = dynamic_cast<const ast::ListExpr*>(expr);
+        if (!list_expr || list_expr->isEmpty())
+          return object::Value();  // or return empty list
+
+        std::vector<object::Value> evaluated_elems;
+        for (const ast::Expr* elem : list_expr->getElements())
+          evaluated_elems.push_back(eval(elem));
+
+        // Assuming you have a way to create a list Value
+        return object::Value::makeList(evaluated_elems);
       }
-      break;
+
       case ast::Expr::Kind::LITERAL : {
-        ast::LiteralExpr* literal_expr = dynamic_cast<ast::LiteralExpr*>(expr);
+        const ast::LiteralExpr* literal_expr = dynamic_cast<const ast::LiteralExpr*>(expr);
         if (!literal_expr)
           return object::Value();
+
+        return object::Value(literal_expr->getValue());
       }
-      break;
+
       case ast::Expr::Kind::NAME : {
-        ast::NameExpr* name_expr = dynamic_cast<ast::NameExpr*>(expr);
+        const ast::NameExpr* name_expr = dynamic_cast<const ast::NameExpr*>(expr);
         if (!name_expr)
           return object::Value();
+
+        StringRef name = name_expr->getValue();
+        if (!env_->exists(name))
+          throw std::runtime_error("Undefined variable: " + name.toUtf8());
+
+        return env_->get(name);
       }
-      break;
+
       case ast::Expr::Kind::UNARY : {
-        ast::UnaryExpr* unary_expr = dynamic_cast<ast::UnaryExpr*>(expr);
+        const ast::UnaryExpr* unary_expr = dynamic_cast<const ast::UnaryExpr*>(expr);
         if (!unary_expr)
           return object::Value();
+
+        object::Value  operand = eval(unary_expr->getOperand());
+        tok::TokenType op      = unary_expr->getOperator();
+
+        switch (op)
+        {
+        case tok::TokenType::OP_MINUS : return -operand;
+        case tok::TokenType::KW_NOT :  // logical NOT
+          return !operand;
+        default : throw std::runtime_error("Unknown unary operator");
+        }
       }
-      break;
-      case ast::Expr::Kind::INVALID : {
-      }
-      break;
+
+      case ast::Expr::Kind::INVALID : throw std::runtime_error("Invalid expression");
+
+      default : throw std::runtime_error("Unknown expression kind");
       }
     }
-    break;
+
     case ast::ASTNode::NodeType::STATEMENT :
+      // Handle statements here
+      throw std::runtime_error("Statement evaluation not implemented");
 
-      break;
-
-    default :
-      break;
+    default : throw std::runtime_error("Unknown AST node type");
     }
   }
 
@@ -153,17 +189,17 @@ class CodeGenerator
 
     // Bind parameters to arguments
     for (size_t i = 0; i < args.size(); ++i)
-      funcEnv->define(func.parameters[i], args[i]);
+      funcEnv->define(func.params[i], args[i]);
 
     // Save current environment and switch to function environment
     auto previousEnv = env_;
     env_             = funcEnv;
 
     // Execute function body
-    Value result;
+    object::Value result;
     try
     {
-      result = evaluate(func.body);
+      result = eval(func.closure);  /// TODO: define the function closure in a clear manner ../runtime/object/value.hpp
     } catch (...)
     {
       env_ = previousEnv;  // Restore environment before rethrowing

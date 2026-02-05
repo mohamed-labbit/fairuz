@@ -236,11 +236,8 @@ const tok::Token* Lexer::lexToken()
       return finish(tok::TokenType::STRING, str, line, col);
     }
     case ',' :
-    case u'،' :
-      consumeChar();
-      return finish(tok::TokenType::COMMA, StringRef(ch), line, col);
-    default :
-      break;
+    case u'،' : consumeChar(); return finish(tok::TokenType::COMMA, StringRef(ch), line, col);
+    default : break;
     }
 
     // Identifiers
@@ -462,21 +459,13 @@ const tok::Token* Lexer::lexToken()
 
       switch (ch)
       {
-      case '(' :
-        tt = tok::TokenType::LPAREN;
-        break;
-      case ')' :
-        tt = tok::TokenType::RPAREN;
-        break;
+      case '(' : tt = tok::TokenType::LPAREN; break;
+      case ')' : tt = tok::TokenType::RPAREN; break;
       case '[' :  // FIX: Added bracket support
         tt = tok::TokenType::LBRACKET;
         break;
-      case ']' :
-        tt = tok::TokenType::RBRACKET;
-        break;
-      case '.' :
-        tt = tok::TokenType::DOT;
-        break;
+      case ']' : tt = tok::TokenType::RBRACKET; break;
+      case '.' : tt = tok::TokenType::DOT; break;
       case ':' :
         if (currentChar() == u'=')
         {
@@ -487,9 +476,7 @@ const tok::Token* Lexer::lexToken()
         else
           tt = tok::TokenType::COLON;
         break;
-      default :
-        tt = tok::TokenType::INVALID;
-        break;
+      default : tt = tok::TokenType::INVALID; break;
       }
 
       return finish(tt, sym, line, col);

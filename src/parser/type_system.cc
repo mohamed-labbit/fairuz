@@ -14,16 +14,11 @@ StringRef TypeSystem::Type::toString() const
 {
   switch (base)
   {
-  case BaseType::Int :
-    return u"int";
-  case BaseType::Float :
-    return u"float";
-  case BaseType::String :
-    return u"str";
-  case BaseType::Bool :
-    return u"bool";
-  case BaseType::None :
-    return u"None";
+  case BaseType::Int : return u"int";
+  case BaseType::Float : return u"float";
+  case BaseType::String : return u"str";
+  case BaseType::Bool : return u"bool";
+  case BaseType::None : return u"None";
   case BaseType::List :
     if (!TypeParams.empty())
       return u"List[" + TypeParams[0]->toString() + u"]";
@@ -32,8 +27,7 @@ StringRef TypeSystem::Type::toString() const
     if (TypeParams.size() >= 2)
       return u"Dict[" + TypeParams[0]->toString() + u", " + TypeParams[1]->toString() + u"]";
     return u"Dict";
-  default :
-    return u"Any";
+  default : return u"Any";
   }
 
   return u"Any";
@@ -79,18 +73,10 @@ std::shared_ptr<typename TypeSystem::Type> TypeSystem::TypeInference::inferExpr(
     std::shared_ptr<Type>   t   = std::make_shared<Type>();
     switch (lit->getType())
     {
-    case ast::LiteralExpr::Type::NUMBER :
-      t->base = lit->getValue().find('.') ? BaseType::Float : BaseType::Int;
-      break;
-    case ast::LiteralExpr::Type::STRING :
-      t->base = BaseType::String;
-      break;
-    case ast::LiteralExpr::Type::BOOLEAN :
-      t->base = BaseType::Bool;
-      break;
-    case ast::LiteralExpr::Type::NONE :
-      t->base = BaseType::None;
-      break;
+    case ast::LiteralExpr::Type::NUMBER : t->base = lit->getValue().find('.') ? BaseType::Float : BaseType::Int; break;
+    case ast::LiteralExpr::Type::STRING : t->base = BaseType::String; break;
+    case ast::LiteralExpr::Type::BOOLEAN : t->base = BaseType::Bool; break;
+    case ast::LiteralExpr::Type::NONE : t->base = BaseType::None; break;
     }
     return t;
   }
@@ -123,8 +109,7 @@ std::shared_ptr<typename TypeSystem::Type> TypeSystem::TypeInference::inferExpr(
     }
     return t;
   }
-  default :
-    return freshTypeVar();
+  default : return freshTypeVar();
   }
 
   return freshTypeVar();

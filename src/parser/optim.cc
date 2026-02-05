@@ -286,8 +286,7 @@ StringRef ASTOptimizer::CSEPass::exprToString(const ast::Expr* expr)
     const ast::UnaryExpr* un = static_cast<const ast::UnaryExpr*>(expr);
     return tok::toString(un->getOperator()) + exprToString(un);
   }
-  default :
-    return u"";
+  default : return u"";
   }
 }
 
