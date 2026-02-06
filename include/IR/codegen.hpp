@@ -68,7 +68,7 @@ class CodeGenerator
         case tok::TokenType::OP_PLUS : return lhs + rhs;
         case tok::TokenType::OP_MINUS : return lhs - rhs;
         case tok::TokenType::OP_STAR : return lhs * rhs;
-        case tok::TokenType::OP_SLASH : return lhs / rhs;
+        case tok::TokenType::OP_SLASH : return lhs / rhs; // division by zero is handled in Value
         case tok::TokenType::OP_EQ : return lhs == rhs;
         case tok::TokenType::OP_GT : return lhs > rhs;
         case tok::TokenType::OP_GTE : return lhs >= rhs;

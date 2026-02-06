@@ -101,7 +101,12 @@ void SemanticAnalyzer::analyzeExpr(const ast::Expr* expr)
     SymbolTable::DataType_t leftType  = inferType(bin->getLeft());
     SymbolTable::DataType_t rightType = inferType(bin->getRight());
 
-    if (leftType != rightType && leftType != SymbolTable::DataType_t::UNKNOWN && rightType != SymbolTable::DataType_t::UNKNOWN)
+    if (leftType != rightType)
+    {
+      /// TODO: reportIssue(Issue::Severity::ERROR, u"In");
+    }
+
+    if (/*leftType != rightType &&*/ leftType != SymbolTable::DataType_t::UNKNOWN && rightType != SymbolTable::DataType_t::UNKNOWN)
     {  // Check for invalid operations
       if ((bin->getOperator() == tok::TokenType::OP_MINUS || bin->getOperator() == tok::TokenType::OP_STAR
            || bin->getOperator() == tok::TokenType::OP_SLASH)
