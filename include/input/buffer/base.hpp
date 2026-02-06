@@ -2,7 +2,7 @@
 
 #include "../../../include/diag/diagnostic.hpp"
 #include "../../macros.hpp"
-#include "../../types.hpp"
+#include "../../types/string.hpp"
 #include "../file_manager.hpp"
 
 #include <fstream>

@@ -230,6 +230,7 @@ class StringRef
 
   // Find a character
   MYLANG_NODISCARD bool find(const CharType c) const noexcept;
+  MYLANG_NODISCARD bool find(const StringRef& s) const noexcept;
 
   // Find position of a character (returns optional index)
   MYLANG_NODISCARD std::optional<SizeType> find_pos(const CharType c) const noexcept;

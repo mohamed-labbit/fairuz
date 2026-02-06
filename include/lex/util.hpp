@@ -2,7 +2,7 @@
 
 #include "../../utfcpp/source/utf8.h"
 #include "../macros.hpp"
-#include "../types.hpp"
+#include "../types/string.hpp"
 #include <omp.h>
 #include <string>
 #include <vector>

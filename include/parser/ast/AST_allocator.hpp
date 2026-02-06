@@ -16,6 +16,7 @@ class ASTAllocator
   ASTAllocator() :
       Allocator_(static_cast<std::int32_t>(runtime::allocator::ArenaAllocator::GrowthStrategy::LINEAR))
   {
+    Allocator_.setName("AST Allocator");
   }
 
   template<typename T, typename... Args>
@@ -26,6 +27,8 @@ class ASTAllocator
       return nullptr;
     return new (mem) T(std::forward<Args>(args)...);
   }
+
+  std::string toString(bool verbose) const { return Allocator_.toString(verbose); }
 };
 
 inline ASTAllocator AST_allocator;

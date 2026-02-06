@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../macros.hpp"
-#include "../types.hpp"
+#include "../types/string.hpp"
 #include "util.hpp"
 
 #include <cstdint>

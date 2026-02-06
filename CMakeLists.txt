@@ -59,6 +59,7 @@ add_executable(mylang_tests
     tests/lexer/test_tokens.cpp
     tests/lexer/test_indentation.cpp
     tests/parser/test_parser.cpp
+    tests/parser/test_analyzer.cpp
     $<TARGET_OBJECTS:mylang_objects>
 )
 

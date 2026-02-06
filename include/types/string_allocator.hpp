@@ -14,6 +14,7 @@ struct StringAllocator
   StringAllocator() :
       Allocator_(static_cast<std::int32_t>(runtime::allocator::ArenaAllocator::GrowthStrategy::EXPONENTIAL))
   {
+    Allocator_.setName("String Allocator");
   }
 
   void* allocateBytes(const SizeType size)

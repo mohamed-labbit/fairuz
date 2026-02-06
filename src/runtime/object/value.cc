@@ -26,7 +26,7 @@ const StringRef& object::Value::asString() const
 {
   if (!isString())
     diagnostic::engine.panic("Value is not a string");
-  return *std::get<std::shared_ptr<StringRef>>(Data_);
+  return std::get<StringRef>(Data_);
 }
 
 bool object::Value::asBool() const
@@ -40,28 +40,35 @@ std::vector<object::Value>& object::Value::asList()
 {
   if (!isList())
     diagnostic::engine.panic("Value is not a list");
-  return *std::get<std::shared_ptr<std::vector<Value>>>(Data_);
+  return std::get<std::vector<Value>>(Data_);
 }
 
 const std::vector<object::Value>& object::Value::asList() const
 {
   if (!isList())
     diagnostic::engine.panic("Value is not a list");
-  return *std::get<std::shared_ptr<std::vector<Value>>>(Data_);
+  return std::get<std::vector<Value>>(Data_);
 }
 
-std::unordered_map<StringRef, object::Value, StringRefHash, StringRefEqual>& object::Value::asDict() const
+std::unordered_map<StringRef, object::Value, StringRefHash, StringRefEqual>& object::Value::asDict()
 {
   if (!isDict())
     diagnostic::engine.panic("Value is not a dict");
-  return *std::get<std::shared_ptr<std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>>>(Data_);
+  return std::get<std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>>(Data_);
 }
 
-typename object::Value::Function& object::Value::asFunction() const
+const std::unordered_map<StringRef, object::Value, StringRefHash, StringRefEqual>& object::Value::asDict() const
+{
+  if (!isDict())
+    diagnostic::engine.panic("Value is not a dict");
+  return std::get<std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>>(Data_);
+}
+
+typename object::Value::Function& object::Value::asFunction()
 {
   if (!isFunction())
     diagnostic::engine.panic("Value is not a function");
-  return std::get<Function&>(Data_);
+  return std::get<Function>(Data_);
 }
 
 typename object::Value::NativeFunction& object::Value::asNativeFunction()
@@ -149,14 +156,14 @@ StringRef object::Value::toString() const
     return result + u"]";
   }
   case Type::DICT : {
-    StringRef                                                                                   result = u"{";
-    const std::shared_ptr<std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>>& dict =
-      std::get<std::shared_ptr<std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>>>(Data_);
+    StringRef                                                                  result = u"{";
+    const std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>& dict =
+      std::get<std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>>(Data_);
     SizeType count = 0;
-    for (const auto& [k, v] : *dict)
+    for (const auto& [k, v] : dict)
     {
       result += u"'" + k + u"': " + v.toString();
-      if (++count < dict->size())
+      if (++count < dict.size())
         result += u", ";
     }
     return result + u"}";
@@ -375,7 +382,7 @@ object::Value object::Value::getIterator() const
   if (isList())
   {
     Iterator it;
-    it.items = std::get<std::shared_ptr<std::vector<Value>>>(Data_);
+    it.items = std::get<std::vector<Value>>(Data_);
     it.index = 0;
     Value result;
     result.Type_ = Type::ITERATOR;
@@ -390,7 +397,7 @@ bool object::Value::hasNext() const
   if (Type_ == Type::ITERATOR)
   {
     const Iterator& it = std::get<Iterator>(Data_);
-    return it.index < it.items->size();
+    return it.index < it.items.size();
   }
   return false;
 }
@@ -400,9 +407,9 @@ object::Value object::Value::next()
   if (Type_ == Type::ITERATOR)
   {
     Iterator& it = std::get<Iterator>(Data_);
-    if (it.index >= it.items->size())
+    if (it.index >= it.items.size())
       diagnostic::engine.panic("Iterator exhausted");
-    return (*it.items)[it.index++];
+    return it.items[it.index++];
   }
   diagnostic::engine.panic("Object is not an iterator");
 }

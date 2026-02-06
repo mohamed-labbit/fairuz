@@ -30,6 +30,7 @@ class SemanticAnalyzer
   ControlFlowGraph             Cfg_;
 
   // Type inference engine
+ public: /// TODO: 
   SymbolTable::DataType_t inferType(const ast::Expr* expr);
 
   void reportIssue(Issue::Severity sev, const StringRef& msg, std::int32_t line, const StringRef& sugg = u"");
@@ -38,7 +39,7 @@ class SemanticAnalyzer
 
   void analyzeStmt(const ast::Stmt* stmt);
 
- public:
+  // public:
   SemanticAnalyzer();
 
   void analyze(const std::vector<ast::Stmt*>& Statements_);

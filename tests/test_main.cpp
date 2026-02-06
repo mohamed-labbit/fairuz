@@ -1,4 +1,5 @@
-#include "../include/types.hpp"
+#include "../include/types/string.hpp"
+#include "../include/parser/ast/ast.hpp"
 #include "test_config.h"
 #include <cstring>
 #include <gtest/gtest.h>
@@ -36,7 +37,11 @@ int main(int argc, char** argv)
   int ret = RUN_ALL_TESTS();
 
   if (test_config::verbose)
-    std::cout << string_allocator.toString(true) << std::endl;
+  {
+    std::cout << string_allocator.toString(true) << '\n';
+    std::cout << '\n';
+    std::cout << parser::ast::AST_allocator.toString(true) << std::endl;
+  }
 
   return ret;
 }

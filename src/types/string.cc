@@ -181,6 +181,26 @@ MYLANG_NODISCARD bool StringRef::find(const CharType c) const noexcept
   return *p == c;
 }
 
+MYLANG_NODISCARD bool StringRef::find(const StringRef& s) const noexcept {
+  if (!StringData_ || !StringData_->ptr())
+    return false;
+  
+  if (s.len() > len())
+    return false;
+  
+  SizeType start = 0;
+  SizeType end = s.len() - 1;
+
+  while (start < end && end < len())
+  {
+    if (s == substr(start, end))
+      return true;
+    start++, end++;
+  }
+
+  return false;
+}
+
 // Find position of a character (returns optional index)
 MYLANG_NODISCARD std::optional<SizeType> StringRef::find_pos(const CharType c) const noexcept
 {
@@ -247,7 +267,7 @@ StringRef StringRef::substr(std::optional<SizeType> start, std::optional<SizeTyp
 StringRef StringRef::substr(SizeType start) const { return substr(std::optional<SizeType>(start), std::nullopt); }
 
 // Convert to double - improved error handling
-double StringRef::toDouble(SizeType* pos = nullptr) const
+double StringRef::toDouble(SizeType* pos) const
 {
   if (empty() || len() == 0)
     throw std::invalid_argument("StringRef::toDouble: empty string");

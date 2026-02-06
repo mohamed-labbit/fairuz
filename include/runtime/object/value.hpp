@@ -3,7 +3,7 @@
 
 #include "../../../utfcpp/source/utf8.h"
 #include "../../macros.hpp"
-#include "../../types.hpp"
+#include "../../types/string.hpp"
 
 #include <cstdint>
 #include <functional>
@@ -63,8 +63,8 @@ class Value
 
   struct Iterator
   {
-    std::shared_ptr<std::vector<Value>> items;
-    SizeType                            index;
+    std::vector<Value> items;
+    SizeType           index;
   };
 
   using ValueData = std::variant<std::monostate,                                                       // None
@@ -186,9 +186,11 @@ class Value
 
   const std::vector<Value>& asList() const;
 
-  std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>& asDict() const;
+  std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>& asDict();
 
-  Function& asFunction() const;
+  const std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>& asDict() const;
+
+  Function& asFunction();
 
   NativeFunction& asNativeFunction();
 

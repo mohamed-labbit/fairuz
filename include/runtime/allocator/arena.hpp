@@ -101,6 +101,8 @@ class MYLANG_COMPILER_ABI ArenaAllocator
   ArenaAllocator(ArenaAllocator&&) MYLANG_NOEXCEPT            = delete;
   ArenaAllocator& operator=(ArenaAllocator&&) MYLANG_NOEXCEPT = delete;
 
+  void setName(const std::string& name) { Name_ = name; }
+
   //==========================================================================
   // Reset and Statistics
   //==========================================================================
