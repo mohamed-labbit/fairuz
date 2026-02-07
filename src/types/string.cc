@@ -140,11 +140,11 @@ CharType& StringRef::at(const SizeType i)
 }
 
 // Accessors
-MYLANG_NODISCARD SizeType StringRef::len() const noexcept { return StringData_ ? StringData_->length() : 0; }
-MYLANG_NODISCARD SizeType StringRef::cap() const noexcept { return StringData_ ? StringData_->cap() : 0; }
-MYLANG_NODISCARD String*  StringRef::get() const noexcept { return StringData_; }
-MYLANG_NODISCARD bool     StringRef::empty() const noexcept { return StringData_ ? StringData_->length() == 0 : true; }
-typename StringRef::ConstPointer              StringRef::data() const noexcept { return StringData_ ? StringData_->ptr() : nullptr; }
+MYLANG_NODISCARD SizeType        StringRef::len() const noexcept { return StringData_ ? StringData_->length() : 0; }
+MYLANG_NODISCARD SizeType        StringRef::cap() const noexcept { return StringData_ ? StringData_->cap() : 0; }
+MYLANG_NODISCARD String*         StringRef::get() const noexcept { return StringData_; }
+MYLANG_NODISCARD bool            StringRef::empty() const noexcept { return StringData_ ? StringData_->length() == 0 : true; }
+typename StringRef::ConstPointer StringRef::data() const noexcept { return StringData_ ? StringData_->ptr() : nullptr; }
 
 typename StringRef::Pointer StringRef::data() noexcept
 {
@@ -181,15 +181,16 @@ MYLANG_NODISCARD bool StringRef::find(const CharType c) const noexcept
   return *p == c;
 }
 
-MYLANG_NODISCARD bool StringRef::find(const StringRef& s) const noexcept {
+MYLANG_NODISCARD bool StringRef::find(const StringRef& s) const noexcept
+{
   if (!StringData_ || !StringData_->ptr())
     return false;
-  
+
   if (s.len() > len())
     return false;
-  
+
   SizeType start = 0;
-  SizeType end = s.len() - 1;
+  SizeType end   = s.len() - 1;
 
   while (start < end && end < len())
   {

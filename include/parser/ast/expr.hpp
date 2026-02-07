@@ -5,6 +5,8 @@
 #include "ast_node.hpp"
 
 #include <cassert>
+#include <cstdint>
+#include <string>
 #include <vector>
 
 
@@ -139,6 +141,10 @@ class LiteralExpr: public Expr
   StringRef getValue() const { return Literal_; }
 
   Type getType() const { return Type_; }
+
+  bool isNumeric() const { return Type_ == Type::NUMBER; }
+
+  float toNumber() const { return std::stof(getValue().toUtf8()); }
 };
 
 class NameExpr: public Expr

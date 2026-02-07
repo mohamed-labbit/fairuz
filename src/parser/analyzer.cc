@@ -40,7 +40,8 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(const ast::Expr* ex
   }
 
   case ast::Expr::Kind::BINARY : {
-    const ast::BinaryExpr*  bin       = static_cast<const ast::BinaryExpr*>(expr);
+    const ast::BinaryExpr* bin = static_cast<const ast::BinaryExpr*>(expr);
+
     SymbolTable::DataType_t leftType  = inferType(bin->getLeft());
     SymbolTable::DataType_t rightType = inferType(bin->getRight());
 
@@ -101,24 +102,20 @@ void SemanticAnalyzer::analyzeExpr(const ast::Expr* expr)
     SymbolTable::DataType_t leftType  = inferType(bin->getLeft());
     SymbolTable::DataType_t rightType = inferType(bin->getRight());
 
-    if (leftType != rightType)
-    {
-      /// TODO: reportIssue(Issue::Severity::ERROR, u"In");
-    }
+    if (leftType != rightType && leftType != SymbolTable::DataType_t::UNKNOWN && rightType != SymbolTable::DataType_t::UNKNOWN)
+      reportIssue(Issue::Severity::ERROR, u"Type mismatch in binary expression", expr->getLine(), u"Left and right operands must have same type");
 
-    if (/*leftType != rightType &&*/ leftType != SymbolTable::DataType_t::UNKNOWN && rightType != SymbolTable::DataType_t::UNKNOWN)
-    {  // Check for invalid operations
-      if ((bin->getOperator() == tok::TokenType::OP_MINUS || bin->getOperator() == tok::TokenType::OP_STAR
-           || bin->getOperator() == tok::TokenType::OP_SLASH)
-          && (leftType == SymbolTable::DataType_t::STRING || rightType == SymbolTable::DataType_t::STRING))
-        reportIssue(Issue::Severity::ERROR, u"Invalid operation on string", expr->getLine(), u"Strings don't support this operator");
+    if (leftType == SymbolTable::DataType_t::STRING || rightType == SymbolTable::DataType_t::STRING)
+    {
+      if (bin->getOperator() != tok::TokenType::OP_PLUS)
+        reportIssue(Issue::Severity::ERROR, u"Invalid operation on string", expr->getLine(), u"Only '+' is allowed for strings");
     }
 
     // Division by zero detection (constant folding)
     if (bin->getOperator() == tok::TokenType::OP_SLASH && bin->getRight()->getKind() == ast::Expr::Kind::LITERAL)
     {
       const ast::LiteralExpr* lit = static_cast<const ast::LiteralExpr*>(bin->getRight());
-      if (lit->getValue() == u"0")
+      if (lit->isNumeric() && lit->toNumber() == 0)
         reportIssue(Issue::Severity::ERROR, u"Division by zero", expr->getLine(), u"This will cause a runtime error");
     }
 
@@ -127,7 +124,7 @@ void SemanticAnalyzer::analyzeExpr(const ast::Expr* expr)
 
   case ast::Expr::Kind::UNARY : {
     const ast::UnaryExpr* un = static_cast<const ast::UnaryExpr*>(expr);
-    analyzeExpr(static_cast<const ast::Expr*>(un));
+    analyzeExpr(un->getOperand());
     break;
   }
 
@@ -148,6 +145,17 @@ void SemanticAnalyzer::analyzeExpr(const ast::Expr* expr)
           reportIssue(Issue::Severity::ERROR, u"'" + name->getValue() + u"' is not callable", expr->getLine());
     }
 
+    if (call->getCallee()->getKind() == ast::Expr::Kind::NAME)
+    {
+      const ast::NameExpr* name = static_cast<const ast::NameExpr*>(call->getCallee());
+
+      SymbolTable::Symbol* sym = CurrentScope_->lookup(name->getValue());
+
+      if (!sym)
+        reportIssue(Issue::Severity::ERROR, u"Undefined function: " + name->getValue(), expr->getLine());
+      else if (sym->SymbolType != SymbolTable::SymbolType::FUNCTION)
+        reportIssue(Issue::Severity::ERROR, u"'" + name->getValue() + u"' is not callable", expr->getLine());
+    }
     break;
   }
 

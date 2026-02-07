@@ -1,7 +1,7 @@
 #pragma once
 
-#include "string_allocator.hpp"
 #include "../macros.hpp"
+#include "string_allocator.hpp"
 
 
 namespace mylang {
