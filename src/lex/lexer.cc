@@ -10,7 +10,6 @@
 
 #include <cassert>
 
-
 namespace mylang {
 namespace lex {
 
