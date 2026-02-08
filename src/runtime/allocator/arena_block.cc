@@ -18,11 +18,9 @@ ArenaBlock::ArenaBlock(const SizeType size, const SizeType alignment) :
   // Allocate aligned memory
   void* mem = std::aligned_alloc(alignment, Size_);
   if (!mem)
-  {
     throw std::bad_alloc();
-    /// TODO: change after debug
-    // diagnostic::engine.panic("bad alloc");
-  }
+  /// TODO: change after debug
+  // diagnostic::engine.panic("bad alloc");
   Begin_ = reinterpret_cast<Pointer>(mem);
   Next_  = Begin_;
 }
