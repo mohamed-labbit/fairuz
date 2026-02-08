@@ -1,7 +1,7 @@
 /**
  * @file arena.h
  * @brief Thread-safe arena/region-based memory allocator with fast path optimization
- * 
+ *
  * This allocator implements a sophisticated memory management system with:
  * - Lock-free allocation using CAS (Compare-And-Swap) operations
  * - Size-specific fast pools for small objects (8, 16, 32, 64, 128, 256 bytes)
@@ -10,7 +10,7 @@
  * - Optional allocation tracking and debugging
  * - Configurable growth strategies (linear/exponential)
  * - Thread-safe operations with fine-grained locking
- * 
+ *
  * @author mylang runtime team
  * @version 2.0
  */
@@ -65,10 +65,10 @@ class MYLANG_COMPILER_ABI ArenaAllocator
   // Fast pools for small allocations (8, 16, 32, 64, 128, 256 bytes)
   mutable std::mutex FastPoolMutex_;  ///< Protects all fast pools
   // Configuration
-  std::atomic<GrowthStrategy> GrowthFactor_{GrowthStrategy::LINEAR};  ///< Block growth strategy
-  SizeType                    BlockSize_{DEFAULT_BLOCK_SIZE};         ///< Initial block size
-  std::atomic<SizeType>       NextBlockSize_{DEFAULT_BLOCK_SIZE};     ///< Next block size to allocate
-  std::string                 Name_{"arena"};                         ///< Allocator name (for debugging)
+  GrowthStrategy GrowthFactor_{GrowthStrategy::LINEAR};  ///< Block growth strategy
+  SizeType       BlockSize_{DEFAULT_BLOCK_SIZE};         ///< Initial block size
+  SizeType       NextBlockSize_{DEFAULT_BLOCK_SIZE};     ///< Next block size to allocate
+  std::string    Name_{"arena"};                         ///< Allocator name (for debugging)
   // Out-of-memory handling
   OutOfMemoryHandler OomHandler_{nullptr};  ///< OOM callback
   mutable std::mutex OomHandlerMutex_;      ///< Protects OOM handler calls
@@ -79,14 +79,14 @@ class MYLANG_COMPILER_ABI ArenaAllocator
   std::unordered_set<void*, VoidPtrHash, VoidPtrEqual>                   AllocatedPtrs_{};     ///< Active allocations (double-free protection)
   mutable std::shared_mutex                                              AllocatedPtrsMutex_;  ///< Protects allocated pointers set
   // Feature flags
-  std::atomic<bool> TrackAllocations_{false};  ///< Enable allocation tracking
-  std::atomic<bool> DebugFeatures_{false};     ///< Enable debug features
-  std::atomic<bool> EnableStatistics_{true};   ///< Enable statistics collection
+  bool TrackAllocations_{false};  ///< Enable allocation tracking
+  bool DebugFeatures_{false};     ///< Enable debug features
+  bool EnableStatistics_{true};   ///< Enable statistics collection
   // Alignment settings
   static constexpr SizeType Alignment_ = alignof(std::max_align_t);  ///< Minimum alignment
-  std::atomic<SizeType>     MaxBlockSize_{MAX_BLOCK_SIZE};           ///< Maximum block size
+  SizeType                  MaxBlockSize_{MAX_BLOCK_SIZE};           ///< Maximum block size
   // for deallocation
-  std::atomic<void*> LastPtr_{nullptr};
+  void* LastPtr_{nullptr};
 
  public:
   ArenaAllocator(std::int32_t       growth_strategy = static_cast<std::int32_t>(GrowthStrategy::EXPONENTIAL),
@@ -121,11 +121,11 @@ class MYLANG_COMPILER_ABI ArenaAllocator
      * @param alignment_ Required alignment
      * @param retry_on_oom Whether to call OOM handler on failure
      * @return Pointer to block start, or nullptr on failure
-     * 
+     *
      * Internal method used by public allocation functions.
-     * 
+     *
      * Thread-safe: Uses exclusive lock when adding to blocks vector.
-     * 
+     *
      * The actual block size may be larger than requested to:
      * - Satisfy alignment requirements
      * - Implement growth strategy
@@ -140,12 +140,12 @@ class MYLANG_COMPILER_ABI ArenaAllocator
      * @param alignment custom alignment, validated and overwritten if wrong
      * @return Pointer to allocated memory, or nullptr on failure
      * @throws panic if size larger than MAX
-     * 
+     *
      * Features:
      * - Automatic alignment
      * - Double-free protection (when debug enabled)
      * - Optional allocation tracking
-     * 
+     *
      * Thread-safe: Yes
      */
   MYLANG_NODISCARD MYLANG_COMPILER_ABI void* allocate(const SizeType size, const SizeType alignment = alignof(std::max_align_t));

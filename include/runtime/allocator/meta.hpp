@@ -19,15 +19,15 @@ namespace allocator {
 struct ArenaAllocStats
 {
   /// Total number of allocation requests
-  std::atomic<SizeType> TotalAllocations{0};
+  SizeType TotalAllocations{0};
   /// Total bytes allocated (cumulative)
-  std::atomic<SizeType> TotalAllocated{0};
+  SizeType TotalAllocated{0};
   /// Total bytes freed (for future use)
-  std::atomic<SizeType> TotalFree{0};
+  SizeType TotalFree{0};
   /// Total number of deallocation requests
-  std::atomic<SizeType> TotalDeallocations{0};
+  SizeType TotalDeallocations{0};
   /// Number of currently active memory blocks
-  std::atomic<SizeType> ActiveBlocks{0};
+  SizeType ActiveBlocks{0};
 
   ArenaAllocStats() = default;
 

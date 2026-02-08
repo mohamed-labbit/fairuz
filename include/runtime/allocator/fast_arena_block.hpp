@@ -32,11 +32,11 @@ class LockFreeFastAllocBlock
 {
  private:
   /// Size of the block (atomic for move operations)
-  std::atomic<SizeType> Size_{DEFAULT_BLOCK_SIZE};
+  SizeType Size_{DEFAULT_BLOCK_SIZE};
   /// Beginning of allocated memory (atomic)
-  std::atomic<Pointer> Begin_{nullptr};
+  Pointer Begin_{nullptr};
   /// Next available byte (atomic bump Pointer)
-  std::atomic<Pointer> Next_{nullptr};
+  Pointer Next_{nullptr};
 
  public:
   /// Default constructor - does not allocate

@@ -11,10 +11,10 @@ ArenaAllocator::ArenaAllocator(std::int32_t growth_strategy, OutOfMemoryHandler 
     DebugFeatures_(debug)
 {
   // Enable tracking in debug mode
-  if (DebugFeatures_.load(std::memory_order_relaxed))
+  if (DebugFeatures_)
   {
-    TrackAllocations_.store(true, std::memory_order_relaxed);
-    EnableStatistics_.store(true, std::memory_order_relaxed);
+    TrackAllocations_ = true;
+    EnableStatistics_ = true;
     AllocStats_.reset();
   }
 }
@@ -31,14 +31,14 @@ void ArenaAllocator::reset()
   // Clear all containers (automatically frees memory via destructors)
   Blocks_.clear();
 
-  if (TrackAllocations_.load(std::memory_order_relaxed))
+  if (TrackAllocations_)
     AllocationMap_.clear();
 
   AllocatedPtrs_.clear();
   // Reset statistics
   AllocStats_.reset();
   // Reset block size
-  NextBlockSize_.store(BlockSize_, std::memory_order_relaxed);
+  NextBlockSize_ = BlockSize_;
 }
 
 MYLANG_NODISCARD
@@ -50,10 +50,10 @@ Pointer ArenaAllocator::allocateBlock(SizeType requested, SizeType alignment_, b
     alignment_ = min_align;
 
   // Determine block size (including growth strategy)
-  SizeType block_size = std::max(requested + alignment_, NextBlockSize_.load(std::memory_order_relaxed));
+  SizeType block_size = std::max(requested + alignment_, NextBlockSize_);
 
   // Check against maximum
-  if (block_size > MaxBlockSize_.load(std::memory_order_relaxed))
+  if (block_size > MaxBlockSize_)
   {
     if (retry_on_oom)
     {
@@ -125,7 +125,7 @@ MYLANG_NODISCARD MYLANG_COMPILER_ABI void* ArenaAllocator::allocate(const SizeTy
 
 
   // Track allocation if enabled
-  if (TrackAllocations_.load(std::memory_order_relaxed))
+  if (TrackAllocations_)
   {
     AllocationHeader header{};
     header.magic     = AllocationHeader::MAGIC;
@@ -149,7 +149,7 @@ MYLANG_NODISCARD MYLANG_COMPILER_ABI void* ArenaAllocator::allocate(const SizeTy
   LastPtr_ = static_cast<void*>(mem);
 
   // Update statistics
-  if (EnableStatistics_.load(std::memory_order_relaxed))
+  if (EnableStatistics_)
   {
     AllocStats_.TotalAllocations++;
     AllocStats_.TotalAllocated += aligned_size;
@@ -170,7 +170,7 @@ void ArenaAllocator::deallocate(void* ptr, const SizeType size)
     return;
   // Strict LIFO check
   Pointer expected = static_cast<Pointer>(ptr);
-  Pointer last     = static_cast<Pointer>(LastPtr_.load(std::memory_order_acquire));
+  Pointer last     = static_cast<Pointer>(LastPtr_);
   if (expected != last)
     return;
   // We MUST operate on the last block
@@ -190,7 +190,7 @@ void ArenaAllocator::deallocate(void* ptr, const SizeType size)
   if (AllocStats_.ActiveBlocks)
     AllocStats_.ActiveBlocks--;
   // Clear LastPtr_ (important!)
-  LastPtr_.store(nullptr, std::memory_order_release);
+  LastPtr_                               = nullptr;
   auto                          end      = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> duration = end - start;
   double                        seconds  = duration.count();
@@ -200,7 +200,7 @@ void ArenaAllocator::deallocate(void* ptr, const SizeType size)
 MYLANG_NODISCARD
 bool ArenaAllocator::verifyAllocation(void* ptr) const
 {
-  if (!TrackAllocations_.load(std::memory_order_relaxed))
+  if (!TrackAllocations_)
     return true;
 
   std::shared_lock<std::shared_mutex> lock(AllocationMapMutex_);
@@ -226,10 +226,10 @@ Pointer ArenaAllocator::allocateFromBlocks(SizeType alloc_size, SizeType align)
   }
 
   // Need a new block
-  SizeType new_block_size = std::max(alloc_size, NextBlockSize_.load(std::memory_order_relaxed));
+  SizeType new_block_size = std::max(alloc_size, NextBlockSize_);
   if (!allocateBlock(new_block_size, align))
   {
-    if (DebugFeatures_.load(std::memory_order_relaxed))
+    if (DebugFeatures_)
       std::cerr << "-- Failed to allocate block : ArenaAllocator::allocate_block()" << std::endl;
     return nullptr;
   }
@@ -242,12 +242,11 @@ Pointer ArenaAllocator::allocateFromBlocks(SizeType alloc_size, SizeType align)
 void ArenaAllocator::updateNextBlockSize() MYLANG_NOEXCEPT
 {
   /// TODO: prevent overflow
-  if (GrowthFactor_.load(std::memory_order_relaxed) == GrowthStrategy::EXPONENTIAL)
+  if (GrowthFactor_ == GrowthStrategy::EXPONENTIAL)
   {
-    SizeType current  = NextBlockSize_.load(std::memory_order_relaxed);
-    SizeType max_size = MaxBlockSize_.load(std::memory_order_relaxed);
-    SizeType new_size = std::min(current * 2, max_size);
-    NextBlockSize_.store(new_size, std::memory_order_relaxed);
+    SizeType current  = NextBlockSize_;
+    SizeType max_size = MaxBlockSize_;
+    NextBlockSize_    = std::min(current * 2, max_size);
   }
 }
 

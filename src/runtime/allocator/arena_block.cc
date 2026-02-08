@@ -24,7 +24,7 @@ ArenaBlock::ArenaBlock(const SizeType size, const SizeType alignment) :
     // diagnostic::engine.panic("bad alloc");
   }
   Begin_ = reinterpret_cast<Pointer>(mem);
-  Next_.store(Begin_, std::memory_order_relaxed);
+  Next_  = Begin_;
 }
 
 ArenaBlock::ArenaBlock(ArenaBlock&& other) MYLANG_NOEXCEPT
@@ -32,11 +32,11 @@ ArenaBlock::ArenaBlock(ArenaBlock&& other) MYLANG_NOEXCEPT
   std::lock_guard<std::mutex> lock(other.Mutex_);
   Size_  = other.Size_;
   Begin_ = other.Begin_;
-  Next_.store(other.Next_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+  Next_  = other.Next_;
   // Reset source
   other.Begin_ = nullptr;
-  other.Next_.store(nullptr, std::memory_order_relaxed);
-  other.Size_ = 0;
+  other.Next_  = nullptr;
+  other.Size_  = 0;
 }
 
 ArenaBlock::~ArenaBlock()
@@ -47,7 +47,7 @@ ArenaBlock::~ArenaBlock()
   {
     std::free(Begin_);
     Begin_ = nullptr;
-    Next_.store(nullptr, std::memory_order_relaxed);
+    Next_  = nullptr;
   }
 }
 
@@ -62,11 +62,11 @@ ArenaBlock& ArenaBlock::operator=(ArenaBlock&& other) MYLANG_NOEXCEPT
     // Take ownership
     Size_  = other.Size_;
     Begin_ = other.Begin_;
-    Next_.store(other.Next_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+    Next_  = other.Next_;
     // Reset source
     other.Begin_ = nullptr;
-    other.Next_.store(nullptr, std::memory_order_relaxed);
-    other.Size_ = 0;
+    other.Next_  = nullptr;
+    other.Size_  = 0;
   }
   return *this;
 }
@@ -81,39 +81,30 @@ Pointer ArenaBlock::allocate(SizeType bytes, std::optional<SizeType> alignment)
   if (alignment_value == 0 || (alignment_value & (alignment_value - 1)) != 0)
     diagnostic::engine.emit("Invalid arguments to ArenaAllocator::allocate()", diagnostic::DiagnosticEngine::Severity::FATAL);
 
-  // Lock-free allocation loop
-  Pointer current_next = Next_.load(std::memory_order_acquire);
+  // Calculate aligned address
+  std::uintptr_t cur     = reinterpret_cast<std::uintptr_t>(Next_);
+  std::uintptr_t aligned = (cur + (alignment_value - 1)) & ~(alignment_value - 1);
+  SizeType       pad     = aligned - cur;
 
-  for (;;)
-  {
-    // Calculate aligned address
-    std::uintptr_t cur     = reinterpret_cast<std::uintptr_t>(current_next);
-    std::uintptr_t aligned = (cur + (alignment_value - 1)) & ~(alignment_value - 1);
-    SizeType       pad     = aligned - cur;
+  // Check if we have enough space (including padding)
+  std::uintptr_t end_addr = reinterpret_cast<std::uintptr_t>(Begin_) + Size_;
+  std::uintptr_t cur_addr = reinterpret_cast<std::uintptr_t>(Next_);
 
-    // Check if we have enough space (including padding)
-    // FIXED: Calculate remaining bytes correctly
-    std::uintptr_t end_addr = reinterpret_cast<std::uintptr_t>(Begin_) + Size_;
-    std::uintptr_t cur_addr = reinterpret_cast<std::uintptr_t>(current_next);
+  if (cur_addr > end_addr)
+    return nullptr;  // Current pointer is beyond block end
 
-    if (cur_addr > end_addr)
-      return nullptr;  // Current pointer is beyond block end
+  SizeType remaining = end_addr - cur_addr;
 
-    SizeType remaining = end_addr - cur_addr;
+  if (remaining < bytes + pad)
+    return nullptr;  // Not enough space
 
-    if (remaining < bytes + pad)
-      return nullptr;  // Not enough space
+  Pointer new_next = reinterpret_cast<Pointer>(aligned + bytes);
 
-    Pointer new_next = reinterpret_cast<Pointer>(aligned + bytes);
-
-    // Try to atomically update next Pointer
-    if (Next_.compare_exchange_weak(current_next, new_next, std::memory_order_release, std::memory_order_acquire))
-      // Success! Return the aligned address
-      return reinterpret_cast<Pointer>(aligned);
-
-    // CAS failed - another thread allocated first
-    // current_next was updated by compare_exchange_weak, retry
-  }
+  // Try to atomically update next Pointer
+  Next_ = new_next;
+  // Success! Return the aligned address
+  return reinterpret_cast<Pointer>(aligned);
+  // CAS failed - another thread allocated first
 }
 
 Pointer ArenaBlock::reserve(const SizeType bytes)
@@ -121,19 +112,12 @@ Pointer ArenaBlock::reserve(const SizeType bytes)
   if (!Begin_ || bytes == 0)
     return nullptr;
 
-  Pointer current_next = Next_.load(std::memory_order_acquire);
-
-  for (;;)
-  {
-    // Check if we have enough space
-    SizeType remaining = Begin_ + Size_ - current_next;
-    if (remaining < bytes)
-      return nullptr;
-
-    Pointer new_next = current_next + bytes;
-    if (Next_.compare_exchange_weak(current_next, new_next, std::memory_order_release, std::memory_order_acquire))
-      return current_next;
-  }
+  // Check if we have enough space
+  SizeType remaining = Begin_ + Size_ - Next_;
+  if (remaining < bytes)
+    return nullptr;
+  Next_ += bytes;
+  return Next_;
 }
 
 }
