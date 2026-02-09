@@ -43,16 +43,17 @@ class StringRef
       Offset_(offset),
       Length_(length)
   {
+    if (Length_ == 0)
+      Length_ = other.Length_ - offset;
+
     if (StringData_)
       StringData_->increment();
-
-    if (!Length_)
-      Length_ = StringData_->length() - offset;
   }
 
   StringRef(ConstPointer lit) :
       StringData_(string_allocator.allocateObject<String>(lit))
   {
+    Length_ = StringData_->length();
   }
 
   StringRef(const char* c_str) :
@@ -213,8 +214,8 @@ class StringRef
   // CharType + StringRef
   friend StringRef operator+(CharType lhs, ConstReference rhs)
   {
-    StringRef result(1, BUFFER_END);
-    result.clear();
+    StringRef result;
+    result.reserve(rhs.len() + 1);
     result += lhs;
     result += rhs;
     return result;

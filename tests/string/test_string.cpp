@@ -140,6 +140,7 @@ TEST_F(StringRefTest, CopyConstructor_Arabic)
   EXPECT_EQ(s2, s1);
   EXPECT_EQ(s2.toUtf8(), "مرحبا");
 }
+
 /*
 TEST_F(StringRefTest, MoveConstructor_NonEmpty)
 {

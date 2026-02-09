@@ -41,10 +41,9 @@ StringRef FileManager::readWindowInternal(SizeType size)
   if (Context_.CharOffset >= InputBuffer_.len())
     return u"";
 
-  SizeType remaining = InputBuffer_.len() - Context_.CharOffset;
-  SizeType count     = std::min(size, remaining);
-
-  StringRef ret = InputBuffer_.substr(Context_.CharOffset, Context_.CharOffset + count);
+  SizeType  remaining = InputBuffer_.len() - Context_.CharOffset;
+  SizeType  count     = std::min(size, remaining);
+  StringRef ret       = InputBuffer_.slice(Context_.CharOffset, Context_.CharOffset + count);
 
   Context_.CharOffset += count;
   Context_.ByteOffset += count * sizeof(CharType);
