@@ -26,13 +26,13 @@ class InputBufferBase
     Buffers_[0] = StringRef(cap + 1);
     Buffers_[1] = StringRef(cap + 1);
 
-    if (!FileManager_ || !FileManager_->isOpen())
+    if (!FileManager_)
       diagnostic::engine.panic("File is not open");
   }
 
   InputBufferBase() = default;
 
-  bool empty() const MYLANG_NOEXCEPT { return !FileManager_->isOpen() && FileManager_->remaining() > 0; }
+  bool empty() const MYLANG_NOEXCEPT { return FileManager_->remaining() > 0; }
 
   bool refreshBuffer(const std::uint32_t to_refresh);
 

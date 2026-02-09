@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../macros.hpp"
-#include "ast/ast.hpp"
+#include "../ast/ast.hpp"
 
 #include <unordered_set>
 #include <vector>

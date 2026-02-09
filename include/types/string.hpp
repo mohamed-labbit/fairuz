@@ -15,7 +15,9 @@ class StringRef
   typedef StringRef&       Reference;
   typedef const StringRef& ConstReference;
 
-  String* StringData_;
+  String*  StringData_{nullptr};
+  SizeType Offset_{0};
+  SizeType Length_{0};  // visible length
 
   // Helper to create empty string
   static String* createEmpty()
@@ -36,11 +38,16 @@ class StringRef
   {
   }
 
-  StringRef(ConstReference other) :
-      StringData_(other.get())
+  StringRef(ConstReference other, SizeType offset = 0, SizeType length = 0) :
+      StringData_(other.get()),
+      Offset_(offset),
+      Length_(length)
   {
     if (StringData_)
       StringData_->increment();
+
+    if (!Length_)
+      Length_ = StringData_->length() - offset;
   }
 
   StringRef(ConstPointer lit) :
@@ -60,6 +67,7 @@ class StringRef
       StringData_    = temp.StringData_;
       if (StringData_)
         StringData_->increment();
+      Length_ = StringData_->length();
     }
   }
 
@@ -68,9 +76,16 @@ class StringRef
   {
   }
 
-  explicit StringRef(String* data) :
-      StringData_(data ? data : createEmpty())
+  explicit StringRef(String* data, SizeType offset = 0, SizeType length = 0) :
+      StringData_(data ? data : createEmpty()),
+      Offset_(offset),
+      Length_(length)
   {
+    if (StringData_)
+      StringData_->increment();
+
+    if (!Length_)
+      Length_ = StringData_->length() - offset;
   }
 
   ~StringRef()
@@ -88,7 +103,6 @@ class StringRef
     }
   }
 
-  // FIXED: Properly decrement old reference before assignment
   Reference operator=(ConstReference other)
   {
     if (this == &other)
@@ -103,6 +117,8 @@ class StringRef
     if (StringData_)
       StringData_->increment();
 
+    Offset_ = other.Offset_;
+    Length_ = other.Length_;
     return *this;
   }
 
@@ -111,7 +127,7 @@ class StringRef
   {
     if (!StringData_ || !other.StringData_)
       return StringData_ == other.StringData_;
-    return *StringData_ == *other.get();
+    return *StringData_ == *other.get() && Length_ == other.Length_;
   }
 
   bool operator!=(ConstReference other) const noexcept { return !(*this == other); }
@@ -238,6 +254,8 @@ class StringRef
   // Truncate string to specified length
   StringRef& truncate(const SizeType s);
 
+  StringRef slice(SizeType start, std::optional<SizeType> end) const;  // no copy
+
   StringRef substr(std::optional<SizeType> start, std::optional<SizeType> end) const;
 
   StringRef substr(SizeType start) const;
@@ -253,6 +271,41 @@ class StringRef
   MYLANG_NODISCARD static StringRef fromUtf8(const char* utf8_cstr);
 
   void COW();
+
+  void ensureUnique()
+  {
+    if (!StringData_)
+      return;
+    if (StringData_->referenceCount() > 1)
+      detach();
+  }
+
+  void detach()
+  {
+    if (!StringData_)
+      return;
+
+    // Determine slice length
+    SizeType copy_len = (Length_ > 0) ? Length_ : (StringData_->length() - Offset_);
+
+    // Allocate a new string of exactly the required size
+    String* s = string_allocator.allocateObject<String>(copy_len);
+
+    // Copy only the relevant portion
+    if (copy_len > 0)
+      ::memcpy(s->ptr(), const_cast<ConstPointer>(StringData_->ptr() + Offset_), copy_len * sizeof(CharType));
+
+    s->setLen(copy_len);
+    s->terminate();
+
+    // Decrement old reference
+    StringData_->decrement();
+
+    // Update StringRef to point to new data
+    StringData_ = s;
+    Offset_     = 0;
+    Length_     = copy_len;
+  }
 };  // StringRef
 
 // Hash functor for StringRef

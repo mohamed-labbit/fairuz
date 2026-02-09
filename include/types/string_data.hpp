@@ -32,7 +32,7 @@ class String
   } storage_;
 
   bool             is_heap;
-  SizeType         len_{0};  // includes SSO_FLAG
+  SizeType         len_{0};  
   mutable SizeType RefCount{1};
 
  public:

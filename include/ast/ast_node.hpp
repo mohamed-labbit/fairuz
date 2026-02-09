@@ -1,10 +1,10 @@
 #pragma once
 
 #include <utility>
+#include "../macros.hpp"
 
 
 namespace mylang {
-namespace parser {
 namespace ast {
 
 class ASTNode
@@ -42,5 +42,4 @@ class ASTNode
 };
 
 }  // namespace ast
-}  // namespace parser
 }  // namespace mylang

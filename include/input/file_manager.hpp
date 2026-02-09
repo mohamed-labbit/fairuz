@@ -82,12 +82,9 @@ class FileManager
 
   struct FileStats
   {
-    SizeType                        TotalBytes{0};
-    SizeType                        TotalLines{0};
-    SizeType                        MaxLineLength{0};
-    SizeType                        AverageLineLength{0};
-    SizeType                        TotalCharacters{0};
-    std::filesystem::file_time_type LastModified;
+    SizeType TotalBytes{0};
+    SizeType TotalLines{0};
+    SizeType TotalCharacters{0};
   };
 
   explicit FileManager(const std::string& filepath);
@@ -99,8 +96,6 @@ class FileManager
   FileManager& operator=(FileManager&) MYLANG_NOEXCEPT = delete;
 
   ~FileManager() = default;
-
-  bool isOpen() const MYLANG_NOEXCEPT { return Stream_.is_open() /*&& Stream_.good()*/; }
 
   bool isChangedSinceLastTime() const MYLANG_NOEXCEPT { return fs::last_write_time(FullPath_) != LastKnownWriteTime_; }
 
@@ -153,19 +148,19 @@ class FileManager
 
   StringRef peekRange(const SizeType start_offset, const SizeType length);
 
-  SizeType remaining() { return static_cast<SizeType>(Stream_.tellg()) - Context_.ByteOffset; }
+  SizeType remaining() { return InputBuffer_.len() - Context_.ByteOffset; }
 
-  SizeType fileSize() { return static_cast<SizeType>(Stream_.tellg()); }
+  SizeType fileSize() { return InputBuffer_.len() * sizeof(CharType); }
 
   StringRef getSourceLine(const SizeType line);
 
  private:
   std::string            FullPath_;
-  std::ifstream          Stream_;
   Context                Context_;
   std::vector<Context>   PositionStack_;
   std::vector<LineIndex> LineIndices_;
   FileStats              Stats_;
+  StringRef              InputBuffer_;
 
   // private constants
   static MYLANG_CONSTEXPR SizeType DEFAULT_BUFFER_SIZE  = 8192;

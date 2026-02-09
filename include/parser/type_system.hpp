@@ -2,7 +2,7 @@
 
 
 #include "../macros.hpp"
-#include "ast/ast.hpp"
+#include "../ast/ast.hpp"
 
 #include <memory>
 #include <unordered_map>

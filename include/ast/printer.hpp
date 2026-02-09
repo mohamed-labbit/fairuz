@@ -1,13 +1,12 @@
 #pragma once
 
 
-#include "../../macros.hpp"
+#include "../macros.hpp"
 #include "ast.hpp"
 #include <iostream>
 
 
 namespace mylang {
-namespace parser {
 namespace ast {
 
 class ASTPrinter
@@ -208,5 +207,4 @@ class ASTPrinter
 };
 
 }  // ast
-}  // parser
 }  // mylang

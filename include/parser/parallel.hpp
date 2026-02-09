@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../lex/token.hpp"
-#include "ast/ast.hpp"
+#include "../ast/ast.hpp"
 #include <vector>
 
 

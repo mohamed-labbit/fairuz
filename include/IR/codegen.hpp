@@ -1,8 +1,7 @@
 #pragma once
 
+#include "../IR/value.hpp"
 #include "../parser/ast/ast.hpp"
-#include "../runtime/object/value.hpp"
-#include "env.hpp"
 
 #include <builtins.h>
 #include <functional>
@@ -17,10 +16,10 @@ using namespace runtime;
 class CodeGenerator
 {
  public:
-  object::Value eval(const ast::ASTNode* node)
+  Value eval(const ast::ASTNode* node)
   {
     if (!node)
-      return object::Value();
+      return Value();
 
     ast::ASTNode::NodeType type = node->getNodeType();
 
@@ -29,7 +28,7 @@ class CodeGenerator
     case ast::ASTNode::NodeType::EXPRESSION : {
       const ast::Expr* expr = dynamic_cast<const ast::Expr*>(node);
       if (!expr)
-        return object::Value();
+        return Value();
 
       ast::Expr::Kind kind = expr->getKind();
       switch (kind)
@@ -37,7 +36,7 @@ class CodeGenerator
       case ast::Expr::Kind::ASSIGNMENT : {
         const ast::AssignmentExpr* assignment_expr = dynamic_cast<const ast::AssignmentExpr*>(expr);
         if (!assignment_expr)
-          return object::Value();
+          return Value();
 
         // Get the target name
         const ast::NameExpr* target = dynamic_cast<const ast::NameExpr*>(assignment_expr->getTarget());
@@ -45,10 +44,10 @@ class CodeGenerator
           throw std::runtime_error("Invalid assignment target");
 
         // Evaluate the value
-        object::Value value = eval(assignment_expr->getValue());
+        Value value = eval(assignment_expr->getValue());
 
         // Store in environment
-        env_->set(target->getValue(), value);
+        Env_->define(target->getValue(), value);
 
         return value;
       }
@@ -56,10 +55,10 @@ class CodeGenerator
       case ast::Expr::Kind::BINARY : {
         const ast::BinaryExpr* binary_expr = dynamic_cast<const ast::BinaryExpr*>(expr);
         if (!binary_expr)
-          return object::Value();
+          return Value();
 
-        object::Value lhs = eval(binary_expr->getLeft());
-        object::Value rhs = eval(binary_expr->getRight());
+        Value lhs = eval(binary_expr->getLeft());
+        Value rhs = eval(binary_expr->getRight());
 
         tok::TokenType op = binary_expr->getOperator();
 
@@ -81,7 +80,7 @@ class CodeGenerator
       case ast::Expr::Kind::CALL : {
         const ast::CallExpr* call_expr = dynamic_cast<const ast::CallExpr*>(expr);
         if (!call_expr)
-          return object::Value();
+          return Value();
 
         // Get function name
         ast::NameExpr* name_expr = dynamic_cast<ast::NameExpr*>(call_expr->getCallee());
@@ -91,7 +90,7 @@ class CodeGenerator
         StringRef func_name = name_expr->getValue();
 
         // Evaluate all arguments FIRST (eager evaluation)
-        std::vector<object::Value> args;
+        std::vector<Value> args;
         for (const auto* arg_expr : call_expr->getArgs())
           args.push_back(eval(arg_expr));
 
@@ -100,9 +99,9 @@ class CodeGenerator
         //    return builtins_[func_name](args);
 
         // Check if it's a user-defined function
-        if (env_->exists(func_name))
+        if (Env_->exists(func_name))
         {
-          object::Value funcValue = env_->get(func_name);
+          Value funcValue = Env_->get(func_name);
           if (funcValue.isFunction())
             return callUserFunction(funcValue, args);
         }
@@ -113,42 +112,42 @@ class CodeGenerator
       case ast::Expr::Kind::LIST : {
         const ast::ListExpr* list_expr = dynamic_cast<const ast::ListExpr*>(expr);
         if (!list_expr || list_expr->isEmpty())
-          return object::Value();  // or return empty list
+          return Value();  // or return empty list
 
-        std::vector<object::Value> evaluated_elems;
+        std::vector<Value> evaluated_elems;
         for (const ast::Expr* elem : list_expr->getElements())
           evaluated_elems.push_back(eval(elem));
 
         // Assuming you have a way to create a list Value
-        return object::Value::makeList(evaluated_elems);
+        return Value::makeList(evaluated_elems);
       }
 
       case ast::Expr::Kind::LITERAL : {
         const ast::LiteralExpr* literal_expr = dynamic_cast<const ast::LiteralExpr*>(expr);
         if (!literal_expr)
-          return object::Value();
+          return Value();
 
-        return object::Value(literal_expr->getValue());
+        return Value(literal_expr->getValue());
       }
 
       case ast::Expr::Kind::NAME : {
         const ast::NameExpr* name_expr = dynamic_cast<const ast::NameExpr*>(expr);
         if (!name_expr)
-          return object::Value();
+          return Value();
 
         StringRef name = name_expr->getValue();
-        if (!env_->exists(name))
+        if (!Env_->exists(name))
           throw std::runtime_error("Undefined variable: " + name.toUtf8());
 
-        return env_->get(name);
+        return Env_->get(name);
       }
 
       case ast::Expr::Kind::UNARY : {
         const ast::UnaryExpr* unary_expr = dynamic_cast<const ast::UnaryExpr*>(expr);
         if (!unary_expr)
-          return object::Value();
+          return Value();
 
-        object::Value  operand = eval(unary_expr->getOperand());
+        Value          operand = eval(unary_expr->getOperand());
         tok::TokenType op      = unary_expr->getOperator();
 
         switch (op)
@@ -175,9 +174,11 @@ class CodeGenerator
   }
 
  private:
-  object::Value callUserFunction(const object::Value& funcValue, const std::vector<object::Value>& args)
+  Environment* Env_;
+
+  Value callUserFunction(Value& func_value, const std::vector<Value>& args)
   {
-    const auto& func = funcValue.asFunction();
+    auto& func = func_value.asFunction();
 
     // Check argument count
     if (args.size() != func.params.size())
@@ -185,29 +186,31 @@ class CodeGenerator
 
     // Create new environment for function execution
     // Use closure environment as parent (for lexical scoping)
-    auto funcEnv = std::make_shared<Environment>(func.closure);
+    auto* func_env = &func.closure;
 
     // Bind parameters to arguments
     for (size_t i = 0; i < args.size(); ++i)
-      funcEnv->define(func.params[i], args[i]);
+    {
+      func_env->define(func.params[i], args[i]);
+    }
 
     // Save current environment and switch to function environment
-    auto previousEnv = env_;
-    env_             = funcEnv;
+    auto previousEnv = Env_;
+    Env_             = func_env;
 
     // Execute function body
-    object::Value result;
+    Value result;
     try
     {
-      result = eval(func.closure);  /// TODO: define the function closure in a clear manner ../runtime/object/value.hpp
+      result = eval(func.body);  /// TODO: define the function closure in a clear manner ../runtime/object/value.hpp
     } catch (...)
     {
-      env_ = previousEnv;  // Restore environment before rethrowing
+      Env_ = previousEnv;  // Restore environment before rethrowing
       throw;
     }
 
     // Restore previous environment
-    env_ = previousEnv;
+    Env_ = previousEnv;
 
     return result;
   }

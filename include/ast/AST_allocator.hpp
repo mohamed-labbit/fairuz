@@ -1,10 +1,9 @@
 #pragma once
 
-#include "../../runtime/allocator/arena.hpp"
+#include "../runtime/allocator/arena.hpp"
 
 
 namespace mylang {
-namespace parser {
 namespace ast {
 
 class ASTAllocator
@@ -34,5 +33,4 @@ class ASTAllocator
 inline ASTAllocator AST_allocator;
 
 }  // ast
-}  // parser
 }  // mylang

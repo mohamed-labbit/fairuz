@@ -1,7 +1,7 @@
+#include "../../include//ast/AST_allocator.hpp"
+#include "../../include//ast/ast.hpp"
 #include "../../include/input/file_manager.hpp"
 #include "../../include/parser/analyzer.hpp"
-#include "../../include/parser/ast/AST_allocator.hpp"
-#include "../../include/parser/ast/ast.hpp"
 #include "../../include/types/string.hpp"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -14,9 +14,7 @@ using namespace mylang::input;
 using namespace mylang::parser;
 using namespace testing;
 
-// ============================================================================
 // Test Fixture
-// ============================================================================
 
 class SemanticAnalyzerTest: public ::testing::Test
 {
@@ -85,9 +83,7 @@ class SemanticAnalyzerTest: public ::testing::Test
   }
 };
 
-// ============================================================================
 // Type Inference Tests
-// ============================================================================
 
 TEST_F(SemanticAnalyzerTest, InferType_NumberLiteral_Integer)
 {
@@ -166,9 +162,7 @@ TEST_F(SemanticAnalyzerTest, InferType_BinaryExpr_LogicalOr)
   EXPECT_EQ(analyzer->inferType(binary), SymbolTable::DataType_t::BOOLEAN);
 }
 
-// ============================================================================
 // Variable Analysis Tests
-// ============================================================================
 
 TEST_F(SemanticAnalyzerTest, UndefinedVariable_ReportsError)
 {
@@ -211,9 +205,7 @@ TEST_F(SemanticAnalyzerTest, UnusedVariable_ReportsWarning)
   EXPECT_TRUE(hasIssueContaining(u"Unused variable"));
 }
 
-// ============================================================================
 // Type Compatibility Tests
-// ============================================================================
 
 TEST_F(SemanticAnalyzerTest, InvalidStringOperation_Subtraction)
 {
@@ -251,9 +243,7 @@ TEST_F(SemanticAnalyzerTest, InvalidStringOperation_Division)
   EXPECT_TRUE(hasIssueContaining(u"Invalid operation on string"));
 }
 
-// ============================================================================
 // Division by Zero Tests
-// ============================================================================
 
 TEST_F(SemanticAnalyzerTest, DivisionByZero_ReportsError)
 {
@@ -278,9 +268,7 @@ TEST_F(SemanticAnalyzerTest, DivisionByNonZero_NoError)
   EXPECT_FALSE(hasIssueContaining(u"Division by zero"));
 }
 
-// ============================================================================
 // Function Analysis Tests
-// ============================================================================
 
 TEST_F(SemanticAnalyzerTest, BuiltInFunction_Print_IsDefined)
 {
@@ -311,9 +299,7 @@ TEST_F(SemanticAnalyzerTest, CallNonCallable_ReportsError)
   EXPECT_TRUE(hasIssueContaining(u"is not callable"));
 }
 
-// ============================================================================
 // Control Flow Tests
-// ============================================================================
 
 TEST_F(SemanticAnalyzerTest, ConstantIfCondition_ReportsWarning)
 {
@@ -340,9 +326,7 @@ TEST_F(SemanticAnalyzerTest, InfiniteLoop_ReportsWarning)
   EXPECT_TRUE(hasIssueContaining(u"Infinite loop"));
 }
 
-// ============================================================================
 // Expression Statement Tests
-// ============================================================================
 
 TEST_F(SemanticAnalyzerTest, UnusedExpressionResult_ReportsInfo)
 {
@@ -370,9 +354,7 @@ TEST_F(SemanticAnalyzerTest, FunctionCallExpression_NoUnusedWarning)
   // May have other info messages, but shouldn't have unused expression warning
 }
 
-// ============================================================================
 // Scope Tests
-// ============================================================================
 
 TEST_F(SemanticAnalyzerTest, ForLoopVariableShadowing_ReportsWarning)
 {
@@ -395,17 +377,15 @@ TEST_F(SemanticAnalyzerTest, ForLoopVariableShadowing_ReportsWarning)
   EXPECT_TRUE(hasIssueContaining(u"Loop variable shadows"));
 }
 
-// ============================================================================
 // Function Definition Tests
-// ============================================================================
 
 TEST_F(SemanticAnalyzerTest, FunctionWithoutReturn_ReportsInfo)
 {
   auto*                   funcName = createName(u"my_func");
   std::vector<ast::Expr*> params;
   ast::ListExpr*          param_list = ast::AST_allocator.make<ast::ListExpr>(params);
-  auto*                   body    = ast::AST_allocator.make<ast::BlockStmt>(std::vector<ast::Stmt*>{} /*, 1*/);
-  auto*                   funcDef = ast::AST_allocator.make<ast::FunctionDef>(funcName, param_list, body /*, 1*/);
+  auto*                   body       = ast::AST_allocator.make<ast::BlockStmt>(std::vector<ast::Stmt*>{} /*, 1*/);
+  auto*                   funcDef    = ast::AST_allocator.make<ast::FunctionDef>(funcName, param_list, body /*, 1*/);
 
   analyzer->analyzeStmt(funcDef);
 
@@ -420,7 +400,7 @@ TEST_F(SemanticAnalyzerTest, FunctionWithReturn_NoWarning)
   ast::ListExpr*          param_list = ast::AST_allocator.make<ast::ListExpr>(params);
   // Create return statement
   auto* retValue = createNumberLiteral(u"42");
-  auto* retStmt  = ast::AST_allocator.make<ast::ReturnStmt>(retValue/*, 2*/);
+  auto* retStmt  = ast::AST_allocator.make<ast::ReturnStmt>(retValue /*, 2*/);
 
   std::vector<ast::Stmt*> bodyStmts = {retStmt};
   auto*                   body      = ast::AST_allocator.make<ast::BlockStmt>(bodyStmts /*, 1*/);
@@ -432,9 +412,7 @@ TEST_F(SemanticAnalyzerTest, FunctionWithReturn_NoWarning)
   EXPECT_FALSE(hasIssueContaining(u"Function may not return a value"));
 }
 
-// ============================================================================
 // Complex Expression Tests
-// ============================================================================
 
 TEST_F(SemanticAnalyzerTest, NestedBinaryExpressions_InfersCorrectType)
 {
@@ -460,9 +438,7 @@ TEST_F(SemanticAnalyzerTest, ListExpression_InfersListType)
   analyzer->analyzeExpr(listExpr);
 }
 
-// ============================================================================
 // Edge Cases and Null Safety Tests
-// ============================================================================
 
 TEST_F(SemanticAnalyzerTest, AnalyzeNullStatement_NoError) { EXPECT_NO_THROW(analyzer->analyzeStmt(nullptr)); }
 
@@ -474,9 +450,7 @@ TEST_F(SemanticAnalyzerTest, EmptyStatementList_NoIssues)
   EXPECT_EQ(analyzer->getIssues().size(), 0);
 }
 
-// ============================================================================
 // Report Generation Tests
-// ============================================================================
 
 TEST_F(SemanticAnalyzerTest, PrintReport_NoIssues)
 {
@@ -493,9 +467,7 @@ TEST_F(SemanticAnalyzerTest, PrintReport_WithIssues)
   EXPECT_NO_THROW(analyzer->printReport());
 }
 
-// ============================================================================
 // Symbol Table Tests
-// ============================================================================
 
 TEST_F(SemanticAnalyzerTest, GetGlobalScope_NotNull) { EXPECT_NE(analyzer->getGlobalScope(), nullptr); }
 
@@ -513,15 +485,13 @@ TEST_F(SemanticAnalyzerTest, AssignmentCreatesSymbol)
   ASSERT_NE(globalScope, nullptr);
 }
 
-// ============================================================================
 // Integration Tests
-// ============================================================================
 
 TEST_F(SemanticAnalyzerTest, ComplexProgram_MultipleIssues)
 {
   // Undefined variable use
   auto* undefined = createName(u"undefined_var", 1);
-  auto* exprStmt1 = ast::AST_allocator.make<ast::ExprStmt>(undefined/*, 1*/);
+  auto* exprStmt1 = ast::AST_allocator.make<ast::ExprStmt>(undefined /*, 1*/);
   statements.push_back(exprStmt1);
 
   // Division by zero
@@ -574,26 +544,24 @@ TEST_F(SemanticAnalyzerTest, VariableFlowAnalysis)
   EXPECT_GT(unusedYCount, 0);
 }
 
-// ============================================================================
 // Call Expression Tests
-// ============================================================================
 
 TEST_F(SemanticAnalyzerTest, CallExpression_InfersAnyType)
 {
   auto*                   callee = createName(u"some_function");
   std::vector<ast::Expr*> args;
   ast::ListExpr*          arg_list = ast::AST_allocator.make<ast::ListExpr>(args);
-  auto*                   call = ast::AST_allocator.make<ast::CallExpr>(callee, arg_list /*, 1*/);
+  auto*                   call     = ast::AST_allocator.make<ast::CallExpr>(callee, arg_list /*, 1*/);
 
   EXPECT_EQ(analyzer->inferType(call), SymbolTable::DataType_t::ANY);
 }
 
 TEST_F(SemanticAnalyzerTest, CallWithArguments_AnalyzesAllArgs)
 {
-  auto*                   callee = createName(u"print");
-  std::vector<ast::Expr*> args   = {createNumberLiteral(u"1"), createStringLiteral(u"hello"), createBooleanLiteral(u"true")};
+  auto*                   callee   = createName(u"print");
+  std::vector<ast::Expr*> args     = {createNumberLiteral(u"1"), createStringLiteral(u"hello"), createBooleanLiteral(u"true")};
   ast::ListExpr*          arg_list = ast::AST_allocator.make<ast::ListExpr>(args);
-  auto*                   call   = ast::AST_allocator.make<ast::CallExpr>(callee, arg_list /*, 1*/);
+  auto*                   call     = ast::AST_allocator.make<ast::CallExpr>(callee, arg_list /*, 1*/);
 
   EXPECT_NO_THROW(analyzer->analyzeExpr(call));
 }

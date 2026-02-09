@@ -1,77 +1,84 @@
-#include "../../../include/runtime/object/value.hpp"
-#include "../../../include/diag/diagnostic.hpp"
+#include "../../include/IR/value.hpp"
+#include "../../include/diag/diagnostic.hpp"
 
 #include <cmath>
 
 
 namespace mylang {
-namespace runtime {
+namespace IR {
 
 // Getters with safety
-std::int64_t object::Value::asInt() const
+std::int64_t Value::asInt() const
 {
   if (!isInt())
     diagnostic::engine.panic("Value is not an integer");
   return std::get<std::int64_t>(Data_);
 }
 
-double object::Value::asFloat() const
+double Value::asFloat() const
 {
   if (!isFloat())
     diagnostic::engine.panic("Value is not a float");
   return std::get<double>(Data_);
 }
 
-const StringRef& object::Value::asString() const
+const StringRef& Value::asString() const
 {
   if (!isString())
     diagnostic::engine.panic("Value is not a string");
   return std::get<StringRef>(Data_);
 }
 
-bool object::Value::asBool() const
+bool Value::asBool() const
 {
   if (!isBool())
     diagnostic::engine.panic("Value is not a boolean");
   return std::get<bool>(Data_);
 }
 
-std::vector<object::Value>& object::Value::asList()
+std::vector<Value>& Value::asList()
 {
   if (!isList())
     diagnostic::engine.panic("Value is not a list");
-  return std::get<std::vector<Value>>(Data_);
+  return std::get<std::vector<Self>>(Data_);
 }
 
-const std::vector<object::Value>& object::Value::asList() const
+const std::vector<Value>& Value::asList() const
 {
   if (!isList())
     diagnostic::engine.panic("Value is not a list");
-  return std::get<std::vector<Value>>(Data_);
+  return std::get<std::vector<Self>>(Data_);
 }
 
-std::unordered_map<StringRef, object::Value, StringRefHash, StringRefEqual>& object::Value::asDict()
+std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>& Value::asDict()
 {
   if (!isDict())
     diagnostic::engine.panic("Value is not a dict");
   return std::get<std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>>(Data_);
 }
 
-const std::unordered_map<StringRef, object::Value, StringRefHash, StringRefEqual>& object::Value::asDict() const
+const std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>& Value::asDict() const
 {
   if (!isDict())
     diagnostic::engine.panic("Value is not a dict");
   return std::get<std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>>(Data_);
 }
 
-typename object::Value::Function& object::Value::asFunction()
+typename Value::Function& Value::asFunction()
 {
   if (!isFunction())
     diagnostic::engine.panic("Value is not a function");
   return std::get<Function>(Data_);
 }
 
-typename object::Value::NativeFunction& object::Value::asNativeFunction()
+const typename Value::Function& Value::asFunction() const
+{
+  if (!isFunction())
+    diagnostic::engine.panic("Value is not a function");
+  return std::get<Function>(Data_);
+}
+
+typename Value::NativeFunction& Value::asNativeFunction()
 {
   if (Type_ != Type::NATIVE_FUNCTION)
     diagnostic::engine.panic("Not a native function");
@@ -79,7 +86,7 @@ typename object::Value::NativeFunction& object::Value::asNativeFunction()
 }
 
 // Type conversions
-double object::Value::toFloat() const
+double Value::toFloat() const
 {
   if (isInt())
     return static_cast<double>(asInt());
@@ -90,7 +97,7 @@ double object::Value::toFloat() const
   diagnostic::engine.panic("Cannot convert to float");
 }
 
-std::int64_t object::Value::toInt() const
+std::int64_t Value::toInt() const
 {
   if (isInt())
     return asInt();
@@ -103,7 +110,7 @@ std::int64_t object::Value::toInt() const
   diagnostic::engine.panic("Cannot convert to int");
 }
 
-bool object::Value::toBool() const
+bool Value::toBool() const
 {
   switch (Type_)
   {
@@ -118,7 +125,7 @@ bool object::Value::toBool() const
   }
 }
 
-StringRef object::Value::toString() const
+StringRef Value::toString() const
 {
   StringRef ret;
 
@@ -145,8 +152,8 @@ StringRef object::Value::toString() const
   case Type::STRING : return asString();
   case Type::BOOL : return asBool() ? u"True" : u"False";
   case Type::LIST : {
-    StringRef                         result = u"[";
-    const std::vector<object::Value>& list   = asList();
+    StringRef                result = u"[";
+    const std::vector<Self>& list   = asList();
     for (SizeType i = 0; i < list.size(); ++i)
     {
       result += list[i].toString();
@@ -156,9 +163,9 @@ StringRef object::Value::toString() const
     return result + u"]";
   }
   case Type::DICT : {
-    StringRef                                                                  result = u"{";
-    const std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>& dict =
-      std::get<std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>>(Data_);
+    StringRef                                                                 result = u"{";
+    const std::unordered_map<StringRef, Self, StringRefHash, StringRefEqual>& dict =
+      std::get<std::unordered_map<StringRef, Self, StringRefHash, StringRefEqual>>(Data_);
     SizeType count = 0;
     for (const auto& [k, v] : dict)
     {
@@ -174,7 +181,7 @@ StringRef object::Value::toString() const
   }
 }
 
-std::string object::Value::repr() const
+std::string Value::repr() const
 {
   if (isString())
     return "'" + asString().toUtf8() + "'";
@@ -182,14 +189,14 @@ std::string object::Value::repr() const
 }
 
 // Hash for use in dictionaries
-SizeType object::Value::hash() const
+SizeType Value::hash() const
 {
   std::hash<StringRef> hasher;
   return hasher(toString());
 }
 
 // Comparison operators
-bool object::Value::operator==(const Value& other) const
+bool Value::operator==(const Value& other) const
 {
   if (Type_ != other.Type_)
   {
@@ -211,7 +218,7 @@ bool object::Value::operator==(const Value& other) const
   }
 }
 
-bool object::Value::operator<(const Value& other) const
+bool Value::operator<(const Value& other) const
 {
   if (isNumber() && other.isNumber())
     return toFloat() < other.toFloat();
@@ -223,114 +230,114 @@ bool object::Value::operator<(const Value& other) const
   diagnostic::engine.panic("Cannot compare types");
 }
 
-bool object::Value::operator>(const Value& other) const { return other < *this; }
-bool object::Value::operator<=(const Value& other) const { return !(other < *this); }
-bool object::Value::operator>=(const Value& other) const { return !(*this < other); }
-bool object::Value::operator!=(const Value& other) const { return !(*this == other); }
+bool Value::operator>(const Value& other) const { return other < *this; }
+bool Value::operator<=(const Value& other) const { return !(other < *this); }
+bool Value::operator>=(const Value& other) const { return !(*this < other); }
+bool Value::operator!=(const Value& other) const { return !(*this == other); }
 
 // Arithmetic operators with type promotion
-object::Value object::Value::operator+(const Value& other) const
+Value Value::operator+(const Value& other) const
 {
   if (isInt() && other.isInt())
-    return Value(asInt() + other.asInt());
+    return Self(asInt() + other.asInt());
   if (isNumber() && other.isNumber())
-    return Value(toFloat() + other.toFloat());
+    return Self(toFloat() + other.toFloat());
   if (isString() || other.isString())
-    return Value(toString() + other.toString());
+    return Self(toString() + other.toString());
   if (isList() && other.isList())
   {
-    std::vector<object::Value>        result    = asList();
-    const std::vector<object::Value>& otherList = other.asList();
+    std::vector<Self>        result    = asList();
+    const std::vector<Self>& otherList = other.asList();
     result.insert(result.end(), otherList.begin(), otherList.end());
-    return Value(result);
+    return Self(result);
   }
   diagnostic::engine.panic("Unsupported operand types for +");
 }
 
-object::Value object::Value::operator-(const Value& other) const
+Value Value::operator-(const Value& other) const
 {
   if (isInt() && other.isInt())
-    return Value(asInt() - other.asInt());
+    return Self(asInt() - other.asInt());
   if (isNumber() && other.isNumber())
-    return Value(toFloat() - other.toFloat());
+    return Self(toFloat() - other.toFloat());
   diagnostic::engine.panic("Unsupported operand types for -");
 }
 
-object::Value object::Value::operator*(const Value& other) const
+Value Value::operator*(const Value& other) const
 {
   if (isInt() && other.isInt())
-    return Value(asInt() * other.asInt());
+    return Self(asInt() * other.asInt());
   if (isNumber() && other.isNumber())
-    return Value(toFloat() * other.toFloat());
+    return Self(toFloat() * other.toFloat());
   // String/List repetition
   if (isString() && other.isInt())
   {
     StringRef result;
     for (std::int64_t i = 0; i < other.asInt(); ++i)
       result += asString();
-    return Value(result);
+    return Self(result);
   }
   if (isList() && other.isInt())
   {
-    std::vector<Value> result;
+    std::vector<Self> result;
     for (std::int64_t i = 0; i < other.asInt(); ++i)
       result.insert(result.end(), asList().begin(), asList().end());
-    return Value(result);
+    return Self(result);
   }
   diagnostic::engine.panic("Unsupported operand types for *");
 }
 
-object::Value object::Value::operator/(const Value& other) const
+Value Value::operator/(const Value& other) const
 {
   if (isNumber() && other.isNumber())
   {
     double divisor = other.toFloat();
     if (divisor == 0.0)
       diagnostic::engine.panic("Division by zero");
-    return Value(toFloat() / divisor);
+    return Self(toFloat() / divisor);
   }
   diagnostic::engine.panic("Unsupported operand types for /");
 }
 
-object::Value object::Value::operator%(const Value& other) const
+Value Value::operator%(const Value& other) const
 {
   if (isInt() && other.isInt())
   {
     if (other.asInt() == 0)
       diagnostic::engine.panic("Modulo by zero");
-    return Value(asInt() % other.asInt());
+    return Self(asInt() % other.asInt());
   }
   if (isNumber() && other.isNumber())
-    return Value(std::fmod(toFloat(), other.toFloat()));
+    return Self(std::fmod(toFloat(), other.toFloat()));
   diagnostic::engine.panic("Unsupported operand types for %");
 }
 
-object::Value object::Value::pow(const Value& other) const
+Value Value::pow(const Value& other) const
 {
   if (isNumber() && other.isNumber())
-    return Value(std::pow(toFloat(), other.toFloat()));
+    return Self(std::pow(toFloat(), other.toFloat()));
   diagnostic::engine.panic("Unsupported operand types for **");
 }
 
 // Unary operators
-object::Value object::Value::operator-() const
+Value Value::operator-() const
 {
   if (isInt())
-    return Value(-asInt());
+    return Self(-asInt());
   if (isFloat())
-    return Value(-asFloat());
+    return Self(-asFloat());
   diagnostic::engine.panic("Unsupported operand type for unary -");
 }
 
-object::Value object::Value::operator!() const { return Value(!toBool()); }
+Value Value::operator!() const { return Self(!toBool()); }
 
 // Subscript operator
-object::Value object::Value::getItem(const Value& key) const
+Value Value::getItem(const Value& key) const
 {
   if (isList())
   {
-    std::int64_t                      index = key.toInt();
-    const std::vector<object::Value>& list  = asList();
+    std::int64_t             index = key.toInt();
+    const std::vector<Self>& list  = asList();
     if (index < 0)
       index += list.size();
     if (index < 0 || index >= list.size())
@@ -339,8 +346,8 @@ object::Value object::Value::getItem(const Value& key) const
   }
   if (isDict())
   {
-    const std::unordered_map<StringRef, object::Value, StringRefHash, StringRefEqual>& dict = asDict();
-    auto                                                                               it   = dict.find(key.toString());
+    const std::unordered_map<StringRef, Self, StringRefHash, StringRefEqual>& dict = asDict();
+    auto                                                                      it   = dict.find(key.toString());
     if (it == dict.end())
       diagnostic::engine.panic("Key not found: " /*+ key.toString()*/);
     return it->second;
@@ -353,17 +360,17 @@ object::Value object::Value::getItem(const Value& key) const
       index += str.len();
     if (index < 0 || index >= str.len())
       diagnostic::engine.panic("String index out of range");
-    return Value(StringRef(str[index]));
+    return Self(StringRef(str[index]));
   }
   diagnostic::engine.panic("Object is not subscriptable");
 }
 
-void object::Value::setItem(const Value& key, const Value& value)
+void Value::setItem(const Value& key, const Value& value)
 {
   if (isList())
   {
-    std::int64_t                index = key.toInt();
-    std::vector<object::Value>& list  = asList();
+    std::int64_t       index = key.toInt();
+    std::vector<Self>& list  = asList();
     if (index < 0)
       index += list.size();
     if (index < 0 || index >= list.size())
@@ -377,22 +384,22 @@ void object::Value::setItem(const Value& key, const Value& value)
 }
 
 // Iterator support
-object::Value object::Value::getIterator() const
+Value Value::getIterator() const
 {
   if (isList())
   {
     Iterator it;
     it.items = std::get<std::vector<Value>>(Data_);
     it.index = 0;
-    Value result;
-    result.Type_ = Type::ITERATOR;
-    result.Data_ = it;
-    return result;
+    Self ret;
+    ret.Type_ = Type::ITERATOR;
+    ret.Data_ = it;
+    return ret;
   }
   diagnostic::engine.panic("Object is not iterable");
 }
 
-bool object::Value::hasNext() const
+bool Value::hasNext() const
 {
   if (Type_ == Type::ITERATOR)
   {
@@ -402,7 +409,7 @@ bool object::Value::hasNext() const
   return false;
 }
 
-object::Value object::Value::next()
+Value Value::next()
 {
   if (Type_ == Type::ITERATOR)
   {

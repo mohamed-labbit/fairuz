@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../diag/diagnostic.hpp"
-#include "../../lex/token.hpp"
+#include "../diag/diagnostic.hpp"
+#include "../lex/token.hpp"
 #include "ast_node.hpp"
 
 #include <cassert>
@@ -11,7 +11,6 @@
 
 
 namespace mylang {
-namespace parser {
 namespace ast {
 
 class Expr: public ASTNode
@@ -298,5 +297,4 @@ class AssignmentExpr: public Expr
 };
 
 }  // namespace ast
-}  // namespace parser
 }  // namespace mylang

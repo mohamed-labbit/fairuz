@@ -1,19 +1,21 @@
 #pragma once
 
-#include "../runtime/object/value.hpp"
+#include "value.hpp"
+
 #include <memory>
 #include <stdexcept>
+#include <string>
 #include <unordered_map>
 
 
 namespace mylang {
-namespace runtime {
+namespace IR {
 
 class Environment
 {
  private:
-  std::unordered_map<std::string, object::Value> variables_;
-  std::shared_ptr<Environment>                   parent_;  // For nested scopes
+  std::unordered_map<StringRef, Value> variables_;
+  Environment*                         parent_;  // For nested scopes
 
  public:
   Environment() :
@@ -21,16 +23,16 @@ class Environment
   {
   }
 
-  explicit Environment(std::shared_ptr<Environment> parent) :
+  explicit Environment(Environment* parent) :
       parent_(parent)
   {
   }
 
   // Define a variable in current scope
-  void define(const std::string& name, const object::Value& value) { variables_[name] = value; }
+  void define(const StringRef& name, const Value& value) { variables_[name] = value; }
 
   // Get a variable (searches parent scopes)
-  object::Value get(const std::string& name) const
+  Value get(const StringRef& name) const
   {
     auto it = variables_.find(name);
     if (it != variables_.end())
@@ -39,11 +41,11 @@ class Environment
     if (parent_)
       return parent_->get(name);
 
-    throw std::runtime_error("Undefined variable: " + name);
+    throw std::runtime_error("Undefined variable: " + name.toUtf8());
   }
 
   // Assign to existing variable (searches parent scopes)
-  void assign(const std::string& name, const object::Value& value)
+  void assign(const StringRef& name, const Value& value)
   {
     auto it = variables_.find(name);
     if (it != variables_.end())
@@ -58,10 +60,10 @@ class Environment
       return;
     }
 
-    throw std::runtime_error("Undefined variable: " + name);
+    throw std::runtime_error("Undefined variable: " + name.toUtf8());
   }
 
-  bool exists(const std::string& name) const
+  bool exists(const StringRef& name) const
   {
     if (variables_.find(name) != variables_.end())
       return true;

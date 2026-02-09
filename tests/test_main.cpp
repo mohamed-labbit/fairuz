@@ -1,6 +1,7 @@
 #include "../include/types/string.hpp"
-#include "../include/parser/ast/ast.hpp"
+#include "../include/ast/ast.hpp"
 #include "test_config.h"
+
 #include <cstring>
 #include <gtest/gtest.h>
 #include <string>
@@ -40,7 +41,7 @@ int main(int argc, char** argv)
   {
     std::cout << string_allocator.toString(true) << '\n';
     std::cout << '\n';
-    std::cout << parser::ast::AST_allocator.toString(true) << std::endl;
+    std::cout << ast::AST_allocator.toString(true) << std::endl;
   }
 
   return ret;

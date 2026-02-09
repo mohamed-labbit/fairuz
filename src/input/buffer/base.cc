@@ -11,7 +11,7 @@ namespace buffer {
 bool InputBufferBase::refreshBuffer(const std::uint32_t to_refresh)
 {
   // Validate file manager state
-  if (!FileManager_ || !FileManager_->isOpen())
+  if (!FileManager_)
     return false;
 
   // Validate buffer index
