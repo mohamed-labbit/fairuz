@@ -204,13 +204,15 @@ bool ArenaAllocator::verifyAllocation(void* ptr) const
 MYLANG_NODISCARD
 Pointer ArenaAllocator::allocateFromBlocks(SizeType alloc_size, SizeType align)
 {
-    std::shared_lock<std::shared_mutex> lock(BlocksMutex_);
-    if (!Blocks_.empty()) {
-        // Try free list first
-        Pointer mem = Blocks_.back().allocate(alloc_size, align);
-        if (mem)
-            return mem;
-    }
+    {
+        std::shared_lock<std::shared_mutex> lock(BlocksMutex_);
+        if (!Blocks_.empty()) {
+            // Try free list first
+            Pointer mem = Blocks_.back().allocate(alloc_size, align);
+            if (mem)
+                return mem;
+        }
+    } // release lock
 
     // Need a new block
     SizeType new_block_size = std::max(alloc_size, NextBlockSize_);
