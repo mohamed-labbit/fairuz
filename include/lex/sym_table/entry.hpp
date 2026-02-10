@@ -6,37 +6,38 @@
 namespace mylang {
 namespace lex {
 
+enum class SymbolType : std::int32_t { VARIABLE,
+    PARAMETER,
+    KEYWORD,
+    FUNCTION,
+    CONSTANT };
 
-enum class SymbolType : std::int32_t { VARIABLE, PARAMETER, KEYWORD, FUNCTION, CONSTANT };
+struct SymbolTableEntry {
 
-struct SymbolTableEntry
-{
+    SymbolType type;
+    SizeType scope; // nesting_level
 
-  SymbolType type;
-  SizeType   scope;  // nesting_level
+    SymbolTableEntry() = default;
 
+    SymbolTableEntry(SymbolType type, SizeType scope)
+        : type(type)
+        , scope(scope)
+    {
+    }
 
-  SymbolTableEntry() = default;
+    SymbolTableEntry(SymbolTableEntry const& other)
+        : type(other.type)
+        , scope(other.scope)
+    {
+    }
 
-  SymbolTableEntry(SymbolType type, SizeType scope) :
-      type(type),
-      scope(scope)
-  {
-  }
-
-  SymbolTableEntry(const SymbolTableEntry& other) :
-      type(other.type),
-      scope(other.scope)
-  {
-  }
-
-  SymbolTableEntry& operator=(const SymbolTableEntry& other)
-  {
-    this->type  = other.type;
-    this->scope = other.scope;
-    return *this;
-  }
+    SymbolTableEntry& operator=(SymbolTableEntry const& other)
+    {
+        this->type = other.type;
+        this->scope = other.scope;
+        return *this;
+    }
 };
 
-}  // namespace lex
-}  // namespace mylang
+} // namespace lex
+} // namespace mylang

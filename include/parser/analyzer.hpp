@@ -6,50 +6,49 @@
 
 #include <memory>
 
-
 namespace mylang {
 namespace parser {
 
 // Semantic analyzer with type inference and optimization hints
-class SemanticAnalyzer
-{
- public:
-  struct Issue
-  {
-    enum class Severity { ERROR, WARNING, INFO };
-    Severity     severity;
-    StringRef    message;
-    std::int32_t line;
-    StringRef    suggestion;
-  };
+class SemanticAnalyzer {
+public:
+    struct Issue {
+        enum class Severity { ERROR,
+            WARNING,
+            INFO };
+        Severity severity;
+        StringRef message;
+        std::int32_t line;
+        StringRef suggestion;
+    };
 
- private:
-  SymbolTable*                 CurrentScope_;
-  std::unique_ptr<SymbolTable> GlobalScope_;
-  std::vector<Issue>           Issues_;
-  ControlFlowGraph             Cfg_;
+private:
+    SymbolTable* CurrentScope_;
+    std::unique_ptr<SymbolTable> GlobalScope_;
+    std::vector<Issue> Issues_;
+    ControlFlowGraph Cfg_;
 
-  // Type inference engine
- public:  /// TODO:
-  SymbolTable::DataType_t inferType(const ast::Expr* expr);
+    // Type inference engine
+public: /// TODO:
+    SymbolTable::DataType_t inferType(ast::Expr const* expr);
 
-  void reportIssue(Issue::Severity sev, const StringRef& msg, std::int32_t line, const StringRef& sugg = u"");
+    void reportIssue(Issue::Severity sev, StringRef const& msg, std::int32_t line, StringRef const& sugg = u"");
 
-  void analyzeExpr(const ast::Expr* expr);
+    void analyzeExpr(ast::Expr const* expr);
 
-  void analyzeStmt(const ast::Stmt* stmt);
+    void analyzeStmt(ast::Stmt const* stmt);
 
-  // public:
-  SemanticAnalyzer();
+    // public:
+    SemanticAnalyzer();
 
-  void analyze(const std::vector<ast::Stmt*>& Statements_);
+    void analyze(std::vector<ast::Stmt*> const& Statements_);
 
-  const std::vector<Issue>& getIssues() const;
+    std::vector<Issue> const& getIssues() const;
 
-  const SymbolTable* getGlobalScope() const;
+    SymbolTable const* getGlobalScope() const;
 
-  void printReport() const;
+    void printReport() const;
 };
 
-}  // parser
-}  // mylang
+} // parser
+} // mylang

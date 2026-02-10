@@ -3,7 +3,6 @@
 
 #include <future>
 
-
 namespace mylang {
 namespace parser {
 
@@ -28,23 +27,21 @@ std::vector<ast::Stmt*> ParallelParser::parseParallel(const std::vector<mylang::
 }
 */
 
-std::vector<std::vector<tok::Token>> ParallelParser::splitIntoChunks(const std::vector<tok::Token>& tokens)
+std::vector<std::vector<tok::Token>> ParallelParser::splitIntoChunks(std::vector<tok::Token> const& tokens)
 {
-  std::vector<std::vector<tok::Token>> chunks;
-  std::vector<tok::Token>              current;
-  for (const tok::Token& tok : tokens)
-  {
-    current.push_back(tok);
-    if (tok.type() == tok::TokenType::KW_FN && current.size() > 1)
-    {
-      chunks.push_back(current);
-      current.clear();
-      current.push_back(tok);
+    std::vector<std::vector<tok::Token>> chunks;
+    std::vector<tok::Token> current;
+    for (tok::Token const& tok : tokens) {
+        current.push_back(tok);
+        if (tok.type() == tok::TokenType::KW_FN && current.size() > 1) {
+            chunks.push_back(current);
+            current.clear();
+            current.push_back(tok);
+        }
     }
-  }
-  if (!current.empty())
-    chunks.push_back(current);
-  return chunks;
+    if (!current.empty())
+        chunks.push_back(current);
+    return chunks;
 }
 
 }

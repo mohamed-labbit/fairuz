@@ -5,25 +5,22 @@
 
 #include <vector>
 
-
 namespace mylang {
 namespace parser {
 
-class ParserProfiler
-{
- private:
-  struct Timing
-  {
-    StringRef phase;
-    double    milliseconds;
-  };
+class ParserProfiler {
+private:
+    struct Timing {
+        StringRef phase;
+        double milliseconds;
+    };
 
-  std::vector<Timing> Timings_;
+    std::vector<Timing> Timings_;
 
- public:
-  void recordPhase(const StringRef& phase, double ms);
+public:
+    void recordPhase(StringRef const& phase, double ms);
 
-  void printReport() const;
+    void printReport() const;
 };
 
 }

@@ -1,49 +1,24 @@
-AccessModifierOffset: -1
-AlignAfterOpenBracket: Align
-AlignConsecutiveAssignments: true
-AlignConsecutiveDeclarations: true
-AlignEscapedNewlines: true
-AlignOperands: true
-AlignTrailingComments: true
-
-AllowAllParametersOfDeclarationOnNextLine: true
-AllowShortCaseLabelsOnASingleLine: true
-AllowShortEnumsOnASingleLine: true
-AllowShortIfStatementsOnASingleLine: false
-AllowShortBlocksOnASingleLine: false
-AllowShortLoopsOnASingleLine: false
-AlwaysBreakTemplateDeclarations: Yes
-
+---
+AlignEscapedNewlines: Left
+AlignTrailingComments:
+    Kind: Always
+    OverEmptyLines: 0
 BasedOnStyle: WebKit
-BitFieldColonSpacing: After
-BinPackParameters: false
-BreakBeforeBinaryOperators: NonAssignment
-BreakBeforeBraces: Custom
 BraceWrapping:
-  AfterFunction: true
-  AfterClass: true
-  AfterStruct: true
-  AfterControlStatement: true
-  BeforeElse: true
-BreakBeforeTernaryOperators: true
-BreakConstructorInitializers: AfterColon
-BreakStringLiterals: false
-ColumnLimit: 120
-ContinuationIndentWidth: 2
-Cpp11BracedListStyle: true
-IndentGotoLabels: false
-IndentPPDirectives: BeforeHash
-IndentWidth: 2
-MaxEmptyLinesToKeep: 2
+    AfterFunction: true
+BreakBeforeBraces: Custom
+BreakBeforeInheritanceComma: true
+BreakConstructorInitializers: BeforeComma
+IndentPPDirectives: AfterHash
+IndentRequiresClause: false
+InsertNewlineAtEOF: true
+LineEnding: LF
 NamespaceIndentation: None
-PackConstructorInitializers: Never
-ReflowComments: false
-SortIncludes: true
-SortUsingDeclarations: false
-SpaceAfterCStyleCast: true
+QualifierAlignment: Right
+RemoveSemicolon: true
+RequiresClausePosition: WithFollowing
+RequiresExpressionIndentation: OuterScope
 SpaceAfterTemplateKeyword: false
-SpaceBeforeCaseColon: true
-SpaceBeforeCpp11BracedList: false
-SpaceBeforeInheritanceColon: false
-SpaceInEmptyBlock: false
-SpacesBeforeTrailingComments: 2
+WrapNamespaceBodyWithEmptyLines: Always
+
+...

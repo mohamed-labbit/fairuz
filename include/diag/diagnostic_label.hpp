@@ -6,11 +6,8 @@
 
 namespace diagnostic {
 
-
-class DiagnosticLabel
-{
- public:
+class DiagnosticLabel {
+public:
 };
-
 
 }

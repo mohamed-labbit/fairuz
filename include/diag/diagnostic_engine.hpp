@@ -6,11 +6,8 @@
 
 namespace diagnostic {
 
-
-class DiagnosticEngine
-{
- public:
+class DiagnosticEngine {
+public:
 };
-
 
 }

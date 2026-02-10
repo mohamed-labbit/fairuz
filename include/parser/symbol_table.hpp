@@ -7,60 +7,71 @@
 #include <unordered_set>
 #include <vector>
 
-
 namespace mylang {
 namespace parser {
 
 // Symbol table with type inference
-class SymbolTable
-{
- public:
-  enum class SymbolType { VARIABLE, FUNCTION, CLASS, MODULE, UNKNOWN };
+class SymbolTable {
+public:
+    enum class SymbolType { VARIABLE,
+        FUNCTION,
+        CLASS,
+        MODULE,
+        UNKNOWN };
 
-  enum class DataType_t { INTEGER, FLOAT, STRING, BOOLEAN, LIST, DICT, TUPLE, NONE, FUNCTION, ANY, UNKNOWN };
+    enum class DataType_t { INTEGER,
+        FLOAT,
+        STRING,
+        BOOLEAN,
+        LIST,
+        DICT,
+        TUPLE,
+        NONE,
+        FUNCTION,
+        ANY,
+        UNKNOWN };
 
-  struct Symbol
-  {
-    StringRef                 name;
-    SymbolType                SymbolType;
-    DataType_t                DataType;
-    bool                      IsConstant     = false;
-    bool                      IsGlobal       = false;
-    bool                      IsUsed         = false;
-    std::int32_t              DefinitionLine = 0;
-    std::vector<std::int32_t> UsageLines;
-    // For functions
-    std::vector<DataType_t> ParamTypes;
-    DataType_t              returnType = DataType_t::UNKNOWN;
-    // For type inference
-    std::unordered_set<DataType_t> PossibleTypes;
-  };
+    struct Symbol {
+        StringRef name;
+        SymbolType SymbolType;
+        DataType_t DataType;
+        bool IsConstant = false;
+        bool IsGlobal = false;
+        bool IsUsed = false;
+        std::int32_t DefinitionLine = 0;
+        std::vector<std::int32_t> UsageLines;
+        // For functions
+        std::vector<DataType_t> ParamTypes;
+        DataType_t returnType = DataType_t::UNKNOWN;
+        // For type inference
+        std::unordered_set<DataType_t> PossibleTypes;
+    };
 
-  SymbolTable* Parent_ = nullptr;
+    SymbolTable* Parent_ = nullptr;
 
- private:
-  std::unordered_map<StringRef, Symbol, StringRefHash, StringRefEqual> Symbols_;
-  std::vector<std::unique_ptr<SymbolTable>>                            Children_;
-  unsigned                                                             ScopeLevel_{0};
+private:
+    std::unordered_map<StringRef, Symbol, StringRefHash, StringRefEqual> Symbols_;
+    std::vector<std::unique_ptr<SymbolTable>> Children_;
+    unsigned ScopeLevel_ { 0 };
 
- public:
-  explicit SymbolTable(SymbolTable* p = nullptr, std::int32_t level = 0);
+public:
+    explicit SymbolTable(SymbolTable* p = nullptr, std::int32_t level = 0);
 
-  void define(const StringRef& name, Symbol symbol);
+    void define(StringRef const& name, Symbol symbol);
 
-  Symbol* lookup(const StringRef& name);
+    Symbol* lookup(StringRef const& name);
 
-  Symbol* lookupLocal(const StringRef& name);
+    Symbol* lookupLocal(StringRef const& name);
 
-  bool isDefined(const StringRef& name) const;
+    bool isDefined(StringRef const& name) const;
 
-  void markUsed(const StringRef& name, std::int32_t line);
+    void markUsed(StringRef const& name, std::int32_t line);
 
-  SymbolTable* createChild();
+    SymbolTable* createChild();
 
-  std::vector<Symbol*> getUnusedSymbols();
+    std::vector<Symbol*> getUnusedSymbols();
 
-  const std::unordered_map<StringRef, Symbol, StringRefHash, StringRefEqual>& getSymbols() const;
+    std::unordered_map<StringRef, Symbol, StringRefHash, StringRefEqual> const& getSymbols() const;
 };
 
 }

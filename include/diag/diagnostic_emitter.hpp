@@ -6,11 +6,8 @@
 
 namespace diagnostic {
 
-
-class DiagnosticEmitter
-{
- public:
+class DiagnosticEmitter {
+public:
 };
-
 
 }

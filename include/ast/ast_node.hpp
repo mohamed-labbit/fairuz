@@ -3,43 +3,42 @@
 #include "../macros.hpp"
 #include <utility>
 
-
 namespace mylang {
 namespace ast {
 
-class ASTNode
-{
- public:
-  enum NodeType { EXPRESSION, STATEMENT };
+class ASTNode {
+public:
+    enum NodeType { EXPRESSION,
+        STATEMENT };
 
- private:
-  SizeType Line_{};
-  SizeType Column_{};
+private:
+    SizeType Line_ {};
+    SizeType Column_ {};
 
-  NodeType NodeType_;
+    NodeType NodeType_;
 
- public:
-  ASTNode()               = default;
-  ASTNode(const ASTNode&) = delete;
-  ASTNode(ASTNode&&)      = delete;
+public:
+    ASTNode() = default;
+    ASTNode(ASTNode const&) = delete;
+    ASTNode(ASTNode&&) = delete;
 
-  ASTNode& operator=(const ASTNode&) = delete;
-  ASTNode& operator=(ASTNode&&)      = delete;
+    ASTNode& operator=(ASTNode const&) = delete;
+    ASTNode& operator=(ASTNode&&) = delete;
 
-  NodeType getNodeType() const { return NodeType_; }
+    NodeType getNodeType() const { return NodeType_; }
 
-  void setNodeType(const NodeType t) { NodeType_ = t; }
+    void setNodeType(NodeType const t) { NodeType_ = t; }
 
-  SizeType getLine() const { return Line_; }
+    SizeType getLine() const { return Line_; }
 
-  SizeType getColumn() const { return Column_; }
+    SizeType getColumn() const { return Column_; }
 
-  void setLine(SizeType l) { Line_ = l; }
+    void setLine(SizeType l) { Line_ = l; }
 
-  void setColumn(SizeType c) { Column_ = c; }
+    void setColumn(SizeType c) { Column_ = c; }
 
-  virtual ~ASTNode() = default;
+    virtual ~ASTNode() = default;
 };
 
-}  // namespace ast
-}  // namespace mylang
+} // namespace ast
+} // namespace mylang

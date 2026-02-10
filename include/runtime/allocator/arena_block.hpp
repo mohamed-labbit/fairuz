@@ -7,13 +7,12 @@
 #include <mutex>
 #include <optional>
 
-
 namespace mylang {
 namespace runtime {
 namespace allocator {
 
-using Byte    = std::uint_fast8_t;  /// Single byte type for Pointer arithmetic
-using Pointer = Byte*;              /// Generic Pointer type for arena memory
+using Byte = std::uint_fast8_t; /// Single byte type for Pointer arithmetic
+using Pointer = Byte*;          /// Generic Pointer type for arena memory
 
 /**
  * @class ArenaBlock
@@ -28,20 +27,19 @@ using Pointer = Byte*;              /// Generic Pointer type for arena memory
  * @note Individual blocks are NOT thread-safe for concurrent allocations
  *       between different blocks. The ArenaAllocator handles this.
  */
-class ArenaBlock
-{
- private:
-  /// Size of this memory block in bytes
-  SizeType Size_{DEFAULT_BLOCK_SIZE};
-  /// Pointer to the beginning of allocated memory
-  Pointer Begin_{nullptr};
-  /// Atomic Pointer to the next available byte (bump Pointer)
-  Pointer Next_{nullptr};
-  /// Mutex for protecting structural operations (not allocation)
-  mutable std::mutex Mutex_;
+class ArenaBlock {
+private:
+    /// Size of this memory block in bytes
+    SizeType Size_ { DEFAULT_BLOCK_SIZE };
+    /// Pointer to the beginning of allocated memory
+    Pointer Begin_ { nullptr };
+    /// Atomic Pointer to the next available byte (bump Pointer)
+    Pointer Next_ { nullptr };
+    /// Mutex for protecting structural operations (not allocation)
+    mutable std::mutex Mutex_;
 
- public:
-  /**
+public:
+    /**
      * @brief Construct an arena block with specified size and alignment
      * @param size Size of the block in bytes
      * @param alignment Required alignment (must be power of 2)
@@ -51,30 +49,30 @@ class ArenaBlock
      * The actual allocated size may be larger than requested to satisfy
      * alignment requirements.
      */
-  explicit ArenaBlock(const SizeType size = DEFAULT_BLOCK_SIZE, const SizeType alignment = alignof(std::max_align_t));
+    explicit ArenaBlock(SizeType const size = DEFAULT_BLOCK_SIZE, SizeType const alignment = alignof(std::max_align_t));
 
-  /**
+    /**
      * @brief Destructor - frees the allocated memory
      *
      * Thread-safe: acquires mutex before freeing to prevent
      * concurrent access during destruction.
      */
-  ~ArenaBlock();
+    ~ArenaBlock();
 
-  // Non-copyable
-  ArenaBlock(const ArenaBlock&)            = delete;
-  ArenaBlock& operator=(const ArenaBlock&) = delete;
+    // Non-copyable
+    ArenaBlock(ArenaBlock const&) = delete;
+    ArenaBlock& operator=(ArenaBlock const&) = delete;
 
-  /**
+    /**
      * @brief Move constructor - transfers ownership of memory
      * @param other The block to move from
      *
      * Thread-safe: locks the source block during the move.
      * After the move, the source block is left in a valid but empty state.
      */
-  ArenaBlock(ArenaBlock&& other) MYLANG_NOEXCEPT;
+    ArenaBlock(ArenaBlock&& other) MYLANG_NOEXCEPT;
 
-  /**
+    /**
      * @brief Move assignment operator
      * @param other The block to move from
      * @return Reference to this block
@@ -82,68 +80,68 @@ class ArenaBlock
      * Thread-safe: locks both blocks during the operation.
      * Frees any existing memory before taking ownership of the source's memory.
      */
-  ArenaBlock& operator=(ArenaBlock&& other) MYLANG_NOEXCEPT;
+    ArenaBlock& operator=(ArenaBlock&& other) MYLANG_NOEXCEPT;
 
-  /**
+    /**
      * @brief Get Pointer to the beginning of the block
      * @return Pointer to start of memory block
      *
      * Thread-safe: protected by mutex
      */
-  Pointer begin() const
-  {
-    std::lock_guard<std::mutex> lock(Mutex_);
-    return Begin_;
-  }
+    Pointer begin() const
+    {
+        std::lock_guard<std::mutex> lock(Mutex_);
+        return Begin_;
+    }
 
-  /**
+    /**
      * @brief Get Pointer to the end of the block
      * @return Pointer to one past the last byte
      *
      * Thread-safe: protected by mutex
      */
-  Pointer end() const
-  {
-    std::lock_guard<std::mutex> lock(Mutex_);
-    return Begin_ + Size_;
-  }
+    Pointer end() const
+    {
+        std::lock_guard<std::mutex> lock(Mutex_);
+        return Begin_ + Size_;
+    }
 
-  /**
+    /**
      * @brief Get the current next Pointer (for inspection)
      * @return Current value of the bump Pointer
      *
      * Lock-free: uses atomic acquire ordering
      */
-  Pointer cNext() const { return Next_; }
+    Pointer cNext() const { return Next_; }
 
-  /**
+    /**
      * @brief Get the total size of the block
      * @return Size in bytes
      *
      * Thread-safe: protected by mutex
      */
-  SizeType size() const
-  {
-    std::lock_guard<std::mutex> lock(Mutex_);
-    return Size_;
-  }
+    SizeType size() const
+    {
+        std::lock_guard<std::mutex> lock(Mutex_);
+        return Size_;
+    }
 
-  SizeType used() const
-  {
-    if (!Begin_ || Next_ < Begin_)
-      return 0;
-    return static_cast<SizeType>(Next_ - Begin_);
-  }
+    SizeType used() const
+    {
+        if (!Begin_ || Next_ < Begin_)
+            return 0;
+        return static_cast<SizeType>(Next_ - Begin_);
+    }
 
-  bool pop(SizeType bytes)
-  {
-    if (!Begin_ || Next_ < Begin_ + bytes)
-      return false;
-    Next_ -= bytes;
-    return true;
-  }
+    bool pop(SizeType bytes)
+    {
+        if (!Begin_ || Next_ < Begin_ + bytes)
+            return false;
+        Next_ -= bytes;
+        return true;
+    }
 
-  /**
+    /**
      * @brief Calculate remaining free space in the block
      * @return Number of bytes still available for allocation
      *
@@ -152,16 +150,16 @@ class ArenaBlock
      * @note This is a snapshot value - by the time you use it,
      *       another thread may have consumed the space.
      */
-  SizeType remaining() const
-  {
-    std::lock_guard<std::mutex> lock(Mutex_);
-    if (!Begin_)
-      return 0;
-    Pointer current_next = Next_;
-    return static_cast<SizeType>(Begin_ + Size_ - current_next);
-  }
+    SizeType remaining() const
+    {
+        std::lock_guard<std::mutex> lock(Mutex_);
+        if (!Begin_)
+            return 0;
+        Pointer current_next = Next_;
+        return static_cast<SizeType>(Begin_ + Size_ - current_next);
+    }
 
-  /**
+    /**
      * @brief Allocate memory from this block with alignment
      * @param bytes Number of bytes to allocate
      * @param alignment Optional alignment requirement
@@ -179,9 +177,9 @@ class ArenaBlock
      *
      * @performance O(1) in the uncontended case, O(n) with high contention
      */
-  Pointer allocate(SizeType bytes, std::optional<SizeType> alignment = std::nullopt);
+    Pointer allocate(SizeType bytes, std::optional<SizeType> alignment = std::nullopt);
 
-  /**
+    /**
      * @brief Reserve memory without alignment (faster)
      * @param bytes Number of bytes to reserve
      * @return Pointer to reserved memory, or nullptr if insufficient space
@@ -191,8 +189,8 @@ class ArenaBlock
      * @warning Returned Pointer may not be aligned!
      * @note Prefer allocate() for most use cases
      */
-  Pointer reserve(const SizeType bytes);
-};  // ArenaBlock
+    Pointer reserve(SizeType const bytes);
+}; // ArenaBlock
 
 }
 }

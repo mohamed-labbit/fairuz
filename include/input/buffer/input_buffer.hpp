@@ -4,95 +4,91 @@
 #include "base.hpp"
 #include <stack>
 
-
 namespace mylang {
 namespace lex {
 namespace buffer {
 
-struct Position
-{
-  SizeType line{0};
-  SizeType column{0};
-  SizeType FilePos{0};
+struct Position {
+    SizeType line { 0 };
+    SizeType column { 0 };
+    SizeType FilePos { 0 };
 
-  Position() = default;
+    Position() = default;
 
-  Position(const SizeType line, const SizeType col, SizeType fpos) :
-      line(line),
-      column(col),
-      FilePos(fpos)
-  {
-  }
+    Position(SizeType const line, SizeType const col, SizeType fpos)
+        : line(line)
+        , column(col)
+        , FilePos(fpos)
+    {
+    }
 };
 
-class InputBuffer: public InputBufferBase
-{
- public:
-  using Pointer = CharType*;
+class InputBuffer : public InputBufferBase {
+public:
+    using Pointer = CharType*;
 
-  InputBuffer() = default;
+    InputBuffer() = default;
 
-  InputBuffer(input::FileManager* file_manager, SizeType cap = DEFAULT_CAPACITY) :
-      Capacity_(cap),
-      InputBufferBase(file_manager, cap)
-  {
-    reset();
-  }
+    InputBuffer(input::FileManager* file_manager, SizeType cap = DEFAULT_CAPACITY)
+        : Capacity_(cap)
+        , InputBufferBase(file_manager, cap)
+    {
+        reset();
+    }
 
-  SizeType size() const { return Buffers_[CurrentBuffer_].len(); }
+    SizeType size() const { return Buffers_[CurrentBuffer_].len(); }
 
-  SizeType bufferOffset() const { return static_cast<SizeType>(Current_ - Buffers_[CurrentBuffer_].data()); }
+    SizeType bufferOffset() const { return static_cast<SizeType>(Current_ - Buffers_[CurrentBuffer_].data()); }
 
-  bool empty() const { return (!Current_ || Buffers_[CurrentBuffer_].empty()); }
+    bool empty() const { return (!Current_ || Buffers_[CurrentBuffer_].empty()); }
 
-  CharType at(const SizeType idx) const { return Buffers_[CurrentBuffer_][idx]; }
+    CharType at(SizeType const idx) const { return Buffers_[CurrentBuffer_][idx]; }
 
-  CharType consumeChar();
+    CharType consumeChar();
 
-  MYLANG_NODISCARD
-  const CharType& current();
+    MYLANG_NODISCARD
+    CharType const& current();
 
-  MYLANG_NODISCARD
-  const CharType& peek();
+    MYLANG_NODISCARD
+    CharType const& peek();
 
-  StringRef nPeek(SizeType n);
+    StringRef nPeek(SizeType n);
 
-  void consume(SizeType len)
-  {
-    while (len-- > 0)
-      consumeChar();
-  }
+    void consume(SizeType len)
+    {
+        while (len-- > 0)
+            consumeChar();
+    }
 
-  void unget(CharType ch);
+    void unget(CharType ch);
 
-  void reset();
+    void reset();
 
-  Position position() const MYLANG_NOEXCEPT { return CurrentPosition_; }
+    Position position() const MYLANG_NOEXCEPT { return CurrentPosition_; }
 
-  StringRef getSourceLine(const SizeType line) { return FileManager_->getSourceLine(line); }
+    StringRef getSourceLine(SizeType const line) { return FileManager_->getSourceLine(line); }
 
- private:
-  struct PushbackEntry
-  {
-    CharType ch;
-    Position pos;
-  };
+private:
+    struct PushbackEntry {
+        CharType ch;
+        Position pos;
+    };
 
-  SizeType                  Capacity_ = DEFAULT_CAPACITY;
-  Pointer                   Current_{nullptr};
-  uint8_t                   CurrentBuffer_{0};
-  SizeType                  FilePos_{0};
-  Position                  CurrentPosition_;
-  std::stack<SizeType>      Columns_;
-  std::stack<PushbackEntry> UngetStack_;
+    SizeType Capacity_ = DEFAULT_CAPACITY;
+    Pointer Current_ { nullptr };
+    uint8_t CurrentBuffer_ { 0 };
+    SizeType FilePos_ { 0 };
+    Position CurrentPosition_;
+    std::stack<SizeType> Columns_;
+    std::stack<PushbackEntry> UngetStack_;
 
-  void swapBuffers_();
+    void swapBuffers_();
 
-  void advancePosition_(CharType ch);
+    void advancePosition_(CharType ch);
 
-  void rewindPosition_(CharType ch);
+    void rewindPosition_(CharType ch);
 };
 
 }
-}  // lex
-}  // mylang
+} // lex
+} // mylang

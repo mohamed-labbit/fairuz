@@ -9,52 +9,50 @@
 #include <string>
 #include <wchar.h>
 
-
 namespace mylang {
 namespace lex {
 
-class SourceManager
-{
- public:
-  explicit SourceManager() = default;
-  explicit SourceManager(input::FileManager* fm) :
-      InputBuffer_(fm, DEFAULT_CAPACITY)
-  {
-    // ...
-  }
+class SourceManager {
+public:
+    explicit SourceManager() = default;
+    explicit SourceManager(input::FileManager* fm)
+        : InputBuffer_(fm, DEFAULT_CAPACITY)
+    {
+        // ...
+    }
 
-  ~SourceManager() = default;
+    ~SourceManager() = default;
 
-  SizeType line() const { return this->InputBuffer_.position().line; }
+    SizeType line() const { return this->InputBuffer_.position().line; }
 
-  SizeType column() const { return this->InputBuffer_.position().column; }
+    SizeType column() const { return this->InputBuffer_.position().column; }
 
-  SizeType fpos() const { return this->InputBuffer_.position().FilePos; }
+    SizeType fpos() const { return this->InputBuffer_.position().FilePos; }
 
-  const std::string fpath() const MYLANG_NOEXCEPT { return this->FilePath_; }
+    std::string const fpath() const MYLANG_NOEXCEPT { return this->FilePath_; }
 
-  mylang::lex::buffer::Position position() const { return this->InputBuffer_.position(); }
+    mylang::lex::buffer::Position position() const { return this->InputBuffer_.position(); }
 
-  bool done() const { return this->InputBuffer_.empty(); }
+    bool done() const { return this->InputBuffer_.empty(); }
 
-  CharType peek();
+    CharType peek();
 
-  CharType consumeChar() { return this->InputBuffer_.consumeChar(); }
+    CharType consumeChar() { return this->InputBuffer_.consumeChar(); }
 
-  CharType current() { return InputBuffer_.current(); }
+    CharType current() { return InputBuffer_.current(); }
 
-  std::pair<SizeType, SizeType> offsetMap(const SizeType& offset);
+    std::pair<SizeType, SizeType> offsetMap(SizeType const& offset);
 
-  std::pair<SizeType, SizeType> offsetMap_(const SizeType& offset) const;
+    std::pair<SizeType, SizeType> offsetMap_(SizeType const& offset) const;
 
-  StringRef getSourceLine(const SizeType line) { return InputBuffer_.getSourceLine(line); }
+    StringRef getSourceLine(SizeType const line) { return InputBuffer_.getSourceLine(line); }
 
- private:
-  std::string         FilePath_;
-  buffer::InputBuffer InputBuffer_;
-  CharType*           Current_{nullptr};
-  buffer::Position    CurrentPosition_;
+private:
+    std::string FilePath_;
+    buffer::InputBuffer InputBuffer_;
+    CharType* Current_ { nullptr };
+    buffer::Position CurrentPosition_;
 };
 
-}  // lex
-}  // mylang
+} // lex
+} // mylang
