@@ -31,6 +31,7 @@ std::vector<ast::Stmt*> Parser::parseProgram()
 ast::Stmt* Parser::parseStatement()
 {
     skipNewlines();
+
     if (check(tok::TokenType::KW_IF))
         return parseIfStmt();
     if (check(tok::TokenType::KW_WHILE))
@@ -39,6 +40,7 @@ ast::Stmt* Parser::parseStatement()
         return parseReturnStmt();
     if (check(tok::TokenType::KW_FN))
         return parseFunctionDef();
+
     return parseExpressionStmt();
 }
 

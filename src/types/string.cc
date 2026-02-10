@@ -14,7 +14,7 @@ void StringRef::expand(SizeType const new_size)
     if (new_size <= cap())
         return;
 
-    ConstPointer old_ptr = data();
+    CharType const* old_ptr = data();
     SizeType old_len = len();
     SizeType new_capacity;
 
@@ -23,7 +23,7 @@ void StringRef::expand(SizeType const new_size)
     else
         new_capacity = std::max(new_size + 1, cap() + cap() / 2);
 
-    Pointer new_ptr = string_allocator.allocateArray<CharType>(new_capacity);
+    CharType* new_ptr = string_allocator.allocateArray<CharType>(new_capacity);
 
     // Copy old data
     if (old_ptr && old_len > 0)
@@ -61,14 +61,13 @@ void StringRef::erase(SizeType const at)
 
     // Optimization: if erasing from the beginning, just adjust offset
     if (at == 0) {
-        Offset_++;
-        Length_--;
+        ++Offset_, --Length_;
         return;
     }
 
     // Optimization: if erasing from the end, just adjust length
     if (at == Length_ - 1) {
-        Length_--;
+        --Length_;
         return;
     }
 
@@ -82,7 +81,7 @@ void StringRef::erase(SizeType const at)
     ::memmove(data() + at, data() + at + 1, (len() - at - 1) * sizeof(CharType));
 
     // Update view length
-    Length_--;
+    --Length_;
 
     // Update underlying data length
     StringData_->setLen(Offset_ + Length_);
@@ -90,7 +89,7 @@ void StringRef::erase(SizeType const at)
 }
 
 // Append another StringRef
-typename StringRef::Reference StringRef::operator+=(ConstReference other)
+StringRef& StringRef::operator+=(StringRef const& other)
 {
     if (other.empty())
         return *this;
@@ -104,7 +103,7 @@ typename StringRef::Reference StringRef::operator+=(ConstReference other)
         expand(new_len);
 
     // Copy data to end of our view
-    Pointer dst = StringData_->ptr() + Offset_ + Length_;
+    CharType* dst = StringData_->ptr() + Offset_ + Length_;
     ::memcpy(dst, other.data(), other.Length_ * sizeof(CharType));
 
     // Update view length
@@ -117,7 +116,7 @@ typename StringRef::Reference StringRef::operator+=(ConstReference other)
     return *this;
 }
 
-typename StringRef::Reference StringRef::operator+=(CharType c)
+StringRef& StringRef::operator+=(CharType c)
 {
     if (!StringData_)
         return *this;
@@ -130,7 +129,7 @@ typename StringRef::Reference StringRef::operator+=(CharType c)
     if (total_len + 1 >= StringData_->cap())
         expand(Length_ + 1);
 
-    Pointer ptr = StringData_->ptr();
+    CharType* ptr = StringData_->ptr();
 
     // Append character at end of our view
     ptr[Offset_ + Length_] = c;
@@ -212,8 +211,8 @@ MYLANG_NODISCARD bool StringRef::find(CharType const c) const noexcept
     if (!StringData_ || !data())
         return false;
 
-    ConstPointer p = data();
-    ConstPointer end = data() + Length_;
+    CharType const* p = data();
+    CharType const* end = data() + Length_;
 
     while (p < end && *p != c)
         ++p;
@@ -247,8 +246,8 @@ MYLANG_NODISCARD std::optional<SizeType> StringRef::find_pos(CharType const c) c
     if (!StringData_ || !data())
         return std::nullopt;
 
-    ConstPointer p = data();
-    ConstPointer end = data() + Length_;
+    CharType const* p = data();
+    CharType const* end = data() + Length_;
 
     while (p < end && *p != c)
         ++p;
@@ -409,7 +408,7 @@ MYLANG_NODISCARD StringRef StringRef::fromUtf8(char const* utf8_cstr)
 StringRef StringRef::slice(SizeType start, std::optional<SizeType> end) const
 {
     if (!StringData_ || Length_ == 0)
-        return StringRef {};
+        return "";
 
     SizeType const src_len = Length_;
 
@@ -430,8 +429,7 @@ StringRef StringRef::slice(SizeType start, std::optional<SizeType> end) const
     return StringRef(*this, start, slice_len);
 }
 
-typename StringRef::Reference
-StringRef::trimWhitespace(std::optional<bool const> leading, std::optional<bool const> trailing)
+StringRef& StringRef::trimWhitespace(std::optional<bool const> leading, std::optional<bool const> trailing)
 {
     bool const trim_leading = leading.value_or(true);
     bool const trim_trailing = trailing.value_or(true);

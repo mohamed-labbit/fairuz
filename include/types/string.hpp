@@ -8,11 +8,6 @@ namespace mylang {
 
 class StringRef {
 private:
-    typedef CharType* Pointer;
-    typedef CharType const* ConstPointer;
-    typedef StringRef& Reference;
-    typedef StringRef const& ConstReference;
-
     String* StringData_ { nullptr };
     SizeType Offset_ { 0 };
     SizeType Length_ { 0 }; // visible length
@@ -36,7 +31,7 @@ public:
     {
     }
 
-    StringRef(ConstReference other, SizeType offset = 0, SizeType length = 0)
+    StringRef(const StringRef& other, SizeType offset = 0, SizeType length = 0)
         : StringData_(other.get())
         , Offset_(offset)
         , Length_(length)
@@ -48,7 +43,7 @@ public:
             StringData_->increment();
     }
 
-    StringRef(ConstPointer lit)
+    StringRef(const CharType* lit)
         : StringData_(string_allocator.allocateObject<String>(lit))
     {
         Length_ = StringData_->length();
@@ -89,7 +84,7 @@ public:
     ~StringRef()
     {
         if (StringData_) {
-            /// NOTE: this will only be deallocated if it's the last pointer in the arena
+            /// NOTE: this will only be deallocated if it's the last CharType* in the arena
             /// we should probably make a better allocator for that ...
             StringData_->decrement();
             if (StringData_->referenceCount() == 0) {
@@ -99,16 +94,16 @@ public:
         }
     }
 
-    Reference operator=(ConstReference other)
+    StringRef& operator=(const StringRef& other)
     {
         if (this == &other)
             return *this;
 
-        // Decrement old reference
+        // Decrement old StringRef&
         if (StringData_)
             StringData_->decrement();
 
-        // Assign new reference
+        // Assign new StringRef&
         StringData_ = other.get();
         if (StringData_)
             StringData_->increment();
@@ -120,14 +115,14 @@ public:
     }
 
     // Equality operator
-    MYLANG_NODISCARD bool operator==(ConstReference other) const noexcept
+    MYLANG_NODISCARD bool operator==(const StringRef& other) const noexcept
     {
         if (!StringData_ || !other.StringData_)
             return StringData_ == other.StringData_;
         return Length_ == other.Length_ && ::memcmp(data(), other.data(), Length_ * sizeof(CharType)) == 0;
     }
 
-    MYLANG_NODISCARD bool operator!=(ConstReference other) const noexcept { return !(*this == other); }
+    MYLANG_NODISCARD bool operator!=(const StringRef& other) const noexcept { return !(*this == other); }
 
     // Expand capacity
     void expand(SizeType const new_size);
@@ -139,8 +134,8 @@ public:
     void erase(SizeType const at);
 
     // Append another StringRef
-    Reference operator+=(ConstReference other);
-    Reference operator+=(CharType c);
+    StringRef& operator+=(const StringRef& other);
+    StringRef& operator+=(CharType c);
 
     // FIXED: Add null checks
     CharType operator[](SizeType const i) const;
@@ -151,10 +146,10 @@ public:
 
     CharType& at(SizeType const i);
 
-    Reference trimWhitespace(std::optional<bool const> leading = std::nullopt, std::optional<bool const> trailing = std::nullopt);
+    StringRef& trimWhitespace(std::optional<bool const> leading = std::nullopt, std::optional<bool const> trailing = std::nullopt);
 
     // StringRef + StringRef
-    friend StringRef operator+(ConstReference lhs, ConstReference rhs)
+    friend StringRef operator+(const StringRef& lhs, const StringRef& rhs)
     {
         if (lhs.empty() && rhs.empty())
             return "";
@@ -179,7 +174,7 @@ public:
     }
 
     // StringRef + const char* (UTF-8 string)
-    friend StringRef operator+(ConstReference lhs, char const* rhs)
+    friend StringRef operator+(const StringRef& lhs, char const* rhs)
     {
         if (!rhs || !rhs[0])
             return StringRef(lhs);
@@ -189,7 +184,7 @@ public:
     }
 
     // const char* + StringRef
-    friend StringRef operator+(char const* lhs, ConstReference rhs)
+    friend StringRef operator+(char const* lhs, const StringRef& rhs)
     {
         if (!lhs || !lhs[0])
             return StringRef(rhs);
@@ -199,7 +194,7 @@ public:
     }
 
     // StringRef + CharType (single character)
-    friend StringRef operator+(ConstReference lhs, CharType rhs)
+    friend StringRef operator+(const StringRef& lhs, CharType rhs)
     {
         StringRef result(lhs);
         result += rhs;
@@ -207,7 +202,7 @@ public:
     }
 
     // CharType + StringRef
-    friend StringRef operator+(CharType lhs, ConstReference rhs)
+    friend StringRef operator+(CharType lhs, const StringRef& rhs)
     {
         StringRef result;
         result.reserve(rhs.len() + 1);
@@ -228,19 +223,19 @@ public:
 
     MYLANG_NODISCARD bool empty() const noexcept { return Length_ == 0; }
 
-    ConstPointer data() const noexcept
+    const CharType* data() const noexcept
     {
         return StringData_ ? StringData_->ptr() + Offset_ : nullptr;
     }
 
-    Pointer data() noexcept
+    CharType* data() noexcept
     {
         ensureUnique();
         return StringData_ ? StringData_->ptr() + Offset_ : nullptr;
     }
 
     // Output stream operator
-    friend std::ostream& operator<<(std::ostream& os, ConstReference str)
+    friend std::ostream& operator<<(std::ostream& os, const StringRef& str)
     {
         if (str.empty())
             return os;
@@ -303,12 +298,12 @@ public:
 
         // Copy only the relevant portion
         if (copy_len > 0)
-            ::memcpy(s->ptr(), const_cast<ConstPointer>(StringData_->ptr() + Offset_), copy_len * sizeof(CharType));
+            ::memcpy(s->ptr(), const_cast<const CharType*>(StringData_->ptr() + Offset_), copy_len * sizeof(CharType));
 
         s->setLen(copy_len);
         s->terminate();
 
-        // Decrement old reference
+        // Decrement old StringRef&
         StringData_->decrement();
 
         // Update StringRef to point to new data

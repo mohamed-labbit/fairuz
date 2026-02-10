@@ -64,7 +64,7 @@ Pointer ArenaAllocator::allocateBlock(SizeType requested, SizeType alignment_, b
         // Add new block to vector (requires exclusive lock)
         std::unique_lock<std::shared_mutex> lock(BlocksMutex_);
         Blocks_.emplace_back(block_size, alignment_);
-        AllocStats_.ActiveBlocks++;
+        ++AllocStats_.ActiveBlocks;
         return Blocks_.back().begin();
     } catch (std::bad_alloc const&) {
         if (retry_on_oom) {
@@ -111,8 +111,6 @@ MYLANG_NODISCARD MYLANG_COMPILER_ABI void* ArenaAllocator::allocate(SizeType con
         return nullptr;
     }
 
-    // _Tp* region = reinterpret_cast<_Tp*>(mem);
-
     // Track allocation if enabled
     if (TrackAllocations_) {
         AllocationHeader header {};
@@ -153,29 +151,34 @@ MYLANG_COMPILER_ABI
 void ArenaAllocator::deallocate(void* ptr, SizeType const size)
 {
     auto start = std::chrono::high_resolution_clock::now();
-    if (!ptr || size == 0)
+    if (!ptr || size == 0 || Blocks_.empty())
         return;
+
     // Strict LIFO check
     Pointer expected = static_cast<Pointer>(ptr);
     Pointer last = static_cast<Pointer>(LastPtr_);
+
     if (expected != last)
         return;
+
     // We MUST operate on the last block
     std::unique_lock<std::shared_mutex> lock(BlocksMutex_);
-    if (Blocks_.empty())
-        return;
+
     ArenaBlock& block = Blocks_.back();
     // CAS-based pop (must be safe)
     bool ok = block.pop(size);
     /// TODO: implement safe decrement
+
     AllocStats_.CurrentlyAllocated -= size;
     AllocStats_.TotalDeallocated -= size;
     ++AllocStats_.TotalDeallocations;
+
     if (block.cNext() == block.begin())
         Blocks_.back();
-    /// TODO: implement safe decrement
+
     if (AllocStats_.ActiveBlocks)
-        AllocStats_.ActiveBlocks--;
+        --AllocStats_.ActiveBlocks;
+
     // Clear LastPtr_ (important!)
     LastPtr_ = nullptr;
     auto end = std::chrono::high_resolution_clock::now();
@@ -201,14 +204,12 @@ bool ArenaAllocator::verifyAllocation(void* ptr) const
 MYLANG_NODISCARD
 Pointer ArenaAllocator::allocateFromBlocks(SizeType alloc_size, SizeType align)
 {
-    {
-        std::shared_lock<std::shared_mutex> lock(BlocksMutex_);
-        if (!Blocks_.empty()) {
-            // Try free list first
-            Pointer mem = Blocks_.back().allocate(alloc_size, align);
-            if (mem)
-                return mem;
-        }
+    std::shared_lock<std::shared_mutex> lock(BlocksMutex_);
+    if (!Blocks_.empty()) {
+        // Try free list first
+        Pointer mem = Blocks_.back().allocate(alloc_size, align);
+        if (mem)
+            return mem;
     }
 
     // Need a new block

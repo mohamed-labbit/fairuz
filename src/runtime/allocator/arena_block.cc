@@ -1,5 +1,6 @@
 #include "../../../include/runtime/allocator/arena_block.hpp"
 
+
 namespace mylang {
 namespace runtime {
 namespace allocator {
@@ -10,14 +11,17 @@ ArenaBlock::ArenaBlock(SizeType const size, SizeType const alignment)
     // Validate alignment is a power of 2
     if (alignment == 0 || (alignment & (alignment - 1)) != 0)
         diagnostic::engine.emit("Alignment must be a power of two", diagnostic::DiagnosticEngine::Severity::FATAL);
+
     // Round up size to multiple of alignment
     SizeType mod = Size_ % alignment;
     if (mod)
         Size_ += (alignment - mod);
+
     // Allocate aligned memory
     void* mem = std::aligned_alloc(alignment, Size_);
     if (!mem)
         throw std::bad_alloc();
+
     /// TODO: change after debug
     // diagnostic::engine.panic("bad alloc");
     Begin_ = reinterpret_cast<Pointer>(mem);
@@ -27,9 +31,11 @@ ArenaBlock::ArenaBlock(SizeType const size, SizeType const alignment)
 ArenaBlock::ArenaBlock(ArenaBlock&& other) MYLANG_NOEXCEPT
 {
     std::lock_guard<std::mutex> lock(other.Mutex_);
+
     Size_ = other.Size_;
     Begin_ = other.Begin_;
     Next_ = other.Next_;
+
     // Reset source
     other.Begin_ = nullptr;
     other.Next_ = nullptr;
@@ -54,10 +60,12 @@ ArenaBlock& ArenaBlock::operator=(ArenaBlock&& other) MYLANG_NOEXCEPT
         // Free existing memory
         if (Begin_)
             std::free(Begin_);
+
         // Take ownership
         Size_ = other.Size_;
         Begin_ = other.Begin_;
         Next_ = other.Next_;
+
         // Reset source
         other.Begin_ = nullptr;
         other.Next_ = nullptr;
@@ -112,6 +120,7 @@ Pointer ArenaBlock::reserve(SizeType const bytes)
     SizeType remaining = Begin_ + Size_ - Next_;
     if (remaining < bytes)
         return nullptr;
+
     Next_ += bytes;
     return Next_;
 }
