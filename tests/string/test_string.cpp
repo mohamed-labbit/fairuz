@@ -66,13 +66,8 @@ TEST_F(StringRefTest, CopyConstructor_Empty)
 
 TEST(DiagnosticTest, CopyConstructorDetailed)
 {
-  // Create original
   StringRef s1 = StringRef::fromUtf8("Hell");
-  std::cout << "s1 initial: " << s1.toUtf8() << " (len=" << s1.len() << ", cap=" << s1.cap() << ")\n";
-
-  // Copy it
   StringRef s2(s1);
-  std::cout << "s2 after copy: " << s2.toUtf8() << " (len=" << s2.len() << ", cap=" << s2.cap() << ")\n";
 
   // Verify they're equal
   EXPECT_EQ(s1, s2);
@@ -81,8 +76,6 @@ TEST(DiagnosticTest, CopyConstructorDetailed)
 
   // Now modify s1
   s1 += 'H';
-  std::cout << "s1 after append: " << s1.toUtf8() << " (len=" << s1.len() << ")\n";
-  std::cout << "s2 after s1 append: " << s2.toUtf8() << " (len=" << s2.len() << ")\n";
 
   // They should be different
   EXPECT_NE(s1, s2);
@@ -93,10 +86,7 @@ TEST(DiagnosticTest, CopyConstructorDetailed)
 TEST(DiagnosticTest, CopyConstructorArabic)
 {
   StringRef s1 = StringRef::fromUtf8("مرحبا");
-  std::cout << "s1: " << s1.toUtf8() << " (len=" << s1.len() << ")\n";
-
   StringRef s2(s1);
-  std::cout << "s2: " << s2.toUtf8() << " (len=" << s2.len() << ")\n";
 
   EXPECT_EQ(s1, s2);
   EXPECT_EQ(s2.toUtf8(), "مرحبا");
@@ -109,9 +99,6 @@ TEST(DiagnosticTest, CheckMemoryIndependence)
 
   StringRef s2(s1);
   CharType* ptr2 = s2.data();
-
-  std::cout << "s1 ptr: " << (void*) ptr1 << "\n";
-  std::cout << "s2 ptr: " << (void*) ptr2 << "\n";
 
   EXPECT_NE(ptr1, ptr2) << "Copy constructor should allocate new memory!";
 
@@ -199,11 +186,8 @@ TEST_F(StringRefTest, CopyAssignment_EmptyToEmpty)
 TEST_F(StringRefTest, CopyAssignment_NonEmptyToEmpty)
 {
   StringRef s1 = StringRef::fromUtf8("Hello");
-  std::cout << "s1 before assign : " << s1 << std::endl;
   StringRef s2;
   s2 = s1;
-  std::cout << "s1 after assign  : " << s1 << std::endl;
-  std::cout << "s2               : " << s2 << std::endl;
   EXPECT_EQ(s2, s1);
 }
 

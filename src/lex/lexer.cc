@@ -18,8 +18,11 @@ Lexer::Lexer(input::FileManager* file_manager) :
     TokIndex_(0),
     IndentSize_(0)
 {
+  IndentStack_.reserve(32);
+  AltIndentStack_.reserve(32);
   IndentStack_.push_back(0);
   AltIndentStack_.push_back(0);
+  TokStream_.reserve(1024);
   configureLocale();
 }
 
@@ -186,12 +189,6 @@ const tok::Token* Lexer::lexToken()
           }
         }
       }
-      else
-      {
-        // Not at beginning of line - just skip whitespace
-        consumeChar();
-        continue;
-      }
       // Should only reach here if blankline is true
       consumeChar();
       continue;
@@ -217,7 +214,7 @@ const tok::Token* Lexer::lexToken()
     break;
     case u'\'' :
     case u'"' : {
-      StringRef str;
+      StringRef str(2);
       CharType  quote = ch;
       CharType  c2    = nextChar();
 
@@ -236,34 +233,124 @@ const tok::Token* Lexer::lexToken()
     }
     case ',' :
     case u'،' : consumeChar(); return finish(tok::TokenType::COMMA, StringRef(ch), line, col);
-    default : break;
-    }
-
-    // Identifiers
-    if ((ch >= 0x0600 && ch <= 0x06FF) || ch == u'_')
-    {
-      StringRef id;
-      id += ch;
+    case 0x0621 :
+    case 0x0622 :
+    case 0x0623 :
+    case 0x0624 :
+    case 0x0625 :
+    case 0x0626 :
+    case 0x0627 :
+    case 0x0628 :
+    case 0x0629 :
+    case 0x062A :
+    case 0x062B :
+    case 0x062C :
+    case 0x062D :
+    case 0x062E :
+    case 0x062F :
+    case 0x0630 :
+    case 0x0631 :
+    case 0x0632 :
+    case 0x0633 :
+    case 0x0634 :
+    case 0x0635 :
+    case 0x0636 :
+    case 0x0637 :
+    case 0x0638 :
+    case 0x0639 :
+    case 0x063A :
+    case 0x0641 :
+    case 0x0642 :
+    case 0x0643 :
+    case 0x0644 :
+    case 0x0645 :
+    case 0x0646 :
+    case 0x0647 :
+    case 0x0648 :
+    case 0x0649 :
+    case 0x064A : {
+      StringRef str(32);
+      str += ch;
       CharType c2 = nextChar();
 
       while (util::isalphaArabic(c2) || c2 == u'_' || std::iswdigit(c2))
       {
-        id += c2;
+        str += c2;
         c2 = nextChar();
       }
 
       tok::TokenType tt = tok::TokenType::IDENTIFIER;
-      if (tok::keywords.count(id))
-        tt = tok::keywords.at(id);
+      if (tok::keywords.count(str))
+        tt = tok::keywords.at(str);
 
-      return finish(tt, id, line, col);
+      return finish(tt, str, line, col);
+    }
+    case '=' :
+    case '<' :
+    case '>' :
+    case '!' :
+    case '+' :
+    case '-' :
+    case '|' :
+    case '&' :
+    case '*' :
+    case '/' : {
+      StringRef str(2);
+      str += ch;
+      CharType nxt = nextChar();
+
+      if (nxt != BUFFER_END)
+      {
+        if (tok::operators.count(str + nxt))  // this creates a temporary ??
+        {
+          str += nxt;
+          consumeChar();
+        }
+      }
+
+      tok::TokenType tt = tok::operators.count(str) ? tok::operators.at(str) : tok::TokenType::IDENTIFIER;
+      return finish(tt, str, line, col);
+    }
+    case '[' :
+    case ']' :
+    case '(' :
+    case ')' :
+    case ':' : {
+      tok::TokenType tt;
+      StringRef      sym;
+      sym += ch;
+      consumeChar();
+
+      switch (ch)
+      {
+      case '(' : tt = tok::TokenType::LPAREN; break;
+      case ')' : tt = tok::TokenType::RPAREN; break;
+      case '[' : tt = tok::TokenType::LBRACKET; break;
+      case ']' : tt = tok::TokenType::RBRACKET; break;
+      case ':' :
+        if (currentChar() == u'=')
+        {
+          consumeChar();
+          sym += '=';
+          tt = tok::TokenType::OP_ASSIGN;
+        }
+        else
+          tt = tok::TokenType::COLON;
+        break;
+      default : tt = tok::TokenType::INVALID; break;
+      }
+
+      return finish(tt, sym, line, col);
+    }
+    default : break;
     }
 
     // Numbers
-    else if (std::iswdigit(ch))
+    if (std::iswdigit(ch))
     {
-      StringRef num;
-      num += ch;
+      StringRef str;
+      str.reserve(32);
+      str += ch;
       CharType c2 = nextChar();
 
       // Check for special number bases (hex, octal, binary)
@@ -272,7 +359,7 @@ const tok::Token* Lexer::lexToken()
         if (c2 == 'x' || c2 == 'X')
         {
           // Hexadecimal literal
-          num += c2;
+          str += c2;
           c2 = nextChar();
 
           bool hasDigits = false;
@@ -288,7 +375,7 @@ const tok::Token* Lexer::lexToken()
             // Check for valid hex digit
             if (std::iswxdigit(c2))
             {
-              num += c2;
+              str += c2;
               hasDigits = true;
               c2        = nextChar();
             }
@@ -299,12 +386,12 @@ const tok::Token* Lexer::lexToken()
           if (!hasDigits)
             diagnostic::engine.panic("Invalid hexadecimal literal: no digits after 0x");
 
-          return finish(tok::TokenType::NUMBER, num, line, col);
+          return finish(tok::TokenType::NUMBER, str, line, col);
         }
         else if (c2 == 'o' || c2 == 'O')
         {
           // Octal literal
-          num += c2;
+          str += c2;
           c2 = nextChar();
 
           bool hasDigits = false;
@@ -321,7 +408,7 @@ const tok::Token* Lexer::lexToken()
             // Check for valid octal digit (0-7)
             if (c2 >= '0' && c2 <= '7')
             {
-              num += c2;
+              str += c2;
               hasDigits = true;
               c2        = nextChar();
             }
@@ -335,12 +422,12 @@ const tok::Token* Lexer::lexToken()
           if (!hasDigits)
             diagnostic::engine.panic("Invalid octal literal: no digits after 0o");
 
-          return finish(tok::TokenType::NUMBER, num, line, col);
+          return finish(tok::TokenType::NUMBER, str, line, col);
         }
         else if (c2 == 'b' || c2 == 'B')
         {
           // Binary literal
-          num += c2;
+          str += c2;
           c2 = nextChar();
 
           bool hasDigits = false;
@@ -357,7 +444,7 @@ const tok::Token* Lexer::lexToken()
             // Check for valid binary digit (0 or 1)
             if (c2 == '0' || c2 == '1')
             {
-              num += c2;
+              str += c2;
               hasDigits = true;
               c2        = nextChar();
             }
@@ -371,7 +458,7 @@ const tok::Token* Lexer::lexToken()
           if (!hasDigits)
             diagnostic::engine.panic("Invalid binary literal: no digits after 0b");
 
-          return finish(tok::TokenType::NUMBER, num, line, col);
+          return finish(tok::TokenType::NUMBER, str, line, col);
         }
         // If it's just '0' followed by regular digits or '.', fall through to decimal parsing
       }
@@ -388,7 +475,7 @@ const tok::Token* Lexer::lexToken()
 
         if (std::iswdigit(c2))
         {
-          num += c2;
+          str += c2;
           c2 = nextChar();
         }
         else
@@ -398,7 +485,7 @@ const tok::Token* Lexer::lexToken()
       // Check for decimal point (floating-point number)
       if (c2 == '.')
       {
-        num += c2;
+        str += c2;
         c2 = nextChar();
 
         // Fractional part (with optional underscores)
@@ -412,73 +499,17 @@ const tok::Token* Lexer::lexToken()
 
           if (std::iswdigit(c2))
           {
-            num += c2;
+            str += c2;
             c2 = nextChar();
           }
           else
             break;
         }
 
-        return finish(tok::TokenType::FLOAT, num, line, col);
+        return finish(tok::TokenType::FLOAT, str, line, col);
       }
 
-      return finish(tok::TokenType::NUMBER, num, line, col);
-    }
-
-    // Operators
-    else if (util::isOperator(ch))
-    {
-      StringRef op;
-      op += ch;
-      CharType nxt = nextChar();
-
-      if (nxt != BUFFER_END)
-      {
-        StringRef two = op;
-        two += nxt;
-
-        if (tok::operators.count(two))
-        {
-          op += nxt;
-          consumeChar();
-        }
-      }
-
-      tok::TokenType tt = tok::operators.count(op) ? tok::operators.at(op) : tok::TokenType::IDENTIFIER;
-      return finish(tt, op, line, col);
-    }
-
-    // Symbols
-    else if (util::isSymbol(ch))
-    {
-      tok::TokenType tt;
-      StringRef      sym;
-      sym += ch;
-      consumeChar();
-
-      switch (ch)
-      {
-      case '(' : tt = tok::TokenType::LPAREN; break;
-      case ')' : tt = tok::TokenType::RPAREN; break;
-      case '[' :  // FIX: Added bracket support
-        tt = tok::TokenType::LBRACKET;
-        break;
-      case ']' : tt = tok::TokenType::RBRACKET; break;
-      case '.' : tt = tok::TokenType::DOT; break;
-      case ':' :
-        if (currentChar() == u'=')
-        {
-          consumeChar();
-          sym += '=';
-          tt = tok::TokenType::OP_ASSIGN;
-        }
-        else
-          tt = tok::TokenType::COLON;
-        break;
-      default : tt = tok::TokenType::INVALID; break;
-      }
-
-      return finish(tt, sym, line, col);
+      return finish(tok::TokenType::NUMBER, str, line, col);
     }
 
     // Unknown

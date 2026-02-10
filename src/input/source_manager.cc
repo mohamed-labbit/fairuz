@@ -7,19 +7,7 @@
 namespace mylang {
 namespace lex {
 
-CharType SourceManager::peek()
-{
-
-  return this->InputBuffer_.peek();
-  if (!Current_)
-    return BUFFER_END;
-
-  CharType* forward = Current_ + 1;
-  if (!forward)
-    return BUFFER_END;
-
-  return *forward;
-}
+CharType SourceManager::peek() { return this->InputBuffer_.peek(); }
 
 std::pair<SizeType, SizeType> SourceManager::offsetMap_(const SizeType& offset) const
 {

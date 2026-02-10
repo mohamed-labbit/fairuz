@@ -1,4 +1,5 @@
 #include "../../include/types/string.hpp"
+
 #include <arm_neon.h>
 #include <cassert>
 #include <simdutf.h>
