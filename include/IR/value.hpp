@@ -18,12 +18,6 @@ class Environment;
 
 class Value {
 public:
-    typedef Value Self;
-    typedef Value* Pointer;
-    typedef Value& Reference;
-    typedef Value const& ConstReference;
-    typedef Value const* ConstPointer;
-
     enum class Type {
         NONE,
         INT,
@@ -83,7 +77,6 @@ public:
 
 private:
     Type Type_;
-
     ValueData Data_;
 
     // Reference counting for memory management
@@ -94,31 +87,37 @@ public:
         : Type_(Type::NONE)
     {
     }
+
     Value(std::int64_t v)
         : Type_(Type::INT)
         , Data_(std::in_place_type<std::int64_t>, v)
     {
     }
+
     Value(double v)
         : Type_(Type::FLOAT)
         , Data_(std::in_place_type<double>, v)
     {
     }
+
     Value(StringRef const& v)
         : Type_(Type::STRING)
         , Data_(std::in_place_type<StringRef>, v)
     {
     }
+
     Value(bool v)
         : Type_(Type::BOOL)
         , Data_(std::in_place_type<bool>, v)
     {
     }
+
     Value(std::vector<Value> v)
         : Type_(Type::LIST)
         , Data_(std::in_place_type<std::vector<Value>>, v)
     {
     }
+
     Value(std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual> v)
         : Type_(Type::DICT)
         , Data_(std::in_place_type<std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>>, v)
@@ -132,9 +131,34 @@ public:
     {
     }
 
-    Type getType() const { return Type_; }
+    SizeType size()
+    {
+        if (isInt())
+            return sizeof(asInt());
+        if (isFloat())
+            return sizeof(asFloat());
+        if (isString())
+            return asString().len();
+        if (isBool())
+            return sizeof(bool);
+        if (isList())
+            return asList().size();
+        if (isDict())
+            return asDict().size();
+        if (isFunction())
+            return sizeof(Function);
+        return sizeof(ValueData);
+    }
 
-    void setType(Type const type) { Type_ = type; }
+    Type getType() const
+    {
+        return Type_;
+    }
+
+    void setType(Type const type)
+    {
+        Type_ = type;
+    }
 
     void setData(std::variant<std::monostate,                                // None
         std::int64_t,                                                        // Int
@@ -151,28 +175,63 @@ public:
     {
         Data_ = data;
     }
+
     // Type checks
-    bool isNone() const { return Type_ == Type::NONE; }
 
-    bool isInt() const { return Type_ == Type::INT; }
+    bool isNone() const
+    {
+        return Type_ == Type::NONE;
+    }
 
-    bool isFloat() const { return Type_ == Type::FLOAT; }
+    bool isInt() const
+    {
+        return Type_ == Type::INT;
+    }
 
-    bool isNumber() const { return isInt() || isFloat(); }
+    bool isFloat() const
+    {
+        return Type_ == Type::FLOAT;
+    }
 
-    bool isString() const { return Type_ == Type::STRING; }
+    bool isNumber() const
+    {
+        return isInt() || isFloat();
+    }
 
-    bool isBool() const { return Type_ == Type::BOOL; }
+    bool isString() const
+    {
+        return Type_ == Type::STRING;
+    }
 
-    bool isList() const { return Type_ == Type::LIST; }
+    bool isBool() const
+    {
+        return Type_ == Type::BOOL;
+    }
 
-    bool isDict() const { return Type_ == Type::DICT; }
+    bool isList() const
+    {
+        return Type_ == Type::LIST;
+    }
 
-    bool isFunction() const { return Type_ == Type::FUNCTION; }
+    bool isDict() const
+    {
+        return Type_ == Type::DICT;
+    }
 
-    bool isCallable() const { return isFunction() || Type_ == Type::NATIVE_FUNCTION; }
+    bool isFunction() const
+    {
+        return Type_ == Type::FUNCTION;
+    }
 
-    bool isIterable() const { return isList() || isString() || isDict(); }
+    bool isCallable() const
+    {
+        return isFunction() || Type_ == Type::NATIVE_FUNCTION;
+    }
+
+    bool isIterable() const
+    {
+        return isList() || isString() || isDict();
+    }
 
     // Getters with safety
     std::int64_t asInt() const;
@@ -184,17 +243,16 @@ public:
     bool asBool() const;
 
     std::vector<Value>& asList();
-
     std::vector<Value> const& asList() const;
 
     std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>& asDict();
-
     std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual> const& asDict() const;
 
     Function& asFunction();
     Function const& asFunction() const;
 
     NativeFunction& asNativeFunction();
+    NativeFunction const& asNativeFunction() const;
 
     double toFloat() const; // Type conversions
 
@@ -211,22 +269,27 @@ public:
     bool hasNext() const;
 
     // Comparison operators
+    bool operator!=(Value const& other) const;
     bool operator==(Value const& other) const;
+
     bool operator<(Value const& other) const;
     bool operator>(Value const& other) const;
+
     bool operator<=(Value const& other) const;
     bool operator>=(Value const& other) const;
-    bool operator!=(Value const& other) const;
 
     // Arithmetic operators with type promotion
     Value operator+(Value const& other) const;
     Value operator-(Value const& other) const;
+
     Value operator*(Value const& other) const;
     Value operator/(Value const& other) const;
     Value operator%(Value const& other) const;
-    Value pow(Value const& other) const;
+
     Value operator-() const; // Unary operators
     Value operator!() const;
+
+    Value pow(Value const& other) const;
     Value getItem(Value const& key) const; // Subscript operator
 
     void setItem(Value const& key, Value const& value);

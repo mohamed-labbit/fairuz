@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../IR/value.hpp"
-#include "../parser/ast/ast.hpp"
+#include "../ast/ast.hpp"
 
 #include <builtins.h>
 #include <functional>
@@ -9,7 +9,6 @@
 namespace mylang {
 namespace IR {
 
-using namespace parser;
 using namespace runtime;
 
 class CodeGenerator {
@@ -186,7 +185,7 @@ private:
 
     Value callUserFunction(Value& func_value, std::vector<Value> const& args)
     {
-        auto& func = func_value.asFunction();
+        Value::Function& func = func_value.asFunction();
 
         // Check argument count
         if (args.size() != func.params.size())
@@ -195,12 +194,11 @@ private:
 
         // Create new environment for function execution
         // Use closure environment as parent (for lexical scoping)
-        auto* func_env = &func.closure;
+        Environment* func_env = func.closure;
 
         // Bind parameters to arguments
-        for (size_t i = 0; i < args.size(); ++i) {
+        for (size_t i = 0; i < args.size(); ++i)
             func_env->define(func.params[i], args[i]);
-        }
 
         // Save current environment and switch to function environment
         auto previousEnv = Env_;

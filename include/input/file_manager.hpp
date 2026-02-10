@@ -2,7 +2,6 @@
 
 #include "../macros.hpp"
 #include "../types/string.hpp"
-
 #include <filesystem>
 #include <fstream>
 #include <span>
@@ -114,15 +113,10 @@ public:
     void reset();
 
     void seekToChar(SizeType const CharOffset);
-
-    void seekToLine(SizeType const line_number)
-    {
-        /// TODO:
-    }
+    void seekToLine(SizeType const line_number);
 
     StringRef readWindow(SizeType const size)
     {
-        /// TODO: : add caching
         return readWindowInternal(size);
     }
 
@@ -153,7 +147,7 @@ public:
     }
 
     CharType peekChar(SizeType const CharOffset);
-
+    
     StringRef peekRange(SizeType const start_offset, SizeType const length);
 
     SizeType remaining() { return InputBuffer_.len() - Context_.ByteOffset; }
@@ -163,12 +157,12 @@ public:
     StringRef getSourceLine(SizeType const line);
 
 private:
-    std::string FullPath_;
-    Context Context_;
-    std::vector<Context> PositionStack_;
-    std::vector<LineIndex> LineIndices_;
-    FileStats Stats_;
-    StringRef InputBuffer_;
+    std::string FullPath_ { "" };
+    Context Context_ {};
+    std::vector<Context> PositionStack_ {};
+    std::vector<LineIndex> LineIndices_ {};
+    FileStats Stats_ {};
+    StringRef InputBuffer_ {};
 
     // private constants
     static MYLANG_CONSTEXPR SizeType DEFAULT_BUFFER_SIZE = 8192;

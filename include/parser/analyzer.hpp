@@ -28,14 +28,12 @@ private:
     std::vector<Issue> Issues_;
     ControlFlowGraph Cfg_;
 
-    // Type inference engine
-public: /// TODO:
+public: 
     SymbolTable::DataType_t inferType(ast::Expr const* expr);
 
     void reportIssue(Issue::Severity sev, StringRef const& msg, std::int32_t line, StringRef const& sugg = u"");
 
     void analyzeExpr(ast::Expr const* expr);
-
     void analyzeStmt(ast::Stmt const* stmt);
 
     // public:

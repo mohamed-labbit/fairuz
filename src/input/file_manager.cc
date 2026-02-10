@@ -1,7 +1,6 @@
 #include "../../include/input/file_manager.hpp"
 #include "../../include/diag/diagnostic.hpp"
 #include "../../include/input/error.hpp"
-
 #include <filesystem>
 #include <iostream>
 #include <span>
@@ -18,11 +17,31 @@ FileManager::FileManager(std::string const& filepath)
     if (!in)
         diagnostic::engine.panic(toString(FileManagerError::FILE_NOT_OPEN));
 
-    InputBuffer_ = StringRef::fromUtf8(std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()));
+    InputBuffer_ = StringRef::fromUtf8(std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>())).trimWhitespace();
     LastKnownWriteTime_ = fs::last_write_time(filepath);
 }
 
-void FileManager::reset() { Context_.reset(); }
+void FileManager::reset()
+{
+    Context_.reset();
+}
+
+void FileManager::seekToLine(SizeType const line_number)
+{
+    seekToChar(0);
+
+    if (line_number > getLineCount())
+        diagnostic::engine.emit("line number argument is invalid", diagnostic::DiagnosticEngine::Severity::ERROR);
+
+    SizeType n = 0;
+    for (; n < line_number && Context_.CharOffset < InputBuffer_.len();) {
+        if (InputBuffer_[Context_.CharOffset++] == '\n')
+            n++;
+    }
+
+    if (n != line_number)
+        diagnostic::engine.emit("failed to seek to requested line", diagnostic::DiagnosticEngine::Severity::ERROR);
+}
 
 void FileManager::seekToChar(SizeType off)
 {
@@ -44,7 +63,7 @@ StringRef FileManager::readWindowInternal(SizeType size)
 
     Context_.CharOffset += count;
     Context_.ByteOffset += count * sizeof(CharType);
-    Context_.column += count; // optional
+    Context_.column += count;
 
     return ret;
 }
@@ -131,6 +150,7 @@ void FileManager::refreshStats()
     FileStats new_stats = computeStats();
     Stats_ = new_stats;
     LastKnownWriteTime_ = fs::last_write_time(FullPath_);
+ 
     // Invalidate line index if file changed
     if (isChangedSinceLastRead()) {
         LineIndices_.clear();

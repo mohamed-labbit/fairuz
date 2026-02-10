@@ -344,7 +344,6 @@ tok::Token const* Lexer::lexToken()
                     bool hasDigits = false;
 
                     for (;;) {
-                        // Skip underscores
                         if (c2 == '_') {
                             c2 = nextChar();
                             continue;
@@ -370,7 +369,6 @@ tok::Token const* Lexer::lexToken()
                     bool hasDigits = false;
 
                     for (;;) {
-                        // Skip underscores
                         if (c2 == '_') {
                             c2 = nextChar();
                             continue;
@@ -382,7 +380,6 @@ tok::Token const* Lexer::lexToken()
                             hasDigits = true;
                             c2 = nextChar();
                         } else if (std::iswdigit(c2))
-                            // Invalid octal digit (8 or 9)
                             diagnostic::engine.panic("Invalid digit '" + std::string(1, c2) + "' in octal literal");
                         else
                             break;
@@ -400,7 +397,6 @@ tok::Token const* Lexer::lexToken()
                     bool hasDigits = false;
 
                     for (;;) {
-                        // Skip underscores
                         if (c2 == '_') {
                             c2 = nextChar();
                             continue;
@@ -412,7 +408,6 @@ tok::Token const* Lexer::lexToken()
                             hasDigits = true;
                             c2 = nextChar();
                         } else if (std::iswdigit(c2))
-                            // Invalid binary digit (2-9)
                             diagnostic::engine.panic("Invalid digit '" + std::string(1, c2) + "' in binary literal");
                         else
                             break;
@@ -429,7 +424,6 @@ tok::Token const* Lexer::lexToken()
             // Decimal integer part (with optional underscores)
             for (;;) {
                 if (c2 == '_') {
-                    // Skip underscores in numeric literals
                     c2 = nextChar();
                     continue;
                 }
@@ -466,7 +460,6 @@ tok::Token const* Lexer::lexToken()
             return finish(tok::TokenType::NUMBER, str, line, col);
         }
 
-        // Unknown
         consumeChar();
         return finish(tok::TokenType::INVALID, StringRef(ch), line, col);
     }
@@ -474,7 +467,6 @@ tok::Token const* Lexer::lexToken()
     if (!TokStream_.empty() && TokStream_.back()->type() == tok::TokenType::ENDMARKER)
         return TokStream_.back();
 
-    // not calling finish since update context is useless at end
     consumeChar();
 
     if (!TokStream_.empty() && TokStream_.back()->type() == tok::TokenType::ENDMARKER)
@@ -487,15 +479,11 @@ tok::Token const* Lexer::lexToken()
 
 tok::Token const* Lexer::next()
 {
-    // Advance the index first
     ++TokIndex_;
 
-    // Make sure we have a token at this position
     while (TokIndex_ >= TokStream_.size()) {
         lexToken();
-        // After lexing, check if we hit ENDMARKER
         if (!TokStream_.empty() && TokStream_.back()->type() == tok::TokenType::ENDMARKER) {
-            // We've reached EOF, stay at ENDMARKER
             TokIndex_ = TokStream_.size() - 1;
             break;
         }

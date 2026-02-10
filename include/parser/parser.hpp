@@ -191,7 +191,10 @@ public:
     // std::vector<ast::Stmt*> parse();
     /// TODO: not sure if these should be private
     /// @brief check wether or not we reached the end of the file so not to bother lookin for stuff to parse
-    bool weDone() const { return Lexer_.current()->is(tok::TokenType::ENDMARKER); }
+    bool weDone() const 
+    { 
+        return Lexer_.current()->is(tok::TokenType::ENDMARKER); 
+    }
 
     /// @brief Checks whether the current token is of the given type
     bool check(tok::TokenType type)
@@ -243,7 +246,10 @@ private:
     }
 
     /// @brief Retrieves a source line for diagnostics
-    StringRef getSourceLine(SizeType line) { return Lexer_.getSourceLine(line); }
+    StringRef getSourceLine(SizeType line) 
+    { 
+        return Lexer_.getSourceLine(line); 
+    }
 
     /// @brief Enters a new scope (currently a no-op)
     void enterScope() { }
