@@ -32,7 +32,7 @@ class String
   } storage_;
 
   bool             is_heap;
-  SizeType         len_{0};  
+  SizeType         len_{0};
   mutable SizeType RefCount{1};
 
  public:
@@ -61,7 +61,10 @@ class String
 
   ConstPointer ptr() const noexcept { return isHeap() ? storage_.heap.ptr : storage_.sso; }
 
-  SizeType cap() const noexcept { return isHeap() ? storage_.heap.cap - 1 /*subtract the nul terminator*/ : SSO_SIZE - 1; }
+  SizeType cap() const noexcept
+  {
+    return isHeap() ? storage_.heap.cap - 1 /*subtract the nul terminator*/ : SSO_SIZE - 1;
+  }
 
   void setLen(const SizeType n)
   {

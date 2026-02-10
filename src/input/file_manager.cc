@@ -1,7 +1,6 @@
 #include "../../include/input/file_manager.hpp"
 #include "../../include/diag/diagnostic.hpp"
 #include "../../include/input/error.hpp"
-#include "../../utfcpp/source/utf8.h"
 
 #include <filesystem>
 #include <iostream>
@@ -21,7 +20,7 @@ FileManager::FileManager(const std::string& filepath) :
   if (!in)
     diagnostic::engine.panic(toString(FileManagerError::FILE_NOT_OPEN));
 
-  InputBuffer_        = StringRef::fromUtf8(std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()));
+  InputBuffer_ = StringRef::fromUtf8(std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()));
   LastKnownWriteTime_ = fs::last_write_time(filepath);
 }
 

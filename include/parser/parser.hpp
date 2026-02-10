@@ -7,10 +7,10 @@
 
 #pragma once
 
+#include "../ast/ast.hpp"
 #include "../input/file_manager.hpp"
 #include "../lex/lexer.hpp"
 #include "../lex/token.hpp"
-#include "../ast/ast.hpp"
 
 #include <optional>
 #include <sstream>

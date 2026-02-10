@@ -1,5 +1,4 @@
 #include "../../include/parser/analyzer.hpp"
-#include "../../utfcpp/source/utf8.h"
 
 #include <iostream>
 
@@ -22,7 +21,8 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(const ast::Expr* ex
 
     switch (lit->getType())
     {
-    case ast::LiteralExpr::Type::NUMBER : return lit->getValue().find('.') ? SymbolTable::DataType_t::FLOAT : SymbolTable::DataType_t::INTEGER;
+    case ast::LiteralExpr::Type::NUMBER :
+      return lit->getValue().find('.') ? SymbolTable::DataType_t::FLOAT : SymbolTable::DataType_t::INTEGER;
     case ast::LiteralExpr::Type::STRING : return SymbolTable::DataType_t::STRING;
     case ast::LiteralExpr::Type::BOOLEAN : return SymbolTable::DataType_t::BOOLEAN;
     case ast::LiteralExpr::Type::NONE : return SymbolTable::DataType_t::NONE;
@@ -86,7 +86,8 @@ void SemanticAnalyzer::analyzeExpr(const ast::Expr* expr)
   case ast::Expr::Kind::NAME : {
     const ast::NameExpr* name = static_cast<const ast::NameExpr*>(expr);
     if (!CurrentScope_->isDefined(name->getValue()))
-      reportIssue(Issue::Severity::ERROR, u"Undefined variable: " + name->getValue(), expr->getLine(), u"Did you forget to initialize it?");
+      reportIssue(Issue::Severity::ERROR, u"Undefined variable: " + name->getValue(), expr->getLine(),
+                  u"Did you forget to initialize it?");
     else
       CurrentScope_->markUsed(name->getValue(), expr->getLine());
     break;
@@ -102,13 +103,16 @@ void SemanticAnalyzer::analyzeExpr(const ast::Expr* expr)
     SymbolTable::DataType_t leftType  = inferType(bin->getLeft());
     SymbolTable::DataType_t rightType = inferType(bin->getRight());
 
-    if (leftType != rightType && leftType != SymbolTable::DataType_t::UNKNOWN && rightType != SymbolTable::DataType_t::UNKNOWN)
-      reportIssue(Issue::Severity::ERROR, u"Type mismatch in binary expression", expr->getLine(), u"Left and right operands must have same type");
+    if (leftType != rightType && leftType != SymbolTable::DataType_t::UNKNOWN
+        && rightType != SymbolTable::DataType_t::UNKNOWN)
+      reportIssue(Issue::Severity::ERROR, u"Type mismatch in binary expression", expr->getLine(),
+                  u"Left and right operands must have same type");
 
     if (leftType == SymbolTable::DataType_t::STRING || rightType == SymbolTable::DataType_t::STRING)
     {
       if (bin->getOperator() != tok::TokenType::OP_PLUS)
-        reportIssue(Issue::Severity::ERROR, u"Invalid operation on string", expr->getLine(), u"Only '+' is allowed for strings");
+        reportIssue(Issue::Severity::ERROR, u"Invalid operation on string", expr->getLine(),
+                    u"Only '+' is allowed for strings");
     }
 
     // Division by zero detection (constant folding)
@@ -213,7 +217,8 @@ void SemanticAnalyzer::analyzeStmt(const ast::Stmt* stmt)
     analyzeExpr(ifStmt->getCondition());
     // Check for constant conditions
     if (ifStmt->getCondition()->getKind() == ast::Expr::Kind::LITERAL)
-      reportIssue(Issue::Severity::WARNING, u"Condition is always constant", stmt->getLine(), u"Consider removing if statement");
+      reportIssue(Issue::Severity::WARNING, u"Condition is always constant", stmt->getLine(),
+                  u"Consider removing if statement");
     for (const ast::Stmt* const& s : ifStmt->getThenBlock()->getStatements())
       analyzeStmt(s);
     for (const ast::Stmt* const& s : ifStmt->getElseBlock()->getStatements())
@@ -335,7 +340,8 @@ void SemanticAnalyzer::analyze(const std::vector<ast::Stmt*>& Statements_)
   // Check for unused variables
   std::vector<SymbolTable::Symbol*> unused = GlobalScope_->getUnusedSymbols();
   for (SymbolTable::Symbol* sym : unused)
-    reportIssue(Issue::Severity::WARNING, u"Unused variable: " + sym->name, sym->DefinitionLine, u"Consider removing if not needed");
+    reportIssue(Issue::Severity::WARNING, u"Unused variable: " + sym->name, sym->DefinitionLine,
+                u"Consider removing if not needed");
 }
 
 const std::vector<typename SemanticAnalyzer::Issue>& SemanticAnalyzer::getIssues() const { return Issues_; }

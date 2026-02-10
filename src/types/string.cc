@@ -1,5 +1,7 @@
 #include "../../include/types/string.hpp"
 #include <arm_neon.h>
+#include <cassert>
+#include <simdutf.h>
 
 
 namespace mylang {
@@ -190,10 +192,14 @@ CharType& StringRef::at(const SizeType i)
 // Accessors
 MYLANG_NODISCARD SizeType StringRef::len() const noexcept { return Length_; }
 
-MYLANG_NODISCARD SizeType        StringRef::cap() const noexcept { return StringData_ ? StringData_->cap() : 0; }
-MYLANG_NODISCARD String*         StringRef::get() const noexcept { return StringData_; }
-MYLANG_NODISCARD bool            StringRef::empty() const noexcept { return Length_ == 0; }
-typename StringRef::ConstPointer StringRef::data() const noexcept { return StringData_ ? StringData_->ptr() + Offset_ : nullptr; }
+MYLANG_NODISCARD SizeType StringRef::cap() const noexcept { return StringData_ ? StringData_->cap() : 0; }
+MYLANG_NODISCARD String*  StringRef::get() const noexcept { return StringData_; }
+MYLANG_NODISCARD bool     StringRef::empty() const noexcept { return Length_ == 0; }
+
+typename StringRef::ConstPointer StringRef::data() const noexcept
+{
+  return StringData_ ? StringData_->ptr() + Offset_ : nullptr;
+}
 
 typename StringRef::Pointer StringRef::data() noexcept
 {
@@ -362,186 +368,26 @@ double StringRef::toDouble(SizeType* pos) const
   return result;
 }
 
-// Convert to UTF-8 - purely view-based
 MYLANG_NODISCARD std::string StringRef::toUtf8() const
 {
   if (empty() || len() == 0)
     return "";
 
   const CharType* src     = data();
-  const CharType* src_end = src + len();
+  size_t          src_len = len();
 
-  bool is_ascii = true;
+  // Calculate required UTF-8 buffer size
+  size_t utf8_len = simdutf::utf8_length_from_utf16(reinterpret_cast<const char16_t*>(src), src_len);
 
-#if defined(__ARM_NEON)
-
-  const uint16_t* p16 = reinterpret_cast<const uint16_t*>(src);
-  const uint16_t* end = reinterpret_cast<const uint16_t*>(src_end);
-
-  uint16x8_t high_mask = vdupq_n_u16(0xFF80);
-
-  while (p16 + 32 <= end)
-  {
-    uint16x8_t c1 = vld1q_u16(p16);
-    uint16x8_t c2 = vld1q_u16(p16 + 8);
-    uint16x8_t c3 = vld1q_u16(p16 + 16);
-    uint16x8_t c4 = vld1q_u16(p16 + 24);
-
-    uint16x8_t comb = vorrq_u16(vorrq_u16(c1, c2), vorrq_u16(c3, c4));
-    uint16x8_t test = vandq_u16(comb, high_mask);
-
-    uint64x2_t t = vreinterpretq_u64_u16(test);
-    if (vgetq_lane_u64(t, 0) | vgetq_lane_u64(t, 1))
-    {
-      is_ascii = false;
-      break;
-    }
-    p16 += 32;
-  }
-
-  while (is_ascii && p16 + 8 <= end)
-  {
-    uint16x8_t chunk = vld1q_u16(p16);
-    uint16x8_t test  = vandq_u16(chunk, high_mask);
-
-    uint64x2_t t = vreinterpretq_u64_u16(test);
-    if (vgetq_lane_u64(t, 0) | vgetq_lane_u64(t, 1))
-    {
-      is_ascii = false;
-      break;
-    }
-    p16 += 8;
-  }
-
-  while (is_ascii && p16 < end)
-  {
-    if (*p16 & 0xFF80)
-      is_ascii = false;
-    ++p16;
-  }
-
-#else
-
-  for (const CharType* p = src; p < src_end; ++p)
-  {
-    if (*p > 0x7F)
-    {
-      is_ascii = false;
-      break;
-    }
-  }
-
-#endif
-
-  if (is_ascii)
-  {
-    std::string out;
-    out.resize(len());
-
-#if defined(__ARM_NEON)
-
-    const uint16_t* p16 = reinterpret_cast<const uint16_t*>(src);
-    uint8_t*        dst = reinterpret_cast<uint8_t*>(&out[0]);
-
-    SizeType i = 0;
-    SizeType n = len() & ~SizeType(15);
-
-    for (; i < n; i += 16)
-    {
-      uint16x8_t lo = vld1q_u16(p16 + i);
-      uint16x8_t hi = vld1q_u16(p16 + i + 8);
-
-      uint8x8_t lo_n = vmovn_u16(lo);
-      uint8x8_t hi_n = vmovn_u16(hi);
-
-      uint8x16_t packed = vcombine_u8(lo_n, hi_n);
-      vst1q_u8(dst + i, packed);
-    }
-
-    for (; i < len(); ++i)
-      dst[i] = static_cast<uint8_t>(src[i]);
-
-#else
-
-    for (SizeType i = 0; i < len(); ++i)
-      out[i] = static_cast<char>(src[i]);
-
-#endif
-
-    return out;
-  }
-
-  size_t utf8_len = 0;
-
-  const CharType* p = src;
-  while (p < src_end)
-  {
-    uint32_t c = *p++;
-
-    if (c < 0x80)
-      utf8_len += 1;
-    else if (c < 0x800)
-      utf8_len += 2;
-    else if (c >= 0xD800 && c <= 0xDBFF)
-    {
-      // surrogate pair
-      if (p >= src_end)
-        throw std::runtime_error("Invalid UTF-16: truncated surrogate");
-
-      uint32_t low = *p++;
-      if (low < 0xDC00 || low > 0xDFFF)
-        throw std::runtime_error("Invalid UTF-16: bad surrogate pair");
-
-      utf8_len += 4;
-    }
-    else if (c >= 0xDC00 && c <= 0xDFFF)
-      throw std::runtime_error("Invalid UTF-16: stray low surrogate");
-    else
-      utf8_len += 3;
-  }
-
+  // Allocate output
   std::string out;
   out.resize(utf8_len);
 
-  char* outp = &out[0];
-  p          = src;
+  // Convert UTF-16 to UTF-8
+  size_t written = simdutf::convert_utf16_to_utf8(reinterpret_cast<const char16_t*>(src), src_len, out.data());
 
-  while (p < src_end)
-  {
-    uint32_t c = *p++;
-
-    if (c < 0x80)
-    {
-      *outp++ = static_cast<char>(c);
-    }
-    else if (c < 0x800)
-    {
-      *outp++ = static_cast<char>(0xC0 | (c >> 6));
-      *outp++ = static_cast<char>(0x80 | (c & 0x3F));
-    }
-    else if (c >= 0xD800 && c <= 0xDBFF)
-    {
-      uint32_t low = *p++;
-
-      if (low < 0xDC00 || low > 0xDFFF)
-        throw std::runtime_error("Invalid UTF-16 surrogate pair");
-
-      uint32_t cp = 0x10000 + (((c - 0xD800) << 10) | (low - 0xDC00));
-
-      *outp++ = static_cast<char>(0xF0 | (cp >> 18));
-      *outp++ = static_cast<char>(0x80 | ((cp >> 12) & 0x3F));
-      *outp++ = static_cast<char>(0x80 | ((cp >> 6) & 0x3F));
-      *outp++ = static_cast<char>(0x80 | (cp & 0x3F));
-    }
-    else if (c >= 0xDC00 && c <= 0xDFFF)
-      throw std::runtime_error("Invalid UTF-16: stray low surrogate");
-    else
-    {
-      *outp++ = static_cast<char>(0xE0 | (c >> 12));
-      *outp++ = static_cast<char>(0x80 | ((c >> 6) & 0x3F));
-      *outp++ = static_cast<char>(0x80 | (c & 0x3F));
-    }
-  }
+  // Sanity check (should always match)
+  assert(written == utf8_len);
 
   return out;
 }
@@ -549,165 +395,24 @@ MYLANG_NODISCARD std::string StringRef::toUtf8() const
 MYLANG_NODISCARD StringRef StringRef::fromUtf8(const std::string& utf8_str)
 {
   if (utf8_str.empty())
-    return StringRef{};
+    return "";
 
   const char* src     = utf8_str.data();
-  const char* src_end = src + utf8_str.size();
+  size_t      src_len = utf8_str.size();
 
-  const uint8_t* p_u8   = reinterpret_cast<const uint8_t*>(src);
-  const uint8_t* end_u8 = reinterpret_cast<const uint8_t*>(src_end);
+  // Validate and get exact UTF-16 length in one pass
+  simdutf::result validation = simdutf::validate_utf8_with_errors(src, src_len);
 
-  bool is_ascii = true;
+  if (validation.error != simdutf::error_code::SUCCESS)
+    throw std::runtime_error("Invalid UTF-8 at position " + std::to_string(validation.count));
 
-#if defined(__ARM_NEON)
-  const uint8x16_t mask = vdupq_n_u8(0x80);
+  size_t utf16_len = simdutf::utf16_length_from_utf8(src, src_len);
 
-  while (p_u8 + 64 <= end_u8)
-  {
-    uint8x16_t c1 = vld1q_u8(p_u8);
-    uint8x16_t c2 = vld1q_u8(p_u8 + 16);
-    uint8x16_t c3 = vld1q_u8(p_u8 + 32);
-    uint8x16_t c4 = vld1q_u8(p_u8 + 48);
-
-    uint8x16_t combined = vorrq_u8(vorrq_u8(c1, c2), vorrq_u8(c3, c4));
-    uint8x16_t test     = vandq_u8(combined, mask);
-
-    uint64x2_t t = vreinterpretq_u64_u8(test);
-    if (vgetq_lane_u64(t, 0) | vgetq_lane_u64(t, 1))
-    {
-      is_ascii = false;
-      break;
-    }
-    p_u8 += 64;
-  }
-
-  while (is_ascii && p_u8 + 16 <= end_u8)
-  {
-    uint8x16_t chunk = vld1q_u8(p_u8);
-    uint8x16_t test  = vandq_u8(chunk, mask);
-
-    uint64x2_t t = vreinterpretq_u64_u8(test);
-    if (vgetq_lane_u64(t, 0) | vgetq_lane_u64(t, 1))
-    {
-      is_ascii = false;
-      break;
-    }
-    p_u8 += 16;
-  }
-#endif
-
-  // ---- scalar tail ----
-  while (is_ascii && p_u8 < end_u8)
-  {
-    if (*p_u8 & 0x80)
-      is_ascii = false;
-    ++p_u8;
-  }
-
-  if (is_ascii) [[likely]]
-  {
-    SizeType len      = utf8_str.size();
-    String*  ret_data = string_allocator.allocateObject<String>();
-
-    if (len < SSO_SIZE) [[likely]]
-    {
-      ret_data->is_heap = false;
-      for (SizeType i = 0; i < len; ++i)
-        ret_data->storage_.sso[i] = static_cast<CharType>(src[i]);
-    }
-    else
-    {
-      ret_data->is_heap           = true;
-      ret_data->storage_.heap.cap = len + 1;
-      ret_data->storage_.heap.ptr = string_allocator.allocateArray<CharType>(len + 1);
-
-      CharType* dest = ret_data->storage_.heap.ptr;
-      SizeType  i    = 0;
-
-#if defined(__ARM_NEON)
-      const uint8_t* src_u8 = reinterpret_cast<const uint8_t*>(src);
-
-      // 16 chars per iteration
-      for (SizeType n = len & ~SizeType(15); i < n; i += 16)
-      {
-        uint8x16_t v = vld1q_u8(src_u8 + i);
-
-        uint16x8_t lo = vmovl_u8(vget_low_u8(v));
-        uint16x8_t hi = vmovl_u8(vget_high_u8(v));
-
-        vst1q_u16(reinterpret_cast<uint16_t*>(dest + i), lo);
-        vst1q_u16(reinterpret_cast<uint16_t*>(dest + i + 8), hi);
-      }
-#endif
-
-      for (; i < len; ++i)
-        dest[i] = static_cast<CharType>(src[i]);
-    }
-
-    ret_data->setLen(len);
-    ret_data->terminate();
-    return StringRef(ret_data);
-  }
-
-  SizeType             utf16_len = 0;
-  const unsigned char* p         = reinterpret_cast<const unsigned char*>(src);
-  const unsigned char* e         = reinterpret_cast<const unsigned char*>(src_end);
-
-  while (p < e)
-  {
-    uint32_t c = *p;
-
-    if (c < 0x80)
-    {
-      utf16_len++;
-      p++;
-    }
-    else if ((c & 0xE0) == 0xC0)
-    {
-      if (p + 1 >= e || (p[1] & 0xC0) != 0x80)
-        throw std::runtime_error("Invalid UTF-8");
-
-      uint32_t cp = ((c & 0x1F) << 6) | (p[1] & 0x3F);
-      if (cp < 0x80)  // overlong
-        throw std::runtime_error("Overlong UTF-8");
-
-      utf16_len++;
-      p += 2;
-    }
-    else if ((c & 0xF0) == 0xE0)
-    {
-      if (p + 2 >= e || (p[1] & 0xC0) != 0x80 || (p[2] & 0xC0) != 0x80)
-        throw std::runtime_error("Invalid UTF-8");
-
-      uint32_t cp = ((c & 0x0F) << 12) | ((p[1] & 0x3F) << 6) | (p[2] & 0x3F);
-      if (cp < 0x800 || (cp >= 0xD800 && cp <= 0xDFFF))
-        throw std::runtime_error("Invalid UTF-8");
-
-      utf16_len++;
-      p += 3;
-    }
-    else if ((c & 0xF8) == 0xF0)
-    {
-      if (p + 3 >= e || (p[1] & 0xC0) != 0x80 || (p[2] & 0xC0) != 0x80 || (p[3] & 0xC0) != 0x80)
-        throw std::runtime_error("Invalid UTF-8");
-
-      uint32_t cp = ((c & 0x07) << 18) | ((p[1] & 0x3F) << 12) | ((p[2] & 0x3F) << 6) | (p[3] & 0x3F);
-
-      if (cp < 0x10000 || cp > 0x10FFFF)
-        throw std::runtime_error("Invalid UTF-8");
-
-      utf16_len += 2;
-      p += 4;
-    }
-    else
-      throw std::runtime_error("Invalid UTF-8");
-  }
-
-  // Allocate
+  // Allocate String object
   String*   ret_data = string_allocator.allocateObject<String>();
   CharType* dest;
 
-  if (utf16_len < SSO_SIZE) [[likely]]
+  if (utf16_len < SSO_SIZE)
   {
     ret_data->is_heap = false;
     dest              = ret_data->storage_.sso;
@@ -720,41 +425,10 @@ MYLANG_NODISCARD StringRef StringRef::fromUtf8(const std::string& utf8_str)
     dest                        = ret_data->storage_.heap.ptr;
   }
 
-  // Decode pass
-  p             = reinterpret_cast<const unsigned char*>(src);
-  CharType* out = dest;
+  // Convert UTF-8 to UTF-16
+  size_t written = simdutf::convert_utf8_to_utf16(src, src_len, reinterpret_cast<char16_t*>(dest));
 
-  while (p < e)
-  {
-    uint32_t c = *p;
-
-    if (c < 0x80)
-    {
-      *out++ = (CharType) c;
-      p++;
-    }
-    else if ((c & 0xE0) == 0xC0)
-    {
-      uint32_t cp = ((c & 0x1F) << 6) | (p[1] & 0x3F);
-      *out++      = (CharType) cp;
-      p += 2;
-    }
-    else if ((c & 0xF0) == 0xE0)
-    {
-      uint32_t cp = ((c & 0x0F) << 12) | ((p[1] & 0x3F) << 6) | (p[2] & 0x3F);
-      *out++      = (CharType) cp;
-      p += 3;
-    }
-    else
-    {
-      uint32_t cp = ((c & 0x07) << 18) | ((p[1] & 0x3F) << 12) | ((p[2] & 0x3F) << 6) | (p[3] & 0x3F);
-
-      cp -= 0x10000;
-      *out++ = (CharType) (0xD800 + (cp >> 10));
-      *out++ = (CharType) (0xDC00 + (cp & 0x3FF));
-      p += 4;
-    }
-  }
+  assert(written == utf16_len);
 
   ret_data->setLen(utf16_len);
   ret_data->terminate();
@@ -765,7 +439,7 @@ MYLANG_NODISCARD StringRef StringRef::fromUtf8(const std::string& utf8_str)
 MYLANG_NODISCARD StringRef StringRef::fromUtf8(const char* utf8_cstr)
 {
   if (!utf8_cstr)
-    return StringRef{};
+    return "";
   return fromUtf8(std::string(utf8_cstr));
 }
 

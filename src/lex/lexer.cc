@@ -495,7 +495,8 @@ const tok::Token* Lexer::lexToken()
   if (!TokStream_.empty() && TokStream_.back()->type() == tok::TokenType::ENDMARKER)
     return TokStream_.back();
 
-  const tok::Token* ret = make_token(tok::TokenType::ENDMARKER, std::nullopt, std::nullopt, SourceManager_.column() - 1);
+  const tok::Token* ret =
+    make_token(tok::TokenType::ENDMARKER, std::nullopt, std::nullopt, SourceManager_.column() - 1);
   store(ret);
   return TokStream_.back();
 }

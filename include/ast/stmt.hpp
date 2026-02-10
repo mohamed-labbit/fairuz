@@ -1,8 +1,8 @@
 #pragma once
 
+#include "../types/string.hpp"
 #include "ast_node.hpp"
 #include "expr.hpp"
-#include "../types/string.hpp"
 
 #include <cassert>
 #include <functional>

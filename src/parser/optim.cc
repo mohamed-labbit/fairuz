@@ -72,7 +72,8 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
     if (std::optional<double> val = evaluateConstant(expr))
     {
       ++Stats_.ConstantFolds;
-      return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER, StringRef::fromUtf8(std::to_string(*val)));
+      return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER,
+                                                       StringRef::fromUtf8(std::to_string(*val)));
     }
     // Algebraic simplifications
     ast::Expr* left  = bin->getLeft();
@@ -116,12 +117,14 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
       if (lit->getValue() == u"2")
       {
         ++Stats_.StrengthReductions;
-        ast::NameExpr* leftClone = ast::AST_allocator.make<ast::NameExpr>(static_cast<ast::NameExpr*>(left)->getValue());
+        ast::NameExpr* leftClone =
+          ast::AST_allocator.make<ast::NameExpr>(static_cast<ast::NameExpr*>(left)->getValue());
         return ast::AST_allocator.make<ast::BinaryExpr>(bin->getLeft(), leftClone, tok::TokenType::OP_PLUS);
       }
     }
     // x - x = 0
-    if (bin->getOperator() == tok::TokenType::OP_MINUS && left->getKind() == ast::Expr::Kind::NAME && right->getKind() == ast::Expr::Kind::NAME)
+    if (bin->getOperator() == tok::TokenType::OP_MINUS && left->getKind() == ast::Expr::Kind::NAME
+        && right->getKind() == ast::Expr::Kind::NAME)
     {
       ast::NameExpr* lname = static_cast<ast::NameExpr*>(left);
       ast::NameExpr* rname = static_cast<ast::NameExpr*>(right);
@@ -140,7 +143,8 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
     if (std::optional<double> val = evaluateConstant(expr))
     {
       ++Stats_.ConstantFolds;
-      return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER, StringRef::fromUtf8(std::to_string(*val)));
+      return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER,
+                                                       StringRef::fromUtf8(std::to_string(*val)));
     }
     // Double negation: --x = x
     if (un->getOperator() == tok::TokenType::OP_MINUS && un->getKind() == ast::Expr::Kind::UNARY)
@@ -280,7 +284,8 @@ StringRef ASTOptimizer::CSEPass::exprToString(const ast::Expr* expr)
   }
   case ast::Expr::Kind::BINARY : {
     const ast::BinaryExpr* bin = static_cast<const ast::BinaryExpr*>(expr);
-    return u"(" + exprToString(bin->getLeft()) + u" " + tok::toString(bin->getOperator()) + u" " + exprToString(bin->getRight()) + u")";
+    return u"(" + exprToString(bin->getLeft()) + u" " + tok::toString(bin->getOperator()) + u" "
+           + exprToString(bin->getRight()) + u")";
   }
   case ast::Expr::Kind::UNARY : {
     const ast::UnaryExpr* un = static_cast<const ast::UnaryExpr*>(expr);
@@ -290,7 +295,10 @@ StringRef ASTOptimizer::CSEPass::exprToString(const ast::Expr* expr)
   }
 }
 
-StringRef ASTOptimizer::CSEPass::getTempVar() { return StringRef::fromUtf8("__cse_temp_") + static_cast<CharType>(TempCounter_++); }
+StringRef ASTOptimizer::CSEPass::getTempVar()
+{
+  return StringRef::fromUtf8("__cse_temp_") + static_cast<CharType>(TempCounter_++);
+}
 
 std::optional<StringRef> ASTOptimizer::CSEPass::findCSE(const ast::Expr* expr)
 {
@@ -310,7 +318,8 @@ void ASTOptimizer::CSEPass::recordExpr(const ast::Expr* expr, const StringRef& v
     ExprCache_[exprStr] = var;
 }
 
-bool ASTOptimizer::isLoopInvariant(const ast::Expr* expr, const std::unordered_set<StringRef, StringRefHash, StringRefEqual>& loopVars)
+bool ASTOptimizer::isLoopInvariant(const ast::Expr*                                                    expr,
+                                   const std::unordered_set<StringRef, StringRefHash, StringRefEqual>& loopVars)
 {
   if (!expr)
     return true;
@@ -375,8 +384,8 @@ void ASTOptimizer::printStats() const
   std::cout << "Common subexpr eliminations: " << Stats_.CommonSubexprEliminations << "\n";
   std::cout << "Loop invariants moved: " << Stats_.LoopInvariants << "\n";
   std::cout << "Total optimizations: "
-            << (Stats_.ConstantFolds + Stats_.DeadCodeEliminations + Stats_.StrengthReductions + Stats_.CommonSubexprEliminations
-                + Stats_.LoopInvariants)
+            << (Stats_.ConstantFolds + Stats_.DeadCodeEliminations + Stats_.StrengthReductions
+                + Stats_.CommonSubexprEliminations + Stats_.LoopInvariants)
             << "\n";
 }
 

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../../utfcpp/source/utf8.h"
 #include "../macros.hpp"
 #include "../types/string.hpp"
 #include <omp.h>
@@ -26,28 +25,6 @@ static inline bool isSymbol(wchar_t ch)
 }
 
 static inline bool isalphaArabic(const wchar_t c) { return (c >= 0x0600 && c <= 0x06FF); }
-
-struct U16StringHash
-{
-  SizeType operator()(const StringRef& s) const MYLANG_NOEXCEPT
-  {
-    // FNV-1a hash (simple, fast, decent distribution)
-    SizeType hash = 1469598103934665603ull;  // 64-bit FNV offset basis
-    SizeType i    = 0;
-    for (; i < s.len(); ++i)
-    {
-      hash ^= static_cast<SizeType>(s[i]);
-      hash *= 1099511628211ull;  // FNV prime
-    }
-    return hash;
-  }
-};
-
-struct U16StringEqual
-{
-  bool operator()(const StringRef& a, const StringRef& b) const MYLANG_NOEXCEPT { return a == b; }
-};
-
 
 }  // util
 }  // mylang

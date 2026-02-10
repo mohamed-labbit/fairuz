@@ -26,6 +26,31 @@ if(OpenMP_FOUND)
     message(STATUS "Found OpenMP: ${OpenMP_CXX_FLAGS}")
 endif()
 
+# Find or fetch simdutf
+find_package(simdutf CONFIG QUIET)
+
+if(NOT simdutf_FOUND)
+    message(STATUS "simdutf not found via find_package, fetching from GitHub...")
+    
+    include(FetchContent)
+    FetchContent_Declare(
+        simdutf
+        GIT_REPOSITORY https://github.com/simdutf/simdutf.git
+        GIT_TAG        v5.5.0  # Use latest stable version
+        GIT_SHALLOW    TRUE
+    )
+    
+    # Configure simdutf options
+    set(SIMDUTF_TESTS OFF CACHE BOOL "Disable simdutf tests" FORCE)
+    set(SIMDUTF_TOOLS OFF CACHE BOOL "Disable simdutf tools" FORCE)
+    set(SIMDUTF_BENCHMARKS OFF CACHE BOOL "Disable simdutf benchmarks" FORCE)
+    
+    FetchContent_MakeAvailable(simdutf)
+    message(STATUS "simdutf fetched successfully")
+else()
+    message(STATUS "Found simdutf via package manager")
+endif()
+
 # Collect source files from src/
 file(GLOB_RECURSE MYLANG_SOURCES ${CMAKE_SOURCE_DIR}/src/*.cpp ${CMAKE_SOURCE_DIR}/src/*.cc)
 
@@ -33,8 +58,10 @@ file(GLOB_RECURSE MYLANG_SOURCES ${CMAKE_SOURCE_DIR}/src/*.cpp ${CMAKE_SOURCE_DI
 add_library(mylang_objects OBJECT ${MYLANG_SOURCES})
 target_include_directories(mylang_objects PUBLIC
     ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/utfcpp/source
 )
+
+# Link simdutf to the object library
+target_link_libraries(mylang_objects PUBLIC simdutf::simdutf)
 
 if(OpenMP_FOUND)
     target_compile_options(mylang_objects PRIVATE ${OpenMP_CXX_FLAGS})
@@ -52,7 +79,6 @@ endif()
 
 # Define the test executable
 add_executable(mylang_tests
-
     tests/test_main.cpp
     tests/runtime/allocator/test_arena.cpp
     tests/string/test_string.cpp
@@ -71,6 +97,7 @@ target_compile_options(mylang_tests PRIVATE
 target_link_libraries(mylang_tests
     PRIVATE
     GTest::gtest_main
+    simdutf::simdutf
 )
 
 if(OpenMP_FOUND)

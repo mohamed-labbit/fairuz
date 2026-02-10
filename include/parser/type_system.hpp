@@ -1,8 +1,8 @@
 #pragma once
 
 
-#include "../macros.hpp"
 #include "../ast/ast.hpp"
+#include "../macros.hpp"
 
 #include <memory>
 #include <unordered_map>
@@ -19,9 +19,9 @@ class TypeSystem
 
   struct Type
   {
-    BaseType                                                                            base;
-    std::vector<std::shared_ptr<Type>>                                                  TypeParams;  // For generics: List[Int]
-    std::unordered_map<StringRef, std::shared_ptr<Type>, StringRefHash, StringRefEqual> fields;      // For classes
+    BaseType                           base;
+    std::vector<std::shared_ptr<Type>> TypeParams;  // For generics: List[Int]
+    std::unordered_map<StringRef, std::shared_ptr<Type>, StringRefHash, StringRefEqual> fields;  // For classes
 
     // Function signature
     std::vector<std::shared_ptr<Type>> ParamTypes;

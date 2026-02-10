@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../../utfcpp/source/utf8.h"
 #include "../macros.hpp"
 
 #include <exception>
@@ -36,7 +35,12 @@ class DiagnosticEngine
 
   /*
   */
-  void report(Severity sev, std::int32_t line, std::int32_t col, std::int32_t len, const std::string& msg, const std::string& code = "")
+  void report(Severity           sev,
+              std::int32_t       line,
+              std::int32_t       col,
+              std::int32_t       len,
+              const std::string& msg,
+              const std::string& code = "")
   {
     Diagnostics_.push_back({sev, line, col, len, msg, code});
   }

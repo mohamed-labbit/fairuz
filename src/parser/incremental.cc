@@ -11,7 +11,8 @@ SizeType IncrementalParser::hashRegion(const StringRef& source, SizeType start, 
 }
 
 // Only reparse changed regions
-std::vector<ast::Stmt*> IncrementalParser::parseIncremental(const StringRef& newSource, const std::vector<SizeType>& changedLines)
+std::vector<ast::Stmt*> IncrementalParser::parseIncremental(const StringRef&             newSource,
+                                                            const std::vector<SizeType>& changedLines)
 {
   // Identify unchanged regions and reuse cached AST
   std::vector<ast::Stmt*> result;

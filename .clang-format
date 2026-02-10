@@ -28,7 +28,7 @@ BraceWrapping:
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializers: AfterColon
 BreakStringLiterals: false
-ColumnLimit: 150
+ColumnLimit: 120
 ContinuationIndentWidth: 2
 Cpp11BracedListStyle: true
 IndentGotoLabels: false

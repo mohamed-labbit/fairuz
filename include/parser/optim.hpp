@@ -1,7 +1,5 @@
 #pragma once
 
-
-#include "../../utfcpp/source/utf8.h"
 #include "../ast/ast.hpp"
 #include <cmath>
 #include <iostream>
@@ -56,7 +54,8 @@ class ASTOptimizer
   };
 
   // Pass 4: Loop Invariant Code Motion
-  bool isLoopInvariant(const ast::Expr* expr, const std::unordered_set<StringRef, StringRefHash, StringRefEqual>& loopVars);
+  bool isLoopInvariant(const ast::Expr*                                                    expr,
+                       const std::unordered_set<StringRef, StringRefHash, StringRefEqual>& loopVars);
 
  public:
   // Main optimization pipeline

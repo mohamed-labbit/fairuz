@@ -1,7 +1,7 @@
 #pragma once
 
-#include <utility>
 #include "../macros.hpp"
+#include <utility>
 
 
 namespace mylang {

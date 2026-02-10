@@ -50,7 +50,8 @@ class LanguageServer
   std::vector<Range> getReferences(const StringRef& source, Position pos);
 
   // Rename symbol
-  std::unordered_map<StringRef, StringRef, StringRefHash, StringRefEqual> rename(const StringRef& source, Position pos, const StringRef& newName);
+  std::unordered_map<StringRef, StringRef, StringRefHash, StringRefEqual>
+  rename(const StringRef& source, Position pos, const StringRef& newName);
 };
 
 }

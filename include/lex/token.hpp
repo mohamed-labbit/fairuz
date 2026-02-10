@@ -2,7 +2,6 @@
 
 #include "../macros.hpp"
 #include "../types/string.hpp"
-#include "util.hpp"
 
 #include <cstdint>
 #include <iostream>
@@ -121,9 +120,10 @@ static const std::unordered_map<StringRef, TokenType, StringRefHash, StringRefEq
   {u"<=", TokenType::OP_LTE}, {u">=", TokenType::OP_GTE},    {u"!=", TokenType::OP_NEQ}};
 
 static const std::unordered_map<StringRef, TokenType, StringRefHash, StringRefEqual> keywords = {
-  {u"خطا", TokenType::KW_FALSE},   {u"عدم", TokenType::KW_NONE},      {u"صحيح", TokenType::KW_TRUE}, {u"و", TokenType::KW_AND},
-  {u"اخرج", TokenType::KW_RETURN}, {u"اكمل", TokenType::KW_CONTINUE}, {u"عرف", TokenType::KW_FN},    {u"او", TokenType::KW_OR},
-  {u"بكل", TokenType::KW_FOR},     {u"اذا", TokenType::KW_IF},        {u"ليس", TokenType::KW_NOT},   {u"ارجع", TokenType::KW_RETURN},
+  {u"خطا", TokenType::KW_FALSE},  {u"عدم", TokenType::KW_NONE},    {u"صحيح", TokenType::KW_TRUE},
+  {u"و", TokenType::KW_AND},      {u"اخرج", TokenType::KW_RETURN}, {u"اكمل", TokenType::KW_CONTINUE},
+  {u"عرف", TokenType::KW_FN},     {u"او", TokenType::KW_OR},       {u"بكل", TokenType::KW_FOR},
+  {u"اذا", TokenType::KW_IF},     {u"ليس", TokenType::KW_NOT},     {u"ارجع", TokenType::KW_RETURN},
   {u"طالما", TokenType::KW_WHILE}};
 
 static const StringRef toString(TokenType tt)
@@ -166,7 +166,8 @@ static const StringRef toString(TokenType tt)
 class Token
 {
  public:
-  Token(StringRef val, TokenType tt, SizeType line, SizeType col, SizeType fpos, std::string fpath, bool atbol = false) :
+  Token(
+    StringRef val, TokenType tt, SizeType line, SizeType col, SizeType fpos, std::string fpath, bool atbol = false) :
       Value_(val),
       Type_(tt),
       Location_(fpath, line, col, fpos),
@@ -189,7 +190,8 @@ class Token
   {
     if (Type_ == TokenType::INDENT || Type_ == TokenType::DEDENT)
       return Type_ == other.Type_;
-    return Value_ == other.Value_ && Type_ == other.Type_ && Location_.line == other.Location_.line && Location_.column == other.Location_.column;
+    return Value_ == other.Value_ && Type_ == other.Type_ && Location_.line == other.Location_.line
+           && Location_.column == other.Location_.column;
   }
 
   bool operator!=(const Token& other) const { return !(*this == other); }
@@ -222,7 +224,8 @@ class Token
 
   bool isUnaryOp() const
   {
-    return Type_ == TokenType::OP_PLUS || Type_ == TokenType::OP_MINUS || Type_ == TokenType::OP_BITNOT || Type_ == TokenType::KW_NOT;
+    return Type_ == TokenType::OP_PLUS || Type_ == TokenType::OP_MINUS || Type_ == TokenType::OP_BITNOT
+           || Type_ == TokenType::KW_NOT;
   }
 
   // FIXED: Proper binary operator check
@@ -235,8 +238,8 @@ class Token
 
   bool isComparisonOp() const
   {
-    return Type_ == TokenType::OP_EQ || Type_ == TokenType::OP_NEQ || Type_ == TokenType::OP_LT || Type_ == TokenType::OP_GT
-           || Type_ == TokenType::OP_LTE || Type_ == TokenType::OP_GTE;
+    return Type_ == TokenType::OP_EQ || Type_ == TokenType::OP_NEQ || Type_ == TokenType::OP_LT
+           || Type_ == TokenType::OP_GT || Type_ == TokenType::OP_LTE || Type_ == TokenType::OP_GTE;
   }
 
   int getArithmeticOpPrecedence() const
@@ -276,8 +279,9 @@ class Token
   // friend ostream operator for pretty-printing in tests/logs
   friend std::ostream& operator<<(std::ostream& os, const Token& tok)
   {
-    os << "Token(\"" << tok.Value_ << "\", type=" << static_cast<std::int32_t>(tok.Type_) << ", line=" << tok.Location_.line
-       << ", col=" << tok.Location_.column << ", file_pos=" << tok.Location_.FilePos << ", file_path=" << tok.Location_.filepath << ")";
+    os << "Token(\"" << tok.Value_ << "\", type=" << static_cast<std::int32_t>(tok.Type_)
+       << ", line=" << tok.Location_.line << ", col=" << tok.Location_.column << ", file_pos=" << tok.Location_.FilePos
+       << ", file_path=" << tok.Location_.filepath << ")";
     return os;
   }
 

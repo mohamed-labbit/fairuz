@@ -77,7 +77,8 @@ Pointer ArenaBlock::allocate(SizeType bytes, std::optional<SizeType> alignment)
   SizeType alignment_value = alignment.value_or(alignof(std::max_align_t));
   // Validate alignment is a power of 2
   if (alignment_value == 0 || (alignment_value & (alignment_value - 1)) != 0)
-    diagnostic::engine.emit("Invalid arguments to ArenaAllocator::allocate()", diagnostic::DiagnosticEngine::Severity::FATAL);
+    diagnostic::engine.emit("Invalid arguments to ArenaAllocator::allocate()",
+                            diagnostic::DiagnosticEngine::Severity::FATAL);
 
   // Calculate aligned address
   std::uintptr_t cur     = reinterpret_cast<std::uintptr_t>(Next_);

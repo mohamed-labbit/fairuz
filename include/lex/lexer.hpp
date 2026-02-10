@@ -157,9 +157,9 @@ inline tok::Token* Lexer::make_token(tok::TokenType             tt,
                                      std::optional<SizeType>    file_pos,
                                      std::optional<std::string> file_path) const
 {
-  tok::Token* ret =
-    token_allocator.make(lexeme.value_or(u""), tt, line.value_or(this->SourceManager_.line()), col.value_or(this->SourceManager_.column()),
-                         file_pos.value_or(this->SourceManager_.fpos()), file_path.value_or(this->SourceManager_.fpath()));
+  tok::Token* ret = token_allocator.make(
+    lexeme.value_or(u""), tt, line.value_or(this->SourceManager_.line()), col.value_or(this->SourceManager_.column()),
+    file_pos.value_or(this->SourceManager_.fpos()), file_path.value_or(this->SourceManager_.fpath()));
   if (!ret)  // protect against bad access
     throw std::bad_alloc();
   return ret;

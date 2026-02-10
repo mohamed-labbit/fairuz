@@ -100,7 +100,8 @@ inline bool isSurrogate(char16_t ch) { return ch >= UTF16_HIGH_SURROGATE_MIN && 
 
 inline uint32_t combineSurrogates(char16_t high, char16_t low)
 {
-  return ((high - UTF16_HIGH_SURROGATE_MIN) << UTF16_SURROGATE_SHIFT) + (low - UTF16_LOW_SURROGATE_MIN) + UTF16_SURROGATE_OFFSET;
+  return ((high - UTF16_HIGH_SURROGATE_MIN) << UTF16_SURROGATE_SHIFT) + (low - UTF16_LOW_SURROGATE_MIN)
+         + UTF16_SURROGATE_OFFSET;
 }
 
 inline void splitToSurrogates(uint32_t codepoint, char16_t& high, char16_t& low)

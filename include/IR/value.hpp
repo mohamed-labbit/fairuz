@@ -1,7 +1,5 @@
 #pragma once
 
-
-#include "../../utfcpp/source/utf8.h"
 #include "../ast/ast.hpp"
 #include "../macros.hpp"
 #include "../types/string.hpp"
@@ -76,17 +74,17 @@ class Value
     SizeType           index;
   };
 
-  using ValueData = std::variant<std::monostate,                                                       // None
-                                 std::int64_t,                                                         // Int
-                                 double,                                                               // Float
-                                 StringRef,                                                            // String (shared for efficiency)
-                                 bool,                                                                 // Bool
-                                 std::vector<Value>,                                                   // List (shared)
+  using ValueData = std::variant<std::monostate,      // None
+                                 std::int64_t,        // Int
+                                 double,              // Float
+                                 StringRef,           // String (shared for efficiency)
+                                 bool,                // Bool
+                                 std::vector<Value>,  // List (shared)
                                  std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>,  // Dict
                                  Function,                                                             // User function
-                                 NativeFunction,                                                       // Native C++ function
-                                 Object,                                                               // Object instance
-                                 Iterator                                                              // Iterator
+                                 NativeFunction,  // Native C++ function
+                                 Object,          // Object instance
+                                 Iterator         // Iterator
                                  >;
 
  private:
@@ -144,17 +142,17 @@ class Value
 
   void setType(const Type type) { Type_ = type; }
 
-  void setData(const std::variant<std::monostate,                                                       // None
-                                  std::int64_t,                                                         // Int
-                                  double,                                                               // Float
-                                  StringRef,                                                            // String (shared for efficiency)
-                                  bool,                                                                 // Bool
-                                  std::vector<Value>,                                                   // List (shared)
+  void setData(const std::variant<std::monostate,      // None
+                                  std::int64_t,        // Int
+                                  double,              // Float
+                                  StringRef,           // String (shared for efficiency)
+                                  bool,                // Bool
+                                  std::vector<Value>,  // List (shared)
                                   std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>,  // Dict
                                   Function,                                                             // User function
-                                  NativeFunction,                                                       // Native C++ function
-                                  Object,                                                               // Object instance
-                                  Iterator                                                              // Iterator
+                                  NativeFunction,  // Native C++ function
+                                  Object,          // Object instance
+                                  Iterator         // Iterator
                                   > data)
   {
     Data_ = data;

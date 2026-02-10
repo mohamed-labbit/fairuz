@@ -94,11 +94,11 @@ MYLANG_NODISCARD MYLANG_COMPILER_ABI void* ArenaAllocator::allocate(const SizeTy
   // Check size
   if (size > MAX_BLOCK_SIZE)
   {
-    diagnostic::engine.emit("allocation size is too large : " + std::to_string(size), diagnostic::DiagnosticEngine::Severity::ERROR);
+    diagnostic::engine.emit("allocation size is too large : " + std::to_string(size),
+                            diagnostic::DiagnosticEngine::Severity::ERROR);
     if (OomHandler_ && OomHandler_(size))
-    {
       return allocate(size);
-    }
+
     diagnostic::engine.emit("bad alloc!", diagnostic::DiagnosticEngine::Severity::FATAL);
     /// TODO: change after debug
     // diagnostic::engine.panic("bad alloc");
