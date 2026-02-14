@@ -31,9 +31,9 @@ public:
     {
     }
 
-    StringRef(const StringRef& other, SizeType offset = 0, SizeType length = 0)
+    StringRef(StringRef const& other, SizeType offset = 0, SizeType length = 0)
         : StringData_(other.get())
-        , Offset_(offset)
+        , Offset_(other.Offset_ + offset)
         , Length_(length)
     {
         if (Length_ == 0)
@@ -43,28 +43,30 @@ public:
             StringData_->increment();
     }
 
-    StringRef(const CharType* lit)
+    StringRef(char const* lit)
         : StringData_(string_allocator.allocateObject<String>(lit))
     {
         Length_ = StringData_->length();
     }
 
-    StringRef(char const* c_str)
-        : StringData_(nullptr)
+    StringRef(char16_t const* u16_str)
     {
-        if (!c_str || !c_str[0])
+        if (!u16_str || !u16_str[0]) {
             StringData_ = createEmpty();
-        else {
-            // Don't use operator= on uninitialized object!
-            StringRef temp = fromUtf8(c_str);
+            Offset_ = 0;
+            Length_ = 0;
+        } else {
+            StringRef temp = fromUtf16(u16_str);
             StringData_ = temp.StringData_;
+            Offset_ = temp.Offset_;
+            Length_ = temp.Length_;
             if (StringData_)
                 StringData_->increment();
-            Length_ = StringData_->length();
+            temp.StringData_ = nullptr; // Prevent temp's destructor from decrementing
         }
     }
 
-    StringRef(SizeType const s, CharType const c)
+    StringRef(SizeType const s, char const c)
         : StringData_(string_allocator.allocateObject<String>(s, c))
     {
     }
@@ -81,29 +83,66 @@ public:
             Length_ = StringData_->length() - offset;
     }
 
+    StringRef(StringRef&& other) noexcept
+        : StringData_(other.StringData_)
+        , Offset_(other.Offset_)
+        , Length_(other.Length_)
+    {
+        other.StringData_ = nullptr;
+        other.Offset_ = 0;
+        other.Length_ = 0;
+    }
+
+    StringRef& operator=(StringRef&& other) noexcept
+    {
+        if (this == &other)
+            return *this;
+
+        // Clean up current data
+        if (StringData_) {
+            StringData_->decrement();
+            if (StringData_->referenceCount() == 0) {
+                StringData_->~String();
+                string_allocator.deallocateObject<String>(StringData_);
+            }
+        }
+
+        // Move from other
+        StringData_ = other.StringData_;
+        Offset_ = other.Offset_;
+        Length_ = other.Length_;
+
+        other.StringData_ = nullptr;
+        other.Offset_ = 0;
+        other.Length_ = 0;
+
+        return *this;
+    }
+
     ~StringRef()
     {
         if (StringData_) {
-            /// NOTE: this will only be deallocated if it's the last CharType* in the arena
+            /// NOTE: this will only be deallocated if it's the last pointer in the arena
             /// we should probably make a better allocator for that ...
             StringData_->decrement();
             if (StringData_->referenceCount() == 0) {
                 StringData_->~String(); // deallocate if possible the string array
                 string_allocator.deallocateObject<String>(StringData_);
+                StringData_ = nullptr;
             }
         }
     }
 
-    StringRef& operator=(const StringRef& other)
+    StringRef& operator=(StringRef const& other)
     {
         if (this == &other)
             return *this;
 
-        // Decrement old StringRef&
+        // Decrement old reference
         if (StringData_)
             StringData_->decrement();
 
-        // Assign new StringRef&
+        // Assign new reference
         StringData_ = other.get();
         if (StringData_)
             StringData_->increment();
@@ -115,14 +154,14 @@ public:
     }
 
     // Equality operator
-    MYLANG_NODISCARD bool operator==(const StringRef& other) const noexcept
+    MYLANG_NODISCARD bool operator==(StringRef const& other) const noexcept
     {
         if (!StringData_ || !other.StringData_)
             return StringData_ == other.StringData_;
-        return Length_ == other.Length_ && ::memcmp(data(), other.data(), Length_ * sizeof(CharType)) == 0;
+        return Length_ == other.Length_ && ::memcmp(data(), other.data(), Length_ * sizeof(char)) == 0;
     }
 
-    MYLANG_NODISCARD bool operator!=(const StringRef& other) const noexcept { return !(*this == other); }
+    MYLANG_NODISCARD bool operator!=(StringRef const& other) const noexcept { return !(*this == other); }
 
     // Expand capacity
     void expand(SizeType const new_size);
@@ -134,22 +173,22 @@ public:
     void erase(SizeType const at);
 
     // Append another StringRef
-    StringRef& operator+=(const StringRef& other);
-    StringRef& operator+=(CharType c);
+    StringRef& operator+=(StringRef const& other);
+    StringRef& operator+=(char c);
 
     // FIXED: Add null checks
-    CharType operator[](SizeType const i) const;
-    CharType& operator[](SizeType const i);
+    char operator[](SizeType const i) const;
+    char& operator[](SizeType const i);
 
     // Safe access with bounds checking (always checked)
-    MYLANG_NODISCARD CharType at(SizeType const i) const;
+    MYLANG_NODISCARD char at(SizeType const i) const;
 
-    CharType& at(SizeType const i);
+    char& at(SizeType const i);
 
     StringRef& trimWhitespace(std::optional<bool const> leading = std::nullopt, std::optional<bool const> trailing = std::nullopt);
 
     // StringRef + StringRef
-    friend StringRef operator+(const StringRef& lhs, const StringRef& rhs)
+    friend StringRef operator+(StringRef const& lhs, StringRef const& rhs)
     {
         if (lhs.empty() && rhs.empty())
             return "";
@@ -164,8 +203,8 @@ public:
         SizeType actual_len = lhs.len() + rhs.len();
         String* result = string_allocator.allocateObject<String>(actual_len);
 
-        ::memcpy(result->ptr(), lhs.data(), lhs.len() * sizeof(CharType));
-        ::memcpy(result->ptr() + lhs.len(), rhs.data(), rhs.len() * sizeof(CharType));
+        ::memcpy(result->ptr(), lhs.data(), lhs.len() * sizeof(char));
+        ::memcpy(result->ptr() + lhs.len(), rhs.data(), rhs.len() * sizeof(char));
 
         result->setLen(actual_len);
         result->terminate();
@@ -174,35 +213,35 @@ public:
     }
 
     // StringRef + const char* (UTF-8 string)
-    friend StringRef operator+(const StringRef& lhs, char const* rhs)
+    friend StringRef operator+(StringRef const& lhs, char const* rhs)
     {
         if (!rhs || !rhs[0])
             return StringRef(lhs);
 
-        StringRef rhs_str = fromUtf8(rhs);
+        StringRef rhs_str = rhs;
         return lhs + rhs_str;
     }
 
     // const char* + StringRef
-    friend StringRef operator+(char const* lhs, const StringRef& rhs)
+    friend StringRef operator+(char const* lhs, StringRef const& rhs)
     {
         if (!lhs || !lhs[0])
             return StringRef(rhs);
 
-        StringRef lhs_str = fromUtf8(lhs);
+        StringRef lhs_str = lhs;
         return lhs_str + rhs;
     }
 
-    // StringRef + CharType (single character)
-    friend StringRef operator+(const StringRef& lhs, CharType rhs)
+    // StringRef + char (single character)
+    friend StringRef operator+(StringRef const& lhs, char rhs)
     {
         StringRef result(lhs);
         result += rhs;
         return result;
     }
 
-    // CharType + StringRef
-    friend StringRef operator+(CharType lhs, const StringRef& rhs)
+    // char + StringRef
+    friend StringRef operator+(char lhs, StringRef const& rhs)
     {
         StringRef result;
         result.reserve(rhs.len() + 1);
@@ -216,30 +255,25 @@ public:
 
     MYLANG_NODISCARD SizeType cap() const noexcept { return StringData_ ? StringData_->cap() : 0; }
 
-    MYLANG_NODISCARD String* get() const noexcept
-    {
-        return StringData_;
-    }
+    MYLANG_NODISCARD String* get() const noexcept { return StringData_; }
 
     MYLANG_NODISCARD bool empty() const noexcept { return Length_ == 0; }
 
-    const CharType* data() const noexcept
+    char const* data() const noexcept { return StringData_ ? StringData_->ptr() + Offset_ : nullptr; }
+
+    char* data() noexcept
     {
-        return StringData_ ? StringData_->ptr() + Offset_ : nullptr;
+        if (StringData_) {
+            ensureUnique();
+            return StringData_->ptr() + Offset_;
+        }
+        return nullptr;
     }
 
-    CharType* data() noexcept
+    friend std::ostream& operator<<(std::ostream& os, StringRef const& str)
     {
-        ensureUnique();
-        return StringData_ ? StringData_->ptr() + Offset_ : nullptr;
-    }
-
-    // Output stream operator
-    friend std::ostream& operator<<(std::ostream& os, const StringRef& str)
-    {
-        if (str.empty())
-            return os;
-        os << str.toUtf8();
+        if (!str.empty())
+            os.write(str.data(), str.len());
         return os;
     }
 
@@ -250,11 +284,11 @@ public:
     void resize(SizeType const s);
 
     // Find a character
-    MYLANG_NODISCARD bool find(CharType const c) const noexcept;
+    MYLANG_NODISCARD bool find(char const c) const noexcept;
     MYLANG_NODISCARD bool find(StringRef const& s) const noexcept;
 
     // Find position of a character (returns optional index)
-    MYLANG_NODISCARD std::optional<SizeType> find_pos(CharType const c) const noexcept;
+    MYLANG_NODISCARD std::optional<SizeType> find_pos(char const c) const noexcept;
 
     // Truncate string to specified length
     StringRef& truncate(SizeType const s);
@@ -263,19 +297,13 @@ public:
 
     StringRef substr(std::optional<SizeType> start, std::optional<SizeType> end) const;
 
-    StringRef substr(SizeType start) const
-    {
-        return substr(std::optional<SizeType>(start), std::nullopt);
-    }
+    StringRef substr(SizeType start) const { return substr(std::optional<SizeType>(start), std::nullopt); }
 
     // Convert to double - improved error handling
     double toDouble(SizeType* pos = nullptr) const;
 
-    MYLANG_NODISCARD std::string toUtf8() const;
-    MYLANG_NODISCARD static StringRef fromUtf8(std::string const& utf8_str);
-
     // Convenience overload for C strings
-    MYLANG_NODISCARD static StringRef fromUtf8(char const* utf8_cstr);
+    MYLANG_NODISCARD static StringRef fromUtf16(char16_t const* utf8_cstr);
 
     void ensureUnique()
     {
@@ -298,12 +326,12 @@ public:
 
         // Copy only the relevant portion
         if (copy_len > 0)
-            ::memcpy(s->ptr(), const_cast<const CharType*>(StringData_->ptr() + Offset_), copy_len * sizeof(CharType));
+            ::memcpy(s->ptr(), const_cast<char const*>(StringData_->ptr() + Offset_), copy_len * sizeof(char));
 
         s->setLen(copy_len);
         s->terminate();
 
-        // Decrement old StringRef&
+        // Decrement old reference
         StringData_->decrement();
 
         // Update StringRef to point to new data
@@ -324,12 +352,12 @@ struct StringRefHash {
         std::size_t hash = 14695981039346656037ULL; // FNV offset basis
         std::size_t const prime = 1099511628211ULL; // FNV prime
 
-        CharType const* data = str.data();
+        char const* data = str.data();
         SizeType const len = str.len();
 
         // Hash the raw bytes of char16_t data
         Byte const* bytes = reinterpret_cast<Byte const*>(data);
-        std::size_t const byte_count = len * sizeof(CharType);
+        std::size_t const byte_count = len * sizeof(char);
 
         for (std::size_t i = 0; i < byte_count; ++i) {
             hash ^= static_cast<std::size_t>(bytes[i]);
@@ -361,11 +389,11 @@ struct hash<mylang::StringRef> {
         std::size_t hash_value = 14695981039346656037ULL;
         std::size_t const prime = 1099511628211ULL;
 
-        mylang::CharType const* data = str.data();
+        char const* data = str.data();
         mylang::SizeType const len = str.len();
 
         unsigned char const* bytes = reinterpret_cast<unsigned char const*>(data);
-        std::size_t const byte_count = len * sizeof(mylang::CharType);
+        std::size_t const byte_count = len * sizeof(char);
 
         for (std::size_t i = 0; i < byte_count; ++i) {
             hash_value ^= static_cast<std::size_t>(bytes[i]);

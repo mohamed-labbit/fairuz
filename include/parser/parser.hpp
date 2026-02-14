@@ -76,7 +76,7 @@ public:
                 ss << "  - " << s << "\n";
         }
 
-        return StringRef::fromUtf8(ss.str());
+        return StringRef(ss.str().data());
     }
 };
 

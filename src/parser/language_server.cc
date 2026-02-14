@@ -14,8 +14,8 @@ LanguageServer::Position LanguageServer::getDefinition(StringRef const& source, 
 
 std::vector<LanguageServer::Range> LanguageServer::getReferences(StringRef const& source, Position pos) { return {}; }
 
-std::unordered_map<StringRef, StringRef, StringRefHash, StringRefEqual>
-LanguageServer::rename(StringRef const& source, Position pos, StringRef const& newName)
+std::unordered_map<StringRef, StringRef, StringRefHash, StringRefEqual> LanguageServer::rename(
+    StringRef const& source, Position pos, StringRef const& newName)
 {
     return {};
 }

@@ -92,8 +92,7 @@ public:
         if (!this->Scopes_.empty()) {
             Scope const& current = this->Scopes_.back();
             symbols.reserve(current.size());
-            std::transform(current.begin(), current.end(), std::back_inserter(symbols),
-                [](auto const& pair) { return pair.second; });
+            std::transform(current.begin(), current.end(), std::back_inserter(symbols), [](auto const& pair) { return pair.second; });
         }
         return symbols;
     }
@@ -125,8 +124,7 @@ public:
         if (level < this->Scopes_.size()) {
             Scope const& scope = this->Scopes_[level];
             symbols.reserve(scope.size());
-            std::transform(scope.begin(), scope.end(), std::back_inserter(symbols),
-                [](auto const& pair) { return pair.second; });
+            std::transform(scope.begin(), scope.end(), std::back_inserter(symbols), [](auto const& pair) { return pair.second; });
         }
         return symbols;
     }

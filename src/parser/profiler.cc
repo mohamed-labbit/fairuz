@@ -22,8 +22,8 @@ void ParserProfiler::printReport() const
 
     for (ParserProfiler::Timing const& t : Timings_) {
         double percent = (t.milliseconds / total) * 100;
-        std::cout << std::left << std::setw(20) << t.phase << ": " << std::right << std::setw(8) << std::fixed
-                  << std::setprecision(2) << t.milliseconds << "ms "
+        std::cout << std::left << std::setw(20) << t.phase << ": " << std::right << std::setw(8) << std::fixed << std::setprecision(2)
+                  << t.milliseconds << "ms "
                   << "(" << std::setw(5) << percent << "%)\n";
     }
 

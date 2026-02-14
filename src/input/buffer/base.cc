@@ -1,3 +1,4 @@
+/*
 #include "../../../include/input/buffer/base.hpp"
 
 #include <algorithm>
@@ -5,18 +6,18 @@
 #include <vector>
 
 namespace mylang {
-namespace lex {
-namespace buffer {
+    namespace lex {
+        namespace buffer {
 
-bool InputBufferBase::refreshBuffer(std::uint32_t const to_refresh)
+        bool InputBufferBase::refreshBuffer(std::uint32_t const to_refresh)
 {
     // Validate file manager state
     if (!FileManager_)
-        return false;
+    return false;
 
     // Validate buffer index
     if (to_refresh >= 2)
-        return false;
+    return false;
 
     // Determine the buffer capacity to use
     SizeType buf_capacity = Buffers_[to_refresh].cap();
@@ -40,7 +41,7 @@ bool InputBufferBase::refreshBuffer(std::uint32_t const to_refresh)
     Buffers_[to_refresh].clear();
 
     if (Buffers_[to_refresh].cap() < buf.len())
-        Buffers_[to_refresh].reserve(buf.len());
+    Buffers_[to_refresh].reserve(buf.len());
 
     Buffers_[to_refresh] += buf;
 
@@ -50,3 +51,4 @@ bool InputBufferBase::refreshBuffer(std::uint32_t const to_refresh)
 } // namespace buffer
 } // namespace lex
 } // namespace mylang
+*/

@@ -46,10 +46,7 @@ public:
 
 private:
     struct VoidPtrHash {
-        SizeType operator()(void const* ptr) const MYLANG_NOEXCEPT
-        {
-            return std::hash<std::uintptr_t>()(reinterpret_cast<std::uintptr_t>(ptr));
-        }
+        SizeType operator()(void const* ptr) const MYLANG_NOEXCEPT { return std::hash<std::uintptr_t>()(reinterpret_cast<std::uintptr_t>(ptr)); }
     };
 
     struct VoidPtrEqual {
@@ -75,9 +72,8 @@ private:
     // Debugging and tracking
     std::unordered_map<void*, AllocationHeader, VoidPtrHash, VoidPtrEqual> AllocationMap_ {}; ///< Allocation metadata
     mutable std::shared_mutex AllocationMapMutex_;                                            ///< Protects allocation map
-    std::unordered_set<void*, VoidPtrHash, VoidPtrEqual>
-        AllocatedPtrs_ {};                         ///< Active allocations (double-free protection)
-    mutable std::shared_mutex AllocatedPtrsMutex_; ///< Protects allocated pointers set
+    std::unordered_set<void*, VoidPtrHash, VoidPtrEqual> AllocatedPtrs_ {};                   ///< Active allocations (double-free protection)
+    mutable std::shared_mutex AllocatedPtrsMutex_;                                            ///< Protects allocated pointers set
     // Feature flags
     bool TrackAllocations_ { false }; ///< Enable allocation tracking
     bool DebugFeatures_ { false };    ///< Enable debug features
@@ -89,8 +85,7 @@ private:
     void* LastPtr_ { nullptr };
 
 public:
-    ArenaAllocator(std::int32_t growth_strategy = static_cast<std::int32_t>(GrowthStrategy::EXPONENTIAL),
-        OutOfMemoryHandler oom_handler = nullptr,
+    ArenaAllocator(std::int32_t growth_strategy = static_cast<std::int32_t>(GrowthStrategy::EXPONENTIAL), OutOfMemoryHandler oom_handler = nullptr,
         bool debug = true);
 
     ~ArenaAllocator() { reset(); }
@@ -148,8 +143,7 @@ public:
      *
      * Thread-safe: Yes
      */
-    MYLANG_NODISCARD MYLANG_COMPILER_ABI void* allocate(SizeType const size,
-        SizeType const alignment = alignof(std::max_align_t));
+    MYLANG_NODISCARD MYLANG_COMPILER_ABI void* allocate(SizeType const size, SizeType const alignment = alignof(std::max_align_t));
 
     MYLANG_COMPILER_ABI void deallocate(void* ptr, SizeType const size);
 

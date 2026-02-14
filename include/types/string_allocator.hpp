@@ -24,16 +24,10 @@ public:
     }
 
     template<typename T>
-    T* allocateArray(SizeType const count)
-    {
-        return static_cast<T*>(allocateBytes(count * sizeof(T)));
-    }
+    T* allocateArray(SizeType const count) { return static_cast<T*>(allocateBytes(count * sizeof(T))); }
 
     template<typename T>
-    void deallocateArray(T* p, SizeType const count)
-    {
-        Allocator_.deallocate((void*)p, count * sizeof(T));
-    }
+    void deallocateArray(T* p, SizeType const count) { Allocator_.deallocate((void*)p, count * sizeof(T)); }
 
     template<typename T, typename... Args>
     MYLANG_NODISCARD T* allocateObject(Args&&... args)
@@ -44,10 +38,7 @@ public:
     }
 
     template<typename T>
-    void deallocateObject(T* obj)
-    {
-        Allocator_.deallocate((void*)obj, sizeof(T));
-    }
+    void deallocateObject(T* obj) { Allocator_.deallocate((void*)obj, sizeof(T)); }
 
     std::string toString(bool verbose) const { return Allocator_.toString(verbose); }
 };

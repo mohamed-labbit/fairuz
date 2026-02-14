@@ -1,18 +1,19 @@
+/*
 #include "../../../include/input/buffer/input_buffer.hpp"
 #include <algorithm>
 #include <cassert>
 
 namespace mylang {
 namespace lex {
-namespace buffer {
+    namespace buffer {
 
-CharType InputBuffer::consumeChar()
+uint32_t InputBuffer::consumeChar()
 {
-    CharType ch;
+    uint32_t ch;
 
     if (!UngetStack_.empty()) {
         // Restore the complete state from unget stack
-        auto entry = UngetStack_.top();
+        InputBuffer::PushbackEntry entry = UngetStack_.top();
         UngetStack_.pop();
 
         CurrentPosition_ = entry.pos;
@@ -27,7 +28,7 @@ CharType InputBuffer::consumeChar()
     // Ensure buffer is valid before reading
     if (*Current_ == BUFFER_END) {
         if (!refreshBuffer(CurrentBuffer_ ^ 1))
-            return BUFFER_END;
+        return BUFFER_END;
         swapBuffers_();
     }
 
@@ -38,49 +39,49 @@ CharType InputBuffer::consumeChar()
     return ch;
 }
 
-MYLANG_NODISCARD const CharType& InputBuffer::current()
+MYLANG_NODISCARD const char& InputBuffer::current()
 {
-    static CharType const end = BUFFER_END;
+    static char const end = BUFFER_END;
 
     if (!Current_)
-        return end;
+    return end;
 
     if (*Current_ == BUFFER_END) {
         if (!refreshBuffer(CurrentBuffer_ ^ 1))
-            return end;
+        return end;
         swapBuffers_();
     }
 
     return *Current_;
 }
 
-MYLANG_NODISCARD const CharType& InputBuffer::peek()
+MYLANG_NODISCARD const char& InputBuffer::peek()
 {
-    static CharType const end = BUFFER_END;
+    static char const end = BUFFER_END;
 
     if (!Current_)
-        return end;
+    return end;
 
     // Ensure current buffer is valid
     if (*Current_ == BUFFER_END) {
         if (!refreshBuffer(CurrentBuffer_ ^ 1))
-            return end;
+        return end;
         swapBuffers_();
     }
 
     // Now Current_ points to valid data, check the next character
-    Pointer forward = Current_ + 1;
+    char* forward = Current_ + 1;
 
     if (*forward == BUFFER_END) {
         // The next character would be in the other buffer
         // Refresh it and return the first character from that buffer
         if (!refreshBuffer(CurrentBuffer_ ^ 1))
-            return end;
+        return end;
 
         // Return first character of the other buffer without swapping
         std::int32_t otherBuffer = CurrentBuffer_ ^ 1;
         if (Buffers_[otherBuffer].len() > 0 && Buffers_[otherBuffer][0] != BUFFER_END)
-            return Buffers_[otherBuffer][0];
+        return Buffers_[otherBuffer][0];
 
         return end;
     }
@@ -93,17 +94,17 @@ StringRef InputBuffer::nPeek(SizeType n)
     StringRef out;
 
     if (n == 0)
-        return out;
+    return out;
 
     // Ensure current buffer is valid
     if (Current_ && *Current_ == BUFFER_END) {
         if (!refreshBuffer(CurrentBuffer_ ^ 1))
-            return out;
+        return out;
         swapBuffers_();
     }
 
     if (!Current_)
-        return out;
+    return out;
 
     SizeType rem = n;
     std::int32_t buf_idx = CurrentBuffer_;
@@ -114,7 +115,7 @@ StringRef InputBuffer::nPeek(SizeType n)
         if (offset >= Buffers_[buf_idx].len() || Buffers_[buf_idx][offset] == BUFFER_END) {
             // Try to refresh the other buffer
             if (!refreshBuffer(buf_idx ^ 1))
-                break;
+            break;
 
             buf_idx ^= 1;
             offset = 0;
@@ -129,7 +130,7 @@ StringRef InputBuffer::nPeek(SizeType n)
     return out;
 }
 
-void InputBuffer::unget(CharType ch)
+void InputBuffer::unget(char ch)
 {
     Position prev_pos = CurrentPosition_;
     rewindPosition_(ch);
@@ -149,12 +150,12 @@ void InputBuffer::reset()
 
     // Clear column stack and initialize
     while (!Columns_.empty())
-        Columns_.pop();
+    Columns_.pop();
     Columns_.push(1);
 
     // Clear unget stack
     while (!UngetStack_.empty())
-        UngetStack_.pop();
+    UngetStack_.pop();
 }
 
 void InputBuffer::swapBuffers_()
@@ -164,10 +165,10 @@ void InputBuffer::swapBuffers_()
 
     // Ensure column stack is never empty
     if (Columns_.empty())
-        Columns_.push(1);
+    Columns_.push(1);
 }
 
-void InputBuffer::advancePosition_(CharType ch)
+void InputBuffer::advancePosition_(char ch)
 {
     ++CurrentPosition_.FilePos;
 
@@ -179,44 +180,46 @@ void InputBuffer::advancePosition_(CharType ch)
         ++CurrentPosition_.column;
 
         if (!Columns_.empty())
-            Columns_.top() = CurrentPosition_.column;
+        Columns_.top() = CurrentPosition_.column;
         else
-            // This should never happen, but handle it gracefully
-            Columns_.push(CurrentPosition_.column);
+        // This should never happen, but handle it gracefully
+        Columns_.push(CurrentPosition_.column);
     }
 }
 
-void InputBuffer::rewindPosition_(CharType ch)
+void InputBuffer::rewindPosition_(char ch)
 {
     // Don't rewind past the beginning of the file
     if (CurrentPosition_.FilePos == 0)
-        return;
+    return;
 
     CurrentPosition_.FilePos = std::max<SizeType>(0, CurrentPosition_.FilePos - 1);
 
     if (ch == u'\n') {
         // We're rewinding past a newline, so go back to the previous line
         if (!Columns_.empty())
-            Columns_.pop();
+        Columns_.pop();
 
         CurrentPosition_.line = std::max<SizeType>(1, CurrentPosition_.line - 1);
         CurrentPosition_.column = Columns_.empty() ? 1 : Columns_.top();
 
         // Ensure column stack is never empty
         if (Columns_.empty())
-            Columns_.push(CurrentPosition_.column);
+        Columns_.push(CurrentPosition_.column);
     } else {
         // Regular character rewind
         CurrentPosition_.column = std::max<SizeType>(0, CurrentPosition_.column - 1);
 
         if (!Columns_.empty())
-            Columns_.top() = CurrentPosition_.column;
+        Columns_.top() = CurrentPosition_.column;
         else
-            // This should never happen, but handle it gracefully
-            Columns_.push(CurrentPosition_.column);
+        // This should never happen, but handle it gracefully
+        Columns_.push(CurrentPosition_.column);
     }
 }
 
 } // namespace buffer
 } // namespace lex
 } // namespace mylang
+
+*/

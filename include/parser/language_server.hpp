@@ -44,8 +44,7 @@ public:
     std::vector<Range> getReferences(StringRef const& source, Position pos);
 
     // Rename symbol
-    std::unordered_map<StringRef, StringRef, StringRefHash, StringRefEqual>
-    rename(StringRef const& source, Position pos, StringRef const& newName);
+    std::unordered_map<StringRef, StringRef, StringRefHash, StringRefEqual> rename(StringRef const& source, Position pos, StringRef const& newName);
 };
 
 }

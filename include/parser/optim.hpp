@@ -50,8 +50,7 @@ public:
     };
 
     // Pass 4: Loop Invariant Code Motion
-    bool isLoopInvariant(ast::Expr const* expr,
-        std::unordered_set<StringRef, StringRefHash, StringRefEqual> const& loopVars);
+    bool isLoopInvariant(ast::Expr const* expr, std::unordered_set<StringRef, StringRefHash, StringRefEqual> const& loopVars);
 
 public:
     // Main optimization pipeline

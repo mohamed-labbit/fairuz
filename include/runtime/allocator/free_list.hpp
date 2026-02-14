@@ -40,7 +40,8 @@ struct FreeListRegion {
      * @brief Move constructor - transfers ownership
      * @param other Source region to move from
      */
-    FreeListRegion(FreeListRegion&& other) MYLANG_NOEXCEPT : ptr(other.ptr)
+    FreeListRegion(FreeListRegion&& other) MYLANG_NOEXCEPT
+        : ptr(other.ptr)
         , size(other.size)
     {
         other.ptr = nullptr;
