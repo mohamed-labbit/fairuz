@@ -112,19 +112,15 @@ enum class TokenType : int {
     INVALID
 };
 
-static std::unordered_map<StringRef, TokenType, StringRefHash, StringRefEqual> const operators = {
-    { u"=", TokenType::OP_EQ }, { u":=", TokenType::OP_ASSIGN }, { u"+", TokenType::OP_PLUS }, { u"-", TokenType::OP_MINUS },
-    { u"*", TokenType::OP_STAR }, { u"/", TokenType::OP_SLASH }, { u"<", TokenType::OP_LT }, { u">", TokenType::OP_GT },
-    { u"<=", TokenType::OP_LTE }, { u">=", TokenType::OP_GTE }, { u"!=", TokenType::OP_NEQ }
-};
+static std::unordered_map<StringRef, TokenType, StringRefHash, StringRefEqual> const operators
+    = { { u"=", TokenType::OP_EQ }, { u":=", TokenType::OP_ASSIGN }, { u"+", TokenType::OP_PLUS }, { u"-", TokenType::OP_MINUS },
+          { u"*", TokenType::OP_STAR }, { u"/", TokenType::OP_SLASH }, { u"<", TokenType::OP_LT }, { u">", TokenType::OP_GT },
+          { u"<=", TokenType::OP_LTE }, { u">=", TokenType::OP_GTE }, { u"!=", TokenType::OP_NEQ } };
 
-static std::unordered_map<StringRef, TokenType, StringRefHash, StringRefEqual> const keywords = {
-    { u"خطا", TokenType::KW_FALSE }, { u"عدم", TokenType::KW_NONE }, { u"صحيح", TokenType::KW_TRUE },
-    { u"و", TokenType::KW_AND }, { u"اخرج", TokenType::KW_RETURN }, { u"اكمل", TokenType::KW_CONTINUE },
-    { u"عرف", TokenType::KW_FN }, { u"او", TokenType::KW_OR }, { u"بكل", TokenType::KW_FOR },
-    { u"اذا", TokenType::KW_IF }, { u"ليس", TokenType::KW_NOT }, { u"ارجع", TokenType::KW_RETURN },
-    { u"طالما", TokenType::KW_WHILE }
-};
+static std::unordered_map<StringRef, TokenType, StringRefHash, StringRefEqual> const keywords = { { u"خطا", TokenType::KW_FALSE },
+    { u"عدم", TokenType::KW_NONE }, { u"صحيح", TokenType::KW_TRUE }, { u"و", TokenType::KW_AND }, { u"اخرج", TokenType::KW_RETURN },
+    { u"اكمل", TokenType::KW_CONTINUE }, { u"عرف", TokenType::KW_FN }, { u"او", TokenType::KW_OR }, { u"بكل", TokenType::KW_FOR },
+    { u"اذا", TokenType::KW_IF }, { u"ليس", TokenType::KW_NOT }, { u"ارجع", TokenType::KW_RETURN }, { u"طالما", TokenType::KW_WHILE } };
 
 static StringRef const toString(TokenType tt)
 {
@@ -194,8 +190,7 @@ static StringRef const toString(TokenType tt)
 
 class Token {
 public:
-    Token(
-        StringRef val, TokenType tt, SizeType line, SizeType col, SizeType fpos, std::string fpath, bool atbol = false)
+    Token(StringRef val, TokenType tt, SizeType line, SizeType col, SizeType fpos, std::string fpath, bool atbol = false)
         : Value_(val)
         , Type_(tt)
         , Location_(fpath, line, col, fpos)
@@ -216,44 +211,76 @@ public:
 
     bool operator==(Token const& other) const
     {
-        if (Type_ == TokenType::INDENT || Type_ == TokenType::DEDENT)
+        if (Type_ == TokenType::INDENT || Type_ == TokenType::DEDENT
+            || Type_ == TokenType::BEGINMARKER || Type_ == TokenType::ENDMARKER)
             return Type_ == other.Type_;
-        return Value_ == other.Value_ && Type_ == other.Type_ && Location_.line == other.Location_.line
-            && Location_.column == other.Location_.column;
+        return Value_ == other.Value_ && Type_ == other.Type_ && Location_.line == other.Location_.line && Location_.column == other.Location_.column;
     }
 
-    bool operator!=(Token const& other) const { return !(*this == other); }
+    bool operator!=(Token const& other) const
+    {
+        return !(*this == other);
+    }
 
     Token& operator=(Token const&) = default;
     Token& operator=(Token&&) MYLANG_NOEXCEPT = default;
 
     // Return const references to avoid copies
-    StringRef const& lexeme() const { return Value_; }
+    StringRef const& lexeme() const
+    {
+        return Value_;
+    }
 
-    TokenType const& type() const { return Type_; }
+    TokenType const& type() const
+    {
+        return Type_;
+    }
 
-    SizeType size() const { return Value_.len(); }
+    SizeType size() const
+    {
+        return Value_.len();
+    }
 
-    SizeType const& line() const { return Location_.line; }
+    SizeType const& line() const
+    {
+        return Location_.line;
+    }
 
-    SizeType const& column() const { return Location_.column; }
+    SizeType const& column() const
+    {
+        return Location_.column;
+    }
 
-    Location const& location() const { return Location_; }
+    Location const& location() const
+    {
+        return Location_;
+    }
 
-    std::string const& filepath() const { return Location_.filepath; }
+    std::string const& filepath() const
+    {
+        return Location_.filepath;
+    }
 
-    bool is(TokenType const tt) const { return tt == Type_; }
+    bool is(TokenType const tt) const
+    {
+        return tt == Type_;
+    }
 
     // is at beginning of a new line
-    bool atbol() const { return Atbol_; }
+    bool atbol() const
+    {
+        return Atbol_;
+    }
 
     // FIXED: Correct operator range check
-    bool isOperator() const { return (Type_ >= TokenType::OP_PLUS && Type_ <= TokenType::OP_RSHIFTEQ); }
+    bool isOperator() const
+    {
+        return (Type_ >= TokenType::OP_PLUS && Type_ <= TokenType::OP_RSHIFTEQ);
+    }
 
     bool isUnaryOp() const
     {
-        return Type_ == TokenType::OP_PLUS || Type_ == TokenType::OP_MINUS || Type_ == TokenType::OP_BITNOT
-            || Type_ == TokenType::KW_NOT;
+        return Type_ == TokenType::OP_PLUS || Type_ == TokenType::OP_MINUS || Type_ == TokenType::OP_BITNOT || Type_ == TokenType::KW_NOT;
     }
 
     // FIXED: Proper binary operator check
@@ -266,8 +293,8 @@ public:
 
     bool isComparisonOp() const
     {
-        return Type_ == TokenType::OP_EQ || Type_ == TokenType::OP_NEQ || Type_ == TokenType::OP_LT
-            || Type_ == TokenType::OP_GT || Type_ == TokenType::OP_LTE || Type_ == TokenType::OP_GTE;
+        return Type_ == TokenType::OP_EQ || Type_ == TokenType::OP_NEQ || Type_ == TokenType::OP_LT || Type_ == TokenType::OP_GT
+            || Type_ == TokenType::OP_LTE || Type_ == TokenType::OP_GTE;
     }
 
     int getArithmeticOpPrecedence() const
@@ -307,9 +334,8 @@ public:
     // friend ostream operator for pretty-printing in tests/logs
     friend std::ostream& operator<<(std::ostream& os, Token const& tok)
     {
-        os << "Token(\"" << tok.Value_ << "\", type=" << static_cast<std::int32_t>(tok.Type_)
-           << ", line=" << tok.Location_.line << ", col=" << tok.Location_.column << ", file_pos=" << tok.Location_.FilePos
-           << ", file_path=" << tok.Location_.filepath << ")";
+        os << "Token(\"" << tok.Value_ << "\", type=" << static_cast<std::int32_t>(tok.Type_) << ", line=" << tok.Location_.line
+           << ", col=" << tok.Location_.column << ", file_pos=" << tok.Location_.FilePos << ", file_path=" << tok.Location_.filepath << ")";
         return os;
     }
 

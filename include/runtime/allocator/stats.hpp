@@ -391,10 +391,7 @@ private:
         os << "+=====================================================================================+\n";
     }
 
-    void printFooter(std::ostream& os) const
-    {
-        os << "+=====================================================================================+\n\n";
-    }
+    void printFooter(std::ostream& os) const { os << "+=====================================================================================+\n\n"; }
 
     void printCoreMetrics(std::ostream& os) const
     {
@@ -405,8 +402,7 @@ private:
         os << "\n+-- Core Metrics --------------------------------------------------------------------+\n";
         printMetric(os, "Total Allocations", StatsFormatter::formatNumber(stats_.TotalAllocations));
         printMetric(os, "Total Deallocations", StatsFormatter::formatNumber(stats_.TotalDeallocations));
-        printMetric(os, "Live Allocations",
-            StatsFormatter::formatNumber(stats_.TotalAllocations - stats_.TotalDeallocations));
+        printMetric(os, "Live Allocations", StatsFormatter::formatNumber(stats_.TotalAllocations - stats_.TotalDeallocations));
         os << "+------------------------------------------------------------------------------------+\n";
         printMetric(os, "Total Bytes Allocated", StatsFormatter::formatBytes(stats_.TotalAllocated));
         printMetric(os, "Currently In Use", StatsFormatter::formatBytes(stats_.CurrentlyAllocated));
@@ -415,8 +411,7 @@ private:
         printMetric(os, "Active Memory Blocks", std::to_string(stats_.ActiveBlocks));
 
         if (stats_.TotalAllocations > 0)
-            printMetric(os, "Average Allocation Size",
-                StatsFormatter::formatBytes(stats_.TotalAllocated / stats_.TotalAllocations));
+            printMetric(os, "Average Allocation Size", StatsFormatter::formatBytes(stats_.TotalAllocated / stats_.TotalAllocations));
 
         os << "+------------------------------------------------------------------------------------+\n";
     }
@@ -434,12 +429,10 @@ private:
         };
 
         SizeBucket buckets[] = { { "<= 8 B", stats_.Small8ByteAllocs }, { "<= 16 B", stats_.Small16ByteAllocs },
-            { "<= 32 B", stats_.Small32ByteAllocs }, { "<= 64 B", stats_.Small64ByteAllocs },
-            { "<= 128 B", stats_.Small128ByteAllocs }, { "<= 256 B", stats_.Small256ByteAllocs },
-            { "<= 512 B", stats_.Medium512ByteAllocs }, { "<= 1 KB", stats_.Medium1KBAllocs },
-            { "<= 2 KB", stats_.Medium2KBAllocs }, { "<= 4 KB", stats_.Medium4KBAllocs },
-            { "<= 8 KB", stats_.Large8KBAllocs }, { "<= 16 KB", stats_.Large16KBAllocs },
-            { "<= 32 KB", stats_.Large32KBAllocs }, { "> 64 KB", stats_.LargeHugeAllocs } };
+            { "<= 32 B", stats_.Small32ByteAllocs }, { "<= 64 B", stats_.Small64ByteAllocs }, { "<= 128 B", stats_.Small128ByteAllocs },
+            { "<= 256 B", stats_.Small256ByteAllocs }, { "<= 512 B", stats_.Medium512ByteAllocs }, { "<= 1 KB", stats_.Medium1KBAllocs },
+            { "<= 2 KB", stats_.Medium2KBAllocs }, { "<= 4 KB", stats_.Medium4KBAllocs }, { "<= 8 KB", stats_.Large8KBAllocs },
+            { "<= 16 KB", stats_.Large16KBAllocs }, { "<= 32 KB", stats_.Large32KBAllocs }, { "> 64 KB", stats_.LargeHugeAllocs } };
 
         // Find max for scaling bars
         std::uint64_t max_count = 0;
@@ -510,8 +503,7 @@ private:
         if (stats_.InternalFragmentation > 0) {
             printMetric(os, "Internal Fragmentation", StatsFormatter::formatBytes(stats_.InternalFragmentation));
             if (stats_.TotalAllocated > 0)
-                printMetric(os, "  (% of total)",
-                    StatsFormatter::formatPercent(stats_.InternalFragmentation, stats_.TotalAllocated));
+                printMetric(os, "  (% of total)", StatsFormatter::formatPercent(stats_.InternalFragmentation, stats_.TotalAllocated));
         }
 
         if (stats_.WastedCapacity > 0)
@@ -547,8 +539,7 @@ private:
 
     void printErrorStatistics(std::ostream& os) const
     {
-        if (stats_.AllocationFailures == 0 && stats_.DoubleFreeAttempts == 0 && stats_.InvalidFreeAttempts == 0
-            && stats_.ZeroByteRequests == 0)
+        if (stats_.AllocationFailures == 0 && stats_.DoubleFreeAttempts == 0 && stats_.InvalidFreeAttempts == 0 && stats_.ZeroByteRequests == 0)
             return;
 
         os << "\n+-- Error Statistics ----------------------------------------------------------------+\n";
@@ -585,8 +576,8 @@ private:
         using std::right;
         using std::setw;
 
-        os << "│ " << left << setw(LABEL_WIDTH) << label << " " << right << setw(12) << StatsFormatter::formatNumber(value)
-           << " " << StatsFormatter::createBar(value, max, 20) << " │\n";
+        os << "│ " << left << setw(LABEL_WIDTH) << label << " " << right << setw(12) << StatsFormatter::formatNumber(value) << " "
+           << StatsFormatter::createBar(value, max, 20) << " │\n";
     }
 };
 

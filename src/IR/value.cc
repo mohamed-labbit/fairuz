@@ -105,7 +105,7 @@ std::int64_t Value::toInt() const
     if (isBool())
         return asBool() ? 1 : 0;
     if (isString())
-        return std::stoll(asString().toUtf8());
+        return std::stoll(asString().data());
     diagnostic::engine.panic("Cannot convert to int");
 }
 
@@ -139,10 +139,10 @@ StringRef Value::toString() const
     case Type::NONE:
         return u"None";
     case Type::INT:
-        return ret.fromUtf8(std::to_string(asInt()));
+        return StringRef(std::to_string(asInt()).data());
     case Type::FLOAT: {
         StringRef s;
-        s = s.fromUtf8(std::to_string(asFloat()));
+        s = std::to_string(asFloat()).data();
         for (SizeType i = s.len() - 1; i > 0; --i) {
             if (s[i] == u'0')
                 s.erase(i);
@@ -170,7 +170,8 @@ StringRef Value::toString() const
     }
     case Type::DICT: {
         StringRef result = u"{";
-        std::unordered_map<StringRef, Self, StringRefHash, StringRefEqual> const& dict = std::get<std::unordered_map<StringRef, Self, StringRefHash, StringRefEqual>>(Data_);
+        std::unordered_map<StringRef, Self, StringRefHash, StringRefEqual> const& dict
+            = std::get<std::unordered_map<StringRef, Self, StringRefHash, StringRefEqual>>(Data_);
         SizeType count = 0;
         for (auto const& [k, v] : dict) {
             result += u"'" + k + u"': " + v.toString();
@@ -191,8 +192,8 @@ StringRef Value::toString() const
 std::string Value::repr() const
 {
     if (isString())
-        return "'" + asString().toUtf8() + "'";
-    return toString().toUtf8();
+        return "'" + std::string(asString().data()) + "'";
+    return toString().data();
 }
 
 // Hash for use in dictionaries

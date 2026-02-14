@@ -67,14 +67,16 @@ public:
      *
      * Any omitted fields are inferred from the current source position.
      */
-    MYLANG_COMPILER_ABI tok::Token* make_token(tok::TokenType tt,
-        std::optional<StringRef> lexeme = std::nullopt,
-        std::optional<SizeType> line = std::nullopt,
-        std::optional<SizeType> col = std::nullopt,
-        std::optional<SizeType> file_pos = std::nullopt,
+    MYLANG_COMPILER_ABI tok::Token* make_token(tok::TokenType tt, std::optional<StringRef> lexeme = std::nullopt,
+        std::optional<SizeType> line = std::nullopt, std::optional<SizeType> col = std::nullopt, std::optional<SizeType> file_pos = std::nullopt,
         std::optional<std::string> file_path = std::nullopt) const;
 
-    MYLANG_COMPILER_ABI StringRef getSourceLine(SizeType const line) { return SourceManager_.getSourceLine(line); }
+    MYLANG_COMPILER_ABI StringRef getSourceLine(SizeType const line)
+    {
+        /// TODO:
+        return "";
+        // return SourceManager_.g(line);
+    }
 
 private:
     SourceManager SourceManager_;              // Manages source input and positions
@@ -84,7 +86,7 @@ private:
     std::vector<tok::Token const*> TokStream_; // Accumulated token stream
     std::vector<unsigned> IndentStack_;        // Legacy indentation stack
     std::vector<unsigned> AltIndentStack_;     // Alternative indentation stack for consistency
-    bool AtBOL_ { false };                     // at beginning of a new line
+    bool AtBOL_ { true };                      // at beginning of a new line
 
     /// @brief Lexes a single token and stores it
     MYLANG_COMPILER_ABI const tok::Token* lexToken();
@@ -92,36 +94,8 @@ private:
     /// @brief Updates indentation context based on emitted token
     MYLANG_COMPILER_ABI void updateIndentationContext_(tok::Token const& token);
 
-    /// @brief Consumes and returns the next character from the source
-    MYLANG_COMPILER_ABI CharType consumeChar() { return SourceManager_.consumeChar(); }
-
-    MYLANG_COMPILER_ABI CharType currentChar() { return SourceManager_.current(); }
-
-    MYLANG_COMPILER_ABI CharType nextChar()
-    {
-        SourceManager_.consumeChar();
-        return SourceManager_.current();
-    }
-
-    MYLANG_COMPILER_ABI CharType peekChar() { return SourceManager_.peek(); }
-
     /// @brief Stores a token in the token stream
     MYLANG_COMPILER_ABI void store(tok::Token const* tok);
-
-    /**
-     * @brief Configures the global locale for Unicode handling.
-     *
-     * Attempts to use Arabic UTF-8 locale, falling back to classic locale
-     * if unavailable.
-     */
-    static void configureLocale()
-    {
-        try {
-            std::locale::global(std::locale("ar_SA.UTF-8"));
-        } catch (std::runtime_error const&) {
-            std::locale::global(std::locale::classic());
-        }
-    }
 }; // class Lexer
 
 struct TokenAllocator {
@@ -146,15 +120,12 @@ public:
 
 inline TokenAllocator token_allocator;
 
-inline tok::Token* Lexer::make_token(tok::TokenType tt,
-    std::optional<StringRef> lexeme,
-    std::optional<SizeType> line,
-    std::optional<SizeType> col,
-    std::optional<SizeType> file_pos,
-    std::optional<std::string> file_path) const
+inline tok::Token* Lexer::make_token(tok::TokenType tt, std::optional<StringRef> lexeme, std::optional<SizeType> line, std::optional<SizeType> col,
+    std::optional<SizeType> file_pos, std::optional<std::string> file_path) const
 {
-    tok::Token* ret = token_allocator.make(lexeme.value_or(u""), tt, line.value_or(this->SourceManager_.line()), col.value_or(this->SourceManager_.column()),
-        file_pos.value_or(this->SourceManager_.fpos()), file_path.value_or(this->SourceManager_.fpath()));
+    tok::Token* ret = token_allocator.make(lexeme.value_or(u""), tt, line.value_or(this->SourceManager_.getLineNumber()),
+        col.value_or(this->SourceManager_.getColumnNumber()), file_pos.value_or(this->SourceManager_.getFileOffset()),
+        file_path.value_or(this->SourceManager_.fpath()));
     if (!ret) // protect against bad access
         throw std::bad_alloc();
     return ret;

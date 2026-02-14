@@ -88,8 +88,7 @@ void SemanticAnalyzer::analyzeExpr(ast::Expr const* expr)
     case ast::Expr::Kind::NAME: {
         ast::NameExpr const* name = static_cast<ast::NameExpr const*>(expr);
         if (!CurrentScope_->isDefined(name->getValue()))
-            reportIssue(Issue::Severity::ERROR, u"Undefined variable: " + name->getValue(), expr->getLine(),
-                u"Did you forget to initialize it?");
+            reportIssue(Issue::Severity::ERROR, u"Undefined variable: " + name->getValue(), expr->getLine(), u"Did you forget to initialize it?");
         else
             CurrentScope_->markUsed(name->getValue(), expr->getLine());
         break;
@@ -105,15 +104,13 @@ void SemanticAnalyzer::analyzeExpr(ast::Expr const* expr)
         SymbolTable::DataType_t leftType = inferType(bin->getLeft());
         SymbolTable::DataType_t rightType = inferType(bin->getRight());
 
-        if (leftType != rightType && leftType != SymbolTable::DataType_t::UNKNOWN
-            && rightType != SymbolTable::DataType_t::UNKNOWN)
-            reportIssue(Issue::Severity::ERROR, u"Type mismatch in binary expression", expr->getLine(),
-                u"Left and right operands must have same type");
+        if (leftType != rightType && leftType != SymbolTable::DataType_t::UNKNOWN && rightType != SymbolTable::DataType_t::UNKNOWN)
+            reportIssue(
+                Issue::Severity::ERROR, u"Type mismatch in binary expression", expr->getLine(), u"Left and right operands must have same type");
 
         if (leftType == SymbolTable::DataType_t::STRING || rightType == SymbolTable::DataType_t::STRING) {
             if (bin->getOperator() != tok::TokenType::OP_PLUS)
-                reportIssue(Issue::Severity::ERROR, u"Invalid operation on string", expr->getLine(),
-                    u"Only '+' is allowed for strings");
+                reportIssue(Issue::Severity::ERROR, u"Invalid operation on string", expr->getLine(), u"Only '+' is allowed for strings");
         }
 
         // Division by zero detection (constant folding)
@@ -215,8 +212,7 @@ void SemanticAnalyzer::analyzeStmt(ast::Stmt const* stmt)
         analyzeExpr(ifStmt->getCondition());
         // Check for constant conditions
         if (ifStmt->getCondition()->getKind() == ast::Expr::Kind::LITERAL)
-            reportIssue(Issue::Severity::WARNING, u"Condition is always constant", stmt->getLine(),
-                u"Consider removing if statement");
+            reportIssue(Issue::Severity::WARNING, u"Condition is always constant", stmt->getLine(), u"Consider removing if statement");
         for (ast::Stmt const* const& s : ifStmt->getThenBlock()->getStatements())
             analyzeStmt(s);
         for (ast::Stmt const* const& s : ifStmt->getElseBlock()->getStatements())
@@ -335,8 +331,7 @@ void SemanticAnalyzer::analyze(std::vector<ast::Stmt*> const& Statements_)
     // Check for unused variables
     std::vector<SymbolTable::Symbol*> unused = GlobalScope_->getUnusedSymbols();
     for (SymbolTable::Symbol* sym : unused)
-        reportIssue(Issue::Severity::WARNING, u"Unused variable: " + sym->name, sym->DefinitionLine,
-            u"Consider removing if not needed");
+        reportIssue(Issue::Severity::WARNING, u"Unused variable: " + sym->name, sym->DefinitionLine, u"Consider removing if not needed");
 }
 
 std::vector<typename SemanticAnalyzer::Issue> const& SemanticAnalyzer::getIssues() const { return Issues_; }

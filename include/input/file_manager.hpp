@@ -68,33 +68,6 @@ MYLANG_CONSTEXPR const char* toString(FileManagerError error) MYLANG_NOEXCEPT
 
 class FileManager {
 public:
-    struct Context {
-        SizeType ByteOffset { 0 };
-        SizeType CharOffset { 0 };
-        SizeType line { 0 };
-        SizeType column { 0 };
-
-        void reset() MYLANG_NOEXCEPT
-        {
-            ByteOffset = 0;
-            CharOffset = 0;
-            line = 0;
-            column = 0;
-        }
-    };
-
-    struct LineIndex {
-        SizeType ByteOffset { 0 };
-        SizeType CharOffset { 0 };
-        SizeType LineLength { 0 };
-    };
-
-    struct FileStats {
-        SizeType TotalBytes { 0 };
-        SizeType TotalLines { 0 };
-        SizeType TotalCharacters { 0 };
-    };
-
     explicit FileManager(std::string const& filepath);
 
     FileManager(FileManager&&) MYLANG_NOEXCEPT = delete;
@@ -105,102 +78,27 @@ public:
 
     ~FileManager() = default;
 
-    bool isChangedSinceLastTime() const MYLANG_NOEXCEPT { return fs::last_write_time(FullPath_) != LastKnownWriteTime_; }
+    StringRef load(std::string const& filepath, bool const replace = false);
 
-    Context getContext() const MYLANG_NOEXCEPT { return Context_; }
-
-    std::string getPath() const MYLANG_NOEXCEPT { return FullPath_; }
-
-    void reset();
-
-    void seekToChar(SizeType const CharOffset);
-
-    void seekToLine(SizeType const line_number)
+    StringRef& buffer()
     {
-        /// TODO:
+        return InputBuffer_;
     }
 
-    StringRef readWindow(SizeType const size)
+    StringRef const& buffer() const
     {
-        /// TODO: : add caching
-        return readWindowInternal(size);
+        return InputBuffer_;
     }
 
-    StringRef readWindowInternal(SizeType size);
-
-    StringRef readLine(SizeType const line_number);
-
-    StringRef readNextLine();
-
-    std::vector<StringRef> readLines(SizeType const start, SizeType const count);
-
-    StringRef readAll();
-
-    void refreshStats();
-
-    SizeType getLineCount()
+    std::string getPath() const
     {
-        if (!LineIndexBuilt_)
-            buildLineIndex();
-        return Stats_.TotalLines;
+        return FilePath_;
     }
-
-    SizeType getCharCount()
-    {
-        if (!LineIndexBuilt_)
-            buildLineIndex();
-        return Stats_.TotalCharacters;
-    }
-
-    CharType peekChar(SizeType const CharOffset);
-
-    StringRef peekRange(SizeType const start_offset, SizeType const length);
-
-    SizeType remaining() { return InputBuffer_.len() - Context_.ByteOffset; }
-
-    SizeType fileSize() { return InputBuffer_.len() * sizeof(CharType); }
-
-    StringRef getSourceLine(SizeType const line);
 
 private:
-    std::string FullPath_;
-    Context Context_;
-    std::vector<Context> PositionStack_;
-    std::vector<LineIndex> LineIndices_;
-    FileStats Stats_;
+    std::string FilePath_;
     StringRef InputBuffer_;
-
-    // private constants
-    static MYLANG_CONSTEXPR SizeType DEFAULT_BUFFER_SIZE = 8192;
-    static MYLANG_CONSTEXPR SizeType MAX_UTF8_CHAR_BYTES = 8;
-    static MYLANG_CONSTEXPR SizeType SMALL_FILE_THRESHOLD = 1024 * 1024;       // 1 MB
-    static MYLANG_CONSTEXPR SizeType LARGE_FILE_THRESHOLD = 1024 * 1024 * 100; // 100 MB
-    static MYLANG_CONSTEXPR SizeType LINE_INDEX_CHUNK = 10;
-
-    bool LineIndexBuilt_ { false };
     std::filesystem::file_time_type LastKnownWriteTime_;
-
-    void popPosition()
-    {
-        if (!PositionStack_.empty())
-            PositionStack_.erase(PositionStack_.begin());
-    }
-
-    void pushPosition()
-    {
-        PositionStack_.push_back(Context_);
-        // Limit stack size
-        if (PositionStack_.size() > 100)
-            PositionStack_.erase(PositionStack_.begin());
-    }
-
-    SizeType validateUtf8Bound(std::span<std::byte const> buffer) const;
-
-    void buildLineIndex();
-
-    FileStats computeStats();
-
-    bool isChangedSinceLastRead() const { return fs::last_write_time(FullPath_) != LastKnownWriteTime_; }
 };
 
 }

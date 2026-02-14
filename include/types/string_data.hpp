@@ -8,20 +8,16 @@ namespace mylang {
 class String {
     friend class StringRef;
 
-    using Pointer = CharType*;
-    using ConstPointer = CharType const*;
-
 private:
     // static constexpr SizeType SSO_FLAG = SizeType(1) << (sizeof(SizeType) * 8 - 1);
 
     union Storage {
-        struct
-        {
-            Pointer ptr;
+        struct {
+            char* ptr;
             SizeType cap;
         } heap;
 
-        CharType sso[SSO_SIZE];
+        char sso[SSO_SIZE];
 
         Storage()
             : heap { nullptr, 0 }
@@ -44,7 +40,7 @@ public:
     ~String()
     {
         if (isHeap())
-            string_allocator.deallocateArray<CharType>(storage_.heap.ptr, storage_.heap.cap);
+            string_allocator.deallocateArray<char>(storage_.heap.ptr, storage_.heap.cap);
     }
 
     // ---- helpers ----
@@ -55,14 +51,11 @@ public:
 
     bool isInlined() const noexcept { return !isHeap(); }
 
-    Pointer ptr() noexcept { return isHeap() ? storage_.heap.ptr : storage_.sso; }
+    char* ptr() noexcept { return isHeap() ? storage_.heap.ptr : storage_.sso; }
 
-    ConstPointer ptr() const noexcept { return isHeap() ? storage_.heap.ptr : storage_.sso; }
+    char const* ptr() const noexcept { return isHeap() ? storage_.heap.ptr : storage_.sso; }
 
-    SizeType cap() const noexcept
-    {
-        return isHeap() ? storage_.heap.cap - 1 /*subtract the nul terminator*/ : SSO_SIZE - 1;
-    }
+    SizeType cap() const noexcept { return isHeap() ? storage_.heap.cap - 1 /*subtract the nul terminator*/ : SSO_SIZE - 1; }
 
     void setLen(SizeType const n)
     {
@@ -81,12 +74,12 @@ public:
         setLen(other.length());
 
         if (other.isInlined())
-            ::memcpy(storage_.sso, other.storage_.sso, (length() + 1) * sizeof(CharType));
+            ::memcpy(storage_.sso, other.storage_.sso, (length() + 1) * sizeof(char));
         else {
             storage_.heap.cap = other.storage_.heap.cap;
-            storage_.heap.ptr = string_allocator.allocateArray<CharType>(storage_.heap.cap);
+            storage_.heap.ptr = string_allocator.allocateArray<char>(storage_.heap.cap);
 
-            ::memcpy(storage_.heap.ptr, other.storage_.heap.ptr, (length() + 1) * sizeof(CharType));
+            ::memcpy(storage_.heap.ptr, other.storage_.heap.ptr, (length() + 1) * sizeof(char));
         }
     }
 
@@ -99,12 +92,12 @@ public:
             is_heap = true;
             setLen(0);
             storage_.heap.cap = s + 1;
-            storage_.heap.ptr = string_allocator.allocateArray<CharType>(storage_.heap.cap);
+            storage_.heap.ptr = string_allocator.allocateArray<char>(storage_.heap.cap);
         }
         terminate();
     }
 
-    String(SizeType const s, CharType const c)
+    String(SizeType const s, char const c)
     {
         if (s < SSO_SIZE) {
             is_heap = false;
@@ -113,7 +106,7 @@ public:
         } else {
             is_heap = true;
             storage_.heap.cap = s + 1;
-            storage_.heap.ptr = string_allocator.allocateArray<CharType>(storage_.heap.cap);
+            storage_.heap.ptr = string_allocator.allocateArray<char>(storage_.heap.cap);
             ::memset(storage_.heap.ptr, c, s);
             setLen(s);
         }
@@ -121,7 +114,7 @@ public:
         terminate();
     }
 
-    String(ConstPointer s, SizeType n)
+    String(char const* s, SizeType n)
     {
         if (!s || n == 0) {
             is_heap = false;
@@ -133,18 +126,18 @@ public:
         if (n < SSO_SIZE) {
             is_heap = false;
             setLen(n);
-            ::memcpy(storage_.sso, s, n * sizeof(CharType));
+            ::memcpy(storage_.sso, s, n * sizeof(char));
         } else {
             is_heap = true;
             storage_.heap.cap = n + 1;
-            storage_.heap.ptr = string_allocator.allocateArray<CharType>(storage_.heap.cap);
-            ::memcpy(storage_.heap.ptr, s, n * sizeof(CharType));
+            storage_.heap.ptr = string_allocator.allocateArray<char>(storage_.heap.cap);
+            ::memcpy(storage_.heap.ptr, s, n * sizeof(char));
         }
 
         terminate();
     }
 
-    String(ConstPointer s)
+    String(char const* s)
     {
         if (!s) {
             len_ = 0;
@@ -152,7 +145,7 @@ public:
             return;
         }
 
-        ConstPointer p = s;
+        char const* p = s;
         while (*p++)
             ;
 
@@ -161,13 +154,13 @@ public:
         if (n < SSO_SIZE) {
             is_heap = false;
             setLen(n);
-            ::memcpy(storage_.sso, s, n * sizeof(CharType));
+            ::memcpy(storage_.sso, s, n * sizeof(char));
         } else {
             is_heap = true;
             setLen(n);
             storage_.heap.cap = n + 1;
-            storage_.heap.ptr = string_allocator.allocateArray<CharType>(storage_.heap.cap);
-            ::memcpy(storage_.heap.ptr, s, (n + 1) * sizeof(CharType));
+            storage_.heap.ptr = string_allocator.allocateArray<char>(storage_.heap.cap);
+            ::memcpy(storage_.heap.ptr, s, (n + 1) * sizeof(char));
         }
 
         terminate();
@@ -183,11 +176,11 @@ public:
         if (length() == 0)
             return true;
 
-        return ::memcmp(ptr(), other.ptr(), length() * sizeof(CharType)) == 0;
+        return ::memcmp(ptr(), other.ptr(), length() * sizeof(char)) == 0;
     }
 
-    CharType operator[](SizeType const i) const noexcept { return ptr()[i]; }
-    CharType& operator[](SizeType const i) noexcept { return ptr()[i]; }
+    char operator[](SizeType const i) const noexcept { return ptr()[i]; }
+    char& operator[](SizeType const i) noexcept { return ptr()[i]; }
 
     void increment() const noexcept { ++RefCount; }
     void decrement() const noexcept { --RefCount; }

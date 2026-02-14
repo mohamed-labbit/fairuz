@@ -3,7 +3,6 @@
 #include "../diag/diagnostic.hpp"
 #include "../lex/token.hpp"
 #include "ast_node.hpp"
-
 #include <cassert>
 #include <cstdint>
 #include <string>
@@ -148,7 +147,7 @@ public:
 
     bool isNumeric() const { return Type_ == Type::NUMBER; }
 
-    float toNumber() const { return std::stof(getValue().toUtf8()); }
+    float toNumber() const { return std::stof(getValue().data()); }
 };
 
 class NameExpr : public Expr {

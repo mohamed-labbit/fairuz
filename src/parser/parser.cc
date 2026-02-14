@@ -61,8 +61,7 @@ ast::Stmt* Parser::parseWhileStmt()
 
     ast::Expr* condition = parseExpression();
     if (!condition) {
-        diagnostic::engine.emit("Expected condition expression after 'while'",
-            diagnostic::DiagnosticEngine::Severity::ERROR);
+        diagnostic::engine.emit("Expected condition expression after 'while'", diagnostic::DiagnosticEngine::Severity::ERROR);
         return nullptr;
     }
 
@@ -71,8 +70,7 @@ ast::Stmt* Parser::parseWhileStmt()
 
     ast::BlockStmt* while_block = parseIndentedBlock();
     if (!while_block) {
-        diagnostic::engine.emit("Expected indented block after while statement",
-            diagnostic::DiagnosticEngine::Severity::ERROR);
+        diagnostic::engine.emit("Expected indented block after while statement", diagnostic::DiagnosticEngine::Severity::ERROR);
         return nullptr;
     }
 
@@ -199,8 +197,7 @@ ast::Stmt* Parser::parseIfStmt()
 
     ast::BlockStmt* then_block = parseIndentedBlock();
     if (!then_block) {
-        diagnostic::engine.emit("Expected indented block after if statement",
-            diagnostic::DiagnosticEngine::Severity::ERROR);
+        diagnostic::engine.emit("Expected indented block after if statement", diagnostic::DiagnosticEngine::Severity::ERROR);
         return nullptr;
     }
 
@@ -258,8 +255,7 @@ ast::Expr* Parser::parseLogicalExprPrecedence(unsigned min_precedence)
 
         ast::Expr* right = parseLogicalExprPrecedence(precedence + 1);
         if (!right) {
-            diagnostic::engine.emit("Expected expression after logical operator",
-                diagnostic::DiagnosticEngine::Severity::ERROR);
+            diagnostic::engine.emit("Expected expression after logical operator", diagnostic::DiagnosticEngine::Severity::ERROR);
             return nullptr;
         }
 
@@ -279,8 +275,7 @@ ast::Expr* Parser::parseComparisonExpr()
         advance();
         ast::Expr* right = parseBinaryExpr();
         if (!right) {
-            diagnostic::engine.emit("Expected expression after comparison operator",
-                diagnostic::DiagnosticEngine::Severity::ERROR);
+            diagnostic::engine.emit("Expected expression after comparison operator", diagnostic::DiagnosticEngine::Severity::ERROR);
             return nullptr;
         }
         left = ast::AST_allocator.make<ast::BinaryExpr>(left, right, op);
@@ -307,8 +302,7 @@ ast::Expr* Parser::parseBinaryExprPrecedence(unsigned min_precedence)
         int nextMin = precedence + 1;
         ast::Expr* right = parseBinaryExprPrecedence(nextMin);
         if (!right) {
-            diagnostic::engine.emit("Expected expression after binary operator",
-                diagnostic::DiagnosticEngine::Severity::ERROR);
+            diagnostic::engine.emit("Expected expression after binary operator", diagnostic::DiagnosticEngine::Severity::ERROR);
             return nullptr;
         }
 
@@ -325,8 +319,7 @@ ast::Expr* Parser::parseUnaryExpr()
         advance();
         ast::Expr* expr = parseUnaryExpr();
         if (!expr) {
-            diagnostic::engine.emit("Expected expression after unary operator",
-                diagnostic::DiagnosticEngine::Severity::ERROR);
+            diagnostic::engine.emit("Expected expression after unary operator", diagnostic::DiagnosticEngine::Severity::ERROR);
             return nullptr;
         }
         return ast::AST_allocator.make<ast::UnaryExpr>(expr, op);
@@ -354,8 +347,7 @@ ast::Expr* Parser::parsePostfixExpr()
 
                 ast::Expr* arg = parseExpression();
                 if (!arg) {
-                    diagnostic::engine.emit("Expected expression in argument list",
-                        diagnostic::DiagnosticEngine::Severity::ERROR);
+                    diagnostic::engine.emit("Expected expression in argument list", diagnostic::DiagnosticEngine::Severity::ERROR);
                     return nullptr;
                 }
                 args.push_back(arg);
@@ -478,8 +470,7 @@ void Parser::synchronize()
             advance();
             return;
         }
-        if (check(tok::TokenType::KW_IF) || check(tok::TokenType::KW_WHILE) || check(tok::TokenType::KW_RETURN)
-            || check(tok::TokenType::KW_FN))
+        if (check(tok::TokenType::KW_IF) || check(tok::TokenType::KW_WHILE) || check(tok::TokenType::KW_RETURN) || check(tok::TokenType::KW_FN))
             return;
 
         advance();

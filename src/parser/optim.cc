@@ -14,8 +14,10 @@ std::optional<double> ASTOptimizer::evaluateConstant(ast::Expr const* expr)
             return lit->getValue().toDouble();
     } else if (expr->getKind() == ast::Expr::Kind::BINARY) {
         ast::BinaryExpr const* bin = static_cast<ast::BinaryExpr const*>(expr);
+
         std::optional<double> left = evaluateConstant(bin->getLeft());
         std::optional<double> right = evaluateConstant(bin->getRight());
+
         if (left == std::nullopt || right == std::nullopt)
             return std::nullopt;
         if (bin->getOperator() == tok::TokenType::OP_PLUS)
@@ -39,6 +41,7 @@ std::optional<double> ASTOptimizer::evaluateConstant(ast::Expr const* expr)
     } else if (expr->getKind() == ast::Expr::Kind::UNARY) {
         ast::UnaryExpr const* un = static_cast<ast::UnaryExpr const*>(expr);
         std::optional<double> operand = evaluateConstant(static_cast<ast::UnaryExpr const*>(un));
+
         if (operand == std::nullopt)
             return std::nullopt;
         if (un->getOperator() == tok::TokenType::OP_PLUS)
@@ -57,17 +60,20 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
     // First, optimize children
     if (expr->getKind() == ast::Expr::Kind::BINARY) {
         ast::BinaryExpr* bin = static_cast<ast::BinaryExpr*>(expr);
+
         bin->setLeft(optimizeConstantFolding(bin->getLeft()));
         bin->setRight(optimizeConstantFolding(bin->getRight()));
+
         // Try to evaluate
         if (std::optional<double> val = evaluateConstant(expr)) {
             ++Stats_.ConstantFolds;
-            return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER,
-                StringRef::fromUtf8(std::to_string(*val)));
+            return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER, StringRef(std::to_string(*val).data()));
         }
+
         // Algebraic simplifications
         ast::Expr* left = bin->getLeft();
         ast::Expr* right = bin->getRight();
+
         // x + 0 = x, x - 0 = x
         if ((bin->getOperator() == tok::TokenType::OP_PLUS || bin->getOperator() == tok::TokenType::OP_MINUS)
             && right->getKind() == ast::Expr::Kind::LITERAL) {
@@ -104,8 +110,7 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
             }
         }
         // x - x = 0
-        if (bin->getOperator() == tok::TokenType::OP_MINUS && left->getKind() == ast::Expr::Kind::NAME
-            && right->getKind() == ast::Expr::Kind::NAME) {
+        if (bin->getOperator() == tok::TokenType::OP_MINUS && left->getKind() == ast::Expr::Kind::NAME && right->getKind() == ast::Expr::Kind::NAME) {
             ast::NameExpr* lname = static_cast<ast::NameExpr*>(left);
             ast::NameExpr* rname = static_cast<ast::NameExpr*>(right);
             if (lname->getValue() == rname->getValue()) {
@@ -118,10 +123,10 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
     else if (expr->getKind() == ast::Expr::Kind::UNARY) {
         ast::UnaryExpr* un = static_cast<ast::UnaryExpr*>(expr);
         un = static_cast<ast::UnaryExpr*>(optimizeConstantFolding(un));
+
         if (std::optional<double> val = evaluateConstant(expr)) {
             ++Stats_.ConstantFolds;
-            return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER,
-                StringRef::fromUtf8(std::to_string(*val)));
+            return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER, StringRef(std::to_string(*val).data()));
         }
         // Double negation: --x = x
         if (un->getOperator() == tok::TokenType::OP_MINUS && un->getKind() == ast::Expr::Kind::UNARY) {
@@ -150,6 +155,7 @@ ast::Stmt* ASTOptimizer::eliminateDeadCode(ast::Stmt* stmt)
 
     if (stmt->getKind() == ast::Stmt::Kind::IF) {
         ast::IfStmt* ifStmt = static_cast<ast::IfStmt*>(stmt);
+
         // Constant condition elimination
         if (ifStmt->getCondition()->getKind() == ast::Expr::Kind::LITERAL) {
             ast::LiteralExpr* lit = static_cast<ast::LiteralExpr*>(ifStmt->getCondition());
@@ -166,6 +172,7 @@ ast::Stmt* ASTOptimizer::eliminateDeadCode(ast::Stmt* stmt)
                 /// TODO:: return std::make_unique<Stmt*>();
             }
         }
+
         // Recursively eliminate in blocks
         std::vector<ast::Stmt*> newThenStmts;
         std::vector<ast::Stmt*> newElseStmts;
@@ -180,10 +187,12 @@ ast::Stmt* ASTOptimizer::eliminateDeadCode(ast::Stmt* stmt)
 
         ast::BlockStmt* newThen = ast::AST_allocator.make<ast::BlockStmt>(newThenStmts);
         ast::BlockStmt* newElse = ast::AST_allocator.make<ast::BlockStmt>(newElseStmts);
+
         ifStmt->setThenBlock(newThen);
         ifStmt->setElseBlock(newElse);
     } else if (stmt->getKind() == ast::Stmt::Kind::WHILE) {
         ast::WhileStmt* whileStmt = static_cast<ast::WhileStmt*>(stmt);
+
         // Infinite loop with false condition
         if (whileStmt->getCondition()->getKind() == ast::Expr::Kind::LITERAL) {
             ast::LiteralExpr* lit = static_cast<ast::LiteralExpr*>(whileStmt->getCondition());
@@ -191,6 +200,7 @@ ast::Stmt* ASTOptimizer::eliminateDeadCode(ast::Stmt* stmt)
                 ++Stats_.DeadCodeEliminations;
             /// TODO:: return std::make_unique<PassStmt>();
         }
+
         std::vector<ast::Stmt*> newBody;
         for (ast::Stmt* const& s : whileStmt->getBlock()->getStatements())
             if (ast::Stmt* opt = eliminateDeadCode(s))
@@ -199,15 +209,18 @@ ast::Stmt* ASTOptimizer::eliminateDeadCode(ast::Stmt* stmt)
     } else if (stmt->getKind() == ast::Stmt::Kind::FOR) {
         ast::ForStmt* forStmt = static_cast<ast::ForStmt*>(stmt);
         std::vector<ast::Stmt*> newBodyStmts;
+
         for (ast::Stmt* const& s : forStmt->getBlock()->getStatements())
             if (ast::Stmt* opt = eliminateDeadCode(s))
                 newBodyStmts.push_back(opt);
+
         ast::BlockStmt* newBody = ast::AST_allocator.make<ast::BlockStmt>(newBodyStmts);
         forStmt->setBlock(newBody);
     } else if (stmt->getKind() == ast::Stmt::Kind::FUNC) {
         ast::FunctionDef* funcDef = static_cast<ast::FunctionDef*>(stmt);
         std::vector<ast::Stmt*> newBodyStmts;
         bool seenReturn = false;
+
         for (ast::Stmt* const& s : funcDef->getBody()->getStatements()) {
             if (seenReturn) {
                 ++Stats_.DeadCodeEliminations;
@@ -218,6 +231,7 @@ ast::Stmt* ASTOptimizer::eliminateDeadCode(ast::Stmt* stmt)
             if (ast::Stmt* opt = eliminateDeadCode(s))
                 newBodyStmts.push_back(opt);
         }
+
         ast::BlockStmt* newBody = ast::AST_allocator.make<ast::BlockStmt>(newBodyStmts);
         funcDef->setBody(newBody);
     }
@@ -241,8 +255,7 @@ StringRef ASTOptimizer::CSEPass::exprToString(ast::Expr const* expr)
     }
     case ast::Expr::Kind::BINARY: {
         ast::BinaryExpr const* bin = static_cast<ast::BinaryExpr const*>(expr);
-        return u"(" + exprToString(bin->getLeft()) + u" " + tok::toString(bin->getOperator()) + u" "
-            + exprToString(bin->getRight()) + u")";
+        return u"(" + exprToString(bin->getLeft()) + u" " + tok::toString(bin->getOperator()) + u" " + exprToString(bin->getRight()) + u")";
     }
     case ast::Expr::Kind::UNARY: {
         ast::UnaryExpr const* un = static_cast<ast::UnaryExpr const*>(expr);
@@ -253,10 +266,7 @@ StringRef ASTOptimizer::CSEPass::exprToString(ast::Expr const* expr)
     }
 }
 
-StringRef ASTOptimizer::CSEPass::getTempVar()
-{
-    return StringRef::fromUtf8("__cse_temp_") + static_cast<CharType>(TempCounter_++);
-}
+StringRef ASTOptimizer::CSEPass::getTempVar() { return StringRef("__cse_temp_") + static_cast<CharType>(TempCounter_++); }
 
 std::optional<StringRef> ASTOptimizer::CSEPass::findCSE(ast::Expr const* expr)
 {
@@ -276,8 +286,7 @@ void ASTOptimizer::CSEPass::recordExpr(ast::Expr const* expr, StringRef const& v
         ExprCache_[exprStr] = var;
 }
 
-bool ASTOptimizer::isLoopInvariant(ast::Expr const* expr,
-    std::unordered_set<StringRef, StringRefHash, StringRefEqual> const& loopVars)
+bool ASTOptimizer::isLoopInvariant(ast::Expr const* expr, std::unordered_set<StringRef, StringRefHash, StringRefEqual> const& loopVars)
 {
     if (!expr)
         return true;
@@ -293,6 +302,7 @@ bool ASTOptimizer::isLoopInvariant(ast::Expr const* expr,
         return isLoopInvariant(un, loopVars);
     } else if (expr->getKind() == ast::Expr::Kind::LITERAL)
         return true;
+
     return false;
 }
 
@@ -331,8 +341,8 @@ void ASTOptimizer::printStats() const
     std::cout << "Common subexpr eliminations: " << Stats_.CommonSubexprEliminations << "\n";
     std::cout << "Loop invariants moved: " << Stats_.LoopInvariants << "\n";
     std::cout << "Total optimizations: "
-              << (Stats_.ConstantFolds + Stats_.DeadCodeEliminations + Stats_.StrengthReductions
-                     + Stats_.CommonSubexprEliminations + Stats_.LoopInvariants)
+              << (Stats_.ConstantFolds + Stats_.DeadCodeEliminations + Stats_.StrengthReductions + Stats_.CommonSubexprEliminations
+                     + Stats_.LoopInvariants)
               << "\n";
 }
 

@@ -1,5 +1,5 @@
 #include "../../include/types/string.hpp"
-#include "../../include/lex/util.hpp"
+#include "../../include/util.hpp"
 
 #include <arm_neon.h>
 #include <cassert>
@@ -14,7 +14,7 @@ void StringRef::expand(SizeType const new_size)
     if (new_size <= cap())
         return;
 
-    ConstPointer old_ptr = data();
+    char const* old_ptr = data();
     SizeType old_len = len();
     SizeType new_capacity;
 
@@ -23,14 +23,14 @@ void StringRef::expand(SizeType const new_size)
     else
         new_capacity = std::max(new_size + 1, cap() + cap() / 2);
 
-    Pointer new_ptr = string_allocator.allocateArray<CharType>(new_capacity);
+    char* new_ptr = string_allocator.allocateArray<char>(new_capacity);
 
     // Copy old data
     if (old_ptr && old_len > 0)
-        ::memcpy(new_ptr, old_ptr, old_len * sizeof(CharType));
+        ::memcpy(new_ptr, old_ptr, old_len * sizeof(char));
 
     if (StringData_->isHeap() && StringData_->storage_.heap.ptr)
-        string_allocator.deallocateArray<CharType>(StringData_->storage_.heap.ptr, StringData_->storage_.heap.cap);
+        string_allocator.deallocateArray<char>(StringData_->storage_.heap.ptr, StringData_->storage_.heap.cap);
 
     // Now set heap storage
     StringData_->storage_.heap.ptr = new_ptr;
@@ -79,7 +79,7 @@ void StringRef::erase(SizeType const at)
         return;
 
     // Shift remaining characters left
-    ::memmove(data() + at, data() + at + 1, (len() - at - 1) * sizeof(CharType));
+    ::memmove(data() + at, data() + at + 1, (len() - at - 1) * sizeof(char));
 
     // Update view length
     Length_--;
@@ -90,7 +90,7 @@ void StringRef::erase(SizeType const at)
 }
 
 // Append another StringRef
-typename StringRef::Reference StringRef::operator+=(ConstReference other)
+StringRef& StringRef::operator+=(StringRef const& other)
 {
     if (other.empty())
         return *this;
@@ -104,8 +104,8 @@ typename StringRef::Reference StringRef::operator+=(ConstReference other)
         expand(new_len);
 
     // Copy data to end of our view
-    Pointer dst = StringData_->ptr() + Offset_ + Length_;
-    ::memcpy(dst, other.data(), other.Length_ * sizeof(CharType));
+    char* dst = StringData_->ptr() + Offset_ + Length_;
+    ::memcpy(dst, other.data(), other.Length_ * sizeof(char));
 
     // Update view length
     Length_ = new_len;
@@ -117,7 +117,7 @@ typename StringRef::Reference StringRef::operator+=(ConstReference other)
     return *this;
 }
 
-typename StringRef::Reference StringRef::operator+=(CharType c)
+StringRef& StringRef::operator+=(char c)
 {
     if (!StringData_)
         return *this;
@@ -130,7 +130,7 @@ typename StringRef::Reference StringRef::operator+=(CharType c)
     if (total_len + 1 >= StringData_->cap())
         expand(Length_ + 1);
 
-    Pointer ptr = StringData_->ptr();
+    char* ptr = StringData_->ptr();
 
     // Append character at end of our view
     ptr[Offset_ + Length_] = c;
@@ -144,7 +144,7 @@ typename StringRef::Reference StringRef::operator+=(CharType c)
 }
 
 // Bounds-checked access (const)
-CharType StringRef::operator[](SizeType const i) const
+char StringRef::operator[](SizeType const i) const
 {
     if (!StringData_ || !data())
         throw std::runtime_error("StringRef::operator[]: null string data");
@@ -154,7 +154,7 @@ CharType StringRef::operator[](SizeType const i) const
 }
 
 // Bounds-checked access (non-const)
-CharType& StringRef::operator[](SizeType const i)
+char& StringRef::operator[](SizeType const i)
 {
     ensureUnique();
     if (!StringData_ || !data())
@@ -165,7 +165,7 @@ CharType& StringRef::operator[](SizeType const i)
 }
 
 // Safe access with bounds checking (always checked)
-MYLANG_NODISCARD CharType StringRef::at(SizeType const i) const
+MYLANG_NODISCARD char StringRef::at(SizeType const i) const
 {
     if (!StringData_ || !data())
         throw std::runtime_error("StringRef::at: null string data");
@@ -174,7 +174,7 @@ MYLANG_NODISCARD CharType StringRef::at(SizeType const i) const
     return (*StringData_)[i + Offset_];
 }
 
-CharType& StringRef::at(SizeType const i)
+char& StringRef::at(SizeType const i)
 {
     ensureUnique();
     if (!StringData_ || !data())
@@ -190,12 +190,7 @@ void StringRef::clear() noexcept
     // Always just reset the view, never modify underlying data
     // This is safe even for exclusively owned strings
     Length_ = 0;
-
-    // Optionally move offset to 0 for cleaner state
-    // (useful if this ref will be reused for appending)
-    if (StringData_ && StringData_->referenceCount() == 1)
-        // Reset to beginning of buffer for better append performance
-        Offset_ = 0;
+    Offset_ = 0;
 }
 
 // Resize capacity (preserves content)
@@ -207,13 +202,13 @@ void StringRef::resize(SizeType const s)
 }
 
 // Find a character - purely view-based
-MYLANG_NODISCARD bool StringRef::find(CharType const c) const noexcept
+MYLANG_NODISCARD bool StringRef::find(char const c) const noexcept
 {
     if (!StringData_ || !data())
         return false;
 
-    ConstPointer p = data();
-    ConstPointer end = data() + Length_;
+    char const* p = data();
+    char const* end = data() + Length_;
 
     while (p < end && *p != c)
         ++p;
@@ -234,7 +229,7 @@ MYLANG_NODISCARD bool StringRef::find(StringRef const& s) const noexcept
     SizeType max_start = len() - search_len;
 
     for (SizeType i = 0; i <= max_start; ++i) {
-        if (::memcmp(data() + i, s.data(), search_len * sizeof(CharType)) == 0)
+        if (::memcmp(data() + i, s.data(), search_len * sizeof(char)) == 0)
             return true;
     }
 
@@ -242,13 +237,13 @@ MYLANG_NODISCARD bool StringRef::find(StringRef const& s) const noexcept
 }
 
 // Find position of a character - purely view-based
-MYLANG_NODISCARD std::optional<SizeType> StringRef::find_pos(CharType const c) const noexcept
+MYLANG_NODISCARD std::optional<SizeType> StringRef::find_pos(char const c) const noexcept
 {
     if (!StringData_ || !data())
         return std::nullopt;
 
-    ConstPointer p = data();
-    ConstPointer end = data() + Length_;
+    char const* p = data();
+    char const* end = data() + Length_;
 
     while (p < end && *p != c)
         ++p;
@@ -267,35 +262,34 @@ StringRef& StringRef::truncate(SizeType const s)
     return *this;
 }
 
-// Substring - creates new StringData with actual copy
 StringRef StringRef::substr(std::optional<SizeType> start, std::optional<SizeType> end) const
 {
     if (empty())
-        return StringRef {};
+        return "";
 
     SizeType start_val = start.value_or(0);
-    SizeType end_val = end.value_or(len() - 1);
+    SizeType end_val = end.value_or(len());
 
     if (start_val >= len())
         throw std::out_of_range("StringRef::substr: start index out of range");
 
-    if (end_val >= len())
-        end_val = len() - 1;
+    if (end_val > len())
+        end_val = len();
 
     if (end_val < start_val)
         throw std::invalid_argument("StringRef::substr: end must be >= start");
 
-    SizeType ret_len = end_val - start_val + 1;
+    SizeType ret_len = end_val - start_val;
     String* ret_data = string_allocator.allocateObject<String>();
 
     if (ret_len < SSO_SIZE) {
         ret_data->is_heap = false;
-        ::memcpy(ret_data->storage_.sso, data() + start_val, ret_len * sizeof(CharType));
+        ::memcpy(ret_data->storage_.sso, data() + start_val, ret_len * sizeof(char));
     } else {
         ret_data->is_heap = true;
         ret_data->storage_.heap.cap = ret_len + 1;
-        ret_data->storage_.heap.ptr = string_allocator.allocateArray<CharType>(ret_data->storage_.heap.cap);
-        ::memcpy(ret_data->storage_.heap.ptr, data() + start_val, ret_len * sizeof(CharType));
+        ret_data->storage_.heap.ptr = string_allocator.allocateArray<char>(ret_data->storage_.heap.cap);
+        ::memcpy(ret_data->storage_.heap.ptr, data() + start_val, ret_len * sizeof(char));
     }
 
     ret_data->setLen(ret_len);
@@ -304,21 +298,42 @@ StringRef StringRef::substr(std::optional<SizeType> start, std::optional<SizeTyp
     return StringRef(ret_data);
 }
 
+// Zero-copy slicing: returns a view into the existing string
+StringRef StringRef::slice(SizeType start, std::optional<SizeType> end) const
+{
+    if (!StringData_ || Length_ == 0)
+        return "";
+
+    SizeType const src_len = Length_;
+
+    if (start >= src_len)
+        throw std::out_of_range("StringRef::slice: start index out of range");
+
+    SizeType end_val = end.value_or(src_len - 1);
+
+    if (end_val >= src_len)
+        end_val = src_len - 1;
+
+    if (end_val < start)
+        throw std::invalid_argument("StringRef::slice: end must be >= start");
+
+    SizeType slice_len = end_val - start + 1;
+
+    return StringRef(*this, start, slice_len);
+}
+
 // Convert to double - purely view-based
 double StringRef::toDouble(SizeType* pos) const
 {
     if (empty() || len() == 0)
         throw std::invalid_argument("StringRef::toDouble: empty string");
 
-    // Convert UTF-16 to UTF-8 for standard library parsing
-    std::string utf8_str = toUtf8();
-
     // Use std::stod on the UTF-8 string
-    std::size_t utf8_pos = 0;
+    SizeType _pos = 0;
     double result;
 
     try {
-        result = std::stod(utf8_str, &utf8_pos);
+        result = std::stod(std::string(data()), &_pos);
     } catch (std::invalid_argument const&) {
         throw std::invalid_argument("StringRef::toDouble: invalid number format");
     } catch (std::out_of_range const&) {
@@ -328,121 +343,64 @@ double StringRef::toDouble(SizeType* pos) const
     // Convert UTF-8 position back to UTF-16 position if requested
     // This is approximate and may not be exact for multi-byte characters
     if (pos)
-        *pos = static_cast<SizeType>(utf8_pos);
+        *pos = _pos;
 
     return result;
 }
 
-MYLANG_NODISCARD std::string StringRef::toUtf8() const
+MYLANG_NODISCARD StringRef StringRef::fromUtf16(char16_t const* src)
 {
-    if (empty() || len() == 0)
+    if (!src || !src[0])
         return "";
 
-    CharType const* src = data();
-    size_t src_len = len();
-
-    // Calculate required UTF-8 buffer size
-    size_t utf8_len = simdutf::utf8_length_from_utf16(reinterpret_cast<char16_t const*>(src), src_len);
-
-    // Allocate output
-    std::string out;
-    out.resize(utf8_len);
-
-    // Convert UTF-16 to UTF-8
-    size_t written = simdutf::convert_utf16_to_utf8(reinterpret_cast<char16_t const*>(src), src_len, out.data());
-
-    // Sanity check (should always match)
-    assert(written == utf8_len);
-
-    return out;
-}
-
-MYLANG_NODISCARD StringRef StringRef::fromUtf8(std::string const& utf8_str)
-{
-    if (utf8_str.empty())
-        return "";
-
-    char const* src = utf8_str.data();
-    size_t src_len = utf8_str.size();
-
+    char16_t const* p = src;
+    while (*p++)
+        ;
+    size_t src_len = p - src - 1;
     // Validate and get exact UTF-16 length in one pass
-    simdutf::result validation = simdutf::validate_utf8_with_errors(src, src_len);
+    simdutf::result validation = simdutf::validate_utf16_with_errors(src, src_len);
 
     if (validation.error != simdutf::error_code::SUCCESS)
         throw std::runtime_error("Invalid UTF-8 at position " + std::to_string(validation.count));
 
-    size_t utf16_len = simdutf::utf16_length_from_utf8(src, src_len);
+    size_t utf8_len = simdutf::utf8_length_from_utf16(src, src_len);
 
     // Allocate String object
     String* ret_data = string_allocator.allocateObject<String>();
-    CharType* dest;
+    char* dest;
 
-    if (utf16_len < SSO_SIZE) {
+    if (utf8_len < SSO_SIZE) {
         ret_data->is_heap = false;
         dest = ret_data->storage_.sso;
     } else {
         ret_data->is_heap = true;
-        ret_data->storage_.heap.cap = utf16_len + 1;
-        ret_data->storage_.heap.ptr = string_allocator.allocateArray<CharType>(utf16_len + 1);
+        ret_data->storage_.heap.cap = utf8_len + 1;
+        ret_data->storage_.heap.ptr = string_allocator.allocateArray<char>(utf8_len + 1);
         dest = ret_data->storage_.heap.ptr;
     }
 
     // Convert UTF-8 to UTF-16
-    size_t written = simdutf::convert_utf8_to_utf16(src, src_len, reinterpret_cast<char16_t*>(dest));
+    size_t written = simdutf::convert_utf16_to_utf8(src, src_len, dest);
 
-    assert(written == utf16_len);
+    assert(written == utf8_len);
 
-    ret_data->setLen(utf16_len);
+    ret_data->setLen(utf8_len);
     ret_data->terminate();
     return StringRef(ret_data);
 }
 
-// Convenience overload for C strings
-MYLANG_NODISCARD StringRef StringRef::fromUtf8(char const* utf8_cstr)
-{
-    if (!utf8_cstr)
-        return "";
-    return fromUtf8(std::string(utf8_cstr));
-}
-
-// Zero-copy slicing: returns a view into the existing string
-StringRef StringRef::slice(SizeType start, std::optional<SizeType> end) const
-{
-    if (!StringData_ || Length_ == 0)
-        return StringRef {};
-
-    SizeType const src_len = Length_;
-
-    if (start >= src_len)
-        throw std::out_of_range("StringRef::slice: start index out of range");
-
-    SizeType end_val = end.value_or(src_len - 1);
-    if (end_val >= src_len)
-        end_val = src_len - 1;
-
-    if (end_val < start)
-        throw std::invalid_argument("StringRef::slice: end must be >= start");
-
-    SizeType slice_len = end_val - start + 1;
-
-    // Use constructor that handles refcount
-    // The new slice will have Offset_ = this->Offset_ + start, Length_ = slice_len
-    return StringRef(*this, start, slice_len);
-}
-
-typename StringRef::Reference
-StringRef::trimWhitespace(std::optional<bool const> leading, std::optional<bool const> trailing)
+StringRef& StringRef::trimWhitespace(std::optional<bool const> leading, std::optional<bool const> trailing)
 {
     bool const trim_leading = leading.value_or(true);
     bool const trim_trailing = trailing.value_or(true);
 
     if (trim_leading) {
-        while (Length_ > 0 && util::isWhitespace((*this)[0]))
+        while (Length_ > 0 && util::isWhitespace(data()[0]))
             ++Offset_, --Length_;
     }
 
     if (trim_trailing) {
-        while (Length_ > 0 && util::isWhitespace((*this)[Length_ - 1]))
+        while (Length_ > 0 && util::isWhitespace(data()[Length_ - 1]))
             --Length_;
     }
 

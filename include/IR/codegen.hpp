@@ -190,8 +190,7 @@ private:
 
         // Check argument count
         if (args.size() != func.params.size())
-            throw std::runtime_error("Expected " + std::to_string(func.params.size()) + " arguments but got "
-                + std::to_string(args.size()));
+            throw std::runtime_error("Expected " + std::to_string(func.params.size()) + " arguments but got " + std::to_string(args.size()));
 
         // Create new environment for function execution
         // Use closure environment as parent (for lexical scoping)

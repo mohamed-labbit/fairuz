@@ -117,8 +117,7 @@ private:
                 printExpr(f->getParameters()[i], { p.indent + pipe(p.last) + "│  ", i + 1 == f->getParameters().size() });
             std::cout << p.indent + pipe(p.last) << "└─ body:\n";
             for (SizeType i = 0; i < f->getBody()->getStatements().size(); ++i)
-                printStmt(f->getBody()->getStatements()[i],
-                    { p.indent + pipe(p.last) + "   ", i + 1 == f->getBody()->getStatements().size() });
+                printStmt(f->getBody()->getStatements()[i], { p.indent + pipe(p.last) + "   ", i + 1 == f->getBody()->getStatements().size() });
             break;
         }
 
