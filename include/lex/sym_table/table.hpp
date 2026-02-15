@@ -26,7 +26,10 @@ public:
     }
 
     // Enter a new scope (e.g., function, block)
-    void enterScope() { this->Scopes_.emplace_back(); }
+    void enterScope()
+    {
+        this->Scopes_.emplace_back();
+    }
 
     // Leave current scope
     void leaveScope()
@@ -83,7 +86,10 @@ public:
     }
 
     // Current nesting depth (0 = global scope)
-    std::int32_t scopeLevel() const { return static_cast<std::int32_t>(this->Scopes_.size()) - 1; }
+    std::int32_t scopeLevel() const
+    {
+        return static_cast<std::int32_t>(this->Scopes_.size()) - 1;
+    }
 
     // Get all symbols in current scope
     std::vector<Entry> getCurrentScopeSymbols() const

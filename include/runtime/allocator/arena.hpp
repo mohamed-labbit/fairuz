@@ -46,11 +46,17 @@ public:
 
 private:
     struct VoidPtrHash {
-        SizeType operator()(void const* ptr) const MYLANG_NOEXCEPT { return std::hash<std::uintptr_t>()(reinterpret_cast<std::uintptr_t>(ptr)); }
+        SizeType operator()(void const* ptr) const MYLANG_NOEXCEPT
+        {
+            return std::hash<std::uintptr_t>()(reinterpret_cast<std::uintptr_t>(ptr));
+        }
     };
 
     struct VoidPtrEqual {
-        bool operator()(void const* a, void const* b) const MYLANG_NOEXCEPT { return a == b; }
+        bool operator()(void const* a, void const* b) const MYLANG_NOEXCEPT
+        {
+            return a == b;
+        }
     };
 
     DetailedAllocStats AllocStats_;
@@ -96,11 +102,12 @@ public:
     ArenaAllocator(ArenaAllocator&&) MYLANG_NOEXCEPT = delete;
     ArenaAllocator& operator=(ArenaAllocator&&) MYLANG_NOEXCEPT = delete;
 
-    void setName(std::string const& name) { Name_ = name; }
+    void setName(std::string const& name)
+    {
+        Name_ = name;
+    }
 
-    //==========================================================================
     // Reset and Statistics
-    //==========================================================================
 
     void reset();
 

@@ -88,13 +88,13 @@ public:
     {
     }
 
-    Value(std::int64_t v)
+    Value(std::int64_t const v)
         : Type_(Type::INT)
         , Data_(std::in_place_type<std::int64_t>, v)
     {
     }
 
-    Value(double v)
+    Value(double const v)
         : Type_(Type::FLOAT)
         , Data_(std::in_place_type<double>, v)
     {
@@ -106,19 +106,19 @@ public:
     {
     }
 
-    Value(bool v)
+    Value(bool const v)
         : Type_(Type::BOOL)
         , Data_(std::in_place_type<bool>, v)
     {
     }
 
-    Value(std::vector<Value> v)
+    Value(std::vector<Value> const v)
         : Type_(Type::LIST)
         , Data_(std::in_place_type<std::vector<Value>>, v)
     {
     }
 
-    Value(std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual> v)
+    Value(std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual> const v)
         : Type_(Type::DICT)
         , Data_(std::in_place_type<std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>>, v)
     {

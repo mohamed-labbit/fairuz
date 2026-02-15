@@ -27,9 +27,7 @@ protected:
     Kind Kind_;
 
 public:
-    explicit Stmt() = default;
-
-    explicit Stmt(StringRef s)
+    explicit Stmt()
     {
         Kind_ = Kind::INVALID;
     }
@@ -51,8 +49,6 @@ public:
         : Statements_(stmts)
     {
         Kind_ = Kind::BLOCK;
-
-        // assert((!Statements_.empty() && Statements_[0]) && "'statements' argument to BlockStmt is null");
     }
 
     BlockStmt(BlockStmt&&) MYLANG_NOEXCEPT = delete;

@@ -25,7 +25,7 @@ public:
         return new (mem) T(std::forward<Args>(args)...);
     }
 
-    std::string toString(bool verbose) const
+    std::string toString(bool const verbose) const
     {
         return Allocator_.toString(verbose);
     }

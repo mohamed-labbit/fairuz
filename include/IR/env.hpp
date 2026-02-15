@@ -39,7 +39,7 @@ public:
         if (parent_)
             return parent_->get(name);
 
-        throw std::runtime_error("Undefined variable: " + name.toUtf8());
+        throw std::runtime_error("Undefined variable: " + std::string(name.data()));
     }
 
     // Assign to existing variable (searches parent scopes)
@@ -56,7 +56,7 @@ public:
             return;
         }
 
-        throw std::runtime_error("Undefined variable: " + name.toUtf8());
+        throw std::runtime_error("Undefined variable: " + std::string(name.data()));
     }
 
     bool exists(StringRef const& name) const

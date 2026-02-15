@@ -17,12 +17,12 @@ private:
         bool last;
     };
 
-    std::string glyph(bool last) const
+    std::string glyph(bool const last) const
     {
         return last ? "└─ " : "├─ ";
     }
 
-    std::string pipe(bool last) const
+    std::string pipe(bool const last) const
     {
         return last ? "   " : "│  ";
     }
@@ -196,7 +196,7 @@ private:
     }
 
 public:
-    explicit ASTPrinter(bool color = true)
+    explicit ASTPrinter(bool const color = true)
         : UseColor_(color)
     {
     }

@@ -39,8 +39,6 @@ public:
         _panic(msg);
     }
 
-    /*
-     */
     void report(Severity sev, std::int32_t line, std::int32_t col, std::int32_t len, std::string const& msg, std::string const& code = "")
     {
         Diagnostics_.push_back({ sev, line, col, len, msg, code });

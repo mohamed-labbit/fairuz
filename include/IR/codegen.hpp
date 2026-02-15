@@ -109,7 +109,7 @@ public:
                         return callUserFunction(funcValue, args);
                 }
 
-                throw std::runtime_error("Undefined function: " + func_name.toUtf8());
+                throw std::runtime_error("Undefined function: " + std::string(func_name.data()));
             }
 
             case ast::Expr::Kind::LIST: {
@@ -140,7 +140,7 @@ public:
 
                 StringRef name = name_expr->getValue();
                 if (!Env_->exists(name))
-                    throw std::runtime_error("Undefined variable: " + name.toUtf8());
+                    throw std::runtime_error("Undefined variable: " + std::string(name.data()));
 
                 return Env_->get(name);
             }

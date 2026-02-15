@@ -7,6 +7,138 @@
 
 namespace mylang {
 
+StringRef::StringRef()
+    : StringData_(createEmpty())
+{
+}
+
+StringRef::StringRef(SizeType const s)
+    : StringData_(string_allocator.allocateObject<String>(s))
+{
+}
+
+StringRef::StringRef(StringRef const& other, SizeType offset, SizeType length)
+    : StringData_(other.get())
+    , Offset_(other.Offset_ + offset)
+    , Length_(length)
+{
+    if (Length_ == 0)
+        Length_ = other.Length_ - offset;
+
+    if (StringData_)
+        StringData_->increment();
+}
+
+StringRef::StringRef(char const* lit)
+    : StringData_(string_allocator.allocateObject<String>(lit))
+{
+    Length_ = StringData_->length();
+}
+
+StringRef::StringRef(char16_t const* u16_str)
+{
+    if (!u16_str || !u16_str[0]) {
+        StringData_ = createEmpty();
+        Offset_ = 0;
+        Length_ = 0;
+    } else {
+        StringRef temp = fromUtf16(u16_str);
+        StringData_ = temp.StringData_;
+        Offset_ = temp.Offset_;
+        Length_ = temp.Length_;
+        if (StringData_)
+            StringData_->increment();
+        temp.StringData_ = nullptr; // Prevent temp's destructor from decrementing
+    }
+}
+
+StringRef::StringRef(SizeType const s, char const c)
+    : StringData_(string_allocator.allocateObject<String>(s, c))
+{
+}
+
+StringRef::StringRef(String* data, SizeType offset, SizeType length)
+    : StringData_(data ? data : createEmpty())
+    , Offset_(offset)
+    , Length_(length)
+{
+    if (StringData_)
+        StringData_->increment();
+
+    if (!Length_)
+        Length_ = StringData_->length() - offset;
+}
+
+StringRef::StringRef(StringRef&& other) noexcept
+    : StringData_(other.StringData_)
+    , Offset_(other.Offset_)
+    , Length_(other.Length_)
+{
+    other.StringData_ = nullptr;
+    other.Offset_ = 0;
+    other.Length_ = 0;
+}
+
+StringRef& StringRef::operator=(StringRef&& other) noexcept
+{
+    if (this == &other)
+        return *this;
+
+    // Clean up current data
+    if (StringData_) {
+        StringData_->decrement();
+        if (StringData_->referenceCount() == 0) {
+            StringData_->~String();
+            string_allocator.deallocateObject<String>(StringData_);
+        }
+    }
+
+    // Move from other
+    StringData_ = other.StringData_;
+    Offset_ = other.Offset_;
+    Length_ = other.Length_;
+
+    other.StringData_ = nullptr;
+    other.Offset_ = 0;
+    other.Length_ = 0;
+
+    return *this;
+}
+
+StringRef::~StringRef()
+{
+    if (StringData_) {
+        /// NOTE: this will only be deallocated if it's the last pointer in the arena
+        /// we should probably make a better allocator for that ...
+        StringData_->decrement();
+        if (StringData_->referenceCount() == 0) {
+            StringData_->~String(); // deallocate if possible the string array
+            string_allocator.deallocateObject<String>(StringData_);
+            StringData_ = nullptr;
+        }
+    }
+}
+
+StringRef& StringRef::operator=(StringRef const& other)
+{
+    if (this == &other)
+        return *this;
+
+    // Decrement old reference
+    if (StringData_)
+        StringData_->decrement();
+
+    // Assign new reference
+    StringData_ = other.get();
+    if (StringData_)
+        StringData_->increment();
+
+    Offset_ = other.Offset_;
+    Length_ = other.Length_;
+
+    return *this;
+}
+
 void StringRef::expand(SizeType const new_size)
 {
     ensureUnique();
@@ -405,6 +537,33 @@ StringRef& StringRef::trimWhitespace(std::optional<bool const> leading, std::opt
     }
 
     return *this;
+}
+
+void StringRef::detach()
+{
+    if (!StringData_)
+        return;
+
+    // Determine slice length
+    SizeType copy_len = (Length_ > 0) ? Length_ : (StringData_->length() - Offset_);
+
+    // Allocate a new string of exactly the required size
+    String* s = string_allocator.allocateObject<String>(copy_len);
+
+    // Copy only the relevant portion
+    if (copy_len > 0)
+        ::memcpy(s->ptr(), const_cast<char const*>(StringData_->ptr() + Offset_), copy_len * sizeof(char));
+
+    s->setLen(copy_len);
+    s->terminate();
+
+    // Decrement old reference
+    StringData_->decrement();
+
+    // Update StringRef to point to new data
+    StringData_ = s;
+    Offset_ = 0;
+    Length_ = copy_len;
 }
 
 }
