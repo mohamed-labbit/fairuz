@@ -123,7 +123,10 @@ public:
     }
 
     /// Get beginning of block
-    Pointer begin() const { return Begin_.load(std::memory_order_acquire); }
+    Pointer begin() const
+    {
+        return Begin_.load(std::memory_order_acquire);
+    }
 
     /// Get end of block
     Pointer end() const
@@ -134,10 +137,16 @@ public:
     }
 
     /// Get current next Pointer
-    Pointer cnext() const { return Next_.load(std::memory_order_acquire); }
+    Pointer cnext() const
+    {
+        return Next_.load(std::memory_order_acquire);
+    }
 
     /// Get block size
-    SizeType size() const { return Size_.load(std::memory_order_acquire); }
+    SizeType size() const
+    {
+        return Size_.load(std::memory_order_acquire);
+    }
 
     /**
      * @brief Get remaining free space

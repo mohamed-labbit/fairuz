@@ -25,7 +25,10 @@ public:
         return new (mem) T(std::forward<Args>(args)...);
     }
 
-    std::string toString(bool verbose) const { return Allocator_.toString(verbose); }
+    std::string toString(bool verbose) const
+    {
+        return Allocator_.toString(verbose);
+    }
 };
 
 inline ASTAllocator AST_allocator;

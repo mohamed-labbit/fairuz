@@ -38,10 +38,16 @@ public:
     ~FileError() override = default;
 
     // Override `what()` to return a generic error message (not the detailed message)
-    char const* what() const noexcept override { return Imp_.c_str(); }
+    char const* what() const noexcept override
+    {
+        return Imp_.c_str();
+    }
 
     // Provides access to the stored detailed message
-    std::string const& imp() const { return Imp_; }
+    std::string const& imp() const
+    {
+        return Imp_;
+    }
 };
 
 }

@@ -112,7 +112,10 @@ public:
      *
      * Lock-free: uses atomic acquire ordering
      */
-    Pointer cNext() const { return Next_; }
+    Pointer cNext() const
+    {
+        return Next_;
+    }
 
     /**
      * @brief Get the total size of the block

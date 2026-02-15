@@ -28,9 +28,16 @@ protected:
 
 public:
     explicit Stmt() = default;
-    explicit Stmt(StringRef s) { Kind_ = Kind::INVALID; }
 
-    Kind getKind() const { return Kind_; }
+    explicit Stmt(StringRef s)
+    {
+        Kind_ = Kind::INVALID;
+    }
+
+    Kind getKind() const
+    {
+        return Kind_;
+    }
 };
 
 class BlockStmt : public Stmt {
@@ -52,11 +59,20 @@ public:
     BlockStmt(BlockStmt const&) MYLANG_NOEXCEPT = delete;
     BlockStmt& operator=(BlockStmt const&) MYLANG_NOEXCEPT = delete;
 
-    std::vector<Stmt*> const& getStatements() const { return Statements_; }
+    std::vector<Stmt*> const& getStatements() const
+    {
+        return Statements_;
+    }
 
-    void setStatements(std::vector<Stmt*>& stmts) { Statements_ = stmts; }
+    void setStatements(std::vector<Stmt*>& stmts)
+    {
+        Statements_ = stmts;
+    }
 
-    bool isEmpty() const { return Statements_.empty(); }
+    bool isEmpty() const
+    {
+        return Statements_.empty();
+    }
 };
 
 class ExprStmt : public Stmt {
@@ -76,9 +92,15 @@ public:
     ExprStmt(ExprStmt const&) MYLANG_NOEXCEPT = delete;
     ExprStmt& operator=(ExprStmt const&) MYLANG_NOEXCEPT = delete;
 
-    Expr* getExpr() const { return Expr_; }
+    Expr* getExpr() const
+    {
+        return Expr_;
+    }
 
-    void setExpr(Expr* e) { Expr_ = e; }
+    void setExpr(Expr* e)
+    {
+        Expr_ = e;
+    }
 };
 
 class AssignmentStmt : public Stmt {
@@ -100,13 +122,25 @@ public:
     AssignmentStmt(AssignmentStmt const&) MYLANG_NOEXCEPT = delete;
     AssignmentStmt& operator=(AssignmentStmt const&) MYLANG_NOEXCEPT = delete;
 
-    Expr* getValue() const { return Value_; }
+    Expr* getValue() const
+    {
+        return Value_;
+    }
 
-    Expr* getTarget() const { return Target_; }
+    Expr* getTarget() const
+    {
+        return Target_;
+    }
 
-    void setValue(Expr* v) { Value_ = v; }
+    void setValue(Expr* v)
+    {
+        Value_ = v;
+    }
 
-    void setTarget(NameExpr* t) { Target_ = t; }
+    void setTarget(NameExpr* t)
+    {
+        Target_ = t;
+    }
 };
 
 class IfStmt : public Stmt {
@@ -130,15 +164,30 @@ public:
     IfStmt(IfStmt const&) MYLANG_NOEXCEPT = delete;
     IfStmt& operator=(IfStmt const&) MYLANG_NOEXCEPT = delete;
 
-    Expr* getCondition() const { return Condition_; }
+    Expr* getCondition() const
+    {
+        return Condition_;
+    }
 
-    BlockStmt* getThenBlock() const { return ThenBlock_; }
+    BlockStmt* getThenBlock() const
+    {
+        return ThenBlock_;
+    }
 
-    BlockStmt* getElseBlock() const { return ElseBlock_; }
+    BlockStmt* getElseBlock() const
+    {
+        return ElseBlock_;
+    }
 
-    void setThenBlock(BlockStmt* t) { ThenBlock_ = t; }
+    void setThenBlock(BlockStmt* t)
+    {
+        ThenBlock_ = t;
+    }
 
-    void setElseBlock(BlockStmt* e) { ElseBlock_ = e; }
+    void setElseBlock(BlockStmt* e)
+    {
+        ElseBlock_ = e;
+    }
 };
 
 class WhileStmt : public Stmt {
@@ -160,11 +209,20 @@ public:
     WhileStmt(WhileStmt const&) MYLANG_NOEXCEPT = delete;
     WhileStmt& operator=(WhileStmt const&) MYLANG_NOEXCEPT = delete;
 
-    Expr* getCondition() const { return Condition_; }
+    Expr* getCondition() const
+    {
+        return Condition_;
+    }
 
-    BlockStmt* getBlock() const { return Block_; }
+    BlockStmt* getBlock() const
+    {
+        return Block_;
+    }
 
-    BlockStmt*& getBlockMutable() { return std::ref<BlockStmt*>(Block_); }
+    BlockStmt*& getBlockMutable()
+    {
+        return std::ref<BlockStmt*>(Block_);
+    }
 };
 
 class ForStmt : public Stmt {
@@ -188,13 +246,25 @@ public:
     ForStmt(ForStmt const&) MYLANG_NOEXCEPT = delete;
     ForStmt& operator=(ForStmt const&) MYLANG_NOEXCEPT = delete;
 
-    NameExpr* getTarget() const { return Target_; }
+    NameExpr* getTarget() const
+    {
+        return Target_;
+    }
 
-    Expr* getIter() const { return Iter_; }
+    Expr* getIter() const
+    {
+        return Iter_;
+    }
 
-    BlockStmt* getBlock() const { return Block_; }
+    BlockStmt* getBlock() const
+    {
+        return Block_;
+    }
 
-    void setBlock(BlockStmt* b) { Block_ = b; }
+    void setBlock(BlockStmt* b)
+    {
+        Block_ = b;
+    }
 };
 
 class FunctionDef : public Stmt {
@@ -218,15 +288,30 @@ public:
     FunctionDef(FunctionDef const&) MYLANG_NOEXCEPT = delete;
     FunctionDef& operator=(FunctionDef const&) MYLANG_NOEXCEPT = delete;
 
-    NameExpr* getName() const { return Name_; }
+    NameExpr* getName() const
+    {
+        return Name_;
+    }
 
-    std::vector<Expr*> const& getParameters() const { return Params_->getElements(); }
+    std::vector<Expr*> const& getParameters() const
+    {
+        return Params_->getElements();
+    }
 
-    BlockStmt* getBody() const { return Body_; }
+    BlockStmt* getBody() const
+    {
+        return Body_;
+    }
 
-    void setBody(BlockStmt* b) { Body_ = b; }
+    void setBody(BlockStmt* b)
+    {
+        Body_ = b;
+    }
 
-    bool hasParameters() const { return !Params_ || Params_->isEmpty(); }
+    bool hasParameters() const
+    {
+        return !Params_ || Params_->isEmpty();
+    }
 };
 
 class ReturnStmt : public Stmt {
@@ -246,7 +331,10 @@ public:
     ReturnStmt(ReturnStmt const&) MYLANG_NOEXCEPT = delete;
     ReturnStmt& operator=(ReturnStmt const&) MYLANG_NOEXCEPT = delete;
 
-    Expr* getValue() const { return Value_; }
+    Expr* getValue() const
+    {
+        return Value_;
+    }
 };
 
 } // ast

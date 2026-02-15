@@ -25,17 +25,35 @@ public:
     ASTNode& operator=(ASTNode const&) = delete;
     ASTNode& operator=(ASTNode&&) = delete;
 
-    NodeType getNodeType() const { return NodeType_; }
+    NodeType getNodeType() const
+    {
+        return NodeType_;
+    }
 
-    void setNodeType(NodeType const t) { NodeType_ = t; }
+    void setNodeType(NodeType const t)
+    {
+        NodeType_ = t;
+    }
 
-    SizeType getLine() const { return Line_; }
+    SizeType getLine() const
+    {
+        return Line_;
+    }
 
-    SizeType getColumn() const { return Column_; }
+    SizeType getColumn() const
+    {
+        return Column_;
+    }
 
-    void setLine(SizeType l) { Line_ = l; }
+    void setLine(SizeType const l)
+    {
+        Line_ = l;
+    }
 
-    void setColumn(SizeType c) { Column_ = c; }
+    void setColumn(SizeType const c)
+    {
+        Column_ = c;
+    }
 
     virtual ~ASTNode() = default;
 };

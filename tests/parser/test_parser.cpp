@@ -836,8 +836,6 @@ TEST_F(ParserTest, ParseVeryLongIdentifier)
 
     StringRef value = name->getValue();
 
-    std::cout << value << std::endl;
-
     EXPECT_GT(value.len(), 100) << "Identifier should be very long";
     EXPECT_LT(value.len(), 10000) << "Identifier should have reasonable upper bound";
 

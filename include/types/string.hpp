@@ -161,7 +161,10 @@ public:
         return Length_ == other.Length_ && ::memcmp(data(), other.data(), Length_ * sizeof(char)) == 0;
     }
 
-    MYLANG_NODISCARD bool operator!=(StringRef const& other) const noexcept { return !(*this == other); }
+    MYLANG_NODISCARD bool operator!=(StringRef const& other) const noexcept
+    {
+        return !(*this == other);
+    }
 
     // Expand capacity
     void expand(SizeType const new_size);
@@ -251,15 +254,30 @@ public:
     }
 
     // Accessors
-    MYLANG_NODISCARD SizeType len() const noexcept { return Length_; }
+    MYLANG_NODISCARD SizeType len() const noexcept
+    {
+        return Length_;
+    }
 
-    MYLANG_NODISCARD SizeType cap() const noexcept { return StringData_ ? StringData_->cap() : 0; }
+    MYLANG_NODISCARD SizeType cap() const noexcept
+    {
+        return StringData_ ? StringData_->cap() : 0;
+    }
 
-    MYLANG_NODISCARD String* get() const noexcept { return StringData_; }
+    MYLANG_NODISCARD String* get() const noexcept
+    {
+        return StringData_;
+    }
 
-    MYLANG_NODISCARD bool empty() const noexcept { return Length_ == 0; }
+    MYLANG_NODISCARD bool empty() const noexcept
+    {
+        return Length_ == 0;
+    }
 
-    char const* data() const noexcept { return StringData_ ? StringData_->ptr() + Offset_ : nullptr; }
+    char const* data() const noexcept
+    {
+        return StringData_ ? StringData_->ptr() + Offset_ : nullptr;
+    }
 
     char* data() noexcept
     {
@@ -297,7 +315,10 @@ public:
 
     StringRef substr(std::optional<SizeType> start, std::optional<SizeType> end) const;
 
-    StringRef substr(SizeType start) const { return substr(std::optional<SizeType>(start), std::nullopt); }
+    StringRef substr(SizeType start) const
+    {
+        return substr(std::optional<SizeType>(start), std::nullopt);
+    }
 
     // Convert to double - improved error handling
     double toDouble(SizeType* pos = nullptr) const;
@@ -370,7 +391,10 @@ struct StringRefHash {
 
 // Equal comparison functor for consistency
 struct StringRefEqual {
-    bool operator()(StringRef const& lhs, StringRef const& rhs) const noexcept { return lhs == rhs; }
+    bool operator()(StringRef const& lhs, StringRef const& rhs) const noexcept
+    {
+        return lhs == rhs;
+    }
 };
 
 } // namespace mylang

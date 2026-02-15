@@ -28,7 +28,7 @@ private:
     std::vector<Issue> Issues_;
     ControlFlowGraph Cfg_;
 
-public: 
+public:
     SymbolTable::DataType_t inferType(ast::Expr const* expr);
 
     void reportIssue(Issue::Severity sev, StringRef const& msg, std::int32_t line, StringRef const& sugg = u"");

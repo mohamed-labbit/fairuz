@@ -14,7 +14,7 @@ void ParserProfiler::printReport() const
     std::cout << "╔═══════════════════════════════════════╗\n";
     std::cout << "║      Parser Performance Report        ║\n";
     std::cout << "╚═══════════════════════════════════════╝\n\n";
-    
+
     double total = 0;
 
     for (ParserProfiler::Timing const& t : Timings_)

@@ -43,19 +43,35 @@ public:
             string_allocator.deallocateArray<char>(storage_.heap.ptr, storage_.heap.cap);
     }
 
-    // ---- helpers ----
+    SizeType length() const noexcept
+    {
+        return len_;
+    }
 
-    SizeType length() const noexcept { return len_; }
+    bool isHeap() const noexcept
+    {
+        return is_heap;
+    }
 
-    bool isHeap() const noexcept { return is_heap; }
+    bool isInlined() const noexcept
+    {
+        return !isHeap();
+    }
 
-    bool isInlined() const noexcept { return !isHeap(); }
+    char* ptr() noexcept
+    {
+        return isHeap() ? storage_.heap.ptr : storage_.sso;
+    }
 
-    char* ptr() noexcept { return isHeap() ? storage_.heap.ptr : storage_.sso; }
+    char const* ptr() const noexcept
+    {
+        return isHeap() ? storage_.heap.ptr : storage_.sso;
+    }
 
-    char const* ptr() const noexcept { return isHeap() ? storage_.heap.ptr : storage_.sso; }
-
-    SizeType cap() const noexcept { return isHeap() ? storage_.heap.cap - 1 /*subtract the nul terminator*/ : SSO_SIZE - 1; }
+    SizeType cap() const noexcept
+    {
+        return isHeap() ? storage_.heap.cap - 1 /*subtract the nul terminator*/ : SSO_SIZE - 1;
+    }
 
     void setLen(SizeType const n)
     {
@@ -166,8 +182,6 @@ public:
         terminate();
     }
 
-    // ---- ops ----
-
     bool operator==(String const& other) const noexcept
     {
         if (length() != other.length())
@@ -179,12 +193,30 @@ public:
         return ::memcmp(ptr(), other.ptr(), length() * sizeof(char)) == 0;
     }
 
-    char operator[](SizeType const i) const noexcept { return ptr()[i]; }
-    char& operator[](SizeType const i) noexcept { return ptr()[i]; }
+    char operator[](SizeType const i) const noexcept
+    {
+        return ptr()[i];
+    }
 
-    void increment() const noexcept { ++RefCount; }
-    void decrement() const noexcept { --RefCount; }
-    SizeType referenceCount() const noexcept { return RefCount; }
+    char& operator[](SizeType const i) noexcept
+    {
+        return ptr()[i];
+    }
+
+    void increment() const noexcept
+    {
+        ++RefCount;
+    }
+
+    void decrement() const noexcept
+    {
+        --RefCount;
+    }
+
+    SizeType referenceCount() const noexcept
+    {
+        return RefCount;
+    }
 };
 
 }

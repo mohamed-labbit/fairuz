@@ -17,9 +17,15 @@ private:
         bool last;
     };
 
-    std::string glyph(bool last) const { return last ? "└─ " : "├─ "; }
+    std::string glyph(bool last) const
+    {
+        return last ? "└─ " : "├─ ";
+    }
 
-    std::string pipe(bool last) const { return last ? "   " : "│  "; }
+    std::string pipe(bool last) const
+    {
+        return last ? "   " : "│  ";
+    }
 
     std::string color(std::string const& s, std::string const& c) const
     {
@@ -195,10 +201,20 @@ public:
     {
     }
 
-    void print(Expr const* e) { printExpr(e, { "", true }); }
-    void print(Stmt const* s) { printStmt(s, { "", true }); }
+    void print(Expr const* e)
+    {
+        printExpr(e, { "", true });
+    }
 
-    std::uint32_t getNodeCount() const { return NodeCount_; }
+    void print(Stmt const* s)
+    {
+        printStmt(s, { "", true });
+    }
+
+    std::uint32_t getNodeCount() const
+    {
+        return NodeCount_;
+    }
 };
 
 } // ast

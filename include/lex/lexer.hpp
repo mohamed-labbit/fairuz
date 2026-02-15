@@ -54,13 +54,19 @@ public:
     MYLANG_COMPILER_ABI const tok::Token* prev();
 
     /// @brief Returns the full token stream
-    MYLANG_COMPILER_ABI const std::vector<tok::Token const*>& tokenStream() const { return TokStream_; }
+    MYLANG_COMPILER_ABI const std::vector<tok::Token const*>& tokenStream() const
+    {
+        return TokStream_;
+    }
 
     /// @brief Tokenizes the entire input source
     MYLANG_COMPILER_ABI std::vector<tok::Token const*> tokenize();
 
     /// @brief Returns the current indentation size
-    MYLANG_COMPILER_ABI const SizeType indentSize() const { return IndentSize_; }
+    MYLANG_COMPILER_ABI const SizeType indentSize() const
+    {
+        return IndentSize_;
+    }
 
     /**
      * @brief Constructs a token with optional metadata.

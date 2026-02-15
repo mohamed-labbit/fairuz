@@ -37,11 +37,20 @@ public:
 
     virtual ~Expr() = default;
 
-    void setStr(StringRef const s) { Str_ = s; }
+    void setStr(StringRef const s)
+    {
+        Str_ = s;
+    }
 
-    StringRef getStr() const { return Str_; }
+    StringRef getStr() const
+    {
+        return Str_;
+    }
 
-    Kind getKind() const { return Kind_; }
+    Kind getKind() const
+    {
+        return Kind_;
+    }
 };
 
 class BinaryExpr : public Expr {
@@ -71,17 +80,35 @@ public:
     BinaryExpr& operator=(BinaryExpr const&) MYLANG_NOEXCEPT = delete;
     BinaryExpr& operator=(BinaryExpr&&) MYLANG_NOEXCEPT = delete;
 
-    Expr* getLeft() const { return Left_; }
+    Expr* getLeft() const
+    {
+        return Left_;
+    }
 
-    Expr* getRight() const { return Right_; }
+    Expr* getRight() const
+    {
+        return Right_;
+    }
 
-    tok::TokenType getOperator() const { return Operator_; }
+    tok::TokenType getOperator() const
+    {
+        return Operator_;
+    }
 
-    void setLeft(Expr* left) { Left_ = left; }
+    void setLeft(Expr* left)
+    {
+        Left_ = left;
+    }
 
-    void setRight(Expr* right) { Right_ = right; }
+    void setRight(Expr* right)
+    {
+        Right_ = right;
+    }
 
-    void setOperator(tok::TokenType op) { Operator_ = op; }
+    void setOperator(tok::TokenType op)
+    {
+        Operator_ = op;
+    }
 };
 
 class UnaryExpr : public Expr {
@@ -107,9 +134,15 @@ public:
     UnaryExpr& operator=(UnaryExpr const&) MYLANG_NOEXCEPT = delete;
     UnaryExpr& operator=(UnaryExpr&&) MYLANG_NOEXCEPT = delete;
 
-    Expr* getOperand() const { return Operand_; }
+    Expr* getOperand() const
+    {
+        return Operand_;
+    }
 
-    tok::TokenType getOperator() const { return Operator_; }
+    tok::TokenType getOperator() const
+    {
+        return Operator_;
+    }
 };
 
 class LiteralExpr : public Expr {
@@ -141,13 +174,25 @@ public:
     LiteralExpr& operator=(LiteralExpr const&) MYLANG_NOEXCEPT = delete;
     LiteralExpr& operator=(LiteralExpr&&) MYLANG_NOEXCEPT = delete;
 
-    StringRef getValue() const { return Literal_; }
+    StringRef getValue() const
+    {
+        return Literal_;
+    }
 
-    Type getType() const { return Type_; }
+    Type getType() const
+    {
+        return Type_;
+    }
 
-    bool isNumeric() const { return Type_ == Type::NUMBER; }
+    bool isNumeric() const
+    {
+        return Type_ == Type::NUMBER;
+    }
 
-    float toNumber() const { return std::stof(getValue().data()); }
+    float toNumber() const
+    {
+        return std::stof(getValue().data());
+    }
 };
 
 class NameExpr : public Expr {
@@ -176,7 +221,10 @@ public:
     NameExpr& operator=(NameExpr const&) MYLANG_NOEXCEPT = delete;
     NameExpr& operator=(NameExpr&&) MYLANG_NOEXCEPT = delete;
 
-    StringRef getValue() const { return Str_; }
+    StringRef getValue() const
+    {
+        return Str_;
+    }
 };
 
 class ListExpr : public Expr {
@@ -196,22 +244,40 @@ public:
     ~ListExpr() override = default;
 
     // FIXED: Added const version of operator[]
-    Expr* operator[](SizeType const i) { return Elements_[i]; }
+    Expr* operator[](SizeType const i)
+    {
+        return Elements_[i];
+    }
 
-    Expr const* operator[](SizeType const i) const { return Elements_[i]; }
+    Expr const* operator[](SizeType const i) const
+    {
+        return Elements_[i];
+    }
 
     ListExpr(ListExpr&&) MYLANG_NOEXCEPT = delete;
     ListExpr(ListExpr const&) MYLANG_NOEXCEPT = delete;
     ListExpr& operator=(ListExpr const&) MYLANG_NOEXCEPT = delete;
     ListExpr& operator=(ListExpr&&) MYLANG_NOEXCEPT = delete;
 
-    std::vector<Expr*> const& getElements() const { return Elements_; }
+    std::vector<Expr*> const& getElements() const
+    {
+        return Elements_;
+    }
 
-    std::vector<Expr*>& getElementsMutable() { return Elements_; }
+    std::vector<Expr*>& getElementsMutable()
+    {
+        return Elements_;
+    }
 
-    bool isEmpty() const { return Elements_.empty(); }
+    bool isEmpty() const
+    {
+        return Elements_.empty();
+    }
 
-    SizeType size() const { return Elements_.size(); }
+    SizeType size() const
+    {
+        return Elements_.size();
+    }
 };
 
 class CallExpr : public Expr {
@@ -243,7 +309,10 @@ public:
     CallExpr& operator=(CallExpr const&) MYLANG_NOEXCEPT = delete;
     CallExpr& operator=(CallExpr&&) MYLANG_NOEXCEPT = delete;
 
-    Expr* getCallee() const { return Callee_; }
+    Expr* getCallee() const
+    {
+        return Callee_;
+    }
 
     std::vector<Expr*> const& getArgs() const
     {
@@ -257,14 +326,26 @@ public:
         return Args_->getElementsMutable();
     }
 
-    ListExpr* getArgsAsListExpr() { return Args_; }
+    ListExpr* getArgsAsListExpr()
+    {
+        return Args_;
+    }
 
-    ListExpr const* getArgsAsListExpr() const { return Args_; }
+    ListExpr const* getArgsAsListExpr() const
+    {
+        return Args_;
+    }
 
-    CallLocation getCallLocation() const { return CallLocation_; }
+    CallLocation getCallLocation() const
+    {
+        return CallLocation_;
+    }
 
     // FIXED: Corrected logic - returns true when there ARE arguments
-    bool hasArguments() const { return Args_ && !Args_->isEmpty(); }
+    bool hasArguments() const
+    {
+        return Args_ && !Args_->isEmpty();
+    }
 };
 
 class AssignmentExpr : public Expr {
@@ -292,9 +373,15 @@ public:
     AssignmentExpr& operator=(AssignmentExpr const&) MYLANG_NOEXCEPT = delete;
     AssignmentExpr& operator=(AssignmentExpr&&) MYLANG_NOEXCEPT = delete;
 
-    NameExpr* getTarget() const { return Target_; }
+    NameExpr* getTarget() const
+    {
+        return Target_;
+    }
 
-    Expr* getValue() const { return Value_; }
+    Expr* getValue() const
+    {
+        return Value_;
+    }
 };
 
 } // namespace ast

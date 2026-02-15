@@ -1,6 +1,5 @@
 #include "../../../include/runtime/allocator/arena_block.hpp"
 
-
 namespace mylang {
 namespace runtime {
 namespace allocator {

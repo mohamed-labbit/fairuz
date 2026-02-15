@@ -29,9 +29,15 @@ public:
 
     DiagnosticEngine() = default;
 
-    void emit(std::string const& msg, Severity sv = Severity::ERROR) { emitError(msg, sv); }
+    void emit(std::string const& msg, Severity sv = Severity::ERROR)
+    {
+        emitError(msg, sv);
+    }
 
-    [[noreturn]] void panic(std::string const& msg) { _panic(msg); }
+    [[noreturn]] void panic(std::string const& msg)
+    {
+        _panic(msg);
+    }
 
     /*
      */

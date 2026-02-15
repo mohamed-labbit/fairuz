@@ -56,7 +56,10 @@ struct FreeListRegion {
      * @param size Required size in bytes
      * @return true if this region is large enough
      */
-    bool hasSpaceFor(SizeType size) const { return size >= this->size; }
+    bool hasSpaceFor(SizeType size) const
+    {
+        return size >= this->size;
+    }
 
     /**
      * @brief Comparison operator for ordered containers

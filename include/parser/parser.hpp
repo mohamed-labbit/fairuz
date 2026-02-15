@@ -144,7 +144,10 @@ public:
     ast::Expr* parseParenthesizedExpr();
 
     /// @brief Parses a general expression
-    ast::Expr* parseExpression() { return parseAssignmentExpr(); }
+    ast::Expr* parseExpression()
+    {
+        return parseAssignmentExpr();
+    }
 
     /// @brief Parses an assignment expression
     ast::Expr* parseAssignmentExpr();
@@ -160,7 +163,10 @@ public:
     }
 
     /// @brief Parses logical expressions (AND / OR)
-    ast::Expr* parseLogicalExpr() { return parseLogicalExprPrecedence(0); }
+    ast::Expr* parseLogicalExpr()
+    {
+        return parseLogicalExprPrecedence(0);
+    }
 
     /// @brief Parses logical expressions using precedence climbing
     ast::Expr* parseLogicalExprPrecedence(unsigned min_precedence);
@@ -172,7 +178,10 @@ public:
     ast::Expr* parseComparisonExpr();
 
     /// @brief Parses binary expressions
-    ast::Expr* parseBinaryExpr() { return parseBinaryExprPrecedence(0); }
+    ast::Expr* parseBinaryExpr()
+    {
+        return parseBinaryExprPrecedence(0);
+    }
 
     /// @brief Parses unary expressions
     ast::Expr* parseUnaryExpr();
@@ -191,9 +200,9 @@ public:
     // std::vector<ast::Stmt*> parse();
     /// TODO: not sure if these should be private
     /// @brief check wether or not we reached the end of the file so not to bother lookin for stuff to parse
-    bool weDone() const 
-    { 
-        return Lexer_.current()->is(tok::TokenType::ENDMARKER); 
+    bool weDone() const
+    {
+        return Lexer_.current()->is(tok::TokenType::ENDMARKER);
     }
 
     /// @brief Checks whether the current token is of the given type
@@ -203,9 +212,15 @@ public:
         return Lexer_.current()->is(type);
     }
 
-    tok::Token const* currentToken() { return Lexer_.current(); }
+    tok::Token const* currentToken()
+    {
+        return Lexer_.current();
+    }
 
-    ast::Expr* parse() { return parseExpression(); }
+    ast::Expr* parse()
+    {
+        return parseExpression();
+    }
 
     ast::BlockStmt* parseIndentedBlock();
 
@@ -213,10 +228,16 @@ private:
     lex::Lexer Lexer_; // Underlying lexer providing tokens
 
     /// @brief Peeks ahead in the token stream without consuming
-    tok::Token const* peek(SizeType offset = 1) { return Lexer_.peek(offset); }
+    tok::Token const* peek(SizeType offset = 1)
+    {
+        return Lexer_.peek(offset);
+    }
 
     /// @brief Advances and returns the next token
-    tok::Token const* advance() { return Lexer_.next(); }
+    tok::Token const* advance()
+    {
+        return Lexer_.next();
+    }
 
     /// @brief Matches and consumes a token if it is of the given type
     bool match(tok::TokenType const type);
@@ -246,9 +267,9 @@ private:
     }
 
     /// @brief Retrieves a source line for diagnostics
-    StringRef getSourceLine(SizeType line) 
-    { 
-        return Lexer_.getSourceLine(line); 
+    StringRef getSourceLine(SizeType line)
+    {
+        return Lexer_.getSourceLine(line);
     }
 
     /// @brief Enters a new scope (currently a no-op)

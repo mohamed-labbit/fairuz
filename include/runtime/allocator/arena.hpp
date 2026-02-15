@@ -104,11 +104,20 @@ public:
 
     void reset();
 
-    SizeType totalAllocated() const { return AllocStats_.TotalAllocated; }
+    SizeType totalAllocated() const
+    {
+        return AllocStats_.TotalAllocated;
+    }
 
-    SizeType totalAllocations() const { return AllocStats_.TotalAllocations; }
+    SizeType totalAllocations() const
+    {
+        return AllocStats_.TotalAllocations;
+    }
 
-    SizeType activeBlocks() const { return AllocStats_.ActiveBlocks; }
+    SizeType activeBlocks() const
+    {
+        return AllocStats_.ActiveBlocks;
+    }
 
     /**
      * @brief Allocate a new memory block

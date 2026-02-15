@@ -69,9 +69,16 @@ struct AllocationHeader {
     static MYLANG_CONSTEXPR uint32_t MAGIC = 0xDEADC0DE; ///< Expected magic value
 
     /// Compute checksum from header fields
-    uint32_t compute_checksum() const { return magic ^ size ^ alignment; }
+    uint32_t compute_checksum() const
+    {
+        return magic ^ size ^ alignment;
+    }
+
     /// Validate header integrity
-    bool is_valid() const { return magic == MAGIC && checksum == compute_checksum(); }
+    bool is_valid() const
+    {
+        return magic == MAGIC && checksum == compute_checksum();
+    }
 };
 
 /**
