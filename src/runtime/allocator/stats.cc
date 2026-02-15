@@ -393,7 +393,7 @@ void StatsPrinter::printErrorStatistics(std::ostream& os) const
     os << "+------------------------------------------------------------------------------------+\n";
 }
 
-void StatsPrinter::printMetric(std::ostream& os, char const* label, std::string const& value, bool warn = false) const
+void StatsPrinter::printMetric(std::ostream& os, char const* label, std::string const& value, bool warn) const
 {
     using std::left;
     using std::right;

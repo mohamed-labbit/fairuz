@@ -85,7 +85,7 @@ public:
     }
 
 private:
-    SourceManager SourceManager_;              // Manages source input and positions
+    input::SourceManager SourceManager_;              // Manages source input and positions
     SizeType TokIndex_ { 0 };                  // Current token index
     unsigned IndentSize_ { 0 };                // Current indentation size
     unsigned IndentLevel_ { 0 };               // current level of indentation
