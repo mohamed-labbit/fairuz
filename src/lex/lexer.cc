@@ -4,7 +4,7 @@
 namespace mylang {
 namespace lex {
 
-Lexer::Lexer(input::FileManager* fm)
+Lexer::Lexer(FileManager* fm)
     : SourceManager_(fm)
     , TokIndex_(0)
     , IndentSize_(4)

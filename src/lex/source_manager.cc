@@ -1,10 +1,10 @@
-#include "../../include/input/source_manager.hpp"
+#include "../../include/lex/source_manager.hpp"
 
 #include <functional>
 #include <iostream>
 
 namespace mylang {
-namespace input {
+namespace lex {
 
 void SourceManager::reset()
 {

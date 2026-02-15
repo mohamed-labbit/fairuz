@@ -1,6 +1,5 @@
-#include "../../include/input/file_manager.hpp"
+#include "../../include/lex/file_manager.hpp"
 #include "../../include/diag/diagnostic.hpp"
-#include "../../include/input/error.hpp"
 
 #include <filesystem>
 #include <iostream>
@@ -9,7 +8,7 @@
 namespace fs = std::filesystem;
 
 namespace mylang {
-namespace input {
+namespace lex {
 
 FileManager::FileManager(std::string const& filepath)
     : FilePath_(filepath)

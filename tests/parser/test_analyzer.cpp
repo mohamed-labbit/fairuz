@@ -1,6 +1,6 @@
 #include "../../include//ast/AST_allocator.hpp"
 #include "../../include//ast/ast.hpp"
-#include "../../include/input/file_manager.hpp"
+#include "../../include/lex/file_manager.hpp"
 #include "../../include/parser/analyzer.hpp"
 #include "../../include/types/string.hpp"
 #include <gmock/gmock.h>
@@ -9,7 +9,6 @@
 #include <vector>
 
 using namespace mylang;
-using namespace mylang::input;
 using namespace mylang::parser;
 using namespace testing;
 

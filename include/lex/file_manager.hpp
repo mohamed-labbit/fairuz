@@ -12,7 +12,7 @@
 namespace fs = std::filesystem;
 
 namespace mylang {
-namespace input {
+namespace lex {
 
 /// @brief Error codes for FileManager operations
 enum class FileManagerError {

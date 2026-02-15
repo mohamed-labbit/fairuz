@@ -18,7 +18,7 @@ inline void PrintTo(tok::Token const& tok, std::ostream* os)
 
 TEST(LexerTest, TestIndentationLevel0)
 {
-    input::FileManager file_manager(lexer_test_cases_dir() / "recognizes_indentation_level0.txt");
+    lex::FileManager file_manager(lexer_test_cases_dir() / "recognizes_indentation_level0.txt");
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
     tok::Token const* expected = lexer.make_token(tok::TokenType::IDENTIFIER, "ا", 1, 1);
@@ -30,7 +30,7 @@ TEST(LexerTest, TestIndentationLevel0)
 
 TEST(LexerTest, TestIndentationLevel1)
 {
-    input::FileManager file_manager(lexer_test_cases_dir() / "recognizes_indentation_level1.txt");
+    lex::FileManager file_manager(lexer_test_cases_dir() / "recognizes_indentation_level1.txt");
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
     std::vector<tok::Token const*> expected = {
@@ -53,7 +53,7 @@ TEST(LexerTest, TestIndentationLevel1)
 
 TEST(LexerTest, TestIndentationLevel2)
 {
-    input::FileManager file_manager(lexer_test_cases_dir() / "recognizes_indentation_level2.txt");
+    lex::FileManager file_manager(lexer_test_cases_dir() / "recognizes_indentation_level2.txt");
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
     std::vector<tok::Token const*> expected = {

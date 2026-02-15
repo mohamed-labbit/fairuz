@@ -8,7 +8,7 @@
 #pragma once
 
 #include "../ast/ast.hpp"
-#include "../input/file_manager.hpp"
+#include "../lex/file_manager.hpp"
 #include "../lex/lexer.hpp"
 #include "../lex/token.hpp"
 
@@ -95,7 +95,7 @@ public:
     explicit Parser() = default;
 
     /// @brief Constructs a parser bound to a file manager
-    explicit Parser(input::FileManager* fm)
+    explicit Parser(lex::FileManager* fm)
         : Lexer_(fm)
     {
         if (!fm)

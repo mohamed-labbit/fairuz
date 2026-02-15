@@ -7,7 +7,7 @@
 
 #include "../../include//ast/ast.hpp"
 #include "../../include//ast/printer.hpp"
-#include "../../include/input/file_manager.hpp"
+#include "../../include/lex/file_manager.hpp"
 #include "../../include/lex/lexer.hpp"
 #include "../../include/parser/parser.hpp"
 #include "../test_config.h"
@@ -63,7 +63,7 @@ ast::ASTPrinter AST_Printer;
 // Literal Expression Tests
 TEST_F(ParserTest, ParseNumberLiteral)
 {
-    input::FileManager file_manager(parser_test_cases_dir() / "number_literal.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "number_literal.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
     ast::LiteralExpr* literal = dynamic_cast<ast::LiteralExpr*>(expr);
@@ -77,7 +77,7 @@ TEST_F(ParserTest, ParseNumberLiteral)
 
 TEST_F(ParserTest, ParseStringLiteral)
 {
-    input::FileManager file_manager(parser_test_cases_dir() / "string_literal.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "string_literal.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
     ast::LiteralExpr* literal = dynamic_cast<ast::LiteralExpr*>(expr);
@@ -92,7 +92,7 @@ TEST_F(ParserTest, ParseStringLiteral)
 
 TEST_F(ParserTest, ParseBooleanLiteralTrue)
 {
-    input::FileManager file_manager(parser_test_cases_dir() / "boolean_literal_true.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "boolean_literal_true.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
     ast::LiteralExpr* literal = dynamic_cast<ast::LiteralExpr*>(expr);
@@ -106,7 +106,7 @@ TEST_F(ParserTest, ParseBooleanLiteralTrue)
 
 TEST_F(ParserTest, ParseBooleanLiteralFalse)
 {
-    input::FileManager file_manager(parser_test_cases_dir() / "boolean_literal_false.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "boolean_literal_false.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
     ast::LiteralExpr* literal = dynamic_cast<ast::LiteralExpr*>(expr);
@@ -120,7 +120,7 @@ TEST_F(ParserTest, ParseBooleanLiteralFalse)
 
 TEST_F(ParserTest, ParseNoneLiteral)
 {
-    input::FileManager file_manager(parser_test_cases_dir() / "none_literal.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "none_literal.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
     ast::LiteralExpr* literal = dynamic_cast<ast::LiteralExpr*>(expr);
@@ -135,7 +135,7 @@ TEST_F(ParserTest, ParseNoneLiteral)
 TEST_F(ParserTest, ParseParenthesizedNumberLiteral)
 {
     // (x)
-    input::FileManager file_manager(parser_test_cases_dir() / "parenthesized_number.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "parenthesized_number.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
     ast::LiteralExpr* literal = dynamic_cast<ast::LiteralExpr*>(expr);
@@ -152,7 +152,7 @@ TEST_F(ParserTest, ParseParenthesizedNumberLiteral)
 
 TEST_F(ParserTest, ParseIdentifier)
 {
-    input::FileManager file_manager(parser_test_cases_dir() / "identifier.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "identifier.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
     ast::NameExpr* name_expr = dynamic_cast<ast::NameExpr*>(expr);
@@ -178,7 +178,7 @@ TEST_F(ParserTest, ParseSimpleIdentifier)
 // Call Expression Tests
 TEST_F(ParserTest, ParseCallExpressionNoArgs)
 {
-    input::FileManager file_manager(parser_test_cases_dir() / "call_expression.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "call_expression.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -201,7 +201,7 @@ TEST_F(ParserTest, ParseCallExpressionNoArgs)
 
 TEST_F(ParserTest, ParseCallExpressionWithOneArg)
 {
-    input::FileManager file_manager(parser_test_cases_dir() / "call_expression_with_one_argument.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "call_expression_with_one_argument.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -229,7 +229,7 @@ TEST_F(ParserTest, ParseCallExpressionWithOneArg)
 TEST_F(ParserTest, ParseNestedCallExpression)
 {
     /// nested call f(g(x))
-    input::FileManager file_manager(parser_test_cases_dir() / "nested_call_expression.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "nested_call_expression.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -284,7 +284,7 @@ TEST_F(ParserTest, ParseNestedCallExpression)
 
 TEST_F(ParserTest, ParseSimpleAddition)
 {
-    input::FileManager file_manager(parser_test_cases_dir() / "simple_addition.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "simple_addition.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -320,7 +320,7 @@ TEST_F(ParserTest, ParseSimpleAddition)
 
 TEST_F(ParserTest, ParseSimpleMultiplication)
 {
-    input::FileManager file_manager(parser_test_cases_dir() / "simple_multiplication.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "simple_multiplication.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -356,7 +356,7 @@ TEST_F(ParserTest, ParseSimpleMultiplication)
 
 TEST_F(ParserTest, ParseSimpleSubtraction)
 {
-    input::FileManager file_manager(parser_test_cases_dir() / "simple_subtraction.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "simple_subtraction.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -392,7 +392,7 @@ TEST_F(ParserTest, ParseSimpleSubtraction)
 
 TEST_F(ParserTest, ParseSimpleDivision)
 {
-    input::FileManager file_manager(parser_test_cases_dir() / "simple_division.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "simple_division.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -431,7 +431,7 @@ TEST_F(ParserTest, ParseSimpleDivision)
 TEST_F(ParserTest, ParseComplexExpression)
 {
     // Test operator precedence: 2 + 3 * 4 should be 2 + (3 * 4)
-    input::FileManager file_manager(parser_test_cases_dir() / "complex_expression.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "complex_expression.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -486,7 +486,7 @@ TEST_F(ParserTest, ParseComplexExpression)
 TEST_F(ParserTest, ParseNestedParentheses)
 {
     // Test: ((2 + 3) * 4)
-    input::FileManager file_manager(parser_test_cases_dir() / "nested_parens.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "nested_parens.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -512,7 +512,7 @@ TEST_F(ParserTest, ParseChainedComparison)
 {
     GTEST_SKIP() << "It isn't trivial if this feature should be in the lang at all";
     // Test: a < b < c (should parse as (a < b) < c due to left associativity)
-    input::FileManager file_manager(parser_test_cases_dir() / "chained_comparison.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "chained_comparison.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -536,7 +536,7 @@ TEST_F(ParserTest, ParseChainedComparison)
 TEST_F(ParserTest, ParseLogicalExpression)
 {
     // Test: a and b or c (should be (a and b) or c)
-    input::FileManager file_manager(parser_test_cases_dir() / "logical_expression.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "logical_expression.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -560,7 +560,7 @@ TEST_F(ParserTest, ParseLogicalExpression)
 TEST_F(ParserTest, ParseUnaryChain)
 {
     // Test: --x (double negation)
-    input::FileManager file_manager(parser_test_cases_dir() / "unary_chain.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "unary_chain.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -587,7 +587,7 @@ TEST_F(ParserTest, ParseUnaryChain)
 TEST_F(ParserTest, ParseComplexFunctionCall)
 {
     // Test: func(a + b, c * d)
-    input::FileManager file_manager(parser_test_cases_dir() / "complex_function_call.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "complex_function_call.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -661,7 +661,7 @@ TEST_F(ParserTest, ParseInvalidSyntaxThrows)
 {
     // GTEST_SKIP() << "ParseInvalidSyntaxThrows: not checked yet";
     // Test: + + (invalid: operator without operands)
-    input::FileManager file_manager(parser_test_cases_dir() / "invalid_syntax.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "invalid_syntax.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -677,7 +677,7 @@ TEST_F(ParserTest, ParseMissingOperand)
 {
     // GTEST_SKIP() << "ParseMissingOperand: not checked yet";
     // Test: a + (missing right operand)
-    input::FileManager file_manager(parser_test_cases_dir() / "missing_operand.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "missing_operand.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -698,7 +698,7 @@ TEST_F(ParserTest, ParseUnmatchedParenthesis)
 {
     // GTEST_SKIP() << "ParseUnmatchedParenthesis: not checked yet";
     // Test: (a + b (missing closing paren)
-    input::FileManager file_manager(parser_test_cases_dir() / "unmatched_paren.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "unmatched_paren.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -713,7 +713,7 @@ TEST_F(ParserTest, ParseExtraClosingParenthesis)
 {
     // GTEST_SKIP() << "ParseExtraClosingParenthesis: not checked yet";
     // Test: a + b) (extra closing paren)
-    input::FileManager file_manager(parser_test_cases_dir() / "extra_paren.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "extra_paren.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -729,7 +729,7 @@ TEST_F(ParserTest, ParseUnexpectedEOF)
 {
     // GTEST_SKIP() << "ParseUnexpectedEOF: not checked yet";
     // Test: a + b + (EOF in the middle of expression)
-    input::FileManager file_manager(parser_test_cases_dir() / "unexpected_eof.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "unexpected_eof.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -748,7 +748,7 @@ TEST_F(ParserTest, ParseInvalidOperatorSequence)
 {
     // GTEST_SKIP() << "ParseInvalidOperatorSequence: not checked yet";
     // Test: a ++ b (invalid operator sequence)
-    input::FileManager file_manager(parser_test_cases_dir() / "invalid_operator_seq.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "invalid_operator_seq.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -774,7 +774,7 @@ TEST_F(ParserTest, ParseEmptyInput)
 {
     // GTEST_SKIP() << "ParseEmptyInput: not checked yet";
     // Test: completely empty file
-    input::FileManager file_manager(parser_test_cases_dir() / "empty_input.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "empty_input.txt");
     parser::Parser parser(&file_manager);
 
     EXPECT_TRUE(parser.weDone()) << "Parser should recognize empty input immediately";
@@ -791,7 +791,7 @@ TEST_F(ParserTest, ParseWhitespaceOnly)
 {
     // GTEST_SKIP() << "ParseWhitespaceOnly: not checked yet";
     // Test: file with only whitespace and newlines
-    input::FileManager file_manager(parser_test_cases_dir() / "whitespace_only.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "whitespace_only.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -805,7 +805,7 @@ TEST_F(ParserTest, ParseWhitespaceOnly)
 TEST_F(ParserTest, ParseSingleIdentifier)
 {
     // Test: just "x"
-    input::FileManager file_manager(parser_test_cases_dir() / "single_identifier.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "single_identifier.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -824,7 +824,7 @@ TEST_F(ParserTest, ParseSingleIdentifier)
 TEST_F(ParserTest, ParseVeryLongIdentifier)
 {
     // Test: extremely long identifier (1000+ characters)
-    input::FileManager file_manager(parser_test_cases_dir() / "long_identifier.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "long_identifier.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -851,7 +851,7 @@ TEST_F(ParserTest, ParseVeryLongIdentifier)
 TEST_F(ParserTest, ParseUnicodeIdentifiers)
 {
     // Test: Arabic identifiers like in SimpleAddition test
-    input::FileManager file_manager(parser_test_cases_dir() / "unicode_identifiers.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "unicode_identifiers.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -879,7 +879,7 @@ TEST_F(ParserTest, ParseUnicodeIdentifiers)
 TEST_F(ParserTest, ParseEmptyList)
 {
     // Test: []
-    input::FileManager file_manager(parser_test_cases_dir() / "empty_list.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "empty_list.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -897,7 +897,7 @@ TEST_F(ParserTest, ParseEmptyList)
 TEST_F(ParserTest, ParseEmptyTuple)
 {
     // Test: ()
-    input::FileManager file_manager(parser_test_cases_dir() / "empty_tuple.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "empty_tuple.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -916,7 +916,7 @@ TEST_F(ParserTest, ParseListWithTrailingComma)
 {
     // GTEST_SKIP() << "ParseListWithTrailingComma: not checked yet";
     // Test: [1, 2, 3,]
-    input::FileManager file_manager(parser_test_cases_dir() / "list_trailing_comma.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "list_trailing_comma.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -935,7 +935,7 @@ TEST_F(ParserTest, ParseNestedLists)
 {
     // GTEST_SKIP() << "ParseNestedLists: not checked yet";
     // Test: [[1, 2], [3, 4]]
-    input::FileManager file_manager(parser_test_cases_dir() / "nested_lists.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "nested_lists.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -965,7 +965,7 @@ TEST_F(ParserTest, ParseNestedLists)
 TEST_F(ParserTest, ParseAssignment)
 {
     // Test: x := 42
-    input::FileManager file_manager(parser_test_cases_dir() / "assignment.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "assignment.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* node = parser.parse();
     ASSERT_NE(node, nullptr) << "Should parse assignment";
@@ -990,7 +990,7 @@ TEST_F(ParserTest, ParseAssignment)
 TEST_F(ParserTest, ParseChainedAssignment)
 {
     // Test: x := y := 5 (should be right associative: x := (y := 5))
-    input::FileManager file_manager(parser_test_cases_dir() / "chained_assignment.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "chained_assignment.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -1015,7 +1015,7 @@ TEST_F(ParserTest, ParseChainedAssignmentWithExpr)
     // Test: x := y := (a + b)
     // This should parse as: x := (y := (a + b))
     // Due to right-associativity of assignment
-    input::FileManager file_manager(parser_test_cases_dir() / "chained_assignment_with_expression.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "chained_assignment_with_expression.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -1069,7 +1069,7 @@ TEST_F(ParserTest, DISABLED_ParseLargeFile)
     GTEST_SKIP() << "DISABLED_ParseLargeFile: not checked yet";
     // Disabled by default, enable for performance testing
     // Test: file with thousands of expressions
-    input::FileManager file_manager(parser_test_cases_dir() / "large_file.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "large_file.txt");
     parser::Parser parser(&file_manager);
     auto start = std::chrono::high_resolution_clock::now();
     int expr_count = 0;
@@ -1094,7 +1094,7 @@ TEST_F(ParserTest, ParseDeeplyNestedExpression)
 {
     // GTEST_SKIP() << "DISABLED_ParseDeeplyNestedExpression: not checked yet";
     // Test: ((((((((((x))))))))))  - 100+ levels deep
-    input::FileManager file_manager(parser_test_cases_dir() / "deeply_nested.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "deeply_nested.txt");
     parser::Parser parser(&file_manager);
     ast::Expr* expr = parser.parse();
 
@@ -1128,7 +1128,7 @@ TEST_F(ParserTest, ParseDeeplyNestedExpression)
 
 TEST_F(ParserTest, ParseWhileLoop)
 {
-    input::FileManager file_manager(parser_test_cases_dir() / "while_loop.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "while_loop.txt");
     parser::Parser parser(&file_manager);
     ast::Stmt* stmt = parser.parseWhileStmt();
     ASSERT_NE(stmt, nullptr) << "Should parse while loop statement";
@@ -1180,7 +1180,7 @@ TEST_F(ParserTest, ParseWhileLoop)
 
 TEST_F(ParserTest, ParseComplexeIfStatement)
 {
-    input::FileManager file_manager(parser_test_cases_dir() / "complexe_if_statement.txt");
+    lex::FileManager file_manager(parser_test_cases_dir() / "complexe_if_statement.txt");
     parser::Parser parser(&file_manager);
 
     ast::Stmt* stmt = parser.parseIfStmt();

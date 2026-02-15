@@ -9,13 +9,13 @@
 #include <string>
 
 namespace mylang {
-namespace input {
+namespace lex {
 
 class SourceManager {
 public:
     explicit SourceManager() = default;
 
-    explicit SourceManager(input::FileManager* fm)
+    explicit SourceManager(FileManager* fm)
         : FileManager_(fm)
     {
         if (!FileManager_)
@@ -76,7 +76,7 @@ private:
         SizeType bytes { 0 }; // Number of bytes this character occupies
     };
 
-    input::FileManager* FileManager_ { nullptr };
+    FileManager* FileManager_ { nullptr };
     Context Context_;
     uint32_t Current_ { BUFFER_END };
     SizeType CurrentBytes_ { 0 }; // Bytes of the current character

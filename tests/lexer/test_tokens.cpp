@@ -1,4 +1,4 @@
-#include "../../include/input/file_manager.hpp"
+#include "../../include/lex/file_manager.hpp"
 #include "../../include/lex/lexer.hpp"
 #include "../../include/lex/token.hpp"
 
@@ -10,7 +10,6 @@
 #include <vector>
 
 using namespace mylang;
-using input::FileManager;
 using StringRef = StringRef;
 
 namespace {
@@ -33,7 +32,7 @@ inline void PrintTo(tok::Token const& tok, std::ostream* os)
 
 TEST(LexerTest, RecognizesPlus)
 {
-    FileManager file_manager(test_cases_path / "recognizes_plus.txt");
+    lex::FileManager file_manager(test_cases_path / "recognizes_plus.txt");
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
     tok::Token const* expected = lexer.make_token(tok::TokenType::OP_PLUS, u"+", 1, 1);
@@ -45,7 +44,7 @@ TEST(LexerTest, RecognizesPlus)
 
 TEST(LexerTest, RecognizesInteger)
 {
-    FileManager file_manager(test_cases_path / "recognizes_integer.txt");
+    lex::FileManager file_manager(test_cases_path / "recognizes_integer.txt");
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
     tok::Token const* expected = lexer.make_token(tok::TokenType::NUMBER, u"123", 1, 1);
@@ -57,7 +56,7 @@ TEST(LexerTest, RecognizesInteger)
 
 TEST(LexerTest, RecognizesFloat)
 {
-    FileManager file_manager(test_cases_path / "recognizes_float.txt");
+    lex::FileManager file_manager(test_cases_path / "recognizes_float.txt");
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
     tok::Token const* expected = lexer.make_token(tok::TokenType::FLOAT, u"123.456", 1, 1);
@@ -69,7 +68,7 @@ TEST(LexerTest, RecognizesFloat)
 
 TEST(LexerTest, RecognizesIdentifier)
 {
-    FileManager file_manager(test_cases_path / "recognizes_identifier.txt");
+    lex::FileManager file_manager(test_cases_path / "recognizes_identifier.txt");
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
     tok::Token const* expected = lexer.make_token(tok::TokenType::IDENTIFIER, u"مرحبا", 1, 1);
@@ -81,7 +80,7 @@ TEST(LexerTest, RecognizesIdentifier)
 
 TEST(LexerTest, RecognizesKeyword)
 {
-    FileManager file_manager(test_cases_path / "recognizes_keyword.txt");
+    lex::FileManager file_manager(test_cases_path / "recognizes_keyword.txt");
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
     EXPECT_EQ(tokens.size(), 3);
@@ -92,7 +91,7 @@ TEST(LexerTest, RecognizesKeyword)
 
 TEST(LexerTest, RecognizesNoneKeyword)
 {
-    FileManager file_manager(test_cases_path / "recognizes_none_keyword.txt");
+    lex::FileManager file_manager(test_cases_path / "recognizes_none_keyword.txt");
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
     auto none_it = std::find_if(tokens.begin(), tokens.end(), [](auto const& tok) { return tok->type() == tok::TokenType::KW_NONE; });
@@ -102,7 +101,7 @@ TEST(LexerTest, RecognizesNoneKeyword)
 
 TEST(LexerTest, RecognizesBooleanKeywords)
 {
-    FileManager file_manager(test_cases_path / "recognizes_boolean_keywords.txt");
+    lex::FileManager file_manager(test_cases_path / "recognizes_boolean_keywords.txt");
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
     auto has_true = std::any_of(tokens.begin(), tokens.end(), [](auto const& tok) { return tok->type() == tok::TokenType::KW_TRUE && tok->lexeme() == u"صحيح"; });
@@ -113,7 +112,7 @@ TEST(LexerTest, RecognizesBooleanKeywords)
 
 TEST(LexerTest, RecognizesStringLiteral)
 {
-    FileManager file_manager(test_cases_path / "recognizes_string_literal.txt");
+    lex::FileManager file_manager(test_cases_path / "recognizes_string_literal.txt");
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
     tok::Token const* expected = lexer.make_token(tok::TokenType::STRING, u"العالم", 1, 1);
@@ -132,7 +131,7 @@ TEST(LexerTest, RecognizesStringLiteral)
 
 TEST(LexerTest, RecognizesExpression00)
 {
-    input::FileManager file_manager(test_cases_path / "recognizes_expression.txt");
+    lex::FileManager file_manager(test_cases_path / "recognizes_expression.txt");
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
     std::vector<tok::Token const*> expected = {
@@ -149,7 +148,7 @@ TEST(LexerTest, RecognizesExpression00)
 
 TEST(LexerTest, RecognizesStmt00)
 {
-    input::FileManager file_manager(test_cases_path / "recognizes_stmt_00.txt");
+    lex::FileManager file_manager(test_cases_path / "recognizes_stmt_00.txt");
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
     std::vector<tok::Token const*> expected = { lexer.make_token(tok::TokenType::BEGINMARKER, u"", 1, 1), lexer.make_token(tok::TokenType::KW_IF, u"اذا", 1, 1),
@@ -163,7 +162,7 @@ TEST(LexerTest, RecognizesStmt00)
 
 TEST(LexerTest, RecognizesStmt01)
 {
-    input::FileManager file_manager(test_cases_path / "recognizes_stmt_01.txt");
+    lex::FileManager file_manager(test_cases_path / "recognizes_stmt_01.txt");
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
     std::vector<tok::Token const*> expected = {
@@ -179,7 +178,7 @@ TEST(LexerTest, RecognizesStmt01)
 
 TEST(LexerTest, RecognizesStmt02)
 {
-    input::FileManager file_manager(test_cases_path / "recognizes_stmt_02.txt");
+    lex::FileManager file_manager(test_cases_path / "recognizes_stmt_02.txt");
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
     std::vector<tok::Token const*> expected = {
@@ -195,7 +194,7 @@ TEST(LexerTest, RecognizesStmt02)
 
 TEST(LexerTest, RecognizesStmt03)
 {
-    input::FileManager file_manager(test_cases_path / "recognizes_stmt_03.txt");
+    lex::FileManager file_manager(test_cases_path / "recognizes_stmt_03.txt");
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
     std::vector<tok::Token const*> expected = {
@@ -212,7 +211,7 @@ TEST(LexerTest, RecognizesStmt03)
 
 TEST(LexerTest, RecognizesStmt04)
 {
-    input::FileManager file_manager(test_cases_path / "recognizes_stmt_04.txt");
+    lex::FileManager file_manager(test_cases_path / "recognizes_stmt_04.txt");
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
     std::vector<tok::Token const*> expected = {

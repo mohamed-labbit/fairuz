@@ -7,8 +7,7 @@
 //  - IndentationAnalysis: result of analyzing indentation on a new line
 //  - Lexer: the main lexical analyzer producing tokens from source input
 
-#include "../../include/lex/sym_table/table.hpp"
-#include "../input/source_manager.hpp"
+#include "source_manager.hpp"
 #include "token.hpp"
 
 #include <locale>
@@ -30,7 +29,7 @@ public:
     explicit Lexer() = default;
 
     /// @brief Constructs a lexer bound to a file manager
-    explicit Lexer(input::FileManager* file_manager);
+    explicit Lexer(FileManager* file_manager);
 
     /// @brief Copying a lexer is not allowed
     explicit Lexer(Lexer const&) = delete;
@@ -85,7 +84,7 @@ public:
     }
 
 private:
-    input::SourceManager SourceManager_;              // Manages source input and positions
+    SourceManager SourceManager_;              // Manages source input and positions
     SizeType TokIndex_ { 0 };                  // Current token index
     unsigned IndentSize_ { 0 };                // Current indentation size
     unsigned IndentLevel_ { 0 };               // current level of indentation
