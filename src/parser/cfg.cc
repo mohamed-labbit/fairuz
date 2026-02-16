@@ -48,15 +48,15 @@ void ControlFlowGraph::computeLiveness()
 
             // liveOut = union of successors' liveIn
             std::unordered_set<StringRef, StringRefHash, StringRefEqual> newLiveOut;
-            for (std::int32_t succ : block.successors) {
+            for (std::int32_t succ : block.successors)
                 newLiveOut.insert(Blocks_[succ].LiveIn.begin(), Blocks_[succ].LiveIn.end());
-            }
 
             // liveIn = use ∪ (liveOut - def)
             std::unordered_set<StringRef, StringRefHash, StringRefEqual> newLiveIn = block.UseVars;
-            for (StringRef const& var : newLiveOut)
+            for (StringRef const& var : newLiveOut) {
                 if (!block.DefVars.count(var))
                     newLiveIn.insert(var);
+            }
 
             if (newLiveIn != block.LiveIn || newLiveOut != block.LiveOut) {
                 block.LiveIn = std::move(newLiveIn);
@@ -70,9 +70,10 @@ void ControlFlowGraph::computeLiveness()
 std::vector<std::int32_t> ControlFlowGraph::getUnreachableBlocks() const
 {
     std::vector<std::int32_t> unreachable;
-    for (SizeType i = 0, n = Blocks_.size(); i < n; ++i)
+    for (SizeType i = 0, n = Blocks_.size(); i < n; ++i) {
         if (!Blocks_[i].IsReachable)
             unreachable.push_back(i);
+    }
     return unreachable;
 }
 

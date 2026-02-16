@@ -132,6 +132,7 @@ std::string StatsFormatter::formatTime(std::uint64_t nanoseconds)
 {
     if (nanoseconds == 0)
         return "0 ns";
+
     if (nanoseconds == UINT64_MAX)
         return "N/A";
 
@@ -383,10 +384,13 @@ void StatsPrinter::printErrorStatistics(std::ostream& os) const
 
     if (stats_.AllocationFailures > 0)
         printMetric(os, "Allocation Failures", std::to_string(stats_.AllocationFailures), true);
+
     if (stats_.DoubleFreeAttempts > 0)
         printMetric(os, "Double-Free Attempts", std::to_string(stats_.DoubleFreeAttempts), true);
+
     if (stats_.InvalidFreeAttempts > 0)
         printMetric(os, "Invalid Free Attempts", std::to_string(stats_.InvalidFreeAttempts), true);
+
     if (stats_.ZeroByteRequests > 0)
         printMetric(os, "Zero-Byte Requests", std::to_string(stats_.ZeroByteRequests), false);
 

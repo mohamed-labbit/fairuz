@@ -101,7 +101,6 @@ Pointer ArenaBlock::allocate(SizeType bytes, std::optional<SizeType> alignment)
         return nullptr; // Not enough space
 
     Pointer new_next = reinterpret_cast<Pointer>(aligned + bytes);
-
     // Try to atomically update next Pointer
     Next_ = new_next;
     // Success! Return the aligned address

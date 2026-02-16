@@ -182,7 +182,8 @@ void StringRef::reserve(SizeType const new_capacity)
 {
     if (new_capacity <= cap())
         return;
-    expand(new_capacity);
+    
+        expand(new_capacity);
 }
 
 // Erase character at position - use view manipulation when possible
@@ -280,9 +281,11 @@ char StringRef::operator[](SizeType const i) const
 {
     if (!StringData_ || !data())
         throw std::runtime_error("StringRef::operator[]: null string data");
-    if (i >= Length_)
+    
+        if (i >= Length_)
         throw std::out_of_range("StringRef::operator[]: index out of bounds");
-    return (*StringData_)[i + Offset_];
+    
+        return (*StringData_)[i + Offset_];
 }
 
 // Bounds-checked access (non-const)
@@ -291,9 +294,11 @@ char& StringRef::operator[](SizeType const i)
     ensureUnique();
     if (!StringData_ || !data())
         throw std::runtime_error("StringRef::operator[]: null string data");
-    if (i >= Length_)
+    
+        if (i >= Length_)
         throw std::out_of_range("StringRef::operator[]: index out of bounds");
-    return (*StringData_)[i + Offset_];
+    
+        return (*StringData_)[i + Offset_];
 }
 
 // Safe access with bounds checking (always checked)
@@ -301,9 +306,11 @@ MYLANG_NODISCARD char StringRef::at(SizeType const i) const
 {
     if (!StringData_ || !data())
         throw std::runtime_error("StringRef::at: null string data");
-    if (i >= Length_)
+    
+        if (i >= Length_)
         throw std::out_of_range("StringRef::at: index out of bounds");
-    return (*StringData_)[i + Offset_];
+    
+        return (*StringData_)[i + Offset_];
 }
 
 char& StringRef::at(SizeType const i)
@@ -311,8 +318,10 @@ char& StringRef::at(SizeType const i)
     ensureUnique();
     if (!StringData_ || !data())
         throw std::runtime_error("StringRef::at: null string data");
-    if (i >= Length_)
+    
+        if (i >= Length_)
         throw std::out_of_range("StringRef::at: index out of bounds");
+
     return (*StringData_)[i + Offset_];
 }
 

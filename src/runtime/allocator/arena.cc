@@ -218,6 +218,7 @@ Pointer ArenaAllocator::allocateFromBlocks(SizeType alloc_size, SizeType align)
     if (!allocateBlock(new_block_size, align)) {
         if (DebugFeatures_)
             std::cerr << "-- Failed to allocate block : ArenaAllocator::allocate_block()" << std::endl;
+            
         return nullptr;
     }
 

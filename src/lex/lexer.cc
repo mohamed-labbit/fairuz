@@ -167,6 +167,7 @@ tok::Token const* Lexer::lexToken()
             // consume entire comment line
             while (current != '\n' && current != BUFFER_END)
                 current = SourceManager_.nextChar();
+
             continue;
         }
 
@@ -181,6 +182,7 @@ tok::Token const* Lexer::lexToken()
             while (current != '\n' && current != BUFFER_END && current != quote) {
                 if (current == '\\') {
                     current = SourceManager_.nextChar();
+
                     // handle escape sequences
                     switch (current) {
                     case 'n':
@@ -210,6 +212,7 @@ tok::Token const* Lexer::lexToken()
                         string_literal += util::encode_utf8_str(current);
                         break;
                     }
+
                     SourceManager_.consumeChar();
                 } else {
                     string_literal += util::encode_utf8_str(current);
@@ -232,6 +235,7 @@ tok::Token const* Lexer::lexToken()
             SourceManager_.consumeChar();
             tok::Token const* ret = finish(current == ',' ? tok::TokenType::COMMA : tok::TokenType::DOT,
                 util::encode_utf8_str(current), line, col);
+
             return ret;
         }
 
@@ -520,6 +524,7 @@ tok::Token const* Lexer::lexToken()
 
     tok::Token const* ret = make_token(tok::TokenType::ENDMARKER, "", last_line, last_col);
     store(ret);
+
     return TokStream_.back();
 }
 
@@ -588,6 +593,7 @@ std::vector<tok::Token const*> Lexer::tokenize()
 {
     while (next()->type() != tok::TokenType::ENDMARKER)
         ;
+
     return this->TokStream_;
 }
 

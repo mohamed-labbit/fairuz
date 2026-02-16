@@ -136,24 +136,7 @@ public:
     {
     }
 
-    SizeType size()
-    {
-        if (isInt())
-            return sizeof(*asInt());
-        if (isFloat())
-            return sizeof(*asFloat());
-        if (isString())
-            return (*asString()).len();
-        if (isBool())
-            return sizeof(bool);
-        if (isList())
-            return (*asList()).size();
-        if (isDict())
-            return (*asDict()).size();
-        if (isFunction())
-            return sizeof(Function);
-        return sizeof(ValueData);
-    }
+    SizeType size();
 
     Type getType() const
     {
@@ -245,17 +228,17 @@ public:
     }
 
     // Getters with safety
-    std::int64_t const* asInt() const;
     std::int64_t* asInt();
+    std::int64_t const* asInt() const;
 
-    double const* asFloat() const;
     double* asFloat();
+    double const* asFloat() const;
 
-    StringRef const* asString() const;
     StringRef* asString();
+    StringRef const* asString() const;
 
-    bool const* asBool() const;
     bool* asBool();
+    bool const* asBool() const;
 
     std::vector<Value>* asList();
     std::vector<Value> const* asList() const;

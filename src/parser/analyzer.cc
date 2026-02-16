@@ -36,6 +36,7 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(ast::Expr const* ex
         SymbolTable::Symbol* sym = CurrentScope_->lookup(name->getValue());
         if (sym)
             return sym->DataType;
+
         break;
     }
 
@@ -87,10 +88,12 @@ void SemanticAnalyzer::analyzeExpr(ast::Expr const* expr)
     switch (expr->getKind()) {
     case ast::Expr::Kind::NAME: {
         ast::NameExpr const* name = static_cast<ast::NameExpr const*>(expr);
+
         if (!CurrentScope_->isDefined(name->getValue()))
             reportIssue(Issue::Severity::ERROR, u"Undefined variable: " + name->getValue(), expr->getLine(), u"Did you forget to initialize it?");
         else
             CurrentScope_->markUsed(name->getValue(), expr->getLine());
+
         break;
     }
 
@@ -140,9 +143,10 @@ void SemanticAnalyzer::analyzeExpr(ast::Expr const* expr)
         if (call->getCallee()->getKind() == ast::Expr::Kind::NAME) {
             ast::NameExpr const* name = static_cast<ast::NameExpr const*>(call->getCallee());
 
-            if (SymbolTable::Symbol* sym = CurrentScope_->lookup(name->getValue()))
+            if (SymbolTable::Symbol* sym = CurrentScope_->lookup(name->getValue())) {
                 if (sym->SymbolType != SymbolTable::SymbolType::FUNCTION)
                     reportIssue(Issue::Severity::ERROR, u"'" + name->getValue() + u"' is not callable", expr->getLine());
+            }
         }
 
         if (call->getCallee()->getKind() == ast::Expr::Kind::NAME) {
@@ -162,6 +166,7 @@ void SemanticAnalyzer::analyzeExpr(ast::Expr const* expr)
         ast::ListExpr const* list = static_cast<ast::ListExpr const*>(expr);
         for (ast::Expr const* const& elem : list->getElements())
             analyzeExpr(elem);
+
         break;
     }
 
@@ -204,19 +209,24 @@ void SemanticAnalyzer::analyzeStmt(ast::Stmt const* stmt)
         // Warn about unused expression results
         if (exprStmt->getExpr()->getKind() != ast::Expr::Kind::CALL)
             reportIssue(Issue::Severity::INFO, u"Expression result not used", stmt->getLine());
+
         break;
     }
 
     case ast::Stmt::Kind::IF: {
         ast::IfStmt const* ifStmt = static_cast<ast::IfStmt const*>(stmt);
         analyzeExpr(ifStmt->getCondition());
+
         // Check for constant conditions
         if (ifStmt->getCondition()->getKind() == ast::Expr::Kind::LITERAL)
             reportIssue(Issue::Severity::WARNING, u"Condition is always constant", stmt->getLine(), u"Consider removing if statement");
+
         for (ast::Stmt const* const& s : ifStmt->getThenBlock()->getStatements())
             analyzeStmt(s);
+
         for (ast::Stmt const* const& s : ifStmt->getElseBlock()->getStatements())
             analyzeStmt(s);
+
         break;
     }
 

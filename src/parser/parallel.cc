@@ -31,6 +31,7 @@ std::vector<std::vector<tok::Token>> ParallelParser::splitIntoChunks(std::vector
 {
     std::vector<std::vector<tok::Token>> chunks;
     std::vector<tok::Token> current;
+
     for (tok::Token const& tok : tokens) {
         current.push_back(tok);
         if (tok.type() == tok::TokenType::KW_FN && current.size() > 1) {
@@ -39,8 +40,10 @@ std::vector<std::vector<tok::Token>> ParallelParser::splitIntoChunks(std::vector
             current.push_back(tok);
         }
     }
+
     if (!current.empty())
         chunks.push_back(current);
+
     return chunks;
 }
 

@@ -20,22 +20,30 @@ std::optional<double> ASTOptimizer::evaluateConstant(ast::Expr const* expr)
 
         if (left == std::nullopt || right == std::nullopt)
             return std::nullopt;
+
         if (bin->getOperator() == tok::TokenType::OP_PLUS)
             return *left + *right;
+
         if (bin->getOperator() == tok::TokenType::OP_MINUS)
             return *left - *right;
+
         if (bin->getOperator() == tok::TokenType::OP_STAR)
             return *left * *right;
+
         if (bin->getOperator() == tok::TokenType::OP_SLASH) {
             if (*right == 0.0)
                 return std::nullopt;
+
             return *left / *right;
         }
+
         if (bin->getOperator() == tok::TokenType::OP_PERCENT) {
             if (*right == 0.0)
                 return std::nullopt;
+
             return std::fmod(*left, *right);
         }
+
         if (bin->getOperator() == tok::TokenType::OP_POWER)
             return std::pow(*left, *right);
     } else if (expr->getKind() == ast::Expr::Kind::UNARY) {
@@ -44,8 +52,10 @@ std::optional<double> ASTOptimizer::evaluateConstant(ast::Expr const* expr)
 
         if (operand == std::nullopt)
             return std::nullopt;
+
         if (un->getOperator() == tok::TokenType::OP_PLUS)
             return *operand;
+
         if (un->getOperator() == tok::TokenType::OP_MINUS)
             return -*operand;
     }
@@ -83,6 +93,7 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
                 return bin->getLeft();
             }
         }
+
         // x * 1 = x, x / 1 = x
         if ((bin->getOperator() == tok::TokenType::OP_STAR || bin->getOperator() == tok::TokenType::OP_SLASH)
             && right->getKind() == ast::Expr::Kind::LITERAL) {
@@ -92,6 +103,7 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
                 return bin->getLeft();
             }
         }
+
         // x * 0 = 0
         if (bin->getOperator() == tok::TokenType::OP_STAR && right->getKind() == ast::Expr::Kind::LITERAL) {
             ast::LiteralExpr* lit = static_cast<ast::LiteralExpr*>(right);
@@ -100,6 +112,7 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
                 return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER, u"0");
             }
         }
+
         // x * 2 = x + x (strength reduction)
         if (bin->getOperator() == tok::TokenType::OP_STAR && right->getKind() == ast::Expr::Kind::LITERAL) {
             auto* lit = static_cast<ast::LiteralExpr*>(right);
@@ -109,6 +122,7 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
                 return ast::AST_allocator.make<ast::BinaryExpr>(bin->getLeft(), leftClone, tok::TokenType::OP_PLUS);
             }
         }
+
         // x - x = 0
         if (bin->getOperator() == tok::TokenType::OP_MINUS && left->getKind() == ast::Expr::Kind::NAME && right->getKind() == ast::Expr::Kind::NAME) {
             ast::NameExpr* lname = static_cast<ast::NameExpr*>(left);
@@ -128,6 +142,7 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
             ++Stats_.ConstantFolds;
             return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER, StringRef(std::to_string(*val).data()));
         }
+
         // Double negation: --x = x
         if (un->getOperator() == tok::TokenType::OP_MINUS && un->getKind() == ast::Expr::Kind::UNARY) {
             ast::UnaryExpr* innerUn = static_cast<ast::UnaryExpr*>(un);
@@ -145,6 +160,7 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
         for (ast::Expr*& elem : list->getElementsMutable())
             elem = optimizeConstantFolding(elem);
     }
+
     return expr;
 }
 
@@ -177,13 +193,15 @@ ast::Stmt* ASTOptimizer::eliminateDeadCode(ast::Stmt* stmt)
         std::vector<ast::Stmt*> newThenStmts;
         std::vector<ast::Stmt*> newElseStmts;
 
-        for (ast::Stmt* const& s : ifStmt->getThenBlock()->getStatements())
+        for (ast::Stmt* const& s : ifStmt->getThenBlock()->getStatements()) {
             if (ast::Stmt* opt = eliminateDeadCode(s))
                 newThenStmts.push_back(opt);
+        }
 
-        for (ast::Stmt* const& s : ifStmt->getElseBlock()->getStatements())
+        for (ast::Stmt* const& s : ifStmt->getElseBlock()->getStatements()) {
             if (ast::Stmt* opt = eliminateDeadCode(s))
                 newElseStmts.push_back(opt);
+        }
 
         ast::BlockStmt* newThen = ast::AST_allocator.make<ast::BlockStmt>(newThenStmts);
         ast::BlockStmt* newElse = ast::AST_allocator.make<ast::BlockStmt>(newElseStmts);
@@ -198,21 +216,25 @@ ast::Stmt* ASTOptimizer::eliminateDeadCode(ast::Stmt* stmt)
             ast::LiteralExpr* lit = static_cast<ast::LiteralExpr*>(whileStmt->getCondition());
             if (lit->getType() == ast::LiteralExpr::Type::BOOLEAN && lit->getValue() == u"false")
                 ++Stats_.DeadCodeEliminations;
+
             /// TODO:: return std::make_unique<PassStmt>();
         }
 
         std::vector<ast::Stmt*> newBody;
-        for (ast::Stmt* const& s : whileStmt->getBlock()->getStatements())
+        for (ast::Stmt* const& s : whileStmt->getBlock()->getStatements()) {
             if (ast::Stmt* opt = eliminateDeadCode(s))
                 newBody.push_back(opt);
+        }
+
         whileStmt->getBlockMutable()->setStatements(newBody);
     } else if (stmt->getKind() == ast::Stmt::Kind::FOR) {
         ast::ForStmt* forStmt = static_cast<ast::ForStmt*>(stmt);
         std::vector<ast::Stmt*> newBodyStmts;
 
-        for (ast::Stmt* const& s : forStmt->getBlock()->getStatements())
+        for (ast::Stmt* const& s : forStmt->getBlock()->getStatements()) {
             if (ast::Stmt* opt = eliminateDeadCode(s))
                 newBodyStmts.push_back(opt);
+        }
 
         ast::BlockStmt* newBody = ast::AST_allocator.make<ast::BlockStmt>(newBodyStmts);
         forStmt->setBlock(newBody);
@@ -226,8 +248,10 @@ ast::Stmt* ASTOptimizer::eliminateDeadCode(ast::Stmt* stmt)
                 ++Stats_.DeadCodeEliminations;
                 continue; // Skip statements after return
             }
+
             if (s->getKind() == ast::Stmt::Kind::RETURN)
                 seenReturn = true;
+
             if (ast::Stmt* opt = eliminateDeadCode(s))
                 newBodyStmts.push_back(opt);
         }
@@ -266,16 +290,21 @@ StringRef ASTOptimizer::CSEPass::exprToString(ast::Expr const* expr)
     }
 }
 
-StringRef ASTOptimizer::CSEPass::getTempVar() { return StringRef("__cse_temp_") + static_cast<CharType>(TempCounter_++); }
+StringRef ASTOptimizer::CSEPass::getTempVar()
+{
+    return StringRef("__cse_temp_") + static_cast<CharType>(TempCounter_++);
+}
 
 std::optional<StringRef> ASTOptimizer::CSEPass::findCSE(ast::Expr const* expr)
 {
     StringRef exprStr = exprToString(expr);
     if (exprStr.empty())
         return std::nullopt;
+
     auto it = ExprCache_.find(exprStr);
     if (it != ExprCache_.end())
         return it->second;
+
     return std::nullopt;
 }
 
@@ -321,16 +350,21 @@ std::vector<ast::Stmt*> ASTOptimizer::optimize(std::vector<ast::Stmt*> statement
                 exprStmt->setExpr(optimizeConstantFolding(exprStmt->getExpr()));
             }
         }
+
         // O2: Dead code elimination
         if (level >= 2)
             stmt = eliminateDeadCode(stmt);
+
         if (stmt)
             result.push_back(stmt);
     }
     return result;
 }
 
-typename ASTOptimizer::OptimizationStats const& ASTOptimizer::getStats() const { return Stats_; }
+typename ASTOptimizer::OptimizationStats const& ASTOptimizer::getStats() const
+{
+    return Stats_;
+}
 
 void ASTOptimizer::printStats() const
 {

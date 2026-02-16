@@ -125,6 +125,7 @@ SizeType SourceManager::calculateColumnAtOffset(SizeType const target_offset) co
     while (line_start > 0) {
         if (buf.data()[line_start - 1] == '\n')
             break;
+
         --line_start;
     }
 

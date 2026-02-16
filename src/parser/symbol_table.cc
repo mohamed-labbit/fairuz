@@ -20,6 +20,7 @@ typename SymbolTable::Symbol* SymbolTable::lookup(StringRef const& name)
     auto it = Symbols_.find(name);
     if (it != Symbols_.end())
         return &it->second;
+
     return Parent_ ? Parent_->lookup(name) : nullptr;
 }
 
@@ -33,6 +34,7 @@ bool SymbolTable::isDefined(StringRef const& name) const
 {
     if (Symbols_.count(name))
         return true;
+
     return Parent_ ? Parent_->isDefined(name) : false;
 }
 
@@ -55,9 +57,11 @@ SymbolTable* SymbolTable::createChild()
 std::vector<typename SymbolTable::Symbol*> SymbolTable::getUnusedSymbols()
 {
     std::vector<Symbol*> unused;
-    for (auto& [name, sym] : Symbols_)
+    for (auto& [name, sym] : Symbols_) {
         if (!sym.IsUsed && sym.SymbolType == SymbolType::VARIABLE)
             unused.push_back(&sym);
+    }
+    
     return unused;
 }
 

@@ -16,6 +16,7 @@ std::vector<ast::Stmt*> Parser::parseProgram()
             break;
 
         ast::Stmt* stmt = parseStatement();
+
         if (stmt)
             statements.push_back(stmt);
         else {
@@ -34,10 +35,13 @@ ast::Stmt* Parser::parseStatement()
 
     if (check(tok::TokenType::KW_IF))
         return parseIfStmt();
+
     if (check(tok::TokenType::KW_WHILE))
         return parseWhileStmt();
+
     if (check(tok::TokenType::KW_RETURN))
         return parseReturnStmt();
+
     if (check(tok::TokenType::KW_FN))
         return parseFunctionDef();
 
@@ -100,6 +104,7 @@ ast::BlockStmt* Parser::parseIndentedBlock()
             break;
 
         ast::Stmt* stmt = parseStatement();
+
         if (stmt)
             statements.push_back(stmt);
         else {
@@ -138,9 +143,7 @@ ast::ListExpr* Parser::parseParametersList()
 
             StringRef param_name = Lexer_.current()->lexeme();
             advance();
-
             parameters.push_back(ast::AST_allocator.make<ast::NameExpr>(param_name));
-
             skipNewlines();
         } while (match(tok::TokenType::COMMA));
     }
@@ -214,6 +217,7 @@ ast::Stmt* Parser::parseExpressionStmt()
     ast::Expr* expr = parseExpression();
     if (!expr)
         return nullptr;
+
     return ast::AST_allocator.make<ast::ExprStmt>(expr);
 }
 
@@ -263,6 +267,7 @@ ast::Expr* Parser::parseLogicalExprPrecedence(unsigned min_precedence)
 
         left = ast::AST_allocator.make<ast::BinaryExpr>(left, right, op);
     }
+
     return left;
 }
 
@@ -307,7 +312,6 @@ ast::Expr* Parser::parseBinaryExprPrecedence(unsigned min_precedence)
             diagnostic::engine.emit("Expected expression after binary operator", diagnostic::DiagnosticEngine::Severity::ERROR);
             return nullptr;
         }
-
         left = ast::AST_allocator.make<ast::BinaryExpr>(left, right, op);
     }
     return left;
@@ -353,7 +357,6 @@ ast::Expr* Parser::parsePostfixExpr()
                     return nullptr;
                 }
                 args.push_back(arg);
-
                 skipNewlines();
             } while (match(tok::TokenType::COMMA));
         }
@@ -411,11 +414,14 @@ ast::Expr* Parser::parsePrimaryExpr()
             advance();
             return ast::AST_allocator.make<ast::ListExpr>(std::vector<ast::Expr*> {});
         }
+
         ast::Expr* expr = parseExpression();
+
         if (!expr)
             return nullptr;
         if (!consume(tok::TokenType::RPAREN, u"Expected ')' after expression"))
             return nullptr;
+
         return expr;
     }
 
@@ -445,7 +451,6 @@ ast::Expr* Parser::parseListLiteral()
                 return nullptr;
             }
             elements.push_back(elem);
-
             skipNewlines();
         } while (match(tok::TokenType::COMMA));
     }
@@ -472,6 +477,7 @@ void Parser::synchronize()
             advance();
             return;
         }
+        
         if (check(tok::TokenType::KW_IF) || check(tok::TokenType::KW_WHILE) || check(tok::TokenType::KW_RETURN) || check(tok::TokenType::KW_FN))
             return;
 
