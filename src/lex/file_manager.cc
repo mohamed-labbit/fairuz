@@ -18,6 +18,7 @@ FileManager::FileManager(std::string const& filepath)
         diagnostic::engine.panic(toString(FileManagerError::FILE_NOT_OPEN));
 
     InputBuffer_ = std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()).data();
+    InputBuffer_.trimWhitespace(/*leading=*/false, /*trailing=*/true);
     LastKnownWriteTime_ = fs::last_write_time(filepath);
 }
 

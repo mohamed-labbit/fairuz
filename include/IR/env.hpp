@@ -2,11 +2,6 @@
 
 #include "value.hpp"
 
-#include <memory>
-#include <stdexcept>
-#include <string>
-#include <unordered_map>
-
 namespace mylang {
 namespace IR {
 
@@ -27,37 +22,16 @@ public:
     }
 
     // Define a variable in current scope
-    void define(StringRef const& name, Value const& value) { variables_[name] = value; }
+    void define(StringRef const& name, Value const& value)
+    {
+        variables_[name] = value;
+    }
 
     // Get a variable (searches parent scopes)
-    Value get(StringRef const& name) const
-    {
-        auto it = variables_.find(name);
-        if (it != variables_.end())
-            return it->second;
-
-        if (parent_)
-            return parent_->get(name);
-
-        throw std::runtime_error("Undefined variable: " + std::string(name.data()));
-    }
+    Value get(StringRef const& name) const;
 
     // Assign to existing variable (searches parent scopes)
-    void assign(StringRef const& name, Value const& value)
-    {
-        auto it = variables_.find(name);
-        if (it != variables_.end()) {
-            it->second = value;
-            return;
-        }
-
-        if (parent_) {
-            parent_->assign(name, value);
-            return;
-        }
-
-        throw std::runtime_error("Undefined variable: " + std::string(name.data()));
-    }
+    void assign(StringRef const& name, Value const& value);
 
     bool exists(StringRef const& name) const
     {

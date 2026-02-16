@@ -88,6 +88,11 @@ public:
     {
     }
 
+    Value(int v)
+        : Value(static_cast<std::int64_t>(v))
+    {
+    }
+
     Value(std::int64_t const v)
         : Type_(Type::INT)
         , Data_(std::in_place_type<std::int64_t>, v)
@@ -134,17 +139,17 @@ public:
     SizeType size()
     {
         if (isInt())
-            return sizeof(asInt());
+            return sizeof(*asInt());
         if (isFloat())
-            return sizeof(asFloat());
+            return sizeof(*asFloat());
         if (isString())
-            return asString().len();
+            return (*asString()).len();
         if (isBool())
             return sizeof(bool);
         if (isList())
-            return asList().size();
+            return (*asList()).size();
         if (isDict())
-            return asDict().size();
+            return (*asDict()).size();
         if (isFunction())
             return sizeof(Function);
         return sizeof(ValueData);
@@ -174,6 +179,12 @@ public:
         > const data)
     {
         Data_ = data;
+    }
+
+    void setData(std::int64_t v)
+    {
+        Data_ = ValueData(std::in_place_type<std::int64_t>, v);
+        Type_ = Type::INT;
     }
 
     // Type checks
@@ -234,25 +245,29 @@ public:
     }
 
     // Getters with safety
-    std::int64_t asInt() const;
+    std::int64_t const* asInt() const;
+    std::int64_t* asInt();
 
-    double asFloat() const;
+    double const* asFloat() const;
+    double* asFloat();
 
-    StringRef const& asString() const;
+    StringRef const* asString() const;
+    StringRef* asString();
 
-    bool asBool() const;
+    bool const* asBool() const;
+    bool* asBool();
 
-    std::vector<Value>& asList();
-    std::vector<Value> const& asList() const;
+    std::vector<Value>* asList();
+    std::vector<Value> const* asList() const;
 
-    std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>& asDict();
-    std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual> const& asDict() const;
+    std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>* asDict();
+    std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual> const* asDict() const;
 
-    Function& asFunction();
-    Function const& asFunction() const;
+    Function* asFunction();
+    Function const* asFunction() const;
 
-    NativeFunction& asNativeFunction();
-    NativeFunction const& asNativeFunction() const;
+    NativeFunction* asNativeFunction();
+    NativeFunction const* asNativeFunction() const;
 
     double toFloat() const; // Type conversions
 
@@ -296,63 +311,9 @@ public:
     Value getIterator() const;
     Value next();
 
-    static Value makeList(std::vector<Value> list);
-};
-
-class Environment {
-private:
-    std::unordered_map<StringRef, Value> variables_;
-    Environment* parent_; // For nested scopes
-
-public:
-    Environment()
-        : parent_(nullptr)
+    static Value makeList(std::vector<Value> list)
     {
-    }
-
-    explicit Environment(Environment* parent)
-        : parent_(parent)
-    {
-    }
-
-    // Define a variable in current scope
-    void define(StringRef const& name, Value const& value) { variables_[name] = value; }
-
-    // Get a variable (searches parent scopes)
-    Value get(StringRef const& name) const
-    {
-        auto it = variables_.find(name);
-        if (it != variables_.end())
-            return it->second;
-
-        if (parent_)
-            return parent_->get(name);
-
-        throw std::runtime_error("Undefined variable: " + std::string(name.data()));
-    }
-
-    // Assign to existing variable (searches parent scopes)
-    void assign(StringRef const& name, Value const& value)
-    {
-        auto it = variables_.find(name);
-        if (it != variables_.end()) {
-            it->second = value;
-            return;
-        }
-
-        if (parent_) {
-            parent_->assign(name, value);
-            return;
-        }
-
-        throw std::runtime_error("Undefined variable: " + std::string(name.data()));
-    }
-
-    bool exists(StringRef const& name) const
-    {
-        if (variables_.find(name) != variables_.end())
-            return true;
-        return parent_ && parent_->exists(name);
+        return Value(list);
     }
 };
 
