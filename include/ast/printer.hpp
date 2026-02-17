@@ -31,6 +31,7 @@ private:
     {
         if (!UseColor_)
             return s;
+            
         return c + s + Color::RESET;
     }
 
@@ -77,7 +78,7 @@ private:
             std::cout << p.indent + pipe(p.last) << "├─ callee:\n";
             printExpr(c->getCallee(), { p.indent + pipe(p.last) + "│  ", true });
             std::cout << p.indent + pipe(p.last) << "└─ args:\n";
-            for (SizeType i = 0; i < c->getArgs().size(); ++i)
+            for (std::size_t i = 0; i < c->getArgs().size(); ++i)
                 printExpr(c->getArgs()[i], { p.indent + pipe(p.last) + "   ", i + 1 == c->getArgs().size() });
             break;
         }
@@ -85,7 +86,7 @@ private:
         case Expr::Kind::LIST: {
             ListExpr const* l = static_cast<ListExpr const*>(e);
             std::cout << color("List", Color::BLUE) << " [" << l->getElements().size() << "]\n";
-            for (SizeType i = 0; i < l->getElements().size(); ++i)
+            for (std::size_t i = 0; i < l->getElements().size(); ++i)
                 printExpr(l->getElements()[i], { p.indent + pipe(p.last), i + 1 == l->getElements().size() });
             break;
         }
@@ -119,10 +120,10 @@ private:
             FunctionDef const* f = static_cast<FunctionDef const*>(s);
             std::cout << color("FunctionDef", Color::BOLD) << " " << f->getName()->getValue() << "\n";
             std::cout << p.indent + pipe(p.last) << "├─ params:\n";
-            for (SizeType i = 0; i < f->getParameters().size(); ++i)
+            for (std::size_t i = 0; i < f->getParameters().size(); ++i)
                 printExpr(f->getParameters()[i], { p.indent + pipe(p.last) + "│  ", i + 1 == f->getParameters().size() });
             std::cout << p.indent + pipe(p.last) << "└─ body:\n";
-            for (SizeType i = 0; i < f->getBody()->getStatements().size(); ++i)
+            for (std::size_t i = 0; i < f->getBody()->getStatements().size(); ++i)
                 printStmt(f->getBody()->getStatements()[i], { p.indent + pipe(p.last) + "   ", i + 1 == f->getBody()->getStatements().size() });
             break;
         }
@@ -153,7 +154,7 @@ private:
         /*
         case Stmt::Kind::FOR : {
           const ForStmt* f = static_cast<const ForStmt*>(s);
-          std::cout << color(u"For", Color::BOLD) << "\n";
+          std::cout << color("For", Color::BOLD) << "\n";
           std::cout << p.indent + pipe(p.last) << "├─ init:\n";
           if (f->getInit())
             printStmt(f->getInit(), {p.indent + pipe(p.last) + "│  ", true});
@@ -185,7 +186,7 @@ private:
         case Stmt::Kind::BLOCK: {
             BlockStmt const* b = static_cast<BlockStmt const*>(s);
             std::cout << color("Block", Color::BOLD) << " {" << b->getStatements().size() << " stmts}\n";
-            for (SizeType i = 0; i < b->getStatements().size(); ++i)
+            for (std::size_t i = 0; i < b->getStatements().size(); ++i)
                 printStmt(b->getStatements()[i], { p.indent + pipe(p.last), i + 1 == b->getStatements().size() });
             break;
         }

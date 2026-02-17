@@ -9,12 +9,10 @@ class String {
     friend class StringRef;
 
 private:
-    // static constexpr SizeType SSO_FLAG = SizeType(1) << (sizeof(SizeType) * 8 - 1);
-
     union Storage {
         struct {
             char* ptr;
-            SizeType cap;
+            std::size_t cap;
         } heap;
 
         char sso[SSO_SIZE];
@@ -26,8 +24,8 @@ private:
     } storage_;
 
     bool is_heap;
-    SizeType len_ { 0 };
-    mutable SizeType RefCount { 1 };
+    std::size_t len_ { 0 };
+    mutable std::size_t RefCount { 1 };
 
 public:
     String()
@@ -43,7 +41,7 @@ public:
             string_allocator.deallocateArray<char>(storage_.heap.ptr, storage_.heap.cap);
     }
 
-    SizeType length() const noexcept
+    std::size_t length() const noexcept
     {
         return len_;
     }
@@ -68,40 +66,42 @@ public:
         return isHeap() ? storage_.heap.ptr : storage_.sso;
     }
 
-    SizeType cap() const noexcept
+    std::size_t cap() const noexcept
     {
         return isHeap() ? storage_.heap.cap - 1 /*subtract the nul terminator*/ : SSO_SIZE - 1;
     }
 
-    void setLen(SizeType const n)
+    void setLen(std::size_t const n)
     {
         if (!isHeap() && n > cap())
             throw std::invalid_argument("String::setLen(unsigned long n = " + std::to_string(n) + ") : invalid length");
+
         len_ = n;
     }
 
-    void terminate() noexcept { ptr()[length()] = BUFFER_END; }
-
-    // constructors
+    void terminate() noexcept
+    {
+        ptr()[length()] = BUFFER_END;
+    }
 
     String(String const& other);
 
-    String(SizeType const s);
+    String(std::size_t const s);
 
-    String(SizeType const s, char const c);
+    String(std::size_t const s, char const c);
 
-    String(char const* s, SizeType n);
+    String(char const* s, std::size_t n);
 
     String(char const* s);
 
     bool operator==(String const& other) const noexcept;
 
-    char operator[](SizeType const i) const noexcept
+    char operator[](std::size_t const i) const noexcept
     {
         return ptr()[i];
     }
 
-    char& operator[](SizeType const i) noexcept
+    char& operator[](std::size_t const i) noexcept
     {
         return ptr()[i];
     }
@@ -116,7 +116,7 @@ public:
         --RefCount;
     }
 
-    SizeType referenceCount() const noexcept
+    std::size_t referenceCount() const noexcept
     {
         return RefCount;
     }

@@ -8,7 +8,7 @@ namespace IR {
 class Environment {
 private:
     std::unordered_map<StringRef, Value> variables_;
-    Environment* parent_; // For nested scopes
+    Environment* parent_; // nested scopes
 
 public:
     Environment()
@@ -21,22 +21,23 @@ public:
     {
     }
 
-    // Define a variable in current scope
+    // define a variable in current scope
     void define(StringRef const& name, Value const& value)
     {
         variables_[name] = value;
     }
 
-    // Get a variable (searches parent scopes)
+    // get a variable (searches parent scopes)
     Value get(StringRef const& name) const;
 
-    // Assign to existing variable (searches parent scopes)
+    // assign to existing variable (searches parent scopes)
     void assign(StringRef const& name, Value const& value);
 
     bool exists(StringRef const& name) const
     {
         if (variables_.find(name) != variables_.end())
             return true;
+
         return parent_ && parent_->exists(name);
     }
 };

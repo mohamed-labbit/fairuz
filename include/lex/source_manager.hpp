@@ -26,22 +26,22 @@ public:
 
     void reset();
 
-    SizeType getLineNumber() const
+    std::size_t getLineNumber() const
     {
         return Context_.line;
     }
 
-    SizeType getColumnNumber() const
+    std::size_t getColumnNumber() const
     {
         return Context_.column;
     }
 
-    SizeType getFileOffset() const
+    std::size_t getFileOffset() const
     {
         return Context_.offset;
     }
 
-    std::string fpath() const MYLANG_NOEXCEPT
+    std::string fpath() const noexcept
     {
         return FileManager_->getPath();
     }
@@ -52,7 +52,7 @@ public:
     }
 
     // returns codepoint next to offset + 1 without advancing pos
-    MYLANG_NODISCARD uint32_t peekChar();
+    [[nodiscard]] uint32_t peekChar();
 
     uint32_t currentChar() const;
 
@@ -65,30 +65,28 @@ public:
 
 private:
     struct Context {
-        SizeType line { 1 };
-        SizeType column { 1 };
-        SizeType offset { 0 }; // byte offset
+        std::size_t line { 1 };
+        std::size_t column { 1 };
+        std::size_t offset { 0 }; // byte offset
     };
 
     struct PushbackEntry {
         uint32_t ch { BUFFER_END };
-        Context ctx;          // Context AFTER reading this character
-        SizeType bytes { 0 }; // Number of bytes this character occupies
+        Context ctx;             
+        std::size_t bytes { 0 }; 
     };
 
     FileManager* FileManager_ { nullptr };
     Context Context_;
     uint32_t Current_ { BUFFER_END };
-    SizeType CurrentBytes_ { 0 }; // Bytes of the current character
+    std::size_t CurrentBytes_ { 0 }; 
     std::stack<PushbackEntry> UngetStack_;
 
-    void advance(uint32_t const cp, SizeType const bytes);
+    void advance(uint32_t const cp, std::size_t const bytes);
 
-    void rewindPosition_(uint32_t const cp, SizeType const bytes);
+    void rewindPosition_(uint32_t const cp, std::size_t const bytes);
 
-    // Calculate what column we're at for a given byte offset
-    // This is needed when rewinding past newlines
-    SizeType calculateColumnAtOffset(SizeType const target_offset) const;
+    std::size_t calculateColumnAtOffset(std::size_t const target_offset) const;
 };
 
 }

@@ -14,7 +14,6 @@ namespace fs = std::filesystem;
 namespace mylang {
 namespace lex {
 
-/// @brief Error codes for FileManager operations
 enum class FileManagerError {
     FILE_NOT_FOUND,
     FILE_NOT_OPEN,
@@ -31,8 +30,7 @@ enum class FileManagerError {
     BUFFER_TOO_SMALL
 };
 
-/// @brief Convert error code to human-readable string
-MYLANG_CONSTEXPR const char* toString(FileManagerError error) MYLANG_NOEXCEPT
+static constexpr char const* toString(FileManagerError error) noexcept
 {
     switch (error) {
     case FileManagerError::FILE_NOT_FOUND:
@@ -70,11 +68,11 @@ class FileManager {
 public:
     explicit FileManager(std::string const& filepath);
 
-    FileManager(FileManager&&) MYLANG_NOEXCEPT = delete;
-    FileManager& operator=(FileManager&&) MYLANG_NOEXCEPT = delete;
+    FileManager(FileManager&&) noexcept = delete;
+    FileManager& operator=(FileManager&&) noexcept = delete;
 
-    FileManager(FileManager const&) MYLANG_NOEXCEPT = delete;
-    FileManager& operator=(FileManager&) MYLANG_NOEXCEPT = delete;
+    FileManager(FileManager const&) noexcept = delete;
+    FileManager& operator=(FileManager&) noexcept = delete;
 
     ~FileManager() = default;
 

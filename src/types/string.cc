@@ -12,12 +12,12 @@ StringRef::StringRef()
 {
 }
 
-StringRef::StringRef(SizeType const s)
+StringRef::StringRef(std::size_t const s)
     : StringData_(string_allocator.allocateObject<String>(s))
 {
 }
 
-StringRef::StringRef(StringRef const& other, SizeType offset, SizeType length)
+StringRef::StringRef(StringRef const& other, std::size_t offset, std::size_t length)
     : StringData_(other.get())
     , Offset_(other.Offset_ + offset)
     , Length_(length)
@@ -52,12 +52,12 @@ StringRef::StringRef(char16_t const* u16_str)
     }
 }
 
-StringRef::StringRef(SizeType const s, char const c)
+StringRef::StringRef(std::size_t const s, char const c)
     : StringData_(string_allocator.allocateObject<String>(s, c))
 {
 }
 
-StringRef::StringRef(String* data, SizeType offset, SizeType length)
+StringRef::StringRef(String* data, std::size_t offset, std::size_t length)
     : StringData_(data ? data : createEmpty())
     , Offset_(offset)
     , Length_(length)
@@ -139,7 +139,7 @@ StringRef& StringRef::operator=(StringRef const& other)
     return *this;
 }
 
-void StringRef::expand(SizeType const new_size)
+void StringRef::expand(std::size_t const new_size)
 {
     ensureUnique();
 
@@ -147,8 +147,8 @@ void StringRef::expand(SizeType const new_size)
         return;
 
     char const* old_ptr = data();
-    SizeType old_len = len();
-    SizeType new_capacity;
+    std::size_t old_len = len();
+    std::size_t new_capacity;
 
     if (cap() < 1024)
         new_capacity = std::max(new_size + 1, cap() * 2);
@@ -178,16 +178,16 @@ void StringRef::expand(SizeType const new_size)
 }
 
 // Reserve capacity (doesn't change length, only capacity)
-void StringRef::reserve(SizeType const new_capacity)
+void StringRef::reserve(std::size_t const new_capacity)
 {
     if (new_capacity <= cap())
         return;
-    
-        expand(new_capacity);
+
+    expand(new_capacity);
 }
 
 // Erase character at position - use view manipulation when possible
-void StringRef::erase(SizeType const at)
+void StringRef::erase(std::size_t const at)
 {
     if (empty() || at >= len())
         return;
@@ -230,7 +230,7 @@ StringRef& StringRef::operator+=(StringRef const& other)
 
     ensureUnique();
 
-    SizeType new_len = Length_ + other.Length_;
+    std::size_t new_len = Length_ + other.Length_;
 
     // Ensure capacity
     if (Offset_ + new_len >= cap())
@@ -257,7 +257,7 @@ StringRef& StringRef::operator+=(char c)
 
     ensureUnique();
 
-    SizeType total_len = Offset_ + Length_;
+    std::size_t total_len = Offset_ + Length_;
 
     // Ensure capacity (need space for char + null)
     if (total_len + 1 >= StringData_->cap())
@@ -277,49 +277,49 @@ StringRef& StringRef::operator+=(char c)
 }
 
 // Bounds-checked access (const)
-char StringRef::operator[](SizeType const i) const
+char StringRef::operator[](std::size_t const i) const
 {
     if (!StringData_ || !data())
         throw std::runtime_error("StringRef::operator[]: null string data");
-    
-        if (i >= Length_)
+
+    if (i >= Length_)
         throw std::out_of_range("StringRef::operator[]: index out of bounds");
-    
-        return (*StringData_)[i + Offset_];
+
+    return (*StringData_)[i + Offset_];
 }
 
 // Bounds-checked access (non-const)
-char& StringRef::operator[](SizeType const i)
+char& StringRef::operator[](std::size_t const i)
 {
     ensureUnique();
     if (!StringData_ || !data())
         throw std::runtime_error("StringRef::operator[]: null string data");
-    
-        if (i >= Length_)
+
+    if (i >= Length_)
         throw std::out_of_range("StringRef::operator[]: index out of bounds");
-    
-        return (*StringData_)[i + Offset_];
+
+    return (*StringData_)[i + Offset_];
 }
 
 // Safe access with bounds checking (always checked)
-MYLANG_NODISCARD char StringRef::at(SizeType const i) const
+char StringRef::at(std::size_t const i) const
 {
     if (!StringData_ || !data())
         throw std::runtime_error("StringRef::at: null string data");
-    
-        if (i >= Length_)
+
+    if (i >= Length_)
         throw std::out_of_range("StringRef::at: index out of bounds");
-    
-        return (*StringData_)[i + Offset_];
+
+    return (*StringData_)[i + Offset_];
 }
 
-char& StringRef::at(SizeType const i)
+char& StringRef::at(std::size_t const i)
 {
     ensureUnique();
     if (!StringData_ || !data())
         throw std::runtime_error("StringRef::at: null string data");
-    
-        if (i >= Length_)
+
+    if (i >= Length_)
         throw std::out_of_range("StringRef::at: index out of bounds");
 
     return (*StringData_)[i + Offset_];
@@ -335,7 +335,7 @@ void StringRef::clear() noexcept
 }
 
 // Resize capacity (preserves content)
-void StringRef::resize(SizeType const s)
+void StringRef::resize(std::size_t const s)
 {
     ensureUnique();
     if (s > cap())
@@ -343,7 +343,7 @@ void StringRef::resize(SizeType const s)
 }
 
 // Find a character - purely view-based
-MYLANG_NODISCARD bool StringRef::find(char const c) const noexcept
+bool StringRef::find(char const c) const noexcept
 {
     if (!StringData_ || !data())
         return false;
@@ -358,7 +358,7 @@ MYLANG_NODISCARD bool StringRef::find(char const c) const noexcept
 }
 
 // Find substring - purely view-based
-MYLANG_NODISCARD bool StringRef::find(StringRef const& s) const noexcept
+bool StringRef::find(StringRef const& s) const noexcept
 {
     if (!StringData_ || !data() || s.empty())
         return false;
@@ -366,10 +366,10 @@ MYLANG_NODISCARD bool StringRef::find(StringRef const& s) const noexcept
     if (s.len() > len())
         return false;
 
-    SizeType search_len = s.len();
-    SizeType max_start = len() - search_len;
+    std::size_t search_len = s.len();
+    std::size_t max_start = len() - search_len;
 
-    for (SizeType i = 0; i <= max_start; ++i) {
+    for (std::size_t i = 0; i <= max_start; ++i) {
         if (::memcmp(data() + i, s.data(), search_len * sizeof(char)) == 0)
             return true;
     }
@@ -378,7 +378,7 @@ MYLANG_NODISCARD bool StringRef::find(StringRef const& s) const noexcept
 }
 
 // Find position of a character - purely view-based
-MYLANG_NODISCARD std::optional<SizeType> StringRef::find_pos(char const c) const noexcept
+std::optional<std::size_t> StringRef::find_pos(char const c) const noexcept
 {
     if (!StringData_ || !data())
         return std::nullopt;
@@ -389,11 +389,11 @@ MYLANG_NODISCARD std::optional<SizeType> StringRef::find_pos(char const c) const
     while (p < end && *p != c)
         ++p;
 
-    return (p < end) ? std::optional<SizeType>(p - data()) : std::nullopt;
+    return (p < end) ? std::optional<std::size_t>(p - data()) : std::nullopt;
 }
 
 // Truncate string - purely view-based
-StringRef& StringRef::truncate(SizeType const s)
+StringRef& StringRef::truncate(std::size_t const s)
 {
     if (s >= Length_)
         return *this;
@@ -403,13 +403,13 @@ StringRef& StringRef::truncate(SizeType const s)
     return *this;
 }
 
-StringRef StringRef::substr(std::optional<SizeType> start, std::optional<SizeType> end) const
+StringRef StringRef::substr(std::optional<std::size_t> start, std::optional<std::size_t> end) const
 {
     if (empty())
         return "";
 
-    SizeType start_val = start.value_or(0);
-    SizeType end_val = end.value_or(len());
+    std::size_t start_val = start.value_or(0);
+    std::size_t end_val = end.value_or(len());
 
     if (start_val >= len())
         throw std::out_of_range("StringRef::substr: start index out of range");
@@ -420,7 +420,7 @@ StringRef StringRef::substr(std::optional<SizeType> start, std::optional<SizeTyp
     if (end_val < start_val)
         throw std::invalid_argument("StringRef::substr: end must be >= start");
 
-    SizeType ret_len = end_val - start_val;
+    std::size_t ret_len = end_val - start_val;
     String* ret_data = string_allocator.allocateObject<String>();
 
     if (ret_len < SSO_SIZE) {
@@ -440,17 +440,17 @@ StringRef StringRef::substr(std::optional<SizeType> start, std::optional<SizeTyp
 }
 
 // Zero-copy slicing: returns a view into the existing string
-StringRef StringRef::slice(SizeType start, std::optional<SizeType> end) const
+StringRef StringRef::slice(std::size_t start, std::optional<std::size_t> end) const
 {
     if (!StringData_ || Length_ == 0)
         return "";
 
-    SizeType const src_len = Length_;
+    std::size_t const src_len = Length_;
 
     if (start >= src_len)
         throw std::out_of_range("StringRef::slice: start index out of range");
 
-    SizeType end_val = end.value_or(src_len - 1);
+    std::size_t end_val = end.value_or(src_len - 1);
 
     if (end_val >= src_len)
         end_val = src_len - 1;
@@ -458,19 +458,19 @@ StringRef StringRef::slice(SizeType start, std::optional<SizeType> end) const
     if (end_val < start)
         throw std::invalid_argument("StringRef::slice: end must be >= start");
 
-    SizeType slice_len = end_val - start + 1;
+    std::size_t slice_len = end_val - start + 1;
 
     return StringRef(*this, start, slice_len);
 }
 
 // Convert to double - purely view-based
-double StringRef::toDouble(SizeType* pos) const
+double StringRef::toDouble(std::size_t* pos) const
 {
     if (empty() || len() == 0)
         throw std::invalid_argument("StringRef::toDouble: empty string");
 
     // Use std::stod on the UTF-8 string
-    SizeType _pos = 0;
+    std::size_t _pos = 0;
     double result;
 
     try {
@@ -489,7 +489,7 @@ double StringRef::toDouble(SizeType* pos) const
     return result;
 }
 
-MYLANG_NODISCARD StringRef StringRef::fromUtf16(char16_t const* src)
+StringRef StringRef::fromUtf16(char16_t const* src)
 {
     if (!src || !src[0])
         return "";
@@ -554,7 +554,7 @@ void StringRef::detach()
         return;
 
     // Determine slice length
-    SizeType copy_len = (Length_ > 0) ? Length_ : (StringData_->length() - Offset_);
+    std::size_t copy_len = (Length_ > 0) ? Length_ : (StringData_->length() - Offset_);
 
     // Allocate a new string of exactly the required size
     String* s = string_allocator.allocateObject<String>(copy_len);

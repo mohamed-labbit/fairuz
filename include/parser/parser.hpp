@@ -1,10 +1,3 @@
-// parser rewrite
-// recursive descent parser
-//
-// This header defines the recursive-descent parser for mylang.
-// The parser consumes tokens produced by the lexer and builds
-// an abstract syntax tree (AST) representing expressions and statements.
-
 #pragma once
 
 #include "../ast/ast.hpp"
@@ -18,29 +11,13 @@
 namespace mylang {
 namespace parser {
 
-/**
- * @brief Exception type representing a parse-time error.
- *
- * ParseError carries precise source location information (line and column),
- * optional source context, and a list of suggestions to aid error recovery
- * or diagnostics.
- */
 class ParseError : public std::runtime_error {
 public:
-    std::int32_t Line_, Column_;         // Source location of the error
-    StringRef Context_;                  // Source line where the error occurred
-    std::vector<StringRef> Suggestions_; // Optional recovery suggestions
+    std::int32_t Line_, Column_;         
+    StringRef Context_;                  
+    std::vector<StringRef> Suggestions_; 
 
-    /**
-     * @brief Constructs a parse error.
-     *
-     * @param msg  Error message (UTF-16)
-     * @param l    Line number
-     * @param c    Column number
-     * @param ctx  Optional source line context
-     * @param sugg Optional list of suggestions
-     */
-    ParseError(StringRef const& msg, unsigned l, unsigned c, StringRef ctx = u"", std::vector<StringRef> sugg = {})
+    ParseError(StringRef const& msg, unsigned int l, unsigned int c, StringRef ctx = "", std::vector<StringRef> sugg = {})
         : Line_(l)
         , Column_(c)
         , Context_(ctx)
@@ -49,17 +26,6 @@ public:
     {
     }
 
-    /**
-     * @brief Formats the parse error into a user-readable message.
-     *
-     * The output includes:
-     *  - Line and column
-     *  - Error message
-     *  - Source line with a caret pointing at the error location
-     *  - Optional suggestions
-     *
-     * @return UTF-16 formatted error message
-     */
     StringRef format() const
     {
         std::stringstream ss;
@@ -80,32 +46,20 @@ public:
     }
 };
 
-/**
- * @brief Recursive-descent parser for mylang.
- *
- * The Parser consumes tokens from the lexer and produces AST nodes.
- * It implements expression parsing using a combination of:
- *  - Recursive descent
- *  - Operator precedence climbing
- *  - Specialized routines for different grammar constructs
- */
 class Parser {
 public:
-    /// @brief Constructs an empty parser
     explicit Parser() = default;
 
-    /// @brief Constructs a parser bound to a file manager
     explicit Parser(lex::FileManager* fm)
         : Lexer_(fm)
     {
         if (!fm)
             diagnostic::engine.panic("file_manager is NULL!");
-        // Advance to the first real token
+
         Lexer_.next();
     }
 
-    /// @brief Constructs a parser from a pre-existing token sequence
-    explicit Parser(std::vector<tok::Token> seq, std::optional<SizeType> s = std::nullopt);
+    explicit Parser(std::vector<tok::Token> seq, std::optional<std::size_t> s = std::nullopt);
 
     std::vector<ast::Stmt*> parseProgram();
 
@@ -127,88 +81,61 @@ public:
 
     ast::Expr* parseParenthesizedExprContent();
 
-    // Expression parsing entry points
-
-    /// @brief does exactly what it says
     ast::ListExpr* parseFunctionArguments();
 
     ast::Expr* parseCallExpr(ast::Expr* callee);
 
-    /// @brief Parses a primary expression
     ast::Expr* parsePrimary();
 
-    /// @brief Parses a unary expression
     ast::Expr* parseUnary();
 
-    /// @brief Parses a parenthesized expression
     ast::Expr* parseParenthesizedExpr();
 
-    /// @brief Parses a general expression
     ast::Expr* parseExpression()
     {
         return parseAssignmentExpr();
     }
 
-    /// @brief Parses an assignment expression
     ast::Expr* parseAssignmentExpr();
 
-    /// @brief Parses a list literal expression
     ast::Expr* parseListLiteral();
 
-    /// @brief Parses a conditional (ternary-like) expression
     ast::Expr* parseConditionalExpr()
     {
         return parseLogicalExpr();
         /// TODO: Ternary?
     }
 
-    /// @brief Parses logical expressions (AND / OR)
     ast::Expr* parseLogicalExpr()
     {
         return parseLogicalExprPrecedence(0);
     }
 
-    /// @brief Parses logical expressions using precedence climbing
-    ast::Expr* parseLogicalExprPrecedence(unsigned min_precedence);
+    ast::Expr* parseLogicalExprPrecedence(unsigned int min_precedence);
 
-    /// @brief Parses binary expressions using precedence climbing
-    ast::Expr* parseBinaryExprPrecedence(unsigned min_precedence);
+    ast::Expr* parseBinaryExprPrecedence(unsigned int min_precedence);
 
-    /// @brief Parses comparison expressions
     ast::Expr* parseComparisonExpr();
 
-    /// @brief Parses binary expressions
     ast::Expr* parseBinaryExpr()
     {
         return parseBinaryExprPrecedence(0);
     }
 
-    /// @brief Parses unary expressions
     ast::Expr* parseUnaryExpr();
 
-    /// @brief Parses primary expressions
     ast::Expr* parsePrimaryExpr();
 
-    /// @brief Parses postfix expressions (calls, indexing, etc.)
     ast::Expr* parsePostfixExpr();
 
-    /**
-     * @brief Parses the entire input into a sequence of statements.
-     *
-     * @return Vector of parsed statement AST nodes
-     */
-    // std::vector<ast::Stmt*> parse();
     /// TODO: not sure if these should be private
-    /// @brief check wether or not we reached the end of the file so not to bother lookin for stuff to parse
     bool weDone() const
     {
         return Lexer_.current()->is(tok::TokenType::ENDMARKER);
     }
 
-    /// @brief Checks whether the current token is of the given type
     bool check(tok::TokenType type)
     {
-        // if (weDone()) return false;
         return Lexer_.current()->is(type);
     }
 
@@ -225,30 +152,21 @@ public:
     ast::BlockStmt* parseIndentedBlock();
 
 private:
-    lex::Lexer Lexer_; // Underlying lexer providing tokens
+    lex::Lexer Lexer_;
 
-    /// @brief Peeks ahead in the token stream without consuming
-    tok::Token const* peek(SizeType offset = 1)
+    tok::Token const* peek(std::size_t offset = 1)
     {
         return Lexer_.peek(offset);
     }
 
-    /// @brief Advances and returns the next token
     tok::Token const* advance()
     {
         return Lexer_.next();
     }
 
-    /// @brief Matches and consumes a token if it is of the given type
     bool match(tok::TokenType const type);
 
-    /**
-     * @brief Consumes a token of the expected type or throws a ParseError.
-     *
-     * @param type Expected token type
-     * @param msg  Error message if the token does not match
-     */
-    MYLANG_NODISCARD
+    [[nodiscard]]
     bool consume(tok::TokenType type, StringRef const& msg)
     {
         if (check(type)) {
@@ -259,20 +177,17 @@ private:
         return false;
     }
 
-    /// @brief Skips newline tokens during parsing
     void skipNewlines()
     {
         while (match(tok::TokenType::NEWLINE))
             ;
     }
 
-    /// @brief Retrieves a source line for diagnostics
-    StringRef getSourceLine(SizeType line)
+    StringRef getSourceLine(std::size_t line)
     {
         return Lexer_.getSourceLine(line);
     }
 
-    /// @brief Enters a new scope (currently a no-op)
     void enterScope() { }
 
     void synchronize();

@@ -59,7 +59,7 @@ public:
 
     struct Iterator {
         std::vector<Value> items;
-        SizeType index;
+        std::size_t index;
     };
 
     using ValueData = std::variant<std::monostate,                           // None
@@ -79,7 +79,8 @@ private:
     Type Type_;
     ValueData Data_;
 
-    // Reference counting for memory management
+    // reference counter
+    /// NOTE: not used yet
     mutable std::int32_t RefCount_ = 0;
 
 public:
@@ -129,14 +130,20 @@ public:
     {
     }
 
-    // Copy constructor with COW (Copy-On-Write)
+    Value(Function const v)
+        : Type_(Type::FUNCTION)
+        , Data_(std::in_place_type<Function>, v)
+    {
+    }
+
     Value(Value const& other)
         : Type_(other.Type_)
         , Data_(other.Data_)
     {
     }
 
-    SizeType size();
+    // raw held data size (handle not included)
+    std::size_t size();
 
     Type getType() const
     {
@@ -148,18 +155,7 @@ public:
         Type_ = type;
     }
 
-    void setData(std::variant<std::monostate,                                // None
-        std::int64_t,                                                        // Int
-        double,                                                              // Float
-        StringRef,                                                           // String (shared for efficiency)
-        bool,                                                                // Bool
-        std::vector<Value>,                                                  // List (shared)
-        std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>, // Dict
-        Function,                                                            // User function
-        NativeFunction,                                                      // Native C++ function
-        Object,                                                              // Object instance
-        Iterator                                                             // Iterator
-        > const data)
+    void setData(ValueData const data)
     {
         Data_ = data;
     }
@@ -170,8 +166,7 @@ public:
         Type_ = Type::INT;
     }
 
-    // Type checks
-
+    // type checks
     bool isNone() const
     {
         return Type_ == Type::NONE;
@@ -227,7 +222,7 @@ public:
         return isList() || isString() || isDict();
     }
 
-    // Getters with safety
+    // getters
     std::int64_t* asInt();
     std::int64_t const* asInt() const;
 
@@ -252,21 +247,22 @@ public:
     NativeFunction* asNativeFunction();
     NativeFunction const* asNativeFunction() const;
 
-    double toFloat() const; // Type conversions
-
+    // type convs
     std::int64_t toInt() const;
+
+    double toFloat() const;
 
     bool toBool() const;
 
     StringRef toString() const;
 
-    std::string repr() const;
+    std::string repr() const; // for debugging (for now)
 
-    SizeType hash() const; // Hash for use in dictionaries
+    std::size_t hash() const;
 
     bool hasNext() const;
 
-    // Comparison operators
+    // operators (arithmetic ops have type promotion)
     bool operator!=(Value const& other) const;
     bool operator==(Value const& other) const;
 
@@ -276,27 +272,61 @@ public:
     bool operator<=(Value const& other) const;
     bool operator>=(Value const& other) const;
 
-    // Arithmetic operators with type promotion
     Value operator+(Value const& other) const;
     Value operator-(Value const& other) const;
-
     Value operator*(Value const& other) const;
     Value operator/(Value const& other) const;
     Value operator%(Value const& other) const;
 
-    Value operator-() const; // Unary operators
+    Value operator-() const;
     Value operator!() const;
 
     Value pow(Value const& other) const;
-    Value getItem(Value const& key) const; // Subscript operator
 
+    Value getItem(Value const& key) const;
     void setItem(Value const& key, Value const& value);
+
     Value getIterator() const;
     Value next();
 
-    static Value makeList(std::vector<Value> list)
+    static constexpr Value makeNone()
     {
-        return Value(list);
+        return Value();
+    }
+
+    static constexpr Value makeInt(int const v)
+    {
+        return Value(v);
+    }
+
+    static constexpr Value makeFloat(double const v)
+    {
+        return Value(v);
+    }
+
+    static constexpr Value makeString(StringRef const v)
+    {
+        return Value(v);
+    }
+
+    static constexpr Value makeBool(bool const v)
+    {
+        return Value(v);
+    }
+
+    static constexpr Value makeList(std::vector<Value> const v)
+    {
+        return Value(v);
+    }
+
+    static constexpr Value makeDict(std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual> const v)
+    {
+        return Value(v);
+    }
+
+    static constexpr Value makeFunction(Function const v)
+    {
+        return Value(v);
     }
 };
 

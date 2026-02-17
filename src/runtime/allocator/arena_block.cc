@@ -4,7 +4,7 @@ namespace mylang {
 namespace runtime {
 namespace allocator {
 
-ArenaBlock::ArenaBlock(SizeType const size, SizeType const alignment)
+ArenaBlock::ArenaBlock(std::size_t const size, std::size_t const alignment)
     : Size_(size)
 {
     // Validate alignment is a power of 2
@@ -12,7 +12,7 @@ ArenaBlock::ArenaBlock(SizeType const size, SizeType const alignment)
         diagnostic::engine.emit("Alignment must be a power of two", diagnostic::DiagnosticEngine::Severity::FATAL);
 
     // Round up size to multiple of alignment
-    SizeType mod = Size_ % alignment;
+    std::size_t mod = Size_ % alignment;
     if (mod)
         Size_ += (alignment - mod);
 
@@ -23,11 +23,11 @@ ArenaBlock::ArenaBlock(SizeType const size, SizeType const alignment)
 
     /// TODO: change after debug
     // diagnostic::engine.panic("bad alloc");
-    Begin_ = reinterpret_cast<Pointer>(mem);
+    Begin_ = reinterpret_cast<unsigned char*>(mem);
     Next_ = Begin_;
 }
 
-ArenaBlock::ArenaBlock(ArenaBlock&& other) MYLANG_NOEXCEPT
+ArenaBlock::ArenaBlock(ArenaBlock&& other) noexcept
 {
     std::lock_guard<std::mutex> lock(other.Mutex_);
 
@@ -52,7 +52,7 @@ ArenaBlock::~ArenaBlock()
     }
 }
 
-ArenaBlock& ArenaBlock::operator=(ArenaBlock&& other) MYLANG_NOEXCEPT
+ArenaBlock& ArenaBlock::operator=(ArenaBlock&& other) noexcept
 {
     if (this != &other) {
         std::scoped_lock lock(Mutex_, other.Mutex_);
@@ -73,12 +73,12 @@ ArenaBlock& ArenaBlock::operator=(ArenaBlock&& other) MYLANG_NOEXCEPT
     return *this;
 }
 
-Pointer ArenaBlock::allocate(SizeType bytes, std::optional<SizeType> alignment)
+unsigned char* ArenaBlock::allocate(std::size_t bytes, std::optional<std::size_t> alignment)
 {
     if (!Begin_ || bytes == 0)
         return nullptr;
 
-    SizeType alignment_value = alignment.value_or(alignof(std::max_align_t));
+    std::size_t alignment_value = alignment.value_or(alignof(std::max_align_t));
     // Validate alignment is a power of 2
     if (alignment_value == 0 || (alignment_value & (alignment_value - 1)) != 0)
         diagnostic::engine.emit("Invalid arguments to ArenaAllocator::allocate()", diagnostic::DiagnosticEngine::Severity::FATAL);
@@ -86,7 +86,7 @@ Pointer ArenaBlock::allocate(SizeType bytes, std::optional<SizeType> alignment)
     // Calculate aligned address
     std::uintptr_t cur = reinterpret_cast<std::uintptr_t>(Next_);
     std::uintptr_t aligned = (cur + (alignment_value - 1)) & ~(alignment_value - 1);
-    SizeType pad = aligned - cur;
+    std::size_t pad = aligned - cur;
 
     // Check if we have enough space (including padding)
     std::uintptr_t end_addr = reinterpret_cast<std::uintptr_t>(Begin_) + Size_;
@@ -95,26 +95,26 @@ Pointer ArenaBlock::allocate(SizeType bytes, std::optional<SizeType> alignment)
     if (cur_addr > end_addr)
         return nullptr; // Current pointer is beyond block end
 
-    SizeType remaining = end_addr - cur_addr;
+    std::size_t remaining = end_addr - cur_addr;
 
     if (remaining < bytes + pad)
         return nullptr; // Not enough space
 
-    Pointer new_next = reinterpret_cast<Pointer>(aligned + bytes);
-    // Try to atomically update next Pointer
+    unsigned char* new_next = reinterpret_cast<unsigned char*>(aligned + bytes);
+    // Try to atomically update next unsigned char*
     Next_ = new_next;
     // Success! Return the aligned address
-    return reinterpret_cast<Pointer>(aligned);
+    return reinterpret_cast<unsigned char*>(aligned);
     // CAS failed - another thread allocated first
 }
 
-Pointer ArenaBlock::reserve(SizeType const bytes)
+unsigned char* ArenaBlock::reserve(std::size_t const bytes)
 {
     if (!Begin_ || bytes == 0)
         return nullptr;
 
     // Check if we have enough space
-    SizeType remaining = Begin_ + Size_ - Next_;
+    std::size_t remaining = Begin_ + Size_ - Next_;
     if (remaining < bytes)
         return nullptr;
 

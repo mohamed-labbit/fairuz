@@ -12,8 +12,8 @@ public:
         STATEMENT };
 
 private:
-    SizeType Line_ {};
-    SizeType Column_ {};
+    std::size_t Line_ {0};
+    std::size_t Column_ {0};
 
     NodeType NodeType_;
 
@@ -22,35 +22,35 @@ public:
     ASTNode(ASTNode const&) = delete;
     ASTNode(ASTNode&&) = delete;
 
-    ASTNode& operator=(ASTNode const&) = delete;
-    ASTNode& operator=(ASTNode&&) = delete;
+    virtual ASTNode& operator=(ASTNode const&) = delete;
+    virtual ASTNode& operator=(ASTNode&&) = delete;
 
-    NodeType getNodeType() const
+    virtual NodeType getNodeType() const
     {
         return NodeType_;
     }
 
-    void setNodeType(NodeType const t)
+    virtual void setNodeType(NodeType const t)
     {
         NodeType_ = t;
     }
 
-    SizeType getLine() const
+    virtual std::size_t getLine() const
     {
         return Line_;
     }
 
-    SizeType getColumn() const
+    virtual std::size_t getColumn() const
     {
         return Column_;
     }
 
-    void setLine(SizeType const l)
+    virtual void setLine(std::size_t const l)
     {
         Line_ = l;
     }
 
-    void setColumn(SizeType const c)
+    virtual void setColumn(std::size_t const c)
     {
         Column_ = c;
     }

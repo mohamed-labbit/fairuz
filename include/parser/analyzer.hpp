@@ -9,13 +9,14 @@
 namespace mylang {
 namespace parser {
 
-// Semantic analyzer with type inference and optimization hints
+// semantic analyzer with type inference and optimization hints
 class SemanticAnalyzer {
 public:
     struct Issue {
         enum class Severity { ERROR,
             WARNING,
             INFO };
+            
         Severity severity;
         StringRef message;
         std::int32_t line;
@@ -31,12 +32,11 @@ private:
 public:
     SymbolTable::DataType_t inferType(ast::Expr const* expr);
 
-    void reportIssue(Issue::Severity sev, StringRef const& msg, std::int32_t line, StringRef const& sugg = u"");
+    void reportIssue(Issue::Severity sev, StringRef const& msg, std::int32_t line, StringRef const& sugg = "");
 
     void analyzeExpr(ast::Expr const* expr);
     void analyzeStmt(ast::Stmt const* stmt);
 
-    // public:
     SemanticAnalyzer();
 
     void analyze(std::vector<ast::Stmt*> const& Statements_);

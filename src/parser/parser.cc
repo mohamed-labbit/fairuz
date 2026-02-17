@@ -50,7 +50,7 @@ ast::Stmt* Parser::parseStatement()
 
 ast::Stmt* Parser::parseReturnStmt()
 {
-    if (!consume(tok::TokenType::KW_RETURN, u"Expected 'return' statement"))
+    if (!consume(tok::TokenType::KW_RETURN, "Expected 'return' statement"))
         return nullptr;
 
     if (check(tok::TokenType::NEWLINE) || weDone())
@@ -62,7 +62,7 @@ ast::Stmt* Parser::parseReturnStmt()
 
 ast::Stmt* Parser::parseWhileStmt()
 {
-    if (!consume(tok::TokenType::KW_WHILE, u"Expected 'while' keyword"))
+    if (!consume(tok::TokenType::KW_WHILE, "Expected 'while' keyword"))
         return nullptr;
 
     ast::Expr* condition = parseExpression();
@@ -71,7 +71,7 @@ ast::Stmt* Parser::parseWhileStmt()
         return nullptr;
     }
 
-    if (!consume(tok::TokenType::COLON, u"Expected ':' after while condition"))
+    if (!consume(tok::TokenType::COLON, "Expected ':' after while condition"))
         return nullptr;
 
     ast::BlockStmt* while_block = parseIndentedBlock();
@@ -88,7 +88,7 @@ ast::BlockStmt* Parser::parseIndentedBlock()
     if (check(tok::TokenType::NEWLINE))
         advance();
 
-    if (!consume(tok::TokenType::INDENT, u"Expected indented block"))
+    if (!consume(tok::TokenType::INDENT, "Expected indented block"))
         return nullptr;
 
     std::vector<ast::Stmt*> statements;
@@ -116,7 +116,7 @@ ast::BlockStmt* Parser::parseIndentedBlock()
 
     if (check(tok::TokenType::ENDMARKER))
         return ast::AST_allocator.make<ast::BlockStmt>(statements);
-    else if (!consume(tok::TokenType::DEDENT, u"Expected dedent after block"))
+    else if (!consume(tok::TokenType::DEDENT, "Expected dedent after block"))
         return nullptr;
 
     return ast::AST_allocator.make<ast::BlockStmt>(statements);
@@ -124,7 +124,7 @@ ast::BlockStmt* Parser::parseIndentedBlock()
 
 ast::ListExpr* Parser::parseParametersList()
 {
-    if (!consume(tok::TokenType::LPAREN, u"Expected '(' before parameters"))
+    if (!consume(tok::TokenType::LPAREN, "Expected '(' before parameters"))
         return nullptr;
 
     std::vector<ast::Expr*> parameters;
@@ -148,7 +148,7 @@ ast::ListExpr* Parser::parseParametersList()
         } while (match(tok::TokenType::COMMA));
     }
 
-    if (!consume(tok::TokenType::RPAREN, u"Expected ')' after parameters"))
+    if (!consume(tok::TokenType::RPAREN, "Expected ')' after parameters"))
         return nullptr;
 
     return ast::AST_allocator.make<ast::ListExpr>(std::move(parameters));
@@ -156,7 +156,7 @@ ast::ListExpr* Parser::parseParametersList()
 
 ast::Stmt* Parser::parseFunctionDef()
 {
-    if (!consume(tok::TokenType::KW_FN, u"Expected 'fn' keyword"))
+    if (!consume(tok::TokenType::KW_FN, "Expected 'fn' keyword"))
         return nullptr;
 
     if (!check(tok::TokenType::IDENTIFIER)) {
@@ -173,7 +173,7 @@ ast::Stmt* Parser::parseFunctionDef()
         return nullptr;
     }
 
-    if (!consume(tok::TokenType::COLON, u"Expected ':' after function parameters"))
+    if (!consume(tok::TokenType::COLON, "Expected ':' after function parameters"))
         return nullptr;
 
     ast::BlockStmt* function_body = parseIndentedBlock();
@@ -188,7 +188,7 @@ ast::Stmt* Parser::parseFunctionDef()
 
 ast::Stmt* Parser::parseIfStmt()
 {
-    if (!consume(tok::TokenType::KW_IF, u"Expected 'if' keyword"))
+    if (!consume(tok::TokenType::KW_IF, "Expected 'if' keyword"))
         return nullptr;
 
     ast::Expr* condition = parseExpression();
@@ -197,7 +197,7 @@ ast::Stmt* Parser::parseIfStmt()
         return nullptr;
     }
 
-    if (!consume(tok::TokenType::COLON, u"Expected ':' after if condition"))
+    if (!consume(tok::TokenType::COLON, "Expected ':' after if condition"))
         return nullptr;
 
     ast::BlockStmt* then_block = parseIndentedBlock();
@@ -244,7 +244,7 @@ ast::Expr* Parser::parseAssignmentExpr()
     return left;
 }
 
-ast::Expr* Parser::parseLogicalExprPrecedence(unsigned min_precedence)
+ast::Expr* Parser::parseLogicalExprPrecedence(unsigned int min_precedence)
 {
     ast::Expr* left = parseComparisonExpr();
     if (!left)
@@ -291,7 +291,7 @@ ast::Expr* Parser::parseComparisonExpr()
     return left;
 }
 
-ast::Expr* Parser::parseBinaryExprPrecedence(unsigned min_precedence)
+ast::Expr* Parser::parseBinaryExprPrecedence(unsigned int min_precedence)
 {
     ast::Expr* left = parseUnaryExpr();
     if (!left)
@@ -361,7 +361,7 @@ ast::Expr* Parser::parsePostfixExpr()
             } while (match(tok::TokenType::COMMA));
         }
 
-        if (!consume(tok::TokenType::RPAREN, u"Expected ')' after arguments"))
+        if (!consume(tok::TokenType::RPAREN, "Expected ')' after arguments"))
             return nullptr;
 
         expr = ast::AST_allocator.make<ast::CallExpr>(expr, ast::AST_allocator.make<ast::ListExpr>(std::move(args)));
@@ -399,7 +399,7 @@ ast::Expr* Parser::parsePrimaryExpr()
 
     if (check(tok::TokenType::KW_NONE)) {
         advance();
-        return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NONE, u"");
+        return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NONE, "");
     }
 
     if (check(tok::TokenType::IDENTIFIER)) {
@@ -419,7 +419,7 @@ ast::Expr* Parser::parsePrimaryExpr()
 
         if (!expr)
             return nullptr;
-        if (!consume(tok::TokenType::RPAREN, u"Expected ')' after expression"))
+        if (!consume(tok::TokenType::RPAREN, "Expected ')' after expression"))
             return nullptr;
 
         return expr;
@@ -455,7 +455,7 @@ ast::Expr* Parser::parseListLiteral()
         } while (match(tok::TokenType::COMMA));
     }
 
-    if (!consume(tok::TokenType::RBRACKET, u"Expected ']' after list elements"))
+    if (!consume(tok::TokenType::RBRACKET, "Expected ']' after list elements"))
         return nullptr;
 
     return ast::AST_allocator.make<ast::ListExpr>(std::move(elements));
@@ -477,7 +477,7 @@ void Parser::synchronize()
             advance();
             return;
         }
-        
+
         if (check(tok::TokenType::KW_IF) || check(tok::TokenType::KW_WHILE) || check(tok::TokenType::KW_RETURN) || check(tok::TokenType::KW_FN))
             return;
 

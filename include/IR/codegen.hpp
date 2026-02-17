@@ -1,16 +1,11 @@
 #pragma once
 
-#include "value.hpp"
-#include "env.hpp"
 #include "../ast/ast.hpp"
-
-#include <builtins.h>
-#include <functional>
+#include "env.hpp"
+#include "value.hpp"
 
 namespace mylang {
 namespace IR {
-
-using namespace runtime;
 
 class CodeGenerator {
 public:

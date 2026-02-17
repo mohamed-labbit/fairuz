@@ -10,7 +10,7 @@
 namespace mylang {
 namespace parser {
 
-// Symbol table with type inference
+// symbol table with type inference
 class SymbolTable {
 public:
     enum class SymbolType { VARIABLE,
@@ -40,10 +40,10 @@ public:
         bool IsUsed = false;
         std::int32_t DefinitionLine = 0;
         std::vector<std::int32_t> UsageLines;
-        // For functions
+        // for functions
         std::vector<DataType_t> ParamTypes;
         DataType_t returnType = DataType_t::UNKNOWN;
-        // For type inference
+        // for type inference
         std::unordered_set<DataType_t> PossibleTypes;
     };
 
@@ -52,7 +52,7 @@ public:
 private:
     std::unordered_map<StringRef, Symbol, StringRefHash, StringRefEqual> Symbols_;
     std::vector<std::unique_ptr<SymbolTable>> Children_;
-    unsigned ScopeLevel_ { 0 };
+    unsigned int ScopeLevel_ { 0 };
 
 public:
     explicit SymbolTable(SymbolTable* p = nullptr, std::int32_t level = 0);

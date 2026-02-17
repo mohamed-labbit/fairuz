@@ -392,7 +392,7 @@ void StatsPrinter::printErrorStatistics(std::ostream& os) const
         printMetric(os, "Invalid Free Attempts", std::to_string(stats_.InvalidFreeAttempts), true);
 
     if (stats_.ZeroByteRequests > 0)
-        printMetric(os, "Zero-Byte Requests", std::to_string(stats_.ZeroByteRequests), false);
+        printMetric(os, "Zero-unsigned char Requests", std::to_string(stats_.ZeroByteRequests), false);
 
     os << "+------------------------------------------------------------------------------------+\n";
 }

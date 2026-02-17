@@ -6,7 +6,7 @@
 namespace mylang {
 namespace IR {
 
-SizeType Value::size()
+std::size_t Value::size()
 {
     if (isInt())
         return sizeof(*asInt());
@@ -168,7 +168,6 @@ typename Value::NativeFunction* Value::asNativeFunction()
     return &std::get<NativeFunction>(Data_);
 }
 
-// Type conversions
 double Value::toFloat() const
 {
     if (isInt())
@@ -236,7 +235,7 @@ StringRef Value::toString() const
     case Type::FLOAT: {
         StringRef s;
         s = std::to_string(*asFloat()).data();
-        for (SizeType i = s.len() - 1; i > 0; --i) {
+        for (std::size_t i = s.len() - 1; i > 0; --i) {
             if (s[i] == '0')
                 s.erase(i);
             else {
@@ -254,7 +253,7 @@ StringRef Value::toString() const
     case Type::LIST: {
         StringRef result = "[";
         std::vector<Value> const& list = *asList();
-        for (SizeType i = 0; i < list.size(); ++i) {
+        for (std::size_t i = 0; i < list.size(); ++i) {
             result += list[i].toString();
             if (i + 1 < list.size())
                 result += ", ";
@@ -265,7 +264,7 @@ StringRef Value::toString() const
         StringRef result = "{";
         std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual> const& dict
             = std::get<std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual>>(Data_);
-        SizeType count = 0;
+        std::size_t count = 0;
         for (auto const& [k, v] : dict) {
             result += "'" + k + "': " + v.toString();
             if (++count < dict.size())
@@ -290,18 +289,15 @@ std::string Value::repr() const
     return toString().data();
 }
 
-// Hash for use in dictionaries
-SizeType Value::hash() const
+std::size_t Value::hash() const
 {
     std::hash<StringRef> hasher;
     return hasher(toString());
 }
 
-// Comparison operators
 bool Value::operator==(Value const& other) const
 {
     if (Type_ != other.Type_) {
-        // Handle numeric comparisons
         if (isNumber() && other.isNumber())
             return toFloat() == other.toFloat();
 
@@ -331,10 +327,6 @@ bool Value::operator<(Value const& other) const
     if (isNumber() && other.isNumber())
         return toFloat() < other.toFloat();
 
-    // if (isString() && other.isString())
-    // {
-    //   return asString() < other.asString();
-    // }
     diagnostic::engine.panic("Cannot compare types");
 }
 
@@ -399,7 +391,6 @@ Value Value::operator*(Value const& other) const
     if (isNumber() && other.isNumber())
         return Value(toFloat() * other.toFloat());
 
-    // String/List repetition
     if (isString() && other.isInt()) {
         StringRef result;
         for (std::int64_t i = 0, n = *other.asInt(); i < n; ++i)
@@ -428,7 +419,6 @@ Value Value::operator/(Value const& other) const
         if (isFloat() && other.isFloat())
             return Value(static_cast<double>(*asFloat() / *other.asFloat()));
 
-        // mix int and float returns float
         double divisor = other.toFloat();
         if (divisor == 0.0) {
             // diagnostic::engine.panic("Division by zero");
@@ -468,7 +458,7 @@ Value Value::operator%(Value const& other) const
     }
 
     diagnostic::engine.panic("Unsupported operand types for %");
-    return Value(); // Unreachable, but satisfies compiler
+    return Value();
 }
 Value Value::pow(Value const& other) const
 {
@@ -477,7 +467,6 @@ Value Value::pow(Value const& other) const
     diagnostic::engine.panic("Unsupported operand types for **");
 }
 
-// Unary operators
 Value Value::operator-() const
 {
     if (isInt())
@@ -489,9 +478,11 @@ Value Value::operator-() const
     diagnostic::engine.panic("Unsupported operand type for unary -");
 }
 
-Value Value::operator!() const { return Value(!toBool()); }
+Value Value::operator!() const
+{
+    return Value(!toBool());
+}
 
-// Subscript operator
 Value Value::getItem(Value const& key) const
 {
     if (isList()) {

@@ -15,13 +15,13 @@ namespace tok {
 
 struct Location {
     std::string filepath { "" };
-    SizeType line { 0 };
-    SizeType column { 0 };
-    SizeType FilePos { 0 };
+    std::size_t line { 0 };
+    std::size_t column { 0 };
+    std::size_t FilePos { 0 };
 
     Location() = default;
 
-    Location(std::string fpath, SizeType line, SizeType col, SizeType fpos)
+    Location(std::string fpath, std::size_t line, std::size_t col, std::size_t fpos)
         : filepath(fpath)
         , line(line)
         , column(col)
@@ -31,7 +31,7 @@ struct Location {
 };
 
 enum class TokenType : int {
-    // Keywords (Arabic)
+    // keywords
     KW_IF,       // اذا
     KW_WHILE,    // طالما
     KW_FOR,      // لكل
@@ -46,7 +46,7 @@ enum class TokenType : int {
     KW_FALSE,    // خطا
     KW_NONE,     // عدم
 
-    // Operators
+    // ops
     OP_PLUS,    // +
     OP_MINUS,   // -
     OP_STAR,    // *
@@ -67,7 +67,7 @@ enum class TokenType : int {
     OP_LSHIFT,  // <<
     OP_RSHIFT,  // >>
 
-    // Augmented assignment
+    // augmented assignment
     OP_PLUSEQ,    // +=
     OP_MINUSEQ,   // -=
     OP_STAREQ,    // *=
@@ -79,7 +79,7 @@ enum class TokenType : int {
     OP_LSHIFTEQ,  // <<=
     OP_RSHIFTEQ,  // >>=
 
-    // Delimiters
+    // delimiters
     LPAREN,    // (
     RPAREN,    // )
     LBRACKET,  // [
@@ -92,13 +92,13 @@ enum class TokenType : int {
     ARROW,     // ->
     DOT,       // .
 
-    // Literals
+    // literals
     NUMBER,
     FLOAT,
     STRING,
     NAME,
 
-    // Special
+    // special
     NEWLINE,
     INDENT,
     DEDENT,
@@ -108,89 +108,89 @@ enum class TokenType : int {
     // identifier
     IDENTIFIER,
 
-    // Error
+    // error
     INVALID
 };
 
 static std::unordered_map<StringRef, TokenType, StringRefHash, StringRefEqual> const operators
-    = { { u"=", TokenType::OP_EQ }, { u":=", TokenType::OP_ASSIGN }, { u"+", TokenType::OP_PLUS }, { u"-", TokenType::OP_MINUS },
-          { u"*", TokenType::OP_STAR }, { u"/", TokenType::OP_SLASH }, { u"<", TokenType::OP_LT }, { u">", TokenType::OP_GT },
-          { u"<=", TokenType::OP_LTE }, { u">=", TokenType::OP_GTE }, { u"!=", TokenType::OP_NEQ } };
+    = { { "=", TokenType::OP_EQ }, { ":=", TokenType::OP_ASSIGN }, { "+", TokenType::OP_PLUS }, { "-", TokenType::OP_MINUS },
+          { "*", TokenType::OP_STAR }, { "/", TokenType::OP_SLASH }, { "<", TokenType::OP_LT }, { ">", TokenType::OP_GT },
+          { "<=", TokenType::OP_LTE }, { ">=", TokenType::OP_GTE }, { "!=", TokenType::OP_NEQ } };
 
-static std::unordered_map<StringRef, TokenType, StringRefHash, StringRefEqual> const keywords = { { u"خطا", TokenType::KW_FALSE },
-    { u"عدم", TokenType::KW_NONE }, { u"صحيح", TokenType::KW_TRUE }, { u"و", TokenType::KW_AND }, { u"اخرج", TokenType::KW_RETURN },
-    { u"اكمل", TokenType::KW_CONTINUE }, { u"عرف", TokenType::KW_FN }, { u"او", TokenType::KW_OR }, { u"بكل", TokenType::KW_FOR },
-    { u"اذا", TokenType::KW_IF }, { u"ليس", TokenType::KW_NOT }, { u"ارجع", TokenType::KW_RETURN }, { u"طالما", TokenType::KW_WHILE } };
+static std::unordered_map<StringRef, TokenType, StringRefHash, StringRefEqual> const keywords = { { "خطا", TokenType::KW_FALSE },
+    { "عدم", TokenType::KW_NONE }, { "صحيح", TokenType::KW_TRUE }, { "و", TokenType::KW_AND }, { "اخرج", TokenType::KW_RETURN },
+    { "اكمل", TokenType::KW_CONTINUE }, { "عرف", TokenType::KW_FN }, { "او", TokenType::KW_OR }, { "بكل", TokenType::KW_FOR },
+    { "اذا", TokenType::KW_IF }, { "ليس", TokenType::KW_NOT }, { "ارجع", TokenType::KW_RETURN }, { "طالما", TokenType::KW_WHILE } };
 
 static StringRef const toString(TokenType tt)
 {
     switch (tt) {
     case TokenType::OP_EQ:
-        return u"=";
+        return "=";
     case TokenType::OP_ASSIGN:
-        return u":=";
+        return ":=";
     case TokenType::OP_PLUS:
-        return u"+";
+        return "+";
     case TokenType::OP_MINUS:
-        return u"-";
+        return "-";
     case TokenType::OP_STAR:
-        return u"*";
+        return "*";
     case TokenType::OP_SLASH:
-        return u"/";
+        return "/";
     case TokenType::OP_PERCENT:
-        return u"%";
+        return "%";
     case TokenType::OP_POWER:
-        return u"**";
+        return "**";
     case TokenType::OP_LT:
-        return u"<";
+        return "<";
     case TokenType::OP_GT:
-        return u">";
+        return ">";
     case TokenType::OP_LTE:
-        return u"<=";
+        return "<=";
     case TokenType::OP_GTE:
-        return u">=";
+        return ">=";
     case TokenType::OP_NEQ:
-        return u"!=";
+        return "!=";
     case TokenType::OP_BITAND:
-        return u"&";
+        return "&";
     case TokenType::OP_BITOR:
-        return u"|";
+        return "|";
     case TokenType::OP_BITXOR:
-        return u"^";
+        return "^";
     case TokenType::OP_BITNOT:
-        return u"~";
+        return "~";
     case TokenType::OP_LSHIFT:
-        return u"<<";
+        return "<<";
     case TokenType::OP_RSHIFT:
-        return u">>";
+        return ">>";
     case TokenType::OP_PLUSEQ:
-        return u"+=";
+        return "+=";
     case TokenType::OP_MINUSEQ:
-        return u"-=";
+        return "-=";
     case TokenType::OP_STAREQ:
-        return u"*=";
+        return "*=";
     case TokenType::OP_SLASHEQ:
-        return u"/=";
+        return "/=";
     case TokenType::OP_PERCENTEQ:
-        return u"%=";
+        return "%=";
     case TokenType::OP_ANDEQ:
-        return u"&=";
+        return "&=";
     case TokenType::OP_OREQ:
-        return u"|=";
+        return "|=";
     case TokenType::OP_XOREQ:
-        return u"^=";
+        return "^=";
     case TokenType::OP_LSHIFTEQ:
-        return u"<<=";
+        return "<<=";
     case TokenType::OP_RSHIFTEQ:
-        return u">>=";
+        return ">>=";
     default:
-        return u"";
+        return "";
     }
 }
 
 class Token {
 public:
-    Token(StringRef val, TokenType tt, SizeType line, SizeType col, SizeType fpos, std::string fpath, bool atbol = false)
+    Token(StringRef val, TokenType tt, std::size_t line, std::size_t col, std::size_t fpos, std::string fpath, bool atbol = false)
         : Value_(val)
         , Type_(tt)
         , Location_(fpath, line, col, fpos)
@@ -207,13 +207,14 @@ public:
     }
 
     Token(Token const&) = default;
-    Token(Token&&) MYLANG_NOEXCEPT = default;
+    Token(Token&&) noexcept = default;
 
     bool operator==(Token const& other) const
     {
         if (Type_ == TokenType::INDENT || Type_ == TokenType::DEDENT
             || Type_ == TokenType::BEGINMARKER || Type_ == TokenType::ENDMARKER)
             return Type_ == other.Type_;
+
         return Value_ == other.Value_ && Type_ == other.Type_ && Location_.line == other.Location_.line && Location_.column == other.Location_.column;
     }
 
@@ -223,7 +224,7 @@ public:
     }
 
     Token& operator=(Token const&) = default;
-    Token& operator=(Token&&) MYLANG_NOEXCEPT = default;
+    Token& operator=(Token&&) noexcept = default;
 
     // Return const references to avoid copies
     StringRef const& lexeme() const
@@ -236,17 +237,17 @@ public:
         return Type_;
     }
 
-    SizeType size() const
+    std::size_t size() const
     {
         return Value_.len();
     }
 
-    SizeType const& line() const
+    std::size_t const& line() const
     {
         return Location_.line;
     }
 
-    SizeType const& column() const
+    std::size_t const& column() const
     {
         return Location_.column;
     }
@@ -343,7 +344,7 @@ private:
     StringRef Value_;
     TokenType Type_;
     Location Location_;
-    bool Atbol_; // FIXED: Now properly initialized
+    bool Atbol_;
 };
 
 } // namespace tok

@@ -44,7 +44,7 @@ protected:
     ast::LiteralExpr* createNoneLiteral(std::int32_t line = 1)
     {
 
-        return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NONE, u"none" /*, line*/);
+        return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NONE, "none" /*, line*/);
     }
 
     // Helper function to create a name expression
@@ -82,25 +82,25 @@ protected:
 
 TEST_F(SemanticAnalyzerTest, InferType_NumberLiteral_Integer)
 {
-    ast::LiteralExpr* expr = createNumberLiteral(u"42");
+    ast::LiteralExpr* expr = createNumberLiteral("42");
     EXPECT_EQ(analyzer->inferType(expr), SymbolTable::DataType_t::INTEGER);
 }
 
 TEST_F(SemanticAnalyzerTest, InferType_NumberLiteral_Float)
 {
-    auto* expr = createNumberLiteral(u"3.14");
+    auto* expr = createNumberLiteral("3.14");
     EXPECT_EQ(analyzer->inferType(expr), SymbolTable::DataType_t::FLOAT);
 }
 
 TEST_F(SemanticAnalyzerTest, InferType_StringLiteral)
 {
-    auto* expr = createStringLiteral(u"hello");
+    auto* expr = createStringLiteral("hello");
     EXPECT_EQ(analyzer->inferType(expr), SymbolTable::DataType_t::STRING);
 }
 
 TEST_F(SemanticAnalyzerTest, InferType_BooleanLiteral)
 {
-    auto* expr = createBooleanLiteral(u"true");
+    auto* expr = createBooleanLiteral("true");
     EXPECT_EQ(analyzer->inferType(expr), SymbolTable::DataType_t::BOOLEAN);
 }
 
@@ -114,8 +114,8 @@ TEST_F(SemanticAnalyzerTest, InferType_NullExpr) { EXPECT_EQ(analyzer->inferType
 
 TEST_F(SemanticAnalyzerTest, InferType_BinaryExpr_IntPlusInt)
 {
-    auto* left = createNumberLiteral(u"10");
-    auto* right = createNumberLiteral(u"20");
+    auto* left = createNumberLiteral("10");
+    auto* right = createNumberLiteral("20");
     auto* binary = createBinary(left, tok::TokenType::OP_PLUS, right);
 
     EXPECT_EQ(analyzer->inferType(binary), SymbolTable::DataType_t::INTEGER);
@@ -123,8 +123,8 @@ TEST_F(SemanticAnalyzerTest, InferType_BinaryExpr_IntPlusInt)
 
 TEST_F(SemanticAnalyzerTest, InferType_BinaryExpr_FloatPromotion)
 {
-    auto* left = createNumberLiteral(u"10");
-    auto* right = createNumberLiteral(u"20.5");
+    auto* left = createNumberLiteral("10");
+    auto* right = createNumberLiteral("20.5");
     auto* binary = createBinary(left, tok::TokenType::OP_PLUS, right);
 
     EXPECT_EQ(analyzer->inferType(binary), SymbolTable::DataType_t::FLOAT);
@@ -132,8 +132,8 @@ TEST_F(SemanticAnalyzerTest, InferType_BinaryExpr_FloatPromotion)
 
 TEST_F(SemanticAnalyzerTest, InferType_BinaryExpr_StringConcat)
 {
-    auto* left = createStringLiteral(u"hello");
-    auto* right = createStringLiteral(u"world");
+    auto* left = createStringLiteral("hello");
+    auto* right = createStringLiteral("world");
     auto* binary = createBinary(left, tok::TokenType::OP_PLUS, right);
 
     EXPECT_EQ(analyzer->inferType(binary), SymbolTable::DataType_t::STRING);
@@ -141,8 +141,8 @@ TEST_F(SemanticAnalyzerTest, InferType_BinaryExpr_StringConcat)
 
 TEST_F(SemanticAnalyzerTest, InferType_BinaryExpr_LogicalAnd)
 {
-    auto* left = createBooleanLiteral(u"true");
-    auto* right = createBooleanLiteral(u"false");
+    auto* left = createBooleanLiteral("true");
+    auto* right = createBooleanLiteral("false");
     auto* binary = createBinary(left, tok::TokenType::KW_AND, right);
 
     EXPECT_EQ(analyzer->inferType(binary), SymbolTable::DataType_t::BOOLEAN);
@@ -150,8 +150,8 @@ TEST_F(SemanticAnalyzerTest, InferType_BinaryExpr_LogicalAnd)
 
 TEST_F(SemanticAnalyzerTest, InferType_BinaryExpr_LogicalOr)
 {
-    auto* left = createBooleanLiteral(u"true");
-    auto* right = createBooleanLiteral(u"false");
+    auto* left = createBooleanLiteral("true");
+    auto* right = createBooleanLiteral("false");
     auto* binary = createBinary(left, tok::TokenType::KW_OR, right);
 
     EXPECT_EQ(analyzer->inferType(binary), SymbolTable::DataType_t::BOOLEAN);
@@ -161,26 +161,26 @@ TEST_F(SemanticAnalyzerTest, InferType_BinaryExpr_LogicalOr)
 
 TEST_F(SemanticAnalyzerTest, UndefinedVariable_ReportsError)
 {
-    auto* nameExpr = createName(u"undefined_var", 5);
+    auto* nameExpr = createName("undefined_var", 5);
 
     analyzer->analyzeExpr(nameExpr);
 
     EXPECT_GT(countIssuesBySeverity(SemanticAnalyzer::Issue::Severity::ERROR), 0);
-    EXPECT_TRUE(hasIssueContaining(u"Undefined variable"));
+    EXPECT_TRUE(hasIssueContaining("Undefined variable"));
 }
 
 TEST_F(SemanticAnalyzerTest, DefinedVariable_NoError)
 {
     // First define the variable
-    auto* value = createNumberLiteral(u"42");
-    auto* target = createName(u"x");
+    auto* value = createNumberLiteral("42");
+    auto* target = createName("x");
     auto* assign = ast::AST_allocator.make<ast::AssignmentStmt>(target, value /*, 1*/);
     statements.push_back(assign);
 
     analyzer->analyze(statements);
 
     // Now use the variable
-    auto* useExpr = createName(u"x", 2);
+    auto* useExpr = createName("x", 2);
     analyzer->analyzeExpr(useExpr);
 
     // Should not report undefined variable error for 'x'
@@ -189,85 +189,85 @@ TEST_F(SemanticAnalyzerTest, DefinedVariable_NoError)
 
 TEST_F(SemanticAnalyzerTest, UnusedVariable_ReportsWarning)
 {
-    auto* value = createNumberLiteral(u"42");
-    auto* target = createName(u"unused_var");
+    auto* value = createNumberLiteral("42");
+    auto* target = createName("unused_var");
     auto* assign = ast::AST_allocator.make<ast::AssignmentStmt>(target, value /*, 1*/);
     statements.push_back(assign);
 
     analyzer->analyze(statements);
 
     EXPECT_GT(countIssuesBySeverity(SemanticAnalyzer::Issue::Severity::WARNING), 0);
-    EXPECT_TRUE(hasIssueContaining(u"Unused variable"));
+    EXPECT_TRUE(hasIssueContaining("Unused variable"));
 }
 
 // Type Compatibility Tests
 
 TEST_F(SemanticAnalyzerTest, InvalidStringOperation_Subtraction)
 {
-    auto* left = createStringLiteral(u"hello");
-    auto* right = createStringLiteral(u"world");
+    auto* left = createStringLiteral("hello");
+    auto* right = createStringLiteral("world");
     auto* binary = createBinary(left, tok::TokenType::OP_MINUS, right);
 
     analyzer->analyzeExpr(binary);
 
     EXPECT_GT(countIssuesBySeverity(SemanticAnalyzer::Issue::Severity::ERROR), 0);
-    EXPECT_TRUE(hasIssueContaining(u"Invalid operation on string"));
+    EXPECT_TRUE(hasIssueContaining("Invalid operation on string"));
 }
 
 TEST_F(SemanticAnalyzerTest, InvalidStringOperation_Multiplication)
 {
-    auto* left = createStringLiteral(u"hello");
-    auto* right = createNumberLiteral(u"3");
+    auto* left = createStringLiteral("hello");
+    auto* right = createNumberLiteral("3");
     auto* binary = createBinary(left, tok::TokenType::OP_STAR, right);
 
     analyzer->analyzeExpr(binary);
 
     EXPECT_GT(countIssuesBySeverity(SemanticAnalyzer::Issue::Severity::ERROR), 0);
-    EXPECT_TRUE(hasIssueContaining(u"Invalid operation on string"));
+    EXPECT_TRUE(hasIssueContaining("Invalid operation on string"));
 }
 
 TEST_F(SemanticAnalyzerTest, InvalidStringOperation_Division)
 {
-    auto* left = createStringLiteral(u"hello");
-    auto* right = createNumberLiteral(u"2");
+    auto* left = createStringLiteral("hello");
+    auto* right = createNumberLiteral("2");
     auto* binary = createBinary(left, tok::TokenType::OP_SLASH, right);
 
     analyzer->analyzeExpr(binary);
 
     EXPECT_GT(countIssuesBySeverity(SemanticAnalyzer::Issue::Severity::ERROR), 0);
-    EXPECT_TRUE(hasIssueContaining(u"Invalid operation on string"));
+    EXPECT_TRUE(hasIssueContaining("Invalid operation on string"));
 }
 
 // Division by Zero Tests
 
 TEST_F(SemanticAnalyzerTest, DivisionByZero_ReportsError)
 {
-    auto* left = createNumberLiteral(u"10");
-    auto* right = createNumberLiteral(u"0");
+    auto* left = createNumberLiteral("10");
+    auto* right = createNumberLiteral("0");
     auto* binary = createBinary(left, tok::TokenType::OP_SLASH, right);
 
     analyzer->analyzeExpr(binary);
 
     EXPECT_GT(countIssuesBySeverity(SemanticAnalyzer::Issue::Severity::ERROR), 0);
-    EXPECT_TRUE(hasIssueContaining(u"Division by zero"));
+    EXPECT_TRUE(hasIssueContaining("Division by zero"));
 }
 
 TEST_F(SemanticAnalyzerTest, DivisionByNonZero_NoError)
 {
-    auto* left = createNumberLiteral(u"10");
-    auto* right = createNumberLiteral(u"5");
+    auto* left = createNumberLiteral("10");
+    auto* right = createNumberLiteral("5");
     auto* binary = createBinary(left, tok::TokenType::OP_SLASH, right);
 
     analyzer->analyzeExpr(binary);
 
-    EXPECT_FALSE(hasIssueContaining(u"Division by zero"));
+    EXPECT_FALSE(hasIssueContaining("Division by zero"));
 }
 
 // Function Analysis Tests
 
 TEST_F(SemanticAnalyzerTest, BuiltInFunction_Print_IsDefined)
 {
-    auto* printName = createName(u"print");
+    auto* printName = createName("print");
 
     analyzer->analyzeExpr(printName);
 
@@ -277,28 +277,28 @@ TEST_F(SemanticAnalyzerTest, BuiltInFunction_Print_IsDefined)
 TEST_F(SemanticAnalyzerTest, CallNonCallable_ReportsError)
 {
     // Define a variable
-    auto* value = createNumberLiteral(u"42");
-    auto* target = createName(u"not_a_function");
+    auto* value = createNumberLiteral("42");
+    auto* target = createName("not_a_function");
     auto* assign = ast::AST_allocator.make<ast::AssignmentStmt>(target, value /*, 1*/);
     statements.push_back(assign);
     analyzer->analyze(statements);
 
     // Try to call it
-    auto* callee = createName(u"not_a_function", 2);
+    auto* callee = createName("not_a_function", 2);
     std::vector<ast::Expr*> args;
     ast::ListExpr* arg_list = ast::AST_allocator.make<ast::ListExpr>(args);
     auto* call = ast::AST_allocator.make<ast::CallExpr>(callee, arg_list /*, 2*/);
 
     analyzer->analyzeExpr(call);
 
-    EXPECT_TRUE(hasIssueContaining(u"is not callable"));
+    EXPECT_TRUE(hasIssueContaining("is not callable"));
 }
 
 // Control Flow Tests
 
 TEST_F(SemanticAnalyzerTest, ConstantIfCondition_ReportsWarning)
 {
-    auto* condition = createBooleanLiteral(u"true");
+    auto* condition = createBooleanLiteral("true");
     auto* thenBlock = ast::AST_allocator.make<ast::BlockStmt>(std::vector<ast::Stmt*> {} /*, 1*/);
     auto* elseBlock = ast::AST_allocator.make<ast::BlockStmt>(std::vector<ast::Stmt*> {} /*, 1*/);
     auto* ifStmt = ast::AST_allocator.make<ast::IfStmt>(condition, thenBlock, elseBlock /*, 1*/);
@@ -306,37 +306,37 @@ TEST_F(SemanticAnalyzerTest, ConstantIfCondition_ReportsWarning)
     analyzer->analyzeStmt(ifStmt);
 
     EXPECT_GT(countIssuesBySeverity(SemanticAnalyzer::Issue::Severity::WARNING), 0);
-    EXPECT_TRUE(hasIssueContaining(u"Condition is always constant"));
+    EXPECT_TRUE(hasIssueContaining("Condition is always constant"));
 }
 
 TEST_F(SemanticAnalyzerTest, InfiniteLoop_ReportsWarning)
 {
-    auto* condition = createBooleanLiteral(u"true");
+    auto* condition = createBooleanLiteral("true");
     auto* block = ast::AST_allocator.make<ast::BlockStmt>(std::vector<ast::Stmt*> {} /*, 1*/);
     auto* whileStmt = ast::AST_allocator.make<ast::WhileStmt>(condition, block /*, 1*/);
 
     analyzer->analyzeStmt(whileStmt);
 
     EXPECT_GT(countIssuesBySeverity(SemanticAnalyzer::Issue::Severity::WARNING), 0);
-    EXPECT_TRUE(hasIssueContaining(u"Infinite loop"));
+    EXPECT_TRUE(hasIssueContaining("Infinite loop"));
 }
 
 // Expression Statement Tests
 
 TEST_F(SemanticAnalyzerTest, UnusedExpressionResult_ReportsInfo)
 {
-    auto* expr = createNumberLiteral(u"42");
+    auto* expr = createNumberLiteral("42");
     auto* exprStmt = ast::AST_allocator.make<ast::ExprStmt>(expr /*, 1*/);
 
     analyzer->analyzeStmt(exprStmt);
 
     EXPECT_GT(countIssuesBySeverity(SemanticAnalyzer::Issue::Severity::INFO), 0);
-    EXPECT_TRUE(hasIssueContaining(u"Expression result not used"));
+    EXPECT_TRUE(hasIssueContaining("Expression result not used"));
 }
 
 TEST_F(SemanticAnalyzerTest, FunctionCallExpression_NoUnusedWarning)
 {
-    auto* callee = createName(u"print");
+    auto* callee = createName("print");
     std::vector<ast::Expr*> args;
     ast::ListExpr* arg_list = ast::AST_allocator.make<ast::ListExpr>(args);
     auto* call = ast::AST_allocator.make<ast::CallExpr>(callee, arg_list /*, 1*/);
@@ -354,29 +354,29 @@ TEST_F(SemanticAnalyzerTest, FunctionCallExpression_NoUnusedWarning)
 TEST_F(SemanticAnalyzerTest, ForLoopVariableShadowing_ReportsWarning)
 {
     // Define outer variable
-    auto* outerValue = createNumberLiteral(u"10");
-    auto* outerTarget = createName(u"i");
+    auto* outerValue = createNumberLiteral("10");
+    auto* outerTarget = createName("i");
     auto* outerAssign = ast::AST_allocator.make<ast::AssignmentStmt>(outerTarget, outerValue /*, 1*/);
     statements.push_back(outerAssign);
 
     analyzer->analyze(statements);
 
     // Create for loop with same variable name
-    auto* loopVar = createName(u"i");
+    auto* loopVar = createName("i");
     auto* iterable = ast::AST_allocator.make<ast::ListExpr>(std::vector<ast::Expr*> {} /*, 2*/);
     auto* loopBlock = ast::AST_allocator.make<ast::BlockStmt>(std::vector<ast::Stmt*> {} /*, 2*/);
     auto* forStmt = ast::AST_allocator.make<ast::ForStmt>(loopVar, iterable, loopBlock /*, 2*/);
 
     analyzer->analyzeStmt(forStmt);
 
-    EXPECT_TRUE(hasIssueContaining(u"Loop variable shadows"));
+    EXPECT_TRUE(hasIssueContaining("Loop variable shadows"));
 }
 
 // Function Definition Tests
 
 TEST_F(SemanticAnalyzerTest, FunctionWithoutReturn_ReportsInfo)
 {
-    auto* funcName = createName(u"my_func");
+    auto* funcName = createName("my_func");
     std::vector<ast::Expr*> params;
     ast::ListExpr* param_list = ast::AST_allocator.make<ast::ListExpr>(params);
     auto* body = ast::AST_allocator.make<ast::BlockStmt>(std::vector<ast::Stmt*> {} /*, 1*/);
@@ -385,16 +385,16 @@ TEST_F(SemanticAnalyzerTest, FunctionWithoutReturn_ReportsInfo)
     analyzer->analyzeStmt(funcDef);
 
     EXPECT_GT(countIssuesBySeverity(SemanticAnalyzer::Issue::Severity::INFO), 0);
-    EXPECT_TRUE(hasIssueContaining(u"Function may not return a value"));
+    EXPECT_TRUE(hasIssueContaining("Function may not return a value"));
 }
 
 TEST_F(SemanticAnalyzerTest, FunctionWithReturn_NoWarning)
 {
-    auto* funcName = createName(u"my_func");
+    auto* funcName = createName("my_func");
     std::vector<ast::Expr*> params;
     ast::ListExpr* param_list = ast::AST_allocator.make<ast::ListExpr>(params);
     // Create return statement
-    auto* retValue = createNumberLiteral(u"42");
+    auto* retValue = createNumberLiteral("42");
     auto* retStmt = ast::AST_allocator.make<ast::ReturnStmt>(retValue /*, 2*/);
 
     std::vector<ast::Stmt*> bodyStmts = { retStmt };
@@ -404,7 +404,7 @@ TEST_F(SemanticAnalyzerTest, FunctionWithReturn_NoWarning)
     analyzer->analyzeStmt(funcDef);
 
     // Should not warn about missing return
-    EXPECT_FALSE(hasIssueContaining(u"Function may not return a value"));
+    EXPECT_FALSE(hasIssueContaining("Function may not return a value"));
 }
 
 // Complex Expression Tests
@@ -412,11 +412,11 @@ TEST_F(SemanticAnalyzerTest, FunctionWithReturn_NoWarning)
 TEST_F(SemanticAnalyzerTest, NestedBinaryExpressions_InfersCorrectType)
 {
     // (10 + 20) * 2.5
-    auto* inner_left = createNumberLiteral(u"10");
-    auto* inner_right = createNumberLiteral(u"20");
+    auto* inner_left = createNumberLiteral("10");
+    auto* inner_right = createNumberLiteral("20");
     auto* inner_binary = createBinary(inner_left, tok::TokenType::OP_PLUS, inner_right);
 
-    auto* outer_right = createNumberLiteral(u"2.5");
+    auto* outer_right = createNumberLiteral("2.5");
     auto* outer_binary = createBinary(inner_binary, tok::TokenType::OP_STAR, outer_right);
 
     // Should promote to FLOAT due to 2.5
@@ -425,7 +425,7 @@ TEST_F(SemanticAnalyzerTest, NestedBinaryExpressions_InfersCorrectType)
 
 TEST_F(SemanticAnalyzerTest, ListExpression_InfersListType)
 {
-    std::vector<ast::Expr*> elements = { createNumberLiteral(u"1"), createNumberLiteral(u"2"), createNumberLiteral(u"3") };
+    std::vector<ast::Expr*> elements = { createNumberLiteral("1"), createNumberLiteral("2"), createNumberLiteral("3") };
     auto* listExpr = ast::AST_allocator.make<ast::ListExpr>(elements /*, 1*/);
 
     EXPECT_EQ(analyzer->inferType(listExpr), SymbolTable::DataType_t::LIST);
@@ -455,7 +455,7 @@ TEST_F(SemanticAnalyzerTest, PrintReport_NoIssues)
 
 TEST_F(SemanticAnalyzerTest, PrintReport_WithIssues)
 {
-    auto* nameExpr = createName(u"undefined", 1);
+    auto* nameExpr = createName("undefined", 1);
     analyzer->analyzeExpr(nameExpr);
 
     // Should not throw
@@ -468,8 +468,8 @@ TEST_F(SemanticAnalyzerTest, GetGlobalScope_NotNull) { EXPECT_NE(analyzer->getGl
 
 TEST_F(SemanticAnalyzerTest, AssignmentCreatesSymbol)
 {
-    auto* value = createNumberLiteral(u"42");
-    auto* target = createName(u"x");
+    auto* value = createNumberLiteral("42");
+    auto* target = createName("x");
     auto* assign = ast::AST_allocator.make<ast::AssignmentStmt>(target, value /*, 1*/);
     statements.push_back(assign);
 
@@ -485,20 +485,20 @@ TEST_F(SemanticAnalyzerTest, AssignmentCreatesSymbol)
 TEST_F(SemanticAnalyzerTest, ComplexProgram_MultipleIssues)
 {
     // Undefined variable use
-    auto* undefined = createName(u"undefined_var", 1);
+    auto* undefined = createName("undefined_var", 1);
     auto* exprStmt1 = ast::AST_allocator.make<ast::ExprStmt>(undefined /*, 1*/);
     statements.push_back(exprStmt1);
 
     // Division by zero
-    auto* left = createNumberLiteral(u"10", 2);
-    auto* right = createNumberLiteral(u"0", 2);
+    auto* left = createNumberLiteral("10", 2);
+    auto* right = createNumberLiteral("0", 2);
     auto* divExpr = createBinary(left, tok::TokenType::OP_SLASH, right);
     auto* exprStmt2 = ast::AST_allocator.make<ast::ExprStmt>(divExpr /*, 2*/);
     statements.push_back(exprStmt2);
 
     // Unused variable
-    auto* value = createNumberLiteral(u"100", 3);
-    auto* target = createName(u"unused");
+    auto* value = createNumberLiteral("100", 3);
+    auto* target = createName("unused");
     auto* assign = ast::AST_allocator.make<ast::AssignmentStmt>(target, value /*, 3*/);
     statements.push_back(assign);
 
@@ -513,16 +513,16 @@ TEST_F(SemanticAnalyzerTest, ComplexProgram_MultipleIssues)
 TEST_F(SemanticAnalyzerTest, VariableFlowAnalysis)
 {
     // Define variable
-    auto* value1 = createNumberLiteral(u"10");
-    auto* target1 = createName(u"x");
+    auto* value1 = createNumberLiteral("10");
+    auto* target1 = createName("x");
     auto* assign1 = ast::AST_allocator.make<ast::AssignmentStmt>(target1, value1 /*, 1*/);
     statements.push_back(assign1);
 
     // Use variable
-    auto* useExpr = createName(u"x", 2);
-    auto* value2 = createNumberLiteral(u"5");
+    auto* useExpr = createName("x", 2);
+    auto* value2 = createNumberLiteral("5");
     auto* binary = createBinary(useExpr, tok::TokenType::OP_PLUS, value2);
-    auto* target2 = createName(u"y");
+    auto* target2 = createName("y");
     auto* assign2 = ast::AST_allocator.make<ast::AssignmentStmt>(target2, binary /*, 2*/);
     statements.push_back(assign2);
 
@@ -532,7 +532,7 @@ TEST_F(SemanticAnalyzerTest, VariableFlowAnalysis)
     auto issues = analyzer->getIssues();
     size_t unusedYCount = 0;
     for (auto const& issue : issues) {
-        if (issue.message.find('y') && issue.message.find(u"Unused"))
+        if (issue.message.find('y') && issue.message.find("Unused"))
             unusedYCount++;
     }
     EXPECT_GT(unusedYCount, 0);
@@ -542,7 +542,7 @@ TEST_F(SemanticAnalyzerTest, VariableFlowAnalysis)
 
 TEST_F(SemanticAnalyzerTest, CallExpression_InfersAnyType)
 {
-    auto* callee = createName(u"some_function");
+    auto* callee = createName("some_function");
     std::vector<ast::Expr*> args;
     ast::ListExpr* arg_list = ast::AST_allocator.make<ast::ListExpr>(args);
     auto* call = ast::AST_allocator.make<ast::CallExpr>(callee, arg_list /*, 1*/);
@@ -552,8 +552,8 @@ TEST_F(SemanticAnalyzerTest, CallExpression_InfersAnyType)
 
 TEST_F(SemanticAnalyzerTest, CallWithArguments_AnalyzesAllArgs)
 {
-    auto* callee = createName(u"print");
-    std::vector<ast::Expr*> args = { createNumberLiteral(u"1"), createStringLiteral(u"hello"), createBooleanLiteral(u"true") };
+    auto* callee = createName("print");
+    std::vector<ast::Expr*> args = { createNumberLiteral("1"), createStringLiteral("hello"), createBooleanLiteral("true") };
     ast::ListExpr* arg_list = ast::AST_allocator.make<ast::ListExpr>(args);
     auto* call = ast::AST_allocator.make<ast::CallExpr>(callee, arg_list /*, 1*/);
 

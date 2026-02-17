@@ -29,17 +29,18 @@ public:
 
     DiagnosticEngine() = default;
 
-    void emit(std::string const& msg, Severity sv = Severity::ERROR)
+    constexpr void emit(std::string const& msg, const Severity sv = Severity::ERROR)
     {
         emitError(msg, sv);
     }
 
-    [[noreturn]] void panic(std::string const& msg)
+    [[noreturn]] constexpr void panic(std::string const& msg)
     {
         _panic(msg);
     }
 
-    void report(Severity sev, std::int32_t line, std::int32_t col, std::int32_t len, std::string const& msg, std::string const& code = "")
+    void report(Severity const sev, std::int32_t const line, std::int32_t const col,
+        std::int32_t const len, std::string const& msg, std::string const& code = "")
     {
         Diagnostics_.push_back({ sev, line, col, len, msg, code });
     }
@@ -64,7 +65,7 @@ public:
 private:
     std::vector<Diagnostic> Diagnostics_;
 
-    void emitError(std::string const& msg, Severity sv)
+    void emitError(std::string const& msg, Severity const sv)
     {
         std::cerr << svToStr(sv) << ": " << msg << std::endl;
         if (sv == Severity::FATAL)

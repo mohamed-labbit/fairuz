@@ -20,7 +20,7 @@ Lexer::Lexer(FileManager* fm)
     util::configureLocale();
 }
 
-Lexer::Lexer(std::vector<tok::Token const*>& seq, SizeType const s)
+Lexer::Lexer(std::vector<tok::Token const*>& seq, std::size_t const s)
     : TokStream_(seq)
     , TokIndex_(0)
     , IndentSize_(4)
@@ -34,7 +34,7 @@ Lexer::Lexer(std::vector<tok::Token const*>& seq, SizeType const s)
 
 tok::Token const* Lexer::lexToken()
 {
-    auto finish = [this](tok::TokenType tt, StringRef str, SizeType line, SizeType col) {
+    auto finish = [this](tok::TokenType tt, StringRef str, std::size_t line, std::size_t col) {
         tok::Token const* ret = make_token(tt, str, line, col);
         store(ret);
         return TokStream_.back();
@@ -46,7 +46,7 @@ tok::Token const* Lexer::lexToken()
         return TokStream_.back();
     }
 
-    auto nextLine = [this](SizeType const& line, SizeType const& col) {
+    auto nextLine = [this](std::size_t const& line, std::size_t const& col) {
         uint32_t current = SourceManager_.currentChar();
 
         if (AtBOL_) {
@@ -54,7 +54,6 @@ tok::Token const* Lexer::lexToken()
             unsigned int alt_size = 0;
             unsigned int cont_line_col = 0;
             bool blank_line = false;
-
             AtBOL_ = false;
 
             // calculate indentation size
@@ -138,8 +137,8 @@ tok::Token const* Lexer::lexToken()
     };
 
     for (;;) {
-        SizeType line = SourceManager_.getLineNumber();
-        SizeType col = SourceManager_.getColumnNumber();
+        std::size_t line = SourceManager_.getLineNumber();
+        std::size_t col = SourceManager_.getColumnNumber();
 
         uint32_t current = SourceManager_.currentChar();
         if (current == BUFFER_END)
@@ -512,8 +511,8 @@ tok::Token const* Lexer::lexToken()
         return TokStream_.back();
 
     // Emit any remaining dedents at EOF
-    SizeType last_line = SourceManager_.getLineNumber();
-    SizeType last_col = SourceManager_.getColumnNumber();
+    std::size_t last_line = SourceManager_.getLineNumber();
+    std::size_t last_col = SourceManager_.getColumnNumber();
 
     while (IndentLevel_ > 0) {
         --IndentLevel_;
@@ -572,7 +571,7 @@ tok::Token const* Lexer::current() const
     return nullptr;
 }
 
-tok::Token const* Lexer::peek(SizeType n)
+tok::Token const* Lexer::peek(std::size_t n)
 {
     while (TokIndex_ + n >= TokStream_.size()) {
         if (!TokStream_.empty() && TokStream_.back()->type() == tok::TokenType::ENDMARKER)

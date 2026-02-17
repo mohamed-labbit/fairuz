@@ -15,7 +15,7 @@ public:
         Allocator_.setName("String Allocator");
     }
 
-    void* allocateBytes(SizeType const size)
+    void* allocateBytes(std::size_t const size)
     {
         void* mem = Allocator_.allocate(size);
         if (!mem)
@@ -24,19 +24,19 @@ public:
     }
 
     template<typename T>
-    T* allocateArray(SizeType const count)
+    T* allocateArray(std::size_t const count)
     {
         return static_cast<T*>(allocateBytes(count * sizeof(T)));
     }
 
     template<typename T>
-    void deallocateArray(T* p, SizeType const count)
+    void deallocateArray(T* p, std::size_t const count)
     {
         Allocator_.deallocate((void*)p, count * sizeof(T));
     }
 
     template<typename T, typename... Args>
-    MYLANG_NODISCARD T* allocateObject(Args&&... args)
+    [[nodiscard]] T* allocateObject(Args&&... args)
     {
         static_assert(std::is_constructible_v<T, Args...>, "T must be constructible with Args...");
         void* mem = allocateBytes(sizeof(T));

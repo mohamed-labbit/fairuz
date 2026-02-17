@@ -11,7 +11,7 @@ std::string DiagnosticEngine::toJSON() const
 {
     std::stringstream ss;
     ss << "[\n";
-    for (SizeType i = 0; i < Diagnostics_.size(); ++i) {
+    for (std::size_t i = 0; i < Diagnostics_.size(); ++i) {
         Diagnostic const& diag = Diagnostics_[i];
         ss << "  {\n";
         ss << "    \"severity: " << static_cast<std::int32_t>(diag.severity) << ",\n";
@@ -56,10 +56,10 @@ void DiagnosticEngine::prettyPrint() const
         std::cout << color << sevStr << Color::RESET;
         if (!diag.code.empty())
             std::cout << "[" << diag.code << "]";
+
         std::cout << ": " << diag.message << "\n";
-        // Show source line
         std::cout << "  --> line " << diag.line << ":" << diag.column << "\n";
-        // Extract and show the problematic line
+
         /*
         std::vector<std::string> lines = splitLines(SourceCode_);
         if (diag.line > 0 && diag.line <= lines.size())
@@ -70,17 +70,18 @@ void DiagnosticEngine::prettyPrint() const
           << Color::RESET << '\n';
         }
         */
-        // Show suggestions
+       
         if (!diag.suggestions.empty()) {
             std::cout << Color::MAGENTA << "Help" << Color::RESET << std::endl;
             for (std::string const& sugg : diag.suggestions)
                 std::cout << "    • " << sugg << "\n";
         }
-        // Show notes
+
         for (auto const& [noteLine, noteMsg] : diag.notes) {
             std::cout << Color::CYAN << "note:" << Color::RESET << std::endl;
             std::cout << "  --> line " << noteLine << "\n";
         }
+
         std::cout << "\n";
     }
 }

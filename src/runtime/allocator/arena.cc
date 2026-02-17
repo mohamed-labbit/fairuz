@@ -21,8 +21,6 @@ void ArenaAllocator::reset()
 {
     // Acquire all locks in consistent order
     std::unique_lock blocks_lock(BlocksMutex_);
-    std::unique_lock fast_pool_lock(FastPoolMutex_);
-    std::unique_lock free_list_lock(FreeListMutex_);
     std::unique_lock alloc_map_lock(AllocationMapMutex_);
     std::unique_lock alloc_ptrs_lock(AllocatedPtrsMutex_);
 
@@ -39,16 +37,15 @@ void ArenaAllocator::reset()
     NextBlockSize_ = BlockSize_;
 }
 
-MYLANG_NODISCARD
-Pointer ArenaAllocator::allocateBlock(SizeType requested, SizeType alignment_, bool retry_on_oom)
+unsigned char* ArenaAllocator::allocateBlock(std::size_t requested, std::size_t alignment_, bool retry_on_oom)
 {
     // Validate and fix alignment if needed
-    SizeType min_align = alignof(std::max_align_t);
+    std::size_t min_align = alignof(std::max_align_t);
     if (alignment_ != ((requested + min_align - 1) & ~(min_align - 1)))
         alignment_ = min_align;
 
     // Determine block size (including growth strategy)
-    SizeType block_size = std::max(requested + alignment_, NextBlockSize_);
+    std::size_t block_size = std::max(requested + alignment_, NextBlockSize_);
 
     // Check against maximum
     if (block_size > MaxBlockSize_) {
@@ -76,7 +73,7 @@ Pointer ArenaAllocator::allocateBlock(SizeType requested, SizeType alignment_, b
     }
 }
 
-MYLANG_NODISCARD MYLANG_COMPILER_ABI void* ArenaAllocator::allocate(SizeType const size, SizeType const alignment)
+void* ArenaAllocator::allocate(std::size_t const size, std::size_t const alignment)
 {
     std::chrono::steady_clock::time_point start = std::chrono::high_resolution_clock::now();
 
@@ -97,14 +94,14 @@ MYLANG_NODISCARD MYLANG_COMPILER_ABI void* ArenaAllocator::allocate(SizeType con
 
     /// TODO: validate alignment
 
-    SizeType aligned_size = getAligned(size, alignment);
+    std::size_t aligned_size = getAligned(size, alignment);
 
     if (aligned_size > MAX_BLOCK_SIZE) {
         std::cerr << "allocation size (after alignment) is too large!" << std::endl;
         return nullptr;
     }
 
-    Pointer mem = allocateFromBlocks(aligned_size);
+    unsigned char* mem = allocateFromBlocks(aligned_size);
     if (!mem) {
         std::cerr << "allocate_from_blocks() failed!" << std::endl;
         return nullptr;
@@ -146,16 +143,15 @@ MYLANG_NODISCARD MYLANG_COMPILER_ABI void* ArenaAllocator::allocate(SizeType con
     return LastPtr_;
 }
 
-MYLANG_COMPILER_ABI
-void ArenaAllocator::deallocate(void* ptr, SizeType const size)
+void ArenaAllocator::deallocate(void* ptr, std::size_t const size)
 {
     auto start = std::chrono::high_resolution_clock::now();
     if (!ptr || size == 0 || Blocks_.empty())
         return;
 
     // Strict LIFO check
-    Pointer expected = static_cast<Pointer>(ptr);
-    Pointer last = static_cast<Pointer>(LastPtr_);
+    unsigned char* expected = static_cast<unsigned char*>(ptr);
+    unsigned char* last = static_cast<unsigned char*>(LastPtr_);
 
     if (expected != last)
         return;
@@ -186,7 +182,6 @@ void ArenaAllocator::deallocate(void* ptr, SizeType const size)
     AllocStats_.TotalDeallocTimeNs += seconds * 1000000;
 }
 
-MYLANG_NODISCARD
 bool ArenaAllocator::verifyAllocation(void* ptr) const
 {
     if (!TrackAllocations_)
@@ -200,25 +195,24 @@ bool ArenaAllocator::verifyAllocation(void* ptr) const
     return it->second.is_valid();
 }
 
-MYLANG_NODISCARD
-Pointer ArenaAllocator::allocateFromBlocks(SizeType alloc_size, SizeType align)
+unsigned char* ArenaAllocator::allocateFromBlocks(std::size_t alloc_size, std::size_t align)
 {
     {
         std::shared_lock<std::shared_mutex> lock(BlocksMutex_);
         if (!Blocks_.empty()) {
             // Try free list first
-            Pointer mem = Blocks_.back().allocate(alloc_size, align);
+            unsigned char* mem = Blocks_.back().allocate(alloc_size, align);
             if (mem)
                 return mem;
         }
     } // release lock
 
     // Need a new block
-    SizeType new_block_size = std::max(alloc_size, NextBlockSize_);
+    std::size_t new_block_size = std::max(alloc_size, NextBlockSize_);
     if (!allocateBlock(new_block_size, align)) {
         if (DebugFeatures_)
             std::cerr << "-- Failed to allocate block : ArenaAllocator::allocate_block()" << std::endl;
-            
+
         return nullptr;
     }
 
@@ -227,12 +221,12 @@ Pointer ArenaAllocator::allocateFromBlocks(SizeType alloc_size, SizeType align)
     return Blocks_.back().allocate(alloc_size, align);
 }
 
-void ArenaAllocator::updateNextBlockSize() MYLANG_NOEXCEPT
+void ArenaAllocator::updateNextBlockSize() noexcept
 {
     /// TODO: prevent overflow
     if (GrowthFactor_ == GrowthStrategy::EXPONENTIAL) {
-        SizeType current = NextBlockSize_;
-        SizeType max_size = MaxBlockSize_;
+        std::size_t current = NextBlockSize_;
+        std::size_t max_size = MaxBlockSize_;
         NextBlockSize_ = std::min(current * 2, max_size);
     }
 }

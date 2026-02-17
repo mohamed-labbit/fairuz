@@ -34,7 +34,7 @@ TEST_F(StringRefTest, DefaultConstructor)
 
 TEST_F(StringRefTest, SizeConstructor_Zero)
 {
-    StringRef s(static_cast<SizeType>(0));
+    StringRef s(static_cast<std::size_t>(0));
     EXPECT_TRUE(s.empty());
     EXPECT_EQ(s.len(), 0);
 }
@@ -139,7 +139,7 @@ TEST_F(StringRefTest, MoveConstructor_NonEmpty)
 {
     StringRef s1("Hello");
     char const* old_ptr = s1.data();
-    SizeType old_len = s1.len();
+    std::size_t old_len = s1.len();
 
     StringRef s2(std::move(s1));
 
@@ -326,7 +326,7 @@ TEST_F(StringRefTest, Expand_FromEmpty)
 TEST_F(StringRefTest, Expand_AlreadyLargeEnough)
 {
     StringRef s(100);
-    SizeType old_cap = s.cap();
+    std::size_t old_cap = s.cap();
     s.expand(50);
     EXPECT_EQ(s.cap(), old_cap); // Should not change
 }
@@ -904,7 +904,7 @@ TEST_F(StringRefTest, ToDouble_InvalidFormat)
 TEST_F(StringRefTest, ToDouble_WithPosition)
 {
     StringRef s("123.456abc");
-    SizeType pos = 0;
+    std::size_t pos = 0;
     double result = s.toDouble(&pos);
     EXPECT_DOUBLE_EQ(result, 123.456);
     EXPECT_GT(pos, 0);
@@ -1012,8 +1012,8 @@ TEST_F(StringRefTest, Stress_ManySubstrings)
     StringRef s("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
     std::vector<StringRef> subs;
 
-    for (SizeType i = 0; i < s.len(); i++) {
-        for (SizeType j = i; j < s.len(); j++) {
+    for (std::size_t i = 0; i < s.len(); i++) {
+        for (std::size_t j = i; j < s.len(); j++) {
             subs.push_back(s.substr(i, j));
         }
     }

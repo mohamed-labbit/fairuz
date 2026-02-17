@@ -70,14 +70,17 @@ void ControlFlowGraph::computeLiveness()
 std::vector<std::int32_t> ControlFlowGraph::getUnreachableBlocks() const
 {
     std::vector<std::int32_t> unreachable;
-    for (SizeType i = 0, n = Blocks_.size(); i < n; ++i) {
+    for (std::size_t i = 0, n = Blocks_.size(); i < n; ++i) {
         if (!Blocks_[i].IsReachable)
             unreachable.push_back(i);
     }
     return unreachable;
 }
 
-std::vector<typename ControlFlowGraph::BasicBlock> const& ControlFlowGraph::getBlocks() const { return Blocks_; }
+std::vector<typename ControlFlowGraph::BasicBlock> const& ControlFlowGraph::getBlocks() const
+{
+    return Blocks_;
+}
 
 }
 }

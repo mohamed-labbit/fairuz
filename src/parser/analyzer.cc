@@ -90,7 +90,7 @@ void SemanticAnalyzer::analyzeExpr(ast::Expr const* expr)
         ast::NameExpr const* name = static_cast<ast::NameExpr const*>(expr);
 
         if (!CurrentScope_->isDefined(name->getValue()))
-            reportIssue(Issue::Severity::ERROR, u"Undefined variable: " + name->getValue(), expr->getLine(), u"Did you forget to initialize it?");
+            reportIssue(Issue::Severity::ERROR, "Undefined variable: " + name->getValue(), expr->getLine(), "Did you forget to initialize it?");
         else
             CurrentScope_->markUsed(name->getValue(), expr->getLine());
 
@@ -109,18 +109,18 @@ void SemanticAnalyzer::analyzeExpr(ast::Expr const* expr)
 
         if (leftType != rightType && leftType != SymbolTable::DataType_t::UNKNOWN && rightType != SymbolTable::DataType_t::UNKNOWN)
             reportIssue(
-                Issue::Severity::ERROR, u"Type mismatch in binary expression", expr->getLine(), u"Left and right operands must have same type");
+                Issue::Severity::ERROR, "Type mismatch in binary expression", expr->getLine(), "Left and right operands must have same type");
 
         if (leftType == SymbolTable::DataType_t::STRING || rightType == SymbolTable::DataType_t::STRING) {
             if (bin->getOperator() != tok::TokenType::OP_PLUS)
-                reportIssue(Issue::Severity::ERROR, u"Invalid operation on string", expr->getLine(), u"Only '+' is allowed for strings");
+                reportIssue(Issue::Severity::ERROR, "Invalid operation on string", expr->getLine(), "Only '+' is allowed for strings");
         }
 
         // Division by zero detection (constant folding)
         if (bin->getOperator() == tok::TokenType::OP_SLASH && bin->getRight()->getKind() == ast::Expr::Kind::LITERAL) {
             ast::LiteralExpr const* lit = static_cast<ast::LiteralExpr const*>(bin->getRight());
             if (lit->isNumeric() && lit->toNumber() == 0)
-                reportIssue(Issue::Severity::ERROR, u"Division by zero", expr->getLine(), u"This will cause a runtime error");
+                reportIssue(Issue::Severity::ERROR, "Division by zero", expr->getLine(), "This will cause a runtime error");
         }
 
         break;
@@ -145,7 +145,7 @@ void SemanticAnalyzer::analyzeExpr(ast::Expr const* expr)
 
             if (SymbolTable::Symbol* sym = CurrentScope_->lookup(name->getValue())) {
                 if (sym->SymbolType != SymbolTable::SymbolType::FUNCTION)
-                    reportIssue(Issue::Severity::ERROR, u"'" + name->getValue() + u"' is not callable", expr->getLine());
+                    reportIssue(Issue::Severity::ERROR, "'" + name->getValue() + "' is not callable", expr->getLine());
             }
         }
 
@@ -155,9 +155,9 @@ void SemanticAnalyzer::analyzeExpr(ast::Expr const* expr)
             SymbolTable::Symbol* sym = CurrentScope_->lookup(name->getValue());
 
             if (!sym)
-                reportIssue(Issue::Severity::ERROR, u"Undefined function: " + name->getValue(), expr->getLine());
+                reportIssue(Issue::Severity::ERROR, "Undefined function: " + name->getValue(), expr->getLine());
             else if (sym->SymbolType != SymbolTable::SymbolType::FUNCTION)
-                reportIssue(Issue::Severity::ERROR, u"'" + name->getValue() + u"' is not callable", expr->getLine());
+                reportIssue(Issue::Severity::ERROR, "'" + name->getValue() + "' is not callable", expr->getLine());
         }
         break;
     }
@@ -208,7 +208,7 @@ void SemanticAnalyzer::analyzeStmt(ast::Stmt const* stmt)
         analyzeExpr(exprStmt->getExpr());
         // Warn about unused expression results
         if (exprStmt->getExpr()->getKind() != ast::Expr::Kind::CALL)
-            reportIssue(Issue::Severity::INFO, u"Expression result not used", stmt->getLine());
+            reportIssue(Issue::Severity::INFO, "Expression result not used", stmt->getLine());
 
         break;
     }
@@ -219,7 +219,7 @@ void SemanticAnalyzer::analyzeStmt(ast::Stmt const* stmt)
 
         // Check for constant conditions
         if (ifStmt->getCondition()->getKind() == ast::Expr::Kind::LITERAL)
-            reportIssue(Issue::Severity::WARNING, u"Condition is always constant", stmt->getLine(), u"Consider removing if statement");
+            reportIssue(Issue::Severity::WARNING, "Condition is always constant", stmt->getLine(), "Consider removing if statement");
 
         for (ast::Stmt const* const& s : ifStmt->getThenBlock()->getStatements())
             analyzeStmt(s);
@@ -237,8 +237,8 @@ void SemanticAnalyzer::analyzeStmt(ast::Stmt const* stmt)
         // Detect infinite loops
         if (whileStmt->getCondition()->getKind() == ast::Expr::Kind::LITERAL) {
             ast::LiteralExpr const* lit = static_cast<ast::LiteralExpr const*>(whileStmt->getCondition());
-            if (lit->getType() == ast::LiteralExpr::Type::BOOLEAN && lit->getValue() == u"true")
-                reportIssue(Issue::Severity::WARNING, u"Infinite loop detected", stmt->getLine(), u"Add a break condition");
+            if (lit->getType() == ast::LiteralExpr::Type::BOOLEAN && lit->getValue() == "true")
+                reportIssue(Issue::Severity::WARNING, "Infinite loop detected", stmt->getLine(), "Add a break condition");
         }
 
         for (ast::Stmt const* const& s : whileStmt->getBlock()->getStatements())
@@ -263,7 +263,7 @@ void SemanticAnalyzer::analyzeStmt(ast::Stmt const* stmt)
 
         // Check if loop variable is shadowing
         if (CurrentScope_->Parent_ && CurrentScope_->Parent_->lookupLocal(forStmt->getTarget()->getValue()))
-            reportIssue(Issue::Severity::WARNING, u"Loop variable shadows outer variable", stmt->getLine());
+            reportIssue(Issue::Severity::WARNING, "Loop variable shadows outer variable", stmt->getLine());
 
         // Exit loop scope
         CurrentScope_ = CurrentScope_->Parent_;
@@ -302,7 +302,7 @@ void SemanticAnalyzer::analyzeStmt(ast::Stmt const* stmt)
         }
 
         if (!hasReturn)
-            reportIssue(Issue::Severity::INFO, u"Function may not return a value", stmt->getLine());
+            reportIssue(Issue::Severity::INFO, "Function may not return a value", stmt->getLine());
 
         // Exit function scope
         CurrentScope_ = CurrentScope_->Parent_;
@@ -327,10 +327,10 @@ SemanticAnalyzer::SemanticAnalyzer()
 
     // Add built-in functions
     SymbolTable::Symbol printSym;
-    printSym.name = u"print";
+    printSym.name = "print";
     printSym.SymbolType = SymbolTable::SymbolType::FUNCTION;
     printSym.DataType = SymbolTable::DataType_t::FUNCTION;
-    GlobalScope_->define(u"print", printSym);
+    GlobalScope_->define("print", printSym);
 }
 
 void SemanticAnalyzer::analyze(std::vector<ast::Stmt*> const& Statements_)
@@ -341,12 +341,18 @@ void SemanticAnalyzer::analyze(std::vector<ast::Stmt*> const& Statements_)
     // Check for unused variables
     std::vector<SymbolTable::Symbol*> unused = GlobalScope_->getUnusedSymbols();
     for (SymbolTable::Symbol* sym : unused)
-        reportIssue(Issue::Severity::WARNING, u"Unused variable: " + sym->name, sym->DefinitionLine, u"Consider removing if not needed");
+        reportIssue(Issue::Severity::WARNING, "Unused variable: " + sym->name, sym->DefinitionLine, "Consider removing if not needed");
 }
 
-std::vector<typename SemanticAnalyzer::Issue> const& SemanticAnalyzer::getIssues() const { return Issues_; }
+std::vector<typename SemanticAnalyzer::Issue> const& SemanticAnalyzer::getIssues() const
+{
+    return Issues_;
+}
 
-SymbolTable const* SemanticAnalyzer::getGlobalScope() const { return GlobalScope_.get(); }
+SymbolTable const* SemanticAnalyzer::getGlobalScope() const
+{
+    return GlobalScope_.get();
+}
 
 void SemanticAnalyzer::printReport() const
 {
@@ -360,13 +366,13 @@ void SemanticAnalyzer::printReport() const
         StringRef sevStr;
         switch (issue.severity) {
         case Issue::Severity::ERROR:
-            sevStr = u"ERROR";
+            sevStr = "ERROR";
             break;
         case Issue::Severity::WARNING:
-            sevStr = u"WARNING";
+            sevStr = "WARNING";
             break;
         case Issue::Severity::INFO:
-            sevStr = u"INFO";
+            sevStr = "INFO";
             break;
         }
 

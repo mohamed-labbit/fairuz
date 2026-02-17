@@ -9,10 +9,9 @@ namespace mylang {
 class StringRef {
 private:
     String* StringData_ { nullptr };
-    SizeType Offset_ { 0 };
-    SizeType Length_ { 0 }; // visible length
+    std::size_t Offset_ { 0 };
+    std::size_t Length_ { 0 }; 
 
-    // Helper to create empty string
     static String* createEmpty()
     {
         String* s = string_allocator.allocateObject<String>();
@@ -20,20 +19,19 @@ private:
     }
 
 public:
-    // FIXED: Initialize StringData_ properly
     StringRef();
 
-    explicit StringRef(SizeType const s);
+    explicit StringRef(std::size_t const s);
 
-    StringRef(StringRef const& other, SizeType offset = 0, SizeType length = 0);
+    StringRef(StringRef const& other, std::size_t offset = 0, std::size_t length = 0);
 
     StringRef(char const* lit);
 
     StringRef(char16_t const* u16_str);
 
-    StringRef(SizeType const s, char const c);
+    StringRef(std::size_t const s, char const c);
 
-    explicit StringRef(String* data, SizeType offset = 0, SizeType length = 0);
+    explicit StringRef(String* data, std::size_t offset = 0, std::size_t length = 0);
 
     StringRef(StringRef&& other) noexcept;
 
@@ -43,44 +41,37 @@ public:
 
     StringRef& operator=(StringRef const& other);
 
-    // Equality operator
-    MYLANG_NODISCARD bool operator==(StringRef const& other) const noexcept
+    [[nodiscard]] bool operator==(StringRef const& other) const noexcept
     {
         if (!StringData_ || !other.StringData_)
             return StringData_ == other.StringData_;
+
         return Length_ == other.Length_ && ::memcmp(data(), other.data(), Length_ * sizeof(char)) == 0;
     }
 
-    MYLANG_NODISCARD bool operator!=(StringRef const& other) const noexcept
+    [[nodiscard]] bool operator!=(StringRef const& other) const noexcept
     {
         return !(*this == other);
     }
 
-    // Expand capacity
-    void expand(SizeType const new_size);
+    void expand(std::size_t const new_size);
 
-    // Reserve capacity (doesn't change length, only capacity)
-    void reserve(SizeType const new_capacity);
+    void reserve(std::size_t const new_capacity);
 
-    // Erase character at position
-    void erase(SizeType const at);
+    void erase(std::size_t const at);
 
-    // Append another StringRef
     StringRef& operator+=(StringRef const& other);
     StringRef& operator+=(char c);
 
-    // FIXED: Add null checks
-    char operator[](SizeType const i) const;
-    char& operator[](SizeType const i);
+    char operator[](std::size_t const i) const;
+    char& operator[](std::size_t const i);
 
-    // Safe access with bounds checking (always checked)
-    MYLANG_NODISCARD char at(SizeType const i) const;
+    [[nodiscard]] char at(std::size_t const i) const;
 
-    char& at(SizeType const i);
+    char& at(std::size_t const i);
 
     StringRef& trimWhitespace(std::optional<bool const> leading = std::nullopt, std::optional<bool const> trailing = std::nullopt);
 
-    // StringRef + StringRef
     friend StringRef operator+(StringRef const& lhs, StringRef const& rhs)
     {
         if (lhs.empty() && rhs.empty())
@@ -92,8 +83,7 @@ public:
         if (rhs.empty())
             return StringRef(lhs);
 
-        // FIXED: Correct length calculation
-        SizeType actual_len = lhs.len() + rhs.len();
+        std::size_t actual_len = lhs.len() + rhs.len();
         String* result = string_allocator.allocateObject<String>(actual_len);
 
         ::memcpy(result->ptr(), lhs.data(), lhs.len() * sizeof(char));
@@ -105,7 +95,6 @@ public:
         return StringRef(result);
     }
 
-    // StringRef + const char* (UTF-8 string)
     friend StringRef operator+(StringRef const& lhs, char const* rhs)
     {
         if (!rhs || !rhs[0])
@@ -115,7 +104,6 @@ public:
         return lhs + rhs_str;
     }
 
-    // const char* + StringRef
     friend StringRef operator+(char const* lhs, StringRef const& rhs)
     {
         if (!lhs || !lhs[0])
@@ -125,7 +113,6 @@ public:
         return lhs_str + rhs;
     }
 
-    // StringRef + char (single character)
     friend StringRef operator+(StringRef const& lhs, char rhs)
     {
         StringRef result(lhs);
@@ -133,7 +120,6 @@ public:
         return result;
     }
 
-    // char + StringRef
     friend StringRef operator+(char lhs, StringRef const& rhs)
     {
         StringRef result;
@@ -143,23 +129,22 @@ public:
         return result;
     }
 
-    // Accessors
-    MYLANG_NODISCARD SizeType len() const noexcept
+    [[nodiscard]] std::size_t len() const noexcept
     {
         return Length_;
     }
 
-    MYLANG_NODISCARD SizeType cap() const noexcept
+    [[nodiscard]] std::size_t cap() const noexcept
     {
         return StringData_ ? StringData_->cap() : 0;
     }
 
-    MYLANG_NODISCARD String* get() const noexcept
+    [[nodiscard]] String* get() const noexcept
     {
         return StringData_;
     }
 
-    MYLANG_NODISCARD bool empty() const noexcept
+    [[nodiscard]] bool empty() const noexcept
     {
         return Length_ == 0;
     }
@@ -182,44 +167,39 @@ public:
     {
         if (!str.empty())
             os.write(str.data(), str.len());
+
         return os;
     }
 
-    // Clear the string (doesn't deallocate memory)
     void clear() noexcept;
 
-    // Resize capacity (preserves content)
-    void resize(SizeType const s);
+    void resize(std::size_t const s);
 
-    // Find a character
-    MYLANG_NODISCARD bool find(char const c) const noexcept;
-    MYLANG_NODISCARD bool find(StringRef const& s) const noexcept;
+    [[nodiscard]] bool find(char const c) const noexcept;
+    [[nodiscard]] bool find(StringRef const& s) const noexcept;
 
-    // Find position of a character (returns optional index)
-    MYLANG_NODISCARD std::optional<SizeType> find_pos(char const c) const noexcept;
+    [[nodiscard]] std::optional<std::size_t> find_pos(char const c) const noexcept;
 
-    // Truncate string to specified length
-    StringRef& truncate(SizeType const s);
+    StringRef& truncate(std::size_t const s);
 
-    StringRef slice(SizeType start, std::optional<SizeType> end) const; // no copy
+    StringRef slice(std::size_t start, std::optional<std::size_t> end) const; 
 
-    StringRef substr(std::optional<SizeType> start, std::optional<SizeType> end) const;
+    StringRef substr(std::optional<std::size_t> start, std::optional<std::size_t> end) const;
 
-    StringRef substr(SizeType start) const
+    StringRef substr(std::size_t start) const
     {
-        return substr(std::optional<SizeType>(start), std::nullopt);
+        return substr(std::optional<std::size_t>(start), std::nullopt);
     }
 
-    // Convert to double - improved error handling
-    double toDouble(SizeType* pos = nullptr) const;
+    double toDouble(std::size_t* pos = nullptr) const;
 
-    // Convenience overload for C strings
-    MYLANG_NODISCARD static StringRef fromUtf16(char16_t const* utf8_cstr);
+    [[nodiscard]] static StringRef fromUtf16(char16_t const* utf8_cstr);
 
     void ensureUnique()
     {
         if (!StringData_)
             return;
+
         if (StringData_->referenceCount() > 1)
             detach();
     }
@@ -227,22 +207,19 @@ public:
     void detach();
 }; // StringRef
 
-// Hash functor for StringRef
 struct StringRefHash {
     std::size_t operator()(StringRef const& str) const noexcept
     {
         if (str.empty() || str.len() == 0)
             return 0;
 
-        // FNV-1a hash algorithm (good distribution, fast)
-        std::size_t hash = 14695981039346656037ULL; // FNV offset basis
-        std::size_t const prime = 1099511628211ULL; // FNV prime
+        std::size_t hash = 14695981039346656037ULL; 
+        std::size_t const prime = 1099511628211ULL; 
 
         char const* data = str.data();
-        SizeType const len = str.len();
+        std::size_t const len = str.len();
 
-        // Hash the raw bytes of char16_t data
-        Byte const* bytes = reinterpret_cast<Byte const*>(data);
+        unsigned char const* bytes = reinterpret_cast<unsigned char const*>(data);
         std::size_t const byte_count = len * sizeof(char);
 
         for (std::size_t i = 0; i < byte_count; ++i) {
@@ -254,7 +231,6 @@ struct StringRefHash {
     }
 };
 
-// Equal comparison functor for consistency
 struct StringRefEqual {
     bool operator()(StringRef const& lhs, StringRef const& rhs) const noexcept
     {
@@ -264,7 +240,6 @@ struct StringRefEqual {
 
 } // namespace mylang
 
-// Specialize std::hash for StringRef
 namespace std {
 
 template<>
@@ -274,12 +249,11 @@ struct hash<mylang::StringRef> {
         if (str.empty() || str.len() == 0)
             return 0;
 
-        // FNV-1a hash
         std::size_t hash_value = 14695981039346656037ULL;
         std::size_t const prime = 1099511628211ULL;
 
         char const* data = str.data();
-        mylang::SizeType const len = str.len();
+        std::size_t const len = str.len();
 
         unsigned char const* bytes = reinterpret_cast<unsigned char const*>(data);
         std::size_t const byte_count = len * sizeof(char);

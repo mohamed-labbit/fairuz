@@ -45,15 +45,16 @@ private:
 public:
     explicit BlockStmt() = delete;
 
-    explicit BlockStmt(std::vector<Stmt*> stmts)
+    BlockStmt(std::vector<Stmt*> stmts)
         : Statements_(stmts)
     {
         Kind_ = Kind::BLOCK;
     }
 
-    BlockStmt(BlockStmt&&) MYLANG_NOEXCEPT = delete;
-    BlockStmt(BlockStmt const&) MYLANG_NOEXCEPT = delete;
-    BlockStmt& operator=(BlockStmt const&) MYLANG_NOEXCEPT = delete;
+    BlockStmt(BlockStmt&&) noexcept = delete;
+    BlockStmt(BlockStmt const&) noexcept = delete;
+
+    BlockStmt& operator=(BlockStmt const&) noexcept = delete;
 
     std::vector<Stmt*> const& getStatements() const
     {
@@ -78,15 +79,16 @@ private:
 public:
     explicit ExprStmt() = default;
 
-    explicit ExprStmt(Expr* expr)
+    ExprStmt(Expr* expr)
         : Expr_(expr)
     {
         Kind_ = Kind::EXPR;
     }
 
-    ExprStmt(ExprStmt&&) MYLANG_NOEXCEPT = delete;
-    ExprStmt(ExprStmt const&) MYLANG_NOEXCEPT = delete;
-    ExprStmt& operator=(ExprStmt const&) MYLANG_NOEXCEPT = delete;
+    ExprStmt(ExprStmt&&) noexcept = delete;
+    ExprStmt(ExprStmt const&) noexcept = delete;
+
+    ExprStmt& operator=(ExprStmt const&) noexcept = delete;
 
     Expr* getExpr() const
     {
@@ -107,16 +109,17 @@ private:
 public:
     explicit AssignmentStmt() = delete;
 
-    explicit AssignmentStmt(Expr* target, Expr* value)
+    AssignmentStmt(Expr* target, Expr* value)
         : Target_(target)
         , Value_(value)
     {
         Kind_ = Kind::ASSIGNMENT;
     }
 
-    AssignmentStmt(AssignmentStmt&&) MYLANG_NOEXCEPT = delete;
-    AssignmentStmt(AssignmentStmt const&) MYLANG_NOEXCEPT = delete;
-    AssignmentStmt& operator=(AssignmentStmt const&) MYLANG_NOEXCEPT = delete;
+    AssignmentStmt(AssignmentStmt&&) noexcept = delete;
+    AssignmentStmt(AssignmentStmt const&) noexcept = delete;
+
+    AssignmentStmt& operator=(AssignmentStmt const&) noexcept = delete;
 
     Expr* getValue() const
     {
@@ -148,7 +151,7 @@ private:
 public:
     explicit IfStmt() = delete;
 
-    explicit IfStmt(Expr* condition, BlockStmt* then_block, BlockStmt* else_block)
+    IfStmt(Expr* condition, BlockStmt* then_block, BlockStmt* else_block)
         : Condition_(condition)
         , ThenBlock_(then_block)
         , ElseBlock_(else_block)
@@ -156,9 +159,10 @@ public:
         Kind_ = Kind::IF;
     }
 
-    IfStmt(IfStmt&&) MYLANG_NOEXCEPT = delete;
-    IfStmt(IfStmt const&) MYLANG_NOEXCEPT = delete;
-    IfStmt& operator=(IfStmt const&) MYLANG_NOEXCEPT = delete;
+    IfStmt(IfStmt&&) noexcept = delete;
+    IfStmt(IfStmt const&) noexcept = delete;
+
+    IfStmt& operator=(IfStmt const&) noexcept = delete;
 
     Expr* getCondition() const
     {
@@ -194,16 +198,17 @@ private:
 public:
     explicit WhileStmt() = delete;
 
-    explicit WhileStmt(Expr* condition, BlockStmt* block)
+    WhileStmt(Expr* condition, BlockStmt* block)
         : Condition_(condition)
         , Block_(block)
     {
         Kind_ = Kind::WHILE;
     }
 
-    WhileStmt(WhileStmt&&) MYLANG_NOEXCEPT = delete;
-    WhileStmt(WhileStmt const&) MYLANG_NOEXCEPT = delete;
-    WhileStmt& operator=(WhileStmt const&) MYLANG_NOEXCEPT = delete;
+    WhileStmt(WhileStmt&&) noexcept = delete;
+    WhileStmt(WhileStmt const&) noexcept = delete;
+
+    WhileStmt& operator=(WhileStmt const&) noexcept = delete;
 
     Expr* getCondition() const
     {
@@ -230,7 +235,7 @@ private:
 public:
     explicit ForStmt() = delete;
 
-    explicit ForStmt(NameExpr* target, Expr* iter, BlockStmt* block)
+    ForStmt(NameExpr* target, Expr* iter, BlockStmt* block)
         : Target_(target)
         , Iter_(iter)
         , Block_(block)
@@ -238,9 +243,10 @@ public:
         Kind_ = Kind::FOR;
     }
 
-    ForStmt(ForStmt&&) MYLANG_NOEXCEPT = delete;
-    ForStmt(ForStmt const&) MYLANG_NOEXCEPT = delete;
-    ForStmt& operator=(ForStmt const&) MYLANG_NOEXCEPT = delete;
+    ForStmt(ForStmt&&) noexcept = delete;
+    ForStmt(ForStmt const&) noexcept = delete;
+
+    ForStmt& operator=(ForStmt const&) noexcept = delete;
 
     NameExpr* getTarget() const
     {
@@ -266,13 +272,13 @@ public:
 class FunctionDef : public Stmt {
 private:
     NameExpr* Name_ { nullptr };
-    ListExpr* Params_;
+    ListExpr* Params_ { nullptr };
     BlockStmt* Body_ { nullptr };
 
 public:
     explicit FunctionDef() = delete;
 
-    explicit FunctionDef(NameExpr* name, ListExpr* params, BlockStmt* body)
+    FunctionDef(NameExpr* name, ListExpr* params, BlockStmt* body)
         : Name_(name)
         , Params_(params)
         , Body_(body)
@@ -280,9 +286,10 @@ public:
         Kind_ = Kind::FUNC;
     }
 
-    FunctionDef(FunctionDef&&) MYLANG_NOEXCEPT = delete;
-    FunctionDef(FunctionDef const&) MYLANG_NOEXCEPT = delete;
-    FunctionDef& operator=(FunctionDef const&) MYLANG_NOEXCEPT = delete;
+    FunctionDef(FunctionDef&&) noexcept = delete;
+    FunctionDef(FunctionDef const&) noexcept = delete;
+
+    FunctionDef& operator=(FunctionDef const&) noexcept = delete;
 
     NameExpr* getName() const
     {
@@ -317,15 +324,16 @@ private:
 public:
     explicit ReturnStmt() = delete;
 
-    explicit ReturnStmt(Expr* value)
+    ReturnStmt(Expr* value)
         : Value_(value)
     {
         Kind_ = Kind::RETURN;
     }
 
-    ReturnStmt(ReturnStmt&&) MYLANG_NOEXCEPT = delete;
-    ReturnStmt(ReturnStmt const&) MYLANG_NOEXCEPT = delete;
-    ReturnStmt& operator=(ReturnStmt const&) MYLANG_NOEXCEPT = delete;
+    ReturnStmt(ReturnStmt&&) noexcept = delete;
+    ReturnStmt(ReturnStmt const&) noexcept = delete;
+
+    ReturnStmt& operator=(ReturnStmt const&) noexcept = delete;
 
     Expr* getValue() const
     {

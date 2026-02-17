@@ -22,6 +22,7 @@ public:
         void* mem = Allocator_.allocate(sizeof(T));
         if (!mem)
             return nullptr;
+            
         return new (mem) T(std::forward<Args>(args)...);
     }
 

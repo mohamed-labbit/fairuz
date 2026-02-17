@@ -13,28 +13,28 @@ StringRef TypeSystem::Type::toString() const
 {
     switch (base) {
     case BaseType::Int:
-        return u"int";
+        return "int";
     case BaseType::Float:
-        return u"float";
+        return "float";
     case BaseType::String:
-        return u"str";
+        return "str";
     case BaseType::Bool:
-        return u"bool";
+        return "bool";
     case BaseType::None:
-        return u"None";
+        return "None";
     case BaseType::List:
         if (!TypeParams.empty())
-            return u"List[" + TypeParams[0]->toString() + u"]";
-        return u"List";
+            return "List[" + TypeParams[0]->toString() + "]";
+        return "List";
     case BaseType::Dict:
         if (TypeParams.size() >= 2)
-            return u"Dict[" + TypeParams[0]->toString() + u", " + TypeParams[1]->toString() + u"]";
-        return u"Dict";
+            return "Dict[" + TypeParams[0]->toString() + ", " + TypeParams[1]->toString() + "]";
+        return "Dict";
     default:
-        return u"Any";
+        return "Any";
     }
 
-    return u"Any";
+    return "Any";
 }
 
 std::shared_ptr<TypeSystem::Type> TypeSystem::TypeInference::freshTypeVar()

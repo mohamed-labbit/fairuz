@@ -11,6 +11,8 @@
 namespace mylang {
 namespace ast {
 
+/// NOTE: do not know if the assert for the costructors args is a good idea
+
 class Expr : public ASTNode {
 public:
     enum class Kind : int { INVALID,
@@ -24,7 +26,7 @@ public:
 
 protected:
     Kind Kind_ { Kind::INVALID };
-    StringRef Str_;
+    StringRef Str_ { "" };
 
 public:
     Expr() = default;
@@ -69,16 +71,17 @@ public:
     {
         Kind_ = Kind::BINARY;
 
-        assert(Left_ && "'left' argument to BinaryExpr is null");
-        assert(Right_ && "'right' argument to BinaryExpr is null");
+        // assert(Left_ && "'left' argument to BinaryExpr is null");
+        // assert(Right_ && "'right' argument to BinaryExpr is null");
     }
 
     ~BinaryExpr() override = default;
 
-    BinaryExpr(BinaryExpr&&) MYLANG_NOEXCEPT = delete;
-    BinaryExpr(BinaryExpr const&) MYLANG_NOEXCEPT = delete;
-    BinaryExpr& operator=(BinaryExpr const&) MYLANG_NOEXCEPT = delete;
-    BinaryExpr& operator=(BinaryExpr&&) MYLANG_NOEXCEPT = delete;
+    BinaryExpr(BinaryExpr&&) noexcept = delete;
+    BinaryExpr(BinaryExpr const&) noexcept = delete;
+
+    BinaryExpr& operator=(BinaryExpr const&) noexcept = delete;
+    BinaryExpr& operator=(BinaryExpr&&) noexcept = delete;
 
     Expr* getLeft() const
     {
@@ -124,15 +127,16 @@ public:
         , Operator_(op)
     {
         Kind_ = Kind::UNARY;
-        assert(Operand_ && "'operand' argument to UnaryExpr is null");
+
+        // assert(Operand_ && "'operand' argument to UnaryExpr is null");
     }
 
     ~UnaryExpr() override = default;
 
-    UnaryExpr(UnaryExpr&&) MYLANG_NOEXCEPT = delete;
-    UnaryExpr(UnaryExpr const&) MYLANG_NOEXCEPT = delete;
-    UnaryExpr& operator=(UnaryExpr const&) MYLANG_NOEXCEPT = delete;
-    UnaryExpr& operator=(UnaryExpr&&) MYLANG_NOEXCEPT = delete;
+    UnaryExpr(UnaryExpr&&) noexcept = delete;
+    UnaryExpr(UnaryExpr const&) noexcept = delete;
+    UnaryExpr& operator=(UnaryExpr const&) noexcept = delete;
+    UnaryExpr& operator=(UnaryExpr&&) noexcept = delete;
 
     Expr* getOperand() const
     {
@@ -169,10 +173,10 @@ public:
 
     ~LiteralExpr() override = default;
 
-    LiteralExpr(LiteralExpr&&) MYLANG_NOEXCEPT = delete;
-    LiteralExpr(LiteralExpr const&) MYLANG_NOEXCEPT = delete;
-    LiteralExpr& operator=(LiteralExpr const&) MYLANG_NOEXCEPT = delete;
-    LiteralExpr& operator=(LiteralExpr&&) MYLANG_NOEXCEPT = delete;
+    LiteralExpr(LiteralExpr&&) noexcept = delete;
+    LiteralExpr(LiteralExpr const&) noexcept = delete;
+    LiteralExpr& operator=(LiteralExpr const&) noexcept = delete;
+    LiteralExpr& operator=(LiteralExpr&&) noexcept = delete;
 
     StringRef getValue() const
     {
@@ -199,27 +203,27 @@ class NameExpr : public Expr {
 public:
     NameExpr() = default;
 
-    // FIXED: Properly initialize Kind_ before assertion
     explicit NameExpr(Expr const* e)
         : Expr(e->getStr())
     {
         Kind_ = Kind::NAME;
-        assert(!Str_.empty() && "'Str_' argument to NameExpr is empty");
+        // assert(!Str_.empty() && "'Str_' argument to NameExpr is empty");
     }
 
-    explicit NameExpr(StringRef const s)
+    NameExpr(StringRef const s)
         : Expr(s)
     {
         Kind_ = Kind::NAME;
-        assert(!Str_.empty() && "'Str_' argument to NameExpr is empty");
+        // assert(!Str_.empty() && "'Str_' argument to NameExpr is empty");
     }
 
     ~NameExpr() override = default;
 
-    NameExpr(NameExpr&&) MYLANG_NOEXCEPT = delete;
-    NameExpr(NameExpr const&) MYLANG_NOEXCEPT = delete;
-    NameExpr& operator=(NameExpr const&) MYLANG_NOEXCEPT = delete;
-    NameExpr& operator=(NameExpr&&) MYLANG_NOEXCEPT = delete;
+    NameExpr(NameExpr&&) noexcept = delete;
+    NameExpr(NameExpr const&) noexcept = delete;
+
+    NameExpr& operator=(NameExpr const&) noexcept = delete;
+    NameExpr& operator=(NameExpr&&) noexcept = delete;
 
     StringRef getValue() const
     {
@@ -234,30 +238,29 @@ private:
 public:
     ListExpr() = default;
 
-    explicit ListExpr(std::vector<Expr*> elements)
+    ListExpr(std::vector<Expr*> elements)
         : Elements_(elements)
     {
         Kind_ = Kind::LIST;
-        // Note: Empty lists can be valid
     }
 
     ~ListExpr() override = default;
 
-    // FIXED: Added const version of operator[]
-    Expr* operator[](SizeType const i)
+    Expr* operator[](std::size_t const i)
     {
         return Elements_[i];
     }
 
-    Expr const* operator[](SizeType const i) const
+    Expr const* operator[](std::size_t const i) const
     {
         return Elements_[i];
     }
 
-    ListExpr(ListExpr&&) MYLANG_NOEXCEPT = delete;
-    ListExpr(ListExpr const&) MYLANG_NOEXCEPT = delete;
-    ListExpr& operator=(ListExpr const&) MYLANG_NOEXCEPT = delete;
-    ListExpr& operator=(ListExpr&&) MYLANG_NOEXCEPT = delete;
+    ListExpr(ListExpr&&) noexcept = delete;
+    ListExpr(ListExpr const&) noexcept = delete;
+
+    ListExpr& operator=(ListExpr const&) noexcept = delete;
+    ListExpr& operator=(ListExpr&&) noexcept = delete;
 
     std::vector<Expr*> const& getElements() const
     {
@@ -274,7 +277,7 @@ public:
         return Elements_.empty();
     }
 
-    SizeType size() const
+    std::size_t size() const
     {
         return Elements_.size();
     }
@@ -293,21 +296,22 @@ private:
 public:
     CallExpr() = delete;
 
-    explicit CallExpr(Expr* c, ListExpr* a = nullptr, CallLocation loc = CallLocation::GLOBAL)
+    CallExpr(Expr* c, ListExpr* a = nullptr, CallLocation loc = CallLocation::GLOBAL)
         : Callee_(c)
         , Args_(a)
         , CallLocation_(loc)
     {
         Kind_ = Kind::CALL;
-        assert(Callee_ && "'callee' argument to CallExpr is null");
+        // assert(Callee_ && "'callee' argument to CallExpr is null");
     }
 
     ~CallExpr() override = default;
 
-    CallExpr(CallExpr&&) MYLANG_NOEXCEPT = delete;
-    CallExpr(CallExpr const&) MYLANG_NOEXCEPT = delete;
-    CallExpr& operator=(CallExpr const&) MYLANG_NOEXCEPT = delete;
-    CallExpr& operator=(CallExpr&&) MYLANG_NOEXCEPT = delete;
+    CallExpr(CallExpr&&) noexcept = delete;
+    CallExpr(CallExpr const&) noexcept = delete;
+
+    CallExpr& operator=(CallExpr const&) noexcept = delete;
+    CallExpr& operator=(CallExpr&&) noexcept = delete;
 
     Expr* getCallee() const
     {
@@ -341,7 +345,6 @@ public:
         return CallLocation_;
     }
 
-    // FIXED: Corrected logic - returns true when there ARE arguments
     bool hasArguments() const
     {
         return Args_ && !Args_->isEmpty();
@@ -362,16 +365,17 @@ public:
     {
         Kind_ = Kind::ASSIGNMENT;
 
-        assert(Target_ && "'target' argument to AssignmentExpr is null");
-        assert(Value_ && "'value' argument to AssignmentExpr is null");
+        // assert(Target_ && "'target' argument to AssignmentExpr is null");
+        // assert(Value_ && "'value' argument to AssignmentExpr is null");
     }
 
     ~AssignmentExpr() override = default;
 
-    AssignmentExpr(AssignmentExpr&&) MYLANG_NOEXCEPT = delete;
-    AssignmentExpr(AssignmentExpr const&) MYLANG_NOEXCEPT = delete;
-    AssignmentExpr& operator=(AssignmentExpr const&) MYLANG_NOEXCEPT = delete;
-    AssignmentExpr& operator=(AssignmentExpr&&) MYLANG_NOEXCEPT = delete;
+    AssignmentExpr(AssignmentExpr&&) noexcept = delete;
+    AssignmentExpr(AssignmentExpr const&) noexcept = delete;
+
+    AssignmentExpr& operator=(AssignmentExpr const&) noexcept = delete;
+    AssignmentExpr& operator=(AssignmentExpr&&) noexcept = delete;
 
     NameExpr* getTarget() const
     {

@@ -3,7 +3,6 @@
 namespace mylang {
 namespace IR {
 
-// Get a variable (searches parent scopes)
 Value Environment::get(StringRef const& name) const
 {
     auto it = variables_.find(name);
@@ -16,7 +15,6 @@ Value Environment::get(StringRef const& name) const
     throw std::runtime_error("Undefined variable: " + std::string(name.data()));
 }
 
-// Assign to existing variable (searches parent scopes)
 void Environment::assign(StringRef const& name, Value const& value)
 {
     auto it = variables_.find(name);
