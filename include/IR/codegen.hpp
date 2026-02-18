@@ -9,6 +9,11 @@ namespace IR {
 
 class CodeGenerator {
 public:
+    CodeGenerator(Environment* env)
+        : Env_(env)
+    {
+    }
+
     Value eval(ast::ASTNode const* node);
 
 private:

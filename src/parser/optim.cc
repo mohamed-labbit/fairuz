@@ -77,15 +77,18 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
         // Try to evaluate
         if (std::optional<double> val = evaluateConstant(expr)) {
             ++Stats_.ConstantFolds;
-            return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER, StringRef(std::to_string(*val).data()));
+            return ast::makeLiteral(ast::LiteralExpr::Type::NUMBER, StringRef(std::to_string(*val).data()));
         }
 
         // Algebraic simplifications
         ast::Expr* left = bin->getLeft();
         ast::Expr* right = bin->getRight();
+        tok::TokenType op = bin->getOperator();
+        ast::Expr::Kind r_kind = right->getKind();
+        ast::Expr::Kind l_kind = left->getKind();
 
         // x + 0 = x, x - 0 = x
-        if ((bin->getOperator() == tok::TokenType::OP_PLUS || bin->getOperator() == tok::TokenType::OP_MINUS)
+        if ((op == tok::TokenType::OP_PLUS || op == tok::TokenType::OP_MINUS)
             && right->getKind() == ast::Expr::Kind::LITERAL) {
             ast::LiteralExpr* lit = static_cast<ast::LiteralExpr*>(right);
             if (lit->getValue() == "0") {
@@ -95,8 +98,7 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
         }
 
         // x * 1 = x, x / 1 = x
-        if ((bin->getOperator() == tok::TokenType::OP_STAR || bin->getOperator() == tok::TokenType::OP_SLASH)
-            && right->getKind() == ast::Expr::Kind::LITERAL) {
+        if ((op == tok::TokenType::OP_STAR || op == tok::TokenType::OP_SLASH) && r_kind == ast::Expr::Kind::LITERAL) {
             ast::LiteralExpr* lit = static_cast<ast::LiteralExpr*>(right);
             if (lit->getValue() == "1") {
                 ++Stats_.StrengthReductions;
@@ -105,42 +107,54 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
         }
 
         // x * 0 = 0
-        if (bin->getOperator() == tok::TokenType::OP_STAR && right->getKind() == ast::Expr::Kind::LITERAL) {
+        /// TODO: find a way to exclude IEEE floats since they could be inf or NaN
+        if (op == tok::TokenType::OP_STAR && r_kind == ast::Expr::Kind::LITERAL) {
             ast::LiteralExpr* lit = static_cast<ast::LiteralExpr*>(right);
             if (lit->getValue() == "0") {
                 ++Stats_.StrengthReductions;
-                return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER, "0");
+                return ast::makeLiteral(ast::LiteralExpr::Type::NUMBER, "0");
             }
         }
 
         // x * 2 = x + x (strength reduction)
-        if (bin->getOperator() == tok::TokenType::OP_STAR && right->getKind() == ast::Expr::Kind::LITERAL) {
+        if (op == tok::TokenType::OP_STAR && r_kind == ast::Expr::Kind::LITERAL) {
             auto* lit = static_cast<ast::LiteralExpr*>(right);
             if (lit->getValue() == "2") {
                 ++Stats_.StrengthReductions;
-                ast::NameExpr* leftClone = ast::AST_allocator.make<ast::NameExpr>(static_cast<ast::NameExpr*>(left)->getValue());
-                return ast::AST_allocator.make<ast::BinaryExpr>(bin->getLeft(), leftClone, tok::TokenType::OP_PLUS);
+                ast::NameExpr* leftClone = ast::makeName(static_cast<ast::NameExpr*>(left)->getValue());
+                return ast::makeBinary(bin->getLeft(), leftClone, tok::TokenType::OP_PLUS);
             }
         }
 
         // x - x = 0
-        if (bin->getOperator() == tok::TokenType::OP_MINUS && left->getKind() == ast::Expr::Kind::NAME && right->getKind() == ast::Expr::Kind::NAME) {
+        if (op == tok::TokenType::OP_MINUS && l_kind == ast::Expr::Kind::NAME && r_kind == ast::Expr::Kind::NAME) {
             ast::NameExpr* lname = static_cast<ast::NameExpr*>(left);
             ast::NameExpr* rname = static_cast<ast::NameExpr*>(right);
             if (lname->getValue() == rname->getValue()) {
                 ++Stats_.StrengthReductions;
-                return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER, "0");
+                return ast::makeLiteral(ast::LiteralExpr::Type::NUMBER, "0");
             }
         }
-    }
-    /// TODO:: ???
-    else if (expr->getKind() == ast::Expr::Kind::UNARY) {
+
+        // string concatenation
+        if (l_kind == ast::Expr::Kind::LITERAL && r_kind == ast::Expr::Kind::LITERAL && op == tok::TokenType::OP_PLUS) {
+            ast::LiteralExpr* l_expr = static_cast<ast::LiteralExpr*>(left);
+            ast::LiteralExpr* r_expr = static_cast<ast::LiteralExpr*>(right);
+
+            if (l_expr->getType() == ast::LiteralExpr::Type::STRING && r_expr->getType() == ast::LiteralExpr::Type::STRING) {
+                StringRef l_str = l_expr->getValue();
+                StringRef r_str = r_expr->getValue();
+
+                return ast::makeLiteral(ast::LiteralExpr::Type::STRING, l_str + r_str);
+            }
+        }
+    } else if (expr->getKind() == ast::Expr::Kind::UNARY) {
         ast::UnaryExpr* outer_un = static_cast<ast::UnaryExpr*>(expr);
         ast::UnaryExpr* inner_un = static_cast<ast::UnaryExpr*>(optimizeConstantFolding(outer_un->getOperand()));
 
         if (std::optional<double> val = evaluateConstant(expr)) {
             ++Stats_.ConstantFolds;
-            return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER, StringRef(std::to_string(*val).data()));
+            return ast::makeLiteral(ast::LiteralExpr::Type::NUMBER, StringRef(std::to_string(*val).data()));
         }
 
         // Double negation: --x = x
@@ -202,8 +216,8 @@ ast::Stmt* ASTOptimizer::eliminateDeadCode(ast::Stmt* stmt)
                 newElseStmts.push_back(opt);
         }
 
-        ast::BlockStmt* newThen = ast::AST_allocator.make<ast::BlockStmt>(newThenStmts);
-        ast::BlockStmt* newElse = ast::AST_allocator.make<ast::BlockStmt>(newElseStmts);
+        ast::BlockStmt* newThen = ast::makeBlock(newThenStmts);
+        ast::BlockStmt* newElse = ast::makeBlock(newElseStmts);
 
         ifStmt->setThenBlock(newThen);
         ifStmt->setElseBlock(newElse);
@@ -235,7 +249,7 @@ ast::Stmt* ASTOptimizer::eliminateDeadCode(ast::Stmt* stmt)
                 newBodyStmts.push_back(opt);
         }
 
-        ast::BlockStmt* newBody = ast::AST_allocator.make<ast::BlockStmt>(newBodyStmts);
+        ast::BlockStmt* newBody = ast::makeBlock(newBodyStmts);
         forStmt->setBlock(newBody);
     } else if (stmt->getKind() == ast::Stmt::Kind::FUNC) {
         ast::FunctionDef* funcDef = static_cast<ast::FunctionDef*>(stmt);
@@ -255,7 +269,7 @@ ast::Stmt* ASTOptimizer::eliminateDeadCode(ast::Stmt* stmt)
                 newBodyStmts.push_back(opt);
         }
 
-        ast::BlockStmt* newBody = ast::AST_allocator.make<ast::BlockStmt>(newBodyStmts);
+        ast::BlockStmt* newBody = ast::makeBlock(newBodyStmts);
         funcDef->setBody(newBody);
     }
 

@@ -50,7 +50,7 @@ Value CodeGenerator::eval(ast::ASTNode const* node)
             case tok::TokenType::OP_STAR:
                 return lhs * rhs;
             case tok::TokenType::OP_SLASH:
-                return lhs / rhs; 
+                return lhs / rhs;
             case tok::TokenType::OP_EQ:
                 return lhs == rhs;
             case tok::TokenType::OP_GT:
@@ -97,7 +97,7 @@ Value CodeGenerator::eval(ast::ASTNode const* node)
         case ast::Expr::Kind::LIST: {
             ast::ListExpr const* list_expr = dynamic_cast<ast::ListExpr const*>(expr);
             if (!list_expr || list_expr->isEmpty())
-                return Value(); 
+                return Value();
 
             std::vector<Value> evaluated_elems;
             for (ast::Expr const* elem : list_expr->getElements())
@@ -110,6 +110,18 @@ Value CodeGenerator::eval(ast::ASTNode const* node)
             ast::LiteralExpr const* literal_expr = dynamic_cast<ast::LiteralExpr const*>(expr);
             if (!literal_expr)
                 return Value();
+
+            StringRef const& v = literal_expr->getValue();
+            switch (literal_expr->getType()) {
+            case ast::LiteralExpr::Type::BOOLEAN:
+                return Value(v == "true" ? true : false);
+            case ast::LiteralExpr::Type::NONE:
+                return Value();
+            case ast::LiteralExpr::Type::NUMBER:
+                return Value(v.toDouble());
+            case ast::LiteralExpr::Type::STRING:
+                return Value(v);
+            }
 
             return Value(literal_expr->getValue());
         }
@@ -137,7 +149,7 @@ Value CodeGenerator::eval(ast::ASTNode const* node)
             switch (op) {
             case tok::TokenType::OP_MINUS:
                 return -operand;
-            case tok::TokenType::KW_NOT: 
+            case tok::TokenType::KW_NOT:
                 return !operand;
             default:
                 throw std::runtime_error("Unknown unary operator");
@@ -180,7 +192,7 @@ Value CodeGenerator::callUserFunction(Value& func_value, std::vector<Value> cons
     try {
         result = eval(func->body);
     } catch (...) {
-        Env_ = previousEnv; 
+        Env_ = previousEnv;
         throw;
     }
 

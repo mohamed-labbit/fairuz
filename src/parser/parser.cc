@@ -57,7 +57,7 @@ ast::Stmt* Parser::parseReturnStmt()
         return nullptr;
 
     ast::Expr* value = parseExpression();
-    return ast::AST_allocator.make<ast::ReturnStmt>(value);
+    return ast::makeReturn(value);
 }
 
 ast::Stmt* Parser::parseWhileStmt()
@@ -80,7 +80,7 @@ ast::Stmt* Parser::parseWhileStmt()
         return nullptr;
     }
 
-    return ast::AST_allocator.make<ast::WhileStmt>(condition, while_block);
+    return ast::makeWhile(condition, while_block);
 }
 
 ast::BlockStmt* Parser::parseIndentedBlock()
@@ -95,7 +95,7 @@ ast::BlockStmt* Parser::parseIndentedBlock()
 
     if (check(tok::TokenType::DEDENT)) {
         advance();
-        return ast::AST_allocator.make<ast::BlockStmt>(statements);
+        return ast::makeBlock(statements);
     }
 
     while (!check(tok::TokenType::DEDENT) && !weDone()) {
@@ -115,11 +115,11 @@ ast::BlockStmt* Parser::parseIndentedBlock()
     }
 
     if (check(tok::TokenType::ENDMARKER))
-        return ast::AST_allocator.make<ast::BlockStmt>(statements);
+        return ast::makeBlock(statements);
     else if (!consume(tok::TokenType::DEDENT, "Expected dedent after block"))
         return nullptr;
 
-    return ast::AST_allocator.make<ast::BlockStmt>(statements);
+    return ast::makeBlock(statements);
 }
 
 ast::ListExpr* Parser::parseParametersList()
@@ -143,7 +143,7 @@ ast::ListExpr* Parser::parseParametersList()
 
             StringRef param_name = Lexer_.current()->lexeme();
             advance();
-            parameters.push_back(ast::AST_allocator.make<ast::NameExpr>(param_name));
+            parameters.push_back(ast::makeName(param_name));
             skipNewlines();
         } while (match(tok::TokenType::COMMA));
     }
@@ -151,7 +151,7 @@ ast::ListExpr* Parser::parseParametersList()
     if (!consume(tok::TokenType::RPAREN, "Expected ')' after parameters"))
         return nullptr;
 
-    return ast::AST_allocator.make<ast::ListExpr>(std::move(parameters));
+    return ast::makeList(std::move(parameters));
 }
 
 ast::Stmt* Parser::parseFunctionDef()
@@ -182,8 +182,8 @@ ast::Stmt* Parser::parseFunctionDef()
         return nullptr;
     }
 
-    ast::NameExpr* name_expr = ast::AST_allocator.make<ast::NameExpr>(function_name);
-    return ast::AST_allocator.make<ast::FunctionDef>(name_expr, parameters_list, function_body);
+    ast::NameExpr* name_expr = ast::makeName(function_name);
+    return ast::makeFunction(name_expr, parameters_list, function_body);
 }
 
 ast::Stmt* Parser::parseIfStmt()
@@ -209,7 +209,7 @@ ast::Stmt* Parser::parseIfStmt()
     ast::BlockStmt* else_block = nullptr;
     skipNewlines();
 
-    return ast::AST_allocator.make<ast::IfStmt>(condition, then_block, else_block);
+    return ast::makeIf(condition, then_block, else_block);
 }
 
 ast::Stmt* Parser::parseExpressionStmt()
@@ -218,7 +218,7 @@ ast::Stmt* Parser::parseExpressionStmt()
     if (!expr)
         return nullptr;
 
-    return ast::AST_allocator.make<ast::ExprStmt>(expr);
+    return ast::makeExprStmt(expr);
 }
 
 ast::Expr* Parser::parseAssignmentExpr()
@@ -238,7 +238,7 @@ ast::Expr* Parser::parseAssignmentExpr()
         if (!right)
             return nullptr;
 
-        return ast::AST_allocator.make<ast::AssignmentExpr>(static_cast<ast::NameExpr*>(left), right);
+        return ast::makeAssignmentExpr(static_cast<ast::NameExpr*>(left), right);
     }
 
     return left;
@@ -265,7 +265,7 @@ ast::Expr* Parser::parseLogicalExprPrecedence(unsigned int min_precedence)
             return nullptr;
         }
 
-        left = ast::AST_allocator.make<ast::BinaryExpr>(left, right, op);
+        left = ast::makeBinary(left, right, op);
     }
 
     return left;
@@ -285,7 +285,7 @@ ast::Expr* Parser::parseComparisonExpr()
             diagnostic::engine.emit("Expected expression after comparison operator", diagnostic::DiagnosticEngine::Severity::ERROR);
             return nullptr;
         }
-        left = ast::AST_allocator.make<ast::BinaryExpr>(left, right, op);
+        left = ast::makeBinary(left, right, op);
     }
 
     return left;
@@ -312,7 +312,7 @@ ast::Expr* Parser::parseBinaryExprPrecedence(unsigned int min_precedence)
             diagnostic::engine.emit("Expected expression after binary operator", diagnostic::DiagnosticEngine::Severity::ERROR);
             return nullptr;
         }
-        left = ast::AST_allocator.make<ast::BinaryExpr>(left, right, op);
+        left = ast::makeBinary(left, right, op);
     }
     return left;
 }
@@ -328,7 +328,7 @@ ast::Expr* Parser::parseUnaryExpr()
             diagnostic::engine.emit("Expected expression after unary operator", diagnostic::DiagnosticEngine::Severity::ERROR);
             return nullptr;
         }
-        return ast::AST_allocator.make<ast::UnaryExpr>(expr, op);
+        return ast::makeUnary(expr, op);
     }
     return parsePostfixExpr();
 }
@@ -364,7 +364,7 @@ ast::Expr* Parser::parsePostfixExpr()
         if (!consume(tok::TokenType::RPAREN, "Expected ')' after arguments"))
             return nullptr;
 
-        expr = ast::AST_allocator.make<ast::CallExpr>(expr, ast::AST_allocator.make<ast::ListExpr>(std::move(args)));
+        expr = ast::makeCall(expr, ast::makeList(std::move(args)));
     }
 
     return expr;
@@ -382,43 +382,44 @@ ast::Expr* Parser::parsePrimaryExpr()
     if (check(tok::TokenType::NUMBER)) {
         auto v = tok->lexeme();
         advance();
-        return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NUMBER, v);
+        return ast::makeLiteral(ast::LiteralExpr::Type::NUMBER, v);
     }
 
     if (check(tok::TokenType::STRING)) {
         auto v = tok->lexeme();
         advance();
-        return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::STRING, v);
+        return ast::makeLiteral(ast::LiteralExpr::Type::STRING, v);
     }
 
     if (check(tok::TokenType::KW_TRUE) || check(tok::TokenType::KW_FALSE)) {
         auto v = tok->lexeme();
         advance();
-        return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::BOOLEAN, v);
+        return ast::makeLiteral(ast::LiteralExpr::Type::BOOLEAN, v);
     }
 
     if (check(tok::TokenType::KW_NONE)) {
         advance();
-        return ast::AST_allocator.make<ast::LiteralExpr>(ast::LiteralExpr::Type::NONE, "");
+        return ast::makeLiteral(ast::LiteralExpr::Type::NONE, "");
     }
 
     if (check(tok::TokenType::IDENTIFIER)) {
         auto name = tok->lexeme();
         advance();
-        return ast::AST_allocator.make<ast::NameExpr>(name);
+        return ast::makeName(name);
     }
 
     if (check(tok::TokenType::LPAREN)) {
         advance();
         if (check(tok::TokenType::RPAREN)) {
             advance();
-            return ast::AST_allocator.make<ast::ListExpr>(std::vector<ast::Expr*> {});
+            return ast::makeList(std::vector<ast::Expr*> {});
         }
 
         ast::Expr* expr = parseExpression();
 
         if (!expr)
             return nullptr;
+
         if (!consume(tok::TokenType::RPAREN, "Expected ')' after expression"))
             return nullptr;
 
@@ -458,7 +459,7 @@ ast::Expr* Parser::parseListLiteral()
     if (!consume(tok::TokenType::RBRACKET, "Expected ']' after list elements"))
         return nullptr;
 
-    return ast::AST_allocator.make<ast::ListExpr>(std::move(elements));
+    return ast::makeList(std::move(elements));
 }
 
 bool Parser::match(tok::TokenType const type)

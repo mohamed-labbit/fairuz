@@ -135,6 +135,7 @@ public:
 
     UnaryExpr(UnaryExpr&&) noexcept = delete;
     UnaryExpr(UnaryExpr const&) noexcept = delete;
+
     UnaryExpr& operator=(UnaryExpr const&) noexcept = delete;
     UnaryExpr& operator=(UnaryExpr&&) noexcept = delete;
 
@@ -175,6 +176,7 @@ public:
 
     LiteralExpr(LiteralExpr&&) noexcept = delete;
     LiteralExpr(LiteralExpr const&) noexcept = delete;
+
     LiteralExpr& operator=(LiteralExpr const&) noexcept = delete;
     LiteralExpr& operator=(LiteralExpr&&) noexcept = delete;
 
@@ -387,6 +389,46 @@ public:
         return Value_;
     }
 };
+
+static constexpr Expr* makeExpr(StringRef const str)
+{
+    return AST_allocator.make<Expr>(str);
+}
+
+static constexpr BinaryExpr* makeBinary(Expr* left, Expr* right, tok::TokenType const op)
+{
+    return AST_allocator.make<BinaryExpr>(left, right, op);
+}
+
+static constexpr UnaryExpr* makeUnary(Expr* operand, tok::TokenType const op)
+{
+    return AST_allocator.make<UnaryExpr>(operand, op);
+}
+
+static constexpr LiteralExpr* makeLiteral(LiteralExpr::Type type, StringRef const str)
+{
+    return AST_allocator.make<LiteralExpr>(type, str);
+}
+
+static constexpr NameExpr* makeName(StringRef const str)
+{
+    return AST_allocator.make<NameExpr>(str);
+}
+
+static constexpr ListExpr* makeList(std::vector<Expr*> elements)
+{
+    return AST_allocator.make<ListExpr>(elements);
+}
+
+static constexpr CallExpr* makeCall(Expr* callee, ListExpr* args = nullptr, CallExpr::CallLocation loc = CallExpr::CallLocation::GLOBAL)
+{
+    return AST_allocator.make<CallExpr>(callee, args, loc);
+}
+
+static constexpr AssignmentExpr* makeAssignmentExpr(NameExpr* target, Expr* value)
+{
+    return AST_allocator.make<AssignmentExpr>(target, value);
+}
 
 } // namespace ast
 } // namespace mylang

@@ -341,5 +341,50 @@ public:
     }
 };
 
+static constexpr Stmt* makeStmt()
+{
+    return AST_allocator.make<Stmt>();
+}
+
+static constexpr BlockStmt* makeBlock(std::vector<Stmt*> stmts)
+{
+    return AST_allocator.make<BlockStmt>(stmts);
+}
+
+static constexpr ExprStmt* makeExprStmt(Expr* expr)
+{
+    return AST_allocator.make<ExprStmt>(expr);
+}
+
+static constexpr AssignmentStmt* makeAssignmentStmt(Expr* target, Expr* value)
+{
+    return AST_allocator.make<AssignmentStmt>(target, value);
+}
+
+static constexpr IfStmt* makeIf(Expr* condition, BlockStmt* then_block, BlockStmt* else_block)
+{
+    return AST_allocator.make<IfStmt>(condition, then_block, else_block);
+}
+
+static constexpr WhileStmt* makeWhile(Expr* condition, BlockStmt* block)
+{
+    return AST_allocator.make<WhileStmt>(condition, block);
+}
+
+static constexpr ForStmt* makeFor(NameExpr* target, Expr* iter, BlockStmt* block)
+{
+    return AST_allocator.make<ForStmt>(target, iter, block);
+}
+
+static constexpr FunctionDef* makeFunction(NameExpr* name, ListExpr* params, BlockStmt* body)
+{
+    return AST_allocator.make<FunctionDef>(name, params, body);
+}
+
+static constexpr ReturnStmt* makeReturn(Expr* value)
+{
+    return AST_allocator.make<ReturnStmt>(value);
+}
+
 } // ast
 } // mylang
