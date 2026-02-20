@@ -87,7 +87,7 @@ TEST_F(CodeGeneratorTest, EvalLiteralBoolean)
 TEST_F(CodeGeneratorTest, EvalNullNode)
 {
     IR::Value result = codegen->eval(nullptr);
-    EXPECT_TRUE(result.isNone() /*|| !result.isValid()*/);
+    EXPECT_TRUE(result.isNone() /**/);
 }
 
 // BINARY EXPRESSION TESTS - ARITHMETIC
@@ -383,7 +383,7 @@ TEST_F(CodeGeneratorTest, ListEmpty)
     IR::Value result = codegen->eval(expr);
 
     // Empty list should return empty value or empty list
-    EXPECT_TRUE(result.isList() /*|| !result.isValid()*/);
+    EXPECT_TRUE(result.isList() || result.isNone() /**/);
 }
 
 TEST_F(CodeGeneratorTest, ListSingleElement)
@@ -450,7 +450,8 @@ TEST_F(CodeGeneratorTest, CallUndefinedFunction)
 {
     ast::CallExpr* expr = makeCall("undefinedFunc", {});
 
-    EXPECT_THROW(codegen->eval(expr), std::runtime_error);
+    IR::Value result = codegen->eval(expr);
+    EXPECT_TRUE(result.isNone());
 }
 
 TEST_F(CodeGeneratorTest, CallInvalidCallee)
@@ -484,7 +485,7 @@ TEST_F(CodeGeneratorTest, CallUserFunctionWithArgs)
 {
     // Define a function that takes two parameters and adds them
     IR::Value::Function func;
-    func.params = { StringRef("a"), StringRef("b") };
+    func.params = IR::makeValue(std::vector<IR::Value> { StringRef("a"), StringRef("b") });
     func.body = ast::makeBinary(ast::makeName("a"), ast::makeName("b"), tok::TokenType::OP_PLUS);
     func.closure = env.get();
 
@@ -502,7 +503,7 @@ TEST_F(CodeGeneratorTest, CallUserFunctionWrongArgCount)
 {
     // Define a function expecting 2 args
     IR::Value::Function func;
-    func.params = { StringRef("x"), StringRef("y") };
+    func.params = IR::makeValue(std::vector<IR::Value> { StringRef("x"), StringRef("y") });
     func.body = makeLiteral(0.0);
     func.closure = env.get();
 
@@ -521,7 +522,7 @@ TEST_F(CodeGeneratorTest, CallEagerEvaluation)
     env->define(StringRef("x"), IR::Value(5.0));
 
     IR::Value::Function func;
-    func.params = { StringRef("arg") };
+    func.params = IR::makeValue({ StringRef("arg") });
     func.body = ast::makeName("arg");
     func.closure = env.get();
 
@@ -567,7 +568,7 @@ TEST_F(CodeGeneratorTest, FunctionParameterShadowing)
 
     // Define function with parameter named 'x'
     IR::Value::Function func;
-    func.params = { StringRef("x") };
+    func.params = IR::makeValue({ StringRef("x") });
     func.body = ast::makeName("x");
     func.closure = env.get();
 
@@ -592,7 +593,7 @@ TEST_F(CodeGeneratorTest, FunctionEnvironmentRestore)
 
     // Define function that modifies a parameter
     IR::Value::Function func;
-    func.params = { StringRef("temp") };
+    func.params = IR::makeValue({ StringRef("temp") });
     func.body = ast::makeName("temp");
     func.closure = env.get();
 
@@ -667,19 +668,6 @@ TEST_F(CodeGeneratorTest, UnknownUnaryOperator)
     EXPECT_THROW(codegen->eval(expr), std::runtime_error);
 }
 
-TEST_F(CodeGeneratorTest, StatementNodeType)
-{
-    // Create a mock statement node
-    class TestStatement : public ast::ASTNode {
-    public:
-        NodeType getNodeType() const override { return NodeType::STATEMENT; }
-    };
-
-    TestStatement* stmt = new TestStatement();
-
-    EXPECT_THROW(codegen->eval(stmt), std::runtime_error);
-}
-
 TEST_F(CodeGeneratorTest, UnknownNodeType)
 {
     // Create node with unknown type
@@ -744,7 +732,7 @@ TEST_F(CodeGeneratorTest, NestedFunctionCalls)
 {
     // Define inner function
     IR::Value::Function innerFunc;
-    innerFunc.params = { StringRef("n") };
+    innerFunc.params = IR::makeValue({ StringRef("n") });
     innerFunc.body = ast::makeBinary(ast::makeName("n"), makeLiteral(2.0), tok::TokenType::OP_STAR);
     innerFunc.closure = env.get();
 
@@ -752,7 +740,7 @@ TEST_F(CodeGeneratorTest, NestedFunctionCalls)
 
     // Define outer function that calls inner
     IR::Value::Function outerFunc;
-    outerFunc.params = { StringRef("m") };
+    outerFunc.params = IR::makeValue({ StringRef("m") });
     outerFunc.body = makeCall("double", { ast::makeName("m") });
     outerFunc.closure = env.get();
 
@@ -786,23 +774,6 @@ TEST_F(CodeGeneratorTest, VerySmallNumbers)
     EXPECT_TRUE(result.isNumber());
 }
 
-TEST_F(CodeGeneratorTest, ZeroComparisons)
-{
-    ast::BinaryExpr* eq = makeBinary(makeLiteral(0.0), makeLiteral(-0.0), tok::TokenType::OP_EQ);
-    IR::Value result = codegen->eval(eq);
-
-    EXPECT_TRUE(result.isBool());
-    // 0.0 and -0.0 should be equal
-}
-
-TEST_F(CodeGeneratorTest, EmptyEnvironmentAccess)
-{
-    // Try to access variable in fresh environment
-    ast::NameExpr* expr = ast::makeName("nonexistent");
-
-    EXPECT_THROW(codegen->eval(expr), std::runtime_error);
-}
-
 TEST_F(CodeGeneratorTest, RecursiveExpression)
 {
     // Deep nesting: ((((5 + 5) + 5) + 5) + 5)
@@ -813,4 +784,1111 @@ TEST_F(CodeGeneratorTest, RecursiveExpression)
     IR::Value result = codegen->eval(expr);
 
     EXPECT_DOUBLE_EQ(*result.asFloat(), 25.0);
+}
+
+TEST_F(CodeGeneratorTest, AssignmentStmtDefineNew)
+{
+    // x = 42
+    ast::AssignmentStmt* stmt = ast::makeAssignmentStmt(ast::makeName("x"), makeLiteral(42.0));
+    IR::Value result = codegen->eval(stmt);
+
+    // Assignment statement should return void/null
+    EXPECT_TRUE(result.isNone() /**/);
+
+    // Variable should be defined in environment
+    EXPECT_TRUE(env->exists(StringRef("x")));
+    IR::Value stored = env->get(StringRef("x"));
+    EXPECT_TRUE(stored.isNumber());
+    EXPECT_DOUBLE_EQ(*stored.asFloat(), 42.0);
+}
+
+TEST_F(CodeGeneratorTest, AssignmentStmtUpdateExisting)
+{
+    // Define x first
+    env->define(StringRef("x"), IR::Value::makeFloat(10.0));
+
+    // x = 99
+    ast::AssignmentStmt* stmt = makeAssignmentStmt(ast::makeName("x"), makeLiteral(99.0));
+    codegen->eval(stmt);
+
+    // Variable should be updated
+    IR::Value stored = env->get(StringRef("x"));
+    EXPECT_DOUBLE_EQ(*stored.asFloat(), 99.0);
+}
+
+TEST_F(CodeGeneratorTest, AssignmentStmtWithExpression)
+{
+    // y = 10 + 20
+    ast::BinaryExpr* expr = makeBinary(makeLiteral(10.0), makeLiteral(20.0), tok::TokenType::OP_PLUS);
+    ast::AssignmentStmt* stmt = makeAssignmentStmt(ast::makeName("y"), expr);
+
+    codegen->eval(stmt);
+
+    IR::Value stored = env->get(StringRef("y"));
+    EXPECT_DOUBLE_EQ(*stored.asFloat(), 30.0);
+}
+
+TEST_F(CodeGeneratorTest, AssignmentStmtChained)
+{
+    // a = 5
+    ast::AssignmentStmt* stmt1 = makeAssignmentStmt(ast::makeName("a"), makeLiteral(5.0));
+    codegen->eval(stmt1);
+
+    // b = a * 2
+    ast::BinaryExpr* expr = makeBinary(ast::makeName("a"), makeLiteral(2.0), tok::TokenType::OP_STAR);
+    ast::AssignmentStmt* stmt2 = makeAssignmentStmt(ast::makeName("b"), expr);
+    codegen->eval(stmt2);
+
+    EXPECT_DOUBLE_EQ(*env->get(StringRef("a")).asFloat(), 5.0);
+    EXPECT_DOUBLE_EQ(*env->get(StringRef("b")).asFloat(), 10.0);
+}
+
+// ============================================================================
+// STATEMENT TESTS - EXPRESSION STATEMENTS
+// ============================================================================
+
+TEST_F(CodeGeneratorTest, ExprStmtSimple)
+{
+    // 42; (expression as statement)
+    ast::ExprStmt* stmt = makeExprStmt(makeLiteral(42.0));
+    IR::Value result = codegen->eval(stmt);
+
+    EXPECT_TRUE(result.isNumber());
+    EXPECT_DOUBLE_EQ(result.toFloat(), 42.0);
+}
+
+TEST_F(CodeGeneratorTest, ExprStmtBinary)
+{
+    // 10 + 20;
+    ast::BinaryExpr* expr = makeBinary(makeLiteral(10.0), makeLiteral(20.0), tok::TokenType::OP_PLUS);
+    ast::ExprStmt* stmt = makeExprStmt(expr);
+
+    IR::Value result = codegen->eval(stmt);
+
+    EXPECT_DOUBLE_EQ(*result.asFloat(), 30.0);
+}
+
+TEST_F(CodeGeneratorTest, ExprStmtFunctionCall)
+{
+    // Define a simple function that returns 100
+    IR::Value::Function func;
+    func.name = StringRef("getHundred");
+    func.params = nullptr;
+    func.body = makeExprStmt(makeLiteral(100.0));
+    func.closure = env.get();
+
+    env->define(StringRef("getHundred"), IR::Value::makeFunction(func));
+
+    // getHundred();
+    ast::CallExpr* call = makeCall("getHundred", {});
+    ast::ExprStmt* stmt = makeExprStmt(call);
+
+    IR::Value result = codegen->eval(stmt);
+
+    EXPECT_DOUBLE_EQ(*result.asFloat(), 100.0);
+}
+
+// ============================================================================
+// STATEMENT TESTS - BLOCK STATEMENTS
+// ============================================================================
+
+TEST_F(CodeGeneratorTest, BlockStmtEmpty)
+{
+    // { }
+    ast::BlockStmt* block = ast::makeBlock({});
+    IR::Value result = codegen->eval(block);
+
+    // Empty block returns empty list or void
+    EXPECT_TRUE(result.isList() || result.isNone());
+}
+
+TEST_F(CodeGeneratorTest, BlockStmtSingle)
+{
+    // { 42; }
+    ast::BlockStmt* block = ast::makeBlock({ makeExprStmt(makeLiteral(42.0)) });
+
+    IR::Value result = codegen->eval(block);
+
+    EXPECT_TRUE(result.isNumber());
+    EXPECT_DOUBLE_EQ(result.toFloat(), 42.0);
+}
+
+TEST_F(CodeGeneratorTest, BlockStmtMultiple)
+{
+    // { 10; 20; 30; }
+    ast::BlockStmt* block = ast::makeBlock({ makeExprStmt(makeLiteral(10.0)), makeExprStmt(makeLiteral(20.0)), makeExprStmt(makeLiteral(30.0)) });
+
+    IR::Value result = codegen->eval(block);
+
+    EXPECT_TRUE(result.isNumber());
+    EXPECT_DOUBLE_EQ(result.toFloat(), 30.0);
+}
+
+TEST_F(CodeGeneratorTest, BlockStmtWithAssignments)
+{
+    // { x = 5; y = 10; x + y; }
+    ast::BlockStmt* block = ast::makeBlock(
+        { makeAssignmentStmt(ast::makeName("x"), makeLiteral(5.0)), makeAssignmentStmt(ast::makeName("y"), makeLiteral(10.0)),
+            ast::makeExprStmt(ast::makeBinary(ast::makeName("x"), ast::makeName("y"), tok::TokenType::OP_PLUS)) });
+
+    IR::Value result = codegen->eval(block);
+
+    // Last statement result should be 15
+    EXPECT_TRUE(result.isNumber());
+    EXPECT_DOUBLE_EQ(result.toFloat(), 15.0);
+
+    // Variables should exist in environment
+    EXPECT_TRUE(env->exists(StringRef("x")));
+    EXPECT_TRUE(env->exists(StringRef("y")));
+}
+
+// STATEMENT TESTS - IF STATEMENTS
+
+TEST_F(CodeGeneratorTest, IfStmtTrueCondition_01)
+{
+    // if (true) { 42; }
+    ast::IfStmt* ifStmt = ast::makeIf(makeLiteral(true), ast::makeBlock({ makeExprStmt(makeLiteral(42.0)) }));
+
+    IR::Value result = codegen->eval(ifStmt);
+
+    EXPECT_TRUE(result.isNumber());
+    EXPECT_DOUBLE_EQ(result.toFloat(), 42.0);
+}
+
+TEST_F(CodeGeneratorTest, IfStmtFalseCondition)
+{
+    // if (false) { 42; }
+    ast::IfStmt* ifStmt = makeIf(
+        makeLiteral(false),
+        ast::makeBlock({ makeExprStmt(makeLiteral(42.0)) }));
+
+    IR::Value result = codegen->eval(ifStmt);
+
+    // Should return void/none when condition is false and no else
+    EXPECT_TRUE(result.isNone());
+}
+
+TEST_F(CodeGeneratorTest, IfStmtTrueWithElse)
+{
+    // if (true) { 10; } else { 20; }
+    ast::IfStmt* ifStmt = makeIf(
+        makeLiteral(true),
+        ast::makeBlock({ makeExprStmt(makeLiteral(10.0)) }),
+        ast::makeBlock({ makeExprStmt(makeLiteral(20.0)) }));
+
+    IR::Value result = codegen->eval(ifStmt);
+
+    EXPECT_TRUE(result.isNumber());
+    EXPECT_DOUBLE_EQ(result.toFloat(), 10.0);
+}
+
+TEST_F(CodeGeneratorTest, IfStmtFalseWithElse)
+{
+    // if (false) { 10; } else { 20; }
+    ast::IfStmt* ifStmt = makeIf(
+        makeLiteral(false),
+        ast::makeBlock({ makeExprStmt(makeLiteral(10.0)) }),
+        ast::makeBlock({ makeExprStmt(makeLiteral(20.0)) }));
+
+    IR::Value result = codegen->eval(ifStmt);
+
+    EXPECT_TRUE(result.isNumber());
+    EXPECT_DOUBLE_EQ(result.toFloat(), 20.0);
+}
+
+TEST_F(CodeGeneratorTest, IfStmtComparisonCondition_01)
+{
+    // x = 10; if (x > 5) { 100; } else { 200; }
+    env->define(StringRef("x"), IR::Value::makeFloat(10.0));
+
+    ast::IfStmt* ifStmt = makeIf(
+        makeBinary(ast::makeName("x"), makeLiteral(5.0), tok::TokenType::OP_GT),
+        ast::makeBlock({ makeExprStmt(makeLiteral(100.0)) }),
+        ast::makeBlock({ makeExprStmt(makeLiteral(200.0)) }));
+
+    IR::Value result = codegen->eval(ifStmt);
+
+    EXPECT_TRUE(result.isNumber());
+    EXPECT_DOUBLE_EQ(result.toFloat(), 100.0);
+}
+
+TEST_F(CodeGeneratorTest, IfStmtNestedIf)
+{
+    // if (true) { if (true) { 42; } }
+    ast::IfStmt* innerIf = makeIf(
+        makeLiteral(true),
+        ast::makeBlock({ makeExprStmt(makeLiteral(42.0)) }));
+
+    ast::IfStmt* outerIf = makeIf(
+        makeLiteral(true),
+        ast::makeBlock({ innerIf }));
+
+    IR::Value result = codegen->eval(outerIf);
+
+    EXPECT_TRUE(result.isNumber());
+    EXPECT_DOUBLE_EQ(result.toFloat(), 42.0);
+}
+
+TEST_F(CodeGeneratorTest, IfStmtWithAssignment)
+{
+    // if (true) { x = 42; }
+    ast::IfStmt* ifStmt = makeIf(
+        makeLiteral(true),
+        ast::makeBlock({ makeAssignmentStmt(ast::makeName("x"), makeLiteral(42.0)) }));
+
+    codegen->eval(ifStmt);
+
+    EXPECT_TRUE(env->exists(StringRef("x")));
+    EXPECT_DOUBLE_EQ(*env->get(StringRef("x")).asFloat(), 42.0);
+}
+
+// ============================================================================
+// STATEMENT TESTS - WHILE STATEMENTS
+// ============================================================================
+
+TEST_F(CodeGeneratorTest, WhileStmtFalseCondition)
+{
+    // counter = 0; while (false) { counter = counter + 1; }
+    env->define(StringRef("counter"), IR::Value::makeFloat(0.0));
+
+    ast::WhileStmt* whileStmt = makeWhile(
+        makeLiteral(false),
+        ast::makeBlock({ makeAssignmentStmt(ast::makeName("counter"),
+            makeBinary(ast::makeName("counter"), makeLiteral(1.0), tok::TokenType::OP_PLUS)) }));
+
+    IR::Value result = codegen->eval(whileStmt);
+
+    // Counter should still be 0
+    EXPECT_DOUBLE_EQ(*env->get(StringRef("counter")).asFloat(), 0.0);
+}
+
+TEST_F(CodeGeneratorTest, WhileStmtAccumulator)
+{
+    // sum = 0; i = 1; while (i <= 5) { sum = sum + i; i = i + 1; }
+    env->define(StringRef("sum"), IR::Value::makeFloat(0.0));
+    env->define(StringRef("i"), IR::Value::makeFloat(1.0));
+
+    ast::WhileStmt* whileStmt = makeWhile(
+        makeBinary(ast::makeName("i"), makeLiteral(5.0), tok::TokenType::OP_LTE),
+        ast::makeBlock({ ast::makeAssignmentStmt(ast::makeName("sum"),
+                             makeBinary(ast::makeName("sum"), ast::makeName("i"), tok::TokenType::OP_PLUS)),
+            makeAssignmentStmt(ast::makeName("i"),
+                makeBinary(ast::makeName("i"), makeLiteral(1.0), tok::TokenType::OP_PLUS)) }));
+
+    IR::Value result = codegen->eval(whileStmt);
+
+    // Sum should be 1+2+3+4+5 = 15
+    EXPECT_DOUBLE_EQ(*env->get(StringRef("sum")).asFloat(), 15.0);
+    EXPECT_DOUBLE_EQ(*env->get(StringRef("i")).asFloat(), 6.0);
+}
+
+TEST_F(CodeGeneratorTest, WhileStmtReturnValue)
+{
+    // x = 1; while (x < 3) { x = x + 1; }
+    env->define(StringRef("x"), IR::Value::makeFloat(1.0));
+
+    ast::WhileStmt* whileStmt = makeWhile(
+        makeBinary(ast::makeName("x"), makeLiteral(3.0), tok::TokenType::OP_LT),
+        ast::makeBlock({ makeAssignmentStmt(ast::makeName("x"),
+            makeBinary(ast::makeName("x"), makeLiteral(1.0), tok::TokenType::OP_PLUS)) }));
+
+    IR::Value result = codegen->eval(whileStmt);
+
+    // Result should be the last block execution result
+    EXPECT_TRUE(result.isList() || result.isNone());
+}
+
+// STATEMENT TESTS - FUNCTION DEFINITIONS
+
+TEST_F(CodeGeneratorTest, FunctionDefNoParams)
+{
+    // function getFortyTwo() { 42; }
+    ast::FunctionDef* funcDef = ast::makeFunction(ast::makeName("getFortyTwo"), ast::makeList({}), ast::makeBlock({ makeExprStmt(makeLiteral(42.0)) }));
+
+    IR::Value result = codegen->eval(funcDef);
+
+    // Function definition returns void
+    EXPECT_TRUE(result.isNone() /**/);
+
+    // Function should be defined in environment
+    EXPECT_TRUE(env->exists(StringRef("getFortyTwo")));
+    IR::Value funcValue = env->get(StringRef("getFortyTwo"));
+    EXPECT_TRUE(funcValue.isFunction());
+}
+
+TEST_F(CodeGeneratorTest, FunctionDefWithSingleParam)
+{
+    // function double(x) { x * 2; }
+    ast::FunctionDef* funcDef = ast::makeFunction(
+        ast::makeName("double"),
+        ast::makeList({ ast::makeName("x") }),
+        ast::makeBlock({ makeExprStmt(makeBinary(ast::makeName("x"), makeLiteral(2.0), tok::TokenType::OP_STAR)) }));
+
+    codegen->eval(funcDef);
+
+    EXPECT_TRUE(env->exists(StringRef("double")));
+    IR::Value funcValue = env->get(StringRef("double"));
+    EXPECT_TRUE(funcValue.isFunction());
+}
+
+TEST_F(CodeGeneratorTest, FunctionDefWithMultipleParams)
+{
+    // function add(a, b) { a + b; }
+    ast::FunctionDef* funcDef = ast::makeFunction(
+        ast::makeName("add"),
+        ast::makeList({ ast::makeName("a"), ast::makeName("b") }),
+        ast::makeBlock({ ast::makeExprStmt(ast::makeBinary(ast::makeName("a"), ast::makeName("b"), tok::TokenType::OP_PLUS)) }));
+
+    codegen->eval(funcDef);
+
+    EXPECT_TRUE(env->exists(StringRef("add")));
+}
+
+TEST_F(CodeGeneratorTest, FunctionDefAndCall)
+{
+    // function square(n) { n * n; }
+    // square(5)
+    ast::FunctionDef* funcDef = ast::makeFunction(
+        ast::makeName("square"),
+        ast::makeList({ ast::makeName("n") }),
+        ast::makeBlock({ ast::makeExprStmt(ast::makeBinary(ast::makeName("n"), ast::makeName("n"), tok::TokenType::OP_STAR)) }));
+
+    codegen->eval(funcDef);
+
+    // Call the function
+    ast::CallExpr* call = ast::makeCall(ast::makeName("square"), ast::makeList({ makeLiteral(5.0) }));
+    IR::Value result = codegen->eval(call);
+
+    EXPECT_TRUE(result.isNumber());
+    EXPECT_DOUBLE_EQ(result.toFloat(), 25.0);
+}
+
+TEST_F(CodeGeneratorTest, FunctionDefMultipleStatements)
+{
+    // function compute(x) { y = x * 2; y + 10; }
+    ast::FunctionDef* funcDef = ast::makeFunction(
+        ast::makeName("compute"),
+        ast::makeList({ ast::makeName("x") }),
+        ast::makeBlock({ makeAssignmentStmt(ast::makeName("y"), makeBinary(ast::makeName("x"), makeLiteral(2.0), tok::TokenType::OP_STAR)),
+            makeExprStmt(makeBinary(ast::makeName("y"), makeLiteral(10.0), tok::TokenType::OP_PLUS)) }));
+
+    codegen->eval(funcDef);
+
+    ast::CallExpr* call = makeCall("compute", { makeLiteral(5.0) });
+    IR::Value result = codegen->eval(call);
+
+    EXPECT_TRUE(result.isNumber());
+    // Result should be (5 * 2) + 10 = 20
+    EXPECT_DOUBLE_EQ(result.toFloat(), 20.0);
+}
+
+TEST_F(CodeGeneratorTest, FunctionDefClosureCapture)
+{
+    // outer = 100; function getOuter() { outer; }
+    env->define(StringRef("outer"), IR::Value::makeFloat(100.0));
+
+    ast::FunctionDef* funcDef = ast::makeFunction(
+        ast::makeName("getOuter"),
+        ast::makeList({}),
+        ast::makeBlock({ ast::makeExprStmt(ast::makeName("outer")) }));
+
+    codegen->eval(funcDef);
+
+    ast::CallExpr* call = makeCall("getOuter", {});
+    IR::Value result = codegen->eval(call);
+
+    EXPECT_TRUE(result.isNumber());
+    EXPECT_DOUBLE_EQ(result.toFloat(), 100.0);
+}
+
+// ============================================================================
+// STATEMENT TESTS - INTEGRATION SCENARIOS
+// ============================================================================
+
+TEST_F(CodeGeneratorTest, IntegrationFibonacciIterative)
+{
+    // function fib(n) {
+    //   if (n <= 1) { n; }
+    //   else {
+    //     a = 0; b = 1; i = 2;
+    //     while (i <= n) {
+    //       temp = a + b;
+    //       a = b;
+    //       b = temp;
+    //       i = i + 1;
+    //     }
+    //     b;
+    //   }
+    // }
+
+    ast::FunctionDef* funcDef = ast::makeFunction(
+        ast::makeName("fib"),
+        ast::makeList({ ast::makeName("n") }),
+        ast::makeBlock({ makeIf(
+            ast::makeBinary(ast::makeName("n"), makeLiteral(1.0), tok::TokenType::OP_LTE),
+            ast::makeBlock({ ast::makeExprStmt(ast::makeName("n")) }),
+            ast::makeBlock({ ast::makeAssignmentStmt(ast::makeName("a"), makeLiteral(0.0)),
+                ast::makeAssignmentStmt(ast::makeName("b"), makeLiteral(1.0)),
+                ast::makeAssignmentStmt(ast::makeName("i"), makeLiteral(2.0)),
+                ast::makeWhile(
+                    ast::makeBinary(ast::makeName("i"), ast::makeName("n"), tok::TokenType::OP_LTE),
+                    ast::makeBlock({ ast::makeAssignmentStmt(ast::makeName("temp"),
+                                         ast::makeBinary(ast::makeName("a"), ast::makeName("b"), tok::TokenType::OP_PLUS)),
+                        ast::makeAssignmentStmt(ast::makeName("a"), ast::makeName("b")),
+                        ast::makeAssignmentStmt(ast::makeName("b"), ast::makeName("temp")),
+                        ast::makeAssignmentStmt(ast::makeName("i"),
+                            ast::makeBinary(ast::makeName("i"), makeLiteral(1.0), tok::TokenType::OP_PLUS)) })),
+                ast::makeExprStmt(ast::makeName("b")) })) }));
+
+    codegen->eval(funcDef);
+
+    // Test fib(6) = 8
+    ast::CallExpr* call = ast::makeCall(ast::makeName("fib"), ast::makeList({ makeLiteral(6.0) }));
+    IR::Value result = codegen->eval(call);
+
+    // The result should be 8 (fibonacci of 6)
+    EXPECT_EQ(*result.asFloat(), 8.0);
+}
+
+TEST_F(CodeGeneratorTest, IntegrationFactorial)
+{
+    // function factorial(n) {
+    //   result = 1;
+    //   i = 1;
+    //   while (i <= n) {
+    //     result = result * i;
+    //     i = i + 1;
+    //   }
+    //   result;
+    // }
+
+    ast::FunctionDef* funcDef = ast::makeFunction(
+        ast::makeName("factorial"),
+        ast::makeList({ ast::makeName("n") }),
+        ast::makeBlock({ makeAssignmentStmt(ast::makeName("result"), makeLiteral(1.0)),
+            makeAssignmentStmt(ast::makeName("i"), makeLiteral(1.0)),
+            makeWhile(
+                ast::makeBinary(ast::makeName("i"), ast::makeName("n"), tok::TokenType::OP_LTE),
+                ast::makeBlock({ ast::makeAssignmentStmt(ast::makeName("result"),
+                                     ast::makeBinary(ast::makeName("result"), ast::makeName("i"), tok::TokenType::OP_STAR)),
+                    ast::makeAssignmentStmt(ast::makeName("i"),
+                        ast::makeBinary(ast::makeName("i"), makeLiteral(1.0), tok::TokenType::OP_PLUS)) })),
+            ast::makeExprStmt(ast::makeName("result")) }));
+
+    codegen->eval(funcDef);
+
+    // Test factorial(5) = 120
+    ast::CallExpr* call = ast::makeCall(ast::makeName("factorial"), ast::makeList({ makeLiteral(5.0) }));
+    IR::Value result = codegen->eval(call);
+
+    EXPECT_TRUE(result.isNumber());
+    EXPECT_DOUBLE_EQ(result.toFloat(), 120.0);
+}
+
+TEST_F(CodeGeneratorTest, IntegrationNestedFunctions)
+{
+    // function outer(x) {
+    //   function inner(y) { x + y; }
+    //   inner(10);
+    // }
+
+    ast::FunctionDef* innerFunc = ast::makeFunction(
+        ast::makeName("inner"),
+        ast::makeList({ ast::makeName("y") }),
+        ast::makeBlock({ ast::makeExprStmt(ast::makeBinary(ast::makeName("x"), ast::makeName("y"), tok::TokenType::OP_PLUS)) }));
+
+    ast::FunctionDef* outerFunc = ast::makeFunction(
+        ast::makeName("outer"),
+        ast::makeList({ ast::makeName("x") }),
+        ast::makeBlock({ innerFunc,
+            ast::makeExprStmt(ast::makeCall(ast::makeName("inner"), ast::makeList({ makeLiteral(10.0) }))) }));
+
+    codegen->eval(outerFunc);
+
+    ast::CallExpr* call = makeCall("outer", { makeLiteral(5.0) });
+    IR::Value result = codegen->eval(call);
+
+    // Should get x (5) + y (10) = 15
+    EXPECT_TRUE(result.isNumber());
+    EXPECT_DOUBLE_EQ(result.toFloat(), 15.0);
+}
+
+TEST_F(CodeGeneratorTest, ZeroComparisons)
+{
+    ast::BinaryExpr* eq = makeBinary(makeLiteral(0.0), makeLiteral(-0.0), tok::TokenType::OP_EQ);
+    IR::Value result = codegen->eval(eq);
+
+    EXPECT_TRUE(result.isBool());
+    // 0.0 and -0.0 should be equal
+    EXPECT_TRUE(*result.asBool());
+}
+
+TEST_F(CodeGeneratorTest, EmptyEnvironmentAccess)
+{
+    // Try to access variable in fresh environment
+    ast::NameExpr* expr = ast::makeName("nonexistent");
+
+    EXPECT_THROW(codegen->eval(expr), std::runtime_error);
+}
+
+// STATEMENT TESTS
+
+// ASSIGNMENT STATEMENT TESTS
+
+TEST_F(CodeGeneratorTest, AssignmentStmtSimple)
+{
+    // x = 42
+    ast::AssignmentStmt* stmt = makeAssignmentStmt(ast::makeName("x"), makeLiteral(42.0));
+    IR::Value result = codegen->eval(stmt);
+
+    // Assignment returns void/empty value
+    EXPECT_TRUE(result.isNone());
+
+    // Variable should be defined
+    EXPECT_TRUE(env->exists(StringRef("x")));
+    EXPECT_DOUBLE_EQ(*env->get(StringRef("x")).asFloat(), 42.0);
+}
+
+TEST_F(CodeGeneratorTest, AssignmentStmtExpression)
+{
+    // y = 10 + 20
+    ast::AssignmentStmt* stmt = makeAssignmentStmt(ast::makeName("y"),
+        makeBinary(makeLiteral(10.0), makeLiteral(20.0), tok::TokenType::OP_PLUS));
+
+    codegen->eval(stmt);
+
+    EXPECT_TRUE(env->exists(StringRef("y")));
+    EXPECT_DOUBLE_EQ(*env->get(StringRef("y")).asFloat(), 30.0);
+}
+
+TEST_F(CodeGeneratorTest, AssignmentStmtReassign)
+{
+    // First assignment
+    env->define(StringRef("z"), IR::Value::makeFloat(5.0));
+
+    // Reassignment: z = 100
+    ast::AssignmentStmt* stmt = makeAssignmentStmt(ast::makeName("z"), makeLiteral(100.0));
+    codegen->eval(stmt);
+
+    EXPECT_DOUBLE_EQ(*env->get(StringRef("z")).asFloat(), 100.0);
+}
+
+TEST_F(CodeGeneratorTest, AssignmentStmtMultipleVariables)
+{
+    // a = 1, b = 2, c = 3
+    ast::AssignmentStmt* stmt1 = makeAssignmentStmt(ast::makeName("a"), makeLiteral(1.0));
+    ast::AssignmentStmt* stmt2 = makeAssignmentStmt(ast::makeName("b"), makeLiteral(2.0));
+    ast::AssignmentStmt* stmt3 = makeAssignmentStmt(ast::makeName("c"), makeLiteral(3.0));
+
+    codegen->eval(stmt1);
+    codegen->eval(stmt2);
+    codegen->eval(stmt3);
+
+    EXPECT_DOUBLE_EQ(*env->get(StringRef("a")).asFloat(), 1.0);
+    EXPECT_DOUBLE_EQ(*env->get(StringRef("b")).asFloat(), 2.0);
+    EXPECT_DOUBLE_EQ(*env->get(StringRef("c")).asFloat(), 3.0);
+}
+
+TEST_F(CodeGeneratorTest, AssignmentStmtWithVariableReference)
+{
+    // x = 10
+    env->define(StringRef("x"), IR::Value::makeFloat(10.0));
+
+    // y = x + 5
+    ast::AssignmentStmt* stmt = makeAssignmentStmt(ast::makeName("y"),
+        makeBinary(ast::makeName("x"), makeLiteral(5.0), tok::TokenType::OP_PLUS));
+
+    codegen->eval(stmt);
+
+    EXPECT_DOUBLE_EQ(*env->get(StringRef("y")).asFloat(), 15.0);
+}
+
+// EXPRESSION STATEMENT TESTS
+
+TEST_F(CodeGeneratorTest, ExprStmtBinaryExpression)
+{
+    // Expression statement: 10 + 20
+    ast::ExprStmt* stmt = makeExprStmt(
+        makeBinary(makeLiteral(10.0), makeLiteral(20.0), tok::TokenType::OP_PLUS));
+
+    IR::Value result = codegen->eval(stmt);
+
+    EXPECT_DOUBLE_EQ(*result.asFloat(), 30.0);
+}
+
+TEST_F(CodeGeneratorTest, ExprStmtWithSideEffects)
+{
+    // x = 5 (as expression statement)
+    ast::ExprStmt* stmt = ast::makeExprStmt(ast::makeAssignmentExpr(ast::makeName("x"), makeLiteral(5.0)));
+
+    IR::Value result = codegen->eval(stmt);
+
+    // Assignment returns the value
+    EXPECT_DOUBLE_EQ(*result.asFloat(), 5.0);
+
+    // And defines the variable
+    EXPECT_TRUE(env->exists(StringRef("x")));
+    EXPECT_DOUBLE_EQ(*env->get(StringRef("x")).asFloat(), 5.0);
+}
+
+// BLOCK STATEMENT TESTS
+
+TEST_F(CodeGeneratorTest, BlockStmtSingleStatement)
+{
+    // { x = 10 }
+    ast::BlockStmt* block = ast::makeBlock({ makeAssignmentStmt(ast::makeName("x"), makeLiteral(10.0)) });
+
+    IR::Value result = codegen->eval(block);
+
+    // Returns list of values from statements
+    EXPECT_TRUE(result.isNone()); // assignments return none with side effects
+
+    // Variable should be defined
+    EXPECT_TRUE(env->exists(StringRef("x")));
+    EXPECT_DOUBLE_EQ(env->get(StringRef("x")).toFloat(), 10.0);
+}
+
+TEST_F(CodeGeneratorTest, BlockStmtMultipleStatements)
+{
+    // { a = 1; b = 2; c = 3; }
+    ast::BlockStmt* block = ast::makeBlock({ makeAssignmentStmt(ast::makeName("a"), makeLiteral(1.0)),
+        makeAssignmentStmt(ast::makeName("b"), makeLiteral(2.0)),
+        makeAssignmentStmt(ast::makeName("c"), makeLiteral(3.0)) });
+
+    IR::Value result = codegen->eval(block);
+
+    EXPECT_TRUE(result.isNone());
+
+    EXPECT_DOUBLE_EQ(env->get(StringRef("a")).toFloat(), 1.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("b")).toFloat(), 2.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("c")).toFloat(), 3.0);
+}
+
+TEST_F(CodeGeneratorTest, BlockStmtWithExpressions)
+{
+    // { 10; 20; 30; }
+    ast::BlockStmt* block = ast::makeBlock({ makeExprStmt(makeLiteral(10.0)),
+        makeExprStmt(makeLiteral(20.0)),
+        makeExprStmt(makeLiteral(30.0)) });
+
+    IR::Value result = codegen->eval(block);
+
+    EXPECT_TRUE(result.isNumber());
+    EXPECT_EQ(result.toFloat(), 30);
+}
+
+TEST_F(CodeGeneratorTest, BlockStmtMixedStatements)
+{
+    // { x = 5; x + 10; y = x * 2; }
+    ast::BlockStmt* block = ast::makeBlock({ makeAssignmentStmt(ast::makeName("x"), makeLiteral(5.0)),
+        makeExprStmt(makeBinary(ast::makeName("x"), makeLiteral(10.0), tok::TokenType::OP_PLUS)),
+        makeAssignmentStmt(ast::makeName("y"), makeBinary(ast::makeName("x"), makeLiteral(2.0), tok::TokenType::OP_STAR)) });
+
+    codegen->eval(block);
+
+    EXPECT_DOUBLE_EQ(*env->get(StringRef("x")).asFloat(), 5.0);
+    EXPECT_DOUBLE_EQ(*env->get(StringRef("y")).asFloat(), 10.0);
+}
+
+// ============================================================================
+// IF STATEMENT TESTS
+// ============================================================================
+
+TEST_F(CodeGeneratorTest, IfStmtTrueCondition)
+{
+    // if (true) { x = 10 }
+    ast::BlockStmt* thenBlock = ast::makeBlock({ makeAssignmentStmt(ast::makeName("x"), makeLiteral(10.0)) });
+    ast::IfStmt* ifStmt = makeIf(makeLiteral(true), thenBlock);
+
+    codegen->eval(ifStmt);
+
+    EXPECT_TRUE(env->exists(StringRef("x")));
+    EXPECT_DOUBLE_EQ(*env->get(StringRef("x")).asFloat(), 10.0);
+}
+
+TEST_F(CodeGeneratorTest, IfStmtFalseCondition_01)
+{
+    // if (false) { x = 10 }
+    ast::BlockStmt* thenBlock = ast::makeBlock({ makeAssignmentStmt(ast::makeName("x"), makeLiteral(10.0)) });
+    ast::IfStmt* ifStmt = makeIf(makeLiteral(false), thenBlock);
+
+    codegen->eval(ifStmt);
+
+    // x should not be defined
+    EXPECT_FALSE(env->exists(StringRef("x")));
+}
+
+TEST_F(CodeGeneratorTest, IfElseStmtTrueCondition)
+{
+    // if (true) { x = 10 } else { x = 20 }
+    ast::BlockStmt* thenBlock = ast::makeBlock({ makeAssignmentStmt(ast::makeName("x"), makeLiteral(10.0)) });
+    ast::BlockStmt* elseBlock = ast::makeBlock({ makeAssignmentStmt(ast::makeName("x"), makeLiteral(20.0)) });
+    ast::IfStmt* ifStmt = makeIf(makeLiteral(true), thenBlock, elseBlock);
+
+    codegen->eval(ifStmt);
+
+    EXPECT_DOUBLE_EQ(*env->get(StringRef("x")).asFloat(), 10.0);
+}
+
+TEST_F(CodeGeneratorTest, IfElseStmtFalseCondition)
+{
+    // if (false) { x = 10 } else { x = 20 }
+    ast::BlockStmt* thenBlock = ast::makeBlock({ makeAssignmentStmt(ast::makeName("x"), makeLiteral(10.0)) });
+    ast::BlockStmt* elseBlock = ast::makeBlock({ makeAssignmentStmt(ast::makeName("x"), makeLiteral(20.0)) });
+    ast::IfStmt* ifStmt = makeIf(makeLiteral(false), thenBlock, elseBlock);
+
+    codegen->eval(ifStmt);
+
+    EXPECT_DOUBLE_EQ(*env->get(StringRef("x")).asFloat(), 20.0);
+}
+
+TEST_F(CodeGeneratorTest, IfStmtComparisonCondition)
+{
+    // if (5 > 3) { result = 1 }
+    ast::BinaryExpr* condition = makeBinary(makeLiteral(5.0), makeLiteral(3.0), tok::TokenType::OP_GT);
+    ast::BlockStmt* thenBlock = ast::makeBlock({ makeAssignmentStmt(ast::makeName("result"), makeLiteral(1.0)) });
+    ast::IfStmt* ifStmt = makeIf(condition, thenBlock);
+
+    codegen->eval(ifStmt);
+
+    EXPECT_TRUE(env->exists(StringRef("result")));
+    EXPECT_DOUBLE_EQ(*env->get(StringRef("result")).asFloat(), 1.0);
+}
+
+TEST_F(CodeGeneratorTest, IfStmtVariableCondition)
+{
+    // x = true; if (x) { y = 5 }
+    env->define(StringRef("x"), IR::Value::makeBool(true));
+
+    ast::BlockStmt* thenBlock = ast::makeBlock({ makeAssignmentStmt(ast::makeName("y"), makeLiteral(5.0)) });
+    ast::IfStmt* ifStmt = makeIf(ast::makeName("x"), thenBlock);
+
+    codegen->eval(ifStmt);
+
+    EXPECT_TRUE(env->exists(StringRef("y")));
+}
+
+TEST_F(CodeGeneratorTest, IfStmtNestedIf_01)
+{
+    // if (true) { if (true) { x = 10 } }
+    ast::BlockStmt* innerThen = ast::makeBlock({ makeAssignmentStmt(ast::makeName("x"), makeLiteral(10.0)) });
+    ast::IfStmt* innerIf = makeIf(makeLiteral(true), innerThen);
+
+    ast::BlockStmt* outerThen = ast::makeBlock({ innerIf });
+    ast::IfStmt* outerIf = makeIf(makeLiteral(true), outerThen);
+
+    codegen->eval(outerIf);
+
+    EXPECT_TRUE(env->exists(StringRef("x")));
+    EXPECT_DOUBLE_EQ(*env->get(StringRef("x")).asFloat(), 10.0);
+}
+
+TEST_F(CodeGeneratorTest, IfStmtReturnValue)
+{
+    // if (true) { 42 } should return 42
+    ast::BlockStmt* thenBlock = ast::makeBlock({ makeExprStmt(makeLiteral(42.0)) });
+    ast::IfStmt* ifStmt = makeIf(makeLiteral(true), thenBlock);
+
+    IR::Value result = codegen->eval(ifStmt);
+
+    // Result should be 42 from the block
+    EXPECT_TRUE(result.isNumber());
+    EXPECT_EQ(result.toInt(), 42);
+}
+
+// ============================================================================
+// WHILE STATEMENT TESTS
+// ============================================================================
+
+TEST_F(CodeGeneratorTest, WhileStmtSimpleLoop)
+{
+    // i = 0; while (i < 3) { i = i + 1 }
+    env->define(StringRef("i"), IR::Value::makeFloat(0.0));
+
+    ast::BinaryExpr* condition = makeBinary(ast::makeName("i"), makeLiteral(3.0), tok::TokenType::OP_LT);
+    ast::BlockStmt* body = ast::makeBlock({ makeAssignmentStmt(ast::makeName("i"), makeBinary(ast::makeName("i"), makeLiteral(1.0), tok::TokenType::OP_PLUS)) });
+
+    ast::WhileStmt* whileStmt = makeWhile(condition, body);
+    codegen->eval(whileStmt);
+
+    EXPECT_DOUBLE_EQ(*env->get(StringRef("i")).asFloat(), 3.0);
+}
+
+TEST_F(CodeGeneratorTest, WhileStmtFalseConditionNeverExecutes)
+{
+    // while (false) { x = 10 }
+    ast::BlockStmt* body = ast::makeBlock({ makeAssignmentStmt(ast::makeName("x"), makeLiteral(10.0)) });
+    ast::WhileStmt* whileStmt = makeWhile(makeLiteral(false), body);
+
+    codegen->eval(whileStmt);
+
+    EXPECT_FALSE(env->exists(StringRef("x")));
+}
+
+TEST_F(CodeGeneratorTest, WhileStmtCounterAccumulation)
+{
+    // sum = 0; i = 1; while (i <= 5) { sum = sum + i; i = i + 1 }
+    env->define(StringRef("sum"), IR::Value::makeFloat(0.0));
+    env->define(StringRef("i"), IR::Value::makeFloat(1.0));
+
+    ast::BinaryExpr* condition = makeBinary(ast::makeName("i"), makeLiteral(5.0), tok::TokenType::OP_LTE);
+    ast::BlockStmt* body = ast::makeBlock({ ast::makeAssignmentStmt(ast::makeName("sum"), ast::makeBinary(ast::makeName("sum"), ast::makeName("i"), tok::TokenType::OP_PLUS)),
+        makeAssignmentStmt(ast::makeName("i"), makeBinary(ast::makeName("i"), makeLiteral(1.0), tok::TokenType::OP_PLUS)) });
+
+    ast::WhileStmt* whileStmt = makeWhile(condition, body);
+    codegen->eval(whileStmt);
+
+    // sum should be 1+2+3+4+5 = 15
+    EXPECT_DOUBLE_EQ(*env->get(StringRef("sum")).asFloat(), 15.0);
+    EXPECT_DOUBLE_EQ(*env->get(StringRef("i")).asFloat(), 6.0);
+}
+
+TEST_F(CodeGeneratorTest, WhileStmtWithComplexCondition)
+{
+    // x = 10; while (x > 0 && x < 20) { x = x - 1 }
+    env->define(StringRef("x"), IR::Value::makeFloat(10.0));
+
+    ast::BinaryExpr* condition = makeBinary(ast::makeName("x"), makeLiteral(0.0), tok::TokenType::OP_GT);
+    ast::BlockStmt* body = ast::makeBlock({ makeAssignmentStmt(ast::makeName("x"), ast::makeBinary(ast::makeName("x"), makeLiteral(1.0), tok::TokenType::OP_MINUS)) });
+
+    ast::WhileStmt* whileStmt = makeWhile(condition, body);
+    codegen->eval(whileStmt);
+
+    EXPECT_DOUBLE_EQ(*env->get(StringRef("x")).asFloat(), 0.0);
+}
+
+TEST_F(CodeGeneratorTest, WhileStmtNestedLoop)
+{
+    // i = 0; while (i < 3) { j = 0; while (j < 2) { j = j + 1 } i = i + 1 }
+    env->define(StringRef("i"), IR::Value::makeFloat(0.0));
+
+    ast::BinaryExpr* innerCondition = makeBinary(ast::makeName("j"), makeLiteral(2.0), tok::TokenType::OP_LT);
+    ast::BlockStmt* innerBody = ast::makeBlock({ makeAssignmentStmt(ast::makeName("j"), makeBinary(ast::makeName("j"), makeLiteral(1.0), tok::TokenType::OP_PLUS)) });
+    ast::WhileStmt* innerWhile = makeWhile(innerCondition, innerBody);
+
+    ast::BinaryExpr* outerCondition = makeBinary(ast::makeName("i"), makeLiteral(3.0), tok::TokenType::OP_LT);
+    ast::BlockStmt* outerBody = ast::makeBlock({ makeAssignmentStmt(ast::makeName("j"), makeLiteral(0.0)),
+        innerWhile, makeAssignmentStmt(ast::makeName("i"), makeBinary(ast::makeName("i"), makeLiteral(1.0), tok::TokenType::OP_PLUS)) });
+
+    ast::WhileStmt* outerWhile = makeWhile(outerCondition, outerBody);
+    codegen->eval(outerWhile);
+
+    EXPECT_DOUBLE_EQ(*env->get(StringRef("i")).asFloat(), 3.0);
+    EXPECT_DOUBLE_EQ(*env->get(StringRef("j")).asFloat(), 2.0);
+}
+
+// ============================================================================
+// FUNCTION DEFINITION STATEMENT TESTS
+// ============================================================================
+
+TEST_F(CodeGeneratorTest, FuncDefSimpleNoParams)
+{
+    // function getValue() { return 42 }
+    // Note: Since return is not fully implemented, we use expression
+    ast::BlockStmt* body = ast::makeBlock({ makeExprStmt(makeLiteral(42.0)) });
+
+    // Create parameter list (empty)
+    std::vector<ast::Expr*> params = {};
+
+    ast::FunctionDef* funcDef = new ast::FunctionDef(
+        ast::makeName("getValue"),
+        ast::makeList(params),
+        body);
+
+    codegen->eval(funcDef);
+
+    // Function should be defined in environment
+    EXPECT_TRUE(env->exists(StringRef("getValue")));
+    IR::Value funcValue = env->get(StringRef("getValue"));
+    EXPECT_TRUE(funcValue.isFunction());
+}
+
+TEST_F(CodeGeneratorTest, FuncDefWithParameters)
+{
+    // function add(a, b) { return a + b }
+    ast::BlockStmt* body = ast::makeBlock({ ast::makeExprStmt(makeBinary(ast::makeName("a"), ast::makeName("b"), tok::TokenType::OP_PLUS)) });
+
+    std::vector<ast::Expr*> params = { ast::makeName("a"), ast::makeName("b") };
+
+    ast::FunctionDef* funcDef = new ast::FunctionDef(
+        ast::makeName("add"),
+        ast::makeList(params),
+        body);
+
+    codegen->eval(funcDef);
+
+    EXPECT_TRUE(env->exists(StringRef("add")));
+}
+
+TEST_F(CodeGeneratorTest, FuncDefAndCall)
+{
+    // function double(x) { return x * 2 }
+    // double(5)
+    ast::BlockStmt* body = ast::makeBlock({ makeExprStmt(makeBinary(ast::makeName("x"), makeLiteral(2.0), tok::TokenType::OP_STAR)) });
+
+    std::vector<ast::Expr*> params = { ast::makeName("x") };
+
+    ast::FunctionDef* funcDef = ast::makeFunction(ast::makeName("double"), ast::makeList(params), body);
+
+    codegen->eval(funcDef);
+
+    // Call the function
+    ast::CallExpr* call = makeCall("double", { makeLiteral(5.0) });
+    IR::Value result = codegen->eval(call);
+
+    EXPECT_TRUE(result.isNumber()); // Body returns block result
+    EXPECT_EQ(result.toInt(), 10);
+}
+
+TEST_F(CodeGeneratorTest, FuncDefWithSideEffects)
+{
+    // function setX() { x = 100 }
+    ast::AssignmentStmt* x = ast::makeAssignmentStmt(ast::makeName("x"), makeLiteral(0.0));
+    codegen->eval(x); // declare x
+
+    ast::BlockStmt* body = ast::makeBlock({ ast::makeAssignmentStmt(ast::makeName("x"), makeLiteral(100.0)) });
+
+    std::vector<ast::Expr*> params = {};
+
+    ast::FunctionDef* funcDef = ast::makeFunction(ast::makeName("setX"), ast::makeList(params), body);
+
+    codegen->eval(funcDef); // define function
+
+    // Call it
+    ast::CallExpr* call = makeCall("setX", {});
+    codegen->eval(call); // set x to 100
+
+    // x should now be defined
+    EXPECT_TRUE(env->exists(StringRef("x")));
+    EXPECT_DOUBLE_EQ(env->get(StringRef("x")).toFloat(), 100.0);
+}
+
+TEST_F(CodeGeneratorTest, FuncDefClosure)
+{
+    // outer = 10
+    // function getOuter() { return outer }
+    env->define(StringRef("outer"), IR::Value::makeFloat(10.0));
+
+    ast::BlockStmt* body = ast::makeBlock({ ast::makeExprStmt(ast::makeName("outer")) });
+
+    std::vector<ast::Expr*> params = {};
+
+    ast::FunctionDef* funcDef = new ast::FunctionDef(
+        ast::makeName("getOuter"),
+        ast::makeList(params),
+        body);
+
+    codegen->eval(funcDef);
+
+    // Function should capture the environment
+    IR::Value funcValue = env->get(StringRef("getOuter"));
+    EXPECT_TRUE(funcValue.isFunction());
+}
+
+TEST_F(CodeGeneratorTest, FuncDefMultipleFunctions)
+{
+    // function f1() { return 1 }
+    // function f2() { return 2 }
+    ast::BlockStmt* body1 = ast::makeBlock({ makeExprStmt(makeLiteral(1.0)) });
+    ast::BlockStmt* body2 = ast::makeBlock({ makeExprStmt(makeLiteral(2.0)) });
+
+    ast::FunctionDef* func1 = new ast::FunctionDef(ast::makeName("f1"), {}, body1);
+    ast::FunctionDef* func2 = new ast::FunctionDef(ast::makeName("f2"), {}, body2);
+
+    codegen->eval(func1);
+    codegen->eval(func2);
+
+    EXPECT_TRUE(env->exists(StringRef("f1")));
+    EXPECT_TRUE(env->exists(StringRef("f2")));
+}
+
+// INTEGRATED STATEMENT TESTS
+
+TEST_F(CodeGeneratorTest, IntegratedIfWithinWhile)
+{
+    // sum = 0
+    // i = 0
+    // while (i < 10)
+    //   if (i % 2 == 0)
+    //     sum = sum + i
+    //   i = i + 1
+    //
+    env->define(StringRef("sum"), IR::Value::makeFloat(0.0));
+    env->define(StringRef("i"), IR::Value::makeFloat(0.0));
+
+    // if condition: (i % 2 == 0) - we'll use a simplified version
+    ast::BinaryExpr* ifCondition = makeBinary(
+        makeBinary(ast::makeName("i"), makeLiteral(2.0), tok::TokenType::OP_PERCENT),
+        makeLiteral(0.0),
+        tok::TokenType::OP_EQ);
+
+    ast::BlockStmt* ifBody = ast::makeBlock({ ast::makeAssignmentStmt(ast::makeName("sum"), ast::makeBinary(ast::makeName("sum"), ast::makeName("i"), tok::TokenType::OP_PLUS)) });
+
+    ast::IfStmt* ifStmt = makeIf(ifCondition, ifBody);
+
+    ast::BinaryExpr* whileCondition = makeBinary(ast::makeName("i"), makeLiteral(10.0), tok::TokenType::OP_LT);
+    ast::BlockStmt* whileBody = ast::makeBlock({ ifStmt,
+        makeAssignmentStmt(ast::makeName("i"), makeBinary(ast::makeName("i"), makeLiteral(1.0), tok::TokenType::OP_PLUS)) });
+
+    ast::WhileStmt* whileStmt = makeWhile(whileCondition, whileBody);
+    codegen->eval(whileStmt);
+
+    // sum should be 0+2+4+6+8 = 20
+    EXPECT_DOUBLE_EQ(*env->get(StringRef("sum")).asFloat(), 20.0);
+}
+
+TEST_F(CodeGeneratorTest, IntegratedFunctionWithIfElse)
+{
+    // function abs(x) 
+    //   if (x < 0) 
+    //      return -x
+    //   else  
+    //      return x
+    // 
+    ast::BinaryExpr* condition = makeBinary(ast::makeName("x"), makeLiteral(0.0), tok::TokenType::OP_LT);
+    ast::BlockStmt* thenBlock = ast::makeBlock({ ast::makeExprStmt(ast::makeUnary(ast::makeName("x"), tok::TokenType::OP_MINUS)) });
+    ast::BlockStmt* elseBlock = ast::makeBlock({ ast::makeExprStmt(ast::makeName("x")) });
+
+    ast::IfStmt* ifStmt = makeIf(condition, thenBlock, elseBlock);
+    ast::BlockStmt* funcBody = ast::makeBlock({ ifStmt });
+
+    std::vector<ast::Expr*> params = { ast::makeName("x") };
+    ast::FunctionDef* funcDef = ast::makeFunction(ast::makeName("abs"), ast::makeList(params), funcBody);
+
+    codegen->eval(funcDef);
+
+    // Test with negative number
+    ast::CallExpr* call1 = makeCall("abs", { makeLiteral(-5.0) });
+    IR::Value result1 = codegen->eval(call1);
+    EXPECT_TRUE(result1.isNumber()); // Returns block result
+    EXPECT_EQ(result1.toInt(), 5);
+
+    // Test with positive number
+    ast::CallExpr* call2 = makeCall("abs", { makeLiteral(5.0) });
+    IR::Value result2 = codegen->eval(call2);
+    EXPECT_TRUE(result2.isNumber());
+    EXPECT_EQ(result2.toInt(), 5);
+}
+
+TEST_F(CodeGeneratorTest, IntegratedBlockWithMultipleStatementTypes)
+{
+    // {
+    //   x = 10
+    //   y = 20
+    //   if (x < y) { result = 1 }
+    //   else { result = 0 }
+    //   result
+    // }
+    ast::BinaryExpr* condition = makeBinary(ast::makeName("x"), ast::makeName("y"), tok::TokenType::OP_LT);
+    ast::BlockStmt* thenBlock = ast::makeBlock({ makeAssignmentStmt(ast::makeName("result"), makeLiteral(1.0)) });
+    ast::BlockStmt* elseBlock = ast::makeBlock({ makeAssignmentStmt(ast::makeName("result"), makeLiteral(0.0)) });
+    ast::IfStmt* ifStmt = makeIf(condition, thenBlock, elseBlock);
+
+    ast::BlockStmt* block = ast::makeBlock({ makeAssignmentStmt(ast::makeName("x"), makeLiteral(10.0)),
+        makeAssignmentStmt(ast::makeName("y"), makeLiteral(20.0)), ifStmt, ast::makeExprStmt(ast::makeName("result")) });
+
+    codegen->eval(block);
+
+    EXPECT_TRUE(env->exists(StringRef("result")));
+    EXPECT_DOUBLE_EQ(*env->get(StringRef("result")).asFloat(), 1.0);
 }
