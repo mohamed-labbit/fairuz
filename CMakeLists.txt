@@ -88,6 +88,7 @@ add_executable(mylang_tests
     tests/parser/test_analyzer.cpp
     tests/parser/test_optim.cpp
     tests/IR/test_value.cpp
+    tests/IR/test_codegen.cpp
     $<TARGET_OBJECTS:mylang_objects>
 )
 
