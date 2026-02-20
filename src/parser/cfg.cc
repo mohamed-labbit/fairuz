@@ -3,7 +3,10 @@
 namespace mylang {
 namespace parser {
 
-void ControlFlowGraph::addBlock(BasicBlock block) { Blocks_.push_back(std::move(block)); }
+void ControlFlowGraph::addBlock(BasicBlock block)
+{
+    Blocks_.push_back(std::move(block));
+}
 
 void ControlFlowGraph::addEdge(std::int32_t from, std::int32_t to)
 {

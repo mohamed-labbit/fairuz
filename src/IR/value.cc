@@ -460,6 +460,7 @@ Value Value::operator%(Value const& other) const
     diagnostic::engine.panic("Unsupported operand types for %");
     return Value();
 }
+
 Value Value::pow(Value const& other) const
 {
     if (isNumber() && other.isNumber())

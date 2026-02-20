@@ -70,7 +70,7 @@ void DiagnosticEngine::prettyPrint() const
           << Color::RESET << '\n';
         }
         */
-       
+
         if (!diag.suggestions.empty()) {
             std::cout << Color::MAGENTA << "Help" << Color::RESET << std::endl;
             for (std::string const& sugg : diag.suggestions)

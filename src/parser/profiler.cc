@@ -6,7 +6,10 @@
 namespace mylang {
 namespace parser {
 
-void ParserProfiler::recordPhase(StringRef const& phase, double ms) { Timings_.push_back({ phase, ms }); }
+void ParserProfiler::recordPhase(StringRef const& phase, double ms)
+{
+    Timings_.push_back({ phase, ms });
+}
 
 void ParserProfiler::printReport() const
 {
