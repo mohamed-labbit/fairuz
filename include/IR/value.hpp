@@ -38,9 +38,10 @@ public:
     };
 
     struct Function {
+        StringRef name;
         std::int32_t CodeOffset;
-        std::vector<StringRef> params;
-        std::vector<Value> defaults;
+        Value* params { nullptr }; // list object
+        Value* defaults { nullptr };
         Environment* closure; // Captured variables
         ast::ASTNode* body;
     };
@@ -89,7 +90,7 @@ public:
     {
     }
 
-    Value(int v)
+    Value(int const v)
         : Value(static_cast<std::int64_t>(v))
     {
     }
@@ -262,6 +263,26 @@ public:
 
     bool hasNext() const;
 
+    Value& operator[](std::size_t const i)
+    {
+        if (!isList()) {
+            diagnostic::engine.emit("Value object does not support [] operator");
+            throw;
+        }
+
+        return std::get<std::vector<Value>>(Data_)[i];
+    }
+
+    Value operator[](std::size_t const i) const
+    {
+        if (!isList()) {
+            diagnostic::engine.emit("Value object does not support [] operator");
+            throw;
+        }
+
+        return std::get<std::vector<Value>>(Data_)[i];
+    }
+
     // operators (arithmetic ops have type promotion)
     bool operator!=(Value const& other) const;
     bool operator==(Value const& other) const;
@@ -329,6 +350,100 @@ public:
         return Value(v);
     }
 };
+
+struct ObjectAllocator {
+private:
+    runtime::allocator::ArenaAllocator Allocator_;
+
+public:
+    ObjectAllocator()
+        : Allocator_(static_cast<int>(runtime::allocator::ArenaAllocator::GrowthStrategy::EXPONENTIAL))
+    {
+        Allocator_.setName("Object Allocator");
+    }
+
+    void* allocateBytes(std::size_t const size)
+    {
+        void* mem = Allocator_.allocate(size);
+        if (!mem)
+            throw std::bad_alloc();
+
+        return mem;
+    }
+
+    template<typename... Args>
+    [[nodiscard]] Value* allocateObject(Args&&... args)
+    {
+        static_assert(std::is_constructible_v<Value, Args...>, "T must be constructible with Args...");
+
+        void* mem = allocateBytes(sizeof(Value));
+
+        return ::new (mem) Value(std::forward<Args>(args)...);
+    }
+
+    template<typename T>
+    void deallocateObject(T* obj)
+    {
+        Allocator_.deallocate((void*)obj, sizeof(T));
+    }
+
+    std::string toString(bool verbose) const
+    {
+        return Allocator_.toString(verbose);
+    }
+};
+
+inline ObjectAllocator object_allocator;
+
+static constexpr Value* makeValue()
+{
+    return object_allocator.allocateObject();
+}
+
+static constexpr Value* makeValue(int const v)
+{
+    return object_allocator.allocateObject(v);
+}
+
+static constexpr Value* makeValue(std::int64_t const v)
+{
+    return object_allocator.allocateObject(v);
+}
+
+static constexpr Value* makeValue(double const v)
+{
+    return object_allocator.allocateObject(v);
+}
+
+static constexpr Value* makeValue(StringRef const& v)
+{
+    return object_allocator.allocateObject(v);
+}
+
+static constexpr Value* makeValue(bool const v)
+{
+    return object_allocator.allocateObject(v);
+}
+
+static constexpr Value* makeValue(std::vector<Value> const v)
+{
+    return object_allocator.allocateObject(v);
+}
+
+static constexpr Value* makeValue(std::unordered_map<StringRef, Value, StringRefHash, StringRefEqual> const v)
+{
+    return object_allocator.allocateObject(v);
+}
+
+static constexpr Value* makeValue(Value::Function v)
+{
+    return object_allocator.allocateObject(v);
+}
+
+static constexpr Value* makeValue(Value const& v)
+{
+    return object_allocator.allocateObject(v);
+}
 
 }
 }

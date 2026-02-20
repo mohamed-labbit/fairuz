@@ -29,7 +29,7 @@ public:
 
     DiagnosticEngine() = default;
 
-    constexpr void emit(std::string const& msg, const Severity sv = Severity::ERROR)
+    constexpr void emit(std::string const& msg, Severity const sv = Severity::ERROR)
     {
         emitError(msg, sv);
     }

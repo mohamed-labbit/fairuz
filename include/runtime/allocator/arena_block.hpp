@@ -82,6 +82,7 @@ public:
     }
 
     unsigned char* allocate(std::size_t bytes, std::optional<std::size_t> alignment = std::nullopt);
+
     unsigned char* reserve(std::size_t const bytes);
 }; // ArenaBlock
 

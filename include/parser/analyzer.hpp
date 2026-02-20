@@ -16,7 +16,7 @@ public:
         enum class Severity { ERROR,
             WARNING,
             INFO };
-            
+
         Severity severity;
         StringRef message;
         std::int32_t line;

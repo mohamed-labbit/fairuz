@@ -10,7 +10,7 @@ class StringRef {
 private:
     String* StringData_ { nullptr };
     std::size_t Offset_ { 0 };
-    std::size_t Length_ { 0 }; 
+    std::size_t Length_ { 0 };
 
     static String* createEmpty()
     {
@@ -182,7 +182,7 @@ public:
 
     StringRef& truncate(std::size_t const s);
 
-    StringRef slice(std::size_t start, std::optional<std::size_t> end) const; 
+    StringRef slice(std::size_t start, std::optional<std::size_t> end) const;
 
     StringRef substr(std::optional<std::size_t> start, std::optional<std::size_t> end) const;
 
@@ -213,8 +213,8 @@ struct StringRefHash {
         if (str.empty() || str.len() == 0)
             return 0;
 
-        std::size_t hash = 14695981039346656037ULL; 
-        std::size_t const prime = 1099511628211ULL; 
+        std::size_t hash = 14695981039346656037ULL;
+        std::size_t const prime = 1099511628211ULL;
 
         char const* data = str.data();
         std::size_t const len = str.len();

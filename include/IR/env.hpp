@@ -5,6 +5,10 @@
 namespace mylang {
 namespace IR {
 
+class Environment;
+
+static void freeEnvironment(Environment* p);
+
 class Environment {
 private:
     std::unordered_map<StringRef, Value> variables_;
@@ -41,6 +45,12 @@ public:
         return parent_ && parent_->exists(name);
     }
 };
+
+static void freeEnvironment(Environment* p)
+{
+    if (p)
+        delete p;
+}
 
 } // namespace runtime
 } // namespace mylang

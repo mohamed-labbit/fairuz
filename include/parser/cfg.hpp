@@ -14,13 +14,13 @@ class ControlFlowGraph {
 public:
     struct BasicBlock {
         std::int32_t id;
-        
+
         std::vector<ast::Stmt*> statements;
         std::vector<std::int32_t> predecessors;
         std::vector<std::int32_t> successors;
-        
+
         bool IsReachable = false;
-        
+
         // data flow analysis
         std::unordered_set<StringRef, StringRefHash, StringRefEqual> DefVars; // variables defined
         std::unordered_set<StringRef, StringRefHash, StringRefEqual> UseVars; // variables used

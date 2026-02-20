@@ -31,7 +31,7 @@ private:
     {
         if (!UseColor_)
             return s;
-            
+
         return c + s + Color::RESET;
     }
 

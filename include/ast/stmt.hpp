@@ -36,6 +36,11 @@ public:
     {
         return Kind_;
     }
+
+    NodeType getNodeType() const override
+    {
+        return NodeType::STATEMENT;
+    }
 };
 
 class BlockStmt : public Stmt {
@@ -284,6 +289,13 @@ public:
         , Body_(body)
     {
         Kind_ = Kind::FUNC;
+
+        if (!Params_)
+            Params_ = AST_allocator.make<ListExpr>(std::vector<Expr*> {});
+        if (!Body_)
+            Body_ = AST_allocator.make<BlockStmt>(std::vector<Stmt*> {});
+        if (!Name_)
+            Name_ = AST_allocator.make<NameExpr>("");
     }
 
     FunctionDef(FunctionDef&&) noexcept = delete;
@@ -299,6 +311,11 @@ public:
     std::vector<Expr*> const& getParameters() const
     {
         return Params_->getElements();
+    }
+
+    ListExpr* getParameterList() const
+    {
+        return Params_;
     }
 
     BlockStmt* getBody() const
@@ -361,7 +378,7 @@ static constexpr AssignmentStmt* makeAssignmentStmt(Expr* target, Expr* value)
     return AST_allocator.make<AssignmentStmt>(target, value);
 }
 
-static constexpr IfStmt* makeIf(Expr* condition, BlockStmt* then_block, BlockStmt* else_block)
+static constexpr IfStmt* makeIf(Expr* condition, BlockStmt* then_block, BlockStmt* else_block = nullptr)
 {
     return AST_allocator.make<IfStmt>(condition, then_block, else_block);
 }

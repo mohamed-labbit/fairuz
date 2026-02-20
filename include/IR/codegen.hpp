@@ -19,7 +19,7 @@ public:
 private:
     Environment* Env_;
 
-    Value callUserFunction(Value& func_value, std::vector<Value> const& args);
+    Value callUserFunction(StringRef const& func_name, std::vector<Value> const& args);
 };
 
 }

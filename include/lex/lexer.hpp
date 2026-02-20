@@ -55,7 +55,7 @@ private:
     SourceManager SourceManager_;
     std::size_t TokIndex_ { 0 };
     unsigned int IndentSize_ { 0 };
-    unsigned int  IndentLevel_ { 0 };
+    unsigned int IndentLevel_ { 0 };
     std::vector<tok::Token const*> TokStream_;
     std::vector<unsigned int> IndentStack_;
     std::vector<unsigned int> AltIndentStack_;

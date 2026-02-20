@@ -13,9 +13,9 @@ namespace parser {
 
 class ParseError : public std::runtime_error {
 public:
-    std::int32_t Line_, Column_;         
-    StringRef Context_;                  
-    std::vector<StringRef> Suggestions_; 
+    std::int32_t Line_, Column_;
+    StringRef Context_;
+    std::vector<StringRef> Suggestions_;
 
     ParseError(StringRef const& msg, unsigned int l, unsigned int c, StringRef ctx = "", std::vector<StringRef> sugg = {})
         : Line_(l)

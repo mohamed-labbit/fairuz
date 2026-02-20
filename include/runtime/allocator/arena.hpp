@@ -64,7 +64,10 @@ public:
     ArenaAllocator(std::int32_t growth_strategy = static_cast<std::int32_t>(GrowthStrategy::EXPONENTIAL), OutOfMemoryHandler oom_handler = nullptr,
         bool debug = true);
 
-    ~ArenaAllocator() { reset(); }
+    ~ArenaAllocator()
+    {
+        reset();
+    }
 
     ArenaAllocator(ArenaAllocator const&) = delete;
     ArenaAllocator& operator=(ArenaAllocator const&) = delete;
@@ -94,15 +97,13 @@ public:
         return AllocStats_.ActiveBlocks;
     }
 
-    [[nodiscard]]
-    unsigned char* allocateBlock(std::size_t requested, std::size_t alignment_ = alignof(std::max_align_t), bool retry_on_oom = true);
+    [[nodiscard]] unsigned char* allocateBlock(std::size_t requested, std::size_t alignment_ = alignof(std::max_align_t), bool retry_on_oom = true);
 
     [[nodiscard]] void* allocate(std::size_t const size, std::size_t const alignment = alignof(std::max_align_t));
 
     void deallocate(void* ptr, std::size_t const size);
 
-    [[nodiscard]]
-    bool verifyAllocation(void* ptr) const;
+    [[nodiscard]] bool verifyAllocation(void* ptr) const;
 
     std::string toString(bool verbose) const
     {
@@ -118,8 +119,7 @@ public:
     }
 
 private:
-    [[nodiscard]]
-    unsigned char* allocateFromBlocks(std::size_t alloc_size, std::size_t align = alignof(std::max_align_t));
+    [[nodiscard]] unsigned char* allocateFromBlocks(std::size_t alloc_size, std::size_t align = alignof(std::max_align_t));
 
     void updateNextBlockSize() noexcept;
 

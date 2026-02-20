@@ -72,14 +72,14 @@ private:
 
     struct PushbackEntry {
         uint32_t ch { BUFFER_END };
-        Context ctx;             
-        std::size_t bytes { 0 }; 
+        Context ctx;
+        std::size_t bytes { 0 };
     };
 
     FileManager* FileManager_ { nullptr };
     Context Context_;
     uint32_t Current_ { BUFFER_END };
-    std::size_t CurrentBytes_ { 0 }; 
+    std::size_t CurrentBytes_ { 0 };
     std::stack<PushbackEntry> UngetStack_;
 
     void advance(uint32_t const cp, std::size_t const bytes);

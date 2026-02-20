@@ -20,6 +20,7 @@ public:
         void* mem = Allocator_.allocate(size);
         if (!mem)
             throw std::bad_alloc();
+
         return mem;
     }
 
@@ -39,7 +40,9 @@ public:
     [[nodiscard]] T* allocateObject(Args&&... args)
     {
         static_assert(std::is_constructible_v<T, Args...>, "T must be constructible with Args...");
+
         void* mem = allocateBytes(sizeof(T));
+
         return ::new (mem) T(std::forward<Args>(args)...);
     }
 

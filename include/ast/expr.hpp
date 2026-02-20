@@ -53,6 +53,11 @@ public:
     {
         return Kind_;
     }
+
+    NodeType getNodeType() const override
+    {
+        return NodeType::EXPRESSION;
+    }
 };
 
 class BinaryExpr : public Expr {
