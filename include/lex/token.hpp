@@ -115,7 +115,9 @@ enum class TokenType : int {
 static std::unordered_map<StringRef, TokenType, StringRefHash, StringRefEqual> const operators
     = { { "=", TokenType::OP_EQ }, { ":=", TokenType::OP_ASSIGN }, { "+", TokenType::OP_PLUS }, { "-", TokenType::OP_MINUS },
           { "*", TokenType::OP_STAR }, { "/", TokenType::OP_SLASH }, { "<", TokenType::OP_LT }, { ">", TokenType::OP_GT },
-          { "<=", TokenType::OP_LTE }, { ">=", TokenType::OP_GTE }, { "!=", TokenType::OP_NEQ } };
+          { "<=", TokenType::OP_LTE }, { ">=", TokenType::OP_GTE },
+          { "٪", TokenType::OP_PERCENT }, { "%", TokenType::OP_PERCENT },
+          { "!=", TokenType::OP_NEQ } };
 
 static std::unordered_map<StringRef, TokenType, StringRefHash, StringRefEqual> const keywords = { { "خطا", TokenType::KW_FALSE },
     { "عدم", TokenType::KW_NONE }, { "صحيح", TokenType::KW_TRUE }, { "و", TokenType::KW_AND }, { "اخرج", TokenType::KW_RETURN },
@@ -296,6 +298,11 @@ public:
     {
         return Type_ == TokenType::OP_EQ || Type_ == TokenType::OP_NEQ || Type_ == TokenType::OP_LT || Type_ == TokenType::OP_GT
             || Type_ == TokenType::OP_LTE || Type_ == TokenType::OP_GTE;
+    }
+
+    bool isWhitespace() const
+    {
+        return Type_ == TokenType::INDENT || Type_ == TokenType::DEDENT || Type_ == TokenType::NEWLINE;
     }
 
     int getArithmeticOpPrecedence() const

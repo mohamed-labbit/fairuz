@@ -58,7 +58,7 @@ public:
     }
 };
 
-ast::ASTPrinter AST_Printer;
+inline ast::ASTPrinter AST_Printer;
 
 // Literal Expression Tests
 TEST_F(ParserTest, ParseNumberLiteral)

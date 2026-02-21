@@ -3,10 +3,13 @@
 # Parse script-specific flags
 CLEAN_BUILD=false
 TEST_ARGS=()
+RUN_TESTS=false
 
 for arg in "$@"; do
     if [[ "$arg" == "-d" ]]; then
         CLEAN_BUILD=true
+    elif [[ "$arg" == "run" ]]; then
+        RUN_TESTS=true
     else
         # Collect all other arguments to forward to test binary
         TEST_ARGS+=("$arg")
@@ -32,4 +35,6 @@ cmake -DCMAKE_C_COMPILER=clang \
 make
 
 # Forward all collected arguments to the test binary
-./mylang_tests "${TEST_ARGS[@]}"
+if [[ "$RUN_TESTS" == true ]]; then
+    ./mylang_tests "${TEST_ARGS[@]}"
+fi

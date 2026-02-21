@@ -3,12 +3,27 @@
 #include "../../include/IR/value.hpp"
 #include "../../include/ast/ast.hpp"
 #include "../../include/ast/expr.hpp"
+#include "../../include/ast/printer.hpp"
+#include "../../include/lex/file_manager.hpp"
+#include "../../include/lex/lexer.hpp"
+#include "../../include/lex/token.hpp"
+#include "../../include/parser/parser.hpp"
+#include "../test_config.h"
+#include <filesystem>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <memory>
 #include <stdexcept>
 
 using namespace mylang;
+
+inline ast::ASTPrinter AST_Printer;
+
+std::filesystem::path test_cases_dir()
+{
+    static auto const dir = std::filesystem::path(__FILE__).parent_path() / "test_cases";
+    return dir;
+}
 
 // Test fixture for CodeGenerator tests
 class CodeGeneratorTest : public ::testing::Test {
@@ -44,6 +59,25 @@ protected:
     {
         return ast::makeCall(ast::makeName(funcName), ast::makeList(args));
     }
+
+    IR::Value eval(std::string const& filename)
+    {
+        lex::FileManager file_manager(test_cases_dir() / filename);
+        parser::Parser parser(&file_manager);
+
+        std::vector<ast::Stmt*> stmts = parser.parseProgram();
+
+        if (test_config::print_ast) {
+            for (ast::Stmt const* s : stmts)
+                AST_Printer.print(s);
+        }
+
+        IR::Value result;
+        for (ast::Stmt const* stmt : stmts)
+            result = codegen->eval(stmt);
+
+        return result;
+    }
 };
 
 // LITERAL EXPRESSION TESTS
@@ -54,34 +88,37 @@ TEST_F(CodeGeneratorTest, EvalLiteralInteger)
     IR::Value result = codegen->eval(literal);
 
     EXPECT_TRUE(result.isNumber());
-    EXPECT_DOUBLE_EQ(*result.asFloat(), 42.0);
+    EXPECT_DOUBLE_EQ(result.toFloat(), 42.0);
 }
 
 TEST_F(CodeGeneratorTest, EvalLiteralZero)
 {
     ast::LiteralExpr* literal = makeLiteral(0.0);
+
     IR::Value result = codegen->eval(literal);
 
     EXPECT_TRUE(result.isNumber());
-    EXPECT_DOUBLE_EQ(*result.asFloat(), 0.0);
+    EXPECT_DOUBLE_EQ(result.toFloat(), 0.0);
 }
 
 TEST_F(CodeGeneratorTest, EvalLiteralNegative)
 {
     ast::LiteralExpr* literal = makeLiteral(-100.5);
+
     IR::Value result = codegen->eval(literal);
 
     EXPECT_TRUE(result.isNumber());
-    EXPECT_DOUBLE_EQ(*result.asFloat(), -100.5);
+    EXPECT_DOUBLE_EQ(result.toFloat(), -100.5);
 }
 
 TEST_F(CodeGeneratorTest, EvalLiteralBoolean)
 {
     ast::LiteralExpr* literal = makeLiteral(true);
+
     IR::Value result = codegen->eval(literal);
 
     EXPECT_TRUE(result.isBool());
-    EXPECT_TRUE(*result.asBool());
+    EXPECT_TRUE(result.toBool());
 }
 
 TEST_F(CodeGeneratorTest, EvalNullNode)
@@ -95,37 +132,41 @@ TEST_F(CodeGeneratorTest, EvalNullNode)
 TEST_F(CodeGeneratorTest, BinaryAddition)
 {
     ast::BinaryExpr* expr = makeBinary(makeLiteral(10.0), makeLiteral(20.0), tok::TokenType::OP_PLUS);
+
     IR::Value result = codegen->eval(expr);
 
     EXPECT_TRUE(result.isNumber());
-    EXPECT_DOUBLE_EQ(*result.asFloat(), 30.0);
+    EXPECT_DOUBLE_EQ(result.toFloat(), 30.0);
 }
 
 TEST_F(CodeGeneratorTest, BinarySubtraction)
 {
     ast::BinaryExpr* expr = makeBinary(makeLiteral(50.0), makeLiteral(30.0), tok::TokenType::OP_MINUS);
+
     IR::Value result = codegen->eval(expr);
 
     EXPECT_TRUE(result.isNumber());
-    EXPECT_DOUBLE_EQ(*result.asFloat(), 20.0);
+    EXPECT_DOUBLE_EQ(result.toFloat(), 20.0);
 }
 
 TEST_F(CodeGeneratorTest, BinaryMultiplication)
 {
     ast::BinaryExpr* expr = makeBinary(makeLiteral(6.0), makeLiteral(7.0), tok::TokenType::OP_STAR);
+
     IR::Value result = codegen->eval(expr);
 
     EXPECT_TRUE(result.isNumber());
-    EXPECT_DOUBLE_EQ(*result.asFloat(), 42.0);
+    EXPECT_DOUBLE_EQ(result.toFloat(), 42.0);
 }
 
 TEST_F(CodeGeneratorTest, BinaryDivision)
 {
     ast::BinaryExpr* expr = makeBinary(makeLiteral(100.0), makeLiteral(4.0), tok::TokenType::OP_SLASH);
+
     IR::Value result = codegen->eval(expr);
 
     EXPECT_TRUE(result.isNumber());
-    EXPECT_DOUBLE_EQ(*result.asFloat(), 25.0);
+    EXPECT_DOUBLE_EQ(result.toFloat(), 25.0);
 }
 
 TEST_F(CodeGeneratorTest, BinaryDivisionByZero)
@@ -135,7 +176,7 @@ TEST_F(CodeGeneratorTest, BinaryDivisionByZero)
     // Division by zero should be handled in IR::Value class
     // This test verifies it doesn't crash
     IR::Value result = codegen->eval(expr);
-    // Result might be inf, nan, or throw - depends on IR::Value implementation
+    /// TODO: implement inf and nan into IR::Value
 }
 
 TEST_F(CodeGeneratorTest, BinaryChainedOperations)
@@ -147,7 +188,7 @@ TEST_F(CodeGeneratorTest, BinaryChainedOperations)
     IR::Value result = codegen->eval(outer);
 
     EXPECT_TRUE(result.isNumber());
-    EXPECT_DOUBLE_EQ(*result.asFloat(), 90.0);
+    EXPECT_DOUBLE_EQ(result.toFloat(), 90.0);
 }
 
 TEST_F(CodeGeneratorTest, BinaryNestedSubtraction)
@@ -159,7 +200,7 @@ TEST_F(CodeGeneratorTest, BinaryNestedSubtraction)
     IR::Value result = codegen->eval(outer);
 
     EXPECT_TRUE(result.isNumber());
-    EXPECT_DOUBLE_EQ(*result.asFloat(), 70.0);
+    EXPECT_DOUBLE_EQ(result.toFloat(), 70.0);
 }
 
 // BINARY EXPRESSION TESTS - COMPARISON
@@ -167,15 +208,17 @@ TEST_F(CodeGeneratorTest, BinaryNestedSubtraction)
 TEST_F(CodeGeneratorTest, BinaryEquality)
 {
     ast::BinaryExpr* expr = makeBinary(makeLiteral(42.0), makeLiteral(42.0), tok::TokenType::OP_EQ);
+
     IR::Value result = codegen->eval(expr);
 
     EXPECT_TRUE(result.isBool());
-    EXPECT_TRUE(*result.asBool());
+    EXPECT_TRUE(result.toBool());
 }
 
 TEST_F(CodeGeneratorTest, BinaryInequality)
 {
     ast::BinaryExpr* expr = makeBinary(makeLiteral(10.0), makeLiteral(20.0), tok::TokenType::OP_EQ);
+
     IR::Value result = codegen->eval(expr);
 
     EXPECT_TRUE(result.isBool());
@@ -185,6 +228,7 @@ TEST_F(CodeGeneratorTest, BinaryInequality)
 TEST_F(CodeGeneratorTest, BinaryGreaterThan)
 {
     ast::BinaryExpr* expr = makeBinary(makeLiteral(50.0), makeLiteral(30.0), tok::TokenType::OP_GT);
+
     IR::Value result = codegen->eval(expr);
 
     EXPECT_TRUE(result.isBool());
@@ -194,6 +238,7 @@ TEST_F(CodeGeneratorTest, BinaryGreaterThan)
 TEST_F(CodeGeneratorTest, BinaryGreaterThanFalse)
 {
     ast::BinaryExpr* expr = makeBinary(makeLiteral(20.0), makeLiteral(30.0), tok::TokenType::OP_GT);
+
     IR::Value result = codegen->eval(expr);
 
     EXPECT_TRUE(result.isBool());
@@ -203,12 +248,14 @@ TEST_F(CodeGeneratorTest, BinaryGreaterThanFalse)
 TEST_F(CodeGeneratorTest, BinaryGreaterThanOrEqual)
 {
     ast::BinaryExpr* expr1 = makeBinary(makeLiteral(50.0), makeLiteral(50.0), tok::TokenType::OP_GTE);
+
     IR::Value result1 = codegen->eval(expr1);
 
     EXPECT_TRUE(result1.isBool());
     EXPECT_TRUE(*result1.asBool());
 
     ast::BinaryExpr* expr2 = makeBinary(makeLiteral(51.0), makeLiteral(50.0), tok::TokenType::OP_GTE);
+
     IR::Value result2 = codegen->eval(expr2);
 
     EXPECT_TRUE(result2.isBool());
@@ -218,6 +265,7 @@ TEST_F(CodeGeneratorTest, BinaryGreaterThanOrEqual)
 TEST_F(CodeGeneratorTest, BinaryLessThan)
 {
     ast::BinaryExpr* expr = makeBinary(makeLiteral(10.0), makeLiteral(20.0), tok::TokenType::OP_LT);
+
     IR::Value result = codegen->eval(expr);
 
     EXPECT_TRUE(result.isBool());
@@ -227,12 +275,14 @@ TEST_F(CodeGeneratorTest, BinaryLessThan)
 TEST_F(CodeGeneratorTest, BinaryLessThanOrEqual)
 {
     ast::BinaryExpr* expr1 = makeBinary(makeLiteral(30.0), makeLiteral(30.0), tok::TokenType::OP_LTE);
+
     IR::Value result1 = codegen->eval(expr1);
 
     EXPECT_TRUE(result1.isBool());
     EXPECT_TRUE(*result1.asBool());
 
     ast::BinaryExpr* expr2 = makeBinary(makeLiteral(29.0), makeLiteral(30.0), tok::TokenType::OP_LTE);
+
     IR::Value result2 = codegen->eval(expr2);
 
     EXPECT_TRUE(result2.isBool());
@@ -244,24 +294,27 @@ TEST_F(CodeGeneratorTest, BinaryLessThanOrEqual)
 TEST_F(CodeGeneratorTest, UnaryNegation)
 {
     ast::UnaryExpr* expr = makeUnary(makeLiteral(42.0), tok::TokenType::OP_MINUS);
+
     IR::Value result = codegen->eval(expr);
 
     EXPECT_TRUE(result.isNumber());
-    EXPECT_DOUBLE_EQ(*result.asFloat(), -42.0);
+    EXPECT_DOUBLE_EQ(result.toFloat(), -42.0);
 }
 
 TEST_F(CodeGeneratorTest, UnaryNegationNegative)
 {
     ast::UnaryExpr* expr = makeUnary(makeLiteral(-10.0), tok::TokenType::OP_MINUS);
+
     IR::Value result = codegen->eval(expr);
 
     EXPECT_TRUE(result.isNumber());
-    EXPECT_DOUBLE_EQ(*result.asFloat(), 10.0);
+    EXPECT_DOUBLE_EQ(result.toFloat(), 10.0);
 }
 
 TEST_F(CodeGeneratorTest, UnaryLogicalNot)
 {
     ast::UnaryExpr* expr = makeUnary(makeLiteral(true), tok::TokenType::KW_NOT);
+
     IR::Value result = codegen->eval(expr);
 
     EXPECT_TRUE(result.isBool());
@@ -271,6 +324,7 @@ TEST_F(CodeGeneratorTest, UnaryLogicalNot)
 TEST_F(CodeGeneratorTest, UnaryLogicalNotFalse)
 {
     ast::UnaryExpr* expr = makeUnary(makeLiteral(false), tok::TokenType::KW_NOT);
+
     IR::Value result = codegen->eval(expr);
 
     EXPECT_TRUE(result.isBool());
@@ -285,7 +339,7 @@ TEST_F(CodeGeneratorTest, UnaryDoubleNegation)
     IR::Value result = codegen->eval(outer);
 
     EXPECT_TRUE(result.isNumber());
-    EXPECT_DOUBLE_EQ(*result.asFloat(), 5.0);
+    EXPECT_DOUBLE_EQ(result.toFloat(), 5.0);
 }
 
 // ASSIGNMENT EXPRESSION TESTS
@@ -293,32 +347,37 @@ TEST_F(CodeGeneratorTest, UnaryDoubleNegation)
 TEST_F(CodeGeneratorTest, AssignmentSimple)
 {
     ast::AssignmentExpr* expr = makeAssignmentExpr(ast::makeName("x"), makeLiteral(42.0));
+
     IR::Value result = codegen->eval(expr);
 
     EXPECT_TRUE(result.isNumber());
-    EXPECT_DOUBLE_EQ(*result.asFloat(), 42.0);
+    EXPECT_DOUBLE_EQ(result.toFloat(), 42.0);
 
     // Verify it's stored in environment
     EXPECT_TRUE(env->exists(StringRef("x")));
+
     IR::Value stored = env->get(StringRef("x"));
-    EXPECT_DOUBLE_EQ(*stored.asFloat(), 42.0);
+
+    EXPECT_DOUBLE_EQ(stored.toFloat(), 42.0);
 }
 
 TEST_F(CodeGeneratorTest, AssignmentOverwrite)
 {
     // First assignment
     ast::AssignmentExpr* expr1 = makeAssignmentExpr(ast::makeName("y"), makeLiteral(10.0));
+
     codegen->eval(expr1);
 
     // Second assignment (overwrite)
     ast::AssignmentExpr* expr2 = makeAssignmentExpr(ast::makeName("y"), makeLiteral(20.0));
+
     IR::Value result = codegen->eval(expr2);
 
-    EXPECT_DOUBLE_EQ(*result.asFloat(), 20.0);
+    EXPECT_DOUBLE_EQ(result.toFloat(), 20.0);
 
     // Verify updated value
     IR::Value stored = env->get(StringRef("y"));
-    EXPECT_DOUBLE_EQ(*stored.asFloat(), 20.0);
+    EXPECT_DOUBLE_EQ(stored.toFloat(), 20.0);
 }
 
 TEST_F(CodeGeneratorTest, AssignmentExpression)
@@ -329,7 +388,7 @@ TEST_F(CodeGeneratorTest, AssignmentExpression)
 
     IR::Value result = codegen->eval(expr);
 
-    EXPECT_DOUBLE_EQ(*result.asFloat(), 30.0);
+    EXPECT_DOUBLE_EQ(result.toFloat(), 30.0);
 }
 
 /*
@@ -351,10 +410,11 @@ TEST_F(CodeGeneratorTest, NameExpressionExists)
     env->define(StringRef("myvar"), IR::Value(123.0));
 
     ast::NameExpr* expr = ast::makeName("myvar");
+
     IR::Value result = codegen->eval(expr);
 
     EXPECT_TRUE(result.isNumber());
-    EXPECT_DOUBLE_EQ(*result.asFloat(), 123.0);
+    EXPECT_DOUBLE_EQ(result.toFloat(), 123.0);
 }
 
 TEST_F(CodeGeneratorTest, NameExpressionUndefined)
@@ -370,9 +430,10 @@ TEST_F(CodeGeneratorTest, NameExpressionInExpression)
     env->define(StringRef("x"), IR::Value(10.0));
 
     ast::BinaryExpr* expr = makeBinary(ast::makeName("x"), makeLiteral(5.0), tok::TokenType::OP_PLUS);
+
     IR::Value result = codegen->eval(expr);
 
-    EXPECT_DOUBLE_EQ(*result.asFloat(), 15.0);
+    EXPECT_DOUBLE_EQ(result.toFloat(), 15.0);
 }
 
 // LIST EXPRESSION TESTS
@@ -380,6 +441,7 @@ TEST_F(CodeGeneratorTest, NameExpressionInExpression)
 TEST_F(CodeGeneratorTest, ListEmpty)
 {
     ast::ListExpr* expr = ast::makeList({});
+
     IR::Value result = codegen->eval(expr);
 
     // Empty list should return empty value or empty list
@@ -393,9 +455,11 @@ TEST_F(CodeGeneratorTest, ListSingleElement)
     IR::Value result = codegen->eval(expr);
 
     EXPECT_TRUE(result.isList());
-    auto list = result.asList();
+
+    std::vector<IR::Value>* list = result.asList();
+
     EXPECT_EQ(list->size(), 1);
-    EXPECT_DOUBLE_EQ(*(*list)[0].asFloat(), 42.0);
+    EXPECT_DOUBLE_EQ((*list)[0].toFloat(), 42.0);
 }
 
 TEST_F(CodeGeneratorTest, ListMultipleElements)
@@ -405,12 +469,14 @@ TEST_F(CodeGeneratorTest, ListMultipleElements)
     IR::Value result = codegen->eval(expr);
 
     EXPECT_TRUE(result.isList());
+
     auto list = result.asList();
+
     EXPECT_EQ(list->size(), 4);
-    EXPECT_DOUBLE_EQ(*(*list)[0].asFloat(), 1.0);
-    EXPECT_DOUBLE_EQ(*(*list)[1].asFloat(), 2.0);
-    EXPECT_DOUBLE_EQ(*(*list)[2].asFloat(), 3.0);
-    EXPECT_DOUBLE_EQ(*(*list)[3].asFloat(), 4.0);
+    EXPECT_DOUBLE_EQ((*list)[0].toFloat(), 1.0);
+    EXPECT_DOUBLE_EQ((*list)[1].toFloat(), 2.0);
+    EXPECT_DOUBLE_EQ((*list)[2].toFloat(), 3.0);
+    EXPECT_DOUBLE_EQ((*list)[3].toFloat(), 4.0);
 }
 
 TEST_F(CodeGeneratorTest, ListWithExpressions)
@@ -422,22 +488,24 @@ TEST_F(CodeGeneratorTest, ListWithExpressions)
     IR::Value result = codegen->eval(expr);
 
     EXPECT_TRUE(result.isList());
+
     auto list = result.asList();
+
     EXPECT_EQ(list->size(), 2);
-    EXPECT_DOUBLE_EQ(*(*list)[0].asFloat(), 15.0);
-    EXPECT_DOUBLE_EQ(*(*list)[1].asFloat(), 40.0);
+    EXPECT_DOUBLE_EQ((*list)[0].toFloat(), 15.0);
+    EXPECT_DOUBLE_EQ((*list)[1].toFloat(), 40.0);
 }
 
 TEST_F(CodeGeneratorTest, ListMixedTypes)
 {
-    ast::ListExpr* expr = ast::makeList({ makeLiteral(42.0),
-        makeLiteral(true),
-        makeLiteral(-10.5) });
+    ast::ListExpr* expr = ast::makeList({ makeLiteral(42.0), makeLiteral(true), makeLiteral(-10.5) });
 
     IR::Value result = codegen->eval(expr);
 
     EXPECT_TRUE(result.isList());
+
     auto list = result.asList();
+
     EXPECT_EQ(list->size(), 3);
     EXPECT_TRUE((*list)[0].isNumber());
     EXPECT_TRUE((*list)[1].isBool());
@@ -451,6 +519,7 @@ TEST_F(CodeGeneratorTest, CallUndefinedFunction)
     ast::CallExpr* expr = makeCall("undefinedFunc", {});
 
     IR::Value result = codegen->eval(expr);
+
     EXPECT_TRUE(result.isNone());
 }
 
@@ -458,7 +527,7 @@ TEST_F(CodeGeneratorTest, CallInvalidCallee)
 {
     // Create a call where callee is not a NameExpr
     ast::LiteralExpr* invalidCallee = makeLiteral(42.0);
-    ast::CallExpr* expr = new ast::CallExpr(invalidCallee, {});
+    ast::CallExpr* expr = ast::makeCall(invalidCallee, {});
 
     EXPECT_THROW(codegen->eval(expr), std::runtime_error);
 }
@@ -478,7 +547,7 @@ TEST_F(CodeGeneratorTest, CallUserFunctionNoArgs)
     IR::Value result = codegen->eval(expr);
 
     EXPECT_TRUE(result.isNumber());
-    EXPECT_DOUBLE_EQ(*result.asFloat(), 100.0);
+    EXPECT_DOUBLE_EQ(result.toFloat(), 100.0);
 }
 
 TEST_F(CodeGeneratorTest, CallUserFunctionWithArgs)
@@ -496,7 +565,7 @@ TEST_F(CodeGeneratorTest, CallUserFunctionWithArgs)
     IR::Value result = codegen->eval(expr);
 
     EXPECT_TRUE(result.isNumber());
-    EXPECT_DOUBLE_EQ(*result.asFloat(), 30.0);
+    EXPECT_DOUBLE_EQ(result.toFloat(), 30.0);
 }
 
 TEST_F(CodeGeneratorTest, CallUserFunctionWrongArgCount)
@@ -535,7 +604,7 @@ TEST_F(CodeGeneratorTest, CallEagerEvaluation)
 
     IR::Value result = codegen->eval(expr);
 
-    EXPECT_DOUBLE_EQ(*result.asFloat(), 10.0);
+    EXPECT_DOUBLE_EQ(result.toFloat(), 10.0);
 }
 
 // FUNCTION CALL ENVIRONMENT TESTS
@@ -558,7 +627,7 @@ TEST_F(CodeGeneratorTest, FunctionLexicalScoping)
     ast::CallExpr* expr = makeCall("getOuter", {});
     IR::Value result = codegen->eval(expr);
 
-    EXPECT_DOUBLE_EQ(*result.asFloat(), 100.0);
+    EXPECT_DOUBLE_EQ(result.toFloat(), 100.0);
 }
 
 TEST_F(CodeGeneratorTest, FunctionParameterShadowing)
@@ -580,10 +649,10 @@ TEST_F(CodeGeneratorTest, FunctionParameterShadowing)
     IR::Value result = codegen->eval(expr);
 
     // Should return parameter value, not outer variable
-    EXPECT_DOUBLE_EQ(*result.asFloat(), 99.0);
+    EXPECT_DOUBLE_EQ(result.toFloat(), 99.0);
 
     // Outer variable should be unchanged
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("x")).asFloat(), 10.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("x")).toFloat(), 10.0);
 }
 
 TEST_F(CodeGeneratorTest, FunctionEnvironmentRestore)
@@ -605,7 +674,7 @@ TEST_F(CodeGeneratorTest, FunctionEnvironmentRestore)
     codegen->eval(expr);
 
     // Original environment variable should be unchanged
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("temp")).asFloat(), 1.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("temp")).toFloat(), 1.0);
 }
 
 TEST_F(CodeGeneratorTest, FunctionExceptionEnvironmentRestore)
@@ -645,25 +714,22 @@ TEST_F(CodeGeneratorTest, InvalidExpressionKind)
     InvalidExpr* expr = new InvalidExpr();
 
     EXPECT_THROW(codegen->eval(expr), std::runtime_error);
+    
+    delete expr;
 }
 
 TEST_F(CodeGeneratorTest, UnknownBinaryOperator)
 {
     // Create binary expression with unknown operator
     // Assuming there's a token type that's not handled
-    ast::BinaryExpr* expr = makeBinary(
-        makeLiteral(1.0),
-        makeLiteral(2.0), static_cast<tok::TokenType>(9999) // Invalid operator
-    );
+    ast::BinaryExpr* expr = makeBinary(makeLiteral(1.0), makeLiteral(2.0), static_cast<tok::TokenType>(9999));
 
     EXPECT_THROW(codegen->eval(expr), std::runtime_error);
 }
 
 TEST_F(CodeGeneratorTest, UnknownUnaryOperator)
 {
-    ast::UnaryExpr* expr = ast::makeUnary(
-        makeLiteral(5.0), static_cast<tok::TokenType>(8888) // Invalid operator
-    );
+    ast::UnaryExpr* expr = ast::makeUnary(makeLiteral(5.0), static_cast<tok::TokenType>(8888));
 
     EXPECT_THROW(codegen->eval(expr), std::runtime_error);
 }
@@ -682,6 +748,8 @@ TEST_F(CodeGeneratorTest, UnknownNodeType)
     UnknownNode* node = new UnknownNode();
 
     EXPECT_THROW(codegen->eval(node), std::runtime_error);
+
+    delete node;
 }
 
 // COMPLEX EXPRESSION TESTS
@@ -696,7 +764,7 @@ TEST_F(CodeGeneratorTest, ComplexArithmeticExpression)
 
     IR::Value result = codegen->eval(div);
 
-    EXPECT_DOUBLE_EQ(*result.asFloat(), 90.0);
+    EXPECT_DOUBLE_EQ(result.toFloat(), 90.0);
 }
 
 TEST_F(CodeGeneratorTest, ComplexComparisonChain)
@@ -724,8 +792,8 @@ TEST_F(CodeGeneratorTest, ComplexWithVariables)
 
     IR::Value result = codegen->eval(assign);
 
-    EXPECT_DOUBLE_EQ(*result.asFloat(), 60.0);
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("result")).asFloat(), 60.0);
+    EXPECT_DOUBLE_EQ(result.toFloat(), 60.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("result")).toFloat(), 60.0);
 }
 
 TEST_F(CodeGeneratorTest, NestedFunctionCalls)
@@ -750,7 +818,7 @@ TEST_F(CodeGeneratorTest, NestedFunctionCalls)
     ast::CallExpr* expr = makeCall("quadruple", { makeLiteral(5.0) });
     IR::Value result = codegen->eval(expr);
 
-    EXPECT_DOUBLE_EQ(*result.asFloat(), 10.0);
+    EXPECT_DOUBLE_EQ(result.toFloat(), 10.0);
 }
 
 // EDGE CASES AND BOUNDARY TESTS
@@ -783,7 +851,7 @@ TEST_F(CodeGeneratorTest, RecursiveExpression)
 
     IR::Value result = codegen->eval(expr);
 
-    EXPECT_DOUBLE_EQ(*result.asFloat(), 25.0);
+    EXPECT_DOUBLE_EQ(result.toFloat(), 25.0);
 }
 
 TEST_F(CodeGeneratorTest, AssignmentStmtDefineNew)
@@ -799,7 +867,7 @@ TEST_F(CodeGeneratorTest, AssignmentStmtDefineNew)
     EXPECT_TRUE(env->exists(StringRef("x")));
     IR::Value stored = env->get(StringRef("x"));
     EXPECT_TRUE(stored.isNumber());
-    EXPECT_DOUBLE_EQ(*stored.asFloat(), 42.0);
+    EXPECT_DOUBLE_EQ(stored.toFloat(), 42.0);
 }
 
 TEST_F(CodeGeneratorTest, AssignmentStmtUpdateExisting)
@@ -813,7 +881,7 @@ TEST_F(CodeGeneratorTest, AssignmentStmtUpdateExisting)
 
     // Variable should be updated
     IR::Value stored = env->get(StringRef("x"));
-    EXPECT_DOUBLE_EQ(*stored.asFloat(), 99.0);
+    EXPECT_DOUBLE_EQ(stored.toFloat(), 99.0);
 }
 
 TEST_F(CodeGeneratorTest, AssignmentStmtWithExpression)
@@ -825,7 +893,7 @@ TEST_F(CodeGeneratorTest, AssignmentStmtWithExpression)
     codegen->eval(stmt);
 
     IR::Value stored = env->get(StringRef("y"));
-    EXPECT_DOUBLE_EQ(*stored.asFloat(), 30.0);
+    EXPECT_DOUBLE_EQ(stored.toFloat(), 30.0);
 }
 
 TEST_F(CodeGeneratorTest, AssignmentStmtChained)
@@ -839,13 +907,11 @@ TEST_F(CodeGeneratorTest, AssignmentStmtChained)
     ast::AssignmentStmt* stmt2 = makeAssignmentStmt(ast::makeName("b"), expr);
     codegen->eval(stmt2);
 
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("a")).asFloat(), 5.0);
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("b")).asFloat(), 10.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("a")).toFloat(), 5.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("b")).toFloat(), 10.0);
 }
 
-// ============================================================================
 // STATEMENT TESTS - EXPRESSION STATEMENTS
-// ============================================================================
 
 TEST_F(CodeGeneratorTest, ExprStmtSimple)
 {
@@ -865,7 +931,7 @@ TEST_F(CodeGeneratorTest, ExprStmtBinary)
 
     IR::Value result = codegen->eval(stmt);
 
-    EXPECT_DOUBLE_EQ(*result.asFloat(), 30.0);
+    EXPECT_DOUBLE_EQ(result.toFloat(), 30.0);
 }
 
 TEST_F(CodeGeneratorTest, ExprStmtFunctionCall)
@@ -885,12 +951,10 @@ TEST_F(CodeGeneratorTest, ExprStmtFunctionCall)
 
     IR::Value result = codegen->eval(stmt);
 
-    EXPECT_DOUBLE_EQ(*result.asFloat(), 100.0);
+    EXPECT_DOUBLE_EQ(result.toFloat(), 100.0);
 }
 
-// ============================================================================
 // STATEMENT TESTS - BLOCK STATEMENTS
-// ============================================================================
 
 TEST_F(CodeGeneratorTest, BlockStmtEmpty)
 {
@@ -958,9 +1022,7 @@ TEST_F(CodeGeneratorTest, IfStmtTrueCondition_01)
 TEST_F(CodeGeneratorTest, IfStmtFalseCondition)
 {
     // if (false) { 42; }
-    ast::IfStmt* ifStmt = makeIf(
-        makeLiteral(false),
-        ast::makeBlock({ makeExprStmt(makeLiteral(42.0)) }));
+    ast::IfStmt* ifStmt = makeIf(makeLiteral(false), ast::makeBlock({ makeExprStmt(makeLiteral(42.0)) }));
 
     IR::Value result = codegen->eval(ifStmt);
 
@@ -972,9 +1034,7 @@ TEST_F(CodeGeneratorTest, IfStmtTrueWithElse)
 {
     // if (true) { 10; } else { 20; }
     ast::IfStmt* ifStmt = makeIf(
-        makeLiteral(true),
-        ast::makeBlock({ makeExprStmt(makeLiteral(10.0)) }),
-        ast::makeBlock({ makeExprStmt(makeLiteral(20.0)) }));
+        makeLiteral(true), ast::makeBlock({ makeExprStmt(makeLiteral(10.0)) }), ast::makeBlock({ makeExprStmt(makeLiteral(20.0)) }));
 
     IR::Value result = codegen->eval(ifStmt);
 
@@ -986,9 +1046,7 @@ TEST_F(CodeGeneratorTest, IfStmtFalseWithElse)
 {
     // if (false) { 10; } else { 20; }
     ast::IfStmt* ifStmt = makeIf(
-        makeLiteral(false),
-        ast::makeBlock({ makeExprStmt(makeLiteral(10.0)) }),
-        ast::makeBlock({ makeExprStmt(makeLiteral(20.0)) }));
+        makeLiteral(false), ast::makeBlock({ makeExprStmt(makeLiteral(10.0)) }), ast::makeBlock({ makeExprStmt(makeLiteral(20.0)) }));
 
     IR::Value result = codegen->eval(ifStmt);
 
@@ -1003,8 +1061,7 @@ TEST_F(CodeGeneratorTest, IfStmtComparisonCondition_01)
 
     ast::IfStmt* ifStmt = makeIf(
         makeBinary(ast::makeName("x"), makeLiteral(5.0), tok::TokenType::OP_GT),
-        ast::makeBlock({ makeExprStmt(makeLiteral(100.0)) }),
-        ast::makeBlock({ makeExprStmt(makeLiteral(200.0)) }));
+        ast::makeBlock({ makeExprStmt(makeLiteral(100.0)) }), ast::makeBlock({ makeExprStmt(makeLiteral(200.0)) }));
 
     IR::Value result = codegen->eval(ifStmt);
 
@@ -1015,13 +1072,8 @@ TEST_F(CodeGeneratorTest, IfStmtComparisonCondition_01)
 TEST_F(CodeGeneratorTest, IfStmtNestedIf)
 {
     // if (true) { if (true) { 42; } }
-    ast::IfStmt* innerIf = makeIf(
-        makeLiteral(true),
-        ast::makeBlock({ makeExprStmt(makeLiteral(42.0)) }));
-
-    ast::IfStmt* outerIf = makeIf(
-        makeLiteral(true),
-        ast::makeBlock({ innerIf }));
+    ast::IfStmt* innerIf = makeIf(makeLiteral(true), ast::makeBlock({ makeExprStmt(makeLiteral(42.0)) }));
+    ast::IfStmt* outerIf = makeIf(makeLiteral(true), ast::makeBlock({ innerIf }));
 
     IR::Value result = codegen->eval(outerIf);
 
@@ -1032,19 +1084,15 @@ TEST_F(CodeGeneratorTest, IfStmtNestedIf)
 TEST_F(CodeGeneratorTest, IfStmtWithAssignment)
 {
     // if (true) { x = 42; }
-    ast::IfStmt* ifStmt = makeIf(
-        makeLiteral(true),
-        ast::makeBlock({ makeAssignmentStmt(ast::makeName("x"), makeLiteral(42.0)) }));
+    ast::IfStmt* ifStmt = makeIf(makeLiteral(true), ast::makeBlock({ makeAssignmentStmt(ast::makeName("x"), makeLiteral(42.0)) }));
 
     codegen->eval(ifStmt);
 
     EXPECT_TRUE(env->exists(StringRef("x")));
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("x")).asFloat(), 42.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("x")).toFloat(), 42.0);
 }
 
-// ============================================================================
 // STATEMENT TESTS - WHILE STATEMENTS
-// ============================================================================
 
 TEST_F(CodeGeneratorTest, WhileStmtFalseCondition)
 {
@@ -1059,43 +1107,35 @@ TEST_F(CodeGeneratorTest, WhileStmtFalseCondition)
     IR::Value result = codegen->eval(whileStmt);
 
     // Counter should still be 0
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("counter")).asFloat(), 0.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("counter")).toFloat(), 0.0);
 }
 
 TEST_F(CodeGeneratorTest, WhileStmtAccumulator)
 {
-    // sum = 0; i = 1; while (i <= 5) { sum = sum + i; i = i + 1; }
-    env->define(StringRef("sum"), IR::Value::makeFloat(0.0));
-    env->define(StringRef("i"), IR::Value::makeFloat(1.0));
+    // sum = 0
+    // i = 1
+    // while (i <= 5)
+    //     sum = sum + i
+    //     i = i + 1
 
-    ast::WhileStmt* whileStmt = makeWhile(
-        makeBinary(ast::makeName("i"), makeLiteral(5.0), tok::TokenType::OP_LTE),
-        ast::makeBlock({ ast::makeAssignmentStmt(ast::makeName("sum"),
-                             makeBinary(ast::makeName("sum"), ast::makeName("i"), tok::TokenType::OP_PLUS)),
-            makeAssignmentStmt(ast::makeName("i"),
-                makeBinary(ast::makeName("i"), makeLiteral(1.0), tok::TokenType::OP_PLUS)) }));
-
-    IR::Value result = codegen->eval(whileStmt);
+    eval("test_while_stmt_accumulator.txt");
 
     // Sum should be 1+2+3+4+5 = 15
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("sum")).asFloat(), 15.0);
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("i")).asFloat(), 6.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("ا")).toFloat(), 15.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("ب")).toFloat(), 6.0);
 }
 
 TEST_F(CodeGeneratorTest, WhileStmtReturnValue)
 {
-    // x = 1; while (x < 3) { x = x + 1; }
-    env->define(StringRef("x"), IR::Value::makeFloat(1.0));
+    // x = 1
+    // while (x < 3)
+    //      x = x + 1
 
-    ast::WhileStmt* whileStmt = makeWhile(
-        makeBinary(ast::makeName("x"), makeLiteral(3.0), tok::TokenType::OP_LT),
-        ast::makeBlock({ makeAssignmentStmt(ast::makeName("x"),
-            makeBinary(ast::makeName("x"), makeLiteral(1.0), tok::TokenType::OP_PLUS)) }));
-
-    IR::Value result = codegen->eval(whileStmt);
+    IR::Value result = eval("test_while.txt");
 
     // Result should be the last block execution result
-    EXPECT_TRUE(result.isList() || result.isNone());
+    EXPECT_TRUE(result.isNumber());
+    EXPECT_DOUBLE_EQ(result.toInt(), 3);
 }
 
 // STATEMENT TESTS - FUNCTION DEFINITIONS
@@ -1165,17 +1205,12 @@ TEST_F(CodeGeneratorTest, FunctionDefAndCall)
 
 TEST_F(CodeGeneratorTest, FunctionDefMultipleStatements)
 {
-    // function compute(x) { y = x * 2; y + 10; }
-    ast::FunctionDef* funcDef = ast::makeFunction(
-        ast::makeName("compute"),
-        ast::makeList({ ast::makeName("x") }),
-        ast::makeBlock({ makeAssignmentStmt(ast::makeName("y"), makeBinary(ast::makeName("x"), makeLiteral(2.0), tok::TokenType::OP_STAR)),
-            makeExprStmt(makeBinary(ast::makeName("y"), makeLiteral(10.0), tok::TokenType::OP_PLUS)) }));
+    // function compute(x)
+    //      y = x * 2
+    //      y = y + 10
+    // compute(5)
 
-    codegen->eval(funcDef);
-
-    ast::CallExpr* call = makeCall("compute", { makeLiteral(5.0) });
-    IR::Value result = codegen->eval(call);
+    IR::Value result = eval("test_function_def_multiple_statements.txt");
 
     EXPECT_TRUE(result.isNumber());
     // Result should be (5 * 2) + 10 = 20
@@ -1188,9 +1223,7 @@ TEST_F(CodeGeneratorTest, FunctionDefClosureCapture)
     env->define(StringRef("outer"), IR::Value::makeFloat(100.0));
 
     ast::FunctionDef* funcDef = ast::makeFunction(
-        ast::makeName("getOuter"),
-        ast::makeList({}),
-        ast::makeBlock({ ast::makeExprStmt(ast::makeName("outer")) }));
+        ast::makeName("getOuter"), ast::makeList({}), ast::makeBlock({ ast::makeExprStmt(ast::makeName("outer")) }));
 
     codegen->eval(funcDef);
 
@@ -1201,9 +1234,7 @@ TEST_F(CodeGeneratorTest, FunctionDefClosureCapture)
     EXPECT_DOUBLE_EQ(result.toFloat(), 100.0);
 }
 
-// ============================================================================
 // STATEMENT TESTS - INTEGRATION SCENARIOS
-// ============================================================================
 
 TEST_F(CodeGeneratorTest, IntegrationFibonacciIterative)
 {
@@ -1222,22 +1253,19 @@ TEST_F(CodeGeneratorTest, IntegrationFibonacciIterative)
     // }
 
     ast::FunctionDef* funcDef = ast::makeFunction(
-        ast::makeName("fib"),
-        ast::makeList({ ast::makeName("n") }),
+        ast::makeName("fib"), ast::makeList({ ast::makeName("n") }),
         ast::makeBlock({ makeIf(
             ast::makeBinary(ast::makeName("n"), makeLiteral(1.0), tok::TokenType::OP_LTE),
             ast::makeBlock({ ast::makeExprStmt(ast::makeName("n")) }),
             ast::makeBlock({ ast::makeAssignmentStmt(ast::makeName("a"), makeLiteral(0.0)),
                 ast::makeAssignmentStmt(ast::makeName("b"), makeLiteral(1.0)),
                 ast::makeAssignmentStmt(ast::makeName("i"), makeLiteral(2.0)),
-                ast::makeWhile(
-                    ast::makeBinary(ast::makeName("i"), ast::makeName("n"), tok::TokenType::OP_LTE),
+                ast::makeWhile(ast::makeBinary(ast::makeName("i"), ast::makeName("n"), tok::TokenType::OP_LTE),
                     ast::makeBlock({ ast::makeAssignmentStmt(ast::makeName("temp"),
                                          ast::makeBinary(ast::makeName("a"), ast::makeName("b"), tok::TokenType::OP_PLUS)),
                         ast::makeAssignmentStmt(ast::makeName("a"), ast::makeName("b")),
                         ast::makeAssignmentStmt(ast::makeName("b"), ast::makeName("temp")),
-                        ast::makeAssignmentStmt(ast::makeName("i"),
-                            ast::makeBinary(ast::makeName("i"), makeLiteral(1.0), tok::TokenType::OP_PLUS)) })),
+                        ast::makeAssignmentStmt(ast::makeName("i"), ast::makeBinary(ast::makeName("i"), makeLiteral(1.0), tok::TokenType::OP_PLUS)) })),
                 ast::makeExprStmt(ast::makeName("b")) })) }));
 
     codegen->eval(funcDef);
@@ -1247,39 +1275,20 @@ TEST_F(CodeGeneratorTest, IntegrationFibonacciIterative)
     IR::Value result = codegen->eval(call);
 
     // The result should be 8 (fibonacci of 6)
-    EXPECT_EQ(*result.asFloat(), 8.0);
+    EXPECT_EQ(result.toFloat(), 8.0);
 }
 
 TEST_F(CodeGeneratorTest, IntegrationFactorial)
 {
-    // function factorial(n) {
-    //   result = 1;
-    //   i = 1;
-    //   while (i <= n) {
-    //     result = result * i;
-    //     i = i + 1;
-    //   }
-    //   result;
-    // }
+    // function factorial(n)
+    //   result = 1
+    //   i = 1
+    //   while (i <= n)
+    //     result = result * i
+    //     i = i + 1
+    //   return result
 
-    ast::FunctionDef* funcDef = ast::makeFunction(
-        ast::makeName("factorial"),
-        ast::makeList({ ast::makeName("n") }),
-        ast::makeBlock({ makeAssignmentStmt(ast::makeName("result"), makeLiteral(1.0)),
-            makeAssignmentStmt(ast::makeName("i"), makeLiteral(1.0)),
-            makeWhile(
-                ast::makeBinary(ast::makeName("i"), ast::makeName("n"), tok::TokenType::OP_LTE),
-                ast::makeBlock({ ast::makeAssignmentStmt(ast::makeName("result"),
-                                     ast::makeBinary(ast::makeName("result"), ast::makeName("i"), tok::TokenType::OP_STAR)),
-                    ast::makeAssignmentStmt(ast::makeName("i"),
-                        ast::makeBinary(ast::makeName("i"), makeLiteral(1.0), tok::TokenType::OP_PLUS)) })),
-            ast::makeExprStmt(ast::makeName("result")) }));
-
-    codegen->eval(funcDef);
-
-    // Test factorial(5) = 120
-    ast::CallExpr* call = ast::makeCall(ast::makeName("factorial"), ast::makeList({ makeLiteral(5.0) }));
-    IR::Value result = codegen->eval(call);
+    IR::Value result = eval("test_integration_factorial.txt");
 
     EXPECT_TRUE(result.isNumber());
     EXPECT_DOUBLE_EQ(result.toFloat(), 120.0);
@@ -1287,10 +1296,12 @@ TEST_F(CodeGeneratorTest, IntegrationFactorial)
 
 TEST_F(CodeGeneratorTest, IntegrationNestedFunctions)
 {
-    // function outer(x) {
-    //   function inner(y) { x + y; }
+    /// NOTE: it's here for convenienve
+    /// do not know if we want something like this in the language
+    // function outer(x)
+    //   function inner(y)
+    //       x + y; 
     //   inner(10);
-    // }
 
     ast::FunctionDef* innerFunc = ast::makeFunction(
         ast::makeName("inner"),
@@ -1346,7 +1357,7 @@ TEST_F(CodeGeneratorTest, AssignmentStmtSimple)
 
     // Variable should be defined
     EXPECT_TRUE(env->exists(StringRef("x")));
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("x")).asFloat(), 42.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("x")).toFloat(), 42.0);
 }
 
 TEST_F(CodeGeneratorTest, AssignmentStmtExpression)
@@ -1358,7 +1369,7 @@ TEST_F(CodeGeneratorTest, AssignmentStmtExpression)
     codegen->eval(stmt);
 
     EXPECT_TRUE(env->exists(StringRef("y")));
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("y")).asFloat(), 30.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("y")).toFloat(), 30.0);
 }
 
 TEST_F(CodeGeneratorTest, AssignmentStmtReassign)
@@ -1370,7 +1381,7 @@ TEST_F(CodeGeneratorTest, AssignmentStmtReassign)
     ast::AssignmentStmt* stmt = makeAssignmentStmt(ast::makeName("z"), makeLiteral(100.0));
     codegen->eval(stmt);
 
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("z")).asFloat(), 100.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("z")).toFloat(), 100.0);
 }
 
 TEST_F(CodeGeneratorTest, AssignmentStmtMultipleVariables)
@@ -1384,9 +1395,9 @@ TEST_F(CodeGeneratorTest, AssignmentStmtMultipleVariables)
     codegen->eval(stmt2);
     codegen->eval(stmt3);
 
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("a")).asFloat(), 1.0);
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("b")).asFloat(), 2.0);
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("c")).asFloat(), 3.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("a")).toFloat(), 1.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("b")).toFloat(), 2.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("c")).toFloat(), 3.0);
 }
 
 TEST_F(CodeGeneratorTest, AssignmentStmtWithVariableReference)
@@ -1400,7 +1411,7 @@ TEST_F(CodeGeneratorTest, AssignmentStmtWithVariableReference)
 
     codegen->eval(stmt);
 
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("y")).asFloat(), 15.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("y")).toFloat(), 15.0);
 }
 
 // EXPRESSION STATEMENT TESTS
@@ -1413,7 +1424,7 @@ TEST_F(CodeGeneratorTest, ExprStmtBinaryExpression)
 
     IR::Value result = codegen->eval(stmt);
 
-    EXPECT_DOUBLE_EQ(*result.asFloat(), 30.0);
+    EXPECT_DOUBLE_EQ(result.toFloat(), 30.0);
 }
 
 TEST_F(CodeGeneratorTest, ExprStmtWithSideEffects)
@@ -1424,11 +1435,11 @@ TEST_F(CodeGeneratorTest, ExprStmtWithSideEffects)
     IR::Value result = codegen->eval(stmt);
 
     // Assignment returns the value
-    EXPECT_DOUBLE_EQ(*result.asFloat(), 5.0);
+    EXPECT_DOUBLE_EQ(result.toFloat(), 5.0);
 
     // And defines the variable
     EXPECT_TRUE(env->exists(StringRef("x")));
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("x")).asFloat(), 5.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("x")).toFloat(), 5.0);
 }
 
 // BLOCK STATEMENT TESTS
@@ -1486,13 +1497,11 @@ TEST_F(CodeGeneratorTest, BlockStmtMixedStatements)
 
     codegen->eval(block);
 
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("x")).asFloat(), 5.0);
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("y")).asFloat(), 10.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("x")).toFloat(), 5.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("y")).toFloat(), 10.0);
 }
 
-// ============================================================================
 // IF STATEMENT TESTS
-// ============================================================================
 
 TEST_F(CodeGeneratorTest, IfStmtTrueCondition)
 {
@@ -1503,7 +1512,7 @@ TEST_F(CodeGeneratorTest, IfStmtTrueCondition)
     codegen->eval(ifStmt);
 
     EXPECT_TRUE(env->exists(StringRef("x")));
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("x")).asFloat(), 10.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("x")).toFloat(), 10.0);
 }
 
 TEST_F(CodeGeneratorTest, IfStmtFalseCondition_01)
@@ -1527,7 +1536,7 @@ TEST_F(CodeGeneratorTest, IfElseStmtTrueCondition)
 
     codegen->eval(ifStmt);
 
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("x")).asFloat(), 10.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("x")).toFloat(), 10.0);
 }
 
 TEST_F(CodeGeneratorTest, IfElseStmtFalseCondition)
@@ -1539,7 +1548,7 @@ TEST_F(CodeGeneratorTest, IfElseStmtFalseCondition)
 
     codegen->eval(ifStmt);
 
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("x")).asFloat(), 20.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("x")).toFloat(), 20.0);
 }
 
 TEST_F(CodeGeneratorTest, IfStmtComparisonCondition)
@@ -1552,7 +1561,7 @@ TEST_F(CodeGeneratorTest, IfStmtComparisonCondition)
     codegen->eval(ifStmt);
 
     EXPECT_TRUE(env->exists(StringRef("result")));
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("result")).asFloat(), 1.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("result")).toFloat(), 1.0);
 }
 
 TEST_F(CodeGeneratorTest, IfStmtVariableCondition)
@@ -1580,7 +1589,7 @@ TEST_F(CodeGeneratorTest, IfStmtNestedIf_01)
     codegen->eval(outerIf);
 
     EXPECT_TRUE(env->exists(StringRef("x")));
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("x")).asFloat(), 10.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("x")).toFloat(), 10.0);
 }
 
 TEST_F(CodeGeneratorTest, IfStmtReturnValue)
@@ -1596,9 +1605,7 @@ TEST_F(CodeGeneratorTest, IfStmtReturnValue)
     EXPECT_EQ(result.toInt(), 42);
 }
 
-// ============================================================================
 // WHILE STATEMENT TESTS
-// ============================================================================
 
 TEST_F(CodeGeneratorTest, WhileStmtSimpleLoop)
 {
@@ -1611,7 +1618,7 @@ TEST_F(CodeGeneratorTest, WhileStmtSimpleLoop)
     ast::WhileStmt* whileStmt = makeWhile(condition, body);
     codegen->eval(whileStmt);
 
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("i")).asFloat(), 3.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("i")).toFloat(), 3.0);
 }
 
 TEST_F(CodeGeneratorTest, WhileStmtFalseConditionNeverExecutes)
@@ -1639,8 +1646,8 @@ TEST_F(CodeGeneratorTest, WhileStmtCounterAccumulation)
     codegen->eval(whileStmt);
 
     // sum should be 1+2+3+4+5 = 15
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("sum")).asFloat(), 15.0);
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("i")).asFloat(), 6.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("sum")).toFloat(), 15.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("i")).toFloat(), 6.0);
 }
 
 TEST_F(CodeGeneratorTest, WhileStmtWithComplexCondition)
@@ -1654,43 +1661,36 @@ TEST_F(CodeGeneratorTest, WhileStmtWithComplexCondition)
     ast::WhileStmt* whileStmt = makeWhile(condition, body);
     codegen->eval(whileStmt);
 
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("x")).asFloat(), 0.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("x")).toFloat(), 0.0);
 }
 
 TEST_F(CodeGeneratorTest, WhileStmtNestedLoop)
 {
-    // i = 0; while (i < 3) { j = 0; while (j < 2) { j = j + 1 } i = i + 1 }
-    env->define(StringRef("i"), IR::Value::makeFloat(0.0));
+    // i = 0; 
+    // while (i < 3) 
+    //      j = 0
+    //      while (j < 2) 
+    //          j = j + 1  
+    //      i = i + 1 
 
-    ast::BinaryExpr* innerCondition = makeBinary(ast::makeName("j"), makeLiteral(2.0), tok::TokenType::OP_LT);
-    ast::BlockStmt* innerBody = ast::makeBlock({ makeAssignmentStmt(ast::makeName("j"), makeBinary(ast::makeName("j"), makeLiteral(1.0), tok::TokenType::OP_PLUS)) });
-    ast::WhileStmt* innerWhile = makeWhile(innerCondition, innerBody);
+    eval("test_while_stmt_nested_loop.txt");
 
-    ast::BinaryExpr* outerCondition = makeBinary(ast::makeName("i"), makeLiteral(3.0), tok::TokenType::OP_LT);
-    ast::BlockStmt* outerBody = ast::makeBlock({ makeAssignmentStmt(ast::makeName("j"), makeLiteral(0.0)),
-        innerWhile, makeAssignmentStmt(ast::makeName("i"), makeBinary(ast::makeName("i"), makeLiteral(1.0), tok::TokenType::OP_PLUS)) });
-
-    ast::WhileStmt* outerWhile = makeWhile(outerCondition, outerBody);
-    codegen->eval(outerWhile);
-
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("i")).asFloat(), 3.0);
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("j")).asFloat(), 2.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("ا")).toFloat(), 3.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("م")).toFloat(), 2.0);
 }
 
-// ============================================================================
 // FUNCTION DEFINITION STATEMENT TESTS
-// ============================================================================
 
 TEST_F(CodeGeneratorTest, FuncDefSimpleNoParams)
 {
     // function getValue() { return 42 }
-    // Note: Since return is not fully implemented, we use expression
+    /// NOTE: Since return is not fully implemented, we use expression
     ast::BlockStmt* body = ast::makeBlock({ makeExprStmt(makeLiteral(42.0)) });
 
     // Create parameter list (empty)
     std::vector<ast::Expr*> params = {};
 
-    ast::FunctionDef* funcDef = new ast::FunctionDef(
+    ast::FunctionDef* funcDef = ast::makeFunction(
         ast::makeName("getValue"),
         ast::makeList(params),
         body);
@@ -1706,35 +1706,18 @@ TEST_F(CodeGeneratorTest, FuncDefSimpleNoParams)
 TEST_F(CodeGeneratorTest, FuncDefWithParameters)
 {
     // function add(a, b) { return a + b }
-    ast::BlockStmt* body = ast::makeBlock({ ast::makeExprStmt(makeBinary(ast::makeName("a"), ast::makeName("b"), tok::TokenType::OP_PLUS)) });
 
-    std::vector<ast::Expr*> params = { ast::makeName("a"), ast::makeName("b") };
+    eval("test_func_def_with_parameters.txt");
 
-    ast::FunctionDef* funcDef = new ast::FunctionDef(
-        ast::makeName("add"),
-        ast::makeList(params),
-        body);
-
-    codegen->eval(funcDef);
-
-    EXPECT_TRUE(env->exists(StringRef("add")));
+    EXPECT_TRUE(env->exists(StringRef("جمع")));
 }
 
 TEST_F(CodeGeneratorTest, FuncDefAndCall)
 {
     // function double(x) { return x * 2 }
     // double(5)
-    ast::BlockStmt* body = ast::makeBlock({ makeExprStmt(makeBinary(ast::makeName("x"), makeLiteral(2.0), tok::TokenType::OP_STAR)) });
 
-    std::vector<ast::Expr*> params = { ast::makeName("x") };
-
-    ast::FunctionDef* funcDef = ast::makeFunction(ast::makeName("double"), ast::makeList(params), body);
-
-    codegen->eval(funcDef);
-
-    // Call the function
-    ast::CallExpr* call = makeCall("double", { makeLiteral(5.0) });
-    IR::Value result = codegen->eval(call);
+    IR::Value result = eval("test_func_def_and_call.txt");
 
     EXPECT_TRUE(result.isNumber()); // Body returns block result
     EXPECT_EQ(result.toInt(), 10);
@@ -1773,7 +1756,7 @@ TEST_F(CodeGeneratorTest, FuncDefClosure)
 
     std::vector<ast::Expr*> params = {};
 
-    ast::FunctionDef* funcDef = new ast::FunctionDef(
+    ast::FunctionDef* funcDef = ast::makeFunction(
         ast::makeName("getOuter"),
         ast::makeList(params),
         body);
@@ -1792,8 +1775,8 @@ TEST_F(CodeGeneratorTest, FuncDefMultipleFunctions)
     ast::BlockStmt* body1 = ast::makeBlock({ makeExprStmt(makeLiteral(1.0)) });
     ast::BlockStmt* body2 = ast::makeBlock({ makeExprStmt(makeLiteral(2.0)) });
 
-    ast::FunctionDef* func1 = new ast::FunctionDef(ast::makeName("f1"), {}, body1);
-    ast::FunctionDef* func2 = new ast::FunctionDef(ast::makeName("f2"), {}, body2);
+    ast::FunctionDef* func1 = ast::makeFunction(ast::makeName("f1"), {}, body1);
+    ast::FunctionDef* func2 = ast::makeFunction(ast::makeName("f2"), {}, body2);
 
     codegen->eval(func1);
     codegen->eval(func2);
@@ -1812,39 +1795,21 @@ TEST_F(CodeGeneratorTest, IntegratedIfWithinWhile)
     //   if (i % 2 == 0)
     //     sum = sum + i
     //   i = i + 1
-    //
-    env->define(StringRef("sum"), IR::Value::makeFloat(0.0));
-    env->define(StringRef("i"), IR::Value::makeFloat(0.0));
 
-    // if condition: (i % 2 == 0) - we'll use a simplified version
-    ast::BinaryExpr* ifCondition = makeBinary(
-        makeBinary(ast::makeName("i"), makeLiteral(2.0), tok::TokenType::OP_PERCENT),
-        makeLiteral(0.0),
-        tok::TokenType::OP_EQ);
-
-    ast::BlockStmt* ifBody = ast::makeBlock({ ast::makeAssignmentStmt(ast::makeName("sum"), ast::makeBinary(ast::makeName("sum"), ast::makeName("i"), tok::TokenType::OP_PLUS)) });
-
-    ast::IfStmt* ifStmt = makeIf(ifCondition, ifBody);
-
-    ast::BinaryExpr* whileCondition = makeBinary(ast::makeName("i"), makeLiteral(10.0), tok::TokenType::OP_LT);
-    ast::BlockStmt* whileBody = ast::makeBlock({ ifStmt,
-        makeAssignmentStmt(ast::makeName("i"), makeBinary(ast::makeName("i"), makeLiteral(1.0), tok::TokenType::OP_PLUS)) });
-
-    ast::WhileStmt* whileStmt = makeWhile(whileCondition, whileBody);
-    codegen->eval(whileStmt);
+    eval("test_integrated_if_within_while.txt");
 
     // sum should be 0+2+4+6+8 = 20
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("sum")).asFloat(), 20.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("جمع")).toFloat(), 20.0);
 }
 
 TEST_F(CodeGeneratorTest, IntegratedFunctionWithIfElse)
 {
-    // function abs(x) 
-    //   if (x < 0) 
+    // function abs(x)
+    //   if (x < 0)
     //      return -x
-    //   else  
+    //   else
     //      return x
-    // 
+
     ast::BinaryExpr* condition = makeBinary(ast::makeName("x"), makeLiteral(0.0), tok::TokenType::OP_LT);
     ast::BlockStmt* thenBlock = ast::makeBlock({ ast::makeExprStmt(ast::makeUnary(ast::makeName("x"), tok::TokenType::OP_MINUS)) });
     ast::BlockStmt* elseBlock = ast::makeBlock({ ast::makeExprStmt(ast::makeName("x")) });
@@ -1872,13 +1837,13 @@ TEST_F(CodeGeneratorTest, IntegratedFunctionWithIfElse)
 
 TEST_F(CodeGeneratorTest, IntegratedBlockWithMultipleStatementTypes)
 {
-    // {
     //   x = 10
     //   y = 20
-    //   if (x < y) { result = 1 }
-    //   else { result = 0 }
+    //   if (x < y)
+    //      result = 1
+    //   else
+    //      result = 0
     //   result
-    // }
     ast::BinaryExpr* condition = makeBinary(ast::makeName("x"), ast::makeName("y"), tok::TokenType::OP_LT);
     ast::BlockStmt* thenBlock = ast::makeBlock({ makeAssignmentStmt(ast::makeName("result"), makeLiteral(1.0)) });
     ast::BlockStmt* elseBlock = ast::makeBlock({ makeAssignmentStmt(ast::makeName("result"), makeLiteral(0.0)) });
@@ -1890,5 +1855,5 @@ TEST_F(CodeGeneratorTest, IntegratedBlockWithMultipleStatementTypes)
     codegen->eval(block);
 
     EXPECT_TRUE(env->exists(StringRef("result")));
-    EXPECT_DOUBLE_EQ(*env->get(StringRef("result")).asFloat(), 1.0);
+    EXPECT_DOUBLE_EQ(env->get(StringRef("result")).toFloat(), 1.0);
 }
