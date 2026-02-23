@@ -836,7 +836,7 @@ TEST_F(ParserTest, ParseVeryLongIdentifier)
 
     // Verify it's all valid identifier characters
 
-    // for (std::size_t i = 0; i < value.len() && value[i]; ++i)
+    // for (size_t i = 0; i < value.len() && value[i]; ++i)
     // EXPECT_TRUE(::isalnum(util::encode_utf8_str(value[i])[0] || value[i] == '_' || value[i] > 127)) << "All characters should be valid identifier chars";
 
     if (test_config::print_ast)
