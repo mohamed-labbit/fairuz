@@ -150,7 +150,7 @@ static uint32_t decode_utf8_at(StringRef const& buf, std::size_t byte_pos, std::
             throw std::runtime_error("Invalid UTF-8: overlong 4-byte sequence");
 
         if (result > 0x10FFFF)
-            throw std::runtime_error("Invalid UTF-8: codepoint out of range");
+            throw std::runtime_error("Invalid UTF-8: cp out of range");
 
         return result;
     }
@@ -167,38 +167,57 @@ static void configureLocale()
     }
 }
 
-static std::size_t encode_utf8(uint32_t codepoint, unsigned char* out_bytes)
+static std::size_t encode_utf8(uint32_t cp, unsigned char* out_bytes)
 {
-    if (codepoint < 0x80) {
-        out_bytes[0] = static_cast<unsigned char>(codepoint);
+    if (cp < 0x80) {
+        out_bytes[0] = static_cast<unsigned char>(cp);
         return 1;
-    } else if (codepoint < 0x800) {
-        out_bytes[0] = static_cast<unsigned char>(0xC0 | (codepoint >> 6));
-        out_bytes[1] = static_cast<unsigned char>(0x80 | (codepoint & 0x3F));
+    } else if (cp < 0x800) {
+        out_bytes[0] = static_cast<unsigned char>(0xC0 | (cp >> 6));
+        out_bytes[1] = static_cast<unsigned char>(0x80 | (cp & 0x3F));
         return 2;
-    } else if (codepoint < 0x10000) {
-        if (codepoint >= 0xD800 && codepoint <= 0xDFFF)
-            throw std::runtime_error("Invalid codepoint: UTF-16 surrogate");
+    } else if (cp < 0x10000) {
+        if (cp >= 0xD800 && cp <= 0xDFFF)
+            throw std::runtime_error("Invalid cp: UTF-16 surrogate");
 
-        out_bytes[0] = static_cast<unsigned char>(0xE0 | (codepoint >> 12));
-        out_bytes[1] = static_cast<unsigned char>(0x80 | ((codepoint >> 6) & 0x3F));
-        out_bytes[2] = static_cast<unsigned char>(0x80 | (codepoint & 0x3F));
+        out_bytes[0] = static_cast<unsigned char>(0xE0 | (cp >> 12));
+        out_bytes[1] = static_cast<unsigned char>(0x80 | ((cp >> 6) & 0x3F));
+        out_bytes[2] = static_cast<unsigned char>(0x80 | (cp & 0x3F));
         return 3;
-    } else if (codepoint <= 0x10FFFF) {
-        out_bytes[0] = static_cast<unsigned char>(0xF0 | (codepoint >> 18));
-        out_bytes[1] = static_cast<unsigned char>(0x80 | ((codepoint >> 12) & 0x3F));
-        out_bytes[2] = static_cast<unsigned char>(0x80 | ((codepoint >> 6) & 0x3F));
-        out_bytes[3] = static_cast<unsigned char>(0x80 | (codepoint & 0x3F));
+    } else if (cp <= 0x10FFFF) {
+        out_bytes[0] = static_cast<unsigned char>(0xF0 | (cp >> 18));
+        out_bytes[1] = static_cast<unsigned char>(0x80 | ((cp >> 12) & 0x3F));
+        out_bytes[2] = static_cast<unsigned char>(0x80 | ((cp >> 6) & 0x3F));
+        out_bytes[3] = static_cast<unsigned char>(0x80 | (cp & 0x3F));
         return 4;
     } else
-        throw std::runtime_error("Invalid codepoint: exceeds Unicode range");
+        throw std::runtime_error("Invalid cp: exceeds Unicode range");
 }
 
-static StringRef encode_utf8_str(uint32_t codepoint)
+static StringRef encode_utf8_str(uint32_t cp)
 {
     unsigned char bytes[4];
-    std::size_t len = encode_utf8(codepoint, bytes);
+    std::size_t len = encode_utf8(cp, bytes);
     return StringRef(reinterpret_cast<char*>(bytes)).truncate(len);
+}
+
+static bool isArabDigit(uint32_t const cp)
+{
+    switch (cp) {
+    case u'٠': // 0
+    case u'١': // 1
+    case u'٢': // 2
+    case u'٣': // 3
+    case u'٤': // 4
+    case u'٥': // 5
+    case u'٦': // 6
+    case u'٧': // 7
+    case u'٨': // 8
+    case u'٩': // 9
+        return true;
+    default:
+        return false;
+    }
 }
 
 } // util
