@@ -239,42 +239,43 @@ tok::Token const* Lexer::lexToken()
         }
 
         // identifiers
-        case 0x0621:
-        case 0x0622:
-        case 0x0623:
-        case 0x0624:
-        case 0x0625:
-        case 0x0626:
-        case 0x0627:
-        case 0x0628:
-        case 0x0629:
-        case 0x062A:
-        case 0x062B:
-        case 0x062C:
-        case 0x062D:
-        case 0x062E:
-        case 0x062F:
-        case 0x0630:
-        case 0x0631:
-        case 0x0632:
-        case 0x0633:
-        case 0x0634:
-        case 0x0635:
-        case 0x0636:
-        case 0x0637:
-        case 0x0638:
-        case 0x0639:
-        case 0x063A:
-        case 0x0641:
-        case 0x0642:
-        case 0x0643:
-        case 0x0644:
-        case 0x0645:
-        case 0x0646:
-        case 0x0647:
-        case 0x0648:
-        case 0x0649:
-        case 0x064A: {
+        case 0x0621: // ء (Hamza)
+        case 0x0622: // آ (Alef with madda above)
+        case 0x0623: // أ (Alef with hamza above)
+        case 0x0624: // ؤ (Waw with hamza above)
+        case 0x0625: // إ (Alef with hamza below)
+        case 0x0626: // ئ (Yeh with hamza above)
+        case 0x0627: // ا (Alef)
+        case 0x0628: // ب (Ba)
+        case 0x0629: // ة (Ta marbuta)
+        case 0x062A: // ت (Ta)
+        case 0x062B: // ث (Tha)
+        case 0x062C: // ج (Jim)
+        case 0x062D: // ح (Ha)
+        case 0x062E: // خ (Kha)
+        case 0x062F: // د (Dal)
+        case 0x0630: // ذ (Dhal)
+        case 0x0631: // ر (Ra)
+        case 0x0632: // ز (Zain)
+        case 0x0633: // س (Sin)
+        case 0x0634: // ش (Shin)
+        case 0x0635: // ص (Sad)
+        case 0x0636: // ض (Dad)
+        case 0x0637: // ط (Ta)
+        case 0x0638: // ظ (Dha)
+        case 0x0639: // ع (Ain)
+        case 0x063A: // غ (Ghain)
+        case 0x0641: // ف (Fa)
+        case 0x0642: // ق (Qaf)
+        case 0x0643: // ك (Kaf)
+        case 0x0644: // ل (Lam)
+        case 0x0645: // م (Mim)
+        case 0x0646: // ن (Nun)
+        case 0x0647: // ه (Ha)
+        case 0x0648: // و (Waw)
+        case 0x0649: // ى (Alef maqsura)
+        case 0x064A: // ي (Ya)
+        {
             StringRef identifier;
 
             while (util::isalphaArabic(current) || current == '_' || ::isdigit(current)) {
@@ -288,6 +289,19 @@ tok::Token const* Lexer::lexToken()
                 tt = tok::keywords.at(identifier);
 
             return finish(tt, identifier, line, col);
+        }
+
+        case u'٠': // 0
+        case u'١': // 1
+        case u'٢': // 2
+        case u'٣': // 3
+        case u'٤': // 4
+        case u'٥': // 5
+        case u'٦': // 6
+        case u'٧': // 7
+        case u'٨': // 8
+        case u'٩': // 9
+        {
         }
 
         // operators
@@ -350,9 +364,8 @@ tok::Token const* Lexer::lexToken()
                     symbol += util::encode_utf8_str('=');
                     SourceManager_.consumeChar();
                     tt = tok::TokenType::OP_ASSIGN;
-                } else {
+                } else
                     tt = tok::TokenType::COLON;
-                }
             } break;
             default:
                 tt = tok::TokenType::INVALID;
