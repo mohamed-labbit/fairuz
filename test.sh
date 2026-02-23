@@ -6,7 +6,7 @@ TEST_ARGS=()
 RUN_TESTS=false
 
 for arg in "$@"; do
-    if [[ "$arg" == "-d" ]]; then
+    if [[ "$arg" == "--clean" ]]; then
         CLEAN_BUILD=true
     elif [[ "$arg" == "run" ]]; then
         RUN_TESTS=true
