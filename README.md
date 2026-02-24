@@ -14,9 +14,21 @@ Thanks to Mohamed Labbit and Mohamed Salem Eddah for pushing on testing and tigh
 
 ## Build and test
 ```bash
-bash test.sh -d
+bash test.sh run
 ```
+If you run only "bash test.sh" it will only compile tests without running them
+
+### cleanup and rebuild
+```bash
+bash test.sh --clean
+```
+
 ### print AST nodes
 ```bash
-bash test.sh -d --print-ast
+bash test.sh run --print-ast
+```
+
+### print the allocator stats
+```bash
+bash test.sh run -v
 ```
