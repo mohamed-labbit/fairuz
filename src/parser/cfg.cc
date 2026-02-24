@@ -8,7 +8,7 @@ void ControlFlowGraph::addBlock(BasicBlock block)
     Blocks_.push_back(std::move(block));
 }
 
-void ControlFlowGraph::addEdge(std::int32_t from, std::int32_t to)
+void ControlFlowGraph::addEdge(int32_t from, int32_t to)
 {
     if (from >= 0 && from < Blocks_.size() && to >= 0 && to < Blocks_.size()) {
         Blocks_[from].successors.push_back(to);
@@ -23,13 +23,13 @@ void ControlFlowGraph::computeReachability()
         return;
 
     Blocks_[EntryBlock_].IsReachable = true;
-    std::vector<std::int32_t> worklist = { EntryBlock_ };
+    std::vector<int32_t> worklist = { EntryBlock_ };
 
     while (!worklist.empty()) {
-        std::int32_t blockId = worklist.back();
+        int32_t blockId = worklist.back();
         worklist.pop_back();
 
-        for (std::int32_t succ : Blocks_[blockId].successors) {
+        for (int32_t succ : Blocks_[blockId].successors) {
             if (!Blocks_[succ].IsReachable) {
                 Blocks_[succ].IsReachable = true;
                 worklist.push_back(succ);
@@ -46,12 +46,12 @@ void ControlFlowGraph::computeLiveness()
     while (changed) {
         changed = false;
 
-        for (std::int32_t i = Blocks_.size() - 1; i >= 0; --i) {
+        for (int32_t i = Blocks_.size() - 1; i >= 0; --i) {
             ControlFlowGraph::BasicBlock& block = Blocks_[i];
 
             // liveOut = union of successors' liveIn
             std::unordered_set<StringRef, StringRefHash, StringRefEqual> newLiveOut;
-            for (std::int32_t succ : block.successors)
+            for (int32_t succ : block.successors)
                 newLiveOut.insert(Blocks_[succ].LiveIn.begin(), Blocks_[succ].LiveIn.end());
 
             // liveIn = use ∪ (liveOut - def)
@@ -70,10 +70,10 @@ void ControlFlowGraph::computeLiveness()
     }
 }
 
-std::vector<std::int32_t> ControlFlowGraph::getUnreachableBlocks() const
+std::vector<int32_t> ControlFlowGraph::getUnreachableBlocks() const
 {
-    std::vector<std::int32_t> unreachable;
-    for (std::size_t i = 0, n = Blocks_.size(); i < n; ++i) {
+    std::vector<int32_t> unreachable;
+    for (size_t i = 0, n = Blocks_.size(); i < n; ++i) {
         if (!Blocks_[i].IsReachable)
             unreachable.push_back(i);
     }

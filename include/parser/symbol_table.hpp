@@ -13,13 +13,16 @@ namespace parser {
 // symbol table with type inference
 class SymbolTable {
 public:
-    enum class SymbolType { VARIABLE,
+    enum class SymbolType {
+        VARIABLE,
         FUNCTION,
         CLASS,
         MODULE,
-        UNKNOWN };
+        UNKNOWN
+    };
 
-    enum class DataType_t { INTEGER,
+    enum class DataType_t {
+        INTEGER,
         FLOAT,
         STRING,
         BOOLEAN,
@@ -29,7 +32,8 @@ public:
         NONE,
         FUNCTION,
         ANY,
-        UNKNOWN };
+        UNKNOWN
+    };
 
     struct Symbol {
         StringRef name;
@@ -38,8 +42,8 @@ public:
         bool IsConstant = false;
         bool IsGlobal = false;
         bool IsUsed = false;
-        std::int32_t DefinitionLine = 0;
-        std::vector<std::int32_t> UsageLines;
+        int32_t DefinitionLine = 0;
+        std::vector<int32_t> UsageLines;
         // for functions
         std::vector<DataType_t> ParamTypes;
         DataType_t returnType = DataType_t::UNKNOWN;
@@ -55,7 +59,7 @@ private:
     unsigned int ScopeLevel_ { 0 };
 
 public:
-    explicit SymbolTable(SymbolTable* p = nullptr, std::int32_t level = 0);
+    explicit SymbolTable(SymbolTable* p = nullptr, int32_t level = 0);
 
     void define(StringRef const& name, Symbol symbol);
 
@@ -65,7 +69,7 @@ public:
 
     bool isDefined(StringRef const& name) const;
 
-    void markUsed(StringRef const& name, std::int32_t line);
+    void markUsed(StringRef const& name, int32_t line);
 
     SymbolTable* createChild();
 

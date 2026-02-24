@@ -20,7 +20,7 @@ Lexer::Lexer(FileManager* fm)
     util::configureLocale();
 }
 
-Lexer::Lexer(std::vector<tok::Token const*>& seq, std::size_t const s)
+Lexer::Lexer(std::vector<tok::Token const*>& seq, size_t const s)
     : TokStream_(seq)
     , TokIndex_(0)
     , IndentSize_(4)
@@ -34,7 +34,7 @@ Lexer::Lexer(std::vector<tok::Token const*>& seq, std::size_t const s)
 
 tok::Token const* Lexer::lexToken()
 {
-    auto finish = [this](tok::TokenType tt, StringRef str, std::size_t line, std::size_t col) {
+    auto finish = [this](tok::TokenType tt, StringRef str, size_t line, size_t col) {
         tok::Token const* ret = make_token(tt, str, line, col);
         store(ret);
         return TokStream_.back();
@@ -46,7 +46,7 @@ tok::Token const* Lexer::lexToken()
         return TokStream_.back();
     }
 
-    auto nextLine = [this](std::size_t const& line, std::size_t const& col) {
+    auto nextLine = [this](size_t const& line, size_t const& col) {
         uint32_t current = SourceManager_.currentChar();
 
         if (AtBOL_) {
@@ -137,8 +137,8 @@ tok::Token const* Lexer::lexToken()
     };
 
     for (;;) {
-        std::size_t line = SourceManager_.getLineNumber();
-        std::size_t col = SourceManager_.getColumnNumber();
+        size_t line = SourceManager_.getLineNumber();
+        size_t col = SourceManager_.getColumnNumber();
 
         uint32_t current = SourceManager_.currentChar();
         if (current == BUFFER_END)
@@ -302,6 +302,15 @@ tok::Token const* Lexer::lexToken()
         case u'٨': // 8
         case u'٩': // 9
         {
+            StringRef digits;
+
+            // only accept integer type for now
+            while (util::isArabDigit(current)) {
+                digits += util::encode_utf8_str(current);
+                SourceManager_.nextChar();
+            }
+
+            return finish(tok::TokenType::INTEGER, digits, line, col);
         }
 
         // operators
@@ -412,7 +421,7 @@ tok::Token const* Lexer::lexToken()
                     if (!has_digits)
                         diagnostic::engine.panic("Invalid hex literal, it has no digits after 0x");
 
-                    return finish(tok::TokenType::NUMBER, number, line, col);
+                    return finish(tok::TokenType::HEX, number, line, col);
                 }
                 // octal
                 else if (next == 'o' || next == 'O') {
@@ -441,7 +450,7 @@ tok::Token const* Lexer::lexToken()
                     if (!has_digits)
                         diagnostic::engine.panic("Invalid octal literal: no digits after 0o");
 
-                    return finish(tok::TokenType::NUMBER, number, line, col);
+                    return finish(tok::TokenType::OCTAL, number, line, col);
                 }
                 // binary
                 else if (next == 'b' || next == 'B') {
@@ -470,7 +479,7 @@ tok::Token const* Lexer::lexToken()
                     if (!has_digits)
                         diagnostic::engine.panic("Invalid binary literal: no digits after 0b");
 
-                    return finish(tok::TokenType::NUMBER, number, line, col);
+                    return finish(tok::TokenType::BINARY, number, line, col);
                 }
                 // If it's just '0' followed by regular digits or '.', fall through to decimal parsing
             }
@@ -511,10 +520,10 @@ tok::Token const* Lexer::lexToken()
                         break;
                 }
 
-                return finish(tok::TokenType::FLOAT, number, line, col);
+                return finish(tok::TokenType::DECIMAL, number, line, col);
             }
 
-            return finish(tok::TokenType::NUMBER, number, line, col);
+            return finish(tok::TokenType::INTEGER, number, line, col);
         }
 
         return finish(tok::TokenType::INVALID, util::encode_utf8_str(current), line, col);
@@ -524,8 +533,8 @@ tok::Token const* Lexer::lexToken()
         return TokStream_.back();
 
     // Emit any remaining dedents at EOF
-    std::size_t last_line = SourceManager_.getLineNumber();
-    std::size_t last_col = SourceManager_.getColumnNumber();
+    size_t last_line = SourceManager_.getLineNumber();
+    size_t last_col = SourceManager_.getColumnNumber();
 
     while (IndentLevel_ > 0) {
         --IndentLevel_;
@@ -584,7 +593,7 @@ tok::Token const* Lexer::current() const
     return nullptr;
 }
 
-tok::Token const* Lexer::peek(std::size_t n)
+tok::Token const* Lexer::peek(size_t n)
 {
     while (TokIndex_ + n >= TokStream_.size()) {
         if (!TokStream_.empty() && TokStream_.back()->type() == tok::TokenType::ENDMARKER)

@@ -52,16 +52,16 @@ TEST_F(ValueConstructionTest, IntConstructorZero)
 
 TEST_F(ValueConstructionTest, IntConstructorMaxValue)
 {
-    Value v(std::numeric_limits<std::int64_t>::max());
+    Value v(std::numeric_limits<int64_t>::max());
     EXPECT_TRUE(v.isInt());
-    EXPECT_EQ(*v.asInt(), std::numeric_limits<std::int64_t>::max());
+    EXPECT_EQ(*v.asInt(), std::numeric_limits<int64_t>::max());
 }
 
 TEST_F(ValueConstructionTest, IntConstructorMinValue)
 {
-    Value v(std::numeric_limits<std::int64_t>::min());
+    Value v(std::numeric_limits<int64_t>::min());
     EXPECT_TRUE(v.isInt());
-    EXPECT_EQ(*v.asInt(), std::numeric_limits<std::int64_t>::min());
+    EXPECT_EQ(*v.asInt(), std::numeric_limits<int64_t>::min());
 }
 
 TEST_F(ValueConstructionTest, FloatConstructor)
@@ -264,7 +264,7 @@ class ValueSizeTest : public ::testing::Test { };
 TEST_F(ValueSizeTest, IntSize)
 {
     Value v(42);
-    EXPECT_EQ(v.size(), sizeof(std::int64_t));
+    EXPECT_EQ(v.size(), sizeof(int64_t));
 }
 
 TEST_F(ValueSizeTest, FloatSize)
@@ -1181,7 +1181,7 @@ TEST_F(ValueEdgeCaseTest, ZeroDivisionBehavior)
 
 TEST_F(ValueEdgeCaseTest, OverflowBehavior)
 {
-    Value v1(std::numeric_limits<std::int64_t>::max());
+    Value v1(std::numeric_limits<int64_t>::max());
     Value v2(1);
     // Document overflow behavior
     Value result = v1 + v2;
@@ -1190,7 +1190,7 @@ TEST_F(ValueEdgeCaseTest, OverflowBehavior)
 
 TEST_F(ValueEdgeCaseTest, UnderflowBehavior)
 {
-    Value v1(std::numeric_limits<std::int64_t>::min());
+    Value v1(std::numeric_limits<int64_t>::min());
     Value v2(1);
     Value result = v1 - v2;
     // Behavior is implementation-defined
@@ -1379,7 +1379,7 @@ TEST_F(ValueTypeMutationTest, SetTypeToNone)
 TEST_F(ValueTypeMutationTest, SetDataChangesInternalData)
 {
     Value v(42);
-    v.setData(std::int64_t(100));
+    v.setData(int64_t(100));
     // After setData, the internal data should reflect the change
     // Actual behavior depends on implementation
 }

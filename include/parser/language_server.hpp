@@ -12,7 +12,7 @@ namespace parser {
 class LanguageServer {
 public:
     struct Position {
-        std::int32_t line, character;
+        int32_t line, character;
     };
 
     struct Range {
@@ -23,7 +23,7 @@ public:
         StringRef label;
         StringRef detail;
         StringRef documentation;
-        std::int32_t kind; // Variable, Function, Class ...
+        int32_t kind; // Variable, Function, Class ...
     };
 
     struct Hover {

@@ -17,15 +17,18 @@ public:
 
     explicit Lexer(Lexer const&) = delete;
 
-    explicit Lexer(std::vector<tok::Token const*>& seq, std::size_t const s);
+    explicit Lexer(std::vector<tok::Token const*>& seq, size_t const s);
 
-    tok::Token const* operator()() { return next(); }
+    tok::Token const* operator()()
+    {
+        return next();
+    }
 
     tok::Token const* current() const;
 
     tok::Token const* next();
 
-    tok::Token const* peek(std::size_t n = 1);
+    tok::Token const* peek(size_t n = 1);
 
     tok::Token const* prev();
 
@@ -36,16 +39,20 @@ public:
 
     std::vector<tok::Token const*> tokenize();
 
-    std::size_t const indentSize() const
+    size_t const indentSize() const
     {
         return IndentSize_;
     }
 
-    tok::Token* make_token(tok::TokenType tt, std::optional<StringRef> lexeme = std::nullopt,
-        std::optional<std::size_t> line = std::nullopt, std::optional<std::size_t> col = std::nullopt, std::optional<std::size_t> file_pos = std::nullopt,
+    tok::Token* make_token(
+        tok::TokenType tt,
+        std::optional<StringRef> lexeme = std::nullopt,
+        std::optional<size_t> line = std::nullopt,
+        std::optional<size_t> col = std::nullopt,
+        std::optional<size_t> file_pos = std::nullopt,
         std::optional<std::string> file_path = std::nullopt) const;
 
-    StringRef getSourceLine(std::size_t const line)
+    StringRef getSourceLine(size_t const line)
     {
         /// TODO:
         return "";
@@ -53,7 +60,7 @@ public:
 
 private:
     SourceManager SourceManager_;
-    std::size_t TokIndex_ { 0 };
+    size_t TokIndex_ { 0 };
     unsigned int IndentSize_ { 0 };
     unsigned int IndentLevel_ { 0 };
     std::vector<tok::Token const*> TokStream_;
@@ -91,11 +98,20 @@ public:
 
 inline TokenAllocator token_allocator;
 
-inline tok::Token* Lexer::make_token(tok::TokenType tt, std::optional<StringRef> lexeme, std::optional<std::size_t> line, std::optional<std::size_t> col,
-    std::optional<std::size_t> file_pos, std::optional<std::string> file_path) const
+inline tok::Token* Lexer::make_token(
+    tok::TokenType tt,
+    std::optional<StringRef> lexeme,
+    std::optional<size_t> line,
+    std::optional<size_t> col,
+    std::optional<size_t> file_pos,
+    std::optional<std::string> file_path) const
 {
-    tok::Token* ret = token_allocator.make(lexeme.value_or(""), tt, line.value_or(this->SourceManager_.getLineNumber()),
-        col.value_or(this->SourceManager_.getColumnNumber()), file_pos.value_or(this->SourceManager_.getFileOffset()),
+    tok::Token* ret = token_allocator.make(
+        lexeme.value_or(""),
+        tt,
+        line.value_or(this->SourceManager_.getLineNumber()),
+        col.value_or(this->SourceManager_.getColumnNumber()),
+        file_pos.value_or(this->SourceManager_.getFileOffset()),
         file_path.value_or(this->SourceManager_.fpath()));
 
     if (!ret) // protect against bad access

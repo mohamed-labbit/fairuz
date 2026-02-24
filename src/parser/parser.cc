@@ -145,13 +145,18 @@ ast::ListExpr* Parser::parseParametersList()
             advance();
             parameters.push_back(ast::makeName(param_name));
             skipNewlines();
-        } while (match(tok::TokenType::COMMA));
+        } while (match(tok::TokenType::COMMA) && !check(tok::TokenType::RPAREN));
     }
 
     if (!consume(tok::TokenType::RPAREN, "Expected ')' after parameters"))
         return nullptr;
 
     return ast::makeList(std::move(parameters));
+}
+
+ast::Expr* Parser::parseExpression()
+{
+    return parseAssignmentExpr();
 }
 
 ast::Stmt* Parser::parseFunctionDef()
@@ -251,9 +256,12 @@ ast::Expr* Parser::parseLogicalExprPrecedence(unsigned int min_precedence)
         return nullptr;
 
     for (;;) {
-        auto* tok = currentToken();
-        int precedence = tok->getLogicalOpPrecedence();
-        if (precedence < 0 || precedence < static_cast<int>(min_precedence))
+        tok::Token const* tok = currentToken();
+        if (!tok->isBinaryOp())
+            break;
+
+        unsigned int precedence = tok->getPrecedence();
+        if (precedence == tok::PREC_NONE || precedence < min_precedence)
             break;
 
         tok::TokenType op = Lexer_.current()->type();
@@ -291,6 +299,11 @@ ast::Expr* Parser::parseComparisonExpr()
     return left;
 }
 
+ast::Expr* Parser::parseBinaryExpr()
+{
+    return parseBinaryExprPrecedence(0);
+}
+
 ast::Expr* Parser::parseBinaryExprPrecedence(unsigned int min_precedence)
 {
     ast::Expr* left = parseUnaryExpr();
@@ -298,15 +311,18 @@ ast::Expr* Parser::parseBinaryExprPrecedence(unsigned int min_precedence)
         return nullptr;
 
     for (;;) {
-        auto* tok = currentToken();
-        int precedence = tok->getArithmeticOpPrecedence();
-        if (precedence < 0 || precedence < static_cast<int>(min_precedence))
+        tok::Token const* tok = currentToken();
+        if (!tok->isBinaryOp() || tok->is(tok::TokenType::OP_ASSIGN))
+            break;
+
+        unsigned int precedence = tok->getPrecedence();
+        if (precedence == tok::PREC_NONE || precedence < min_precedence)
             break;
 
         tok::TokenType op = Lexer_.current()->type();
         advance();
 
-        int nextMin = precedence + 1;
+        unsigned int nextMin = precedence + 1;
         ast::Expr* right = parseBinaryExprPrecedence(nextMin);
         if (!right) {
             diagnostic::engine.emit("Expected expression after binary operator", diagnostic::DiagnosticEngine::Severity::ERROR);
@@ -319,7 +335,7 @@ ast::Expr* Parser::parseBinaryExprPrecedence(unsigned int min_precedence)
 
 ast::Expr* Parser::parseUnaryExpr()
 {
-    auto* tok = currentToken();
+    tok::Token const* tok = currentToken();
     if (tok->isUnaryOp()) {
         tok::TokenType op = Lexer_.current()->type();
         advance();
@@ -358,7 +374,7 @@ ast::Expr* Parser::parsePostfixExpr()
                 }
                 args.push_back(arg);
                 skipNewlines();
-            } while (match(tok::TokenType::COMMA));
+            } while (match(tok::TokenType::COMMA) && !check(tok::TokenType::RPAREN));
         }
 
         if (!consume(tok::TokenType::RPAREN, "Expected ')' after arguments"))
@@ -370,29 +386,68 @@ ast::Expr* Parser::parsePostfixExpr()
     return expr;
 }
 
+bool Parser::weDone() const
+{
+    return Lexer_.current()->is(tok::TokenType::ENDMARKER);
+}
+
+bool Parser::check(tok::TokenType type)
+{
+    return Lexer_.current()->is(type);
+}
+
+tok::Token const* Parser::currentToken()
+{
+    return Lexer_.current();
+}
+
+ast::Expr* Parser::parse()
+{
+    return parseExpression();
+}
+
 ast::Expr* Parser::parsePrimaryExpr()
 {
-    if (weDone()) {
-        diagnostic::engine.emit("Unexpected end of input", diagnostic::DiagnosticEngine::Severity::ERROR);
-        return nullptr;
-    }
+    tok::Token const* tok = currentToken();
 
-    auto* tok = Lexer_.current();
-
-    if (check(tok::TokenType::NUMBER)) {
-        auto v = tok->lexeme();
+    if (currentToken()->isNumeric()) {
+        StringRef v = tok->lexeme();
         advance();
-        return ast::makeLiteral(ast::LiteralExpr::Type::NUMBER, v);
+
+        ast::LiteralExpr::Type type;
+
+        switch (tok->type()) {
+        case tok::TokenType::INTEGER:
+            type = ast::LiteralExpr::Type::INTEGER;
+            break;
+        case tok::TokenType::DECIMAL:
+            type = ast::LiteralExpr::Type::DECIMAL;
+            break;
+        case tok::TokenType::HEX:
+            type = ast::LiteralExpr::Type::HEX;
+            break;
+        case tok::TokenType::OCTAL:
+            type = ast::LiteralExpr::Type::OCTAL;
+            break;
+        case tok::TokenType::BINARY:
+            type = ast::LiteralExpr::Type::BINARY;
+            break;
+        default:
+            type = ast::LiteralExpr::Type::INTEGER;
+            break;
+        }
+
+        return ast::makeLiteral(type, v);
     }
 
     if (check(tok::TokenType::STRING)) {
-        auto v = tok->lexeme();
+        StringRef v = tok->lexeme();
         advance();
         return ast::makeLiteral(ast::LiteralExpr::Type::STRING, v);
     }
 
     if (check(tok::TokenType::KW_TRUE) || check(tok::TokenType::KW_FALSE)) {
-        auto v = tok->lexeme();
+        StringRef v = tok->lexeme();
         advance();
         return ast::makeLiteral(ast::LiteralExpr::Type::BOOLEAN, v);
     }
@@ -403,7 +458,7 @@ ast::Expr* Parser::parsePrimaryExpr()
     }
 
     if (check(tok::TokenType::IDENTIFIER)) {
-        auto name = tok->lexeme();
+        StringRef name = tok->lexeme();
         advance();
         return ast::makeName(name);
     }
@@ -431,7 +486,9 @@ ast::Expr* Parser::parsePrimaryExpr()
         return parseListLiteral();
     }
 
-    diagnostic::engine.emit("Expected expression", diagnostic::DiagnosticEngine::Severity::ERROR);
+    if (Expecting_)
+        diagnostic::engine.emit("Expected expression", diagnostic::DiagnosticEngine::Severity::ERROR);
+
     return nullptr;
 }
 
@@ -451,15 +508,27 @@ ast::Expr* Parser::parseListLiteral()
                 diagnostic::engine.emit("Expected expression in list literal", diagnostic::DiagnosticEngine::Severity::ERROR);
                 return nullptr;
             }
+
             elements.push_back(elem);
             skipNewlines();
-        } while (match(tok::TokenType::COMMA));
+        } while (match(tok::TokenType::COMMA) && !check(tok::TokenType::RBRACKET));
     }
 
     if (!consume(tok::TokenType::RBRACKET, "Expected ']' after list elements"))
         return nullptr;
 
     return ast::makeList(std::move(elements));
+}
+
+ast::Expr* Parser::parseConditionalExpr()
+{
+    return parseLogicalExpr();
+    /// TODO: Ternary?
+}
+
+ast::Expr* Parser::parseLogicalExpr()
+{
+    return parseLogicalExprPrecedence(0);
 }
 
 bool Parser::match(tok::TokenType const type)

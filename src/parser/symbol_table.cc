@@ -3,7 +3,7 @@
 namespace mylang {
 namespace parser {
 
-SymbolTable::SymbolTable(SymbolTable* p, std::int32_t level)
+SymbolTable::SymbolTable(SymbolTable* p, int32_t level)
     : Parent_(p)
     , ScopeLevel_(level)
 {
@@ -38,9 +38,9 @@ bool SymbolTable::isDefined(StringRef const& name) const
     return Parent_ ? Parent_->isDefined(name) : false;
 }
 
-void SymbolTable::markUsed(StringRef const& name, std::int32_t line)
+void SymbolTable::markUsed(StringRef const& name, int32_t line)
 {
-    if (auto* sym = lookup(name)) {
+    if (Symbol* sym = lookup(name)) {
         sym->IsUsed = true;
         sym->UsageLines.push_back(line);
     }
@@ -48,8 +48,8 @@ void SymbolTable::markUsed(StringRef const& name, std::int32_t line)
 
 SymbolTable* SymbolTable::createChild()
 {
-    auto child = std::make_unique<SymbolTable>(this, ScopeLevel_ + 1);
-    auto* ptr = child.get();
+    std::unique_ptr<SymbolTable> child = std::make_unique<SymbolTable>(this, ScopeLevel_ + 1);
+    SymbolTable* ptr = child.get();
     Children_.push_back(std::move(child));
     return ptr;
 }

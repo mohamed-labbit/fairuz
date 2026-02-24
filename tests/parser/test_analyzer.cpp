@@ -26,32 +26,37 @@ protected:
     }
 
     // Helper function to create a literal expression
-    ast::LiteralExpr* createNumberLiteral(StringRef const& value, std::int32_t line = 1)
+    ast::LiteralExpr* createNumberLiteralInteger(StringRef const& value, int32_t line = 1)
     {
-        return ast::makeLiteral(ast::LiteralExpr::Type::NUMBER, value /*, line*/);
+        return ast::makeLiteral(ast::LiteralExpr::Type::INTEGER, value /*, line*/);
     }
 
-    ast::LiteralExpr* createStringLiteral(StringRef const& value, std::int32_t line = 1)
+    ast::LiteralExpr* createNumberLiteralDecimal(StringRef const& value, int32_t line = 1)
+    {
+        return ast::makeLiteral(ast::LiteralExpr::Type::DECIMAL, value /*, line*/);
+    }
+
+    ast::LiteralExpr* createStringLiteral(StringRef const& value, int32_t line = 1)
     {
         return ast::makeLiteral(ast::LiteralExpr::Type::STRING, value /*, line*/);
     }
 
-    ast::LiteralExpr* createBooleanLiteral(StringRef const& value, std::int32_t line = 1)
+    ast::LiteralExpr* createBooleanLiteral(StringRef const& value, int32_t line = 1)
     {
         return ast::makeLiteral(ast::LiteralExpr::Type::BOOLEAN, value /*, line*/);
     }
 
-    ast::LiteralExpr* createNoneLiteral(std::int32_t line = 1)
+    ast::LiteralExpr* createNoneLiteral(int32_t line = 1)
     {
 
         return ast::makeLiteral(ast::LiteralExpr::Type::NONE, "none" /*, line*/);
     }
 
     // Helper function to create a name expression
-    ast::NameExpr* createName(StringRef const& name, std::int32_t line = 1) { return ast::makeName(name /*, line*/); }
+    ast::NameExpr* createName(StringRef const& name, int32_t line = 1) { return ast::makeName(name /*, line*/); }
 
     // Helper function to create a binary expression
-    ast::BinaryExpr* createBinary(ast::Expr* left, tok::TokenType op, ast::Expr* right, std::int32_t line = 1)
+    ast::BinaryExpr* createBinary(ast::Expr* left, tok::TokenType op, ast::Expr* right, int32_t line = 1)
     {
         return ast::makeBinary(left, right, op /*, line*/);
     }
@@ -82,77 +87,80 @@ protected:
 
 TEST_F(SemanticAnalyzerTest, InferType_NumberLiteral_Integer)
 {
-    ast::LiteralExpr* expr = createNumberLiteral("42");
+    ast::LiteralExpr* expr = createNumberLiteralInteger("42");
     EXPECT_EQ(analyzer->inferType(expr), SymbolTable::DataType_t::INTEGER);
 }
 
 TEST_F(SemanticAnalyzerTest, InferType_NumberLiteral_Float)
 {
-    auto* expr = createNumberLiteral("3.14");
+    ast::LiteralExpr* expr = createNumberLiteralDecimal("3.14");
     EXPECT_EQ(analyzer->inferType(expr), SymbolTable::DataType_t::FLOAT);
 }
 
 TEST_F(SemanticAnalyzerTest, InferType_StringLiteral)
 {
-    auto* expr = createStringLiteral("hello");
+    ast::LiteralExpr* expr = createStringLiteral("hello");
     EXPECT_EQ(analyzer->inferType(expr), SymbolTable::DataType_t::STRING);
 }
 
 TEST_F(SemanticAnalyzerTest, InferType_BooleanLiteral)
 {
-    auto* expr = createBooleanLiteral("true");
+    ast::LiteralExpr* expr = createBooleanLiteral("true");
     EXPECT_EQ(analyzer->inferType(expr), SymbolTable::DataType_t::BOOLEAN);
 }
 
 TEST_F(SemanticAnalyzerTest, InferType_NoneLiteral)
 {
-    auto* expr = createNoneLiteral();
+    ast::LiteralExpr* expr = createNoneLiteral();
     EXPECT_EQ(analyzer->inferType(expr), SymbolTable::DataType_t::NONE);
 }
 
-TEST_F(SemanticAnalyzerTest, InferType_NullExpr) { EXPECT_EQ(analyzer->inferType(nullptr), SymbolTable::DataType_t::UNKNOWN); }
+TEST_F(SemanticAnalyzerTest, InferType_NullExpr)
+{
+    EXPECT_EQ(analyzer->inferType(nullptr), SymbolTable::DataType_t::UNKNOWN);
+}
 
 TEST_F(SemanticAnalyzerTest, InferType_BinaryExpr_IntPlusInt)
 {
-    auto* left = createNumberLiteral("10");
-    auto* right = createNumberLiteral("20");
-    auto* binary = createBinary(left, tok::TokenType::OP_PLUS, right);
+    ast::LiteralExpr* left = createNumberLiteralInteger("10");
+    ast::LiteralExpr* right = createNumberLiteralInteger("20");
+    ast::BinaryExpr* binary = createBinary(left, tok::TokenType::OP_PLUS, right);
 
     EXPECT_EQ(analyzer->inferType(binary), SymbolTable::DataType_t::INTEGER);
 }
 
 TEST_F(SemanticAnalyzerTest, InferType_BinaryExpr_FloatPromotion)
 {
-    auto* left = createNumberLiteral("10");
-    auto* right = createNumberLiteral("20.5");
-    auto* binary = createBinary(left, tok::TokenType::OP_PLUS, right);
+    ast::LiteralExpr* left = createNumberLiteralInteger("10");
+    ast::LiteralExpr* right = createNumberLiteralDecimal("20.5");
+    ast::BinaryExpr* binary = createBinary(left, tok::TokenType::OP_PLUS, right);
 
     EXPECT_EQ(analyzer->inferType(binary), SymbolTable::DataType_t::FLOAT);
 }
 
 TEST_F(SemanticAnalyzerTest, InferType_BinaryExpr_StringConcat)
 {
-    auto* left = createStringLiteral("hello");
-    auto* right = createStringLiteral("world");
-    auto* binary = createBinary(left, tok::TokenType::OP_PLUS, right);
+    ast::LiteralExpr* left = createStringLiteral("hello");
+    ast::LiteralExpr* right = createStringLiteral("world");
+    ast::BinaryExpr* binary = createBinary(left, tok::TokenType::OP_PLUS, right);
 
     EXPECT_EQ(analyzer->inferType(binary), SymbolTable::DataType_t::STRING);
 }
 
 TEST_F(SemanticAnalyzerTest, InferType_BinaryExpr_LogicalAnd)
 {
-    auto* left = createBooleanLiteral("true");
-    auto* right = createBooleanLiteral("false");
-    auto* binary = createBinary(left, tok::TokenType::KW_AND, right);
+    ast::LiteralExpr* left = createBooleanLiteral("true");
+    ast::LiteralExpr* right = createBooleanLiteral("false");
+    ast::BinaryExpr* binary = createBinary(left, tok::TokenType::KW_AND, right);
 
     EXPECT_EQ(analyzer->inferType(binary), SymbolTable::DataType_t::BOOLEAN);
 }
 
 TEST_F(SemanticAnalyzerTest, InferType_BinaryExpr_LogicalOr)
 {
-    auto* left = createBooleanLiteral("true");
-    auto* right = createBooleanLiteral("false");
-    auto* binary = createBinary(left, tok::TokenType::KW_OR, right);
+    ast::LiteralExpr* left = createBooleanLiteral("true");
+    ast::LiteralExpr* right = createBooleanLiteral("false");
+    ast::BinaryExpr* binary = createBinary(left, tok::TokenType::KW_OR, right);
 
     EXPECT_EQ(analyzer->inferType(binary), SymbolTable::DataType_t::BOOLEAN);
 }
@@ -161,7 +169,7 @@ TEST_F(SemanticAnalyzerTest, InferType_BinaryExpr_LogicalOr)
 
 TEST_F(SemanticAnalyzerTest, UndefinedVariable_ReportsError)
 {
-    auto* nameExpr = createName("undefined_var", 5);
+    ast::NameExpr* nameExpr = createName("undefined_var", 5);
 
     analyzer->analyzeExpr(nameExpr);
 
@@ -172,15 +180,15 @@ TEST_F(SemanticAnalyzerTest, UndefinedVariable_ReportsError)
 TEST_F(SemanticAnalyzerTest, DefinedVariable_NoError)
 {
     // First define the variable
-    auto* value = createNumberLiteral("42");
-    auto* target = createName("x");
-    auto* assign = ast::makeAssignmentStmt(target, value /*, 1*/);
+    ast::LiteralExpr* value = createNumberLiteralInteger("42");
+    ast::NameExpr* target = createName("x");
+    ast::AssignmentStmt* assign = ast::makeAssignmentStmt(target, value /*, 1*/);
     statements.push_back(assign);
 
     analyzer->analyze(statements);
 
     // Now use the variable
-    auto* useExpr = createName("x", 2);
+    ast::NameExpr* useExpr = createName("x", 2);
     analyzer->analyzeExpr(useExpr);
 
     // Should not report undefined variable error for 'x'
@@ -189,9 +197,9 @@ TEST_F(SemanticAnalyzerTest, DefinedVariable_NoError)
 
 TEST_F(SemanticAnalyzerTest, UnusedVariable_ReportsWarning)
 {
-    auto* value = createNumberLiteral("42");
-    auto* target = createName("unused_var");
-    auto* assign = ast::makeAssignmentStmt(target, value /*, 1*/);
+    ast::LiteralExpr* value = createNumberLiteralInteger("42");
+    ast::NameExpr* target = createName("unused_var");
+    ast::AssignmentStmt* assign = ast::makeAssignmentStmt(target, value /*, 1*/);
     statements.push_back(assign);
 
     analyzer->analyze(statements);
@@ -204,9 +212,9 @@ TEST_F(SemanticAnalyzerTest, UnusedVariable_ReportsWarning)
 
 TEST_F(SemanticAnalyzerTest, InvalidStringOperation_Subtraction)
 {
-    auto* left = createStringLiteral("hello");
-    auto* right = createStringLiteral("world");
-    auto* binary = createBinary(left, tok::TokenType::OP_MINUS, right);
+    ast::LiteralExpr* left = createStringLiteral("hello");
+    ast::LiteralExpr* right = createStringLiteral("world");
+    ast::BinaryExpr* binary = createBinary(left, tok::TokenType::OP_MINUS, right);
 
     analyzer->analyzeExpr(binary);
 
@@ -216,9 +224,9 @@ TEST_F(SemanticAnalyzerTest, InvalidStringOperation_Subtraction)
 
 TEST_F(SemanticAnalyzerTest, InvalidStringOperation_Multiplication)
 {
-    auto* left = createStringLiteral("hello");
-    auto* right = createNumberLiteral("3");
-    auto* binary = createBinary(left, tok::TokenType::OP_STAR, right);
+    ast::LiteralExpr* left = createStringLiteral("hello");
+    ast::LiteralExpr* right = createNumberLiteralInteger("3");
+    ast::BinaryExpr* binary = createBinary(left, tok::TokenType::OP_STAR, right);
 
     analyzer->analyzeExpr(binary);
 
@@ -228,9 +236,9 @@ TEST_F(SemanticAnalyzerTest, InvalidStringOperation_Multiplication)
 
 TEST_F(SemanticAnalyzerTest, InvalidStringOperation_Division)
 {
-    auto* left = createStringLiteral("hello");
-    auto* right = createNumberLiteral("2");
-    auto* binary = createBinary(left, tok::TokenType::OP_SLASH, right);
+    ast::LiteralExpr* left = createStringLiteral("hello");
+    ast::LiteralExpr* right = createNumberLiteralInteger("2");
+    ast::BinaryExpr* binary = createBinary(left, tok::TokenType::OP_SLASH, right);
 
     analyzer->analyzeExpr(binary);
 
@@ -242,9 +250,9 @@ TEST_F(SemanticAnalyzerTest, InvalidStringOperation_Division)
 
 TEST_F(SemanticAnalyzerTest, DivisionByZero_ReportsError)
 {
-    auto* left = createNumberLiteral("10");
-    auto* right = createNumberLiteral("0");
-    auto* binary = createBinary(left, tok::TokenType::OP_SLASH, right);
+    ast::LiteralExpr* left = createNumberLiteralInteger("10");
+    ast::LiteralExpr* right = createNumberLiteralInteger("0");
+    ast::BinaryExpr* binary = createBinary(left, tok::TokenType::OP_SLASH, right);
 
     analyzer->analyzeExpr(binary);
 
@@ -254,9 +262,9 @@ TEST_F(SemanticAnalyzerTest, DivisionByZero_ReportsError)
 
 TEST_F(SemanticAnalyzerTest, DivisionByNonZero_NoError)
 {
-    auto* left = createNumberLiteral("10");
-    auto* right = createNumberLiteral("5");
-    auto* binary = createBinary(left, tok::TokenType::OP_SLASH, right);
+    ast::LiteralExpr* left = createNumberLiteralInteger("10");
+    ast::LiteralExpr* right = createNumberLiteralInteger("5");
+    ast::BinaryExpr* binary = createBinary(left, tok::TokenType::OP_SLASH, right);
 
     analyzer->analyzeExpr(binary);
 
@@ -267,7 +275,7 @@ TEST_F(SemanticAnalyzerTest, DivisionByNonZero_NoError)
 
 TEST_F(SemanticAnalyzerTest, BuiltInFunction_Print_IsDefined)
 {
-    auto* printName = createName("print");
+    ast::NameExpr* printName = createName("print");
 
     analyzer->analyzeExpr(printName);
 
@@ -277,17 +285,17 @@ TEST_F(SemanticAnalyzerTest, BuiltInFunction_Print_IsDefined)
 TEST_F(SemanticAnalyzerTest, CallNonCallable_ReportsError)
 {
     // Define a variable
-    auto* value = createNumberLiteral("42");
-    auto* target = createName("not_a_function");
-    auto* assign = ast::makeAssignmentStmt(target, value /*, 1*/);
+    ast::LiteralExpr* value = createNumberLiteralInteger("42");
+    ast::NameExpr* target = createName("not_a_function");
+    ast::AssignmentStmt* assign = ast::makeAssignmentStmt(target, value /*, 1*/);
     statements.push_back(assign);
     analyzer->analyze(statements);
 
     // Try to call it
-    auto* callee = createName("not_a_function", 2);
+    ast::NameExpr* callee = createName("not_a_function", 2);
     std::vector<ast::Expr*> args;
     ast::ListExpr* arg_list = ast::makeList(args);
-    auto* call = ast::makeCall(callee, arg_list /*, 2*/);
+    ast::CallExpr* call = ast::makeCall(callee, arg_list /*, 2*/);
 
     analyzer->analyzeExpr(call);
 
@@ -298,10 +306,10 @@ TEST_F(SemanticAnalyzerTest, CallNonCallable_ReportsError)
 
 TEST_F(SemanticAnalyzerTest, ConstantIfCondition_ReportsWarning)
 {
-    auto* condition = createBooleanLiteral("true");
-    auto* thenBlock = ast::makeBlock(std::vector<ast::Stmt*> {} /*, 1*/);
-    auto* elseBlock = ast::makeBlock(std::vector<ast::Stmt*> {} /*, 1*/);
-    auto* ifStmt = ast::makeIf(condition, thenBlock, elseBlock /*, 1*/);
+    ast::LiteralExpr* condition = createBooleanLiteral("true");
+    ast::BlockStmt* thenBlock = ast::makeBlock(std::vector<ast::Stmt*> {} /*, 1*/);
+    ast::BlockStmt* elseBlock = ast::makeBlock(std::vector<ast::Stmt*> {} /*, 1*/);
+    ast::IfStmt* ifStmt = ast::makeIf(condition, thenBlock, elseBlock /*, 1*/);
 
     analyzer->analyzeStmt(ifStmt);
 
@@ -311,9 +319,9 @@ TEST_F(SemanticAnalyzerTest, ConstantIfCondition_ReportsWarning)
 
 TEST_F(SemanticAnalyzerTest, InfiniteLoop_ReportsWarning)
 {
-    auto* condition = createBooleanLiteral("true");
-    auto* block = ast::makeBlock(std::vector<ast::Stmt*> {} /*, 1*/);
-    auto* whileStmt = ast::makeWhile(condition, block /*, 1*/);
+    ast::LiteralExpr* condition = createBooleanLiteral("true");
+    ast::BlockStmt* block = ast::makeBlock(std::vector<ast::Stmt*> {} /*, 1*/);
+    ast::WhileStmt* whileStmt = ast::makeWhile(condition, block /*, 1*/);
 
     analyzer->analyzeStmt(whileStmt);
 
@@ -325,8 +333,8 @@ TEST_F(SemanticAnalyzerTest, InfiniteLoop_ReportsWarning)
 
 TEST_F(SemanticAnalyzerTest, UnusedExpressionResult_ReportsInfo)
 {
-    auto* expr = createNumberLiteral("42");
-    auto* exprStmt = ast::makeExprStmt(expr /*, 1*/);
+    ast::LiteralExpr* expr = createNumberLiteralInteger("42");
+    ast::ExprStmt* exprStmt = ast::makeExprStmt(expr /*, 1*/);
 
     analyzer->analyzeStmt(exprStmt);
 
@@ -336,11 +344,11 @@ TEST_F(SemanticAnalyzerTest, UnusedExpressionResult_ReportsInfo)
 
 TEST_F(SemanticAnalyzerTest, FunctionCallExpression_NoUnusedWarning)
 {
-    auto* callee = createName("print");
+    ast::NameExpr* callee = createName("print");
     std::vector<ast::Expr*> args;
     ast::ListExpr* arg_list = ast::makeList(args);
-    auto* call = ast::makeCall(callee, arg_list /*, 1*/);
-    auto* exprStmt = ast::makeExprStmt(call /*, 1*/);
+    ast::CallExpr* call = ast::makeCall(callee, arg_list /*, 1*/);
+    ast::ExprStmt* exprStmt = ast::makeExprStmt(call /*, 1*/);
 
     analyzer->analyzeStmt(exprStmt);
 
@@ -354,18 +362,18 @@ TEST_F(SemanticAnalyzerTest, FunctionCallExpression_NoUnusedWarning)
 TEST_F(SemanticAnalyzerTest, ForLoopVariableShadowing_ReportsWarning)
 {
     // Define outer variable
-    auto* outerValue = createNumberLiteral("10");
-    auto* outerTarget = createName("i");
-    auto* outerAssign = ast::makeAssignmentStmt(outerTarget, outerValue /*, 1*/);
+    ast::LiteralExpr* outerValue = createNumberLiteralInteger("10");
+    ast::NameExpr* outerTarget = createName("i");
+    ast::AssignmentStmt* outerAssign = ast::makeAssignmentStmt(outerTarget, outerValue /*, 1*/);
     statements.push_back(outerAssign);
 
     analyzer->analyze(statements);
 
     // Create for loop with same variable name
-    auto* loopVar = createName("i");
-    auto* iterable = ast::makeList(std::vector<ast::Expr*> {} /*, 2*/);
-    auto* loopBlock = ast::makeBlock(std::vector<ast::Stmt*> {} /*, 2*/);
-    auto* forStmt = ast::makeFor(loopVar, iterable, loopBlock /*, 2*/);
+    ast::NameExpr* loopVar = createName("i");
+    ast::ListExpr* iterable = ast::makeList(std::vector<ast::Expr*> {} /*, 2*/);
+    ast::BlockStmt* loopBlock = ast::makeBlock(std::vector<ast::Stmt*> {} /*, 2*/);
+    ast::ForStmt* forStmt = ast::makeFor(loopVar, iterable, loopBlock /*, 2*/);
 
     analyzer->analyzeStmt(forStmt);
 
@@ -376,11 +384,11 @@ TEST_F(SemanticAnalyzerTest, ForLoopVariableShadowing_ReportsWarning)
 
 TEST_F(SemanticAnalyzerTest, FunctionWithoutReturn_ReportsInfo)
 {
-    auto* funcName = createName("my_func");
+    ast::NameExpr* funcName = createName("my_func");
     std::vector<ast::Expr*> params;
     ast::ListExpr* param_list = ast::makeList(params);
-    auto* body = ast::makeBlock(std::vector<ast::Stmt*> {} /*, 1*/);
-    auto* funcDef = ast::makeFunction(funcName, param_list, body /*, 1*/);
+    ast::BlockStmt* body = ast::makeBlock(std::vector<ast::Stmt*> {} /*, 1*/);
+    ast::FunctionDef* funcDef = ast::makeFunction(funcName, param_list, body /*, 1*/);
 
     analyzer->analyzeStmt(funcDef);
 
@@ -390,16 +398,16 @@ TEST_F(SemanticAnalyzerTest, FunctionWithoutReturn_ReportsInfo)
 
 TEST_F(SemanticAnalyzerTest, FunctionWithReturn_NoWarning)
 {
-    auto* funcName = createName("my_func");
+    ast::NameExpr* funcName = createName("my_func");
     std::vector<ast::Expr*> params;
     ast::ListExpr* param_list = ast::makeList(params);
     // Create return statement
-    auto* retValue = createNumberLiteral("42");
-    auto* retStmt = ast::makeReturn(retValue /*, 2*/);
+    ast::LiteralExpr* retValue = createNumberLiteralInteger("42");
+    ast::ReturnStmt* retStmt = ast::makeReturn(retValue /*, 2*/);
 
     std::vector<ast::Stmt*> bodyStmts = { retStmt };
-    auto* body = ast::makeBlock(bodyStmts /*, 1*/);
-    auto* funcDef = ast::makeFunction(funcName, param_list, body /*, 1*/);
+    ast::BlockStmt* body = ast::makeBlock(bodyStmts /*, 1*/);
+    ast::FunctionDef* funcDef = ast::makeFunction(funcName, param_list, body /*, 1*/);
 
     analyzer->analyzeStmt(funcDef);
 
@@ -412,12 +420,12 @@ TEST_F(SemanticAnalyzerTest, FunctionWithReturn_NoWarning)
 TEST_F(SemanticAnalyzerTest, NestedBinaryExpressions_InfersCorrectType)
 {
     // (10 + 20) * 2.5
-    auto* inner_left = createNumberLiteral("10");
-    auto* inner_right = createNumberLiteral("20");
-    auto* inner_binary = createBinary(inner_left, tok::TokenType::OP_PLUS, inner_right);
+    ast::LiteralExpr* inner_left = createNumberLiteralInteger("10");
+    ast::LiteralExpr* inner_right = createNumberLiteralInteger("20");
+    ast::BinaryExpr* inner_binary = createBinary(inner_left, tok::TokenType::OP_PLUS, inner_right);
 
-    auto* outer_right = createNumberLiteral("2.5");
-    auto* outer_binary = createBinary(inner_binary, tok::TokenType::OP_STAR, outer_right);
+    ast::LiteralExpr* outer_right = createNumberLiteralDecimal("2.5");
+    ast::BinaryExpr* outer_binary = createBinary(inner_binary, tok::TokenType::OP_STAR, outer_right);
 
     // Should promote to FLOAT due to 2.5
     EXPECT_EQ(analyzer->inferType(outer_binary), SymbolTable::DataType_t::FLOAT);
@@ -425,8 +433,8 @@ TEST_F(SemanticAnalyzerTest, NestedBinaryExpressions_InfersCorrectType)
 
 TEST_F(SemanticAnalyzerTest, ListExpression_InfersListType)
 {
-    std::vector<ast::Expr*> elements = { createNumberLiteral("1"), createNumberLiteral("2"), createNumberLiteral("3") };
-    auto* listExpr = ast::makeList(elements /*, 1*/);
+    std::vector<ast::Expr*> elements = { createNumberLiteralInteger("1"), createNumberLiteralInteger("2"), createNumberLiteralInteger("3") };
+    ast::ListExpr* listExpr = ast::makeList(elements /*, 1*/);
 
     EXPECT_EQ(analyzer->inferType(listExpr), SymbolTable::DataType_t::LIST);
 
@@ -435,9 +443,15 @@ TEST_F(SemanticAnalyzerTest, ListExpression_InfersListType)
 
 // Edge Cases and Null Safety Tests
 
-TEST_F(SemanticAnalyzerTest, AnalyzeNullStatement_NoError) { EXPECT_NO_THROW(analyzer->analyzeStmt(nullptr)); }
+TEST_F(SemanticAnalyzerTest, AnalyzeNullStatement_NoError)
+{
+    EXPECT_NO_THROW(analyzer->analyzeStmt(nullptr));
+}
 
-TEST_F(SemanticAnalyzerTest, AnalyzeNullExpression_NoError) { EXPECT_NO_THROW(analyzer->analyzeExpr(nullptr)); }
+TEST_F(SemanticAnalyzerTest, AnalyzeNullExpression_NoError)
+{
+    EXPECT_NO_THROW(analyzer->analyzeExpr(nullptr));
+}
 
 TEST_F(SemanticAnalyzerTest, EmptyStatementList_NoIssues)
 {
@@ -455,7 +469,7 @@ TEST_F(SemanticAnalyzerTest, PrintReport_NoIssues)
 
 TEST_F(SemanticAnalyzerTest, PrintReport_WithIssues)
 {
-    auto* nameExpr = createName("undefined", 1);
+    ast::NameExpr* nameExpr = createName("undefined", 1);
     analyzer->analyzeExpr(nameExpr);
 
     // Should not throw
@@ -464,13 +478,16 @@ TEST_F(SemanticAnalyzerTest, PrintReport_WithIssues)
 
 // Symbol Table Tests
 
-TEST_F(SemanticAnalyzerTest, GetGlobalScope_NotNull) { EXPECT_NE(analyzer->getGlobalScope(), nullptr); }
+TEST_F(SemanticAnalyzerTest, GetGlobalScope_NotNull)
+{
+    EXPECT_NE(analyzer->getGlobalScope(), nullptr);
+}
 
 TEST_F(SemanticAnalyzerTest, AssignmentCreatesSymbol)
 {
-    auto* value = createNumberLiteral("42");
-    auto* target = createName("x");
-    auto* assign = ast::makeAssignmentStmt(target, value /*, 1*/);
+    ast::LiteralExpr* value = createNumberLiteralInteger("42");
+    ast::NameExpr* target = createName("x");
+    ast::AssignmentStmt* assign = ast::makeAssignmentStmt(target, value /*, 1*/);
     statements.push_back(assign);
 
     analyzer->analyze(statements);
@@ -485,21 +502,21 @@ TEST_F(SemanticAnalyzerTest, AssignmentCreatesSymbol)
 TEST_F(SemanticAnalyzerTest, ComplexProgram_MultipleIssues)
 {
     // Undefined variable use
-    auto* undefined = createName("undefined_var", 1);
-    auto* exprStmt1 = ast::makeExprStmt(undefined /*, 1*/);
+    ast::NameExpr* undefined = createName("undefined_var", 1);
+    ast::ExprStmt* exprStmt1 = ast::makeExprStmt(undefined /*, 1*/);
     statements.push_back(exprStmt1);
 
     // Division by zero
-    auto* left = createNumberLiteral("10", 2);
-    auto* right = createNumberLiteral("0", 2);
-    auto* divExpr = createBinary(left, tok::TokenType::OP_SLASH, right);
-    auto* exprStmt2 = ast::makeExprStmt(divExpr /*, 2*/);
+    ast::LiteralExpr* left = createNumberLiteralInteger("10", 2);
+    ast::LiteralExpr* right = createNumberLiteralInteger("0", 2);
+    ast::BinaryExpr* divExpr = createBinary(left, tok::TokenType::OP_SLASH, right);
+    ast::ExprStmt* exprStmt2 = ast::makeExprStmt(divExpr /*, 2*/);
     statements.push_back(exprStmt2);
 
     // Unused variable
-    auto* value = createNumberLiteral("100", 3);
-    auto* target = createName("unused");
-    auto* assign = ast::makeAssignmentStmt(target, value /*, 3*/);
+    ast::LiteralExpr* value = createNumberLiteralInteger("100", 3);
+    ast::NameExpr* target = createName("unused");
+    ast::AssignmentStmt* assign = ast::makeAssignmentStmt(target, value /*, 3*/);
     statements.push_back(assign);
 
     analyzer->analyze(statements);
@@ -513,17 +530,17 @@ TEST_F(SemanticAnalyzerTest, ComplexProgram_MultipleIssues)
 TEST_F(SemanticAnalyzerTest, VariableFlowAnalysis)
 {
     // Define variable
-    auto* value1 = createNumberLiteral("10");
-    auto* target1 = createName("x");
-    auto* assign1 = ast::makeAssignmentStmt(target1, value1 /*, 1*/);
+    ast::LiteralExpr* value1 = createNumberLiteralInteger("10");
+    ast::NameExpr* target1 = createName("x");
+    ast::AssignmentStmt* assign1 = ast::makeAssignmentStmt(target1, value1 /*, 1*/);
     statements.push_back(assign1);
 
     // Use variable
-    auto* useExpr = createName("x", 2);
-    auto* value2 = createNumberLiteral("5");
-    auto* binary = createBinary(useExpr, tok::TokenType::OP_PLUS, value2);
-    auto* target2 = createName("y");
-    auto* assign2 = ast::makeAssignmentStmt(target2, binary /*, 2*/);
+    ast::NameExpr* useExpr = createName("x", 2);
+    ast::LiteralExpr* value2 = createNumberLiteralInteger("5");
+    ast::BinaryExpr* binary = createBinary(useExpr, tok::TokenType::OP_PLUS, value2);
+    ast::NameExpr* target2 = createName("y");
+    ast::AssignmentStmt* assign2 = ast::makeAssignmentStmt(target2, binary /*, 2*/);
     statements.push_back(assign2);
 
     analyzer->analyze(statements);
@@ -542,20 +559,20 @@ TEST_F(SemanticAnalyzerTest, VariableFlowAnalysis)
 
 TEST_F(SemanticAnalyzerTest, CallExpression_InfersAnyType)
 {
-    auto* callee = createName("some_function");
+    ast::NameExpr* callee = createName("some_function");
     std::vector<ast::Expr*> args;
     ast::ListExpr* arg_list = ast::makeList(args);
-    auto* call = ast::makeCall(callee, arg_list /*, 1*/);
+    ast::CallExpr* call = ast::makeCall(callee, arg_list /*, 1*/);
 
     EXPECT_EQ(analyzer->inferType(call), SymbolTable::DataType_t::ANY);
 }
 
 TEST_F(SemanticAnalyzerTest, CallWithArguments_AnalyzesAllArgs)
 {
-    auto* callee = createName("print");
-    std::vector<ast::Expr*> args = { createNumberLiteral("1"), createStringLiteral("hello"), createBooleanLiteral("true") };
+    ast::NameExpr* callee = createName("print");
+    std::vector<ast::Expr*> args = { createNumberLiteralInteger("1"), createStringLiteral("hello"), createBooleanLiteral("true") };
     ast::ListExpr* arg_list = ast::makeList(args);
-    auto* call = ast::makeCall(callee, arg_list /*, 1*/);
+    ast::CallExpr* call = ast::makeCall(callee, arg_list /*, 1*/);
 
     EXPECT_NO_THROW(analyzer->analyzeExpr(call));
 }

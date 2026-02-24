@@ -17,7 +17,7 @@ void SourceManager::reset()
         UngetStack_.pop();
 
     if (FileManager_ && FileManager_->buffer().len() > 0) {
-        std::size_t bytes = 0;
+        size_t bytes = 0;
         uint32_t cp = util::decode_utf8_at(FileManager_->buffer(), 0, &bytes);
         Current_ = cp;
         CurrentBytes_ = bytes;
@@ -29,8 +29,8 @@ uint32_t SourceManager::peekChar()
     if (!UngetStack_.empty())
         return UngetStack_.top().ch;
 
-    auto saved = Context_;
-    auto saved_current = Current_;
+    Context saved = Context_;
+    uint32_t saved_current = Current_;
     uint32_t cp = nextChar();
 
     if (cp != BUFFER_END)
@@ -48,7 +48,7 @@ uint32_t SourceManager::currentChar() const
     if (Context_.offset >= FileManager_->buffer().len())
         return BUFFER_END;
 
-    std::size_t bytes = 0;
+    size_t bytes = 0;
     return util::decode_utf8_at(FileManager_->buffer(), Context_.offset, &bytes);
 }
 
@@ -57,7 +57,7 @@ void SourceManager::consumeChar()
     if (Context_.offset >= FileManager_->buffer().len())
         return;
 
-    std::size_t bytes = 0;
+    size_t bytes = 0;
     uint32_t cp = util::decode_utf8_at(FileManager_->buffer(), Context_.offset, &bytes);
     advance(cp, bytes);
 }
@@ -80,7 +80,7 @@ void SourceManager::unget(uint32_t const cp)
     UngetStack_.push(e);
 }
 
-void SourceManager::advance(uint32_t const cp, std::size_t const bytes)
+void SourceManager::advance(uint32_t const cp, size_t const bytes)
 {
     Context_.offset += bytes;
 
@@ -91,7 +91,7 @@ void SourceManager::advance(uint32_t const cp, std::size_t const bytes)
         ++Context_.column;
 }
 
-void SourceManager::rewindPosition_(uint32_t const cp, std::size_t const bytes)
+void SourceManager::rewindPosition_(uint32_t const cp, size_t const bytes)
 {
     if (Context_.offset < bytes)
         throw std::runtime_error("SourceManager: attempted to rewind past beginning of file");
@@ -105,11 +105,11 @@ void SourceManager::rewindPosition_(uint32_t const cp, std::size_t const bytes)
         Context_.column = (Context_.column > 1) ? (Context_.column - 1) : 1;
 }
 
-std::size_t SourceManager::calculateColumnAtOffset(std::size_t const target_offset) const
+size_t SourceManager::calculateColumnAtOffset(size_t const target_offset) const
 {
     StringRef const& buf = FileManager_->buffer();
 
-    std::size_t line_start = target_offset;
+    size_t line_start = target_offset;
     while (line_start > 0) {
         if (buf.data()[line_start - 1] == '\n')
             break;
@@ -117,11 +117,11 @@ std::size_t SourceManager::calculateColumnAtOffset(std::size_t const target_offs
         --line_start;
     }
 
-    std::size_t column = 1;
-    std::size_t pos = line_start;
+    size_t column = 1;
+    size_t pos = line_start;
 
     while (pos < target_offset) {
-        std::size_t bytes = 0;
+        size_t bytes = 0;
         util::decode_utf8_at(buf, pos, &bytes);
         pos += bytes;
         ++column;
