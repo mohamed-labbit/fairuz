@@ -6,7 +6,7 @@ TEST_ARGS=()
 RUN_TESTS=false
 
 for arg in "$@"; do
-    if [[ "$arg" == "-d" ]]; then
+    if [[ "$arg" == "--clean" ]]; then
         CLEAN_BUILD=true
     elif [[ "$arg" == "run" ]]; then
         RUN_TESTS=true
@@ -24,8 +24,6 @@ fi
 
 mkdir -p build
 cd build || exit 1
-
-w
 
 cmake -DCMAKE_C_COMPILER=clang \
       -DCMAKE_CXX_COMPILER=clang++ \
