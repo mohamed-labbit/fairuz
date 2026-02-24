@@ -15,14 +15,16 @@ namespace ast {
 
 class Expr : public ASTNode {
 public:
-    enum class Kind : int { INVALID,
+    enum class Kind : int {
+        INVALID,
         BINARY,
         UNARY,
         LITERAL,
         NAME,
         CALL,
         ASSIGNMENT,
-        LIST };
+        LIST
+    };
 
 protected:
     Kind Kind_ { Kind::INVALID };

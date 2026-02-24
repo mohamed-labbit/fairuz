@@ -8,8 +8,10 @@ namespace ast {
 
 class ASTNode {
 public:
-    enum NodeType { EXPRESSION,
-        STATEMENT };
+    enum NodeType {
+        EXPRESSION,
+        STATEMENT
+    };
 
 private:
     std::size_t Line_ { 0 };

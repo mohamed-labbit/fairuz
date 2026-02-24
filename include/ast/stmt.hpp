@@ -13,7 +13,8 @@ namespace ast {
 
 class Stmt : public ASTNode {
 public:
-    enum class Kind : int { INVALID,
+    enum class Kind : int {
+        INVALID,
         EXPR,
         ASSIGNMENT,
         IF,
@@ -21,7 +22,8 @@ public:
         FOR,
         FUNC,
         RETURN,
-        BLOCK };
+        BLOCK
+    };
 
 protected:
     Kind Kind_;
@@ -292,8 +294,10 @@ public:
 
         if (!Params_)
             Params_ = AST_allocator.make<ListExpr>(std::vector<Expr*> {});
+
         if (!Body_)
             Body_ = AST_allocator.make<BlockStmt>(std::vector<Stmt*> {});
+
         if (!Name_)
             Name_ = AST_allocator.make<NameExpr>("");
     }
@@ -318,7 +322,7 @@ public:
         return Params_;
     }
 
-    BlockStmt* getBody() const
+    BlockStmt const* getBody() const
     {
         return Body_;
     }
@@ -352,9 +356,14 @@ public:
 
     ReturnStmt& operator=(ReturnStmt const&) noexcept = delete;
 
-    Expr* getValue() const
+    Expr const* getValue() const
     {
         return Value_;
+    }
+
+    void setValue(Expr* v)
+    {
+        Value_ = v;
     }
 };
 
