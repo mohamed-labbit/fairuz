@@ -141,7 +141,7 @@ ast::ListExpr* Parser::parseParametersList()
                 return nullptr;
             }
 
-            StringRef param_name = Lexer_.current()->lexeme();
+            StringRef param_name = currentToken()->lexeme();
             advance();
             parameters.push_back(ast::makeName(param_name));
             skipNewlines();
@@ -150,6 +150,9 @@ ast::ListExpr* Parser::parseParametersList()
 
     if (!consume(tok::TokenType::RPAREN, "Expected ')' after parameters"))
         return nullptr;
+
+    if (parameters.empty())
+        return ast::makeList(std::vector<ast::Expr*> {});
 
     return ast::makeList(std::move(parameters));
 }
@@ -169,7 +172,7 @@ ast::Stmt* Parser::parseFunctionDef()
         return nullptr;
     }
 
-    StringRef function_name = Lexer_.current()->lexeme();
+    StringRef function_name = currentToken()->lexeme();
     advance();
 
     ast::ListExpr* parameters_list = parseParametersList();
