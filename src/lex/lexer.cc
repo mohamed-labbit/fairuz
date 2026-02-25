@@ -229,10 +229,11 @@ tok::Token const* Lexer::lexToken()
         }
 
         // separators
+        case u'٬':
         case ',':
         case '.': {
             SourceManager_.consumeChar();
-            tok::Token const* ret = finish(current == ',' ? tok::TokenType::COMMA : tok::TokenType::DOT,
+            tok::Token const* ret = finish(current == ',' || current == u'٬' ? tok::TokenType::COMMA : tok::TokenType::DOT,
                 util::encode_utf8_str(current), line, col);
 
             return ret;
@@ -323,7 +324,9 @@ tok::Token const* Lexer::lexToken()
         case '|':
         case '&':
         case '*':
-        case '/': {
+        case '/':
+        case '%':
+        case u'٪': {
             StringRef operator_str;
             operator_str += util::encode_utf8_str(current);
             SourceManager_.consumeChar();
@@ -526,6 +529,7 @@ tok::Token const* Lexer::lexToken()
             return finish(tok::TokenType::INTEGER, number, line, col);
         }
 
+        diagnostic::engine.panic("Invalid character found : " + static_cast<char>(current));
         return finish(tok::TokenType::INVALID, util::encode_utf8_str(current), line, col);
     }
 
