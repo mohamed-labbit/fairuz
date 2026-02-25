@@ -327,7 +327,7 @@ public:
         return Params_;
     }
 
-    BlockStmt const* getBody() const
+    BlockStmt* getBody() const
     {
         return Body_;
     }
