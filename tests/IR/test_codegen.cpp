@@ -43,22 +43,6 @@ protected:
         env.reset();
     }
 
-    // Helper to create literal expressions
-    ast::LiteralExpr* makeLiteralFloat(double value)
-    {
-        return ast::makeLiteral(ast::LiteralExpr::Type::DECIMAL, StringRef(std::to_string(value).data()));
-    }
-
-    ast::LiteralExpr* makeLiteralInt(int value)
-    {
-        return ast::makeLiteral(ast::LiteralExpr::Type::INTEGER, StringRef(std::to_string(value).data()));
-    }
-
-    ast::LiteralExpr* makeLiteralBool(bool value)
-    {
-        return ast::makeLiteral(ast::LiteralExpr::Type::BOOLEAN, value ? "صحيح " : "خطا");
-    }
-
     // Helper to create call expressions
     ast::CallExpr* makeCall(StringRef const& funcName, std::vector<ast::Expr*> const& args)
     {
