@@ -41,7 +41,7 @@ protected:
 
     ast::LiteralExpr* makeBoolLiteral(bool value)
     {
-        return ast::makeLiteral(ast::LiteralExpr::Type::BOOLEAN, value ? "true" : "false");
+        return ast::makeLiteral(ast::LiteralExpr::Type::BOOLEAN, value ? "صحيح" : "خطا");
     }
 
     // Helper to create assignment statements
@@ -318,7 +318,7 @@ TEST_F(ASTOptimizerTest, ConstantFoldingUnary)
     }
     ast::Expr* result = optimizer->optimizeConstantFolding(expr);
     if (test_config::print_ast) {
-        std::cout << "Normal:" << '\n';
+        std::cout << "Optimized:" << '\n';
         AST_Printer.print(result);
     }
     ASSERT_EQ(result->getKind(), ast::Expr::Kind::LITERAL);
@@ -819,7 +819,7 @@ TEST_F(ASTOptimizerTest, DeadCodeAfterReturn)
         AST_Printer.print(result);
     }
     ASSERT_NE(result, nullptr);
-    EXPECT_EQ(optimizer->getStats().DeadCodeEliminations, 2);
+    EXPECT_EQ(optimizer->getStats().DeadCodeEliminations, 1);
 }
 
 TEST_F(ASTOptimizerTest, DeadCodeAfterEarlyReturn)

@@ -13,9 +13,6 @@ void Compiler::compile(ASTNode const* node)
     if (!node)
         return;
 
-    IR::Environment environment;
-    IR::CodeGenerator evaluator(&environment);
-
     ASTNode::NodeType node_type = node->getNodeType();
 
     if (node_type == ASTNode::NodeType::STATEMENT) [[likely]] {
@@ -84,12 +81,6 @@ void Compiler::compile(ASTNode const* node)
                 return;
             }
 
-            IR::Value value = evaluator.eval(literal_expr);
-
-            if (value.isInt() || value.isFloat())
-            {
-                emitConstant(value);
-            }
         } break;
         case Expr::Kind::NAME:
             break;

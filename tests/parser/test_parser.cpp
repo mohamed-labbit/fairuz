@@ -1152,7 +1152,7 @@ TEST_F(ParserTest, ParseWhileLoop)
     EXPECT_EQ(condition_expr->getOperator(), tok::TokenType::OP_EQ);
 
     // Check body (using getBody() instead of getBlock())
-    ast::BlockStmt* block = dynamic_cast<ast::BlockStmt*>(while_stmt->getBlock());
+    const ast::BlockStmt* block = dynamic_cast<const ast::BlockStmt*>(while_stmt->getBlock());
     ASSERT_NE(block, nullptr) << "Should parse while loop body block";
 
     // Check block has statements
@@ -1215,7 +1215,7 @@ TEST_F(ParserTest, ParseComplexeIfStatement)
     EXPECT_EQ(condition_expr->getOperator(), tok::TokenType::OP_EQ);
 
     // Check body (using getBody() instead of getBlock())
-    ast::BlockStmt* block = dynamic_cast<ast::BlockStmt*>(while_stmt->getBlock());
+    const ast::BlockStmt* block = dynamic_cast<const ast::BlockStmt*>(while_stmt->getBlock());
     ASSERT_NE(block, nullptr) << "Should parse while loop body block";
 
     // Check block has statements

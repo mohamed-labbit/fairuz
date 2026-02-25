@@ -3,6 +3,7 @@
 #include "../../IR/value.hpp"
 #include "../opcode/chunk.hpp"
 #include "../opcode/opcode.hpp"
+#include "../../ast/ast.hpp"
 
 class ASTNode;
 
@@ -11,7 +12,7 @@ namespace runtime {
 
 class Compiler {
 public:
-    void compile(const ASTNode* node);
+    void compile(const ast::ASTNode* node);
 
 private:
     OpCodeChunk CurrentChunk_;

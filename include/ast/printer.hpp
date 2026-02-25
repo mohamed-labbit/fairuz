@@ -59,14 +59,14 @@ private:
 
         case Expr::Kind::UNARY: {
             UnaryExpr const* u = static_cast<UnaryExpr const*>(e);
-            std::cout << color("Unary", Color::BOLD) << " " << tok::toString(u->getOperator()) << "\n";
+            std::cout << color("Unary", Color::BOLD) << " " << tok::Token::toString(u->getOperator()) << "\n";
             printExpr(u->getOperand(), { p.indent + pipe(p.last), true });
             break;
         }
 
         case Expr::Kind::BINARY: {
             BinaryExpr const* b = static_cast<BinaryExpr const*>(e);
-            std::cout << color("Binary", Color::BOLD) << " " << tok::toString(b->getOperator()) << "\n";
+            std::cout << color("Binary", Color::BOLD) << " " << tok::Token::toString(b->getOperator()) << "\n";
             printExpr(b->getLeft(), { p.indent + pipe(p.last), false });
             printExpr(b->getRight(), { p.indent + pipe(p.last), true });
             break;

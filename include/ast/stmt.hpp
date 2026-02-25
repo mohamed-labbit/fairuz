@@ -220,9 +220,14 @@ public:
         return Condition_;
     }
 
-    BlockStmt* getBlock() const
+    BlockStmt const* getBlock() const
     {
         return Block_;
+    }
+
+    void setBlock(BlockStmt* b)
+    {
+        Block_ = b;
     }
 
     BlockStmt*& getBlockMutable()
@@ -363,7 +368,7 @@ static constexpr Stmt* makeStmt()
     return AST_allocator.make<Stmt>();
 }
 
-static constexpr BlockStmt* makeBlock(std::vector<Stmt*> stmts)
+static constexpr BlockStmt* makeBlock(std::vector<Stmt*> stmts = {})
 {
     return AST_allocator.make<BlockStmt>(stmts);
 }
