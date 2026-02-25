@@ -13,13 +13,15 @@ namespace parser {
 class SemanticAnalyzer {
 public:
     struct Issue {
-        enum class Severity { ERROR,
+        enum class Severity {
+            ERROR,
             WARNING,
-            INFO };
+            INFO
+        };
 
         Severity severity;
         StringRef message;
-        std::int32_t line;
+        int32_t line;
         StringRef suggestion;
     };
 
@@ -32,7 +34,7 @@ private:
 public:
     SymbolTable::DataType_t inferType(ast::Expr const* expr);
 
-    void reportIssue(Issue::Severity sev, StringRef const& msg, std::int32_t line, StringRef const& sugg = "");
+    void reportIssue(Issue::Severity sev, StringRef const& msg, int32_t line, StringRef const& sugg = "");
 
     void analyzeExpr(ast::Expr const* expr);
     void analyzeStmt(ast::Stmt const* stmt);

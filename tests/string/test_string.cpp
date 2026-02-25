@@ -34,7 +34,7 @@ TEST_F(StringRefTest, DefaultConstructor)
 
 TEST_F(StringRefTest, SizeConstructor_Zero)
 {
-    StringRef s(static_cast<std::size_t>(0));
+    StringRef s(static_cast<size_t>(0));
     EXPECT_TRUE(s.empty());
     EXPECT_EQ(s.len(), 0);
 }
@@ -139,7 +139,7 @@ TEST_F(StringRefTest, MoveConstructor_NonEmpty)
 {
     StringRef s1("Hello");
     char const* old_ptr = s1.data();
-    std::size_t old_len = s1.len();
+    size_t old_len = s1.len();
 
     StringRef s2(std::move(s1));
 
@@ -326,7 +326,7 @@ TEST_F(StringRefTest, Expand_FromEmpty)
 TEST_F(StringRefTest, Expand_AlreadyLargeEnough)
 {
     StringRef s(100);
-    std::size_t old_cap = s.cap();
+    size_t old_cap = s.cap();
     s.expand(50);
     EXPECT_EQ(s.cap(), old_cap); // Should not change
 }
@@ -904,7 +904,7 @@ TEST_F(StringRefTest, ToDouble_InvalidFormat)
 TEST_F(StringRefTest, ToDouble_WithPosition)
 {
     StringRef s("123.456abc");
-    std::size_t pos = 0;
+    size_t pos = 0;
     double result = s.toDouble(&pos);
     EXPECT_DOUBLE_EQ(result, 123.456);
     EXPECT_GT(pos, 0);
@@ -1012,8 +1012,8 @@ TEST_F(StringRefTest, Stress_ManySubstrings)
     StringRef s("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
     std::vector<StringRef> subs;
 
-    for (std::size_t i = 0; i < s.len(); i++) {
-        for (std::size_t j = i; j < s.len(); j++) {
+    for (size_t i = 0; i < s.len(); i++) {
+        for (size_t j = i; j < s.len(); j++) {
             subs.push_back(s.substr(i, j));
         }
     }
@@ -1039,14 +1039,12 @@ TEST_F(StringRefTest, Stress_RandomOperations)
             s.clear();
             break;
         case 2: // Erase
-            if (!s.empty()) {
+            if (!s.empty())
                 s.erase(0);
-            }
             break;
         case 3: // Truncate
-            if (!s.empty()) {
+            if (!s.empty())
                 s.truncate(s.len() / 2);
-            }
             break;
         case 4: // Copy
         {
@@ -1075,9 +1073,8 @@ TEST_F(StringRefTest, EdgeCase_MaxSizeString)
     // Test with a reasonably large string
     size_t const large_size = 1000000;
     StringRef s(large_size);
-    for (size_t i = 0; i < 100; i++) {
+    for (size_t i = 0; i < 100; i++)
         s += 'A';
-    }
     EXPECT_EQ(s.len(), 100);
 }
 
@@ -1103,9 +1100,8 @@ TEST_F(StringRefTest, EdgeCase_SurrogatesPairs)
 TEST_F(StringRefTest, EdgeCase_AllZeros)
 {
     StringRef s(10);
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 10; i++)
         s += char { 0 };
-    }
     EXPECT_EQ(s.len(), 10);
 }
 
@@ -1122,9 +1118,8 @@ TEST_F(StringRefTest, EdgeCase_HighUnicodeValues)
 
 TEST_F(StringRefTest, NoLeak_MultipleConstructDestruct)
 {
-    for (int i = 0; i < 1000; i++) {
+    for (int i = 0; i < 1000; i++)
         StringRef s("Test String");
-    }
     // Valgrind or AddressSanitizer will catch leaks
     EXPECT_TRUE(true);
 }
@@ -1156,9 +1151,8 @@ TEST_F(StringRefTest, Performance_AppendChars)
 
     StringRef s;
     s.reserve(10000);
-    for (int i = 0; i < 10000; i++) {
+    for (int i = 0; i < 10000; i++)
         s += char('A');
-    }
 
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);

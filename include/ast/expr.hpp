@@ -159,10 +159,17 @@ public:
 
 class LiteralExpr : public Expr {
 public:
-    enum class Type { NUMBER,
+    enum class Type {
+        INTEGER,
+        DECIMAL,
+        HEX,
+        OCTAL,
+        BINARY,
+
         STRING,
         BOOLEAN,
-        NONE };
+        NONE
+    };
 
 private:
     Type Type_ { Type::NONE };
@@ -199,7 +206,11 @@ public:
 
     bool isNumeric() const
     {
-        return Type_ == Type::NUMBER;
+        return Type_ == Type::INTEGER
+            || Type_ == Type::DECIMAL
+            || Type_ == Type::HEX
+            || Type_ == Type::OCTAL
+            || Type_ == Type::BINARY;
     }
 
     float toNumber() const

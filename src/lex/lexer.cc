@@ -20,7 +20,7 @@ Lexer::Lexer(FileManager* fm)
     util::configureLocale();
 }
 
-Lexer::Lexer(std::vector<tok::Token const*>& seq, std::size_t const s)
+Lexer::Lexer(std::vector<tok::Token const*>& seq, size_t const s)
     : TokStream_(seq)
     , TokIndex_(0)
     , IndentSize_(4)
@@ -34,7 +34,7 @@ Lexer::Lexer(std::vector<tok::Token const*>& seq, std::size_t const s)
 
 tok::Token const* Lexer::lexToken()
 {
-    auto finish = [this](tok::TokenType tt, StringRef str, std::size_t line, std::size_t col) {
+    auto finish = [this](tok::TokenType tt, StringRef str, size_t line, size_t col) {
         tok::Token const* ret = make_token(tt, str, line, col);
         store(ret);
         return TokStream_.back();
@@ -46,7 +46,7 @@ tok::Token const* Lexer::lexToken()
         return TokStream_.back();
     }
 
-    auto nextLine = [this](std::size_t const& line, std::size_t const& col) {
+    auto nextLine = [this](size_t const& line, size_t const& col) {
         uint32_t current = SourceManager_.currentChar();
 
         if (AtBOL_) {
@@ -137,8 +137,8 @@ tok::Token const* Lexer::lexToken()
     };
 
     for (;;) {
-        std::size_t line = SourceManager_.getLineNumber();
-        std::size_t col = SourceManager_.getColumnNumber();
+        size_t line = SourceManager_.getLineNumber();
+        size_t col = SourceManager_.getColumnNumber();
 
         uint32_t current = SourceManager_.currentChar();
         if (current == BUFFER_END)
@@ -239,42 +239,43 @@ tok::Token const* Lexer::lexToken()
         }
 
         // identifiers
-        case 0x0621:
-        case 0x0622:
-        case 0x0623:
-        case 0x0624:
-        case 0x0625:
-        case 0x0626:
-        case 0x0627:
-        case 0x0628:
-        case 0x0629:
-        case 0x062A:
-        case 0x062B:
-        case 0x062C:
-        case 0x062D:
-        case 0x062E:
-        case 0x062F:
-        case 0x0630:
-        case 0x0631:
-        case 0x0632:
-        case 0x0633:
-        case 0x0634:
-        case 0x0635:
-        case 0x0636:
-        case 0x0637:
-        case 0x0638:
-        case 0x0639:
-        case 0x063A:
-        case 0x0641:
-        case 0x0642:
-        case 0x0643:
-        case 0x0644:
-        case 0x0645:
-        case 0x0646:
-        case 0x0647:
-        case 0x0648:
-        case 0x0649:
-        case 0x064A: {
+        case 0x0621: // ء (Hamza)
+        case 0x0622: // آ (Alef with madda above)
+        case 0x0623: // أ (Alef with hamza above)
+        case 0x0624: // ؤ (Waw with hamza above)
+        case 0x0625: // إ (Alef with hamza below)
+        case 0x0626: // ئ (Yeh with hamza above)
+        case 0x0627: // ا (Alef)
+        case 0x0628: // ب (Ba)
+        case 0x0629: // ة (Ta marbuta)
+        case 0x062A: // ت (Ta)
+        case 0x062B: // ث (Tha)
+        case 0x062C: // ج (Jim)
+        case 0x062D: // ح (Ha)
+        case 0x062E: // خ (Kha)
+        case 0x062F: // د (Dal)
+        case 0x0630: // ذ (Dhal)
+        case 0x0631: // ر (Ra)
+        case 0x0632: // ز (Zain)
+        case 0x0633: // س (Sin)
+        case 0x0634: // ش (Shin)
+        case 0x0635: // ص (Sad)
+        case 0x0636: // ض (Dad)
+        case 0x0637: // ط (Ta)
+        case 0x0638: // ظ (Dha)
+        case 0x0639: // ع (Ain)
+        case 0x063A: // غ (Ghain)
+        case 0x0641: // ف (Fa)
+        case 0x0642: // ق (Qaf)
+        case 0x0643: // ك (Kaf)
+        case 0x0644: // ل (Lam)
+        case 0x0645: // م (Mim)
+        case 0x0646: // ن (Nun)
+        case 0x0647: // ه (Ha)
+        case 0x0648: // و (Waw)
+        case 0x0649: // ى (Alef maqsura)
+        case 0x064A: // ي (Ya)
+        {
             StringRef identifier;
 
             while (util::isalphaArabic(current) || current == '_' || ::isdigit(current)) {
@@ -288,6 +289,28 @@ tok::Token const* Lexer::lexToken()
                 tt = tok::keywords.at(identifier);
 
             return finish(tt, identifier, line, col);
+        }
+
+        case u'٠': // 0
+        case u'١': // 1
+        case u'٢': // 2
+        case u'٣': // 3
+        case u'٤': // 4
+        case u'٥': // 5
+        case u'٦': // 6
+        case u'٧': // 7
+        case u'٨': // 8
+        case u'٩': // 9
+        {
+            StringRef digits;
+
+            // only accept integer type for now
+            while (util::isArabDigit(current)) {
+                digits += util::encode_utf8_str(current);
+                SourceManager_.nextChar();
+            }
+
+            return finish(tok::TokenType::INTEGER, digits, line, col);
         }
 
         // operators
@@ -350,9 +373,8 @@ tok::Token const* Lexer::lexToken()
                     symbol += util::encode_utf8_str('=');
                     SourceManager_.consumeChar();
                     tt = tok::TokenType::OP_ASSIGN;
-                } else {
+                } else
                     tt = tok::TokenType::COLON;
-                }
             } break;
             default:
                 tt = tok::TokenType::INVALID;
@@ -399,7 +421,7 @@ tok::Token const* Lexer::lexToken()
                     if (!has_digits)
                         diagnostic::engine.panic("Invalid hex literal, it has no digits after 0x");
 
-                    return finish(tok::TokenType::NUMBER, number, line, col);
+                    return finish(tok::TokenType::HEX, number, line, col);
                 }
                 // octal
                 else if (next == 'o' || next == 'O') {
@@ -428,7 +450,7 @@ tok::Token const* Lexer::lexToken()
                     if (!has_digits)
                         diagnostic::engine.panic("Invalid octal literal: no digits after 0o");
 
-                    return finish(tok::TokenType::NUMBER, number, line, col);
+                    return finish(tok::TokenType::OCTAL, number, line, col);
                 }
                 // binary
                 else if (next == 'b' || next == 'B') {
@@ -457,7 +479,7 @@ tok::Token const* Lexer::lexToken()
                     if (!has_digits)
                         diagnostic::engine.panic("Invalid binary literal: no digits after 0b");
 
-                    return finish(tok::TokenType::NUMBER, number, line, col);
+                    return finish(tok::TokenType::BINARY, number, line, col);
                 }
                 // If it's just '0' followed by regular digits or '.', fall through to decimal parsing
             }
@@ -498,10 +520,10 @@ tok::Token const* Lexer::lexToken()
                         break;
                 }
 
-                return finish(tok::TokenType::FLOAT, number, line, col);
+                return finish(tok::TokenType::DECIMAL, number, line, col);
             }
 
-            return finish(tok::TokenType::NUMBER, number, line, col);
+            return finish(tok::TokenType::INTEGER, number, line, col);
         }
 
         return finish(tok::TokenType::INVALID, util::encode_utf8_str(current), line, col);
@@ -511,8 +533,8 @@ tok::Token const* Lexer::lexToken()
         return TokStream_.back();
 
     // Emit any remaining dedents at EOF
-    std::size_t last_line = SourceManager_.getLineNumber();
-    std::size_t last_col = SourceManager_.getColumnNumber();
+    size_t last_line = SourceManager_.getLineNumber();
+    size_t last_col = SourceManager_.getColumnNumber();
 
     while (IndentLevel_ > 0) {
         --IndentLevel_;
@@ -571,7 +593,7 @@ tok::Token const* Lexer::current() const
     return nullptr;
 }
 
-tok::Token const* Lexer::peek(std::size_t n)
+tok::Token const* Lexer::peek(size_t n)
 {
     while (TokIndex_ + n >= TokStream_.size()) {
         if (!TokStream_.empty() && TokStream_.back()->type() == tok::TokenType::ENDMARKER)

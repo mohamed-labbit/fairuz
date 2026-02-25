@@ -72,7 +72,7 @@ TEST_F(ParserTest, ParseNumberLiteral)
         AST_Printer.print(literal);
 
     ASSERT_NE(literal, nullptr);
-    EXPECT_EQ(literal->getType(), ast::LiteralExpr::Type::NUMBER);
+    EXPECT_EQ(literal->getType(), ast::LiteralExpr::Type::INTEGER);
 }
 
 TEST_F(ParserTest, ParseStringLiteral)
@@ -144,7 +144,7 @@ TEST_F(ParserTest, ParseParenthesizedNumberLiteral)
         AST_Printer.print(literal);
 
     ASSERT_NE(literal, nullptr);
-    EXPECT_EQ(literal->getType(), ast::LiteralExpr::Type::NUMBER);
+    EXPECT_EQ(literal->getType(), ast::LiteralExpr::Type::INTEGER);
 }
 
 // Name/Identifier Expression Tests
@@ -446,7 +446,7 @@ TEST_F(ParserTest, ParseComplexExpression)
     ast::LiteralExpr* left_lit = dynamic_cast<ast::LiteralExpr*>(left_expr);
 
     ASSERT_NE(left_lit, nullptr) << "Left should be a LiteralExpr";
-    EXPECT_EQ(left_lit->getType(), ast::LiteralExpr::Type::NUMBER);
+    EXPECT_EQ(left_lit->getType(), ast::LiteralExpr::Type::INTEGER);
     EXPECT_EQ(left_lit->getValue(), "2");
 
     // Check right side: should be BinaryExpr(3, *, 4)
@@ -620,6 +620,7 @@ TEST_F(ParserTest, ParseComplexFunctionCall)
 
     ast::NameExpr* first_lhs_expr = dynamic_cast<ast::NameExpr*>(first_lhs);
     ast::NameExpr* first_rhs_expr = dynamic_cast<ast::NameExpr*>(first_rhs);
+
     StringRef first_lhs_name = first_lhs_expr->getValue();
     StringRef first_rhs_name = first_rhs_expr->getValue();
 
@@ -640,6 +641,7 @@ TEST_F(ParserTest, ParseComplexFunctionCall)
 
     ast::NameExpr* second_lhs_expr = dynamic_cast<ast::NameExpr*>(second_lhs);
     ast::NameExpr* second_rhs_expr = dynamic_cast<ast::NameExpr*>(second_rhs);
+
     StringRef second_lhs_name = second_lhs_expr->getValue();
     StringRef second_rhs_name = second_rhs_expr->getValue();
 
@@ -836,7 +838,7 @@ TEST_F(ParserTest, ParseVeryLongIdentifier)
 
     // Verify it's all valid identifier characters
 
-    // for (std::size_t i = 0; i < value.len() && value[i]; ++i)
+    // for (size_t i = 0; i < value.len() && value[i]; ++i)
     // EXPECT_TRUE(::isalnum(util::encode_utf8_str(value[i])[0] || value[i] == '_' || value[i] > 127)) << "All characters should be valid identifier chars";
 
     if (test_config::print_ast)
@@ -1150,7 +1152,7 @@ TEST_F(ParserTest, ParseWhileLoop)
     EXPECT_EQ(condition_expr->getOperator(), tok::TokenType::OP_EQ);
 
     // Check body (using getBody() instead of getBlock())
-    ast::BlockStmt* block = dynamic_cast<ast::BlockStmt*>(while_stmt->getBlock());
+    const ast::BlockStmt* block = dynamic_cast<const ast::BlockStmt*>(while_stmt->getBlock());
     ASSERT_NE(block, nullptr) << "Should parse while loop body block";
 
     // Check block has statements
@@ -1213,7 +1215,7 @@ TEST_F(ParserTest, ParseComplexeIfStatement)
     EXPECT_EQ(condition_expr->getOperator(), tok::TokenType::OP_EQ);
 
     // Check body (using getBody() instead of getBlock())
-    ast::BlockStmt* block = dynamic_cast<ast::BlockStmt*>(while_stmt->getBlock());
+    const ast::BlockStmt* block = dynamic_cast<const ast::BlockStmt*>(while_stmt->getBlock());
     ASSERT_NE(block, nullptr) << "Should parse while loop body block";
 
     // Check block has statements

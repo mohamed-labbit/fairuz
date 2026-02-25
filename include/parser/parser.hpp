@@ -13,7 +13,7 @@ namespace parser {
 
 class ParseError : public std::runtime_error {
 public:
-    std::int32_t Line_, Column_;
+    int32_t Line_, Column_;
     StringRef Context_;
     std::vector<StringRef> Suggestions_;
 
@@ -59,7 +59,7 @@ public:
         Lexer_.next();
     }
 
-    explicit Parser(std::vector<tok::Token> seq, std::optional<std::size_t> s = std::nullopt);
+    explicit Parser(std::vector<tok::Token> seq, std::optional<size_t> s = std::nullopt);
 
     std::vector<ast::Stmt*> parseProgram();
 
@@ -91,25 +91,15 @@ public:
 
     ast::Expr* parseParenthesizedExpr();
 
-    ast::Expr* parseExpression()
-    {
-        return parseAssignmentExpr();
-    }
+    ast::Expr* parseExpression();
 
     ast::Expr* parseAssignmentExpr();
 
     ast::Expr* parseListLiteral();
 
-    ast::Expr* parseConditionalExpr()
-    {
-        return parseLogicalExpr();
-        /// TODO: Ternary?
-    }
+    ast::Expr* parseConditionalExpr();
 
-    ast::Expr* parseLogicalExpr()
-    {
-        return parseLogicalExprPrecedence(0);
-    }
+    ast::Expr* parseLogicalExpr();
 
     ast::Expr* parseLogicalExprPrecedence(unsigned int min_precedence);
 
@@ -117,10 +107,7 @@ public:
 
     ast::Expr* parseComparisonExpr();
 
-    ast::Expr* parseBinaryExpr()
-    {
-        return parseBinaryExprPrecedence(0);
-    }
+    ast::Expr* parseBinaryExpr();
 
     ast::Expr* parseUnaryExpr();
 
@@ -128,33 +115,21 @@ public:
 
     ast::Expr* parsePostfixExpr();
 
-    /// TODO: not sure if these should be private
-    bool weDone() const
-    {
-        return Lexer_.current()->is(tok::TokenType::ENDMARKER);
-    }
+    bool weDone() const;
 
-    bool check(tok::TokenType type)
-    {
-        return Lexer_.current()->is(type);
-    }
+    bool check(tok::TokenType type);
 
-    tok::Token const* currentToken()
-    {
-        return Lexer_.current();
-    }
+    tok::Token const* currentToken();
 
-    ast::Expr* parse()
-    {
-        return parseExpression();
-    }
+    ast::Expr* parse();
 
     ast::BlockStmt* parseIndentedBlock();
 
 private:
     lex::Lexer Lexer_;
+    bool Expecting_ { false };
 
-    tok::Token const* peek(std::size_t offset = 1)
+    tok::Token const* peek(size_t offset = 1)
     {
         return Lexer_.peek(offset);
     }
@@ -183,7 +158,7 @@ private:
             ;
     }
 
-    StringRef getSourceLine(std::size_t line)
+    StringRef getSourceLine(size_t line)
     {
         return Lexer_.getSourceLine(line);
     }

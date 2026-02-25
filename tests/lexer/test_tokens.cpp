@@ -47,7 +47,7 @@ TEST(LexerTest, RecognizesInteger)
     lex::FileManager file_manager(test_cases_path / "recognizes_integer.txt");
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
-    tok::Token const* expected = lexer.make_token(tok::TokenType::NUMBER, "123", 1, 1);
+    tok::Token const* expected = lexer.make_token(tok::TokenType::INTEGER, "123", 1, 1);
     EXPECT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0]->type(), tok::TokenType::BEGINMARKER);
     EXPECT_EQ(*tokens[1], *expected);
@@ -59,7 +59,7 @@ TEST(LexerTest, RecognizesFloat)
     lex::FileManager file_manager(test_cases_path / "recognizes_float.txt");
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
-    tok::Token const* expected = lexer.make_token(tok::TokenType::FLOAT, "123.456", 1, 1);
+    tok::Token const* expected = lexer.make_token(tok::TokenType::DECIMAL, "123.456", 1, 1);
     EXPECT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0]->type(), tok::TokenType::BEGINMARKER);
     EXPECT_EQ(*tokens[1], *expected);
@@ -136,13 +136,13 @@ TEST(LexerTest, RecognizesExpression00)
     std::vector<tok::Token const*> tokens = lexer.tokenize();
     std::vector<tok::Token const*> expected = {
         lexer.make_token(tok::TokenType::BEGINMARKER, "", 1, 1), lexer.make_token(tok::TokenType::IDENTIFIER, "س", 1, 1),
-        lexer.make_token(tok::TokenType::OP_EQ, "=", 1, 3), lexer.make_token(tok::TokenType::NUMBER, "42", 1, 5),
+        lexer.make_token(tok::TokenType::OP_EQ, "=", 1, 3), lexer.make_token(tok::TokenType::INTEGER, "42", 1, 5),
         lexer.make_token(tok::TokenType::OP_PLUS, "+", 1, 8), lexer.make_token(tok::TokenType::IDENTIFIER, "ي", 1, 10),
         lexer.make_token(tok::TokenType::ENDMARKER, "", 1, 10)
     };
     EXPECT_EQ(tokens.size(), 7);
     EXPECT_EQ(tokens[0]->type(), tok::TokenType::BEGINMARKER);
-    for (std::size_t i = 0; i < tokens.size(); ++i)
+    for (size_t i = 0; i < tokens.size(); ++i)
         EXPECT_EQ(*tokens[i], *expected[i]);
 }
 
@@ -156,7 +156,7 @@ TEST(LexerTest, RecognizesStmt00)
         lexer.make_token(tok::TokenType::IDENTIFIER, "د", 1, 9), lexer.make_token(tok::TokenType::COLON, ":", 1, 10),
         lexer.make_token(tok::TokenType::ENDMARKER, "", 1, 10) };
     EXPECT_EQ(tokens.size(), expected.size());
-    for (std::size_t i = 0; i < tokens.size(); ++i)
+    for (size_t i = 0; i < tokens.size(); ++i)
         EXPECT_EQ(*tokens[i], *expected[i]);
 }
 
@@ -172,7 +172,7 @@ TEST(LexerTest, RecognizesStmt01)
         lexer.make_token(tok::TokenType::ENDMARKER, "", 1, 13)
     };
     EXPECT_EQ(tokens.size(), expected.size());
-    for (std::size_t i = 0; i < tokens.size(); ++i)
+    for (size_t i = 0; i < tokens.size(); ++i)
         EXPECT_EQ(*tokens[i], *expected[i]);
 }
 
@@ -188,7 +188,7 @@ TEST(LexerTest, RecognizesStmt02)
         lexer.make_token(tok::TokenType::ENDMARKER, "", 1, 11)
     };
     EXPECT_EQ(tokens.size(), expected.size());
-    for (std::size_t i = 0; i < tokens.size(); ++i)
+    for (size_t i = 0; i < tokens.size(); ++i)
         EXPECT_EQ(*tokens[i], *expected[i]);
 }
 
@@ -205,7 +205,7 @@ TEST(LexerTest, RecognizesStmt03)
         lexer.make_token(tok::TokenType::ENDMARKER, "", 1, 8),
     };
     EXPECT_EQ(tokens.size(), expected.size());
-    for (std::size_t i = 0; i < tokens.size(); ++i)
+    for (size_t i = 0; i < tokens.size(); ++i)
         EXPECT_EQ(*tokens[i], *expected[i]);
 }
 
@@ -219,16 +219,16 @@ TEST(LexerTest, RecognizesStmt04)
         lexer.make_token(tok::TokenType::KW_IF, "اذا", 1, 1),
         lexer.make_token(tok::TokenType::IDENTIFIER, "ا", 1, 5),
         lexer.make_token(tok::TokenType::OP_EQ, "=", 1, 7),
-        lexer.make_token(tok::TokenType::NUMBER, "3", 1, 9),
+        lexer.make_token(tok::TokenType::INTEGER, "3", 1, 9),
         lexer.make_token(tok::TokenType::COLON, ":", 1, 10),
         lexer.make_token(tok::TokenType::NEWLINE, "\n", 1, 11),
         lexer.make_token(tok::TokenType::INDENT, ""),
-        lexer.make_token(tok::TokenType::KW_RETURN, "اخرج", 2, 5),
+        lexer.make_token(tok::TokenType::KW_RETURN, "ارجع", 2, 5),
         lexer.make_token(tok::TokenType::DEDENT),
         lexer.make_token(tok::TokenType::ENDMARKER, "", 2, 8)
     };
 
     EXPECT_EQ(tokens.size(), expected.size());
-    for (std::size_t i = 0; i < tokens.size(); ++i)
+    for (size_t i = 0; i < tokens.size(); ++i)
         EXPECT_EQ(*tokens[i], *expected[i]);
 }

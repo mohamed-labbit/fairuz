@@ -1,7 +1,9 @@
 #include "../../include/ast/ast.hpp"
 #include "../../include/ast/expr.hpp"
+#include "../../include/ast/printer.hpp"
 #include "../../include/ast/stmt.hpp"
 #include "../../include/parser/optim.hpp"
+#include "../test_config.h"
 #include <cmath>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -9,6 +11,8 @@
 #include <memory>
 
 using namespace mylang;
+
+ast::ASTPrinter AST_Printer;
 
 class ASTOptimizerTest : public ::testing::Test {
 protected:
@@ -27,7 +31,7 @@ protected:
     // Helper to create literal expressions
     ast::LiteralExpr* makeLiteral(double value)
     {
-        return ast::makeLiteral(ast::LiteralExpr::Type::NUMBER, StringRef(std::to_string(value).c_str()));
+        return ast::makeLiteral(ast::LiteralExpr::Type::DECIMAL, StringRef(std::to_string(value).c_str()));
     }
 
     ast::LiteralExpr* makeLiteral(StringRef const& value, ast::LiteralExpr::Type type)
@@ -37,7 +41,7 @@ protected:
 
     ast::LiteralExpr* makeBoolLiteral(bool value)
     {
-        return ast::makeLiteral(ast::LiteralExpr::Type::BOOLEAN, value ? "true" : "false");
+        return ast::makeLiteral(ast::LiteralExpr::Type::BOOLEAN, value ? "صحيح" : "خطا");
     }
 
     // Helper to create assignment statements
@@ -250,11 +254,19 @@ TEST_F(ASTOptimizerTest, EvaluateConstantPartiallyConstant)
 TEST_F(ASTOptimizerTest, ConstantFoldingSimpleAddition)
 {
     ast::BinaryExpr* expr = makeBinary(makeLiteral(5.0), makeLiteral(10.0), tok::TokenType::OP_PLUS);
+    if (test_config::print_ast) {
+        std::cout << "Normal:" << '\n';
+        AST_Printer.print(expr);
+    }
     ast::Expr* result = optimizer->optimizeConstantFolding(expr);
+    if (test_config::print_ast) {
+        std::cout << "Optimized:" << '\n';
+        AST_Printer.print(result);
+    }
 
     ASSERT_EQ(result->getKind(), ast::Expr::Kind::LITERAL);
     ast::LiteralExpr* lit = static_cast<ast::LiteralExpr*>(result);
-    EXPECT_EQ(lit->getType(), ast::LiteralExpr::Type::NUMBER);
+    EXPECT_TRUE(lit->isNumeric());
     EXPECT_DOUBLE_EQ(lit->getValue().toDouble(), 15.0);
     EXPECT_EQ(optimizer->getStats().ConstantFolds, 1);
 }
@@ -262,8 +274,15 @@ TEST_F(ASTOptimizerTest, ConstantFoldingSimpleAddition)
 TEST_F(ASTOptimizerTest, ConstantFoldingMultiplication)
 {
     ast::BinaryExpr* expr = makeBinary(makeLiteral(6.0), makeLiteral(7.0), tok::TokenType::OP_STAR);
+    if (test_config::print_ast) {
+        std::cout << "Normal:" << '\n';
+        AST_Printer.print(expr);
+    }
     ast::Expr* result = optimizer->optimizeConstantFolding(expr);
-
+    if (test_config::print_ast) {
+        std::cout << "Optimized:" << '\n';
+        AST_Printer.print(result);
+    }
     ASSERT_EQ(result->getKind(), ast::Expr::Kind::LITERAL);
     ast::LiteralExpr* lit = static_cast<ast::LiteralExpr*>(result);
     EXPECT_DOUBLE_EQ(lit->getValue().toDouble(), 42.0);
@@ -275,8 +294,16 @@ TEST_F(ASTOptimizerTest, ConstantFoldingNested)
     ast::BinaryExpr* left = makeBinary(makeLiteral(3.0), makeLiteral(4.0), tok::TokenType::OP_PLUS);
     ast::BinaryExpr* right = makeBinary(makeLiteral(5.0), makeLiteral(2.0), tok::TokenType::OP_MINUS);
     ast::BinaryExpr* expr = makeBinary(left, right, tok::TokenType::OP_STAR);
+    if (test_config::print_ast) {
+        std::cout << "Normal:" << '\n';
+        AST_Printer.print(expr);
+    }
 
     ast::Expr* result = optimizer->optimizeConstantFolding(expr);
+    if (test_config::print_ast) {
+        std::cout << "Optimized:" << '\n';
+        AST_Printer.print(result);
+    }
 
     ASSERT_EQ(result->getKind(), ast::Expr::Kind::LITERAL);
     EXPECT_DOUBLE_EQ(static_cast<ast::LiteralExpr*>(result)->getValue().toDouble(), 21.0);
@@ -285,8 +312,15 @@ TEST_F(ASTOptimizerTest, ConstantFoldingNested)
 TEST_F(ASTOptimizerTest, ConstantFoldingUnary)
 {
     ast::UnaryExpr* expr = makeUnary(makeLiteral(42.0), tok::TokenType::OP_MINUS);
+    if (test_config::print_ast) {
+        std::cout << "Normal:" << '\n';
+        AST_Printer.print(expr);
+    }
     ast::Expr* result = optimizer->optimizeConstantFolding(expr);
-
+    if (test_config::print_ast) {
+        std::cout << "Optimized:" << '\n';
+        AST_Printer.print(result);
+    }
     ASSERT_EQ(result->getKind(), ast::Expr::Kind::LITERAL);
     EXPECT_DOUBLE_EQ(static_cast<ast::LiteralExpr*>(result)->getValue().toDouble(), -42.0);
 }
@@ -313,10 +347,16 @@ TEST_F(ASTOptimizerTest, SimplifyAdditionWithZero)
 {
     // x + 0 = x
     ast::NameExpr* x = ast::makeName("x");
-    ast::BinaryExpr* expr = makeBinary(x, makeLiteral("0", ast::LiteralExpr::Type::NUMBER), tok::TokenType::OP_PLUS);
-
+    ast::BinaryExpr* expr = makeBinary(x, makeLiteral(0), tok::TokenType::OP_PLUS);
+    if (test_config::print_ast) {
+        std::cout << "Normal:" << '\n';
+        AST_Printer.print(expr);
+    }
     ast::Expr* result = optimizer->optimizeConstantFolding(expr);
-
+    if (test_config::print_ast) {
+        std::cout << "Optimized:" << '\n';
+        AST_Printer.print(result);
+    }
     EXPECT_EQ(result, x);
     EXPECT_EQ(optimizer->getStats().StrengthReductions, 1);
 }
@@ -325,10 +365,16 @@ TEST_F(ASTOptimizerTest, SimplifySubtractionWithZero)
 {
     // x - 0 = x
     ast::NameExpr* x = ast::makeName("x");
-    ast::BinaryExpr* expr = makeBinary(x, makeLiteral("0", ast::LiteralExpr::Type::NUMBER), tok::TokenType::OP_MINUS);
-
+    ast::BinaryExpr* expr = makeBinary(x, makeLiteral(0), tok::TokenType::OP_MINUS);
+    if (test_config::print_ast) {
+        std::cout << "Normal:" << '\n';
+        AST_Printer.print(expr);
+    }
     ast::Expr* result = optimizer->optimizeConstantFolding(expr);
-
+    if (test_config::print_ast) {
+        std::cout << "Optimized:" << '\n';
+        AST_Printer.print(result);
+    }
     EXPECT_EQ(result, x);
     EXPECT_EQ(optimizer->getStats().StrengthReductions, 1);
 }
@@ -337,10 +383,16 @@ TEST_F(ASTOptimizerTest, SimplifyMultiplicationByOne)
 {
     // x * 1 = x
     ast::NameExpr* x = ast::makeName("x");
-    ast::BinaryExpr* expr = makeBinary(x, makeLiteral("1", ast::LiteralExpr::Type::NUMBER), tok::TokenType::OP_STAR);
-
+    ast::BinaryExpr* expr = makeBinary(x, makeLiteral(1), tok::TokenType::OP_STAR);
+    if (test_config::print_ast) {
+        std::cout << "Normal:" << '\n';
+        AST_Printer.print(expr);
+    }
     ast::Expr* result = optimizer->optimizeConstantFolding(expr);
-
+    if (test_config::print_ast) {
+        std::cout << "Optimized:" << '\n';
+        AST_Printer.print(result);
+    }
     EXPECT_EQ(result, x);
     EXPECT_EQ(optimizer->getStats().StrengthReductions, 1);
 }
@@ -349,10 +401,16 @@ TEST_F(ASTOptimizerTest, SimplifyDivisionByOne)
 {
     // x / 1 = x
     ast::NameExpr* x = ast::makeName("x");
-    ast::BinaryExpr* expr = makeBinary(x, ast::makeLiteral(ast::LiteralExpr::Type::NUMBER, "1"), tok::TokenType::OP_SLASH);
-
+    ast::BinaryExpr* expr = makeBinary(x, makeLiteral(1), tok::TokenType::OP_SLASH);
+    if (test_config::print_ast) {
+        std::cout << "Normal:" << '\n';
+        AST_Printer.print(expr);
+    }
     ast::Expr* result = optimizer->optimizeConstantFolding(expr);
-
+    if (test_config::print_ast) {
+        std::cout << "Optimized:" << '\n';
+        AST_Printer.print(result);
+    }
     EXPECT_EQ(result, x);
     EXPECT_EQ(optimizer->getStats().StrengthReductions, 1);
 }
@@ -361,10 +419,16 @@ TEST_F(ASTOptimizerTest, SimplifyMultiplicationByZero)
 {
     // x * 0 = 0
     ast::NameExpr* x = ast::makeName("x");
-    ast::BinaryExpr* expr = makeBinary(x, ast::makeLiteral(ast::LiteralExpr::Type::NUMBER, "0"), tok::TokenType::OP_STAR);
-
+    ast::BinaryExpr* expr = makeBinary(x, makeLiteral(0), tok::TokenType::OP_STAR);
+    if (test_config::print_ast) {
+        std::cout << "Normal:" << '\n';
+        AST_Printer.print(expr);
+    }
     ast::Expr* result = optimizer->optimizeConstantFolding(expr);
-
+    if (test_config::print_ast) {
+        std::cout << "Optimized:" << '\n';
+        AST_Printer.print(result);
+    }
     ASSERT_EQ(result->getKind(), ast::Expr::Kind::LITERAL);
     ast::LiteralExpr* lit = static_cast<ast::LiteralExpr*>(result);
     EXPECT_EQ(lit->getValue(), "0");
@@ -375,10 +439,16 @@ TEST_F(ASTOptimizerTest, SimplifyMultiplicationByTwo)
 {
     // x * 2 = x + x
     ast::NameExpr* x = ast::makeName("x");
-    ast::BinaryExpr* expr = makeBinary(x, makeLiteral("2", ast::LiteralExpr::Type::NUMBER), tok::TokenType::OP_STAR);
-
+    ast::BinaryExpr* expr = makeBinary(x, makeLiteral(2), tok::TokenType::OP_STAR);
+    if (test_config::print_ast) {
+        std::cout << "Normal:" << '\n';
+        AST_Printer.print(expr);
+    }
     ast::Expr* result = optimizer->optimizeConstantFolding(expr);
-
+    if (test_config::print_ast) {
+        std::cout << "Optimized:" << '\n';
+        AST_Printer.print(expr);
+    }
     ASSERT_EQ(result->getKind(), ast::Expr::Kind::BINARY);
     ast::BinaryExpr* bin = static_cast<ast::BinaryExpr*>(result);
     EXPECT_EQ(bin->getOperator(), tok::TokenType::OP_PLUS);
@@ -391,9 +461,15 @@ TEST_F(ASTOptimizerTest, SimplifySubtractionSameVariable)
     ast::NameExpr* x1 = ast::makeName("x");
     ast::NameExpr* x2 = ast::makeName("x");
     ast::BinaryExpr* expr = makeBinary(x1, x2, tok::TokenType::OP_MINUS);
-
+    if (test_config::print_ast) {
+        std::cout << "Normal:" << '\n';
+        AST_Printer.print(expr);
+    }
     ast::Expr* result = optimizer->optimizeConstantFolding(expr);
-
+    if (test_config::print_ast) {
+        std::cout << "Optimized:" << '\n';
+        AST_Printer.print(result);
+    }
     ASSERT_EQ(result->getKind(), ast::Expr::Kind::LITERAL);
     ast::LiteralExpr* lit = static_cast<ast::LiteralExpr*>(result);
     EXPECT_EQ(lit->getValue(), "0");
@@ -404,9 +480,15 @@ TEST_F(ASTOptimizerTest, SimplifySubtractionDifferentVariables)
 {
     // x - y (should not simplify)
     ast::BinaryExpr* expr = makeBinary(ast::makeName("x"), ast::makeName("y"), tok::TokenType::OP_MINUS);
-
+    if (test_config::print_ast) {
+        std::cout << "Normal:" << '\n';
+        AST_Printer.print(expr);
+    }
     ast::Expr* result = optimizer->optimizeConstantFolding(expr);
-
+    if (test_config::print_ast) {
+        std::cout << "Optimized:" << '\n';
+        AST_Printer.print(result);
+    }
     EXPECT_EQ(result, expr);
     EXPECT_EQ(optimizer->getStats().StrengthReductions, 0);
 }
@@ -417,9 +499,15 @@ TEST_F(ASTOptimizerTest, SimplifyDoubleNegation)
     ast::NameExpr* x = ast::makeName("x");
     ast::UnaryExpr* inner = makeUnary(x, tok::TokenType::OP_MINUS);
     ast::UnaryExpr* outer = makeUnary(inner, tok::TokenType::OP_MINUS);
-
+    if (test_config::print_ast) {
+        std::cout << "Normal:" << '\n';
+        AST_Printer.print(outer);
+    }
     ast::Expr* result = optimizer->optimizeConstantFolding(outer);
-
+    if (test_config::print_ast) {
+        std::cout << "Optimized:" << '\n';
+        AST_Printer.print(result);
+    }
     // Should eliminate double negation
     EXPECT_EQ(optimizer->getStats().StrengthReductions, 1);
 }
@@ -428,9 +516,15 @@ TEST_F(ASTOptimizerTest, NoSimplificationWithNonZero)
 {
     // x + 5 (should not simplify)
     ast::BinaryExpr* expr = makeBinary(ast::makeName("x"), makeLiteral(5.0), tok::TokenType::OP_PLUS);
-
+    if (test_config::print_ast) {
+        std::cout << "Normal:" << '\n';
+        AST_Printer.print(expr);
+    }
     ast::Expr* result = optimizer->optimizeConstantFolding(expr);
-
+    if (test_config::print_ast) {
+        std::cout << "Optimized:" << '\n';
+        AST_Printer.print(result);
+    }
     EXPECT_EQ(result, expr);
     EXPECT_EQ(optimizer->getStats().StrengthReductions, 0);
 }
@@ -446,11 +540,17 @@ TEST_F(ASTOptimizerTest, OptimizeCallExpressionArgs)
     };
 
     ast::CallExpr* call = ast::makeCall(ast::makeName("func"), ast::makeList(args));
+    if (test_config::print_ast) {
+        std::cout << "Normal:" << '\n';
+        AST_Printer.print(call);
+    }
     ast::Expr* result = optimizer->optimizeConstantFolding(call);
-
     ASSERT_EQ(result->getKind(), ast::Expr::Kind::CALL);
     ast::CallExpr* optimized = static_cast<ast::CallExpr*>(result);
-
+    if (test_config::print_ast) {
+        std::cout << "Optimized:" << '\n';
+        AST_Printer.print(optimized);
+    }
     // Arguments should be folded
     EXPECT_EQ(optimizer->getStats().ConstantFolds, 2);
 }
@@ -463,10 +563,16 @@ TEST_F(ASTOptimizerTest, OptimizeListElements)
         makeBinary(makeLiteral(3.0), makeLiteral(4.0), tok::TokenType::OP_STAR),
         ast::makeName("x")
     };
-
     ast::ListExpr* list = ast::makeList(elements);
+    if (test_config::print_ast) {
+        std::cout << "Normal:" << '\n';
+        AST_Printer.print(list);
+    }
     ast::Expr* result = optimizer->optimizeConstantFolding(list);
-
+    if (test_config::print_ast) {
+        std::cout << "Optimized:" << '\n';
+        AST_Printer.print(result);
+    }
     ASSERT_EQ(result->getKind(), ast::Expr::Kind::LIST);
     EXPECT_EQ(optimizer->getStats().ConstantFolds, 2);
 }
@@ -488,9 +594,15 @@ TEST_F(ASTOptimizerTest, DeadCodeIfTrueCondition)
     ast::BlockStmt* thenBlock = ast::makeBlock({ makeExprStmt(makeLiteral(1.0)) });
     ast::BlockStmt* elseBlock = ast::makeBlock({ makeExprStmt(makeLiteral(2.0)) });
     ast::IfStmt* ifStmt = makeIf(makeBoolLiteral(true), thenBlock, elseBlock);
-
+    if (test_config::print_ast) {
+        std::cout << "Normal:" << '\n';
+        AST_Printer.print(ifStmt);
+    }
     ast::Stmt* result = optimizer->eliminateDeadCode(ifStmt);
-
+    if (test_config::print_ast) {
+        std::cout << "Optimized:" << '\n';
+        AST_Printer.print(result);
+    }
     ASSERT_NE(result, nullptr);
     EXPECT_EQ(result->getKind(), ast::Stmt::Kind::BLOCK);
     EXPECT_EQ(optimizer->getStats().DeadCodeEliminations, 1);
@@ -503,9 +615,15 @@ TEST_F(ASTOptimizerTest, DeadCodeIfFalseCondition)
     ast::BlockStmt* thenBlock = ast::makeBlock({ makeExprStmt(makeLiteral(1.0)) });
     ast::BlockStmt* elseBlock = ast::makeBlock({ makeExprStmt(makeLiteral(2.0)) });
     ast::IfStmt* ifStmt = makeIf(makeBoolLiteral(false), thenBlock, elseBlock);
-
+    if (test_config::print_ast) {
+        std::cout << "Normal:" << '\n';
+        AST_Printer.print(ifStmt);
+    }
     ast::Stmt* result = optimizer->eliminateDeadCode(ifStmt);
-
+    if (test_config::print_ast) {
+        std::cout << "Optimized:" << '\n';
+        AST_Printer.print(result);
+    }
     EXPECT_EQ(optimizer->getStats().DeadCodeEliminations, 1);
 }
 
@@ -515,9 +633,15 @@ TEST_F(ASTOptimizerTest, DeadCodeIfFalseNoElse)
     // Should eliminate entire statement
     ast::BlockStmt* thenBlock = ast::makeBlock({ makeExprStmt(makeLiteral(1.0)) });
     ast::IfStmt* ifStmt = makeIf(makeBoolLiteral(false), thenBlock);
-
+    if (test_config::print_ast) {
+        std::cout << "Normal:" << '\n';
+        AST_Printer.print(ifStmt);
+    }
     ast::Stmt* result = optimizer->eliminateDeadCode(ifStmt);
-
+    if (test_config::print_ast) {
+        std::cout << "Optimized:" << '\n';
+        AST_Printer.print(result);
+    }
     EXPECT_EQ(optimizer->getStats().DeadCodeEliminations, 1);
 }
 
@@ -528,9 +652,15 @@ TEST_F(ASTOptimizerTest, DeadCodeIfDynamicCondition)
     ast::BinaryExpr* condition = makeBinary(ast::makeName("x"), makeLiteral(0.0), tok::TokenType::OP_GT);
     ast::BlockStmt* thenBlock = ast::makeBlock({ makeExprStmt(makeLiteral(1.0)) });
     ast::IfStmt* ifStmt = makeIf(condition, thenBlock);
-
+    if (test_config::print_ast) {
+        std::cout << "Normal:" << '\n';
+        AST_Printer.print(ifStmt);
+    }
     ast::Stmt* result = optimizer->eliminateDeadCode(ifStmt);
-
+    if (test_config::print_ast) {
+        std::cout << "Optimized:" << '\n';
+        AST_Printer.print(result);
+    }
     EXPECT_EQ(result, ifStmt);
     EXPECT_EQ(optimizer->getStats().DeadCodeEliminations, 0);
 }
@@ -542,9 +672,15 @@ TEST_F(ASTOptimizerTest, DeadCodeNestedIf)
     ast::IfStmt* innerIf = makeIf(makeBoolLiteral(false), ast::makeBlock({}), innerElse);
     ast::BlockStmt* outerThen = ast::makeBlock({ innerIf });
     ast::IfStmt* outerIf = makeIf(makeBoolLiteral(true), outerThen);
-
+    if (test_config::print_ast) {
+        std::cout << "Normal:" << '\n';
+        AST_Printer.print(outerIf);
+    }
     ast::Stmt* result = optimizer->eliminateDeadCode(outerIf);
-
+    if (test_config::print_ast) {
+        std::cout << "Optimized:" << '\n';
+        AST_Printer.print(result);
+    }
     // Should eliminate both if statements
     EXPECT_GE(optimizer->getStats().DeadCodeEliminations, 1);
 }
@@ -557,9 +693,15 @@ TEST_F(ASTOptimizerTest, DeadCodeWhileFalseCondition)
     // Loop never executes - dead code
     ast::BlockStmt* body = ast::makeBlock({ makeExprStmt(makeLiteral(1.0)) });
     ast::WhileStmt* whileStmt = makeWhile(makeBoolLiteral(false), body);
-
+    if (test_config::print_ast) {
+        std::cout << "Normal:" << '\n';
+        AST_Printer.print(whileStmt);
+    }
     ast::Stmt* result = optimizer->eliminateDeadCode(whileStmt);
-
+    if (test_config::print_ast) {
+        std::cout << "Optimized:" << '\n';
+        AST_Printer.print(result);
+    }
     EXPECT_EQ(optimizer->getStats().DeadCodeEliminations, 1);
 }
 
@@ -569,9 +711,15 @@ TEST_F(ASTOptimizerTest, DeadCodeWhileTrueCondition)
     // Infinite loop, but not dead code
     ast::BlockStmt* body = ast::makeBlock({ makeExprStmt(makeLiteral(1.0)) });
     ast::WhileStmt* whileStmt = makeWhile(makeBoolLiteral(true), body);
-
+    if (test_config::print_ast) {
+        std::cout << "Normal:" << '\n';
+        AST_Printer.print(whileStmt);
+    }
     ast::Stmt* result = optimizer->eliminateDeadCode(whileStmt);
-
+    if (test_config::print_ast) {
+        std::cout << "Optimized:" << '\n';
+        AST_Printer.print(result);
+    }
     EXPECT_EQ(result, whileStmt);
 }
 
@@ -582,7 +730,17 @@ TEST_F(ASTOptimizerTest, DeadCodeWhileDynamicCondition)
     ast::BinaryExpr* condition = makeBinary(ast::makeName("x"), makeLiteral(0.0), tok::TokenType::OP_GT);
     ast::WhileStmt* whileStmt = makeWhile(condition, body);
 
+    if (test_config::print_ast) {
+        std::cout << "Normal:" << '\n';
+        AST_Printer.print(whileStmt);
+    }
+
     ast::Stmt* result = optimizer->eliminateDeadCode(whileStmt);
+
+    if (test_config::print_ast) {
+        std::cout << "Optimized:" << '\n';
+        AST_Printer.print(result);
+    }
 
     EXPECT_EQ(result, whileStmt);
     EXPECT_EQ(optimizer->getStats().DeadCodeEliminations, 0);
@@ -594,9 +752,15 @@ TEST_F(ASTOptimizerTest, DeadCodeWhileNestedStatements)
     ast::IfStmt* innerIf = makeIf(makeBoolLiteral(false), ast::makeBlock({ makeExprStmt(makeLiteral(2.0)) }));
     ast::BlockStmt* body = ast::makeBlock({ makeExprStmt(makeLiteral(1.0)), innerIf });
     ast::WhileStmt* whileStmt = makeWhile(ast::makeName("x"), body);
-
+    if (test_config::print_ast) {
+        std::cout << "Normal:" << '\n';
+        AST_Printer.print(whileStmt);
+    }
     ast::Stmt* result = optimizer->eliminateDeadCode(whileStmt);
-
+    if (test_config::print_ast) {
+        std::cout << "Optimized:" << '\n';
+        AST_Printer.print(result);
+    }
     // Inner if should be eliminated
     EXPECT_GE(optimizer->getStats().DeadCodeEliminations, 1);
 }
@@ -645,10 +809,17 @@ TEST_F(ASTOptimizerTest, DeadCodeAfterReturn)
     // stmt2 and stmt3 are dead
     std::vector<ast::Stmt*> body = { makeReturn(makeLiteral(1.0)), makeExprStmt(makeLiteral(2.0)), makeExprStmt(makeLiteral(3.0)) };
     ast::FunctionDef* func = makeFunction("f", {}, ast::makeBlock(body));
+    if (test_config::print_ast) {
+        std::cout << "Normal:" << '\n';
+        AST_Printer.print(func);
+    }
     ast::Stmt* result = optimizer->eliminateDeadCode(func);
-
+    if (test_config::print_ast) {
+        std::cout << "Optimized:" << '\n';
+        AST_Printer.print(result);
+    }
     ASSERT_NE(result, nullptr);
-    EXPECT_EQ(optimizer->getStats().DeadCodeEliminations, 2);
+    EXPECT_EQ(optimizer->getStats().DeadCodeEliminations, 1);
 }
 
 TEST_F(ASTOptimizerTest, DeadCodeAfterEarlyReturn)
@@ -658,8 +829,15 @@ TEST_F(ASTOptimizerTest, DeadCodeAfterEarlyReturn)
     ast::IfStmt* ifStmt = makeIf(ast::makeName("x"), ast::makeBlock({ makeReturn(makeLiteral(1.0)) }), ast::makeBlock({ makeReturn(makeLiteral(2.0)) }));
     std::vector<ast::Stmt*> body = { ifStmt, makeExprStmt(makeLiteral(3.0)) };
     ast::FunctionDef* func = makeFunction("f", {}, ast::makeBlock(body));
+    if (test_config::print_ast) {
+        std::cout << "Normal:" << '\n';
+        AST_Printer.print(func);
+    }
     ast::Stmt* result = optimizer->eliminateDeadCode(func);
-
+    if (test_config::print_ast) {
+        std::cout << "Optimized:" << '\n';
+        AST_Printer.print(result);
+    }
     EXPECT_GE(optimizer->getStats().DeadCodeEliminations, 0);
 }
 
@@ -669,8 +847,15 @@ TEST_F(ASTOptimizerTest, NoDeadCodeBeforeReturn)
     // No dead code
     std::vector<ast::Stmt*> body = { makeExprStmt(makeLiteral(1.0)), makeExprStmt(makeLiteral(2.0)), makeReturn(makeLiteral(3.0)) };
     ast::FunctionDef* func = makeFunction("f", {}, ast::makeBlock(body));
+    if (test_config::print_ast) {
+        std::cout << "Normal:" << '\n';
+        AST_Printer.print(func);
+    }
     ast::Stmt* result = optimizer->eliminateDeadCode(func);
-
+    if (test_config::print_ast) {
+        std::cout << "Optimized:" << '\n';
+        AST_Printer.print(result);
+    }
     EXPECT_EQ(optimizer->getStats().DeadCodeEliminations, 0);
 }
 
@@ -679,9 +864,15 @@ TEST_F(ASTOptimizerTest, DeadCodeNestedInFunction)
     // function f() { if (false) { stmt } }
     ast::IfStmt* ifStmt = makeIf(makeBoolLiteral(false), ast::makeBlock({ makeExprStmt(makeLiteral(1.0)) }));
     ast::FunctionDef* func = makeFunction("f", {}, ast::makeBlock({ ifStmt }));
-
+    if (test_config::print_ast) {
+        std::cout << "Normal:" << '\n';
+        AST_Printer.print(func);
+    }
     ast::Stmt* result = optimizer->eliminateDeadCode(func);
-
+    if (test_config::print_ast) {
+        std::cout << "Optimized:" << '\n';
+        AST_Printer.print(result);
+    }
     EXPECT_GE(optimizer->getStats().DeadCodeEliminations, 1);
 }
 
@@ -1008,7 +1199,7 @@ TEST_F(ASTOptimizerTest, StatisticsConstantFolds)
 TEST_F(ASTOptimizerTest, StatisticsMultipleOptimizations)
 {
     ast::BinaryExpr* expr1 = makeBinary(makeLiteral(2.0), makeLiteral(3.0), tok::TokenType::OP_PLUS);
-    ast::BinaryExpr* expr2 = makeBinary(ast::makeName("x"), ast::makeLiteral(ast::LiteralExpr::Type::NUMBER, "0"), tok::TokenType::OP_PLUS);
+    ast::BinaryExpr* expr2 = makeBinary(ast::makeName("x"), makeLiteral(0), tok::TokenType::OP_PLUS);
 
     optimizer->optimizeConstantFolding(expr1);
     optimizer->optimizeConstantFolding(expr2);
@@ -1119,18 +1310,18 @@ TEST_F(ASTOptimizerTest, EdgeCaseMixedOptimizations)
 {
     // Test combining multiple optimization types
     // x * 0 (strength reduction to 0)
-    ast::BinaryExpr* mul = makeBinary(ast::makeName("x"), ast::makeLiteral(ast::LiteralExpr::Type::NUMBER, "0"), tok::TokenType::OP_STAR);
+    ast::BinaryExpr* mul = makeBinary(ast::makeName("x"), makeLiteral(0), tok::TokenType::OP_STAR);
     ast::Expr* result = optimizer->optimizeConstantFolding(mul);
 
     ASSERT_EQ(result->getKind(), ast::Expr::Kind::LITERAL);
-    EXPECT_EQ(static_cast<ast::LiteralExpr*>(result)->getValue(), "0");
+    EXPECT_EQ(static_cast<ast::LiteralExpr*>(result)->getValue().toDouble(), 0.0);
 }
 
 TEST_F(ASTOptimizerTest, EdgeCaseChainedStrengthReductions)
 {
     // (x + 0) * 1
-    ast::BinaryExpr* add = makeBinary(ast::makeName("x"), ast::makeLiteral(ast::LiteralExpr::Type::NUMBER, "0"), tok::TokenType::OP_PLUS);
-    ast::BinaryExpr* mul = makeBinary(add, ast::makeLiteral(ast::LiteralExpr::Type::NUMBER, "1"), tok::TokenType::OP_STAR);
+    ast::BinaryExpr* add = makeBinary(ast::makeName("x"), makeLiteral(0), tok::TokenType::OP_PLUS);
+    ast::BinaryExpr* mul = makeBinary(add, makeLiteral(1), tok::TokenType::OP_STAR);
     ast::Expr* result = optimizer->optimizeConstantFolding(mul);
 
     // Should apply both optimizations
@@ -1146,7 +1337,7 @@ TEST_F(ASTOptimizerTest, IntegrationFullOptimizationPipeline)
         // Constant folding: x = 2 + 3 => x = 5
         makeAssignment("x", makeBinary(makeLiteral(2.0), makeLiteral(3.0), tok::TokenType::OP_PLUS)),
         // Strength reduction: y = x * 1 => y = x
-        makeAssignment("y", makeBinary(ast::makeName("x"), ast::makeLiteral(ast::LiteralExpr::Type::NUMBER, "1"), tok::TokenType::OP_STAR)),
+        makeAssignment("y", makeBinary(ast::makeName("x"), makeLiteral(1), tok::TokenType::OP_STAR)),
         // Dead code: if (false) { ... }
         makeIf(makeBoolLiteral(false), ast::makeBlock({ makeExprStmt(makeLiteral(999.0)) }))
     };

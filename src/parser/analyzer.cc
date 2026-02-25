@@ -18,8 +18,10 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(ast::Expr const* ex
         ast::LiteralExpr const* lit = static_cast<ast::LiteralExpr const*>(expr);
 
         switch (lit->getType()) {
-        case ast::LiteralExpr::Type::NUMBER:
-            return lit->getValue().find('.') ? SymbolTable::DataType_t::FLOAT : SymbolTable::DataType_t::INTEGER;
+        case ast::LiteralExpr::Type::INTEGER:
+            return SymbolTable::DataType_t::INTEGER;
+        case ast::LiteralExpr::Type::DECIMAL:
+            return SymbolTable::DataType_t::FLOAT;
         case ast::LiteralExpr::Type::STRING:
             return SymbolTable::DataType_t::STRING;
         case ast::LiteralExpr::Type::BOOLEAN:
@@ -75,7 +77,7 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(ast::Expr const* ex
     return SymbolTable::DataType_t::UNKNOWN;
 }
 
-void SemanticAnalyzer::reportIssue(Issue::Severity sev, StringRef const& msg, std::int32_t line, StringRef const& sugg)
+void SemanticAnalyzer::reportIssue(Issue::Severity sev, StringRef const& msg, int32_t line, StringRef const& sugg)
 {
     Issues_.push_back({ sev, msg, line, sugg });
 }

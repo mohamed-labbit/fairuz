@@ -12,18 +12,20 @@ namespace parser {
 
 class TypeSystem {
 public:
-    enum class BaseType { Int,
-        Float,
-        String,
-        Bool,
-        None,
-        Any,
-        List,
-        Dict,
-        Tuple,
-        Set,
-        Function,
-        Class };
+    enum class BaseType {
+        INT,
+        FLOAT,
+        STRING,
+        BOOL,
+        NONE,
+        ANY,
+        LIST,
+        DICT,
+        TUPLE,
+        SET,
+        FUNCTION,
+        CLASS
+    };
 
     struct Type {
         BaseType base;
@@ -41,7 +43,7 @@ public:
     // Hindley-Milner type inference
     class TypeInference {
     private:
-        std::int32_t FreshVarCounter_ { 0 };
+        int32_t FreshVarCounter_ { 0 };
         std::unordered_map<StringRef, std::shared_ptr<Type>, StringRefHash, StringRefEqual> Substitutions_;
 
         std::shared_ptr<Type> freshTypeVar();

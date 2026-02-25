@@ -14,11 +14,11 @@ namespace parser {
 class ASTOptimizer {
 public:
     struct OptimizationStats {
-        std::size_t ConstantFolds { 0 };
-        std::size_t DeadCodeEliminations { 0 };
-        std::size_t CommonSubexprEliminations { 0 };
-        std::size_t LoopInvariants { 0 };
-        std::size_t StrengthReductions { 0 };
+        size_t ConstantFolds { 0 };
+        size_t DeadCodeEliminations { 0 };
+        size_t CommonSubexprEliminations { 0 };
+        size_t LoopInvariants { 0 };
+        size_t StrengthReductions { 0 };
     };
 
 private:
@@ -39,7 +39,7 @@ public:
     class CSEPass {
     private:
         std::unordered_map<StringRef, StringRef, StringRefHash, StringRefEqual> ExprCache_;
-        std::int32_t TempCounter_ = 0;
+        int32_t TempCounter_ = 0;
 
     public:
         StringRef exprToString(ast::Expr const* expr);
@@ -55,7 +55,7 @@ public:
     bool isLoopInvariant(ast::Expr const* expr, std::unordered_set<StringRef, StringRefHash, StringRefEqual> const& loopVars);
 
     // Main optimization pipeline
-    std::vector<ast::Stmt*> optimize(std::vector<ast::Stmt*> statements, std::int32_t level = 2);
+    std::vector<ast::Stmt*> optimize(std::vector<ast::Stmt*> statements, int32_t level = 2);
 
     OptimizationStats const& getStats() const;
 

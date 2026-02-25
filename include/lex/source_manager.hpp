@@ -26,17 +26,17 @@ public:
 
     void reset();
 
-    std::size_t getLineNumber() const
+    size_t getLineNumber() const
     {
         return Context_.line;
     }
 
-    std::size_t getColumnNumber() const
+    size_t getColumnNumber() const
     {
         return Context_.column;
     }
 
-    std::size_t getFileOffset() const
+    size_t getFileOffset() const
     {
         return Context_.offset;
     }
@@ -65,28 +65,28 @@ public:
 
 private:
     struct Context {
-        std::size_t line { 1 };
-        std::size_t column { 1 };
-        std::size_t offset { 0 }; // byte offset
+        size_t line { 1 };
+        size_t column { 1 };
+        size_t offset { 0 }; // byte offset
     };
 
     struct PushbackEntry {
         uint32_t ch { BUFFER_END };
         Context ctx;
-        std::size_t bytes { 0 };
+        size_t bytes { 0 };
     };
 
     FileManager* FileManager_ { nullptr };
     Context Context_;
     uint32_t Current_ { BUFFER_END };
-    std::size_t CurrentBytes_ { 0 };
+    size_t CurrentBytes_ { 0 };
     std::stack<PushbackEntry> UngetStack_;
 
-    void advance(uint32_t const cp, std::size_t const bytes);
+    void advance(uint32_t const cp, size_t const bytes);
 
-    void rewindPosition_(uint32_t const cp, std::size_t const bytes);
+    void rewindPosition_(uint32_t const cp, size_t const bytes);
 
-    std::size_t calculateColumnAtOffset(std::size_t const target_offset) const;
+    size_t calculateColumnAtOffset(size_t const target_offset) const;
 };
 
 }

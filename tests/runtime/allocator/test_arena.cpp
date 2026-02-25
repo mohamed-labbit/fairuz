@@ -12,14 +12,14 @@ private:
 
 public:
     TestAllocator()
-        : Allocator_(static_cast<std::int32_t>(runtime::allocator::ArenaAllocator::GrowthStrategy::LINEAR))
+        : Allocator_(static_cast<int32_t>(runtime::allocator::ArenaAllocator::GrowthStrategy::LINEAR))
     {
     }
 
     runtime::allocator::ArenaAllocator& get() noexcept { return std::ref<runtime::allocator::ArenaAllocator>(Allocator_); }
 
     template<typename T, typename... Args>
-    T* allocate(std::size_t count, Args&&... args)
+    T* allocate(size_t count, Args&&... args)
     {
         void* mem = Allocator_.allocate(count * sizeof(T));
         if (!mem)
@@ -81,16 +81,16 @@ TEST(ArenaAllocatorTest, AllocateZeroCount)
 TEST(ArenaAllocatorTest, AllocateArrayOfInts)
 {
     TestAllocator arena;
-    constexpr std::size_t count = 100;
+    constexpr size_t count = 100;
     int* arr = arena.allocate<int>(count);
 
     ASSERT_NE(arr, nullptr);
 
-    for (std::size_t i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; ++i) {
         arr[i] = static_cast<int>(i);
     }
 
-    for (std::size_t i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; ++i) {
         EXPECT_EQ(arr[i], static_cast<int>(i));
     }
 }
@@ -103,7 +103,7 @@ TEST(ArenaAllocatorTest, AllocateLargeArray)
 
     ASSERT_NE(arr, nullptr);
 
-    for (std::size_t i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; ++i) {
         arr[i] = static_cast<double>(i) * 1.5;
     }
 
@@ -143,7 +143,7 @@ TEST(ArenaAllocatorTest, AllocateFloat)
 TEST(ArenaAllocatorTest, AllocateLongLong)
 {
     TestAllocator arena;
-    std::int64_t* ptr = arena.allocate<std::int64_t>(1);
+    int64_t* ptr = arena.allocate<int64_t>(1);
     ASSERT_NE(ptr, nullptr);
     *ptr = 9223372036854775807LL;
     EXPECT_EQ(*ptr, 9223372036854775807LL);
@@ -347,7 +347,7 @@ TEST(ArenaAllocatorTest, ActiveBlocksCount)
     int* ptr1 = arena.allocate<int>(1);
     EXPECT_GT(arena.get().activeBlocks(), 0);
 
-    std::size_t initial_blocks = arena.get().activeBlocks();
+    size_t initial_blocks = arena.get().activeBlocks();
 
     // Many small allocations might stay in same block
     for (int i = 0; i < 10; ++i) {
@@ -373,7 +373,7 @@ TEST(ArenaAllocatorTest, DeallocateIsNoOp)
   ASSERT_NE(ptr, nullptr);
   *ptr = 42;
 
-  std::size_t allocations_before = arena.totalAllocations();
+  size_t allocations_before = arena.totalAllocations();
 
   arena.deallocate(ptr);
 
@@ -399,9 +399,9 @@ TEST(ArenaAllocatorTest, ProperAlignment)
     ASSERT_NE(d, nullptr);
     EXPECT_EQ(reinterpret_cast<uintptr_t>(d) % alignof(double), 0);
 
-    std::int64_t* ll = arena.allocate<std::int64_t>(1);
+    int64_t* ll = arena.allocate<int64_t>(1);
     ASSERT_NE(ll, nullptr);
-    EXPECT_EQ(reinterpret_cast<uintptr_t>(ll) % alignof(std::int64_t), 0);
+    EXPECT_EQ(reinterpret_cast<uintptr_t>(ll) % alignof(int64_t), 0);
 }
 
 struct alignas(64) AlignedStruct {
@@ -453,7 +453,7 @@ TEST(ArenaAllocatorTest, AllocateMaxBlockSize)
 {
 
 // Allocate close to MAX_BLOCK_SIZE
-constexpr std::size_t large_size = MAX_BLOCK_SIZE / sizeof(char32_t);
+constexpr size_t large_size = MAX_BLOCK_SIZE / sizeof(char32_t);
 TestAllocator      arena;
 char32_t*          ptr = arena.allocate<char32_t>(large_size);
 ASSERT_NE(ptr, nullptr);
@@ -470,7 +470,7 @@ TEST(ArenaAllocatorTest, AllocateExceedsMaxBlockSize)
 {
     TestAllocator arena;
     // Try to allocate more than MAX_BLOCK_SIZE
-    constexpr std::size_t too_large = MAX_BLOCK_SIZE + 1024;
+    constexpr size_t too_large = MAX_BLOCK_SIZE + 1024;
     // Should return nullptr as it exceeds limit
     char* ptr = nullptr; // to silence no-discard warning
     EXPECT_THROW((ptr = arena.allocate<char>(too_large)), std::runtime_error);
@@ -542,7 +542,7 @@ TEST(ArenaAllocatorTest, VerifyInvalidPointer)
 TEST(ArenaAllocatorTest, OOMHandlerNotCalled)
 {
   bool handler_called = false;
-  auto oom_handler    = [&](std::size_t requested) {
+  auto oom_handler    = [&](size_t requested) {
     handler_called = true;
     return false;
   };
@@ -557,9 +557,9 @@ TEST(ArenaAllocatorTest, OOMHandlerNotCalled)
 TEST(ArenaAllocatorTest, OOMHandlerCalledOnFailure)
 {
   bool     handler_called = false;
-  std::size_t requested_size = 0;
+  size_t requested_size = 0;
 
-  auto oom_handler = [&](std::size_t requested) {
+  auto oom_handler = [&](size_t requested) {
     handler_called = true;
     requested_size = requested;
     return false;  // Don't retry
@@ -568,7 +568,7 @@ TEST(ArenaAllocatorTest, OOMHandlerCalledOnFailure)
   TestAllocator arena(static_cast<int>(TestAllocator::GrowthStrategy::EXPONENTIAL), alignof(std::max_align_t), oom_handler);
 
   // Try to allocate more than allowed
-  constexpr std::size_t too_large = MAX_BLOCK_SIZE + 1024;
+  constexpr size_t too_large = MAX_BLOCK_SIZE + 1024;
   char*              ptr       = nullptr;
 
   EXPECT_THROW((ptr = arena.allocate<char>(too_large)), std::runtime_error);
@@ -580,7 +580,7 @@ TEST(ArenaAllocatorTest, OOMHandlerRetry)
 {
   int call_count = 0;
 
-  auto oom_handler = [&](std::size_t requested) {
+  auto oom_handler = [&](size_t requested) {
     call_count++;
     return call_count < 2;  // Retry once
   };
@@ -588,7 +588,7 @@ TEST(ArenaAllocatorTest, OOMHandlerRetry)
   TestAllocator arena(static_cast<int>(TestAllocator::GrowthStrategy::EXPONENTIAL), alignof(std::max_align_t), oom_handler);
 
   // Allocate oversized
-  constexpr std::size_t too_large = MAX_BLOCK_SIZE + 1024;
+  constexpr size_t too_large = MAX_BLOCK_SIZE + 1024;
   char*              ptr       = nullptr;
 
   EXPECT_THROW((ptr = arena.allocate<char>(too_large)), std::runtime_error);
@@ -624,7 +624,7 @@ TEST(ArenaAllocatorTest, MixedSizeAllocations)
     std::vector<void*> ptrs;
 
     for (int i = 0; i < 10; ++i) {
-        std::size_t size = (i % 10) + 1;
+        size_t size = (i % 10) + 1;
         if (i % 3 == 0) {
             int* ptr = arena.allocate<int>(size);
             ASSERT_NE(ptr, nullptr);
@@ -646,7 +646,7 @@ TEST(ArenaAllocatorTest, MixedSizeAllocations)
 TEST(ArenaAllocatorTest, AlternatingLargeSmall)
 {
     TestAllocator arena;
-    std::size_t large_amount = 10000, small_amount = 1;
+    size_t large_amount = 10000, small_amount = 1;
 
     for (int i = 0; i < 10; ++i) {
         if (i % 2 == 0) {
@@ -702,8 +702,8 @@ TEST(ArenaAllocatorTest, ConsecutiveAllocations)
 
     // Should be consecutive in memory (arena bump allocator)
     // Note: This might not always be true due to alignment
-    std::size_t diff1 = reinterpret_cast<uintptr_t>(ptr2) - reinterpret_cast<uintptr_t>(ptr1);
-    std::size_t diff2 = reinterpret_cast<uintptr_t>(ptr3) - reinterpret_cast<uintptr_t>(ptr2);
+    size_t diff1 = reinterpret_cast<uintptr_t>(ptr2) - reinterpret_cast<uintptr_t>(ptr1);
+    size_t diff2 = reinterpret_cast<uintptr_t>(ptr3) - reinterpret_cast<uintptr_t>(ptr2);
 
     EXPECT_GE(diff1, sizeof(int));
     EXPECT_GE(diff2, sizeof(int));
