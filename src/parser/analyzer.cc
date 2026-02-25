@@ -17,18 +17,16 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(ast::Expr const* ex
     case ast::Expr::Kind::LITERAL: {
         ast::LiteralExpr const* lit = static_cast<ast::LiteralExpr const*>(expr);
 
-        switch (lit->getType()) {
-        case ast::LiteralExpr::Type::INTEGER:
-            return SymbolTable::DataType_t::INTEGER;
-        case ast::LiteralExpr::Type::DECIMAL:
-            return SymbolTable::DataType_t::FLOAT;
-        case ast::LiteralExpr::Type::STRING:
+        if (lit->isString())
             return SymbolTable::DataType_t::STRING;
-        case ast::LiteralExpr::Type::BOOLEAN:
+        if (lit->isDecimal())
+            return SymbolTable::DataType_t::FLOAT;
+        if (lit->isInteger())
+            return SymbolTable::DataType_t::INTEGER;
+        if (lit->isBoolean())
             return SymbolTable::DataType_t::BOOLEAN;
-        case ast::LiteralExpr::Type::NONE:
+        else
             return SymbolTable::DataType_t::NONE;
-        }
 
         break;
     }
@@ -239,7 +237,7 @@ void SemanticAnalyzer::analyzeStmt(ast::Stmt const* stmt)
         // Detect infinite loops
         if (whileStmt->getCondition()->getKind() == ast::Expr::Kind::LITERAL) {
             ast::LiteralExpr const* lit = static_cast<ast::LiteralExpr const*>(whileStmt->getCondition());
-            if (lit->getType() == ast::LiteralExpr::Type::BOOLEAN && lit->getValue() == "true")
+            if (lit->isBoolean() && lit->getBool() == true)
                 reportIssue(Issue::Severity::WARNING, "Infinite loop detected", stmt->getLine(), "Add a break condition");
         }
 

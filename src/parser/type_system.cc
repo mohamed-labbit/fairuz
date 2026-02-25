@@ -76,7 +76,7 @@ std::shared_ptr<typename TypeSystem::Type> TypeSystem::TypeInference::inferExpr(
         case ast::LiteralExpr::Type::INTEGER:
             t->base = BaseType::INT;
             break;
-        case ast::LiteralExpr::Type::DECIMAL:
+        case ast::LiteralExpr::Type::FLOAT:
             t->base = BaseType::FLOAT;
             break;
         case ast::LiteralExpr::Type::STRING:

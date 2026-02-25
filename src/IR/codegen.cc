@@ -128,20 +128,14 @@ Value CodeGenerator::eval(ast::ASTNode const* node)
             if (!literal_expr)
                 return Value();
 
-            StringRef const& v = literal_expr->getValue();
+            if (literal_expr->isBoolean())
+                return literal_expr->getBool();
 
-            switch (literal_expr->getType()) {
-            case ast::LiteralExpr::Type::BOOLEAN:
-                return Value::makeBool(v == "true" ? true : false);
-            case ast::LiteralExpr::Type::INTEGER:
-                return Value::makeInt(static_cast<int>(v.toDouble()));
-            case ast::LiteralExpr::Type::DECIMAL:
-                return Value::makeFloat(v.toDouble());
-            case ast::LiteralExpr::Type::STRING:
-                return Value::makeString(v);
-            case ast::LiteralExpr::Type::NONE:
-                return Value();
-            }
+            if (literal_expr->isNumeric())
+                return literal_expr->toNumber();
+
+            if (literal_expr->isString())
+                return literal_expr->getStr();
 
             return Value();
         }

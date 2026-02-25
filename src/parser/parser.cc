@@ -417,44 +417,31 @@ ast::Expr* Parser::parsePrimaryExpr()
         ast::LiteralExpr::Type type;
 
         switch (tok->type()) {
-        case tok::TokenType::INTEGER:
-            type = ast::LiteralExpr::Type::INTEGER;
-            break;
         case tok::TokenType::DECIMAL:
-            type = ast::LiteralExpr::Type::DECIMAL;
-            break;
+            return ast::makeLiteralFloat(v.toDouble());
+        case tok::TokenType::INTEGER:
         case tok::TokenType::HEX:
-            type = ast::LiteralExpr::Type::HEX;
-            break;
         case tok::TokenType::OCTAL:
-            type = ast::LiteralExpr::Type::OCTAL;
-            break;
         case tok::TokenType::BINARY:
-            type = ast::LiteralExpr::Type::BINARY;
-            break;
-        default:
-            type = ast::LiteralExpr::Type::INTEGER;
-            break;
+            return ast::makeLiteralInt(util::parseIntegerLiteral(v));
         }
-
-        return ast::makeLiteral(type, v);
     }
 
     if (check(tok::TokenType::STRING)) {
         StringRef v = tok->lexeme();
         advance();
-        return ast::makeLiteral(ast::LiteralExpr::Type::STRING, v);
+        return ast::makeLiteralString(v);
     }
 
     if (check(tok::TokenType::KW_TRUE) || check(tok::TokenType::KW_FALSE)) {
         StringRef v = tok->lexeme();
         advance();
-        return ast::makeLiteral(ast::LiteralExpr::Type::BOOLEAN, v);
+        return ast::makeLiteralBool(v == "صحيح" ? true : false);
     }
 
     if (check(tok::TokenType::KW_NONE)) {
         advance();
-        return ast::makeLiteral(ast::LiteralExpr::Type::NONE, "");
+        return ast::makeLiteralString("");
     }
 
     if (check(tok::TokenType::IDENTIFIER)) {
