@@ -530,7 +530,6 @@ tok::Token const* Lexer::lexToken()
         }
 
         diagnostic::engine.panic("Invalid character found : " + static_cast<char>(current));
-        return finish(tok::TokenType::INVALID, util::encode_utf8_str(current), line, col);
     }
 
     if (!TokStream_.empty() && TokStream_.back()->type() == tok::TokenType::ENDMARKER)
