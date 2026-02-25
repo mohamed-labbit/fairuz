@@ -53,7 +53,12 @@ private:
 
         case Expr::Kind::LITERAL: {
             LiteralExpr const* l = static_cast<LiteralExpr const*>(e);
-            std::cout << color("Literal", Color::GREEN) << "(" << l->getValue() << ")\n";
+            if (l->isNumeric())
+                std::cout << color("Literal", Color::GREEN) << "(" << l->toNumber() << ")\n";
+            else if (l->isString())
+                std::cout << color("Literal", Color::GREEN) << "(" << l->getStr() << ")\n";
+            else if (l->isBoolean())
+                std::cout << color("Literal", Color::GREEN) << "(" << l->getBool() << ")\n";
             break;
         }
 

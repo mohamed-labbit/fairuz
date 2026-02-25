@@ -34,6 +34,10 @@ public:
         Kind_ = Kind::INVALID;
     }
 
+    virtual Stmt* clone() const = 0;
+
+    virtual bool equals(Stmt const* other) const = 0;
+
     Kind getKind() const
     {
         return Kind_;
@@ -62,6 +66,29 @@ public:
     BlockStmt(BlockStmt const&) noexcept = delete;
 
     BlockStmt& operator=(BlockStmt const&) noexcept = delete;
+
+    BlockStmt* clone() const override
+    {
+        return AST_allocator.make<BlockStmt>(Statements_);
+    }
+
+    bool equals(Stmt const* other) const override
+    {
+        if (!other || other->getKind() != Kind::BLOCK)
+            return false;
+
+        BlockStmt const* block = static_cast<BlockStmt const*>(other);
+
+        if (Statements_.size() != block->Statements_.size())
+            return false;
+
+        for (size_t i = 0; i < Statements_.size(); ++i) {
+            if (!Statements_[i]->equals(block->Statements_[i]))
+                return false;
+        }
+
+        return true;
+    }
 
     std::vector<Stmt*> const& getStatements() const
     {
@@ -97,6 +124,20 @@ public:
 
     ExprStmt& operator=(ExprStmt const&) noexcept = delete;
 
+    ExprStmt* clone() const override
+    {
+        return AST_allocator.make<ExprStmt>(Expr_->clone());
+    }
+
+    bool equals(Stmt const* other) const override
+    {
+        if (Kind_ != other->getKind())
+            return false;
+
+        ExprStmt const* block = dynamic_cast<ExprStmt const*>(other);
+        return Expr_->equals(block->getExpr());
+    }
+
     Expr* getExpr() const
     {
         return Expr_;
@@ -127,6 +168,20 @@ public:
     AssignmentStmt(AssignmentStmt const&) noexcept = delete;
 
     AssignmentStmt& operator=(AssignmentStmt const&) noexcept = delete;
+
+    AssignmentStmt* clone() const override
+    {
+        return AST_allocator.make<AssignmentStmt>(Target_->clone(), Target_->clone());
+    }
+
+    bool equals(Stmt const* other) const override
+    {
+        if (Kind_ != other->getKind())
+            return false;
+
+        AssignmentStmt const* block = dynamic_cast<AssignmentStmt const*>(other);
+        return Value_->equals(block->getValue()) && Target_->equals(block->getTarget());
+    }
 
     Expr* getValue() const
     {
@@ -170,6 +225,22 @@ public:
     IfStmt(IfStmt const&) noexcept = delete;
 
     IfStmt& operator=(IfStmt const&) noexcept = delete;
+
+    IfStmt* clone() const override
+    {
+        return AST_allocator.make<IfStmt>(Condition_->clone(), ThenBlock_->clone(), ElseBlock_->clone());
+    }
+
+    bool equals(Stmt const* other) const override
+    {
+        if (Kind_ != other->getKind())
+            return false;
+
+        IfStmt const* block = dynamic_cast<IfStmt const*>(other);
+        return Condition_->equals(block->getCondition())
+            && ThenBlock_->equals(block->getThenBlock())
+            && ElseBlock_->equals(block->getElseBlock());
+    }
 
     Expr* getCondition() const
     {
@@ -217,6 +288,20 @@ public:
 
     WhileStmt& operator=(WhileStmt const&) noexcept = delete;
 
+    WhileStmt* clone() const override
+    {
+        return AST_allocator.make<WhileStmt>(Condition_->clone(), Block_->clone());
+    }
+
+    bool equals(Stmt const* other) const override
+    {
+        if (Kind_ != other->getKind())
+            return false;
+
+        WhileStmt const* block = dynamic_cast<WhileStmt const*>(other);
+        return Condition_->equals(block->getCondition()) && Block_->equals(block->getBlock());
+    }
+
     Expr* getCondition() const
     {
         return Condition_;
@@ -259,6 +344,22 @@ public:
     ForStmt(ForStmt const&) noexcept = delete;
 
     ForStmt& operator=(ForStmt const&) noexcept = delete;
+
+    ForStmt* clone() const override
+    {
+        return AST_allocator.make<ForStmt>(Target_->clone(), Iter_->clone(), Block_->clone());
+    }
+
+    bool equals(Stmt const* other) const override
+    {
+        if (Kind_ != other->getKind())
+            return false;
+
+        ForStmt const* block = dynamic_cast<ForStmt const*>(other);
+        return Target_->equals(block->getTarget())
+            && Iter_->equals(block->getIter())
+            && Block_->equals(block->getBlock());
+    }
 
     NameExpr* getTarget() const
     {
@@ -312,6 +413,22 @@ public:
 
     FunctionDef& operator=(FunctionDef const&) noexcept = delete;
 
+    FunctionDef* clone() const override
+    {
+        return AST_allocator.make<FunctionDef>(Name_->clone(), Params_->clone(), Body_->clone());
+    }
+
+    bool equals(Stmt const* other) const override
+    {
+        if (Kind_ != other->getKind())
+            return false;
+
+        FunctionDef const* block = dynamic_cast<FunctionDef const*>(other);
+        return Name_->equals(block->getName())
+            && Params_->equals(block->getParameterList())
+            && Body_->equals(block->getBody());
+    }
+
     NameExpr* getName() const
     {
         return Name_;
@@ -361,6 +478,20 @@ public:
 
     ReturnStmt& operator=(ReturnStmt const&) noexcept = delete;
 
+    ReturnStmt* clone() const override
+    {
+        return AST_allocator.make<ReturnStmt>(Value_->clone());
+    }
+
+    bool equals(Stmt const* other) const override
+    {
+        if (Kind_ != other->getKind())
+            return false;
+
+        ReturnStmt const* block = dynamic_cast<ReturnStmt const*>(other);
+        return Value_->equals(block->getValue());
+    }
+
     Expr const* getValue() const
     {
         return Value_;
@@ -371,11 +502,6 @@ public:
         Value_ = v;
     }
 };
-
-static constexpr Stmt* makeStmt()
-{
-    return AST_allocator.make<Stmt>();
-}
 
 static constexpr BlockStmt* makeBlock(std::vector<Stmt*> stmts = {})
 {

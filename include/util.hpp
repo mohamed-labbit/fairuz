@@ -220,5 +220,53 @@ static bool isArabDigit(uint32_t const cp)
     }
 }
 
+static int64_t parseIntegerLiteral(StringRef const& literal)
+{
+    int base = 10;
+    size_t i = 0;
+    bool negative = false;
+
+    if (literal[i] == '-') {
+        negative = true;
+        ++i;
+    }
+
+    if (literal.slice(i, 2) == "0x" || literal.slice(i, 2) == "0X") {
+        base = 16;
+        i += 2;
+    } else if (literal.slice(i, 2) == "0b" || literal.slice(i, 2) == "0B") {
+        base = 2;
+        i += 2;
+    } else if (literal[i] == '0' && literal.len() > i + 1) {
+        base = 8;
+        ++i;
+    }
+
+    int64_t value = 0;
+
+    for (; i < literal.len(); ++i) {
+        char c = literal[i];
+
+        if (c == '\'')
+            continue; // ignore digit separators
+
+        int digit;
+
+        if (std::isdigit(c))
+            digit = c - '0';
+        else if (std::isalpha(c))
+            digit = std::tolower(c) - 'a' + 10;
+        else
+            throw std::invalid_argument("Invalid digit");
+
+        if (digit >= base)
+            throw std::invalid_argument("Digit out of range for base");
+
+        value = value * base + digit;
+    }
+
+    return negative ? -value : value;
+}
+
 } // util
 } // mylang
