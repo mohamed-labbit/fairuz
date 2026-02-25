@@ -80,7 +80,7 @@ endif()
 # Define the test executable
 add_executable(mylang_tests
     tests/test_main.cpp
-    #tests/runtime/allocator/test_arena.cpp
+    tests/runtime/allocator/test_arena.cpp
     tests/string/test_string.cpp
     tests/lexer/test_tokens.cpp
     tests/lexer/test_indentation.cpp
@@ -88,8 +88,8 @@ add_executable(mylang_tests
     tests/parser/test_analyzer.cpp
     tests/parser/test_optim.cpp
     tests/security/test_security.cpp
-    #tests/IR/test_value.cpp
-    #tests/IR/test_codegen.cpp
+    tests/IR/test_value.cpp
+    tests/IR/test_codegen.cpp
     $<TARGET_OBJECTS:mylang_objects>
 )
 
