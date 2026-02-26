@@ -90,6 +90,7 @@ add_executable(mylang_tests
     tests/security/test_security.cpp
     tests/IR/test_value.cpp
     tests/IR/test_codegen.cpp
+    tests/runtime/compiler/test_value.cpp
     $<TARGET_OBJECTS:mylang_objects>
 )
 
