@@ -3,18 +3,57 @@
 namespace mylang {
 namespace parser {
 
-std::optional<double> ASTOptimizer::evaluateConstant(ast::Expr const* expr)
+using namespace ast;
+
+namespace {
+
+bool isDefinitelyIntegerExpr(Expr const* expr)
+{
+    if (!expr)
+        return false;
+
+    switch (expr->getKind()) {
+    case Expr::Kind::LITERAL: {
+        auto const* lit = static_cast<LiteralExpr const*>(expr);
+        return lit->isInteger();
+    }
+    case Expr::Kind::UNARY: {
+        auto const* un = static_cast<UnaryExpr const*>(expr);
+        UnaryOp op = un->getOperator();
+        if (op != UnaryOp::OP_PLUS && op != UnaryOp::OP_NEG)
+            return false;
+        return isDefinitelyIntegerExpr(un->getOperand());
+    }
+    case Expr::Kind::BINARY: {
+        auto const* bin = static_cast<BinaryExpr const*>(expr);
+        if (!isDefinitelyIntegerExpr(bin->getLeft()) || !isDefinitelyIntegerExpr(bin->getRight()))
+            return false;
+
+        BinaryOp op = bin->getOperator();
+        return op == BinaryOp::OP_ADD
+            || op == BinaryOp::OP_SUB
+            || op == BinaryOp::OP_MUL
+            || op == BinaryOp::OP_MOD;
+    }
+    default:
+        return false;
+    }
+}
+
+}
+
+std::optional<double> ASTOptimizer::evaluateConstant(Expr const* expr)
 {
     if (!expr)
         return std::nullopt;
 
-    if (expr->getKind() == ast::Expr::Kind::LITERAL) {
-        ast::LiteralExpr const* lit = dynamic_cast<ast::LiteralExpr const*>(expr);
+    if (expr->getKind() == Expr::Kind::LITERAL) {
+        LiteralExpr const* lit = dynamic_cast<LiteralExpr const*>(expr);
 
         if (lit->isNumeric())
             return lit->toNumber();
-    } else if (expr->getKind() == ast::Expr::Kind::BINARY) {
-        ast::BinaryExpr const* bin = dynamic_cast<ast::BinaryExpr const*>(expr);
+    } else if (expr->getKind() == Expr::Kind::BINARY) {
+        BinaryExpr const* bin = dynamic_cast<BinaryExpr const*>(expr);
 
         std::optional<double> left = evaluateConstant(bin->getLeft());
         std::optional<double> right = evaluateConstant(bin->getRight());
@@ -22,55 +61,49 @@ std::optional<double> ASTOptimizer::evaluateConstant(ast::Expr const* expr)
         if (left == std::nullopt || right == std::nullopt)
             return std::nullopt;
 
-        if (bin->getOperator() == tok::TokenType::OP_PLUS)
-            return *left + *right;
-
-        if (bin->getOperator() == tok::TokenType::OP_MINUS)
-            return *left - *right;
-
-        if (bin->getOperator() == tok::TokenType::OP_STAR)
-            return *left * *right;
-
-        if (bin->getOperator() == tok::TokenType::OP_SLASH) {
+        switch (bin->getOperator()) {
+        case BinaryOp::OP_ADD: return *left + *right;
+        case BinaryOp::OP_SUB: return *left - *right;
+        case BinaryOp::OP_MUL: return *left * *right;
+        case BinaryOp::OP_POW: return std::pow(*left, *right);
+        case BinaryOp::OP_DIV:
             if (*right == 0.0)
                 return std::nullopt;
 
             return *left / *right;
-        }
 
-        if (bin->getOperator() == tok::TokenType::OP_PERCENT) {
+        case BinaryOp::OP_MOD:
             if (*right == 0.0)
                 return std::nullopt;
 
             return std::fmod(*left, *right);
+        default:
+            return std::nullopt;
         }
-
-        if (bin->getOperator() == tok::TokenType::OP_POWER)
-            return std::pow(*left, *right);
-    } else if (expr->getKind() == ast::Expr::Kind::UNARY) {
-        ast::UnaryExpr const* un = dynamic_cast<ast::UnaryExpr const*>(expr);
+    } else if (expr->getKind() == Expr::Kind::UNARY) {
+        UnaryExpr const* un = dynamic_cast<UnaryExpr const*>(expr);
         std::optional<double> operand = evaluateConstant(un->getOperand());
 
         if (operand == std::nullopt)
             return std::nullopt;
 
-        if (un->getOperator() == tok::TokenType::OP_PLUS)
+        if (un->getOperator() == UnaryOp::OP_PLUS)
             return *operand;
 
-        if (un->getOperator() == tok::TokenType::OP_MINUS)
+        if (un->getOperator() == UnaryOp::OP_NEG)
             return -*operand;
     }
     return std::nullopt;
 }
 
-ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
+Expr* ASTOptimizer::optimizeConstantFolding(Expr* expr)
 {
     if (!expr)
         return nullptr;
 
     // First, optimize children
-    if (expr->getKind() == ast::Expr::Kind::BINARY) {
-        ast::BinaryExpr* bin = dynamic_cast<ast::BinaryExpr*>(expr);
+    if (expr->getKind() == Expr::Kind::BINARY) {
+        BinaryExpr* bin = dynamic_cast<BinaryExpr*>(expr);
 
         bin->setLeft(optimizeConstantFolding(bin->getLeft()));
         bin->setRight(optimizeConstantFolding(bin->getRight()));
@@ -78,24 +111,24 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
         // Try to evaluate
         if (std::optional<double> val = evaluateConstant(expr)) {
             ++Stats_.ConstantFolds;
-            return ast::makeLiteralFloat(*val);
+            return makeLiteralFloat(*val);
         }
 
         // Algebraic simplifications
-        ast::Expr* left = bin->getLeft();
-        ast::Expr* right = bin->getRight();
+        Expr* left = bin->getLeft();
+        Expr* right = bin->getRight();
 
         if (!left || !right)
             return expr->clone();
 
-        tok::TokenType op = bin->getOperator();
+        BinaryOp op = bin->getOperator();
 
-        ast::Expr::Kind r_kind = right->getKind();
-        ast::Expr::Kind l_kind = left->getKind();
+        Expr::Kind r_kind = right->getKind();
+        Expr::Kind l_kind = left->getKind();
 
         // x + 0 = x, x - 0 = x
-        if ((op == tok::TokenType::OP_PLUS || op == tok::TokenType::OP_MINUS) && r_kind == ast::Expr::Kind::LITERAL) {
-            ast::LiteralExpr* lit = dynamic_cast<ast::LiteralExpr*>(right);
+        if ((op == BinaryOp::OP_ADD || op == BinaryOp::OP_SUB) && r_kind == Expr::Kind::LITERAL) {
+            LiteralExpr* lit = dynamic_cast<LiteralExpr*>(right);
             if (lit->isNumeric() && lit->toNumber() == 0) {
                 ++Stats_.StrengthReductions;
                 return left->clone();
@@ -103,8 +136,8 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
         }
 
         // inverse (0 - x != x, but 0 + x = x)
-        if (op == tok::TokenType::OP_PLUS && l_kind == ast::Expr::Kind::LITERAL) {
-            ast::LiteralExpr* lit = dynamic_cast<ast::LiteralExpr*>(left);
+        if (op == BinaryOp::OP_ADD && l_kind == Expr::Kind::LITERAL) {
+            LiteralExpr* lit = dynamic_cast<LiteralExpr*>(left);
             if (lit->isNumeric() && lit->toNumber() == 0) {
                 ++Stats_.StrengthReductions;
                 return right->clone();
@@ -112,8 +145,8 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
         }
 
         // x * 1 = x, x / 1 = x
-        if ((op == tok::TokenType::OP_STAR || op == tok::TokenType::OP_SLASH) && r_kind == ast::Expr::Kind::LITERAL) {
-            ast::LiteralExpr* lit = dynamic_cast<ast::LiteralExpr*>(right);
+        if ((op == BinaryOp::OP_MUL || op == BinaryOp::OP_DIV) && r_kind == Expr::Kind::LITERAL) {
+            LiteralExpr* lit = dynamic_cast<LiteralExpr*>(right);
             if (lit->isNumeric() && lit->toNumber() == 1) {
                 ++Stats_.StrengthReductions;
                 return left->clone();
@@ -121,76 +154,75 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
         }
 
         // 1 * x
-        if (op == tok::TokenType::OP_STAR && l_kind == ast::Expr::Kind::LITERAL) {
-            ast::LiteralExpr* lit = dynamic_cast<ast::LiteralExpr*>(left);
+        if (op == BinaryOp::OP_MUL && l_kind == Expr::Kind::LITERAL) {
+            LiteralExpr* lit = dynamic_cast<LiteralExpr*>(left);
             if (lit->isNumeric() && lit->toNumber() == 1) {
                 ++Stats_.StrengthReductions;
                 return right->clone();
             }
         }
 
-        // x * 0 = 0
-        /// TODO: find a way to exclude IEEE floats since they could be inf or NaN
-        if (op == tok::TokenType::OP_STAR && r_kind == ast::Expr::Kind::LITERAL) {
-            ast::LiteralExpr* lit = dynamic_cast<ast::LiteralExpr*>(right);
-            if (lit->isNumeric() && lit->toNumber() == 0) {
+        // x * 0 = 0 (only when left side is definitely integer; IEEE floats can yield NaN for inf * 0)
+        if (op == BinaryOp::OP_MUL && r_kind == Expr::Kind::LITERAL) {
+            auto* r_lit = static_cast<LiteralExpr*>(right);
+            if (r_lit->isNumeric() && r_lit->toNumber() == 0 && isDefinitelyIntegerExpr(left)) {
                 ++Stats_.StrengthReductions;
-                return ast::makeLiteralInt(0);
+                return makeLiteralInt(0);
             }
         }
 
         // x * 2 = x + x (strength reduction)
-        if (op == tok::TokenType::OP_STAR && r_kind == ast::Expr::Kind::LITERAL) {
-            auto* lit = dynamic_cast<ast::LiteralExpr*>(right);
+        if (op == BinaryOp::OP_MUL && r_kind == Expr::Kind::LITERAL) {
+            auto* lit = dynamic_cast<LiteralExpr*>(right);
             if (lit->isNumeric() && lit->toNumber() == 2) {
                 ++Stats_.StrengthReductions;
-                return ast::makeBinary(left->clone(), left->clone(), tok::TokenType::OP_PLUS);
+                return makeBinary(left->clone(), left->clone(), BinaryOp::OP_ADD);
             }
         }
 
-        if (op == tok::TokenType::OP_STAR && l_kind == ast::Expr::Kind::LITERAL) {
-            auto* lit = dynamic_cast<ast::LiteralExpr*>(left);
+        if (op == BinaryOp::OP_MUL && l_kind == Expr::Kind::LITERAL) {
+            auto* lit = dynamic_cast<LiteralExpr*>(left);
             if (lit->isNumeric() && lit->toNumber() == 2) {
                 ++Stats_.StrengthReductions;
-                return ast::makeBinary(right->clone(), right->clone(), tok::TokenType::OP_PLUS);
+                return makeBinary(right->clone(), right->clone(), BinaryOp::OP_ADD);
             }
         }
 
         // x - x = 0
-        if (op == tok::TokenType::OP_MINUS) {
+        if (op == BinaryOp::OP_SUB) {
             if (left->equals(right)) {
                 ++Stats_.StrengthReductions;
-                return ast::makeLiteralInt(0);
+                return makeLiteralInt(0);
             }
         }
 
         // string concatenation
-        if (l_kind == ast::Expr::Kind::LITERAL && r_kind == ast::Expr::Kind::LITERAL && op == tok::TokenType::OP_PLUS) {
-            ast::LiteralExpr* l_lit = dynamic_cast<ast::LiteralExpr*>(left);
-            ast::LiteralExpr* r_lit = dynamic_cast<ast::LiteralExpr*>(right);
+        if (l_kind == Expr::Kind::LITERAL && r_kind == Expr::Kind::LITERAL && op == BinaryOp::OP_ADD) {
+            LiteralExpr* l_lit = dynamic_cast<LiteralExpr*>(left);
+            LiteralExpr* r_lit = dynamic_cast<LiteralExpr*>(right);
 
-            if (l_lit->getType() == ast::LiteralExpr::Type::STRING && r_lit->getType() == ast::LiteralExpr::Type::STRING)
-                return ast::makeLiteralString(l_lit->getStr() + r_lit->getStr());
+            if (l_lit->getType() == LiteralExpr::Type::STRING && r_lit->getType() == LiteralExpr::Type::STRING)
+                return makeLiteralString(l_lit->getStr() + r_lit->getStr());
         }
-    } else if (expr->getKind() == ast::Expr::Kind::UNARY) {
-        auto* outer = static_cast<ast::UnaryExpr*>(expr);
-        ast::Expr* optimizedOperand = optimizeConstantFolding(outer->getOperand());
+    } else if (expr->getKind() == Expr::Kind::UNARY) {
+        auto* outer = static_cast<UnaryExpr*>(expr);
+        Expr* optimizedOperand = optimizeConstantFolding(outer->getOperand());
         bool operandChanged = (optimizedOperand != outer->getOperand());
-        ast::UnaryExpr* rebuiltUnary = nullptr;
+        UnaryExpr* rebuiltUnary = nullptr;
 
         if (operandChanged)
-            rebuiltUnary = ast::makeUnary(optimizedOperand, outer->getOperator());
+            rebuiltUnary = makeUnary(optimizedOperand, outer->getOperator());
         else
             rebuiltUnary = outer->clone();
 
         if (auto val = evaluateConstant(rebuiltUnary)) {
             ++Stats_.ConstantFolds;
-            return ast::makeLiteralFloat(*val);
+            return makeLiteralFloat(*val);
         }
 
-        if (rebuiltUnary->getOperator() == tok::TokenType::OP_MINUS) {
-            if (auto* inner = dynamic_cast<ast::UnaryExpr*>(optimizedOperand)) {
-                if (inner->getOperator() == tok::TokenType::OP_MINUS) {
+        if (rebuiltUnary->getOperator() == UnaryOp::OP_NEG) {
+            if (auto* inner = dynamic_cast<UnaryExpr*>(optimizedOperand)) {
+                if (inner->getOperator() == UnaryOp::OP_NEG) {
                     ++Stats_.StrengthReductions;
                     return inner->getOperand()->clone();
                 }
@@ -198,31 +230,31 @@ ast::Expr* ASTOptimizer::optimizeConstantFolding(ast::Expr* expr)
         }
 
         return rebuiltUnary;
-    } else if (expr->getKind() == ast::Expr::Kind::CALL) {
-        ast::CallExpr* call = dynamic_cast<ast::CallExpr*>(expr);
-        for (ast::Expr*& arg : call->getArgsMutable())
+    } else if (expr->getKind() == Expr::Kind::CALL) {
+        CallExpr* call = dynamic_cast<CallExpr*>(expr);
+        for (Expr*& arg : call->getArgsMutable())
             arg = optimizeConstantFolding(arg);
-    } else if (expr->getKind() == ast::Expr::Kind::LIST) {
-        ast::ListExpr* list = dynamic_cast<ast::ListExpr*>(expr);
-        for (ast::Expr*& elem : list->getElementsMutable())
+    } else if (expr->getKind() == Expr::Kind::LIST) {
+        ListExpr* list = dynamic_cast<ListExpr*>(expr);
+        for (Expr*& elem : list->getElementsMutable())
             elem = optimizeConstantFolding(elem);
     }
 
     return expr->clone();
 }
 
-ast::Stmt* ASTOptimizer::eliminateDeadCode(ast::Stmt* stmt)
+Stmt* ASTOptimizer::eliminateDeadCode(Stmt* stmt)
 {
     if (!stmt)
         return nullptr;
 
-    if (stmt->getKind() == ast::Stmt::Kind::IF) {
-        ast::IfStmt* ifStmt = dynamic_cast<ast::IfStmt*>(stmt);
+    if (stmt->getKind() == Stmt::Kind::IF) {
+        IfStmt* ifStmt = dynamic_cast<IfStmt*>(stmt);
 
         // Constant condition elimination
-        if (ifStmt->getCondition()->getKind() == ast::Expr::Kind::LITERAL) {
-            ast::LiteralExpr* lit = dynamic_cast<ast::LiteralExpr*>(ifStmt->getCondition());
-            if (lit->getType() == ast::LiteralExpr::Type::BOOLEAN) {
+        if (ifStmt->getCondition()->getKind() == Expr::Kind::LITERAL) {
+            LiteralExpr* lit = dynamic_cast<LiteralExpr*>(ifStmt->getCondition());
+            if (lit->getType() == LiteralExpr::Type::BOOLEAN) {
                 ++Stats_.DeadCodeEliminations;
                 if (lit->getBool() == true)
                     // Return then block as block statement
@@ -238,69 +270,69 @@ ast::Stmt* ASTOptimizer::eliminateDeadCode(ast::Stmt* stmt)
             }
         }
 
-        ast::IfStmt* clone = ifStmt->clone();
+        IfStmt* clone = ifStmt->clone();
 
-        clone->setThenBlock(dynamic_cast<ast::BlockStmt*>(eliminateDeadCode(clone->getThenBlock())));
-        clone->setElseBlock(dynamic_cast<ast::BlockStmt*>(eliminateDeadCode(clone->getElseBlock())));
+        clone->setThenBlock(dynamic_cast<BlockStmt*>(eliminateDeadCode(clone->getThenBlock())));
+        clone->setElseBlock(dynamic_cast<BlockStmt*>(eliminateDeadCode(clone->getElseBlock())));
 
         return clone;
-    } else if (stmt->getKind() == ast::Stmt::Kind::WHILE) {
-        ast::WhileStmt* whileStmt = dynamic_cast<ast::WhileStmt*>(stmt);
+    } else if (stmt->getKind() == Stmt::Kind::WHILE) {
+        WhileStmt* whileStmt = dynamic_cast<WhileStmt*>(stmt);
 
         // Infinite loop with false condition
-        if (whileStmt->getCondition()->getKind() == ast::Expr::Kind::LITERAL) {
-            ast::LiteralExpr* lit = dynamic_cast<ast::LiteralExpr*>(whileStmt->getCondition());
-            if (lit->getType() == ast::LiteralExpr::Type::BOOLEAN && lit->getBool() == false) {
+        if (whileStmt->getCondition()->getKind() == Expr::Kind::LITERAL) {
+            LiteralExpr* lit = dynamic_cast<LiteralExpr*>(whileStmt->getCondition());
+            if (lit->getType() == LiteralExpr::Type::BOOLEAN && lit->getBool() == false) {
                 ++Stats_.DeadCodeEliminations;
                 return nullptr; // kill loop
             }
         }
 
-        ast::WhileStmt* clone = whileStmt->clone();
-        clone->setBlock(dynamic_cast<ast::BlockStmt*>(eliminateDeadCode(clone->getBlockMutable())));
+        WhileStmt* clone = whileStmt->clone();
+        clone->setBlock(dynamic_cast<BlockStmt*>(eliminateDeadCode(clone->getBlockMutable())));
         return clone;
-    } else if (stmt->getKind() == ast::Stmt::Kind::FOR) {
-        ast::ForStmt* forStmt = dynamic_cast<ast::ForStmt*>(stmt);
+    } else if (stmt->getKind() == Stmt::Kind::FOR) {
+        ForStmt* forStmt = dynamic_cast<ForStmt*>(stmt);
         /// TODO: evaluate for loop condition and kill it if it doesn't run
-        ast::ForStmt* clone = forStmt->clone();
-        clone->setBlock(dynamic_cast<ast::BlockStmt*>(eliminateDeadCode(clone->getBlock())));
+        ForStmt* clone = forStmt->clone();
+        clone->setBlock(dynamic_cast<BlockStmt*>(eliminateDeadCode(clone->getBlock())));
         return clone;
-    } else if (stmt->getKind() == ast::Stmt::Kind::FUNC) {
-        ast::FunctionDef* funcDef = dynamic_cast<ast::FunctionDef*>(stmt);
-        ast::FunctionDef* clone = funcDef->clone();
-        clone->setBody(dynamic_cast<ast::BlockStmt*>(eliminateDeadCode(clone->getBody())));
+    } else if (stmt->getKind() == Stmt::Kind::FUNC) {
+        FunctionDef* funcDef = dynamic_cast<FunctionDef*>(stmt);
+        FunctionDef* clone = funcDef->clone();
+        clone->setBody(dynamic_cast<BlockStmt*>(eliminateDeadCode(clone->getBody())));
         return clone;
-    } else if (stmt->getKind() == ast::Stmt::Kind::BLOCK) {
-        ast::BlockStmt* block_stmt = dynamic_cast<ast::BlockStmt*>(stmt);
-        std::vector<ast::Stmt*> new_stmts;
+    } else if (stmt->getKind() == Stmt::Kind::BLOCK) {
+        BlockStmt* block_stmt = dynamic_cast<BlockStmt*>(stmt);
+        std::vector<Stmt*> new_stmts;
         new_stmts.reserve(block_stmt->getStatements().size());
         bool seen_return = false;
-        for (ast::Stmt* s : block_stmt->getStatements()) {
+        for (Stmt* s : block_stmt->getStatements()) {
             if (seen_return) {
                 Stats_.DeadCodeEliminations++;
                 break;
             }
 
-            if (s->getKind() == ast::Stmt::Kind::RETURN)
+            if (s->getKind() == Stmt::Kind::RETURN)
                 seen_return = true;
 
             new_stmts.push_back(eliminateDeadCode(s));
         }
 
-        return ast::makeBlock(new_stmts);
+        return makeBlock(new_stmts);
     }
 
     return stmt->clone();
 }
 
-StringRef ASTOptimizer::CSEPass::exprToString(ast::Expr const* expr)
+StringRef ASTOptimizer::CSEPass::exprToString(Expr const* expr)
 {
     if (!expr)
         return "";
 
     switch (expr->getKind()) {
-    case ast::Expr::Kind::LITERAL: {
-        ast::LiteralExpr const* lit = dynamic_cast<ast::LiteralExpr const*>(expr);
+    case Expr::Kind::LITERAL: {
+        LiteralExpr const* lit = dynamic_cast<LiteralExpr const*>(expr);
         if (lit->isString())
             return lit->getStr();
         else if (lit->isNumeric())
@@ -310,17 +342,23 @@ StringRef ASTOptimizer::CSEPass::exprToString(ast::Expr const* expr)
         else
             return "";
     }
-    case ast::Expr::Kind::NAME: {
-        ast::NameExpr const* name = dynamic_cast<ast::NameExpr const*>(expr);
+    case Expr::Kind::NAME: {
+        NameExpr const* name = dynamic_cast<NameExpr const*>(expr);
         return name->getValue();
     }
-    case ast::Expr::Kind::BINARY: {
-        ast::BinaryExpr const* bin = dynamic_cast<ast::BinaryExpr const*>(expr);
+    case Expr::Kind::BINARY: {
+        /*
+        BinaryExpr const* bin = dynamic_cast<BinaryExpr const*>(expr);
         return "(" + exprToString(bin->getLeft()) + " " + tok::Token::toString(bin->getOperator()) + " " + exprToString(bin->getRight()) + ")";
+        */
+        break;
     }
-    case ast::Expr::Kind::UNARY: {
-        ast::UnaryExpr const* un = dynamic_cast<ast::UnaryExpr const*>(expr);
+    case Expr::Kind::UNARY: {
+        /*
+        UnaryExpr const* un = dynamic_cast<UnaryExpr const*>(expr);
         return tok::Token::toString(un->getOperator()) + exprToString(un->getOperand());
+        */
+        break;
     }
     default:
         return "";
@@ -332,7 +370,7 @@ StringRef ASTOptimizer::CSEPass::getTempVar()
     return StringRef("__cse_temp_") + static_cast<char>(TempCounter_++);
 }
 
-std::optional<StringRef> ASTOptimizer::CSEPass::findCSE(ast::Expr const* expr)
+std::optional<StringRef> ASTOptimizer::CSEPass::findCSE(Expr const* expr)
 {
     StringRef exprStr = exprToString(expr);
     if (exprStr.empty())
@@ -345,45 +383,45 @@ std::optional<StringRef> ASTOptimizer::CSEPass::findCSE(ast::Expr const* expr)
     return std::nullopt;
 }
 
-void ASTOptimizer::CSEPass::recordExpr(ast::Expr const* expr, StringRef const& var)
+void ASTOptimizer::CSEPass::recordExpr(Expr const* expr, StringRef const& var)
 {
     StringRef exprStr = exprToString(expr);
     if (!exprStr.empty())
         ExprCache_[exprStr] = var;
 }
 
-bool ASTOptimizer::isLoopInvariant(ast::Expr const* expr, std::unordered_set<StringRef, StringRefHash, StringRefEqual> const& loopVars)
+bool ASTOptimizer::isLoopInvariant(Expr const* expr, std::unordered_set<StringRef, StringRefHash, StringRefEqual> const& loopVars)
 {
     if (!expr)
         return true;
 
-    if (expr->getKind() == ast::Expr::Kind::NAME) {
-        ast::NameExpr const* name = dynamic_cast<ast::NameExpr const*>(expr);
+    if (expr->getKind() == Expr::Kind::NAME) {
+        NameExpr const* name = dynamic_cast<NameExpr const*>(expr);
         return !loopVars.count(name->getValue());
-    } else if (expr->getKind() == ast::Expr::Kind::BINARY) {
-        ast::BinaryExpr const* bin = dynamic_cast<ast::BinaryExpr const*>(expr);
+    } else if (expr->getKind() == Expr::Kind::BINARY) {
+        BinaryExpr const* bin = dynamic_cast<BinaryExpr const*>(expr);
         return isLoopInvariant(bin->getLeft(), loopVars) && isLoopInvariant(bin->getRight(), loopVars);
-    } else if (expr->getKind() == ast::Expr::Kind::UNARY) {
-        ast::UnaryExpr const* un = dynamic_cast<ast::UnaryExpr const*>(expr);
+    } else if (expr->getKind() == Expr::Kind::UNARY) {
+        UnaryExpr const* un = dynamic_cast<UnaryExpr const*>(expr);
         return isLoopInvariant(un->getOperand(), loopVars);
-    } else if (expr->getKind() == ast::Expr::Kind::LITERAL)
+    } else if (expr->getKind() == Expr::Kind::LITERAL)
         return true;
 
     return false;
 }
 
-std::vector<ast::Stmt*> ASTOptimizer::optimize(std::vector<ast::Stmt*> statements, int32_t level)
+std::vector<Stmt*> ASTOptimizer::optimize(std::vector<Stmt*> statements, int32_t level)
 {
-    std::vector<ast::Stmt*> result;
-    for (ast::Stmt*& stmt : statements) {
+    std::vector<Stmt*> result;
+    for (Stmt*& stmt : statements) {
         // Apply optimizations based on level
         if (level >= 1) {
             // O1: Basic optimizations
-            if (stmt->getKind() == ast::Stmt::Kind::ASSIGNMENT) {
-                ast::AssignmentStmt* assign = dynamic_cast<ast::AssignmentStmt*>(stmt);
+            if (stmt->getKind() == Stmt::Kind::ASSIGNMENT) {
+                AssignmentStmt* assign = dynamic_cast<AssignmentStmt*>(stmt);
                 assign->setValue(optimizeConstantFolding(assign->getValue()));
-            } else if (stmt->getKind() == ast::Stmt::Kind::EXPR) {
-                ast::ExprStmt* exprStmt = dynamic_cast<ast::ExprStmt*>(stmt);
+            } else if (stmt->getKind() == Stmt::Kind::EXPR) {
+                ExprStmt* exprStmt = dynamic_cast<ExprStmt*>(stmt);
                 exprStmt->setExpr(optimizeConstantFolding(exprStmt->getExpr()));
             }
         }

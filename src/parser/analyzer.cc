@@ -5,17 +5,19 @@
 namespace mylang {
 namespace parser {
 
+using namespace ast;
+
 // semantic analyzer
 
 // Type inference engine
-typename SymbolTable::DataType_t SemanticAnalyzer::inferType(ast::Expr const* expr)
+typename SymbolTable::DataType_t SemanticAnalyzer::inferType(Expr const* expr)
 {
     if (!expr)
         return SymbolTable::DataType_t::UNKNOWN;
 
     switch (expr->getKind()) {
-    case ast::Expr::Kind::LITERAL: {
-        ast::LiteralExpr const* lit = static_cast<ast::LiteralExpr const*>(expr);
+    case Expr::Kind::LITERAL: {
+        LiteralExpr const* lit = static_cast<LiteralExpr const*>(expr);
 
         if (lit->isString())
             return SymbolTable::DataType_t::STRING;
@@ -31,8 +33,8 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(ast::Expr const* ex
         break;
     }
 
-    case ast::Expr::Kind::NAME: {
-        ast::NameExpr const* name = static_cast<ast::NameExpr const*>(expr);
+    case Expr::Kind::NAME: {
+        NameExpr const* name = static_cast<NameExpr const*>(expr);
         SymbolTable::Symbol* sym = CurrentScope_->lookup(name->getValue());
         if (sym)
             return sym->DataType;
@@ -40,8 +42,8 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(ast::Expr const* ex
         break;
     }
 
-    case ast::Expr::Kind::BINARY: {
-        ast::BinaryExpr const* bin = static_cast<ast::BinaryExpr const*>(expr);
+    case Expr::Kind::BINARY: {
+        BinaryExpr const* bin = static_cast<BinaryExpr const*>(expr);
 
         SymbolTable::DataType_t leftType = inferType(bin->getLeft());
         SymbolTable::DataType_t rightType = inferType(bin->getRight());
@@ -53,19 +55,19 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(ast::Expr const* ex
         if (leftType == SymbolTable::DataType_t::INTEGER && rightType == SymbolTable::DataType_t::INTEGER)
             return SymbolTable::DataType_t::INTEGER;
 
-        if (bin->getOperator() == tok::TokenType::OP_PLUS && leftType == SymbolTable::DataType_t::STRING)
+        if (bin->getOperator() == BinaryOp::OP_ADD && leftType == SymbolTable::DataType_t::STRING)
             return SymbolTable::DataType_t::STRING;
 
-        if (bin->getOperator() == tok::TokenType::KW_AND || bin->getOperator() == tok::TokenType::KW_OR)
+        if (bin->getOperator() == BinaryOp::OP_AND || bin->getOperator() == BinaryOp::OP_OR)
             return SymbolTable::DataType_t::BOOLEAN;
 
         break;
     }
 
-    case ast::Expr::Kind::LIST:
+    case Expr::Kind::LIST:
         return SymbolTable::DataType_t::LIST;
 
-    case ast::Expr::Kind::CALL:
+    case Expr::Kind::CALL:
         return SymbolTable::DataType_t::ANY;
 
     default:
@@ -80,14 +82,14 @@ void SemanticAnalyzer::reportIssue(Issue::Severity sev, StringRef const& msg, in
     Issues_.push_back({ sev, msg, line, sugg });
 }
 
-void SemanticAnalyzer::analyzeExpr(ast::Expr const* expr)
+void SemanticAnalyzer::analyzeExpr(Expr const* expr)
 {
     if (!expr)
         return;
 
     switch (expr->getKind()) {
-    case ast::Expr::Kind::NAME: {
-        ast::NameExpr const* name = static_cast<ast::NameExpr const*>(expr);
+    case Expr::Kind::NAME: {
+        NameExpr const* name = static_cast<NameExpr const*>(expr);
 
         if (!CurrentScope_->isDefined(name->getValue()))
             reportIssue(Issue::Severity::ERROR, "Undefined variable: " + name->getValue(), expr->getLine(), "Did you forget to initialize it?");
@@ -97,8 +99,8 @@ void SemanticAnalyzer::analyzeExpr(ast::Expr const* expr)
         break;
     }
 
-    case ast::Expr::Kind::BINARY: {
-        ast::BinaryExpr const* bin = static_cast<ast::BinaryExpr const*>(expr);
+    case Expr::Kind::BINARY: {
+        BinaryExpr const* bin = static_cast<BinaryExpr const*>(expr);
 
         analyzeExpr(bin->getLeft());
         analyzeExpr(bin->getRight());
@@ -112,13 +114,13 @@ void SemanticAnalyzer::analyzeExpr(ast::Expr const* expr)
                 Issue::Severity::ERROR, "Type mismatch in binary expression", expr->getLine(), "Left and right operands must have same type");
 
         if (leftType == SymbolTable::DataType_t::STRING || rightType == SymbolTable::DataType_t::STRING) {
-            if (bin->getOperator() != tok::TokenType::OP_PLUS)
+            if (bin->getOperator() != BinaryOp::OP_ADD)
                 reportIssue(Issue::Severity::ERROR, "Invalid operation on string", expr->getLine(), "Only '+' is allowed for strings");
         }
 
         // Division by zero detection (constant folding)
-        if (bin->getOperator() == tok::TokenType::OP_SLASH && bin->getRight()->getKind() == ast::Expr::Kind::LITERAL) {
-            ast::LiteralExpr const* lit = static_cast<ast::LiteralExpr const*>(bin->getRight());
+        if (bin->getOperator() == BinaryOp::OP_DIV && bin->getRight()->getKind() == Expr::Kind::LITERAL) {
+            LiteralExpr const* lit = static_cast<LiteralExpr const*>(bin->getRight());
             if (lit->isNumeric() && lit->toNumber() == 0)
                 reportIssue(Issue::Severity::ERROR, "Division by zero", expr->getLine(), "This will cause a runtime error");
         }
@@ -126,22 +128,22 @@ void SemanticAnalyzer::analyzeExpr(ast::Expr const* expr)
         break;
     }
 
-    case ast::Expr::Kind::UNARY: {
-        ast::UnaryExpr const* un = static_cast<ast::UnaryExpr const*>(expr);
+    case Expr::Kind::UNARY: {
+        UnaryExpr const* un = static_cast<UnaryExpr const*>(expr);
         analyzeExpr(un->getOperand());
         break;
     }
 
-    case ast::Expr::Kind::CALL: {
-        ast::CallExpr const* call = static_cast<ast::CallExpr const*>(expr);
+    case Expr::Kind::CALL: {
+        CallExpr const* call = static_cast<CallExpr const*>(expr);
         analyzeExpr(call->getCallee());
 
-        for (ast::Expr const* const& arg : call->getArgs())
+        for (Expr const* const& arg : call->getArgs())
             analyzeExpr(arg);
 
         // Check if calling undefined function
-        if (call->getCallee()->getKind() == ast::Expr::Kind::NAME) {
-            ast::NameExpr const* name = static_cast<ast::NameExpr const*>(call->getCallee());
+        if (call->getCallee()->getKind() == Expr::Kind::NAME) {
+            NameExpr const* name = static_cast<NameExpr const*>(call->getCallee());
 
             if (SymbolTable::Symbol* sym = CurrentScope_->lookup(name->getValue())) {
                 if (sym->SymbolType != SymbolTable::SymbolType::FUNCTION)
@@ -149,8 +151,8 @@ void SemanticAnalyzer::analyzeExpr(ast::Expr const* expr)
             }
         }
 
-        if (call->getCallee()->getKind() == ast::Expr::Kind::NAME) {
-            ast::NameExpr const* name = static_cast<ast::NameExpr const*>(call->getCallee());
+        if (call->getCallee()->getKind() == Expr::Kind::NAME) {
+            NameExpr const* name = static_cast<NameExpr const*>(call->getCallee());
 
             SymbolTable::Symbol* sym = CurrentScope_->lookup(name->getValue());
 
@@ -162,9 +164,9 @@ void SemanticAnalyzer::analyzeExpr(ast::Expr const* expr)
         break;
     }
 
-    case ast::Expr::Kind::LIST: {
-        ast::ListExpr const* list = static_cast<ast::ListExpr const*>(expr);
-        for (ast::Expr const* const& elem : list->getElements())
+    case Expr::Kind::LIST: {
+        ListExpr const* list = static_cast<ListExpr const*>(expr);
+        for (Expr const* const& elem : list->getElements())
             analyzeExpr(elem);
 
         break;
@@ -175,14 +177,14 @@ void SemanticAnalyzer::analyzeExpr(ast::Expr const* expr)
     }
 }
 
-void SemanticAnalyzer::analyzeStmt(ast::Stmt const* stmt)
+void SemanticAnalyzer::analyzeStmt(Stmt const* stmt)
 {
     if (!stmt)
         return;
 
     switch (stmt->getKind()) {
-    case ast::Stmt::Kind::ASSIGNMENT: {
-        ast::AssignmentStmt const* assign = static_cast<ast::AssignmentStmt const*>(stmt);
+    case Stmt::Kind::ASSIGNMENT: {
+        AssignmentStmt const* assign = static_cast<AssignmentStmt const*>(stmt);
         analyzeExpr(assign->getValue());
 
         SymbolTable::DataType_t type = inferType(assign->getValue());
@@ -191,64 +193,64 @@ void SemanticAnalyzer::analyzeStmt(ast::Stmt const* stmt)
         sym.DataType = type;
         sym.DefinitionLine = stmt->getLine();
 
-        ast::Expr* target = assign->getTarget();
+        Expr* target = assign->getTarget();
         assert(target);
         StringRef target_name = "";
 
         /// TODO: check other type of target expressions
-        if (target->getKind() == ast::Expr::Kind::NAME)
-            target_name = dynamic_cast<ast::NameExpr*>(target)->getValue();
+        if (target->getKind() == Expr::Kind::NAME)
+            target_name = dynamic_cast<NameExpr*>(target)->getValue();
 
         CurrentScope_->define(target_name, sym);
         break;
     }
 
-    case ast::Stmt::Kind::EXPR: {
-        ast::ExprStmt const* exprStmt = static_cast<ast::ExprStmt const*>(stmt);
+    case Stmt::Kind::EXPR: {
+        ExprStmt const* exprStmt = static_cast<ExprStmt const*>(stmt);
         analyzeExpr(exprStmt->getExpr());
         // Warn about unused expression results
-        if (exprStmt->getExpr()->getKind() != ast::Expr::Kind::CALL)
+        if (exprStmt->getExpr()->getKind() != Expr::Kind::CALL)
             reportIssue(Issue::Severity::INFO, "Expression result not used", stmt->getLine());
 
         break;
     }
 
-    case ast::Stmt::Kind::IF: {
-        ast::IfStmt const* ifStmt = static_cast<ast::IfStmt const*>(stmt);
+    case Stmt::Kind::IF: {
+        IfStmt const* ifStmt = static_cast<IfStmt const*>(stmt);
         analyzeExpr(ifStmt->getCondition());
 
         // Check for constant conditions
-        if (ifStmt->getCondition()->getKind() == ast::Expr::Kind::LITERAL)
+        if (ifStmt->getCondition()->getKind() == Expr::Kind::LITERAL)
             reportIssue(Issue::Severity::WARNING, "Condition is always constant", stmt->getLine(), "Consider removing if statement");
 
-        for (ast::Stmt const* const& s : ifStmt->getThenBlock()->getStatements())
+        for (Stmt const* const& s : ifStmt->getThenBlock()->getStatements())
             analyzeStmt(s);
 
-        for (ast::Stmt const* const& s : ifStmt->getElseBlock()->getStatements())
+        for (Stmt const* const& s : ifStmt->getElseBlock()->getStatements())
             analyzeStmt(s);
 
         break;
     }
 
-    case ast::Stmt::Kind::WHILE: {
-        ast::WhileStmt const* whileStmt = static_cast<ast::WhileStmt const*>(stmt);
+    case Stmt::Kind::WHILE: {
+        WhileStmt const* whileStmt = static_cast<WhileStmt const*>(stmt);
         analyzeExpr(whileStmt->getCondition());
 
         // Detect infinite loops
-        if (whileStmt->getCondition()->getKind() == ast::Expr::Kind::LITERAL) {
-            ast::LiteralExpr const* lit = static_cast<ast::LiteralExpr const*>(whileStmt->getCondition());
+        if (whileStmt->getCondition()->getKind() == Expr::Kind::LITERAL) {
+            LiteralExpr const* lit = static_cast<LiteralExpr const*>(whileStmt->getCondition());
             if (lit->isBoolean() && lit->getBool() == true)
                 reportIssue(Issue::Severity::WARNING, "Infinite loop detected", stmt->getLine(), "Add a break condition");
         }
 
-        for (ast::Stmt const* const& s : whileStmt->getBlock()->getStatements())
+        for (Stmt const* const& s : whileStmt->getBlock()->getStatements())
             analyzeStmt(s);
 
         break;
     }
 
-    case ast::Stmt::Kind::FOR: {
-        ast::ForStmt const* forStmt = static_cast<ast::ForStmt const*>(stmt);
+    case Stmt::Kind::FOR: {
+        ForStmt const* forStmt = static_cast<ForStmt const*>(stmt);
         analyzeExpr(forStmt->getIter());
 
         // Create new scope for loop variable
@@ -258,7 +260,7 @@ void SemanticAnalyzer::analyzeStmt(ast::Stmt const* stmt)
         loopVar.DataType = SymbolTable::DataType_t::ANY;
         CurrentScope_->define(forStmt->getTarget()->getValue(), loopVar);
 
-        for (ast::Stmt const* const& s : forStmt->getBlock()->getStatements())
+        for (Stmt const* const& s : forStmt->getBlock()->getStatements())
             analyzeStmt(s);
 
         // Check if loop variable is shadowing
@@ -270,8 +272,8 @@ void SemanticAnalyzer::analyzeStmt(ast::Stmt const* stmt)
         break;
     }
 
-    case ast::Stmt::Kind::FUNC: {
-        ast::FunctionDef const* funcDef = static_cast<ast::FunctionDef const*>(stmt);
+    case Stmt::Kind::FUNC: {
+        FunctionDef const* funcDef = static_cast<FunctionDef const*>(stmt);
         SymbolTable::Symbol funcSym;
         funcSym.SymbolType = SymbolTable::SymbolType::FUNCTION;
         funcSym.DataType = SymbolTable::DataType_t::FUNCTION;
@@ -281,21 +283,21 @@ void SemanticAnalyzer::analyzeStmt(ast::Stmt const* stmt)
         // Create function scope
         CurrentScope_ = CurrentScope_->createChild();
 
-        for (ast::Expr const* const& param : funcDef->getParameters()) {
+        for (Expr const* const& param : funcDef->getParameters()) {
             SymbolTable::Symbol paramSym;
             paramSym.SymbolType = SymbolTable::SymbolType::VARIABLE;
             paramSym.DataType = SymbolTable::DataType_t::ANY;
-            CurrentScope_->define(static_cast<ast::NameExpr const*>(param)->getValue(), paramSym);
+            CurrentScope_->define(static_cast<NameExpr const*>(param)->getValue(), paramSym);
         }
 
-        for (ast::Stmt const* const& s : funcDef->getBody()->getStatements())
+        for (Stmt const* const& s : funcDef->getBody()->getStatements())
             analyzeStmt(s);
 
         // Check for missing return statement
         bool hasReturn = false;
 
-        for (ast::Stmt const* const& s : funcDef->getBody()->getStatements()) {
-            if (s->getKind() == ast::Stmt::Kind::RETURN) {
+        for (Stmt const* const& s : funcDef->getBody()->getStatements()) {
+            if (s->getKind() == Stmt::Kind::RETURN) {
                 hasReturn = true;
                 break;
             }
@@ -309,8 +311,8 @@ void SemanticAnalyzer::analyzeStmt(ast::Stmt const* stmt)
         break;
     }
 
-    case ast::Stmt::Kind::RETURN: {
-        ast::ReturnStmt const* ret = static_cast<ast::ReturnStmt const*>(stmt);
+    case Stmt::Kind::RETURN: {
+        ReturnStmt const* ret = static_cast<ReturnStmt const*>(stmt);
         analyzeExpr(ret->getValue());
         break;
     }
@@ -333,9 +335,9 @@ SemanticAnalyzer::SemanticAnalyzer()
     GlobalScope_->define("print", printSym);
 }
 
-void SemanticAnalyzer::analyze(std::vector<ast::Stmt*> const& Statements_)
+void SemanticAnalyzer::analyze(std::vector<Stmt*> const& Statements_)
 {
-    for (ast::Stmt const* const& stmt : Statements_)
+    for (Stmt const* const& stmt : Statements_)
         analyzeStmt(stmt);
 
     // Check for unused variables

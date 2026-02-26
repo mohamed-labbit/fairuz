@@ -6,16 +6,58 @@
 namespace mylang {
 namespace parser {
 
-std::vector<ast::Stmt*> Parser::parseProgram()
+using namespace ast;
+
+BinaryOp toBinaryOp(tok::TokenType const op)
 {
-    std::vector<ast::Stmt*> statements;
+    switch (op) {
+    case tok::TokenType::OP_PLUS: return BinaryOp::OP_ADD;
+    case tok::TokenType::OP_MINUS: return BinaryOp::OP_SUB;
+    case tok::TokenType::OP_STAR: return BinaryOp::OP_MUL;
+    case tok::TokenType::OP_SLASH: return BinaryOp::OP_DIV;
+    case tok::TokenType::OP_PERCENT: return BinaryOp::OP_MOD;
+    case tok::TokenType::OP_POWER: return BinaryOp::OP_POW;
+    case tok::TokenType::OP_EQ: return BinaryOp::OP_EQ;
+    case tok::TokenType::OP_NEQ: return BinaryOp::OP_NEQ;
+    case tok::TokenType::OP_LT: return BinaryOp::OP_LT;
+    case tok::TokenType::OP_GT: return BinaryOp::OP_GT;
+    case tok::TokenType::OP_LTE: return BinaryOp::OP_LTE;
+    case tok::TokenType::OP_GTE: return BinaryOp::OP_GTE;
+    case tok::TokenType::OP_BITAND: return BinaryOp::OP_BITAND;
+    case tok::TokenType::OP_BITOR: return BinaryOp::OP_BITOR;
+    case tok::TokenType::OP_BITXOR: return BinaryOp::OP_BITXOR;
+    case tok::TokenType::OP_BITNOT: return BinaryOp::OP_BITNOT;
+    case tok::TokenType::OP_LSHIFT: return BinaryOp::OP_LSHIFT;
+    case tok::TokenType::OP_RSHIFT: return BinaryOp::OP_RSHIFT;
+    case tok::TokenType::OP_AND: return BinaryOp::OP_AND;
+    case tok::TokenType::OP_OR: return BinaryOp::OP_OR;
+    default:
+        return BinaryOp::INVALID;
+    }
+}
+
+UnaryOp toUnaryOp(tok::TokenType const op)
+{
+    switch (op) {
+    case tok::TokenType::OP_PLUS: return UnaryOp::OP_PLUS;
+    case tok::TokenType::OP_MINUS: return UnaryOp::OP_NEG;
+    case tok::TokenType::OP_BITNOT: return UnaryOp::OP_BITNOT;
+    case tok::TokenType::OP_NOT: return UnaryOp::OP_NOT;
+    default:
+        return UnaryOp::INVALID;
+    }
+}
+
+std::vector<Stmt*> Parser::parseProgram()
+{
+    std::vector<Stmt*> statements;
 
     while (!weDone()) {
         skipNewlines();
         if (weDone())
             break;
 
-        ast::Stmt* stmt = parseStatement();
+        Stmt* stmt = parseStatement();
 
         if (stmt)
             statements.push_back(stmt);
@@ -29,7 +71,7 @@ std::vector<ast::Stmt*> Parser::parseProgram()
     return statements;
 }
 
-ast::Stmt* Parser::parseStatement()
+Stmt* Parser::parseStatement()
 {
     skipNewlines();
 
@@ -48,7 +90,7 @@ ast::Stmt* Parser::parseStatement()
     return parseExpressionStmt();
 }
 
-ast::Stmt* Parser::parseReturnStmt()
+Stmt* Parser::parseReturnStmt()
 {
     if (!consume(tok::TokenType::KW_RETURN, "Expected 'return' statement"))
         return nullptr;
@@ -56,16 +98,16 @@ ast::Stmt* Parser::parseReturnStmt()
     if (check(tok::TokenType::NEWLINE) || weDone())
         return nullptr;
 
-    ast::Expr* value = parseExpression();
-    return ast::makeReturn(value);
+    Expr* value = parseExpression();
+    return makeReturn(value);
 }
 
-ast::Stmt* Parser::parseWhileStmt()
+Stmt* Parser::parseWhileStmt()
 {
     if (!consume(tok::TokenType::KW_WHILE, "Expected 'while' keyword"))
         return nullptr;
 
-    ast::Expr* condition = parseExpression();
+    Expr* condition = parseExpression();
     if (!condition) {
         diagnostic::engine.emit("Expected condition expression after 'while'", diagnostic::DiagnosticEngine::Severity::ERROR);
         return nullptr;
@@ -74,16 +116,16 @@ ast::Stmt* Parser::parseWhileStmt()
     if (!consume(tok::TokenType::COLON, "Expected ':' after while condition"))
         return nullptr;
 
-    ast::BlockStmt* while_block = parseIndentedBlock();
+    BlockStmt* while_block = parseIndentedBlock();
     if (!while_block) {
         diagnostic::engine.emit("Expected indented block after while statement", diagnostic::DiagnosticEngine::Severity::ERROR);
         return nullptr;
     }
 
-    return ast::makeWhile(condition, while_block);
+    return makeWhile(condition, while_block);
 }
 
-ast::BlockStmt* Parser::parseIndentedBlock()
+BlockStmt* Parser::parseIndentedBlock()
 {
     if (check(tok::TokenType::NEWLINE))
         advance();
@@ -91,11 +133,11 @@ ast::BlockStmt* Parser::parseIndentedBlock()
     if (!consume(tok::TokenType::INDENT, "Expected indented block"))
         return nullptr;
 
-    std::vector<ast::Stmt*> statements;
+    std::vector<Stmt*> statements;
 
     if (check(tok::TokenType::DEDENT)) {
         advance();
-        return ast::makeBlock(statements);
+        return makeBlock(statements);
     }
 
     while (!check(tok::TokenType::DEDENT) && !weDone()) {
@@ -103,7 +145,7 @@ ast::BlockStmt* Parser::parseIndentedBlock()
         if (check(tok::TokenType::DEDENT))
             break;
 
-        ast::Stmt* stmt = parseStatement();
+        Stmt* stmt = parseStatement();
 
         if (stmt)
             statements.push_back(stmt);
@@ -115,19 +157,19 @@ ast::BlockStmt* Parser::parseIndentedBlock()
     }
 
     if (check(tok::TokenType::ENDMARKER))
-        return ast::makeBlock(statements);
+        return makeBlock(statements);
     else if (!consume(tok::TokenType::DEDENT, "Expected dedent after block"))
         return nullptr;
 
-    return ast::makeBlock(statements);
+    return makeBlock(statements);
 }
 
-ast::ListExpr* Parser::parseParametersList()
+ListExpr* Parser::parseParametersList()
 {
     if (!consume(tok::TokenType::LPAREN, "Expected '(' before parameters"))
         return nullptr;
 
-    std::vector<ast::Expr*> parameters;
+    std::vector<Expr*> parameters;
     parameters.reserve(4); // typical small function
 
     if (!check(tok::TokenType::RPAREN)) {
@@ -143,7 +185,7 @@ ast::ListExpr* Parser::parseParametersList()
 
             StringRef param_name = currentToken()->lexeme();
             advance();
-            parameters.push_back(ast::makeName(param_name));
+            parameters.push_back(makeName(param_name));
             skipNewlines();
         } while (match(tok::TokenType::COMMA) && !check(tok::TokenType::RPAREN));
     }
@@ -152,17 +194,17 @@ ast::ListExpr* Parser::parseParametersList()
         return nullptr;
 
     if (parameters.empty())
-        return ast::makeList(std::vector<ast::Expr*> {});
+        return makeList(std::vector<Expr*> {});
 
-    return ast::makeList(std::move(parameters));
+    return makeList(std::move(parameters));
 }
 
-ast::Expr* Parser::parseExpression()
+Expr* Parser::parseExpression()
 {
     return parseAssignmentExpr();
 }
 
-ast::Stmt* Parser::parseFunctionDef()
+Stmt* Parser::parseFunctionDef()
 {
     if (!consume(tok::TokenType::KW_FN, "Expected 'fn' keyword"))
         return nullptr;
@@ -175,7 +217,7 @@ ast::Stmt* Parser::parseFunctionDef()
     StringRef function_name = currentToken()->lexeme();
     advance();
 
-    ast::ListExpr* parameters_list = parseParametersList();
+    ListExpr* parameters_list = parseParametersList();
     if (!parameters_list) {
         diagnostic::engine.emit("Failed to parse parameter list", diagnostic::DiagnosticEngine::Severity::ERROR);
         return nullptr;
@@ -184,22 +226,22 @@ ast::Stmt* Parser::parseFunctionDef()
     if (!consume(tok::TokenType::COLON, "Expected ':' after function parameters"))
         return nullptr;
 
-    ast::BlockStmt* function_body = parseIndentedBlock();
+    BlockStmt* function_body = parseIndentedBlock();
     if (!function_body) {
         diagnostic::engine.emit("Failed to parse function body", diagnostic::DiagnosticEngine::Severity::ERROR);
         return nullptr;
     }
 
-    ast::NameExpr* name_expr = ast::makeName(function_name);
-    return ast::makeFunction(name_expr, parameters_list, function_body);
+    NameExpr* name_expr = makeName(function_name);
+    return makeFunction(name_expr, parameters_list, function_body);
 }
 
-ast::Stmt* Parser::parseIfStmt()
+Stmt* Parser::parseIfStmt()
 {
     if (!consume(tok::TokenType::KW_IF, "Expected 'if' keyword"))
         return nullptr;
 
-    ast::Expr* condition = parseExpression();
+    Expr* condition = parseExpression();
     if (!condition) {
         diagnostic::engine.emit("Expected condition expression after 'if'", diagnostic::DiagnosticEngine::Severity::ERROR);
         return nullptr;
@@ -208,53 +250,53 @@ ast::Stmt* Parser::parseIfStmt()
     if (!consume(tok::TokenType::COLON, "Expected ':' after if condition"))
         return nullptr;
 
-    ast::BlockStmt* then_block = parseIndentedBlock();
+    BlockStmt* then_block = parseIndentedBlock();
     if (!then_block) {
         diagnostic::engine.emit("Expected indented block after if statement", diagnostic::DiagnosticEngine::Severity::ERROR);
         return nullptr;
     }
 
-    ast::BlockStmt* else_block = nullptr;
+    BlockStmt* else_block = nullptr;
     skipNewlines();
 
-    return ast::makeIf(condition, then_block, else_block);
+    return makeIf(condition, then_block, else_block);
 }
 
-ast::Stmt* Parser::parseExpressionStmt()
+Stmt* Parser::parseExpressionStmt()
 {
-    ast::Expr* expr = parseExpression();
+    Expr* expr = parseExpression();
     if (!expr)
         return nullptr;
 
-    return ast::makeExprStmt(expr);
+    return makeExprStmt(expr);
 }
 
-ast::Expr* Parser::parseAssignmentExpr()
+Expr* Parser::parseAssignmentExpr()
 {
-    ast::Expr* left = parseConditionalExpr();
+    Expr* left = parseConditionalExpr();
     if (!left)
         return nullptr;
 
     if (check(tok::TokenType::OP_ASSIGN)) {
-        if (left->getKind() != ast::Expr::Kind::NAME) {
+        if (left->getKind() != Expr::Kind::NAME) {
             diagnostic::engine.emit("Invalid assignment target", diagnostic::DiagnosticEngine::Severity::ERROR);
             return nullptr;
         }
 
         advance();
-        ast::Expr* right = parseAssignmentExpr();
+        Expr* right = parseAssignmentExpr();
         if (!right)
             return nullptr;
 
-        return ast::makeAssignmentExpr(static_cast<ast::NameExpr*>(left), right);
+        return makeAssignmentExpr(static_cast<NameExpr*>(left), right);
     }
 
     return left;
 }
 
-ast::Expr* Parser::parseLogicalExprPrecedence(unsigned int min_precedence)
+Expr* Parser::parseLogicalExprPrecedence(unsigned int min_precedence)
 {
-    ast::Expr* left = parseComparisonExpr();
+    Expr* left = parseComparisonExpr();
     if (!left)
         return nullptr;
 
@@ -270,46 +312,47 @@ ast::Expr* Parser::parseLogicalExprPrecedence(unsigned int min_precedence)
         tok::TokenType op = Lexer_.current()->type();
         advance();
 
-        ast::Expr* right = parseLogicalExprPrecedence(precedence + 1);
+        Expr* right = parseLogicalExprPrecedence(precedence + 1);
         if (!right) {
             diagnostic::engine.emit("Expected expression after logical operator", diagnostic::DiagnosticEngine::Severity::ERROR);
             return nullptr;
         }
 
-        left = ast::makeBinary(left, right, op);
+        left = makeBinary(left, right, toBinaryOp(op));
     }
 
     return left;
 }
 
-ast::Expr* Parser::parseComparisonExpr()
+Expr* Parser::parseComparisonExpr()
 {
-    ast::Expr* left = parseBinaryExpr();
+    Expr* left = parseBinaryExpr();
     if (!left)
         return nullptr;
 
     if (currentToken()->isComparisonOp()) {
         tok::TokenType op = Lexer_.current()->type();
         advance();
-        ast::Expr* right = parseBinaryExpr();
+        Expr* right = parseBinaryExpr();
         if (!right) {
             diagnostic::engine.emit("Expected expression after comparison operator", diagnostic::DiagnosticEngine::Severity::ERROR);
             return nullptr;
         }
-        left = ast::makeBinary(left, right, op);
+
+        left = makeBinary(left, right, toBinaryOp(op));
     }
 
     return left;
 }
 
-ast::Expr* Parser::parseBinaryExpr()
+Expr* Parser::parseBinaryExpr()
 {
     return parseBinaryExprPrecedence(0);
 }
 
-ast::Expr* Parser::parseBinaryExprPrecedence(unsigned int min_precedence)
+Expr* Parser::parseBinaryExprPrecedence(unsigned int min_precedence)
 {
-    ast::Expr* left = parseUnaryExpr();
+    Expr* left = parseUnaryExpr();
     if (!left)
         return nullptr;
 
@@ -326,42 +369,44 @@ ast::Expr* Parser::parseBinaryExprPrecedence(unsigned int min_precedence)
         advance();
 
         unsigned int nextMin = precedence + 1;
-        ast::Expr* right = parseBinaryExprPrecedence(nextMin);
+        Expr* right = parseBinaryExprPrecedence(nextMin);
         if (!right) {
             diagnostic::engine.emit("Expected expression after binary operator", diagnostic::DiagnosticEngine::Severity::ERROR);
             return nullptr;
         }
-        left = ast::makeBinary(left, right, op);
+
+        left = makeBinary(left, right, toBinaryOp(op));
     }
+
     return left;
 }
 
-ast::Expr* Parser::parseUnaryExpr()
+Expr* Parser::parseUnaryExpr()
 {
     tok::Token const* tok = currentToken();
     if (tok->isUnaryOp()) {
         tok::TokenType op = Lexer_.current()->type();
         advance();
-        ast::Expr* expr = parseUnaryExpr();
+        Expr* expr = parseUnaryExpr();
         if (!expr) {
             diagnostic::engine.emit("Expected expression after unary operator", diagnostic::DiagnosticEngine::Severity::ERROR);
             return nullptr;
         }
-        return ast::makeUnary(expr, op);
+        return makeUnary(expr, toUnaryOp(op));
     }
     return parsePostfixExpr();
 }
 
-ast::Expr* Parser::parsePostfixExpr()
+Expr* Parser::parsePostfixExpr()
 {
-    ast::Expr* expr = parsePrimaryExpr();
+    Expr* expr = parsePrimaryExpr();
     if (!expr)
         return nullptr;
 
     while (check(tok::TokenType::LPAREN)) {
         advance();
 
-        std::vector<ast::Expr*> args;
+        std::vector<Expr*> args;
         args.reserve(4);
 
         if (!check(tok::TokenType::RPAREN)) {
@@ -370,7 +415,7 @@ ast::Expr* Parser::parsePostfixExpr()
                 if (check(tok::TokenType::RPAREN))
                     break;
 
-                ast::Expr* arg = parseExpression();
+                Expr* arg = parseExpression();
                 if (!arg) {
                     diagnostic::engine.emit("Expected expression in argument list", diagnostic::DiagnosticEngine::Severity::ERROR);
                     return nullptr;
@@ -383,7 +428,7 @@ ast::Expr* Parser::parsePostfixExpr()
         if (!consume(tok::TokenType::RPAREN, "Expected ')' after arguments"))
             return nullptr;
 
-        expr = ast::makeCall(expr, ast::makeList(std::move(args)));
+        expr = makeCall(expr, makeList(std::move(args)));
     }
 
     return expr;
@@ -404,12 +449,12 @@ tok::Token const* Parser::currentToken()
     return Lexer_.current();
 }
 
-ast::Expr* Parser::parse()
+Expr* Parser::parse()
 {
     return parseExpression();
 }
 
-ast::Expr* Parser::parsePrimaryExpr()
+Expr* Parser::parsePrimaryExpr()
 {
     tok::Token const* tok = currentToken();
 
@@ -417,50 +462,50 @@ ast::Expr* Parser::parsePrimaryExpr()
         StringRef v = tok->lexeme();
         advance();
 
-        ast::LiteralExpr::Type type;
+        LiteralExpr::Type type;
 
         switch (tok->type()) {
         case tok::TokenType::DECIMAL:
-            return ast::makeLiteralFloat(v.toDouble());
+            return makeLiteralFloat(v.toDouble());
         case tok::TokenType::INTEGER:
         case tok::TokenType::HEX:
         case tok::TokenType::OCTAL:
         case tok::TokenType::BINARY:
-            return ast::makeLiteralInt(util::parseIntegerLiteral(v));
+            return makeLiteralInt(util::parseIntegerLiteral(v));
         }
     }
 
     if (check(tok::TokenType::STRING)) {
         StringRef v = tok->lexeme();
         advance();
-        return ast::makeLiteralString(v);
+        return makeLiteralString(v);
     }
 
     if (check(tok::TokenType::KW_TRUE) || check(tok::TokenType::KW_FALSE)) {
         StringRef v = tok->lexeme();
         advance();
-        return ast::makeLiteralBool(v == "صحيح" ? true : false);
+        return makeLiteralBool(v == "صحيح" ? true : false);
     }
 
     if (check(tok::TokenType::KW_NONE)) {
         advance();
-        return ast::makeLiteralString("");
+        return makeLiteralString("");
     }
 
     if (check(tok::TokenType::IDENTIFIER)) {
         StringRef name = tok->lexeme();
         advance();
-        return ast::makeName(name);
+        return makeName(name);
     }
 
     if (check(tok::TokenType::LPAREN)) {
         advance();
         if (check(tok::TokenType::RPAREN)) {
             advance();
-            return ast::makeList(std::vector<ast::Expr*> {});
+            return makeList(std::vector<Expr*> {});
         }
 
-        ast::Expr* expr = parseExpression();
+        Expr* expr = parseExpression();
 
         if (!expr)
             return nullptr;
@@ -482,9 +527,9 @@ ast::Expr* Parser::parsePrimaryExpr()
     return nullptr;
 }
 
-ast::Expr* Parser::parseListLiteral()
+Expr* Parser::parseListLiteral()
 {
-    std::vector<ast::Expr*> elements;
+    std::vector<Expr*> elements;
     elements.reserve(4);
 
     if (!check(tok::TokenType::RBRACKET)) {
@@ -493,7 +538,7 @@ ast::Expr* Parser::parseListLiteral()
             if (check(tok::TokenType::RBRACKET))
                 break;
 
-            ast::Expr* elem = parseExpression();
+            Expr* elem = parseExpression();
             if (!elem) {
                 diagnostic::engine.emit("Expected expression in list literal", diagnostic::DiagnosticEngine::Severity::ERROR);
                 return nullptr;
@@ -507,16 +552,16 @@ ast::Expr* Parser::parseListLiteral()
     if (!consume(tok::TokenType::RBRACKET, "Expected ']' after list elements"))
         return nullptr;
 
-    return ast::makeList(std::move(elements));
+    return makeList(std::move(elements));
 }
 
-ast::Expr* Parser::parseConditionalExpr()
+Expr* Parser::parseConditionalExpr()
 {
     return parseLogicalExpr();
     /// TODO: Ternary?
 }
 
-ast::Expr* Parser::parseLogicalExpr()
+Expr* Parser::parseLogicalExpr()
 {
     return parseLogicalExprPrecedence(0);
 }

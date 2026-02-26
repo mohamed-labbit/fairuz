@@ -72,8 +72,8 @@ bool Token::isOperator() const
 {
     return (Type_ >= TokenType::OP_PLUS
                && Type_ <= TokenType::OP_RSHIFTEQ)
-        || Type_ == TokenType::KW_AND
-        || Type_ == TokenType::KW_OR;
+        || Type_ == TokenType::OP_AND
+        || Type_ == TokenType::OP_OR;
 }
 
 bool Token::isUnaryOp() const
@@ -81,7 +81,7 @@ bool Token::isUnaryOp() const
     return Type_ == TokenType::OP_PLUS
         || Type_ == TokenType::OP_MINUS
         || Type_ == TokenType::OP_BITNOT
-        || Type_ == TokenType::KW_NOT;
+        || Type_ == TokenType::OP_NOT;
 }
 
 bool Token::isBinaryOp() const
@@ -104,8 +104,8 @@ bool Token::isBinaryOp() const
         || Type_ == TokenType::OP_BITNOT
         || Type_ == TokenType::OP_LSHIFT
         || Type_ == TokenType::OP_RSHIFT
-        || Type_ == TokenType::KW_AND
-        || Type_ == TokenType::KW_OR;
+        || Type_ == TokenType::OP_AND
+        || Type_ == TokenType::OP_OR;
 }
 
 bool Token::isComparisonOp() const
@@ -174,9 +174,9 @@ int Token::getPrecedence(bool is_unary) const
         return PREC_BITXOR;
     case TokenType::OP_BITOR: // |
         return PREC_BITOR;
-    case TokenType::KW_AND: // and
+    case TokenType::OP_AND: // and
         return PREC_AND;
-    case TokenType::KW_OR: // or
+    case TokenType::OP_OR: // or
         return PREC_OR;
     default:
         return PREC_NONE;
