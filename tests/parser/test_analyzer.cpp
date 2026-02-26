@@ -126,7 +126,7 @@ TEST_F(SemanticAnalyzerTest, InferType_BinaryExpr_LogicalAnd)
 {
     ast::LiteralExpr* left = ast::makeLiteralBool(true);
     ast::LiteralExpr* right = ast::makeLiteralBool(false);
-    ast::BinaryExpr* binary = createBinary(left, tok::TokenType::KW_AND, right);
+    ast::BinaryExpr* binary = createBinary(left, tok::TokenType::OP_AND, right);
 
     EXPECT_EQ(analyzer->inferType(binary), SymbolTable::DataType_t::BOOLEAN);
 }
@@ -135,7 +135,7 @@ TEST_F(SemanticAnalyzerTest, InferType_BinaryExpr_LogicalOr)
 {
     ast::LiteralExpr* left = ast::makeLiteralBool(true);
     ast::LiteralExpr* right = ast::makeLiteralBool(false);
-    ast::BinaryExpr* binary = createBinary(left, tok::TokenType::KW_OR, right);
+    ast::BinaryExpr* binary = createBinary(left, tok::TokenType::OP_OR, right);
 
     EXPECT_EQ(analyzer->inferType(binary), SymbolTable::DataType_t::BOOLEAN);
 }

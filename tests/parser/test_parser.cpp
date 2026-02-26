@@ -541,13 +541,13 @@ TEST_F(ParserTest, ParseLogicalExpression)
     ast::BinaryExpr* root = dynamic_cast<ast::BinaryExpr*>(expr);
 
     ASSERT_NE(root, nullptr) << "Root should be BinaryExpr";
-    EXPECT_EQ(root->getOperator(), tok::TokenType::KW_OR) << "Root should be OR (lower precedence)";
+    EXPECT_EQ(root->getOperator(), tok::TokenType::OP_OR) << "Root should be OR (lower precedence)";
 
     // Left should be (a and b)
     ast::BinaryExpr* left_and = dynamic_cast<ast::BinaryExpr*>(root->getLeft());
 
     ASSERT_NE(left_and, nullptr) << "Left should be AND expression";
-    EXPECT_EQ(left_and->getOperator(), tok::TokenType::KW_AND);
+    EXPECT_EQ(left_and->getOperator(), tok::TokenType::OP_AND);
 
     if (test_config::print_ast)
         AST_Printer.print(expr);
@@ -1153,7 +1153,7 @@ TEST_F(ParserTest, ParseWhileLoop)
     EXPECT_EQ(condition_expr->getOperator(), tok::TokenType::OP_EQ);
 
     // Check body (using getBody() instead of getBlock())
-    const ast::BlockStmt* block = dynamic_cast<const ast::BlockStmt*>(while_stmt->getBlock());
+    ast::BlockStmt const* block = dynamic_cast<ast::BlockStmt const*>(while_stmt->getBlock());
     ASSERT_NE(block, nullptr) << "Should parse while loop body block";
 
     // Check block has statements
@@ -1216,7 +1216,7 @@ TEST_F(ParserTest, ParseComplexeIfStatement)
     EXPECT_EQ(condition_expr->getOperator(), tok::TokenType::OP_EQ);
 
     // Check body (using getBody() instead of getBlock())
-    const ast::BlockStmt* block = dynamic_cast<const ast::BlockStmt*>(while_stmt->getBlock());
+    ast::BlockStmt const* block = dynamic_cast<ast::BlockStmt const*>(while_stmt->getBlock());
     ASSERT_NE(block, nullptr) << "Should parse while loop body block";
 
     // Check block has statements

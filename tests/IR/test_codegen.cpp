@@ -302,7 +302,7 @@ TEST_F(CodeGeneratorTest, UnaryNegationNegative)
 
 TEST_F(CodeGeneratorTest, UnaryLogicalNot)
 {
-    ast::UnaryExpr* expr = makeUnary(ast::makeLiteralBool(true), tok::TokenType::KW_NOT);
+    ast::UnaryExpr* expr = makeUnary(ast::makeLiteralBool(true), tok::TokenType::OP_NOT);
 
     IR::Value result = codegen->eval(expr);
 
@@ -312,7 +312,7 @@ TEST_F(CodeGeneratorTest, UnaryLogicalNot)
 
 TEST_F(CodeGeneratorTest, UnaryLogicalNotFalse)
 {
-    ast::UnaryExpr* expr = makeUnary(ast::makeLiteralBool(false), tok::TokenType::KW_NOT);
+    ast::UnaryExpr* expr = makeUnary(ast::makeLiteralBool(false), tok::TokenType::OP_NOT);
 
     IR::Value result = codegen->eval(expr);
 
