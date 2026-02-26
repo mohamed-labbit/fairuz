@@ -43,12 +43,12 @@ enum class TokenType : int {
     KW_FALSE,    // خطا
     KW_NONE,     // عدم
     KW_TRUE,     // صحيح
-    
+
     // these are ops with keywords instead of symbols
-    OP_AND,      // و
-    OP_OR,       // او
-    OP_NOT,      // ليس
-    
+    OP_AND, // و
+    OP_OR,  // او
+    OP_NOT, // ليس
+
     // ops
     OP_PLUS,    // +
     OP_MINUS,   // -
