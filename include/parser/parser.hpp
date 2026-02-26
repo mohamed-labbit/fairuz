@@ -4,8 +4,8 @@
 #include "../lex/file_manager.hpp"
 #include "../lex/lexer.hpp"
 #include "../lex/token.hpp"
-#include "symbol_table.hpp"
 #include "analyzer.hpp"
+#include "symbol_table.hpp"
 
 #include <optional>
 #include <sstream>
@@ -131,7 +131,7 @@ private:
     lex::Lexer Lexer_;
     SymbolTable SymTable_;
     SemanticAnalyzer Sema_;
-    
+
     bool Expecting_ { false };
 
     tok::Token const* peek(size_t offset = 1)

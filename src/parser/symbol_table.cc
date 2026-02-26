@@ -15,10 +15,8 @@ void SymbolTable::define(StringRef const& name, Symbol symbol)
         // emit redeclaration error
         return;
 
-        
-
     symbol.name = name;
-    Symbols_.emplace(name, std::move(symbol)); 
+    Symbols_.emplace(name, std::move(symbol));
 }
 
 typename SymbolTable::Symbol* SymbolTable::lookup(StringRef const& name)

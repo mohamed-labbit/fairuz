@@ -21,10 +21,13 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(Expr const* expr)
 
         if (lit->isString())
             return SymbolTable::DataType_t::STRING;
+
         if (lit->isDecimal())
             return SymbolTable::DataType_t::FLOAT;
+
         if (lit->isInteger())
             return SymbolTable::DataType_t::INTEGER;
+
         if (lit->isBoolean())
             return SymbolTable::DataType_t::BOOLEAN;
         else
@@ -64,11 +67,8 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(Expr const* expr)
         break;
     }
 
-    case Expr::Kind::LIST:
-        return SymbolTable::DataType_t::LIST;
-
-    case Expr::Kind::CALL:
-        return SymbolTable::DataType_t::ANY;
+    case Expr::Kind::LIST: return SymbolTable::DataType_t::LIST;
+    case Expr::Kind::CALL: return SymbolTable::DataType_t::ANY;
 
     default:
         break;
@@ -153,7 +153,6 @@ void SemanticAnalyzer::analyzeExpr(Expr const* expr)
 
         if (call->getCallee()->getKind() == Expr::Kind::NAME) {
             NameExpr const* name = static_cast<NameExpr const*>(call->getCallee());
-
             SymbolTable::Symbol* sym = CurrentScope_->lookup(name->getValue());
 
             if (!sym)
@@ -277,37 +276,37 @@ void SemanticAnalyzer::analyzeStmt(Stmt const* stmt)
     }
 
     case Stmt::Kind::FUNC: {
-        FunctionDef const* funcDef = static_cast<FunctionDef const*>(stmt);
-        SymbolTable::Symbol funcSym;
-        funcSym.symbolType = SymbolTable::SymbolType::FUNCTION;
-        funcSym.dataType = SymbolTable::DataType_t::FUNCTION;
-        funcSym.definitionLine = stmt->getLine();
-        CurrentScope_->define(funcDef->getName()->getValue(), funcSym);
+        FunctionDef const* func_def = static_cast<FunctionDef const*>(stmt);
+        SymbolTable::Symbol func_sym;
+        func_sym.symbolType = SymbolTable::SymbolType::FUNCTION;
+        func_sym.dataType = SymbolTable::DataType_t::FUNCTION;
+        func_sym.definitionLine = stmt->getLine();
+        CurrentScope_->define(func_def->getName()->getValue(), func_sym);
 
         // Create function scope
         CurrentScope_ = CurrentScope_->createChild();
 
-        for (Expr const* const& param : funcDef->getParameters()) {
-            SymbolTable::Symbol paramSym;
-            paramSym.symbolType = SymbolTable::SymbolType::VARIABLE;
-            paramSym.dataType = SymbolTable::DataType_t::ANY;
-            CurrentScope_->define(static_cast<NameExpr const*>(param)->getValue(), paramSym);
+        for (Expr const* const& param : func_def->getParameters()) {
+            SymbolTable::Symbol param_sym;
+            param_sym.symbolType = SymbolTable::SymbolType::VARIABLE;
+            param_sym.dataType = SymbolTable::DataType_t::ANY;
+            CurrentScope_->define(static_cast<NameExpr const*>(param)->getValue(), param_sym);
         }
 
-        for (Stmt const* const& s : funcDef->getBody()->getStatements())
+        for (Stmt const* const& s : func_def->getBody()->getStatements())
             analyzeStmt(s);
 
         // Check for missing return statement
-        bool hasReturn = false;
+        bool has_return = false;
 
-        for (Stmt const* const& s : funcDef->getBody()->getStatements()) {
+        for (Stmt const* const& s : func_def->getBody()->getStatements()) {
             if (s->getKind() == Stmt::Kind::RETURN) {
-                hasReturn = true;
+                has_return = true;
                 break;
             }
         }
 
-        if (!hasReturn)
+        if (!has_return)
             reportIssue(Issue::Severity::INFO, "Function may not return a value", stmt->getLine());
 
         // Exit function scope

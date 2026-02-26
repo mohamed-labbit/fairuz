@@ -12,8 +12,8 @@ Lexer::Lexer(FileManager* fm)
     , AtBOL_(true)
 {
     TokStream_.reserve(1024);
-    IndentStack_.reserve(32);
-    AltIndentStack_.reserve(32);
+    IndentStack_.reserve(8);
+    AltIndentStack_.reserve(8);
     IndentStack_.push_back(0);
     AltIndentStack_.push_back(0);
 
@@ -46,7 +46,7 @@ tok::Token const* Lexer::lexToken()
         return TokStream_.back();
     }
 
-    auto nextLine = [this](size_t const& line, size_t const& col) {
+    auto nextLine = [this](uint32_t const& line, uint32_t const& col) {
         uint32_t current = SourceManager_.currentChar();
 
         if (AtBOL_) {
@@ -137,8 +137,8 @@ tok::Token const* Lexer::lexToken()
     };
 
     for (;;) {
-        size_t line = SourceManager_.getLineNumber();
-        size_t col = SourceManager_.getColumnNumber();
+        uint32_t line = SourceManager_.getLineNumber();
+        uint32_t col = SourceManager_.getColumnNumber();
 
         uint32_t current = SourceManager_.currentChar();
         if (current == BUFFER_END)
@@ -184,27 +184,13 @@ tok::Token const* Lexer::lexToken()
 
                     // handle escape sequences
                     switch (current) {
-                    case 'n':
-                        string_literal += '\n';
-                        break;
-                    case 't':
-                        string_literal += '\t';
-                        break;
-                    case 'r':
-                        string_literal += '\r';
-                        break;
-                    case '\\':
-                        string_literal += '\\';
-                        break;
-                    case '\'':
-                        string_literal += '\'';
-                        break;
-                    case '"':
-                        string_literal += '"';
-                        break;
-                    case '0':
-                        string_literal += '\0';
-                        break;
+                    case 'n': string_literal += '\n'; break;
+                    case 't': string_literal += '\t'; break;
+                    case 'r': string_literal += '\r'; break;
+                    case '\\': string_literal += '\\'; break;
+                    case '\'': string_literal += '\''; break;
+                    case '"': string_literal += '"'; break;
+                    case '0': string_literal += '\0'; break;
                     default:
                         // if not a recognized escape, keep the backslash
                         string_literal += '\\';
@@ -536,8 +522,8 @@ tok::Token const* Lexer::lexToken()
         return TokStream_.back();
 
     // Emit any remaining dedents at EOF
-    size_t last_line = SourceManager_.getLineNumber();
-    size_t last_col = SourceManager_.getColumnNumber();
+    uint32_t last_line = SourceManager_.getLineNumber();
+    uint32_t last_col = SourceManager_.getColumnNumber();
 
     while (IndentLevel_ > 0) {
         --IndentLevel_;
@@ -578,9 +564,7 @@ tok::Token const* Lexer::prev()
     if (TokIndex_ > 0)
         --TokIndex_;
     else
-        return TokStream_.empty()
-            ? nullptr
-            : TokStream_.front();
+        return TokStream_.empty() ? nullptr : TokStream_.front();
 
     return TokStream_[TokIndex_];
 }
@@ -623,7 +607,7 @@ std::vector<tok::Token const*> Lexer::tokenize()
 
 void Lexer::updateIndentationContext_(tok::Token const& token)
 {
-    // Placeholder for future use
+    // STUB
 }
 
 }

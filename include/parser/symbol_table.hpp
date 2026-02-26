@@ -55,7 +55,6 @@ private:
     std::unordered_map<StringRef, Symbol, StringRefHash, StringRefEqual> Symbols_;
     std::vector<std::unique_ptr<SymbolTable>> Children_;
     unsigned int ScopeLevel_ { 0 };
-    
 
 public:
     explicit SymbolTable(SymbolTable* p = nullptr, int32_t level = 0);

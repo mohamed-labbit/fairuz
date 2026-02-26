@@ -32,17 +32,12 @@ TokenType const& Token::type() const
     return Type_;
 }
 
-size_t Token::size() const
-{
-    return Value_.len();
-}
-
-size_t const& Token::line() const
+uint32_t const& Token::line() const
 {
     return Location_.line;
 }
 
-size_t const& Token::column() const
+uint32_t const& Token::column() const
 {
     return Location_.column;
 }
@@ -186,64 +181,35 @@ int Token::getPrecedence(bool is_unary) const
 StringRef const Token::toString(TokenType const tt)
 {
     switch (tt) {
-    case TokenType::OP_EQ:
-        return "=";
-    case TokenType::OP_ASSIGN:
-        return ":=";
-    case TokenType::OP_PLUS:
-        return "+";
-    case TokenType::OP_MINUS:
-        return "-";
-    case TokenType::OP_STAR:
-        return "*";
-    case TokenType::OP_SLASH:
-        return "/";
-    case TokenType::OP_PERCENT:
-        return "%";
-    case TokenType::OP_POWER:
-        return "**";
-    case TokenType::OP_LT:
-        return "<";
-    case TokenType::OP_GT:
-        return ">";
-    case TokenType::OP_LTE:
-        return "<=";
-    case TokenType::OP_GTE:
-        return ">=";
-    case TokenType::OP_NEQ:
-        return "!=";
-    case TokenType::OP_BITAND:
-        return "&";
-    case TokenType::OP_BITOR:
-        return "|";
-    case TokenType::OP_BITXOR:
-        return "^";
-    case TokenType::OP_BITNOT:
-        return "~";
-    case TokenType::OP_LSHIFT:
-        return "<<";
-    case TokenType::OP_RSHIFT:
-        return ">>";
-    case TokenType::OP_PLUSEQ:
-        return "+=";
-    case TokenType::OP_MINUSEQ:
-        return "-=";
-    case TokenType::OP_STAREQ:
-        return "*=";
-    case TokenType::OP_SLASHEQ:
-        return "/=";
-    case TokenType::OP_PERCENTEQ:
-        return "%=";
-    case TokenType::OP_ANDEQ:
-        return "&=";
-    case TokenType::OP_OREQ:
-        return "|=";
-    case TokenType::OP_XOREQ:
-        return "^=";
-    case TokenType::OP_LSHIFTEQ:
-        return "<<=";
-    case TokenType::OP_RSHIFTEQ:
-        return ">>=";
+    case TokenType::OP_EQ: return "=";
+    case TokenType::OP_ASSIGN: return ":=";
+    case TokenType::OP_PLUS: return "+";
+    case TokenType::OP_MINUS: return "-";
+    case TokenType::OP_STAR: return "*";
+    case TokenType::OP_SLASH: return "/";
+    case TokenType::OP_PERCENT: return "%";
+    case TokenType::OP_POWER: return "**";
+    case TokenType::OP_LT: return "<";
+    case TokenType::OP_GT: return ">";
+    case TokenType::OP_LTE: return "<=";
+    case TokenType::OP_GTE: return ">=";
+    case TokenType::OP_NEQ: return "!=";
+    case TokenType::OP_BITAND: return "&";
+    case TokenType::OP_BITOR: return "|";
+    case TokenType::OP_BITXOR: return "^";
+    case TokenType::OP_BITNOT: return "~";
+    case TokenType::OP_LSHIFT: return "<<";
+    case TokenType::OP_RSHIFT: return ">>";
+    case TokenType::OP_PLUSEQ: return "+=";
+    case TokenType::OP_MINUSEQ: return "-=";
+    case TokenType::OP_STAREQ: return "*=";
+    case TokenType::OP_SLASHEQ: return "/=";
+    case TokenType::OP_PERCENTEQ: return "%=";
+    case TokenType::OP_ANDEQ: return "&=";
+    case TokenType::OP_OREQ: return "|=";
+    case TokenType::OP_XOREQ: return "^=";
+    case TokenType::OP_LSHIFTEQ: return "<<=";
+    case TokenType::OP_RSHIFTEQ: return ">>=";
     default:
         return "";
     }

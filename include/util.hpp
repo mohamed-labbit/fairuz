@@ -86,7 +86,7 @@ static inline bool isalphaArabic(wchar_t const c)
     return (c >= 0x0600 && c <= 0x06FF);
 }
 
-static uint32_t decode_utf8_at(StringRef const& buf, std::size_t byte_pos, std::size_t* out_bytes)
+static uint32_t decode_utf8_at(StringRef const& buf, std::size_t byte_pos, uint64_t* out_bytes)
 {
     if (byte_pos >= buf.len())
         throw std::runtime_error("UTF8 decode past end of buffer");
