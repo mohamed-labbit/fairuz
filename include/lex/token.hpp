@@ -40,13 +40,15 @@ enum class TokenType : int {
     KW_RETURN,   // ارجع
     KW_CONTINUE, // اكمل
     KW_BREAK,    // اخرج
-    KW_AND,      // و
-    KW_OR,       // او
-    KW_NOT,      // ليس
-    KW_TRUE,     // صحيح
     KW_FALSE,    // خطا
     KW_NONE,     // عدم
-
+    KW_TRUE,     // صحيح
+    
+    // these are ops with keywords instead of symbols
+    OP_AND,      // و
+    OP_OR,       // او
+    OP_NOT,      // ليس
+    
     // ops
     OP_PLUS,    // +
     OP_MINUS,   // -
@@ -138,14 +140,14 @@ static std::unordered_map<StringRef, TokenType, StringRefHash, StringRefEqual> c
           { "خطا", TokenType::KW_FALSE },
           { "عدم", TokenType::KW_NONE },
           { "صحيح", TokenType::KW_TRUE },
-          { "و", TokenType::KW_AND },
+          { "و", TokenType::OP_AND },
           { "اخرج", TokenType::KW_BREAK },
           { "اكمل", TokenType::KW_CONTINUE },
           { "عرف", TokenType::KW_FN },
-          { "او", TokenType::KW_OR },
+          { "او", TokenType::OP_OR },
           { "بكل", TokenType::KW_FOR },
           { "اذا", TokenType::KW_IF },
-          { "ليس", TokenType::KW_NOT },
+          { "ليس", TokenType::OP_NOT },
           { "ارجع", TokenType::KW_RETURN },
           { "طالما", TokenType::KW_WHILE }
       };

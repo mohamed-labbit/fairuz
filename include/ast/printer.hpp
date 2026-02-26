@@ -17,6 +17,44 @@ private:
         bool last;
     };
 
+    StringRef const toString(UnaryOp const op)
+    {
+        switch (op) {
+        case UnaryOp::OP_PLUS: return "+";
+        case UnaryOp::OP_MINUS: return "-";
+        case UnaryOp::OP_BITNOT: return "~";
+        case UnaryOp::OP_NOT: return "ليس";
+        default:
+            return "";
+        }
+    }
+
+    StringRef const toString(BinaryOp const op)
+    {
+        switch (op) {
+        case BinaryOp::OP_EQ: return "=";
+        case BinaryOp::OP_ADD: return "+";
+        case BinaryOp::OP_SUB: return "-";
+        case BinaryOp::OP_MUL: return "*";
+        case BinaryOp::OP_DIV: return "/";
+        case BinaryOp::OP_MOD: return "%";
+        case BinaryOp::OP_POW: return "**";
+        case BinaryOp::OP_LT: return "<";
+        case BinaryOp::OP_GT: return ">";
+        case BinaryOp::OP_LTE: return "<=";
+        case BinaryOp::OP_GTE: return ">=";
+        case BinaryOp::OP_NEQ: return "!=";
+        case BinaryOp::OP_BITAND: return "&";
+        case BinaryOp::OP_BITOR: return "|";
+        case BinaryOp::OP_BITXOR: return "^";
+        case BinaryOp::OP_BITNOT: return "~";
+        case BinaryOp::OP_LSHIFT: return "<<";
+        case BinaryOp::OP_RSHIFT: return ">>";
+        default:
+            return "";
+        }
+    }
+
     std::string glyph(bool const last) const
     {
         return last ? "└─ " : "├─ ";
@@ -64,14 +102,14 @@ private:
 
         case Expr::Kind::UNARY: {
             UnaryExpr const* u = static_cast<UnaryExpr const*>(e);
-            std::cout << color("Unary", Color::BOLD) << " " << tok::Token::toString(u->getOperator()) << "\n";
+            std::cout << color("Unary", Color::BOLD) << " " << toString(u->getOperator()) << "\n";
             printExpr(u->getOperand(), { p.indent + pipe(p.last), true });
             break;
         }
 
         case Expr::Kind::BINARY: {
             BinaryExpr const* b = static_cast<BinaryExpr const*>(e);
-            std::cout << color("Binary", Color::BOLD) << " " << tok::Token::toString(b->getOperator()) << "\n";
+            std::cout << color("Binary", Color::BOLD) << " " << toString(b->getOperator()) << "\n";
             printExpr(b->getLeft(), { p.indent + pipe(p.last), false });
             printExpr(b->getRight(), { p.indent + pipe(p.last), true });
             break;

@@ -53,15 +53,41 @@ public:
 };
 
 class BinaryExpr : public Expr {
+public:
+    enum class Op {
+        OP_ADD,
+        OP_SUB,
+        OP_MUL,
+        OP_DIV,
+        OP_MOD,
+        OP_POW,
+        OP_EQ,
+        OP_NEQ,
+        OP_LT,
+        OP_GT,
+        OP_LTE,
+        OP_GTE,
+        OP_BITAND,
+        OP_BITOR,
+        OP_BITXOR,
+        OP_BITNOT,
+        OP_LSHIFT,
+        OP_RSHIFT,
+        OP_AND,
+        OP_OR,
+
+        INVALID
+    };
+
 private:
     Expr* Left_ { nullptr };
     Expr* Right_ { nullptr };
-    tok::TokenType Operator_ { tok::TokenType::INVALID };
+    Op Operator_ { Op::INVALID };
 
 public:
     BinaryExpr() = delete;
 
-    BinaryExpr(Expr* left, Expr* right, tok::TokenType op)
+    BinaryExpr(Expr* left, Expr* right, Op op)
         : Left_(left)
         , Right_(right)
         , Operator_(op)
@@ -106,7 +132,7 @@ public:
         return Right_;
     }
 
-    tok::TokenType getOperator() const
+    Op getOperator() const
     {
         return Operator_;
     }
@@ -121,21 +147,31 @@ public:
         Right_ = right;
     }
 
-    void setOperator(tok::TokenType op)
+    void setOperator(Op op)
     {
         Operator_ = op;
     }
 };
 
 class UnaryExpr : public Expr {
+public:
+    enum class Op {
+        OP_PLUS,
+        OP_NEG,
+        OP_BITNOT,
+        OP_NOT,
+
+        INVALID
+    };
+
 private:
     Expr* Operand_ { nullptr };
-    tok::TokenType Operator_ { tok::TokenType::INVALID };
+    Op Operator_ { Op::INVALID };
 
 public:
     UnaryExpr() = delete;
 
-    UnaryExpr(Expr* operand, tok::TokenType op)
+    UnaryExpr(Expr* operand, Op op)
         : Operand_(operand)
         , Operator_(op)
     {
@@ -171,7 +207,7 @@ public:
         return Operand_;
     }
 
-    tok::TokenType getOperator() const
+    Op getOperator() const
     {
         return Operator_;
     }
@@ -606,12 +642,15 @@ public:
     }
 };
 
-static constexpr BinaryExpr* makeBinary(Expr* left, Expr* right, tok::TokenType const op)
+using UnaryOp = UnaryExpr::Op;
+using BinaryOp = BinaryExpr::Op;
+
+static constexpr BinaryExpr* makeBinary(Expr* left, Expr* right, BinaryExpr::Op const op)
 {
     return AST_allocator.make<BinaryExpr>(left, right, op);
 }
 
-static constexpr UnaryExpr* makeUnary(Expr* operand, tok::TokenType const op)
+static constexpr UnaryExpr* makeUnary(Expr* operand, UnaryExpr::Op const op)
 {
     return AST_allocator.make<UnaryExpr>(operand, op);
 }

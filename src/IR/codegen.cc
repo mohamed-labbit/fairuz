@@ -61,29 +61,19 @@ Value CodeGenerator::eval(ast::ASTNode const* node)
             Value lhs = eval(binary_expr->getLeft());
             Value rhs = eval(binary_expr->getRight());
 
-            tok::TokenType op = binary_expr->getOperator();
+            ast::BinaryExpr::Op op = binary_expr->getOperator();
 
             switch (op) {
-            case tok::TokenType::OP_PLUS:
-                return lhs + rhs;
-            case tok::TokenType::OP_MINUS:
-                return lhs - rhs;
-            case tok::TokenType::OP_STAR:
-                return lhs * rhs;
-            case tok::TokenType::OP_SLASH:
-                return lhs / rhs;
-            case tok::TokenType::OP_EQ:
-                return lhs == rhs;
-            case tok::TokenType::OP_GT:
-                return lhs > rhs;
-            case tok::TokenType::OP_GTE:
-                return lhs >= rhs;
-            case tok::TokenType::OP_LT:
-                return lhs < rhs;
-            case tok::TokenType::OP_LTE:
-                return lhs <= rhs;
-            case tok::TokenType::OP_PERCENT:
-                return lhs % rhs;
+            case ast::BinaryOp::OP_ADD: return lhs + rhs;
+            case ast::BinaryOp::OP_SUB: return lhs - rhs;
+            case ast::BinaryOp::OP_MUL: return lhs * rhs;
+            case ast::BinaryOp::OP_DIV: return lhs / rhs;
+            case ast::BinaryOp::OP_EQ: return lhs == rhs;
+            case ast::BinaryOp::OP_GT: return lhs > rhs;
+            case ast::BinaryOp::OP_GTE: return lhs >= rhs;
+            case ast::BinaryOp::OP_LT: return lhs < rhs;
+            case ast::BinaryOp::OP_LTE: return lhs <= rhs;
+            case ast::BinaryOp::OP_MOD: return lhs % rhs;
             default:
                 throw std::runtime_error("Unknown binary operator");
             }
@@ -161,12 +151,12 @@ Value CodeGenerator::eval(ast::ASTNode const* node)
                 return Value();
 
             Value operand = eval(unary_expr->getOperand());
-            tok::TokenType op = unary_expr->getOperator();
+            ast::UnaryExpr::Op op = unary_expr->getOperator();
 
             switch (op) {
-            case tok::TokenType::OP_MINUS:
+            case ast::UnaryOp::OP_NEG:
                 return -operand;
-            case tok::TokenType::KW_NOT:
+            case ast::UnaryOp::OP_NOT:
                 return !operand;
             default:
                 throw std::runtime_error("Unknown unary operator");

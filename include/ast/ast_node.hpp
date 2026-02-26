@@ -14,8 +14,8 @@ public:
     };
 
 private:
-    std::size_t Line_ { 0 };
-    std::size_t Column_ { 0 };
+    uint32_t Line_ { 0 };
+    uint32_t Column_ { 0 };
 
     NodeType NodeType_;
 
@@ -29,13 +29,13 @@ public:
 
     virtual NodeType getNodeType() const;
 
-    virtual std::size_t getLine() const;
+    virtual uint32_t getLine() const;
 
-    virtual std::size_t getColumn() const;
+    virtual uint32_t getColumn() const;
 
-    virtual void setLine(std::size_t const l);
+    virtual void setLine(uint32_t const l);
 
-    virtual void setColumn(std::size_t const c);
+    virtual void setColumn(uint32_t const c);
 
     ~ASTNode() = default;
 };

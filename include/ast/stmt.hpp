@@ -154,6 +154,8 @@ private:
     Expr* Value_ { nullptr };
     Expr* Target_ { nullptr };
 
+    bool isDecl_ { false };
+
 public:
     explicit AssignmentStmt() = delete;
 
@@ -201,6 +203,11 @@ public:
     void setTarget(NameExpr* t)
     {
         Target_ = t;
+    }
+
+    bool isDeclaration() const
+    {
+        return isDecl_;
     }
 };
 
@@ -500,6 +507,11 @@ public:
     void setValue(Expr* v)
     {
         Value_ = v;
+    }
+
+    bool hasValue() const
+    {
+        return Value_ != nullptr;
     }
 };
 
