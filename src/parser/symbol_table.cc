@@ -11,8 +11,14 @@ SymbolTable::SymbolTable(SymbolTable* p, int32_t level)
 
 void SymbolTable::define(StringRef const& name, Symbol symbol)
 {
+    if (lookupLocal(name))
+        // emit redeclaration error
+        return;
+
+        
+
     symbol.name = name;
-    Symbols_[name] = symbol;
+    Symbols_.emplace(name, std::move(symbol)); 
 }
 
 typename SymbolTable::Symbol* SymbolTable::lookup(StringRef const& name)
@@ -32,7 +38,7 @@ typename SymbolTable::Symbol* SymbolTable::lookupLocal(StringRef const& name)
 
 bool SymbolTable::isDefined(StringRef const& name) const
 {
-    if (Symbols_.count(name))
+    if (Symbols_.find(name) != Symbols_.end())
         return true;
 
     return Parent_ ? Parent_->isDefined(name) : false;
@@ -41,8 +47,8 @@ bool SymbolTable::isDefined(StringRef const& name) const
 void SymbolTable::markUsed(StringRef const& name, int32_t line)
 {
     if (Symbol* sym = lookup(name)) {
-        sym->IsUsed = true;
-        sym->UsageLines.push_back(line);
+        sym->isUsed = true;
+        sym->usageLines.push_back(line);
     }
 }
 
@@ -58,7 +64,7 @@ std::vector<typename SymbolTable::Symbol*> SymbolTable::getUnusedSymbols()
 {
     std::vector<Symbol*> unused;
     for (auto& [name, sym] : Symbols_) {
-        if (!sym.IsUsed && sym.SymbolType == SymbolType::VARIABLE)
+        if (!sym.isUsed && sym.symbolType == SymbolType::VARIABLE)
             unused.push_back(&sym);
     }
 

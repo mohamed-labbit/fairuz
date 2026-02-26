@@ -596,12 +596,15 @@ private:
     NameExpr* Target_ { nullptr };
     Expr* Value_ { nullptr };
 
+    bool isDecl_ = false;
+
 public:
     AssignmentExpr() = delete;
 
-    AssignmentExpr(NameExpr* target, Expr* value)
+    AssignmentExpr(NameExpr* target, Expr* value, bool decl = false)
         : Target_(target)
         , Value_(value)
+        , isDecl_(decl)
     {
         Kind_ = Kind::ASSIGNMENT;
 
@@ -639,6 +642,11 @@ public:
     Expr* getValue() const
     {
         return Value_;
+    }
+
+    bool isDeclaration() const
+    {
+        return isDecl_;
     }
 };
 
@@ -695,9 +703,9 @@ static constexpr CallExpr* makeCall(Expr* callee, ListExpr* args = nullptr, Call
     return AST_allocator.make<CallExpr>(callee, args, loc);
 }
 
-static constexpr AssignmentExpr* makeAssignmentExpr(NameExpr* target, Expr* value)
+static constexpr AssignmentExpr* makeAssignmentExpr(NameExpr* target, Expr* value, bool decl = false)
 {
-    return AST_allocator.make<AssignmentExpr>(target, value);
+    return AST_allocator.make<AssignmentExpr>(target, value, decl);
 }
 
 } // namespace ast

@@ -165,7 +165,7 @@ Expr* ASTOptimizer::optimizeConstantFolding(Expr* expr)
         // x * 0 = 0 (only when left side is definitely integer; IEEE floats can yield NaN for inf * 0)
         if (op == BinaryOp::OP_MUL && r_kind == Expr::Kind::LITERAL) {
             auto* r_lit = static_cast<LiteralExpr*>(right);
-            if (r_lit->isNumeric() && r_lit->toNumber() == 0 && isDefinitelyIntegerExpr(left)) {
+            if (r_lit->isNumeric() && r_lit->toNumber() == 0 /*&& isDefinitelyIntegerExpr(left)*/) {
                 ++Stats_.StrengthReductions;
                 return makeLiteralInt(0);
             }
@@ -363,6 +363,8 @@ StringRef ASTOptimizer::CSEPass::exprToString(Expr const* expr)
     default:
         return "";
     }
+
+    return "";
 }
 
 StringRef ASTOptimizer::CSEPass::getTempVar()

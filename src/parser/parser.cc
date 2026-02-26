@@ -68,6 +68,8 @@ std::vector<Stmt*> Parser::parseProgram()
         }
     }
 
+    Sema_.analyze(statements);
+
     return statements;
 }
 
@@ -288,7 +290,13 @@ Expr* Parser::parseAssignmentExpr()
         if (!right)
             return nullptr;
 
-        return makeAssignmentExpr(static_cast<NameExpr*>(left), right);
+        // push var to symbol table
+        NameExpr* target = static_cast<NameExpr*>(left);
+        bool decl = false;
+        if (Sema_.getGlobalScope()->isDefined(target->getValue()))
+            decl = true;
+
+        return makeAssignmentExpr(target, right, decl);
     }
 
     return left;

@@ -37,7 +37,7 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(Expr const* expr)
         NameExpr const* name = static_cast<NameExpr const*>(expr);
         SymbolTable::Symbol* sym = CurrentScope_->lookup(name->getValue());
         if (sym)
-            return sym->DataType;
+            return sym->dataType;
 
         break;
     }
@@ -146,7 +146,7 @@ void SemanticAnalyzer::analyzeExpr(Expr const* expr)
             NameExpr const* name = static_cast<NameExpr const*>(call->getCallee());
 
             if (SymbolTable::Symbol* sym = CurrentScope_->lookup(name->getValue())) {
-                if (sym->SymbolType != SymbolTable::SymbolType::FUNCTION)
+                if (sym->symbolType != SymbolTable::SymbolType::FUNCTION)
                     reportIssue(Issue::Severity::ERROR, "'" + name->getValue() + "' is not callable", expr->getLine());
             }
         }
@@ -158,7 +158,7 @@ void SemanticAnalyzer::analyzeExpr(Expr const* expr)
 
             if (!sym)
                 reportIssue(Issue::Severity::ERROR, "Undefined function: " + name->getValue(), expr->getLine());
-            else if (sym->SymbolType != SymbolTable::SymbolType::FUNCTION)
+            else if (sym->symbolType != SymbolTable::SymbolType::FUNCTION)
                 reportIssue(Issue::Severity::ERROR, "'" + name->getValue() + "' is not callable", expr->getLine());
         }
         break;
@@ -189,9 +189,9 @@ void SemanticAnalyzer::analyzeStmt(Stmt const* stmt)
 
         SymbolTable::DataType_t type = inferType(assign->getValue());
         SymbolTable::Symbol sym;
-        sym.SymbolType = SymbolTable::SymbolType::VARIABLE;
-        sym.DataType = type;
-        sym.DefinitionLine = stmt->getLine();
+        sym.symbolType = SymbolTable::SymbolType::VARIABLE;
+        sym.dataType = type;
+        sym.definitionLine = stmt->getLine();
 
         Expr* target = assign->getTarget();
         assert(target);
@@ -223,11 +223,15 @@ void SemanticAnalyzer::analyzeStmt(Stmt const* stmt)
         if (ifStmt->getCondition()->getKind() == Expr::Kind::LITERAL)
             reportIssue(Issue::Severity::WARNING, "Condition is always constant", stmt->getLine(), "Consider removing if statement");
 
-        for (Stmt const* const& s : ifStmt->getThenBlock()->getStatements())
-            analyzeStmt(s);
+        if (ifStmt->getThenBlock()) {
+            for (Stmt const* const& s : ifStmt->getThenBlock()->getStatements())
+                analyzeStmt(s);
+        }
 
-        for (Stmt const* const& s : ifStmt->getElseBlock()->getStatements())
-            analyzeStmt(s);
+        if (ifStmt->getElseBlock()) {
+            for (Stmt const* const& s : ifStmt->getElseBlock()->getStatements())
+                analyzeStmt(s);
+        }
 
         break;
     }
@@ -256,8 +260,8 @@ void SemanticAnalyzer::analyzeStmt(Stmt const* stmt)
         // Create new scope for loop variable
         CurrentScope_ = CurrentScope_->createChild();
         SymbolTable::Symbol loopVar;
-        loopVar.SymbolType = SymbolTable::SymbolType::VARIABLE;
-        loopVar.DataType = SymbolTable::DataType_t::ANY;
+        loopVar.symbolType = SymbolTable::SymbolType::VARIABLE;
+        loopVar.dataType = SymbolTable::DataType_t::ANY;
         CurrentScope_->define(forStmt->getTarget()->getValue(), loopVar);
 
         for (Stmt const* const& s : forStmt->getBlock()->getStatements())
@@ -275,9 +279,9 @@ void SemanticAnalyzer::analyzeStmt(Stmt const* stmt)
     case Stmt::Kind::FUNC: {
         FunctionDef const* funcDef = static_cast<FunctionDef const*>(stmt);
         SymbolTable::Symbol funcSym;
-        funcSym.SymbolType = SymbolTable::SymbolType::FUNCTION;
-        funcSym.DataType = SymbolTable::DataType_t::FUNCTION;
-        funcSym.DefinitionLine = stmt->getLine();
+        funcSym.symbolType = SymbolTable::SymbolType::FUNCTION;
+        funcSym.dataType = SymbolTable::DataType_t::FUNCTION;
+        funcSym.definitionLine = stmt->getLine();
         CurrentScope_->define(funcDef->getName()->getValue(), funcSym);
 
         // Create function scope
@@ -285,8 +289,8 @@ void SemanticAnalyzer::analyzeStmt(Stmt const* stmt)
 
         for (Expr const* const& param : funcDef->getParameters()) {
             SymbolTable::Symbol paramSym;
-            paramSym.SymbolType = SymbolTable::SymbolType::VARIABLE;
-            paramSym.DataType = SymbolTable::DataType_t::ANY;
+            paramSym.symbolType = SymbolTable::SymbolType::VARIABLE;
+            paramSym.dataType = SymbolTable::DataType_t::ANY;
             CurrentScope_->define(static_cast<NameExpr const*>(param)->getValue(), paramSym);
         }
 
@@ -330,8 +334,8 @@ SemanticAnalyzer::SemanticAnalyzer()
     // Add built-in functions
     SymbolTable::Symbol printSym;
     printSym.name = "print";
-    printSym.SymbolType = SymbolTable::SymbolType::FUNCTION;
-    printSym.DataType = SymbolTable::DataType_t::FUNCTION;
+    printSym.symbolType = SymbolTable::SymbolType::FUNCTION;
+    printSym.dataType = SymbolTable::DataType_t::FUNCTION;
     GlobalScope_->define("print", printSym);
 }
 
@@ -343,7 +347,7 @@ void SemanticAnalyzer::analyze(std::vector<Stmt*> const& Statements_)
     // Check for unused variables
     std::vector<SymbolTable::Symbol*> unused = GlobalScope_->getUnusedSymbols();
     for (SymbolTable::Symbol* sym : unused)
-        reportIssue(Issue::Severity::WARNING, "Unused variable: " + sym->name, sym->DefinitionLine, "Consider removing if not needed");
+        reportIssue(Issue::Severity::WARNING, "Unused variable: " + sym->name, sym->definitionLine, "Consider removing if not needed");
 }
 
 std::vector<typename SemanticAnalyzer::Issue> const& SemanticAnalyzer::getIssues() const

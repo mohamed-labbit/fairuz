@@ -21,7 +21,7 @@ private:
     {
         switch (op) {
         case UnaryOp::OP_PLUS: return "+";
-        case UnaryOp::OP_MINUS: return "-";
+        case UnaryOp::OP_NEG: return "-";
         case UnaryOp::OP_BITNOT: return "~";
         case UnaryOp::OP_NOT: return "ليس";
         default:

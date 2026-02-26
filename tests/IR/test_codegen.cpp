@@ -120,7 +120,7 @@ TEST_F(CodeGeneratorTest, EvalNullNode)
 
 TEST_F(CodeGeneratorTest, BinaryAddition)
 {
-    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralInt(10), ast::makeLiteralInt(20), tok::TokenType::OP_PLUS);
+    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralInt(10), ast::makeLiteralInt(20), ast::BinaryOp::OP_ADD);
 
     IR::Value result = codegen->eval(expr);
 
@@ -130,7 +130,7 @@ TEST_F(CodeGeneratorTest, BinaryAddition)
 
 TEST_F(CodeGeneratorTest, BinarySubtraction)
 {
-    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralInt(50), ast::makeLiteralInt(30), tok::TokenType::OP_MINUS);
+    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralInt(50), ast::makeLiteralInt(30), ast::BinaryOp::OP_SUB);
 
     IR::Value result = codegen->eval(expr);
 
@@ -140,7 +140,7 @@ TEST_F(CodeGeneratorTest, BinarySubtraction)
 
 TEST_F(CodeGeneratorTest, BinaryMultiplication)
 {
-    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralInt(6), ast::makeLiteralInt(7), tok::TokenType::OP_STAR);
+    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralInt(6), ast::makeLiteralInt(7), ast::BinaryOp::OP_MUL);
 
     IR::Value result = codegen->eval(expr);
 
@@ -150,7 +150,7 @@ TEST_F(CodeGeneratorTest, BinaryMultiplication)
 
 TEST_F(CodeGeneratorTest, BinaryDivision)
 {
-    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralInt(100), ast::makeLiteralInt(4), tok::TokenType::OP_SLASH);
+    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralInt(100), ast::makeLiteralInt(4), ast::BinaryOp::OP_DIV);
 
     IR::Value result = codegen->eval(expr);
 
@@ -160,7 +160,7 @@ TEST_F(CodeGeneratorTest, BinaryDivision)
 
 TEST_F(CodeGeneratorTest, BinaryDivisionByZero)
 {
-    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralInt(10), ast::makeLiteralInt(0), tok::TokenType::OP_SLASH);
+    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralInt(10), ast::makeLiteralInt(0), ast::BinaryOp::OP_DIV);
 
     // Division by zero should be handled in IR::Value class
     // This test verifies it doesn't crash
@@ -171,8 +171,8 @@ TEST_F(CodeGeneratorTest, BinaryDivisionByZero)
 TEST_F(CodeGeneratorTest, BinaryChainedOperations)
 {
     // (10 + 20) * 3
-    ast::BinaryExpr* inner = makeBinary(ast::makeLiteralInt(10), ast::makeLiteralInt(20), tok::TokenType::OP_PLUS);
-    ast::BinaryExpr* outer = makeBinary(inner, ast::makeLiteralInt(3), tok::TokenType::OP_STAR);
+    ast::BinaryExpr* inner = makeBinary(ast::makeLiteralInt(10), ast::makeLiteralInt(20), ast::BinaryOp::OP_ADD);
+    ast::BinaryExpr* outer = makeBinary(inner, ast::makeLiteralInt(3), ast::BinaryOp::OP_MUL);
 
     IR::Value result = codegen->eval(outer);
 
@@ -183,8 +183,8 @@ TEST_F(CodeGeneratorTest, BinaryChainedOperations)
 TEST_F(CodeGeneratorTest, BinaryNestedSubtraction)
 {
     // 100 - (50 - 20)
-    ast::BinaryExpr* inner = makeBinary(ast::makeLiteralInt(50), ast::makeLiteralInt(20), tok::TokenType::OP_MINUS);
-    ast::BinaryExpr* outer = makeBinary(ast::makeLiteralInt(100), inner, tok::TokenType::OP_MINUS);
+    ast::BinaryExpr* inner = makeBinary(ast::makeLiteralInt(50), ast::makeLiteralInt(20), ast::BinaryOp::OP_SUB);
+    ast::BinaryExpr* outer = makeBinary(ast::makeLiteralInt(100), inner, ast::BinaryOp::OP_SUB);
 
     IR::Value result = codegen->eval(outer);
 
@@ -196,7 +196,7 @@ TEST_F(CodeGeneratorTest, BinaryNestedSubtraction)
 
 TEST_F(CodeGeneratorTest, BinaryEquality)
 {
-    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralInt(42), ast::makeLiteralInt(42), tok::TokenType::OP_EQ);
+    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralInt(42), ast::makeLiteralInt(42), ast::BinaryOp::OP_EQ);
 
     IR::Value result = codegen->eval(expr);
 
@@ -206,7 +206,7 @@ TEST_F(CodeGeneratorTest, BinaryEquality)
 
 TEST_F(CodeGeneratorTest, BinaryInequality)
 {
-    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralInt(10), ast::makeLiteralInt(20), tok::TokenType::OP_EQ);
+    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralInt(10), ast::makeLiteralInt(20), ast::BinaryOp::OP_EQ);
 
     IR::Value result = codegen->eval(expr);
 
@@ -216,7 +216,7 @@ TEST_F(CodeGeneratorTest, BinaryInequality)
 
 TEST_F(CodeGeneratorTest, BinaryGreaterThan)
 {
-    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralInt(50), ast::makeLiteralInt(30), tok::TokenType::OP_GT);
+    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralInt(50), ast::makeLiteralInt(30), ast::BinaryOp::OP_GT);
 
     IR::Value result = codegen->eval(expr);
 
@@ -226,7 +226,7 @@ TEST_F(CodeGeneratorTest, BinaryGreaterThan)
 
 TEST_F(CodeGeneratorTest, BinaryGreaterThanFalse)
 {
-    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralInt(20), ast::makeLiteralInt(30), tok::TokenType::OP_GT);
+    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralInt(20), ast::makeLiteralInt(30), ast::BinaryOp::OP_GT);
 
     IR::Value result = codegen->eval(expr);
 
@@ -236,14 +236,14 @@ TEST_F(CodeGeneratorTest, BinaryGreaterThanFalse)
 
 TEST_F(CodeGeneratorTest, BinaryGreaterThanOrEqual)
 {
-    ast::BinaryExpr* expr1 = makeBinary(ast::makeLiteralInt(50), ast::makeLiteralInt(50), tok::TokenType::OP_GTE);
+    ast::BinaryExpr* expr1 = makeBinary(ast::makeLiteralInt(50), ast::makeLiteralInt(50), ast::BinaryOp::OP_GTE);
 
     IR::Value result1 = codegen->eval(expr1);
 
     EXPECT_TRUE(result1.isBool());
     EXPECT_TRUE(*result1.asBool());
 
-    ast::BinaryExpr* expr2 = makeBinary(ast::makeLiteralInt(51), ast::makeLiteralInt(50), tok::TokenType::OP_GTE);
+    ast::BinaryExpr* expr2 = makeBinary(ast::makeLiteralInt(51), ast::makeLiteralInt(50), ast::BinaryOp::OP_GTE);
 
     IR::Value result2 = codegen->eval(expr2);
 
@@ -253,7 +253,7 @@ TEST_F(CodeGeneratorTest, BinaryGreaterThanOrEqual)
 
 TEST_F(CodeGeneratorTest, BinaryLessThan)
 {
-    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralInt(10), ast::makeLiteralInt(20), tok::TokenType::OP_LT);
+    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralInt(10), ast::makeLiteralInt(20), ast::BinaryOp::OP_LT);
 
     IR::Value result = codegen->eval(expr);
 
@@ -263,14 +263,14 @@ TEST_F(CodeGeneratorTest, BinaryLessThan)
 
 TEST_F(CodeGeneratorTest, BinaryLessThanOrEqual)
 {
-    ast::BinaryExpr* expr1 = makeBinary(ast::makeLiteralInt(30), ast::makeLiteralInt(30), tok::TokenType::OP_LTE);
+    ast::BinaryExpr* expr1 = makeBinary(ast::makeLiteralInt(30), ast::makeLiteralInt(30), ast::BinaryOp::OP_LTE);
 
     IR::Value result1 = codegen->eval(expr1);
 
     EXPECT_TRUE(result1.isBool());
     EXPECT_TRUE(*result1.asBool());
 
-    ast::BinaryExpr* expr2 = makeBinary(ast::makeLiteralInt(29), ast::makeLiteralInt(30), tok::TokenType::OP_LTE);
+    ast::BinaryExpr* expr2 = makeBinary(ast::makeLiteralInt(29), ast::makeLiteralInt(30), ast::BinaryOp::OP_LTE);
 
     IR::Value result2 = codegen->eval(expr2);
 
@@ -282,7 +282,7 @@ TEST_F(CodeGeneratorTest, BinaryLessThanOrEqual)
 
 TEST_F(CodeGeneratorTest, UnaryNegation)
 {
-    ast::UnaryExpr* expr = makeUnary(ast::makeLiteralInt(42), tok::TokenType::OP_MINUS);
+    ast::UnaryExpr* expr = makeUnary(ast::makeLiteralInt(42), ast::UnaryOp::OP_NEG);
 
     IR::Value result = codegen->eval(expr);
 
@@ -292,7 +292,7 @@ TEST_F(CodeGeneratorTest, UnaryNegation)
 
 TEST_F(CodeGeneratorTest, UnaryNegationNegative)
 {
-    ast::UnaryExpr* expr = makeUnary(ast::makeLiteralInt(-10), tok::TokenType::OP_MINUS);
+    ast::UnaryExpr* expr = makeUnary(ast::makeLiteralInt(-10), ast::UnaryOp::OP_NEG);
 
     IR::Value result = codegen->eval(expr);
 
@@ -302,7 +302,7 @@ TEST_F(CodeGeneratorTest, UnaryNegationNegative)
 
 TEST_F(CodeGeneratorTest, UnaryLogicalNot)
 {
-    ast::UnaryExpr* expr = makeUnary(ast::makeLiteralBool(true), tok::TokenType::OP_NOT);
+    ast::UnaryExpr* expr = makeUnary(ast::makeLiteralBool(true), ast::UnaryOp::OP_NOT);
 
     IR::Value result = codegen->eval(expr);
 
@@ -312,7 +312,7 @@ TEST_F(CodeGeneratorTest, UnaryLogicalNot)
 
 TEST_F(CodeGeneratorTest, UnaryLogicalNotFalse)
 {
-    ast::UnaryExpr* expr = makeUnary(ast::makeLiteralBool(false), tok::TokenType::OP_NOT);
+    ast::UnaryExpr* expr = makeUnary(ast::makeLiteralBool(false), ast::UnaryOp::OP_NOT);
 
     IR::Value result = codegen->eval(expr);
 
@@ -322,8 +322,8 @@ TEST_F(CodeGeneratorTest, UnaryLogicalNotFalse)
 
 TEST_F(CodeGeneratorTest, UnaryDoubleNegation)
 {
-    ast::UnaryExpr* inner = makeUnary(ast::makeLiteralInt(5), tok::TokenType::OP_MINUS);
-    ast::UnaryExpr* outer = makeUnary(inner, tok::TokenType::OP_MINUS);
+    ast::UnaryExpr* inner = makeUnary(ast::makeLiteralInt(5), ast::UnaryOp::OP_NEG);
+    ast::UnaryExpr* outer = makeUnary(inner, ast::UnaryOp::OP_NEG);
 
     IR::Value result = codegen->eval(outer);
 
@@ -372,7 +372,7 @@ TEST_F(CodeGeneratorTest, AssignmentOverwrite)
 TEST_F(CodeGeneratorTest, AssignmentExpression)
 {
     // x = 10 + 20
-    ast::BinaryExpr* value = makeBinary(ast::makeLiteralInt(10), ast::makeLiteralInt(20), tok::TokenType::OP_PLUS);
+    ast::BinaryExpr* value = makeBinary(ast::makeLiteralInt(10), ast::makeLiteralInt(20), ast::BinaryOp::OP_ADD);
     ast::AssignmentExpr* expr = makeAssignmentExpr(ast::makeName("z"), value);
 
     IR::Value result = codegen->eval(expr);
@@ -418,7 +418,7 @@ TEST_F(CodeGeneratorTest, NameExpressionInExpression)
     // x = 10, then compute x + 5
     env->define(StringRef("x"), IR::Value(10));
 
-    ast::BinaryExpr* expr = makeBinary(ast::makeName("x"), ast::makeLiteralInt(5), tok::TokenType::OP_PLUS);
+    ast::BinaryExpr* expr = makeBinary(ast::makeName("x"), ast::makeLiteralInt(5), ast::BinaryOp::OP_ADD);
 
     IR::Value result = codegen->eval(expr);
 
@@ -471,8 +471,8 @@ TEST_F(CodeGeneratorTest, ListMultipleElements)
 TEST_F(CodeGeneratorTest, ListWithExpressions)
 {
     // [10 + 5, 20 * 2]
-    ast::ListExpr* expr = ast::makeList({ makeBinary(ast::makeLiteralInt(10), ast::makeLiteralInt(5), tok::TokenType::OP_PLUS),
-        makeBinary(ast::makeLiteralInt(20), ast::makeLiteralInt(2), tok::TokenType::OP_STAR) });
+    ast::ListExpr* expr = ast::makeList({ makeBinary(ast::makeLiteralInt(10), ast::makeLiteralInt(5), ast::BinaryOp::OP_ADD),
+        makeBinary(ast::makeLiteralInt(20), ast::makeLiteralInt(2), ast::BinaryOp::OP_MUL) });
 
     IR::Value result = codegen->eval(expr);
 
@@ -544,7 +544,7 @@ TEST_F(CodeGeneratorTest, CallUserFunctionWithArgs)
     // Define a function that takes two parameters and adds them
     IR::Value::Function func;
     func.params = IR::makeValue(std::vector<IR::Value> { StringRef("a"), StringRef("b") });
-    func.body = ast::makeBinary(ast::makeName("a"), ast::makeName("b"), tok::TokenType::OP_PLUS);
+    func.body = ast::makeBinary(ast::makeName("a"), ast::makeName("b"), ast::BinaryOp::OP_ADD);
     func.closure = env.get();
 
     IR::Value funcValue = IR::Value::makeFunction(func);
@@ -588,7 +588,7 @@ TEST_F(CodeGeneratorTest, CallEagerEvaluation)
     env->define(StringRef("identity"), funcValue);
 
     // Call with expression argument
-    ast::BinaryExpr* arg = makeBinary(ast::makeName("x"), ast::makeLiteralInt(2), tok::TokenType::OP_STAR);
+    ast::BinaryExpr* arg = makeBinary(ast::makeName("x"), ast::makeLiteralInt(2), ast::BinaryOp::OP_MUL);
     ast::CallExpr* expr = makeCall("identity", { arg });
 
     IR::Value result = codegen->eval(expr);
@@ -693,14 +693,14 @@ TEST_F(CodeGeneratorTest, UnknownBinaryOperator)
 {
     // Create binary expression with unknown operator
     // Assuming there's a token type that's not handled
-    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralInt(1), ast::makeLiteralInt(2), static_cast<tok::TokenType>(9999));
+    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralInt(1), ast::makeLiteralInt(2), static_cast<ast::BinaryOp>(9999));
 
     EXPECT_THROW(codegen->eval(expr), std::runtime_error);
 }
 
 TEST_F(CodeGeneratorTest, UnknownUnaryOperator)
 {
-    ast::UnaryExpr* expr = ast::makeUnary(ast::makeLiteralInt(5), static_cast<tok::TokenType>(8888));
+    ast::UnaryExpr* expr = ast::makeUnary(ast::makeLiteralInt(5), static_cast<ast::UnaryOp>(8888));
 
     EXPECT_THROW(codegen->eval(expr), std::runtime_error);
 }
@@ -728,10 +728,10 @@ TEST_F(CodeGeneratorTest, UnknownNodeType)
 TEST_F(CodeGeneratorTest, ComplexArithmeticExpression)
 {
     // (10 + 20) * (30 - 15) / 5
-    ast::BinaryExpr* add = makeBinary(ast::makeLiteralInt(10), ast::makeLiteralInt(20), tok::TokenType::OP_PLUS);
-    ast::BinaryExpr* sub = makeBinary(ast::makeLiteralInt(30), ast::makeLiteralInt(15), tok::TokenType::OP_MINUS);
-    ast::BinaryExpr* mul = makeBinary(add, sub, tok::TokenType::OP_STAR);
-    ast::BinaryExpr* div = makeBinary(mul, ast::makeLiteralInt(5), tok::TokenType::OP_SLASH);
+    ast::BinaryExpr* add = makeBinary(ast::makeLiteralInt(10), ast::makeLiteralInt(20), ast::BinaryOp::OP_ADD);
+    ast::BinaryExpr* sub = makeBinary(ast::makeLiteralInt(30), ast::makeLiteralInt(15), ast::BinaryOp::OP_SUB);
+    ast::BinaryExpr* mul = makeBinary(add, sub, ast::BinaryOp::OP_MUL);
+    ast::BinaryExpr* div = makeBinary(mul, ast::makeLiteralInt(5), ast::BinaryOp::OP_DIV);
 
     IR::Value result = codegen->eval(div);
 
@@ -741,8 +741,8 @@ TEST_F(CodeGeneratorTest, ComplexArithmeticExpression)
 TEST_F(CodeGeneratorTest, ComplexComparisonChain)
 {
     // (10 < 20) AND (30 > 15)  -- represented as separate evaluations
-    ast::BinaryExpr* lt = makeBinary(ast::makeLiteralInt(10), ast::makeLiteralInt(20), tok::TokenType::OP_LT);
-    ast::BinaryExpr* gt = makeBinary(ast::makeLiteralInt(30), ast::makeLiteralInt(15), tok::TokenType::OP_GT);
+    ast::BinaryExpr* lt = makeBinary(ast::makeLiteralInt(10), ast::makeLiteralInt(20), ast::BinaryOp::OP_LT);
+    ast::BinaryExpr* gt = makeBinary(ast::makeLiteralInt(30), ast::makeLiteralInt(15), ast::BinaryOp::OP_GT);
 
     IR::Value result1 = codegen->eval(lt);
     IR::Value result2 = codegen->eval(gt);
@@ -757,8 +757,8 @@ TEST_F(CodeGeneratorTest, ComplexWithVariables)
     env->define(StringRef("x"), IR::Value(10));
     env->define(StringRef("y"), IR::Value(20));
 
-    ast::BinaryExpr* add = ast::makeBinary(ast::makeName("x"), ast::makeName("y"), tok::TokenType::OP_PLUS);
-    ast::BinaryExpr* mul = ast::makeBinary(add, ast::makeLiteralInt(2), tok::TokenType::OP_STAR);
+    ast::BinaryExpr* add = ast::makeBinary(ast::makeName("x"), ast::makeName("y"), ast::BinaryOp::OP_ADD);
+    ast::BinaryExpr* mul = ast::makeBinary(add, ast::makeLiteralInt(2), ast::BinaryOp::OP_MUL);
     ast::AssignmentExpr* assign = ast::makeAssignmentExpr(ast::makeName("result"), mul);
 
     IR::Value result = codegen->eval(assign);
@@ -772,7 +772,7 @@ TEST_F(CodeGeneratorTest, NestedFunctionCalls)
     // Define inner function
     IR::Value::Function innerFunc;
     innerFunc.params = IR::makeValue({ StringRef("n") });
-    innerFunc.body = ast::makeBinary(ast::makeName("n"), ast::makeLiteralInt(2), tok::TokenType::OP_STAR);
+    innerFunc.body = ast::makeBinary(ast::makeName("n"), ast::makeLiteralInt(2), ast::BinaryOp::OP_MUL);
     innerFunc.closure = env.get();
 
     env->define(StringRef("double"), IR::Value::makeFunction(innerFunc));
@@ -796,7 +796,7 @@ TEST_F(CodeGeneratorTest, NestedFunctionCalls)
 
 TEST_F(CodeGeneratorTest, VeryLargeNumbers)
 {
-    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralFloat(1e308), ast::makeLiteralFloat(1e308), tok::TokenType::OP_PLUS);
+    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralFloat(1e308), ast::makeLiteralFloat(1e308), ast::BinaryOp::OP_ADD);
 
     IR::Value result = codegen->eval(expr);
 
@@ -806,7 +806,7 @@ TEST_F(CodeGeneratorTest, VeryLargeNumbers)
 
 TEST_F(CodeGeneratorTest, VerySmallNumbers)
 {
-    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralFloat(1e-308), ast::makeLiteralFloat(1e-308), tok::TokenType::OP_STAR);
+    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralFloat(1e-308), ast::makeLiteralFloat(1e-308), ast::BinaryOp::OP_MUL);
 
     IR::Value result = codegen->eval(expr);
 
@@ -818,7 +818,7 @@ TEST_F(CodeGeneratorTest, RecursiveExpression)
     // Deep nesting: ((((5 + 5) + 5) + 5) + 5)
     ast::Expr* expr = ast::makeLiteralInt(5);
     for (int i = 0; i < 4; ++i)
-        expr = makeBinary(expr, ast::makeLiteralInt(5), tok::TokenType::OP_PLUS);
+        expr = makeBinary(expr, ast::makeLiteralInt(5), ast::BinaryOp::OP_ADD);
 
     IR::Value result = codegen->eval(expr);
 
@@ -858,7 +858,7 @@ TEST_F(CodeGeneratorTest, AssignmentStmtUpdateExisting)
 TEST_F(CodeGeneratorTest, AssignmentStmtWithExpression)
 {
     // y = 10 + 20
-    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralInt(10), ast::makeLiteralInt(20), tok::TokenType::OP_PLUS);
+    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralInt(10), ast::makeLiteralInt(20), ast::BinaryOp::OP_ADD);
     ast::AssignmentStmt* stmt = makeAssignmentStmt(ast::makeName("y"), expr);
 
     codegen->eval(stmt);
@@ -874,7 +874,7 @@ TEST_F(CodeGeneratorTest, AssignmentStmtChained)
     codegen->eval(stmt1);
 
     // b = a * 2
-    ast::BinaryExpr* expr = makeBinary(ast::makeName("a"), ast::makeLiteralInt(2), tok::TokenType::OP_STAR);
+    ast::BinaryExpr* expr = makeBinary(ast::makeName("a"), ast::makeLiteralInt(2), ast::BinaryOp::OP_MUL);
     ast::AssignmentStmt* stmt2 = makeAssignmentStmt(ast::makeName("b"), expr);
     codegen->eval(stmt2);
 
@@ -897,7 +897,7 @@ TEST_F(CodeGeneratorTest, ExprStmtSimple)
 TEST_F(CodeGeneratorTest, ExprStmtBinary)
 {
     // 10 + 20;
-    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralInt(10), ast::makeLiteralInt(20), tok::TokenType::OP_PLUS);
+    ast::BinaryExpr* expr = makeBinary(ast::makeLiteralInt(10), ast::makeLiteralInt(20), ast::BinaryOp::OP_ADD);
     ast::ExprStmt* stmt = makeExprStmt(expr);
 
     IR::Value result = codegen->eval(stmt);
@@ -967,7 +967,7 @@ TEST_F(CodeGeneratorTest, BlockStmtWithAssignments)
     // { x = 5; y = 10; x + y; }
     ast::BlockStmt* block = ast::makeBlock(
         { makeAssignmentStmt(ast::makeName("x"), ast::makeLiteralInt(5)), makeAssignmentStmt(ast::makeName("y"), ast::makeLiteralInt(10)),
-            ast::makeExprStmt(ast::makeBinary(ast::makeName("x"), ast::makeName("y"), tok::TokenType::OP_PLUS)) });
+            ast::makeExprStmt(ast::makeBinary(ast::makeName("x"), ast::makeName("y"), ast::BinaryOp::OP_ADD)) });
 
     IR::Value result = codegen->eval(block);
 
@@ -1038,7 +1038,7 @@ TEST_F(CodeGeneratorTest, IfStmtComparisonCondition_01)
     env->define(StringRef("x"), IR::Value::makeFloat(10));
 
     ast::IfStmt* ifStmt = makeIf(
-        makeBinary(ast::makeName("x"), ast::makeLiteralInt(5), tok::TokenType::OP_GT),
+        makeBinary(ast::makeName("x"), ast::makeLiteralInt(5), ast::BinaryOp::OP_GT),
         ast::makeBlock({ makeExprStmt(ast::makeLiteralInt(100)) }), ast::makeBlock({ makeExprStmt(ast::makeLiteralInt(200)) }));
 
     IR::Value result = codegen->eval(ifStmt);
@@ -1080,7 +1080,7 @@ TEST_F(CodeGeneratorTest, WhileStmtFalseCondition)
     ast::WhileStmt* whileStmt = makeWhile(
         ast::makeLiteralBool(false),
         ast::makeBlock({ makeAssignmentStmt(ast::makeName("counter"),
-            makeBinary(ast::makeName("counter"), ast::makeLiteralInt(1), tok::TokenType::OP_PLUS)) }));
+            makeBinary(ast::makeName("counter"), ast::makeLiteralInt(1), ast::BinaryOp::OP_ADD)) }));
 
     IR::Value result = codegen->eval(whileStmt);
 
@@ -1141,7 +1141,7 @@ TEST_F(CodeGeneratorTest, FunctionDefWithSingleParam)
     ast::FunctionDef* funcDef = ast::makeFunction(
         ast::makeName("double"),
         ast::makeList({ ast::makeName("x") }),
-        ast::makeBlock({ makeExprStmt(makeBinary(ast::makeName("x"), ast::makeLiteralInt(2), tok::TokenType::OP_STAR)) }));
+        ast::makeBlock({ makeExprStmt(makeBinary(ast::makeName("x"), ast::makeLiteralInt(2), ast::BinaryOp::OP_MUL)) }));
 
     codegen->eval(funcDef);
 
@@ -1156,7 +1156,7 @@ TEST_F(CodeGeneratorTest, FunctionDefWithMultipleParams)
     ast::FunctionDef* funcDef = ast::makeFunction(
         ast::makeName("add"),
         ast::makeList({ ast::makeName("a"), ast::makeName("b") }),
-        ast::makeBlock({ ast::makeExprStmt(ast::makeBinary(ast::makeName("a"), ast::makeName("b"), tok::TokenType::OP_PLUS)) }));
+        ast::makeBlock({ ast::makeExprStmt(ast::makeBinary(ast::makeName("a"), ast::makeName("b"), ast::BinaryOp::OP_ADD)) }));
 
     codegen->eval(funcDef);
 
@@ -1170,7 +1170,7 @@ TEST_F(CodeGeneratorTest, FunctionDefAndCall)
     ast::FunctionDef* funcDef = ast::makeFunction(
         ast::makeName("square"),
         ast::makeList({ ast::makeName("n") }),
-        ast::makeBlock({ ast::makeExprStmt(ast::makeBinary(ast::makeName("n"), ast::makeName("n"), tok::TokenType::OP_STAR)) }));
+        ast::makeBlock({ ast::makeExprStmt(ast::makeBinary(ast::makeName("n"), ast::makeName("n"), ast::BinaryOp::OP_MUL)) }));
 
     codegen->eval(funcDef);
 
@@ -1234,17 +1234,17 @@ TEST_F(CodeGeneratorTest, IntegrationFibonacciIterative)
     ast::FunctionDef* funcDef = ast::makeFunction(
         ast::makeName("fib"), ast::makeList({ ast::makeName("n") }),
         ast::makeBlock({ makeIf(
-            ast::makeBinary(ast::makeName("n"), ast::makeLiteralInt(1), tok::TokenType::OP_LTE),
+            ast::makeBinary(ast::makeName("n"), ast::makeLiteralInt(1), ast::BinaryOp::OP_LTE),
             ast::makeBlock({ ast::makeExprStmt(ast::makeName("n")) }),
             ast::makeBlock({ ast::makeAssignmentStmt(ast::makeName("a"), ast::makeLiteralInt(0)),
                 ast::makeAssignmentStmt(ast::makeName("b"), ast::makeLiteralInt(1)),
                 ast::makeAssignmentStmt(ast::makeName("i"), ast::makeLiteralInt(2)),
-                ast::makeWhile(ast::makeBinary(ast::makeName("i"), ast::makeName("n"), tok::TokenType::OP_LTE),
+                ast::makeWhile(ast::makeBinary(ast::makeName("i"), ast::makeName("n"), ast::BinaryOp::OP_LTE),
                     ast::makeBlock({ ast::makeAssignmentStmt(ast::makeName("temp"),
-                                         ast::makeBinary(ast::makeName("a"), ast::makeName("b"), tok::TokenType::OP_PLUS)),
+                                         ast::makeBinary(ast::makeName("a"), ast::makeName("b"), ast::BinaryOp::OP_ADD)),
                         ast::makeAssignmentStmt(ast::makeName("a"), ast::makeName("b")),
                         ast::makeAssignmentStmt(ast::makeName("b"), ast::makeName("temp")),
-                        ast::makeAssignmentStmt(ast::makeName("i"), ast::makeBinary(ast::makeName("i"), ast::makeLiteralInt(1), tok::TokenType::OP_PLUS)) })),
+                        ast::makeAssignmentStmt(ast::makeName("i"), ast::makeBinary(ast::makeName("i"), ast::makeLiteralInt(1), ast::BinaryOp::OP_ADD)) })),
                 ast::makeExprStmt(ast::makeName("b")) })) }));
 
     codegen->eval(funcDef);
@@ -1285,7 +1285,7 @@ TEST_F(CodeGeneratorTest, IntegrationNestedFunctions)
     ast::FunctionDef* innerFunc = ast::makeFunction(
         ast::makeName("inner"),
         ast::makeList({ ast::makeName("y") }),
-        ast::makeBlock({ ast::makeExprStmt(ast::makeBinary(ast::makeName("x"), ast::makeName("y"), tok::TokenType::OP_PLUS)) }));
+        ast::makeBlock({ ast::makeExprStmt(ast::makeBinary(ast::makeName("x"), ast::makeName("y"), ast::BinaryOp::OP_ADD)) }));
 
     ast::FunctionDef* outerFunc = ast::makeFunction(
         ast::makeName("outer"),
@@ -1305,7 +1305,7 @@ TEST_F(CodeGeneratorTest, IntegrationNestedFunctions)
 
 TEST_F(CodeGeneratorTest, ZeroComparisons)
 {
-    ast::BinaryExpr* eq = makeBinary(ast::makeLiteralInt(0), ast::makeLiteralInt(-0), tok::TokenType::OP_EQ);
+    ast::BinaryExpr* eq = makeBinary(ast::makeLiteralInt(0), ast::makeLiteralInt(-0), ast::BinaryOp::OP_EQ);
     IR::Value result = codegen->eval(eq);
 
     EXPECT_TRUE(result.isBool());
@@ -1343,7 +1343,7 @@ TEST_F(CodeGeneratorTest, AssignmentStmtExpression)
 {
     // y = 10 + 20
     ast::AssignmentStmt* stmt = makeAssignmentStmt(ast::makeName("y"),
-        makeBinary(ast::makeLiteralInt(10), ast::makeLiteralInt(20), tok::TokenType::OP_PLUS));
+        makeBinary(ast::makeLiteralInt(10), ast::makeLiteralInt(20), ast::BinaryOp::OP_ADD));
 
     codegen->eval(stmt);
 
@@ -1386,7 +1386,7 @@ TEST_F(CodeGeneratorTest, AssignmentStmtWithVariableReference)
 
     // y = x + 5
     ast::AssignmentStmt* stmt = makeAssignmentStmt(ast::makeName("y"),
-        makeBinary(ast::makeName("x"), ast::makeLiteralInt(5), tok::TokenType::OP_PLUS));
+        makeBinary(ast::makeName("x"), ast::makeLiteralInt(5), ast::BinaryOp::OP_ADD));
 
     codegen->eval(stmt);
 
@@ -1399,7 +1399,7 @@ TEST_F(CodeGeneratorTest, ExprStmtBinaryExpression)
 {
     // Expression statement: 10 + 20
     ast::ExprStmt* stmt = makeExprStmt(
-        makeBinary(ast::makeLiteralInt(10), ast::makeLiteralInt(20), tok::TokenType::OP_PLUS));
+        makeBinary(ast::makeLiteralInt(10), ast::makeLiteralInt(20), ast::BinaryOp::OP_ADD));
 
     IR::Value result = codegen->eval(stmt);
 
@@ -1471,8 +1471,8 @@ TEST_F(CodeGeneratorTest, BlockStmtMixedStatements)
 {
     // { x = 5; x + 10; y = x * 2; }
     ast::BlockStmt* block = ast::makeBlock({ makeAssignmentStmt(ast::makeName("x"), ast::makeLiteralInt(5)),
-        makeExprStmt(makeBinary(ast::makeName("x"), ast::makeLiteralInt(10), tok::TokenType::OP_PLUS)),
-        makeAssignmentStmt(ast::makeName("y"), makeBinary(ast::makeName("x"), ast::makeLiteralInt(2), tok::TokenType::OP_STAR)) });
+        makeExprStmt(makeBinary(ast::makeName("x"), ast::makeLiteralInt(10), ast::BinaryOp::OP_ADD)),
+        makeAssignmentStmt(ast::makeName("y"), makeBinary(ast::makeName("x"), ast::makeLiteralInt(2), ast::BinaryOp::OP_MUL)) });
 
     codegen->eval(block);
 
@@ -1533,7 +1533,7 @@ TEST_F(CodeGeneratorTest, IfElseStmtFalseCondition)
 TEST_F(CodeGeneratorTest, IfStmtComparisonCondition)
 {
     // if (5 > 3) { result = 1 }
-    ast::BinaryExpr* condition = makeBinary(ast::makeLiteralInt(5), ast::makeLiteralInt(3), tok::TokenType::OP_GT);
+    ast::BinaryExpr* condition = makeBinary(ast::makeLiteralInt(5), ast::makeLiteralInt(3), ast::BinaryOp::OP_GT);
     ast::BlockStmt* thenBlock = ast::makeBlock({ makeAssignmentStmt(ast::makeName("result"), ast::makeLiteralInt(1)) });
     ast::IfStmt* ifStmt = makeIf(condition, thenBlock);
 
@@ -1591,8 +1591,8 @@ TEST_F(CodeGeneratorTest, WhileStmtSimpleLoop)
     // i = 0; while (i < 3) { i = i + 1 }
     env->define(StringRef("i"), IR::Value::makeFloat(0));
 
-    ast::BinaryExpr* condition = makeBinary(ast::makeName("i"), ast::makeLiteralInt(3), tok::TokenType::OP_LT);
-    ast::BlockStmt* body = ast::makeBlock({ makeAssignmentStmt(ast::makeName("i"), makeBinary(ast::makeName("i"), ast::makeLiteralInt(1), tok::TokenType::OP_PLUS)) });
+    ast::BinaryExpr* condition = makeBinary(ast::makeName("i"), ast::makeLiteralInt(3), ast::BinaryOp::OP_LT);
+    ast::BlockStmt* body = ast::makeBlock({ makeAssignmentStmt(ast::makeName("i"), makeBinary(ast::makeName("i"), ast::makeLiteralInt(1), ast::BinaryOp::OP_ADD)) });
 
     ast::WhileStmt* whileStmt = makeWhile(condition, body);
     codegen->eval(whileStmt);
@@ -1617,9 +1617,9 @@ TEST_F(CodeGeneratorTest, WhileStmtCounterAccumulation)
     env->define(StringRef("sum"), IR::Value::makeFloat(0));
     env->define(StringRef("i"), IR::Value::makeFloat(1));
 
-    ast::BinaryExpr* condition = makeBinary(ast::makeName("i"), ast::makeLiteralInt(5), tok::TokenType::OP_LTE);
-    ast::BlockStmt* body = ast::makeBlock({ ast::makeAssignmentStmt(ast::makeName("sum"), ast::makeBinary(ast::makeName("sum"), ast::makeName("i"), tok::TokenType::OP_PLUS)),
-        makeAssignmentStmt(ast::makeName("i"), makeBinary(ast::makeName("i"), ast::makeLiteralInt(1), tok::TokenType::OP_PLUS)) });
+    ast::BinaryExpr* condition = makeBinary(ast::makeName("i"), ast::makeLiteralInt(5), ast::BinaryOp::OP_LTE);
+    ast::BlockStmt* body = ast::makeBlock({ ast::makeAssignmentStmt(ast::makeName("sum"), ast::makeBinary(ast::makeName("sum"), ast::makeName("i"), ast::BinaryOp::OP_ADD)),
+        makeAssignmentStmt(ast::makeName("i"), makeBinary(ast::makeName("i"), ast::makeLiteralInt(1), ast::BinaryOp::OP_ADD)) });
 
     ast::WhileStmt* whileStmt = makeWhile(condition, body);
     codegen->eval(whileStmt);
@@ -1634,8 +1634,8 @@ TEST_F(CodeGeneratorTest, WhileStmtWithComplexCondition)
     // x = 10; while (x > 0 && x < 20) { x = x - 1 }
     env->define(StringRef("x"), IR::Value::makeFloat(10));
 
-    ast::BinaryExpr* condition = makeBinary(ast::makeName("x"), ast::makeLiteralInt(0), tok::TokenType::OP_GT);
-    ast::BlockStmt* body = ast::makeBlock({ makeAssignmentStmt(ast::makeName("x"), ast::makeBinary(ast::makeName("x"), ast::makeLiteralInt(1), tok::TokenType::OP_MINUS)) });
+    ast::BinaryExpr* condition = makeBinary(ast::makeName("x"), ast::makeLiteralInt(0), ast::BinaryOp::OP_GT);
+    ast::BlockStmt* body = ast::makeBlock({ makeAssignmentStmt(ast::makeName("x"), ast::makeBinary(ast::makeName("x"), ast::makeLiteralInt(1), ast::BinaryOp::OP_SUB)) });
 
     ast::WhileStmt* whileStmt = makeWhile(condition, body);
     codegen->eval(whileStmt);
@@ -1789,8 +1789,8 @@ TEST_F(CodeGeneratorTest, IntegratedFunctionWithIfElse)
     //   else
     //      return x
 
-    ast::BinaryExpr* condition = makeBinary(ast::makeName("x"), ast::makeLiteralInt(0), tok::TokenType::OP_LT);
-    ast::BlockStmt* thenBlock = ast::makeBlock({ ast::makeExprStmt(ast::makeUnary(ast::makeName("x"), tok::TokenType::OP_MINUS)) });
+    ast::BinaryExpr* condition = makeBinary(ast::makeName("x"), ast::makeLiteralInt(0), ast::BinaryOp::OP_LT);
+    ast::BlockStmt* thenBlock = ast::makeBlock({ ast::makeExprStmt(ast::makeUnary(ast::makeName("x"), ast::UnaryOp::OP_NEG)) });
     ast::BlockStmt* elseBlock = ast::makeBlock({ ast::makeExprStmt(ast::makeName("x")) });
 
     ast::IfStmt* ifStmt = makeIf(condition, thenBlock, elseBlock);
@@ -1823,7 +1823,7 @@ TEST_F(CodeGeneratorTest, IntegratedBlockWithMultipleStatementTypes)
     //   else
     //      result = 0
     //   result
-    ast::BinaryExpr* condition = makeBinary(ast::makeName("x"), ast::makeName("y"), tok::TokenType::OP_LT);
+    ast::BinaryExpr* condition = makeBinary(ast::makeName("x"), ast::makeName("y"), ast::BinaryOp::OP_LT);
     ast::BlockStmt* thenBlock = ast::makeBlock({ makeAssignmentStmt(ast::makeName("result"), ast::makeLiteralInt(1)) });
     ast::BlockStmt* elseBlock = ast::makeBlock({ makeAssignmentStmt(ast::makeName("result"), ast::makeLiteralInt(0)) });
     ast::IfStmt* ifStmt = makeIf(condition, thenBlock, elseBlock);

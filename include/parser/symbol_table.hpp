@@ -37,18 +37,16 @@ public:
 
     struct Symbol {
         StringRef name;
-        SymbolType SymbolType;
-        DataType_t DataType;
-        bool IsConstant = false;
-        bool IsGlobal = false;
-        bool IsUsed = false;
-        int32_t DefinitionLine = 0;
-        std::vector<int32_t> UsageLines;
+        SymbolType symbolType;
+        DataType_t dataType;
+        bool isUsed = false;
+        int32_t definitionLine = 0;
+        std::vector<int32_t> usageLines;
         // for functions
-        std::vector<DataType_t> ParamTypes;
+        std::vector<DataType_t> paramTypes;
         DataType_t returnType = DataType_t::UNKNOWN;
         // for type inference
-        std::unordered_set<DataType_t> PossibleTypes;
+        std::unordered_set<DataType_t> possibleTypes;
     };
 
     SymbolTable* Parent_ = nullptr;
@@ -57,6 +55,7 @@ private:
     std::unordered_map<StringRef, Symbol, StringRefHash, StringRefEqual> Symbols_;
     std::vector<std::unique_ptr<SymbolTable>> Children_;
     unsigned int ScopeLevel_ { 0 };
+    
 
 public:
     explicit SymbolTable(SymbolTable* p = nullptr, int32_t level = 0);

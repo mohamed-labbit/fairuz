@@ -159,9 +159,10 @@ private:
 public:
     explicit AssignmentStmt() = delete;
 
-    AssignmentStmt(Expr* target, Expr* value)
+    AssignmentStmt(Expr* target, Expr* value, bool decl = false)
         : Target_(target)
         , Value_(value)
+        , isDecl_(decl)
     {
         Kind_ = Kind::ASSIGNMENT;
     }
@@ -525,9 +526,9 @@ static constexpr ExprStmt* makeExprStmt(Expr* expr)
     return AST_allocator.make<ExprStmt>(expr);
 }
 
-static constexpr AssignmentStmt* makeAssignmentStmt(Expr* target, Expr* value)
+static constexpr AssignmentStmt* makeAssignmentStmt(Expr* target, Expr* value, bool decl = false)
 {
-    return AST_allocator.make<AssignmentStmt>(target, value);
+    return AST_allocator.make<AssignmentStmt>(target, value, decl);
 }
 
 static constexpr IfStmt* makeIf(Expr* condition, BlockStmt* then_block, BlockStmt* else_block = nullptr)

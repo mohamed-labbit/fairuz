@@ -29,7 +29,7 @@ protected:
     ast::NameExpr* createName(StringRef const& name, int32_t line = 1) { return ast::makeName(name /*, line*/); }
 
     // Helper function to create a binary expression
-    ast::BinaryExpr* createBinary(ast::Expr* left, tok::TokenType op, ast::Expr* right, int32_t line = 1)
+    ast::BinaryExpr* createBinary(ast::Expr* left, ast::BinaryOp op, ast::Expr* right, int32_t line = 1)
     {
         return ast::makeBinary(left, right, op /*, line*/);
     }
@@ -99,7 +99,7 @@ TEST_F(SemanticAnalyzerTest, InferType_BinaryExpr_IntPlusInt)
 {
     ast::LiteralExpr* left = ast::makeLiteralInt(10);
     ast::LiteralExpr* right = ast::makeLiteralInt(20);
-    ast::BinaryExpr* binary = createBinary(left, tok::TokenType::OP_PLUS, right);
+    ast::BinaryExpr* binary = createBinary(left, ast::BinaryOp::OP_ADD, right);
 
     EXPECT_EQ(analyzer->inferType(binary), SymbolTable::DataType_t::INTEGER);
 }
@@ -108,7 +108,7 @@ TEST_F(SemanticAnalyzerTest, InferType_BinaryExpr_FloatPromotion)
 {
     ast::LiteralExpr* left = ast::makeLiteralInt(10);
     ast::LiteralExpr* right = ast::makeLiteralFloat(20.5);
-    ast::BinaryExpr* binary = createBinary(left, tok::TokenType::OP_PLUS, right);
+    ast::BinaryExpr* binary = createBinary(left, ast::BinaryOp::OP_ADD, right);
 
     EXPECT_EQ(analyzer->inferType(binary), SymbolTable::DataType_t::FLOAT);
 }
@@ -117,7 +117,7 @@ TEST_F(SemanticAnalyzerTest, InferType_BinaryExpr_StringConcat)
 {
     ast::LiteralExpr* left = ast::makeLiteralString("hello");
     ast::LiteralExpr* right = ast::makeLiteralString("world");
-    ast::BinaryExpr* binary = createBinary(left, tok::TokenType::OP_PLUS, right);
+    ast::BinaryExpr* binary = createBinary(left, ast::BinaryOp::OP_ADD, right);
 
     EXPECT_EQ(analyzer->inferType(binary), SymbolTable::DataType_t::STRING);
 }
@@ -126,7 +126,7 @@ TEST_F(SemanticAnalyzerTest, InferType_BinaryExpr_LogicalAnd)
 {
     ast::LiteralExpr* left = ast::makeLiteralBool(true);
     ast::LiteralExpr* right = ast::makeLiteralBool(false);
-    ast::BinaryExpr* binary = createBinary(left, tok::TokenType::OP_AND, right);
+    ast::BinaryExpr* binary = createBinary(left, ast::BinaryOp::OP_AND, right);
 
     EXPECT_EQ(analyzer->inferType(binary), SymbolTable::DataType_t::BOOLEAN);
 }
@@ -135,7 +135,7 @@ TEST_F(SemanticAnalyzerTest, InferType_BinaryExpr_LogicalOr)
 {
     ast::LiteralExpr* left = ast::makeLiteralBool(true);
     ast::LiteralExpr* right = ast::makeLiteralBool(false);
-    ast::BinaryExpr* binary = createBinary(left, tok::TokenType::OP_OR, right);
+    ast::BinaryExpr* binary = createBinary(left, ast::BinaryOp::OP_OR, right);
 
     EXPECT_EQ(analyzer->inferType(binary), SymbolTable::DataType_t::BOOLEAN);
 }
@@ -189,7 +189,7 @@ TEST_F(SemanticAnalyzerTest, InvalidStringOperation_Subtraction)
 {
     ast::LiteralExpr* left = ast::makeLiteralString("hello");
     ast::LiteralExpr* right = ast::makeLiteralString("world");
-    ast::BinaryExpr* binary = createBinary(left, tok::TokenType::OP_MINUS, right);
+    ast::BinaryExpr* binary = createBinary(left, ast::BinaryOp::OP_SUB, right);
 
     analyzer->analyzeExpr(binary);
 
@@ -201,7 +201,7 @@ TEST_F(SemanticAnalyzerTest, InvalidStringOperation_Multiplication)
 {
     ast::LiteralExpr* left = ast::makeLiteralString("hello");
     ast::LiteralExpr* right = ast::makeLiteralInt(3);
-    ast::BinaryExpr* binary = createBinary(left, tok::TokenType::OP_STAR, right);
+    ast::BinaryExpr* binary = createBinary(left, ast::BinaryOp::OP_MUL, right);
 
     analyzer->analyzeExpr(binary);
 
@@ -213,7 +213,7 @@ TEST_F(SemanticAnalyzerTest, InvalidStringOperation_Division)
 {
     ast::LiteralExpr* left = ast::makeLiteralString("hello");
     ast::LiteralExpr* right = ast::makeLiteralInt(2);
-    ast::BinaryExpr* binary = createBinary(left, tok::TokenType::OP_SLASH, right);
+    ast::BinaryExpr* binary = createBinary(left, ast::BinaryOp::OP_DIV, right);
 
     analyzer->analyzeExpr(binary);
 
@@ -227,7 +227,7 @@ TEST_F(SemanticAnalyzerTest, DivisionByZero_ReportsError)
 {
     ast::LiteralExpr* left = ast::makeLiteralInt(10);
     ast::LiteralExpr* right = ast::makeLiteralInt(0);
-    ast::BinaryExpr* binary = createBinary(left, tok::TokenType::OP_SLASH, right);
+    ast::BinaryExpr* binary = createBinary(left, ast::BinaryOp::OP_DIV, right);
 
     analyzer->analyzeExpr(binary);
 
@@ -239,7 +239,7 @@ TEST_F(SemanticAnalyzerTest, DivisionByNonZero_NoError)
 {
     ast::LiteralExpr* left = ast::makeLiteralInt(10);
     ast::LiteralExpr* right = ast::makeLiteralInt(5);
-    ast::BinaryExpr* binary = createBinary(left, tok::TokenType::OP_SLASH, right);
+    ast::BinaryExpr* binary = createBinary(left, ast::BinaryOp::OP_DIV, right);
 
     analyzer->analyzeExpr(binary);
 
@@ -397,10 +397,10 @@ TEST_F(SemanticAnalyzerTest, NestedBinaryExpressions_InfersCorrectType)
     // (10 + 20) * 2.5
     ast::LiteralExpr* inner_left = ast::makeLiteralInt(10);
     ast::LiteralExpr* inner_right = ast::makeLiteralInt(20);
-    ast::BinaryExpr* inner_binary = createBinary(inner_left, tok::TokenType::OP_PLUS, inner_right);
+    ast::BinaryExpr* inner_binary = createBinary(inner_left, ast::BinaryOp::OP_ADD, inner_right);
 
     ast::LiteralExpr* outer_right = ast::makeLiteralFloat(2.5);
-    ast::BinaryExpr* outer_binary = createBinary(inner_binary, tok::TokenType::OP_STAR, outer_right);
+    ast::BinaryExpr* outer_binary = createBinary(inner_binary, ast::BinaryOp::OP_MUL, outer_right);
 
     // Should promote to FLOAT due to 2.5
     EXPECT_EQ(analyzer->inferType(outer_binary), SymbolTable::DataType_t::FLOAT);
@@ -484,7 +484,7 @@ TEST_F(SemanticAnalyzerTest, ComplexProgram_MultipleIssues)
     // Division by zero
     ast::LiteralExpr* left = ast::makeLiteralInt(10);
     ast::LiteralExpr* right = ast::makeLiteralInt(0);
-    ast::BinaryExpr* divExpr = createBinary(left, tok::TokenType::OP_SLASH, right);
+    ast::BinaryExpr* divExpr = createBinary(left, ast::BinaryOp::OP_DIV, right);
     ast::ExprStmt* exprStmt2 = ast::makeExprStmt(divExpr /*, 2*/);
     statements.push_back(exprStmt2);
 
@@ -513,7 +513,7 @@ TEST_F(SemanticAnalyzerTest, VariableFlowAnalysis)
     // Use variable
     ast::NameExpr* useExpr = createName("x", 2);
     ast::LiteralExpr* value2 = ast::makeLiteralInt(5);
-    ast::BinaryExpr* binary = createBinary(useExpr, tok::TokenType::OP_PLUS, value2);
+    ast::BinaryExpr* binary = createBinary(useExpr, ast::BinaryOp::OP_ADD, value2);
     ast::NameExpr* target2 = createName("y");
     ast::AssignmentStmt* assign2 = ast::makeAssignmentStmt(target2, binary /*, 2*/);
     statements.push_back(assign2);
