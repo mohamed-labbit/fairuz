@@ -29,9 +29,9 @@ protected:
     ast::NameExpr* createName(StringRef const& name, int32_t line = 1) { return ast::makeName(name /*, line*/); }
 
     // Helper function to create a binary expression
-    ast::BinaryExpr* createBinary(ast::Expr* left, ast::BinaryOp op, ast::Expr* right, int32_t line = 1)
+    ast::BinaryExpr* createBinary(ast::Expr* l, ast::BinaryOp op, ast::Expr* right, int32_t line = 1)
     {
-        return ast::makeBinary(left, right, op /*, line*/);
+        return ast::makeBinary(l, right, op /*, line*/);
     }
 
     // Helper to count issues by severity

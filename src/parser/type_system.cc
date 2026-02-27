@@ -85,7 +85,7 @@ std::shared_ptr<typename TypeSystem::Type> TypeSystem::TypeInference::inferExpr(
         case ast::LiteralExpr::Type::BOOLEAN:
             t->base = BaseType::BOOL;
             break;
-        case ast::LiteralExpr::Type::NONE:
+        case ast::LiteralExpr::Type::NIL:
             t->base = BaseType::NONE;
             break;
         }

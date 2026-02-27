@@ -275,37 +275,37 @@ Stmt* Parser::parseExpressionStmt()
 
 Expr* Parser::parseAssignmentExpr()
 {
-    Expr* left = parseConditionalExpr();
-    if (!left)
+    Expr* L = parseConditionalExpr();
+    if (!L)
         return nullptr;
 
     if (check(tok::TokenType::OP_ASSIGN)) {
-        if (left->getKind() != Expr::Kind::NAME) {
+        if (L->getKind() != Expr::Kind::NAME) {
             diagnostic::engine.emit("Invalid assignment target", diagnostic::DiagnosticEngine::Severity::ERROR);
             return nullptr;
         }
 
         advance();
-        Expr* right = parseAssignmentExpr();
-        if (!right)
+        Expr* R = parseAssignmentExpr();
+        if (!R)
             return nullptr;
 
         // push var to symbol table
-        NameExpr* target = static_cast<NameExpr*>(left);
+        NameExpr* target = static_cast<NameExpr*>(L);
         bool decl = false;
         if (Sema_.getGlobalScope()->isDefined(target->getValue()))
             decl = true;
 
-        return makeAssignmentExpr(target, right, decl);
+        return makeAssignmentExpr(target, R, decl);
     }
 
-    return left;
+    return L;
 }
 
 Expr* Parser::parseLogicalExprPrecedence(unsigned int min_precedence)
 {
-    Expr* left = parseComparisonExpr();
-    if (!left)
+    Expr* L = parseComparisonExpr();
+    if (!L)
         return nullptr;
 
     for (;;) {
@@ -320,37 +320,37 @@ Expr* Parser::parseLogicalExprPrecedence(unsigned int min_precedence)
         tok::TokenType op = Lexer_.current()->type();
         advance();
 
-        Expr* right = parseLogicalExprPrecedence(precedence + 1);
-        if (!right) {
+        Expr* R = parseLogicalExprPrecedence(precedence + 1);
+        if (!R) {
             diagnostic::engine.emit("Expected expression after logical operator", diagnostic::DiagnosticEngine::Severity::ERROR);
             return nullptr;
         }
 
-        left = makeBinary(left, right, toBinaryOp(op));
+        L = makeBinary(L, R, toBinaryOp(op));
     }
 
-    return left;
+    return L;
 }
 
 Expr* Parser::parseComparisonExpr()
 {
-    Expr* left = parseBinaryExpr();
-    if (!left)
+    Expr* L = parseBinaryExpr();
+    if (!L)
         return nullptr;
 
     if (currentToken()->isComparisonOp()) {
         tok::TokenType op = Lexer_.current()->type();
         advance();
-        Expr* right = parseBinaryExpr();
-        if (!right) {
+        Expr* R = parseBinaryExpr();
+        if (!R) {
             diagnostic::engine.emit("Expected expression after comparison operator", diagnostic::DiagnosticEngine::Severity::ERROR);
             return nullptr;
         }
 
-        left = makeBinary(left, right, toBinaryOp(op));
+        L = makeBinary(L, R, toBinaryOp(op));
     }
 
-    return left;
+    return L;
 }
 
 Expr* Parser::parseBinaryExpr()
@@ -360,8 +360,8 @@ Expr* Parser::parseBinaryExpr()
 
 Expr* Parser::parseBinaryExprPrecedence(unsigned int min_precedence)
 {
-    Expr* left = parseUnaryExpr();
-    if (!left)
+    Expr* L = parseUnaryExpr();
+    if (!L)
         return nullptr;
 
     for (;;) {
@@ -377,16 +377,16 @@ Expr* Parser::parseBinaryExprPrecedence(unsigned int min_precedence)
         advance();
 
         unsigned int nextMin = precedence + 1;
-        Expr* right = parseBinaryExprPrecedence(nextMin);
-        if (!right) {
+        Expr* R = parseBinaryExprPrecedence(nextMin);
+        if (!R) {
             diagnostic::engine.emit("Expected expression after binary operator", diagnostic::DiagnosticEngine::Severity::ERROR);
             return nullptr;
         }
 
-        left = makeBinary(left, right, toBinaryOp(op));
+        L = makeBinary(L, R, toBinaryOp(op));
     }
 
-    return left;
+    return L;
 }
 
 Expr* Parser::parseUnaryExpr()

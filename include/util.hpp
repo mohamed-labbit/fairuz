@@ -268,5 +268,17 @@ static int64_t parseIntegerLiteral(StringRef const& literal)
     return negative ? -value : value;
 }
 
+static bool isIntegerValue(double d, int64_t& out)
+{
+    if (!std::isfinite(d))
+        return false;
+    int64_t iv = static_cast<int64_t>(d);
+    if (static_cast<double>(iv) != d)
+        return false;
+    out = iv;
+    return true;
+}
+
+
 } // util
 } // mylang

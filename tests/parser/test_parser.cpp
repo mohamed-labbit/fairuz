@@ -131,7 +131,7 @@ TEST_F(ParserTest, ParseNoneLiteral)
         AST_Printer.print(literal);
 
     ASSERT_NE(literal, nullptr);
-    EXPECT_EQ(literal->getType(), LiteralExpr::Type::NONE);
+    EXPECT_EQ(literal->getType(), LiteralExpr::Type::NIL);
 }
 
 TEST_F(ParserTest, ParseParenthesizedNumberLiteral)

@@ -55,28 +55,28 @@ std::optional<double> ASTOptimizer::evaluateConstant(Expr const* expr)
     } else if (expr->getKind() == Expr::Kind::BINARY) {
         BinaryExpr const* bin = dynamic_cast<BinaryExpr const*>(expr);
 
-        std::optional<double> left = evaluateConstant(bin->getLeft());
-        std::optional<double> right = evaluateConstant(bin->getRight());
+        std::optional<double> L = evaluateConstant(bin->getLeft());
+        std::optional<double> R = evaluateConstant(bin->getRight());
 
-        if (left == std::nullopt || right == std::nullopt)
+        if (!L || !R)
             return std::nullopt;
 
         switch (bin->getOperator()) {
-        case BinaryOp::OP_ADD: return *left + *right;
-        case BinaryOp::OP_SUB: return *left - *right;
-        case BinaryOp::OP_MUL: return *left * *right;
-        case BinaryOp::OP_POW: return std::pow(*left, *right);
+        case BinaryOp::OP_ADD: return *L + *R;
+        case BinaryOp::OP_SUB: return *L - *R;
+        case BinaryOp::OP_MUL: return *L * *R;
+        case BinaryOp::OP_POW: return std::pow(*L, *R);
         case BinaryOp::OP_DIV:
-            if (*right == 0.0)
+            if (*R == 0.0)
                 return std::nullopt;
 
-            return *left / *right;
+            return *L / *R;
 
         case BinaryOp::OP_MOD:
-            if (*right == 0.0)
+            if (*R == 0.0)
                 return std::nullopt;
 
-            return std::fmod(*left, *right);
+            return std::fmod(*L, *R);
         default:
             return std::nullopt;
         }
@@ -84,7 +84,7 @@ std::optional<double> ASTOptimizer::evaluateConstant(Expr const* expr)
         UnaryExpr const* un = dynamic_cast<UnaryExpr const*>(expr);
         std::optional<double> operand = evaluateConstant(un->getOperand());
 
-        if (operand == std::nullopt)
+        if (!operand)
             return std::nullopt;
 
         if (un->getOperator() == UnaryOp::OP_PLUS)
@@ -115,57 +115,57 @@ Expr* ASTOptimizer::optimizeConstantFolding(Expr* expr)
         }
 
         // Algebraic simplifications
-        Expr* left = bin->getLeft();
-        Expr* right = bin->getRight();
+        Expr* L = bin->getLeft();
+        Expr* R = bin->getRight();
 
-        if (!left || !right)
+        if (!L || !R)
             return expr->clone();
 
         BinaryOp op = bin->getOperator();
 
-        Expr::Kind r_kind = right->getKind();
-        Expr::Kind l_kind = left->getKind();
+        Expr::Kind r_kind = R->getKind();
+        Expr::Kind l_kind = L->getKind();
 
         // x + 0 = x, x - 0 = x
         if ((op == BinaryOp::OP_ADD || op == BinaryOp::OP_SUB) && r_kind == Expr::Kind::LITERAL) {
-            LiteralExpr* lit = dynamic_cast<LiteralExpr*>(right);
+            LiteralExpr* lit = dynamic_cast<LiteralExpr*>(R);
             if (lit->isNumeric() && lit->toNumber() == 0) {
                 ++Stats_.StrengthReductions;
-                return left->clone();
+                return L->clone();
             }
         }
 
         // inverse (0 - x != x, but 0 + x = x)
         if (op == BinaryOp::OP_ADD && l_kind == Expr::Kind::LITERAL) {
-            LiteralExpr* lit = dynamic_cast<LiteralExpr*>(left);
+            LiteralExpr* lit = dynamic_cast<LiteralExpr*>(L);
             if (lit->isNumeric() && lit->toNumber() == 0) {
                 ++Stats_.StrengthReductions;
-                return right->clone();
+                return R->clone();
             }
         }
 
         // x * 1 = x, x / 1 = x
         if ((op == BinaryOp::OP_MUL || op == BinaryOp::OP_DIV) && r_kind == Expr::Kind::LITERAL) {
-            LiteralExpr* lit = dynamic_cast<LiteralExpr*>(right);
+            LiteralExpr* lit = dynamic_cast<LiteralExpr*>(R);
             if (lit->isNumeric() && lit->toNumber() == 1) {
                 ++Stats_.StrengthReductions;
-                return left->clone();
+                return L->clone();
             }
         }
 
         // 1 * x
         if (op == BinaryOp::OP_MUL && l_kind == Expr::Kind::LITERAL) {
-            LiteralExpr* lit = dynamic_cast<LiteralExpr*>(left);
+            LiteralExpr* lit = dynamic_cast<LiteralExpr*>(L);
             if (lit->isNumeric() && lit->toNumber() == 1) {
                 ++Stats_.StrengthReductions;
-                return right->clone();
+                return R->clone();
             }
         }
 
-        // x * 0 = 0 (only when left side is definitely integer; IEEE floats can yield NaN for inf * 0)
+        // x * 0 = 0 (only when L side is definitely integer; IEEE floats can yield NaN for inf * 0)
         if (op == BinaryOp::OP_MUL && r_kind == Expr::Kind::LITERAL) {
-            auto* r_lit = static_cast<LiteralExpr*>(right);
-            if (r_lit->isNumeric() && r_lit->toNumber() == 0 /*&& isDefinitelyIntegerExpr(left)*/) {
+            auto* r_lit = static_cast<LiteralExpr*>(R);
+            if (r_lit->isNumeric() && r_lit->toNumber() == 0 /*&& isDefinitelyIntegerExpr(L)*/) {
                 ++Stats_.StrengthReductions;
                 return makeLiteralInt(0);
             }
@@ -173,24 +173,24 @@ Expr* ASTOptimizer::optimizeConstantFolding(Expr* expr)
 
         // x * 2 = x + x (strength reduction)
         if (op == BinaryOp::OP_MUL && r_kind == Expr::Kind::LITERAL) {
-            auto* lit = dynamic_cast<LiteralExpr*>(right);
+            auto* lit = dynamic_cast<LiteralExpr*>(R);
             if (lit->isNumeric() && lit->toNumber() == 2) {
                 ++Stats_.StrengthReductions;
-                return makeBinary(left->clone(), left->clone(), BinaryOp::OP_ADD);
+                return makeBinary(L->clone(), L->clone(), BinaryOp::OP_ADD);
             }
         }
 
         if (op == BinaryOp::OP_MUL && l_kind == Expr::Kind::LITERAL) {
-            auto* lit = dynamic_cast<LiteralExpr*>(left);
+            auto* lit = dynamic_cast<LiteralExpr*>(L);
             if (lit->isNumeric() && lit->toNumber() == 2) {
                 ++Stats_.StrengthReductions;
-                return makeBinary(right->clone(), right->clone(), BinaryOp::OP_ADD);
+                return makeBinary(R->clone(), R->clone(), BinaryOp::OP_ADD);
             }
         }
 
         // x - x = 0
         if (op == BinaryOp::OP_SUB) {
-            if (left->equals(right)) {
+            if (L->equals(R)) {
                 ++Stats_.StrengthReductions;
                 return makeLiteralInt(0);
             }
@@ -198,8 +198,8 @@ Expr* ASTOptimizer::optimizeConstantFolding(Expr* expr)
 
         // string concatenation
         if (l_kind == Expr::Kind::LITERAL && r_kind == Expr::Kind::LITERAL && op == BinaryOp::OP_ADD) {
-            LiteralExpr* l_lit = dynamic_cast<LiteralExpr*>(left);
-            LiteralExpr* r_lit = dynamic_cast<LiteralExpr*>(right);
+            LiteralExpr* l_lit = dynamic_cast<LiteralExpr*>(L);
+            LiteralExpr* r_lit = dynamic_cast<LiteralExpr*>(R);
 
             if (l_lit->getType() == LiteralExpr::Type::STRING && r_lit->getType() == LiteralExpr::Type::STRING)
                 return makeLiteralString(l_lit->getStr() + r_lit->getStr());

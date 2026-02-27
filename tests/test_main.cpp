@@ -1,6 +1,7 @@
-#include "../include/ast/ast.hpp"
-#include "../include/types/string.hpp"
 #include "../include/IR/value.hpp"
+#include "../include/ast/AST_allocator.hpp"
+#include "../include/runtime/runtime_allocator.hpp"
+#include "../include/types/string_allocator.hpp"
 #include "test_config.h"
 
 #include <cstring>
@@ -41,7 +42,9 @@ int main(int argc, char** argv)
         std::cout << '\n';
         std::cout << ast::AST_allocator.toString(true) << '\n';
         std::cout << '\n';
-        std::cout << IR::object_allocator.toString(true) << std::endl;
+        std::cout << IR::object_allocator.toString(true) << '\n';
+        std::cout << '\n';
+        std::cout << runtime::runtime_allocator.toString(true) << std::endl;
     }
 
     return ret;

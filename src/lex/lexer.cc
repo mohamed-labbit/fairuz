@@ -515,7 +515,7 @@ tok::Token const* Lexer::lexToken()
             return finish(tok::TokenType::INTEGER, number, line, col);
         }
 
-        diagnostic::engine.panic("Invalid character found : " + static_cast<char>(current));
+        diagnostic::engine.panic("Invalid character found : " + std::to_string(static_cast<char>(current)));
     }
 
     if (!TokStream_.empty() && TokStream_.back()->type() == tok::TokenType::ENDMARKER)
