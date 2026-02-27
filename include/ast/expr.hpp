@@ -87,9 +87,9 @@ private:
 public:
     BinaryExpr() = delete;
 
-    BinaryExpr(Expr* left, Expr* right, Op op)
-        : Left_(left)
-        , Right_(right)
+    BinaryExpr(Expr* l, Expr* r, Op op)
+        : Left_(l)
+        , Right_(r)
         , Operator_(op)
     {
         Kind_ = Kind::BINARY;
@@ -137,14 +137,14 @@ public:
         return Operator_;
     }
 
-    void setLeft(Expr* left)
+    void setLeft(Expr* l)
     {
-        Left_ = left;
+        Left_ = l;
     }
 
-    void setRight(Expr* right)
+    void setRight(Expr* r)
     {
-        Right_ = right;
+        Right_ = r;
     }
 
     void setOperator(Op op)
@@ -223,11 +223,11 @@ public:
         BINARY,
         STRING,
         BOOLEAN,
-        NONE
+        NIL
     };
 
 private:
-    Type Type_ { Type::NONE };
+    Type Type_ { Type::NIL };
 
     union {
         int64_t IntValue_;
@@ -238,7 +238,11 @@ private:
     StringRef StrValue_;
 
 public:
-    LiteralExpr() = default;
+    LiteralExpr()
+        : Type_(Type::NIL)
+    {
+        Kind_ = Kind::LITERAL;
+    }
 
     LiteralExpr(int64_t value, Type type)
         : Type_(type)
@@ -333,6 +337,11 @@ public:
         return isInteger() || isDecimal();
     }
 
+    bool isNil() const
+    {
+        return Type_ == Type::NIL;
+    }
+
     bool equals(Expr const* other) const override
     {
         if (!other || other->getKind() != Kind_)
@@ -354,8 +363,8 @@ public:
             return BoolValue_ == lit->BoolValue_;
         case Type::STRING:
             return StrValue_ == lit->StrValue_;
-        case Type::NONE:
-            return true;
+        case Type::NIL:
+            return true; // two nil objects are always equal
         }
         return false;
     }
@@ -374,7 +383,7 @@ public:
             return AST_allocator.make<LiteralExpr>(BoolValue_);
         case Type::STRING:
             return AST_allocator.make<LiteralExpr>(StrValue_);
-        case Type::NONE:
+        case Type::NIL:
             return AST_allocator.make<LiteralExpr>();
         }
         return nullptr; // should never happen
@@ -653,14 +662,19 @@ public:
 using UnaryOp = UnaryExpr::Op;
 using BinaryOp = BinaryExpr::Op;
 
-static constexpr BinaryExpr* makeBinary(Expr* left, Expr* right, BinaryExpr::Op const op)
+static constexpr BinaryExpr* makeBinary(Expr* l, Expr* r, BinaryExpr::Op const op)
 {
-    return AST_allocator.make<BinaryExpr>(left, right, op);
+    return AST_allocator.make<BinaryExpr>(l, r, op);
 }
 
 static constexpr UnaryExpr* makeUnary(Expr* operand, UnaryExpr::Op const op)
 {
     return AST_allocator.make<UnaryExpr>(operand, op);
+}
+
+static constexpr LiteralExpr* makeLiteralNil()
+{
+    return AST_allocator.make<LiteralExpr>();
 }
 
 static constexpr LiteralExpr* makeLiteralInt(int value)
