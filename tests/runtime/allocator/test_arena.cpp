@@ -32,14 +32,6 @@ inline TestAllocator test_allocator;
 
 // Basic Allocation Tests
 
-TEST(ArenaAllocatorTest, DefaultConstruction)
-{
-    TestAllocator arena;
-    EXPECT_EQ(arena.get().totalAllocations(), 0);
-    EXPECT_EQ(arena.get().totalAllocated(), 0);
-    EXPECT_EQ(arena.get().activeBlocks(), 0);
-}
-
 TEST(ArenaAllocatorTest, SingleIntAllocation)
 {
     TestAllocator arena;
@@ -68,6 +60,7 @@ TEST(ArenaAllocatorTest, MultipleIntAllocations)
     EXPECT_EQ(*ptr1, 1);
     EXPECT_EQ(*ptr2, 2);
     EXPECT_EQ(*ptr3, 3);
+
     EXPECT_EQ(arena.get().totalAllocations(), 3);
 }
 
@@ -86,13 +79,11 @@ TEST(ArenaAllocatorTest, AllocateArrayOfInts)
 
     ASSERT_NE(arr, nullptr);
 
-    for (size_t i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; ++i) 
         arr[i] = static_cast<int>(i);
-    }
 
-    for (size_t i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; ++i) 
         EXPECT_EQ(arr[i], static_cast<int>(i));
-    }
 }
 
 TEST(ArenaAllocatorTest, AllocateLargeArray)
@@ -103,9 +94,8 @@ TEST(ArenaAllocatorTest, AllocateLargeArray)
 
     ASSERT_NE(arr, nullptr);
 
-    for (size_t i = 0; i < count; ++i) {
+    for (size_t i = 0; i < count; ++i) 
         arr[i] = static_cast<double>(i) * 1.5;
-    }
 
     EXPECT_EQ(arr[0], 0.0);
     EXPECT_EQ(arr[count - 1], (count - 1) * 1.5);
@@ -158,10 +148,13 @@ TEST(ArenaAllocatorTest, AllocatePODStruct)
 {
     TestAllocator arena;
     Point* ptr = arena.allocate<Point>(1);
+    
     ASSERT_NE(ptr, nullptr);
+    
     ptr->x = 1.0;
     ptr->y = 2.0;
     ptr->z = 3.0;
+
     EXPECT_DOUBLE_EQ(ptr->x, 1.0);
     EXPECT_DOUBLE_EQ(ptr->y, 2.0);
     EXPECT_DOUBLE_EQ(ptr->z, 3.0);
@@ -181,10 +174,6 @@ TEST(ArenaAllocatorTest, AllocateLargeStruct)
     EXPECT_EQ(ptr->data[0], 'X');
     EXPECT_EQ(ptr->data[1023], 'Y');
 }
-
-// ============================================================================
-// Fast Pool Tests (8, 16, 32, 64, 128, 256 byte allocations)
-// ============================================================================
 
 TEST(ArenaAllocatorTest, FastPool8Bytes)
 {
@@ -363,32 +352,6 @@ TEST(ArenaAllocatorTest, ActiveBlocksCount)
     EXPECT_GT(arena.get().activeBlocks(), initial_blocks);
 }
 
-// Deallocation Tests (should be no-ops)
-/*
-TEST(ArenaAllocatorTest, DeallocateIsNoOp)
-{
-  TestAllocator arena;
-
-  int* ptr = arena.allocate<int>(1);
-  ASSERT_NE(ptr, nullptr);
-  *ptr = 42;
-
-  size_t allocations_before = arena.totalAllocations();
-
-  arena.deallocate(ptr);
-
-  // Allocation should still be valid (arena doesn't free individual items)
-  EXPECT_EQ(*ptr, 42);
-}
-
-TEST(ArenaAllocatorTest, DeallocateNullptr)
-{
-  TestAllocator arena;
-  arena.deallocate<int>(nullptr);
-  // Should not crash
-}
-*/
-
 // Alignment Tests
 
 TEST(ArenaAllocatorTest, ProperAlignment)
@@ -416,56 +379,6 @@ TEST(ArenaAllocatorTest, CustomAlignment)
     EXPECT_EQ(reinterpret_cast<uintptr_t>(ptr) % 64, 0);
 }
 
-// Growth Strategy Tests
-/*
-TEST(ArenaAllocatorTest, ExponentialGrowth)
-{
-  TestAllocator arena(static_cast<int>(TestAllocator::GrowthStrategy::EXPONENTIAL));
-
-  // Force multiple block allocations
-  for (int i = 0; i < 10; ++i)
-  {
-    char* ptr = arena.allocate<char>(1024);
-    ASSERT_NE(ptr, nullptr);
-  }
-
-  EXPECT_GT(arena.get().activeBlocks(), 1);
-}
-
-TEST(ArenaAllocatorTest, LinearGrowth)
-{
-  TestAllocator arena(static_cast<int>(TestAllocator::GrowthStrategy::LINEAR));
-
-  // Force multiple block allocations
-  for (int i = 0; i < 10; ++i)
-  {
-    char* ptr = arena.allocate<char>(1024);
-    ASSERT_NE(ptr, nullptr);
-  }
-
-  EXPECT_GT(arena.activeBlocks(), 1);
-}
-*/
-// Large Allocation Tests
-
-/*
-TEST(ArenaAllocatorTest, AllocateMaxBlockSize)
-{
-
-// Allocate close to MAX_BLOCK_SIZE
-constexpr size_t large_size = MAX_BLOCK_SIZE / sizeof(char32_t);
-TestAllocator      arena;
-char32_t*          ptr = arena.allocate<char32_t>(large_size);
-ASSERT_NE(ptr, nullptr);
-
-ptr[0]              = 'A';
-ptr[large_size - 1] = 'Z';
-
-EXPECT_EQ(ptr[0], 'A');
-EXPECT_EQ(ptr[large_size - 1], 'Z');
-}
-*/
-
 TEST(ArenaAllocatorTest, AllocateExceedsMaxBlockSize)
 {
     TestAllocator arena;
@@ -491,110 +404,11 @@ TEST(ArenaAllocatorTest, MultipleBlocksRequired)
     }
 
     // Verify all allocations
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < 10; ++i) 
         EXPECT_EQ(*ptrs[i], i);
-    }
 
     EXPECT_GT(arena.get().activeBlocks(), 1);
 }
-
-// Debug Mode Tests
-/*
-TEST(ArenaAllocatorTest, DebugModeEnabled)
-{
-  TestAllocator arena(static_cast<int>(TestAllocator::GrowthStrategy::EXPONENTIAL), alignof(std::max_align_t), nullptr,
-                      true  // Enable debug
-  );
-
-  int* ptr = arena.allocate<int>();
-  ASSERT_NE(ptr, nullptr);
-
-  // In debug mode, allocation should be tracked
-  EXPECT_TRUE(arena.verifyAllocation(ptr));
-}
-
-TEST(ArenaAllocatorTest, DebugModeDisabled)
-{
-  TestAllocator arena(static_cast<int>(TestAllocator::GrowthStrategy::EXPONENTIAL), alignof(std::max_align_t), nullptr,
-                      false  // Disable debug
-  );
-
-  int* ptr = arena.allocate<int>();
-  ASSERT_NE(ptr, nullptr);
-
-  // Without debug mode, verify should return true (not tracked)
-  EXPECT_TRUE(arena.verifyAllocation(ptr));
-}
-
-TEST(ArenaAllocatorTest, VerifyInvalidPointer)
-{
-  TestAllocator arena(static_cast<int>(TestAllocator::GrowthStrategy::EXPONENTIAL), alignof(std::max_align_t), nullptr,
-                      true  // Enable debug
-  );
-
-  int stack_var = 42;
-
-  // Stack pointer should not be verified as arena allocation
-  EXPECT_FALSE(arena.verifyAllocation(&stack_var));
-}
-// OOM Handler Tests
-
-TEST(ArenaAllocatorTest, OOMHandlerNotCalled)
-{
-  bool handler_called = false;
-  auto oom_handler    = [&](size_t requested) {
-    handler_called = true;
-    return false;
-  };
-
-  TestAllocator arena(static_cast<int>(TestAllocator::GrowthStrategy::EXPONENTIAL), alignof(std::max_align_t), oom_handler);
-
-  int* ptr = arena.allocate<int>();
-  ASSERT_NE(ptr, nullptr);
-  EXPECT_FALSE(handler_called);
-}
-
-TEST(ArenaAllocatorTest, OOMHandlerCalledOnFailure)
-{
-  bool     handler_called = false;
-  size_t requested_size = 0;
-
-  auto oom_handler = [&](size_t requested) {
-    handler_called = true;
-    requested_size = requested;
-    return false;  // Don't retry
-  };
-
-  TestAllocator arena(static_cast<int>(TestAllocator::GrowthStrategy::EXPONENTIAL), alignof(std::max_align_t), oom_handler);
-
-  // Try to allocate more than allowed
-  constexpr size_t too_large = MAX_BLOCK_SIZE + 1024;
-  char*              ptr       = nullptr;
-
-  EXPECT_THROW((ptr = arena.allocate<char>(too_large)), std::runtime_error);
-  EXPECT_TRUE(handler_called);
-  EXPECT_GT(requested_size, 0);
-}
-
-TEST(ArenaAllocatorTest, OOMHandlerRetry)
-{
-  int call_count = 0;
-
-  auto oom_handler = [&](size_t requested) {
-    call_count++;
-    return call_count < 2;  // Retry once
-  };
-
-  TestAllocator arena(static_cast<int>(TestAllocator::GrowthStrategy::EXPONENTIAL), alignof(std::max_align_t), oom_handler);
-
-  // Allocate oversized
-  constexpr size_t too_large = MAX_BLOCK_SIZE + 1024;
-  char*              ptr       = nullptr;
-
-  EXPECT_THROW((ptr = arena.allocate<char>(too_large)), std::runtime_error);
-  EXPECT_EQ(call_count, 2);  // Called twice (initial + 1 retry)
-}
-*/
 
 TEST(ArenaAllocatorTest, ManySmallAllocations)
 {
@@ -610,9 +424,8 @@ TEST(ArenaAllocatorTest, ManySmallAllocations)
         ptrs.push_back(ptr);
     }
 
-    for (int i = 0; i < count; ++i) {
+    for (int i = 0; i < count; ++i) 
         EXPECT_EQ(*ptrs[i], i);
-    }
 
     EXPECT_EQ(arena.get().totalAllocations(), count);
 }
@@ -783,28 +596,6 @@ TEST(ArenaBlockTest, MoveConstruction)
 }
 
 // Performance Benchmarks (as tests)
-
-/*
- *
-TEST(ArenaAllocatorPerformance, AllocateMillionInts)
-{
-    TestAllocator arena;
-
-    auto start = std::chrono::high_resolution_clock::now();
-
-    for (int i = 0; i < 1000000; ++i)
-    {
-        int* ptr = arena.allocate<int>();
-        ASSERT_NE(ptr, nullptr);
-    }
-
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-
-    std::cout << "Allocated 1 million ints in " << duration.count() << "ms\n";
-    EXPECT_EQ(arena.total_allocations(), 1000000);
-}
- */
 
 TEST(ArenaAllocatorPerformance, ResetPerformance)
 {

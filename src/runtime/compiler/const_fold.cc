@@ -10,10 +10,11 @@ std::optional<Value> Compiler::constValue(Expr const* e)
 {
     if (!e)
         return std::nullopt;
+
     if (e->getKind() != Expr::Kind::LITERAL)
         return std::nullopt;
 
-    auto* lit = static_cast<LiteralExpr const*>(e);
+    LiteralExpr const* lit = static_cast<LiteralExpr const*>(e);
     if (lit->isBoolean())
         return Value::boolean(lit->getBool());
     /*
@@ -24,13 +25,14 @@ std::optional<Value> Compiler::constValue(Expr const* e)
         return Value::integer(lit->getInt());
     if (lit->isDecimal())
         return Value::real(lit->getFloat());
+
     // Strings are not folded here (they are heap objects)
     return std::nullopt;
 }
 
 std::optional<Value> Compiler::tryFoldUnary(UnaryExpr const* e)
 {
-    auto cv = constValue(e->getOperand());
+    std::optional<Value> cv = constValue(e->getOperand());
     if (!cv)
         return std::nullopt;
 
@@ -38,7 +40,6 @@ std::optional<Value> Compiler::tryFoldUnary(UnaryExpr const* e)
     case UnaryOp::OP_NEG:
         if (cv->isInt())
             return Value::integer(-cv->asInt());
-
         if (cv->isDouble())
             return Value::real(-cv->asDouble());
 
@@ -57,13 +58,13 @@ std::optional<Value> Compiler::tryFoldUnary(UnaryExpr const* e)
 
 std::optional<Value> Compiler::tryFoldBinary(BinaryExpr const* e)
 {
-    auto L = constValue(e->getLeft());
-    auto R = constValue(e->getRight());
+    std::optional<Value> L = constValue(e->getLeft());
+    std::optional<Value> R = constValue(e->getRight());
 
     if (!L || !R)
         return std::nullopt;
 
-    auto op = e->getOperator();
+    BinaryOp op = e->getOperator();
 
     // Equality works on all types
     if (op == BinaryOp::OP_EQ)
@@ -77,10 +78,12 @@ std::optional<Value> Compiler::tryFoldBinary(BinaryExpr const* e)
         return std::nullopt;
 
     bool both_int = L->isInt() && R->isInt();
-    auto li = L->isInt() ? L->asInt() : static_cast<int64_t>(L->asDouble());
-    auto ri = R->isInt() ? R->asInt() : static_cast<int64_t>(R->asDouble());
-    auto ld = L->as_number_double();
-    auto rd = R->as_number_double();
+
+    int64_t li = L->isInt() ? L->asInt() : static_cast<int64_t>(L->asDouble());
+    int64_t ri = R->isInt() ? R->asInt() : static_cast<int64_t>(R->asDouble());
+
+    double ld = L->asNumberDouble();
+    double rd = R->asNumberDouble();
 
     switch (op) {
     case BinaryOp::OP_ADD:
@@ -110,10 +113,14 @@ std::optional<Value> Compiler::tryFoldBinary(BinaryExpr const* e)
                         : Value::real(std::fmod(ld, rd));
     case BinaryOp::OP_POW:
         return Value::real(std::pow(ld, rd));
-    case BinaryOp::OP_LT: return Value::boolean(ld < rd);
-    case BinaryOp::OP_GT: return Value::boolean(ld > rd);
-    case BinaryOp::OP_LTE: return Value::boolean(ld <= rd);
-    case BinaryOp::OP_GTE: return Value::boolean(ld >= rd);
+    case BinaryOp::OP_LT:
+        return Value::boolean(ld < rd);
+    case BinaryOp::OP_GT:
+        return Value::boolean(ld > rd);
+    case BinaryOp::OP_LTE:
+        return Value::boolean(ld <= rd);
+    case BinaryOp::OP_GTE:
+        return Value::boolean(ld >= rd);
     case BinaryOp::OP_BITAND:
         return both_int ? Value::integer(li & ri) : std::optional<Value> {};
     case BinaryOp::OP_BITOR:

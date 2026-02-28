@@ -86,7 +86,7 @@ static inline bool isalphaArabic(wchar_t const c)
     return (c >= 0x0600 && c <= 0x06FF);
 }
 
-static uint32_t decode_utf8_at(StringRef const& buf, std::size_t byte_pos, uint64_t* out_bytes)
+static uint32_t decode_utf8_at(StringRef const& buf, size_t byte_pos, uint64_t* out_bytes)
 {
     if (byte_pos >= buf.len())
         throw std::runtime_error("UTF8 decode past end of buffer");
@@ -167,7 +167,7 @@ static void configureLocale()
     }
 }
 
-static std::size_t encode_utf8(uint32_t cp, unsigned char* out_bytes)
+static size_t encode_utf8(uint32_t cp, unsigned char* out_bytes)
 {
     if (cp < 0x80) {
         out_bytes[0] = static_cast<unsigned char>(cp);
@@ -197,7 +197,7 @@ static std::size_t encode_utf8(uint32_t cp, unsigned char* out_bytes)
 static StringRef encode_utf8_str(uint32_t cp)
 {
     unsigned char bytes[4];
-    std::size_t len = encode_utf8(cp, bytes);
+    size_t len = encode_utf8(cp, bytes);
     return StringRef(reinterpret_cast<char*>(bytes)).truncate(len);
 }
 
@@ -252,10 +252,10 @@ static int64_t parseIntegerLiteral(StringRef const& literal)
 
         int digit;
 
-        if (std::isdigit(c))
+        if (::isdigit(c))
             digit = c - '0';
         else if (std::isalpha(c))
-            digit = std::tolower(c) - 'a' + 10;
+            digit = ::tolower(c) - 'a' + 10;
         else
             throw std::invalid_argument("Invalid digit");
 
@@ -278,7 +278,6 @@ static bool isIntegerValue(double d, int64_t& out)
     out = iv;
     return true;
 }
-
 
 } // util
 } // mylang

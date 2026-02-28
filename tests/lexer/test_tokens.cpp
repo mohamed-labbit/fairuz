@@ -35,7 +35,7 @@ TEST(LexerTest, RecognizesPlus)
     lex::FileManager file_manager(test_cases_path / "recognizes_plus.txt");
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
-    tok::Token const* expected = lexer.make_token(tok::TokenType::OP_PLUS, "+", 1, 1);
+    tok::Token const* expected = lexer.makeToken(tok::TokenType::OP_PLUS, "+", 1, 1);
     EXPECT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0]->type(), tok::TokenType::BEGINMARKER);
     EXPECT_EQ(*tokens[1], *expected);
@@ -47,7 +47,7 @@ TEST(LexerTest, RecognizesInteger)
     lex::FileManager file_manager(test_cases_path / "recognizes_integer.txt");
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
-    tok::Token const* expected = lexer.make_token(tok::TokenType::INTEGER, "123", 1, 1);
+    tok::Token const* expected = lexer.makeToken(tok::TokenType::INTEGER, "123", 1, 1);
     EXPECT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0]->type(), tok::TokenType::BEGINMARKER);
     EXPECT_EQ(*tokens[1], *expected);
@@ -59,7 +59,7 @@ TEST(LexerTest, RecognizesFloat)
     lex::FileManager file_manager(test_cases_path / "recognizes_float.txt");
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
-    tok::Token const* expected = lexer.make_token(tok::TokenType::DECIMAL, "123.456", 1, 1);
+    tok::Token const* expected = lexer.makeToken(tok::TokenType::DECIMAL, "123.456", 1, 1);
     EXPECT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0]->type(), tok::TokenType::BEGINMARKER);
     EXPECT_EQ(*tokens[1], *expected);
@@ -71,7 +71,7 @@ TEST(LexerTest, RecognizesIdentifier)
     lex::FileManager file_manager(test_cases_path / "recognizes_identifier.txt");
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
-    tok::Token const* expected = lexer.make_token(tok::TokenType::IDENTIFIER, "مرحبا", 1, 1);
+    tok::Token const* expected = lexer.makeToken(tok::TokenType::IDENTIFIER, "مرحبا", 1, 1);
     EXPECT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0]->type(), tok::TokenType::BEGINMARKER);
     EXPECT_EQ(*tokens[1], *expected);
@@ -115,19 +115,12 @@ TEST(LexerTest, RecognizesStringLiteral)
     lex::FileManager file_manager(test_cases_path / "recognizes_string_literal.txt");
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
-    tok::Token const* expected = lexer.make_token(tok::TokenType::STRING, "العالم", 1, 1);
+    tok::Token const* expected = lexer.makeToken(tok::TokenType::STRING, "العالم", 1, 1);
     EXPECT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0]->type(), tok::TokenType::BEGINMARKER);
     EXPECT_EQ(*tokens[1], *expected);
     EXPECT_EQ(tokens[2]->type(), tok::TokenType::ENDMARKER);
 }
-
-#if 0
-  TEST(LexerTest, HandlesUnexpectedCharacter) {
-    LexTokenizer lexer("@");
-    EXPECT_THROW(lexer.tokenize(), LexerError);
-  }
-#endif
 
 TEST(LexerTest, RecognizesExpression00)
 {
@@ -135,10 +128,10 @@ TEST(LexerTest, RecognizesExpression00)
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
     std::vector<tok::Token const*> expected = {
-        lexer.make_token(tok::TokenType::BEGINMARKER, "", 1, 1), lexer.make_token(tok::TokenType::IDENTIFIER, "س", 1, 1),
-        lexer.make_token(tok::TokenType::OP_EQ, "=", 1, 3), lexer.make_token(tok::TokenType::INTEGER, "42", 1, 5),
-        lexer.make_token(tok::TokenType::OP_PLUS, "+", 1, 8), lexer.make_token(tok::TokenType::IDENTIFIER, "ي", 1, 10),
-        lexer.make_token(tok::TokenType::ENDMARKER, "", 1, 10)
+        lexer.makeToken(tok::TokenType::BEGINMARKER, "", 1, 1), lexer.makeToken(tok::TokenType::IDENTIFIER, "س", 1, 1),
+        lexer.makeToken(tok::TokenType::OP_EQ, "=", 1, 3), lexer.makeToken(tok::TokenType::INTEGER, "42", 1, 5),
+        lexer.makeToken(tok::TokenType::OP_PLUS, "+", 1, 8), lexer.makeToken(tok::TokenType::IDENTIFIER, "ي", 1, 10),
+        lexer.makeToken(tok::TokenType::ENDMARKER, "", 1, 10)
     };
     EXPECT_EQ(tokens.size(), 7);
     EXPECT_EQ(tokens[0]->type(), tok::TokenType::BEGINMARKER);
@@ -151,10 +144,10 @@ TEST(LexerTest, RecognizesStmt00)
     lex::FileManager file_manager(test_cases_path / "recognizes_stmt_00.txt");
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
-    std::vector<tok::Token const*> expected = { lexer.make_token(tok::TokenType::BEGINMARKER, "", 1, 1), lexer.make_token(tok::TokenType::KW_IF, "اذا", 1, 1),
-        lexer.make_token(tok::TokenType::IDENTIFIER, "س", 1, 5), lexer.make_token(tok::TokenType::OP_EQ, "=", 1, 7),
-        lexer.make_token(tok::TokenType::IDENTIFIER, "د", 1, 9), lexer.make_token(tok::TokenType::COLON, ":", 1, 10),
-        lexer.make_token(tok::TokenType::ENDMARKER, "", 1, 10) };
+    std::vector<tok::Token const*> expected = { lexer.makeToken(tok::TokenType::BEGINMARKER, "", 1, 1), lexer.makeToken(tok::TokenType::KW_IF, "اذا", 1, 1),
+        lexer.makeToken(tok::TokenType::IDENTIFIER, "س", 1, 5), lexer.makeToken(tok::TokenType::OP_EQ, "=", 1, 7),
+        lexer.makeToken(tok::TokenType::IDENTIFIER, "د", 1, 9), lexer.makeToken(tok::TokenType::COLON, ":", 1, 10),
+        lexer.makeToken(tok::TokenType::ENDMARKER, "", 1, 10) };
     EXPECT_EQ(tokens.size(), expected.size());
     for (size_t i = 0; i < tokens.size(); ++i)
         EXPECT_EQ(*tokens[i], *expected[i]);
@@ -166,10 +159,10 @@ TEST(LexerTest, RecognizesStmt01)
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
     std::vector<tok::Token const*> expected = {
-        lexer.make_token(tok::TokenType::BEGINMARKER, "", 1, 1), lexer.make_token(tok::TokenType::KW_WHILE, "طالما", 1, 1),
-        lexer.make_token(tok::TokenType::IDENTIFIER, "س", 1, 7), lexer.make_token(tok::TokenType::OP_NEQ, "!=", 1, 9),
-        lexer.make_token(tok::TokenType::IDENTIFIER, "د", 1, 12), lexer.make_token(tok::TokenType::COLON, ":", 1, 13),
-        lexer.make_token(tok::TokenType::ENDMARKER, "", 1, 13)
+        lexer.makeToken(tok::TokenType::BEGINMARKER, "", 1, 1), lexer.makeToken(tok::TokenType::KW_WHILE, "طالما", 1, 1),
+        lexer.makeToken(tok::TokenType::IDENTIFIER, "س", 1, 7), lexer.makeToken(tok::TokenType::OP_NEQ, "!=", 1, 9),
+        lexer.makeToken(tok::TokenType::IDENTIFIER, "د", 1, 12), lexer.makeToken(tok::TokenType::COLON, ":", 1, 13),
+        lexer.makeToken(tok::TokenType::ENDMARKER, "", 1, 13)
     };
     EXPECT_EQ(tokens.size(), expected.size());
     for (size_t i = 0; i < tokens.size(); ++i)
@@ -182,10 +175,10 @@ TEST(LexerTest, RecognizesStmt02)
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
     std::vector<tok::Token const*> expected = {
-        lexer.make_token(tok::TokenType::BEGINMARKER, "", 1, 1), lexer.make_token(tok::TokenType::KW_FOR, "بكل", 1, 1),
-        lexer.make_token(tok::TokenType::IDENTIFIER, "ل", 1, 5), lexer.make_token(tok::TokenType::IDENTIFIER, "في", 1, 7),
-        lexer.make_token(tok::TokenType::IDENTIFIER, "ك", 1, 10), lexer.make_token(tok::TokenType::COLON, ":", 1, 11),
-        lexer.make_token(tok::TokenType::ENDMARKER, "", 1, 11)
+        lexer.makeToken(tok::TokenType::BEGINMARKER, "", 1, 1), lexer.makeToken(tok::TokenType::KW_FOR, "بكل", 1, 1),
+        lexer.makeToken(tok::TokenType::IDENTIFIER, "ل", 1, 5), lexer.makeToken(tok::TokenType::IDENTIFIER, "في", 1, 7),
+        lexer.makeToken(tok::TokenType::IDENTIFIER, "ك", 1, 10), lexer.makeToken(tok::TokenType::COLON, ":", 1, 11),
+        lexer.makeToken(tok::TokenType::ENDMARKER, "", 1, 11)
     };
     EXPECT_EQ(tokens.size(), expected.size());
     for (size_t i = 0; i < tokens.size(); ++i)
@@ -198,11 +191,11 @@ TEST(LexerTest, RecognizesStmt03)
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
     std::vector<tok::Token const*> expected = {
-        lexer.make_token(tok::TokenType::BEGINMARKER, "", 1, 1),
-        lexer.make_token(tok::TokenType::IDENTIFIER, "ا", 1, 1),
-        lexer.make_token(tok::TokenType::OP_ASSIGN, ":=", 1, 3),
-        lexer.make_token(tok::TokenType::KW_FALSE, "خطا", 1, 6),
-        lexer.make_token(tok::TokenType::ENDMARKER, "", 1, 8),
+        lexer.makeToken(tok::TokenType::BEGINMARKER, "", 1, 1),
+        lexer.makeToken(tok::TokenType::IDENTIFIER, "ا", 1, 1),
+        lexer.makeToken(tok::TokenType::OP_ASSIGN, ":=", 1, 3),
+        lexer.makeToken(tok::TokenType::KW_FALSE, "خطا", 1, 6),
+        lexer.makeToken(tok::TokenType::ENDMARKER, "", 1, 8),
     };
     EXPECT_EQ(tokens.size(), expected.size());
     for (size_t i = 0; i < tokens.size(); ++i)
@@ -215,17 +208,17 @@ TEST(LexerTest, RecognizesStmt04)
     lex::Lexer lexer(&file_manager);
     std::vector<tok::Token const*> tokens = lexer.tokenize();
     std::vector<tok::Token const*> expected = {
-        lexer.make_token(tok::TokenType::BEGINMARKER, "", 1, 1),
-        lexer.make_token(tok::TokenType::KW_IF, "اذا", 1, 1),
-        lexer.make_token(tok::TokenType::IDENTIFIER, "ا", 1, 5),
-        lexer.make_token(tok::TokenType::OP_EQ, "=", 1, 7),
-        lexer.make_token(tok::TokenType::INTEGER, "3", 1, 9),
-        lexer.make_token(tok::TokenType::COLON, ":", 1, 10),
-        lexer.make_token(tok::TokenType::NEWLINE, "\n", 1, 11),
-        lexer.make_token(tok::TokenType::INDENT, ""),
-        lexer.make_token(tok::TokenType::KW_RETURN, "ارجع", 2, 5),
-        lexer.make_token(tok::TokenType::DEDENT),
-        lexer.make_token(tok::TokenType::ENDMARKER, "", 2, 8)
+        lexer.makeToken(tok::TokenType::BEGINMARKER, "", 1, 1),
+        lexer.makeToken(tok::TokenType::KW_IF, "اذا", 1, 1),
+        lexer.makeToken(tok::TokenType::IDENTIFIER, "ا", 1, 5),
+        lexer.makeToken(tok::TokenType::OP_EQ, "=", 1, 7),
+        lexer.makeToken(tok::TokenType::INTEGER, "3", 1, 9),
+        lexer.makeToken(tok::TokenType::COLON, ":", 1, 10),
+        lexer.makeToken(tok::TokenType::NEWLINE, "\n", 1, 11),
+        lexer.makeToken(tok::TokenType::INDENT, ""),
+        lexer.makeToken(tok::TokenType::KW_RETURN, "ارجع", 2, 5),
+        lexer.makeToken(tok::TokenType::DEDENT),
+        lexer.makeToken(tok::TokenType::ENDMARKER, "", 2, 8)
     };
 
     EXPECT_EQ(tokens.size(), expected.size());

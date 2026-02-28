@@ -62,24 +62,17 @@ struct DetailedAllocStats {
     std::uint64_t CASRetries { 0 };
 
     void recordAllocationSize(std::uint64_t size);
-
     void updatePeak(std::uint64_t current);
-
     void recordAllocTime(std::uint64_t duration_ns);
-
     void reset();
 };
 
 class StatsFormatter {
 public:
     static std::string formatBytes(std::uint64_t bytes, int precision = 2);
-
     static std::string formatTime(std::uint64_t nanoseconds);
-
     static std::string formatPercent(std::uint64_t numerator, std::uint64_t denominator, int precision = 2);
-
     static std::string createBar(std::uint64_t value, std::uint64_t max, int width = 40);
-
     static std::string formatNumber(std::uint64_t value);
 };
 
@@ -100,28 +93,18 @@ public:
     }
 
     void printDetailed(std::ostream& os, bool verbose = true) const;
-
     void printSummary(std::ostream& os) const;
 
 private:
     void printHeader(std::ostream& os) const;
-
     void printFooter(std::ostream& os) const;
-
     void printCoreMetrics(std::ostream& os) const;
-
     void printSizeDistribution(std::ostream& os) const;
-
     void printPerformanceMetrics(std::ostream& os) const;
-
     void printFragmentationAnalysis(std::ostream& os) const;
-
     void printTimingStatistics(std::ostream& os) const;
-
     void printErrorStatistics(std::ostream& os) const;
-
     void printMetric(std::ostream& os, char const* label, std::string const& value, bool warn = false) const;
-
     void printMetricWithBar(std::ostream& os, char const* label, std::uint64_t value, std::uint64_t max) const;
 };
 

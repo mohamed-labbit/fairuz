@@ -11,7 +11,7 @@ std::string DiagnosticEngine::toJSON() const
 {
     std::stringstream ss;
     ss << "[\n";
-    for (std::size_t i = 0; i < Diagnostics_.size(); ++i) {
+    for (size_t i = 0; i < Diagnostics_.size(); ++i) {
         Diagnostic const& diag = Diagnostics_[i];
         ss << "  {\n";
         ss << "    \"severity: " << static_cast<std::int32_t>(diag.severity) << ",\n";

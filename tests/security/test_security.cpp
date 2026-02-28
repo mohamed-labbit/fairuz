@@ -1,6 +1,5 @@
 // Author: Ze3ter
 
-
 #include "../../include/lex/file_manager.hpp"
 #include "../../include/macros.hpp"
 #include "../../include/runtime/allocator/arena.hpp"
@@ -24,8 +23,8 @@ using namespace mylang;
 
 TEST(SecurityV1, MaxBlockSizeStillSafeForDoubling)
 {
-    constexpr std::size_t half_max = std::numeric_limits<std::size_t>::max() / 2;
-    EXPECT_LT(static_cast<std::size_t>(MAX_BLOCK_SIZE), half_max)
+    constexpr size_t half_max = std::numeric_limits<size_t>::max() / 2;
+    EXPECT_LT(static_cast<size_t>(MAX_BLOCK_SIZE), half_max)
         << "If MAX_BLOCK_SIZE exceeds SIZE_MAX/2, the unguarded current*2 will overflow";
 }
 
@@ -46,7 +45,8 @@ TEST(SecurityV1, ExponentialGrowthDoesNotCorruptMemory)
         static_cast<int>(runtime::allocator::ArenaAllocator::GrowthStrategy::EXPONENTIAL));
     for (int i = 0; i < 40; ++i) {
         void* p = alloc.allocate(512);
-        if (!p) break;
+        if (!p)
+            break;
         *static_cast<char*>(p) = static_cast<char>(i);
     }
     SUCCEED();
@@ -78,7 +78,8 @@ TEST(SecurityV2, ConcurrentCopyDestroyRace)
         });
     }
     go.store(true, std::memory_order_release);
-    for (auto& th : threads) th.join();
+    for (auto& th : threads)
+        th.join();
     SUCCEED() << "Run with -fsanitize=thread to expose the data race on RefCount";
 }
 
@@ -127,7 +128,10 @@ TEST(SecurityV4, TemporaryCopiedBeforeDestruction)
 TEST(SecurityV4, FileManagerAcceptsValidPath)
 {
     fs::path tmp = fs::temp_directory_path() / "v4_test.lang";
-    { std::ofstream f(tmp); f << "hello"; }
+    {
+        std::ofstream f(tmp);
+        f << "hello";
+    }
     ASSERT_NO_THROW({
         lex::FileManager fm(tmp.string());
         EXPECT_EQ(fm.buffer(), StringRef("hello"));
@@ -152,12 +156,18 @@ protected:
 
     void SetUp() override
     {
-        safe_dir_     = fs::temp_directory_path() / "v5_safe";
-        safe_file_    = safe_dir_ / "prog.lang";
+        safe_dir_ = fs::temp_directory_path() / "v5_safe";
+        safe_file_ = safe_dir_ / "prog.lang";
         outside_file_ = fs::temp_directory_path() / "v5_secret.txt";
         fs::create_directories(safe_dir_);
-        { std::ofstream f(safe_file_);    f << "safe code"; }
-        { std::ofstream f(outside_file_); f << "SECRET DATA"; }
+        {
+            std::ofstream f(safe_file_);
+            f << "safe code";
+        }
+        {
+            std::ofstream f(outside_file_);
+            f << "SECRET DATA";
+        }
     }
 
     void TearDown() override
@@ -230,20 +240,20 @@ TEST(SecurityV6, SliceViewNotDangledByExpand)
 TEST(SecurityV7, MaxBlockSizeExceedsUint32Max)
 {
     constexpr uint32_t truncated = static_cast<uint32_t>(MAX_BLOCK_SIZE);
-    EXPECT_GT(static_cast<std::size_t>(MAX_BLOCK_SIZE),
-              static_cast<std::size_t>(std::numeric_limits<uint32_t>::max()));
+    EXPECT_GT(static_cast<size_t>(MAX_BLOCK_SIZE),
+        static_cast<size_t>(std::numeric_limits<uint32_t>::max()));
     EXPECT_EQ(truncated, 0u) << "static_cast<uint32_t>(MAX_BLOCK_SIZE) wraps to 0";
 }
 
 TEST(SecurityV7, CastIsLossyForSizesAboveUint32Max)
 {
-    std::size_t cases[] = {
-        static_cast<std::size_t>(std::numeric_limits<uint32_t>::max()) + 1ULL,
-        static_cast<std::size_t>(MAX_BLOCK_SIZE),
+    size_t cases[] = {
+        static_cast<size_t>(std::numeric_limits<uint32_t>::max()) + 1ULL,
+        static_cast<size_t>(MAX_BLOCK_SIZE),
     };
-    for (std::size_t sz : cases) {
+    for (size_t sz : cases) {
         uint32_t stored = static_cast<uint32_t>(sz);
-        EXPECT_NE(static_cast<std::size_t>(stored), sz)
+        EXPECT_NE(static_cast<size_t>(stored), sz)
             << "Size " << sz << " truncated to " << stored;
     }
 }
@@ -252,10 +262,10 @@ TEST(SecurityV7, CorruptedChecksumGoesUndetected)
 {
     using namespace mylang::runtime::allocator;
     AllocationHeader h {};
-    h.magic     = AllocationHeader::MAGIC;
+    h.magic = AllocationHeader::MAGIC;
     h.alignment = static_cast<uint32_t>(alignof(std::max_align_t));
-    h.size      = static_cast<uint32_t>(MAX_BLOCK_SIZE); // truncates 4 GiB → 0
-    h.checksum  = h.compute_checksum();
+    h.size = static_cast<uint32_t>(MAX_BLOCK_SIZE); // truncates 4 GiB → 0
+    h.checksum = h.compute_checksum();
 
     // The size field silently records 0 instead of 4 GiB
     EXPECT_EQ(h.size, 0u)
@@ -266,6 +276,6 @@ TEST(SecurityV7, CorruptedChecksumGoesUndetected)
         << "is_valid() returns true despite size=0: truncation is undetectable by the validator";
 
     // Confirm the stored size differs from the real allocation size
-    EXPECT_NE(static_cast<std::size_t>(h.size), static_cast<std::size_t>(MAX_BLOCK_SIZE))
+    EXPECT_NE(static_cast<size_t>(h.size), static_cast<size_t>(MAX_BLOCK_SIZE))
         << "AllocationHeader.size (0) != real allocation size (4 GiB): metadata is silently wrong";
 }

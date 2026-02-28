@@ -26,30 +26,13 @@ public:
 
     void reset();
 
-    uint32_t getLineNumber() const
-    {
-        return Context_.line;
-    }
+    uint32_t getLineNumber() const { return Context_.line; }
+    uint32_t getColumnNumber() const { return Context_.column; }
+    uint64_t getFileOffset() const { return Context_.offset; }
 
-    uint32_t getColumnNumber() const
-    {
-        return Context_.column;
-    }
+    std::string fpath() const noexcept { return FileManager_->getPath(); }
 
-    uint64_t getFileOffset() const
-    {
-        return Context_.offset;
-    }
-
-    std::string fpath() const noexcept
-    {
-        return FileManager_->getPath();
-    }
-
-    bool done() const
-    {
-        return Context_.offset >= FileManager_->buffer().len();
-    }
+    bool done() const { return Context_.offset >= FileManager_->buffer().len(); }
 
     // returns codepoint next to offset + 1 without advancing pos
     [[nodiscard]] uint32_t peekChar();

@@ -232,11 +232,11 @@ Expr* ASTOptimizer::optimizeConstantFolding(Expr* expr)
         return rebuiltUnary;
     } else if (expr->getKind() == Expr::Kind::CALL) {
         CallExpr* call = dynamic_cast<CallExpr*>(expr);
-        for (Expr*& arg : call->getArgsMutable())
+        for (Expr*& arg : call->getArgs())
             arg = optimizeConstantFolding(arg);
     } else if (expr->getKind() == Expr::Kind::LIST) {
         ListExpr* list = dynamic_cast<ListExpr*>(expr);
-        for (Expr*& elem : list->getElementsMutable())
+        for (Expr*& elem : list->getElements())
             elem = optimizeConstantFolding(elem);
     }
 
@@ -289,7 +289,7 @@ Stmt* ASTOptimizer::eliminateDeadCode(Stmt* stmt)
         }
 
         WhileStmt* clone = whileStmt->clone();
-        clone->setBlock(dynamic_cast<BlockStmt*>(eliminateDeadCode(clone->getBlockMutable())));
+        clone->setBlock(dynamic_cast<BlockStmt*>(eliminateDeadCode(clone->getBlock())));
         return clone;
     } else if (stmt->getKind() == Stmt::Kind::FOR) {
         ForStmt* forStmt = dynamic_cast<ForStmt*>(stmt);

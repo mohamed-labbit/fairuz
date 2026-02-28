@@ -35,13 +35,13 @@ Lexer::Lexer(std::vector<tok::Token const*>& seq, size_t const s)
 tok::Token const* Lexer::lexToken()
 {
     auto finish = [this](tok::TokenType tt, StringRef str, size_t line, size_t col) {
-        tok::Token const* ret = make_token(tt, str, line, col);
+        tok::Token const* ret = makeToken(tt, str, line, col);
         store(ret);
         return TokStream_.back();
     };
 
     if (TokStream_.empty()) {
-        tok::Token const* ret = make_token(tok::TokenType::BEGINMARKER, "", 1, 1);
+        tok::Token const* ret = makeToken(tok::TokenType::BEGINMARKER, "", 1, 1);
         store(ret);
         return TokStream_.back();
     }
@@ -110,7 +110,7 @@ tok::Token const* Lexer::lexToken()
                     IndentStack_.push_back(size);
                     AltIndentStack_.push_back(alt_size);
 
-                    store(make_token(tok::TokenType::INDENT, "", line, col));
+                    store(makeToken(tok::TokenType::INDENT, "", line, col));
                 }
                 // Dedent
                 else /*size < IndentStack_.back()*/ {
@@ -130,7 +130,7 @@ tok::Token const* Lexer::lexToken()
                         diagnostic::engine.panic("Inconsistent indentation");
 
                     for (unsigned int i = 0; i < dedent_count; ++i)
-                        store(make_token(tok::TokenType::DEDENT, "", line, col));
+                        store(makeToken(tok::TokenType::DEDENT, "", line, col));
                 }
             }
         }
@@ -148,7 +148,7 @@ tok::Token const* Lexer::lexToken()
         case '\n': {
             SourceManager_.consumeChar();
             AtBOL_ = true;
-            tok::Token const* ret = make_token(tok::TokenType::NEWLINE, util::encode_utf8_str('\n'), line, col);
+            tok::Token const* ret = makeToken(tok::TokenType::NEWLINE, util::encode_utf8_str('\n'), line, col);
             store(ret);
             nextLine(line, col);
             return ret;
@@ -529,10 +529,10 @@ tok::Token const* Lexer::lexToken()
         --IndentLevel_;
         IndentStack_.pop_back();
         AltIndentStack_.pop_back();
-        store(make_token(tok::TokenType::DEDENT, "", last_line, last_col));
+        store(makeToken(tok::TokenType::DEDENT, "", last_line, last_col));
     }
 
-    tok::Token const* ret = make_token(tok::TokenType::ENDMARKER, "", last_line, last_col);
+    tok::Token const* ret = makeToken(tok::TokenType::ENDMARKER, "", last_line, last_col);
     store(ret);
 
     return TokStream_.back();
@@ -555,16 +555,6 @@ tok::Token const* Lexer::next()
 
     if (TokIndex_ + 1 < TokStream_.size())
         ++TokIndex_;
-
-    return TokStream_[TokIndex_];
-}
-
-tok::Token const* Lexer::prev()
-{
-    if (TokIndex_ > 0)
-        --TokIndex_;
-    else
-        return TokStream_.empty() ? nullptr : TokStream_.front();
 
     return TokStream_[TokIndex_];
 }
@@ -603,11 +593,6 @@ std::vector<tok::Token const*> Lexer::tokenize()
         ;
 
     return this->TokStream_;
-}
-
-void Lexer::updateIndentationContext_(tok::Token const& token)
-{
-    // STUB
 }
 
 }

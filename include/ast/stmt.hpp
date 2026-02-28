@@ -11,6 +11,26 @@
 namespace mylang {
 namespace ast {
 
+// forward
+class Stmt;
+class BlockStmt;
+class ExprStmt;
+class AssignmentStmt;
+class IfStmt;
+class WhileStmt;
+class ForStmt;
+class FunctionDef;
+class ReturnStmt;
+
+static constexpr BlockStmt* makeBlock(std::vector<Stmt*> stmts = {});
+static constexpr ExprStmt* makeExprStmt(Expr* expr);
+static constexpr AssignmentStmt* makeAssignmentStmt(Expr* target, Expr* value, bool decl = false);
+static constexpr IfStmt* makeIf(Expr* condition, BlockStmt* then_block, BlockStmt* else_block = nullptr);
+static constexpr WhileStmt* makeWhile(Expr* condition, BlockStmt* block);
+static constexpr ForStmt* makeFor(NameExpr* target, Expr* iter, BlockStmt* block);
+static constexpr FunctionDef* makeFunction(NameExpr* name, ListExpr* params, BlockStmt* body);
+static constexpr ReturnStmt* makeReturn(Expr* value);
+
 class Stmt : public ASTNode {
 public:
     enum class Kind : int {
@@ -26,27 +46,18 @@ public:
     };
 
 protected:
-    Kind Kind_;
+    Kind Kind_ { Kind::INVALID };
 
 public:
-    explicit Stmt()
-    {
-        Kind_ = Kind::INVALID;
-    }
+    explicit Stmt() = default;
 
     virtual Stmt* clone() const = 0;
 
     virtual bool equals(Stmt const* other) const = 0;
 
-    Kind getKind() const
-    {
-        return Kind_;
-    }
+    Kind getKind() const { return Kind_; }
 
-    NodeType getNodeType() const override
-    {
-        return NodeType::STATEMENT;
-    }
+    NodeType getNodeType() const override { return NodeType::STATEMENT; }
 };
 
 class BlockStmt : public Stmt {
@@ -67,10 +78,7 @@ public:
 
     BlockStmt& operator=(BlockStmt const&) noexcept = delete;
 
-    BlockStmt* clone() const override
-    {
-        return AST_allocator.make<BlockStmt>(Statements_);
-    }
+    BlockStmt* clone() const override { return makeBlock(Statements_); }
 
     bool equals(Stmt const* other) const override
     {
@@ -82,28 +90,18 @@ public:
         if (Statements_.size() != block->Statements_.size())
             return false;
 
-        for (size_t i = 0; i < Statements_.size(); ++i) {
+        for (size_t i = 0; i < Statements_.size(); ++i)
             if (!Statements_[i]->equals(block->Statements_[i]))
                 return false;
-        }
 
         return true;
     }
 
-    std::vector<Stmt*> const& getStatements() const
-    {
-        return Statements_;
-    }
+    std::vector<Stmt*> const& getStatements() const { return Statements_; }
 
-    void setStatements(std::vector<Stmt*>& stmts)
-    {
-        Statements_ = stmts;
-    }
+    void setStatements(std::vector<Stmt*>& stmts) { Statements_ = stmts; }
 
-    bool isEmpty() const
-    {
-        return Statements_.empty();
-    }
+    bool isEmpty() const { return Statements_.empty(); }
 };
 
 class ExprStmt : public Stmt {
@@ -124,10 +122,7 @@ public:
 
     ExprStmt& operator=(ExprStmt const&) noexcept = delete;
 
-    ExprStmt* clone() const override
-    {
-        return AST_allocator.make<ExprStmt>(Expr_->clone());
-    }
+    ExprStmt* clone() const override { return makeExprStmt(Expr_->clone()); }
 
     bool equals(Stmt const* other) const override
     {
@@ -138,15 +133,9 @@ public:
         return Expr_->equals(block->getExpr());
     }
 
-    Expr* getExpr() const
-    {
-        return Expr_;
-    }
+    Expr* getExpr() const { return Expr_; }
 
-    void setExpr(Expr* e)
-    {
-        Expr_ = e;
-    }
+    void setExpr(Expr* e) { Expr_ = e; }
 };
 
 class AssignmentStmt : public Stmt {
@@ -172,10 +161,7 @@ public:
 
     AssignmentStmt& operator=(AssignmentStmt const&) noexcept = delete;
 
-    AssignmentStmt* clone() const override
-    {
-        return AST_allocator.make<AssignmentStmt>(Target_->clone(), Target_->clone());
-    }
+    AssignmentStmt* clone() const override { return makeAssignmentStmt(Target_->clone(), Target_->clone()); }
 
     bool equals(Stmt const* other) const override
     {
@@ -186,30 +172,13 @@ public:
         return Value_->equals(block->getValue()) && Target_->equals(block->getTarget());
     }
 
-    Expr* getValue() const
-    {
-        return Value_;
-    }
+    Expr* getValue() const { return Value_; }
+    Expr* getTarget() const { return Target_; }
 
-    Expr* getTarget() const
-    {
-        return Target_;
-    }
+    void setValue(Expr* v) { Value_ = v; }
+    void setTarget(NameExpr* t) { Target_ = t; }
 
-    void setValue(Expr* v)
-    {
-        Value_ = v;
-    }
-
-    void setTarget(NameExpr* t)
-    {
-        Target_ = t;
-    }
-
-    bool isDeclaration() const
-    {
-        return isDecl_;
-    }
+    bool isDeclaration() const { return isDecl_; }
 };
 
 class IfStmt : public Stmt {
@@ -234,10 +203,7 @@ public:
 
     IfStmt& operator=(IfStmt const&) noexcept = delete;
 
-    IfStmt* clone() const override
-    {
-        return AST_allocator.make<IfStmt>(Condition_->clone(), ThenBlock_->clone(), ElseBlock_->clone());
-    }
+    IfStmt* clone() const override { return makeIf(Condition_->clone(), ThenBlock_->clone(), ElseBlock_->clone()); }
 
     bool equals(Stmt const* other) const override
     {
@@ -250,30 +216,13 @@ public:
             && ElseBlock_->equals(block->getElseBlock());
     }
 
-    Expr* getCondition() const
-    {
-        return Condition_;
-    }
+    Expr* getCondition() const { return Condition_; }
 
-    BlockStmt* getThenBlock() const
-    {
-        return ThenBlock_;
-    }
+    BlockStmt* getThenBlock() const { return ThenBlock_; }
+    BlockStmt* getElseBlock() const { return ElseBlock_; }
 
-    BlockStmt* getElseBlock() const
-    {
-        return ElseBlock_;
-    }
-
-    void setThenBlock(BlockStmt* t)
-    {
-        ThenBlock_ = t;
-    }
-
-    void setElseBlock(BlockStmt* e)
-    {
-        ElseBlock_ = e;
-    }
+    void setThenBlock(BlockStmt* t) { ThenBlock_ = t; }
+    void setElseBlock(BlockStmt* e) { ElseBlock_ = e; }
 };
 
 class WhileStmt : public Stmt {
@@ -296,10 +245,7 @@ public:
 
     WhileStmt& operator=(WhileStmt const&) noexcept = delete;
 
-    WhileStmt* clone() const override
-    {
-        return AST_allocator.make<WhileStmt>(Condition_->clone(), Block_->clone());
-    }
+    WhileStmt* clone() const override { return makeWhile(Condition_->clone(), Block_->clone()); }
 
     bool equals(Stmt const* other) const override
     {
@@ -310,25 +256,12 @@ public:
         return Condition_->equals(block->getCondition()) && Block_->equals(block->getBlock());
     }
 
-    Expr* getCondition() const
-    {
-        return Condition_;
-    }
+    Expr* getCondition() const { return Condition_; }
 
-    BlockStmt const* getBlock() const
-    {
-        return Block_;
-    }
+    BlockStmt* getBlock() { return Block_; }
+    BlockStmt const* getBlock() const { return Block_; }
 
-    void setBlock(BlockStmt* b)
-    {
-        Block_ = b;
-    }
-
-    BlockStmt*& getBlockMutable()
-    {
-        return std::ref<BlockStmt*>(Block_);
-    }
+    void setBlock(BlockStmt* b) { Block_ = b; }
 };
 
 class ForStmt : public Stmt {
@@ -355,7 +288,7 @@ public:
 
     ForStmt* clone() const override
     {
-        return AST_allocator.make<ForStmt>(Target_->clone(), Iter_->clone(), Block_->clone());
+        return AST_allocator.allocateObject<ForStmt>(Target_->clone(), Iter_->clone(), Block_->clone());
     }
 
     bool equals(Stmt const* other) const override
@@ -369,25 +302,13 @@ public:
             && Block_->equals(block->getBlock());
     }
 
-    NameExpr* getTarget() const
-    {
-        return Target_;
-    }
+    NameExpr* getTarget() const { return Target_; }
 
-    Expr* getIter() const
-    {
-        return Iter_;
-    }
+    Expr* getIter() const { return Iter_; }
 
-    BlockStmt* getBlock() const
-    {
-        return Block_;
-    }
+    BlockStmt* getBlock() const { return Block_; }
 
-    void setBlock(BlockStmt* b)
-    {
-        Block_ = b;
-    }
+    void setBlock(BlockStmt* b) { Block_ = b; }
 };
 
 class FunctionDef : public Stmt {
@@ -407,13 +328,11 @@ public:
         Kind_ = Kind::FUNC;
 
         if (!Params_)
-            Params_ = AST_allocator.make<ListExpr>(std::vector<Expr*> {});
-
+            Params_ = makeList(std::vector<Expr*> {});
         if (!Body_)
-            Body_ = AST_allocator.make<BlockStmt>(std::vector<Stmt*> {});
-
+            Body_ = makeBlock(std::vector<Stmt*> {});
         if (!Name_)
-            Name_ = AST_allocator.make<NameExpr>("");
+            Name_ = makeName("");
     }
 
     FunctionDef(FunctionDef&&) noexcept = delete;
@@ -421,10 +340,7 @@ public:
 
     FunctionDef& operator=(FunctionDef const&) noexcept = delete;
 
-    FunctionDef* clone() const override
-    {
-        return AST_allocator.make<FunctionDef>(Name_->clone(), Params_->clone(), Body_->clone());
-    }
+    FunctionDef* clone() const override { return makeFunction(Name_->clone(), Params_->clone(), Body_->clone()); }
 
     bool equals(Stmt const* other) const override
     {
@@ -437,35 +353,17 @@ public:
             && Body_->equals(block->getBody());
     }
 
-    NameExpr* getName() const
-    {
-        return Name_;
-    }
+    NameExpr* getName() const { return Name_; }
 
-    std::vector<Expr*> const& getParameters() const
-    {
-        return Params_->getElements();
-    }
+    std::vector<Expr*> const& getParameters() const { return Params_->getElements(); }
 
-    ListExpr* getParameterList() const
-    {
-        return Params_;
-    }
+    ListExpr* getParameterList() const { return Params_; }
 
-    BlockStmt* getBody() const
-    {
-        return Body_;
-    }
+    BlockStmt* getBody() const { return Body_; }
 
-    void setBody(BlockStmt* b)
-    {
-        Body_ = b;
-    }
+    void setBody(BlockStmt* b) { Body_ = b; }
 
-    bool hasParameters() const
-    {
-        return !Params_ || Params_->isEmpty();
-    }
+    bool hasParameters() const { return Params_ && !Params_->isEmpty(); }
 };
 
 class ReturnStmt : public Stmt {
@@ -486,10 +384,7 @@ public:
 
     ReturnStmt& operator=(ReturnStmt const&) noexcept = delete;
 
-    ReturnStmt* clone() const override
-    {
-        return AST_allocator.make<ReturnStmt>(Value_->clone());
-    }
+    ReturnStmt* clone() const override { return makeReturn(Value_->clone()); }
 
     bool equals(Stmt const* other) const override
     {
@@ -500,60 +395,44 @@ public:
         return Value_->equals(block->getValue());
     }
 
-    Expr const* getValue() const
-    {
-        return Value_;
-    }
+    Expr const* getValue() const { return Value_; }
 
-    void setValue(Expr* v)
-    {
-        Value_ = v;
-    }
+    void setValue(Expr* v) { Value_ = v; }
 
-    bool hasValue() const
-    {
-        return Value_ != nullptr;
-    }
+    bool hasValue() const { return Value_ != nullptr; }
 };
 
-static constexpr BlockStmt* makeBlock(std::vector<Stmt*> stmts = {})
+static constexpr BlockStmt* makeBlock(std::vector<Stmt*> stmts)
 {
-    return AST_allocator.make<BlockStmt>(stmts);
+    return AST_allocator.allocateObject<BlockStmt>(stmts);
 }
-
 static constexpr ExprStmt* makeExprStmt(Expr* expr)
 {
-    return AST_allocator.make<ExprStmt>(expr);
+    return AST_allocator.allocateObject<ExprStmt>(expr);
 }
-
-static constexpr AssignmentStmt* makeAssignmentStmt(Expr* target, Expr* value, bool decl = false)
+static constexpr AssignmentStmt* makeAssignmentStmt(Expr* target, Expr* value, bool decl)
 {
-    return AST_allocator.make<AssignmentStmt>(target, value, decl);
+    return AST_allocator.allocateObject<AssignmentStmt>(target, value, decl);
 }
-
-static constexpr IfStmt* makeIf(Expr* condition, BlockStmt* then_block, BlockStmt* else_block = nullptr)
+static constexpr IfStmt* makeIf(Expr* condition, BlockStmt* then_block, BlockStmt* else_block)
 {
-    return AST_allocator.make<IfStmt>(condition, then_block, else_block);
+    return AST_allocator.allocateObject<IfStmt>(condition, then_block, else_block);
 }
-
 static constexpr WhileStmt* makeWhile(Expr* condition, BlockStmt* block)
 {
-    return AST_allocator.make<WhileStmt>(condition, block);
+    return AST_allocator.allocateObject<WhileStmt>(condition, block);
 }
-
 static constexpr ForStmt* makeFor(NameExpr* target, Expr* iter, BlockStmt* block)
 {
-    return AST_allocator.make<ForStmt>(target, iter, block);
+    return AST_allocator.allocateObject<ForStmt>(target, iter, block);
 }
-
 static constexpr FunctionDef* makeFunction(NameExpr* name, ListExpr* params, BlockStmt* body)
 {
-    return AST_allocator.make<FunctionDef>(name, params, body);
+    return AST_allocator.allocateObject<FunctionDef>(name, params, body);
 }
-
 static constexpr ReturnStmt* makeReturn(Expr* value)
 {
-    return AST_allocator.make<ReturnStmt>(value);
+    return AST_allocator.allocateObject<ReturnStmt>(value);
 }
 
 } // ast

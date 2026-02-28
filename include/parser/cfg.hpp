@@ -19,13 +19,13 @@ public:
         std::vector<int32_t> predecessors;
         std::vector<int32_t> successors;
 
-        bool IsReachable = false;
+        bool isReachable = false;
 
         // data flow analysis
-        std::unordered_set<StringRef, StringRefHash, StringRefEqual> DefVars; // variables defined
-        std::unordered_set<StringRef, StringRefHash, StringRefEqual> UseVars; // variables used
-        std::unordered_set<StringRef, StringRefHash, StringRefEqual> LiveIn;  // live at entry
-        std::unordered_set<StringRef, StringRefHash, StringRefEqual> LiveOut; // live at exit
+        std::unordered_set<StringRef, StringRefHash, StringRefEqual> defVars; // variables defined
+        std::unordered_set<StringRef, StringRefHash, StringRefEqual> useVars; // variables used
+        std::unordered_set<StringRef, StringRefHash, StringRefEqual> liveIn;  // live at entry
+        std::unordered_set<StringRef, StringRefHash, StringRefEqual> liveOut; // live at exit
     };
 
 private:
@@ -35,16 +35,11 @@ private:
 
 public:
     void addBlock(BasicBlock block);
-
     void addEdge(int32_t from, int32_t to);
-
     void computeReachability();
-
-    // dead code detection
-    void computeLiveness();
+    void computeLiveness(); // dead code detection
 
     std::vector<int32_t> getUnreachableBlocks() const;
-
     std::vector<BasicBlock> const& getBlocks() const;
 };
 

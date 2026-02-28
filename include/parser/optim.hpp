@@ -29,13 +29,9 @@ private:
 public:
     std::optional<double> evaluateConstant(ast::Expr const* expr);
 
-    // Pass 1: Constant Folding
     ast::Expr* optimizeConstantFolding(ast::Expr* expr);
-
-    // Pass 2: Dead Code Elimination
     ast::Stmt* eliminateDeadCode(ast::Stmt* stmt);
 
-    // Pass 3: Common Subexpression Elimination
     class CSEPass {
     private:
         std::unordered_map<StringRef, StringRef, StringRefHash, StringRefEqual> ExprCache_;
@@ -43,7 +39,6 @@ public:
 
     public:
         StringRef exprToString(ast::Expr const* expr);
-
         StringRef getTempVar();
 
         std::optional<StringRef> findCSE(ast::Expr const* expr);

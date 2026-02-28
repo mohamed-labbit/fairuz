@@ -37,15 +37,15 @@ void ArenaAllocator::reset()
     NextBlockSize_ = BlockSize_;
 }
 
-unsigned char* ArenaAllocator::allocateBlock(std::size_t requested, std::size_t alignment_, bool retry_on_oom)
+unsigned char* ArenaAllocator::allocateBlock(size_t requested, size_t alignment_, bool retry_on_oom)
 {
     // Validate and fix alignment if needed
-    std::size_t min_align = alignof(std::max_align_t);
+    size_t min_align = alignof(std::max_align_t);
     if (alignment_ != ((requested + min_align - 1) & ~(min_align - 1)))
         alignment_ = min_align;
 
     // Determine block size (including growth strategy)
-    std::size_t block_size = std::max(requested + alignment_, NextBlockSize_);
+    size_t block_size = std::max(requested + alignment_, NextBlockSize_);
 
     // Check against maximum
     if (block_size > MaxBlockSize_) {
@@ -73,7 +73,7 @@ unsigned char* ArenaAllocator::allocateBlock(std::size_t requested, std::size_t 
     }
 }
 
-void* ArenaAllocator::allocate(std::size_t const size, std::size_t const alignment)
+void* ArenaAllocator::allocate(size_t const size, size_t const alignment)
 {
     std::chrono::steady_clock::time_point start = std::chrono::high_resolution_clock::now();
 
@@ -94,7 +94,7 @@ void* ArenaAllocator::allocate(std::size_t const size, std::size_t const alignme
 
     /// TODO: validate alignment
 
-    std::size_t aligned_size = getAligned(size, alignment);
+    size_t aligned_size = getAligned(size, alignment);
 
     if (aligned_size > MAX_BLOCK_SIZE) {
         std::cerr << "allocation size (after alignment) is too large!" << std::endl;
@@ -143,7 +143,7 @@ void* ArenaAllocator::allocate(std::size_t const size, std::size_t const alignme
     return LastPtr_;
 }
 
-void ArenaAllocator::deallocate(void* ptr, std::size_t const size)
+void ArenaAllocator::deallocate(void* ptr, size_t const size)
 {
     auto start = std::chrono::high_resolution_clock::now();
     if (!ptr || size == 0 || Blocks_.empty())
@@ -195,7 +195,7 @@ bool ArenaAllocator::verifyAllocation(void* ptr) const
     return it->second.is_valid();
 }
 
-unsigned char* ArenaAllocator::allocateFromBlocks(std::size_t alloc_size, std::size_t align)
+unsigned char* ArenaAllocator::allocateFromBlocks(size_t alloc_size, size_t align)
 {
     {
         std::shared_lock<std::shared_mutex> lock(BlocksMutex_);
@@ -208,7 +208,7 @@ unsigned char* ArenaAllocator::allocateFromBlocks(std::size_t alloc_size, std::s
     } // release lock
 
     // Need a new block
-    std::size_t new_block_size = std::max(alloc_size, NextBlockSize_);
+    size_t new_block_size = std::max(alloc_size, NextBlockSize_);
     if (!allocateBlock(new_block_size, align)) {
         if (DebugFeatures_)
             std::cerr << "-- Failed to allocate block : ArenaAllocator::allocate_block()" << std::endl;
@@ -225,8 +225,8 @@ void ArenaAllocator::updateNextBlockSize() noexcept
 {
     /// TODO: prevent overflow
     if (GrowthFactor_ == GrowthStrategy::EXPONENTIAL) {
-        std::size_t current = NextBlockSize_;
-        std::size_t max_size = MaxBlockSize_;
+        size_t current = NextBlockSize_;
+        size_t max_size = MaxBlockSize_;
         NextBlockSize_ = std::min(current * 2, max_size);
     }
 }

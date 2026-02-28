@@ -66,66 +66,38 @@ public:
     std::vector<ast::Stmt*> parseProgram();
 
     ast::Stmt* parseStatement();
-
     ast::Stmt* parseExpressionStmt();
-
     ast::Stmt* parseIfStmt();
-
     ast::Stmt* parseWhileStmt();
-
     ast::Stmt* parseReturnStmt();
-
     ast::Stmt* parseFunctionDef();
-
-    ast::ListExpr* parseParametersList();
-
-    ast::BlockStmt* parseBlock();
-
     ast::Expr* parseParenthesizedExprContent();
-
-    ast::ListExpr* parseFunctionArguments();
-
     ast::Expr* parseCallExpr(ast::Expr* callee);
-
     ast::Expr* parsePrimary();
-
     ast::Expr* parseUnary();
-
     ast::Expr* parseParenthesizedExpr();
-
     ast::Expr* parseExpression();
-
     ast::Expr* parseAssignmentExpr();
-
     ast::Expr* parseListLiteral();
-
     ast::Expr* parseConditionalExpr();
-
     ast::Expr* parseLogicalExpr();
-
     ast::Expr* parseLogicalExprPrecedence(unsigned int min_precedence);
-
     ast::Expr* parseBinaryExprPrecedence(unsigned int min_precedence);
-
     ast::Expr* parseComparisonExpr();
-
     ast::Expr* parseBinaryExpr();
-
     ast::Expr* parseUnaryExpr();
-
     ast::Expr* parsePrimaryExpr();
-
     ast::Expr* parsePostfixExpr();
+    ast::Expr* parse();
+    ast::ListExpr* parseFunctionArguments();
+    ast::ListExpr* parseParametersList();
+    ast::BlockStmt* parseBlock();
+    ast::BlockStmt* parseIndentedBlock();
 
     bool weDone() const;
-
     bool check(tok::TokenType type);
 
     tok::Token const* currentToken();
-
-    ast::Expr* parse();
-
-    ast::BlockStmt* parseIndentedBlock();
 
 private:
     lex::Lexer Lexer_;
@@ -134,15 +106,8 @@ private:
 
     bool Expecting_ { false };
 
-    tok::Token const* peek(size_t offset = 1)
-    {
-        return Lexer_.peek(offset);
-    }
-
-    tok::Token const* advance()
-    {
-        return Lexer_.next();
-    }
+    tok::Token const* peek(size_t offset = 1) { return Lexer_.peek(offset); }
+    tok::Token const* advance() { return Lexer_.next(); }
 
     bool match(tok::TokenType const type);
 
@@ -163,13 +128,7 @@ private:
             ;
     }
 
-    StringRef getSourceLine(size_t line)
-    {
-        return Lexer_.getSourceLine(line);
-    }
-
-    void enterScope() { }
-
+    void enterScope();
     void synchronize();
 };
 

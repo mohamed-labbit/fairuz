@@ -22,7 +22,7 @@ void ControlFlowGraph::computeReachability()
     if (Blocks_.empty())
         return;
 
-    Blocks_[EntryBlock_].IsReachable = true;
+    Blocks_[EntryBlock_].isReachable = true;
     std::vector<int32_t> worklist = { EntryBlock_ };
 
     while (!worklist.empty()) {
@@ -30,8 +30,8 @@ void ControlFlowGraph::computeReachability()
         worklist.pop_back();
 
         for (int32_t succ : Blocks_[blockId].successors) {
-            if (!Blocks_[succ].IsReachable) {
-                Blocks_[succ].IsReachable = true;
+            if (!Blocks_[succ].isReachable) {
+                Blocks_[succ].isReachable = true;
                 worklist.push_back(succ);
             }
         }
@@ -52,18 +52,17 @@ void ControlFlowGraph::computeLiveness()
             // liveOut = union of successors' liveIn
             std::unordered_set<StringRef, StringRefHash, StringRefEqual> newLiveOut;
             for (int32_t succ : block.successors)
-                newLiveOut.insert(Blocks_[succ].LiveIn.begin(), Blocks_[succ].LiveIn.end());
+                newLiveOut.insert(Blocks_[succ].liveIn.begin(), Blocks_[succ].liveIn.end());
 
             // liveIn = use ∪ (liveOut - def)
-            std::unordered_set<StringRef, StringRefHash, StringRefEqual> newLiveIn = block.UseVars;
-            for (StringRef const& var : newLiveOut) {
-                if (!block.DefVars.count(var))
+            std::unordered_set<StringRef, StringRefHash, StringRefEqual> newLiveIn = block.useVars;
+            for (StringRef const& var : newLiveOut)
+                if (!block.defVars.count(var))
                     newLiveIn.insert(var);
-            }
 
-            if (newLiveIn != block.LiveIn || newLiveOut != block.LiveOut) {
-                block.LiveIn = std::move(newLiveIn);
-                block.LiveOut = std::move(newLiveOut);
+            if (newLiveIn != block.liveIn || newLiveOut != block.liveOut) {
+                block.liveIn = std::move(newLiveIn);
+                block.liveOut = std::move(newLiveOut);
                 changed = true;
             }
         }
@@ -73,10 +72,10 @@ void ControlFlowGraph::computeLiveness()
 std::vector<int32_t> ControlFlowGraph::getUnreachableBlocks() const
 {
     std::vector<int32_t> unreachable;
-    for (size_t i = 0, n = Blocks_.size(); i < n; ++i) {
-        if (!Blocks_[i].IsReachable)
+    for (size_t i = 0, n = Blocks_.size(); i < n; ++i)
+        if (!Blocks_[i].isReachable)
             unreachable.push_back(i);
-    }
+
     return unreachable;
 }
 

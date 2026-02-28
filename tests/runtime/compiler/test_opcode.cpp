@@ -2,8 +2,8 @@
 #include <gtest/gtest.h>
 #include <limits>
 
-#include "../../../include/runtime/compiler/disassembler.hpp"
 #include "../../../include/runtime/opcode/opcode.hpp"
+#include "../../../include/runtime/opcode/chunk.hpp"
 
 using namespace mylang::runtime;
 

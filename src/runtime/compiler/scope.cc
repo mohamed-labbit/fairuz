@@ -24,11 +24,12 @@ void Compiler::endScope(uint32_t line)
 
     // Check if any are captured
     bool any_captured = false;
-    for (int i = pop_from; i < static_cast<int>(locals.size()); ++i)
+    for (int i = pop_from; i < static_cast<int>(locals.size()); ++i) {
         if (locals[i].isCaptured) {
             any_captured = true;
             break;
         }
+    }
 
     if (any_captured && pop_from < static_cast<int>(locals.size())) {
         Reg first = locals[pop_from].reg;
@@ -36,9 +37,8 @@ void Compiler::endScope(uint32_t line)
     }
 
     // Free registers back to pop_from (they're in the locals)
-    if (pop_from < static_cast<int>(locals.size())) {
+    if (pop_from < static_cast<int>(locals.size()))
         Current_->nextReg = locals[pop_from].reg;
-    }
 
     locals.resize(pop_from);
 }
@@ -53,9 +53,8 @@ Compiler::VarInfo Compiler::resolveName(StringRef const& name)
     // Search locals in current function (innermost scope first)
     auto& locals = Current_->locals;
     for (int i = static_cast<int>(locals.size()) - 1; i >= 0; --i) {
-        if (locals[i].name == name) {
+        if (locals[i].name == name)
             return { VarInfo::Kind::LOCAL, locals[i].reg };
-        }
     }
 
     // Search enclosing functions for upvalues
@@ -95,11 +94,15 @@ int Compiler::resolveUpValue(CompilerState* state, StringRef const& name)
 int Compiler::addUpValue(CompilerState* state, bool isLocal, uint8_t index)
 {
     // Deduplicate
+    if (!state)
+        return -1;
+
     for (int i = 0; i < static_cast<int>(state->upvalues.size()); ++i) {
         auto& uv = state->upvalues[i];
         if (uv.isLocal == isLocal && uv.index == index)
             return i;
     }
+
     state->upvalues.push_back({ isLocal, index });
     return static_cast<int>(state->upvalues.size() - 1);
 }

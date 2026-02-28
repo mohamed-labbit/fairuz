@@ -471,16 +471,16 @@ Expr* Parser::parsePrimaryExpr()
         advance();
 
         LiteralExpr::Type type;
+        tok::TokenType tt = tok->type();
 
-        switch (tok->type()) {
-        case tok::TokenType::DECIMAL:
+        if (tt == tok::TokenType::DECIMAL)
             return makeLiteralFloat(v.toDouble());
-        case tok::TokenType::INTEGER:
-        case tok::TokenType::HEX:
-        case tok::TokenType::OCTAL:
-        case tok::TokenType::BINARY:
+
+        if (tt == tok::TokenType::INTEGER
+            || tt == tok::TokenType::HEX
+            || tt == tok::TokenType::OCTAL
+            || tt == tok::TokenType::BINARY)
             return makeLiteralInt(util::parseIntegerLiteral(v));
-        }
     }
 
     if (check(tok::TokenType::STRING)) {

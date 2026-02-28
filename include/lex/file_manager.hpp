@@ -65,20 +65,11 @@ public:
 
     StringRef load(std::string const& filepath, bool const replace = false);
 
-    StringRef& buffer()
-    {
-        return InputBuffer_;
-    }
+    StringRef& buffer() { return InputBuffer_; }
 
-    StringRef const& buffer() const
-    {
-        return InputBuffer_;
-    }
+    StringRef const& buffer() const { return InputBuffer_; }
 
-    std::string getPath() const
-    {
-        return FilePath_;
-    }
+    std::string getPath() const { return FilePath_; }
 
 private:
     std::string FilePath_;

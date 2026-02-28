@@ -2,6 +2,7 @@
 
 #include "../diag/diagnostic.hpp"
 #include "../lex/token.hpp"
+#include "AST_allocator.hpp"
 #include "ast_node.hpp"
 #include <cassert>
 #include <cstdint>
@@ -11,7 +12,64 @@
 namespace mylang {
 namespace ast {
 
+enum class BinaryOp {
+    OP_ADD,
+    OP_SUB,
+    OP_MUL,
+    OP_DIV,
+    OP_MOD,
+    OP_POW,
+    OP_EQ,
+    OP_NEQ,
+    OP_LT,
+    OP_GT,
+    OP_LTE,
+    OP_GTE,
+    OP_BITAND,
+    OP_BITOR,
+    OP_BITXOR,
+    OP_BITNOT,
+    OP_LSHIFT,
+    OP_RSHIFT,
+    OP_AND,
+    OP_OR,
+
+    INVALID
+};
+
+enum class UnaryOp {
+    OP_PLUS,
+    OP_NEG,
+    OP_BITNOT,
+    OP_NOT,
+
+    INVALID
+};
+
 /// NOTE: do not know if the assert for the costructors args is a good idea
+
+// forward
+class Expr;
+class BinaryExpr;
+class UnaryExpr;
+class LiteralExpr;
+class NameExpr;
+class ListExpr;
+class CallExpr;
+class AssignmentExpr;
+
+static constexpr BinaryExpr* makeBinary(Expr* l, Expr* r, BinaryOp const op);
+static constexpr UnaryExpr* makeUnary(Expr* operand, UnaryOp const op);
+static constexpr LiteralExpr* makeLiteralNil();
+static constexpr LiteralExpr* makeLiteralInt(int value);
+static constexpr LiteralExpr* makeLiteralInt(int64_t value);
+static constexpr LiteralExpr* makeLiteralFloat(double value);
+static constexpr LiteralExpr* makeLiteralString(StringRef value);
+static constexpr LiteralExpr* makeLiteralBool(bool value);
+static constexpr NameExpr* makeName(StringRef const str);
+static constexpr ListExpr* makeList(std::vector<Expr*> elements = {});
+static constexpr CallExpr* makeCall(Expr* callee, ListExpr* args = nullptr);
+static constexpr AssignmentExpr* makeAssignmentExpr(NameExpr* target, Expr* value, bool decl = false);
 
 class Expr : public ASTNode {
 public:
@@ -38,56 +96,22 @@ public:
     virtual ~Expr() = default;
 
     virtual bool equals(Expr const* other) const = 0;
-
     virtual Expr* clone() const = 0;
 
-    Kind getKind() const
-    {
-        return Kind_;
-    }
-
-    NodeType getNodeType() const override
-    {
-        return NodeType::EXPRESSION;
-    }
+    Kind getKind() const { return Kind_; }
+    NodeType getNodeType() const override { return NodeType::EXPRESSION; }
 };
 
 class BinaryExpr : public Expr {
-public:
-    enum class Op {
-        OP_ADD,
-        OP_SUB,
-        OP_MUL,
-        OP_DIV,
-        OP_MOD,
-        OP_POW,
-        OP_EQ,
-        OP_NEQ,
-        OP_LT,
-        OP_GT,
-        OP_LTE,
-        OP_GTE,
-        OP_BITAND,
-        OP_BITOR,
-        OP_BITXOR,
-        OP_BITNOT,
-        OP_LSHIFT,
-        OP_RSHIFT,
-        OP_AND,
-        OP_OR,
-
-        INVALID
-    };
-
 private:
     Expr* Left_ { nullptr };
     Expr* Right_ { nullptr };
-    Op Operator_ { Op::INVALID };
+    BinaryOp Operator_ { BinaryOp::INVALID };
 
 public:
     BinaryExpr() = delete;
 
-    BinaryExpr(Expr* l, Expr* r, Op op)
+    BinaryExpr(Expr* l, Expr* r, BinaryOp op)
         : Left_(l)
         , Right_(r)
         , Operator_(op)
@@ -117,61 +141,28 @@ public:
             && Right_->equals(bin->getRight());
     }
 
-    BinaryExpr* clone() const override
-    {
-        return AST_allocator.make<BinaryExpr>(Left_->clone(), Right_->clone(), Operator_);
-    }
+    BinaryExpr* clone() const override { return makeBinary(Left_->clone(), Right_->clone(), Operator_); }
 
-    Expr* getLeft() const
-    {
-        return Left_;
-    }
+    Expr* getLeft() const { return Left_; }
+    Expr* getRight() const { return Right_; }
 
-    Expr* getRight() const
-    {
-        return Right_;
-    }
+    BinaryOp getOperator() const { return Operator_; }
 
-    Op getOperator() const
-    {
-        return Operator_;
-    }
+    void setLeft(Expr* l) { Left_ = l; }
+    void setRight(Expr* r) { Right_ = r; }
 
-    void setLeft(Expr* l)
-    {
-        Left_ = l;
-    }
-
-    void setRight(Expr* r)
-    {
-        Right_ = r;
-    }
-
-    void setOperator(Op op)
-    {
-        Operator_ = op;
-    }
+    void setOperator(BinaryOp op) { Operator_ = op; }
 };
 
 class UnaryExpr : public Expr {
-public:
-    enum class Op {
-        OP_PLUS,
-        OP_NEG,
-        OP_BITNOT,
-        OP_NOT,
-
-        INVALID
-    };
-
 private:
     Expr* Operand_ { nullptr };
-    Op Operator_ { Op::INVALID };
+    UnaryOp Operator_ { UnaryOp::INVALID };
 
 public:
     UnaryExpr() = delete;
 
-    UnaryExpr(Expr* operand, Op op)
+    UnaryExpr(Expr* operand, UnaryOp op)
         : Operand_(operand)
         , Operator_(op)
     {
@@ -197,20 +188,11 @@ public:
         return Operator_ == un->getOperator() && Operand_->equals(un->getOperand());
     }
 
-    UnaryExpr* clone() const override
-    {
-        return AST_allocator.make<UnaryExpr>(Operand_->clone(), Operator_);
-    }
+    UnaryExpr* clone() const override { return makeUnary(Operand_->clone(), Operator_); }
 
-    Expr* getOperand() const
-    {
-        return Operand_;
-    }
+    Expr* getOperand() const { return Operand_; }
 
-    Op getOperator() const
-    {
-        return Operator_;
-    }
+    UnaryOp getOperator() const { return Operator_; }
 };
 
 class LiteralExpr : public Expr {
@@ -280,10 +262,7 @@ public:
     LiteralExpr& operator=(LiteralExpr const&) noexcept = delete;
     LiteralExpr& operator=(LiteralExpr&&) noexcept = delete;
 
-    Type getType() const
-    {
-        return Type_;
-    }
+    Type getType() const { return Type_; }
 
     int64_t getInt() const
     {
@@ -317,30 +296,11 @@ public:
             || Type_ == Type::BINARY;
     }
 
-    bool isDecimal() const
-    {
-        return Type_ == Type::FLOAT;
-    }
-
-    bool isBoolean() const
-    {
-        return Type_ == Type::BOOLEAN;
-    }
-
-    bool isString() const
-    {
-        return Type_ == Type::STRING;
-    }
-
-    bool isNumeric() const
-    {
-        return isInteger() || isDecimal();
-    }
-
-    bool isNil() const
-    {
-        return Type_ == Type::NIL;
-    }
+    bool isDecimal() const { return Type_ == Type::FLOAT; }
+    bool isBoolean() const { return Type_ == Type::BOOLEAN; }
+    bool isString() const { return Type_ == Type::STRING; }
+    bool isNumeric() const { return isInteger() || isDecimal(); }
+    bool isNil() const { return Type_ == Type::NIL; }
 
     bool equals(Expr const* other) const override
     {
@@ -355,16 +315,11 @@ public:
         case Type::INTEGER:
         case Type::HEX:
         case Type::OCTAL:
-        case Type::BINARY:
-            return IntValue_ == lit->IntValue_;
-        case Type::FLOAT:
-            return FloatValue_ == lit->FloatValue_;
-        case Type::BOOLEAN:
-            return BoolValue_ == lit->BoolValue_;
-        case Type::STRING:
-            return StrValue_ == lit->StrValue_;
-        case Type::NIL:
-            return true; // two nil objects are always equal
+        case Type::BINARY: return IntValue_ == lit->IntValue_;
+        case Type::FLOAT: return FloatValue_ == lit->FloatValue_;
+        case Type::BOOLEAN: return BoolValue_ == lit->BoolValue_;
+        case Type::STRING: return StrValue_ == lit->StrValue_;
+        case Type::NIL: return true; // two nil objects are always equal
         }
         return false;
     }
@@ -375,18 +330,14 @@ public:
         case Type::INTEGER:
         case Type::HEX:
         case Type::OCTAL:
-        case Type::BINARY:
-            return AST_allocator.make<LiteralExpr>(IntValue_, Type_);
-        case Type::FLOAT:
-            return AST_allocator.make<LiteralExpr>(FloatValue_, Type_);
-        case Type::BOOLEAN:
-            return AST_allocator.make<LiteralExpr>(BoolValue_);
-        case Type::STRING:
-            return AST_allocator.make<LiteralExpr>(StrValue_);
-        case Type::NIL:
-            return AST_allocator.make<LiteralExpr>();
+        case Type::BINARY: return makeLiteralInt(IntValue_);
+        case Type::FLOAT: return makeLiteralFloat(FloatValue_);
+        case Type::BOOLEAN: return makeLiteralBool(BoolValue_);
+        case Type::STRING: return makeLiteralString(StrValue_);
+        case Type::NIL: return makeLiteralNil();
+        default:
+            return nullptr; // should never happen
         }
-        return nullptr; // should never happen
     }
 
     double toNumber() const
@@ -395,6 +346,7 @@ public:
             return static_cast<double>(IntValue_);
         if (isDecimal())
             return FloatValue_;
+
         return 0.0;
     }
 };
@@ -430,15 +382,9 @@ public:
         return Value_ == name->getValue();
     }
 
-    NameExpr* clone() const override
-    {
-        return AST_allocator.make<NameExpr>(Value_);
-    }
+    NameExpr* clone() const override { return makeName(Value_); }
 
-    StringRef getValue() const
-    {
-        return Value_;
-    }
+    StringRef getValue() const { return Value_; }
 };
 
 class ListExpr : public Expr {
@@ -456,15 +402,8 @@ public:
 
     ~ListExpr() override = default;
 
-    Expr* operator[](std::size_t const i)
-    {
-        return Elements_[i];
-    }
-
-    Expr const* operator[](std::size_t const i) const
-    {
-        return Elements_[i];
-    }
+    Expr* operator[](size_t const i) { return Elements_[i]; }
+    Expr const* operator[](size_t const i) const { return Elements_[i]; }
 
     ListExpr(ListExpr&&) noexcept = delete;
     ListExpr(ListExpr const&) noexcept = delete;
@@ -482,38 +421,21 @@ public:
         if (Elements_.size() != list->Elements_.size())
             return false;
 
-        for (size_t i = 0; i < Elements_.size(); ++i) {
+        for (size_t i = 0; i < Elements_.size(); ++i)
             if (!Elements_[i]->equals(list->Elements_[i]))
                 return false;
-        }
 
         return true;
     }
 
-    ListExpr* clone() const override
-    {
-        return AST_allocator.make<ListExpr>(Elements_);
-    }
+    ListExpr* clone() const override { return makeList(Elements_); }
 
-    std::vector<Expr*> const& getElements() const
-    {
-        return Elements_;
-    }
+    std::vector<Expr*> const& getElements() const { return Elements_; }
+    std::vector<Expr*>& getElements() { return Elements_; }
 
-    std::vector<Expr*>& getElementsMutable()
-    {
-        return Elements_;
-    }
+    bool isEmpty() const { return Elements_.empty(); }
 
-    bool isEmpty() const
-    {
-        return Elements_.empty();
-    }
-
-    std::size_t size() const
-    {
-        return Elements_.size();
-    }
+    size_t size() const { return Elements_.size(); }
 };
 
 class CallExpr : public Expr {
@@ -557,15 +479,9 @@ public:
             && CallLocation_ == call->getCallLocation();
     }
 
-    CallExpr* clone() const override
-    {
-        return AST_allocator.make<CallExpr>(Callee_->clone(), Args_->clone(), CallLocation_);
-    }
+    CallExpr* clone() const override { return makeCall(Callee_->clone(), Args_->clone()); }
 
-    Expr* getCallee() const
-    {
-        return Callee_;
-    }
+    Expr* getCallee() const { return Callee_; }
 
     std::vector<Expr*> const& getArgs() const
     {
@@ -573,31 +489,18 @@ public:
         return Args_ ? Args_->getElements() : empty;
     }
 
-    std::vector<Expr*>& getArgsMutable()
+    std::vector<Expr*>& getArgs()
     {
         assert(Args_ && "Attempting to get mutable args when Args_ is null");
-        return Args_->getElementsMutable();
+        return Args_->getElements();
     }
 
-    ListExpr* getArgsAsListExpr()
-    {
-        return Args_;
-    }
+    ListExpr* getArgsAsListExpr() { return Args_; }
+    ListExpr const* getArgsAsListExpr() const { return Args_; }
 
-    ListExpr const* getArgsAsListExpr() const
-    {
-        return Args_;
-    }
+    CallLocation getCallLocation() const { return CallLocation_; }
 
-    CallLocation getCallLocation() const
-    {
-        return CallLocation_;
-    }
-
-    bool hasArguments() const
-    {
-        return Args_ && !Args_->isEmpty();
-    }
+    bool hasArguments() const { return Args_ && !Args_->isEmpty(); }
 };
 
 class AssignmentExpr : public Expr {
@@ -638,88 +541,62 @@ public:
         return Target_->equals(bin->getTarget()) && Value_->equals(bin->getValue());
     }
 
-    AssignmentExpr* clone() const override
-    {
-        return AST_allocator.make<AssignmentExpr>(Target_->clone(), Value_->clone());
-    }
+    AssignmentExpr* clone() const override { return makeAssignmentExpr(Target_->clone(), Value_->clone()); }
 
-    NameExpr* getTarget() const
-    {
-        return Target_;
-    }
+    NameExpr* getTarget() const { return Target_; }
 
-    Expr* getValue() const
-    {
-        return Value_;
-    }
+    Expr* getValue() const { return Value_; }
 
-    bool isDeclaration() const
-    {
-        return isDecl_;
-    }
+    bool isDeclaration() const { return isDecl_; }
 };
 
-using UnaryOp = UnaryExpr::Op;
-using BinaryOp = BinaryExpr::Op;
-
-static constexpr BinaryExpr* makeBinary(Expr* l, Expr* r, BinaryExpr::Op const op)
+static constexpr BinaryExpr* makeBinary(Expr* l, Expr* r, BinaryOp const op)
 {
-    return AST_allocator.make<BinaryExpr>(l, r, op);
+    return AST_allocator.allocateObject<BinaryExpr>(l, r, op);
 }
-
-static constexpr UnaryExpr* makeUnary(Expr* operand, UnaryExpr::Op const op)
+static constexpr UnaryExpr* makeUnary(Expr* operand, UnaryOp const op)
 {
-    return AST_allocator.make<UnaryExpr>(operand, op);
+    return AST_allocator.allocateObject<UnaryExpr>(operand, op);
 }
-
 static constexpr LiteralExpr* makeLiteralNil()
 {
-    return AST_allocator.make<LiteralExpr>();
+    return AST_allocator.allocateObject<LiteralExpr>();
 }
-
 static constexpr LiteralExpr* makeLiteralInt(int value)
 {
-    return AST_allocator.make<LiteralExpr>(static_cast<int64_t>(value), LiteralExpr::Type::INTEGER);
+    return AST_allocator.allocateObject<LiteralExpr>(static_cast<int64_t>(value), LiteralExpr::Type::INTEGER);
 }
-
 static constexpr LiteralExpr* makeLiteralInt(int64_t value)
 {
-    return AST_allocator.make<LiteralExpr>(value, LiteralExpr::Type::INTEGER);
+    return AST_allocator.allocateObject<LiteralExpr>(value, LiteralExpr::Type::INTEGER);
 }
-
 static constexpr LiteralExpr* makeLiteralFloat(double value)
 {
-    return AST_allocator.make<LiteralExpr>(value, LiteralExpr::Type::FLOAT);
+    return AST_allocator.allocateObject<LiteralExpr>(value, LiteralExpr::Type::FLOAT);
 }
-
 static constexpr LiteralExpr* makeLiteralString(StringRef value)
 {
-    return AST_allocator.make<LiteralExpr>(value);
+    return AST_allocator.allocateObject<LiteralExpr>(value);
 }
-
 static constexpr LiteralExpr* makeLiteralBool(bool value)
 {
-    return AST_allocator.make<LiteralExpr>(value);
+    return AST_allocator.allocateObject<LiteralExpr>(value);
 }
-
 static constexpr NameExpr* makeName(StringRef const str)
 {
-    return AST_allocator.make<NameExpr>(str);
+    return AST_allocator.allocateObject<NameExpr>(str);
 }
-
-static constexpr ListExpr* makeList(std::vector<Expr*> elements)
+static constexpr ListExpr* makeList(std::vector<Expr*> elements )
 {
-    return AST_allocator.make<ListExpr>(elements);
+    return AST_allocator.allocateObject<ListExpr>(elements);
 }
-
-static constexpr CallExpr* makeCall(Expr* callee, ListExpr* args = nullptr, CallExpr::CallLocation loc = CallExpr::CallLocation::GLOBAL)
+static constexpr CallExpr* makeCall(Expr* callee, ListExpr* args)
 {
-    return AST_allocator.make<CallExpr>(callee, args, loc);
+    return AST_allocator.allocateObject<CallExpr>(callee, args);
 }
-
-static constexpr AssignmentExpr* makeAssignmentExpr(NameExpr* target, Expr* value, bool decl = false)
+static constexpr AssignmentExpr* makeAssignmentExpr(NameExpr* target, Expr* value, bool decl)
 {
-    return AST_allocator.make<AssignmentExpr>(target, value, decl);
+    return AST_allocator.allocateObject<AssignmentExpr>(target, value, decl);
 }
 
 } // namespace ast

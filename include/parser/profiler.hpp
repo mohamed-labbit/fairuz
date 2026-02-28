@@ -19,7 +19,6 @@ private:
 
 public:
     void recordPhase(StringRef const& phase, double ms);
-
     void printReport() const;
 };
 

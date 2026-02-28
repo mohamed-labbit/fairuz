@@ -17,7 +17,7 @@ String::String(String const& other)
     }
 }
 
-String::String(std::size_t const s)
+String::String(size_t const s)
 {
     if (s < SSO_SIZE) {
         is_heap = false;
@@ -31,7 +31,7 @@ String::String(std::size_t const s)
     terminate();
 }
 
-String::String(std::size_t const s, char const c)
+String::String(size_t const s, char const c)
 {
     if (s < SSO_SIZE) {
         is_heap = false;
@@ -48,7 +48,7 @@ String::String(std::size_t const s, char const c)
     terminate();
 }
 
-String::String(char const* s, std::size_t n)
+String::String(char const* s, size_t n)
 {
     if (!s || n == 0) {
         is_heap = false;
@@ -83,7 +83,7 @@ String::String(char const* s)
     while (*p++)
         ;
 
-    std::size_t n = p - s - 1;
+    size_t n = p - s - 1;
 
     if (n < SSO_SIZE) {
         is_heap = false;

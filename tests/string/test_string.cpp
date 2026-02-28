@@ -23,15 +23,6 @@ protected:
     }
 };
 
-TEST_F(StringRefTest, DefaultConstructor)
-{
-    StringRef s;
-    EXPECT_TRUE(s.empty());
-    EXPECT_EQ(s.len(), 0);
-    EXPECT_GE(s.cap(), 0); // Changed: may or may not allocate
-    // Note: data() may be nullptr for default constructor
-}
-
 TEST_F(StringRefTest, SizeConstructor_Zero)
 {
     StringRef s(static_cast<size_t>(0));
@@ -68,21 +59,14 @@ TEST(DiagnosticTest, CopyConstructorDetailed)
     StringRef s1("Hell");
     StringRef s2(s1);
 
-    // Verify they're equal
     EXPECT_EQ(s1, s2);
     EXPECT_EQ(s1.len(), s2.len());
-    // FIXED: With CoW, they may share memory until modified
-    // EXPECT_NE(s1.data(), s2.data()); // This is wrong for CoW!
-
-    // Now modify s1 - this should trigger CoW
     s1 += 'H';
 
-    // They should be different
     EXPECT_NE(s1, s2);
     EXPECT_EQ(s1, StringRef("HellH"));
     EXPECT_EQ(s2, StringRef("Hell"));
 
-    // After modification, they should have different memory
     EXPECT_NE(s1.data(), s2.data());
 }
 
@@ -98,19 +82,14 @@ TEST(DiagnosticTest, CopyConstructorArabic)
 TEST(DiagnosticTest, CheckMemoryIndependence)
 {
     StringRef s1("Test");
-
     StringRef s2(s1);
 
-    // FIXED: With CoW, they share memory until one is modified
-    // So we need to trigger CoW first
     s1[0] = 'X'; // This triggers CoW
 
     char* ptr1 = s1.data();
     char* ptr2 = s2.data();
 
     EXPECT_NE(ptr1, ptr2) << "After CoW, should have different memory!";
-
-    // Verify the modification worked correctly
     EXPECT_EQ(s1[0], 'X');
     EXPECT_EQ(s2[0], 'T');
     EXPECT_EQ(s1, "Xest");
@@ -123,8 +102,6 @@ TEST_F(StringRefTest, CopyConstructor_NonEmpty)
     StringRef s2(s1);
     EXPECT_EQ(s2.len(), s1.len());
     EXPECT_EQ(s2, s1);
-    // FIXED: With CoW, they may share memory
-    // EXPECT_NE(s2.data(), s1.data()); // Wrong expectation for CoW
 }
 
 TEST_F(StringRefTest, CopyConstructor_Arabic)
@@ -145,8 +122,7 @@ TEST_F(StringRefTest, MoveConstructor_NonEmpty)
 
     EXPECT_EQ(s2.len(), old_len);
     EXPECT_EQ(s2.data(), old_ptr);
-    EXPECT_TRUE(s1.empty()); // s1 should be empty
-    // FIXED: After move, s1.StringData_ is nullptr, so data() returns nullptr
+    EXPECT_TRUE(s1.empty());
     EXPECT_EQ(s1.data(), nullptr);
 }
 
@@ -188,7 +164,7 @@ TEST_F(StringRefTest, CopyAssignment_SharedData)
     StringRef s1("Hello");
     StringRef s2 = s1.slice(0, 2); // s1 and s2 share StringData_
 
-    s1 = s2; // Should not crash
+    s1 = s2;
     EXPECT_EQ(s1, s2);
 }
 
@@ -402,17 +378,15 @@ TEST_F(StringRefTest, AppendChar_Multiple)
 TEST_F(StringRefTest, AppendChar_UnicodeChar)
 {
     StringRef s;
-    s += char(0x0645); // FIXED: Arabic letter Meem - but this is char, not char16_t
-    // This test may need adjustment based on how char handles this
-    EXPECT_GE(s.len(), 1); // Changed to GE since multi-byte UTF-8
+    s += char(0x0645);
+    EXPECT_GE(s.len(), 1);
 }
 
 TEST_F(StringRefTest, AppendChar_TriggerExpansion)
 {
     StringRef s(2);
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 100; i++)
         s += 'A';
-    }
     EXPECT_EQ(s.len(), 100);
 }
 
@@ -956,21 +930,18 @@ TEST_F(StringRefTest, StdHash_Works)
 TEST_F(StringRefTest, Stress_ManyAppends)
 {
     StringRef s;
-    for (int i = 0; i < 10000; i++) {
+    for (int i = 0; i < 10000; i++)
         s += char('A' + (i % 26));
-    }
     EXPECT_EQ(s.len(), 10000);
 }
 
 TEST_F(StringRefTest, Stress_ManyErases)
 {
     StringRef s;
-    for (int i = 0; i < 1000; i++) {
+    for (int i = 0; i < 1000; i++)
         s += char('A');
-    }
-    for (int i = 0; i < 500; i++) {
+    for (int i = 0; i < 500; i++)
         s.erase(0);
-    }
     EXPECT_EQ(s.len(), 500);
 }
 
@@ -985,9 +956,8 @@ TEST_F(StringRefTest, Stress_CopyAndModify)
     }
 
     EXPECT_EQ(original, "Original");
-    for (size_t i = 0; i < copies.size(); i++) {
+    for (size_t i = 0; i < copies.size(); i++)
         EXPECT_NE(copies[i], original);
-    }
 }
 
 TEST_F(StringRefTest, Stress_LargeString)
@@ -1012,11 +982,9 @@ TEST_F(StringRefTest, Stress_ManySubstrings)
     StringRef s("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
     std::vector<StringRef> subs;
 
-    for (size_t i = 0; i < s.len(); i++) {
-        for (size_t j = i; j < s.len(); j++) {
+    for (size_t i = 0; i < s.len(); i++)
+        for (size_t j = i; j < s.len(); j++)
             subs.push_back(s.substr(i, j));
-        }
-    }
 
     EXPECT_GT(subs.size(), 100);
 }

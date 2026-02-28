@@ -256,13 +256,13 @@ TEST(ValueDouble, SmallestPositive)
 TEST(ValueDouble, AsNumberDoubleFromInt)
 {
     Value v = Value::integer(42);
-    EXPECT_DOUBLE_EQ(v.as_number_double(), 42.0);
+    EXPECT_DOUBLE_EQ(v.asNumberDouble(), 42.0);
 }
 
 TEST(ValueDouble, AsNumberDoubleFromDouble)
 {
     Value v = Value::real(1.5);
-    EXPECT_DOUBLE_EQ(v.as_number_double(), 1.5);
+    EXPECT_DOUBLE_EQ(v.asNumberDouble(), 1.5);
 }
 
 // Boolean semantics

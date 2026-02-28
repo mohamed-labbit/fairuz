@@ -22,11 +22,11 @@ public:
         EXPONENTIAL
     };
 
-    using OutOfMemoryHandler = std::function<bool(std::size_t requested)>;
+    using OutOfMemoryHandler = std::function<bool(size_t requested)>;
 
 private:
     struct VoidPtrHash {
-        std::size_t operator()(void const* ptr) const noexcept
+        size_t operator()(void const* ptr) const noexcept
         {
             return std::hash<std::uintptr_t>()(reinterpret_cast<std::uintptr_t>(ptr));
         }
@@ -43,8 +43,8 @@ private:
     std::vector<ArenaBlock> Blocks_ {};
     mutable std::shared_mutex BlocksMutex_;
     GrowthStrategy GrowthFactor_ { GrowthStrategy::LINEAR };
-    std::size_t BlockSize_ { DEFAULT_BLOCK_SIZE };
-    std::size_t NextBlockSize_ { DEFAULT_BLOCK_SIZE };
+    size_t BlockSize_ { DEFAULT_BLOCK_SIZE };
+    size_t NextBlockSize_ { DEFAULT_BLOCK_SIZE };
     std::string Name_ { "arena" };
     OutOfMemoryHandler OomHandler_ { nullptr };
     mutable std::mutex OomHandlerMutex_;
@@ -55,10 +55,10 @@ private:
     bool TrackAllocations_ { false };
     bool DebugFeatures_ { false };
     bool EnableStatistics_ { true };
-    std::size_t MaxBlockSize_ { MAX_BLOCK_SIZE };
+    size_t MaxBlockSize_ { MAX_BLOCK_SIZE };
     void* LastPtr_ { nullptr };
 
-    static constexpr std::size_t Alignment_ = alignof(std::max_align_t);
+    static constexpr size_t Alignment_ = alignof(std::max_align_t);
 
 public:
     ArenaAllocator(std::int32_t growth_strategy = static_cast<std::int32_t>(GrowthStrategy::EXPONENTIAL), OutOfMemoryHandler oom_handler = nullptr,
@@ -82,26 +82,26 @@ public:
 
     void reset();
 
-    std::size_t totalAllocated() const
+    size_t totalAllocated() const
     {
         return AllocStats_.TotalAllocated;
     }
 
-    std::size_t totalAllocations() const
+    size_t totalAllocations() const
     {
         return AllocStats_.TotalAllocations;
     }
 
-    std::size_t activeBlocks() const
+    size_t activeBlocks() const
     {
         return AllocStats_.ActiveBlocks;
     }
 
-    [[nodiscard]] unsigned char* allocateBlock(std::size_t requested, std::size_t alignment_ = alignof(std::max_align_t), bool retry_on_oom = true);
+    [[nodiscard]] unsigned char* allocateBlock(size_t requested, size_t alignment_ = alignof(std::max_align_t), bool retry_on_oom = true);
 
-    [[nodiscard]] void* allocate(std::size_t const size, std::size_t const alignment = alignof(std::max_align_t));
+    [[nodiscard]] void* allocate(size_t const size, size_t const alignment = alignof(std::max_align_t));
 
-    void deallocate(void* ptr, std::size_t const size);
+    void deallocate(void* ptr, size_t const size);
 
     [[nodiscard]] bool verifyAllocation(void* ptr) const;
 
@@ -119,11 +119,11 @@ public:
     }
 
 private:
-    [[nodiscard]] unsigned char* allocateFromBlocks(std::size_t alloc_size, std::size_t align = alignof(std::max_align_t));
+    [[nodiscard]] unsigned char* allocateFromBlocks(size_t alloc_size, size_t align = alignof(std::max_align_t));
 
     void updateNextBlockSize() noexcept;
 
-    static constexpr std::size_t getAligned(std::size_t n, std::size_t const alignment = alignof(std::max_align_t)) noexcept
+    static constexpr size_t getAligned(size_t n, size_t const alignment = alignof(std::max_align_t)) noexcept
     {
         return (n + alignment - 1) & ~(alignment - 1);
     }

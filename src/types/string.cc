@@ -12,12 +12,12 @@ StringRef::StringRef()
 {
 }
 
-StringRef::StringRef(std::size_t const s)
+StringRef::StringRef(size_t const s)
     : StringData_(string_allocator.allocateObject<String>(s))
 {
 }
 
-StringRef::StringRef(StringRef const& other, std::size_t offset, std::size_t length)
+StringRef::StringRef(StringRef const& other, size_t offset, size_t length)
     : StringData_(other.get())
     , Offset_(other.Offset_ + offset)
     , Length_(length)
@@ -52,12 +52,12 @@ StringRef::StringRef(char16_t const* u16_str)
     }
 }
 
-StringRef::StringRef(std::size_t const s, char const c)
+StringRef::StringRef(size_t const s, char const c)
     : StringData_(string_allocator.allocateObject<String>(s, c))
 {
 }
 
-StringRef::StringRef(String* data, std::size_t offset, std::size_t length)
+StringRef::StringRef(String* data, size_t offset, size_t length)
     : StringData_(data ? data : createEmpty())
     , Offset_(offset)
     , Length_(length)
@@ -139,7 +139,7 @@ StringRef& StringRef::operator=(StringRef const& other)
     return *this;
 }
 
-void StringRef::expand(std::size_t const new_size)
+void StringRef::expand(size_t const new_size)
 {
     ensureUnique();
 
@@ -147,8 +147,8 @@ void StringRef::expand(std::size_t const new_size)
         return;
 
     char const* old_ptr = data();
-    std::size_t old_len = len();
-    std::size_t new_capacity;
+    size_t old_len = len();
+    size_t new_capacity;
 
     if (cap() < 1024)
         new_capacity = std::max(new_size + 1, cap() * 2);
@@ -178,7 +178,7 @@ void StringRef::expand(std::size_t const new_size)
 }
 
 // Reserve capacity (doesn't change length, only capacity)
-void StringRef::reserve(std::size_t const new_capacity)
+void StringRef::reserve(size_t const new_capacity)
 {
     if (new_capacity <= cap())
         return;
@@ -187,7 +187,7 @@ void StringRef::reserve(std::size_t const new_capacity)
 }
 
 // Erase character at position - use view manipulation when possible
-void StringRef::erase(std::size_t const at)
+void StringRef::erase(size_t const at)
 {
     if (empty() || at >= len())
         return;
@@ -230,7 +230,7 @@ StringRef& StringRef::operator+=(StringRef const& other)
 
     ensureUnique();
 
-    std::size_t new_len = Length_ + other.Length_;
+    size_t new_len = Length_ + other.Length_;
 
     // Ensure capacity
     if (Offset_ + new_len >= cap())
@@ -257,7 +257,7 @@ StringRef& StringRef::operator+=(char c)
 
     ensureUnique();
 
-    std::size_t total_len = Offset_ + Length_;
+    size_t total_len = Offset_ + Length_;
 
     // Ensure capacity (need space for char + null)
     if (total_len + 1 >= StringData_->cap())
@@ -277,7 +277,7 @@ StringRef& StringRef::operator+=(char c)
 }
 
 // Bounds-checked access (const)
-char StringRef::operator[](std::size_t const i) const
+char StringRef::operator[](size_t const i) const
 {
     if (!StringData_ || !data())
         throw std::runtime_error("StringRef::operator[]: null string data");
@@ -289,7 +289,7 @@ char StringRef::operator[](std::size_t const i) const
 }
 
 // Bounds-checked access (non-const)
-char& StringRef::operator[](std::size_t const i)
+char& StringRef::operator[](size_t const i)
 {
     ensureUnique();
     if (!StringData_ || !data())
@@ -302,7 +302,7 @@ char& StringRef::operator[](std::size_t const i)
 }
 
 // Safe access with bounds checking (always checked)
-char StringRef::at(std::size_t const i) const
+char StringRef::at(size_t const i) const
 {
     if (!StringData_ || !data())
         throw std::runtime_error("StringRef::at: null string data");
@@ -313,7 +313,7 @@ char StringRef::at(std::size_t const i) const
     return (*StringData_)[i + Offset_];
 }
 
-char& StringRef::at(std::size_t const i)
+char& StringRef::at(size_t const i)
 {
     ensureUnique();
     if (!StringData_ || !data())
@@ -335,7 +335,7 @@ void StringRef::clear() noexcept
 }
 
 // Resize capacity (preserves content)
-void StringRef::resize(std::size_t const s)
+void StringRef::resize(size_t const s)
 {
     ensureUnique();
     if (s > cap())
@@ -366,10 +366,10 @@ bool StringRef::find(StringRef const& s) const noexcept
     if (s.len() > len())
         return false;
 
-    std::size_t search_len = s.len();
-    std::size_t max_start = len() - search_len;
+    size_t search_len = s.len();
+    size_t max_start = len() - search_len;
 
-    for (std::size_t i = 0; i <= max_start; ++i) {
+    for (size_t i = 0; i <= max_start; ++i) {
         if (::memcmp(data() + i, s.data(), search_len * sizeof(char)) == 0)
             return true;
     }
@@ -378,7 +378,7 @@ bool StringRef::find(StringRef const& s) const noexcept
 }
 
 // Find position of a character - purely view-based
-std::optional<std::size_t> StringRef::find_pos(char const c) const noexcept
+std::optional<size_t> StringRef::find_pos(char const c) const noexcept
 {
     if (!StringData_ || !data())
         return std::nullopt;
@@ -389,11 +389,11 @@ std::optional<std::size_t> StringRef::find_pos(char const c) const noexcept
     while (p < end && *p != c)
         ++p;
 
-    return (p < end) ? std::optional<std::size_t>(p - data()) : std::nullopt;
+    return (p < end) ? std::optional<size_t>(p - data()) : std::nullopt;
 }
 
 // Truncate string - purely view-based
-StringRef& StringRef::truncate(std::size_t const s)
+StringRef& StringRef::truncate(size_t const s)
 {
     if (s >= Length_)
         return *this;
@@ -403,13 +403,13 @@ StringRef& StringRef::truncate(std::size_t const s)
     return *this;
 }
 
-StringRef StringRef::substr(std::optional<std::size_t> start, std::optional<std::size_t> end) const
+StringRef StringRef::substr(std::optional<size_t> start, std::optional<size_t> end) const
 {
     if (empty())
         return "";
 
-    std::size_t start_val = start.value_or(0);
-    std::size_t end_val = end.value_or(len());
+    size_t start_val = start.value_or(0);
+    size_t end_val = end.value_or(len());
 
     if (start_val >= len())
         throw std::out_of_range("StringRef::substr: start index out of range");
@@ -420,7 +420,7 @@ StringRef StringRef::substr(std::optional<std::size_t> start, std::optional<std:
     if (end_val < start_val)
         throw std::invalid_argument("StringRef::substr: end must be >= start");
 
-    std::size_t ret_len = end_val - start_val;
+    size_t ret_len = end_val - start_val;
     String* ret_data = string_allocator.allocateObject<String>();
 
     if (ret_len < SSO_SIZE) {
@@ -440,17 +440,17 @@ StringRef StringRef::substr(std::optional<std::size_t> start, std::optional<std:
 }
 
 // Zero-copy slicing: returns a view into the existing string
-StringRef StringRef::slice(std::size_t start, std::optional<std::size_t> end) const
+StringRef StringRef::slice(size_t start, std::optional<size_t> end) const
 {
     if (!StringData_ || Length_ == 0)
         return "";
 
-    std::size_t const src_len = Length_;
+    size_t const src_len = Length_;
 
     if (start >= src_len)
         throw std::out_of_range("StringRef::slice: start index out of range");
 
-    std::size_t end_val = end.value_or(src_len - 1);
+    size_t end_val = end.value_or(src_len - 1);
 
     if (end_val >= src_len)
         end_val = src_len - 1;
@@ -458,19 +458,19 @@ StringRef StringRef::slice(std::size_t start, std::optional<std::size_t> end) co
     if (end_val < start)
         throw std::invalid_argument("StringRef::slice: end must be >= start");
 
-    std::size_t slice_len = end_val - start + 1;
+    size_t slice_len = end_val - start + 1;
 
     return StringRef(*this, start, slice_len);
 }
 
 // Convert to double - purely view-based
-double StringRef::toDouble(std::size_t* pos) const
+double StringRef::toDouble(size_t* pos) const
 {
     if (empty() || len() == 0)
         throw std::invalid_argument("StringRef::toDouble: empty string");
 
     // Use std::stod on the UTF-8 string
-    std::size_t _pos = 0;
+    size_t _pos = 0;
     double result;
 
     try {
@@ -554,7 +554,7 @@ void StringRef::detach()
         return;
 
     // Determine slice length
-    std::size_t copy_len = (Length_ > 0) ? Length_ : (StringData_->length() - Offset_);
+    size_t copy_len = (Length_ > 0) ? Length_ : (StringData_->length() - Offset_);
 
     // Allocate a new string of exactly the required size
     String* s = string_allocator.allocateObject<String>(copy_len);

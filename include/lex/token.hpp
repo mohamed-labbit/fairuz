@@ -200,15 +200,10 @@ public:
 
     // Return const references to avoid copies
     StringRef const& lexeme() const;
-
     TokenType const& type() const;
-
     uint32_t const& line() const;
-
     uint32_t const& column() const;
-
     Location const& location() const;
-
     std::string const& filepath() const;
 
     bool is(TokenType const tt) const;
@@ -217,19 +212,13 @@ public:
     bool atbol() const;
 
     bool isOperator() const;
-
     bool isUnaryOp() const;
-
     bool isBinaryOp() const;
-
     bool isComparisonOp() const;
-
     bool isWhitespace() const;
-
     bool isNumeric() const;
 
     double toDouble() const;
-
     int toInt() const;
 
     int getPrecedence(bool is_unary = false) const;

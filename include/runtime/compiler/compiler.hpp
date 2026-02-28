@@ -74,7 +74,7 @@ struct CompilerState {
     void freeReg()
     {
         if (nextReg > 0)
-            --nextReg;
+            nextReg--;
     }
 
     // Free back down to a watermark (end of expression temporaries)
@@ -110,87 +110,60 @@ public:
     // Errors are stored in errors() and can be pretty-printed.
     Chunk* compile(std::vector<ast::Stmt*> const& root);
 
-    std::vector<CompileError> const& errors() const
-    {
-        return Errors_;
-    }
+    std::vector<CompileError> const& errors() const { return Errors_; }
 
-    bool had_error() const
-    {
-        return !Errors_.empty();
-    }
+    bool had_error() const { return !Errors_.empty(); }
 
 private:
     // ---- state stack ----
     CompilerState* Current_ = nullptr; // innermost function being compiled
     std::vector<CompileError> Errors_;
-
     // String interning table: char data → constant index (across entire compilation)
     std::unordered_map<StringRef, uint16_t> StringCache_;
 
     // ---- entry points per AST node category ----
     void compileStmt(ast::Stmt const* s);
-
     void compileBlock(ast::BlockStmt const* s);
-
     void compileExprStmt(ast::ExprStmt const* s);
-
     void compileAssignmentStmt(ast::AssignmentStmt const* s);
-
     void compileIf(ast::IfStmt const* s);
-
     void compileWhile(ast::WhileStmt const* s);
-
     void compileFor(ast::ForStmt const* s);
-
     void compileFunctionDef(ast::FunctionDef const* s);
-
     void compileReturn(ast::ReturnStmt const* s);
 
     // Compile expr, place result in *dst_hint* register if provided,
     // otherwise allocate a fresh temporary.  Returns the register holding
     // the result (which may equal dst_hint).
-    Reg compileExpr(ast::Expr const* e, std::optional<Reg> dst = std::nullopt);
-
-    Reg compileBinary(ast::BinaryExpr const* e, std::optional<Reg> dst);
-
-    Reg compileUnary(ast::UnaryExpr const* e, std::optional<Reg> dst);
-
-    Reg compileLiteral(ast::LiteralExpr const* e, std::optional<Reg> dst);
-
-    Reg compileName(ast::NameExpr const* e, std::optional<Reg> dst);
-
-    Reg compileAssignmentExpr(ast::AssignmentExpr const* e, std::optional<Reg> dst);
-
-    Reg compileCall(ast::CallExpr const* e, std::optional<Reg> dst, bool tail_pos = false);
-
-    Reg compileList(ast::ListExpr const* e, std::optional<Reg> dst);
+    Reg compileExpr(ast::Expr const* e, Reg* dst = nullptr);
+    Reg compileBinary(ast::BinaryExpr const* e, Reg* dst);
+    Reg compileUnary(ast::UnaryExpr const* e, Reg* dst);
+    Reg compileLiteral(ast::LiteralExpr const* e, Reg* dst);
+    Reg compileName(ast::NameExpr const* e, Reg* dst);
+    Reg compileAssignmentExpr(ast::AssignmentExpr const* e, Reg* dst);
+    Reg compileCall(ast::CallExpr const* e, Reg* dst, bool tail_pos = false);
+    Reg compileList(ast::ListExpr const* e, Reg* dst);
 
     // ---- constant folding ----
     // Returns a folded Value if the expression is a compile-time constant,
     // nullopt otherwise.
     std::optional<Value> tryFoldBinary(ast::BinaryExpr const* e);
-
     std::optional<Value> tryFoldUnary(ast::UnaryExpr const* e);
-
     std::optional<Value> constValue(ast::Expr const* e); // returns const if trivially known
 
     // ---- register allocation helpers ----
     Reg allocReg();
 
     void freeReg();
-
     void freeRegsTo(Reg mark);
 
-    Reg ensureDst(std::optional<Reg> dst); // alloc if not provided
+    Reg ensureDst(Reg* dst); // alloc if not provided
 
     // ---- emit helpers ----
     uint32_t emit(Instruction i, uint32_t line);
-
     uint32_t emitJump(OpCode op, Reg cond, uint32_t line); // emits with placeholder offset
 
     void patchJump(uint32_t idx);
-
     void patchJumpTo(uint32_t idx, uint32_t target);
 
     uint32_t currentOffset() const;
@@ -200,7 +173,6 @@ private:
 
     // ---- scope / variable management ----
     void beginScope();
-
     void endScope(uint32_t line);
 
     void declareLocal(StringRef const& name, Reg reg, bool is_const = false);
@@ -228,25 +200,16 @@ private:
 
     // ---- loop context ----
     void pushLoop(uint32_t loop_start);
-
     void popLoop(uint32_t loop_exit_instr, uint32_t continue_target, uint32_t line);
 
     void emitBreak(uint32_t line);
-
     void emitContinue(uint32_t line);
 
     // ---- dead code suppression ----
     bool isDead_ = false; // set after RETURN/unconditional jump; cleared at labels
 
-    void markDead()
-    {
-        isDead_ = true;
-    }
-
-    void clearDead()
-    {
-        isDead_ = false;
-    }
+    void markDead() { isDead_ = true; }
+    void clearDead() { isDead_ = false; }
 
     // ---- error reporting ----
     void error(StringRef const& msg, uint32_t line);
@@ -254,19 +217,10 @@ private:
     Reg errorReg(); // returns 0 after recording an error
 
     // ---- utilities ----
-    Chunk const* currentChunk() const
-    {
-        return Current_->chunk;
-    }
-
-    Chunk* currentChunk()
-    {
-        return Current_->chunk;
-    }
+    Chunk const* currentChunk() const { return Current_->chunk; }
+    Chunk* currentChunk() { return Current_->chunk; }
 
     uint32_t internString(StringRef const& s, uint32_t line);
-
-    static bool isIntegerValue(double d, int64_t& out);
 };
 
 } // namespace runtime

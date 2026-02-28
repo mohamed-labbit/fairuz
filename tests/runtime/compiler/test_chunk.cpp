@@ -6,16 +6,14 @@
 
 using namespace mylang::runtime;
 
-// ============================================================================
-// Emit — basic append and index return
-// ============================================================================
-
 TEST(Chunk, EmitReturnsCorrectIndex)
 {
     Chunk c;
+
     uint32_t i0 = c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), 1);
     uint32_t i1 = c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), 1);
     uint32_t i2 = c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), 1);
+
     EXPECT_EQ(i0, 0u);
     EXPECT_EQ(i1, 1u);
     EXPECT_EQ(i2, 2u);
@@ -30,21 +28,15 @@ TEST(Chunk, EmittedInstructionPreserved)
     EXPECT_EQ(c.code[0], instr);
 }
 
-// ============================================================================
-// patch_jump — forward jump patching
-// ============================================================================
-
 TEST(Chunk, PatchJumpForward)
 {
     Chunk c;
-    // Emit a placeholder jump
-    uint32_t jump_idx = c.emit(
-        make_AsBx(static_cast<uint8_t>(OpCode::JUMP_IF_FALSE), 0, 0), 1);
-    // Emit 3 more instructions as the "body"
+    uint32_t jump_idx = c.emit(make_AsBx(static_cast<uint8_t>(OpCode::JUMP_IF_FALSE), 0, 0), 1);
+
     c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), 2);
     c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), 3);
     c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), 4);
-    // Now patch: should jump to current end (offset = 4-0-1 = 3)
+
     bool ok = c.patchJump(jump_idx);
     EXPECT_TRUE(ok);
     EXPECT_EQ(instr_sBx(c.code[jump_idx]), 3);
@@ -53,8 +45,7 @@ TEST(Chunk, PatchJumpForward)
 TEST(Chunk, PatchJumpToSelf_OffsetZero)
 {
     Chunk c;
-    uint32_t idx = c.emit(
-        make_AsBx(static_cast<uint8_t>(OpCode::JUMP), 0, 0), 1);
+    uint32_t idx = c.emit(make_AsBx(static_cast<uint8_t>(OpCode::JUMP), 0, 0), 1);
     // No more instructions — patch immediately
     bool ok = c.patchJump(idx);
     EXPECT_TRUE(ok);
@@ -71,10 +62,6 @@ TEST(Chunk, PatchJumpPreservesOpAndA)
     EXPECT_EQ(static_cast<OpCode>(instr_op(c.code[idx])), OpCode::JUMP_IF_FALSE);
     EXPECT_EQ(instr_A(c.code[idx]), 7u);
 }
-
-// ============================================================================
-// add_constant — deduplication
-// ============================================================================
 
 TEST(Chunk, AddConstantDeduplicatesIntegers)
 {
@@ -131,10 +118,6 @@ TEST(Chunk, AddConstantReturnSequentialIndices)
     }
 }
 
-// ============================================================================
-// alloc_ic_slot — sequential allocation
-// ============================================================================
-
 TEST(Chunk, AllocICSlotSequential)
 {
     Chunk c;
@@ -171,10 +154,6 @@ TEST(Chunk, ICSlotCanBeUpdated)
     EXPECT_EQ(slot.hit_count, 500u);
 }
 
-// ============================================================================
-// get_line — run-length encoded source map
-// ============================================================================
-
 TEST(Chunk, GetLineSingleLine)
 {
     Chunk c;
@@ -199,11 +178,10 @@ TEST(Chunk, GetLineMultipleLines)
 
 TEST(Chunk, GetLineRunLengthCompressed)
 {
-    // Consecutive same-line instructions should NOT create duplicate LineEntry records
     Chunk c;
     for (int i = 0; i < 10; ++i)
         c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), 42);
-    EXPECT_EQ(c.lines.size(), 1u); // run-length: only one entry
+    EXPECT_EQ(c.lines.size(), 1u);
     for (int i = 0; i < 10; ++i)
         EXPECT_EQ(c.getLine(i), 42u);
 }
@@ -212,23 +190,17 @@ TEST(Chunk, GetLineNewEntryOnLineChange)
 {
     Chunk c;
     c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), 1);
-    c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), 2); // new line → new entry
+    c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), 2);
     EXPECT_EQ(c.lines.size(), 2u);
 }
 
-// ============================================================================
-// Sub-function ownership — nested Chunk lifetime
-// ============================================================================
-
 TEST(Chunk, OwnsSubFunctions)
 {
-    // Chunk destructor must delete owned sub-chunks without crash
     auto* parent = new Chunk();
     auto* child = new Chunk();
     child->name = "child";
     parent->functions.push_back(child);
-    delete parent; // child must be deleted here too — no leak / crash
-    // If we got here, ownership works correctly (sanitizers would catch leaks)
+    delete parent;
     SUCCEED();
 }
 
@@ -246,10 +218,6 @@ TEST(Chunk, SubFunctionPreservesData)
     EXPECT_EQ(parent.functions[0]->arity, 2);
     EXPECT_EQ(parent.functions[0]->code.size(), 1u);
 }
-
-// ============================================================================
-// Chunk non-copyable, movable
-// ============================================================================
 
 TEST(Chunk, IsMoveConstructible)
 {
@@ -269,10 +237,6 @@ TEST(Chunk, IsMoveAssignable)
     b = std::move(a);
     EXPECT_EQ(b.name, "src");
 }
-
-// ============================================================================
-// CompilerState register allocator (tested directly)
-// ============================================================================
 
 TEST(CompilerState, AllocRegIncrementsWatermark)
 {
@@ -295,7 +259,7 @@ TEST(CompilerState, FreeRegDecrements)
     s.allocReg();
     s.freeReg();
     EXPECT_EQ(s.nextReg, 1u);
-    EXPECT_EQ(s.maxReg, 2u); // high watermark unchanged
+    EXPECT_EQ(s.maxReg, 2u);
 }
 
 TEST(CompilerState, FreeRegsToWatermark)
@@ -308,7 +272,7 @@ TEST(CompilerState, FreeRegsToWatermark)
     s.allocReg(); // 2
     s.freeRegsTo(1);
     EXPECT_EQ(s.nextReg, 1u);
-    EXPECT_EQ(s.maxReg, 3u); // high watermark still 3
+    EXPECT_EQ(s.maxReg, 3u);
 }
 
 TEST(CompilerState, MaxRegTracksHighWatermark)
@@ -320,7 +284,7 @@ TEST(CompilerState, MaxRegTracksHighWatermark)
     s.allocReg();
     s.allocReg();
     s.freeRegsTo(0);
-    s.allocReg(); // reallocates r0 — max stays 3
+    s.allocReg();
     EXPECT_EQ(s.maxReg, 3u);
 }
 
@@ -330,6 +294,6 @@ TEST(CompilerState, FreeRegAtZeroIsNoOp)
     CompilerState s;
     s.chunk = &c;
     EXPECT_EQ(s.nextReg, 0u);
-    s.freeReg(); // should not underflow
+    s.freeReg();
     EXPECT_EQ(s.nextReg, 0u);
 }

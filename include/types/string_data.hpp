@@ -12,7 +12,7 @@ private:
     union Storage {
         struct {
             char* ptr;
-            std::size_t cap;
+            size_t cap;
         } heap;
 
         char sso[SSO_SIZE];
@@ -24,8 +24,8 @@ private:
     } storage_;
 
     bool is_heap;
-    std::size_t len_ { 0 };
-    mutable std::size_t RefCount { 1 };
+    size_t len_ { 0 };
+    mutable size_t RefCount { 1 };
 
 public:
     String()
@@ -41,7 +41,7 @@ public:
             string_allocator.deallocateArray<char>(storage_.heap.ptr, storage_.heap.cap);
     }
 
-    std::size_t length() const noexcept
+    size_t length() const noexcept
     {
         return len_;
     }
@@ -66,12 +66,12 @@ public:
         return isHeap() ? storage_.heap.ptr : storage_.sso;
     }
 
-    std::size_t cap() const noexcept
+    size_t cap() const noexcept
     {
         return isHeap() ? storage_.heap.cap - 1 /*subtract the nul terminator*/ : SSO_SIZE - 1;
     }
 
-    void setLen(std::size_t const n)
+    void setLen(size_t const n)
     {
         if (!isHeap() && n > cap())
             throw std::invalid_argument("String::setLen(unsigned long n = " + std::to_string(n) + ") : invalid length");
@@ -86,22 +86,22 @@ public:
 
     String(String const& other);
 
-    String(std::size_t const s);
+    String(size_t const s);
 
-    String(std::size_t const s, char const c);
+    String(size_t const s, char const c);
 
-    String(char const* s, std::size_t n);
+    String(char const* s, size_t n);
 
     String(char const* s);
 
     bool operator==(String const& other) const noexcept;
 
-    char operator[](std::size_t const i) const noexcept
+    char operator[](size_t const i) const noexcept
     {
         return ptr()[i];
     }
 
-    char& operator[](std::size_t const i) noexcept
+    char& operator[](size_t const i) noexcept
     {
         return ptr()[i];
     }
@@ -116,7 +116,7 @@ public:
         --RefCount;
     }
 
-    std::size_t referenceCount() const noexcept
+    size_t referenceCount() const noexcept
     {
         return RefCount;
     }

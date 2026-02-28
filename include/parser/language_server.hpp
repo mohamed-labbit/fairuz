@@ -12,11 +12,13 @@ namespace parser {
 class LanguageServer {
 public:
     struct Position {
-        int32_t line, character;
+        int32_t line;
+        int32_t character;
     };
 
     struct Range {
-        Position start, end;
+        Position start;
+        Position end;
     };
 
     struct CompletionItem {
