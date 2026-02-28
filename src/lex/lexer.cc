@@ -4,6 +4,8 @@
 namespace mylang {
 namespace lex {
 
+#define FINISH() 
+
 Lexer::Lexer(FileManager* fm)
     : SourceManager_(fm)
     , TokIndex_(0)
