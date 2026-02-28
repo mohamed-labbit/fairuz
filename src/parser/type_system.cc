@@ -4,6 +4,8 @@
 namespace mylang {
 namespace parser {
 
+using namespace ast;
+
 bool TypeSystem::Type::operator==(Type const& other) const
 {
     return base == other.base; // Simplified
@@ -12,23 +14,20 @@ bool TypeSystem::Type::operator==(Type const& other) const
 StringRef TypeSystem::Type::toString() const
 {
     switch (base) {
-    case BaseType::INT:
-        return "int";
-    case BaseType::FLOAT:
-        return "float";
-    case BaseType::STRING:
-        return "str";
-    case BaseType::BOOL:
-        return "bool";
-    case BaseType::NONE:
-        return "None";
+    case BaseType::INT: return "int";
+    case BaseType::FLOAT: return "float";
+    case BaseType::STRING: return "str";
+    case BaseType::BOOL: return "bool";
+    case BaseType::NIL: return "nil";
     case BaseType::LIST:
         if (!TypeParams.empty())
             return "List[" + TypeParams[0]->toString() + "]";
+
         return "List";
     case BaseType::DICT:
         if (TypeParams.size() >= 2)
             return "Dict[" + TypeParams[0]->toString() + ", " + TypeParams[1]->toString() + "]";
+            
         return "Dict";
     default:
         return "Any";
@@ -62,38 +61,33 @@ void TypeSystem::TypeInference::unify(std::shared_ptr<TypeSystem::Type> t1, std:
     }
 }
 
-std::shared_ptr<typename TypeSystem::Type> TypeSystem::TypeInference::inferExpr(ast::Expr const* expr)
+std::shared_ptr<typename TypeSystem::Type> TypeSystem::TypeInference::inferExpr(Expr const* expr)
 {
     if (!expr)
         return std::make_shared<Type>();
 
     switch (expr->getKind()) {
-    case ast::Expr::Kind::LITERAL: {
-        ast::LiteralExpr const* lit = static_cast<ast::LiteralExpr const*>(expr);
+    case Expr::Kind::LITERAL: {
+        LiteralExpr const* lit = static_cast<LiteralExpr const*>(expr);
         std::shared_ptr<Type> t = std::make_shared<Type>();
 
-        switch (lit->getType()) {
-        case ast::LiteralExpr::Type::INTEGER:
+        LiteralExpr::Type lit_type = lit->getType();
+
+        if (lit_type == LiteralExpr::Type::INTEGER)
             t->base = BaseType::INT;
-            break;
-        case ast::LiteralExpr::Type::FLOAT:
+        else if (lit_type == LiteralExpr::Type::FLOAT)
             t->base = BaseType::FLOAT;
-            break;
-        case ast::LiteralExpr::Type::STRING:
+        else if (lit_type == LiteralExpr::Type::STRING)
             t->base = BaseType::STRING;
-            break;
-        case ast::LiteralExpr::Type::BOOLEAN:
+        else if (lit_type == LiteralExpr::Type::BOOLEAN)
             t->base = BaseType::BOOL;
-            break;
-        case ast::LiteralExpr::Type::NIL:
-            t->base = BaseType::NONE;
-            break;
-        }
+        else if (lit_type == LiteralExpr::Type::NIL)
+            t->base = BaseType::NIL;
 
         return t;
     }
-    case ast::Expr::Kind::BINARY: {
-        ast::BinaryExpr const* bin = static_cast<ast::BinaryExpr const*>(expr);
+    case Expr::Kind::BINARY: {
+        BinaryExpr const* bin = static_cast<BinaryExpr const*>(expr);
 
         std::shared_ptr<Type> leftType = inferExpr(bin->getLeft());
         std::shared_ptr<Type> rightType = inferExpr(bin->getRight());
@@ -101,16 +95,16 @@ std::shared_ptr<typename TypeSystem::Type> TypeSystem::TypeInference::inferExpr(
         unify(leftType, rightType);
 
         // Result type based on operator
-        if (bin->getOperator() == ast::BinaryOp::OP_ADD
-            || bin->getOperator() == ast::BinaryOp::OP_SUB
-            || bin->getOperator() == ast::BinaryOp::OP_MUL
-            || bin->getOperator() == ast::BinaryOp::OP_DIV)
+        if (bin->getOperator() == BinaryOp::OP_ADD
+            || bin->getOperator() == BinaryOp::OP_SUB
+            || bin->getOperator() == BinaryOp::OP_MUL
+            || bin->getOperator() == BinaryOp::OP_DIV)
 
             return leftType;
-        else if (bin->getOperator() == ast::BinaryOp::OP_EQ
-            || bin->getOperator() == ast::BinaryOp::OP_NEQ
-            || bin->getOperator() == ast::BinaryOp::OP_LT
-            || bin->getOperator() == ast::BinaryOp::OP_GT) {
+        else if (bin->getOperator() == BinaryOp::OP_EQ
+            || bin->getOperator() == BinaryOp::OP_NEQ
+            || bin->getOperator() == BinaryOp::OP_LT
+            || bin->getOperator() == BinaryOp::OP_GT) {
 
             std::shared_ptr<Type> t = std::make_shared<Type>();
             t->base = BaseType::BOOL;
@@ -119,8 +113,8 @@ std::shared_ptr<typename TypeSystem::Type> TypeSystem::TypeInference::inferExpr(
 
         return leftType;
     }
-    case ast::Expr::Kind::LIST: {
-        ast::ListExpr const* list = static_cast<ast::ListExpr const*>(expr);
+    case Expr::Kind::LIST: {
+        ListExpr const* list = static_cast<ListExpr const*>(expr);
         std::shared_ptr<Type> t = std::make_shared<Type>();
         t->base = BaseType::LIST;
 

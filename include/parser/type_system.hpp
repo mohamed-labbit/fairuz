@@ -17,7 +17,7 @@ public:
         FLOAT,
         STRING,
         BOOL,
-        NONE,
+        NIL,
         ANY,
         LIST,
         DICT,

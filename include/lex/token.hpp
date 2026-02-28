@@ -173,7 +173,7 @@ enum {
 
 class Token {
 public:
-    Token(StringRef val, TokenType tt, uint32_t line, uint32_t col, uint64_t fpos, std::string fpath, bool atbol = false)
+    Token(StringRef val, TokenType tt, uint32_t line, uint32_t col, uint64_t fpos = 0, std::string fpath = "", bool atbol = false)
         : Value_(val)
         , Type_(tt)
         , Location_(fpath, line, col, fpos)
