@@ -26,13 +26,7 @@ public:
 
     std::vector<tok::Token const*> tokenize();
 
-    tok::Token* makeToken(
-        tok::TokenType tt,
-        std::optional<StringRef> lexeme = std::nullopt,
-        std::optional<size_t> line = std::nullopt,
-        std::optional<size_t> col = std::nullopt,
-        std::optional<size_t> file_pos = std::nullopt,
-        std::optional<std::string> file_path = std::nullopt) const;
+    static tok::Token* makeToken(tok::TokenType tt, StringRef lexeme = "", size_t line = 0, size_t col = 0);
 
 private:
     SourceManager SourceManager_;
@@ -52,21 +46,9 @@ private:
 
 inline Allocator token_allocator("Token allocator");
 
-inline tok::Token* Lexer::makeToken(
-    tok::TokenType tt,
-    std::optional<StringRef> lexeme,
-    std::optional<size_t> line,
-    std::optional<size_t> col,
-    std::optional<size_t> file_pos,
-    std::optional<std::string> file_path) const
+inline tok::Token* Lexer::makeToken(tok::TokenType tt, StringRef lexeme, size_t line, size_t col)
 {
-    return token_allocator.allocateObject<tok::Token>(
-        lexeme.value_or(""),
-        tt,
-        line.value_or(this->SourceManager_.getLineNumber()),
-        col.value_or(this->SourceManager_.getColumnNumber()),
-        file_pos.value_or(this->SourceManager_.getFileOffset()),
-        file_path.value_or(this->SourceManager_.fpath()));
+    return token_allocator.allocateObject<tok::Token>(lexeme, tt, line, col);
 }
 
 } // namespace lex
