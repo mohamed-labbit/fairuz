@@ -183,7 +183,7 @@ TEST(CompilerLiteral, NilExpression)
     // Expected:
     //   0: LOAD_NIL  A=0 B=0 C=1
     //   1: RETURN_NIL
-    auto chunk = compile_ok(makeExprStmt(makeLiteralNil()));
+    Chunk* chunk = compile_ok(makeExprStmt(makeLiteralNil()));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -194,7 +194,7 @@ TEST(CompilerLiteral, NilExpression)
 
 TEST(CompilerLiteral, TrueLiteral)
 {
-    auto chunk = compile_ok(makeExprStmt(makeLiteralBool(true)));
+    Chunk* chunk = compile_ok(makeExprStmt(makeLiteralBool(true)));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -205,7 +205,7 @@ TEST(CompilerLiteral, TrueLiteral)
 
 TEST(CompilerLiteral, FalseLiteral)
 {
-    auto chunk = compile_ok(makeExprStmt(makeLiteralBool(false)));
+    Chunk* chunk = compile_ok(makeExprStmt(makeLiteralBool(false)));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -217,7 +217,7 @@ TEST(CompilerLiteral, FalseLiteral)
 TEST(CompilerLiteral, SmallIntegerUsesLoadInt)
 {
     // Integers in [-32767, 32767] must use LOAD_INT (no constant pool entry)
-    auto chunk = compile_ok(makeExprStmt(makeLiteralInt(42)));
+    Chunk* chunk = compile_ok(makeExprStmt(makeLiteralInt(42)));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -230,7 +230,7 @@ TEST(CompilerLiteral, SmallIntegerUsesLoadInt)
 
 TEST(CompilerLiteral, NegativeSmallIntegerUsesLoadInt)
 {
-    auto chunk = compile_ok(makeExprStmt(makeLiteralInt(-100)));
+    Chunk* chunk = compile_ok(makeExprStmt(makeLiteralInt(-100)));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -241,7 +241,7 @@ TEST(CompilerLiteral, NegativeSmallIntegerUsesLoadInt)
 
 TEST(CompilerLiteral, ZeroUsesLoadInt)
 {
-    auto chunk = compile_ok(makeExprStmt(makeLiteralInt(0)));
+    Chunk* chunk = compile_ok(makeExprStmt(makeLiteralInt(0)));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -251,7 +251,7 @@ TEST(CompilerLiteral, ZeroUsesLoadInt)
 TEST(CompilerLiteral, LargeIntegerUsesConstantPool)
 {
     // 100000 > 32767 — must fall back to LOAD_CONST
-    auto chunk = compile_ok(makeExprStmt(makeLiteralInt(100000)));
+    Chunk* chunk = compile_ok(makeExprStmt(makeLiteralInt(100000)));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -263,7 +263,7 @@ TEST(CompilerLiteral, LargeIntegerUsesConstantPool)
 
 TEST(CompilerLiteral, FloatUsesConstantPool)
 {
-    auto chunk = compile_ok(makeExprStmt(makeLiteralFloat(3.14)));
+    Chunk* chunk = compile_ok(makeExprStmt(makeLiteralFloat(3.14)));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -276,7 +276,7 @@ TEST(CompilerLiteral, FloatUsesConstantPool)
 TEST(CompilerLiteral, WholeNumberFloatFoldsToInt)
 {
     // 4.0 is exactly representable as int — compiler should use LOAD_INT
-    auto chunk = compile_ok(makeExprStmt(makeLiteralFloat(4.0)));
+    Chunk* chunk = compile_ok(makeExprStmt(makeLiteralFloat(4.0)));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -286,7 +286,7 @@ TEST(CompilerLiteral, WholeNumberFloatFoldsToInt)
 
 TEST(CompilerLiteral, StringUsesConstantPool)
 {
-    auto chunk = compile_ok(makeExprStmt(makeLiteralString("hello")));
+    Chunk* chunk = compile_ok(makeExprStmt(makeLiteralString("hello")));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -302,7 +302,7 @@ TEST(CompilerLiteral, StringsDeduplicated)
     std::vector<Stmt*> stmts;
     stmts.push_back(makeExprStmt(makeLiteralString("dup")));
     stmts.push_back(makeExprStmt(makeLiteralString("dup")));
-    auto chunk = compile_ok(makeBlock(std::move(stmts)));
+    Chunk* chunk = compile_ok(makeBlock(std::move(stmts)));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     // Only one constant pool entry
@@ -317,7 +317,7 @@ TEST(CompilerVar, LocalDeclaration)
     // Expected:
     //   0: LOAD_INT A=0 Bx=bias(5)   ← x lives in r0
     //   1: RETURN_NIL
-    auto chunk = compile_ok(blk(decl("x", makeLiteralInt(5))));
+    Chunk* chunk = compile_ok(blk(decl("x", makeLiteralInt(5))));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -330,7 +330,7 @@ TEST(CompilerVar, LocalDeclaration)
 TEST(CompilerVar, TwoLocalsUseConsecutiveRegisters)
 {
     // let x = 1; let y = 2
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         decl("x", makeLiteralInt(1)),
         decl("y", makeLiteralInt(2))));
     ASSERT_NE(chunk, nullptr);
@@ -347,7 +347,7 @@ TEST(CompilerVar, LocalAssignmentWritesBackToSameRegister)
 {
     // let x = 1; x = 2
     // x is in r0; assignment compiles the RHS directly into r0
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         decl("x", makeLiteralInt(1)),
         assign_stmt("x", makeLiteralInt(2))));
     ASSERT_NE(chunk, nullptr);
@@ -364,7 +364,7 @@ TEST(CompilerVar, GlobalLoadAndStore)
     // Undeclared name → global.
     // Assigning to an undeclared name emits STORE_GLOBAL.
     // Reading an undeclared name emits LOAD_GLOBAL.
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         assign_stmt("g", makeLiteralInt(7)), // g not declared → STORE_GLOBAL
         makeExprStmt(makeName("g"))          // LOAD_GLOBAL
         ));
@@ -394,7 +394,7 @@ TEST(CompilerUnary, NegateVariable)
     //   LOAD_INT r0=5   (x)
     //   OP_NEG      r1=−r0
     //   RETURN_NIL
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         decl("x", makeLiteralInt(5)),
         makeExprStmt(makeUnary(makeName("x"), UnaryOp::OP_NEG))));
     ASSERT_NE(chunk, nullptr);
@@ -408,7 +408,7 @@ TEST(CompilerUnary, NegateVariable)
 
 TEST(CompilerUnary, NotVariable)
 {
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         decl("b", makeLiteralBool(true)),
         makeExprStmt(makeUnary(makeName("b"), UnaryOp::OP_NOT))));
     ASSERT_NE(chunk, nullptr);
@@ -422,7 +422,7 @@ TEST(CompilerUnary, NotVariable)
 
 TEST(CompilerUnary, BitwiseNotVariable)
 {
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         decl("n", makeLiteralInt(0xFF)),
         makeExprStmt(makeUnary(makeName("n"), UnaryOp::OP_BITNOT))));
     ASSERT_NE(chunk, nullptr);
@@ -438,7 +438,7 @@ TEST(CompilerUnary, BitwiseNotVariable)
 TEST(CompilerUnary, NegLiteralFolded)
 {
     // -(3) should fold to LOAD_INT -3
-    auto chunk = compile_ok(makeExprStmt(makeUnary(makeLiteralInt(3), UnaryOp::OP_NEG)));
+    Chunk* chunk = compile_ok(makeExprStmt(makeUnary(makeLiteralInt(3), UnaryOp::OP_NEG)));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -450,7 +450,7 @@ TEST(CompilerUnary, NegLiteralFolded)
 
 TEST(CompilerUnary, NotTrueFolded)
 {
-    auto chunk = compile_ok(makeExprStmt(makeUnary(makeLiteralBool(true), UnaryOp::OP_NOT)));
+    Chunk* chunk = compile_ok(makeExprStmt(makeUnary(makeLiteralBool(true), UnaryOp::OP_NOT)));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -461,7 +461,7 @@ TEST(CompilerUnary, NotTrueFolded)
 
 TEST(CompilerUnary, NotFalseFolded)
 {
-    auto chunk = compile_ok(makeExprStmt(makeUnary(makeLiteralBool(false), UnaryOp::OP_NOT)));
+    Chunk* chunk = compile_ok(makeExprStmt(makeUnary(makeLiteralBool(false), UnaryOp::OP_NOT)));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -473,7 +473,7 @@ TEST(CompilerUnary, NotFalseFolded)
 TEST(CompilerUnary, BNotLiteralFolded)
 {
     // ~0 → -1
-    auto chunk = compile_ok(makeExprStmt(makeUnary(makeLiteralInt(0), UnaryOp::OP_BITNOT)));
+    Chunk* chunk = compile_ok(makeExprStmt(makeUnary(makeLiteralInt(0), UnaryOp::OP_BITNOT)));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -493,7 +493,7 @@ TEST(CompilerBinary, AddTwoLocals)
 {
     // let a=1; let b=2; a+b
     // r0=a, r1=b, r2=temp_a, r3=temp_b, dst=r2
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         decl("a", makeLiteralInt(1)),
         decl("b", makeLiteralInt(2)),
         makeExprStmt(makeBinary(makeName("a"), makeName("b"), BinaryOp::OP_ADD))));
@@ -514,7 +514,7 @@ TEST(CompilerBinary, AddTwoLocals)
 
 TEST(CompilerBinary, SubtractLiterals)
 {
-    auto chunk = compile_ok(makeExprStmt(
+    Chunk* chunk = compile_ok(makeExprStmt(
         makeBinary(makeLiteralInt(10), makeLiteralInt(3), BinaryOp::OP_SUB)));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
@@ -528,7 +528,7 @@ TEST(CompilerBinary, SubtractLiterals)
 
 TEST(CompilerBinary, MultiplyLiterals)
 {
-    auto chunk = compile_ok(makeExprStmt(
+    Chunk* chunk = compile_ok(makeExprStmt(
         makeBinary(makeLiteralInt(6), makeLiteralInt(7), BinaryOp::OP_MUL)));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
@@ -541,7 +541,7 @@ TEST(CompilerBinary, MultiplyLiterals)
 TEST(CompilerBinary, DivisionFolded)
 {
     // 1.0 / 2.0 → 0.5 (double result, uses LOAD_CONST)
-    auto chunk = compile_ok(makeExprStmt(
+    Chunk* chunk = compile_ok(makeExprStmt(
         makeBinary(makeLiteralFloat(1.0), makeLiteralFloat(2.0), BinaryOp::OP_DIV)));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
@@ -554,7 +554,7 @@ TEST(CompilerBinary, DivisionFolded)
 TEST(CompilerBinary, DivisionByZeroNotFolded)
 {
     // x / 0 where x is a variable — cannot fold, must emit DIV + NOP
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         decl("x", makeLiteralInt(5)),
         makeExprStmt(makeBinary(makeName("x"), makeLiteralInt(0), BinaryOp::OP_DIV))));
     ASSERT_NE(chunk, nullptr);
@@ -573,7 +573,7 @@ TEST(CompilerBinary, DivisionByZeroNotFolded)
 TEST(CompilerBinary, GreaterThanNormalizedToLT)
 {
     // a > b  →  compiler swaps operands and emits LT(b, a)
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         decl("a", makeLiteralInt(3)),
         decl("b", makeLiteralInt(1)),
         makeExprStmt(makeBinary(makeName("a"), makeName("b"), BinaryOp::OP_GT))));
@@ -591,7 +591,7 @@ TEST(CompilerBinary, GreaterThanNormalizedToLT)
 
 TEST(CompilerBinary, GreaterEqualNormalizedToLE)
 {
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         decl("a", makeLiteralInt(5)),
         decl("b", makeLiteralInt(5)),
         makeExprStmt(makeBinary(makeName("a"), makeName("b"), BinaryOp::OP_GTE))));
@@ -608,7 +608,7 @@ TEST(CompilerBinary, GreaterEqualNormalizedToLE)
 TEST(CompilerBinary, ICSlotAllocatedPerBinaryOp)
 {
     // Two non-foldable binary ops → two IC slots
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         decl("x", makeLiteralInt(1)),
         decl("y", makeLiteralInt(2)),
         makeExprStmt(makeBinary(makeName("x"), makeName("y"), BinaryOp::OP_ADD)),
@@ -621,7 +621,7 @@ TEST(CompilerBinary, ICSlotAllocatedPerBinaryOp)
 TEST(CompilerBinary, EqualityLiteralsFolded)
 {
     // 1 == 1 → true
-    auto chunk = compile_ok(makeExprStmt(
+    Chunk* chunk = compile_ok(makeExprStmt(
         makeBinary(makeLiteralInt(1), makeLiteralInt(1), BinaryOp::OP_EQ)));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
@@ -634,7 +634,7 @@ TEST(CompilerBinary, EqualityLiteralsFolded)
 TEST(CompilerBinary, InequalityLiteralsFolded)
 {
     // 1 != 2 → true
-    auto chunk = compile_ok(makeExprStmt(
+    Chunk* chunk = compile_ok(makeExprStmt(
         makeBinary(makeLiteralInt(1), makeLiteralInt(2), BinaryOp::OP_NEQ)));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
@@ -647,7 +647,7 @@ TEST(CompilerBinary, InequalityLiteralsFolded)
 TEST(CompilerBinary, BitwiseAndFolded)
 {
     // 0b1100 & 0b1010 = 0b1000 = 8
-    auto chunk = compile_ok(makeExprStmt(
+    Chunk* chunk = compile_ok(makeExprStmt(
         makeBinary(makeLiteralInt(0b1100), makeLiteralInt(0b1010), BinaryOp::OP_BITAND)));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
@@ -660,7 +660,7 @@ TEST(CompilerBinary, BitwiseAndFolded)
 TEST(CompilerBinary, ShiftLeftFolded)
 {
     // 1 << 3 = 8
-    auto chunk = compile_ok(makeExprStmt(
+    Chunk* chunk = compile_ok(makeExprStmt(
         makeBinary(makeLiteralInt(1), makeLiteralInt(3), BinaryOp::OP_LSHIFT)));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
@@ -677,7 +677,7 @@ TEST(CompilerBinary, ShiftLeftFolded)
 //   [patch: after_b]
 TEST(CompilerBinary, LogicalAndShortCircuit)
 {
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         decl("a", makeLiteralBool(true)),
         decl("b", makeLiteralBool(false)),
         makeExprStmt(makeBinary(makeName("a"), makeName("b"), BinaryOp::OP_AND))));
@@ -709,7 +709,7 @@ TEST(CompilerBinary, LogicalAndShortCircuit)
 
 TEST(CompilerBinary, LogicalOrShortCircuit)
 {
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         decl("a", makeLiteralBool(false)),
         decl("b", makeLiteralBool(true)),
         makeExprStmt(makeBinary(makeName("a"), makeName("b"), BinaryOp::OP_OR))));
@@ -730,7 +730,7 @@ TEST(CompilerBinary, AndWithBothLiteralsTrueNotFolded)
     // The compiler currently does NOT constant-fold AND/OR.
     // Verify: no JUMP_IF_FALSE means it *was* folded; presence means not.
     // This test just verifies the compiler doesn't crash.
-    auto chunk = compile_ok(makeExprStmt(
+    Chunk* chunk = compile_ok(makeExprStmt(
         makeBinary(makeLiteralBool(true), makeLiteralBool(true), BinaryOp::OP_AND)));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
@@ -744,7 +744,7 @@ TEST(CompilerIf, SimpleIfNoElse)
     // JUMP_IF_FALSE r0 → after_then
     // LOAD_INT r1=1
     // [after_then]: RETURN_NIL
-    auto chunk = compile_ok(makeIf(
+    Chunk* chunk = compile_ok(makeIf(
         makeName("x"),
         blk(decl("y", makeLiteralInt(1)))));
     ASSERT_NE(chunk, nullptr);
@@ -772,7 +772,7 @@ TEST(CompilerIf, IfElse)
     // JUMP → end
     // [else]: LOAD_INT 2
     // [end]: RETURN_NIL
-    auto chunk = compile_ok(makeIf(
+    Chunk* chunk = compile_ok(makeIf(
         makeName("x"),
         blk(decl("a", makeLiteralInt(1))),
         blk(decl("b", makeLiteralInt(2)))));
@@ -807,7 +807,7 @@ TEST(CompilerIf, ConstantTrueConditionDCE)
 {
     // if (true) { let x = 1 } else { let y = 999 }
     // else branch must be completely absent — no LOAD_INT 999
-    auto chunk = compile_ok(makeIf(
+    Chunk* chunk = compile_ok(makeIf(
         makeLiteralBool(true),
         blk(decl("x", makeLiteralInt(1))),
         blk(decl("y", makeLiteralInt(999)))));
@@ -826,7 +826,7 @@ TEST(CompilerIf, ConstantFalseConditionDCE)
 {
     // if (false) { let x = 1 } else { let y = 2 }
     // then branch entirely absent
-    auto chunk = compile_ok(makeIf(
+    Chunk* chunk = compile_ok(makeIf(
         makeLiteralBool(false),
         blk(decl("x", makeLiteralInt(1))),
         blk(decl("y", makeLiteralInt(2)))));
@@ -842,7 +842,7 @@ TEST(CompilerIf, ConstantFalseConditionDCE)
 TEST(CompilerIf, ConstantFalseNoElseEmitsNothing)
 {
     // if (false) { ... }  — both then and else absent
-    auto chunk = compile_ok(makeIf(
+    Chunk* chunk = compile_ok(makeIf(
         makeLiteralBool(false),
         blk(decl("x", makeLiteralInt(1)))));
     ASSERT_NE(chunk, nullptr);
@@ -862,7 +862,7 @@ TEST(CompilerWhile, BasicWhile)
     //   LOAD_INT 1           ← body
     //   LOOP → loop_start
     // exit: RETURN_NIL
-    auto chunk = compile_ok(makeWhile(
+    Chunk* chunk = compile_ok(makeWhile(
         makeName("x"),
         blk(decl("a", makeLiteralInt(1)))));
     ASSERT_NE(chunk, nullptr);
@@ -887,7 +887,7 @@ TEST(CompilerWhile, BasicWhile)
 TEST(CompilerWhile, WhileFalseEmitsNothing)
 {
     // while (false) { let x = 1 }  → DCE: emit nothing
-    auto chunk = compile_ok(makeWhile(
+    Chunk* chunk = compile_ok(makeWhile(
         makeLiteralBool(false),
         blk(decl("x", makeLiteralInt(1)))));
     ASSERT_NE(chunk, nullptr);
@@ -901,7 +901,7 @@ TEST(CompilerWhile, WhileTrueEmitsUnconditionalLoop)
 {
     // while (true) { }
     // Only a LOOP back-edge — no JUMP_IF_FALSE
-    auto chunk = compile_ok(makeWhile(
+    Chunk* chunk = compile_ok(makeWhile(
         makeLiteralBool(true),
         blk()));
     ASSERT_NE(chunk, nullptr);
@@ -920,7 +920,7 @@ TEST(CompilerWhile, WhileTrueEmitsUnconditionalLoop)
 TEST(CompilerWhile, JumpIfFalsePointsPastLoop)
 {
     // Verify the exit jump lands on RETURN_NIL
-    auto chunk = compile_ok(makeWhile(
+    Chunk* chunk = compile_ok(makeWhile(
         makeName("cond"),
         blk(decl("x", makeLiteralInt(0)))));
     ASSERT_NE(chunk, nullptr);
@@ -938,7 +938,7 @@ TEST(CompilerWhile, JumpIfFalsePointsPastLoop)
 
 TEST(CompilerReturn, ReturnNilEmitsReturnNil)
 {
-    auto chunk = compile_ok(blk(makeReturn(makeLiteralNil())));
+    Chunk* chunk = compile_ok(blk(makeReturn(makeLiteralNil())));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -948,7 +948,7 @@ TEST(CompilerReturn, ReturnNilEmitsReturnNil)
 
 TEST(CompilerReturn, ReturnValueEmitsReturn)
 {
-    auto chunk = compile_ok(blk(makeReturn(makeLiteralInt(42))));
+    Chunk* chunk = compile_ok(blk(makeReturn(makeLiteralInt(42))));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -960,7 +960,7 @@ TEST(CompilerReturn, ReturnValueEmitsReturn)
 TEST(CompilerReturn, ReturnIsDeadCodeBarrier)
 {
     // Statements after return must be suppressed
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         makeReturn(makeLiteralInt(1)),
         decl("x", makeLiteralInt(99)) // must NOT appear
         ));
@@ -980,7 +980,7 @@ TEST(CompilerReturn, ReturnIsDeadCodeBarrier)
 TEST(CompilerReturn, TailCallEmitsCallTail)
 {
     // Inside a non-top-level function: return f() → CALL_TAIL
-    auto chunk = compile_ok(func_stmt(
+    Chunk* chunk = compile_ok(func_stmt(
         "wrapper", {},
         blk(makeReturn(call(makeName("f"))))));
     ASSERT_NE(chunk, nullptr);
@@ -997,7 +997,7 @@ TEST(CompilerReturn, TailCallEmitsCallTail)
 TEST(CompilerFunc, EmptyFunction)
 {
     // fn foo() { }
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         func_stmt("foo", {}, blk())));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
@@ -1020,7 +1020,7 @@ TEST(CompilerFunc, EmptyFunction)
 TEST(CompilerFunc, FunctionWithParams)
 {
     // fn add(a, b) { return a + b }
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         func_stmt("add", { makeName("a"), makeName("b") },
             blk(makeReturn(makeBinary(makeName("a"), makeName("b"), BinaryOp::OP_ADD))))));
     ASSERT_NE(chunk, nullptr);
@@ -1045,7 +1045,7 @@ TEST(CompilerFunc, FunctionWithParams)
 TEST(CompilerFunc, FunctionStoredAsLocal)
 {
     // fn foo() { } — foo lives in r0 in the enclosing scope
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         func_stmt("foo", {}, blk())));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
@@ -1055,7 +1055,7 @@ TEST(CompilerFunc, FunctionStoredAsLocal)
 TEST(CompilerFunc, NestedFunctionIndexing)
 {
     // Two consecutive function declarations → fn_idx 0 and 1
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         func_stmt("a", {}, blk()),
         func_stmt("b", {}, blk())));
     ASSERT_NE(chunk, nullptr);
@@ -1071,7 +1071,7 @@ TEST(CompilerFunc, NestedFunctionIndexing)
 TEST(CompilerFunc, RecursiveFunctionBodyCompiles)
 {
     // fn fact(n) { if (n) { return n } return 1 }
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         func_stmt("fact", { makeName("n") },
             blk(
                 makeIf(makeName("n"), blk(makeReturn(makeName("n")))),
@@ -1088,7 +1088,7 @@ TEST(CompilerClosure, CapturesLocalFromEnclosingScope)
     //   let x = 1
     //   fn inner() { return x }  ← x captured as upvalue
     // }
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         func_stmt("outer", {},
             blk(
                 decl("x", makeLiteralInt(1)),
@@ -1122,7 +1122,7 @@ TEST(CompilerClosure, UpvalueDescriptorEmittedAfterClosure)
 {
     // The MOVE pseudo-instruction (upvalue descriptor) must follow CLOSURE
     // in the parent chunk's code stream.
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         func_stmt("outer", {},
             blk(
                 decl("x", makeLiteralInt(1)),
@@ -1153,7 +1153,7 @@ TEST(CompilerCall, CallWithNoArgs)
     // f()
     // LOAD_GLOBAL f → r0
     // IC_CALL r0 argc=0 ic=0
-    auto chunk = compile_ok(makeExprStmt(call(makeName("f"))));
+    Chunk* chunk = compile_ok(makeExprStmt(call(makeName("f"))));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -1174,7 +1174,7 @@ TEST(CompilerCall, CallWithTwoArgs)
     std::vector<Expr*> args;
     args.push_back(makeLiteralInt(1));
     args.push_back(makeLiteralInt(2));
-    auto chunk = compile_ok(makeExprStmt(call(makeName("f"), std::move(args))));
+    Chunk* chunk = compile_ok(makeExprStmt(call(makeName("f"), std::move(args))));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -1193,7 +1193,7 @@ TEST(CompilerCall, CallResultUsed)
     // LOAD_GLOBAL x → r1
     // IC_CALL r0 argc=1
     // (result is in r0; local 'r' is the next allocated reg)
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         decl("r", call(makeName("f"), [] {
             std::vector<Expr*> a;
             a.push_back(makeName("x"));
@@ -1211,7 +1211,7 @@ TEST(CompilerCall, CallResultUsed)
 TEST(CompilerCall, ICSlotAllocatedPerCallSite)
 {
     // f(); g() → two IC slots
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         makeExprStmt(call(makeName("f"))),
         makeExprStmt(call(makeName("g")))));
     ASSERT_NE(chunk, nullptr);
@@ -1223,7 +1223,7 @@ TEST(CompilerList, EmptyList)
 {
     // []
     // NEW_LIST r0 cap=0
-    auto chunk = compile_ok(makeExprStmt(makeList()));
+    Chunk* chunk = compile_ok(makeExprStmt(makeList()));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -1239,7 +1239,7 @@ TEST(CompilerList, ListWithElements)
     elems.push_back(makeLiteralInt(1));
     elems.push_back(makeLiteralInt(2));
     elems.push_back(makeLiteralInt(3));
-    auto chunk = compile_ok(makeExprStmt(makeList(std::move(elems))));
+    Chunk* chunk = compile_ok(makeExprStmt(makeList(std::move(elems))));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -1261,7 +1261,7 @@ TEST(CompilerList, ListCapHintCappedAt255)
     std::vector<Expr*> elems;
     for (int i = 0; i < 300; ++i)
         elems.push_back(makeLiteralInt(i));
-    auto chunk = compile_ok(makeExprStmt(makeList(std::move(elems))));
+    Chunk* chunk = compile_ok(makeExprStmt(makeList(std::move(elems))));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     // First instruction is NEW_LIST; B field = capacity hint
@@ -1275,7 +1275,7 @@ TEST(CompilerScope, LocaslDontLeakOutOfBlock)
 {
     // { let x = 1 }   ← x is gone after block
     // let x = 2       ← this x should also be r0 (reused)
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         makeBlock([] {
             std::vector<Stmt*> s;
             s.push_back(decl("x", makeLiteralInt(1)));
@@ -1296,7 +1296,7 @@ TEST(CompilerScope, LocaslDontLeakOutOfBlock)
 TEST(CompilerScope, NestedScopesBothVisible)
 {
     // let a = 1; { let b = 2; let c = a + b }
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         decl("a", makeLiteralInt(1)),
         makeBlock([] {
             std::vector<Stmt*> s;
@@ -1320,7 +1320,7 @@ TEST(CompilerScope, NestedScopesBothVisible)
 TEST(CompilerError, NullRootReturnsNullAndRecordsError)
 {
     Compiler c;
-    auto chunk = c.compile(std::vector<Stmt*> {});
+    Chunk* chunk = c.compile(std::vector<Stmt*> {});
     EXPECT_EQ(chunk, nullptr);
     EXPECT_TRUE(c.had_error());
     ASSERT_FALSE(c.errors().empty());
@@ -1329,7 +1329,7 @@ TEST(CompilerError, NullRootReturnsNullAndRecordsError)
 
 TEST(CompilerMeta, TopLevelChunkNameIsMain)
 {
-    auto chunk = compile_ok(blk());
+    Chunk* chunk = compile_ok(blk());
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     EXPECT_EQ(chunk->name, "<main>");
@@ -1338,7 +1338,7 @@ TEST(CompilerMeta, TopLevelChunkNameIsMain)
 TEST(CompilerMeta, LocalCountReflectsMaxRegisters)
 {
     // let a=1; let b=2; let c=3  → max_reg = 3
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         decl("a", makeLiteralInt(1)),
         decl("b", makeLiteralInt(2)),
         decl("c", makeLiteralInt(3))));
@@ -1349,7 +1349,7 @@ TEST(CompilerMeta, LocalCountReflectsMaxRegisters)
 
 TEST(CompilerMeta, FunctionAritySetCorrectly)
 {
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         func_stmt("f", { makeName("x"), makeName("y"), makeName("z") }, blk())));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
@@ -1359,7 +1359,7 @@ TEST(CompilerMeta, FunctionAritySetCorrectly)
 
 TEST(CompilerMeta, FunctionNameSetCorrectly)
 {
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         func_stmt("compute", {}, blk())));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
@@ -1369,7 +1369,7 @@ TEST(CompilerMeta, FunctionNameSetCorrectly)
 
 TEST(CompilerMeta, LineInfoPresent)
 {
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         decl("x", makeLiteralInt(42), false, /*line=*/7)));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
@@ -1386,7 +1386,7 @@ TEST(CompilerIntegration, Fibonacci)
     args_n1.push_back(makeBinary(makeName("n"), makeLiteralInt(1), BinaryOp::OP_SUB));
     args_n2.push_back(makeBinary(makeName("n"), makeLiteralInt(2), BinaryOp::OP_SUB));
 
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         func_stmt("fib", { makeName("n") },
             blk(
                 makeIf(
@@ -1415,7 +1415,7 @@ TEST(CompilerIntegration, CounterWithClosure)
     //   fn inc() { count = count + 1 }
     //   return inc
     // }
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         func_stmt("make_counter", {},
             blk(
                 decl("count", makeLiteralInt(0)),
@@ -1443,7 +1443,7 @@ TEST(CompilerIntegration, NestedArithmetic)
 {
     // let result = (2 + 3) * (4 - 1)
     // Entire expression is const-folded: (5) * (3) = 15
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         decl("result",
             makeBinary(
                 makeBinary(makeLiteralInt(2), makeLiteralInt(3), BinaryOp::OP_ADD),
@@ -1461,7 +1461,7 @@ TEST(CompilerIntegration, NestedArithmetic)
 TEST(CompilerIntegration, StringConstantPoolDedup)
 {
     // "hello" used three times → one pool entry
-    auto chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok(blk(
         makeExprStmt(makeLiteralString("hello")),
         makeExprStmt(makeLiteralString("hello")),
         makeExprStmt(makeLiteralString("hello"))));
@@ -1482,7 +1482,7 @@ TEST(CompilerIntegration, MixedLiteralsInList)
     elems.push_back(makeLiteralInt(42));
     elems.push_back(makeLiteralFloat(3.14));
     elems.push_back(makeLiteralString("hi"));
-    auto chunk = compile_ok(makeExprStmt(makeList(std::move(elems))));
+    Chunk* chunk = compile_ok(makeExprStmt(makeList(std::move(elems))));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     // Must have NEW_LIST followed by 4× (load + LIST_APPEND)

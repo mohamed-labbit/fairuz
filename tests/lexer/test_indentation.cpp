@@ -42,7 +42,7 @@ TEST(LexerTest, TestIndentationLevel1)
         lexer.makeToken(tok::TokenType::NEWLINE, "\n", 2, 6),
         lexer.makeToken(tok::TokenType::DEDENT),
         lexer.makeToken(tok::TokenType::DEDENT),
-        lexer.makeToken(tok::TokenType::ENDMARKER, std::nullopt, 3, 1)
+        lexer.makeToken(tok::TokenType::ENDMARKER, "", 3, 1)
     };
     // ASSERT_EQ(tokens.size(), 9);
     EXPECT_EQ(tokens[0]->type(), tok::TokenType::BEGINMARKER);
@@ -68,7 +68,7 @@ TEST(LexerTest, TestIndentationLevel2)
         lexer.makeToken(tok::TokenType::NEWLINE, "\n", 3, 10),
         lexer.makeToken(tok::TokenType::DEDENT),
         lexer.makeToken(tok::TokenType::DEDENT),
-        lexer.makeToken(tok::TokenType::ENDMARKER, std::nullopt, 4, 1)
+        lexer.makeToken(tok::TokenType::ENDMARKER, "", 4, 1)
     };
 
     ASSERT_EQ(tokens.size(), expected.size());
