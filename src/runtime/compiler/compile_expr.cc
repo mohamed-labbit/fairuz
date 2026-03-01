@@ -16,13 +16,13 @@ Reg Compiler::compileExpr(Expr const* e, Reg* dst)
         return 0;
 
     switch (e->getKind()) {
-    case Expr::Kind::LITERAL: return compileLiteral(dynamic_cast<LiteralExpr const*>(e), dst);
-    case Expr::Kind::NAME: return compileName(dynamic_cast<NameExpr const*>(e), dst);
-    case Expr::Kind::BINARY: return compileBinary(dynamic_cast<BinaryExpr const*>(e), dst);
-    case Expr::Kind::UNARY: return compileUnary(dynamic_cast<UnaryExpr const*>(e), dst);
-    case Expr::Kind::ASSIGNMENT: return compileAssignmentExpr(dynamic_cast<AssignmentExpr const*>(e), dst);
-    case Expr::Kind::CALL: return compileCall(dynamic_cast<CallExpr const*>(e), dst, /*tail=*/false);
-    case Expr::Kind::LIST: return compileList(dynamic_cast<ListExpr const*>(e), dst);
+    case Expr::Kind::LITERAL: return compileLiteral(static_cast<LiteralExpr const*>(e), dst);
+    case Expr::Kind::NAME: return compileName(static_cast<NameExpr const*>(e), dst);
+    case Expr::Kind::BINARY: return compileBinary(static_cast<BinaryExpr const*>(e), dst);
+    case Expr::Kind::UNARY: return compileUnary(static_cast<UnaryExpr const*>(e), dst);
+    case Expr::Kind::ASSIGNMENT: return compileAssignmentExpr(static_cast<AssignmentExpr const*>(e), dst);
+    case Expr::Kind::CALL: return compileCall(static_cast<CallExpr const*>(e), dst, /*tail=*/false);
+    case Expr::Kind::LIST: return compileList(static_cast<ListExpr const*>(e), dst);
     case Expr::Kind::INVALID:
         error("invalid expression node", e->getLine());
         return errorReg();
