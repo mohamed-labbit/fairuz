@@ -58,6 +58,59 @@ std::optional<Value> Compiler::tryFoldUnary(UnaryExpr const* e)
 
 std::optional<Value> Compiler::tryFoldBinary(BinaryExpr const* e)
 {
+    if (!e)
+        return std::nullopt;
+
+    Expr* LE = e->getLeft();
+    Expr* RE = e->getRight();
+
+    if (!LE || !RE)
+        return std::nullopt;
+
+    if (LE->getKind() == Expr::Kind::LITERAL && RE->getKind() == Expr::Kind::LITERAL)
+        // simple non nested expression
+        return _tryFoldBinary(e);
+
+    std::optional<Value> L, R;
+
+    // fold left
+    if (LE->getKind() == Expr::Kind::BINARY)
+        L = tryFoldBinary(dynamic_cast<BinaryExpr const*>(LE));
+    else if (LE->getKind() == Expr::Kind::UNARY)
+        L = tryFoldUnary(dynamic_cast<UnaryExpr const*>(LE));
+
+    // fold right
+    if (RE->getKind() == Expr::Kind::BINARY)
+        R = tryFoldBinary(dynamic_cast<BinaryExpr const*>(RE));
+    else if (RE->getKind() == Expr::Kind::UNARY)
+        R = tryFoldUnary(dynamic_cast<UnaryExpr const*>(RE));
+
+    if (!R && !L)
+        return std::nullopt;
+
+    BinaryExpr* ce = e->clone();
+
+    auto makeLiteralFromVal = [](Value const v) {
+        if (v.isInt())
+            return makeLiteralInt(v.asInt());
+        else if (v.isDouble())
+            return makeLiteralFloat(v.asDouble());
+        else if (v.isBool())
+            return makeLiteralBool(v.asBool());
+
+        return makeLiteralNil();
+    };
+
+    if (L)
+        ce->setLeft(makeLiteralFromVal(*L));
+    if (R)
+        ce->setRight(makeLiteralFromVal(*R));
+
+    return _tryFoldBinary(ce);
+}
+
+std::optional<Value> Compiler::_tryFoldBinary(BinaryExpr const* e)
+{
     std::optional<Value> L = constValue(e->getLeft());
     std::optional<Value> R = constValue(e->getRight());
 
@@ -86,12 +139,9 @@ std::optional<Value> Compiler::tryFoldBinary(BinaryExpr const* e)
     double rd = R->asNumberDouble();
 
     switch (op) {
-    case BinaryOp::OP_ADD:
-        return both_int ? Value::integer(li + ri) : Value::real(ld + rd);
-    case BinaryOp::OP_SUB:
-        return both_int ? Value::integer(li - ri) : Value::real(ld - rd);
-    case BinaryOp::OP_MUL:
-        return both_int ? Value::integer(li * ri) : Value::real(ld * rd);
+    case BinaryOp::OP_ADD: return both_int ? Value::integer(li + ri) : Value::real(ld + rd);
+    case BinaryOp::OP_SUB: return both_int ? Value::integer(li - ri) : Value::real(ld - rd);
+    case BinaryOp::OP_MUL: return both_int ? Value::integer(li * ri) : Value::real(ld * rd);
     case BinaryOp::OP_DIV:
         if (rd == 0.0)
             return std::nullopt; // don't fold division by zero
@@ -109,24 +159,15 @@ std::optional<Value> Compiler::tryFoldBinary(BinaryExpr const* e)
         if (ri == 0)
             return std::nullopt;
 
-        return both_int ? Value::integer(((li % ri) + ri) % ri)
-                        : Value::real(std::fmod(ld, rd));
-    case BinaryOp::OP_POW:
-        return Value::real(std::pow(ld, rd));
-    case BinaryOp::OP_LT:
-        return Value::boolean(ld < rd);
-    case BinaryOp::OP_GT:
-        return Value::boolean(ld > rd);
-    case BinaryOp::OP_LTE:
-        return Value::boolean(ld <= rd);
-    case BinaryOp::OP_GTE:
-        return Value::boolean(ld >= rd);
-    case BinaryOp::OP_BITAND:
-        return both_int ? Value::integer(li & ri) : std::optional<Value> {};
-    case BinaryOp::OP_BITOR:
-        return both_int ? Value::integer(li | ri) : std::optional<Value> {};
-    case BinaryOp::OP_BITXOR:
-        return both_int ? Value::integer(li ^ ri) : std::optional<Value> {};
+        return both_int ? Value::integer(((li % ri) + ri) % ri) : Value::real(std::fmod(ld, rd));
+    case BinaryOp::OP_POW: return Value::real(std::pow(ld, rd));
+    case BinaryOp::OP_LT: return Value::boolean(ld < rd);
+    case BinaryOp::OP_GT: return Value::boolean(ld > rd);
+    case BinaryOp::OP_LTE: return Value::boolean(ld <= rd);
+    case BinaryOp::OP_GTE: return Value::boolean(ld >= rd);
+    case BinaryOp::OP_BITAND: return both_int ? Value::integer(li & ri) : std::optional<Value> {};
+    case BinaryOp::OP_BITOR: return both_int ? Value::integer(li | ri) : std::optional<Value> {};
+    case BinaryOp::OP_BITXOR: return both_int ? Value::integer(li ^ ri) : std::optional<Value> {};
     case BinaryOp::OP_LSHIFT:
         if (!both_int || ri < 0 || ri >= 64)
             return std::nullopt;

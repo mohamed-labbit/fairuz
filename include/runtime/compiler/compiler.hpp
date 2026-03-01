@@ -147,7 +147,8 @@ private:
     // ---- constant folding ----
     // Returns a folded Value if the expression is a compile-time constant,
     // nullopt otherwise.
-    std::optional<Value> tryFoldBinary(ast::BinaryExpr const* e);
+    std::optional<Value> _tryFoldBinary(ast::BinaryExpr const* e); // single pass, no recursion
+    std::optional<Value> tryFoldBinary(ast::BinaryExpr const* e); // recurive
     std::optional<Value> tryFoldUnary(ast::UnaryExpr const* e);
     std::optional<Value> constValue(ast::Expr const* e); // returns const if trivially known
 
