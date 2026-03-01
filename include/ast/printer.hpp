@@ -234,6 +234,16 @@ private:
             break;
         }
 
+        case Stmt::Kind::ASSIGNMENT: {
+            AssignmentStmt const* a = static_cast<AssignmentStmt const*>(s);
+            std::cout << color("Assignment", Color::YELLOW) << " :=\n";
+            std::cout << p.indent + pipe(p.last) << "├─ target:\n";
+            printExpr(a->getTarget(), { p.indent + pipe(p.last) + "│  ", true });
+            std::cout << p.indent + pipe(p.last) << "└─ value:\n";
+            printExpr(a->getValue(), { p.indent + pipe(p.last) + "   ", true });
+            break;
+        }
+
         default:
             std::cout << color("<unknown stmt>", Color::RED) << "\n";
         }
