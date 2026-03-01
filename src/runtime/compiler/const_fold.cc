@@ -75,15 +75,15 @@ std::optional<Value> Compiler::tryFoldBinary(BinaryExpr const* e)
 
     // fold left
     if (LE->getKind() == Expr::Kind::BINARY)
-        L = tryFoldBinary(dynamic_cast<BinaryExpr const*>(LE));
+        L = tryFoldBinary(static_cast<BinaryExpr const*>(LE));
     else if (LE->getKind() == Expr::Kind::UNARY)
-        L = tryFoldUnary(dynamic_cast<UnaryExpr const*>(LE));
+        L = tryFoldUnary(static_cast<UnaryExpr const*>(LE));
 
     // fold right
     if (RE->getKind() == Expr::Kind::BINARY)
-        R = tryFoldBinary(dynamic_cast<BinaryExpr const*>(RE));
+        R = tryFoldBinary(static_cast<BinaryExpr const*>(RE));
     else if (RE->getKind() == Expr::Kind::UNARY)
-        R = tryFoldUnary(dynamic_cast<UnaryExpr const*>(RE));
+        R = tryFoldUnary(static_cast<UnaryExpr const*>(RE));
 
     if (!R && !L)
         return std::nullopt;
