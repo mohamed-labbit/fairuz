@@ -22,7 +22,6 @@ void Compiler::compileStmt(Stmt const* s)
     case Stmt::Kind::ASSIGNMENT: compileAssignmentStmt(dynamic_cast<AssignmentStmt const*>(s)); break;
     case Stmt::Kind::IF: compileIf(dynamic_cast<IfStmt const*>(s)); break;
     case Stmt::Kind::WHILE: compileWhile(dynamic_cast<WhileStmt const*>(s)); break;
-    // case Stmt::Kind::FOR: compileFor(static_cast<ForStmt const*>(s)); break;
     case Stmt::Kind::FUNC: compileFunctionDef(dynamic_cast<FunctionDef const*>(s)); break;
     case Stmt::Kind::RETURN: compileReturn(dynamic_cast<ReturnStmt const*>(s)); break;
     case Stmt::Kind::INVALID:
@@ -33,16 +32,12 @@ void Compiler::compileStmt(Stmt const* s)
 
 void Compiler::compileBlock(BlockStmt const* s)
 {
-    bool is_top_level = Current_->isTopLevel && Current_->scopeDepth == 0;
-
-    if (!is_top_level)
-        beginScope();
+    beginScope();
 
     for (Stmt const* child : s->getStatements())
         compileStmt(child);
 
-    if (!is_top_level)
-        endScope(s->getLine());
+    endScope(s->getLine());
 }
 
 void Compiler::compileExprStmt(ExprStmt const* s)
@@ -306,7 +301,13 @@ void Compiler::compileReturn(ReturnStmt const* s)
 {
     uint32_t line = s->getLine();
 
-    if (!s->hasValue()) {
+    // this is a stub, because compileReturn should never be called with a nullptr
+    // a node ptr should be valid to contain node metadata
+    if (!s->hasValue())
+        return;
+
+    if (s->getValue()->getKind() == Expr::Kind::LITERAL && dynamic_cast<LiteralExpr const*>(s->getValue())->isNil()) {
+        // generate one return nil op code instead of load nil and return
         emit(make_ABC(static_cast<uint8_t>(OpCode::RETURN_NIL), 0, 0, 0), line);
         markDead();
         return;
