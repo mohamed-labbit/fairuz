@@ -5,7 +5,7 @@
 #include "../../../include/runtime/opcode/chunk.hpp"
 #include "../../../include/runtime/opcode/opcode.hpp"
 #include "../../../include/types/string.hpp"
-
+#include "../../../include/ast/printer.hpp"
 #include "../../../include/ast/ast.hpp"
 
 #include <algorithm>
@@ -943,7 +943,7 @@ TEST(CompilerReturn, ReturnNilEmitsReturnNil)
     dump(chunk);
     BytecodeChecker bc(*chunk);
     bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
-    bc.done(); // no implicit second RETURN_NIL — it's dead code
+    bc.done();
 }
 
 TEST(CompilerReturn, ReturnValueEmitsReturn)
@@ -1271,23 +1271,22 @@ TEST(CompilerList, ListCapHintCappedAt255)
     EXPECT_EQ(instr_B(new_list), 255u) << "capacity hint must be capped at 255";
 }
 
-TEST(CompilerScope, LocaslDontLeakOutOfBlock)
+TEST(CompilerScope, LocalslDontLeakOutOfBlock)
 {
     // { let x = 1 }   ← x is gone after block
     // let x = 2       ← this x should also be r0 (reused)
-    Chunk* chunk = compile_ok(blk(
-        makeBlock([] {
-            std::vector<Stmt*> s;
-            s.push_back(decl("x", makeLiteralInt(1)));
-            return s;
-        }()),
-        decl("y", makeLiteralInt(2))));
+    BlockStmt* _ast = blk(
+        makeBlock({ decl("x", makeLiteralInt(1)) }),
+        decl("x", makeLiteralInt(2)));
+    Chunk* chunk = compile_ok(_ast);
+    ASTPrinter printer;
+    printer.print(_ast);
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     // After the inner block closes, next_reg returns to 0, so y goes into r0
     BytecodeChecker bc(*chunk);
     bc.next("LOAD_INT 1 (inner x)").op(OpCode::LOAD_INT).A(0).Bx(load_int_bx(1));
-    bc.next("LOAD_INT 2 (y)").op(OpCode::LOAD_INT).A(0).Bx(load_int_bx(2));
+    bc.next("LOAD_INT 2 (outer x)").op(OpCode::LOAD_INT).A(0).Bx(load_int_bx(2));
     bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
     bc.done();
     EXPECT_EQ(chunk->local_count, 1); // max concurrent locals = 1
@@ -1441,7 +1440,7 @@ TEST(CompilerIntegration, CounterWithClosure)
 
 TEST(CompilerIntegration, NestedArithmetic)
 {
-    // let result = (2 + 3) * (4 - 1)
+    // result = (2 + 3) * (4 - 1)
     // Entire expression is const-folded: (5) * (3) = 15
     Chunk* chunk = compile_ok(blk(
         decl("result",
