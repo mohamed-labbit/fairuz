@@ -369,10 +369,9 @@ bool StringRef::find(StringRef const& s) const noexcept
     size_t search_len = s.len();
     size_t max_start = len() - search_len;
 
-    for (size_t i = 0; i <= max_start; ++i) {
+    for (size_t i = 0; i <= max_start; ++i)
         if (::memcmp(data() + i, s.data(), search_len * sizeof(char)) == 0)
             return true;
-    }
 
     return false;
 }
@@ -535,15 +534,13 @@ StringRef& StringRef::trimWhitespace(std::optional<bool const> leading, std::opt
     bool const trim_leading = leading.value_or(true);
     bool const trim_trailing = trailing.value_or(true);
 
-    if (trim_leading) {
+    if (trim_leading)
         while (Length_ > 0 && util::isWhitespace(data()[0]))
             ++Offset_, --Length_;
-    }
 
-    if (trim_trailing) {
+    if (trim_trailing)
         while (Length_ > 0 && util::isWhitespace(data()[Length_ - 1]))
             --Length_;
-    }
 
     return *this;
 }
@@ -555,7 +552,6 @@ void StringRef::detach()
 
     // Determine slice length
     size_t copy_len = (Length_ > 0) ? Length_ : (StringData_->length() - Offset_);
-
     // Allocate a new string of exactly the required size
     String* s = string_allocator.allocateObject<String>(copy_len);
 
