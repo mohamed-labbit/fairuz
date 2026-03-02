@@ -44,7 +44,6 @@ String::String(size_t const s, char const c)
         ::memset(storage_.heap.ptr, c, s);
         setLen(s);
     }
-
     terminate();
 }
 
@@ -67,7 +66,6 @@ String::String(char const* s, size_t n)
         storage_.heap.ptr = string_allocator.allocateArray<char>(storage_.heap.cap);
         ::memcpy(storage_.heap.ptr, s, n * sizeof(char));
     }
-
     terminate();
 }
 
@@ -79,11 +77,7 @@ String::String(char const* s)
         return;
     }
 
-    char const* p = s;
-    while (*p++)
-        ;
-
-    size_t n = p - s - 1;
+    size_t n = ::strlen(s);
 
     if (n < SSO_SIZE) {
         is_heap = false;
@@ -96,7 +90,6 @@ String::String(char const* s)
         storage_.heap.ptr = string_allocator.allocateArray<char>(storage_.heap.cap);
         ::memcpy(storage_.heap.ptr, s, (n + 1) * sizeof(char));
     }
-
     terminate();
 }
 
@@ -104,7 +97,6 @@ bool String::operator==(String const& other) const noexcept
 {
     if (length() != other.length())
         return false;
-
     if (length() == 0)
         return true;
 
