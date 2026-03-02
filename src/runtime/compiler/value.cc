@@ -19,7 +19,6 @@ Value Value::integer(int64_t v)
     // For values outside ±2^47 we fall back to double.
     if (v >= -(INT64_C(1) << 47) && v < (INT64_C(1) << 47)) {
         uint64_t payload = static_cast<uint64_t>(v) & UINT64_C(0xFFFFFFFFFFFF);
-
         return Value { NANBOX_QNAN | TAG_INT | (payload << 3) };
     }
 
@@ -41,42 +40,16 @@ Value Value::real(double d)
 Value Value::object(ObjHeader* ptr)
 {
     uintptr_t p = reinterpret_cast<uintptr_t>(ptr);
-
-    return Value {
-        NANBOX_SIGN_BIT | NANBOX_QNAN | (static_cast<uint64_t>(p) & UINT64_C(0xFFFFFFFFFFFF))
-    };
+    return Value { NANBOX_SIGN_BIT | NANBOX_QNAN | (static_cast<uint64_t>(p) & UINT64_C(0xFFFFFFFFFFFF)) };
 }
 
 // ---- type queries ----
-bool Value::isNil() const
-{
-    return raw == NIL_VAL;
-}
-
-bool Value::isBool() const
-{
-    return (raw & (NANBOX_QNAN | TAG_BOOL | TAG_INT)) == (NANBOX_QNAN | TAG_BOOL);
-}
-
-bool Value::isInt() const
-{
-    return (raw & (NANBOX_QNAN | TAG_INT)) == (NANBOX_QNAN | TAG_INT) && !isObj();
-}
-
-bool Value::isDouble() const
-{
-    return (raw & NANBOX_QNAN) != NANBOX_QNAN || raw == CANONICAL_NAN;
-}
-
-bool Value::isObj() const
-{
-    return (raw & (NANBOX_SIGN_BIT | NANBOX_QNAN)) == (NANBOX_SIGN_BIT | NANBOX_QNAN);
-}
-
-bool Value::isNumber() const
-{
-    return isInt() || isDouble();
-}
+bool Value::isNil() const { return raw == NIL_VAL; }
+bool Value::isBool() const { return (raw & (NANBOX_QNAN | TAG_BOOL | TAG_INT)) == (NANBOX_QNAN | TAG_BOOL); }
+bool Value::isInt() const { return (raw & (NANBOX_QNAN | TAG_INT)) == (NANBOX_QNAN | TAG_INT) && !isObj(); }
+bool Value::isDouble() const { return (raw & NANBOX_QNAN) != NANBOX_QNAN || raw == CANONICAL_NAN; }
+bool Value::isObj() const { return (raw & (NANBOX_SIGN_BIT | NANBOX_QNAN)) == (NANBOX_SIGN_BIT | NANBOX_QNAN); }
+bool Value::isNumber() const { return isInt() || isDouble(); }
 
 // ---- extractors ----
 bool Value::asBool() const
@@ -135,80 +108,31 @@ bool Value::isTruthy() const
 }
 
 // Defined in value.cpp
-ObjString* Value::asString() const
-{
-    return static_cast<ObjString*>(asObj());
-}
+ObjString* Value::asString() const { return static_cast<ObjString*>(asObj()); }
+ObjList* Value::asList() const { return static_cast<ObjList*>(asObj()); }
+ObjFunction* Value::asFunction() const { return static_cast<ObjFunction*>(asObj()); }
+ObjClosure* Value::asClosure() const { return static_cast<ObjClosure*>(asObj()); }
+ObjNative* Value::asNative() const { return static_cast<ObjNative*>(asObj()); }
 
-ObjList* Value::asList() const
-{
-    return static_cast<ObjList*>(asObj());
-}
-
-ObjFunction* Value::asFunction() const
-{
-    return static_cast<ObjFunction*>(asObj());
-}
-
-ObjClosure* Value::asClosure() const
-{
-    return static_cast<ObjClosure*>(asObj());
-}
-
-ObjNative* Value::asNative() const
-{
-    return static_cast<ObjNative*>(asObj());
-}
-
-bool Value::isString() const
-{
-    return isObj() && asObj()->type == ObjType::STRING;
-}
-
-bool Value::isList() const
-{
-    return isObj() && asObj()->type == ObjType::LIST;
-}
-
-bool Value::isFunction() const
-{
-    return isObj() && asObj()->type == ObjType::FUNCTION;
-}
-
-bool Value::isClosure() const
-{
-    return isObj() && asObj()->type == ObjType::CLOSURE;
-}
-
-bool Value::isNative() const
-{
-    return isObj() && asObj()->type == ObjType::NATIVE;
-}
+bool Value::isString() const { return isObj() && asObj()->type == ObjType::STRING; }
+bool Value::isList() const { return isObj() && asObj()->type == ObjType::LIST; }
+bool Value::isFunction() const { return isObj() && asObj()->type == ObjType::FUNCTION; }
+bool Value::isClosure() const { return isObj() && asObj()->type == ObjType::CLOSURE; }
+bool Value::isNative() const { return isObj() && asObj()->type == ObjType::NATIVE; }
 
 // Pretty-printer (defined in value.cpp)
 inline std::ostream& operator<<(std::ostream& os, Value v)
 {
     using namespace mylang::runtime;
 
-    if (v.isNil()) {
-        os << "nil";
-        return os;
-    }
-
-    if (v.isBool()) {
-        os << (v.asBool() ? "true" : "false");
-        return os;
-    }
-
-    if (v.isInt()) {
-        os << v.asInt();
-        return os;
-    }
-
-    if (v.isDouble()) {
-        os << v.asDouble();
-        return os;
-    }
+    if (v.isNil())
+        return { os << "nil" };
+    if (v.isBool())
+        return { os << (v.asBool() ? "true" : "false") };
+    if (v.isInt())
+        return { os << v.asInt() };
+    if (v.isDouble())
+        return { os << v.asDouble() };
 
     if (v.isObj()) {
         ObjHeader* obj = v.asObj();
@@ -217,8 +141,7 @@ inline std::ostream& operator<<(std::ostream& os, Value v)
         case ObjType::STRING: {
             ObjString* s = static_cast<ObjString*>(obj);
             os << s->chars;
-            break;
-        }
+        } break;
 
         case ObjType::LIST: {
             ObjList* list = static_cast<ObjList*>(obj);
@@ -229,8 +152,7 @@ inline std::ostream& operator<<(std::ostream& os, Value v)
                     os << ", ";
             }
             os << "]";
-            break;
-        }
+        } break;
 
         case ObjType::FUNCTION: {
             ObjFunction* fn = static_cast<ObjFunction*>(obj);
@@ -238,8 +160,7 @@ inline std::ostream& operator<<(std::ostream& os, Value v)
                 os << "<fn " << fn->name->chars << ">";
             else
                 os << "<fn anonymous>";
-            break;
-        }
+        } break;
 
         case ObjType::CLOSURE: {
             ObjClosure* closure = static_cast<ObjClosure*>(obj);
@@ -247,14 +168,12 @@ inline std::ostream& operator<<(std::ostream& os, Value v)
                 os << "<closure " << closure->function->name->chars << ">";
             else
                 os << "<closure anonymous>";
-            break;
-        }
+        } break;
 
         case ObjType::NATIVE: {
             ObjNative* native = static_cast<ObjNative*>(obj);
             os << "<native fn " << native->name->chars << ">";
-            break;
-        }
+        } break;
 
         case ObjType::UPVALUE:
             os << "<upvalue>";
