@@ -14,25 +14,11 @@ Reg Compiler::allocReg()
     return r;
 }
 
-void Compiler::freeReg()
-{
-    Current_->freeReg();
-}
-
-void Compiler::freeRegsTo(Reg mark)
-{
-    Current_->freeRegsTo(mark);
-}
-
-Reg Compiler::ensureDst(Reg* dst)
-{
-    return dst ? *dst : allocReg();
-}
-
-Reg Compiler::errorReg()
-{
-    return 0;
-}
+void Compiler::freeReg() { Current_->freeReg(); }
+void Compiler::freeRegsTo(Reg mark) { Current_->freeRegsTo(mark); }
+Reg Compiler::ensureDst(Reg* dst) { return dst ? *dst : allocReg(); }
+Reg Compiler::errorReg() { return 0; }
 
 }
+
 }
