@@ -10,7 +10,6 @@ std::optional<Value> Compiler::constValue(Expr const* e)
 {
     if (!e)
         return std::nullopt;
-
     if (e->getKind() != Expr::Kind::LITERAL)
         return std::nullopt;
 
@@ -122,10 +121,8 @@ std::optional<Value> Compiler::_tryFoldBinary(BinaryExpr const* e)
     // Equality works on all types
     if (op == BinaryOp::OP_EQ)
         return Value::boolean(*L == *R);
-
     if (op == BinaryOp::OP_NEQ)
         return Value::boolean(*L != *R);
-
     // Arithmetic requires numeric operands
     if (!L->isNumber() || !R->isNumber())
         return std::nullopt;
