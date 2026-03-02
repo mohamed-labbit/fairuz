@@ -187,7 +187,7 @@ struct ObjFunction : ObjHeader {
 
     ~ObjFunction()
     {
-        // chunk is owned by whoever created it (Compiler or test).  Don't delete here.
+        // chunk is owned by caller
     }
 };
 
