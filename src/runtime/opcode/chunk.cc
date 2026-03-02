@@ -18,8 +18,8 @@ bool Chunk::patchJump(uint32_t instr_idx)
     if (offset > 32767 || offset < -32768)
         return false;
 
-    auto op = instr_op(code[instr_idx]);
-    auto A = instr_A(code[instr_idx]);
+    uint8_t op = instr_op(code[instr_idx]);
+    uint8_t A = instr_A(code[instr_idx]);
     code[instr_idx] = make_AsBx(op, A, offset);
 
     return true;
