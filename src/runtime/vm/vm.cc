@@ -3,36 +3,7 @@
 namespace mylang {
 namespace runtime {
 
-#undef READ_INSTR
-#undef PEEK_INSTR
-#undef RA
-#undef RB
-#undef RC
-
-#define READ_INSTR() (chunk()->code[frame().ip++])
-#define PEEK_INSTR() (chunk()->code[frame().ip])
-#define RA(i) reg(instr_A(i))
-#define RB(i) reg(instr_B(i))
-#define RC(i) reg(instr_C(i))
-
-template<typename T, typename... Args>
-T* VM::alloc_obj(Args&&... args)
-{
-    if (gc_allocated_ > gc_threshold_)
-        collect_garbage();
-
-    T* obj = new T(std::forward<Args>(args)...);
-    gc_allocated_ += sizeof(T);
-
-    // Prepend to intrusive list
-    obj->next = gc_head_;
-    gc_head_ = obj;
-    return obj;
-}
-
-// ---------------------------------------------------------------------------
 // String interning
-// ---------------------------------------------------------------------------
 
 ObjString* VM::intern(StringRef const& s)
 {
@@ -45,9 +16,7 @@ ObjString* VM::intern(StringRef const& s)
     return obj;
 }
 
-// ---------------------------------------------------------------------------
 // Constructor / Destructor
-// ---------------------------------------------------------------------------
 
 VM::VM()
 {
@@ -74,9 +43,7 @@ VM::~VM()
     }
 }
 
-// ---------------------------------------------------------------------------
 // Globals
-// ---------------------------------------------------------------------------
 
 void VM::set_global(StringRef const& name, Value v)
 {
@@ -94,9 +61,7 @@ bool VM::has_global(StringRef const& name) const
     return globals_.count(name) > 0;
 }
 
-// ---------------------------------------------------------------------------
 // Native registration
-// ---------------------------------------------------------------------------
 
 void VM::register_native(StringRef const& name, NativeFn fn, int arity)
 {
@@ -105,9 +70,7 @@ void VM::register_native(StringRef const& name, NativeFn fn, int arity)
     globals_[name] = Value::object(nat);
 }
 
-// ---------------------------------------------------------------------------
 // run() — entry point
-// ---------------------------------------------------------------------------
 
 Value VM::run(Chunk* chunk)
 {
@@ -133,9 +96,7 @@ Value VM::run(Chunk* chunk)
     return result;
 }
 
-// ---------------------------------------------------------------------------
 // ensure_stack
-// ---------------------------------------------------------------------------
 
 void VM::ensure_stack(int needed)
 {
@@ -143,11 +104,15 @@ void VM::ensure_stack(int needed)
         stack_.resize(stack_.size() * 2);
 }
 
-// ---------------------------------------------------------------------------
 // Main dispatch loop
-// ---------------------------------------------------------------------------
 
 // Convenience macros — only alive inside execute()
+
+#define READ_INSTR() (chunk()->code[frame().ip++])
+#define PEEK_INSTR() (chunk()->code[frame().ip])
+#define RA(i) reg(instr_A(i))
+#define RB(i) reg(instr_B(i))
+#define RC(i) reg(instr_C(i))
 
 Value VM::execute()
 {
@@ -157,9 +122,7 @@ Value VM::execute()
 
         switch (static_cast<OpCode>(op)) {
 
-            // ---------------------------------------------------------------
             // Loads
-            // ---------------------------------------------------------------
 
         case OpCode::LOAD_NIL: {
             // Fill registers [B .. B+C)
@@ -211,17 +174,13 @@ Value VM::execute()
             break;
         }
 
-            // ---------------------------------------------------------------
             // Register moves
-            // ---------------------------------------------------------------
 
         case OpCode::MOVE:
             RA(ins) = RB(ins);
             break;
 
-            // ---------------------------------------------------------------
             // Upvalues
-            // ---------------------------------------------------------------
 
         case OpCode::GET_UPVALUE: {
             uint8_t idx = instr_B(ins);
@@ -241,9 +200,7 @@ Value VM::execute()
             break;
         }
 
-            // ---------------------------------------------------------------
             // Arithmetic — integer-specialised fast paths
-            // ---------------------------------------------------------------
 
         case OpCode::ADD: {
             Value a = RB(ins), b = RC(ins);
@@ -358,9 +315,7 @@ Value VM::execute()
             RA(ins) = do_shr(RB(ins), RC(ins));
             break;
 
-            // ---------------------------------------------------------------
             // Comparison — result is boolean in A
-            // ---------------------------------------------------------------
 
         case OpCode::EQ: RA(ins) = Value::boolean(do_eq(RB(ins), RC(ins))); break;
         case OpCode::NEQ: RA(ins) = Value::boolean(!do_eq(RB(ins), RC(ins))); break;
@@ -377,9 +332,7 @@ Value VM::execute()
             RA(ins) = Value::boolean(!RB(ins).isTruthy());
             break;
 
-            // ---------------------------------------------------------------
             // String concatenation
-            // ---------------------------------------------------------------
 
         case OpCode::CONCAT: {
             uint8_t first = instr_B(ins);
@@ -407,9 +360,7 @@ Value VM::execute()
             break;
         }
 
-            // ---------------------------------------------------------------
             // List operations
-            // ---------------------------------------------------------------
 
         case OpCode::NEW_LIST: {
             uint8_t cap = instr_B(ins);
@@ -482,9 +433,7 @@ Value VM::execute()
             break;
         }
 
-            // ---------------------------------------------------------------
             // Jumps
-            // ---------------------------------------------------------------
 
         case OpCode::JUMP:
             frame().ip += instr_sBx(ins);
@@ -504,7 +453,6 @@ Value VM::execute()
             frame().ip += instr_sBx(ins); // sBx is negative → backward
             break;
 
-            // ---------------------------------------------------------------
             // Numeric for-loop
             //
             // Registers at base A:
@@ -512,7 +460,6 @@ Value VM::execute()
             //   A+1  limit
             //   A+2  step
             //   A+3  user loop variable (updated from A+0 each iteration)
-            // ---------------------------------------------------------------
 
         case OpCode::FOR_PREP: {
             uint8_t base = instr_A(ins);
@@ -594,13 +541,11 @@ Value VM::execute()
             break;
         }
 
-            // ---------------------------------------------------------------
             // Closures
             //
             // CLOSURE A Bx   — A = new closure for chunk->functions[Bx]
             // Immediately following: one MOVE pseudo-instruction per upvalue:
             //   MOVE A=is_local B=index  (A=1 → capture local, A=0 → re-capture upvalue)
-            // ---------------------------------------------------------------
 
         case OpCode::CLOSURE: {
             uint16_t fn_idx = instr_Bx(ins);
@@ -631,9 +576,7 @@ Value VM::execute()
             break;
         }
 
-            // ---------------------------------------------------------------
             // Function calls
-            // ---------------------------------------------------------------
 
         case OpCode::CALL: {
             uint8_t func_reg = instr_A(ins);
@@ -675,18 +618,15 @@ Value VM::execute()
             break;
         }
 
-            // ---------------------------------------------------------------
             // Return
-            // ---------------------------------------------------------------
 
         case OpCode::RETURN: {
             uint8_t src = instr_A(ins);
             uint8_t nresult = instr_B(ins);
+            Value result = (nresult > 0) ? reg(src) : Value::nil(); // capture BEFORE pop
             return_from_call(src, nresult);
-            // If we just popped the last frame, we're done
             if (frames_.empty())
-                return (nresult > 0) ? stack_[src] : Value::nil();
-
+                return result; // ← must exit execute() here
             break;
         }
 
@@ -694,13 +634,10 @@ Value VM::execute()
             return_from_call(0, 0);
             if (frames_.empty())
                 return Value::nil();
-
             break;
         }
 
-            // ---------------------------------------------------------------
             // Misc
-            // ---------------------------------------------------------------
 
         case OpCode::NOP:
             // IC descriptor NOP — consumed by the opcode that precedes it;
@@ -717,9 +654,13 @@ Value VM::execute()
     }
 }
 
-// ---------------------------------------------------------------------------
+#undef READ_INSTR
+#undef PEEK_INSTR
+#undef RA
+#undef RB
+#undef RC
+
 // call_value — dispatch to closure or native
-// ---------------------------------------------------------------------------
 
 void VM::call_value(Value callee, int argc, int base, bool tail)
 {
@@ -780,9 +721,7 @@ Value VM::call_native(ObjNative* nat, int argc, int base)
     return nat->fn(argc, args);
 }
 
-// ---------------------------------------------------------------------------
 // return_from_call
-// ---------------------------------------------------------------------------
 
 void VM::return_from_call(int result_reg, int nresults)
 {
@@ -841,9 +780,7 @@ void VM::close_upvalues(int from_stack_pos)
     }
 }
 
-// ---------------------------------------------------------------------------
 // Arithmetic helpers
-// ---------------------------------------------------------------------------
 
 static inline bool both_numeric(Value a, Value b)
 {
@@ -1048,9 +985,7 @@ bool VM::do_le(Value a, Value b)
     runtime_error("'<=' operands must be numbers or strings");
 }
 
-// ---------------------------------------------------------------------------
 // IC profile update
-// ---------------------------------------------------------------------------
 
 void VM::update_ic_binary(Chunk* ch, uint32_t nop_ip, Value lhs, Value rhs, Value result)
 {
@@ -1079,126 +1014,7 @@ void VM::update_ic_call(Chunk* ch, uint32_t ic_ip, Value callee, Value result)
     }
 }
 
-// ---------------------------------------------------------------------------
-// Mark-and-sweep GC
-// ---------------------------------------------------------------------------
-
-void VM::mark_value(Value v)
-{
-    if (v.isObj())
-        mark_object(v.asObj());
-}
-
-void VM::mark_object(ObjHeader* obj)
-{
-    if (!obj || obj->is_marked)
-        return;
-    obj->is_marked = true;
-
-    switch (obj->type) {
-    case ObjType::STRING:
-        break; // no references
-    case ObjType::LIST:
-        for (Value& v : static_cast<ObjList*>(obj)->elements)
-            mark_value(v);
-        break;
-    case ObjType::FUNCTION:
-        // Mark constants in the chunk
-        if (static_cast<ObjFunction*>(obj)->chunk)
-            for (Value& v : static_cast<ObjFunction*>(obj)->chunk->constants)
-                mark_value(v);
-        break;
-    case ObjType::CLOSURE: {
-        ObjClosure* cl = static_cast<ObjClosure*>(obj);
-        mark_object(cl->function);
-        for (ObjUpvalue* uv : cl->upvalues)
-            mark_object(uv);
-
-    } break;
-    case ObjType::NATIVE:
-        mark_object(static_cast<ObjNative*>(obj)->name);
-        break;
-    case ObjType::UPVALUE: {
-        ObjUpvalue* uv = static_cast<ObjUpvalue*>(obj);
-        mark_value(*uv->location);
-        mark_value(uv->closed);
-        break;
-    }
-    }
-}
-
-void VM::mark_roots()
-{
-    // Stack
-    for (int i = 0; i < stack_top_; ++i)
-        mark_value(stack_[i]);
-    // Frames (closures)
-    for (auto& f : frames_)
-        mark_object(f.closure);
-    // Globals
-    for (auto& [k, v] : globals_)
-        mark_value(v);
-    // Open upvalues
-    for (ObjUpvalue* uv : open_upvalues_)
-        mark_object(uv);
-}
-
-void VM::trace_references()
-{
-    // We already marked everything reachable in mark_roots() recursively.
-    // Nothing further needed for a simple stop-the-world collector.
-}
-
-void VM::sweep()
-{
-    ObjHeader** prev = &gc_head_;
-    ObjHeader* cur = gc_head_;
-
-    while (cur) {
-        if (cur->is_marked) {
-            cur->is_marked = false; // reset for next cycle
-            prev = &cur->next;
-            cur = cur->next;
-        } else {
-            ObjHeader* unreachable = cur;
-            cur = cur->next;
-            *prev = cur;
-            gc_allocated_ -= sizeof(*unreachable); // approximate
-
-            // Also remove from string table if it's a string
-            if (unreachable->type == ObjType::STRING) {
-                auto* s = static_cast<ObjString*>(unreachable);
-                string_table_.erase(s->chars);
-            }
-
-            switch (unreachable->type) {
-            case ObjType::STRING: delete static_cast<ObjString*>(unreachable); break;
-            case ObjType::LIST: delete static_cast<ObjList*>(unreachable); break;
-            case ObjType::FUNCTION: delete static_cast<ObjFunction*>(unreachable); break;
-            case ObjType::CLOSURE: delete static_cast<ObjClosure*>(unreachable); break;
-            case ObjType::NATIVE: delete static_cast<ObjNative*>(unreachable); break;
-            case ObjType::UPVALUE: delete static_cast<ObjUpvalue*>(unreachable); break;
-            }
-        }
-    }
-}
-
-void VM::collect_garbage()
-{
-    mark_roots();
-    trace_references();
-    sweep();
-
-    gc_threshold_ = static_cast<size_t>(
-        static_cast<double>(gc_allocated_) * GC_GROWTH);
-
-    if (gc_threshold_ < GC_INITIAL)
-        gc_threshold_ = GC_INITIAL;
-}
-
-// ---------------------------------------------------------------------------
 // Error helpers
-// ---------------------------------------------------------------------------
 
 [[noreturn]] void VM::runtime_error(std::string const& msg)
 {
@@ -1219,136 +1035,6 @@ std::string VM::build_traceback() const
     }
 
     return ss.str();
-}
-
-// ---------------------------------------------------------------------------
-// Standard library
-// ---------------------------------------------------------------------------
-
-void VM::open_stdlib()
-{
-    // print(...) — print all args space-separated with a newline
-    register_native("print", [](int argc, Value* argv) -> Value {
-        for (int i = 0; i < argc; ++i) {
-            if (i > 0)  std::cout << ' ';
-            Value v = argv[i];
-            if (v.isNil())          std::cout << "nil";
-            else if (v.isBool())    std::cout << (v.asBool() ? "true" : "false");
-            else if (v.isInt())     std::cout << v.asInt();
-            else if (v.isDouble())  std::cout << v.asDouble();
-            else if (v.isString())  std::cout << v.asString()->chars;
-            else if (v.isList()) {
-                std::cout << "[";
-                auto& elems = v.asList()->elements;
-                for (size_t j = 0; j < elems.size(); ++j) {
-                    if (j > 0)  std::cout << ", ";
-                    Value e = elems[j];
-                    if (e.isNil())         std::cout << "nil";
-                    else if (e.isBool())   std::cout << (e.asBool() ? "true" : "false");
-                    else if (e.isInt())    std::cout << e.asInt();
-                    else if (e.isDouble()) std::cout << e.asDouble();
-                    else if (e.isString()) std::cout << e.asString()->chars;
-                    else                   std::cout << "<obj>";
-                }
-                std::cout << "]";
-            } else std::cout << "<obj>";
-        }
-        std::cout << '\n';
-        return Value::nil(); }, /*arity=*/-1);
-
-    // type(v) → string name of the type
-    register_native("type", [](int argc, Value* argv) -> Value {
-        if (argc < 1)  return Value::nil();
-        Value v = argv[0];
-        // We can't call intern() here (no VM*), so we return a raw ObjString.
-        // Callers that need the string object should use the longer form.
-        // For stdlib simplicity we return a string by re-registering after intern.
-        // We store the name as a compile-time constant string in the closure instead.
-        // (See below — registered as a lambda that uses a static map.)
-        if (v.isNil())     { static ObjString s("nil");      return Value::object(&s); }
-        if (v.isBool())    { static ObjString s("bool");     return Value::object(&s); }
-        if (v.isInt())     { static ObjString s("int");      return Value::object(&s); }
-        if (v.isDouble())  { static ObjString s("float");    return Value::object(&s); }
-        if (v.isString())  { static ObjString s("string");   return Value::object(&s); }
-        if (v.isList())    { static ObjString s("list");     return Value::object(&s); }
-        if (v.isClosure()) { static ObjString s("function"); return Value::object(&s); }
-        if (v.isNative())  { static ObjString s("function"); return Value::object(&s); }
-        static ObjString s("unknown"); return Value::object(&s); }, 1);
-
-    // len(list) → integer length
-    register_native("len", [](int argc, Value* argv) -> Value {
-        if (argc < 1)           { return Value::integer(0); }
-        if (argv[0].isList())   { return Value::integer(static_cast<int64_t>(argv[0].asList()->elements.size())); }
-        if (argv[0].isString()) { return Value::integer(static_cast<int64_t>(argv[0].asString()->chars.len())); }
-        throw VMError("len() argument must be a list or string"); }, 1);
-
-    // append(list, value) — mutates and returns list
-    register_native("append", [](int argc, Value* argv) -> Value {
-        if (argc < 2 || !argv[0].isList()) throw VMError("append(list, value) — first argument must be a list");
-        argv[0].asList()->elements.push_back(argv[1]);
-        return argv[0]; }, 2);
-
-    // pop(list) — removes and returns last element
-    register_native("pop", [](int argc, Value* argv) -> Value {
-        if (argc < 1 || !argv[0].isList()) throw VMError("pop(list) — argument must be a list");
-        auto& elems = argv[0].asList()->elements;
-        if (elems.empty()) throw VMError("pop() on empty list");
-        Value v = elems.back();
-        elems.pop_back();
-        return v; }, 1);
-
-    // str(v) → string representation (returns ObjString*)
-    register_native("str", [](int argc, Value* argv) -> Value {
-        if (argc < 1) {  static ObjString s(""); return Value::object(&s); }
-        Value v = argv[0];
-        StringRef result;
-        if (v.isNil())         result = "nil";
-        else if (v.isBool())   result = v.asBool() ? "true" : "false";
-        else if (v.isInt())    result = std::to_string(v.asInt()).data();
-        else if (v.isDouble()) result = std::to_string(v.asDouble()).data();
-        else if (v.isString()) return v; // already a string
-        else                   result = "<obj>";
-        // Allocate on heap — GC will track it
-        ObjString* s = new ObjString(result);
-        return Value::object(s); }, 1);
-
-    // int(v) → integer truncation
-    register_native("int", [](int argc, Value* argv) -> Value {
-        if (argc < 1) return Value::integer(0);
-        Value v = argv[0];
-        if (v.isInt())    return v;
-        if (v.isDouble()) return Value::integer(static_cast<int64_t>(v.asDouble()));
-        if (v.isBool())   return Value::integer(v.asBool() ? 1 : 0);
-        if (v.isString()) {
-            try { return Value::integer(v.asString()->chars.toDouble()); }
-            catch (...) { throw VMError("int() cannot convert string to integer"); }
-        }
-        throw VMError("int() cannot convert this type"); }, 1);
-
-    // float(v) → double conversion
-    register_native("float", [](int argc, Value* argv) -> Value {
-        if (argc < 1) return Value::real(0.0);
-        Value v = argv[0];
-        if (v.isDouble()) return v;
-        if (v.isInt())    return Value::real(static_cast<double>(v.asInt()));
-        if (v.isBool())   return Value::real(v.asBool() ? 1.0 : 0.0);
-        if (v.isString()) {
-            try { return Value::real(v.asString()->chars.toDouble()); }
-            catch (...) { throw VMError("float() cannot convert string"); }
-        }
-        throw VMError("float() cannot convert this type"); }, 1);
-
-    // assert(cond, msg?) — throw if cond is falsy
-    register_native("assert", [](int argc, Value* argv) -> Value {
-        if (argc < 1 || !argv[0].isTruthy()) {
-            std::string msg = "assertion failed";
-            if (argc >= 2 && argv[1].isString()) msg = argv[1].asString()->chars.data();
-            throw VMError(msg);
-        }
-        return argv[0]; }, -1);
-
-    // clock() → elapsed seconds as float (uses std::clock)
-    register_native("clock", [](int /*argc*/, Value* /*argv*/) -> Value { return Value::real(static_cast<double>(::clock()) / CLOCKS_PER_SEC); }, 0);
 }
 
 }
