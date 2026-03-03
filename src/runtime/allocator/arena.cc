@@ -168,8 +168,10 @@ void ArenaAllocator::deallocate(void* ptr, size_t const size)
     AllocStats_.TotalDeallocated -= size;
     ++AllocStats_.TotalDeallocations;
 
+    /*
     if (block.cNext() == block.begin())
         Blocks_.back();
+    */
 
     if (AllocStats_.ActiveBlocks)
         --AllocStats_.ActiveBlocks;
