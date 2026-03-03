@@ -67,7 +67,7 @@ static constexpr LiteralExpr* makeLiteralFloat(double value);
 static constexpr LiteralExpr* makeLiteralString(StringRef value);
 static constexpr LiteralExpr* makeLiteralBool(bool value);
 static constexpr NameExpr* makeName(StringRef const str);
-static constexpr ListExpr* makeList(std::vector<Expr*> elements = {});
+static constexpr ListExpr* makeList(std::vector<Expr*> elements = { });
 static constexpr CallExpr* makeCall(Expr* callee, ListExpr* args = nullptr);
 static constexpr AssignmentExpr* makeAssignmentExpr(NameExpr* target, Expr* value, bool decl = false);
 

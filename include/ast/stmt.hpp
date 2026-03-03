@@ -22,7 +22,7 @@ class ForStmt;
 class FunctionDef;
 class ReturnStmt;
 
-static constexpr BlockStmt* makeBlock(std::vector<Stmt*> stmts = {});
+static constexpr BlockStmt* makeBlock(std::vector<Stmt*> stmts = { });
 static constexpr ExprStmt* makeExprStmt(Expr* expr);
 static constexpr AssignmentStmt* makeAssignmentStmt(Expr* target, Expr* value, bool decl = false);
 static constexpr IfStmt* makeIf(Expr* condition, BlockStmt* then_block, BlockStmt* else_block = nullptr);
@@ -328,9 +328,9 @@ public:
         Kind_ = Kind::FUNC;
 
         if (!Params_)
-            Params_ = makeList(std::vector<Expr*> {});
+            Params_ = makeList(std::vector<Expr*> { });
         if (!Body_)
-            Body_ = makeBlock(std::vector<Stmt*> {});
+            Body_ = makeBlock(std::vector<Stmt*> { });
         if (!Name_)
             Name_ = makeName("");
     }
