@@ -586,7 +586,7 @@ static constexpr NameExpr* makeName(StringRef const str)
 {
     return AST_allocator.allocateObject<NameExpr>(str);
 }
-static constexpr ListExpr* makeList(std::vector<Expr*> elements )
+static constexpr ListExpr* makeList(std::vector<Expr*> elements)
 {
     return AST_allocator.allocateObject<ListExpr>(elements);
 }
