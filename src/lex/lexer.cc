@@ -4,7 +4,7 @@
 namespace mylang {
 namespace lex {
 
-#define FINISH() 
+#define FINISH()
 
 Lexer::Lexer(FileManager* fm)
     : SourceManager_(fm)
