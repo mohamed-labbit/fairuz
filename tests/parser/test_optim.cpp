@@ -1,7 +1,5 @@
 #include "../../include/ast/ast.hpp"
-#include "../../include/ast/expr.hpp"
 #include "../../include/ast/printer.hpp"
-#include "../../include/ast/stmt.hpp"
 #include "../../include/parser/optim.hpp"
 #include "../test_config.h"
 

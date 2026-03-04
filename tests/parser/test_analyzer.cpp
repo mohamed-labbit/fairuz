@@ -1,5 +1,4 @@
-#include "../../include//ast/AST_allocator.hpp"
-#include "../../include//ast/ast.hpp"
+#include "../../include/ast/ast.hpp"
 #include "../../include/lex/file_manager.hpp"
 #include "../../include/parser/analyzer.hpp"
 #include "../../include/types/string.hpp"
