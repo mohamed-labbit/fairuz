@@ -1,5 +1,5 @@
-#include "../../../include/ast/ast.hpp"
-#include "../../../include/ast/printer.hpp"
+#include "../../../include/ast.hpp"
+#include "../../../include/ast_printer.hpp"
 #include "../../../include/runtime/compiler/compiler.hpp"
 #include "../../../include/runtime/runtime_allocator.hpp"
 
@@ -24,7 +24,7 @@ void Compiler::compileStmt(Stmt const* s)
     case Stmt::Kind::WHILE: compileWhile(dynamic_cast<WhileStmt const*>(s)); break;
     case Stmt::Kind::FUNC: compileFunctionDef(dynamic_cast<FunctionDef const*>(s)); break;
     case Stmt::Kind::RETURN: compileReturn(dynamic_cast<ReturnStmt const*>(s)); break;
-    case Stmt::Kind::FOR: 
+    case Stmt::Kind::FOR:
         std::cerr << "Not implemented yet." << std::endl;
         break;
     case Stmt::Kind::INVALID:

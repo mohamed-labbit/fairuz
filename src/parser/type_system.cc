@@ -1,5 +1,5 @@
 #include "../../include/parser/type_system.hpp"
-#include "../../include/diag/diagnostic.hpp"
+#include "../../include/diagnostic.hpp"
 
 namespace mylang {
 namespace parser {
@@ -27,7 +27,7 @@ StringRef TypeSystem::Type::toString() const
     case BaseType::DICT:
         if (TypeParams.size() >= 2)
             return "Dict[" + TypeParams[0]->toString() + ", " + TypeParams[1]->toString() + "]";
-            
+
         return "Dict";
     default:
         return "Any";

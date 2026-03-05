@@ -1,4 +1,4 @@
-#include "../../include/diag/diagnostic.hpp"
+#include "../include/diagnostic.hpp"
 
 #include <iomanip>
 #include <iostream>
@@ -6,6 +6,61 @@
 
 namespace mylang {
 namespace diagnostic {
+
+void DiagnosticEngine::report(Severity const sev, std::int32_t const line, std::int32_t const col,
+    std::int32_t const len, std::string const& msg, std::string const& code)
+{
+    Diagnostics_.push_back({ sev, line, col, len, msg, code });
+}
+
+void DiagnosticEngine::addSuggestion(std::string const& suggestion)
+{
+    if (!Diagnostics_.empty())
+        Diagnostics_.back().suggestions.push_back(suggestion);
+}
+
+void DiagnosticEngine::addNote(std::int32_t line, std::string const& note)
+{
+    if (!Diagnostics_.empty())
+        Diagnostics_.back().notes.push_back({ line, note });
+}
+
+void DiagnosticEngine::emitError(std::string const& msg, Severity const sv)
+{
+    std::cerr << svToStr(sv) << ": " << msg << std::endl;
+    if (sv == Severity::FATAL)
+        throw std::runtime_error("");
+}
+
+[[noreturn]] void DiagnosticEngine::_panic(std::string const& msg) const
+{
+    std::cerr << "fatal: Program panic: " << msg << std::endl;
+    std::terminate(); // Or throw std::runtime_error(msg);
+}
+
+std::string DiagnosticEngine::svToStr(Severity const sv)
+{
+    switch (sv) {
+    case Severity::NOTE: return Color::BOLD + Color::CYAN + "note" + Color::RESET;
+    case Severity::FATAL: return Color::BOLD + Color::RED + "fatal" + Color::RESET;
+    case Severity::ERROR: return Color::BOLD + Color::RED + "error" + Color::RESET;
+    case Severity::WARNING: return Color::BOLD + Color::YELLOW + "warning" + Color::RESET;
+    default:
+        return Color::BOLD + "unknown" + Color::RESET;
+    }
+}
+
+std::vector<std::string> DiagnosticEngine::splitLines(std::string const& text) const
+{
+    std::vector<std::string> lines;
+    std::stringstream ss(text);
+    std::string line;
+
+    while (std::getline(ss, line))
+        lines.push_back(line);
+
+    return lines;
+}
 
 std::string DiagnosticEngine::toJSON() const
 {

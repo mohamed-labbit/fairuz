@@ -4,9 +4,9 @@
 #include "../../../include/runtime/compiler/value.hpp"
 #include "../../../include/runtime/opcode/chunk.hpp"
 #include "../../../include/runtime/opcode/opcode.hpp"
-#include "../../../include/types/string.hpp"
-#include "../../../include/ast/printer.hpp"
-#include "../../../include/ast/ast.hpp"
+#include "../../../include/string.hpp"
+#include "../../../include/ast_printer.hpp"
+#include "../../../include/ast.hpp"
 
 #include <algorithm>
 #include <cmath>

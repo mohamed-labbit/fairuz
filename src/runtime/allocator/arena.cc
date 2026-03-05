@@ -109,7 +109,7 @@ void* ArenaAllocator::allocate(size_t const size, size_t const alignment)
 
     // Track allocation if enabled
     if (TrackAllocations_) {
-        AllocationHeader header {};
+        AllocationHeader header { };
         header.magic = AllocationHeader::MAGIC;
         header.size = static_cast<std::uint32_t>(aligned_size);
         header.alignment = static_cast<std::uint32_t>(alignment);

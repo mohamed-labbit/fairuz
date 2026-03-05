@@ -1,4 +1,4 @@
-#include "../../../include/ast/ast.hpp"
+#include "../../../include/ast.hpp"
 #include "../../../include/runtime/compiler/compiler.hpp"
 
 namespace mylang {
@@ -162,9 +162,9 @@ std::optional<Value> Compiler::_tryFoldBinary(BinaryExpr const* e)
     case BinaryOp::OP_GT: return Value::boolean(ld > rd);
     case BinaryOp::OP_LTE: return Value::boolean(ld <= rd);
     case BinaryOp::OP_GTE: return Value::boolean(ld >= rd);
-    case BinaryOp::OP_BITAND: return both_int ? Value::integer(li & ri) : std::optional<Value> {};
-    case BinaryOp::OP_BITOR: return both_int ? Value::integer(li | ri) : std::optional<Value> {};
-    case BinaryOp::OP_BITXOR: return both_int ? Value::integer(li ^ ri) : std::optional<Value> {};
+    case BinaryOp::OP_BITAND: return both_int ? Value::integer(li & ri) : std::optional<Value> { };
+    case BinaryOp::OP_BITOR: return both_int ? Value::integer(li | ri) : std::optional<Value> { };
+    case BinaryOp::OP_BITXOR: return both_int ? Value::integer(li ^ ri) : std::optional<Value> { };
     case BinaryOp::OP_LSHIFT:
         if (!both_int || ri < 0 || ri >= 64)
             return std::nullopt;

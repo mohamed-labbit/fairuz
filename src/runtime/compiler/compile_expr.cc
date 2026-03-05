@@ -1,4 +1,4 @@
-#include "../../../include/ast/ast.hpp"
+#include "../../../include/ast.hpp"
 #include "../../../include/runtime/compiler/compiler.hpp"
 #include "../../../include/util.hpp"
 

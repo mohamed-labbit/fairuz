@@ -54,7 +54,7 @@ void Compiler::emitLoadValue(Reg dst, Value v, uint32_t line)
 
 void Compiler::pushLoop(uint32_t loop_start)
 {
-    Current_->loopStack.push_back({ {}, {}, loop_start });
+    Current_->loopStack.push_back({ { }, { }, loop_start });
 }
 
 void Compiler::popLoop(uint32_t loop_exit, uint32_t continue_target, uint32_t line)

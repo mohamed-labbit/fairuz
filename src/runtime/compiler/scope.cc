@@ -52,7 +52,7 @@ Compiler::VarInfo Compiler::resolveName(StringRef const& name)
 {
     // Search locals in current function (innermost scope first)
     auto& locals = Current_->locals;
-    for (int i = static_cast<int>(locals.size()) - 1; i >= 0; --i) 
+    for (int i = static_cast<int>(locals.size()) - 1; i >= 0; --i)
         if (locals[i].name == name)
             return { VarInfo::Kind::LOCAL, locals[i].reg };
 

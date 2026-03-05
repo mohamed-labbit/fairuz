@@ -1,5 +1,5 @@
 // stringref_test.cpp - Comprehensive brutal test suite for StringRef
-#include "../../include/types/string.hpp"
+#include "../../include/string.hpp"
 #include <algorithm>
 #include <gtest/gtest.h>
 #include <random>

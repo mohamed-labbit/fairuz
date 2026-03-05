@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../ast/ast.hpp"
+#include "../ast.hpp"
 #include "../macros.hpp"
 
 #include <memory>

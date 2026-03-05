@@ -5,8 +5,8 @@
 #include <memory>
 #include <vector>
 
-#include "../../include//ast/ast.hpp"
-#include "../../include//ast/printer.hpp"
+#include "../../include/ast.hpp"
+#include "../../include/ast_printer.hpp"
 #include "../../include/lex/file_manager.hpp"
 #include "../../include/lex/lexer.hpp"
 #include "../../include/parser/parser.hpp"

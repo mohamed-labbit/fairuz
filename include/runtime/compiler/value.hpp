@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../types/string.hpp"
+#include "../../string.hpp"
 #include "forward.hpp"
 
 #include <cassert>

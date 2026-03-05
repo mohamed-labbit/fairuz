@@ -4,7 +4,7 @@
 #include "../../include/macros.hpp"
 #include "../../include/runtime/allocator/arena.hpp"
 #include "../../include/runtime/allocator/meta.hpp"
-#include "../../include/types/string.hpp"
+#include "../../include/string.hpp"
 
 #include <atomic>
 #include <filesystem>

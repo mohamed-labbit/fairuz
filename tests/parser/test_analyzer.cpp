@@ -1,7 +1,7 @@
-#include "../../include/ast/ast.hpp"
+#include "../../include/ast.hpp"
 #include "../../include/lex/file_manager.hpp"
 #include "../../include/parser/analyzer.hpp"
-#include "../../include/types/string.hpp"
+#include "../../include/string.hpp"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <memory>

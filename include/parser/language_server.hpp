@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../macros.hpp"
-#include "../types/string.hpp"
+#include "../string.hpp"
 
 #include <unordered_map>
 #include <vector>

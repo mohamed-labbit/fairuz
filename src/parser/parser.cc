@@ -1,5 +1,5 @@
 #include "../../include/parser/parser.hpp"
-#include "../../include/diag/diagnostic.hpp"
+#include "../../include/diagnostic.hpp"
 
 #include <cassert>
 
@@ -196,7 +196,7 @@ ListExpr* Parser::parseParametersList()
         return nullptr;
 
     if (parameters.empty())
-        return makeList(std::vector<Expr*> {});
+        return makeList(std::vector<Expr*> { });
 
     return makeList(std::move(parameters));
 }
@@ -510,7 +510,7 @@ Expr* Parser::parsePrimaryExpr()
         advance();
         if (check(tok::TokenType::RPAREN)) {
             advance();
-            return makeList(std::vector<Expr*> {});
+            return makeList(std::vector<Expr*> { });
         }
 
         Expr* expr = parseExpression();

@@ -1,6 +1,6 @@
-#include "../include/ast/ast.hpp"
+#include "../include/ast.hpp"
 #include "../include/runtime/runtime_allocator.hpp"
-#include "../include/types/string_allocator.hpp"
+#include "../include/string.hpp"
 #include "test_config.h"
 
 #include <cstring>

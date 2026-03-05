@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../diag/diagnostic.hpp"
+#include "../../diagnostic.hpp"
 #include "arena_block.hpp"
 #include "meta.hpp"
 #include "stats.hpp"
@@ -40,7 +40,7 @@ private:
     };
 
     DetailedAllocStats AllocStats_;
-    std::vector<ArenaBlock> Blocks_ {};
+    std::vector<ArenaBlock> Blocks_ { };
     mutable std::shared_mutex BlocksMutex_;
     GrowthStrategy GrowthFactor_ { GrowthStrategy::LINEAR };
     size_t BlockSize_ { DEFAULT_BLOCK_SIZE };
@@ -48,9 +48,9 @@ private:
     std::string Name_ { "arena" };
     OutOfMemoryHandler OomHandler_ { nullptr };
     mutable std::mutex OomHandlerMutex_;
-    std::unordered_map<void*, AllocationHeader, VoidPtrHash, VoidPtrEqual> AllocationMap_ {};
+    std::unordered_map<void*, AllocationHeader, VoidPtrHash, VoidPtrEqual> AllocationMap_ { };
     mutable std::shared_mutex AllocationMapMutex_;
-    std::unordered_set<void*, VoidPtrHash, VoidPtrEqual> AllocatedPtrs_ {};
+    std::unordered_set<void*, VoidPtrHash, VoidPtrEqual> AllocatedPtrs_ { };
     mutable std::shared_mutex AllocatedPtrsMutex_;
     bool TrackAllocations_ { false };
     bool DebugFeatures_ { false };

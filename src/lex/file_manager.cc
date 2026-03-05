@@ -1,5 +1,5 @@
 #include "../../include/lex/file_manager.hpp"
-#include "../../include/diag/diagnostic.hpp"
+#include "../../include/diagnostic.hpp"
 
 #include <filesystem>
 #include <iostream>

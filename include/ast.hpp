@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include "../allocator.hpp"
-#include "../types/string.hpp"
+#include "allocator.hpp"
+#include "string.hpp"
 
 #include <cassert>
 
@@ -700,11 +700,32 @@ public:
     ReturnStmt& operator=(ReturnStmt const&) noexcept = delete;
 
     bool equals(Stmt const* other) const override;
-    ReturnStmt* clone() const override ;
-    Expr const* getValue() const ;
+    ReturnStmt* clone() const override;
+    Expr const* getValue() const;
     void setValue(Expr* v);
     bool hasValue() const;
 };
+
+static constexpr BinaryExpr* makeBinary(Expr* l, Expr* r, BinaryOp const op) { return AST_allocator.allocateObject<BinaryExpr>(l, r, op); }
+static constexpr UnaryExpr* makeUnary(Expr* operand, UnaryOp const op) { return AST_allocator.allocateObject<UnaryExpr>(operand, op); }
+static constexpr LiteralExpr* makeLiteralNil() { return AST_allocator.allocateObject<LiteralExpr>(); }
+static constexpr LiteralExpr* makeLiteralInt(int value) { return AST_allocator.allocateObject<LiteralExpr>(static_cast<int64_t>(value), LiteralExpr::Type::INTEGER); }
+static constexpr LiteralExpr* makeLiteralInt(int64_t value) { return AST_allocator.allocateObject<LiteralExpr>(value, LiteralExpr::Type::INTEGER); }
+static constexpr LiteralExpr* makeLiteralFloat(double value) { return AST_allocator.allocateObject<LiteralExpr>(value, LiteralExpr::Type::FLOAT); }
+static constexpr LiteralExpr* makeLiteralString(StringRef value) { return AST_allocator.allocateObject<LiteralExpr>(value); }
+static constexpr LiteralExpr* makeLiteralBool(bool value) { return AST_allocator.allocateObject<LiteralExpr>(value); }
+static constexpr NameExpr* makeName(StringRef const str) { return AST_allocator.allocateObject<NameExpr>(str); }
+static constexpr ListExpr* makeList(std::vector<Expr*> elements) { return AST_allocator.allocateObject<ListExpr>(elements); }
+static constexpr CallExpr* makeCall(Expr* callee, ListExpr* args) { return AST_allocator.allocateObject<CallExpr>(callee, args); }
+static constexpr AssignmentExpr* makeAssignmentExpr(NameExpr* target, Expr* value, bool decl) { return AST_allocator.allocateObject<AssignmentExpr>(target, value, decl); }
+static constexpr BlockStmt* makeBlock(std::vector<Stmt*> stmts) { return AST_allocator.allocateObject<BlockStmt>(stmts); }
+static constexpr ExprStmt* makeExprStmt(Expr* expr) { return AST_allocator.allocateObject<ExprStmt>(expr); }
+static constexpr AssignmentStmt* makeAssignmentStmt(Expr* target, Expr* value, bool decl) { return AST_allocator.allocateObject<AssignmentStmt>(target, value, decl); }
+static constexpr IfStmt* makeIf(Expr* condition, BlockStmt* then_block, BlockStmt* else_block) { return AST_allocator.allocateObject<IfStmt>(condition, then_block, else_block); }
+static constexpr WhileStmt* makeWhile(Expr* condition, BlockStmt* block) { return AST_allocator.allocateObject<WhileStmt>(condition, block); }
+static constexpr ForStmt* makeFor(NameExpr* target, Expr* iter, BlockStmt* block) { return AST_allocator.allocateObject<ForStmt>(target, iter, block); }
+static constexpr FunctionDef* makeFunction(NameExpr* name, ListExpr* params, BlockStmt* body) { return AST_allocator.allocateObject<FunctionDef>(name, params, body); }
+static constexpr ReturnStmt* makeReturn(Expr* value) { return AST_allocator.allocateObject<ReturnStmt>(value); }
 
 }
 }

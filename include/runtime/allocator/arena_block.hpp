@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../diag/diagnostic.hpp"
+#include "../../diagnostic.hpp"
 #include "../../macros.hpp"
 
 #include <atomic>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../ast/ast.hpp"
+#include "../ast.hpp"
 #include "../lex/file_manager.hpp"
 #include "../lex/lexer.hpp"
 #include "../lex/token.hpp"
@@ -19,7 +19,7 @@ public:
     StringRef Context_;
     std::vector<StringRef> Suggestions_;
 
-    ParseError(StringRef const& msg, unsigned int l, unsigned int c, StringRef ctx = "", std::vector<StringRef> sugg = {})
+    ParseError(StringRef const& msg, unsigned int l, unsigned int c, StringRef ctx = "", std::vector<StringRef> sugg = { })
         : Line_(l)
         , Column_(c)
         , Context_(ctx)
