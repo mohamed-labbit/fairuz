@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _UTIL_HPP
+#define _UTIL_HPP
 
 #include "macros.hpp"
 #include "string.hpp"
@@ -281,3 +282,5 @@ static bool isIntegerValue(double d, int64_t& out)
 
 } // util
 } // mylang
+
+#endif // _UTIL_HPP

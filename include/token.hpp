@@ -1,7 +1,8 @@
-#pragma once
+#ifndef _TOKEN_HPP
+#define _TOKEN_HPP
 
-#include "../macros.hpp"
-#include "../string.hpp"
+#include "macros.hpp"
+#include "string.hpp"
 
 #include <cstdint>
 #include <iostream>
@@ -253,3 +254,5 @@ private:
 
 } // namespace tok
 } // namespace mylang
+
+#endif // _TOKEN_HPP

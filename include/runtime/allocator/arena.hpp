@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _ARENA_HPP
+#define _ARENA_HPP
 
 #include "../../diagnostic.hpp"
 #include "meta.hpp"
@@ -7,9 +8,9 @@
 #include <functional>
 #include <iomanip>
 #include <iostream>
+#include <mutex>
 #include <shared_mutex>
 #include <unordered_set>
-#include <mutex>
 
 namespace mylang {
 namespace runtime {
@@ -207,3 +208,5 @@ private:
 } // namespace allocator
 } // namespace runtime
 } // namespace mylang
+
+#endif // _ARENA_HPP

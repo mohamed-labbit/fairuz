@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _STATS_HPP
+#define _STATS_HPP
 
 #include <atomic>
 #include <chrono>
@@ -111,3 +112,5 @@ private:
 } // namespace allocator
 } // namespace runtime
 } // namespace mylang
+
+#endif // _STATS_HPP

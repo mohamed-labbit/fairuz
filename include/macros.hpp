@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _MACROS_HPP
+#define _MACROS_HPP
 
 #include <limits>
 #include <string>
@@ -29,3 +30,5 @@ std::string const GRAY = "\033[90m";
 } // Color
 
 } // mylang
+
+#endif // _MACROS_HPP

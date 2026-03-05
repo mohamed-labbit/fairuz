@@ -172,6 +172,7 @@ unsigned char* ArenaAllocator::allocateBlock(size_t requested, size_t alignment_
             if (OomHandler_ && OomHandler_(block_size))
                 return allocateBlock(requested, alignment_, false); // Retry once
         }
+
         return nullptr;
     }
 
@@ -187,6 +188,7 @@ unsigned char* ArenaAllocator::allocateBlock(size_t requested, size_t alignment_
             if (OomHandler_ && OomHandler_(block_size))
                 return allocateBlock(requested, alignment_, false); // Retry once
         }
+
         return nullptr;
     }
 }

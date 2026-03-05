@@ -3,8 +3,8 @@
 #include <gtest/gtest.h>
 #include <limits>
 
-#include "../../../include/runtime/compiler/value.hpp"
-#include "../../../include/runtime/opcode/chunk.hpp"
+#include "../../../include/runtime/value.hpp"
+#include "../../../include/runtime/opcode.hpp"
 
 using namespace mylang::runtime;
 

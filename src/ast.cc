@@ -8,8 +8,8 @@ namespace ast {
 typename ASTNode::NodeType ASTNode::getNodeType() const { return NodeType_; }
 uint32_t ASTNode::getLine() const { return Line_; }
 uint32_t ASTNode::getColumn() const { return Column_; }
-void ASTNode::setLine(uint32_t const l) { Line_ = l; }
-void ASTNode::setColumn(uint32_t const c) { Column_ = c; }
+void ASTNode::setLine(uint32_t const line) { Line_ = line; }
+void ASTNode::setColumn(uint32_t const col) { Column_ = col; }
 
 // binary expr
 bool BinaryExpr::equals(Expr const* other) const

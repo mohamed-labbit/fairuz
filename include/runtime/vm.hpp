@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _VM_HPP
+#define _VM_HPP
 
 // =============================================================================
 // vm.hpp — Register-based bytecode interpreter
@@ -27,9 +28,8 @@
 // stack-trace string attached.  Callers catch at the top level.
 // =============================================================================
 
-#include "../compiler/value.hpp"
-#include "../opcode/chunk.hpp"
-#include "../opcode/opcode.hpp"
+#include "opcode.hpp"
+#include "value.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -195,3 +195,5 @@ private:
 
 } // namespace runtime
 } // namespace mylang
+
+#endif // _VM_HPP

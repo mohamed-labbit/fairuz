@@ -1,29 +1,31 @@
 // ast
 
-#pragma once
+#ifndef _AST_HPP
+#define _AST_HPP
 
 #include "allocator.hpp"
 #include "string.hpp"
 
 #include <cassert>
 
-namespace mylang {
-namespace ast {
+namespace mylang::ast {
 
 inline Allocator AST_allocator("AST allocator");
 
 class ASTNode {
 public:
-    enum NodeType {
+    enum class NodeType : int {
         EXPRESSION,
-        STATEMENT
+        STATEMENT,
+
+        INVALID
     };
 
 private:
     uint32_t Line_ { 0 };
     uint32_t Column_ { 0 };
 
-    NodeType NodeType_;
+    NodeType NodeType_ { NodeType::INVALID };
 
 public:
     ASTNode() = default;
@@ -33,15 +35,15 @@ public:
     ASTNode& operator=(ASTNode const&) = delete;
     ASTNode& operator=(ASTNode&&) = delete;
 
-    virtual NodeType getNodeType() const;
+    [[nodiscard]] virtual NodeType getNodeType() const;
 
     virtual uint32_t getLine() const;
 
     virtual uint32_t getColumn() const;
 
-    virtual void setLine(uint32_t const l);
+    virtual void setLine(uint32_t line);
 
-    virtual void setColumn(uint32_t const c);
+    virtual void setColumn(uint32_t col);
 
     ~ASTNode() = default;
 };
@@ -728,4 +730,5 @@ static constexpr FunctionDef* makeFunction(NameExpr* name, ListExpr* params, Blo
 static constexpr ReturnStmt* makeReturn(Expr* value) { return AST_allocator.allocateObject<ReturnStmt>(value); }
 
 }
-}
+
+#endif // _AST_HPP

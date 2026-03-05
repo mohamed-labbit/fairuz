@@ -1,7 +1,8 @@
-#pragma once
+#ifndef _AST_PRINTER_HPP
+#define _AST_PRINTER_HPP
 
-#include "macros.hpp"
 #include "ast.hpp"
+#include "macros.hpp"
 #include <iostream>
 
 namespace mylang {
@@ -273,3 +274,5 @@ public:
 
 } // ast
 } // mylang
+
+#endif // _AST_PRINTER_HPP

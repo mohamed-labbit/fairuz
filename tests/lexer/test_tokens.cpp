@@ -1,6 +1,5 @@
-#include "../../include/lex/file_manager.hpp"
-#include "../../include/lex/lexer.hpp"
-#include "../../include/lex/token.hpp"
+#include "../../include/lexer.hpp"
+#include "../../include/token.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -19,8 +18,7 @@ std::filesystem::path const test_cases_path = std::filesystem::path(__FILE__).pa
 StringRef load_source(std::filesystem::path const& path)
 {
     std::ifstream file(path, std::ios::binary);
-    std::string utf8_contents((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-    return StringRef(utf8_contents.data());
+    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>()).data();
 }
 
 }

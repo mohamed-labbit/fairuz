@@ -1,6 +1,6 @@
 #include "../../include/ast.hpp"
 #include "../../include/ast_printer.hpp"
-#include "../../include/parser/optim.hpp"
+#include "../../include/parser.hpp"
 #include "../test_config.h"
 
 #include <cmath>

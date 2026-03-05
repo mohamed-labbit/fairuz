@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _ALLOCATOR_HPP
+#define _ALLOCATOR_HPP
 
 #include "runtime/allocator/arena.hpp"
 
@@ -9,10 +10,10 @@ private:
     runtime::allocator::ArenaAllocator Allocator_;
 
 public:
-    Allocator(std::string name = "")
+    explicit Allocator(std::string const& name = "")
         : Allocator_(static_cast<std::int32_t>(runtime::allocator::ArenaAllocator::GrowthStrategy::EXPONENTIAL))
     {
-        if (name.length() != 0)
+        if (!name.empty())
             Allocator_.setName(name);
     }
 
@@ -32,9 +33,9 @@ public:
     }
 
     template<typename T>
-    void deallocateArray(T* p, size_t const count)
+    void deallocateArray(T* ptr, size_t const count)
     {
-        Allocator_.deallocate((void*)p, count * sizeof(T));
+        Allocator_.deallocate(static_cast<void*>(ptr), count * sizeof(T));
     }
 
     template<typename T, typename... Args>
@@ -57,6 +58,8 @@ public:
     {
         return Allocator_.toString(verbose);
     }
-};
+} __attribute__((aligned(128)));
 
-}
+} // namespace mylang
+
+#endif // _ALLOCATOR_HPP

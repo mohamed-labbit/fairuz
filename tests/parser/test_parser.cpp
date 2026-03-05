@@ -7,9 +7,8 @@
 
 #include "../../include/ast.hpp"
 #include "../../include/ast_printer.hpp"
-#include "../../include/lex/file_manager.hpp"
-#include "../../include/lex/lexer.hpp"
-#include "../../include/parser/parser.hpp"
+#include "../../include/lexer.hpp"
+#include "../../include/parser.hpp"
 #include "../test_config.h"
 
 using namespace mylang;

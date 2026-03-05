@@ -1,9 +1,9 @@
-#pragma once
+#ifndef _COMPILER_HPP
+#define _COMPILER_HPP
 
-#include "../opcode/chunk.hpp"
-#include "../opcode/opcode.hpp"
-#include "forward.hpp"
+#include "opcode.hpp"
 #include "value.hpp"
+#include "../ast.hpp"
 
 #include <memory>
 #include <optional>
@@ -226,3 +226,5 @@ private:
 
 } // namespace runtime
 } // namespace mylang
+
+#endif // _COMPILER_HPP

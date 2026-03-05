@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _STRING_HPP
+#define _STRING_HPP
 
 #include "allocator.hpp"
 #include "macros.hpp"
@@ -424,3 +425,5 @@ struct hash<mylang::StringRef> {
 };
 
 } // namespace std
+
+#endif // _STRING_HPP

@@ -1,10 +1,165 @@
-#include "../../include/lex/lexer.hpp"
-#include "../../include/util.hpp"
+#include "../include/lexer.hpp"
+#include "../include/util.hpp"
 
 namespace mylang {
 namespace lex {
 
-#define FINISH()
+namespace fs = std::filesystem;
+
+FileManager::FileManager(std::string const& filepath)
+    : FilePath_(filepath)
+{
+    std::ifstream in(filepath, std::ios::binary);
+    if (!in)
+        diagnostic::engine.panic(toString(FileManagerError::FILE_NOT_OPEN));
+
+    InputBuffer_ = std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()).data();
+    InputBuffer_.trimWhitespace(/*leading=*/false, /*trailing=*/true);
+    LastKnownWriteTime_ = fs::last_write_time(filepath);
+}
+
+StringRef FileManager::load(std::string const& filepath, bool replace)
+{
+    if (filepath.empty())
+        return "";
+
+    std::ifstream in(filepath, std::ios::binary);
+    StringRef ret = std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()).data();
+    if (!in)
+        diagnostic::engine.panic(toString(FileManagerError::FILE_NOT_OPEN));
+
+    if (replace || FilePath_.empty()) {
+        InputBuffer_ = ret;
+        FilePath_ = filepath;
+        LastKnownWriteTime_ = fs::last_write_time(filepath);
+    }
+
+    return ret;
+}
+
+void SourceManager::reset()
+{
+    Context_.line = 1;
+    Context_.column = 1;
+    Context_.offset = 0;
+    Current_ = BUFFER_END;
+
+    while (!UngetStack_.empty())
+        UngetStack_.pop();
+
+    if (FileManager_ && FileManager_->buffer().len() > 0) {
+        uint64_t bytes = 0;
+        uint32_t cp = util::decode_utf8_at(FileManager_->buffer(), 0, &bytes);
+        Current_ = cp;
+        CurrentBytes_ = bytes;
+    }
+}
+
+uint32_t SourceManager::peekChar()
+{
+    if (!UngetStack_.empty())
+        return UngetStack_.top().ch;
+
+    Context saved = Context_;
+    uint32_t saved_current = Current_;
+    uint32_t cp = nextChar();
+
+    if (cp != BUFFER_END)
+        unget(cp);
+    else {
+        Context_ = saved;
+        Current_ = saved_current;
+    }
+
+    return cp;
+}
+
+uint32_t SourceManager::currentChar() const
+{
+    if (Context_.offset >= FileManager_->buffer().len())
+        return BUFFER_END;
+
+    uint64_t bytes = 0;
+    return util::decode_utf8_at(FileManager_->buffer(), Context_.offset, &bytes);
+}
+
+void SourceManager::consumeChar()
+{
+    if (Context_.offset >= FileManager_->buffer().len())
+        return;
+
+    uint64_t bytes = 0;
+    uint32_t cp = util::decode_utf8_at(FileManager_->buffer(), Context_.offset, &bytes);
+    advance(cp, bytes);
+}
+
+// returns codepoint next to offset + 1
+uint32_t SourceManager::nextChar()
+{
+    consumeChar();
+    return currentChar();
+}
+
+void SourceManager::unget(uint32_t const cp)
+{
+    PushbackEntry e;
+    e.ch = cp;
+    e.ctx = Context_;
+    e.bytes = CurrentBytes_;
+
+    rewindPosition_(cp, e.bytes);
+    UngetStack_.push(e);
+}
+
+void SourceManager::advance(uint32_t const cp, uint64_t const bytes)
+{
+    Context_.offset += bytes;
+
+    if (cp == '\n') {
+        ++Context_.line;
+        Context_.column = 1;
+    } else
+        ++Context_.column;
+}
+
+void SourceManager::rewindPosition_(uint32_t const cp, uint64_t const bytes)
+{
+    if (Context_.offset < bytes)
+        throw std::runtime_error("SourceManager: attempted to rewind past beginning of file");
+
+    Context_.offset -= bytes;
+
+    if (cp == '\n') {
+        Context_.line = (Context_.line > 1) ? (Context_.line - 1) : 1;
+        Context_.column = calculateColumnAtOffset(Context_.offset);
+    } else
+        Context_.column = (Context_.column > 1) ? (Context_.column - 1) : 1;
+}
+
+uint32_t SourceManager::calculateColumnAtOffset(uint64_t const target_offset) const
+{
+    StringRef const& buf = FileManager_->buffer();
+
+    uint64_t line_start = target_offset;
+    while (line_start > 0) {
+        if (buf.data()[line_start - 1] == '\n')
+            break;
+
+        --line_start;
+    }
+
+    uint32_t column = 1;
+    uint64_t pos = line_start;
+
+    while (pos < target_offset) {
+        uint64_t bytes = 0;
+        util::decode_utf8_at(buf, pos, &bytes);
+        pos += bytes;
+        ++column;
+    }
+
+    return column;
+}
 
 Lexer::Lexer(FileManager* fm)
     : SourceManager_(fm)
@@ -23,7 +178,7 @@ Lexer::Lexer(FileManager* fm)
 }
 
 Lexer::Lexer(std::vector<tok::Token const*>& seq, size_t const s)
-    : TokStream_(seq)
+    : TokStream_(seq.begin(), seq.begin() + s)
     , TokIndex_(0)
     , IndentSize_(4)
     , IndentLevel_(0)

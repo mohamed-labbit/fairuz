@@ -1,4 +1,5 @@
-#pragma once
+#ifndef META_HPP
+#define META_HPP
 
 #include "../../macros.hpp"
 
@@ -44,3 +45,5 @@ struct AllocationFooter {
 }
 }
 }
+
+#endif // META_HPP

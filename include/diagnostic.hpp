@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _DIAGNOSTIC_HPP
+#define _DIAGNOSTIC_HPP
 
 #include "macros.hpp"
 
@@ -63,3 +64,5 @@ inline DiagnosticEngine engine;
 
 }
 }
+
+#endif // _DIAGNOSTIC_HPP

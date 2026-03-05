@@ -1,7 +1,8 @@
-#pragma once
+#ifndef _VALUE_HPP
+#define _VALUE_HPP
 
-#include "../../string.hpp"
-#include "forward.hpp"
+#include "../string.hpp"
+#include "../util.hpp"
 
 #include <cassert>
 #include <cstdint>
@@ -13,6 +14,13 @@
 
 namespace mylang {
 namespace runtime {
+
+struct ObjHeader;
+struct ObjString;
+struct ObjList;
+struct ObjFunction;
+struct ObjClosure;
+struct ObjNative;
 
 // ---------------------------------------------------------------------------
 // NaN-boxing layout (64-bit)
@@ -234,3 +242,5 @@ struct ObjNative : ObjHeader {
 
 } // namespace runtime
 } // namespace mylang
+
+#endif // _VALUE_HPP

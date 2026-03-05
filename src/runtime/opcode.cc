@@ -1,4 +1,4 @@
-#include "../../../include/runtime/opcode/chunk.hpp"
+#include "../../include/runtime/opcode.hpp"
 
 namespace mylang {
 namespace runtime {

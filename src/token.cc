@@ -1,4 +1,4 @@
-#include "../../include/lex/token.hpp"
+#include "../include/token.hpp"
 
 namespace mylang {
 namespace tok {

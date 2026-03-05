@@ -1,7 +1,5 @@
-// Author: Ze3ter
-
-#include "../../include/lex/file_manager.hpp"
 #include "../../include/macros.hpp"
+#include "../../include/lexer.hpp"
 #include "../../include/runtime/allocator/arena.hpp"
 #include "../../include/runtime/allocator/meta.hpp"
 #include "../../include/string.hpp"

@@ -1,6 +1,5 @@
 #include "../../include/ast.hpp"
-#include "../../include/lex/file_manager.hpp"
-#include "../../include/parser/analyzer.hpp"
+#include "../../include/parser.hpp"
 #include "../../include/string.hpp"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>

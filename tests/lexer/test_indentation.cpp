@@ -1,7 +1,7 @@
 #include <filesystem>
 #include <gtest/gtest.h>
 
-#include "../../include/lex/lexer.hpp"
+#include "../../include/lexer.hpp"
 
 using namespace mylang;
 
