@@ -1,4 +1,4 @@
-#include "../include/ast/AST_allocator.hpp"
+#include "../include/ast/ast.hpp"
 #include "../include/runtime/runtime_allocator.hpp"
 #include "../include/types/string_allocator.hpp"
 #include "test_config.h"
