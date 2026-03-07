@@ -1,5 +1,5 @@
-#ifndef _ALLOCATOR_HPP
-#define _ALLOCATOR_HPP
+#ifndef ALLOCATOR_HPP
+#define ALLOCATOR_HPP
 
 #include "runtime/allocator/arena.hpp"
 
@@ -39,7 +39,7 @@ public:
     }
 
     template<typename T, typename... Args>
-    [[nodiscard]] T* allocateObject(Args&&... args)
+    MY_NODISCARD T* allocateObject(Args&&... args)
     {
         static_assert(std::is_constructible_v<T, Args...>, "T must be constructible with Args...");
 
@@ -62,4 +62,4 @@ public:
 
 } // namespace mylang
 
-#endif // _ALLOCATOR_HPP
+#endif // ALLOCATOR_HPP
