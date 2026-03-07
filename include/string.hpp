@@ -1,5 +1,5 @@
-#ifndef _STRING_HPP
-#define _STRING_HPP
+#ifndef STRING_HPP
+#define STRING_HPP
 
 #include "allocator.hpp"
 #include "macros.hpp"
@@ -160,7 +160,7 @@ public:
 
     StringRef& operator=(StringRef const& other);
 
-    [[nodiscard]] bool operator==(StringRef const& other) const noexcept
+    MY_NODISCARD bool operator==(StringRef const& other) const noexcept
     {
         if (StringData_ == other.StringData_)
             return true;
@@ -171,7 +171,7 @@ public:
         return Length_ == other.Length_ && ::memcmp(data(), other.data(), Length_) == 0;
     }
 
-    [[nodiscard]] bool operator<(StringRef const& other) const noexcept
+    MY_NODISCARD bool operator<(StringRef const& other) const noexcept
     {
         if (StringData_ == other.StringData_)
             return false;
@@ -182,8 +182,8 @@ public:
         if (!other.StringData_)
             return false;
 
-        size_t minLen = std::min(Length_, other.Length_);
-        int cmp = ::memcmp(data(), other.data(), minLen);
+        size_t const minLen = std::min(Length_, other.Length_);
+        int const cmp = ::memcmp(data(), other.data(), minLen);
 
         if (cmp != 0)
             return cmp < 0;
@@ -191,22 +191,22 @@ public:
         return Length_ < other.Length_;
     }
 
-    [[nodiscard]] bool operator!=(StringRef const& other) const noexcept
+    MY_NODISCARD bool operator!=(StringRef const& other) const noexcept
     {
         return !(*this == other);
     }
 
-    [[nodiscard]] bool operator<=(StringRef const& other) const noexcept
+    MY_NODISCARD bool operator<=(StringRef const& other) const noexcept
     {
         return !(*this > other);
     }
 
-    [[nodiscard]] bool operator>(StringRef const& other) const noexcept
+    MY_NODISCARD bool operator>(StringRef const& other) const noexcept
     {
         return other < *this;
     }
 
-    [[nodiscard]] bool operator>=(StringRef const& other) const noexcept
+    MY_NODISCARD bool operator>=(StringRef const& other) const noexcept
     {
         return !(*this < other);
     }
@@ -223,7 +223,7 @@ public:
     char operator[](size_t const i) const;
     char& operator[](size_t const i);
 
-    [[nodiscard]] char at(size_t const i) const;
+    MY_NODISCARD char at(size_t const i) const;
 
     char& at(size_t const i);
 
@@ -240,7 +240,7 @@ public:
         if (rhs.empty())
             return StringRef(lhs);
 
-        size_t actual_len = lhs.len() + rhs.len();
+        size_t const actual_len = lhs.len() + rhs.len();
         String* result = string_allocator.allocateObject<String>(actual_len);
 
         ::memcpy(result->ptr(), lhs.data(), lhs.len() * sizeof(char));
@@ -286,32 +286,32 @@ public:
         return result;
     }
 
-    [[nodiscard]] size_t len() const noexcept
+    MY_NODISCARD size_t len() const noexcept
     {
         return Length_;
     }
 
-    [[nodiscard]] size_t cap() const noexcept
+    MY_NODISCARD size_t cap() const noexcept
     {
         return StringData_ ? StringData_->cap() : 0;
     }
 
-    [[nodiscard]] String* get() const noexcept
+    MY_NODISCARD String* get() const noexcept
     {
         return StringData_;
     }
 
-    [[nodiscard]] bool empty() const noexcept
+    MY_NODISCARD bool empty() const noexcept
     {
         return Length_ == 0;
     }
 
-    char const* data() const noexcept
+    MY_NODISCARD char const* data() const noexcept
     {
         return StringData_ ? StringData_->ptr() + Offset_ : nullptr;
     }
 
-    char* data() noexcept
+    MY_NODISCARD char* data() noexcept
     {
         if (StringData_) {
             ensureUnique();
@@ -332,10 +332,10 @@ public:
 
     void resize(size_t const s);
 
-    [[nodiscard]] bool find(char const c) const noexcept;
-    [[nodiscard]] bool find(StringRef const& s) const noexcept;
+    MY_NODISCARD bool find(char const c) const noexcept;
+    MY_NODISCARD bool find(StringRef const& s) const noexcept;
 
-    [[nodiscard]] std::optional<size_t> find_pos(char const c) const noexcept;
+    MY_NODISCARD std::optional<size_t> find_pos(char const c) const noexcept;
 
     StringRef& truncate(size_t const s);
 
@@ -350,7 +350,7 @@ public:
 
     double toDouble(size_t* pos = nullptr) const;
 
-    [[nodiscard]] static StringRef fromUtf16(char16_t const* utf8_cstr);
+    MY_NODISCARD static StringRef fromUtf16(char16_t const* utf8_cstr);
 
     void ensureUnique()
     {
@@ -426,4 +426,4 @@ struct hash<mylang::StringRef> {
 
 } // namespace std
 
-#endif // _STRING_HPP
+#endif // STRING_HPP

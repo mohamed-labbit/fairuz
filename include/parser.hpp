@@ -1,5 +1,5 @@
-#ifndef _PARSER_HPP
-#define _PARSER_HPP
+#ifndef PARSER_HPP
+#define PARSER_HPP
 
 #include "ast.hpp"
 #include "lexer.hpp"
@@ -214,7 +214,7 @@ private:
 
     bool match(tok::TokenType const type);
 
-    [[nodiscard]]
+    MY_NODISCARD
     bool consume(tok::TokenType type, StringRef const& msg)
     {
         if (check(type)) {
@@ -284,4 +284,4 @@ public:
 } // namespace parser
 } // namespace mylang
 
-#endif // _PARSER_HPP
+#endif // PARSER_HPP

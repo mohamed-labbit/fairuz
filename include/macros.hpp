@@ -1,5 +1,5 @@
-#ifndef _MACROS_HPP
-#define _MACROS_HPP
+#ifndef MACROS_HPP
+#define MACROS_HPP
 
 #include <limits>
 #include <string>
@@ -14,6 +14,7 @@ namespace mylang {
 #define DEFAULT_BLOCK_SIZE 1024
 #define MAX_BLOCK_SIZE 4294967296
 #define DEFAULT_STRING_CAPACITY 100
+#define MY_NODISCARD [[nodiscard]]
 
 namespace Color {
 
@@ -31,4 +32,4 @@ std::string const GRAY = "\033[90m";
 
 } // mylang
 
-#endif // _MACROS_HPP
+#endif // MACROS_HPP

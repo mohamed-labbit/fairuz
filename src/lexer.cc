@@ -1,8 +1,7 @@
 #include "../include/lexer.hpp"
 #include "../include/util.hpp"
 
-namespace mylang {
-namespace lex {
+namespace mylang::lex {
 
 namespace fs = std::filesystem;
 
@@ -752,5 +751,4 @@ std::vector<tok::Token const*> Lexer::tokenize()
     return this->TokStream_;
 }
 
-}
-}
+} // namespace mylang::lex

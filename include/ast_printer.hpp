@@ -1,5 +1,5 @@
-#ifndef _AST_PRINTER_HPP
-#define _AST_PRINTER_HPP
+#ifndef AST_PRINTER_HPP
+#define AST_PRINTER_HPP
 
 #include "ast.hpp"
 #include "macros.hpp"
@@ -275,4 +275,4 @@ public:
 } // ast
 } // mylang
 
-#endif // _AST_PRINTER_HPP
+#endif // AST_PRINTER_HPP

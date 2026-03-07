@@ -1,7 +1,6 @@
 #include "../include/token.hpp"
 
-namespace mylang {
-namespace tok {
+namespace mylang::tok {
 
 bool Token::operator==(Token const& other) const
 {
@@ -215,5 +214,4 @@ StringRef const Token::toString(TokenType const tt)
     }
 }
 
-}
-}
+} // namespace mylang::tok

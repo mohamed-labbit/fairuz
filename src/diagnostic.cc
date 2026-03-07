@@ -4,8 +4,7 @@
 #include <iostream>
 #include <sstream>
 
-namespace mylang {
-namespace diagnostic {
+namespace mylang::diagnostic {
 
 void DiagnosticEngine::report(Severity const sev, std::int32_t const line, std::int32_t const col,
     std::int32_t const len, std::string const& msg, std::string const& code)
@@ -141,5 +140,4 @@ void DiagnosticEngine::prettyPrint() const
     }
 }
 
-}
-}
+} // namespace mylang::diagnostic

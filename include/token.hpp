@@ -1,5 +1,5 @@
-#ifndef _TOKEN_HPP
-#define _TOKEN_HPP
+#ifndef TOKEN_HPP
+#define TOKEN_HPP
 
 #include "macros.hpp"
 #include "string.hpp"
@@ -200,29 +200,29 @@ public:
     Token& operator=(Token&&) noexcept = default;
 
     // Return const references to avoid copies
-    StringRef const& lexeme() const;
-    TokenType const& type() const;
-    uint32_t const& line() const;
-    uint32_t const& column() const;
-    Location const& location() const;
-    std::string const& filepath() const;
+    MY_NODISCARD StringRef const& lexeme() const;
+    MY_NODISCARD TokenType const& type() const;
+    MY_NODISCARD uint32_t const& line() const;
+    MY_NODISCARD uint32_t const& column() const;
+    MY_NODISCARD Location const& location() const;
+    MY_NODISCARD std::string const& filepath() const;
 
-    bool is(TokenType const tt) const;
+    MY_NODISCARD bool is(TokenType const tt) const;
 
     // is at beginning of a new line
-    bool atbol() const;
+    MY_NODISCARD bool atbol() const;
 
-    bool isOperator() const;
-    bool isUnaryOp() const;
-    bool isBinaryOp() const;
-    bool isComparisonOp() const;
-    bool isWhitespace() const;
-    bool isNumeric() const;
+    MY_NODISCARD bool isOperator() const;
+    MY_NODISCARD bool isUnaryOp() const;
+    MY_NODISCARD bool isBinaryOp() const;
+    MY_NODISCARD bool isComparisonOp() const;
+    MY_NODISCARD bool isWhitespace() const;
+    MY_NODISCARD bool isNumeric() const;
 
-    double toDouble() const;
-    int toInt() const;
+    MY_NODISCARD double toDouble() const;
+    MY_NODISCARD int toInt() const;
 
-    int getPrecedence(bool is_unary = false) const;
+    MY_NODISCARD int getPrecedence(bool is_unary = false) const;
 
     // friend ostream operator for pretty-printing in tests/logs
     friend std::ostream& operator<<(std::ostream& os, Token const& tok)
@@ -255,4 +255,4 @@ private:
 } // namespace tok
 } // namespace mylang
 
-#endif // _TOKEN_HPP
+#endif // TOKEN_HPP

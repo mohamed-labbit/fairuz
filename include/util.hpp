@@ -1,21 +1,18 @@
-#ifndef _UTIL_HPP
-#define _UTIL_HPP
+#ifndef UTIL_HPP
+#define UTIL_HPP
 
 #include "macros.hpp"
 #include "string.hpp"
-#include <omp.h>
-#include <string>
-#include <vector>
+#include <cctype>
 
-namespace mylang {
-namespace util {
+namespace mylang::util {
 
-static inline bool isWhitespace(wchar_t ch)
+static inline bool isWhitespace(uint32_t const& ch)
 {
     return ch == u' ' || ch == u'\t' || ch == u'\r';
 }
 
-static inline bool const isOperator(wchar_t const ch)
+static inline bool const isOperator(uint32_t const& ch)
 {
     switch (ch) {
     case '=':
@@ -34,13 +31,7 @@ static inline bool const isOperator(wchar_t const ch)
     }
 }
 
-static inline bool isSymbol(wchar_t ch)
-{
-    static constexpr std::string_view syms = ",[]().:";
-    return syms.find(ch) != std::string_view::npos;
-}
-
-static inline bool isalphaArabic(wchar_t const c)
+static inline bool isalphaArabic(uint32_t const c)
 {
     switch (c) {
     case 0x0621:
@@ -87,7 +78,7 @@ static inline bool isalphaArabic(wchar_t const c)
     return (c >= 0x0600 && c <= 0x06FF);
 }
 
-static uint32_t decode_utf8_at(StringRef const& buf, size_t byte_pos, uint64_t* out_bytes)
+static uint32_t decode_utf8_at(StringRef const& buf, size_t const byte_pos, uint64_t* out_bytes)
 {
     if (byte_pos >= buf.len())
         throw std::runtime_error("UTF8 decode past end of buffer");
@@ -95,7 +86,7 @@ static uint32_t decode_utf8_at(StringRef const& buf, size_t byte_pos, uint64_t* 
     unsigned char const* p = (unsigned char const*)buf.data() + byte_pos;
     unsigned char const* end = (unsigned char const*)buf.data() + buf.len();
 
-    unsigned char c = *p;
+    unsigned char const c = *p;
 
     if (c < 0x80) {
         *out_bytes = 1;
@@ -110,7 +101,7 @@ static uint32_t decode_utf8_at(StringRef const& buf, size_t byte_pos, uint64_t* 
             throw std::runtime_error("Invalid UTF-8: bad continuation byte");
 
         *out_bytes = 2;
-        uint32_t result = ((p[0] & 0x1F) << 6) | (p[1] & 0x3F);
+        uint32_t const result = ((p[0] & 0x1F) << 6) | (p[1] & 0x3F);
 
         if (result < 0x80)
             throw std::runtime_error("Invalid UTF-8: overlong 2-byte sequence");
@@ -126,7 +117,7 @@ static uint32_t decode_utf8_at(StringRef const& buf, size_t byte_pos, uint64_t* 
             throw std::runtime_error("Invalid UTF-8: bad continuation byte");
 
         *out_bytes = 3;
-        uint32_t result = ((p[0] & 0x0F) << 12) | ((p[1] & 0x3F) << 6) | (p[2] & 0x3F);
+        uint32_t const result = ((p[0] & 0x0F) << 12) | ((p[1] & 0x3F) << 6) | (p[2] & 0x3F);
 
         if (result < 0x800)
             throw std::runtime_error("Invalid UTF-8: overlong 3-byte sequence");
@@ -145,7 +136,7 @@ static uint32_t decode_utf8_at(StringRef const& buf, size_t byte_pos, uint64_t* 
             throw std::runtime_error("Invalid UTF-8: bad continuation byte");
 
         *out_bytes = 4;
-        uint32_t result = ((p[0] & 0x07) << 18) | ((p[1] & 0x3F) << 12) | ((p[2] & 0x3F) << 6) | (p[3] & 0x3F);
+        uint32_t const result = ((p[0] & 0x07) << 18) | ((p[1] & 0x3F) << 12) | ((p[2] & 0x3F) << 6) | (p[3] & 0x3F);
 
         if (result < 0x10000)
             throw std::runtime_error("Invalid UTF-8: overlong 4-byte sequence");
@@ -168,16 +159,18 @@ static void configureLocale()
     }
 }
 
-static size_t encode_utf8(uint32_t cp, unsigned char* out_bytes)
+static size_t encode_utf8(uint32_t const cp, unsigned char* out_bytes)
 {
     if (cp < 0x80) {
         out_bytes[0] = static_cast<unsigned char>(cp);
         return 1;
-    } else if (cp < 0x800) {
+    }
+    if (cp < 0x800) {
         out_bytes[0] = static_cast<unsigned char>(0xC0 | (cp >> 6));
         out_bytes[1] = static_cast<unsigned char>(0x80 | (cp & 0x3F));
         return 2;
-    } else if (cp < 0x10000) {
+    }
+    if (cp < 0x10000) {
         if (cp >= 0xD800 && cp <= 0xDFFF)
             throw std::runtime_error("Invalid cp: UTF-16 surrogate");
 
@@ -185,20 +178,21 @@ static size_t encode_utf8(uint32_t cp, unsigned char* out_bytes)
         out_bytes[1] = static_cast<unsigned char>(0x80 | ((cp >> 6) & 0x3F));
         out_bytes[2] = static_cast<unsigned char>(0x80 | (cp & 0x3F));
         return 3;
-    } else if (cp <= 0x10FFFF) {
+    }
+    if (cp <= 0x10FFFF) {
         out_bytes[0] = static_cast<unsigned char>(0xF0 | (cp >> 18));
         out_bytes[1] = static_cast<unsigned char>(0x80 | ((cp >> 12) & 0x3F));
         out_bytes[2] = static_cast<unsigned char>(0x80 | ((cp >> 6) & 0x3F));
         out_bytes[3] = static_cast<unsigned char>(0x80 | (cp & 0x3F));
         return 4;
-    } else
-        throw std::runtime_error("Invalid cp: exceeds Unicode range");
+    }
+    throw std::runtime_error("Invalid cp: exceeds Unicode range");
 }
 
-static StringRef encode_utf8_str(uint32_t cp)
+static StringRef encode_utf8_str(uint32_t const cp)
 {
     unsigned char bytes[4];
-    size_t len = encode_utf8(cp, bytes);
+    size_t const len = encode_utf8(cp, bytes);
     return StringRef(reinterpret_cast<char*>(bytes)).truncate(len);
 }
 
@@ -227,7 +221,7 @@ static int64_t parseIntegerLiteral(StringRef const& literal)
     size_t i = 0;
     bool negative = false;
 
-    if (literal[i] == '-') {
+    if (literal.at(i) == '-') {
         negative = true;
         ++i;
     }
@@ -238,7 +232,7 @@ static int64_t parseIntegerLiteral(StringRef const& literal)
     } else if (literal.slice(i, 2) == "0b" || literal.slice(i, 2) == "0B") {
         base = 2;
         i += 2;
-    } else if (literal[i] == '0' && literal.len() > i + 1) {
+    } else if (literal.at(i) == '0' && literal.len() > i + 1) {
         base = 8;
         ++i;
     }
@@ -246,16 +240,16 @@ static int64_t parseIntegerLiteral(StringRef const& literal)
     int64_t value = 0;
 
     for (; i < literal.len(); ++i) {
-        char c = literal[i];
+        char const c = literal.at(i);
 
         if (c == '\'')
             continue; // ignore digit separators
 
-        int digit;
+        int digit = 0;
 
         if (::isdigit(c))
             digit = c - '0';
-        else if (std::isalpha(c))
+        else if (::isalpha(c))
             digit = ::tolower(c) - 'a' + 10;
         else
             throw std::invalid_argument("Invalid digit");
@@ -273,14 +267,13 @@ static bool isIntegerValue(double d, int64_t& out)
 {
     if (!std::isfinite(d))
         return false;
-    int64_t iv = static_cast<int64_t>(d);
+    int64_t const iv = static_cast<int64_t>(d);
     if (static_cast<double>(iv) != d)
         return false;
     out = iv;
     return true;
 }
 
-} // util
-} // mylang
+} // namespace mylang::util
 
-#endif // _UTIL_HPP
+#endif // UTIL_HPP

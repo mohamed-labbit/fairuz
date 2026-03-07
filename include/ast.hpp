@@ -1,7 +1,7 @@
 // ast
 
-#ifndef _AST_HPP
-#define _AST_HPP
+#ifndef AST_HPP
+#define AST_HPP
 
 #include "allocator.hpp"
 #include "string.hpp"
@@ -35,20 +35,20 @@ public:
     ASTNode& operator=(ASTNode const&) = delete;
     ASTNode& operator=(ASTNode&&) = delete;
 
-    [[nodiscard]] virtual NodeType getNodeType() const;
+    MY_NODISCARD virtual NodeType getNodeType() const;
 
-    virtual uint32_t getLine() const;
+    MY_NODISCARD virtual uint32_t getLine() const;
 
-    virtual uint32_t getColumn() const;
+    MY_NODISCARD virtual uint32_t getColumn() const;
 
     virtual void setLine(uint32_t line);
 
     virtual void setColumn(uint32_t col);
 
-    ~ASTNode() = default;
+    virtual ~ASTNode() = default;
 };
 
-enum class BinaryOp {
+enum class BinaryOp : uint8_t {
     OP_ADD,
     OP_SUB,
     OP_MUL,
@@ -73,7 +73,7 @@ enum class BinaryOp {
     INVALID
 };
 
-enum class UnaryOp {
+enum class UnaryOp : uint8_t {
     OP_PLUS,
     OP_NEG,
     OP_BITNOT,
@@ -183,11 +183,11 @@ public:
     BinaryExpr& operator=(BinaryExpr const&) noexcept = delete;
     BinaryExpr& operator=(BinaryExpr&&) noexcept = delete;
 
-    bool equals(Expr const* other) const override;
-    BinaryExpr* clone() const override;
-    Expr* getLeft() const;
-    Expr* getRight() const;
-    BinaryOp getOperator() const;
+    MY_NODISCARD bool equals(Expr const* other) const override;
+    MY_NODISCARD BinaryExpr* clone() const override;
+    MY_NODISCARD Expr* getLeft() const;
+    MY_NODISCARD Expr* getRight() const;
+    MY_NODISCARD BinaryOp getOperator() const;
     void setLeft(Expr* l);
     void setRight(Expr* r);
     void setOperator(BinaryOp op);
@@ -218,10 +218,10 @@ public:
     UnaryExpr& operator=(UnaryExpr const&) noexcept = delete;
     UnaryExpr& operator=(UnaryExpr&&) noexcept = delete;
 
-    bool equals(Expr const* other) const override;
-    UnaryExpr* clone() const override;
-    Expr* getOperand() const;
-    UnaryOp getOperator() const;
+    MY_NODISCARD bool equals(Expr const* other) const override;
+    MY_NODISCARD UnaryExpr* clone() const override;
+    MY_NODISCARD Expr* getOperand() const;
+    MY_NODISCARD UnaryOp getOperator() const;
 };
 
 class LiteralExpr : public Expr {
@@ -249,7 +249,7 @@ private:
     StringRef StrValue_;
 
 public:
-    LiteralExpr()
+    explicit LiteralExpr()
         : Type_(Type::NIL)
     {
         Kind_ = Kind::LITERAL;
@@ -269,16 +269,16 @@ public:
         Kind_ = Kind::LITERAL;
     }
 
-    LiteralExpr(bool value)
+    explicit LiteralExpr(bool value)
         : Type_(Type::BOOLEAN)
         , BoolValue_(value)
     {
         Kind_ = Kind::LITERAL;
     }
 
-    LiteralExpr(StringRef str)
+    explicit LiteralExpr(StringRef str)
         : Type_(Type::STRING)
-        , StrValue_(str)
+        , StrValue_(std::move(str))
     {
         Kind_ = Kind::LITERAL;
     }
@@ -291,22 +291,22 @@ public:
     LiteralExpr& operator=(LiteralExpr const&) noexcept = delete;
     LiteralExpr& operator=(LiteralExpr&&) noexcept = delete;
 
-    Type getType() const;
-    int64_t getInt() const;
-    double getFloat() const;
-    bool getBool() const;
-    StringRef getStr() const;
-    bool isInteger() const;
+    MY_NODISCARD Type getType() const;
+    MY_NODISCARD int64_t getInt() const;
+    MY_NODISCARD double getFloat() const;
+    MY_NODISCARD bool getBool() const;
+    MY_NODISCARD StringRef getStr() const;
 
-    bool isDecimal() const;
-    bool isBoolean() const;
-    bool isString() const;
-    bool isNumeric() const;
-    bool isNil() const;
+    MY_NODISCARD bool isInteger() const;
+    MY_NODISCARD bool isDecimal() const;
+    MY_NODISCARD bool isBoolean() const;
+    MY_NODISCARD bool isString() const;
+    MY_NODISCARD bool isNumeric() const;
+    MY_NODISCARD bool isNil() const;
 
-    bool equals(Expr const* other) const override;
-    LiteralExpr* clone() const override;
-    double toNumber() const;
+    MY_NODISCARD bool equals(Expr const* other) const override;
+    MY_NODISCARD LiteralExpr* clone() const override;
+    MY_NODISCARD double toNumber() const;
 };
 
 class NameExpr : public Expr {
@@ -316,7 +316,7 @@ private:
 public:
     NameExpr() = default;
 
-    NameExpr(StringRef const s)
+    explicit NameExpr(StringRef const& s)
         : Value_(s)
     {
         Kind_ = Kind::NAME;
@@ -331,9 +331,9 @@ public:
     NameExpr& operator=(NameExpr const&) noexcept = delete;
     NameExpr& operator=(NameExpr&&) noexcept = delete;
 
-    bool equals(Expr const* other) const override;
-    NameExpr* clone() const override;
-    StringRef getValue() const;
+    MY_NODISCARD bool equals(Expr const* other) const override;
+    MY_NODISCARD NameExpr* clone() const override;
+    MY_NODISCARD StringRef getValue() const;
 };
 
 class ListExpr : public Expr {
@@ -343,8 +343,8 @@ private:
 public:
     ListExpr() = default;
 
-    ListExpr(std::vector<Expr*> elements)
-        : Elements_(elements)
+    explicit ListExpr(std::vector<Expr*> elements)
+        : Elements_(std::move(elements))
     {
         Kind_ = Kind::LIST;
     }
@@ -360,12 +360,12 @@ public:
     ListExpr& operator=(ListExpr const&) noexcept = delete;
     ListExpr& operator=(ListExpr&&) noexcept = delete;
 
-    bool equals(Expr const* other) const override;
-    ListExpr* clone() const override;
-    std::vector<Expr*> const& getElements() const;
-    std::vector<Expr*>& getElements();
-    bool isEmpty() const;
-    size_t size() const;
+    MY_NODISCARD bool equals(Expr const* other) const override;
+    MY_NODISCARD ListExpr* clone() const override;
+    MY_NODISCARD std::vector<Expr*> const& getElements() const;
+    MY_NODISCARD std::vector<Expr*>& getElements();
+    MY_NODISCARD bool isEmpty() const;
+    MY_NODISCARD size_t size() const;
 };
 
 class CallExpr : public Expr {
@@ -381,7 +381,7 @@ private:
 public:
     CallExpr() = delete;
 
-    CallExpr(Expr* c, ListExpr* a = nullptr, CallLocation loc = CallLocation::GLOBAL)
+    explicit CallExpr(Expr* c, ListExpr* a = nullptr, CallLocation loc = CallLocation::GLOBAL)
         : Callee_(c)
         , Args_(a)
         , CallLocation_(loc)
@@ -398,15 +398,15 @@ public:
     CallExpr& operator=(CallExpr const&) noexcept = delete;
     CallExpr& operator=(CallExpr&&) noexcept = delete;
 
-    bool equals(Expr const* other) const override;
-    CallExpr* clone() const override;
-    Expr* getCallee() const;
-    std::vector<Expr*> const& getArgs() const;
-    std::vector<Expr*>& getArgs();
-    ListExpr* getArgsAsListExpr();
-    ListExpr const* getArgsAsListExpr() const;
-    CallLocation getCallLocation() const;
-    bool hasArguments() const;
+    MY_NODISCARD bool equals(Expr const* other) const override;
+    MY_NODISCARD CallExpr* clone() const override;
+    MY_NODISCARD Expr* getCallee() const;
+    MY_NODISCARD std::vector<Expr*> const& getArgs() const;
+    MY_NODISCARD std::vector<Expr*>& getArgs();
+    MY_NODISCARD ListExpr* getArgsAsListExpr();
+    MY_NODISCARD ListExpr const* getArgsAsListExpr() const;
+    MY_NODISCARD CallLocation getCallLocation() const;
+    MY_NODISCARD bool hasArguments() const;
 };
 
 class AssignmentExpr : public Expr {
@@ -438,16 +438,16 @@ public:
     AssignmentExpr& operator=(AssignmentExpr const&) noexcept = delete;
     AssignmentExpr& operator=(AssignmentExpr&&) noexcept = delete;
 
-    bool equals(Expr const* other) const override;
-    AssignmentExpr* clone() const override;
-    NameExpr* getTarget() const;
-    Expr* getValue() const;
-    bool isDeclaration() const;
+    MY_NODISCARD bool equals(Expr const* other) const override;
+    MY_NODISCARD AssignmentExpr* clone() const override;
+    MY_NODISCARD NameExpr* getTarget() const;
+    MY_NODISCARD Expr* getValue() const;
+    MY_NODISCARD bool isDeclaration() const;
 };
 
 class Stmt : public ASTNode {
 public:
-    enum class Kind : int {
+    enum class Kind : uint8_t {
         INVALID,
         EXPR,
         ASSIGNMENT,
@@ -465,6 +465,8 @@ protected:
 public:
     explicit Stmt() = default;
 
+    virtual ~Stmt() = default;
+
     virtual Stmt* clone() const = 0;
 
     virtual bool equals(Stmt const* other) const = 0;
@@ -481,7 +483,7 @@ private:
 public:
     explicit BlockStmt() = delete;
 
-    BlockStmt(std::vector<Stmt*> stmts)
+    explicit BlockStmt(std::vector<Stmt*> stmts)
         : Statements_(stmts)
     {
         Kind_ = Kind::BLOCK;
@@ -492,11 +494,11 @@ public:
 
     BlockStmt& operator=(BlockStmt const&) noexcept = delete;
 
-    bool equals(Stmt const* other) const override;
-    BlockStmt* clone() const override;
-    std::vector<Stmt*> const& getStatements() const;
+    MY_NODISCARD bool equals(Stmt const* other) const override;
+    MY_NODISCARD BlockStmt* clone() const override;
+    MY_NODISCARD std::vector<Stmt*> const& getStatements() const;
+    MY_NODISCARD bool isEmpty() const;
     void setStatements(std::vector<Stmt*>& stmts);
-    bool isEmpty() const;
 };
 
 class ExprStmt : public Stmt {
@@ -506,7 +508,7 @@ private:
 public:
     explicit ExprStmt() = default;
 
-    ExprStmt(Expr* expr)
+    explicit ExprStmt(Expr* expr)
         : Expr_(expr)
     {
         Kind_ = Kind::EXPR;
@@ -517,9 +519,9 @@ public:
 
     ExprStmt& operator=(ExprStmt const&) noexcept = delete;
 
-    bool equals(Stmt const* other) const override;
-    ExprStmt* clone() const override;
-    Expr* getExpr() const;
+    MY_NODISCARD bool equals(Stmt const* other) const override;
+    MY_NODISCARD ExprStmt* clone() const override;
+    MY_NODISCARD Expr* getExpr() const;
     void setExpr(Expr* e);
 };
 
@@ -546,13 +548,13 @@ public:
 
     AssignmentStmt& operator=(AssignmentStmt const&) noexcept = delete;
 
-    bool equals(Stmt const* other) const override;
-    AssignmentStmt* clone() const override;
-    Expr* getValue() const;
-    Expr* getTarget() const;
+    MY_NODISCARD bool equals(Stmt const* other) const override;
+    MY_NODISCARD AssignmentStmt* clone() const override;
+    MY_NODISCARD Expr* getValue() const;
+    MY_NODISCARD Expr* getTarget() const;
+    MY_NODISCARD bool isDeclaration() const;
     void setValue(Expr* v);
     void setTarget(NameExpr* t);
-    bool isDeclaration() const;
 };
 
 class IfStmt : public Stmt {
@@ -577,11 +579,11 @@ public:
 
     IfStmt& operator=(IfStmt const&) noexcept = delete;
 
-    bool equals(Stmt const* other) const override;
-    IfStmt* clone() const override;
-    Expr* getCondition() const;
-    BlockStmt* getThenBlock() const;
-    BlockStmt* getElseBlock() const;
+    MY_NODISCARD bool equals(Stmt const* other) const override;
+    MY_NODISCARD IfStmt* clone() const override;
+    MY_NODISCARD Expr* getCondition() const;
+    MY_NODISCARD BlockStmt* getThenBlock() const;
+    MY_NODISCARD BlockStmt* getElseBlock() const;
     void setThenBlock(BlockStmt* t);
     void setElseBlock(BlockStmt* e);
 };
@@ -606,11 +608,11 @@ public:
 
     WhileStmt& operator=(WhileStmt const&) noexcept = delete;
 
-    bool equals(Stmt const* other) const override;
-    WhileStmt* clone() const override;
-    Expr* getCondition() const;
-    BlockStmt* getBlock();
-    BlockStmt const* getBlock() const;
+    MY_NODISCARD bool equals(Stmt const* other) const override;
+    MY_NODISCARD WhileStmt* clone() const override;
+    MY_NODISCARD Expr* getCondition() const;
+    MY_NODISCARD BlockStmt* getBlock();
+    MY_NODISCARD BlockStmt const* getBlock() const;
     void setBlock(BlockStmt* b);
 };
 
@@ -636,11 +638,11 @@ public:
 
     ForStmt& operator=(ForStmt const&) noexcept = delete;
 
-    bool equals(Stmt const* other) const override;
-    ForStmt* clone() const override;
-    NameExpr* getTarget() const;
-    Expr* getIter() const;
-    BlockStmt* getBlock() const;
+    MY_NODISCARD bool equals(Stmt const* other) const override;
+    MY_NODISCARD ForStmt* clone() const override;
+    MY_NODISCARD NameExpr* getTarget() const;
+    MY_NODISCARD Expr* getIter() const;
+    MY_NODISCARD BlockStmt* getBlock() const;
     void setBlock(BlockStmt* b);
 };
 
@@ -673,14 +675,14 @@ public:
 
     FunctionDef& operator=(FunctionDef const&) noexcept = delete;
 
-    bool equals(Stmt const* other) const override;
-    FunctionDef* clone() const override;
-    NameExpr* getName() const;
-    std::vector<Expr*> const& getParameters() const;
-    ListExpr* getParameterList() const;
-    BlockStmt* getBody() const;
+    MY_NODISCARD bool equals(Stmt const* other) const override;
+    MY_NODISCARD FunctionDef* clone() const override;
+    MY_NODISCARD NameExpr* getName() const;
+    MY_NODISCARD std::vector<Expr*> const& getParameters() const;
+    MY_NODISCARD ListExpr* getParameterList() const;
+    MY_NODISCARD BlockStmt* getBody() const;
+    MY_NODISCARD bool hasParameters() const;
     void setBody(BlockStmt* b);
-    bool hasParameters() const;
 };
 
 class ReturnStmt : public Stmt {
@@ -690,7 +692,7 @@ private:
 public:
     explicit ReturnStmt() = delete;
 
-    ReturnStmt(Expr* value)
+    explicit ReturnStmt(Expr* value)
         : Value_(value)
     {
         Kind_ = Kind::RETURN;
@@ -701,11 +703,11 @@ public:
 
     ReturnStmt& operator=(ReturnStmt const&) noexcept = delete;
 
-    bool equals(Stmt const* other) const override;
-    ReturnStmt* clone() const override;
-    Expr const* getValue() const;
+    MY_NODISCARD bool equals(Stmt const* other) const override;
+    MY_NODISCARD ReturnStmt* clone() const override;
+    MY_NODISCARD Expr const* getValue() const;
+    MY_NODISCARD bool hasValue() const;
     void setValue(Expr* v);
-    bool hasValue() const;
 };
 
 static constexpr BinaryExpr* makeBinary(Expr* l, Expr* r, BinaryOp const op) { return AST_allocator.allocateObject<BinaryExpr>(l, r, op); }
@@ -731,4 +733,4 @@ static constexpr ReturnStmt* makeReturn(Expr* value) { return AST_allocator.allo
 
 }
 
-#endif // _AST_HPP
+#endif // AST_HPP

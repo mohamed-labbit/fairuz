@@ -4,8 +4,7 @@
 
 #include <cassert>
 
-namespace mylang {
-namespace parser {
+namespace mylang::parser {
 
 using namespace ast;
 
@@ -1507,5 +1506,4 @@ void ASTOptimizer::printStats() const
               << "\n";
 }
 
-} // namespace parser
-} // namespace mylang
+} // namespace mylang::parser

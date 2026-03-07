@@ -2,8 +2,7 @@
 
 #include "../include/ast.hpp"
 
-namespace mylang {
-namespace ast {
+namespace mylang::ast {
 
 typename ASTNode::NodeType ASTNode::getNodeType() const { return NodeType_; }
 uint32_t ASTNode::getLine() const { return Line_; }
@@ -370,5 +369,4 @@ Expr const* ReturnStmt::getValue() const { return Value_; }
 void ReturnStmt::setValue(Expr* v) { Value_ = v; }
 bool ReturnStmt::hasValue() const { return Value_ != nullptr; }
 
-}
-}
+} // mylang::ast

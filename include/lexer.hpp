@@ -1,5 +1,5 @@
-#ifndef _LEXER_HPP
-#define _LEXER_HPP
+#ifndef LEXER_HPP
+#define LEXER_HPP
 
 #include "token.hpp"
 
@@ -99,7 +99,7 @@ public:
     bool done() const { return Context_.offset >= FileManager_->buffer().len(); }
 
     // returns codepoint next to offset + 1 without advancing pos
-    [[nodiscard]] uint32_t peekChar();
+    MY_NODISCARD uint32_t peekChar();
 
     uint32_t currentChar() const;
 
@@ -181,4 +181,4 @@ inline tok::Token* Lexer::makeToken(tok::TokenType tt, StringRef lexeme, size_t 
 } // namespace lex
 } // namespace mylang
 
-#endif // _LEXER_HPP
+#endif // LEXER_HPP

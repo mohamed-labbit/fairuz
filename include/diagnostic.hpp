@@ -1,5 +1,5 @@
-#ifndef _DIAGNOSTIC_HPP
-#define _DIAGNOSTIC_HPP
+#ifndef DIAGNOSTIC_HPP
+#define DIAGNOSTIC_HPP
 
 #include "macros.hpp"
 
@@ -65,4 +65,4 @@ inline DiagnosticEngine engine;
 }
 }
 
-#endif // _DIAGNOSTIC_HPP
+#endif // DIAGNOSTIC_HPP
