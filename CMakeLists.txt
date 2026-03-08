@@ -31,20 +31,20 @@ find_package(simdutf CONFIG QUIET)
 
 if(NOT simdutf_FOUND)
     message(STATUS "simdutf not found via find_package, fetching from GitHub...")
-    
+
     include(FetchContent)
     FetchContent_Declare(
         simdutf
         GIT_REPOSITORY https://github.com/simdutf/simdutf.git
-        GIT_TAG        v5.5.0  # Use latest stable version
-        GIT_SHALLOW    TRUE
+        GIT_TAG v5.5.0 # Use latest stable version
+        GIT_SHALLOW TRUE
     )
-    
+
     # Configure simdutf options
     set(SIMDUTF_TESTS OFF CACHE BOOL "Disable simdutf tests" FORCE)
     set(SIMDUTF_TOOLS OFF CACHE BOOL "Disable simdutf tools" FORCE)
     set(SIMDUTF_BENCHMARKS OFF CACHE BOOL "Disable simdutf benchmarks" FORCE)
-    
+
     FetchContent_MakeAvailable(simdutf)
     message(STATUS "simdutf fetched successfully")
 else()
@@ -80,17 +80,19 @@ endif()
 # Define the test executable
 add_executable(mylang_tests
     tests/test_main.cpp
-    tests/runtime/allocator/test_arena.cpp
+    tests/runtime/test_arena.cpp
     tests/string/test_string.cpp
     tests/lexer/test_tokens.cpp
     tests/lexer/test_indentation.cpp
     tests/parser/test_parser.cpp
     tests/parser/test_analyzer.cpp
     tests/parser/test_optim.cpp
-    tests/security/test_security.cpp
-    tests/IR/test_value.cpp
-    tests/IR/test_codegen.cpp
+    tests/runtime/compiler/test_opcode.cpp
+    tests/runtime/compiler/test_chunk.cpp
     tests/runtime/compiler/test_value.cpp
+    tests/runtime/compiler/test_compiler.cpp
+    tests/runtime/test_vm.cpp
+    tests/security/test_security.cpp
     $<TARGET_OBJECTS:mylang_objects>
 )
 
