@@ -67,3 +67,4 @@ if __name__ == "__main__":
 .DS_Store
 build/
 lines.py
+cleanup.sh

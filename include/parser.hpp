@@ -159,7 +159,7 @@ public:
         : Lexer_(fm)
     {
         if (!fm)
-            diagnostic::engine.panic("file_manager is NULL!");
+            diagnostic::panic("file_manager is NULL!");
 
         Lexer_.next();
     }
@@ -221,7 +221,7 @@ private:
             advance();
             return true;
         }
-        diagnostic::engine.emit(msg.data(), diagnostic::DiagnosticEngine::Severity::ERROR);
+        diagnostic::emit(msg.data(), diagnostic::Severity::ERROR);
         return false;
     }
 

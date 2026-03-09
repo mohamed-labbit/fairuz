@@ -1,7 +1,6 @@
-#include "../../../include/runtime/compiler/compiler.hpp"
-#include "../../../include/runtime/compiler/value.hpp"
-#include "../../../include/runtime/opcode/chunk.hpp"
-#include "../../../include/runtime/opcode/opcode.hpp"
+#include "../../../include/runtime/compiler.hpp"
+#include "../../../include/runtime/value.hpp"
+#include "../../../include/runtime/opcode.hpp"
 #include <gtest/gtest.h>
 
 using namespace mylang::runtime;
@@ -23,7 +22,7 @@ TEST(Chunk, EmitReturnsCorrectIndex)
 TEST(Chunk, EmittedInstructionPreserved)
 {
     Chunk c;
-    Instruction instr = make_ABC(static_cast<uint8_t>(OpCode::ADD), 1, 2, 3);
+    uint32_t instr = make_ABC(static_cast<uint8_t>(OpCode::OP_ADD), 1, 2, 3);
     c.emit(instr, 10);
     EXPECT_EQ(c.code[0], instr);
 }
@@ -127,31 +126,31 @@ TEST(Chunk, AllocICSlotSequential)
     EXPECT_EQ(s0, 0u);
     EXPECT_EQ(s1, 1u);
     EXPECT_EQ(s2, 2u);
-    EXPECT_EQ(c.ic_slots.size(), 3u);
+    EXPECT_EQ(c.icSlots.size(), 3u);
 }
 
 TEST(Chunk, AllocICSlotDefaultState)
 {
     Chunk c;
     c.allocIcSlot();
-    auto& slot = c.ic_slots[0];
-    EXPECT_EQ(slot.seen_lhs, TypeTag::NONE);
-    EXPECT_EQ(slot.seen_rhs, TypeTag::NONE);
-    EXPECT_EQ(slot.seen_ret, TypeTag::NONE);
-    EXPECT_EQ(slot.hit_count, 0u);
-    EXPECT_EQ(slot.jit_stub, nullptr);
+    auto& slot = c.icSlots[0];
+    EXPECT_EQ(slot.seenLhs, TypeTag::NONE);
+    EXPECT_EQ(slot.seenRhs, TypeTag::NONE);
+    EXPECT_EQ(slot.seenRet, TypeTag::NONE);
+    EXPECT_EQ(slot.hitCount, 0u);
+    EXPECT_EQ(slot.jitStub, nullptr);
 }
 
 TEST(Chunk, ICSlotCanBeUpdated)
 {
     Chunk c;
     c.allocIcSlot();
-    auto& slot = c.ic_slots[0];
-    slot.seen_lhs = TypeTag::INT;
-    slot.seen_rhs = TypeTag::INT;
-    slot.hit_count = 500;
-    EXPECT_EQ(slot.seen_lhs, TypeTag::INT);
-    EXPECT_EQ(slot.hit_count, 500u);
+    auto& slot = c.icSlots[0];
+    slot.seenLhs = TypeTag::INT;
+    slot.seenRhs = TypeTag::INT;
+    slot.hitCount = 500;
+    EXPECT_EQ(slot.seenLhs, TypeTag::INT);
+    EXPECT_EQ(slot.hitCount, 500u);
 }
 
 TEST(Chunk, GetLineSingleLine)
@@ -243,9 +242,9 @@ TEST(CompilerState, AllocRegIncrementsWatermark)
     Chunk c;
     CompilerState s;
     s.chunk = &c;
-    EXPECT_EQ(s.allocReg(), 0u);
-    EXPECT_EQ(s.allocReg(), 1u);
-    EXPECT_EQ(s.allocReg(), 2u);
+    EXPECT_EQ(s.allocRegister(), 0u);
+    EXPECT_EQ(s.allocRegister(), 1u);
+    EXPECT_EQ(s.allocRegister(), 2u);
     EXPECT_EQ(s.nextReg, 3u);
     EXPECT_EQ(s.maxReg, 3u);
 }
@@ -255,9 +254,9 @@ TEST(CompilerState, FreeRegDecrements)
     Chunk c;
     CompilerState s;
     s.chunk = &c;
-    s.allocReg();
-    s.allocReg();
-    s.freeReg();
+    s.allocRegister();
+    s.allocRegister();
+    s.freeRegister();
     EXPECT_EQ(s.nextReg, 1u);
     EXPECT_EQ(s.maxReg, 2u);
 }
@@ -267,9 +266,9 @@ TEST(CompilerState, FreeRegsToWatermark)
     Chunk c;
     CompilerState s;
     s.chunk = &c;
-    s.allocReg(); // 0
-    s.allocReg(); // 1
-    s.allocReg(); // 2
+    s.allocRegister(); // 0
+    s.allocRegister(); // 1
+    s.allocRegister(); // 2
     s.freeRegsTo(1);
     EXPECT_EQ(s.nextReg, 1u);
     EXPECT_EQ(s.maxReg, 3u);
@@ -280,11 +279,11 @@ TEST(CompilerState, MaxRegTracksHighWatermark)
     Chunk c;
     CompilerState s;
     s.chunk = &c;
-    s.allocReg();
-    s.allocReg();
-    s.allocReg();
+    s.allocRegister();
+    s.allocRegister();
+    s.allocRegister();
     s.freeRegsTo(0);
-    s.allocReg();
+    s.allocRegister();
     EXPECT_EQ(s.maxReg, 3u);
 }
 
@@ -294,6 +293,6 @@ TEST(CompilerState, FreeRegAtZeroIsNoOp)
     CompilerState s;
     s.chunk = &c;
     EXPECT_EQ(s.nextReg, 0u);
-    s.freeReg();
+    s.freeRegister();
     EXPECT_EQ(s.nextReg, 0u);
 }

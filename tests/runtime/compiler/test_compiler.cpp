@@ -1,12 +1,11 @@
 #include <gtest/gtest.h>
 
-#include "../../../include/runtime/compiler/compiler.hpp"
-#include "../../../include/runtime/compiler/value.hpp"
-#include "../../../include/runtime/opcode/chunk.hpp"
-#include "../../../include/runtime/opcode/opcode.hpp"
-#include "../../../include/string.hpp"
-#include "../../../include/ast_printer.hpp"
 #include "../../../include/ast.hpp"
+#include "../../../include/ast_printer.hpp"
+#include "../../../include/runtime/compiler.hpp"
+#include "../../../include/runtime/opcode.hpp"
+#include "../../../include/runtime/value.hpp"
+#include "../../../include/string.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -24,7 +23,7 @@ static constexpr AssignmentExpr* assign_expr(StringRef name_, Expr* val, uint32_
 {
     return makeAssignmentExpr(makeName(name_), val /*, line*/);
 }
-static constexpr CallExpr* call(Expr* callee, std::vector<Expr*> args = {}, uint32_t line = 1)
+static constexpr CallExpr* call(Expr* callee, std::vector<Expr*> args = { }, uint32_t line = 1)
 {
     return makeCall(callee, makeList(args) /*, line*/);
 }
@@ -126,21 +125,13 @@ private:
 
     Chunk const& chunk_;
     uint32_t pos_;
-    Instruction cur_ = 0;
+    uint32_t cur_ = 0;
     StringRef label_;
 };
 
 static Chunk* compile_ok(std::vector<Stmt*> stmts, Compiler& c)
 {
-    Chunk* chunk = c.compile(stmts);
-    if (c.had_error()) {
-        for (auto& e : c.errors())
-            ADD_FAILURE() << e.format();
-
-        return nullptr;
-    }
-
-    return chunk;
+    return c.compile(stmts);
 }
 
 static void dump(Chunk const* c)
@@ -224,7 +215,7 @@ TEST(CompilerLiteral, SmallIntegerUsesLoadInt)
     bc.next("LOAD_INT").op(OpCode::LOAD_INT).A(0).Bx(load_int_bx(42));
     bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
     bc.done();
-    // Verify constant pool was NOT used for the integer
+    // Verify constant pool was OP_NOT used for the integer
     EXPECT_TRUE(chunk->constants.empty());
 }
 
@@ -257,8 +248,8 @@ TEST(CompilerLiteral, LargeIntegerUsesConstantPool)
     BytecodeChecker bc(*chunk);
     bc.next("LOAD_CONST").op(OpCode::LOAD_CONST).A(0).Bx(0);
     ASSERT_FALSE(chunk->constants.empty());
-    EXPECT_TRUE(chunk->constants[0].isInt());
-    EXPECT_EQ(chunk->constants[0].asInt(), 100000);
+    EXPECT_TRUE(chunk->constants[0].isInteger());
+    EXPECT_EQ(chunk->constants[0].asInteger(), 100000);
 }
 
 TEST(CompilerLiteral, FloatUsesConstantPool)
@@ -293,7 +284,7 @@ TEST(CompilerLiteral, StringUsesConstantPool)
     bc.next("LOAD_CONST").op(OpCode::LOAD_CONST).A(0).Bx(0);
     ASSERT_FALSE(chunk->constants.empty());
     EXPECT_TRUE(chunk->constants[0].isString());
-    EXPECT_EQ(chunk->constants[0].asString()->chars, "hello");
+    EXPECT_EQ(chunk->constants[0].asString()->str, "hello");
 }
 
 TEST(CompilerLiteral, StringsDeduplicated)
@@ -324,7 +315,7 @@ TEST(CompilerVar, LocalDeclaration)
     bc.next("LOAD_INT").op(OpCode::LOAD_INT).A(0).Bx(load_int_bx(5));
     bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
     bc.done();
-    EXPECT_EQ(chunk->local_count, 1);
+    EXPECT_EQ(chunk->localCount, 1);
 }
 
 TEST(CompilerVar, TwoLocalsUseConsecutiveRegisters)
@@ -340,7 +331,7 @@ TEST(CompilerVar, TwoLocalsUseConsecutiveRegisters)
     bc.next("LOAD_INT y").op(OpCode::LOAD_INT).A(1); // y → r1
     bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
     bc.done();
-    EXPECT_EQ(chunk->local_count, 2);
+    EXPECT_EQ(chunk->localCount, 2);
 }
 
 TEST(CompilerVar, LocalAssignmentWritesBackToSameRegister)
@@ -364,10 +355,10 @@ TEST(CompilerVar, GlobalLoadAndStore)
     // Undeclared name → global.
     // Assigning to an undeclared name emits STORE_GLOBAL.
     // Reading an undeclared name emits LOAD_GLOBAL.
-    Chunk* chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok({
         assign_stmt("g", makeLiteralInt(7)), // g not declared → STORE_GLOBAL
         makeExprStmt(makeName("g"))          // LOAD_GLOBAL
-        ));
+    });
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     // Store
@@ -382,7 +373,7 @@ TEST(CompilerVar, GlobalLoadAndStore)
     // The name "g" must appear in the constant pool
     bool found = false;
     for (auto& v : chunk->constants)
-        if (v.isString() && v.asString()->chars == "g")
+        if (v.isString() && v.asString()->str == "g")
             found = true;
     EXPECT_TRUE(found) << "global name 'g' not interned into constant pool";
 }
@@ -401,7 +392,7 @@ TEST(CompilerUnary, NegateVariable)
     dump(chunk);
     BytecodeChecker bc(*chunk);
     bc.next("LOAD_INT x").op(OpCode::LOAD_INT).A(0);
-    bc.next("NEG").op(OpCode::NEG).B(0); // src = r0
+    bc.next("OP_NEG").op(OpCode::OP_NEG).B(0); // src = r0
     bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
     bc.done();
 }
@@ -415,7 +406,7 @@ TEST(CompilerUnary, NotVariable)
     dump(chunk);
     BytecodeChecker bc(*chunk);
     bc.next("LOAD_TRUE b").op(OpCode::LOAD_TRUE).A(0);
-    bc.next("NOT").op(OpCode::NOT).B(0);
+    bc.next("OP_NOT").op(OpCode::OP_NOT).B(0);
     bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
     bc.done();
 }
@@ -429,7 +420,7 @@ TEST(CompilerUnary, BitwiseNotVariable)
     dump(chunk);
     BytecodeChecker bc(*chunk);
     bc.next("decl").op(OpCode::LOAD_INT).A(0);
-    bc.next("BNOT").op(OpCode::BNOT).B(0);
+    bc.next("OP_BITNOT").op(OpCode::OP_BITNOT).B(0);
     bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
     bc.done();
 }
@@ -505,11 +496,11 @@ TEST(CompilerBinary, AddTwoLocals)
     // compile(makeName("a")) → r0 (local, no MOVE because no dst hint)
     // compile(makeName("b")) → r1
     // dst = alloc_reg() = r2
-    bc.next("ADD").op(OpCode::ADD).A(2).B(0).C(1);
+    bc.next("OP_ADD").op(OpCode::OP_ADD).A(2).B(0).C(1);
     bc.next("NOP ic").op(OpCode::NOP).A(0); // IC slot 0
     bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
     bc.done();
-    EXPECT_EQ(chunk->ic_slots.size(), 1u);
+    EXPECT_EQ(chunk->icSlots.size(), 1u);
 }
 
 TEST(CompilerBinary, SubtractLiterals)
@@ -523,7 +514,7 @@ TEST(CompilerBinary, SubtractLiterals)
     bc.next("LOAD_INT 7").op(OpCode::LOAD_INT).Bx(load_int_bx(7));
     bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
     bc.done();
-    EXPECT_TRUE(chunk->ic_slots.empty()); // no IC slot for folded ops
+    EXPECT_TRUE(chunk->icSlots.empty()); // no IC slot for folded ops
 }
 
 TEST(CompilerBinary, MultiplyLiterals)
@@ -553,7 +544,7 @@ TEST(CompilerBinary, DivisionFolded)
 
 TEST(CompilerBinary, DivisionByZeroNotFolded)
 {
-    // x / 0 where x is a variable — cannot fold, must emit DIV + NOP
+    // x / 0 where x is a variable — cannot fold, must emit OP_DIV + NOP
     Chunk* chunk = compile_ok(blk(
         decl("x", makeLiteralInt(5)),
         makeExprStmt(makeBinary(makeName("x"), makeLiteralInt(0), BinaryOp::OP_DIV))));
@@ -561,10 +552,10 @@ TEST(CompilerBinary, DivisionByZeroNotFolded)
     dump(chunk);
     BytecodeChecker bc(*chunk);
     bc.next("decl x").op(OpCode::LOAD_INT).A(0);
-    // Even with literal 0 on RHS, DIV by literal zero is not folded
+    // Even with literal 0 on RHS, OP_DIV by literal zero is not folded
     // (only purely-literal binary ops are folded; here LHS is a name)
     bc.next("LOAD_INT 0 into r1 temp").op(OpCode::LOAD_INT);
-    bc.next("DIV").op(OpCode::DIV);
+    bc.next("OP_DIV").op(OpCode::OP_DIV);
     bc.next("NOP ic").op(OpCode::NOP);
     bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
     bc.done();
@@ -572,7 +563,7 @@ TEST(CompilerBinary, DivisionByZeroNotFolded)
 
 TEST(CompilerBinary, GreaterThanNormalizedToLT)
 {
-    // a > b  →  compiler swaps operands and emits LT(b, a)
+    // a > b  →  compiler swaps operands and emits OP_LT(b, a)
     Chunk* chunk = compile_ok(blk(
         decl("a", makeLiteralInt(3)),
         decl("b", makeLiteralInt(1)),
@@ -582,8 +573,8 @@ TEST(CompilerBinary, GreaterThanNormalizedToLT)
     BytecodeChecker bc(*chunk);
     bc.next("decl a").op(OpCode::LOAD_INT).A(0);
     bc.next("decl b").op(OpCode::LOAD_INT).A(1);
-    // GT(a,b) → LT(b,a): B=r1(b), C=r0(a)
-    bc.next("LT").op(OpCode::LT).B(1).C(0);
+    // GT(a,b) → OP_LT(b,a): B=r1(b), C=r0(a)
+    bc.next("OP_LT").op(OpCode::OP_LT).B(1).C(0);
     bc.next("NOP ic").op(OpCode::NOP);
     bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
     bc.done();
@@ -600,8 +591,8 @@ TEST(CompilerBinary, GreaterEqualNormalizedToLE)
     BytecodeChecker bc(*chunk);
     bc.next("decl a").op(OpCode::LOAD_INT).A(0);
     bc.next("decl b").op(OpCode::LOAD_INT).A(1);
-    // GE(a,b) → LE(b,a)
-    bc.next("LE").op(OpCode::LE).B(1).C(0);
+    // GE(a,b) → OP_LTE(b,a)
+    bc.next("OP_LTE").op(OpCode::OP_LTE).B(1).C(0);
     bc.next("NOP ic").op(OpCode::NOP);
 }
 
@@ -615,7 +606,7 @@ TEST(CompilerBinary, ICSlotAllocatedPerBinaryOp)
         makeExprStmt(makeBinary(makeName("x"), makeName("y"), BinaryOp::OP_MUL))));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
-    EXPECT_EQ(chunk->ic_slots.size(), 2u);
+    EXPECT_EQ(chunk->icSlots.size(), 2u);
 }
 
 TEST(CompilerBinary, EqualityLiteralsFolded)
@@ -727,7 +718,7 @@ TEST(CompilerBinary, AndWithBothLiteralsTrueNotFolded)
     // true && true — AND is not folded (non-literal names on each side);
     // but true && true with literal operands: const_value returns a value,
     // however AND/OR are checked BEFORE try_fold_binary.
-    // The compiler currently does NOT constant-fold AND/OR.
+    // The compiler currently does OP_NOT constant-fold AND/OR.
     // Verify: no JUMP_IF_FALSE means it *was* folded; presence means not.
     // This test just verifies the compiler doesn't crash.
     Chunk* chunk = compile_ok(makeExprStmt(
@@ -818,8 +809,8 @@ TEST(CompilerIf, ConstantTrueConditionDCE)
             << "JUMP_IF_FALSE should not exist when condition is const-true";
     // 999 must not appear in constants
     for (auto& v : chunk->constants)
-        if (v.isInt())
-            EXPECT_NE(v.asInt(), 999);
+        if (v.isInteger())
+            EXPECT_NE(v.asInteger(), 999);
 }
 
 TEST(CompilerIf, ConstantFalseConditionDCE)
@@ -962,14 +953,14 @@ TEST(CompilerReturn, ReturnIsDeadCodeBarrier)
     // Statements after return must be suppressed
     Chunk* chunk = compile_ok(blk(
         makeReturn(makeLiteralInt(1)),
-        decl("x", makeLiteralInt(99)) // must NOT appear
+        decl("x", makeLiteralInt(99)) // must OP_NOT appear
         ));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     // Only LOAD_INT 1 + RETURN appear; no LOAD_INT 99
     for (auto& v : chunk->constants)
-        if (v.isInt())
-            EXPECT_NE(v.asInt(), 99) << "dead code leaked into constant pool";
+        if (v.isInteger())
+            EXPECT_NE(v.asInteger(), 99) << "dead code leaked into constant pool";
     bool found_99 = false;
     for (auto& ins : chunk->code)
         if (instr_op(ins) == static_cast<uint8_t>(OpCode::LOAD_INT) && instr_Bx(ins) == load_int_bx(99))
@@ -981,7 +972,7 @@ TEST(CompilerReturn, TailCallEmitsCallTail)
 {
     // Inside a non-top-level function: return f() → CALL_TAIL
     Chunk* chunk = compile_ok(func_stmt(
-        "wrapper", {},
+        "wrapper", { },
         blk(makeReturn(call(makeName("f"))))));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
@@ -998,7 +989,7 @@ TEST(CompilerFunc, EmptyFunction)
 {
     // fn foo() { }
     Chunk* chunk = compile_ok(blk(
-        func_stmt("foo", {}, blk())));
+        func_stmt("foo", { }, blk())));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     // Parent chunk: CLOSURE r0 fn_idx=0, then RETURN_NIL
@@ -1028,15 +1019,15 @@ TEST(CompilerFunc, FunctionWithParams)
     ASSERT_EQ(chunk->functions.size(), 1u);
     Chunk const* fn = chunk->functions[0];
     EXPECT_EQ(fn->arity, 2);
-    EXPECT_EQ(fn->local_count, 3); // a=r0, b=r1, tempL=r2, tempR NOT allocated / dst=r2
+    EXPECT_EQ(fn->localCount, 3); // a=r0, b=r1, tempL=r2, tempR OP_NOT allocated / dst=r2
 
     // fn code:
-    //   ADD r2 r0 r1
+    //   OP_ADD r2 r0 r1
     //   NOP ic=0
     //   RETURN r2 1
     BytecodeChecker fbc(*fn);
 
-    fbc.next("ADD").op(OpCode::ADD).A(2).B(0).C(1);
+    fbc.next("OP_ADD").op(OpCode::OP_ADD).A(2).B(0).C(1);
     fbc.next("NOP").op(OpCode::NOP).A(0);
     fbc.next("RETURN").op(OpCode::RETURN).A(2).B(1);
     fbc.done();
@@ -1046,18 +1037,18 @@ TEST(CompilerFunc, FunctionStoredAsLocal)
 {
     // fn foo() { } — foo lives in r0 in the enclosing scope
     Chunk* chunk = compile_ok(blk(
-        func_stmt("foo", {}, blk())));
+        func_stmt("foo", { }, blk())));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
-    EXPECT_EQ(chunk->local_count, 1); // the closure itself
+    EXPECT_EQ(chunk->localCount, 1); // the closure itself
 }
 
 TEST(CompilerFunc, NestedFunctionIndexing)
 {
     // Two consecutive function declarations → fn_idx 0 and 1
     Chunk* chunk = compile_ok(blk(
-        func_stmt("a", {}, blk()),
-        func_stmt("b", {}, blk())));
+        func_stmt("a", { }, blk()),
+        func_stmt("b", { }, blk())));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     ASSERT_EQ(chunk->functions.size(), 2u);
@@ -1089,10 +1080,10 @@ TEST(CompilerClosure, CapturesLocalFromEnclosingScope)
     //   fn inner() { return x }  ← x captured as upvalue
     // }
     Chunk* chunk = compile_ok(blk(
-        func_stmt("outer", {},
+        func_stmt("outer", { },
             blk(
                 decl("x", makeLiteralInt(1)),
-                func_stmt("inner", {}, blk(makeReturn(makeName("x"))))))));
+                func_stmt("inner", { }, blk(makeReturn(makeName("x"))))))));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     ASSERT_EQ(chunk->functions.size(), 1u);
@@ -1100,8 +1091,8 @@ TEST(CompilerClosure, CapturesLocalFromEnclosingScope)
     ASSERT_EQ(outer->functions.size(), 1u);
     Chunk const* inner = outer->functions[0];
 
-    // inner must have upvalue_count = 1
-    EXPECT_EQ(inner->upvalue_count, 1);
+    // inner must have upvalueCount = 1
+    EXPECT_EQ(inner->upvalueCount, 1);
 
     // inner's body must contain GET_UPVALUE
     bool has_get_uv = false;
@@ -1123,10 +1114,10 @@ TEST(CompilerClosure, UpvalueDescriptorEmittedAfterClosure)
     // The MOVE pseudo-instruction (upvalue descriptor) must follow CLOSURE
     // in the parent chunk's code stream.
     Chunk* chunk = compile_ok(blk(
-        func_stmt("outer", {},
+        func_stmt("outer", { },
             blk(
                 decl("x", makeLiteralInt(1)),
-                func_stmt("inner", {}, blk(makeReturn(makeName("x"))))))));
+                func_stmt("inner", { }, blk(makeReturn(makeName("x"))))))));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     Chunk const* outer = chunk->functions[0];
@@ -1141,7 +1132,7 @@ TEST(CompilerClosure, UpvalueDescriptorEmittedAfterClosure)
     // The instruction immediately after CLOSURE must be a MOVE with
     // A=1 (is_local=true) and B=register of x (r0)
     ASSERT_LT(closure_pos + 1, (int)outer->code.size());
-    Instruction desc = outer->code[closure_pos + 1];
+    uint32_t desc = outer->code[closure_pos + 1];
     EXPECT_EQ(instr_op(desc), static_cast<uint8_t>(OpCode::MOVE))
         << "upvalue descriptor MOVE must follow CLOSURE";
     EXPECT_EQ(instr_A(desc), 1u) << "is_local=1 for direct local capture";
@@ -1161,7 +1152,7 @@ TEST(CompilerCall, CallWithNoArgs)
     bc.next("IC_CALL").op(OpCode::IC_CALL).B(0); // argc=0
     bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
     bc.done();
-    EXPECT_EQ(chunk->ic_slots.size(), 1u);
+    EXPECT_EQ(chunk->icSlots.size(), 1u);
 }
 
 TEST(CompilerCall, CallWithTwoArgs)
@@ -1216,18 +1207,18 @@ TEST(CompilerCall, ICSlotAllocatedPerCallSite)
         makeExprStmt(call(makeName("g")))));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
-    EXPECT_EQ(chunk->ic_slots.size(), 2u);
+    EXPECT_EQ(chunk->icSlots.size(), 2u);
 }
 
 TEST(CompilerList, EmptyList)
 {
     // []
-    // NEW_LIST r0 cap=0
+    // LIST_NEW r0 cap=0
     Chunk* chunk = compile_ok(makeExprStmt(makeList()));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
-    bc.next("NEW_LIST").op(OpCode::NEW_LIST).A(0).B(0);
+    bc.next("LIST_NEW").op(OpCode::LIST_NEW).A(0).B(0);
     bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
     bc.done();
 }
@@ -1243,7 +1234,7 @@ TEST(CompilerList, ListWithElements)
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
-    bc.next("NEW_LIST").op(OpCode::NEW_LIST).A(0).B(3); // cap hint = 3
+    bc.next("LIST_NEW").op(OpCode::LIST_NEW).A(0).B(3); // cap hint = 3
     // For each element: load into temp, LIST_APPEND
     bc.next("LOAD 1").op(OpCode::LOAD_INT).Bx(load_int_bx(1));
     bc.next("APPEND 1").op(OpCode::LIST_APPEND).A(0);
@@ -1264,10 +1255,10 @@ TEST(CompilerList, ListCapHintCappedAt255)
     Chunk* chunk = compile_ok(makeExprStmt(makeList(std::move(elems))));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
-    // First instruction is NEW_LIST; B field = capacity hint
+    // First instruction is LIST_NEW; B field = capacity hint
     ASSERT_FALSE(chunk->code.empty());
-    Instruction new_list = chunk->code[0];
-    EXPECT_EQ(instr_op(new_list), static_cast<uint8_t>(OpCode::NEW_LIST));
+    uint32_t new_list = chunk->code[0];
+    EXPECT_EQ(instr_op(new_list), static_cast<uint8_t>(OpCode::LIST_NEW));
     EXPECT_EQ(instr_B(new_list), 255u) << "capacity hint must be capped at 255";
 }
 
@@ -1289,7 +1280,7 @@ TEST(CompilerScope, LocalslDontLeakOutOfBlock)
     bc.next("LOAD_INT 2 (outer x)").op(OpCode::LOAD_INT).A(0).Bx(load_int_bx(2));
     bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
     bc.done();
-    EXPECT_EQ(chunk->local_count, 1); // max concurrent locals = 1
+    EXPECT_EQ(chunk->localCount, 1); // max concurrent locals = 1
 }
 
 TEST(CompilerScope, NestedScopesBothVisible)
@@ -1305,25 +1296,16 @@ TEST(CompilerScope, NestedScopesBothVisible)
         }())));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
-    // a=r0, b=r1; ADD r2 r0 r1; c goes into r2
+    // a=r0, b=r1; OP_ADD r2 r0 r1; c goes into r2
     bool found_add = false;
-    for (auto& ins : chunk->code)
-        if (instr_op(ins) == static_cast<uint8_t>(OpCode::ADD)) {
+    for (auto& ins : chunk->code) {
+        if (instr_op(ins) == static_cast<uint8_t>(OpCode::OP_ADD)) {
             EXPECT_EQ(instr_B(ins), 0u) << "a in r0";
             EXPECT_EQ(instr_C(ins), 1u) << "b in r1";
             found_add = true;
         }
+    }
     EXPECT_TRUE(found_add);
-}
-
-TEST(CompilerError, NullRootReturnsNullAndRecordsError)
-{
-    Compiler c;
-    Chunk* chunk = c.compile(std::vector<Stmt*> {});
-    EXPECT_EQ(chunk, nullptr);
-    EXPECT_TRUE(c.had_error());
-    ASSERT_FALSE(c.errors().empty());
-    EXPECT_TRUE(c.errors()[0].message.find("null"));
 }
 
 TEST(CompilerMeta, TopLevelChunkNameIsMain)
@@ -1343,7 +1325,7 @@ TEST(CompilerMeta, LocalCountReflectsMaxRegisters)
         decl("c", makeLiteralInt(3))));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
-    EXPECT_EQ(chunk->local_count, 3);
+    EXPECT_EQ(chunk->localCount, 3);
 }
 
 TEST(CompilerMeta, FunctionAritySetCorrectly)
@@ -1359,7 +1341,7 @@ TEST(CompilerMeta, FunctionAritySetCorrectly)
 TEST(CompilerMeta, FunctionNameSetCorrectly)
 {
     Chunk* chunk = compile_ok(blk(
-        func_stmt("compute", {}, blk())));
+        func_stmt("compute", { }, blk())));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     ASSERT_EQ(chunk->functions.size(), 1u);
@@ -1403,8 +1385,8 @@ TEST(CompilerIntegration, Fibonacci)
     EXPECT_EQ(fib->arity, 1);
     EXPECT_FALSE(fib->code.empty());
     // Both recursive calls → 2 IC slots from the two IC_CALLs
-    // plus IC slots from the binary ops ADD, LE, two SUBs = >= 2 from calls
-    EXPECT_GE(fib->ic_slots.size(), 2u);
+    // plus IC slots from the binary ops OP_ADD, OP_LTE, two SUBs = >= 2 from calls
+    EXPECT_GE(fib->icSlots.size(), 2u);
 }
 
 TEST(CompilerIntegration, CounterWithClosure)
@@ -1415,10 +1397,10 @@ TEST(CompilerIntegration, CounterWithClosure)
     //   return inc
     // }
     Chunk* chunk = compile_ok(blk(
-        func_stmt("make_counter", {},
+        func_stmt("make_counter", { },
             blk(
                 decl("count", makeLiteralInt(0)),
-                func_stmt("inc", {},
+                func_stmt("inc", { },
                     blk(assign_stmt("count",
                         makeBinary(makeName("count"), makeLiteralInt(1), BinaryOp::OP_ADD)))),
                 makeReturn(makeName("inc"))))));
@@ -1435,7 +1417,7 @@ TEST(CompilerIntegration, CounterWithClosure)
         if (instr_op(ins) == static_cast<uint8_t>(OpCode::SET_UPVALUE))
             has_set_uv = true;
     EXPECT_TRUE(has_set_uv) << "inc() should SET_UPVALUE for count";
-    EXPECT_EQ(inc->upvalue_count, 1);
+    EXPECT_EQ(inc->upvalueCount, 1);
 }
 
 TEST(CompilerIntegration, NestedArithmetic)
@@ -1454,7 +1436,7 @@ TEST(CompilerIntegration, NestedArithmetic)
     bc.next("LOAD_INT 15").op(OpCode::LOAD_INT).A(0).Bx(load_int_bx(15));
     bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
     bc.done();
-    EXPECT_TRUE(chunk->ic_slots.empty()); // all folded
+    EXPECT_TRUE(chunk->icSlots.empty()); // all folded
 }
 
 TEST(CompilerIntegration, StringConstantPoolDedup)
@@ -1468,7 +1450,7 @@ TEST(CompilerIntegration, StringConstantPoolDedup)
     dump(chunk);
     int count = 0;
     for (auto& v : chunk->constants)
-        if (v.isString() && v.asString()->chars == "hello")
+        if (v.isString() && v.asString()->str == "hello")
             ++count;
     EXPECT_EQ(count, 1);
 }
@@ -1484,7 +1466,7 @@ TEST(CompilerIntegration, MixedLiteralsInList)
     Chunk* chunk = compile_ok(makeExprStmt(makeList(std::move(elems))));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
-    // Must have NEW_LIST followed by 4× (load + LIST_APPEND)
+    // Must have LIST_NEW followed by 4× (load + LIST_APPEND)
     int appends = 0;
     for (auto& ins : chunk->code)
         if (instr_op(ins) == static_cast<uint8_t>(OpCode::LIST_APPEND))

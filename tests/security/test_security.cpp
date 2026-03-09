@@ -1,5 +1,5 @@
-#include "../../include/macros.hpp"
 #include "../../include/lexer.hpp"
+#include "../../include/macros.hpp"
 #include "../../include/runtime/allocator/arena.hpp"
 #include "../../include/runtime/allocator/meta.hpp"
 #include "../../include/string.hpp"
@@ -30,7 +30,7 @@ TEST(SecurityV1, AllocateMustRejectOversizedRequest)
 {
     runtime::allocator::ArenaAllocator alloc(
         static_cast<int>(runtime::allocator::ArenaAllocator::GrowthStrategy::LINEAR));
-    // allocate() calls diagnostic::engine.emit(FATAL) which throws instead of returning nullptr.
+    // allocate() calls diagnostic::emit(FATAL) which throws instead of returning nullptr.
     void* p = nullptr;
     EXPECT_ANY_THROW(p = alloc.allocate(MAX_BLOCK_SIZE + 1))
         << "allocate() must reject >MAX_BLOCK_SIZE (throws via diagnostic FATAL)";
@@ -259,7 +259,7 @@ TEST(SecurityV7, CastIsLossyForSizesAboveUint32Max)
 TEST(SecurityV7, CorruptedChecksumGoesUndetected)
 {
     using namespace mylang::runtime::allocator;
-    AllocationHeader h {};
+    AllocationHeader h { };
     h.magic = AllocationHeader::MAGIC;
     h.alignment = static_cast<uint32_t>(alignof(std::max_align_t));
     h.size = static_cast<uint32_t>(MAX_BLOCK_SIZE); // truncates 4 GiB → 0

@@ -1,188 +1,113 @@
-#ifndef _OPCODE_HPP
-#define _OPCODE_HPP
+#ifndef OPCODE_HPP
+#define OPCODE_HPP
 
 #include "value.hpp"
-
 #include <cinttypes>
-#include <cstddef>
 #include <cstdint>
 
-namespace mylang {
-namespace runtime {
+namespace mylang::runtime {
 
-// ---------------------------------------------------------------------------
-// Instruction encoding — fixed 32-bit words.
-//
-//  Format ABC  (most instructions):
-//   31..24  opcode  (8 bits)
-//   23..16  A       (8 bits)  — destination register
-//   15.. 8  B       (8 bits)  — source register / small immediate
-//    7.. 0  C       (8 bits)  — source register / small immediate
-//
-//  Format ABx  (LOAD_CONST, CLOSURE, …):
-//   31..24  opcode  (8 bits)
-//   23..16  A       (8 bits)
-//   15.. 0  Bx      (16 bits) — unsigned index into constant table
-//
-//  Format AsBx (JUMP, LOOP, …):
-//   31..24  opcode  (8 bits)
-//   23..16  A       (8 bits)  — condition register (or unused=0)
-//   15.. 0  sBx     (16 bits) — signed offset, bias = 32767
-//
-// Register 0..254 are general-purpose per-function registers.
-// Register 255 is reserved as a "no register" sentinel.
-// ---------------------------------------------------------------------------
+static constexpr uint16_t JUMP_OFFSET = 32767;
+static constexpr uint8_t REG_NONE = 0xFF;
+static constexpr uint16_t MAX_CONSTANTS = 0xFFFF;
+static constexpr uint8_t MAX_REGS = 250; // room for sentinel + scratch
 
-using Instruction = uint32_t;
+inline uint8_t instr_op(uint32_t const i) { return (i >> 24) & 0xFF; }
+inline uint8_t instr_A(uint32_t const i) { return (i >> 16) & 0xFF; }
+inline uint8_t instr_B(uint32_t const i) { return (i >> 8) & 0xFF; }
+inline uint8_t instr_C(uint32_t const i) { return i & 0xFF; }
+inline uint16_t instr_Bx(uint32_t const i) { return i & 0xFFFF; }
+inline int16_t instr_sBx(uint32_t const i) { return static_cast<int16_t>(i & 0xFFFF) - 32767; }
 
-// ---- field extraction/packing ----
-
-inline uint8_t instr_op(Instruction i)
+inline uint32_t make_ABC(uint8_t op, uint8_t A, uint8_t B, uint8_t C)
 {
-    return (i >> 24) & 0xFF;
+    return (static_cast<uint32_t>(op) << 24) | (static_cast<uint32_t>(A) << 16)
+        | (static_cast<uint32_t>(B) << 8) | static_cast<uint32_t>(C);
+}
+inline uint32_t make_ABx(uint8_t op, uint8_t A, uint16_t Bx)
+{
+    return (static_cast<uint32_t>(op) << 24) | (static_cast<uint32_t>(A) << 16) | (static_cast<uint32_t>(Bx));
+}
+inline uint32_t make_AsBx(uint8_t op, uint8_t A, int64_t sBx)
+{
+    uint16_t _sBx = static_cast<uint16_t>(sBx + JUMP_OFFSET);
+    return (static_cast<uint32_t>(op) << 24) | (static_cast<uint32_t>(A) << 16) | (static_cast<uint32_t>(_sBx));
 }
 
-inline uint8_t instr_A(Instruction i)
-{
-    return (i >> 16) & 0xFF;
-}
-
-inline uint8_t instr_B(Instruction i)
-{
-    return (i >> 8) & 0xFF;
-}
-
-inline uint8_t instr_C(Instruction i)
-{
-    return i & 0xFF;
-}
-
-inline uint16_t instr_Bx(Instruction i)
-{
-    return i & 0xFFFF;
-}
-
-inline int16_t instr_sBx(Instruction i)
-{
-    return static_cast<int16_t>(i & 0xFFFF) - 32767;
-}
-
-inline Instruction make_ABC(uint8_t op, uint8_t A, uint8_t B, uint8_t C)
-{
-    return (static_cast<uint32_t>(op) << 24)
-        | (static_cast<uint32_t>(A) << 16)
-        | (static_cast<uint32_t>(B) << 8)
-        | static_cast<uint32_t>(C);
-}
-
-inline Instruction make_ABx(uint8_t op, uint8_t A, uint16_t Bx)
-{
-    return (static_cast<uint32_t>(op) << 24)
-        | (static_cast<uint32_t>(A) << 16)
-        | static_cast<uint32_t>(Bx);
-}
-
-inline Instruction make_AsBx(uint8_t op, uint8_t A, int offset)
-{
-    // offset is relative to the instruction AFTER the jump
-    uint16_t sBx = static_cast<uint16_t>(offset + 32767);
-    return (static_cast<uint32_t>(op) << 24)
-        | (static_cast<uint32_t>(A) << 16)
-        | static_cast<uint32_t>(sBx);
-}
-
-static constexpr uint8_t REG_NONE = 255;
-static constexpr uint16_t MAX_CONSTANTS = 65535;
-static constexpr uint8_t MAX_REGISTERS = 250; // leave room for sentinel + scratch
-
-// ---------------------------------------------------------------------------
-// OpCode table
-// ---------------------------------------------------------------------------
 enum class OpCode : uint8_t {
-    // ---- loads ----
-    LOAD_NIL,     // A: dst, B: start, C: count  — fill [B..B+C) with nil
-    LOAD_TRUE,    // A: dst
-    LOAD_FALSE,   // A: dst
-    LOAD_CONST,   // A: dst, Bx: const index
-    LOAD_INT,     // A: dst, Bx: signed 16-bit integer (bias 32767)
-    LOAD_GLOBAL,  // A: dst, Bx: name const index
-    STORE_GLOBAL, // A: src, Bx: name const index
+    /// [Op]: [A] , [B], [C]
+    /// or
+    /// [Op]: [A] , [  Bx  ]
+    /// or
+    /// [Op]: [A] , [  sBx ]
 
-    // ---- register moves ----
-    MOVE, // A: dst, B: src
+    LOAD_NIL,     // dst, Start, Count - fill [B..B+C) with nil
+    LOAD_TRUE,    // dst, - , -
+    LOAD_FALSE,   // dst, - , -
+    LOAD_CONST,   // dst, Const pool index
+    LOAD_INT,     // dst, signed 16-bit int (with bias, for larger ints use Value)
+    LOAD_GLOBAL,  // dst, name const index
+    STORE_GLOBAL, // src, name const index
 
-    // ---- upvalue ops ----
-    GET_UPVALUE,   // A: dst, B: upvalue index
-    SET_UPVALUE,   // A: src, B: upvalue index
-    CLOSE_UPVALUE, // A: first register to close (close all above A)
+    MOVE, // dst, src, -
 
-    // ---- arithmetic (integer-specialised paths in VM) ----
-    ADD,  // A=B+C
-    SUB,  // A=B-C
-    MUL,  // A=B*C
-    DIV,  // A=B/C  (float division)
-    IDIV, // A=B//C (integer floor division)
-    MOD,  // A=B%C
-    POW,  // A=B**C
-    NEG,  // A=-B
+    GET_UPVALUE,   // dst, index
+    SET_UPVALUE,   // src, index
+    CLOSE_UPVALUE, // first reg to close (close all the above), - , -
 
-    // ---- bitwise ----
-    BAND, // A=B&C
-    BOR,  // A=B|C
-    BXOR, // A=B^C
-    BNOT, // A=~B
-    SHL,  // A=B<<C
-    SHR,  // A=B>>C
-
-    // ---- comparison (result in A: 0 or 1) ----
-    EQ,  // A = (B == C)
-    NEQ, // A = (B != C)
-    LT,  // A = (B <  C)
-    LE,  // A = (B <= C)
-
-    // ---- logical ----
-    NOT, // A = !B (boolean)
-
-    // ---- string ----
+    // * is the value inside the given reg, if you have to ask ,then don't touch this code
+    // *A = *left OP *right
+    OP_ADD,
+    OP_SUB,
+    OP_MUL,
+    OP_DIV,
+    OP_MOD,
+    OP_POW,
+    OP_NEG, // *A = -(*B)
+    OP_BITAND,
+    OP_BITOR,
+    OP_BITXOR,
+    OP_BITNOT, // *A = ~(*B)
+    OP_LSHIFT,
+    OP_RSHIFT,
+    OP_EQ,
+    OP_NEQ,
+    OP_LT,
+    OP_LTE,
+    OP_NOT, // *A = !(*B)
     CONCAT, // A: dst, B: first reg, C: count  — concat C registers starting at B
 
-    // ---- list ----
-    NEW_LIST,    // A: dst, B: initial capacity hint
-    LIST_APPEND, // A: list reg, B: value reg
-    LIST_GET,    // A: dst, B: list reg, C: index reg
-    LIST_SET,    // A: list reg, B: index reg, C: value reg
-    LIST_LEN,    // A: dst, B: list reg
+    LIST_NEW,    // dst, init capacity hint, -
+    LIST_APPEND, // list reg, val reg, -
+    LIST_GET,    // dst, list reg, index reg
+    LIST_SET,    // list reg, index reg, value reg
+    LIST_LEN,    // dst, list reg
 
-    // ---- jumps ----
-    JUMP,          // sBx: unconditional offset
-    JUMP_IF_TRUE,  // A: cond reg, sBx: offset if truthy  (does NOT pop)
-    JUMP_IF_FALSE, // A: cond reg, sBx: offset if falsy
-    LOOP,          // sBx: backward offset (negative = back)
+    JUMP,          // -, sBx : unconditional jump
+    JUMP_IF_TRUE,  // cond reg, offset if truthy (DOESN'T pop)
+    JUMP_IF_FALSE, // cond reg, offset if falsy
+    LOOP,          // -, sBx: backward offset (neg = back)
 
-    // ---- numeric for loop (fast path) ----
-    FOR_PREP, // A: base (limit=A+1, step=A+2, idx=A+3), sBx: jump past body if done
-    FOR_STEP, // A: base, sBx: jump back to body top if not done
+    FOR_PREP, // base, (lim=*A + 1, step = *A + 2, idx = *A + 3), jump past block if done
+    FOR_STEP, // base, jump back to top of block if not done
 
-    // ---- functions ----
-    CLOSURE,    // A: dst, Bx: function const index
-                // followed by upvalue descriptors: one MOVE per upvalue
-    CALL,       // A: func reg, B: argc, C: expected results (255=discard all)
-    CALL_TAIL,  // A: func reg, B: argc  — tail-call optimised
-    RETURN,     // A: first result reg, B: result count (0 = return nil)
-    RETURN_NIL, // no operands — fast path
+    CLOSURE,    // dst, function const index
+                // followed by upvalue descriptors, one MOVE per upvalue
+    CALL,       // func reg, argc, expected ret (0xFF=discard)
+    CALL_TAIL,  // func reg, argc | tail call optimized
+    RETURN,     // first result reg, result count (0=RETURN NIL)
+    RETURN_NIL, // no operands, fast path insead of load and return
 
-    // ---- inline-cache hint (emitted on polymorphic call sites) ----
-    IC_CALL, // A: func reg, B: argc, C: IC slot index
+    IC_CALL, // func reg, argc, slot index
 
-    // ---- misc ----
+    // misc
     NOP,
     HALT,
 
     _COUNT
 };
 
-// Instruction format, for disassembly
-enum class InstrFmt {
+enum class InstrFormat : uint8_t {
     ABC,
     ABx,
     AsBx,
@@ -190,11 +115,6 @@ enum class InstrFmt {
     NONE
 };
 
-// ---------------------------------------------------------------------------
-// TypeProfile — collected at runtime to guide the JIT.
-// Each call-site or binary-op slot records the types it has seen.
-// Represented as a bitmask so the JIT can quickly check "always int?".
-// ---------------------------------------------------------------------------
 enum class TypeTag : uint8_t {
     NONE = 0,
     NIL = 1 << 0,
@@ -204,32 +124,23 @@ enum class TypeTag : uint8_t {
     STRING = 1 << 4,
     LIST = 1 << 5,
     CLOSURE = 1 << 6,
-    NATIVE = 1 << 7,
+    NATIVE = 1 << 7
 };
 
-inline TypeTag operator|(TypeTag a, TypeTag b)
-{
-    return static_cast<TypeTag>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
-}
-
-inline TypeTag& operator|=(TypeTag& a, TypeTag b)
+inline bool hasTag(TypeTag mask, TypeTag t) { return (static_cast<uint8_t>(mask) & static_cast<uint8_t>(t)) != 0; }
+inline TypeTag operator|(TypeTag const a, TypeTag const b) { return static_cast<TypeTag>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b)); }
+inline TypeTag& operator|=(TypeTag& a, TypeTag const b)
 {
     a = a | b;
     return a;
 }
-
-inline bool has_tag(TypeTag mask, TypeTag t)
-{
-    return (static_cast<uint8_t>(mask) & static_cast<uint8_t>(t)) != 0;
-}
-
-inline TypeTag value_type_tag(Value v)
+inline TypeTag valueTypeTag(Value const v)
 {
     if (v.isNil())
         return TypeTag::NIL;
-    if (v.isBool())
+    if (v.isBoolean())
         return TypeTag::BOOL;
-    if (v.isInt())
+    if (v.isInteger())
         return TypeTag::INT;
     if (v.isDouble())
         return TypeTag::DOUBLE;
@@ -241,24 +152,19 @@ inline TypeTag value_type_tag(Value v)
         return TypeTag::CLOSURE;
     if (v.isNative())
         return TypeTag::NATIVE;
-
     return TypeTag::NONE;
 }
 
 struct ICSlot {
-    TypeTag seen_lhs = TypeTag::NONE; // for binary ops
-    TypeTag seen_rhs = TypeTag::NONE;
-    TypeTag seen_ret = TypeTag::NONE; // for calls
-    uint32_t hit_count = 0;           // execution count
-    void* jit_stub = nullptr;         // patched by JIT, null = not compiled
+    TypeTag seenLhs { TypeTag::NONE };
+    TypeTag seenRhs { TypeTag::NONE };
+    TypeTag seenRet { TypeTag::NONE };
+    uint32_t hitCount { 0 };
+    void* jitStub { nullptr };
 };
 
-// ---------------------------------------------------------------------------
-// DebugInfo — maps instruction index → source line for error reporting.
-// Run-length encoded to save memory.
-// ---------------------------------------------------------------------------
 struct LineEntry {
-    uint32_t start_instr; // first instruction index with this line
+    uint32_t start;
     uint32_t line;
 };
 
@@ -276,27 +182,26 @@ static StringRef opcode_name(OpCode op)
     case OpCode::GET_UPVALUE: return "GET_UPVALUE";
     case OpCode::SET_UPVALUE: return "SET_UPVALUE";
     case OpCode::CLOSE_UPVALUE: return "CLOSE_UPVALUE";
-    case OpCode::ADD: return "ADD";
-    case OpCode::SUB: return "SUB";
-    case OpCode::MUL: return "MUL";
-    case OpCode::DIV: return "DIV";
-    case OpCode::IDIV: return "IDIV";
-    case OpCode::MOD: return "MOD";
-    case OpCode::POW: return "POW";
-    case OpCode::NEG: return "NEG";
-    case OpCode::BAND: return "BAND";
-    case OpCode::BOR: return "BOR";
-    case OpCode::BXOR: return "BXOR";
-    case OpCode::BNOT: return "BNOT";
-    case OpCode::SHL: return "SHL";
-    case OpCode::SHR: return "SHR";
-    case OpCode::EQ: return "EQ";
-    case OpCode::NEQ: return "NEQ";
-    case OpCode::LT: return "LT";
-    case OpCode::LE: return "LE";
-    case OpCode::NOT: return "NOT";
+    case OpCode::OP_ADD: return "OP_ADD";
+    case OpCode::OP_SUB: return "OP_SUB";
+    case OpCode::OP_MUL: return "OP_MUL";
+    case OpCode::OP_DIV: return "OP_DIV";
+    case OpCode::OP_MOD: return "OP_MOD";
+    case OpCode::OP_POW: return "OP_POW";
+    case OpCode::OP_NEG: return "OP_NEG";
+    case OpCode::OP_BITAND: return "OP_BITAND";
+    case OpCode::OP_BITOR: return "OP_BITOR";
+    case OpCode::OP_BITXOR: return "BITXOR";
+    case OpCode::OP_BITNOT: return "BITNOT";
+    case OpCode::OP_LSHIFT: return "OP_LSHIFT";
+    case OpCode::OP_RSHIFT: return "OP_RSHIFT";
+    case OpCode::OP_EQ: return "OP_EQ";
+    case OpCode::OP_NEQ: return "OP_NEQ";
+    case OpCode::OP_LT: return "OP_LT";
+    case OpCode::OP_LTE: return "OP_LE";
+    case OpCode::OP_NOT: return "OP_NOT";
     case OpCode::CONCAT: return "CONCAT";
-    case OpCode::NEW_LIST: return "NEW_LIST";
+    case OpCode::LIST_NEW: return "LIST_NEW";
     case OpCode::LIST_APPEND: return "LIST_APPEND";
     case OpCode::LIST_GET: return "LIST_GET";
     case OpCode::LIST_SET: return "LIST_SET";
@@ -320,7 +225,7 @@ static StringRef opcode_name(OpCode op)
     }
 }
 
-static InstrFmt opcode_format(OpCode op)
+static InstrFormat opcodeFormat(OpCode op)
 {
     switch (op) {
     case OpCode::LOAD_CONST:
@@ -328,20 +233,20 @@ static InstrFmt opcode_format(OpCode op)
     case OpCode::LOAD_GLOBAL:
     case OpCode::STORE_GLOBAL:
     case OpCode::CLOSURE:
-        return InstrFmt::ABx;
+        return InstrFormat::ABx;
     case OpCode::JUMP:
     case OpCode::JUMP_IF_TRUE:
     case OpCode::JUMP_IF_FALSE:
     case OpCode::LOOP:
     case OpCode::FOR_PREP:
     case OpCode::FOR_STEP:
-        return InstrFmt::AsBx;
+        return InstrFormat::AsBx;
     case OpCode::RETURN_NIL:
     case OpCode::HALT:
     case OpCode::NOP:
-        return InstrFmt::NONE;
+        return InstrFormat::NONE;
     default:
-        return InstrFmt::ABC;
+        return InstrFormat::ABC;
     }
 }
 
@@ -349,69 +254,163 @@ static void print_value(Value v)
 {
     if (v.isNil())
         ::printf("nil");
-    else if (v.isBool())
-        ::printf("%s", v.asBool() ? "true" : "false");
-    else if (v.isInt())
-        ::printf("%" PRId64, v.asInt());
+    else if (v.isBoolean())
+        ::printf("%s", v.asBoolean() ? "true" : "false");
+    else if (v.isInteger())
+        ::printf("%" PRId64, v.asInteger());
     else if (v.isDouble())
         ::printf("%g", v.asDouble());
     else if (v.isString())
-        ::printf("\"%s\"", v.asString()->chars.data());
-    else if (v.isObj())
-        ::printf("<obj %p>", (void*)v.asObj());
+        ::printf("\"%s\"", v.asString()->str.data());
+    else if (v.isObject())
+        ::printf("<obj %p>", (void*)v.asObject());
 
     ::printf("?");
 }
 
-// ---------------------------------------------------------------------------
-// Chunk — the bytecode + constant pool for one function or script.
-// ---------------------------------------------------------------------------
 struct Chunk {
-    // --- identity ---
-    StringRef name; // "<main>" or function name
-    int arity = 0;
-    int local_count = 0; // number of registers needed (set by compiler)
-    int upvalue_count = 0;
+    StringRef name;
+    int arity { 0 };
+    unsigned int localCount { 0 };
+    unsigned int upvalueCount { 0 };
 
-    // --- code ---
-    std::vector<Instruction> code;
-    std::vector<Value> constants; // constant pool
-    std::vector<LineEntry> lines; // debug info
-
-    // --- nested functions (closures defined in this chunk) ---
-    std::vector<Chunk*> functions; // owned
-
-    // --- type profile slots (one per IC_CALL / binary op that requested one) ---
-    std::vector<ICSlot> ic_slots;
+    std::vector<uint32_t> code;
+    std::vector<Value> constants;
+    std::vector<LineEntry> lines;
+    std::vector<Chunk*> functions;
+    std::vector<ICSlot> icSlots;
 
     Chunk() = default;
     ~Chunk() = default;
 
-    // non-copyable — chunks own their sub-chunks
     Chunk(Chunk const&) = delete;
     Chunk(Chunk&&) = default;
 
     Chunk& operator=(Chunk const&) = delete;
     Chunk& operator=(Chunk&&) = default;
 
-    // ---- emit helpers ----
-    uint32_t emit(Instruction instr, uint32_t line);
+    uint32_t emit(uint32_t instr, uint32_t line)
+    {
+        code.push_back(instr);
+        addLine(line);
+        return static_cast<uint32_t>(code.size() - 1);
+    }
 
-    // Patch a previously emitted jump with the real offset.
-    // Returns false if offset overflows 16 bits.
-    bool patchJump(uint32_t instr_idx);
+    bool patchJump(uint32_t const instr_idx)
+    {
+        int32_t const offset = static_cast<int32_t>(code.size()) - static_cast<int32_t>(instr_idx) - 1;
+        if (offset > JUMP_OFFSET || offset < -JUMP_OFFSET)
+            return false;
+        uint8_t op = instr_op(code[instr_idx]);
+        uint8_t A = instr_A(code[instr_idx]);
+        code[instr_idx] = make_AsBx(op, A, offset);
+        return true;
+    }
 
-    // Add a constant; deduplicates integers and doubles and strings.
-    uint16_t addConstant(Value v);
+    uint16_t addConstant(Value const v)
+    {
+        for (uint16_t i = 0, n = static_cast<uint16_t>(constants.size()); i < n; ++i)
+            if (constants[i] == v)
+                return i;
+        constants.push_back(v);
+        return static_cast<uint16_t>(constants.size() - 1);
+    }
 
-    // Allocate an IC slot, return its index.
-    uint8_t allocIcSlot();
+    uint8_t allocIcSlot()
+    {
+        icSlots.emplace_back();
+        return static_cast<uint8_t>(icSlots.size() - 1);
+    }
 
-    // Source line for instruction index (binary search)
-    uint32_t getLine(uint32_t instr_idx) const;
+    uint32_t getLine(uint32_t const instr_idx) const
+    {
+        uint32_t line = 0;
 
-    // Disassemble to stdout (defined in disassembler.cpp)
-    void disassemble() const;
+        for (auto& e : lines) {
+            if (e.start > instr_idx)
+                break;
+
+            line = e.line;
+        }
+
+        return line;
+    }
+
+    void disassemble() const
+    {
+        ::printf("=== %s (arity=%d regs=%d upvals=%d) ===\n", name.data(), arity, localCount, upvalueCount);
+
+        // Print constants
+        if (!constants.empty()) {
+            ::printf("  constants:\n");
+
+            for (size_t i = 0; i < constants.size(); ++i) {
+                ::printf("    [%3zu] ", i);
+                print_value(constants[i]);
+                ::printf("\n");
+            }
+        }
+
+        // Print IC slots
+        if (!icSlots.empty())
+            ::printf("  ic_slots: %zu\n", icSlots.size());
+
+        // Print instructions
+        ::printf("  code:\n");
+
+        for (uint32_t i = 0; i < static_cast<uint32_t>(code.size()); ++i) {
+            uint32_t ins = code[i];
+            auto op = static_cast<OpCode>(instr_op(ins));
+            auto fmt = opcodeFormat(op);
+            uint32_t line = getLine(i);
+
+            ::printf("    %04u  [%3u]  %-16s ", i, line, opcode_name(op).data());
+
+            switch (fmt) {
+            case InstrFormat::ABC:
+                ::printf("A=%-3u  B=%-3u  C=%-3u", instr_A(ins), instr_B(ins), instr_C(ins));
+                break;
+
+            case InstrFormat::ABx:
+                ::printf("A=%-3u  Bx=%-5u", instr_A(ins), instr_Bx(ins));
+                // Annotate with constant value
+                if (op == OpCode::LOAD_CONST || op == OpCode::LOAD_GLOBAL || op == OpCode::STORE_GLOBAL) {
+                    uint16_t idx = instr_Bx(ins);
+
+                    if (idx < constants.size()) {
+                        ::printf("  ; ");
+                        print_value(constants[idx]);
+                    }
+                } else if (op == OpCode::LOAD_INT) {
+                    ::printf("  ; %d", static_cast<int>(instr_Bx(ins)) - 32767);
+                } else if (op == OpCode::CLOSURE) {
+                    uint16_t idx = instr_Bx(ins);
+                    if (idx < functions.size())
+                        ::printf("  ; fn '%s'", functions[idx]->name.data());
+                }
+                break;
+
+            case InstrFormat::AsBx:
+                ::printf("A=%-3u  sBx=%-5d  -> %d", instr_A(ins), instr_sBx(ins), static_cast<int>(i) + 1 + instr_sBx(ins));
+                break;
+
+            case InstrFormat::NONE:
+                break;
+
+            case InstrFormat::A:
+                ::printf("A=%-3u", instr_A(ins));
+                break;
+            }
+
+            ::printf("\n");
+        }
+
+        // Recurse into nested functions
+        for (Chunk const* fn : functions) {
+            ::printf("\n");
+            fn->disassemble();
+        }
+    }
 
 private:
     void addLine(uint32_t line)
@@ -421,7 +420,6 @@ private:
     }
 };
 
-} // namespace runtime
-} // namespace mylang
+}
 
-#endif // _OPCODE_HPP
+#endif // OPCODE_HPP

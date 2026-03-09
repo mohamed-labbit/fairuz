@@ -11,15 +11,15 @@
 namespace mylang {
 namespace diagnostic {
 
+enum class Severity : uint8_t {
+    NOTE,
+    FATAL,
+    ERROR,
+    WARNING
+};
+
 class DiagnosticEngine {
 public:
-    enum class Severity : int {
-        NOTE,
-        FATAL,
-        ERROR,
-        WARNING
-    };
-
     struct Diagnostic {
         Severity severity;
         std::int32_t line, column;
@@ -61,6 +61,16 @@ private:
 };
 
 inline DiagnosticEngine engine;
+
+static constexpr void emit(std::string const& msg, Severity const sv = Severity::ERROR)
+{
+    engine.emit(msg, sv);
+}
+
+static constexpr void panic(std::string const& msg)
+{
+    engine.panic(msg);
+}
 
 }
 }

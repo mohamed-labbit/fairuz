@@ -10,7 +10,7 @@ FileManager::FileManager(std::string const& filepath)
 {
     std::ifstream in(filepath, std::ios::binary);
     if (!in)
-        diagnostic::engine.panic(toString(FileManagerError::FILE_NOT_OPEN));
+        diagnostic::panic(toString(FileManagerError::FILE_NOT_OPEN));
 
     InputBuffer_ = std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()).data();
     InputBuffer_.trimWhitespace(/*leading=*/false, /*trailing=*/true);
@@ -25,7 +25,7 @@ StringRef FileManager::load(std::string const& filepath, bool replace)
     std::ifstream in(filepath, std::ios::binary);
     StringRef ret = std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()).data();
     if (!in)
-        diagnostic::engine.panic(toString(FileManagerError::FILE_NOT_OPEN));
+        diagnostic::panic(toString(FileManagerError::FILE_NOT_OPEN));
 
     if (replace || FilePath_.empty()) {
         InputBuffer_ = ret;
@@ -252,15 +252,15 @@ tok::Token const* Lexer::lexToken()
                     // no change
                     // consistency check
                     if (alt_size != AltIndentStack_.back())
-                        diagnostic::engine.panic("Inconsistent indentation");
+                        diagnostic::panic("Inconsistent indentation");
                 }
                 // Indent
                 else if (size > IndentStack_.back()) {
                     if (IndentLevel_ + 1 > MAX_ALLOWED_INDENT)
-                        diagnostic::engine.panic("Too many indentation levels");
+                        diagnostic::panic("Too many indentation levels");
 
                     if (alt_size <= AltIndentStack_.back())
-                        diagnostic::engine.panic("Inconsistent indentation (tabs/spaces)");
+                        diagnostic::panic("Inconsistent indentation (tabs/spaces)");
 
                     ++IndentLevel_;
                     IndentStack_.push_back(size);
@@ -280,10 +280,10 @@ tok::Token const* Lexer::lexToken()
                     }
 
                     if (size != IndentStack_.back())
-                        diagnostic::engine.panic("Unindent does not match any outer level of indentation");
+                        diagnostic::panic("Unindent does not match any outer level of indentation");
 
                     if (alt_size != AltIndentStack_.back())
-                        diagnostic::engine.panic("Inconsistent indentation");
+                        diagnostic::panic("Inconsistent indentation");
 
                     for (unsigned int i = 0; i < dedent_count; ++i)
                         store(makeToken(tok::TokenType::DEDENT, "", line, col));
@@ -564,7 +564,7 @@ tok::Token const* Lexer::lexToken()
                     }
 
                     if (!has_digits)
-                        diagnostic::engine.panic("Invalid hex literal, it has no digits after 0x");
+                        diagnostic::panic("Invalid hex literal, it has no digits after 0x");
 
                     return finish(tok::TokenType::HEX, number, line, col);
                 }
@@ -587,13 +587,13 @@ tok::Token const* Lexer::lexToken()
                             current = SourceManager_.nextChar();
                             has_digits = true;
                         } else if (::isdigit(current))
-                            diagnostic::engine.panic("Invalid digit '" + std::string(1, current) + "' in octal literal");
+                            diagnostic::panic("Invalid digit '" + std::string(1, current) + "' in octal literal");
                         else
                             break;
                     }
 
                     if (!has_digits)
-                        diagnostic::engine.panic("Invalid octal literal: no digits after 0o");
+                        diagnostic::panic("Invalid octal literal: no digits after 0o");
 
                     return finish(tok::TokenType::OCTAL, number, line, col);
                 }
@@ -616,13 +616,13 @@ tok::Token const* Lexer::lexToken()
                             current = SourceManager_.nextChar();
                             has_digits = true;
                         } else if (::isdigit(current))
-                            diagnostic::engine.panic("Invalid digit '" + std::string(1, current) + "' in binary literal");
+                            diagnostic::panic("Invalid digit '" + std::string(1, current) + "' in binary literal");
                         else
                             break;
                     }
 
                     if (!has_digits)
-                        diagnostic::engine.panic("Invalid binary literal: no digits after 0b");
+                        diagnostic::panic("Invalid binary literal: no digits after 0b");
 
                     return finish(tok::TokenType::BINARY, number, line, col);
                 }
@@ -671,7 +671,7 @@ tok::Token const* Lexer::lexToken()
             return finish(tok::TokenType::INTEGER, number, line, col);
         }
 
-        diagnostic::engine.panic("Invalid character found : " + std::to_string(static_cast<char>(current)));
+        diagnostic::panic("Invalid character found : " + std::to_string(static_cast<char>(current)));
     }
 
     if (!TokStream_.empty() && TokStream_.back()->type() == tok::TokenType::ENDMARKER)

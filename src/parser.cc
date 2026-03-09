@@ -567,7 +567,7 @@ Stmt* Parser::parseWhileStmt()
 
     Expr* condition = parseExpression();
     if (!condition) {
-        diagnostic::engine.emit("Expected condition expression after 'while'", diagnostic::DiagnosticEngine::Severity::ERROR);
+        diagnostic::emit("Expected condition expression after 'while'", diagnostic::Severity::ERROR);
         return nullptr;
     }
 
@@ -576,7 +576,7 @@ Stmt* Parser::parseWhileStmt()
 
     BlockStmt* while_block = parseIndentedBlock();
     if (!while_block) {
-        diagnostic::engine.emit("Expected indented block after while statement", diagnostic::DiagnosticEngine::Severity::ERROR);
+        diagnostic::emit("Expected indented block after while statement", diagnostic::Severity::ERROR);
         return nullptr;
     }
 
@@ -637,7 +637,7 @@ ListExpr* Parser::parseParametersList()
                 break;
 
             if (!check(tok::TokenType::IDENTIFIER)) {
-                diagnostic::engine.emit("Expected parameter name", diagnostic::DiagnosticEngine::Severity::ERROR);
+                diagnostic::emit("Expected parameter name", diagnostic::Severity::ERROR);
                 return nullptr;
             }
 
@@ -668,7 +668,7 @@ Stmt* Parser::parseFunctionDef()
         return nullptr;
 
     if (!check(tok::TokenType::IDENTIFIER)) {
-        diagnostic::engine.emit("Expected function name after 'fn'", diagnostic::DiagnosticEngine::Severity::ERROR);
+        diagnostic::emit("Expected function name after 'fn'", diagnostic::Severity::ERROR);
         return nullptr;
     }
 
@@ -677,7 +677,7 @@ Stmt* Parser::parseFunctionDef()
 
     ListExpr* parameters_list = parseParametersList();
     if (!parameters_list) {
-        diagnostic::engine.emit("Failed to parse parameter list", diagnostic::DiagnosticEngine::Severity::ERROR);
+        diagnostic::emit("Failed to parse parameter list", diagnostic::Severity::ERROR);
         return nullptr;
     }
 
@@ -686,7 +686,7 @@ Stmt* Parser::parseFunctionDef()
 
     BlockStmt* function_body = parseIndentedBlock();
     if (!function_body) {
-        diagnostic::engine.emit("Failed to parse function body", diagnostic::DiagnosticEngine::Severity::ERROR);
+        diagnostic::emit("Failed to parse function body", diagnostic::Severity::ERROR);
         return nullptr;
     }
 
@@ -701,7 +701,7 @@ Stmt* Parser::parseIfStmt()
 
     Expr* condition = parseExpression();
     if (!condition) {
-        diagnostic::engine.emit("Expected condition expression after 'if'", diagnostic::DiagnosticEngine::Severity::ERROR);
+        diagnostic::emit("Expected condition expression after 'if'", diagnostic::Severity::ERROR);
         return nullptr;
     }
 
@@ -710,7 +710,7 @@ Stmt* Parser::parseIfStmt()
 
     BlockStmt* then_block = parseIndentedBlock();
     if (!then_block) {
-        diagnostic::engine.emit("Expected indented block after if statement", diagnostic::DiagnosticEngine::Severity::ERROR);
+        diagnostic::emit("Expected indented block after if statement", diagnostic::Severity::ERROR);
         return nullptr;
     }
 
@@ -737,7 +737,7 @@ Expr* Parser::parseAssignmentExpr()
 
     if (check(tok::TokenType::OP_ASSIGN)) {
         if (L->getKind() != Expr::Kind::NAME) {
-            diagnostic::engine.emit("Invalid assignment target", diagnostic::DiagnosticEngine::Severity::ERROR);
+            diagnostic::emit("Invalid assignment target", diagnostic::Severity::ERROR);
             return nullptr;
         }
 
@@ -778,7 +778,7 @@ Expr* Parser::parseLogicalExprPrecedence(unsigned int min_precedence)
 
         Expr* R = parseLogicalExprPrecedence(precedence + 1);
         if (!R) {
-            diagnostic::engine.emit("Expected expression after logical operator", diagnostic::DiagnosticEngine::Severity::ERROR);
+            diagnostic::emit("Expected expression after logical operator", diagnostic::Severity::ERROR);
             return nullptr;
         }
 
@@ -799,7 +799,7 @@ Expr* Parser::parseComparisonExpr()
         advance();
         Expr* R = parseBinaryExpr();
         if (!R) {
-            diagnostic::engine.emit("Expected expression after comparison operator", diagnostic::DiagnosticEngine::Severity::ERROR);
+            diagnostic::emit("Expected expression after comparison operator", diagnostic::Severity::ERROR);
             return nullptr;
         }
 
@@ -835,7 +835,7 @@ Expr* Parser::parseBinaryExprPrecedence(unsigned int min_precedence)
         unsigned int nextMin = precedence + 1;
         Expr* R = parseBinaryExprPrecedence(nextMin);
         if (!R) {
-            diagnostic::engine.emit("Expected expression after binary operator", diagnostic::DiagnosticEngine::Severity::ERROR);
+            diagnostic::emit("Expected expression after binary operator", diagnostic::Severity::ERROR);
             return nullptr;
         }
 
@@ -853,7 +853,7 @@ Expr* Parser::parseUnaryExpr()
         advance();
         Expr* expr = parseUnaryExpr();
         if (!expr) {
-            diagnostic::engine.emit("Expected expression after unary operator", diagnostic::DiagnosticEngine::Severity::ERROR);
+            diagnostic::emit("Expected expression after unary operator", diagnostic::Severity::ERROR);
             return nullptr;
         }
         return makeUnary(expr, toUnaryOp(op));
@@ -881,7 +881,7 @@ Expr* Parser::parsePostfixExpr()
 
                 Expr* arg = parseExpression();
                 if (!arg) {
-                    diagnostic::engine.emit("Expected expression in argument list", diagnostic::DiagnosticEngine::Severity::ERROR);
+                    diagnostic::emit("Expected expression in argument list", diagnostic::Severity::ERROR);
                     return nullptr;
                 }
                 args.push_back(arg);
@@ -986,7 +986,7 @@ Expr* Parser::parsePrimaryExpr()
     }
 
     if (Expecting_)
-        diagnostic::engine.emit("Expected expression", diagnostic::DiagnosticEngine::Severity::ERROR);
+        diagnostic::emit("Expected expression", diagnostic::Severity::ERROR);
 
     return nullptr;
 }
@@ -1004,7 +1004,7 @@ Expr* Parser::parseListLiteral()
 
             Expr* elem = parseExpression();
             if (!elem) {
-                diagnostic::engine.emit("Expected expression in list literal", diagnostic::DiagnosticEngine::Severity::ERROR);
+                diagnostic::emit("Expected expression in list literal", diagnostic::Severity::ERROR);
                 return nullptr;
             }
 

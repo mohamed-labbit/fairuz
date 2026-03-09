@@ -1,5 +1,5 @@
-#ifndef _RUNTIME_ALLOCATOR_HPP
-#define _RUNTIME_ALLOCATOR_HPP
+#ifndef RUNTIME_ALLOCATOR_HPP
+#define RUNTIME_ALLOCATOR_HPP
 
 #include "../allocator.hpp"
 
@@ -11,4 +11,4 @@ inline Allocator runtime_allocator("Runtime allocator");
 }
 }
 
-#endif // _RUNTIME_ALLOCATOR_HPP
+#endif // RUNTIME_ALLOCATOR_HPP

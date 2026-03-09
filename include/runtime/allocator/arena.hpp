@@ -1,5 +1,5 @@
-#ifndef _ARENA_HPP
-#define _ARENA_HPP
+#ifndef ARENA_HPP
+#define ARENA_HPP
 
 #include "../../diagnostic.hpp"
 #include "meta.hpp"
@@ -12,9 +12,7 @@
 #include <shared_mutex>
 #include <unordered_set>
 
-namespace mylang {
-namespace runtime {
-namespace allocator {
+namespace mylang::runtime::allocator {
 
 class ArenaBlock {
 private:
@@ -82,7 +80,7 @@ public:
         if (!Begin_)
             return 0;
 
-        unsigned char* current_next = Next_;
+        unsigned char const* current_next = Next_;
         return static_cast<size_t>(Begin_ + Size_ - current_next);
     }
 
@@ -137,7 +135,7 @@ private:
     static constexpr size_t Alignment_ = alignof(std::max_align_t);
 
 public:
-    ArenaAllocator(std::int32_t growth_strategy = static_cast<std::int32_t>(GrowthStrategy::EXPONENTIAL), OutOfMemoryHandler oom_handler = nullptr,
+    explicit ArenaAllocator(std::int32_t growth_strategy = static_cast<std::int32_t>(GrowthStrategy::EXPONENTIAL), OutOfMemoryHandler oom_handler = nullptr,
         bool debug = true);
 
     ~ArenaAllocator()
@@ -173,13 +171,13 @@ public:
         return AllocStats_.ActiveBlocks;
     }
 
-    [[nodiscard]] unsigned char* allocateBlock(size_t requested, size_t alignment_ = alignof(std::max_align_t), bool retry_on_oom = true);
+    MY_NODISCARD unsigned char* allocateBlock(size_t requested, size_t alignment_ = alignof(std::max_align_t), bool retry_on_oom = true);
 
-    [[nodiscard]] void* allocate(size_t const size, size_t const alignment = alignof(std::max_align_t));
+    MY_NODISCARD void* allocate(size_t const size, size_t const alignment = alignof(std::max_align_t));
 
     void deallocate(void* ptr, size_t const size);
 
-    [[nodiscard]] bool verifyAllocation(void* ptr) const;
+    MY_NODISCARD bool verifyAllocation(void* ptr) const;
 
     std::string toString(bool verbose) const
     {
@@ -195,7 +193,7 @@ public:
     }
 
 private:
-    [[nodiscard]] unsigned char* allocateFromBlocks(size_t alloc_size, size_t align = alignof(std::max_align_t));
+    MY_NODISCARD unsigned char* allocateFromBlocks(size_t alloc_size, size_t align = alignof(std::max_align_t));
 
     void updateNextBlockSize() noexcept;
 
@@ -205,8 +203,6 @@ private:
     }
 };
 
-} // namespace allocator
-} // namespace runtime
-} // namespace mylang
+} // namespace mylang::runtime::allocator
 
-#endif // _ARENA_HPP
+#endif // ARENA_HPP

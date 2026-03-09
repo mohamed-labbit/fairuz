@@ -1,8 +1,6 @@
 #include "../../../include/runtime/allocator/stats.hpp"
 
-namespace mylang {
-namespace runtime {
-namespace allocator {
+namespace mylang::runtime::allocator {
 
 void DetailedAllocStats::recordAllocationSize(std::uint64_t size)
 {
@@ -115,7 +113,7 @@ std::string StatsFormatter::formatBytes(std::uint64_t bytes, int precision)
     if (bytes == 0)
         return "0 B";
 
-    double value = static_cast<double>(bytes);
+    auto value = static_cast<double>(bytes);
     int idx = 0;
 
     while (value >= 1024.0 && idx < num_suffixes - 1) {
@@ -421,6 +419,4 @@ void StatsPrinter::printMetricWithBar(std::ostream& os, char const* label, std::
        << StatsFormatter::createBar(value, max, 20) << " │\n";
 }
 
-}
-}
-}
+} // namespace mylang::runtime::allocator

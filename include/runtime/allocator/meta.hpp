@@ -5,9 +5,7 @@
 
 #include <atomic>
 
-namespace mylang {
-namespace runtime {
-namespace allocator {
+namespace mylang::runtime::allocator {
 
 struct AllocationHeader {
     uint_fast32_t magic;
@@ -42,8 +40,6 @@ struct AllocationFooter {
     }
 };
 
-}
-}
-}
+} // namespace mylang::runtime::allocator
 
 #endif // META_HPP

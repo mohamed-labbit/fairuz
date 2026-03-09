@@ -1,5 +1,5 @@
-#ifndef _STATS_HPP
-#define _STATS_HPP
+#ifndef STATS_HPP
+#define STATS_HPP
 
 #include <atomic>
 #include <chrono>
@@ -10,9 +10,7 @@
 #include <string>
 #include <vector>
 
-namespace mylang {
-namespace runtime {
-namespace allocator {
+namespace mylang::runtime::allocator {
 
 struct DetailedAllocStats {
     std::uint64_t TotalAllocations { 0 };
@@ -109,8 +107,6 @@ private:
     void printMetricWithBar(std::ostream& os, char const* label, std::uint64_t value, std::uint64_t max) const;
 };
 
-} // namespace allocator
-} // namespace runtime
-} // namespace mylang
+} // namespace mylang::runtime::allocator
 
-#endif // _STATS_HPP
+#endif // STATS_HPP

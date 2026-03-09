@@ -13,29 +13,29 @@ using namespace mylang::runtime;
 TEST(NanBox, NilRawBits)
 {
     // NIL_VAL must equal QNAN | TAG_NIL (tag=1)
-    EXPECT_EQ(Value::nil().raw, NANBOX_QNAN | TAG_NIL);
+    EXPECT_EQ(Value::nil().raw(), Value::NANBOX_QNAN | Value::TAG_NIL);
 }
 
 TEST(NanBox, FalseRawBits)
 {
-    EXPECT_EQ(Value::boolean(false).raw, NANBOX_QNAN | TAG_BOOL);
+    EXPECT_EQ(Value::boolean(false).raw(), Value::NANBOX_QNAN | Value::TAG_BOOL);
 }
 
 TEST(NanBox, TrueRawBits)
 {
     // true encodes the bool bit at bit 2
-    EXPECT_EQ(Value::boolean(true).raw, NANBOX_QNAN | TAG_BOOL | (UINT64_C(1) << 2));
+    EXPECT_EQ(Value::boolean(true).raw(), Value::NANBOX_QNAN | Value::TAG_BOOL | (UINT64_C(1) << 2));
 }
 
 TEST(NanBox, ZeroIntegerRawBits)
 {
     // Integer 0: QNAN | TAG_INT(3) | payload(0 << 3)
     Value v = Value::integer(0);
-    EXPECT_TRUE(v.isInt());
+    EXPECT_TRUE(v.isInteger());
     EXPECT_FALSE(v.isDouble());
     EXPECT_FALSE(v.isNil());
-    EXPECT_FALSE(v.isBool());
-    EXPECT_FALSE(v.isObj());
+    EXPECT_FALSE(v.isBoolean());
+    EXPECT_FALSE(v.isObject());
 }
 
 TEST(NanBox, PureDoubleIsNotTagged)
@@ -43,10 +43,10 @@ TEST(NanBox, PureDoubleIsNotTagged)
     // A normal double must not have all of bits 51..62 set
     Value v = Value::real(1.0);
     EXPECT_TRUE(v.isDouble());
-    EXPECT_FALSE(v.isInt());
+    EXPECT_FALSE(v.isInteger());
     EXPECT_FALSE(v.isNil());
-    EXPECT_FALSE(v.isBool());
-    EXPECT_FALSE(v.isObj());
+    EXPECT_FALSE(v.isBoolean());
+    EXPECT_FALSE(v.isObject());
 }
 
 TEST(NanBox, ObjPointerTagging)
@@ -54,12 +54,12 @@ TEST(NanBox, ObjPointerTagging)
     // Object: SIGN_BIT | QNAN in upper bits, pointer in lower 48
     ObjList list;
     Value v = Value::object(&list);
-    EXPECT_TRUE(v.isObj());
+    EXPECT_TRUE(v.isObject());
     EXPECT_FALSE(v.isDouble());
-    EXPECT_FALSE(v.isInt());
+    EXPECT_FALSE(v.isInteger());
     EXPECT_FALSE(v.isNil());
-    EXPECT_FALSE(v.isBool());
-    EXPECT_EQ(v.asObj(), static_cast<ObjHeader*>(&list));
+    EXPECT_FALSE(v.isBoolean());
+    EXPECT_EQ(v.asObject(), static_cast<ObjHeader*>(&list));
 }
 
 // Type tag mutual exclusivity — no two tags should fire at once
@@ -67,7 +67,7 @@ TEST(NanBox, ObjPointerTagging)
 TEST(NanBox, TypeTagsMutuallyExclusive_Nil)
 {
     Value v = Value::nil();
-    int count = v.isNil() + v.isBool() + v.isInt() + v.isDouble() + v.isObj();
+    int count = v.isNil() + v.isBoolean() + v.isInteger() + v.isDouble() + v.isObject();
     EXPECT_EQ(count, 1);
 }
 
@@ -75,7 +75,7 @@ TEST(NanBox, TypeTagsMutuallyExclusive_Bool)
 {
     for (bool b : { true, false }) {
         Value v = Value::boolean(b);
-        int count = v.isNil() + v.isBool() + v.isInt() + v.isDouble() + v.isObj();
+        int count = v.isNil() + v.isBoolean() + v.isInteger() + v.isDouble() + v.isObject();
         EXPECT_EQ(count, 1) << "bool=" << b;
     }
 }
@@ -84,7 +84,7 @@ TEST(NanBox, TypeTagsMutuallyExclusive_Int)
 {
     for (int64_t i : { INT64_C(0), INT64_C(1), INT64_C(-1), INT64_C(100000) }) {
         Value v = Value::integer(i);
-        int count = v.isNil() + v.isBool() + v.isInt() + v.isDouble() + v.isObj();
+        int count = v.isNil() + v.isBoolean() + v.isInteger() + v.isDouble() + v.isObject();
         EXPECT_EQ(count, 1) << "int=" << i;
     }
 }
@@ -93,7 +93,7 @@ TEST(NanBox, TypeTagsMutuallyExclusive_Double)
 {
     for (double d : { 0.0, 1.5, -3.14, 1e300 }) {
         Value v = Value::real(d);
-        int count = v.isNil() + v.isBool() + v.isInt() + v.isDouble() + v.isObj();
+        int count = v.isNil() + v.isBoolean() + v.isInteger() + v.isDouble() + v.isObject();
         EXPECT_EQ(count, 1) << "double=" << d;
     }
 }
@@ -102,7 +102,7 @@ TEST(NanBox, TypeTagsMutuallyExclusive_Obj)
 {
     ObjList list;
     Value v = Value::object(&list);
-    int count = v.isNil() + v.isBool() + v.isInt() + v.isDouble() + v.isObj();
+    int count = v.isNil() + v.isBoolean() + v.isInteger() + v.isDouble() + v.isObject();
     EXPECT_EQ(count, 1);
 }
 
@@ -111,36 +111,36 @@ TEST(NanBox, TypeTagsMutuallyExclusive_Obj)
 TEST(ValueInt, Zero)
 {
     Value v = Value::integer(0);
-    EXPECT_TRUE(v.isInt());
-    EXPECT_EQ(v.asInt(), 0);
+    EXPECT_TRUE(v.isInteger());
+    EXPECT_EQ(v.asInteger(), 0);
 }
 
 TEST(ValueInt, PositiveOne)
 {
     Value v = Value::integer(1);
-    EXPECT_EQ(v.asInt(), 1);
+    EXPECT_EQ(v.asInteger(), 1);
 }
 
 TEST(ValueInt, NegativeOne)
 {
     Value v = Value::integer(-1);
-    EXPECT_EQ(v.asInt(), -1);
+    EXPECT_EQ(v.asInteger(), -1);
 }
 
 TEST(ValueInt, LargePositive)
 {
     int64_t n = (INT64_C(1) << 40);
     Value v = Value::integer(n);
-    EXPECT_TRUE(v.isInt());
-    EXPECT_EQ(v.asInt(), n);
+    EXPECT_TRUE(v.isInteger());
+    EXPECT_EQ(v.asInteger(), n);
 }
 
 TEST(ValueInt, LargeNegative)
 {
     int64_t n = -(INT64_C(1) << 40);
     Value v = Value::integer(n);
-    EXPECT_TRUE(v.isInt());
-    EXPECT_EQ(v.asInt(), n);
+    EXPECT_TRUE(v.isInteger());
+    EXPECT_EQ(v.asInteger(), n);
 }
 
 TEST(ValueInt, Max48BitPositive)
@@ -148,8 +148,8 @@ TEST(ValueInt, Max48BitPositive)
     // 2^47 - 1 is the maximum value that fits in the int48 encoding
     int64_t n = (INT64_C(1) << 47) - 1;
     Value v = Value::integer(n);
-    EXPECT_TRUE(v.isInt());
-    EXPECT_EQ(v.asInt(), n);
+    EXPECT_TRUE(v.isInteger());
+    EXPECT_EQ(v.asInteger(), n);
 }
 
 TEST(ValueInt, Min48BitNegative)
@@ -157,8 +157,8 @@ TEST(ValueInt, Min48BitNegative)
     // -(2^47) is the minimum value that fits in the int48 encoding
     int64_t n = -(INT64_C(1) << 47);
     Value v = Value::integer(n);
-    EXPECT_TRUE(v.isInt());
-    EXPECT_EQ(v.asInt(), n);
+    EXPECT_TRUE(v.isInteger());
+    EXPECT_EQ(v.asInteger(), n);
 }
 
 TEST(ValueInt, OverflowFallsBackToDouble)
@@ -172,9 +172,9 @@ TEST(ValueInt, OverflowFallsBackToDouble)
 
 TEST(ValueInt, SignExtensionCorrect)
 {
-    // -1 stored as int48: all 48 bits set. asInt() must sign-extend correctly.
+    // -1 stored as int48: all 48 bits set. asInteger() must sign-extend correctly.
     Value v = Value::integer(-1);
-    EXPECT_EQ(v.asInt(), -1LL);
+    EXPECT_EQ(v.asInteger(), -1LL);
 }
 
 // Double round-trip
@@ -256,13 +256,13 @@ TEST(ValueDouble, SmallestPositive)
 TEST(ValueDouble, AsNumberDoubleFromInt)
 {
     Value v = Value::integer(42);
-    EXPECT_DOUBLE_EQ(v.asNumberDouble(), 42.0);
+    EXPECT_DOUBLE_EQ(v.asDoubleAny(), 42.0);
 }
 
 TEST(ValueDouble, AsNumberDoubleFromDouble)
 {
     Value v = Value::real(1.5);
-    EXPECT_DOUBLE_EQ(v.asNumberDouble(), 1.5);
+    EXPECT_DOUBLE_EQ(v.asDoubleAny(), 1.5);
 }
 
 // Boolean semantics
@@ -270,15 +270,15 @@ TEST(ValueDouble, AsNumberDoubleFromDouble)
 TEST(ValueBool, TrueExtraction)
 {
     Value v = Value::boolean(true);
-    EXPECT_TRUE(v.isBool());
-    EXPECT_TRUE(v.asBool());
+    EXPECT_TRUE(v.isBoolean());
+    EXPECT_TRUE(v.asBoolean());
 }
 
 TEST(ValueBool, FalseExtraction)
 {
     Value v = Value::boolean(false);
-    EXPECT_TRUE(v.isBool());
-    EXPECT_FALSE(v.asBool());
+    EXPECT_TRUE(v.isBoolean());
+    EXPECT_FALSE(v.asBoolean());
 }
 
 TEST(ValueBool, TrueNotEqualFalse)
@@ -308,7 +308,7 @@ TEST(Truthiness, ObjIsTruthy)
     EXPECT_TRUE(Value::object(&list).isTruthy());
 }
 
-// Equality — raw bit comparison
+// Equality — raw() bit comparison
 
 TEST(ValueEquality, NilEqualsNil) { EXPECT_EQ(Value::nil(), Value::nil()); }
 TEST(ValueEquality, NilNotEqualBool) { EXPECT_NE(Value::nil(), Value::boolean(false)); }
@@ -327,7 +327,7 @@ TEST(ObjTypes, StringType)
 {
     ObjString s("hello");
     Value v = Value::object(&s);
-    EXPECT_TRUE(v.isObj());
+    EXPECT_TRUE(v.isObject());
     EXPECT_TRUE(v.isString());
     EXPECT_FALSE(v.isList());
     EXPECT_FALSE(v.isFunction());
@@ -360,7 +360,7 @@ TEST(ObjTypes, NativeType)
 TEST(ObjHeader, DefaultUnmarked)
 {
     ObjList list;
-    EXPECT_FALSE(list.is_marked);
+    EXPECT_FALSE(list.isMarked);
     EXPECT_EQ(list.next, nullptr);
     EXPECT_EQ(list.type, ObjType::LIST);
 }
@@ -368,10 +368,10 @@ TEST(ObjHeader, DefaultUnmarked)
 TEST(ObjHeader, MarkBitToggle)
 {
     ObjList list;
-    list.is_marked = true;
-    EXPECT_TRUE(list.is_marked);
-    list.is_marked = false;
-    EXPECT_FALSE(list.is_marked);
+    list.isMarked = true;
+    EXPECT_TRUE(list.isMarked);
+    list.isMarked = false;
+    EXPECT_FALSE(list.isMarked);
 }
 
 // ObjString
@@ -385,13 +385,13 @@ TEST(ObjString, TypeIsString)
 TEST(ObjString, CharsPreserved)
 {
     ObjString s("hello world");
-    EXPECT_EQ(s.chars, "hello world");
+    EXPECT_EQ(s.str, "hello world");
 }
 
 TEST(ObjString, EmptyString)
 {
     ObjString s("");
-    EXPECT_EQ(s.chars, "");
+    EXPECT_EQ(s.str, "");
 }
 
 // ObjList
@@ -409,8 +409,8 @@ TEST(ObjList, CanAppendValues)
     list.elements.push_back(Value::integer(1));
     list.elements.push_back(Value::boolean(true));
     EXPECT_EQ(list.elements.size(), 2u);
-    EXPECT_EQ(list.elements[0].asInt(), 1);
-    EXPECT_TRUE(list.elements[1].asBool());
+    EXPECT_EQ(list.elements[0].asInteger(), 1);
+    EXPECT_TRUE(list.elements[1].asBoolean());
 }
 
 // ObjUpvalue
@@ -421,7 +421,7 @@ TEST(ObjUpvalue, PointsToStack)
     ObjUpvalue uv(&stack_val);
     EXPECT_EQ(uv.type, ObjType::UPVALUE);
     EXPECT_EQ(uv.location, &stack_val);
-    EXPECT_EQ(uv.next_open, nullptr);
+    EXPECT_EQ(uv.nextOpen, nullptr);
 }
 
 TEST(ObjUpvalue, ClosedValueDefault)
@@ -436,17 +436,17 @@ TEST(ObjUpvalue, ClosedValueDefault)
 TEST(TypeTag, Combine)
 {
     TypeTag t = TypeTag::INT | TypeTag::DOUBLE;
-    EXPECT_TRUE(has_tag(t, TypeTag::INT));
-    EXPECT_TRUE(has_tag(t, TypeTag::DOUBLE));
-    EXPECT_FALSE(has_tag(t, TypeTag::STRING));
+    EXPECT_TRUE(hasTag(t, TypeTag::INT));
+    EXPECT_TRUE(hasTag(t, TypeTag::DOUBLE));
+    EXPECT_FALSE(hasTag(t, TypeTag::STRING));
 }
 
 TEST(TypeTag, NoneHasNoTags)
 {
     TypeTag t = TypeTag::NONE;
-    EXPECT_FALSE(has_tag(t, TypeTag::INT));
-    EXPECT_FALSE(has_tag(t, TypeTag::BOOL));
-    EXPECT_FALSE(has_tag(t, TypeTag::NIL));
+    EXPECT_FALSE(hasTag(t, TypeTag::INT));
+    EXPECT_FALSE(hasTag(t, TypeTag::BOOL));
+    EXPECT_FALSE(hasTag(t, TypeTag::NIL));
 }
 
 TEST(TypeTag, OrAssign)
@@ -454,23 +454,23 @@ TEST(TypeTag, OrAssign)
     TypeTag t = TypeTag::NONE;
     t |= TypeTag::STRING;
     t |= TypeTag::LIST;
-    EXPECT_TRUE(has_tag(t, TypeTag::STRING));
-    EXPECT_TRUE(has_tag(t, TypeTag::LIST));
-    EXPECT_FALSE(has_tag(t, TypeTag::INT));
+    EXPECT_TRUE(hasTag(t, TypeTag::STRING));
+    EXPECT_TRUE(hasTag(t, TypeTag::LIST));
+    EXPECT_FALSE(hasTag(t, TypeTag::INT));
 }
 
-TEST(TypeTag, ValueTypeTagNil) { EXPECT_EQ(value_type_tag(Value::nil()), TypeTag::NIL); }
-TEST(TypeTag, ValueTypeTagBool) { EXPECT_EQ(value_type_tag(Value::boolean(true)), TypeTag::BOOL); }
-TEST(TypeTag, ValueTypeTagInt) { EXPECT_EQ(value_type_tag(Value::integer(1)), TypeTag::INT); }
-TEST(TypeTag, ValueTypeTagDouble) { EXPECT_EQ(value_type_tag(Value::real(1.5)), TypeTag::DOUBLE); }
+TEST(TypeTag, ValueTypeTagNil) { EXPECT_EQ(valueTypeTag(Value::nil()), TypeTag::NIL); }
+TEST(TypeTag, ValueTypeTagBool) { EXPECT_EQ(valueTypeTag(Value::boolean(true)), TypeTag::BOOL); }
+TEST(TypeTag, ValueTypeTagInt) { EXPECT_EQ(valueTypeTag(Value::integer(1)), TypeTag::INT); }
+TEST(TypeTag, ValueTypeTagDouble) { EXPECT_EQ(valueTypeTag(Value::real(1.5)), TypeTag::DOUBLE); }
 TEST(TypeTag, ValueTypeTagString)
 {
     ObjString s("x");
-    EXPECT_EQ(value_type_tag(Value::object(&s)), TypeTag::STRING);
+    EXPECT_EQ(valueTypeTag(Value::object(&s)), TypeTag::STRING);
 }
 
 TEST(TypeTag, ValueTypeTagList)
 {
     ObjList l;
-    EXPECT_EQ(value_type_tag(Value::object(&l)), TypeTag::LIST);
+    EXPECT_EQ(valueTypeTag(Value::object(&l)), TypeTag::LIST);
 }

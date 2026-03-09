@@ -9,7 +9,7 @@ ArenaBlock::ArenaBlock(size_t const size, size_t const alignment)
 {
     // Validate alignment is a power of 2
     if (alignment == 0 || (alignment & (alignment - 1)) != 0)
-        diagnostic::engine.emit("Alignment must be a power of two", diagnostic::DiagnosticEngine::Severity::FATAL);
+        diagnostic::emit("Alignment must be a power of two", diagnostic::Severity::FATAL);
 
     // Round up size to multiple of alignment
     size_t mod = Size_ % alignment;
@@ -22,7 +22,7 @@ ArenaBlock::ArenaBlock(size_t const size, size_t const alignment)
         throw std::bad_alloc();
 
     /// TODO: change after debug
-    // diagnostic::engine.panic("bad alloc");
+    // diagnostic::panic("bad alloc");
     Begin_ = reinterpret_cast<unsigned char*>(mem);
     Next_ = Begin_;
 }
@@ -81,7 +81,7 @@ unsigned char* ArenaBlock::allocate(size_t bytes, std::optional<size_t> alignmen
     size_t alignment_value = alignment.value_or(alignof(std::max_align_t));
     // Validate alignment is a power of 2
     if (alignment_value == 0 || (alignment_value & (alignment_value - 1)) != 0)
-        diagnostic::engine.emit("Invalid arguments to ArenaAllocator::allocate()", diagnostic::DiagnosticEngine::Severity::FATAL);
+        diagnostic::emit("Invalid arguments to ArenaAllocator::allocate()", diagnostic::Severity::FATAL);
 
     // Calculate aligned address
     std::uintptr_t cur = reinterpret_cast<std::uintptr_t>(Next_);
@@ -203,13 +203,13 @@ void* ArenaAllocator::allocate(size_t const size, size_t const alignment)
 
     // Check size
     if (size > MAX_BLOCK_SIZE) {
-        diagnostic::engine.emit("allocation size is too large : " + std::to_string(size), diagnostic::DiagnosticEngine::Severity::ERROR);
+        diagnostic::emit("allocation size is too large : " + std::to_string(size), diagnostic::Severity::ERROR);
         if (OomHandler_ && OomHandler_(size))
             return allocate(size);
 
-        diagnostic::engine.emit("bad alloc!", diagnostic::DiagnosticEngine::Severity::FATAL);
+        diagnostic::emit("bad alloc!", diagnostic::Severity::FATAL);
         /// TODO: change after debug
-        // diagnostic::engine.panic("bad alloc");
+        // diagnostic::panic("bad alloc");
     }
 
     /// TODO: validate alignment
@@ -270,8 +270,8 @@ void ArenaAllocator::deallocate(void* ptr, size_t const size)
         return;
 
     // Strict LIFO check
-    unsigned char* expected = static_cast<unsigned char*>(ptr);
-    unsigned char* last = static_cast<unsigned char*>(LastPtr_);
+    auto* expected = static_cast<unsigned char*>(ptr);
+    auto* last = static_cast<unsigned char*>(LastPtr_);
 
     if (expected != last)
         return;
