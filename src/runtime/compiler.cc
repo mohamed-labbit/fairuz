@@ -463,7 +463,7 @@ uint8_t Compiler::compileAssignmentExpr(AssignmentExpr const* e, uint8_t* dst)
     return errorReg();
 }
 
-uint8_t Compiler::compileCall(CallExpr const* e, uint8_t* dst, bool tail )
+uint8_t Compiler::compileCall(CallExpr const* e, uint8_t* dst, bool tail)
 {
     uint32_t line = e ? e->getLine() : 0;
     uint8_t fn_reg = allocRegister();
