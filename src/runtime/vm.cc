@@ -47,7 +47,7 @@ Value VM::execute()
             RA(instr) = val;
         } break;
         case OpCode::LOAD_INT: {
-            int16_t raw = static_cast<int16_t>(instr_Bx(instr)) - JUMP_OFFSET;
+            int16_t raw = static_cast<uint16_t>(instr_Bx(instr)) - JUMP_OFFSET;
             RA(instr) = Value::integer(raw);
         } break;
         case OpCode::LOAD_GLOBAL: {
@@ -318,7 +318,8 @@ namespace {
 template<typename IntOp, typename RealOp>
 Value _binaryArith(Value const lhs, Value const rhs, IntOp intOp, RealOp realOp)
 {
-    assert(lhs.isNumber() && rhs.isNumber());
+    if (!lhs.isInteger() || !rhs.isInteger())
+        diagnostic::emit("binary arithmetic on non numeric operand is not allowed", diagnostic::Severity::FATAL);
     if (lhs.isInteger() && rhs.isInteger())
         return Value::integer(intOp(lhs.asInteger(), rhs.asInteger()));
     return Value::real(realOp(lhs.asDoubleAny(), rhs.asDoubleAny()));
@@ -327,14 +328,16 @@ Value _binaryArith(Value const lhs, Value const rhs, IntOp intOp, RealOp realOp)
 template<typename IntOp>
 Value _binaryBitwise(Value const lhs, Value const rhs, IntOp intOp)
 {
-    assert(lhs.isInteger() && rhs.isInteger());
+    if (!lhs.isInteger() || !rhs.isInteger())
+        diagnostic::emit("bitwise op on non integer operand is not allowed", diagnostic::Severity::FATAL);
     return Value::integer(intOp(lhs.asInteger(), rhs.asInteger()));
 }
 
 template<typename IntOp>
 Value _binaryShift(Value const lhs, Value const rhs, IntOp intOp)
 {
-    assert(lhs.isInteger() && rhs.isInteger());
+    if (!lhs.isInteger() || !rhs.isInteger())
+        diagnostic::emit("bit shift on non integer operand is not allowed", diagnostic::Severity::FATAL);
     auto shift = rhs.asInteger();
     if (shift < 0 || shift >= std::numeric_limits<decltype(lhs.asInteger())>::digits)
         diagnostic::emit("shift amount out of range", diagnostic::Severity::FATAL);
@@ -344,9 +347,11 @@ Value _binaryShift(Value const lhs, Value const rhs, IntOp intOp)
 template<typename IntOp, typename RealOp>
 bool _binaryCmp(Value const lhs, Value const rhs, IntOp intOp, RealOp realOp)
 {
-    assert(lhs.isNumber() && rhs.isNumber());
+    // assert(lhs.isNumber() && rhs.isNumber());
     if (lhs.isInteger() && rhs.isInteger())
         return intOp(lhs.asInteger(), rhs.asInteger());
+    if (lhs.isString() && lhs.isString())
+        return realOp(lhs.asString(), rhs.asString());
     return realOp(lhs.asDoubleAny(), rhs.asDoubleAny());
 }
 
@@ -419,13 +424,15 @@ Value VM::_shr(Value const lhs, Value const rhs)
 
 Value VM::_neg(Value const a)
 {
-    assert(a.isNumber());
+    if (!a.isNumber())
+        diagnostic::emit("'-' on a non numeric value is not allowed", diagnostic::Severity::FATAL);
     return a.isInteger() ? Value::integer(-a.asInteger()) : Value::real(-a.asDouble());
 }
 
 Value VM::_bitnot(Value const a)
 {
-    assert(a.isInteger());
+    if (!a.isInteger())
+        diagnostic::emit("'~' on non integer is not allowed", diagnostic::Severity::FATAL);
     return Value::integer(~a.asInteger());
 }
 

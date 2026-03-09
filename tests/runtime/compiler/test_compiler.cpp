@@ -308,7 +308,7 @@ TEST(CompilerVar, LocalDeclaration)
     // Expected:
     //   0: LOAD_INT A=0 Bx=bias(5)   ← x lives in r0
     //   1: RETURN_NIL
-    Chunk* chunk = compile_ok(blk(decl("x", makeLiteralInt(5))));
+    Chunk* chunk = compile_ok(decl("x", makeLiteralInt(5)));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -321,9 +321,8 @@ TEST(CompilerVar, LocalDeclaration)
 TEST(CompilerVar, TwoLocalsUseConsecutiveRegisters)
 {
     // let x = 1; let y = 2
-    Chunk* chunk = compile_ok(blk(
-        decl("x", makeLiteralInt(1)),
-        decl("y", makeLiteralInt(2))));
+    Chunk* chunk = compile_ok({ decl("x", makeLiteralInt(1)),
+        decl("y", makeLiteralInt(2)) });
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -338,9 +337,8 @@ TEST(CompilerVar, LocalAssignmentWritesBackToSameRegister)
 {
     // let x = 1; x = 2
     // x is in r0; assignment compiles the RHS directly into r0
-    Chunk* chunk = compile_ok(blk(
-        decl("x", makeLiteralInt(1)),
-        assign_stmt("x", makeLiteralInt(2))));
+    Chunk* chunk = compile_ok({ decl("x", makeLiteralInt(1)),
+        assign_stmt("x", makeLiteralInt(2)) });
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -385,9 +383,7 @@ TEST(CompilerUnary, NegateVariable)
     //   LOAD_INT r0=5   (x)
     //   OP_NEG      r1=−r0
     //   RETURN_NIL
-    Chunk* chunk = compile_ok(blk(
-        decl("x", makeLiteralInt(5)),
-        makeExprStmt(makeUnary(makeName("x"), UnaryOp::OP_NEG))));
+    Chunk* chunk = compile_ok({ decl("x", makeLiteralInt(5)), makeExprStmt(makeUnary(makeName("x"), UnaryOp::OP_NEG)) });
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -399,9 +395,7 @@ TEST(CompilerUnary, NegateVariable)
 
 TEST(CompilerUnary, NotVariable)
 {
-    Chunk* chunk = compile_ok(blk(
-        decl("b", makeLiteralBool(true)),
-        makeExprStmt(makeUnary(makeName("b"), UnaryOp::OP_NOT))));
+    Chunk* chunk = compile_ok({ decl("b", makeLiteralBool(true)), makeExprStmt(makeUnary(makeName("b"), UnaryOp::OP_NOT)) });
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -413,9 +407,8 @@ TEST(CompilerUnary, NotVariable)
 
 TEST(CompilerUnary, BitwiseNotVariable)
 {
-    Chunk* chunk = compile_ok(blk(
-        decl("n", makeLiteralInt(0xFF)),
-        makeExprStmt(makeUnary(makeName("n"), UnaryOp::OP_BITNOT))));
+    Chunk* chunk = compile_ok({ decl("n", makeLiteralInt(0xFF)),
+        makeExprStmt(makeUnary(makeName("n"), UnaryOp::OP_BITNOT)) });
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -484,10 +477,9 @@ TEST(CompilerBinary, AddTwoLocals)
 {
     // let a=1; let b=2; a+b
     // r0=a, r1=b, r2=temp_a, r3=temp_b, dst=r2
-    Chunk* chunk = compile_ok(blk(
-        decl("a", makeLiteralInt(1)),
+    Chunk* chunk = compile_ok({ decl("a", makeLiteralInt(1)),
         decl("b", makeLiteralInt(2)),
-        makeExprStmt(makeBinary(makeName("a"), makeName("b"), BinaryOp::OP_ADD))));
+        makeExprStmt(makeBinary(makeName("a"), makeName("b"), BinaryOp::OP_ADD)) });
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -545,9 +537,8 @@ TEST(CompilerBinary, DivisionFolded)
 TEST(CompilerBinary, DivisionByZeroNotFolded)
 {
     // x / 0 where x is a variable — cannot fold, must emit OP_DIV + NOP
-    Chunk* chunk = compile_ok(blk(
-        decl("x", makeLiteralInt(5)),
-        makeExprStmt(makeBinary(makeName("x"), makeLiteralInt(0), BinaryOp::OP_DIV))));
+    Chunk* chunk = compile_ok({ decl("x", makeLiteralInt(5)),
+        makeExprStmt(makeBinary(makeName("x"), makeLiteralInt(0), BinaryOp::OP_DIV)) });
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -564,10 +555,9 @@ TEST(CompilerBinary, DivisionByZeroNotFolded)
 TEST(CompilerBinary, GreaterThanNormalizedToLT)
 {
     // a > b  →  compiler swaps operands and emits OP_LT(b, a)
-    Chunk* chunk = compile_ok(blk(
-        decl("a", makeLiteralInt(3)),
+    Chunk* chunk = compile_ok({ decl("a", makeLiteralInt(3)),
         decl("b", makeLiteralInt(1)),
-        makeExprStmt(makeBinary(makeName("a"), makeName("b"), BinaryOp::OP_GT))));
+        makeExprStmt(makeBinary(makeName("a"), makeName("b"), BinaryOp::OP_GT)) });
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -582,10 +572,9 @@ TEST(CompilerBinary, GreaterThanNormalizedToLT)
 
 TEST(CompilerBinary, GreaterEqualNormalizedToLE)
 {
-    Chunk* chunk = compile_ok(blk(
-        decl("a", makeLiteralInt(5)),
+    Chunk* chunk = compile_ok({ decl("a", makeLiteralInt(5)),
         decl("b", makeLiteralInt(5)),
-        makeExprStmt(makeBinary(makeName("a"), makeName("b"), BinaryOp::OP_GTE))));
+        makeExprStmt(makeBinary(makeName("a"), makeName("b"), BinaryOp::OP_GTE)) });
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -599,11 +588,10 @@ TEST(CompilerBinary, GreaterEqualNormalizedToLE)
 TEST(CompilerBinary, ICSlotAllocatedPerBinaryOp)
 {
     // Two non-foldable binary ops → two IC slots
-    Chunk* chunk = compile_ok(blk(
-        decl("x", makeLiteralInt(1)),
+    Chunk* chunk = compile_ok({ decl("x", makeLiteralInt(1)),
         decl("y", makeLiteralInt(2)),
         makeExprStmt(makeBinary(makeName("x"), makeName("y"), BinaryOp::OP_ADD)),
-        makeExprStmt(makeBinary(makeName("x"), makeName("y"), BinaryOp::OP_MUL))));
+        makeExprStmt(makeBinary(makeName("x"), makeName("y"), BinaryOp::OP_MUL)) });
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     EXPECT_EQ(chunk->icSlots.size(), 2u);
@@ -668,10 +656,9 @@ TEST(CompilerBinary, ShiftLeftFolded)
 //   [patch: after_b]
 TEST(CompilerBinary, LogicalAndShortCircuit)
 {
-    Chunk* chunk = compile_ok(blk(
-        decl("a", makeLiteralBool(true)),
+    Chunk* chunk = compile_ok({ decl("a", makeLiteralBool(true)),
         decl("b", makeLiteralBool(false)),
-        makeExprStmt(makeBinary(makeName("a"), makeName("b"), BinaryOp::OP_AND))));
+        makeExprStmt(makeBinary(makeName("a"), makeName("b"), BinaryOp::OP_AND)) });
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -700,10 +687,9 @@ TEST(CompilerBinary, LogicalAndShortCircuit)
 
 TEST(CompilerBinary, LogicalOrShortCircuit)
 {
-    Chunk* chunk = compile_ok(blk(
-        decl("a", makeLiteralBool(false)),
+    Chunk* chunk = compile_ok({ decl("a", makeLiteralBool(false)),
         decl("b", makeLiteralBool(true)),
-        makeExprStmt(makeBinary(makeName("a"), makeName("b"), BinaryOp::OP_OR))));
+        makeExprStmt(makeBinary(makeName("a"), makeName("b"), BinaryOp::OP_OR)) });
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     bool found_jit = false;
@@ -929,7 +915,7 @@ TEST(CompilerWhile, JumpIfFalsePointsPastLoop)
 
 TEST(CompilerReturn, ReturnNilEmitsReturnNil)
 {
-    Chunk* chunk = compile_ok(blk(makeReturn(makeLiteralNil())));
+    Chunk* chunk = compile_ok(makeReturn(makeLiteralNil()));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -939,7 +925,7 @@ TEST(CompilerReturn, ReturnNilEmitsReturnNil)
 
 TEST(CompilerReturn, ReturnValueEmitsReturn)
 {
-    Chunk* chunk = compile_ok(blk(makeReturn(makeLiteralInt(42))));
+    Chunk* chunk = compile_ok(makeReturn(makeLiteralInt(42)));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -951,10 +937,10 @@ TEST(CompilerReturn, ReturnValueEmitsReturn)
 TEST(CompilerReturn, ReturnIsDeadCodeBarrier)
 {
     // Statements after return must be suppressed
-    Chunk* chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok({
         makeReturn(makeLiteralInt(1)),
         decl("x", makeLiteralInt(99)) // must OP_NOT appear
-        ));
+    });
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     // Only LOAD_INT 1 + RETURN appear; no LOAD_INT 99
@@ -988,8 +974,7 @@ TEST(CompilerReturn, TailCallEmitsCallTail)
 TEST(CompilerFunc, EmptyFunction)
 {
     // fn foo() { }
-    Chunk* chunk = compile_ok(blk(
-        func_stmt("foo", { }, blk())));
+    Chunk* chunk = compile_ok(func_stmt("foo", { }, blk()));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     // Parent chunk: CLOSURE r0 fn_idx=0, then RETURN_NIL
@@ -1011,9 +996,7 @@ TEST(CompilerFunc, EmptyFunction)
 TEST(CompilerFunc, FunctionWithParams)
 {
     // fn add(a, b) { return a + b }
-    Chunk* chunk = compile_ok(blk(
-        func_stmt("add", { makeName("a"), makeName("b") },
-            blk(makeReturn(makeBinary(makeName("a"), makeName("b"), BinaryOp::OP_ADD))))));
+    Chunk* chunk = compile_ok(func_stmt("add", { makeName("a"), makeName("b") }, blk(makeReturn(makeBinary(makeName("a"), makeName("b"), BinaryOp::OP_ADD)))));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     ASSERT_EQ(chunk->functions.size(), 1u);
@@ -1036,8 +1019,7 @@ TEST(CompilerFunc, FunctionWithParams)
 TEST(CompilerFunc, FunctionStoredAsLocal)
 {
     // fn foo() { } — foo lives in r0 in the enclosing scope
-    Chunk* chunk = compile_ok(blk(
-        func_stmt("foo", { }, blk())));
+    Chunk* chunk = compile_ok(func_stmt("foo", { }, blk()));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     EXPECT_EQ(chunk->localCount, 1); // the closure itself
@@ -1046,9 +1028,7 @@ TEST(CompilerFunc, FunctionStoredAsLocal)
 TEST(CompilerFunc, NestedFunctionIndexing)
 {
     // Two consecutive function declarations → fn_idx 0 and 1
-    Chunk* chunk = compile_ok(blk(
-        func_stmt("a", { }, blk()),
-        func_stmt("b", { }, blk())));
+    Chunk* chunk = compile_ok({ func_stmt("a", { }, blk()), func_stmt("b", { }, blk()) });
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     ASSERT_EQ(chunk->functions.size(), 2u);
@@ -1062,11 +1042,9 @@ TEST(CompilerFunc, NestedFunctionIndexing)
 TEST(CompilerFunc, RecursiveFunctionBodyCompiles)
 {
     // fn fact(n) { if (n) { return n } return 1 }
-    Chunk* chunk = compile_ok(blk(
-        func_stmt("fact", { makeName("n") },
-            blk(
-                makeIf(makeName("n"), blk(makeReturn(makeName("n")))),
-                makeReturn(makeLiteralInt(1))))));
+    Chunk* chunk = compile_ok(func_stmt("fact", { makeName("n") },
+        blk(makeIf(makeName("n"), blk(makeReturn(makeName("n")))),
+            makeReturn(makeLiteralInt(1)))));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     ASSERT_FALSE(chunk->functions.empty());
@@ -1079,11 +1057,10 @@ TEST(CompilerClosure, CapturesLocalFromEnclosingScope)
     //   let x = 1
     //   fn inner() { return x }  ← x captured as upvalue
     // }
-    Chunk* chunk = compile_ok(blk(
-        func_stmt("outer", { },
-            blk(
-                decl("x", makeLiteralInt(1)),
-                func_stmt("inner", { }, blk(makeReturn(makeName("x"))))))));
+    Chunk* chunk = compile_ok(func_stmt("outer", { },
+        blk(
+            decl("x", makeLiteralInt(1)),
+            func_stmt("inner", { }, blk(makeReturn(makeName("x")))))));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     ASSERT_EQ(chunk->functions.size(), 1u);
@@ -1113,11 +1090,10 @@ TEST(CompilerClosure, UpvalueDescriptorEmittedAfterClosure)
 {
     // The MOVE pseudo-instruction (upvalue descriptor) must follow CLOSURE
     // in the parent chunk's code stream.
-    Chunk* chunk = compile_ok(blk(
-        func_stmt("outer", { },
-            blk(
-                decl("x", makeLiteralInt(1)),
-                func_stmt("inner", { }, blk(makeReturn(makeName("x"))))))));
+    Chunk* chunk = compile_ok(func_stmt("outer", { },
+        blk(
+            decl("x", makeLiteralInt(1)),
+            func_stmt("inner", { }, blk(makeReturn(makeName("x")))))));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     Chunk const* outer = chunk->functions[0];
@@ -1184,12 +1160,11 @@ TEST(CompilerCall, CallResultUsed)
     // LOAD_GLOBAL x → r1
     // IC_CALL r0 argc=1
     // (result is in r0; local 'r' is the next allocated reg)
-    Chunk* chunk = compile_ok(blk(
-        decl("r", call(makeName("f"), [] {
-            std::vector<Expr*> a;
-            a.push_back(makeName("x"));
-            return a;
-        }()))));
+    Chunk* chunk = compile_ok( decl("r", call(makeName("f"), [] {
+        std::vector<Expr*> a;
+        a.push_back(makeName("x"));
+        return a;
+    }())));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     bool has_ic_call = false;
@@ -1202,9 +1177,7 @@ TEST(CompilerCall, CallResultUsed)
 TEST(CompilerCall, ICSlotAllocatedPerCallSite)
 {
     // f(); g() → two IC slots
-    Chunk* chunk = compile_ok(blk(
-        makeExprStmt(call(makeName("f"))),
-        makeExprStmt(call(makeName("g")))));
+    Chunk* chunk = compile_ok({ makeExprStmt(call(makeName("f"))), makeExprStmt(call(makeName("g"))) });
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     EXPECT_EQ(chunk->icSlots.size(), 2u);
@@ -1286,14 +1259,13 @@ TEST(CompilerScope, LocalslDontLeakOutOfBlock)
 TEST(CompilerScope, NestedScopesBothVisible)
 {
     // let a = 1; { let b = 2; let c = a + b }
-    Chunk* chunk = compile_ok(blk(
-        decl("a", makeLiteralInt(1)),
+    Chunk* chunk = compile_ok({ decl("a", makeLiteralInt(1)),
         makeBlock([] {
             std::vector<Stmt*> s;
             s.push_back(decl("b", makeLiteralInt(2)));
             s.push_back(decl("c", makeBinary(makeName("a"), makeName("b"), BinaryOp::OP_ADD)));
             return s;
-        }())));
+        }()) });
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     // a=r0, b=r1; OP_ADD r2 r0 r1; c goes into r2
@@ -1310,7 +1282,7 @@ TEST(CompilerScope, NestedScopesBothVisible)
 
 TEST(CompilerMeta, TopLevelChunkNameIsMain)
 {
-    Chunk* chunk = compile_ok(blk());
+    Chunk* chunk = compile_ok({ });
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     EXPECT_EQ(chunk->name, "<main>");
@@ -1319,10 +1291,9 @@ TEST(CompilerMeta, TopLevelChunkNameIsMain)
 TEST(CompilerMeta, LocalCountReflectsMaxRegisters)
 {
     // let a=1; let b=2; let c=3  → max_reg = 3
-    Chunk* chunk = compile_ok(blk(
-        decl("a", makeLiteralInt(1)),
+    Chunk* chunk = compile_ok({ decl("a", makeLiteralInt(1)),
         decl("b", makeLiteralInt(2)),
-        decl("c", makeLiteralInt(3))));
+        decl("c", makeLiteralInt(3)) });
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     EXPECT_EQ(chunk->localCount, 3);
@@ -1330,8 +1301,7 @@ TEST(CompilerMeta, LocalCountReflectsMaxRegisters)
 
 TEST(CompilerMeta, FunctionAritySetCorrectly)
 {
-    Chunk* chunk = compile_ok(blk(
-        func_stmt("f", { makeName("x"), makeName("y"), makeName("z") }, blk())));
+    Chunk* chunk = compile_ok(func_stmt("f", { makeName("x"), makeName("y"), makeName("z") }, blk()));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     ASSERT_EQ(chunk->functions.size(), 1u);
@@ -1340,8 +1310,7 @@ TEST(CompilerMeta, FunctionAritySetCorrectly)
 
 TEST(CompilerMeta, FunctionNameSetCorrectly)
 {
-    Chunk* chunk = compile_ok(blk(
-        func_stmt("compute", { }, blk())));
+    Chunk* chunk = compile_ok( func_stmt("compute", { }, blk()) );
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     ASSERT_EQ(chunk->functions.size(), 1u);
@@ -1350,8 +1319,7 @@ TEST(CompilerMeta, FunctionNameSetCorrectly)
 
 TEST(CompilerMeta, LineInfoPresent)
 {
-    Chunk* chunk = compile_ok(blk(
-        decl("x", makeLiteralInt(42), false, /*line=*/7)));
+    Chunk* chunk = compile_ok(decl("x", makeLiteralInt(42), false, /*line=*/7));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     EXPECT_FALSE(chunk->lines.empty());
@@ -1367,16 +1335,15 @@ TEST(CompilerIntegration, Fibonacci)
     args_n1.push_back(makeBinary(makeName("n"), makeLiteralInt(1), BinaryOp::OP_SUB));
     args_n2.push_back(makeBinary(makeName("n"), makeLiteralInt(2), BinaryOp::OP_SUB));
 
-    Chunk* chunk = compile_ok(blk(
-        func_stmt("fib", { makeName("n") },
-            blk(
-                makeIf(
-                    makeBinary(makeName("n"), makeLiteralInt(1), BinaryOp::OP_LTE),
-                    blk(makeReturn(makeName("n")))),
-                makeReturn(makeBinary(
-                    call(makeName("fib"), std::move(args_n1)),
-                    call(makeName("fib"), std::move(args_n2)),
-                    BinaryOp::OP_ADD))))));
+    Chunk* chunk = compile_ok(func_stmt("fib", { makeName("n") },
+        blk(
+            makeIf(
+                makeBinary(makeName("n"), makeLiteralInt(1), BinaryOp::OP_LTE),
+                blk(makeReturn(makeName("n")))),
+            makeReturn(makeBinary(
+                call(makeName("fib"), std::move(args_n1)),
+                call(makeName("fib"), std::move(args_n2)),
+                BinaryOp::OP_ADD)))));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     EXPECT_FALSE(chunk->functions.empty());
@@ -1396,14 +1363,13 @@ TEST(CompilerIntegration, CounterWithClosure)
     //   fn inc() { count = count + 1 }
     //   return inc
     // }
-    Chunk* chunk = compile_ok(blk(
-        func_stmt("make_counter", { },
-            blk(
-                decl("count", makeLiteralInt(0)),
-                func_stmt("inc", { },
-                    blk(assign_stmt("count",
-                        makeBinary(makeName("count"), makeLiteralInt(1), BinaryOp::OP_ADD)))),
-                makeReturn(makeName("inc"))))));
+    Chunk* chunk = compile_ok(func_stmt("make_counter", { },
+        blk(
+            decl("count", makeLiteralInt(0)),
+            func_stmt("inc", { },
+                blk(assign_stmt("count",
+                    makeBinary(makeName("count"), makeLiteralInt(1), BinaryOp::OP_ADD)))),
+            makeReturn(makeName("inc")))));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     ASSERT_EQ(chunk->functions.size(), 1u);
@@ -1424,12 +1390,11 @@ TEST(CompilerIntegration, NestedArithmetic)
 {
     // result = (2 + 3) * (4 - 1)
     // Entire expression is const-folded: (5) * (3) = 15
-    Chunk* chunk = compile_ok(blk(
-        decl("result",
-            makeBinary(
-                makeBinary(makeLiteralInt(2), makeLiteralInt(3), BinaryOp::OP_ADD),
-                makeBinary(makeLiteralInt(4), makeLiteralInt(1), BinaryOp::OP_SUB),
-                BinaryOp::OP_MUL))));
+    Chunk* chunk = compile_ok(decl("result",
+        makeBinary(
+            makeBinary(makeLiteralInt(2), makeLiteralInt(3), BinaryOp::OP_ADD),
+            makeBinary(makeLiteralInt(4), makeLiteralInt(1), BinaryOp::OP_SUB),
+            BinaryOp::OP_MUL)));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
@@ -1442,10 +1407,9 @@ TEST(CompilerIntegration, NestedArithmetic)
 TEST(CompilerIntegration, StringConstantPoolDedup)
 {
     // "hello" used three times → one pool entry
-    Chunk* chunk = compile_ok(blk(
+    Chunk* chunk = compile_ok({ makeExprStmt(makeLiteralString("hello")),
         makeExprStmt(makeLiteralString("hello")),
-        makeExprStmt(makeLiteralString("hello")),
-        makeExprStmt(makeLiteralString("hello"))));
+        makeExprStmt(makeLiteralString("hello")) });
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     int count = 0;

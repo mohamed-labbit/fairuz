@@ -269,7 +269,7 @@ static void print_value(Value v)
 }
 
 struct Chunk {
-    StringRef name;
+    StringRef name { "" };
     int arity { 0 };
     unsigned int localCount { 0 };
     unsigned int upvalueCount { 0 };
