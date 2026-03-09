@@ -33,6 +33,7 @@ struct CompilerState {
     uint8_t maxReg { 0 };
     StringRef funcName;
     bool isTopLevel { false };
+    bool isDead_ { false };
 
     struct LoopContext {
         std::vector<uint32_t> breakPatches;    // jump instruction to patch to loop exit

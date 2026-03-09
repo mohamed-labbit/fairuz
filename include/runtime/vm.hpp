@@ -33,6 +33,7 @@ private:
     unsigned int FramesTop_ { 0 };
     std::unordered_map<StringRef, Value> Globals_;
     std::vector<ObjUpvalue*> OpenUpvalues_;
+    bool isDead_ { false };
 
     Value execute();
 

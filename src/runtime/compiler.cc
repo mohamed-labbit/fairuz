@@ -23,9 +23,11 @@ Chunk* Compiler::compile(std::vector<Stmt*> const& stmts)
     for (auto const& s : stmts)
         compileStmt(s);
 
-    // Emit implicit RETURN_NIL if the function didn't already return
-    uint32_t line = stmts[0] ? stmts[0]->getLine() : 0;
-    emit(make_ABC(static_cast<uint8_t>(OpCode::RETURN_NIL), 0, 0, 0), line);
+    // Emit implicit RETURN_NIL only when control flow is still live.
+    if (!state.isDead_) {
+        uint32_t line = stmts[0] ? stmts[0]->getLine() : 0;
+        emit(make_ABC(static_cast<uint8_t>(OpCode::RETURN_NIL), 0, 0, 0), line);
+    }
     top_chunk->localCount = state.maxReg;
     top_chunk->upvalueCount = static_cast<int>(state.upvalues.size());
     Current_ = nullptr;
@@ -34,7 +36,7 @@ Chunk* Compiler::compile(std::vector<Stmt*> const& stmts)
 
 void Compiler::compileStmt(Stmt const* s)
 {
-    if (!s)
+    if (!s || Current_->isDead_)
         return;
 
     switch (s->getKind()) {
@@ -106,23 +108,83 @@ void Compiler::compileIf(IfStmt const* s)
         return;
 
     uint32_t line = s ? s->getLine() : 0;
+    bool const incoming_dead = Current_->isDead_;
 
-    /// TODO: attempt constant folding on condition + DCE
+    std::optional<Value> folded_cond;
+    Expr const* cond_expr = s->getCondition();
+    if (cond_expr) {
+        switch (cond_expr->getKind()) {
+        case Expr::Kind::LITERAL: folded_cond = constValue(cond_expr); break;
+        case Expr::Kind::UNARY: folded_cond = tryFoldUnary(static_cast<UnaryExpr const*>(cond_expr)); break;
+        case Expr::Kind::BINARY: folded_cond = tryFoldBinary(static_cast<BinaryExpr const*>(cond_expr)); break;
+        default: break;
+        }
+    }
+
+    if (folded_cond) {
+        if (folded_cond->isTruthy()) {
+            compileStmt(s->getThenBlock());
+            return;
+        }
+        if (BlockStmt const* else_block = s->getElseBlock()) {
+            compileStmt(else_block);
+            return;
+        }
+        Current_->isDead_ = incoming_dead;
+        return;
+    }
 
     uint8_t mark = Current_->nextReg;
     uint8_t cond = compileExpr(s->getCondition());
     uint32_t jump_false = emitJump(OpCode::JUMP_IF_FALSE, cond, line);
     Current_->freeRegsTo(mark);
     compileStmt(s->getThenBlock());
-    /// TODO: compile else statements
-    patchJump(jump_false);
+    if (BlockStmt const* else_block = s->getElseBlock()) {
+        uint32_t jump_end = emitJump(OpCode::JUMP, 0, line);
+        patchJump(jump_false);
+        compileStmt(else_block);
+        patchJump(jump_end);
+    } else
+        patchJump(jump_false);
+
+    Current_->isDead_ = incoming_dead;
 }
 
 void Compiler::compileWhile(WhileStmt const* s)
 {
-    uint32_t line = s ? s->getLine() : 0;
+    if (!s)
+        return;
 
-    /// TODO: attempt constant folding on condition + DCE
+    uint32_t line = s ? s->getLine() : 0;
+    bool const incoming_dead = Current_->isDead_;
+
+    std::optional<Value> folded_cond;
+    Expr const* cond_expr = s->getCondition();
+    if (cond_expr) {
+        switch (cond_expr->getKind()) {
+        case Expr::Kind::LITERAL: folded_cond = constValue(cond_expr); break;
+        case Expr::Kind::UNARY: folded_cond = tryFoldUnary(static_cast<UnaryExpr const*>(cond_expr)); break;
+        case Expr::Kind::BINARY: folded_cond = tryFoldBinary(static_cast<BinaryExpr const*>(cond_expr)); break;
+        default: break;
+        }
+    }
+
+    if (folded_cond) {
+        if (!folded_cond->isTruthy()) {
+            Current_->isDead_ = incoming_dead;
+            return;
+        }
+
+        uint32_t loop_start_folded = currentOffset();
+        pushLoop(loop_start_folded);
+        compileStmt(s->getBlock());
+        uint32_t offset_folded = loop_start_folded - currentOffset() - 1;
+        emit(make_AsBx(static_cast<uint8_t>(OpCode::LOOP), 0, offset_folded), line);
+        popLoop(currentOffset(), loop_start_folded, line);
+        Current_->isDead_ = incoming_dead;
+        return;
+    }
+
     uint32_t loop_start = currentOffset();
     pushLoop(loop_start);
     uint8_t mark = Current_->nextReg;
@@ -134,6 +196,7 @@ void Compiler::compileWhile(WhileStmt const* s)
     emit(make_AsBx(static_cast<uint8_t>(OpCode::LOOP), 0, offset), line);
     patchJump(exit_jump);
     popLoop(currentOffset(), loop_start, line);
+    Current_->isDead_ = incoming_dead;
 }
 
 void Compiler::compileFunctionDef(FunctionDef const* f)
@@ -170,7 +233,8 @@ void Compiler::compileFunctionDef(FunctionDef const* f)
     }
 
     compileStmt(f->getBody());
-    emit(make_ABC(static_cast<uint8_t>(OpCode::RETURN_NIL), 0, 0, 0), line);
+    if (!fn_state.isDead_)
+        emit(make_ABC(static_cast<uint8_t>(OpCode::RETURN_NIL), 0, 0, 0), line);
 
     endScope(line);
 
@@ -203,6 +267,7 @@ void Compiler::compileReturn(ReturnStmt const* s)
 
     if (!s->hasValue() || (s->getValue()->getKind() == Expr::Kind::LITERAL && static_cast<LiteralExpr const*>(s->getValue())->isNil())) {
         emit(make_ABC(static_cast<uint8_t>(OpCode::RETURN_NIL), 0, 0, 0), line);
+        Current_->isDead_ = true;
         return;
     }
 
@@ -212,6 +277,7 @@ void Compiler::compileReturn(ReturnStmt const* s)
         uint8_t mark = Current_->nextReg;
         compileCall(static_cast<CallExpr const*>(value), nullptr, true);
         Current_->freeRegsTo(mark);
+        Current_->isDead_ = true;
         return;
     }
 
@@ -219,6 +285,7 @@ void Compiler::compileReturn(ReturnStmt const* s)
     uint8_t src = compileExpr(value);
     emit(make_ABC(static_cast<uint8_t>(OpCode::RETURN), src, 1, 0), line);
     Current_->freeRegsTo(mark);
+    Current_->isDead_ = true;
 }
 
 uint8_t Compiler::compileExpr(Expr const* e, uint8_t* dst)

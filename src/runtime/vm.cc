@@ -377,7 +377,8 @@ Value VM::_mul(Value const lhs, Value const rhs) { return _binaryArith(lhs, rhs,
 
 Value VM::_cnc(Value const lhs, Value const rhs)
 {
-    assert(lhs.isString() && rhs.isString());
+    if (lhs.isString() && rhs.isString())
+        diagnostic::emit("String concatenation can only apply to string operands", diagnostic::Severity::FATAL);
     return Value::object(intern(lhs.asString()->str + rhs.asString()->str));
 }
 
