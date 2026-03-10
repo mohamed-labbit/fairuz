@@ -163,11 +163,13 @@ static size_t encode_utf8(uint32_t const cp, unsigned char* out_bytes)
 {
     if (cp < 0x80) {
         out_bytes[0] = static_cast<unsigned char>(cp);
+        out_bytes[1] = '\0';
         return 1;
     }
     if (cp < 0x800) {
         out_bytes[0] = static_cast<unsigned char>(0xC0 | (cp >> 6));
         out_bytes[1] = static_cast<unsigned char>(0x80 | (cp & 0x3F));
+        out_bytes[2] = '\0';
         return 2;
     }
     if (cp < 0x10000) {
@@ -177,6 +179,7 @@ static size_t encode_utf8(uint32_t const cp, unsigned char* out_bytes)
         out_bytes[0] = static_cast<unsigned char>(0xE0 | (cp >> 12));
         out_bytes[1] = static_cast<unsigned char>(0x80 | ((cp >> 6) & 0x3F));
         out_bytes[2] = static_cast<unsigned char>(0x80 | (cp & 0x3F));
+        out_bytes[3] = '\0';
         return 3;
     }
     if (cp <= 0x10FFFF) {
@@ -184,6 +187,7 @@ static size_t encode_utf8(uint32_t const cp, unsigned char* out_bytes)
         out_bytes[1] = static_cast<unsigned char>(0x80 | ((cp >> 12) & 0x3F));
         out_bytes[2] = static_cast<unsigned char>(0x80 | ((cp >> 6) & 0x3F));
         out_bytes[3] = static_cast<unsigned char>(0x80 | (cp & 0x3F));
+        out_bytes[4] = '\0';
         return 4;
     }
     throw std::runtime_error("Invalid cp: exceeds Unicode range");
@@ -191,7 +195,7 @@ static size_t encode_utf8(uint32_t const cp, unsigned char* out_bytes)
 
 static StringRef encode_utf8_str(uint32_t const cp)
 {
-    unsigned char bytes[4];
+    unsigned char bytes[5];
     size_t const len = encode_utf8(cp, bytes);
     return StringRef(reinterpret_cast<char*>(bytes)).truncate(len);
 }
