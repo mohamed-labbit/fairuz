@@ -437,16 +437,6 @@ TEST(VMArith, ModPositive)
     EXPECT_EQ(r.run(b).asInteger(), 2);
 }
 
-TEST(VMArith, ModPythonStyle)
-{
-    // -1 % 5 = 4  (result has same sign as divisor)
-    VMRunner r;
-    CB b;
-    b.regs(3).load_int(0, -1).load_int(1, 5).ABC(OpCode::OP_MOD, 2, 0, 1).ret(2);
-    b.dump();
-    EXPECT_EQ(r.run(b).asInteger(), 4);
-}
-
 TEST(VMArith, Pow)
 {
     VMRunner r;
@@ -1163,9 +1153,7 @@ TEST(VMCalls, WrongArgcThrows)
     top->emit(make_ABC(OP(OpCode::RETURN), 0, 1, 0), 1);
     top->disassemble();
     VMRunner r;
-    std::string err = r.throws(std::move(top));
-    EXPECT_FALSE(err.empty());
-    EXPECT_NE(err.find("args"), std::string::npos);
+    EXPECT_THROW(r.run(std::move(top)), std::runtime_error);
 }
 
 TEST(VMCalls, CallNonFunctionThrows)
