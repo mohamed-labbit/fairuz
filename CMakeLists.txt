@@ -7,17 +7,17 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # For LLVM/Clang on macOS, ensure we use the right standard library
 if(APPLE)
-    # Use libc++ and ensure proper linkage
     add_compile_options(-stdlib=libc++)
     add_link_options(-stdlib=libc++)
-
-    # Point to Homebrew LLVM's libc++
     link_directories(/opt/homebrew/opt/llvm/lib/c++)
     include_directories(/opt/homebrew/opt/llvm/include/c++/v1)
 endif()
 
 # Add include directories
 include_directories(${CMAKE_SOURCE_DIR}/include)
+
+# Optional: build tests (pass -DBUILD_TESTS=ON or use the 'test' preset)
+option(BUILD_TESTS "Build the test suite" OFF)
 
 # Find OpenMP if available
 find_package(OpenMP)
@@ -36,11 +36,10 @@ if(NOT simdutf_FOUND)
     FetchContent_Declare(
         simdutf
         GIT_REPOSITORY https://github.com/simdutf/simdutf.git
-        GIT_TAG v5.5.0 # Use latest stable version
+        GIT_TAG v5.5.0
         GIT_SHALLOW TRUE
     )
 
-    # Configure simdutf options
     set(SIMDUTF_TESTS OFF CACHE BOOL "Disable simdutf tests" FORCE)
     set(SIMDUTF_TOOLS OFF CACHE BOOL "Disable simdutf tools" FORCE)
     set(SIMDUTF_BENCHMARKS OFF CACHE BOOL "Disable simdutf benchmarks" FORCE)
@@ -59,61 +58,72 @@ add_library(mylang_objects OBJECT ${MYLANG_SOURCES})
 target_include_directories(mylang_objects PUBLIC
     ${CMAKE_SOURCE_DIR}/include
 )
-
-# Link simdutf to the object library
 target_link_libraries(mylang_objects PUBLIC simdutf::simdutf)
 
 if(OpenMP_FOUND)
     target_compile_options(mylang_objects PRIVATE ${OpenMP_CXX_FLAGS})
 endif()
 
-# Find GTest (use system package if available, otherwise fall back to a minimal
-# bundled implementation so tests can still run in restricted environments)
-find_package(GTest CONFIG QUIET)
-
-if(NOT GTest_FOUND)
-    add_library(minimal_gtest STATIC tests/support/minimal_gtest_main.cpp)
-    target_include_directories(minimal_gtest PUBLIC ${CMAKE_SOURCE_DIR}/tests/support)
-    add_library(GTest::gtest_main ALIAS minimal_gtest)
-endif()
-
-# Define the test executable
-add_executable(mylang_tests
-    tests/test_main.cpp
-    tests/runtime/test_arena.cpp
-    tests/string/test_string.cpp
-    tests/lexer/test_tokens.cpp
-    tests/lexer/test_indentation.cpp
-    tests/parser/test_parser.cpp
-    tests/parser/test_analyzer.cpp
-    tests/parser/test_optim.cpp
-    tests/runtime/compiler/test_opcode.cpp
-    tests/runtime/compiler/test_chunk.cpp
-    tests/runtime/compiler/test_value.cpp
-    tests/runtime/compiler/test_compiler.cpp
-    tests/runtime/test_vm.cpp
-    tests/security/test_security.cpp
+# ─── Main executable ────────────────────────────────────────────────────────
+add_executable(mylang
+    main.cpp
     $<TARGET_OBJECTS:mylang_objects>
 )
 
-target_compile_options(mylang_tests PRIVATE
-    $<$<CXX_COMPILER_ID:GNU,Clang>:-O0>
-    $<$<CXX_COMPILER_ID:MSVC>:/Od>
-)
-
-target_link_libraries(mylang_tests
-    PRIVATE
-    GTest::gtest_main
-    simdutf::simdutf
-)
+target_include_directories(mylang PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_link_libraries(mylang PRIVATE simdutf::simdutf)
 
 if(OpenMP_FOUND)
-    target_link_libraries(mylang_tests PRIVATE OpenMP::OpenMP_CXX)
+    target_link_libraries(mylang PRIVATE OpenMP::OpenMP_CXX)
 endif()
 
-# Also propagate include dirs
-target_include_directories(mylang_tests PRIVATE ${CMAKE_SOURCE_DIR}/include)
+# ─── Test executable (only when BUILD_TESTS=ON) ──────────────────────────────
+if(BUILD_TESTS)
+    message(STATUS "Building tests")
 
-# Enable testing and register tests
-enable_testing()
-add_test(NAME AllTestsInMain COMMAND mylang_tests)
+    find_package(GTest CONFIG QUIET)
+
+    if(NOT GTest_FOUND)
+        add_library(minimal_gtest STATIC tests/support/minimal_gtest_main.cpp)
+        target_include_directories(minimal_gtest PUBLIC ${CMAKE_SOURCE_DIR}/tests/support)
+        add_library(GTest::gtest_main ALIAS minimal_gtest)
+    endif()
+
+    add_executable(mylang_tests
+        tests/test_main.cpp
+        tests/runtime/test_arena.cpp
+        tests/string/test_string.cpp
+        tests/lexer/test_tokens.cpp
+        tests/lexer/test_indentation.cpp
+        tests/parser/test_parser.cpp
+        tests/parser/test_analyzer.cpp
+        tests/parser/test_optim.cpp
+        tests/runtime/compiler/test_opcode.cpp
+        tests/runtime/compiler/test_chunk.cpp
+        tests/runtime/compiler/test_value.cpp
+        tests/runtime/compiler/test_compiler.cpp
+        tests/runtime/test_vm.cpp
+        tests/security/test_security.cpp
+        $<TARGET_OBJECTS:mylang_objects>
+    )
+
+    target_compile_options(mylang_tests PRIVATE
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-O0>
+        $<$<CXX_COMPILER_ID:MSVC>:/Od>
+    )
+
+    target_link_libraries(mylang_tests
+        PRIVATE
+        GTest::gtest_main
+        simdutf::simdutf
+    )
+
+    if(OpenMP_FOUND)
+        target_link_libraries(mylang_tests PRIVATE OpenMP::OpenMP_CXX)
+    endif()
+
+    target_include_directories(mylang_tests PRIVATE ${CMAKE_SOURCE_DIR}/include)
+
+    enable_testing()
+    add_test(NAME AllTestsInMain COMMAND mylang_tests)
+endif()
