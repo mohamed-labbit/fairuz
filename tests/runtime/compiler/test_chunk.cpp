@@ -195,22 +195,21 @@ TEST(Chunk, GetLineNewEntryOnLineChange)
 
 TEST(Chunk, OwnsSubFunctions)
 {
-    auto* parent = new Chunk();
-    auto* child = new Chunk();
+    auto* parent = mylang::runtime::makeChunk();
+    auto* child = mylang::runtime::makeChunk();
     child->name = "child";
-    parent->functions.push_back(child);
-    delete parent;
+    parent->functions.push(child);
     SUCCEED();
 }
 
 TEST(Chunk, SubFunctionPreservesData)
 {
     Chunk parent;
-    auto* child = new Chunk();
+    auto* child = mylang::runtime::makeChunk();
     child->name = "myfunc";
     child->arity = 2;
     child->emit(make_ABC(static_cast<uint8_t>(OpCode::RETURN_NIL), 0, 0, 0), 1);
-    parent.functions.push_back(child);
+    parent.functions.push(child);
 
     EXPECT_EQ(parent.functions.size(), 1u);
     EXPECT_EQ(parent.functions[0]->name, "myfunc");

@@ -1,4 +1,5 @@
 #include "../include/lexer.hpp"
+#include "../include/array.hpp"
 #include "../include/util.hpp"
 
 namespace mylang::lex {
@@ -167,24 +168,24 @@ Lexer::Lexer(FileManager* fm)
     , IndentLevel_(0)
     , AtBOL_(true)
 {
-    TokStream_.reserve(1024);
-    IndentStack_.reserve(8);
-    AltIndentStack_.reserve(8);
-    IndentStack_.push_back(0);
-    AltIndentStack_.push_back(0);
+    TokStream_ = Array<mylang::tok::Token const*>::withCapacity(1024);
+    IndentStack_ = Array<unsigned int>::withCapacity(8);
+    AltIndentStack_ = Array<unsigned int>::withCapacity(8);
+    IndentStack_.push(0);
+    AltIndentStack_.push(0);
 
     util::configureLocale();
 }
 
-Lexer::Lexer(std::vector<tok::Token const*>& seq, size_t const s)
-    : TokStream_(seq.begin(), seq.begin() + s)
+Lexer::Lexer(Array<tok::Token const*>& seq/*, size_t const s*/)
+    : TokStream_(seq)
     , TokIndex_(0)
     , IndentSize_(4)
     , IndentLevel_(0)
     , AtBOL_(true)
 {
-    IndentStack_.push_back(0);
-    AltIndentStack_.push_back(0);
+    IndentStack_.push(0);
+    AltIndentStack_.push(0);
     util::configureLocale();
 }
 
@@ -263,8 +264,8 @@ tok::Token const* Lexer::lexToken()
                         diagnostic::panic("Inconsistent indentation (tabs/spaces)");
 
                     ++IndentLevel_;
-                    IndentStack_.push_back(size);
-                    AltIndentStack_.push_back(alt_size);
+                    IndentStack_.push(size);
+                    AltIndentStack_.push(alt_size);
 
                     store(makeToken(tok::TokenType::INDENT, "", line, col));
                 }
@@ -274,8 +275,8 @@ tok::Token const* Lexer::lexToken()
 
                     while (IndentLevel_ > 0 && size < IndentStack_.back()) {
                         --IndentLevel_;
-                        IndentStack_.pop_back();
-                        AltIndentStack_.pop_back();
+                        IndentStack_.pop();
+                        AltIndentStack_.pop();
                         ++dedent_count;
                     }
 
@@ -428,8 +429,8 @@ tok::Token const* Lexer::lexToken()
 
             // check if this identifier is a reserved keyword
             tok::TokenType tt = tok::TokenType::IDENTIFIER;
-            if (tok::keywords.count(identifier))
-                tt = tok::keywords.at(identifier);
+            if (auto type = tok::lookupKeyword(identifier))
+                tt = *type;
 
             return finish(tt, identifier, line, col);
         }
@@ -476,17 +477,17 @@ tok::Token const* Lexer::lexToken()
             uint32_t next = SourceManager_.currentChar();
             if (next != BUFFER_END) {
                 StringRef two = operator_str + util::encode_utf8_str(next);
-                if (tok::operators.count(two)) {
+                if (auto type = tok::lookupOperator(two)) {
                     operator_str = two;
                     SourceManager_.consumeChar();
                 }
             }
 
             // check if the operator exists in the map
-            if (!tok::operators.count(operator_str))
-                return finish(tok::TokenType::INVALID, operator_str, line, col);
+            if (auto type = tok::lookupOperator(operator_str))
+                return finish(*type, operator_str, line, col);
 
-            return finish(tok::operators.at(operator_str), operator_str, line, col);
+            return finish(tok::TokenType::INVALID, operator_str, line, col);
         }
 
         case '[':
@@ -683,8 +684,8 @@ tok::Token const* Lexer::lexToken()
 
     while (IndentLevel_ > 0) {
         --IndentLevel_;
-        IndentStack_.pop_back();
-        AltIndentStack_.pop_back();
+        IndentStack_.pop();
+        AltIndentStack_.pop();
         store(makeToken(tok::TokenType::DEDENT, "", last_line, last_col));
     }
 
@@ -740,10 +741,10 @@ tok::Token const* Lexer::peek(size_t n)
 
 void Lexer::store(tok::Token const* tok)
 {
-    TokStream_.push_back(tok);
+    TokStream_.push(tok);
 }
 
-std::vector<tok::Token const*> Lexer::tokenize()
+Array<tok::Token const*> Lexer::tokenize()
 {
     while (next()->type() != tok::TokenType::ENDMARKER)
         ;

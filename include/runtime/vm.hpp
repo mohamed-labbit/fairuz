@@ -1,8 +1,9 @@
 #ifndef VM_HPP
 #define VM_HPP
 
+#include "../array.hpp"
 #include "value.hpp"
-#include <array>
+#include <unordered_map>
 
 namespace mylang::runtime {
 
@@ -13,8 +14,7 @@ public:
 
     VM()
     {
-        Stack_.fill(Value::nil());
-        Frames_.fill(CallFrame());
+        openStdlib();
     }
 
     Value run(Chunk* chunk);
@@ -26,13 +26,13 @@ private:
         int32_t base { 0 };              // index into VM::stack_ where register 0 lives
     };
 
+    std::unordered_map<StringRef, Value> Globals_;
     std::unordered_map<StringRef, ObjString*> StringTable_;
-    std::array<Value, STACK_SIZE> Stack_;
-    std::array<CallFrame, MAX_FRAMES> Frames_;
+    Array<Value> Stack_ { STACK_SIZE, Value::nil() };
+    Array<CallFrame> Frames_ { MAX_FRAMES, CallFrame() };
     unsigned int StackTop_ { 0 };
     unsigned int FramesTop_ { 0 };
-    std::unordered_map<StringRef, Value> Globals_;
-    std::vector<ObjUpvalue*> OpenUpvalues_;
+    Array<ObjUpvalue*> OpenUpvalues_;
     bool isDead_ { false };
 
     Value execute();
@@ -74,6 +74,13 @@ private:
     void callValue(Value callee, int argc, int base, bool tail);
     Value callNative(ObjNative* nat, int argc, int base);
     void returnFromCall(int ret_reg, int n_ret);
+
+    void openStdlib();
+    void registerNative(StringRef const& name, NativeFn fn, int arity = -1)
+    {
+        ObjString* name_obj = makeObjectString(name);
+        Globals_[name] = Value::object(makeObjectNative(fn, name_obj, arity));
+    }
 }; // class VM
 
 } // namespace mylang::runtime

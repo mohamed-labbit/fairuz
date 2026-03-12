@@ -14,9 +14,9 @@ using namespace mylang::ast;
 using namespace mylang::parser;
 using namespace testing;
 
-ASTPrinter AST_Printer;
-
 class ASTOptimizerTest : public Test {
+public:
+    ASTPrinter AST_Printer;
 protected:
     std::unique_ptr<ASTOptimizer> optimizer;
 
@@ -40,18 +40,18 @@ protected:
     IfStmt* makeIf(Expr* condition, BlockStmt* thenBlock, BlockStmt* elseBlock = nullptr)
     {
         if (!elseBlock)
-            elseBlock = makeBlock(std::vector<Stmt*>());
+            elseBlock = makeBlock(Array<Stmt*>());
 
         return ast::makeIf(condition, thenBlock, elseBlock);
     }
 
     // Helper to create function definitions
-    FunctionDef* makeFunction(StringRef const& name, std::vector<StringRef> const& params, BlockStmt* body)
+    FunctionDef* makeFunction(StringRef const& name, Array<StringRef> const& params, BlockStmt* body)
     {
         NameExpr* nameExpr = makeName(name);
-        std::vector<Expr*> paramsExpr(params.size());
+        Array<Expr*> paramsExpr(params.size());
         for (auto p : params)
-            paramsExpr.push_back(makeName(p));
+            paramsExpr.push(makeName(p));
 
         ListExpr* listExpr = makeList(paramsExpr);
         return ast::makeFunction(nameExpr, listExpr, body);
@@ -371,7 +371,7 @@ TEST_F(ASTOptimizerTest, NoSimplificationWithNonZero)
 TEST_F(ASTOptimizerTest, OptimizeCallExpressionArgs)
 {
     // func(2 + 3, 4 * 5)
-    std::vector<Expr*> args = {
+    Array<Expr*> args = {
         makeBinary(makeLiteralInt(2), makeLiteralInt(3), BinaryOp::OP_ADD),
         makeBinary(makeLiteralInt(4), makeLiteralInt(5), BinaryOp::OP_MUL)
     };
@@ -387,7 +387,7 @@ TEST_F(ASTOptimizerTest, OptimizeCallExpressionArgs)
 TEST_F(ASTOptimizerTest, OptimizeListElements)
 {
     // [1 + 2, 3 * 4, x]
-    std::vector<Expr*> elements = {
+    Array<Expr*> elements = {
         makeBinary(makeLiteralInt(1), makeLiteralInt(2), BinaryOp::OP_ADD),
         makeBinary(makeLiteralInt(3), makeLiteralInt(4), BinaryOp::OP_MUL),
         makeName("x")
@@ -401,7 +401,7 @@ TEST_F(ASTOptimizerTest, OptimizeListElements)
 
 TEST_F(ASTOptimizerTest, OptimizeEmptyList)
 {
-    ListExpr* list = makeList(std::vector<Expr*>());
+    ListExpr* list = makeList(Array<Expr*>());
     Expr* result = optimizer->optimizeConstantFolding(list);
 
     EXPECT_TRUE(result->equals(list));
@@ -461,7 +461,7 @@ TEST_F(ASTOptimizerTest, DeadCodeNestedIf)
 {
     // if (true) { if (false) { stmt1 } else { stmt2 } }
     BlockStmt* innerElse = makeBlock({ makeExprStmt(makeLiteralInt(2)) });
-    IfStmt* innerIf = makeIf(makeLiteralBool(false), makeBlock({}), innerElse);
+    IfStmt* innerIf = makeIf(makeLiteralBool(false), makeBlock({ }), innerElse);
     BlockStmt* outerThen = makeBlock({ innerIf });
     IfStmt* outerIf = makeIf(makeLiteralBool(true), outerThen);
     Stmt* result = optimizer->eliminateDeadCode(outerIf);
@@ -557,12 +557,12 @@ TEST_F(ASTOptimizerTest, DeadCodeAfterReturn)
 {
     // function f() { return 1; stmt2; stmt3; }
     // stmt2 and stmt3 are dead
-    std::vector<Stmt*> body = {
+    Array<Stmt*> body = {
         makeReturn(makeLiteralInt(1)),
         makeExprStmt(makeLiteralInt(2)),
         makeExprStmt(makeLiteralInt(3))
     };
-    FunctionDef* func = makeFunction("f", {}, makeBlock(body));
+    FunctionDef* func = makeFunction("f", { }, makeBlock(body));
     Stmt* result = optimizer->eliminateDeadCode(func);
     ASSERT_NE(result, nullptr);
     EXPECT_EQ(optimizer->getStats().DeadCodeEliminations, 1);
@@ -574,8 +574,8 @@ TEST_F(ASTOptimizerTest, DeadCodeAfterEarlyReturn)
     // stmt is dead (both branches return)
     IfStmt* ifStmt = makeIf(makeName("x"), makeBlock({ makeReturn(makeLiteralInt(1)) }),
         makeBlock({ makeReturn(makeLiteralInt(2)) }));
-    std::vector<Stmt*> body = { ifStmt, makeExprStmt(makeLiteralInt(3)) };
-    FunctionDef* func = makeFunction("f", {}, makeBlock(body));
+    Array<Stmt*> body = { ifStmt, makeExprStmt(makeLiteralInt(3)) };
+    FunctionDef* func = makeFunction("f", { }, makeBlock(body));
     Stmt* result = optimizer->eliminateDeadCode(func);
     EXPECT_GE(optimizer->getStats().DeadCodeEliminations, 0);
 }
@@ -584,12 +584,12 @@ TEST_F(ASTOptimizerTest, NoDeadCodeBeforeReturn)
 {
     // function f() { stmt1; stmt2; return 1; }
     // No dead code
-    std::vector<Stmt*> body = {
+    Array<Stmt*> body = {
         makeExprStmt(makeLiteralInt(1)),
         makeExprStmt(makeLiteralInt(2)),
         makeReturn(makeLiteralInt(3))
     };
-    FunctionDef* func = makeFunction("f", {}, makeBlock(body));
+    FunctionDef* func = makeFunction("f", { }, makeBlock(body));
     Stmt* result = optimizer->eliminateDeadCode(func);
     EXPECT_EQ(optimizer->getStats().DeadCodeEliminations, 0);
 }
@@ -598,7 +598,7 @@ TEST_F(ASTOptimizerTest, DeadCodeNestedInFunction)
 {
     // function f() { if (false) { stmt } }
     IfStmt* ifStmt = makeIf(makeLiteralBool(false), makeBlock({ makeExprStmt(makeLiteralInt(1)) }));
-    FunctionDef* func = makeFunction("f", {}, makeBlock({ ifStmt }));
+    FunctionDef* func = makeFunction("f", { }, makeBlock({ ifStmt }));
     Stmt* result = optimizer->eliminateDeadCode(func);
 
     EXPECT_GE(optimizer->getStats().DeadCodeEliminations, 1);
@@ -757,8 +757,8 @@ TEST_F(ASTOptimizerTest, OptimizeLevel0NoOptimization)
 {
     // Level 0 - no optimization
     AssignmentStmt* stmt = makeAssignment("x", makeBinary(makeLiteralInt(5), makeLiteralInt(10), BinaryOp::OP_ADD));
-    std::vector<Stmt*> statements = { stmt };
-    std::vector<Stmt*> result = optimizer->optimize(statements, 0);
+    Array<Stmt*> statements = { stmt };
+    Array<Stmt*> result = optimizer->optimize(statements, 0);
 
     EXPECT_EQ(result.size(), 1);
     EXPECT_EQ(optimizer->getStats().ConstantFolds, 0);
@@ -768,8 +768,8 @@ TEST_F(ASTOptimizerTest, OptimizeLevel1BasicOptimization)
 {
     // Level 1 - basic optimization (constant folding)
     AssignmentStmt* stmt = makeAssignment("x", makeBinary(makeLiteralInt(5), makeLiteralInt(10), BinaryOp::OP_ADD));
-    std::vector<Stmt*> statements = { stmt };
-    std::vector<Stmt*> result = optimizer->optimize(statements, 1);
+    Array<Stmt*> statements = { stmt };
+    Array<Stmt*> result = optimizer->optimize(statements, 1);
 
     EXPECT_EQ(result.size(), 1);
     EXPECT_EQ(optimizer->getStats().ConstantFolds, 1);
@@ -779,8 +779,8 @@ TEST_F(ASTOptimizerTest, OptimizeLevel1ExpressionStatement)
 {
     // Level 1 with expression statement
     ExprStmt* stmt = makeExprStmt(makeBinary(makeLiteralInt(3), makeLiteralInt(4), BinaryOp::OP_MUL));
-    std::vector<Stmt*> statements = { stmt };
-    std::vector<Stmt*> result = optimizer->optimize(statements, 1);
+    Array<Stmt*> statements = { stmt };
+    Array<Stmt*> result = optimizer->optimize(statements, 1);
 
     EXPECT_EQ(result.size(), 1);
     EXPECT_EQ(optimizer->getStats().ConstantFolds, 1);
@@ -790,8 +790,8 @@ TEST_F(ASTOptimizerTest, OptimizeLevel2DeadCodeElimination)
 {
     // Level 2 - includes dead code elimination
     IfStmt* ifStmt = makeIf(makeLiteralBool(false), makeBlock({ makeExprStmt(makeLiteralInt(1)) }));
-    std::vector<Stmt*> statements = { ifStmt };
-    std::vector<Stmt*> result = optimizer->optimize(statements, 2);
+    Array<Stmt*> statements = { ifStmt };
+    Array<Stmt*> result = optimizer->optimize(statements, 2);
 
     EXPECT_GE(optimizer->getStats().DeadCodeEliminations, 1);
 }
@@ -801,8 +801,8 @@ TEST_F(ASTOptimizerTest, OptimizeLevel2Combined)
     // Level 2 - both constant folding and dead code elimination
     AssignmentStmt* assign = makeAssignment("x", makeBinary(makeLiteralInt(2), makeLiteralInt(3), BinaryOp::OP_ADD));
     IfStmt* ifStmt = makeIf(makeLiteralBool(false), makeBlock({ makeExprStmt(makeLiteralInt(1)) }));
-    std::vector<Stmt*> statements = { assign, ifStmt };
-    std::vector<Stmt*> result = optimizer->optimize(statements, 2);
+    Array<Stmt*> statements = { assign, ifStmt };
+    Array<Stmt*> result = optimizer->optimize(statements, 2);
 
     EXPECT_GE(optimizer->getStats().ConstantFolds, 1);
     EXPECT_GE(optimizer->getStats().DeadCodeEliminations, 1);
@@ -810,13 +810,13 @@ TEST_F(ASTOptimizerTest, OptimizeLevel2Combined)
 
 TEST_F(ASTOptimizerTest, OptimizeMultipleStatements)
 {
-    std::vector<Stmt*> statements = {
+    Array<Stmt*> statements = {
         makeAssignment("a", makeBinary(makeLiteralInt(1), makeLiteralInt(2), BinaryOp::OP_ADD)),
         makeAssignment("b", makeBinary(makeLiteralInt(3), makeLiteralInt(4), BinaryOp::OP_MUL)),
         makeAssignment("c", makeBinary(makeLiteralInt(5), makeLiteralInt(1), BinaryOp::OP_SUB))
     };
 
-    std::vector<Stmt*> result = optimizer->optimize(statements, 1);
+    Array<Stmt*> result = optimizer->optimize(statements, 1);
 
     EXPECT_EQ(result.size(), 3);
     EXPECT_EQ(optimizer->getStats().ConstantFolds, 3);
@@ -824,8 +824,8 @@ TEST_F(ASTOptimizerTest, OptimizeMultipleStatements)
 
 TEST_F(ASTOptimizerTest, OptimizeEmptyStatements)
 {
-    std::vector<Stmt*> statements;
-    std::vector<Stmt*> result = optimizer->optimize(statements, 2);
+    Array<Stmt*> statements;
+    Array<Stmt*> result = optimizer->optimize(statements, 2);
 
     EXPECT_EQ(result.size(), 0);
 }
@@ -833,8 +833,8 @@ TEST_F(ASTOptimizerTest, OptimizeEmptyStatements)
 TEST_F(ASTOptimizerTest, OptimizeNullStatementsFiltered)
 {
     // After optimization, null statements should be filtered out
-    std::vector<Stmt*> statements = { makeAssignment("x", makeLiteralInt(1)) };
-    std::vector<Stmt*> result = optimizer->optimize(statements, 2);
+    Array<Stmt*> statements = { makeAssignment("x", makeLiteralInt(1)) };
+    Array<Stmt*> result = optimizer->optimize(statements, 2);
 
     // Should only contain non-null statements
     for (Stmt* stmt : result)
@@ -949,15 +949,15 @@ TEST_F(ASTOptimizerTest, EdgeCaseModuloNegative)
 
 TEST_F(ASTOptimizerTest, StressManyOptimizations)
 {
-    std::vector<Stmt*> statements;
+    Array<Stmt*> statements;
 
     // Create 100 assignment statements with constant expressions
     for (int i = 0; i < 100; ++i) {
         StringRef varName = "var" + StringRef(std::to_string(i).data());
-        statements.push_back(makeAssignment(varName, makeBinary(makeLiteralInt(i), makeLiteralInt(i), BinaryOp::OP_ADD)));
+        statements.push(makeAssignment(varName, makeBinary(makeLiteralInt(i), makeLiteralInt(i), BinaryOp::OP_ADD)));
     }
 
-    std::vector<Stmt*> result = optimizer->optimize(statements, 1);
+    Array<Stmt*> result = optimizer->optimize(statements, 1);
 
     EXPECT_EQ(result.size(), 100);
     EXPECT_EQ(optimizer->getStats().ConstantFolds, 100);
@@ -1001,7 +1001,7 @@ TEST_F(ASTOptimizerTest, EdgeCaseChainedStrengthReductions)
 TEST_F(ASTOptimizerTest, IntegrationFullOptimizationPipeline)
 {
     // Test a complete optimization scenario
-    std::vector<Stmt*> statements = {
+    Array<Stmt*> statements = {
         // Constant folding: x = 2 + 3 => x = 5
         makeAssignment("x", makeBinary(makeLiteralInt(2), makeLiteralInt(3), BinaryOp::OP_ADD)),
         // Strength reduction: y = x * 1 => y = x
@@ -1010,7 +1010,7 @@ TEST_F(ASTOptimizerTest, IntegrationFullOptimizationPipeline)
         makeIf(makeLiteralBool(false), makeBlock({ makeExprStmt(makeLiteralInt(999)) }))
     };
 
-    std::vector<Stmt*> result = optimizer->optimize(statements, 2);
+    Array<Stmt*> result = optimizer->optimize(statements, 2);
 
     EXPECT_GE(optimizer->getStats().ConstantFolds, 1);
     EXPECT_GE(optimizer->getStats().StrengthReductions, 1);
@@ -1024,15 +1024,15 @@ TEST_F(ASTOptimizerTest, IntegrationNestedFunctionOptimization)
     //   if (false) { y = 1; }
     //   return x;
     // }
-    std::vector<Stmt*> body = {
+    Array<Stmt*> body = {
         makeAssignment("x", makeBinary(makeLiteralInt(5), makeLiteralInt(10), BinaryOp::OP_ADD)),
         makeIf(makeLiteralBool(false), makeBlock({ makeAssignment("y", makeLiteralInt(1)) })),
         makeReturn(makeName("x"))
     };
 
-    FunctionDef* func = makeFunction("f", {}, makeBlock(body));
-    std::vector<Stmt*> statements = { func };
-    std::vector<Stmt*> result = optimizer->optimize(statements, 2);
+    FunctionDef* func = makeFunction("f", { }, makeBlock(body));
+    Array<Stmt*> statements = { func };
+    Array<Stmt*> result = optimizer->optimize(statements, 2);
 
     EXPECT_EQ(result.size(), 1);
 }

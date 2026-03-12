@@ -53,7 +53,7 @@ void SymbolTable::markUsed(StringRef const& name, int32_t line)
 {
     if (Symbol* sym = lookup(name)) {
         sym->isUsed = true;
-        sym->usageLines.push_back(line);
+        sym->usageLines.push(line);
     }
 }
 
@@ -61,16 +61,16 @@ SymbolTable* SymbolTable::createChild()
 {
     std::unique_ptr<SymbolTable> child = std::make_unique<SymbolTable>(this, ScopeLevel_ + 1);
     SymbolTable* ptr = child.get();
-    Children_.push_back(std::move(child));
+    Children_.push(std::move(child));
     return ptr;
 }
 
-std::vector<typename SymbolTable::Symbol*> SymbolTable::getUnusedSymbols()
+Array<typename SymbolTable::Symbol*> SymbolTable::getUnusedSymbols()
 {
-    std::vector<Symbol*> unused;
+    Array<Symbol*> unused;
     for (auto& [name, sym] : Symbols_) {
         if (!sym.isUsed && sym.symbolType == SymbolType::VARIABLE)
-            unused.push_back(&sym);
+            unused.push(&sym);
     }
 
     return unused;
@@ -153,7 +153,7 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(Expr const* expr)
 
 void SemanticAnalyzer::reportIssue(Issue::Severity sev, StringRef const& msg, int32_t line, StringRef const& sugg)
 {
-    Issues_.push_back({ sev, msg, line, sugg });
+    Issues_.push({ sev, msg, line, sugg });
 }
 
 void SemanticAnalyzer::analyzeExpr(Expr const* expr)
@@ -412,18 +412,18 @@ SemanticAnalyzer::SemanticAnalyzer()
     GlobalScope_->define("print", printSym);
 }
 
-void SemanticAnalyzer::analyze(std::vector<Stmt*> const& Statements_)
+void SemanticAnalyzer::analyze(Array<Stmt*> const& Statements_)
 {
     for (Stmt const* const& stmt : Statements_)
         analyzeStmt(stmt);
 
     // Check for unused variables
-    std::vector<SymbolTable::Symbol*> unused = GlobalScope_->getUnusedSymbols();
+    Array<SymbolTable::Symbol*> unused = GlobalScope_->getUnusedSymbols();
     for (SymbolTable::Symbol* sym : unused)
         reportIssue(Issue::Severity::WARNING, "Unused variable: " + sym->name, sym->definitionLine, "Consider removing if not needed");
 }
 
-std::vector<typename SemanticAnalyzer::Issue> const& SemanticAnalyzer::getIssues() const
+Array<typename SemanticAnalyzer::Issue> const& SemanticAnalyzer::getIssues() const
 {
     return Issues_;
 }
@@ -504,9 +504,9 @@ UnaryOp toUnaryOp(tok::TokenType const op)
     }
 }
 
-std::vector<Stmt*> Parser::parseProgram()
+Array<Stmt*> Parser::parseProgram()
 {
-    std::vector<Stmt*> statements;
+    Array<Stmt*> statements;
 
     while (!weDone()) {
         skipNewlines();
@@ -516,7 +516,7 @@ std::vector<Stmt*> Parser::parseProgram()
         Stmt* stmt = parseStatement();
 
         if (stmt)
-            statements.push_back(stmt);
+            statements.push(stmt);
         else {
             synchronize();
             if (weDone())
@@ -591,7 +591,7 @@ BlockStmt* Parser::parseIndentedBlock()
     if (!consume(tok::TokenType::INDENT, "Expected indented block"))
         return nullptr;
 
-    std::vector<Stmt*> statements;
+    Array<Stmt*> statements;
 
     if (check(tok::TokenType::DEDENT)) {
         advance();
@@ -606,7 +606,7 @@ BlockStmt* Parser::parseIndentedBlock()
         Stmt* stmt = parseStatement();
 
         if (stmt)
-            statements.push_back(stmt);
+            statements.push(stmt);
         else {
             synchronize();
             if (check(tok::TokenType::DEDENT) || weDone())
@@ -627,8 +627,7 @@ ListExpr* Parser::parseParametersList()
     if (!consume(tok::TokenType::LPAREN, "Expected '(' before parameters"))
         return nullptr;
 
-    std::vector<Expr*> parameters;
-    parameters.reserve(4); // typical small function
+    Array<Expr*> parameters = Array<Expr*>::withCapacity(4); // typical small function
 
     if (!check(tok::TokenType::RPAREN)) {
         do {
@@ -643,7 +642,7 @@ ListExpr* Parser::parseParametersList()
 
             StringRef param_name = currentToken()->lexeme();
             advance();
-            parameters.push_back(makeName(param_name));
+            parameters.push(makeName(param_name));
             skipNewlines();
         } while (match(tok::TokenType::COMMA) && !check(tok::TokenType::RPAREN));
     }
@@ -652,9 +651,9 @@ ListExpr* Parser::parseParametersList()
         return nullptr;
 
     if (parameters.empty())
-        return makeList(std::vector<Expr*> { });
+        return makeList(Array<Expr*> { });
 
-    return makeList(std::move(parameters));
+    return makeList(parameters);
 }
 
 Expr* Parser::parseExpression()
@@ -870,8 +869,7 @@ Expr* Parser::parsePostfixExpr()
     while (check(tok::TokenType::LPAREN)) {
         advance();
 
-        std::vector<Expr*> args;
-        args.reserve(4);
+        Array<Expr*> args = Array<Expr*>::withCapacity(4);
 
         if (!check(tok::TokenType::RPAREN)) {
             do {
@@ -884,7 +882,7 @@ Expr* Parser::parsePostfixExpr()
                     diagnostic::emit("Expected expression in argument list", diagnostic::Severity::ERROR);
                     return nullptr;
                 }
-                args.push_back(arg);
+                args.push(arg);
                 skipNewlines();
             } while (match(tok::TokenType::COMMA) && !check(tok::TokenType::RPAREN));
         }
@@ -966,7 +964,7 @@ Expr* Parser::parsePrimaryExpr()
         advance();
         if (check(tok::TokenType::RPAREN)) {
             advance();
-            return makeList(std::vector<Expr*> { });
+            return makeList(Array<Expr*> { });
         }
 
         Expr* expr = parseExpression();
@@ -993,8 +991,7 @@ Expr* Parser::parsePrimaryExpr()
 
 Expr* Parser::parseListLiteral()
 {
-    std::vector<Expr*> elements;
-    elements.reserve(4);
+    Array<Expr*> elements = Array<Expr*>::withCapacity(4);
 
     if (!check(tok::TokenType::RBRACKET)) {
         do {
@@ -1008,7 +1005,7 @@ Expr* Parser::parseListLiteral()
                 return nullptr;
             }
 
-            elements.push_back(elem);
+            elements.push(elem);
             skipNewlines();
         } while (match(tok::TokenType::COMMA) && !check(tok::TokenType::RBRACKET));
     }
@@ -1353,8 +1350,7 @@ Stmt* ASTOptimizer::eliminateDeadCode(Stmt* stmt)
         return clone;
     } else if (stmt->getKind() == Stmt::Kind::BLOCK) {
         BlockStmt* block_stmt = dynamic_cast<BlockStmt*>(stmt);
-        std::vector<Stmt*> new_stmts;
-        new_stmts.reserve(block_stmt->getStatements().size());
+        Array<Stmt*> new_stmts = Array<Stmt*>::withCapacity(block_stmt->getStatements().size());
         bool seen_return = false;
         for (Stmt* s : block_stmt->getStatements()) {
             if (seen_return) {
@@ -1365,7 +1361,7 @@ Stmt* ASTOptimizer::eliminateDeadCode(Stmt* stmt)
             if (s->getKind() == Stmt::Kind::RETURN)
                 seen_return = true;
 
-            new_stmts.push_back(eliminateDeadCode(s));
+            new_stmts.push(eliminateDeadCode(s));
         }
 
         return makeBlock(new_stmts);
@@ -1461,9 +1457,9 @@ bool ASTOptimizer::isLoopInvariant(Expr const* expr, std::unordered_set<StringRe
     return false;
 }
 
-std::vector<Stmt*> ASTOptimizer::optimize(std::vector<Stmt*> statements, int32_t level)
+Array<Stmt*> ASTOptimizer::optimize(Array<Stmt*> statements, int32_t level)
 {
-    std::vector<Stmt*> result;
+    Array<Stmt*> result;
     for (Stmt*& stmt : statements) {
         // Apply optimizations based on level
         if (level >= 1) {
@@ -1482,7 +1478,7 @@ std::vector<Stmt*> ASTOptimizer::optimize(std::vector<Stmt*> statements, int32_t
             stmt = eliminateDeadCode(stmt);
 
         if (stmt)
-            result.push_back(stmt);
+            result.push(stmt);
     }
     return result;
 }

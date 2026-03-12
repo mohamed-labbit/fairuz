@@ -5,7 +5,6 @@
 #include "../util.hpp"
 #include "opcode.hpp"
 #include "optim.hpp"
-#include "runtime_allocator.hpp"
 
 namespace mylang::runtime {
 
@@ -26,8 +25,8 @@ struct UpvalueDesc {
 
 struct CompilerState {
     Chunk* chunk { nullptr };
-    std::vector<LocalVariableDesc> locals;
-    std::vector<UpvalueDesc> upvalues;
+    Array<LocalVariableDesc> locals;
+    Array<UpvalueDesc> upvalues;
     unsigned int scopeDepth { 0 };
     uint8_t nextReg { 0 };
     uint8_t maxReg { 0 };
@@ -36,11 +35,11 @@ struct CompilerState {
     bool isDead_ { false };
 
     struct LoopContext {
-        std::vector<uint32_t> breakPatches;    // jump instruction to patch to loop exit
-        std::vector<uint32_t> continuePatches; // jump instr to patch to loop step
-        uint32_t loopStart;                    // instruction index of loop header
+        Array<uint32_t> breakPatches;    // jump instruction to patch to loop exit
+        Array<uint32_t> continuePatches; // jump instr to patch to loop step
+        uint32_t loopStart;              // instruction index of loop header
     };
-    std::vector<LoopContext> loopStack;
+    Array<LoopContext> loopStack;
 
     CompilerState* enclosing { nullptr }; // linked list for upvalue resolution
 
@@ -69,7 +68,7 @@ public:
     Compiler() = default;
     ~Compiler() = default;
 
-    Chunk* compile(std::vector<Stmt*> const& stmts);
+    Chunk* compile(Array<Stmt*> const& stmts);
 
 private:
     CompilerState* Current_ { nullptr };

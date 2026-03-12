@@ -119,39 +119,8 @@ enum class TokenType : int {
     INVALID
 };
 
-static std::unordered_map<StringRef, TokenType, StringRefHash, StringRefEqual> const operators
-    = {
-          { "=", TokenType::OP_EQ },
-          { ":=", TokenType::OP_ASSIGN },
-          { "+", TokenType::OP_PLUS },
-          { "-", TokenType::OP_MINUS },
-          { "*", TokenType::OP_STAR },
-          { "/", TokenType::OP_SLASH },
-          { "<", TokenType::OP_LT },
-          { ">", TokenType::OP_GT },
-          { "<=", TokenType::OP_LTE },
-          { ">=", TokenType::OP_GTE },
-          { "٪", TokenType::OP_PERCENT },
-          { "%", TokenType::OP_PERCENT },
-          { "!=", TokenType::OP_NEQ }
-      };
-
-static std::unordered_map<StringRef, TokenType, StringRefHash, StringRefEqual> const keywords
-    = {
-          { "خطا", TokenType::KW_FALSE },
-          { "عدم", TokenType::KW_NONE },
-          { "صحيح", TokenType::KW_TRUE },
-          { "و", TokenType::OP_AND },
-          { "اخرج", TokenType::KW_BREAK },
-          { "اكمل", TokenType::KW_CONTINUE },
-          { "عرف", TokenType::KW_FN },
-          { "او", TokenType::OP_OR },
-          { "بكل", TokenType::KW_FOR },
-          { "اذا", TokenType::KW_IF },
-          { "ليس", TokenType::OP_NOT },
-          { "ارجع", TokenType::KW_RETURN },
-          { "طالما", TokenType::KW_WHILE }
-      };
+MY_NODISCARD std::optional<TokenType> lookupKeyword(StringRef const& s);
+MY_NODISCARD std::optional<TokenType> lookupOperator(StringRef const& s);
 
 enum {
     PREC_COMMA,
@@ -201,10 +170,15 @@ public:
 
     // Return const references to avoid copies
     MY_NODISCARD StringRef const& lexeme() const;
+    
     MY_NODISCARD TokenType const& type() const;
+    
     MY_NODISCARD uint32_t const& line() const;
+    
     MY_NODISCARD uint32_t const& column() const;
+    
     MY_NODISCARD Location const& location() const;
+    
     MY_NODISCARD std::string const& filepath() const;
 
     MY_NODISCARD bool is(TokenType const tt) const;

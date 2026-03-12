@@ -1,6 +1,4 @@
-#include "../include/ast.hpp"
-#include "../include/runtime/runtime_allocator.hpp"
-#include "../include/string.hpp"
+#include "../include/allocator.hpp"
 #include "test_config.h"
 
 #include <cstring>
@@ -20,6 +18,9 @@ int main(int argc, char** argv)
 {
     ::testing::InitGoogleTest(&argc, argv);
 
+    mylang::AllocatorContext g_ctx;
+    mylang::setContext(&g_ctx);
+
     // Parse custom arguments (after gtest consumes its own)
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -37,12 +38,14 @@ int main(int argc, char** argv)
     int ret = RUN_ALL_TESTS();
 
     if (test_config::verbose) {
-        std::cout << string_allocator.toString(true) << '\n';
+        std::cout << getStringAllocator().toString(true) << '\n';
         std::cout << '\n';
-        std::cout << ast::AST_allocator.toString(true) << '\n';
+        std::cout << getTokenAllocator().toString(true) << '\n';
         std::cout << '\n';
-        std::cout << runtime::runtime_allocator.toString(true) << std::endl;
+        std::cout << getRuntimeAllocator().toString(true) << std::endl;
     }
+
+    mylang::g_context = nullptr;
 
     return ret;
 }

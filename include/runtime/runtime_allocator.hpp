@@ -1,14 +1,15 @@
+/*
 #ifndef RUNTIME_ALLOCATOR_HPP
 #define RUNTIME_ALLOCATOR_HPP
 
 #include "../allocator.hpp"
 
-namespace mylang {
-namespace runtime {
+namespace mylang::runtime {
 
-inline Allocator runtime_allocator("Runtime allocator");
+inline Allocator getRuntimeAllocator()("Runtime allocator");
 
-}
-}
+} // namespace mylang::runtime
 
 #endif // RUNTIME_ALLOCATOR_HPP
+
+*/

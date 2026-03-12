@@ -62,11 +62,11 @@ static constexpr uint8_t OP(OpCode o)
 // ChunkBuilder — fluent bytecode assembler
 // ---------------------------------------------------------------------------
 struct CB {
-    std::unique_ptr<Chunk> ch;
+    Chunk* ch { nullptr };
 
     CB()
-        : ch(std::make_unique<Chunk>())
     {
+        ch = makeChunk();
         ch->name = "<test>";
     }
 
@@ -118,12 +118,10 @@ struct CB {
         return *this;
     }
 
-    Chunk* release() { return ch.release(); }
-
     void dump() const
     {
         std::cout << "Disassemebeled chunk:" << '\n';
-        if (ch.get())
+        if (ch)
             ch->disassemble();
         std::cout << '\n';
     }
@@ -138,37 +136,17 @@ private:
 // ---------------------------------------------------------------------------
 struct VMRunner {
     VM vm;
-    std::unique_ptr<Chunk> chunk_;
+    Chunk* chunk_ = makeChunk();
 
     Value run(CB& b)
     {
-        chunk_.reset(b.release());
-        return vm.run(chunk_.get());
+        chunk_ = b.ch;
+        return vm.run(chunk_);
     }
-    Value run(std::unique_ptr<Chunk> c)
+    Value run(Chunk* c)
     {
-        chunk_ = std::move(c);
-        return vm.run(chunk_.get());
-    }
-
-    // Run and expect a VMError; return the error message.
-    std::string throws(CB& b)
-    {
-        try {
-            run(b);
-            return "";
-        } catch (std::runtime_error const& e) {
-            return e.what();
-        }
-    }
-    std::string throws(std::unique_ptr<Chunk> c)
-    {
-        try {
-            run(std::move(c));
-            return "";
-        } catch (std::runtime_error const& e) {
-            return e.what();
-        }
+        chunk_ = c;
+        return vm.run(chunk_);
     }
 };
 
@@ -434,7 +412,7 @@ TEST(VMArith, ModPositive)
     CB b;
     b.regs(3).load_int(0, 17).load_int(1, 5).ABC(OpCode::OP_MOD, 2, 0, 1).ret(2);
     b.dump();
-    EXPECT_EQ(r.run(b).asInteger(), 2);
+    EXPECT_DOUBLE_EQ(r.run(b).asDoubleAny(), 2.0);
 }
 
 TEST(VMArith, Pow)
@@ -552,15 +530,15 @@ TEST(VMBitwise, ShrLogical_NegativeInput)
 {
     // Logical (unsigned) shift: -8 >> 1 in 64-bit unsigned = large positive.
     // -8 as int64 = 0xFFFFFFFFFFFFFFF8; >> 1 = 0x7FFFFFFFFFFFFFFC = INT64_MAX-3.
-    // That value is outside int48 range, so Value::integer stores it as double.
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, -8).load_int(1, 1).ABC(OpCode::OP_RSHIFT, 2, 0, 1).ret(2);
     b.dump();
+    // That value is outside int48 range, so Value::integer stores it as double.
     Value v = r.run(b);
-    EXPECT_TRUE(v.isNumber());
+    EXPECT_TRUE(v.isDouble());
     // Just verify it's positive (sign bit cleared → logical shift working).
-    EXPECT_GT(v.asDoubleAny(), 0.0);
+    EXPECT_GT(v.asDouble(), 0.0);
 }
 
 TEST(VMBitwise, AndOnDoubleThrows)
@@ -1110,9 +1088,9 @@ TEST(VMLists, LenOnNonListThrows)
 // =============================================================================
 
 // Helper: build a 2-arg adder function chunk
-static std::unique_ptr<Chunk> make_adder_chunk()
+static Chunk* make_adder_chunk()
 {
-    auto fn = std::make_unique<Chunk>();
+    auto fn = makeChunk();
     fn->name = "add2";
     fn->arity = 2;
     fn->localCount = 3;
@@ -1125,10 +1103,10 @@ static std::unique_ptr<Chunk> make_adder_chunk()
 TEST(VMCalls, CallClosure_TwoArgs)
 {
     // CLOSURE r0 fn[0]; load_int r1 3; load_int r2 4; CALL r0 2; RETURN r0
-    auto top = std::make_unique<Chunk>();
+    auto top = makeChunk();
     top->name = "<test>";
     top->localCount = 4;
-    top->functions.push_back(make_adder_chunk().release());
+    top->functions.push(make_adder_chunk());
 
     top->emit(make_ABx(OP(OpCode::CLOSURE), 0, 0), 1); // no upval descs
     top->emit(make_ABx(OP(OpCode::LOAD_INT), 1, BX(3)), 1);
@@ -1137,15 +1115,15 @@ TEST(VMCalls, CallClosure_TwoArgs)
     top->emit(make_ABC(OP(OpCode::RETURN), 0, 1, 0), 1);
     top->disassemble();
     VMRunner r;
-    EXPECT_EQ(r.run(std::move(top)).asInteger(), 7);
+    EXPECT_EQ(r.run(top).asInteger(), 7);
 }
 
 TEST(VMCalls, WrongArgcThrows)
 {
-    auto top = std::make_unique<Chunk>();
+    auto top = makeChunk();
     top->name = "<test>";
     top->localCount = 3;
-    top->functions.push_back(make_adder_chunk().release());
+    top->functions.push(make_adder_chunk());
 
     top->emit(make_ABx(OP(OpCode::CLOSURE), 0, 0), 1);
     top->emit(make_ABx(OP(OpCode::LOAD_INT), 1, BX(1)), 1);
@@ -1153,7 +1131,7 @@ TEST(VMCalls, WrongArgcThrows)
     top->emit(make_ABC(OP(OpCode::RETURN), 0, 1, 0), 1);
     top->disassemble();
     VMRunner r;
-    EXPECT_THROW(r.run(std::move(top)), std::runtime_error);
+    EXPECT_THROW(r.run(top), std::runtime_error);
 }
 
 TEST(VMCalls, CallNonFunctionThrows)
@@ -1191,12 +1169,12 @@ TEST(VMCalls, TailCall_DoesNotOverflowFrames)
     //   MOVE r3 r0            ← arg for tail call
     //   CALL_TAIL r2 1
 
-    auto fn = std::make_unique<Chunk>();
+    auto fn = makeChunk();
     fn->name = "cd";
     fn->arity = 1;
     fn->localCount = 4;
 
-    uint16_t nk = fn->addConstant(Value::object(new ObjString("cd")));
+    uint16_t nk = fn->addConstant(Value::object(makeObjectString("cd")));
 
     fn->emit(make_ABx(OP(OpCode::LOAD_INT), 1, BX(0)), 1);
     fn->emit(make_ABC(OP(OpCode::OP_EQ), 1, 0, 1), 1);
@@ -1208,12 +1186,12 @@ TEST(VMCalls, TailCall_DoesNotOverflowFrames)
     fn->emit(make_ABC(OP(OpCode::MOVE), 3, 0, 0), 1); // arg
     fn->emit(make_ABC(OP(OpCode::CALL_TAIL), 2, 1, 0), 1);
 
-    auto top = std::make_unique<Chunk>();
+    auto top = makeChunk();
     top->name = "<test>";
     top->localCount = 3;
-    top->functions.push_back(fn.release());
+    top->functions.push(fn);
 
-    uint16_t tk = top->addConstant(Value::object(new ObjString("cd")));
+    uint16_t tk = top->addConstant(Value::object(makeObjectString("cd")));
     top->emit(make_ABx(OP(OpCode::CLOSURE), 0, 0), 1);
     top->emit(make_ABx(OP(OpCode::STORE_GLOBAL), 0, tk), 1);
     top->emit(make_ABx(OP(OpCode::LOAD_INT), 1, BX(300)), 1);
@@ -1228,29 +1206,27 @@ TEST(VMCalls, TailCall_DoesNotOverflowFrames)
 TEST(VMCalls, StackOverflowDetected)
 {
     // Non-tail infinite recursion hits MAX_FRAMES.
-    auto fn = std::make_unique<Chunk>();
+    auto fn = makeChunk();
     fn->name = "inf";
     fn->arity = 0;
     fn->localCount = 1;
-    uint16_t nk = fn->addConstant(Value::object(new ObjString("inf")));
+    uint16_t nk = fn->addConstant(Value::object(makeObjectString("inf")));
     fn->emit(make_ABx(OP(OpCode::LOAD_GLOBAL), 0, nk), 1);
     fn->emit(make_ABC(OP(OpCode::CALL), 0, 0, 0), 1);
     fn->emit(make_ABC(OP(OpCode::RETURN), 0, 1, 0), 1);
 
-    auto top = std::make_unique<Chunk>();
+    auto top = makeChunk();
     top->name = "<test>";
     top->localCount = 1;
-    top->functions.push_back(fn.release());
-    uint16_t tk = top->addConstant(Value::object(new ObjString("inf")));
+    top->functions.push(fn);
+    uint16_t tk = top->addConstant(Value::object(makeObjectString("inf")));
     top->emit(make_ABx(OP(OpCode::CLOSURE), 0, 0), 1);
     top->emit(make_ABx(OP(OpCode::STORE_GLOBAL), 0, tk), 1);
     top->emit(make_ABC(OP(OpCode::CALL), 0, 0, 0), 1);
     top->emit(make_ABC(OP(OpCode::RETURN), 0, 1, 0), 1);
     top->disassemble();
     VMRunner r;
-    std::string err = r.throws(std::move(top));
-    EXPECT_FALSE(err.empty());
-    EXPECT_NE(err.find("overflow"), std::string::npos);
+    EXPECT_THROW(r.run(top), std::runtime_error);
 }
 
 // =============================================================================
@@ -1260,7 +1236,7 @@ TEST(VMCalls, StackOverflowDetected)
 TEST(VMClosures, CaptureLocal_GetUpvalue)
 {
     // fn outer(): x=10; fn inner(): return x; return inner()
-    auto inner = std::make_unique<Chunk>();
+    auto inner = makeChunk();
     inner->name = "inner";
     inner->arity = 0;
     inner->upvalueCount = 1;
@@ -1268,22 +1244,22 @@ TEST(VMClosures, CaptureLocal_GetUpvalue)
     inner->emit(make_ABC(OP(OpCode::GET_UPVALUE), 0, 0, 0), 1);
     inner->emit(make_ABC(OP(OpCode::RETURN), 0, 1, 0), 1);
 
-    auto outer = std::make_unique<Chunk>();
+    auto outer = makeChunk();
     outer->name = "outer";
     outer->arity = 0;
     outer->localCount = 2;
     outer->upvalueCount = 0;
-    outer->functions.push_back(inner.release());
+    outer->functions.push(inner);
     outer->emit(make_ABx(OP(OpCode::LOAD_INT), 0, BX(10)), 1); // x=10
     outer->emit(make_ABx(OP(OpCode::CLOSURE), 1, 0), 1);       // CLOSURE r1 fn[0]
     outer->emit(make_ABC(OP(OpCode::MOVE), 1, 0, 0), 1);       //   upval: local r0
     outer->emit(make_ABC(OP(OpCode::CALL), 1, 0, 0), 1);       // inner()
     outer->emit(make_ABC(OP(OpCode::RETURN), 1, 1, 0), 1);
 
-    auto top = std::make_unique<Chunk>();
+    auto top = makeChunk();
     top->name = "<test>";
     top->localCount = 2;
-    top->functions.push_back(outer.release());
+    top->functions.push(outer);
     top->emit(make_ABx(OP(OpCode::CLOSURE), 0, 0), 1);
     top->emit(make_ABC(OP(OpCode::CALL), 0, 0, 0), 1);
     top->emit(make_ABC(OP(OpCode::RETURN), 0, 1, 0), 1);
@@ -1295,7 +1271,7 @@ TEST(VMClosures, CaptureLocal_GetUpvalue)
 TEST(VMClosures, SetUpvalue_CounterReaches3)
 {
     // make_counter() returns an inc closure; calling it 3x returns 3.
-    auto inc = std::make_unique<Chunk>();
+    auto inc = makeChunk();
     inc->name = "inc";
     inc->arity = 0;
     inc->upvalueCount = 1;
@@ -1306,28 +1282,29 @@ TEST(VMClosures, SetUpvalue_CounterReaches3)
     inc->emit(make_ABC(OP(OpCode::SET_UPVALUE), 0, 0, 0), 1); // n=r0
     inc->emit(make_ABC(OP(OpCode::RETURN), 0, 1, 0), 1);
 
-    auto mc = std::make_unique<Chunk>();
+    auto mc = makeChunk();
     mc->name = "mc";
     mc->arity = 0;
     mc->localCount = 2;
     mc->upvalueCount = 0;
-    mc->functions.push_back(inc.release());
+    mc->functions.push(inc);
     mc->emit(make_ABx(OP(OpCode::LOAD_INT), 0, BX(0)), 1); // n=0
     mc->emit(make_ABx(OP(OpCode::CLOSURE), 1, 0), 1);
     mc->emit(make_ABC(OP(OpCode::MOVE), 1, 0, 0), 1); // upval local r0
     mc->emit(make_ABC(OP(OpCode::RETURN), 1, 1, 0), 1);
 
-    auto top = std::make_unique<Chunk>();
+    auto top = makeChunk();
     top->name = "<test>";
     top->localCount = 2;
-    top->functions.push_back(mc.release());
+    top->functions.push(mc);
     // r0=mc; CALL(mc)→r0=inc; then call inc 3x; result in r0
-    top->emit(make_ABx(OP(OpCode::CLOSURE), 0, 0), 1);
-    top->emit(make_ABC(OP(OpCode::CALL), 0, 0, 0), 1); // r0=inc
-    top->emit(make_ABC(OP(OpCode::CALL), 0, 0, 0), 1); // call inc → 1
-    top->emit(make_ABC(OP(OpCode::CALL), 0, 0, 0), 1); // call inc → 2
-    top->emit(make_ABC(OP(OpCode::CALL), 0, 0, 0), 1); // call inc → 3
-    top->emit(make_ABC(OP(OpCode::RETURN), 0, 1, 0), 1);
+    top->emit(make_ABx(OP(OpCode::CLOSURE), 0, 0),       1); // r0 = mc
+    top->emit(make_ABC(OP(OpCode::CALL),    2, 0, 0),    1); // call r0 → r2 = inc
+    top->emit(make_ABC(OP(OpCode::MOVE),    1, 2, 0),    1); // r1 = inc
+    top->emit(make_ABC(OP(OpCode::CALL),    2, 1, 0),    1); // call r1 → r2 = 1
+    top->emit(make_ABC(OP(OpCode::CALL),    2, 1, 0),    1); // call r1 → r2 = 2
+    top->emit(make_ABC(OP(OpCode::CALL),    2, 1, 0),    1); // call r1 → r2 = 3
+    top->emit(make_ABC(OP(OpCode::RETURN),  2, 1, 0),    1); // return 3
     top->disassemble();
     VMRunner r;
     EXPECT_EQ(r.run(std::move(top)).asInteger(), 3);
@@ -1336,7 +1313,7 @@ TEST(VMClosures, SetUpvalue_CounterReaches3)
 TEST(VMClosures, CloseUpvalue_SurvivesFrame)
 {
     // make_adder(x) returns add(y)=x+y; the upvalue must survive frame pop.
-    auto add = std::make_unique<Chunk>();
+    auto add = makeChunk();
     add->name = "add";
     add->arity = 1;
     add->upvalueCount = 1;
@@ -1345,21 +1322,21 @@ TEST(VMClosures, CloseUpvalue_SurvivesFrame)
     add->emit(make_ABC(OP(OpCode::OP_ADD), 2, 1, 0), 1);      // r2=x+y(r0)
     add->emit(make_ABC(OP(OpCode::RETURN), 2, 1, 0), 1);
 
-    auto ma = std::make_unique<Chunk>();
+    auto ma = makeChunk();
     ma->name = "ma";
     ma->arity = 1;
     ma->localCount = 2;
     ma->upvalueCount = 0;
-    ma->functions.push_back(add.release());
+    ma->functions.push(add);
     ma->emit(make_ABx(OP(OpCode::CLOSURE), 1, 0), 1);
     ma->emit(make_ABC(OP(OpCode::MOVE), 1, 0, 0), 1);          // upval local r0=x
     ma->emit(make_ABC(OP(OpCode::CLOSE_UPVALUE), 0, 0, 0), 1); // close x
     ma->emit(make_ABC(OP(OpCode::RETURN), 1, 1, 0), 1);
 
-    auto top = std::make_unique<Chunk>();
+    auto top = makeChunk();
     top->name = "<test>";
     top->localCount = 3;
-    top->functions.push_back(ma.release());
+    top->functions.push(ma);
     // r0=ma; call ma(10)→r0=add; call add(5)→r0=15
     top->emit(make_ABx(OP(OpCode::CLOSURE), 0, 0), 1);
     top->emit(make_ABx(OP(OpCode::LOAD_INT), 1, BX(10)), 1);
@@ -1376,7 +1353,7 @@ TEST(VMClosures, CloseUpvalue_SurvivesFrame)
 TEST(VMClosures, SharedUpvalue_TwoClosuresOneSlot)
 {
     // get/set closures share upvalue n; set(99) then get() returns 99.
-    auto get_fn = std::make_unique<Chunk>();
+    auto get_fn = makeChunk();
     get_fn->name = "get";
     get_fn->arity = 0;
     get_fn->upvalueCount = 1;
@@ -1384,7 +1361,7 @@ TEST(VMClosures, SharedUpvalue_TwoClosuresOneSlot)
     get_fn->emit(make_ABC(OP(OpCode::GET_UPVALUE), 0, 0, 0), 1);
     get_fn->emit(make_ABC(OP(OpCode::RETURN), 0, 1, 0), 1);
 
-    auto set_fn = std::make_unique<Chunk>();
+    auto set_fn = makeChunk();
     set_fn->name = "set";
     set_fn->arity = 1;
     set_fn->upvalueCount = 1;
@@ -1392,13 +1369,13 @@ TEST(VMClosures, SharedUpvalue_TwoClosuresOneSlot)
     set_fn->emit(make_ABC(OP(OpCode::SET_UPVALUE), 0, 0, 0), 1); // upval[0]=r0(v)
     set_fn->emit(make_ABC(OP(OpCode::RETURN_NIL), 0, 0, 0), 1);
 
-    auto mp = std::make_unique<Chunk>();
+    auto mp = makeChunk();
     mp->name = "mp";
     mp->arity = 0;
     mp->localCount = 4;
     mp->upvalueCount = 0;
-    mp->functions.push_back(get_fn.release()); // fn[0]
-    mp->functions.push_back(set_fn.release()); // fn[1]
+    mp->functions.push(get_fn); // fn[0]
+    mp->functions.push(set_fn); // fn[1]
     // n=r0=0; get=r1; set=r2; list=r3
     mp->emit(make_ABx(OP(OpCode::LOAD_INT), 0, BX(0)), 1);
     mp->emit(make_ABx(OP(OpCode::CLOSURE), 1, 0), 1);
@@ -1411,10 +1388,10 @@ TEST(VMClosures, SharedUpvalue_TwoClosuresOneSlot)
     mp->emit(make_ABC(OP(OpCode::CLOSE_UPVALUE), 0, 0, 0), 1);
     mp->emit(make_ABC(OP(OpCode::RETURN), 3, 1, 0), 1);
 
-    auto top = std::make_unique<Chunk>();
+    auto top = makeChunk();
     top->name = "<test>";
     top->localCount = 5;
-    top->functions.push_back(mp.release());
+    top->functions.push(mp);
     // r0=pair list; call mp
     top->emit(make_ABx(OP(OpCode::CLOSURE), 0, 0), 1);
     top->emit(make_ABC(OP(OpCode::CALL), 0, 0, 0), 1); // r0=[get,set]
@@ -1501,11 +1478,11 @@ TEST(VMIntegration, Fibonacci_fib10_equals_55)
 {
     // fn fib(n): if n<=1: return n; return fib(n-1)+fib(n-2)
     // Registers in fib: r0=n r1=tmp r2=cond r3=a r4=fib r5=arg r6=b r7=fib r8=arg
-    auto fib = std::make_unique<Chunk>();
+    auto fib = makeChunk();
     fib->name = "fib";
     fib->arity = 1;
     fib->localCount = 9;
-    uint16_t nk = fib->addConstant(Value::object(new ObjString("fib")));
+    uint16_t nk = fib->addConstant(Value::object(makeObjectString("fib")));
 
     // ip0: load_int r1 1
     fib->emit(make_ABx(OP(OpCode::LOAD_INT), 1, BX(1)), 1);
@@ -1538,11 +1515,11 @@ TEST(VMIntegration, Fibonacci_fib10_equals_55)
     // ip14: RETURN r4
     fib->emit(make_ABC(OP(OpCode::RETURN), 4, 1, 0), 1);
 
-    auto top = std::make_unique<Chunk>();
+    auto top = makeChunk();
     top->name = "<test>";
     top->localCount = 3;
-    top->functions.push_back(fib.release());
-    uint16_t tk = top->addConstant(Value::object(new ObjString("fib")));
+    top->functions.push(fib);
+    uint16_t tk = top->addConstant(Value::object(makeObjectString("fib")));
     top->emit(make_ABx(OP(OpCode::CLOSURE), 0, 0), 1);
     top->emit(make_ABx(OP(OpCode::STORE_GLOBAL), 0, tk), 1);
     top->emit(make_ABx(OP(OpCode::LOAD_INT), 1, BX(10)), 1);
@@ -1601,7 +1578,7 @@ TEST(VMIntegration, ListSquaresViaForLoop)
 TEST(VMIntegration, NestedAdderClosure)
 {
     // make_adder(x) → add(y) = x+y; add5=make_adder(5); add5(3)==8
-    auto add_fn = std::make_unique<Chunk>();
+    auto add_fn = makeChunk();
     add_fn->name = "add";
     add_fn->arity = 1;
     add_fn->upvalueCount = 1;
@@ -1610,20 +1587,20 @@ TEST(VMIntegration, NestedAdderClosure)
     add_fn->emit(make_ABC(OP(OpCode::OP_ADD), 2, 1, 0), 1);      // r2=x+y
     add_fn->emit(make_ABC(OP(OpCode::RETURN), 2, 1, 0), 1);
 
-    auto make_adder = std::make_unique<Chunk>();
+    auto make_adder = makeChunk();
     make_adder->name = "ma";
     make_adder->arity = 1;
     make_adder->localCount = 2;
-    make_adder->functions.push_back(add_fn.release());
+    make_adder->functions.push(add_fn);
     make_adder->emit(make_ABx(OP(OpCode::CLOSURE), 1, 0), 1);
     make_adder->emit(make_ABC(OP(OpCode::MOVE), 1, 0, 0), 1); // upval local r0
     make_adder->emit(make_ABC(OP(OpCode::CLOSE_UPVALUE), 0, 0, 0), 1);
     make_adder->emit(make_ABC(OP(OpCode::RETURN), 1, 1, 0), 1);
 
-    auto top = std::make_unique<Chunk>();
+    auto top = makeChunk();
     top->name = "<test>";
     top->localCount = 3;
-    top->functions.push_back(make_adder.release());
+    top->functions.push(make_adder);
     top->emit(make_ABx(OP(OpCode::CLOSURE), 0, 0), 1);
     top->emit(make_ABx(OP(OpCode::LOAD_INT), 1, BX(5)), 1);
     top->emit(make_ABC(OP(OpCode::CALL), 0, 1, 0), 1); // add5=make_adder(5)
@@ -1640,7 +1617,7 @@ TEST(VMIntegration, CounterFromGlobal_MultipleVMs)
 {
     // Two independent VMs; each counter is independent.
     auto make_mc_chunk = []() {
-        auto inc = std::make_unique<Chunk>();
+        auto inc = makeChunk();
         inc->name = "inc";
         inc->arity = 0;
         inc->upvalueCount = 1;
@@ -1651,11 +1628,11 @@ TEST(VMIntegration, CounterFromGlobal_MultipleVMs)
         inc->emit(make_ABC(OP(OpCode::SET_UPVALUE), 0, 0, 0), 1);
         inc->emit(make_ABC(OP(OpCode::RETURN), 0, 1, 0), 1);
 
-        auto mc = std::make_unique<Chunk>();
+        auto mc = makeChunk();
         mc->name = "mc";
         mc->arity = 0;
         mc->localCount = 2;
-        mc->functions.push_back(inc.release());
+        mc->functions.push(inc);
         mc->emit(make_ABx(OP(OpCode::LOAD_INT), 0, BX(0)), 1);
         mc->emit(make_ABx(OP(OpCode::CLOSURE), 1, 0), 1);
         mc->emit(make_ABC(OP(OpCode::MOVE), 1, 0, 0), 1);
@@ -1664,10 +1641,10 @@ TEST(VMIntegration, CounterFromGlobal_MultipleVMs)
     };
 
     // VM A: call inc twice
-    auto topA = std::make_unique<Chunk>();
+    auto topA = makeChunk();
     topA->name = "<A>";
     topA->localCount = 2;
-    topA->functions.push_back(make_mc_chunk().release());
+    topA->functions.push(make_mc_chunk());
     topA->emit(make_ABx(OP(OpCode::CLOSURE), 0, 0), 1);
     topA->emit(make_ABC(OP(OpCode::CALL), 0, 0, 0), 1);
     topA->emit(make_ABC(OP(OpCode::CALL), 0, 0, 0), 1);
@@ -1675,10 +1652,10 @@ TEST(VMIntegration, CounterFromGlobal_MultipleVMs)
     topA->emit(make_ABC(OP(OpCode::RETURN), 0, 1, 0), 1);
 
     // VM B: call inc once
-    auto topB = std::make_unique<Chunk>();
+    auto topB = makeChunk();
     topB->name = "<B>";
     topB->localCount = 2;
-    topB->functions.push_back(make_mc_chunk().release());
+    topB->functions.push(make_mc_chunk());
     topB->emit(make_ABx(OP(OpCode::CLOSURE), 0, 0), 1);
     topB->emit(make_ABC(OP(OpCode::CALL), 0, 0, 0), 1);
     topB->emit(make_ABC(OP(OpCode::CALL), 0, 0, 0), 1);

@@ -169,8 +169,8 @@ bool ListExpr::equals(Expr const* other) const
 }
 
 ListExpr* ListExpr::clone() const { return makeList(Elements_); }
-std::vector<Expr*> const& ListExpr::getElements() const { return Elements_; }
-std::vector<Expr*>& ListExpr::getElements() { return Elements_; }
+Array<Expr*> const& ListExpr::getElements() const { return Elements_; }
+Array<Expr*>& ListExpr::getElements() { return Elements_; }
 bool ListExpr::isEmpty() const { return Elements_.empty(); }
 size_t ListExpr::size() const { return Elements_.size(); }
 
@@ -189,13 +189,13 @@ bool CallExpr::equals(Expr const* other) const
 CallExpr* CallExpr::clone() const { return makeCall(Callee_->clone(), Args_->clone()); }
 Expr* CallExpr::getCallee() const { return Callee_; }
 
-std::vector<Expr*> const& CallExpr::getArgs() const
+Array<Expr*> const& CallExpr::getArgs() const
 {
-    static std::vector<Expr*> const empty;
+    static Array<Expr*> const empty;
     return Args_ ? Args_->getElements() : empty;
 }
 
-std::vector<Expr*>& CallExpr::getArgs()
+Array<Expr*>& CallExpr::getArgs()
 {
     assert(Args_ && "Attempting to get mutable args when Args_ is null");
     return Args_->getElements();
@@ -240,8 +240,8 @@ bool BlockStmt::equals(Stmt const* other) const
 }
 
 BlockStmt* BlockStmt::clone() const { return makeBlock(Statements_); }
-std::vector<Stmt*> const& BlockStmt::getStatements() const { return Statements_; }
-void BlockStmt::setStatements(std::vector<Stmt*>& stmts) { Statements_ = stmts; }
+Array<Stmt*> const& BlockStmt::getStatements() const { return Statements_; }
+void BlockStmt::setStatements(Array<Stmt*>& stmts) { Statements_ = stmts; }
 bool BlockStmt::isEmpty() const { return Statements_.empty(); }
 
 // expr stmt
@@ -326,7 +326,7 @@ bool ForStmt::equals(Stmt const* other) const
         && Block_->equals(block->getBlock());
 }
 
-ForStmt* ForStmt::clone() const { return AST_allocator.allocateObject<ForStmt>(Target_->clone(), Iter_->clone(), Block_->clone()); }
+ForStmt* ForStmt::clone() const { return getTokenAllocator().allocateObject<ForStmt>(Target_->clone(), Iter_->clone(), Block_->clone()); }
 NameExpr* ForStmt::getTarget() const { return Target_; }
 Expr* ForStmt::getIter() const { return Iter_; }
 BlockStmt* ForStmt::getBlock() const { return Block_; }
@@ -347,7 +347,7 @@ bool FunctionDef::equals(Stmt const* other) const
 
 FunctionDef* FunctionDef::clone() const { return makeFunction(Name_->clone(), Params_->clone(), Body_->clone()); }
 NameExpr* FunctionDef::getName() const { return Name_; }
-std::vector<Expr*> const& FunctionDef::getParameters() const { return Params_->getElements(); }
+Array<Expr*> const& FunctionDef::getParameters() const { return Params_->getElements(); }
 ListExpr* FunctionDef::getParameterList() const { return Params_; }
 BlockStmt* FunctionDef::getBody() const { return Body_; }
 void FunctionDef::setBody(BlockStmt* b) { Body_ = b; }

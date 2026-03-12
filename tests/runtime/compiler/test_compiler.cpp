@@ -23,7 +23,7 @@ static constexpr AssignmentExpr* assign_expr(StringRef name_, Expr* val, uint32_
 {
     return makeAssignmentExpr(makeName(name_), val /*, line*/);
 }
-static constexpr CallExpr* call(Expr* callee, std::vector<Expr*> args = { }, uint32_t line = 1)
+static constexpr CallExpr* call(Expr* callee, Array<Expr*> args = { }, uint32_t line = 1)
 {
     return makeCall(callee, makeList(args) /*, line*/);
 }
@@ -35,7 +35,7 @@ static constexpr AssignmentStmt* assign_stmt(StringRef nm, Expr* val, uint32_t l
 {
     return makeAssignmentStmt(makeName(nm), val, false);
 }
-static constexpr FunctionDef* func_stmt(StringRef nm, std::vector<Expr*> params, BlockStmt* body, uint32_t line = 1)
+static constexpr FunctionDef* func_stmt(StringRef nm, Array<Expr*> params, BlockStmt* body, uint32_t line = 1)
 {
     return makeFunction(makeName(nm), makeList(params), body /*, line*/);
 }
@@ -44,8 +44,8 @@ static constexpr FunctionDef* func_stmt(StringRef nm, std::vector<Expr*> params,
 template<typename... Stmts>
 static BlockStmt* blk(Stmts&&... s)
 {
-    std::vector<Stmt*> v;
-    (v.push_back(std::forward<Stmts>(s)), ...);
+    Array<Stmt*> v;
+    (v.push(std::forward<Stmts>(s)), ...);
     return makeBlock(std::move(v));
 }
 
@@ -129,7 +129,7 @@ private:
     StringRef label_;
 };
 
-static Chunk* compile_ok(std::vector<Stmt*> stmts, Compiler& c)
+static Chunk* compile_ok(Array<Stmt*> stmts, Compiler& c)
 {
     return c.compile(stmts);
 }
@@ -143,7 +143,7 @@ static void dump(Chunk const* c)
 }
 
 // Overload that creates a fresh Compiler internally
-static Chunk* compile_ok(std::vector<Stmt*> stmts)
+static Chunk* compile_ok(Array<Stmt*> stmts)
 {
     Compiler c;
     return compile_ok(stmts, c);
@@ -151,15 +151,15 @@ static Chunk* compile_ok(std::vector<Stmt*> stmts)
 
 static Chunk* compile_ok(Stmt* root)
 {
-    std::vector<Stmt*> stmts;
-    stmts.push_back(root);
+    Array<Stmt*> stmts;
+    stmts.push(root);
     return compile_ok(stmts);
 }
 
 static Chunk* compile_ok(Stmt* root, Compiler& c)
 {
-    std::vector<Stmt*> stmts;
-    stmts.push_back(root);
+    Array<Stmt*> stmts;
+    stmts.push(root);
     return compile_ok(stmts, c);
 }
 
@@ -290,9 +290,9 @@ TEST(CompilerLiteral, StringUsesConstantPool)
 TEST(CompilerLiteral, StringsDeduplicated)
 {
     // Two identical string literals should share one constant-pool slot
-    std::vector<Stmt*> stmts;
-    stmts.push_back(makeExprStmt(makeLiteralString("dup")));
-    stmts.push_back(makeExprStmt(makeLiteralString("dup")));
+    Array<Stmt*> stmts;
+    stmts.push(makeExprStmt(makeLiteralString("dup")));
+    stmts.push(makeExprStmt(makeLiteralString("dup")));
     Chunk* chunk = compile_ok(makeBlock(std::move(stmts)));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
@@ -497,8 +497,7 @@ TEST(CompilerBinary, AddTwoLocals)
 
 TEST(CompilerBinary, SubtractLiterals)
 {
-    Chunk* chunk = compile_ok(makeExprStmt(
-        makeBinary(makeLiteralInt(10), makeLiteralInt(3), BinaryOp::OP_SUB)));
+    Chunk* chunk = compile_ok(makeExprStmt(makeBinary(makeLiteralInt(10), makeLiteralInt(3), BinaryOp::OP_SUB)));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     // 10 - 3 = 7, folded
@@ -524,14 +523,13 @@ TEST(CompilerBinary, MultiplyLiterals)
 TEST(CompilerBinary, DivisionFolded)
 {
     // 1.0 / 2.0 → 0.5 (double result, uses LOAD_CONST)
-    Chunk* chunk = compile_ok(makeExprStmt(
-        makeBinary(makeLiteralFloat(1.0), makeLiteralFloat(2.0), BinaryOp::OP_DIV)));
+    Chunk* chunk = compile_ok(makeExprStmt(makeBinary(makeLiteralFloat(1.0), makeLiteralFloat(2.0), BinaryOp::OP_DIV)));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     BytecodeChecker bc(*chunk);
     bc.next("LOAD_CONST 0.5").op(OpCode::LOAD_CONST).A(0).Bx(0);
     ASSERT_FALSE(chunk->constants.empty());
-    EXPECT_DOUBLE_EQ(chunk->constants[0].asDouble(), 0.5);
+    EXPECT_DOUBLE_EQ(chunk->constants[0].asDoubleAny(), 0.5);
 }
 
 TEST(CompilerBinary, DivisionByZeroNotFolded)
@@ -795,8 +793,7 @@ TEST(CompilerIf, ConstantTrueConditionDCE)
             << "JUMP_IF_FALSE should not exist when condition is const-true";
     // 999 must not appear in constants
     for (auto& v : chunk->constants)
-        if (v.isInteger())
-            EXPECT_NE(v.asInteger(), 999);
+        EXPECT_NE(v.asInteger(), 999);
 }
 
 TEST(CompilerIf, ConstantFalseConditionDCE)
@@ -945,8 +942,7 @@ TEST(CompilerReturn, ReturnIsDeadCodeBarrier)
     dump(chunk);
     // Only LOAD_INT 1 + RETURN appear; no LOAD_INT 99
     for (auto& v : chunk->constants)
-        if (v.isInteger())
-            EXPECT_NE(v.asInteger(), 99) << "dead code leaked into constant pool";
+        EXPECT_NE(v.asInteger(), 99) << "dead code leaked into constant pool";
     bool found_99 = false;
     for (auto& ins : chunk->code)
         if (instr_op(ins) == static_cast<uint8_t>(OpCode::LOAD_INT) && instr_Bx(ins) == load_int_bx(99))
@@ -1090,27 +1086,25 @@ TEST(CompilerClosure, UpvalueDescriptorEmittedAfterClosure)
 {
     // The MOVE pseudo-instruction (upvalue descriptor) must follow CLOSURE
     // in the parent chunk's code stream.
-    Chunk* chunk = compile_ok(func_stmt("outer", { },
-        blk(
-            decl("x", makeLiteralInt(1)),
-            func_stmt("inner", { }, blk(makeReturn(makeName("x")))))));
+    // fn outer():
+    //     x = 1
+    //     fn inner():
+    //         return x
+    Chunk* chunk = compile_ok(func_stmt("outer", { }, blk(decl("x", makeLiteralInt(1)), func_stmt("inner", { }, blk(makeReturn(makeName("x")))))));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     Chunk const* outer = chunk->functions[0];
-
     // Find the CLOSURE instruction in outer
     int closure_pos = -1;
     for (int i = 0; i < (int)outer->code.size(); ++i)
         if (instr_op(outer->code[i]) == static_cast<uint8_t>(OpCode::CLOSURE))
             closure_pos = i;
     ASSERT_GE(closure_pos, 0) << "CLOSURE not found in outer";
-
     // The instruction immediately after CLOSURE must be a MOVE with
     // A=1 (is_local=true) and B=register of x (r0)
     ASSERT_LT(closure_pos + 1, (int)outer->code.size());
     uint32_t desc = outer->code[closure_pos + 1];
-    EXPECT_EQ(instr_op(desc), static_cast<uint8_t>(OpCode::MOVE))
-        << "upvalue descriptor MOVE must follow CLOSURE";
+    EXPECT_EQ(instr_op(desc), static_cast<uint8_t>(OpCode::MOVE)) << "upvalue descriptor MOVE must follow CLOSURE";
     EXPECT_EQ(instr_A(desc), 1u) << "is_local=1 for direct local capture";
     EXPECT_EQ(instr_B(desc), 0u) << "captures r0 (x)";
 }
@@ -1138,9 +1132,9 @@ TEST(CompilerCall, CallWithTwoArgs)
     // LOAD_INT 1 → r1
     // LOAD_INT 2 → r2
     // IC_CALL r0 argc=2 ic=0
-    std::vector<Expr*> args;
-    args.push_back(makeLiteralInt(1));
-    args.push_back(makeLiteralInt(2));
+    Array<Expr*> args;
+    args.push(makeLiteralInt(1));
+    args.push(makeLiteralInt(2));
     Chunk* chunk = compile_ok(makeExprStmt(call(makeName("f"), std::move(args))));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
@@ -1161,8 +1155,8 @@ TEST(CompilerCall, CallResultUsed)
     // IC_CALL r0 argc=1
     // (result is in r0; local 'r' is the next allocated reg)
     Chunk* chunk = compile_ok( decl("r", call(makeName("f"), [] {
-        std::vector<Expr*> a;
-        a.push_back(makeName("x"));
+        Array<Expr*> a;
+        a.push(makeName("x"));
         return a;
     }())));
     ASSERT_NE(chunk, nullptr);
@@ -1199,10 +1193,10 @@ TEST(CompilerList, EmptyList)
 TEST(CompilerList, ListWithElements)
 {
     // [1, 2, 3]
-    std::vector<Expr*> elems;
-    elems.push_back(makeLiteralInt(1));
-    elems.push_back(makeLiteralInt(2));
-    elems.push_back(makeLiteralInt(3));
+    Array<Expr*> elems;
+    elems.push(makeLiteralInt(1));
+    elems.push(makeLiteralInt(2));
+    elems.push(makeLiteralInt(3));
     Chunk* chunk = compile_ok(makeExprStmt(makeList(std::move(elems))));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
@@ -1222,9 +1216,9 @@ TEST(CompilerList, ListWithElements)
 TEST(CompilerList, ListCapHintCappedAt255)
 {
     // A list with 300 elements must cap the hint at 255
-    std::vector<Expr*> elems;
+    Array<Expr*> elems;
     for (int i = 0; i < 300; ++i)
-        elems.push_back(makeLiteralInt(i));
+        elems.push(makeLiteralInt(i));
     Chunk* chunk = compile_ok(makeExprStmt(makeList(std::move(elems))));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
@@ -1261,9 +1255,9 @@ TEST(CompilerScope, NestedScopesBothVisible)
     // let a = 1; { let b = 2; let c = a + b }
     Chunk* chunk = compile_ok({ decl("a", makeLiteralInt(1)),
         makeBlock([] {
-            std::vector<Stmt*> s;
-            s.push_back(decl("b", makeLiteralInt(2)));
-            s.push_back(decl("c", makeBinary(makeName("a"), makeName("b"), BinaryOp::OP_ADD)));
+            Array<Stmt*> s;
+            s.push(decl("b", makeLiteralInt(2)));
+            s.push(decl("c", makeBinary(makeName("a"), makeName("b"), BinaryOp::OP_ADD)));
             return s;
         }()) });
     ASSERT_NE(chunk, nullptr);
@@ -1282,7 +1276,7 @@ TEST(CompilerScope, NestedScopesBothVisible)
 
 TEST(CompilerMeta, TopLevelChunkNameIsMain)
 {
-    Chunk* chunk = compile_ok({ });
+    Chunk* chunk = compile_ok(blk());
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     EXPECT_EQ(chunk->name, "<main>");
@@ -1331,9 +1325,9 @@ TEST(CompilerIntegration, Fibonacci)
     //   if (n <= 1) { return n }
     //   return fib(n-1) + fib(n-2)
     // }
-    std::vector<Expr*> args_n1, args_n2;
-    args_n1.push_back(makeBinary(makeName("n"), makeLiteralInt(1), BinaryOp::OP_SUB));
-    args_n2.push_back(makeBinary(makeName("n"), makeLiteralInt(2), BinaryOp::OP_SUB));
+    Array<Expr*> args_n1, args_n2;
+    args_n1.push(makeBinary(makeName("n"), makeLiteralInt(1), BinaryOp::OP_SUB));
+    args_n2.push(makeBinary(makeName("n"), makeLiteralInt(2), BinaryOp::OP_SUB));
 
     Chunk* chunk = compile_ok(func_stmt("fib", { makeName("n") },
         blk(
@@ -1422,11 +1416,11 @@ TEST(CompilerIntegration, StringConstantPoolDedup)
 TEST(CompilerIntegration, MixedLiteralsInList)
 {
     // [true, 42, 3.14, "hi"]
-    std::vector<Expr*> elems;
-    elems.push_back(makeLiteralBool(true));
-    elems.push_back(makeLiteralInt(42));
-    elems.push_back(makeLiteralFloat(3.14));
-    elems.push_back(makeLiteralString("hi"));
+    Array<Expr*> elems;
+    elems.push(makeLiteralBool(true));
+    elems.push(makeLiteralInt(42));
+    elems.push(makeLiteralFloat(3.14));
+    elems.push(makeLiteralString("hi"));
     Chunk* chunk = compile_ok(makeExprStmt(makeList(std::move(elems))));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);

@@ -16,12 +16,11 @@ using namespace testing;
 class SemanticAnalyzerTest : public ::testing::Test {
 protected:
     std::unique_ptr<SemanticAnalyzer> analyzer;
-    std::vector<Stmt*> statements;
+    Array<Stmt*> statements;
 
     void SetUp() override
     {
         analyzer = std::make_unique<SemanticAnalyzer>();
-        statements.clear();
     }
 
     // Helper to count issues by severity
@@ -103,7 +102,7 @@ TEST_F(SemanticAnalyzerTest, DefinedVariable_NoError)
 {
     // First define the variable
     AssignmentStmt* assign = makeAssignmentStmt(makeName("x"), makeLiteralInt(42));
-    statements.push_back(assign);
+    statements.push(assign);
 
     analyzer->analyze(statements);
 
@@ -118,7 +117,7 @@ TEST_F(SemanticAnalyzerTest, DefinedVariable_NoError)
 TEST_F(SemanticAnalyzerTest, UnusedVariable_ReportsWarning)
 {
     AssignmentStmt* assign = makeAssignmentStmt(makeName("unused_var"), makeLiteralInt(42));
-    statements.push_back(assign);
+    statements.push(assign);
 
     analyzer->analyze(statements);
 
@@ -194,7 +193,7 @@ TEST_F(SemanticAnalyzerTest, CallNonCallable_ReportsError)
 {
     // Define a variable
     AssignmentStmt* assign = makeAssignmentStmt(makeName("not_a_function"), makeLiteralInt(42));
-    statements.push_back(assign);
+    statements.push(assign);
     analyzer->analyze(statements);
 
     // Try to call it
@@ -257,7 +256,7 @@ TEST_F(SemanticAnalyzerTest, ForLoopVariableShadowing_ReportsWarning)
 {
     // Define outer variable
     AssignmentStmt* outerAssign = makeAssignmentStmt(makeName("i"), makeLiteralInt(10));
-    statements.push_back(outerAssign);
+    statements.push(outerAssign);
 
     analyzer->analyze(statements);
 
@@ -356,7 +355,7 @@ TEST_F(SemanticAnalyzerTest, GetGlobalScope_NotNull)
 TEST_F(SemanticAnalyzerTest, AssignmentCreatesSymbol)
 {
     AssignmentStmt* assign = makeAssignmentStmt(makeName("x"), makeLiteralInt(42));
-    statements.push_back(assign);
+    statements.push(assign);
 
     analyzer->analyze(statements);
 
@@ -371,16 +370,16 @@ TEST_F(SemanticAnalyzerTest, ComplexProgram_MultipleIssues)
 {
     // Undefined variable use
     ExprStmt* exprStmt1 = makeExprStmt(makeName("undefined_var"));
-    statements.push_back(exprStmt1);
+    statements.push(exprStmt1);
 
     // Division by zero
     BinaryExpr* divExpr = makeBinary(makeLiteralInt(10), makeLiteralInt(0), BinaryOp::OP_DIV);
     ExprStmt* exprStmt2 = makeExprStmt(divExpr);
-    statements.push_back(exprStmt2);
+    statements.push(exprStmt2);
 
     // Unused variable
     AssignmentStmt* assign = makeAssignmentStmt(makeName("unused"), makeLiteralInt(100));
-    statements.push_back(assign);
+    statements.push(assign);
 
     analyzer->analyze(statements);
 
@@ -394,12 +393,12 @@ TEST_F(SemanticAnalyzerTest, VariableFlowAnalysis)
 {
     // Define variable
     AssignmentStmt* assign1 = makeAssignmentStmt(makeName("x"), makeLiteralInt(10));
-    statements.push_back(assign1);
+    statements.push(assign1);
 
     // Use variable
     BinaryExpr* binary = makeBinary(makeName("x"), makeLiteralInt(5), BinaryOp::OP_ADD);
     AssignmentStmt* assign2 = makeAssignmentStmt(makeName("y"), binary);
-    statements.push_back(assign2);
+    statements.push(assign2);
 
     analyzer->analyze(statements);
 
@@ -417,16 +416,14 @@ TEST_F(SemanticAnalyzerTest, VariableFlowAnalysis)
 
 TEST_F(SemanticAnalyzerTest, CallExpression_InfersAnyType)
 {
-    std::vector<Expr*> args;
-    CallExpr* call = makeCall(makeName("some_function"), makeList(args) /*, 1*/);
+    CallExpr* call = makeCall(makeName("some_function"), makeList({}) /*, 1*/);
 
     EXPECT_EQ(analyzer->inferType(call), SymbolTable::DataType_t::ANY);
 }
 
 TEST_F(SemanticAnalyzerTest, CallWithArguments_AnalyzesAllArgs)
 {
-    std::vector<Expr*> args = { makeLiteralInt(1), makeLiteralString("hello"), makeLiteralBool(true) };
-    CallExpr* call = makeCall(makeName("print"), makeList(args));
+    CallExpr* call = makeCall(makeName("print"), makeList({ makeLiteralInt(1), makeLiteralString("hello"), makeLiteralBool(true) }));
 
     EXPECT_NO_THROW(analyzer->analyzeExpr(call));
 }

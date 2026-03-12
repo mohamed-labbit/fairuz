@@ -16,7 +16,7 @@ String::String(String const& other)
         ::memcpy(storage_.sso, other.storage_.sso, (length() + 1) * sizeof(char));
     else {
         storage_.heap.cap = other.storage_.heap.cap;
-        storage_.heap.ptr = string_allocator.allocateArray<char>(storage_.heap.cap);
+        storage_.heap.ptr = getStringAllocator().allocateArray<char>(storage_.heap.cap);
 
         ::memcpy(storage_.heap.ptr, other.storage_.heap.ptr, (length() + 1) * sizeof(char));
     }
@@ -31,7 +31,7 @@ String::String(size_t const s)
         is_heap = true;
         setLen(0);
         storage_.heap.cap = s + 1;
-        storage_.heap.ptr = string_allocator.allocateArray<char>(storage_.heap.cap);
+        storage_.heap.ptr = getStringAllocator().allocateArray<char>(storage_.heap.cap);
     }
     terminate();
 }
@@ -45,7 +45,7 @@ String::String(size_t const s, char const c)
     } else {
         is_heap = true;
         storage_.heap.cap = s + 1;
-        storage_.heap.ptr = string_allocator.allocateArray<char>(storage_.heap.cap);
+        storage_.heap.ptr = getStringAllocator().allocateArray<char>(storage_.heap.cap);
         ::memset(storage_.heap.ptr, c, s);
         setLen(s);
     }
@@ -68,7 +68,7 @@ String::String(char const* s, size_t n)
     } else {
         is_heap = true;
         storage_.heap.cap = n + 1;
-        storage_.heap.ptr = string_allocator.allocateArray<char>(storage_.heap.cap);
+        storage_.heap.ptr = getStringAllocator().allocateArray<char>(storage_.heap.cap);
         ::memcpy(storage_.heap.ptr, s, n * sizeof(char));
     }
     terminate();
@@ -92,7 +92,7 @@ String::String(char const* s)
         is_heap = true;
         setLen(n);
         storage_.heap.cap = n + 1;
-        storage_.heap.ptr = string_allocator.allocateArray<char>(storage_.heap.cap);
+        storage_.heap.ptr = getStringAllocator().allocateArray<char>(storage_.heap.cap);
         ::memcpy(storage_.heap.ptr, s, (n + 1) * sizeof(char));
     }
     terminate();
@@ -114,7 +114,7 @@ StringRef::StringRef()
 }
 
 StringRef::StringRef(size_t const s)
-    : StringData_(string_allocator.allocateObject<String>(s))
+    : StringData_(getStringAllocator().allocateObject<String>(s))
 {
 }
 
@@ -131,7 +131,7 @@ StringRef::StringRef(StringRef const& other, size_t offset, size_t length)
 }
 
 StringRef::StringRef(char const* lit)
-    : StringData_(string_allocator.allocateObject<String>(lit))
+    : StringData_(getStringAllocator().allocateObject<String>(lit))
 {
     Length_ = StringData_->length();
 }
@@ -154,7 +154,7 @@ StringRef::StringRef(char16_t const* u16_str)
 }
 
 StringRef::StringRef(size_t const s, char const c)
-    : StringData_(string_allocator.allocateObject<String>(s, c))
+    : StringData_(getStringAllocator().allocateObject<String>(s, c))
 {
 }
 
@@ -190,7 +190,7 @@ StringRef& StringRef::operator=(StringRef&& other) noexcept
         StringData_->decrement();
         if (StringData_->referenceCount() == 0) {
             StringData_->~String();
-            string_allocator.deallocateObject<String>(StringData_);
+            getStringAllocator().deallocateObject<String>(StringData_);
         }
     }
 
@@ -214,7 +214,7 @@ StringRef::~StringRef()
         StringData_->decrement();
         if (StringData_->referenceCount() == 0) {
             StringData_->~String(); // deallocate if possible the string array
-            string_allocator.deallocateObject<String>(StringData_);
+            getStringAllocator().deallocateObject<String>(StringData_);
             StringData_ = nullptr;
         }
     }
@@ -256,14 +256,14 @@ void StringRef::expand(size_t const new_size)
     else
         new_capacity = std::max(new_size + 1, cap() + cap() / 2);
 
-    char* new_ptr = string_allocator.allocateArray<char>(new_capacity);
+    char* new_ptr = getStringAllocator().allocateArray<char>(new_capacity);
 
     // Copy old data
     if (old_ptr && old_len > 0)
         ::memcpy(new_ptr, old_ptr, old_len * sizeof(char));
 
     if (StringData_->isHeap() && StringData_->storage_.heap.ptr)
-        string_allocator.deallocateArray<char>(StringData_->storage_.heap.ptr, StringData_->storage_.heap.cap);
+        getStringAllocator().deallocateArray<char>(StringData_->storage_.heap.ptr, StringData_->storage_.heap.cap);
 
     // Now set heap storage
     StringData_->storage_.heap.ptr = new_ptr;
@@ -521,7 +521,7 @@ StringRef StringRef::substr(std::optional<size_t> start, std::optional<size_t> e
         throw std::invalid_argument("StringRef::substr: end must be >= start");
 
     size_t ret_len = end_val - start_val;
-    String* ret_data = string_allocator.allocateObject<String>();
+    String* ret_data = getStringAllocator().allocateObject<String>();
 
     if (ret_len < SSO_SIZE) {
         ret_data->is_heap = false;
@@ -529,7 +529,7 @@ StringRef StringRef::substr(std::optional<size_t> start, std::optional<size_t> e
     } else {
         ret_data->is_heap = true;
         ret_data->storage_.heap.cap = ret_len + 1;
-        ret_data->storage_.heap.ptr = string_allocator.allocateArray<char>(ret_data->storage_.heap.cap);
+        ret_data->storage_.heap.ptr = getStringAllocator().allocateArray<char>(ret_data->storage_.heap.cap);
         ::memcpy(ret_data->storage_.heap.ptr, data() + start_val, ret_len * sizeof(char));
     }
 
@@ -607,7 +607,7 @@ StringRef StringRef::fromUtf16(char16_t const* src)
     size_t utf8_len = simdutf::utf8_length_from_utf16(src, src_len);
 
     // Allocate String object
-    String* ret_data = string_allocator.allocateObject<String>();
+    String* ret_data = getStringAllocator().allocateObject<String>();
     char* dest;
 
     if (utf8_len < SSO_SIZE) {
@@ -616,7 +616,7 @@ StringRef StringRef::fromUtf16(char16_t const* src)
     } else {
         ret_data->is_heap = true;
         ret_data->storage_.heap.cap = utf8_len + 1;
-        ret_data->storage_.heap.ptr = string_allocator.allocateArray<char>(utf8_len + 1);
+        ret_data->storage_.heap.ptr = getStringAllocator().allocateArray<char>(utf8_len + 1);
         dest = ret_data->storage_.heap.ptr;
     }
 
@@ -654,7 +654,7 @@ void StringRef::detach()
     // Determine slice length
     size_t copy_len = (Length_ > 0) ? Length_ : (StringData_->length() - Offset_);
     // Allocate a new string of exactly the required size
-    String* s = string_allocator.allocateObject<String>(copy_len);
+    String* s = getStringAllocator().allocateObject<String>(copy_len);
 
     // Copy only the relevant portion
     if (copy_len > 0)

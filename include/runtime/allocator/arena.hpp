@@ -34,58 +34,18 @@ public:
 
     ArenaBlock& operator=(ArenaBlock&& other) noexcept;
 
-    unsigned char* begin() const
-    {
-        std::lock_guard<std::mutex> lock(Mutex_);
-        return Begin_;
-    }
+    unsigned char* begin() const;
+    unsigned char* end() const;
+    unsigned char* cNext() const;
 
-    unsigned char* end() const
-    {
-        std::lock_guard<std::mutex> lock(Mutex_);
-        return Begin_ + Size_;
-    }
+    size_t size() const;
+    size_t used() const;
 
-    unsigned char* cNext() const
-    {
-        return Next_;
-    }
+    bool pop(size_t bytes);
 
-    size_t size() const
-    {
-        std::lock_guard<std::mutex> lock(Mutex_);
-        return Size_;
-    }
-
-    size_t used() const
-    {
-        if (!Begin_ || Next_ < Begin_)
-            return 0;
-
-        return static_cast<size_t>(Next_ - Begin_);
-    }
-
-    bool pop(size_t bytes)
-    {
-        if (!Begin_ || Next_ < Begin_ + bytes)
-            return false;
-
-        Next_ -= bytes;
-        return true;
-    }
-
-    size_t remaining() const
-    {
-        std::lock_guard<std::mutex> lock(Mutex_);
-        if (!Begin_)
-            return 0;
-
-        unsigned char const* current_next = Next_;
-        return static_cast<size_t>(Begin_ + Size_ - current_next);
-    }
+    size_t remaining() const;
 
     unsigned char* allocate(size_t bytes, std::optional<size_t> alignment = std::nullopt);
-
     unsigned char* reserve(size_t const bytes);
 }; // ArenaBlock
 
@@ -149,27 +109,12 @@ public:
     ArenaAllocator(ArenaAllocator&&) noexcept = delete;
     ArenaAllocator& operator=(ArenaAllocator&&) noexcept = delete;
 
-    void setName(std::string const& name)
-    {
-        Name_ = name;
-    }
-
+    void setName(std::string const& name);
     void reset();
 
-    size_t totalAllocated() const
-    {
-        return AllocStats_.TotalAllocated;
-    }
-
-    size_t totalAllocations() const
-    {
-        return AllocStats_.TotalAllocations;
-    }
-
-    size_t activeBlocks() const
-    {
-        return AllocStats_.ActiveBlocks;
-    }
+    size_t totalAllocated() const;
+    size_t totalAllocations() const;
+    size_t activeBlocks() const;
 
     MY_NODISCARD unsigned char* allocateBlock(size_t requested, size_t alignment_ = alignof(std::max_align_t), bool retry_on_oom = true);
 
@@ -179,18 +124,9 @@ public:
 
     MY_NODISCARD bool verifyAllocation(void* ptr) const;
 
-    std::string toString(bool verbose) const
-    {
-        std::ostringstream oss;
-        dumpStats(oss, verbose);
-        return oss.str();
-    }
+    std::string toString(bool verbose) const;
 
-    void dumpStats(std::ostream& os, bool verbose) const
-    {
-        StatsPrinter printer(AllocStats_, Name_);
-        printer.printDetailed(os, verbose);
-    }
+    void dumpStats(std::ostream& os, bool verbose) const;
 
 private:
     MY_NODISCARD unsigned char* allocateFromBlocks(size_t alloc_size, size_t align = alignof(std::max_align_t));
@@ -201,7 +137,7 @@ private:
     {
         return (n + alignment - 1) & ~(alignment - 1);
     }
-};
+}; // class ArenaAllocator
 
 } // namespace mylang::runtime::allocator
 

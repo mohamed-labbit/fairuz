@@ -2,7 +2,7 @@
 
 namespace mylang::runtime {
 
-Chunk* Compiler::compile(std::vector<Stmt*> const& stmts)
+Chunk* Compiler::compile(Array<Stmt*> const& stmts)
 {
     if (stmts.empty() || !stmts[0]) {
         diagnostic::emit("null AST root", diagnostic::Severity::FATAL);
@@ -10,7 +10,7 @@ Chunk* Compiler::compile(std::vector<Stmt*> const& stmts)
     }
 
     // Build the top-level chunk
-    auto top_chunk = runtime_allocator.allocateObject<Chunk>();
+    auto top_chunk = makeChunk();
     top_chunk->name = "<main>";
 
     CompilerState state;
@@ -208,16 +208,21 @@ void Compiler::compileFunctionDef(FunctionDef const* f)
         return;
     }
 
-    /// NOTE: this doesn't handle variadics yet
     std::vector<StringRef> params;
     if (f->hasParameters())
         for (Expr const* e : f->getParameters())
             params.push_back(dynamic_cast<NameExpr const*>(e)->getValue());
 
-    Chunk* fn_chunk = runtime_allocator.allocateObject<Chunk>();
+    Chunk* fn_chunk = makeChunk();
     fn_chunk->name = name->getValue();
     fn_chunk->arity = static_cast<int>(params.size());
-    currentChunk()->functions.push_back(fn_chunk);
+    currentChunk()->functions.push(fn_chunk);
+
+    // find the index in the parent chunk before switching state
+    auto& funcs = currentChunk()->functions;
+    auto it = std::find(funcs.begin(), funcs.end(), fn_chunk);
+    assert(it != funcs.end());
+    uint16_t fn_idx = static_cast<uint16_t>(std::distance(funcs.begin(), it));
 
     CompilerState fn_state;
     fn_state.chunk = fn_chunk;
@@ -241,22 +246,19 @@ void Compiler::compileFunctionDef(FunctionDef const* f)
     fn_chunk->localCount = fn_state.maxReg;
     fn_chunk->upvalueCount = static_cast<unsigned int>(fn_state.upvalues.size());
 
-    CompilerState* parent = fn_state.enclosing;
-    Current_ = parent;
+    // restore parent before emitting anything into parent chunk
+    Current_ = fn_state.enclosing;
 
-    for (auto& uv : fn_state.upvalues)
-        // MOVE: A=isLocal, B=index, C=0 — purely a descriptor, not executed
-        emit(make_ABC(static_cast<uint8_t>(OpCode::MOVE), static_cast<uint8_t>(uv.isLocal ? 1 : 0), uv.index, 0), line);
-
-    auto& funcs = currentChunk()->functions;
-    auto it = std::find(funcs.begin(), funcs.end(), fn_chunk);
-    assert(it != funcs.end());
-    uint16_t fn_idx = static_cast<uint16_t>(std::distance(funcs.begin(), it));
+    // emit CLOSURE into parent chunk
     uint8_t dst = allocRegister();
     emit(make_ABx(static_cast<uint8_t>(OpCode::CLOSURE), dst, fn_idx), line);
 
-    for (auto& uv : fn_chunk->functions)
-        (void)uv;
+    // descriptors must immediately follow CLOSURE in the same chunk
+    for (auto& uv : fn_state.upvalues)
+        emit(make_ABC(static_cast<uint8_t>(OpCode::MOVE),
+                 static_cast<uint8_t>(uv.isLocal ? 1 : 0),
+                 uv.index, 0),
+            line);
 
     declareLocal(name->getValue(), dst);
 }
@@ -568,7 +570,8 @@ uint8_t Compiler::compileList(ListExpr const* e, uint8_t* dst)
     auto const& elems = e->getElements();
     uint8_t cap = static_cast<uint8_t>(std::min<size_t>(elems.size(), 0xFF));
     emit(make_ABC(static_cast<uint8_t>(OpCode::LIST_NEW), dst_reg, cap, 0), line);
-    uint8_t mark = Current_->nextReg;
+
+    uint8_t mark = Current_->nextReg; // <-- moved here, AFTER dst_reg is allocated
     for (Expr const* elem : elems) {
         uint8_t val = compileExpr(elem);
         emit(make_ABC(static_cast<uint8_t>(OpCode::LIST_APPEND), dst_reg, val, 0), line);
@@ -599,7 +602,7 @@ uint8_t Compiler::allocRegister()
 
 void Compiler::declareLocal(StringRef const& name, uint8_t const reg)
 {
-    Current_->locals.push_back({ name, Current_->scopeDepth, reg, false });
+    Current_->locals.push({ name, Current_->scopeDepth, reg, false });
 }
 
 // searches from inner scope all the way to globals
@@ -649,7 +652,7 @@ int Compiler::addUpvalue(CompilerState* state, bool const is_local, uint8_t cons
             return i;
     }
 
-    state->upvalues.push_back({ is_local, index });
+    state->upvalues.push({ is_local, index });
     return static_cast<int>(state->upvalues.size() - 1);
 }
 
@@ -671,7 +674,7 @@ void Compiler::patchJump(uint32_t const idx)
 
 void Compiler::pushLoop(uint32_t const loop_start)
 {
-    Current_->loopStack.push_back({ { }, { }, loop_start });
+    Current_->loopStack.push({ { }, { }, loop_start });
 }
 
 void Compiler::popLoop(uint32_t const loop_exit, uint32_t const continue_target, uint32_t const line)
@@ -682,7 +685,7 @@ void Compiler::popLoop(uint32_t const loop_exit, uint32_t const continue_target,
         patchJumpTo(idx, loop_exit);
     for (auto idx : ctx.continuePatches)
         patchJumpTo(idx, continue_target);
-    Current_->loopStack.pop_back();
+    Current_->loopStack.pop();
 }
 
 void Compiler::patchJumpTo(uint32_t const instr_idx, uint32_t const target)
@@ -710,7 +713,7 @@ void Compiler::emitLoadValue(uint8_t const dst, Value const v, uint32_t const li
             uint16_t kidx = currentChunk()->addConstant(v);
             emit(make_ABx(static_cast<uint8_t>(OpCode::LOAD_CONST), dst, kidx), line);
         }
-    } else {
+    } else if (v.isDouble()) {
         uint16_t kidx = currentChunk()->addConstant(v);
         emit(make_ABx(static_cast<uint8_t>(OpCode::LOAD_CONST), dst, kidx), line);
     }
@@ -723,7 +726,7 @@ Chunk* Compiler::currentChunk() const
 
 uint32_t Compiler::currentOffset() const
 {
-    return static_cast<uint32_t>(currentChunk()->code.size());
+    return currentChunk()->code.size();
 }
 
 void Compiler::beginScope()
@@ -765,7 +768,7 @@ uint32_t Compiler::internString(StringRef const& str, uint32_t const line)
     if (it != StringCache_.end())
         return it->second;
 
-    ObjString* obj = new ObjString(str); // GC will own this after loading
+    ObjString* obj = makeObjectString(str); // GC will own this after loading
     uint16_t idx = currentChunk()->addConstant(Value::object(obj));
     StringCache_[str] = idx;
     if (idx == MAX_CONSTANTS)

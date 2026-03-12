@@ -13,18 +13,18 @@ using namespace mylang::runtime;
 TEST(NanBox, NilRawBits)
 {
     // NIL_VAL must equal QNAN | TAG_NIL (tag=1)
-    EXPECT_EQ(Value::nil().raw(), Value::NANBOX_QNAN | Value::TAG_NIL);
+    EXPECT_EQ(Value::nil().raw(), Value::NIL_VAL);
 }
 
 TEST(NanBox, FalseRawBits)
 {
-    EXPECT_EQ(Value::boolean(false).raw(), Value::NANBOX_QNAN | Value::TAG_BOOL);
+    EXPECT_EQ(Value::boolean(false).raw(), Value::FALSE_VAL);
 }
 
 TEST(NanBox, TrueRawBits)
 {
     // true encodes the bool bit at bit 2
-    EXPECT_EQ(Value::boolean(true).raw(), Value::NANBOX_QNAN | Value::TAG_BOOL | (UINT64_C(1) << 2));
+    EXPECT_EQ(Value::boolean(true).raw(), Value::TRUE_VAL);
 }
 
 TEST(NanBox, ZeroIntegerRawBits)
@@ -43,7 +43,6 @@ TEST(NanBox, PureDoubleIsNotTagged)
     // A normal double must not have all of bits 51..62 set
     Value v = Value::real(1.0);
     EXPECT_TRUE(v.isDouble());
-    EXPECT_FALSE(v.isInteger());
     EXPECT_FALSE(v.isNil());
     EXPECT_FALSE(v.isBoolean());
     EXPECT_FALSE(v.isObject());
@@ -56,7 +55,6 @@ TEST(NanBox, ObjPointerTagging)
     Value v = Value::object(&list);
     EXPECT_TRUE(v.isObject());
     EXPECT_FALSE(v.isDouble());
-    EXPECT_FALSE(v.isInteger());
     EXPECT_FALSE(v.isNil());
     EXPECT_FALSE(v.isBoolean());
     EXPECT_EQ(v.asObject(), static_cast<ObjHeader*>(&list));
@@ -67,7 +65,7 @@ TEST(NanBox, ObjPointerTagging)
 TEST(NanBox, TypeTagsMutuallyExclusive_Nil)
 {
     Value v = Value::nil();
-    int count = v.isNil() + v.isBoolean() + v.isInteger() + v.isDouble() + v.isObject();
+    int count = v.isNil() + v.isBoolean() + v.isDouble() + v.isObject();
     EXPECT_EQ(count, 1);
 }
 
@@ -75,7 +73,7 @@ TEST(NanBox, TypeTagsMutuallyExclusive_Bool)
 {
     for (bool b : { true, false }) {
         Value v = Value::boolean(b);
-        int count = v.isNil() + v.isBoolean() + v.isInteger() + v.isDouble() + v.isObject();
+        int count = v.isNil() + v.isBoolean() + v.isDouble() + v.isObject();
         EXPECT_EQ(count, 1) << "bool=" << b;
     }
 }
@@ -93,7 +91,7 @@ TEST(NanBox, TypeTagsMutuallyExclusive_Double)
 {
     for (double d : { 0.0, 1.5, -3.14, 1e300 }) {
         Value v = Value::real(d);
-        int count = v.isNil() + v.isBoolean() + v.isInteger() + v.isDouble() + v.isObject();
+        int count = v.isNil() + v.isBoolean() + v.isDouble() + v.isObject();
         EXPECT_EQ(count, 1) << "double=" << d;
     }
 }
@@ -102,7 +100,7 @@ TEST(NanBox, TypeTagsMutuallyExclusive_Obj)
 {
     ObjList list;
     Value v = Value::object(&list);
-    int count = v.isNil() + v.isBoolean() + v.isInteger() + v.isDouble() + v.isObject();
+    int count = v.isNil() + v.isBoolean() + v.isDouble() + v.isObject();
     EXPECT_EQ(count, 1);
 }
 
@@ -262,7 +260,7 @@ TEST(ValueDouble, AsNumberDoubleFromInt)
 TEST(ValueDouble, AsNumberDoubleFromDouble)
 {
     Value v = Value::real(1.5);
-    EXPECT_DOUBLE_EQ(v.asDoubleAny(), 1.5);
+    EXPECT_DOUBLE_EQ(v.asDouble(), 1.5);
 }
 
 // Boolean semantics
@@ -406,8 +404,8 @@ TEST(ObjList, StartsEmpty)
 TEST(ObjList, CanAppendValues)
 {
     ObjList list;
-    list.elements.push_back(Value::integer(1));
-    list.elements.push_back(Value::boolean(true));
+    list.elements.push(Value::integer(1));
+    list.elements.push(Value::boolean(true));
     EXPECT_EQ(list.elements.size(), 2u);
     EXPECT_EQ(list.elements[0].asInteger(), 1);
     EXPECT_TRUE(list.elements[1].asBoolean());

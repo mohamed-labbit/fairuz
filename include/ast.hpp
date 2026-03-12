@@ -4,13 +4,28 @@
 #define AST_HPP
 
 #include "allocator.hpp"
+#include "array.hpp"
 #include "string.hpp"
 
 #include <cassert>
 
 namespace mylang::ast {
 
-inline Allocator AST_allocator("AST allocator");
+// inline Allocator getTokenAllocator()("AST allocator");
+
+class Expr;
+class ListExpr;
+class NameExpr;
+class AssignmentExpr;
+class Stmt;
+class BlockStmt;
+class AssignmentStmt;
+
+static ListExpr* makeList(Array<Expr*> elements = { });
+static BlockStmt* makeBlock(Array<Stmt*> stmts = { });
+static NameExpr* makeName(StringRef const str);
+static AssignmentExpr* makeAssignmentExpr(NameExpr* target, Expr* value, bool decl = true);
+static AssignmentStmt* makeAssignmentStmt(Expr* target, Expr* value, bool decl = true);
 
 class ASTNode {
 public:
@@ -84,46 +99,6 @@ enum class UnaryOp : uint8_t {
 
 /// NOTE: do not know if the assert for the costructors args is a good idea
 
-// forward
-class Expr;
-class BinaryExpr;
-class UnaryExpr;
-class LiteralExpr;
-class NameExpr;
-class ListExpr;
-class CallExpr;
-class AssignmentExpr;
-class Stmt;
-class BlockStmt;
-class ExprStmt;
-class AssignmentStmt;
-class IfStmt;
-class WhileStmt;
-class ForStmt;
-class FunctionDef;
-class ReturnStmt;
-
-static constexpr BinaryExpr* makeBinary(Expr* l, Expr* r, BinaryOp const op);
-static constexpr UnaryExpr* makeUnary(Expr* operand, UnaryOp const op);
-static constexpr LiteralExpr* makeLiteralNil();
-static constexpr LiteralExpr* makeLiteralInt(int value);
-static constexpr LiteralExpr* makeLiteralInt(int64_t value);
-static constexpr LiteralExpr* makeLiteralFloat(double value);
-static constexpr LiteralExpr* makeLiteralString(StringRef value);
-static constexpr LiteralExpr* makeLiteralBool(bool value);
-static constexpr NameExpr* makeName(StringRef const str);
-static constexpr ListExpr* makeList(std::vector<Expr*> elements = { });
-static constexpr CallExpr* makeCall(Expr* callee, ListExpr* args = nullptr);
-static constexpr AssignmentExpr* makeAssignmentExpr(NameExpr* target, Expr* value, bool decl = false);
-static constexpr BlockStmt* makeBlock(std::vector<Stmt*> stmts = { });
-static constexpr ExprStmt* makeExprStmt(Expr* expr);
-static constexpr AssignmentStmt* makeAssignmentStmt(Expr* target, Expr* value, bool decl = false);
-static constexpr IfStmt* makeIf(Expr* condition, BlockStmt* then_block, BlockStmt* else_block = nullptr);
-static constexpr WhileStmt* makeWhile(Expr* condition, BlockStmt* block);
-static constexpr ForStmt* makeFor(NameExpr* target, Expr* iter, BlockStmt* block);
-static constexpr FunctionDef* makeFunction(NameExpr* name, ListExpr* params, BlockStmt* body);
-static constexpr ReturnStmt* makeReturn(Expr* value);
-
 class Expr : public ASTNode {
 public:
     enum class Kind : int {
@@ -155,7 +130,7 @@ public:
     NodeType getNodeType() const override { return NodeType::EXPRESSION; }
 };
 
-class BinaryExpr : public Expr {
+class BinaryExpr final : public Expr {
 private:
     Expr* Left_ { nullptr };
     Expr* Right_ { nullptr };
@@ -193,7 +168,7 @@ public:
     void setOperator(BinaryOp op);
 };
 
-class UnaryExpr : public Expr {
+class UnaryExpr final : public Expr {
 private:
     Expr* Operand_ { nullptr };
     UnaryOp Operator_ { UnaryOp::INVALID };
@@ -224,7 +199,7 @@ public:
     MY_NODISCARD UnaryOp getOperator() const;
 };
 
-class LiteralExpr : public Expr {
+class LiteralExpr final : public Expr {
 public:
     enum class Type {
         INTEGER,
@@ -309,7 +284,7 @@ public:
     MY_NODISCARD double toNumber() const;
 };
 
-class NameExpr : public Expr {
+class NameExpr final : public Expr {
 private:
     StringRef Value_;
 
@@ -336,14 +311,14 @@ public:
     MY_NODISCARD StringRef getValue() const;
 };
 
-class ListExpr : public Expr {
+class ListExpr final : public Expr {
 private:
-    std::vector<Expr*> Elements_;
+    Array<Expr*> Elements_;
 
 public:
     ListExpr() = default;
 
-    explicit ListExpr(std::vector<Expr*> elements)
+    explicit ListExpr(Array<Expr*> elements)
         : Elements_(std::move(elements))
     {
         Kind_ = Kind::LIST;
@@ -362,13 +337,13 @@ public:
 
     MY_NODISCARD bool equals(Expr const* other) const override;
     MY_NODISCARD ListExpr* clone() const override;
-    MY_NODISCARD std::vector<Expr*> const& getElements() const;
-    MY_NODISCARD std::vector<Expr*>& getElements();
+    MY_NODISCARD Array<Expr*> const& getElements() const;
+    MY_NODISCARD Array<Expr*>& getElements();
     MY_NODISCARD bool isEmpty() const;
     MY_NODISCARD size_t size() const;
 };
 
-class CallExpr : public Expr {
+class CallExpr final : public Expr {
 public:
     enum class CallLocation : int { GLOBAL,
         LOCAL };
@@ -401,15 +376,15 @@ public:
     MY_NODISCARD bool equals(Expr const* other) const override;
     MY_NODISCARD CallExpr* clone() const override;
     MY_NODISCARD Expr* getCallee() const;
-    MY_NODISCARD std::vector<Expr*> const& getArgs() const;
-    MY_NODISCARD std::vector<Expr*>& getArgs();
+    MY_NODISCARD Array<Expr*> const& getArgs() const;
+    MY_NODISCARD Array<Expr*>& getArgs();
     MY_NODISCARD ListExpr* getArgsAsListExpr();
     MY_NODISCARD ListExpr const* getArgsAsListExpr() const;
     MY_NODISCARD CallLocation getCallLocation() const;
     MY_NODISCARD bool hasArguments() const;
 };
 
-class AssignmentExpr : public Expr {
+class AssignmentExpr final : public Expr {
 private:
     NameExpr* Target_ { nullptr };
     Expr* Value_ { nullptr };
@@ -476,14 +451,14 @@ public:
     NodeType getNodeType() const override { return NodeType::STATEMENT; }
 };
 
-class BlockStmt : public Stmt {
+class BlockStmt final : public Stmt {
 private:
-    std::vector<Stmt*> Statements_;
+    Array<Stmt*> Statements_;
 
 public:
     explicit BlockStmt() = delete;
 
-    explicit BlockStmt(std::vector<Stmt*> stmts)
+    explicit BlockStmt(Array<Stmt*> stmts)
         : Statements_(stmts)
     {
         Kind_ = Kind::BLOCK;
@@ -496,12 +471,12 @@ public:
 
     MY_NODISCARD bool equals(Stmt const* other) const override;
     MY_NODISCARD BlockStmt* clone() const override;
-    MY_NODISCARD std::vector<Stmt*> const& getStatements() const;
+    MY_NODISCARD Array<Stmt*> const& getStatements() const;
     MY_NODISCARD bool isEmpty() const;
-    void setStatements(std::vector<Stmt*>& stmts);
+    void setStatements(Array<Stmt*>& stmts);
 };
 
-class ExprStmt : public Stmt {
+class ExprStmt final : public Stmt {
 private:
     Expr* Expr_ { nullptr };
 
@@ -525,7 +500,7 @@ public:
     void setExpr(Expr* e);
 };
 
-class AssignmentStmt : public Stmt {
+class AssignmentStmt final : public Stmt {
 private:
     Expr* Value_ { nullptr };
     Expr* Target_ { nullptr };
@@ -557,7 +532,7 @@ public:
     void setTarget(NameExpr* t);
 };
 
-class IfStmt : public Stmt {
+class IfStmt final : public Stmt {
 private:
     Expr* Condition_ { nullptr };
     BlockStmt* ThenBlock_ { nullptr };
@@ -588,7 +563,7 @@ public:
     void setElseBlock(BlockStmt* e);
 };
 
-class WhileStmt : public Stmt {
+class WhileStmt final : public Stmt {
 private:
     Expr* Condition_ { nullptr };
     BlockStmt* Block_ { nullptr };
@@ -616,7 +591,7 @@ public:
     void setBlock(BlockStmt* b);
 };
 
-class ForStmt : public Stmt {
+class ForStmt final : public Stmt {
 private:
     NameExpr* Target_ { nullptr };
     Expr* Iter_ { nullptr };
@@ -646,7 +621,7 @@ public:
     void setBlock(BlockStmt* b);
 };
 
-class FunctionDef : public Stmt {
+class FunctionDef final : public Stmt {
 private:
     NameExpr* Name_ { nullptr };
     ListExpr* Params_ { nullptr };
@@ -663,9 +638,9 @@ public:
         Kind_ = Kind::FUNC;
 
         if (!Params_)
-            Params_ = makeList(std::vector<Expr*> { });
+            Params_ = makeList(Array<Expr*> { });
         if (!Body_)
-            Body_ = makeBlock(std::vector<Stmt*> { });
+            Body_ = makeBlock(Array<Stmt*> { });
         if (!Name_)
             Name_ = makeName("");
     }
@@ -678,14 +653,14 @@ public:
     MY_NODISCARD bool equals(Stmt const* other) const override;
     MY_NODISCARD FunctionDef* clone() const override;
     MY_NODISCARD NameExpr* getName() const;
-    MY_NODISCARD std::vector<Expr*> const& getParameters() const;
+    MY_NODISCARD Array<Expr*> const& getParameters() const;
     MY_NODISCARD ListExpr* getParameterList() const;
     MY_NODISCARD BlockStmt* getBody() const;
     MY_NODISCARD bool hasParameters() const;
     void setBody(BlockStmt* b);
 };
 
-class ReturnStmt : public Stmt {
+class ReturnStmt final : public Stmt {
 private:
     Expr* Value_ { nullptr };
 
@@ -710,26 +685,26 @@ public:
     void setValue(Expr* v);
 };
 
-static constexpr BinaryExpr* makeBinary(Expr* l, Expr* r, BinaryOp const op) { return AST_allocator.allocateObject<BinaryExpr>(l, r, op); }
-static constexpr UnaryExpr* makeUnary(Expr* operand, UnaryOp const op) { return AST_allocator.allocateObject<UnaryExpr>(operand, op); }
-static constexpr LiteralExpr* makeLiteralNil() { return AST_allocator.allocateObject<LiteralExpr>(); }
-static constexpr LiteralExpr* makeLiteralInt(int value) { return AST_allocator.allocateObject<LiteralExpr>(static_cast<int64_t>(value), LiteralExpr::Type::INTEGER); }
-static constexpr LiteralExpr* makeLiteralInt(int64_t value) { return AST_allocator.allocateObject<LiteralExpr>(value, LiteralExpr::Type::INTEGER); }
-static constexpr LiteralExpr* makeLiteralFloat(double value) { return AST_allocator.allocateObject<LiteralExpr>(value, LiteralExpr::Type::FLOAT); }
-static constexpr LiteralExpr* makeLiteralString(StringRef value) { return AST_allocator.allocateObject<LiteralExpr>(value); }
-static constexpr LiteralExpr* makeLiteralBool(bool value) { return AST_allocator.allocateObject<LiteralExpr>(value); }
-static constexpr NameExpr* makeName(StringRef const str) { return AST_allocator.allocateObject<NameExpr>(str); }
-static constexpr ListExpr* makeList(std::vector<Expr*> elements) { return AST_allocator.allocateObject<ListExpr>(elements); }
-static constexpr CallExpr* makeCall(Expr* callee, ListExpr* args) { return AST_allocator.allocateObject<CallExpr>(callee, args); }
-static constexpr AssignmentExpr* makeAssignmentExpr(NameExpr* target, Expr* value, bool decl) { return AST_allocator.allocateObject<AssignmentExpr>(target, value, decl); }
-static constexpr BlockStmt* makeBlock(std::vector<Stmt*> stmts) { return AST_allocator.allocateObject<BlockStmt>(stmts); }
-static constexpr ExprStmt* makeExprStmt(Expr* expr) { return AST_allocator.allocateObject<ExprStmt>(expr); }
-static constexpr AssignmentStmt* makeAssignmentStmt(Expr* target, Expr* value, bool decl) { return AST_allocator.allocateObject<AssignmentStmt>(target, value, decl); }
-static constexpr IfStmt* makeIf(Expr* condition, BlockStmt* then_block, BlockStmt* else_block) { return AST_allocator.allocateObject<IfStmt>(condition, then_block, else_block); }
-static constexpr WhileStmt* makeWhile(Expr* condition, BlockStmt* block) { return AST_allocator.allocateObject<WhileStmt>(condition, block); }
-static constexpr ForStmt* makeFor(NameExpr* target, Expr* iter, BlockStmt* block) { return AST_allocator.allocateObject<ForStmt>(target, iter, block); }
-static constexpr FunctionDef* makeFunction(NameExpr* name, ListExpr* params, BlockStmt* body) { return AST_allocator.allocateObject<FunctionDef>(name, params, body); }
-static constexpr ReturnStmt* makeReturn(Expr* value) { return AST_allocator.allocateObject<ReturnStmt>(value); }
+static BinaryExpr* makeBinary(Expr* l, Expr* r, BinaryOp const op) { return getTokenAllocator().allocateObject<BinaryExpr>(l, r, op); }
+static UnaryExpr* makeUnary(Expr* operand, UnaryOp const op) { return getTokenAllocator().allocateObject<UnaryExpr>(operand, op); }
+static LiteralExpr* makeLiteralNil() { return getTokenAllocator().allocateObject<LiteralExpr>(); }
+static LiteralExpr* makeLiteralInt(int value) { return getTokenAllocator().allocateObject<LiteralExpr>(static_cast<int64_t>(value), LiteralExpr::Type::INTEGER); }
+static LiteralExpr* makeLiteralInt(int64_t value) { return getTokenAllocator().allocateObject<LiteralExpr>(value, LiteralExpr::Type::INTEGER); }
+static LiteralExpr* makeLiteralFloat(double value) { return getTokenAllocator().allocateObject<LiteralExpr>(value, LiteralExpr::Type::FLOAT); }
+static LiteralExpr* makeLiteralString(StringRef value) { return getTokenAllocator().allocateObject<LiteralExpr>(value); }
+static LiteralExpr* makeLiteralBool(bool value) { return getTokenAllocator().allocateObject<LiteralExpr>(value); }
+static NameExpr* makeName(StringRef const str) { return getTokenAllocator().allocateObject<NameExpr>(str); }
+static ListExpr* makeList(Array<Expr*> elements) { return getTokenAllocator().allocateObject<ListExpr>(elements); }
+static CallExpr* makeCall(Expr* callee, ListExpr* args) { return getTokenAllocator().allocateObject<CallExpr>(callee, args); }
+static AssignmentExpr* makeAssignmentExpr(NameExpr* target, Expr* value, bool decl) { return getTokenAllocator().allocateObject<AssignmentExpr>(target, value, decl); }
+static BlockStmt* makeBlock(Array<Stmt*> stmts) { return getTokenAllocator().allocateObject<BlockStmt>(stmts); }
+static ExprStmt* makeExprStmt(Expr* expr) { return getTokenAllocator().allocateObject<ExprStmt>(expr); }
+static AssignmentStmt* makeAssignmentStmt(Expr* target, Expr* value, bool decl) { return getTokenAllocator().allocateObject<AssignmentStmt>(target, value, decl); }
+static IfStmt* makeIf(Expr* condition, BlockStmt* then_block, BlockStmt* else_block = nullptr) { return getTokenAllocator().allocateObject<IfStmt>(condition, then_block, else_block); }
+static WhileStmt* makeWhile(Expr* condition, BlockStmt* block) { return getTokenAllocator().allocateObject<WhileStmt>(condition, block); }
+static ForStmt* makeFor(NameExpr* target, Expr* iter, BlockStmt* block) { return getTokenAllocator().allocateObject<ForStmt>(target, iter, block); }
+static FunctionDef* makeFunction(NameExpr* name, ListExpr* params, BlockStmt* body) { return getTokenAllocator().allocateObject<FunctionDef>(name, params, body); }
+static ReturnStmt* makeReturn(Expr* value) { return getTokenAllocator().allocateObject<ReturnStmt>(value); }
 
 }
 

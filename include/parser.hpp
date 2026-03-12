@@ -1,6 +1,7 @@
 #ifndef PARSER_HPP
 #define PARSER_HPP
 
+#include "array.hpp"
 #include "ast.hpp"
 #include "lexer.hpp"
 #include "token.hpp"
@@ -41,9 +42,9 @@ public:
         DataType_t dataType;
         bool isUsed = false;
         int32_t definitionLine = 0;
-        std::vector<int32_t> usageLines;
+        Array<int32_t> usageLines;
         // for functions
-        std::vector<DataType_t> paramTypes;
+        Array<DataType_t> paramTypes;
         DataType_t returnType = DataType_t::UNKNOWN;
         // for type inference
         std::unordered_set<DataType_t> possibleTypes;
@@ -53,7 +54,7 @@ public:
 
 private:
     std::unordered_map<StringRef, Symbol, StringRefHash, StringRefEqual> Symbols_;
-    std::vector<std::unique_ptr<SymbolTable>> Children_;
+    Array<std::unique_ptr<SymbolTable>> Children_;
     unsigned int ScopeLevel_ { 0 };
 
 public:
@@ -71,7 +72,7 @@ public:
 
     SymbolTable* createChild();
 
-    std::vector<Symbol*> getUnusedSymbols();
+    Array<Symbol*> getUnusedSymbols();
 
     std::unordered_map<StringRef, Symbol, StringRefHash, StringRefEqual> const& getSymbols() const;
 };
@@ -95,7 +96,7 @@ public:
 private:
     SymbolTable* CurrentScope_;
     std::unique_ptr<SymbolTable> GlobalScope_;
-    std::vector<Issue> Issues_;
+    Array<Issue> Issues_;
 
 public:
     SymbolTable::DataType_t inferType(ast::Expr const* expr);
@@ -107,9 +108,9 @@ public:
 
     SemanticAnalyzer();
 
-    void analyze(std::vector<ast::Stmt*> const& Statements_);
+    void analyze(Array<ast::Stmt*> const& Statements_);
 
-    std::vector<Issue> const& getIssues() const;
+    Array<Issue> const& getIssues() const;
 
     SymbolTable const* getGlobalScope() const;
 
@@ -120,9 +121,9 @@ class ParseError : public std::runtime_error {
 public:
     int32_t Line_, Column_;
     StringRef Context_;
-    std::vector<StringRef> Suggestions_;
+    Array<StringRef> Suggestions_;
 
-    ParseError(StringRef const& msg, unsigned int l, unsigned int c, StringRef ctx = "", std::vector<StringRef> sugg = { })
+    ParseError(StringRef const& msg, unsigned int l, unsigned int c, StringRef ctx = "", Array<StringRef> sugg = { })
         : Line_(l)
         , Column_(c)
         , Context_(ctx)
@@ -164,9 +165,9 @@ public:
         Lexer_.next();
     }
 
-    explicit Parser(std::vector<tok::Token> seq, std::optional<size_t> s = std::nullopt);
+    explicit Parser(Array<tok::Token> seq, std::optional<size_t> s = std::nullopt);
 
-    std::vector<ast::Stmt*> parseProgram();
+    Array<ast::Stmt*> parseProgram();
 
     ast::Stmt* parseStatement();
     ast::Stmt* parseExpressionStmt();
@@ -248,8 +249,6 @@ public:
 private:
     OptimizationStats Stats_;
 
-    // Constant folding evaluator
-
 public:
     std::optional<double> evaluateConstant(ast::Expr const* expr);
 
@@ -274,7 +273,7 @@ public:
     bool isLoopInvariant(ast::Expr const* expr, std::unordered_set<StringRef, StringRefHash, StringRefEqual> const& loopVars);
 
     // Main optimization pipeline
-    std::vector<ast::Stmt*> optimize(std::vector<ast::Stmt*> statements, int32_t level = 2);
+    Array<ast::Stmt*> optimize(Array<ast::Stmt*> statements, int32_t level = 2);
 
     OptimizationStats const& getStats() const;
 

@@ -73,6 +73,56 @@ ArenaBlock& ArenaBlock::operator=(ArenaBlock&& other) noexcept
     return *this;
 }
 
+unsigned char* ArenaBlock::begin() const
+{
+    std::lock_guard<std::mutex> lock(Mutex_);
+    return Begin_;
+}
+
+unsigned char* ArenaBlock::end() const
+{
+    std::lock_guard<std::mutex> lock(Mutex_);
+    return Begin_ + Size_;
+}
+
+unsigned char* ArenaBlock::cNext() const
+{
+    return Next_;
+}
+
+size_t ArenaBlock::size() const
+{
+    std::lock_guard<std::mutex> lock(Mutex_);
+    return Size_;
+}
+
+size_t ArenaBlock::used() const
+{
+    if (!Begin_ || Next_ < Begin_)
+        return 0;
+
+    return static_cast<size_t>(Next_ - Begin_);
+}
+
+bool ArenaBlock::pop(size_t bytes)
+{
+    if (!Begin_ || Next_ < Begin_ + bytes)
+        return false;
+
+    Next_ -= bytes;
+    return true;
+}
+
+size_t ArenaBlock::remaining() const
+{
+    std::lock_guard<std::mutex> lock(Mutex_);
+    if (!Begin_)
+        return 0;
+
+    unsigned char const* current_next = Next_;
+    return static_cast<size_t>(Begin_ + Size_ - current_next);
+}
+
 unsigned char* ArenaBlock::allocate(size_t bytes, std::optional<size_t> alignment)
 {
     if (!Begin_ || bytes == 0)
@@ -154,6 +204,14 @@ void ArenaAllocator::reset()
     // Reset block size
     NextBlockSize_ = BlockSize_;
 }
+
+void reset();
+
+void ArenaAllocator::setName(std::string const& name) { Name_ = name; }
+
+size_t ArenaAllocator::totalAllocated() const { return AllocStats_.TotalAllocated; }
+size_t ArenaAllocator::totalAllocations() const { return AllocStats_.TotalAllocations; }
+size_t ArenaAllocator::activeBlocks() const { return AllocStats_.ActiveBlocks; }
 
 unsigned char* ArenaAllocator::allocateBlock(size_t requested, size_t alignment_, bool retry_on_oom)
 {
@@ -315,6 +373,19 @@ bool ArenaAllocator::verifyAllocation(void* ptr) const
         return false;
 
     return it->second.is_valid();
+}
+
+std::string ArenaAllocator::toString(bool verbose) const
+{
+    std::ostringstream oss;
+    dumpStats(oss, verbose);
+    return oss.str();
+}
+
+void ArenaAllocator::dumpStats(std::ostream& os, bool verbose) const
+{
+    StatsPrinter printer(AllocStats_, Name_);
+    printer.printDetailed(os, verbose);
 }
 
 unsigned char* ArenaAllocator::allocateFromBlocks(size_t alloc_size, size_t align)

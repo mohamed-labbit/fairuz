@@ -1,19 +1,21 @@
 #include "../../include/runtime/vm.hpp"
+#include "../../include/allocator.hpp"
 #include "../../include/runtime/opcode.hpp"
-#include "../../include/runtime/runtime_allocator.hpp"
+#include "../../include/runtime/stdlib.hpp"
 #include "../../include/runtime/value.hpp"
 
 namespace mylang::runtime {
 
 Value VM::run(Chunk* chunk)
 {
-    ObjFunction* fn = runtime_allocator.allocateObject<ObjFunction>();
+    ObjFunction* fn = makeObjectFunction();
     fn->chunk = chunk;
-    ObjClosure* cl = runtime_allocator.allocateObject<ObjClosure>(fn);
-    // ensureStack(chunk->localCount + 8);
-    Stack_[0] = Value::object(cl);
-    StackTop_ = chunk->localCount + 1;
-    Frames_[FramesTop_++] = { cl, 0, 0 };
+    ObjClosure* cl = makeObjectClosure(fn);
+
+    Stack_[0] = Value::object(cl);     // slot 0 = top-level closure (frame overhead)
+    StackTop_ = chunk->localCount + 2; // +1 for self slot, +1 past locals
+
+    Frames_[FramesTop_++] = { cl, 0, 1 }; // base = 1, reg(0) = Stack_[1]
     Value res = execute();
     --FramesTop_;
     return res;
@@ -47,7 +49,7 @@ Value VM::execute()
             RA(instr) = val;
         } break;
         case OpCode::LOAD_INT: {
-            int16_t raw = static_cast<uint16_t>(instr_Bx(instr)) - JUMP_OFFSET;
+            int32_t raw = static_cast<uint16_t>(instr_Bx(instr)) - JUMP_OFFSET;
             RA(instr) = Value::integer(raw);
         } break;
         case OpCode::LOAD_GLOBAL: {
@@ -124,7 +126,7 @@ Value VM::execute()
         case OpCode::CONCAT: RA(instr) = _cnc(RB(instr), RC(instr)); break; /// needs checking
         case OpCode::LIST_NEW: {
             uint8_t cap = instr_B(instr);
-            ObjList* list_obj = runtime_allocator.allocateObject<ObjList>();
+            ObjList* list_obj = makeObjectList();
             list_obj->reserve(cap);
             RA(instr) = Value::object(list_obj);
         } break;
@@ -132,7 +134,7 @@ Value VM::execute()
             Value list_v = RA(instr);
             if (!list_v.isList())
                 diagnostic::emit("LIST_APPEND on non-list", diagnostic::Severity::FATAL);
-            list_v.asList()->elements.push_back(RB(instr));
+            list_v.asList()->elements.push(RB(instr));
         } break;
         case OpCode::LIST_GET: {
             Value list_v = RB(instr), index_v = RC(instr);
@@ -176,78 +178,15 @@ Value VM::execute()
                 frame().ip += instr_sBx(instr);
             break;
         case OpCode::LOOP: frame().ip += instr_sBx(instr); break;
-        case OpCode::FOR_PREP: {
-            uint8_t base = instr_A(instr);
-            Value start = reg(base), step = reg(base + 2);
-            // Subtract step so the first FOR_STEP will add it back
-            if (start.isInteger() && step.isInteger())
-                reg(base) = Value::integer(start.asInteger() - step.asInteger());
-            else
-                reg(base) = Value::real(start.asDoubleAny() - step.asDoubleAny());
-            {
-                // Fall through to FOR_STEP to do the initial check
-                // (FOR_STEP immediately follows FOR_PREP in the code stream)
-                // We actually jump to the FOR_STEP that follows the body by
-                // falling into FOR_STEP via the next instruction.
-                // The sBx here is the offset to past the body — if we're
-                // already done, skip entirely.
-                // We re-run the FOR_STEP logic inline:
-                Value& counter = reg(base);
-                Value limit = reg(base + 1);
-                Value& step_v = reg(base + 2);
-                Value& idx = reg(base + 3);
-
-                if (counter.isInteger() && limit.isInteger() && step_v.isInteger()) {
-                    int64_t c = counter.asInteger() + step_v.asInteger();
-                    int64_t lim = limit.asInteger(), st = step_v.asInteger();
-                    counter = Value::integer(c);
-                    idx = Value::integer(c);
-                    bool done = (st > 0) ? (c > lim) : (c < lim);
-                    if (done)
-                        frame().ip += instr_sBx(instr);
-                } else {
-                    double c = counter.asDoubleAny() + step_v.asDoubleAny();
-                    double lim = limit.asDoubleAny(), st = step_v.asDoubleAny();
-                    counter = Value::real(c);
-                    idx = Value::real(c);
-                    bool done = (st > 0.0) ? (c > lim) : (c < lim);
-                    if (done)
-                        frame().ip += instr_sBx(instr);
-                }
-            }
-        } break;
-        case OpCode::FOR_STEP: {
-            uint8_t base = instr_A(instr);
-            Value& counter = reg(base);
-            Value limit = reg(base + 1);
-            Value& step_v = reg(base + 2);
-            Value& idx = reg(base + 3);
-
-            if (counter.isInteger() && limit.isInteger() && step_v.isInteger()) {
-                int64_t c = counter.asInteger() + step_v.asInteger();
-                int64_t lim = limit.asInteger(), st = step_v.asInteger();
-                counter = Value::integer(c);
-                idx = Value::integer(c);
-                bool keep = (st > 0) ? (c <= lim) : (c >= lim);
-                if (keep)
-                    frame().ip += instr_sBx(instr);
-            } else {
-                double c = counter.asDoubleAny() + step_v.asDoubleAny();
-                double lim = limit.asDoubleAny(), st = step_v.asDoubleAny();
-                counter = Value::real(c);
-                idx = Value::real(c);
-                bool keep = (st > 0.0) ? (c <= lim) : (c >= lim);
-                if (keep)
-                    frame().ip += instr_sBx(instr);
-            }
-        } break;
+        case OpCode::FOR_PREP: break;
+        case OpCode::FOR_STEP: break;
         case OpCode::CLOSURE: {
             uint16_t fn_idx = instr_Bx(instr);
             Chunk* fn_chunk = chunk()->functions[fn_idx];
-            ObjFunction* fn = runtime_allocator.allocateObject<ObjFunction>(fn_chunk);
+            ObjFunction* fn = makeObjectFunction(fn_chunk);
             fn->arity = fn_chunk->arity;
             fn->upvalueCount = fn_chunk->upvalueCount;
-            ObjClosure* cl = runtime_allocator.allocateObject<ObjClosure>(fn);
+            ObjClosure* cl = makeObjectClosure(fn);
 
             for (unsigned int i = 0; i < fn_chunk->upvalueCount; ++i) {
                 uint32_t desc = READ_INSTR();
@@ -265,15 +204,15 @@ Value VM::execute()
             uint8_t fn_reg = instr_A(instr);
             uint8_t argc = instr_B(instr);
             Value callee = reg(fn_reg);
-            int base = frame().base + fn_reg;
-            callValue(callee, argc, base, /*tail=*/false);
+            int base = frame().base + fn_reg + 1; // +1: skip closure slot
+            callValue(callee, argc, base, false);
         } break;
         case OpCode::IC_CALL: {
             uint8_t fn_reg = instr_A(instr);
             uint8_t argc = instr_B(instr);
             uint8_t ic_idx = instr_C(instr);
             Value callee = reg(fn_reg);
-            int base = frame().base + fn_reg;
+            int base = frame().base + fn_reg + 1; // +1 here too
 
             if (ic_idx < chunk()->icSlots.size()) {
                 auto& slot = chunk()->icSlots[ic_idx];
@@ -289,8 +228,10 @@ Value VM::execute()
             uint8_t fn_reg = instr_A(instr);
             uint8_t argc = instr_B(instr);
             Value callee = reg(fn_reg);
-            int base = frame().base + fn_reg;
-            callValue(callee, argc, base, /*tail=*/true);
+            int base = frame().base + fn_reg + 1;
+            fprintf(stderr, "CALL_TAIL: FramesTop_=%d base=%d\n", FramesTop_, base);
+            callValue(callee, argc, base, true);
+            fprintf(stderr, "CALL_TAIL after: FramesTop_=%d\n", FramesTop_);
         } break;
         case OpCode::RETURN: {
             uint8_t src = instr_A(instr);
@@ -318,7 +259,7 @@ namespace {
 template<typename IntOp, typename RealOp>
 Value _binaryArith(Value const lhs, Value const rhs, IntOp intOp, RealOp realOp)
 {
-    if (!lhs.isInteger() || !rhs.isInteger())
+    if (!lhs.isNumber() || !rhs.isNumber())
         diagnostic::emit("binary arithmetic on non numeric operand is not allowed", diagnostic::Severity::FATAL);
     if (lhs.isInteger() && rhs.isInteger())
         return Value::integer(intOp(lhs.asInteger(), rhs.asInteger()));
@@ -347,10 +288,9 @@ Value _binaryShift(Value const lhs, Value const rhs, IntOp intOp)
 template<typename IntOp, typename RealOp>
 bool _binaryCmp(Value const lhs, Value const rhs, IntOp intOp, RealOp realOp)
 {
-    // assert(lhs.isNumber() && rhs.isNumber());
     if (lhs.isInteger() && rhs.isInteger())
         return intOp(lhs.asInteger(), rhs.asInteger());
-    if (lhs.isString() && lhs.isString())
+    if (lhs.isString() && rhs.isString())
         return realOp(lhs.asString(), rhs.asString());
     return realOp(lhs.asDoubleAny(), rhs.asDoubleAny());
 }
@@ -377,7 +317,7 @@ Value VM::_mul(Value const lhs, Value const rhs) { return _binaryArith(lhs, rhs,
 
 Value VM::_cnc(Value const lhs, Value const rhs)
 {
-    if (lhs.isString() && rhs.isString())
+    if (!lhs.isString() || !rhs.isString())
         diagnostic::emit("String concatenation can only apply to string operands", diagnostic::Severity::FATAL);
     return Value::object(intern(lhs.asString()->str + rhs.asString()->str));
 }
@@ -420,7 +360,9 @@ Value VM::_shl(Value const lhs, Value const rhs)
 }
 Value VM::_shr(Value const lhs, Value const rhs)
 {
-    return _binaryShift(lhs, rhs, [](auto a, auto b) { return a >> b; });
+    return _binaryShift(lhs, rhs, [](int64_t a, int64_t b) {
+        return static_cast<int64_t>(static_cast<uint64_t>(a) >> static_cast<uint64_t>(b));
+    });
 }
 
 Value VM::_neg(Value const a)
@@ -446,7 +388,7 @@ ObjString* VM::intern(StringRef const& str)
     auto it = StringTable_.find(str);
     if (it != StringTable_.end())
         return it->second;
-    ObjString* obj = runtime_allocator.allocateObject<ObjString>(str);
+    ObjString* obj = makeObjectString(str);
     StringTable_[str] = obj;
     return obj;
 }
@@ -491,8 +433,8 @@ ObjUpvalue* VM::captureUpvalue(unsigned int stack_pos)
         if (uv->location == &Stack_[stack_pos])
             return uv;
 
-    ObjUpvalue* uv = runtime_allocator.allocateObject<ObjUpvalue>(&Stack_[stack_pos]);
-    OpenUpvalues_.push_back(uv);
+    ObjUpvalue* uv = makeObjectUpvalue(&Stack_[stack_pos]);
+    OpenUpvalues_.push(uv);
     return uv;
 }
 
@@ -507,25 +449,23 @@ void VM::callValue(Value callee, int argc, int base, bool tail)
                 diagnostic::Severity::FATAL);
 
         if (FramesTop_ >= MAX_FRAMES)
-            diagnostic::emit("Stack overflow");
+            diagnostic::emit("Stack overflow", diagnostic::Severity::FATAL);
 
         if (tail && FramesTop_ > 0) {
-            // Tail-call: reuse the current frame.
-            // Copy the callee and args down into the current frame's base.
-            int cur_base = Frames_.back().base;
+            int cur_base = Frames_[FramesTop_ - 1].base; // ← was Frames_.back()
 
-            // Move callee + args to cur_base
-            for (int i = 0; i <= argc; ++i)
+            for (int i = 0; i < argc; ++i)
                 Stack_[cur_base + i] = Stack_[base + i];
 
-            // Replace the current frame
-            Frames_.back() = { cl, 0, cur_base };
-            // Clear registers above argc in the new frame
-            // ensureStack(cl->function->chunk->localCount + 8);
-            int new_top = cur_base + cl->function->chunk->localCount + 1;
+            for (int i = argc; i < cl->function->chunk->localCount; ++i)
+                Stack_[cur_base + i] = Value::nil();
 
+            Frames_[FramesTop_ - 1] = { cl, 0, cur_base }; // ← was Frames_.back()
+
+            int new_top = cur_base + cl->function->chunk->localCount + 1;
             while (StackTop_ < new_top)
                 Stack_[StackTop_++] = Value::nil();
+            StackTop_ = new_top;
         } else {
             // ensureStack(cl->function->chunk->localCount + 8);
             int new_top = base + cl->function->chunk->localCount + 1;
@@ -535,6 +475,8 @@ void VM::callValue(Value callee, int argc, int base, bool tail)
 
             Frames_[FramesTop_++] = { cl, 0, base };
         }
+
+        return;
     } else if (callee.isNative()) {
         ObjNative* nat = callee.asNative();
         if (nat->arity >= 0 && argc != nat->arity)
@@ -542,17 +484,19 @@ void VM::callValue(Value callee, int argc, int base, bool tail)
                 + "' expected " + std::to_string(nat->arity) + " args, got " + std::to_string(argc));
 
         Value result = callNative(nat, argc, base);
-        Stack_[base] = result;
-        StackTop_ = base + 1;
-        return; // ← added
+        // Write result into fn_reg slot (base - 1), mirroring returnFromCall for closures.
+        // base = caller_frame.base + fn_reg + 1, so base-1 is exactly the fn_reg slot.
+        Stack_[base - 1] = result;
+        // StackTop_ is unchanged — no frame was pushed, so nothing to clean up.
+        return;
     }
     diagnostic::emit("Attempting call on non-function value", diagnostic::Severity::FATAL);
 }
 
 Value VM::callNative(ObjNative* nat, int argc, int base)
 {
-    // Arguments are at stack_[base+1 .. base+argc]
-    Value* args = &Stack_[base + 1];
+    // base already points at arg 0 (= frame().base + fn_reg + 1)
+    Value* args = &Stack_[base]; // ← was base + 1
     return nat->fn(argc, args);
 }
 
@@ -561,20 +505,17 @@ void VM::returnFromCall(int ret_reg, int n_ret)
     if (FramesTop_ == 0)
         return;
 
-    CallFrame returning = Frames_.back();
+    CallFrame returning = Frames_[FramesTop_ - 1];
     --FramesTop_;
     closeUpvalues(returning.base);
     Value ret = (n_ret > 0) ? Stack_[returning.base + ret_reg] : Value::nil();
+    Stack_[returning.base - 1] = ret; // write return value into closure slot (fn_reg in caller)
+
     if (FramesTop_ > 0) {
-        // Find where the callee was in the caller's register file.
-        // The call instruction placed the function at frame.base + func_reg.
-        // After return, result lives in that same slot.
-        // We stored base = frame.base + func_reg, so stack_[base] gets result.
         Stack_[returning.base] = ret;
-        // Trim stack to just past the caller's register window
-        StackTop_ = returning.base + Frames_.back().closure->function->chunk->localCount + 1;
+        // Use the CALLER's localCount (Frames_[FramesTop_ - 1]), not returning's
+        StackTop_ = (returning.base - 1) + Frames_[FramesTop_ - 1].closure->function->chunk->localCount + 1;
     } else {
-        // Returning from the top-level script
         Stack_[0] = ret;
         StackTop_ = 1;
     }
@@ -584,5 +525,40 @@ typename VM::CallFrame& VM::frame() { return Frames_[FramesTop_ - 1]; }
 typename VM::CallFrame const& VM::frame() const { return Frames_[FramesTop_ - 1]; }
 Chunk* VM::chunk() { return frame().closure->function->chunk; }
 Value& VM::reg(int r) { return Stack_[frame().base + r]; }
+
+void VM::openStdlib()
+{
+    registerNative("len", [](int argc, Value* argv) -> Value { return nativeLen(argc, argv); }, -1);
+    registerNative("append", [](int argc, Value* argv) -> Value { return nativeAppend(argc, argv); }, -1);
+    registerNative("pop", [](int argc, Value* argv) -> Value { return nativePop(argc, argv); }, -1);
+    registerNative("slice", [](int argc, Value* argv) -> Value { return nativeSlice(argc, argv); }, -1);
+    registerNative("print", [](int argc, Value* argv) -> Value { return nativePrint(argc, argv); }, -1);
+    registerNative("input", [](int argc, Value* argv) -> Value { return nativeInput(argc, argv); }, -1);
+    registerNative("type", [](int argc, Value* argv) -> Value { return nativeType(argc, argv); }, -1);
+    registerNative("int", [](int argc, Value* argv) -> Value { return nativeInt(argc, argv); }, -1);
+    registerNative("float", [](int argc, Value* argv) -> Value { return nativeFloat(argc, argv); }, -1);
+    registerNative("str", [](int argc, Value* argv) -> Value { return nativeStr(argc, argv); }, -1);
+    registerNative("bool", [](int argc, Value* argv) -> Value { return nativeBool(argc, argv); }, -1);
+    registerNative("list", [](int argc, Value* argv) -> Value { return nativeList(argc, argv); }, -1);
+    registerNative("split", [](int argc, Value* argv) -> Value { return nativeSplit(argc, argv); }, -1);
+    registerNative("join", [](int argc, Value* argv) -> Value { return nativeJoin(argc, argv); }, -1);
+    registerNative("substr", [](int argc, Value* argv) -> Value { return nativeSubstr(argc, argv); }, -1);
+    registerNative("contains", [](int argc, Value* argv) -> Value { return nativeContains(argc, argv); }, -1);
+    registerNative("trim", [](int argc, Value* argv) -> Value { return nativeTrim(argc, argv); }, -1);
+    registerNative("floor", [](int argc, Value* argv) -> Value { return nativeFloor(argc, argv); }, -1);
+    registerNative("ceil", [](int argc, Value* argv) -> Value { return nativeCeil(argc, argv); }, -1);
+    registerNative("round", [](int argc, Value* argv) -> Value { return nativeRound(argc, argv); }, -1);
+    registerNative("abs", [](int argc, Value* argv) -> Value { return nativeAbs(argc, argv); }, -1);
+    registerNative("min", [](int argc, Value* argv) -> Value { return nativeMin(argc, argv); }, -1);
+    registerNative("max", [](int argc, Value* argv) -> Value { return nativeMax(argc, argv); }, -1);
+    registerNative("pow", [](int argc, Value* argv) -> Value { return nativePow(argc, argv); }, -1);
+    registerNative("sqrt", [](int argc, Value* argv) -> Value { return nativeSqrt(argc, argv); }, -1);
+    registerNative("assert", [](int argc, Value* argv) -> Value { return nativeAssert(argc, argv); }, -1);
+    registerNative("clock", [](int argc, Value* argv) -> Value { return nativeClock(argc, argv); }, -1);
+    registerNative("error", [](int argc, Value* argv) -> Value { return nativeError(argc, argv); }, -1);
+    registerNative("time", [](int argc, Value* argv) -> Value { return nativeTime(argc, argv); }, -1);
+
+    /// TODO: ...
+}
 
 } // namespace mylang::runtime

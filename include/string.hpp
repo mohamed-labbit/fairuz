@@ -6,7 +6,7 @@
 
 namespace mylang {
 
-inline Allocator string_allocator("String allocator");
+// inline Allocator getStringAllocator()("String allocator");
 
 class String {
     friend class StringRef;
@@ -41,7 +41,7 @@ public:
     ~String()
     {
         if (isHeap())
-            string_allocator.deallocateArray<char>(storage_.heap.ptr, storage_.heap.cap);
+            getStringAllocator().deallocateArray<char>(storage_.heap.ptr, storage_.heap.cap);
     }
 
     size_t length() const noexcept
@@ -89,11 +89,11 @@ public:
 
     String(String const& other);
 
-    String(size_t const s);
+    explicit String(size_t const s);
 
-    String(size_t const s, char const c);
+    explicit String(size_t const s, char const c);
 
-    String(char const* s, size_t n);
+    explicit String(char const* s, size_t n);
 
     String(char const* s);
 
@@ -133,7 +133,7 @@ private:
 
     static String* createEmpty()
     {
-        String* s = string_allocator.allocateObject<String>();
+        String* s = getStringAllocator().allocateObject<String>();
         return s;
     }
 
@@ -241,7 +241,7 @@ public:
             return StringRef(lhs);
 
         size_t const actual_len = lhs.len() + rhs.len();
-        String* result = string_allocator.allocateObject<String>(actual_len);
+        String* result = getStringAllocator().allocateObject<String>(actual_len);
 
         ::memcpy(result->ptr(), lhs.data(), lhs.len() * sizeof(char));
         ::memcpy(result->ptr() + lhs.len(), rhs.data(), rhs.len() * sizeof(char));

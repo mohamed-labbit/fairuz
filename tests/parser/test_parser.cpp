@@ -185,7 +185,7 @@ TEST_F(ParserTest, ParseCallExpressionWithOneArg)
     ASSERT_NE(callee_name, nullptr);
     EXPECT_EQ(callee_name->getValue(), "اطبع");
 
-    std::vector<Expr*> const& args = call_expr->getArgs();
+    auto const& args = call_expr->getArgs();
 
     EXPECT_FALSE(args.empty());
     /// TODO: check for each argument and their order
