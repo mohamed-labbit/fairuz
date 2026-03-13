@@ -9,6 +9,7 @@ namespace mylang {
 
 String::String(String const& other)
     : is_heap(other.isHeap())
+    , RefCount(1)
 {
     setLen(other.length());
 

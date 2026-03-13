@@ -170,15 +170,15 @@ public:
 
     // Return const references to avoid copies
     MY_NODISCARD StringRef const& lexeme() const;
-    
+
     MY_NODISCARD TokenType const& type() const;
-    
+
     MY_NODISCARD uint32_t const& line() const;
-    
+
     MY_NODISCARD uint32_t const& column() const;
-    
+
     MY_NODISCARD Location const& location() const;
-    
+
     MY_NODISCARD std::string const& filepath() const;
 
     MY_NODISCARD bool is(TokenType const tt) const;

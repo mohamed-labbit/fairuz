@@ -685,26 +685,86 @@ public:
     void setValue(Expr* v);
 };
 
-static BinaryExpr* makeBinary(Expr* l, Expr* r, BinaryOp const op) { return getTokenAllocator().allocateObject<BinaryExpr>(l, r, op); }
-static UnaryExpr* makeUnary(Expr* operand, UnaryOp const op) { return getTokenAllocator().allocateObject<UnaryExpr>(operand, op); }
-static LiteralExpr* makeLiteralNil() { return getTokenAllocator().allocateObject<LiteralExpr>(); }
-static LiteralExpr* makeLiteralInt(int value) { return getTokenAllocator().allocateObject<LiteralExpr>(static_cast<int64_t>(value), LiteralExpr::Type::INTEGER); }
-static LiteralExpr* makeLiteralInt(int64_t value) { return getTokenAllocator().allocateObject<LiteralExpr>(value, LiteralExpr::Type::INTEGER); }
-static LiteralExpr* makeLiteralFloat(double value) { return getTokenAllocator().allocateObject<LiteralExpr>(value, LiteralExpr::Type::FLOAT); }
-static LiteralExpr* makeLiteralString(StringRef value) { return getTokenAllocator().allocateObject<LiteralExpr>(value); }
-static LiteralExpr* makeLiteralBool(bool value) { return getTokenAllocator().allocateObject<LiteralExpr>(value); }
-static NameExpr* makeName(StringRef const str) { return getTokenAllocator().allocateObject<NameExpr>(str); }
-static ListExpr* makeList(Array<Expr*> elements) { return getTokenAllocator().allocateObject<ListExpr>(elements); }
-static CallExpr* makeCall(Expr* callee, ListExpr* args) { return getTokenAllocator().allocateObject<CallExpr>(callee, args); }
-static AssignmentExpr* makeAssignmentExpr(NameExpr* target, Expr* value, bool decl) { return getTokenAllocator().allocateObject<AssignmentExpr>(target, value, decl); }
-static BlockStmt* makeBlock(Array<Stmt*> stmts) { return getTokenAllocator().allocateObject<BlockStmt>(stmts); }
-static ExprStmt* makeExprStmt(Expr* expr) { return getTokenAllocator().allocateObject<ExprStmt>(expr); }
-static AssignmentStmt* makeAssignmentStmt(Expr* target, Expr* value, bool decl) { return getTokenAllocator().allocateObject<AssignmentStmt>(target, value, decl); }
-static IfStmt* makeIf(Expr* condition, BlockStmt* then_block, BlockStmt* else_block = nullptr) { return getTokenAllocator().allocateObject<IfStmt>(condition, then_block, else_block); }
-static WhileStmt* makeWhile(Expr* condition, BlockStmt* block) { return getTokenAllocator().allocateObject<WhileStmt>(condition, block); }
-static ForStmt* makeFor(NameExpr* target, Expr* iter, BlockStmt* block) { return getTokenAllocator().allocateObject<ForStmt>(target, iter, block); }
-static FunctionDef* makeFunction(NameExpr* name, ListExpr* params, BlockStmt* body) { return getTokenAllocator().allocateObject<FunctionDef>(name, params, body); }
-static ReturnStmt* makeReturn(Expr* value) { return getTokenAllocator().allocateObject<ReturnStmt>(value); }
+static BinaryExpr* makeBinary(Expr* l, Expr* r, BinaryOp const op)
+{
+    return getTokenAllocator().allocateObject<BinaryExpr>(l, r, op);
+}
+static UnaryExpr* makeUnary(Expr* operand, UnaryOp const op)
+{
+    return getTokenAllocator().allocateObject<UnaryExpr>(operand, op);
+}
+static LiteralExpr* makeLiteralNil()
+{
+    return getTokenAllocator().allocateObject<LiteralExpr>();
+}
+static LiteralExpr* makeLiteralInt(int value)
+{
+    return getTokenAllocator().allocateObject<LiteralExpr>(static_cast<int64_t>(value), LiteralExpr::Type::INTEGER);
+}
+static LiteralExpr* makeLiteralInt(int64_t value)
+{
+    return getTokenAllocator().allocateObject<LiteralExpr>(value, LiteralExpr::Type::INTEGER);
+}
+static LiteralExpr* makeLiteralFloat(double value)
+{
+    return getTokenAllocator().allocateObject<LiteralExpr>(value, LiteralExpr::Type::FLOAT);
+}
+static LiteralExpr* makeLiteralString(StringRef value)
+{
+    return getTokenAllocator().allocateObject<LiteralExpr>(value);
+}
+static LiteralExpr* makeLiteralBool(bool value)
+{
+    return getTokenAllocator().allocateObject<LiteralExpr>(value);
+}
+static NameExpr* makeName(StringRef const str)
+{
+    return getTokenAllocator().allocateObject<NameExpr>(str);
+}
+static ListExpr* makeList(Array<Expr*> elements)
+{
+    return getTokenAllocator().allocateObject<ListExpr>(elements);
+}
+static CallExpr* makeCall(Expr* callee, ListExpr* args)
+{
+    return getTokenAllocator().allocateObject<CallExpr>(callee, args);
+}
+static AssignmentExpr* makeAssignmentExpr(NameExpr* target, Expr* value, bool decl)
+{
+    return getTokenAllocator().allocateObject<AssignmentExpr>(target, value, decl);
+}
+static BlockStmt* makeBlock(Array<Stmt*> stmts)
+{
+    return getTokenAllocator().allocateObject<BlockStmt>(stmts);
+}
+static ExprStmt* makeExprStmt(Expr* expr)
+{
+    return getTokenAllocator().allocateObject<ExprStmt>(expr);
+}
+static AssignmentStmt* makeAssignmentStmt(Expr* target, Expr* value, bool decl)
+{
+    return getTokenAllocator().allocateObject<AssignmentStmt>(target, value, decl);
+}
+static IfStmt* makeIf(Expr* condition, BlockStmt* then_block, BlockStmt* else_block = nullptr)
+{
+    return getTokenAllocator().allocateObject<IfStmt>(condition, then_block, else_block);
+}
+static WhileStmt* makeWhile(Expr* condition, BlockStmt* block)
+{
+    return getTokenAllocator().allocateObject<WhileStmt>(condition, block);
+}
+static ForStmt* makeFor(NameExpr* target, Expr* iter, BlockStmt* block)
+{
+    return getTokenAllocator().allocateObject<ForStmt>(target, iter, block);
+}
+static FunctionDef* makeFunction(NameExpr* name, ListExpr* params, BlockStmt* body)
+{
+    return getTokenAllocator().allocateObject<FunctionDef>(name, params, body);
+}
+static ReturnStmt* makeReturn(Expr* value)
+{
+    return getTokenAllocator().allocateObject<ReturnStmt>(value);
+}
 
 }
 

@@ -63,6 +63,22 @@ struct CompilerState {
     }
 };
 
+struct RegMark {
+    CompilerState* state;
+    uint8_t mark;
+
+    explicit RegMark(CompilerState* s)
+        : state(s)
+        , mark(s->nextReg)
+    {
+    }
+
+    ~RegMark()
+    {
+        state->freeRegsTo(mark);
+    }
+};
+
 class Compiler {
 public:
     Compiler() = default;

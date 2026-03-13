@@ -1,4 +1,5 @@
 #include "../../include/runtime/compiler.hpp"
+#include <unordered_map>
 
 namespace mylang::runtime {
 
@@ -28,9 +29,11 @@ Chunk* Compiler::compile(Array<Stmt*> const& stmts)
         uint32_t line = stmts[0] ? stmts[0]->getLine() : 0;
         emit(make_ABC(static_cast<uint8_t>(OpCode::RETURN_NIL), 0, 0, 0), line);
     }
+
     top_chunk->localCount = state.maxReg;
     top_chunk->upvalueCount = static_cast<int>(state.upvalues.size());
     Current_ = nullptr;
+
     return top_chunk;
 }
 
@@ -40,15 +43,33 @@ void Compiler::compileStmt(Stmt const* s)
         return;
 
     switch (s->getKind()) {
-    case Stmt::Kind::BLOCK: compileBlock(static_cast<BlockStmt const*>(s)); break;
-    case Stmt::Kind::EXPR: compileExprStmt(static_cast<ExprStmt const*>(s)); break;
-    case Stmt::Kind::ASSIGNMENT: compileAssignmentStmt(static_cast<AssignmentStmt const*>(s)); break;
-    case Stmt::Kind::IF: compileIf(static_cast<IfStmt const*>(s)); break;
-    case Stmt::Kind::WHILE: compileWhile(static_cast<WhileStmt const*>(s)); break;
-    case Stmt::Kind::FUNC: compileFunctionDef(static_cast<FunctionDef const*>(s)); break;
-    case Stmt::Kind::RETURN: compileReturn(static_cast<ReturnStmt const*>(s)); break;
-    case Stmt::Kind::FOR: diagnostic::emit("Not implemented yet."); break;
-    case Stmt::Kind::INVALID: diagnostic::emit("Invalid statement node."); break;
+    case Stmt::Kind::BLOCK:
+        compileBlock(static_cast<BlockStmt const*>(s));
+        break;
+    case Stmt::Kind::EXPR:
+        compileExprStmt(static_cast<ExprStmt const*>(s));
+        break;
+    case Stmt::Kind::ASSIGNMENT:
+        compileAssignmentStmt(static_cast<AssignmentStmt const*>(s));
+        break;
+    case Stmt::Kind::IF:
+        compileIf(static_cast<IfStmt const*>(s));
+        break;
+    case Stmt::Kind::WHILE:
+        compileWhile(static_cast<WhileStmt const*>(s));
+        break;
+    case Stmt::Kind::FUNC:
+        compileFunctionDef(static_cast<FunctionDef const*>(s));
+        break;
+    case Stmt::Kind::RETURN:
+        compileReturn(static_cast<ReturnStmt const*>(s));
+        break;
+    case Stmt::Kind::FOR:
+        diagnostic::emit("Not implemented yet.");
+        break;
+    case Stmt::Kind::INVALID:
+        diagnostic::emit("Invalid statement node.");
+        break;
     }
 }
 
@@ -64,9 +85,8 @@ void Compiler::compileBlock(BlockStmt const* s)
 
 void Compiler::compileExprStmt(ExprStmt const* s)
 {
-    uint8_t mark = Current_->nextReg;
+    RegMark mark(Current_);
     compileExpr(s->getExpr());
-    Current_->freeRegsTo(mark);
 }
 
 void Compiler::compileAssignmentStmt(AssignmentStmt const* s)
@@ -81,23 +101,22 @@ void Compiler::compileAssignmentStmt(AssignmentStmt const* s)
         declareLocal(name->getValue(), reg);
     } else {
         VarInfo vi = resolveName(name->getValue());
+
         switch (vi.kind) {
-        case VarInfo::Kind::LOCAL: compileExpr(s->getValue(), &vi.index); break;
+        case VarInfo::Kind::LOCAL:
+            compileExpr(s->getValue(), &vi.index);
+            break;
         case VarInfo::Kind::UPVALUE: {
-            uint8_t mark = Current_->nextReg;
+            RegMark mark(Current_);
             uint8_t src = compileExpr(s->getValue());
             emit(make_ABC(static_cast<uint8_t>(OpCode::SET_UPVALUE), src, vi.index, 0), line);
-            Current_->freeRegsTo(mark);
-            break;
-        }
+        } break;
         case VarInfo::Kind::GLOBAL: {
-            uint8_t mark = Current_->nextReg;
+            RegMark mark(Current_);
             uint8_t src = compileExpr(s->getValue());
             uint16_t kidx = internString(name->getValue(), line);
             emit(make_ABx(static_cast<uint8_t>(OpCode::STORE_GLOBAL), src, kidx), line);
-            Current_->freeRegsTo(mark);
-            break;
-        }
+        } break;
         }
     }
 }
@@ -110,35 +129,28 @@ void Compiler::compileIf(IfStmt const* s)
     uint32_t line = s ? s->getLine() : 0;
     bool const incoming_dead = Current_->isDead_;
 
-    std::optional<Value> folded_cond;
-    Expr const* cond_expr = s->getCondition();
-    if (cond_expr) {
-        switch (cond_expr->getKind()) {
-        case Expr::Kind::LITERAL: folded_cond = constValue(cond_expr); break;
-        case Expr::Kind::UNARY: folded_cond = tryFoldUnary(static_cast<UnaryExpr const*>(cond_expr)); break;
-        case Expr::Kind::BINARY: folded_cond = tryFoldBinary(static_cast<BinaryExpr const*>(cond_expr)); break;
-        default: break;
-        }
-    }
+    auto folded_cond = tryFoldExpr(s->getCondition());
 
     if (folded_cond) {
         if (folded_cond->isTruthy()) {
             compileStmt(s->getThenBlock());
             return;
         }
+
         if (BlockStmt const* else_block = s->getElseBlock()) {
             compileStmt(else_block);
             return;
         }
+
         Current_->isDead_ = incoming_dead;
         return;
     }
 
-    uint8_t mark = Current_->nextReg;
+    RegMark mark(Current_);
     uint8_t cond = compileExpr(s->getCondition());
     uint32_t jump_false = emitJump(OpCode::JUMP_IF_FALSE, cond, line);
-    Current_->freeRegsTo(mark);
     compileStmt(s->getThenBlock());
+
     if (BlockStmt const* else_block = s->getElseBlock()) {
         uint32_t jump_end = emitJump(OpCode::JUMP, 0, line);
         patchJump(jump_false);
@@ -158,16 +170,7 @@ void Compiler::compileWhile(WhileStmt const* s)
     uint32_t line = s ? s->getLine() : 0;
     bool const incoming_dead = Current_->isDead_;
 
-    std::optional<Value> folded_cond;
-    Expr const* cond_expr = s->getCondition();
-    if (cond_expr) {
-        switch (cond_expr->getKind()) {
-        case Expr::Kind::LITERAL: folded_cond = constValue(cond_expr); break;
-        case Expr::Kind::UNARY: folded_cond = tryFoldUnary(static_cast<UnaryExpr const*>(cond_expr)); break;
-        case Expr::Kind::BINARY: folded_cond = tryFoldBinary(static_cast<BinaryExpr const*>(cond_expr)); break;
-        default: break;
-        }
-    }
+    auto folded_cond = tryFoldExpr(s->getCondition());
 
     if (folded_cond) {
         if (!folded_cond->isTruthy()) {
@@ -187,10 +190,9 @@ void Compiler::compileWhile(WhileStmt const* s)
 
     uint32_t loop_start = currentOffset();
     pushLoop(loop_start);
-    uint8_t mark = Current_->nextReg;
+    RegMark mark(Current_);
     uint8_t cond = compileExpr(s->getCondition());
     uint32_t exit_jump = emitJump(OpCode::JUMP_IF_FALSE, cond, line);
-    Current_->freeRegsTo(mark);
     compileStmt(s->getBlock());
     uint32_t offset = loop_start - currentOffset() - 1;
     emit(make_AsBx(static_cast<uint8_t>(OpCode::LOOP), 0, offset), line);
@@ -202,6 +204,7 @@ void Compiler::compileWhile(WhileStmt const* s)
 void Compiler::compileFunctionDef(FunctionDef const* f)
 {
     uint32_t line = f ? f->getLine() : 0;
+
     NameExpr* name = f->getName();
     if (!name) {
         diagnostic::emit("Function name is null", diagnostic::Severity::FATAL);
@@ -255,10 +258,7 @@ void Compiler::compileFunctionDef(FunctionDef const* f)
 
     // descriptors must immediately follow CLOSURE in the same chunk
     for (auto& uv : fn_state.upvalues)
-        emit(make_ABC(static_cast<uint8_t>(OpCode::MOVE),
-                 static_cast<uint8_t>(uv.isLocal ? 1 : 0),
-                 uv.index, 0),
-            line);
+        emit(make_ABC(static_cast<uint8_t>(OpCode::MOVE), static_cast<uint8_t>(uv.isLocal ? 1 : 0), uv.index, 0), line);
 
     declareLocal(name->getValue(), dst);
 }
@@ -276,17 +276,15 @@ void Compiler::compileReturn(ReturnStmt const* s)
     Expr const* value = s->getValue();
 
     if (value->getKind() == Expr::Kind::CALL) {
-        uint8_t mark = Current_->nextReg;
+        RegMark mark(Current_);
         compileCall(static_cast<CallExpr const*>(value), nullptr, true);
-        Current_->freeRegsTo(mark);
         Current_->isDead_ = true;
         return;
     }
 
-    uint8_t mark = Current_->nextReg;
+    RegMark mark(Current_);
     uint8_t src = compileExpr(value);
     emit(make_ABC(static_cast<uint8_t>(OpCode::RETURN), src, 1, 0), line);
-    Current_->freeRegsTo(mark);
     Current_->isDead_ = true;
 }
 
@@ -296,14 +294,23 @@ uint8_t Compiler::compileExpr(Expr const* e, uint8_t* dst)
         return errorReg();
 
     switch (e->getKind()) {
-    case Expr::Kind::LITERAL: return compileLiteral(static_cast<LiteralExpr const*>(e), dst);
-    case Expr::Kind::NAME: return compileName(static_cast<NameExpr const*>(e), dst);
-    case Expr::Kind::UNARY: return compileUnary(static_cast<UnaryExpr const*>(e), dst);
-    case Expr::Kind::BINARY: return compileBinary(static_cast<BinaryExpr const*>(e), dst);
-    case Expr::Kind::ASSIGNMENT: return compileAssignmentExpr(static_cast<AssignmentExpr const*>(e), dst);
-    case Expr::Kind::CALL: return compileCall(static_cast<CallExpr const*>(e), dst);
-    case Expr::Kind::LIST: return compileList(static_cast<ListExpr const*>(e), dst);
-    case Expr::Kind::INVALID: diagnostic::emit("Invalid expression node");
+    case Expr::Kind::LITERAL:
+        return compileLiteral(static_cast<LiteralExpr const*>(e), dst);
+    case Expr::Kind::NAME:
+        return compileName(static_cast<NameExpr const*>(e), dst);
+    case Expr::Kind::UNARY:
+        return compileUnary(static_cast<UnaryExpr const*>(e), dst);
+    case Expr::Kind::BINARY:
+        return compileBinary(static_cast<BinaryExpr const*>(e), dst);
+    case Expr::Kind::ASSIGNMENT:
+        return compileAssignmentExpr(static_cast<AssignmentExpr const*>(e), dst);
+    case Expr::Kind::CALL:
+        return compileCall(static_cast<CallExpr const*>(e), dst);
+    case Expr::Kind::LIST:
+        return compileList(static_cast<ListExpr const*>(e), dst);
+    case Expr::Kind::INVALID:
+        diagnostic::emit("Invalid expression node");
+        break;
     }
 
     return errorReg();
@@ -314,41 +321,27 @@ uint8_t Compiler::compileLiteral(LiteralExpr const* e, uint8_t* dst)
     uint32_t line = e ? e->getLine() : 0;
     uint8_t dst_reg = ensureReg(dst);
 
-    if (e->isInteger()) {
-        int64_t int_v = e->getInt();
-        emitLoadValue(dst_reg, Value::integer(int_v), line);
-        return dst_reg;
-    }
+    Value v;
 
-    if (e->isDecimal()) {
-        double v = e->getFloat();
-        int64_t int_v;
-        if (util::isIntegerValue(v, int_v))
-            emitLoadValue(dst_reg, Value::integer(int_v), line);
-        else
-            emitLoadValue(dst_reg, Value::real(v), line);
-        return dst_reg;
-    }
-
-    if (e->isString()) {
+    if (e->isInteger())
+        v = Value::integer(e->getInt());
+    else if (e->isDecimal())
+        v = Value::real(e->getFloat());
+    else if (e->isBoolean())
+        v = Value::boolean(e->getBool());
+    else if (e->isNil())
+        v = Value::nil();
+    else if (e->isString()) {
         uint16_t kidx = internString(e->getStr(), line);
         emit(make_ABx(static_cast<uint8_t>(OpCode::LOAD_CONST), dst_reg, kidx), line);
         return dst_reg;
+    } else {
+        diagnostic::emit("Unknown literal type");
+        return errorReg();
     }
 
-    if (e->isBoolean()) {
-        OpCode op = e->getBool() ? OpCode::LOAD_TRUE : OpCode::LOAD_FALSE;
-        emit(make_ABC(static_cast<uint8_t>(op), dst_reg, 0, 0), line);
-        return dst_reg;
-    }
-
-    if (e->isNil()) {
-        emit(make_ABC(static_cast<uint8_t>(OpCode::LOAD_NIL), dst_reg, dst_reg, 1), line);
-        return dst_reg;
-    }
-
-    diagnostic::emit("Unknown literal type", diagnostic::Severity::FATAL);
-    return errorReg(); // just to satisfy compiler warnings
+    emitLoadValue(dst_reg, v, line);
+    return dst_reg;
 }
 
 uint8_t Compiler::compileName(NameExpr const* e, uint8_t* dst)
@@ -360,6 +353,7 @@ uint8_t Compiler::compileName(NameExpr const* e, uint8_t* dst)
     case VarInfo::Kind::LOCAL:
         if (dst && *dst != vi.index)
             emit(make_ABC(static_cast<uint8_t>(OpCode::MOVE), *dst, vi.index, 0), line);
+
         return dst ? *dst : vi.index;
     case VarInfo::Kind::UPVALUE: {
         uint8_t dst_reg = ensureReg(dst);
@@ -387,22 +381,28 @@ uint8_t Compiler::compileUnary(UnaryExpr const* e, uint8_t* dst)
         return dst_reg;
     }
 
-    uint8_t mark = Current_->nextReg;
+    RegMark mark(Current_);
     uint8_t src = compileExpr(e->getOperand());
     uint8_t dst_reg = ensureReg(dst);
 
     OpCode op;
 
     switch (e->getOperator()) {
-    case UnaryOp::OP_NOT: op = OpCode::OP_NOT; break;
-    case UnaryOp::OP_BITNOT: op = OpCode::OP_BITNOT; break;
-    case UnaryOp::OP_NEG: op = OpCode::OP_NEG; break;
+    case UnaryOp::OP_NOT:
+        op = OpCode::OP_NOT;
+        break;
+    case UnaryOp::OP_BITNOT:
+        op = OpCode::OP_BITNOT;
+        break;
+    case UnaryOp::OP_NEG:
+        op = OpCode::OP_NEG;
+        break;
     // case UnaryOp::OP_PLUS: op = OpCode::OP_PLUS; break;
-    default: diagnostic::emit("Unknown unary operator", diagnostic::Severity::FATAL);
+    default:
+        diagnostic::emit("Unknown unary operator", diagnostic::Severity::FATAL);
     }
 
     emit(make_ABC(static_cast<uint8_t>(op), dst_reg, src, 0), line);
-    Current_->freeRegsTo(mark);
     return dst_reg;
 }
 
@@ -420,56 +420,91 @@ uint8_t Compiler::compileBinary(BinaryExpr const* e, uint8_t* dst)
 
     if (op == BinaryOp::OP_AND) {
         uint8_t dst_reg = ensureReg(dst);
-        uint8_t mark = Current_->nextReg;
+        RegMark mark(Current_);
         uint8_t left = compileExpr(e->getLeft(), &dst_reg);
+
         if (left != dst_reg)
             emit(make_ABC(static_cast<uint8_t>(OpCode::MOVE), dst_reg, left, 0), line);
+
         uint32_t skip = emitJump(OpCode::JUMP_IF_FALSE, dst_reg, line);
-        Current_->freeRegsTo(mark);
         uint8_t R = compileExpr(e->getRight(), &dst_reg);
+
         if (R != dst_reg)
             emit(make_ABC(static_cast<uint8_t>(OpCode::MOVE), dst_reg, R, 0), line);
+
         patchJump(skip);
         return dst_reg;
     }
 
     if (op == BinaryOp::OP_OR) {
         uint8_t dst_reg = ensureReg(dst);
-        uint8_t mark = Current_->nextReg;
+        RegMark mark(Current_);
         uint8_t left = compileExpr(e->getLeft(), &dst_reg);
+
         if (left != dst_reg)
             emit(make_ABC(static_cast<uint8_t>(OpCode::MOVE), dst_reg, left, 0), line);
+
         uint32_t skip = emitJump(OpCode::JUMP_IF_TRUE, dst_reg, line);
-        Current_->freeRegsTo(mark);
         uint8_t R = compileExpr(e->getRight(), &dst_reg);
+
         if (R != dst_reg)
             emit(make_ABC(static_cast<uint8_t>(OpCode::MOVE), dst_reg, R, 0), line);
+
         patchJump(skip);
         return dst_reg;
     }
 
-    uint8_t mark = Current_->nextReg;
+    RegMark mark(Current_);
     uint8_t L = compileExpr(e->getLeft());
     uint8_t R = compileExpr(e->getRight());
     uint8_t dst_reg = ensureReg(dst);
     uint8_t ic = currentChunk()->allocIcSlot();
 
     OpCode bc_op;
+
     switch (op) {
-    case BinaryOp::OP_ADD: bc_op = OpCode::OP_ADD; break;
-    case BinaryOp::OP_SUB: bc_op = OpCode::OP_SUB; break;
-    case BinaryOp::OP_MUL: bc_op = OpCode::OP_MUL; break;
-    case BinaryOp::OP_DIV: bc_op = OpCode::OP_DIV; break;
-    case BinaryOp::OP_MOD: bc_op = OpCode::OP_MOD; break;
-    case BinaryOp::OP_EQ: bc_op = OpCode::OP_EQ; break;
-    case BinaryOp::OP_NEQ: bc_op = OpCode::OP_NEQ; break;
-    case BinaryOp::OP_LT: bc_op = OpCode::OP_LT; break;
-    case BinaryOp::OP_LTE: bc_op = OpCode::OP_LTE; break;
-    case BinaryOp::OP_BITAND: bc_op = OpCode::OP_BITAND; break;
-    case BinaryOp::OP_BITOR: bc_op = OpCode::OP_BITOR; break;
-    case BinaryOp::OP_BITXOR: bc_op = OpCode::OP_BITXOR; break;
-    case BinaryOp::OP_LSHIFT: bc_op = OpCode::OP_LSHIFT; break;
-    case BinaryOp::OP_RSHIFT: bc_op = OpCode::OP_RSHIFT; break;
+    case BinaryOp::OP_ADD: //
+        bc_op = OpCode::OP_ADD;
+        break;
+    case BinaryOp::OP_SUB: //
+        bc_op = OpCode::OP_SUB;
+        break;
+    case BinaryOp::OP_MUL: //
+        bc_op = OpCode::OP_MUL;
+        break;
+    case BinaryOp::OP_DIV:
+        bc_op = OpCode::OP_DIV;
+        break;
+    case BinaryOp::OP_MOD:
+        bc_op = OpCode::OP_MOD;
+        break;
+    case BinaryOp::OP_EQ:
+        bc_op = OpCode::OP_EQ;
+        break;
+    case BinaryOp::OP_NEQ:
+        bc_op = OpCode::OP_NEQ;
+        break;
+    case BinaryOp::OP_LT:
+        bc_op = OpCode::OP_LT;
+        break;
+    case BinaryOp::OP_LTE:
+        bc_op = OpCode::OP_LTE;
+        break;
+    case BinaryOp::OP_BITAND:
+        bc_op = OpCode::OP_BITAND;
+        break;
+    case BinaryOp::OP_BITOR:
+        bc_op = OpCode::OP_BITOR;
+        break;
+    case BinaryOp::OP_BITXOR:
+        bc_op = OpCode::OP_BITXOR;
+        break;
+    case BinaryOp::OP_LSHIFT:
+        bc_op = OpCode::OP_LSHIFT;
+        break;
+    case BinaryOp::OP_RSHIFT:
+        bc_op = OpCode::OP_RSHIFT;
+        break;
     case BinaryOp::OP_GT:
         std::swap(L, R);
         bc_op = OpCode::OP_LT;
@@ -484,7 +519,7 @@ uint8_t Compiler::compileBinary(BinaryExpr const* e, uint8_t* dst)
 
     emit(make_ABC(static_cast<uint8_t>(bc_op), dst_reg, L, R), line);
     emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), ic, 0, 0), line);
-    Current_->freeRegsTo(mark);
+
     return dst_reg;
 }
 
@@ -506,25 +541,23 @@ uint8_t Compiler::compileAssignmentExpr(AssignmentExpr const* e, uint8_t* dst)
     }
 
     case VarInfo::Kind::UPVALUE: {
-        uint8_t mark = Current_->nextReg;
+        RegMark mark(Current_);
         result = compileExpr(e->getValue());
         emit(make_ABC(static_cast<uint8_t>(OpCode::SET_UPVALUE), result, vi.index, 0), line);
         uint8_t dst_reg = ensureReg(dst);
         if (dst_reg != result)
             emit(make_ABC(static_cast<uint8_t>(OpCode::MOVE), dst_reg, result, 0), line);
-        Current_->freeRegsTo(mark);
         return dst_reg;
     }
 
     case VarInfo::Kind::GLOBAL: {
-        uint8_t mark = Current_->nextReg;
+        RegMark mark(Current_);
         result = compileExpr(e->getValue());
         uint16_t kidx = internString(name, line);
         emit(make_ABx(static_cast<uint8_t>(OpCode::STORE_GLOBAL), result, kidx), line);
         uint8_t dst_reg = ensureReg(dst);
         if (dst_reg != result)
             emit(make_ABC(static_cast<uint8_t>(OpCode::MOVE), dst_reg, result, 0), line);
-        Current_->freeRegsTo(mark);
         return dst_reg;
     }
     }
@@ -571,12 +604,12 @@ uint8_t Compiler::compileList(ListExpr const* e, uint8_t* dst)
     uint8_t cap = static_cast<uint8_t>(std::min<size_t>(elems.size(), 0xFF));
     emit(make_ABC(static_cast<uint8_t>(OpCode::LIST_NEW), dst_reg, cap, 0), line);
 
-    uint8_t mark = Current_->nextReg; // <-- moved here, AFTER dst_reg is allocated
+    RegMark mark(Current_);
     for (Expr const* elem : elems) {
         uint8_t val = compileExpr(elem);
         emit(make_ABC(static_cast<uint8_t>(OpCode::LIST_APPEND), dst_reg, val, 0), line);
-        Current_->freeRegsTo(mark);
     }
+
     return dst_reg;
 }
 
@@ -681,18 +714,23 @@ void Compiler::popLoop(uint32_t const loop_exit, uint32_t const continue_target,
 {
     assert(!Current_->loopStack.empty());
     auto& ctx = Current_->loopStack.back();
+
     for (auto idx : ctx.breakPatches)
         patchJumpTo(idx, loop_exit);
+
     for (auto idx : ctx.continuePatches)
         patchJumpTo(idx, continue_target);
+
     Current_->loopStack.pop();
 }
 
 void Compiler::patchJumpTo(uint32_t const instr_idx, uint32_t const target)
 {
     int32_t offset = static_cast<int32_t>(target) - static_cast<int32_t>(instr_idx) - 1;
+
     if (offset > JUMP_OFFSET || offset < -JUMP_OFFSET)
         diagnostic::emit("Jump offset overflow in loop", diagnostic::Severity::FATAL);
+
     uint8_t op = instr_op(currentChunk()->code[instr_idx]);
     uint8_t A = instr_A(currentChunk()->code[instr_idx]);
     currentChunk()->code[instr_idx] = make_AsBx(op, A, offset);
@@ -700,16 +738,16 @@ void Compiler::patchJumpTo(uint32_t const instr_idx, uint32_t const target)
 
 void Compiler::emitLoadValue(uint8_t const dst, Value const v, uint32_t const line)
 {
-    if (v.isNil()) {
+    if (v.isNil())
         emit(make_ABC(static_cast<uint8_t>(OpCode::LOAD_NIL), dst, dst, 1), line);
-    } else if (v.isBoolean()) {
+    else if (v.isBoolean()) {
         OpCode op = v.asBoolean() ? OpCode::LOAD_TRUE : OpCode::LOAD_FALSE;
         emit(make_ABC(static_cast<uint8_t>(op), dst, 0, 0), line);
     } else if (v.isInteger()) {
         int64_t int_v = v.asInteger();
-        if (int_v >= -JUMP_OFFSET && int_v <= JUMP_OFFSET) {
+        if (int_v >= -JUMP_OFFSET && int_v <= JUMP_OFFSET)
             emit(make_ABx(static_cast<uint8_t>(OpCode::LOAD_INT), dst, static_cast<uint16_t>(int_v + JUMP_OFFSET)), line);
-        } else {
+        else {
             uint16_t kidx = currentChunk()->addConstant(v);
             emit(make_ABx(static_cast<uint8_t>(OpCode::LOAD_CONST), dst, kidx), line);
         }
@@ -773,6 +811,7 @@ uint32_t Compiler::internString(StringRef const& str, uint32_t const line)
     StringCache_[str] = idx;
     if (idx == MAX_CONSTANTS)
         diagnostic::emit("Too many string constants");
+
     return idx;
 }
 

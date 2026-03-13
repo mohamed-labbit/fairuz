@@ -184,55 +184,25 @@ public:
         return arr[0];
     }
 
-    uint32_t size() const noexcept
-    {
-        return Size_;
-    }
+    uint32_t size() const noexcept { return Size_; }
 
-    uint32_t cap() const noexcept
-    {
-        return Cap_;
-    }
+    uint32_t cap() const noexcept { return Cap_; }
 
-    T* data() noexcept
-    {
-        return arr;
-    }
+    T* data() noexcept { return arr; }
 
-    T const* data() const noexcept
-    {
-        return arr;
-    }
+    T const* data() const noexcept { return arr; }
 
-    bool empty() const noexcept
-    {
-        return Size_ == 0;
-    }
+    bool empty() const noexcept { return Size_ == 0; }
 
-    bool full() const noexcept
-    {
-        return Size_ == Cap_;
-    }
+    bool full() const noexcept { return Size_ == Cap_; }
 
-    T* begin() noexcept
-    {
-        return arr;
-    }
+    T* begin() noexcept { return arr; }
 
-    T* end() noexcept
-    {
-        return arr + Size_;
-    }
+    T* end() noexcept { return arr + Size_; }
 
-    T const* begin() const noexcept
-    {
-        return arr;
-    }
+    T const* begin() const noexcept { return arr; }
 
-    T const* end() const noexcept
-    {
-        return arr + Size_;
-    }
+    T const* end() const noexcept { return arr + Size_; }
 };
 
 template<typename T>

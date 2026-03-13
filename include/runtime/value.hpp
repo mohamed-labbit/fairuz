@@ -135,8 +135,15 @@ struct ObjList : ObjHeader {
     {
     }
 
-    void reserve(uint32_t const cap) { elements.reserve(cap); }
-    uint32_t size() const { return elements.size(); }
+    void reserve(uint32_t const cap)
+    {
+        elements.reserve(cap);
+    }
+
+    uint32_t size() const
+    {
+        return elements.size();
+    }
 };
 
 struct ObjFunction : ObjHeader {
@@ -194,13 +201,40 @@ struct ObjNative : ObjHeader {
     }
 };
 
-static ObjHeader* makeObject(ObjType t) { return getRuntimeAllocator().allocateObject<ObjHeader>(t); }
-static ObjString* makeObjectString(StringRef s) { return getRuntimeAllocator().allocateObject<ObjString>(s); }
-static ObjList* makeObjectList() { return getRuntimeAllocator().allocateObject<ObjList>(); }
-static ObjFunction* makeObjectFunction(Chunk* ch = nullptr) { return getRuntimeAllocator().allocateObject<ObjFunction>(ch); }
-static ObjUpvalue* makeObjectUpvalue(Value* slot) { return getRuntimeAllocator().allocateObject<ObjUpvalue>(slot); }
-static ObjClosure* makeObjectClosure(ObjFunction* fn) { return getRuntimeAllocator().allocateObject<ObjClosure>(fn); }
-static ObjNative* makeObjectNative(NativeFn f, ObjString* n, int a) { return getRuntimeAllocator().allocateObject<ObjNative>(f, n, a); }
+static ObjHeader* makeObject(ObjType t)
+{
+    return getRuntimeAllocator().allocateObject<ObjHeader>(t);
+}
+
+static ObjString* makeObjectString(StringRef s)
+{
+    return getRuntimeAllocator().allocateObject<ObjString>(s);
+}
+
+static ObjList* makeObjectList()
+{
+    return getRuntimeAllocator().allocateObject<ObjList>();
+}
+
+static ObjFunction* makeObjectFunction(Chunk* ch = nullptr)
+{
+    return getRuntimeAllocator().allocateObject<ObjFunction>(ch);
+}
+
+static ObjUpvalue* makeObjectUpvalue(Value* slot)
+{
+    return getRuntimeAllocator().allocateObject<ObjUpvalue>(slot);
+}
+
+static ObjClosure* makeObjectClosure(ObjFunction* fn)
+{
+    return getRuntimeAllocator().allocateObject<ObjClosure>(fn);
+}
+
+static ObjNative* makeObjectNative(NativeFn f, ObjString* n, int a)
+{
+    return getRuntimeAllocator().allocateObject<ObjNative>(f, n, a);
+}
 
 inline std::ostream& operator<<(std::ostream& os, Value v)
 {

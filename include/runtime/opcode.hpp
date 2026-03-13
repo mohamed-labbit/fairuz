@@ -14,22 +14,47 @@ static constexpr uint8_t REG_NONE = 0xFF;
 static constexpr uint16_t MAX_CONSTANTS = 0xFFFF;
 static constexpr uint8_t MAX_REGS = 250; // room for sentinel + scratch
 
-inline uint8_t instr_op(uint32_t const i) { return (i >> 24) & 0xFF; }
-inline uint8_t instr_A(uint32_t const i) { return (i >> 16) & 0xFF; }
-inline uint8_t instr_B(uint32_t const i) { return (i >> 8) & 0xFF; }
-inline uint8_t instr_C(uint32_t const i) { return i & 0xFF; }
-inline uint16_t instr_Bx(uint32_t const i) { return i & 0xFFFF; }
-inline int16_t instr_sBx(uint32_t const i) { return static_cast<int16_t>(i & 0xFFFF) - 32767; }
+inline uint8_t instr_op(uint32_t const i)
+{
+    return (i >> 24) & 0xFF;
+}
+
+inline uint8_t instr_A(uint32_t const i)
+{
+    return (i >> 16) & 0xFF;
+}
+
+inline uint8_t instr_B(uint32_t const i)
+{
+    return (i >> 8) & 0xFF;
+}
+
+inline uint8_t instr_C(uint32_t const i)
+{
+    return i & 0xFF;
+}
+
+inline uint16_t instr_Bx(uint32_t const i)
+{
+    return i & 0xFFFF;
+}
+
+inline int16_t instr_sBx(uint32_t const i)
+{
+    return static_cast<int16_t>(i & 0xFFFF) - 32767;
+}
 
 inline uint32_t make_ABC(uint8_t op, uint8_t A, uint8_t B, uint8_t C)
 {
     return (static_cast<uint32_t>(op) << 24) | (static_cast<uint32_t>(A) << 16)
         | (static_cast<uint32_t>(B) << 8) | static_cast<uint32_t>(C);
 }
+
 inline uint32_t make_ABx(uint8_t op, uint8_t A, uint16_t Bx)
 {
     return (static_cast<uint32_t>(op) << 24) | (static_cast<uint32_t>(A) << 16) | (static_cast<uint32_t>(Bx));
 }
+
 inline uint32_t make_AsBx(uint8_t op, uint8_t A, int64_t sBx)
 {
     uint16_t _sBx = static_cast<uint16_t>(sBx + JUMP_OFFSET);
@@ -129,13 +154,22 @@ enum class TypeTag : uint8_t {
     NATIVE = 1 << 7
 };
 
-inline bool hasTag(TypeTag mask, TypeTag t) { return (static_cast<uint8_t>(mask) & static_cast<uint8_t>(t)) != 0; }
-inline TypeTag operator|(TypeTag const a, TypeTag const b) { return static_cast<TypeTag>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b)); }
+inline bool hasTag(TypeTag mask, TypeTag t)
+{
+    return (static_cast<uint8_t>(mask) & static_cast<uint8_t>(t)) != 0;
+}
+
+inline TypeTag operator|(TypeTag const a, TypeTag const b)
+{
+    return static_cast<TypeTag>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
+}
+
 inline TypeTag& operator|=(TypeTag& a, TypeTag const b)
 {
     a = a | b;
     return a;
 }
+
 inline TypeTag valueTypeTag(Value const v)
 {
     if (v.isNil())
@@ -154,6 +188,7 @@ inline TypeTag valueTypeTag(Value const v)
         return TypeTag::CLOSURE;
     if (v.isNative())
         return TypeTag::NATIVE;
+
     return TypeTag::NONE;
 }
 
@@ -173,55 +208,104 @@ struct LineEntry {
 static StringRef opcode_name(OpCode op)
 {
     switch (op) {
-    case OpCode::LOAD_NIL: return "LOAD_NIL";
-    case OpCode::LOAD_TRUE: return "LOAD_TRUE";
-    case OpCode::LOAD_FALSE: return "LOAD_FALSE";
-    case OpCode::LOAD_CONST: return "LOAD_CONST";
-    case OpCode::LOAD_INT: return "LOAD_INT";
-    case OpCode::LOAD_GLOBAL: return "LOAD_GLOBAL";
-    case OpCode::STORE_GLOBAL: return "STORE_GLOBAL";
-    case OpCode::MOVE: return "MOVE";
-    case OpCode::GET_UPVALUE: return "GET_UPVALUE";
-    case OpCode::SET_UPVALUE: return "SET_UPVALUE";
-    case OpCode::CLOSE_UPVALUE: return "CLOSE_UPVALUE";
-    case OpCode::OP_ADD: return "OP_ADD";
-    case OpCode::OP_SUB: return "OP_SUB";
-    case OpCode::OP_MUL: return "OP_MUL";
-    case OpCode::OP_DIV: return "OP_DIV";
-    case OpCode::OP_MOD: return "OP_MOD";
-    case OpCode::OP_POW: return "OP_POW";
-    case OpCode::OP_NEG: return "OP_NEG";
-    case OpCode::OP_BITAND: return "OP_BITAND";
-    case OpCode::OP_BITOR: return "OP_BITOR";
-    case OpCode::OP_BITXOR: return "BITXOR";
-    case OpCode::OP_BITNOT: return "BITNOT";
-    case OpCode::OP_LSHIFT: return "OP_LSHIFT";
-    case OpCode::OP_RSHIFT: return "OP_RSHIFT";
-    case OpCode::OP_EQ: return "OP_EQ";
-    case OpCode::OP_NEQ: return "OP_NEQ";
-    case OpCode::OP_LT: return "OP_LT";
-    case OpCode::OP_LTE: return "OP_LE";
-    case OpCode::OP_NOT: return "OP_NOT";
-    case OpCode::CONCAT: return "CONCAT";
-    case OpCode::LIST_NEW: return "LIST_NEW";
-    case OpCode::LIST_APPEND: return "LIST_APPEND";
-    case OpCode::LIST_GET: return "LIST_GET";
-    case OpCode::LIST_SET: return "LIST_SET";
-    case OpCode::LIST_LEN: return "LIST_LEN";
-    case OpCode::JUMP: return "JUMP";
-    case OpCode::JUMP_IF_TRUE: return "JUMP_IF_TRUE";
-    case OpCode::JUMP_IF_FALSE: return "JUMP_IF_FALSE";
-    case OpCode::LOOP: return "LOOP";
-    case OpCode::FOR_PREP: return "FOR_PREP";
-    case OpCode::FOR_STEP: return "FOR_STEP";
-    case OpCode::CLOSURE: return "CLOSURE";
-    case OpCode::CALL: return "CALL";
-    case OpCode::CALL_TAIL: return "CALL_TAIL";
-    case OpCode::RETURN: return "RETURN";
-    case OpCode::RETURN_NIL: return "RETURN_NIL";
-    case OpCode::IC_CALL: return "IC_CALL";
-    case OpCode::NOP: return "NOP";
-    case OpCode::HALT: return "HALT";
+    case OpCode::LOAD_NIL:
+        return "LOAD_NIL";
+    case OpCode::LOAD_TRUE:
+        return "LOAD_TRUE";
+    case OpCode::LOAD_FALSE:
+        return "LOAD_FALSE";
+    case OpCode::LOAD_CONST:
+        return "LOAD_CONST";
+    case OpCode::LOAD_INT:
+        return "LOAD_INT";
+    case OpCode::LOAD_GLOBAL:
+        return "LOAD_GLOBAL";
+    case OpCode::STORE_GLOBAL:
+        return "STORE_GLOBAL";
+    case OpCode::MOVE:
+        return "MOVE";
+    case OpCode::GET_UPVALUE:
+        return "GET_UPVALUE";
+    case OpCode::SET_UPVALUE:
+        return "SET_UPVALUE";
+    case OpCode::CLOSE_UPVALUE:
+        return "CLOSE_UPVALUE";
+    case OpCode::OP_ADD:
+        return "OP_ADD";
+    case OpCode::OP_SUB:
+        return "OP_SUB";
+    case OpCode::OP_MUL:
+        return "OP_MUL";
+    case OpCode::OP_DIV:
+        return "OP_DIV";
+    case OpCode::OP_MOD:
+        return "OP_MOD";
+    case OpCode::OP_POW:
+        return "OP_POW";
+    case OpCode::OP_NEG:
+        return "OP_NEG";
+    case OpCode::OP_BITAND:
+        return "OP_BITAND";
+    case OpCode::OP_BITOR:
+        return "OP_BITOR";
+    case OpCode::OP_BITXOR:
+        return "BITXOR";
+    case OpCode::OP_BITNOT:
+        return "BITNOT";
+    case OpCode::OP_LSHIFT:
+        return "OP_LSHIFT";
+    case OpCode::OP_RSHIFT:
+        return "OP_RSHIFT";
+    case OpCode::OP_EQ:
+        return "OP_EQ";
+    case OpCode::OP_NEQ:
+        return "OP_NEQ";
+    case OpCode::OP_LT:
+        return "OP_LT";
+    case OpCode::OP_LTE:
+        return "OP_LE";
+    case OpCode::OP_NOT:
+        return "OP_NOT";
+    case OpCode::CONCAT:
+        return "CONCAT";
+    case OpCode::LIST_NEW:
+        return "LIST_NEW";
+    case OpCode::LIST_APPEND:
+        return "LIST_APPEND";
+    case OpCode::LIST_GET:
+        return "LIST_GET";
+    case OpCode::LIST_SET:
+        return "LIST_SET";
+    case OpCode::LIST_LEN:
+        return "LIST_LEN";
+    case OpCode::JUMP:
+        return "JUMP";
+    case OpCode::JUMP_IF_TRUE:
+        return "JUMP_IF_TRUE";
+    case OpCode::JUMP_IF_FALSE:
+        return "JUMP_IF_FALSE";
+    case OpCode::LOOP:
+        return "LOOP";
+    case OpCode::FOR_PREP:
+        return "FOR_PREP";
+    case OpCode::FOR_STEP:
+        return "FOR_STEP";
+    case OpCode::CLOSURE:
+        return "CLOSURE";
+    case OpCode::CALL:
+        return "CALL";
+    case OpCode::CALL_TAIL:
+        return "CALL_TAIL";
+    case OpCode::RETURN:
+        return "RETURN";
+    case OpCode::RETURN_NIL:
+        return "RETURN_NIL";
+    case OpCode::IC_CALL:
+        return "IC_CALL";
+    case OpCode::NOP:
+        return "NOP";
+    case OpCode::HALT:
+        return "HALT";
     default:
         return "???";
     }
@@ -292,7 +376,10 @@ private:
 };
 
 template<typename... Args>
-static Chunk* makeChunk(Args&&... args) { return getRuntimeAllocator().allocateObject<Chunk>(std::forward<Args>(args)...); }
+static Chunk* makeChunk(Args&&... args)
+{
+    return getRuntimeAllocator().allocateObject<Chunk>(std::forward<Args>(args)...);
+}
 
 }
 

@@ -278,20 +278,11 @@ public:
     {
     }
 
-    void print(Expr const* e)
-    {
-        printExpr(e, { "", true });
-    }
+    void print(Expr const* e) { printExpr(e, { "", true }); }
 
-    void print(Stmt const* s)
-    {
-        printStmt(s, { "", true });
-    }
+    void print(Stmt const* s) { printStmt(s, { "", true }); }
 
-    std::uint32_t getNodeCount() const
-    {
-        return NodeCount_;
-    }
+    std::uint32_t getNodeCount() const { return NodeCount_; }
 };
 
 } // ast

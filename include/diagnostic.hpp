@@ -36,8 +36,7 @@ public:
 
     [[noreturn]] constexpr void panic(std::string const& msg) { _panic(msg); }
 
-    void report(Severity const sev, std::int32_t const line, std::int32_t const col,
-        std::int32_t const len, std::string const& msg, std::string const& code = "");
+    void report(Severity const sev, std::int32_t const line, std::int32_t const col, std::int32_t const len, std::string const& msg, std::string const& code = "");
 
     void addSuggestion(std::string const& suggestion);
 
@@ -62,15 +61,9 @@ private:
 
 inline DiagnosticEngine engine;
 
-static constexpr void emit(std::string const& msg, Severity const sv = Severity::ERROR)
-{
-    engine.emit(msg, sv);
-}
+static constexpr void emit(std::string const& msg, Severity const sv = Severity::ERROR) { engine.emit(msg, sv); }
 
-static constexpr void panic(std::string const& msg)
-{
-    engine.panic(msg);
-}
+static constexpr void panic(std::string const& msg) { engine.panic(msg); }
 
 }
 }

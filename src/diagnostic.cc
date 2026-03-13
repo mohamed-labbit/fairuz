@@ -40,10 +40,14 @@ void DiagnosticEngine::emitError(std::string const& msg, Severity const sv)
 std::string DiagnosticEngine::svToStr(Severity const sv)
 {
     switch (sv) {
-    case Severity::NOTE: return Color::BOLD + Color::CYAN + "note" + Color::RESET;
-    case Severity::FATAL: return Color::BOLD + Color::RED + "fatal" + Color::RESET;
-    case Severity::ERROR: return Color::BOLD + Color::RED + "error" + Color::RESET;
-    case Severity::WARNING: return Color::BOLD + Color::YELLOW + "warning" + Color::RESET;
+    case Severity::NOTE:
+        return Color::BOLD + Color::CYAN + "note" + Color::RESET;
+    case Severity::FATAL:
+        return Color::BOLD + Color::RED + "fatal" + Color::RESET;
+    case Severity::ERROR:
+        return Color::BOLD + Color::RED + "error" + Color::RESET;
+    case Severity::WARNING:
+        return Color::BOLD + Color::YELLOW + "warning" + Color::RESET;
     default:
         return Color::BOLD + "unknown" + Color::RESET;
     }

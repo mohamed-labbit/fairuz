@@ -44,35 +44,17 @@ public:
             getStringAllocator().deallocateArray<char>(storage_.heap.ptr, storage_.heap.cap);
     }
 
-    size_t length() const noexcept
-    {
-        return len_;
-    }
+    size_t length() const noexcept { return len_; }
 
-    bool isHeap() const noexcept
-    {
-        return is_heap;
-    }
+    bool isHeap() const noexcept { return is_heap; }
 
-    bool isInlined() const noexcept
-    {
-        return !isHeap();
-    }
+    bool isInlined() const noexcept { return !isHeap(); }
 
-    char* ptr() noexcept
-    {
-        return isHeap() ? storage_.heap.ptr : storage_.sso;
-    }
+    char* ptr() noexcept { return isHeap() ? storage_.heap.ptr : storage_.sso; }
 
-    char const* ptr() const noexcept
-    {
-        return isHeap() ? storage_.heap.ptr : storage_.sso;
-    }
+    char const* ptr() const noexcept { return isHeap() ? storage_.heap.ptr : storage_.sso; }
 
-    size_t cap() const noexcept
-    {
-        return isHeap() ? storage_.heap.cap - 1 /*subtract the nul terminator*/ : SSO_SIZE - 1;
-    }
+    size_t cap() const noexcept { return isHeap() ? (storage_.heap.cap > 0 ? storage_.heap.cap - 1 : 0) /*subtract the nul terminator*/ : SSO_SIZE - 1; }
 
     void setLen(size_t const n)
     {
@@ -82,10 +64,7 @@ public:
         len_ = n;
     }
 
-    void terminate() noexcept
-    {
-        ptr()[length()] = BUFFER_END;
-    }
+    void terminate() noexcept { ptr()[length()] = BUFFER_END; }
 
     String(String const& other);
 
@@ -99,30 +78,15 @@ public:
 
     bool operator==(String const& other) const noexcept;
 
-    char operator[](size_t const i) const noexcept
-    {
-        return ptr()[i];
-    }
+    char operator[](size_t const i) const noexcept { return ptr()[i]; }
 
-    char& operator[](size_t const i) noexcept
-    {
-        return ptr()[i];
-    }
+    char& operator[](size_t const i) noexcept { return ptr()[i]; }
 
-    void increment() const noexcept
-    {
-        ++RefCount;
-    }
+    void increment() const noexcept { ++RefCount; }
 
-    void decrement() const noexcept
-    {
-        --RefCount;
-    }
+    void decrement() const noexcept { --RefCount; }
 
-    size_t referenceCount() const noexcept
-    {
-        return RefCount;
-    }
+    size_t referenceCount() const noexcept { return RefCount; }
 };
 
 class StringRef {
@@ -170,6 +134,8 @@ public:
 
         return Length_ == other.Length_ && ::memcmp(data(), other.data(), Length_) == 0;
     }
+    
+    MY_NODISCARD bool operator!=(StringRef const& other) const noexcept { return !(*this == other); }
 
     MY_NODISCARD bool operator<(StringRef const& other) const noexcept
     {
@@ -190,27 +156,12 @@ public:
 
         return Length_ < other.Length_;
     }
+    
+    MY_NODISCARD bool operator>(StringRef const& other) const noexcept { return other < *this; }
 
-    MY_NODISCARD bool operator!=(StringRef const& other) const noexcept
-    {
-        return !(*this == other);
-    }
-
-    MY_NODISCARD bool operator<=(StringRef const& other) const noexcept
-    {
-        return !(*this > other);
-    }
-
-    MY_NODISCARD bool operator>(StringRef const& other) const noexcept
-    {
-        return other < *this;
-    }
-
-    MY_NODISCARD bool operator>=(StringRef const& other) const noexcept
-    {
-        return !(*this < other);
-    }
-
+    MY_NODISCARD bool operator<=(StringRef const& other) const noexcept { return !(*this > other); }
+    MY_NODISCARD bool operator>=(StringRef const& other) const noexcept { return !(*this < other); }
+    
     void expand(size_t const new_size);
 
     void reserve(size_t const new_capacity);
@@ -286,30 +237,15 @@ public:
         return result;
     }
 
-    MY_NODISCARD size_t len() const noexcept
-    {
-        return Length_;
-    }
+    MY_NODISCARD size_t len() const noexcept { return Length_; }
+    
+    MY_NODISCARD size_t cap() const noexcept { return StringData_ ? StringData_->cap() : 0; }
 
-    MY_NODISCARD size_t cap() const noexcept
-    {
-        return StringData_ ? StringData_->cap() : 0;
-    }
+    MY_NODISCARD String* get() const noexcept { return StringData_;}
 
-    MY_NODISCARD String* get() const noexcept
-    {
-        return StringData_;
-    }
+    MY_NODISCARD bool empty() const noexcept{ return Length_ == 0;}
 
-    MY_NODISCARD bool empty() const noexcept
-    {
-        return Length_ == 0;
-    }
-
-    MY_NODISCARD char const* data() const noexcept
-    {
-        return StringData_ ? StringData_->ptr() + Offset_ : nullptr;
-    }
+    MY_NODISCARD char const* data() const noexcept { return StringData_ ? StringData_->ptr() + Offset_ : nullptr; }
 
     MY_NODISCARD char* data() noexcept
     {

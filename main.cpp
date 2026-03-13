@@ -8,6 +8,9 @@ int main(int argc, char** argv)
     if (argc < 2)
         return 0; // return silently
 
+    mylang::AllocatorContext g_ctx;
+    mylang::setContext(&g_ctx);
+
     std::string filename = argv[1];
     mylang::lex::FileManager file_manager(filename);
     mylang::parser::Parser parser(&file_manager);
@@ -15,6 +18,5 @@ int main(int argc, char** argv)
     mylang::runtime::VM virtual_machine;
 
     virtual_machine.run(bc_compiler.compile(parser.parseProgram()));
-
     return 0;
 }

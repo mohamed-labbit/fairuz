@@ -105,7 +105,9 @@ public:
     void reset();
 
     uint32_t getLineNumber() const { return Context_.line; }
+
     uint32_t getColumnNumber() const { return Context_.column; }
+
     uint64_t getFileOffset() const { return Context_.offset; }
 
     std::string fpath() const noexcept { return FileManager_->getPath(); }
@@ -161,8 +163,11 @@ public:
     explicit Lexer(Array<tok::Token const*>& seq /*, size_t const s*/);
 
     tok::Token const* operator()() { return next(); }
+
     tok::Token const* current() const;
+
     tok::Token const* next();
+
     tok::Token const* peek(size_t n = 1);
 
     Array<tok::Token const*> tokenize();

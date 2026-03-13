@@ -26,6 +26,7 @@ public:
         void* mem = arena_.allocate(size);
         if (!mem)
             throw std::bad_alloc();
+
         return mem;
     }
 
@@ -76,6 +77,7 @@ inline AllocatorContext& getContext()
 {
     if (!g_context)
         diagnostic::emit("AllocatorContext not initialized — call setContext() in main first", diagnostic::Severity::FATAL);
+
     return *g_context;
 }
 

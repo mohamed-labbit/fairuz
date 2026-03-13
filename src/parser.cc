@@ -141,8 +141,10 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(Expr const* expr)
         break;
     }
 
-    case Expr::Kind::LIST: return SymbolTable::DataType_t::LIST;
-    case Expr::Kind::CALL: return SymbolTable::DataType_t::ANY;
+    case Expr::Kind::LIST:
+        return SymbolTable::DataType_t::LIST;
+    case Expr::Kind::CALL:
+        return SymbolTable::DataType_t::ANY;
 
     default:
         break;
@@ -467,26 +469,46 @@ void SemanticAnalyzer::printReport() const
 BinaryOp toBinaryOp(tok::TokenType const op)
 {
     switch (op) {
-    case tok::TokenType::OP_PLUS: return BinaryOp::OP_ADD;
-    case tok::TokenType::OP_MINUS: return BinaryOp::OP_SUB;
-    case tok::TokenType::OP_STAR: return BinaryOp::OP_MUL;
-    case tok::TokenType::OP_SLASH: return BinaryOp::OP_DIV;
-    case tok::TokenType::OP_PERCENT: return BinaryOp::OP_MOD;
-    case tok::TokenType::OP_POWER: return BinaryOp::OP_POW;
-    case tok::TokenType::OP_EQ: return BinaryOp::OP_EQ;
-    case tok::TokenType::OP_NEQ: return BinaryOp::OP_NEQ;
-    case tok::TokenType::OP_LT: return BinaryOp::OP_LT;
-    case tok::TokenType::OP_GT: return BinaryOp::OP_GT;
-    case tok::TokenType::OP_LTE: return BinaryOp::OP_LTE;
-    case tok::TokenType::OP_GTE: return BinaryOp::OP_GTE;
-    case tok::TokenType::OP_BITAND: return BinaryOp::OP_BITAND;
-    case tok::TokenType::OP_BITOR: return BinaryOp::OP_BITOR;
-    case tok::TokenType::OP_BITXOR: return BinaryOp::OP_BITXOR;
-    case tok::TokenType::OP_BITNOT: return BinaryOp::OP_BITNOT;
-    case tok::TokenType::OP_LSHIFT: return BinaryOp::OP_LSHIFT;
-    case tok::TokenType::OP_RSHIFT: return BinaryOp::OP_RSHIFT;
-    case tok::TokenType::OP_AND: return BinaryOp::OP_AND;
-    case tok::TokenType::OP_OR: return BinaryOp::OP_OR;
+    case tok::TokenType::OP_PLUS:
+        return BinaryOp::OP_ADD;
+    case tok::TokenType::OP_MINUS:
+        return BinaryOp::OP_SUB;
+    case tok::TokenType::OP_STAR:
+        return BinaryOp::OP_MUL;
+    case tok::TokenType::OP_SLASH:
+        return BinaryOp::OP_DIV;
+    case tok::TokenType::OP_PERCENT:
+        return BinaryOp::OP_MOD;
+    case tok::TokenType::OP_POWER:
+        return BinaryOp::OP_POW;
+    case tok::TokenType::OP_EQ:
+        return BinaryOp::OP_EQ;
+    case tok::TokenType::OP_NEQ:
+        return BinaryOp::OP_NEQ;
+    case tok::TokenType::OP_LT:
+        return BinaryOp::OP_LT;
+    case tok::TokenType::OP_GT:
+        return BinaryOp::OP_GT;
+    case tok::TokenType::OP_LTE:
+        return BinaryOp::OP_LTE;
+    case tok::TokenType::OP_GTE:
+        return BinaryOp::OP_GTE;
+    case tok::TokenType::OP_BITAND:
+        return BinaryOp::OP_BITAND;
+    case tok::TokenType::OP_BITOR:
+        return BinaryOp::OP_BITOR;
+    case tok::TokenType::OP_BITXOR:
+        return BinaryOp::OP_BITXOR;
+    case tok::TokenType::OP_BITNOT:
+        return BinaryOp::OP_BITNOT;
+    case tok::TokenType::OP_LSHIFT:
+        return BinaryOp::OP_LSHIFT;
+    case tok::TokenType::OP_RSHIFT:
+        return BinaryOp::OP_RSHIFT;
+    case tok::TokenType::OP_AND:
+        return BinaryOp::OP_AND;
+    case tok::TokenType::OP_OR:
+        return BinaryOp::OP_OR;
     default:
         return BinaryOp::INVALID;
     }
@@ -495,10 +517,14 @@ BinaryOp toBinaryOp(tok::TokenType const op)
 UnaryOp toUnaryOp(tok::TokenType const op)
 {
     switch (op) {
-    case tok::TokenType::OP_PLUS: return UnaryOp::OP_PLUS;
-    case tok::TokenType::OP_MINUS: return UnaryOp::OP_NEG;
-    case tok::TokenType::OP_BITNOT: return UnaryOp::OP_BITNOT;
-    case tok::TokenType::OP_NOT: return UnaryOp::OP_NOT;
+    case tok::TokenType::OP_PLUS:
+        return UnaryOp::OP_PLUS;
+    case tok::TokenType::OP_MINUS:
+        return UnaryOp::OP_NEG;
+    case tok::TokenType::OP_BITNOT:
+        return UnaryOp::OP_BITNOT;
+    case tok::TokenType::OP_NOT:
+        return UnaryOp::OP_NOT;
     default:
         return UnaryOp::INVALID;
     }
@@ -1108,10 +1134,14 @@ std::optional<double> ASTOptimizer::evaluateConstant(Expr const* expr)
             return std::nullopt;
 
         switch (bin->getOperator()) {
-        case BinaryOp::OP_ADD: return *L + *R;
-        case BinaryOp::OP_SUB: return *L - *R;
-        case BinaryOp::OP_MUL: return *L * *R;
-        case BinaryOp::OP_POW: return std::pow(*L, *R);
+        case BinaryOp::OP_ADD:
+            return *L + *R;
+        case BinaryOp::OP_SUB:
+            return *L - *R;
+        case BinaryOp::OP_MUL:
+            return *L * *R;
+        case BinaryOp::OP_POW:
+            return std::pow(*L, *R);
         case BinaryOp::OP_DIV:
             if (*R == 0.0)
                 return std::nullopt;

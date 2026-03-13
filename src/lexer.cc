@@ -177,7 +177,7 @@ Lexer::Lexer(FileManager* fm)
     util::configureLocale();
 }
 
-Lexer::Lexer(Array<tok::Token const*>& seq/*, size_t const s*/)
+Lexer::Lexer(Array<tok::Token const*>& seq /*, size_t const s*/)
     : TokStream_(seq)
     , TokIndex_(0)
     , IndentSize_(4)
@@ -341,13 +341,27 @@ tok::Token const* Lexer::lexToken()
 
                     // handle escape sequences
                     switch (current) {
-                    case 'n': string_literal += '\n'; break;
-                    case 't': string_literal += '\t'; break;
-                    case 'r': string_literal += '\r'; break;
-                    case '\\': string_literal += '\\'; break;
-                    case '\'': string_literal += '\''; break;
-                    case '"': string_literal += '"'; break;
-                    case '0': string_literal += '\0'; break;
+                    case 'n':
+                        string_literal += '\n';
+                        break;
+                    case 't':
+                        string_literal += '\t';
+                        break;
+                    case 'r':
+                        string_literal += '\r';
+                        break;
+                    case '\\':
+                        string_literal += '\\';
+                        break;
+                    case '\'':
+                        string_literal += '\'';
+                        break;
+                    case '"':
+                        string_literal += '"';
+                        break;
+                    case '0':
+                        string_literal += '\0';
+                        break;
                     default:
                         // if not a recognized escape, keep the backslash
                         string_literal += '\\';

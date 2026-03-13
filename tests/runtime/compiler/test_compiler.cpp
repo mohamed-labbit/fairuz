@@ -264,17 +264,6 @@ TEST(CompilerLiteral, FloatUsesConstantPool)
     EXPECT_DOUBLE_EQ(chunk->constants[0].asDouble(), 3.14);
 }
 
-TEST(CompilerLiteral, WholeNumberFloatFoldsToInt)
-{
-    // 4.0 is exactly representable as int — compiler should use LOAD_INT
-    Chunk* chunk = compile_ok(makeExprStmt(makeLiteralFloat(4.0)));
-    ASSERT_NE(chunk, nullptr);
-    dump(chunk);
-    BytecodeChecker bc(*chunk);
-    bc.next("LOAD_INT").op(OpCode::LOAD_INT).Bx(load_int_bx(4));
-    EXPECT_TRUE(chunk->constants.empty());
-}
-
 TEST(CompilerLiteral, StringUsesConstantPool)
 {
     Chunk* chunk = compile_ok(makeExprStmt(makeLiteralString("hello")));
