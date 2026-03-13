@@ -21,10 +21,14 @@ private:
     StringRef const toString(UnaryOp const op)
     {
         switch (op) {
-        case UnaryOp::OP_PLUS: return "+";
-        case UnaryOp::OP_NEG: return "-";
-        case UnaryOp::OP_BITNOT: return "~";
-        case UnaryOp::OP_NOT: return "ليس";
+        case UnaryOp::OP_PLUS:
+            return "+";
+        case UnaryOp::OP_NEG:
+            return "-";
+        case UnaryOp::OP_BITNOT:
+            return "~";
+        case UnaryOp::OP_NOT:
+            return "ليس";
         default:
             return "";
         }
@@ -33,24 +37,42 @@ private:
     StringRef const toString(BinaryOp const op)
     {
         switch (op) {
-        case BinaryOp::OP_EQ: return "=";
-        case BinaryOp::OP_ADD: return "+";
-        case BinaryOp::OP_SUB: return "-";
-        case BinaryOp::OP_MUL: return "*";
-        case BinaryOp::OP_DIV: return "/";
-        case BinaryOp::OP_MOD: return "%";
-        case BinaryOp::OP_POW: return "**";
-        case BinaryOp::OP_LT: return "<";
-        case BinaryOp::OP_GT: return ">";
-        case BinaryOp::OP_LTE: return "<=";
-        case BinaryOp::OP_GTE: return ">=";
-        case BinaryOp::OP_NEQ: return "!=";
-        case BinaryOp::OP_BITAND: return "&";
-        case BinaryOp::OP_BITOR: return "|";
-        case BinaryOp::OP_BITXOR: return "^";
-        case BinaryOp::OP_BITNOT: return "~";
-        case BinaryOp::OP_LSHIFT: return "<<";
-        case BinaryOp::OP_RSHIFT: return ">>";
+        case BinaryOp::OP_EQ:
+            return "=";
+        case BinaryOp::OP_ADD:
+            return "+";
+        case BinaryOp::OP_SUB:
+            return "-";
+        case BinaryOp::OP_MUL:
+            return "*";
+        case BinaryOp::OP_DIV:
+            return "/";
+        case BinaryOp::OP_MOD:
+            return "%";
+        case BinaryOp::OP_POW:
+            return "**";
+        case BinaryOp::OP_LT:
+            return "<";
+        case BinaryOp::OP_GT:
+            return ">";
+        case BinaryOp::OP_LTE:
+            return "<=";
+        case BinaryOp::OP_GTE:
+            return ">=";
+        case BinaryOp::OP_NEQ:
+            return "!=";
+        case BinaryOp::OP_BITAND:
+            return "&";
+        case BinaryOp::OP_BITOR:
+            return "|";
+        case BinaryOp::OP_BITXOR:
+            return "^";
+        case BinaryOp::OP_BITNOT:
+            return "~";
+        case BinaryOp::OP_LSHIFT:
+            return "<<";
+        case BinaryOp::OP_RSHIFT:
+            return ">>";
         default:
             return "";
         }
