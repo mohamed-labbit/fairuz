@@ -4,11 +4,30 @@
 
 namespace mylang::ast {
 
-typename ASTNode::NodeType ASTNode::getNodeType() const { return NodeType_; }
-uint32_t ASTNode::getLine() const { return Line_; }
-uint32_t ASTNode::getColumn() const { return Column_; }
-void ASTNode::setLine(uint32_t const line) { Line_ = line; }
-void ASTNode::setColumn(uint32_t const col) { Column_ = col; }
+typename ASTNode::NodeType ASTNode::getNodeType() const
+{
+    return NodeType_;
+}
+
+uint32_t ASTNode::getLine() const
+{
+    return Line_;
+}
+
+uint32_t ASTNode::getColumn() const
+{
+    return Column_;
+}
+
+void ASTNode::setLine(uint32_t const line)
+{
+    Line_ = line;
+}
+
+void ASTNode::setColumn(uint32_t const col)
+{
+    Column_ = col;
+}
 
 // binary expr
 bool BinaryExpr::equals(Expr const* other) const
@@ -22,13 +41,40 @@ bool BinaryExpr::equals(Expr const* other) const
         && Right_->equals(bin->getRight());
 }
 
-BinaryExpr* BinaryExpr::clone() const { return makeBinary(Left_->clone(), Right_->clone(), Operator_); }
-Expr* BinaryExpr::getLeft() const { return Left_; }
-Expr* BinaryExpr::getRight() const { return Right_; }
-BinaryOp BinaryExpr::getOperator() const { return Operator_; }
-void BinaryExpr::setLeft(Expr* l) { Left_ = l; }
-void BinaryExpr::setRight(Expr* r) { Right_ = r; }
-void BinaryExpr::setOperator(BinaryOp op) { Operator_ = op; }
+BinaryExpr* BinaryExpr::clone() const
+{
+    return makeBinary(Left_->clone(), Right_->clone(), Operator_);
+}
+
+Expr* BinaryExpr::getLeft() const
+{
+    return Left_;
+}
+
+Expr* BinaryExpr::getRight() const
+{
+    return Right_;
+}
+
+BinaryOp BinaryExpr::getOperator() const
+{
+    return Operator_;
+}
+
+void BinaryExpr::setLeft(Expr* l)
+{
+    Left_ = l;
+}
+
+void BinaryExpr::setRight(Expr* r)
+{
+    Right_ = r;
+}
+
+void BinaryExpr::setOperator(BinaryOp op)
+{
+    Operator_ = op;
+}
 
 // unary expr
 bool UnaryExpr::equals(Expr const* other) const
@@ -40,12 +86,26 @@ bool UnaryExpr::equals(Expr const* other) const
     return Operator_ == un->getOperator() && Operand_->equals(un->getOperand());
 }
 
-UnaryExpr* UnaryExpr::clone() const { return makeUnary(Operand_->clone(), Operator_); }
-Expr* UnaryExpr::getOperand() const { return Operand_; }
-UnaryOp UnaryExpr::getOperator() const { return Operator_; }
+UnaryExpr* UnaryExpr::clone() const
+{
+    return makeUnary(Operand_->clone(), Operator_);
+}
+
+Expr* UnaryExpr::getOperand() const
+{
+    return Operand_;
+}
+
+UnaryOp UnaryExpr::getOperator() const
+{
+    return Operator_;
+}
 
 // literal expr
-typename LiteralExpr::Type LiteralExpr::getType() const { return Type_; }
+typename LiteralExpr::Type LiteralExpr::getType() const
+{
+    return Type_;
+}
 
 int64_t LiteralExpr::getInt() const
 {
@@ -73,17 +133,33 @@ StringRef LiteralExpr::getStr() const
 
 bool LiteralExpr::isInteger() const
 {
-    return Type_ == Type::INTEGER
-        || Type_ == Type::HEX
-        || Type_ == Type::OCTAL
-        || Type_ == Type::BINARY;
+    return Type_ == Type::INTEGER || Type_ == Type::HEX || Type_ == Type::OCTAL || Type_ == Type::BINARY;
 }
 
-bool LiteralExpr::isDecimal() const { return Type_ == Type::FLOAT; }
-bool LiteralExpr::isBoolean() const { return Type_ == Type::BOOLEAN; }
-bool LiteralExpr::isString() const { return Type_ == Type::STRING; }
-bool LiteralExpr::isNumeric() const { return isInteger() || isDecimal(); }
-bool LiteralExpr::isNil() const { return Type_ == Type::NIL; }
+bool LiteralExpr::isDecimal() const
+{
+    return Type_ == Type::FLOAT;
+}
+
+bool LiteralExpr::isBoolean() const
+{
+    return Type_ == Type::BOOLEAN;
+}
+
+bool LiteralExpr::isString() const
+{
+    return Type_ == Type::STRING;
+}
+
+bool LiteralExpr::isNumeric() const
+{
+    return isInteger() || isDecimal();
+}
+
+bool LiteralExpr::isNil() const
+{
+    return Type_ == Type::NIL;
+}
 
 bool LiteralExpr::equals(Expr const* other) const
 {
@@ -98,11 +174,16 @@ bool LiteralExpr::equals(Expr const* other) const
     case Type::INTEGER:
     case Type::HEX:
     case Type::OCTAL:
-    case Type::BINARY: return IntValue_ == lit->IntValue_;
-    case Type::FLOAT: return FloatValue_ == lit->FloatValue_;
-    case Type::BOOLEAN: return BoolValue_ == lit->BoolValue_;
-    case Type::STRING: return StrValue_ == lit->StrValue_;
-    case Type::NIL: return true; // two nil objects are always equal
+    case Type::BINARY:
+        return IntValue_ == lit->IntValue_;
+    case Type::FLOAT:
+        return FloatValue_ == lit->FloatValue_;
+    case Type::BOOLEAN:
+        return BoolValue_ == lit->BoolValue_;
+    case Type::STRING:
+        return StrValue_ == lit->StrValue_;
+    case Type::NIL:
+        return true; // two nil objects are always equal
     }
     return false;
 }
@@ -113,11 +194,16 @@ LiteralExpr* LiteralExpr::clone() const
     case Type::INTEGER:
     case Type::HEX:
     case Type::OCTAL:
-    case Type::BINARY: return makeLiteralInt(IntValue_);
-    case Type::FLOAT: return makeLiteralFloat(FloatValue_);
-    case Type::BOOLEAN: return makeLiteralBool(BoolValue_);
-    case Type::STRING: return makeLiteralString(StrValue_);
-    case Type::NIL: return makeLiteralNil();
+    case Type::BINARY:
+        return makeLiteralInt(IntValue_);
+    case Type::FLOAT:
+        return makeLiteralFloat(FloatValue_);
+    case Type::BOOLEAN:
+        return makeLiteralBool(BoolValue_);
+    case Type::STRING:
+        return makeLiteralString(StrValue_);
+    case Type::NIL:
+        return makeLiteralNil();
     default:
         return nullptr; // should never happen
     }
@@ -143,13 +229,27 @@ bool NameExpr::equals(Expr const* other) const
     return Value_ == name->getValue();
 }
 
-NameExpr* NameExpr::clone() const { return makeName(Value_); }
-StringRef NameExpr::getValue() const { return Value_; }
+NameExpr* NameExpr::clone() const
+{
+    return makeName(Value_);
+}
+
+StringRef NameExpr::getValue() const
+{
+    return Value_;
+}
 
 // list expr
 
-Expr* ListExpr::operator[](size_t const i) { return Elements_[i]; }
-Expr const* ListExpr::operator[](size_t const i) const { return Elements_[i]; }
+Expr* ListExpr::operator[](size_t const i)
+{
+    return Elements_[i];
+}
+
+Expr const* ListExpr::operator[](size_t const i) const
+{
+    return Elements_[i];
+}
 
 bool ListExpr::equals(Expr const* other) const
 {
@@ -168,11 +268,30 @@ bool ListExpr::equals(Expr const* other) const
     return true;
 }
 
-ListExpr* ListExpr::clone() const { return makeList(Elements_); }
-Array<Expr*> const& ListExpr::getElements() const { return Elements_; }
-Array<Expr*>& ListExpr::getElements() { return Elements_; }
-bool ListExpr::isEmpty() const { return Elements_.empty(); }
-size_t ListExpr::size() const { return Elements_.size(); }
+ListExpr* ListExpr::clone() const
+{
+    return makeList(Elements_);
+}
+
+Array<Expr*> const& ListExpr::getElements() const
+{
+    return Elements_;
+}
+
+Array<Expr*>& ListExpr::getElements()
+{
+    return Elements_;
+}
+
+bool ListExpr::isEmpty() const
+{
+    return Elements_.empty();
+}
+
+size_t ListExpr::size() const
+{
+    return Elements_.size();
+}
 
 // call expr
 bool CallExpr::equals(Expr const* other) const
@@ -186,8 +305,15 @@ bool CallExpr::equals(Expr const* other) const
         && CallLocation_ == call->getCallLocation();
 }
 
-CallExpr* CallExpr::clone() const { return makeCall(Callee_->clone(), Args_->clone()); }
-Expr* CallExpr::getCallee() const { return Callee_; }
+CallExpr* CallExpr::clone() const
+{
+    return makeCall(Callee_->clone(), Args_->clone());
+}
+
+Expr* CallExpr::getCallee() const
+{
+    return Callee_;
+}
 
 Array<Expr*> const& CallExpr::getArgs() const
 {
@@ -201,10 +327,25 @@ Array<Expr*>& CallExpr::getArgs()
     return Args_->getElements();
 }
 
-ListExpr* CallExpr::getArgsAsListExpr() { return Args_; }
-ListExpr const* CallExpr::getArgsAsListExpr() const { return Args_; }
-typename CallExpr::CallLocation CallExpr::getCallLocation() const { return CallLocation_; }
-bool CallExpr::hasArguments() const { return Args_ && !Args_->isEmpty(); }
+ListExpr* CallExpr::getArgsAsListExpr()
+{
+    return Args_;
+}
+
+ListExpr const* CallExpr::getArgsAsListExpr() const
+{
+    return Args_;
+}
+
+typename CallExpr::CallLocation CallExpr::getCallLocation() const
+{
+    return CallLocation_;
+}
+
+bool CallExpr::hasArguments() const
+{
+    return Args_ && !Args_->isEmpty();
+}
 
 // assignment expr
 bool AssignmentExpr::equals(Expr const* other) const
@@ -216,10 +357,25 @@ bool AssignmentExpr::equals(Expr const* other) const
     return Target_->equals(bin->getTarget()) && Value_->equals(bin->getValue());
 }
 
-AssignmentExpr* AssignmentExpr::clone() const { return makeAssignmentExpr(Target_->clone(), Value_->clone()); }
-NameExpr* AssignmentExpr::getTarget() const { return Target_; }
-Expr* AssignmentExpr::getValue() const { return Value_; }
-bool AssignmentExpr::isDeclaration() const { return isDecl_; }
+AssignmentExpr* AssignmentExpr::clone() const
+{
+    return makeAssignmentExpr(Target_->clone(), Value_->clone());
+}
+
+NameExpr* AssignmentExpr::getTarget() const
+{
+    return Target_;
+}
+
+Expr* AssignmentExpr::getValue() const
+{
+    return Value_;
+}
+
+bool AssignmentExpr::isDeclaration() const
+{
+    return isDecl_;
+}
 
 // block stmt
 bool BlockStmt::equals(Stmt const* other) const
@@ -239,10 +395,25 @@ bool BlockStmt::equals(Stmt const* other) const
     return true;
 }
 
-BlockStmt* BlockStmt::clone() const { return makeBlock(Statements_); }
-Array<Stmt*> const& BlockStmt::getStatements() const { return Statements_; }
-void BlockStmt::setStatements(Array<Stmt*>& stmts) { Statements_ = stmts; }
-bool BlockStmt::isEmpty() const { return Statements_.empty(); }
+BlockStmt* BlockStmt::clone() const
+{
+    return makeBlock(Statements_);
+}
+
+Array<Stmt*> const& BlockStmt::getStatements() const
+{
+    return Statements_;
+}
+
+void BlockStmt::setStatements(Array<Stmt*>& stmts)
+{
+    Statements_ = stmts;
+}
+
+bool BlockStmt::isEmpty() const
+{
+    return Statements_.empty();
+}
 
 // expr stmt
 
@@ -255,9 +426,20 @@ bool ExprStmt::equals(Stmt const* other) const
     return Expr_->equals(block->getExpr());
 }
 
-ExprStmt* ExprStmt::clone() const { return makeExprStmt(Expr_->clone()); }
-Expr* ExprStmt::getExpr() const { return Expr_; }
-void ExprStmt::setExpr(Expr* e) { Expr_ = e; }
+ExprStmt* ExprStmt::clone() const
+{
+    return makeExprStmt(Expr_->clone());
+}
+
+Expr* ExprStmt::getExpr() const
+{
+    return Expr_;
+}
+
+void ExprStmt::setExpr(Expr* e)
+{
+    Expr_ = e;
+}
 
 // assignment stmt
 
@@ -270,12 +452,35 @@ bool AssignmentStmt::equals(Stmt const* other) const
     return Value_->equals(block->getValue()) && Target_->equals(block->getTarget());
 }
 
-AssignmentStmt* AssignmentStmt::clone() const { return makeAssignmentStmt(Target_->clone(), Target_->clone()); }
-Expr* AssignmentStmt::getValue() const { return Value_; }
-Expr* AssignmentStmt::getTarget() const { return Target_; }
-void AssignmentStmt::setValue(Expr* v) { Value_ = v; }
-void AssignmentStmt::setTarget(NameExpr* t) { Target_ = t; }
-bool AssignmentStmt::isDeclaration() const { return isDecl_; }
+AssignmentStmt* AssignmentStmt::clone() const
+{
+    return makeAssignmentStmt(Target_->clone(), Target_->clone());
+}
+
+Expr* AssignmentStmt::getValue() const
+{
+    return Value_;
+}
+
+Expr* AssignmentStmt::getTarget() const
+{
+    return Target_;
+}
+
+void AssignmentStmt::setValue(Expr* v)
+{
+    Value_ = v;
+}
+
+void AssignmentStmt::setTarget(NameExpr* t)
+{
+    Target_ = t;
+}
+
+bool AssignmentStmt::isDeclaration() const
+{
+    return isDecl_;
+}
 
 // if stmt
 
@@ -290,12 +495,35 @@ bool IfStmt::equals(Stmt const* other) const
         && ElseBlock_->equals(block->getElseBlock());
 }
 
-IfStmt* IfStmt::clone() const { return makeIf(Condition_->clone(), ThenBlock_->clone(), ElseBlock_->clone()); }
-Expr* IfStmt::getCondition() const { return Condition_; }
-BlockStmt* IfStmt::getThenBlock() const { return ThenBlock_; }
-BlockStmt* IfStmt::getElseBlock() const { return ElseBlock_; }
-void IfStmt::setThenBlock(BlockStmt* t) { ThenBlock_ = t; }
-void IfStmt::setElseBlock(BlockStmt* e) { ElseBlock_ = e; }
+IfStmt* IfStmt::clone() const
+{
+    return makeIf(Condition_->clone(), ThenBlock_->clone(), ElseBlock_->clone());
+}
+
+Expr* IfStmt::getCondition() const
+{
+    return Condition_;
+}
+
+BlockStmt* IfStmt::getThenBlock() const
+{
+    return ThenBlock_;
+}
+
+BlockStmt* IfStmt::getElseBlock() const
+{
+    return ElseBlock_;
+}
+
+void IfStmt::setThenBlock(BlockStmt* t)
+{
+    ThenBlock_ = t;
+}
+
+void IfStmt::setElseBlock(BlockStmt* e)
+{
+    ElseBlock_ = e;
+}
 
 // while stmt
 
@@ -308,11 +536,30 @@ bool WhileStmt::equals(Stmt const* other) const
     return Condition_->equals(block->getCondition()) && Block_->equals(block->getBlock());
 }
 
-WhileStmt* WhileStmt::clone() const { return makeWhile(Condition_->clone(), Block_->clone()); }
-Expr* WhileStmt::getCondition() const { return Condition_; }
-BlockStmt* WhileStmt::getBlock() { return Block_; }
-BlockStmt const* WhileStmt::getBlock() const { return Block_; }
-void WhileStmt::setBlock(BlockStmt* b) { Block_ = b; }
+WhileStmt* WhileStmt::clone() const
+{
+    return makeWhile(Condition_->clone(), Block_->clone());
+}
+
+Expr* WhileStmt::getCondition() const
+{
+    return Condition_;
+}
+
+BlockStmt* WhileStmt::getBlock()
+{
+    return Block_;
+}
+
+BlockStmt const* WhileStmt::getBlock() const
+{
+    return Block_;
+}
+
+void WhileStmt::setBlock(BlockStmt* b)
+{
+    Block_ = b;
+}
 
 // for stmt
 bool ForStmt::equals(Stmt const* other) const
@@ -326,11 +573,30 @@ bool ForStmt::equals(Stmt const* other) const
         && Block_->equals(block->getBlock());
 }
 
-ForStmt* ForStmt::clone() const { return getTokenAllocator().allocateObject<ForStmt>(Target_->clone(), Iter_->clone(), Block_->clone()); }
-NameExpr* ForStmt::getTarget() const { return Target_; }
-Expr* ForStmt::getIter() const { return Iter_; }
-BlockStmt* ForStmt::getBlock() const { return Block_; }
-void ForStmt::setBlock(BlockStmt* b) { Block_ = b; }
+ForStmt* ForStmt::clone() const
+{
+    return getTokenAllocator().allocateObject<ForStmt>(Target_->clone(), Iter_->clone(), Block_->clone());
+}
+
+NameExpr* ForStmt::getTarget() const
+{
+    return Target_;
+}
+
+Expr* ForStmt::getIter() const
+{
+    return Iter_;
+}
+
+BlockStmt* ForStmt::getBlock() const
+{
+    return Block_;
+}
+
+void ForStmt::setBlock(BlockStmt* b)
+{
+    Block_ = b;
+}
 
 // function def
 
@@ -345,13 +611,40 @@ bool FunctionDef::equals(Stmt const* other) const
         && Body_->equals(block->getBody());
 }
 
-FunctionDef* FunctionDef::clone() const { return makeFunction(Name_->clone(), Params_->clone(), Body_->clone()); }
-NameExpr* FunctionDef::getName() const { return Name_; }
-Array<Expr*> const& FunctionDef::getParameters() const { return Params_->getElements(); }
-ListExpr* FunctionDef::getParameterList() const { return Params_; }
-BlockStmt* FunctionDef::getBody() const { return Body_; }
-void FunctionDef::setBody(BlockStmt* b) { Body_ = b; }
-bool FunctionDef::hasParameters() const { return Params_ && !Params_->isEmpty(); }
+FunctionDef* FunctionDef::clone() const
+{
+    return makeFunction(Name_->clone(), Params_->clone(), Body_->clone());
+}
+
+NameExpr* FunctionDef::getName() const
+{
+    return Name_;
+}
+
+Array<Expr*> const& FunctionDef::getParameters() const
+{
+    return Params_->getElements();
+}
+
+ListExpr* FunctionDef::getParameterList() const
+{
+    return Params_;
+}
+
+BlockStmt* FunctionDef::getBody() const
+{
+    return Body_;
+}
+
+void FunctionDef::setBody(BlockStmt* b)
+{
+    Body_ = b;
+}
+
+bool FunctionDef::hasParameters() const
+{
+    return Params_ && !Params_->isEmpty();
+}
 
 // return stmt
 
@@ -364,9 +657,24 @@ bool ReturnStmt::equals(Stmt const* other) const
     return Value_->equals(block->getValue());
 }
 
-ReturnStmt* ReturnStmt::clone() const { return makeReturn(Value_->clone()); }
-Expr const* ReturnStmt::getValue() const { return Value_; }
-void ReturnStmt::setValue(Expr* v) { Value_ = v; }
-bool ReturnStmt::hasValue() const { return Value_ != nullptr; }
+ReturnStmt* ReturnStmt::clone() const
+{
+    return makeReturn(Value_->clone());
+}
+
+Expr const* ReturnStmt::getValue() const
+{
+    return Value_;
+}
+
+void ReturnStmt::setValue(Expr* v)
+{
+    Value_ = v;
+}
+
+bool ReturnStmt::hasValue() const
+{
+    return Value_ != nullptr;
+}
 
 } // mylang::ast
