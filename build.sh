@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+DEBUG=0
 CLEAN_BUILD=false
 RUN_TESTS=false
 RUN_MAIN=false
@@ -13,6 +14,8 @@ for arg in "$@"; do
         RUN_TESTS=true
     elif [[ "$arg" == "run" ]]; then
         RUN_MAIN=true
+    elif [[ "$arg" == "--debug" ]]; then
+        DEBUG=1
     else
         if [[ "$RUN_TESTS" == true ]]; then
             TEST_ARGS+=("$arg")
@@ -47,7 +50,7 @@ fi
 make || exit 1
 
 if [[ "$RUN_TESTS" == true ]]; then
-    ASAN_OPTIONS=detect_leaks=0 ./mylang_tests "${TEST_ARGS[@]}"
+    ASAN_OPTIONS=detect_leaks="$DEBUG" ./mylang_tests "${TEST_ARGS[@]}"
 fi
 
 if [[ "$RUN_MAIN" == true ]]; then
@@ -55,5 +58,5 @@ if [[ "$RUN_MAIN" == true ]]; then
         echo "usage: ./test.sh run <file>"
         exit 1
     fi
-    ASAN_OPTIONS=detect_leaks=0 ./mylang "${MAIN_ARGS[@]}"
+    ASAN_OPTIONS=detect_leaks="$DEBUG" ./mylang "${MAIN_ARGS[@]}"
 fi
