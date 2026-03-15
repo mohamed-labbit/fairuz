@@ -11,21 +11,25 @@
 
 namespace mylang::ast {
 
-// inline Allocator getTokenAllocator()("AST allocator");
+// inline Allocator getAstAllocator()("AST allocator");
 
 class Expr;
 class ListExpr;
 class NameExpr;
 class AssignmentExpr;
+class ErrExpr;
 class Stmt;
 class BlockStmt;
 class AssignmentStmt;
+class ErrStmt;
 
 static ListExpr* makeList(Array<Expr*> elements = { });
 static BlockStmt* makeBlock(Array<Stmt*> stmts = { });
 static NameExpr* makeName(StringRef const str);
 static AssignmentExpr* makeAssignmentExpr(NameExpr* target, Expr* value, bool decl = true);
 static AssignmentStmt* makeAssignmentStmt(Expr* target, Expr* value, bool decl = true);
+static ErrExpr* makeErrExpr(uint32_t line, uint32_t col);
+static ErrStmt* makeErrStmt(uint32_t line, uint32_t col);
 
 class ASTNode {
 public:
@@ -38,7 +42,7 @@ public:
 
 private:
     uint32_t Line_ { 0 };
-    uint32_t Column_ { 0 };
+    uint16_t Column_ { 0 };
 
     NodeType NodeType_ { NodeType::INVALID };
 
@@ -52,13 +56,13 @@ public:
 
     MY_NODISCARD virtual NodeType getNodeType() const;
 
-    MY_NODISCARD virtual uint32_t getLine() const;
+    MY_NODISCARD uint32_t getLine() const;
 
-    MY_NODISCARD virtual uint32_t getColumn() const;
+    MY_NODISCARD uint16_t getColumn() const;
 
-    virtual void setLine(uint32_t line);
+    void setLine(uint32_t line);
 
-    virtual void setColumn(uint32_t col);
+    void setColumn(uint16_t col);
 
     virtual ~ASTNode() = default;
 };
@@ -79,7 +83,6 @@ enum class BinaryOp : uint8_t {
     OP_BITAND,
     OP_BITOR,
     OP_BITXOR,
-    OP_BITNOT,
     OP_LSHIFT,
     OP_RSHIFT,
     OP_AND,
@@ -159,10 +162,13 @@ public:
     BinaryExpr& operator=(BinaryExpr&&) noexcept = delete;
 
     MY_NODISCARD bool equals(Expr const* other) const override;
+
     MY_NODISCARD BinaryExpr* clone() const override;
+
     MY_NODISCARD Expr* getLeft() const;
     MY_NODISCARD Expr* getRight() const;
     MY_NODISCARD BinaryOp getOperator() const;
+
     void setLeft(Expr* l);
     void setRight(Expr* r);
     void setOperator(BinaryOp op);
@@ -194,7 +200,9 @@ public:
     UnaryExpr& operator=(UnaryExpr&&) noexcept = delete;
 
     MY_NODISCARD bool equals(Expr const* other) const override;
+
     MY_NODISCARD UnaryExpr* clone() const override;
+
     MY_NODISCARD Expr* getOperand() const;
     MY_NODISCARD UnaryOp getOperator() const;
 };
@@ -280,7 +288,9 @@ public:
     MY_NODISCARD bool isNil() const;
 
     MY_NODISCARD bool equals(Expr const* other) const override;
+
     MY_NODISCARD LiteralExpr* clone() const override;
+
     MY_NODISCARD double toNumber() const;
 };
 
@@ -336,10 +346,15 @@ public:
     ListExpr& operator=(ListExpr&&) noexcept = delete;
 
     MY_NODISCARD bool equals(Expr const* other) const override;
+
     MY_NODISCARD ListExpr* clone() const override;
+
     MY_NODISCARD Array<Expr*> const& getElements() const;
+
     MY_NODISCARD Array<Expr*>& getElements();
+
     MY_NODISCARD bool isEmpty() const;
+
     MY_NODISCARD size_t size() const;
 };
 
@@ -374,13 +389,21 @@ public:
     CallExpr& operator=(CallExpr&&) noexcept = delete;
 
     MY_NODISCARD bool equals(Expr const* other) const override;
+
     MY_NODISCARD CallExpr* clone() const override;
+
     MY_NODISCARD Expr* getCallee() const;
+
     MY_NODISCARD Array<Expr*> const& getArgs() const;
+
     MY_NODISCARD Array<Expr*>& getArgs();
+
     MY_NODISCARD ListExpr* getArgsAsListExpr();
+
     MY_NODISCARD ListExpr const* getArgsAsListExpr() const;
+
     MY_NODISCARD CallLocation getCallLocation() const;
+
     MY_NODISCARD bool hasArguments() const;
 };
 
@@ -414,9 +437,13 @@ public:
     AssignmentExpr& operator=(AssignmentExpr&&) noexcept = delete;
 
     MY_NODISCARD bool equals(Expr const* other) const override;
+
     MY_NODISCARD AssignmentExpr* clone() const override;
+
     MY_NODISCARD NameExpr* getTarget() const;
+
     MY_NODISCARD Expr* getValue() const;
+
     MY_NODISCARD bool isDeclaration() const;
 };
 
@@ -443,7 +470,6 @@ public:
     virtual ~Stmt() = default;
 
     virtual Stmt* clone() const = 0;
-
     virtual bool equals(Stmt const* other) const = 0;
 
     Kind getKind() const { return Kind_; }
@@ -470,9 +496,13 @@ public:
     BlockStmt& operator=(BlockStmt const&) noexcept = delete;
 
     MY_NODISCARD bool equals(Stmt const* other) const override;
+
     MY_NODISCARD BlockStmt* clone() const override;
+
     MY_NODISCARD Array<Stmt*> const& getStatements() const;
+
     MY_NODISCARD bool isEmpty() const;
+
     void setStatements(Array<Stmt*>& stmts);
 };
 
@@ -495,8 +525,11 @@ public:
     ExprStmt& operator=(ExprStmt const&) noexcept = delete;
 
     MY_NODISCARD bool equals(Stmt const* other) const override;
+
     MY_NODISCARD ExprStmt* clone() const override;
+
     MY_NODISCARD Expr* getExpr() const;
+
     void setExpr(Expr* e);
 };
 
@@ -525,9 +558,12 @@ public:
 
     MY_NODISCARD bool equals(Stmt const* other) const override;
     MY_NODISCARD AssignmentStmt* clone() const override;
+
     MY_NODISCARD Expr* getValue() const;
     MY_NODISCARD Expr* getTarget() const;
+
     MY_NODISCARD bool isDeclaration() const;
+
     void setValue(Expr* v);
     void setTarget(NameExpr* t);
 };
@@ -555,10 +591,13 @@ public:
     IfStmt& operator=(IfStmt const&) noexcept = delete;
 
     MY_NODISCARD bool equals(Stmt const* other) const override;
+
     MY_NODISCARD IfStmt* clone() const override;
+
     MY_NODISCARD Expr* getCondition() const;
     MY_NODISCARD BlockStmt* getThenBlock() const;
     MY_NODISCARD BlockStmt* getElseBlock() const;
+
     void setThenBlock(BlockStmt* t);
     void setElseBlock(BlockStmt* e);
 };
@@ -584,10 +623,15 @@ public:
     WhileStmt& operator=(WhileStmt const&) noexcept = delete;
 
     MY_NODISCARD bool equals(Stmt const* other) const override;
+
     MY_NODISCARD WhileStmt* clone() const override;
+
     MY_NODISCARD Expr* getCondition() const;
+
     MY_NODISCARD BlockStmt* getBlock();
+
     MY_NODISCARD BlockStmt const* getBlock() const;
+
     void setBlock(BlockStmt* b);
 };
 
@@ -614,10 +658,15 @@ public:
     ForStmt& operator=(ForStmt const&) noexcept = delete;
 
     MY_NODISCARD bool equals(Stmt const* other) const override;
+
     MY_NODISCARD ForStmt* clone() const override;
+
     MY_NODISCARD NameExpr* getTarget() const;
+
     MY_NODISCARD Expr* getIter() const;
+
     MY_NODISCARD BlockStmt* getBlock() const;
+
     void setBlock(BlockStmt* b);
 };
 
@@ -651,12 +700,19 @@ public:
     FunctionDef& operator=(FunctionDef const&) noexcept = delete;
 
     MY_NODISCARD bool equals(Stmt const* other) const override;
+
     MY_NODISCARD FunctionDef* clone() const override;
+
     MY_NODISCARD NameExpr* getName() const;
+
     MY_NODISCARD Array<Expr*> const& getParameters() const;
+
     MY_NODISCARD ListExpr* getParameterList() const;
+
     MY_NODISCARD BlockStmt* getBody() const;
+
     MY_NODISCARD bool hasParameters() const;
+
     void setBody(BlockStmt* b);
 };
 
@@ -679,91 +735,129 @@ public:
     ReturnStmt& operator=(ReturnStmt const&) noexcept = delete;
 
     MY_NODISCARD bool equals(Stmt const* other) const override;
+
     MY_NODISCARD ReturnStmt* clone() const override;
+
     MY_NODISCARD Expr const* getValue() const;
+
     MY_NODISCARD bool hasValue() const;
+
     void setValue(Expr* v);
 };
 
+class ErrStmt final : public Stmt {
+public:
+    ErrStmt(uint32_t line, uint32_t col)
+    {
+        setLine(line);
+        setColumn(col);
+    }
+
+    Stmt* clone() const override { return makeErrStmt(getLine(), getColumn()); }
+
+    bool equals(Stmt const* other) const override { return getKind() == other->getKind(); }
+};
+
+class ErrExpr final : public Expr {
+public:
+    ErrExpr(uint32_t line, uint32_t col)
+    {
+        setLine(line);
+        setColumn(col);
+    }
+
+    Expr* clone() const override { return makeErrExpr(getLine(), getColumn()); }
+
+    bool equals(Expr const* other) const override { return getKind() == other->getKind(); }
+};
+
+static ErrStmt* makeErrStmt(uint32_t line, uint32_t col)
+{
+    return getAstAllocator().allocateObject<ErrStmt>(line, col);
+}
+static ErrExpr* makeErrExpr(uint32_t line, uint32_t col)
+{
+    return getAstAllocator().allocateObject<ErrExpr>(line, col);
+}
 static BinaryExpr* makeBinary(Expr* l, Expr* r, BinaryOp const op)
 {
-    return getTokenAllocator().allocateObject<BinaryExpr>(l, r, op);
+    return getAstAllocator().allocateObject<BinaryExpr>(l, r, op);
 }
 static UnaryExpr* makeUnary(Expr* operand, UnaryOp const op)
 {
-    return getTokenAllocator().allocateObject<UnaryExpr>(operand, op);
+    return getAstAllocator().allocateObject<UnaryExpr>(operand, op);
 }
 static LiteralExpr* makeLiteralNil()
 {
-    return getTokenAllocator().allocateObject<LiteralExpr>();
+    return getAstAllocator().allocateObject<LiteralExpr>();
 }
 static LiteralExpr* makeLiteralInt(int value)
 {
-    return getTokenAllocator().allocateObject<LiteralExpr>(static_cast<int64_t>(value), LiteralExpr::Type::INTEGER);
+    return getAstAllocator().allocateObject<LiteralExpr>(static_cast<int64_t>(value), LiteralExpr::Type::INTEGER);
 }
 static LiteralExpr* makeLiteralInt(int64_t value)
 {
-    return getTokenAllocator().allocateObject<LiteralExpr>(value, LiteralExpr::Type::INTEGER);
+    return getAstAllocator().allocateObject<LiteralExpr>(value, LiteralExpr::Type::INTEGER);
 }
 static LiteralExpr* makeLiteralFloat(double value)
 {
-    return getTokenAllocator().allocateObject<LiteralExpr>(value, LiteralExpr::Type::FLOAT);
+    return getAstAllocator().allocateObject<LiteralExpr>(value, LiteralExpr::Type::FLOAT);
 }
 static LiteralExpr* makeLiteralString(StringRef value)
 {
-    return getTokenAllocator().allocateObject<LiteralExpr>(value);
+    return getAstAllocator().allocateObject<LiteralExpr>(value);
 }
 static LiteralExpr* makeLiteralBool(bool value)
 {
-    return getTokenAllocator().allocateObject<LiteralExpr>(value);
+    return getAstAllocator().allocateObject<LiteralExpr>(value);
 }
 static NameExpr* makeName(StringRef const str)
 {
-    return getTokenAllocator().allocateObject<NameExpr>(str);
+    return getAstAllocator().allocateObject<NameExpr>(str);
 }
 static ListExpr* makeList(Array<Expr*> elements)
 {
-    return getTokenAllocator().allocateObject<ListExpr>(elements);
+    return getAstAllocator().allocateObject<ListExpr>(elements);
 }
 static CallExpr* makeCall(Expr* callee, ListExpr* args)
 {
-    return getTokenAllocator().allocateObject<CallExpr>(callee, args);
+    return getAstAllocator().allocateObject<CallExpr>(callee, args);
 }
 static AssignmentExpr* makeAssignmentExpr(NameExpr* target, Expr* value, bool decl)
 {
-    return getTokenAllocator().allocateObject<AssignmentExpr>(target, value, decl);
+    return getAstAllocator().allocateObject<AssignmentExpr>(target, value, decl);
 }
 static BlockStmt* makeBlock(Array<Stmt*> stmts)
 {
-    return getTokenAllocator().allocateObject<BlockStmt>(stmts);
+    return getAstAllocator().allocateObject<BlockStmt>(stmts);
 }
 static ExprStmt* makeExprStmt(Expr* expr)
 {
-    return getTokenAllocator().allocateObject<ExprStmt>(expr);
+    return getAstAllocator().allocateObject<ExprStmt>(expr);
 }
 static AssignmentStmt* makeAssignmentStmt(Expr* target, Expr* value, bool decl)
 {
-    return getTokenAllocator().allocateObject<AssignmentStmt>(target, value, decl);
+    return getAstAllocator().allocateObject<AssignmentStmt>(target, value, decl);
 }
 static IfStmt* makeIf(Expr* condition, BlockStmt* then_block, BlockStmt* else_block = nullptr)
 {
-    return getTokenAllocator().allocateObject<IfStmt>(condition, then_block, else_block);
+    return getAstAllocator().allocateObject<IfStmt>(condition, then_block, else_block);
 }
 static WhileStmt* makeWhile(Expr* condition, BlockStmt* block)
 {
-    return getTokenAllocator().allocateObject<WhileStmt>(condition, block);
+    return getAstAllocator().allocateObject<WhileStmt>(condition, block);
 }
 static ForStmt* makeFor(NameExpr* target, Expr* iter, BlockStmt* block)
 {
-    return getTokenAllocator().allocateObject<ForStmt>(target, iter, block);
+    return getAstAllocator().allocateObject<ForStmt>(target, iter, block);
 }
 static FunctionDef* makeFunction(NameExpr* name, ListExpr* params, BlockStmt* body)
 {
-    return getTokenAllocator().allocateObject<FunctionDef>(name, params, body);
+    return getAstAllocator().allocateObject<FunctionDef>(name, params, body);
 }
-static ReturnStmt* makeReturn(Expr* value)
+static ReturnStmt* makeReturn(Expr* value = nullptr)
 {
-    return getTokenAllocator().allocateObject<ReturnStmt>(value);
+    return getAstAllocator().allocateObject<ReturnStmt>(value);
 }
 
 }
