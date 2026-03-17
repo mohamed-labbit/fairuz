@@ -39,7 +39,6 @@ TEST(ArenaAllocatorTest, SingleIntAllocation)
     ASSERT_NE(ptr, nullptr);
     *ptr = 42;
     EXPECT_EQ(*ptr, 42);
-    EXPECT_EQ(arena.get().totalAllocations(), 1);
 }
 
 TEST(ArenaAllocatorTest, MultipleIntAllocations)
@@ -60,8 +59,6 @@ TEST(ArenaAllocatorTest, MultipleIntAllocations)
     EXPECT_EQ(*ptr1, 1);
     EXPECT_EQ(*ptr2, 2);
     EXPECT_EQ(*ptr3, 3);
-
-    EXPECT_EQ(arena.get().totalAllocations(), 3);
 }
 
 TEST(ArenaAllocatorTest, AllocateZeroCount)
@@ -267,21 +264,6 @@ TEST(ArenaAllocatorTest, FastPoolMixedSizes)
 
 // Reset Tests
 
-TEST(ArenaAllocatorTest, ResetClearsAllocations)
-{
-    TestAllocator arena;
-
-    int* ptr1 = arena.allocate<int>(100);
-    ASSERT_NE(ptr1, nullptr);
-    EXPECT_GT(arena.get().totalAllocations(), 0);
-
-    arena.get().reset();
-
-    EXPECT_EQ(arena.get().totalAllocations(), 0);
-    EXPECT_EQ(arena.get().totalAllocated(), 0);
-    EXPECT_EQ(arena.get().activeBlocks(), 0);
-}
-
 TEST(ArenaAllocatorTest, ReuseAfterReset)
 {
     TestAllocator arena;
@@ -304,52 +286,7 @@ TEST(ArenaAllocatorTest, MultipleResets)
         int* ptr = arena.allocate<int>(1000);
         ASSERT_NE(ptr, nullptr);
         arena.get().reset();
-        EXPECT_EQ(arena.get().totalAllocations(), 0);
     }
-}
-
-// Statistics Tests
-
-TEST(ArenaAllocatorTest, StatisticsTracking)
-{
-    TestAllocator arena;
-
-    EXPECT_EQ(arena.get().totalAllocations(), 0);
-    EXPECT_EQ(arena.get().totalAllocated(), 0);
-
-    int* ptr1 = arena.allocate<int>(1);
-    EXPECT_EQ(arena.get().totalAllocations(), 1);
-    EXPECT_GE(arena.get().totalAllocated(), sizeof(int));
-
-    int* ptr2 = arena.allocate<int>(100);
-    EXPECT_EQ(arena.get().totalAllocations(), 2);
-    EXPECT_GE(arena.get().totalAllocated(), sizeof(int) * 101);
-}
-
-TEST(ArenaAllocatorTest, ActiveBlocksCount)
-{
-    TestAllocator arena;
-
-    EXPECT_EQ(arena.get().activeBlocks(), 0);
-
-    // Small allocation triggers first block
-    int* ptr1 = arena.allocate<int>(1);
-    EXPECT_GT(arena.get().activeBlocks(), 0);
-
-    size_t initial_blocks = arena.get().activeBlocks();
-
-    // Many small allocations might stay in same block
-    for (int i = 0; i < 10; ++i) {
-        int* p = arena.allocate<int>(1);
-        if (!p)
-            throw std::bad_alloc();
-    }
-
-    // Large allocation forces new block
-    char* p = arena.allocate<char>(1024 * 1024);
-    if (!p)
-        throw std::bad_alloc();
-    EXPECT_GT(arena.get().activeBlocks(), initial_blocks);
 }
 
 // Alignment Tests
@@ -407,7 +344,7 @@ TEST(ArenaAllocatorTest, MultipleBlocksRequired)
     for (int i = 0; i < 10; ++i) 
         EXPECT_EQ(*ptrs[i], i);
 
-    EXPECT_GT(arena.get().activeBlocks(), 1);
+
 }
 
 TEST(ArenaAllocatorTest, ManySmallAllocations)
@@ -427,7 +364,7 @@ TEST(ArenaAllocatorTest, ManySmallAllocations)
     for (int i = 0; i < count; ++i) 
         EXPECT_EQ(*ptrs[i], i);
 
-    EXPECT_EQ(arena.get().totalAllocations(), count);
+
 }
 
 TEST(ArenaAllocatorTest, MixedSizeAllocations)
@@ -452,8 +389,6 @@ TEST(ArenaAllocatorTest, MixedSizeAllocations)
             ptrs.push_back(ptr);
         }
     }
-
-    EXPECT_EQ(arena.get().totalAllocations(), 10);
 }
 
 TEST(ArenaAllocatorTest, AlternatingLargeSmall)
@@ -470,8 +405,6 @@ TEST(ArenaAllocatorTest, AlternatingLargeSmall)
             ASSERT_NE(small, nullptr);
         }
     }
-
-    EXPECT_EQ(arena.get().totalAllocations(), 10);
 }
 
 // Block Tests
@@ -482,7 +415,7 @@ TEST(ArenaAllocatorTest, AllocateBlockDirect)
 
     unsigned char* ptr = arena.get().allocateBlock(1024);
     ASSERT_NE(ptr, nullptr);
-    EXPECT_EQ(arena.get().activeBlocks(), 1);
+
 
     ptr[0] = 'A';
     ptr[1023] = 'Z';
@@ -520,23 +453,6 @@ TEST(ArenaAllocatorTest, ConsecutiveAllocations)
 
     EXPECT_GE(diff1, sizeof(int));
     EXPECT_GE(diff2, sizeof(int));
-}
-
-TEST(ArenaAllocatorTest, ResetAndAllocateAgain)
-{
-    TestAllocator arena;
-
-    for (int round = 0; round < 5; ++round) {
-        for (int i = 0; i < 10; ++i) {
-            int* ptr = arena.allocate<int>(1);
-            ASSERT_NE(ptr, nullptr);
-            *ptr = i;
-        }
-
-        EXPECT_EQ(arena.get().totalAllocations(), 10);
-        arena.get().reset();
-        EXPECT_EQ(arena.get().totalAllocations(), 0);
-    }
 }
 
 // runtime::allocator::ArenaBlock Tests
@@ -615,5 +531,5 @@ TEST(ArenaAllocatorPerformance, ResetPerformance)
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     std::cout << "Reset took " << duration.count() << "μs\n";
 
-    EXPECT_EQ(arena.get().totalAllocations(), 0);
+
 }

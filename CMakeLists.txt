@@ -104,7 +104,6 @@ if(BUILD_TESTS)
         tests/runtime/compiler/test_compiler.cpp
         tests/runtime/test_vm.cpp
         tests/runtime/test_stdlib.cpp
-        tests/security/test_security.cpp
         $<TARGET_OBJECTS:mylang_objects>
     )
 

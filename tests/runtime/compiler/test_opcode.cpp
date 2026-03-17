@@ -200,6 +200,8 @@ TEST(OpCodeMeta, AllOpcodesHaveName)
     }
 }
 
+/// just a guard against someguy changing the opcode names
+/// 
 TEST(OpCodeMeta, KnownNames)
 {
     EXPECT_EQ(opcode_name(OpCode::LOAD_NIL), "LOAD_NIL");

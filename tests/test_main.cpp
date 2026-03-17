@@ -3,6 +3,7 @@
 
 #include <cstring>
 #include <gtest/gtest.h>
+#include <iostream>
 #include <string>
 
 using namespace mylang;
@@ -37,14 +38,18 @@ int main(int argc, char** argv)
 
     int ret = RUN_ALL_TESTS();
 
+    #ifdef MYLANG_DEBUG
+    
     if (test_config::verbose) {
+        std::cout << getAstAllocator().toString(true) << '\n';
+        std::cout << '\n';
         std::cout << getStringAllocator().toString(true) << '\n';
         std::cout << '\n';
         std::cout << getTokenAllocator().toString(true) << '\n';
         std::cout << '\n';
         std::cout << getRuntimeAllocator().toString(true) << std::endl;
     }
-
+#endif // MYLANG_DEBUG
     mylang::g_context = nullptr;
 
     return ret;

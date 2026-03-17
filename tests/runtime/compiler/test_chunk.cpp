@@ -9,9 +9,9 @@ TEST(Chunk, EmitReturnsCorrectIndex)
 {
     Chunk c;
 
-    uint32_t i0 = c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), 1);
-    uint32_t i1 = c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), 1);
-    uint32_t i2 = c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), 1);
+    uint32_t i0 = c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), {});
+    uint32_t i1 = c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), {});
+    uint32_t i2 = c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), {});
 
     EXPECT_EQ(i0, 0u);
     EXPECT_EQ(i1, 1u);
@@ -22,19 +22,19 @@ TEST(Chunk, EmitReturnsCorrectIndex)
 TEST(Chunk, EmittedInstructionPreserved)
 {
     Chunk c;
-    uint32_t instr = make_ABC(static_cast<uint8_t>(OpCode::OP_ADD), 1, 2, 3);
-    c.emit(instr, 10);
+    uint32_t instr = make_ABC(static_cast<uint8_t>(OpCode::OP_ADD), 1, 2, {});
+    c.emit(instr, {});
     EXPECT_EQ(c.code[0], instr);
 }
 
 TEST(Chunk, PatchJumpForward)
 {
     Chunk c;
-    uint32_t jump_idx = c.emit(make_AsBx(static_cast<uint8_t>(OpCode::JUMP_IF_FALSE), 0, 0), 1);
+    uint32_t jump_idx = c.emit(make_AsBx(static_cast<uint8_t>(OpCode::JUMP_IF_FALSE), 0, 0), {});
 
-    c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), 2);
-    c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), 3);
-    c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), 4);
+    c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), {});
+    c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), {});
+    c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), {});
 
     bool ok = c.patchJump(jump_idx);
     EXPECT_TRUE(ok);
@@ -44,7 +44,7 @@ TEST(Chunk, PatchJumpForward)
 TEST(Chunk, PatchJumpToSelf_OffsetZero)
 {
     Chunk c;
-    uint32_t idx = c.emit(make_AsBx(static_cast<uint8_t>(OpCode::JUMP), 0, 0), 1);
+    uint32_t idx = c.emit(make_AsBx(static_cast<uint8_t>(OpCode::JUMP), 0, 0), {});
     // No more instructions — patch immediately
     bool ok = c.patchJump(idx);
     EXPECT_TRUE(ok);
@@ -55,8 +55,8 @@ TEST(Chunk, PatchJumpToSelf_OffsetZero)
 TEST(Chunk, PatchJumpPreservesOpAndA)
 {
     Chunk c;
-    uint32_t idx = c.emit(make_AsBx(static_cast<uint8_t>(OpCode::JUMP_IF_FALSE), 7, 0), 1);
-    c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), 2);
+    uint32_t idx = c.emit(make_AsBx(static_cast<uint8_t>(OpCode::JUMP_IF_FALSE), 7, 0), {});
+    c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), {});
     c.patchJump(idx);
     EXPECT_EQ(static_cast<OpCode>(instr_op(c.code[idx])), OpCode::JUMP_IF_FALSE);
     EXPECT_EQ(instr_A(c.code[idx]), 7u);
@@ -156,8 +156,8 @@ TEST(Chunk, ICSlotCanBeUpdated)
 TEST(Chunk, GetLineSingleLine)
 {
     Chunk c;
-    c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), 10);
-    c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), 10);
+    c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), {10, 0, 0});
+    c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), {10, 0, 0});
     EXPECT_EQ(c.getLine(0), 10u);
     EXPECT_EQ(c.getLine(1), 10u);
 }
@@ -165,10 +165,10 @@ TEST(Chunk, GetLineSingleLine)
 TEST(Chunk, GetLineMultipleLines)
 {
     Chunk c;
-    c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), 1);
-    c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), 1);
-    c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), 5);
-    c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), 9);
+    c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), {1, 0, 0});
+    c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), {1, 0, 0});
+    c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), {5, 0, 0});
+    c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), {9, 0, 0});
     EXPECT_EQ(c.getLine(0), 1u);
     EXPECT_EQ(c.getLine(1), 1u);
     EXPECT_EQ(c.getLine(2), 5u);
@@ -179,7 +179,7 @@ TEST(Chunk, GetLineRunLengthCompressed)
 {
     Chunk c;
     for (int i = 0; i < 10; ++i)
-        c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), 42);
+        c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), {42});
     EXPECT_EQ(c.lines.size(), 1u);
     for (int i = 0; i < 10; ++i)
         EXPECT_EQ(c.getLine(i), 42u);
@@ -188,8 +188,8 @@ TEST(Chunk, GetLineRunLengthCompressed)
 TEST(Chunk, GetLineNewEntryOnLineChange)
 {
     Chunk c;
-    c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), 1);
-    c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), 2);
+    c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), {0, 0, 0});
+    c.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), {1, 0, 0});
     EXPECT_EQ(c.lines.size(), 2u);
 }
 
@@ -208,7 +208,7 @@ TEST(Chunk, SubFunctionPreservesData)
     auto* child = mylang::runtime::makeChunk();
     child->name = "myfunc";
     child->arity = 2;
-    child->emit(make_ABC(static_cast<uint8_t>(OpCode::RETURN_NIL), 0, 0, 0), 1);
+    child->emit(make_ABC(static_cast<uint8_t>(OpCode::RETURN_NIL), 0, 0, 0), {});
     parent.functions.push(child);
 
     EXPECT_EQ(parent.functions.size(), 1u);
@@ -221,7 +221,7 @@ TEST(Chunk, IsMoveConstructible)
 {
     Chunk a;
     a.name = "moved";
-    a.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), 1);
+    a.emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), 0, 0, 0), {});
     Chunk b(std::move(a));
     EXPECT_EQ(b.name, "moved");
     EXPECT_EQ(b.code.size(), 1u);

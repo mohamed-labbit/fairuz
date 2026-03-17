@@ -148,9 +148,9 @@ TEST(NativePrint, TwoArgs_DoesNotCrash)
     EXPECT_TRUE(call(nativePrint, {s, s}).isNil());
 }
 
-TEST(NativeStr, NoArgs_ReturnsNil)
+TEST(NativeStr, NoArgs_ReturnsEmpty)
 {
-    EXPECT_TRUE(call0(nativeStr).isNil());
+    EXPECT_TRUE(call0(nativeStr).isString());
 }
 
 TEST(NativeStr, NullArgv_ReturnsNil)
