@@ -83,6 +83,35 @@ public:
 
     std::string getPath() const { return FilePath_; }
 
+    StringRef getLineAt(uint32_t const line_idx) const
+    {
+        if (line_idx == 0 || InputBuffer_.empty())
+            return { };
+
+        char const* data = InputBuffer_.data();
+        size_t const size = InputBuffer_.len();
+
+        uint32_t current_line = 1;
+        size_t line_start = 0;
+
+        for (size_t i = 0; i <= size; ++i) {
+            if (i == size || data[i] == '\n') {
+                if (current_line == line_idx) {
+                    size_t len = i - line_start;
+                    // Strip trailing \r for CRLF
+                    if (len > 0 && data[line_start + len - 1] == '\r')
+                        --len;
+
+                    return StringRef(InputBuffer_.get(), line_start, len);
+                }
+                ++current_line;
+                line_start = i + 1;
+            }
+        }
+
+        return { };
+    }
+
 private:
     std::string FilePath_;
     StringRef InputBuffer_;
@@ -125,6 +154,8 @@ public:
     uint32_t nextChar();
 
     void unget(uint32_t const cp);
+
+    StringRef getLineAt(uint32_t const line_idx) const { return FileManager_->getLineAt(line_idx); }
 
 private:
     struct Context {
@@ -173,6 +204,11 @@ public:
     Array<tok::Token const*> tokenize();
 
     static tok::Token* makeToken(tok::TokenType tt, StringRef lexeme = "", size_t line = 0, size_t col = 0);
+
+    StringRef getLineAt(uint32_t const line_idx) const
+    {
+        return SourceManager_.getLineAt(line_idx);
+    }
 
 private:
     SourceManager SourceManager_;

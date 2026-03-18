@@ -134,7 +134,7 @@ public:
 
         return Length_ == other.Length_ && ::memcmp(data(), other.data(), Length_) == 0;
     }
-    
+
     MY_NODISCARD bool operator!=(StringRef const& other) const noexcept { return !(*this == other); }
 
     MY_NODISCARD bool operator<(StringRef const& other) const noexcept
@@ -156,12 +156,12 @@ public:
 
         return Length_ < other.Length_;
     }
-    
+
     MY_NODISCARD bool operator>(StringRef const& other) const noexcept { return other < *this; }
 
     MY_NODISCARD bool operator<=(StringRef const& other) const noexcept { return !(*this > other); }
     MY_NODISCARD bool operator>=(StringRef const& other) const noexcept { return !(*this < other); }
-    
+
     void expand(size_t const new_size);
 
     void reserve(size_t const new_capacity);
@@ -238,12 +238,12 @@ public:
     }
 
     MY_NODISCARD size_t len() const noexcept { return Length_; }
-    
+
     MY_NODISCARD size_t cap() const noexcept { return StringData_ ? StringData_->cap() : 0; }
 
-    MY_NODISCARD String* get() const noexcept { return StringData_;}
+    MY_NODISCARD String* get() const noexcept { return StringData_; }
 
-    MY_NODISCARD bool empty() const noexcept{ return Length_ == 0;}
+    MY_NODISCARD bool empty() const noexcept { return Length_ == 0; }
 
     MY_NODISCARD char const* data() const noexcept { return StringData_ ? StringData_->ptr() + Offset_ : nullptr; }
 

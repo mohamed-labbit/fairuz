@@ -1,9 +1,11 @@
 #ifndef META_HPP
 #define META_HPP
 
-#include "../../macros.hpp"
+#ifdef MYLANG_DEBUG
 
-#include <atomic>
+#    include "../../macros.hpp"
+
+#    include <atomic>
 
 namespace mylang::runtime::allocator {
 
@@ -41,5 +43,7 @@ struct AllocationFooter {
 };
 
 } // namespace mylang::runtime::allocator
+
+#endif // MYLANG_DEBUG
 
 #endif // META_HPP

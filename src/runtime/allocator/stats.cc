@@ -2,6 +2,8 @@
 
 namespace mylang::runtime::allocator {
 
+#ifdef MYLANG_DEBUG
+
 void DetailedAllocStats::recordAllocationSize(std::uint64_t size)
 {
     if (size <= 8)
@@ -418,5 +420,7 @@ void StatsPrinter::printMetricWithBar(std::ostream& os, char const* label, std::
     os << "│ " << left << setw(LABEL_WIDTH) << label << " " << right << setw(12) << StatsFormatter::formatNumber(value) << " "
        << StatsFormatter::createBar(value, max, 20) << " │\n";
 }
+
+#endif // MYLANG_DEBUG
 
 } // namespace mylang::runtime::allocator

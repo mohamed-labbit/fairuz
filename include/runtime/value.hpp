@@ -76,6 +76,7 @@ public:
     double asDouble() const;
     double asDoubleAny() const;
     ObjHeader* asObject() const;
+    int64_t asIntegerUnchecked() const;
 
     ObjString* asString() const;
     ObjList* asList() const;

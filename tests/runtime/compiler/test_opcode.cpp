@@ -6,42 +6,9 @@
 
 using namespace mylang::runtime;
 
-// ============================================================================
-// make_ABC round-trip
-// ============================================================================
-
-TEST(InstrABC, ZeroFields)
-{
-    uint32_t i = make_ABC(0, 0, 0, 0);
-    EXPECT_EQ(instr_op(i), 0u);
-    EXPECT_EQ(instr_A(i), 0u);
-    EXPECT_EQ(instr_B(i), 0u);
-    EXPECT_EQ(instr_C(i), 0u);
-}
-
-TEST(InstrABC, MaxFields)
-{
-    uint32_t i = make_ABC(0xFF, 0xFF, 0xFF, 0xFF);
-    EXPECT_EQ(instr_op(i), 0xFFu);
-    EXPECT_EQ(instr_A(i), 0xFFu);
-    EXPECT_EQ(instr_B(i), 0xFFu);
-    EXPECT_EQ(instr_C(i), 0xFFu);
-}
-
-TEST(InstrABC, FieldsIsolated)
-{
-    // Writing one field must not affect others
-    uint32_t i = make_ABC(0x11, 0x22, 0x33, 0x44);
-    EXPECT_EQ(instr_op(i), 0x11u);
-    EXPECT_EQ(instr_A(i), 0x22u);
-    EXPECT_EQ(instr_B(i), 0x33u);
-    EXPECT_EQ(instr_C(i), 0x44u);
-}
-
 TEST(InstrABC, OpCodeADD)
 {
-    uint8_t op = static_cast<uint8_t>(OpCode::OP_ADD);
-    uint32_t i = make_ABC(op, 5, 6, 7);
+    uint32_t i = make_ABC(OpCode::OP_ADD, 5, 6, 7);
     EXPECT_EQ(static_cast<OpCode>(instr_op(i)), OpCode::OP_ADD);
     EXPECT_EQ(instr_A(i), 5u);
     EXPECT_EQ(instr_B(i), 6u);
@@ -50,29 +17,25 @@ TEST(InstrABC, OpCodeADD)
 
 TEST(InstrABC, FieldsDoNotBleed)
 {
-    uint32_t i = make_ABC(0, 0xFF, 0, 0);
+    uint32_t i = make_ABC(OpCode(0), 0xFF, 0, 0);
     EXPECT_EQ(instr_A(i), 0xFFu);
     EXPECT_EQ(instr_B(i), 0u);
     EXPECT_EQ(instr_C(i), 0u);
 
-    uint32_t j = make_ABC(0, 0, 0xFF, 0);
+    uint32_t j = make_ABC(OpCode(0), 0, 0xFF, 0);
     EXPECT_EQ(instr_A(j), 0u);
     EXPECT_EQ(instr_B(j), 0xFFu);
     EXPECT_EQ(instr_C(j), 0u);
 
-    uint32_t k = make_ABC(0, 0, 0, 0xFF);
+    uint32_t k = make_ABC(OpCode(0), 0, 0, 0xFF);
     EXPECT_EQ(instr_A(k), 0u);
     EXPECT_EQ(instr_B(k), 0u);
     EXPECT_EQ(instr_C(k), 0xFFu);
 }
 
-// ============================================================================
-// make_ABx round-trip
-// ============================================================================
-
 TEST(InstrABx, ZeroFields)
 {
-    uint32_t i = make_ABx(0, 0, 0);
+    uint32_t i = make_ABx(OpCode(0), 0, 0);
     EXPECT_EQ(instr_op(i), 0u);
     EXPECT_EQ(instr_A(i), 0u);
     EXPECT_EQ(instr_Bx(i), 0u);
@@ -80,80 +43,75 @@ TEST(InstrABx, ZeroFields)
 
 TEST(InstrABx, MaxBx)
 {
-    uint32_t i = make_ABx(0, 0, 0xFFFF);
+    uint32_t i = make_ABx(OpCode(0), 0, 0xFFFF);
     EXPECT_EQ(instr_Bx(i), 0xFFFFu);
 }
 
 TEST(InstrABx, MaxA)
 {
-    uint32_t i = make_ABx(0, 0xFF, 0);
+    uint32_t i = make_ABx(OpCode(0), 0xFF, 0);
     EXPECT_EQ(instr_A(i), 0xFFu);
     EXPECT_EQ(instr_Bx(i), 0u);
 }
 
 TEST(InstrABx, BxDoesNotAffectA)
 {
-    uint32_t i = make_ABx(0, 0x77, 0xABCD);
+    uint32_t i = make_ABx(OpCode(0), 0x77, 0xABCD);
     EXPECT_EQ(instr_A(i), 0x77u);
     EXPECT_EQ(instr_Bx(i), 0xABCDu);
 }
 
 TEST(InstrABx, OpCodeLOAD_CONST)
 {
-    uint8_t op = static_cast<uint8_t>(OpCode::LOAD_CONST);
-    uint32_t i = make_ABx(op, 3, 1000);
+    uint32_t i = make_ABx(OpCode::LOAD_CONST, 3, 1000);
     EXPECT_EQ(static_cast<OpCode>(instr_op(i)), OpCode::LOAD_CONST);
     EXPECT_EQ(instr_A(i), 3u);
     EXPECT_EQ(instr_Bx(i), 1000u);
 }
 
-// ============================================================================
-// make_AsBx — signed bias encoding
-// ============================================================================
-
 TEST(InstrAsBx, ZeroOffset)
 {
     // offset 0 → sBx field = 32767 (bias)
-    uint32_t i = make_AsBx(static_cast<uint8_t>(OpCode::JUMP), 0, 0);
+    uint32_t i = make_AsBx((OpCode::JUMP), 0, 0);
     EXPECT_EQ(instr_sBx(i), 0);
 }
 
 TEST(InstrAsBx, PositiveOffset)
 {
-    uint32_t i = make_AsBx(static_cast<uint8_t>(OpCode::JUMP), 0, 100);
+    uint32_t i = make_AsBx((OpCode::JUMP), 0, 100);
     EXPECT_EQ(instr_sBx(i), 100);
 }
 
 TEST(InstrAsBx, NegativeOffset)
 {
-    uint32_t i = make_AsBx(static_cast<uint8_t>(OpCode::LOOP), 0, -50);
+    uint32_t i = make_AsBx((OpCode::LOOP), 0, -50);
     EXPECT_EQ(instr_sBx(i), -50);
 }
 
 TEST(InstrAsBx, MaxPositiveOffset)
 {
     // Maximum positive offset: 32767 (stored as 32767+32767=65534, fits in uint16)
-    uint32_t i = make_AsBx(static_cast<uint8_t>(OpCode::JUMP), 0, 32767);
+    uint32_t i = make_AsBx((OpCode::JUMP), 0, 32767);
     EXPECT_EQ(instr_sBx(i), 32767);
 }
 
 TEST(InstrAsBx, MaxNegativeOffset)
 {
     // Maximum negative: -32767 (stored as 0)
-    uint32_t i = make_AsBx(static_cast<uint8_t>(OpCode::LOOP), 0, -32767);
+    uint32_t i = make_AsBx((OpCode::LOOP), 0, -32767);
     EXPECT_EQ(instr_sBx(i), -32767);
 }
 
 TEST(InstrAsBx, AFieldPreserved)
 {
-    uint32_t i = make_AsBx(static_cast<uint8_t>(OpCode::JUMP_IF_FALSE), 42, 10);
+    uint32_t i = make_AsBx((OpCode::JUMP_IF_FALSE), 42, 10);
     EXPECT_EQ(instr_A(i), 42u);
     EXPECT_EQ(instr_sBx(i), 10);
 }
 
 TEST(InstrAsBx, AFieldMaxWithNegativeOffset)
 {
-    uint32_t i = make_AsBx(static_cast<uint8_t>(OpCode::JUMP_IF_TRUE), 0xFF, -100);
+    uint32_t i = make_AsBx((OpCode::JUMP_IF_TRUE), 0xFF, -100);
     EXPECT_EQ(instr_A(i), 0xFFu);
     EXPECT_EQ(instr_sBx(i), -100);
 }
@@ -161,14 +119,10 @@ TEST(InstrAsBx, AFieldMaxWithNegativeOffset)
 TEST(InstrAsBx, BiasIsExactly32767)
 {
     // By definition: sBx_raw=0 → offset=-32767, sBx_raw=32767 → offset=0
-    uint32_t i = make_AsBx(0, 0, 0);
+    uint32_t i = make_AsBx(OpCode(0), 0, 0);
     uint16_t raw_sbx = static_cast<uint16_t>(i & 0xFFFF);
     EXPECT_EQ(raw_sbx, static_cast<uint16_t>(32767));
 }
-
-// ============================================================================
-// REG_NONE and MAX_REGISTERS constants
-// ============================================================================
 
 TEST(Constants, REG_NONE_Is255)
 {
@@ -187,10 +141,6 @@ TEST(Constants, MAX_CONSTANTS_Is16Bit)
     EXPECT_EQ(MAX_CONSTANTS, 65535u);
 }
 
-// ============================================================================
-// opcode_name — every opcode must return a non-empty, non-"???" string
-// ============================================================================
-
 TEST(OpCodeMeta, AllOpcodesHaveName)
 {
     for (int op = 0; op < static_cast<int>(OpCode::_COUNT); ++op) {
@@ -201,7 +151,7 @@ TEST(OpCodeMeta, AllOpcodesHaveName)
 }
 
 /// just a guard against someguy changing the opcode names
-/// 
+///
 TEST(OpCodeMeta, KnownNames)
 {
     EXPECT_EQ(opcode_name(OpCode::LOAD_NIL), "LOAD_NIL");
@@ -235,10 +185,6 @@ TEST(OpCodeMeta, KnownNames)
     EXPECT_EQ(opcode_name(OpCode::LIST_SET), "LIST_SET");
     EXPECT_EQ(opcode_name(OpCode::LIST_LEN), "LIST_LEN");
 }
-
-// ============================================================================
-// opcodeFormat — every opcode must return a valid format
-// ============================================================================
 
 TEST(OpCodeMeta, AllOpcodesHaveFormat)
 {

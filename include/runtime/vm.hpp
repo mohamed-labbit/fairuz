@@ -2,18 +2,22 @@
 #define VM_HPP
 
 #include "../array.hpp"
-#include "value.hpp"
+#include "value_.hpp"
 #include <unordered_map>
 
 namespace mylang::runtime {
 
+using ErrorCode = diagnostic::errc::runtime::Code;
+
 class VM {
 public:
     static constexpr int MAX_FRAMES = 256;
-    static constexpr int STACK_SIZE = 1024 * 4;
+    static constexpr int STACK_SIZE = 8192;
 
     VM()
     {
+        std::fill(Stack_, Stack_ + STACK_SIZE, NIL_VAL);
+        std::fill(Frames_, Frames_ + MAX_FRAMES, CallFrame { });
         openStdlib();
     }
 
@@ -21,50 +25,28 @@ public:
 
 private:
     struct CallFrame {
-        ObjClosure* closure { nullptr }; // currently executing closure (never null)
-        uint32_t ip { 0 };               // instruction pointer into closure->function->chunk
-        int32_t base { 0 };              // index into VM::stack_ where register 0 lives
+        ObjClosure* closure { nullptr };
+        uint32_t ip { 0 };
+        int32_t base { 0 };
+        int localCount { 0 };
     };
+
+    Value Stack_[STACK_SIZE];
+    CallFrame Frames_[MAX_FRAMES];
+    unsigned int StackTop_ { 0 };
+    unsigned int FramesTop_ { 0 };
 
     std::unordered_map<StringRef, Value> Globals_;
     std::unordered_map<StringRef, ObjString*> StringTable_;
-    Array<Value> Stack_ { STACK_SIZE, Value::nil() };
-    Array<CallFrame> Frames_ { MAX_FRAMES, CallFrame() };
-    unsigned int StackTop_ { 0 };
-    unsigned int FramesTop_ { 0 };
     Array<ObjUpvalue*> OpenUpvalues_;
     bool isDead_ { false };
 
     Value execute();
 
-    // help
     CallFrame& frame();
     CallFrame const& frame() const;
     Chunk* chunk();
     Value& reg(int r);
-
-    // binary ops
-    Value _add(Value const lhs, Value const rhs);    // lhs + rhs
-    Value _sub(Value const lhs, Value const rhs);    // lhs - rhs
-    Value _mul(Value const lhs, Value const rhs);    // lhs * rhs
-    Value _div(Value const lhs, Value const rhs);    // lhs / rhs
-    Value _mod(Value const lhs, Value const rhs);    // lhs % rhs
-    Value _pow(Value const lhs, Value const rhs);    // lhs ** rhs
-    Value _cnc(Value const lhs, Value const rhs);    // str concat
-    Value _bitand(Value const lhs, Value const rhs); // lhs & rhs
-    Value _bitor(Value const lhs, Value const rhs);  // lhs | rhs
-    Value _bitxor(Value const lhs, Value const rhs); // lhs ^ rhs
-    Value _shl(Value const lhs, Value const rhs);    // lhs << rhs
-    Value _shr(Value const lhs, Value const rhs);    // lhs >> rhs
-
-    // unary ops
-    Value _neg(Value const a);    // -a
-    Value _bitnot(Value const a); // ~a
-
-    // cmp
-    bool _eq(Value const lhs, Value const rhs); // lhs = rhs
-    bool _lt(Value const lhs, Value const rhs); // lhs < rhs
-    bool _le(Value const lhs, Value const rhs); // lhs <= rhs
 
     ObjString* intern(StringRef const& str);
     void ensureStack(int needed);
@@ -76,11 +58,13 @@ private:
     void returnFromCall(int ret_reg, int n_ret);
 
     void openStdlib();
-    void registerNative(StringRef const& name, NativeFn fn, int arity = -1)
-    {
-        ObjString* name_obj = makeObjectString(name);
-        Globals_[name] = Value::object(makeObjectNative(fn, name_obj, arity));
-    }
+    void registerNative(StringRef const& name, NativeFn fn, int arity = -1);
+
+    SourceLocation currentLocation() const;
+    void runtimeError(ErrorCode code);
+    [[noreturn]] void halt();
+    void internChunkConstants(Chunk* ch);
+
 }; // class VM
 
 } // namespace mylang::runtime

@@ -3,7 +3,10 @@
 
 #include "array.hpp"
 #include "ast.hpp"
+#include "diagnostic.hpp"
+#include "error.hpp"
 #include "lexer.hpp"
+#include "string.hpp"
 #include "token.hpp"
 
 #include <optional>
@@ -11,6 +14,8 @@
 
 namespace mylang {
 namespace parser {
+
+using namespace ast;
 
 class SymbolTable {
 public:
@@ -99,16 +104,16 @@ private:
     Array<Issue> Issues_;
 
 public:
-    SymbolTable::DataType_t inferType(ast::Expr const* expr);
+    SymbolTable::DataType_t inferType(Expr const* expr);
 
     void reportIssue(Issue::Severity sev, StringRef const& msg, int32_t line, StringRef const& sugg = "");
 
-    void analyzeExpr(ast::Expr const* expr);
-    void analyzeStmt(ast::Stmt const* stmt);
+    void analyzeExpr(Expr const* expr);
+    void analyzeStmt(Stmt const* stmt);
 
     SemanticAnalyzer();
 
-    void analyze(Array<ast::Stmt*> const& Statements_);
+    void analyze(Array<Stmt*> const& Statements_);
 
     Array<Issue> const& getIssues() const;
 
@@ -167,36 +172,36 @@ public:
 
     explicit Parser(Array<tok::Token> seq, std::optional<size_t> s = std::nullopt);
 
-    Array<ast::Stmt*> parseProgram();
+    Array<Stmt*> parseProgram();
 
-    ast::Stmt* parseStatement();
-    ast::Stmt* parseExpressionStmt();
-    ast::Stmt* parseIfStmt();
-    ast::Stmt* parseWhileStmt();
-    ast::Stmt* parseReturnStmt();
-    ast::Stmt* parseFunctionDef();
-    ast::Expr* parseParenthesizedExprContent();
-    ast::Expr* parseCallExpr(ast::Expr* callee);
-    ast::Expr* parsePrimary();
-    ast::Expr* parseUnary();
-    ast::Expr* parseParenthesizedExpr();
-    ast::Expr* parseExpression();
-    ast::Expr* parseAssignmentExpr();
-    ast::Expr* parseListLiteral();
-    ast::Expr* parseConditionalExpr();
-    ast::Expr* parseLogicalExpr();
-    ast::Expr* parseLogicalExprPrecedence(unsigned int min_precedence);
-    ast::Expr* parseBinaryExprPrecedence(unsigned int min_precedence);
-    ast::Expr* parseComparisonExpr();
-    ast::Expr* parseBinaryExpr();
-    ast::Expr* parseUnaryExpr();
-    ast::Expr* parsePrimaryExpr();
-    ast::Expr* parsePostfixExpr();
-    ast::Expr* parse();
-    ast::ListExpr* parseFunctionArguments();
-    ast::ListExpr* parseParametersList();
-    ast::BlockStmt* parseBlock();
-    ast::BlockStmt* parseIndentedBlock();
+    ErrorOr<Stmt*> parseStatement();
+    ErrorOr<Stmt*> parseExpressionStmt();
+    ErrorOr<Stmt*> parseIfStmt();
+    ErrorOr<Stmt*> parseWhileStmt();
+    ErrorOr<Stmt*> parseReturnStmt();
+    ErrorOr<Stmt*> parseFunctionDef();
+    ErrorOr<Expr*> parseParenthesizedExprContent();
+    ErrorOr<Expr*> parseCallExpr(Expr* callee);
+    ErrorOr<Expr*> parsePrimary();
+    ErrorOr<Expr*> parseUnary();
+    ErrorOr<Expr*> parseParenthesizedExpr();
+    ErrorOr<Expr*> parseExpression();
+    ErrorOr<Expr*> parseAssignmentExpr();
+    ErrorOr<Expr*> parseListLiteral();
+    ErrorOr<Expr*> parseConditionalExpr();
+    ErrorOr<Expr*> parseLogicalExpr();
+    ErrorOr<Expr*> parseLogicalExprPrecedence(unsigned int min_precedence);
+    ErrorOr<Expr*> parseBinaryExprPrecedence(unsigned int min_precedence);
+    ErrorOr<Expr*> parseComparisonExpr();
+    ErrorOr<Expr*> parseBinaryExpr();
+    ErrorOr<Expr*> parseUnaryExpr();
+    ErrorOr<Expr*> parsePrimaryExpr();
+    ErrorOr<Expr*> parsePostfixExpr();
+    ErrorOr<Expr*> parse();
+    ErrorOr<Expr*> parseFunctionArguments();
+    ErrorOr<Expr*> parseParametersList();
+    ErrorOr<Stmt*> parseBlock();
+    ErrorOr<Stmt*> parseIndentedBlock();
 
     bool weDone() const;
     bool check(tok::TokenType type);
@@ -208,23 +213,22 @@ private:
     SymbolTable SymTable_;
     SemanticAnalyzer Sema_;
 
-    bool Expecting_ { false };
-
     tok::Token const* peek(size_t offset = 1) { return Lexer_.peek(offset); }
     tok::Token const* advance() { return Lexer_.next(); }
 
     bool match(tok::TokenType const type);
 
     MY_NODISCARD
-    bool consume(tok::TokenType type, StringRef const& msg)
+    bool consume(tok::TokenType type)
     {
         if (check(type)) {
             advance();
             return true;
         }
-        diagnostic::emit(msg.data(), diagnostic::Severity::ERROR);
         return false;
     }
+
+    Error reportError(diagnostic::errc::parser::Code err_code);
 
     void skipNewlines()
     {
@@ -250,10 +254,10 @@ private:
     OptimizationStats Stats_;
 
 public:
-    std::optional<double> evaluateConstant(ast::Expr const* expr);
+    std::optional<double> evaluateConstant(Expr const* expr);
 
-    ast::Expr* optimizeConstantFolding(ast::Expr* expr);
-    ast::Stmt* eliminateDeadCode(ast::Stmt* stmt);
+    Expr* optimizeConstantFolding(Expr* expr);
+    Stmt* eliminateDeadCode(Stmt* stmt);
 
     class CSEPass {
     private:
@@ -261,19 +265,19 @@ public:
         int32_t TempCounter_ = 0;
 
     public:
-        StringRef exprToString(ast::Expr const* expr);
+        StringRef exprToString(Expr const* expr);
         StringRef getTempVar();
 
-        std::optional<StringRef> findCSE(ast::Expr const* expr);
+        std::optional<StringRef> findCSE(Expr const* expr);
 
-        void recordExpr(ast::Expr const* expr, StringRef const& var);
+        void recordExpr(Expr const* expr, StringRef const& var);
     };
 
     // Pass 4: Loop Invariant Code Motion
-    bool isLoopInvariant(ast::Expr const* expr, std::unordered_set<StringRef, StringRefHash, StringRefEqual> const& loopVars);
+    bool isLoopInvariant(Expr const* expr, std::unordered_set<StringRef, StringRefHash, StringRefEqual> const& loopVars);
 
     // Main optimization pipeline
-    Array<ast::Stmt*> optimize(Array<ast::Stmt*> statements, int32_t level = 2);
+    Array<Stmt*> optimize(Array<Stmt*> statements, int32_t level = 2);
 
     OptimizationStats const& getStats() const;
 

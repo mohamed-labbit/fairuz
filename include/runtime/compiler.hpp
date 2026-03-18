@@ -57,10 +57,7 @@ struct CompilerState {
             nextReg--;
     }
 
-    void freeRegsTo(uint8_t mark)
-    {
-        nextReg = mark;
-    }
+    void freeRegsTo(uint8_t mark) { nextReg = mark; }
 };
 
 struct RegMark {
@@ -73,10 +70,7 @@ struct RegMark {
     {
     }
 
-    ~RegMark()
-    {
-        state->freeRegsTo(mark);
-    }
+    ~RegMark() { state->freeRegsTo(mark); }
 };
 
 class Compiler {
@@ -88,7 +82,16 @@ public:
 
 private:
     CompilerState* Current_ { nullptr };
-    std::unordered_map<StringRef, uint16_t> StringCache_;
+    struct PairHash {
+        size_t operator()(std::pair<StringRef, Chunk*> const& p) const noexcept
+        {
+            size_t h1 = std::hash<StringRef> { }(p.first);
+            size_t h2 = std::hash<Chunk*> { }(p.second);
+            return h1 ^ (h2 * 0x9e3779b97f4a7c15ULL + (h1 << 6) + (h1 >> 2));
+        }
+    };
+
+    std::unordered_map<std::pair<StringRef, Chunk*>, uint16_t, PairHash> StringCache_;
 
     struct VarInfo {
         enum class Kind {
@@ -135,23 +138,23 @@ private:
     int resolveUpvalue(CompilerState* state, StringRef const& name);
     int addUpvalue(CompilerState* state, bool const is_local, uint8_t const index);
 
-    uint32_t emit(uint32_t const instr, uint32_t const line);
-    uint32_t emitJump(OpCode const op, uint8_t const cond, uint32_t const line);
+    uint32_t emit(uint32_t const instr, SourceLocation loc);
+    uint32_t emitJump(OpCode const op, uint8_t const cond, SourceLocation loc);
 
     void patchJump(uint32_t const idx);
     void pushLoop(uint32_t const loop_start);
     void popLoop(uint32_t const loop_exit, uint32_t const continue_target, uint32_t const line);
     void patchJumpTo(uint32_t const instr_idx, uint32_t const target);
-    void emitLoadValue(uint8_t const dst, Value const v, uint32_t const line);
+    void emitLoadValue(uint8_t const dst, Value const v, SourceLocation loc);
 
     Chunk* currentChunk() const;
 
     uint32_t currentOffset() const;
 
     void beginScope();
-    void endScope(uint32_t const line);
+    void endScope(SourceLocation loc);
 
-    uint32_t internString(StringRef const& str, uint32_t const line);
+    uint32_t internString(StringRef const& str);
 };
 
 }

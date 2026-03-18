@@ -1,29 +1,31 @@
 #include "../../include/runtime/opcode.hpp"
+#include "../../include/runtime/value_.hpp"
 #include <cstdio>
 
 namespace mylang::runtime {
 
-void print_value(Value v)
+void print_value(uint64_t v)
 {
-    if (v.isNil())
+    if (v == NIL_VAL)
         ::printf("nil");
-    else if (v.isBoolean())
-        ::printf("%s", v.asBoolean() ? "true" : "false");
-    else if (v.isInteger())
-        ::printf("%i", v.isInteger());
-    else if (v.isDouble())
-        ::printf("%g", v.asDouble());
-    else if (v.isString())
-        ::printf("\"%s\"", v.asString()->str.data());
-    else if (v.isObject())
-        ::printf("<obj %p>", (void*)v.asObject());
+    else if (IS_BOOL(v))
+        ::printf("%s", asBool(v) ? "true" : "false");
+    else if (IS_INTEGER(v))
+        ::printf("%lli", asInteger(v));
+    else if (isDouble(v))
+        ::printf("%g", asDouble(v));
+    else if (isString(v))
+        ::printf("\"%s\"", asString(v)->str.data());
+    else if (IS_OBJECT(v))
+        ::printf("<obj %p>", (void*)asObject(v));
     ::printf("?");
 }
 
-uint32_t Chunk::emit(uint32_t instr, uint32_t line)
+uint32_t Chunk::emit(uint32_t instr, SourceLocation loc)
 {
+    locations.push(loc);
     code.push(instr);
-    addLine(line);
+    addLine(loc.line);
     return static_cast<uint32_t>(code.size() - 1);
 }
 
@@ -32,7 +34,8 @@ bool Chunk::patchJump(uint32_t const instr_idx)
     int32_t const offset = static_cast<int32_t>(code.size()) - static_cast<int32_t>(instr_idx) - 1;
     if (offset > JUMP_OFFSET || offset < -JUMP_OFFSET)
         return false;
-    uint8_t op = instr_op(code[instr_idx]);
+
+    OpCode op = instr_op(code[instr_idx]);
     uint8_t A = instr_A(code[instr_idx]);
     code[instr_idx] = make_AsBx(op, A, offset);
     return true;
@@ -40,9 +43,11 @@ bool Chunk::patchJump(uint32_t const instr_idx)
 
 uint16_t Chunk::addConstant(Value const v)
 {
-    for (uint16_t i = 0, n = static_cast<uint16_t>(constants.size()); i < n; ++i)
+    for (uint16_t i = 0, n = static_cast<uint16_t>(constants.size()); i < n; ++i) {
         if (constants[i] == v)
             return i;
+    }
+
     constants.push(v);
     return static_cast<uint16_t>(constants.size() - 1);
 }

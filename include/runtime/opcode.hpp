@@ -2,7 +2,7 @@
 #define OPCODE_HPP
 
 #include "../array.hpp"
-#include "value.hpp"
+#include "../string.hpp"
 #include <cinttypes>
 #include <cstdint>
 #include <utility>
@@ -13,53 +13,6 @@ static constexpr uint16_t JUMP_OFFSET = 32767;
 static constexpr uint8_t REG_NONE = 0xFF;
 static constexpr uint16_t MAX_CONSTANTS = 0xFFFF;
 static constexpr uint8_t MAX_REGS = 250; // room for sentinel + scratch
-
-inline uint8_t instr_op(uint32_t const i)
-{
-    return (i >> 24) & 0xFF;
-}
-
-inline uint8_t instr_A(uint32_t const i)
-{
-    return (i >> 16) & 0xFF;
-}
-
-inline uint8_t instr_B(uint32_t const i)
-{
-    return (i >> 8) & 0xFF;
-}
-
-inline uint8_t instr_C(uint32_t const i)
-{
-    return i & 0xFF;
-}
-
-inline uint16_t instr_Bx(uint32_t const i)
-{
-    return i & 0xFFFF;
-}
-
-inline int16_t instr_sBx(uint32_t const i)
-{
-    return static_cast<int16_t>(i & 0xFFFF) - 32767;
-}
-
-inline uint32_t make_ABC(uint8_t op, uint8_t A, uint8_t B, uint8_t C)
-{
-    return (static_cast<uint32_t>(op) << 24) | (static_cast<uint32_t>(A) << 16)
-        | (static_cast<uint32_t>(B) << 8) | static_cast<uint32_t>(C);
-}
-
-inline uint32_t make_ABx(uint8_t op, uint8_t A, uint16_t Bx)
-{
-    return (static_cast<uint32_t>(op) << 24) | (static_cast<uint32_t>(A) << 16) | (static_cast<uint32_t>(Bx));
-}
-
-inline uint32_t make_AsBx(uint8_t op, uint8_t A, int64_t sBx)
-{
-    uint16_t _sBx = static_cast<uint16_t>(sBx + JUMP_OFFSET);
-    return (static_cast<uint32_t>(op) << 24) | (static_cast<uint32_t>(A) << 16) | (static_cast<uint32_t>(_sBx));
-}
 
 enum class OpCode : uint8_t {
     /// [Op]: [A] , [B], [C]
@@ -72,7 +25,7 @@ enum class OpCode : uint8_t {
     LOAD_TRUE,    // dst, - , -
     LOAD_FALSE,   // dst, - , -
     LOAD_CONST,   // dst, Const pool index
-    LOAD_INT,     // dst, signed 16-bit int (with bias, for larger ints use Value)
+    LOAD_INT,     // dst, signed 16-bit int (with bias, for larger ints use uint64_t)
     LOAD_GLOBAL,  // dst, name const index
     STORE_GLOBAL, // src, name const index
 
@@ -85,22 +38,47 @@ enum class OpCode : uint8_t {
     // * is the value inside the given reg, if you have to ask ,then don't touch this code
     // *A = *left OP *right
     OP_ADD,
+    OP_ADD_II,
+    OP_ADD_FF,
     OP_SUB,
+    OP_SUB_II,
+    OP_SUB_FF,
     OP_MUL,
+    OP_MUL_II,
+    OP_MUL_FF,
     OP_DIV,
+    OP_DIV_II,
+    OP_DIV_FF,
     OP_MOD,
+    OP_MOD_II,
+    OP_MOD_FF,
     OP_POW,
     OP_NEG, // *A = -(*B)
+    OP_NEG_I,
+    OP_NEG_F,
     OP_BITAND,
+    OP_BITAND_I,
     OP_BITOR,
     OP_BITXOR,
     OP_BITNOT, // *A = ~(*B)
     OP_LSHIFT,
     OP_RSHIFT,
     OP_EQ,
+    OP_EQ_II,
+    OP_EQ_FF,
+    OP_EQ_SS,
     OP_NEQ,
+    OP_NEQ_II,
+    OP_NEQ_FF,
+    OP_NEQ_SS,
     OP_LT,
+    OP_LT_II,
+    OP_LT_FF,
+    OP_LT_SS,
     OP_LTE,
+    OP_LTE_II,
+    OP_LTE_FF,
+    OP_LTE_SS,
     OP_NOT, // *A = !(*B)
     CONCAT, // A: dst, B: first reg, C: count  — concat C registers starting at B
 
@@ -134,6 +112,37 @@ enum class OpCode : uint8_t {
     _COUNT
 };
 
+// inline uint8_t instr_op(uint32_t const i) { return (i >> 24) & 0xFF; }
+
+inline OpCode instr_op(uint32_t const i) { return static_cast<OpCode>((i >> 24) & 0xFF); }
+
+inline uint8_t instr_A(uint32_t const i) { return (i >> 16) & 0xFF; }
+
+inline uint8_t instr_B(uint32_t const i) { return (i >> 8) & 0xFF; }
+
+inline uint8_t instr_C(uint32_t const i) { return i & 0xFF; }
+
+inline uint16_t instr_Bx(uint32_t const i) { return i & 0xFFFF; }
+
+inline int16_t instr_sBx(uint32_t const i) { return static_cast<int16_t>(i & 0xFFFF) - 32767; }
+
+inline uint32_t make_ABC(OpCode op, uint8_t A, uint8_t B, uint8_t C)
+{
+    return (static_cast<uint32_t>(op) << 24) | (static_cast<uint32_t>(A) << 16)
+        | (static_cast<uint32_t>(B) << 8) | static_cast<uint32_t>(C);
+}
+
+inline uint32_t make_ABx(OpCode op, uint8_t A, uint16_t Bx)
+{
+    return (static_cast<uint32_t>(op) << 24) | (static_cast<uint32_t>(A) << 16) | (static_cast<uint32_t>(Bx));
+}
+
+inline uint32_t make_AsBx(OpCode op, uint8_t A, int64_t sBx)
+{
+    uint16_t _sBx = static_cast<uint16_t>(sBx + JUMP_OFFSET);
+    return (static_cast<uint32_t>(op) << 24) | (static_cast<uint32_t>(A) << 16) | (static_cast<uint32_t>(_sBx));
+}
+
 enum class InstrFormat : uint8_t {
     ABC,
     ABx,
@@ -142,60 +151,10 @@ enum class InstrFormat : uint8_t {
     NONE
 };
 
-enum class TypeTag : uint8_t {
-    NONE = 0,
-    NIL = 1 << 0,
-    BOOL = 1 << 1,
-    INT = 1 << 2,
-    DOUBLE = 1 << 3,
-    STRING = 1 << 4,
-    LIST = 1 << 5,
-    CLOSURE = 1 << 6,
-    NATIVE = 1 << 7
-};
-
-inline bool hasTag(TypeTag mask, TypeTag t)
-{
-    return (static_cast<uint8_t>(mask) & static_cast<uint8_t>(t)) != 0;
-}
-
-inline TypeTag operator|(TypeTag const a, TypeTag const b)
-{
-    return static_cast<TypeTag>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
-}
-
-inline TypeTag& operator|=(TypeTag& a, TypeTag const b)
-{
-    a = a | b;
-    return a;
-}
-
-inline TypeTag valueTypeTag(Value const v)
-{
-    if (v.isNil())
-        return TypeTag::NIL;
-    if (v.isBoolean())
-        return TypeTag::BOOL;
-    if (v.isInteger())
-        return TypeTag::INT;
-    if (v.isDouble())
-        return TypeTag::DOUBLE;
-    if (v.isString())
-        return TypeTag::STRING;
-    if (v.isList())
-        return TypeTag::LIST;
-    if (v.isClosure())
-        return TypeTag::CLOSURE;
-    if (v.isNative())
-        return TypeTag::NATIVE;
-
-    return TypeTag::NONE;
-}
-
 struct ICSlot {
-    TypeTag seenLhs { TypeTag::NONE };
-    TypeTag seenRhs { TypeTag::NONE };
-    TypeTag seenRet { TypeTag::NONE };
+    uint8_t seenLhs { 0 };
+    uint8_t seenRhs { 0 };
+    uint8_t seenRet { 0 };
     uint32_t hitCount { 0 };
     void* jitStub { nullptr };
 };
@@ -336,7 +295,7 @@ static InstrFormat opcodeFormat(OpCode op)
     }
 }
 
-static void print_value(Value v);
+static void print_value(uint64_t v);
 
 struct Chunk {
     StringRef name { "" };
@@ -345,7 +304,8 @@ struct Chunk {
     unsigned int upvalueCount { 0 };
 
     Array<uint32_t> code;
-    Array<Value> constants;
+    Array<SourceLocation> locations;
+    Array<uint64_t> constants;
     Array<LineEntry> lines;
     Array<Chunk*> functions;
     Array<ICSlot> icSlots;
@@ -359,11 +319,11 @@ struct Chunk {
     Chunk& operator=(Chunk const&) = delete;
     Chunk& operator=(Chunk&&) = default;
 
-    uint32_t emit(uint32_t instr, uint32_t line);
+    uint32_t emit(uint32_t instr, SourceLocation loc);
 
     bool patchJump(uint32_t const instr_idx);
 
-    uint16_t addConstant(Value const v);
+    uint16_t addConstant(uint64_t const v);
 
     uint8_t allocIcSlot();
 

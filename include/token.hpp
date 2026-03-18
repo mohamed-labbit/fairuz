@@ -17,7 +17,7 @@ namespace tok {
 struct Location {
     std::string filepath { "" };
     uint32_t line { 0 };
-    uint32_t column { 0 };
+    uint16_t column { 0 };
     uint64_t FilePos { 0 };
 
     Location() = default;
@@ -143,7 +143,7 @@ enum {
 
 class Token {
 public:
-    Token(StringRef val, TokenType tt, uint32_t line, uint32_t col, uint64_t fpos = 0, std::string fpath = "", bool atbol = false)
+    Token(StringRef val, TokenType tt, uint32_t line, uint16_t col, uint64_t fpos = 0, std::string fpath = "", bool atbol = false)
         : Value_(val)
         , Type_(tt)
         , Location_(fpath, line, col, fpos)
@@ -175,7 +175,7 @@ public:
 
     MY_NODISCARD uint32_t const& line() const;
 
-    MY_NODISCARD uint32_t const& column() const;
+    MY_NODISCARD uint16_t const& column() const;
 
     MY_NODISCARD Location const& location() const;
 

@@ -2,7 +2,7 @@
 #define OPTIM_HPP
 
 #include "../ast.hpp"
-#include "value.hpp"
+#include "value_.hpp"
 #include <cstdint>
 #include <optional>
 
@@ -18,13 +18,13 @@ static std::optional<Value> constValue(Expr const* e)
     LiteralExpr const* lit = static_cast<LiteralExpr const*>(e);
 
     if (lit->isNil())
-        return Value::nil();
+        return NIL_VAL;
     if (lit->isBoolean())
-        return Value::boolean(lit->getBool());
+        return makeBool(lit->getBool());
     if (lit->isInteger())
-        return Value::integer(lit->getInt());
+        return makeInteger(lit->getInt());
     if (lit->isDecimal())
-        return Value::real(lit->getFloat());
+        return makeReal(lit->getFloat());
 
     // Strings are not folded here (they are heap objects)
     return std::nullopt;
@@ -38,15 +38,15 @@ static std::optional<Value> tryFoldUnary(UnaryExpr const* e)
 
     switch (e->getOperator()) {
     case UnaryOp::OP_NEG:
-        if (cv->isNumber())
-            return cv->isInteger() ? Value::integer(-cv->asInteger()) : Value::real(-cv->asDouble());
+        if (isNumber(*cv))
+            return IS_INTEGER(*cv) ? makeInteger(-asInteger(*cv)) : makeReal(-asDouble(*cv));
 
         return std::nullopt;
     case UnaryOp::OP_NOT:
-        return Value::boolean(!cv->isTruthy());
+        return makeBool(!isTruthy(*cv));
     case UnaryOp::OP_BITNOT:
-        if (cv->isInteger())
-            return Value::integer(~cv->asInteger());
+        if (IS_INTEGER(*cv))
+            return makeInteger(~asInteger(*cv));
 
         return std::nullopt;
     default:
@@ -66,70 +66,70 @@ static std::optional<Value> _tryFoldBinary(BinaryExpr const* e)
 
     // Equality works on all types
     if (op == BinaryOp::OP_EQ)
-        return Value::boolean(*L == *R);
+        return makeBool(*L == *R);
 
     if (op == BinaryOp::OP_NEQ)
-        return Value::boolean(*L != *R);
+        return makeBool(*L != *R);
 
     // Arithmetic requires numeric operands
-    if (!L->isNumber() || !R->isNumber())
+    if (!isNumber(*L) || !isNumber(*R))
         return std::nullopt;
 
-    bool both_ints = L->isInteger() && R->isInteger();
+    bool both_ints = IS_INTEGER(*L) && IS_INTEGER(*R);
 
-    double ld = L->asDoubleAny();
-    double rd = R->asDoubleAny();
+    double ld = asDouble(*L);
+    double rd = asDouble(*R);
 
-    int64_t li = L->isInteger() ? L->asInteger() : static_cast<int64_t>(L->asDoubleAny());
-    int64_t ri = R->isInteger() ? R->asInteger() : static_cast<int64_t>(R->asDoubleAny());
+    int64_t li = IS_INTEGER(*L) ? asInteger(*L) : static_cast<int64_t>(asDouble(*L));
+    int64_t ri = IS_INTEGER(*R) ? asInteger(*R) : static_cast<int64_t>(asDouble(*R));
 
     switch (op) {
     case BinaryOp::OP_ADD:
-        return both_ints ? Value::integer(li + ri) : Value::real(ld + rd);
+        return both_ints ? makeInteger(li + ri) : makeReal(ld + rd);
     case BinaryOp::OP_SUB:
-        return both_ints ? Value::integer(li - ri) : Value::real(ld - rd);
+        return both_ints ? makeInteger(li - ri) : makeReal(ld - rd);
     case BinaryOp::OP_MUL:
-        return both_ints ? Value::integer(li * ri) : Value::real(ld * rd);
+        return both_ints ? makeInteger(li * ri) : makeReal(ld * rd);
     case BinaryOp::OP_DIV:
         if (rd == 0.0)
             return std::nullopt; // don't fold division by zero
 
-        return Value::real(ld / rd);
+        return makeReal(ld / rd);
     case BinaryOp::OP_MOD: {
         if (rd == 0.0)
             return std::nullopt;
 
         if (both_ints)
-            return Value::integer(li % ri);
+            return makeInteger(li % ri);
 
-        return Value::real(std::fmod(ld, rd));
+        return makeReal(std::fmod(ld, rd));
     }
     case BinaryOp::OP_POW:
-        return Value::real(std::pow(ld, rd));
+        return makeReal(std::pow(ld, rd));
     case BinaryOp::OP_LT:
-        return Value::boolean(ld < rd);
+        return makeBool(ld < rd);
     case BinaryOp::OP_GT:
-        return Value::boolean(ld > rd);
+        return makeBool(ld > rd);
     case BinaryOp::OP_LTE:
-        return Value::boolean(ld <= rd);
+        return makeBool(ld <= rd);
     case BinaryOp::OP_GTE:
-        return Value::boolean(ld >= rd);
+        return makeBool(ld >= rd);
     case BinaryOp::OP_BITAND:
-        return both_ints ? Value::integer(li & ri) : std::optional<Value> { };
+        return both_ints ? makeInteger(li & ri) : std::optional<Value> { };
     case BinaryOp::OP_BITOR:
-        return both_ints ? Value::integer(li | ri) : std::optional<Value> { };
+        return both_ints ? makeInteger(li | ri) : std::optional<Value> { };
     case BinaryOp::OP_BITXOR:
-        return both_ints ? Value::integer(li ^ ri) : std::optional<Value> { };
+        return both_ints ? makeInteger(li ^ ri) : std::optional<Value> { };
     case BinaryOp::OP_LSHIFT:
         if (!both_ints || ri < 0 || ri >= 64)
             return std::nullopt;
 
-        return Value::integer(li << ri);
+        return makeInteger(li << ri);
     case BinaryOp::OP_RSHIFT:
         if (!both_ints || ri < 0 || ri >= 64)
             return std::nullopt;
 
-        return Value::integer(li >> ri);
+        return makeInteger(li >> ri);
     default:
         return std::nullopt;
     }
@@ -170,12 +170,12 @@ static std::optional<Value> tryFoldBinary(BinaryExpr const* e)
     BinaryExpr* ce = e->clone();
 
     auto makeLiteralFromVal = [](Value const v) {
-        if (v.isDouble())
-            return makeLiteralFloat(v.asDouble());
-        if (v.isInteger())
-            return makeLiteralInt(v.asInteger());
-        if (v.isBoolean())
-            return makeLiteralBool(v.asBoolean());
+        if (isDouble(v))
+            return makeLiteralFloat(asDouble(v));
+        if (IS_INTEGER(v))
+            return makeLiteralInt(asInteger(v));
+        if (IS_BOOL(v))
+            return makeLiteralBool(asBool(v));
 
         return makeLiteralNil();
     };

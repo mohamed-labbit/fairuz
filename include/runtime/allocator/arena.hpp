@@ -19,7 +19,6 @@ private:
     size_t Size_ { DEFAULT_BLOCK_SIZE };
     unsigned char* Begin_ { nullptr };
     unsigned char* Next_ { nullptr };
-    mutable std::mutex Mutex_;
 
 public:
     explicit ArenaBlock(size_t const size = DEFAULT_BLOCK_SIZE, size_t const alignment = alignof(std::max_align_t));
@@ -59,6 +58,16 @@ public:
     using OutOfMemoryHandler = std::function<bool(size_t requested)>;
 
 private:
+    std::vector<ArenaBlock> Blocks_ { };
+    GrowthStrategy GrowthFactor_ { GrowthStrategy::LINEAR };
+    size_t BlockSize_ { DEFAULT_BLOCK_SIZE };
+    size_t NextBlockSize_ { DEFAULT_BLOCK_SIZE };
+    std::string Name_ { "arena" };
+    OutOfMemoryHandler OomHandler_ { nullptr };
+    size_t MaxBlockSize_ { MAX_BLOCK_SIZE };
+    void* LastPtr_ { nullptr };
+
+#ifdef MYLANG_DEBUG
     struct VoidPtrHash {
         size_t operator()(void const* ptr) const noexcept
         {
@@ -74,23 +83,12 @@ private:
     };
 
     DetailedAllocStats AllocStats_;
-    std::vector<ArenaBlock> Blocks_ { };
-    mutable std::shared_mutex BlocksMutex_;
-    GrowthStrategy GrowthFactor_ { GrowthStrategy::LINEAR };
-    size_t BlockSize_ { DEFAULT_BLOCK_SIZE };
-    size_t NextBlockSize_ { DEFAULT_BLOCK_SIZE };
-    std::string Name_ { "arena" };
-    OutOfMemoryHandler OomHandler_ { nullptr };
-    mutable std::mutex OomHandlerMutex_;
     std::unordered_map<void*, AllocationHeader, VoidPtrHash, VoidPtrEqual> AllocationMap_ { };
-    mutable std::shared_mutex AllocationMapMutex_;
     std::unordered_set<void*, VoidPtrHash, VoidPtrEqual> AllocatedPtrs_ { };
-    mutable std::shared_mutex AllocatedPtrsMutex_;
     bool TrackAllocations_ { false };
     bool DebugFeatures_ { false };
     bool EnableStatistics_ { true };
-    size_t MaxBlockSize_ { MAX_BLOCK_SIZE };
-    void* LastPtr_ { nullptr };
+#endif // MYLANG_DEBUG
 
     static constexpr size_t Alignment_ = alignof(std::max_align_t);
 
@@ -112,21 +110,20 @@ public:
     void setName(std::string const& name);
     void reset();
 
-    size_t totalAllocated() const;
-    size_t totalAllocations() const;
-    size_t activeBlocks() const;
-
     MY_NODISCARD unsigned char* allocateBlock(size_t requested, size_t alignment_ = alignof(std::max_align_t), bool retry_on_oom = true);
 
     MY_NODISCARD void* allocate(size_t const size, size_t const alignment = alignof(std::max_align_t));
 
     void deallocate(void* ptr, size_t const size);
 
-    MY_NODISCARD bool verifyAllocation(void* ptr) const;
-
+#ifdef MYLANG_DEBUG
+    size_t totalAllocated() const;
+    size_t totalAllocations() const;
+    size_t activeBlocks() const;
     std::string toString(bool verbose) const;
-
     void dumpStats(std::ostream& os, bool verbose) const;
+    MY_NODISCARD bool verifyAllocation(void* ptr) const;
+#endif // MYLANG_DEBUG
 
 private:
     MY_NODISCARD unsigned char* allocateFromBlocks(size_t alloc_size, size_t align = alignof(std::max_align_t));

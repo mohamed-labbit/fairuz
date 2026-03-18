@@ -30,6 +30,12 @@ std::string const GRAY = "\033[90m";
 
 } // Color
 
+struct SourceLocation {
+    uint32_t line { 0 };
+    uint16_t column { 0 };
+    uint16_t length { 0 };
+};
+
 } // mylang
 
 #endif // MACROS_HPP

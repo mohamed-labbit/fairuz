@@ -1,14 +1,16 @@
 #ifndef STATS_HPP
 #define STATS_HPP
 
-#include <atomic>
-#include <chrono>
-#include <cstdint>
-#include <iomanip>
-#include <iostream>
-#include <sstream>
-#include <string>
-#include <vector>
+#ifdef MYLANG_DEBUG
+
+#    include <atomic>
+#    include <chrono>
+#    include <cstdint>
+#    include <iomanip>
+#    include <iostream>
+#    include <sstream>
+#    include <string>
+#    include <vector>
 
 namespace mylang::runtime::allocator {
 
@@ -108,5 +110,7 @@ private:
 };
 
 } // namespace mylang::runtime::allocator
+
+#endif // MYLANG_DEBUG
 
 #endif // STATS_HPP

@@ -56,7 +56,9 @@ public:
         arena_.deallocate(static_cast<void*>(obj), sizeof(T));
     }
 
+#ifdef MYLANG_DEBUG
     std::string toString(bool verbose) const { return arena_.toString(verbose); }
+#endif // MYLANG_DEBUG
 
     ~Allocator() = default;
 };

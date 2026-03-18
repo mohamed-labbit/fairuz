@@ -3,6 +3,9 @@
 
 namespace mylang::runtime {
 
+static SourceLocation srcLoc(Stmt const* s) { return SourceLocation { s->getLine(), s->getColumn(), 0 }; }
+static SourceLocation srcLoc(Expr const* e) { return SourceLocation { e->getLine(), e->getColumn(), 0 }; }
+
 Chunk* Compiler::compile(Array<Stmt*> const& stmts)
 {
     if (stmts.empty() || !stmts[0]) {
@@ -24,10 +27,12 @@ Chunk* Compiler::compile(Array<Stmt*> const& stmts)
     for (auto const& s : stmts)
         compileStmt(s);
 
+    SourceLocation cur_loc = { stmts.back()->getLine(), stmts.back()->getColumn(), 0 };
+
     // Emit implicit RETURN_NIL only when control flow is still live.
     if (!state.isDead_) {
         uint32_t line = stmts[0] ? stmts[0]->getLine() : 0;
-        emit(make_ABC(static_cast<uint8_t>(OpCode::RETURN_NIL), 0, 0, 0), line);
+        emit(make_ABC(OpCode::RETURN_NIL, 0, 0, 0), cur_loc);
     }
 
     top_chunk->localCount = state.maxReg;
@@ -80,7 +85,12 @@ void Compiler::compileBlock(BlockStmt const* s)
     for (Stmt const* child : s->getStatements())
         compileStmt(child);
 
-    endScope(s->getLine());
+    SourceLocation loc = { 1, 1, 0 };
+    if (!s->getStatements().empty()) {
+        Stmt* n = s->getStatements().back();
+        loc = { n->getLine(), n->getColumn(), 0 };
+    }
+    endScope(loc);
 }
 
 void Compiler::compileExprStmt(ExprStmt const* s)
@@ -91,7 +101,7 @@ void Compiler::compileExprStmt(ExprStmt const* s)
 
 void Compiler::compileAssignmentStmt(AssignmentStmt const* s)
 {
-    uint32_t line = s ? s->getLine() : 0;
+    SourceLocation cur_loc = { s->getLine(), s->getColumn(), 0 };
     NameExpr const* name = dynamic_cast<NameExpr const*>(s->getTarget());
     assert(name);
 
@@ -109,13 +119,13 @@ void Compiler::compileAssignmentStmt(AssignmentStmt const* s)
         case VarInfo::Kind::UPVALUE: {
             RegMark mark(Current_);
             uint8_t src = compileExpr(s->getValue());
-            emit(make_ABC(static_cast<uint8_t>(OpCode::SET_UPVALUE), src, vi.index, 0), line);
+            emit(make_ABC(OpCode::SET_UPVALUE, src, vi.index, 0), cur_loc);
         } break;
         case VarInfo::Kind::GLOBAL: {
             RegMark mark(Current_);
             uint8_t src = compileExpr(s->getValue());
-            uint16_t kidx = internString(name->getValue(), line);
-            emit(make_ABx(static_cast<uint8_t>(OpCode::STORE_GLOBAL), src, kidx), line);
+            uint16_t kidx = internString(name->getValue());
+            emit(make_ABx((OpCode::STORE_GLOBAL), src, kidx), cur_loc);
         } break;
         }
     }
@@ -126,13 +136,13 @@ void Compiler::compileIf(IfStmt const* s)
     if (!s)
         return;
 
-    uint32_t line = s ? s->getLine() : 0;
+    SourceLocation cur_loc = { s->getLine(), s->getColumn(), 0 };
     bool const incoming_dead = Current_->isDead_;
 
     auto folded_cond = tryFoldExpr(s->getCondition());
 
     if (folded_cond) {
-        if (folded_cond->isTruthy()) {
+        if (isTruthy(*folded_cond)) {
             compileStmt(s->getThenBlock());
             return;
         }
@@ -148,11 +158,11 @@ void Compiler::compileIf(IfStmt const* s)
 
     RegMark mark(Current_);
     uint8_t cond = compileExpr(s->getCondition());
-    uint32_t jump_false = emitJump(OpCode::JUMP_IF_FALSE, cond, line);
+    uint32_t jump_false = emitJump(OpCode::JUMP_IF_FALSE, cond, cur_loc);
     compileStmt(s->getThenBlock());
 
     if (BlockStmt const* else_block = s->getElseBlock()) {
-        uint32_t jump_end = emitJump(OpCode::JUMP, 0, line);
+        uint32_t jump_end = emitJump(OpCode::JUMP, 0, cur_loc);
         patchJump(jump_false);
         compileStmt(else_block);
         patchJump(jump_end);
@@ -167,13 +177,13 @@ void Compiler::compileWhile(WhileStmt const* s)
     if (!s)
         return;
 
-    uint32_t line = s ? s->getLine() : 0;
+    SourceLocation const cur_loc = { s->getLine(), s->getColumn(), 0 };
     bool const incoming_dead = Current_->isDead_;
 
     auto folded_cond = tryFoldExpr(s->getCondition());
 
     if (folded_cond) {
-        if (!folded_cond->isTruthy()) {
+        if (!isTruthy(*folded_cond)) {
             Current_->isDead_ = incoming_dead;
             return;
         }
@@ -182,8 +192,8 @@ void Compiler::compileWhile(WhileStmt const* s)
         pushLoop(loop_start_folded);
         compileStmt(s->getBlock());
         uint32_t offset_folded = loop_start_folded - currentOffset() - 1;
-        emit(make_AsBx(static_cast<uint8_t>(OpCode::LOOP), 0, offset_folded), line);
-        popLoop(currentOffset(), loop_start_folded, line);
+        emit(make_AsBx((OpCode::LOOP), 0, offset_folded), cur_loc);
+        popLoop(currentOffset(), loop_start_folded, cur_loc.line);
         Current_->isDead_ = incoming_dead;
         return;
     }
@@ -192,18 +202,18 @@ void Compiler::compileWhile(WhileStmt const* s)
     pushLoop(loop_start);
     RegMark mark(Current_);
     uint8_t cond = compileExpr(s->getCondition());
-    uint32_t exit_jump = emitJump(OpCode::JUMP_IF_FALSE, cond, line);
+    uint32_t exit_jump = emitJump(OpCode::JUMP_IF_FALSE, cond, cur_loc);
     compileStmt(s->getBlock());
     uint32_t offset = loop_start - currentOffset() - 1;
-    emit(make_AsBx(static_cast<uint8_t>(OpCode::LOOP), 0, offset), line);
+    emit(make_AsBx((OpCode::LOOP), 0, offset), cur_loc);
     patchJump(exit_jump);
-    popLoop(currentOffset(), loop_start, line);
+    popLoop(currentOffset(), loop_start, cur_loc.line);
     Current_->isDead_ = incoming_dead;
 }
 
 void Compiler::compileFunctionDef(FunctionDef const* f)
 {
-    uint32_t line = f ? f->getLine() : 0;
+    SourceLocation cur_loc = { f->getLine(), f->getColumn(), 0 };
 
     NameExpr* name = f->getName();
     if (!name) {
@@ -242,9 +252,9 @@ void Compiler::compileFunctionDef(FunctionDef const* f)
 
     compileStmt(f->getBody());
     if (!fn_state.isDead_)
-        emit(make_ABC(static_cast<uint8_t>(OpCode::RETURN_NIL), 0, 0, 0), line);
+        emit(make_ABC(OpCode::RETURN_NIL, 0, 0, 0), cur_loc);
 
-    endScope(line);
+    endScope(cur_loc);
 
     fn_chunk->localCount = fn_state.maxReg;
     fn_chunk->upvalueCount = static_cast<unsigned int>(fn_state.upvalues.size());
@@ -252,23 +262,26 @@ void Compiler::compileFunctionDef(FunctionDef const* f)
     // restore parent before emitting anything into parent chunk
     Current_ = fn_state.enclosing;
 
-    // emit CLOSURE into parent chunk
     uint8_t dst = allocRegister();
-    emit(make_ABx(static_cast<uint8_t>(OpCode::CLOSURE), dst, fn_idx), line);
+    emit(make_ABx((OpCode::CLOSURE), dst, fn_idx), cur_loc);
 
-    // descriptors must immediately follow CLOSURE in the same chunk
     for (auto& uv : fn_state.upvalues)
-        emit(make_ABC(static_cast<uint8_t>(OpCode::MOVE), static_cast<uint8_t>(uv.isLocal ? 1 : 0), uv.index, 0), line);
-
-    declareLocal(name->getValue(), dst);
+        emit(make_ABC(OpCode::MOVE, (uv.isLocal ? 1 : 0), uv.index, 0), cur_loc);
+        
+    if (Current_->isTopLevel) {
+        uint16_t kidx = internString(name->getValue());
+        emit(make_ABx((OpCode::STORE_GLOBAL), dst, kidx), cur_loc);
+    } else {
+        declareLocal(name->getValue(), dst);
+    }
 }
 
 void Compiler::compileReturn(ReturnStmt const* s)
 {
-    uint32_t line = s ? s->getLine() : 0;
+    SourceLocation cur_loc = { s->getLine(), s->getColumn(), 0 };
 
     if (!s->hasValue() || (s->getValue()->getKind() == Expr::Kind::LITERAL && static_cast<LiteralExpr const*>(s->getValue())->isNil())) {
-        emit(make_ABC(static_cast<uint8_t>(OpCode::RETURN_NIL), 0, 0, 0), line);
+        emit(make_ABC(OpCode::RETURN_NIL, 0, 0, 0), cur_loc);
         Current_->isDead_ = true;
         return;
     }
@@ -284,7 +297,7 @@ void Compiler::compileReturn(ReturnStmt const* s)
 
     RegMark mark(Current_);
     uint8_t src = compileExpr(value);
-    emit(make_ABC(static_cast<uint8_t>(OpCode::RETURN), src, 1, 0), line);
+    emit(make_ABC(OpCode::RETURN, src, 1, 0), cur_loc);
     Current_->isDead_ = true;
 }
 
@@ -318,52 +331,52 @@ uint8_t Compiler::compileExpr(Expr const* e, uint8_t* dst)
 
 uint8_t Compiler::compileLiteral(LiteralExpr const* e, uint8_t* dst)
 {
-    uint32_t line = e ? e->getLine() : 0;
+    SourceLocation cur_loc = { e->getLine(), e->getColumn(), 0 };
     uint8_t dst_reg = ensureReg(dst);
 
     Value v;
 
     if (e->isInteger())
-        v = Value::integer(e->getInt());
+        v = makeInteger(e->getInt());
     else if (e->isDecimal())
-        v = Value::real(e->getFloat());
+        v = makeReal(e->getFloat());
     else if (e->isBoolean())
-        v = Value::boolean(e->getBool());
+        v = makeBool(e->getBool());
     else if (e->isNil())
-        v = Value::nil();
+        v = NIL_VAL;
     else if (e->isString()) {
-        uint16_t kidx = internString(e->getStr(), line);
-        emit(make_ABx(static_cast<uint8_t>(OpCode::LOAD_CONST), dst_reg, kidx), line);
+        uint16_t kidx = internString(e->getStr());
+        emit(make_ABx((OpCode::LOAD_CONST), dst_reg, kidx), cur_loc);
         return dst_reg;
     } else {
         diagnostic::emit("Unknown literal type");
         return errorReg();
     }
 
-    emitLoadValue(dst_reg, v, line);
+    emitLoadValue(dst_reg, v, cur_loc);
     return dst_reg;
 }
 
 uint8_t Compiler::compileName(NameExpr const* e, uint8_t* dst)
 {
-    uint32_t line = e ? e->getLine() : 0;
+    SourceLocation cur_loc = { e->getLine(), e->getColumn(), 0 };
     VarInfo vi = resolveName(e->getValue());
 
     switch (vi.kind) {
     case VarInfo::Kind::LOCAL:
         if (dst && *dst != vi.index)
-            emit(make_ABC(static_cast<uint8_t>(OpCode::MOVE), *dst, vi.index, 0), line);
+            emit(make_ABC((OpCode::MOVE), *dst, vi.index, 0), cur_loc);
 
         return dst ? *dst : vi.index;
     case VarInfo::Kind::UPVALUE: {
         uint8_t dst_reg = ensureReg(dst);
-        emit(make_ABC(static_cast<uint8_t>(OpCode::GET_UPVALUE), dst_reg, vi.index, 0), line);
+        emit(make_ABC((OpCode::GET_UPVALUE), dst_reg, vi.index, 0), cur_loc);
         return dst_reg;
     }
     case VarInfo::Kind::GLOBAL: {
         uint8_t dst_reg = ensureReg(dst);
-        uint16_t kidx = internString(e->getValue(), line);
-        emit(make_ABx(static_cast<uint8_t>(OpCode::LOAD_GLOBAL), dst_reg, kidx), line);
+        uint16_t kidx = internString(e->getValue());
+        emit(make_ABx((OpCode::LOAD_GLOBAL), dst_reg, kidx), cur_loc);
         return dst_reg;
     }
     }
@@ -373,11 +386,11 @@ uint8_t Compiler::compileName(NameExpr const* e, uint8_t* dst)
 
 uint8_t Compiler::compileUnary(UnaryExpr const* e, uint8_t* dst)
 {
-    uint32_t line = e ? e->getLine() : 0;
+    SourceLocation cur_loc = { e->getLine(), e->getColumn(), 0 };
 
     if (std::optional<Value> folded = tryFoldUnary(e)) {
         uint8_t dst_reg = ensureReg(dst);
-        emitLoadValue(dst_reg, *folded, line);
+        emitLoadValue(dst_reg, *folded, cur_loc);
         return dst_reg;
     }
 
@@ -402,17 +415,17 @@ uint8_t Compiler::compileUnary(UnaryExpr const* e, uint8_t* dst)
         diagnostic::emit("Unknown unary operator", diagnostic::Severity::FATAL);
     }
 
-    emit(make_ABC(static_cast<uint8_t>(op), dst_reg, src, 0), line);
+    emit(make_ABC((op), dst_reg, src, 0), cur_loc);
     return dst_reg;
 }
 
 uint8_t Compiler::compileBinary(BinaryExpr const* e, uint8_t* dst)
 {
-    uint32_t line = e ? e->getLine() : 0;
+    SourceLocation cur_loc = { e->getLine(), e->getColumn(), 0 };
 
     if (std::optional<Value> folded = tryFoldBinary(e)) {
         uint8_t dst_reg = ensureReg(dst);
-        emitLoadValue(dst_reg, *folded, line);
+        emitLoadValue(dst_reg, *folded, cur_loc);
         return dst_reg;
     }
 
@@ -424,13 +437,13 @@ uint8_t Compiler::compileBinary(BinaryExpr const* e, uint8_t* dst)
         uint8_t left = compileExpr(e->getLeft(), &dst_reg);
 
         if (left != dst_reg)
-            emit(make_ABC(static_cast<uint8_t>(OpCode::MOVE), dst_reg, left, 0), line);
+            emit(make_ABC((OpCode::MOVE), dst_reg, left, 0), cur_loc);
 
-        uint32_t skip = emitJump(OpCode::JUMP_IF_FALSE, dst_reg, line);
+        uint32_t skip = emitJump(OpCode::JUMP_IF_FALSE, dst_reg, cur_loc);
         uint8_t R = compileExpr(e->getRight(), &dst_reg);
 
         if (R != dst_reg)
-            emit(make_ABC(static_cast<uint8_t>(OpCode::MOVE), dst_reg, R, 0), line);
+            emit(make_ABC((OpCode::MOVE), dst_reg, R, 0), cur_loc);
 
         patchJump(skip);
         return dst_reg;
@@ -442,13 +455,13 @@ uint8_t Compiler::compileBinary(BinaryExpr const* e, uint8_t* dst)
         uint8_t left = compileExpr(e->getLeft(), &dst_reg);
 
         if (left != dst_reg)
-            emit(make_ABC(static_cast<uint8_t>(OpCode::MOVE), dst_reg, left, 0), line);
+            emit(make_ABC((OpCode::MOVE), dst_reg, left, 0), cur_loc);
 
-        uint32_t skip = emitJump(OpCode::JUMP_IF_TRUE, dst_reg, line);
+        uint32_t skip = emitJump(OpCode::JUMP_IF_TRUE, dst_reg, cur_loc);
         uint8_t R = compileExpr(e->getRight(), &dst_reg);
 
         if (R != dst_reg)
-            emit(make_ABC(static_cast<uint8_t>(OpCode::MOVE), dst_reg, R, 0), line);
+            emit(make_ABC((OpCode::MOVE), dst_reg, R, 0), cur_loc);
 
         patchJump(skip);
         return dst_reg;
@@ -517,15 +530,15 @@ uint8_t Compiler::compileBinary(BinaryExpr const* e, uint8_t* dst)
         diagnostic::emit("Unknown binary operator", diagnostic::Severity::FATAL);
     }
 
-    emit(make_ABC(static_cast<uint8_t>(bc_op), dst_reg, L, R), line);
-    emit(make_ABC(static_cast<uint8_t>(OpCode::NOP), ic, 0, 0), line);
+    emit(make_ABC((bc_op), dst_reg, L, R), cur_loc);
+    emit(make_ABC((OpCode::NOP), ic, 0, 0), cur_loc);
 
     return dst_reg;
 }
 
 uint8_t Compiler::compileAssignmentExpr(AssignmentExpr const* e, uint8_t* dst)
 {
-    uint32_t line = e ? e->getLine() : 0;
+    SourceLocation cur_loc = { e->getLine(), e->getColumn(), 0 };
     StringRef name = e->getTarget()->getValue();
     VarInfo vi = resolveName(name);
     uint8_t result;
@@ -534,7 +547,7 @@ uint8_t Compiler::compileAssignmentExpr(AssignmentExpr const* e, uint8_t* dst)
     case VarInfo::Kind::LOCAL: {
         result = compileExpr(e->getValue(), &vi.index);
         if (dst && *dst != vi.index) {
-            emit(make_ABC(static_cast<uint8_t>(OpCode::MOVE), *dst, vi.index, 0), line);
+            emit(make_ABC((OpCode::MOVE), *dst, vi.index, 0), cur_loc);
             return *dst;
         }
         return vi.index;
@@ -543,21 +556,21 @@ uint8_t Compiler::compileAssignmentExpr(AssignmentExpr const* e, uint8_t* dst)
     case VarInfo::Kind::UPVALUE: {
         RegMark mark(Current_);
         result = compileExpr(e->getValue());
-        emit(make_ABC(static_cast<uint8_t>(OpCode::SET_UPVALUE), result, vi.index, 0), line);
+        emit(make_ABC((OpCode::SET_UPVALUE), result, vi.index, 0), cur_loc);
         uint8_t dst_reg = ensureReg(dst);
         if (dst_reg != result)
-            emit(make_ABC(static_cast<uint8_t>(OpCode::MOVE), dst_reg, result, 0), line);
+            emit(make_ABC((OpCode::MOVE), dst_reg, result, 0), cur_loc);
         return dst_reg;
     }
 
     case VarInfo::Kind::GLOBAL: {
         RegMark mark(Current_);
         result = compileExpr(e->getValue());
-        uint16_t kidx = internString(name, line);
-        emit(make_ABx(static_cast<uint8_t>(OpCode::STORE_GLOBAL), result, kidx), line);
+        uint16_t kidx = internString(name);
+        emit(make_ABx((OpCode::STORE_GLOBAL), result, kidx), cur_loc);
         uint8_t dst_reg = ensureReg(dst);
         if (dst_reg != result)
-            emit(make_ABC(static_cast<uint8_t>(OpCode::MOVE), dst_reg, result, 0), line);
+            emit(make_ABC((OpCode::MOVE), dst_reg, result, 0), cur_loc);
         return dst_reg;
     }
     }
@@ -567,7 +580,7 @@ uint8_t Compiler::compileAssignmentExpr(AssignmentExpr const* e, uint8_t* dst)
 
 uint8_t Compiler::compileCall(CallExpr const* e, uint8_t* dst, bool tail)
 {
-    uint32_t line = e ? e->getLine() : 0;
+    SourceLocation cur_loc = { e->getLine(), e->getColumn(), 0 };
     uint8_t fn_reg = allocRegister();
     compileExpr(e->getCallee(), &fn_reg);
 
@@ -578,19 +591,19 @@ uint8_t Compiler::compileCall(CallExpr const* e, uint8_t* dst, bool tail)
     }
 
     // this essentialy caps argc at 0xFF, if u got more args you should see a doctor
-    uint8_t argc = static_cast<uint8_t>(args.size());
+    uint8_t argc = (args.size());
 
     if (tail && !Current_->isTopLevel) {
-        emit(make_ABC(static_cast<uint8_t>(OpCode::CALL_TAIL), fn_reg, argc, 0), line);
+        emit(make_ABC((OpCode::CALL_TAIL), fn_reg, argc, 0), cur_loc);
         Current_->freeRegsTo(fn_reg);
         return fn_reg;
     }
 
     uint8_t ic = currentChunk()->allocIcSlot();
-    emit(make_ABC(static_cast<uint8_t>(OpCode::IC_CALL), fn_reg, argc, ic), line);
+    emit(make_ABC((OpCode::IC_CALL), fn_reg, argc, ic), cur_loc);
     uint8_t dst_reg = dst ? *dst : fn_reg;
     if (dst_reg != fn_reg)
-        emit(make_ABC(static_cast<uint8_t>(OpCode::MOVE), dst_reg, fn_reg, 0), line);
+        emit(make_ABC((OpCode::MOVE), dst_reg, fn_reg, 0), cur_loc);
 
     Current_->freeRegsTo(fn_reg + 1);
     return dst_reg;
@@ -598,30 +611,24 @@ uint8_t Compiler::compileCall(CallExpr const* e, uint8_t* dst, bool tail)
 
 uint8_t Compiler::compileList(ListExpr const* e, uint8_t* dst)
 {
-    uint32_t line = e ? e->getLine() : 0;
+    SourceLocation cur_loc = { e->getLine(), e->getColumn(), 0 };
     uint8_t dst_reg = ensureReg(dst);
     auto const& elems = e->getElements();
-    uint8_t cap = static_cast<uint8_t>(std::min<size_t>(elems.size(), 0xFF));
-    emit(make_ABC(static_cast<uint8_t>(OpCode::LIST_NEW), dst_reg, cap, 0), line);
+    uint8_t cap = (std::min<size_t>(elems.size(), 0xFF));
+    emit(make_ABC((OpCode::LIST_NEW), dst_reg, cap, 0), cur_loc);
 
     RegMark mark(Current_);
     for (Expr const* elem : elems) {
         uint8_t val = compileExpr(elem);
-        emit(make_ABC(static_cast<uint8_t>(OpCode::LIST_APPEND), dst_reg, val, 0), line);
+        emit(make_ABC((OpCode::LIST_APPEND), dst_reg, val, 0), cur_loc);
     }
 
     return dst_reg;
 }
 
-uint8_t Compiler::errorReg() const
-{
-    return 0;
-}
+uint8_t Compiler::errorReg() const { return 0; }
 
-uint8_t Compiler::ensureReg(uint8_t const* reg)
-{
-    return reg ? *reg : allocRegister();
-}
+uint8_t Compiler::ensureReg(uint8_t const* reg) { return reg ? *reg : allocRegister(); }
 
 uint8_t Compiler::allocRegister()
 {
@@ -669,7 +676,7 @@ int Compiler::resolveUpvalue(CompilerState* state, StringRef const& name)
 
     int up = resolveUpvalue(state->enclosing, name);
     if (up >= 0)
-        return addUpvalue(state, false, static_cast<uint8_t>(up));
+        return addUpvalue(state, false, (up));
 
     return -1;
 }
@@ -689,14 +696,14 @@ int Compiler::addUpvalue(CompilerState* state, bool const is_local, uint8_t cons
     return static_cast<int>(state->upvalues.size() - 1);
 }
 
-uint32_t Compiler::emit(uint32_t const instr, uint32_t const line)
+uint32_t Compiler::emit(uint32_t const instr, SourceLocation loc)
 {
-    return currentChunk()->emit(instr, line);
+    return currentChunk()->emit(instr, loc);
 }
 
-uint32_t Compiler::emitJump(OpCode const op, uint8_t const cond, uint32_t const line)
+uint32_t Compiler::emitJump(OpCode const op, uint8_t const cond, SourceLocation loc)
 {
-    return emit(make_AsBx(static_cast<uint8_t>(op), cond, 0), line);
+    return emit(make_AsBx((op), cond, 0), loc);
 }
 
 void Compiler::patchJump(uint32_t const idx)
@@ -705,10 +712,7 @@ void Compiler::patchJump(uint32_t const idx)
         diagnostic::emit("Jump offset overflow", diagnostic::Severity::FATAL);
 }
 
-void Compiler::pushLoop(uint32_t const loop_start)
-{
-    Current_->loopStack.push({ { }, { }, loop_start });
-}
+void Compiler::pushLoop(uint32_t const loop_start) { Current_->loopStack.push({ { }, { }, loop_start }); }
 
 void Compiler::popLoop(uint32_t const loop_exit, uint32_t const continue_target, uint32_t const line)
 {
@@ -731,48 +735,39 @@ void Compiler::patchJumpTo(uint32_t const instr_idx, uint32_t const target)
     if (offset > JUMP_OFFSET || offset < -JUMP_OFFSET)
         diagnostic::emit("Jump offset overflow in loop", diagnostic::Severity::FATAL);
 
-    uint8_t op = instr_op(currentChunk()->code[instr_idx]);
+    OpCode op = instr_op(currentChunk()->code[instr_idx]);
     uint8_t A = instr_A(currentChunk()->code[instr_idx]);
     currentChunk()->code[instr_idx] = make_AsBx(op, A, offset);
 }
 
-void Compiler::emitLoadValue(uint8_t const dst, Value const v, uint32_t const line)
+void Compiler::emitLoadValue(uint8_t const dst, Value const v, SourceLocation loc)
 {
-    if (v.isNil())
-        emit(make_ABC(static_cast<uint8_t>(OpCode::LOAD_NIL), dst, dst, 1), line);
-    else if (v.isBoolean()) {
-        OpCode op = v.asBoolean() ? OpCode::LOAD_TRUE : OpCode::LOAD_FALSE;
-        emit(make_ABC(static_cast<uint8_t>(op), dst, 0, 0), line);
-    } else if (v.isInteger()) {
-        int64_t int_v = v.asInteger();
+    if (v == NIL_VAL)
+        emit(make_ABC((OpCode::LOAD_NIL), dst, dst, 1), loc);
+    else if (IS_BOOL(v)) {
+        OpCode op = asBool(v) ? OpCode::LOAD_TRUE : OpCode::LOAD_FALSE;
+        emit(make_ABC((op), dst, 0, 0), loc);
+    } else if (IS_INTEGER(v)) {
+        int64_t int_v = asInteger(v);
         if (int_v >= -JUMP_OFFSET && int_v <= JUMP_OFFSET)
-            emit(make_ABx(static_cast<uint8_t>(OpCode::LOAD_INT), dst, static_cast<uint16_t>(int_v + JUMP_OFFSET)), line);
+            emit(make_ABx((OpCode::LOAD_INT), dst, static_cast<uint16_t>(int_v + JUMP_OFFSET)), loc);
         else {
             uint16_t kidx = currentChunk()->addConstant(v);
-            emit(make_ABx(static_cast<uint8_t>(OpCode::LOAD_CONST), dst, kidx), line);
+            emit(make_ABx(OpCode::LOAD_CONST, dst, kidx), loc);
         }
-    } else if (v.isDouble()) {
+    } else if (isDouble(v)) {
         uint16_t kidx = currentChunk()->addConstant(v);
-        emit(make_ABx(static_cast<uint8_t>(OpCode::LOAD_CONST), dst, kidx), line);
+        emit(make_ABx((OpCode::LOAD_CONST), dst, kidx), loc);
     }
 }
 
-Chunk* Compiler::currentChunk() const
-{
-    return Current_->chunk;
-}
+Chunk* Compiler::currentChunk() const { return Current_->chunk; }
 
-uint32_t Compiler::currentOffset() const
-{
-    return currentChunk()->code.size();
-}
+uint32_t Compiler::currentOffset() const { return currentChunk()->code.size(); }
 
-void Compiler::beginScope()
-{
-    ++Current_->scopeDepth;
-}
+void Compiler::beginScope() { ++Current_->scopeDepth; }
 
-void Compiler::endScope(uint32_t const line)
+void Compiler::endScope(SourceLocation loc)
 {
     unsigned int const depth = --Current_->scopeDepth;
     auto& locals = Current_->locals;
@@ -791,7 +786,7 @@ void Compiler::endScope(uint32_t const line)
 
     if (any && pop_from < locals.size()) {
         uint8_t first = locals[pop_from].reg;
-        emit(make_ABC(static_cast<uint8_t>(OpCode::CLOSE_UPVALUE), first, 0, 0), line);
+        emit(make_ABC((OpCode::CLOSE_UPVALUE), first, 0, 0), loc);
     }
 
     if (pop_from < locals.size())
@@ -800,18 +795,18 @@ void Compiler::endScope(uint32_t const line)
     locals.resize(pop_from);
 }
 
-uint32_t Compiler::internString(StringRef const& str, uint32_t const line)
+uint32_t Compiler::internString(StringRef const& str)
 {
-    auto it = StringCache_.find(str);
+    // Key must be per-chunk, not global
+    Chunk* chunk = currentChunk();
+    auto key = std::make_pair(str, chunk);
+    auto it = StringCache_.find(key);
     if (it != StringCache_.end())
         return it->second;
 
-    ObjString* obj = makeObjectString(str); // GC will own this after loading
-    uint16_t idx = currentChunk()->addConstant(Value::object(obj));
-    StringCache_[str] = idx;
-    if (idx == MAX_CONSTANTS)
-        diagnostic::emit("Too many string constants");
-
+    ObjString* obj = makeObjectString(str);
+    uint16_t idx = chunk->addConstant(makeObject(obj));
+    StringCache_[key] = idx;
     return idx;
 }
 

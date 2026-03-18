@@ -6,101 +6,107 @@
 
 namespace mylang::runtime {
 
+using ErrorCode = diagnostic::errc::runtime::Code;
+
 Value nativeLen(int argc, Value* argv)
 {
     if (argc == 0 || !argv)
-        return Value::nil();
+        return NIL_VAL;
 
     if (argc == 1) {
-        if (argv[0].isString())
-            return Value::integer(argv[0].asString()->str.len());
-        if (argv[0].isList())
-            return Value::integer(argv[0].asList()->elements.size());
+        if (isString(argv[0]))
+            return makeInteger(asString(argv[0])->str.len());
+        if (isList(argv[0]))
+            return makeInteger(asList(argv[0])->elements.size());
     }
 
     /// do not accept multiple arguments for len
-    return Value::nil();
+    return NIL_VAL;
 }
 
 Value nativePrint(int argc, Value* argv)
 {
     if (argc != 1 || !argv) {
         std::cout << std::endl;
-        return Value::nil();
+        return NIL_VAL;
     }
 
-    StringRef output = nativeStr(1, &argv[0]).asString()->str;
+    StringRef output = asString(nativeStr(1, &argv[0]))->str;
 
     std::cout << output << std::endl;
-    return Value::nil();
+    return NIL_VAL;
 }
 
 Value nativeType(int argc, Value* argv)
 {
     if (argc != 1 || !argv)
-        return Value::nil();
+        return NIL_VAL;
 
-    return Value::integer(static_cast<int64_t>(valueTypeTag(argv[0])));
+    return makeInteger(static_cast<int64_t>(valueTypeTag(argv[0])));
 }
 
 Value nativeInt(int argc, Value* argv)
 {
     if (argc != 1 || !argv)
-        return Value::nil();
+        return NIL_VAL;
 
-    if (argv[0].isNumber())
-        return Value::integer(static_cast<int64_t>(argv[0].asDoubleAny()));
+    if (isNumber(argv[0]))
+        return makeInteger(asDouble(static_cast<int64_t>(argv[0])));
 
-    return Value::nil();
+    return NIL_VAL;
 }
 
 Value nativeFloat(int argc, Value* argv)
 {
     if (argc != 1 || !argv)
-        return Value::nil();
+        return NIL_VAL;
 
-    if (argv[0].isNumber())
-        return Value::real(argv[0].asDoubleAny());
+    if (isNumber(argv[0]))
+        return makeReal(asDouble(argv[0]));
 
-    return Value::nil();
+    return NIL_VAL;
 }
 
 Value nativeAppend(int argc, Value* argv)
 {
     if (argc < 2 || !argv) {
         diagnostic::emit("append() : expected two arguments got : " + std::to_string(argc));
-        return Value::nil();
+        diagnostic::runtimeError(ErrorCode::WRONG_ARG_COUNT);
+        return NIL_VAL;
     }
 
     Value& list_v = argv[0];
-    if (!list_v.isList()) {
+    if (!isList(list_v)) {
         diagnostic::emit("append() called on a non list value");
-        return Value::nil();
+        diagnostic::runtimeError(ErrorCode::TYPE_ERROR_CALL);
+        return NIL_VAL;
     }
 
-    ObjList* list_obj = list_v.asList();
+    ObjList* list_obj = asList(list_v);
 
     for (int i = 1; i < argc; ++i)
         list_obj->elements.push(argv[i]);
 
-    return Value::nil();
+    return NIL_VAL;
 }
 
 Value nativePop(int argc, Value* argv)
 {
     if (argc != 1 || !argv) {
         diagnostic::emit("pop() called with no value attatched");
-        return Value::nil();
+        diagnostic::runtimeError(ErrorCode::TYPE_ERROR_CALL);
+        return NIL_VAL;
     }
 
     Value& list_v = argv[0];
-    if (!list_v.isList()) {
+    if (!isList(list_v)) {
         diagnostic::emit("pop() called on a non list value");
-        return Value::nil();
+        diagnostic::runtimeError(ErrorCode::TYPE_ERROR_CALL);
+        return NIL_VAL;
     }
 
-    list_v.asList()->elements.pop();
-    return Value::nil();
+    asList(list_v)->elements.pop();
+    return NIL_VAL;
 }
 
 Value nativeSlice(int argc, Value* argv)
@@ -112,15 +118,16 @@ Value nativeSlice(int argc, Value* argv)
 
     if (argc < 2) {
         diagnostic::emit("slice() expects at least 2 arguments, got : " + std::to_string(argc));
-        return Value::nil();
+        diagnostic::runtimeError(ErrorCode::WRONG_ARG_COUNT);
+        return NIL_VAL;
     }
 
-    ObjList* list_obj = argv[0].asList();
-    Value ret = Value::object(makeObjectList());
-    ObjList* ret_list = ret.asList();
+    ObjList* list_obj = asList(argv[0]);
+    Value ret = makeObject(makeObjectList());
+    ObjList* ret_list = asList(ret);
     /// Expects indices to be ints
-    uint32_t a = argv[1].asInteger();
-    uint32_t b = argc == 3 ? argv[2].asInteger() : list_obj->size() - 1;
+    uint32_t a = asInteger(argv[1]);
+    uint32_t b = argc == 3 ? asInteger(argv[2]) : list_obj->size() - 1;
 
     for (int i = a; i <= b; ++i)
         ret_list->elements.push(list_obj->elements[i]);
@@ -130,51 +137,57 @@ Value nativeSlice(int argc, Value* argv)
 
 Value nativeInput(int argc, Value* argv)
 {
-    return Value::nil();
+    return NIL_VAL;
 }
 
 Value nativeStr(int argc, Value* argv)
 {
-    if (argc != 1 || !argv) {
+    if (argc > 1) {
         diagnostic::emit("str() is called with no arguments");
-        return Value::nil();
+        diagnostic::runtimeError(ErrorCode::WRONG_ARG_COUNT);
+        return NIL_VAL;
     }
 
     StringRef output = "";
 
+    if (argc == 0 || !argv)
+        return makeObject((makeObjectString(output)));
+
     /// TODO : stringify a list
 
-    if (argv[0].isString())
-        output = argv[0].asString()->str;
-    else if (argv[0].isBoolean())
-        output = argv[0].asBoolean() ? "true" : "false";
-    else if (argv[0].isDouble())
-        output = std::to_string(argv[0].asDouble()).data();
-    else if (argv[0].isInteger())
-        output = std::to_string(argv[0].asInteger()).data();
+    if (isString(argv[0]))
+        output = asString(argv[0])->str;
+    else if (IS_BOOL(argv[0]))
+        output = asBool(argv[0]) ? "true" : "false";
+    else if (isDouble(argv[0]))
+        output = std::to_string(asDouble(argv[0])).data();
+    else if (IS_INTEGER(argv[0]))
+        output = std::to_string(asInteger(argv[0])).data();
 
-    return Value::object(makeObjectString(output));
+    return makeObject(makeObjectString(output));
 }
 
 Value nativeBool(int argc, Value* argv)
 {
     if (argc != 1 || !argv) {
         diagnostic::emit("bool() is called with no arguments");
-        return Value::nil();
+        diagnostic::runtimeError(ErrorCode::WRONG_ARG_COUNT);
+        return NIL_VAL;
     }
 
-    return argv[0].isTruthy() ? Value::boolean(true) : Value::boolean(false);
+    return isTruthy(argv[0]) ? makeBool(true) : makeBool(false);
 }
 
 Value nativeList(int argc, Value* argv)
 {
     if (argc < 2) {
         diagnostic::emit("list() expects at least 2 arguments, got : " + std::to_string(argc));
-        return Value::nil();
+        diagnostic::runtimeError(ErrorCode::WRONG_ARG_COUNT);
+        return NIL_VAL;
     }
 
-    Value ret = Value::object(makeObjectList());
-    ObjList* list_obj = ret.asList();
+    Value ret = makeObject(makeObjectList());
+    ObjList* list_obj = asList(ret);
 
     for (int i = 0; i < argc;)
         list_obj->elements.push(argv[i++]);
@@ -182,114 +195,102 @@ Value nativeList(int argc, Value* argv)
     return ret;
 }
 
-Value nativeSplit(int argc, Value* argv)
-{
-    return Value::nil();
-}
+Value nativeSplit(int argc, Value* argv) { return NIL_VAL; }
 
-Value nativeJoin(int argc, Value* argv)
-{
-    return Value::nil();
-}
+Value nativeJoin(int argc, Value* argv) { return NIL_VAL; }
 
-Value nativeSubstr(int argc, Value* argv)
-{
-    return Value::nil();
-}
+Value nativeSubstr(int argc, Value* argv) { return NIL_VAL; }
 
-Value nativeContains(int argc, Value* argv)
-{
-    return Value::nil();
-}
+Value nativeContains(int argc, Value* argv) { return NIL_VAL; }
 
-Value nativeTrim(int argc, Value* argv)
-{
-    return Value::nil();
-}
+Value nativeTrim(int argc, Value* argv) { return NIL_VAL; }
 
 Value nativeFloor(int argc, Value* argv)
 {
     if (argc != 1 || !argv) {
         diagnostic::emit("floor() expects 1 argument, got : " + std::to_string(argc));
-        return Value::nil();
+        diagnostic::runtimeError(ErrorCode::WRONG_ARG_COUNT);
+        return NIL_VAL;
     }
 
-    if (!argv[0].isNumber()) {
+    if (!isNumber(argv[0])) {
         diagnostic::emit("floor() is called with a non numeric value argument");
-        return Value::nil();
+        // diagnostic::runtimeError(ErrorCode::);
+        /// diagnostic::runtimeError(ErrorCode::);
+        return NIL_VAL;
     }
 
-    if (argv[0].isInteger())
+    if (IS_INTEGER(argv[0]))
         return argv[0];
 
-    return Value::real(std::floorf(argv[0].asDouble()));
+    return makeReal(std::floorf(asDouble(argv[0])));
 }
 
 Value nativeCeil(int argc, Value* argv)
 {
     if (argc != 1 || !argv) {
         diagnostic::emit("ceil() expects 1 argument, got : " + std::to_string(argc));
-        return Value::nil();
+        return NIL_VAL;
     }
 
-    if (!argv[0].isNumber()) {
+    if (!isNumber(argv[0])) {
         diagnostic::emit("ceil() is called with a non numeric value argument");
-        return Value::nil();
+        return NIL_VAL;
     }
 
-    if (argv[0].isInteger())
+    if (IS_INTEGER(argv[0]))
         return argv[0];
 
-    return Value::real(std::ceilf(argv[0].asDouble()));
+    return makeReal(std::ceilf(asDouble(argv[0])));
 }
 
 Value nativeRound(int argc, Value* argv)
 {
-    return Value::nil();
+    return NIL_VAL;
 }
 
 Value nativeAbs(int argc, Value* argv)
 {
     if (argc != 1 || !argv) {
         diagnostic::emit("abs() expects 1 argument, got : " + std::to_string(argc));
-        return Value::nil();
+        return NIL_VAL;
     }
 
-    if (!argv[0].isNumber()) {
+    if (!isNumber(argv[0])) {
         diagnostic::emit("abs() is called with a non numeric value argument");
-        return Value::nil();
+        return NIL_VAL;
     }
 
-    if (argv[0].isInteger())
-        return Value::integer(std::abs(argv[0].asInteger()));
+    if (IS_INTEGER(argv[0]))
+        return makeInteger(std::abs(asInteger(argv[0])));
 
-    return Value::real(std::fabs(argv[0].asDouble()));
+    return makeReal(std::fabs(asDouble(argv[0])));
 }
 
 Value nativeMin(int argc, Value* argv)
 {
     if (argc < 2 || !argv) {
         diagnostic::emit("ceil() expects 2 or more arguments, got : " + std::to_string(argc));
-        return Value::nil();
+        return NIL_VAL;
     }
 
-    if (!argv[0].isNumber()) {
+    if (!isNumber(argv[0])) {
         diagnostic::emit("ceil() is called with a non numeric value argument");
-        return Value::nil();
+        return NIL_VAL;
     }
 
-    Value ret = Value::real(argv[0].asDoubleAny());
+    Value ret = makeReal(asDouble(argv[0]));
     bool all_ints = true;
 
     for (int i = 1; i < argc; ++i) {
-        if (!argv[i].isInteger())
+        if (!IS_INTEGER(argv[i]))
             all_ints = false;
 
-        ret = Value::real(std::fmin(ret.asDouble(), argv[i].asDoubleAny()));
+        ret = makeReal(std::fmin(asDouble(ret), asDouble(argv[i])));
     }
 
     if (all_ints)
-        return Value::integer(static_cast<int64_t>(ret.asDouble()));
+        return makeInteger(static_cast<int64_t>(asDouble(ret)));
 
     return ret;
 }
@@ -298,58 +299,58 @@ Value nativeMax(int argc, Value* argv)
 {
     if (argc < 2 || !argv) {
         diagnostic::emit("ceil() expects 2 or more arguments, got : " + std::to_string(argc));
-        return Value::nil();
+        return NIL_VAL;
     }
 
-    if (!argv[0].isNumber()) {
+    if (!isNumber(argv[0])) {
         diagnostic::emit("ceil() is called with a non numeric value argument");
-        return Value::nil();
+        return NIL_VAL;
     }
 
-    Value ret = Value::real(argv[0].asDoubleAny());
+    Value ret = makeReal(asDouble(argv[0]));
     bool all_ints = true;
 
     for (int i = 1; i < argc; ++i) {
-        if (!argv[i].isInteger())
+        if (!IS_INTEGER(argv[i]))
             all_ints = false;
 
-        ret = Value::real(std::fmax(ret.asDouble(), argv[i].asDoubleAny()));
+        ret = makeReal(std::fmax(asDouble(ret), asDouble(argv[i])));
     }
 
     if (all_ints)
-        return Value::integer(static_cast<int64_t>(ret.asDouble()));
+        return makeInteger(static_cast<int64_t>(asDouble(ret)));
 
     return ret;
 }
 
 Value nativePow(int argc, Value* argv)
 {
-    return Value::nil();
+    return NIL_VAL;
 }
 
 Value nativeSqrt(int argc, Value* argv)
 {
-    return Value::nil();
+    return NIL_VAL;
 }
 
 Value nativeAssert(int argc, Value* argv)
 {
-    return Value::nil();
+    return NIL_VAL;
 }
 
 Value nativeClock(int argc, Value* argv)
 {
-    return Value::nil();
+    return NIL_VAL;
 }
 
 Value nativeError(int argc, Value* argv)
 {
-    return Value::nil();
+    return NIL_VAL;
 }
 
 Value nativeTime(int argc, Value* argv)
 {
-    return Value::nil();
+    return NIL_VAL;
 }
 
 } // namespace mylang::runtime

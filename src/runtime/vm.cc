@@ -2,7 +2,7 @@
 #include "../../include/allocator.hpp"
 #include "../../include/runtime/opcode.hpp"
 #include "../../include/runtime/stdlib.hpp"
-#include "../../include/runtime/value.hpp"
+#include <stdexcept>
 
 namespace mylang::runtime {
 
@@ -12,383 +12,18 @@ Value VM::run(Chunk* chunk)
     fn->chunk = chunk;
     ObjClosure* cl = makeObjectClosure(fn);
 
-    Stack_[0] = Value::object(cl);     // slot 0 = top-level closure (frame overhead)
-    StackTop_ = chunk->localCount + 2; // +1 for self slot, +1 past locals
+    Stack_[0] = makeObject(cl);
+    StackTop_ = chunk->localCount + 2;
 
-    Frames_[FramesTop_++] = { cl, 0, 1 }; // base = 1, reg(0) = Stack_[1]
+    Frames_[FramesTop_++] = { cl, 0, 1, static_cast<int>(chunk->localCount) }; // FIX #5: cache localCount
+    internChunkConstants(cl->function->chunk);
     Value res = execute();
     --FramesTop_;
 
     return res;
 }
 
-Value VM::execute()
-{
-    auto READ_INSTR = [this]() { return chunk()->code[frame().ip++]; };
-    auto PEEK_INSTR = [this]() { return chunk()->code[frame().ip]; };
-
-    auto RA = [this](uint32_t const i) -> Value& { return reg(instr_A(i)); };
-    auto RB = [this](uint32_t const i) -> Value& { return reg(instr_B(i)); };
-    auto RC = [this](uint32_t const i) -> Value& { return reg(instr_C(i)); };
-
-    for (;;) {
-        uint32_t instr = READ_INSTR();
-        uint8_t op = instr_op(instr);
-
-        switch (static_cast<OpCode>(op)) {
-        case OpCode::LOAD_NIL: {
-            uint8_t start = instr_B(instr);
-            uint8_t count = instr_C(instr);
-
-            for (uint8_t i = 0; i < count; ++i)
-                reg(start + i) = Value::nil();
-        } break;
-        case OpCode::LOAD_TRUE:
-            RA(instr) = Value::boolean(true);
-            break;
-        case OpCode::LOAD_FALSE:
-            RA(instr) = Value::boolean(false);
-            break;
-        case OpCode::LOAD_CONST: {
-            uint16_t idx = instr_Bx(instr);
-            Value val = chunk()->constants[idx];
-
-            if (val.isString())
-                val = Value::object(intern(val.asString()->str));
-
-            RA(instr) = val;
-        } break;
-        case OpCode::LOAD_INT: {
-            int32_t raw = static_cast<uint16_t>(instr_Bx(instr)) - JUMP_OFFSET;
-            RA(instr) = Value::integer(raw);
-        } break;
-        case OpCode::LOAD_GLOBAL: {
-            uint16_t idx = instr_Bx(instr);
-            Value name_v = chunk()->constants[idx];
-            StringRef key = name_v.isString() ? name_v.asString()->str : "";
-            auto it = Globals_.find(key);
-            RA(instr) = (it != Globals_.end()) ? it->second : Value::nil();
-        } break;
-        case OpCode::STORE_GLOBAL: {
-            uint16_t idx = instr_Bx(instr);
-            Value name_v = chunk()->constants[idx];
-            StringRef key = name_v.isString() ? name_v.asString()->str : "";
-            Globals_[key] = RA(instr);
-        } break;
-        case OpCode::MOVE:
-            RA(instr) = RB(instr);
-            break;
-        case OpCode::GET_UPVALUE:
-            RA(instr) = *frame().closure->upValues[instr_B(instr)]->location;
-            break;
-        case OpCode::SET_UPVALUE:
-            *frame().closure->upValues[instr_B(instr)]->location = RA(instr);
-            break;
-        case OpCode::CLOSE_UPVALUE:
-            closeUpvalues(frame().base + instr_A(instr));
-            break;
-        case OpCode::OP_ADD: {
-            Value lhs = RB(instr);
-            Value rhs = RC(instr);
-            Value res = _add(lhs, rhs);
-            RA(instr) = res;
-
-            if (frame().ip < static_cast<uint32_t>(chunk()->code.size())) {
-                uint32_t nop = PEEK_INSTR();
-                if (instr_op(nop) == static_cast<uint8_t>(OpCode::NOP))
-                    updateIcBinary(chunk(), frame().ip, lhs, rhs, res);
-            }
-        } break;
-        case OpCode::OP_SUB: {
-            Value lhs = RB(instr);
-            Value rhs = RC(instr);
-            Value res = _sub(lhs, rhs);
-            RA(instr) = res;
-
-            if (frame().ip < static_cast<uint32_t>(chunk()->code.size())) {
-                uint32_t nop = PEEK_INSTR();
-                if (instr_op(nop) == static_cast<uint8_t>(OpCode::NOP))
-                    updateIcBinary(chunk(), frame().ip, lhs, rhs, res);
-            }
-        } break;
-        case OpCode::OP_MUL: {
-            Value lhs = RB(instr);
-            Value rhs = RC(instr);
-            Value res = _mul(lhs, rhs);
-            RA(instr) = res;
-
-            if (frame().ip < static_cast<uint32_t>(chunk()->code.size())) {
-                uint32_t nop = PEEK_INSTR();
-                if (instr_op(nop) == static_cast<uint8_t>(OpCode::NOP))
-                    updateIcBinary(chunk(), frame().ip, lhs, rhs, res);
-            }
-        } break;
-        case OpCode::OP_DIV: {
-            Value lhs = RB(instr);
-            Value rhs = RC(instr);
-            Value res = _div(lhs, rhs);
-            RA(instr) = res;
-
-            if (frame().ip < static_cast<uint32_t>(chunk()->code.size())) {
-                uint32_t nop = PEEK_INSTR();
-                if (instr_op(nop) == static_cast<uint8_t>(OpCode::NOP))
-                    updateIcBinary(chunk(), frame().ip, lhs, rhs, res);
-            }
-        } break;
-        case OpCode::OP_MOD:
-            RA(instr) = _mod(RB(instr), RC(instr));
-            break;
-        case OpCode::OP_POW:
-            RA(instr) = _pow(RB(instr), RC(instr));
-            break;
-        case OpCode::OP_NEG:
-            RA(instr) = _neg(RB(instr));
-            break;
-        case OpCode::OP_BITAND:
-            RA(instr) = _bitand(RB(instr), RC(instr));
-            break;
-        case OpCode::OP_BITOR:
-            RA(instr) = _bitor(RB(instr), RC(instr));
-            break;
-        case OpCode::OP_BITXOR:
-            RA(instr) = _bitxor(RB(instr), RC(instr));
-            break;
-        case OpCode::OP_BITNOT:
-            RA(instr) = _bitnot(RB(instr));
-            break;
-        case OpCode::OP_LSHIFT:
-            RA(instr) = _shl(RB(instr), RC(instr));
-            break;
-        case OpCode::OP_RSHIFT:
-            RA(instr) = _shr(RB(instr), RC(instr));
-            break;
-        case OpCode::OP_EQ:
-            RA(instr) = Value::boolean(_eq(RB(instr), RC(instr)));
-            break;
-        case OpCode::OP_NEQ:
-            RA(instr) = Value::boolean(!_eq(RB(instr), RC(instr)));
-            break;
-        case OpCode::OP_LT:
-            RA(instr) = Value::boolean(_lt(RB(instr), RC(instr)));
-            break;
-        case OpCode::OP_LTE:
-            RA(instr) = Value::boolean(_le(RB(instr), RC(instr)));
-            break;
-        case OpCode::OP_NOT:
-            RA(instr) = Value::boolean(!RB(instr).isTruthy());
-            break;
-        case OpCode::CONCAT:
-            RA(instr) = _cnc(RB(instr), RC(instr));
-            break; /// needs checking
-        case OpCode::LIST_NEW: {
-            uint8_t cap = instr_B(instr);
-            ObjList* list_obj = makeObjectList();
-            list_obj->reserve(cap);
-            RA(instr) = Value::object(list_obj);
-        } break;
-        case OpCode::LIST_APPEND: {
-            Value list_v = RA(instr);
-
-            if (!list_v.isList())
-                diagnostic::emit("LIST_APPEND on non-list", diagnostic::Severity::FATAL);
-
-            list_v.asList()->elements.push(RB(instr));
-        } break;
-        case OpCode::LIST_GET: {
-            Value list_v = RB(instr), index_v = RC(instr);
-
-            if (!list_v.isList())
-                diagnostic::emit("index access on non-list", diagnostic::Severity::FATAL);
-
-            if (!index_v.isInteger())
-                diagnostic::emit("list index must be an integer", diagnostic::Severity::FATAL);
-
-            auto& elems = list_v.asList()->elements;
-            int64_t idx = index_v.asInteger();
-
-            if (idx < 0 || idx >= static_cast<int64_t>(elems.size()))
-                diagnostic::emit("list index out of range", diagnostic::Severity::FATAL);
-
-            RA(instr) = elems[static_cast<size_t>(idx)];
-        } break;
-        case OpCode::LIST_SET: {
-            Value list_v = RA(instr), index_v = RB(instr), new_val = RC(instr);
-
-            if (!list_v.isList())
-                diagnostic::emit("index assignment on non-list", diagnostic::Severity::FATAL);
-
-            if (!index_v.isInteger())
-                diagnostic::emit("list index must be an integer", diagnostic::Severity::FATAL);
-
-            auto& elems = list_v.asList()->elements;
-            int64_t idx = index_v.asInteger();
-
-            if (idx < 0)
-                idx += static_cast<int64_t>(elems.size());
-
-            if (idx < 0 || idx >= static_cast<int64_t>(elems.size()))
-                diagnostic::emit("list index out of range", diagnostic::Severity::FATAL);
-
-            elems[static_cast<size_t>(idx)] = new_val;
-        } break;
-        case OpCode::LIST_LEN: {
-            Value list_v = RB(instr);
-
-            if (!list_v.isList())
-                diagnostic::emit("len() on non-list", diagnostic::Severity::FATAL);
-
-            RA(instr) = Value::integer(static_cast<int64_t>(list_v.asList()->elements.size()));
-        } break;
-        case OpCode::JUMP:
-            frame().ip += instr_sBx(instr);
-            break;
-        case OpCode::JUMP_IF_TRUE:
-            if (RA(instr).isTruthy())
-                frame().ip += instr_sBx(instr);
-
-            break;
-        case OpCode::JUMP_IF_FALSE:
-            if (!RA(instr).isTruthy())
-                frame().ip += instr_sBx(instr);
-
-            break;
-        case OpCode::LOOP:
-            frame().ip += instr_sBx(instr);
-            break;
-        case OpCode::FOR_PREP:
-            break;
-        case OpCode::FOR_STEP:
-            break;
-        case OpCode::CLOSURE: {
-            uint16_t fn_idx = instr_Bx(instr);
-            Chunk* fn_chunk = chunk()->functions[fn_idx];
-            ObjFunction* fn = makeObjectFunction(fn_chunk);
-            fn->arity = fn_chunk->arity;
-            fn->upvalueCount = fn_chunk->upvalueCount;
-            ObjClosure* cl = makeObjectClosure(fn);
-
-            for (unsigned int i = 0; i < fn_chunk->upvalueCount; ++i) {
-                uint32_t desc = READ_INSTR();
-                bool is_local = instr_A(desc) == 1;
-                uint8_t index = instr_B(desc);
-
-                if (is_local)
-                    cl->upValues[i] = captureUpvalue(frame().base + index);
-                else
-                    cl->upValues[i] = frame().closure->upValues[index];
-            }
-
-            RA(instr) = Value::object(cl);
-        } break;
-        case OpCode::CALL: {
-            uint8_t fn_reg = instr_A(instr);
-            uint8_t argc = instr_B(instr);
-            Value callee = reg(fn_reg);
-            int base = frame().base + fn_reg + 1; // +1: skip closure slot
-
-            callValue(callee, argc, base, false);
-        } break;
-        case OpCode::IC_CALL: {
-            uint8_t fn_reg = instr_A(instr);
-            uint8_t argc = instr_B(instr);
-            uint8_t ic_idx = instr_C(instr);
-            Value callee = reg(fn_reg);
-            int base = frame().base + fn_reg + 1; // +1 here too
-
-            if (ic_idx < chunk()->icSlots.size()) {
-                auto& slot = chunk()->icSlots[ic_idx];
-                slot.seenLhs |= valueTypeTag(callee);
-                slot.hitCount++;
-            }
-
-            callValue(callee, argc, base, /*tail=*/false);
-
-            if (ic_idx < chunk()->icSlots.size())
-                chunk()->icSlots[ic_idx].seenRet |= valueTypeTag(reg(fn_reg));
-        } break;
-        case OpCode::CALL_TAIL: {
-            uint8_t fn_reg = instr_A(instr);
-            uint8_t argc = instr_B(instr);
-            Value callee = reg(fn_reg);
-            int base = frame().base + fn_reg + 1;
-
-            callValue(callee, argc, base, true);
-        } break;
-        case OpCode::RETURN: {
-            uint8_t src = instr_A(instr);
-            uint8_t n_ret = instr_B(instr);
-            Value ret = (n_ret > 0) ? reg(src) : Value::nil();
-
-            returnFromCall(src, n_ret);
-
-            if (FramesTop_ == 0)
-                return ret;
-        } break;
-        case OpCode::RETURN_NIL:
-            returnFromCall(0, 0);
-
-            if (FramesTop_ == 0)
-                return Value::nil();
-
-            break;
-        case OpCode::NOP:
-            break;
-        case OpCode::HALT:
-            return StackTop_ > 0 ? Stack_[0] : Value::nil();
-        default:
-            diagnostic::emit("Unknown opcode : " + std::to_string(static_cast<int>(op)), diagnostic::Severity::FATAL);
-        }
-    }
-}
-
 namespace {
-
-// dispatch helpers that take the op as template/lambda params
-template<typename IntOp, typename RealOp>
-Value _binaryArith(Value const lhs, Value const rhs, IntOp intOp, RealOp realOp)
-{
-    if (!lhs.isNumber() || !rhs.isNumber())
-        diagnostic::emit("binary arithmetic on non numeric operand is not allowed", diagnostic::Severity::FATAL);
-
-    if (lhs.isInteger() && rhs.isInteger())
-        return Value::integer(intOp(lhs.asInteger(), rhs.asInteger()));
-
-    return Value::real(realOp(lhs.asDoubleAny(), rhs.asDoubleAny()));
-}
-
-template<typename IntOp>
-Value _binaryBitwise(Value const lhs, Value const rhs, IntOp intOp)
-{
-    if (!lhs.isInteger() || !rhs.isInteger())
-        diagnostic::emit("bitwise op on non integer operand is not allowed", diagnostic::Severity::FATAL);
-
-    return Value::integer(intOp(lhs.asInteger(), rhs.asInteger()));
-}
-
-template<typename IntOp>
-Value _binaryShift(Value const lhs, Value const rhs, IntOp intOp)
-{
-    if (!lhs.isInteger() || !rhs.isInteger())
-        diagnostic::emit("bit shift on non integer operand is not allowed", diagnostic::Severity::FATAL);
-
-    auto shift = rhs.asInteger();
-    if (shift < 0 || shift >= std::numeric_limits<decltype(lhs.asInteger())>::digits)
-        diagnostic::emit("shift amount out of range", diagnostic::Severity::FATAL);
-
-    return Value::integer(intOp(lhs.asInteger(), shift));
-}
-
-template<typename IntOp, typename RealOp>
-bool _binaryCmp(Value const lhs, Value const rhs, IntOp intOp, RealOp realOp)
-{
-    if (lhs.isInteger() && rhs.isInteger())
-        return intOp(lhs.asInteger(), rhs.asInteger());
-
-    if (lhs.isString() && rhs.isString())
-        return realOp(lhs.asString(), rhs.asString());
-
-    return realOp(lhs.asDoubleAny(), rhs.asDoubleAny());
-}
 
 template<typename T>
 T intPow(T base, T exp)
@@ -404,117 +39,782 @@ T intPow(T base, T exp)
     return result;
 }
 
-} // namespace anonymous
+} // namespace
 
-Value VM::_add(Value const lhs, Value const rhs)
+#define DISPATCH_TABLE_INIT \
+    &&H_LOAD_NIL,           \
+        &&H_LOAD_TRUE,      \
+        &&H_LOAD_FALSE,     \
+        &&H_LOAD_CONST,     \
+        &&H_LOAD_INT,       \
+        &&H_LOAD_GLOBAL,    \
+        &&H_STORE_GLOBAL,   \
+        &&H_MOVE,           \
+        &&H_GET_UPVALUE,    \
+        &&H_SET_UPVALUE,    \
+        &&H_CLOSE_UPVALUE,  \
+        &&H_OP_ADD,         \
+        &&H_OP_ADD_II,      \
+        &&H_OP_ADD_FF,      \
+        &&H_OP_SUB,         \
+        &&H_OP_SUB_II,      \
+        &&H_OP_SUB_FF,      \
+        &&H_OP_MUL,         \
+        &&H_OP_MUL_II,      \
+        &&H_OP_MUL_FF,      \
+        &&H_OP_DIV,         \
+        &&H_OP_DIV_II,      \
+        &&H_OP_DIV_FF,      \
+        &&H_OP_MOD,         \
+        &&H_OP_MOD_II,      \
+        &&H_OP_MOD_FF,      \
+        &&H_OP_POW,         \
+        &&H_OP_NEG,         \
+        &&H_OP_NEG_I,       \
+        &&H_OP_NEG_F,       \
+        &&H_OP_BITAND,      \
+        &&H_OP_BITAND_I,    \
+        &&H_OP_BITOR,       \
+        &&H_OP_BITXOR,      \
+        &&H_OP_BITNOT,      \
+        &&H_OP_LSHIFT,      \
+        &&H_OP_RSHIFT,      \
+        &&H_OP_EQ,          \
+        &&H_OP_EQ_II,       \
+        &&H_OP_EQ_FF,       \
+        &&H_OP_EQ_SS,       \
+        &&H_OP_NEQ,         \
+        &&H_OP_NEQ_II,      \
+        &&H_OP_NEQ_FF,      \
+        &&H_OP_NEQ_SS,      \
+        &&H_OP_LT,          \
+        &&H_OP_LT_II,       \
+        &&H_OP_LT_FF,       \
+        &&H_OP_LT_SS,       \
+        &&H_OP_LTE,         \
+        &&H_OP_LTE_II,      \
+        &&H_OP_LTE_FF,      \
+        &&H_OP_LTE_SS,      \
+        &&H_OP_NOT,         \
+        &&H_CONCAT,         \
+        &&H_LIST_NEW,       \
+        &&H_LIST_APPEND,    \
+        &&H_LIST_GET,       \
+        &&H_LIST_SET,       \
+        &&H_LIST_LEN,       \
+        &&H_JUMP,           \
+        &&H_JUMP_IF_TRUE,   \
+        &&H_JUMP_IF_FALSE,  \
+        &&H_LOOP,           \
+        &&H_FOR_PREP,       \
+        &&H_FOR_STEP,       \
+        &&H_CLOSURE,        \
+        &&H_CALL,           \
+        &&H_CALL_TAIL,      \
+        &&H_RETURN,         \
+        &&H_RETURN_NIL,     \
+        &&H_IC_CALL,        \
+        &&H_NOP,            \
+        &&H_HALT,
+
+#define DISPATCH()                                                   \
+    do {                                                             \
+        instr = cur_chunk->code[ip++];                               \
+        goto* dispatch_table[static_cast<uint8_t>(instr_op(instr))]; \
+    } while (0)
+
+#define BEGIN_DISPATCH() DISPATCH()
+#define CASE(op) H_##op:
+#define END_DISPATCH()
+
+#define VM_OP_II(lhs, rhs, op) asInteger(lhs) op asInteger(rhs)
+#define VM_OP_FF(lhs, rhs, op) asDouble(lhs) op asDouble(rhs)
+#define VM_ABC(op) cur_chunk->code[ip - 1] = make_ABC(op, a, b, c)
+
+#define RA() cur_base[instr_A(instr)]
+#define RB() cur_base[instr_B(instr)]
+#define RC() cur_base[instr_C(instr)]
+
+#define LOAD_FRAME()                              \
+    do {                                          \
+        CallFrame& f = frame();                   \
+        cur_closure = f.closure;                  \
+        cur_chunk = cur_closure->function->chunk; \
+        cur_frame_base = f.base;                  \
+        cur_base = &Stack_[cur_frame_base];       \
+        ip = f.ip;                                \
+    } while (0)
+
+#define SAVE_IP()        \
+    do {                 \
+        frame().ip = ip; \
+    } while (0)
+
+Value VM::execute()
 {
-    return _binaryArith(lhs, rhs, std::plus<> { }, std::plus<> { });
-}
+    static void const* dispatch_table[] = { DISPATCH_TABLE_INIT };
 
-Value VM::_sub(Value const lhs, Value const rhs)
-{
-    return _binaryArith(lhs, rhs, std::minus<> { }, std::minus<> { });
-}
+    uint32_t instr;
 
-Value VM::_mul(Value const lhs, Value const rhs)
-{
-    return _binaryArith(lhs, rhs, std::multiplies<> { }, std::multiplies<> { });
-}
+    Chunk* cur_chunk = frame().closure->function->chunk;
+    ObjClosure* cur_closure = frame().closure;
+    int cur_frame_base = frame().base;
+    Value* cur_base = &Stack_[cur_frame_base];
+    uint32_t ip = frame().ip;
 
-Value VM::_cnc(Value const lhs, Value const rhs)
-{
-    if (!lhs.isString() || !rhs.isString())
-        diagnostic::emit("String concatenation can only apply to string operands", diagnostic::Severity::FATAL);
+    BEGIN_DISPATCH();
 
-    return Value::object(intern(lhs.asString()->str + rhs.asString()->str));
-}
+    CASE(LOAD_NIL)
+    {
+        uint8_t start = instr_B(instr);
+        uint8_t count = instr_C(instr);
+        for (uint8_t i = 0; i < count; ++i)
+            cur_base[start + i] = NIL_VAL;
+        DISPATCH();
+    }
+    CASE(LOAD_TRUE)
+    {
+        RA() = makeBool(true);
+        DISPATCH();
+    }
+    CASE(LOAD_FALSE)
+    {
+        RA() = makeBool(false);
+        DISPATCH();
+    }
+    CASE(LOAD_CONST)
+    {
+        RA() = cur_chunk->constants[instr_Bx(instr)];
+        DISPATCH();
+    }
+    CASE(LOAD_INT)
+    {
+        RA() = makeInteger(static_cast<int32_t>(static_cast<uint16_t>(instr_Bx(instr))) - JUMP_OFFSET);
+        DISPATCH();
+    }
+    CASE(LOAD_GLOBAL)
+    {
+        Value name_v = cur_chunk->constants[instr_Bx(instr)];
+        auto it = Globals_.find(asString(name_v)->str);
+        RA() = (it != Globals_.end()) ? it->second : NIL_VAL;
+        DISPATCH();
+    }
+    CASE(STORE_GLOBAL)
+    {
+        Value name_v = cur_chunk->constants[instr_Bx(instr)];
+        Globals_[asString(name_v)->str] = RA();
+        DISPATCH();
+    }
+    CASE(MOVE)
+    {
+        RA() = RB();
+        DISPATCH();
+    }
+    CASE(GET_UPVALUE)
+    {
+        RA() = *cur_closure->upValues[instr_B(instr)]->location;
+        DISPATCH();
+    }
+    CASE(SET_UPVALUE)
+    {
+        *cur_closure->upValues[instr_B(instr)]->location = RA();
+        DISPATCH();
+    }
+    CASE(CLOSE_UPVALUE)
+    {
+        closeUpvalues(cur_frame_base + instr_A(instr));
+        DISPATCH();
+    }
+    CASE(OP_ADD)
+    {
+        uint8_t a = instr_A(instr), b = instr_B(instr), c = instr_C(instr);
+        Value lhs = cur_base[b], rhs = cur_base[c];
 
-Value VM::_div(Value const lhs, Value const rhs)
-{
-    if (rhs.asDoubleAny() == 0.0)
-        diagnostic::emit("division by zero is undefined", diagnostic::Severity::FATAL);
+        if (__builtin_expect(!isNumber(lhs) || !isNumber(rhs), 0))
+            runtimeError(ErrorCode::TYPE_ERROR_ARITH);
 
-    return _binaryArith(lhs, rhs, std::divides<> { }, std::divides<> { });
-}
+        if (IS_INTEGER(lhs) & IS_INTEGER(rhs)) {
+            cur_base[a] = makeInteger(VM_OP_II(lhs, rhs, +));
+            VM_ABC(OpCode::OP_ADD_II);
+        } else {
+            cur_base[a] = makeReal(VM_OP_FF(lhs, rhs, +));
+            VM_ABC(OpCode::OP_ADD_FF);
+        }
 
-Value VM::_mod(Value const lhs, Value const rhs)
-{
-    if (rhs.asDoubleAny() == 0.0)
-        diagnostic::emit("modulo by zero is undefined", diagnostic::Severity::FATAL);
+        DISPATCH();
+    }
+    CASE(OP_ADD_II)
+    {
+        RA() = makeInteger(VM_OP_II(RB(), RC(), +));
+        DISPATCH();
+    }
+    CASE(OP_ADD_FF)
+    {
+        RA() = makeReal(VM_OP_FF(RB(), RC(), +));
+        DISPATCH();
+    }
+    CASE(OP_SUB)
+    {
+        uint8_t a = instr_A(instr), b = instr_B(instr), c = instr_C(instr);
+        Value lhs = cur_base[b], rhs = cur_base[c];
 
-    return _binaryArith(lhs, rhs, std::modulus<> { }, [](double a, double b) { return std::fmod(a, b); });
-}
+        if (__builtin_expect(!isNumber(lhs) || !isNumber(rhs), 0))
+            runtimeError(ErrorCode::TYPE_ERROR_ARITH);
 
-Value VM::_pow(Value const lhs, Value const rhs)
-{
-    assert(lhs.isNumber() && rhs.isNumber());
+        if (IS_INTEGER(lhs) & IS_INTEGER(rhs)) {
+            cur_base[a] = makeInteger(VM_OP_II(lhs, rhs, -));
+            VM_ABC(OpCode::OP_SUB_II);
+        } else {
+            cur_base[a] = makeReal(VM_OP_FF(lhs, rhs, -));
+            VM_ABC(OpCode::OP_SUB_FF);
+        }
 
-    if (lhs.isInteger() && rhs.isInteger()) {
-        auto exp = rhs.asInteger();
-        if (exp < 0)
-            diagnostic::emit("negative integer exponent is undefined", diagnostic::Severity::FATAL);
-        return Value::integer(intPow(lhs.asInteger(), exp));
+        DISPATCH();
+    }
+    CASE(OP_SUB_II)
+    {
+        RA() = makeInteger(VM_OP_II(RB(), RC(), -));
+        DISPATCH();
+    }
+    CASE(OP_SUB_FF)
+    {
+        RA() = makeReal(VM_OP_FF(RB(), RC(), -));
+        DISPATCH();
+    }
+    CASE(OP_MUL)
+    {
+        uint8_t a = instr_A(instr), b = instr_B(instr), c = instr_C(instr);
+        Value lhs = cur_base[b], rhs = cur_base[c];
+
+        if (__builtin_expect(!isNumber(lhs) || !isNumber(rhs), 0))
+            runtimeError(ErrorCode::TYPE_ERROR_ARITH);
+
+        if (IS_INTEGER(lhs) & IS_INTEGER(rhs)) {
+            cur_base[a] = makeInteger(VM_OP_II(lhs, rhs, *));
+            VM_ABC(OpCode::OP_MUL_II);
+        } else {
+            cur_base[a] = makeReal(VM_OP_FF(lhs, rhs, *));
+            VM_ABC(OpCode::OP_MUL_FF);
+        }
+
+        DISPATCH();
+    }
+    CASE(OP_MUL_II)
+    {
+        RA() = makeInteger(VM_OP_II(RB(), RC(), *));
+        DISPATCH();
+    }
+    CASE(OP_MUL_FF)
+    {
+        // FIX: was makeInteger(...) — wrong wrapper for float result
+        RA() = makeReal(VM_OP_FF(RB(), RC(), *));
+        DISPATCH();
+    }
+    CASE(OP_DIV)
+    {
+        // FIX: restructured to check zero per type, and use 0.0 (double) not 0.0f (float)
+        uint8_t a = instr_A(instr), b = instr_B(instr), c = instr_C(instr);
+        Value lhs = cur_base[b], rhs = cur_base[c];
+
+        if (__builtin_expect(!isNumber(lhs) || !isNumber(rhs), 0))
+            runtimeError(ErrorCode::TYPE_ERROR_ARITH);
+
+        if (asDouble(rhs) == 0.0)
+            runtimeError(ErrorCode::DIVISION_BY_ZERO);
+
+        if (IS_INTEGER(lhs) & IS_INTEGER(rhs)) {
+            cur_base[a] = makeInteger(VM_OP_II(lhs, rhs, /));
+            VM_ABC(OpCode::OP_DIV_II);
+        } else {
+            cur_base[a] = makeReal(VM_OP_FF(lhs, rhs, /));
+            VM_ABC(OpCode::OP_DIV_FF);
+        }
+
+        DISPATCH();
+    }
+    CASE(OP_DIV_II)
+    {
+        RA() = makeInteger(VM_OP_II(RB(), RC(), /));
+        DISPATCH();
+    }
+    CASE(OP_DIV_FF)
+    {
+        RA() = makeReal(VM_OP_FF(RB(), RC(), /));
+        DISPATCH();
+    }
+    CASE(OP_MOD)
+    {
+        uint8_t a = instr_A(instr), b = instr_B(instr), c = instr_C(instr);
+        Value lhs = cur_base[b], rhs = cur_base[c];
+
+        if (__builtin_expect(!isNumber(lhs) || !isNumber(rhs), 0))
+            runtimeError(ErrorCode::TYPE_ERROR_ARITH);
+
+        if (asDouble(rhs) == 0.0)
+            runtimeError(ErrorCode::MODULO_BY_ZERO);
+
+        if (IS_INTEGER(lhs) & IS_INTEGER(rhs)) {
+            cur_base[a] = makeInteger(VM_OP_II(lhs, rhs, %));
+            VM_ABC(OpCode::OP_MOD_II);
+        } else {
+            cur_base[a] = makeReal(std::fmod(asDouble(lhs), asDouble(rhs)));
+            VM_ABC(OpCode::OP_MOD_FF);
+        }
+
+        DISPATCH();
+    }
+    CASE(OP_MOD_II)
+    {
+        RA() = makeInteger(VM_OP_II(RB(), RC(), %));
+        DISPATCH();
+    }
+    CASE(OP_MOD_FF)
+    {
+        RA() = makeReal(std::fmod(asDouble(RB()), asDouble(RC())));
+        DISPATCH();
+    }
+    CASE(OP_POW)
+    {
+        DISPATCH();
+    }
+    CASE(OP_NEG)
+    {
+        uint8_t a = instr_A(instr), b = instr_B(instr), c = instr_C(instr); // c is not used but for VM_ABC
+        Value operand = cur_base[b];
+
+        if (__builtin_expect(!isNumber(operand), 0))
+            runtimeError(ErrorCode::TYPE_ERROR_ARITH);
+
+        if (IS_INTEGER(operand)) {
+            cur_base[a] = makeInteger(-asInteger(operand));
+            VM_ABC(OpCode::OP_NEG_I);
+        } else {
+            cur_base[a] = makeReal(-asDouble(operand));
+            VM_ABC(OpCode::OP_NEG_F);
+        }
+
+        DISPATCH();
+    }
+    CASE(OP_NEG_I)
+    {
+        RA() = makeInteger(-asInteger(RB()));
+        DISPATCH();
+    }
+    CASE(OP_NEG_F)
+    {
+        RA() = makeReal(-asDouble(RB()));
+        DISPATCH();
+    }
+    CASE(OP_BITAND)
+    {
+        uint8_t a = instr_A(instr), b = instr_B(instr), c = instr_C(instr);
+        Value lhs = cur_base[b], rhs = cur_base[c];
+
+        if (__builtin_expect(!IS_INTEGER(lhs) || !IS_INTEGER(rhs), 0))
+            runtimeError(ErrorCode::TYPE_ERROR_ARITH);
+
+        cur_base[a] = makeInteger(VM_OP_II(lhs, rhs, &));
+        VM_ABC(OpCode::OP_BITAND_I);
+
+        DISPATCH();
+    }
+    CASE(OP_BITAND_I)
+    {
+        RA() = makeInteger(VM_OP_II(RB(), RC(), &));
+        DISPATCH();
+    }
+    CASE(OP_BITOR)
+    {
+        DISPATCH();
+    }
+    CASE(OP_BITXOR)
+    {
+        DISPATCH();
+    }
+    CASE(OP_BITNOT)
+    {
+        DISPATCH();
+    }
+    CASE(OP_LSHIFT)
+    {
+        DISPATCH();
+    }
+    CASE(OP_RSHIFT)
+    {
+        DISPATCH();
+    }
+    CASE(OP_EQ)
+    {
+        uint8_t a = instr_A(instr), b = instr_B(instr), c = instr_C(instr);
+        Value lhs = cur_base[b], rhs = cur_base[c];
+        bool both_int = IS_INTEGER(lhs) & IS_INTEGER(rhs);
+
+        if (both_int) {
+            cur_base[a] = makeBool(VM_OP_II(lhs, rhs, ==));
+            VM_ABC(OpCode::OP_EQ_II);
+        } else if (isString(lhs) && isString(rhs)) [[unlikely]] {
+            cur_base[a] = makeBool(asString(lhs)->str == asString(rhs)->str);
+            VM_ABC(OpCode::OP_EQ_SS);
+        } else {
+            cur_base[a] = makeBool(VM_OP_FF(lhs, rhs, ==));
+            VM_ABC(OpCode::OP_EQ_FF);
+        }
+
+        DISPATCH();
+    }
+    CASE(OP_EQ_II)
+    {
+        RA() = makeBool(VM_OP_II(RB(), RC(), ==));
+        DISPATCH();
+    }
+    CASE(OP_EQ_FF)
+    {
+        RA() = makeBool(VM_OP_FF(RB(), RC(), ==));
+        DISPATCH();
+    }
+    CASE(OP_EQ_SS)
+    {
+        RA() = makeBool(asString(RB())->str == asString(RC())->str);
+        DISPATCH();
+    }
+    CASE(OP_NEQ)
+    {
+        uint8_t a = instr_A(instr), b = instr_B(instr), c = instr_C(instr);
+        Value lhs = cur_base[b], rhs = cur_base[c];
+        bool both_int = IS_INTEGER(lhs) & IS_INTEGER(rhs);
+
+        if (both_int) {
+            cur_base[a] = makeBool(VM_OP_II(lhs, rhs, !=));
+            VM_ABC(OpCode::OP_NEQ_II);
+        } else if (isString(lhs) && isString(rhs)) [[unlikely]] {
+            cur_base[a] = makeBool(asString(lhs)->str != asString(rhs)->str);
+            VM_ABC(OpCode::OP_NEQ_SS);
+        } else {
+            cur_base[a] = makeBool(VM_OP_FF(lhs, rhs, !=));
+            VM_ABC(OpCode::OP_NEQ_FF);
+        }
+
+        DISPATCH();
+    }
+    CASE(OP_NEQ_II)
+    {
+        RA() = makeBool(VM_OP_II(RB(), RC(), !=));
+        DISPATCH();
+    }
+    CASE(OP_NEQ_FF)
+    {
+        RA() = makeBool(VM_OP_FF(RB(), RC(), !=));
+        DISPATCH();
+    }
+    CASE(OP_NEQ_SS)
+    {
+        RA() = makeBool(asString(RB())->str != asString(RC())->str);
+        DISPATCH();
+    }
+    CASE(OP_LT)
+    {
+        uint8_t a = instr_A(instr), b = instr_B(instr), c = instr_C(instr);
+        Value lhs = cur_base[b], rhs = cur_base[c];
+        bool both_int = IS_INTEGER(lhs) & IS_INTEGER(rhs);
+
+        if (both_int) {
+            cur_base[a] = makeBool(VM_OP_II(lhs, rhs, <));
+            VM_ABC(OpCode::OP_LT_II);
+        } else if (isString(lhs) && isString(rhs)) [[unlikely]] {
+            cur_base[a] = makeBool(asString(lhs)->str < asString(rhs)->str);
+            VM_ABC(OpCode::OP_LT_SS);
+        } else {
+            cur_base[a] = makeBool(VM_OP_FF(lhs, rhs, <));
+            VM_ABC(OpCode::OP_LT_FF);
+        }
+
+        DISPATCH();
+    }
+    CASE(OP_LT_II)
+    {
+        RA() = makeBool(VM_OP_II(RB(), RC(), <));
+        DISPATCH();
+    }
+    CASE(OP_LT_FF)
+    {
+        RA() = makeBool(VM_OP_FF(RB(), RC(), <));
+        DISPATCH();
+    }
+    CASE(OP_LT_SS)
+    {
+        RA() = makeBool(asString(RB())->str < asString(RC())->str);
+        DISPATCH();
+    }
+    CASE(OP_LTE)
+    {
+        uint8_t a = instr_A(instr), b = instr_B(instr), c = instr_C(instr);
+        Value lhs = cur_base[b], rhs = cur_base[c];
+        bool both_int = IS_INTEGER(lhs) & IS_INTEGER(rhs);
+
+        if (both_int) {
+            cur_base[a] = makeBool(VM_OP_II(lhs, rhs, <=));
+            VM_ABC(OpCode::OP_LTE_II);
+        } else if (isString(lhs) && isString(rhs)) [[unlikely]] {
+            cur_base[a] = makeBool(asString(lhs)->str <= asString(rhs)->str);
+            VM_ABC(OpCode::OP_LTE_SS);
+        } else {
+            cur_base[a] = makeBool(VM_OP_FF(lhs, rhs, <=));
+            VM_ABC(OpCode::OP_LTE_FF);
+        }
+
+        DISPATCH();
+    }
+    CASE(OP_LTE_II)
+    {
+        RA() = makeBool(VM_OP_II(RB(), RC(), <=));
+        DISPATCH();
+    }
+    CASE(OP_LTE_FF)
+    {
+        RA() = makeBool(VM_OP_FF(RB(), RC(), <=));
+        DISPATCH();
+    }
+    CASE(OP_LTE_SS)
+    {
+        // FIX: was empty with no DISPATCH() — silent fall-through
+        RA() = makeBool(asString(RB())->str <= asString(RC())->str);
+        DISPATCH();
+    }
+    CASE(OP_NOT)
+    {
+        RA() = makeBool(isTruthy(!RB()));
+        DISPATCH();
+    }
+    CASE(CONCAT)
+    {
+        DISPATCH();
+    }
+    CASE(LIST_NEW)
+    {
+        ObjList* list_obj = makeObjectList();
+        list_obj->reserve(instr_B(instr));
+        RA() = makeObject(list_obj);
+        DISPATCH();
+    }
+    CASE(LIST_APPEND)
+    {
+        Value list_v = RA();
+        if (!isList(list_v)) [[unlikely]]
+            runtimeError(ErrorCode::TYPE_ERROR_CALL);
+        asList(list_v)->elements.push(RB());
+        DISPATCH();
+    }
+    CASE(LIST_GET)
+    {
+        Value list_v = RB(), index_v = RC();
+        if (!isList(list_v)) [[unlikely]]
+            runtimeError(ErrorCode::TYPE_ERROR_CALL);
+        if (!IS_INTEGER(index_v)) [[unlikely]]
+            runtimeError(ErrorCode::INDEX_TYPE_ERROR);
+        auto& elems = asList(list_v)->elements;
+        int64_t idx = asInteger(index_v);
+        if (idx < 0 || idx >= static_cast<int64_t>(elems.size())) [[unlikely]]
+            runtimeError(ErrorCode::INDEX_OUT_OF_BOUNDS);
+        RA() = elems[static_cast<size_t>(idx)];
+        DISPATCH();
+    }
+    CASE(LIST_SET)
+    {
+        Value list_v = RA(), index_v = RB(), new_val = RC();
+        if (!isList(list_v)) [[unlikely]]
+            runtimeError(ErrorCode::TYPE_ERROR_CALL);
+        if (!IS_INTEGER(index_v)) [[unlikely]]
+            runtimeError(ErrorCode::INDEX_TYPE_ERROR);
+        auto& elems = asList(list_v)->elements;
+        int64_t idx = asInteger(index_v);
+        if (idx < 0)
+            idx += static_cast<int64_t>(elems.size());
+        if (idx < 0 || idx >= static_cast<int64_t>(elems.size())) [[unlikely]]
+            runtimeError(ErrorCode::INDEX_OUT_OF_BOUNDS);
+        elems[static_cast<size_t>(idx)] = new_val;
+        DISPATCH();
+    }
+    CASE(LIST_LEN)
+    {
+        Value list_v = RB();
+        if (!isList(list_v)) [[unlikely]]
+            runtimeError(ErrorCode::TYPE_ERROR_CALL);
+        RA() = makeInteger(static_cast<int64_t>(asList(list_v)->elements.size()));
+        DISPATCH();
+    }
+    CASE(JUMP)
+    {
+        ip += instr_sBx(instr);
+        DISPATCH();
+    }
+    CASE(JUMP_IF_TRUE)
+    {
+        if (isTruthy(RA()))
+            ip += instr_sBx(instr);
+        DISPATCH();
+    }
+    CASE(JUMP_IF_FALSE)
+    {
+        if (!isTruthy(RA()))
+            ip += instr_sBx(instr);
+        DISPATCH();
+    }
+    CASE(LOOP)
+    {
+        ip += instr_sBx(instr);
+        DISPATCH();
+    }
+    CASE(FOR_PREP) { /* TODO */ DISPATCH(); }
+    CASE(FOR_STEP) { /* TODO */ DISPATCH(); }
+    CASE(CLOSURE)
+    {
+        uint16_t fn_idx = instr_Bx(instr);
+        Chunk* fn_chunk = cur_chunk->functions[fn_idx];
+        ObjFunction* fn = makeObjectFunction(fn_chunk);
+        fn->arity = fn_chunk->arity;
+        fn->upvalueCount = fn_chunk->upvalueCount;
+        ObjClosure* cl = makeObjectClosure(fn);
+
+        for (unsigned int i = 0; i < fn_chunk->upvalueCount; ++i) {
+            uint32_t desc = cur_chunk->code[ip++];
+            bool is_local = instr_A(desc) == 1;
+            uint8_t index = instr_B(desc);
+            cl->upValues[i] = is_local
+                ? captureUpvalue(cur_frame_base + index)
+                : cur_closure->upValues[index];
+        }
+
+        RA() = makeObject(cl);
+        DISPATCH();
+    }
+    CASE(CALL)
+    {
+        uint8_t fn_reg = instr_A(instr);
+        uint8_t argc = instr_B(instr);
+        Value callee = cur_base[fn_reg];
+        int base = cur_frame_base + fn_reg + 1;
+
+        if (isClosure(callee)) [[likely]] {
+            ObjClosure* cl = asClosure(callee);
+            if (argc != cl->function->arity) [[unlikely]] {
+                diagnostic::emit("expected " + std::to_string(cl->function->arity)
+                    + " arguments but got " + std::to_string(argc));
+                runtimeError(ErrorCode::WRONG_ARG_COUNT);
+            }
+            if (FramesTop_ >= MAX_FRAMES) [[unlikely]]
+                runtimeError(ErrorCode::STACK_OVERFLOW);
+
+            int new_top = base + cl->function->chunk->localCount + 1;
+            while (StackTop_ < new_top)
+                Stack_[StackTop_++] = NIL_VAL;
+
+            SAVE_IP();
+            Frames_[FramesTop_++] = { cl, 0, base, static_cast<int>(cl->function->chunk->localCount) };
+        } else {
+            SAVE_IP();
+            callValue(callee, argc, base, /*tail=*/false);
+        }
+        LOAD_FRAME();
+        DISPATCH();
+    }
+    CASE(CALL_TAIL)
+    {
+        uint8_t fn_reg = instr_A(instr);
+        uint8_t argc = instr_B(instr);
+        Value callee = cur_base[fn_reg];
+        int base = cur_frame_base + fn_reg + 1;
+        SAVE_IP();
+        callValue(callee, argc, base, /*tail=*/true);
+        LOAD_FRAME();
+        DISPATCH();
+    }
+    CASE(IC_CALL)
+    {
+        uint8_t fn_reg = instr_A(instr), argc = instr_B(instr), ic_idx = instr_C(instr);
+        Value callee = cur_base[fn_reg];
+        int base = cur_frame_base + fn_reg + 1;
+
+        if (ic_idx < cur_chunk->icSlots.size()) {
+            auto& slot = cur_chunk->icSlots[ic_idx];
+            slot.seenLhs |= static_cast<uint8_t>(valueTypeTag(callee));
+            slot.hitCount++;
+        }
+
+        Chunk* caller_chunk = cur_chunk;
+        int result_slot = base - 1;
+
+        SAVE_IP();
+        callValue(callee, argc, base, /*tail=*/false);
+        LOAD_FRAME();
+
+        if (ic_idx < caller_chunk->icSlots.size())
+            caller_chunk->icSlots[ic_idx].seenRet |= static_cast<uint8_t>(valueTypeTag(Stack_[result_slot]));
+
+        DISPATCH();
+    }
+    CASE(RETURN)
+    {
+        uint8_t const src = instr_A(instr);
+        uint8_t const n_ret = instr_B(instr);
+        Value ret = (n_ret > 0) ? cur_base[src] : NIL_VAL;
+
+        if (__builtin_expect(!OpenUpvalues_.empty(), 0)) {
+            Value* threshold = &Stack_[cur_frame_base];
+            uint32_t i = static_cast<uint32_t>(OpenUpvalues_.size());
+            while (i > 0 && OpenUpvalues_[i - 1]->location >= threshold) {
+                ObjUpvalue* uv = OpenUpvalues_[--i];
+                uv->closed = *uv->location;
+                uv->location = &uv->closed;
+            }
+            OpenUpvalues_.resize(i);
+        }
+
+        Stack_[cur_frame_base - 1] = ret;
+        --FramesTop_;
+
+        if (__builtin_expect(FramesTop_ == 0, 0))
+            return ret;
+
+        LOAD_FRAME();
+
+        DISPATCH();
+    }
+    CASE(RETURN_NIL)
+    {
+        SAVE_IP();
+
+        if (__builtin_expect(!OpenUpvalues_.empty(), 0)) {
+            Value* threshold = &Stack_[cur_frame_base];
+            uint32_t i = static_cast<uint32_t>(OpenUpvalues_.size());
+            while (i > 0 && OpenUpvalues_[i - 1]->location >= threshold) {
+                ObjUpvalue* uv = OpenUpvalues_[--i];
+                uv->closed = *uv->location;
+                uv->location = &uv->closed;
+            }
+            OpenUpvalues_.resize(i);
+        }
+
+        Stack_[cur_frame_base - 1] = NIL_VAL;
+        --FramesTop_;
+
+        if (__builtin_expect(FramesTop_ == 0, 0))
+            return NIL_VAL;
+
+        LOAD_FRAME();
+        DISPATCH();
+    }
+    CASE(NOP)
+    {
+        DISPATCH();
+    }
+    CASE(HALT)
+    {
+        halt();
     }
 
-    return Value::real(std::pow(lhs.asDoubleAny(), rhs.asDoubleAny()));
-}
+    END_DISPATCH();
 
-Value VM::_bitand(Value const lhs, Value const rhs)
-{
-    return _binaryBitwise(lhs, rhs, std::bit_and<> { });
-}
-
-Value VM::_bitor(Value const lhs, Value const rhs)
-{
-    return _binaryBitwise(lhs, rhs, std::bit_or<> { });
-}
-
-Value VM::_bitxor(Value const lhs, Value const rhs)
-{
-    return _binaryBitwise(lhs, rhs, std::bit_xor<> { });
-}
-
-Value VM::_shl(Value const lhs, Value const rhs)
-{
-    return _binaryShift(lhs, rhs, [](auto a, auto b) { return a << b; });
-}
-
-Value VM::_shr(Value const lhs, Value const rhs)
-{
-    return _binaryShift(lhs, rhs, [](int64_t a, int64_t b) {
-        return static_cast<int64_t>(static_cast<uint64_t>(a) >> static_cast<uint64_t>(b));
-    });
-}
-
-Value VM::_neg(Value const a)
-{
-    if (!a.isNumber())
-        diagnostic::emit("'-' on a non numeric value is not allowed", diagnostic::Severity::FATAL);
-
-    return a.isInteger() ? Value::integer(-a.asInteger()) : Value::real(-a.asDouble());
-}
-
-Value VM::_bitnot(Value const a)
-{
-    if (!a.isInteger())
-        diagnostic::emit("'~' on non integer is not allowed", diagnostic::Severity::FATAL);
-
-    return Value::integer(~a.asInteger());
-}
-
-bool VM::_eq(Value const lhs, Value const rhs)
-{
-    return _binaryCmp(lhs, rhs, std::equal_to<> { }, std::equal_to<> { });
-}
-
-bool VM::_lt(Value const lhs, Value const rhs)
-{
-    return _binaryCmp(lhs, rhs, std::less<> { }, std::less<> { });
-}
-
-bool VM::_le(Value const lhs, Value const rhs)
-{
-    return _binaryCmp(lhs, rhs, std::less_equal<> { }, std::less_equal<> { });
+    __builtin_unreachable();
 }
 
 ObjString* VM::intern(StringRef const& str)
@@ -522,7 +822,6 @@ ObjString* VM::intern(StringRef const& str)
     auto it = StringTable_.find(str);
     if (it != StringTable_.end())
         return it->second;
-
     ObjString* obj = makeObjectString(str);
     StringTable_[str] = obj;
     return obj;
@@ -531,21 +830,26 @@ ObjString* VM::intern(StringRef const& str)
 void VM::ensureStack(int needed)
 {
     if (static_cast<size_t>(StackTop_) + static_cast<size_t>(needed) > STACK_SIZE)
-        diagnostic::emit("stack overflow", diagnostic::Severity::FATAL);
+        runtimeError(ErrorCode::STACK_OVERFLOW);
 }
 
 void VM::closeUpvalues(unsigned int from_stack_pos)
 {
-    // Close all open upvalues whose location >= from_stack_pos
-    for (auto it = OpenUpvalues_.begin(); it != OpenUpvalues_.end();) {
-        ObjUpvalue* uv = *it;
-        if (uv->location >= &Stack_[from_stack_pos]) {
-            uv->closed = *uv->location;
-            uv->location = &uv->closed;
-            it = OpenUpvalues_.erase(it);
-        } else
-            ++it;
+    if (OpenUpvalues_.empty())
+        return;
+
+    Value* threshold = &Stack_[from_stack_pos];
+    uint32_t i = OpenUpvalues_.size();
+
+    // OpenUpvalues_ maintained in ascending stack-position order,
+    // so upvalues above threshold are at the tail
+    while (i > 0 && OpenUpvalues_[i - 1]->location >= threshold) {
+        ObjUpvalue* uv = OpenUpvalues_[i - 1];
+        uv->closed = *uv->location;
+        uv->location = &uv->closed;
+        --i;
     }
+    OpenUpvalues_.resize(i); // single truncation, no memmove
 }
 
 void VM::updateIcBinary(Chunk* ch, uint32_t nop_ip, Value lhs, Value rhs, Value result)
@@ -555,20 +859,18 @@ void VM::updateIcBinary(Chunk* ch, uint32_t nop_ip, Value lhs, Value rhs, Value 
 
     if (ic_idx < ch->icSlots.size()) {
         auto& slot = ch->icSlots[ic_idx];
-        slot.seenLhs |= valueTypeTag(lhs);
-        slot.seenRhs |= valueTypeTag(rhs);
-        slot.seenRet |= valueTypeTag(result);
+        slot.seenLhs |= static_cast<uint8_t>(valueTypeTag(lhs));
+        slot.seenRhs |= static_cast<uint8_t>(valueTypeTag(rhs));
+        slot.seenRet |= static_cast<uint8_t>(valueTypeTag(result));
         slot.hitCount++;
     }
 }
 
 ObjUpvalue* VM::captureUpvalue(unsigned int stack_pos)
 {
-    // reuse an existing open upvalue pointing at the same stack slot
     for (ObjUpvalue* uv : OpenUpvalues_)
         if (uv->location == &Stack_[stack_pos])
             return uv;
-
     ObjUpvalue* uv = makeObjectUpvalue(&Stack_[stack_pos]);
     OpenUpvalues_.push(uv);
     return uv;
@@ -576,65 +878,68 @@ ObjUpvalue* VM::captureUpvalue(unsigned int stack_pos)
 
 void VM::callValue(Value callee, int argc, int base, bool tail)
 {
-    if (callee.isClosure()) {
-        ObjClosure* cl = callee.asClosure();
+    if (isClosure(callee)) {
+        ObjClosure* cl = asClosure(callee);
         int arity = cl->function->arity;
 
-        if (argc != arity)
-            diagnostic::emit("expected " + std::to_string(arity) + " arguments but got " + std::to_string(argc),
-                diagnostic::Severity::FATAL);
-
-        if (FramesTop_ >= MAX_FRAMES)
-            diagnostic::emit("Stack overflow", diagnostic::Severity::FATAL);
+        if (argc != arity) [[unlikely]] {
+            diagnostic::emit("expected " + std::to_string(arity) + " arguments but got " + std::to_string(argc));
+            runtimeError(ErrorCode::WRONG_ARG_COUNT);
+        }
+        if (FramesTop_ >= MAX_FRAMES) [[unlikely]]
+            runtimeError(ErrorCode::STACK_OVERFLOW);
 
         if (tail && FramesTop_ > 0) {
-            int cur_base = Frames_[FramesTop_ - 1].base; // ← was Frames_.back()
+            int cur_base_offset = Frames_[FramesTop_ - 1].base;
+            // FIX #6: hoist localCount — was computed twice in the old code
+            int local_count = cl->function->chunk->localCount;
 
             for (int i = 0; i < argc; ++i)
-                Stack_[cur_base + i] = Stack_[base + i];
+                Stack_[cur_base_offset + i] = Stack_[base + i];
+            for (int i = argc; i < local_count; ++i)
+                Stack_[cur_base_offset + i] = NIL_VAL;
 
-            for (int i = argc; i < cl->function->chunk->localCount; ++i)
-                Stack_[cur_base + i] = Value::nil();
+            // FIX #5: store localCount in frame
+            Frames_[FramesTop_ - 1] = { cl, 0, cur_base_offset, local_count };
 
-            Frames_[FramesTop_ - 1] = { cl, 0, cur_base }; // ← was Frames_.back()
-
-            int new_top = cur_base + cl->function->chunk->localCount + 1;
-            while (StackTop_ < new_top)
-                Stack_[StackTop_++] = Value::nil();
-            StackTop_ = new_top;
+            int new_top = cur_base_offset + local_count + 1;
+            if (StackTop_ < new_top)
+                StackTop_ = new_top;
         } else {
-            // ensureStack(cl->function->chunk->localCount + 8);
-            int new_top = base + cl->function->chunk->localCount + 1;
+            int local_count = cl->function->chunk->localCount; // FIX #6: one read
+            int new_top = base + local_count + 1;
 
+            // FIX #10: avoid the while loop when stack is already big enough
             while (StackTop_ < new_top)
-                Stack_[StackTop_++] = Value::nil();
+                Stack_[StackTop_++] = NIL_VAL;
 
-            Frames_[FramesTop_++] = { cl, 0, base };
+            // FIX #5: store localCount in frame
+            Frames_[FramesTop_++] = { cl, 0, base, local_count };
         }
-
-        return;
-    } else if (callee.isNative()) {
-        ObjNative* nat = callee.asNative();
-        if (nat->arity >= 0 && argc != nat->arity)
-            diagnostic::emit("native '" + std::string(nat->name ? nat->name->str.data() : "?")
-                + "' expected " + std::to_string(nat->arity) + " args, got " + std::to_string(argc));
-
-        Value result = callNative(nat, argc, base);
-        // Write result into fn_reg slot (base - 1), mirroring returnFromCall for closures.
-        // base = caller_frame.base + fn_reg + 1, so base-1 is exactly the fn_reg slot.
-        Stack_[base - 1] = result;
-        // StackTop_ is unchanged — no frame was pushed, so nothing to clean up.
         return;
     }
 
-    diagnostic::emit("Attempting call on non-function value", diagnostic::Severity::FATAL);
+    if (isNative(callee)) {
+        ObjNative* nat = asNative(callee);
+        if (nat->arity >= 0 && argc != nat->arity) [[unlikely]] {
+            diagnostic::emit("native '" + std::string(nat->name ? nat->name->str.data() : "?")
+                + "' expected " + std::to_string(nat->arity) + " args, got " + std::to_string(argc));
+            runtimeError(ErrorCode::WRONG_ARG_COUNT);
+        }
+        Stack_[base - 1] = callNative(nat, argc, base);
+        return;
+    }
+
+    StringRef fn_name;
+    if (isFunction(callee))
+        fn_name = asFunction(callee)->name->str;
+    diagnostic::emit("Attempting call on non-function value : " + std::string(fn_name.data()));
+    runtimeError(ErrorCode::TYPE_ERROR_CALL);
 }
 
 Value VM::callNative(ObjNative* nat, int argc, int base)
 {
-    // base already points at arg 0 (= frame().base + fn_reg + 1)
-    Value* args = &Stack_[base]; // ← was base + 1
-    return nat->fn(argc, args);
+    return nat->fn(argc, &Stack_[base]);
 }
 
 void VM::returnFromCall(int ret_reg, int n_ret)
@@ -644,39 +949,27 @@ void VM::returnFromCall(int ret_reg, int n_ret)
 
     CallFrame returning = Frames_[FramesTop_ - 1];
     --FramesTop_;
+
+    // FIX #9: skip upvalue close if nothing is open
     closeUpvalues(returning.base);
-    Value ret = (n_ret > 0) ? Stack_[returning.base + ret_reg] : Value::nil();
-    Stack_[returning.base - 1] = ret; // write return value into closure slot (fn_reg in caller)
+
+    Value ret = (n_ret > 0) ? Stack_[returning.base + ret_reg] : NIL_VAL;
+    Stack_[returning.base - 1] = ret;
 
     if (FramesTop_ > 0) {
         Stack_[returning.base] = ret;
-        // Use the CALLER's localCount (Frames_[FramesTop_ - 1]), not returning's
-        StackTop_ = (returning.base - 1) + Frames_[FramesTop_ - 1].closure->function->chunk->localCount + 1;
+        // FIX #5: use cached localCount — eliminates 4-deep pointer chain
+        StackTop_ = (returning.base - 1) + Frames_[FramesTop_ - 1].localCount + 1;
     } else {
         Stack_[0] = ret;
         StackTop_ = 1;
     }
 }
 
-typename VM::CallFrame& VM::frame()
-{
-    return Frames_[FramesTop_ - 1];
-}
-
-typename VM::CallFrame const& VM::frame() const
-{
-    return Frames_[FramesTop_ - 1];
-}
-
-Chunk* VM::chunk()
-{
-    return frame().closure->function->chunk;
-}
-
-Value& VM::reg(int r)
-{
-    return Stack_[frame().base + r];
-}
+inline typename VM::CallFrame& VM::frame() { return Frames_[FramesTop_ - 1]; }
+inline typename VM::CallFrame const& VM::frame() const { return Frames_[FramesTop_ - 1]; }
+Chunk* VM::chunk() { return frame().closure->function->chunk; }
+Value& VM::reg(int r) { return Stack_[frame().base + r]; }
 
 void VM::openStdlib()
 {
@@ -684,7 +977,7 @@ void VM::openStdlib()
     registerNative("append", [](int argc, Value* argv) -> Value { return nativeAppend(argc, argv); }, -1);
     registerNative("pop", [](int argc, Value* argv) -> Value { return nativePop(argc, argv); }, -1);
     registerNative("slice", [](int argc, Value* argv) -> Value { return nativeSlice(argc, argv); }, -1);
-    registerNative("print", [](int argc, Value* argv) -> Value { return nativePrint(argc, argv); }, -1);
+    registerNative("اكتب", [](int argc, Value* argv) -> Value { return nativePrint(argc, argv); }, -1);
     registerNative("input", [](int argc, Value* argv) -> Value { return nativeInput(argc, argv); }, -1);
     registerNative("type", [](int argc, Value* argv) -> Value { return nativeType(argc, argv); }, -1);
     registerNative("int", [](int argc, Value* argv) -> Value { return nativeInt(argc, argv); }, -1);
@@ -709,8 +1002,69 @@ void VM::openStdlib()
     registerNative("clock", [](int argc, Value* argv) -> Value { return nativeClock(argc, argv); }, -1);
     registerNative("error", [](int argc, Value* argv) -> Value { return nativeError(argc, argv); }, -1);
     registerNative("time", [](int argc, Value* argv) -> Value { return nativeTime(argc, argv); }, -1);
+}
 
-    /// TODO: ...
+void VM::registerNative(StringRef const& name, NativeFn fn, int arity)
+{
+    ObjString* name_obj = makeObjectString(name);
+    Globals_[name] = makeObject(makeObjectNative(fn, name_obj, arity));
+}
+
+SourceLocation VM::currentLocation() const
+{
+    size_t offset = frame().ip > 0 ? frame().ip - 1 : 0;
+    Chunk const& ch = *frame().closure->function->chunk;
+    if (offset < ch.locations.size())
+        return ch.locations[offset];
+    return { 0, 0, 0 };
+}
+
+void VM::runtimeError(ErrorCode code)
+{
+    SourceLocation loc = currentLocation();
+    diagnostic::report(diagnostic::Severity::ERROR, loc.line, loc.column, static_cast<uint16_t>(code));
+
+    for (int32_t i = FramesTop_ - 1; i >= 0; --i) {
+        CallFrame const& f = Frames_[i];
+        Chunk const& ch = *f.closure->function->chunk;
+        size_t offset = f.ip > 0 ? f.ip - 1 : 0;
+        if (offset >= ch.locations.size())
+            continue;
+
+        SourceLocation floc = ch.locations[offset];
+        StringRef fname = (f.closure->function && f.closure->function->name)
+            ? f.closure->function->name->str
+            : "<toplevel>";
+
+        diagnostic::engine.addNote(
+            floc.line,
+            "in '" + std::string(fname.data()) + "' at "
+                + std::to_string(floc.line) + ":" + std::to_string(floc.column));
+    }
+
+    diagnostic::dump();
+    halt();
+}
+
+void VM::halt()
+{
+    closeUpvalues(0);
+    FramesTop_ = 0;
+    StackTop_ = 0;
+    throw std::runtime_error("");
+}
+
+void VM::internChunkConstants(Chunk* ch)
+{
+    auto& constants = ch->constants;
+
+    for (uint32_t i = 0; i < constants.size(); ++i) {
+        if (isString(constants[i]))
+            constants[i] = makeObject(intern(asString(constants[i])->str));
+    }
+
+    for (auto* fn : ch->functions)
+        internChunkConstants(fn);
 }
 
 } // namespace mylang::runtime

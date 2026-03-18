@@ -98,7 +98,7 @@ uint32_t const& Token::line() const
     return Location_.line;
 }
 
-uint32_t const& Token::column() const
+uint16_t const& Token::column() const
 {
     return Location_.column;
 }

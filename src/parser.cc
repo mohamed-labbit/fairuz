@@ -7,7 +7,18 @@
 namespace mylang::parser {
 
 using namespace ast;
+using ErrorCode = diagnostic::errc::parser::Code;
 
+static bool isValidNode(Expr const* e) { return e->getKind() != Expr::Kind::INVALID; }
+static bool isValidNode(Stmt const* s) { return s->getKind() != Stmt::Kind::INVALID; }
+
+Error Parser::reportError(ErrorCode err_code)
+{
+    auto err_tok = currentToken();
+    SourceLocation loc = { err_tok->line(), err_tok->column(), static_cast<uint16_t>(err_tok->lexeme().len()) };
+    return mylang::reportError(err_code, loc, &Lexer_);
+    // no dump() here — emission is deferred to parseProgram()
+}
 // symbol table
 
 SymbolTable::SymbolTable(SymbolTable* p, int32_t level)
@@ -19,8 +30,7 @@ SymbolTable::SymbolTable(SymbolTable* p, int32_t level)
 void SymbolTable::define(StringRef const& name, Symbol symbol)
 {
     if (lookupLocal(name))
-        // emit redeclaration error
-        return;
+        diagnostic::emit("Redeclaration of identifier", diagnostic::Severity::FATAL);
 
     symbol.name = name;
     Symbols_.emplace(name, std::move(symbol));
@@ -95,19 +105,14 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(Expr const* expr)
 
         if (lit->isString())
             return SymbolTable::DataType_t::STRING;
-
         if (lit->isDecimal())
             return SymbolTable::DataType_t::FLOAT;
-
         if (lit->isInteger())
             return SymbolTable::DataType_t::INTEGER;
-
         if (lit->isBoolean())
             return SymbolTable::DataType_t::BOOLEAN;
-        else
-            return SymbolTable::DataType_t::NONE;
 
-        break;
+        return SymbolTable::DataType_t::NONE;
     }
 
     case Expr::Kind::NAME: {
@@ -115,9 +120,7 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(Expr const* expr)
         SymbolTable::Symbol* sym = CurrentScope_->lookup(name->getValue());
         if (sym)
             return sym->dataType;
-
-        break;
-    }
+    } break;
 
     case Expr::Kind::BINARY: {
         BinaryExpr const* bin = static_cast<BinaryExpr const*>(expr);
@@ -128,18 +131,13 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(Expr const* expr)
         // Type promotion rules
         if (leftType == SymbolTable::DataType_t::FLOAT || rightType == SymbolTable::DataType_t::FLOAT)
             return SymbolTable::DataType_t::FLOAT;
-
         if (leftType == SymbolTable::DataType_t::INTEGER && rightType == SymbolTable::DataType_t::INTEGER)
             return SymbolTable::DataType_t::INTEGER;
-
         if (bin->getOperator() == BinaryOp::OP_ADD && leftType == SymbolTable::DataType_t::STRING)
             return SymbolTable::DataType_t::STRING;
-
         if (bin->getOperator() == BinaryOp::OP_AND || bin->getOperator() == BinaryOp::OP_OR)
             return SymbolTable::DataType_t::BOOLEAN;
-
-        break;
-    }
+    } break;
 
     case Expr::Kind::LIST:
         return SymbolTable::DataType_t::LIST;
@@ -171,9 +169,7 @@ void SemanticAnalyzer::analyzeExpr(Expr const* expr)
             reportIssue(Issue::Severity::ERROR, "Undefined variable: " + name->getValue(), expr->getLine(), "Did you forget to initialize it?");
         else
             CurrentScope_->markUsed(name->getValue(), expr->getLine());
-
-        break;
-    }
+    } break;
 
     case Expr::Kind::BINARY: {
         BinaryExpr const* bin = static_cast<BinaryExpr const*>(expr);
@@ -200,15 +196,12 @@ void SemanticAnalyzer::analyzeExpr(Expr const* expr)
             if (lit->isNumeric() && lit->toNumber() == 0)
                 reportIssue(Issue::Severity::ERROR, "Division by zero", expr->getLine(), "This will cause a runtime error");
         }
-
-        break;
-    }
+    } break;
 
     case Expr::Kind::UNARY: {
         UnaryExpr const* un = static_cast<UnaryExpr const*>(expr);
         analyzeExpr(un->getOperand());
-        break;
-    }
+    } break;
 
     case Expr::Kind::CALL: {
         CallExpr const* call = static_cast<CallExpr const*>(expr);
@@ -236,16 +229,13 @@ void SemanticAnalyzer::analyzeExpr(Expr const* expr)
             else if (sym->symbolType != SymbolTable::SymbolType::FUNCTION)
                 reportIssue(Issue::Severity::ERROR, "'" + name->getValue() + "' is not callable", expr->getLine());
         }
-        break;
-    }
+    } break;
 
     case Expr::Kind::LIST: {
         ListExpr const* list = static_cast<ListExpr const*>(expr);
         for (Expr const* const& elem : list->getElements())
             analyzeExpr(elem);
-
-        break;
-    }
+    } break;
 
     default:
         break;
@@ -277,8 +267,7 @@ void SemanticAnalyzer::analyzeStmt(Stmt const* stmt)
             target_name = dynamic_cast<NameExpr*>(target)->getValue();
 
         CurrentScope_->define(target_name, sym);
-        break;
-    }
+    } break;
 
     case Stmt::Kind::EXPR: {
         ExprStmt const* exprStmt = static_cast<ExprStmt const*>(stmt);
@@ -286,9 +275,7 @@ void SemanticAnalyzer::analyzeStmt(Stmt const* stmt)
         // Warn about unused expression results
         if (exprStmt->getExpr()->getKind() != Expr::Kind::CALL)
             reportIssue(Issue::Severity::INFO, "Expression result not used", stmt->getLine());
-
-        break;
-    }
+    } break;
 
     case Stmt::Kind::IF: {
         IfStmt const* ifStmt = static_cast<IfStmt const*>(stmt);
@@ -307,9 +294,7 @@ void SemanticAnalyzer::analyzeStmt(Stmt const* stmt)
             for (Stmt const* const& s : ifStmt->getElseBlock()->getStatements())
                 analyzeStmt(s);
         }
-
-        break;
-    }
+    } break;
 
     case Stmt::Kind::WHILE: {
         WhileStmt const* whileStmt = static_cast<WhileStmt const*>(stmt);
@@ -324,9 +309,7 @@ void SemanticAnalyzer::analyzeStmt(Stmt const* stmt)
 
         for (Stmt const* const& s : whileStmt->getBlock()->getStatements())
             analyzeStmt(s);
-
-        break;
-    }
+    } break;
 
     case Stmt::Kind::FOR: {
         ForStmt const* forStmt = static_cast<ForStmt const*>(stmt);
@@ -348,8 +331,7 @@ void SemanticAnalyzer::analyzeStmt(Stmt const* stmt)
 
         // Exit loop scope
         CurrentScope_ = CurrentScope_->Parent_;
-        break;
-    }
+    } break;
 
     case Stmt::Kind::FUNC: {
         FunctionDef const* func_def = static_cast<FunctionDef const*>(stmt);
@@ -387,14 +369,12 @@ void SemanticAnalyzer::analyzeStmt(Stmt const* stmt)
 
         // Exit function scope
         CurrentScope_ = CurrentScope_->Parent_;
-        break;
-    }
+    } break;
 
     case Stmt::Kind::RETURN: {
         ReturnStmt const* ret = static_cast<ReturnStmt const*>(stmt);
         analyzeExpr(ret->getValue());
-        break;
-    }
+    } break;
 
     default:
         break;
@@ -499,8 +479,6 @@ BinaryOp toBinaryOp(tok::TokenType const op)
         return BinaryOp::OP_BITOR;
     case tok::TokenType::OP_BITXOR:
         return BinaryOp::OP_BITXOR;
-    case tok::TokenType::OP_BITNOT:
-        return BinaryOp::OP_BITNOT;
     case tok::TokenType::OP_LSHIFT:
         return BinaryOp::OP_LSHIFT;
     case tok::TokenType::OP_RSHIFT:
@@ -539,11 +517,12 @@ Array<Stmt*> Parser::parseProgram()
         if (weDone())
             break;
 
-        Stmt* stmt = parseStatement();
-
-        if (stmt)
-            statements.push(stmt);
-        else {
+        auto stmt = parseStatement();
+        if (stmt.hasValue()) {
+            statements.push(stmt.value());
+        } else {
+            if (diagnostic::isSaturated())
+                break;
             synchronize();
             if (weDone())
                 break;
@@ -552,70 +531,70 @@ Array<Stmt*> Parser::parseProgram()
 
     Sema_.analyze(statements);
 
+    // Single emission point for the entire parse.
+    if (diagnostic::hasErrors())
+        diagnostic::dump();
+
     return statements;
 }
 
-Stmt* Parser::parseStatement()
+ErrorOr<Stmt*> Parser::parseStatement()
 {
     skipNewlines();
 
     if (check(tok::TokenType::KW_IF))
         return parseIfStmt();
-
     if (check(tok::TokenType::KW_WHILE))
         return parseWhileStmt();
-
     if (check(tok::TokenType::KW_RETURN))
         return parseReturnStmt();
-
     if (check(tok::TokenType::KW_FN))
         return parseFunctionDef();
 
     return parseExpressionStmt();
 }
 
-Stmt* Parser::parseReturnStmt()
+ErrorOr<Stmt*> Parser::parseReturnStmt()
 {
-    if (!consume(tok::TokenType::KW_RETURN, "Expected 'return' statement"))
-        return nullptr;
+    if (!consume(tok::TokenType::KW_RETURN))
+        return reportError(ErrorCode::EXPECTED_RETURN);
 
     if (check(tok::TokenType::NEWLINE) || weDone())
-        return nullptr;
+        return makeReturn();
 
-    Expr* value = parseExpression();
-    return makeReturn(value);
+    auto ret = parseExpression();
+    if (!ret.hasValue())
+        return ret.error();
+
+    return makeReturn(ret.value());
 }
 
-Stmt* Parser::parseWhileStmt()
+ErrorOr<Stmt*> Parser::parseWhileStmt()
 {
-    if (!consume(tok::TokenType::KW_WHILE, "Expected 'while' keyword"))
-        return nullptr;
+    if (!consume(tok::TokenType::KW_WHILE))
+        return reportError(ErrorCode::EXPECTED_WHILE_KEYWORD);
 
-    Expr* condition = parseExpression();
-    if (!condition) {
-        diagnostic::emit("Expected condition expression after 'while'", diagnostic::Severity::ERROR);
-        return nullptr;
-    }
+    auto condition = parseExpression();
+    if (!condition.hasValue())
+        return condition.error();
 
-    if (!consume(tok::TokenType::COLON, "Expected ':' after while condition"))
-        return nullptr;
+    if (!consume(tok::TokenType::COLON))
+        return reportError(ErrorCode::EXPECTED_COLON_WHILE);
 
-    BlockStmt* while_block = parseIndentedBlock();
-    if (!while_block) {
-        diagnostic::emit("Expected indented block after while statement", diagnostic::Severity::ERROR);
-        return nullptr;
-    }
+    auto while_block = parseIndentedBlock();
+    if (!while_block.hasValue())
+        return while_block.error();
 
-    return makeWhile(condition, while_block);
+    return makeWhile(condition.value(), static_cast<BlockStmt*>(while_block.value()));
 }
 
-BlockStmt* Parser::parseIndentedBlock()
+ErrorOr<Stmt*> Parser::parseIndentedBlock()
 {
     if (check(tok::TokenType::NEWLINE))
         advance();
 
-    if (!consume(tok::TokenType::INDENT, "Expected indented block"))
-        return nullptr;
+    if (!consume(tok::TokenType::INDENT))
+        return reportError(ErrorCode::EXPECTED_INDENT);
 
     Array<Stmt*> statements;
 
@@ -629,10 +608,10 @@ BlockStmt* Parser::parseIndentedBlock()
         if (check(tok::TokenType::DEDENT))
             break;
 
-        Stmt* stmt = parseStatement();
+        auto stmt = parseStatement();
 
-        if (stmt)
-            statements.push(stmt);
+        if (stmt.hasValue())
+            statements.push(stmt.value());
         else {
             synchronize();
             if (check(tok::TokenType::DEDENT) || weDone())
@@ -642,16 +621,16 @@ BlockStmt* Parser::parseIndentedBlock()
 
     if (check(tok::TokenType::ENDMARKER))
         return makeBlock(statements);
-    else if (!consume(tok::TokenType::DEDENT, "Expected dedent after block"))
-        return nullptr;
+    else if (!consume(tok::TokenType::DEDENT))
+        return reportError(ErrorCode::EXPECTED_DEDENT);
 
     return makeBlock(statements);
 }
 
-ListExpr* Parser::parseParametersList()
+ErrorOr<Expr*> Parser::parseParametersList()
 {
-    if (!consume(tok::TokenType::LPAREN, "Expected '(' before parameters"))
-        return nullptr;
+    if (!consume(tok::TokenType::LPAREN))
+        return reportError(ErrorCode::EXPECTED_LPAREN);
 
     Array<Expr*> parameters = Array<Expr*>::withCapacity(4); // typical small function
 
@@ -661,10 +640,8 @@ ListExpr* Parser::parseParametersList()
             if (check(tok::TokenType::RPAREN))
                 break;
 
-            if (!check(tok::TokenType::IDENTIFIER)) {
-                diagnostic::emit("Expected parameter name", diagnostic::Severity::ERROR);
-                return nullptr;
-            }
+            if (!check(tok::TokenType::IDENTIFIER))
+                return reportError(ErrorCode::EXPECTED_PARAM_NAME);
 
             StringRef param_name = currentToken()->lexeme();
             advance();
@@ -673,8 +650,8 @@ ListExpr* Parser::parseParametersList()
         } while (match(tok::TokenType::COMMA) && !check(tok::TokenType::RPAREN));
     }
 
-    if (!consume(tok::TokenType::RPAREN, "Expected ')' after parameters"))
-        return nullptr;
+    if (!consume(tok::TokenType::RPAREN))
+        return reportError(ErrorCode::EXPECTED_RPAREN_EXPR);
 
     if (parameters.empty())
         return makeList(Array<Expr*> { });
@@ -682,112 +659,98 @@ ListExpr* Parser::parseParametersList()
     return makeList(parameters);
 }
 
-Expr* Parser::parseExpression()
-{
-    return parseAssignmentExpr();
-}
+ErrorOr<Expr*> Parser::parseExpression() { return parseAssignmentExpr(); }
 
-Stmt* Parser::parseFunctionDef()
+ErrorOr<Stmt*> Parser::parseFunctionDef()
 {
-    if (!consume(tok::TokenType::KW_FN, "Expected 'fn' keyword"))
-        return nullptr;
+    if (!consume(tok::TokenType::KW_FN))
+        return reportError(ErrorCode::EXPECTED_FN_KEYWORD);
 
-    if (!check(tok::TokenType::IDENTIFIER)) {
-        diagnostic::emit("Expected function name after 'fn'", diagnostic::Severity::ERROR);
-        return nullptr;
-    }
+    if (!check(tok::TokenType::IDENTIFIER))
+        return reportError(ErrorCode::EXPECTED_FN_NAME);
 
     StringRef function_name = currentToken()->lexeme();
     advance();
 
-    ListExpr* parameters_list = parseParametersList();
-    if (!parameters_list) {
-        diagnostic::emit("Failed to parse parameter list", diagnostic::Severity::ERROR);
-        return nullptr;
-    }
+    auto parameters_list = parseParametersList();
+    if (!parameters_list.hasValue())
+        return parameters_list.error();
 
-    if (!consume(tok::TokenType::COLON, "Expected ':' after function parameters"))
-        return nullptr;
+    if (!consume(tok::TokenType::COLON))
+        return reportError(ErrorCode::EXPECTED_COLON_FN);
 
-    BlockStmt* function_body = parseIndentedBlock();
-    if (!function_body) {
-        diagnostic::emit("Failed to parse function body", diagnostic::Severity::ERROR);
-        return nullptr;
-    }
+    auto function_body = parseIndentedBlock();
+    if (!function_body.hasValue())
+        return function_body.error();
 
-    NameExpr* name_expr = makeName(function_name);
-    return makeFunction(name_expr, parameters_list, function_body);
+    return makeFunction(makeName(function_name),
+        static_cast<ListExpr*>(parameters_list.value()), static_cast<BlockStmt*>(function_body.value()));
 }
 
-Stmt* Parser::parseIfStmt()
+ErrorOr<Stmt*> Parser::parseIfStmt()
 {
-    if (!consume(tok::TokenType::KW_IF, "Expected 'if' keyword"))
-        return nullptr;
+    if (!consume(tok::TokenType::KW_IF))
+        return reportError(ErrorCode::EXPECTED_IF_KEYWORD);
 
-    Expr* condition = parseExpression();
-    if (!condition) {
-        diagnostic::emit("Expected condition expression after 'if'", diagnostic::Severity::ERROR);
-        return nullptr;
-    }
+    auto condition = parseExpression();
+    if (!condition.hasValue())
+        return condition.error();
 
-    if (!consume(tok::TokenType::COLON, "Expected ':' after if condition"))
-        return nullptr;
+    if (!consume(tok::TokenType::COLON))
+        return reportError(ErrorCode::EXPECTED_COLON_IF);
 
-    BlockStmt* then_block = parseIndentedBlock();
-    if (!then_block) {
-        diagnostic::emit("Expected indented block after if statement", diagnostic::Severity::ERROR);
-        return nullptr;
-    }
+    auto then_block = parseIndentedBlock();
+    if (!then_block.hasValue())
+        return then_block.error();
 
+    /// NOTE: else isn't supported yet.
     BlockStmt* else_block = nullptr;
     skipNewlines();
 
-    return makeIf(condition, then_block, else_block);
+    return makeIf(condition.value(), static_cast<BlockStmt*>(then_block.value()), else_block);
 }
 
-Stmt* Parser::parseExpressionStmt()
+ErrorOr<Stmt*> Parser::parseExpressionStmt()
 {
-    Expr* expr = parseExpression();
-    if (!expr)
-        return nullptr;
+    auto expr = parseExpression();
+    if (!expr.hasValue())
+        return expr.error();
 
-    return makeExprStmt(expr);
+    return makeExprStmt(expr.value());
 }
 
-Expr* Parser::parseAssignmentExpr()
+ErrorOr<Expr*> Parser::parseAssignmentExpr()
 {
-    Expr* L = parseConditionalExpr();
-    if (!L)
-        return nullptr;
+    auto L = parseConditionalExpr();
+    if (!L.hasValue())
+        return L.error();
 
     if (check(tok::TokenType::OP_ASSIGN)) {
-        if (L->getKind() != Expr::Kind::NAME) {
-            diagnostic::emit("Invalid assignment target", diagnostic::Severity::ERROR);
-            return nullptr;
-        }
+        if (L.value()->getKind() != Expr::Kind::NAME)
+            return reportError(ErrorCode::INVALID_ASSIGN_TARGET);
 
         advance();
-        Expr* R = parseAssignmentExpr();
-        if (!R)
-            return nullptr;
+        auto R = parseAssignmentExpr();
+        if (!R.hasValue())
+            return R.error();
 
         // push var to symbol table
-        NameExpr* target = static_cast<NameExpr*>(L);
+        NameExpr* target = static_cast<NameExpr*>(L.value());
         bool decl = false;
         if (Sema_.getGlobalScope()->isDefined(target->getValue()))
             decl = true;
 
-        return makeAssignmentExpr(target, R, decl);
+        return ErrorOr<Expr*>::fromValue(makeAssignmentExpr(target, R.value(), decl));
     }
 
-    return L;
+    return L.value();
 }
 
-Expr* Parser::parseLogicalExprPrecedence(unsigned int min_precedence)
+ErrorOr<Expr*> Parser::parseLogicalExprPrecedence(unsigned int min_precedence)
 {
-    Expr* L = parseComparisonExpr();
-    if (!L)
-        return nullptr;
+    auto L = parseComparisonExpr();
+    if (!L.hasValue())
+        return L.error();
 
     for (;;) {
         tok::Token const* tok = currentToken();
@@ -801,49 +764,42 @@ Expr* Parser::parseLogicalExprPrecedence(unsigned int min_precedence)
         tok::TokenType op = Lexer_.current()->type();
         advance();
 
-        Expr* R = parseLogicalExprPrecedence(precedence + 1);
-        if (!R) {
-            diagnostic::emit("Expected expression after logical operator", diagnostic::Severity::ERROR);
-            return nullptr;
-        }
+        auto R = parseLogicalExprPrecedence(precedence + 1);
+        if (!R.hasValue())
+            return R.error();
 
-        L = makeBinary(L, R, toBinaryOp(op));
+        L.setValue(makeBinary(L.value(), R.value(), toBinaryOp(op)));
     }
 
-    return L;
+    return L.value();
 }
 
-Expr* Parser::parseComparisonExpr()
+ErrorOr<Expr*> Parser::parseComparisonExpr()
 {
-    Expr* L = parseBinaryExpr();
-    if (!L)
-        return nullptr;
+    auto L = parseBinaryExpr();
+    if (!L.hasValue())
+        return L.error();
 
     if (currentToken()->isComparisonOp()) {
         tok::TokenType op = Lexer_.current()->type();
         advance();
-        Expr* R = parseBinaryExpr();
-        if (!R) {
-            diagnostic::emit("Expected expression after comparison operator", diagnostic::Severity::ERROR);
-            return nullptr;
-        }
+        auto R = parseBinaryExpr();
+        if (!R.hasValue())
+            return R.error();
 
-        L = makeBinary(L, R, toBinaryOp(op));
+        L.setValue(makeBinary(L.value(), R.value(), toBinaryOp(op)));
     }
 
-    return L;
+    return L.value();
 }
 
-Expr* Parser::parseBinaryExpr()
-{
-    return parseBinaryExprPrecedence(0);
-}
+ErrorOr<Expr*> Parser::parseBinaryExpr() { return parseBinaryExprPrecedence(0); }
 
-Expr* Parser::parseBinaryExprPrecedence(unsigned int min_precedence)
+ErrorOr<Expr*> Parser::parseBinaryExprPrecedence(unsigned int min_precedence)
 {
-    Expr* L = parseUnaryExpr();
-    if (!L)
-        return nullptr;
+    auto L = parseUnaryExpr();
+    if (!L.hasValue())
+        return L.error();
 
     for (;;) {
         tok::Token const* tok = currentToken();
@@ -858,39 +814,39 @@ Expr* Parser::parseBinaryExprPrecedence(unsigned int min_precedence)
         advance();
 
         unsigned int nextMin = precedence + 1;
-        Expr* R = parseBinaryExprPrecedence(nextMin);
-        if (!R) {
-            diagnostic::emit("Expected expression after binary operator", diagnostic::Severity::ERROR);
-            return nullptr;
-        }
+        auto R = parseBinaryExprPrecedence(nextMin);
+        if (!R.hasValue())
+            return R.error();
 
-        L = makeBinary(L, R, toBinaryOp(op));
+        L.setValue(makeBinary(L.value(), R.value(), toBinaryOp(op)));
     }
 
-    return L;
+    return L.value();
 }
 
-Expr* Parser::parseUnaryExpr()
+ErrorOr<Expr*> Parser::parseUnaryExpr()
 {
     tok::Token const* tok = currentToken();
     if (tok->isUnaryOp()) {
         tok::TokenType op = Lexer_.current()->type();
         advance();
-        Expr* expr = parseUnaryExpr();
-        if (!expr) {
-            diagnostic::emit("Expected expression after unary operator", diagnostic::Severity::ERROR);
-            return nullptr;
-        }
-        return makeUnary(expr, toUnaryOp(op));
+
+        auto expr = parseUnaryExpr();
+        if (!expr.hasValue())
+            return expr.error();
+
+        return makeUnary(expr.value(), toUnaryOp(op));
     }
     return parsePostfixExpr();
 }
 
-Expr* Parser::parsePostfixExpr()
+ErrorOr<Expr*> Parser::parsePostfixExpr()
 {
-    Expr* expr = parsePrimaryExpr();
-    if (!expr)
-        return nullptr;
+    auto expr_or = parsePrimaryExpr();
+    if (!expr_or.hasValue())
+        return expr_or.error();
+
+    Expr* expr = expr_or.value();
 
     while (check(tok::TokenType::LPAREN)) {
         advance();
@@ -903,18 +859,17 @@ Expr* Parser::parsePostfixExpr()
                 if (check(tok::TokenType::RPAREN))
                     break;
 
-                Expr* arg = parseExpression();
-                if (!arg) {
-                    diagnostic::emit("Expected expression in argument list", diagnostic::Severity::ERROR);
-                    return nullptr;
-                }
-                args.push(arg);
+                auto arg = parseExpression();
+                if (!arg.hasValue())
+                    return arg.error();
+
+                args.push(arg.value());
                 skipNewlines();
             } while (match(tok::TokenType::COMMA) && !check(tok::TokenType::RPAREN));
         }
 
-        if (!consume(tok::TokenType::RPAREN, "Expected ')' after arguments"))
-            return nullptr;
+        if (!consume(tok::TokenType::RPAREN))
+            return reportError(ErrorCode::EXPECTED_RPAREN_EXPR);
 
         expr = makeCall(expr, makeList(std::move(args)));
     }
@@ -922,27 +877,15 @@ Expr* Parser::parsePostfixExpr()
     return expr;
 }
 
-bool Parser::weDone() const
-{
-    return Lexer_.current()->is(tok::TokenType::ENDMARKER);
-}
+bool Parser::weDone() const { return Lexer_.current()->is(tok::TokenType::ENDMARKER); }
 
-bool Parser::check(tok::TokenType type)
-{
-    return Lexer_.current()->is(type);
-}
+bool Parser::check(tok::TokenType type) { return Lexer_.current()->is(type); }
 
-tok::Token const* Parser::currentToken()
-{
-    return Lexer_.current();
-}
+tok::Token const* Parser::currentToken() { return Lexer_.current(); }
 
-Expr* Parser::parse()
-{
-    return parseExpression();
-}
+ErrorOr<Expr*> Parser::parse() { return parseExpression(); }
 
-Expr* Parser::parsePrimaryExpr()
+ErrorOr<Expr*> Parser::parsePrimaryExpr()
 {
     tok::Token const* tok = currentToken();
 
@@ -956,10 +899,7 @@ Expr* Parser::parsePrimaryExpr()
         if (tt == tok::TokenType::DECIMAL)
             return makeLiteralFloat(v.toDouble());
 
-        if (tt == tok::TokenType::INTEGER
-            || tt == tok::TokenType::HEX
-            || tt == tok::TokenType::OCTAL
-            || tt == tok::TokenType::BINARY)
+        if (tt == tok::TokenType::INTEGER || tt == tok::TokenType::HEX || tt == tok::TokenType::OCTAL || tt == tok::TokenType::BINARY)
             return makeLiteralInt(util::parseIntegerLiteral(v));
     }
 
@@ -993,15 +933,15 @@ Expr* Parser::parsePrimaryExpr()
             return makeList(Array<Expr*> { });
         }
 
-        Expr* expr = parseExpression();
+        auto expr = parseExpression();
 
-        if (!expr)
-            return nullptr;
+        if (!expr.hasValue())
+            return expr.error();
 
-        if (!consume(tok::TokenType::RPAREN, "Expected ')' after expression"))
-            return nullptr;
+        if (!consume(tok::TokenType::RPAREN))
+            return reportError(ErrorCode::EXPECTED_RPAREN_EXPR);
 
-        return expr;
+        return expr.value();
     }
 
     if (check(tok::TokenType::LBRACKET)) {
@@ -1009,13 +949,12 @@ Expr* Parser::parsePrimaryExpr()
         return parseListLiteral();
     }
 
-    if (Expecting_)
-        diagnostic::emit("Expected expression", diagnostic::Severity::ERROR);
-
-    return nullptr;
+    if (weDone())
+        return reportError(ErrorCode::UNEXPECTED_EOF);
+    return reportError(ErrorCode::UNEXPECTED_TOKEN);
 }
 
-Expr* Parser::parseListLiteral()
+ErrorOr<Expr*> Parser::parseListLiteral()
 {
     Array<Expr*> elements = Array<Expr*>::withCapacity(4);
 
@@ -1025,33 +964,28 @@ Expr* Parser::parseListLiteral()
             if (check(tok::TokenType::RBRACKET))
                 break;
 
-            Expr* elem = parseExpression();
-            if (!elem) {
-                diagnostic::emit("Expected expression in list literal", diagnostic::Severity::ERROR);
-                return nullptr;
-            }
+            auto elem = parseExpression();
+            if (!elem.hasValue())
+                return elem.error();
 
-            elements.push(elem);
+            elements.push(elem.value());
             skipNewlines();
         } while (match(tok::TokenType::COMMA) && !check(tok::TokenType::RBRACKET));
     }
 
-    if (!consume(tok::TokenType::RBRACKET, "Expected ']' after list elements"))
-        return nullptr;
+    if (!consume(tok::TokenType::RBRACKET))
+        return reportError(ErrorCode::EXPECTED_RBRACKET);
 
     return makeList(std::move(elements));
 }
 
-Expr* Parser::parseConditionalExpr()
+ErrorOr<Expr*> Parser::parseConditionalExpr()
 {
     return parseLogicalExpr();
     /// TODO: Ternary?
 }
 
-Expr* Parser::parseLogicalExpr()
-{
-    return parseLogicalExprPrecedence(0);
-}
+ErrorOr<Expr*> Parser::parseLogicalExpr() { return parseLogicalExprPrecedence(0); }
 
 bool Parser::match(tok::TokenType const type)
 {
@@ -1094,6 +1028,7 @@ bool isDefinitelyIntegerExpr(Expr const* expr)
         UnaryOp op = un->getOperator();
         if (op != UnaryOp::OP_PLUS && op != UnaryOp::OP_NEG)
             return false;
+
         return isDefinitelyIntegerExpr(un->getOperand());
     }
     case Expr::Kind::BINARY: {
@@ -1102,10 +1037,7 @@ bool isDefinitelyIntegerExpr(Expr const* expr)
             return false;
 
         BinaryOp op = bin->getOperator();
-        return op == BinaryOp::OP_ADD
-            || op == BinaryOp::OP_SUB
-            || op == BinaryOp::OP_MUL
-            || op == BinaryOp::OP_MOD;
+        return op == BinaryOp::OP_ADD || op == BinaryOp::OP_SUB || op == BinaryOp::OP_MUL || op == BinaryOp::OP_MOD;
     }
     default:
         return false;
@@ -1147,7 +1079,6 @@ std::optional<double> ASTOptimizer::evaluateConstant(Expr const* expr)
                 return std::nullopt;
 
             return *L / *R;
-
         case BinaryOp::OP_MOD:
             if (*R == 0.0)
                 return std::nullopt;
@@ -1162,10 +1093,8 @@ std::optional<double> ASTOptimizer::evaluateConstant(Expr const* expr)
 
         if (!operand)
             return std::nullopt;
-
         if (un->getOperator() == UnaryOp::OP_PLUS)
             return *operand;
-
         if (un->getOperator() == UnaryOp::OP_NEG)
             return -*operand;
     }
@@ -1426,15 +1355,13 @@ StringRef ASTOptimizer::CSEPass::exprToString(Expr const* expr)
         BinaryExpr const* bin = dynamic_cast<BinaryExpr const*>(expr);
         return "(" + exprToString(bin->getLeft()) + " " + tok::Token::toString(bin->getOperator()) + " " + exprToString(bin->getRight()) + ")";
         */
-        break;
-    }
+    } break;
     case Expr::Kind::UNARY: {
         /*
         UnaryExpr const* un = dynamic_cast<UnaryExpr const*>(expr);
         return tok::Token::toString(un->getOperator()) + exprToString(un->getOperand());
         */
-        break;
-    }
+    } break;
     default:
         return "";
     }
@@ -1506,7 +1433,6 @@ Array<Stmt*> ASTOptimizer::optimize(Array<Stmt*> statements, int32_t level)
         // O2: Dead code elimination
         if (level >= 2)
             stmt = eliminateDeadCode(stmt);
-
         if (stmt)
             result.push(stmt);
     }

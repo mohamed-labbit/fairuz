@@ -70,8 +70,9 @@ class Array {
     {
         if (s <= DEFAULT_CAP)
             return DEFAULT_CAP;
-
-        return 1u << std::bit_width(s - 1);
+        if (s < 64)
+            return 1u << std::bit_width(s - 1); // power-of-2 for small
+        return s + (s >> 1);                    // 1.5x for larger
     }
 
     void ensure_push_capacity();
@@ -136,21 +137,8 @@ public:
 
     T* erase(T const* p);
 
-    T& operator[](uint32_t i)
-    {
-        if (i >= Size_)
-            diagnostic::emit("Array::operator[] - index out of bounds");
-
-        return arr[i];
-    }
-
-    T const& operator[](uint32_t i) const
-    {
-        if (i >= Size_)
-            diagnostic::emit("Array::operator[] - index out of bounds");
-
-        return arr[i];
-    }
+    T& operator[](uint32_t i) { return arr[i]; }
+    T const& operator[](uint32_t i) const { return arr[i]; }
 
     T& back()
     {
@@ -208,8 +196,15 @@ public:
 template<typename T>
 void Array<T>::ensure_push_capacity()
 {
-    if (Size_ >= Cap_)
-        reserve(Cap_ == 0 ? DEFAULT_CAP : Cap_ * 2);
+    if (Size_ < Cap_)
+        return;
+    uint32_t new_cap = Cap_ == 0 ? DEFAULT_CAP : Cap_ + (Cap_ >> 1);
+    // allocate new_cap directly, skip the nextCapacity rounding
+    T* new_arr = getRuntimeAllocator().allocateArray<T>(new_cap);
+    if (arr && Size_ > 0)
+        relocate(new_arr, arr, Size_);
+    arr = new_arr;
+    Cap_ = new_cap;
 }
 
 template<typename T>

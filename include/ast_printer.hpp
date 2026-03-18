@@ -67,8 +67,6 @@ private:
             return "|";
         case BinaryOp::OP_BITXOR:
             return "^";
-        case BinaryOp::OP_BITNOT:
-            return "~";
         case BinaryOp::OP_LSHIFT:
             return "<<";
         case BinaryOp::OP_RSHIFT:

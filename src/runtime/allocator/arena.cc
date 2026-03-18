@@ -4,12 +4,16 @@ namespace mylang {
 namespace runtime {
 namespace allocator {
 
+using ErrorCode = diagnostic::errc::general::Code;
+
 ArenaBlock::ArenaBlock(size_t const size, size_t const alignment)
     : Size_(size)
 {
     // Validate alignment is a power of 2
-    if (alignment == 0 || (alignment & (alignment - 1)) != 0)
-        diagnostic::emit("Alignment must be a power of two", diagnostic::Severity::FATAL);
+    if (alignment == 0 || (alignment & (alignment - 1)) != 0) {
+        diagnostic::emit("Alignment must be a power of two");
+        diagnostic::internalError(ErrorCode::INTERNAL_ERROR);
+    }
 
     // Round up size to multiple of alignment
     size_t mod = Size_ % alignment;
@@ -19,7 +23,7 @@ ArenaBlock::ArenaBlock(size_t const size, size_t const alignment)
     // Allocate aligned memory
     void* mem = std::aligned_alloc(alignment, Size_);
     if (!mem)
-        throw std::bad_alloc();
+        diagnostic::internalError(ErrorCode::ALLOC_FAILED);
 
     /// TODO: change after debug
     // diagnostic::panic("bad alloc");
@@ -29,8 +33,6 @@ ArenaBlock::ArenaBlock(size_t const size, size_t const alignment)
 
 ArenaBlock::ArenaBlock(ArenaBlock&& other) noexcept
 {
-    std::lock_guard<std::mutex> lock(other.Mutex_);
-
     Size_ = other.Size_;
     Begin_ = other.Begin_;
     Next_ = other.Next_;
@@ -44,7 +46,7 @@ ArenaBlock::ArenaBlock(ArenaBlock&& other) noexcept
 ArenaBlock::~ArenaBlock()
 {
     size_t number_of_frees = 0;
-    std::lock_guard<std::mutex> lock(Mutex_);
+
     if (Begin_) {
         std::free(Begin_);
         Begin_ = nullptr;
@@ -55,7 +57,6 @@ ArenaBlock::~ArenaBlock()
 ArenaBlock& ArenaBlock::operator=(ArenaBlock&& other) noexcept
 {
     if (this != &other) {
-        std::scoped_lock lock(Mutex_, other.Mutex_);
         // Free existing memory
         if (Begin_)
             std::free(Begin_);
@@ -73,28 +74,13 @@ ArenaBlock& ArenaBlock::operator=(ArenaBlock&& other) noexcept
     return *this;
 }
 
-unsigned char* ArenaBlock::begin() const
-{
-    std::lock_guard<std::mutex> lock(Mutex_);
-    return Begin_;
-}
+unsigned char* ArenaBlock::begin() const { return Begin_; }
 
-unsigned char* ArenaBlock::end() const
-{
-    std::lock_guard<std::mutex> lock(Mutex_);
-    return Begin_ + Size_;
-}
+unsigned char* ArenaBlock::end() const { return Begin_ + Size_; }
 
-unsigned char* ArenaBlock::cNext() const
-{
-    return Next_;
-}
+unsigned char* ArenaBlock::cNext() const { return Next_; }
 
-size_t ArenaBlock::size() const
-{
-    std::lock_guard<std::mutex> lock(Mutex_);
-    return Size_;
-}
+size_t ArenaBlock::size() const { return Size_; }
 
 size_t ArenaBlock::used() const
 {
@@ -115,7 +101,6 @@ bool ArenaBlock::pop(size_t bytes)
 
 size_t ArenaBlock::remaining() const
 {
-    std::lock_guard<std::mutex> lock(Mutex_);
     if (!Begin_)
         return 0;
 
@@ -130,17 +115,19 @@ unsigned char* ArenaBlock::allocate(size_t bytes, std::optional<size_t> alignmen
 
     size_t alignment_value = alignment.value_or(alignof(std::max_align_t));
     // Validate alignment is a power of 2
-    if (alignment_value == 0 || (alignment_value & (alignment_value - 1)) != 0)
-        diagnostic::emit("Invalid arguments to ArenaAllocator::allocate()", diagnostic::Severity::FATAL);
+    if (alignment_value == 0 || (alignment_value & (alignment_value - 1)) != 0) {
+        diagnostic::emit("Invalid arguments to ArenaAllocator::allocate()");
+        diagnostic::internalError(ErrorCode::INTERNAL_ERROR);
+    }
 
     // Calculate aligned address
-    std::uintptr_t cur = reinterpret_cast<std::uintptr_t>(Next_);
-    std::uintptr_t aligned = (cur + (alignment_value - 1)) & ~(alignment_value - 1);
+    uintptr_t cur = reinterpret_cast<uintptr_t>(Next_);
+    uintptr_t aligned = (cur + (alignment_value - 1)) & ~(alignment_value - 1);
     size_t pad = aligned - cur;
 
     // Check if we have enough space (including padding)
-    std::uintptr_t end_addr = reinterpret_cast<std::uintptr_t>(Begin_) + Size_;
-    std::uintptr_t cur_addr = reinterpret_cast<std::uintptr_t>(Next_);
+    uintptr_t end_addr = reinterpret_cast<uintptr_t>(Begin_) + Size_;
+    uintptr_t cur_addr = reinterpret_cast<uintptr_t>(Next_);
 
     if (cur_addr > end_addr)
         return nullptr; // Current pointer is beyond block end
@@ -175,32 +162,33 @@ unsigned char* ArenaBlock::reserve(size_t const bytes)
 ArenaAllocator::ArenaAllocator(std::int32_t growth_strategy, OutOfMemoryHandler oom_handler, bool debug)
     : GrowthFactor_(GrowthStrategy(growth_strategy))
     , OomHandler_(oom_handler)
+#ifdef MYLANG_DEBUG
     , DebugFeatures_(debug)
+#endif // MYLANG_DEBUG
 {
+#ifdef MYLANG_DEBUG
     // Enable tracking in debug mode
     if (DebugFeatures_) {
         TrackAllocations_ = true;
         EnableStatistics_ = true;
         AllocStats_.reset();
     }
+#endif // MYLANG_DEBUG
 }
 
 void ArenaAllocator::reset()
 {
-    // Acquire all locks in consistent order
-    std::unique_lock blocks_lock(BlocksMutex_);
-    std::unique_lock alloc_map_lock(AllocationMapMutex_);
-    std::unique_lock alloc_ptrs_lock(AllocatedPtrsMutex_);
-
     // Clear all containers (automatically frees memory via destructors)
     Blocks_.clear();
 
+#ifdef MYLANG_DEBUG
     if (TrackAllocations_)
         AllocationMap_.clear();
 
     AllocatedPtrs_.clear();
     // Reset statistics
     AllocStats_.reset();
+#endif // MYLANG_DEBUG
     // Reset block size
     NextBlockSize_ = BlockSize_;
 }
@@ -209,9 +197,13 @@ void reset();
 
 void ArenaAllocator::setName(std::string const& name) { Name_ = name; }
 
+#ifdef MYLANG_DEBUG
 size_t ArenaAllocator::totalAllocated() const { return AllocStats_.TotalAllocated; }
+
 size_t ArenaAllocator::totalAllocations() const { return AllocStats_.TotalAllocations; }
+
 size_t ArenaAllocator::activeBlocks() const { return AllocStats_.ActiveBlocks; }
+#endif // MYLANG_DEBUG
 
 unsigned char* ArenaAllocator::allocateBlock(size_t requested, size_t alignment_, bool retry_on_oom)
 {
@@ -226,7 +218,6 @@ unsigned char* ArenaAllocator::allocateBlock(size_t requested, size_t alignment_
     // Check against maximum
     if (block_size > MaxBlockSize_) {
         if (retry_on_oom) {
-            std::lock_guard<std::mutex> oom_lock(OomHandlerMutex_);
             if (OomHandler_ && OomHandler_(block_size))
                 return allocateBlock(requested, alignment_, false); // Retry once
         }
@@ -236,13 +227,13 @@ unsigned char* ArenaAllocator::allocateBlock(size_t requested, size_t alignment_
 
     try {
         // Add new block to vector (requires exclusive lock)
-        std::unique_lock<std::shared_mutex> lock(BlocksMutex_);
         Blocks_.emplace_back(block_size, alignment_);
+#ifdef MYLANG_DEBUG
         ++AllocStats_.ActiveBlocks;
+#endif
         return Blocks_.back().begin();
     } catch (std::bad_alloc const&) {
         if (retry_on_oom) {
-            std::lock_guard<std::mutex> oom_lock(OomHandlerMutex_);
             if (OomHandler_ && OomHandler_(block_size))
                 return allocateBlock(requested, alignment_, false); // Retry once
         }
@@ -253,19 +244,21 @@ unsigned char* ArenaAllocator::allocateBlock(size_t requested, size_t alignment_
 
 void* ArenaAllocator::allocate(size_t const size, size_t const alignment)
 {
+#ifdef MYLANG_DEBUG
     std::chrono::steady_clock::time_point start = std::chrono::high_resolution_clock::now();
-
+#endif
     // Validate count
     if (size == 0)
         return nullptr;
 
     // Check size
     if (size > MAX_BLOCK_SIZE) {
-        diagnostic::emit("allocation size is too large : " + std::to_string(size), diagnostic::Severity::ERROR);
+        diagnostic::emit("allocation size is too large : " + std::to_string(size));
+        diagnostic::internalError(ErrorCode::ALLOC_FAILED);
         if (OomHandler_ && OomHandler_(size))
             return allocate(size);
 
-        diagnostic::emit("bad alloc!", diagnostic::Severity::FATAL);
+        diagnostic::internalError(ErrorCode::ALLOC_FAILED);
         /// TODO: change after debug
         // diagnostic::panic("bad alloc");
     }
@@ -284,8 +277,10 @@ void* ArenaAllocator::allocate(size_t const size, size_t const alignment)
         std::cerr << "allocate_from_blocks() failed!" << std::endl;
         return nullptr;
     }
+    LastPtr_ = static_cast<void*>(mem);
 
     // Track allocation if enabled
+#ifdef MYLANG_DEBUG
     if (TrackAllocations_) {
         AllocationHeader header { };
         header.magic = AllocationHeader::MAGIC;
@@ -293,20 +288,16 @@ void* ArenaAllocator::allocate(size_t const size, size_t const alignment)
         header.alignment = static_cast<std::uint32_t>(alignment);
         header.checksum = header.compute_checksum();
         header.timestamp = std::chrono::steady_clock::now();
-        std::unique_lock<std::shared_mutex> lock(AllocationMapMutex_);
         AllocationMap_[mem] = header;
     }
 
     // Track Pointer for double-free protection
-    std::unique_lock<std::shared_mutex> lock(AllocatedPtrsMutex_);
     AllocatedPtrs_.insert(mem);
 
     // Construct objects if needed
 
     std::chrono::steady_clock::time_point end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
-
-    LastPtr_ = static_cast<void*>(mem);
 
     // Update statistics
     if (EnableStatistics_) {
@@ -317,13 +308,16 @@ void* ArenaAllocator::allocate(size_t const size, size_t const alignment)
         AllocStats_.updatePeak(aligned_size);
         AllocStats_.recordAllocTime(duration.count() * 1000000);
     }
+#endif // MYLANG_DEBUG
 
     return LastPtr_;
 }
 
 void ArenaAllocator::deallocate(void* ptr, size_t const size)
 {
+#ifdef MYLANG_DEBUG
     auto start = std::chrono::high_resolution_clock::now();
+#endif
     if (!ptr || size == 0 || Blocks_.empty())
         return;
 
@@ -334,18 +328,15 @@ void ArenaAllocator::deallocate(void* ptr, size_t const size)
     if (expected != last)
         return;
 
-    // We MUST operate on the last block
-    std::unique_lock<std::shared_mutex> lock(BlocksMutex_);
-
     ArenaBlock& block = Blocks_.back();
     // CAS-based pop (must be safe)
     bool ok = block.pop(size);
-    /// TODO: implement safe decrement
+    LastPtr_ = nullptr;
 
+#ifdef MYLANG_DEBUG
     AllocStats_.CurrentlyAllocated -= size;
     AllocStats_.TotalDeallocated -= size;
     ++AllocStats_.TotalDeallocations;
-
     /*
     if (block.cNext() == block.begin())
         Blocks_.back();
@@ -355,13 +346,14 @@ void ArenaAllocator::deallocate(void* ptr, size_t const size)
         --AllocStats_.ActiveBlocks;
 
     // Clear LastPtr_ (important!)
-    LastPtr_ = nullptr;
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
     double seconds = duration.count();
     AllocStats_.TotalDeallocTimeNs += seconds * 1000000;
+#endif
 }
 
+#ifdef MYLANG_DEBUG
 bool ArenaAllocator::verifyAllocation(void* ptr) const
 {
     if (!TrackAllocations_)
@@ -387,11 +379,11 @@ void ArenaAllocator::dumpStats(std::ostream& os, bool verbose) const
     StatsPrinter printer(AllocStats_, Name_);
     printer.printDetailed(os, verbose);
 }
+#endif
 
 unsigned char* ArenaAllocator::allocateFromBlocks(size_t alloc_size, size_t align)
 {
     {
-        std::shared_lock<std::shared_mutex> lock(BlocksMutex_);
         if (!Blocks_.empty()) {
             // Try free list first
             unsigned char* mem = Blocks_.back().allocate(alloc_size, align);
@@ -403,14 +395,14 @@ unsigned char* ArenaAllocator::allocateFromBlocks(size_t alloc_size, size_t alig
     // Need a new block
     size_t new_block_size = std::max(alloc_size, NextBlockSize_);
     if (!allocateBlock(new_block_size, align)) {
+#ifdef MYLANG_DEBUG
         if (DebugFeatures_)
             std::cerr << "-- Failed to allocate block : ArenaAllocator::allocate_block()" << std::endl;
-
+#endif
         return nullptr;
     }
 
     updateNextBlockSize();
-    std::shared_lock<std::shared_mutex> lock(BlocksMutex_);
     return Blocks_.back().allocate(alloc_size, align);
 }
 
