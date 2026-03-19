@@ -2,15 +2,16 @@
 #include "../../include/allocator.hpp"
 #include "../../include/runtime/opcode.hpp"
 #include "../../include/runtime/stdlib.hpp"
+#include <cstdint>
 #include <stdexcept>
 
 namespace mylang::runtime {
 
 Value VM::run(Chunk* chunk)
 {
-    ObjFunction* fn = makeObjectFunction();
+    ObjFunction* fn = MAKE_OBJ_FUNCTION();
     fn->chunk = chunk;
-    ObjClosure* cl = makeObjectClosure(fn);
+    ObjClosure* cl = MAKE_OBJ_CLOSURE(fn);
 
     Stack_[0] = makeObject(cl);
     StackTop_ = chunk->localCount + 2;
@@ -41,80 +42,91 @@ T intPow(T base, T exp)
 
 } // namespace
 
-#define DISPATCH_TABLE_INIT \
-    &&H_LOAD_NIL,           \
-        &&H_LOAD_TRUE,      \
-        &&H_LOAD_FALSE,     \
-        &&H_LOAD_CONST,     \
-        &&H_LOAD_INT,       \
-        &&H_LOAD_GLOBAL,    \
-        &&H_STORE_GLOBAL,   \
-        &&H_MOVE,           \
-        &&H_GET_UPVALUE,    \
-        &&H_SET_UPVALUE,    \
-        &&H_CLOSE_UPVALUE,  \
-        &&H_OP_ADD,         \
-        &&H_OP_ADD_II,      \
-        &&H_OP_ADD_FF,      \
-        &&H_OP_SUB,         \
-        &&H_OP_SUB_II,      \
-        &&H_OP_SUB_FF,      \
-        &&H_OP_MUL,         \
-        &&H_OP_MUL_II,      \
-        &&H_OP_MUL_FF,      \
-        &&H_OP_DIV,         \
-        &&H_OP_DIV_II,      \
-        &&H_OP_DIV_FF,      \
-        &&H_OP_MOD,         \
-        &&H_OP_MOD_II,      \
-        &&H_OP_MOD_FF,      \
-        &&H_OP_POW,         \
-        &&H_OP_NEG,         \
-        &&H_OP_NEG_I,       \
-        &&H_OP_NEG_F,       \
-        &&H_OP_BITAND,      \
-        &&H_OP_BITAND_I,    \
-        &&H_OP_BITOR,       \
-        &&H_OP_BITXOR,      \
-        &&H_OP_BITNOT,      \
-        &&H_OP_LSHIFT,      \
-        &&H_OP_RSHIFT,      \
-        &&H_OP_EQ,          \
-        &&H_OP_EQ_II,       \
-        &&H_OP_EQ_FF,       \
-        &&H_OP_EQ_SS,       \
-        &&H_OP_NEQ,         \
-        &&H_OP_NEQ_II,      \
-        &&H_OP_NEQ_FF,      \
-        &&H_OP_NEQ_SS,      \
-        &&H_OP_LT,          \
-        &&H_OP_LT_II,       \
-        &&H_OP_LT_FF,       \
-        &&H_OP_LT_SS,       \
-        &&H_OP_LTE,         \
-        &&H_OP_LTE_II,      \
-        &&H_OP_LTE_FF,      \
-        &&H_OP_LTE_SS,      \
-        &&H_OP_NOT,         \
-        &&H_CONCAT,         \
-        &&H_LIST_NEW,       \
-        &&H_LIST_APPEND,    \
-        &&H_LIST_GET,       \
-        &&H_LIST_SET,       \
-        &&H_LIST_LEN,       \
-        &&H_JUMP,           \
-        &&H_JUMP_IF_TRUE,   \
-        &&H_JUMP_IF_FALSE,  \
-        &&H_LOOP,           \
-        &&H_FOR_PREP,       \
-        &&H_FOR_STEP,       \
-        &&H_CLOSURE,        \
-        &&H_CALL,           \
-        &&H_CALL_TAIL,      \
-        &&H_RETURN,         \
-        &&H_RETURN_NIL,     \
-        &&H_IC_CALL,        \
-        &&H_NOP,            \
+#define DISPATCH_TABLE_INIT      \
+    &&H_LOAD_NIL,                \
+        &&H_LOAD_TRUE,           \
+        &&H_LOAD_FALSE,          \
+        &&H_LOAD_CONST,          \
+        &&H_LOAD_INT,            \
+        &&H_LOAD_GLOBAL,         \
+        &&H_STORE_GLOBAL,        \
+        &&H_LOAD_GLOBAL_CACHED,  \
+        &&H_STORE_GLOBAL_CACHED, \
+        &&H_MOVE,                \
+        &&H_GET_UPVALUE,         \
+        &&H_SET_UPVALUE,         \
+        &&H_CLOSE_UPVALUE,       \
+        &&H_OP_ADD,              \
+        &&H_OP_ADD_II,           \
+        &&H_OP_ADD_FF,           \
+        &&H_OP_ADD_RI,           \
+        &&H_OP_SUB,              \
+        &&H_OP_SUB_II,           \
+        &&H_OP_SUB_FF,           \
+        &&H_OP_SUB_RI,           \
+        &&H_OP_MUL,              \
+        &&H_OP_MUL_II,           \
+        &&H_OP_MUL_FF,           \
+        &&H_OP_MUL_RI,           \
+        &&H_OP_DIV,              \
+        &&H_OP_DIV_II,           \
+        &&H_OP_DIV_FF,           \
+        &&H_OP_MOD,              \
+        &&H_OP_MOD_II,           \
+        &&H_OP_MOD_FF,           \
+        &&H_OP_POW,              \
+        &&H_OP_NEG,              \
+        &&H_OP_NEG_I,            \
+        &&H_OP_NEG_F,            \
+        &&H_OP_BITAND,           \
+        &&H_OP_BITAND_I,         \
+        &&H_OP_BITOR,            \
+        &&H_OP_BITOR_I,          \
+        &&H_OP_BITXOR,           \
+        &&H_OP_BITXOR_I,         \
+        &&H_OP_BITNOT,           \
+        &&H_OP_LSHIFT,           \
+        &&H_OP_RSHIFT,           \
+        &&H_OP_EQ,               \
+        &&H_OP_EQ_II,            \
+        &&H_OP_EQ_FF,            \
+        &&H_OP_EQ_SS,            \
+        &&H_OP_EQ_RI,            \
+        &&H_OP_NEQ,              \
+        &&H_OP_NEQ_II,           \
+        &&H_OP_NEQ_FF,           \
+        &&H_OP_NEQ_SS,           \
+        &&H_OP_LT,               \
+        &&H_OP_LT_II,            \
+        &&H_OP_LT_FF,            \
+        &&H_OP_LT_SS,            \
+        &&H_OP_LT_RI,            \
+        &&H_OP_LTE,              \
+        &&H_OP_LTE_II,           \
+        &&H_OP_LTE_FF,           \
+        &&H_OP_LTE_SS,           \
+        &&H_OP_LTE_RI,           \
+        &&H_OP_NOT,              \
+        &&H_CONCAT,              \
+        &&H_LIST_NEW,            \
+        &&H_LIST_APPEND,         \
+        &&H_LIST_GET,            \
+        &&H_LIST_SET,            \
+        &&H_LIST_LEN,            \
+        &&H_JUMP,                \
+        &&H_JUMP_IF_TRUE,        \
+        &&H_JUMP_IF_FALSE,       \
+        &&H_LOOP,                \
+        &&H_FOR_PREP,            \
+        &&H_FOR_STEP,            \
+        &&H_CLOSURE,             \
+        &&H_CALL,                \
+        &&H_CALL_TAIL,           \
+        &&H_RETURN,              \
+        &&H_RETURN_NIL,          \
+        &&H_RETURN1,             \
+        &&H_IC_CALL,             \
+        &&H_NOP,                 \
         &&H_HALT,
 
 #define DISPATCH()                                                   \
@@ -129,6 +141,16 @@ T intPow(T base, T exp)
 
 #define VM_OP_II(lhs, rhs, op) asInteger(lhs) op asInteger(rhs)
 #define VM_OP_FF(lhs, rhs, op) asDouble(lhs) op asDouble(rhs)
+
+#define VM_ADDI(lhs, rhs) VM_OP_II(lhs, rhs, +)
+#define VM_SUBI(lhs, rhs) VM_OP_II(lhs, rhs, -)
+#define VM_MULI(lhs, rhs) VM_OP_II(lhs, rhs, *)
+#define VM_DIVI(lhs, rhs) VM_OP_II(lhs, rhs, /)
+#define VM_ADDF(lhs, rhs) VM_OP_FF(lhs, rhs, +)
+#define VM_SUBF(lhs, rhs) VM_OP_FF(lhs, rhs, -)
+#define VM_MULF(lhs, rhs) VM_OP_FF(lhs, rhs, *)
+#define VM_DIVF(lhs, rhs) VM_OP_FF(lhs, rhs, /)
+
 #define VM_ABC(op) cur_chunk->code[ip - 1] = make_ABC(op, a, b, c)
 
 #define RA() cur_base[instr_A(instr)]
@@ -168,8 +190,10 @@ Value VM::execute()
     {
         uint8_t start = instr_B(instr);
         uint8_t count = instr_C(instr);
+
         for (uint8_t i = 0; i < count; ++i)
             cur_base[start + i] = NIL_VAL;
+
         DISPATCH();
     }
     CASE(LOAD_TRUE)
@@ -194,15 +218,57 @@ Value VM::execute()
     }
     CASE(LOAD_GLOBAL)
     {
-        Value name_v = cur_chunk->constants[instr_Bx(instr)];
-        auto it = Globals_.find(asString(name_v)->str);
-        RA() = (it != Globals_.end()) ? it->second : NIL_VAL;
+        {
+            Value name_v = cur_chunk->constants[instr_Bx(instr)];
+            StringRef name = asString(name_v)->str;
+            auto it = GlobalIndex_.find(name);
+            uint32_t slot_idx;
+
+            if (it != GlobalIndex_.end()) {
+                slot_idx = it->second;
+            } else {
+                slot_idx = static_cast<uint32_t>(GlobalSlots_.size());
+                GlobalSlots_.push_back(NIL_VAL);
+                GlobalIndex_[name] = slot_idx;
+            }
+
+            RA() = GlobalSlots_[slot_idx];
+
+            cur_chunk->code[ip - 1] = make_ABx(OpCode::LOAD_GLOBAL_CACHED, instr_A(instr), slot_idx);
+        }
+
+        DISPATCH();
+    }
+    CASE(LOAD_GLOBAL_CACHED)
+    {
+        RA() = GlobalSlots_[instr_Bx(instr)];
         DISPATCH();
     }
     CASE(STORE_GLOBAL)
     {
-        Value name_v = cur_chunk->constants[instr_Bx(instr)];
-        Globals_[asString(name_v)->str] = RA();
+        {
+            Value name_v = cur_chunk->constants[instr_Bx(instr)];
+            StringRef name = asString(name_v)->str;
+            auto it = GlobalIndex_.find(name);
+            uint32_t slot_idx;
+
+            if (it != GlobalIndex_.end()) {
+                slot_idx = it->second;
+            } else {
+                slot_idx = static_cast<uint32_t>(GlobalSlots_.size());
+                GlobalSlots_.push_back(NIL_VAL);
+                GlobalIndex_[name] = slot_idx;
+            }
+
+            GlobalSlots_[slot_idx] = RA();
+            cur_chunk->code[ip - 1] = make_ABx(OpCode::STORE_GLOBAL_CACHED, instr_A(instr), slot_idx);
+        }
+
+        DISPATCH();
+    }
+    CASE(STORE_GLOBAL_CACHED)
+    {
+        GlobalSlots_[instr_Bx(instr)] = RA();
         DISPATCH();
     }
     CASE(MOVE)
@@ -227,17 +293,21 @@ Value VM::execute()
     }
     CASE(OP_ADD)
     {
-        uint8_t a = instr_A(instr), b = instr_B(instr), c = instr_C(instr);
-        Value lhs = cur_base[b], rhs = cur_base[c];
+        uint8_t a = instr_A(instr);
+        uint8_t b = instr_B(instr);
+        uint8_t c = instr_C(instr);
+
+        Value lhs = cur_base[b];
+        Value rhs = cur_base[c];
 
         if (__builtin_expect(!isNumber(lhs) || !isNumber(rhs), 0))
             runtimeError(ErrorCode::TYPE_ERROR_ARITH);
 
-        if (IS_INTEGER(lhs) & IS_INTEGER(rhs)) {
-            cur_base[a] = makeInteger(VM_OP_II(lhs, rhs, +));
+        if (_isInteger(lhs) & _isInteger(rhs)) {
+            cur_base[a] = makeInteger(VM_ADDI(lhs, rhs));
             VM_ABC(OpCode::OP_ADD_II);
         } else {
-            cur_base[a] = makeReal(VM_OP_FF(lhs, rhs, +));
+            cur_base[a] = makeReal(VM_ADDF(lhs, rhs));
             VM_ABC(OpCode::OP_ADD_FF);
         }
 
@@ -245,27 +315,43 @@ Value VM::execute()
     }
     CASE(OP_ADD_II)
     {
-        RA() = makeInteger(VM_OP_II(RB(), RC(), +));
+        RA() = makeInteger(VM_ADDI(RB(), RC()));
         DISPATCH();
     }
     CASE(OP_ADD_FF)
     {
-        RA() = makeReal(VM_OP_FF(RB(), RC(), +));
+        RA() = makeReal(VM_ADDF(RB(), RC()));
+        DISPATCH();
+    }
+    CASE(OP_ADD_RI)
+    {
+        Value lhs = RB();
+        int8_t imm = static_cast<int8_t>(instr_C(instr) - 128);
+
+        if (__builtin_expect(_isInteger(lhs), 1))
+            RA() = makeInteger(asInteger(lhs) + imm);
+        else
+            RA() = makeReal(asDouble(lhs) + imm);
+
         DISPATCH();
     }
     CASE(OP_SUB)
     {
-        uint8_t a = instr_A(instr), b = instr_B(instr), c = instr_C(instr);
-        Value lhs = cur_base[b], rhs = cur_base[c];
+        uint8_t a = instr_A(instr);
+        uint8_t b = instr_B(instr);
+        uint8_t c = instr_C(instr);
+
+        Value lhs = cur_base[b];
+        Value rhs = cur_base[c];
 
         if (__builtin_expect(!isNumber(lhs) || !isNumber(rhs), 0))
             runtimeError(ErrorCode::TYPE_ERROR_ARITH);
 
-        if (IS_INTEGER(lhs) & IS_INTEGER(rhs)) {
-            cur_base[a] = makeInteger(VM_OP_II(lhs, rhs, -));
+        if (_isInteger(lhs) & _isInteger(rhs)) {
+            cur_base[a] = makeInteger(VM_SUBI(lhs, rhs));
             VM_ABC(OpCode::OP_SUB_II);
         } else {
-            cur_base[a] = makeReal(VM_OP_FF(lhs, rhs, -));
+            cur_base[a] = makeReal(VM_SUBF(lhs, rhs));
             VM_ABC(OpCode::OP_SUB_FF);
         }
 
@@ -273,27 +359,43 @@ Value VM::execute()
     }
     CASE(OP_SUB_II)
     {
-        RA() = makeInteger(VM_OP_II(RB(), RC(), -));
+        RA() = makeInteger(VM_SUBI(RB(), RC()));
         DISPATCH();
     }
     CASE(OP_SUB_FF)
     {
-        RA() = makeReal(VM_OP_FF(RB(), RC(), -));
+        RA() = makeReal(VM_SUBF(RB(), RC()));
+        DISPATCH();
+    }
+    CASE(OP_SUB_RI)
+    {
+        Value lhs = RB();
+        int8_t imm = static_cast<int8_t>(instr_C(instr) - 128);
+
+        if (__builtin_expect(_isInteger(lhs), 1))
+            RA() = makeInteger(asInteger(lhs) - imm);
+        else
+            RA() = makeReal(asDouble(lhs) - imm);
+
         DISPATCH();
     }
     CASE(OP_MUL)
     {
-        uint8_t a = instr_A(instr), b = instr_B(instr), c = instr_C(instr);
-        Value lhs = cur_base[b], rhs = cur_base[c];
+        uint8_t a = instr_A(instr);
+        uint8_t b = instr_B(instr);
+        uint8_t c = instr_C(instr);
+
+        Value lhs = cur_base[b];
+        Value rhs = cur_base[c];
 
         if (__builtin_expect(!isNumber(lhs) || !isNumber(rhs), 0))
             runtimeError(ErrorCode::TYPE_ERROR_ARITH);
 
-        if (IS_INTEGER(lhs) & IS_INTEGER(rhs)) {
-            cur_base[a] = makeInteger(VM_OP_II(lhs, rhs, *));
+        if (_isInteger(lhs) & _isInteger(rhs)) {
+            cur_base[a] = makeInteger(VM_MULI(lhs, rhs));
             VM_ABC(OpCode::OP_MUL_II);
         } else {
-            cur_base[a] = makeReal(VM_OP_FF(lhs, rhs, *));
+            cur_base[a] = makeReal(VM_MULF(lhs, rhs));
             VM_ABC(OpCode::OP_MUL_FF);
         }
 
@@ -301,7 +403,7 @@ Value VM::execute()
     }
     CASE(OP_MUL_II)
     {
-        RA() = makeInteger(VM_OP_II(RB(), RC(), *));
+        RA() = makeInteger(VM_MULI(RB(), RC()));
         DISPATCH();
     }
     CASE(OP_MUL_FF)
@@ -310,11 +412,26 @@ Value VM::execute()
         RA() = makeReal(VM_OP_FF(RB(), RC(), *));
         DISPATCH();
     }
+    CASE(OP_MUL_RI)
+    {
+        Value lhs = RB();
+        int8_t imm = static_cast<int8_t>(instr_C(instr) - 128);
+
+        if (__builtin_expect(_isInteger(lhs), 1))
+            RA() = makeInteger(asInteger(lhs) * imm);
+        else
+            RA() = makeReal(asDouble(lhs) * imm);
+
+        DISPATCH();
+    }
     CASE(OP_DIV)
     {
-        // FIX: restructured to check zero per type, and use 0.0 (double) not 0.0f (float)
-        uint8_t a = instr_A(instr), b = instr_B(instr), c = instr_C(instr);
-        Value lhs = cur_base[b], rhs = cur_base[c];
+        uint8_t a = instr_A(instr);
+        uint8_t b = instr_B(instr);
+        uint8_t c = instr_C(instr);
+
+        Value lhs = cur_base[b];
+        Value rhs = cur_base[c];
 
         if (__builtin_expect(!isNumber(lhs) || !isNumber(rhs), 0))
             runtimeError(ErrorCode::TYPE_ERROR_ARITH);
@@ -322,11 +439,11 @@ Value VM::execute()
         if (asDouble(rhs) == 0.0)
             runtimeError(ErrorCode::DIVISION_BY_ZERO);
 
-        if (IS_INTEGER(lhs) & IS_INTEGER(rhs)) {
-            cur_base[a] = makeInteger(VM_OP_II(lhs, rhs, /));
+        if (_isInteger(lhs) & _isInteger(rhs)) {
+            cur_base[a] = makeInteger(VM_DIVI(lhs, rhs));
             VM_ABC(OpCode::OP_DIV_II);
         } else {
-            cur_base[a] = makeReal(VM_OP_FF(lhs, rhs, /));
+            cur_base[a] = makeReal(VM_DIVF(lhs, rhs));
             VM_ABC(OpCode::OP_DIV_FF);
         }
 
@@ -334,18 +451,22 @@ Value VM::execute()
     }
     CASE(OP_DIV_II)
     {
-        RA() = makeInteger(VM_OP_II(RB(), RC(), /));
+        RA() = makeInteger(VM_DIVI(RB(), RC()));
         DISPATCH();
     }
     CASE(OP_DIV_FF)
     {
-        RA() = makeReal(VM_OP_FF(RB(), RC(), /));
+        RA() = makeReal(VM_DIVF(RB(), RC()));
         DISPATCH();
     }
     CASE(OP_MOD)
     {
-        uint8_t a = instr_A(instr), b = instr_B(instr), c = instr_C(instr);
-        Value lhs = cur_base[b], rhs = cur_base[c];
+        uint8_t a = instr_A(instr);
+        uint8_t b = instr_B(instr);
+        uint8_t c = instr_C(instr);
+
+        Value lhs = cur_base[b];
+        Value rhs = cur_base[c];
 
         if (__builtin_expect(!isNumber(lhs) || !isNumber(rhs), 0))
             runtimeError(ErrorCode::TYPE_ERROR_ARITH);
@@ -353,7 +474,7 @@ Value VM::execute()
         if (asDouble(rhs) == 0.0)
             runtimeError(ErrorCode::MODULO_BY_ZERO);
 
-        if (IS_INTEGER(lhs) & IS_INTEGER(rhs)) {
+        if (_isInteger(lhs) & _isInteger(rhs)) {
             cur_base[a] = makeInteger(VM_OP_II(lhs, rhs, %));
             VM_ABC(OpCode::OP_MOD_II);
         } else {
@@ -379,13 +500,16 @@ Value VM::execute()
     }
     CASE(OP_NEG)
     {
-        uint8_t a = instr_A(instr), b = instr_B(instr), c = instr_C(instr); // c is not used but for VM_ABC
+        uint8_t a = instr_A(instr);
+        uint8_t b = instr_B(instr);
+        uint8_t c = instr_C(instr);
+
         Value operand = cur_base[b];
 
         if (__builtin_expect(!isNumber(operand), 0))
             runtimeError(ErrorCode::TYPE_ERROR_ARITH);
 
-        if (IS_INTEGER(operand)) {
+        if (_isInteger(operand)) {
             cur_base[a] = makeInteger(-asInteger(operand));
             VM_ABC(OpCode::OP_NEG_I);
         } else {
@@ -407,10 +531,14 @@ Value VM::execute()
     }
     CASE(OP_BITAND)
     {
-        uint8_t a = instr_A(instr), b = instr_B(instr), c = instr_C(instr);
-        Value lhs = cur_base[b], rhs = cur_base[c];
+        uint8_t a = instr_A(instr);
+        uint8_t b = instr_B(instr);
+        uint8_t c = instr_C(instr);
 
-        if (__builtin_expect(!IS_INTEGER(lhs) || !IS_INTEGER(rhs), 0))
+        Value lhs = cur_base[b];
+        Value rhs = cur_base[c];
+
+        if (__builtin_expect(!_isInteger(lhs) || !_isInteger(rhs), 0))
             runtimeError(ErrorCode::TYPE_ERROR_ARITH);
 
         cur_base[a] = makeInteger(VM_OP_II(lhs, rhs, &));
@@ -425,14 +553,55 @@ Value VM::execute()
     }
     CASE(OP_BITOR)
     {
+        uint8_t a = instr_A(instr);
+        uint8_t b = instr_B(instr);
+        uint8_t c = instr_C(instr);
+
+        Value lhs = cur_base[b];
+        Value rhs = cur_base[c];
+
+        if (__builtin_expect(!_isInteger(lhs) || !_isInteger(rhs), 0))
+            runtimeError(ErrorCode::TYPE_ERROR_ARITH);
+
+        cur_base[a] = makeInteger(VM_OP_II(lhs, rhs, |));
+        VM_ABC(OpCode::OP_BITOR_I);
+
+        DISPATCH();
+    }
+    CASE(OP_BITOR_I)
+    {
+        RA() = VM_OP_II(RB(), RC(), |);
         DISPATCH();
     }
     CASE(OP_BITXOR)
     {
+        uint8_t a = instr_A(instr);
+        uint8_t b = instr_B(instr);
+        uint8_t c = instr_C(instr);
+
+        Value lhs = cur_base[b];
+        Value rhs = cur_base[c];
+
+        if (__builtin_expect(!_isInteger(lhs) || !_isInteger(rhs), 0))
+            runtimeError(ErrorCode::TYPE_ERROR_ARITH);
+
+        cur_base[a] = makeInteger(VM_OP_II(lhs, rhs, ^));
+        VM_ABC(OpCode::OP_BITXOR_I);
+
+        DISPATCH();
+    }
+    CASE(OP_BITXOR_I)
+    {
+        RA() = VM_OP_II(RB(), RC(), ^);
         DISPATCH();
     }
     CASE(OP_BITNOT)
     {
+        Value operand = RB();
+        if (__builtin_expect(!_isInteger(operand), 0))
+            runtimeError(ErrorCode::TYPE_ERROR_ARITH);
+
+        RA() = makeInteger(~asInteger(operand));
         DISPATCH();
     }
     CASE(OP_LSHIFT)
@@ -445,14 +614,18 @@ Value VM::execute()
     }
     CASE(OP_EQ)
     {
-        uint8_t a = instr_A(instr), b = instr_B(instr), c = instr_C(instr);
-        Value lhs = cur_base[b], rhs = cur_base[c];
-        bool both_int = IS_INTEGER(lhs) & IS_INTEGER(rhs);
+        uint8_t a = instr_A(instr);
+        uint8_t b = instr_B(instr);
+        uint8_t c = instr_C(instr);
+
+        Value lhs = cur_base[b];
+        Value rhs = cur_base[c];
+        bool both_int = _isInteger(lhs) & _isInteger(rhs);
 
         if (both_int) {
             cur_base[a] = makeBool(VM_OP_II(lhs, rhs, ==));
             VM_ABC(OpCode::OP_EQ_II);
-        } else if (isString(lhs) && isString(rhs)) [[unlikely]] {
+        } else if (_isString(lhs) && _isString(rhs)) [[unlikely]] {
             cur_base[a] = makeBool(asString(lhs)->str == asString(rhs)->str);
             VM_ABC(OpCode::OP_EQ_SS);
         } else {
@@ -477,16 +650,36 @@ Value VM::execute()
         RA() = makeBool(asString(RB())->str == asString(RC())->str);
         DISPATCH();
     }
+    CASE(OP_EQ_RI)
+    {
+        Value lhs = RB();
+        int8_t imm = static_cast<int8_t>(instr_C(instr) - 128);
+
+        if (__builtin_expect(_isInteger(lhs), 1)) {
+            RA() = makeBool(asInteger(lhs) == static_cast<int64_t>(imm));
+        } else {
+            if (__builtin_expect(!isDouble(lhs), 0))
+                runtimeError(ErrorCode::TYPE_ERROR_ARITH);
+
+            RA() = makeBool(asDouble(lhs) == static_cast<double>(imm));
+        }
+
+        DISPATCH();
+    }
     CASE(OP_NEQ)
     {
-        uint8_t a = instr_A(instr), b = instr_B(instr), c = instr_C(instr);
-        Value lhs = cur_base[b], rhs = cur_base[c];
-        bool both_int = IS_INTEGER(lhs) & IS_INTEGER(rhs);
+        uint8_t a = instr_A(instr);
+        uint8_t b = instr_B(instr);
+        uint8_t c = instr_C(instr);
+
+        Value lhs = cur_base[b];
+        Value rhs = cur_base[c];
+        bool both_int = _isInteger(lhs) & _isInteger(rhs);
 
         if (both_int) {
             cur_base[a] = makeBool(VM_OP_II(lhs, rhs, !=));
             VM_ABC(OpCode::OP_NEQ_II);
-        } else if (isString(lhs) && isString(rhs)) [[unlikely]] {
+        } else if (_isString(lhs) && _isString(rhs)) [[unlikely]] {
             cur_base[a] = makeBool(asString(lhs)->str != asString(rhs)->str);
             VM_ABC(OpCode::OP_NEQ_SS);
         } else {
@@ -513,14 +706,18 @@ Value VM::execute()
     }
     CASE(OP_LT)
     {
-        uint8_t a = instr_A(instr), b = instr_B(instr), c = instr_C(instr);
-        Value lhs = cur_base[b], rhs = cur_base[c];
-        bool both_int = IS_INTEGER(lhs) & IS_INTEGER(rhs);
+        uint8_t a = instr_A(instr);
+        uint8_t b = instr_B(instr);
+        uint8_t c = instr_C(instr);
+
+        Value lhs = cur_base[b];
+        Value rhs = cur_base[c];
+        bool both_int = _isInteger(lhs) & _isInteger(rhs);
 
         if (both_int) {
             cur_base[a] = makeBool(VM_OP_II(lhs, rhs, <));
             VM_ABC(OpCode::OP_LT_II);
-        } else if (isString(lhs) && isString(rhs)) [[unlikely]] {
+        } else if (_isString(lhs) && _isString(rhs)) [[unlikely]] {
             cur_base[a] = makeBool(asString(lhs)->str < asString(rhs)->str);
             VM_ABC(OpCode::OP_LT_SS);
         } else {
@@ -545,16 +742,37 @@ Value VM::execute()
         RA() = makeBool(asString(RB())->str < asString(RC())->str);
         DISPATCH();
     }
+    CASE(OP_LT_RI)
+    {
+        Value lhs = RB();
+        int8_t imm = static_cast<int8_t>(instr_C(instr) - 128);
+
+        if (__builtin_expect(_isInteger(lhs), 1)) {
+            RA() = makeBool(asInteger(lhs) < static_cast<int64_t>(imm));
+        } else {
+            if (__builtin_expect(!isDouble(lhs), 0))
+                runtimeError(ErrorCode::TYPE_ERROR_ARITH);
+
+            RA() = makeBool(asDouble(lhs) < static_cast<double>(imm));
+        }
+
+        DISPATCH();
+    }
+
     CASE(OP_LTE)
     {
-        uint8_t a = instr_A(instr), b = instr_B(instr), c = instr_C(instr);
-        Value lhs = cur_base[b], rhs = cur_base[c];
-        bool both_int = IS_INTEGER(lhs) & IS_INTEGER(rhs);
+        uint8_t a = instr_A(instr);
+        uint8_t b = instr_B(instr);
+        uint8_t c = instr_C(instr);
+
+        Value lhs = cur_base[b];
+        Value rhs = cur_base[c];
+        bool both_int = _isInteger(lhs) & _isInteger(rhs);
 
         if (both_int) {
             cur_base[a] = makeBool(VM_OP_II(lhs, rhs, <=));
             VM_ABC(OpCode::OP_LTE_II);
-        } else if (isString(lhs) && isString(rhs)) [[unlikely]] {
+        } else if (_isString(lhs) && _isString(rhs)) [[unlikely]] {
             cur_base[a] = makeBool(asString(lhs)->str <= asString(rhs)->str);
             VM_ABC(OpCode::OP_LTE_SS);
         } else {
@@ -580,9 +798,25 @@ Value VM::execute()
         RA() = makeBool(asString(RB())->str <= asString(RC())->str);
         DISPATCH();
     }
+    CASE(OP_LTE_RI)
+    {
+        Value lhs = RB();
+        int8_t imm = static_cast<int8_t>(instr_C(instr) - 128);
+
+        if (__builtin_expect(_isInteger(lhs), 1)) {
+            RA() = makeBool(asInteger(lhs) <= static_cast<int64_t>(imm));
+        } else {
+            if (__builtin_expect(!isDouble(lhs), 0))
+                runtimeError(ErrorCode::TYPE_ERROR_ARITH);
+
+            RA() = makeBool(asDouble(lhs) <= static_cast<double>(imm));
+        }
+
+        DISPATCH();
+    }
     CASE(OP_NOT)
     {
-        RA() = makeBool(isTruthy(!RB()));
+        RA() = makeBool(!isTruthy(RB()));
         DISPATCH();
     }
     CASE(CONCAT)
@@ -591,7 +825,7 @@ Value VM::execute()
     }
     CASE(LIST_NEW)
     {
-        ObjList* list_obj = makeObjectList();
+        ObjList* list_obj = MAKE_OBJ_LIST();
         list_obj->reserve(instr_B(instr));
         RA() = makeObject(list_obj);
         DISPATCH();
@@ -599,46 +833,63 @@ Value VM::execute()
     CASE(LIST_APPEND)
     {
         Value list_v = RA();
-        if (!isList(list_v)) [[unlikely]]
+
+        if (!_isList(list_v)) [[unlikely]]
             runtimeError(ErrorCode::TYPE_ERROR_CALL);
+
         asList(list_v)->elements.push(RB());
         DISPATCH();
     }
     CASE(LIST_GET)
     {
-        Value list_v = RB(), index_v = RC();
-        if (!isList(list_v)) [[unlikely]]
+        Value list_v = RB();
+        Value index_v = RC();
+
+        if (!_isList(list_v)) [[unlikely]]
             runtimeError(ErrorCode::TYPE_ERROR_CALL);
-        if (!IS_INTEGER(index_v)) [[unlikely]]
+
+        if (!_isInteger(index_v)) [[unlikely]]
             runtimeError(ErrorCode::INDEX_TYPE_ERROR);
+
         auto& elems = asList(list_v)->elements;
         int64_t idx = asInteger(index_v);
+
         if (idx < 0 || idx >= static_cast<int64_t>(elems.size())) [[unlikely]]
             runtimeError(ErrorCode::INDEX_OUT_OF_BOUNDS);
+
         RA() = elems[static_cast<size_t>(idx)];
         DISPATCH();
     }
     CASE(LIST_SET)
     {
-        Value list_v = RA(), index_v = RB(), new_val = RC();
-        if (!isList(list_v)) [[unlikely]]
+        Value list_v = RA();
+        Value index_v = RB();
+        Value new_val = RC();
+
+        if (!_isList(list_v)) [[unlikely]]
             runtimeError(ErrorCode::TYPE_ERROR_CALL);
-        if (!IS_INTEGER(index_v)) [[unlikely]]
+
+        if (!_isInteger(index_v)) [[unlikely]]
             runtimeError(ErrorCode::INDEX_TYPE_ERROR);
+
         auto& elems = asList(list_v)->elements;
         int64_t idx = asInteger(index_v);
+
         if (idx < 0)
             idx += static_cast<int64_t>(elems.size());
         if (idx < 0 || idx >= static_cast<int64_t>(elems.size())) [[unlikely]]
             runtimeError(ErrorCode::INDEX_OUT_OF_BOUNDS);
+
         elems[static_cast<size_t>(idx)] = new_val;
         DISPATCH();
     }
     CASE(LIST_LEN)
     {
         Value list_v = RB();
-        if (!isList(list_v)) [[unlikely]]
+
+        if (!_isList(list_v)) [[unlikely]]
             runtimeError(ErrorCode::TYPE_ERROR_CALL);
+
         RA() = makeInteger(static_cast<int64_t>(asList(list_v)->elements.size()));
         DISPATCH();
     }
@@ -651,12 +902,14 @@ Value VM::execute()
     {
         if (isTruthy(RA()))
             ip += instr_sBx(instr);
+
         DISPATCH();
     }
     CASE(JUMP_IF_FALSE)
     {
         if (!isTruthy(RA()))
             ip += instr_sBx(instr);
+
         DISPATCH();
     }
     CASE(LOOP)
@@ -664,16 +917,112 @@ Value VM::execute()
         ip += instr_sBx(instr);
         DISPATCH();
     }
-    CASE(FOR_PREP) { /* TODO */ DISPATCH(); }
-    CASE(FOR_STEP) { /* TODO */ DISPATCH(); }
+    CASE(FOR_PREP)
+    {
+        // Register layout (all at base = A):
+        //   R[A]   = initial value  (converted to loop counter)
+        //   R[A+1] = limit
+        //   R[A+2] = step
+        //   R[A+3] = control variable (copy of initial, visible in loop body)
+        //
+        // After prep:
+        //   R[A]   = limit   (kept for step comparison)
+        //   R[A+1] = step
+        //   R[A+2] = control variable (starts at initial)
+        //
+        // sBx = offset to jump past the loop body if condition already false.
+
+        uint8_t base = instr_A(instr);
+        Value init_v = cur_base[base];
+        Value limit_v = cur_base[base + 1];
+        Value step_v = cur_base[base + 2];
+
+        if (__builtin_expect(!isNumber(init_v) || !isNumber(limit_v) || !isNumber(step_v), 0))
+            runtimeError(ErrorCode::TYPE_ERROR_ARITH);
+
+        if (_isInteger(init_v) && _isInteger(limit_v) && _isInteger(step_v)) {
+            int64_t init = asInteger(init_v);
+            int64_t limit = asInteger(limit_v);
+            int64_t step = asInteger(step_v);
+
+            if (step == 0)
+                runtimeError(ErrorCode::DIVISION_BY_ZERO);
+
+            cur_base[base] = makeInteger(limit);
+            cur_base[base + 1] = makeInteger(step);
+            cur_base[base + 2] = makeInteger(init);
+
+            bool should_run = (step > 0) ? (init <= limit) : (init >= limit);
+            if (!should_run)
+                ip += instr_sBx(instr);
+        } else {
+            double init = asDoubleAny(init_v);
+            double limit = asDoubleAny(limit_v);
+            double step = asDoubleAny(step_v);
+
+            if (step == 0.0)
+                runtimeError(ErrorCode::DIVISION_BY_ZERO);
+
+            cur_base[base] = makeReal(limit);
+            cur_base[base + 1] = makeReal(step);
+            cur_base[base + 2] = makeReal(init);
+
+            bool should_run = (step > 0.0) ? (init <= limit) : (init >= limit);
+            if (!should_run)
+                ip += instr_sBx(instr);
+        }
+
+        DISPATCH();
+    }
+
+    CASE(FOR_STEP)
+    {
+        // R[A]   = limit
+        // R[A+1] = step
+        // R[A+2] = control variable
+        //
+        // Increment control variable by step.
+        // If still in range, jump back by sBx (negative offset).
+
+        uint8_t base = instr_A(instr);
+        Value limit_v = cur_base[base];
+        Value step_v = cur_base[base + 1];
+        Value control_v = cur_base[base + 2];
+
+        if (_isInteger(control_v)) {
+            int64_t control = asInteger(control_v);
+            int64_t step = asInteger(step_v);
+            int64_t limit = asInteger(limit_v);
+
+            control += step;
+            cur_base[base + 2] = makeInteger(control);
+
+            bool continue_loop = (step > 0) ? (control <= limit) : (control >= limit);
+            if (continue_loop)
+                ip += instr_sBx(instr);
+        } else {
+            double control = asDouble(control_v);
+            double step = asDouble(step_v);
+            double limit = asDouble(limit_v);
+
+            control += step;
+            cur_base[base + 2] = makeReal(control);
+
+            bool continue_loop = (step > 0.0) ? (control <= limit) : (control >= limit);
+            if (continue_loop)
+                ip += instr_sBx(instr);
+        }
+
+        DISPATCH();
+    }
     CASE(CLOSURE)
     {
         uint16_t fn_idx = instr_Bx(instr);
         Chunk* fn_chunk = cur_chunk->functions[fn_idx];
-        ObjFunction* fn = makeObjectFunction(fn_chunk);
+        ObjFunction* fn = MAKE_OBJ_FUNCTION(fn_chunk);
         fn->arity = fn_chunk->arity;
         fn->upvalueCount = fn_chunk->upvalueCount;
-        ObjClosure* cl = makeObjectClosure(fn);
+        ObjClosure* cl = MAKE_OBJ_CLOSURE(fn);
 
         for (unsigned int i = 0; i < fn_chunk->upvalueCount; ++i) {
             uint32_t desc = cur_chunk->code[ip++];
@@ -696,11 +1045,13 @@ Value VM::execute()
 
         if (isClosure(callee)) [[likely]] {
             ObjClosure* cl = asClosure(callee);
+
             if (argc != cl->function->arity) [[unlikely]] {
                 diagnostic::emit("expected " + std::to_string(cl->function->arity)
                     + " arguments but got " + std::to_string(argc));
                 runtimeError(ErrorCode::WRONG_ARG_COUNT);
             }
+
             if (FramesTop_ >= MAX_FRAMES) [[unlikely]]
                 runtimeError(ErrorCode::STACK_OVERFLOW);
 
@@ -714,6 +1065,7 @@ Value VM::execute()
             SAVE_IP();
             callValue(callee, argc, base, /*tail=*/false);
         }
+
         LOAD_FRAME();
         DISPATCH();
     }
@@ -723,6 +1075,7 @@ Value VM::execute()
         uint8_t argc = instr_B(instr);
         Value callee = cur_base[fn_reg];
         int base = cur_frame_base + fn_reg + 1;
+
         SAVE_IP();
         callValue(callee, argc, base, /*tail=*/true);
         LOAD_FRAME();
@@ -730,11 +1083,14 @@ Value VM::execute()
     }
     CASE(IC_CALL)
     {
-        uint8_t fn_reg = instr_A(instr), argc = instr_B(instr), ic_idx = instr_C(instr);
+        uint8_t fn_reg = instr_A(instr);
+        uint8_t argc = instr_B(instr);
+        uint8_t ic_idx = instr_C(instr);
         Value callee = cur_base[fn_reg];
         int base = cur_frame_base + fn_reg + 1;
 
-        if (ic_idx < cur_chunk->icSlots.size()) {
+        bool has_slot = ic_idx < cur_chunk->icSlots.size();
+        if (has_slot) {
             auto& slot = cur_chunk->icSlots[ic_idx];
             slot.seenLhs |= static_cast<uint8_t>(valueTypeTag(callee));
             slot.hitCount++;
@@ -743,11 +1099,34 @@ Value VM::execute()
         Chunk* caller_chunk = cur_chunk;
         int result_slot = base - 1;
 
-        SAVE_IP();
-        callValue(callee, argc, base, /*tail=*/false);
+        if (isClosure(callee)) [[likely]] {
+            ObjClosure* cl = asClosure(callee);
+
+            if (argc != cl->function->arity) [[unlikely]] {
+                diagnostic::emit("expected " + std::to_string(cl->function->arity)
+                    + " arguments but got " + std::to_string(argc));
+                runtimeError(ErrorCode::WRONG_ARG_COUNT);
+            }
+
+            if (FramesTop_ >= MAX_FRAMES) [[unlikely]]
+                runtimeError(ErrorCode::STACK_OVERFLOW);
+
+            int local_count = cl->function->chunk->localCount;
+            int new_top = base + local_count + 1;
+
+            while (StackTop_ < new_top)
+                Stack_[StackTop_++] = NIL_VAL;
+
+            SAVE_IP();
+            Frames_[FramesTop_++] = { cl, 0, base, local_count };
+        } else {
+            SAVE_IP();
+            callValue(callee, argc, base, /*tail=*/false);
+        }
+
         LOAD_FRAME();
 
-        if (ic_idx < caller_chunk->icSlots.size())
+        if (has_slot)
             caller_chunk->icSlots[ic_idx].seenRet |= static_cast<uint8_t>(valueTypeTag(Stack_[result_slot]));
 
         DISPATCH();
@@ -781,8 +1160,6 @@ Value VM::execute()
     }
     CASE(RETURN_NIL)
     {
-        SAVE_IP();
-
         if (__builtin_expect(!OpenUpvalues_.empty(), 0)) {
             Value* threshold = &Stack_[cur_frame_base];
             uint32_t i = static_cast<uint32_t>(OpenUpvalues_.size());
@@ -799,6 +1176,32 @@ Value VM::execute()
 
         if (__builtin_expect(FramesTop_ == 0, 0))
             return NIL_VAL;
+
+        LOAD_FRAME();
+        DISPATCH();
+    }
+    CASE(RETURN1)
+    {
+        Value ret = cur_base[instr_A(instr)];
+
+        if (__builtin_expect(!OpenUpvalues_.empty(), 0)) {
+            Value* threshold = &Stack_[cur_frame_base];
+            uint32_t i = static_cast<uint32_t>(OpenUpvalues_.size());
+
+            while (i > 0 && OpenUpvalues_[i - 1]->location >= threshold) {
+                ObjUpvalue* uv = OpenUpvalues_[--i];
+                uv->closed = *uv->location;
+                uv->location = &uv->closed;
+            }
+
+            OpenUpvalues_.resize(i);
+        }
+
+        Stack_[cur_frame_base - 1] = ret;
+        --FramesTop_;
+
+        if (__builtin_expect(FramesTop_ == 0, 0))
+            return ret;
 
         LOAD_FRAME();
         DISPATCH();
@@ -822,7 +1225,8 @@ ObjString* VM::intern(StringRef const& str)
     auto it = StringTable_.find(str);
     if (it != StringTable_.end())
         return it->second;
-    ObjString* obj = makeObjectString(str);
+
+    ObjString* obj = MAKE_OBJ_STRING(str);
     StringTable_[str] = obj;
     return obj;
 }
@@ -849,6 +1253,7 @@ void VM::closeUpvalues(unsigned int from_stack_pos)
         uv->location = &uv->closed;
         --i;
     }
+
     OpenUpvalues_.resize(i); // single truncation, no memmove
 }
 
@@ -868,10 +1273,12 @@ void VM::updateIcBinary(Chunk* ch, uint32_t nop_ip, Value lhs, Value rhs, Value 
 
 ObjUpvalue* VM::captureUpvalue(unsigned int stack_pos)
 {
-    for (ObjUpvalue* uv : OpenUpvalues_)
+    for (ObjUpvalue* uv : OpenUpvalues_) {
         if (uv->location == &Stack_[stack_pos])
             return uv;
-    ObjUpvalue* uv = makeObjectUpvalue(&Stack_[stack_pos]);
+    }
+
+    ObjUpvalue* uv = MAKE_OBJ_UPVALUE(&Stack_[stack_pos]);
     OpenUpvalues_.push(uv);
     return uv;
 }
@@ -886,6 +1293,7 @@ void VM::callValue(Value callee, int argc, int base, bool tail)
             diagnostic::emit("expected " + std::to_string(arity) + " arguments but got " + std::to_string(argc));
             runtimeError(ErrorCode::WRONG_ARG_COUNT);
         }
+
         if (FramesTop_ >= MAX_FRAMES) [[unlikely]]
             runtimeError(ErrorCode::STACK_OVERFLOW);
 
@@ -926,6 +1334,7 @@ void VM::callValue(Value callee, int argc, int base, bool tail)
                 + "' expected " + std::to_string(nat->arity) + " args, got " + std::to_string(argc));
             runtimeError(ErrorCode::WRONG_ARG_COUNT);
         }
+
         Stack_[base - 1] = callNative(nat, argc, base);
         return;
     }
@@ -967,8 +1376,11 @@ void VM::returnFromCall(int ret_reg, int n_ret)
 }
 
 inline typename VM::CallFrame& VM::frame() { return Frames_[FramesTop_ - 1]; }
+
 inline typename VM::CallFrame const& VM::frame() const { return Frames_[FramesTop_ - 1]; }
+
 Chunk* VM::chunk() { return frame().closure->function->chunk; }
+
 Value& VM::reg(int r) { return Stack_[frame().base + r]; }
 
 void VM::openStdlib()
@@ -1006,8 +1418,17 @@ void VM::openStdlib()
 
 void VM::registerNative(StringRef const& name, NativeFn fn, int arity)
 {
-    ObjString* name_obj = makeObjectString(name);
-    Globals_[name] = makeObject(makeObjectNative(fn, name_obj, arity));
+    ObjString* name_obj = MAKE_OBJ_STRING(name);
+    Value val = makeObject(MAKE_OBJ_NATIVE(fn, name_obj, arity));
+
+    auto it = GlobalIndex_.find(name);
+    if (it != GlobalIndex_.end()) {
+        GlobalSlots_[it->second] = val;
+    } else {
+        uint32_t slot_idx = static_cast<uint32_t>(GlobalSlots_.size());
+        GlobalSlots_.push_back(val);
+        GlobalIndex_[name] = slot_idx;
+    }
 }
 
 SourceLocation VM::currentLocation() const
@@ -1016,6 +1437,7 @@ SourceLocation VM::currentLocation() const
     Chunk const& ch = *frame().closure->function->chunk;
     if (offset < ch.locations.size())
         return ch.locations[offset];
+
     return { 0, 0, 0 };
 }
 
@@ -1059,7 +1481,7 @@ void VM::internChunkConstants(Chunk* ch)
     auto& constants = ch->constants;
 
     for (uint32_t i = 0; i < constants.size(); ++i) {
-        if (isString(constants[i]))
+        if (_isString(constants[i]))
             constants[i] = makeObject(intern(asString(constants[i])->str));
     }
 
