@@ -2,39 +2,40 @@
 
 #include "../include/arena.hpp"
 
+#include <atomic>
+#include <sys/mman.h>
+
 namespace mylang {
 
 using ErrorCode = diagnostic::errc::general::Code;
-
 ArenaBlock::ArenaBlock(size_t const size, size_t const alignment) : Size_(size) {
-  if (alignment == 0 || (alignment & (alignment - 1)) != 0) {
-    diagnostic::emit("Alignment must be a power of two");
-    diagnostic::internalError(ErrorCode::INTERNAL_ERROR);
+
+  Begin_ = reinterpret_cast<unsigned char *>(
+      mmap(reinterpret_cast<void *>(0x200000000ULL), size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
+
+  if (Begin_ == MAP_FAILED)
+    diagnostic::emit("ArenaBlock: mmap failed", diagnostic::Severity::FATAL);
+
+  if (reinterpret_cast<uintptr_t>(Begin_) > UINT64_C(0x0000FFFFFFFFFFFF)) {
+    munmap(Begin_, Size_);
+    Begin_ = nullptr;
+    diagnostic::emit("ArenaBlock: mmap returned high address — NaN-boxing unsafe", diagnostic::Severity::FATAL);
   }
 
-  size_t mod = Size_ % alignment;
-  if (mod)
-    Size_ += (alignment - mod);
-
-  void *mem = std::aligned_alloc(alignment, Size_);
-  if (!mem)
-    diagnostic::internalError(ErrorCode::ALLOC_FAILED);
-
-  Begin_ = reinterpret_cast<unsigned char *>(mem);
   Next_ = Begin_;
-  End_ = Begin_ + Size_;
+  End_ = Begin_ + size;
 }
 
 ArenaBlock::ArenaBlock(ArenaBlock &&other) noexcept : Size_(other.Size_), Begin_(other.Begin_), Next_(other.Next_), End_(other.End_) {
+  other.Size_ = 0;
   other.Begin_ = nullptr;
   other.Next_ = nullptr;
   other.End_ = nullptr;
-  other.Size_ = 0;
 }
 
 ArenaBlock::~ArenaBlock() {
   if (Begin_) {
-    std::free(Begin_);
+    munmap(Begin_, Size_);
     Begin_ = nullptr;
     Next_ = nullptr;
     End_ = nullptr;

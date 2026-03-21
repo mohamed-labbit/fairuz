@@ -9,14 +9,17 @@ namespace mylang::lex {
 
 namespace fs = std::filesystem;
 
-FileManager::FileManager(std::string const &filepath) : FilePath_(filepath) {
-  std::ifstream in(filepath, std::ios::binary);
-  if (!in)
-    diagnostic::panic(toString(FileManagerError::FILE_NOT_OPEN));
+FileManager::FileManager(std::string const& filepath) : FilePath_(filepath) {
+    std::ifstream in(filepath, std::ios::binary);
+    if (!in) {
+        diagnostic::panic(std::string(toString(FileManagerError::FILE_NOT_OPEN))  + ": " + filepath);
+    }
 
-  InputBuffer_ = std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()).data();
-  InputBuffer_.trimWhitespace(/*leading=*/false, /*trailing=*/true);
-  LastKnownWriteTime_ = fs::last_write_time(filepath);
+    std::string content{std::istreambuf_iterator<char>{in},
+                        std::istreambuf_iterator<char>{}};
+    InputBuffer_ = StringRef(content.data());
+    InputBuffer_.trimWhitespace(false, true);
+    LastKnownWriteTime_ = fs::last_write_time(filepath);
 }
 
 StringRef FileManager::load(std::string const &filepath, bool replace) {
@@ -41,7 +44,7 @@ void SourceManager::reset() {
   Context_.line = 1;
   Context_.column = 1;
   Context_.offset = 0;
-  Current_ = BUFFER_END;
+  Current_ = 0;
 
   while (!UngetStack_.empty())
     UngetStack_.pop();
@@ -62,7 +65,7 @@ uint32_t SourceManager::peekChar() {
   uint32_t saved_current = Current_;
   uint32_t cp = nextChar();
 
-  if (cp != BUFFER_END)
+  if (cp != 0)
     unget(cp);
   else {
     Context_ = saved;
@@ -74,7 +77,7 @@ uint32_t SourceManager::peekChar() {
 
 uint32_t SourceManager::currentChar() const {
   if (Context_.offset >= FileManager_->buffer().len())
-    return BUFFER_END;
+    return 0;
 
   uint64_t bytes = 0;
   return util::decode_utf8_at(FileManager_->buffer(), Context_.offset, &bytes);
@@ -219,7 +222,7 @@ tok::Token const *Lexer::lexToken() {
       }
 
       // process indentation
-      if (!blank_line && current != BUFFER_END) {
+      if (!blank_line && current != 0) {
         size = cont_line_col ? cont_line_col : size;
         alt_size = cont_line_col ? cont_line_col : alt_size;
 
@@ -272,7 +275,7 @@ tok::Token const *Lexer::lexToken() {
     uint32_t col = SourceManager_.getColumnNumber();
 
     uint32_t current = SourceManager_.currentChar();
-    if (current == BUFFER_END)
+    if (current == 0)
       break;
 
     switch (current) {
@@ -295,7 +298,7 @@ tok::Token const *Lexer::lexToken() {
     // comments
     case '#': {
       // consume entire comment line
-      while (current != '\n' && current != BUFFER_END)
+      while (current != '\n' && current != 0)
         current = SourceManager_.nextChar();
 
       continue;
@@ -309,7 +312,7 @@ tok::Token const *Lexer::lexToken() {
       current = SourceManager_.nextChar();
 
       // capture quoted string with escape seq
-      while (current != '\n' && current != BUFFER_END && current != quote) {
+      while (current != '\n' && current != 0 && current != quote) {
         if (current == '\\') {
           current = SourceManager_.nextChar();
 
@@ -463,7 +466,7 @@ tok::Token const *Lexer::lexToken() {
       SourceManager_.consumeChar();
 
       uint32_t next = SourceManager_.currentChar();
-      if (next != BUFFER_END) {
+      if (next != 0) {
         StringRef two = operator_str + util::encode_utf8_str(next);
         if (auto type = tok::lookupOperator(two)) {
           operator_str = two;

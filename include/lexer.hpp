@@ -142,14 +142,14 @@ private:
   };
 
   struct PushbackEntry {
-    uint32_t ch{BUFFER_END};
+    uint32_t ch{0};
     Context ctx;
     uint64_t bytes{0};
   };
 
   FileManager *FileManager_{nullptr};
   Context Context_;
-  uint32_t Current_{BUFFER_END};
+  uint32_t Current_{0};
   uint64_t CurrentBytes_{0};
   std::stack<PushbackEntry> UngetStack_;
 

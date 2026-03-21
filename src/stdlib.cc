@@ -2,9 +2,11 @@
 
 #include "../include/stdlib.hpp"
 
+#include <cmath>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <string>
 
 namespace mylang::runtime {
 
@@ -143,8 +145,8 @@ Value nativeInt(int argc, Value *argv) {
   if (argc != 1 || !argv)
     return NIL_VAL;
 
-  if (IS_INTEGER(argv[0]))
-    return MAKE_INTEGER(AS_DOUBLE(static_cast<int64_t>(argv[0])));
+  if (IS_NUMBER(argv[0]))
+    return MAKE_INTEGER(AS_DOUBLE_ANY(static_cast<int64_t>(argv[0])));
 
   return NIL_VAL;
 }
@@ -153,8 +155,8 @@ Value nativeFloat(int argc, Value *argv) {
   if (argc != 1 || !argv)
     return NIL_VAL;
 
-  if (IS_INTEGER(argv[0]))
-    return MAKE_REAL(AS_DOUBLE(argv[0]));
+  if (IS_NUMBER(argv[0]))
+    return MAKE_REAL(AS_DOUBLE_ANY(argv[0]));
 
   return NIL_VAL;
 }
@@ -228,7 +230,7 @@ Value nativeInput(int argc, Value *argv) { return NIL_VAL; }
 
 Value nativeStr(int argc, Value *argv) {
   if (argc > 1) {
-    diagnostic::emit("str() is called with no arguments");
+    diagnostic::emit("str() expects one argument , got : " + std::to_string(argc));
     diagnostic::runtimeError(ErrorCode::WRONG_ARG_COUNT);
     return NIL_VAL;
   }
@@ -236,7 +238,7 @@ Value nativeStr(int argc, Value *argv) {
   StringRef output = "";
 
   if (argc == 0 || !argv)
-    return MAKE_OBJECT((MAKE_OBJ_STRING(output)));
+    return MAKE_OBJECT((MAKE_OBJ_STRING(output))); // return empty on no arg
 
   /// TODO : stringify a list
 
@@ -266,8 +268,8 @@ Value nativeList(int argc, Value *argv) {
   Value ret = MAKE_OBJECT(MAKE_OBJ_LIST());
   ObjList *list_obj = AS_LIST(ret);
 
-  for (int i = 0; i < argc;)
-    list_obj->elements.push(argv[i++]);
+  for (int i = 0; i < argc; ++i)
+    list_obj->elements.push(argv[i]);
 
   return ret;
 }
@@ -289,7 +291,7 @@ Value nativeFloor(int argc, Value *argv) {
     return NIL_VAL;
   }
 
-  if (!IS_INTEGER(argv[0])) {
+  if (!IS_NUMBER(argv[0])) {
     diagnostic::emit("floor() is called with a non numeric value argument");
     // diagnostic::runtimeError(ErrorCode::);
     /// diagnostic::runtimeError(ErrorCode::);
@@ -299,7 +301,7 @@ Value nativeFloor(int argc, Value *argv) {
   if (IS_INTEGER(argv[0]))
     return argv[0];
 
-  return MAKE_REAL(std::floorf(AS_DOUBLE(argv[0])));
+  return MAKE_REAL(std::floor(AS_DOUBLE(argv[0])));
 }
 
 Value nativeCeil(int argc, Value *argv) {
@@ -308,7 +310,7 @@ Value nativeCeil(int argc, Value *argv) {
     return NIL_VAL;
   }
 
-  if (!IS_INTEGER(argv[0])) {
+  if (!IS_NUMBER(argv[0])) {
     diagnostic::emit("ceil() is called with a non numeric value argument");
     return NIL_VAL;
   }
@@ -316,7 +318,7 @@ Value nativeCeil(int argc, Value *argv) {
   if (IS_INTEGER(argv[0]))
     return argv[0];
 
-  return MAKE_REAL(std::ceilf(AS_DOUBLE(argv[0])));
+  return MAKE_REAL(std::ceil(AS_DOUBLE_ANY(argv[0])));
 }
 
 Value nativeRound(int argc, Value *argv) { return NIL_VAL; }
@@ -327,68 +329,91 @@ Value nativeAbs(int argc, Value *argv) {
     return NIL_VAL;
   }
 
-  if (!IS_INTEGER(argv[0])) {
+  if (!IS_NUMBER(argv[0])) {
     diagnostic::emit("abs() is called with a non numeric value argument");
     return NIL_VAL;
   }
 
-  if (IS_INTEGER(argv[0]))
+  if (IS_INTEGER(argv[0])) {
+    int64_t v = AS_INTEGER(argv[0]);
+    if (v == INT64_MIN) {
+      diagnostic::emit("abs() argument out of range");
+      return NIL_VAL;
+    }
     return MAKE_INTEGER(std::abs(AS_INTEGER(argv[0])));
-
+  }
   return MAKE_REAL(std::fabs(AS_DOUBLE(argv[0])));
 }
 
 Value nativeMin(int argc, Value *argv) {
-  if (argc < 2 || !argv) {
-    diagnostic::emit("ceil() expects 2 or more arguments, got : " + std::to_string(argc));
+  if (argc < 1 || !argv) {
+    diagnostic::emit("min() expects 1 or more arguments, got: " + std::to_string(argc));
     return NIL_VAL;
   }
 
-  if (!IS_INTEGER(argv[0])) {
-    diagnostic::emit("ceil() is called with a non numeric value argument");
-    return NIL_VAL;
-  }
+  // Determine mode from argv[0]
+  bool all_ints = IS_INTEGER(argv[0]);
+  bool all_strs = IS_STRING(argv[0]);
 
-  Value ret = MAKE_REAL(AS_DOUBLE(argv[0]));
-  bool all_ints = true;
-
+  // Validate all args match the expected type
   for (int i = 1; i < argc; ++i) {
     if (!IS_INTEGER(argv[i]))
       all_ints = false;
-
-    ret = MAKE_REAL(std::fmin(AS_DOUBLE(ret), AS_DOUBLE(argv[i])));
+    if (!IS_STRING(argv[i]))
+      all_strs = false;
   }
 
-  if (all_ints)
-    return MAKE_INTEGER(static_cast<int64_t>(AS_DOUBLE(ret)));
+  if (all_strs) {
+    Value ret = argv[0];
+    for (int i = 1; i < argc; ++i) {
+      if (AS_STRING(argv[i])->str < AS_STRING(ret)->str)
+        ret = argv[i];
+    }
+    return ret;
+  }
 
+  Value ret = MAKE_REAL(AS_DOUBLE_ANY(argv[0]));
+  for (int i = 1; i < argc; ++i)
+    ret = MAKE_REAL(std::fmin(AS_DOUBLE_ANY(ret), AS_DOUBLE_ANY(argv[i])));
+
+  if (all_ints)
+    return MAKE_INTEGER(static_cast<int64_t>(AS_DOUBLE_ANY(ret)));
   return ret;
 }
 
 Value nativeMax(int argc, Value *argv) {
-  if (argc < 2 || !argv) {
-    diagnostic::emit("ceil() expects 2 or more arguments, got : " + std::to_string(argc));
+  if (argc < 1 || !argv) {
+    diagnostic::emit("max() expects 1 or more arguments, got: " + std::to_string(argc));
     return NIL_VAL;
   }
 
-  if (!IS_INTEGER(argv[0])) {
-    diagnostic::emit("ceil() is called with a non numeric value argument");
-    return NIL_VAL;
-  }
+  // Determine mode from argv[0]
+  bool all_ints = IS_INTEGER(argv[0]);
+  bool all_strs = IS_STRING(argv[0]);
 
-  Value ret = MAKE_REAL(AS_DOUBLE(argv[0]));
-  bool all_ints = true;
-
+  // Validate all args match the expected type
   for (int i = 1; i < argc; ++i) {
     if (!IS_INTEGER(argv[i]))
       all_ints = false;
-
-    ret = MAKE_REAL(std::fmax(AS_DOUBLE(ret), AS_DOUBLE(argv[i])));
+    if (!IS_STRING(argv[i]))
+      all_strs = false;
   }
 
-  if (all_ints)
-    return MAKE_INTEGER(static_cast<int64_t>(AS_DOUBLE(ret)));
+  if (all_strs) {
+    Value ret = argv[0];
+    for (int i = 1; i < argc; ++i) {
+      if (AS_STRING(argv[i])->str > AS_STRING(ret)->str)
+        ret = argv[i];
+    }
+    return ret;
+  }
 
+  Value ret = MAKE_REAL(AS_DOUBLE_ANY(argv[0]));
+  for (int i = 1; i < argc; ++i)
+    ret = MAKE_REAL(std::fmax(AS_DOUBLE_ANY(ret), AS_DOUBLE_ANY(argv[i])));
+
+  if (all_ints)
+    return MAKE_INTEGER(static_cast<int64_t>(AS_DOUBLE_ANY(ret)));
   return ret;
 }
 

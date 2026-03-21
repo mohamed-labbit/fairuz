@@ -85,6 +85,7 @@ struct ObjNative : ObjHeader {
 #define MAKE_OBJ_CLOSURE(fn) getAllocator().allocateObject<ObjClosure>(fn)
 #define MAKE_OBJ_NATIVE(f, n, a) getAllocator().allocateObject<ObjNative>(f, n, a)
 
+#define MAKE_OBJECT(p) TAG_OBJ | (reinterpret_cast<uintptr_t>(p) & PAYLOAD_MASK)
 #define MAKE_REAL(d)                                                                                                                                 \
   ({                                                                                                                                                 \
     auto _tmp = (d);                                                                                                                                 \
@@ -92,7 +93,6 @@ struct ObjNative : ObjHeader {
     __builtin_memcpy(&bits, &_tmp, sizeof(bits));                                                                                                    \
     bits;                                                                                                                                            \
   })
-#define MAKE_OBJECT(p) TAG_OBJ | (reinterpret_cast<uintptr_t>(p) & PAYLOAD_MASK)
 #define MAKE_BOOL(b) ((b) ? TRUE_VAL : FALSE_VAL)
 #define MAKE_INTEGER(v) (static_cast<Value>(v) & PAYLOAD_MASK) | TAG_INT
 
@@ -102,14 +102,16 @@ struct ObjNative : ObjHeader {
 #define IS_OBJECT(v) (((v) >> 48) == OBJ_TAG16)
 #define IS_DOUBLE(v)                                                                                                                                 \
   ({                                                                                                                                                 \
-    Value _v = (v);                                                                                                                                  \
-    uint64_t _top = _v >> 48;                                                                                                                        \
-    (_top != INT_TAG16 && _top != OBJ_TAG16 && !IS_BOOL(_v) && !IS_NIL(_v));                                                                         \
+    Value _vd = (v);                                                                                                                                 \
+    uint64_t _top = _vd >> 48;                                                                                                                       \
+    (_top != INT_TAG16 && _top != OBJ_TAG16 && !((_vd | 1) == TRUE_VAL) && !(_vd == NIL_VAL));                                                       \
   })
+
 #define IS_NUMBER(v)                                                                                                                                 \
   ({                                                                                                                                                 \
-    Value _v = (v);                                                                                                                                  \
-    (IS_INTEGER(_v) || IS_DOUBLE(_v));                                                                                                               \
+    Value _vn = (v);                                                                                                                                 \
+    uint64_t _top = _vn >> 48;                                                                                                                       \
+    (_top == INT_TAG16) || (_top != OBJ_TAG16 && !((_vn | 1) == TRUE_VAL) && !(_vn == NIL_VAL));                                                     \
   })
 
 #define IS_STRING(v) (IS_OBJECT(v) && reinterpret_cast<ObjHeader *>((v) & PAYLOAD_MASK)->type == ObjType::STRING)
@@ -199,6 +201,8 @@ inline TypeTag &operator|=(TypeTag &a, TypeTag b) noexcept { return a = a | b; }
     return TypeTag::BOOL;
   if (IS_INTEGER(v))
     return TypeTag::INT;
+  if (IS_DOUBLE(v))
+    return TypeTag::DOUBLE;
 
   if (IS_OBJECT(v)) {
     switch (AS_OBJECT(v)->type) {
@@ -214,8 +218,7 @@ inline TypeTag &operator|=(TypeTag &a, TypeTag b) noexcept { return a = a | b; }
       return TypeTag::NONE;
     }
   }
-
-  return TypeTag::DOUBLE;
+  return TypeTag::NONE;
 }
 
 } // namespace mylang::runtime

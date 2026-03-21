@@ -91,19 +91,18 @@ if(BUILD_TESTS)
 
     add_executable(mylang_tests
         tests/test_main.cpp
-        tests/runtime/test_arena.cpp
-        tests/string/test_string.cpp
-        tests/lexer/test_tokens.cpp
-        tests/lexer/test_indentation.cpp
-        tests/parser/test_parser.cpp
-        tests/parser/test_analyzer.cpp
-        tests/parser/test_optim.cpp
-        tests/runtime/compiler/test_opcode.cpp
-        tests/runtime/compiler/test_chunk.cpp
-        tests/runtime/compiler/test_value.cpp
-        tests/runtime/compiler/test_compiler.cpp
-        tests/runtime/test_vm.cpp
-        tests/runtime/test_stdlib.cpp
+        tests/test_arena.cpp
+        tests/test_string.cpp
+        tests/test_tokens.cpp
+        tests/test_indentation.cpp
+        tests/test_parser.cpp
+        tests/test_analyzer.cpp
+        tests/test_optim.cpp
+        tests/test_opcode.cpp
+        tests/test_chunk.cpp
+        tests/test_compiler.cpp
+        tests/test_vm.cpp
+        tests/test_stdlib.cpp
         $<TARGET_OBJECTS:mylang_objects>
     )
 

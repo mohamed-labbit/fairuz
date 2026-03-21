@@ -11,14 +11,14 @@ namespace mylang {
 
 namespace detail {
 
-static char g_empty_string_storage[sizeof(String)];
-static String *g_empty_string = nullptr;
+static char g_empty_string_storage[sizeof(StringBase)];
+static StringBase *g_empty_string = nullptr;
 
-String *emptyStringSingleton() noexcept {
+StringBase *emptyStringSingleton() noexcept {
   if (__builtin_expect(g_empty_string != nullptr, 1))
     return g_empty_string;
 
-  g_empty_string = new (g_empty_string_storage) String();
+  g_empty_string = new (g_empty_string_storage) StringBase();
   for (int i = 0; i < 1024; ++i)
     g_empty_string->increment();
 
@@ -27,61 +27,57 @@ String *emptyStringSingleton() noexcept {
 
 } // namespace detail
 
-String::String(size_t const s) : is_heap(s >= SSO_SIZE), len_(0) {
+StringBase::StringBase(size_t const s) : is_heap(s >= SSO_SIZE) {
   if (s < SSO_SIZE) {
-    storage_.sso[0] = BUFFER_END;
+    storage_.sso[0] = 0;
   } else {
     storage_.heap.cap = s + 1;
     storage_.heap.ptr = getAllocator().allocateArray<char>(storage_.heap.cap);
-    storage_.heap.ptr[0] = BUFFER_END;
+    storage_.heap.ptr[0] = 0;
   }
 }
 
-String::String(size_t const s, char const c) : is_heap(s >= SSO_SIZE), len_(s) {
+StringBase::StringBase(size_t const s, char const c) : is_heap(s >= SSO_SIZE) {
   if (s < SSO_SIZE) {
     ::memset(storage_.sso, c, s);
-    storage_.sso[s] = BUFFER_END;
+    storage_.sso[s] = 0;
   } else {
     storage_.heap.cap = s + 1;
     storage_.heap.ptr = getAllocator().allocateArray<char>(storage_.heap.cap);
     ::memset(storage_.heap.ptr, c, s);
-    storage_.heap.ptr[s] = BUFFER_END;
+    storage_.heap.ptr[s] = 0;
   }
 }
 
-String::String(char const *s, size_t n) {
+StringBase::StringBase(char const *s, size_t n) {
   if (!s || n == 0) {
     is_heap = false;
-    len_ = 0;
-    storage_.sso[0] = BUFFER_END;
+    storage_.sso[0] = 0;
     return;
   }
 
   is_heap = (n >= SSO_SIZE);
-  len_ = n;
 
   if (!is_heap) {
     ::memcpy(storage_.sso, s, n);
-    storage_.sso[n] = BUFFER_END;
+    storage_.sso[n] = 0;
   } else {
     storage_.heap.cap = n + 1;
     storage_.heap.ptr = getAllocator().allocateArray<char>(storage_.heap.cap);
     ::memcpy(storage_.heap.ptr, s, n);
-    storage_.heap.ptr[n] = BUFFER_END;
+    storage_.heap.ptr[n] = 0;
   }
 }
 
-String::String(char const *s) {
+StringBase::StringBase(char const *s) {
   if (!s) {
     is_heap = false;
-    len_ = 0;
-    storage_.sso[0] = BUFFER_END;
+    storage_.sso[0] = 0;
     return;
   }
 
   size_t n = ::strlen(s);
   is_heap = (n >= SSO_SIZE);
-  len_ = n;
 
   if (!is_heap) {
     ::memcpy(storage_.sso, s, n + 1);
@@ -92,15 +88,7 @@ String::String(char const *s) {
   }
 }
 
-bool String::operator==(String const &other) const noexcept {
-  if (len_ != other.len_)
-    return false;
-  if (len_ == 0)
-    return true;
-  return ::memcmp(ptr(), other.ptr(), len_) == 0;
-}
-
-StringRef::StringRef(size_t const s) : StringData_(getAllocator().allocateObject<String>(s)), Offset_(0), Length_(0) {}
+StringRef::StringRef(size_t const s) : StringData_(getAllocator().allocateObject<StringBase>(s)), Offset_(0), Length_(0) {}
 
 StringRef::StringRef(StringRef const &other, size_t offset, size_t length)
     : StringData_(other.StringData_), Offset_(other.Offset_ + offset),
@@ -109,6 +97,7 @@ StringRef::StringRef(StringRef const &other, size_t offset, size_t length)
     StringData_->increment();
 }
 
+// relies on lit being nul terminated
 StringRef::StringRef(char const *lit) {
   if (!lit || !lit[0]) {
     StringData_ = detail::emptyStringSingleton();
@@ -118,9 +107,9 @@ StringRef::StringRef(char const *lit) {
     return;
   }
 
-  StringData_ = getAllocator().allocateObject<String>(lit);
+  StringData_ = getAllocator().allocateObject<StringBase>(lit);
   Offset_ = 0;
-  Length_ = StringData_->length();
+  Length_ = ::strlen(lit);
 }
 
 StringRef::StringRef(char16_t const *u16_str) {
@@ -139,12 +128,14 @@ StringRef::StringRef(char16_t const *u16_str) {
   temp.StringData_ = nullptr;
 }
 
-StringRef::StringRef(size_t const s, char const c) : StringData_(getAllocator().allocateObject<String>(s, c)), Offset_(0), Length_(s) {}
+StringRef::StringRef(size_t const s, char const c) : StringData_(getAllocator().allocateObject<StringBase>(s, c)), Offset_(0), Length_(s) {}
 
-StringRef::StringRef(String *data, size_t offset, size_t length)
+StringRef::StringRef(StringBase *data, size_t offset, size_t length)
     : StringData_(data ? data : detail::emptyStringSingleton()), Offset_(offset), Length_(length) {
-  if (!length)
-    Length_ = StringData_->length() > offset ? StringData_->length() - offset : 0;
+  if (!length) {
+    const size_t len = ::strlen(data->ptr());
+    Length_ = len > offset ? len - offset : 0;
+  }
   StringData_->increment();
 }
 
@@ -161,8 +152,8 @@ StringRef &StringRef::operator=(StringRef &&other) noexcept {
   if (StringData_) {
     StringData_->decrement();
     if (StringData_->referenceCount() == 0) {
-      StringData_->~String();
-      getAllocator().deallocateObject<String>(StringData_);
+      StringData_->~StringBase();
+      getAllocator().deallocateObject<StringBase>(StringData_);
     }
   }
 
@@ -182,8 +173,8 @@ StringRef::~StringRef() {
 
   StringData_->decrement();
   if (StringData_->referenceCount() == 0) {
-    StringData_->~String();
-    getAllocator().deallocateObject<String>(StringData_);
+    StringData_->~StringBase();
+    getAllocator().deallocateObject<StringBase>(StringData_);
     StringData_ = nullptr;
   }
 }
@@ -229,8 +220,7 @@ void StringRef::expand(size_t const new_size) {
   StringData_->is_heap = true;
   Offset_ = 0;
 
-  StringData_->setLen(old_len);
-  StringData_->terminate();
+  StringData_->ptr()[Length_] = 0;
 }
 
 void StringRef::reserve(size_t const new_capacity) {
@@ -259,8 +249,8 @@ void StringRef::erase(size_t const at) {
 
   ::memmove(data() + at, data() + at + 1, len() - at - 1);
   --Length_;
-  StringData_->setLen(Offset_ + Length_);
-  StringData_->terminate();
+
+  StringData_->ptr()[Length_] = 0;
 }
 
 StringRef &StringRef::operator+=(StringRef const &other) {
@@ -275,8 +265,7 @@ StringRef &StringRef::operator+=(StringRef const &other) {
 
   ::memcpy(StringData_->ptr() + Offset_ + Length_, other.data(), other.Length_);
   Length_ = new_len;
-  StringData_->setLen(Offset_ + Length_);
-  StringData_->terminate();
+  StringData_->ptr()[Length_] = 0;
 
   return *this;
 }
@@ -292,8 +281,7 @@ StringRef &StringRef::operator+=(char c) {
 
   StringData_->ptr()[Offset_ + Length_] = c;
   ++Length_;
-  StringData_->setLen(Offset_ + Length_);
-  StringData_->terminate();
+  StringData_->ptr()[Length_] = 0;
 
   return *this;
 }
@@ -430,11 +418,10 @@ StringRef StringRef::substrCopy(size_t start, size_t end) const {
   if (copy_len == 0)
     return {};
 
-  String *ret = getAllocator().allocateObject<String>(copy_len);
+  StringBase *ret = getAllocator().allocateObject<StringBase>(copy_len);
 
   ::memcpy(ret->ptr(), data() + start, copy_len);
-  ret->setLen(copy_len);
-  ret->terminate();
+  ret->ptr()[copy_len] = 0;
 
   return StringRef(ret);
 }
@@ -473,14 +460,13 @@ StringRef StringRef::fromUtf16(char16_t const *src) {
 
   size_t utf8_len = simdutf::utf8_length_from_utf16(src, src_len);
 
-  String *ret_data = getAllocator().allocateObject<String>(utf8_len);
+  StringBase *ret_data = getAllocator().allocateObject<StringBase>(utf8_len);
   char *dest = ret_data->ptr();
 
   size_t written = simdutf::convert_utf16_to_utf8(src, src_len, dest);
   assert(written == utf8_len);
 
-  ret_data->setLen(utf8_len);
-  ret_data->terminate();
+  ret_data->ptr()[utf8_len] = 0;
 
   return StringRef(ret_data);
 }
@@ -489,15 +475,15 @@ void StringRef::detach() {
   if (!StringData_)
     return;
 
-  size_t copy_len = Length_ > 0 ? Length_ : (StringData_->length() - Offset_);
+  const size_t len = ::strlen(StringData_->ptr());
+  const size_t copy_len = Length_ > 0 ? Length_ : (len - Offset_);
 
-  String *s = getAllocator().allocateObject<String>(copy_len);
+  StringBase *s = getAllocator().allocateObject<StringBase>(copy_len);
 
   if (copy_len > 0)
     ::memcpy(s->ptr(), StringData_->ptr() + Offset_, copy_len);
 
-  s->setLen(copy_len);
-  s->terminate();
+  s->ptr()[copy_len] = 0;
 
   StringData_->decrement();
   StringData_ = s;

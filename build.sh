@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+PROJECT_ROOT="$(pwd)"
 DEBUG=0
 CLEAN_BUILD=false
 RUN_TESTS=false
@@ -38,25 +39,27 @@ if [[ "$RUN_TESTS" == true ]]; then
           -DCMAKE_BUILD_TYPE=Debug \
           -DCMAKE_CXX_FLAGS="-fsanitize=address -g" \
           -DCMAKE_OSX_SYSROOT="$(xcrun --show-sdk-path)" \
-          -DBUILD_TESTS=ON ..
+          -DBUILD_TESTS=ON .. || exit 1
 else
     cmake -DCMAKE_C_COMPILER=clang \
           -DCMAKE_CXX_COMPILER=clang++ \
           -DCMAKE_BUILD_TYPE=Debug \
           -DCMAKE_CXX_FLAGS="-fsanitize=address -g" \
-          -DCMAKE_OSX_SYSROOT="$(xcrun --show-sdk-path)" ..
+          -DCMAKE_OSX_SYSROOT="$(xcrun --show-sdk-path)" .. || exit 1
 fi
 
 make || exit 1
 
 if [[ "$RUN_TESTS" == true ]]; then
-    ASAN_OPTIONS=detect_leaks="$DEBUG" ./mylang_tests "${TEST_ARGS[@]}"
+    ASAN_OPTIONS=detect_leaks="$DEBUG" \
+        "$PROJECT_ROOT/build/mylang_tests" "${TEST_ARGS[@]}"
 fi
 
 if [[ "$RUN_MAIN" == true ]]; then
     if [[ ${#MAIN_ARGS[@]} -eq 0 ]]; then
-        echo "usage: ./test.sh run <file>"
+        echo "usage: ./build.sh run <file>"
         exit 1
     fi
-    ASAN_OPTIONS=detect_leaks="$DEBUG" ./mylang "${MAIN_ARGS[@]}"
+    ASAN_OPTIONS=detect_leaks="$DEBUG" \
+        "$PROJECT_ROOT/build/mylang" "${MAIN_ARGS[@]}"
 fi

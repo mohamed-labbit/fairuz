@@ -85,7 +85,7 @@ TEST(NativePrint, TwoArgs_DoesNotCrash) {
 
 TEST(NativeStr, NoArgs_ReturnsEmpty) { EXPECT_TRUE(IS_STRING(call0(nativeStr))); }
 
-TEST(NativeStr, NullArgv_ReturnsNil) { EXPECT_TRUE(IS_NIL(nativeStr(1, nullptr))); }
+TEST(NativeStr, NullArgv_ReturnsNil) { EXPECT_TRUE(AS_STRING(nativeStr(1, nullptr))->str.empty()); }
 
 TEST(NativeStr, Integer) {
   Value r = call(nativeStr, {MAKE_INTEGER(42)});
@@ -362,9 +362,17 @@ TEST(NativeSlice, ReturnIsNewList_NotAlias) {
   EXPECT_EQ(AS_LIST(r)->elements.size(), 1u);
 }
 
-TEST(NativeList, NoArgs_ReturnsNil) { EXPECT_TRUE(IS_NIL(call0(nativeList))); }
+TEST(NativeList, NoArgs_ReturnsEmpty) { 
+    Value r = call0(nativeList);
+    EXPECT_TRUE(IS_LIST(r) && AS_LIST(r)->elements.empty()); 
+}
 
-TEST(NativeList, OneArg_ReturnsNil) { EXPECT_TRUE(IS_NIL(call(nativeList, {MAKE_INTEGER(1)}))); }
+TEST(NativeList, OneArg) { 
+    Value v = MAKE_INTEGER(1);
+    Value r = call(nativeList, {v});
+    EXPECT_TRUE(IS_LIST(r)); 
+    EXPECT_EQ(AS_LIST(r)->elements[0], v);
+}
 
 TEST(NativeList, TwoArgs_CreatesList) {
   Value r = call(nativeList, {MAKE_INTEGER(1), MAKE_INTEGER(2)});
@@ -480,7 +488,12 @@ TEST(NativeAbs, NilArg_ReturnsNil) { EXPECT_TRUE(IS_NIL(call(nativeAbs, {NIL_VAL
 
 TEST(NativeMin, NoArgs_ReturnsNil) { EXPECT_TRUE(IS_NIL(call0(nativeMin))); }
 
-TEST(NativeMin, OneArg_ReturnsNil) { EXPECT_TRUE(IS_NIL(call(nativeMin, {MAKE_INTEGER(1)}))); }
+TEST(NativeMin, OneArg_ReturnsArg) {
+  srand(static_cast<unsigned>(time(nullptr)));
+  Value n = MAKE_INTEGER(static_cast<int64_t>(rand()));
+  Value result = nativeMin(1, &n);
+  EXPECT_EQ(AS_INTEGER(result), AS_INTEGER(n));
+}
 
 TEST(NativeMin, TwoPositiveIntegers) {
   Value r = call(nativeMin, {MAKE_INTEGER(3), MAKE_INTEGER(7)});
@@ -504,11 +517,16 @@ TEST(NativeMin, NegativeValues) {
   EXPECT_EQ(AS_INTEGER(r), -5);
 }
 
-TEST(NativeMin, StringFirstArg_ReturnsNil) { EXPECT_TRUE(IS_NIL(call(nativeMin, {makeStr("a"), makeStr("b")}))); }
+TEST(NativeMin, StringFirstArg_ReturnsNil) { EXPECT_EQ(AS_STRING(call(nativeMin, {makeStr("a"), makeStr("b")}))->str, MAKE_OBJ_STRING("a")->str); }
 
 TEST(NativeMax, NoArgs_ReturnsNil) { EXPECT_TRUE(IS_NIL(call0(nativeMax))); }
 
-TEST(NativeMax, OneArg_ReturnsNil) { EXPECT_TRUE(IS_NIL(call(nativeMax, {MAKE_INTEGER(1)}))); }
+TEST(NativeMax, OneArg_ReturnsArg) {
+  srand(static_cast<unsigned>(time(nullptr)));
+  Value n = MAKE_INTEGER(static_cast<int64_t>(rand()));
+  Value result = nativeMax(1, &n);
+  EXPECT_EQ(AS_INTEGER(result), AS_INTEGER(n));
+}
 
 TEST(NativeMax, TwoPositiveIntegers) {
   Value r = call(nativeMax, {MAKE_INTEGER(3), MAKE_INTEGER(7)});
@@ -532,7 +550,7 @@ TEST(NativeMax, MixedFloatAndInteger) {
   EXPECT_DOUBLE_EQ(AS_DOUBLE(r), 3.5);
 }
 
-TEST(NativeMax, StringFirstArg_ReturnsNil) { EXPECT_TRUE(IS_NIL(call(nativeMax, {makeStr("a"), makeStr("b")}))); }
+TEST(NativeMax, StringFirstArg_ReturnsArg) { EXPECT_EQ(AS_STRING(call(nativeMax, {makeStr("a"), makeStr("b")}))->str, MAKE_OBJ_STRING("b")->str); }
 
 #define STUB_TEST(FnName, ...)                                                                                                                       \
   TEST(Stub_##FnName, DoesNotCrash_ReturnsNil) {                                                                                                     \
