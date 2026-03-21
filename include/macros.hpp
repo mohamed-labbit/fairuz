@@ -1,7 +1,6 @@
 #ifndef MACROS_HPP
 #define MACROS_HPP
 
-#include <limits>
 #include <string>
 
 namespace mylang {
@@ -28,14 +27,14 @@ std::string const MAGENTA = "\033[35m";
 std::string const CYAN = "\033[36m";
 std::string const GRAY = "\033[90m";
 
-} // Color
+} // namespace Color
 
 struct SourceLocation {
-    uint32_t line { 0 };
-    uint16_t column { 0 };
-    uint16_t length { 0 };
+  uint32_t line{0};
+  uint16_t column{0};
+  uint16_t length{0};
 };
 
-} // mylang
+} // namespace mylang
 
 #endif // MACROS_HPP

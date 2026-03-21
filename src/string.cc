@@ -1,676 +1,508 @@
+/// string.cc
+
 #include "../include/string.hpp"
 #include "../include/util.hpp"
 
-#include <arm_neon.h>
 #include <cassert>
+#include <charconv>
 #include <simdutf.h>
 
 namespace mylang {
 
-String::String(String const& other)
-    : is_heap(other.isHeap())
-    , RefCount(1)
-{
-    setLen(other.length());
+namespace detail {
 
-    if (other.isInlined())
-        ::memcpy(storage_.sso, other.storage_.sso, (length() + 1) * sizeof(char));
-    else {
-        storage_.heap.cap = other.storage_.heap.cap;
-        storage_.heap.ptr = getStringAllocator().allocateArray<char>(storage_.heap.cap);
+static char g_empty_string_storage[sizeof(String)];
+static String *g_empty_string = nullptr;
 
-        ::memcpy(storage_.heap.ptr, other.storage_.heap.ptr, (length() + 1) * sizeof(char));
-    }
+String *emptyStringSingleton() noexcept {
+  if (__builtin_expect(g_empty_string != nullptr, 1))
+    return g_empty_string;
+
+  g_empty_string = new (g_empty_string_storage) String();
+  for (int i = 0; i < 1024; ++i)
+    g_empty_string->increment();
+
+  return g_empty_string;
 }
 
-String::String(size_t const s)
-{
-    if (s < SSO_SIZE) {
-        is_heap = false;
-        setLen(0);
-    } else {
-        is_heap = true;
-        setLen(0);
-        storage_.heap.cap = s + 1;
-        storage_.heap.ptr = getStringAllocator().allocateArray<char>(storage_.heap.cap);
-    }
-    terminate();
+} // namespace detail
+
+String::String(size_t const s) : is_heap(s >= SSO_SIZE), len_(0) {
+  if (s < SSO_SIZE) {
+    storage_.sso[0] = BUFFER_END;
+  } else {
+    storage_.heap.cap = s + 1;
+    storage_.heap.ptr = getAllocator().allocateArray<char>(storage_.heap.cap);
+    storage_.heap.ptr[0] = BUFFER_END;
+  }
 }
 
-String::String(size_t const s, char const c)
-{
-    if (s < SSO_SIZE) {
-        is_heap = false;
-        ::memset(storage_.sso, c, s);
-        setLen(s);
-    } else {
-        is_heap = true;
-        storage_.heap.cap = s + 1;
-        storage_.heap.ptr = getStringAllocator().allocateArray<char>(storage_.heap.cap);
-        ::memset(storage_.heap.ptr, c, s);
-        setLen(s);
-    }
-    terminate();
+String::String(size_t const s, char const c) : is_heap(s >= SSO_SIZE), len_(s) {
+  if (s < SSO_SIZE) {
+    ::memset(storage_.sso, c, s);
+    storage_.sso[s] = BUFFER_END;
+  } else {
+    storage_.heap.cap = s + 1;
+    storage_.heap.ptr = getAllocator().allocateArray<char>(storage_.heap.cap);
+    ::memset(storage_.heap.ptr, c, s);
+    storage_.heap.ptr[s] = BUFFER_END;
+  }
 }
 
-String::String(char const* s, size_t n)
-{
-    if (!s || n == 0) {
-        is_heap = false;
-        setLen(0);
-        terminate();
-        return;
-    }
+String::String(char const *s, size_t n) {
+  if (!s || n == 0) {
+    is_heap = false;
+    len_ = 0;
+    storage_.sso[0] = BUFFER_END;
+    return;
+  }
 
-    if (n < SSO_SIZE) {
-        is_heap = false;
-        setLen(n);
-        ::memcpy(storage_.sso, s, n * sizeof(char));
-    } else {
-        is_heap = true;
-        storage_.heap.cap = n + 1;
-        storage_.heap.ptr = getStringAllocator().allocateArray<char>(storage_.heap.cap);
-        ::memcpy(storage_.heap.ptr, s, n * sizeof(char));
-    }
-    terminate();
+  is_heap = (n >= SSO_SIZE);
+  len_ = n;
+
+  if (!is_heap) {
+    ::memcpy(storage_.sso, s, n);
+    storage_.sso[n] = BUFFER_END;
+  } else {
+    storage_.heap.cap = n + 1;
+    storage_.heap.ptr = getAllocator().allocateArray<char>(storage_.heap.cap);
+    ::memcpy(storage_.heap.ptr, s, n);
+    storage_.heap.ptr[n] = BUFFER_END;
+  }
 }
 
-String::String(char const* s)
-{
-    if (!s) {
-        len_ = 0;
-        storage_.sso[0] = BUFFER_END;
-        return;
-    }
+String::String(char const *s) {
+  if (!s) {
+    is_heap = false;
+    len_ = 0;
+    storage_.sso[0] = BUFFER_END;
+    return;
+  }
 
-    size_t n = ::strlen(s);
+  size_t n = ::strlen(s);
+  is_heap = (n >= SSO_SIZE);
+  len_ = n;
 
-    if (n < SSO_SIZE) {
-        is_heap = false;
-        setLen(n);
-        ::memcpy(storage_.sso, s, n * sizeof(char));
-    } else {
-        is_heap = true;
-        setLen(n);
-        storage_.heap.cap = n + 1;
-        storage_.heap.ptr = getStringAllocator().allocateArray<char>(storage_.heap.cap);
-        ::memcpy(storage_.heap.ptr, s, (n + 1) * sizeof(char));
-    }
-    terminate();
+  if (!is_heap) {
+    ::memcpy(storage_.sso, s, n + 1);
+  } else {
+    storage_.heap.cap = n + 1;
+    storage_.heap.ptr = getAllocator().allocateArray<char>(storage_.heap.cap);
+    ::memcpy(storage_.heap.ptr, s, n + 1);
+  }
 }
 
-bool String::operator==(String const& other) const noexcept
-{
-    if (length() != other.length())
-        return false;
-    if (length() == 0)
-        return true;
-
-    return ::memcmp(ptr(), other.ptr(), length() * sizeof(char)) == 0;
-}
-
-StringRef::StringRef()
-    : StringData_(createEmpty())
-{
-}
-
-StringRef::StringRef(size_t const s)
-    : StringData_(getStringAllocator().allocateObject<String>(s))
-{
-}
-
-StringRef::StringRef(StringRef const& other, size_t offset, size_t length)
-    : StringData_(other.get())
-    , Offset_(other.Offset_ + offset)
-    , Length_(length)
-{
-    if (Length_ == 0)
-        Length_ = other.Length_ - offset;
-
-    if (StringData_)
-        StringData_->increment();
-}
-
-StringRef::StringRef(char const* lit)
-    : StringData_(getStringAllocator().allocateObject<String>(lit))
-{
-    Length_ = StringData_->length();
-}
-
-StringRef::StringRef(char16_t const* u16_str)
-{
-    if (!u16_str || !u16_str[0]) {
-        StringData_ = createEmpty();
-        Offset_ = 0;
-        Length_ = 0;
-    } else {
-        StringRef temp = fromUtf16(u16_str);
-        StringData_ = temp.StringData_;
-        Offset_ = temp.Offset_;
-        Length_ = temp.Length_;
-        if (StringData_)
-            StringData_->increment();
-        temp.StringData_ = nullptr; // Prevent temp's destructor from decrementing
-    }
-}
-
-StringRef::StringRef(size_t const s, char const c)
-    : StringData_(getStringAllocator().allocateObject<String>(s, c))
-{
-}
-
-StringRef::StringRef(String* data, size_t offset, size_t length)
-    : StringData_(data ? data : createEmpty())
-    , Offset_(offset)
-    , Length_(length)
-{
-    if (StringData_)
-        StringData_->increment();
-
-    if (!Length_)
-        Length_ = StringData_->length() - offset;
-}
-
-StringRef::StringRef(StringRef&& other) noexcept
-    : StringData_(other.StringData_)
-    , Offset_(other.Offset_)
-    , Length_(other.Length_)
-{
-    other.StringData_ = nullptr;
-    other.Offset_ = 0;
-    other.Length_ = 0;
-}
-
-StringRef& StringRef::operator=(StringRef&& other) noexcept
-{
-    if (this == &other)
-        return *this;
-
-    // Clean up current data
-    if (StringData_) {
-        StringData_->decrement();
-        if (StringData_->referenceCount() == 0) {
-            StringData_->~String();
-            getStringAllocator().deallocateObject<String>(StringData_);
-        }
-    }
-
-    // Move from other
-    StringData_ = other.StringData_;
-    Offset_ = other.Offset_;
-    Length_ = other.Length_;
-
-    other.StringData_ = nullptr;
-    other.Offset_ = 0;
-    other.Length_ = 0;
-
-    return *this;
-}
-
-StringRef::~StringRef()
-{
-    if (StringData_) {
-        /// NOTE: this will only be deallocated if it's the last pointer in the arena
-        /// we should probably make a better allocator for that ...
-        StringData_->decrement();
-        if (StringData_->referenceCount() == 0) {
-            StringData_->~String(); // deallocate if possible the string array
-            getStringAllocator().deallocateObject<String>(StringData_);
-            StringData_ = nullptr;
-        }
-    }
-}
-
-StringRef& StringRef::operator=(StringRef const& other)
-{
-    if (this == &other)
-        return *this;
-
-    // Decrement old reference
-    if (StringData_)
-        StringData_->decrement();
-
-    // Assign new reference
-    StringData_ = other.get();
-    if (StringData_)
-        StringData_->increment();
-
-    Offset_ = other.Offset_;
-    Length_ = other.Length_;
-
-    return *this;
-}
-
-void StringRef::expand(size_t const new_size)
-{
-    ensureUnique();
-
-    if (new_size <= cap())
-        return;
-
-    char const* old_ptr = data();
-    size_t old_len = len();
-    size_t new_capacity;
-
-    if (cap() < 1024)
-        new_capacity = std::max(new_size + 1, cap() * 2);
-    else
-        new_capacity = std::max(new_size + 1, cap() + cap() / 2);
-
-    char* new_ptr = getStringAllocator().allocateArray<char>(new_capacity);
-
-    // Copy old data
-    if (old_ptr && old_len > 0)
-        ::memcpy(new_ptr, old_ptr, old_len * sizeof(char));
-
-    if (StringData_->isHeap() && StringData_->storage_.heap.ptr)
-        getStringAllocator().deallocateArray<char>(StringData_->storage_.heap.ptr, StringData_->storage_.heap.cap);
-
-    // Now set heap storage
-    StringData_->storage_.heap.ptr = new_ptr;
-    StringData_->storage_.heap.cap = new_capacity;
-    StringData_->is_heap = true;
-
-    // After expansion, we're working with a fresh buffer, so reset offset
-    Offset_ = 0;
-
-    // Set the actual length in StringData_
-    StringData_->setLen(old_len);
-    StringData_->terminate();
-}
-
-// Reserve capacity (doesn't change length, only capacity)
-void StringRef::reserve(size_t const new_capacity)
-{
-    if (new_capacity <= cap())
-        return;
-
-    expand(new_capacity);
-}
-
-// Erase character at position - use view manipulation when possible
-void StringRef::erase(size_t const at)
-{
-    if (empty() || at >= len())
-        return;
-
-    // Optimization: if erasing from the beginning, just adjust offset
-    if (at == 0) {
-        Offset_++;
-        Length_--;
-        return;
-    }
-
-    // Optimization: if erasing from the end, just adjust length
-    if (at == Length_ - 1) {
-        Length_--;
-        return;
-    }
-
-    // Middle deletion requires actual modification
-    ensureUnique();
-
-    if (!data())
-        return;
-
-    // Shift remaining characters left
-    ::memmove(data() + at, data() + at + 1, (len() - at - 1) * sizeof(char));
-
-    // Update view length
-    Length_--;
-
-    // Update underlying data length
-    StringData_->setLen(Offset_ + Length_);
-    StringData_->terminate();
-}
-
-// Append another StringRef
-StringRef& StringRef::operator+=(StringRef const& other)
-{
-    if (other.empty())
-        return *this;
-
-    ensureUnique();
-
-    size_t new_len = Length_ + other.Length_;
-
-    // Ensure capacity
-    if (Offset_ + new_len >= cap())
-        expand(new_len);
-
-    // Copy data to end of our view
-    char* dst = StringData_->ptr() + Offset_ + Length_;
-    ::memcpy(dst, other.data(), other.Length_ * sizeof(char));
-
-    // Update view length
-    Length_ = new_len;
-
-    // Update underlying data length
-    StringData_->setLen(Offset_ + Length_);
-    StringData_->terminate();
-
-    return *this;
-}
-
-StringRef& StringRef::operator+=(char c)
-{
-    if (!StringData_)
-        return *this;
-
-    ensureUnique();
-
-    size_t total_len = Offset_ + Length_;
-
-    // Ensure capacity (need space for char + null)
-    if (total_len + 1 >= StringData_->cap())
-        expand(Length_ + 1);
-
-    char* ptr = StringData_->ptr();
-
-    // Append character at end of our view
-    ptr[Offset_ + Length_] = c;
-    Length_++;
-
-    // Update underlying data length
-    StringData_->setLen(Offset_ + Length_);
-    StringData_->terminate();
-
-    return *this;
-}
-
-// Bounds-checked access (const)
-char StringRef::operator[](size_t const i) const
-{
-    if (!StringData_ || !data())
-        throw std::runtime_error("StringRef::operator[]: null string data");
-
-    if (i >= Length_)
-        throw std::out_of_range("StringRef::operator[]: index out of bounds");
-
-    return (*StringData_)[i + Offset_];
-}
-
-// Bounds-checked access (non-const)
-char& StringRef::operator[](size_t const i)
-{
-    ensureUnique();
-    if (!StringData_ || !data())
-        throw std::runtime_error("StringRef::operator[]: null string data");
-
-    if (i >= Length_)
-        throw std::out_of_range("StringRef::operator[]: index out of bounds");
-
-    return (*StringData_)[i + Offset_];
-}
-
-// Safe access with bounds checking (always checked)
-char StringRef::at(size_t const i) const
-{
-    if (!StringData_ || !data())
-        throw std::runtime_error("StringRef::at: null string data");
-
-    if (i >= Length_)
-        throw std::out_of_range("StringRef::at: index out of bounds");
-
-    return (*StringData_)[i + Offset_];
-}
-
-char& StringRef::at(size_t const i)
-{
-    ensureUnique();
-    if (!StringData_ || !data())
-        throw std::runtime_error("StringRef::at: null string data");
-
-    if (i >= Length_)
-        throw std::out_of_range("StringRef::at: index out of bounds");
-
-    return (*StringData_)[i + Offset_];
-}
-
-// Clear the string - use view manipulation exclusively
-void StringRef::clear() noexcept
-{
-    // Always just reset the view, never modify underlying data
-    // This is safe even for exclusively owned strings
-    Length_ = 0;
-    Offset_ = 0;
-}
-
-// Resize capacity (preserves content)
-void StringRef::resize(size_t const s)
-{
-    ensureUnique();
-    if (s > cap())
-        expand(s);
-}
-
-// Find a character - purely view-based
-bool StringRef::find(char const c) const noexcept
-{
-    if (!StringData_ || !data())
-        return false;
-
-    char const* p = data();
-    char const* end = data() + Length_;
-
-    while (p < end && *p != c)
-        ++p;
-
-    return p < end;
-}
-
-// Find substring - purely view-based
-bool StringRef::find(StringRef const& s) const noexcept
-{
-    if (!StringData_ || !data() || s.empty())
-        return false;
-
-    if (s.len() > len())
-        return false;
-
-    size_t search_len = s.len();
-    size_t max_start = len() - search_len;
-
-    for (size_t i = 0; i <= max_start; ++i)
-        if (::memcmp(data() + i, s.data(), search_len * sizeof(char)) == 0)
-            return true;
-
+bool String::operator==(String const &other) const noexcept {
+  if (len_ != other.len_)
     return false;
+  if (len_ == 0)
+    return true;
+  return ::memcmp(ptr(), other.ptr(), len_) == 0;
 }
 
-// Find position of a character - purely view-based
-std::optional<size_t> StringRef::find_pos(char const c) const noexcept
-{
-    if (!StringData_ || !data())
-        return std::nullopt;
+StringRef::StringRef(size_t const s) : StringData_(getAllocator().allocateObject<String>(s)), Offset_(0), Length_(0) {}
 
-    char const* p = data();
-    char const* end = data() + Length_;
-
-    while (p < end && *p != c)
-        ++p;
-
-    return (p < end) ? std::optional<size_t>(p - data()) : std::nullopt;
+StringRef::StringRef(StringRef const &other, size_t offset, size_t length)
+    : StringData_(other.StringData_), Offset_(other.Offset_ + offset),
+      Length_(length ? length : (other.Length_ > offset ? other.Length_ - offset : 0)) {
+  if (StringData_)
+    StringData_->increment();
 }
 
-// Truncate string - purely view-based
-StringRef& StringRef::truncate(size_t const s)
-{
-    if (s >= Length_)
-        return *this;
+StringRef::StringRef(char const *lit) {
+  if (!lit || !lit[0]) {
+    StringData_ = detail::emptyStringSingleton();
+    StringData_->increment();
+    Offset_ = 0;
+    Length_ = 0;
+    return;
+  }
 
-    // Simply adjust the view length
-    Length_ = s;
+  StringData_ = getAllocator().allocateObject<String>(lit);
+  Offset_ = 0;
+  Length_ = StringData_->length();
+}
+
+StringRef::StringRef(char16_t const *u16_str) {
+  if (!u16_str || !u16_str[0]) {
+    StringData_ = detail::emptyStringSingleton();
+    StringData_->increment();
+    Offset_ = 0;
+    Length_ = 0;
+    return;
+  }
+
+  StringRef temp = fromUtf16(u16_str);
+  StringData_ = temp.StringData_;
+  Offset_ = temp.Offset_;
+  Length_ = temp.Length_;
+  temp.StringData_ = nullptr;
+}
+
+StringRef::StringRef(size_t const s, char const c) : StringData_(getAllocator().allocateObject<String>(s, c)), Offset_(0), Length_(s) {}
+
+StringRef::StringRef(String *data, size_t offset, size_t length)
+    : StringData_(data ? data : detail::emptyStringSingleton()), Offset_(offset), Length_(length) {
+  if (!length)
+    Length_ = StringData_->length() > offset ? StringData_->length() - offset : 0;
+  StringData_->increment();
+}
+
+StringRef::StringRef(StringRef &&other) noexcept : StringData_(other.StringData_), Offset_(other.Offset_), Length_(other.Length_) {
+  other.StringData_ = nullptr;
+  other.Offset_ = 0;
+  other.Length_ = 0;
+}
+
+StringRef &StringRef::operator=(StringRef &&other) noexcept {
+  if (this == &other)
     return *this;
-}
 
-StringRef StringRef::substr(std::optional<size_t> start, std::optional<size_t> end) const
-{
-    if (empty())
-        return "";
-
-    size_t start_val = start.value_or(0);
-    size_t end_val = end.value_or(len());
-
-    if (start_val >= len())
-        throw std::out_of_range("StringRef::substr: start index out of range");
-
-    if (end_val > len())
-        end_val = len();
-
-    if (end_val < start_val)
-        throw std::invalid_argument("StringRef::substr: end must be >= start");
-
-    size_t ret_len = end_val - start_val;
-    String* ret_data = getStringAllocator().allocateObject<String>();
-
-    if (ret_len < SSO_SIZE) {
-        ret_data->is_heap = false;
-        ::memcpy(ret_data->storage_.sso, data() + start_val, ret_len * sizeof(char));
-    } else {
-        ret_data->is_heap = true;
-        ret_data->storage_.heap.cap = ret_len + 1;
-        ret_data->storage_.heap.ptr = getStringAllocator().allocateArray<char>(ret_data->storage_.heap.cap);
-        ::memcpy(ret_data->storage_.heap.ptr, data() + start_val, ret_len * sizeof(char));
+  if (StringData_) {
+    StringData_->decrement();
+    if (StringData_->referenceCount() == 0) {
+      StringData_->~String();
+      getAllocator().deallocateObject<String>(StringData_);
     }
+  }
 
-    ret_data->setLen(ret_len);
-    ret_data->terminate();
+  StringData_ = other.StringData_;
+  Offset_ = other.Offset_;
+  Length_ = other.Length_;
+  other.StringData_ = nullptr;
+  other.Offset_ = 0;
+  other.Length_ = 0;
 
-    return StringRef(ret_data);
+  return *this;
 }
 
-// Zero-copy slicing: returns a view into the existing string
-StringRef StringRef::slice(size_t start, std::optional<size_t> end) const
-{
-    if (!StringData_ || Length_ == 0)
-        return "";
+StringRef::~StringRef() {
+  if (!StringData_)
+    return;
 
-    size_t const src_len = Length_;
-
-    if (start >= src_len)
-        throw std::out_of_range("StringRef::slice: start index out of range");
-
-    size_t end_val = end.value_or(src_len - 1);
-
-    if (end_val >= src_len)
-        end_val = src_len - 1;
-
-    if (end_val < start)
-        throw std::invalid_argument("StringRef::slice: end must be >= start");
-
-    size_t slice_len = end_val - start + 1;
-
-    return StringRef(*this, start, slice_len);
+  StringData_->decrement();
+  if (StringData_->referenceCount() == 0) {
+    StringData_->~String();
+    getAllocator().deallocateObject<String>(StringData_);
+    StringData_ = nullptr;
+  }
 }
 
-// Convert to double - purely view-based
-double StringRef::toDouble(size_t* pos) const
-{
-    if (empty() || len() == 0)
-        throw std::invalid_argument("StringRef::toDouble: empty string");
-
-    // Use std::stod on the UTF-8 string
-    size_t _pos = 0;
-    double result;
-
-    try {
-        result = std::stod(std::string(data()), &_pos);
-    } catch (std::invalid_argument const&) {
-        throw std::invalid_argument("StringRef::toDouble: invalid number format");
-    } catch (std::out_of_range const&) {
-        throw std::out_of_range("StringRef::toDouble: number out of range");
-    }
-
-    // Convert UTF-8 position back to UTF-16 position if requested
-    // This is approximate and may not be exact for multi-byte characters
-    if (pos)
-        *pos = _pos;
-
-    return result;
-}
-
-StringRef StringRef::fromUtf16(char16_t const* src)
-{
-    if (!src || !src[0])
-        return "";
-
-    char16_t const* p = src;
-    while (*p++)
-        ;
-    size_t src_len = p - src - 1;
-    // Validate and get exact UTF-16 length in one pass
-    simdutf::result validation = simdutf::validate_utf16_with_errors(src, src_len);
-
-    if (validation.error != simdutf::error_code::SUCCESS)
-        throw std::runtime_error("Invalid UTF-8 at position " + std::to_string(validation.count));
-
-    size_t utf8_len = simdutf::utf8_length_from_utf16(src, src_len);
-
-    // Allocate String object
-    String* ret_data = getStringAllocator().allocateObject<String>();
-    char* dest;
-
-    if (utf8_len < SSO_SIZE) {
-        ret_data->is_heap = false;
-        dest = ret_data->storage_.sso;
-    } else {
-        ret_data->is_heap = true;
-        ret_data->storage_.heap.cap = utf8_len + 1;
-        ret_data->storage_.heap.ptr = getStringAllocator().allocateArray<char>(utf8_len + 1);
-        dest = ret_data->storage_.heap.ptr;
-    }
-
-    // Convert UTF-8 to UTF-16
-    size_t written = simdutf::convert_utf16_to_utf8(src, src_len, dest);
-
-    assert(written == utf8_len);
-
-    ret_data->setLen(utf8_len);
-    ret_data->terminate();
-    return StringRef(ret_data);
-}
-
-StringRef& StringRef::trimWhitespace(std::optional<bool const> leading, std::optional<bool const> trailing)
-{
-    bool const trim_leading = leading.value_or(true);
-    bool const trim_trailing = trailing.value_or(true);
-
-    if (trim_leading)
-        while (Length_ > 0 && util::isWhitespace(data()[0]))
-            ++Offset_, --Length_;
-
-    if (trim_trailing)
-        while (Length_ > 0 && util::isWhitespace(data()[Length_ - 1]))
-            --Length_;
-
+StringRef &StringRef::operator=(StringRef const &other) {
+  if (this == &other)
     return *this;
-}
 
-void StringRef::detach()
-{
-    if (!StringData_)
-        return;
-
-    // Determine slice length
-    size_t copy_len = (Length_ > 0) ? Length_ : (StringData_->length() - Offset_);
-    // Allocate a new string of exactly the required size
-    String* s = getStringAllocator().allocateObject<String>(copy_len);
-
-    // Copy only the relevant portion
-    if (copy_len > 0)
-        ::memcpy(s->ptr(), const_cast<char const*>(StringData_->ptr() + Offset_), copy_len * sizeof(char));
-
-    s->setLen(copy_len);
-    s->terminate();
-
-    // Decrement old reference
+  if (StringData_)
     StringData_->decrement();
 
-    // Update StringRef to point to new data
-    StringData_ = s;
-    Offset_ = 0;
-    Length_ = copy_len;
+  StringData_ = other.StringData_;
+  Offset_ = other.Offset_;
+  Length_ = other.Length_;
+
+  if (StringData_)
+    StringData_->increment();
+
+  return *this;
 }
 
+void StringRef::expand(size_t const new_size) {
+  ensureUnique();
+
+  if (new_size <= cap())
+    return;
+
+  char const *old_ptr = data();
+  size_t old_len = len();
+
+  size_t new_capacity = (cap() < 1024) ? std::max(new_size + 1, cap() * 2) : std::max(new_size + 1, cap() + cap() / 2);
+
+  char *new_ptr = getAllocator().allocateArray<char>(new_capacity);
+
+  if (old_ptr && old_len > 0)
+    ::memcpy(new_ptr, old_ptr, old_len);
+
+  if (StringData_->isHeap() && StringData_->storage_.heap.ptr)
+    getAllocator().deallocateArray<char>(StringData_->storage_.heap.ptr, StringData_->storage_.heap.cap);
+
+  StringData_->storage_.heap.ptr = new_ptr;
+  StringData_->storage_.heap.cap = new_capacity;
+  StringData_->is_heap = true;
+  Offset_ = 0;
+
+  StringData_->setLen(old_len);
+  StringData_->terminate();
 }
+
+void StringRef::reserve(size_t const new_capacity) {
+  if (new_capacity <= cap())
+    return;
+  expand(new_capacity);
+}
+
+void StringRef::erase(size_t const at) {
+  if (empty() || at >= len())
+    return;
+
+  if (at == 0) {
+    ++Offset_;
+    --Length_;
+    return;
+  }
+  if (at == Length_ - 1) {
+    --Length_;
+    return;
+  }
+
+  ensureUnique();
+  if (!data())
+    return;
+
+  ::memmove(data() + at, data() + at + 1, len() - at - 1);
+  --Length_;
+  StringData_->setLen(Offset_ + Length_);
+  StringData_->terminate();
+}
+
+StringRef &StringRef::operator+=(StringRef const &other) {
+  if (other.empty())
+    return *this;
+
+  ensureUnique();
+
+  size_t new_len = Length_ + other.Length_;
+  if (Offset_ + new_len >= cap())
+    expand(new_len);
+
+  ::memcpy(StringData_->ptr() + Offset_ + Length_, other.data(), other.Length_);
+  Length_ = new_len;
+  StringData_->setLen(Offset_ + Length_);
+  StringData_->terminate();
+
+  return *this;
+}
+
+StringRef &StringRef::operator+=(char c) {
+  if (!StringData_)
+    return *this;
+
+  ensureUnique();
+
+  if (Offset_ + Length_ + 1 >= StringData_->cap())
+    expand(Length_ + 1);
+
+  StringData_->ptr()[Offset_ + Length_] = c;
+  ++Length_;
+  StringData_->setLen(Offset_ + Length_);
+  StringData_->terminate();
+
+  return *this;
+}
+
+char StringRef::operator[](size_t const i) const {
+  if (!StringData_ || !data())
+    throw std::runtime_error("StringRef::operator[]: null string data");
+  if (i >= Length_)
+    throw std::out_of_range("StringRef::operator[]: index out of bounds");
+  return (*StringData_)[i + Offset_];
+}
+
+char &StringRef::operator[](size_t const i) {
+  ensureUnique();
+  if (!StringData_ || !data())
+    throw std::runtime_error("StringRef::operator[]: null string data");
+  if (i >= Length_)
+    throw std::out_of_range("StringRef::operator[]: index out of bounds");
+  return (*StringData_)[i + Offset_];
+}
+
+char StringRef::at(size_t const i) const {
+  if (!StringData_ || !data())
+    throw std::runtime_error("StringRef::at: null string data");
+  if (i >= Length_)
+    throw std::out_of_range("StringRef::at: index out of bounds");
+  return (*StringData_)[i + Offset_];
+}
+
+char &StringRef::at(size_t const i) {
+  ensureUnique();
+  if (!StringData_ || !data())
+    throw std::runtime_error("StringRef::at: null string data");
+  if (i >= Length_)
+    throw std::out_of_range("StringRef::at: index out of bounds");
+  return (*StringData_)[i + Offset_];
+}
+
+bool StringRef::find(char const c) const noexcept {
+  if (!StringData_ || !data())
+    return false;
+  char const *p = data();
+  char const *end = p + Length_;
+  while (p < end && *p != c)
+    ++p;
+  return p < end;
+}
+
+bool StringRef::find(StringRef const &s) const noexcept {
+  if (!StringData_ || !data() || s.empty() || s.len() > len())
+    return false;
+  size_t search_len = s.len();
+  size_t max_start = len() - search_len;
+  for (size_t i = 0; i <= max_start; ++i) {
+    if (::memcmp(data() + i, s.data(), search_len) == 0)
+      return true;
+  }
+  return false;
+}
+
+std::optional<size_t> StringRef::find_pos(char const c) const noexcept {
+  if (!StringData_ || !data())
+    return std::nullopt;
+  char const *p = data();
+  char const *end = p + Length_;
+  while (p < end && *p != c)
+    ++p;
+  return (p < end) ? std::optional<size_t>(p - data()) : std::nullopt;
+}
+
+StringRef &StringRef::trimWhitespace(bool leading, bool trailing) noexcept {
+  if (leading) {
+    while (Length_ > 0 && util::isWhitespace(data()[0])) {
+      ++Offset_;
+      --Length_;
+    }
+  }
+
+  if (trailing) {
+    while (Length_ > 0 && util::isWhitespace(data()[Length_ - 1]))
+      --Length_;
+  }
+
+  return *this;
+}
+
+StringRef &StringRef::truncate(size_t const s) noexcept {
+  if (s < Length_)
+    Length_ = s;
+  return *this;
+}
+
+void StringRef::resize(size_t const s) {
+  ensureUnique();
+  if (s > cap())
+    expand(s);
+}
+
+StringRef StringRef::slice(size_t start, size_t end) const {
+  if (!StringData_ || Length_ == 0)
+    return {};
+
+  if (start > Length_) {
+    diagnostic::emit("StringRef::slice: start index out of range");
+    return {};
+  }
+
+  if (end > Length_ || end == SIZE_MAX)
+    end = Length_;
+
+  if (end < start) {
+    diagnostic::emit("StringRef::slice: end must be >= start");
+    return {};
+  }
+
+  return StringRef(*this, start, end - start);
+}
+
+StringRef StringRef::substrCopy(size_t start, size_t end) const {
+  if (!StringData_ || Length_ == 0)
+    return {};
+
+  if (start > Length_)
+    throw std::out_of_range("StringRef::substrCopy: start index out of range");
+
+  if (end > Length_ || end == SIZE_MAX)
+    end = Length_;
+
+  if (end < start)
+    throw std::invalid_argument("StringRef::substrCopy: end must be >= start");
+
+  size_t copy_len = end - start;
+
+  if (copy_len == 0)
+    return {};
+
+  String *ret = getAllocator().allocateObject<String>(copy_len);
+
+  ::memcpy(ret->ptr(), data() + start, copy_len);
+  ret->setLen(copy_len);
+  ret->terminate();
+
+  return StringRef(ret);
+}
+
+double StringRef::toDouble(size_t *pos) const {
+  if (empty())
+    throw std::invalid_argument("StringRef::toDouble: empty string");
+
+  double result{};
+  auto [end_ptr, ec] = std::from_chars(data(), data() + Length_, result);
+
+  if (ec == std::errc::invalid_argument)
+    throw std::invalid_argument("StringRef::toDouble: invalid number format");
+
+  if (ec == std::errc::result_out_of_range)
+    throw std::out_of_range("StringRef::toDouble: number out of range");
+
+  if (pos)
+    *pos = static_cast<size_t>(end_ptr - data());
+
+  return result;
+}
+
+StringRef StringRef::fromUtf16(char16_t const *src) {
+  if (!src || !src[0])
+    return {};
+
+  char16_t const *p = src;
+  while (*p)
+    ++p;
+  size_t src_len = static_cast<size_t>(p - src);
+
+  simdutf::result validation = simdutf::validate_utf16_with_errors(src, src_len);
+  if (validation.error != simdutf::error_code::SUCCESS)
+    throw std::runtime_error("Invalid UTF-16 at code unit " + std::to_string(validation.count));
+
+  size_t utf8_len = simdutf::utf8_length_from_utf16(src, src_len);
+
+  String *ret_data = getAllocator().allocateObject<String>(utf8_len);
+  char *dest = ret_data->ptr();
+
+  size_t written = simdutf::convert_utf16_to_utf8(src, src_len, dest);
+  assert(written == utf8_len);
+
+  ret_data->setLen(utf8_len);
+  ret_data->terminate();
+
+  return StringRef(ret_data);
+}
+
+void StringRef::detach() {
+  if (!StringData_)
+    return;
+
+  size_t copy_len = Length_ > 0 ? Length_ : (StringData_->length() - Offset_);
+
+  String *s = getAllocator().allocateObject<String>(copy_len);
+
+  if (copy_len > 0)
+    ::memcpy(s->ptr(), StringData_->ptr() + Offset_, copy_len);
+
+  s->setLen(copy_len);
+  s->terminate();
+
+  StringData_->decrement();
+  StringData_ = s;
+  Offset_ = 0;
+  Length_ = copy_len;
+}
+
+} // namespace mylang

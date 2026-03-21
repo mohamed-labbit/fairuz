@@ -1,363 +1,366 @@
 #ifndef STRING_HPP
 #define STRING_HPP
 
-#include "allocator.hpp"
-#include "macros.hpp"
+#include "arena.hpp"
+
+#include <ostream>
 
 namespace mylang {
 
-// inline Allocator getStringAllocator()("String allocator");
-
 class String {
-    friend class StringRef;
+  friend class StringRef;
 
 private:
-    union Storage {
-        struct {
-            char* ptr;
-            size_t cap;
-        } heap;
+  union Storage {
+    struct {
+      char *ptr;
+      size_t cap;
+    } heap;
 
-        char sso[SSO_SIZE];
+    char sso[SSO_SIZE];
 
-        Storage()
-            : heap { nullptr, 0 }
-        {
-        }
-    } storage_;
+    Storage() : heap{nullptr, 0} {}
+  } storage_;
 
-    bool is_heap;
-    size_t len_ { 0 };
-    mutable size_t RefCount { 1 };
+  bool is_heap;
+  size_t len_{0};
+  // Atomic refcount — safe to share across threads (relaxed increment,
+  // acq_rel decrement to order the destructor).
+  mutable std::atomic<uint32_t> RefCount{1};
 
 public:
-    String()
-        : is_heap { false }
-    {
-        len_ = 0;
-        storage_.sso[0] = BUFFER_END;
-    }
+  String() : is_heap{false} {
+    len_ = 0;
+    storage_.sso[0] = BUFFER_END;
+  }
 
-    ~String()
-    {
-        if (isHeap())
-            getStringAllocator().deallocateArray<char>(storage_.heap.ptr, storage_.heap.cap);
-    }
+  ~String() {
+    if (isHeap())
+      getAllocator().deallocateArray<char>(storage_.heap.ptr, storage_.heap.cap);
+  }
 
-    size_t length() const noexcept { return len_; }
+  // Non-copyable / non-movable — always managed through StringRef.
+  String(String const &) = delete;
+  String &operator=(String const &) = delete;
 
-    bool isHeap() const noexcept { return is_heap; }
+  static constexpr size_t kSSOSize = SSO_SIZE;
 
-    bool isInlined() const noexcept { return !isHeap(); }
+  size_t length() const noexcept { return len_; }
 
-    char* ptr() noexcept { return isHeap() ? storage_.heap.ptr : storage_.sso; }
+  bool isHeap() const noexcept { return is_heap; }
 
-    char const* ptr() const noexcept { return isHeap() ? storage_.heap.ptr : storage_.sso; }
+  bool isInlined() const noexcept { return !isHeap(); }
 
-    size_t cap() const noexcept { return isHeap() ? (storage_.heap.cap > 0 ? storage_.heap.cap - 1 : 0) /*subtract the nul terminator*/ : SSO_SIZE - 1; }
+  char *ptr() noexcept { return isHeap() ? storage_.heap.ptr : storage_.sso; }
 
-    void setLen(size_t const n)
-    {
-        if (!isHeap() && n > cap())
-            throw std::invalid_argument("String::setLen(unsigned long n = " + std::to_string(n) + ") : invalid length");
+  char const *ptr() const noexcept { return isHeap() ? storage_.heap.ptr : storage_.sso; }
 
-        len_ = n;
-    }
+  size_t cap() const noexcept { return isHeap() ? (storage_.heap.cap > 0 ? storage_.heap.cap - 1 : 0) : SSO_SIZE - 1; }
 
-    void terminate() noexcept { ptr()[length()] = BUFFER_END; }
+  void setLen(size_t const n) {
+    if (!isHeap() && n > cap())
+      throw std::invalid_argument("String::setLen: invalid length " + std::to_string(n));
+    len_ = n;
+  }
 
-    String(String const& other);
+  void terminate() noexcept { ptr()[length()] = BUFFER_END; }
 
-    explicit String(size_t const s);
+  explicit String(size_t const s);
+  explicit String(size_t const s, char const c);
+  explicit String(char const *s, size_t n);
+  String(char const *s);
 
-    explicit String(size_t const s, char const c);
+  bool operator==(String const &other) const noexcept;
 
-    explicit String(char const* s, size_t n);
+  char operator[](size_t const i) const noexcept { return ptr()[i]; }
+  char &operator[](size_t const i) noexcept { return ptr()[i]; }
 
-    String(char const* s);
+  void increment() const noexcept { RefCount.fetch_add(1, std::memory_order_relaxed); }
 
-    bool operator==(String const& other) const noexcept;
+  void decrement() const noexcept { RefCount.fetch_sub(1, std::memory_order_acq_rel); }
 
-    char operator[](size_t const i) const noexcept { return ptr()[i]; }
-
-    char& operator[](size_t const i) noexcept { return ptr()[i]; }
-
-    void increment() const noexcept { ++RefCount; }
-
-    void decrement() const noexcept { --RefCount; }
-
-    size_t referenceCount() const noexcept { return RefCount; }
+  uint32_t referenceCount() const noexcept { return RefCount.load(std::memory_order_acquire); }
 };
+
+// ---------------------------------------------------------------------------
+// Global empty-string singleton
+//
+// StringRef's default constructor and any "return empty" fast-path point here
+// instead of heap-allocating a fresh String every time. The singleton's
+// refcount is pinned at a high value so it is never freed.
+// ---------------------------------------------------------------------------
+namespace detail {
+
+String *emptyStringSingleton() noexcept;
+
+} // namespace detail
 
 class StringRef {
 private:
-    String* StringData_ { nullptr };
-    size_t Offset_ { 0 };
-    size_t Length_ { 0 };
+  String *StringData_{nullptr};
+  size_t Offset_{0};
+  size_t Length_{0};
 
-    static String* createEmpty()
-    {
-        String* s = getStringAllocator().allocateObject<String>();
-        return s;
-    }
+  // Private: creates a brand-new, independently-owned empty String.
+  // Only used when we need a writable empty buffer (e.g. reserve()).
+  static String *createEmpty() {
+    String *s = getAllocator().allocateObject<String>();
+    return s;
+  }
 
 public:
-    StringRef();
+  // Default: points at the global empty singleton — zero heap allocation.
+  StringRef() noexcept : StringData_(detail::emptyStringSingleton()), Offset_(0), Length_(0) { StringData_->increment(); }
 
-    explicit StringRef(size_t const s);
+  explicit StringRef(size_t const s);
 
-    StringRef(StringRef const& other, size_t offset = 0, size_t length = 0);
+  StringRef(StringRef const &other, size_t offset = 0, size_t length = 0);
 
-    StringRef(char const* lit);
+  StringRef(char const *lit);
 
-    StringRef(char16_t const* u16_str);
+  StringRef(char16_t const *u16_str);
 
-    StringRef(size_t const s, char const c);
+  StringRef(size_t const s, char const c);
 
-    explicit StringRef(String* data, size_t offset = 0, size_t length = 0);
+  explicit StringRef(String *data, size_t offset = 0, size_t length = 0);
 
-    StringRef(StringRef&& other) noexcept;
+  StringRef(StringRef &&other) noexcept;
 
-    StringRef& operator=(StringRef&& other) noexcept;
+  StringRef &operator=(StringRef &&other) noexcept;
 
-    ~StringRef();
+  ~StringRef();
 
-    StringRef& operator=(StringRef const& other);
+  StringRef &operator=(StringRef const &other);
 
-    MY_NODISCARD bool operator==(StringRef const& other) const noexcept
-    {
-        if (StringData_ == other.StringData_)
-            return true;
+  // -----------------------------------------------------------------------
+  // Comparison
+  // -----------------------------------------------------------------------
 
-        if (!StringData_ || !other.StringData_)
-            return false;
+  MY_NODISCARD bool operator==(StringRef const &other) const noexcept {
+    if (StringData_ == other.StringData_ && Offset_ == other.Offset_ && Length_ == other.Length_)
+      return true;
+    if (Length_ != other.Length_)
+      return false;
+    if (!StringData_ || !other.StringData_)
+      return Length_ == 0;
+    return ::memcmp(data(), other.data(), Length_) == 0;
+  }
 
-        return Length_ == other.Length_ && ::memcmp(data(), other.data(), Length_) == 0;
+  MY_NODISCARD bool operator!=(StringRef const &other) const noexcept { return !(*this == other); }
+
+  MY_NODISCARD bool operator<(StringRef const &other) const noexcept {
+    if (StringData_ == other.StringData_ && Offset_ == other.Offset_ && Length_ == other.Length_)
+      return false;
+    if (!StringData_)
+      return other.Length_ > 0;
+    if (!other.StringData_)
+      return false;
+
+    size_t const minLen = std::min(Length_, other.Length_);
+    int const cmp = ::memcmp(data(), other.data(), minLen);
+    return cmp != 0 ? cmp < 0 : Length_ < other.Length_;
+  }
+
+  MY_NODISCARD bool operator>(StringRef const &other) const noexcept { return other < *this; }
+  MY_NODISCARD bool operator<=(StringRef const &other) const noexcept { return !(*this > other); }
+  MY_NODISCARD bool operator>=(StringRef const &other) const noexcept { return !(*this < other); }
+
+  // -----------------------------------------------------------------------
+  // Mutation
+  // -----------------------------------------------------------------------
+
+  void expand(size_t const new_size);
+
+  void reserve(size_t const new_capacity);
+
+  void erase(size_t const at);
+
+  StringRef &operator+=(StringRef const &other);
+  StringRef &operator+=(char c);
+
+  char operator[](size_t const i) const;
+  char &operator[](size_t const i);
+
+  MY_NODISCARD char at(size_t const i) const;
+  char &at(size_t const i);
+
+  // Trim leading/trailing ASCII whitespace (view-only, no allocation).
+  StringRef &trimWhitespace(bool leading = true, bool trailing = true) noexcept;
+
+  // -----------------------------------------------------------------------
+  // Concatenation
+  // -----------------------------------------------------------------------
+
+  friend StringRef operator+(StringRef const &lhs, StringRef const &rhs) {
+    if (lhs.empty())
+      return StringRef(rhs);
+    if (rhs.empty())
+      return StringRef(lhs);
+
+    size_t const actual_len = lhs.len() + rhs.len();
+    String *result = getAllocator().allocateObject<String>(actual_len);
+
+    ::memcpy(result->ptr(), lhs.data(), lhs.len());
+    ::memcpy(result->ptr() + lhs.len(), rhs.data(), rhs.len());
+
+    result->setLen(actual_len);
+    result->terminate();
+
+    return StringRef(result); // takes ownership; ctor increments refcount once
+  }
+
+  friend StringRef operator+(StringRef const &lhs, char const *rhs) {
+    if (!rhs || !rhs[0])
+      return StringRef(lhs);
+    StringRef rhs_str = rhs;
+    return lhs + rhs_str;
+  }
+
+  friend StringRef operator+(char const *lhs, StringRef const &rhs) {
+    if (!lhs || !lhs[0])
+      return StringRef(rhs);
+    StringRef lhs_str = lhs;
+    return lhs_str + rhs;
+  }
+
+  friend StringRef operator+(StringRef const &lhs, char rhs) {
+    StringRef result(lhs);
+    result += rhs;
+    return result;
+  }
+
+  friend StringRef operator+(char lhs, StringRef const &rhs) {
+    StringRef result;
+    result.reserve(rhs.len() + 1);
+    result += lhs;
+    result += rhs;
+    return result;
+  }
+
+  // -----------------------------------------------------------------------
+  // Accessors
+  // -----------------------------------------------------------------------
+
+  MY_NODISCARD size_t len() const noexcept { return Length_; }
+  MY_NODISCARD size_t cap() const noexcept { return StringData_ ? StringData_->cap() : 0; }
+  MY_NODISCARD String *get() const noexcept { return StringData_; }
+  MY_NODISCARD bool empty() const noexcept { return Length_ == 0; }
+
+  MY_NODISCARD char const *data() const noexcept { return StringData_ ? StringData_->ptr() + Offset_ : nullptr; }
+
+  MY_NODISCARD char *data() noexcept {
+    if (StringData_) {
+      ensureUnique();
+      return StringData_->ptr() + Offset_;
     }
+    return nullptr;
+  }
 
-    MY_NODISCARD bool operator!=(StringRef const& other) const noexcept { return !(*this == other); }
+  friend std::ostream &operator<<(std::ostream &os, StringRef const &str) {
+    if (!str.empty())
+      os.write(str.data(), static_cast<std::streamsize>(str.len()));
+    return os;
+  }
 
-    MY_NODISCARD bool operator<(StringRef const& other) const noexcept
-    {
-        if (StringData_ == other.StringData_)
-            return false;
+  void clear() noexcept {
+    Length_ = 0;
+    Offset_ = 0;
+  }
 
-        if (!StringData_)
-            return true; // null < non-null
+  void resize(size_t const s);
 
-        if (!other.StringData_)
-            return false;
+  MY_NODISCARD bool find(char const c) const noexcept;
+  MY_NODISCARD bool find(StringRef const &s) const noexcept;
 
-        size_t const minLen = std::min(Length_, other.Length_);
-        int const cmp = ::memcmp(data(), other.data(), minLen);
+  MY_NODISCARD std::optional<size_t> find_pos(char const c) const noexcept;
 
-        if (cmp != 0)
-            return cmp < 0;
+  StringRef &truncate(size_t const s) noexcept;
 
-        return Length_ < other.Length_;
-    }
+  // -----------------------------------------------------------------------
+  // Slicing
+  //
+  // slice()  — zero-copy view into this string; exclusive end (STL convention)
+  // substr() — same as slice(); only copies when the caller mutates
+  // substrCopy() — always allocates a fresh independent buffer
+  //
+  // Both slice() and substr() use EXCLUSIVE end indices.
+  // -----------------------------------------------------------------------
 
-    MY_NODISCARD bool operator>(StringRef const& other) const noexcept { return other < *this; }
+  // Zero-copy view [start, end).  end defaults to len().
+  StringRef slice(size_t start, size_t end = SIZE_MAX) const;
 
-    MY_NODISCARD bool operator<=(StringRef const& other) const noexcept { return !(*this > other); }
-    MY_NODISCARD bool operator>=(StringRef const& other) const noexcept { return !(*this < other); }
+  // Alias for slice() — zero-copy until mutated (copy-on-write via
+  // ensureUnique).
+  StringRef substr(size_t start, size_t end = SIZE_MAX) const { return slice(start, end); }
 
-    void expand(size_t const new_size);
+  // Legacy overload kept for callers that pass optional end.
+  // StringRef substr(size_t start) const { return slice(start); }
 
-    void reserve(size_t const new_capacity);
+  // Unconditional deep copy — use when you need an independent buffer.
+  StringRef substrCopy(size_t start, size_t end = SIZE_MAX) const;
 
-    void erase(size_t const at);
+  // -----------------------------------------------------------------------
+  // Conversion
+  // -----------------------------------------------------------------------
 
-    StringRef& operator+=(StringRef const& other);
-    StringRef& operator+=(char c);
+  // Parse as double via std::from_chars — zero allocation.
+  double toDouble(size_t *pos = nullptr) const;
 
-    char operator[](size_t const i) const;
-    char& operator[](size_t const i);
+  MY_NODISCARD static StringRef fromUtf16(char16_t const *utf16_cstr);
 
-    MY_NODISCARD char at(size_t const i) const;
+  // -----------------------------------------------------------------------
+  // COW helpers
+  // -----------------------------------------------------------------------
 
-    char& at(size_t const i);
+  void ensureUnique() {
+    if (!StringData_)
+      return;
+    // Hot path: almost always refcount == 1.
+    if (__builtin_expect(StringData_->referenceCount() == 1, 1))
+      return;
+    detach();
+  }
 
-    StringRef& trimWhitespace(std::optional<bool const> leading = std::nullopt, std::optional<bool const> trailing = std::nullopt);
-
-    friend StringRef operator+(StringRef const& lhs, StringRef const& rhs)
-    {
-        if (lhs.empty() && rhs.empty())
-            return "";
-
-        if (lhs.empty())
-            return StringRef(rhs);
-
-        if (rhs.empty())
-            return StringRef(lhs);
-
-        size_t const actual_len = lhs.len() + rhs.len();
-        String* result = getStringAllocator().allocateObject<String>(actual_len);
-
-        ::memcpy(result->ptr(), lhs.data(), lhs.len() * sizeof(char));
-        ::memcpy(result->ptr() + lhs.len(), rhs.data(), rhs.len() * sizeof(char));
-
-        result->setLen(actual_len);
-        result->terminate();
-
-        return StringRef(result);
-    }
-
-    friend StringRef operator+(StringRef const& lhs, char const* rhs)
-    {
-        if (!rhs || !rhs[0])
-            return StringRef(lhs);
-
-        StringRef rhs_str = rhs;
-        return lhs + rhs_str;
-    }
-
-    friend StringRef operator+(char const* lhs, StringRef const& rhs)
-    {
-        if (!lhs || !lhs[0])
-            return StringRef(rhs);
-
-        StringRef lhs_str = lhs;
-        return lhs_str + rhs;
-    }
-
-    friend StringRef operator+(StringRef const& lhs, char rhs)
-    {
-        StringRef result(lhs);
-        result += rhs;
-        return result;
-    }
-
-    friend StringRef operator+(char lhs, StringRef const& rhs)
-    {
-        StringRef result;
-        result.reserve(rhs.len() + 1);
-        result += lhs;
-        result += rhs;
-        return result;
-    }
-
-    MY_NODISCARD size_t len() const noexcept { return Length_; }
-
-    MY_NODISCARD size_t cap() const noexcept { return StringData_ ? StringData_->cap() : 0; }
-
-    MY_NODISCARD String* get() const noexcept { return StringData_; }
-
-    MY_NODISCARD bool empty() const noexcept { return Length_ == 0; }
-
-    MY_NODISCARD char const* data() const noexcept { return StringData_ ? StringData_->ptr() + Offset_ : nullptr; }
-
-    MY_NODISCARD char* data() noexcept
-    {
-        if (StringData_) {
-            ensureUnique();
-            return StringData_->ptr() + Offset_;
-        }
-        return nullptr;
-    }
-
-    friend std::ostream& operator<<(std::ostream& os, StringRef const& str)
-    {
-        if (!str.empty())
-            os.write(str.data(), str.len());
-
-        return os;
-    }
-
-    void clear() noexcept;
-
-    void resize(size_t const s);
-
-    MY_NODISCARD bool find(char const c) const noexcept;
-    MY_NODISCARD bool find(StringRef const& s) const noexcept;
-
-    MY_NODISCARD std::optional<size_t> find_pos(char const c) const noexcept;
-
-    StringRef& truncate(size_t const s);
-
-    StringRef slice(size_t start, std::optional<size_t> end) const;
-
-    StringRef substr(std::optional<size_t> start, std::optional<size_t> end) const;
-
-    StringRef substr(size_t start) const
-    {
-        return substr(std::optional<size_t>(start), std::nullopt);
-    }
-
-    double toDouble(size_t* pos = nullptr) const;
-
-    MY_NODISCARD static StringRef fromUtf16(char16_t const* utf8_cstr);
-
-    void ensureUnique()
-    {
-        if (!StringData_)
-            return;
-
-        if (StringData_->referenceCount() > 1)
-            detach();
-    }
-
-    void detach();
+  void detach();
 }; // StringRef
 
+// ---------------------------------------------------------------------------
+// Hash — single canonical implementation; std::hash<StringRef> delegates here.
+// ---------------------------------------------------------------------------
+
 struct StringRefHash {
-    size_t operator()(StringRef const& str) const noexcept
-    {
-        if (str.empty() || str.len() == 0)
-            return 0;
+  size_t operator()(StringRef const &str) const noexcept {
+    if (str.empty())
+      return 0;
 
-        size_t hash = 14695981039346656037ULL;
-        size_t const prime = 1099511628211ULL;
+    size_t hash = 14695981039346656037ULL;
+    constexpr size_t prime = 1099511628211ULL;
 
-        char const* data = str.data();
-        size_t const len = str.len();
+    auto const *bytes = reinterpret_cast<unsigned char const *>(str.data());
+    size_t const n = str.len();
 
-        unsigned char const* bytes = reinterpret_cast<unsigned char const*>(data);
-        size_t const byte_count = len * sizeof(char);
-
-        for (size_t i = 0; i < byte_count; ++i) {
-            hash ^= static_cast<size_t>(bytes[i]);
-            hash *= prime;
-        }
-
-        return hash;
+    for (size_t i = 0; i < n; ++i) {
+      hash ^= static_cast<size_t>(bytes[i]);
+      hash *= prime;
     }
+
+    return hash;
+  }
 };
 
 struct StringRefEqual {
-    bool operator()(StringRef const& lhs, StringRef const& rhs) const noexcept
-    {
-        return lhs == rhs;
-    }
+  bool operator()(StringRef const &lhs, StringRef const &rhs) const noexcept { return lhs == rhs; }
 };
 
 } // namespace mylang
 
+// ---------------------------------------------------------------------------
+// std::hash delegates to StringRefHash — single source of truth.
+// ---------------------------------------------------------------------------
 namespace std {
 
-template<>
-struct hash<mylang::StringRef> {
-    size_t operator()(mylang::StringRef const& str) const noexcept
-    {
-        if (str.empty() || str.len() == 0)
-            return 0;
-
-        size_t hash_value = 14695981039346656037ULL;
-        size_t const prime = 1099511628211ULL;
-
-        char const* data = str.data();
-        size_t const len = str.len();
-
-        unsigned char const* bytes = reinterpret_cast<unsigned char const*>(data);
-        size_t const byte_count = len * sizeof(char);
-
-        for (size_t i = 0; i < byte_count; ++i) {
-            hash_value ^= static_cast<size_t>(bytes[i]);
-            hash_value *= prime;
-        }
-
-        return hash_value;
-    }
+template <> struct hash<mylang::StringRef> {
+  size_t operator()(mylang::StringRef const &str) const noexcept { return mylang::StringRefHash{}(str); }
 };
 
 } // namespace std
