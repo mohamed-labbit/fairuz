@@ -5,6 +5,13 @@
 
 namespace mylang::runtime {
 
+VM::VM()
+{
+    std::fill(Stack_, Stack_ + STACK_SIZE, NIL_VAL);
+    std::fill(Frames_, Frames_ + MAX_FRAMES, CallFrame { });
+    openStdlib();
+}
+
 Value VM::run(Chunk* chunk)
 {
     ObjFunction* fn = MAKE_OBJ_FUNCTION();
@@ -153,7 +160,7 @@ Value VM::run(Chunk* chunk)
 
 #define CLOSE_UPVALUES_IF_NEEDED()                                         \
     do {                                                                   \
-        if (LIKELY(has_open_upvalues == 0)) {                  \
+        if (LIKELY(has_open_upvalues == 0)) {                              \
             Value* threshold = &Stack_[cur_frame_base];                    \
             uint32_t i = static_cast<uint32_t>(OpenUpvalues_.size());      \
             while (i > 0 && OpenUpvalues_[i - 1]->location >= threshold) { \
@@ -166,9 +173,6 @@ Value VM::run(Chunk* chunk)
             OpenUpvalues_.resize(i);                                       \
         }                                                                  \
     } while (0)
-    
-#define UNLIKELY(x) __builtin_expect(!!(x), 0)
-#define LIKELY(x) __builtin_expect(!!(x), 1)
 
 Value VM::execute()
 {
@@ -507,12 +511,13 @@ Value VM::execute()
     CASE(OP_BITNOT)
     {
         Value operand = RB();
-        if (UNLIKELY(!IS_INTEGER(operand))) 
+        if (UNLIKELY(!IS_INTEGER(operand)))
             runtimeError(ErrorCode::TYPE_ERROR_ARITH);
         RA() = MAKE_INTEGER(~AS_INTEGER(operand));
         DISPATCH();
     }
-    CASE(OP_LSHIFT) {
+    CASE(OP_LSHIFT)
+    {
         Value lhs = RB();
         if (UNLIKELY(!IS_INTEGER(lhs)))
             runtimeError(ErrorCode::TYPE_ERROR_ARITH);
@@ -522,7 +527,8 @@ Value VM::execute()
         RA() = MAKE_INTEGER(static_cast<int64_t>(static_cast<uint64_t>(AS_INTEGER(lhs)) << imm));
         DISPATCH();
     }
-    CASE(OP_RSHIFT) { 
+    CASE(OP_RSHIFT)
+    {
         Value lhs = RB();
         if (UNLIKELY(!IS_INTEGER(lhs)))
             runtimeError(ErrorCode::TYPE_ERROR_ARITH);
@@ -530,7 +536,7 @@ Value VM::execute()
         if (imm > 64)
             runtimeError(ErrorCode::INDEX_TYPE_ERROR);
         RA() = MAKE_INTEGER(static_cast<int64_t>(static_cast<uint64_t>(AS_INTEGER(lhs)) >> imm));
-        DISPATCH(); 
+        DISPATCH();
     }
     CASE(OP_EQ)
     {

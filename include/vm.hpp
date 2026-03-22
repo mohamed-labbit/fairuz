@@ -2,6 +2,7 @@
 #define VM_HPP
 
 #include "value.hpp"
+#include "gc.hpp"
 
 namespace mylang::runtime {
 
@@ -12,16 +13,13 @@ public:
     static constexpr int MAX_FRAMES = 256;
     static constexpr int STACK_SIZE = 8192;
 
-    VM()
-    {
-        std::fill(Stack_, Stack_ + STACK_SIZE, NIL_VAL);
-        std::fill(Frames_, Frames_ + MAX_FRAMES, CallFrame { });
-        openStdlib();
-    }
+    VM();
 
     Value run(Chunk* chunk);
 
 private:
+    friend class GarbageCollector;
+
     struct CallFrame {
         ObjClosure* closure { nullptr };
         Chunk* chunk { nullptr };
@@ -29,6 +27,8 @@ private:
         int32_t base { 0 };
         int localCount { 0 };
     };
+    
+    GarbageCollector GC_;
 
     Value Stack_[STACK_SIZE];
     CallFrame Frames_[MAX_FRAMES];
