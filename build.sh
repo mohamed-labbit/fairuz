@@ -1,31 +1,49 @@
 #!/usr/bin/env bash
 
 PROJECT_ROOT="$(pwd)"
+
 DEBUG=0
 CLEAN_BUILD=false
 RUN_TESTS=false
 RUN_MAIN=false
+RUN_INCLUDES=false
+
 TEST_ARGS=()
 MAIN_ARGS=()
 
+# -------------------------
+# Parse arguments
+# -------------------------
 for arg in "$@"; do
-    if [[ "$arg" == "--clean" ]]; then
-        CLEAN_BUILD=true
-    elif [[ "$arg" == "test" ]]; then
-        RUN_TESTS=true
-    elif [[ "$arg" == "run" ]]; then
-        RUN_MAIN=true
-    elif [[ "$arg" == "--debug" ]]; then
-        DEBUG=1
-    else
-        if [[ "$RUN_TESTS" == true ]]; then
-            TEST_ARGS+=("$arg")
-        else
-            MAIN_ARGS+=("$arg")
-        fi
-    fi
+    case "$arg" in
+        --clean)
+            CLEAN_BUILD=true
+            ;;
+        --debug)
+            DEBUG=1
+            ;;
+        --includes)
+            RUN_INCLUDES=true
+            ;;
+        test)
+            RUN_TESTS=true
+            ;;
+        run)
+            RUN_MAIN=true
+            ;;
+        *)
+            if [[ "$RUN_TESTS" == true ]]; then
+                TEST_ARGS+=("$arg")
+            else
+                MAIN_ARGS+=("$arg")
+            fi
+            ;;
+    esac
 done
 
+# -------------------------
+# Clean build
+# -------------------------
 if [[ "$CLEAN_BUILD" == true ]]; then
     rm -rf build
 fi
@@ -33,33 +51,58 @@ fi
 mkdir -p build
 cd build || exit 1
 
+# -------------------------
+# Configure with CMake
+# -------------------------
+COMMON_FLAGS=(
+    -DCMAKE_C_COMPILER=clang
+    -DCMAKE_CXX_COMPILER=clang++
+    -DCMAKE_BUILD_TYPE=Debug
+    -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+    -DCMAKE_CXX_FLAGS="-fsanitize=address -g"
+    -DCMAKE_OSX_SYSROOT="$(xcrun --show-sdk-path)"
+)
+
 if [[ "$RUN_TESTS" == true ]]; then
-    cmake -DCMAKE_C_COMPILER=clang \
-          -DCMAKE_CXX_COMPILER=clang++ \
-          -DCMAKE_BUILD_TYPE=Debug \
-          -DCMAKE_CXX_FLAGS="-fsanitize=address -g" \
-          -DCMAKE_OSX_SYSROOT="$(xcrun --show-sdk-path)" \
-          -DBUILD_TESTS=ON .. || exit 1
+    cmake "${COMMON_FLAGS[@]}" -DBUILD_TESTS=ON .. || exit 1
 else
-    cmake -DCMAKE_C_COMPILER=clang \
-          -DCMAKE_CXX_COMPILER=clang++ \
-          -DCMAKE_BUILD_TYPE=Debug \
-          -DCMAKE_CXX_FLAGS="-fsanitize=address -g" \
-          -DCMAKE_OSX_SYSROOT="$(xcrun --show-sdk-path)" .. || exit 1
+    cmake "${COMMON_FLAGS[@]}" .. || exit 1
 fi
 
+# -------------------------
+# Build
+# -------------------------
 make || exit 1
 
+# -------------------------
+# Run include-cleaner
+# -------------------------
+if [[ "$RUN_INCLUDES" == true ]]; then
+    echo "🔍 Running clang include-cleaner..."
+
+    find src -name "*.cpp" \
+    | xargs -P 8 -I {} clangd --check="{}" \
+        --compile-commands-dir=build \
+        --enable-config
+fi
+
+# -------------------------
+# Run tests
+# -------------------------
 if [[ "$RUN_TESTS" == true ]]; then
     ASAN_OPTIONS=detect_leaks="$DEBUG" \
         "$PROJECT_ROOT/build/mylang_tests" "${TEST_ARGS[@]}"
 fi
 
+# -------------------------
+# Run main program
+# -------------------------
 if [[ "$RUN_MAIN" == true ]]; then
     if [[ ${#MAIN_ARGS[@]} -eq 0 ]]; then
         echo "usage: ./build.sh run <file>"
         exit 1
     fi
+
     ASAN_OPTIONS=detect_leaks="$DEBUG" \
         "$PROJECT_ROOT/build/mylang" "${MAIN_ARGS[@]}"
 fi

@@ -5,16 +5,13 @@
 
 namespace mylang {
 
-#define SSO_SIZE 20 // to make sizeof(String) = 64 bytes
-#define TABWIDTH 8
-#define MAX_ALLOWED_INDENT 100
-#define DEFAULT_CAPACITY 4096
-#define DEFAULT_BLOCK_SIZE 1024
-#define MAX_BLOCK_SIZE 4294967296
-#define DEFAULT_STRING_CAPACITY 100
-#define MY_NODISCARD [[nodiscard]]
+    struct SourceLocation {
+    uint32_t line { 0 };
+    uint16_t column { 0 };
+    uint16_t length { 0 };
+};
 
-namespace Color {
+    namespace Color {
 
 std::string const RESET = "\033[0m";
 std::string const BOLD = "\033[1m";
@@ -28,11 +25,14 @@ std::string const GRAY = "\033[90m";
 
 } // namespace Color
 
-struct SourceLocation {
-  uint32_t line{0};
-  uint16_t column{0};
-  uint16_t length{0};
-};
+#define SSO_SIZE 20 // to make sizeof(String) = 64 bytes
+#define TABWIDTH 8
+#define MAX_ALLOWED_INDENT 100
+#define DEFAULT_CAPACITY 4096
+#define DEFAULT_BLOCK_SIZE 1024
+#define MAX_BLOCK_SIZE 4294967296
+#define DEFAULT_STRING_CAPACITY 100
+#define MY_NODISCARD [[nodiscard]]
 
 } // namespace mylang
 

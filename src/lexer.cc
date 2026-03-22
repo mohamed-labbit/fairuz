@@ -1,740 +1,630 @@
 /// lexer.cc
 
 #include "../include/lexer.hpp"
+#include "../include/ctype.hpp"
 #include "../include/util.hpp"
 
 #include <fstream>
+
+#define CONSUME_BASE_DIGITS(valid_expr, token_type, err_msg) \
+    do {                                                     \
+        number += util::encode_utf8_str(next);               \
+        current = SourceManager_.nextChar();                 \
+        bool any = false;                                    \
+        for (;;) {                                           \
+            if (current == '_') {                            \
+                current = SourceManager_.nextChar();         \
+                continue;                                    \
+            }                                                \
+            if (!(valid_expr))                               \
+                break;                                       \
+            number += util::encode_utf8_str(current);        \
+            current = SourceManager_.nextChar();             \
+            any = true;                                      \
+        }                                                    \
+        if (!any)                                            \
+            diagnostic::panic(err_msg);                      \
+        return finish(token_type, number, line, col);        \
+    } while (0)
+
+#define OCTAL_DIGIT(c)                                                               \
+    ((c) >= '0' && (c) <= '7'                                                        \
+            ? true                                                                   \
+            : (IS_DIGIT(c)                                                           \
+                      ? (diagnostic::panic("Invalid digit in octal literal"), false) \
+                      : false))
+
+#define BINARY_DIGIT(c)                                                               \
+    ((c) == '0' || (c) == '1'                                                         \
+            ? true                                                                    \
+            : (IS_DIGIT(c)                                                            \
+                      ? (diagnostic::panic("Invalid digit in binary literal"), false) \
+                      : false))
 
 namespace mylang::lex {
 
 namespace fs = std::filesystem;
 
-FileManager::FileManager(std::string const& filepath) : FilePath_(filepath) {
+FileManager::FileManager(std::string const& filepath)
+    : FilePath_(filepath)
+{
     std::ifstream in(filepath, std::ios::binary);
     if (!in) {
-        diagnostic::panic(std::string(toString(FileManagerError::FILE_NOT_OPEN))  + ": " + filepath);
+        diagnostic::panic(std::string(toString(FileManagerError::FILE_NOT_OPEN)) + ": " + filepath);
     }
 
-    std::string content{std::istreambuf_iterator<char>{in},
-                        std::istreambuf_iterator<char>{}};
+    std::string content { std::istreambuf_iterator<char> { in },
+        std::istreambuf_iterator<char> { } };
     InputBuffer_ = StringRef(content.data());
     InputBuffer_.trimWhitespace(false, true);
     LastKnownWriteTime_ = fs::last_write_time(filepath);
 }
 
-StringRef FileManager::load(std::string const &filepath, bool replace) {
-  if (filepath.empty())
-    return "";
+StringRef FileManager::load(std::string const& filepath, bool replace)
+{
+    if (filepath.empty())
+        return "";
 
-  std::ifstream in(filepath, std::ios::binary);
-  StringRef ret = std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()).data();
-  if (!in)
-    diagnostic::panic(toString(FileManagerError::FILE_NOT_OPEN));
+    std::ifstream in(filepath, std::ios::binary);
+    StringRef ret = std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()).data();
+    if (!in)
+        diagnostic::panic(toString(FileManagerError::FILE_NOT_OPEN));
 
-  if (replace || FilePath_.empty()) {
-    InputBuffer_ = ret;
-    FilePath_ = filepath;
-    LastKnownWriteTime_ = fs::last_write_time(filepath);
-  }
+    if (replace || FilePath_.empty()) {
+        InputBuffer_ = ret;
+        FilePath_ = filepath;
+        LastKnownWriteTime_ = fs::last_write_time(filepath);
+    }
 
-  return ret;
+    return ret;
 }
 
-void SourceManager::reset() {
-  Context_.line = 1;
-  Context_.column = 1;
-  Context_.offset = 0;
-  Current_ = 0;
-
-  while (!UngetStack_.empty())
-    UngetStack_.pop();
-
-  if (FileManager_ && FileManager_->buffer().len() > 0) {
-    uint64_t bytes = 0;
-    uint32_t cp = util::decode_utf8_at(FileManager_->buffer(), 0, &bytes);
-    Current_ = cp;
-    CurrentBytes_ = bytes;
-  }
-}
-
-uint32_t SourceManager::peekChar() {
-  if (!UngetStack_.empty())
-    return UngetStack_.top().ch;
-
-  Context saved = Context_;
-  uint32_t saved_current = Current_;
-  uint32_t cp = nextChar();
-
-  if (cp != 0)
-    unget(cp);
-  else {
-    Context_ = saved;
-    Current_ = saved_current;
-  }
-
-  return cp;
-}
-
-uint32_t SourceManager::currentChar() const {
-  if (Context_.offset >= FileManager_->buffer().len())
-    return 0;
-
-  uint64_t bytes = 0;
-  return util::decode_utf8_at(FileManager_->buffer(), Context_.offset, &bytes);
-}
-
-void SourceManager::consumeChar() {
-  if (Context_.offset >= FileManager_->buffer().len())
-    return;
-
-  uint64_t bytes = 0;
-  uint32_t cp = util::decode_utf8_at(FileManager_->buffer(), Context_.offset, &bytes);
-  advance(cp, bytes);
-}
-
-uint32_t SourceManager::nextChar() {
-  consumeChar();
-  return currentChar();
-}
-
-void SourceManager::unget(uint32_t const cp) {
-  PushbackEntry e;
-  e.ch = cp;
-  e.ctx = Context_;
-  e.bytes = CurrentBytes_;
-
-  rewindPosition_(cp, e.bytes);
-  UngetStack_.push(e);
-}
-
-void SourceManager::advance(uint32_t const cp, uint64_t const bytes) {
-  Context_.offset += bytes;
-
-  if (cp == '\n') {
-    ++Context_.line;
+void SourceManager::reset()
+{
+    Context_.line = 1;
     Context_.column = 1;
-  } else
-    ++Context_.column;
+    Context_.offset = 0;
+    Current_ = 0;
+
+    while (!UngetStack_.empty())
+        UngetStack_.pop();
+
+    if (FileManager_ && FileManager_->buffer().len() > 0) {
+        uint64_t bytes = 0;
+        uint32_t cp = util::decode_utf8_at(FileManager_->buffer(), 0, &bytes);
+        Current_ = cp;
+        CurrentBytes_ = bytes;
+    }
 }
 
-void SourceManager::rewindPosition_(uint32_t const cp, uint64_t const bytes) {
-  if (Context_.offset < bytes)
-    throw std::runtime_error("SourceManager: attempted to rewind past beginning of file");
+uint32_t SourceManager::peekChar()
+{
+    if (!UngetStack_.empty())
+        return UngetStack_.top().ch;
 
-  Context_.offset -= bytes;
+    Context saved = Context_;
+    uint32_t saved_current = Current_;
+    uint32_t cp = nextChar();
 
-  if (cp == '\n') {
-    Context_.line = (Context_.line > 1) ? (Context_.line - 1) : 1;
-    Context_.column = calculateColumnAtOffset(Context_.offset);
-  } else
-    Context_.column = (Context_.column > 1) ? (Context_.column - 1) : 1;
+    if (cp != 0)
+        unget(cp);
+    else {
+        Context_ = saved;
+        Current_ = saved_current;
+    }
+
+    return cp;
 }
 
-uint32_t SourceManager::calculateColumnAtOffset(uint64_t const target_offset) const {
-  StringRef const &buf = FileManager_->buffer();
+uint32_t SourceManager::currentChar() const
+{
+    if (Context_.offset >= FileManager_->buffer().len())
+        return 0;
 
-  uint64_t line_start = target_offset;
-  while (line_start > 0) {
-    if (buf.data()[line_start - 1] == '\n')
-      break;
-
-    --line_start;
-  }
-
-  uint32_t column = 1;
-  uint64_t pos = line_start;
-
-  while (pos < target_offset) {
     uint64_t bytes = 0;
-    util::decode_utf8_at(buf, pos, &bytes);
-    pos += bytes;
-    ++column;
-  }
-
-  return column;
+    return util::decode_utf8_at(FileManager_->buffer(), Context_.offset, &bytes);
 }
 
-Lexer::Lexer(FileManager *fm) : SourceManager_(fm), TokIndex_(0), IndentSize_(4), IndentLevel_(0), AtBOL_(true) {
-  TokStream_ = Array<mylang::tok::Token const *>::withCapacity(1024);
-  IndentStack_ = Array<unsigned int>::withCapacity(8);
-  AltIndentStack_ = Array<unsigned int>::withCapacity(8);
-  IndentStack_.push(0);
-  AltIndentStack_.push(0);
+void SourceManager::consumeChar()
+{
+    if (Context_.offset >= FileManager_->buffer().len())
+        return;
 
-  util::configureLocale();
+    uint64_t bytes = 0;
+    uint32_t cp = util::decode_utf8_at(FileManager_->buffer(), Context_.offset, &bytes);
+    advance(cp, bytes);
 }
 
-Lexer::Lexer(Array<tok::Token const *> &seq /*, size_t const s*/) : TokStream_(seq), TokIndex_(0), IndentSize_(4), IndentLevel_(0), AtBOL_(true) {
-  IndentStack_.push(0);
-  AltIndentStack_.push(0);
-  util::configureLocale();
+uint32_t SourceManager::nextChar()
+{
+    consumeChar();
+    return currentChar();
 }
 
-tok::Token const *Lexer::lexToken() {
-  auto finish = [this](tok::TokenType tt, StringRef str, size_t line, size_t col) {
-    tok::Token const *ret = makeToken(tt, str, line, col);
-    store(ret);
-    return TokStream_.back();
-  };
+void SourceManager::unget(uint32_t const cp)
+{
+    PushbackEntry e;
+    e.ch = cp;
+    e.ctx = Context_;
+    e.bytes = CurrentBytes_;
 
-  if (TokStream_.empty()) {
-    tok::Token const *ret = makeToken(tok::TokenType::BEGINMARKER, "", 1, 1);
-    store(ret);
-    return TokStream_.back();
-  }
+    rewindPosition_(cp, e.bytes);
+    UngetStack_.push(e);
+}
 
-  auto nextLine = [this](uint32_t const &line, uint32_t const &col) {
-    uint32_t current = SourceManager_.currentChar();
+void SourceManager::advance(uint32_t const cp, uint64_t const bytes)
+{
+    Context_.offset += bytes;
 
-    if (AtBOL_) {
-      unsigned int size = 0;
-      unsigned int alt_size = 0;
-      unsigned int cont_line_col = 0;
-      bool blank_line = false;
-      AtBOL_ = false;
+    if (cp == '\n') {
+        ++Context_.line;
+        Context_.column = 1;
+    } else
+        ++Context_.column;
+}
 
-      for (;;) {
-        if (current == ' ') {
-          SourceManager_.consumeChar();
-          size++, alt_size++;
-        } else if (current == '\t') {
-          SourceManager_.consumeChar();
-          size = (size / IndentSize_ + 1) * IndentSize_;
-          alt_size = (alt_size / TABWIDTH + 1) * TABWIDTH;
-        } else if (current == '\f') {
-          SourceManager_.consumeChar();
-          size = alt_size = 0;
-        } else if (current == '\\') {
-          SourceManager_.consumeChar();
-          cont_line_col = cont_line_col ? cont_line_col : size;
-        } else {
-          break;
+void SourceManager::rewindPosition_(uint32_t const cp, uint64_t const bytes)
+{
+    if (Context_.offset < bytes)
+        throw std::runtime_error("SourceManager: attempted to rewind past beginning of file");
+
+    Context_.offset -= bytes;
+
+    if (cp == '\n') {
+        Context_.line = (Context_.line > 1) ? (Context_.line - 1) : 1;
+        Context_.column = calculateColumnAtOffset(Context_.offset);
+    } else
+        Context_.column = (Context_.column > 1) ? (Context_.column - 1) : 1;
+}
+
+uint32_t SourceManager::calculateColumnAtOffset(uint64_t const target_offset) const
+{
+    StringRef const& buf = FileManager_->buffer();
+
+    uint64_t line_start = target_offset;
+    while (line_start > 0) {
+        if (buf.data()[line_start - 1] == '\n')
+            break;
+
+        --line_start;
+    }
+
+    uint32_t column = 1;
+    uint64_t pos = line_start;
+
+    while (pos < target_offset) {
+        uint64_t bytes = 0;
+        util::decode_utf8_at(buf, pos, &bytes);
+        pos += bytes;
+        ++column;
+    }
+
+    return column;
+}
+
+Lexer::Lexer(FileManager* fm)
+    : SourceManager_(fm)
+    , TokIndex_(0)
+    , IndentSize_(4)
+    , IndentLevel_(0)
+    , AtBOL_(true)
+{
+    TokStream_ = Array<mylang::tok::Token const*>::withCapacity(1024);
+    IndentStack_ = Array<unsigned int>::withCapacity(8);
+    AltIndentStack_ = Array<unsigned int>::withCapacity(8);
+    IndentStack_.push(0);
+    AltIndentStack_.push(0);
+
+    util::configureLocale();
+}
+
+Lexer::Lexer(Array<tok::Token const*>& seq /*, size_t const s*/)
+    : TokStream_(seq)
+    , TokIndex_(0)
+    , IndentSize_(4)
+    , IndentLevel_(0)
+    , AtBOL_(true)
+{
+    IndentStack_.push(0);
+    AltIndentStack_.push(0);
+    util::configureLocale();
+}
+
+tok::Token const* Lexer::lexToken()
+{
+    auto finish = [this](tok::TokenType tt, StringRef str, size_t line, size_t col) {
+        tok::Token const* ret = MAKE_TOKEN(tt, str, line, col);
+        store(ret);
+        return TokStream_.back();
+    };
+
+    if (TokStream_.empty()) {
+        store(MAKE_TOKEN(tok::TokenType::BEGINMARKER, "", 1, 1));
+        return TokStream_.back();
+    }
+
+    auto nextLine = [this](uint32_t line, uint32_t col) {
+        if (!AtBOL_)
+            return;
+        AtBOL_ = false;
+
+        unsigned int size = 0;
+        unsigned int alt_size = 0;
+        unsigned int cont_line_col = 0;
+
+        uint32_t current = SourceManager_.currentChar();
+
+        // count leading whitespace
+        for (;;) {
+            if (current == ' ') {
+                SourceManager_.consumeChar();
+                ++size;
+                ++alt_size;
+            } else if (current == '\t') {
+                SourceManager_.consumeChar();
+                size = (size / IndentSize_ + 1) * IndentSize_;
+                alt_size = (alt_size / TABWIDTH + 1) * TABWIDTH;
+            } else if (current == '\f') {
+                // form-feed resets the column counter — handled explicitly,
+                // NOT via ml_is_space, because it has special indent semantics.
+                SourceManager_.consumeChar();
+                size = alt_size = 0;
+            } else if (current == '\\') {
+                SourceManager_.consumeChar();
+                if (!cont_line_col)
+                    cont_line_col = size;
+            } else {
+                break;
+            }
+            current = SourceManager_.currentChar();
         }
-        current = SourceManager_.currentChar();
-      }
 
-      // check if a blank line
-      if (current == '#' || current == '\n' || current == '\r') {
-        if (size == 0 && current == '\n')
-          blank_line = false; // empty
-        else
-          blank_line = true; // comment or whitespace-only
-      }
+        // blank
+        if (current == '#' || current == '\n' || current == '\r')
+            return;
+        if (current == 0)
+            return;
 
-      // process indentation
-      if (!blank_line && current != 0) {
-        size = cont_line_col ? cont_line_col : size;
-        alt_size = cont_line_col ? cont_line_col : alt_size;
+        if (cont_line_col) {
+            size = alt_size = cont_line_col;
+        }
 
         if (size == IndentStack_.back()) {
-          // no change
-          // consistency check
-          if (alt_size != AltIndentStack_.back())
-            diagnostic::panic("Inconsistent indentation");
-        }
-        // Indent
-        else if (size > IndentStack_.back()) {
-          if (IndentLevel_ + 1 > MAX_ALLOWED_INDENT)
-            diagnostic::panic("Too many indentation levels");
+            if (alt_size != AltIndentStack_.back())
+                diagnostic::panic("Inconsistent indentation");
 
-          if (alt_size <= AltIndentStack_.back())
-            diagnostic::panic("Inconsistent indentation (tabs/spaces)");
+        } else if (size > IndentStack_.back()) {
+            if (IndentLevel_ + 1 > MAX_ALLOWED_INDENT)
+                diagnostic::panic("Too many indentation levels");
+            if (alt_size <= AltIndentStack_.back())
+                diagnostic::panic("Inconsistent indentation (tabs/spaces)");
 
-          ++IndentLevel_;
-          IndentStack_.push(size);
-          AltIndentStack_.push(alt_size);
+            ++IndentLevel_;
+            IndentStack_.push(size);
+            AltIndentStack_.push(alt_size);
+            store(MAKE_TOKEN(tok::TokenType::INDENT, "", line, col));
 
-          store(makeToken(tok::TokenType::INDENT, "", line, col));
-        }
-        // Dedent
-        else /*size < IndentStack_.back()*/ {
-          unsigned int dedent_count = 0;
-
-          while (IndentLevel_ > 0 && size < IndentStack_.back()) {
-            --IndentLevel_;
-            IndentStack_.pop();
-            AltIndentStack_.pop();
-            ++dedent_count;
-          }
-
-          if (size != IndentStack_.back())
-            diagnostic::panic("Unindent does not match any outer level of indentation");
-
-          if (alt_size != AltIndentStack_.back())
-            diagnostic::panic("Inconsistent indentation");
-
-          for (unsigned int i = 0; i < dedent_count; ++i)
-            store(makeToken(tok::TokenType::DEDENT, "", line, col));
-        }
-      }
-    }
-  };
-
-  for (;;) {
-    uint32_t line = SourceManager_.getLineNumber();
-    uint32_t col = SourceManager_.getColumnNumber();
-
-    uint32_t current = SourceManager_.currentChar();
-    if (current == 0)
-      break;
-
-    switch (current) {
-    case '\n': {
-      SourceManager_.consumeChar();
-      AtBOL_ = true;
-      tok::Token const *ret = makeToken(tok::TokenType::NEWLINE, util::encode_utf8_str('\n'), line, col);
-      store(ret);
-      nextLine(line, col);
-      return ret;
-    }
-
-    // ignore whitespace if not at beginning of a new line
-    case ' ':
-    case '\t':
-    case '\r':
-      SourceManager_.consumeChar();
-      continue;
-
-    // comments
-    case '#': {
-      // consume entire comment line
-      while (current != '\n' && current != 0)
-        current = SourceManager_.nextChar();
-
-      continue;
-    }
-
-    // string literal
-    case '\'':
-    case '"': {
-      StringRef string_literal;
-      uint32_t quote = current; // account for ' and "
-      current = SourceManager_.nextChar();
-
-      // capture quoted string with escape seq
-      while (current != '\n' && current != 0 && current != quote) {
-        if (current == '\\') {
-          current = SourceManager_.nextChar();
-
-          // handle escape sequences
-          switch (current) {
-          case 'n':
-            string_literal += '\n';
-            break;
-          case 't':
-            string_literal += '\t';
-            break;
-          case 'r':
-            string_literal += '\r';
-            break;
-          case '\\':
-            string_literal += '\\';
-            break;
-          case '\'':
-            string_literal += '\'';
-            break;
-          case '"':
-            string_literal += '"';
-            break;
-          case '0':
-            string_literal += '\0';
-            break;
-          default:
-            // if not a recognized escape, keep the backslash
-            string_literal += '\\';
-            string_literal += util::encode_utf8_str(current);
-            break;
-          }
-
-          SourceManager_.consumeChar();
         } else {
-          string_literal += util::encode_utf8_str(current);
-          current = SourceManager_.nextChar();
-        }
-      }
-
-      if (current != quote)
-        return finish(tok::TokenType::INVALID, string_literal, line, col);
-
-      SourceManager_.consumeChar(); // closing quote
-
-      return finish(tok::TokenType::STRING, string_literal, line, col);
-    }
-
-    // separators
-    case u'٬':
-    case u'،':
-    case ',':
-    case '.': {
-      SourceManager_.consumeChar();
-      tok::Token const *ret = finish((current == ',' || current == u'٬' || current == u'،') ? tok::TokenType::COMMA : tok::TokenType::DOT,
-                                     util::encode_utf8_str(current), line, col);
-
-      return ret;
-    }
-
-    // identifiers
-    case 0x0621: // ء (Hamza)
-    case 0x0622: // آ (Alef with madda above)
-    case 0x0623: // أ (Alef with hamza above)
-    case 0x0624: // ؤ (Waw with hamza above)
-    case 0x0625: // إ (Alef with hamza below)
-    case 0x0626: // ئ (Yeh with hamza above)
-    case 0x0627: // ا (Alef)
-    case 0x0628: // ب (Ba)
-    case 0x0629: // ة (Ta marbuta)
-    case 0x062A: // ت (Ta)
-    case 0x062B: // ث (Tha)
-    case 0x062C: // ج (Jim)
-    case 0x062D: // ح (Ha)
-    case 0x062E: // خ (Kha)
-    case 0x062F: // د (Dal)
-    case 0x0630: // ذ (Dhal)
-    case 0x0631: // ر (Ra)
-    case 0x0632: // ز (Zain)
-    case 0x0633: // س (Sin)
-    case 0x0634: // ش (Shin)
-    case 0x0635: // ص (Sad)
-    case 0x0636: // ض (Dad)
-    case 0x0637: // ط (Ta)
-    case 0x0638: // ظ (Dha)
-    case 0x0639: // ع (Ain)
-    case 0x063A: // غ (Ghain)
-    case 0x0641: // ف (Fa)
-    case 0x0642: // ق (Qaf)
-    case 0x0643: // ك (Kaf)
-    case 0x0644: // ل (Lam)
-    case 0x0645: // م (Mim)
-    case 0x0646: // ن (Nun)
-    case 0x0647: // ه (Ha)
-    case 0x0648: // و (Waw)
-    case 0x0649: // ى (Alef maqsura)
-    case 0x064A: // ي (Ya)
-    {
-      StringRef identifier;
-
-      while (util::isalphaArabic(current) || current == '_' || ::isdigit(current)) {
-        identifier += util::encode_utf8_str(current);
-        current = SourceManager_.nextChar();
-      }
-
-      // check if keyword
-      tok::TokenType tt = tok::TokenType::IDENTIFIER;
-      if (auto type = tok::lookupKeyword(identifier))
-        tt = *type;
-
-      return finish(tt, identifier, line, col);
-    }
-
-    case u'٠': // 0
-    case u'١': // 1
-    case u'٢': // 2
-    case u'٣': // 3
-    case u'٤': // 4
-    case u'٥': // 5
-    case u'٦': // 6
-    case u'٧': // 7
-    case u'٨': // 8
-    case u'٩': // 9
-    {
-      StringRef digits;
-
-      // only accept integer type for now
-      while (util::isArabDigit(current)) {
-        digits += util::encode_utf8_str(current);
-        SourceManager_.nextChar();
-      }
-
-      return finish(tok::TokenType::INTEGER, digits, line, col);
-    }
-
-    // operators
-    case '=':
-    case '<':
-    case '>':
-    case '!':
-    case '+':
-    case '-':
-    case '|':
-    case '&':
-    case '*':
-    case '/':
-    case '%':
-    case u'٪': {
-      StringRef operator_str;
-      operator_str += util::encode_utf8_str(current);
-      SourceManager_.consumeChar();
-
-      uint32_t next = SourceManager_.currentChar();
-      if (next != 0) {
-        StringRef two = operator_str + util::encode_utf8_str(next);
-        if (auto type = tok::lookupOperator(two)) {
-          operator_str = two;
-          SourceManager_.consumeChar();
-        }
-      }
-
-      // check if the operator exists
-      if (auto type = tok::lookupOperator(operator_str))
-        return finish(*type, operator_str, line, col);
-
-      return finish(tok::TokenType::INVALID, operator_str, line, col);
-    }
-
-    case '[':
-    case ']':
-    case '(':
-    case ')':
-    case ':': {
-      StringRef symbol;
-      symbol += util::encode_utf8_str(current);
-      SourceManager_.consumeChar();
-
-      tok::TokenType tt;
-      switch (current) {
-      case '[':
-        tt = tok::TokenType::LBRACKET;
-        break;
-      case ']':
-        tt = tok::TokenType::RBRACKET;
-        break;
-      case '(':
-        tt = tok::TokenType::LPAREN;
-        break;
-      case ')':
-        tt = tok::TokenType::RPAREN;
-        break;
-      case ':': {
-        uint32_t next_c = SourceManager_.currentChar();
-        if (next_c == '=') {
-          symbol += util::encode_utf8_str('=');
-          SourceManager_.consumeChar();
-          tt = tok::TokenType::OP_ASSIGN;
-        } else
-          tt = tok::TokenType::COLON;
-      } break;
-      default:
-        tt = tok::TokenType::INVALID;
-        break;
-      }
-
-      return finish(tt, symbol, line, col);
-    }
-
-    default:
-      break;
-    }
-
-    // number literal
-    if (::isdigit(current)) {
-      StringRef number;
-      number += util::encode_utf8_str(current);
-      uint32_t next = SourceManager_.nextChar();
-
-      if (current == '0') {
-        // hex
-        if (next == 'x' || next == 'X') {
-          number += util::encode_utf8_str(next);
-          current = SourceManager_.nextChar();
-
-          // should have digits to be valid hex
-          bool has_digits = false;
-
-          for (;;) {
-            if (current == '_') {
-              current = SourceManager_.nextChar();
-              continue;
+            unsigned int dedent_count = 0;
+            while (IndentLevel_ > 0 && size < IndentStack_.back()) {
+                --IndentLevel_;
+                IndentStack_.pop();
+                AltIndentStack_.pop();
+                ++dedent_count;
             }
+            if (size != IndentStack_.back())
+                diagnostic::panic("Unindent does not match any outer level of indentation");
+            if (alt_size != AltIndentStack_.back())
+                diagnostic::panic("Inconsistent indentation");
 
-            // check for valid hex digits (0-9, A-F, a-f)
-            if (::isxdigit(current)) {
-              number += util::encode_utf8_str(current);
-              current = SourceManager_.nextChar();
-              has_digits = true;
-            } else
-              break;
-          }
-
-          if (!has_digits)
-            diagnostic::panic("Invalid hex literal, it has no digits after 0x");
-
-          return finish(tok::TokenType::HEX, number, line, col);
+            for (unsigned int i = 0; i < dedent_count; ++i)
+                store(MAKE_TOKEN(tok::TokenType::DEDENT, "", line, col));
         }
-        // octal
-        else if (next == 'o' || next == 'O') {
-          number += util::encode_utf8_str(next);
-          current = SourceManager_.nextChar();
+    };
 
-          bool has_digits = false;
+    for (;;) {
+        uint32_t line = SourceManager_.getLineNumber();
+        uint32_t col = SourceManager_.getColumnNumber();
+        uint32_t current = SourceManager_.currentChar();
 
-          for (;;) {
-            if (current == '_') {
-              current = SourceManager_.nextChar();
-              continue;
-            }
-
-            // check for valid octal digits (0-7)
-            if (current >= '0' && current <= '7') {
-              number += util::encode_utf8_str(current);
-              current = SourceManager_.nextChar();
-              has_digits = true;
-            } else if (::isdigit(current))
-              diagnostic::panic("Invalid digit '" + std::string(1, current) + "' in octal literal");
-            else
-              break;
-          }
-
-          if (!has_digits)
-            diagnostic::panic("Invalid octal literal: no digits after 0o");
-
-          return finish(tok::TokenType::OCTAL, number, line, col);
-        }
-        // binary
-        else if (next == 'b' || next == 'B') {
-          number += util::encode_utf8_str(next); // consume peeked
-          current = SourceManager_.nextChar();
-
-          bool has_digits = false;
-
-          for (;;) {
-            if (current == '_') {
-              current = SourceManager_.nextChar();
-              continue;
-            }
-
-            // valid digits in binary (0 and 1)
-            if (current == '0' || current == '1') {
-              number += util::encode_utf8_str(current);
-              current = SourceManager_.nextChar();
-              has_digits = true;
-            } else if (::isdigit(current))
-              diagnostic::panic("Invalid digit '" + std::string(1, current) + "' in binary literal");
-            else
-              break;
-          }
-
-          if (!has_digits)
-            diagnostic::panic("Invalid binary literal: no digits after 0b");
-
-          return finish(tok::TokenType::BINARY, number, line, col);
-        }
-        // If it's just '0' followed by regular digits or '.', fall through to
-        // decimal parsing
-      }
-
-      current = SourceManager_.currentChar(); // sanity check
-
-      // integer part, might be followed by a decimal part
-      for (;;) {
-        if (current == '_') {
-          current = SourceManager_.nextChar();
-          continue;
-        }
-
-        if (::isdigit(current)) {
-          number += util::encode_utf8_str(current);
-          current = SourceManager_.nextChar();
-          continue;
-        } else
-          break;
-      }
-
-      // check if decimal
-      if (current == '.') {
-        number += util::encode_utf8_str(current);
-        current = SourceManager_.nextChar();
-
-        for (;;) {
-          if (current == '_') {
-            current = SourceManager_.nextChar();
-            continue;
-          }
-
-          if (::isdigit(current)) {
-            number += util::encode_utf8_str(current);
-            current = SourceManager_.nextChar();
-            continue;
-          } else
+        if (current == 0)
             break;
+
+        if (current == '\n') {
+            SourceManager_.consumeChar();
+            AtBOL_ = true;
+            tok::Token const* ret = MAKE_TOKEN(tok::TokenType::NEWLINE, util::encode_utf8_str('\n'), line, col);
+            store(ret);
+            nextLine(line, col);
+            return ret;
         }
 
-        return finish(tok::TokenType::DECIMAL, number, line, col);
-      }
+        if (current == ' ' || current == '\t' || current == '\r') {
+            SourceManager_.consumeChar();
+            continue;
+        }
 
-      return finish(tok::TokenType::INTEGER, number, line, col);
+        if (current == '#') {
+            while (current != '\n' && current != 0)
+                current = SourceManager_.nextChar();
+            continue;
+        }
+
+        if (current == '\'' || current == '"') {
+            StringRef string_literal;
+            uint32_t quote = current;
+            current = SourceManager_.nextChar();
+
+            while (current != '\n' && current != 0 && current != quote) {
+                if (current == '\\') {
+                    current = SourceManager_.nextChar();
+                    switch (current) {
+                    case 'n':
+                        string_literal += '\n';
+                        break;
+                    case 't':
+                        string_literal += '\t';
+                        break;
+                    case 'r':
+                        string_literal += '\r';
+                        break;
+                    case '\\':
+                        string_literal += '\\';
+                        break;
+                    case '\'':
+                        string_literal += '\'';
+                        break;
+                    case '"':
+                        string_literal += '"';
+                        break;
+                    case '0':
+                        string_literal += '\0';
+                        break;
+                    default:
+                        string_literal += '\\';
+                        string_literal += util::encode_utf8_str(current);
+                        break;
+                    }
+                    SourceManager_.consumeChar();
+                } else {
+                    string_literal += util::encode_utf8_str(current);
+                    current = SourceManager_.nextChar();
+                }
+            }
+
+            if (current != quote)
+                return finish(tok::TokenType::INVALID, string_literal, line, col);
+
+            SourceManager_.consumeChar(); // closing quote
+            return finish(tok::TokenType::STRING, string_literal, line, col);
+        }
+
+        if (current == ',' || current == '.' || current == u'،' || current == u'٬') {
+            SourceManager_.consumeChar();
+            return finish((current == '.') ? tok::TokenType::DOT : tok::TokenType::COMMA, util::encode_utf8_str(current), line, col);
+        }
+
+        if (current == '[' || current == ']' || current == '(' || current == ')' || current == ':') {
+            StringRef symbol;
+            symbol += util::encode_utf8_str(current);
+            SourceManager_.consumeChar();
+
+            tok::TokenType tt;
+            switch (current) {
+            case '[':
+                tt = tok::TokenType::LBRACKET;
+                break;
+            case ']':
+                tt = tok::TokenType::RBRACKET;
+                break;
+            case '(':
+                tt = tok::TokenType::LPAREN;
+                break;
+            case ')':
+                tt = tok::TokenType::RPAREN;
+                break;
+            case ':': {
+                if (SourceManager_.currentChar() == '=') {
+                    symbol += util::encode_utf8_str('=');
+                    SourceManager_.consumeChar();
+                    tt = tok::TokenType::OP_ASSIGN;
+                } else {
+                    tt = tok::TokenType::COLON;
+                }
+                break;
+            }
+            default:
+                tt = tok::TokenType::INVALID;
+                break;
+            }
+            return finish(tt, symbol, line, col);
+        }
+
+        if (current == '=' || current == '<' || current == '>'
+            || current == '!' || current == '+' || current == '-'
+            || current == '|' || current == '&' || current == '*'
+            || current == '/' || current == '%' || current == u'٪') {
+            StringRef operator_str;
+            operator_str += util::encode_utf8_str(current);
+            SourceManager_.consumeChar();
+
+            uint32_t next = SourceManager_.currentChar();
+            if (next != 0) {
+                StringRef two = operator_str + util::encode_utf8_str(next);
+                if (tok::lookupOperator(two)) {
+                    operator_str = two;
+                    SourceManager_.consumeChar();
+                }
+            }
+
+            if (auto type = tok::lookupOperator(operator_str))
+                return finish(*type, operator_str, line, col);
+
+            return finish(tok::TokenType::INVALID, operator_str, line, col);
+        }
+
+        if (IS_DIGIT(current)) {
+            StringRef number;
+            number += util::encode_utf8_str(current);
+            uint32_t next = SourceManager_.nextChar();
+
+            // numeric base prefix: 0x / 0o / 0b
+            if (current == '0') {
+                auto consumeBaseDigits =
+                    [&](auto valid, tok::TokenType tt, char const* err) -> tok::Token const* {
+                    number += util::encode_utf8_str(next); // prefix char
+                    current = SourceManager_.nextChar();
+                    bool any = false;
+                    for (;;) {
+                        if (current == '_') {
+                            current = SourceManager_.nextChar();
+                            continue;
+                        }
+                        if (!valid(current))
+                            break;
+                        number += util::encode_utf8_str(current);
+                        current = SourceManager_.nextChar();
+                        any = true;
+                    }
+                    if (!any)
+                        diagnostic::panic(err);
+                    return finish(tt, number, line, col);
+                };
+
+                if (next == 'x' || next == 'X')
+                    CONSUME_BASE_DIGITS(IS_XDIGIT(current), tok::TokenType::HEX, "Invalid hex literal: no digits after 0x");
+
+                if (next == 'o' || next == 'O')
+                    CONSUME_BASE_DIGITS(OCTAL_DIGIT(current), tok::TokenType::OCTAL, "Invalid octal literal: no digits after 0o");
+
+                if (next == 'b' || next == 'B')
+                    CONSUME_BASE_DIGITS(BINARY_DIGIT(current), tok::TokenType::BINARY, "Invalid binary literal: no digits after 0b");
+            }
+
+            current = SourceManager_.currentChar();
+            for (;;) {
+                if (current == '_') {
+                    current = SourceManager_.nextChar();
+                    continue;
+                }
+                if (!IS_DIGIT(current))
+                    break;
+                number += util::encode_utf8_str(current);
+                current = SourceManager_.nextChar();
+            }
+
+            if (current == '.') {
+                number += util::encode_utf8_str(current);
+                current = SourceManager_.nextChar();
+                for (;;) {
+                    if (current == '_') {
+                        current = SourceManager_.nextChar();
+                        continue;
+                    }
+                    if (!IS_DIGIT(current))
+                        break;
+                    number += util::encode_utf8_str(current);
+                    current = SourceManager_.nextChar();
+                }
+                return finish(tok::TokenType::DECIMAL, number, line, col);
+            }
+
+            return finish(tok::TokenType::INTEGER, number, line, col);
+        }
+
+        if (IS_ARDIGIT(current)) {
+            StringRef digits;
+            while (IS_ARDIGIT(current)) {
+                digits += util::encode_utf8_str(current);
+                current = SourceManager_.nextChar();
+            }
+            return finish(tok::TokenType::INTEGER, digits, line, col);
+        }
+
+        if (IS_IDENT_S(current)) {
+            StringRef identifier;
+            while (IS_IDENT_C(current)) {
+                identifier += util::encode_utf8_str(current);
+                current = SourceManager_.nextChar();
+            }
+            tok::TokenType tt = tok::TokenType::IDENTIFIER;
+            if (auto type = tok::lookupKeyword(identifier))
+                tt = *type;
+            return finish(tt, identifier, line, col);
+        }
+
+        diagnostic::report(diagnostic::Severity::ERROR, line, col, 0, getLineAt(line).data());
+        diagnostic::panic("Invalid character: U+" + [](uint32_t cp) {char buf[8]; std::snprintf(buf, sizeof(buf), "%04X", cp); return std::string(buf); }(current));
     }
-
-    diagnostic::report(diagnostic::Severity::ERROR, line, col, 0, getLineAt(line).data());
-    diagnostic::panic("Invalid character found : " + std::to_string(static_cast<char>(current)));
-  }
-
-  if (!TokStream_.empty() && TokStream_.back()->type() == tok::TokenType::ENDMARKER)
-    return TokStream_.back();
-
-  uint32_t last_line = SourceManager_.getLineNumber();
-  uint32_t last_col = SourceManager_.getColumnNumber();
-
-  while (IndentLevel_ > 0) {
-    --IndentLevel_;
-    IndentStack_.pop();
-    AltIndentStack_.pop();
-    store(makeToken(tok::TokenType::DEDENT, "", last_line, last_col));
-  }
-
-  tok::Token const *ret = makeToken(tok::TokenType::ENDMARKER, "", last_line, last_col);
-  store(ret);
-
-  return TokStream_.back();
-}
-
-tok::Token const *Lexer::next() {
-  if (TokIndex_ + 1 < TokStream_.size())
-    return TokStream_[++TokIndex_];
-
-  while (true) {
-    lexToken();
 
     if (!TokStream_.empty() && TokStream_.back()->type() == tok::TokenType::ENDMARKER)
-      break;
+        return TokStream_.back();
+
+    uint32_t last_line = SourceManager_.getLineNumber();
+    uint32_t last_col = SourceManager_.getColumnNumber();
+
+    while (IndentLevel_ > 0) {
+        --IndentLevel_;
+        IndentStack_.pop();
+        AltIndentStack_.pop();
+        store(MAKE_TOKEN(tok::TokenType::DEDENT, "", last_line, last_col));
+    }
+
+    store(MAKE_TOKEN(tok::TokenType::ENDMARKER, "", last_line, last_col));
+    return TokStream_.back();
+}
+
+tok::Token const* Lexer::next()
+{
+    if (TokIndex_ + 1 < TokStream_.size())
+        return TokStream_[++TokIndex_];
+
+    while (true) {
+        lexToken();
+
+        if (!TokStream_.empty() && TokStream_.back()->type() == tok::TokenType::ENDMARKER)
+            break;
+        if (TokIndex_ + 1 < TokStream_.size())
+            break;
+    }
 
     if (TokIndex_ + 1 < TokStream_.size())
-      break;
-  }
+        ++TokIndex_;
 
-  if (TokIndex_ + 1 < TokStream_.size())
-    ++TokIndex_;
-
-  return TokStream_[TokIndex_];
-}
-
-tok::Token const *Lexer::current() const {
-  if (TokIndex_ < TokStream_.size())
     return TokStream_[TokIndex_];
-
-  if (!TokStream_.empty())
-    return TokStream_.back();
-
-  return nullptr;
 }
 
-tok::Token const *Lexer::peek(size_t n) {
-  while (TokIndex_ + n >= TokStream_.size()) {
-    if (!TokStream_.empty() && TokStream_.back()->type() == tok::TokenType::ENDMARKER)
-      return TokStream_.back();
+tok::Token const* Lexer::current() const
+{
+    if (TokIndex_ < TokStream_.size())
+        return TokStream_[TokIndex_];
 
-    lexToken();
-  }
+    if (!TokStream_.empty())
+        return TokStream_.back();
 
-  return TokStream_[TokIndex_ + n];
+    return nullptr;
 }
 
-void Lexer::store(tok::Token const *tok) { TokStream_.push(tok); }
+tok::Token const* Lexer::peek(size_t n)
+{
+    while (TokIndex_ + n >= TokStream_.size()) {
+        if (!TokStream_.empty() && TokStream_.back()->type() == tok::TokenType::ENDMARKER)
+            return TokStream_.back();
 
-Array<tok::Token const *> Lexer::tokenize() {
-  while (next()->type() != tok::TokenType::ENDMARKER)
-    ;
+        lexToken();
+    }
 
-  return this->TokStream_;
+    return TokStream_[TokIndex_ + n];
+}
+
+void Lexer::store(tok::Token const* tok) { TokStream_.push(tok); }
+
+Array<tok::Token const*> Lexer::tokenize()
+{
+    while (next()->type() != tok::TokenType::ENDMARKER)
+        ;
+
+    return this->TokStream_;
 }
 
 } // namespace mylang::lex

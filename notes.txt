@@ -401,7 +401,7 @@ function_def:
     | function_def_raw
 
 function_def_raw:
-    | 'عرف' NAME '(' [params] ')' ':' block  
+    | 'دالة' NAME '(' [params] ')' ':' block  
 
 params:
     | parameters

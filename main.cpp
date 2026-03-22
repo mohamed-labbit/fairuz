@@ -9,10 +9,8 @@ int main(int argc, char** argv)
 {
     if (argc < 2)
         return 0; // return silently
-
     mylang::AllocatorContext g_ctx;
     mylang::setContext(&g_ctx);
-
     std::string filename = argv[1];
     mylang::lex::FileManager file_manager(filename);
     mylang::parser::Parser parser(&file_manager);
@@ -29,7 +27,6 @@ int main(int argc, char** argv)
     virtual_machine.run(bc);
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
-    std::cout << '\n'
-              << duration.count() << std::endl;
+    std::cout << '\n' << duration.count() << std::endl;
     return 0;
 }

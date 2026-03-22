@@ -1,0 +1,1 @@
+time bash build.sh run /Users/mohamedrabbit/code/mylang/demo_else.txt && time bash build.sh run /Users/mohamedrabbit/code/mylang/demo.txt && time bash build.sh run /Users/mohamedrabbit/code/mylang/demo_.txt
