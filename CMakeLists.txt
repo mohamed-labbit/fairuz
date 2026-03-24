@@ -1,17 +1,11 @@
 cmake_minimum_required(VERSION 3.14)
-project(MyProgrammingLanguage)
+project(MyProgrammingLanguage VERSION 0.0.0 LANGUAGES C CXX)
+
+include(GNUInstallDirs)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-
-# For LLVM/Clang on macOS, ensure we use the right standard library
-if(APPLE)
-    add_compile_options(-stdlib=libc++)
-    add_link_options(-stdlib=libc++)
-    link_directories(/opt/homebrew/opt/llvm/lib/c++)
-    include_directories(/opt/homebrew/opt/llvm/include/c++/v1)
-endif()
 
 # Add include directories
 include_directories(${CMAKE_SOURCE_DIR}/include)
@@ -52,6 +46,7 @@ endif()
 
 # Collect source files from src/
 file(GLOB_RECURSE MYLANG_SOURCES ${CMAKE_SOURCE_DIR}/src/*.cpp ${CMAKE_SOURCE_DIR}/src/*.cc)
+list(REMOVE_ITEM MYLANG_SOURCES ${CMAKE_SOURCE_DIR}/src/comp.cc)
 
 # Build an object library from your language sources
 add_library(mylang_objects OBJECT ${MYLANG_SOURCES})
@@ -59,10 +54,6 @@ target_include_directories(mylang_objects PUBLIC
     ${CMAKE_SOURCE_DIR}/include
 )
 target_link_libraries(mylang_objects PUBLIC simdutf::simdutf)
-
-if(OpenMP_FOUND)
-    target_compile_options(mylang_objects PRIVATE ${OpenMP_CXX_FLAGS})
-endif()
 
 # ─── Main executable ────────────────────────────────────────────────────────
 add_executable(mylang
@@ -72,10 +63,34 @@ add_executable(mylang
 
 target_include_directories(mylang PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_link_libraries(mylang PRIVATE simdutf::simdutf)
+target_compile_definitions(mylang PRIVATE MYLANG_VERSION="${PROJECT_VERSION}")
 
 if(OpenMP_FOUND)
     target_link_libraries(mylang PRIVATE OpenMP::OpenMP_CXX)
 endif()
+
+install(TARGETS mylang
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+install(FILES
+    ${CMAKE_SOURCE_DIR}/README.md
+    ${CMAKE_SOURCE_DIR}/LICENSE
+    DESTINATION ${CMAKE_INSTALL_DOCDIR}
+)
+
+install(FILES
+    ${CMAKE_SOURCE_DIR}/demo.txt
+    ${CMAKE_SOURCE_DIR}/demo_.txt
+    ${CMAKE_SOURCE_DIR}/demo_else.txt
+    ${CMAKE_SOURCE_DIR}/demo_factorial.txt
+    ${CMAKE_SOURCE_DIR}/demo_primes_200.txt
+    ${CMAKE_SOURCE_DIR}/demo_strings_lists.txt
+    ${CMAKE_SOURCE_DIR}/demo_numeric_natives.txt
+    ${CMAKE_SOURCE_DIR}/demo_lists_working.txt
+    ${CMAKE_SOURCE_DIR}/demo_native_regressions.txt
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/mylang/examples
+)
 
 # ─── Test executable (only when BUILD_TESTS=ON) ──────────────────────────────
 if(BUILD_TESTS)
@@ -92,6 +107,7 @@ if(BUILD_TESTS)
     add_executable(mylang_tests
         tests/test_main.cpp
         tests/test_arena.cpp
+        tests/test_narrow_table.cpp
         tests/test_string.cpp
         tests/test_tokens.cpp
         tests/test_indentation.cpp
@@ -109,6 +125,9 @@ if(BUILD_TESTS)
     target_compile_options(mylang_tests PRIVATE
         $<$<CXX_COMPILER_ID:GNU,Clang>:-O0>
         $<$<CXX_COMPILER_ID:MSVC>:/Od>
+        -march=native          # use all instructions available on this specific CPU
+        -flto                  # link-time optimization — inlines across TUs
+        -ffast-math            # relaxed float semantics, faster but breaks IEEE edge cases
     )
 
     target_link_libraries(mylang_tests

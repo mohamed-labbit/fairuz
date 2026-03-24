@@ -16,7 +16,7 @@ static StringBase* g_empty_string = nullptr;
 
 StringBase* emptyStringSingleton() noexcept
 {
-    if (__builtin_expect(g_empty_string != nullptr, 1))
+    if (LIKELY(g_empty_string != nullptr))
         return g_empty_string;
 
     g_empty_string = new (g_empty_string_storage) StringBase();
@@ -307,26 +307,20 @@ StringRef& StringRef::operator+=(StringRef const& other)
 
 StringRef& StringRef::operator+=(char c)
 {
-    if (!StringData_)
-        return *this;
-
     ensureUnique();
 
-    if (Offset_ + Length_ + 1 >= StringData_->cap())
+    if (UNLIKELY(Offset_ + Length_ + 1 >= StringData_->cap()))
         expand(Length_ + 1);
 
     StringData_->ptr()[Offset_ + Length_] = c;
-    ++Length_;
-    StringData_->ptr()[Length_] = 0;
+    StringData_->ptr()[++Length_] = 0;
 
     return *this;
 }
 
 char StringRef::operator[](size_t const i) const
 {
-    if (!StringData_ || !data())
-        throw std::runtime_error("StringRef::operator[]: null string data");
-    if (i >= Length_)
+    if (UNLIKELY(i >= Length_))
         throw std::out_of_range("StringRef::operator[]: index out of bounds");
     return (*StringData_)[i + Offset_];
 }
@@ -334,18 +328,14 @@ char StringRef::operator[](size_t const i) const
 char& StringRef::operator[](size_t const i)
 {
     ensureUnique();
-    if (!StringData_ || !data())
-        throw std::runtime_error("StringRef::operator[]: null string data");
-    if (i >= Length_)
+    if (UNLIKELY(i >= Length_))
         throw std::out_of_range("StringRef::operator[]: index out of bounds");
     return (*StringData_)[i + Offset_];
 }
 
 char StringRef::at(size_t const i) const
 {
-    if (!StringData_ || !data())
-        throw std::runtime_error("StringRef::at: null string data");
-    if (i >= Length_)
+    if (UNLIKELY(i >= Length_))
         throw std::out_of_range("StringRef::at: index out of bounds");
     return (*StringData_)[i + Offset_];
 }
@@ -353,17 +343,13 @@ char StringRef::at(size_t const i) const
 char& StringRef::at(size_t const i)
 {
     ensureUnique();
-    if (!StringData_ || !data())
-        throw std::runtime_error("StringRef::at: null string data");
-    if (i >= Length_)
+    if (UNLIKELY(i >= Length_))
         throw std::out_of_range("StringRef::at: index out of bounds");
     return (*StringData_)[i + Offset_];
 }
 
 bool StringRef::find(char const c) const noexcept
 {
-    if (!StringData_ || !data())
-        return false;
     char const* p = data();
     char const* end = p + Length_;
     while (p < end && *p != c)
@@ -373,7 +359,7 @@ bool StringRef::find(char const c) const noexcept
 
 bool StringRef::find(StringRef const& s) const noexcept
 {
-    if (!StringData_ || !data() || s.empty() || s.len() > len())
+    if (s.empty() || s.len() > len())
         return false;
     size_t search_len = s.len();
     size_t max_start = len() - search_len;
@@ -386,8 +372,6 @@ bool StringRef::find(StringRef const& s) const noexcept
 
 std::optional<size_t> StringRef::find_pos(char const c) const noexcept
 {
-    if (!StringData_ || !data())
-        return std::nullopt;
     char const* p = data();
     char const* end = p + Length_;
     while (p < end && *p != c)
@@ -428,7 +412,7 @@ void StringRef::resize(size_t const s)
 
 StringRef StringRef::slice(size_t start, size_t end) const
 {
-    if (!StringData_ || Length_ == 0)
+    if (Length_ == 0)
         return { };
 
     if (start > Length_) {
@@ -449,7 +433,7 @@ StringRef StringRef::slice(size_t start, size_t end) const
 
 StringRef StringRef::substrCopy(size_t start, size_t end) const
 {
-    if (!StringData_ || Length_ == 0)
+    if (Length_ == 0)
         return { };
 
     if (start > Length_)
@@ -523,9 +507,6 @@ StringRef StringRef::fromUtf16(char16_t const* src)
 
 void StringRef::detach()
 {
-    if (!StringData_)
-        return;
-
     size_t const len = ::strlen(StringData_->ptr());
     size_t const copy_len = Length_ > 0 ? Length_ : (len - Offset_);
 

@@ -2,7 +2,6 @@
 
 #include "../include/arena.hpp"
 
-#include <atomic>
 #include <sys/mman.h>
 
 namespace mylang {
@@ -54,7 +53,7 @@ ArenaBlock& ArenaBlock::operator=(ArenaBlock&& other) noexcept
 {
     if (this != &other) {
         if (Begin_)
-            std::free(Begin_);
+            munmap(Begin_, Size_);
 
         Size_ = other.Size_;
         Begin_ = other.Begin_;
@@ -78,6 +77,7 @@ size_t ArenaBlock::used() const
 {
     if (!Begin_ || Next_ < Begin_)
         return 0;
+
     return static_cast<size_t>(Next_ - Begin_);
 }
 
@@ -85,6 +85,7 @@ size_t ArenaBlock::remaining() const
 {
     if (!Begin_)
         return 0;
+
     return static_cast<size_t>(End_ - Next_);
 }
 
@@ -92,6 +93,7 @@ bool ArenaBlock::pop(size_t bytes)
 {
     if (!Begin_ || Next_ < Begin_ + bytes)
         return false;
+
     Next_ -= bytes;
     return true;
 }
@@ -107,7 +109,7 @@ unsigned char* ArenaBlock::allocate(size_t bytes, std::optional<size_t> alignmen
     uintptr_t aligned = (cur + align - 1) & ~(align - 1);
     uintptr_t next = aligned + bytes;
 
-    if (__builtin_expect(next > reinterpret_cast<uintptr_t>(End_), 0))
+    if (UNLIKELY(next > reinterpret_cast<uintptr_t>(End_)))
         return nullptr;
 
     Next_ = reinterpret_cast<unsigned char*>(next);
@@ -118,13 +120,15 @@ unsigned char* ArenaBlock::reserve(size_t const bytes)
 {
     if (!Begin_ || bytes == 0)
         return nullptr;
+
     if (static_cast<size_t>(End_ - Next_) < bytes)
         return nullptr;
+
     Next_ += bytes;
     return Next_;
 }
 
-ArenaAllocator::ArenaAllocator(std::int32_t growth_strategy, OutOfMemoryHandler oom_handler, bool debug)
+ArenaAllocator::ArenaAllocator(int32_t growth_strategy, OutOfMemoryHandler oom_handler, bool debug)
     : GrowthFactor_(GrowthStrategy(growth_strategy))
     , OomHandler_(oom_handler)
 #ifdef MYLANG_DEBUG
@@ -149,6 +153,7 @@ void ArenaAllocator::reset()
 #ifdef MYLANG_DEBUG
     if (TrackAllocations_)
         AllocationMap_.clear();
+
     AllocatedPtrs_.clear();
     AllocStats_.reset();
 #endif
@@ -166,10 +171,10 @@ size_t ArenaAllocator::activeBlocks() const { return AllocStats_.ActiveBlocks; }
 
 void* ArenaAllocator::allocate(size_t const size, size_t const alignment)
 {
-    if (__builtin_expect(size == 0, 0))
+    if (UNLIKELY(size == 0))
         return nullptr;
 
-    if (__builtin_expect(size > MAX_BLOCK_SIZE, 0)) {
+    if (UNLIKELY(size > MAX_BLOCK_SIZE)) {
         diagnostic::emit("allocation size is too large : " + std::to_string(size));
         diagnostic::internalError(ErrorCode::ALLOC_FAILED);
     }
@@ -178,7 +183,7 @@ void* ArenaAllocator::allocate(size_t const size, size_t const alignment)
     uintptr_t aligned = (cur + alignment - 1) & ~(alignment - 1);
     uintptr_t next = aligned + size;
 
-    if (__builtin_expect(next <= reinterpret_cast<uintptr_t>(End_), 1)) {
+    if (LIKELY(next <= reinterpret_cast<uintptr_t>(End_))) {
         Next_ = reinterpret_cast<unsigned char*>(next);
 
 #ifdef MYLANG_DEBUG
@@ -232,7 +237,7 @@ void* ArenaAllocator::allocateSlow(size_t size, size_t alignment)
     uintptr_t aligned = (cur + alignment - 1) & ~(alignment - 1);
     uintptr_t next = aligned + size;
 
-    if (__builtin_expect(next > reinterpret_cast<uintptr_t>(End_), 0))
+    if (UNLIKELY(next > reinterpret_cast<uintptr_t>(End_)))
         return nullptr;
 
     Next_ = reinterpret_cast<unsigned char*>(next);
@@ -276,6 +281,7 @@ unsigned char* ArenaAllocator::allocateBlock(size_t requested, size_t alignment_
     if (block_size > MaxBlockSize_) {
         if (retry_on_oom && OomHandler_ && OomHandler_(block_size))
             return allocateBlock(requested, alignment_, false);
+
         return nullptr;
     }
 
@@ -291,6 +297,7 @@ unsigned char* ArenaAllocator::allocateBlock(size_t requested, size_t alignment_
     } catch (std::bad_alloc const&) {
         if (retry_on_oom && OomHandler_ && OomHandler_(block_size))
             return allocateBlock(requested, alignment_, false);
+
         return nullptr;
     }
 }
@@ -335,8 +342,8 @@ void ArenaAllocator::trackAllocation(unsigned char* ptr, size_t size, size_t ali
     if (TrackAllocations_) {
         AllocationHeader header { };
         header.magic = AllocationHeader::MAGIC;
-        header.size = static_cast<std::uint32_t>(size);
-        header.alignment = static_cast<std::uint32_t>(alignment);
+        header.size = static_cast<uint32_t>(size);
+        header.alignment = static_cast<uint32_t>(alignment);
         header.checksum = header.compute_checksum();
         header.timestamp = std::chrono::steady_clock::now();
         AllocationMap_[ptr] = header;
@@ -356,10 +363,12 @@ bool ArenaAllocator::verifyAllocation(void* ptr) const
 {
     if (!TrackAllocations_)
         return true;
+
     std::shared_lock<std::shared_mutex> lock(AllocationMapMutex_);
     auto it = AllocationMap_.find(ptr);
     if (it == AllocationMap_.end())
         return false;
+
     return it->second.is_valid();
 }
 

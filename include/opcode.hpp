@@ -199,6 +199,10 @@ static StringRef opcode_name(OpCode op)
         return "STORE_GLOBAL";
     case OpCode::MOVE:
         return "MOVE";
+    case OpCode::LOAD_GLOBAL_CACHED:
+        return "LOAD_GLOBAL_CACHED";
+    case OpCode::STORE_GLOBAL_CACHED:
+        return "STORE_GLOBAL_CACHED";
     case OpCode::GET_UPVALUE:
         return "GET_UPVALUE";
     case OpCode::SET_UPVALUE:
@@ -207,48 +211,102 @@ static StringRef opcode_name(OpCode op)
         return "CLOSE_UPVALUE";
     case OpCode::OP_ADD:
         return "OP_ADD";
+    case OpCode::OP_ADD_II:
+        return "OP_ADD_II";
+    case OpCode::OP_ADD_FF:
+        return "OP_ADD_FF";
     case OpCode::OP_ADD_RI:
         return "OP_ADD_RI";
     case OpCode::OP_SUB:
         return "OP_SUB";
+    case OpCode::OP_SUB_II:
+        return "OP_SUB_II";
+    case OpCode::OP_SUB_FF:
+        return "OP_SUB_FF";
     case OpCode::OP_SUB_RI:
         return "OP_SUB_RI";
     case OpCode::OP_MUL:
         return "OP_MUL";
+    case OpCode::OP_MUL_II:
+        return "OP_MUL_II";
+    case OpCode::OP_MUL_FF:
+        return "OP_MUL_FF";
     case OpCode::OP_MUL_RI:
         return "OP_MUL_RI";
     case OpCode::OP_DIV:
         return "OP_DIV";
+    case OpCode::OP_DIV_II:
+        return "OP_DIV_II";
+    case OpCode::OP_DIV_FF:
+        return "OP_DIV_FF";
     case OpCode::OP_MOD:
         return "OP_MOD";
+    case OpCode::OP_MOD_II:
+        return "OP_MOD_II";
+    case OpCode::OP_MOD_FF:
+        return "OP_MOD_FF";
     case OpCode::OP_POW:
         return "OP_POW";
     case OpCode::OP_NEG:
         return "OP_NEG";
+    case OpCode::OP_NEG_I:
+        return "OP_NEG_I";
+    case OpCode::OP_NEG_F:
+        return "OP_NEG_F";
     case OpCode::OP_BITAND:
         return "OP_BITAND";
+    case OpCode::OP_BITAND_I:
+        return "OP_BITAND_I";
     case OpCode::OP_BITOR:
         return "OP_BITOR";
+    case OpCode::OP_BITOR_I:
+        return "OP_BITOR_I";
     case OpCode::OP_BITXOR:
-        return "BITXOR";
+        return "OP_BITXOR";
+    case OpCode::OP_BITXOR_I:
+        return "OP_BITXOR_I";
     case OpCode::OP_BITNOT:
-        return "BITNOT";
+        return "OP_BITNOT";
     case OpCode::OP_LSHIFT:
         return "OP_LSHIFT";
     case OpCode::OP_RSHIFT:
         return "OP_RSHIFT";
     case OpCode::OP_EQ:
         return "OP_EQ";
+    case OpCode::OP_EQ_II:
+        return "OP_EQ_II";
+    case OpCode::OP_EQ_FF:
+        return "OP_EQ_FF";
+    case OpCode::OP_EQ_SS:
+        return "OP_EQ_SS";
     case OpCode::OP_EQ_RI:
         return "OP_EQ_RI";
     case OpCode::OP_NEQ:
         return "OP_NEQ";
+    case OpCode::OP_NEQ_II:
+        return "OP_NEQ_II";
+    case OpCode::OP_NEQ_FF:
+        return "OP_NEQ_FF";
+    case OpCode::OP_NEQ_SS:
+        return "OP_NEQ_SS";
     case OpCode::OP_LT:
         return "OP_LT";
+    case OpCode::OP_LT_II:
+        return "OP_LT_II";
+    case OpCode::OP_LT_FF:
+        return "OP_LT_FF";
+    case OpCode::OP_LT_SS:
+        return "OP_LT_SS";
     case OpCode::OP_LT_RI:
         return "OP_LT_RI";
     case OpCode::OP_LTE:
         return "OP_LTE";
+    case OpCode::OP_LTE_II:
+        return "OP_LTE_II";
+    case OpCode::OP_LTE_FF:
+        return "OP_LTE_FF";
+    case OpCode::OP_LTE_SS:
+        return "OP_LTE_SS";
     case OpCode::OP_LTE_RI:
         return "OP_LTE_RI";
     case OpCode::OP_NOT:
@@ -335,7 +393,7 @@ struct Chunk {
 
     Array<uint32_t> code;
     Array<SourceLocation> locations;
-    Array<uint64_t> constants;
+    Array<uint64_t> constants; // constants are boxed values!!!
     Array<LineEntry> lines;
     Array<Chunk*> functions;
     Array<ICSlot> icSlots;
@@ -351,15 +409,10 @@ struct Chunk {
     Chunk& operator=(Chunk&&) = default;
 
     uint32_t emit(uint32_t instr, SourceLocation loc);
-
     bool patchJump(uint32_t const instr_idx);
-
     uint16_t addConstant(uint64_t const v);
-
     uint8_t allocIcSlot();
-
     uint32_t getLine(uint32_t const instr_idx) const;
-
     void disassemble() const;
 
 private:

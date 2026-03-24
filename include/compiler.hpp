@@ -4,15 +4,17 @@
 #include "ast.hpp"
 #include "value.hpp"
 
+#include <unordered_map>
+#include <utility>
+
 namespace mylang::runtime {
 
 using namespace ast;
 
-struct LocalVariableDesc {
+struct LocalVar {
     StringRef name;
     unsigned int depth;
     uint8_t reg;
-    bool isCaptured;
 };
 
 struct UpvalueDesc {
@@ -22,8 +24,7 @@ struct UpvalueDesc {
 
 struct CompilerState {
     Chunk* chunk { nullptr };
-    Array<LocalVariableDesc> locals;
-    Array<UpvalueDesc> upvalues;
+    Array<LocalVar> locals;
     unsigned int scopeDepth { 0 };
     uint8_t nextReg { 0 };
     uint8_t maxReg { 0 };
@@ -57,12 +58,17 @@ struct CompilerState {
 struct RegMark {
     CompilerState* state;
     uint8_t mark;
+
     explicit RegMark(CompilerState* s)
         : state(s)
         , mark(s->nextReg)
     {
     }
-    ~RegMark() { state->freeRegsTo(mark); }
+
+    ~RegMark()
+    {
+        state->freeRegsTo(mark);
+    }
 };
 
 struct ExprResult {
@@ -150,9 +156,10 @@ private:
     std::unordered_map<std::pair<StringRef, Chunk*>, uint16_t, PairHash> StringCache_;
 
     struct VarInfo {
-        enum class Kind { LOCAL,
-            UPVALUE,
-            GLOBAL } kind;
+        enum class Kind {
+            LOCAL,
+            GLOBAL
+        } kind;
         uint8_t index;
     };
 
@@ -202,6 +209,7 @@ private:
 
     uint32_t emit(uint32_t instr, SourceLocation loc);
     uint32_t emitJump(OpCode op, uint8_t cond, SourceLocation loc);
+
     void patchJump(uint32_t idx);
     void pushLoop(uint32_t loop_start);
     void popLoop(uint32_t loop_exit, uint32_t continue_target, uint32_t line);

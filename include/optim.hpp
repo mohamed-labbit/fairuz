@@ -67,9 +67,6 @@ static std::optional<Value> _tryFoldBinary(BinaryExpr const* e)
     if (op == BinaryOp::OP_NEQ)
         return MAKE_BOOL(*L != *R);
 
-    if (!IS_INTEGER(*L) || !IS_INTEGER(*R))
-        return std::nullopt;
-
     bool both_ints = IS_INTEGER(*L) && IS_INTEGER(*R);
 
     double ld = AS_DOUBLE(*L);

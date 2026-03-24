@@ -1,8 +1,10 @@
+/// gc.cc
+
 #include "../include/gc.hpp"
 #include "../include/vm.hpp"
 
 namespace mylang::runtime {
-    
+
 void GarbageCollector::collect(VM* vm)
 {
     markRoots(vm);
@@ -13,24 +15,21 @@ void GarbageCollector::collect(VM* vm)
 void GarbageCollector::markRoots(VM* vm)
 {
     // Stack values
-    for (uint32_t i = 0; i < vm->StackTop_; ++i) {
+    for (int i = 0; i < vm->StackTop_ && i < VM::STACK_SIZE; ++i) {
         if (IS_OBJECT(vm->Stack_[i]))
             markObject(AS_OBJECT(vm->Stack_[i]));
     }
 
     // Call frames
-    for (uint32_t i = 0; i < vm->FramesTop_; ++i)
+    for (int i = 0; i < vm->FramesTop_ && i < VM::MAX_FRAMES; ++i)
         markObject(vm->Frames_[i].closure);
 
     // Open upvalues
     for (uint32_t i = 0, n = vm->OpenUpvalues_.size(); i < n; ++i)
         markObject(vm->OpenUpvalues_[i]);
 
-    // Globals
-    for (auto& [key, val] : vm->Globals_) {
-        if (IS_OBJECT(val))
-            markObject(AS_OBJECT(val));
-    }
+    // Global slots are the live VM roots for globals.
+    markValueArray(vm->GlobalSlots_);
 }
 
 void GarbageCollector::markObject(ObjHeader* p)
@@ -80,6 +79,8 @@ void GarbageCollector::sweep()
         if (!All_[i]->isMarked) {
             delete All_[i];
             All_.erase(i);
+            // delay decrement until erase succeeds
+            CurrentSize_ -= sizeof(ObjHeader);
         } else {
             All_[i]->isMarked = false;
             ++i;
@@ -87,7 +88,7 @@ void GarbageCollector::sweep()
     }
 }
 
-void GarbageCollector::markValueArray(const Array<Value>& arr)
+void GarbageCollector::markValueArray(Array<Value> const& arr)
 {
     for (uint32_t i = 0, n = arr.size(); i < n; ++i) {
         if (IS_OBJECT(arr[i]))
@@ -103,5 +104,15 @@ void GarbageCollector::traceReferences()
         blackenObject(obj);
     }
 }
-    
-} // namespace mylang::runtime 
+
+// gc.cc
+void GarbageCollector::sweepAll()
+{
+    for (uint32_t i = 0; i < All_.size(); ++i)
+        delete All_[i];
+
+    All_.clear();
+    CurrentSize_ = 0;
+}
+
+} // namespace mylang::runtime

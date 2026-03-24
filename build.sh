@@ -7,9 +7,11 @@ CLEAN_BUILD=false
 RUN_TESTS=false
 RUN_MAIN=false
 RUN_INCLUDES=false
+RUN_INSTALL=false
 
 TEST_ARGS=()
 MAIN_ARGS=()
+INSTALL_ARGS=()
 
 # -------------------------
 # Parse arguments
@@ -31,9 +33,14 @@ for arg in "$@"; do
         run)
             RUN_MAIN=true
             ;;
+        install)
+            RUN_INSTALL=true
+            ;;
         *)
             if [[ "$RUN_TESTS" == true ]]; then
                 TEST_ARGS+=("$arg")
+            elif [[ "$RUN_INSTALL" == true ]]; then
+                INSTALL_ARGS+=("$arg")
             else
                 MAIN_ARGS+=("$arg")
             fi
@@ -57,11 +64,22 @@ cd build || exit 1
 COMMON_FLAGS=(
     -DCMAKE_C_COMPILER=clang
     -DCMAKE_CXX_COMPILER=clang++
-    -DCMAKE_BUILD_TYPE=Debug
     -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-    -DCMAKE_CXX_FLAGS="-fsanitize=address -g"
     -DCMAKE_OSX_SYSROOT="$(xcrun --show-sdk-path)"
 )
+
+if [[ "$DEBUG" == 1 || "$RUN_TESTS" == true ]]; then
+    COMMON_FLAGS+=(
+        -DCMAKE_BUILD_TYPE=Debug
+        -DCMAKE_CXX_FLAGS="-fsanitize=address -g"
+    )
+else
+    COMMON_FLAGS+=(
+        -DCMAKE_BUILD_TYPE=Release
+        -DCMAKE_CXX_FLAGS="-Ofast -DNDEBUG -flto=thin"
+        -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
+    )
+fi
 
 if [[ "$RUN_TESTS" == true ]]; then
     cmake "${COMMON_FLAGS[@]}" -DBUILD_TESTS=ON .. || exit 1
@@ -105,4 +123,26 @@ if [[ "$RUN_MAIN" == true ]]; then
 
     ASAN_OPTIONS=detect_leaks="$DEBUG" \
         "$PROJECT_ROOT/build/mylang" "${MAIN_ARGS[@]}"
+fi
+
+# -------------------------
+# Install
+# -------------------------
+if [[ "$RUN_INSTALL" == true ]]; then
+    INSTALL_PREFIX=""
+    if [[ ${#INSTALL_ARGS[@]} -gt 0 ]]; then
+        INSTALL_PREFIX="${INSTALL_ARGS[0]}"
+        cmake --install . --prefix "$INSTALL_PREFIX" || exit 1
+    else
+        INSTALL_PREFIX="/usr/local"
+        cmake --install . || exit 1
+    fi
+
+    echo
+    echo "Installed mylang to: $INSTALL_PREFIX"
+    echo "Run it directly with:"
+    echo "  $INSTALL_PREFIX/bin/mylang <file> [options]"
+    echo
+    echo "If you want 'mylang' on your PATH for this shell:"
+    echo "  export PATH=\"$INSTALL_PREFIX/bin:\$PATH\""
 fi

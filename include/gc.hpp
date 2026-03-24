@@ -5,13 +5,16 @@
 #include "value.hpp"
 
 namespace mylang::runtime {
-    
+
 class VM;
 
 class GarbageCollector {
 private:
     Array<ObjHeader*> All_;
     Array<ObjHeader*> Grays_;
+
+    uint32_t CurrentSize_ { 0 };
+
 public:
     GarbageCollector() = default;
 
@@ -22,16 +25,19 @@ public:
     {
         T* obj = new T(std::forward<Args>(args)...);
         All_.push(static_cast<ObjHeader*>(obj));
-        /// TODO: threshold??
+        CurrentSize_ += sizeof(T); // reasonable estimate
         return obj;
     }
+
+    uint32_t currentMemory() const { return CurrentSize_; }
+    void sweepAll();
 
 private:
     void markRoots(VM* vm);
     void markObject(ObjHeader* p);
     void blackenObject(ObjHeader* obj);
     void sweep();
-    void markValueArray(const Array<Value>& arr);
+    void markValueArray(Array<Value> const& arr);
     void traceReferences();
 };
 

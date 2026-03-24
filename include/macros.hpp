@@ -5,13 +5,13 @@
 
 namespace mylang {
 
-    struct SourceLocation {
+struct SourceLocation {
     uint32_t line { 0 };
     uint16_t column { 0 };
     uint16_t length { 0 };
 };
 
-    namespace Color {
+namespace Color {
 
 std::string const RESET = "\033[0m";
 std::string const BOLD = "\033[1m";
@@ -35,5 +35,8 @@ std::string const GRAY = "\033[90m";
 #define MY_NODISCARD [[nodiscard]]
 
 } // namespace mylang
+
+#define UNLIKELY(x) __builtin_expect(!!(x), 0)
+#define LIKELY(x) __builtin_expect(!!(x), 1)
 
 #endif // MACROS_HPP

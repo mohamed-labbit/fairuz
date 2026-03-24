@@ -21,8 +21,8 @@ struct ErrStmt;
 static ListExpr* makeList(Array<Expr*> elements = { });
 static BlockStmt* makeBlock(Array<Stmt*> stmts = { });
 static NameExpr* makeName(StringRef const str);
-static AssignmentExpr* makeAssignmentExpr(Expr* target, Expr* value, bool decl = true);
-static AssignmentStmt* makeAssignmentStmt(Expr* target, Expr* value, bool decl = true);
+static AssignmentExpr* makeAssignmentExpr(Expr* target, Expr* value, bool decl = false);
+static AssignmentStmt* makeAssignmentStmt(Expr* target, Expr* value, bool decl = false);
 static ErrExpr* makeErrExpr(uint32_t line, uint32_t col);
 static ErrStmt* makeErrStmt(uint32_t line, uint32_t col);
 

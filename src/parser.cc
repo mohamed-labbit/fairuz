@@ -13,6 +13,31 @@ using ErrorCode = diagnostic::errc::parser::Code;
 static bool isValidNode(Expr const* e) { return e->getKind() != Expr::Kind::INVALID; }
 static bool isValidNode(Stmt const* s) { return s->getKind() != Stmt::Kind::INVALID; }
 
+static bool stmtDefinitelyReturns(Stmt const* stmt)
+{
+    if (!stmt)
+        return false;
+
+    switch (stmt->getKind()) {
+    case Stmt::Kind::RETURN:
+        return true;
+    case Stmt::Kind::BLOCK: {
+        auto const* block = static_cast<BlockStmt const*>(stmt);
+        for (Stmt const* child : block->getStatements()) {
+            if (stmtDefinitelyReturns(child))
+                return true;
+        }
+        return false;
+    }
+    case Stmt::Kind::IF: {
+        auto const* if_stmt = static_cast<IfStmt const*>(stmt);
+        return stmtDefinitelyReturns(if_stmt->getThen()) && stmtDefinitelyReturns(if_stmt->getElse());
+    }
+    default:
+        return false;
+    }
+}
+
 Error Parser::reportError(ErrorCode err_code)
 {
     auto err_tok = currentToken();
@@ -348,6 +373,8 @@ void SemanticAnalyzer::analyzeStmt(Stmt const* stmt)
         }
 
         analyzeStmt(func_def->getBody());
+        if (!stmtDefinitelyReturns(func_def->getBody()))
+            reportIssue(Issue::Severity::INFO, "Function may not return a value", stmt->getLine());
         // Exit function scope
         CurrentScope_ = CurrentScope_->Parent_;
     } break;

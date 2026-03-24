@@ -1,21 +1,43 @@
 /// stdlib.cc
 
-#include "../include/stdlib.hpp"
-#include "diagnostic.hpp"
-#include "value.hpp"
+#include "../include/vm.hpp"
 
-#include <array>
 #include <cmath>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
-#include <string>
 
 namespace mylang::runtime {
 
 using ErrorCode = diagnostic::errc::runtime::Code;
 
-Value nativeLen(int argc, Value* argv)
+static StringRef valueToString(Value v)
+{
+    if (IS_NIL(v))
+        return "nil";
+    if (IS_BOOL(v))
+        return AS_BOOL(v) ? "true" : "false";
+    if (IS_INTEGER(v))
+        return StringRef(std::to_string(AS_INTEGER(v)).c_str());
+    if (IS_DOUBLE(v)) {
+        std::ostringstream oss;
+        oss << std::setprecision(14) << std::noshowpoint << AS_DOUBLE(v);
+        return StringRef(oss.str().c_str());
+    }
+    if (IS_STRING(v))
+        return AS_STRING(v)->str;
+    if (IS_LIST(v))
+        return "<list>";
+    if (IS_CLOSURE(v))
+        return "<function>";
+    if (IS_NATIVE(v))
+        return "<native>";
+    if (IS_FUNCTION(v))
+        return "<function>";
+    return "";
+}
+
+Value VM::nativeLen(int argc, Value* argv)
 {
     if (argc == 0 || !argv)
         return NIL_VAL;
@@ -124,7 +146,7 @@ static void printValue(Value v, int depth = 0)
     }
 }
 
-Value nativePrint(int argc, Value* argv)
+Value VM::nativePrint(int argc, Value* argv)
 {
     if (argc == 0 || !argv) {
         std::cout << '\n';
@@ -140,7 +162,7 @@ Value nativePrint(int argc, Value* argv)
     return NIL_VAL;
 }
 
-Value nativeType(int argc, Value* argv)
+Value VM::nativeType(int argc, Value* argv)
 {
     if (argc != 1 || !argv)
         return NIL_VAL;
@@ -148,7 +170,7 @@ Value nativeType(int argc, Value* argv)
     return MAKE_INTEGER(static_cast<int64_t>(valueTypeTag(argv[0])));
 }
 
-Value nativeInt(int argc, Value* argv)
+Value VM::nativeInt(int argc, Value* argv)
 {
     if (argc != 1 || !argv)
         return NIL_VAL;
@@ -157,7 +179,7 @@ Value nativeInt(int argc, Value* argv)
     return NIL_VAL;
 }
 
-Value nativeFloat(int argc, Value* argv)
+Value VM::nativeFloat(int argc, Value* argv)
 {
     if (argc != 1 || !argv)
         return NIL_VAL;
@@ -168,7 +190,7 @@ Value nativeFloat(int argc, Value* argv)
     return NIL_VAL;
 }
 
-Value nativeAppend(int argc, Value* argv)
+Value VM::nativeAppend(int argc, Value* argv)
 {
     if (argc < 2 || !argv) {
         diagnostic::emit("append() : expected two arguments got : " + std::to_string(argc));
@@ -191,7 +213,7 @@ Value nativeAppend(int argc, Value* argv)
     return NIL_VAL;
 }
 
-Value nativePop(int argc, Value* argv)
+Value VM::nativePop(int argc, Value* argv)
 {
     if (argc != 1 || !argv) {
         diagnostic::emit("pop() called with no value attatched");
@@ -210,7 +232,7 @@ Value nativePop(int argc, Value* argv)
     return NIL_VAL;
 }
 
-Value nativeSlice(int argc, Value* argv)
+Value VM::nativeSlice(int argc, Value* argv)
 {
     /// cut a copy of a list, with inclusive indices
     /// accept [list, a, b]
@@ -236,9 +258,9 @@ Value nativeSlice(int argc, Value* argv)
     return ret;
 }
 
-Value nativeInput(int argc, Value* argv) { return NIL_VAL; }
+Value VM::nativeInput(int argc, Value* argv) { return NIL_VAL; }
 
-Value nativeStr(int argc, Value* argv)
+Value VM::nativeStr(int argc, Value* argv)
 {
     if (argc > 1) {
         diagnostic::emit("str() expects one argument , got : " + std::to_string(argc));
@@ -265,7 +287,7 @@ Value nativeStr(int argc, Value* argv)
     return MAKE_STRING(output);
 }
 
-Value nativeBool(int argc, Value* argv)
+Value VM::nativeBool(int argc, Value* argv)
 {
     if (argc != 1 || !argv) {
         diagnostic::emit("bool() is called with no arguments");
@@ -276,7 +298,7 @@ Value nativeBool(int argc, Value* argv)
     return IS_TRUTHY(argv[0]) ? MAKE_BOOL(true) : MAKE_BOOL(false);
 }
 
-Value nativeList(int argc, Value* argv)
+Value VM::nativeList(int argc, Value* argv)
 {
     Value ret = MAKE_LIST();
     ObjList* list_obj = AS_LIST(ret);
@@ -287,11 +309,69 @@ Value nativeList(int argc, Value* argv)
     return ret;
 }
 
-Value nativeSplit(int argc, Value* argv) { return NIL_VAL; }
+Value VM::nativeSplit(int argc, Value* argv)
+{
+    if (argc != 2 || !argv)
+        return NIL_VAL;
+    if (!IS_STRING(argv[0]) || !IS_STRING(argv[1]))
+        return NIL_VAL;
 
-Value nativeJoin(int argc, Value* argv) { return NIL_VAL; }
+    StringRef src = AS_STRING(argv[0])->str;
+    StringRef delim = AS_STRING(argv[1])->str;
 
-Value nativeSubstr(int argc, Value* argv)
+    Value ret = MAKE_LIST();
+    ObjList* list = AS_LIST(ret);
+
+    if (delim.empty()) {
+        list->elements.push(MAKE_STRING(src));
+        return ret;
+    }
+
+    size_t start = 0;
+    while (start <= src.len()) {
+        size_t pos = start;
+        bool found = false;
+        while (pos + delim.len() <= src.len()) {
+            if (::memcmp(src.data() + pos, delim.data(), delim.len()) == 0) {
+                found = true;
+                break;
+            }
+            ++pos;
+        }
+
+        if (!found) {
+            list->elements.push(MAKE_STRING(src.substr(start, src.len())));
+            break;
+        }
+
+        list->elements.push(MAKE_STRING(src.substr(start, pos)));
+        start = pos + delim.len();
+    }
+
+    return ret;
+}
+
+Value VM::nativeJoin(int argc, Value* argv)
+{
+    if (argc != 2 || !argv)
+        return NIL_VAL;
+    if (!IS_LIST(argv[0]) || !IS_STRING(argv[1]))
+        return NIL_VAL;
+
+    ObjList* list = AS_LIST(argv[0]);
+    StringRef delim = AS_STRING(argv[1])->str;
+    StringRef out = "";
+
+    for (uint32_t i = 0; i < list->elements.size(); ++i) {
+        if (i > 0)
+            out += delim;
+        out += valueToString(list->elements[i]);
+    }
+
+    return MAKE_STRING(out);
+}
+
+Value VM::nativeSubstr(int argc, Value* argv)
 {
     if (argc != 3 || !argv) {
         diagnostic::emit("substr() expects 3 arguments, got : " + std::to_string(argc));
@@ -307,11 +387,29 @@ Value nativeSubstr(int argc, Value* argv)
     return MAKE_STRING(ret);
 }
 
-Value nativeContains(int argc, Value* argv) { return NIL_VAL; }
+Value VM::nativeContains(int argc, Value* argv)
+{
+    if (argc != 2 || !argv)
+        return NIL_VAL;
+    if (!IS_STRING(argv[0]) || !IS_STRING(argv[1]))
+        return NIL_VAL;
 
-Value nativeTrim(int argc, Value* argv) { return NIL_VAL; }
+    return MAKE_BOOL(AS_STRING(argv[0])->str.find(AS_STRING(argv[1])->str));
+}
 
-Value nativeFloor(int argc, Value* argv)
+Value VM::nativeTrim(int argc, Value* argv)
+{
+    if (argc != 1 || !argv)
+        return NIL_VAL;
+    if (!IS_STRING(argv[0]))
+        return NIL_VAL;
+
+    StringRef out = AS_STRING(argv[0])->str;
+    out.trimWhitespace();
+    return MAKE_STRING(out.substr(0, out.len()));
+}
+
+Value VM::nativeFloor(int argc, Value* argv)
 {
     if (argc != 1 || !argv) {
         diagnostic::emit("floor() expects 1 argument, got : " + std::to_string(argc));
@@ -329,7 +427,7 @@ Value nativeFloor(int argc, Value* argv)
     return MAKE_REAL(std::floor(AS_DOUBLE(argv[0])));
 }
 
-Value nativeCeil(int argc, Value* argv)
+Value VM::nativeCeil(int argc, Value* argv)
 {
     if (argc != 1 || !argv) {
         diagnostic::emit("ceil() expects 1 argument, got : " + std::to_string(argc));
@@ -347,9 +445,19 @@ Value nativeCeil(int argc, Value* argv)
     return MAKE_REAL(std::ceil(AS_DOUBLE_ANY(argv[0])));
 }
 
-Value nativeRound(int argc, Value* argv) { return NIL_VAL; }
+Value VM::nativeRound(int argc, Value* argv)
+{
+    if (argc != 1 || !argv)
+        return NIL_VAL;
+    if (!IS_NUMBER(argv[0]))
+        return NIL_VAL;
+    if (IS_INTEGER(argv[0]))
+        return argv[0];
 
-Value nativeAbs(int argc, Value* argv)
+    return MAKE_REAL(std::round(AS_DOUBLE_ANY(argv[0])));
+}
+
+Value VM::nativeAbs(int argc, Value* argv)
 {
     if (argc != 1 || !argv) {
         diagnostic::emit("abs() expects 1 argument, got : " + std::to_string(argc));
@@ -372,7 +480,7 @@ Value nativeAbs(int argc, Value* argv)
     return MAKE_REAL(std::fabs(AS_DOUBLE(argv[0])));
 }
 
-Value nativeMin(int argc, Value* argv)
+Value VM::nativeMin(int argc, Value* argv)
 {
     if (argc < 1 || !argv) {
         diagnostic::emit("min() expects 1 or more arguments, got: " + std::to_string(argc));
@@ -406,11 +514,10 @@ Value nativeMin(int argc, Value* argv)
 
     if (all_ints)
         return MAKE_INTEGER(static_cast<int64_t>(AS_DOUBLE_ANY(ret)));
-
     return ret;
 }
 
-Value nativeMax(int argc, Value* argv)
+Value VM::nativeMax(int argc, Value* argv)
 {
     if (argc < 1 || !argv) {
         diagnostic::emit("max() expects 1 or more arguments, got: " + std::to_string(argc));
@@ -447,7 +554,7 @@ Value nativeMax(int argc, Value* argv)
     return ret;
 }
 
-Value nativePow(int argc, Value* argv)
+Value VM::nativePow(int argc, Value* argv)
 {
     if (argc != 2 || !argv) {
         diagnostic::emit("pow() expects 2 arguments, got : " + std::to_string(argc));
@@ -457,7 +564,7 @@ Value nativePow(int argc, Value* argv)
     Value base = argv[0];
     Value exponent = argv[1];
 
-    if (__builtin_expect(!IS_NUMBER(base) || !IS_NUMBER(exponent), 0)) {
+    if (UNLIKELY(!IS_NUMBER(base) || !IS_NUMBER(exponent))) {
         diagnostic::runtimeError(ErrorCode::TYPE_ERROR_ARITH);
         return NIL_VAL;
     }
@@ -471,7 +578,7 @@ Value nativePow(int argc, Value* argv)
     return NIL_VAL;
 }
 
-Value nativeSqrt(int argc, Value* argv)
+Value VM::nativeSqrt(int argc, Value* argv)
 {
     if (argc != 1 || !argv) {
         diagnostic::emit("sqrt() expects 1 argument, got : " + std::to_string(argc));
@@ -480,20 +587,21 @@ Value nativeSqrt(int argc, Value* argv)
 
     Value n = argv[0];
 
-    if (__builtin_expect(IS_NUMBER(n), 0)) {
+    if (UNLIKELY(!IS_NUMBER(n))) {
         diagnostic::runtimeError(ErrorCode::TYPE_ERROR_ARITH);
         return NIL_VAL;
     }
 
-    return MAKE_REAL(std::sqrt(AS_DOUBLE_ANY(n)));
+    double val = AS_DOUBLE_ANY(n);
+    if (val < 0.0)
+        return NIL_VAL;
+
+    return MAKE_REAL(std::sqrt(val));
 }
 
-Value nativeAssert(int argc, Value* argv) { return NIL_VAL; }
-
-Value nativeClock(int argc, Value* argv) { return NIL_VAL; }
-
-Value nativeError(int argc, Value* argv) { return NIL_VAL; }
-
-Value nativeTime(int argc, Value* argv) { return NIL_VAL; }
+Value VM::nativeAssert(int argc, Value* argv) { return NIL_VAL; }
+Value VM::nativeClock(int argc, Value* argv) { return NIL_VAL; }
+Value VM::nativeError(int argc, Value* argv) { return NIL_VAL; }
+Value VM::nativeTime(int argc, Value* argv) { return NIL_VAL; }
 
 } // namespace mylang::runtime

@@ -11,7 +11,7 @@ namespace ast {
 class ASTPrinter {
 private:
     bool UseColor_;
-    std::uint32_t NodeCount_ = 0;
+    uint32_t NodeCount_ = 0;
 
     struct Prefix {
         std::string indent;
@@ -253,7 +253,7 @@ public:
     void print(Expr const* e) { printExpr(e, { "", true }); }
     void print(Stmt const* s) { printStmt(s, { "", true }); }
 
-    std::uint32_t getNodeCount() const { return NodeCount_; }
+    uint32_t getNodeCount() const { return NodeCount_; }
 };
 
 } // namespace ast

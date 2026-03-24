@@ -112,6 +112,8 @@ public:
         return *slot;
     }
 
+    void clear() { Size_ = 0; }
+
     void push(T const& val);
     void push(T&& val);
     T pop();
@@ -184,13 +186,14 @@ template<typename T>
 Array<T>::Array(uint32_t capacity, T fill_v)
 {
     if (capacity > ARRAY_MAX)
-        diagnostic::emit("Requested capacity " + std::to_string(capacity) + " exceeds maximum " + std::to_string(ARRAY_MAX), diagnostic::Severity::FATAL);
+        diagnostic::emit("Requested capacity " + std::to_string(capacity) + " exceeds maximum "
+                + std::to_string(ARRAY_MAX),
+            diagnostic::Severity::FATAL);
 
     if (capacity == 0)
         return;
 
     arr = getAllocator().allocateArray<T>(capacity);
-    assert(arr != nullptr);
     Cap_ = capacity;
 
     uint32_t i = 0;

@@ -46,7 +46,7 @@ public:
 
 class ArenaAllocator {
 public:
-    enum class GrowthStrategy : std::int32_t { LINEAR,
+    enum class GrowthStrategy : int32_t { LINEAR,
         EXPONENTIAL };
 
     using OutOfMemoryHandler = std::function<bool(size_t requested)>;
@@ -69,7 +69,7 @@ private:
 
 #ifdef MYLANG_DEBUG
     struct VoidPtrHash {
-        size_t operator()(void const* ptr) const noexcept { return std::hash<std::uintptr_t>()(reinterpret_cast<std::uintptr_t>(ptr)); }
+        size_t operator()(void const* ptr) const noexcept { return std::hash<uintptr_t>()(reinterpret_cast<uintptr_t>(ptr)); }
     };
 
     struct VoidPtrEqual {
@@ -87,7 +87,7 @@ private:
     static constexpr size_t Alignment_ = alignof(std::max_align_t);
 
 public:
-    explicit ArenaAllocator(std::int32_t growth_strategy = static_cast<std::int32_t>(GrowthStrategy::EXPONENTIAL),
+    explicit ArenaAllocator(int32_t growth_strategy = static_cast<int32_t>(GrowthStrategy::EXPONENTIAL),
         OutOfMemoryHandler oom_handler = nullptr, bool debug = true);
 
     ~ArenaAllocator() { reset(); }

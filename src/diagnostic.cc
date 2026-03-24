@@ -30,7 +30,7 @@ void DiagnosticEngine::addSuggestion(std::string const& suggestion)
         Diagnostics_.back().suggestions.push_back(suggestion);
 }
 
-void DiagnosticEngine::addNote(std::int32_t line, std::string const& note)
+void DiagnosticEngine::addNote(int32_t line, std::string const& note)
 {
     if (!Diagnostics_.empty())
         Diagnostics_.back().notes.push_back({ line, note });

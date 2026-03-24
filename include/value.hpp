@@ -18,12 +18,14 @@ static constexpr Value TRUE_VAL = UINT64_C(0x7FF8000000000003);
 static constexpr uint64_t INT_TAG16 = UINT64_C(0x7FF9);
 static constexpr uint64_t OBJ_TAG16 = UINT64_C(0xFFF8);
 
-enum class ObjType : uint8_t { STRING,
+enum class ObjType : uint8_t {
+    STRING,
     LIST,
     FUNCTION,
     CLOSURE,
     NATIVE,
-    UPVALUE };
+    UPVALUE
+};
 
 struct ObjHeader {
     ObjType type { ObjType::UPVALUE };
@@ -97,7 +99,8 @@ struct ObjClosure final : public ObjHeader {
     }
 };
 
-using NativeFn = Value (*)(int argc, Value* argv);
+class VM;
+using NativeFn = Value (VM::*)(int, Value*);
 
 struct ObjNative final : public ObjHeader {
     NativeFn fn;
@@ -114,11 +117,11 @@ struct ObjNative final : public ObjHeader {
 };
 
 #define MAKE_OBJ_STRING(s) getAllocator().allocateObject<ObjString>(s)
-#define MAKE_OBJ_LIST() getAllocator().allocateObject<ObjList>()
-#define MAKE_OBJ_FUNCTION(ch) getAllocator().allocateObject<ObjFunction>(ch)
-#define MAKE_OBJ_UPVALUE(slot) getAllocator().allocateObject<ObjUpvalue>(slot)
-#define MAKE_OBJ_CLOSURE(fn) getAllocator().allocateObject<ObjClosure>(fn)
 #define MAKE_OBJ_NATIVE(f, n, a) getAllocator().allocateObject<ObjNative>(f, n, a)
+#define MAKE_OBJ_LIST() GC_.make<ObjList>()
+#define MAKE_OBJ_FUNCTION(ch) GC_.make<ObjFunction>(ch)
+#define MAKE_OBJ_UPVALUE(slot) GC_.make<ObjUpvalue>(slot)
+#define MAKE_OBJ_CLOSURE(fn) GC_.make<ObjClosure>(fn)
 
 #define MAKE_OBJECT(p) TAG_OBJ | (reinterpret_cast<uintptr_t>(p) & PAYLOAD_MASK)
 #define MAKE_STRING(v)                                                \
@@ -128,23 +131,23 @@ struct ObjNative final : public ObjHeader {
     })
 #define MAKE_LIST()                                                  \
     ({                                                               \
-        ObjList* obj = getAllocator().allocateObject<ObjList>();     \
+        ObjList* obj = GC_.make<ObjList>();                          \
         TAG_OBJ | (reinterpret_cast<uintptr_t>(obj) & PAYLOAD_MASK); \
     })
-#define MAKE_FUNCTION(ch)                                                  \
-    ({                                                                     \
-        ObjFunction* obj = getAllocator().allocateObject<ObjFunction>(ch); \
-        TAG_OBJ | (reinterpret_cast<uintptr_t>(obj) & PAYLOAD_MASK);       \
+#define MAKE_FUNCTION(ch)                                            \
+    ({                                                               \
+        ObjFunction* obj = GC_.make<ObjFunction>(ch);                \
+        TAG_OBJ | (reinterpret_cast<uintptr_t>(obj) & PAYLOAD_MASK); \
     })
-#define MAKE_UPVALUE(slot)                                                 \
-    ({                                                                     \
-        ObjUpvalue* obj = getAllocator().allocateObject<ObjUpvalue>(slot); \
-        TAG_OBJ | (reinterpret_cast<uintptr_t>(obj) & PAYLOAD_MASK);       \
+#define MAKE_UPVALUE(slot)                                           \
+    ({                                                               \
+        ObjUpvalue* obj = GC_.make<ObjUpvalue>(slot);                \
+        TAG_OBJ | (reinterpret_cast<uintptr_t>(obj) & PAYLOAD_MASK); \
     })
-#define MAKE_CLOSURE(fn)                                                 \
-    ({                                                                   \
-        ObjClosure* obj = getAllocator().allocateObject<ObjClosure>(fn); \
-        TAG_OBJ | (reinterpret_cast<uintptr_t>(obj) & PAYLOAD_MASK);     \
+#define MAKE_CLOSURE(fn)                                             \
+    ({                                                               \
+        ObjClosure* obj = GC_.make<ObjClosure>(fn);                  \
+        TAG_OBJ | (reinterpret_cast<uintptr_t>(obj) & PAYLOAD_MASK); \
     })
 #define MAKE_NATIVE(f, n, a)                                                \
     ({                                                                      \
@@ -185,24 +188,24 @@ struct ObjNative final : public ObjHeader {
 #define IS_FUNCTION(v) (IS_OBJECT(v) && reinterpret_cast<ObjHeader*>((v) & PAYLOAD_MASK)->type == ObjType::FUNCTION)
 #define IS_CLOSURE(v) (IS_OBJECT(v) && reinterpret_cast<ObjHeader*>((v) & PAYLOAD_MASK)->type == ObjType::CLOSURE)
 #define IS_NATIVE(v) (IS_OBJECT(v) && reinterpret_cast<ObjHeader*>((v) & PAYLOAD_MASK)->type == ObjType::NATIVE)
-#define IS_TRUTHY(v)                                        \
-    ({                                                      \
-        Value _v = (v);                                     \
-        uint64_t _tag = _v >> 48;                           \
-        bool _res;                                          \
-                                                            \
-        if (__builtin_expect(IS_NIL(_v), 0))                \
-            _res = false;                                   \
-        else if (__builtin_expect((_v | 1) == TRUE_VAL, 0)) \
-            _res = (_v & 1);                                \
-        else if (__builtin_expect(_tag == INT_TAG16, 1))    \
-            _res = ((_v & PAYLOAD_MASK) != 0);              \
-        else if (__builtin_expect(_tag == OBJ_TAG16, 0))    \
-            _res = true;                                    \
-        else                                                \
-            _res = __builtin_expect((_v << 1) != 0, 1);     \
-                                                            \
-        _res;                                               \
+#define IS_TRUTHY(v)                             \
+    ({                                           \
+        Value _v = (v);                          \
+        uint64_t _tag = _v >> 48;                \
+        bool _res;                               \
+                                                 \
+        if (UNLIKELY(IS_NIL(_v)))                \
+            _res = false;                        \
+        else if (UNLIKELY((_v | 1) == TRUE_VAL)) \
+            _res = (_v & 1);                     \
+        else if (LIKELY(_tag == INT_TAG16))      \
+            _res = ((_v & PAYLOAD_MASK) != 0);   \
+        else if (UNLIKELY(_tag == OBJ_TAG16))    \
+            _res = true;                         \
+        else                                     \
+            _res = LIKELY((_v << 1) != 0);       \
+                                                 \
+        _res;                                    \
     })
 
 #define AS_BOOL(v) ((v) & 1)

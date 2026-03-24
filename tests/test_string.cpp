@@ -1,7 +1,10 @@
 #include "../include/string.hpp"
 
+#include <chrono>
 #include <gtest/gtest.h>
 #include <random>
+#include <string>
+#include <vector>
 
 using namespace mylang;
 
@@ -43,7 +46,7 @@ TEST_F(StringRefTest, CopyConstructor_Empty)
     EXPECT_EQ(s2.len(), 0);
 }
 
-TEST(DiagnosticTest, CopyConstructorDetailed)
+TEST_F(StringRefTest, CopyConstructorDetailed)
 {
     StringRef s1("Hell");
     StringRef s2(s1);
@@ -59,7 +62,7 @@ TEST(DiagnosticTest, CopyConstructorDetailed)
     EXPECT_NE(s1.data(), s2.data());
 }
 
-TEST(DiagnosticTest, CopyConstructorArabic)
+TEST_F(StringRefTest, CopyConstructorArabic)
 {
     StringRef s1("مرحبا");
     StringRef s2(s1);
@@ -68,7 +71,7 @@ TEST(DiagnosticTest, CopyConstructorArabic)
     EXPECT_EQ(s2, StringRef("مرحبا"));
 }
 
-TEST(DiagnosticTest, CheckMemoryIndependence)
+TEST_F(StringRefTest, CheckMemoryIndependence)
 {
     StringRef s1("Test");
     StringRef s2(s1);
@@ -1142,4 +1145,542 @@ TEST_F(StringRefTest, CoW_NonConstData)
     char const* ptr2 = s2.data();
 
     EXPECT_NE(ptr1, ptr2);
+}
+
+static double microseconds_since(std::chrono::high_resolution_clock::time_point t0)
+{
+    using namespace std::chrono;
+    return static_cast<double>(
+               duration_cast<nanoseconds>(high_resolution_clock::now() - t0).count())
+        / 1000.0;
+}
+
+// Prevent the compiler from optimizing away a value entirely.
+// We write through a volatile sink so the read of `v` is observable.
+template<typename T>
+static void do_not_optimize(T const& v)
+{
+    void const volatile* sink = &v; // NOLINT
+    (void)sink;
+}
+
+// ---------------------------------------------------------------------------
+// Append throughput
+// ---------------------------------------------------------------------------
+
+// Baseline: 1 M single-char appends with pre-reserved buffer (pure write path).
+TEST_F(StringRefTest, Append_1M_Chars_PreReserved)
+{
+    constexpr int N = 1'000'000;
+
+    StringRef s;
+    s.reserve(N);
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < N; ++i)
+        s += 'A';
+    double us = microseconds_since(t0);
+
+    do_not_optimize(s);
+    EXPECT_EQ(s.len(), static_cast<size_t>(N));
+    std::printf("  Append 1M chars (pre-reserved):  %.1f µs  (%.1f ns/op)\n",
+        us, us * 1000.0 / N);
+}
+
+// Append with no pre-reservation — measures reallocation overhead.
+TEST_F(StringRefTest, Append_1M_Chars_NoReserve)
+{
+    constexpr int N = 1'000'000;
+
+    StringRef s;
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < N; ++i)
+        s += char('A' + i % 26);
+    double us = microseconds_since(t0);
+
+    do_not_optimize(s);
+    EXPECT_EQ(s.len(), static_cast<size_t>(N));
+    std::printf("  Append 1M chars (no reserve):    %.1f µs  (%.1f ns/op)\n",
+        us, us * 1000.0 / N);
+}
+
+// Append short string chunks — 250k * 4 bytes = 1 MB total.
+TEST_F(StringRefTest, Append_250k_ShortStrings)
+{
+    constexpr int N = 250'000;
+    StringRef chunk("abcd");
+
+    StringRef s;
+    s.reserve(N * 4);
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < N; ++i)
+        s += chunk;
+    double us = microseconds_since(t0);
+
+    do_not_optimize(s);
+    EXPECT_EQ(s.len(), static_cast<size_t>(N * 4));
+    std::printf("  Append 250k short strings:       %.1f µs  (%.1f ns/op)\n",
+        us, us * 1000.0 / N);
+}
+
+// ---------------------------------------------------------------------------
+// Concatenation (operator+) — should be O(n) total not O(n²)
+// ---------------------------------------------------------------------------
+
+// 10k concatenations via operator+ building a growing string.
+// If operator+ is naive this is O(n²); a good impl should stay linear-ish.
+TEST_F(StringRefTest, Concat_10k_Growing)
+{
+    constexpr int N = 10'000;
+    StringRef part("X");
+    StringRef result;
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < N; ++i)
+        result = result + part;
+    double us = microseconds_since(t0);
+
+    do_not_optimize(result);
+    EXPECT_EQ(result.len(), static_cast<size_t>(N));
+    std::printf("  Concat 10k growing (operator+):  %.1f µs  (%.1f ns/op)\n",
+        us, us * 1000.0 / N);
+}
+
+// Same total bytes but using += — should be significantly faster.
+TEST_F(StringRefTest, Concat_10k_AppendAssign)
+{
+    constexpr int N = 10'000;
+    StringRef part("X");
+    StringRef result;
+    result.reserve(N);
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < N; ++i)
+        result += part;
+    double us = microseconds_since(t0);
+
+    do_not_optimize(result);
+    EXPECT_EQ(result.len(), static_cast<size_t>(N));
+    std::printf("  Concat 10k via +=:               %.1f µs  (%.1f ns/op)\n",
+        us, us * 1000.0 / N);
+}
+
+// ---------------------------------------------------------------------------
+// Copy-on-Write semantics under load
+// ---------------------------------------------------------------------------
+
+// 100k shallow copies (no mutation) — should be near-free if CoW shares data.
+TEST_F(StringRefTest, CoW_100k_ShallowCopies)
+{
+    constexpr int N = 100'000;
+    StringRef original("The quick brown fox jumps over the lazy dog");
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < N; ++i) {
+        StringRef copy = original;
+        do_not_optimize(copy);
+    }
+    double us = microseconds_since(t0);
+
+    std::printf("  CoW 100k shallow copies:         %.1f µs  (%.1f ns/op)\n",
+        us, us * 1000.0 / N);
+}
+
+// 100k copy-then-mutate — each forces a real allocation (CoW break).
+TEST_F(StringRefTest, CoW_100k_CopyThenMutate)
+{
+    constexpr int N = 100'000;
+    StringRef original("The quick brown fox jumps over the lazy dog");
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < N; ++i) {
+        StringRef copy = original;
+        copy[0] = 'X'; // triggers CoW detach
+        do_not_optimize(copy);
+    }
+    double us = microseconds_since(t0);
+
+    std::printf("  CoW 100k copy+mutate (break):    %.1f µs  (%.1f ns/op)\n",
+        us, us * 1000.0 / N);
+}
+
+// Ratio test: shallow copy should be substantially faster than copy+mutate.
+TEST_F(StringRefTest, CoW_ShallowVsMutate_Ratio)
+{
+    constexpr int N = 50'000;
+    StringRef original("The quick brown fox jumps over the lazy dog");
+
+    // shallow
+    auto t0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < N; ++i) {
+        StringRef copy = original;
+        do_not_optimize(copy);
+    }
+    double shallow_us = microseconds_since(t0);
+
+    // mutating
+    t0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < N; ++i) {
+        StringRef copy = original;
+        copy[0] = 'X';
+        do_not_optimize(copy);
+    }
+    double mutate_us = microseconds_since(t0);
+
+    std::printf("  CoW ratio: shallow=%.1f µs  mutate=%.1f µs  ratio=%.1fx\n",
+        shallow_us, mutate_us, mutate_us / shallow_us);
+
+    // Shallow copy must be at least 2x faster than copy+mutate.
+    // If CoW is working, it should be much more than 2x.
+    EXPECT_LT(shallow_us, mutate_us * 0.5)
+        << "CoW shallow copy is not significantly faster than copy+mutate — "
+           "CoW benefit may not be materializing";
+}
+
+// ---------------------------------------------------------------------------
+// Hashing throughput
+// ---------------------------------------------------------------------------
+
+// Hash 1M times — exercises the hot path in hash maps.
+TEST_F(StringRefTest, Hash_1M_Short)
+{
+    constexpr int N = 1'000'000;
+    StringRefHash hasher;
+    StringRef s("identifier_name");
+    size_t acc = 0;
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < N; ++i)
+        acc ^= hasher(s);
+    double us = microseconds_since(t0);
+
+    do_not_optimize(acc);
+    std::printf("  Hash 1M (15-byte string):        %.1f µs  (%.1f ns/op)\n",
+        us, us * 1000.0 / N);
+}
+
+TEST_F(StringRefTest, Hash_1M_Long)
+{
+    constexpr int N = 1'000'000;
+    StringRefHash hasher;
+    std::string buf(256, 'x');
+    StringRef s(buf.data());
+    size_t acc = 0;
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < N; ++i)
+        acc ^= hasher(s);
+    double us = microseconds_since(t0);
+
+    do_not_optimize(acc);
+    std::printf("  Hash 1M (256-byte string):       %.1f µs  (%.1f ns/op)\n",
+        us, us * 1000.0 / N);
+}
+
+// Hash throughput should scale roughly linearly with length, not quadratically.
+TEST_F(StringRefTest, Hash_ScalesWithLength)
+{
+    constexpr int N = 500'000;
+    StringRefHash hasher;
+
+    std::string short_buf(16, 'a');
+    std::string long_buf(1024, 'a');
+    StringRef s_short(short_buf.data());
+    StringRef s_long(long_buf.data());
+    size_t acc = 0;
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < N; ++i)
+        acc ^= hasher(s_short);
+    double short_us = microseconds_since(t0);
+
+    t0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < N; ++i)
+        acc ^= hasher(s_long);
+    double long_us = microseconds_since(t0);
+
+    do_not_optimize(acc);
+    double ratio = long_us / short_us;
+    std::printf("  Hash scaling: 16B=%.1f µs  1024B=%.1f µs  ratio=%.1fx  "
+                "(ideal=64x)\n",
+        short_us, long_us, ratio);
+
+    // Allow up to 128x — anything beyond suggests quadratic scanning.
+    EXPECT_LT(ratio, 128.0)
+        << "Hash appears to scale worse than O(n) with string length";
+}
+
+// ---------------------------------------------------------------------------
+// Search / find
+// ---------------------------------------------------------------------------
+
+// find_pos over a 1 MB string — worst case (char not present).
+TEST_F(StringRefTest, FindPos_1MB_Miss)
+{
+    constexpr size_t SZ = 1'000'000;
+    std::string buf(SZ, 'A');
+    StringRef s(buf.data());
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    auto result = s.find_pos('Z'); // not present
+    double us = microseconds_since(t0);
+
+    do_not_optimize(result);
+    EXPECT_FALSE(result.has_value());
+    std::printf("  find_pos miss on 1MB string:     %.1f µs\n", us);
+}
+
+// find_pos hit at the very end.
+TEST_F(StringRefTest, FindPos_1MB_HitAtEnd)
+{
+    constexpr size_t SZ = 1'000'000;
+    std::string buf(SZ, 'A');
+    buf.back() = 'Z';
+    StringRef s(buf.data());
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    auto result = s.find_pos('Z');
+    double us = microseconds_since(t0);
+
+    do_not_optimize(result);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_EQ(result.value(), SZ - 1);
+    std::printf("  find_pos hit-at-end on 1MB:      %.1f µs\n", us);
+}
+
+// ---------------------------------------------------------------------------
+// substr / slice — zero-copy semantics under load
+// ---------------------------------------------------------------------------
+
+// 1M slices of a large string — should not allocate if slice is zero-copy.
+TEST_F(StringRefTest, Slice_1M_NoAlloc)
+{
+    constexpr int N = 1'000'000;
+    std::string buf(1000, 'X');
+    StringRef s(buf.data());
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < N; ++i) {
+        StringRef sl = s.slice(0, 500);
+        do_not_optimize(sl);
+    }
+    double us = microseconds_since(t0);
+
+    std::printf("  slice() 1M times (no mutation):  %.1f µs  (%.1f ns/op)\n",
+        us, us * 1000.0 / N);
+}
+
+// 1M substr calls — substr copies, so this exercises allocator throughput.
+TEST_F(StringRefTest, Substr_1M_Copies)
+{
+    constexpr int N = 1'000'000;
+    std::string buf(1000, 'X');
+    StringRef s(buf.data());
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < N; ++i) {
+        StringRef sub = s.substr(0, 500);
+        do_not_optimize(sub);
+    }
+    double us = microseconds_since(t0);
+
+    std::printf("  substr() 1M times (copies):      %.1f µs  (%.1f ns/op)\n",
+        us, us * 1000.0 / N);
+}
+
+// Slice should be significantly faster than substr (no alloc vs alloc).
+TEST_F(StringRefTest, Slice_vs_Substr_Ratio)
+{
+    constexpr int N = 200'000;
+    std::string buf(500, 'Y');
+    StringRef s(buf.data());
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < N; ++i) {
+        StringRef sl = s.slice(0, 250);
+        do_not_optimize(sl);
+    }
+    double slice_us = microseconds_since(t0);
+
+    t0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < N; ++i) {
+        StringRef sub = s.substr(0, 250);
+        do_not_optimize(sub);
+    }
+    double substr_us = microseconds_since(t0);
+
+    std::printf("  slice=%.1f µs  substr=%.1f µs  ratio=%.1fx\n",
+        slice_us, substr_us, substr_us / slice_us);
+
+    EXPECT_LT(slice_us, substr_us)
+        << "slice() should be faster than substr() — slice is zero-copy";
+}
+
+// ---------------------------------------------------------------------------
+// Equality comparison
+// ---------------------------------------------------------------------------
+
+// 2M equality checks on equal strings — hot path in interning / hash maps.
+TEST_F(StringRefTest, Equality_2M_Equal)
+{
+    constexpr int N = 2'000'000;
+    StringRef s1("some_variable_name");
+    StringRef s2("some_variable_name");
+    int hits = 0;
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < N; ++i)
+        hits += (s1 == s2) ? 1 : 0;
+    double us = microseconds_since(t0);
+
+    do_not_optimize(hits);
+    EXPECT_EQ(hits, N);
+    std::printf("  Equality 2M (equal, 18B):        %.1f µs  (%.1f ns/op)\n",
+        us, us * 1000.0 / N);
+}
+
+// 2M equality checks on strings that differ in the last byte — worst case.
+TEST_F(StringRefTest, Equality_2M_DifferLastByte)
+{
+    constexpr int N = 2'000'000;
+    std::string a(64, 'A');
+    a.back() = 'X';
+    std::string b(64, 'A');
+    b.back() = 'Y';
+    StringRef s1(a.data());
+    StringRef s2(b.data());
+    int hits = 0;
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < N; ++i)
+        hits += (s1 == s2) ? 1 : 0;
+    double us = microseconds_since(t0);
+
+    do_not_optimize(hits);
+    EXPECT_EQ(hits, 0);
+    std::printf("  Equality 2M (differ last, 64B):  %.1f µs  (%.1f ns/op)\n",
+        us, us * 1000.0 / N);
+}
+
+// ---------------------------------------------------------------------------
+// erase throughput
+// ---------------------------------------------------------------------------
+
+// Erase first char 100k times from the front — O(n) per erase → O(n²) total.
+// Documents the cost so regressions are visible.
+TEST_F(StringRefTest, Erase_100k_FromFront)
+{
+    constexpr int N = 100'000;
+    StringRef s;
+    s.reserve(N);
+    for (int i = 0; i < N; ++i)
+        s += char('A' + i % 26);
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    while (!s.empty())
+        s.erase(0);
+    double us = microseconds_since(t0);
+
+    do_not_optimize(s);
+    EXPECT_TRUE(s.empty());
+    std::printf("  Erase front 100k chars:          %.1f µs\n", us);
+}
+
+// ---------------------------------------------------------------------------
+// Unicode / UTF-8 throughput
+// ---------------------------------------------------------------------------
+
+// Append 100k Arabic codepoints (2 bytes each in UTF-8).
+TEST_F(StringRefTest, Append_100k_ArabicChunks)
+{
+    constexpr int N = 100'000;
+    StringRef chunk("مرحبا"); // 10 UTF-8 bytes
+    StringRef s;
+    s.reserve(N * 10);
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < N; ++i)
+        s += chunk;
+    double us = microseconds_since(t0);
+
+    do_not_optimize(s);
+    EXPECT_EQ(s.len(), static_cast<size_t>(N * 10));
+    std::printf("  Append 100k Arabic chunks:       %.1f µs  (%.1f ns/op)\n",
+        us, us * 1000.0 / N);
+}
+
+// ---------------------------------------------------------------------------
+// toDouble throughput
+// ---------------------------------------------------------------------------
+
+TEST_F(StringRefTest, ToDouble_1M_Integer)
+{
+    constexpr int N = 1'000'000;
+    StringRef s("123456");
+    double acc = 0;
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < N; ++i)
+        acc += s.toDouble();
+    double us = microseconds_since(t0);
+
+    do_not_optimize(acc);
+    std::printf("  toDouble() 1M integer parses:    %.1f µs  (%.1f ns/op)\n",
+        us, us * 1000.0 / N);
+}
+
+TEST_F(StringRefTest, ToDouble_1M_Float)
+{
+    constexpr int N = 1'000'000;
+    StringRef s("3.14159265");
+    double acc = 0;
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < N; ++i)
+        acc += s.toDouble();
+    double us = microseconds_since(t0);
+
+    do_not_optimize(acc);
+    std::printf("  toDouble() 1M float parses:      %.1f µs  (%.1f ns/op)\n",
+        us, us * 1000.0 / N);
+}
+
+// ---------------------------------------------------------------------------
+// Mixed workload — simulates a realistic interpreter inner loop:
+// intern a name, look it up, compare, slice.
+// ---------------------------------------------------------------------------
+TEST_F(StringRefTest, Mixed_InterpreterInnerLoop)
+{
+    constexpr int N = 500'000;
+
+    // Simulate identifier table with a small set of names.
+    std::vector<StringRef> identifiers = {
+        StringRef("counter"),
+        StringRef("result"),
+        StringRef("index"),
+        StringRef("value"),
+        StringRef("accumulator"),
+    };
+
+    StringRefHash hasher;
+    size_t acc = 0;
+    int matches = 0;
+    StringRef target("result");
+
+    auto t0 = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < N; ++i) {
+        StringRef const& id = identifiers[i % identifiers.size()];
+        acc ^= hasher(id);                                       // hash lookup
+        matches += (id == target);                               // equality check
+        StringRef sl = id.slice(0, id.len() > 3 ? 3 : id.len()); // prefix slice
+        do_not_optimize(sl);
+    }
+    double us = microseconds_since(t0);
+
+    do_not_optimize(acc);
+    std::printf("  Mixed interpreter loop 500k:     %.1f µs  (%.1f ns/op)\n",
+        us, us * 1000.0 / N);
+    std::printf("    (matches=%d, hash_acc=0x%zx)\n", matches, acc);
 }

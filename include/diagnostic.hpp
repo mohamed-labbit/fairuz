@@ -252,7 +252,7 @@ public:
     void report(Severity const sev, uint32_t const line, uint16_t const col, uint16_t err_code, std::string const& code = "");
 
     void addSuggestion(std::string const& suggestion);
-    void addNote(std::int32_t line, std::string const& note);
+    void addNote(int32_t line, std::string const& note);
 
     std::string toJSON() const;
 

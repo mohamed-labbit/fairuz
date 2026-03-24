@@ -27,7 +27,7 @@ private:
 
     bool is_heap;
 
-    mutable std::atomic<uint32_t> RefCount { 1 };
+    mutable uint32_t RefCount { 1 };
 
 public:
     StringBase()
@@ -49,13 +49,11 @@ public:
 
     bool isHeap() const noexcept { return is_heap; }
 
-    bool isInlined() const noexcept { return !isHeap(); }
+    char* ptr() noexcept { return UNLIKELY(isHeap()) ? storage_.heap.ptr : storage_.sso; }
 
-    char* ptr() noexcept { return isHeap() ? storage_.heap.ptr : storage_.sso; }
+    char const* ptr() const noexcept { return UNLIKELY(isHeap()) ? storage_.heap.ptr : storage_.sso; }
 
-    char const* ptr() const noexcept { return isHeap() ? storage_.heap.ptr : storage_.sso; }
-
-    size_t cap() const noexcept { return isHeap() ? (storage_.heap.cap > 0 ? storage_.heap.cap - 1 : 0) : SSO_SIZE - 1; }
+    size_t cap() const noexcept { return UNLIKELY(isHeap()) ? (storage_.heap.cap > 0 ? storage_.heap.cap - 1 : 0) : SSO_SIZE - 1; }
 
     explicit StringBase(size_t const s);
     explicit StringBase(size_t const s, char const c);
@@ -65,10 +63,10 @@ public:
     char operator[](size_t const i) const noexcept { return ptr()[i]; }
     char& operator[](size_t const i) noexcept { return ptr()[i]; }
 
-    void increment() const noexcept { RefCount.fetch_add(1, std::memory_order_relaxed); }
-    void decrement() const noexcept { RefCount.fetch_sub(1, std::memory_order_acq_rel); }
+    void increment() const noexcept { RefCount++; }
+    void decrement() const noexcept { RefCount--; }
 
-    uint32_t referenceCount() const noexcept { return RefCount.load(std::memory_order_acquire); }
+    uint32_t referenceCount() const noexcept { return RefCount; }
 };
 
 namespace detail {
@@ -254,7 +252,18 @@ public:
 
     StringRef& truncate(size_t const s) noexcept;
     StringRef slice(size_t start, size_t end = SIZE_MAX) const;
-    StringRef substr(size_t start, size_t end = SIZE_MAX) const { return slice(start, end); }
+    StringRef substr(size_t start, size_t end = SIZE_MAX) const
+    {
+        if (Length_ == 0)
+            return { };
+        if (start > Length_)
+            return { };
+        if (end > Length_ || end == SIZE_MAX)
+            end = Length_;
+        if (end < start)
+            return { };
+        return substrCopy(start, end);
+    }
     StringRef substrCopy(size_t start, size_t end = SIZE_MAX) const;
 
     double toDouble(size_t* pos = nullptr) const;
@@ -265,7 +274,7 @@ public:
     {
         if (!StringData_)
             return;
-        if (__builtin_expect(StringData_->referenceCount() == 1, 1))
+        if (LIKELY(StringData_->referenceCount() == 1))
             return;
         detach();
     }
@@ -273,24 +282,165 @@ public:
     void detach();
 }; // StringRef
 
+namespace detail {
+
+// wy_read helpers — always read unaligned, the compiler emits ldr on ARM64.
+inline uint64_t wy_read8(void const* p) noexcept
+{
+    uint64_t v;
+    __builtin_memcpy(&v, p, 8);
+    return v;
+}
+inline uint32_t wy_read4(void const* p) noexcept
+{
+    uint32_t v;
+    __builtin_memcpy(&v, p, 4);
+    return v;
+}
+
+// 128-bit multiply — GCC/Clang both lower this to a single MUL on ARM64/x86-64.
+inline void wymix(uint64_t& a, uint64_t& b) noexcept
+{
+#if defined(__SIZEOF_INT128__)
+    __uint128_t r = static_cast<__uint128_t>(a) * b;
+    a = static_cast<uint64_t>(r);
+    b = static_cast<uint64_t>(r >> 64);
+#else
+    // 32-bit fallback via four 32×32→64 multiplies.
+    uint64_t ha = a >> 32, hb = b >> 32;
+    uint64_t la = static_cast<uint32_t>(a), lb = static_cast<uint32_t>(b);
+    uint64_t hh = ha * hb, hl = ha * lb, lh = la * hb, ll = la * lb;
+    uint64_t m = (ll >> 32) + static_cast<uint32_t>(hl) + static_cast<uint32_t>(lh);
+    a = (hl >> 32) + (lh >> 32) + (hh) + (m >> 32);
+    b = ll + (m << 32);
+#endif
+    a ^= b;
+}
+
+// wyhash secret constants (from the reference implementation).
+static constexpr uint64_t WY_P0 = UINT64_C(0xa0761d6478bd642f);
+static constexpr uint64_t WY_P1 = UINT64_C(0xe7037ed1a0b428db);
+static constexpr uint64_t WY_P2 = UINT64_C(0x8ebc6af09c88c6e3);
+static constexpr uint64_t WY_P3 = UINT64_C(0x589965cc75374cc3);
+
+inline uint64_t wyhash(void const* key, size_t len, uint64_t seed) noexcept
+{
+    auto const* p = static_cast<uint8_t const*>(key);
+    seed ^= WY_P0;
+
+    uint64_t a = 0, b = 0;
+
+    if (len <= 16) {
+        if (len >= 4) {
+            // Read 4 bytes from each end; they may overlap for len in [4,7].
+            a = (static_cast<uint64_t>(wy_read4(p)) << 32)
+                | wy_read4(p + ((len >> 3) << 2));
+            b = (static_cast<uint64_t>(wy_read4(p + len - 4)) << 32)
+                | wy_read4(p + len - 4 - ((len >> 3) << 2));
+        } else if (len > 0) {
+            // 1–3 bytes: spread across three positions without branching.
+            a = (static_cast<uint64_t>(p[0]) << 16)
+                | (static_cast<uint64_t>(p[len >> 1]) << 8)
+                | p[len - 1];
+            b = 0;
+        }
+        // len == 0: a = b = 0, falls through to final mix.
+    } else {
+        size_t i = len;
+        // If not 8-byte aligned, read one full 8-byte pair to align the loop.
+        if (i > 48) {
+            uint64_t see1 = seed, see2 = seed;
+            do {
+                seed ^= WY_P1;
+                a = wy_read8(p);
+                b = wy_read8(p + 8);
+                wymix(a, b);
+                seed ^= b;
+                see1 ^= WY_P2;
+                a = wy_read8(p + 16);
+                b = wy_read8(p + 24);
+                wymix(a, b);
+                see1 ^= b;
+                see2 ^= WY_P3;
+                a = wy_read8(p + 32);
+                b = wy_read8(p + 40);
+                wymix(a, b);
+                see2 ^= b;
+                p += 48;
+                i -= 48;
+            } while (i > 48);
+            seed ^= see1 ^ see2;
+        }
+        while (i > 16) {
+            seed ^= WY_P1;
+            a = wy_read8(p);
+            b = wy_read8(p + 8);
+            wymix(a, b);
+            seed ^= b;
+            p += 16;
+            i -= 16;
+        }
+        // Final 9–16 bytes (always two overlapping 8-byte reads).
+        a = wy_read8(p + i - 16);
+        b = wy_read8(p + i - 8);
+    }
+
+    a ^= WY_P1;
+    b ^= seed;
+    wymix(a, b);
+    a ^= WY_P0 ^ len;
+    b ^= WY_P1;
+    wymix(a, b);
+    return a ^ b;
+}
+
+} // namespace detail
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Drop-in replacement — same interface as the FNV-1a version.
+// ─────────────────────────────────────────────────────────────────────────────
+
 struct StringRefHash {
+    // Seed is exposed so callers can build seeded hash tables if needed,
+    // but the default zero-seed is fine for std::unordered_map / StringCache_.
+    uint64_t seed { 0 };
+
     size_t operator()(StringRef const& str) const noexcept
     {
         if (str.empty())
             return 0;
 
-        size_t hash = 14695981039346656037ULL;
-        constexpr size_t prime = 1099511628211ULL;
+        size_t n = str.len();
+        auto const* p = reinterpret_cast<uint8_t const*>(str.data());
 
-        auto const* bytes = reinterpret_cast<unsigned char const*>(str.data());
-        size_t const n = str.len();
-
-        for (size_t i = 0; i < n; ++i) {
-            hash ^= static_cast<size_t>(bytes[i]);
-            hash *= prime;
+        if (n <= 16) {
+            // Read up to 16 bytes using two overlapping reads,
+            // same trick as wyhash's short path — no memcpy, no loop.
+            uint64_t a = 0, b = 0;
+            if (n >= 8) {
+                // Two 8-byte reads, potentially overlapping.
+                __builtin_memcpy(&a, p, 8);
+                __builtin_memcpy(&b, p + n - 8, 8);
+            } else if (n >= 4) {
+                __builtin_memcpy(&a, p, 4);
+                __builtin_memcpy(&b, p + n - 4, 4);
+            } else {
+                // 1–3 bytes: spread across three positions.
+                a = (uint64_t(p[0]) << 16)
+                    | (uint64_t(p[n >> 1]) << 8)
+                    | p[n - 1];
+            }
+            // Murmur-style finalizer — two multiplies, fast on ARM64.
+            a ^= b ^ n;
+            a ^= a >> 33;
+            a *= UINT64_C(0xff51afd7ed558ccd);
+            a ^= a >> 33;
+            a *= UINT64_C(0xc4ceb9fe1a85ec53);
+            a ^= a >> 33;
+            return static_cast<size_t>(a);
         }
 
-        return hash;
+        return static_cast<size_t>(detail::wyhash(p, n, seed));
     }
 };
 
