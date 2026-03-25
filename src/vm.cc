@@ -1,6 +1,6 @@
 //
 // vm.cc
-// 
+//
 
 #include "../include/vm.hpp"
 #include "value.hpp"
@@ -151,11 +151,11 @@
         }                                                                  \
     } while (0)
 
-#define RECORD_BINARY_IC(lhs, rhs, result)                                 \
-    do {                                                                   \
-        if (ip < cur_chunk->code.size()                                    \
-            && instr_op(cur_chunk->code[ip]) == OpCode::NOP)               \
-            updateIcBinary(cur_chunk, ip, lhs, rhs, result);               \
+#define RECORD_BINARY_IC(lhs, rhs, result)                   \
+    do {                                                     \
+        if (ip < cur_chunk->code.size()                      \
+            && instr_op(cur_chunk->code[ip]) == OpCode::NOP) \
+            updateIcBinary(cur_chunk, ip, lhs, rhs, result); \
     } while (0)
 
 namespace mylang::runtime {
@@ -173,7 +173,7 @@ VM::VM()
 {
     std::fill(Stack_, Stack_ + STACK_SIZE, NIL_VAL);
     std::fill(Frames_, Frames_ + MAX_FRAMES, CallFrame());
-    
+
     openStdlib();
 }
 
@@ -193,7 +193,7 @@ void VM::pushValue(Value v)
 {
     if (StackTop_ == STACK_SIZE)
         runtimeError(ErrorCode::STACK_OVERFLOW);
-    
+
     Stack_[StackTop_] = v;
     StackTop_++;
 }
@@ -203,7 +203,7 @@ Value VM::popValue()
 {
     if (StackTop_ == 0)
         runtimeError(ErrorCode::STACK_UNDERFLOW);
-    
+
     --StackTop_;
     return Stack_[StackTop_];
 }
@@ -221,7 +221,7 @@ void VM::ensureStackSlots(int needed)
 {
     if (needed > STACK_SIZE)
         runtimeError(ErrorCode::STACK_OVERFLOW);
-    
+
     while (StackTop_ < needed)
         pushValue(NIL_VAL);
 }
@@ -231,7 +231,7 @@ void VM::pushFrame(CallFrame const& f)
 {
     if (FramesTop_ == MAX_FRAMES)
         runtimeError(ErrorCode::STACK_OVERFLOW);
-    
+
     Frames_[FramesTop_] = f;
     FramesTop_++;
 }
@@ -241,7 +241,7 @@ void VM::popFrame()
 {
     if (FramesTop_ == 0)
         runtimeError(ErrorCode::STACK_UNDERFLOW);
-    
+
     --FramesTop_;
 }
 

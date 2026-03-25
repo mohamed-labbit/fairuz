@@ -7,6 +7,7 @@
 namespace mylang {
 
 using ErrorCode = diagnostic::errc::general::Code;
+
 ArenaBlock::ArenaBlock(size_t const size, size_t const alignment)
     : Size_(size)
 {

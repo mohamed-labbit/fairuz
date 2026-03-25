@@ -961,7 +961,7 @@ ErrorOr<Expr*> Parser::parsePrimaryExpr()
 
     if (check(tok::TokenType::KW_NONE)) {
         advance();
-        return makeLiteralString("");
+        return makeLiteralNil();
     }
 
     if (check(tok::TokenType::IDENTIFIER)) {
@@ -1143,6 +1143,7 @@ std::optional<double> ASTOptimizer::evaluateConstant(Expr const* expr)
         if (un->getOperator() == UnaryOp::OP_NEG)
             return -*operand;
     }
+
     return std::nullopt;
 }
 

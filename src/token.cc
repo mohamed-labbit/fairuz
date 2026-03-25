@@ -91,29 +91,64 @@ bool Token::atbol() const { return Atbol_; }
 
 bool Token::isOperator() const
 {
-    return (Type_ >= TokenType::OP_PLUS && Type_ <= TokenType::OP_RSHIFTEQ) || Type_ == TokenType::OP_AND || Type_ == TokenType::OP_OR;
+    return (Type_ >= TokenType::OP_PLUS && Type_ <= TokenType::OP_RSHIFTEQ)
+        || Type_ == TokenType::OP_AND || Type_ == TokenType::OP_OR;
 }
 
 bool Token::isUnaryOp() const
 {
-    return Type_ == TokenType::OP_PLUS || Type_ == TokenType::OP_MINUS || Type_ == TokenType::OP_BITNOT || Type_ == TokenType::OP_NOT;
+    return Type_ == TokenType::OP_PLUS
+        || Type_ == TokenType::OP_MINUS
+        || Type_ == TokenType::OP_BITNOT
+        || Type_ == TokenType::OP_NOT;
 }
 
 bool Token::isBinaryOp() const
 {
-    return Type_ == TokenType::OP_PLUS || Type_ == TokenType::OP_MINUS || Type_ == TokenType::OP_STAR || Type_ == TokenType::OP_SLASH || Type_ == TokenType::OP_PERCENT || Type_ == TokenType::OP_POWER || Type_ == TokenType::OP_EQ || Type_ == TokenType::OP_NEQ || Type_ == TokenType::OP_LT || Type_ == TokenType::OP_GT || Type_ == TokenType::OP_LTE || Type_ == TokenType::OP_GTE || Type_ == TokenType::OP_BITAND || Type_ == TokenType::OP_BITOR || Type_ == TokenType::OP_BITXOR || Type_ == TokenType::OP_BITNOT || Type_ == TokenType::OP_LSHIFT || Type_ == TokenType::OP_RSHIFT || Type_ == TokenType::OP_AND || Type_ == TokenType::OP_OR;
+    return Type_ == TokenType::OP_PLUS || Type_ == TokenType::OP_MINUS
+        || Type_ == TokenType::OP_STAR
+        || Type_ == TokenType::OP_SLASH
+        || Type_ == TokenType::OP_PERCENT
+        || Type_ == TokenType::OP_POWER
+        || Type_ == TokenType::OP_EQ
+        || Type_ == TokenType::OP_NEQ
+        || Type_ == TokenType::OP_LT
+        || Type_ == TokenType::OP_GT
+        || Type_ == TokenType::OP_LTE
+        || Type_ == TokenType::OP_GTE
+        || Type_ == TokenType::OP_BITAND
+        || Type_ == TokenType::OP_BITOR
+        || Type_ == TokenType::OP_BITXOR
+        || Type_ == TokenType::OP_LSHIFT
+        || Type_ == TokenType::OP_RSHIFT
+        || Type_ == TokenType::OP_AND
+        || Type_ == TokenType::OP_OR;
 }
 
 bool Token::isComparisonOp() const
 {
-    return Type_ == TokenType::OP_EQ || Type_ == TokenType::OP_NEQ || Type_ == TokenType::OP_LT || Type_ == TokenType::OP_GT || Type_ == TokenType::OP_LTE || Type_ == TokenType::OP_GTE;
+    return Type_ == TokenType::OP_EQ
+        || Type_ == TokenType::OP_NEQ
+        || Type_ == TokenType::OP_LT
+        || Type_ == TokenType::OP_GT
+        || Type_ == TokenType::OP_LTE
+        || Type_ == TokenType::OP_GTE;
 }
 
-bool Token::isWhitespace() const { return Type_ == TokenType::INDENT || Type_ == TokenType::DEDENT || Type_ == TokenType::NEWLINE; }
+bool Token::isWhitespace() const
+{
+    return Type_ == TokenType::INDENT
+        || Type_ == TokenType::DEDENT
+        || Type_ == TokenType::NEWLINE;
+}
 
 bool Token::isNumeric() const
 {
-    return Type_ == TokenType::INTEGER || Type_ == TokenType::HEX || Type_ == TokenType::OCTAL || Type_ == TokenType::BINARY || Type_ == TokenType::DECIMAL;
+    return Type_ == TokenType::INTEGER
+        || Type_ == TokenType::HEX
+        || Type_ == TokenType::OCTAL
+        || Type_ == TokenType::BINARY
+        || Type_ == TokenType::DECIMAL;
 }
 
 double Token::toDouble() const { return lexeme().toDouble(); }

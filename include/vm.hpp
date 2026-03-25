@@ -2,8 +2,8 @@
 #define VM_HPP
 
 #include "gc.hpp"
-#include "table.hpp"
 #include "opcode.hpp"
+#include "table.hpp"
 #include "value.hpp"
 
 namespace mylang::runtime {
@@ -74,7 +74,7 @@ public:
 
     GarbageCollector GC_;
 
-    Value Stack_ [STACK_SIZE];
+    Value Stack_[STACK_SIZE];
     CallFrame Frames_[MAX_FRAMES];
 
     int StackTop_ { 0 };
