@@ -416,7 +416,7 @@ StringRef StringRef::slice(size_t start, size_t end) const
         return { };
 
     if (start > Length_) {
-        diagnostic::emit("StringRef::slice: start index out of range");
+        diagnostic::emit(diagnostic::errc::container::Code::STRING_SLICE_START_OOB);
         return { };
     }
 
@@ -424,7 +424,7 @@ StringRef StringRef::slice(size_t start, size_t end) const
         end = Length_;
 
     if (end < start) {
-        diagnostic::emit("StringRef::slice: end must be >= start");
+        diagnostic::emit(diagnostic::errc::container::Code::STRING_SLICE_END_BEFORE_START);
         return { };
     }
 
@@ -486,7 +486,7 @@ StringRef StringRef::fromUtf16(char16_t const* src)
     char16_t const* p = src;
     while (*p)
         ++p;
-    size_t src_len = static_cast<size_t>(p - src);
+    auto src_len = static_cast<size_t>(p - src);
 
     simdutf::result validation = simdutf::validate_utf16_with_errors(src, src_len);
     if (validation.error != simdutf::error_code::SUCCESS)

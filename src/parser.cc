@@ -22,7 +22,7 @@ static bool stmtDefinitelyReturns(Stmt const* stmt)
     case Stmt::Kind::RETURN:
         return true;
     case Stmt::Kind::BLOCK: {
-        auto const* block = static_cast<BlockStmt const*>(stmt);
+        auto block = static_cast<BlockStmt const*>(stmt);
         for (Stmt const* child : block->getStatements()) {
             if (stmtDefinitelyReturns(child))
                 return true;
@@ -30,7 +30,7 @@ static bool stmtDefinitelyReturns(Stmt const* stmt)
         return false;
     }
     case Stmt::Kind::IF: {
-        auto const* if_stmt = static_cast<IfStmt const*>(stmt);
+        auto if_stmt = static_cast<IfStmt const*>(stmt);
         return stmtDefinitelyReturns(if_stmt->getThen()) && stmtDefinitelyReturns(if_stmt->getElse());
     }
     default:
@@ -123,7 +123,7 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(Expr const* expr)
 
     switch (expr->getKind()) {
     case Expr::Kind::LITERAL: {
-        LiteralExpr const* lit = static_cast<LiteralExpr const*>(expr);
+auto lit = static_cast<LiteralExpr const*>(expr);
 
         if (lit->isString())
             return SymbolTable::DataType_t::STRING;
@@ -138,14 +138,14 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(Expr const* expr)
     }
 
     case Expr::Kind::NAME: {
-        NameExpr const* name = static_cast<NameExpr const*>(expr);
+auto name = static_cast<NameExpr const*>(expr);
         SymbolTable::Symbol* sym = CurrentScope_->lookup(name->getValue());
         if (sym)
             return sym->dataType;
     } break;
 
     case Expr::Kind::BINARY: {
-        BinaryExpr const* bin = static_cast<BinaryExpr const*>(expr);
+auto bin = static_cast<BinaryExpr const*>(expr);
 
         SymbolTable::DataType_t leftType = inferType(bin->getLeft());
         SymbolTable::DataType_t rightType = inferType(bin->getRight());
@@ -185,7 +185,7 @@ void SemanticAnalyzer::analyzeExpr(Expr const* expr)
 
     switch (expr->getKind()) {
     case Expr::Kind::NAME: {
-        NameExpr const* name = static_cast<NameExpr const*>(expr);
+auto name = static_cast<NameExpr const*>(expr);
 
         if (!CurrentScope_->isDefined(name->getValue()))
             reportIssue(Issue::Severity::ERROR, "Undefined variable: " + name->getValue(), expr->getLine(), "Did you forget to initialize it?");
@@ -194,7 +194,7 @@ void SemanticAnalyzer::analyzeExpr(Expr const* expr)
     } break;
 
     case Expr::Kind::BINARY: {
-        BinaryExpr const* bin = static_cast<BinaryExpr const*>(expr);
+        auto bin = static_cast<BinaryExpr const*>(expr);
 
         analyzeExpr(bin->getLeft());
         analyzeExpr(bin->getRight());
@@ -211,26 +211,26 @@ void SemanticAnalyzer::analyzeExpr(Expr const* expr)
         }
 
         if (bin->getOperator() == BinaryOp::OP_DIV && bin->getRight()->getKind() == Expr::Kind::LITERAL) {
-            LiteralExpr const* lit = static_cast<LiteralExpr const*>(bin->getRight());
+            auto lit = static_cast<LiteralExpr const*>(bin->getRight());
             if (lit->isNumeric() && lit->toNumber() == 0)
                 reportIssue(Issue::Severity::ERROR, "Division by zero", expr->getLine(), "This will cause a runtime error");
         }
     } break;
 
     case Expr::Kind::UNARY: {
-        UnaryExpr const* un = static_cast<UnaryExpr const*>(expr);
+        auto un = static_cast<UnaryExpr const*>(expr);
         analyzeExpr(un->getOperand());
     } break;
 
     case Expr::Kind::CALL: {
-        CallExpr const* call = static_cast<CallExpr const*>(expr);
+        auto call = static_cast<CallExpr const*>(expr);
         analyzeExpr(call->getCallee());
 
         for (Expr const* const& arg : call->getArgs())
             analyzeExpr(arg);
 
         if (call->getCallee()->getKind() == Expr::Kind::NAME) {
-            NameExpr const* name = static_cast<NameExpr const*>(call->getCallee());
+            auto name = static_cast<NameExpr const*>(call->getCallee());
 
             if (SymbolTable::Symbol* sym = CurrentScope_->lookup(name->getValue())) {
                 if (sym->symbolType != SymbolTable::SymbolType::FUNCTION)
@@ -239,7 +239,7 @@ void SemanticAnalyzer::analyzeExpr(Expr const* expr)
         }
 
         if (call->getCallee()->getKind() == Expr::Kind::NAME) {
-            NameExpr const* name = static_cast<NameExpr const*>(call->getCallee());
+            auto name = static_cast<NameExpr const*>(call->getCallee());
             SymbolTable::Symbol* sym = CurrentScope_->lookup(name->getValue());
 
             if (!sym)
@@ -250,13 +250,13 @@ void SemanticAnalyzer::analyzeExpr(Expr const* expr)
     } break;
 
     case Expr::Kind::LIST: {
-        ListExpr const* list = static_cast<ListExpr const*>(expr);
+        auto list = static_cast<ListExpr const*>(expr);
         for (Expr const* const& elem : list->getElements())
             analyzeExpr(elem);
     } break;
 
     case Expr::Kind::INDEX: {
-        auto const* idx = static_cast<IndexExpr const*>(expr);
+        auto idx = static_cast<IndexExpr const*>(expr);
         analyzeExpr(idx->getObject());
         analyzeExpr(idx->getIndex());
     } break;
@@ -273,7 +273,7 @@ void SemanticAnalyzer::analyzeStmt(Stmt const* stmt)
 
     switch (stmt->getKind()) {
     case Stmt::Kind::ASSIGNMENT: {
-        AssignmentStmt const* assign = static_cast<AssignmentStmt const*>(stmt);
+        auto assign = static_cast<AssignmentStmt const*>(stmt);
         analyzeExpr(assign->getValue());
 
         Expr* target = assign->getTarget();
@@ -301,14 +301,14 @@ void SemanticAnalyzer::analyzeStmt(Stmt const* stmt)
     } break;
 
     case Stmt::Kind::EXPR: {
-        ExprStmt const* expr_stmt = static_cast<ExprStmt const*>(stmt);
+        auto expr_stmt = static_cast<ExprStmt const*>(stmt);
         analyzeExpr(expr_stmt->getExpr());
         if (expr_stmt->getExpr()->getKind() != Expr::Kind::CALL)
             reportIssue(Issue::Severity::INFO, "Expression result not used", stmt->getLine());
     } break;
 
     case Stmt::Kind::IF: {
-        IfStmt const* ifStmt = static_cast<IfStmt const*>(stmt);
+        auto ifStmt = static_cast<IfStmt const*>(stmt);
         analyzeExpr(ifStmt->getCondition());
 
         Stmt const* then_block = ifStmt->getThen();
@@ -324,7 +324,7 @@ void SemanticAnalyzer::analyzeStmt(Stmt const* stmt)
     } break;
 
     case Stmt::Kind::WHILE: {
-        WhileStmt const* while_stmt = static_cast<WhileStmt const*>(stmt);
+        auto while_stmt = static_cast<WhileStmt const*>(stmt);
         analyzeExpr(while_stmt->getCondition());
 
         // Detect infinite loops
@@ -338,7 +338,7 @@ void SemanticAnalyzer::analyzeStmt(Stmt const* stmt)
     } break;
 
     case Stmt::Kind::FOR: {
-        ForStmt const* for_stmt = static_cast<ForStmt const*>(stmt);
+auto for_stmt = static_cast<ForStmt const*>(stmt);
         analyzeExpr(for_stmt->getIter());
 
         CurrentScope_ = CurrentScope_->createChild();
@@ -356,7 +356,7 @@ void SemanticAnalyzer::analyzeStmt(Stmt const* stmt)
     } break;
 
     case Stmt::Kind::FUNC: {
-        FunctionDef const* func_def = static_cast<FunctionDef const*>(stmt);
+auto func_def = static_cast<FunctionDef const*>(stmt);
         SymbolTable::Symbol func_sym;
         func_sym.symbolType = SymbolTable::SymbolType::FUNCTION;
         func_sym.dataType = SymbolTable::DataType_t::FUNCTION;
@@ -380,7 +380,7 @@ void SemanticAnalyzer::analyzeStmt(Stmt const* stmt)
     } break;
 
     case Stmt::Kind::RETURN: {
-        ReturnStmt const* ret = static_cast<ReturnStmt const*>(stmt);
+auto ret = static_cast<ReturnStmt const*>(stmt);
         analyzeExpr(ret->getValue());
     } break;
 
@@ -761,7 +761,7 @@ ErrorOr<Expr*> Parser::parseAssignmentExpr()
             return R.error();
 
         if (kind == Expr::Kind::NAME) {
-            NameExpr* name_target = static_cast<NameExpr*>(target);
+auto name_target = static_cast<NameExpr*>(target);
             bool decl = !Sema_.getCurrentScope()->isDefined(name_target->getValue());
             return ErrorOr<Expr*>::fromValue(makeAssignmentExpr(name_target, R.value(), decl));
         }
@@ -1065,11 +1065,11 @@ bool isDefinitelyIntegerExpr(Expr const* expr)
 
     switch (expr->getKind()) {
     case Expr::Kind::LITERAL: {
-        auto const* lit = static_cast<LiteralExpr const*>(expr);
+        auto  lit = static_cast<LiteralExpr const*>(expr);
         return lit->isInteger();
     }
     case Expr::Kind::UNARY: {
-        auto const* un = static_cast<UnaryExpr const*>(expr);
+        auto un = static_cast<UnaryExpr const*>(expr);
         UnaryOp op = un->getOperator();
         if (op != UnaryOp::OP_PLUS && op != UnaryOp::OP_NEG)
             return false;
@@ -1077,7 +1077,7 @@ bool isDefinitelyIntegerExpr(Expr const* expr)
         return isDefinitelyIntegerExpr(un->getOperand());
     }
     case Expr::Kind::BINARY: {
-        auto const* bin = static_cast<BinaryExpr const*>(expr);
+        auto  bin = static_cast<BinaryExpr const*>(expr);
         if (!isDefinitelyIntegerExpr(bin->getLeft()) || !isDefinitelyIntegerExpr(bin->getRight()))
             return false;
 

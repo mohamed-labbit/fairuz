@@ -10,6 +10,7 @@
 namespace mylang::runtime {
 
 using ErrorCode = diagnostic::errc::runtime::Code;
+using StdlibError = diagnostic::errc::stdlib::Code;
 
 static StringRef valueToString(Value v)
 {
@@ -79,7 +80,7 @@ static void printValue(Value v, int depth = 0)
             return;
 
         case ObjType::LIST: {
-            ObjList* list = static_cast<ObjList*>(obj);
+            auto list = static_cast<ObjList*>(obj);
             std::cout << '[';
             for (uint32_t i = 0; i < list->elements.size(); ++i) {
                 if (i > 0)
@@ -98,7 +99,7 @@ static void printValue(Value v, int depth = 0)
         }
 
         case ObjType::CLOSURE: {
-            ObjClosure* cl = static_cast<ObjClosure*>(obj);
+            auto cl = static_cast<ObjClosure*>(obj);
             std::cout << "<function ";
             if (cl->function && cl->function->name)
                 std::cout << cl->function->name->str;
@@ -109,7 +110,7 @@ static void printValue(Value v, int depth = 0)
         }
 
         case ObjType::NATIVE: {
-            ObjNative* nat = static_cast<ObjNative*>(obj);
+            auto nat = static_cast<ObjNative*>(obj);
             std::cout << "<native ";
             if (nat->name)
                 std::cout << nat->name->str;
@@ -120,7 +121,7 @@ static void printValue(Value v, int depth = 0)
         }
 
         case ObjType::FUNCTION: {
-            ObjFunction* fn = static_cast<ObjFunction*>(obj);
+            auto fn = static_cast<ObjFunction*>(obj);
             std::cout << "<function ";
             if (fn->name)
                 std::cout << fn->name->str;
@@ -193,15 +194,15 @@ Value VM::nativeFloat(int argc, Value* argv)
 Value VM::nativeAppend(int argc, Value* argv)
 {
     if (argc < 2 || !argv) {
-        diagnostic::emit("append() : expected two arguments got : " + std::to_string(argc));
-        diagnostic::runtimeError(ErrorCode::WRONG_ARG_COUNT);
+        diagnostic::emit(StdlibError::APPEND_ARG_COUNT, "got " + std::to_string(argc));
+        diagnostic::runtimeError(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
     }
 
     Value& list_v = argv[0];
     if (!IS_LIST(list_v)) {
-        diagnostic::emit("append() called on a non list value");
-        diagnostic::runtimeError(ErrorCode::TYPE_ERROR_CALL);
+        diagnostic::emit(StdlibError::APPEND_TYPE_ERROR);
+        diagnostic::runtimeError(ErrorCode::NATIVE_TYPE_ERROR);
         return NIL_VAL;
     }
 
@@ -216,15 +217,15 @@ Value VM::nativeAppend(int argc, Value* argv)
 Value VM::nativePop(int argc, Value* argv)
 {
     if (argc != 1 || !argv) {
-        diagnostic::emit("pop() called with no value attatched");
-        diagnostic::runtimeError(ErrorCode::TYPE_ERROR_CALL);
+        diagnostic::emit(StdlibError::POP_ARG_COUNT, "got " + std::to_string(argc));
+        diagnostic::runtimeError(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
     }
 
     Value& list_v = argv[0];
     if (!IS_LIST(list_v)) {
-        diagnostic::emit("pop() called on a non list value");
-        diagnostic::runtimeError(ErrorCode::TYPE_ERROR_CALL);
+        diagnostic::emit(StdlibError::POP_TYPE_ERROR);
+        diagnostic::runtimeError(ErrorCode::NATIVE_TYPE_ERROR);
         return NIL_VAL;
     }
 
@@ -240,8 +241,8 @@ Value VM::nativeSlice(int argc, Value* argv)
     /// if b is null then cut [a:]
 
     if (argc < 2) {
-        diagnostic::emit("slice() expects at least 2 arguments, got : " + std::to_string(argc));
-        diagnostic::runtimeError(ErrorCode::WRONG_ARG_COUNT);
+        diagnostic::emit(StdlibError::SLICE_ARG_COUNT, "got " + std::to_string(argc));
+        diagnostic::runtimeError(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
     }
 
@@ -258,13 +259,16 @@ Value VM::nativeSlice(int argc, Value* argv)
     return ret;
 }
 
-Value VM::nativeInput(int argc, Value* argv) { return NIL_VAL; }
+Value VM::nativeInput(int /*argc*/, Value* /*argv*/)
+{
+    return NIL_VAL;
+}
 
 Value VM::nativeStr(int argc, Value* argv)
 {
     if (argc > 1) {
-        diagnostic::emit("str() expects one argument , got : " + std::to_string(argc));
-        diagnostic::runtimeError(ErrorCode::WRONG_ARG_COUNT);
+        diagnostic::emit(StdlibError::STR_ARG_COUNT, "got " + std::to_string(argc));
+        diagnostic::runtimeError(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
     }
 
@@ -290,8 +294,8 @@ Value VM::nativeStr(int argc, Value* argv)
 Value VM::nativeBool(int argc, Value* argv)
 {
     if (argc != 1 || !argv) {
-        diagnostic::emit("bool() is called with no arguments");
-        diagnostic::runtimeError(ErrorCode::WRONG_ARG_COUNT);
+        diagnostic::emit(StdlibError::BOOL_ARG_COUNT, "got " + std::to_string(argc));
+        diagnostic::runtimeError(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
     }
 
@@ -374,7 +378,8 @@ Value VM::nativeJoin(int argc, Value* argv)
 Value VM::nativeSubstr(int argc, Value* argv)
 {
     if (argc != 3 || !argv) {
-        diagnostic::emit("substr() expects 3 arguments, got : " + std::to_string(argc));
+        diagnostic::emit(StdlibError::SUBSTR_ARG_COUNT, "got " + std::to_string(argc));
+        diagnostic::runtimeError(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
     }
 
@@ -412,12 +417,14 @@ Value VM::nativeTrim(int argc, Value* argv)
 Value VM::nativeFloor(int argc, Value* argv)
 {
     if (argc != 1 || !argv) {
-        diagnostic::emit("floor() expects 1 argument, got : " + std::to_string(argc));
+        diagnostic::emit(StdlibError::FLOOR_ARG_COUNT, "got " + std::to_string(argc));
+        diagnostic::runtimeError(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
     }
 
     if (!IS_NUMBER(argv[0])) {
-        diagnostic::emit("floor() is called with a non numeric value argument");
+        diagnostic::emit(StdlibError::FLOOR_TYPE_ERROR);
+        diagnostic::runtimeError(ErrorCode::NATIVE_TYPE_ERROR);
         return NIL_VAL;
     }
 
@@ -430,12 +437,14 @@ Value VM::nativeFloor(int argc, Value* argv)
 Value VM::nativeCeil(int argc, Value* argv)
 {
     if (argc != 1 || !argv) {
-        diagnostic::emit("ceil() expects 1 argument, got : " + std::to_string(argc));
+        diagnostic::emit(StdlibError::CEIL_ARG_COUNT, "got " + std::to_string(argc));
+        diagnostic::runtimeError(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
     }
 
     if (!IS_NUMBER(argv[0])) {
-        diagnostic::emit("ceil() is called with a non numeric value argument");
+        diagnostic::emit(StdlibError::CEIL_TYPE_ERROR);
+        diagnostic::runtimeError(ErrorCode::NATIVE_TYPE_ERROR);
         return NIL_VAL;
     }
 
@@ -447,10 +456,16 @@ Value VM::nativeCeil(int argc, Value* argv)
 
 Value VM::nativeRound(int argc, Value* argv)
 {
-    if (argc != 1 || !argv)
+    if (argc != 1 || !argv) {
+        diagnostic::emit(StdlibError::ROUND_ARG_COUNT, "got " + std::to_string(argc));
+        diagnostic::runtimeError(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
-    if (!IS_NUMBER(argv[0]))
+    }
+    if (!IS_NUMBER(argv[0])) {
+        diagnostic::emit(StdlibError::ROUND_TYPE_ERROR);
+        diagnostic::runtimeError(ErrorCode::NATIVE_TYPE_ERROR);
         return NIL_VAL;
+    }
     if (IS_INTEGER(argv[0]))
         return argv[0];
 
@@ -460,19 +475,21 @@ Value VM::nativeRound(int argc, Value* argv)
 Value VM::nativeAbs(int argc, Value* argv)
 {
     if (argc != 1 || !argv) {
-        diagnostic::emit("abs() expects 1 argument, got : " + std::to_string(argc));
+        diagnostic::emit(StdlibError::ABS_ARG_COUNT, "got " + std::to_string(argc));
+        diagnostic::runtimeError(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
     }
 
     if (!IS_NUMBER(argv[0])) {
-        diagnostic::emit("abs() is called with a non numeric value argument");
+        diagnostic::emit(StdlibError::ABS_TYPE_ERROR);
+        diagnostic::runtimeError(ErrorCode::NATIVE_TYPE_ERROR);
         return NIL_VAL;
     }
 
     if (IS_INTEGER(argv[0])) {
         int64_t v = AS_INTEGER(argv[0]);
         if (v == INT64_MIN) {
-            diagnostic::emit("abs() argument out of range");
+            diagnostic::emit(StdlibError::ABS_OUT_OF_RANGE);
             return NIL_VAL;
         }
         return MAKE_INTEGER(std::abs(AS_INTEGER(argv[0])));
@@ -483,7 +500,8 @@ Value VM::nativeAbs(int argc, Value* argv)
 Value VM::nativeMin(int argc, Value* argv)
 {
     if (argc < 1 || !argv) {
-        diagnostic::emit("min() expects 1 or more arguments, got: " + std::to_string(argc));
+        diagnostic::emit(StdlibError::MIN_ARG_COUNT, "got " + std::to_string(argc));
+        diagnostic::runtimeError(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
     }
 
@@ -520,7 +538,8 @@ Value VM::nativeMin(int argc, Value* argv)
 Value VM::nativeMax(int argc, Value* argv)
 {
     if (argc < 1 || !argv) {
-        diagnostic::emit("max() expects 1 or more arguments, got: " + std::to_string(argc));
+        diagnostic::emit(StdlibError::MAX_ARG_COUNT, "got " + std::to_string(argc));
+        diagnostic::runtimeError(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
     }
 
@@ -557,7 +576,8 @@ Value VM::nativeMax(int argc, Value* argv)
 Value VM::nativePow(int argc, Value* argv)
 {
     if (argc != 2 || !argv) {
-        diagnostic::emit("pow() expects 2 arguments, got : " + std::to_string(argc));
+        diagnostic::emit(StdlibError::POW_ARG_COUNT, "got " + std::to_string(argc));
+        diagnostic::runtimeError(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
     }
 
@@ -565,7 +585,8 @@ Value VM::nativePow(int argc, Value* argv)
     Value exponent = argv[1];
 
     if (UNLIKELY(!IS_NUMBER(base) || !IS_NUMBER(exponent))) {
-        diagnostic::runtimeError(ErrorCode::TYPE_ERROR_ARITH);
+        diagnostic::emit(StdlibError::POW_TYPE_ERROR);
+        diagnostic::runtimeError(ErrorCode::NATIVE_TYPE_ERROR);
         return NIL_VAL;
     }
 
@@ -581,14 +602,16 @@ Value VM::nativePow(int argc, Value* argv)
 Value VM::nativeSqrt(int argc, Value* argv)
 {
     if (argc != 1 || !argv) {
-        diagnostic::emit("sqrt() expects 1 argument, got : " + std::to_string(argc));
+        diagnostic::emit(StdlibError::SQRT_ARG_COUNT, "got " + std::to_string(argc));
+        diagnostic::runtimeError(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
     }
 
     Value n = argv[0];
 
     if (UNLIKELY(!IS_NUMBER(n))) {
-        diagnostic::runtimeError(ErrorCode::TYPE_ERROR_ARITH);
+        diagnostic::emit(StdlibError::SQRT_TYPE_ERROR);
+        diagnostic::runtimeError(ErrorCode::NATIVE_TYPE_ERROR);
         return NIL_VAL;
     }
 
@@ -599,9 +622,9 @@ Value VM::nativeSqrt(int argc, Value* argv)
     return MAKE_REAL(std::sqrt(val));
 }
 
-Value VM::nativeAssert(int argc, Value* argv) { return NIL_VAL; }
-Value VM::nativeClock(int argc, Value* argv) { return NIL_VAL; }
-Value VM::nativeError(int argc, Value* argv) { return NIL_VAL; }
-Value VM::nativeTime(int argc, Value* argv) { return NIL_VAL; }
+Value VM::nativeAssert(int /*argc*/, Value* /*argv*/) { return NIL_VAL; }
+Value VM::nativeClock(int /*argc*/, Value* /*argv*/) { return NIL_VAL; }
+Value VM::nativeError(int /*argc*/, Value* /*argv*/) { return NIL_VAL; }
+Value VM::nativeTime(int /*argc*/, Value* /*argv*/) { return NIL_VAL; }
 
 } // namespace mylang::runtime

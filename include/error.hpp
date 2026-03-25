@@ -3,6 +3,8 @@
 
 #include "lexer.hpp"
 
+#include <string>
+
 namespace mylang {
 
 class [[nodiscard]] Error {
@@ -31,7 +33,7 @@ public:
 
 private:
     uint16_t m_code;
-};
+}; // class Error
 
 template<typename T, typename E = Error>
 class [[nodiscard]] ErrorOr {
@@ -144,11 +146,17 @@ private:
         else
             get_error().~E();
     }
-};
+}; // class ErrorOr
 
 static Error _reportError(uint16_t err_code, SourceLocation loc, lex::Lexer* lex)
 {
-    diagnostic::report(diagnostic::Severity::ERROR, loc.line, loc.column, err_code, lex ? lex->getLineAt(loc.line).data() : "");
+    std::string snippet;
+    if (lex) {
+        StringRef line = lex->getLineAt(loc.line);
+        if (!line.empty())
+            snippet.assign(line.data(), line.len());
+    }
+    diagnostic::report(diagnostic::Severity::ERROR, loc.line, loc.column, err_code, snippet);
     return Error(err_code);
 }
 static Error reportError(diagnostic::errc::parser::Code err_code, SourceLocation loc, lex::Lexer* lex = nullptr)

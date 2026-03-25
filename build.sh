@@ -13,9 +13,6 @@ TEST_ARGS=()
 MAIN_ARGS=()
 INSTALL_ARGS=()
 
-# -------------------------
-# Parse arguments
-# -------------------------
 for arg in "$@"; do
     case "$arg" in
         --clean)
@@ -48,9 +45,6 @@ for arg in "$@"; do
     esac
 done
 
-# -------------------------
-# Clean build
-# -------------------------
 if [[ "$CLEAN_BUILD" == true ]]; then
     rm -rf build
 fi
@@ -58,9 +52,6 @@ fi
 mkdir -p build
 cd build || exit 1
 
-# -------------------------
-# Configure with CMake
-# -------------------------
 COMMON_FLAGS=(
     -DCMAKE_C_COMPILER=clang
     -DCMAKE_CXX_COMPILER=clang++
@@ -87,14 +78,8 @@ else
     cmake "${COMMON_FLAGS[@]}" .. || exit 1
 fi
 
-# -------------------------
-# Build
-# -------------------------
 make || exit 1
 
-# -------------------------
-# Run include-cleaner
-# -------------------------
 if [[ "$RUN_INCLUDES" == true ]]; then
     echo "🔍 Running clang include-cleaner..."
 
@@ -104,17 +89,11 @@ if [[ "$RUN_INCLUDES" == true ]]; then
         --enable-config
 fi
 
-# -------------------------
-# Run tests
-# -------------------------
 if [[ "$RUN_TESTS" == true ]]; then
     ASAN_OPTIONS=detect_leaks="$DEBUG" \
         "$PROJECT_ROOT/build/mylang_tests" "${TEST_ARGS[@]}"
 fi
 
-# -------------------------
-# Run main program
-# -------------------------
 if [[ "$RUN_MAIN" == true ]]; then
     if [[ ${#MAIN_ARGS[@]} -eq 0 ]]; then
         echo "usage: ./build.sh run <file>"
@@ -125,9 +104,6 @@ if [[ "$RUN_MAIN" == true ]]; then
         "$PROJECT_ROOT/build/mylang" "${MAIN_ARGS[@]}"
 fi
 
-# -------------------------
-# Install
-# -------------------------
 if [[ "$RUN_INSTALL" == true ]]; then
     INSTALL_PREFIX=""
     if [[ ${#INSTALL_ARGS[@]} -gt 0 ]]; then

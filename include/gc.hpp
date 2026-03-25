@@ -39,7 +39,7 @@ private:
     void sweep();
     void markValueArray(Array<Value> const& arr);
     void traceReferences();
-};
+}; // class GarbageCollector
 
 } // namespace mylang::runtime
 

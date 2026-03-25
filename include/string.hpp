@@ -67,7 +67,7 @@ public:
     void decrement() const noexcept { RefCount--; }
 
     uint32_t referenceCount() const noexcept { return RefCount; }
-};
+}; // class StringBase
 
 namespace detail {
 
@@ -117,7 +117,7 @@ public:
 
     StringRef& operator=(StringRef const& other);
 
-    MY_NODISCARD bool operator==(StringRef const& other) const noexcept
+    [[nodiscard]] bool operator==(StringRef const& other) const noexcept
     {
         if (StringData_ == other.StringData_ && Offset_ == other.Offset_ && Length_ == other.Length_)
             return true;
@@ -128,9 +128,9 @@ public:
         return ::memcmp(data(), other.data(), Length_) == 0;
     }
 
-    MY_NODISCARD bool operator!=(StringRef const& other) const noexcept { return !(*this == other); }
+    [[nodiscard]] bool operator!=(StringRef const& other) const noexcept { return !(*this == other); }
 
-    MY_NODISCARD bool operator<(StringRef const& other) const noexcept
+    [[nodiscard]] bool operator<(StringRef const& other) const noexcept
     {
         if (StringData_ == other.StringData_ && Offset_ == other.Offset_ && Length_ == other.Length_)
             return false;
@@ -144,9 +144,9 @@ public:
         return cmp != 0 ? cmp < 0 : Length_ < other.Length_;
     }
 
-    MY_NODISCARD bool operator>(StringRef const& other) const noexcept { return other < *this; }
-    MY_NODISCARD bool operator<=(StringRef const& other) const noexcept { return !(*this > other); }
-    MY_NODISCARD bool operator>=(StringRef const& other) const noexcept { return !(*this < other); }
+    [[nodiscard]] bool operator>(StringRef const& other) const noexcept { return other < *this; }
+    [[nodiscard]] bool operator<=(StringRef const& other) const noexcept { return !(*this > other); }
+    [[nodiscard]] bool operator>=(StringRef const& other) const noexcept { return !(*this < other); }
 
     void expand(size_t const new_size);
     void reserve(size_t const new_capacity);
@@ -158,7 +158,7 @@ public:
     char operator[](size_t const i) const;
     char& operator[](size_t const i);
 
-    MY_NODISCARD char at(size_t const i) const;
+    [[nodiscard]] char at(size_t const i) const;
     char& at(size_t const i);
 
     StringRef& trimWhitespace(bool leading = true, bool trailing = true) noexcept;
@@ -214,13 +214,13 @@ public:
         return result;
     }
 
-    MY_NODISCARD size_t len() const noexcept { return Length_; }
-    MY_NODISCARD size_t cap() const noexcept { return StringData_ ? StringData_->cap() : 0; }
-    MY_NODISCARD StringBase* get() const noexcept { return StringData_; }
-    MY_NODISCARD bool empty() const noexcept { return Length_ == 0; }
-    MY_NODISCARD char const* data() const noexcept { return StringData_ ? StringData_->ptr() + Offset_ : nullptr; }
+    [[nodiscard]] size_t len() const noexcept { return Length_; }
+    [[nodiscard]] size_t cap() const noexcept { return StringData_ ? StringData_->cap() : 0; }
+    [[nodiscard]] StringBase* get() const noexcept { return StringData_; }
+    [[nodiscard]] bool empty() const noexcept { return Length_ == 0; }
+    [[nodiscard]] char const* data() const noexcept { return StringData_ ? StringData_->ptr() + Offset_ : nullptr; }
 
-    MY_NODISCARD char* data() noexcept
+    [[nodiscard]] char* data() noexcept
     {
         if (StringData_) {
             ensureUnique();
@@ -245,10 +245,10 @@ public:
 
     void resize(size_t const s);
 
-    MY_NODISCARD bool find(char const c) const noexcept;
-    MY_NODISCARD bool find(StringRef const& s) const noexcept;
+    [[nodiscard]] bool find(char const c) const noexcept;
+    [[nodiscard]] bool find(StringRef const& s) const noexcept;
 
-    MY_NODISCARD std::optional<size_t> find_pos(char const c) const noexcept;
+    [[nodiscard]] std::optional<size_t> find_pos(char const c) const noexcept;
 
     StringRef& truncate(size_t const s) noexcept;
     StringRef slice(size_t start, size_t end = SIZE_MAX) const;
@@ -268,7 +268,7 @@ public:
 
     double toDouble(size_t* pos = nullptr) const;
 
-    MY_NODISCARD static StringRef fromUtf16(char16_t const* utf16_cstr);
+    [[nodiscard]] static StringRef fromUtf16(char16_t const* utf16_cstr);
 
     void ensureUnique()
     {
@@ -280,7 +280,7 @@ public:
     }
 
     void detach();
-}; // StringRef
+}; // class StringRef
 
 namespace detail {
 
@@ -302,7 +302,7 @@ inline uint32_t wy_read4(void const* p) noexcept
 inline void wymix(uint64_t& a, uint64_t& b) noexcept
 {
 #if defined(__SIZEOF_INT128__)
-    __uint128_t r = static_cast<__uint128_t>(a) * b;
+    auto r = static_cast<__uint128_t>(a) * b;
     a = static_cast<uint64_t>(r);
     b = static_cast<uint64_t>(r >> 64);
 #else
@@ -325,7 +325,7 @@ static constexpr uint64_t WY_P3 = UINT64_C(0x589965cc75374cc3);
 
 inline uint64_t wyhash(void const* key, size_t len, uint64_t seed) noexcept
 {
-    auto const* p = static_cast<uint8_t const*>(key);
+    auto p = static_cast<uint8_t const*>(key);
     seed ^= WY_P0;
 
     uint64_t a = 0, b = 0;
@@ -442,11 +442,11 @@ struct StringRefHash {
 
         return static_cast<size_t>(detail::wyhash(p, n, seed));
     }
-};
+}; // struct StringRefHash
 
 struct StringRefEqual {
     bool operator()(StringRef const& lhs, StringRef const& rhs) const noexcept { return lhs == rhs; }
-};
+}; // struct StringRefEqual
 
 } // namespace mylang
 
@@ -455,7 +455,7 @@ namespace std {
 template<>
 struct hash<mylang::StringRef> {
     size_t operator()(mylang::StringRef const& str) const noexcept { return mylang::StringRefHash { }(str); }
-};
+}; // struct hash
 
 } // namespace std
 

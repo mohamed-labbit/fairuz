@@ -120,7 +120,7 @@ enum class OpCode : uint8_t {
     HALT,
 
     _COUNT
-};
+}; // enum OpCode
 
 inline OpCode instr_op(uint32_t const i) { return static_cast<OpCode>((i >> 24) & 0xFF); }
 
@@ -157,11 +157,13 @@ inline uint32_t make_ABSC(OpCode op, uint8_t A, uint8_t B, int8_t sC)
 
 inline int8_t instr_sC(uint32_t i) { return static_cast<int8_t>(i & 0xFF) - 128; }
 
-enum class InstrFormat : uint8_t { ABC,
+enum class InstrFormat : uint8_t {
+    ABC,
     ABx,
     AsBx,
     A,
-    NONE };
+    NONE
+}; // enum InstrFormat
 
 struct ICSlot {
     uint8_t seenLhs { 0 };
@@ -173,12 +175,12 @@ struct ICSlot {
     // global ic
     uint64_t* globalPtr { nullptr };
     uint64_t version { 0 };
-};
+}; // struct ICSlot
 
 struct LineEntry {
     uint32_t start;
     uint32_t line;
-};
+}; // struct LineEntry
 
 static StringRef opcode_name(OpCode op)
 {
@@ -417,7 +419,7 @@ struct Chunk {
 
 private:
     void addLine(uint32_t line);
-};
+}; // struct Chunk
 
 template<typename... Args>
 static Chunk* makeChunk(Args&&... args) { return getAllocator().allocateObject<Chunk>(std::forward<Args>(args)...); }

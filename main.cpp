@@ -25,7 +25,7 @@ enum class ExitCode : int {
     DataError = 65,
     NoInput = 66,
     Software = 70,
-};
+}; // enum ExitCode
 
 struct Options {
     bool dump_ast { false };
@@ -35,7 +35,7 @@ struct Options {
     bool show_help { false };
     bool show_version { false };
     std::string input_path;
-};
+}; // struct Options
 
 void printUsage(std::ostream& out, std::string_view program)
 {

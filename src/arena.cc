@@ -11,17 +11,18 @@ using ErrorCode = diagnostic::errc::general::Code;
 ArenaBlock::ArenaBlock(size_t const size, size_t const alignment)
     : Size_(size)
 {
+    (void)alignment;
 
     Begin_ = reinterpret_cast<unsigned char*>(
         mmap(reinterpret_cast<void*>(0x200000000ULL), size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
 
     if (Begin_ == MAP_FAILED)
-        diagnostic::emit("ArenaBlock: mmap failed", diagnostic::Severity::FATAL);
+        diagnostic::emit(ErrorCode::MMAP_FAILED, diagnostic::Severity::FATAL);
 
     if (reinterpret_cast<uintptr_t>(Begin_) > UINT64_C(0x0000FFFFFFFFFFFF)) {
         munmap(Begin_, Size_);
         Begin_ = nullptr;
-        diagnostic::emit("ArenaBlock: mmap returned high address — NaN-boxing unsafe", diagnostic::Severity::FATAL);
+        diagnostic::emit(ErrorCode::NANBOX_ADDRESS_UNSAFE, diagnostic::Severity::FATAL);
     }
 
     Next_ = Begin_;
@@ -176,7 +177,7 @@ void* ArenaAllocator::allocate(size_t const size, size_t const alignment)
         return nullptr;
 
     if (UNLIKELY(size > MAX_BLOCK_SIZE)) {
-        diagnostic::emit("allocation size is too large : " + std::to_string(size));
+        diagnostic::emit(ErrorCode::ALLOC_FAILED, "allocation size is too large: " + std::to_string(size));
         diagnostic::internalError(ErrorCode::ALLOC_FAILED);
     }
 
@@ -254,8 +255,8 @@ void ArenaAllocator::deallocate(void* ptr, size_t const size)
     if (!ptr || size == 0 || Blocks_.empty())
         return;
 
-    auto* expected = static_cast<unsigned char*>(ptr);
-    auto* last = static_cast<unsigned char*>(LastPtr_);
+    auto expected = static_cast<unsigned char*>(ptr);
+    auto last = static_cast<unsigned char*>(LastPtr_);
 
     if (expected != last)
         return;

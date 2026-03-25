@@ -66,7 +66,7 @@ struct DetailedAllocStats {
     void updatePeak(uint64_t current);
     void recordAllocTime(uint64_t duration_ns);
     void reset();
-};
+}; // struct DetailedAllocStats
 
 class StatsFormatter {
 public:
@@ -75,7 +75,7 @@ public:
     static std::string formatPercent(uint64_t numerator, uint64_t denominator, int precision = 2);
     static std::string createBar(uint64_t value, uint64_t max, int width = 40);
     static std::string formatNumber(uint64_t value);
-};
+}; // class StatsFormatter
 
 class StatsPrinter {
 private:
@@ -107,7 +107,7 @@ private:
     void printErrorStatistics(std::ostream& os) const;
     void printMetric(std::ostream& os, char const* label, std::string const& value, bool warn = false) const;
     void printMetricWithBar(std::ostream& os, char const* label, uint64_t value, uint64_t max) const;
-};
+}; // class StatsPrinter
 
 } // namespace mylang
 

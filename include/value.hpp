@@ -25,7 +25,7 @@ enum class ObjType : uint8_t {
     CLOSURE,
     NATIVE,
     UPVALUE
-};
+}; // enum ObjType
 
 struct ObjHeader {
     ObjType type { ObjType::UPVALUE };
@@ -36,7 +36,7 @@ struct ObjHeader {
         : type(t)
     {
     }
-};
+}; // struct ObjHeader
 
 struct ObjString final : public ObjHeader {
     StringRef str;
@@ -48,7 +48,7 @@ struct ObjString final : public ObjHeader {
         , hash(static_cast<uint64_t>(std::hash<StringRef> { }(s)))
     {
     }
-};
+}; // struct ObjString
 
 struct ObjList final : public ObjHeader {
     Array<Value> elements;
@@ -60,7 +60,7 @@ struct ObjList final : public ObjHeader {
 
     void reserve(uint32_t cap) { elements.reserve(cap); }
     uint32_t size() const { return elements.size(); }
-};
+}; // struct ObjList
 
 struct ObjFunction final : public ObjHeader {
     unsigned int arity { 0 };
@@ -73,7 +73,7 @@ struct ObjFunction final : public ObjHeader {
         , chunk(ch)
     {
     }
-};
+}; // struct ObjFunction
 
 struct ObjUpvalue final : public ObjHeader {
     Value* location { nullptr };
@@ -85,7 +85,7 @@ struct ObjUpvalue final : public ObjHeader {
         , location(slot)
     {
     }
-};
+}; // struct ObjUpvalue
 
 struct ObjClosure final : public ObjHeader {
     ObjFunction* function { nullptr };
@@ -97,9 +97,10 @@ struct ObjClosure final : public ObjHeader {
         , upValues(fn->upvalueCount, nullptr)
     {
     }
-};
+}; // struct ObjClosure
 
-class VM;
+class VM; // forward
+
 using NativeFn = Value (VM::*)(int, Value*);
 
 struct ObjNative final : public ObjHeader {
@@ -114,7 +115,7 @@ struct ObjNative final : public ObjHeader {
         , arity(a)
     {
     }
-};
+}; // struct ObjNative
 
 #define MAKE_OBJ_STRING(s) getAllocator().allocateObject<ObjString>(s)
 #define MAKE_OBJ_NATIVE(f, n, a) getAllocator().allocateObject<ObjNative>(f, n, a)
@@ -253,7 +254,7 @@ enum class TypeTag : uint8_t {
     LIST = 1 << 5,
     CLOSURE = 1 << 6,
     NATIVE = 1 << 7
-};
+}; // enum TypeTag
 
 [[nodiscard]] inline bool hasTag(TypeTag mask, TypeTag t) noexcept { return (static_cast<uint8_t>(mask) & static_cast<uint8_t>(t)) != 0; }
 

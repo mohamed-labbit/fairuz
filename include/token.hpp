@@ -5,8 +5,7 @@
 
 #include <sstream>
 
-namespace mylang {
-namespace tok {
+namespace mylang::tok {
 
 struct Location {
     std::string filepath { "" };
@@ -23,7 +22,7 @@ struct Location {
         , FilePos(fpos)
     {
     }
-};
+}; // struct Location
 
 enum class TokenType : int {
     KW_IF,
@@ -93,10 +92,10 @@ enum class TokenType : int {
     ENDMARKER,
     IDENTIFIER,
     INVALID
-};
+}; // enum TokenType
 
-MY_NODISCARD std::optional<TokenType> lookupKeyword(StringRef const& s);
-MY_NODISCARD std::optional<TokenType> lookupOperator(StringRef const& s);
+[[nodiscard]] std::optional<TokenType> lookupKeyword(StringRef const& s);
+[[nodiscard]] std::optional<TokenType> lookupOperator(StringRef const& s);
 
 enum {
     PREC_COMMA,
@@ -115,7 +114,7 @@ enum {
     PREC_UNARY,
     PREC_POSTFIX,
     PREC_NONE
-};
+}; // enum
 
 class Token {
 public:
@@ -145,34 +144,34 @@ public:
     Token& operator=(Token&&) noexcept = default;
 
     // Return const references to avoid copies
-    MY_NODISCARD StringRef const& lexeme() const;
+    [[nodiscard]] StringRef const& lexeme() const;
 
-    MY_NODISCARD TokenType const& type() const;
+    [[nodiscard]] TokenType const& type() const;
 
-    MY_NODISCARD uint32_t const& line() const;
+    [[nodiscard]] uint32_t const& line() const;
 
-    MY_NODISCARD uint16_t const& column() const;
+    [[nodiscard]] uint16_t const& column() const;
 
-    MY_NODISCARD Location const& location() const;
+    [[nodiscard]] Location const& location() const;
 
-    MY_NODISCARD std::string const& filepath() const;
+    [[nodiscard]] std::string const& filepath() const;
 
-    MY_NODISCARD bool is(TokenType const tt) const;
+    [[nodiscard]] bool is(TokenType const tt) const;
 
     // is at beginning of a newline
-    MY_NODISCARD bool atbol() const;
+    [[nodiscard]] bool atbol() const;
 
-    MY_NODISCARD bool isOperator() const;
-    MY_NODISCARD bool isUnaryOp() const;
-    MY_NODISCARD bool isBinaryOp() const;
-    MY_NODISCARD bool isComparisonOp() const;
-    MY_NODISCARD bool isWhitespace() const;
-    MY_NODISCARD bool isNumeric() const;
+    [[nodiscard]] bool isOperator() const;
+    [[nodiscard]] bool isUnaryOp() const;
+    [[nodiscard]] bool isBinaryOp() const;
+    [[nodiscard]] bool isComparisonOp() const;
+    [[nodiscard]] bool isWhitespace() const;
+    [[nodiscard]] bool isNumeric() const;
 
-    MY_NODISCARD double toDouble() const;
-    MY_NODISCARD int toInt() const;
+    [[nodiscard]] double toDouble() const;
+    [[nodiscard]] int toInt() const;
 
-    MY_NODISCARD int getPrecedence(bool is_unary = false) const;
+    [[nodiscard]] int getPrecedence(bool is_unary = false) const;
 
     // friend ostream operator for pretty-printing in tests/logs
     friend std::ostream& operator<<(std::ostream& os, Token const& tok)
@@ -189,9 +188,8 @@ private:
     TokenType Type_;
     Location Location_;
     bool Atbol_;
-};
+}; // class Token
 
-} // namespace tok
-} // namespace mylang
+} // namespace mylang::tok
 
 #endif // TOKEN_HPP

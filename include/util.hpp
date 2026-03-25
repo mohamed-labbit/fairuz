@@ -266,7 +266,7 @@ static bool isIntegerValue(double d, int64_t& out)
 {
     if (!std::isfinite(d))
         return false;
-    int64_t const iv = static_cast<int64_t>(d);
+    auto iv = static_cast<int64_t>(d);
     if (static_cast<double>(iv) != d)
         return false;
     out = iv;

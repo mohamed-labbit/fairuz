@@ -13,7 +13,7 @@ static std::optional<Value> constValue(Expr const* e)
     if (!e || e->getKind() != Expr::Kind::LITERAL)
         return std::nullopt;
 
-    LiteralExpr const* lit = static_cast<LiteralExpr const*>(e);
+    auto lit = static_cast<LiteralExpr const*>(e);
 
     if (lit->isNil())
         return NIL_VAL;
@@ -72,8 +72,8 @@ static std::optional<Value> _tryFoldBinary(BinaryExpr const* e)
     double ld = AS_DOUBLE(*L);
     double rd = AS_DOUBLE(*R);
 
-    int64_t li = IS_INTEGER(*L) ? AS_INTEGER(*L) : static_cast<int64_t>(AS_DOUBLE(*L));
-    int64_t ri = IS_INTEGER(*R) ? AS_INTEGER(*R) : static_cast<int64_t>(AS_DOUBLE(*R));
+    auto li = IS_INTEGER(*L) ? AS_INTEGER(*L) : static_cast<int64_t>(AS_DOUBLE(*L));
+    auto ri = IS_INTEGER(*R) ? AS_INTEGER(*R) : static_cast<int64_t>(AS_DOUBLE(*R));
 
     switch (op) {
     case BinaryOp::OP_ADD:

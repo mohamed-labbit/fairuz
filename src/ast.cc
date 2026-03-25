@@ -78,7 +78,10 @@ StringRef LiteralExpr::getStr() const
     return StrValue_;
 }
 
-bool LiteralExpr::isInteger() const { return Type_ == Type::INTEGER || Type_ == Type::HEX || Type_ == Type::OCTAL || Type_ == Type::BINARY; }
+bool LiteralExpr::isInteger() const
+{
+    return Type_ == Type::INTEGER || Type_ == Type::HEX || Type_ == Type::OCTAL || Type_ == Type::BINARY;
+}
 
 bool LiteralExpr::isDecimal() const { return Type_ == Type::FLOAT; }
 
@@ -234,11 +237,18 @@ bool AssignmentExpr::equals(Expr const* other) const
     return Target_->equals(bin->getTarget()) && Value_->equals(bin->getValue());
 }
 
-AssignmentExpr* AssignmentExpr::clone() const { return makeAssignmentExpr(Target_->clone(), Value_->clone()); }
+AssignmentExpr* AssignmentExpr::clone() const
+{
+    return makeAssignmentExpr(Target_->clone(), Value_->clone());
+}
 
 Expr* AssignmentExpr::getTarget() const { return Target_; }
 
 Expr* AssignmentExpr::getValue() const { return Value_; }
+
+void AssignmentExpr::setTarget(Expr* t) { Target_ = t; }
+
+void AssignmentExpr::setValue(Expr* v) { Value_ = v; }
 
 bool AssignmentExpr::isDeclaration() const { return isDecl_; }
 
@@ -247,7 +257,7 @@ bool BlockStmt::equals(Stmt const* other) const
     if (!other || other->getKind() != Kind::BLOCK)
         return false;
 
-    BlockStmt const* block = static_cast<BlockStmt const*>(other);
+    auto block = static_cast<BlockStmt const*>(other);
 
     if (Statements_.size() != block->Statements_.size())
         return false;
@@ -264,7 +274,7 @@ bool IndexExpr::equals(Expr const* other) const
     if (!other || other->getKind() != Kind::INDEX)
         return false;
 
-    IndexExpr const* index = static_cast<IndexExpr const*>(other);
+    auto index = static_cast<IndexExpr const*>(other);
     return Object_->equals(index->getObject()) && Index_->equals(index->getIndex());
 }
 
@@ -307,20 +317,23 @@ bool AssignmentStmt::equals(Stmt const* other) const
         return false;
 
     auto block = static_cast<AssignmentStmt const*>(other);
-    return Value_->equals(block->getValue()) && Target_->equals(block->getTarget());
+    return Expr_->getValue()->equals(block->getValue()) && Expr_->getTarget()->equals(block->getTarget());
 }
 
-AssignmentStmt* AssignmentStmt::clone() const { return makeAssignmentStmt(Target_->clone(), Target_->clone()); }
+AssignmentStmt* AssignmentStmt::clone() const
+{
+    return makeAssignmentStmt(Expr_->getTarget(), Expr_->getValue(), Expr_->isDeclaration());
+}
 
-Expr* AssignmentStmt::getValue() const { return Value_; }
+Expr* AssignmentStmt::getValue() const { return Expr_->getValue(); }
 
-Expr* AssignmentStmt::getTarget() const { return Target_; }
+Expr* AssignmentStmt::getTarget() const { return Expr_->getTarget(); }
 
-void AssignmentStmt::setValue(Expr* v) { Value_ = v; }
+void AssignmentStmt::setValue(Expr* v) { Expr_->setValue(v); }
 
-void AssignmentStmt::setTarget(Expr* t) { Target_ = t; }
+void AssignmentStmt::setTarget(Expr* t) { Expr_->setTarget(t); }
 
-bool AssignmentStmt::isDeclaration() const { return isDecl_; }
+bool AssignmentStmt::isDeclaration() const { return Expr_->isDeclaration(); }
 
 bool IfStmt::equals(Stmt const* other) const
 {
@@ -331,7 +344,10 @@ bool IfStmt::equals(Stmt const* other) const
     return Condition_->equals(block->getCondition()) && ThenStmt_->equals(block->getThen()) && ElseStmt_->equals(block->getElse());
 }
 
-IfStmt* IfStmt::clone() const { return makeIf(Condition_->clone(), ThenStmt_->clone(), ElseStmt_->clone()); }
+IfStmt* IfStmt::clone() const
+{
+    return makeIf(Condition_->clone(), ThenStmt_->clone(), ElseStmt_->clone());
+}
 
 Expr* IfStmt::getCondition() const { return Condition_; }
 
@@ -371,7 +387,10 @@ bool ForStmt::equals(Stmt const* other) const
     return Target_->equals(block->getTarget()) && Iter_->equals(block->getIter()) && Body_->equals(block->getBody());
 }
 
-ForStmt* ForStmt::clone() const { return getAllocator().allocateObject<ForStmt>(Target_->clone(), Iter_->clone(), Body_->clone()); }
+ForStmt* ForStmt::clone() const
+{
+    return getAllocator().allocateObject<ForStmt>(Target_->clone(), Iter_->clone(), Body_->clone());
+}
 
 NameExpr* ForStmt::getTarget() const { return Target_; }
 
@@ -390,7 +409,10 @@ bool FunctionDef::equals(Stmt const* other) const
     return Name_->equals(block->getName()) && Params_->equals(block->getParameterList()) && Body_->equals(block->getBody());
 }
 
-FunctionDef* FunctionDef::clone() const { return makeFunction(Name_->clone(), Params_->clone(), Body_->clone()); }
+FunctionDef* FunctionDef::clone() const
+{
+    return makeFunction(Name_->clone(), Params_->clone(), Body_->clone());
+}
 
 NameExpr* FunctionDef::getName() const { return Name_; }
 

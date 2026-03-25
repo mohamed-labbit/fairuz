@@ -7,20 +7,22 @@
 
 #include <unordered_set>
 
-namespace mylang {
-namespace parser {
+namespace mylang::parser {
 
 using namespace ast;
 
 class SymbolTable {
 public:
-    enum class SymbolType { VARIABLE,
+    enum class SymbolType {
+        VARIABLE,
         FUNCTION,
         CLASS,
         MODULE,
-        UNKNOWN };
+        UNKNOWN
+    }; // enum SymbolType
 
-    enum class DataType_t { INTEGER,
+    enum class DataType_t {
+        INTEGER,
         FLOAT,
         STRING,
         BOOLEAN,
@@ -30,7 +32,8 @@ public:
         NONE,
         FUNCTION,
         ANY,
-        UNKNOWN };
+        UNKNOWN
+    }; // enum DataType_t
 
     struct Symbol {
         StringRef name;
@@ -42,7 +45,7 @@ public:
         Array<DataType_t> paramTypes;
         DataType_t returnType = DataType_t::UNKNOWN;
         std::unordered_set<DataType_t> possibleTypes;
-    };
+    }; // struct Symbol
 
     SymbolTable* Parent_ = nullptr;
 
@@ -62,20 +65,22 @@ public:
     SymbolTable* createChild();
     Array<Symbol*> getUnusedSymbols();
     std::unordered_map<StringRef, Symbol, StringRefHash, StringRefEqual> const& getSymbols() const;
-};
+}; // class SymbolTable
 
 class SemanticAnalyzer {
 public:
     struct Issue {
-        enum class Severity { ERROR,
+        enum class Severity {
+            ERROR,
             WARNING,
-            INFO };
+            INFO
+        }; // enum Severity
 
         Severity severity;
         StringRef message;
         int32_t line;
         StringRef suggestion;
-    };
+    }; // struct Issue
 
 private:
     SymbolTable* CurrentScope_;
@@ -93,7 +98,7 @@ public:
     SymbolTable const* getGlobalScope() const;
     SymbolTable const* getCurrentScope() const;
     void printReport() const;
-};
+}; // class SemanticAnalyzer
 
 class ParseError : public std::runtime_error {
 public:
@@ -128,7 +133,7 @@ public:
 
         return StringRef(ss.str().data());
     }
-};
+}; // class ParseError
 
 class Parser {
 public:
@@ -138,7 +143,7 @@ public:
         : Lexer_(fm)
     {
         if (!fm)
-            diagnostic::panic("file_manager is NULL!");
+            diagnostic::panic(diagnostic::errc::general::Code::INTERNAL_ERROR, "parser received a null FileManager");
 
         Lexer_.next();
     }
@@ -191,7 +196,7 @@ private:
 
     bool match(tok::TokenType const type);
 
-    MY_NODISCARD
+    [[nodiscard]]
     bool consume(tok::TokenType type)
     {
         if (check(type)) {
@@ -211,7 +216,7 @@ private:
 
     void enterScope();
     void synchronize();
-};
+}; // class Parser
 
 class ASTOptimizer {
 public:
@@ -221,7 +226,7 @@ public:
         size_t CommonSubexprEliminations { 0 };
         size_t LoopInvariants { 0 };
         size_t StrengthReductions { 0 };
-    };
+    }; // struct OptimizationStats
 
 private:
     OptimizationStats Stats_;
@@ -244,15 +249,14 @@ public:
         std::optional<StringRef> findCSE(Expr const* expr);
 
         void recordExpr(Expr const* expr, StringRef const& var);
-    };
+    }; // class CSEPass
 
     bool isLoopInvariant(Expr const* expr, std::unordered_set<StringRef, StringRefHash, StringRefEqual> const& loopVars);
     Array<Stmt*> optimize(Array<Stmt*> statements, int32_t level = 2);
     OptimizationStats const& getStats() const;
     void printStats() const;
-};
+}; // class ASTOptimizer
 
-} // namespace parser
-} // namespace mylang
+} // namespace mylang::parser
 
 #endif // PARSER_HPP

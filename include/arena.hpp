@@ -29,25 +29,26 @@ public:
 
     ArenaBlock& operator=(ArenaBlock&& other) noexcept;
 
-    unsigned char* begin() const;
-    unsigned char* end() const;
-    unsigned char* cNext() const;
+    [[nodiscard]] unsigned char* begin() const;
+    [[nodiscard]] unsigned char* end() const;
+    [[nodiscard]] unsigned char* cNext() const;
 
-    size_t size() const;
-    size_t used() const;
+    [[nodiscard]] size_t size() const;
+    [[nodiscard]] size_t used() const;
+    [[nodiscard]] size_t remaining() const;
 
     bool pop(size_t bytes);
 
-    size_t remaining() const;
-
-    unsigned char* allocate(size_t bytes, std::optional<size_t> alignment = std::nullopt);
+    [[nodiscard]] unsigned char* allocate(size_t bytes, std::optional<size_t> alignment = std::nullopt);
     unsigned char* reserve(size_t const bytes);
-}; // ArenaBlock
+}; // class ArenaBlock
 
 class ArenaAllocator {
 public:
-    enum class GrowthStrategy : int32_t { LINEAR,
-        EXPONENTIAL };
+    enum class GrowthStrategy : int32_t {
+        LINEAR,
+        EXPONENTIAL
+    }; // enum GrowthStrategy
 
     using OutOfMemoryHandler = std::function<bool(size_t requested)>;
 
@@ -70,11 +71,11 @@ private:
 #ifdef MYLANG_DEBUG
     struct VoidPtrHash {
         size_t operator()(void const* ptr) const noexcept { return std::hash<uintptr_t>()(reinterpret_cast<uintptr_t>(ptr)); }
-    };
+    }; // struct VoidPtrHash
 
     struct VoidPtrEqual {
         bool operator()(void const* a, void const* b) const noexcept { return a == b; }
-    };
+    }; // struct VoidPtrEqual
 
     DetailedAllocStats AllocStats_;
     std::unordered_map<void*, AllocationHeader, VoidPtrHash, VoidPtrEqual> AllocationMap_ { };
@@ -101,20 +102,20 @@ public:
     void setName(std::string const& name);
     void reset();
 
-    MY_NODISCARD unsigned char* allocateBlock(size_t requested, size_t alignment_ = alignof(std::max_align_t), bool retry_on_oom = true);
+    [[nodiscard]] unsigned char* allocateBlock(size_t requested, size_t alignment_ = alignof(std::max_align_t), bool retry_on_oom = true);
 
-    MY_NODISCARD void* allocate(size_t const size, size_t const alignment = alignof(std::max_align_t));
+    [[nodiscard]] void* allocate(size_t const size, size_t const alignment = alignof(std::max_align_t));
 
     void deallocate(void* ptr, size_t const size);
 
     template<typename T>
-    T* allocateArray(size_t const count) { return static_cast<T*>(allocate(count * sizeof(T))); }
+    [[nodiscard]] T* allocateArray(size_t const count) { return static_cast<T*>(allocate(count * sizeof(T))); }
 
     template<typename T>
     void deallocateArray(T* ptr, size_t const count) { deallocate(static_cast<void*>(ptr), count * sizeof(T)); }
 
     template<typename T, typename... Args>
-    MY_NODISCARD T* allocateObject(Args&&... args)
+    [[nodiscard]] T* allocateObject(Args&&... args)
     {
         static_assert(std::is_constructible_v<T, Args...>, "T must be constructible with Args...");
         return ::new (allocate(sizeof(T))) T(std::forward<Args>(args)...);
@@ -129,15 +130,15 @@ public:
     size_t activeBlocks() const;
     std::string toString(bool verbose) const;
     void dumpStats(std::ostream& os, bool verbose) const;
-    MY_NODISCARD bool verifyAllocation(void* ptr) const;
+    [[nodiscard]] bool verifyAllocation(void* ptr) const;
 #endif // MYLANG_DEBUG
 
 private:
-    MY_NODISCARD unsigned char* allocateFromBlocks(size_t alloc_size, size_t align = alignof(std::max_align_t));
+    [[nodiscard]] unsigned char* allocateFromBlocks(size_t alloc_size, size_t align = alignof(std::max_align_t));
 
     void updateNextBlockSize() noexcept;
 
-    static constexpr size_t getAligned(size_t n, size_t const alignment = alignof(std::max_align_t)) noexcept
+    [[nodiscard]] static constexpr size_t getAligned(size_t n, size_t const alignment = alignof(std::max_align_t)) noexcept
     {
         return (n + alignment - 1) & ~(alignment - 1);
     }
@@ -145,7 +146,7 @@ private:
 
 struct AllocatorContext {
     ArenaAllocator allocator;
-};
+}; // struct AllocatorContext
 
 inline AllocatorContext* g_context = nullptr;
 
@@ -154,7 +155,9 @@ inline void setContext(AllocatorContext* ctx) { g_context = ctx; }
 inline AllocatorContext& getContext()
 {
     if (!g_context)
-        diagnostic::emit("AllocatorContext not initialized — call setContext() in main first", diagnostic::Severity::FATAL);
+        diagnostic::emit(diagnostic::errc::general::Code::ALLOCATOR_CONTEXT_NOT_INITIALIZED,
+            "call setContext() in main first",
+            diagnostic::Severity::FATAL);
 
     return *g_context;
 }
@@ -167,7 +170,7 @@ struct AllocatorContextScope {
 
     AllocatorContextScope(AllocatorContextScope const&) = delete;
     AllocatorContextScope& operator=(AllocatorContextScope const&) = delete;
-};
+}; // struct AllocatorContextScope
 
 } // namespace mylang
 

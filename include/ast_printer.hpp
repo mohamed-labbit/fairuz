@@ -5,8 +5,7 @@
 
 #include <iostream>
 
-namespace mylang {
-namespace ast {
+namespace mylang::ast {
 
 class ASTPrinter {
 private:
@@ -16,7 +15,7 @@ private:
     struct Prefix {
         std::string indent;
         bool last;
-    };
+    }; // struct Prefix
 
     StringRef const toString(UnaryOp const op)
     {
@@ -98,13 +97,13 @@ private:
 
         switch (e->getKind()) {
         case Expr::Kind::NAME: {
-            NameExpr const* n = static_cast<NameExpr const*>(e);
+            auto n = static_cast<NameExpr const*>(e);
             std::cout << color("Name", Color::CYAN) << "(" << n->getValue() << ")\n";
             break;
         }
 
         case Expr::Kind::LITERAL: {
-            LiteralExpr const* l = static_cast<LiteralExpr const*>(e);
+            auto l = static_cast<LiteralExpr const*>(e);
             if (l->isNumeric())
                 std::cout << color("Literal", Color::GREEN) << "(" << l->toNumber() << ")\n";
             else if (l->isString())
@@ -115,14 +114,14 @@ private:
         }
 
         case Expr::Kind::UNARY: {
-            UnaryExpr const* u = static_cast<UnaryExpr const*>(e);
+            auto u = static_cast<UnaryExpr const*>(e);
             std::cout << color("Unary", Color::BOLD) << " " << toString(u->getOperator()) << "\n";
             printExpr(u->getOperand(), { p.indent + pipe(p.last), true });
             break;
         }
 
         case Expr::Kind::BINARY: {
-            BinaryExpr const* b = static_cast<BinaryExpr const*>(e);
+            auto b = static_cast<BinaryExpr const*>(e);
             std::cout << color("Binary", Color::BOLD) << " " << toString(b->getOperator()) << "\n";
             printExpr(b->getLeft(), { p.indent + pipe(p.last), false });
             printExpr(b->getRight(), { p.indent + pipe(p.last), true });
@@ -130,7 +129,7 @@ private:
         }
 
         case Expr::Kind::CALL: {
-            CallExpr const* c = static_cast<CallExpr const*>(e);
+            auto c = static_cast<CallExpr const*>(e);
             std::cout << color("Call", Color::MAGENTA) << " (" << c->getArgs().size() << " args)\n";
             std::cout << p.indent + pipe(p.last) << "├─ callee:\n";
             printExpr(c->getCallee(), { p.indent + pipe(p.last) + "│  ", true });
@@ -141,7 +140,7 @@ private:
         }
 
         case Expr::Kind::LIST: {
-            ListExpr const* l = static_cast<ListExpr const*>(e);
+            auto l = static_cast<ListExpr const*>(e);
             std::cout << color("List", Color::BLUE) << " [" << l->getElements().size() << "]\n";
             for (size_t i = 0; i < l->getElements().size(); ++i)
                 printExpr(l->getElements()[i], { p.indent + pipe(p.last), i + 1 == l->getElements().size() });
@@ -149,7 +148,7 @@ private:
         }
 
         case Expr::Kind::ASSIGNMENT: {
-            AssignmentExpr const* a = static_cast<AssignmentExpr const*>(e);
+            auto a = static_cast<AssignmentExpr const*>(e);
             std::cout << color("Assignment", Color::YELLOW) << " :=\n";
             std::cout << p.indent + pipe(p.last) << "├─ target:\n";
             printExpr(a->getTarget(), { p.indent + pipe(p.last) + "│  ", true });
@@ -174,7 +173,7 @@ private:
 
         switch (s->getKind()) {
         case Stmt::Kind::FUNC: {
-            FunctionDef const* f = static_cast<FunctionDef const*>(s);
+            auto f = static_cast<FunctionDef const*>(s);
             std::cout << color("FunctionDef", Color::BOLD) << " " << f->getName()->getValue() << "\n";
             std::cout << p.indent + pipe(p.last) << "├─ params:\n";
             for (size_t i = 0; i < f->getParameters().size(); ++i)
@@ -185,21 +184,21 @@ private:
         }
 
         case Stmt::Kind::RETURN: {
-            ReturnStmt const* r = static_cast<ReturnStmt const*>(s);
+            auto r = static_cast<ReturnStmt const*>(s);
             std::cout << color("Return", Color::BOLD) << "\n";
             printExpr(r->getValue(), { p.indent + pipe(p.last), true });
             break;
         }
 
         case Stmt::Kind::EXPR: {
-            ExprStmt const* e = static_cast<ExprStmt const*>(s);
+            auto e = static_cast<ExprStmt const*>(s);
             std::cout << color("ExprStmt", Color::BOLD) << "\n";
             printExpr(e->getExpr(), { p.indent + pipe(p.last), true });
             break;
         }
 
         case Stmt::Kind::WHILE: {
-            WhileStmt const* w = static_cast<WhileStmt const*>(s);
+            auto w = static_cast<WhileStmt const*>(s);
             std::cout << color("While", Color::BOLD) << "\n";
             std::cout << p.indent + pipe(p.last) << "├─ condition:\n";
             printExpr(w->getCondition(), { p.indent + pipe(p.last) + "│  ", true });
@@ -208,7 +207,7 @@ private:
             break;
         }
         case Stmt::Kind::IF: {
-            IfStmt const* i = static_cast<IfStmt const*>(s);
+            auto i = static_cast<IfStmt const*>(s);
             std::cout << color("If", Color::BOLD) << "\n";
             std::cout << p.indent + pipe(p.last) << "├─ condition:\n";
             printExpr(i->getCondition(), { p.indent + pipe(p.last) + "│  ", true });
@@ -222,7 +221,7 @@ private:
         }
 
         case Stmt::Kind::BLOCK: {
-            BlockStmt const* b = static_cast<BlockStmt const*>(s);
+            auto b = static_cast<BlockStmt const*>(s);
             std::cout << color("Block", Color::BOLD) << " {" << b->getStatements().size() << " stmts}\n";
             for (size_t i = 0; i < b->getStatements().size(); ++i)
                 printStmt(b->getStatements()[i], { p.indent + pipe(p.last), i + 1 == b->getStatements().size() });
@@ -230,7 +229,7 @@ private:
         }
 
         case Stmt::Kind::ASSIGNMENT: {
-            AssignmentStmt const* a = static_cast<AssignmentStmt const*>(s);
+            auto a = static_cast<AssignmentStmt const*>(s);
             std::cout << color("Assignment", Color::YELLOW) << " :=\n";
             std::cout << p.indent + pipe(p.last) << "├─ target:\n";
             printExpr(a->getTarget(), { p.indent + pipe(p.last) + "│  ", true });
@@ -254,9 +253,8 @@ public:
     void print(Stmt const* s) { printStmt(s, { "", true }); }
 
     uint32_t getNodeCount() const { return NodeCount_; }
-};
+}; // class ASTPrinter
 
-} // namespace ast
-} // namespace mylang
+} // namespace mylang::ast
 
 #endif // AST_PRINTER_HPP

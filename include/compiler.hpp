@@ -15,12 +15,12 @@ struct LocalVar {
     StringRef name;
     unsigned int depth;
     uint8_t reg;
-};
+}; // struct LocalVar
 
 struct UpvalueDesc {
     bool isLocal;
     uint8_t index;
-};
+}; // struct UpvalueDesc
 
 struct CompilerState {
     Chunk* chunk { nullptr };
@@ -53,7 +53,7 @@ struct CompilerState {
             nextReg--;
     }
     void freeRegsTo(uint8_t m) { nextReg = m; }
-};
+}; // struct CompilerState
 
 struct RegMark {
     CompilerState* state;
@@ -69,15 +69,17 @@ struct RegMark {
     {
         state->freeRegsTo(mark);
     }
-};
+}; // struct RegMark
 
 struct ExprResult {
-    enum class Kind : uint8_t { REG,
+    enum class Kind : uint8_t {
+        REG,
         RELOC,
         KINT,
         KFLOAT,
         KBOOL,
-        KNIL } kind;
+        KNIL
+    } kind;
 
     union {
         uint8_t reg_;
@@ -85,7 +87,7 @@ struct ExprResult {
         int64_t ival;
         double dval;
         bool bval;
-    };
+    }; // union
 
     static ExprResult reg(uint8_t r)
     {
@@ -130,10 +132,13 @@ struct ExprResult {
         return e;
     }
 
-    bool isConst() const { return kind == Kind::KINT || kind == Kind::KFLOAT || kind == Kind::KBOOL || kind == Kind::KNIL; }
+    bool isConst() const { 
+        return kind == Kind::KINT || kind == Kind::KFLOAT || kind == Kind::KBOOL || kind == Kind::KNIL; 
+    }
+    
     bool isReg() const { return kind == Kind::REG; }
     bool isReloc() const { return kind == Kind::RELOC; }
-};
+}; // struct ExprResult
 
 class Compiler {
 public:
@@ -223,7 +228,7 @@ private:
     void endScope(SourceLocation loc);
 
     uint32_t internString(StringRef const& str);
-};
+}; // class Compiler
 
 } // namespace mylang::runtime
 

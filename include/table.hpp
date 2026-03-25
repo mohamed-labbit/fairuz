@@ -12,7 +12,7 @@ class NarrowHashTable {
         V value { };
         uint64_t hash { 0 };
         bool occupied { false };
-    };
+    }; // struct Entry
 
     static constexpr uint32_t kMinCapacity = 16;
     static constexpr uint32_t kLoadPercent = 70;
@@ -113,14 +113,14 @@ public:
 
     V* findPtr(K const& key)
     {
-        uint64_t hash = static_cast<uint64_t>(Hash_(key));
+        auto hash = static_cast<uint64_t>(Hash_(key));
         Entry* entry = findEntry(key, hash);
         return entry ? &entry->value : nullptr;
     }
 
     V const* findPtr(K const& key) const
     {
-        uint64_t hash = static_cast<uint64_t>(Hash_(key));
+        auto hash = static_cast<uint64_t>(Hash_(key));
         Entry const* entry = findEntry(key, hash);
         return entry ? &entry->value : nullptr;
     }
@@ -131,7 +131,7 @@ public:
     {
         growIfNeeded();
 
-        uint64_t hash = static_cast<uint64_t>(Hash_(key));
+        auto hash = static_cast<uint64_t>(Hash_(key));
         if (Entry* existing = findEntry(key, hash)) {
             existing->value = value;
             return existing->value;
@@ -148,7 +148,7 @@ public:
         ++Size_;
         return Buckets_[idx].value;
     }
-};
+}; // class NarrowHashTable
 
 } // namespace mylang
 

@@ -3,7 +3,7 @@
 //
 
 #include "../include/vm.hpp"
-#include "value.hpp"
+#include "macros.hpp"
 
 #define DISPATCH()                                                   \
     do {                                                             \
@@ -139,7 +139,7 @@
     do {                                                                   \
         if (UNLIKELY(has_open_upvalues != 0)) {                            \
             Value* threshold = &Stack_[cur_frame_base];                    \
-            uint32_t i = static_cast<uint32_t>(OpenUpvalues_.size());      \
+            auto i = static_cast<uint32_t>(OpenUpvalues_.size());      \
             while (i > 0 && OpenUpvalues_[i - 1]->location >= threshold) { \
                 ObjUpvalue* uv = OpenUpvalues_[--i];                       \
                 uv->closed = *uv->location;                                \
@@ -450,7 +450,7 @@ Value VM::execute()
     CASE(OP_ADD_RI)
     {
         Value lhs = RB();
-        int8_t imm = static_cast<int8_t>(instr_C(instr) - 128);
+        auto imm = static_cast<int8_t>(instr_C(instr) - 128);
         RA() = LIKELY(IS_INTEGER(lhs)) ? MAKE_INTEGER(AS_INTEGER(lhs) + imm) : MAKE_REAL(AS_DOUBLE(lhs) + imm);
         DISPATCH();
     }
@@ -486,7 +486,7 @@ Value VM::execute()
     CASE(OP_SUB_RI)
     {
         Value lhs = RB();
-        int8_t imm = static_cast<int8_t>(instr_C(instr) - 128);
+        auto imm = static_cast<int8_t>(instr_C(instr) - 128);
         RA() = LIKELY(IS_INTEGER(lhs)) ? MAKE_INTEGER(AS_INTEGER(lhs) - imm) : MAKE_REAL(AS_DOUBLE(lhs) - imm);
         DISPATCH();
     }
@@ -522,7 +522,7 @@ Value VM::execute()
     CASE(OP_MUL_RI)
     {
         Value lhs = RB();
-        int8_t imm = static_cast<int8_t>(instr_C(instr) - 128);
+        auto imm = static_cast<int8_t>(instr_C(instr) - 128);
         RA() = LIKELY(IS_INTEGER(lhs)) ? MAKE_INTEGER(AS_INTEGER(lhs) * imm) : MAKE_REAL(AS_DOUBLE(lhs) * imm);
         DISPATCH();
     }
@@ -693,7 +693,7 @@ Value VM::execute()
         uint8_t imm = instr_C(instr);
         if (imm > 64)
             runtimeError(ErrorCode::INDEX_TYPE_ERROR);
-        uint64_t shifted = static_cast<uint64_t>(AS_INTEGER(lhs)) >> imm;
+        auto shifted = static_cast<uint64_t>(AS_INTEGER(lhs)) >> imm;
         if (AS_INTEGER(lhs) < 0)
             RA() = MAKE_REAL(static_cast<double>(shifted));
         else
@@ -740,7 +740,7 @@ Value VM::execute()
     CASE(OP_EQ_RI)
     {
         Value lhs = RB();
-        int8_t imm = static_cast<int8_t>(instr_C(instr) - 128);
+        auto imm = static_cast<int8_t>(instr_C(instr) - 128);
         if (LIKELY(IS_INTEGER(lhs)))
             RA() = MAKE_BOOL(AS_INTEGER(lhs) == static_cast<int64_t>(imm));
         else {
@@ -827,7 +827,7 @@ Value VM::execute()
     CASE(OP_LT_RI)
     {
         Value lhs = RB();
-        int8_t imm = static_cast<int8_t>(instr_C(instr) - 128);
+        auto imm = static_cast<int8_t>(instr_C(instr) - 128);
         if (LIKELY(IS_INTEGER(lhs)))
             RA() = MAKE_BOOL(AS_INTEGER(lhs) < static_cast<int64_t>(imm));
         else {
@@ -877,7 +877,7 @@ Value VM::execute()
     CASE(OP_LTE_RI)
     {
         Value lhs = RB();
-        int8_t imm = static_cast<int8_t>(instr_C(instr) - 128);
+        auto imm = static_cast<int8_t>(instr_C(instr) - 128);
         if (LIKELY(IS_INTEGER(lhs)))
             RA() = MAKE_BOOL(AS_INTEGER(lhs) <= static_cast<int64_t>(imm));
         else {
@@ -892,7 +892,10 @@ Value VM::execute()
         RA() = MAKE_BOOL(!IS_TRUTHY(RB()));
         DISPATCH();
     }
-    CASE(CONCAT) { DISPATCH(); }
+    CASE(CONCAT)
+    {
+        DISPATCH();
+    }
     CASE(LIST_NEW)
     {
         ObjList* list_obj = MAKE_OBJ_LIST();
@@ -995,6 +998,7 @@ Value VM::execute()
         Value limit_v = cur_base[base_reg];
         Value step_v = cur_base[base_reg + 1];
         Value control_v = cur_base[base_reg + 2];
+
         if (IS_INTEGER(control_v)) {
             int64_t control = AS_INTEGER(control_v) + AS_INTEGER(step_v);
             cur_base[base_reg + 2] = MAKE_INTEGER(control);
@@ -1022,6 +1026,7 @@ Value VM::execute()
         fn->arity = fn_chunk->arity;
         fn->upvalueCount = fn_chunk->upvalueCount;
         ObjClosure* cl = MAKE_OBJ_CLOSURE(fn);
+
         for (unsigned int i = 0; i < fn_chunk->upvalueCount; ++i) {
             uint32_t desc = cur_chunk->code[ip++];
             bool is_local = instr_A(desc) == 1;
@@ -1033,6 +1038,7 @@ Value VM::execute()
                 cl->upValues[i] = cur_closure->upValues[index];
             }
         }
+
         RA() = MAKE_OBJECT(cl);
         DISPATCH();
     }
@@ -1082,13 +1088,16 @@ Value VM::execute()
         Value callee = cur_base[fn_reg];
         int base = cur_frame_base + fn_reg + 1;
         bool has_slot = ic_idx < cur_chunk->icSlots.size();
+
         if (has_slot) {
             auto& slot = cur_chunk->icSlots[ic_idx];
             slot.seenLhs |= static_cast<uint8_t>(valueTypeTag(callee));
             slot.hitCount++;
         }
+
         Chunk* caller_chunk = cur_chunk;
         int result_slot = base - 1;
+
         if (IS_CLOSURE(callee)) {
             ObjClosure* cl = AS_CLOSURE(callee);
             Chunk* fchk = cl->function->chunk;
@@ -1121,8 +1130,10 @@ Value VM::execute()
         CLOSE_UPVALUES_IF_NEEDED();
         Stack_[cur_frame_base - 1] = ret;
         --FramesTop_;
+
         if (LIKELY(FramesTop_ == 0))
             return ret;
+
         LOAD_FRAME();
         DISPATCH();
     }
@@ -1131,8 +1142,10 @@ Value VM::execute()
         CLOSE_UPVALUES_IF_NEEDED();
         Stack_[cur_frame_base - 1] = NIL_VAL;
         --FramesTop_;
+
         if (LIKELY(FramesTop_ == 0))
             return NIL_VAL;
+
         LOAD_FRAME();
         DISPATCH();
     }
@@ -1142,13 +1155,23 @@ Value VM::execute()
         CLOSE_UPVALUES_IF_NEEDED();
         Stack_[cur_frame_base - 1] = ret;
         --FramesTop_;
+
         if (LIKELY(FramesTop_ == 0))
             return ret;
+
         LOAD_FRAME();
         DISPATCH();
     }
-    CASE(NOP) { DISPATCH(); }
-    CASE(HALT) { halt(); }
+
+    CASE(NOP)
+    {
+        DISPATCH();
+    }
+    CASE(HALT)
+    {
+        halt();
+    }
+
     END_DISPATCH();
 
     return NIL_VAL;
@@ -1163,7 +1186,7 @@ void VM::callValue(Value callee, int argc, int call_base, bool tail)
         int local_count = fchk->localCount;
 
         if (argc != arity) {
-            diagnostic::emit(
+            diagnostic::emit(ErrorCode::WRONG_ARG_COUNT,
                 "expected " + std::to_string(arity) + " arguments but got " + std::to_string(argc));
             runtimeError(ErrorCode::WRONG_ARG_COUNT);
         }
@@ -1173,11 +1196,15 @@ void VM::callValue(Value callee, int argc, int call_base, bool tail)
 
         if (tail && frameDepth() > 0) {
             int cur_base = Frames_[FramesTop_ - 1].base;
+
             for (int i = 0; i < argc; ++i)
                 Stack_[cur_base + i] = Stack_[call_base + i];
+
             for (int i = argc; i < local_count; ++i)
                 Stack_[cur_base + i] = NIL_VAL;
+
             Frames_[FramesTop_ - 1] = CallFrame(cl, fchk, 0, cur_base, local_count);
+
             int new_top = cur_base + local_count + 1;
             if (StackTop_ < new_top)
                 StackTop_ = new_top;
@@ -1185,8 +1212,10 @@ void VM::callValue(Value callee, int argc, int call_base, bool tail)
             int new_top = call_base + local_count + 1;
             while (StackTop_ < new_top)
                 Stack_[StackTop_++] = NIL_VAL;
+
             for (int i = argc; i < local_count; ++i)
                 Stack_[call_base + i] = NIL_VAL;
+
             Frames_[FramesTop_++] = CallFrame(cl, fchk, 0, call_base, local_count);
         }
         return;
@@ -1195,10 +1224,12 @@ void VM::callValue(Value callee, int argc, int call_base, bool tail)
     if (IS_NATIVE(callee)) {
         ObjNative* nat = AS_NATIVE(callee);
         if (nat->arity >= 0 && argc != nat->arity) {
-            diagnostic::emit(
-                "native '" + std::string(nat->name ? nat->name->str.data() : "?") + "' expected " + std::to_string(nat->arity) + " args, got " + std::to_string(argc));
-            runtimeError(ErrorCode::WRONG_ARG_COUNT);
+            std::string name = (nat->name ? std::string(nat->name->str.data(), nat->name->str.len()) : "?");
+            diagnostic::emit(ErrorCode::NATIVE_ARG_COUNT,
+                "native '" + name + "' expected " + std::to_string(nat->arity) + " args, got " + std::to_string(argc));
+            runtimeError(ErrorCode::NATIVE_ARG_COUNT);
         }
+
         Stack_[call_base - 1] = callNative(nat, argc, call_base);
         return;
     }
@@ -1206,8 +1237,9 @@ void VM::callValue(Value callee, int argc, int call_base, bool tail)
     StringRef fn_name;
     if (IS_FUNCTION(callee) && AS_FUNCTION(callee)->name)
         fn_name = AS_FUNCTION(callee)->name->str;
-    diagnostic::emit("Attempting call on non-function value: " + std::string(fn_name.data()));
-    runtimeError(ErrorCode::TYPE_ERROR_CALL);
+
+    diagnostic::emit(ErrorCode::NON_FUNCTION_CALL, std::string(fn_name.data(), fn_name.len()));
+    runtimeError(ErrorCode::NON_FUNCTION_CALL);
 }
 
 Value VM::callNative(ObjNative* nat, int argc, int call_base)
@@ -1218,7 +1250,7 @@ Value VM::callNative(ObjNative* nat, int argc, int call_base)
 ObjUpvalue* VM::captureUpvalue(unsigned int stack_pos)
 {
     // Re-use an existing open upvalue pointing to the same slot.
-    for (int i = static_cast<int>(OpenUpvalues_.size()) - 1; i >= 0; --i) {
+    for (auto i = static_cast<int>(OpenUpvalues_.size()) - 1; i >= 0; --i) {
         ObjUpvalue* uv = OpenUpvalues_[i];
         if (uv->location == &Stack_[stack_pos])
             return uv;
@@ -1236,7 +1268,7 @@ void VM::closeUpvalues(unsigned int from_stack_pos)
         return;
 
     Value* threshold = &Stack_[from_stack_pos];
-    int i = static_cast<int>(OpenUpvalues_.size());
+    auto i = static_cast<int>(OpenUpvalues_.size());
 
     while (i > 0 && OpenUpvalues_[i - 1]->location >= threshold) {
         ObjUpvalue* uv = OpenUpvalues_[--i];
@@ -1258,6 +1290,7 @@ ObjString* VM::intern(StringRef const& str)
 {
     if (ObjString** existing = StringTable_.findPtr(str))
         return *existing;
+
     ObjString* obj = MAKE_OBJ_STRING(str);
     StringTable_.insertOrAssign(str, obj);
     return obj;
@@ -1267,33 +1300,31 @@ void VM::internChunkConstants(Chunk* ch)
 {
     if (!ch)
         return;
+
     for (uint32_t i = 0; i < ch->constants.size(); ++i) {
         if (IS_STRING(ch->constants[i]))
             ch->constants[i] = MAKE_OBJECT(intern(AS_STRING(ch->constants[i])->str));
     }
+
     for (auto* fn : ch->functions)
         internChunkConstants(fn);
 }
 
-// ---------------------------------------------------------------------------
-// Standard library registration
-// ---------------------------------------------------------------------------
-
 void VM::openStdlib()
 {
-    registerNative("len", &VM::nativeLen, -1);
+    registerNative("حجم", &VM::nativeLen, -1);
     registerNative("اضف", &VM::nativeAppend, -1);
-    registerNative("pop", &VM::nativePop, -1);
-    registerNative("slice", &VM::nativeSlice, -1);
+    registerNative("احذف", &VM::nativePop, -1);
+    registerNative("مقطع", &VM::nativeSlice, -1);
     registerNative("اكتب", &VM::nativePrint, -1);
     registerNative("input", &VM::nativeInput, -1);
-    registerNative("type", &VM::nativeType, -1);
-    registerNative("int", &VM::nativeInt, -1);
-    registerNative("float", &VM::nativeFloat, -1);
+    registerNative("نوع", &VM::nativeType, -1);
+    registerNative("طبيعي", &VM::nativeInt, -1);
+    registerNative("حقيقي", &VM::nativeFloat, -1);
     registerNative("str", &VM::nativeStr, -1);
     registerNative("bool", &VM::nativeBool, -1);
     registerNative("قائمة", &VM::nativeList, -1);
-    registerNative("split", &VM::nativeSplit, -1);
+    registerNative("اقسم", &VM::nativeSplit, -1);
     registerNative("join", &VM::nativeJoin, -1);
     registerNative("substr", &VM::nativeSubstr, -1);
     registerNative("contains", &VM::nativeContains, -1);
@@ -1319,7 +1350,7 @@ void VM::registerNative(StringRef const& name, NativeFn fn, int arity)
     if (uint32_t* slot = GlobalIndex_.findPtr(name)) {
         GlobalSlots_[*slot] = val;
     } else {
-        uint32_t slot_idx = static_cast<uint32_t>(GlobalSlots_.size());
+        auto slot_idx = GlobalSlots_.size();
         GlobalSlots_.push(val);
         GlobalIndex_.insertOrAssign(name, slot_idx);
     }
@@ -1348,6 +1379,8 @@ void VM::runtimeError(ErrorCode code)
         loc.line, loc.column,
         static_cast<uint16_t>(code));
 
+    StringRef fname = "";
+    SourceLocation floc = { 0, 0, 0 };
     for (int i = FramesTop_ - 1; i >= 0; --i) {
         CallFrame* p = &Frames_[i];
         if (!p->chunk)
@@ -1357,15 +1390,14 @@ void VM::runtimeError(ErrorCode code)
         if (off >= ch.locations.size())
             continue;
 
-        SourceLocation floc = ch.locations[off];
-        StringRef fname = (p->closure && p->closure->function && p->closure->function->name)
+        floc = ch.locations[off];
+        fname = (p->closure && p->closure->function && p->closure->function->name)
             ? p->closure->function->name->str
-            : "<toplevel>";
-        diagnostic::engine.addNote(
-            floc.line,
-            "in '" + std::string(fname.data()) + "' at " + std::to_string(floc.line) + ":" + std::to_string(floc.column));
+            : "";
     }
-
+    diagnostic::engine.addNote(
+        floc.line,
+        (fname.empty() ? "" : ("in '" + std::string(fname.data(), fname.len()))) + "' at " + std::to_string(floc.line) + ":" + std::to_string(floc.column));
     diagnostic::dump();
     halt();
 }

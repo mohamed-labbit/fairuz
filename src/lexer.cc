@@ -6,39 +6,39 @@
 
 #include <fstream>
 
-#define CONSUME_BASE_DIGITS(valid_expr, token_type, err_msg) \
-    do {                                                     \
-        number += util::encode_utf8_str(next);               \
-        current = SourceManager_.nextChar();                 \
-        bool any = false;                                    \
-        for (;;) {                                           \
-            if (current == '_') {                            \
-                current = SourceManager_.nextChar();         \
-                continue;                                    \
-            }                                                \
-            if (!(valid_expr))                               \
-                break;                                       \
-            number += util::encode_utf8_str(current);        \
-            current = SourceManager_.nextChar();             \
-            any = true;                                      \
-        }                                                    \
-        if (!any)                                            \
-            diagnostic::panic(err_msg);                      \
-        return finish(token_type, number, line, col);        \
+#define CONSUME_BASE_DIGITS(valid_expr, token_type, err_code, detail) \
+    do {                                                              \
+        number += util::encode_utf8_str(next);                        \
+        current = SourceManager_.nextChar();                          \
+        bool any = false;                                             \
+        for (;;) {                                                    \
+            if (current == '_') {                                     \
+                current = SourceManager_.nextChar();                  \
+                continue;                                             \
+            }                                                         \
+            if (!(valid_expr))                                        \
+                break;                                                \
+            number += util::encode_utf8_str(current);                 \
+            current = SourceManager_.nextChar();                      \
+            any = true;                                               \
+        }                                                             \
+        if (!any)                                                     \
+            diagnostic::panic(err_code, detail);                      \
+        return finish(token_type, number, line, col);                 \
     } while (0)
 
-#define OCTAL_DIGIT(c)                                                               \
-    ((c) >= '0' && (c) <= '7'                                                        \
-            ? true                                                                   \
-            : (IS_DIGIT(c)                                                           \
-                      ? (diagnostic::panic("Invalid digit in octal literal"), false) \
+#define OCTAL_DIGIT(c)                                                                                 \
+    ((c) >= '0' && (c) <= '7'                                                                          \
+            ? true                                                                                     \
+            : (IS_DIGIT(c)                                                                             \
+                      ? (diagnostic::panic(diagnostic::errc::lexer::Code::INVALID_OCTAL_DIGIT), false) \
                       : false))
 
-#define BINARY_DIGIT(c)                                                               \
-    ((c) == '0' || (c) == '1'                                                         \
-            ? true                                                                    \
-            : (IS_DIGIT(c)                                                            \
-                      ? (diagnostic::panic("Invalid digit in binary literal"), false) \
+#define BINARY_DIGIT(c)                                                                                 \
+    ((c) == '0' || (c) == '1'                                                                           \
+            ? true                                                                                      \
+            : (IS_DIGIT(c)                                                                              \
+                      ? (diagnostic::panic(diagnostic::errc::lexer::Code::INVALID_BINARY_DIGIT), false) \
                       : false))
 
 namespace mylang::lex {
@@ -50,7 +50,7 @@ FileManager::FileManager(std::string const& filepath)
 {
     std::ifstream in(filepath, std::ios::binary);
     if (!in) {
-        diagnostic::panic(std::string(toString(FileManagerError::FILE_NOT_OPEN)) + ": " + filepath);
+        diagnostic::panic(diagnostic::errc::lexer::Code::FILE_NOT_OPEN, filepath);
     }
 
     std::string content { std::istreambuf_iterator<char> { in },
@@ -68,7 +68,7 @@ StringRef FileManager::load(std::string const& filepath, bool replace)
     std::ifstream in(filepath, std::ios::binary);
     StringRef ret = std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()).data();
     if (!in)
-        diagnostic::panic(toString(FileManagerError::FILE_NOT_OPEN));
+        diagnostic::panic(diagnostic::errc::lexer::Code::FILE_NOT_OPEN, filepath);
 
     if (replace || FilePath_.empty()) {
         InputBuffer_ = ret;
@@ -291,13 +291,13 @@ tok::Token const* Lexer::lexToken()
 
         if (size == IndentStack_.back()) {
             if (alt_size != AltIndentStack_.back())
-                diagnostic::panic("Inconsistent indentation");
+                diagnostic::panic(diagnostic::errc::lexer::Code::INCONSISTENT_INDENTATION);
 
         } else if (size > IndentStack_.back()) {
             if (IndentLevel_ + 1 > MAX_ALLOWED_INDENT)
-                diagnostic::panic("Too many indentation levels");
+                diagnostic::panic(diagnostic::errc::lexer::Code::TOO_MANY_INDENT_LEVELS);
             if (alt_size <= AltIndentStack_.back())
-                diagnostic::panic("Inconsistent indentation (tabs/spaces)");
+                diagnostic::panic(diagnostic::errc::lexer::Code::MIXED_INDENTATION);
 
             ++IndentLevel_;
             IndentStack_.push(size);
@@ -313,9 +313,9 @@ tok::Token const* Lexer::lexToken()
                 ++dedent_count;
             }
             if (size != IndentStack_.back())
-                diagnostic::panic("Unindent does not match any outer level of indentation");
+                diagnostic::panic(diagnostic::errc::lexer::Code::INVALID_UNINDENT);
             if (alt_size != AltIndentStack_.back())
-                diagnostic::panic("Inconsistent indentation");
+                diagnostic::panic(diagnostic::errc::lexer::Code::INCONSISTENT_INDENTATION);
 
             for (unsigned int i = 0; i < dedent_count; ++i)
                 store(MAKE_TOKEN(tok::TokenType::DEDENT, "", line, col));
@@ -470,35 +470,14 @@ tok::Token const* Lexer::lexToken()
 
             // numeric base prefix: 0x / 0o / 0b
             if (current == '0') {
-                auto consumeBaseDigits =
-                    [&](auto valid, tok::TokenType tt, char const* err) -> tok::Token const* {
-                    number += util::encode_utf8_str(next); // prefix char
-                    current = SourceManager_.nextChar();
-                    bool any = false;
-                    for (;;) {
-                        if (current == '_') {
-                            current = SourceManager_.nextChar();
-                            continue;
-                        }
-                        if (!valid(current))
-                            break;
-                        number += util::encode_utf8_str(current);
-                        current = SourceManager_.nextChar();
-                        any = true;
-                    }
-                    if (!any)
-                        diagnostic::panic(err);
-                    return finish(tt, number, line, col);
-                };
-
                 if (next == 'x' || next == 'X')
-                    CONSUME_BASE_DIGITS(IS_XDIGIT(current), tok::TokenType::HEX, "Invalid hex literal: no digits after 0x");
+                    CONSUME_BASE_DIGITS(IS_XDIGIT(current), tok::TokenType::HEX, diagnostic::errc::lexer::Code::INVALID_BASE_LITERAL, "no digits after 0x");
 
                 if (next == 'o' || next == 'O')
-                    CONSUME_BASE_DIGITS(OCTAL_DIGIT(current), tok::TokenType::OCTAL, "Invalid octal literal: no digits after 0o");
+                    CONSUME_BASE_DIGITS(OCTAL_DIGIT(current), tok::TokenType::OCTAL, diagnostic::errc::lexer::Code::INVALID_BASE_LITERAL, "no digits after 0o");
 
                 if (next == 'b' || next == 'B')
-                    CONSUME_BASE_DIGITS(BINARY_DIGIT(current), tok::TokenType::BINARY, "Invalid binary literal: no digits after 0b");
+                    CONSUME_BASE_DIGITS(BINARY_DIGIT(current), tok::TokenType::BINARY, diagnostic::errc::lexer::Code::INVALID_BASE_LITERAL, "no digits after 0b");
             }
 
             current = SourceManager_.currentChar();
@@ -553,8 +532,10 @@ tok::Token const* Lexer::lexToken()
             return finish(tt, identifier, line, col);
         }
 
-        diagnostic::report(diagnostic::Severity::ERROR, line, col, 0, getLineAt(line).data());
-        diagnostic::panic("Invalid character: U+" + [](uint32_t cp) {char buf[8]; std::snprintf(buf, sizeof(buf), "%04X", cp); return std::string(buf); }(current));
+        StringRef source_line = getLineAt(line);
+        std::string snippet = source_line.empty() ? std::string() : std::string(source_line.data(), source_line.len());
+        diagnostic::report(diagnostic::Severity::ERROR, line, col, diagnostic::errc::lexer::Code::INVALID_CHARACTER, snippet);
+        diagnostic::panic(diagnostic::errc::lexer::Code::INVALID_CHARACTER, "U+" + [](uint32_t cp) {char buf[8]; std::snprintf(buf, sizeof(buf), "%04X", cp); return std::string(buf); }(current));
     }
 
     if (!TokStream_.empty() && TokStream_.back()->type() == tok::TokenType::ENDMARKER)

@@ -70,7 +70,7 @@ public:
             , localCount(lc)
         {
         }
-    };
+    }; // struct CallFrame
 
     GarbageCollector GC_;
 
@@ -127,7 +127,7 @@ public:
     Value& regB(CallFrame const& f, uint32_t instr);
     Value& regC(CallFrame const& f, uint32_t instr);
     void closeUpvaluesForFrame(CallFrame const& f);
-};
+}; // class VM
 
 } // namespace mylang::runtime
 

@@ -23,7 +23,7 @@ struct AllocationHeader {
     uint32_t compute_checksum() const { return magic ^ size ^ alignment; }
 
     bool is_valid() const { return magic == MAGIC && checksum == compute_checksum(); }
-};
+}; // struct AllocationHeader
 
 struct AllocationFooter {
     uint32_t guard;
@@ -31,7 +31,7 @@ struct AllocationFooter {
     static constexpr uint32_t GUARD = 0xFEEDFACE;
 
     bool is_valid() const { return guard == GUARD; }
-};
+}; // struct AllocationFooter
 
 } // namespace mylang
 

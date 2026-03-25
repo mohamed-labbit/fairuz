@@ -9,8 +9,7 @@
 
 #define MAKE_TOKEN(tt, lexeme, line, col) getAllocator().allocateObject<tok::Token>(lexeme, tt, line, col)
 
-namespace mylang {
-namespace lex {
+namespace mylang::lex {
 
 enum class FileManagerError {
     FILE_NOT_FOUND,
@@ -26,7 +25,7 @@ enum class FileManagerError {
     CACHE_ERROR,
     INVALID_LINE_NUMBER,
     BUFFER_TOO_SMALL
-};
+}; // enum FileManagerError
 
 static constexpr char const* toString(FileManagerError error) noexcept
 {
@@ -111,7 +110,7 @@ private:
     std::string FilePath_;
     StringRef InputBuffer_;
     std::filesystem::file_time_type LastKnownWriteTime_;
-};
+}; // class FileManager
 
 class SourceManager {
 public:
@@ -133,7 +132,7 @@ public:
     uint64_t getFileOffset() const { return Context_.offset; }
     std::string fpath() const noexcept { return FileManager_->getPath(); }
     bool done() const { return Context_.offset >= FileManager_->buffer().len(); }
-    MY_NODISCARD uint32_t peekChar();
+    [[nodiscard]] uint32_t peekChar();
     uint32_t currentChar() const;
     void consumeChar();
     uint32_t nextChar();
@@ -145,13 +144,13 @@ private:
         uint32_t line { 1 };
         uint32_t column { 1 };
         uint64_t offset { 0 }; // byte offset
-    };
+    }; // struct Context
 
     struct PushbackEntry {
         uint32_t ch { 0 };
         Context ctx;
         uint64_t bytes { 0 };
-    };
+    }; // struct PushBackEntry
 
     FileManager* FileManager_ { nullptr };
     Context Context_;
@@ -162,7 +161,7 @@ private:
     void advance(uint32_t const cp, uint64_t const bytes);
     void rewindPosition_(uint32_t const cp, uint64_t const bytes);
     uint32_t calculateColumnAtOffset(uint64_t const target_offset) const;
-};
+}; // class SourceManager
 
 class Lexer {
 public:
@@ -194,7 +193,6 @@ private:
     void store(tok::Token const* tok);
 }; // class Lexer
 
-} // namespace lex
-} // namespace mylang
+} // namespace mylang::lex
 
 #endif // LEXER_HPP

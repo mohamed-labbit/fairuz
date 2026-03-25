@@ -165,7 +165,7 @@ std::string StatsFormatter::createBar(uint64_t value, uint64_t max, int width)
     if (max == 0)
         return std::string(width, ' ');
 
-    int filled = static_cast<int>((static_cast<double>(value) / max) * width);
+    auto filled = static_cast<int>((static_cast<double>(value) / max) * width);
     filled = std::min(filled, width);
 
     std::string bar = "|";
@@ -272,7 +272,7 @@ void StatsPrinter::printSizeDistribution(std::ostream& os) const
     struct SizeBucket {
         char const* name;
         uint64_t count;
-    };
+    }; // struct SizeBucket
 
     SizeBucket buckets[] = { { "<= 8 B", stats_.Small8ByteAllocs }, { "<= 16 B", stats_.Small16ByteAllocs }, { "<= 32 B", stats_.Small32ByteAllocs },
         { "<= 64 B", stats_.Small64ByteAllocs }, { "<= 128 B", stats_.Small128ByteAllocs }, { "<= 256 B", stats_.Small256ByteAllocs },

@@ -127,7 +127,7 @@ public:
     T& back()
     {
         if (Size_ == 0)
-            diagnostic::emit("Array::back -- array is empty");
+            diagnostic::emit(diagnostic::errc::container::Code::ARRAY_EMPTY_BACK, diagnostic::Severity::FATAL);
 
         return arr[Size_ - 1];
     }
@@ -135,7 +135,7 @@ public:
     T const& back() const
     {
         if (Size_ == 0)
-            diagnostic::emit("Array::back -- array is empty");
+            diagnostic::emit(diagnostic::errc::container::Code::ARRAY_EMPTY_BACK, diagnostic::Severity::FATAL);
 
         return arr[Size_ - 1];
     }
@@ -143,7 +143,7 @@ public:
     T& front()
     {
         if (Size_ == 0)
-            diagnostic::emit("Array::front -- array is empty");
+            diagnostic::emit(diagnostic::errc::container::Code::ARRAY_EMPTY_FRONT, diagnostic::Severity::FATAL);
 
         return arr[0];
     }
@@ -151,7 +151,7 @@ public:
     T const& front() const
     {
         if (Size_ == 0)
-            diagnostic::emit("Array::fron -- array is empty");
+            diagnostic::emit(diagnostic::errc::container::Code::ARRAY_EMPTY_FRONT, diagnostic::Severity::FATAL);
 
         return arr[0];
     }
@@ -166,7 +166,7 @@ public:
     T* end() noexcept { return arr + Size_; }
     T const* begin() const noexcept { return arr; }
     T const* end() const noexcept { return arr + Size_; }
-};
+}; // class Array
 
 template<typename T>
 void Array<T>::ensure_push_capacity()
@@ -186,8 +186,8 @@ template<typename T>
 Array<T>::Array(uint32_t capacity, T fill_v)
 {
     if (capacity > ARRAY_MAX)
-        diagnostic::emit("Requested capacity " + std::to_string(capacity) + " exceeds maximum "
-                + std::to_string(ARRAY_MAX),
+        diagnostic::emit(diagnostic::errc::container::Code::ARRAY_CAPACITY_EXCEEDED,
+            std::to_string(capacity) + " > " + std::to_string(ARRAY_MAX),
             diagnostic::Severity::FATAL);
 
     if (capacity == 0)
@@ -389,7 +389,7 @@ template<typename T>
 void Array<T>::erase(uint32_t const at)
 {
     if (at >= Size_)
-        diagnostic::emit("out of bounds access", diagnostic::Severity::FATAL);
+        diagnostic::emit(diagnostic::errc::container::Code::ARRAY_OUT_OF_BOUNDS, diagnostic::Severity::FATAL);
 
     if constexpr (TRIVIAL_COPY) {
         uint32_t const remaining = Size_ - at - 1;

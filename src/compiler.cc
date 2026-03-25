@@ -9,8 +9,11 @@
 
 namespace mylang::runtime {
 
+using CompilerError = diagnostic::errc::compiler::Code;
+
 static SourceLocation srcLoc(Stmt const* s) { return { s->getLine(), s->getColumn(), 0 }; }
 static SourceLocation srcLoc(Expr const* e) { return { e->getLine(), e->getColumn(), 0 }; }
+
 static bool isTerminalTopLevelCall(Stmt const* s)
 {
     auto const* expr_stmt = dynamic_cast<ExprStmt const*>(s);
@@ -95,7 +98,7 @@ void Compiler::compileStmt(Stmt const* s)
         compileFor(static_cast<ForStmt const*>(s));
         break;
     case Stmt::Kind::INVALID:
-        diagnostic::emit("Invalid statement node.");
+        diagnostic::emit(CompilerError::INVALID_STATEMENT_NODE);
         break;
     }
 }
@@ -125,7 +128,7 @@ void Compiler::compileAssignmentStmt(AssignmentStmt const* s)
     SourceLocation loc = srcLoc(s);
     auto const* name = dynamic_cast<NameExpr const*>(s->getTarget());
     if (!name) {
-        diagnostic::emit("Only simple name assignment statements are supported.");
+        diagnostic::emit(CompilerError::INVALID_ASSIGNMENT_TARGET, "only simple name assignments are supported");
         return;
     }
 
@@ -222,7 +225,7 @@ void Compiler::compileFunctionDef(FunctionDef const* f)
     SourceLocation loc = srcLoc(f);
     NameExpr* name = f->getName();
     if (!name) {
-        diagnostic::emit("Function name is null", diagnostic::Severity::FATAL);
+        diagnostic::emit(CompilerError::NULL_FUNCTION_NAME, diagnostic::Severity::FATAL);
         return;
     }
 
@@ -231,7 +234,7 @@ void Compiler::compileFunctionDef(FunctionDef const* f)
     fn_chunk->arity = f->hasParameters() ? static_cast<int>(f->getParameters().size()) : 0;
     fn_chunk->upvalueCount = 0;
 
-    uint16_t fn_idx = static_cast<uint16_t>(currentChunk()->functions.size());
+    auto fn_idx = static_cast<uint16_t>(currentChunk()->functions.size());
     currentChunk()->functions.push(fn_chunk);
 
     CompilerState fn_state;
@@ -245,7 +248,7 @@ void Compiler::compileFunctionDef(FunctionDef const* f)
         for (Expr const* param : f->getParameters()) {
             auto const* param_name = dynamic_cast<NameExpr const*>(param);
             if (!param_name) {
-                diagnostic::emit("Function parameter must be a name.");
+                diagnostic::emit(CompilerError::INVALID_FUNCTION_PARAMETER);
                 continue;
             }
             uint8_t reg = allocRegister();
@@ -304,7 +307,7 @@ void Compiler::compileReturn(ReturnStmt const* s)
 void Compiler::compileFor(ForStmt const* s)
 {
     (void)s;
-    diagnostic::emit("for loops are not implemented in the bytecode compiler yet.");
+    diagnostic::emit(CompilerError::FOR_NOT_IMPLEMENTED);
 }
 
 ExprResult Compiler::compileExprI(Expr const* e)
@@ -330,7 +333,7 @@ ExprResult Compiler::compileExprI(Expr const* e)
     case Expr::Kind::INDEX:
         return compileIndexI(static_cast<IndexExpr const*>(e));
     case Expr::Kind::INVALID:
-        diagnostic::emit("Invalid expression node.");
+        diagnostic::emit(CompilerError::INVALID_EXPRESSION_NODE);
         return ExprResult::knil();
     }
 
@@ -353,7 +356,7 @@ ExprResult Compiler::compileLiteralI(LiteralExpr const* e)
     if (e->isNil())
         return ExprResult::knil();
 
-    diagnostic::emit("Unknown literal type");
+    diagnostic::emit(CompilerError::UNKNOWN_LITERAL_TYPE);
     return ExprResult::knil();
 }
 
@@ -398,7 +401,7 @@ ExprResult Compiler::compileUnaryI(UnaryExpr const* e)
         op = OpCode::OP_NOT;
         break;
     default:
-        diagnostic::emit("Unknown unary operator", diagnostic::Severity::FATAL);
+        diagnostic::emit(CompilerError::UNKNOWN_UNARY_OPERATOR, diagnostic::Severity::FATAL);
         return ExprResult::knil();
     }
 
@@ -512,19 +515,19 @@ ExprResult Compiler::compileBinaryI(BinaryExpr const* e)
         bc_op = OpCode::OP_RSHIFT;
         break;
     default:
-        diagnostic::emit("Unknown binary operator", diagnostic::Severity::FATAL);
+        diagnostic::emit(CompilerError::UNKNOWN_BINARY_OPERATOR, diagnostic::Severity::FATAL);
         return ExprResult::knil();
     }
 
     if (bc_op == OpCode::OP_LSHIFT || bc_op == OpCode::OP_RSHIFT) {
         auto const* amount_expr = dynamic_cast<LiteralExpr const*>(e->getRight());
         if (!amount_expr || !amount_expr->isInteger()) {
-            diagnostic::emit("shift amount must be a constant integer");
+            diagnostic::emit(CompilerError::SHIFT_AMOUNT_NOT_CONSTANT);
             return ExprResult::knil();
         }
         int64_t amount = amount_expr->getInt();
         if (amount < 0 || amount > 63) {
-            diagnostic::emit("shift amount out of range");
+            diagnostic::emit(CompilerError::SHIFT_AMOUNT_OUT_OF_RANGE, std::to_string(amount));
             return ExprResult::knil();
         }
 
@@ -554,7 +557,7 @@ ExprResult Compiler::compileAssignI(AssignmentExpr const* e)
     Expr const* target = e->getTarget();
 
     if (target->getKind() == Expr::Kind::INDEX) {
-        auto const* index_expr = static_cast<IndexExpr const*>(target);
+        auto index_expr = static_cast<IndexExpr const*>(target);
         RegMark mark(Current_);
         uint8_t list_reg = anyReg(compileExprI(index_expr->getObject()), loc);
         uint8_t index_reg = anyReg(compileExprI(index_expr->getIndex()), loc);
@@ -565,7 +568,7 @@ ExprResult Compiler::compileAssignI(AssignmentExpr const* e)
 
     auto const* name = dynamic_cast<NameExpr const*>(target);
     if (!name) {
-        diagnostic::emit("Invalid assignment target.");
+        diagnostic::emit(CompilerError::INVALID_ASSIGNMENT_TARGET);
         return ExprResult::knil();
     }
 
@@ -611,7 +614,7 @@ ExprResult Compiler::compileListI(ListExpr const* e)
 {
     SourceLocation loc = srcLoc(e);
     uint8_t dst = allocRegister();
-    uint8_t cap = static_cast<uint8_t>(std::min<uint32_t>(e->size(), 0xFF));
+    auto cap = static_cast<uint8_t>(std::min<uint32_t>(e->size(), 0xFF));
     emit(make_ABC(OpCode::LIST_NEW, dst, cap, 0), loc);
 
     RegMark mark(Current_);
@@ -779,7 +782,7 @@ uint8_t Compiler::allocRegister()
 {
     uint8_t reg = Current_->allocRegister();
     if (reg >= MAX_REGS) {
-        diagnostic::emit("Too many registers in function '" + std::string(Current_->funcName.data()) + "'");
+        diagnostic::emit(CompilerError::TOO_MANY_REGISTERS, std::string(Current_->funcName.data(), Current_->funcName.len()));
         return 0;
     }
     return reg;
@@ -793,7 +796,7 @@ void Compiler::declareLocal(StringRef const& name, uint8_t reg)
 Compiler::VarInfo Compiler::resolveName(StringRef const& name)
 {
     auto const& locals = Current_->locals;
-    for (int i = static_cast<int>(locals.size()) - 1; i >= 0; --i) {
+    for (auto i = static_cast<int>(locals.size()) - 1; i >= 0; --i) {
         if (locals[i].name == name)
             return { VarInfo::Kind::LOCAL, locals[i].reg };
     }
@@ -829,7 +832,7 @@ uint32_t Compiler::emitJump(OpCode op, uint8_t cond, SourceLocation loc)
 void Compiler::patchJump(uint32_t idx)
 {
     if (!currentChunk()->patchJump(idx))
-        diagnostic::emit("Jump offset overflow", diagnostic::Severity::FATAL);
+        diagnostic::emit(CompilerError::JUMP_OFFSET_OVERFLOW, diagnostic::Severity::FATAL);
 }
 
 void Compiler::pushLoop(uint32_t loop_start)
@@ -853,9 +856,9 @@ void Compiler::popLoop(uint32_t loop_exit, uint32_t continue_target, uint32_t li
 
 void Compiler::patchJumpTo(uint32_t instr_idx, uint32_t target)
 {
-    int32_t offset = static_cast<int32_t>(target) - static_cast<int32_t>(instr_idx) - 1;
+    auto offset = static_cast<int32_t>(target) - static_cast<int32_t>(instr_idx) - 1;
     if (offset > JUMP_OFFSET || offset < -JUMP_OFFSET)
-        diagnostic::emit("Jump offset overflow in loop", diagnostic::Severity::FATAL);
+        diagnostic::emit(CompilerError::LOOP_JUMP_OFFSET_OVERFLOW, diagnostic::Severity::FATAL);
 
     uint32_t word = currentChunk()->code[instr_idx];
     currentChunk()->code[instr_idx] = make_AsBx(instr_op(word), instr_A(word), offset);
