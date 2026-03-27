@@ -46,7 +46,6 @@ endif()
 
 # Collect source files from src/
 file(GLOB_RECURSE MYLANG_SOURCES ${CMAKE_SOURCE_DIR}/src/*.cpp ${CMAKE_SOURCE_DIR}/src/*.cc)
-list(REMOVE_ITEM MYLANG_SOURCES ${CMAKE_SOURCE_DIR}/src/comp.cc)
 
 # Build an object library from your language sources
 add_library(mylang_objects OBJECT ${MYLANG_SOURCES})
@@ -112,6 +111,7 @@ if(BUILD_TESTS)
         tests/test_tokens.cpp
         tests/test_indentation.cpp
         tests/test_parser.cpp
+        tests/test_parser_golden.cpp
         tests/test_analyzer.cpp
         tests/test_optim.cpp
         tests/test_opcode.cpp
@@ -119,6 +119,9 @@ if(BUILD_TESTS)
         tests/test_compiler.cpp
         tests/test_vm.cpp
         tests/test_stdlib.cpp
+        tests/test_cli.cpp
+        tests/test_regressions.cpp
+        tests/test_property.cpp
         $<TARGET_OBJECTS:mylang_objects>
     )
 

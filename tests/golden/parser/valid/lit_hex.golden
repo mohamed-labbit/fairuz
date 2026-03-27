@@ -1,0 +1,5 @@
+KIND:expr
+SOURCE:
+0xFF
+EXPECTED:
+int(255)

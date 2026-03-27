@@ -2,6 +2,9 @@
 
 #include "../include/parser.hpp"
 #include "../include/util.hpp"
+#include "arena.hpp"
+#include "ast.hpp"
+#include "token.hpp"
 
 #include <iostream>
 
@@ -95,10 +98,9 @@ void SymbolTable::markUsed(StringRef const& name, int32_t line)
 
 SymbolTable* SymbolTable::createChild()
 {
-    std::unique_ptr<SymbolTable> child = std::make_unique<SymbolTable>(this, ScopeLevel_ + 1);
-    SymbolTable* ptr = child.get();
-    Children_.push(std::move(child));
-    return ptr;
+    SymbolTable* child = getAllocator().allocateObject<SymbolTable>(this, ScopeLevel_ + 1);
+    Children_.push(child);
+    return child;
 }
 
 Array<typename SymbolTable::Symbol*> SymbolTable::getUnusedSymbols()
@@ -112,7 +114,11 @@ Array<typename SymbolTable::Symbol*> SymbolTable::getUnusedSymbols()
     return unused;
 }
 
-std::unordered_map<StringRef, typename SymbolTable::Symbol, StringRefHash, StringRefEqual> const& SymbolTable::getSymbols() const { return Symbols_; }
+std::unordered_map<StringRef, typename SymbolTable::Symbol, StringRefHash, StringRefEqual> const&
+SymbolTable::getSymbols() const
+{
+    return Symbols_;
+}
 
 // semantic analyzer
 
@@ -123,7 +129,7 @@ typename SymbolTable::DataType_t SemanticAnalyzer::inferType(Expr const* expr)
 
     switch (expr->getKind()) {
     case Expr::Kind::LITERAL: {
-auto lit = static_cast<LiteralExpr const*>(expr);
+        auto lit = static_cast<LiteralExpr const*>(expr);
 
         if (lit->isString())
             return SymbolTable::DataType_t::STRING;
@@ -138,14 +144,14 @@ auto lit = static_cast<LiteralExpr const*>(expr);
     }
 
     case Expr::Kind::NAME: {
-auto name = static_cast<NameExpr const*>(expr);
+        auto name = static_cast<NameExpr const*>(expr);
         SymbolTable::Symbol* sym = CurrentScope_->lookup(name->getValue());
         if (sym)
             return sym->dataType;
     } break;
 
     case Expr::Kind::BINARY: {
-auto bin = static_cast<BinaryExpr const*>(expr);
+        auto bin = static_cast<BinaryExpr const*>(expr);
 
         SymbolTable::DataType_t leftType = inferType(bin->getLeft());
         SymbolTable::DataType_t rightType = inferType(bin->getRight());
@@ -173,7 +179,7 @@ auto bin = static_cast<BinaryExpr const*>(expr);
     return SymbolTable::DataType_t::UNKNOWN;
 }
 
-void SemanticAnalyzer::reportIssue(Issue::Severity sev, StringRef const& msg, int32_t line, StringRef const& sugg)
+void SemanticAnalyzer::reportIssue(Issue::Severity sev, StringRef msg, int32_t line, StringRef const& sugg)
 {
     Issues_.push({ sev, msg, line, sugg });
 }
@@ -185,7 +191,7 @@ void SemanticAnalyzer::analyzeExpr(Expr const* expr)
 
     switch (expr->getKind()) {
     case Expr::Kind::NAME: {
-auto name = static_cast<NameExpr const*>(expr);
+        auto name = static_cast<NameExpr const*>(expr);
 
         if (!CurrentScope_->isDefined(name->getValue()))
             reportIssue(Issue::Severity::ERROR, "Undefined variable: " + name->getValue(), expr->getLine(), "Did you forget to initialize it?");
@@ -338,7 +344,7 @@ void SemanticAnalyzer::analyzeStmt(Stmt const* stmt)
     } break;
 
     case Stmt::Kind::FOR: {
-auto for_stmt = static_cast<ForStmt const*>(stmt);
+        auto for_stmt = static_cast<ForStmt const*>(stmt);
         analyzeExpr(for_stmt->getIter());
 
         CurrentScope_ = CurrentScope_->createChild();
@@ -356,7 +362,7 @@ auto for_stmt = static_cast<ForStmt const*>(stmt);
     } break;
 
     case Stmt::Kind::FUNC: {
-auto func_def = static_cast<FunctionDef const*>(stmt);
+        auto func_def = static_cast<FunctionDef const*>(stmt);
         SymbolTable::Symbol func_sym;
         func_sym.symbolType = SymbolTable::SymbolType::FUNCTION;
         func_sym.dataType = SymbolTable::DataType_t::FUNCTION;
@@ -380,7 +386,7 @@ auto func_def = static_cast<FunctionDef const*>(stmt);
     } break;
 
     case Stmt::Kind::RETURN: {
-auto ret = static_cast<ReturnStmt const*>(stmt);
+        auto ret = static_cast<ReturnStmt const*>(stmt);
         analyzeExpr(ret->getValue());
     } break;
 
@@ -391,8 +397,8 @@ auto ret = static_cast<ReturnStmt const*>(stmt);
 
 SemanticAnalyzer::SemanticAnalyzer()
 {
-    GlobalScope_ = std::make_unique<SymbolTable>();
-    CurrentScope_ = GlobalScope_.get();
+    GlobalScope_ = getAllocator().allocateObject<SymbolTable>();
+    CurrentScope_ = GlobalScope_;
 
     SymbolTable::Symbol printSym;
     printSym.name = "print";
@@ -413,8 +419,7 @@ void SemanticAnalyzer::analyze(Array<Stmt*> const& Statements_)
 
 Array<typename SemanticAnalyzer::Issue> const& SemanticAnalyzer::getIssues() const { return Issues_; }
 
-SymbolTable const* SemanticAnalyzer::getGlobalScope() const { return GlobalScope_.get(); }
-
+SymbolTable const* SemanticAnalyzer::getGlobalScope() const { return GlobalScope_; }
 SymbolTable const* SemanticAnalyzer::getCurrentScope() const { return CurrentScope_; }
 
 void SemanticAnalyzer::printReport() const
@@ -532,6 +537,7 @@ Array<Stmt*> Parser::parseProgram()
     }
 
     Sema_.analyze(statements);
+    Optimizer_.optimize(statements, /*level=*/2);
 
     if (diagnostic::hasErrors())
         diagnostic::dump();
@@ -761,7 +767,7 @@ ErrorOr<Expr*> Parser::parseAssignmentExpr()
             return R.error();
 
         if (kind == Expr::Kind::NAME) {
-auto name_target = static_cast<NameExpr*>(target);
+            auto name_target = static_cast<NameExpr*>(target);
             bool decl = !Sema_.getCurrentScope()->isDefined(name_target->getValue());
             return ErrorOr<Expr*>::fromValue(makeAssignmentExpr(name_target, R.value(), decl));
         }
@@ -937,14 +943,16 @@ ErrorOr<Expr*> Parser::parsePrimaryExpr()
         StringRef v = tok->lexeme();
         advance();
 
-        LiteralExpr::Type type;
         tok::TokenType tt = tok->type();
 
         if (tt == tok::TokenType::DECIMAL)
             return makeLiteralFloat(v.toDouble());
 
-        if (tt == tok::TokenType::INTEGER || tt == tok::TokenType::HEX || tt == tok::TokenType::OCTAL || tt == tok::TokenType::BINARY)
-            return makeLiteralInt(util::parseIntegerLiteral(v));
+        if (tt == tok::TokenType::INTEGER || tt == tok::TokenType::HEX || tt == tok::TokenType::OCTAL || tt == tok::TokenType::BINARY) {
+            static constexpr int BASE_FOR_TYPE[] = { 2, 8, 10, 16 };
+            return makeLiteralInt(util::parseIntegerLiteral(v,
+                /*base=*/BASE_FOR_TYPE[static_cast<int>(tt) - static_cast<int>(tok::TokenType::BINARY)]));
+        }
     }
 
     if (check(tok::TokenType::STRING)) {
@@ -1065,7 +1073,7 @@ bool isDefinitelyIntegerExpr(Expr const* expr)
 
     switch (expr->getKind()) {
     case Expr::Kind::LITERAL: {
-        auto  lit = static_cast<LiteralExpr const*>(expr);
+        auto lit = static_cast<LiteralExpr const*>(expr);
         return lit->isInteger();
     }
     case Expr::Kind::UNARY: {
@@ -1077,7 +1085,7 @@ bool isDefinitelyIntegerExpr(Expr const* expr)
         return isDefinitelyIntegerExpr(un->getOperand());
     }
     case Expr::Kind::BINARY: {
-        auto  bin = static_cast<BinaryExpr const*>(expr);
+        auto bin = static_cast<BinaryExpr const*>(expr);
         if (!isDefinitelyIntegerExpr(bin->getLeft()) || !isDefinitelyIntegerExpr(bin->getRight()))
             return false;
 

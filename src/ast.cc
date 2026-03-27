@@ -80,7 +80,7 @@ StringRef LiteralExpr::getStr() const
 
 bool LiteralExpr::isInteger() const
 {
-    return Type_ == Type::INTEGER || Type_ == Type::HEX || Type_ == Type::OCTAL || Type_ == Type::BINARY;
+    return Type_ == Type::INTEGER;
 }
 
 bool LiteralExpr::isDecimal() const { return Type_ == Type::FLOAT; }
@@ -104,9 +104,6 @@ bool LiteralExpr::equals(Expr const* other) const
 
     switch (Type_) {
     case Type::INTEGER:
-    case Type::HEX:
-    case Type::OCTAL:
-    case Type::BINARY:
         return IntValue_ == lit->IntValue_;
     case Type::FLOAT:
         return FloatValue_ == lit->FloatValue_;
@@ -124,9 +121,6 @@ LiteralExpr* LiteralExpr::clone() const
 {
     switch (Type_) {
     case Type::INTEGER:
-    case Type::HEX:
-    case Type::OCTAL:
-    case Type::BINARY:
         return makeLiteralInt(IntValue_);
     case Type::FLOAT:
         return makeLiteralFloat(FloatValue_);
@@ -346,7 +340,7 @@ bool IfStmt::equals(Stmt const* other) const
 
 IfStmt* IfStmt::clone() const
 {
-    return makeIf(Condition_->clone(), ThenStmt_->clone(), ElseStmt_->clone());
+    return makeIf(Condition_->clone(), ThenStmt_->clone(), LIKELY(ElseStmt_ == nullptr) ? nullptr : ElseStmt_->clone());
 }
 
 Expr* IfStmt::getCondition() const { return Condition_; }

@@ -1,0 +1,5 @@
+KIND:expr
+SOURCE:
+1
+EXPECTED:
+int(1)

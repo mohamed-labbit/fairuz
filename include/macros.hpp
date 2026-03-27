@@ -31,7 +31,7 @@ std::string const GRAY = "\033[90m";
 #define DEFAULT_CAPACITY 4096
 #define DEFAULT_BLOCK_SIZE 1024
 #define MAX_BLOCK_SIZE 4294967296
-#define DEFAULT_STRING_CAPACITY 100[[nodiscard]]
+#define DEFAULT_STRING_CAPACITY 100 [[nodiscard]]
 
 } // namespace mylang
 

@@ -45,6 +45,11 @@ public:
     StringBase(StringBase const&) = delete;
     StringBase& operator=(StringBase const&) = delete;
 
+    explicit StringBase(size_t const s);
+    explicit StringBase(size_t const s, char const c);
+    explicit StringBase(char const* s, size_t n);
+    StringBase(char const* s);
+
     static constexpr size_t kSSOSize = SSO_SIZE;
 
     bool isHeap() const noexcept { return is_heap; }
@@ -54,11 +59,6 @@ public:
     char const* ptr() const noexcept { return UNLIKELY(isHeap()) ? storage_.heap.ptr : storage_.sso; }
 
     size_t cap() const noexcept { return UNLIKELY(isHeap()) ? (storage_.heap.cap > 0 ? storage_.heap.cap - 1 : 0) : SSO_SIZE - 1; }
-
-    explicit StringBase(size_t const s);
-    explicit StringBase(size_t const s, char const c);
-    explicit StringBase(char const* s, size_t n);
-    StringBase(char const* s);
 
     char operator[](size_t const i) const noexcept { return ptr()[i]; }
     char& operator[](size_t const i) noexcept { return ptr()[i]; }

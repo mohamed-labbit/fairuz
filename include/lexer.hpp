@@ -7,7 +7,7 @@
 #include <filesystem>
 #include <stack>
 
-#define MAKE_TOKEN(tt, lexeme, line, col) getAllocator().allocateObject<tok::Token>(lexeme, tt, line, col)
+#define MAKE_TOKEN(t, l, ln, c) getAllocator().allocateObject<tok::Token>(l, t, ln, c)
 
 namespace mylang::lex {
 

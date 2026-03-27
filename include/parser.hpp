@@ -51,7 +51,7 @@ public:
 
 private:
     std::unordered_map<StringRef, Symbol, StringRefHash, StringRefEqual> Symbols_;
-    Array<std::unique_ptr<SymbolTable>> Children_;
+    Array<SymbolTable*> Children_;
     unsigned int ScopeLevel_ { 0 };
 
 public:
@@ -84,13 +84,13 @@ public:
 
 private:
     SymbolTable* CurrentScope_;
-    std::unique_ptr<SymbolTable> GlobalScope_;
+    SymbolTable* GlobalScope_;
     Array<Issue> Issues_;
 
 public:
     SemanticAnalyzer();
     SymbolTable::DataType_t inferType(Expr const* expr);
-    void reportIssue(Issue::Severity sev, StringRef const& msg, int32_t line, StringRef const& sugg = "");
+    void reportIssue(Issue::Severity sev, StringRef msg, int32_t line, StringRef const& sugg = "");
     void analyzeExpr(Expr const* expr);
     void analyzeStmt(Stmt const* stmt);
     void analyze(Array<Stmt*> const& Statements_);
@@ -134,6 +134,45 @@ public:
         return StringRef(ss.str().data());
     }
 }; // class ParseError
+
+class ASTOptimizer {
+public:
+    struct OptimizationStats {
+        size_t ConstantFolds { 0 };
+        size_t DeadCodeEliminations { 0 };
+        size_t CommonSubexprEliminations { 0 };
+        size_t LoopInvariants { 0 };
+        size_t StrengthReductions { 0 };
+    }; // struct OptimizationStats
+
+private:
+    OptimizationStats Stats_;
+
+public:
+    std::optional<double> evaluateConstant(Expr const* expr);
+
+    Expr* optimizeConstantFolding(Expr* expr);
+    Stmt* eliminateDeadCode(Stmt* stmt);
+
+    class CSEPass {
+    private:
+        std::unordered_map<StringRef, StringRef, StringRefHash, StringRefEqual> ExprCache_;
+        int32_t TempCounter_ = 0;
+
+    public:
+        StringRef exprToString(Expr const* expr);
+        StringRef getTempVar();
+
+        std::optional<StringRef> findCSE(Expr const* expr);
+
+        void recordExpr(Expr const* expr, StringRef const& var);
+    }; // class CSEPass
+
+    bool isLoopInvariant(Expr const* expr, std::unordered_set<StringRef, StringRefHash, StringRefEqual> const& loopVars);
+    Array<Stmt*> optimize(Array<Stmt*> statements, int32_t level = 2);
+    OptimizationStats const& getStats() const;
+    void printStats() const;
+}; // class ASTOptimizer
 
 class Parser {
 public:
@@ -190,6 +229,7 @@ private:
     lex::Lexer Lexer_;
     SymbolTable SymTable_;
     SemanticAnalyzer Sema_;
+    ASTOptimizer Optimizer_;
 
     tok::Token const* peek(size_t offset = 1) { return Lexer_.peek(offset); }
     tok::Token const* advance() { return Lexer_.next(); }
@@ -217,45 +257,6 @@ private:
     void enterScope();
     void synchronize();
 }; // class Parser
-
-class ASTOptimizer {
-public:
-    struct OptimizationStats {
-        size_t ConstantFolds { 0 };
-        size_t DeadCodeEliminations { 0 };
-        size_t CommonSubexprEliminations { 0 };
-        size_t LoopInvariants { 0 };
-        size_t StrengthReductions { 0 };
-    }; // struct OptimizationStats
-
-private:
-    OptimizationStats Stats_;
-
-public:
-    std::optional<double> evaluateConstant(Expr const* expr);
-
-    Expr* optimizeConstantFolding(Expr* expr);
-    Stmt* eliminateDeadCode(Stmt* stmt);
-
-    class CSEPass {
-    private:
-        std::unordered_map<StringRef, StringRef, StringRefHash, StringRefEqual> ExprCache_;
-        int32_t TempCounter_ = 0;
-
-    public:
-        StringRef exprToString(Expr const* expr);
-        StringRef getTempVar();
-
-        std::optional<StringRef> findCSE(Expr const* expr);
-
-        void recordExpr(Expr const* expr, StringRef const& var);
-    }; // class CSEPass
-
-    bool isLoopInvariant(Expr const* expr, std::unordered_set<StringRef, StringRefHash, StringRefEqual> const& loopVars);
-    Array<Stmt*> optimize(Array<Stmt*> statements, int32_t level = 2);
-    OptimizationStats const& getStats() const;
-    void printStats() const;
-}; // class ASTOptimizer
 
 } // namespace mylang::parser
 

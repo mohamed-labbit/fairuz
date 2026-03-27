@@ -132,10 +132,11 @@ struct ExprResult {
         return e;
     }
 
-    bool isConst() const { 
-        return kind == Kind::KINT || kind == Kind::KFLOAT || kind == Kind::KBOOL || kind == Kind::KNIL; 
+    bool isConst() const
+    {
+        return kind == Kind::KINT || kind == Kind::KFLOAT || kind == Kind::KBOOL || kind == Kind::KNIL;
     }
-    
+
     bool isReg() const { return kind == Kind::REG; }
     bool isReloc() const { return kind == Kind::RELOC; }
 }; // struct ExprResult

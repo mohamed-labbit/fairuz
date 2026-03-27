@@ -102,17 +102,17 @@
         &&H_NOP,                 \
         &&H_HALT
 
-#define VMOP_II(lhs, rhs, op) AS_INTEGER(lhs) op AS_INTEGER(rhs)
-#define VMOP_FF(lhs, rhs, op) AS_DOUBLE(lhs) op AS_DOUBLE(rhs)
+#define VMOPI(lhs, rhs, op) AS_INTEGER(lhs) op AS_INTEGER(rhs)
+#define VMOPF(lhs, rhs, op) AS_DOUBLE(lhs) op AS_DOUBLE(rhs)
 
-#define VM_ADDI(lhs, rhs) VMOP_II(lhs, rhs, +)
-#define VM_SUBI(lhs, rhs) VMOP_II(lhs, rhs, -)
-#define VM_MULI(lhs, rhs) VMOP_II(lhs, rhs, *)
-#define VM_DIVI(lhs, rhs) VMOP_II(lhs, rhs, /)
-#define VM_ADDF(lhs, rhs) VMOP_FF(lhs, rhs, +)
-#define VM_SUBF(lhs, rhs) VMOP_FF(lhs, rhs, -)
-#define VM_MULF(lhs, rhs) VMOP_FF(lhs, rhs, *)
-#define VM_DIVF(lhs, rhs) VMOP_FF(lhs, rhs, /)
+#define VM_ADDI(lhs, rhs) VMOPI(lhs, rhs, +)
+#define VM_SUBI(lhs, rhs) VMOPI(lhs, rhs, -)
+#define VM_MULI(lhs, rhs) VMOPI(lhs, rhs, *)
+#define VM_DIVI(lhs, rhs) VMOPI(lhs, rhs, /)
+#define VM_ADDF(lhs, rhs) VMOPF(lhs, rhs, +)
+#define VM_SUBF(lhs, rhs) VMOPF(lhs, rhs, -)
+#define VM_MULF(lhs, rhs) VMOPF(lhs, rhs, *)
+#define VM_DIVF(lhs, rhs) VMOPF(lhs, rhs, /)
 
 #define VM_ABC(op) cur_chunk->code[ip - 1] = make_ABC(op, a, b, c)
 
@@ -139,7 +139,7 @@
     do {                                                                   \
         if (UNLIKELY(has_open_upvalues != 0)) {                            \
             Value* threshold = &Stack_[cur_frame_base];                    \
-            auto i = static_cast<uint32_t>(OpenUpvalues_.size());      \
+            auto i = static_cast<uint32_t>(OpenUpvalues_.size());          \
             while (i > 0 && OpenUpvalues_[i - 1]->location >= threshold) { \
                 ObjUpvalue* uv = OpenUpvalues_[--i];                       \
                 uv->closed = *uv->location;                                \
@@ -158,6 +158,12 @@
             updateIcBinary(cur_chunk, ip, lhs, rhs, result); \
     } while (0)
 
+#define REQUIRE_NUMBER(v)                              \
+    do {                                               \
+        if (!IS_NUMBER(v))                             \
+            runtimeError(ErrorCode::TYPE_ERROR_ARITH); \
+    } while (0)
+
 namespace mylang::runtime {
 
 static void checkStackIndex(int index, int stack_size, char const* context)
@@ -165,7 +171,8 @@ static void checkStackIndex(int index, int stack_size, char const* context)
     if (index < 0 || index >= stack_size) {
         // This is a VM internal error, not a user error.
         throw std::logic_error(
-            std::string("VM internal error: stack index ") + std::to_string(index) + " out of range [0," + std::to_string(stack_size) + ") in " + context);
+            std::string("VM internal error: stack index ") + std::to_string(index)
+            + " out of range [0," + std::to_string(stack_size) + ") in " + context);
     }
 }
 
@@ -182,31 +189,12 @@ VM::~VM()
     GC_.sweepAll();
 }
 
-// How many value slots are currently in use.
-int VM::stackSize() const { return StackTop_; }
-
-// How many call frames are active.
-int VM::frameDepth() const { return FramesTop_; }
-
-// Push a value, checking for overflow.
-void VM::pushValue(Value v)
-{
-    if (StackTop_ == STACK_SIZE)
-        runtimeError(ErrorCode::STACK_OVERFLOW);
-
-    Stack_[StackTop_] = v;
-    StackTop_++;
-}
-
-// Pop a value, checking for underflow.
-Value VM::popValue()
-{
-    if (StackTop_ == 0)
-        runtimeError(ErrorCode::STACK_UNDERFLOW);
-
-    --StackTop_;
-    return Stack_[StackTop_];
-}
+#define PUSH_VALUE(v)                                \
+    do {                                             \
+        if (StackTop_ == STACK_SIZE)                 \
+            runtimeError(ErrorCode::STACK_OVERFLOW); \
+        Stack_[StackTop_++] = v;                     \
+    } while (0);
 
 // Read a value at an absolute stack index.
 Value& VM::stackAt(int index)
@@ -223,26 +211,7 @@ void VM::ensureStackSlots(int needed)
         runtimeError(ErrorCode::STACK_OVERFLOW);
 
     while (StackTop_ < needed)
-        pushValue(NIL_VAL);
-}
-
-// Push a call frame, checking for overflow.
-void VM::pushFrame(CallFrame const& f)
-{
-    if (FramesTop_ == MAX_FRAMES)
-        runtimeError(ErrorCode::STACK_OVERFLOW);
-
-    Frames_[FramesTop_] = f;
-    FramesTop_++;
-}
-
-// Pop a call frame, checking for underflow.
-void VM::popFrame()
-{
-    if (FramesTop_ == 0)
-        runtimeError(ErrorCode::STACK_UNDERFLOW);
-
-    --FramesTop_;
+        PUSH_VALUE(NIL_VAL);
 }
 
 // Reference to the topmost call frame.
@@ -263,18 +232,6 @@ Value& VM::getReg(CallFrame const& f, int reg)
     int abs = f.base + reg;
     checkStackIndex(abs, STACK_SIZE, "getReg");
     return Stack_[abs];
-}
-
-static void requireNumber(Value v, VM* vm)
-{
-    if (!IS_NUMBER(v))
-        vm->runtimeError(ErrorCode::TYPE_ERROR_ARITH);
-}
-
-static void requireInteger(Value v, VM* vm)
-{
-    if (!IS_INTEGER(v))
-        vm->runtimeError(ErrorCode::TYPE_ERROR_ARITH);
 }
 
 Value VM::run(Chunk* chunk)
@@ -310,7 +267,7 @@ Value VM::execute()
 {
     static void const* dispatch_table[] = { TABLE_INIT };
 
-    if (frameDepth() == 0)
+    if (FramesTop_ == 0)
         return NIL_VAL;
 
     uint32_t instr;
@@ -515,7 +472,7 @@ Value VM::execute()
     }
     CASE(OP_MUL_FF)
     {
-        RA() = MAKE_REAL(VMOP_FF(RB(), RC(), *));
+        RA() = MAKE_REAL(VMOPF(RB(), RC(), *));
         RECORD_BINARY_IC(RB(), RC(), RA());
         DISPATCH();
     }
@@ -566,7 +523,7 @@ Value VM::execute()
         if (AS_DOUBLE_ANY(rhs) == 0.0)
             runtimeError(ErrorCode::MODULO_BY_ZERO);
         if (IS_INTEGER(lhs) && IS_INTEGER(rhs)) {
-            cur_base[a] = MAKE_REAL(static_cast<double>(VMOP_II(lhs, rhs, %)));
+            cur_base[a] = MAKE_REAL(static_cast<double>(VMOPI(lhs, rhs, %)));
             RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
             VM_ABC(OpCode::OP_MOD_II);
         } else {
@@ -578,7 +535,7 @@ Value VM::execute()
     }
     CASE(OP_MOD_II)
     {
-        RA() = MAKE_REAL(static_cast<double>(VMOP_II(RB(), RC(), %)));
+        RA() = MAKE_REAL(static_cast<double>(VMOPI(RB(), RC(), %)));
         RECORD_BINARY_IC(RB(), RC(), RA());
         DISPATCH();
     }
@@ -591,8 +548,8 @@ Value VM::execute()
     CASE(OP_POW)
     {
         Value lhs = RB(), rhs = RC();
-        requireNumber(lhs, this);
-        requireNumber(rhs, this);
+        REQUIRE_NUMBER(lhs);
+        REQUIRE_NUMBER(rhs);
         RA() = MAKE_REAL(std::pow(AS_DOUBLE_ANY(lhs), AS_DOUBLE_ANY(rhs)));
         DISPATCH();
     }
@@ -627,13 +584,13 @@ Value VM::execute()
         Value lhs = cur_base[b], rhs = cur_base[c];
         if (UNLIKELY(!IS_INTEGER(lhs) || !IS_INTEGER(rhs)))
             runtimeError(ErrorCode::TYPE_ERROR_ARITH);
-        cur_base[a] = MAKE_INTEGER(VMOP_II(lhs, rhs, &));
+        cur_base[a] = MAKE_INTEGER(VMOPI(lhs, rhs, &));
         VM_ABC(OpCode::OP_BITAND_I);
         DISPATCH();
     }
     CASE(OP_BITAND_I)
     {
-        RA() = MAKE_INTEGER(VMOP_II(RB(), RC(), &));
+        RA() = MAKE_INTEGER(VMOPI(RB(), RC(), &));
         DISPATCH();
     }
     CASE(OP_BITOR)
@@ -642,13 +599,13 @@ Value VM::execute()
         Value lhs = cur_base[b], rhs = cur_base[c];
         if (UNLIKELY(!IS_INTEGER(lhs) || !IS_INTEGER(rhs)))
             runtimeError(ErrorCode::TYPE_ERROR_ARITH);
-        cur_base[a] = MAKE_INTEGER(VMOP_II(lhs, rhs, |));
+        cur_base[a] = MAKE_INTEGER(VMOPI(lhs, rhs, |));
         VM_ABC(OpCode::OP_BITOR_I);
         DISPATCH();
     }
     CASE(OP_BITOR_I)
     {
-        RA() = MAKE_INTEGER(VMOP_II(RB(), RC(), |));
+        RA() = MAKE_INTEGER(VMOPI(RB(), RC(), |));
         DISPATCH();
     }
     CASE(OP_BITXOR)
@@ -657,13 +614,13 @@ Value VM::execute()
         Value lhs = cur_base[b], rhs = cur_base[c];
         if (UNLIKELY(!IS_INTEGER(lhs) || !IS_INTEGER(rhs)))
             runtimeError(ErrorCode::TYPE_ERROR_ARITH);
-        cur_base[a] = MAKE_INTEGER(VMOP_II(lhs, rhs, ^));
+        cur_base[a] = MAKE_INTEGER(VMOPI(lhs, rhs, ^));
         VM_ABC(OpCode::OP_BITXOR_I);
         DISPATCH();
     }
     CASE(OP_BITXOR_I)
     {
-        RA() = MAKE_INTEGER(VMOP_II(RB(), RC(), ^));
+        RA() = MAKE_INTEGER(VMOPI(RB(), RC(), ^));
         DISPATCH();
     }
     CASE(OP_BITNOT)
@@ -705,7 +662,7 @@ Value VM::execute()
         uint8_t a = instr_A(instr), b = instr_B(instr), c = instr_C(instr);
         Value lhs = cur_base[b], rhs = cur_base[c];
         if (IS_INTEGER(lhs) && IS_INTEGER(rhs)) {
-            cur_base[a] = MAKE_BOOL(VMOP_II(lhs, rhs, ==));
+            cur_base[a] = MAKE_BOOL(VMOPI(lhs, rhs, ==));
             RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
             VM_ABC(OpCode::OP_EQ_II);
         } else if (IS_STRING(lhs) && IS_STRING(rhs)) {
@@ -721,7 +678,7 @@ Value VM::execute()
     }
     CASE(OP_EQ_II)
     {
-        RA() = MAKE_BOOL(VMOP_II(RB(), RC(), ==));
+        RA() = MAKE_BOOL(VMOPI(RB(), RC(), ==));
         RECORD_BINARY_IC(RB(), RC(), RA());
         DISPATCH();
     }
@@ -755,7 +712,7 @@ Value VM::execute()
         uint8_t a = instr_A(instr), b = instr_B(instr), c = instr_C(instr);
         Value lhs = cur_base[b], rhs = cur_base[c];
         if (IS_INTEGER(lhs) && IS_INTEGER(rhs)) {
-            cur_base[a] = MAKE_BOOL(VMOP_II(lhs, rhs, !=));
+            cur_base[a] = MAKE_BOOL(VMOPI(lhs, rhs, !=));
             RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
             VM_ABC(OpCode::OP_NEQ_II);
         } else if (IS_STRING(lhs) && IS_STRING(rhs)) {
@@ -771,7 +728,7 @@ Value VM::execute()
     }
     CASE(OP_NEQ_II)
     {
-        RA() = MAKE_BOOL(VMOP_II(RB(), RC(), !=));
+        RA() = MAKE_BOOL(VMOPI(RB(), RC(), !=));
         RECORD_BINARY_IC(RB(), RC(), RA());
         DISPATCH();
     }
@@ -792,7 +749,7 @@ Value VM::execute()
         uint8_t a = instr_A(instr), b = instr_B(instr), c = instr_C(instr);
         Value lhs = cur_base[b], rhs = cur_base[c];
         if (IS_INTEGER(lhs) && IS_INTEGER(rhs)) {
-            cur_base[a] = MAKE_BOOL(VMOP_II(lhs, rhs, <));
+            cur_base[a] = MAKE_BOOL(VMOPI(lhs, rhs, <));
             RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
             VM_ABC(OpCode::OP_LT_II);
         } else if (IS_STRING(lhs) && IS_STRING(rhs)) {
@@ -808,7 +765,7 @@ Value VM::execute()
     }
     CASE(OP_LT_II)
     {
-        RA() = MAKE_BOOL(VMOP_II(RB(), RC(), <));
+        RA() = MAKE_BOOL(VMOPI(RB(), RC(), <));
         RECORD_BINARY_IC(RB(), RC(), RA());
         DISPATCH();
     }
@@ -842,7 +799,7 @@ Value VM::execute()
         uint8_t a = instr_A(instr), b = instr_B(instr), c = instr_C(instr);
         Value lhs = cur_base[b], rhs = cur_base[c];
         if (IS_INTEGER(lhs) && IS_INTEGER(rhs)) {
-            cur_base[a] = MAKE_BOOL(VMOP_II(lhs, rhs, <=));
+            cur_base[a] = MAKE_BOOL(VMOPI(lhs, rhs, <=));
             RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
             VM_ABC(OpCode::OP_LTE_II);
         } else if (IS_STRING(lhs) && IS_STRING(rhs)) {
@@ -858,7 +815,7 @@ Value VM::execute()
     }
     CASE(OP_LTE_II)
     {
-        RA() = MAKE_BOOL(VMOP_II(RB(), RC(), <=));
+        RA() = MAKE_BOOL(VMOPI(RB(), RC(), <=));
         RECORD_BINARY_IC(RB(), RC(), RA());
         DISPATCH();
     }
@@ -1194,7 +1151,7 @@ void VM::callValue(Value callee, int argc, int call_base, bool tail)
         if (local_count < argc)
             runtimeError(ErrorCode::WRONG_ARG_COUNT);
 
-        if (tail && frameDepth() > 0) {
+        if (tail && FramesTop_ > 0) {
             int cur_base = Frames_[FramesTop_ - 1].base;
 
             for (int i = 0; i < argc; ++i)
@@ -1358,7 +1315,7 @@ void VM::registerNative(StringRef const& name, NativeFn fn, int arity)
 
 SourceLocation VM::currentLocation() const
 {
-    if (frameDepth() == 0)
+    if (FramesTop_ == 0)
         return { 0, 0, 0 };
 
     CallFrame const& f = topFrame();

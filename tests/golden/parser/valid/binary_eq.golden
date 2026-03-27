@@ -1,0 +1,5 @@
+KIND:expr
+SOURCE:
+ا = ب
+EXPECTED:
+bin(eq,name(ا),name(ب))

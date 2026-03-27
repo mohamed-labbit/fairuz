@@ -41,6 +41,13 @@
                       ? (diagnostic::panic(diagnostic::errc::lexer::Code::INVALID_BINARY_DIGIT), false) \
                       : false))
 
+#define FINISH(tt, str, line, col)                                 \
+    ({                                                             \
+        const tok::Token* _token = MAKE_TOKEN(tt, str, line, col); \
+        store(_token);                                             \
+        TokStream_.back();                                         \
+    })
+
 namespace mylang::lex {
 
 namespace fs = std::filesystem;
@@ -238,10 +245,8 @@ tok::Token const* Lexer::lexToken()
         return TokStream_.back();
     };
 
-    if (TokStream_.empty()) {
-        store(MAKE_TOKEN(tok::TokenType::BEGINMARKER, "", 1, 1));
-        return TokStream_.back();
-    }
+    if (TokStream_.empty())
+        return FINISH(tok::TokenType::BEGINMARKER, "", 1, 1);
 
     auto nextLine = [this](uint32_t line, uint32_t col) {
         if (!AtBOL_)
@@ -396,7 +401,7 @@ tok::Token const* Lexer::lexToken()
                 return finish(tok::TokenType::INVALID, string_literal, line, col);
 
             SourceManager_.consumeChar(); // closing quote
-            return finish(tok::TokenType::STRING, string_literal, line, col);
+            return FINISH(tok::TokenType::STRING, string_literal, line, col);
         }
 
         if (current == ',' || current == '.' || current == u'،' || current == u'٬') {
@@ -437,13 +442,14 @@ tok::Token const* Lexer::lexToken()
                 tt = tok::TokenType::INVALID;
                 break;
             }
-            return finish(tt, symbol, line, col);
+            return FINISH(tt, symbol, line, col);
         }
 
         if (current == '=' || current == '<' || current == '>'
             || current == '!' || current == '+' || current == '-'
             || current == '|' || current == '&' || current == '*'
-            || current == '/' || current == '%' || current == u'٪') {
+            || current == '/' || current == '%' || current == u'٪'
+            || current == '^' || current == '~') {
             StringRef operator_str;
             operator_str += util::encode_utf8_str(current);
             SourceManager_.consumeChar();
@@ -458,9 +464,9 @@ tok::Token const* Lexer::lexToken()
             }
 
             if (auto type = tok::lookupOperator(operator_str))
-                return finish(*type, operator_str, line, col);
+                return FINISH(*type, operator_str, line, col);
 
-            return finish(tok::TokenType::INVALID, operator_str, line, col);
+            return FINISH(tok::TokenType::INVALID, operator_str, line, col);
         }
 
         if (IS_DIGIT(current)) {
@@ -505,10 +511,10 @@ tok::Token const* Lexer::lexToken()
                     number += util::encode_utf8_str(current);
                     current = SourceManager_.nextChar();
                 }
-                return finish(tok::TokenType::DECIMAL, number, line, col);
+                return FINISH(tok::TokenType::DECIMAL, number, line, col);
             }
 
-            return finish(tok::TokenType::INTEGER, number, line, col);
+            return FINISH(tok::TokenType::INTEGER, number, line, col);
         }
 
         if (IS_ARDIGIT(current)) {
@@ -517,7 +523,7 @@ tok::Token const* Lexer::lexToken()
                 digits += util::encode_utf8_str(current);
                 current = SourceManager_.nextChar();
             }
-            return finish(tok::TokenType::INTEGER, digits, line, col);
+            return FINISH(tok::TokenType::INTEGER, digits, line, col);
         }
 
         if (IS_IDENT_S(current)) {
@@ -529,13 +535,14 @@ tok::Token const* Lexer::lexToken()
             tok::TokenType tt = tok::TokenType::IDENTIFIER;
             if (auto type = tok::lookupKeyword(identifier))
                 tt = *type;
-            return finish(tt, identifier, line, col);
+            return FINISH(tt, identifier, line, col);
         }
 
         StringRef source_line = getLineAt(line);
         std::string snippet = source_line.empty() ? std::string() : std::string(source_line.data(), source_line.len());
         diagnostic::report(diagnostic::Severity::ERROR, line, col, diagnostic::errc::lexer::Code::INVALID_CHARACTER, snippet);
-        diagnostic::panic(diagnostic::errc::lexer::Code::INVALID_CHARACTER, "U+" + [](uint32_t cp) {char buf[8]; std::snprintf(buf, sizeof(buf), "%04X", cp); return std::string(buf); }(current));
+        diagnostic::panic(diagnostic::errc::lexer::Code::INVALID_CHARACTER, "U+" + [](uint32_t cp) {
+                char buf[8]; std::snprintf(buf, sizeof(buf), "%04X", cp); return std::string(buf); }(current));
     }
 
     if (!TokStream_.empty() && TokStream_.back()->type() == tok::TokenType::ENDMARKER)
@@ -551,8 +558,7 @@ tok::Token const* Lexer::lexToken()
         store(MAKE_TOKEN(tok::TokenType::DEDENT, "", last_line, last_col));
     }
 
-    store(MAKE_TOKEN(tok::TokenType::ENDMARKER, "", last_line, last_col));
-    return TokStream_.back();
+    return FINISH(tok::TokenType::ENDMARKER, "", last_line, last_col);
 }
 
 tok::Token const* Lexer::next()

@@ -1,0 +1,5 @@
+KIND:expr
+SOURCE:
+خطا
+EXPECTED:
+bool(false)

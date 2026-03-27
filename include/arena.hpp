@@ -109,7 +109,10 @@ public:
     void deallocate(void* ptr, size_t const size);
 
     template<typename T>
-    [[nodiscard]] T* allocateArray(size_t const count) { return static_cast<T*>(allocate(count * sizeof(T))); }
+    [[nodiscard]] T* allocateArray(size_t const count)
+    {
+        return static_cast<T*>(allocate(count * sizeof(T)));
+    }
 
     template<typename T>
     void deallocateArray(T* ptr, size_t const count) { deallocate(static_cast<void*>(ptr), count * sizeof(T)); }
@@ -154,11 +157,10 @@ inline void setContext(AllocatorContext* ctx) { g_context = ctx; }
 
 inline AllocatorContext& getContext()
 {
-    if (!g_context)
-        diagnostic::emit(diagnostic::errc::general::Code::ALLOCATOR_CONTEXT_NOT_INITIALIZED,
-            "call setContext() in main first",
-            diagnostic::Severity::FATAL);
-
+    if (UNLIKELY(!g_context)) {
+        static AllocatorContext default_ctx;
+        g_context = &default_ctx;
+    }
     return *g_context;
 }
 

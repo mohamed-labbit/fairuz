@@ -1,0 +1,6 @@
+KIND:program
+SOURCE:
+دالة ا(د):
+    ب
+EXPECTED:
+program[func(ا,[name(د)],block[expr(name(ب))])]

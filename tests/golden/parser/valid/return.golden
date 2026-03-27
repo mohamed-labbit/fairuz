@@ -1,0 +1,5 @@
+KIND:program
+SOURCE:
+ارجع ا
+EXPECTED:
+program[return(name(ا))]

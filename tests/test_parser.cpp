@@ -84,7 +84,6 @@ TEST_F(ParserTest, ParseLiteral)
 
 TEST_F(ParserTest, ParseNoneLiteral)
 {
-    GTEST_SKIP() << "Not supported yet";
     FileManager file_manager(parser_test_cases_dir() / "none_literal.txt");
     Parser parser(&file_manager);
     Expr* expr = parser.parse().value();

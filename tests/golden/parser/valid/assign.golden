@@ -1,0 +1,5 @@
+KIND:program
+SOURCE:
+ا := ب
+EXPECTED:
+program[expr(assign(name(ا),name(ب),decl=false))]

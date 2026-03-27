@@ -3,6 +3,8 @@
 
 #include "array.hpp"
 #include "string.hpp"
+#include <cassert>
+#include <cstddef>
 
 namespace mylang::ast {
 
@@ -135,6 +137,7 @@ public:
         , Right_(r)
         , Operator_(op)
     {
+        assert(Left_ != nullptr && Right_ != nullptr);
         Kind_ = Kind::BINARY;
     }
 
@@ -168,6 +171,7 @@ public:
         : Operand_(operand)
         , Operator_(op)
     {
+        assert(operand != nullptr);
         Kind_ = Kind::UNARY;
     }
 
@@ -190,9 +194,6 @@ public:
     enum class Type {
         INTEGER,
         FLOAT,
-        HEX,
-        OCTAL,
-        BINARY,
         STRING,
         BOOLEAN,
         NIL
@@ -345,6 +346,10 @@ public:
         , Args_(a)
         , CallLocation_(loc)
     {
+        if (!Args_)
+            Args_ = makeList();
+
+        assert(Callee_ != nullptr && Args_ != nullptr);
         Kind_ = Kind::CALL;
     }
 
@@ -382,6 +387,7 @@ public:
         , Value_(value)
         , isDecl_(decl)
     {
+        assert(Target_ != nullptr && Value_ != nullptr);
         Kind_ = Kind::ASSIGNMENT;
     }
 
@@ -408,10 +414,13 @@ private:
     Expr* Index_ { nullptr };
 
 public:
+    IndexExpr() = delete;
+
     IndexExpr(Expr* obj, Expr* idx)
         : Object_(obj)
         , Index_(idx)
     {
+        assert(Object_ != nullptr && Index_ != nullptr);
         Kind_ = Kind::INDEX;
     }
 
@@ -431,7 +440,7 @@ public:
 
 struct Stmt : public ASTNode {
 public:
-    enum class Kind : uint8_t { 
+    enum class Kind : uint8_t {
         EXPR,
         ASSIGNMENT,
         IF,
@@ -462,7 +471,8 @@ private:
     Array<Stmt*> Statements_;
 
 public:
-    explicit BlockStmt() = delete;
+    BlockStmt() = delete;
+
     explicit BlockStmt(Array<Stmt*> stmts)
         : Statements_(stmts)
     {
@@ -486,10 +496,12 @@ private:
     Expr* Expr_ { nullptr };
 
 public:
-    explicit ExprStmt() = default;
+    ExprStmt() = delete;
+
     explicit ExprStmt(Expr* expr)
         : Expr_(expr)
     {
+        assert(Expr_ != nullptr);
         Kind_ = Kind::EXPR;
     }
 
@@ -509,16 +521,18 @@ private:
     AssignmentExpr* Expr_;
 
 public:
-    explicit AssignmentStmt() = delete;
+    AssignmentStmt() = delete;
 
     explicit AssignmentStmt(AssignmentExpr* e)
         : Expr_(e->clone())
     {
+        assert(Expr_ != nullptr);
+        Kind_ = Kind::ASSIGNMENT;
     }
 
     AssignmentStmt(Expr* target, Expr* value, bool decl = false)
     {
-        Expr_ = makeAssignmentExpr(target, value, decl);
+        Expr_ = makeAssignmentExpr(target, value, decl); // AssignmentExpr will assert args for us
         Kind_ = Kind::ASSIGNMENT;
     }
 
@@ -543,16 +557,17 @@ private:
     Stmt* ElseStmt_ { nullptr };
 
 public:
-    explicit IfStmt() = delete;
+    IfStmt() = delete;
 
     IfStmt(Expr* condition, Stmt* then_stmt, Stmt* else_stmt)
         : Condition_(condition)
         , ThenStmt_(then_stmt)
         , ElseStmt_(else_stmt)
     {
+        assert(Condition_ != nullptr && then_stmt != nullptr);
         Kind_ = Kind::IF;
     }
-    
+
     IfStmt(IfStmt&&) noexcept = delete;
     IfStmt(IfStmt const&) noexcept = delete;
 
@@ -573,15 +588,16 @@ private:
     Stmt* Body_ { nullptr };
 
 public:
-    explicit WhileStmt() = delete;
+    WhileStmt() = delete;
 
     WhileStmt(Expr* condition, Stmt* body)
         : Condition_(condition)
         , Body_(body)
     {
+        assert(Condition_ != nullptr && Body_ != nullptr);
         Kind_ = Kind::WHILE;
     }
-    
+
     WhileStmt(WhileStmt&&) noexcept = delete;
     WhileStmt(WhileStmt const&) noexcept = delete;
 
@@ -602,16 +618,17 @@ private:
     Stmt* Body_ { nullptr };
 
 public:
-    explicit ForStmt() = delete;
+    ForStmt() = delete;
 
     ForStmt(NameExpr* target, Expr* iter, Stmt* body)
         : Target_(target)
         , Iter_(iter)
         , Body_(body)
     {
+        assert(Target_ != nullptr && Iter_ != nullptr && Body_ != nullptr);
         Kind_ = Kind::FOR;
     }
-    
+
     ForStmt(ForStmt&&) noexcept = delete;
     ForStmt(ForStmt const&) noexcept = delete;
 
@@ -632,23 +649,17 @@ private:
     Stmt* Body_ { nullptr };
 
 public:
-    explicit FunctionDef() = delete;
+    FunctionDef() = delete;
 
     FunctionDef(NameExpr* name, ListExpr* params, Stmt* body)
         : Name_(name)
         , Params_(params)
         , Body_(body)
     {
+        assert(Name_ != nullptr && Params_ != nullptr && Body_ != nullptr);
         Kind_ = Kind::FUNC;
-
-        if (!Params_)
-            Params_ = makeList();
-        if (!Body_)
-            Body_ = makeBlock();
-        if (!Name_)
-            Name_ = makeName("");
     }
-    
+
     FunctionDef(FunctionDef&&) noexcept = delete;
     FunctionDef(FunctionDef const&) noexcept = delete;
 
@@ -669,10 +680,12 @@ private:
     Expr* Value_ { nullptr };
 
 public:
-    explicit ReturnStmt() = delete;
+    ReturnStmt() = delete;
+
     explicit ReturnStmt(Expr* value)
         : Value_(value)
     {
+        assert(Value_ != nullptr);
         Kind_ = Kind::RETURN;
     }
 
@@ -689,38 +702,6 @@ public:
     void setValue(Expr* v);
 }; // struct ReturnStmt
 
-struct ErrStmt final : public Stmt {
-public:
-    ErrStmt(uint32_t line, uint32_t col)
-    {
-        setLine(line);
-        setColumn(col);
-    }
-
-    Stmt* clone() const override { return makeErrStmt(getLine(), getColumn()); }
-    bool equals(Stmt const* other) const override { return getKind() == other->getKind(); }
-}; // struct ErrStmt
-
-struct ErrExpr final : public Expr {
-public:
-    ErrExpr(uint32_t line, uint32_t col)
-    {
-        setLine(line);
-        setColumn(col);
-    }
-
-    Expr* clone() const override { return makeErrExpr(getLine(), getColumn()); }
-    bool equals(Expr const* other) const override { return getKind() == other->getKind(); }
-}; // struct ErrExpr
-
-static ErrStmt* makeErrStmt(uint32_t line, uint32_t col)
-{
-    return getAllocator().allocateObject<ErrStmt>(line, col);
-}
-static ErrExpr* makeErrExpr(uint32_t line, uint32_t col)
-{
-    return getAllocator().allocateObject<ErrExpr>(line, col);
-}
 static BinaryExpr* makeBinary(Expr* l, Expr* r, BinaryOp const op)
 {
     return getAllocator().allocateObject<BinaryExpr>(l, r, op);

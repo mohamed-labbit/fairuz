@@ -34,6 +34,7 @@ static std::unordered_map<std::string_view, TokenType> const& getOperators()
         { "-", TokenType::OP_MINUS },
         { "*", TokenType::OP_STAR },
         { "/", TokenType::OP_SLASH },
+        { "**", TokenType::OP_POWER },
         { "<", TokenType::OP_LT },
         { ">", TokenType::OP_GT },
         { "<=", TokenType::OP_LTE },
@@ -41,6 +42,12 @@ static std::unordered_map<std::string_view, TokenType> const& getOperators()
         { "٪", TokenType::OP_PERCENT },
         { "%", TokenType::OP_PERCENT },
         { "!=", TokenType::OP_NEQ },
+        { ">>", TokenType::OP_RSHIFT },
+        { "<<", TokenType::OP_LSHIFT },
+        { "&", TokenType::OP_BITAND },
+        { "|", TokenType::OP_BITOR },
+        { "~", TokenType::OP_BITNOT },
+        { "^", TokenType::OP_BITXOR }
     };
     return map;
 }
@@ -105,7 +112,8 @@ bool Token::isUnaryOp() const
 
 bool Token::isBinaryOp() const
 {
-    return Type_ == TokenType::OP_PLUS || Type_ == TokenType::OP_MINUS
+    return Type_ == TokenType::OP_PLUS
+        || Type_ == TokenType::OP_MINUS
         || Type_ == TokenType::OP_STAR
         || Type_ == TokenType::OP_SLASH
         || Type_ == TokenType::OP_PERCENT

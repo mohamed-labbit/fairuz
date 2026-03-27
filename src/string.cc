@@ -2,6 +2,7 @@
 
 #include "../include/string.hpp"
 #include "../include/util.hpp"
+#include "diagnostic.hpp"
 
 #include <cassert>
 #include <charconv>
@@ -70,6 +71,8 @@ StringBase::StringBase(char const* s, size_t n)
     } else {
         storage_.heap.cap = n + 1;
         storage_.heap.ptr = getAllocator().allocateArray<char>(storage_.heap.cap);
+        if (!storage_.heap.ptr)
+            diagnostic::panic("allocateArray<char>(size=" + std::to_string(storage_.heap.cap) + ") failed!");
         ::memcpy(storage_.heap.ptr, s, n);
         storage_.heap.ptr[n] = 0;
     }
@@ -91,6 +94,8 @@ StringBase::StringBase(char const* s)
     } else {
         storage_.heap.cap = n + 1;
         storage_.heap.ptr = getAllocator().allocateArray<char>(storage_.heap.cap);
+        if (!storage_.heap.ptr)
+            diagnostic::panic("allocateArray<char>(size=" + std::to_string(storage_.heap.cap) + ") failed!");
         ::memcpy(storage_.heap.ptr, s, n + 1);
     }
 }

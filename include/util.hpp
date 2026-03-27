@@ -2,6 +2,8 @@
 #define UTIL_HPP
 
 #include "string.hpp"
+#include <cstdint>
+#include <string>
 
 namespace mylang::util {
 
@@ -214,9 +216,11 @@ static bool isArabDigit(uint32_t const cp)
     }
 }
 
-static int64_t parseIntegerLiteral(StringRef const& literal)
+static int64_t parseIntegerLiteral(StringRef const& literal, int base)
 {
-    int base = 10;
+    if (base == -1) /*false call */
+        return INT16_MIN;
+
     size_t i = 0;
     bool negative = false;
 
@@ -225,16 +229,12 @@ static int64_t parseIntegerLiteral(StringRef const& literal)
         ++i;
     }
 
-    if (literal.slice(i, 2) == "0x" || literal.slice(i, 2) == "0X") {
-        base = 16;
+    if (literal.slice(i, 2) == "0x" || literal.slice(i, 2) == "0X"
+        || literal.slice(i, 2) == "0b" || literal.slice(i, 2) == "0B"
+        || literal.slice(i, 2) == "0o" || literal.slice(i, 2) == "0O")
         i += 2;
-    } else if (literal.slice(i, 2) == "0b" || literal.slice(i, 2) == "0B") {
-        base = 2;
-        i += 2;
-    } else if (literal.at(i) == '0' && literal.len() > i + 1) {
-        base = 8;
+    else if (literal.at(i) == '0' && literal.len() > i + 1)
         ++i;
-    }
 
     int64_t value = 0;
 
@@ -242,7 +242,7 @@ static int64_t parseIntegerLiteral(StringRef const& literal)
         char const c = literal.at(i);
 
         if (c == '\'')
-            continue; // ignore digit separators
+            continue;
 
         int digit = 0;
 
@@ -254,7 +254,7 @@ static int64_t parseIntegerLiteral(StringRef const& literal)
             throw std::invalid_argument("Invalid digit");
 
         if (digit >= base)
-            throw std::invalid_argument("Digit out of range for base");
+            throw std::invalid_argument("Digit out of range for base (base=" + std::to_string(base) + ", digit=" + std::to_string(digit) + ")");
 
         value = value * base + digit;
     }

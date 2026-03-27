@@ -1,0 +1,5 @@
+KIND:expr
+SOURCE:
+-ا
+EXPECTED:
+unary(neg,name(ا))

@@ -1,0 +1,6 @@
+KIND:program
+SOURCE:
+اذا ا:
+    ب
+EXPECTED:
+program[if(name(ا),block[expr(name(ب))],null)]
