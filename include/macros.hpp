@@ -3,13 +3,13 @@
 
 #include <string>
 
-namespace mylang {
+namespace fairuz {
 
-struct SourceLocation {
+struct Fa_SourceLocation {
     uint32_t line { 0 };
     uint16_t column { 0 };
     uint16_t length { 0 };
-}; // struct SourceLocation
+}; // struct Fa_SourceLocation
 
 namespace Color {
 
@@ -33,7 +33,16 @@ std::string const GRAY = "\033[90m";
 #define MAX_BLOCK_SIZE 4294967296
 #define DEFAULT_STRING_CAPACITY 100 [[nodiscard]]
 
-} // namespace mylang
+} // namespace fairuz
+
+using u8 = uint8_t;
+using u16 = uint16_t;
+using u32 = uint32_t;
+using u64 = uint64_t;
+using i16 = int16_t;
+using i32 = int32_t;
+using i64 = int64_t;
+using f64 = double;
 
 #define UNLIKELY(x) __builtin_expect(!!(x), 0)
 #define LIKELY(x) __builtin_expect(!!(x), 1)

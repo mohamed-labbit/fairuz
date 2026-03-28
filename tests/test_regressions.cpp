@@ -28,7 +28,7 @@ std::string read_file(std::filesystem::path const& path)
 
 RunResult run_installed(std::filesystem::path const& binary, std::filesystem::path const& input, std::string const& extra = "")
 {
-    auto const base = std::filesystem::temp_directory_path() / std::filesystem::path("mylang_regression_XXXXXX");
+    auto const base = std::filesystem::temp_directory_path() / std::filesystem::path("fairuz_regression_XXXXXX");
     std::string tmpl = base.string();
     std::vector<char> writable(tmpl.begin(), tmpl.end());
     writable.push_back('\0');
@@ -53,7 +53,7 @@ RunResult run_installed(std::filesystem::path const& binary, std::filesystem::pa
 
 std::filesystem::path binary_path()
 {
-    return std::filesystem::current_path() / "mylang";
+    return std::filesystem::current_path() / "fairuz";
 }
 
 std::filesystem::path repo_root()

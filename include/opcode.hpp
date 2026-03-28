@@ -4,14 +4,14 @@
 #include "array.hpp"
 #include "string.hpp"
 
-namespace mylang::runtime {
+namespace fairuz::runtime {
 
-static constexpr uint16_t JUMP_OFFSET = 32767;
-static constexpr uint8_t REG_NONE = 0xFF;
-static constexpr uint16_t MAX_CONSTANTS = 0xFFFF;
-static constexpr uint8_t MAX_REGS = 250;
+static constexpr u16 JUMP_OFFSET = 32767;
+static constexpr u8 REG_NONE = 0xFF;
+static constexpr u16 MAX_CONSTANTS = 0xFFFF;
+static constexpr u8 MAX_REGS = 250;
 
-enum class OpCode : uint8_t {
+enum class Fa_OpCode : u8 {
     /// [Op]: [A] , [B], [C]
     /// or
     /// [Op]: [A] , [  Bx  ]
@@ -22,7 +22,7 @@ enum class OpCode : uint8_t {
     LOAD_TRUE,          // dst, - , -
     LOAD_FALSE,         // dst, - , -
     LOAD_CONST,         // dst, Const pool index
-    LOAD_INT,           // dst, signed 16-bit int (with bias, for larger ints use uint64_t)
+    LOAD_INT,           // dst, signed 16-bit int (with bias, for larger ints use u64)
     LOAD_GLOBAL,        // dst, name const index
     STORE_GLOBAL,       // src, name const index
     LOAD_GLOBAL_CACHED, // A = dst, Bx = index into GlobalSlots_
@@ -120,310 +120,311 @@ enum class OpCode : uint8_t {
     HALT,
 
     _COUNT
-}; // enum OpCode
+}; // enum Fa_OpCode
 
-inline OpCode instr_op(uint32_t const i) { return static_cast<OpCode>((i >> 24) & 0xFF); }
+inline Fa_OpCode Fa_instr_op(u32 const i) { return static_cast<Fa_OpCode>((i >> 24) & 0xFF); }
 
-inline uint8_t instr_A(uint32_t const i) { return (i >> 16) & 0xFF; }
+inline u8 Fa_instr_A(u32 const i) { return (i >> 16) & 0xFF; }
 
-inline uint8_t instr_B(uint32_t const i) { return (i >> 8) & 0xFF; }
+inline u8 Fa_instr_B(u32 const i) { return (i >> 8) & 0xFF; }
 
-inline uint8_t instr_C(uint32_t const i) { return i & 0xFF; }
+inline u8 Fa_instr_C(u32 const i) { return i & 0xFF; }
 
-inline uint16_t instr_Bx(uint32_t const i) { return i & 0xFFFF; }
+inline u16 Fa_instr_Bx(u32 const i) { return i & 0xFFFF; }
 
-inline int16_t instr_sBx(uint32_t const i) { return static_cast<int16_t>(i & 0xFFFF) - 32767; }
+inline i16 Fa_instr_sBx(u32 const i) { return static_cast<i16>(i & 0xFFFF) - 32767; }
 
-inline uint32_t make_ABC(OpCode op, uint8_t A, uint8_t B, uint8_t C)
+inline u32 Fa_make_ABC(Fa_OpCode op, u8 A, u8 B, u8 C)
 {
-    return (static_cast<uint32_t>(op) << 24) | (static_cast<uint32_t>(A) << 16) | (static_cast<uint32_t>(B) << 8) | static_cast<uint32_t>(C);
+    return (static_cast<u32>(op) << 24) | (static_cast<u32>(A) << 16) | (static_cast<u32>(B) << 8) | static_cast<u32>(C);
 }
 
-inline uint32_t make_ABx(OpCode op, uint8_t A, uint16_t Bx)
+inline u32 Fa_make_ABx(Fa_OpCode op, u8 A, u16 Bx)
 {
-    return (static_cast<uint32_t>(op) << 24) | (static_cast<uint32_t>(A) << 16) | (static_cast<uint32_t>(Bx));
+    return (static_cast<u32>(op) << 24) | (static_cast<u32>(A) << 16) | (static_cast<u32>(Bx));
 }
 
-inline uint32_t make_AsBx(OpCode op, uint8_t A, int64_t sBx)
+inline u32 Fa_make_AsBx(Fa_OpCode op, u8 A, i64 sBx)
 {
-    uint16_t _sBx = static_cast<uint16_t>(sBx + JUMP_OFFSET);
-    return (static_cast<uint32_t>(op) << 24) | (static_cast<uint32_t>(A) << 16) | (static_cast<uint32_t>(_sBx));
+    u16 _sBx = static_cast<u16>(sBx + JUMP_OFFSET);
+    return (static_cast<u32>(op) << 24) | (static_cast<u32>(A) << 16) | (static_cast<u32>(_sBx));
 }
 
-inline uint32_t make_ABSC(OpCode op, uint8_t A, uint8_t B, int8_t sC)
+inline u32 Fa_make_ABSC(Fa_OpCode op, u8 A, u8 B, int8_t sC)
 {
-    return (static_cast<uint32_t>(op) << 24) | (static_cast<uint32_t>(A) << 16) | (static_cast<uint32_t>(B) << 8) | static_cast<uint32_t>(static_cast<uint8_t>(sC + 128));
+    return (static_cast<u32>(op) << 24) | (static_cast<u32>(A) << 16)
+        | (static_cast<u32>(B) << 8) | static_cast<u32>(static_cast<u8>(sC + 128));
 }
 
-inline int8_t instr_sC(uint32_t i) { return static_cast<int8_t>(i & 0xFF) - 128; }
+inline int8_t Fa_instr_sC(u32 i) { return static_cast<int8_t>(i & 0xFF) - 128; }
 
-enum class InstrFormat : uint8_t {
+enum class Fa_InstrFormat : u8 {
     ABC,
     ABx,
     AsBx,
     A,
     NONE
-}; // enum InstrFormat
+}; // enum Fa_InstrFormat
 
-struct ICSlot {
-    uint8_t seenLhs { 0 };
-    uint8_t seenRhs { 0 };
-    uint8_t seenRet { 0 };
-    uint32_t hitCount { 0 };
+struct Fa_ICSlot {
+    u8 seenLhs { 0 };
+    u8 seenRhs { 0 };
+    u8 seenRet { 0 };
+    u32 hitCount { 0 };
     void* jitStub { nullptr };
 
     // global ic
-    uint64_t* globalPtr { nullptr };
-    uint64_t version { 0 };
-}; // struct ICSlot
+    u64* globalPtr { nullptr };
+    u64 version { 0 };
+}; // struct Fa_ICSlot
 
-struct LineEntry {
-    uint32_t start;
-    uint32_t line;
+struct Fa_LineEntry {
+    u32 start;
+    u32 line;
 }; // struct LineEntry
 
-static StringRef opcode_name(OpCode op)
+static Fa_StringRef Fa_opcode_name(Fa_OpCode op)
 {
     switch (op) {
-    case OpCode::LOAD_NIL:
+    case Fa_OpCode::LOAD_NIL:
         return "LOAD_NIL";
-    case OpCode::LOAD_TRUE:
+    case Fa_OpCode::LOAD_TRUE:
         return "LOAD_TRUE";
-    case OpCode::LOAD_FALSE:
+    case Fa_OpCode::LOAD_FALSE:
         return "LOAD_FALSE";
-    case OpCode::LOAD_CONST:
+    case Fa_OpCode::LOAD_CONST:
         return "LOAD_CONST";
-    case OpCode::LOAD_INT:
+    case Fa_OpCode::LOAD_INT:
         return "LOAD_INT";
-    case OpCode::LOAD_GLOBAL:
+    case Fa_OpCode::LOAD_GLOBAL:
         return "LOAD_GLOBAL";
-    case OpCode::STORE_GLOBAL:
+    case Fa_OpCode::STORE_GLOBAL:
         return "STORE_GLOBAL";
-    case OpCode::MOVE:
+    case Fa_OpCode::MOVE:
         return "MOVE";
-    case OpCode::LOAD_GLOBAL_CACHED:
+    case Fa_OpCode::LOAD_GLOBAL_CACHED:
         return "LOAD_GLOBAL_CACHED";
-    case OpCode::STORE_GLOBAL_CACHED:
+    case Fa_OpCode::STORE_GLOBAL_CACHED:
         return "STORE_GLOBAL_CACHED";
-    case OpCode::GET_UPVALUE:
+    case Fa_OpCode::GET_UPVALUE:
         return "GET_UPVALUE";
-    case OpCode::SET_UPVALUE:
+    case Fa_OpCode::SET_UPVALUE:
         return "SET_UPVALUE";
-    case OpCode::CLOSE_UPVALUE:
+    case Fa_OpCode::CLOSE_UPVALUE:
         return "CLOSE_UPVALUE";
-    case OpCode::OP_ADD:
+    case Fa_OpCode::OP_ADD:
         return "OP_ADD";
-    case OpCode::OP_ADD_II:
+    case Fa_OpCode::OP_ADD_II:
         return "OP_ADD_II";
-    case OpCode::OP_ADD_FF:
+    case Fa_OpCode::OP_ADD_FF:
         return "OP_ADD_FF";
-    case OpCode::OP_ADD_RI:
+    case Fa_OpCode::OP_ADD_RI:
         return "OP_ADD_RI";
-    case OpCode::OP_SUB:
+    case Fa_OpCode::OP_SUB:
         return "OP_SUB";
-    case OpCode::OP_SUB_II:
+    case Fa_OpCode::OP_SUB_II:
         return "OP_SUB_II";
-    case OpCode::OP_SUB_FF:
+    case Fa_OpCode::OP_SUB_FF:
         return "OP_SUB_FF";
-    case OpCode::OP_SUB_RI:
+    case Fa_OpCode::OP_SUB_RI:
         return "OP_SUB_RI";
-    case OpCode::OP_MUL:
+    case Fa_OpCode::OP_MUL:
         return "OP_MUL";
-    case OpCode::OP_MUL_II:
+    case Fa_OpCode::OP_MUL_II:
         return "OP_MUL_II";
-    case OpCode::OP_MUL_FF:
+    case Fa_OpCode::OP_MUL_FF:
         return "OP_MUL_FF";
-    case OpCode::OP_MUL_RI:
+    case Fa_OpCode::OP_MUL_RI:
         return "OP_MUL_RI";
-    case OpCode::OP_DIV:
+    case Fa_OpCode::OP_DIV:
         return "OP_DIV";
-    case OpCode::OP_DIV_II:
+    case Fa_OpCode::OP_DIV_II:
         return "OP_DIV_II";
-    case OpCode::OP_DIV_FF:
+    case Fa_OpCode::OP_DIV_FF:
         return "OP_DIV_FF";
-    case OpCode::OP_MOD:
+    case Fa_OpCode::OP_MOD:
         return "OP_MOD";
-    case OpCode::OP_MOD_II:
+    case Fa_OpCode::OP_MOD_II:
         return "OP_MOD_II";
-    case OpCode::OP_MOD_FF:
+    case Fa_OpCode::OP_MOD_FF:
         return "OP_MOD_FF";
-    case OpCode::OP_POW:
+    case Fa_OpCode::OP_POW:
         return "OP_POW";
-    case OpCode::OP_NEG:
+    case Fa_OpCode::OP_NEG:
         return "OP_NEG";
-    case OpCode::OP_NEG_I:
+    case Fa_OpCode::OP_NEG_I:
         return "OP_NEG_I";
-    case OpCode::OP_NEG_F:
+    case Fa_OpCode::OP_NEG_F:
         return "OP_NEG_F";
-    case OpCode::OP_BITAND:
+    case Fa_OpCode::OP_BITAND:
         return "OP_BITAND";
-    case OpCode::OP_BITAND_I:
+    case Fa_OpCode::OP_BITAND_I:
         return "OP_BITAND_I";
-    case OpCode::OP_BITOR:
+    case Fa_OpCode::OP_BITOR:
         return "OP_BITOR";
-    case OpCode::OP_BITOR_I:
+    case Fa_OpCode::OP_BITOR_I:
         return "OP_BITOR_I";
-    case OpCode::OP_BITXOR:
+    case Fa_OpCode::OP_BITXOR:
         return "OP_BITXOR";
-    case OpCode::OP_BITXOR_I:
+    case Fa_OpCode::OP_BITXOR_I:
         return "OP_BITXOR_I";
-    case OpCode::OP_BITNOT:
+    case Fa_OpCode::OP_BITNOT:
         return "OP_BITNOT";
-    case OpCode::OP_LSHIFT:
+    case Fa_OpCode::OP_LSHIFT:
         return "OP_LSHIFT";
-    case OpCode::OP_RSHIFT:
+    case Fa_OpCode::OP_RSHIFT:
         return "OP_RSHIFT";
-    case OpCode::OP_EQ:
+    case Fa_OpCode::OP_EQ:
         return "OP_EQ";
-    case OpCode::OP_EQ_II:
+    case Fa_OpCode::OP_EQ_II:
         return "OP_EQ_II";
-    case OpCode::OP_EQ_FF:
+    case Fa_OpCode::OP_EQ_FF:
         return "OP_EQ_FF";
-    case OpCode::OP_EQ_SS:
+    case Fa_OpCode::OP_EQ_SS:
         return "OP_EQ_SS";
-    case OpCode::OP_EQ_RI:
+    case Fa_OpCode::OP_EQ_RI:
         return "OP_EQ_RI";
-    case OpCode::OP_NEQ:
+    case Fa_OpCode::OP_NEQ:
         return "OP_NEQ";
-    case OpCode::OP_NEQ_II:
+    case Fa_OpCode::OP_NEQ_II:
         return "OP_NEQ_II";
-    case OpCode::OP_NEQ_FF:
+    case Fa_OpCode::OP_NEQ_FF:
         return "OP_NEQ_FF";
-    case OpCode::OP_NEQ_SS:
+    case Fa_OpCode::OP_NEQ_SS:
         return "OP_NEQ_SS";
-    case OpCode::OP_LT:
+    case Fa_OpCode::OP_LT:
         return "OP_LT";
-    case OpCode::OP_LT_II:
+    case Fa_OpCode::OP_LT_II:
         return "OP_LT_II";
-    case OpCode::OP_LT_FF:
+    case Fa_OpCode::OP_LT_FF:
         return "OP_LT_FF";
-    case OpCode::OP_LT_SS:
+    case Fa_OpCode::OP_LT_SS:
         return "OP_LT_SS";
-    case OpCode::OP_LT_RI:
+    case Fa_OpCode::OP_LT_RI:
         return "OP_LT_RI";
-    case OpCode::OP_LTE:
+    case Fa_OpCode::OP_LTE:
         return "OP_LTE";
-    case OpCode::OP_LTE_II:
+    case Fa_OpCode::OP_LTE_II:
         return "OP_LTE_II";
-    case OpCode::OP_LTE_FF:
+    case Fa_OpCode::OP_LTE_FF:
         return "OP_LTE_FF";
-    case OpCode::OP_LTE_SS:
+    case Fa_OpCode::OP_LTE_SS:
         return "OP_LTE_SS";
-    case OpCode::OP_LTE_RI:
+    case Fa_OpCode::OP_LTE_RI:
         return "OP_LTE_RI";
-    case OpCode::OP_NOT:
+    case Fa_OpCode::OP_NOT:
         return "OP_NOT";
-    case OpCode::CONCAT:
+    case Fa_OpCode::CONCAT:
         return "CONCAT";
-    case OpCode::LIST_NEW:
+    case Fa_OpCode::LIST_NEW:
         return "LIST_NEW";
-    case OpCode::LIST_APPEND:
+    case Fa_OpCode::LIST_APPEND:
         return "LIST_APPEND";
-    case OpCode::LIST_GET:
+    case Fa_OpCode::LIST_GET:
         return "LIST_GET";
-    case OpCode::LIST_SET:
+    case Fa_OpCode::LIST_SET:
         return "LIST_SET";
-    case OpCode::LIST_LEN:
+    case Fa_OpCode::LIST_LEN:
         return "LIST_LEN";
-    case OpCode::JUMP:
+    case Fa_OpCode::JUMP:
         return "JUMP";
-    case OpCode::JUMP_IF_TRUE:
+    case Fa_OpCode::JUMP_IF_TRUE:
         return "JUMP_IF_TRUE";
-    case OpCode::JUMP_IF_FALSE:
+    case Fa_OpCode::JUMP_IF_FALSE:
         return "JUMP_IF_FALSE";
-    case OpCode::LOOP:
+    case Fa_OpCode::LOOP:
         return "LOOP";
-    case OpCode::FOR_PREP:
+    case Fa_OpCode::FOR_PREP:
         return "FOR_PREP";
-    case OpCode::FOR_STEP:
+    case Fa_OpCode::FOR_STEP:
         return "FOR_STEP";
-    case OpCode::CLOSURE:
+    case Fa_OpCode::CLOSURE:
         return "CLOSURE";
-    case OpCode::CALL:
+    case Fa_OpCode::CALL:
         return "CALL";
-    case OpCode::CALL_TAIL:
+    case Fa_OpCode::CALL_TAIL:
         return "CALL_TAIL";
-    case OpCode::RETURN:
+    case Fa_OpCode::RETURN:
         return "RETURN";
-    case OpCode::RETURN_NIL:
+    case Fa_OpCode::RETURN_NIL:
         return "RETURN_NIL";
-    case OpCode::RETURN1:
+    case Fa_OpCode::RETURN1:
         return "RETURN1";
-    case OpCode::IC_CALL:
+    case Fa_OpCode::IC_CALL:
         return "IC_CALL";
-    case OpCode::NOP:
+    case Fa_OpCode::NOP:
         return "NOP";
-    case OpCode::HALT:
+    case Fa_OpCode::HALT:
         return "HALT";
     default:
         return "???";
     }
 }
 
-static InstrFormat opcodeFormat(OpCode op)
+static Fa_InstrFormat opcodeFormat(Fa_OpCode op)
 {
     switch (op) {
-    case OpCode::LOAD_CONST:
-    case OpCode::LOAD_INT:
-    case OpCode::LOAD_GLOBAL:
-    case OpCode::STORE_GLOBAL:
-    case OpCode::CLOSURE:
-        return InstrFormat::ABx;
-    case OpCode::JUMP:
-    case OpCode::JUMP_IF_TRUE:
-    case OpCode::JUMP_IF_FALSE:
-    case OpCode::LOOP:
-    case OpCode::FOR_PREP:
-    case OpCode::FOR_STEP:
-        return InstrFormat::AsBx;
-    case OpCode::RETURN_NIL:
-    case OpCode::HALT:
-    case OpCode::NOP:
-        return InstrFormat::NONE;
+    case Fa_OpCode::LOAD_CONST:
+    case Fa_OpCode::LOAD_INT:
+    case Fa_OpCode::LOAD_GLOBAL:
+    case Fa_OpCode::STORE_GLOBAL:
+    case Fa_OpCode::CLOSURE:
+        return Fa_InstrFormat::ABx;
+    case Fa_OpCode::JUMP:
+    case Fa_OpCode::JUMP_IF_TRUE:
+    case Fa_OpCode::JUMP_IF_FALSE:
+    case Fa_OpCode::LOOP:
+    case Fa_OpCode::FOR_PREP:
+    case Fa_OpCode::FOR_STEP:
+        return Fa_InstrFormat::AsBx;
+    case Fa_OpCode::RETURN_NIL:
+    case Fa_OpCode::HALT:
+    case Fa_OpCode::NOP:
+        return Fa_InstrFormat::NONE;
     default:
-        return InstrFormat::ABC;
+        return Fa_InstrFormat::ABC;
     }
 }
 
-static void print_value(uint64_t v);
+static void print_value(u64 v);
 
-struct Chunk {
-    StringRef name { "" };
+struct Fa_Chunk {
+    Fa_StringRef name { "" };
     int arity { 0 };
     unsigned int localCount { 0 };
     unsigned int upvalueCount { 0 };
 
-    Array<uint32_t> code;
-    Array<SourceLocation> locations;
-    Array<uint64_t> constants; // constants are boxed values!!!
-    Array<LineEntry> lines;
-    Array<Chunk*> functions;
-    Array<ICSlot> icSlots;
-    Array<uint64_t*> globalCache;
+    Fa_Array<u32> code;
+    Fa_Array<Fa_SourceLocation> locations;
+    Fa_Array<u64> constants; // constants are boxed values!!!
+    Fa_Array<Fa_LineEntry> lines;
+    Fa_Array<Fa_Chunk*> functions;
+    Fa_Array<Fa_ICSlot> icSlots;
+    Fa_Array<u64*> globalCache;
 
-    Chunk() = default;
-    ~Chunk() = default;
+    Fa_Chunk() = default;
+    ~Fa_Chunk() = default;
 
-    Chunk(Chunk const&) = delete;
-    Chunk(Chunk&&) = default;
+    Fa_Chunk(Fa_Chunk const&) = delete;
+    Fa_Chunk(Fa_Chunk&&) = default;
 
-    Chunk& operator=(Chunk const&) = delete;
-    Chunk& operator=(Chunk&&) = default;
+    Fa_Chunk& operator=(Fa_Chunk const&) = delete;
+    Fa_Chunk& operator=(Fa_Chunk&&) = default;
 
-    uint32_t emit(uint32_t instr, SourceLocation loc);
-    bool patchJump(uint32_t const instr_idx);
-    uint16_t addConstant(uint64_t const v);
-    uint8_t allocIcSlot();
-    uint32_t getLine(uint32_t const instr_idx) const;
+    u32 emit(u32 instr, Fa_SourceLocation loc);
+    bool patchJump(u32 const instr_idx);
+    u16 addConstant(u64 const v);
+    u8 allocIcSlot();
+    u32 getLine(u32 const instr_idx) const;
     void disassemble() const;
 
 private:
-    void addLine(uint32_t line);
-}; // struct Chunk
+    void addLine(u32 line);
+}; // struct Fa_Chunk
 
 template<typename... Args>
-static Chunk* makeChunk(Args&&... args) { return getAllocator().allocateObject<Chunk>(std::forward<Args>(args)...); }
+static Fa_Chunk* makeChunk(Args&&... args) { return getAllocator().allocateObject<Fa_Chunk>(std::forward<Args>(args)...); }
 
-} // namespace mylang::runtime
+} // namespace fairuz::runtime
 
 #endif // OPCODE_HPP

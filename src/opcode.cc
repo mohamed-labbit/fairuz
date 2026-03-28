@@ -2,65 +2,65 @@
 
 #include "../include/value.hpp"
 
-namespace mylang::runtime {
+namespace fairuz::runtime {
 
-void print_value(uint64_t v)
+void print_value(u64 v)
 {
-    if (IS_NIL(v))
+    if (Fa_IS_NIL(v))
         ::printf("nil");
-    else if (IS_BOOL(v))
-        ::printf("%s", AS_BOOL(v) ? "true" : "false");
-    else if (IS_INTEGER(v))
-        ::printf("%lli", AS_INTEGER(v));
-    else if (IS_DOUBLE(v))
-        ::printf("%g", AS_DOUBLE(v));
-    else if (IS_STRING(v))
-        ::printf("\"%s\"", AS_STRING(v)->str.data());
-    else if (IS_OBJECT(v))
-        ::printf("<obj %p>", (void*)(AS_OBJECT(v)));
+    else if (Fa_IS_BOOL(v))
+        ::printf("%s", Fa_AS_BOOL(v) ? "true" : "false");
+    else if (Fa_IS_INTEGER(v))
+        ::printf("%lli", Fa_AS_INTEGER(v));
+    else if (Fa_IS_DOUBLE(v))
+        ::printf("%g", Fa_AS_DOUBLE(v));
+    else if (Fa_IS_STRING(v))
+        ::printf("\"%s\"", Fa_AS_STRING(v)->str.data());
+    else if (Fa_IS_OBJECT(v))
+        ::printf("<obj %p>", (void*)(Fa_AS_OBJECT(v)));
     ::printf("?");
 }
 
-uint32_t Chunk::emit(uint32_t instr, SourceLocation loc)
+u32 Fa_Chunk::emit(u32 instr, Fa_SourceLocation loc)
 {
     locations.push(loc);
     code.push(instr);
     addLine(loc.line);
-    return static_cast<uint32_t>(code.size() - 1);
+    return static_cast<u32>(code.size() - 1);
 }
 
-bool Chunk::patchJump(uint32_t const instr_idx)
+bool Fa_Chunk::patchJump(u32 const instr_idx)
 {
-    int32_t const offset = static_cast<int32_t>(code.size()) - static_cast<int32_t>(instr_idx) - 1;
+    i32 const offset = static_cast<i32>(code.size()) - static_cast<i32>(instr_idx) - 1;
     if (offset > JUMP_OFFSET || offset < -JUMP_OFFSET)
         return false;
 
-    OpCode op = instr_op(code[instr_idx]);
-    uint8_t A = instr_A(code[instr_idx]);
-    code[instr_idx] = make_AsBx(op, A, offset);
+    Fa_OpCode op = Fa_instr_op(code[instr_idx]);
+    u8 A = Fa_instr_A(code[instr_idx]);
+    code[instr_idx] = Fa_make_AsBx(op, A, offset);
     return true;
 }
 
-uint16_t Chunk::addConstant(Value const v)
+u16 Fa_Chunk::addConstant(Fa_Value const v)
 {
-    for (uint16_t i = 0, n = static_cast<uint16_t>(constants.size()); i < n; ++i) {
+    for (u16 i = 0, n = static_cast<u16>(constants.size()); i < n; ++i) {
         if (constants[i] == v)
             return i;
     }
 
     constants.push(v);
-    return static_cast<uint16_t>(constants.size() - 1);
+    return static_cast<u16>(constants.size() - 1);
 }
 
-uint8_t Chunk::allocIcSlot()
+u8 Fa_Chunk::allocIcSlot()
 {
-    icSlots.push(ICSlot());
-    return static_cast<uint8_t>(icSlots.size() - 1);
+    icSlots.push(Fa_ICSlot());
+    return static_cast<u8>(icSlots.size() - 1);
 }
 
-uint32_t Chunk::getLine(uint32_t const instr_idx) const
+u32 Fa_Chunk::getLine(u32 const instr_idx) const
 {
-    uint32_t line = 0;
+    u32 line = 0;
 
     for (auto& e : lines) {
         if (e.start > instr_idx)
@@ -71,7 +71,7 @@ uint32_t Chunk::getLine(uint32_t const instr_idx) const
     return line;
 }
 
-void Chunk::disassemble() const
+void Fa_Chunk::disassemble() const
 {
     ::printf("=== %s (arity=%d regs=%d upvals=%d) ===\n", name.data(), arity, localCount, upvalueCount);
 
@@ -90,63 +90,63 @@ void Chunk::disassemble() const
 
     ::printf("  code:\n");
 
-    for (uint32_t i = 0; i < static_cast<uint32_t>(code.size()); ++i) {
-        uint32_t ins = code[i];
-        auto op = static_cast<OpCode>(instr_op(ins));
+    for (u32 i = 0; i < static_cast<u32>(code.size()); ++i) {
+        u32 ins = code[i];
+        auto op = static_cast<Fa_OpCode>(Fa_instr_op(ins));
         auto fmt = opcodeFormat(op);
-        uint32_t line = getLine(i);
+        u32 line = getLine(i);
 
-        ::printf("    %04u  [%3u]  %-16s ", i, line, opcode_name(op).data());
+        ::printf("    %04u  [%3u]  %-16s ", i, line, Fa_opcode_name(op).data());
 
         switch (fmt) {
-        case InstrFormat::ABC:
-            ::printf("A=%-3u  B=%-3u  C=%-3u", instr_A(ins), instr_B(ins), instr_C(ins));
+        case Fa_InstrFormat::ABC:
+            ::printf("A=%-3u  B=%-3u  C=%-3u", Fa_instr_A(ins), Fa_instr_B(ins), Fa_instr_C(ins));
             break;
 
-        case InstrFormat::ABx:
-            ::printf("A=%-3u  Bx=%-5u", instr_A(ins), instr_Bx(ins));
+        case Fa_InstrFormat::ABx:
+            ::printf("A=%-3u  Bx=%-5u", Fa_instr_A(ins), Fa_instr_Bx(ins));
             // Annotate with constant value
-            if (op == OpCode::LOAD_CONST || op == OpCode::LOAD_GLOBAL || op == OpCode::STORE_GLOBAL) {
-                uint16_t idx = instr_Bx(ins);
+            if (op == Fa_OpCode::LOAD_CONST || op == Fa_OpCode::LOAD_GLOBAL || op == Fa_OpCode::STORE_GLOBAL) {
+                u16 idx = Fa_instr_Bx(ins);
 
                 if (idx < constants.size()) {
                     ::printf("  ; ");
                     print_value(constants[idx]);
                 }
-            } else if (op == OpCode::LOAD_INT) {
-                ::printf("  ; %d", static_cast<int>(instr_Bx(ins)) - 32767);
-            } else if (op == OpCode::CLOSURE) {
-                uint16_t idx = instr_Bx(ins);
+            } else if (op == Fa_OpCode::LOAD_INT) {
+                ::printf("  ; %d", static_cast<int>(Fa_instr_Bx(ins)) - 32767);
+            } else if (op == Fa_OpCode::CLOSURE) {
+                u16 idx = Fa_instr_Bx(ins);
                 if (idx < functions.size())
                     ::printf("  ; fn '%s'", functions[idx]->name.data());
             }
             break;
 
-        case InstrFormat::AsBx:
-            ::printf("A=%-3u  sBx=%-5d  -> %d", instr_A(ins), instr_sBx(ins), static_cast<int>(i) + 1 + instr_sBx(ins));
+        case Fa_InstrFormat::AsBx:
+            ::printf("A=%-3u  sBx=%-5d  -> %d", Fa_instr_A(ins), Fa_instr_sBx(ins), static_cast<int>(i) + 1 + Fa_instr_sBx(ins));
             break;
 
-        case InstrFormat::NONE:
+        case Fa_InstrFormat::NONE:
             break;
 
-        case InstrFormat::A:
-            ::printf("A=%-3u", instr_A(ins));
+        case Fa_InstrFormat::A:
+            ::printf("A=%-3u", Fa_instr_A(ins));
             break;
         }
 
         ::printf("\n");
     }
 
-    for (Chunk const* fn : functions) {
+    for (Fa_Chunk const* fn : functions) {
         ::printf("\n");
         fn->disassemble();
     }
 }
 
-void Chunk::addLine(uint32_t line)
+void Fa_Chunk::addLine(u32 line)
 {
     if (lines.empty() || lines.back().line != line)
-        lines.push({ static_cast<uint32_t>(code.size() - 1), line });
+        lines.push({ static_cast<u32>(code.size() - 1), line });
 }
 
-} // namespace mylang::runtime
+} // namespace fairuz::runtime

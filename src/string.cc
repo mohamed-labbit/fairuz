@@ -8,7 +8,7 @@
 #include <charconv>
 #include <simdutf.h>
 
-namespace mylang {
+namespace fairuz {
 
 namespace detail {
 
@@ -100,14 +100,14 @@ StringBase::StringBase(char const* s)
     }
 }
 
-StringRef::StringRef(size_t const s)
+Fa_StringRef::Fa_StringRef(size_t const s)
     : StringData_(getAllocator().allocateObject<StringBase>(s))
     , Offset_(0)
     , Length_(0)
 {
 }
 
-StringRef::StringRef(StringRef const& other, size_t offset, size_t length)
+Fa_StringRef::Fa_StringRef(Fa_StringRef const& other, size_t offset, size_t length)
     : StringData_(other.StringData_)
     , Offset_(other.Offset_ + offset)
     , Length_(length ? length : (other.Length_ > offset ? other.Length_ - offset : 0))
@@ -117,7 +117,7 @@ StringRef::StringRef(StringRef const& other, size_t offset, size_t length)
 }
 
 // relies on lit being nul terminated
-StringRef::StringRef(char const* lit)
+Fa_StringRef::Fa_StringRef(char const* lit)
 {
     if (!lit || !lit[0]) {
         StringData_ = detail::emptyStringSingleton();
@@ -132,7 +132,7 @@ StringRef::StringRef(char const* lit)
     Length_ = ::strlen(lit);
 }
 
-StringRef::StringRef(char16_t const* u16_str)
+Fa_StringRef::Fa_StringRef(char16_t const* u16_str)
 {
     if (!u16_str || !u16_str[0]) {
         StringData_ = detail::emptyStringSingleton();
@@ -142,21 +142,21 @@ StringRef::StringRef(char16_t const* u16_str)
         return;
     }
 
-    StringRef temp = fromUtf16(u16_str);
+    Fa_StringRef temp = fromUtf16(u16_str);
     StringData_ = temp.StringData_;
     Offset_ = temp.Offset_;
     Length_ = temp.Length_;
     temp.StringData_ = nullptr;
 }
 
-StringRef::StringRef(size_t const s, char const c)
+Fa_StringRef::Fa_StringRef(size_t const s, char const c)
     : StringData_(getAllocator().allocateObject<StringBase>(s, c))
     , Offset_(0)
     , Length_(s)
 {
 }
 
-StringRef::StringRef(StringBase* data, size_t offset, size_t length)
+Fa_StringRef::Fa_StringRef(StringBase* data, size_t offset, size_t length)
     : StringData_(data ? data : detail::emptyStringSingleton())
     , Offset_(offset)
     , Length_(length)
@@ -168,7 +168,7 @@ StringRef::StringRef(StringBase* data, size_t offset, size_t length)
     StringData_->increment();
 }
 
-StringRef::StringRef(StringRef&& other) noexcept
+Fa_StringRef::Fa_StringRef(Fa_StringRef&& other) noexcept
     : StringData_(other.StringData_)
     , Offset_(other.Offset_)
     , Length_(other.Length_)
@@ -178,7 +178,7 @@ StringRef::StringRef(StringRef&& other) noexcept
     other.Length_ = 0;
 }
 
-StringRef& StringRef::operator=(StringRef&& other) noexcept
+Fa_StringRef& Fa_StringRef::operator=(Fa_StringRef&& other) noexcept
 {
     if (this == &other)
         return *this;
@@ -201,7 +201,7 @@ StringRef& StringRef::operator=(StringRef&& other) noexcept
     return *this;
 }
 
-StringRef::~StringRef()
+Fa_StringRef::~Fa_StringRef()
 {
     if (!StringData_)
         return;
@@ -214,7 +214,7 @@ StringRef::~StringRef()
     }
 }
 
-StringRef& StringRef::operator=(StringRef const& other)
+Fa_StringRef& Fa_StringRef::operator=(Fa_StringRef const& other)
 {
     if (this == &other)
         return *this;
@@ -232,7 +232,7 @@ StringRef& StringRef::operator=(StringRef const& other)
     return *this;
 }
 
-void StringRef::expand(size_t const new_size)
+void Fa_StringRef::expand(size_t const new_size)
 {
     ensureUnique();
 
@@ -260,14 +260,14 @@ void StringRef::expand(size_t const new_size)
     StringData_->ptr()[Length_] = 0;
 }
 
-void StringRef::reserve(size_t const new_capacity)
+void Fa_StringRef::reserve(size_t const new_capacity)
 {
     if (new_capacity <= cap())
         return;
     expand(new_capacity);
 }
 
-void StringRef::erase(size_t const at)
+void Fa_StringRef::erase(size_t const at)
 {
     if (empty() || at >= len())
         return;
@@ -292,7 +292,7 @@ void StringRef::erase(size_t const at)
     StringData_->ptr()[Length_] = 0;
 }
 
-StringRef& StringRef::operator+=(StringRef const& other)
+Fa_StringRef& Fa_StringRef::operator+=(Fa_StringRef const& other)
 {
     if (other.empty())
         return *this;
@@ -310,7 +310,7 @@ StringRef& StringRef::operator+=(StringRef const& other)
     return *this;
 }
 
-StringRef& StringRef::operator+=(char c)
+Fa_StringRef& Fa_StringRef::operator+=(char c)
 {
     ensureUnique();
 
@@ -323,37 +323,37 @@ StringRef& StringRef::operator+=(char c)
     return *this;
 }
 
-char StringRef::operator[](size_t const i) const
+char Fa_StringRef::operator[](size_t const i) const
 {
     if (UNLIKELY(i >= Length_))
-        throw std::out_of_range("StringRef::operator[]: index out of bounds");
+        throw std::out_of_range("Fa_StringRef::operator[]: index out of bounds");
     return (*StringData_)[i + Offset_];
 }
 
-char& StringRef::operator[](size_t const i)
-{
-    ensureUnique();
-    if (UNLIKELY(i >= Length_))
-        throw std::out_of_range("StringRef::operator[]: index out of bounds");
-    return (*StringData_)[i + Offset_];
-}
-
-char StringRef::at(size_t const i) const
-{
-    if (UNLIKELY(i >= Length_))
-        throw std::out_of_range("StringRef::at: index out of bounds");
-    return (*StringData_)[i + Offset_];
-}
-
-char& StringRef::at(size_t const i)
+char& Fa_StringRef::operator[](size_t const i)
 {
     ensureUnique();
     if (UNLIKELY(i >= Length_))
-        throw std::out_of_range("StringRef::at: index out of bounds");
+        throw std::out_of_range("Fa_StringRef::operator[]: index out of bounds");
     return (*StringData_)[i + Offset_];
 }
 
-bool StringRef::find(char const c) const noexcept
+char Fa_StringRef::at(size_t const i) const
+{
+    if (UNLIKELY(i >= Length_))
+        throw std::out_of_range("Fa_StringRef::at: index out of bounds");
+    return (*StringData_)[i + Offset_];
+}
+
+char& Fa_StringRef::at(size_t const i)
+{
+    ensureUnique();
+    if (UNLIKELY(i >= Length_))
+        throw std::out_of_range("Fa_StringRef::at: index out of bounds");
+    return (*StringData_)[i + Offset_];
+}
+
+bool Fa_StringRef::find(char const c) const noexcept
 {
     char const* p = data();
     char const* end = p + Length_;
@@ -362,7 +362,7 @@ bool StringRef::find(char const c) const noexcept
     return p < end;
 }
 
-bool StringRef::find(StringRef const& s) const noexcept
+bool Fa_StringRef::find(Fa_StringRef const& s) const noexcept
 {
     if (s.empty() || s.len() > len())
         return false;
@@ -375,7 +375,7 @@ bool StringRef::find(StringRef const& s) const noexcept
     return false;
 }
 
-std::optional<size_t> StringRef::find_pos(char const c) const noexcept
+std::optional<size_t> Fa_StringRef::find_pos(char const c) const noexcept
 {
     char const* p = data();
     char const* end = p + Length_;
@@ -384,7 +384,7 @@ std::optional<size_t> StringRef::find_pos(char const c) const noexcept
     return (p < end) ? std::optional<size_t>(p - data()) : std::nullopt;
 }
 
-StringRef& StringRef::trimWhitespace(bool leading, bool trailing) noexcept
+Fa_StringRef& Fa_StringRef::trimWhitespace(bool leading, bool trailing) noexcept
 {
     if (leading) {
         while (Length_ > 0 && util::isWhitespace(data()[0])) {
@@ -401,21 +401,21 @@ StringRef& StringRef::trimWhitespace(bool leading, bool trailing) noexcept
     return *this;
 }
 
-StringRef& StringRef::truncate(size_t const s) noexcept
+Fa_StringRef& Fa_StringRef::truncate(size_t const s) noexcept
 {
     if (s < Length_)
         Length_ = s;
     return *this;
 }
 
-void StringRef::resize(size_t const s)
+void Fa_StringRef::resize(size_t const s)
 {
     ensureUnique();
     if (s > cap())
         expand(s);
 }
 
-StringRef StringRef::slice(size_t start, size_t end) const
+Fa_StringRef Fa_StringRef::slice(size_t start, size_t end) const
 {
     if (Length_ == 0)
         return { };
@@ -433,22 +433,22 @@ StringRef StringRef::slice(size_t start, size_t end) const
         return { };
     }
 
-    return StringRef(*this, start, end - start);
+    return Fa_StringRef(*this, start, end - start);
 }
 
-StringRef StringRef::substrCopy(size_t start, size_t end) const
+Fa_StringRef Fa_StringRef::substrCopy(size_t start, size_t end) const
 {
     if (Length_ == 0)
         return { };
 
     if (start > Length_)
-        throw std::out_of_range("StringRef::substrCopy: start index out of range");
+        throw std::out_of_range("Fa_StringRef::substrCopy: start index out of range");
 
     if (end > Length_ || end == SIZE_MAX)
         end = Length_;
 
     if (end < start)
-        throw std::invalid_argument("StringRef::substrCopy: end must be >= start");
+        throw std::invalid_argument("Fa_StringRef::substrCopy: end must be >= start");
 
     size_t copy_len = end - start;
 
@@ -460,22 +460,22 @@ StringRef StringRef::substrCopy(size_t start, size_t end) const
     ::memcpy(ret->ptr(), data() + start, copy_len);
     ret->ptr()[copy_len] = 0;
 
-    return StringRef(ret);
+    return Fa_StringRef(ret);
 }
 
-double StringRef::toDouble(size_t* pos) const
+f64 Fa_StringRef::toDouble(size_t* pos) const
 {
     if (empty())
-        throw std::invalid_argument("StringRef::toDouble: empty string");
+        throw std::invalid_argument("Fa_StringRef::toDouble: empty string");
 
-    double result { };
+    f64 result { };
     auto [end_ptr, ec] = std::from_chars(data(), data() + Length_, result);
 
     if (ec == std::errc::invalid_argument)
-        throw std::invalid_argument("StringRef::toDouble: invalid number format");
+        throw std::invalid_argument("Fa_StringRef::toDouble: invalid number format");
 
     if (ec == std::errc::result_out_of_range)
-        throw std::out_of_range("StringRef::toDouble: number out of range");
+        throw std::out_of_range("Fa_StringRef::toDouble: number out of range");
 
     if (pos)
         *pos = static_cast<size_t>(end_ptr - data());
@@ -483,7 +483,7 @@ double StringRef::toDouble(size_t* pos) const
     return result;
 }
 
-StringRef StringRef::fromUtf16(char16_t const* src)
+Fa_StringRef Fa_StringRef::fromUtf16(char16_t const* src)
 {
     if (!src || !src[0])
         return { };
@@ -507,10 +507,10 @@ StringRef StringRef::fromUtf16(char16_t const* src)
 
     ret_data->ptr()[utf8_len] = 0;
 
-    return StringRef(ret_data);
+    return Fa_StringRef(ret_data);
 }
 
-void StringRef::detach()
+void Fa_StringRef::detach()
 {
     size_t const len = ::strlen(StringData_->ptr());
     size_t const copy_len = Length_ > 0 ? Length_ : (len - Offset_);
@@ -528,4 +528,4 @@ void StringRef::detach()
     Length_ = copy_len;
 }
 
-} // namespace mylang
+} // namespace fairuz

@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace mylang;
+using namespace fairuz;
 
 std::filesystem::path lexer_test_cases_dir()
 {
@@ -10,65 +10,65 @@ std::filesystem::path lexer_test_cases_dir()
     return dir;
 }
 
-inline void PrintTo(tok::Token const& tok, std::ostream* os)
+inline void PrintTo(tok::Fa_Token const& tok, std::ostream* os)
 {
-    *os << "tok::Token(\"" << tok.lexeme() << "\", type=" << static_cast<int>(tok.type()) << ", line=" << tok.line() << ", col=" << tok.column() << ")";
+    *os << "tok::Fa_Token(\"" << tok.lexeme() << "\", type=" << static_cast<int>(tok.type()) << ", line=" << tok.line() << ", col=" << tok.column() << ")";
 }
 
 TEST(LexerTest, TestIndentationLevel0)
 {
-    lex::FileManager file_manager(lexer_test_cases_dir() / "recognizes_indentation_level0.txt");
-    lex::Lexer lexer(&file_manager);
+    lex::Fa_FileManager file_manager(lexer_test_cases_dir() / "recognizes_indentation_level0.txt");
+    lex::Fa_Lexer lexer(&file_manager);
     auto tokens = lexer.tokenize();
-    tok::Token const* expected = MAKE_TOKEN(tok::TokenType::IDENTIFIER, "ا", 1, 1);
+    tok::Fa_Token const* expected = MAKE_TOKEN(tok::Fa_TokenType::IDENTIFIER, "ا", 1, 1);
     ASSERT_EQ(tokens.size(), 3);
-    EXPECT_EQ(tokens[0]->type(), tok::TokenType::BEGINMARKER);
+    EXPECT_EQ(tokens[0]->type(), tok::Fa_TokenType::BEGINMARKER);
     EXPECT_EQ(*tokens[1], *expected);
-    EXPECT_EQ(tokens[2]->type(), tok::TokenType::ENDMARKER);
+    EXPECT_EQ(tokens[2]->type(), tok::Fa_TokenType::ENDMARKER);
 }
 
 TEST(LexerTest, TestIndentationLevel1)
 {
-    lex::FileManager file_manager(lexer_test_cases_dir() / "recognizes_indentation_level1.txt");
-    lex::Lexer lexer(&file_manager);
+    lex::Fa_FileManager file_manager(lexer_test_cases_dir() / "recognizes_indentation_level1.txt");
+    lex::Fa_Lexer lexer(&file_manager);
     auto tokens = lexer.tokenize();
-    std::vector<tok::Token const*> expected = { MAKE_TOKEN(tok::TokenType::BEGINMARKER, "", 1, 1),
-        MAKE_TOKEN(tok::TokenType::IDENTIFIER, "ا", 1, 1),
-        MAKE_TOKEN(tok::TokenType::NEWLINE, "\n", 1, 2),
-        MAKE_TOKEN(tok::TokenType::INDENT, "", 0, 0),
-        MAKE_TOKEN(tok::TokenType::IDENTIFIER, "ا", 2, 5),
-        MAKE_TOKEN(tok::TokenType::NEWLINE, "\n", 2, 6),
-        MAKE_TOKEN(tok::TokenType::DEDENT, "", 0, 0),
-        MAKE_TOKEN(tok::TokenType::DEDENT, "", 0, 0),
-        MAKE_TOKEN(tok::TokenType::ENDMARKER, "", 3, 1) };
+    std::vector<tok::Fa_Token const*> expected = { MAKE_TOKEN(tok::Fa_TokenType::BEGINMARKER, "", 1, 1),
+        MAKE_TOKEN(tok::Fa_TokenType::IDENTIFIER, "ا", 1, 1),
+        MAKE_TOKEN(tok::Fa_TokenType::NEWLINE, "\n", 1, 2),
+        MAKE_TOKEN(tok::Fa_TokenType::INDENT, "", 0, 0),
+        MAKE_TOKEN(tok::Fa_TokenType::IDENTIFIER, "ا", 2, 5),
+        MAKE_TOKEN(tok::Fa_TokenType::NEWLINE, "\n", 2, 6),
+        MAKE_TOKEN(tok::Fa_TokenType::DEDENT, "", 0, 0),
+        MAKE_TOKEN(tok::Fa_TokenType::DEDENT, "", 0, 0),
+        MAKE_TOKEN(tok::Fa_TokenType::ENDMARKER, "", 3, 1) };
     // ASSERT_EQ(tokens.size(), 9);
-    EXPECT_EQ(tokens[0]->type(), tok::TokenType::BEGINMARKER);
+    EXPECT_EQ(tokens[0]->type(), tok::Fa_TokenType::BEGINMARKER);
     for (int i = 1; i < tokens.size() - 1; ++i)
         EXPECT_EQ(*expected[i], *tokens[i]);
-    EXPECT_EQ(tokens.back()->type(), tok::TokenType::ENDMARKER);
+    EXPECT_EQ(tokens.back()->type(), tok::Fa_TokenType::ENDMARKER);
 }
 
 TEST(LexerTest, TestIndentationLevel2)
 {
-    lex::FileManager file_manager(lexer_test_cases_dir() / "recognizes_indentation_level2.txt");
-    lex::Lexer lexer(&file_manager);
+    lex::Fa_FileManager file_manager(lexer_test_cases_dir() / "recognizes_indentation_level2.txt");
+    lex::Fa_Lexer lexer(&file_manager);
     auto tokens = lexer.tokenize();
-    std::vector<tok::Token const*> expected = { MAKE_TOKEN(tok::TokenType::BEGINMARKER, "", 1, 1),
-        MAKE_TOKEN(tok::TokenType::IDENTIFIER, "ا", 1, 1),
-        MAKE_TOKEN(tok::TokenType::NEWLINE, "\n", 1, 2),
-        MAKE_TOKEN(tok::TokenType::INDENT, "", 0, 0),
-        MAKE_TOKEN(tok::TokenType::IDENTIFIER, "ا", 2, 5),
-        MAKE_TOKEN(tok::TokenType::NEWLINE, "\n", 2, 6),
-        MAKE_TOKEN(tok::TokenType::INDENT, "", 0, 0),
-        MAKE_TOKEN(tok::TokenType::IDENTIFIER, "ا", 3, 9),
-        MAKE_TOKEN(tok::TokenType::NEWLINE, "\n", 3, 10),
-        MAKE_TOKEN(tok::TokenType::DEDENT, "", 0, 0),
-        MAKE_TOKEN(tok::TokenType::DEDENT, "", 0, 0),
-        MAKE_TOKEN(tok::TokenType::ENDMARKER, "", 4, 1) };
+    std::vector<tok::Fa_Token const*> expected = { MAKE_TOKEN(tok::Fa_TokenType::BEGINMARKER, "", 1, 1),
+        MAKE_TOKEN(tok::Fa_TokenType::IDENTIFIER, "ا", 1, 1),
+        MAKE_TOKEN(tok::Fa_TokenType::NEWLINE, "\n", 1, 2),
+        MAKE_TOKEN(tok::Fa_TokenType::INDENT, "", 0, 0),
+        MAKE_TOKEN(tok::Fa_TokenType::IDENTIFIER, "ا", 2, 5),
+        MAKE_TOKEN(tok::Fa_TokenType::NEWLINE, "\n", 2, 6),
+        MAKE_TOKEN(tok::Fa_TokenType::INDENT, "", 0, 0),
+        MAKE_TOKEN(tok::Fa_TokenType::IDENTIFIER, "ا", 3, 9),
+        MAKE_TOKEN(tok::Fa_TokenType::NEWLINE, "\n", 3, 10),
+        MAKE_TOKEN(tok::Fa_TokenType::DEDENT, "", 0, 0),
+        MAKE_TOKEN(tok::Fa_TokenType::DEDENT, "", 0, 0),
+        MAKE_TOKEN(tok::Fa_TokenType::ENDMARKER, "", 4, 1) };
 
     ASSERT_EQ(tokens.size(), expected.size());
-    EXPECT_EQ(tokens[0]->type(), tok::TokenType::BEGINMARKER);
+    EXPECT_EQ(tokens[0]->type(), tok::Fa_TokenType::BEGINMARKER);
     for (int i = 1; i < tokens.size() - 1; ++i)
         EXPECT_EQ(*expected[i], *tokens[i]);
-    EXPECT_EQ(tokens.back()->type(), tok::TokenType::ENDMARKER);
+    EXPECT_EQ(tokens.back()->type(), tok::Fa_TokenType::ENDMARKER);
 }

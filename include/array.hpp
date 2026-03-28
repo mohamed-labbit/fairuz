@@ -7,12 +7,12 @@
 #include <bit>
 #include <cassert>
 
-namespace mylang {
+namespace fairuz {
 
 template<typename T>
-class Array {
-    static constexpr uint32_t ARRAY_MAX = __UINT32_MAX__;
-    static constexpr uint32_t DEFAULT_CAP = 8;
+class Fa_Array {
+    static constexpr u32 ARRAY_MAX = __UINT32_MAX__;
+    static constexpr u32 DEFAULT_CAP = 8;
     static constexpr bool TRIVIAL_COPY = std::is_trivially_copyable_v<T>;
     static constexpr bool TRIVIAL_DTOR = std::is_trivially_destructible_v<T>;
 
@@ -24,7 +24,7 @@ class Array {
         }
     }
 
-    static void relocate(T* dst, T* src, uint32_t n) noexcept
+    static void relocate(T* dst, T* src, u32 n) noexcept
     {
         if (n == 0)
             return;
@@ -32,14 +32,14 @@ class Array {
         if constexpr (TRIVIAL_COPY)
             ::memcpy(static_cast<void*>(dst), src, n * sizeof(T));
         else {
-            for (uint32_t i = 0; i < n; ++i) {
+            for (u32 i = 0; i < n; ++i) {
                 ::new (static_cast<void*>(dst + i)) T(std::move(src[i]));
                 src[i].~T();
             }
         }
     }
 
-    static void copy_construct_range(T* dst, T const* src, uint32_t n)
+    static void copy_construct_range(T* dst, T const* src, u32 n)
     {
         if (n == 0)
             return;
@@ -47,7 +47,7 @@ class Array {
         if constexpr (TRIVIAL_COPY)
             ::memcpy(static_cast<void*>(dst), src, n * sizeof(T));
         else {
-            uint32_t i = 0;
+            u32 i = 0;
             try {
                 for (; i < n; ++i)
                     ::new (static_cast<void*>(dst + i)) T(src[i]);
@@ -59,10 +59,10 @@ class Array {
     }
 
     T* arr { nullptr };
-    uint32_t Size_ { 0 };
-    uint32_t Cap_ { 0 };
+    u32 Size_ { 0 };
+    u32 Cap_ { 0 };
 
-    static uint32_t nextCapacity(uint32_t const s) noexcept
+    static u32 nextCapacity(u32 const s) noexcept
     {
         if (s <= DEFAULT_CAP)
             return DEFAULT_CAP;
@@ -74,20 +74,20 @@ class Array {
     void ensure_push_capacity();
 
 public:
-    Array() = default;
-    explicit Array(uint32_t capacity, T fill_v = T());
-    Array(Array const& other);
-    Array(Array&& other) noexcept;
-    Array(std::initializer_list<T> list);
+    Fa_Array() = default;
+    explicit Fa_Array(u32 capacity, T fill_v = T());
+    Fa_Array(Fa_Array const& other);
+    Fa_Array(Fa_Array&& other) noexcept;
+    Fa_Array(std::initializer_list<T> list);
 
-    Array& operator=(Array const& other);
-    Array& operator=(Array&& other) noexcept;
+    Fa_Array& operator=(Fa_Array const& other);
+    Fa_Array& operator=(Fa_Array&& other) noexcept;
 
-    ~Array() { destroy_range(arr, arr + Size_); }
+    ~Fa_Array() { destroy_range(arr, arr + Size_); }
 
-    static Array withCapacity(uint32_t capacity)
+    static Fa_Array withCapacity(u32 capacity)
     {
-        Array a;
+        Fa_Array a;
         if (capacity == 0)
             return a;
 
@@ -117,12 +117,12 @@ public:
     void push(T const& val);
     void push(T&& val);
     T pop();
-    void reserve(uint32_t const s);
-    void resize(uint32_t const s);
-    void erase(uint32_t const at);
+    void reserve(u32 const s);
+    void resize(u32 const s);
+    void erase(u32 const at);
     T* erase(T const* p);
-    T& operator[](uint32_t i) { return arr[i]; }
-    T const& operator[](uint32_t i) const { return arr[i]; }
+    T& operator[](u32 i) { return arr[i]; }
+    T const& operator[](u32 i) const { return arr[i]; }
 
     T& back()
     {
@@ -156,8 +156,8 @@ public:
         return arr[0];
     }
 
-    uint32_t size() const noexcept { return Size_; }
-    uint32_t cap() const noexcept { return Cap_; }
+    u32 size() const noexcept { return Size_; }
+    u32 cap() const noexcept { return Cap_; }
     T* data() noexcept { return arr; }
     T const* data() const noexcept { return arr; }
     bool empty() const noexcept { return Size_ == 0; }
@@ -166,14 +166,14 @@ public:
     T* end() noexcept { return arr + Size_; }
     T const* begin() const noexcept { return arr; }
     T const* end() const noexcept { return arr + Size_; }
-}; // class Array
+}; // class Fa_Array
 
 template<typename T>
-void Array<T>::ensure_push_capacity()
+void Fa_Array<T>::ensure_push_capacity()
 {
     if (Size_ < Cap_)
         return;
-    uint32_t new_cap = Cap_ == 0 ? DEFAULT_CAP : Cap_ + (Cap_ >> 1);
+    u32 new_cap = Cap_ == 0 ? DEFAULT_CAP : Cap_ + (Cap_ >> 1);
     // allocate new_cap directly, skip the nextCapacity rounding
     T* new_arr = getAllocator().allocateArray<T>(new_cap);
     if (arr && Size_ > 0)
@@ -183,7 +183,7 @@ void Array<T>::ensure_push_capacity()
 }
 
 template<typename T>
-Array<T>::Array(uint32_t capacity, T fill_v)
+Fa_Array<T>::Fa_Array(u32 capacity, T fill_v)
 {
     if (capacity > ARRAY_MAX)
         diagnostic::emit(diagnostic::errc::container::Code::ARRAY_CAPACITY_EXCEEDED,
@@ -196,7 +196,7 @@ Array<T>::Array(uint32_t capacity, T fill_v)
     arr = getAllocator().allocateArray<T>(capacity);
     Cap_ = capacity;
 
-    uint32_t i = 0;
+    u32 i = 0;
     try {
         if constexpr (TRIVIAL_COPY) {
             for (; i < capacity; ++i)
@@ -213,7 +213,7 @@ Array<T>::Array(uint32_t capacity, T fill_v)
 }
 
 template<typename T>
-Array<T>::Array(Array const& other)
+Fa_Array<T>::Fa_Array(Fa_Array const& other)
     : Cap_(other.Cap_)
 {
     if (Cap_ == 0)
@@ -226,7 +226,7 @@ Array<T>::Array(Array const& other)
 }
 
 template<typename T>
-Array<T>::Array(Array&& other) noexcept
+Fa_Array<T>::Fa_Array(Fa_Array&& other) noexcept
     : arr(other.arr)
     , Size_(other.Size_)
     , Cap_(other.Cap_)
@@ -237,17 +237,17 @@ Array<T>::Array(Array&& other) noexcept
 }
 
 template<typename T>
-Array<T>::Array(std::initializer_list<T> list)
+Fa_Array<T>::Fa_Array(std::initializer_list<T> list)
 {
     if (list.size() == 0)
         return;
 
-    Size_ = static_cast<uint32_t>(list.size());
+    Size_ = static_cast<u32>(list.size());
     Cap_ = nextCapacity(Size_);
     arr = getAllocator().allocateArray<T>(Cap_);
     assert(arr != nullptr);
 
-    uint32_t i = 0;
+    u32 i = 0;
     try {
         if constexpr (TRIVIAL_COPY) {
             for (T const& val : list)
@@ -264,7 +264,7 @@ Array<T>::Array(std::initializer_list<T> list)
 }
 
 template<typename T>
-Array<T>& Array<T>::operator=(Array const& other)
+Fa_Array<T>& Fa_Array<T>::operator=(Fa_Array const& other)
 {
     if (this == &other)
         return *this;
@@ -285,7 +285,7 @@ Array<T>& Array<T>::operator=(Array const& other)
 }
 
 template<typename T>
-Array<T>& Array<T>::operator=(Array&& other) noexcept
+Fa_Array<T>& Fa_Array<T>::operator=(Fa_Array&& other) noexcept
 {
     if (this == &other)
         return *this;
@@ -305,7 +305,7 @@ Array<T>& Array<T>::operator=(Array&& other) noexcept
 }
 
 template<typename T>
-void Array<T>::push(T const& val)
+void Fa_Array<T>::push(T const& val)
 {
     ensure_push_capacity();
     if constexpr (TRIVIAL_COPY)
@@ -316,7 +316,7 @@ void Array<T>::push(T const& val)
 }
 
 template<typename T>
-void Array<T>::push(T&& val)
+void Fa_Array<T>::push(T&& val)
 {
     ensure_push_capacity();
     if constexpr (TRIVIAL_COPY)
@@ -327,9 +327,9 @@ void Array<T>::push(T&& val)
 }
 
 template<typename T>
-T Array<T>::pop()
+T Fa_Array<T>::pop()
 {
-    assert(Size_ > 0 && "Array::pop — array is empty");
+    assert(Size_ > 0 && "Fa_Array::pop — array is empty");
     --Size_;
     if constexpr (TRIVIAL_DTOR)
         return arr[Size_];
@@ -341,12 +341,12 @@ T Array<T>::pop()
 }
 
 template<typename T>
-void Array<T>::reserve(uint32_t const s)
+void Fa_Array<T>::reserve(u32 const s)
 {
     if (s <= Cap_)
         return;
 
-    uint32_t const rounded = nextCapacity(s);
+    u32 const rounded = nextCapacity(s);
     T* new_arr = getAllocator().allocateArray<T>(rounded);
     assert(new_arr != nullptr);
 
@@ -359,7 +359,7 @@ void Array<T>::reserve(uint32_t const s)
 }
 
 template<typename T>
-void Array<T>::resize(uint32_t const s)
+void Fa_Array<T>::resize(u32 const s)
 {
     if (s < Size_) {
         destroy_range(arr + s, arr + Size_);
@@ -368,7 +368,7 @@ void Array<T>::resize(uint32_t const s)
         if (s > Cap_)
             reserve(s);
 
-        uint32_t i = Size_;
+        u32 i = Size_;
         try {
             if constexpr (TRIVIAL_COPY) {
                 for (; i < s; ++i)
@@ -386,18 +386,18 @@ void Array<T>::resize(uint32_t const s)
 }
 
 template<typename T>
-void Array<T>::erase(uint32_t const at)
+void Fa_Array<T>::erase(u32 const at)
 {
     if (at >= Size_)
         diagnostic::emit(diagnostic::errc::container::Code::ARRAY_OUT_OF_BOUNDS, diagnostic::Severity::FATAL);
 
     if constexpr (TRIVIAL_COPY) {
-        uint32_t const remaining = Size_ - at - 1;
+        u32 const remaining = Size_ - at - 1;
         if (remaining > 0)
             ::memmove(arr + at, arr + at + 1, remaining * sizeof(T));
     } else {
         arr[at].~T();
-        for (uint32_t i = at; i < Size_ - 1; ++i) {
+        for (u32 i = at; i < Size_ - 1; ++i) {
             ::new (static_cast<void*>(arr + i)) T(std::move(arr[i + 1]));
             arr[i + 1].~T();
         }
@@ -407,20 +407,20 @@ void Array<T>::erase(uint32_t const at)
 }
 
 template<typename T>
-T* Array<T>::erase(T const* p)
+T* Fa_Array<T>::erase(T const* p)
 {
     if (p < arr || p >= arr + Size_)
         return const_cast<T*>(p);
 
     T* ptr = const_cast<T*>(p);
-    uint32_t remaining = static_cast<uint32_t>((arr + Size_) - (ptr + 1));
+    u32 remaining = static_cast<u32>((arr + Size_) - (ptr + 1));
 
     if constexpr (TRIVIAL_COPY) {
         if (remaining > 0)
             ::memmove(ptr, ptr + 1, remaining * sizeof(T));
     } else {
         ptr->~T();
-        for (uint32_t i = 0; i < remaining; ++i) {
+        for (u32 i = 0; i < remaining; ++i) {
             ::new (static_cast<void*>(ptr + i)) T(std::move(ptr[i + 1]));
             ptr[i + 1].~T();
         }
@@ -431,11 +431,11 @@ T* Array<T>::erase(T const* p)
 }
 
 template<typename T, typename... Args>
-static Array<T> makeArray(Args&&... args)
+static Fa_Array<T> makeArray(Args&&... args)
 {
     return getAllocator().allocateArray<T>(std::forward<Args>(args)...);
 }
 
-} // namespace mylang
+} // namespace fairuz
 
 #endif // ARRAY_HPP

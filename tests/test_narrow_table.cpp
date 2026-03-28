@@ -2,14 +2,14 @@
 
 #include <gtest/gtest.h>
 
-using namespace mylang;
+using namespace fairuz;
 
 namespace {
 
 struct IntHash {
     size_t operator()(int value) const
     {
-        return static_cast<size_t>(static_cast<uint32_t>(value) * 2654435761u);
+        return static_cast<size_t>(static_cast<u32>(value) * 2654435761u);
     }
 };
 

@@ -5,10 +5,10 @@
 
 #include <ostream>
 
-namespace mylang {
+namespace fairuz {
 
 class StringBase {
-    friend class StringRef;
+    friend class Fa_StringRef;
 
 private:
     union Storage {
@@ -27,7 +27,7 @@ private:
 
     bool is_heap;
 
-    mutable uint32_t RefCount { 1 };
+    mutable u32 RefCount { 1 };
 
 public:
     StringBase()
@@ -66,7 +66,7 @@ public:
     void increment() const noexcept { RefCount++; }
     void decrement() const noexcept { RefCount--; }
 
-    uint32_t referenceCount() const noexcept { return RefCount; }
+    u32 referenceCount() const noexcept { return RefCount; }
 }; // class StringBase
 
 namespace detail {
@@ -75,7 +75,7 @@ StringBase* emptyStringSingleton() noexcept;
 
 } // namespace detail
 
-class StringRef {
+class Fa_StringRef {
 private:
     StringBase* StringData_ { nullptr };
     size_t Offset_ { 0 };
@@ -89,7 +89,7 @@ private:
 
 public:
     // Default: points at the global empty singleton — zero heap allocation.
-    StringRef() noexcept
+    Fa_StringRef() noexcept
         : StringData_(detail::emptyStringSingleton())
         , Offset_(0)
         , Length_(0)
@@ -97,27 +97,27 @@ public:
         StringData_->increment();
     }
 
-    explicit StringRef(size_t const s);
+    explicit Fa_StringRef(size_t const s);
 
-    StringRef(StringRef const& other, size_t offset = 0, size_t length = 0);
+    Fa_StringRef(Fa_StringRef const& other, size_t offset = 0, size_t length = 0);
 
-    StringRef(char const* lit);
+    Fa_StringRef(char const* lit);
 
-    StringRef(char16_t const* u16_str);
+    Fa_StringRef(char16_t const* u16_str);
 
-    StringRef(size_t const s, char const c);
+    Fa_StringRef(size_t const s, char const c);
 
-    explicit StringRef(StringBase* data, size_t offset = 0, size_t length = 0);
+    explicit Fa_StringRef(StringBase* data, size_t offset = 0, size_t length = 0);
 
-    StringRef(StringRef&& other) noexcept;
+    Fa_StringRef(Fa_StringRef&& other) noexcept;
 
-    StringRef& operator=(StringRef&& other) noexcept;
+    Fa_StringRef& operator=(Fa_StringRef&& other) noexcept;
 
-    ~StringRef();
+    ~Fa_StringRef();
 
-    StringRef& operator=(StringRef const& other);
+    Fa_StringRef& operator=(Fa_StringRef const& other);
 
-    [[nodiscard]] bool operator==(StringRef const& other) const noexcept
+    [[nodiscard]] bool operator==(Fa_StringRef const& other) const noexcept
     {
         if (StringData_ == other.StringData_ && Offset_ == other.Offset_ && Length_ == other.Length_)
             return true;
@@ -128,9 +128,9 @@ public:
         return ::memcmp(data(), other.data(), Length_) == 0;
     }
 
-    [[nodiscard]] bool operator!=(StringRef const& other) const noexcept { return !(*this == other); }
+    [[nodiscard]] bool operator!=(Fa_StringRef const& other) const noexcept { return !(*this == other); }
 
-    [[nodiscard]] bool operator<(StringRef const& other) const noexcept
+    [[nodiscard]] bool operator<(Fa_StringRef const& other) const noexcept
     {
         if (StringData_ == other.StringData_ && Offset_ == other.Offset_ && Length_ == other.Length_)
             return false;
@@ -144,16 +144,16 @@ public:
         return cmp != 0 ? cmp < 0 : Length_ < other.Length_;
     }
 
-    [[nodiscard]] bool operator>(StringRef const& other) const noexcept { return other < *this; }
-    [[nodiscard]] bool operator<=(StringRef const& other) const noexcept { return !(*this > other); }
-    [[nodiscard]] bool operator>=(StringRef const& other) const noexcept { return !(*this < other); }
+    [[nodiscard]] bool operator>(Fa_StringRef const& other) const noexcept { return other < *this; }
+    [[nodiscard]] bool operator<=(Fa_StringRef const& other) const noexcept { return !(*this > other); }
+    [[nodiscard]] bool operator>=(Fa_StringRef const& other) const noexcept { return !(*this < other); }
 
     void expand(size_t const new_size);
     void reserve(size_t const new_capacity);
     void erase(size_t const at);
 
-    StringRef& operator+=(StringRef const& other);
-    StringRef& operator+=(char c);
+    Fa_StringRef& operator+=(Fa_StringRef const& other);
+    Fa_StringRef& operator+=(char c);
 
     char operator[](size_t const i) const;
     char& operator[](size_t const i);
@@ -161,13 +161,13 @@ public:
     [[nodiscard]] char at(size_t const i) const;
     char& at(size_t const i);
 
-    StringRef& trimWhitespace(bool leading = true, bool trailing = true) noexcept;
+    Fa_StringRef& trimWhitespace(bool leading = true, bool trailing = true) noexcept;
 
-    StringRef operator+(StringRef const& rhs) const
+    Fa_StringRef operator+(Fa_StringRef const& rhs) const
     {
         size_t const r_len = rhs.len();
         if (empty())
-            return StringRef(rhs);
+            return Fa_StringRef(rhs);
         if (r_len == 0)
             return *this;
 
@@ -179,35 +179,35 @@ public:
 
         result->ptr()[new_len] = 0;
 
-        return StringRef(result);
+        return Fa_StringRef(result);
     }
 
-    StringRef operator+(char const* rhs) const
+    Fa_StringRef operator+(char const* rhs) const
     {
         if (!rhs || !rhs[0])
             return *this;
-        StringRef rhs_str = rhs;
+        Fa_StringRef rhs_str = rhs;
         return *this + rhs_str;
     }
 
-    friend StringRef operator+(char const* lhs, StringRef const& rhs)
+    friend Fa_StringRef operator+(char const* lhs, Fa_StringRef const& rhs)
     {
         if (!lhs || !lhs[0])
-            return StringRef(rhs);
-        StringRef lhs_str = lhs;
+            return Fa_StringRef(rhs);
+        Fa_StringRef lhs_str = lhs;
         return lhs_str + rhs;
     }
 
-    friend StringRef operator+(StringRef const& lhs, char rhs)
+    friend Fa_StringRef operator+(Fa_StringRef const& lhs, char rhs)
     {
-        StringRef result(lhs);
+        Fa_StringRef result(lhs);
         result += rhs;
         return result;
     }
 
-    friend StringRef operator+(char lhs, StringRef const& rhs)
+    friend Fa_StringRef operator+(char lhs, Fa_StringRef const& rhs)
     {
-        StringRef result;
+        Fa_StringRef result;
         result.reserve(rhs.len() + 1);
         result += lhs;
         result += rhs;
@@ -229,7 +229,7 @@ public:
         return nullptr;
     }
 
-    friend std::ostream& operator<<(std::ostream& os, StringRef const& str)
+    friend std::ostream& operator<<(std::ostream& os, Fa_StringRef const& str)
     {
         if (!str.empty())
             os.write(str.data(), static_cast<std::streamsize>(str.len()));
@@ -246,13 +246,13 @@ public:
     void resize(size_t const s);
 
     [[nodiscard]] bool find(char const c) const noexcept;
-    [[nodiscard]] bool find(StringRef const& s) const noexcept;
+    [[nodiscard]] bool find(Fa_StringRef const& s) const noexcept;
 
     [[nodiscard]] std::optional<size_t> find_pos(char const c) const noexcept;
 
-    StringRef& truncate(size_t const s) noexcept;
-    StringRef slice(size_t start, size_t end = SIZE_MAX) const;
-    StringRef substr(size_t start, size_t end = SIZE_MAX) const
+    Fa_StringRef& truncate(size_t const s) noexcept;
+    Fa_StringRef slice(size_t start, size_t end = SIZE_MAX) const;
+    Fa_StringRef substr(size_t start, size_t end = SIZE_MAX) const
     {
         if (Length_ == 0)
             return { };
@@ -264,11 +264,11 @@ public:
             return { };
         return substrCopy(start, end);
     }
-    StringRef substrCopy(size_t start, size_t end = SIZE_MAX) const;
+    Fa_StringRef substrCopy(size_t start, size_t end = SIZE_MAX) const;
 
-    double toDouble(size_t* pos = nullptr) const;
+    f64 toDouble(size_t* pos = nullptr) const;
 
-    [[nodiscard]] static StringRef fromUtf16(char16_t const* utf16_cstr);
+    [[nodiscard]] static Fa_StringRef fromUtf16(char16_t const* utf16_cstr);
 
     void ensureUnique()
     {
@@ -280,37 +280,37 @@ public:
     }
 
     void detach();
-}; // class StringRef
+}; // class Fa_StringRef
 
 namespace detail {
 
 // wy_read helpers — always read unaligned, the compiler emits ldr on ARM64.
-inline uint64_t wy_read8(void const* p) noexcept
+inline u64 wy_read8(void const* p) noexcept
 {
-    uint64_t v;
+    u64 v;
     __builtin_memcpy(&v, p, 8);
     return v;
 }
-inline uint32_t wy_read4(void const* p) noexcept
+inline u32 wy_read4(void const* p) noexcept
 {
-    uint32_t v;
+    u32 v;
     __builtin_memcpy(&v, p, 4);
     return v;
 }
 
 // 128-bit multiply — GCC/Clang both lower this to a single MUL on ARM64/x86-64.
-inline void wymix(uint64_t& a, uint64_t& b) noexcept
+inline void wymix(u64& a, u64& b) noexcept
 {
 #if defined(__SIZEOF_INT128__)
     auto r = static_cast<__uint128_t>(a) * b;
-    a = static_cast<uint64_t>(r);
-    b = static_cast<uint64_t>(r >> 64);
+    a = static_cast<u64>(r);
+    b = static_cast<u64>(r >> 64);
 #else
     // 32-bit fallback via four 32×32→64 multiplies.
-    uint64_t ha = a >> 32, hb = b >> 32;
-    uint64_t la = static_cast<uint32_t>(a), lb = static_cast<uint32_t>(b);
-    uint64_t hh = ha * hb, hl = ha * lb, lh = la * hb, ll = la * lb;
-    uint64_t m = (ll >> 32) + static_cast<uint32_t>(hl) + static_cast<uint32_t>(lh);
+    u64 ha = a >> 32, hb = b >> 32;
+    u64 la = static_cast<u32>(a), lb = static_cast<u32>(b);
+    u64 hh = ha * hb, hl = ha * lb, lh = la * hb, ll = la * lb;
+    u64 m = (ll >> 32) + static_cast<u32>(hl) + static_cast<u32>(lh);
     a = (hl >> 32) + (lh >> 32) + (hh) + (m >> 32);
     b = ll + (m << 32);
 #endif
@@ -318,29 +318,29 @@ inline void wymix(uint64_t& a, uint64_t& b) noexcept
 }
 
 // wyhash secret constants (from the reference implementation).
-static constexpr uint64_t WY_P0 = UINT64_C(0xa0761d6478bd642f);
-static constexpr uint64_t WY_P1 = UINT64_C(0xe7037ed1a0b428db);
-static constexpr uint64_t WY_P2 = UINT64_C(0x8ebc6af09c88c6e3);
-static constexpr uint64_t WY_P3 = UINT64_C(0x589965cc75374cc3);
+static constexpr u64 WY_P0 = UINT64_C(0xa0761d6478bd642f);
+static constexpr u64 WY_P1 = UINT64_C(0xe7037ed1a0b428db);
+static constexpr u64 WY_P2 = UINT64_C(0x8ebc6af09c88c6e3);
+static constexpr u64 WY_P3 = UINT64_C(0x589965cc75374cc3);
 
-inline uint64_t wyhash(void const* key, size_t len, uint64_t seed) noexcept
+inline u64 wyhash(void const* key, size_t len, u64 seed) noexcept
 {
-    auto p = static_cast<uint8_t const*>(key);
+    auto p = static_cast<u8 const*>(key);
     seed ^= WY_P0;
 
-    uint64_t a = 0, b = 0;
+    u64 a = 0, b = 0;
 
     if (len <= 16) {
         if (len >= 4) {
             // Read 4 bytes from each end; they may overlap for len in [4,7].
-            a = (static_cast<uint64_t>(wy_read4(p)) << 32)
+            a = (static_cast<u64>(wy_read4(p)) << 32)
                 | wy_read4(p + ((len >> 3) << 2));
-            b = (static_cast<uint64_t>(wy_read4(p + len - 4)) << 32)
+            b = (static_cast<u64>(wy_read4(p + len - 4)) << 32)
                 | wy_read4(p + len - 4 - ((len >> 3) << 2));
         } else if (len > 0) {
             // 1–3 bytes: spread across three positions without branching.
-            a = (static_cast<uint64_t>(p[0]) << 16)
-                | (static_cast<uint64_t>(p[len >> 1]) << 8)
+            a = (static_cast<u64>(p[0]) << 16)
+                | (static_cast<u64>(p[len >> 1]) << 8)
                 | p[len - 1];
             b = 0;
         }
@@ -349,7 +349,7 @@ inline uint64_t wyhash(void const* key, size_t len, uint64_t seed) noexcept
         size_t i = len;
         // If not 8-byte aligned, read one full 8-byte pair to align the loop.
         if (i > 48) {
-            uint64_t see1 = seed, see2 = seed;
+            u64 see1 = seed, see2 = seed;
             do {
                 seed ^= WY_P1;
                 a = wy_read8(p);
@@ -400,23 +400,23 @@ inline uint64_t wyhash(void const* key, size_t len, uint64_t seed) noexcept
 // Drop-in replacement — same interface as the FNV-1a version.
 // ─────────────────────────────────────────────────────────────────────────────
 
-struct StringRefHash {
+struct Fa_StringRefHash {
     // Seed is exposed so callers can build seeded hash tables if needed,
     // but the default zero-seed is fine for std::unordered_map / StringCache_.
-    uint64_t seed { 0 };
+    u64 seed { 0 };
 
-    size_t operator()(StringRef const& str) const noexcept
+    size_t operator()(Fa_StringRef const& str) const noexcept
     {
         if (str.empty())
             return 0;
 
         size_t n = str.len();
-        auto const* p = reinterpret_cast<uint8_t const*>(str.data());
+        auto const* p = reinterpret_cast<u8 const*>(str.data());
 
         if (n <= 16) {
             // Read up to 16 bytes using two overlapping reads,
             // same trick as wyhash's short path — no memcpy, no loop.
-            uint64_t a = 0, b = 0;
+            u64 a = 0, b = 0;
             if (n >= 8) {
                 // Two 8-byte reads, potentially overlapping.
                 __builtin_memcpy(&a, p, 8);
@@ -426,8 +426,8 @@ struct StringRefHash {
                 __builtin_memcpy(&b, p + n - 4, 4);
             } else {
                 // 1–3 bytes: spread across three positions.
-                a = (uint64_t(p[0]) << 16)
-                    | (uint64_t(p[n >> 1]) << 8)
+                a = (u64(p[0]) << 16)
+                    | (u64(p[n >> 1]) << 8)
                     | p[n - 1];
             }
             // Murmur-style finalizer — two multiplies, fast on ARM64.
@@ -442,19 +442,19 @@ struct StringRefHash {
 
         return static_cast<size_t>(detail::wyhash(p, n, seed));
     }
-}; // struct StringRefHash
+}; // struct Fa_StringRefHash
 
-struct StringRefEqual {
-    bool operator()(StringRef const& lhs, StringRef const& rhs) const noexcept { return lhs == rhs; }
-}; // struct StringRefEqual
+struct Fa_StringRefEqual {
+    bool operator()(Fa_StringRef const& lhs, Fa_StringRef const& rhs) const noexcept { return lhs == rhs; }
+}; // struct Fa_StringRefEqual
 
-} // namespace mylang
+} // namespace fairuz
 
 namespace std {
 
 template<>
-struct hash<mylang::StringRef> {
-    size_t operator()(mylang::StringRef const& str) const noexcept { return mylang::StringRefHash { }(str); }
+struct hash<fairuz::Fa_StringRef> {
+    size_t operator()(fairuz::Fa_StringRef const& str) const noexcept { return fairuz::Fa_StringRefHash { }(str); }
 }; // struct hash
 
 } // namespace std

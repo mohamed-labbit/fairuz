@@ -5,11 +5,11 @@
 #include <cstdint>
 #include <string>
 
-namespace mylang::util {
+namespace fairuz::util {
 
-static inline bool isWhitespace(uint32_t const& ch) { return ch == u' ' || ch == u'\t' || ch == u'\r'; }
+static inline bool isWhitespace(u32 const& ch) { return ch == u' ' || ch == u'\t' || ch == u'\r'; }
 
-static inline bool const isOperator(uint32_t const& ch)
+static inline bool const isOperator(u32 const& ch)
 {
     switch (ch) {
     case '=':
@@ -28,7 +28,7 @@ static inline bool const isOperator(uint32_t const& ch)
     }
 }
 
-static inline bool isalphaArabic(uint32_t const c)
+static inline bool isalphaArabic(u32 const c)
 {
     switch (c) {
     case 0x0621:
@@ -75,7 +75,7 @@ static inline bool isalphaArabic(uint32_t const c)
     return (c >= 0x0600 && c <= 0x06FF);
 }
 
-static uint32_t decode_utf8_at(StringRef const& buf, size_t const byte_pos, uint64_t* out_bytes)
+static u32 decode_utf8_at(Fa_StringRef const& buf, size_t const byte_pos, u64* out_bytes)
 {
     if (byte_pos >= buf.len())
         throw std::runtime_error("UTF8 decode past end of buffer");
@@ -98,7 +98,7 @@ static uint32_t decode_utf8_at(StringRef const& buf, size_t const byte_pos, uint
             throw std::runtime_error("Invalid UTF-8: bad continuation byte");
 
         *out_bytes = 2;
-        uint32_t const result = ((p[0] & 0x1F) << 6) | (p[1] & 0x3F);
+        u32 const result = ((p[0] & 0x1F) << 6) | (p[1] & 0x3F);
 
         if (result < 0x80)
             throw std::runtime_error("Invalid UTF-8: overlong 2-byte sequence");
@@ -114,7 +114,7 @@ static uint32_t decode_utf8_at(StringRef const& buf, size_t const byte_pos, uint
             throw std::runtime_error("Invalid UTF-8: bad continuation byte");
 
         *out_bytes = 3;
-        uint32_t const result = ((p[0] & 0x0F) << 12) | ((p[1] & 0x3F) << 6) | (p[2] & 0x3F);
+        u32 const result = ((p[0] & 0x0F) << 12) | ((p[1] & 0x3F) << 6) | (p[2] & 0x3F);
 
         if (result < 0x800)
             throw std::runtime_error("Invalid UTF-8: overlong 3-byte sequence");
@@ -133,7 +133,7 @@ static uint32_t decode_utf8_at(StringRef const& buf, size_t const byte_pos, uint
             throw std::runtime_error("Invalid UTF-8: bad continuation byte");
 
         *out_bytes = 4;
-        uint32_t const result = ((p[0] & 0x07) << 18) | ((p[1] & 0x3F) << 12) | ((p[2] & 0x3F) << 6) | (p[3] & 0x3F);
+        u32 const result = ((p[0] & 0x07) << 18) | ((p[1] & 0x3F) << 12) | ((p[2] & 0x3F) << 6) | (p[3] & 0x3F);
 
         if (result < 0x10000)
             throw std::runtime_error("Invalid UTF-8: overlong 4-byte sequence");
@@ -156,7 +156,7 @@ static void configureLocale()
     }
 }
 
-static size_t encode_utf8(uint32_t const cp, unsigned char* out_bytes)
+static size_t encode_utf8(u32 const cp, unsigned char* out_bytes)
 {
     if (cp < 0x80) {
         out_bytes[0] = static_cast<unsigned char>(cp);
@@ -190,14 +190,14 @@ static size_t encode_utf8(uint32_t const cp, unsigned char* out_bytes)
     throw std::runtime_error("Invalid cp: exceeds Unicode range");
 }
 
-static StringRef encode_utf8_str(uint32_t const cp)
+static Fa_StringRef encode_utf8_str(u32 const cp)
 {
     unsigned char bytes[5];
     size_t const len = encode_utf8(cp, bytes);
-    return StringRef(reinterpret_cast<char*>(bytes)).truncate(len);
+    return Fa_StringRef(reinterpret_cast<char*>(bytes)).truncate(len);
 }
 
-static bool isArabDigit(uint32_t const cp)
+static bool isArabDigit(u32 const cp)
 {
     switch (cp) {
     case u'٠': // 0
@@ -216,7 +216,7 @@ static bool isArabDigit(uint32_t const cp)
     }
 }
 
-static int64_t parseIntegerLiteral(StringRef const& literal, int base)
+static i64 parseIntegerLiteral(Fa_StringRef const& literal, int base)
 {
     if (base == -1) /*false call */
         return INT16_MIN;
@@ -236,7 +236,7 @@ static int64_t parseIntegerLiteral(StringRef const& literal, int base)
     else if (literal.at(i) == '0' && literal.len() > i + 1)
         ++i;
 
-    int64_t value = 0;
+    i64 value = 0;
 
     for (; i < literal.len(); ++i) {
         char const c = literal.at(i);
@@ -262,17 +262,17 @@ static int64_t parseIntegerLiteral(StringRef const& literal, int base)
     return negative ? -value : value;
 }
 
-static bool isIntegerValue(double d, int64_t& out)
+static bool isIntegerValue(f64 d, i64& out)
 {
     if (!std::isfinite(d))
         return false;
-    auto iv = static_cast<int64_t>(d);
-    if (static_cast<double>(iv) != d)
+    auto iv = static_cast<i64>(d);
+    if (static_cast<f64>(iv) != d)
         return false;
     out = iv;
     return true;
 }
 
-} // namespace mylang::util
+} // namespace fairuz::util
 
 #endif // UTIL_HPP

@@ -7,9 +7,9 @@
 #include <functional>
 #include <optional>
 
-namespace mylang {
+namespace fairuz {
 
-class ArenaBlock {
+class Fa_ArenaBlock {
 private:
     size_t Size_ { DEFAULT_BLOCK_SIZE };
     unsigned char* Begin_ { nullptr };
@@ -17,17 +17,17 @@ private:
     unsigned char* End_ { nullptr };
 
 public:
-    explicit ArenaBlock(size_t const size = DEFAULT_BLOCK_SIZE, size_t const alignment = alignof(std::max_align_t));
+    explicit Fa_ArenaBlock(size_t const size = DEFAULT_BLOCK_SIZE, size_t const alignment = alignof(std::max_align_t));
 
-    ~ArenaBlock();
+    ~Fa_ArenaBlock();
 
     // Non-copyable
-    ArenaBlock(ArenaBlock const&) = delete;
-    ArenaBlock& operator=(ArenaBlock const&) = delete;
+    Fa_ArenaBlock(Fa_ArenaBlock const&) = delete;
+    Fa_ArenaBlock& operator=(Fa_ArenaBlock const&) = delete;
 
-    ArenaBlock(ArenaBlock&& other) noexcept;
+    Fa_ArenaBlock(Fa_ArenaBlock&& other) noexcept;
 
-    ArenaBlock& operator=(ArenaBlock&& other) noexcept;
+    Fa_ArenaBlock& operator=(Fa_ArenaBlock&& other) noexcept;
 
     [[nodiscard]] unsigned char* begin() const;
     [[nodiscard]] unsigned char* end() const;
@@ -41,11 +41,11 @@ public:
 
     [[nodiscard]] unsigned char* allocate(size_t bytes, std::optional<size_t> alignment = std::nullopt);
     unsigned char* reserve(size_t const bytes);
-}; // class ArenaBlock
+}; // class Fa_ArenaBlock
 
-class ArenaAllocator {
+class Fa_ArenaAllocator {
 public:
-    enum class GrowthStrategy : int32_t {
+    enum class GrowthStrategy : i32 {
         LINEAR,
         EXPONENTIAL
     }; // enum GrowthStrategy
@@ -53,7 +53,7 @@ public:
     using OutOfMemoryHandler = std::function<bool(size_t requested)>;
 
 private:
-    std::vector<ArenaBlock> Blocks_ { };
+    std::vector<Fa_ArenaBlock> Blocks_ { };
     GrowthStrategy GrowthFactor_ { GrowthStrategy::LINEAR };
     size_t BlockSize_ { DEFAULT_BLOCK_SIZE };
     size_t NextBlockSize_ { DEFAULT_BLOCK_SIZE };
@@ -64,11 +64,11 @@ private:
     unsigned char* Next_ { nullptr };
     unsigned char* End_ { nullptr };
     void* allocateSlow(size_t size, size_t alignment);
-#ifdef MYLANG_DEBUG
+#ifdef fairuz_DEBUG
     void trackAllocation(unsigned char* ptr, size_t size, size_t alignment);
 #endif
 
-#ifdef MYLANG_DEBUG
+#ifdef fairuz_DEBUG
     struct VoidPtrHash {
         size_t operator()(void const* ptr) const noexcept { return std::hash<uintptr_t>()(reinterpret_cast<uintptr_t>(ptr)); }
     }; // struct VoidPtrHash
@@ -83,21 +83,21 @@ private:
     bool TrackAllocations_ { false };
     bool DebugFeatures_ { false };
     bool EnableStatistics_ { true };
-#endif // MYLANG_DEBUG
+#endif // fairuz_DEBUG
 
     static constexpr size_t Alignment_ = alignof(std::max_align_t);
 
 public:
-    explicit ArenaAllocator(int32_t growth_strategy = static_cast<int32_t>(GrowthStrategy::EXPONENTIAL),
+    explicit Fa_ArenaAllocator(i32 growth_strategy = static_cast<i32>(GrowthStrategy::EXPONENTIAL),
         OutOfMemoryHandler oom_handler = nullptr, bool debug = true);
 
-    ~ArenaAllocator() { reset(); }
+    ~Fa_ArenaAllocator() { reset(); }
 
-    ArenaAllocator(ArenaAllocator const&) = delete;
-    ArenaAllocator& operator=(ArenaAllocator const&) = delete;
+    Fa_ArenaAllocator(Fa_ArenaAllocator const&) = delete;
+    Fa_ArenaAllocator& operator=(Fa_ArenaAllocator const&) = delete;
 
-    ArenaAllocator(ArenaAllocator&&) noexcept = delete;
-    ArenaAllocator& operator=(ArenaAllocator&&) noexcept = delete;
+    Fa_ArenaAllocator(Fa_ArenaAllocator&&) noexcept = delete;
+    Fa_ArenaAllocator& operator=(Fa_ArenaAllocator&&) noexcept = delete;
 
     void setName(std::string const& name);
     void reset();
@@ -127,14 +127,14 @@ public:
     template<typename T>
     void deallocateObject(T* obj) { deallocate(static_cast<void*>(obj), sizeof(T)); }
 
-#ifdef MYLANG_DEBUG
+#ifdef fairuz_DEBUG
     size_t totalAllocated() const;
     size_t totalAllocations() const;
     size_t activeBlocks() const;
     std::string toString(bool verbose) const;
     void dumpStats(std::ostream& os, bool verbose) const;
     [[nodiscard]] bool verifyAllocation(void* ptr) const;
-#endif // MYLANG_DEBUG
+#endif // fairuz_DEBUG
 
 private:
     [[nodiscard]] unsigned char* allocateFromBlocks(size_t alloc_size, size_t align = alignof(std::max_align_t));
@@ -145,35 +145,35 @@ private:
     {
         return (n + alignment - 1) & ~(alignment - 1);
     }
-}; // class ArenaAllocator
+}; // class Fa_ArenaAllocator
 
-struct AllocatorContext {
-    ArenaAllocator allocator;
-}; // struct AllocatorContext
+struct Fa_AllocatorContext {
+    Fa_ArenaAllocator allocator;
+}; // struct Fa_AllocatorContext
 
-inline AllocatorContext* g_context = nullptr;
+inline Fa_AllocatorContext* g_context = nullptr;
 
-inline void setContext(AllocatorContext* ctx) { g_context = ctx; }
+inline void setContext(Fa_AllocatorContext* ctx) { g_context = ctx; }
 
-inline AllocatorContext& getContext()
+inline Fa_AllocatorContext& getContext()
 {
     if (UNLIKELY(!g_context)) {
-        static AllocatorContext default_ctx;
+        static Fa_AllocatorContext default_ctx;
         g_context = &default_ctx;
     }
     return *g_context;
 }
 
-inline ArenaAllocator& getAllocator() { return getContext().allocator; }
+inline Fa_ArenaAllocator& getAllocator() { return getContext().allocator; }
 
-struct AllocatorContextScope {
-    explicit AllocatorContextScope(AllocatorContext& ctx) { g_context = &ctx; }
-    ~AllocatorContextScope() { g_context = nullptr; }
+struct Fa_AllocatorContextScope {
+    explicit Fa_AllocatorContextScope(Fa_AllocatorContext& ctx) { g_context = &ctx; }
+    ~Fa_AllocatorContextScope() { g_context = nullptr; }
 
-    AllocatorContextScope(AllocatorContextScope const&) = delete;
-    AllocatorContextScope& operator=(AllocatorContextScope const&) = delete;
-}; // struct AllocatorContextScope
+    Fa_AllocatorContextScope(Fa_AllocatorContextScope const&) = delete;
+    Fa_AllocatorContextScope& operator=(Fa_AllocatorContextScope const&) = delete;
+}; // struct Fa_AllocatorContextScope
 
-} // namespace mylang
+} // namespace fairuz
 
 #endif // ARENA_HPP

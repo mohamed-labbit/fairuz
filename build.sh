@@ -91,7 +91,7 @@ fi
 
 if [[ "$RUN_TESTS" == true ]]; then
     ASAN_OPTIONS=detect_leaks="$DEBUG" \
-        "$PROJECT_ROOT/build/mylang_tests" "${TEST_ARGS[@]}"
+        "$PROJECT_ROOT/build/fairuz_tests" "${TEST_ARGS[@]}"
 fi
 
 if [[ "$RUN_MAIN" == true ]]; then
@@ -101,7 +101,7 @@ if [[ "$RUN_MAIN" == true ]]; then
     fi
 
     ASAN_OPTIONS=detect_leaks="$DEBUG" \
-        "$PROJECT_ROOT/build/mylang" "${MAIN_ARGS[@]}"
+        "$PROJECT_ROOT/build/fairuz" "${MAIN_ARGS[@]}"
 fi
 
 if [[ "$RUN_INSTALL" == true ]]; then
@@ -115,10 +115,10 @@ if [[ "$RUN_INSTALL" == true ]]; then
     fi
 
     echo
-    echo "Installed mylang to: $INSTALL_PREFIX"
+    echo "Installed fairuz to: $INSTALL_PREFIX"
     echo "Run it directly with:"
-    echo "  $INSTALL_PREFIX/bin/mylang <file> [options]"
+    echo "  $INSTALL_PREFIX/bin/fairuz <file> [options]"
     echo
-    echo "If you want 'mylang' on your PATH for this shell:"
+    echo "If you want 'fairuz' on your PATH for this shell:"
     echo "  export PATH=\"$INSTALL_PREFIX/bin:\$PATH\""
 fi

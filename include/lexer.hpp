@@ -7,9 +7,9 @@
 #include <filesystem>
 #include <stack>
 
-#define MAKE_TOKEN(t, l, ln, c) getAllocator().allocateObject<tok::Token>(l, t, ln, c)
+#define MAKE_TOKEN(t, l, ln, c) getAllocator().allocateObject<tok::Fa_Token>(l, t, ln, c)
 
-namespace mylang::lex {
+namespace fairuz::lex {
 
 enum class FileManagerError {
     FILE_NOT_FOUND,
@@ -61,24 +61,24 @@ static constexpr char const* toString(FileManagerError error) noexcept
     }
 }
 
-class FileManager {
+class Fa_FileManager {
 public:
-    explicit FileManager(std::string const& filepath);
+    explicit Fa_FileManager(std::string const& filepath);
 
-    FileManager(FileManager&&) noexcept = delete;
-    FileManager& operator=(FileManager&&) noexcept = delete;
+    Fa_FileManager(Fa_FileManager&&) noexcept = delete;
+    Fa_FileManager& operator=(Fa_FileManager&&) noexcept = delete;
 
-    FileManager(FileManager const&) noexcept = delete;
-    FileManager& operator=(FileManager&) noexcept = delete;
+    Fa_FileManager(Fa_FileManager const&) noexcept = delete;
+    Fa_FileManager& operator=(Fa_FileManager&) noexcept = delete;
 
-    ~FileManager() = default;
+    ~Fa_FileManager() = default;
 
-    StringRef load(std::string const& filepath, bool const replace = false);
-    StringRef& buffer() { return InputBuffer_; }
-    StringRef const& buffer() const { return InputBuffer_; }
+    Fa_StringRef load(std::string const& filepath, bool const replace = false);
+    Fa_StringRef& buffer() { return InputBuffer_; }
+    Fa_StringRef const& buffer() const { return InputBuffer_; }
     std::string getPath() const { return FilePath_; }
 
-    StringRef getLineAt(uint32_t const line_idx) const
+    Fa_StringRef getLineAt(u32 const line_idx) const
     {
         if (line_idx == 0 || InputBuffer_.empty())
             return { };
@@ -86,7 +86,7 @@ public:
         char const* data = InputBuffer_.data();
         size_t const size = InputBuffer_.len();
 
-        uint32_t current_line = 1;
+        u32 current_line = 1;
         size_t line_start = 0;
 
         for (size_t i = 0; i <= size; ++i) {
@@ -96,7 +96,7 @@ public:
                     if (len > 0 && data[line_start + len - 1] == '\r')
                         --len;
 
-                    return StringRef(InputBuffer_.get(), line_start, len);
+                    return Fa_StringRef(InputBuffer_.get(), line_start, len);
                 }
                 ++current_line;
                 line_start = i + 1;
@@ -108,91 +108,91 @@ public:
 
 private:
     std::string FilePath_;
-    StringRef InputBuffer_;
+    Fa_StringRef InputBuffer_;
     std::filesystem::file_time_type LastKnownWriteTime_;
-}; // class FileManager
+}; // class Fa_FileManager
 
-class SourceManager {
+class Fa_SourceManager {
 public:
-    explicit SourceManager() = default;
+    explicit Fa_SourceManager() = default;
 
-    explicit SourceManager(FileManager* fm)
+    explicit Fa_SourceManager(Fa_FileManager* fm)
         : FileManager_(fm)
     {
         if (!FileManager_)
-            throw std::runtime_error("SourceManager: FileManager is null");
+            throw std::runtime_error("Fa_SourceManager: Fa_FileManager is null");
 
         reset();
     }
 
     void reset();
 
-    uint32_t getLineNumber() const { return Context_.line; }
-    uint32_t getColumnNumber() const { return Context_.column; }
-    uint64_t getFileOffset() const { return Context_.offset; }
+    u32 getLineNumber() const { return Context_.line; }
+    u32 getColumnNumber() const { return Context_.column; }
+    u64 getFileOffset() const { return Context_.offset; }
     std::string fpath() const noexcept { return FileManager_->getPath(); }
     bool done() const { return Context_.offset >= FileManager_->buffer().len(); }
-    [[nodiscard]] uint32_t peekChar();
-    uint32_t currentChar() const;
+    [[nodiscard]] u32 peekChar();
+    u32 currentChar() const;
     void consumeChar();
-    uint32_t nextChar();
-    void unget(uint32_t const cp);
-    StringRef getLineAt(uint32_t const line_idx) const { return FileManager_->getLineAt(line_idx); }
+    u32 nextChar();
+    void unget(u32 const cp);
+    Fa_StringRef getLineAt(u32 const line_idx) const { return FileManager_->getLineAt(line_idx); }
 
 private:
     struct Context {
-        uint32_t line { 1 };
-        uint32_t column { 1 };
-        uint64_t offset { 0 }; // byte offset
+        u32 line { 1 };
+        u32 column { 1 };
+        u64 offset { 0 }; // byte offset
     }; // struct Context
 
     struct PushbackEntry {
-        uint32_t ch { 0 };
+        u32 ch { 0 };
         Context ctx;
-        uint64_t bytes { 0 };
+        u64 bytes { 0 };
     }; // struct PushBackEntry
 
-    FileManager* FileManager_ { nullptr };
+    Fa_FileManager* FileManager_ { nullptr };
     Context Context_;
-    uint32_t Current_ { 0 };
-    uint64_t CurrentBytes_ { 0 };
+    u32 Current_ { 0 };
+    u64 CurrentBytes_ { 0 };
     std::stack<PushbackEntry> UngetStack_;
 
-    void advance(uint32_t const cp, uint64_t const bytes);
-    void rewindPosition_(uint32_t const cp, uint64_t const bytes);
-    uint32_t calculateColumnAtOffset(uint64_t const target_offset) const;
-}; // class SourceManager
+    void advance(u32 const cp, u64 const bytes);
+    void rewindPosition_(u32 const cp, u64 const bytes);
+    u32 calculateColumnAtOffset(u64 const target_offset) const;
+}; // class Fa_SourceManager
 
-class Lexer {
+class Fa_Lexer {
 public:
-    explicit Lexer() = default;
-    explicit Lexer(FileManager* file_manager);
-    explicit Lexer(Lexer const&) = delete;
-    explicit Lexer(Array<tok::Token const*>& seq /*, size_t const s*/);
+    explicit Fa_Lexer() = default;
+    explicit Fa_Lexer(Fa_FileManager* file_manager);
+    explicit Fa_Lexer(Fa_Lexer const&) = delete;
+    explicit Fa_Lexer(Fa_Array<tok::Fa_Token const*>& seq /*, size_t const s*/);
 
-    tok::Token const* operator()() { return next(); }
-    tok::Token const* current() const;
-    tok::Token const* next();
-    tok::Token const* peek(size_t n = 1);
-    Array<tok::Token const*> tokenize();
-    StringRef getLineAt(uint32_t const line_idx) const { return SourceManager_.getLineAt(line_idx); }
+    tok::Fa_Token const* operator()() { return next(); }
+    tok::Fa_Token const* current() const;
+    tok::Fa_Token const* next();
+    tok::Fa_Token const* peek(size_t n = 1);
+    Fa_Array<tok::Fa_Token const*> tokenize();
+    Fa_StringRef getLineAt(u32 const line_idx) const { return SourceManager_.getLineAt(line_idx); }
 
 private:
-    SourceManager SourceManager_;
+    Fa_SourceManager SourceManager_;
     size_t TokIndex_ { 0 };
     unsigned int IndentSize_ { 0 };
     unsigned int IndentLevel_ { 0 };
-    Array<tok::Token const*> TokStream_;
-    Array<unsigned int> IndentStack_;
-    Array<unsigned int> AltIndentStack_;
+    Fa_Array<tok::Fa_Token const*> TokStream_;
+    Fa_Array<unsigned int> IndentStack_;
+    Fa_Array<unsigned int> AltIndentStack_;
     bool AtBOL_ { true };
 
     // main lexer loop
-    tok::Token const* lexToken();
+    tok::Fa_Token const* lexToken();
 
-    void store(tok::Token const* tok);
-}; // class Lexer
+    void store(tok::Fa_Token const* tok);
+}; // class Fa_Lexer
 
-} // namespace mylang::lex
+} // namespace fairuz::lex
 
 #endif // LEXER_HPP

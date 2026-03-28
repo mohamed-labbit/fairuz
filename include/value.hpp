@@ -3,199 +3,199 @@
 
 #include "opcode.hpp"
 
-namespace mylang::runtime {
+namespace fairuz::runtime {
 
-using Value = uint64_t;
+using Fa_Value = u64;
 
-static constexpr Value NANBOX_QNAN = UINT64_C(0x7FF8000000000000);
-static constexpr Value NANBOX_SIGN_BIT = UINT64_C(0x8000000000000000);
-static constexpr Value TAG_INT = UINT64_C(0x7FF9000000000000);
-static constexpr Value TAG_OBJ = UINT64_C(0xFFF8000000000000);
-static constexpr Value PAYLOAD_MASK = UINT64_C(0x0000FFFFFFFFFFFF);
-static constexpr Value NIL_VAL = UINT64_C(0x7FF8000000000001);
-static constexpr Value FALSE_VAL = UINT64_C(0x7FF8000000000002);
-static constexpr Value TRUE_VAL = UINT64_C(0x7FF8000000000003);
-static constexpr uint64_t INT_TAG16 = UINT64_C(0x7FF9);
-static constexpr uint64_t OBJ_TAG16 = UINT64_C(0xFFF8);
+static constexpr Fa_Value NANBOX_QNAN = UINT64_C(0x7FF8000000000000);
+static constexpr Fa_Value NANBOX_SIGN_BIT = UINT64_C(0x8000000000000000);
+static constexpr Fa_Value TAG_INT = UINT64_C(0x7FF9000000000000);
+static constexpr Fa_Value TAG_OBJ = UINT64_C(0xFFF8000000000000);
+static constexpr Fa_Value PAYLOAD_MASK = UINT64_C(0x0000FFFFFFFFFFFF);
+static constexpr Fa_Value NIL_VAL = UINT64_C(0x7FF8000000000001);
+static constexpr Fa_Value FALSE_VAL = UINT64_C(0x7FF8000000000002);
+static constexpr Fa_Value TRUE_VAL = UINT64_C(0x7FF8000000000003);
+static constexpr u64 INT_TAG16 = UINT64_C(0x7FF9);
+static constexpr u64 OBJ_TAG16 = UINT64_C(0xFFF8);
 
-enum class ObjType : uint8_t {
+enum class Fa_ObjType : u8 {
     STRING,
     LIST,
     FUNCTION,
     CLOSURE,
     NATIVE,
     UPVALUE
-}; // enum ObjType
+}; // enum Fa_ObjType
 
-struct ObjHeader {
-    ObjType type { ObjType::UPVALUE };
+struct Fa_ObjHeader {
+    Fa_ObjType type { Fa_ObjType::UPVALUE };
     bool isMarked { false };
-    ObjHeader* next { nullptr };
+    Fa_ObjHeader* next { nullptr };
 
-    explicit ObjHeader(ObjType t) noexcept
+    explicit Fa_ObjHeader(Fa_ObjType t) noexcept
         : type(t)
     {
     }
-}; // struct ObjHeader
+}; // struct Fa_ObjHeader
 
-struct ObjString final : public ObjHeader {
-    StringRef str;
-    uint64_t hash;
+struct Fa_ObjString final : public Fa_ObjHeader {
+    Fa_StringRef str;
+    u64 hash;
 
-    explicit ObjString(StringRef s)
-        : ObjHeader(ObjType::STRING)
+    explicit Fa_ObjString(Fa_StringRef s)
+        : Fa_ObjHeader(Fa_ObjType::STRING)
         , str(s)
-        , hash(static_cast<uint64_t>(std::hash<StringRef> { }(s)))
+        , hash(static_cast<u64>(std::hash<Fa_StringRef> { }(s)))
     {
     }
-}; // struct ObjString
+}; // struct Fa_ObjString
 
-struct ObjList final : public ObjHeader {
-    Array<Value> elements;
+struct Fa_ObjList final : public Fa_ObjHeader {
+    Fa_Array<Fa_Value> elements;
 
-    ObjList()
-        : ObjHeader(ObjType::LIST)
+    Fa_ObjList()
+        : Fa_ObjHeader(Fa_ObjType::LIST)
     {
     }
 
-    void reserve(uint32_t cap) { elements.reserve(cap); }
-    uint32_t size() const { return elements.size(); }
-}; // struct ObjList
+    void reserve(u32 cap) { elements.reserve(cap); }
+    u32 size() const { return elements.size(); }
+}; // struct Fa_ObjList
 
-struct ObjFunction final : public ObjHeader {
+struct Fa_ObjFunction final : public Fa_ObjHeader {
     unsigned int arity { 0 };
     unsigned int upvalueCount { 0 };
-    Chunk* chunk { nullptr };
-    ObjString* name { nullptr };
+    Fa_Chunk* chunk { nullptr };
+    Fa_ObjString* name { nullptr };
 
-    explicit ObjFunction(Chunk* ch = nullptr)
-        : ObjHeader(ObjType::FUNCTION)
+    explicit Fa_ObjFunction(Fa_Chunk* ch = nullptr)
+        : Fa_ObjHeader(Fa_ObjType::FUNCTION)
         , chunk(ch)
     {
     }
-}; // struct ObjFunction
+}; // struct Fa_ObjFunction
 
-struct ObjUpvalue final : public ObjHeader {
-    Value* location { nullptr };
-    Value closed;
+struct ObjUpvalue final : public Fa_ObjHeader {
+    Fa_Value* location { nullptr };
+    Fa_Value closed;
     ObjUpvalue* nextOpen { nullptr };
 
-    explicit ObjUpvalue(Value* slot) noexcept
-        : ObjHeader(ObjType::UPVALUE)
+    explicit ObjUpvalue(Fa_Value* slot) noexcept
+        : Fa_ObjHeader(Fa_ObjType::UPVALUE)
         , location(slot)
     {
     }
 }; // struct ObjUpvalue
 
-struct ObjClosure final : public ObjHeader {
-    ObjFunction* function { nullptr };
-    Array<ObjUpvalue*> upValues;
+struct Fa_ObjClosure final : public Fa_ObjHeader {
+    Fa_ObjFunction* function { nullptr };
+    Fa_Array<ObjUpvalue*> upValues;
 
-    explicit ObjClosure(ObjFunction* fn)
-        : ObjHeader(ObjType::CLOSURE)
+    explicit Fa_ObjClosure(Fa_ObjFunction* fn)
+        : Fa_ObjHeader(Fa_ObjType::CLOSURE)
         , function(fn)
         , upValues(fn->upvalueCount, nullptr)
     {
     }
-}; // struct ObjClosure
+}; // struct Fa_ObjClosure
 
-class VM; // forward
+class Fa_VM; // forward
 
-using NativeFn = Value (VM::*)(int, Value*);
+using NativeFn = Fa_Value (Fa_VM::*)(int, Fa_Value*);
 
-struct ObjNative final : public ObjHeader {
+struct Fa_ObjNative final : public Fa_ObjHeader {
     NativeFn fn;
-    ObjString* name { nullptr };
+    Fa_ObjString* name { nullptr };
     int arity;
 
-    ObjNative(NativeFn f, ObjString* n, int a)
-        : ObjHeader(ObjType::NATIVE)
+    Fa_ObjNative(NativeFn f, Fa_ObjString* n, int a)
+        : Fa_ObjHeader(Fa_ObjType::NATIVE)
         , fn(f)
         , name(n)
         , arity(a)
     {
     }
-}; // struct ObjNative
+}; // struct Fa_ObjNative
 
-#define MAKE_OBJ_STRING(s) getAllocator().allocateObject<ObjString>(s)
-#define MAKE_OBJ_NATIVE(f, n, a) getAllocator().allocateObject<ObjNative>(f, n, a)
-#define MAKE_OBJ_LIST() GC_.make<ObjList>()
-#define MAKE_OBJ_FUNCTION(ch) GC_.make<ObjFunction>(ch)
-#define MAKE_OBJ_UPVALUE(slot) GC_.make<ObjUpvalue>(slot)
-#define MAKE_OBJ_CLOSURE(fn) GC_.make<ObjClosure>(fn)
+#define Fa_MAKE_OBJ_STRING(s) getAllocator().allocateObject<Fa_ObjString>(s)
+#define Fa_MAKE_OBJ_NATIVE(f, n, a) getAllocator().allocateObject<Fa_ObjNative>(f, n, a)
+#define Fa_MAKE_OBJ_LIST() GC_.make<Fa_ObjList>()
+#define Fa_MAKE_OBJ_FUNCTION(ch) GC_.make<Fa_ObjFunction>(ch)
+#define Fa_MAKE_OBJ_UPVALUE(slot) GC_.make<ObjUpvalue>(slot)
+#define Fa_MAKE_OBJ_CLOSURE(fn) GC_.make<Fa_ObjClosure>(fn)
 
-#define MAKE_OBJECT(p) TAG_OBJ | (reinterpret_cast<uintptr_t>(p) & PAYLOAD_MASK)
-#define MAKE_STRING(v)                                                \
-    ({                                                                \
-        ObjString* obj = getAllocator().allocateObject<ObjString>(v); \
-        TAG_OBJ | (reinterpret_cast<uintptr_t>(obj) & PAYLOAD_MASK);  \
+#define Fa_MAKE_OBJECT(p) TAG_OBJ | (reinterpret_cast<uintptr_t>(p) & PAYLOAD_MASK)
+#define Fa_MAKE_STRING(v)                                                   \
+    ({                                                                      \
+        Fa_ObjString* obj = getAllocator().allocateObject<Fa_ObjString>(v); \
+        TAG_OBJ | (reinterpret_cast<uintptr_t>(obj) & PAYLOAD_MASK);        \
     })
-#define MAKE_LIST()                                                  \
+#define Fa_MAKE_LIST()                                               \
     ({                                                               \
-        ObjList* obj = GC_.make<ObjList>();                          \
+        Fa_ObjList* obj = GC_.make<Fa_ObjList>();                    \
         TAG_OBJ | (reinterpret_cast<uintptr_t>(obj) & PAYLOAD_MASK); \
     })
-#define MAKE_FUNCTION(ch)                                            \
+#define Fa_MAKE_FUNCTION(ch)                                         \
     ({                                                               \
-        ObjFunction* obj = GC_.make<ObjFunction>(ch);                \
+        Fa_ObjFunction* obj = GC_.make<Fa_ObjFunction>(ch);          \
         TAG_OBJ | (reinterpret_cast<uintptr_t>(obj) & PAYLOAD_MASK); \
     })
-#define MAKE_UPVALUE(slot)                                           \
+#define Fa_MAKE_UPVALUE(slot)                                        \
     ({                                                               \
         ObjUpvalue* obj = GC_.make<ObjUpvalue>(slot);                \
         TAG_OBJ | (reinterpret_cast<uintptr_t>(obj) & PAYLOAD_MASK); \
     })
-#define MAKE_CLOSURE(fn)                                             \
+#define Fa_MAKE_CLOSURE(fn)                                          \
     ({                                                               \
-        ObjClosure* obj = GC_.make<ObjClosure>(fn);                  \
+        Fa_ObjClosure* obj = GC_.make<Fa_ObjClosure>(fn);            \
         TAG_OBJ | (reinterpret_cast<uintptr_t>(obj) & PAYLOAD_MASK); \
     })
-#define MAKE_NATIVE(f, n, a)                                                \
-    ({                                                                      \
-        ObjNative* obj = getAllocator().allocateObject<ObjNative>(f, n, a); \
-        TAG_OBJ | (reinterpret_cast<uintptr_t>(obj) & PAYLOAD_MASK);        \
+#define Fa_MAKE_NATIVE(f, n, a)                                                   \
+    ({                                                                            \
+        Fa_ObjNative* obj = getAllocator().allocateObject<Fa_ObjNative>(f, n, a); \
+        TAG_OBJ | (reinterpret_cast<uintptr_t>(obj) & PAYLOAD_MASK);              \
     })
 
-#define MAKE_REAL(d)                                  \
+#define Fa_MAKE_REAL(d)                               \
     ({                                                \
         auto _tmp = (d);                              \
-        Value bits;                                   \
+        Fa_Value bits;                                \
         __builtin_memcpy(&bits, &_tmp, sizeof(bits)); \
         bits;                                         \
     })
-#define MAKE_BOOL(b) ((b) ? TRUE_VAL : FALSE_VAL)
-#define MAKE_INTEGER(v) (static_cast<Value>(v) & PAYLOAD_MASK) | TAG_INT
+#define Fa_MAKE_BOOL(b) ((b) ? TRUE_VAL : FALSE_VAL)
+#define Fa_MAKE_INTEGER(v) (static_cast<Fa_Value>(v) & PAYLOAD_MASK) | TAG_INT
 
-#define IS_NIL(v) ((v) == NIL_VAL)
-#define IS_BOOL(v) (((v) | 1) == TRUE_VAL)
-#define IS_INTEGER(v) (((v) >> 48) == INT_TAG16)
-#define IS_OBJECT(v) (((v) >> 48) == OBJ_TAG16)
-#define IS_DOUBLE(v)                                                                               \
+#define Fa_IS_NIL(v) ((v) == NIL_VAL)
+#define Fa_IS_BOOL(v) (((v) | 1) == TRUE_VAL)
+#define Fa_IS_INTEGER(v) (((v) >> 48) == INT_TAG16)
+#define Fa_IS_OBJECT(v) (((v) >> 48) == OBJ_TAG16)
+#define Fa_IS_DOUBLE(v)                                                                            \
     ({                                                                                             \
-        Value _vd = (v);                                                                           \
-        uint64_t _top = _vd >> 48;                                                                 \
+        Fa_Value _vd = (v);                                                                        \
+        u64 _top = _vd >> 48;                                                                      \
         (_top != INT_TAG16 && _top != OBJ_TAG16 && !((_vd | 1) == TRUE_VAL) && !(_vd == NIL_VAL)); \
     })
 
-#define IS_NUMBER(v)                                                                                 \
+#define Fa_IS_NUMBER(v)                                                                              \
     ({                                                                                               \
-        Value _vn = (v);                                                                             \
-        uint64_t _top = _vn >> 48;                                                                   \
+        Fa_Value _vn = (v);                                                                          \
+        u64 _top = _vn >> 48;                                                                        \
         (_top == INT_TAG16) || (_top != OBJ_TAG16 && !((_vn | 1) == TRUE_VAL) && !(_vn == NIL_VAL)); \
     })
 
-#define IS_STRING(v) (IS_OBJECT(v) && reinterpret_cast<ObjHeader*>((v) & PAYLOAD_MASK)->type == ObjType::STRING)
-#define IS_LIST(v) (IS_OBJECT(v) && reinterpret_cast<ObjHeader*>((v) & PAYLOAD_MASK)->type == ObjType::LIST)
-#define IS_FUNCTION(v) (IS_OBJECT(v) && reinterpret_cast<ObjHeader*>((v) & PAYLOAD_MASK)->type == ObjType::FUNCTION)
-#define IS_CLOSURE(v) (IS_OBJECT(v) && reinterpret_cast<ObjHeader*>((v) & PAYLOAD_MASK)->type == ObjType::CLOSURE)
-#define IS_NATIVE(v) (IS_OBJECT(v) && reinterpret_cast<ObjHeader*>((v) & PAYLOAD_MASK)->type == ObjType::NATIVE)
-#define IS_TRUTHY(v)                             \
+#define Fa_IS_STRING(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::STRING)
+#define Fa_IS_LIST(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::LIST)
+#define Fa_IS_FUNCTION(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::FUNCTION)
+#define Fa_IS_CLOSURE(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::CLOSURE)
+#define Fa_IS_NATIVE(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::NATIVE)
+#define Fa_IS_TRUTHY(v)                          \
     ({                                           \
-        Value _v = (v);                          \
-        uint64_t _tag = _v >> 48;                \
+        Fa_Value _v = (v);                       \
+        u64 _tag = _v >> 48;                     \
         bool _res;                               \
                                                  \
-        if (UNLIKELY(IS_NIL(_v)))                \
+        if (UNLIKELY(Fa_IS_NIL(_v)))             \
             _res = false;                        \
         else if (UNLIKELY((_v | 1) == TRUE_VAL)) \
             _res = (_v & 1);                     \
@@ -209,42 +209,42 @@ struct ObjNative final : public ObjHeader {
         _res;                                    \
     })
 
-#define AS_BOOL(v) ((v) & 1)
-#define AS_INTEGER(v)                                     \
-    ({                                                    \
-        int64_t _payload = (int64_t)((v) & PAYLOAD_MASK); \
-        if (_payload & (INT64_C(1) << 47))                \
-            _payload |= ~PAYLOAD_MASK;                    \
-        _payload;                                         \
+#define Fa_AS_BOOL(v) ((v) & 1)
+#define Fa_AS_INTEGER(v)                          \
+    ({                                            \
+        i64 _payload = (i64)((v) & PAYLOAD_MASK); \
+        if (_payload & (INT64_C(1) << 47))        \
+            _payload |= ~PAYLOAD_MASK;            \
+        _payload;                                 \
     })
 
-#define AS_DOUBLE(v)                            \
+#define Fa_AS_DOUBLE(v)                         \
     ({                                          \
-        Value _v = (v);                         \
-        double _d;                              \
+        Fa_Value _v = (v);                      \
+        f64 _d;                                 \
         __builtin_memcpy(&_d, &_v, sizeof(_d)); \
         _d;                                     \
     })
 
-#define AS_DOUBLE_ANY(v)                            \
+#define Fa_AS_DOUBLE_ANY(v)                         \
     ({                                              \
-        Value _v = (v);                             \
-        double _d;                                  \
-        if (IS_INTEGER(_v))                         \
-            _d = (double)AS_INTEGER(_v);            \
+        Fa_Value _v = (v);                          \
+        f64 _d;                                     \
+        if (Fa_IS_INTEGER(_v))                      \
+            _d = (f64)Fa_AS_INTEGER(_v);            \
         else                                        \
             __builtin_memcpy(&_d, &_v, sizeof(_d)); \
         _d;                                         \
     })
 
-#define AS_OBJECT(v) reinterpret_cast<ObjHeader*>(static_cast<uintptr_t>((v) & PAYLOAD_MASK))
-#define AS_STRING(v) static_cast<ObjString*>(AS_OBJECT(v))
-#define AS_LIST(v) static_cast<ObjList*>(AS_OBJECT(v))
-#define AS_FUNCTION(v) static_cast<ObjFunction*>(AS_OBJECT(v))
-#define AS_CLOSURE(v) static_cast<ObjClosure*>(AS_OBJECT(v))
-#define AS_NATIVE(v) static_cast<ObjNative*>(AS_OBJECT(v))
+#define Fa_AS_OBJECT(v) reinterpret_cast<Fa_ObjHeader*>(static_cast<uintptr_t>((v) & PAYLOAD_MASK))
+#define Fa_AS_STRING(v) static_cast<Fa_ObjString*>(Fa_AS_OBJECT(v))
+#define Fa_AS_LIST(v) static_cast<Fa_ObjList*>(Fa_AS_OBJECT(v))
+#define Fa_AS_FUNCTION(v) static_cast<Fa_ObjFunction*>(Fa_AS_OBJECT(v))
+#define Fa_AS_CLOSURE(v) static_cast<Fa_ObjClosure*>(Fa_AS_OBJECT(v))
+#define Fa_AS_NATIVE(v) static_cast<Fa_ObjNative*>(Fa_AS_OBJECT(v))
 
-enum class TypeTag : uint8_t {
+enum class Fa_TypeTag : u8 {
     NONE = 0,
     NIL = 1 << 0,
     BOOL = 1 << 1,
@@ -254,45 +254,45 @@ enum class TypeTag : uint8_t {
     LIST = 1 << 5,
     CLOSURE = 1 << 6,
     NATIVE = 1 << 7
-}; // enum TypeTag
+}; // enum Fa_TypeTag
 
-[[nodiscard]] inline bool hasTag(TypeTag mask, TypeTag t) noexcept { return (static_cast<uint8_t>(mask) & static_cast<uint8_t>(t)) != 0; }
+[[nodiscard]] inline bool hasTag(Fa_TypeTag mask, Fa_TypeTag t) noexcept { return (static_cast<u8>(mask) & static_cast<u8>(t)) != 0; }
 
-[[nodiscard]] inline TypeTag operator|(TypeTag a, TypeTag b) noexcept
+[[nodiscard]] inline Fa_TypeTag operator|(Fa_TypeTag a, Fa_TypeTag b) noexcept
 {
-    return static_cast<TypeTag>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
+    return static_cast<Fa_TypeTag>(static_cast<u8>(a) | static_cast<u8>(b));
 }
 
-inline TypeTag& operator|=(TypeTag& a, TypeTag b) noexcept { return a = a | b; }
+inline Fa_TypeTag& operator|=(Fa_TypeTag& a, Fa_TypeTag b) noexcept { return a = a | b; }
 
-[[nodiscard]] inline TypeTag valueTypeTag(Value v) noexcept
+[[nodiscard]] inline Fa_TypeTag valueTypeTag(Fa_Value v) noexcept
 {
-    if (IS_NIL(v))
-        return TypeTag::NIL;
-    if (IS_BOOL(v))
-        return TypeTag::BOOL;
-    if (IS_INTEGER(v))
-        return TypeTag::INT;
-    if (IS_DOUBLE(v))
-        return TypeTag::DOUBLE;
+    if (Fa_IS_NIL(v))
+        return Fa_TypeTag::NIL;
+    if (Fa_IS_BOOL(v))
+        return Fa_TypeTag::BOOL;
+    if (Fa_IS_INTEGER(v))
+        return Fa_TypeTag::INT;
+    if (Fa_IS_DOUBLE(v))
+        return Fa_TypeTag::DOUBLE;
 
-    if (IS_OBJECT(v)) {
-        switch (AS_OBJECT(v)->type) {
-        case ObjType::STRING:
-            return TypeTag::STRING;
-        case ObjType::LIST:
-            return TypeTag::LIST;
-        case ObjType::CLOSURE:
-            return TypeTag::CLOSURE;
-        case ObjType::NATIVE:
-            return TypeTag::NATIVE;
+    if (Fa_IS_OBJECT(v)) {
+        switch (Fa_AS_OBJECT(v)->type) {
+        case Fa_ObjType::STRING:
+            return Fa_TypeTag::STRING;
+        case Fa_ObjType::LIST:
+            return Fa_TypeTag::LIST;
+        case Fa_ObjType::CLOSURE:
+            return Fa_TypeTag::CLOSURE;
+        case Fa_ObjType::NATIVE:
+            return Fa_TypeTag::NATIVE;
         default:
-            return TypeTag::NONE;
+            return Fa_TypeTag::NONE;
         }
     }
-    return TypeTag::NONE;
+    return Fa_TypeTag::NONE;
 }
 
-} // namespace mylang::runtime
+} // namespace fairuz::runtime
 
 #endif // VALUE_HPP

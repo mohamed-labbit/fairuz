@@ -7,9 +7,9 @@
 #include <iostream>
 #include <sstream>
 
-namespace mylang::diagnostic {
+namespace fairuz::diagnostic {
 
-void DiagnosticEngine::report(Severity const sev, uint32_t const line, uint16_t const col, uint16_t err_code, std::string const& code)
+void Fa_DiagnosticEngine::report(Severity const sev, u32 const line, u16 const col, u16 err_code, std::string const& code)
 {
     if (sev == Severity::ERROR && ErrorCount_ >= LIMIT)
         return;
@@ -24,32 +24,32 @@ void DiagnosticEngine::report(Severity const sev, uint32_t const line, uint16_t 
         ++WarningCount_;
 }
 
-void DiagnosticEngine::addSuggestion(std::string const& suggestion)
+void Fa_DiagnosticEngine::addSuggestion(std::string const& suggestion)
 {
     if (!Diagnostics_.empty())
         Diagnostics_.back().suggestions.push_back(suggestion);
 }
 
-void DiagnosticEngine::addNote(int32_t line, std::string const& note)
+void Fa_DiagnosticEngine::addNote(i32 line, std::string const& note)
 {
     if (!Diagnostics_.empty())
         Diagnostics_.back().notes.push_back({ line, note });
 }
 
-void DiagnosticEngine::emitError(std::string const& msg, Severity const sv)
+void Fa_DiagnosticEngine::emitError(std::string const& msg, Severity const sv)
 {
     std::cerr << svToStr(sv) << ": " << msg << "\n";
     if (sv == Severity::FATAL)
         throw std::runtime_error(msg);
 }
 
-[[noreturn]] void DiagnosticEngine::_panic(std::string const& msg) const
+[[noreturn]] void Fa_DiagnosticEngine::_panic(std::string const& msg) const
 {
     std::cerr << Color::BOLD << Color::RED << "fatal" << Color::RESET << ": " << msg << "\n";
     std::terminate();
 }
 
-std::string DiagnosticEngine::svToStr(Severity const sv)
+std::string Fa_DiagnosticEngine::svToStr(Severity const sv)
 {
     switch (sv) {
     case Severity::NOTE:
@@ -65,7 +65,7 @@ std::string DiagnosticEngine::svToStr(Severity const sv)
     }
 }
 
-std::vector<std::string> DiagnosticEngine::splitLines(std::string const& text) const
+std::vector<std::string> Fa_DiagnosticEngine::splitLines(std::string const& text) const
 {
     std::vector<std::string> lines;
     std::stringstream ss(text);
@@ -75,14 +75,14 @@ std::vector<std::string> DiagnosticEngine::splitLines(std::string const& text) c
     return lines;
 }
 
-std::string DiagnosticEngine::toJSON() const
+std::string Fa_DiagnosticEngine::toJSON() const
 {
     std::stringstream ss;
     ss << "[\n";
     for (size_t i = 0; i < Diagnostics_.size(); ++i) {
         Diagnostic const& d = Diagnostics_[i];
         ss << "  {\n";
-        ss << "    \"severity\": " << static_cast<int32_t>(d.severity) << ",\n";
+        ss << "    \"severity\": " << static_cast<i32>(d.severity) << ",\n";
         ss << "    \"line\": " << d.line << ",\n";
         ss << "    \"column\": " << d.column << ",\n";
         ss << "    \"message\": \"" << errorMessageFor(d.err_code) << "\",\n";
@@ -96,7 +96,7 @@ std::string DiagnosticEngine::toJSON() const
     return ss.str();
 }
 
-void DiagnosticEngine::prettyPrint() const
+void Fa_DiagnosticEngine::prettyPrint() const
 {
     if (Diagnostics_.empty())
         return;
@@ -156,4 +156,4 @@ void DiagnosticEngine::prettyPrint() const
                   << "further errors suppressed (limit: " << LIMIT << ")\n\n";
 }
 
-} // namespace mylang::diagnostic
+} // namespace fairuz::diagnostic

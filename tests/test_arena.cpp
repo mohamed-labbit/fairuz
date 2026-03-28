@@ -2,19 +2,19 @@
 
 #include <gtest/gtest.h>
 
-using namespace mylang;
+using namespace fairuz;
 
 class TestAllocator {
 private:
-    ArenaAllocator Allocator_;
+    Fa_ArenaAllocator Allocator_;
 
 public:
     TestAllocator()
-        : Allocator_(static_cast<int32_t>(ArenaAllocator::GrowthStrategy::LINEAR))
+        : Allocator_(static_cast<i32>(Fa_ArenaAllocator::GrowthStrategy::LINEAR))
     {
     }
 
-    ArenaAllocator& get() noexcept { return std::ref<ArenaAllocator>(Allocator_); }
+    Fa_ArenaAllocator& get() noexcept { return std::ref<Fa_ArenaAllocator>(Allocator_); }
 
     template<typename T, typename... Args>
     T* allocate(size_t count, Args&&... args)
@@ -83,12 +83,12 @@ TEST(ArenaAllocatorTest, AllocateLargeArray)
 {
     TestAllocator arena;
     constexpr size_t count = 10000;
-    double* arr = arena.allocate<double>(count);
+    f64* arr = arena.allocate<f64>(count);
 
     ASSERT_NE(arr, nullptr);
 
     for (size_t i = 0; i < count; ++i)
-        arr[i] = static_cast<double>(i) * 1.5;
+        arr[i] = static_cast<f64>(i) * 1.5;
 
     EXPECT_EQ(arr[0], 0.0);
     EXPECT_EQ(arr[count - 1], (count - 1) * 1.5);
@@ -106,7 +106,7 @@ TEST(ArenaAllocatorTest, AllocateChar)
 TEST(ArenaAllocatorTest, AllocateDouble)
 {
     TestAllocator arena;
-    double* ptr = arena.allocate<double>(1);
+    f64* ptr = arena.allocate<f64>(1);
     ASSERT_NE(ptr, nullptr);
     *ptr = 3.14159;
     EXPECT_DOUBLE_EQ(*ptr, 3.14159);
@@ -124,14 +124,14 @@ TEST(ArenaAllocatorTest, AllocateFloat)
 TEST(ArenaAllocatorTest, AllocateLongLong)
 {
     TestAllocator arena;
-    int64_t* ptr = arena.allocate<int64_t>(1);
+    i64* ptr = arena.allocate<i64>(1);
     ASSERT_NE(ptr, nullptr);
     *ptr = 9223372036854775807LL;
     EXPECT_EQ(*ptr, 9223372036854775807LL);
 }
 
 struct Point {
-    double x, y, z;
+    f64 x, y, z;
 };
 
 TEST(ArenaAllocatorTest, AllocatePODStruct)
@@ -284,13 +284,13 @@ TEST(ArenaAllocatorTest, ProperAlignment)
 {
     TestAllocator arena;
 
-    double* d = arena.allocate<double>(1);
+    f64* d = arena.allocate<f64>(1);
     ASSERT_NE(d, nullptr);
-    EXPECT_EQ(reinterpret_cast<uintptr_t>(d) % alignof(double), 0);
+    EXPECT_EQ(reinterpret_cast<uintptr_t>(d) % alignof(f64), 0);
 
-    int64_t* ll = arena.allocate<int64_t>(1);
+    i64* ll = arena.allocate<i64>(1);
     ASSERT_NE(ll, nullptr);
-    EXPECT_EQ(reinterpret_cast<uintptr_t>(ll) % alignof(int64_t), 0);
+    EXPECT_EQ(reinterpret_cast<uintptr_t>(ll) % alignof(i64), 0);
 }
 
 struct alignas(64) AlignedStruct {
@@ -353,7 +353,7 @@ TEST(ArenaAllocatorTest, MixedSizeAllocations)
             ASSERT_NE(ptr, nullptr);
             ptrs.push_back(ptr);
         } else if (i % 3 == 1) {
-            double* ptr = arena.allocate<double>(size);
+            f64* ptr = arena.allocate<f64>(size);
             ASSERT_NE(ptr, nullptr);
             ptrs.push_back(ptr);
         } else {
@@ -421,30 +421,30 @@ TEST(ArenaAllocatorTest, ConsecutiveAllocations)
     EXPECT_GE(diff2, sizeof(int));
 }
 
-TEST(ArenaBlockTest, DefaultConstruction)
+TEST(F_ArenaBlockTest, DefaultConstruction)
 {
-    ArenaBlock block;
+    Fa_ArenaBlock block;
     EXPECT_EQ(block.size(), DEFAULT_BLOCK_SIZE);
     EXPECT_NE(block.begin(), nullptr);
 }
 
-TEST(ArenaBlockTest, CustomSize)
+TEST(F_ArenaBlockTest, CustomSize)
 {
-    ArenaBlock block(1024);
+    Fa_ArenaBlock block(1024);
     EXPECT_EQ(block.size(), 1024);
 }
 
-TEST(ArenaBlockTest, AllocateFromBlock)
+TEST(F_ArenaBlockTest, AllocateFromBlock)
 {
-    ArenaBlock block(1024);
+    Fa_ArenaBlock block(1024);
     unsigned char* ptr = block.reserve(128);
     ASSERT_NE(ptr, nullptr);
     EXPECT_LE(block.remaining(), 1024);
 }
 
-TEST(ArenaBlockTest, BlockExhaustion)
+TEST(F_ArenaBlockTest, BlockExhaustion)
 {
-    ArenaBlock block(128);
+    Fa_ArenaBlock block(128);
     unsigned char* ptr1 = block.reserve(64);
     ASSERT_NE(ptr1, nullptr);
 
@@ -455,13 +455,13 @@ TEST(ArenaBlockTest, BlockExhaustion)
     EXPECT_EQ(ptr3, nullptr);
 }
 
-TEST(ArenaBlockTest, MoveConstruction)
+TEST(F_ArenaBlockTest, MoveConstruction)
 {
-    ArenaBlock block1(1024);
+    Fa_ArenaBlock block1(1024);
     unsigned char* ptr = block1.reserve(128);
     ASSERT_NE(ptr, nullptr);
 
-    ArenaBlock block2(std::move(block1));
+    Fa_ArenaBlock block2(std::move(block1));
     EXPECT_EQ(block2.size(), 1024);
     EXPECT_EQ(block1.size(), 0);
     EXPECT_EQ(block1.begin(), nullptr);

@@ -1,14 +1,16 @@
 #ifndef DIAGNOSTIC_HPP
 #define DIAGNOSTIC_HPP
 
+#include "macros.hpp"
+
 #include <cstdint>
 #include <string>
 #include <type_traits>
 #include <vector>
 
-namespace mylang::diagnostic {
+namespace fairuz::diagnostic {
 
-enum class Severity : uint8_t {
+enum class Severity : u8 {
     NOTE,
     FATAL,
     ERROR,
@@ -19,7 +21,7 @@ namespace errc {
 
 namespace lexer {
 
-enum class Code : uint16_t {
+enum class Code : u16 {
     FILE_NOT_OPEN = 0x0001,
     INVALID_OCTAL_DIGIT = 0x0002,
     INVALID_BINARY_DIGIT = 0x0003,
@@ -38,7 +40,7 @@ enum class Code : uint16_t {
 
 namespace parser {
 
-enum class Code : uint16_t {
+enum class Code : u16 {
     EXPECTED_INDENT = 0x0101,
     EXPECTED_DEDENT = 0x0102,
     EXPECTED_LPAREN = 0x0103,
@@ -65,7 +67,7 @@ enum class Code : uint16_t {
 
 namespace sema {
 
-enum class Code : uint16_t {
+enum class Code : u16 {
     UNDEFINED_VARIABLE = 0x0200,
     UNDEFINED_FUNCTION = 0x0201,
     NOT_CALLABLE = 0x0202,
@@ -85,7 +87,7 @@ enum class Code : uint16_t {
 
 namespace compiler {
 
-enum class Code : uint16_t {
+enum class Code : u16 {
     NULL_AST_ROOT = 0x0300,
     INVALID_STATEMENT_NODE = 0x0301,
     INVALID_EXPRESSION_NODE = 0x0302,
@@ -107,7 +109,7 @@ enum class Code : uint16_t {
 
 namespace runtime {
 
-enum class Code : uint16_t {
+enum class Code : u16 {
     STACK_OVERFLOW = 0x0400,
     STACK_UNDERFLOW = 0x0401,
     DIVISION_BY_ZERO = 0x0402,
@@ -127,13 +129,14 @@ enum class Code : uint16_t {
     NON_FUNCTION_CALL = 0x0410,
     NATIVE_ARG_COUNT = 0x0411,
     NATIVE_TYPE_ERROR = 0x0412,
+    ASSERTION_FAILED = 0x0413,
 }; // enum Code
 
 } // namespace runtime
 
 namespace stdlib {
 
-enum class Code : uint16_t {
+enum class Code : u16 {
     APPEND_ARG_COUNT = 0x0500,
     APPEND_TYPE_ERROR = 0x0501,
     POP_ARG_COUNT = 0x0502,
@@ -157,13 +160,15 @@ enum class Code : uint16_t {
     POW_TYPE_ERROR = 0x0514,
     SQRT_ARG_COUNT = 0x0515,
     SQRT_TYPE_ERROR = 0x0516,
+    ASSERT_ARG_COUNT = 0x0517,
+    ASSERT_FAILED = 0x0518,
 }; // enum Code
 
 } // namespace stdlib
 
 namespace container {
 
-enum class Code : uint16_t {
+enum class Code : u16 {
     ARRAY_EMPTY_BACK = 0x0600,
     ARRAY_EMPTY_FRONT = 0x0601,
     ARRAY_CAPACITY_EXCEEDED = 0x0602,
@@ -176,7 +181,7 @@ enum class Code : uint16_t {
 
 namespace general {
 
-enum class Code : uint16_t {
+enum class Code : u16 {
     ALLOC_FAILED = 0x0700,
     ARENA_EXHAUSTED = 0x0701,
     INTERNAL_ERROR = 0x0702,
@@ -190,7 +195,7 @@ enum class Code : uint16_t {
 
 } // namespace errc
 
-static constexpr char const* errorMessageFor(uint16_t code)
+static constexpr char const* errorMessageFor(u16 code)
 {
     switch (code) {
     // lexer
@@ -265,7 +270,7 @@ static constexpr char const* errorMessageFor(uint16_t code)
     case 0x0201:
         return "Undefined function";
     case 0x0202:
-        return "Expression is not callable";
+        return "expression is not callable";
     case 0x0203:
         return "Redeclaration of identifier";
     case 0x0204:
@@ -285,7 +290,7 @@ static constexpr char const* errorMessageFor(uint16_t code)
     case 0x020B:
         return "Infinite loop detected (condition is always true)";
     case 0x020C:
-        return "Expression result is not used";
+        return "expression result is not used";
     // compiler
     case 0x0300:
         return "Compiler received a null AST root";
@@ -405,13 +410,13 @@ static constexpr char const* errorMessageFor(uint16_t code)
         return "sqrt() expects a numeric argument";
     // containers
     case 0x0600:
-        return "Array::back() called on an empty array";
+        return "Fa_Array::back() called on an empty array";
     case 0x0601:
-        return "Array::front() called on an empty array";
+        return "Fa_Array::front() called on an empty array";
     case 0x0602:
         return "Requested array capacity exceeds the maximum";
     case 0x0603:
-        return "Array index is out of bounds";
+        return "Fa_Array index is out of bounds";
     case 0x0604:
         return "String slice start index is out of range";
     case 0x0605:
@@ -426,7 +431,7 @@ static constexpr char const* errorMessageFor(uint16_t code)
     case 0x0703:
         return "Unknown error";
     case 0x0704:
-        return "AllocatorContext is not initialized";
+        return "Fa_AllocatorContext is not initialized";
     case 0x0705:
         return "mmap failed";
     case 0x0706:
@@ -436,24 +441,24 @@ static constexpr char const* errorMessageFor(uint16_t code)
     }
 }
 
-class DiagnosticEngine {
+class Fa_DiagnosticEngine {
 public:
     struct Diagnostic {
         Severity severity;
-        uint32_t line;
-        uint16_t column;
-        uint16_t err_code;
+        u32 line;
+        u16 column;
+        u16 err_code;
         std::string code;
         std::vector<std::string> suggestions;
-        std::vector<std::pair<int32_t, std::string>> notes;
+        std::vector<std::pair<i32, std::string>> notes;
     }; // struct Diagnostic
 
     // Maximum number of errors before the engine stops accumulating and
     // the parser should stop trying to recover. FATAL diagnostics bypass
     // this limit and always get recorded.
-    static constexpr uint32_t LIMIT = 20;
+    static constexpr u32 LIMIT = 20;
 
-    DiagnosticEngine() = default;
+    Fa_DiagnosticEngine() = default;
 
     // --- existing API, unchanged ---
 
@@ -470,10 +475,10 @@ public:
     // If the engine is saturated (error count >= LIMIT), non-FATAL diagnostics
     // are silently dropped — the existing diagnostic list is still valid and
     // will be emitted in full when dump() is called.
-    void report(Severity const sev, uint32_t const line, uint16_t const col, uint16_t err_code, std::string const& code = "");
+    void report(Severity const sev, u32 const line, u16 const col, u16 err_code, std::string const& code = "");
 
     void addSuggestion(std::string const& suggestion);
-    void addNote(int32_t line, std::string const& note);
+    void addNote(i32 line, std::string const& note);
 
     std::string toJSON() const;
 
@@ -491,8 +496,8 @@ public:
     // produce noise.
     bool isSaturated() const noexcept { return ErrorCount_ >= LIMIT; }
 
-    uint32_t errorCount() const noexcept { return ErrorCount_; }
-    uint32_t warningCount() const noexcept { return WarningCount_; }
+    u32 errorCount() const noexcept { return ErrorCount_; }
+    u32 warningCount() const noexcept { return WarningCount_; }
 
     // Clears all accumulated diagnostics. Intended for unit tests that run
     // multiple parse passes through the same engine instance.
@@ -505,24 +510,24 @@ public:
 
 private:
     std::vector<Diagnostic> Diagnostics_;
-    uint32_t ErrorCount_ = 0;
-    uint32_t WarningCount_ = 0;
+    u32 ErrorCount_ = 0;
+    u32 WarningCount_ = 0;
 
     void emitError(std::string const& msg, Severity const sv);
     [[noreturn]] void _panic(std::string const& msg) const;
     static std::string svToStr(Severity const sv);
     std::vector<std::string> splitLines(std::string const& text) const;
-}; // class DiagnosticEngine
+}; // class Fa_DiagnosticEngine
 
 // --- module-level singletons and forwarding functions, unchanged ---
 
-inline DiagnosticEngine engine;
+inline Fa_DiagnosticEngine engine;
 
 template<typename CodeEnum>
-static constexpr uint16_t codeValue(CodeEnum code)
+static constexpr u16 codeValue(CodeEnum code)
 {
     static_assert(std::is_enum_v<CodeEnum>, "diagnostic code must be an enum");
-    return static_cast<uint16_t>(code);
+    return static_cast<u16>(code);
 }
 
 static void emit(std::string const& msg, Severity const sv = Severity::ERROR) { engine.emit(msg, sv); }
@@ -559,13 +564,13 @@ template<typename CodeEnum>
     engine.panic(message);
 }
 
-static void report(Severity const sev, uint32_t const line, uint16_t const col, uint16_t err_code, std::string const& code = "")
+static void report(Severity const sev, u32 const line, u16 const col, u16 err_code, std::string const& code = "")
 {
     engine.report(sev, line, col, err_code, code);
 }
 
 template<typename CodeEnum>
-static void report(Severity const sev, uint32_t const line, uint16_t const col, CodeEnum code, std::string const& snippet = "")
+static void report(Severity const sev, u32 const line, u16 const col, CodeEnum code, std::string const& snippet = "")
 {
     engine.report(sev, line, col, codeValue(code), snippet);
 }
@@ -582,10 +587,10 @@ static void dump() { engine.prettyPrint(); }
 // reach into engine directly.
 static bool hasErrors() noexcept { return engine.hasErrors(); }
 static bool isSaturated() noexcept { return engine.isSaturated(); }
-static uint32_t errorCount() noexcept { return engine.errorCount(); }
-static uint32_t warningCount() noexcept { return engine.warningCount(); }
+static u32 errorCount() noexcept { return engine.errorCount(); }
+static u32 warningCount() noexcept { return engine.warningCount(); }
 static void reset() noexcept { engine.reset(); }
 
-} // namespace mylang::diagnostic
+} // namespace fairuz::diagnostic
 
 #endif // DIAGNOSTIC_HPP

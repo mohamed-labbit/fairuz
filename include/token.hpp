@@ -5,13 +5,13 @@
 
 #include <sstream>
 
-namespace mylang::tok {
+namespace fairuz::tok {
 
 struct Location {
     std::string filepath { "" };
-    uint32_t line { 0 };
-    uint16_t column { 0 };
-    uint64_t FilePos { 0 };
+    u32 line { 0 };
+    u16 column { 0 };
+    u64 FilePos { 0 };
 
     Location() = default;
 
@@ -24,7 +24,7 @@ struct Location {
     }
 }; // struct Location
 
-enum class TokenType : int {
+enum class Fa_TokenType : int {
     KW_IF,
     KW_ELSE,
     KW_WHILE,
@@ -92,10 +92,10 @@ enum class TokenType : int {
     ENDMARKER,
     IDENTIFIER,
     INVALID
-}; // enum TokenType
+}; // enum Fa_TokenType
 
-[[nodiscard]] std::optional<TokenType> lookupKeyword(StringRef const& s);
-[[nodiscard]] std::optional<TokenType> lookupOperator(StringRef const& s);
+[[nodiscard]] std::optional<Fa_TokenType> lookupKeyword(Fa_StringRef const& s);
+[[nodiscard]] std::optional<Fa_TokenType> lookupOperator(Fa_StringRef const& s);
 
 enum {
     PREC_COMMA,
@@ -116,9 +116,9 @@ enum {
     PREC_NONE
 }; // enum
 
-class Token {
+class Fa_Token {
 public:
-    Token(StringRef val, TokenType tt, uint32_t line, uint16_t col, uint64_t fpos = 0, std::string fpath = "", bool atbol = false)
+    Fa_Token(Fa_StringRef val, Fa_TokenType tt, u32 line, u16 col, u64 fpos = 0, std::string fpath = "", bool atbol = false)
         : Value_(val)
         , Type_(tt)
         , Location_(fpath, line, col, fpos)
@@ -126,37 +126,37 @@ public:
     {
     }
 
-    Token()
+    Fa_Token()
         : Value_()
-        , Type_(TokenType::INVALID)
+        , Type_(Fa_TokenType::INVALID)
         , Location_()
         , Atbol_(false)
     {
     }
 
-    Token(Token const&) = default;
-    Token(Token&&) noexcept = default;
+    Fa_Token(Fa_Token const&) = default;
+    Fa_Token(Fa_Token&&) noexcept = default;
 
-    bool operator==(Token const& other) const;
-    bool operator!=(Token const& other) const;
+    bool operator==(Fa_Token const& other) const;
+    bool operator!=(Fa_Token const& other) const;
 
-    Token& operator=(Token const&) = default;
-    Token& operator=(Token&&) noexcept = default;
+    Fa_Token& operator=(Fa_Token const&) = default;
+    Fa_Token& operator=(Fa_Token&&) noexcept = default;
 
     // Return const references to avoid copies
-    [[nodiscard]] StringRef const& lexeme() const;
+    [[nodiscard]] Fa_StringRef const& lexeme() const;
 
-    [[nodiscard]] TokenType const& type() const;
+    [[nodiscard]] Fa_TokenType const& type() const;
 
-    [[nodiscard]] uint32_t const& line() const;
+    [[nodiscard]] u32 const& line() const;
 
-    [[nodiscard]] uint16_t const& column() const;
+    [[nodiscard]] u16 const& column() const;
 
     [[nodiscard]] Location const& location() const;
 
     [[nodiscard]] std::string const& filepath() const;
 
-    [[nodiscard]] bool is(TokenType const tt) const;
+    [[nodiscard]] bool is(Fa_TokenType const tt) const;
 
     // is at beginning of a newline
     [[nodiscard]] bool atbol() const;
@@ -168,28 +168,28 @@ public:
     [[nodiscard]] bool isWhitespace() const;
     [[nodiscard]] bool isNumeric() const;
 
-    [[nodiscard]] double toDouble() const;
+    [[nodiscard]] f64 toDouble() const;
     [[nodiscard]] int toInt() const;
 
     [[nodiscard]] int getPrecedence(bool is_unary = false) const;
 
     // friend ostream operator for pretty-printing in tests/logs
-    friend std::ostream& operator<<(std::ostream& os, Token const& tok)
+    friend std::ostream& operator<<(std::ostream& os, Fa_Token const& tok)
     {
-        os << "Token(\"" << tok.Value_ << "\", type=" << static_cast<int32_t>(tok.Type_) << ", line=" << tok.Location_.line
+        os << "Fa_Token(\"" << tok.Value_ << "\", type=" << static_cast<i32>(tok.Type_) << ", line=" << tok.Location_.line
            << ", col=" << tok.Location_.column << ", file_pos=" << tok.Location_.FilePos << ", file_path=" << tok.Location_.filepath << ")";
         return os;
     }
 
-    static StringRef const toString(TokenType const tt);
+    static Fa_StringRef const toString(Fa_TokenType const tt);
 
 private:
-    StringRef Value_;
-    TokenType Type_;
+    Fa_StringRef Value_;
+    Fa_TokenType Type_;
     Location Location_;
     bool Atbol_;
-}; // class Token
+}; // class Fa_Token
 
-} // namespace mylang::tok
+} // namespace fairuz::tok
 
 #endif // TOKEN_HPP

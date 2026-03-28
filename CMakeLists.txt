@@ -45,30 +45,30 @@ else()
 endif()
 
 # Collect source files from src/
-file(GLOB_RECURSE MYLANG_SOURCES ${CMAKE_SOURCE_DIR}/src/*.cpp ${CMAKE_SOURCE_DIR}/src/*.cc)
+file(GLOB_RECURSE fairuz_SOURCES ${CMAKE_SOURCE_DIR}/src/*.cpp ${CMAKE_SOURCE_DIR}/src/*.cc)
 
 # Build an object library from your language sources
-add_library(mylang_objects OBJECT ${MYLANG_SOURCES})
-target_include_directories(mylang_objects PUBLIC
+add_library(fairuz_objects OBJECT ${fairuz_SOURCES})
+target_include_directories(fairuz_objects PUBLIC
     ${CMAKE_SOURCE_DIR}/include
 )
-target_link_libraries(mylang_objects PUBLIC simdutf::simdutf)
+target_link_libraries(fairuz_objects PUBLIC simdutf::simdutf)
 
 # ─── Main executable ────────────────────────────────────────────────────────
-add_executable(mylang
+add_executable(fairuz
     main.cpp
-    $<TARGET_OBJECTS:mylang_objects>
+    $<TARGET_OBJECTS:fairuz_objects>
 )
 
-target_include_directories(mylang PRIVATE ${CMAKE_SOURCE_DIR}/include)
-target_link_libraries(mylang PRIVATE simdutf::simdutf)
-target_compile_definitions(mylang PRIVATE MYLANG_VERSION="${PROJECT_VERSION}")
+target_include_directories(fairuz PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_link_libraries(fairuz PRIVATE simdutf::simdutf)
+target_compile_definitions(fairuz PRIVATE fairuz_VERSION="${PROJECT_VERSION}")
 
 if(OpenMP_FOUND)
-    target_link_libraries(mylang PRIVATE OpenMP::OpenMP_CXX)
+    target_link_libraries(fairuz PRIVATE OpenMP::OpenMP_CXX)
 endif()
 
-install(TARGETS mylang
+install(TARGETS fairuz
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
@@ -88,7 +88,7 @@ install(FILES
     ${CMAKE_SOURCE_DIR}/demo_numeric_natives.txt
     ${CMAKE_SOURCE_DIR}/demo_lists_working.txt
     ${CMAKE_SOURCE_DIR}/demo_native_regressions.txt
-    DESTINATION ${CMAKE_INSTALL_DATADIR}/mylang/examples
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/fairuz/examples
 )
 
 # ─── Test executable (only when BUILD_TESTS=ON) ──────────────────────────────
@@ -103,7 +103,7 @@ if(BUILD_TESTS)
         add_library(GTest::gtest_main ALIAS minimal_gtest)
     endif()
 
-    add_executable(mylang_tests
+    add_executable(fairuz_tests
         tests/test_main.cpp
         tests/test_arena.cpp
         tests/test_narrow_table.cpp
@@ -122,10 +122,10 @@ if(BUILD_TESTS)
         tests/test_cli.cpp
         tests/test_regressions.cpp
         tests/test_property.cpp
-        $<TARGET_OBJECTS:mylang_objects>
+        $<TARGET_OBJECTS:fairuz_objects>
     )
 
-    target_compile_options(mylang_tests PRIVATE
+    target_compile_options(fairuz_tests PRIVATE
         $<$<CXX_COMPILER_ID:GNU,Clang>:-O0>
         $<$<CXX_COMPILER_ID:MSVC>:/Od>
         -march=native          # use all instructions available on this specific CPU
@@ -133,18 +133,18 @@ if(BUILD_TESTS)
         -ffast-math            # relaxed float semantics, faster but breaks IEEE edge cases
     )
 
-    target_link_libraries(mylang_tests
+    target_link_libraries(fairuz_tests
         PRIVATE
         GTest::gtest_main
         simdutf::simdutf
     )
 
     if(OpenMP_FOUND)
-        target_link_libraries(mylang_tests PRIVATE OpenMP::OpenMP_CXX)
+        target_link_libraries(fairuz_tests PRIVATE OpenMP::OpenMP_CXX)
     endif()
 
-    target_include_directories(mylang_tests PRIVATE ${CMAKE_SOURCE_DIR}/include)
+    target_include_directories(fairuz_tests PRIVATE ${CMAKE_SOURCE_DIR}/include)
 
     enable_testing()
-    add_test(NAME AllTestsInMain COMMAND mylang_tests)
+    add_test(NAME AllTestsInMain COMMAND fairuz_tests)
 endif()

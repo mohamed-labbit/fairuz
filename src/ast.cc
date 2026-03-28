@@ -2,103 +2,103 @@
 
 #include "../include/ast.hpp"
 
-namespace mylang::ast {
+namespace fairuz::AST {
 
-typename ASTNode::NodeType ASTNode::getNodeType() const { return NodeType_; }
+typename Fa_ASTNode::NodeType Fa_ASTNode::getNodeType() const { return NodeType_; }
 
-uint32_t ASTNode::getLine() const { return Line_; }
+u32 Fa_ASTNode::getLine() const { return Line_; }
 
-uint16_t ASTNode::getColumn() const { return Column_; }
+u16 Fa_ASTNode::getColumn() const { return Column_; }
 
-void ASTNode::setLine(uint32_t const line) { Line_ = line; }
+void Fa_ASTNode::setLine(u32 const line) { Line_ = line; }
 
-void ASTNode::setColumn(uint16_t const col) { Column_ = col; }
+void Fa_ASTNode::setColumn(u16 const col) { Column_ = col; }
 
-bool BinaryExpr::equals(Expr const* other) const
+bool Fa_BinaryExpr::equals(Fa_Expr const* other) const
 {
     if (other->getKind() != Kind_)
         return false;
 
-    auto bin = static_cast<BinaryExpr const*>(other);
+    auto bin = static_cast<Fa_BinaryExpr const*>(other);
     return Operator_ == bin->getOperator() && Left_->equals(bin->getLeft()) && Right_->equals(bin->getRight());
 }
 
-BinaryExpr* BinaryExpr::clone() const { return makeBinary(Left_->clone(), Right_->clone(), Operator_); }
+Fa_BinaryExpr* Fa_BinaryExpr::clone() const { return Fa_makeBinary(Left_->clone(), Right_->clone(), Operator_); }
 
-Expr* BinaryExpr::getLeft() const { return Left_; }
+Fa_Expr* Fa_BinaryExpr::getLeft() const { return Left_; }
 
-Expr* BinaryExpr::getRight() const { return Right_; }
+Fa_Expr* Fa_BinaryExpr::getRight() const { return Right_; }
 
-BinaryOp BinaryExpr::getOperator() const { return Operator_; }
+Fa_BinaryOp Fa_BinaryExpr::getOperator() const { return Operator_; }
 
-void BinaryExpr::setLeft(Expr* l) { Left_ = l; }
+void Fa_BinaryExpr::setLeft(Fa_Expr* l) { Left_ = l; }
 
-void BinaryExpr::setRight(Expr* r) { Right_ = r; }
+void Fa_BinaryExpr::setRight(Fa_Expr* r) { Right_ = r; }
 
-void BinaryExpr::setOperator(BinaryOp op) { Operator_ = op; }
+void Fa_BinaryExpr::setOperator(Fa_BinaryOp op) { Operator_ = op; }
 
-bool UnaryExpr::equals(Expr const* other) const
+bool Fa_UnaryExpr::equals(Fa_Expr const* other) const
 {
     if (other->getKind() != Kind_)
         return false;
 
-    auto un = static_cast<UnaryExpr const*>(other);
+    auto un = static_cast<Fa_UnaryExpr const*>(other);
     return Operator_ == un->getOperator() && Operand_->equals(un->getOperand());
 }
 
-UnaryExpr* UnaryExpr::clone() const { return makeUnary(Operand_->clone(), Operator_); }
+Fa_UnaryExpr* Fa_UnaryExpr::clone() const { return Fa_makeUnary(Operand_->clone(), Operator_); }
 
-Expr* UnaryExpr::getOperand() const { return Operand_; }
+Fa_Expr* Fa_UnaryExpr::getOperand() const { return Operand_; }
 
-UnaryOp UnaryExpr::getOperator() const { return Operator_; }
+Fa_UnaryOp Fa_UnaryExpr::getOperator() const { return Operator_; }
 
-typename LiteralExpr::Type LiteralExpr::getType() const { return Type_; }
+typename Fa_LiteralExpr::Type Fa_LiteralExpr::getType() const { return Type_; }
 
-int64_t LiteralExpr::getInt() const
+i64 Fa_LiteralExpr::getInt() const
 {
     assert(isInteger());
     return IntValue_;
 }
 
-double LiteralExpr::getFloat() const
+f64 Fa_LiteralExpr::getFloat() const
 {
     assert(isDecimal());
     return FloatValue_;
 }
 
-bool LiteralExpr::getBool() const
+bool Fa_LiteralExpr::getBool() const
 {
     assert(isBoolean());
     return BoolValue_;
 }
 
-StringRef LiteralExpr::getStr() const
+Fa_StringRef Fa_LiteralExpr::getStr() const
 {
     assert(isString());
     return StrValue_;
 }
 
-bool LiteralExpr::isInteger() const
+bool Fa_LiteralExpr::isInteger() const
 {
     return Type_ == Type::INTEGER;
 }
 
-bool LiteralExpr::isDecimal() const { return Type_ == Type::FLOAT; }
+bool Fa_LiteralExpr::isDecimal() const { return Type_ == Type::FLOAT; }
 
-bool LiteralExpr::isBoolean() const { return Type_ == Type::BOOLEAN; }
+bool Fa_LiteralExpr::isBoolean() const { return Type_ == Type::BOOLEAN; }
 
-bool LiteralExpr::isString() const { return Type_ == Type::STRING; }
+bool Fa_LiteralExpr::isString() const { return Type_ == Type::STRING; }
 
-bool LiteralExpr::isNumeric() const { return isInteger() || isDecimal(); }
+bool Fa_LiteralExpr::isNumeric() const { return isInteger() || isDecimal(); }
 
-bool LiteralExpr::isNil() const { return Type_ == Type::NIL; }
+bool Fa_LiteralExpr::isNil() const { return Type_ == Type::NIL; }
 
-bool LiteralExpr::equals(Expr const* other) const
+bool Fa_LiteralExpr::equals(Fa_Expr const* other) const
 {
     if (!other || other->getKind() != Kind_)
         return false;
 
-    auto lit = static_cast<LiteralExpr const*>(other);
+    auto lit = static_cast<Fa_LiteralExpr const*>(other);
     if (!lit || Type_ != lit->Type_)
         return false;
 
@@ -117,57 +117,57 @@ bool LiteralExpr::equals(Expr const* other) const
     return false;
 }
 
-LiteralExpr* LiteralExpr::clone() const
+Fa_LiteralExpr* Fa_LiteralExpr::clone() const
 {
     switch (Type_) {
     case Type::INTEGER:
-        return makeLiteralInt(IntValue_);
+        return Fa_makeLiteralInt(IntValue_);
     case Type::FLOAT:
-        return makeLiteralFloat(FloatValue_);
+        return Fa_makeLiteralFloat(FloatValue_);
     case Type::BOOLEAN:
-        return makeLiteralBool(BoolValue_);
+        return Fa_makeLiteralBool(BoolValue_);
     case Type::STRING:
-        return makeLiteralString(StrValue_);
+        return Fa_makeLiteralString(StrValue_);
     case Type::NIL:
-        return makeLiteralNil();
+        return Fa_makeLiteralNil();
     default:
         return nullptr; // should never happen
     }
 }
 
-double LiteralExpr::toNumber() const
+f64 Fa_LiteralExpr::toNumber() const
 {
     if (isInteger())
-        return static_cast<double>(IntValue_);
+        return static_cast<f64>(IntValue_);
     if (isDecimal())
         return FloatValue_;
 
     return 0.0;
 }
 
-bool NameExpr::equals(Expr const* other) const
+bool Fa_NameExpr::equals(Fa_Expr const* other) const
 {
     if (other->getKind() != Kind_)
         return false;
 
-    auto name = static_cast<NameExpr const*>(other);
+    auto name = static_cast<Fa_NameExpr const*>(other);
     return Value_ == name->getValue();
 }
 
-NameExpr* NameExpr::clone() const { return makeName(Value_); }
+Fa_NameExpr* Fa_NameExpr::clone() const { return Fa_makeName(Value_); }
 
-StringRef NameExpr::getValue() const { return Value_; }
+Fa_StringRef Fa_NameExpr::getValue() const { return Value_; }
 
-Expr* ListExpr::operator[](size_t const i) { return Elements_[i]; }
+Fa_Expr* Fa_ListExpr::operator[](size_t const i) { return Elements_[i]; }
 
-Expr const* ListExpr::operator[](size_t const i) const { return Elements_[i]; }
+Fa_Expr const* Fa_ListExpr::operator[](size_t const i) const { return Elements_[i]; }
 
-bool ListExpr::equals(Expr const* other) const
+bool Fa_ListExpr::equals(Fa_Expr const* other) const
 {
     if (other->getKind() != Kind_)
         return false;
 
-    auto list = static_cast<ListExpr const*>(other);
+    auto list = static_cast<Fa_ListExpr const*>(other);
 
     if (Elements_.size() != list->Elements_.size())
         return false;
@@ -179,79 +179,79 @@ bool ListExpr::equals(Expr const* other) const
     return true;
 }
 
-ListExpr* ListExpr::clone() const { return makeList(Elements_); }
+Fa_ListExpr* Fa_ListExpr::clone() const { return Fa_makeList(Elements_); }
 
-Array<Expr*> const& ListExpr::getElements() const { return Elements_; }
+Fa_Array<Fa_Expr*> const& Fa_ListExpr::getElements() const { return Elements_; }
 
-Array<Expr*>& ListExpr::getElements() { return Elements_; }
+Fa_Array<Fa_Expr*>& Fa_ListExpr::getElements() { return Elements_; }
 
-bool ListExpr::isEmpty() const { return Elements_.empty(); }
+bool Fa_ListExpr::isEmpty() const { return Elements_.empty(); }
 
-size_t ListExpr::size() const { return Elements_.size(); }
+size_t Fa_ListExpr::size() const { return Elements_.size(); }
 
-bool CallExpr::equals(Expr const* other) const
+bool Fa_CallExpr::equals(Fa_Expr const* other) const
 {
     if (other->getKind() != Kind_)
         return false;
 
-    auto call = static_cast<CallExpr const*>(other);
+    auto call = static_cast<Fa_CallExpr const*>(other);
     return Callee_->equals(call->getCallee()) && Args_->equals(call->getArgsAsListExpr()) && CallLocation_ == call->getCallLocation();
 }
 
-CallExpr* CallExpr::clone() const { return makeCall(Callee_->clone(), Args_->clone()); }
+Fa_CallExpr* Fa_CallExpr::clone() const { return Fa_makeCall(Callee_->clone(), Args_->clone()); }
 
-Expr* CallExpr::getCallee() const { return Callee_; }
+Fa_Expr* Fa_CallExpr::getCallee() const { return Callee_; }
 
-Array<Expr*> const& CallExpr::getArgs() const
+Fa_Array<Fa_Expr*> const& Fa_CallExpr::getArgs() const
 {
-    static Array<Expr*> const empty;
+    static Fa_Array<Fa_Expr*> const empty;
     return Args_ ? Args_->getElements() : empty;
 }
 
-Array<Expr*>& CallExpr::getArgs()
+Fa_Array<Fa_Expr*>& Fa_CallExpr::getArgs()
 {
     assert(Args_ && "Attempting to get mutable args when Args_ is null");
     return Args_->getElements();
 }
 
-ListExpr* CallExpr::getArgsAsListExpr() { return Args_; }
+Fa_ListExpr* Fa_CallExpr::getArgsAsListExpr() { return Args_; }
 
-ListExpr const* CallExpr::getArgsAsListExpr() const { return Args_; }
+Fa_ListExpr const* Fa_CallExpr::getArgsAsListExpr() const { return Args_; }
 
-typename CallExpr::CallLocation CallExpr::getCallLocation() const { return CallLocation_; }
+typename Fa_CallExpr::CallLocation Fa_CallExpr::getCallLocation() const { return CallLocation_; }
 
-bool CallExpr::hasArguments() const { return Args_ && !Args_->isEmpty(); }
+bool Fa_CallExpr::hasArguments() const { return Args_ && !Args_->isEmpty(); }
 
-bool AssignmentExpr::equals(Expr const* other) const
+bool Fa_AssignmentExpr::equals(Fa_Expr const* other) const
 {
     if (other->getKind() != Kind_)
         return false;
 
-    auto bin = static_cast<AssignmentExpr const*>(other);
+    auto bin = static_cast<Fa_AssignmentExpr const*>(other);
     return Target_->equals(bin->getTarget()) && Value_->equals(bin->getValue());
 }
 
-AssignmentExpr* AssignmentExpr::clone() const
+Fa_AssignmentExpr* Fa_AssignmentExpr::clone() const
 {
-    return makeAssignmentExpr(Target_->clone(), Value_->clone());
+    return Fa_makeAssignmentExpr(Target_->clone(), Value_->clone());
 }
 
-Expr* AssignmentExpr::getTarget() const { return Target_; }
+Fa_Expr* Fa_AssignmentExpr::getTarget() const { return Target_; }
 
-Expr* AssignmentExpr::getValue() const { return Value_; }
+Fa_Expr* Fa_AssignmentExpr::getValue() const { return Value_; }
 
-void AssignmentExpr::setTarget(Expr* t) { Target_ = t; }
+void Fa_AssignmentExpr::setTarget(Fa_Expr* t) { Target_ = t; }
 
-void AssignmentExpr::setValue(Expr* v) { Value_ = v; }
+void Fa_AssignmentExpr::setValue(Fa_Expr* v) { Value_ = v; }
 
-bool AssignmentExpr::isDeclaration() const { return isDecl_; }
+bool Fa_AssignmentExpr::isDeclaration() const { return isDecl_; }
 
-bool BlockStmt::equals(Stmt const* other) const
+bool Fa_BlockStmt::equals(Fa_Stmt const* other) const
 {
     if (!other || other->getKind() != Kind::BLOCK)
         return false;
 
-    auto block = static_cast<BlockStmt const*>(other);
+    auto block = static_cast<Fa_BlockStmt const*>(other);
 
     if (Statements_.size() != block->Statements_.size())
         return false;
@@ -263,181 +263,178 @@ bool BlockStmt::equals(Stmt const* other) const
     return true;
 }
 
-bool IndexExpr::equals(Expr const* other) const
+bool Fa_IndexExpr::equals(Fa_Expr const* other) const
 {
     if (!other || other->getKind() != Kind::INDEX)
         return false;
 
-    auto index = static_cast<IndexExpr const*>(other);
+    auto index = static_cast<Fa_IndexExpr const*>(other);
     return Object_->equals(index->getObject()) && Index_->equals(index->getIndex());
 }
 
-IndexExpr* IndexExpr::clone() const { return makeIndex(Object_->clone(), Index_->clone()); }
+Fa_IndexExpr* Fa_IndexExpr::clone() const { return Fa_makeIndex(Object_->clone(), Index_->clone()); }
 
-Expr* IndexExpr::getObject() const { return Object_; }
+Fa_Expr* Fa_IndexExpr::getObject() const { return Object_; }
 
-Expr* IndexExpr::getIndex() const { return Index_; }
+Fa_Expr* Fa_IndexExpr::getIndex() const { return Index_; }
 
-BlockStmt* BlockStmt::clone() const { return makeBlock(Statements_); }
+Fa_BlockStmt* Fa_BlockStmt::clone() const { return Fa_makeBlock(Statements_); }
 
-Array<Stmt*> const& BlockStmt::getStatements() const { return Statements_; }
+Fa_Array<Fa_Stmt*> const& Fa_BlockStmt::getStatements() const { return Statements_; }
 
-void BlockStmt::setStatements(Array<Stmt*>& stmts) { Statements_ = stmts; }
+void Fa_BlockStmt::setStatements(Fa_Array<Fa_Stmt*>& stmts) { Statements_ = stmts; }
 
-bool BlockStmt::isEmpty() const { return Statements_.empty(); }
+bool Fa_BlockStmt::isEmpty() const { return Statements_.empty(); }
 
-// expr stmt
+// Fa_Expr stmt
 
-bool ExprStmt::equals(Stmt const* other) const
+bool Fa_ExprStmt::equals(Fa_Stmt const* other) const
 {
     if (Kind_ != other->getKind())
         return false;
 
-    auto block = static_cast<ExprStmt const*>(other);
+    auto block = static_cast<Fa_ExprStmt const*>(other);
     return Expr_->equals(block->getExpr());
 }
 
-ExprStmt* ExprStmt::clone() const { return makeExprStmt(Expr_->clone()); }
+Fa_ExprStmt* Fa_ExprStmt::clone() const { return Fa_makeExprStmt(Expr_->clone()); }
 
-Expr* ExprStmt::getExpr() const { return Expr_; }
+Fa_Expr* Fa_ExprStmt::getExpr() const { return Expr_; }
 
-void ExprStmt::setExpr(Expr* e) { Expr_ = e; }
+void Fa_ExprStmt::setExpr(Fa_Expr* e) { Expr_ = e; }
 
 // assignment stmt
 
-bool AssignmentStmt::equals(Stmt const* other) const
+bool Fa_AssignmentStmt::equals(Fa_Stmt const* other) const
 {
     if (Kind_ != other->getKind())
         return false;
 
-    auto block = static_cast<AssignmentStmt const*>(other);
+    auto block = static_cast<Fa_AssignmentStmt const*>(other);
     return Expr_->getValue()->equals(block->getValue()) && Expr_->getTarget()->equals(block->getTarget());
 }
 
-AssignmentStmt* AssignmentStmt::clone() const
+Fa_AssignmentStmt* Fa_AssignmentStmt::clone() const
 {
-    return makeAssignmentStmt(Expr_->getTarget(), Expr_->getValue(), Expr_->isDeclaration());
+    return Fa_makeAssignmentStmt(Expr_->getTarget(), Expr_->getValue(), Expr_->isDeclaration());
 }
 
-Expr* AssignmentStmt::getValue() const { return Expr_->getValue(); }
+Fa_Expr* Fa_AssignmentStmt::getValue() const { return Expr_->getValue(); }
 
-Expr* AssignmentStmt::getTarget() const { return Expr_->getTarget(); }
+Fa_Expr* Fa_AssignmentStmt::getTarget() const { return Expr_->getTarget(); }
 
-void AssignmentStmt::setValue(Expr* v) { Expr_->setValue(v); }
+void Fa_AssignmentStmt::setValue(Fa_Expr* v) { Expr_->setValue(v); }
 
-void AssignmentStmt::setTarget(Expr* t) { Expr_->setTarget(t); }
+void Fa_AssignmentStmt::setTarget(Fa_Expr* t) { Expr_->setTarget(t); }
 
-bool AssignmentStmt::isDeclaration() const { return Expr_->isDeclaration(); }
+bool Fa_AssignmentStmt::isDeclaration() const { return Expr_->isDeclaration(); }
 
-bool IfStmt::equals(Stmt const* other) const
+bool Fa_IfStmt::equals(Fa_Stmt const* other) const
 {
     if (Kind_ != other->getKind())
         return false;
 
-    auto block = static_cast<IfStmt const*>(other);
+    auto block = static_cast<Fa_IfStmt const*>(other);
     return Condition_->equals(block->getCondition()) && ThenStmt_->equals(block->getThen()) && ElseStmt_->equals(block->getElse());
 }
 
-IfStmt* IfStmt::clone() const
+Fa_IfStmt* Fa_IfStmt::clone() const
 {
-    return makeIf(Condition_->clone(), ThenStmt_->clone(), LIKELY(ElseStmt_ == nullptr) ? nullptr : ElseStmt_->clone());
+    return Fa_makeIf(Condition_->clone(), ThenStmt_->clone(), LIKELY(ElseStmt_ == nullptr) ? nullptr : ElseStmt_->clone());
 }
 
-Expr* IfStmt::getCondition() const { return Condition_; }
+Fa_Expr* Fa_IfStmt::getCondition() const { return Condition_; }
 
-Stmt* IfStmt::getThen() const { return ThenStmt_; }
+Fa_Stmt* Fa_IfStmt::getThen() const { return ThenStmt_; }
 
-Stmt* IfStmt::getElse() const { return ElseStmt_; }
+Fa_Stmt* Fa_IfStmt::getElse() const { return ElseStmt_; }
 
-void IfStmt::setThen(Stmt* t) { ThenStmt_ = t; }
+void Fa_IfStmt::setThen(Fa_Stmt* t) { ThenStmt_ = t; }
 
-void IfStmt::setElse(Stmt* e) { ElseStmt_ = e; }
+void Fa_IfStmt::setElse(Fa_Stmt* e) { ElseStmt_ = e; }
 
-bool WhileStmt::equals(Stmt const* other) const
+bool Fa_WhileStmt::equals(Fa_Stmt const* other) const
 {
     if (Kind_ != other->getKind())
         return false;
 
-    auto block = static_cast<WhileStmt const*>(other);
+    auto block = static_cast<Fa_WhileStmt const*>(other);
     return Condition_->equals(block->getCondition()) && Body_->equals(block->getBody());
 }
 
-WhileStmt* WhileStmt::clone() const { return makeWhile(Condition_->clone(), Body_->clone()); }
+Fa_WhileStmt* Fa_WhileStmt::clone() const { return Fa_makeWhile(Condition_->clone(), Body_->clone()); }
 
-Expr* WhileStmt::getCondition() const { return Condition_; }
+Fa_Expr* Fa_WhileStmt::getCondition() const { return Condition_; }
 
-Stmt* WhileStmt::getBody() { return Body_; }
+Fa_Stmt* Fa_WhileStmt::getBody() { return Body_; }
 
-Stmt const* WhileStmt::getBody() const { return Body_; }
+Fa_Stmt const* Fa_WhileStmt::getBody() const { return Body_; }
 
-void WhileStmt::setBody(Stmt* b) { Body_ = b; }
+void Fa_WhileStmt::setBody(Fa_Stmt* b) { Body_ = b; }
 
-bool ForStmt::equals(Stmt const* other) const
+bool Fa_ForStmt::equals(Fa_Stmt const* other) const
 {
     if (Kind_ != other->getKind())
         return false;
 
-    auto block = static_cast<ForStmt const*>(other);
-    return Target_->equals(block->getTarget()) && Iter_->equals(block->getIter()) && Body_->equals(block->getBody());
+    auto block = static_cast<Fa_ForStmt const*>(other);
+    return Container_->equals(block->getContainer()) && Iter_->equals(block->getIter()) && Body_->equals(block->getBody());
 }
 
-ForStmt* ForStmt::clone() const
+Fa_ForStmt* Fa_ForStmt::clone() const
 {
-    return getAllocator().allocateObject<ForStmt>(Target_->clone(), Iter_->clone(), Body_->clone());
+    return getAllocator().allocateObject<Fa_ForStmt>(Container_->clone(), Iter_->clone(), Body_->clone());
 }
 
-NameExpr* ForStmt::getTarget() const { return Target_; }
+Fa_Expr* Fa_ForStmt::getContainer() const { return Container_; }
 
-Expr* ForStmt::getIter() const { return Iter_; }
+Fa_Expr* Fa_ForStmt::getIter() const { return Iter_; }
 
-Stmt* ForStmt::getBody() const { return Body_; }
+Fa_Stmt* Fa_ForStmt::getBody() const { return Body_; }
 
-void ForStmt::setBody(Stmt* b) { Body_ = b; }
+void Fa_ForStmt::setBody(Fa_Stmt* b) { Body_ = b; }
 
-bool FunctionDef::equals(Stmt const* other) const
+bool Fa_FunctionDef::equals(Fa_Stmt const* other) const
 {
     if (Kind_ != other->getKind())
         return false;
 
-    auto block = static_cast<FunctionDef const*>(other);
+    auto block = static_cast<Fa_FunctionDef const*>(other);
     return Name_->equals(block->getName()) && Params_->equals(block->getParameterList()) && Body_->equals(block->getBody());
 }
 
-FunctionDef* FunctionDef::clone() const
+Fa_FunctionDef* Fa_FunctionDef::clone() const
 {
-    return makeFunction(Name_->clone(), Params_->clone(), Body_->clone());
+    return Fa_makeFunction(Name_->clone(), Params_->clone(), Body_->clone());
 }
 
-NameExpr* FunctionDef::getName() const { return Name_; }
+Fa_NameExpr* Fa_FunctionDef::getName() const { return Name_; }
 
-Array<Expr*> const& FunctionDef::getParameters() const { return Params_->getElements(); }
+Fa_Array<Fa_Expr*> const& Fa_FunctionDef::getParameters() const { return Params_->getElements(); }
 
-ListExpr* FunctionDef::getParameterList() const { return Params_; }
+Fa_ListExpr* Fa_FunctionDef::getParameterList() const { return Params_; }
 
-Stmt* FunctionDef::getBody() const { return Body_; }
+Fa_Stmt* Fa_FunctionDef::getBody() const { return Body_; }
 
-void FunctionDef::setBody(Stmt* b) { Body_ = b; }
+void Fa_FunctionDef::setBody(Fa_Stmt* b) { Body_ = b; }
 
-bool FunctionDef::hasParameters() const { return Params_ && !Params_->isEmpty(); }
+bool Fa_FunctionDef::hasParameters() const { return Params_ && !Params_->isEmpty(); }
 
-bool ReturnStmt::equals(Stmt const* other) const
+Fa_ReturnStmt* Fa_ReturnStmt::clone() const { return Fa_makeReturn(Value_->clone()); }
+
+Fa_Expr const* Fa_ReturnStmt::getValue() const { return Value_; }
+
+void Fa_ReturnStmt::setValue(Fa_Expr* v) { Value_ = v; }
+
+bool Fa_ReturnStmt::hasValue() const { return Value_ != nullptr; }
+
+[[nodiscard]] bool Fa_ReturnStmt::equals(Fa_Stmt const* other) const
 {
     if (Kind_ != other->getKind())
         return false;
 
-    auto ret = static_cast<ReturnStmt const*>(other);
-    if (!Value_ && !ret->getValue())
-        return true;
-
-    return Value_->equals(ret->getValue());
+    auto ret_stmt = static_cast<Fa_ReturnStmt const*>(other);
+    return Value_->equals(ret_stmt->getValue());
 }
 
-ReturnStmt* ReturnStmt::clone() const { return makeReturn(Value_->clone()); }
-
-Expr const* ReturnStmt::getValue() const { return Value_; }
-
-void ReturnStmt::setValue(Expr* v) { Value_ = v; }
-
-bool ReturnStmt::hasValue() const { return Value_ != nullptr; }
-
-} // namespace mylang::ast
+} // namespace fairuz::ast

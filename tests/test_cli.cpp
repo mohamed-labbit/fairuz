@@ -28,12 +28,12 @@ std::string read_file(std::filesystem::path const& path)
 
 std::filesystem::path test_binary()
 {
-    return std::filesystem::current_path() / "mylang";
+    return std::filesystem::current_path() / "fairuz";
 }
 
 RunResult run_cli(std::string const& args)
 {
-    auto const base = std::filesystem::temp_directory_path() / std::filesystem::path("mylang_cli_XXXXXX");
+    auto const base = std::filesystem::temp_directory_path() / std::filesystem::path("fairuz_cli_XXXXXX");
     std::string tmpl = base.string();
     std::vector<char> writable(tmpl.begin(), tmpl.end());
     writable.push_back('\0');
@@ -55,7 +55,7 @@ RunResult run_cli(std::string const& args)
 
 std::filesystem::path write_program(std::string const& source)
 {
-    auto path = std::filesystem::temp_directory_path() / ("mylang_cli_program_" + std::to_string(::getpid()) + ".txt");
+    auto path = std::filesystem::temp_directory_path() / ("fairuz_cli_program_" + std::to_string(::getpid()) + ".txt");
     std::ofstream out(path);
     out << source;
     return path;
@@ -75,7 +75,7 @@ TEST(CliE2E, Version)
 {
     RunResult r = run_cli("--version");
     EXPECT_EQ(r.exit_code, 0);
-    EXPECT_NE(r.out.find("mylang 0.0.0"), std::string::npos);
+    EXPECT_NE(r.out.find("fairuz 0.0.0"), std::string::npos);
 }
 
 TEST(CliE2E, CheckOnly)
@@ -97,7 +97,7 @@ TEST(CliE2E, FileThenTrailingOption)
 
 TEST(CliE2E, MissingFile)
 {
-    RunResult r = run_cli(shell_quote("/tmp/definitely_missing_mylang_input.txt"));
+    RunResult r = run_cli(shell_quote("/tmp/definitely_missing_fairuz_input.txt"));
     EXPECT_EQ(r.exit_code, 66);
     EXPECT_NE(r.err.find("Input file not found"), std::string::npos);
 }

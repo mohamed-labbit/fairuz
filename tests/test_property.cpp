@@ -8,15 +8,14 @@
 #include <random>
 #include <string>
 
-using namespace mylang;
-using namespace mylang::ast;
-using namespace mylang::lex;
-using namespace mylang::parser;
-using namespace mylang::runtime;
+using namespace fairuz;
+using namespace fairuz::lex;
+using namespace fairuz::parser;
+using namespace fairuz::runtime;
 
 namespace {
 
-struct ExprSpec {
+struct Fa_ExprSpec {
     enum class Kind {
         Lit,
         Neg,
@@ -26,37 +25,37 @@ struct ExprSpec {
     };
 
     Kind kind;
-    int64_t value { 0 };
-    std::unique_ptr<ExprSpec> left;
-    std::unique_ptr<ExprSpec> right;
+    i64 value { 0 };
+    std::unique_ptr<Fa_ExprSpec> left;
+    std::unique_ptr<Fa_ExprSpec> right;
 };
 
-ExprSpec make_lit(int64_t v)
+Fa_ExprSpec make_lit(i64 v)
 {
-    ExprSpec e;
-    e.kind = ExprSpec::Kind::Lit;
+    Fa_ExprSpec e;
+    e.kind = Fa_ExprSpec::Kind::Lit;
     e.value = v;
     return e;
 }
 
-ExprSpec make_unary(ExprSpec::Kind kind, ExprSpec child)
+Fa_ExprSpec make_unary(Fa_ExprSpec::Kind kind, Fa_ExprSpec child)
 {
-    ExprSpec e;
+    Fa_ExprSpec e;
     e.kind = kind;
-    e.left = std::make_unique<ExprSpec>(std::move(child));
+    e.left = std::make_unique<Fa_ExprSpec>(std::move(child));
     return e;
 }
 
-ExprSpec make_binary(ExprSpec::Kind kind, ExprSpec lhs, ExprSpec rhs)
+Fa_ExprSpec make_binary(Fa_ExprSpec::Kind kind, Fa_ExprSpec lhs, Fa_ExprSpec rhs)
 {
-    ExprSpec e;
+    Fa_ExprSpec e;
     e.kind = kind;
-    e.left = std::make_unique<ExprSpec>(std::move(lhs));
-    e.right = std::make_unique<ExprSpec>(std::move(rhs));
+    e.left = std::make_unique<Fa_ExprSpec>(std::move(lhs));
+    e.right = std::make_unique<Fa_ExprSpec>(std::move(rhs));
     return e;
 }
 
-ExprSpec gen_expr(std::mt19937_64& rng, int depth)
+Fa_ExprSpec gen_Fa_Expr(std::mt19937_64& rng, int depth)
 {
     std::uniform_int_distribution<int> lit_dist(-9, 9);
     if (depth <= 0)
@@ -67,127 +66,127 @@ ExprSpec gen_expr(std::mt19937_64& rng, int depth)
     case 0:
         return make_lit(lit_dist(rng));
     case 1:
-        return make_unary(ExprSpec::Kind::Neg, gen_expr(rng, depth - 1));
+        return make_unary(Fa_ExprSpec::Kind::Neg, gen_Fa_Expr(rng, depth - 1));
     case 2:
-        return make_binary(ExprSpec::Kind::Add, gen_expr(rng, depth - 1), gen_expr(rng, depth - 1));
+        return make_binary(Fa_ExprSpec::Kind::Add, gen_Fa_Expr(rng, depth - 1), gen_Fa_Expr(rng, depth - 1));
     case 3:
-        return make_binary(ExprSpec::Kind::Sub, gen_expr(rng, depth - 1), gen_expr(rng, depth - 1));
+        return make_binary(Fa_ExprSpec::Kind::Sub, gen_Fa_Expr(rng, depth - 1), gen_Fa_Expr(rng, depth - 1));
     default:
-        return make_binary(ExprSpec::Kind::Mul, gen_expr(rng, depth - 1), gen_expr(rng, depth - 1));
+        return make_binary(Fa_ExprSpec::Kind::Mul, gen_Fa_Expr(rng, depth - 1), gen_Fa_Expr(rng, depth - 1));
     }
 }
 
-std::string to_source(ExprSpec const& expr)
+std::string to_source(Fa_ExprSpec const& expr)
 {
     switch (expr.kind) {
-    case ExprSpec::Kind::Lit:
+    case Fa_ExprSpec::Kind::Lit:
         return std::to_string(expr.value);
-    case ExprSpec::Kind::Neg:
+    case Fa_ExprSpec::Kind::Neg:
         return "(-" + to_source(*expr.left) + ")";
-    case ExprSpec::Kind::Add:
+    case Fa_ExprSpec::Kind::Add:
         return "(" + to_source(*expr.left) + " + " + to_source(*expr.right) + ")";
-    case ExprSpec::Kind::Sub:
+    case Fa_ExprSpec::Kind::Sub:
         return "(" + to_source(*expr.left) + " - " + to_source(*expr.right) + ")";
-    case ExprSpec::Kind::Mul:
+    case Fa_ExprSpec::Kind::Mul:
         return "(" + to_source(*expr.left) + " * " + to_source(*expr.right) + ")";
     }
     return "0";
 }
 
-int64_t eval_host(ExprSpec const& expr)
+i64 eval_host(Fa_ExprSpec const& expr)
 {
     switch (expr.kind) {
-    case ExprSpec::Kind::Lit:
+    case Fa_ExprSpec::Kind::Lit:
         return expr.value;
-    case ExprSpec::Kind::Neg:
+    case Fa_ExprSpec::Kind::Neg:
         return -eval_host(*expr.left);
-    case ExprSpec::Kind::Add:
+    case Fa_ExprSpec::Kind::Add:
         return eval_host(*expr.left) + eval_host(*expr.right);
-    case ExprSpec::Kind::Sub:
+    case Fa_ExprSpec::Kind::Sub:
         return eval_host(*expr.left) - eval_host(*expr.right);
-    case ExprSpec::Kind::Mul:
+    case Fa_ExprSpec::Kind::Mul:
         return eval_host(*expr.left) * eval_host(*expr.right);
     }
     return 0;
 }
 
-Expr* build_ast(ExprSpec const& expr)
+AST::Fa_Expr* build_ast(Fa_ExprSpec const& expr)
 {
     switch (expr.kind) {
-    case ExprSpec::Kind::Lit:
-        return makeLiteralInt(expr.value);
-    case ExprSpec::Kind::Neg:
-        return makeUnary(build_ast(*expr.left), UnaryOp::OP_NEG);
-    case ExprSpec::Kind::Add:
-        return makeBinary(build_ast(*expr.left), build_ast(*expr.right), BinaryOp::OP_ADD);
-    case ExprSpec::Kind::Sub:
-        return makeBinary(build_ast(*expr.left), build_ast(*expr.right), BinaryOp::OP_SUB);
-    case ExprSpec::Kind::Mul:
-        return makeBinary(build_ast(*expr.left), build_ast(*expr.right), BinaryOp::OP_MUL);
+    case Fa_ExprSpec::Kind::Lit:
+        return AST::Fa_makeLiteralInt(expr.value);
+    case Fa_ExprSpec::Kind::Neg:
+        return Fa_makeUnary(build_ast(*expr.left), AST::Fa_UnaryOp::OP_NEG);
+    case Fa_ExprSpec::Kind::Add:
+        return Fa_makeBinary(build_ast(*expr.left), build_ast(*expr.right), AST::Fa_BinaryOp::OP_ADD);
+    case Fa_ExprSpec::Kind::Sub:
+        return Fa_makeBinary(build_ast(*expr.left), build_ast(*expr.right), AST::Fa_BinaryOp::OP_SUB);
+    case Fa_ExprSpec::Kind::Mul:
+        return Fa_makeBinary(build_ast(*expr.left), build_ast(*expr.right), AST::Fa_BinaryOp::OP_MUL);
     }
-    return makeLiteralInt(0);
+    return AST::Fa_makeLiteralInt(0);
 }
 
-Value run_expr_source(std::string const& source)
+Fa_Value run_Fa_Expr_source(std::string const& source)
 {
-    FileManager fm((std::filesystem::temp_directory_path() / "mylang_property_expr.txt").string());
+    Fa_FileManager fm((std::filesystem::temp_directory_path() / "fairuz_property_expr.txt").string());
     fm.buffer() = source.c_str();
-    Parser parser(&fm);
+    Fa_Parser parser(&fm);
     auto parsed = parser.parse();
     EXPECT_TRUE(parsed.hasValue()) << source;
-    Chunk* chunk = Compiler().compile({ makeExprStmt(parsed.value()) });
-    VM vm;
+    Fa_Chunk* chunk = Compiler().compile({ Fa_makeExprStmt(parsed.value()) });
+    Fa_VM vm;
     return vm.run(chunk);
 }
 
-Value run_expr_ast(Expr* expr)
+Fa_Value run_Fa_Expr_ast(AST::Fa_Expr* expr)
 {
-    Chunk* chunk = Compiler().compile({ makeExprStmt(expr) });
-    VM vm;
+    Fa_Chunk* chunk = Compiler().compile({ Fa_makeExprStmt(expr) });
+    Fa_VM vm;
     return vm.run(chunk);
 }
 
 bool sanitizer_stress_enabled()
 {
-    char const* v = std::getenv("MYLANG_ENABLE_SANITIZER_STRESS");
+    char const* v = std::getenv("fairuz_ENABLE_SANITIZER_STRESS");
     return v && std::string(v) == "1";
 }
 
 } // namespace
 
-TEST(PropertyExpr, RandomArithmeticMatchesHostAndAst)
+TEST(PropertyFa_Expr, RandomArithmeticMatchesHostAndAst)
 {
     diagnostic::reset();
     std::mt19937_64 rng(0xC0FFEE);
 
     for (int i = 0; i < 250; ++i) {
-        ExprSpec spec = gen_expr(rng, 4);
+        Fa_ExprSpec spec = gen_Fa_Expr(rng, 4);
         std::string source = to_source(spec);
-        int64_t expected = eval_host(spec);
+        i64 expected = eval_host(spec);
 
-        Value parsed_value = run_expr_source(source);
-        Value ast_value = run_expr_ast(build_ast(spec));
+        Fa_Value parsed_value = run_Fa_Expr_source(source);
+        Fa_Value ast_value = run_Fa_Expr_ast(build_ast(spec));
 
-        ASSERT_TRUE(IS_INTEGER(parsed_value)) << source;
-        ASSERT_TRUE(IS_INTEGER(ast_value)) << source;
-        EXPECT_EQ(AS_INTEGER(parsed_value), expected) << source;
-        EXPECT_EQ(AS_INTEGER(ast_value), expected) << source;
-        EXPECT_EQ(AS_INTEGER(parsed_value), AS_INTEGER(ast_value)) << source;
+        ASSERT_TRUE(Fa_IS_INTEGER(parsed_value)) << source;
+        ASSERT_TRUE(Fa_IS_INTEGER(ast_value)) << source;
+        EXPECT_EQ(Fa_AS_INTEGER(parsed_value), expected) << source;
+        EXPECT_EQ(Fa_AS_INTEGER(ast_value), expected) << source;
+        EXPECT_EQ(Fa_AS_INTEGER(parsed_value), Fa_AS_INTEGER(ast_value)) << source;
     }
 }
 
 TEST(SanitizerStress, RandomArithmeticCorpus)
 {
     if (!sanitizer_stress_enabled())
-        GTEST_SKIP() << "set MYLANG_ENABLE_SANITIZER_STRESS=1 to enable";
+        GTEST_SKIP() << "set fairuz_ENABLE_SANITIZER_STRESS=1 to enable";
 
     diagnostic::reset();
     std::mt19937_64 rng(0xBAD5EED);
 
     for (int i = 0; i < 2000; ++i) {
-        ExprSpec spec = gen_expr(rng, 5);
+        Fa_ExprSpec spec = gen_Fa_Expr(rng, 5);
         std::string source = to_source(spec);
-        Value parsed_value = run_expr_source(source);
-        ASSERT_TRUE(IS_INTEGER(parsed_value)) << source;
+        Fa_Value parsed_value = run_Fa_Expr_source(source);
+        ASSERT_TRUE(Fa_IS_INTEGER(parsed_value)) << source;
     }
 }

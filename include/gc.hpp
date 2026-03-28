@@ -4,43 +4,43 @@
 #include "array.hpp"
 #include "value.hpp"
 
-namespace mylang::runtime {
+namespace fairuz::runtime {
 
-class VM;
+class Fa_VM;
 
-class GarbageCollector {
+class Fa_GarbageCollector {
 private:
-    Array<ObjHeader*> All_;
-    Array<ObjHeader*> Grays_;
+    Fa_Array<Fa_ObjHeader*> All_;
+    Fa_Array<Fa_ObjHeader*> Grays_;
 
-    uint32_t CurrentSize_ { 0 };
+    u32 CurrentSize_ { 0 };
 
 public:
-    GarbageCollector() = default;
+    Fa_GarbageCollector() = default;
 
-    void collect(VM* vm);
+    void collect(Fa_VM* vm);
 
     template<typename T, typename... Args>
     T* make(Args&&... args)
     {
         T* obj = new T(std::forward<Args>(args)...);
-        All_.push(static_cast<ObjHeader*>(obj));
+        All_.push(static_cast<Fa_ObjHeader*>(obj));
         CurrentSize_ += sizeof(T); // reasonable estimate
         return obj;
     }
 
-    uint32_t currentMemory() const { return CurrentSize_; }
+    u32 currentMemory() const { return CurrentSize_; }
     void sweepAll();
 
 private:
-    void markRoots(VM* vm);
-    void markObject(ObjHeader* p);
-    void blackenObject(ObjHeader* obj);
+    void markRoots(Fa_VM* vm);
+    void markObject(Fa_ObjHeader* p);
+    void blackenObject(Fa_ObjHeader* obj);
     void sweep();
-    void markValueArray(Array<Value> const& arr);
+    void markValueArray(Fa_Array<Fa_Value> const& arr);
     void traceReferences();
-}; // class GarbageCollector
+}; // class Fa_GarbageCollector
 
-} // namespace mylang::runtime
+} // namespace fairuz::runtime
 
 #endif // GC_HPP

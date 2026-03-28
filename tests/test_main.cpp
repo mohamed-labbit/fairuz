@@ -3,7 +3,7 @@
 
 #include <gtest/gtest.h>
 
-using namespace mylang;
+using namespace fairuz;
 
 namespace test_config {
 
@@ -16,8 +16,8 @@ int main(int argc, char** argv)
 {
     ::testing::InitGoogleTest(&argc, argv);
 
-    mylang::AllocatorContext g_ctx;
-    mylang::setContext(&g_ctx);
+    fairuz::Fa_AllocatorContext g_ctx;
+    fairuz::setContext(&g_ctx);
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -34,7 +34,7 @@ int main(int argc, char** argv)
 
     int ret = RUN_ALL_TESTS();
 
-#ifdef MYLANG_DEBUG
+#ifdef fairuz_DEBUG
 
     if (test_config::verbose) {
         std::cout << getAllocator().toString(true) << '\n';
@@ -45,8 +45,8 @@ int main(int argc, char** argv)
         std::cout << '\n';
         std::cout << getAllocator().toString(true) << std::endl;
     }
-#endif // MYLANG_DEBUG
-    mylang::g_context = nullptr;
+#endif // fairuz_DEBUG
+    fairuz::g_context = nullptr;
 
     return ret;
 }

@@ -6,63 +6,67 @@
 #include "table.hpp"
 #include "value.hpp"
 
-namespace mylang::runtime {
+namespace fairuz::runtime {
 
 using ErrorCode = diagnostic::errc::runtime::Code;
 
-class VM {
+class Fa_VM {
 public:
     static constexpr int MAX_FRAMES = 256;
     static constexpr int STACK_SIZE = 8192;
     static constexpr int GC_THRESHOLD = 1024 * 4; // 4kb
 
-    VM();
-    ~VM();
+    Fa_VM();
+    ~Fa_VM();
 
-    Value run(Chunk* chunk);
+    Fa_Value run(Fa_Chunk* chunk);
 
-    Value nativeLen(int argc, Value* argv);
-    Value nativePrint(int argc, Value* argv);
-    Value nativeType(int argc, Value* argv);
-    Value nativeInt(int argc, Value* argv);
-    Value nativeFloat(int argc, Value* argv);
-    Value nativeAppend(int argc, Value* argv);
-    Value nativePop(int argc, Value* argv);
-    Value nativeSlice(int argc, Value* argv);
-    Value nativeInput(int argc, Value* argv);
-    Value nativeStr(int argc, Value* argv);
-    Value nativeBool(int argc, Value* argv);
-    Value nativeList(int argc, Value* argv);
-    Value nativeSplit(int argc, Value* argv);
-    Value nativeJoin(int argc, Value* argv);
-    Value nativeSubstr(int argc, Value* argv);
-    Value nativeContains(int argc, Value* argv);
-    Value nativeTrim(int argc, Value* argv);
-    Value nativeFloor(int argc, Value* argv);
-    Value nativeCeil(int argc, Value* argv);
-    Value nativeRound(int argc, Value* argv);
-    Value nativeAbs(int argc, Value* argv);
-    Value nativeMin(int argc, Value* argv);
-    Value nativeMax(int argc, Value* argv);
-    Value nativePow(int argc, Value* argv);
-    Value nativeSqrt(int argc, Value* argv);
-    Value nativeAssert(int argc, Value* argv);
-    Value nativeClock(int argc, Value* argv);
-    Value nativeError(int argc, Value* argv);
-    Value nativeTime(int argc, Value* argv);
+    /* STANDARD LIBRARY */
+    
+    /* IO */
+    Fa_Value Fa_print(int argc, Fa_Value* argv);
+    
+    Fa_Value Fa_len(int argc, Fa_Value* argv);
+    Fa_Value Fa_type(int argc, Fa_Value* argv);
+    Fa_Value Fa_int(int argc, Fa_Value* argv);
+    Fa_Value Fa_float(int argc, Fa_Value* argv);
+    Fa_Value Fa_append(int argc, Fa_Value* argv);
+    Fa_Value Fa_pop(int argc, Fa_Value* argv);
+    Fa_Value Fa_slice(int argc, Fa_Value* argv);
+    Fa_Value Fa_input(int argc, Fa_Value* argv);
+    Fa_Value Fa_str(int argc, Fa_Value* argv);
+    Fa_Value Fa_bool(int argc, Fa_Value* argv);
+    Fa_Value Fa_list(int argc, Fa_Value* argv);
+    Fa_Value Fa_split(int argc, Fa_Value* argv);
+    Fa_Value Fa_join(int argc, Fa_Value* argv);
+    Fa_Value Fa_substr(int argc, Fa_Value* argv);
+    Fa_Value Fa_contains(int argc, Fa_Value* argv);
+    Fa_Value Fa_trim(int argc, Fa_Value* argv);
+    Fa_Value Fa_floor(int argc, Fa_Value* argv);
+    Fa_Value Fa_ceil(int argc, Fa_Value* argv);
+    Fa_Value Fa_round(int argc, Fa_Value* argv);
+    Fa_Value Fa_abs(int argc, Fa_Value* argv);
+    Fa_Value Fa_min(int argc, Fa_Value* argv);
+    Fa_Value Fa_max(int argc, Fa_Value* argv);
+    Fa_Value Fa_pow(int argc, Fa_Value* argv);
+    Fa_Value Fa_sqrt(int argc, Fa_Value* argv);
+    Fa_Value Fa_assert(int argc, Fa_Value* argv);
+    Fa_Value Fa_clock(int argc, Fa_Value* argv);
+    Fa_Value Fa_error(int argc, Fa_Value* argv);
+    Fa_Value Fa_time(int argc, Fa_Value* argv);
 
-    friend class GarbageCollector;
+    friend class Fa_GarbageCollector;
 
-    struct CallFrame {
-        ObjClosure* closure { nullptr };
-        Chunk* chunk { nullptr };
-        uint32_t ip { 0 };
-        uint16_t base { 0 };
-        uint16_t localCount { 0 };
+    struct Fa_CallFrame {
+        Fa_ObjClosure* closure { nullptr };
+        Fa_Chunk* chunk { nullptr };
+        u32 ip { 0 };
+        u16 base { 0 };
+        u16 localCount { 0 };
 
-        CallFrame() = default;
+        Fa_CallFrame() = default;
 
-        explicit CallFrame(ObjClosure* cl, Chunk* ch, uint32_t ip, uint16_t b, uint16_t lc)
+        explicit Fa_CallFrame(Fa_ObjClosure* cl, Fa_Chunk* ch, u32 ip, u16 b, u16 lc)
             : closure(cl)
             , chunk(ch)
             , ip(ip)
@@ -70,65 +74,65 @@ public:
             , localCount(lc)
         {
         }
-    }; // struct CallFrame
+    }; // struct Fa_CallFrame
 
-    GarbageCollector GC_;
+    Fa_GarbageCollector GC_;
 
-    Value Stack_[STACK_SIZE];
-    CallFrame Frames_[MAX_FRAMES];
+    Fa_Value Stack_[STACK_SIZE];
+    Fa_CallFrame Frames_[MAX_FRAMES];
 
     int StackTop_ { 0 };
     int FramesTop_ { 0 };
 
     int OpenUpvalueCount_ { 0 };
 
-    NarrowHashTable<StringRef, uint32_t, StringRefHash, StringRefEqual> GlobalIndex_;
-    NarrowHashTable<StringRef, ObjString*, StringRefHash, StringRefEqual> StringTable_;
-    Array<Value> GlobalSlots_;
-    Array<ObjUpvalue*> OpenUpvalues_;
+    NarrowHashTable<Fa_StringRef, u32, Fa_StringRefHash, Fa_StringRefEqual> GlobalIndex_;
+    NarrowHashTable<Fa_StringRef, Fa_ObjString*, Fa_StringRefHash, Fa_StringRefEqual> StringTable_;
+    Fa_Array<Fa_Value> GlobalSlots_;
+    Fa_Array<ObjUpvalue*> OpenUpvalues_;
     bool isDead_ { false };
 
-    Value execute();
+    Fa_Value execute();
 
-    CallFrame& frame();
-    CallFrame const& frame() const;
-    Chunk* chunk();
-    Value& reg(int r);
+    Fa_CallFrame& frame();
+    Fa_CallFrame const& frame() const;
+    Fa_Chunk* chunk();
+    Fa_Value& reg(int r);
 
-    ObjString* intern(StringRef const& str);
+    Fa_ObjString* intern(Fa_StringRef const& str);
     void ensureStack(int needed);
     void closeUpvalues(unsigned int from_stack_pos);
-    void updateIcBinary(Chunk* ch, uint32_t nop_ip, Value lhs, Value rhs, Value result);
+    void updateIcBinary(Fa_Chunk* ch, u32 nop_ip, Fa_Value lhs, Fa_Value rhs, Fa_Value result);
     ObjUpvalue* captureUpvalue(unsigned int stack_pos);
-    void callValue(Value callee, int argc, int base, bool tail);
-    Value callNative(ObjNative* nat, int argc, int base);
+    void callValue(Fa_Value callee, int argc, int base, bool tail);
+    Fa_Value callNative(Fa_ObjNative* nat, int argc, int base);
     void returnFromCall(int ret_reg, int n_ret);
 
     void openStdlib();
-    void registerNative(StringRef const& name, NativeFn fn, int arity = -1);
+    void registerNative(Fa_StringRef const& name, NativeFn fn, int arity = -1);
 
-    SourceLocation currentLocation() const;
+    Fa_SourceLocation currentLocation() const;
     void runtimeError(ErrorCode code);
     [[noreturn]] void halt();
-    void internChunkConstants(Chunk* ch);
+    void internChunkConstants(Fa_Chunk* ch);
 
     int stackSize() const;
     int frameDepth() const;
-    void pushValue(Value v);
-    Value popValue();
-    Value& stackAt(int index);
+    void pushValue(Fa_Value v);
+    Fa_Value popValue();
+    Fa_Value& stackAt(int index);
     void ensureStackSlots(int needed);
-    void pushFrame(CallFrame const& f);
+    void pushFrame(Fa_CallFrame const& f);
     void popFrame();
-    CallFrame& topFrame();
-    CallFrame const& topFrame() const;
-    Value& getReg(CallFrame const& f, int reg);
-    Value& regA(CallFrame const& f, uint32_t instr);
-    Value& regB(CallFrame const& f, uint32_t instr);
-    Value& regC(CallFrame const& f, uint32_t instr);
-    void closeUpvaluesForFrame(CallFrame const& f);
-}; // class VM
+    Fa_CallFrame& topFrame();
+    Fa_CallFrame const& topFrame() const;
+    Fa_Value& getReg(Fa_CallFrame const& f, int reg);
+    Fa_Value& regA(Fa_CallFrame const& f, u32 instr);
+    Fa_Value& regB(Fa_CallFrame const& f, u32 instr);
+    Fa_Value& regC(Fa_CallFrame const& f, u32 instr);
+    void closeUpvaluesForFrame(Fa_CallFrame const& f);
+}; // class Fa_VM
 
-} // namespace mylang::runtime
+} // namespace fairuz::runtime
 
 #endif // VM_HPP

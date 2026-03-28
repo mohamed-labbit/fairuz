@@ -13,11 +13,11 @@
 
 namespace {
 
-#ifndef MYLANG_VERSION
-#define MYLANG_VERSION "0.0.0"
+#ifndef fairuz_VERSION
+#    define fairuz_VERSION "0.0.0"
 #endif
 
-constexpr char const* kVersion = MYLANG_VERSION;
+constexpr char const* kVersion = fairuz_VERSION;
 
 enum class ExitCode : int {
     Success = 0,
@@ -100,10 +100,10 @@ bool parseArgs(int argc, char** argv, Options& options)
     return true;
 }
 
-void printAst(mylang::Array<mylang::ast::Stmt*> const& statements)
+void printAst(fairuz::Fa_Array<fairuz::AST::Fa_Stmt*> const& statements)
 {
-    mylang::ast::ASTPrinter printer(true);
-    for (uint32_t i = 0; i < statements.size(); ++i)
+    fairuz::AST::ASTPrinter printer(true);
+    for (u32 i = 0; i < statements.size(); ++i)
         printer.print(statements[i]);
 }
 
@@ -113,23 +113,23 @@ int main(int argc, char** argv)
 {
     Options options;
     if (!parseArgs(argc, argv, options)) {
-        printUsage(std::cerr, argc > 0 ? argv[0] : "mylang");
+        printUsage(std::cerr, argc > 0 ? argv[0] : "fairuz");
         return static_cast<int>(ExitCode::Usage);
     }
 
     if (options.show_help) {
-        printUsage(std::cout, argc > 0 ? argv[0] : "mylang");
+        printUsage(std::cout, argc > 0 ? argv[0] : "fairuz");
         return static_cast<int>(ExitCode::Success);
     }
 
     if (options.show_version) {
-        std::cout << "mylang " << kVersion << "\n";
+        std::cout << "fairuz " << kVersion << "\n";
         return static_cast<int>(ExitCode::Success);
     }
 
     if (options.input_path.empty()) {
         std::cerr << "No input file provided\n";
-        printUsage(std::cerr, argc > 0 ? argv[0] : "mylang");
+        printUsage(std::cerr, argc > 0 ? argv[0] : "fairuz");
         return static_cast<int>(ExitCode::Usage);
     }
 
@@ -139,23 +139,23 @@ int main(int argc, char** argv)
     }
 
     try {
-        mylang::diagnostic::reset();
+        fairuz::diagnostic::reset();
 
-        mylang::AllocatorContext allocator_context;
-        mylang::setContext(&allocator_context);
+        fairuz::Fa_AllocatorContext allocator_context;
+        fairuz::setContext(&allocator_context);
 
-        mylang::lex::FileManager file_manager(options.input_path);
-        mylang::parser::Parser parser(&file_manager);
-        mylang::Array<mylang::ast::Stmt*> statements = parser.parseProgram();
+        fairuz::lex::Fa_FileManager file_manager(options.input_path);
+        fairuz::parser::Fa_Parser parser(&file_manager);
+        fairuz::Fa_Array<fairuz::AST::Fa_Stmt*> statements = parser.parseProgram();
 
-        if (mylang::diagnostic::hasErrors())
+        if (fairuz::diagnostic::hasErrors())
             return static_cast<int>(ExitCode::DataError);
 
         if (options.dump_ast)
             printAst(statements);
 
-        mylang::runtime::Compiler compiler;
-        mylang::runtime::Chunk* chunk = compiler.compile(statements);
+        fairuz::runtime::Compiler compiler;
+        fairuz::runtime::Fa_Chunk* chunk = compiler.compile(statements);
         if (!chunk) {
             std::cerr << "Compilation failed: no bytecode was produced\n";
             return static_cast<int>(ExitCode::Software);
@@ -167,13 +167,13 @@ int main(int argc, char** argv)
         if (options.check_only)
             return static_cast<int>(ExitCode::Success);
 
-        mylang::runtime::VM vm;
+        fairuz::runtime::Fa_VM vm;
         auto const start = std::chrono::steady_clock::now();
         vm.run(chunk);
         auto const end = std::chrono::steady_clock::now();
 
         if (options.print_time) {
-            std::chrono::duration<double> elapsed = end - start;
+            std::chrono::duration<f64> elapsed = end - start;
             std::cerr << "time: " << elapsed.count() << "s\n";
         }
 

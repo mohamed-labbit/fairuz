@@ -4,46 +4,44 @@
 #include "ast.hpp"
 #include "value.hpp"
 
-namespace mylang::runtime {
+namespace fairuz::runtime {
 
-using namespace ast;
-
-static std::optional<Value> constValue(Expr const* e)
+static std::optional<Fa_Value> constValue(AST::Fa_Expr const* e)
 {
-    if (!e || e->getKind() != Expr::Kind::LITERAL)
+    if (!e || e->getKind() != AST::Fa_Expr::Kind::LITERAL)
         return std::nullopt;
 
-    auto lit = static_cast<LiteralExpr const*>(e);
+    auto lit = static_cast<AST::Fa_LiteralExpr const*>(e);
 
     if (lit->isNil())
         return NIL_VAL;
     if (lit->isBoolean())
-        return MAKE_BOOL(lit->getBool());
+        return Fa_MAKE_BOOL(lit->getBool());
     if (lit->isInteger())
-        return MAKE_INTEGER(lit->getInt());
+        return Fa_MAKE_INTEGER(lit->getInt());
     if (lit->isDecimal())
-        return MAKE_REAL(lit->getFloat());
+        return Fa_MAKE_REAL(lit->getFloat());
 
     return std::nullopt;
 }
 
-static std::optional<Value> tryFoldUnary(UnaryExpr const* e)
+static std::optional<Fa_Value> tryFoldUnary(AST::Fa_UnaryExpr const* e)
 {
-    std::optional<Value> cv = constValue(e->getOperand());
+    std::optional<Fa_Value> cv = constValue(e->getOperand());
     if (!cv)
         return std::nullopt;
 
     switch (e->getOperator()) {
-    case UnaryOp::OP_NEG:
-        if (IS_INTEGER(*cv))
-            return IS_INTEGER(*cv) ? MAKE_INTEGER(-AS_INTEGER(*cv)) : MAKE_REAL(-AS_DOUBLE(*cv));
+    case AST::Fa_UnaryOp::OP_NEG:
+        if (Fa_IS_INTEGER(*cv))
+            return Fa_IS_INTEGER(*cv) ? Fa_MAKE_INTEGER(-Fa_AS_INTEGER(*cv)) : Fa_MAKE_REAL(-Fa_AS_DOUBLE(*cv));
 
         return std::nullopt;
-    case UnaryOp::OP_NOT:
-        return MAKE_BOOL(!IS_TRUTHY(*cv));
-    case UnaryOp::OP_BITNOT:
-        if (IS_INTEGER(*cv))
-            return MAKE_INTEGER(~AS_INTEGER(*cv));
+    case AST::Fa_UnaryOp::OP_NOT:
+        return Fa_MAKE_BOOL(!Fa_IS_TRUTHY(*cv));
+    case AST::Fa_UnaryOp::OP_BITNOT:
+        if (Fa_IS_INTEGER(*cv))
+            return Fa_MAKE_INTEGER(~Fa_AS_INTEGER(*cv));
 
         return std::nullopt;
     default:
@@ -51,7 +49,7 @@ static std::optional<Value> tryFoldUnary(UnaryExpr const* e)
     }
 }
 
-static std::optional<Value> _tryFoldBinary(BinaryExpr const* e)
+static std::optional<Fa_Value> _tryFoldBinary(AST::Fa_BinaryExpr const* e)
 {
     auto L = constValue(e->getLeft());
     auto R = constValue(e->getRight());
@@ -59,114 +57,114 @@ static std::optional<Value> _tryFoldBinary(BinaryExpr const* e)
     if (!L || !R)
         return std::nullopt;
 
-    BinaryOp op = e->getOperator();
+    AST::Fa_BinaryOp op = e->getOperator();
 
-    if (op == BinaryOp::OP_EQ)
-        return MAKE_BOOL(*L == *R);
+    if (op == AST::Fa_BinaryOp::OP_EQ)
+        return Fa_MAKE_BOOL(*L == *R);
 
-    if (op == BinaryOp::OP_NEQ)
-        return MAKE_BOOL(*L != *R);
+    if (op == AST::Fa_BinaryOp::OP_NEQ)
+        return Fa_MAKE_BOOL(*L != *R);
 
-    bool both_ints = IS_INTEGER(*L) && IS_INTEGER(*R);
+    bool both_ints = Fa_IS_INTEGER(*L) && Fa_IS_INTEGER(*R);
 
-    double ld = AS_DOUBLE(*L);
-    double rd = AS_DOUBLE(*R);
+    f64 ld = Fa_AS_DOUBLE(*L);
+    f64 rd = Fa_AS_DOUBLE(*R);
 
-    auto li = IS_INTEGER(*L) ? AS_INTEGER(*L) : static_cast<int64_t>(AS_DOUBLE(*L));
-    auto ri = IS_INTEGER(*R) ? AS_INTEGER(*R) : static_cast<int64_t>(AS_DOUBLE(*R));
+    auto li = Fa_IS_INTEGER(*L) ? Fa_AS_INTEGER(*L) : static_cast<i64>(Fa_AS_DOUBLE(*L));
+    auto ri = Fa_IS_INTEGER(*R) ? Fa_AS_INTEGER(*R) : static_cast<i64>(Fa_AS_DOUBLE(*R));
 
     switch (op) {
-    case BinaryOp::OP_ADD:
-        return both_ints ? MAKE_INTEGER(li + ri) : MAKE_REAL(ld + rd);
-    case BinaryOp::OP_SUB:
-        return both_ints ? MAKE_INTEGER(li - ri) : MAKE_REAL(ld - rd);
-    case BinaryOp::OP_MUL:
-        return both_ints ? MAKE_INTEGER(li * ri) : MAKE_REAL(ld * rd);
-    case BinaryOp::OP_DIV:
+    case AST::Fa_BinaryOp::OP_ADD:
+        return both_ints ? Fa_MAKE_INTEGER(li + ri) : Fa_MAKE_REAL(ld + rd);
+    case AST::Fa_BinaryOp::OP_SUB:
+        return both_ints ? Fa_MAKE_INTEGER(li - ri) : Fa_MAKE_REAL(ld - rd);
+    case AST::Fa_BinaryOp::OP_MUL:
+        return both_ints ? Fa_MAKE_INTEGER(li * ri) : Fa_MAKE_REAL(ld * rd);
+    case AST::Fa_BinaryOp::OP_DIV:
         if (rd == 0.0)
             return std::nullopt;
 
-        return MAKE_REAL(ld / rd);
-    case BinaryOp::OP_MOD: {
+        return Fa_MAKE_REAL(ld / rd);
+    case AST::Fa_BinaryOp::OP_MOD: {
         if (rd == 0.0)
             return std::nullopt;
 
         if (both_ints)
-            return MAKE_INTEGER(li % ri);
+            return Fa_MAKE_INTEGER(li % ri);
 
-        return MAKE_REAL(std::fmod(ld, rd));
+        return Fa_MAKE_REAL(std::fmod(ld, rd));
     }
-    case BinaryOp::OP_POW:
-        return MAKE_REAL(std::pow(ld, rd));
-    case BinaryOp::OP_LT:
-        return MAKE_BOOL(ld < rd);
-    case BinaryOp::OP_GT:
-        return MAKE_BOOL(ld > rd);
-    case BinaryOp::OP_LTE:
-        return MAKE_BOOL(ld <= rd);
-    case BinaryOp::OP_GTE:
-        return MAKE_BOOL(ld >= rd);
-    case BinaryOp::OP_BITAND:
-        return both_ints ? MAKE_INTEGER(li & ri) : std::optional<Value> { };
-    case BinaryOp::OP_BITOR:
-        return both_ints ? MAKE_INTEGER(li | ri) : std::optional<Value> { };
-    case BinaryOp::OP_BITXOR:
-        return both_ints ? MAKE_INTEGER(li ^ ri) : std::optional<Value> { };
-    case BinaryOp::OP_LSHIFT:
+    case AST::Fa_BinaryOp::OP_POW:
+        return Fa_MAKE_REAL(std::pow(ld, rd));
+    case AST::Fa_BinaryOp::OP_LT:
+        return Fa_MAKE_BOOL(ld < rd);
+    case AST::Fa_BinaryOp::OP_GT:
+        return Fa_MAKE_BOOL(ld > rd);
+    case AST::Fa_BinaryOp::OP_LTE:
+        return Fa_MAKE_BOOL(ld <= rd);
+    case AST::Fa_BinaryOp::OP_GTE:
+        return Fa_MAKE_BOOL(ld >= rd);
+    case AST::Fa_BinaryOp::OP_BITAND:
+        return both_ints ? Fa_MAKE_INTEGER(li & ri) : std::optional<Fa_Value> { };
+    case AST::Fa_BinaryOp::OP_BITOR:
+        return both_ints ? Fa_MAKE_INTEGER(li | ri) : std::optional<Fa_Value> { };
+    case AST::Fa_BinaryOp::OP_BITXOR:
+        return both_ints ? Fa_MAKE_INTEGER(li ^ ri) : std::optional<Fa_Value> { };
+    case AST::Fa_BinaryOp::OP_LSHIFT:
         if (!both_ints || ri < 0 || ri >= 64)
             return std::nullopt;
 
-        return MAKE_INTEGER(li << ri);
-    case BinaryOp::OP_RSHIFT:
+        return Fa_MAKE_INTEGER(li << ri);
+    case AST::Fa_BinaryOp::OP_RSHIFT:
         if (!both_ints || ri < 0 || ri >= 64)
             return std::nullopt;
 
-        return MAKE_INTEGER(li >> ri);
+        return Fa_MAKE_INTEGER(li >> ri);
     default:
         return std::nullopt;
     }
 }
 
-static std::optional<Value> tryFoldBinary(BinaryExpr const* e)
+static std::optional<Fa_Value> tryFoldBinary(AST::Fa_BinaryExpr const* e)
 {
     if (!e)
         return std::nullopt;
 
-    Expr* LE = e->getLeft();
-    Expr* RE = e->getRight();
+    AST::Fa_Expr* LE = e->getLeft();
+    AST::Fa_Expr* RE = e->getRight();
 
     if (!LE || !RE)
         return std::nullopt;
 
-    if (LE->getKind() == Expr::Kind::LITERAL && RE->getKind() == Expr::Kind::LITERAL)
+    if (LE->getKind() == AST::Fa_Expr::Kind::LITERAL && RE->getKind() == AST::Fa_Expr::Kind::LITERAL)
         return _tryFoldBinary(e);
 
-    std::optional<Value> L, R;
+    std::optional<Fa_Value> L, R;
 
-    if (LE->getKind() == Expr::Kind::BINARY)
-        L = tryFoldBinary(static_cast<BinaryExpr const*>(LE));
-    else if (LE->getKind() == Expr::Kind::UNARY)
-        L = tryFoldUnary(static_cast<UnaryExpr const*>(LE));
+    if (LE->getKind() == AST::Fa_Expr::Kind::BINARY)
+        L = tryFoldBinary(static_cast<AST::Fa_BinaryExpr const*>(LE));
+    else if (LE->getKind() == AST::Fa_Expr::Kind::UNARY)
+        L = tryFoldUnary(static_cast<AST::Fa_UnaryExpr const*>(LE));
 
-    if (RE->getKind() == Expr::Kind::BINARY)
-        R = tryFoldBinary(static_cast<BinaryExpr const*>(RE));
-    else if (RE->getKind() == Expr::Kind::UNARY)
-        R = tryFoldUnary(static_cast<UnaryExpr const*>(RE));
+    if (RE->getKind() == AST::Fa_Expr::Kind::BINARY)
+        R = tryFoldBinary(static_cast<AST::Fa_BinaryExpr const*>(RE));
+    else if (RE->getKind() == AST::Fa_Expr::Kind::UNARY)
+        R = tryFoldUnary(static_cast<AST::Fa_UnaryExpr const*>(RE));
 
     if (!R && !L)
         return std::nullopt;
 
-    BinaryExpr* ce = e->clone();
+    AST::Fa_BinaryExpr* ce = e->clone();
 
-    auto makeLiteralFromVal = [](Value const v) {
-        if (IS_DOUBLE(v))
-            return makeLiteralFloat(AS_DOUBLE(v));
-        if (IS_INTEGER(v))
-            return makeLiteralInt(AS_INTEGER(v));
-        if (IS_BOOL(v))
-            return makeLiteralBool(AS_BOOL(v));
+    auto makeLiteralFromVal = [](Fa_Value const v) {
+        if (Fa_IS_DOUBLE(v))
+            return AST::Fa_makeLiteralFloat(Fa_AS_DOUBLE(v));
+        if (Fa_IS_INTEGER(v))
+            return AST::Fa_makeLiteralInt(Fa_AS_INTEGER(v));
+        if (Fa_IS_BOOL(v))
+            return AST::Fa_makeLiteralBool(Fa_AS_BOOL(v));
 
-        return makeLiteralNil();
+        return AST::Fa_makeLiteralNil();
     };
 
     if (L)
@@ -177,23 +175,23 @@ static std::optional<Value> tryFoldBinary(BinaryExpr const* e)
     return _tryFoldBinary(ce);
 }
 
-static std::optional<Value> tryFoldExpr(Expr const* e)
+static std::optional<Fa_Value> tryFoldExpr(AST::Fa_Expr const* e)
 {
     if (!e)
         return std::nullopt;
 
     switch (e->getKind()) {
-    case Expr::Kind::LITERAL:
+    case AST::Fa_Expr::Kind::LITERAL:
         return constValue(e);
-    case Expr::Kind::UNARY:
-        return tryFoldUnary(static_cast<UnaryExpr const*>(e));
-    case Expr::Kind::BINARY:
-        return tryFoldBinary(static_cast<BinaryExpr const*>(e));
+    case AST::Fa_Expr::Kind::UNARY:
+        return tryFoldUnary(static_cast<AST::Fa_UnaryExpr const*>(e));
+    case AST::Fa_Expr::Kind::BINARY:
+        return tryFoldBinary(static_cast<AST::Fa_BinaryExpr const*>(e));
     default:
         return std::nullopt;
     }
 }
 
-} // namespace mylang::runtime
+} // namespace fairuz::runtime
 
 #endif // OPTIM_HPP

@@ -6,29 +6,23 @@
 #include <cassert>
 #include <cstddef>
 
-namespace mylang::ast {
+namespace fairuz::AST {
 
-// inline Allocator getAllocator()("AST allocator");
+struct Fa_Expr;
+struct Fa_ListExpr;
+struct Fa_NameExpr;
+struct Fa_AssignmentExpr;
+struct Fa_Stmt;
+struct Fa_BlockStmt;
+struct Fa_AssignmentStmt;
 
-struct Expr;
-struct ListExpr;
-struct NameExpr;
-struct AssignmentExpr;
-struct ErrExpr;
-struct Stmt;
-struct BlockStmt;
-struct AssignmentStmt;
-struct ErrStmt;
+static Fa_ListExpr* Fa_makeList(Fa_Array<Fa_Expr*> elements = { });
+static Fa_BlockStmt* Fa_makeBlock(Fa_Array<Fa_Stmt*> stmts = { });
+static Fa_NameExpr* Fa_makeName(Fa_StringRef const str);
+static Fa_AssignmentExpr* Fa_makeAssignmentExpr(Fa_Expr* target, Fa_Expr* value, bool decl = false);
+static Fa_AssignmentStmt* Fa_makeAssignmentStmt(Fa_Expr* target, Fa_Expr* value, bool decl = false);
 
-static ListExpr* makeList(Array<Expr*> elements = { });
-static BlockStmt* makeBlock(Array<Stmt*> stmts = { });
-static NameExpr* makeName(StringRef const str);
-static AssignmentExpr* makeAssignmentExpr(Expr* target, Expr* value, bool decl = false);
-static AssignmentStmt* makeAssignmentStmt(Expr* target, Expr* value, bool decl = false);
-static ErrExpr* makeErrExpr(uint32_t line, uint32_t col);
-static ErrStmt* makeErrStmt(uint32_t line, uint32_t col);
-
-struct ASTNode {
+struct Fa_ASTNode {
 public:
     enum class NodeType : int {
         EXPRESSION,
@@ -37,28 +31,28 @@ public:
     }; // enum NodeType
 
 private:
-    uint32_t Line_ { 0 };
-    uint16_t Column_ { 0 };
+    u32 Line_ { 0 };
+    u16 Column_ { 0 };
 
     NodeType NodeType_ { NodeType::INVALID };
 
 public:
-    ASTNode() = default;
-    ASTNode(ASTNode const&) = delete;
-    ASTNode(ASTNode&&) = delete;
+    Fa_ASTNode() = default;
+    Fa_ASTNode(Fa_ASTNode const&) = delete;
+    Fa_ASTNode(Fa_ASTNode&&) = delete;
 
-    ASTNode& operator=(ASTNode const&) = delete;
-    ASTNode& operator=(ASTNode&&) = delete;
+    Fa_ASTNode& operator=(Fa_ASTNode const&) = delete;
+    Fa_ASTNode& operator=(Fa_ASTNode&&) = delete;
 
     [[nodiscard]] virtual NodeType getNodeType() const;
-    [[nodiscard]] uint32_t getLine() const;
-    [[nodiscard]] uint16_t getColumn() const;
-    void setLine(uint32_t line);
-    void setColumn(uint16_t col);
-    virtual ~ASTNode() = default;
-}; // struct ASTNode
+    [[nodiscard]] u32 getLine() const;
+    [[nodiscard]] u16 getColumn() const;
+    void setLine(u32 line);
+    void setColumn(u16 col);
+    virtual ~Fa_ASTNode() = default;
+}; // struct Fa_ASTNode
 
-enum class BinaryOp : uint8_t {
+enum class Fa_BinaryOp : u8 {
     OP_ADD,
     OP_SUB,
     OP_MUL,
@@ -79,19 +73,19 @@ enum class BinaryOp : uint8_t {
     OP_AND,
     OP_OR,
     INVALID
-}; // enum BinaryOp
+}; // enum Fa_BinaryOp
 
-enum class UnaryOp : uint8_t {
+enum class Fa_UnaryOp : u8 {
     OP_PLUS,
     OP_NEG,
     OP_BITNOT,
     OP_NOT,
     INVALID
-}; // enum UnaryOp
+}; // enum Fa_UnaryOp
 
 /// NOTE: do not know if the assert for the costructors args is a good idea
 
-struct Expr : public ASTNode {
+struct Fa_Expr : public Fa_ASTNode {
 public:
     enum class Kind : int {
         BINARY,
@@ -109,30 +103,30 @@ protected:
     Kind Kind_ { Kind::INVALID };
 
 public:
-    Expr()
+    Fa_Expr()
         : Kind_(Kind::INVALID)
     {
     }
 
-    virtual ~Expr() = default;
+    virtual ~Fa_Expr() = default;
 
-    virtual bool equals(Expr const* other) const = 0;
-    virtual Expr* clone() const = 0;
+    virtual bool equals(Fa_Expr const* other) const = 0;
+    virtual Fa_Expr* clone() const = 0;
 
     Kind getKind() const { return Kind_; }
     NodeType getNodeType() const override { return NodeType::EXPRESSION; }
-}; // struct Expr
+}; // struct Fa_Expr
 
-struct BinaryExpr final : public Expr {
+struct Fa_BinaryExpr final : public Fa_Expr {
 private:
-    Expr* Left_ { nullptr };
-    Expr* Right_ { nullptr };
-    BinaryOp Operator_ { BinaryOp::INVALID };
+    Fa_Expr* Left_ { nullptr };
+    Fa_Expr* Right_ { nullptr };
+    Fa_BinaryOp Operator_ { Fa_BinaryOp::INVALID };
 
 public:
-    BinaryExpr() = delete;
+    Fa_BinaryExpr() = delete;
 
-    BinaryExpr(Expr* l, Expr* r, BinaryOp op)
+    Fa_BinaryExpr(Fa_Expr* l, Fa_Expr* r, Fa_BinaryOp op)
         : Left_(l)
         , Right_(r)
         , Operator_(op)
@@ -141,33 +135,34 @@ public:
         Kind_ = Kind::BINARY;
     }
 
-    ~BinaryExpr() override = default;
+    ~Fa_BinaryExpr() override = default;
 
-    BinaryExpr(BinaryExpr&&) noexcept = delete;
-    BinaryExpr(BinaryExpr const&) noexcept = delete;
+    Fa_BinaryExpr(Fa_BinaryExpr&&) noexcept = delete;
+    Fa_BinaryExpr(Fa_BinaryExpr const&) noexcept = delete;
 
-    BinaryExpr& operator=(BinaryExpr const&) noexcept = delete;
-    BinaryExpr& operator=(BinaryExpr&&) noexcept = delete;
+    Fa_BinaryExpr& operator=(Fa_BinaryExpr const&) noexcept = delete;
+    Fa_BinaryExpr& operator=(Fa_BinaryExpr&&) noexcept = delete;
 
-    [[nodiscard]] bool equals(Expr const* other) const override;
-    [[nodiscard]] BinaryExpr* clone() const override;
-    [[nodiscard]] Expr* getLeft() const;
-    [[nodiscard]] Expr* getRight() const;
-    [[nodiscard]] BinaryOp getOperator() const;
-    void setLeft(Expr* l);
-    void setRight(Expr* r);
-    void setOperator(BinaryOp op);
-}; // struct BinaryExpr
+    [[nodiscard]] bool equals(Fa_Expr const* other) const override;
+    [[nodiscard]] Fa_BinaryExpr* clone() const override;
+    [[nodiscard]] Fa_Expr* getLeft() const;
+    [[nodiscard]] Fa_Expr* getRight() const;
+    [[nodiscard]] Fa_BinaryOp getOperator() const;
 
-struct UnaryExpr final : public Expr {
+    void setLeft(Fa_Expr* l);
+    void setRight(Fa_Expr* r);
+    void setOperator(Fa_BinaryOp op);
+}; // struct Fa_BinaryExpr
+
+struct Fa_UnaryExpr final : public Fa_Expr {
 private:
-    Expr* Operand_ { nullptr };
-    UnaryOp Operator_ { UnaryOp::INVALID };
+    Fa_Expr* Operand_ { nullptr };
+    Fa_UnaryOp Operator_ { Fa_UnaryOp::INVALID };
 
 public:
-    UnaryExpr() = delete;
+    Fa_UnaryExpr() = delete;
 
-    UnaryExpr(Expr* operand, UnaryOp op)
+    Fa_UnaryExpr(Fa_Expr* operand, Fa_UnaryOp op)
         : Operand_(operand)
         , Operator_(op)
     {
@@ -175,21 +170,21 @@ public:
         Kind_ = Kind::UNARY;
     }
 
-    ~UnaryExpr() override = default;
+    ~Fa_UnaryExpr() override = default;
 
-    UnaryExpr(UnaryExpr&&) noexcept = delete;
-    UnaryExpr(UnaryExpr const&) noexcept = delete;
+    Fa_UnaryExpr(Fa_UnaryExpr&&) noexcept = delete;
+    Fa_UnaryExpr(Fa_UnaryExpr const&) noexcept = delete;
 
-    UnaryExpr& operator=(UnaryExpr const&) noexcept = delete;
-    UnaryExpr& operator=(UnaryExpr&&) noexcept = delete;
+    Fa_UnaryExpr& operator=(Fa_UnaryExpr const&) noexcept = delete;
+    Fa_UnaryExpr& operator=(Fa_UnaryExpr&&) noexcept = delete;
 
-    [[nodiscard]] bool equals(Expr const* other) const override;
-    [[nodiscard]] UnaryExpr* clone() const override;
-    [[nodiscard]] Expr* getOperand() const;
-    [[nodiscard]] UnaryOp getOperator() const;
-}; // struct UnaryExpr
+    [[nodiscard]] bool equals(Fa_Expr const* other) const override;
+    [[nodiscard]] Fa_UnaryExpr* clone() const override;
+    [[nodiscard]] Fa_Expr* getOperand() const;
+    [[nodiscard]] Fa_UnaryOp getOperator() const;
+}; // struct Fa_UnaryExpr
 
-struct LiteralExpr final : public Expr {
+struct Fa_LiteralExpr final : public Fa_Expr {
 public:
     enum class Type {
         INTEGER,
@@ -203,59 +198,59 @@ private:
     Type Type_ { Type::NIL };
 
     union {
-        int64_t IntValue_;
-        double FloatValue_;
+        i64 IntValue_;
+        f64 FloatValue_;
         bool BoolValue_;
     }; // union
 
-    StringRef StrValue_;
+    Fa_StringRef StrValue_;
 
 public:
-    explicit LiteralExpr()
+    explicit Fa_LiteralExpr()
         : Type_(Type::NIL)
     {
         Kind_ = Kind::LITERAL;
     }
 
-    LiteralExpr(int64_t value, Type type)
+    Fa_LiteralExpr(i64 value, Type type)
         : Type_(type)
         , IntValue_(value)
     {
         Kind_ = Kind::LITERAL;
     }
-    LiteralExpr(double value, Type type)
+    Fa_LiteralExpr(f64 value, Type type)
         : Type_(type)
         , FloatValue_(value)
     {
         Kind_ = Kind::LITERAL;
     }
 
-    explicit LiteralExpr(bool value)
+    explicit Fa_LiteralExpr(bool value)
         : Type_(Type::BOOLEAN)
         , BoolValue_(value)
     {
         Kind_ = Kind::LITERAL;
     }
-    explicit LiteralExpr(StringRef str)
+    explicit Fa_LiteralExpr(Fa_StringRef str)
         : Type_(Type::STRING)
         , StrValue_(std::move(str))
     {
         Kind_ = Kind::LITERAL;
     }
 
-    ~LiteralExpr() override = default;
+    ~Fa_LiteralExpr() override = default;
 
-    LiteralExpr(LiteralExpr&&) noexcept = delete;
-    LiteralExpr(LiteralExpr const&) noexcept = delete;
+    Fa_LiteralExpr(Fa_LiteralExpr&&) noexcept = delete;
+    Fa_LiteralExpr(Fa_LiteralExpr const&) noexcept = delete;
 
-    LiteralExpr& operator=(LiteralExpr const&) noexcept = delete;
-    LiteralExpr& operator=(LiteralExpr&&) noexcept = delete;
+    Fa_LiteralExpr& operator=(Fa_LiteralExpr const&) noexcept = delete;
+    Fa_LiteralExpr& operator=(Fa_LiteralExpr&&) noexcept = delete;
 
     [[nodiscard]] Type getType() const;
-    [[nodiscard]] int64_t getInt() const;
-    [[nodiscard]] double getFloat() const;
+    [[nodiscard]] i64 getInt() const;
+    [[nodiscard]] f64 getFloat() const;
     [[nodiscard]] bool getBool() const;
-    [[nodiscard]] StringRef getStr() const;
+    [[nodiscard]] Fa_StringRef getStr() const;
 
     [[nodiscard]] bool isInteger() const;
     [[nodiscard]] bool isDecimal() const;
@@ -263,70 +258,71 @@ public:
     [[nodiscard]] bool isString() const;
     [[nodiscard]] bool isNumeric() const;
     [[nodiscard]] bool isNil() const;
-    [[nodiscard]] bool equals(Expr const* other) const override;
-    [[nodiscard]] LiteralExpr* clone() const override;
-    [[nodiscard]] double toNumber() const;
-}; // struct LiteralExpr
 
-struct NameExpr final : public Expr {
+    [[nodiscard]] bool equals(Fa_Expr const* other) const override;
+    [[nodiscard]] Fa_LiteralExpr* clone() const override;
+    [[nodiscard]] f64 toNumber() const;
+}; // struct Fa_LiteralExpr
+
+struct Fa_NameExpr final : public Fa_Expr {
 private:
-    StringRef Value_;
+    Fa_StringRef Value_;
 
 public:
-    NameExpr() = default;
+    Fa_NameExpr() = default;
 
-    explicit NameExpr(StringRef s)
+    explicit Fa_NameExpr(Fa_StringRef s)
         : Value_(std::move(s))
     {
         Kind_ = Kind::NAME;
     }
 
-    ~NameExpr() override = default;
+    ~Fa_NameExpr() override = default;
 
-    NameExpr(NameExpr&&) noexcept = delete;
-    NameExpr(NameExpr const&) noexcept = delete;
+    Fa_NameExpr(Fa_NameExpr&&) noexcept = delete;
+    Fa_NameExpr(Fa_NameExpr const&) noexcept = delete;
 
-    NameExpr& operator=(NameExpr const&) noexcept = delete;
-    NameExpr& operator=(NameExpr&&) noexcept = delete;
+    Fa_NameExpr& operator=(Fa_NameExpr const&) noexcept = delete;
+    Fa_NameExpr& operator=(Fa_NameExpr&&) noexcept = delete;
 
-    [[nodiscard]] bool equals(Expr const* other) const override;
-    [[nodiscard]] NameExpr* clone() const override;
-    [[nodiscard]] StringRef getValue() const;
-}; // struct NameExpr
+    [[nodiscard]] bool equals(Fa_Expr const* other) const override;
+    [[nodiscard]] Fa_NameExpr* clone() const override;
+    [[nodiscard]] Fa_StringRef getValue() const;
+}; // struct Fa_NameExpr
 
-struct ListExpr final : public Expr {
+struct Fa_ListExpr final : public Fa_Expr {
 private:
-    Array<Expr*> Elements_;
+    Fa_Array<Fa_Expr*> Elements_;
 
 public:
-    ListExpr() = default;
+    Fa_ListExpr() = default;
 
-    explicit ListExpr(Array<Expr*> elements)
+    explicit Fa_ListExpr(Fa_Array<Fa_Expr*> elements)
         : Elements_(std::move(elements))
     {
         Kind_ = Kind::LIST;
     }
 
-    ~ListExpr() override = default;
+    ~Fa_ListExpr() override = default;
 
-    Expr* operator[](size_t const i);
-    Expr const* operator[](size_t const i) const;
+    Fa_Expr* operator[](size_t const i);
+    Fa_Expr const* operator[](size_t const i) const;
 
-    ListExpr(ListExpr&&) noexcept = delete;
-    ListExpr(ListExpr const&) noexcept = delete;
+    Fa_ListExpr(Fa_ListExpr&&) noexcept = delete;
+    Fa_ListExpr(Fa_ListExpr const&) noexcept = delete;
 
-    ListExpr& operator=(ListExpr const&) noexcept = delete;
-    ListExpr& operator=(ListExpr&&) noexcept = delete;
+    Fa_ListExpr& operator=(Fa_ListExpr const&) noexcept = delete;
+    Fa_ListExpr& operator=(Fa_ListExpr&&) noexcept = delete;
 
-    [[nodiscard]] bool equals(Expr const* other) const override;
-    [[nodiscard]] ListExpr* clone() const override;
-    [[nodiscard]] Array<Expr*> const& getElements() const;
-    [[nodiscard]] Array<Expr*>& getElements();
+    [[nodiscard]] bool equals(Fa_Expr const* other) const override;
+    [[nodiscard]] Fa_ListExpr* clone() const override;
+    [[nodiscard]] Fa_Array<Fa_Expr*> const& getElements() const;
+    [[nodiscard]] Fa_Array<Fa_Expr*>& getElements();
     [[nodiscard]] bool isEmpty() const;
     [[nodiscard]] size_t size() const;
-}; // struct ListExpr
+}; // struct Fa_ListExpr
 
-struct CallExpr final : public Expr {
+struct Fa_CallExpr final : public Fa_Expr {
 public:
     enum class CallLocation : int {
         GLOBAL,
@@ -334,55 +330,55 @@ public:
     }; // enum CallLocation
 
 private:
-    Expr* Callee_ { nullptr };
-    ListExpr* Args_ { nullptr };
+    Fa_Expr* Callee_ { nullptr };
+    Fa_ListExpr* Args_ { nullptr };
     CallLocation CallLocation_ { CallLocation::GLOBAL }; // FIXED: Initialize member
 
 public:
-    CallExpr() = delete;
+    Fa_CallExpr() = delete;
 
-    explicit CallExpr(Expr* c, ListExpr* a = nullptr, CallLocation loc = CallLocation::GLOBAL)
+    explicit Fa_CallExpr(Fa_Expr* c, Fa_ListExpr* a = nullptr, CallLocation loc = CallLocation::GLOBAL)
         : Callee_(c)
         , Args_(a)
         , CallLocation_(loc)
     {
         if (!Args_)
-            Args_ = makeList();
+            Args_ = Fa_makeList();
 
         assert(Callee_ != nullptr && Args_ != nullptr);
         Kind_ = Kind::CALL;
     }
 
-    ~CallExpr() override = default;
+    ~Fa_CallExpr() override = default;
 
-    CallExpr(CallExpr&&) noexcept = delete;
-    CallExpr(CallExpr const&) noexcept = delete;
+    Fa_CallExpr(Fa_CallExpr&&) noexcept = delete;
+    Fa_CallExpr(Fa_CallExpr const&) noexcept = delete;
 
-    CallExpr& operator=(CallExpr const&) noexcept = delete;
-    CallExpr& operator=(CallExpr&&) noexcept = delete;
+    Fa_CallExpr& operator=(Fa_CallExpr const&) noexcept = delete;
+    Fa_CallExpr& operator=(Fa_CallExpr&&) noexcept = delete;
 
-    [[nodiscard]] bool equals(Expr const* other) const override;
-    [[nodiscard]] CallExpr* clone() const override;
-    [[nodiscard]] Expr* getCallee() const;
-    [[nodiscard]] Array<Expr*> const& getArgs() const;
-    [[nodiscard]] Array<Expr*>& getArgs();
-    [[nodiscard]] ListExpr* getArgsAsListExpr();
-    [[nodiscard]] ListExpr const* getArgsAsListExpr() const;
+    [[nodiscard]] bool equals(Fa_Expr const* other) const override;
+    [[nodiscard]] Fa_CallExpr* clone() const override;
+    [[nodiscard]] Fa_Expr* getCallee() const;
+    [[nodiscard]] Fa_Array<Fa_Expr*> const& getArgs() const;
+    [[nodiscard]] Fa_Array<Fa_Expr*>& getArgs();
+    [[nodiscard]] Fa_ListExpr* getArgsAsListExpr();
+    [[nodiscard]] Fa_ListExpr const* getArgsAsListExpr() const;
     [[nodiscard]] CallLocation getCallLocation() const;
     [[nodiscard]] bool hasArguments() const;
-}; // struct CallExpr
+}; // struct Fa_CallExpr
 
-struct AssignmentExpr final : public Expr {
+struct Fa_AssignmentExpr final : public Fa_Expr {
 private:
-    Expr* Target_ { nullptr };
-    Expr* Value_ { nullptr };
+    Fa_Expr* Target_ { nullptr };
+    Fa_Expr* Value_ { nullptr };
 
     bool isDecl_ = false;
 
 public:
-    AssignmentExpr() = delete;
+    Fa_AssignmentExpr() = delete;
 
-    AssignmentExpr(Expr* target, Expr* value, bool decl = false)
+    Fa_AssignmentExpr(Fa_Expr* target, Fa_Expr* value, bool decl = false)
         : Target_(target)
         , Value_(value)
         , isDecl_(decl)
@@ -391,32 +387,32 @@ public:
         Kind_ = Kind::ASSIGNMENT;
     }
 
-    ~AssignmentExpr() override = default;
+    ~Fa_AssignmentExpr() override = default;
 
-    AssignmentExpr(AssignmentExpr&&) noexcept = delete;
-    AssignmentExpr(AssignmentExpr const&) noexcept = delete;
+    Fa_AssignmentExpr(Fa_AssignmentExpr&&) noexcept = delete;
+    Fa_AssignmentExpr(Fa_AssignmentExpr const&) noexcept = delete;
 
-    AssignmentExpr& operator=(AssignmentExpr const&) noexcept = delete;
-    AssignmentExpr& operator=(AssignmentExpr&&) noexcept = delete;
+    Fa_AssignmentExpr& operator=(Fa_AssignmentExpr const&) noexcept = delete;
+    Fa_AssignmentExpr& operator=(Fa_AssignmentExpr&&) noexcept = delete;
 
-    [[nodiscard]] bool equals(Expr const* other) const override;
-    [[nodiscard]] AssignmentExpr* clone() const override;
-    [[nodiscard]] Expr* getTarget() const;
-    [[nodiscard]] Expr* getValue() const;
-    void setTarget(Expr* t);
-    void setValue(Expr* v);
+    [[nodiscard]] bool equals(Fa_Expr const* other) const override;
+    [[nodiscard]] Fa_AssignmentExpr* clone() const override;
+    [[nodiscard]] Fa_Expr* getTarget() const;
+    [[nodiscard]] Fa_Expr* getValue() const;
+    void setTarget(Fa_Expr* t);
+    void setValue(Fa_Expr* v);
     [[nodiscard]] bool isDeclaration() const;
-}; // AssignmentExpr
+}; // Fa_AssignmentExpr
 
-struct IndexExpr final : public Expr {
+struct Fa_IndexExpr final : public Fa_Expr {
 private:
-    Expr* Object_ { nullptr };
-    Expr* Index_ { nullptr };
+    Fa_Expr* Object_ { nullptr };
+    Fa_Expr* Index_ { nullptr };
 
 public:
-    IndexExpr() = delete;
+    Fa_IndexExpr() = delete;
 
-    IndexExpr(Expr* obj, Expr* idx)
+    Fa_IndexExpr(Fa_Expr* obj, Fa_Expr* idx)
         : Object_(obj)
         , Index_(idx)
     {
@@ -424,23 +420,23 @@ public:
         Kind_ = Kind::INDEX;
     }
 
-    ~IndexExpr() override = default;
+    ~Fa_IndexExpr() override = default;
 
-    IndexExpr(IndexExpr&&) noexcept = delete;
-    IndexExpr(IndexExpr const&) noexcept = delete;
+    Fa_IndexExpr(Fa_IndexExpr&&) noexcept = delete;
+    Fa_IndexExpr(Fa_IndexExpr const&) noexcept = delete;
 
-    IndexExpr& operator=(IndexExpr const&) noexcept = delete;
-    IndexExpr& operator=(IndexExpr&&) noexcept = delete;
+    Fa_IndexExpr& operator=(Fa_IndexExpr const&) noexcept = delete;
+    Fa_IndexExpr& operator=(Fa_IndexExpr&&) noexcept = delete;
 
-    [[nodiscard]] bool equals(Expr const* other) const override;
-    [[nodiscard]] IndexExpr* clone() const override;
-    [[nodiscard]] Expr* getObject() const;
-    [[nodiscard]] Expr* getIndex() const;
-}; // struct IndexExpr
+    [[nodiscard]] bool equals(Fa_Expr const* other) const override;
+    [[nodiscard]] Fa_IndexExpr* clone() const override;
+    [[nodiscard]] Fa_Expr* getObject() const;
+    [[nodiscard]] Fa_Expr* getIndex() const;
+}; // struct Fa_IndexExpr
 
-struct Stmt : public ASTNode {
+struct Fa_Stmt : public Fa_ASTNode {
 public:
-    enum class Kind : uint8_t {
+    enum class Kind : u8 {
         EXPR,
         ASSIGNMENT,
         IF,
@@ -456,110 +452,110 @@ protected:
     Kind Kind_ { Kind::INVALID };
 
 public:
-    explicit Stmt() = default;
-    virtual ~Stmt() = default;
+    explicit Fa_Stmt() = default;
+    virtual ~Fa_Stmt() = default;
 
-    virtual Stmt* clone() const = 0;
-    virtual bool equals(Stmt const* other) const = 0;
+    virtual Fa_Stmt* clone() const = 0;
+    virtual bool equals(Fa_Stmt const* other) const = 0;
 
     Kind getKind() const { return Kind_; }
     NodeType getNodeType() const override { return NodeType::STATEMENT; }
-}; // struct Stmt
+}; // struct Fa_Stmt
 
-struct BlockStmt final : public Stmt {
+struct Fa_BlockStmt final : public Fa_Stmt {
 private:
-    Array<Stmt*> Statements_;
+    Fa_Array<Fa_Stmt*> Statements_;
 
 public:
-    BlockStmt() = delete;
+    Fa_BlockStmt() = delete;
 
-    explicit BlockStmt(Array<Stmt*> stmts)
+    explicit Fa_BlockStmt(Fa_Array<Fa_Stmt*> stmts)
         : Statements_(stmts)
     {
         Kind_ = Kind::BLOCK;
     }
 
-    BlockStmt(BlockStmt&&) noexcept = delete;
-    BlockStmt(BlockStmt const&) noexcept = delete;
+    Fa_BlockStmt(Fa_BlockStmt&&) noexcept = delete;
+    Fa_BlockStmt(Fa_BlockStmt const&) noexcept = delete;
 
-    BlockStmt& operator=(BlockStmt const&) noexcept = delete;
+    Fa_BlockStmt& operator=(Fa_BlockStmt const&) noexcept = delete;
 
-    [[nodiscard]] bool equals(Stmt const* other) const override;
-    [[nodiscard]] BlockStmt* clone() const override;
-    [[nodiscard]] Array<Stmt*> const& getStatements() const;
+    [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
+    [[nodiscard]] Fa_BlockStmt* clone() const override;
+    [[nodiscard]] Fa_Array<Fa_Stmt*> const& getStatements() const;
     [[nodiscard]] bool isEmpty() const;
-    void setStatements(Array<Stmt*>& stmts);
-}; // struct BlockStmt
+    void setStatements(Fa_Array<Fa_Stmt*>& stmts);
+}; // struct Fa_BlockStmt
 
-struct ExprStmt final : public Stmt {
+struct Fa_ExprStmt final : public Fa_Stmt {
 private:
-    Expr* Expr_ { nullptr };
+    Fa_Expr* Expr_ { nullptr };
 
 public:
-    ExprStmt() = delete;
+    Fa_ExprStmt() = delete;
 
-    explicit ExprStmt(Expr* expr)
+    explicit Fa_ExprStmt(Fa_Expr* expr)
         : Expr_(expr)
     {
         assert(Expr_ != nullptr);
         Kind_ = Kind::EXPR;
     }
 
-    ExprStmt(ExprStmt&&) noexcept = delete;
-    ExprStmt(ExprStmt const&) noexcept = delete;
+    Fa_ExprStmt(Fa_ExprStmt&&) noexcept = delete;
+    Fa_ExprStmt(Fa_ExprStmt const&) noexcept = delete;
 
-    ExprStmt& operator=(ExprStmt const&) noexcept = delete;
+    Fa_ExprStmt& operator=(Fa_ExprStmt const&) noexcept = delete;
 
-    [[nodiscard]] bool equals(Stmt const* other) const override;
-    [[nodiscard]] ExprStmt* clone() const override;
-    [[nodiscard]] Expr* getExpr() const;
-    void setExpr(Expr* e);
-}; // struct ExprStmt
+    [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
+    [[nodiscard]] Fa_ExprStmt* clone() const override;
+    [[nodiscard]] Fa_Expr* getExpr() const;
+    void setExpr(Fa_Expr* e);
+}; // struct Fa_ExprStmt
 
-struct AssignmentStmt final : public Stmt {
+struct Fa_AssignmentStmt final : public Fa_Stmt {
 private:
-    AssignmentExpr* Expr_;
+    Fa_AssignmentExpr* Expr_;
 
 public:
-    AssignmentStmt() = delete;
+    Fa_AssignmentStmt() = delete;
 
-    explicit AssignmentStmt(AssignmentExpr* e)
+    explicit Fa_AssignmentStmt(Fa_AssignmentExpr* e)
         : Expr_(e->clone())
     {
         assert(Expr_ != nullptr);
         Kind_ = Kind::ASSIGNMENT;
     }
 
-    AssignmentStmt(Expr* target, Expr* value, bool decl = false)
+    Fa_AssignmentStmt(Fa_Expr* target, Fa_Expr* value, bool decl = false)
     {
-        Expr_ = makeAssignmentExpr(target, value, decl); // AssignmentExpr will assert args for us
+        Expr_ = Fa_makeAssignmentExpr(target, value, decl); // Fa_AssignmentExpr will assert args for us
         Kind_ = Kind::ASSIGNMENT;
     }
 
-    AssignmentStmt(AssignmentStmt&&) noexcept = delete;
-    AssignmentStmt(AssignmentStmt const&) noexcept = delete;
+    Fa_AssignmentStmt(Fa_AssignmentStmt&&) noexcept = delete;
+    Fa_AssignmentStmt(Fa_AssignmentStmt const&) noexcept = delete;
 
-    AssignmentStmt& operator=(AssignmentStmt const&) noexcept = delete;
+    Fa_AssignmentStmt& operator=(Fa_AssignmentStmt const&) noexcept = delete;
 
-    [[nodiscard]] bool equals(Stmt const* other) const override;
-    [[nodiscard]] AssignmentStmt* clone() const override;
-    [[nodiscard]] Expr* getValue() const;
-    [[nodiscard]] Expr* getTarget() const;
+    [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
+    [[nodiscard]] Fa_AssignmentStmt* clone() const override;
+    [[nodiscard]] Fa_Expr* getValue() const;
+    [[nodiscard]] Fa_Expr* getTarget() const;
     [[nodiscard]] bool isDeclaration() const;
-    void setValue(Expr* v);
-    void setTarget(Expr* t);
-}; // struct AssignmentExpr
+    void setValue(Fa_Expr* v);
+    void setTarget(Fa_Expr* t);
+}; // struct Fa_AssignmentExpr
 
-struct IfStmt final : public Stmt {
+struct Fa_IfStmt final : public Fa_Stmt {
 private:
-    Expr* Condition_ { nullptr };
-    Stmt* ThenStmt_ { nullptr };
-    Stmt* ElseStmt_ { nullptr };
+    Fa_Expr* Condition_ { nullptr };
+    Fa_Stmt* ThenStmt_ { nullptr };
+    Fa_Stmt* ElseStmt_ { nullptr };
 
 public:
-    IfStmt() = delete;
+    Fa_IfStmt() = delete;
 
-    IfStmt(Expr* condition, Stmt* then_stmt, Stmt* else_stmt)
+    Fa_IfStmt(Fa_Expr* condition, Fa_Stmt* then_stmt, Fa_Stmt* else_stmt)
         : Condition_(condition)
         , ThenStmt_(then_stmt)
         , ElseStmt_(else_stmt)
@@ -568,29 +564,29 @@ public:
         Kind_ = Kind::IF;
     }
 
-    IfStmt(IfStmt&&) noexcept = delete;
-    IfStmt(IfStmt const&) noexcept = delete;
+    Fa_IfStmt(Fa_IfStmt&&) noexcept = delete;
+    Fa_IfStmt(Fa_IfStmt const&) noexcept = delete;
 
-    IfStmt& operator=(IfStmt const&) noexcept = delete;
+    Fa_IfStmt& operator=(Fa_IfStmt const&) noexcept = delete;
 
-    [[nodiscard]] bool equals(Stmt const* other) const override;
-    [[nodiscard]] IfStmt* clone() const override;
-    [[nodiscard]] Expr* getCondition() const;
-    [[nodiscard]] Stmt* getThen() const;
-    [[nodiscard]] Stmt* getElse() const;
-    void setThen(Stmt* t);
-    void setElse(Stmt* e);
-}; // struct IfStmt
+    [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
+    [[nodiscard]] Fa_IfStmt* clone() const override;
+    [[nodiscard]] Fa_Expr* getCondition() const;
+    [[nodiscard]] Fa_Stmt* getThen() const;
+    [[nodiscard]] Fa_Stmt* getElse() const;
+    void setThen(Fa_Stmt* t);
+    void setElse(Fa_Stmt* e);
+}; // struct Fa_IfStmt
 
-struct WhileStmt final : public Stmt {
+struct Fa_WhileStmt final : public Fa_Stmt {
 private:
-    Expr* Condition_ { nullptr };
-    Stmt* Body_ { nullptr };
+    Fa_Expr* Condition_ { nullptr };
+    Fa_Stmt* Body_ { nullptr };
 
 public:
-    WhileStmt() = delete;
+    Fa_WhileStmt() = delete;
 
-    WhileStmt(Expr* condition, Stmt* body)
+    Fa_WhileStmt(Fa_Expr* condition, Fa_Stmt* body)
         : Condition_(condition)
         , Body_(body)
     {
@@ -598,30 +594,30 @@ public:
         Kind_ = Kind::WHILE;
     }
 
-    WhileStmt(WhileStmt&&) noexcept = delete;
-    WhileStmt(WhileStmt const&) noexcept = delete;
+    Fa_WhileStmt(Fa_WhileStmt&&) noexcept = delete;
+    Fa_WhileStmt(Fa_WhileStmt const&) noexcept = delete;
 
-    WhileStmt& operator=(WhileStmt const&) noexcept = delete;
+    Fa_WhileStmt& operator=(Fa_WhileStmt const&) noexcept = delete;
 
-    [[nodiscard]] bool equals(Stmt const* other) const override;
-    [[nodiscard]] WhileStmt* clone() const override;
-    [[nodiscard]] Expr* getCondition() const;
-    [[nodiscard]] Stmt* getBody();
-    [[nodiscard]] Stmt const* getBody() const;
-    void setBody(Stmt* b);
-}; // struct WhileStmt
+    [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
+    [[nodiscard]] Fa_WhileStmt* clone() const override;
+    [[nodiscard]] Fa_Expr* getCondition() const;
+    [[nodiscard]] Fa_Stmt* getBody();
+    [[nodiscard]] Fa_Stmt const* getBody() const;
+    void setBody(Fa_Stmt* b);
+}; // struct Fa_WhileStmt
 
-struct ForStmt final : public Stmt {
+struct Fa_ForStmt final : public Fa_Stmt {
 private:
-    NameExpr* Target_ { nullptr };
-    Expr* Iter_ { nullptr };
-    Stmt* Body_ { nullptr };
+    Fa_Expr* Container_ { nullptr };
+    Fa_Expr* Iter_ { nullptr };
+    Fa_Stmt* Body_ { nullptr };
 
 public:
-    ForStmt() = delete;
+    Fa_ForStmt() = delete;
 
-    ForStmt(NameExpr* target, Expr* iter, Stmt* body)
-        : Target_(target)
+    Fa_ForStmt(Fa_Expr* target, Fa_Expr* iter, Fa_Stmt* body)
+        : Container_(target)
         , Iter_(iter)
         , Body_(body)
     {
@@ -629,29 +625,29 @@ public:
         Kind_ = Kind::FOR;
     }
 
-    ForStmt(ForStmt&&) noexcept = delete;
-    ForStmt(ForStmt const&) noexcept = delete;
+    Fa_ForStmt(Fa_ForStmt&&) noexcept = delete;
+    Fa_ForStmt(Fa_ForStmt const&) noexcept = delete;
 
-    ForStmt& operator=(ForStmt const&) noexcept = delete;
+    Fa_ForStmt& operator=(Fa_ForStmt const&) noexcept = delete;
 
-    [[nodiscard]] bool equals(Stmt const* other) const override;
-    [[nodiscard]] ForStmt* clone() const override;
-    [[nodiscard]] NameExpr* getTarget() const;
-    [[nodiscard]] Expr* getIter() const;
-    [[nodiscard]] Stmt* getBody() const;
-    void setBody(Stmt* b);
-}; // struct ForStmt
+    [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
+    [[nodiscard]] Fa_ForStmt* clone() const override;
+    [[nodiscard]] Fa_Expr* getContainer() const;
+    [[nodiscard]] Fa_Expr* getIter() const;
+    [[nodiscard]] Fa_Stmt* getBody() const;
+    void setBody(Fa_Stmt* b);
+}; // struct Fa_ForStmt
 
-struct FunctionDef final : public Stmt {
+struct Fa_FunctionDef final : public Fa_Stmt {
 private:
-    NameExpr* Name_ { nullptr };
-    ListExpr* Params_ { nullptr };
-    Stmt* Body_ { nullptr };
+    Fa_NameExpr* Name_ { nullptr };
+    Fa_ListExpr* Params_ { nullptr };
+    Fa_Stmt* Body_ { nullptr };
 
 public:
-    FunctionDef() = delete;
+    Fa_FunctionDef() = delete;
 
-    FunctionDef(NameExpr* name, ListExpr* params, Stmt* body)
+    Fa_FunctionDef(Fa_NameExpr* name, Fa_ListExpr* params, Fa_Stmt* body)
         : Name_(name)
         , Params_(params)
         , Body_(body)
@@ -660,133 +656,133 @@ public:
         Kind_ = Kind::FUNC;
     }
 
-    FunctionDef(FunctionDef&&) noexcept = delete;
-    FunctionDef(FunctionDef const&) noexcept = delete;
+    Fa_FunctionDef(Fa_FunctionDef&&) noexcept = delete;
+    Fa_FunctionDef(Fa_FunctionDef const&) noexcept = delete;
 
-    FunctionDef& operator=(FunctionDef const&) noexcept = delete;
-    [[nodiscard]] bool equals(Stmt const* other) const override;
-    [[nodiscard]] FunctionDef* clone() const override;
-    [[nodiscard]] NameExpr* getName() const;
-    [[nodiscard]] Array<Expr*> const& getParameters() const;
-    [[nodiscard]] ListExpr* getParameterList() const;
-    [[nodiscard]] Stmt* getBody() const;
+    Fa_FunctionDef& operator=(Fa_FunctionDef const&) noexcept = delete;
+    [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
+    [[nodiscard]] Fa_FunctionDef* clone() const override;
+    [[nodiscard]] Fa_NameExpr* getName() const;
+    [[nodiscard]] Fa_Array<Fa_Expr*> const& getParameters() const;
+    [[nodiscard]] Fa_ListExpr* getParameterList() const;
+    [[nodiscard]] Fa_Stmt* getBody() const;
     [[nodiscard]] bool hasParameters() const;
 
-    void setBody(Stmt* b);
-}; // struct FunctionDef
+    void setBody(Fa_Stmt* b);
+}; // struct Fa_FunctionDef
 
-struct ReturnStmt final : public Stmt {
+struct Fa_ReturnStmt final : public Fa_Stmt {
 private:
-    Expr* Value_ { nullptr };
+    Fa_Expr* Value_ { nullptr };
 
 public:
-    ReturnStmt() = delete;
+    Fa_ReturnStmt() = delete;
 
-    explicit ReturnStmt(Expr* value)
+    explicit Fa_ReturnStmt(Fa_Expr* value)
         : Value_(value)
     {
         assert(Value_ != nullptr);
         Kind_ = Kind::RETURN;
     }
 
-    ReturnStmt(ReturnStmt&&) noexcept = delete;
-    ReturnStmt(ReturnStmt const&) noexcept = delete;
+    Fa_ReturnStmt(Fa_ReturnStmt&&) noexcept = delete;
+    Fa_ReturnStmt(Fa_ReturnStmt const&) noexcept = delete;
 
-    ReturnStmt& operator=(ReturnStmt const&) noexcept = delete;
+    Fa_ReturnStmt& operator=(Fa_ReturnStmt const&) noexcept = delete;
 
-    [[nodiscard]] bool equals(Stmt const* other) const override;
-    [[nodiscard]] ReturnStmt* clone() const override;
-    [[nodiscard]] Expr const* getValue() const;
+    [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
+    [[nodiscard]] Fa_ReturnStmt* clone() const override;
+    [[nodiscard]] Fa_Expr const* getValue() const;
     [[nodiscard]] bool hasValue() const;
 
-    void setValue(Expr* v);
-}; // struct ReturnStmt
+    void setValue(Fa_Expr* v);
+}; // struct Fa_ReturnStmt
 
-static BinaryExpr* makeBinary(Expr* l, Expr* r, BinaryOp const op)
+static Fa_BinaryExpr* Fa_makeBinary(Fa_Expr* l, Fa_Expr* r, Fa_BinaryOp const op)
 {
-    return getAllocator().allocateObject<BinaryExpr>(l, r, op);
+    return getAllocator().allocateObject<Fa_BinaryExpr>(l, r, op);
 }
-static UnaryExpr* makeUnary(Expr* operand, UnaryOp const op)
+static Fa_UnaryExpr* Fa_makeUnary(Fa_Expr* operand, Fa_UnaryOp const op)
 {
-    return getAllocator().allocateObject<UnaryExpr>(operand, op);
+    return getAllocator().allocateObject<Fa_UnaryExpr>(operand, op);
 }
-static LiteralExpr* makeLiteralNil()
+static Fa_LiteralExpr* Fa_makeLiteralNil()
 {
-    return getAllocator().allocateObject<LiteralExpr>();
+    return getAllocator().allocateObject<Fa_LiteralExpr>();
 }
-static LiteralExpr* makeLiteralInt(int value)
+static Fa_LiteralExpr* Fa_makeLiteralInt(int value)
 {
-    return getAllocator().allocateObject<LiteralExpr>(static_cast<int64_t>(value), LiteralExpr::Type::INTEGER);
+    return getAllocator().allocateObject<Fa_LiteralExpr>(static_cast<i64>(value), Fa_LiteralExpr::Type::INTEGER);
 }
-static LiteralExpr* makeLiteralInt(int64_t value)
+static Fa_LiteralExpr* Fa_makeLiteralInt(i64 value)
 {
-    return getAllocator().allocateObject<LiteralExpr>(value, LiteralExpr::Type::INTEGER);
+    return getAllocator().allocateObject<Fa_LiteralExpr>(value, Fa_LiteralExpr::Type::INTEGER);
 }
-static LiteralExpr* makeLiteralFloat(double value)
+static Fa_LiteralExpr* Fa_makeLiteralFloat(f64 value)
 {
-    return getAllocator().allocateObject<LiteralExpr>(value, LiteralExpr::Type::FLOAT);
+    return getAllocator().allocateObject<Fa_LiteralExpr>(value, Fa_LiteralExpr::Type::FLOAT);
 }
-static LiteralExpr* makeLiteralString(StringRef value)
+static Fa_LiteralExpr* Fa_makeLiteralString(Fa_StringRef value)
 {
-    return getAllocator().allocateObject<LiteralExpr>(value);
+    return getAllocator().allocateObject<Fa_LiteralExpr>(value);
 }
-static LiteralExpr* makeLiteralBool(bool value)
+static Fa_LiteralExpr* Fa_makeLiteralBool(bool value)
 {
-    return getAllocator().allocateObject<LiteralExpr>(value);
+    return getAllocator().allocateObject<Fa_LiteralExpr>(value);
 }
-static NameExpr* makeName(StringRef const str)
+static Fa_NameExpr* Fa_makeName(Fa_StringRef const str)
 {
-    return getAllocator().allocateObject<NameExpr>(str);
+    return getAllocator().allocateObject<Fa_NameExpr>(str);
 }
-static ListExpr* makeList(Array<Expr*> elements)
+static Fa_ListExpr* Fa_makeList(Fa_Array<Fa_Expr*> elements)
 {
-    return getAllocator().allocateObject<ListExpr>(elements);
+    return getAllocator().allocateObject<Fa_ListExpr>(elements);
 }
-static CallExpr* makeCall(Expr* callee, ListExpr* args)
+static Fa_CallExpr* Fa_makeCall(Fa_Expr* callee, Fa_ListExpr* args)
 {
-    return getAllocator().allocateObject<CallExpr>(callee, args);
+    return getAllocator().allocateObject<Fa_CallExpr>(callee, args);
 }
-static AssignmentExpr* makeAssignmentExpr(Expr* target, Expr* value, bool decl)
+static Fa_AssignmentExpr* Fa_makeAssignmentExpr(Fa_Expr* target, Fa_Expr* value, bool decl)
 {
-    return getAllocator().allocateObject<AssignmentExpr>(target, value, decl);
+    return getAllocator().allocateObject<Fa_AssignmentExpr>(target, value, decl);
 }
-static IndexExpr* makeIndex(Expr* obj, Expr* idx)
+static Fa_IndexExpr* Fa_makeIndex(Fa_Expr* obj, Fa_Expr* idx)
 {
-    return getAllocator().allocateObject<IndexExpr>(obj, idx);
+    return getAllocator().allocateObject<Fa_IndexExpr>(obj, idx);
 }
-static BlockStmt* makeBlock(Array<Stmt*> stmts)
+static Fa_BlockStmt* Fa_makeBlock(Fa_Array<Fa_Stmt*> stmts)
 {
-    return getAllocator().allocateObject<BlockStmt>(stmts);
+    return getAllocator().allocateObject<Fa_BlockStmt>(stmts);
 }
-static ExprStmt* makeExprStmt(Expr* expr)
+static Fa_ExprStmt* Fa_makeExprStmt(Fa_Expr* expr)
 {
-    return getAllocator().allocateObject<ExprStmt>(expr);
+    return getAllocator().allocateObject<Fa_ExprStmt>(expr);
 }
-static AssignmentStmt* makeAssignmentStmt(Expr* target, Expr* value, bool decl)
+static Fa_AssignmentStmt* Fa_makeAssignmentStmt(Fa_Expr* target, Fa_Expr* value, bool decl)
 {
-    return getAllocator().allocateObject<AssignmentStmt>(target, value, decl);
+    return getAllocator().allocateObject<Fa_AssignmentStmt>(target, value, decl);
 }
-static IfStmt* makeIf(Expr* condition, Stmt* then_block, Stmt* else_block = nullptr)
+static Fa_IfStmt* Fa_makeIf(Fa_Expr* condition, Fa_Stmt* then_block, Fa_Stmt* else_block = nullptr)
 {
-    return getAllocator().allocateObject<IfStmt>(condition, then_block, else_block);
+    return getAllocator().allocateObject<Fa_IfStmt>(condition, then_block, else_block);
 }
-static WhileStmt* makeWhile(Expr* condition, Stmt* body)
+static Fa_WhileStmt* Fa_makeWhile(Fa_Expr* condition, Fa_Stmt* body)
 {
-    return getAllocator().allocateObject<WhileStmt>(condition, body);
+    return getAllocator().allocateObject<Fa_WhileStmt>(condition, body);
 }
-static ForStmt* makeFor(NameExpr* target, Expr* iter, Stmt* body)
+static Fa_ForStmt* Fa_makeFor(Fa_NameExpr* target, Fa_Expr* iter, Fa_Stmt* body)
 {
-    return getAllocator().allocateObject<ForStmt>(target, iter, body);
+    return getAllocator().allocateObject<Fa_ForStmt>(target, iter, body);
 }
-static FunctionDef* makeFunction(NameExpr* name, ListExpr* params, Stmt* body)
+static Fa_FunctionDef* Fa_makeFunction(Fa_NameExpr* name, Fa_ListExpr* params, Fa_Stmt* body)
 {
-    return getAllocator().allocateObject<FunctionDef>(name, params, body);
+    return getAllocator().allocateObject<Fa_FunctionDef>(name, params, body);
 }
-static ReturnStmt* makeReturn(Expr* value = nullptr)
+static Fa_ReturnStmt* Fa_makeReturn(Fa_Expr* value = nullptr)
 {
-    return getAllocator().allocateObject<ReturnStmt>(value);
+    return getAllocator().allocateObject<Fa_ReturnStmt>(value);
 }
 
-} // namespace mylang::ast
+} // namespace fairuz::ast
 
 #endif // AST_HPP

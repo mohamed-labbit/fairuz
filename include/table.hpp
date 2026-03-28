@@ -3,48 +3,48 @@
 
 #include "array.hpp"
 
-namespace mylang {
+namespace fairuz {
 
 template<typename K, typename V, typename Hash, typename Equal>
 class NarrowHashTable {
     struct Entry {
         K key { };
         V value { };
-        uint64_t hash { 0 };
+        u64 hash { 0 };
         bool occupied { false };
     }; // struct Entry
 
-    static constexpr uint32_t kMinCapacity = 16;
-    static constexpr uint32_t kLoadPercent = 70;
+    static constexpr u32 kMinCapacity = 16;
+    static constexpr u32 kLoadPercent = 70;
 
-    Array<Entry> Buckets_;
-    uint32_t Size_ { 0 };
+    Fa_Array<Entry> Buckets_;
+    u32 Size_ { 0 };
     Hash Hash_ { };
     Equal Equal_ { };
 
-    static uint32_t nextPowerOfTwo(uint32_t n)
+    static u32 nextPowerOfTwo(u32 n)
     {
-        uint32_t cap = kMinCapacity;
+        u32 cap = kMinCapacity;
         while (cap < n)
             cap <<= 1;
         return cap;
     }
 
-    uint32_t mask() const
+    u32 mask() const
     {
         assert(!Buckets_.empty());
         return Buckets_.size() - 1;
     }
 
-    uint32_t bucketIndex(uint64_t hash) const
+    u32 bucketIndex(u64 hash) const
     {
-        return static_cast<uint32_t>(hash) & mask();
+        return static_cast<u32>(hash) & mask();
     }
 
-    void reinsertInto(Array<Entry>& dst, Entry const& src)
+    void reinsertInto(Fa_Array<Entry>& dst, Entry const& src)
     {
-        uint32_t dst_mask = dst.size() - 1;
-        uint32_t idx = static_cast<uint32_t>(src.hash) & dst_mask;
+        u32 dst_mask = dst.size() - 1;
+        u32 idx = static_cast<u32>(src.hash) & dst_mask;
         while (dst[idx].occupied)
             idx = (idx + 1) & dst_mask;
         dst[idx] = src;
@@ -53,27 +53,27 @@ class NarrowHashTable {
     void growIfNeeded()
     {
         if (Buckets_.empty()) {
-            Buckets_ = Array<Entry>(kMinCapacity, Entry { });
+            Buckets_ = Fa_Array<Entry>(kMinCapacity, Entry { });
             return;
         }
 
         if ((Size_ + 1) * 100 < Buckets_.size() * kLoadPercent)
             return;
 
-        Array<Entry> grown(nextPowerOfTwo(Buckets_.size() << 1), Entry { });
-        for (uint32_t i = 0; i < Buckets_.size(); ++i) {
+        Fa_Array<Entry> grown(nextPowerOfTwo(Buckets_.size() << 1), Entry { });
+        for (u32 i = 0; i < Buckets_.size(); ++i) {
             if (Buckets_[i].occupied)
                 reinsertInto(grown, Buckets_[i]);
         }
         Buckets_ = std::move(grown);
     }
 
-    Entry* findEntry(K const& key, uint64_t hash)
+    Entry* findEntry(K const& key, u64 hash)
     {
         if (Buckets_.empty())
             return nullptr;
 
-        uint32_t idx = bucketIndex(hash);
+        u32 idx = bucketIndex(hash);
         while (Buckets_[idx].occupied) {
             Entry& entry = Buckets_[idx];
             if (entry.hash == hash && Equal_(entry.key, key))
@@ -83,12 +83,12 @@ class NarrowHashTable {
         return nullptr;
     }
 
-    Entry const* findEntry(K const& key, uint64_t hash) const
+    Entry const* findEntry(K const& key, u64 hash) const
     {
         if (Buckets_.empty())
             return nullptr;
 
-        uint32_t idx = bucketIndex(hash);
+        u32 idx = bucketIndex(hash);
         while (Buckets_[idx].occupied) {
             Entry const& entry = Buckets_[idx];
             if (entry.hash == hash && Equal_(entry.key, key))
@@ -103,24 +103,24 @@ public:
 
     void clear()
     {
-        for (uint32_t i = 0; i < Buckets_.size(); ++i)
+        for (u32 i = 0; i < Buckets_.size(); ++i)
             Buckets_[i] = Entry { };
         Size_ = 0;
     }
 
-    uint32_t size() const { return Size_; }
+    u32 size() const { return Size_; }
     bool empty() const { return Size_ == 0; }
 
     V* findPtr(K const& key)
     {
-        auto hash = static_cast<uint64_t>(Hash_(key));
+        auto hash = static_cast<u64>(Hash_(key));
         Entry* entry = findEntry(key, hash);
         return entry ? &entry->value : nullptr;
     }
 
     V const* findPtr(K const& key) const
     {
-        auto hash = static_cast<uint64_t>(Hash_(key));
+        auto hash = static_cast<u64>(Hash_(key));
         Entry const* entry = findEntry(key, hash);
         return entry ? &entry->value : nullptr;
     }
@@ -131,13 +131,13 @@ public:
     {
         growIfNeeded();
 
-        auto hash = static_cast<uint64_t>(Hash_(key));
+        auto hash = static_cast<u64>(Hash_(key));
         if (Entry* existing = findEntry(key, hash)) {
             existing->value = value;
             return existing->value;
         }
 
-        uint32_t idx = bucketIndex(hash);
+        u32 idx = bucketIndex(hash);
         while (Buckets_[idx].occupied)
             idx = (idx + 1) & mask();
 
@@ -146,10 +146,11 @@ public:
         Buckets_[idx].key = key;
         Buckets_[idx].value = value;
         ++Size_;
+
         return Buckets_[idx].value;
     }
 }; // class NarrowHashTable
 
-} // namespace mylang
+} // namespace fairuz
 
 #endif // NARROW_TABLE_HPP

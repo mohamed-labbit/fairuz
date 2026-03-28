@@ -1,9 +1,9 @@
-#ifdef MYLANG_DEBUG
+#ifdef fairuz_DEBUG
 #    include "../../include/allocator/stats.hpp"
 
-namespace mylang {
+namespace fairuz {
 
-void DetailedAllocStats::recordAllocationSize(uint64_t size)
+void DetailedAllocStats::recordAllocationSize(u64 size)
 {
     if (size <= 8)
         Small8ByteAllocs++;
@@ -35,13 +35,13 @@ void DetailedAllocStats::recordAllocationSize(uint64_t size)
         LargeHugeAllocs++;
 }
 
-void DetailedAllocStats::updatePeak(uint64_t current)
+void DetailedAllocStats::updatePeak(u64 current)
 {
     if (current > PeakAllocated)
         PeakAllocated = current;
 }
 
-void DetailedAllocStats::recordAllocTime(uint64_t duration_ns)
+void DetailedAllocStats::recordAllocTime(u64 duration_ns)
 {
     TotalAllocTimeNs += duration_ns;
 
@@ -106,7 +106,7 @@ void DetailedAllocStats::reset()
     CASRetries = 0;
 }
 
-std::string StatsFormatter::formatBytes(uint64_t bytes, int precision)
+std::string StatsFormatter::formatBytes(u64 bytes, int precision)
 {
     static char const* suffixes[] = { "B", "KB", "MB", "GB", "TB" };
     static int const num_suffixes = 5;
@@ -114,7 +114,7 @@ std::string StatsFormatter::formatBytes(uint64_t bytes, int precision)
     if (bytes == 0)
         return "0 B";
 
-    auto value = static_cast<double>(bytes);
+    auto value = static_cast<f64>(bytes);
     int idx = 0;
 
     while (value >= 1024.0 && idx < num_suffixes - 1) {
@@ -127,7 +127,7 @@ std::string StatsFormatter::formatBytes(uint64_t bytes, int precision)
     return oss.str();
 }
 
-std::string StatsFormatter::formatTime(uint64_t nanoseconds)
+std::string StatsFormatter::formatTime(u64 nanoseconds)
 {
     if (nanoseconds == 0)
         return "0 ns";
@@ -149,23 +149,23 @@ std::string StatsFormatter::formatTime(uint64_t nanoseconds)
     return oss.str();
 }
 
-std::string StatsFormatter::formatPercent(uint64_t numerator, uint64_t denominator, int precision)
+std::string StatsFormatter::formatPercent(u64 numerator, u64 denominator, int precision)
 {
     if (denominator == 0)
         return "N/A";
 
-    double percent = (100.0 * numerator) / denominator;
+    f64 percent = (100.0 * numerator) / denominator;
     std::ostringstream oss;
     oss << std::fixed << std::setprecision(precision) << percent << "%";
     return oss.str();
 }
 
-std::string StatsFormatter::createBar(uint64_t value, uint64_t max, int width)
+std::string StatsFormatter::createBar(u64 value, u64 max, int width)
 {
     if (max == 0)
         return std::string(width, ' ');
 
-    auto filled = static_cast<int>((static_cast<double>(value) / max) * width);
+    auto filled = static_cast<int>((static_cast<f64>(value) / max) * width);
     filled = std::min(filled, width);
 
     std::string bar = "|";
@@ -175,7 +175,7 @@ std::string StatsFormatter::createBar(uint64_t value, uint64_t max, int width)
     return bar;
 }
 
-std::string StatsFormatter::formatNumber(uint64_t value)
+std::string StatsFormatter::formatNumber(u64 value)
 {
     std::string str = std::to_string(value);
     int insert_pos = str.length() - 3;
@@ -271,7 +271,7 @@ void StatsPrinter::printSizeDistribution(std::ostream& os) const
 
     struct SizeBucket {
         char const* name;
-        uint64_t count;
+        u64 count;
     }; // struct SizeBucket
 
     SizeBucket buckets[] = { { "<= 8 B", stats_.Small8ByteAllocs }, { "<= 16 B", stats_.Small16ByteAllocs }, { "<= 32 B", stats_.Small32ByteAllocs },
@@ -281,7 +281,7 @@ void StatsPrinter::printSizeDistribution(std::ostream& os) const
         { "<= 32 KB", stats_.Large32KBAllocs }, { "> 64 KB", stats_.LargeHugeAllocs } };
 
     // Find max for scaling bars
-    uint64_t max_count = 0;
+    u64 max_count = 0;
     for (auto const& bucket : buckets)
         max_count = std::max(max_count, bucket.count);
 
@@ -300,15 +300,15 @@ void StatsPrinter::printSizeDistribution(std::ostream& os) const
 
 void StatsPrinter::printPerformanceMetrics(std::ostream& os) const
 {
-    // uint64_t fast_hits   =
-    // stats_.FastPoolHits.load(std::memory_order_relaxed); uint64_t
+    // u64 fast_hits   =
+    // stats_.FastPoolHits.load(std::memory_order_relaxed); u64
     // fast_misses = stats_.FastPoolMisses.load(std::memory_order_relaxed);
-    // uint64_t free_hits   =
-    // stats_.FreeListHits.load(std::memory_order_relaxed); uint64_t
+    // u64 free_hits   =
+    // stats_.FreeListHits.load(std::memory_order_relaxed); u64
     // free_misses = stats_.FreeListMisses.load(std::memory_order_relaxed);
 
-    // uint64_t fast_total = fast_hits + fast_misses;
-    // uint64_t free_total = free_hits + free_misses;
+    // u64 fast_total = fast_hits + fast_misses;
+    // u64 free_total = free_hits + free_misses;
 
     os << "\n+-- Performance Metrics "
           "-------------------------------------------------------------+\n";
@@ -378,7 +378,7 @@ void StatsPrinter::printTimingStatistics(std::ostream& os) const
           "---------------------------------------------------------------+\n";
 
     if (stats_.TotalAllocations > 0 && stats_.TotalAllocTimeNs > 0) {
-        uint64_t avg_alloc = stats_.TotalAllocTimeNs / stats_.TotalAllocations;
+        u64 avg_alloc = stats_.TotalAllocTimeNs / stats_.TotalAllocations;
         printMetric(os, "Allocation Time (avg)", StatsFormatter::formatTime(avg_alloc));
         printMetric(os, "  Min", StatsFormatter::formatTime(stats_.MinAllocTimeNs));
         printMetric(os, "  Max", StatsFormatter::formatTime(stats_.MaxAllocTimeNs));
@@ -388,7 +388,7 @@ void StatsPrinter::printTimingStatistics(std::ostream& os) const
     if (stats_.TotalDeallocations > 0 && stats_.TotalDeallocTimeNs > 0) {
         os << "+-------------------------------------------------------------------"
               "-----------------+\n";
-        uint64_t avg_dealloc = stats_.TotalDeallocTimeNs / stats_.TotalDeallocations;
+        u64 avg_dealloc = stats_.TotalDeallocTimeNs / stats_.TotalDeallocations;
         printMetric(os, "Deallocation Time (avg)", StatsFormatter::formatTime(avg_dealloc));
         printMetric(os, "  Total", StatsFormatter::formatTime(stats_.TotalDeallocTimeNs));
     }
@@ -435,7 +435,7 @@ void StatsPrinter::printMetric(std::ostream& os, char const* label, std::string 
     os << left << setw(LABEL_WIDTH) << label << " " << right << setw(VALUE_WIDTH) << value << " │\n";
 }
 
-void StatsPrinter::printMetricWithBar(std::ostream& os, char const* label, uint64_t value, uint64_t max) const
+void StatsPrinter::printMetricWithBar(std::ostream& os, char const* label, u64 value, u64 max) const
 {
     using std::left;
     using std::right;
@@ -445,5 +445,5 @@ void StatsPrinter::printMetricWithBar(std::ostream& os, char const* label, uint6
        << StatsFormatter::createBar(value, max, 20) << " │\n";
 }
 
-} // namespace mylang
-#endif // MYLANG_DEBUG
+} // namespace fairuz
+#endif // fairuz_DEBUG

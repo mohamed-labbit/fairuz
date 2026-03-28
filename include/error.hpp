@@ -5,55 +5,55 @@
 
 #include <string>
 
-namespace mylang {
+namespace fairuz {
 
-class [[nodiscard]] Error {
+class [[nodiscard]] Fa_Error {
 public:
     template<typename CodeEnum>
-    explicit Error(CodeEnum code)
-        : m_code(static_cast<uint16_t>(code))
+    explicit Fa_Error(CodeEnum code)
+        : m_code(static_cast<u16>(code))
     {
     }
 
     template<typename CodeEnum>
-    Error()
+    Fa_Error()
         : m_code(CodeEnum::UNKNOWN)
     {
     }
 
-    Error(Error const&) = default;
-    Error& operator=(Error const&) = default;
-    Error(Error&&) = default;
-    Error& operator=(Error&&) = default;
+    Fa_Error(Fa_Error const&) = default;
+    Fa_Error& operator=(Fa_Error const&) = default;
+    Fa_Error(Fa_Error&&) = default;
+    Fa_Error& operator=(Fa_Error&&) = default;
 
-    bool operator==(Error const& other) const { return m_code == other.m_code; }
+    bool operator==(Fa_Error const& other) const { return m_code == other.m_code; }
 
-    StringRef getErrorMessage() const { return diagnostic::errorMessageFor(m_code); }
-    uint16_t getCode() const { return m_code; }
+    Fa_StringRef getErrorMessage() const { return diagnostic::errorMessageFor(m_code); }
+    u16 getCode() const { return m_code; }
 
 private:
-    uint16_t m_code;
-}; // class Error
+    u16 m_code;
+}; // class Fa_Error
 
-template<typename T, typename E = Error>
-class [[nodiscard]] ErrorOr {
+template<typename T, typename E = Fa_Error>
+class [[nodiscard]] Fa_ErrorOr {
 public:
-    ErrorOr(T val)
+    Fa_ErrorOr(T val)
         : is_value_(true)
     {
         ::new (static_cast<void*>(&storage_)) T(static_cast<T&&>(val));
     }
 
-    ErrorOr(E err)
+    Fa_ErrorOr(E err)
         : is_value_(false)
     {
         ::new (static_cast<void*>(&storage_)) E(static_cast<E&&>(err));
     }
 
-    static ErrorOr fromValue(T v) { return ErrorOr(static_cast<T&&>(v)); }
-    static ErrorOr fromError(E e) { return ErrorOr(static_cast<E&&>(e)); }
+    static Fa_ErrorOr fromValue(T v) { return Fa_ErrorOr(static_cast<T&&>(v)); }
+    static Fa_ErrorOr fromError(E e) { return Fa_ErrorOr(static_cast<E&&>(e)); }
 
-    ErrorOr(ErrorOr const& other)
+    Fa_ErrorOr(Fa_ErrorOr const& other)
         : is_value_(other.is_value_)
     {
         if (is_value_)
@@ -62,7 +62,7 @@ public:
             ::new (static_cast<void*>(&storage_)) E(other.get_error());
     }
 
-    ErrorOr& operator=(ErrorOr const& other)
+    Fa_ErrorOr& operator=(Fa_ErrorOr const& other)
     {
         if (this == &other)
             return *this;
@@ -75,7 +75,7 @@ public:
         return *this;
     }
 
-    ErrorOr(ErrorOr&& other) noexcept
+    Fa_ErrorOr(Fa_ErrorOr&& other) noexcept
         : is_value_(other.is_value_)
     {
         if (is_value_)
@@ -84,7 +84,7 @@ public:
             ::new (static_cast<void*>(&storage_)) E(static_cast<E&&>(other.get_error()));
     }
 
-    ErrorOr& operator=(ErrorOr&& other) noexcept
+    Fa_ErrorOr& operator=(Fa_ErrorOr&& other) noexcept
     {
         if (this == &other)
             return *this;
@@ -97,7 +97,7 @@ public:
         return *this;
     }
 
-    ~ErrorOr() { destroy_active(); }
+    ~Fa_ErrorOr() { destroy_active(); }
 
     bool hasValue() const noexcept { return is_value_; }
     bool hasError() const noexcept { return !is_value_; }
@@ -105,13 +105,13 @@ public:
     T value() const
     {
         // In a debug build you want an assert here rather than silent UB.
-        assert(is_value_ && "called value() on an ErrorOr holding an error");
+        assert(is_value_ && "called value() on an Fa_ErrorOr holding an error");
         return get_value();
     }
 
     E error() const
     {
-        assert(!is_value_ && "called error() on an ErrorOr holding a value");
+        assert(!is_value_ && "called error() on an Fa_ErrorOr holding a value");
         return get_error();
     }
 
@@ -146,36 +146,36 @@ private:
         else
             get_error().~E();
     }
-}; // class ErrorOr
+}; // class Fa_ErrorOr
 
-static Error _reportError(uint16_t err_code, SourceLocation loc, lex::Lexer* lex)
+static Fa_Error _reportError(u16 err_code, Fa_SourceLocation loc, lex::Fa_Lexer* lex)
 {
     std::string snippet;
     if (lex) {
-        StringRef line = lex->getLineAt(loc.line);
+        Fa_StringRef line = lex->getLineAt(loc.line);
         if (!line.empty())
             snippet.assign(line.data(), line.len());
     }
     diagnostic::report(diagnostic::Severity::ERROR, loc.line, loc.column, err_code, snippet);
-    return Error(err_code);
+    return Fa_Error(err_code);
 }
-static Error reportError(diagnostic::errc::parser::Code err_code, SourceLocation loc, lex::Lexer* lex = nullptr)
+static Fa_Error reportError(diagnostic::errc::parser::Code err_code, Fa_SourceLocation loc, lex::Fa_Lexer* lex = nullptr)
 {
-    return _reportError(static_cast<uint16_t>(err_code), loc, lex);
+    return _reportError(static_cast<u16>(err_code), loc, lex);
 }
-static Error reportError(diagnostic::errc::sema::Code err_code, SourceLocation loc, lex::Lexer* lex = nullptr)
+static Fa_Error reportError(diagnostic::errc::sema::Code err_code, Fa_SourceLocation loc, lex::Fa_Lexer* lex = nullptr)
 {
-    return _reportError(static_cast<uint16_t>(err_code), loc, lex);
+    return _reportError(static_cast<u16>(err_code), loc, lex);
 }
-static Error reportError(diagnostic::errc::runtime::Code err_code, SourceLocation loc, lex::Lexer* lex = nullptr)
+static Fa_Error reportError(diagnostic::errc::runtime::Code err_code, Fa_SourceLocation loc, lex::Fa_Lexer* lex = nullptr)
 {
-    return _reportError(static_cast<uint16_t>(err_code), loc, lex);
+    return _reportError(static_cast<u16>(err_code), loc, lex);
 }
-static Error reportError(diagnostic::errc::general::Code err_code, SourceLocation loc, lex::Lexer* lex = nullptr)
+static Fa_Error reportError(diagnostic::errc::general::Code err_code, Fa_SourceLocation loc, lex::Fa_Lexer* lex = nullptr)
 {
-    return _reportError(static_cast<uint16_t>(err_code), loc, lex);
+    return _reportError(static_cast<u16>(err_code), loc, lex);
 }
 
-} // namespace mylang
+} // namespace fairuz
 
 #endif // ERROR_OR

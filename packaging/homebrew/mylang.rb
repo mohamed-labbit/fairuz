@@ -1,7 +1,7 @@
-class Mylang < Formula
+class fairuz < Formula
   desc "Arabic-first experimental programming language"
-  homepage "https://github.com/REPLACE_ME/mylang"
-  url "https://github.com/REPLACE_ME/mylang/archive/refs/tags/v0.0.0.tar.gz"
+  homepage "https://github.com/REPLACE_ME/fairuz"
+  url "https://github.com/REPLACE_ME/fairuz/archive/refs/tags/v0.0.0.tar.gz"
   sha256 "REPLACE_WITH_RELEASE_TARBALL_SHA256"
   license "MIT"
 
@@ -29,6 +29,6 @@ class Mylang < Formula
           اكتب("خطأ")
     EOS
 
-    assert_match "صحيح", shell_output("#{bin}/mylang #{testpath}/smoke.txt")
+    assert_match "صحيح", shell_output("#{bin}/fairuz #{testpath}/smoke.txt")
   end
 end

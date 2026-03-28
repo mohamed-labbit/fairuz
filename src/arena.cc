@@ -4,11 +4,11 @@
 
 #include <sys/mman.h>
 
-namespace mylang {
+namespace fairuz {
 
 using ErrorCode = diagnostic::errc::general::Code;
 
-ArenaBlock::ArenaBlock(size_t const size, size_t const alignment)
+Fa_ArenaBlock::Fa_ArenaBlock(size_t const size, size_t const alignment)
     : Size_(size)
 {
     (void)alignment;
@@ -29,7 +29,7 @@ ArenaBlock::ArenaBlock(size_t const size, size_t const alignment)
     End_ = Begin_ + size;
 }
 
-ArenaBlock::ArenaBlock(ArenaBlock&& other) noexcept
+Fa_ArenaBlock::Fa_ArenaBlock(Fa_ArenaBlock&& other) noexcept
     : Size_(other.Size_)
     , Begin_(other.Begin_)
     , Next_(other.Next_)
@@ -41,7 +41,7 @@ ArenaBlock::ArenaBlock(ArenaBlock&& other) noexcept
     other.End_ = nullptr;
 }
 
-ArenaBlock::~ArenaBlock()
+Fa_ArenaBlock::~Fa_ArenaBlock()
 {
     if (Begin_) {
         munmap(Begin_, Size_);
@@ -51,7 +51,7 @@ ArenaBlock::~ArenaBlock()
     }
 }
 
-ArenaBlock& ArenaBlock::operator=(ArenaBlock&& other) noexcept
+Fa_ArenaBlock& Fa_ArenaBlock::operator=(Fa_ArenaBlock&& other) noexcept
 {
     if (this != &other) {
         if (Begin_)
@@ -70,12 +70,12 @@ ArenaBlock& ArenaBlock::operator=(ArenaBlock&& other) noexcept
     return *this;
 }
 
-unsigned char* ArenaBlock::begin() const { return Begin_; }
-unsigned char* ArenaBlock::end() const { return End_; }
-unsigned char* ArenaBlock::cNext() const { return Next_; }
-size_t ArenaBlock::size() const { return Size_; }
+unsigned char* Fa_ArenaBlock::begin() const { return Begin_; }
+unsigned char* Fa_ArenaBlock::end() const { return End_; }
+unsigned char* Fa_ArenaBlock::cNext() const { return Next_; }
+size_t Fa_ArenaBlock::size() const { return Size_; }
 
-size_t ArenaBlock::used() const
+size_t Fa_ArenaBlock::used() const
 {
     if (!Begin_ || Next_ < Begin_)
         return 0;
@@ -83,7 +83,7 @@ size_t ArenaBlock::used() const
     return static_cast<size_t>(Next_ - Begin_);
 }
 
-size_t ArenaBlock::remaining() const
+size_t Fa_ArenaBlock::remaining() const
 {
     if (!Begin_)
         return 0;
@@ -91,7 +91,7 @@ size_t ArenaBlock::remaining() const
     return static_cast<size_t>(End_ - Next_);
 }
 
-bool ArenaBlock::pop(size_t bytes)
+bool Fa_ArenaBlock::pop(size_t bytes)
 {
     if (!Begin_ || Next_ < Begin_ + bytes)
         return false;
@@ -100,7 +100,7 @@ bool ArenaBlock::pop(size_t bytes)
     return true;
 }
 
-unsigned char* ArenaBlock::allocate(size_t bytes, std::optional<size_t> alignment)
+unsigned char* Fa_ArenaBlock::allocate(size_t bytes, std::optional<size_t> alignment)
 {
     if (!Begin_ || bytes == 0)
         return nullptr;
@@ -118,7 +118,7 @@ unsigned char* ArenaBlock::allocate(size_t bytes, std::optional<size_t> alignmen
     return reinterpret_cast<unsigned char*>(aligned);
 }
 
-unsigned char* ArenaBlock::reserve(size_t const bytes)
+unsigned char* Fa_ArenaBlock::reserve(size_t const bytes)
 {
     if (!Begin_ || bytes == 0)
         return nullptr;
@@ -130,14 +130,14 @@ unsigned char* ArenaBlock::reserve(size_t const bytes)
     return Next_;
 }
 
-ArenaAllocator::ArenaAllocator(int32_t growth_strategy, OutOfMemoryHandler oom_handler, bool debug)
+Fa_ArenaAllocator::Fa_ArenaAllocator(i32 growth_strategy, OutOfMemoryHandler oom_handler, bool debug)
     : GrowthFactor_(GrowthStrategy(growth_strategy))
     , OomHandler_(oom_handler)
-#ifdef MYLANG_DEBUG
+#ifdef fairuz_DEBUG
     , DebugFeatures_(debug)
 #endif
 {
-#ifdef MYLANG_DEBUG
+#ifdef fairuz_DEBUG
     if (DebugFeatures_) {
         TrackAllocations_ = true;
         EnableStatistics_ = true;
@@ -146,13 +146,13 @@ ArenaAllocator::ArenaAllocator(int32_t growth_strategy, OutOfMemoryHandler oom_h
 #endif
 }
 
-void ArenaAllocator::reset()
+void Fa_ArenaAllocator::reset()
 {
     Blocks_.clear();
     Next_ = nullptr;
     End_ = nullptr;
 
-#ifdef MYLANG_DEBUG
+#ifdef fairuz_DEBUG
     if (TrackAllocations_)
         AllocationMap_.clear();
 
@@ -163,15 +163,15 @@ void ArenaAllocator::reset()
     NextBlockSize_ = BlockSize_;
 }
 
-void ArenaAllocator::setName(std::string const& name) { Name_ = name; }
+void Fa_ArenaAllocator::setName(std::string const& name) { Name_ = name; }
 
-#ifdef MYLANG_DEBUG
-size_t ArenaAllocator::totalAllocated() const { return AllocStats_.TotalAllocated; }
-size_t ArenaAllocator::totalAllocations() const { return AllocStats_.TotalAllocations; }
-size_t ArenaAllocator::activeBlocks() const { return AllocStats_.ActiveBlocks; }
+#ifdef fairuz_DEBUG
+size_t Fa_ArenaAllocator::totalAllocated() const { return AllocStats_.TotalAllocated; }
+size_t Fa_ArenaAllocator::totalAllocations() const { return AllocStats_.TotalAllocations; }
+size_t Fa_ArenaAllocator::activeBlocks() const { return AllocStats_.ActiveBlocks; }
 #endif
 
-void* ArenaAllocator::allocate(size_t const size, size_t const alignment)
+void* Fa_ArenaAllocator::allocate(size_t const size, size_t const alignment)
 {
     if (UNLIKELY(size == 0))
         return nullptr;
@@ -188,7 +188,7 @@ void* ArenaAllocator::allocate(size_t const size, size_t const alignment)
     if (LIKELY(next <= reinterpret_cast<uintptr_t>(End_))) {
         Next_ = reinterpret_cast<unsigned char*>(next);
 
-#ifdef MYLANG_DEBUG
+#ifdef fairuz_DEBUG
         trackAllocation(reinterpret_cast<unsigned char*>(aligned), size, alignment);
 #endif
         return reinterpret_cast<void*>(aligned);
@@ -197,7 +197,7 @@ void* ArenaAllocator::allocate(size_t const size, size_t const alignment)
     return allocateSlow(size, alignment);
 }
 
-void* ArenaAllocator::allocateSlow(size_t size, size_t alignment)
+void* Fa_ArenaAllocator::allocateSlow(size_t size, size_t alignment)
 {
     size_t block_size = std::max(size + alignment, NextBlockSize_);
 
@@ -214,7 +214,7 @@ void* ArenaAllocator::allocateSlow(size_t size, size_t alignment)
 
     try {
         Blocks_.emplace_back(block_size, alignment);
-#ifdef MYLANG_DEBUG
+#ifdef fairuz_DEBUG
         ++AllocStats_.ActiveBlocks;
 #endif
     } catch (std::bad_alloc const&) {
@@ -231,7 +231,7 @@ void* ArenaAllocator::allocateSlow(size_t size, size_t alignment)
 
     updateNextBlockSize();
 
-    ArenaBlock& blk = Blocks_.back();
+    Fa_ArenaBlock& blk = Blocks_.back();
     Next_ = blk.begin();
     End_ = blk.end();
 
@@ -244,13 +244,13 @@ void* ArenaAllocator::allocateSlow(size_t size, size_t alignment)
 
     Next_ = reinterpret_cast<unsigned char*>(next);
 
-#ifdef MYLANG_DEBUG
+#ifdef fairuz_DEBUG
     trackAllocation(reinterpret_cast<unsigned char*>(aligned), size, alignment);
 #endif
     return reinterpret_cast<void*>(aligned);
 }
 
-void ArenaAllocator::deallocate(void* ptr, size_t const size)
+void Fa_ArenaAllocator::deallocate(void* ptr, size_t const size)
 {
     if (!ptr || size == 0 || Blocks_.empty())
         return;
@@ -261,13 +261,13 @@ void ArenaAllocator::deallocate(void* ptr, size_t const size)
     if (expected != last)
         return;
 
-    ArenaBlock& block = Blocks_.back();
+    Fa_ArenaBlock& block = Blocks_.back();
     if (block.pop(size)) {
         Next_ = block.cNext();
         LastPtr_ = nullptr;
     }
 
-#ifdef MYLANG_DEBUG
+#ifdef fairuz_DEBUG
     if (AllocStats_.CurrentlyAllocated >= size)
         AllocStats_.CurrentlyAllocated -= size;
     ++AllocStats_.TotalDeallocations;
@@ -276,7 +276,7 @@ void ArenaAllocator::deallocate(void* ptr, size_t const size)
 #endif
 }
 
-unsigned char* ArenaAllocator::allocateBlock(size_t requested, size_t alignment_, bool retry_on_oom)
+unsigned char* Fa_ArenaAllocator::allocateBlock(size_t requested, size_t alignment_, bool retry_on_oom)
 {
     size_t block_size = std::max(requested + alignment_, NextBlockSize_);
 
@@ -289,10 +289,10 @@ unsigned char* ArenaAllocator::allocateBlock(size_t requested, size_t alignment_
 
     try {
         Blocks_.emplace_back(block_size, alignment_);
-#ifdef MYLANG_DEBUG
+#ifdef fairuz_DEBUG
         ++AllocStats_.ActiveBlocks;
 #endif
-        ArenaBlock& blk = Blocks_.back();
+        Fa_ArenaBlock& blk = Blocks_.back();
         Next_ = blk.begin();
         End_ = blk.end();
         return blk.begin();
@@ -304,7 +304,7 @@ unsigned char* ArenaAllocator::allocateBlock(size_t requested, size_t alignment_
     }
 }
 
-unsigned char* ArenaAllocator::allocateFromBlocks(size_t alloc_size, size_t align)
+unsigned char* Fa_ArenaAllocator::allocateFromBlocks(size_t alloc_size, size_t align)
 {
     if (!Blocks_.empty()) {
         unsigned char* mem = Blocks_.back().allocate(alloc_size, align);
@@ -316,9 +316,9 @@ unsigned char* ArenaAllocator::allocateFromBlocks(size_t alloc_size, size_t alig
 
     size_t new_block_size = std::max(alloc_size, NextBlockSize_);
     if (!allocateBlock(new_block_size, align)) {
-#ifdef MYLANG_DEBUG
+#ifdef fairuz_DEBUG
         if (DebugFeatures_)
-            std::cerr << "-- Failed to allocate block : ArenaAllocator::allocate_block()" << std::endl;
+            std::cerr << "-- Failed to allocate block : Fa_ArenaAllocator::allocate_block()" << std::endl;
 #endif
         return nullptr;
     }
@@ -330,22 +330,22 @@ unsigned char* ArenaAllocator::allocateFromBlocks(size_t alloc_size, size_t alig
     return mem;
 }
 
-void ArenaAllocator::updateNextBlockSize() noexcept
+void Fa_ArenaAllocator::updateNextBlockSize() noexcept
 {
     if (GrowthFactor_ == GrowthStrategy::EXPONENTIAL)
         NextBlockSize_ = std::min(NextBlockSize_ * 2, MaxBlockSize_);
 }
 
-#ifdef MYLANG_DEBUG
-void ArenaAllocator::trackAllocation(unsigned char* ptr, size_t size, size_t alignment)
+#ifdef fairuz_DEBUG
+void Fa_ArenaAllocator::trackAllocation(unsigned char* ptr, size_t size, size_t alignment)
 {
     LastPtr_ = ptr;
 
     if (TrackAllocations_) {
         AllocationHeader header { };
         header.magic = AllocationHeader::MAGIC;
-        header.size = static_cast<uint32_t>(size);
-        header.alignment = static_cast<uint32_t>(alignment);
+        header.size = static_cast<u32>(size);
+        header.alignment = static_cast<u32>(alignment);
         header.checksum = header.compute_checksum();
         header.timestamp = std::chrono::steady_clock::now();
         AllocationMap_[ptr] = header;
@@ -361,7 +361,7 @@ void ArenaAllocator::trackAllocation(unsigned char* ptr, size_t size, size_t ali
     }
 }
 
-bool ArenaAllocator::verifyAllocation(void* ptr) const
+bool Fa_ArenaAllocator::verifyAllocation(void* ptr) const
 {
     if (!TrackAllocations_)
         return true;
@@ -374,18 +374,18 @@ bool ArenaAllocator::verifyAllocation(void* ptr) const
     return it->second.is_valid();
 }
 
-std::string ArenaAllocator::toString(bool verbose) const
+std::string Fa_ArenaAllocator::toString(bool verbose) const
 {
     std::ostringstream oss;
     dumpStats(oss, verbose);
     return oss.str();
 }
 
-void ArenaAllocator::dumpStats(std::ostream& os, bool verbose) const
+void Fa_ArenaAllocator::dumpStats(std::ostream& os, bool verbose) const
 {
     StatsPrinter printer(AllocStats_, Name_);
     printer.printDetailed(os, verbose);
 }
-#endif // MYLANG_DEBUG
+#endif // fairuz_DEBUG
 
-} // namespace mylang
+} // namespace fairuz

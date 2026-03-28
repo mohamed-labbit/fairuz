@@ -2,38 +2,34 @@
 
 #include "../include/parser.hpp"
 #include "../include/util.hpp"
-#include "arena.hpp"
-#include "ast.hpp"
-#include "token.hpp"
 
 #include <iostream>
 
-namespace mylang::parser {
+namespace fairuz::parser {
 
-using namespace ast;
 using ErrorCode = diagnostic::errc::parser::Code;
 
-static bool isValidNode(Expr const* e) { return e->getKind() != Expr::Kind::INVALID; }
-static bool isValidNode(Stmt const* s) { return s->getKind() != Stmt::Kind::INVALID; }
+static bool isValidNode(AST::Fa_Expr const* e) { return e->getKind() != AST::Fa_Expr::Kind::INVALID; }
+static bool isValidNode(AST::Fa_Stmt const* s) { return s->getKind() != AST::Fa_Stmt::Kind::INVALID; }
 
-static bool stmtDefinitelyReturns(Stmt const* stmt)
+static bool stmtDefinitelyReturns(AST::Fa_Stmt const* stmt)
 {
     if (!stmt)
         return false;
 
     switch (stmt->getKind()) {
-    case Stmt::Kind::RETURN:
+    case AST::Fa_Stmt::Kind::RETURN:
         return true;
-    case Stmt::Kind::BLOCK: {
-        auto block = static_cast<BlockStmt const*>(stmt);
-        for (Stmt const* child : block->getStatements()) {
+    case AST::Fa_Stmt::Kind::BLOCK: {
+        auto block = static_cast<AST::Fa_BlockStmt const*>(stmt);
+        for (AST::Fa_Stmt const* child : block->getStatements()) {
             if (stmtDefinitelyReturns(child))
                 return true;
         }
         return false;
     }
-    case Stmt::Kind::IF: {
-        auto if_stmt = static_cast<IfStmt const*>(stmt);
+    case AST::Fa_Stmt::Kind::IF: {
+        auto if_stmt = static_cast<AST::Fa_IfStmt const*>(stmt);
         return stmtDefinitelyReturns(if_stmt->getThen()) && stmtDefinitelyReturns(if_stmt->getElse());
     }
     default:
@@ -41,22 +37,22 @@ static bool stmtDefinitelyReturns(Stmt const* stmt)
     }
 }
 
-Error Parser::reportError(ErrorCode err_code)
+Fa_Error Fa_Parser::reportError(ErrorCode err_code)
 {
     auto err_tok = currentToken();
-    SourceLocation loc = { err_tok->line(), err_tok->column(), static_cast<uint16_t>(err_tok->lexeme().len()) };
-    return mylang::reportError(err_code, loc, &Lexer_);
+    Fa_SourceLocation loc = { err_tok->line(), err_tok->column(), static_cast<u16>(err_tok->lexeme().len()) };
+    return fairuz::reportError(err_code, loc, &Lexer_);
 }
 
 // symbol table
 
-SymbolTable::SymbolTable(SymbolTable* p, int32_t level)
+Fa_SymbolTable::Fa_SymbolTable(Fa_SymbolTable* p, i32 level)
     : Parent_(p)
     , ScopeLevel_(level)
 {
 }
 
-void SymbolTable::define(StringRef const& name, Symbol symbol)
+void Fa_SymbolTable::define(Fa_StringRef const& name, Symbol symbol)
 {
     if (lookupLocal(name))
         return;
@@ -65,7 +61,7 @@ void SymbolTable::define(StringRef const& name, Symbol symbol)
     Symbols_.emplace(name, std::move(symbol));
 }
 
-typename SymbolTable::Symbol* SymbolTable::lookup(StringRef const& name)
+typename Fa_SymbolTable::Symbol* Fa_SymbolTable::lookup(Fa_StringRef const& name)
 {
     auto it = Symbols_.find(name);
     if (it != Symbols_.end())
@@ -74,13 +70,13 @@ typename SymbolTable::Symbol* SymbolTable::lookup(StringRef const& name)
     return Parent_ ? Parent_->lookup(name) : nullptr;
 }
 
-typename SymbolTable::Symbol* SymbolTable::lookupLocal(StringRef const& name)
+typename Fa_SymbolTable::Symbol* Fa_SymbolTable::lookupLocal(Fa_StringRef const& name)
 {
     auto it = Symbols_.find(name);
     return it != Symbols_.end() ? &it->second : nullptr;
 }
 
-bool SymbolTable::isDefined(StringRef const& name) const
+bool Fa_SymbolTable::isDefined(Fa_StringRef const& name) const
 {
     if (Symbols_.find(name) != Symbols_.end())
         return true;
@@ -88,7 +84,7 @@ bool SymbolTable::isDefined(StringRef const& name) const
     return Parent_ ? Parent_->isDefined(name) : false;
 }
 
-void SymbolTable::markUsed(StringRef const& name, int32_t line)
+void Fa_SymbolTable::markUsed(Fa_StringRef const& name, i32 line)
 {
     if (Symbol* sym = lookup(name)) {
         sym->isUsed = true;
@@ -96,16 +92,16 @@ void SymbolTable::markUsed(StringRef const& name, int32_t line)
     }
 }
 
-SymbolTable* SymbolTable::createChild()
+Fa_SymbolTable* Fa_SymbolTable::createChild()
 {
-    SymbolTable* child = getAllocator().allocateObject<SymbolTable>(this, ScopeLevel_ + 1);
+    Fa_SymbolTable* child = getAllocator().allocateObject<Fa_SymbolTable>(this, ScopeLevel_ + 1);
     Children_.push(child);
     return child;
 }
 
-Array<typename SymbolTable::Symbol*> SymbolTable::getUnusedSymbols()
+Fa_Array<typename Fa_SymbolTable::Symbol*> Fa_SymbolTable::getUnusedSymbols()
 {
-    Array<Symbol*> unused;
+    Fa_Array<Symbol*> unused;
     for (auto& [name, sym] : Symbols_) {
         if (!sym.isUsed && sym.symbolType == SymbolType::VARIABLE)
             unused.push(&sym);
@@ -114,84 +110,84 @@ Array<typename SymbolTable::Symbol*> SymbolTable::getUnusedSymbols()
     return unused;
 }
 
-std::unordered_map<StringRef, typename SymbolTable::Symbol, StringRefHash, StringRefEqual> const&
-SymbolTable::getSymbols() const
+std::unordered_map<Fa_StringRef, typename Fa_SymbolTable::Symbol, Fa_StringRefHash, Fa_StringRefEqual> const&
+Fa_SymbolTable::getSymbols() const
 {
     return Symbols_;
 }
 
 // semantic analyzer
 
-typename SymbolTable::DataType_t SemanticAnalyzer::inferType(Expr const* expr)
+typename Fa_SymbolTable::DataType_t Fa_SemanticAnalyzer::inferType(AST::Fa_Expr const* expr)
 {
     if (!expr)
-        return SymbolTable::DataType_t::UNKNOWN;
+        return Fa_SymbolTable::DataType_t::UNKNOWN;
 
     switch (expr->getKind()) {
-    case Expr::Kind::LITERAL: {
-        auto lit = static_cast<LiteralExpr const*>(expr);
+    case AST::Fa_Expr::Kind::LITERAL: {
+        auto lit = static_cast<AST::Fa_LiteralExpr const*>(expr);
 
         if (lit->isString())
-            return SymbolTable::DataType_t::STRING;
+            return Fa_SymbolTable::DataType_t::STRING;
         if (lit->isDecimal())
-            return SymbolTable::DataType_t::FLOAT;
+            return Fa_SymbolTable::DataType_t::FLOAT;
         if (lit->isInteger())
-            return SymbolTable::DataType_t::INTEGER;
+            return Fa_SymbolTable::DataType_t::INTEGER;
         if (lit->isBoolean())
-            return SymbolTable::DataType_t::BOOLEAN;
+            return Fa_SymbolTable::DataType_t::BOOLEAN;
 
-        return SymbolTable::DataType_t::NONE;
+        return Fa_SymbolTable::DataType_t::NONE;
     }
 
-    case Expr::Kind::NAME: {
-        auto name = static_cast<NameExpr const*>(expr);
-        SymbolTable::Symbol* sym = CurrentScope_->lookup(name->getValue());
+    case AST::Fa_Expr::Kind::NAME: {
+        auto name = static_cast<AST::Fa_NameExpr const*>(expr);
+        Fa_SymbolTable::Symbol* sym = CurrentScope_->lookup(name->getValue());
         if (sym)
             return sym->dataType;
     } break;
 
-    case Expr::Kind::BINARY: {
-        auto bin = static_cast<BinaryExpr const*>(expr);
+    case AST::Fa_Expr::Kind::BINARY: {
+        auto bin = static_cast<AST::Fa_BinaryExpr const*>(expr);
 
-        SymbolTable::DataType_t leftType = inferType(bin->getLeft());
-        SymbolTable::DataType_t rightType = inferType(bin->getRight());
+        Fa_SymbolTable::DataType_t leftType = inferType(bin->getLeft());
+        Fa_SymbolTable::DataType_t rightType = inferType(bin->getRight());
 
         // Type promotion rules
-        if (leftType == SymbolTable::DataType_t::FLOAT || rightType == SymbolTable::DataType_t::FLOAT)
-            return SymbolTable::DataType_t::FLOAT;
-        if (leftType == SymbolTable::DataType_t::INTEGER && rightType == SymbolTable::DataType_t::INTEGER)
-            return SymbolTable::DataType_t::INTEGER;
-        if (bin->getOperator() == BinaryOp::OP_ADD && leftType == SymbolTable::DataType_t::STRING)
-            return SymbolTable::DataType_t::STRING;
-        if (bin->getOperator() == BinaryOp::OP_AND || bin->getOperator() == BinaryOp::OP_OR)
-            return SymbolTable::DataType_t::BOOLEAN;
+        if (leftType == Fa_SymbolTable::DataType_t::FLOAT || rightType == Fa_SymbolTable::DataType_t::FLOAT)
+            return Fa_SymbolTable::DataType_t::FLOAT;
+        if (leftType == Fa_SymbolTable::DataType_t::INTEGER && rightType == Fa_SymbolTable::DataType_t::INTEGER)
+            return Fa_SymbolTable::DataType_t::INTEGER;
+        if (bin->getOperator() == AST::Fa_BinaryOp::OP_ADD && leftType == Fa_SymbolTable::DataType_t::STRING)
+            return Fa_SymbolTable::DataType_t::STRING;
+        if (bin->getOperator() == AST::Fa_BinaryOp::OP_AND || bin->getOperator() == AST::Fa_BinaryOp::OP_OR)
+            return Fa_SymbolTable::DataType_t::BOOLEAN;
     } break;
 
-    case Expr::Kind::LIST:
-        return SymbolTable::DataType_t::LIST;
-    case Expr::Kind::CALL:
-        return SymbolTable::DataType_t::ANY;
+    case AST::Fa_Expr::Kind::LIST:
+        return Fa_SymbolTable::DataType_t::LIST;
+    case AST::Fa_Expr::Kind::CALL:
+        return Fa_SymbolTable::DataType_t::ANY;
 
     default:
         break;
     }
 
-    return SymbolTable::DataType_t::UNKNOWN;
+    return Fa_SymbolTable::DataType_t::UNKNOWN;
 }
 
-void SemanticAnalyzer::reportIssue(Issue::Severity sev, StringRef msg, int32_t line, StringRef const& sugg)
+void Fa_SemanticAnalyzer::reportIssue(Issue::Severity sev, Fa_StringRef msg, i32 line, Fa_StringRef const& sugg)
 {
     Issues_.push({ sev, msg, line, sugg });
 }
 
-void SemanticAnalyzer::analyzeExpr(Expr const* expr)
+void Fa_SemanticAnalyzer::analyzeFa_Expr(AST::Fa_Expr const* expr)
 {
     if (!expr)
         return;
 
     switch (expr->getKind()) {
-    case Expr::Kind::NAME: {
-        auto name = static_cast<NameExpr const*>(expr);
+    case AST::Fa_Expr::Kind::NAME: {
+        auto name = static_cast<AST::Fa_NameExpr const*>(expr);
 
         if (!CurrentScope_->isDefined(name->getValue()))
             reportIssue(Issue::Severity::ERROR, "Undefined variable: " + name->getValue(), expr->getLine(), "Did you forget to initialize it?");
@@ -199,72 +195,72 @@ void SemanticAnalyzer::analyzeExpr(Expr const* expr)
             CurrentScope_->markUsed(name->getValue(), expr->getLine());
     } break;
 
-    case Expr::Kind::BINARY: {
-        auto bin = static_cast<BinaryExpr const*>(expr);
+    case AST::Fa_Expr::Kind::BINARY: {
+        auto bin = static_cast<AST::Fa_BinaryExpr const*>(expr);
 
-        analyzeExpr(bin->getLeft());
-        analyzeExpr(bin->getRight());
+        analyzeFa_Expr(bin->getLeft());
+        analyzeFa_Expr(bin->getRight());
 
-        SymbolTable::DataType_t leftType = inferType(bin->getLeft());
-        SymbolTable::DataType_t rightType = inferType(bin->getRight());
+        Fa_SymbolTable::DataType_t leftType = inferType(bin->getLeft());
+        Fa_SymbolTable::DataType_t rightType = inferType(bin->getRight());
 
-        if (leftType != rightType && leftType != SymbolTable::DataType_t::UNKNOWN && rightType != SymbolTable::DataType_t::UNKNOWN)
-            reportIssue(Issue::Severity::ERROR, "Type mismatch in binary expression", expr->getLine(), "Left and right operands must have same type");
+        if (leftType != rightType && leftType != Fa_SymbolTable::DataType_t::UNKNOWN && rightType != Fa_SymbolTable::DataType_t::UNKNOWN)
+            reportIssue(Issue::Severity::ERROR, "Type mismatch in binary Fa_Expression", expr->getLine(), "Left and right operands must have same type");
 
-        if (leftType == SymbolTable::DataType_t::STRING || rightType == SymbolTable::DataType_t::STRING) {
-            if (bin->getOperator() != BinaryOp::OP_ADD)
+        if (leftType == Fa_SymbolTable::DataType_t::STRING || rightType == Fa_SymbolTable::DataType_t::STRING) {
+            if (bin->getOperator() != AST::Fa_BinaryOp::OP_ADD)
                 reportIssue(Issue::Severity::ERROR, "Invalid operation on string", expr->getLine(), "Only '+' is allowed for strings");
         }
 
-        if (bin->getOperator() == BinaryOp::OP_DIV && bin->getRight()->getKind() == Expr::Kind::LITERAL) {
-            auto lit = static_cast<LiteralExpr const*>(bin->getRight());
+        if (bin->getOperator() == AST::Fa_BinaryOp::OP_DIV && bin->getRight()->getKind() == AST::Fa_Expr::Kind::LITERAL) {
+            auto lit = static_cast<AST::Fa_LiteralExpr const*>(bin->getRight());
             if (lit->isNumeric() && lit->toNumber() == 0)
                 reportIssue(Issue::Severity::ERROR, "Division by zero", expr->getLine(), "This will cause a runtime error");
         }
     } break;
 
-    case Expr::Kind::UNARY: {
-        auto un = static_cast<UnaryExpr const*>(expr);
-        analyzeExpr(un->getOperand());
+    case AST::Fa_Expr::Kind::UNARY: {
+        auto un = static_cast<AST::Fa_UnaryExpr const*>(expr);
+        analyzeFa_Expr(un->getOperand());
     } break;
 
-    case Expr::Kind::CALL: {
-        auto call = static_cast<CallExpr const*>(expr);
-        analyzeExpr(call->getCallee());
+    case AST::Fa_Expr::Kind::CALL: {
+        auto call = static_cast<AST::Fa_CallExpr const*>(expr);
+        analyzeFa_Expr(call->getCallee());
 
-        for (Expr const* const& arg : call->getArgs())
-            analyzeExpr(arg);
+        for (AST::Fa_Expr const* const& arg : call->getArgs())
+            analyzeFa_Expr(arg);
 
-        if (call->getCallee()->getKind() == Expr::Kind::NAME) {
-            auto name = static_cast<NameExpr const*>(call->getCallee());
+        if (call->getCallee()->getKind() == AST::Fa_Expr::Kind::NAME) {
+            auto name = static_cast<AST::Fa_NameExpr const*>(call->getCallee());
 
-            if (SymbolTable::Symbol* sym = CurrentScope_->lookup(name->getValue())) {
-                if (sym->symbolType != SymbolTable::SymbolType::FUNCTION)
+            if (Fa_SymbolTable::Symbol* sym = CurrentScope_->lookup(name->getValue())) {
+                if (sym->symbolType != Fa_SymbolTable::SymbolType::FUNCTION)
                     reportIssue(Issue::Severity::ERROR, "'" + name->getValue() + "' is not callable", expr->getLine());
             }
         }
 
-        if (call->getCallee()->getKind() == Expr::Kind::NAME) {
-            auto name = static_cast<NameExpr const*>(call->getCallee());
-            SymbolTable::Symbol* sym = CurrentScope_->lookup(name->getValue());
+        if (call->getCallee()->getKind() == AST::Fa_Expr::Kind::NAME) {
+            auto name = static_cast<AST::Fa_NameExpr const*>(call->getCallee());
+            Fa_SymbolTable::Symbol* sym = CurrentScope_->lookup(name->getValue());
 
             if (!sym)
                 reportIssue(Issue::Severity::ERROR, "Undefined function: " + name->getValue(), expr->getLine());
-            else if (sym->symbolType != SymbolTable::SymbolType::FUNCTION)
+            else if (sym->symbolType != Fa_SymbolTable::SymbolType::FUNCTION)
                 reportIssue(Issue::Severity::ERROR, "'" + name->getValue() + "' is not callable", expr->getLine());
         }
     } break;
 
-    case Expr::Kind::LIST: {
-        auto list = static_cast<ListExpr const*>(expr);
-        for (Expr const* const& elem : list->getElements())
-            analyzeExpr(elem);
+    case AST::Fa_Expr::Kind::LIST: {
+        auto list = static_cast<AST::Fa_ListExpr const*>(expr);
+        for (AST::Fa_Expr const* const& elem : list->getElements())
+            analyzeFa_Expr(elem);
     } break;
 
-    case Expr::Kind::INDEX: {
-        auto idx = static_cast<IndexExpr const*>(expr);
-        analyzeExpr(idx->getObject());
-        analyzeExpr(idx->getIndex());
+    case AST::Fa_Expr::Kind::INDEX: {
+        auto idx = static_cast<AST::Fa_IndexExpr const*>(expr);
+        analyzeFa_Expr(idx->getObject());
+        analyzeFa_Expr(idx->getIndex());
     } break;
 
     default:
@@ -272,31 +268,31 @@ void SemanticAnalyzer::analyzeExpr(Expr const* expr)
     }
 }
 
-void SemanticAnalyzer::analyzeStmt(Stmt const* stmt)
+void Fa_SemanticAnalyzer::analyzeStmt(AST::Fa_Stmt const* stmt)
 {
     if (!stmt)
         return;
 
     switch (stmt->getKind()) {
-    case Stmt::Kind::ASSIGNMENT: {
-        auto assign = static_cast<AssignmentStmt const*>(stmt);
-        analyzeExpr(assign->getValue());
+    case AST::Fa_Stmt::Kind::ASSIGNMENT: {
+        auto assign = static_cast<AST::Fa_AssignmentStmt const*>(stmt);
+        analyzeFa_Expr(assign->getValue());
 
-        Expr* target = assign->getTarget();
+        AST::Fa_Expr* target = assign->getTarget();
         assert(target);
 
-        if (target->getKind() == Expr::Kind::INDEX) {
-            analyzeExpr(target);
+        if (target->getKind() == AST::Fa_Expr::Kind::INDEX) {
+            analyzeFa_Expr(target);
             break;
         }
 
-        if (target->getKind() == Expr::Kind::NAME) {
-            StringRef target_name = static_cast<NameExpr*>(target)->getValue();
+        if (target->getKind() == AST::Fa_Expr::Kind::NAME) {
+            Fa_StringRef target_name = static_cast<AST::Fa_NameExpr*>(target)->getValue();
 
             if (!CurrentScope_->lookupLocal(target_name)) {
                 // First assignment in this scope — declare it
-                SymbolTable::Symbol sym;
-                sym.symbolType = SymbolTable::SymbolType::VARIABLE;
+                Fa_SymbolTable::Symbol sym;
+                sym.symbolType = Fa_SymbolTable::SymbolType::VARIABLE;
                 sym.dataType = inferType(assign->getValue());
                 sym.definitionLine = stmt->getLine();
                 CurrentScope_->define(target_name, sym);
@@ -306,21 +302,21 @@ void SemanticAnalyzer::analyzeStmt(Stmt const* stmt)
         }
     } break;
 
-    case Stmt::Kind::EXPR: {
-        auto expr_stmt = static_cast<ExprStmt const*>(stmt);
-        analyzeExpr(expr_stmt->getExpr());
-        if (expr_stmt->getExpr()->getKind() != Expr::Kind::CALL)
-            reportIssue(Issue::Severity::INFO, "Expression result not used", stmt->getLine());
+    case AST::Fa_Stmt::Kind::EXPR: {
+        auto Fa_Expr_stmt = static_cast<AST::Fa_ExprStmt const*>(stmt);
+        analyzeFa_Expr(Fa_Expr_stmt->getExpr());
+        if (Fa_Expr_stmt->getExpr()->getKind() != AST::Fa_Expr::Kind::CALL)
+            reportIssue(Issue::Severity::INFO, "Fa_Expression result not used", stmt->getLine());
     } break;
 
-    case Stmt::Kind::IF: {
-        auto ifStmt = static_cast<IfStmt const*>(stmt);
-        analyzeExpr(ifStmt->getCondition());
+    case AST::Fa_Stmt::Kind::IF: {
+        auto ifStmt = static_cast<AST::Fa_IfStmt const*>(stmt);
+        analyzeFa_Expr(ifStmt->getCondition());
 
-        Stmt const* then_block = ifStmt->getThen();
-        Stmt const* else_block = ifStmt->getElse();
+        AST::Fa_Stmt const* then_block = ifStmt->getThen();
+        AST::Fa_Stmt const* else_block = ifStmt->getElse();
 
-        if (ifStmt->getCondition()->getKind() == Expr::Kind::LITERAL)
+        if (ifStmt->getCondition()->getKind() == AST::Fa_Expr::Kind::LITERAL)
             reportIssue(Issue::Severity::WARNING, "Condition is always constant", stmt->getLine(), "Consider removing if statement");
 
         if (then_block)
@@ -329,13 +325,13 @@ void SemanticAnalyzer::analyzeStmt(Stmt const* stmt)
             analyzeStmt(else_block);
     } break;
 
-    case Stmt::Kind::WHILE: {
-        auto while_stmt = static_cast<WhileStmt const*>(stmt);
-        analyzeExpr(while_stmt->getCondition());
+    case AST::Fa_Stmt::Kind::WHILE: {
+        auto while_stmt = static_cast<AST::Fa_WhileStmt const*>(stmt);
+        analyzeFa_Expr(while_stmt->getCondition());
 
         // Detect infinite loops
-        if (while_stmt->getCondition()->getKind() == Expr::Kind::LITERAL) {
-            LiteralExpr const* lit = static_cast<LiteralExpr const*>(while_stmt->getCondition());
+        if (while_stmt->getCondition()->getKind() == AST::Fa_Expr::Kind::LITERAL) {
+            AST::Fa_LiteralExpr const* lit = static_cast<AST::Fa_LiteralExpr const*>(while_stmt->getCondition());
             if (lit->isBoolean() && lit->getBool() == true)
                 reportIssue(Issue::Severity::WARNING, "Infinite loop detected", stmt->getLine(), "Add a break condition");
         }
@@ -343,14 +339,14 @@ void SemanticAnalyzer::analyzeStmt(Stmt const* stmt)
         analyzeStmt(while_stmt->getBody());
     } break;
 
-    case Stmt::Kind::FOR: {
-        auto for_stmt = static_cast<ForStmt const*>(stmt);
-        analyzeExpr(for_stmt->getIter());
+    case AST::Fa_Stmt::Kind::FOR: {
+        auto for_stmt = static_cast<AST::Fa_ForStmt const*>(stmt);
+        analyzeFa_Expr(for_stmt->getIter());
 
         CurrentScope_ = CurrentScope_->createChild();
-        SymbolTable::Symbol loopVar;
-        loopVar.symbolType = SymbolTable::SymbolType::VARIABLE;
-        loopVar.dataType = SymbolTable::DataType_t::ANY;
+        Fa_SymbolTable::Symbol loopVar;
+        loopVar.symbolType = Fa_SymbolTable::SymbolType::VARIABLE;
+        loopVar.dataType = Fa_SymbolTable::DataType_t::ANY;
         CurrentScope_->define(for_stmt->getTarget()->getValue(), loopVar);
 
         analyzeStmt(for_stmt->getBody());
@@ -361,21 +357,21 @@ void SemanticAnalyzer::analyzeStmt(Stmt const* stmt)
         CurrentScope_ = CurrentScope_->Parent_;
     } break;
 
-    case Stmt::Kind::FUNC: {
-        auto func_def = static_cast<FunctionDef const*>(stmt);
-        SymbolTable::Symbol func_sym;
-        func_sym.symbolType = SymbolTable::SymbolType::FUNCTION;
-        func_sym.dataType = SymbolTable::DataType_t::FUNCTION;
+    case AST::Fa_Stmt::Kind::FUNC: {
+        auto func_def = static_cast<AST::Fa_FunctionDef const*>(stmt);
+        Fa_SymbolTable::Symbol func_sym;
+        func_sym.symbolType = Fa_SymbolTable::SymbolType::FUNCTION;
+        func_sym.dataType = Fa_SymbolTable::DataType_t::FUNCTION;
         func_sym.definitionLine = stmt->getLine();
         CurrentScope_->define(func_def->getName()->getValue(), func_sym);
 
         CurrentScope_ = CurrentScope_->createChild();
 
-        for (Expr const* const& param : func_def->getParameters()) {
-            SymbolTable::Symbol param_sym;
-            param_sym.symbolType = SymbolTable::SymbolType::VARIABLE;
-            param_sym.dataType = SymbolTable::DataType_t::ANY;
-            CurrentScope_->define(static_cast<NameExpr const*>(param)->getValue(), param_sym);
+        for (AST::Fa_Expr const* const& param : func_def->getParameters()) {
+            Fa_SymbolTable::Symbol param_sym;
+            param_sym.symbolType = Fa_SymbolTable::SymbolType::VARIABLE;
+            param_sym.dataType = Fa_SymbolTable::DataType_t::ANY;
+            CurrentScope_->define(static_cast<AST::Fa_NameExpr const*>(param)->getValue(), param_sym);
         }
 
         analyzeStmt(func_def->getBody());
@@ -385,9 +381,9 @@ void SemanticAnalyzer::analyzeStmt(Stmt const* stmt)
         CurrentScope_ = CurrentScope_->Parent_;
     } break;
 
-    case Stmt::Kind::RETURN: {
-        auto ret = static_cast<ReturnStmt const*>(stmt);
-        analyzeExpr(ret->getValue());
+    case AST::Fa_Stmt::Kind::RETURN: {
+        auto ret = static_cast<AST::Fa_ReturnStmt const*>(stmt);
+        analyzeFa_Expr(ret->getValue());
     } break;
 
     default:
@@ -395,34 +391,34 @@ void SemanticAnalyzer::analyzeStmt(Stmt const* stmt)
     }
 }
 
-SemanticAnalyzer::SemanticAnalyzer()
+Fa_SemanticAnalyzer::Fa_SemanticAnalyzer()
 {
-    GlobalScope_ = getAllocator().allocateObject<SymbolTable>();
+    GlobalScope_ = getAllocator().allocateObject<Fa_SymbolTable>();
     CurrentScope_ = GlobalScope_;
 
-    SymbolTable::Symbol printSym;
+    Fa_SymbolTable::Symbol printSym;
     printSym.name = "print";
-    printSym.symbolType = SymbolTable::SymbolType::FUNCTION;
-    printSym.dataType = SymbolTable::DataType_t::FUNCTION;
+    printSym.symbolType = Fa_SymbolTable::SymbolType::FUNCTION;
+    printSym.dataType = Fa_SymbolTable::DataType_t::FUNCTION;
     GlobalScope_->define("print", printSym);
 }
 
-void SemanticAnalyzer::analyze(Array<Stmt*> const& Statements_)
+void Fa_SemanticAnalyzer::analyze(Fa_Array<AST::Fa_Stmt*> const& Statements_)
 {
-    for (Stmt const* const& stmt : Statements_)
+    for (AST::Fa_Stmt const* const& stmt : Statements_)
         analyzeStmt(stmt);
 
-    Array<SymbolTable::Symbol*> unused = GlobalScope_->getUnusedSymbols();
-    for (SymbolTable::Symbol* sym : unused)
+    Fa_Array<Fa_SymbolTable::Symbol*> unused = GlobalScope_->getUnusedSymbols();
+    for (Fa_SymbolTable::Symbol* sym : unused)
         reportIssue(Issue::Severity::WARNING, "Unused variable: " + sym->name, sym->definitionLine, "Consider removing if not needed");
 }
 
-Array<typename SemanticAnalyzer::Issue> const& SemanticAnalyzer::getIssues() const { return Issues_; }
+Fa_Array<typename Fa_SemanticAnalyzer::Issue> const& Fa_SemanticAnalyzer::getIssues() const { return Issues_; }
 
-SymbolTable const* SemanticAnalyzer::getGlobalScope() const { return GlobalScope_; }
-SymbolTable const* SemanticAnalyzer::getCurrentScope() const { return CurrentScope_; }
+Fa_SymbolTable const* Fa_SemanticAnalyzer::getGlobalScope() const { return GlobalScope_; }
+Fa_SymbolTable const* Fa_SemanticAnalyzer::getCurrentScope() const { return CurrentScope_; }
 
-void SemanticAnalyzer::printReport() const
+void Fa_SemanticAnalyzer::printReport() const
 {
     if (Issues_.empty()) {
         std::cout << "✓ No issues found\n";
@@ -430,8 +426,8 @@ void SemanticAnalyzer::printReport() const
     }
 
     std::cout << "Found " << Issues_.size() << " issue(s):\n\n";
-    for (SemanticAnalyzer::Issue const& issue : Issues_) {
-        StringRef sevStr;
+    for (Fa_SemanticAnalyzer::Issue const& issue : Issues_) {
+        Fa_StringRef sevStr;
         switch (issue.severity) {
         case Issue::Severity::ERROR:
             sevStr = "ERROR";
@@ -453,71 +449,71 @@ void SemanticAnalyzer::printReport() const
     }
 }
 
-BinaryOp toBinaryOp(tok::TokenType const op)
+AST::Fa_BinaryOp toBinaryOp(tok::Fa_TokenType const op)
 {
     switch (op) {
-    case tok::TokenType::OP_PLUS:
-        return BinaryOp::OP_ADD;
-    case tok::TokenType::OP_MINUS:
-        return BinaryOp::OP_SUB;
-    case tok::TokenType::OP_STAR:
-        return BinaryOp::OP_MUL;
-    case tok::TokenType::OP_SLASH:
-        return BinaryOp::OP_DIV;
-    case tok::TokenType::OP_PERCENT:
-        return BinaryOp::OP_MOD;
-    case tok::TokenType::OP_POWER:
-        return BinaryOp::OP_POW;
-    case tok::TokenType::OP_EQ:
-        return BinaryOp::OP_EQ;
-    case tok::TokenType::OP_NEQ:
-        return BinaryOp::OP_NEQ;
-    case tok::TokenType::OP_LT:
-        return BinaryOp::OP_LT;
-    case tok::TokenType::OP_GT:
-        return BinaryOp::OP_GT;
-    case tok::TokenType::OP_LTE:
-        return BinaryOp::OP_LTE;
-    case tok::TokenType::OP_GTE:
-        return BinaryOp::OP_GTE;
-    case tok::TokenType::OP_BITAND:
-        return BinaryOp::OP_BITAND;
-    case tok::TokenType::OP_BITOR:
-        return BinaryOp::OP_BITOR;
-    case tok::TokenType::OP_BITXOR:
-        return BinaryOp::OP_BITXOR;
-    case tok::TokenType::OP_LSHIFT:
-        return BinaryOp::OP_LSHIFT;
-    case tok::TokenType::OP_RSHIFT:
-        return BinaryOp::OP_RSHIFT;
-    case tok::TokenType::OP_AND:
-        return BinaryOp::OP_AND;
-    case tok::TokenType::OP_OR:
-        return BinaryOp::OP_OR;
+    case tok::Fa_TokenType::OP_PLUS:
+        return AST::Fa_BinaryOp::OP_ADD;
+    case tok::Fa_TokenType::OP_MINUS:
+        return AST::Fa_BinaryOp::OP_SUB;
+    case tok::Fa_TokenType::OP_STAR:
+        return AST::Fa_BinaryOp::OP_MUL;
+    case tok::Fa_TokenType::OP_SLASH:
+        return AST::Fa_BinaryOp::OP_DIV;
+    case tok::Fa_TokenType::OP_PERCENT:
+        return AST::Fa_BinaryOp::OP_MOD;
+    case tok::Fa_TokenType::OP_POWER:
+        return AST::Fa_BinaryOp::OP_POW;
+    case tok::Fa_TokenType::OP_EQ:
+        return AST::Fa_BinaryOp::OP_EQ;
+    case tok::Fa_TokenType::OP_NEQ:
+        return AST::Fa_BinaryOp::OP_NEQ;
+    case tok::Fa_TokenType::OP_LT:
+        return AST::Fa_BinaryOp::OP_LT;
+    case tok::Fa_TokenType::OP_GT:
+        return AST::Fa_BinaryOp::OP_GT;
+    case tok::Fa_TokenType::OP_LTE:
+        return AST::Fa_BinaryOp::OP_LTE;
+    case tok::Fa_TokenType::OP_GTE:
+        return AST::Fa_BinaryOp::OP_GTE;
+    case tok::Fa_TokenType::OP_BITAND:
+        return AST::Fa_BinaryOp::OP_BITAND;
+    case tok::Fa_TokenType::OP_BITOR:
+        return AST::Fa_BinaryOp::OP_BITOR;
+    case tok::Fa_TokenType::OP_BITXOR:
+        return AST::Fa_BinaryOp::OP_BITXOR;
+    case tok::Fa_TokenType::OP_LSHIFT:
+        return AST::Fa_BinaryOp::OP_LSHIFT;
+    case tok::Fa_TokenType::OP_RSHIFT:
+        return AST::Fa_BinaryOp::OP_RSHIFT;
+    case tok::Fa_TokenType::OP_AND:
+        return AST::Fa_BinaryOp::OP_AND;
+    case tok::Fa_TokenType::OP_OR:
+        return AST::Fa_BinaryOp::OP_OR;
     default:
-        return BinaryOp::INVALID;
+        return AST::Fa_BinaryOp::INVALID;
     }
 }
 
-UnaryOp toUnaryOp(tok::TokenType const op)
+AST::Fa_UnaryOp toUnaryOp(tok::Fa_TokenType const op)
 {
     switch (op) {
-    case tok::TokenType::OP_PLUS:
-        return UnaryOp::OP_PLUS;
-    case tok::TokenType::OP_MINUS:
-        return UnaryOp::OP_NEG;
-    case tok::TokenType::OP_BITNOT:
-        return UnaryOp::OP_BITNOT;
-    case tok::TokenType::OP_NOT:
-        return UnaryOp::OP_NOT;
+    case tok::Fa_TokenType::OP_PLUS:
+        return AST::Fa_UnaryOp::OP_PLUS;
+    case tok::Fa_TokenType::OP_MINUS:
+        return AST::Fa_UnaryOp::OP_NEG;
+    case tok::Fa_TokenType::OP_BITNOT:
+        return AST::Fa_UnaryOp::OP_BITNOT;
+    case tok::Fa_TokenType::OP_NOT:
+        return AST::Fa_UnaryOp::OP_NOT;
     default:
-        return UnaryOp::INVALID;
+        return AST::Fa_UnaryOp::INVALID;
     }
 }
 
-Array<Stmt*> Parser::parseProgram()
+Fa_Array<AST::Fa_Stmt*> Fa_Parser::parseProgram()
 {
-    Array<Stmt*> statements;
+    Fa_Array<AST::Fa_Stmt*> statements;
 
     while (!weDone()) {
         skipNewlines();
@@ -545,74 +541,74 @@ Array<Stmt*> Parser::parseProgram()
     return statements;
 }
 
-ErrorOr<Stmt*> Parser::parseStatement()
+Fa_ErrorOr<AST::Fa_Stmt*> Fa_Parser::parseStatement()
 {
     skipNewlines();
 
-    if (check(tok::TokenType::KW_IF))
+    if (check(tok::Fa_TokenType::KW_IF))
         return parseIfStmt();
-    if (check(tok::TokenType::KW_WHILE))
+    if (check(tok::Fa_TokenType::KW_WHILE))
         return parseWhileStmt();
-    if (check(tok::TokenType::KW_RETURN))
+    if (check(tok::Fa_TokenType::KW_RETURN))
         return parseReturnStmt();
-    if (check(tok::TokenType::KW_FN))
+    if (check(tok::Fa_TokenType::KW_FN))
         return parseFunctionDef();
 
     return parseExpressionStmt();
 }
 
-ErrorOr<Stmt*> Parser::parseReturnStmt()
+Fa_ErrorOr<AST::Fa_Stmt*> Fa_Parser::parseReturnStmt()
 {
-    if (!consume(tok::TokenType::KW_RETURN))
+    if (!consume(tok::Fa_TokenType::KW_RETURN))
         return reportError(ErrorCode::EXPECTED_RETURN);
 
-    if (check(tok::TokenType::NEWLINE) || weDone())
-        return makeReturn();
+    if (check(tok::Fa_TokenType::NEWLINE) || weDone())
+        return AST::Fa_makeReturn();
 
     auto ret = parseExpression();
     if (ret.hasError())
         return ret.error();
 
-    return makeReturn(ret.value());
+    return AST::Fa_makeReturn(ret.value());
 }
 
-ErrorOr<Stmt*> Parser::parseWhileStmt()
+Fa_ErrorOr<AST::Fa_Stmt*> Fa_Parser::parseWhileStmt()
 {
-    if (!consume(tok::TokenType::KW_WHILE))
+    if (!consume(tok::Fa_TokenType::KW_WHILE))
         return reportError(ErrorCode::EXPECTED_WHILE_KEYWORD);
 
     auto condition = parseExpression();
     if (condition.hasError())
         return condition.error();
 
-    if (!consume(tok::TokenType::COLON))
+    if (!consume(tok::Fa_TokenType::COLON))
         return reportError(ErrorCode::EXPECTED_COLON_WHILE);
 
     auto while_block = parseIndentedBlock();
     if (while_block.hasError())
         return while_block.error();
 
-    return makeWhile(condition.value(), static_cast<BlockStmt*>(while_block.value()));
+    return Fa_makeWhile(condition.value(), static_cast<AST::Fa_BlockStmt*>(while_block.value()));
 }
 
-ErrorOr<Stmt*> Parser::parseIndentedBlock()
+Fa_ErrorOr<AST::Fa_Stmt*> Fa_Parser::parseIndentedBlock()
 {
-    if (check(tok::TokenType::NEWLINE))
+    if (check(tok::Fa_TokenType::NEWLINE))
         advance();
 
-    if (!consume(tok::TokenType::INDENT))
+    if (!consume(tok::Fa_TokenType::INDENT))
         return reportError(ErrorCode::EXPECTED_INDENT);
 
-    Array<Stmt*> statements;
+    Fa_Array<AST::Fa_Stmt*> statements;
 
-    if (check(tok::TokenType::DEDENT)) {
+    if (check(tok::Fa_TokenType::DEDENT)) {
         advance();
-        return makeBlock(statements);
+        return Fa_makeBlock(statements);
     }
 
-    while (!check(tok::TokenType::DEDENT) && !weDone()) {
+    while (!check(tok::Fa_TokenType::DEDENT) && !weDone()) {
         skipNewlines();
-        if (check(tok::TokenType::DEDENT))
+        if (check(tok::Fa_TokenType::DEDENT))
             break;
 
         auto stmt = parseStatement();
@@ -621,109 +617,109 @@ ErrorOr<Stmt*> Parser::parseIndentedBlock()
             statements.push(stmt.value());
         else {
             synchronize();
-            if (check(tok::TokenType::DEDENT) || weDone())
+            if (check(tok::Fa_TokenType::DEDENT) || weDone())
                 break;
         }
     }
 
-    if (check(tok::TokenType::ENDMARKER))
-        return makeBlock(statements);
-    else if (!consume(tok::TokenType::DEDENT))
+    if (check(tok::Fa_TokenType::ENDMARKER))
+        return Fa_makeBlock(statements);
+    else if (!consume(tok::Fa_TokenType::DEDENT))
         return reportError(ErrorCode::EXPECTED_DEDENT);
 
-    return makeBlock(statements);
+    return Fa_makeBlock(statements);
 }
 
-ErrorOr<Expr*> Parser::parseParametersList()
+Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parseParametersList()
 {
-    if (!consume(tok::TokenType::LPAREN))
+    if (!consume(tok::Fa_TokenType::LPAREN))
         return reportError(ErrorCode::EXPECTED_LPAREN);
 
-    Array<Expr*> parameters = Array<Expr*>::withCapacity(4); // typical small function
+    Fa_Array<AST::Fa_Expr*> parameters = Fa_Array<AST::Fa_Expr*>::withCapacity(4); // typical small function
 
-    if (!check(tok::TokenType::RPAREN)) {
+    if (!check(tok::Fa_TokenType::RPAREN)) {
         do {
             skipNewlines();
-            if (check(tok::TokenType::RPAREN))
+            if (check(tok::Fa_TokenType::RPAREN))
                 break;
 
-            if (!check(tok::TokenType::IDENTIFIER))
+            if (!check(tok::Fa_TokenType::IDENTIFIER))
                 return reportError(ErrorCode::EXPECTED_PARAM_NAME);
 
-            StringRef param_name = currentToken()->lexeme();
+            Fa_StringRef param_name = currentToken()->lexeme();
             advance();
-            parameters.push(makeName(param_name));
+            parameters.push(AST::Fa_makeName(param_name));
             skipNewlines();
-        } while (match(tok::TokenType::COMMA) && !check(tok::TokenType::RPAREN));
+        } while (match(tok::Fa_TokenType::COMMA) && !check(tok::Fa_TokenType::RPAREN));
     }
 
-    if (!consume(tok::TokenType::RPAREN))
+    if (!consume(tok::Fa_TokenType::RPAREN))
         return reportError(ErrorCode::EXPECTED_RPAREN_EXPR);
 
     if (parameters.empty())
-        return makeList(Array<Expr*> { });
+        return Fa_makeList(Fa_Array<AST::Fa_Expr*> { });
 
-    return makeList(parameters);
+    return Fa_makeList(parameters);
 }
 
-ErrorOr<Expr*> Parser::parseExpression() { return parseAssignmentExpr(); }
+Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parseExpression() { return parseAssignmentExpr(); }
 
-ErrorOr<Stmt*> Parser::parseFunctionDef()
+Fa_ErrorOr<AST::Fa_Stmt*> Fa_Parser::parseFunctionDef()
 {
-    if (!consume(tok::TokenType::KW_FN))
+    if (!consume(tok::Fa_TokenType::KW_FN))
         return reportError(ErrorCode::EXPECTED_FN_KEYWORD);
 
-    if (!check(tok::TokenType::IDENTIFIER))
+    if (!check(tok::Fa_TokenType::IDENTIFIER))
         return reportError(ErrorCode::EXPECTED_FN_NAME);
 
-    StringRef function_name = currentToken()->lexeme();
+    Fa_StringRef function_name = currentToken()->lexeme();
     advance();
 
     auto parameters_list = parseParametersList();
     if (parameters_list.hasError())
         return parameters_list.error();
 
-    if (!consume(tok::TokenType::COLON))
+    if (!consume(tok::Fa_TokenType::COLON))
         return reportError(ErrorCode::EXPECTED_COLON_FN);
 
     auto function_body = parseIndentedBlock();
     if (function_body.hasError())
         return function_body.error();
 
-    return makeFunction(makeName(function_name), static_cast<ListExpr*>(parameters_list.value()), static_cast<BlockStmt*>(function_body.value()));
+    return Fa_makeFunction(AST::Fa_makeName(function_name), static_cast<AST::Fa_ListExpr*>(parameters_list.value()), static_cast<AST::Fa_BlockStmt*>(function_body.value()));
 }
 
-ErrorOr<Stmt*> Parser::parseIfStmt()
+Fa_ErrorOr<AST::Fa_Stmt*> Fa_Parser::parseIfStmt()
 {
-    if (!consume(tok::TokenType::KW_IF))
+    if (!consume(tok::Fa_TokenType::KW_IF))
         return reportError(ErrorCode::EXPECTED_IF_KEYWORD);
 
     auto condition = parseExpression();
     if (condition.hasError())
         return condition.error();
 
-    if (!consume(tok::TokenType::COLON))
+    if (!consume(tok::Fa_TokenType::COLON))
         return reportError(ErrorCode::EXPECTED_COLON_IF);
 
     auto then_block = parseIndentedBlock();
     if (then_block.hasError())
         return then_block.error();
 
-    Stmt* else_block = nullptr;
+    AST::Fa_Stmt* else_block = nullptr;
 
     skipNewlines();
 
-    if (consume(tok::TokenType::KW_ELSE)) {
+    if (consume(tok::Fa_TokenType::KW_ELSE)) {
         skipNewlines();
 
-        if (check(tok::TokenType::KW_IF)) {
+        if (check(tok::Fa_TokenType::KW_IF)) {
             // else-if: treat as nested if inside the else clause
             auto nested = parseIfStmt();
             if (nested.hasError())
                 return nested.error();
             else_block = nested.value();
         } else {
-            if (!consume(tok::TokenType::COLON))
+            if (!consume(tok::Fa_TokenType::COLON))
                 return reportError(ErrorCode::EXPECTED_COLON_IF);
             auto else_stmt = parseIndentedBlock();
             if (else_stmt.hasError())
@@ -732,32 +728,32 @@ ErrorOr<Stmt*> Parser::parseIfStmt()
         }
     }
 
-    return makeIf(
+    return Fa_makeIf(
         condition.value(),
-        static_cast<BlockStmt*>(then_block.value()),
+        static_cast<AST::Fa_BlockStmt*>(then_block.value()),
         else_block);
 }
 
-ErrorOr<Stmt*> Parser::parseExpressionStmt()
+Fa_ErrorOr<AST::Fa_Stmt*> Fa_Parser::parseExpressionStmt()
 {
     auto expr = parseExpression();
     if (expr.hasError())
         return expr.error();
 
-    return makeExprStmt(expr.value());
+    return Fa_makeExprStmt(expr.value());
 }
 
-ErrorOr<Expr*> Parser::parseAssignmentExpr()
+Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parseAssignmentExpr()
 {
     auto L = parseConditionalExpr();
     if (L.hasError())
         return L.error();
 
-    if (check(tok::TokenType::OP_ASSIGN)) {
-        Expr* target = L.value();
-        Expr::Kind kind = target->getKind();
+    if (check(tok::Fa_TokenType::OP_ASSIGN)) {
+        AST::Fa_Expr* target = L.value();
+        AST::Fa_Expr::Kind kind = target->getKind();
 
-        if (kind != Expr::Kind::NAME && kind != Expr::Kind::INDEX)
+        if (kind != AST::Fa_Expr::Kind::NAME && kind != AST::Fa_Expr::Kind::INDEX)
             return reportError(ErrorCode::INVALID_ASSIGN_TARGET);
 
         advance();
@@ -766,25 +762,25 @@ ErrorOr<Expr*> Parser::parseAssignmentExpr()
         if (R.hasError())
             return R.error();
 
-        if (kind == Expr::Kind::NAME) {
-            auto name_target = static_cast<NameExpr*>(target);
+        if (kind == AST::Fa_Expr::Kind::NAME) {
+            auto name_target = static_cast<AST::Fa_NameExpr*>(target);
             bool decl = !Sema_.getCurrentScope()->isDefined(name_target->getValue());
-            return ErrorOr<Expr*>::fromValue(makeAssignmentExpr(name_target, R.value(), decl));
+            return Fa_ErrorOr<AST::Fa_Expr*>::fromValue(Fa_makeAssignmentExpr(name_target, R.value(), decl));
         }
-        return ErrorOr<Expr*>::fromValue(makeAssignmentExpr(target, R.value(), /*decl=*/false));
+        return Fa_ErrorOr<AST::Fa_Expr*>::fromValue(Fa_makeAssignmentExpr(target, R.value(), /*decl=*/false));
     }
 
     return L.value();
 }
 
-ErrorOr<Expr*> Parser::parseLogicalExprPrecedence(unsigned int min_precedence)
+Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parseLogicalExprPrecedence(unsigned int min_precedence)
 {
     auto L = parseComparisonExpr();
     if (L.hasError())
         return L.error();
 
     for (;;) {
-        tok::Token const* tok = currentToken();
+        tok::Fa_Token const* tok = currentToken();
         if (!tok->isBinaryOp())
             break;
 
@@ -792,56 +788,56 @@ ErrorOr<Expr*> Parser::parseLogicalExprPrecedence(unsigned int min_precedence)
         if (precedence == tok::PREC_NONE || precedence < min_precedence)
             break;
 
-        tok::TokenType op = Lexer_.current()->type();
+        tok::Fa_TokenType op = Lexer_.current()->type();
         advance();
 
         auto R = parseLogicalExprPrecedence(precedence + 1);
         if (R.hasError())
             return R.error();
 
-        L.setValue(makeBinary(L.value(), R.value(), toBinaryOp(op)));
+        L.setValue(Fa_makeBinary(L.value(), R.value(), toBinaryOp(op)));
     }
 
     return L.value();
 }
 
-ErrorOr<Expr*> Parser::parseComparisonExpr()
+Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parseComparisonExpr()
 {
     auto L = parseBinaryExpr();
     if (L.hasError())
         return L.error();
 
     if (currentToken()->isComparisonOp()) {
-        tok::TokenType op = Lexer_.current()->type();
+        tok::Fa_TokenType op = Lexer_.current()->type();
         advance();
         auto R = parseBinaryExpr();
         if (R.hasError())
             return R.error();
 
-        L.setValue(makeBinary(L.value(), R.value(), toBinaryOp(op)));
+        L.setValue(Fa_makeBinary(L.value(), R.value(), toBinaryOp(op)));
     }
 
     return L.value();
 }
 
-ErrorOr<Expr*> Parser::parseBinaryExpr() { return parseBinaryExprPrecedence(0); }
+Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parseBinaryExpr() { return parseBinaryExprPrecedence(0); }
 
-ErrorOr<Expr*> Parser::parseBinaryExprPrecedence(unsigned int min_precedence)
+Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parseBinaryExprPrecedence(unsigned int min_precedence)
 {
     auto L = parseUnaryExpr();
     if (L.hasError())
         return L.error();
 
     for (;;) {
-        tok::Token const* tok = currentToken();
-        if (!tok->isBinaryOp() || tok->is(tok::TokenType::OP_ASSIGN))
+        tok::Fa_Token const* tok = currentToken();
+        if (!tok->isBinaryOp() || tok->is(tok::Fa_TokenType::OP_ASSIGN))
             break;
 
         unsigned int precedence = tok->getPrecedence();
         if (precedence == tok::PREC_NONE || precedence < min_precedence)
             break;
 
-        tok::TokenType op = Lexer_.current()->type();
+        tok::Fa_TokenType op = Lexer_.current()->type();
         advance();
 
         unsigned int nextMin = precedence + 1;
@@ -849,46 +845,46 @@ ErrorOr<Expr*> Parser::parseBinaryExprPrecedence(unsigned int min_precedence)
         if (R.hasError())
             return R.error();
 
-        L.setValue(makeBinary(L.value(), R.value(), toBinaryOp(op)));
+        L.setValue(Fa_makeBinary(L.value(), R.value(), toBinaryOp(op)));
     }
 
     return L.value();
 }
 
-ErrorOr<Expr*> Parser::parseUnaryExpr()
+Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parseUnaryExpr()
 {
-    tok::Token const* tok = currentToken();
+    tok::Fa_Token const* tok = currentToken();
     if (tok->isUnaryOp()) {
-        tok::TokenType op = Lexer_.current()->type();
+        tok::Fa_TokenType op = Lexer_.current()->type();
         advance();
 
         auto expr = parseUnaryExpr();
         if (expr.hasError())
             return expr.error();
 
-        return makeUnary(expr.value(), toUnaryOp(op));
+        return Fa_makeUnary(expr.value(), toUnaryOp(op));
     }
     return parsePostfixExpr();
 }
 
-ErrorOr<Expr*> Parser::parsePostfixExpr()
+Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parsePostfixExpr()
 {
     auto expr_or = parsePrimaryExpr();
     if (expr_or.hasError())
         return expr_or.error();
 
-    Expr* expr = expr_or.value();
+    AST::Fa_Expr* expr = expr_or.value();
 
     for (;;) {
-        if (check(tok::TokenType::LPAREN)) {
+        if (check(tok::Fa_TokenType::LPAREN)) {
             advance();
 
-            Array<Expr*> args = Array<Expr*>::withCapacity(4);
+            Fa_Array<AST::Fa_Expr*> args = Fa_Array<AST::Fa_Expr*>::withCapacity(4);
 
-            if (!check(tok::TokenType::RPAREN)) {
+            if (!check(tok::Fa_TokenType::RPAREN)) {
                 do {
                     skipNewlines();
-                    if (check(tok::TokenType::RPAREN))
+                    if (check(tok::Fa_TokenType::RPAREN))
                         break;
 
                     auto arg = parseExpression();
@@ -897,27 +893,27 @@ ErrorOr<Expr*> Parser::parsePostfixExpr()
 
                     args.push(arg.value());
                     skipNewlines();
-                } while (match(tok::TokenType::COMMA) && !check(tok::TokenType::RPAREN));
+                } while (match(tok::Fa_TokenType::COMMA) && !check(tok::Fa_TokenType::RPAREN));
             }
 
-            if (!consume(tok::TokenType::RPAREN))
+            if (!consume(tok::Fa_TokenType::RPAREN))
                 return reportError(ErrorCode::EXPECTED_RPAREN_EXPR);
 
-            expr = makeCall(expr, makeList(std::move(args)));
+            expr = Fa_makeCall(expr, Fa_makeList(std::move(args)));
             continue;
         }
 
-        if (check(tok::TokenType::LBRACKET)) {
+        if (check(tok::Fa_TokenType::LBRACKET)) {
             advance();
 
             auto index = parseExpression();
             if (index.hasError())
                 return index.error();
 
-            if (!consume(tok::TokenType::RBRACKET))
+            if (!consume(tok::Fa_TokenType::RBRACKET))
                 return reportError(ErrorCode::EXPECTED_RBRACKET);
 
-            expr = makeIndex(expr, index.value());
+            expr = Fa_makeIndex(expr, index.value());
             continue;
         }
 
@@ -927,62 +923,62 @@ ErrorOr<Expr*> Parser::parsePostfixExpr()
     return expr;
 }
 
-bool Parser::weDone() const { return Lexer_.current()->is(tok::TokenType::ENDMARKER); }
+bool Fa_Parser::weDone() const { return Lexer_.current()->is(tok::Fa_TokenType::ENDMARKER); }
 
-bool Parser::check(tok::TokenType type) { return Lexer_.current()->is(type); }
+bool Fa_Parser::check(tok::Fa_TokenType type) { return Lexer_.current()->is(type); }
 
-tok::Token const* Parser::currentToken() { return Lexer_.current(); }
+tok::Fa_Token const* Fa_Parser::currentToken() { return Lexer_.current(); }
 
-ErrorOr<Expr*> Parser::parse() { return parseExpression(); }
+Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse() { return parseExpression(); }
 
-ErrorOr<Expr*> Parser::parsePrimaryExpr()
+Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parsePrimaryExpr()
 {
-    tok::Token const* tok = currentToken();
+    tok::Fa_Token const* tok = currentToken();
 
     if (currentToken()->isNumeric()) {
-        StringRef v = tok->lexeme();
+        Fa_StringRef v = tok->lexeme();
         advance();
 
-        tok::TokenType tt = tok->type();
+        tok::Fa_TokenType tt = tok->type();
 
-        if (tt == tok::TokenType::DECIMAL)
-            return makeLiteralFloat(v.toDouble());
+        if (tt == tok::Fa_TokenType::DECIMAL)
+            return AST::Fa_makeLiteralFloat(v.toDouble());
 
-        if (tt == tok::TokenType::INTEGER || tt == tok::TokenType::HEX || tt == tok::TokenType::OCTAL || tt == tok::TokenType::BINARY) {
+        if (tt == tok::Fa_TokenType::INTEGER || tt == tok::Fa_TokenType::HEX || tt == tok::Fa_TokenType::OCTAL || tt == tok::Fa_TokenType::BINARY) {
             static constexpr int BASE_FOR_TYPE[] = { 2, 8, 10, 16 };
-            return makeLiteralInt(util::parseIntegerLiteral(v,
-                /*base=*/BASE_FOR_TYPE[static_cast<int>(tt) - static_cast<int>(tok::TokenType::BINARY)]));
+            return AST::Fa_makeLiteralInt(util::parseIntegerLiteral(v,
+                /*base=*/BASE_FOR_TYPE[static_cast<int>(tt) - static_cast<int>(tok::Fa_TokenType::BINARY)]));
         }
     }
 
-    if (check(tok::TokenType::STRING)) {
-        StringRef v = tok->lexeme();
+    if (check(tok::Fa_TokenType::STRING)) {
+        Fa_StringRef v = tok->lexeme();
         advance();
-        return makeLiteralString(v);
+        return AST::Fa_makeLiteralString(v);
     }
 
-    if (check(tok::TokenType::KW_TRUE) || check(tok::TokenType::KW_FALSE)) {
-        StringRef v = tok->lexeme();
+    if (check(tok::Fa_TokenType::KW_TRUE) || check(tok::Fa_TokenType::KW_FALSE)) {
+        Fa_StringRef v = tok->lexeme();
         advance();
-        return makeLiteralBool(v == "صحيح" ? true : false);
+        return AST::Fa_makeLiteralBool(v == "صحيح" ? true : false);
     }
 
-    if (check(tok::TokenType::KW_NONE)) {
+    if (check(tok::Fa_TokenType::KW_NONE)) {
         advance();
-        return makeLiteralNil();
+        return AST::Fa_makeLiteralNil();
     }
 
-    if (check(tok::TokenType::IDENTIFIER)) {
-        StringRef name = tok->lexeme();
+    if (check(tok::Fa_TokenType::IDENTIFIER)) {
+        Fa_StringRef name = tok->lexeme();
         advance();
-        return makeName(name);
+        return AST::Fa_makeName(name);
     }
 
-    if (check(tok::TokenType::LPAREN)) {
+    if (check(tok::Fa_TokenType::LPAREN)) {
         advance();
-        if (check(tok::TokenType::RPAREN)) {
+        if (check(tok::Fa_TokenType::RPAREN)) {
             advance();
-            return makeList(Array<Expr*> { });
+            return Fa_makeList(Fa_Array<AST::Fa_Expr*> { });
         }
 
         auto expr = parseExpression();
@@ -990,31 +986,32 @@ ErrorOr<Expr*> Parser::parsePrimaryExpr()
         if (expr.hasError())
             return expr.error();
 
-        if (!consume(tok::TokenType::RPAREN))
+        if (!consume(tok::Fa_TokenType::RPAREN))
             return reportError(ErrorCode::EXPECTED_RPAREN_EXPR);
 
         return expr.value();
     }
 
-    if (check(tok::TokenType::LBRACKET)) {
+    if (check(tok::Fa_TokenType::LBRACKET)) {
         advance();
         return parseListLiteral();
     }
 
     if (weDone())
         return reportError(ErrorCode::UNEXPECTED_EOF);
+
     skipNewlines();
     return reportError(ErrorCode::UNEXPECTED_TOKEN);
 }
 
-ErrorOr<Expr*> Parser::parseListLiteral()
+Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parseListLiteral()
 {
-    Array<Expr*> elements = Array<Expr*>::withCapacity(4);
+    Fa_Array<AST::Fa_Expr*> elements = Fa_Array<AST::Fa_Expr*>::withCapacity(4);
 
-    if (!check(tok::TokenType::RBRACKET)) {
+    if (!check(tok::Fa_TokenType::RBRACKET)) {
         do {
             skipNewlines();
-            if (check(tok::TokenType::RBRACKET))
+            if (check(tok::Fa_TokenType::RBRACKET))
                 break;
 
             auto elem = parseExpression();
@@ -1023,24 +1020,24 @@ ErrorOr<Expr*> Parser::parseListLiteral()
 
             elements.push(elem.value());
             skipNewlines();
-        } while (match(tok::TokenType::COMMA) && !check(tok::TokenType::RBRACKET));
+        } while (match(tok::Fa_TokenType::COMMA) && !check(tok::Fa_TokenType::RBRACKET));
     }
 
-    if (!consume(tok::TokenType::RBRACKET))
+    if (!consume(tok::Fa_TokenType::RBRACKET))
         return reportError(ErrorCode::EXPECTED_RBRACKET);
 
-    return makeList(std::move(elements));
+    return Fa_makeList(std::move(elements));
 }
 
-ErrorOr<Expr*> Parser::parseConditionalExpr()
+Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parseConditionalExpr()
 {
     return parseLogicalExpr();
     /// TODO: Ternary?
 }
 
-ErrorOr<Expr*> Parser::parseLogicalExpr() { return parseLogicalExprPrecedence(0); }
+Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parseLogicalExpr() { return parseLogicalExprPrecedence(0); }
 
-bool Parser::match(tok::TokenType const type)
+bool Fa_Parser::match(tok::Fa_TokenType const type)
 {
     if (check(type)) {
         advance();
@@ -1049,15 +1046,15 @@ bool Parser::match(tok::TokenType const type)
     return false;
 }
 
-void Parser::synchronize()
+void Fa_Parser::synchronize()
 {
     while (!weDone()) {
-        if (check(tok::TokenType::NEWLINE) || check(tok::TokenType::DEDENT)) {
+        if (check(tok::Fa_TokenType::NEWLINE) || check(tok::Fa_TokenType::DEDENT)) {
             advance();
             return;
         }
 
-        if (check(tok::TokenType::KW_IF) || check(tok::TokenType::KW_WHILE) || check(tok::TokenType::KW_RETURN) || check(tok::TokenType::KW_FN))
+        if (check(tok::Fa_TokenType::KW_IF) || check(tok::Fa_TokenType::KW_WHILE) || check(tok::Fa_TokenType::KW_RETURN) || check(tok::Fa_TokenType::KW_FN))
             return;
 
         advance();
@@ -1066,31 +1063,31 @@ void Parser::synchronize()
 
 namespace {
 
-bool isDefinitelyIntegerExpr(Expr const* expr)
+bool isDefinitelyIntegerFa_Expr(AST::Fa_Expr const* expr)
 {
     if (!expr)
         return false;
 
     switch (expr->getKind()) {
-    case Expr::Kind::LITERAL: {
-        auto lit = static_cast<LiteralExpr const*>(expr);
+    case AST::Fa_Expr::Kind::LITERAL: {
+        auto lit = static_cast<AST::Fa_LiteralExpr const*>(expr);
         return lit->isInteger();
     }
-    case Expr::Kind::UNARY: {
-        auto un = static_cast<UnaryExpr const*>(expr);
-        UnaryOp op = un->getOperator();
-        if (op != UnaryOp::OP_PLUS && op != UnaryOp::OP_NEG)
+    case AST::Fa_Expr::Kind::UNARY: {
+        auto un = static_cast<AST::Fa_UnaryExpr const*>(expr);
+        AST::Fa_UnaryOp op = un->getOperator();
+        if (op != AST::Fa_UnaryOp::OP_PLUS && op != AST::Fa_UnaryOp::OP_NEG)
             return false;
 
-        return isDefinitelyIntegerExpr(un->getOperand());
+        return isDefinitelyIntegerFa_Expr(un->getOperand());
     }
-    case Expr::Kind::BINARY: {
-        auto bin = static_cast<BinaryExpr const*>(expr);
-        if (!isDefinitelyIntegerExpr(bin->getLeft()) || !isDefinitelyIntegerExpr(bin->getRight()))
+    case AST::Fa_Expr::Kind::BINARY: {
+        auto bin = static_cast<AST::Fa_BinaryExpr const*>(expr);
+        if (!isDefinitelyIntegerFa_Expr(bin->getLeft()) || !isDefinitelyIntegerFa_Expr(bin->getRight()))
             return false;
 
-        BinaryOp op = bin->getOperator();
-        return op == BinaryOp::OP_ADD || op == BinaryOp::OP_SUB || op == BinaryOp::OP_MUL || op == BinaryOp::OP_MOD;
+        AST::Fa_BinaryOp op = bin->getOperator();
+        return op == AST::Fa_BinaryOp::OP_ADD || op == AST::Fa_BinaryOp::OP_SUB || op == AST::Fa_BinaryOp::OP_MUL || op == AST::Fa_BinaryOp::OP_MOD;
     }
     default:
         return false;
@@ -1099,40 +1096,40 @@ bool isDefinitelyIntegerExpr(Expr const* expr)
 
 } // namespace
 
-std::optional<double> ASTOptimizer::evaluateConstant(Expr const* expr)
+std::optional<f64> Fa_ASTOptimizer::evaluateConstant(AST::Fa_Expr const* expr)
 {
     if (!expr)
         return std::nullopt;
 
-    if (expr->getKind() == Expr::Kind::LITERAL) {
-        auto lit = dynamic_cast<LiteralExpr const*>(expr);
+    if (expr->getKind() == AST::Fa_Expr::Kind::LITERAL) {
+        auto lit = dynamic_cast<AST::Fa_LiteralExpr const*>(expr);
 
         if (lit->isNumeric())
             return lit->toNumber();
-    } else if (expr->getKind() == Expr::Kind::BINARY) {
-        auto bin = dynamic_cast<BinaryExpr const*>(expr);
+    } else if (expr->getKind() == AST::Fa_Expr::Kind::BINARY) {
+        auto bin = dynamic_cast<AST::Fa_BinaryExpr const*>(expr);
 
-        std::optional<double> L = evaluateConstant(bin->getLeft());
-        std::optional<double> R = evaluateConstant(bin->getRight());
+        std::optional<f64> L = evaluateConstant(bin->getLeft());
+        std::optional<f64> R = evaluateConstant(bin->getRight());
 
         if (!L || !R)
             return std::nullopt;
 
         switch (bin->getOperator()) {
-        case BinaryOp::OP_ADD:
+        case AST::Fa_BinaryOp::OP_ADD:
             return *L + *R;
-        case BinaryOp::OP_SUB:
+        case AST::Fa_BinaryOp::OP_SUB:
             return *L - *R;
-        case BinaryOp::OP_MUL:
+        case AST::Fa_BinaryOp::OP_MUL:
             return *L * *R;
-        case BinaryOp::OP_POW:
+        case AST::Fa_BinaryOp::OP_POW:
             return std::pow(*L, *R);
-        case BinaryOp::OP_DIV:
+        case AST::Fa_BinaryOp::OP_DIV:
             if (*R == 0.0)
                 return std::nullopt;
 
             return *L / *R;
-        case BinaryOp::OP_MOD:
+        case AST::Fa_BinaryOp::OP_MOD:
             if (*R == 0.0)
                 return std::nullopt;
 
@@ -1140,51 +1137,51 @@ std::optional<double> ASTOptimizer::evaluateConstant(Expr const* expr)
         default:
             return std::nullopt;
         }
-    } else if (expr->getKind() == Expr::Kind::UNARY) {
-        auto un = dynamic_cast<UnaryExpr const*>(expr);
-        std::optional<double> operand = evaluateConstant(un->getOperand());
+    } else if (expr->getKind() == AST::Fa_Expr::Kind::UNARY) {
+        auto un = dynamic_cast<AST::Fa_UnaryExpr const*>(expr);
+        std::optional<f64> operand = evaluateConstant(un->getOperand());
 
         if (!operand)
             return std::nullopt;
-        if (un->getOperator() == UnaryOp::OP_PLUS)
+        if (un->getOperator() == AST::Fa_UnaryOp::OP_PLUS)
             return *operand;
-        if (un->getOperator() == UnaryOp::OP_NEG)
+        if (un->getOperator() == AST::Fa_UnaryOp::OP_NEG)
             return -*operand;
     }
 
     return std::nullopt;
 }
 
-Expr* ASTOptimizer::optimizeConstantFolding(Expr* expr)
+AST::Fa_Expr* Fa_ASTOptimizer::optimizeConstantFolding(AST::Fa_Expr* expr)
 {
     if (!expr)
         return nullptr;
 
-    if (expr->getKind() == Expr::Kind::BINARY) {
-        auto bin = dynamic_cast<BinaryExpr*>(expr);
+    if (expr->getKind() == AST::Fa_Expr::Kind::BINARY) {
+        auto bin = dynamic_cast<AST::Fa_BinaryExpr*>(expr);
 
         bin->setLeft(optimizeConstantFolding(bin->getLeft()));
         bin->setRight(optimizeConstantFolding(bin->getRight()));
 
-        if (std::optional<double> val = evaluateConstant(expr)) {
+        if (std::optional<f64> val = evaluateConstant(expr)) {
             ++Stats_.ConstantFolds;
-            return makeLiteralFloat(*val);
+            return AST::Fa_makeLiteralFloat(*val);
         }
 
-        Expr* L = bin->getLeft();
-        Expr* R = bin->getRight();
+        AST::Fa_Expr* L = bin->getLeft();
+        AST::Fa_Expr* R = bin->getRight();
 
         if (!L || !R)
             return expr->clone();
 
-        BinaryOp op = bin->getOperator();
+        AST::Fa_BinaryOp op = bin->getOperator();
 
-        Expr::Kind r_kind = R->getKind();
-        Expr::Kind l_kind = L->getKind();
+        AST::Fa_Expr::Kind r_kind = R->getKind();
+        AST::Fa_Expr::Kind l_kind = L->getKind();
 
         // x + 0 = x, x - 0 = x
-        if ((op == BinaryOp::OP_ADD || op == BinaryOp::OP_SUB) && r_kind == Expr::Kind::LITERAL) {
-            auto lit = static_cast<LiteralExpr*>(R);
+        if ((op == AST::Fa_BinaryOp::OP_ADD || op == AST::Fa_BinaryOp::OP_SUB) && r_kind == AST::Fa_Expr::Kind::LITERAL) {
+            auto lit = static_cast<AST::Fa_LiteralExpr*>(R);
             if (lit->isNumeric() && lit->toNumber() == 0) {
                 ++Stats_.StrengthReductions;
                 return L->clone();
@@ -1192,8 +1189,8 @@ Expr* ASTOptimizer::optimizeConstantFolding(Expr* expr)
         }
 
         // inverse (0 - x != x, but 0 + x = x)
-        if (op == BinaryOp::OP_ADD && l_kind == Expr::Kind::LITERAL) {
-            auto lit = static_cast<LiteralExpr*>(L);
+        if (op == AST::Fa_BinaryOp::OP_ADD && l_kind == AST::Fa_Expr::Kind::LITERAL) {
+            auto lit = static_cast<AST::Fa_LiteralExpr*>(L);
             if (lit->isNumeric() && lit->toNumber() == 0) {
                 ++Stats_.StrengthReductions;
                 return R->clone();
@@ -1201,8 +1198,8 @@ Expr* ASTOptimizer::optimizeConstantFolding(Expr* expr)
         }
 
         // x * 1 = x, x / 1 = x
-        if ((op == BinaryOp::OP_MUL || op == BinaryOp::OP_DIV) && r_kind == Expr::Kind::LITERAL) {
-            auto lit = static_cast<LiteralExpr*>(R);
+        if ((op == AST::Fa_BinaryOp::OP_MUL || op == AST::Fa_BinaryOp::OP_DIV) && r_kind == AST::Fa_Expr::Kind::LITERAL) {
+            auto lit = static_cast<AST::Fa_LiteralExpr*>(R);
             if (lit->isNumeric() && lit->toNumber() == 1) {
                 ++Stats_.StrengthReductions;
                 return L->clone();
@@ -1210,8 +1207,8 @@ Expr* ASTOptimizer::optimizeConstantFolding(Expr* expr)
         }
 
         // 1 * x
-        if (op == BinaryOp::OP_MUL && l_kind == Expr::Kind::LITERAL) {
-            auto lit = static_cast<LiteralExpr*>(L);
+        if (op == AST::Fa_BinaryOp::OP_MUL && l_kind == AST::Fa_Expr::Kind::LITERAL) {
+            auto lit = static_cast<AST::Fa_LiteralExpr*>(L);
             if (lit->isNumeric() && lit->toNumber() == 1) {
                 ++Stats_.StrengthReductions;
                 return R->clone();
@@ -1220,66 +1217,66 @@ Expr* ASTOptimizer::optimizeConstantFolding(Expr* expr)
 
         // x * 0 = 0 (only when L side is definitely integer; IEEE floats can yield
         // NaN for inf * 0)
-        if (op == BinaryOp::OP_MUL && r_kind == Expr::Kind::LITERAL) {
-            auto r_lit = static_cast<LiteralExpr*>(R);
-            if (r_lit->isNumeric() && r_lit->toNumber() == 0 /*&& isDefinitelyIntegerExpr(L)*/) {
+        if (op == AST::Fa_BinaryOp::OP_MUL && r_kind == AST::Fa_Expr::Kind::LITERAL) {
+            auto r_lit = static_cast<AST::Fa_LiteralExpr*>(R);
+            if (r_lit->isNumeric() && r_lit->toNumber() == 0 /*&& isDefinitelyIntegerFa_Expr(L)*/) {
                 ++Stats_.StrengthReductions;
-                return makeLiteralInt(0);
+                return AST::Fa_makeLiteralInt(0);
             }
         }
 
         // x * 2 = x + x (strength reduction)
-        if (op == BinaryOp::OP_MUL && r_kind == Expr::Kind::LITERAL) {
-            auto lit = static_cast<LiteralExpr*>(R);
+        if (op == AST::Fa_BinaryOp::OP_MUL && r_kind == AST::Fa_Expr::Kind::LITERAL) {
+            auto lit = static_cast<AST::Fa_LiteralExpr*>(R);
             if (lit->isNumeric() && lit->toNumber() == 2) {
                 ++Stats_.StrengthReductions;
-                return makeBinary(L->clone(), L->clone(), BinaryOp::OP_ADD);
+                return AST::Fa_makeBinary(L->clone(), L->clone(), AST::Fa_BinaryOp::OP_ADD);
             }
         }
 
-        if (op == BinaryOp::OP_MUL && l_kind == Expr::Kind::LITERAL) {
-            auto lit = static_cast<LiteralExpr*>(L);
+        if (op == AST::Fa_BinaryOp::OP_MUL && l_kind == AST::Fa_Expr::Kind::LITERAL) {
+            auto lit = static_cast<AST::Fa_LiteralExpr*>(L);
             if (lit->isNumeric() && lit->toNumber() == 2) {
                 ++Stats_.StrengthReductions;
-                return makeBinary(R->clone(), R->clone(), BinaryOp::OP_ADD);
+                return Fa_makeBinary(R->clone(), R->clone(), AST::Fa_BinaryOp::OP_ADD);
             }
         }
 
         // x - x = 0
-        if (op == BinaryOp::OP_SUB) {
+        if (op == AST::Fa_BinaryOp::OP_SUB) {
             if (L->equals(R)) {
                 ++Stats_.StrengthReductions;
-                return makeLiteralInt(0);
+                return AST::Fa_makeLiteralInt(0);
             }
         }
 
         // string concatenation
-        if (l_kind == Expr::Kind::LITERAL && r_kind == Expr::Kind::LITERAL && op == BinaryOp::OP_ADD) {
-            auto l_lit = static_cast<LiteralExpr*>(L);
-            auto r_lit = static_cast<LiteralExpr*>(R);
+        if (l_kind == AST::Fa_Expr::Kind::LITERAL && r_kind == AST::Fa_Expr::Kind::LITERAL && op == AST::Fa_BinaryOp::OP_ADD) {
+            auto l_lit = static_cast<AST::Fa_LiteralExpr*>(L);
+            auto r_lit = static_cast<AST::Fa_LiteralExpr*>(R);
 
-            if (l_lit->getType() == LiteralExpr::Type::STRING && r_lit->getType() == LiteralExpr::Type::STRING)
-                return makeLiteralString(l_lit->getStr() + r_lit->getStr());
+            if (l_lit->getType() == AST::Fa_LiteralExpr::Type::STRING && r_lit->getType() == AST::Fa_LiteralExpr::Type::STRING)
+                return AST::Fa_makeLiteralString(l_lit->getStr() + r_lit->getStr());
         }
-    } else if (expr->getKind() == Expr::Kind::UNARY) {
-        auto outer = static_cast<UnaryExpr*>(expr);
-        Expr* optimizedOperand = optimizeConstantFolding(outer->getOperand());
+    } else if (expr->getKind() == AST::Fa_Expr::Kind::UNARY) {
+        auto outer = static_cast<AST::Fa_UnaryExpr*>(expr);
+        AST::Fa_Expr* optimizedOperand = optimizeConstantFolding(outer->getOperand());
         bool operandChanged = (optimizedOperand != outer->getOperand());
-        UnaryExpr* rebuiltUnary = nullptr;
+        AST::Fa_UnaryExpr* rebuiltUnary = nullptr;
 
         if (operandChanged)
-            rebuiltUnary = makeUnary(optimizedOperand, outer->getOperator());
+            rebuiltUnary = AST::Fa_makeUnary(optimizedOperand, outer->getOperator());
         else
             rebuiltUnary = outer->clone();
 
         if (auto val = evaluateConstant(rebuiltUnary)) {
             ++Stats_.ConstantFolds;
-            return makeLiteralFloat(*val);
+            return AST::Fa_makeLiteralFloat(*val);
         }
 
-        if (rebuiltUnary->getOperator() == UnaryOp::OP_NEG) {
-            if (auto inner = static_cast<UnaryExpr*>(optimizedOperand)) {
-                if (inner->getOperator() == UnaryOp::OP_NEG) {
+        if (rebuiltUnary->getOperator() == AST::Fa_UnaryOp::OP_NEG) {
+            if (auto inner = static_cast<AST::Fa_UnaryExpr*>(optimizedOperand)) {
+                if (inner->getOperator() == AST::Fa_UnaryOp::OP_NEG) {
                     ++Stats_.StrengthReductions;
                     return inner->getOperand()->clone();
                 }
@@ -1287,30 +1284,30 @@ Expr* ASTOptimizer::optimizeConstantFolding(Expr* expr)
         }
 
         return rebuiltUnary;
-    } else if (expr->getKind() == Expr::Kind::CALL) {
-        auto call = static_cast<CallExpr*>(expr);
-        for (Expr*& arg : call->getArgs())
+    } else if (expr->getKind() == AST::Fa_Expr::Kind::CALL) {
+        auto call = static_cast<AST::Fa_CallExpr*>(expr);
+        for (AST::Fa_Expr*& arg : call->getArgs())
             arg = optimizeConstantFolding(arg);
-    } else if (expr->getKind() == Expr::Kind::LIST) {
-        auto list = static_cast<ListExpr*>(expr);
-        for (Expr*& elem : list->getElements())
+    } else if (expr->getKind() == AST::Fa_Expr::Kind::LIST) {
+        auto list = static_cast<AST::Fa_ListExpr*>(expr);
+        for (AST::Fa_Expr*& elem : list->getElements())
             elem = optimizeConstantFolding(elem);
     }
 
     return expr->clone();
 }
 
-Stmt* ASTOptimizer::eliminateDeadCode(Stmt* stmt)
+AST::Fa_Stmt* Fa_ASTOptimizer::eliminateDeadCode(AST::Fa_Stmt* stmt)
 {
     if (!stmt)
         return nullptr;
 
-    if (stmt->getKind() == Stmt::Kind::IF) {
-        auto ifStmt = static_cast<IfStmt*>(stmt);
+    if (stmt->getKind() == AST::Fa_Stmt::Kind::IF) {
+        auto ifStmt = static_cast<AST::Fa_IfStmt*>(stmt);
 
-        if (ifStmt->getCondition()->getKind() == Expr::Kind::LITERAL) {
-            auto lit = static_cast<LiteralExpr*>(ifStmt->getCondition());
-            if (lit->getType() == LiteralExpr::Type::BOOLEAN) {
+        if (ifStmt->getCondition()->getKind() == AST::Fa_Expr::Kind::LITERAL) {
+            auto lit = static_cast<AST::Fa_LiteralExpr*>(ifStmt->getCondition());
+            if (lit->getType() == AST::Fa_LiteralExpr::Type::BOOLEAN) {
                 ++Stats_.DeadCodeEliminations;
                 if (lit->getBool() == true)
                     return ifStmt->getThen()->clone();
@@ -1324,67 +1321,67 @@ Stmt* ASTOptimizer::eliminateDeadCode(Stmt* stmt)
             }
         }
 
-        IfStmt* clone = ifStmt->clone();
+        AST::Fa_IfStmt* clone = ifStmt->clone();
 
         clone->setThen(eliminateDeadCode(clone->getThen()));
         clone->setElse(eliminateDeadCode(clone->getElse()));
 
         return clone;
-    } else if (stmt->getKind() == Stmt::Kind::WHILE) {
-        auto while_stmt = static_cast<WhileStmt*>(stmt);
+    } else if (stmt->getKind() == AST::Fa_Stmt::Kind::WHILE) {
+        auto while_stmt = static_cast<AST::Fa_WhileStmt*>(stmt);
 
-        if (while_stmt->getCondition()->getKind() == Expr::Kind::LITERAL) {
-            auto lit = static_cast<LiteralExpr*>(while_stmt->getCondition());
-            if (lit->getType() == LiteralExpr::Type::BOOLEAN && lit->getBool() == false) {
+        if (while_stmt->getCondition()->getKind() == AST::Fa_Expr::Kind::LITERAL) {
+            auto lit = static_cast<AST::Fa_LiteralExpr*>(while_stmt->getCondition());
+            if (lit->getType() == AST::Fa_LiteralExpr::Type::BOOLEAN && lit->getBool() == false) {
                 ++Stats_.DeadCodeEliminations;
                 return nullptr; // kill loop
             }
         }
 
-        WhileStmt* clone = while_stmt->clone();
-        clone->setBody(dynamic_cast<BlockStmt*>(eliminateDeadCode(clone->getBody())));
+        AST::Fa_WhileStmt* clone = while_stmt->clone();
+        clone->setBody(dynamic_cast<AST::Fa_BlockStmt*>(eliminateDeadCode(clone->getBody())));
         return clone;
-    } else if (stmt->getKind() == Stmt::Kind::FOR) {
-        ForStmt* for_stmt = dynamic_cast<ForStmt*>(stmt);
+    } else if (stmt->getKind() == AST::Fa_Stmt::Kind::FOR) {
+        AST::Fa_ForStmt* for_stmt = dynamic_cast<AST::Fa_ForStmt*>(stmt);
         /// TODO: evaluate for loop condition and kill it if it doesn't run
-        ForStmt* clone = for_stmt->clone();
-        clone->setBody(dynamic_cast<BlockStmt*>(eliminateDeadCode(clone->getBody())));
+        AST::Fa_ForStmt* clone = for_stmt->clone();
+        clone->setBody(dynamic_cast<AST::Fa_BlockStmt*>(eliminateDeadCode(clone->getBody())));
         return clone;
-    } else if (stmt->getKind() == Stmt::Kind::FUNC) {
-        FunctionDef* funcDef = dynamic_cast<FunctionDef*>(stmt);
-        FunctionDef* clone = funcDef->clone();
-        clone->setBody(dynamic_cast<BlockStmt*>(eliminateDeadCode(clone->getBody())));
+    } else if (stmt->getKind() == AST::Fa_Stmt::Kind::FUNC) {
+        AST::Fa_FunctionDef* funcDef = dynamic_cast<AST::Fa_FunctionDef*>(stmt);
+        AST::Fa_FunctionDef* clone = funcDef->clone();
+        clone->setBody(dynamic_cast<AST::Fa_BlockStmt*>(eliminateDeadCode(clone->getBody())));
         return clone;
-    } else if (stmt->getKind() == Stmt::Kind::BLOCK) {
-        BlockStmt* block_stmt = dynamic_cast<BlockStmt*>(stmt);
-        Array<Stmt*> new_stmts = Array<Stmt*>::withCapacity(block_stmt->getStatements().size());
+    } else if (stmt->getKind() == AST::Fa_Stmt::Kind::BLOCK) {
+        AST::Fa_BlockStmt* block_stmt = dynamic_cast<AST::Fa_BlockStmt*>(stmt);
+        Fa_Array<AST::Fa_Stmt*> new_stmts = Fa_Array<AST::Fa_Stmt*>::withCapacity(block_stmt->getStatements().size());
         bool seen_return = false;
-        for (Stmt* s : block_stmt->getStatements()) {
+        for (AST::Fa_Stmt* s : block_stmt->getStatements()) {
             if (seen_return) {
                 Stats_.DeadCodeEliminations++;
                 break;
             }
 
-            if (s->getKind() == Stmt::Kind::RETURN)
+            if (s->getKind() == AST::Fa_Stmt::Kind::RETURN)
                 seen_return = true;
 
             new_stmts.push(eliminateDeadCode(s));
         }
 
-        return makeBlock(new_stmts);
+        return Fa_makeBlock(new_stmts);
     }
 
     return stmt->clone();
 }
 
-StringRef ASTOptimizer::CSEPass::exprToString(Expr const* expr)
+Fa_StringRef Fa_ASTOptimizer::CSEPass::exprToString(AST::Fa_Expr const* expr)
 {
     if (!expr)
         return "";
 
     switch (expr->getKind()) {
-    case Expr::Kind::LITERAL: {
-        LiteralExpr const* lit = dynamic_cast<LiteralExpr const*>(expr);
+    case AST::Fa_Expr::Kind::LITERAL: {
+        AST::Fa_LiteralExpr const* lit = dynamic_cast<AST::Fa_LiteralExpr const*>(expr);
         if (lit->isString())
             return lit->getStr();
         else if (lit->isNumeric())
@@ -1394,13 +1391,13 @@ StringRef ASTOptimizer::CSEPass::exprToString(Expr const* expr)
         else
             return "";
     }
-    case Expr::Kind::NAME: {
-        NameExpr const* name = dynamic_cast<NameExpr const*>(expr);
+    case AST::Fa_Expr::Kind::NAME: {
+        AST::Fa_NameExpr const* name = dynamic_cast<AST::Fa_NameExpr const*>(expr);
         return name->getValue();
     }
-    case Expr::Kind::BINARY: {
+    case AST::Fa_Expr::Kind::BINARY: {
     } break;
-    case Expr::Kind::UNARY: {
+    case AST::Fa_Expr::Kind::UNARY: {
     } break;
     default:
         return "";
@@ -1409,58 +1406,60 @@ StringRef ASTOptimizer::CSEPass::exprToString(Expr const* expr)
     return "";
 }
 
-StringRef ASTOptimizer::CSEPass::getTempVar() { return StringRef("__cse_temp_") + static_cast<char>(TempCounter_++); }
+Fa_StringRef Fa_ASTOptimizer::CSEPass::getTempVar() { return Fa_StringRef("__cse_temp_") + static_cast<char>(TempCounter_++); }
 
-std::optional<StringRef> ASTOptimizer::CSEPass::findCSE(Expr const* expr)
+std::optional<Fa_StringRef> Fa_ASTOptimizer::CSEPass::findCSE(AST::Fa_Expr const* expr)
 {
-    StringRef exprStr = exprToString(expr);
-    if (exprStr.empty())
+    Fa_StringRef Fa_ExprStr = exprToString(expr);
+    if (Fa_ExprStr.empty())
         return std::nullopt;
 
-    auto it = ExprCache_.find(exprStr);
-    if (it != ExprCache_.end())
+    auto it = Fa_ExprCache_.find(Fa_ExprStr);
+    if (it != Fa_ExprCache_.end())
         return it->second;
 
     return std::nullopt;
 }
 
-void ASTOptimizer::CSEPass::recordExpr(Expr const* expr, StringRef const& var)
+void Fa_ASTOptimizer::CSEPass::recordExpr(AST::Fa_Expr const* expr, Fa_StringRef const& var)
 {
-    StringRef exprStr = exprToString(expr);
-    if (!exprStr.empty())
-        ExprCache_[exprStr] = var;
+    Fa_StringRef Fa_ExprStr = exprToString(expr);
+    if (!Fa_ExprStr.empty())
+        Fa_ExprCache_[Fa_ExprStr] = var;
 }
 
-bool ASTOptimizer::isLoopInvariant(Expr const* expr, std::unordered_set<StringRef, StringRefHash, StringRefEqual> const& loopVars)
+bool Fa_ASTOptimizer::isLoopInvariant(AST::Fa_Expr const* expr, std::unordered_set<Fa_StringRef, Fa_StringRefHash, Fa_StringRefEqual> const& loopVars)
 {
     if (!expr)
         return true;
 
-    if (expr->getKind() == Expr::Kind::NAME) {
-        NameExpr const* name = dynamic_cast<NameExpr const*>(expr);
+    if (expr->getKind() == AST::Fa_Expr::Kind::NAME) {
+        AST::Fa_NameExpr const* name = dynamic_cast<AST::Fa_NameExpr const*>(expr);
         return !loopVars.count(name->getValue());
-    } else if (expr->getKind() == Expr::Kind::BINARY) {
-        BinaryExpr const* bin = dynamic_cast<BinaryExpr const*>(expr);
+    } else if (expr->getKind() == AST::Fa_Expr::Kind::BINARY) {
+        AST::Fa_BinaryExpr const* bin = dynamic_cast<AST::Fa_BinaryExpr const*>(expr);
         return isLoopInvariant(bin->getLeft(), loopVars) && isLoopInvariant(bin->getRight(), loopVars);
-    } else if (expr->getKind() == Expr::Kind::UNARY) {
-        UnaryExpr const* un = dynamic_cast<UnaryExpr const*>(expr);
+    } else if (expr->getKind() == AST::Fa_Expr::Kind::UNARY) {
+        AST::Fa_UnaryExpr const* un = dynamic_cast<AST::Fa_UnaryExpr const*>(expr);
         return isLoopInvariant(un->getOperand(), loopVars);
-    } else if (expr->getKind() == Expr::Kind::LITERAL)
+    } else if (expr->getKind() == AST::Fa_Expr::Kind::LITERAL) {
         return true;
+    }
 
     return false;
 }
 
-Array<Stmt*> ASTOptimizer::optimize(Array<Stmt*> statements, int32_t level)
+Fa_Array<AST::Fa_Stmt*> Fa_ASTOptimizer::optimize(Fa_Array<AST::Fa_Stmt*> statements, i32 level)
 {
-    Array<Stmt*> result;
-    for (Stmt*& stmt : statements) {
+    Fa_Array<AST::Fa_Stmt*> result;
+
+    for (AST::Fa_Stmt*& stmt : statements) {
         if (level >= 1) {
-            if (stmt->getKind() == Stmt::Kind::ASSIGNMENT) {
-                AssignmentStmt* assign = dynamic_cast<AssignmentStmt*>(stmt);
+            if (stmt->getKind() == AST::Fa_Stmt::Kind::ASSIGNMENT) {
+                AST::Fa_AssignmentStmt* assign = dynamic_cast<AST::Fa_AssignmentStmt*>(stmt);
                 assign->setValue(optimizeConstantFolding(assign->getValue()));
-            } else if (stmt->getKind() == Stmt::Kind::EXPR) {
-                ExprStmt* expr_stmt = dynamic_cast<ExprStmt*>(stmt);
+            } else if (stmt->getKind() == AST::Fa_Stmt::Kind::EXPR) {
+                AST::Fa_ExprStmt* expr_stmt = dynamic_cast<AST::Fa_ExprStmt*>(stmt);
                 expr_stmt->setExpr(optimizeConstantFolding(expr_stmt->getExpr()));
             }
         }
@@ -1470,22 +1469,23 @@ Array<Stmt*> ASTOptimizer::optimize(Array<Stmt*> statements, int32_t level)
         if (stmt)
             result.push(stmt);
     }
+
     return result;
 }
 
-typename ASTOptimizer::OptimizationStats const& ASTOptimizer::getStats() const { return Stats_; }
+typename Fa_ASTOptimizer::OptimizationStats const& Fa_ASTOptimizer::getStats() const { return Stats_; }
 
-void ASTOptimizer::printStats() const
+void Fa_ASTOptimizer::printStats() const
 {
     std::cout << "\nOptimization Statistics :\n";
     std::cout << "Constant folds             : " << Stats_.ConstantFolds << "\n";
     std::cout << "Dead code eliminations     : " << Stats_.DeadCodeEliminations << "\n";
     std::cout << "Strength reductions        : " << Stats_.StrengthReductions << "\n";
-    std::cout << "Common subexpr eliminations: " << Stats_.CommonSubexprEliminations << "\n";
+    std::cout << "Common subexpr eliminations: " << Stats_.CommonSubFa_ExprEliminations << "\n";
     std::cout << "Loop invariants moved      : " << Stats_.LoopInvariants << "\n";
     std::cout << "Total optimizations        : "
-              << (Stats_.ConstantFolds + Stats_.DeadCodeEliminations + Stats_.StrengthReductions + Stats_.CommonSubexprEliminations + Stats_.LoopInvariants)
+              << (Stats_.ConstantFolds + Stats_.DeadCodeEliminations + Stats_.StrengthReductions + Stats_.CommonSubFa_ExprEliminations + Stats_.LoopInvariants)
               << "\n";
 }
 
-} // namespace mylang::parser
+} // namespace fairuz::parser

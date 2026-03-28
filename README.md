@@ -13,15 +13,15 @@ This is a scrappy, work-in-progress attempt to build the first Turing-complete p
 After installation, run programs with:
 
 ```bash
-mylang file.txt
+fairuz file.txt
 ```
 
 Options can appear before or after the file:
 
 ```bash
-mylang file.txt --time
-mylang --check file.txt
-mylang file.txt --dump-bytecode
+fairuz file.txt --time
+fairuz --check file.txt
+fairuz file.txt --dump-bytecode
 ```
 
 Useful flags:
@@ -51,20 +51,20 @@ bash build.sh run demo_factorial.txt
 
 ### install locally from CMake
 ```bash
-bash build.sh install /tmp/mylang-prefix
+bash build.sh install /tmp/fairuz-prefix
 ```
 
 This installs:
-- `bin/mylang`
+- `bin/fairuz`
 - docs under `share/doc`
-- example programs under `share/mylang/examples`
+- example programs under `share/fairuz/examples`
 
 ## Homebrew
 A Homebrew formula template is included at:
 
-- [packaging/homebrew/mylang.rb](/Users/mohamedrabbit/code/mylang/packaging/homebrew/mylang.rb)
+- [packaging/homebrew/fairuz.rb](/Users/mohamedrabbit/code/fairuz/packaging/homebrew/fairuz.rb)
 
 Typical release flow:
 1. Create a tagged source release, for example `v0.0.0`
 2. Fill in the release tarball `sha256` in the formula
-3. Install with `brew install --build-from-source ./packaging/homebrew/mylang.rb`
+3. Install with `brew install --build-from-source ./packaging/homebrew/fairuz.rb`
