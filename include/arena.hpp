@@ -78,7 +78,7 @@ private:
     }; // struct VoidPtrEqual
 
     DetailedAllocStats AllocStats_;
-    std::unordered_map<void*, AllocationHeader, VoidPtrHash, VoidPtrEqual> AllocationMap_ { };
+    std::unordered_mape<void*, AllocationHeader, VoidPtrHash, VoidPtrEqual> AllocationMap_ { };
     std::unordered_set<void*, VoidPtrHash, VoidPtrEqual> AllocatedPtrs_ { };
     bool TrackAllocations_ { false };
     bool DebugFeatures_ { false };

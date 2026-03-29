@@ -727,6 +727,54 @@ TEST(CompilerWhile, JumpIfFalsePointsPastLoop)
     EXPECT_EQ(Fa_instr_op(chunk->code[target]), Fa_OpCode::RETURN_NIL);
 }
 
+TEST(CompilerFor, ListIterationLowersToLoopBytecode)
+{
+    Fa_Chunk* chunk = compile_ok({
+        decl("items", AST::Fa_makeList({ AST::Fa_makeLiteralInt(1), AST::Fa_makeLiteralInt(2), AST::Fa_makeLiteralInt(3) })),
+        decl("sum", AST::Fa_makeLiteralInt(0)),
+        AST::Fa_makeFor(AST::Fa_makeName("item"),
+            AST::Fa_makeName("items"),
+            blk(assign_stmt("sum", AST::Fa_makeBinary(AST::Fa_makeName("sum"), AST::Fa_makeName("item"), AST::Fa_BinaryOp::OP_ADD))))
+    });
+    ASSERT_NE(chunk, nullptr);
+    dump(chunk);
+
+    bool has_list_len = false;
+    bool has_list_get = false;
+    bool has_jif = false;
+    bool has_loop = false;
+    bool has_add = false;
+
+    for (auto ins : chunk->code) {
+        switch (Fa_instr_op(ins)) {
+        case Fa_OpCode::LIST_LEN:
+            has_list_len = true;
+            break;
+        case Fa_OpCode::LIST_GET:
+            has_list_get = true;
+            break;
+        case Fa_OpCode::JUMP_IF_FALSE:
+            has_jif = true;
+            break;
+        case Fa_OpCode::LOOP:
+            has_loop = true;
+            EXPECT_LT(Fa_instr_sBx(ins), 0) << "for loop back-edge must be negative";
+            break;
+        case Fa_OpCode::OP_ADD:
+            has_add = true;
+            break;
+        default:
+            break;
+        }
+    }
+
+    EXPECT_TRUE(has_list_len);
+    EXPECT_TRUE(has_list_get);
+    EXPECT_TRUE(has_jif);
+    EXPECT_TRUE(has_loop);
+    EXPECT_TRUE(has_add);
+}
+
 TEST(CompilerReturn, ReturnNilEmitsReturnNil)
 {
     Fa_Chunk* chunk = compile_ok(Fa_makeReturn(AST::Fa_makeLiteralNil()));

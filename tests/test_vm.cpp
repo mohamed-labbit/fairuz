@@ -807,7 +807,7 @@ TEST(VMCalls, ICCallNativeLen)
         .ABC(Fa_OpCode::LIST_APPEND, 0, 2, 0)
         .load_int(2, 3)
         .ABC(Fa_OpCode::LIST_APPEND, 0, 2, 0)
-        .ldg(1, "len")
+        .ldg(1, "حجم")
         .mov(2, 0)
         .ABC(Fa_OpCode::IC_CALL, 1, 1, 0)
         .ret(1);
@@ -1092,24 +1092,35 @@ TEST(VMIntegration, Fibonacci_fib10_equals_55)
     EXPECT_EQ(Fa_AS_INTEGER(r.run(top)), 55);
 }
 
-TEST(VMIntegration, SumForLoop_1_to_100)
+TEST(VMIntegration, SumForLoopOverList)
 {
-    GTEST_SKIP() << "Not implemented yet.";
+    AST::Fa_Stmt* sum = AST::Fa_makeFunction(
+        AST::Fa_makeName("sum"),
+        AST::Fa_makeList(),
+        AST::Fa_makeBlock({
+            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("items"), AST::Fa_makeList({
+                                                                   AST::Fa_makeLiteralInt(1),
+                                                                   AST::Fa_makeLiteralInt(2),
+                                                                   AST::Fa_makeLiteralInt(3),
+                                                                   AST::Fa_makeLiteralInt(4),
+                                                                   AST::Fa_makeLiteralInt(5) }),
+                true),
+            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("total"), AST::Fa_makeLiteralInt(0), true),
+            AST::Fa_makeFor(AST::Fa_makeName("item"),
+                AST::Fa_makeName("items"),
+                AST::Fa_makeBlock({
+                    AST::Fa_makeAssignmentStmt(
+                        AST::Fa_makeName("total"),
+                        AST::Fa_makeBinary(AST::Fa_makeName("total"), AST::Fa_makeName("item"), AST::Fa_BinaryOp::OP_ADD),
+                        false),
+                })),
+            AST::Fa_makeReturn(AST::Fa_makeName("total")),
+        }));
+
+    Fa_Chunk* top = compile_calling(sum);
+    top->disassemble();
     VMRunner r;
-    CB b;
-    b.regs(5)
-        .slot()
-        .load_int(0, 1)
-        .load_int(1, 100)
-        .load_int(2, 1)
-        .load_int(4, 0)
-        .AsBx(Fa_OpCode::FOR_PREP, 0, 3)
-        .ABC(Fa_OpCode::OP_ADD, 4, 4, 3)
-        .nop(0)
-        .AsBx(Fa_OpCode::FOR_STEP, 0, -3)
-        .ret(4);
-    b.dump();
-    EXPECT_EQ(Fa_AS_INTEGER(r.run(b)), 5050);
+    EXPECT_EQ(Fa_AS_INTEGER(r.run(top)), 15);
 }
 
 TEST(VMIntegration, StringConcat_3Parts)
@@ -1130,29 +1141,26 @@ TEST(VMIntegration, StringConcat_3Parts)
     EXPECT_EQ(Fa_AS_STRING(v)->str, "hello, world");
 }
 
-TEST(VMIntegration, ListSquaresViaForLoop)
+TEST(VMIntegration, EmptyForLoopLeavesStateUnchanged)
 {
-    GTEST_SKIP() << "Not implemented yet.";
+    AST::Fa_Stmt* first = AST::Fa_makeFunction(
+        AST::Fa_makeName("first"),
+        AST::Fa_makeList(),
+        AST::Fa_makeBlock({
+            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("items"), AST::Fa_makeList(), true),
+            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("seen"), AST::Fa_makeLiteralInt(99), true),
+            AST::Fa_makeFor(AST::Fa_makeName("item"),
+                AST::Fa_makeName("items"),
+                AST::Fa_makeBlock({
+                    AST::Fa_makeAssignmentStmt(AST::Fa_makeName("seen"), AST::Fa_makeName("item"), false),
+                })),
+            AST::Fa_makeReturn(AST::Fa_makeName("seen")),
+        }));
+
+    Fa_Chunk* top = compile_calling(first);
+    top->disassemble();
     VMRunner r;
-    CB b;
-    b.regs(6)
-        .slot()
-        .slot()
-        .load_int(0, 0)
-        .load_int(1, 9)
-        .load_int(2, 1)
-        .ABC(Fa_OpCode::LIST_NEW, 4, 10, 0)
-        .AsBx(Fa_OpCode::FOR_PREP, 0, 5)
-        .ABC(Fa_OpCode::OP_MUL, 5, 3, 3)
-        .nop(0)
-        .ABC(Fa_OpCode::LIST_APPEND, 4, 5, 0)
-        .ABC(Fa_OpCode::NOP, 1, 0, 0)
-        .AsBx(Fa_OpCode::FOR_STEP, 0, -5)
-        .load_int(5, 5)
-        .ABC(Fa_OpCode::LIST_GET, 5, 4, 5)
-        .ret(5);
-    b.dump();
-    EXPECT_EQ(Fa_AS_INTEGER(r.run(b)), 25);
+    EXPECT_EQ(Fa_AS_INTEGER(r.run(top)), 99);
 }
 
 TEST(VMIntegration, NestedAdderClosure)

@@ -402,7 +402,7 @@ inline u64 wyhash(void const* key, size_t len, u64 seed) noexcept
 
 struct Fa_StringRefHash {
     // Seed is exposed so callers can build seeded hash tables if needed,
-    // but the default zero-seed is fine for std::unordered_map / StringCache_.
+    // but the default zero-seed is fine for HashTable / StringCache_.
     u64 seed { 0 };
 
     size_t operator()(Fa_StringRef const& str) const noexcept

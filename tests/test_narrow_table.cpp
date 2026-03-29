@@ -27,12 +27,12 @@ struct CollidingHash {
     }
 };
 
-using IntTable = NarrowHashTable<int, int, IntHash, IntEqual>;
-using CollidingIntTable = NarrowHashTable<int, int, CollidingHash, IntEqual>;
+using IntTable = Fa_HashTable<int, int, IntHash, IntEqual>;
+using CollidingIntTable = Fa_HashTable<int, int, CollidingHash, IntEqual>;
 
 } // namespace
 
-TEST(NarrowHashTable, InsertAndFindSingleEntry)
+TEST(Fa_HashTable, InsertAndFindSingleEntry)
 {
     IntTable table;
 
@@ -47,7 +47,7 @@ TEST(NarrowHashTable, InsertAndFindSingleEntry)
     EXPECT_FALSE(table.empty());
 }
 
-TEST(NarrowHashTable, OverwriteKeepsSizeStable)
+TEST(Fa_HashTable, OverwriteKeepsSizeStable)
 {
     IntTable table;
 
@@ -59,7 +59,7 @@ TEST(NarrowHashTable, OverwriteKeepsSizeStable)
     EXPECT_EQ(*table.findPtr(3), 42);
 }
 
-TEST(NarrowHashTable, HandlesLinearProbingCollisions)
+TEST(Fa_HashTable, HandlesLinearProbingCollisions)
 {
     CollidingIntTable table;
 
@@ -74,7 +74,7 @@ TEST(NarrowHashTable, HandlesLinearProbingCollisions)
     }
 }
 
-TEST(NarrowHashTable, GrowthPreservesExistingEntries)
+TEST(Fa_HashTable, GrowthPreservesExistingEntries)
 {
     IntTable table;
 
@@ -89,7 +89,7 @@ TEST(NarrowHashTable, GrowthPreservesExistingEntries)
     }
 }
 
-TEST(NarrowHashTable, ClearRemovesEntriesAndAllowsReuse)
+TEST(Fa_HashTable, ClearRemovesEntriesAndAllowsReuse)
 {
     IntTable table;
 

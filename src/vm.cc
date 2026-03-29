@@ -380,7 +380,7 @@ Fa_Value Fa_VM::execute()
             Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
             Fa_VM_ABC(Fa_OpCode::OP_ADD_II);
         } else {
-            cur_base[a] = Fa_MAKE_REAL(Fa_VM_SUBI(lhs, rhs));
+            cur_base[a] = Fa_MAKE_REAL(Fa_VM_ADDF(lhs, rhs));
             Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
             Fa_VM_ABC(Fa_OpCode::OP_ADD_FF);
         }

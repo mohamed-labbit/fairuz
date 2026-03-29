@@ -334,8 +334,11 @@ bool Fa_IfStmt::equals(Fa_Stmt const* other) const
     if (Kind_ != other->getKind())
         return false;
 
-    auto block = static_cast<Fa_IfStmt const*>(other);
-    return Condition_->equals(block->getCondition()) && ThenStmt_->equals(block->getThen()) && ElseStmt_->equals(block->getElse());
+    auto if_stmt = static_cast<Fa_IfStmt const*>(other);
+    bool eq_else = false;
+    if (ElseStmt_ && if_stmt->getElse())
+        eq_else = ElseStmt_->equals(if_stmt->getElse());
+    return Condition_->equals(if_stmt->getCondition()) && ThenStmt_->equals(if_stmt->getThen()) && eq_else;
 }
 
 Fa_IfStmt* Fa_IfStmt::clone() const
@@ -387,6 +390,8 @@ Fa_ForStmt* Fa_ForStmt::clone() const
 }
 
 Fa_Expr* Fa_ForStmt::getContainer() const { return Container_; }
+
+Fa_NameExpr* Fa_ForStmt::getTarget() const { return static_cast<Fa_NameExpr*>(Container_); }
 
 Fa_Expr* Fa_ForStmt::getIter() const { return Iter_; }
 

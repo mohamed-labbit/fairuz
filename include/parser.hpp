@@ -4,6 +4,7 @@
 #include "ast.hpp"
 #include "error.hpp"
 #include "lexer.hpp"
+#include "table.hpp"
 
 #include <unordered_set>
 
@@ -48,7 +49,7 @@ public:
     Fa_SymbolTable* Parent_ = nullptr;
 
 private:
-    std::unordered_map<Fa_StringRef, Symbol, Fa_StringRefHash, Fa_StringRefEqual> Symbols_;
+    Fa_HashTable<Fa_StringRef, Symbol, Fa_StringRefHash, Fa_StringRefEqual> Symbols_;
     Fa_Array<Fa_SymbolTable*> Children_;
     unsigned int ScopeLevel_ { 0 };
 
@@ -62,7 +63,7 @@ public:
     void markUsed(Fa_StringRef const& name, i32 line);
     Fa_SymbolTable* createChild();
     Fa_Array<Symbol*> getUnusedSymbols();
-    std::unordered_map<Fa_StringRef, Symbol, Fa_StringRefHash, Fa_StringRefEqual> const& getSymbols() const;
+    Fa_HashTable<Fa_StringRef, Symbol, Fa_StringRefHash, Fa_StringRefEqual> const& getSymbols() const;
 }; // class Fa_SymbolTable
 
 class Fa_SemanticAnalyzer {
@@ -133,43 +134,6 @@ public:
     }
 }; // class ParseError
 
-class Fa_ASTOptimizer {
-public:
-    struct OptimizationStats {
-        size_t ConstantFolds { 0 };
-        size_t DeadCodeEliminations { 0 };
-        size_t CommonSubFa_ExprEliminations { 0 };
-        size_t LoopInvariants { 0 };
-        size_t StrengthReductions { 0 };
-    }; // struct OptimizationStats
-
-private:
-    OptimizationStats Stats_;
-
-public:
-    std::optional<f64> evaluateConstant(AST::Fa_Expr const* expr);
-
-    AST::Fa_Expr* optimizeConstantFolding(AST::Fa_Expr* expr);
-    AST::Fa_Stmt* eliminateDeadCode(AST::Fa_Stmt* stmt);
-
-    class CSEPass {
-    private:
-        std::unordered_map<Fa_StringRef, Fa_StringRef, Fa_StringRefHash, Fa_StringRefEqual> Fa_ExprCache_;
-        i32 TempCounter_ = 0;
-
-    public:
-        Fa_StringRef exprToString(AST::Fa_Expr const* expr);
-        Fa_StringRef getTempVar();
-        std::optional<Fa_StringRef> findCSE(AST::Fa_Expr const* expr);
-        void recordExpr(AST::Fa_Expr const* expr, Fa_StringRef const& var);
-    }; // class CSEPass
-
-    bool isLoopInvariant(AST::Fa_Expr const* expr, std::unordered_set<Fa_StringRef, Fa_StringRefHash, Fa_StringRefEqual> const& loopVars);
-    Fa_Array<AST::Fa_Stmt*> optimize(Fa_Array<AST::Fa_Stmt*> statements, i32 level = 2);
-    OptimizationStats const& getStats() const;
-    void printStats() const;
-}; // class Fa_ASTOptimizer
-
 class Fa_Parser {
 public:
     explicit Fa_Parser() = default;
@@ -225,7 +189,6 @@ private:
     lex::Fa_Lexer Lexer_;
     Fa_SymbolTable SymTable_;
     Fa_SemanticAnalyzer Sema_;
-    Fa_ASTOptimizer Optimizer_;
 
     tok::Fa_Token const* peek(size_t offset = 1) { return Lexer_.peek(offset); }
     tok::Fa_Token const* advance() { return Lexer_.next(); }

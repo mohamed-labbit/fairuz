@@ -129,7 +129,7 @@ AST::Fa_Expr* build_ast(Fa_ExprSpec const& expr)
 
 Fa_Value run_Fa_Expr_source(std::string const& source)
 {
-    Fa_FileManager fm((std::filesystem::temp_directory_path() / "fairuz_property_expr.txt").string());
+    Fa_FileManager fm;
     fm.buffer() = source.c_str();
     Fa_Parser parser(&fm);
     auto parsed = parser.parse();

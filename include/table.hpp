@@ -2,11 +2,12 @@
 #define NARROW_TABLE_HPP
 
 #include "array.hpp"
+#include <initializer_list>
 
 namespace fairuz {
 
 template<typename K, typename V, typename Hash, typename Equal>
-class NarrowHashTable {
+class Fa_HashTable {
     struct Entry {
         K key { };
         V value { };
@@ -99,7 +100,27 @@ class NarrowHashTable {
     }
 
 public:
-    NarrowHashTable() = default;
+    Fa_HashTable() = default;
+    
+    explicit Fa_HashTable(std::initializer_list<std::pair<K, V>> list) 
+    {    
+        if (list.size() == 0)
+            return;
+        
+        for (const std::pair<K, V>& pair : list)
+            insertOrAssign(pair.first, pair.second);
+    }
+    
+    ~Fa_HashTable() {}
+    
+    V& operator[](const K& key) { 
+        auto hash = static_cast<u64>(Hash_(key));
+        if (Entry* entry = findEntry(key, hash))
+            return entry->value;
+        return insertOrAssign(key, V{});
+    }
+    
+    const V& operator[](const K& key) const = delete;
 
     void clear()
     {
@@ -149,7 +170,35 @@ public:
 
         return Buckets_[idx].value;
     }
-}; // class NarrowHashTable
+    
+    struct Iterator {
+        Entry* ptr;
+        Entry* end;
+    
+        Iterator& operator++() {
+            ++ptr;
+            while (ptr != end && !ptr->occupied)
+                ++ptr;
+            return *this;
+        }
+    
+        std::pair<K const&, V&> operator*() const { return { ptr->key, ptr->value }; }
+        Entry* operator->() const { return ptr; }
+        bool operator!=(const Iterator& other) const { return ptr != other.ptr; }
+    };
+    
+    Iterator begin() {
+        Entry* p = Buckets_.begin();
+        Entry* e = Buckets_.end();
+        while (p != e && !p->occupied) ++p;
+        return { p, e };
+    }
+    
+    Iterator end() {
+        Entry* e = Buckets_.end();
+        return { e, e };
+    }
+}; // class Fa_HashTable
 
 } // namespace fairuz
 

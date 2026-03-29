@@ -2,9 +2,11 @@
 #define COMPILER_HPP
 
 #include "ast.hpp"
+#include "opcode.hpp"
+#include "string.hpp"
 #include "value.hpp"
+#include "table.hpp"
 
-#include <unordered_map>
 #include <utility>
 
 namespace fairuz::runtime {
@@ -157,7 +159,13 @@ private:
             return h1 ^ (h2 * 0x9e3779b97f4a7c15ULL + (h1 << 6) + (h1 >> 2));
         }
     };
-    std::unordered_map<std::pair<Fa_StringRef, Fa_Chunk*>, u16, PairHash> StringCache_;
+    struct PairEqual {
+        bool operator()(std::pair<Fa_StringRef, Fa_Chunk*> lhs, std::pair<Fa_StringRef, Fa_Chunk*> rhs) const noexcept 
+        {
+            return lhs.first == rhs.first && lhs.second == rhs.second;
+        }
+    };
+    Fa_HashTable<std::pair<Fa_StringRef, Fa_Chunk*>, u16, PairHash, PairEqual> StringCache_;
 
     struct VarInfo {
         enum class Kind {

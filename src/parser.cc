@@ -58,27 +58,25 @@ void Fa_SymbolTable::define(Fa_StringRef const& name, Symbol symbol)
         return;
 
     symbol.name = name;
-    Symbols_.emplace(name, std::move(symbol));
+    Symbols_[name] = symbol;
 }
 
 typename Fa_SymbolTable::Symbol* Fa_SymbolTable::lookup(Fa_StringRef const& name)
-{
-    auto it = Symbols_.find(name);
-    if (it != Symbols_.end())
-        return &it->second;
+{   
+    if (Symbols_.contains(name))
+        return &Symbols_[name];
 
     return Parent_ ? Parent_->lookup(name) : nullptr;
 }
 
 typename Fa_SymbolTable::Symbol* Fa_SymbolTable::lookupLocal(Fa_StringRef const& name)
 {
-    auto it = Symbols_.find(name);
-    return it != Symbols_.end() ? &it->second : nullptr;
+    return Symbols_.findPtr(name);
 }
 
 bool Fa_SymbolTable::isDefined(Fa_StringRef const& name) const
-{
-    if (Symbols_.find(name) != Symbols_.end())
+{   
+    if (Symbols_.contains(name))
         return true;
 
     return Parent_ ? Parent_->isDefined(name) : false;
@@ -102,7 +100,7 @@ Fa_SymbolTable* Fa_SymbolTable::createChild()
 Fa_Array<typename Fa_SymbolTable::Symbol*> Fa_SymbolTable::getUnusedSymbols()
 {
     Fa_Array<Symbol*> unused;
-    for (auto& [name, sym] : Symbols_) {
+    for (auto [name, sym] : Symbols_) {
         if (!sym.isUsed && sym.symbolType == SymbolType::VARIABLE)
             unused.push(&sym);
     }
@@ -110,7 +108,7 @@ Fa_Array<typename Fa_SymbolTable::Symbol*> Fa_SymbolTable::getUnusedSymbols()
     return unused;
 }
 
-std::unordered_map<Fa_StringRef, typename Fa_SymbolTable::Symbol, Fa_StringRefHash, Fa_StringRefEqual> const&
+Fa_HashTable<Fa_StringRef, typename Fa_SymbolTable::Symbol, Fa_StringRefHash, Fa_StringRefEqual> const&
 Fa_SymbolTable::getSymbols() const
 {
     return Symbols_;
@@ -533,7 +531,6 @@ Fa_Array<AST::Fa_Stmt*> Fa_Parser::parseProgram()
     }
 
     Sema_.analyze(statements);
-    Optimizer_.optimize(statements, /*level=*/2);
 
     if (diagnostic::hasErrors())
         diagnostic::dump();
@@ -1059,433 +1056,6 @@ void Fa_Parser::synchronize()
 
         advance();
     }
-}
-
-namespace {
-
-bool isDefinitelyIntegerFa_Expr(AST::Fa_Expr const* expr)
-{
-    if (!expr)
-        return false;
-
-    switch (expr->getKind()) {
-    case AST::Fa_Expr::Kind::LITERAL: {
-        auto lit = static_cast<AST::Fa_LiteralExpr const*>(expr);
-        return lit->isInteger();
-    }
-    case AST::Fa_Expr::Kind::UNARY: {
-        auto un = static_cast<AST::Fa_UnaryExpr const*>(expr);
-        AST::Fa_UnaryOp op = un->getOperator();
-        if (op != AST::Fa_UnaryOp::OP_PLUS && op != AST::Fa_UnaryOp::OP_NEG)
-            return false;
-
-        return isDefinitelyIntegerFa_Expr(un->getOperand());
-    }
-    case AST::Fa_Expr::Kind::BINARY: {
-        auto bin = static_cast<AST::Fa_BinaryExpr const*>(expr);
-        if (!isDefinitelyIntegerFa_Expr(bin->getLeft()) || !isDefinitelyIntegerFa_Expr(bin->getRight()))
-            return false;
-
-        AST::Fa_BinaryOp op = bin->getOperator();
-        return op == AST::Fa_BinaryOp::OP_ADD || op == AST::Fa_BinaryOp::OP_SUB || op == AST::Fa_BinaryOp::OP_MUL || op == AST::Fa_BinaryOp::OP_MOD;
-    }
-    default:
-        return false;
-    }
-}
-
-} // namespace
-
-std::optional<f64> Fa_ASTOptimizer::evaluateConstant(AST::Fa_Expr const* expr)
-{
-    if (!expr)
-        return std::nullopt;
-
-    if (expr->getKind() == AST::Fa_Expr::Kind::LITERAL) {
-        auto lit = dynamic_cast<AST::Fa_LiteralExpr const*>(expr);
-
-        if (lit->isNumeric())
-            return lit->toNumber();
-    } else if (expr->getKind() == AST::Fa_Expr::Kind::BINARY) {
-        auto bin = dynamic_cast<AST::Fa_BinaryExpr const*>(expr);
-
-        std::optional<f64> L = evaluateConstant(bin->getLeft());
-        std::optional<f64> R = evaluateConstant(bin->getRight());
-
-        if (!L || !R)
-            return std::nullopt;
-
-        switch (bin->getOperator()) {
-        case AST::Fa_BinaryOp::OP_ADD:
-            return *L + *R;
-        case AST::Fa_BinaryOp::OP_SUB:
-            return *L - *R;
-        case AST::Fa_BinaryOp::OP_MUL:
-            return *L * *R;
-        case AST::Fa_BinaryOp::OP_POW:
-            return std::pow(*L, *R);
-        case AST::Fa_BinaryOp::OP_DIV:
-            if (*R == 0.0)
-                return std::nullopt;
-
-            return *L / *R;
-        case AST::Fa_BinaryOp::OP_MOD:
-            if (*R == 0.0)
-                return std::nullopt;
-
-            return std::fmod(*L, *R);
-        default:
-            return std::nullopt;
-        }
-    } else if (expr->getKind() == AST::Fa_Expr::Kind::UNARY) {
-        auto un = dynamic_cast<AST::Fa_UnaryExpr const*>(expr);
-        std::optional<f64> operand = evaluateConstant(un->getOperand());
-
-        if (!operand)
-            return std::nullopt;
-        if (un->getOperator() == AST::Fa_UnaryOp::OP_PLUS)
-            return *operand;
-        if (un->getOperator() == AST::Fa_UnaryOp::OP_NEG)
-            return -*operand;
-    }
-
-    return std::nullopt;
-}
-
-AST::Fa_Expr* Fa_ASTOptimizer::optimizeConstantFolding(AST::Fa_Expr* expr)
-{
-    if (!expr)
-        return nullptr;
-
-    if (expr->getKind() == AST::Fa_Expr::Kind::BINARY) {
-        auto bin = dynamic_cast<AST::Fa_BinaryExpr*>(expr);
-
-        bin->setLeft(optimizeConstantFolding(bin->getLeft()));
-        bin->setRight(optimizeConstantFolding(bin->getRight()));
-
-        if (std::optional<f64> val = evaluateConstant(expr)) {
-            ++Stats_.ConstantFolds;
-            return AST::Fa_makeLiteralFloat(*val);
-        }
-
-        AST::Fa_Expr* L = bin->getLeft();
-        AST::Fa_Expr* R = bin->getRight();
-
-        if (!L || !R)
-            return expr->clone();
-
-        AST::Fa_BinaryOp op = bin->getOperator();
-
-        AST::Fa_Expr::Kind r_kind = R->getKind();
-        AST::Fa_Expr::Kind l_kind = L->getKind();
-
-        // x + 0 = x, x - 0 = x
-        if ((op == AST::Fa_BinaryOp::OP_ADD || op == AST::Fa_BinaryOp::OP_SUB) && r_kind == AST::Fa_Expr::Kind::LITERAL) {
-            auto lit = static_cast<AST::Fa_LiteralExpr*>(R);
-            if (lit->isNumeric() && lit->toNumber() == 0) {
-                ++Stats_.StrengthReductions;
-                return L->clone();
-            }
-        }
-
-        // inverse (0 - x != x, but 0 + x = x)
-        if (op == AST::Fa_BinaryOp::OP_ADD && l_kind == AST::Fa_Expr::Kind::LITERAL) {
-            auto lit = static_cast<AST::Fa_LiteralExpr*>(L);
-            if (lit->isNumeric() && lit->toNumber() == 0) {
-                ++Stats_.StrengthReductions;
-                return R->clone();
-            }
-        }
-
-        // x * 1 = x, x / 1 = x
-        if ((op == AST::Fa_BinaryOp::OP_MUL || op == AST::Fa_BinaryOp::OP_DIV) && r_kind == AST::Fa_Expr::Kind::LITERAL) {
-            auto lit = static_cast<AST::Fa_LiteralExpr*>(R);
-            if (lit->isNumeric() && lit->toNumber() == 1) {
-                ++Stats_.StrengthReductions;
-                return L->clone();
-            }
-        }
-
-        // 1 * x
-        if (op == AST::Fa_BinaryOp::OP_MUL && l_kind == AST::Fa_Expr::Kind::LITERAL) {
-            auto lit = static_cast<AST::Fa_LiteralExpr*>(L);
-            if (lit->isNumeric() && lit->toNumber() == 1) {
-                ++Stats_.StrengthReductions;
-                return R->clone();
-            }
-        }
-
-        // x * 0 = 0 (only when L side is definitely integer; IEEE floats can yield
-        // NaN for inf * 0)
-        if (op == AST::Fa_BinaryOp::OP_MUL && r_kind == AST::Fa_Expr::Kind::LITERAL) {
-            auto r_lit = static_cast<AST::Fa_LiteralExpr*>(R);
-            if (r_lit->isNumeric() && r_lit->toNumber() == 0 /*&& isDefinitelyIntegerFa_Expr(L)*/) {
-                ++Stats_.StrengthReductions;
-                return AST::Fa_makeLiteralInt(0);
-            }
-        }
-
-        // x * 2 = x + x (strength reduction)
-        if (op == AST::Fa_BinaryOp::OP_MUL && r_kind == AST::Fa_Expr::Kind::LITERAL) {
-            auto lit = static_cast<AST::Fa_LiteralExpr*>(R);
-            if (lit->isNumeric() && lit->toNumber() == 2) {
-                ++Stats_.StrengthReductions;
-                return AST::Fa_makeBinary(L->clone(), L->clone(), AST::Fa_BinaryOp::OP_ADD);
-            }
-        }
-
-        if (op == AST::Fa_BinaryOp::OP_MUL && l_kind == AST::Fa_Expr::Kind::LITERAL) {
-            auto lit = static_cast<AST::Fa_LiteralExpr*>(L);
-            if (lit->isNumeric() && lit->toNumber() == 2) {
-                ++Stats_.StrengthReductions;
-                return Fa_makeBinary(R->clone(), R->clone(), AST::Fa_BinaryOp::OP_ADD);
-            }
-        }
-
-        // x - x = 0
-        if (op == AST::Fa_BinaryOp::OP_SUB) {
-            if (L->equals(R)) {
-                ++Stats_.StrengthReductions;
-                return AST::Fa_makeLiteralInt(0);
-            }
-        }
-
-        // string concatenation
-        if (l_kind == AST::Fa_Expr::Kind::LITERAL && r_kind == AST::Fa_Expr::Kind::LITERAL && op == AST::Fa_BinaryOp::OP_ADD) {
-            auto l_lit = static_cast<AST::Fa_LiteralExpr*>(L);
-            auto r_lit = static_cast<AST::Fa_LiteralExpr*>(R);
-
-            if (l_lit->getType() == AST::Fa_LiteralExpr::Type::STRING && r_lit->getType() == AST::Fa_LiteralExpr::Type::STRING)
-                return AST::Fa_makeLiteralString(l_lit->getStr() + r_lit->getStr());
-        }
-    } else if (expr->getKind() == AST::Fa_Expr::Kind::UNARY) {
-        auto outer = static_cast<AST::Fa_UnaryExpr*>(expr);
-        AST::Fa_Expr* optimizedOperand = optimizeConstantFolding(outer->getOperand());
-        bool operandChanged = (optimizedOperand != outer->getOperand());
-        AST::Fa_UnaryExpr* rebuiltUnary = nullptr;
-
-        if (operandChanged)
-            rebuiltUnary = AST::Fa_makeUnary(optimizedOperand, outer->getOperator());
-        else
-            rebuiltUnary = outer->clone();
-
-        if (auto val = evaluateConstant(rebuiltUnary)) {
-            ++Stats_.ConstantFolds;
-            return AST::Fa_makeLiteralFloat(*val);
-        }
-
-        if (rebuiltUnary->getOperator() == AST::Fa_UnaryOp::OP_NEG) {
-            if (auto inner = static_cast<AST::Fa_UnaryExpr*>(optimizedOperand)) {
-                if (inner->getOperator() == AST::Fa_UnaryOp::OP_NEG) {
-                    ++Stats_.StrengthReductions;
-                    return inner->getOperand()->clone();
-                }
-            }
-        }
-
-        return rebuiltUnary;
-    } else if (expr->getKind() == AST::Fa_Expr::Kind::CALL) {
-        auto call = static_cast<AST::Fa_CallExpr*>(expr);
-        for (AST::Fa_Expr*& arg : call->getArgs())
-            arg = optimizeConstantFolding(arg);
-    } else if (expr->getKind() == AST::Fa_Expr::Kind::LIST) {
-        auto list = static_cast<AST::Fa_ListExpr*>(expr);
-        for (AST::Fa_Expr*& elem : list->getElements())
-            elem = optimizeConstantFolding(elem);
-    }
-
-    return expr->clone();
-}
-
-AST::Fa_Stmt* Fa_ASTOptimizer::eliminateDeadCode(AST::Fa_Stmt* stmt)
-{
-    if (!stmt)
-        return nullptr;
-
-    if (stmt->getKind() == AST::Fa_Stmt::Kind::IF) {
-        auto ifStmt = static_cast<AST::Fa_IfStmt*>(stmt);
-
-        if (ifStmt->getCondition()->getKind() == AST::Fa_Expr::Kind::LITERAL) {
-            auto lit = static_cast<AST::Fa_LiteralExpr*>(ifStmt->getCondition());
-            if (lit->getType() == AST::Fa_LiteralExpr::Type::BOOLEAN) {
-                ++Stats_.DeadCodeEliminations;
-                if (lit->getBool() == true)
-                    return ifStmt->getThen()->clone();
-                else {
-                    auto* elseBlock = ifStmt->getElse();
-                    if (elseBlock)
-                        return ifStmt->getElse()->clone();
-                    else
-                        return nullptr;
-                }
-            }
-        }
-
-        AST::Fa_IfStmt* clone = ifStmt->clone();
-
-        clone->setThen(eliminateDeadCode(clone->getThen()));
-        clone->setElse(eliminateDeadCode(clone->getElse()));
-
-        return clone;
-    } else if (stmt->getKind() == AST::Fa_Stmt::Kind::WHILE) {
-        auto while_stmt = static_cast<AST::Fa_WhileStmt*>(stmt);
-
-        if (while_stmt->getCondition()->getKind() == AST::Fa_Expr::Kind::LITERAL) {
-            auto lit = static_cast<AST::Fa_LiteralExpr*>(while_stmt->getCondition());
-            if (lit->getType() == AST::Fa_LiteralExpr::Type::BOOLEAN && lit->getBool() == false) {
-                ++Stats_.DeadCodeEliminations;
-                return nullptr; // kill loop
-            }
-        }
-
-        AST::Fa_WhileStmt* clone = while_stmt->clone();
-        clone->setBody(dynamic_cast<AST::Fa_BlockStmt*>(eliminateDeadCode(clone->getBody())));
-        return clone;
-    } else if (stmt->getKind() == AST::Fa_Stmt::Kind::FOR) {
-        AST::Fa_ForStmt* for_stmt = dynamic_cast<AST::Fa_ForStmt*>(stmt);
-        /// TODO: evaluate for loop condition and kill it if it doesn't run
-        AST::Fa_ForStmt* clone = for_stmt->clone();
-        clone->setBody(dynamic_cast<AST::Fa_BlockStmt*>(eliminateDeadCode(clone->getBody())));
-        return clone;
-    } else if (stmt->getKind() == AST::Fa_Stmt::Kind::FUNC) {
-        AST::Fa_FunctionDef* funcDef = dynamic_cast<AST::Fa_FunctionDef*>(stmt);
-        AST::Fa_FunctionDef* clone = funcDef->clone();
-        clone->setBody(dynamic_cast<AST::Fa_BlockStmt*>(eliminateDeadCode(clone->getBody())));
-        return clone;
-    } else if (stmt->getKind() == AST::Fa_Stmt::Kind::BLOCK) {
-        AST::Fa_BlockStmt* block_stmt = dynamic_cast<AST::Fa_BlockStmt*>(stmt);
-        Fa_Array<AST::Fa_Stmt*> new_stmts = Fa_Array<AST::Fa_Stmt*>::withCapacity(block_stmt->getStatements().size());
-        bool seen_return = false;
-        for (AST::Fa_Stmt* s : block_stmt->getStatements()) {
-            if (seen_return) {
-                Stats_.DeadCodeEliminations++;
-                break;
-            }
-
-            if (s->getKind() == AST::Fa_Stmt::Kind::RETURN)
-                seen_return = true;
-
-            new_stmts.push(eliminateDeadCode(s));
-        }
-
-        return Fa_makeBlock(new_stmts);
-    }
-
-    return stmt->clone();
-}
-
-Fa_StringRef Fa_ASTOptimizer::CSEPass::exprToString(AST::Fa_Expr const* expr)
-{
-    if (!expr)
-        return "";
-
-    switch (expr->getKind()) {
-    case AST::Fa_Expr::Kind::LITERAL: {
-        AST::Fa_LiteralExpr const* lit = dynamic_cast<AST::Fa_LiteralExpr const*>(expr);
-        if (lit->isString())
-            return lit->getStr();
-        else if (lit->isNumeric())
-            return std::to_string(lit->toNumber()).data();
-        else if (lit->isBoolean())
-            return lit->getBool() ? "true" : "false";
-        else
-            return "";
-    }
-    case AST::Fa_Expr::Kind::NAME: {
-        AST::Fa_NameExpr const* name = dynamic_cast<AST::Fa_NameExpr const*>(expr);
-        return name->getValue();
-    }
-    case AST::Fa_Expr::Kind::BINARY: {
-    } break;
-    case AST::Fa_Expr::Kind::UNARY: {
-    } break;
-    default:
-        return "";
-    }
-
-    return "";
-}
-
-Fa_StringRef Fa_ASTOptimizer::CSEPass::getTempVar() { return Fa_StringRef("__cse_temp_") + static_cast<char>(TempCounter_++); }
-
-std::optional<Fa_StringRef> Fa_ASTOptimizer::CSEPass::findCSE(AST::Fa_Expr const* expr)
-{
-    Fa_StringRef Fa_ExprStr = exprToString(expr);
-    if (Fa_ExprStr.empty())
-        return std::nullopt;
-
-    auto it = Fa_ExprCache_.find(Fa_ExprStr);
-    if (it != Fa_ExprCache_.end())
-        return it->second;
-
-    return std::nullopt;
-}
-
-void Fa_ASTOptimizer::CSEPass::recordExpr(AST::Fa_Expr const* expr, Fa_StringRef const& var)
-{
-    Fa_StringRef Fa_ExprStr = exprToString(expr);
-    if (!Fa_ExprStr.empty())
-        Fa_ExprCache_[Fa_ExprStr] = var;
-}
-
-bool Fa_ASTOptimizer::isLoopInvariant(AST::Fa_Expr const* expr, std::unordered_set<Fa_StringRef, Fa_StringRefHash, Fa_StringRefEqual> const& loopVars)
-{
-    if (!expr)
-        return true;
-
-    if (expr->getKind() == AST::Fa_Expr::Kind::NAME) {
-        AST::Fa_NameExpr const* name = dynamic_cast<AST::Fa_NameExpr const*>(expr);
-        return !loopVars.count(name->getValue());
-    } else if (expr->getKind() == AST::Fa_Expr::Kind::BINARY) {
-        AST::Fa_BinaryExpr const* bin = dynamic_cast<AST::Fa_BinaryExpr const*>(expr);
-        return isLoopInvariant(bin->getLeft(), loopVars) && isLoopInvariant(bin->getRight(), loopVars);
-    } else if (expr->getKind() == AST::Fa_Expr::Kind::UNARY) {
-        AST::Fa_UnaryExpr const* un = dynamic_cast<AST::Fa_UnaryExpr const*>(expr);
-        return isLoopInvariant(un->getOperand(), loopVars);
-    } else if (expr->getKind() == AST::Fa_Expr::Kind::LITERAL) {
-        return true;
-    }
-
-    return false;
-}
-
-Fa_Array<AST::Fa_Stmt*> Fa_ASTOptimizer::optimize(Fa_Array<AST::Fa_Stmt*> statements, i32 level)
-{
-    Fa_Array<AST::Fa_Stmt*> result;
-
-    for (AST::Fa_Stmt*& stmt : statements) {
-        if (level >= 1) {
-            if (stmt->getKind() == AST::Fa_Stmt::Kind::ASSIGNMENT) {
-                AST::Fa_AssignmentStmt* assign = dynamic_cast<AST::Fa_AssignmentStmt*>(stmt);
-                assign->setValue(optimizeConstantFolding(assign->getValue()));
-            } else if (stmt->getKind() == AST::Fa_Stmt::Kind::EXPR) {
-                AST::Fa_ExprStmt* expr_stmt = dynamic_cast<AST::Fa_ExprStmt*>(stmt);
-                expr_stmt->setExpr(optimizeConstantFolding(expr_stmt->getExpr()));
-            }
-        }
-
-        if (level >= 2)
-            stmt = eliminateDeadCode(stmt);
-        if (stmt)
-            result.push(stmt);
-    }
-
-    return result;
-}
-
-typename Fa_ASTOptimizer::OptimizationStats const& Fa_ASTOptimizer::getStats() const { return Stats_; }
-
-void Fa_ASTOptimizer::printStats() const
-{
-    std::cout << "\nOptimization Statistics :\n";
-    std::cout << "Constant folds             : " << Stats_.ConstantFolds << "\n";
-    std::cout << "Dead code eliminations     : " << Stats_.DeadCodeEliminations << "\n";
-    std::cout << "Strength reductions        : " << Stats_.StrengthReductions << "\n";
-    std::cout << "Common subexpr eliminations: " << Stats_.CommonSubFa_ExprEliminations << "\n";
-    std::cout << "Loop invariants moved      : " << Stats_.LoopInvariants << "\n";
-    std::cout << "Total optimizations        : "
-              << (Stats_.ConstantFolds + Stats_.DeadCodeEliminations + Stats_.StrengthReductions + Stats_.CommonSubFa_ExprEliminations + Stats_.LoopInvariants)
-              << "\n";
 }
 
 } // namespace fairuz::parser

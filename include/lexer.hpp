@@ -63,6 +63,7 @@ static constexpr char const* toString(FileManagerError error) noexcept
 
 class Fa_FileManager {
 public:
+    Fa_FileManager() = default;
     explicit Fa_FileManager(std::string const& filepath);
 
     Fa_FileManager(Fa_FileManager&&) noexcept = delete;

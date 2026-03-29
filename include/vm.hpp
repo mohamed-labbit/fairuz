@@ -86,8 +86,8 @@ public:
 
     int OpenUpvalueCount_ { 0 };
 
-    NarrowHashTable<Fa_StringRef, u32, Fa_StringRefHash, Fa_StringRefEqual> GlobalIndex_;
-    NarrowHashTable<Fa_StringRef, Fa_ObjString*, Fa_StringRefHash, Fa_StringRefEqual> StringTable_;
+    Fa_HashTable<Fa_StringRef, u32, Fa_StringRefHash, Fa_StringRefEqual> GlobalIndex_;
+    Fa_HashTable<Fa_StringRef, Fa_ObjString*, Fa_StringRefHash, Fa_StringRefEqual> StringTable_;
     Fa_Array<Fa_Value> GlobalSlots_;
     Fa_Array<ObjUpvalue*> OpenUpvalues_;
     bool isDead_ { false };

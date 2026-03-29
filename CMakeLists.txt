@@ -113,7 +113,6 @@ if(BUILD_TESTS)
         tests/test_parser.cpp
         tests/test_parser_golden.cpp
         tests/test_analyzer.cpp
-        tests/test_optim.cpp
         tests/test_opcode.cpp
         tests/test_chunk.cpp
         tests/test_compiler.cpp

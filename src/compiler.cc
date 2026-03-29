@@ -4,6 +4,7 @@
 #include "../include/optim.hpp"
 #include "macros.hpp"
 
+#include "gtest/gtest.h"
 #include <algorithm>
 #include <cassert>
 #include <utility>
@@ -306,11 +307,62 @@ void Compiler::compileReturn(AST::Fa_ReturnStmt const* s)
 
 void Compiler::compileFor(AST::Fa_ForStmt const* s)
 {
-    (void)s;
-    diagnostic::emit(CompilerError::FOR_NOT_IMPLEMENTED);
-    
     Fa_SourceLocation loc = SRC_LOC(s);
-    
+    auto const* target = dynamic_cast<AST::Fa_NameExpr const*>(s->getTarget());
+    if (!target) {
+        diagnostic::emit(CompilerError::INVALID_ASSIGNMENT_TARGET, "for loop target must be a name");
+        return;
+    }
+
+    bool incoming_dead = Current_->isDead_;
+
+    beginScope();
+
+    u8 iter_reg = allocRegister();
+    {
+        declareLocal("__for_iter", iter_reg);
+        RegMark mark(Current_);
+        discharge(compileExprI(s->getIter()), iter_reg, loc);
+    }
+
+    u8 len_reg = allocRegister();
+    declareLocal("__for_len", len_reg);
+    emit(Fa_make_ABC(Fa_OpCode::LIST_LEN, len_reg, iter_reg, 0), loc);
+
+    u8 index_reg = allocRegister();
+    declareLocal("__for_index", index_reg);
+    emitLoadValue(index_reg, Fa_MAKE_INTEGER(0), loc);
+
+    u8 target_reg = allocRegister();
+    declareLocal(target->getValue(), target_reg);
+
+    u8 cond_reg = allocRegister();
+    declareLocal("__for_cond", cond_reg);
+
+    u8 step_reg = allocRegister();
+    declareLocal("__for_step", step_reg);
+    emitLoadValue(step_reg, Fa_MAKE_INTEGER(1), loc);
+
+    u32 loop_start = currentOffset();
+    pushLoop(loop_start);
+
+    emit(Fa_make_ABC(Fa_OpCode::OP_LT, cond_reg, index_reg, len_reg), loc);
+    emit(Fa_make_ABC(Fa_OpCode::NOP, currentChunk()->allocIcSlot(), 0, 0), loc);
+    u32 exit_jump = emitJump(Fa_OpCode::JUMP_IF_FALSE, cond_reg, loc);
+
+    emit(Fa_make_ABC(Fa_OpCode::LIST_GET, target_reg, iter_reg, index_reg), loc);
+    compileStmt(s->getBody());
+
+    u32 continue_target = currentOffset();
+    emit(Fa_make_ABC(Fa_OpCode::OP_ADD, index_reg, index_reg, step_reg), loc);
+    emit(Fa_make_ABC(Fa_OpCode::NOP, currentChunk()->allocIcSlot(), 0, 0), loc);
+    emit(Fa_make_AsBx(Fa_OpCode::LOOP, 0, static_cast<i32>(loop_start) - static_cast<i32>(currentOffset()) - 1), loc);
+
+    patchJump(exit_jump);
+    popLoop(currentOffset(), continue_target, loc.line);
+    endScope(loc);
+
+    Current_->isDead_ = incoming_dead;
 }
 
 Fa_ExprResult Compiler::compileExprI(AST::Fa_Expr const* e)
@@ -925,9 +977,14 @@ u32 Compiler::internString(Fa_StringRef const& str)
 {
     Fa_Chunk* chunk = currentChunk();
     auto key = std::make_pair(str, chunk);
+    /*
+     * 
     auto it = StringCache_.find(key);
     if (it != StringCache_.end())
         return it->second;
+    */
+    
+    auto it = StringCache_.findPtr(key);
 
     Fa_ObjString* obj = Fa_MAKE_OBJ_STRING(str);
     u16 idx = chunk->addConstant(Fa_MAKE_OBJECT(obj));

@@ -131,7 +131,8 @@ public:
         , Right_(r)
         , Operator_(op)
     {
-        assert(Left_ != nullptr && Right_ != nullptr);
+        assert(Left_ != nullptr);
+        assert(Right_ != nullptr);
         Kind_ = Kind::BINARY;
     }
 
@@ -345,7 +346,8 @@ public:
         if (!Args_)
             Args_ = Fa_makeList();
 
-        assert(Callee_ != nullptr && Args_ != nullptr);
+        assert(Callee_ != nullptr);
+        assert(Args_ != nullptr);
         Kind_ = Kind::CALL;
     }
 
@@ -383,7 +385,8 @@ public:
         , Value_(value)
         , isDecl_(decl)
     {
-        assert(Target_ != nullptr && Value_ != nullptr);
+        assert(Target_ != nullptr);
+        assert(Value_ != nullptr);
         Kind_ = Kind::ASSIGNMENT;
     }
 
@@ -416,7 +419,8 @@ public:
         : Object_(obj)
         , Index_(idx)
     {
-        assert(Object_ != nullptr && Index_ != nullptr);
+        assert(Object_ != nullptr);
+        assert(Index_ != nullptr);
         Kind_ = Kind::INDEX;
     }
 
@@ -560,7 +564,8 @@ public:
         , ThenStmt_(then_stmt)
         , ElseStmt_(else_stmt)
     {
-        assert(Condition_ != nullptr && then_stmt != nullptr);
+        assert(Condition_ != nullptr);
+        assert(then_stmt != nullptr);
         Kind_ = Kind::IF;
     }
 
@@ -590,7 +595,8 @@ public:
         : Condition_(condition)
         , Body_(body)
     {
-        assert(Condition_ != nullptr && Body_ != nullptr);
+        assert(Condition_ != nullptr);
+        assert(Body_ != nullptr);
         Kind_ = Kind::WHILE;
     }
 
@@ -621,7 +627,9 @@ public:
         , Iter_(iter)
         , Body_(body)
     {
-        assert(Target_ != nullptr && Iter_ != nullptr && Body_ != nullptr);
+        assert(Container_ != nullptr);
+        assert(Iter_ != nullptr);
+        assert(Body_ != nullptr);
         Kind_ = Kind::FOR;
     }
 
@@ -633,6 +641,7 @@ public:
     [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
     [[nodiscard]] Fa_ForStmt* clone() const override;
     [[nodiscard]] Fa_Expr* getContainer() const;
+    [[nodiscard]] Fa_NameExpr* getTarget() const;
     [[nodiscard]] Fa_Expr* getIter() const;
     [[nodiscard]] Fa_Stmt* getBody() const;
     void setBody(Fa_Stmt* b);
@@ -652,7 +661,9 @@ public:
         , Params_(params)
         , Body_(body)
     {
-        assert(Name_ != nullptr && Params_ != nullptr && Body_ != nullptr);
+        assert(Name_ != nullptr);
+        assert(Params_ != nullptr);
+        assert(Body_ != nullptr);
         Kind_ = Kind::FUNC;
     }
 
