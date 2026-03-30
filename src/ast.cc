@@ -218,6 +218,32 @@ Fa_ListExpr* Fa_CallExpr::getArgsAsListExpr() { return Args_; }
 
 Fa_ListExpr const* Fa_CallExpr::getArgsAsListExpr() const { return Args_; }
 
+bool Fa_DictExpr::equals(Fa_Expr const* other) const {
+    if (Kind_ != other->getKind())
+        return false;
+    
+    // a dictionary normally doesn't care about order so this is logically not correct
+    // but we gonna stub an implementation that requires order until someone fixes this
+    auto dict = static_cast<const Fa_DictExpr*>(other)->getContent();
+    const u32 s1 = Content_.size();
+    const u32 s2 = dict.size();
+    if (s1 != s2)
+        return false;
+    for (u32 i = 0; i < s1; ++i)
+    {
+        if (!Content_[i].first->equals(dict[i].first) || !Content_[i].second->equals(dict[i].second))
+            return false;
+    }
+    return true;
+}
+
+Fa_Expr* Fa_DictExpr::clone() const {
+    
+}
+
+Fa_Array<std::pair<Fa_Expr*, Fa_Expr*>> Fa_DictExpr::getContent() const { return Content_; }
+void Fa_DictExpr::setContent(Fa_Array<std::pair<Fa_Expr*, Fa_Expr*>> c) { Content_ = c; }
+
 typename Fa_CallExpr::CallLocation Fa_CallExpr::getCallLocation() const { return CallLocation_; }
 
 bool Fa_CallExpr::hasArguments() const { return Args_ && !Args_->isEmpty(); }
