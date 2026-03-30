@@ -2,6 +2,10 @@
 
 #include "../include/parser.hpp"
 #include "../include/util.hpp"
+#include "array.hpp"
+#include "ast.hpp"
+#include "table.hpp"
+#include "token.hpp"
 
 #include <iostream>
 
@@ -62,7 +66,7 @@ void Fa_SymbolTable::define(Fa_StringRef const& name, Symbol symbol)
 }
 
 typename Fa_SymbolTable::Symbol* Fa_SymbolTable::lookup(Fa_StringRef const& name)
-{   
+{
     if (Symbols_.contains(name))
         return &Symbols_[name];
 
@@ -75,7 +79,7 @@ typename Fa_SymbolTable::Symbol* Fa_SymbolTable::lookupLocal(Fa_StringRef const&
 }
 
 bool Fa_SymbolTable::isDefined(Fa_StringRef const& name) const
-{   
+{
     if (Symbols_.contains(name))
         return true;
 
@@ -897,6 +901,41 @@ Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parsePostfixExpr()
                 return reportError(ErrorCode::EXPECTED_RPAREN_EXPR);
 
             expr = Fa_makeCall(expr, Fa_makeList(std::move(args)));
+            continue;
+        }
+
+        // dict
+        if (check(tok::Fa_TokenType::LBRACE)) {
+            advance();
+
+            Fa_Array<std::pair<AST::Fa_Expr*, AST::Fa_Expr*>> content;
+
+            if (!check(tok::Fa_TokenType::RBRACE))
+            {
+                do {
+                    skipNewlines();
+                    if (check(tok::Fa_TokenType::RBRACE))
+                        break;
+
+                    auto first = parseExpression();
+                    if (first.hasError())
+                        return first.error();
+
+                    if (!consume(tok::Fa_TokenType::COLON))
+                        return reportError(ErrorCode::EXPECTED_COLON_DICT);
+
+                    auto second = parseExpression();
+                    if (second.hasError())
+                        return second.error();
+
+                    content.push({first.value(), second.value()});
+                } while (match(tok::Fa_TokenType::COMMA) && !check(tok::Fa_TokenType::RBRACE));
+            }
+
+            if (!consume(tok::Fa_TokenType::RBRACE))
+                return reportError(ErrorCode::EXPECTED_RBRACE_EXPR);
+
+            expr = AST::Fa_makeDict(content);
             continue;
         }
 
