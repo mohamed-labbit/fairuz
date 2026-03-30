@@ -326,6 +326,18 @@ Fa_Value Fa_VM::Fa_list(int argc, Fa_Value* argv)
     return ret;
 }
 
+Fa_Value Fa_VM::Fa_dict(int argc, Fa_Value* argv) {
+    Fa_Value ret = Fa_MAKE_DICT();
+    Fa_ObjDict* dict_obj = Fa_AS_DICT(ret);
+
+    // this is structurally false because it relys on the structure of the dict
+    // to have only one single key for each value (1 : 1)
+    for (int i = 0; i < argc - 1; i += 2)
+        dict_obj->data.push({ argv[i], argv[i + 1] });
+
+    return ret;
+}
+
 Fa_Value Fa_VM::Fa_split(int argc, Fa_Value* argv)
 {
     if (argc != 2 || !argv)
