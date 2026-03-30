@@ -1,6 +1,7 @@
 #ifndef AST_HPP
 #define AST_HPP
 
+#include "arena.hpp"
 #include "array.hpp"
 #include "string.hpp"
 #include <cassert>
@@ -96,6 +97,7 @@ public:
         ASSIGNMENT,
         LIST,
         INDEX,
+        DICT,
         INVALID
     }; // enum Kind
 
@@ -322,6 +324,24 @@ public:
     [[nodiscard]] bool isEmpty() const;
     [[nodiscard]] size_t size() const;
 }; // struct Fa_ListExpr
+
+struct Fa_DictExpr final : public Fa_Expr {
+private:
+    Fa_Array<std::pair<Fa_Expr*, Fa_Expr*>> Content_;
+public:
+    Fa_DictExpr(Fa_Array<std::pair<Fa_Expr*, Fa_Expr*>> content) 
+        : Content_(content)
+    {
+        assert(Content_ != nullptr);
+        Kind_ = Kind::DICT;
+    }
+    
+    bool equals(Fa_Expr const* other) const override;
+    Fa_Expr* clone() const override;
+    
+    Fa_Array<std::pair<Fa_Expr*, Fa_Expr*>> getContent() const;
+    void setContent(Fa_Array<std::pair<Fa_Expr*, Fa_Expr*>> c);
+};
 
 struct Fa_CallExpr final : public Fa_Expr {
 public:
@@ -748,6 +768,10 @@ static Fa_NameExpr* Fa_makeName(Fa_StringRef const str)
 static Fa_ListExpr* Fa_makeList(Fa_Array<Fa_Expr*> elements)
 {
     return getAllocator().allocateObject<Fa_ListExpr>(elements);
+}
+static Fa_DictExpr* Fa_makeDict(Fa_Array<std::pair<Fa_Expr*, Fa_Expr*>> content) 
+{
+    return getAllocator().allocateObject<Fa_DictExpr>(content);
 }
 static Fa_CallExpr* Fa_makeCall(Fa_Expr* callee, Fa_ListExpr* args)
 {
