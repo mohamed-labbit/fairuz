@@ -3,6 +3,11 @@
 //
 
 #include "../include/vm.hpp"
+#include "array.hpp"
+#include "macros.hpp"
+#include "string.hpp"
+#include "value.hpp"
+#include <locale>
 
 #define Fa_DISPATCH()                                              \
     do {                                                           \
@@ -98,6 +103,7 @@
         &&H_RETURN_NIL,          \
         &&H_RETURN1,             \
         &&H_IC_CALL,             \
+        &&H_OP_INDEX,            \
         &&H_NOP,                 \
         &&H_HALT
 
@@ -371,20 +377,29 @@ Fa_Value Fa_VM::execute()
     {
         u8 a = Fa_instr_A(instr), b = Fa_instr_B(instr), c = Fa_instr_C(instr);
         Fa_Value lhs = cur_base[b], rhs = cur_base[c];
+        bool both_str = Fa_IS_STRING(lhs) && Fa_IS_STRING(rhs);
 
-        if (UNLIKELY(!Fa_IS_NUMBER(lhs) || !Fa_IS_NUMBER(rhs)))
-            runtimeError(ErrorCode::TYPE_ERROR_ARITH);
-
-        if (Fa_IS_INTEGER(lhs) && Fa_IS_INTEGER(rhs)) {
+        if (both_str) {
+            // String concatenation
+            cur_base[a] = Fa_MAKE_STRING(Fa_AS_STRING(lhs)->str + Fa_AS_STRING(rhs)->str);
+            Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
+            // Fa_VM_ABC(Fa_OpCode::OP_ADD_SS);
+        }
+        else if (Fa_IS_INTEGER(lhs) && Fa_IS_INTEGER(rhs)) {
+            // Integer addition
             cur_base[a] = Fa_MAKE_INTEGER(Fa_VM_ADDI(lhs, rhs));
             Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
             Fa_VM_ABC(Fa_OpCode::OP_ADD_II);
-        } else {
+        }
+        else if (Fa_IS_NUMBER(lhs) && Fa_IS_NUMBER(rhs)) {
+            // Float addition (includes mixed int/float)
             cur_base[a] = Fa_MAKE_REAL(Fa_VM_ADDF(lhs, rhs));
             Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
             Fa_VM_ABC(Fa_OpCode::OP_ADD_FF);
         }
-
+        else {
+            runtimeError(ErrorCode::TYPE_ERROR_ARITH);
+        }
         Fa_DISPATCH();
     }
     Fa_CASE(OP_ADD_II)
@@ -1186,6 +1201,35 @@ Fa_Value Fa_VM::execute()
         LOAD_FRAME();
         Fa_DISPATCH();
     }
+    Fa_CASE(OP_INDEX)
+    {
+        Fa_Value dst = Fa_RA();
+        Fa_Value obj = Fa_RB();
+        Fa_Value idx = Fa_RC();
+        i64 idx_int =  Fa_AS_INTEGER(idx);
+
+        if (UNLIKELY(!Fa_IS_INTEGER(idx)))
+            runtimeError(ErrorCode::INDEX_TYPE_ERROR);
+
+        if (Fa_IS_STRING(obj)) {
+            Fa_StringRef& str = Fa_AS_STRING(obj)->str;
+            if (UNLIKELY(idx_int >= str.len() || idx_int < 0))
+                runtimeError(ErrorCode::INDEX_OUT_OF_BOUNDS);
+            
+            Fa_StringRef c = str.slice(idx_int, idx_int + 1);
+            Fa_RA() = Fa_MAKE_STRING(c);
+        } else if (Fa_IS_LIST(obj)) {
+            Fa_Array<Fa_Value> list = Fa_AS_LIST(obj)->elements;
+            if (UNLIKELY(idx_int >= list.size() || idx_int < 0))
+                runtimeError(ErrorCode::INDEX_OUT_OF_BOUNDS);
+            
+            Fa_RA() = Fa_AS_LIST(obj)->elements[idx_int];
+        } else {
+            runtimeError(ErrorCode::INDEX_TYPE_ERROR);
+        }
+
+        Fa_DISPATCH();
+    }
 
     Fa_CASE(NOP)
     {
@@ -1348,6 +1392,7 @@ void Fa_VM::openStdlib()
     registerNative("str", &Fa_VM::Fa_str, -1);
     registerNative("bool", &Fa_VM::Fa_bool, -1);
     registerNative("قائمة", &Fa_VM::Fa_list, -1);
+    registerNative("dict", &Fa_VM::Fa_dict, - 1);
     registerNative("اقسم", &Fa_VM::Fa_split, -1);
     registerNative("join", &Fa_VM::Fa_join, -1);
     registerNative("substr", &Fa_VM::Fa_substr, -1);
