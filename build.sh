@@ -96,7 +96,7 @@ fi
 
 if [[ "$RUN_MAIN" == true ]]; then
     if [[ ${#MAIN_ARGS[@]} -eq 0 ]]; then
-        echo "usage: ./build.sh run <file>"
+        echo "usage: ./build.sh run <file.fa>"
         exit 1
     fi
 
@@ -117,7 +117,7 @@ if [[ "$RUN_INSTALL" == true ]]; then
     echo
     echo "Installed fairuz to: $INSTALL_PREFIX"
     echo "Run it directly with:"
-    echo "  $INSTALL_PREFIX/bin/fairuz <file> [options]"
+    echo "  $INSTALL_PREFIX/bin/fairuz <file.fa> [options]"
     echo
     echo "If you want 'fairuz' on your PATH for this shell:"
     echo "  export PATH=\"$INSTALL_PREFIX/bin:\$PATH\""
