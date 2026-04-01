@@ -7,7 +7,7 @@
 #include <filesystem>
 #include <stack>
 
-#define MAKE_TOKEN(t, l, ln, c) getAllocator().allocateObject<tok::Fa_Token>(l, t, ln, c)
+#define MAKE_TOKEN(t, l, ln, c) get_allocator().allocate_object<tok::Fa_Token>(l, t, ln, c)
 
 namespace fairuz::lex {
 
@@ -27,7 +27,7 @@ enum class FileManagerError {
     BUFFER_TOO_SMALL
 }; // enum FileManagerError
 
-static constexpr char const* toString(FileManagerError error) noexcept
+static constexpr char const* to_string(FileManagerError error) noexcept
 {
     switch (error) {
     case FileManagerError::FILE_NOT_FOUND:
@@ -75,29 +75,29 @@ public:
     ~Fa_FileManager() = default;
 
     Fa_StringRef load(std::string const& filepath, bool const replace = false);
-    Fa_StringRef& buffer() { return InputBuffer_; }
-    Fa_StringRef const& buffer() const { return InputBuffer_; }
-    std::string getPath() const { return FilePath_; }
+    Fa_StringRef& buffer() { return m_input_buffer; }
+    Fa_StringRef const& buffer() const { return m_input_buffer; }
+    std::string get_path() const { return m_file_path; }
 
-    Fa_StringRef getLineAt(u32 const line_idx) const
+    Fa_StringRef get_line_at(u32 const line_idx) const
     {
-        if (line_idx == 0 || InputBuffer_.empty())
+        if (line_idx == 0 || m_input_buffer.empty())
             return { };
 
-        char const* data = InputBuffer_.data();
-        size_t const size = InputBuffer_.len();
+        char const* data = m_input_buffer.data();
+        size_t const m_size = m_input_buffer.len();
 
         u32 current_line = 1;
         size_t line_start = 0;
 
-        for (size_t i = 0; i <= size; ++i) {
-            if (i == size || data[i] == '\n') {
+        for (size_t i = 0; i <= m_size; ++i) {
+            if (i == m_size || data[i] == '\n') {
                 if (current_line == line_idx) {
                     size_t len = i - line_start;
                     if (len > 0 && data[line_start + len - 1] == '\r')
                         --len;
 
-                    return Fa_StringRef(InputBuffer_.get(), line_start, len);
+                    return Fa_StringRef(m_input_buffer.get(), line_start, len);
                 }
                 ++current_line;
                 line_start = i + 1;
@@ -108,9 +108,9 @@ public:
     }
 
 private:
-    std::string FilePath_;
-    Fa_StringRef InputBuffer_;
-    std::filesystem::file_time_type LastKnownWriteTime_;
+    std::string m_file_path;
+    Fa_StringRef m_input_buffer;
+    std::filesystem::file_time_type m_last_known_write_time;
 }; // class Fa_FileManager
 
 class Fa_SourceManager {
@@ -118,9 +118,9 @@ public:
     explicit Fa_SourceManager() = default;
 
     explicit Fa_SourceManager(Fa_FileManager* fm)
-        : FileManager_(fm)
+        : m_file_manager(fm)
     {
-        if (!FileManager_)
+        if (!m_file_manager)
             throw std::runtime_error("Fa_SourceManager: Fa_FileManager is null");
 
         reset();
@@ -128,23 +128,23 @@ public:
 
     void reset();
 
-    u32 getLineNumber() const { return Context_.line; }
-    u32 getColumnNumber() const { return Context_.column; }
-    u64 getFileOffset() const { return Context_.offset; }
-    std::string fpath() const noexcept { return FileManager_->getPath(); }
-    bool done() const { return Context_.offset >= FileManager_->buffer().len(); }
-    [[nodiscard]] u32 peekChar();
-    u32 currentChar() const;
-    void consumeChar();
-    u32 nextChar();
+    u32 get_line_number() const { return m_context.m_line; }
+    u32 get_column_number() const { return m_context.m_column; }
+    u64 get_file_offset() const { return m_context.m_offset; }
+    std::string fpath() const noexcept { return m_file_manager->get_path(); }
+    bool done() const { return m_context.m_offset >= m_file_manager->buffer().len(); }
+    [[nodiscard]] u32 peek_char();
+    u32 current_char() const;
+    void consume_char();
+    u32 next_char();
     void unget(u32 const cp);
-    Fa_StringRef getLineAt(u32 const line_idx) const { return FileManager_->getLineAt(line_idx); }
+    Fa_StringRef get_line_at(u32 const line_idx) const { return m_file_manager->get_line_at(line_idx); }
 
 private:
     struct Context {
-        u32 line { 1 };
-        u32 column { 1 };
-        u64 offset { 0 }; // byte offset
+        u32 m_line { 1 };
+        u32 m_column { 1 };
+        u64 m_offset { 0 }; // byte offset
     }; // struct Context
 
     struct PushbackEntry {
@@ -153,43 +153,43 @@ private:
         u64 bytes { 0 };
     }; // struct PushBackEntry
 
-    Fa_FileManager* FileManager_ { nullptr };
-    Context Context_;
-    u32 Current_ { 0 };
-    u64 CurrentBytes_ { 0 };
-    std::stack<PushbackEntry> UngetStack_;
+    Fa_FileManager* m_file_manager { nullptr };
+    Context m_context;
+    u32 m_current { 0 };
+    u64 m_current_bytes { 0 };
+    std::stack<PushbackEntry> m_unget_stack;
 
     void advance(u32 const cp, u64 const bytes);
-    void rewindPosition_(u32 const cp, u64 const bytes);
-    u32 calculateColumnAtOffset(u64 const target_offset) const;
+    void rewind_position_(u32 const cp, u64 const bytes);
+    u32 calculate_column_at_offset(u64 const target_offset) const;
 }; // class Fa_SourceManager
 
 class Fa_Lexer {
 public:
     explicit Fa_Lexer() = default;
-    explicit Fa_Lexer(Fa_FileManager* file_manager);
+    explicit Fa_Lexer(Fa_FileManager* m_file_manager);
     explicit Fa_Lexer(Fa_Lexer const&) = delete;
     explicit Fa_Lexer(Fa_Array<tok::Fa_Token const*>& seq /*, size_t const s*/);
 
-    tok::Fa_Token const* operator()() { return next(); }
-    tok::Fa_Token const* current() const;
-    tok::Fa_Token const* next();
+    tok::Fa_Token const* operator()() { return m_next(); }
+    tok::Fa_Token const* m_current() const;
+    tok::Fa_Token const* m_next();
     tok::Fa_Token const* peek(size_t n = 1);
     Fa_Array<tok::Fa_Token const*> tokenize();
-    Fa_StringRef getLineAt(u32 const line_idx) const { return SourceManager_.getLineAt(line_idx); }
+    Fa_StringRef get_line_at(u32 const line_idx) const { return m_source_manager.get_line_at(line_idx); }
 
 private:
-    Fa_SourceManager SourceManager_;
-    size_t TokIndex_ { 0 };
-    unsigned int IndentSize_ { 0 };
-    unsigned int IndentLevel_ { 0 };
-    Fa_Array<tok::Fa_Token const*> TokStream_;
-    Fa_Array<unsigned int> IndentStack_;
-    Fa_Array<unsigned int> AltIndentStack_;
-    bool AtBOL_ { true };
+    Fa_SourceManager m_source_manager;
+    size_t m_tok_index { 0 };
+    unsigned int m_indent_size { 0 };
+    unsigned int m_indent_level { 0 };
+    Fa_Array<tok::Fa_Token const*> m_tok_stream;
+    Fa_Array<unsigned int> m_indent_stack;
+    Fa_Array<unsigned int> m_alt_indent_stack;
+    bool m_at_bol { true };
 
     // main lexer loop
-    tok::Fa_Token const* lexToken();
+    tok::Fa_Token const* lex_token();
 
     void store(tok::Fa_Token const* tok);
 }; // class Fa_Lexer

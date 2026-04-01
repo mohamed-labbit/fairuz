@@ -18,8 +18,8 @@ struct CB {
 
     CB()
     {
-        ch = makeChunk();
-        ch->name = "<test>";
+        ch = make_chunk();
+        ch->m_name = "<test>";
     }
 
     CB& ABC(Fa_OpCode op, u8 A, u8 B, u8 C, u32 ln = 1)
@@ -32,9 +32,9 @@ struct CB {
         ch->emit(Fa_make_ABx(op, A, Bx), { ln, 0, 0 });
         return *this;
     }
-    CB& AsBx(Fa_OpCode op, u8 A, int sBx, u32 ln = 1)
+    CB& AsBx(Fa_OpCode op, u8 A, int s_bx, u32 ln = 1)
     {
-        ch->emit(Fa_make_AsBx(op, A, sBx), { ln, 0, 0 });
+        ch->emit(Fa_make_AsBx(op, A, s_bx), { ln, 0, 0 });
         return *this;
     }
 
@@ -47,20 +47,20 @@ struct CB {
     u16 str(char const* s)
     {
         strs_.emplace_back(std::make_unique<Fa_ObjString>(Fa_StringRef(s)));
-        return ch->addConstant(Fa_MAKE_OBJECT(strs_.back().get()));
+        return ch->add_constant(Fa_MAKE_OBJECT(strs_.back().get()));
     }
 
-    CB& ldg(u8 r, char const* name) { return ABx(Fa_OpCode::LOAD_GLOBAL, r, str(name)); }
-    CB& stg(u8 r, char const* name) { return ABx(Fa_OpCode::STORE_GLOBAL, r, str(name)); }
+    CB& ldg(u8 r, char const* m_name) { return ABx(Fa_OpCode::LOAD_GLOBAL, r, str(m_name)); }
+    CB& stg(u8 r, char const* m_name) { return ABx(Fa_OpCode::STORE_GLOBAL, r, str(m_name)); }
 
     CB& regs(int n)
     {
-        ch->localCount = n;
+        ch->local_count = n;
         return *this;
     }
     CB& slot()
     {
-        ch->allocIcSlot();
+        ch->alloc_ic_slot();
         return *this;
     }
 
@@ -77,7 +77,7 @@ struct CB {
         if (v >= -32767 && v <= 32768) {
             return load_int(r, static_cast<int>(v)); // fits in LOAD_INT
         } else {
-            u16 k = ch->addConstant(Fa_MAKE_INTEGER(v));
+            u16 k = ch->add_constant(Fa_MAKE_INTEGER(v));
             return ABx(Fa_OpCode::LOAD_CONST, r, k); // spill to constant pool
         }
     }
@@ -88,7 +88,7 @@ private:
 
 struct VMRunner {
     Fa_VM vm;
-    Fa_Chunk* chunk_ = makeChunk();
+    Fa_Chunk* chunk_ = make_chunk();
 
     Fa_Value run(CB& b)
     {
@@ -117,8 +117,8 @@ Fa_Chunk* compile_program(Fa_Array<AST::Fa_Stmt*> stmts)
 
 Fa_Chunk* compile_calling(AST::Fa_Stmt* fn)
 {
-    auto* name = static_cast<AST::Fa_FunctionDef*>(fn)->getName();
-    return compile_program({ fn, AST::Fa_makeExprStmt(AST::Fa_makeCall(AST::Fa_makeName(name->getValue()), AST::Fa_makeList())) });
+    auto* m_name = static_cast<AST::Fa_FunctionDef*>(fn)->get_name();
+    return compile_program({ fn, AST::Fa_makeExprStmt(AST::Fa_makeCall(AST::Fa_makeName(m_name->get_value()), AST::Fa_makeList())) });
 }
 
 } // namespace
@@ -220,7 +220,7 @@ TEST(VMLoads, ConstDouble)
     VMRunner r;
     CB b;
     b.regs(1);
-    u16 k = b.ch->addConstant(Fa_MAKE_REAL(3.14));
+    u16 k = b.ch->add_constant(Fa_MAKE_REAL(3.14));
     b.ABx(Fa_OpCode::LOAD_CONST, 0, k).ret(0);
     b.dump();
     Fa_Value v = r.run(b);
@@ -246,7 +246,7 @@ TEST(VMLoads, ConstLargeInt)
     VMRunner r;
     CB b;
     b.regs(1);
-    u16 k = b.ch->addConstant(Fa_MAKE_INTEGER(1000000LL));
+    u16 k = b.ch->add_constant(Fa_MAKE_INTEGER(1000000LL));
     b.ABx(Fa_OpCode::LOAD_CONST, 0, k).ret(0);
     b.dump();
     Fa_Value v = r.run(b);
@@ -299,8 +299,8 @@ TEST(VMArith, AddDoubles)
     VMRunner r;
     CB b;
     b.regs(3);
-    u16 k0 = b.ch->addConstant(Fa_MAKE_REAL(1.5));
-    u16 k1 = b.ch->addConstant(Fa_MAKE_REAL(2.5));
+    u16 k0 = b.ch->add_constant(Fa_MAKE_REAL(1.5));
+    u16 k1 = b.ch->add_constant(Fa_MAKE_REAL(2.5));
     b.ABx(Fa_OpCode::LOAD_CONST, 0, k0).ABx(Fa_OpCode::LOAD_CONST, 1, k1).ABC(Fa_OpCode::OP_ADD, 2, 0, 1).ret(2);
     b.dump();
     Fa_Value v = r.run(b);
@@ -346,8 +346,8 @@ TEST(VMArith, DivDouble)
     VMRunner r;
     CB b;
     b.regs(3);
-    u16 k0 = b.ch->addConstant(Fa_MAKE_REAL(84.0));
-    u16 k1 = b.ch->addConstant(Fa_MAKE_REAL(2.0));
+    u16 k0 = b.ch->add_constant(Fa_MAKE_REAL(84.0));
+    u16 k1 = b.ch->add_constant(Fa_MAKE_REAL(2.0));
     b.ABx(Fa_OpCode::LOAD_CONST, 0, k0).ABx(Fa_OpCode::LOAD_CONST, 1, k1).ABC(Fa_OpCode::OP_DIV, 2, 0, 1).ret(2);
     b.dump();
     EXPECT_DOUBLE_EQ(Fa_AS_DOUBLE(r.run(b)), 42.0);
@@ -385,7 +385,7 @@ TEST(VMArith, NegDouble)
     VMRunner r;
     CB b;
     b.regs(2);
-    u16 k = b.ch->addConstant(Fa_MAKE_REAL(3.5));
+    u16 k = b.ch->add_constant(Fa_MAKE_REAL(3.5));
     b.ABx(Fa_OpCode::LOAD_CONST, 0, k).ABC(Fa_OpCode::OP_NEG, 1, 0, 0).ret(1);
     b.dump();
     EXPECT_DOUBLE_EQ(Fa_AS_DOUBLE(r.run(b)), -3.5);
@@ -396,8 +396,8 @@ TEST(VMArith, DivByZeroThrows)
     VMRunner r;
     CB b;
     b.regs(3);
-    u16 k0 = b.ch->addConstant(Fa_MAKE_REAL(1.0));
-    u16 k1 = b.ch->addConstant(Fa_MAKE_REAL(0.0));
+    u16 k0 = b.ch->add_constant(Fa_MAKE_REAL(1.0));
+    u16 k1 = b.ch->add_constant(Fa_MAKE_REAL(0.0));
     b.ABx(Fa_OpCode::LOAD_CONST, 0, k0).ABx(Fa_OpCode::LOAD_CONST, 1, k1).ABC(Fa_OpCode::OP_DIV, 2, 0, 1).ret(2);
     b.dump();
     EXPECT_THROW(r.run(b), std::runtime_error);
@@ -482,7 +482,7 @@ TEST(VMBitwise, AndOnDoubleThrows)
     VMRunner r;
     CB b;
     b.regs(3);
-    u16 k = b.ch->addConstant(Fa_MAKE_REAL(1.0));
+    u16 k = b.ch->add_constant(Fa_MAKE_REAL(1.0));
     b.ABx(Fa_OpCode::LOAD_CONST, 0, k).load_int(1, 1).ABC(Fa_OpCode::OP_BITAND, 2, 0, 1).ret(2);
     b.dump();
     EXPECT_THROW(r.run(b), std::runtime_error);
@@ -742,10 +742,10 @@ TEST(VMLists, LenOnNonListThrows)
 
 static Fa_Chunk* make_adder_chunk()
 {
-    auto fn = makeChunk();
-    fn->name = "add2";
+    auto fn = make_chunk();
+    fn->m_name = "add2";
     fn->arity = 2;
-    fn->localCount = 3;
+    fn->local_count = 3;
     // r0=a r1=b (params); r2=a+b
     fn->emit(Fa_make_ABC(Fa_OpCode::OP_ADD, 2, 0, 1), { });
     fn->emit(Fa_make_ABC(Fa_OpCode::RETURN, 2, 1, 0), { });
@@ -754,9 +754,9 @@ static Fa_Chunk* make_adder_chunk()
 
 TEST(VMCalls, CallClosure_TwoArgs)
 {
-    auto top = makeChunk();
-    top->name = "<test>";
-    top->localCount = 4;
+    auto top = make_chunk();
+    top->m_name = "<test>";
+    top->local_count = 4;
     top->functions.push(make_adder_chunk());
 
     top->emit(Fa_make_ABx(Fa_OpCode::CLOSURE, 0, 0), { });
@@ -771,9 +771,9 @@ TEST(VMCalls, CallClosure_TwoArgs)
 
 TEST(VMCalls, WrongArgcThrows)
 {
-    auto top = makeChunk();
-    top->name = "<test>";
-    top->localCount = 3;
+    auto top = make_chunk();
+    top->m_name = "<test>";
+    top->local_count = 3;
     top->functions.push(make_adder_chunk());
 
     top->emit(Fa_make_ABx(Fa_OpCode::CLOSURE, 0, 0), { });
@@ -817,12 +817,12 @@ TEST(VMCalls, ICCallNativeLen)
 
 TEST(VMCalls, TailCall_DoesNotOverflowFrames)
 {
-    auto fn = makeChunk();
-    fn->name = "cd";
+    auto fn = make_chunk();
+    fn->m_name = "cd";
     fn->arity = 1;
-    fn->localCount = 4;
+    fn->local_count = 4;
 
-    u16 nk = fn->addConstant(Fa_MAKE_STRING("cd"));
+    u16 nk = fn->add_constant(Fa_MAKE_STRING("cd"));
 
     fn->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 1, BX(0)), { });
     fn->emit(Fa_make_ABC(Fa_OpCode::OP_EQ, 1, 0, 1), { });
@@ -834,12 +834,12 @@ TEST(VMCalls, TailCall_DoesNotOverflowFrames)
     fn->emit(Fa_make_ABC(Fa_OpCode::MOVE, 3, 0, 0), { });
     fn->emit(Fa_make_ABC(Fa_OpCode::CALL_TAIL, 2, 1, 0), { });
 
-    auto top = makeChunk();
-    top->name = "<test>";
-    top->localCount = 3;
+    auto top = make_chunk();
+    top->m_name = "<test>";
+    top->local_count = 3;
     top->functions.push(fn);
 
-    u16 tk = top->addConstant(Fa_MAKE_STRING("cd"));
+    u16 tk = top->add_constant(Fa_MAKE_STRING("cd"));
     top->emit(Fa_make_ABx(Fa_OpCode::CLOSURE, 0, 0), { });
     top->emit(Fa_make_ABx(Fa_OpCode::STORE_GLOBAL, 0, tk), { });
     top->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 1, BX(300)), { });
@@ -853,20 +853,20 @@ TEST(VMCalls, TailCall_DoesNotOverflowFrames)
 
 TEST(VMCalls, StackOverflowDetected)
 {
-    auto fn = makeChunk();
-    fn->name = "inf";
+    auto fn = make_chunk();
+    fn->m_name = "inf";
     fn->arity = 0;
-    fn->localCount = 1;
-    u16 nk = fn->addConstant(Fa_MAKE_STRING("inf"));
+    fn->local_count = 1;
+    u16 nk = fn->add_constant(Fa_MAKE_STRING("inf"));
     fn->emit(Fa_make_ABx(Fa_OpCode::LOAD_GLOBAL, 0, nk), { });
     fn->emit(Fa_make_ABC(Fa_OpCode::CALL, 0, 0, 0), { });
     fn->emit(Fa_make_ABC(Fa_OpCode::RETURN, 0, 1, 0), { });
 
-    auto top = makeChunk();
-    top->name = "<test>";
-    top->localCount = 1;
+    auto top = make_chunk();
+    top->m_name = "<test>";
+    top->local_count = 1;
     top->functions.push(fn);
-    u16 tk = top->addConstant(Fa_MAKE_STRING("inf"));
+    u16 tk = top->add_constant(Fa_MAKE_STRING("inf"));
     top->emit(Fa_make_ABx(Fa_OpCode::CLOSURE, 0, 0), { });
     top->emit(Fa_make_ABx(Fa_OpCode::STORE_GLOBAL, 0, tk), { });
     top->emit(Fa_make_ABC(Fa_OpCode::CALL, 0, 0, 0), { });
@@ -878,19 +878,19 @@ TEST(VMCalls, StackOverflowDetected)
 
 TEST(VMClosures, CaptureLocal_GetUpvalue)
 {
-    auto inner = makeChunk();
-    inner->name = "inner";
+    auto inner = make_chunk();
+    inner->m_name = "inner";
     inner->arity = 0;
-    inner->upvalueCount = 1;
-    inner->localCount = 1;
+    inner->upvalue_count = 1;
+    inner->local_count = 1;
     inner->emit(Fa_make_ABC(Fa_OpCode::GET_UPVALUE, 0, 0, 0), { });
     inner->emit(Fa_make_ABC(Fa_OpCode::RETURN, 0, 1, 0), { });
 
-    auto outer = makeChunk();
-    outer->name = "outer";
+    auto outer = make_chunk();
+    outer->m_name = "outer";
     outer->arity = 0;
-    outer->localCount = 2;
-    outer->upvalueCount = 0;
+    outer->local_count = 2;
+    outer->upvalue_count = 0;
     outer->functions.push(inner);
     outer->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 0, BX(10)), { });
     outer->emit(Fa_make_ABx(Fa_OpCode::CLOSURE, 1, 0), { });
@@ -898,9 +898,9 @@ TEST(VMClosures, CaptureLocal_GetUpvalue)
     outer->emit(Fa_make_ABC(Fa_OpCode::CALL, 1, 0, 0), { });
     outer->emit(Fa_make_ABC(Fa_OpCode::RETURN, 1, 1, 0), { });
 
-    auto top = makeChunk();
-    top->name = "<test>";
-    top->localCount = 2;
+    auto top = make_chunk();
+    top->m_name = "<test>";
+    top->local_count = 2;
     top->functions.push(outer);
     top->emit(Fa_make_ABx(Fa_OpCode::CLOSURE, 0, 0), { });
     top->emit(Fa_make_ABC(Fa_OpCode::CALL, 0, 0, 0), { });
@@ -912,29 +912,29 @@ TEST(VMClosures, CaptureLocal_GetUpvalue)
 
 TEST(VMClosures, CloseUpvalue_SurvivesFrame)
 {
-    auto add = makeChunk();
-    add->name = "add";
+    auto add = make_chunk();
+    add->m_name = "add";
     add->arity = 1;
-    add->upvalueCount = 1;
-    add->localCount = 3;
+    add->upvalue_count = 1;
+    add->local_count = 3;
     add->emit(Fa_make_ABC(Fa_OpCode::GET_UPVALUE, 1, 0, 0), { });
     add->emit(Fa_make_ABC(Fa_OpCode::OP_ADD, 2, 1, 0), { });
     add->emit(Fa_make_ABC(Fa_OpCode::RETURN, 2, 1, 0), { });
 
-    auto ma = makeChunk();
-    ma->name = "ma";
+    auto ma = make_chunk();
+    ma->m_name = "ma";
     ma->arity = 1;
-    ma->localCount = 2;
-    ma->upvalueCount = 0;
+    ma->local_count = 2;
+    ma->upvalue_count = 0;
     ma->functions.push(add);
     ma->emit(Fa_make_ABx(Fa_OpCode::CLOSURE, 1, 0), { });
     ma->emit(Fa_make_ABC(Fa_OpCode::MOVE, 1, 0, 0), { });
     ma->emit(Fa_make_ABC(Fa_OpCode::CLOSE_UPVALUE, 0, 0, 0), { });
     ma->emit(Fa_make_ABC(Fa_OpCode::RETURN, 1, 1, 0), { });
 
-    auto top = makeChunk();
-    top->name = "<test>";
-    top->localCount = 3;
+    auto top = make_chunk();
+    top->m_name = "<test>";
+    top->local_count = 3;
     top->functions.push(ma);
     top->emit(Fa_make_ABx(Fa_OpCode::CLOSURE, 0, 0), { });
     top->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 1, BX(10)), { });
@@ -950,27 +950,27 @@ TEST(VMClosures, CloseUpvalue_SurvivesFrame)
 
 TEST(VMClosures, SharedUpvalue_TwoClosuresOneSlot)
 {
-    auto get_fn = makeChunk();
-    get_fn->name = "get";
+    auto get_fn = make_chunk();
+    get_fn->m_name = "get";
     get_fn->arity = 0;
-    get_fn->upvalueCount = 1;
-    get_fn->localCount = 1;
+    get_fn->upvalue_count = 1;
+    get_fn->local_count = 1;
     get_fn->emit(Fa_make_ABC(Fa_OpCode::GET_UPVALUE, 0, 0, 0), { });
     get_fn->emit(Fa_make_ABC(Fa_OpCode::RETURN, 0, 1, 0), { });
 
-    auto set_fn = makeChunk();
-    set_fn->name = "set";
+    auto set_fn = make_chunk();
+    set_fn->m_name = "set";
     set_fn->arity = 1;
-    set_fn->upvalueCount = 1;
-    set_fn->localCount = 1;
+    set_fn->upvalue_count = 1;
+    set_fn->local_count = 1;
     set_fn->emit(Fa_make_ABC(Fa_OpCode::SET_UPVALUE, 0, 0, 0), { });
     set_fn->emit(Fa_make_ABC(Fa_OpCode::RETURN_NIL, 0, 0, 0), { });
 
-    auto mp = makeChunk();
-    mp->name = "mp";
+    auto mp = make_chunk();
+    mp->m_name = "mp";
     mp->arity = 0;
-    mp->localCount = 4;
-    mp->upvalueCount = 0;
+    mp->local_count = 4;
+    mp->upvalue_count = 0;
     mp->functions.push(get_fn);
     mp->functions.push(set_fn);
     mp->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 0, BX(0)), { });
@@ -984,9 +984,9 @@ TEST(VMClosures, SharedUpvalue_TwoClosuresOneSlot)
     mp->emit(Fa_make_ABC(Fa_OpCode::CLOSE_UPVALUE, 0, 0, 0), { });
     mp->emit(Fa_make_ABC(Fa_OpCode::RETURN, 3, 1, 0), { });
 
-    auto top = makeChunk();
-    top->name = "<test>";
-    top->localCount = 5;
+    auto top = make_chunk();
+    top->m_name = "<test>";
+    top->local_count = 5;
     top->functions.push(mp);
     top->emit(Fa_make_ABx(Fa_OpCode::CLOSURE, 0, 0), { });
     top->emit(Fa_make_ABC(Fa_OpCode::CALL, 0, 0, 0), { });
@@ -1011,11 +1011,11 @@ TEST(VMICProfile, BinaryOpUpdatesSlot)
     b.regs(3).slot().load_int(0, 3).load_int(1, 4).ABC(Fa_OpCode::OP_ADD, 2, 0, 1).nop(0).ret(2);
     r.run(b);
     b.dump();
-    auto const& s = r.chunk_->icSlots[0];
-    EXPECT_TRUE(hasTag(Fa_TypeTag(s.seenLhs), Fa_TypeTag::INT));
-    EXPECT_TRUE(hasTag(Fa_TypeTag(s.seenRhs), Fa_TypeTag::INT));
-    EXPECT_TRUE(hasTag(Fa_TypeTag(s.seenRet), Fa_TypeTag::INT));
-    EXPECT_GE(s.hitCount, 1u);
+    auto const& s = r.chunk_->ic_slots[0];
+    EXPECT_TRUE(has_tag(Fa_TypeTag(s.seen_lhs), Fa_TypeTag::INT));
+    EXPECT_TRUE(has_tag(Fa_TypeTag(s.seen_rhs), Fa_TypeTag::INT));
+    EXPECT_TRUE(has_tag(Fa_TypeTag(s.seen_ret), Fa_TypeTag::INT));
+    EXPECT_GE(s.hit_count, 1u);
 }
 
 TEST(VMICProfile, SubUpdatesSlot)
@@ -1025,7 +1025,7 @@ TEST(VMICProfile, SubUpdatesSlot)
     b.regs(3).slot().load_int(0, 10).load_int(1, 3).ABC(Fa_OpCode::OP_SUB, 2, 0, 1).nop(0).ret(2);
     b.dump();
     r.run(b);
-    EXPECT_GE(r.chunk_->icSlots[0].hitCount, 1u);
+    EXPECT_GE(r.chunk_->ic_slots[0].hit_count, 1u);
 }
 
 TEST(VMICProfile, ICCallUpdatesSlot)
@@ -1045,10 +1045,10 @@ TEST(VMICProfile, ICCallUpdatesSlot)
         .ret(1);
     b.dump();
     r.run(b);
-    auto const& s = r.chunk_->icSlots[0];
-    EXPECT_TRUE(hasTag(Fa_TypeTag(s.seenLhs), Fa_TypeTag::NATIVE));
-    EXPECT_TRUE(hasTag(Fa_TypeTag(s.seenRet), Fa_TypeTag::INT));
-    EXPECT_GE(s.hitCount, 1u);
+    auto const& s = r.chunk_->ic_slots[0];
+    EXPECT_TRUE(has_tag(Fa_TypeTag(s.seen_lhs), Fa_TypeTag::NATIVE));
+    EXPECT_TRUE(has_tag(Fa_TypeTag(s.seen_ret), Fa_TypeTag::INT));
+    EXPECT_GE(s.hit_count, 1u);
 }
 
 TEST(VMICProfile, SlotAccumulatesAcrossLoopIterations)
@@ -1069,7 +1069,7 @@ TEST(VMICProfile, SlotAccumulatesAcrossLoopIterations)
         .ret(0);
     b.dump();
     r.run(b);
-    EXPECT_EQ(r.chunk_->icSlots[0].hitCount, 5u);
+    EXPECT_EQ(r.chunk_->ic_slots[0].hit_count, 5u);
 }
 
 TEST(VMIntegration, Fibonacci_fib10_equals_55)
@@ -1098,12 +1098,7 @@ TEST(VMIntegration, SumForLoopOverList)
         AST::Fa_makeName("sum"),
         AST::Fa_makeList(),
         AST::Fa_makeBlock({
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("items"), AST::Fa_makeList({
-                                                                   AST::Fa_makeLiteralInt(1),
-                                                                   AST::Fa_makeLiteralInt(2),
-                                                                   AST::Fa_makeLiteralInt(3),
-                                                                   AST::Fa_makeLiteralInt(4),
-                                                                   AST::Fa_makeLiteralInt(5) }),
+            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("items"), AST::Fa_makeList({ AST::Fa_makeLiteralInt(1), AST::Fa_makeLiteralInt(2), AST::Fa_makeLiteralInt(3), AST::Fa_makeLiteralInt(4), AST::Fa_makeLiteralInt(5) }),
                 true),
             AST::Fa_makeAssignmentStmt(AST::Fa_makeName("total"), AST::Fa_makeLiteralInt(0), true),
             AST::Fa_makeFor(AST::Fa_makeName("item"),
@@ -1165,28 +1160,28 @@ TEST(VMIntegration, EmptyForLoopLeavesStateUnchanged)
 
 TEST(VMIntegration, NestedAdderClosure)
 {
-    auto add_fn = makeChunk();
-    add_fn->name = "add";
+    auto add_fn = make_chunk();
+    add_fn->m_name = "add";
     add_fn->arity = 1;
-    add_fn->upvalueCount = 1;
-    add_fn->localCount = 3;
+    add_fn->upvalue_count = 1;
+    add_fn->local_count = 3;
     add_fn->emit(Fa_make_ABC(Fa_OpCode::GET_UPVALUE, 1, 0, 0), { });
     add_fn->emit(Fa_make_ABC(Fa_OpCode::OP_ADD, 2, 1, 0), { });
     add_fn->emit(Fa_make_ABC(Fa_OpCode::RETURN, 2, 1, 0), { });
 
-    auto make_adder = makeChunk();
-    make_adder->name = "ma";
+    auto make_adder = make_chunk();
+    make_adder->m_name = "ma";
     make_adder->arity = 1;
-    make_adder->localCount = 2;
+    make_adder->local_count = 2;
     make_adder->functions.push(add_fn);
     make_adder->emit(Fa_make_ABx(Fa_OpCode::CLOSURE, 1, 0), { });
     make_adder->emit(Fa_make_ABC(Fa_OpCode::MOVE, 1, 0, 0), { });
     make_adder->emit(Fa_make_ABC(Fa_OpCode::CLOSE_UPVALUE, 0, 0, 0), { });
     make_adder->emit(Fa_make_ABC(Fa_OpCode::RETURN, 1, 1, 0), { });
 
-    auto top = makeChunk();
-    top->name = "<test>";
-    top->localCount = 3;
+    auto top = make_chunk();
+    top->m_name = "<test>";
+    top->local_count = 3;
     top->functions.push(make_adder);
     top->emit(Fa_make_ABx(Fa_OpCode::CLOSURE, 0, 0), { });
     top->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 1, BX(5)), { });
@@ -1231,8 +1226,8 @@ TEST(NativeLen, MultipleArgs_ReturnsNil)
 {
     Fa_VM vm;
     auto s = Fa_MAKE_STRING("hi");
-    Fa_Value args[] = { s, s };
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_len(2, args)));
+    Fa_Value m_args[] = { s, s };
+    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_len(2, m_args)));
 }
 
 TEST(NativeLen, IntegerArg_ReturnsNil)
@@ -1308,8 +1303,8 @@ TEST(NativePrint, TwoArgs_DoesNotCrash)
 {
     Fa_VM vm;
     auto s = Fa_MAKE_STRING("a");
-    Fa_Value args[] = { s, s };
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_print(2, args)));
+    Fa_Value m_args[] = { s, s };
+    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_print(2, m_args)));
 }
 
 TEST(NativeStr, NoArgs_ReturnsEmpty)
@@ -1400,8 +1395,8 @@ TEST(NativeStr, TwoArgs_ReturnsNil)
 {
     Fa_VM vm;
     auto s = Fa_MAKE_STRING("x");
-    Fa_Value args[] = { s, s };
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_str(2, args)));
+    Fa_Value m_args[] = { s, s };
+    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_str(2, m_args)));
 }
 
 TEST(NativeBool, NoArgs_ReturnsNil)
@@ -1687,8 +1682,8 @@ TEST(NativeFloor, NilArg_ReturnsNil)
 TEST(NativeFloor, TwoArgs_ReturnsNil)
 {
     Fa_VM vm;
-    Fa_Value args[] = { Fa_MAKE_REAL(1.5), Fa_MAKE_REAL(2.5) };
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_floor(2, args)));
+    Fa_Value m_args[] = { Fa_MAKE_REAL(1.5), Fa_MAKE_REAL(2.5) };
+    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_floor(2, m_args)));
 }
 
 TEST(NativeCeil, NoArgs_ReturnsNil)
@@ -1827,16 +1822,16 @@ TEST(NativeMin, OneArg_ReturnsArg)
 TEST(NativeMin, TwoPositiveIntegers)
 {
     Fa_VM vm;
-    Fa_Value args[] = { Fa_MAKE_INTEGER(3), Fa_MAKE_INTEGER(7) };
-    Fa_Value r = vm.Fa_min(2, args);
+    Fa_Value m_args[] = { Fa_MAKE_INTEGER(3), Fa_MAKE_INTEGER(7) };
+    Fa_Value r = vm.Fa_min(2, m_args);
     EXPECT_EQ(Fa_AS_INTEGER(r), 3);
 }
 
 TEST(NativeMin, AllIntegersReturnsInteger)
 {
     Fa_VM vm;
-    Fa_Value args[] = { Fa_MAKE_INTEGER(5), Fa_MAKE_INTEGER(2), Fa_MAKE_INTEGER(8) };
-    Fa_Value r = vm.Fa_min(3, args);
+    Fa_Value m_args[] = { Fa_MAKE_INTEGER(5), Fa_MAKE_INTEGER(2), Fa_MAKE_INTEGER(8) };
+    Fa_Value r = vm.Fa_min(3, m_args);
     EXPECT_TRUE(Fa_IS_INTEGER(r));
     EXPECT_EQ(Fa_AS_INTEGER(r), 2);
 }
@@ -1844,8 +1839,8 @@ TEST(NativeMin, AllIntegersReturnsInteger)
 TEST(NativeMin, MixedFloatAndInteger_ReturnsFloat)
 {
     Fa_VM vm;
-    Fa_Value args[] = { Fa_MAKE_INTEGER(3), Fa_MAKE_REAL(1.5) };
-    Fa_Value r = vm.Fa_min(2, args);
+    Fa_Value m_args[] = { Fa_MAKE_INTEGER(3), Fa_MAKE_REAL(1.5) };
+    Fa_Value r = vm.Fa_min(2, m_args);
     EXPECT_TRUE(Fa_IS_DOUBLE(r));
     EXPECT_DOUBLE_EQ(Fa_AS_DOUBLE(r), 1.5);
 }
@@ -1853,16 +1848,16 @@ TEST(NativeMin, MixedFloatAndInteger_ReturnsFloat)
 TEST(NativeMin, NegativeValues)
 {
     Fa_VM vm;
-    Fa_Value args[] = { Fa_MAKE_INTEGER(-1), Fa_MAKE_INTEGER(-5), Fa_MAKE_INTEGER(-2) };
-    Fa_Value r = vm.Fa_min(3, args);
+    Fa_Value m_args[] = { Fa_MAKE_INTEGER(-1), Fa_MAKE_INTEGER(-5), Fa_MAKE_INTEGER(-2) };
+    Fa_Value r = vm.Fa_min(3, m_args);
     EXPECT_EQ(Fa_AS_INTEGER(r), -5);
 }
 
 TEST(NativeMin, StringFirstArg_ReturnsNil)
 {
     Fa_VM vm;
-    Fa_Value args[] = { Fa_MAKE_STRING("a"), Fa_MAKE_STRING("b") };
-    EXPECT_EQ(Fa_AS_STRING(vm.Fa_min(2, args))->str, Fa_MAKE_OBJ_STRING("a")->str);
+    Fa_Value m_args[] = { Fa_MAKE_STRING("a"), Fa_MAKE_STRING("b") };
+    EXPECT_EQ(Fa_AS_STRING(vm.Fa_min(2, m_args))->str, Fa_MAKE_OBJ_STRING("a")->str);
 }
 
 TEST(NativeMax, NoArgs_ReturnsNil)
@@ -1883,24 +1878,24 @@ TEST(NativeMax, OneArg_ReturnsArg)
 TEST(NativeMax, TwoPositiveIntegers)
 {
     Fa_VM vm;
-    Fa_Value args[] = { Fa_MAKE_INTEGER(3), Fa_MAKE_INTEGER(7) };
-    Fa_Value r = vm.Fa_max(2, args);
+    Fa_Value m_args[] = { Fa_MAKE_INTEGER(3), Fa_MAKE_INTEGER(7) };
+    Fa_Value r = vm.Fa_max(2, m_args);
     EXPECT_EQ(Fa_AS_INTEGER(r), 7);
 }
 
 TEST(NativeMax, NegativeValues)
 {
     Fa_VM vm;
-    Fa_Value args[] = { Fa_MAKE_INTEGER(-3), Fa_MAKE_INTEGER(-1) };
-    Fa_Value r = vm.Fa_max(2, args);
+    Fa_Value m_args[] = { Fa_MAKE_INTEGER(-3), Fa_MAKE_INTEGER(-1) };
+    Fa_Value r = vm.Fa_max(2, m_args);
     EXPECT_EQ(Fa_AS_INTEGER(r), -1);
 }
 
 TEST(NativeMax, AllIntegersReturnsInteger)
 {
     Fa_VM vm;
-    Fa_Value args[] = { Fa_MAKE_INTEGER(1), Fa_MAKE_INTEGER(9), Fa_MAKE_INTEGER(4) };
-    Fa_Value r = vm.Fa_max(3, args);
+    Fa_Value m_args[] = { Fa_MAKE_INTEGER(1), Fa_MAKE_INTEGER(9), Fa_MAKE_INTEGER(4) };
+    Fa_Value r = vm.Fa_max(3, m_args);
     EXPECT_TRUE(Fa_IS_INTEGER(r));
     EXPECT_EQ(Fa_AS_INTEGER(r), 9);
 }
@@ -1908,8 +1903,8 @@ TEST(NativeMax, AllIntegersReturnsInteger)
 TEST(NativeMax, MixedFloatAndInteger)
 {
     Fa_VM vm;
-    Fa_Value args[] = { Fa_MAKE_INTEGER(3), Fa_MAKE_REAL(3.5) };
-    Fa_Value r = vm.Fa_max(2, args);
+    Fa_Value m_args[] = { Fa_MAKE_INTEGER(3), Fa_MAKE_REAL(3.5) };
+    Fa_Value r = vm.Fa_max(2, m_args);
     EXPECT_TRUE(Fa_IS_DOUBLE(r));
     EXPECT_DOUBLE_EQ(Fa_AS_DOUBLE(r), 3.5);
 }
@@ -1917,8 +1912,8 @@ TEST(NativeMax, MixedFloatAndInteger)
 TEST(NativeMax, StringFirstArg_ReturnsArg)
 {
     Fa_VM vm;
-    Fa_Value args[] = { Fa_MAKE_STRING("a"), Fa_MAKE_STRING("b") };
-    EXPECT_EQ(Fa_AS_STRING(vm.Fa_max(2, args))->str, Fa_MAKE_OBJ_STRING("b")->str);
+    Fa_Value m_args[] = { Fa_MAKE_STRING("a"), Fa_MAKE_STRING("b") };
+    EXPECT_EQ(Fa_AS_STRING(vm.Fa_max(2, m_args))->str, Fa_MAKE_OBJ_STRING("b")->str);
 }
 
 TEST(NativeRound, HalfRoundsUp)
@@ -1951,8 +1946,8 @@ TEST(NativeRound, IntegerPassthrough)
 TEST(NativePow, BasicSquare)
 {
     Fa_VM vm;
-    Fa_Value args[] = { Fa_MAKE_REAL(3.0), Fa_MAKE_REAL(2.0) };
-    Fa_Value r = vm.Fa_pow(2, args);
+    Fa_Value m_args[] = { Fa_MAKE_REAL(3.0), Fa_MAKE_REAL(2.0) };
+    Fa_Value r = vm.Fa_pow(2, m_args);
     if (!Fa_IS_NIL(r))
         EXPECT_DOUBLE_EQ(Fa_AS_DOUBLE(r), 9.0);
 }
@@ -1960,8 +1955,8 @@ TEST(NativePow, BasicSquare)
 TEST(NativePow, ZeroExponent)
 {
     Fa_VM vm;
-    Fa_Value args[] = { Fa_MAKE_REAL(5.0), Fa_MAKE_REAL(0.0) };
-    Fa_Value r = vm.Fa_pow(2, args);
+    Fa_Value m_args[] = { Fa_MAKE_REAL(5.0), Fa_MAKE_REAL(0.0) };
+    Fa_Value r = vm.Fa_pow(2, m_args);
     if (!Fa_IS_NIL(r))
         EXPECT_DOUBLE_EQ(Fa_AS_DOUBLE(r), 1.0);
 }
@@ -1969,8 +1964,8 @@ TEST(NativePow, ZeroExponent)
 TEST(NativePow, NegativeExponent)
 {
     Fa_VM vm;
-    Fa_Value args[] = { Fa_MAKE_REAL(2.0), Fa_MAKE_REAL(-1.0) };
-    Fa_Value r = vm.Fa_pow(2, args);
+    Fa_Value m_args[] = { Fa_MAKE_REAL(2.0), Fa_MAKE_REAL(-1.0) };
+    Fa_Value r = vm.Fa_pow(2, m_args);
     if (!Fa_IS_NIL(r))
         EXPECT_DOUBLE_EQ(Fa_AS_DOUBLE(r), 0.5);
 }
@@ -2003,34 +1998,34 @@ TEST(NativeSqrt, NegativeInput_SpecBehavior)
 TEST(NativeSplit, BasicSplit)
 {
     Fa_VM vm;
-    Fa_Value args[] = { Fa_MAKE_STRING("a,b,c"), Fa_MAKE_STRING(",") };
-    Fa_Value r = vm.Fa_split(2, args);
+    Fa_Value m_args[] = { Fa_MAKE_STRING("a,b,c"), Fa_MAKE_STRING(",") };
+    Fa_Value r = vm.Fa_split(2, m_args);
     ASSERT_TRUE(Fa_IS_LIST(r));
-    EXPECT_EQ(Fa_AS_LIST(r)->elements.size(), 3u);
-    ASSERT_TRUE(Fa_IS_STRING(Fa_AS_LIST(r)->elements[0]));
-    ASSERT_TRUE(Fa_IS_STRING(Fa_AS_LIST(r)->elements[1]));
-    ASSERT_TRUE(Fa_IS_STRING(Fa_AS_LIST(r)->elements[2]));
-    EXPECT_EQ(std::string(Fa_AS_STRING(Fa_AS_LIST(r)->elements[0])->str.data()), "a");
-    EXPECT_EQ(std::string(Fa_AS_STRING(Fa_AS_LIST(r)->elements[1])->str.data()), "b");
-    EXPECT_EQ(std::string(Fa_AS_STRING(Fa_AS_LIST(r)->elements[2])->str.data()), "c");
+    EXPECT_EQ(Fa_AS_LIST(r)->m_elements.size(), 3u);
+    ASSERT_TRUE(Fa_IS_STRING(Fa_AS_LIST(r)->m_elements[0]));
+    ASSERT_TRUE(Fa_IS_STRING(Fa_AS_LIST(r)->m_elements[1]));
+    ASSERT_TRUE(Fa_IS_STRING(Fa_AS_LIST(r)->m_elements[2]));
+    EXPECT_EQ(std::string(Fa_AS_STRING(Fa_AS_LIST(r)->m_elements[0])->str.data()), "a");
+    EXPECT_EQ(std::string(Fa_AS_STRING(Fa_AS_LIST(r)->m_elements[1])->str.data()), "b");
+    EXPECT_EQ(std::string(Fa_AS_STRING(Fa_AS_LIST(r)->m_elements[2])->str.data()), "c");
 }
 
 TEST(NativeSplit, NoDelimiterFound)
 {
     Fa_VM vm;
-    Fa_Value args[] = { Fa_MAKE_STRING("hello"), Fa_MAKE_STRING(",") };
-    Fa_Value r = vm.Fa_split(2, args);
+    Fa_Value m_args[] = { Fa_MAKE_STRING("hello"), Fa_MAKE_STRING(",") };
+    Fa_Value r = vm.Fa_split(2, m_args);
     ASSERT_TRUE(Fa_IS_LIST(r));
-    EXPECT_EQ(Fa_AS_LIST(r)->elements.size(), 1u);
-    ASSERT_TRUE(Fa_IS_STRING(Fa_AS_LIST(r)->elements[0]));
-    EXPECT_EQ(std::string(Fa_AS_STRING(Fa_AS_LIST(r)->elements[0])->str.data()), "hello");
+    EXPECT_EQ(Fa_AS_LIST(r)->m_elements.size(), 1u);
+    ASSERT_TRUE(Fa_IS_STRING(Fa_AS_LIST(r)->m_elements[0]));
+    EXPECT_EQ(std::string(Fa_AS_STRING(Fa_AS_LIST(r)->m_elements[0])->str.data()), "hello");
 }
 
 TEST(NativeSubstr, BasicSubstr)
 {
     Fa_VM vm; // substr is exclusive
-    Fa_Value args[] = { Fa_MAKE_STRING("hello"), Fa_MAKE_INTEGER(1), Fa_MAKE_INTEGER(4) };
-    Fa_Value r = vm.Fa_substr(3, args);
+    Fa_Value m_args[] = { Fa_MAKE_STRING("hello"), Fa_MAKE_INTEGER(1), Fa_MAKE_INTEGER(4) };
+    Fa_Value r = vm.Fa_substr(3, m_args);
     if (!Fa_IS_NIL(r)) {
         ASSERT_TRUE(Fa_IS_STRING(r));
         EXPECT_EQ(std::string(Fa_AS_STRING(r)->str.data()), "ell");
@@ -2040,8 +2035,8 @@ TEST(NativeSubstr, BasicSubstr)
 TEST(NativeSubstr, FromStart)
 {
     Fa_VM vm; // substr is exclusive
-    Fa_Value args[] = { Fa_MAKE_STRING("hello"), Fa_MAKE_INTEGER(0), Fa_MAKE_INTEGER(3) };
-    Fa_Value r = vm.Fa_substr(3, args);
+    Fa_Value m_args[] = { Fa_MAKE_STRING("hello"), Fa_MAKE_INTEGER(0), Fa_MAKE_INTEGER(3) };
+    Fa_Value r = vm.Fa_substr(3, m_args);
     if (!Fa_IS_NIL(r)) {
         ASSERT_TRUE(Fa_IS_STRING(r));
         EXPECT_EQ(std::string(Fa_AS_STRING(r)->str.data()), "hel");
@@ -2051,8 +2046,8 @@ TEST(NativeSubstr, FromStart)
 TEST(NativeContains, StringContains_True)
 {
     Fa_VM vm;
-    Fa_Value args[] = { Fa_MAKE_STRING("hello world"), Fa_MAKE_STRING("world") };
-    Fa_Value r = vm.Fa_contains(2, args);
+    Fa_Value m_args[] = { Fa_MAKE_STRING("hello world"), Fa_MAKE_STRING("world") };
+    Fa_Value r = vm.Fa_contains(2, m_args);
     ASSERT_TRUE(Fa_IS_BOOL(r));
     EXPECT_TRUE(Fa_AS_BOOL(r));
 }
@@ -2060,8 +2055,8 @@ TEST(NativeContains, StringContains_True)
 TEST(NativeContains, StringContains_False)
 {
     Fa_VM vm;
-    Fa_Value args[] = { Fa_MAKE_STRING("hello"), Fa_MAKE_STRING("xyz") };
-    Fa_Value r = vm.Fa_contains(2, args);
+    Fa_Value m_args[] = { Fa_MAKE_STRING("hello"), Fa_MAKE_STRING("xyz") };
+    Fa_Value r = vm.Fa_contains(2, m_args);
     ASSERT_TRUE(Fa_IS_BOOL(r));
     EXPECT_FALSE(Fa_AS_BOOL(r));
 }
@@ -2098,11 +2093,11 @@ TEST(NativeJoin, BasicJoin)
     Fa_VM vm;
     Fa_Value list = vm.Fa_list(0, nullptr);
     Fa_ObjList* l = Fa_AS_LIST(list);
-    l->elements.push(Fa_MAKE_STRING("a"));
-    l->elements.push(Fa_MAKE_STRING("b"));
-    l->elements.push(Fa_MAKE_STRING("c"));
-    Fa_Value args[] = { list, Fa_MAKE_STRING("|") };
-    Fa_Value r = vm.Fa_join(2, args);
+    l->m_elements.push(Fa_MAKE_STRING("a"));
+    l->m_elements.push(Fa_MAKE_STRING("b"));
+    l->m_elements.push(Fa_MAKE_STRING("c"));
+    Fa_Value m_args[] = { list, Fa_MAKE_STRING("|") };
+    Fa_Value r = vm.Fa_join(2, m_args);
     ASSERT_TRUE(Fa_IS_STRING(r));
     EXPECT_EQ(std::string(Fa_AS_STRING(r)->str.data()), "a|b|c");
 }
@@ -2154,8 +2149,8 @@ static void do_not_optimize(T const& v)
 
 static bool stress_perf_enabled()
 {
-    char const* value = std::getenv("fairuz_ENABLE_STRESS_PERF");
-    return value && value[0] == '1';
+    char const* m_value = std::getenv("fairuz_ENABLE_STRESS_PERF");
+    return m_value && m_value[0] == '1';
 }
 
 static void require_stress_perf()
@@ -2341,10 +2336,10 @@ TEST(VMPerfTest, GlobalLookup_100k_Roundtrips)
 
 static Fa_Chunk* make_add2_chunk()
 {
-    auto* fn = makeChunk();
-    fn->name = "add2";
+    auto* fn = make_chunk();
+    fn->m_name = "add2";
     fn->arity = 2;
-    fn->localCount = 3;
+    fn->local_count = 3;
     fn->emit(Fa_make_ABC(Fa_OpCode::OP_ADD, 2, 0, 1), { });
     fn->emit(Fa_make_ABC(Fa_OpCode::RETURN, 2, 1, 0), { });
     return fn;
@@ -2354,7 +2349,7 @@ TEST(VMPerfTest, CallOverhead_100k_Calls)
 {
     constexpr int N = 100;
 
-    AST::Fa_Stmt* body = AST::Fa_makeBlock(
+    AST::Fa_Stmt* m_body = AST::Fa_makeBlock(
         { AST::Fa_makeAssignmentStmt(AST::Fa_makeName("i"), AST::Fa_makeLiteralInt(0)),
             AST::Fa_makeAssignmentStmt(AST::Fa_makeName("limit"), AST::Fa_makeLiteralInt(N)),
             AST::Fa_makeWhile(
@@ -2366,7 +2361,7 @@ TEST(VMPerfTest, CallOverhead_100k_Calls)
     AST::Fa_Stmt* func = AST::Fa_makeFunction(
         AST::Fa_makeName("test"),
         AST::Fa_makeList(),
-        body);
+        m_body);
 
     AST::Fa_Stmt* add = AST::Fa_makeFunction(
         AST::Fa_makeName("add"),

@@ -3,6 +3,7 @@
 #include "../include/vm.hpp"
 #include "diagnostic.hpp"
 #include "macros.hpp"
+#include "pair.hpp"
 #include "value.hpp"
 
 #include <cmath>
@@ -15,7 +16,7 @@ namespace fairuz::runtime {
 using ErrorCode = diagnostic::errc::runtime::Code;
 using StdlibError = diagnostic::errc::stdlib::Code;
 
-static Fa_StringRef valueToString(Fa_Value v)
+static Fa_StringRef value_to_string(Fa_Value v)
 {
     if (Fa_IS_NIL(v))
         return "nil";
@@ -50,14 +51,14 @@ Fa_Value Fa_VM::Fa_len(int argc, Fa_Value* argv)
         if (Fa_IS_STRING(argv[0]))
             return Fa_MAKE_INTEGER(Fa_AS_STRING(argv[0])->str.len());
         if (Fa_IS_LIST(argv[0]))
-            return Fa_MAKE_INTEGER(Fa_AS_LIST(argv[0])->elements.size());
+            return Fa_MAKE_INTEGER(Fa_AS_LIST(argv[0])->m_elements.size());
     }
 
     /// do not accept multiple args for len
     return NIL_VAL;
 }
 
-static void printValue(Fa_Value v, int depth = 0)
+static void print_runtime_value(Fa_Value v, int depth = 0)
 {
     if (Fa_IS_NIL(v)) {
         std::cout << "nil";
@@ -77,7 +78,7 @@ static void printValue(Fa_Value v, int depth = 0)
     if (Fa_IS_OBJECT(v)) {
         Fa_ObjHeader* obj = Fa_AS_OBJECT(v);
 
-        switch (obj->type) {
+        switch (obj->m_type) {
         case Fa_ObjType::STRING:
             std::cout << static_cast<Fa_ObjString*>(obj)->str;
             return;
@@ -85,27 +86,39 @@ static void printValue(Fa_Value v, int depth = 0)
         case Fa_ObjType::LIST: {
             auto list = static_cast<Fa_ObjList*>(obj);
             std::cout << '[';
-            for (u32 i = 0; i < list->elements.size(); ++i) {
+            for (u32 i = 0, n = list->m_elements.size(); i < n; ++i) {
                 if (i > 0)
                     std::cout << ", ";
-                Fa_Value elem = list->elements[i];
-                if (Fa_IS_OBJECT(elem) && Fa_AS_OBJECT(elem)->type == Fa_ObjType::STRING) {
+                Fa_Value elem = list->m_elements[i];
+                if (Fa_IS_OBJECT(elem) && Fa_AS_OBJECT(elem)->m_type == Fa_ObjType::STRING) {
                     std::cout << '"';
                     std::cout << Fa_AS_STRING((elem))->str;
                     std::cout << '"';
                 } else {
-                    printValue(elem, depth + 1);
+                    print_runtime_value(elem, depth + 1);
                 }
             }
             std::cout << ']';
+            return;
+        }
+        
+        case Fa_ObjType::DICT: {
+            auto dict = static_cast<Fa_ObjDict*>(obj);
+            std::cout << '{';
+            for (u32 i = 0, n = dict->data.size(); i < n; ++i) {
+                if (i > 0)
+                    std::cout << ",\n";
+                auto [k, v] = dict->data[i];
+                
+            }
             return;
         }
 
         case Fa_ObjType::CLOSURE: {
             auto cl = static_cast<Fa_ObjClosure*>(obj);
             std::cout << "<function ";
-            if (cl->function && cl->function->name)
-                std::cout << cl->function->name->str;
+            if (cl->function && cl->function->m_name)
+                std::cout << cl->function->m_name->str;
             else
                 std::cout << "?";
             std::cout << '>';
@@ -115,8 +128,8 @@ static void printValue(Fa_Value v, int depth = 0)
         case Fa_ObjType::NATIVE: {
             auto nat = static_cast<Fa_ObjNative*>(obj);
             std::cout << "<native ";
-            if (nat->name)
-                std::cout << nat->name->str;
+            if (nat->m_name)
+                std::cout << nat->m_name->str;
             else
                 std::cout << "?";
             std::cout << '>';
@@ -126,14 +139,14 @@ static void printValue(Fa_Value v, int depth = 0)
         case Fa_ObjType::FUNCTION: {
             auto fn = static_cast<Fa_ObjFunction*>(obj);
             std::cout << "<function ";
-            if (fn->name)
-                std::cout << fn->name->str;
+            if (fn->m_name)
+                std::cout << fn->m_name->str;
             else
                 std::cout << "?";
             std::cout << '>';
             return;
         }
-
+        
         case Fa_ObjType::UPVALUE:
             std::cout << "<upvalue>";
             return;
@@ -160,7 +173,7 @@ Fa_Value Fa_VM::Fa_print(int argc, Fa_Value* argv)
     for (int i = 0; i < argc; ++i) {
         if (i > 0)
             std::cout << '\t';
-        printValue(argv[i]);
+        print_runtime_value(argv[i]);
     }
     std::cout << '\n';
     return NIL_VAL;
@@ -171,7 +184,7 @@ Fa_Value Fa_VM::Fa_type(int argc, Fa_Value* argv)
     if (argc != 1 || !argv)
         return NIL_VAL;
 
-    return Fa_MAKE_INTEGER(static_cast<i64>(valueTypeTag(argv[0])));
+    return Fa_MAKE_INTEGER(static_cast<i64>(value_type_tag(argv[0])));
 }
 
 Fa_Value Fa_VM::Fa_int(int argc, Fa_Value* argv)
@@ -198,21 +211,21 @@ Fa_Value Fa_VM::Fa_append(int argc, Fa_Value* argv)
 {
     if (argc < 2 || !argv) {
         diagnostic::emit(StdlibError::APPEND_ARG_COUNT, "got " + std::to_string(argc));
-        diagnostic::runtimeError(ErrorCode::NATIVE_ARG_COUNT);
+        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
     }
 
     Fa_Value& list_v = argv[0];
     if (!Fa_IS_LIST(list_v)) {
         diagnostic::emit(StdlibError::APPEND_TYPE_ERROR);
-        diagnostic::runtimeError(ErrorCode::NATIVE_TYPE_ERROR);
+        diagnostic::runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
         return NIL_VAL;
     }
 
     Fa_ObjList* list_obj = Fa_AS_LIST(list_v);
 
     for (int i = 1; i < argc; ++i)
-        list_obj->elements.push(argv[i]);
+        list_obj->m_elements.push(argv[i]);
 
     return NIL_VAL;
 }
@@ -221,18 +234,18 @@ Fa_Value Fa_VM::Fa_pop(int argc, Fa_Value* argv)
 {
     if (argc != 1 || !argv) {
         diagnostic::emit(StdlibError::POP_ARG_COUNT, "got " + std::to_string(argc));
-        diagnostic::runtimeError(ErrorCode::NATIVE_ARG_COUNT);
+        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
     }
 
     Fa_Value& list_v = argv[0];
     if (!Fa_IS_LIST(list_v)) {
         diagnostic::emit(StdlibError::POP_TYPE_ERROR);
-        diagnostic::runtimeError(ErrorCode::NATIVE_TYPE_ERROR);
+        diagnostic::runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
         return NIL_VAL;
     }
 
-    Fa_AS_LIST(list_v)->elements.pop();
+    Fa_AS_LIST(list_v)->m_elements.pop();
     return NIL_VAL;
 }
 
@@ -245,7 +258,7 @@ Fa_Value Fa_VM::Fa_slice(int argc, Fa_Value* argv)
 
     if (argc < 2) {
         diagnostic::emit(StdlibError::SLICE_ARG_COUNT, "got " + std::to_string(argc));
-        diagnostic::runtimeError(ErrorCode::NATIVE_ARG_COUNT);
+        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
     }
 
@@ -257,7 +270,7 @@ Fa_Value Fa_VM::Fa_slice(int argc, Fa_Value* argv)
     u32 b = argc == 3 ? Fa_AS_INTEGER(argv[2]) : list_obj->size() - 1;
 
     for (int i = a; i <= b; ++i)
-        ret_list->elements.push(list_obj->elements[i]);
+        ret_list->m_elements.push(list_obj->m_elements[i]);
 
     return ret;
 }
@@ -281,7 +294,7 @@ Fa_Value Fa_VM::Fa_str(int argc, Fa_Value* argv)
 {
     if (argc > 1) {
         diagnostic::emit(StdlibError::STR_ARG_COUNT, "got " + std::to_string(argc));
-        diagnostic::runtimeError(ErrorCode::NATIVE_ARG_COUNT);
+        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
     }
 
@@ -308,7 +321,7 @@ Fa_Value Fa_VM::Fa_bool(int argc, Fa_Value* argv)
 {
     if (argc != 1 || !argv) {
         diagnostic::emit(StdlibError::BOOL_ARG_COUNT, "got " + std::to_string(argc));
-        diagnostic::runtimeError(ErrorCode::NATIVE_ARG_COUNT);
+        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
     }
 
@@ -321,7 +334,7 @@ Fa_Value Fa_VM::Fa_list(int argc, Fa_Value* argv)
     Fa_ObjList* list_obj = Fa_AS_LIST(ret);
 
     for (int i = 0; i < argc; ++i)
-        list_obj->elements.push(argv[i]);
+        list_obj->m_elements.push(argv[i]);
 
     return ret;
 }
@@ -352,7 +365,7 @@ Fa_Value Fa_VM::Fa_split(int argc, Fa_Value* argv)
     Fa_ObjList* list = Fa_AS_LIST(ret);
 
     if (delim.empty()) {
-        list->elements.push(Fa_MAKE_STRING(src));
+        list->m_elements.push(Fa_MAKE_STRING(src));
         return ret;
     }
 
@@ -369,11 +382,11 @@ Fa_Value Fa_VM::Fa_split(int argc, Fa_Value* argv)
         }
 
         if (!found) {
-            list->elements.push(Fa_MAKE_STRING(src.substr(start, src.len())));
+            list->m_elements.push(Fa_MAKE_STRING(src.substr(start, src.len())));
             break;
         }
 
-        list->elements.push(Fa_MAKE_STRING(src.substr(start, pos)));
+        list->m_elements.push(Fa_MAKE_STRING(src.substr(start, pos)));
         start = pos + delim.len();
     }
 
@@ -391,10 +404,10 @@ Fa_Value Fa_VM::Fa_join(int argc, Fa_Value* argv)
     Fa_StringRef delim = Fa_AS_STRING(argv[1])->str;
     Fa_StringRef out = "";
 
-    for (u32 i = 0; i < list->elements.size(); ++i) {
+    for (u32 i = 0; i < list->m_elements.size(); ++i) {
         if (i > 0)
             out += delim;
-        out += valueToString(list->elements[i]);
+        out += value_to_string(list->m_elements[i]);
     }
 
     return Fa_MAKE_STRING(out);
@@ -404,7 +417,7 @@ Fa_Value Fa_VM::Fa_substr(int argc, Fa_Value* argv)
 {
     if (argc != 3 || !argv) {
         diagnostic::emit(StdlibError::SUBSTR_ARG_COUNT, "got " + std::to_string(argc));
-        diagnostic::runtimeError(ErrorCode::NATIVE_ARG_COUNT);
+        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
     }
 
@@ -435,7 +448,7 @@ Fa_Value Fa_VM::Fa_trim(int argc, Fa_Value* argv)
         return NIL_VAL;
 
     Fa_StringRef out = Fa_AS_STRING(argv[0])->str;
-    out.trimWhitespace();
+    out.trim_whitespace();
     return Fa_MAKE_STRING(out.substr(0, out.len()));
 }
 
@@ -443,13 +456,13 @@ Fa_Value Fa_VM::Fa_floor(int argc, Fa_Value* argv)
 {
     if (argc != 1 || !argv) {
         diagnostic::emit(StdlibError::FLOOR_ARG_COUNT, "got " + std::to_string(argc));
-        diagnostic::runtimeError(ErrorCode::NATIVE_ARG_COUNT);
+        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
     }
 
     if (!Fa_IS_NUMBER(argv[0])) {
         diagnostic::emit(StdlibError::FLOOR_TYPE_ERROR);
-        diagnostic::runtimeError(ErrorCode::NATIVE_TYPE_ERROR);
+        diagnostic::runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
         return NIL_VAL;
     }
 
@@ -463,13 +476,13 @@ Fa_Value Fa_VM::Fa_ceil(int argc, Fa_Value* argv)
 {
     if (argc != 1 || !argv) {
         diagnostic::emit(StdlibError::CEIL_ARG_COUNT, "got " + std::to_string(argc));
-        diagnostic::runtimeError(ErrorCode::NATIVE_ARG_COUNT);
+        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
     }
 
     if (!Fa_IS_NUMBER(argv[0])) {
         diagnostic::emit(StdlibError::CEIL_TYPE_ERROR);
-        diagnostic::runtimeError(ErrorCode::NATIVE_TYPE_ERROR);
+        diagnostic::runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
         return NIL_VAL;
     }
 
@@ -483,12 +496,12 @@ Fa_Value Fa_VM::Fa_round(int argc, Fa_Value* argv)
 {
     if (argc != 1 || !argv) {
         diagnostic::emit(StdlibError::ROUND_ARG_COUNT, "got " + std::to_string(argc));
-        diagnostic::runtimeError(ErrorCode::NATIVE_ARG_COUNT);
+        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
     }
     if (!Fa_IS_NUMBER(argv[0])) {
         diagnostic::emit(StdlibError::ROUND_TYPE_ERROR);
-        diagnostic::runtimeError(ErrorCode::NATIVE_TYPE_ERROR);
+        diagnostic::runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
         return NIL_VAL;
     }
     if (Fa_IS_INTEGER(argv[0]))
@@ -501,13 +514,13 @@ Fa_Value Fa_VM::Fa_abs(int argc, Fa_Value* argv)
 {
     if (argc != 1 || !argv) {
         diagnostic::emit(StdlibError::ABS_ARG_COUNT, "got " + std::to_string(argc));
-        diagnostic::runtimeError(ErrorCode::NATIVE_ARG_COUNT);
+        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
     }
 
     if (!Fa_IS_NUMBER(argv[0])) {
         diagnostic::emit(StdlibError::ABS_TYPE_ERROR);
-        diagnostic::runtimeError(ErrorCode::NATIVE_TYPE_ERROR);
+        diagnostic::runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
         return NIL_VAL;
     }
 
@@ -526,7 +539,7 @@ Fa_Value Fa_VM::Fa_min(int argc, Fa_Value* argv)
 {
     if (argc < 1 || !argv) {
         diagnostic::emit(StdlibError::MIN_ARG_COUNT, "got " + std::to_string(argc));
-        diagnostic::runtimeError(ErrorCode::NATIVE_ARG_COUNT);
+        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
     }
 
@@ -564,7 +577,7 @@ Fa_Value Fa_VM::Fa_max(int argc, Fa_Value* argv)
 {
     if (argc < 1 || !argv) {
         diagnostic::emit(StdlibError::MAX_ARG_COUNT, "got " + std::to_string(argc));
-        diagnostic::runtimeError(ErrorCode::NATIVE_ARG_COUNT);
+        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
     }
 
@@ -602,7 +615,7 @@ Fa_Value Fa_VM::Fa_pow(int argc, Fa_Value* argv)
 {
     if (argc != 2 || !argv) {
         diagnostic::emit(StdlibError::POW_ARG_COUNT, "got " + std::to_string(argc));
-        diagnostic::runtimeError(ErrorCode::NATIVE_ARG_COUNT);
+        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
     }
 
@@ -611,7 +624,7 @@ Fa_Value Fa_VM::Fa_pow(int argc, Fa_Value* argv)
 
     if (UNLIKELY(!Fa_IS_NUMBER(base) || !Fa_IS_NUMBER(exponent))) {
         diagnostic::emit(StdlibError::POW_TYPE_ERROR);
-        diagnostic::runtimeError(ErrorCode::NATIVE_TYPE_ERROR);
+        diagnostic::runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
         return NIL_VAL;
     }
 
@@ -628,7 +641,7 @@ Fa_Value Fa_VM::Fa_sqrt(int argc, Fa_Value* argv)
 {
     if (argc != 1 || !argv) {
         diagnostic::emit(StdlibError::SQRT_ARG_COUNT, "got " + std::to_string(argc));
-        diagnostic::runtimeError(ErrorCode::NATIVE_ARG_COUNT);
+        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
     }
 
@@ -636,7 +649,7 @@ Fa_Value Fa_VM::Fa_sqrt(int argc, Fa_Value* argv)
 
     if (UNLIKELY(!Fa_IS_NUMBER(n))) {
         diagnostic::emit(StdlibError::SQRT_TYPE_ERROR);
-        diagnostic::runtimeError(ErrorCode::NATIVE_TYPE_ERROR);
+        diagnostic::runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
         return NIL_VAL;
     }
 
@@ -652,7 +665,7 @@ Fa_Value Fa_VM::Fa_assert(int argc, Fa_Value* argv)
     if (argc < 1 || !argv)
     {
         diagnostic::emit(StdlibError::ASSERT_ARG_COUNT, "got" + std::to_string(argc));
-        diagnostic::runtimeError(ErrorCode::NATIVE_ARG_COUNT);
+        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
     }
     
@@ -660,10 +673,10 @@ Fa_Value Fa_VM::Fa_assert(int argc, Fa_Value* argv)
     {
         if (!Fa_IS_TRUTHY(argv[i])) // eval entire expr
         {
-            Fa_SourceLocation loc = currentLocation();
+            Fa_SourceLocation loc = current_location();
             /// TODO: find a way to print the line code with pretty error
-            diagnostic::report(diagnostic::Severity::ERROR, loc.line, loc.column, ErrorCode::ASSERTION_FAILED);
-            diagnostic::runtimeError(ErrorCode::ASSERTION_FAILED);
+            diagnostic::report(diagnostic::Severity::ERROR, loc.m_line, loc.m_column, ErrorCode::ASSERTION_FAILED);
+            diagnostic::runtime_error(ErrorCode::ASSERTION_FAILED);
         }
     }
 

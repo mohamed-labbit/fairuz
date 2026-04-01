@@ -1,0 +1,60 @@
+{
+  "name": "fairuz-language",
+  "displayName": "Fairuz Language Support",
+  "description": "Syntax highlighting and language configuration for the Fairuz programming language.",
+  "version": "0.1.0",
+  "publisher": "fairuz",
+  "license": "MIT",
+  "main": "./extension.js",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:fairuz",
+    "onCommand:fairuz.openRtlEditor",
+    "onCustomEditor:fairuz.rtlEditor"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "fairuz",
+        "aliases": [
+          "Fairuz",
+          "fairuz"
+        ],
+        "extensions": [
+          ".fa"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "fairuz",
+        "scopeName": "source.fairuz",
+        "path": "./syntaxes/fairuz.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "fairuz.openRtlEditor",
+        "title": "Fairuz: Open RTL Editor"
+      }
+    ],
+    "customEditors": [
+      {
+        "viewType": "fairuz.rtlEditor",
+        "displayName": "Fairuz RTL Editor",
+        "selector": [
+          {
+            "filenamePattern": "*.fa"
+          }
+        ],
+        "priority": "option"
+      }
+    ]
+  }
+}

@@ -14,17 +14,17 @@ namespace {
 Fa_Value make_list(Fa_VM& vm, std::initializer_list<Fa_Value> values)
 {
     Fa_Value list = vm.Fa_list(0, nullptr);
-    for (Fa_Value value : values)
-        Fa_AS_LIST(list)->elements.push(value);
+    for (Fa_Value m_value : values)
+        Fa_AS_LIST(list)->m_elements.push(m_value);
     return list;
 }
 
-std::string as_std_string(Fa_Value value)
+std::string as_std_string(Fa_Value m_value)
 {
-    EXPECT_TRUE(Fa_IS_STRING(value));
-    if (!Fa_IS_STRING(value))
+    EXPECT_TRUE(Fa_IS_STRING(m_value));
+    if (!Fa_IS_STRING(m_value))
         return {};
-    return std::string(Fa_AS_STRING(value)->str.data(), Fa_AS_STRING(value)->str.len());
+    return std::string(Fa_AS_STRING(m_value)->str.data(), Fa_AS_STRING(m_value)->str.len());
 }
 
 double elapsed_us(std::chrono::high_resolution_clock::time_point start)
@@ -40,16 +40,16 @@ double elapsed_us(std::chrono::high_resolution_clock::time_point start)
 TEST(StdlibRegression, SplitPreservesEmptyFieldsAtBothEnds)
 {
     Fa_VM vm;
-    Fa_Value args[] = { Fa_MAKE_STRING(",alpha,,omega,"), Fa_MAKE_STRING(",") };
-    Fa_Value result = vm.Fa_split(2, args);
+    Fa_Value m_args[] = { Fa_MAKE_STRING(",alpha,,omega,"), Fa_MAKE_STRING(",") };
+    Fa_Value result = vm.Fa_split(2, m_args);
 
     ASSERT_TRUE(Fa_IS_LIST(result));
-    ASSERT_EQ(Fa_AS_LIST(result)->elements.size(), 5u);
-    EXPECT_EQ(as_std_string(Fa_AS_LIST(result)->elements[0]), "");
-    EXPECT_EQ(as_std_string(Fa_AS_LIST(result)->elements[1]), "alpha");
-    EXPECT_EQ(as_std_string(Fa_AS_LIST(result)->elements[2]), "");
-    EXPECT_EQ(as_std_string(Fa_AS_LIST(result)->elements[3]), "omega");
-    EXPECT_EQ(as_std_string(Fa_AS_LIST(result)->elements[4]), "");
+    ASSERT_EQ(Fa_AS_LIST(result)->m_elements.size(), 5u);
+    EXPECT_EQ(as_std_string(Fa_AS_LIST(result)->m_elements[0]), "");
+    EXPECT_EQ(as_std_string(Fa_AS_LIST(result)->m_elements[1]), "alpha");
+    EXPECT_EQ(as_std_string(Fa_AS_LIST(result)->m_elements[2]), "");
+    EXPECT_EQ(as_std_string(Fa_AS_LIST(result)->m_elements[3]), "omega");
+    EXPECT_EQ(as_std_string(Fa_AS_LIST(result)->m_elements[4]), "");
 }
 
 TEST(StdlibRegression, JoinStringifiesMixedScalarValues)
@@ -61,8 +61,8 @@ TEST(StdlibRegression, JoinStringifiesMixedScalarValues)
                                       Fa_MAKE_STRING("ok"),
                                       NIL_VAL,
                                   });
-    Fa_Value args[] = { list, Fa_MAKE_STRING("|") };
-    Fa_Value result = vm.Fa_join(2, args);
+    Fa_Value m_args[] = { list, Fa_MAKE_STRING("|") };
+    Fa_Value result = vm.Fa_join(2, m_args);
 
     ASSERT_TRUE(Fa_IS_STRING(result));
     EXPECT_EQ(as_std_string(result), "7|true|ok|nil");
@@ -72,8 +72,8 @@ TEST(StdlibRegression, JoinEmptyListReturnsEmptyString)
 {
     Fa_VM vm;
     Fa_Value list = vm.Fa_list(0, nullptr);
-    Fa_Value args[] = { list, Fa_MAKE_STRING("|") };
-    Fa_Value result = vm.Fa_join(2, args);
+    Fa_Value m_args[] = { list, Fa_MAKE_STRING("|") };
+    Fa_Value result = vm.Fa_join(2, m_args);
 
     ASSERT_TRUE(Fa_IS_STRING(result));
     EXPECT_EQ(as_std_string(result), "");
@@ -83,14 +83,14 @@ TEST(StdlibRegression, AppendAddsMultipleValuesInOrder)
 {
     Fa_VM vm;
     Fa_Value list = vm.Fa_list(0, nullptr);
-    Fa_Value args[] = { list, Fa_MAKE_INTEGER(1), Fa_MAKE_INTEGER(2), Fa_MAKE_INTEGER(3) };
-    Fa_Value result = vm.Fa_append(4, args);
+    Fa_Value m_args[] = { list, Fa_MAKE_INTEGER(1), Fa_MAKE_INTEGER(2), Fa_MAKE_INTEGER(3) };
+    Fa_Value result = vm.Fa_append(4, m_args);
 
     EXPECT_TRUE(Fa_IS_NIL(result));
-    ASSERT_EQ(Fa_AS_LIST(list)->elements.size(), 3u);
-    EXPECT_EQ(Fa_AS_INTEGER(Fa_AS_LIST(list)->elements[0]), 1);
-    EXPECT_EQ(Fa_AS_INTEGER(Fa_AS_LIST(list)->elements[1]), 2);
-    EXPECT_EQ(Fa_AS_INTEGER(Fa_AS_LIST(list)->elements[2]), 3);
+    ASSERT_EQ(Fa_AS_LIST(list)->m_elements.size(), 3u);
+    EXPECT_EQ(Fa_AS_INTEGER(Fa_AS_LIST(list)->m_elements[0]), 1);
+    EXPECT_EQ(Fa_AS_INTEGER(Fa_AS_LIST(list)->m_elements[1]), 2);
+    EXPECT_EQ(Fa_AS_INTEGER(Fa_AS_LIST(list)->m_elements[2]), 3);
 }
 
 TEST(StdlibRegression, AppendTypeErrorPopulatesDiagnostics)
@@ -98,13 +98,13 @@ TEST(StdlibRegression, AppendTypeErrorPopulatesDiagnostics)
     diagnostic::reset();
 
     Fa_VM vm;
-    Fa_Value args[] = { Fa_MAKE_INTEGER(7), Fa_MAKE_INTEGER(9) };
-    Fa_Value result = vm.Fa_append(2, args);
+    Fa_Value m_args[] = { Fa_MAKE_INTEGER(7), Fa_MAKE_INTEGER(9) };
+    Fa_Value result = vm.Fa_append(2, m_args);
 
     EXPECT_TRUE(Fa_IS_NIL(result));
-    EXPECT_TRUE(diagnostic::hasErrors());
-    EXPECT_GE(diagnostic::errorCount(), 2u);
-    EXPECT_NE(diagnostic::engine.toJSON().find("append() expects a list as the first argument"), std::string::npos);
+    EXPECT_TRUE(diagnostic::has_errors());
+    EXPECT_GE(diagnostic::error_count(), 2u);
+    EXPECT_NE(diagnostic::engine.to_json().find("append() expects a list as the first argument"), std::string::npos);
 }
 
 TEST(StdlibRegression, PopRemovesLastElementFromList)
@@ -118,9 +118,9 @@ TEST(StdlibRegression, PopRemovesLastElementFromList)
     Fa_Value result = vm.Fa_pop(1, &list);
 
     EXPECT_TRUE(Fa_IS_NIL(result));
-    ASSERT_EQ(Fa_AS_LIST(list)->elements.size(), 2u);
-    EXPECT_EQ(Fa_AS_INTEGER(Fa_AS_LIST(list)->elements[0]), 10);
-    EXPECT_EQ(Fa_AS_INTEGER(Fa_AS_LIST(list)->elements[1]), 20);
+    ASSERT_EQ(Fa_AS_LIST(list)->m_elements.size(), 2u);
+    EXPECT_EQ(Fa_AS_INTEGER(Fa_AS_LIST(list)->m_elements[0]), 10);
+    EXPECT_EQ(Fa_AS_INTEGER(Fa_AS_LIST(list)->m_elements[1]), 20);
 }
 
 TEST(StdlibRegression, SliceReturnsCopyNotAlias)
@@ -132,16 +132,16 @@ TEST(StdlibRegression, SliceReturnsCopyNotAlias)
                                         Fa_MAKE_INTEGER(3),
                                         Fa_MAKE_INTEGER(4),
                                     });
-    Fa_Value args[] = { source, Fa_MAKE_INTEGER(1), Fa_MAKE_INTEGER(2) };
-    Fa_Value result = vm.Fa_slice(3, args);
+    Fa_Value m_args[] = { source, Fa_MAKE_INTEGER(1), Fa_MAKE_INTEGER(2) };
+    Fa_Value result = vm.Fa_slice(3, m_args);
 
     ASSERT_TRUE(Fa_IS_LIST(result));
-    ASSERT_EQ(Fa_AS_LIST(result)->elements.size(), 2u);
-    EXPECT_EQ(Fa_AS_INTEGER(Fa_AS_LIST(result)->elements[0]), 2);
-    EXPECT_EQ(Fa_AS_INTEGER(Fa_AS_LIST(result)->elements[1]), 3);
+    ASSERT_EQ(Fa_AS_LIST(result)->m_elements.size(), 2u);
+    EXPECT_EQ(Fa_AS_INTEGER(Fa_AS_LIST(result)->m_elements[0]), 2);
+    EXPECT_EQ(Fa_AS_INTEGER(Fa_AS_LIST(result)->m_elements[1]), 3);
 
-    Fa_AS_LIST(result)->elements[0] = Fa_MAKE_INTEGER(99);
-    EXPECT_EQ(Fa_AS_INTEGER(Fa_AS_LIST(source)->elements[1]), 2);
+    Fa_AS_LIST(result)->m_elements[0] = Fa_MAKE_INTEGER(99);
+    EXPECT_EQ(Fa_AS_INTEGER(Fa_AS_LIST(source)->m_elements[1]), 2);
 }
 
 TEST(StdlibRegression, SliceTwoArgsReturnsTail)
@@ -153,20 +153,20 @@ TEST(StdlibRegression, SliceTwoArgsReturnsTail)
                                         Fa_MAKE_INTEGER(6),
                                         Fa_MAKE_INTEGER(7),
                                     });
-    Fa_Value args[] = { source, Fa_MAKE_INTEGER(2) };
-    Fa_Value result = vm.Fa_slice(2, args);
+    Fa_Value m_args[] = { source, Fa_MAKE_INTEGER(2) };
+    Fa_Value result = vm.Fa_slice(2, m_args);
 
     ASSERT_TRUE(Fa_IS_LIST(result));
-    ASSERT_EQ(Fa_AS_LIST(result)->elements.size(), 2u);
-    EXPECT_EQ(Fa_AS_INTEGER(Fa_AS_LIST(result)->elements[0]), 6);
-    EXPECT_EQ(Fa_AS_INTEGER(Fa_AS_LIST(result)->elements[1]), 7);
+    ASSERT_EQ(Fa_AS_LIST(result)->m_elements.size(), 2u);
+    EXPECT_EQ(Fa_AS_INTEGER(Fa_AS_LIST(result)->m_elements[0]), 6);
+    EXPECT_EQ(Fa_AS_INTEGER(Fa_AS_LIST(result)->m_elements[1]), 7);
 }
 
 TEST(StdlibRegression, SubstrClampsEndPastStringLength)
 {
     Fa_VM vm;
-    Fa_Value args[] = { Fa_MAKE_STRING("fairuz"), Fa_MAKE_INTEGER(2), Fa_MAKE_INTEGER(99) };
-    Fa_Value result = vm.Fa_substr(3, args);
+    Fa_Value m_args[] = { Fa_MAKE_STRING("fairuz"), Fa_MAKE_INTEGER(2), Fa_MAKE_INTEGER(99) };
+    Fa_Value result = vm.Fa_substr(3, m_args);
 
     ASSERT_TRUE(Fa_IS_STRING(result));
     EXPECT_EQ(as_std_string(result), "iruz");
@@ -175,8 +175,8 @@ TEST(StdlibRegression, SubstrClampsEndPastStringLength)
 TEST(StdlibRegression, SubstrZeroWidthRangeReturnsEmptyString)
 {
     Fa_VM vm;
-    Fa_Value args[] = { Fa_MAKE_STRING("fairuz"), Fa_MAKE_INTEGER(3), Fa_MAKE_INTEGER(3) };
-    Fa_Value result = vm.Fa_substr(3, args);
+    Fa_Value m_args[] = { Fa_MAKE_STRING("fairuz"), Fa_MAKE_INTEGER(3), Fa_MAKE_INTEGER(3) };
+    Fa_Value result = vm.Fa_substr(3, m_args);
 
     ASSERT_TRUE(Fa_IS_STRING(result));
     EXPECT_EQ(as_std_string(result), "");
@@ -185,8 +185,8 @@ TEST(StdlibRegression, SubstrZeroWidthRangeReturnsEmptyString)
 TEST(StdlibRegression, ContainsEmptyNeedleIsTrue)
 {
     Fa_VM vm;
-    Fa_Value args[] = { Fa_MAKE_STRING("fairuz"), Fa_MAKE_STRING("") };
-    Fa_Value result = vm.Fa_contains(2, args);
+    Fa_Value m_args[] = { Fa_MAKE_STRING("fairuz"), Fa_MAKE_STRING("") };
+    Fa_Value result = vm.Fa_contains(2, m_args);
 
     ASSERT_TRUE(Fa_IS_BOOL(result));
     EXPECT_TRUE(Fa_AS_BOOL(result));
@@ -195,8 +195,8 @@ TEST(StdlibRegression, ContainsEmptyNeedleIsTrue)
 TEST(StdlibRegression, ContainsExactMatchIsTrue)
 {
     Fa_VM vm;
-    Fa_Value args[] = { Fa_MAKE_STRING("fairuz"), Fa_MAKE_STRING("fairuz") };
-    Fa_Value result = vm.Fa_contains(2, args);
+    Fa_Value m_args[] = { Fa_MAKE_STRING("fairuz"), Fa_MAKE_STRING("fairuz") };
+    Fa_Value result = vm.Fa_contains(2, m_args);
 
     ASSERT_TRUE(Fa_IS_BOOL(result));
     EXPECT_TRUE(Fa_AS_BOOL(result));
@@ -226,7 +226,7 @@ TEST(StdlibRegression, StrScalarConversionsMatchSurfaceSyntax)
 
     EXPECT_EQ(as_std_string(vm.Fa_str(1, &int_value)), "42");
     EXPECT_EQ(as_std_string(vm.Fa_str(1, &bool_value)), "true");
-    EXPECT_EQ(as_std_string(vm.Fa_str(1, &nil_value)), "");
+    EXPECT_EQ(as_std_string(vm.Fa_str(1, &nil_value)), "nil");
 }
 
 TEST(StdlibRegression, TrimRemovesMixedLeadingAndTrailingWhitespace)
@@ -244,11 +244,11 @@ TEST(StdlibRegression, AssertStopsBeingSilentWhenAnyArgumentIsFalsy)
     diagnostic::reset();
 
     Fa_VM vm;
-    Fa_Value args[] = { Fa_MAKE_BOOL(true), Fa_MAKE_BOOL(false), Fa_MAKE_INTEGER(1) };
-    Fa_Value result = vm.Fa_assert(3, args);
+    Fa_Value m_args[] = { Fa_MAKE_BOOL(true), Fa_MAKE_BOOL(false), Fa_MAKE_INTEGER(1) };
+    Fa_Value result = vm.Fa_assert(3, m_args);
 
     EXPECT_TRUE(Fa_IS_NIL(result));
-    EXPECT_TRUE(diagnostic::hasErrors());
+    EXPECT_TRUE(diagnostic::has_errors());
 }
 
 TEST(StdlibPerf, SplitJoinRoundTripLargeCsv)
@@ -269,7 +269,7 @@ TEST(StdlibPerf, SplitJoinRoundTripLargeCsv)
     double split_us = elapsed_us(start);
 
     ASSERT_TRUE(Fa_IS_LIST(parts));
-    ASSERT_EQ(Fa_AS_LIST(parts)->elements.size(), 2000u);
+    ASSERT_EQ(Fa_AS_LIST(parts)->m_elements.size(), 2000u);
 
     Fa_Value join_args[] = { parts, Fa_MAKE_STRING(",") };
     start = std::chrono::high_resolution_clock::now();
@@ -290,9 +290,9 @@ TEST(StdlibPerf, LenOnLargeString100kCalls)
     auto start = std::chrono::high_resolution_clock::now();
     i64 last = -1;
     for (int i = 0; i < 100000; ++i) {
-        Fa_Value value = vm.Fa_len(1, &arg);
-        ASSERT_TRUE(Fa_IS_INTEGER(value));
-        last = Fa_AS_INTEGER(value);
+        Fa_Value m_value = vm.Fa_len(1, &arg);
+        ASSERT_TRUE(Fa_IS_INTEGER(m_value));
+        last = Fa_AS_INTEGER(m_value);
     }
     double total_us = elapsed_us(start);
 

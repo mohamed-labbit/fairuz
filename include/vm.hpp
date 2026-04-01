@@ -37,6 +37,7 @@ public:
     Fa_Value Fa_str(int argc, Fa_Value* argv);
     Fa_Value Fa_bool(int argc, Fa_Value* argv);
     Fa_Value Fa_list(int argc, Fa_Value* argv);
+    Fa_Value Fa_dict(int argc, Fa_Value* argv);
     Fa_Value Fa_split(int argc, Fa_Value* argv);
     Fa_Value Fa_join(int argc, Fa_Value* argv);
     Fa_Value Fa_substr(int argc, Fa_Value* argv);
@@ -62,7 +63,7 @@ public:
         Fa_Chunk* chunk { nullptr };
         u32 ip { 0 };
         u16 base { 0 };
-        u16 localCount { 0 };
+        u16 local_count { 0 };
 
         Fa_CallFrame() = default;
 
@@ -71,66 +72,66 @@ public:
             , chunk(ch)
             , ip(ip)
             , base(b)
-            , localCount(lc)
+            , local_count(lc)
         {
         }
     }; // struct Fa_CallFrame
 
     Fa_GarbageCollector GC_;
 
-    Fa_Value Stack_[STACK_SIZE];
-    Fa_CallFrame Frames_[MAX_FRAMES];
+    Fa_Value stack_[STACK_SIZE];
+    Fa_CallFrame frames_[MAX_FRAMES];
 
-    int StackTop_ { 0 };
-    int FramesTop_ { 0 };
+    int m_stack_top { 0 };
+    int m_frames_top { 0 };
 
-    int OpenUpvalueCount_ { 0 };
+    int m_open_upvalue_count { 0 };
 
-    Fa_HashTable<Fa_StringRef, u32, Fa_StringRefHash, Fa_StringRefEqual> GlobalIndex_;
-    Fa_HashTable<Fa_StringRef, Fa_ObjString*, Fa_StringRefHash, Fa_StringRefEqual> StringTable_;
-    Fa_Array<Fa_Value> GlobalSlots_;
-    Fa_Array<ObjUpvalue*> OpenUpvalues_;
-    bool isDead_ { false };
+    Fa_HashTable<Fa_StringRef, u32, Fa_StringRefHash, Fa_StringRefEqual> m_global_index;
+    Fa_HashTable<Fa_StringRef, Fa_ObjString*, Fa_StringRefHash, Fa_StringRefEqual> m_string_table;
+    Fa_Array<Fa_Value> m_global_slots;
+    Fa_Array<ObjUpvalue*> m_open_upvalues;
+    bool m_is_dead { false };
 
     Fa_Value execute();
 
     Fa_CallFrame& frame();
     Fa_CallFrame const& frame() const;
     Fa_Chunk* chunk();
-    Fa_Value& reg(int r);
+    Fa_Value& m_reg(int r);
 
     Fa_ObjString* intern(Fa_StringRef const& str);
-    void ensureStack(int needed);
-    void closeUpvalues(unsigned int from_stack_pos);
-    void updateIcBinary(Fa_Chunk* ch, u32 nop_ip, Fa_Value lhs, Fa_Value rhs, Fa_Value result);
-    ObjUpvalue* captureUpvalue(unsigned int stack_pos);
-    void callValue(Fa_Value callee, int argc, int base, bool tail);
-    Fa_Value callNative(Fa_ObjNative* nat, int argc, int base);
-    void returnFromCall(int ret_reg, int n_ret);
+    void ensure_stack(int needed);
+    void close_upvalues(unsigned int from_stack_pos);
+    void update_ic_binary(Fa_Chunk* ch, u32 nop_ip, Fa_Value lhs, Fa_Value rhs, Fa_Value result);
+    ObjUpvalue* capture_upvalue(unsigned int stack_pos);
+    void call_value(Fa_Value m_callee, int argc, int base, bool tail);
+    Fa_Value call_native(Fa_ObjNative* nat, int argc, int base);
+    void return_from_call(int ret_reg, int n_ret);
 
-    void openStdlib();
-    void registerNative(Fa_StringRef const& name, NativeFn fn, int arity = -1);
+    void open_stdlib();
+    void register_native(Fa_StringRef const& m_name, NativeFn fn, int arity = -1);
 
-    Fa_SourceLocation currentLocation() const;
-    void runtimeError(ErrorCode code);
+    Fa_SourceLocation current_location() const;
+    void runtime_error(ErrorCode code);
     [[noreturn]] void halt();
-    void internChunkConstants(Fa_Chunk* ch);
+    void intern_chunk_constants(Fa_Chunk* ch);
 
-    int stackSize() const;
-    int frameDepth() const;
-    void pushValue(Fa_Value v);
-    Fa_Value popValue();
-    Fa_Value& stackAt(int index);
-    void ensureStackSlots(int needed);
-    void pushFrame(Fa_CallFrame const& f);
-    void popFrame();
-    Fa_CallFrame& topFrame();
-    Fa_CallFrame const& topFrame() const;
-    Fa_Value& getReg(Fa_CallFrame const& f, int reg);
-    Fa_Value& regA(Fa_CallFrame const& f, u32 instr);
-    Fa_Value& regB(Fa_CallFrame const& f, u32 instr);
-    Fa_Value& regC(Fa_CallFrame const& f, u32 instr);
-    void closeUpvaluesForFrame(Fa_CallFrame const& f);
+    int stack_size() const;
+    int frame_depth() const;
+    void push_value(Fa_Value v);
+    Fa_Value pop_value();
+    Fa_Value& stack_at(int m_index);
+    void ensure_stack_slots(int needed);
+    void push_frame(Fa_CallFrame const& f);
+    void pop_frame();
+    Fa_CallFrame& top_frame();
+    Fa_CallFrame const& top_frame() const;
+    Fa_Value& get_reg(Fa_CallFrame const& f, int m_reg);
+    Fa_Value& reg_a(Fa_CallFrame const& f, u32 instr);
+    Fa_Value& reg_b(Fa_CallFrame const& f, u32 instr);
+    Fa_Value& reg_c(Fa_CallFrame const& f, u32 instr);
+    void close_upvalues_for_frame(Fa_CallFrame const& f);
 }; // class Fa_VM
 
 } // namespace fairuz::runtime

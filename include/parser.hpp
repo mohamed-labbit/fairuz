@@ -35,35 +35,35 @@ public:
     }; // enum DataType_t
 
     struct Symbol {
-        Fa_StringRef name;
-        SymbolType symbolType;
-        DataType_t dataType;
-        bool isUsed = false;
-        i32 definitionLine = 0;
-        Fa_Array<i32> usageLines;
-        Fa_Array<DataType_t> paramTypes;
-        DataType_t returnType = DataType_t::UNKNOWN;
-        std::unordered_set<DataType_t> possibleTypes;
+        Fa_StringRef m_name;
+        SymbolType symbol_type;
+        DataType_t data_type;
+        bool is_used = false;
+        i32 definition_line = 0;
+        Fa_Array<i32> usage_lines;
+        Fa_Array<DataType_t> param_types;
+        DataType_t return_type = DataType_t::UNKNOWN;
+        std::unordered_set<DataType_t> possible_types;
     }; // struct Symbol
 
-    Fa_SymbolTable* Parent_ = nullptr;
+    Fa_SymbolTable* m_parent = nullptr;
 
 private:
-    Fa_HashTable<Fa_StringRef, Symbol, Fa_StringRefHash, Fa_StringRefEqual> Symbols_;
-    Fa_Array<Fa_SymbolTable*> Children_;
-    unsigned int ScopeLevel_ { 0 };
+    Fa_HashTable<Fa_StringRef, Symbol, Fa_StringRefHash, Fa_StringRefEqual> m_symbols;
+    Fa_Array<Fa_SymbolTable*> m_children;
+    unsigned int m_scope_level { 0 };
 
 public:
     explicit Fa_SymbolTable(Fa_SymbolTable* p = nullptr, i32 level = 0);
 
-    void define(Fa_StringRef const& name, Symbol symbol);
-    Symbol* lookup(Fa_StringRef const& name);
-    Symbol* lookupLocal(Fa_StringRef const& name);
-    bool isDefined(Fa_StringRef const& name) const;
-    void markUsed(Fa_StringRef const& name, i32 line);
-    Fa_SymbolTable* createChild();
-    Fa_Array<Symbol*> getUnusedSymbols();
-    Fa_HashTable<Fa_StringRef, Symbol, Fa_StringRefHash, Fa_StringRefEqual> const& getSymbols() const;
+    void define(Fa_StringRef const& m_name, Symbol symbol);
+    Symbol* lookup(Fa_StringRef const& m_name);
+    Symbol* lookup_local(Fa_StringRef const& m_name);
+    bool is_defined(Fa_StringRef const& m_name) const;
+    void mark_used(Fa_StringRef const& m_name, i32 m_line);
+    Fa_SymbolTable* create_child();
+    Fa_Array<Symbol*> get_unused_symbols();
+    Fa_HashTable<Fa_StringRef, Symbol, Fa_StringRefHash, Fa_StringRefEqual> const& get_symbols() const;
 }; // class Fa_SymbolTable
 
 class Fa_SemanticAnalyzer {
@@ -77,39 +77,39 @@ public:
 
         Severity severity;
         Fa_StringRef message;
-        i32 line;
+        i32 m_line;
         Fa_StringRef suggestion;
     }; // struct Issue
 
 private:
-    Fa_SymbolTable* CurrentScope_;
-    Fa_SymbolTable* GlobalScope_;
-    Fa_Array<Issue> Issues_;
+    Fa_SymbolTable* m_current_scope;
+    Fa_SymbolTable* m_global_scope;
+    Fa_Array<Issue> m_issues;
 
 public:
     Fa_SemanticAnalyzer();
-    Fa_SymbolTable::DataType_t inferType(AST::Fa_Expr const* expr);
-    void reportIssue(Issue::Severity sev, Fa_StringRef msg, i32 line, Fa_StringRef const& sugg = "");
-    void analyzeFa_Expr(AST::Fa_Expr const* expr);
-    void analyzeStmt(AST::Fa_Stmt const* stmt);
-    void analyze(Fa_Array<AST::Fa_Stmt*> const& statements);
-    Fa_Array<Issue> const& getIssues() const;
-    Fa_SymbolTable const* getGlobalScope() const;
-    Fa_SymbolTable const* getCurrentScope() const;
-    void printReport() const;
+    Fa_SymbolTable::DataType_t infer_type(AST::Fa_Expr const* m_expr);
+    void report_issue(Issue::Severity sev, Fa_StringRef msg, i32 m_line, Fa_StringRef const& sugg = "");
+    void analyze_fa_expr(AST::Fa_Expr const* m_expr);
+    void analyze_stmt(AST::Fa_Stmt const* stmt);
+    void analyze(Fa_Array<AST::Fa_Stmt*> const& m_statements);
+    Fa_Array<Issue> const& get_issues() const;
+    Fa_SymbolTable const* get_global_scope() const;
+    Fa_SymbolTable const* get_current_scope() const;
+    void print_report() const;
 }; // class Fa_SemanticAnalyzer
 
 class Fa_ParseError : public std::runtime_error {
 public:
-    i32 Line_, Column_;
-    Fa_StringRef Context_;
-    Fa_Array<Fa_StringRef> Suggestions_;
+    i32 m_line, m_column;
+    Fa_StringRef m_context;
+    Fa_Array<Fa_StringRef> m_suggestions;
 
     Fa_ParseError(Fa_StringRef const& msg, unsigned int l, unsigned int c, Fa_StringRef ctx = "", Fa_Array<Fa_StringRef> sugg = { })
-        : Line_(l)
-        , Column_(c)
-        , Context_(ctx)
-        , Suggestions_(sugg)
+        : m_line(l)
+        , m_column(c)
+        , m_context(ctx)
+        , m_suggestions(sugg)
         , std::runtime_error(msg.data())
     {
     }
@@ -117,16 +117,16 @@ public:
     Fa_StringRef format() const
     {
         std::stringstream ss;
-        ss << "Line " << Line_ << ":" << Column_ << " - " << what() << "\n";
+        ss << "Line " << m_line << ":" << m_column << " - " << what() << "\n";
 
-        if (!Context_.empty()) {
-            ss << "  | " << Context_ << "\n";
-            ss << "  | " << std::string(Column_ - 1, ' ') << "^\n";
+        if (!m_context.empty()) {
+            ss << "  | " << m_context << "\n";
+            ss << "  | " << std::string(m_column - 1, ' ') << "^\n";
         }
 
-        if (!Suggestions_.empty()) {
+        if (!m_suggestions.empty()) {
             ss << "Suggestions:\n";
-            for (Fa_StringRef const& s : Suggestions_)
+            for (Fa_StringRef const& s : m_suggestions)
                 ss << "  - " << s << "\n";
         }
 
@@ -139,81 +139,81 @@ public:
     explicit Fa_Parser() = default;
 
     explicit Fa_Parser(lex::Fa_FileManager* fm)
-        : Lexer_(fm)
+        : m_lexer(fm)
     {
         if (!fm)
             diagnostic::panic(diagnostic::errc::general::Code::INTERNAL_ERROR, "parser received a null Fa_FileManager");
 
-        Lexer_.next();
+        m_lexer.m_next();
     }
 
     explicit Fa_Parser(Fa_Array<tok::Fa_Token> seq, std::optional<size_t> s = std::nullopt);
 
-    Fa_Array<AST::Fa_Stmt*> parseProgram();
+    Fa_Array<AST::Fa_Stmt*> parse_program();
 
-    Fa_ErrorOr<AST::Fa_Stmt*> parseStatement();
-    Fa_ErrorOr<AST::Fa_Stmt*> parseExpressionStmt();
-    Fa_ErrorOr<AST::Fa_Stmt*> parseIfStmt();
-    Fa_ErrorOr<AST::Fa_Stmt*> parseWhileStmt();
-    Fa_ErrorOr<AST::Fa_Stmt*> parseReturnStmt();
-    Fa_ErrorOr<AST::Fa_Stmt*> parseFunctionDef();
-    Fa_ErrorOr<AST::Fa_Expr*> parseParenthesizedExprContent();
-    Fa_ErrorOr<AST::Fa_Expr*> parseCallExpr(AST::Fa_Expr* callee);
-    Fa_ErrorOr<AST::Fa_Expr*> parsePrimary();
-    Fa_ErrorOr<AST::Fa_Expr*> parseUnary();
-    Fa_ErrorOr<AST::Fa_Expr*> parseParenthesizedExpr();
-    Fa_ErrorOr<AST::Fa_Expr*> parseExpression();
-    Fa_ErrorOr<AST::Fa_Expr*> parseAssignmentExpr();
-    Fa_ErrorOr<AST::Fa_Expr*> parseListLiteral();
-    Fa_ErrorOr<AST::Fa_Expr*> parseConditionalExpr();
-    Fa_ErrorOr<AST::Fa_Expr*> parseLogicalExpr();
-    Fa_ErrorOr<AST::Fa_Expr*> parseLogicalExprPrecedence(unsigned int min_precedence);
-    Fa_ErrorOr<AST::Fa_Expr*> parseBinaryExprPrecedence(unsigned int min_precedence);
-    Fa_ErrorOr<AST::Fa_Expr*> parseComparisonExpr();
-    Fa_ErrorOr<AST::Fa_Expr*> parseBinaryExpr();
-    Fa_ErrorOr<AST::Fa_Expr*> parseUnaryExpr();
-    Fa_ErrorOr<AST::Fa_Expr*> parsePrimaryExpr();
-    Fa_ErrorOr<AST::Fa_Expr*> parsePostfixExpr();
+    Fa_ErrorOr<AST::Fa_Stmt*> parse_statement();
+    Fa_ErrorOr<AST::Fa_Stmt*> parse_expression_stmt();
+    Fa_ErrorOr<AST::Fa_Stmt*> parse_if_stmt();
+    Fa_ErrorOr<AST::Fa_Stmt*> parse_while_stmt();
+    Fa_ErrorOr<AST::Fa_Stmt*> parse_return_stmt();
+    Fa_ErrorOr<AST::Fa_Stmt*> parse_function_def();
+    Fa_ErrorOr<AST::Fa_Expr*> parse_parenthesized_expr_content();
+    Fa_ErrorOr<AST::Fa_Expr*> parse_call_expr(AST::Fa_Expr* m_callee);
+    Fa_ErrorOr<AST::Fa_Expr*> parse_primary();
+    Fa_ErrorOr<AST::Fa_Expr*> parse_unary();
+    Fa_ErrorOr<AST::Fa_Expr*> parse_parenthesized_expr();
+    Fa_ErrorOr<AST::Fa_Expr*> parse_expression();
+    Fa_ErrorOr<AST::Fa_Expr*> parse_assignment_expr();
+    Fa_ErrorOr<AST::Fa_Expr*> parse_list_literal();
+    Fa_ErrorOr<AST::Fa_Expr*> parse_conditional_expr();
+    Fa_ErrorOr<AST::Fa_Expr*> parse_logical_expr();
+    Fa_ErrorOr<AST::Fa_Expr*> parse_logical_expr_precedence(unsigned int min_precedence);
+    Fa_ErrorOr<AST::Fa_Expr*> parse_binary_expr_precedence(unsigned int min_precedence);
+    Fa_ErrorOr<AST::Fa_Expr*> parse_comparison_expr();
+    Fa_ErrorOr<AST::Fa_Expr*> parse_binary_expr();
+    Fa_ErrorOr<AST::Fa_Expr*> parse_unary_expr();
+    Fa_ErrorOr<AST::Fa_Expr*> parse_primary_expr();
+    Fa_ErrorOr<AST::Fa_Expr*> parse_postfix_expr();
     Fa_ErrorOr<AST::Fa_Expr*> parse();
-    Fa_ErrorOr<AST::Fa_Expr*> parseFunctionArguments();
-    Fa_ErrorOr<AST::Fa_Expr*> parseParametersList();
-    Fa_ErrorOr<AST::Fa_Stmt*> parseBlock();
-    Fa_ErrorOr<AST::Fa_Stmt*> parseIndentedBlock();
+    Fa_ErrorOr<AST::Fa_Expr*> parse_function_arguments();
+    Fa_ErrorOr<AST::Fa_Expr*> parse_parameters_list();
+    Fa_ErrorOr<AST::Fa_Stmt*> parse_block();
+    Fa_ErrorOr<AST::Fa_Stmt*> parse_indented_block();
 
-    bool weDone() const;
-    bool check(tok::Fa_TokenType type);
+    bool we_done() const;
+    bool check(tok::Fa_TokenType m_type);
 
-    tok::Fa_Token const* currentToken();
+    tok::Fa_Token const* current_token();
 
 private:
-    lex::Fa_Lexer Lexer_;
-    Fa_SymbolTable SymTable_;
-    Fa_SemanticAnalyzer Sema_;
+    lex::Fa_Lexer m_lexer;
+    Fa_SymbolTable m_sym_table;
+    Fa_SemanticAnalyzer m_sema;
 
-    tok::Fa_Token const* peek(size_t offset = 1) { return Lexer_.peek(offset); }
-    tok::Fa_Token const* advance() { return Lexer_.next(); }
+    tok::Fa_Token const* peek(size_t m_offset = 1) { return m_lexer.peek(m_offset); }
+    tok::Fa_Token const* advance() { return m_lexer.m_next(); }
 
-    bool match(tok::Fa_TokenType const type);
+    bool match(tok::Fa_TokenType const m_type);
 
     [[nodiscard]]
-    bool consume(tok::Fa_TokenType type)
+    bool consume(tok::Fa_TokenType m_type)
     {
-        if (check(type)) {
+        if (check(m_type)) {
             advance();
             return true;
         }
         return false;
     }
 
-    Fa_Error reportError(diagnostic::errc::parser::Code err_code);
+    Fa_Error report_error(diagnostic::errc::parser::Code err_code);
 
-    void skipNewlines()
+    void skip_newlines()
     {
         while (match(tok::Fa_TokenType::NEWLINE))
             ;
     }
 
-    void enterScope();
+    void enter_scope();
     void synchronize();
 }; // class Fa_Parser
 

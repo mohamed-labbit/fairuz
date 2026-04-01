@@ -46,27 +46,27 @@ GoldenCase load_case(std::filesystem::path const& path)
 
     GoldenCase gc;
     Section section = Section::None;
-    std::string line;
+    std::string m_line;
     std::ostringstream source;
     std::ostringstream expected;
 
-    while (std::getline(in, line)) {
-        if (line.rfind("KIND:", 0) == 0) {
-            gc.kind = trim(line.substr(5));
+    while (std::getline(in, m_line)) {
+        if (m_line.rfind("KIND:", 0) == 0) {
+            gc.kind = trim(m_line.substr(5));
             continue;
         }
-        if (line == "SOURCE:") {
+        if (m_line == "SOURCE:") {
             section = Section::Source;
             continue;
         }
-        if (line == "EXPECTED:") {
+        if (m_line == "EXPECTED:") {
             section = Section::Expected;
             continue;
         }
         if (section == Section::Source)
-            source << line << '\n';
+            source << m_line << '\n';
         else if (section == Section::Expected)
-            expected << line << '\n';
+            expected << m_line << '\n';
     }
 
     gc.source = trim(source.str());
@@ -74,7 +74,7 @@ GoldenCase load_case(std::filesystem::path const& path)
     return gc;
 }
 
-std::string binOpName(AST::Fa_BinaryOp op)
+std::string bin_op_name(AST::Fa_BinaryOp op)
 {
     switch (op) {
     case AST::Fa_BinaryOp::OP_ADD:
@@ -120,7 +120,7 @@ std::string binOpName(AST::Fa_BinaryOp op)
     }
 }
 
-std::string unaryOpName(AST::Fa_UnaryOp op)
+std::string unary_op_name(AST::Fa_UnaryOp op)
 {
     switch (op) {
     case AST::Fa_UnaryOp::OP_PLUS:
@@ -136,134 +136,134 @@ std::string unaryOpName(AST::Fa_UnaryOp op)
     }
 }
 
-std::string sigExpr(AST::Fa_Expr const* expr);
-std::string sigStmt(AST::Fa_Stmt const* stmt);
+std::string sig_expr(AST::Fa_Expr const* m_expr);
+std::string sig_stmt(AST::Fa_Stmt const* stmt);
 
-std::string sigList(AST::Fa_ListExpr const* list)
+std::string sig_list(AST::Fa_ListExpr const* list)
 {
     std::ostringstream out;
     out << "[";
-    for (u32 i = 0; i < list->getElements().size(); ++i) {
+    for (u32 i = 0; i < list->get_elements().size(); ++i) {
         if (i)
             out << ",";
-        out << sigExpr(list->getElements()[i]);
+        out << sig_expr(list->get_elements()[i]);
     }
     out << "]";
     return out.str();
 }
 
-std::string sigExpr(AST::Fa_Expr const* expr)
+std::string sig_expr(AST::Fa_Expr const* m_expr)
 {
-    if (!expr)
+    if (!m_expr)
         return "null";
 
-    switch (expr->getKind()) {
+    switch (m_expr->get_kind()) {
     case AST::Fa_Expr::Kind::LITERAL: {
-        auto const* lit = static_cast<AST::Fa_LiteralExpr const*>(expr);
-        if (lit->isNil())
+        auto const* lit = static_cast<AST::Fa_LiteralExpr const*>(m_expr);
+        if (lit->is_nil())
             return "nil";
-        if (lit->isBoolean())
-            return std::string("bool(") + (lit->getBool() ? "true" : "false") + ")";
-        if (lit->isInteger())
-            return "int(" + std::to_string(lit->getInt()) + ")";
-        if (lit->isDecimal())
-            return "float(" + std::to_string(lit->getFloat()) + ")";
-        if (lit->isString())
-            return "str(" + std::string(lit->getStr().data(), lit->getStr().len()) + ")";
+        if (lit->is_bool())
+            return std::string("bool(") + (lit->get_bool() ? "true" : "false") + ")";
+        if (lit->is_integer())
+            return "int(" + std::to_string(lit->get_int()) + ")";
+        if (lit->is_float())
+            return "float(" + std::to_string(lit->get_float()) + ")";
+        if (lit->is_string())
+            return "str(" + std::string(lit->get_str().data(), lit->get_str().len()) + ")";
         return "lit(?)";
     }
     case AST::Fa_Expr::Kind::NAME: {
-        auto const* name = static_cast<AST::Fa_NameExpr const*>(expr);
-        return "name(" + std::string(name->getValue().data(), name->getValue().len()) + ")";
+        auto const* m_name = static_cast<AST::Fa_NameExpr const*>(m_expr);
+        return "name(" + std::string(m_name->get_value().data(), m_name->get_value().len()) + ")";
     }
     case AST::Fa_Expr::Kind::UNARY: {
-        auto const* un = static_cast<AST::Fa_UnaryExpr const*>(expr);
-        return "unary(" + unaryOpName(un->getOperator()) + "," + sigExpr(un->getOperand()) + ")";
+        auto const* un = static_cast<AST::Fa_UnaryExpr const*>(m_expr);
+        return "unary(" + unary_op_name(un->get_operator()) + "," + sig_expr(un->get_operand()) + ")";
     }
     case AST::Fa_Expr::Kind::BINARY: {
-        auto const* bin = static_cast<AST::Fa_BinaryExpr const*>(expr);
-        return "bin(" + binOpName(bin->getOperator()) + "," + sigExpr(bin->getLeft()) + "," + sigExpr(bin->getRight()) + ")";
+        auto const* bin = static_cast<AST::Fa_BinaryExpr const*>(m_expr);
+        return "bin(" + bin_op_name(bin->get_operator()) + "," + sig_expr(bin->get_left()) + "," + sig_expr(bin->get_right()) + ")";
     }
     case AST::Fa_Expr::Kind::LIST:
-        return "list" + sigList(static_cast<AST::Fa_ListExpr const*>(expr));
+        return "list" + sig_list(static_cast<AST::Fa_ListExpr const*>(m_expr));
     case AST::Fa_Expr::Kind::CALL: {
-        auto const* call = static_cast<AST::Fa_CallExpr const*>(expr);
-        return "call(" + sigExpr(call->getCallee()) + "," + sigList(call->getArgsAsListExpr()) + ")";
+        auto const* call = static_cast<AST::Fa_CallExpr const*>(m_expr);
+        return "call(" + sig_expr(call->get_callee()) + "," + sig_list(call->get_args_as_list_expr()) + ")";
     }
     case AST::Fa_Expr::Kind::ASSIGNMENT: {
-        auto const* a = static_cast<AST::Fa_AssignmentExpr const*>(expr);
-        return "assign(" + sigExpr(a->getTarget()) + "," + sigExpr(a->getValue()) + ",decl=" + std::string(a->isDeclaration() ? "true" : "false") + ")";
+        auto const* a = static_cast<AST::Fa_AssignmentExpr const*>(m_expr);
+        return "assign(" + sig_expr(a->get_target()) + "," + sig_expr(a->get_value()) + ",decl=" + std::string(a->is_declaration() ? "true" : "false") + ")";
     }
     case AST::Fa_Expr::Kind::INDEX: {
-        auto const* idx = static_cast<AST::Fa_IndexExpr const*>(expr);
-        return "index(" + sigExpr(idx->getObject()) + "," + sigExpr(idx->getIndex()) + ")";
+        auto const* idx = static_cast<AST::Fa_IndexExpr const*>(m_expr);
+        return "index(" + sig_expr(idx->get_object()) + "," + sig_expr(idx->get_index()) + ")";
     }
     default:
         return "expr(?)";
     }
 }
 
-std::string sigStmt(AST::Fa_Stmt const* stmt)
+std::string sig_stmt(AST::Fa_Stmt const* stmt)
 {
     if (!stmt)
         return "null";
 
-    switch (stmt->getKind()) {
+    switch (stmt->get_kind()) {
     case AST::Fa_Stmt::Kind::BLOCK: {
         auto const* block = static_cast<AST::Fa_BlockStmt const*>(stmt);
         std::ostringstream out;
         out << "block[";
-        for (u32 i = 0; i < block->getStatements().size(); ++i) {
+        for (u32 i = 0; i < block->get_statements().size(); ++i) {
             if (i)
                 out << ",";
-            out << sigStmt(block->getStatements()[i]);
+            out << sig_stmt(block->get_statements()[i]);
         }
         out << "]";
         return out.str();
     }
     case AST::Fa_Stmt::Kind::EXPR:
-        return "expr(" + sigExpr(static_cast<AST::Fa_ExprStmt const*>(stmt)->getExpr()) + ")";
+        return "expr(" + sig_expr(static_cast<AST::Fa_ExprStmt const*>(stmt)->get_expr()) + ")";
     case AST::Fa_Stmt::Kind::ASSIGNMENT: {
         auto const* a = static_cast<AST::Fa_AssignmentStmt const*>(stmt);
-        return "assignstmt(" + sigExpr(a->getTarget()) + "," + sigExpr(a->getValue()) + ",decl=" + std::string(a->isDeclaration() ? "true" : "false") + ")";
+        return "assignstmt(" + sig_expr(a->get_target()) + "," + sig_expr(a->get_value()) + ",decl=" + std::string(a->is_declaration() ? "true" : "false") + ")";
     }
     case AST::Fa_Stmt::Kind::IF: {
         auto const* i = static_cast<AST::Fa_IfStmt const*>(stmt);
-        return "if(" + sigExpr(i->getCondition()) + "," + sigStmt(i->getThen()) + "," + sigStmt(i->getElse()) + ")";
+        return "if(" + sig_expr(i->get_condition()) + "," + sig_stmt(i->get_then()) + "," + sig_stmt(i->get_else()) + ")";
     }
     case AST::Fa_Stmt::Kind::WHILE: {
         auto const* w = static_cast<AST::Fa_WhileStmt const*>(stmt);
-        return "while(" + sigExpr(w->getCondition()) + "," + sigStmt(w->getBody()) + ")";
+        return "while(" + sig_expr(w->get_condition()) + "," + sig_stmt(w->get_body()) + ")";
     }
     case AST::Fa_Stmt::Kind::FUNC: {
         auto const* fn = static_cast<AST::Fa_FunctionDef const*>(stmt);
         std::ostringstream out;
-        out << "func(" << std::string(fn->getName()->getValue().data(), fn->getName()->getValue().len()) << ",[";
-        for (u32 i = 0; i < fn->getParameters().size(); ++i) {
+        out << "func(" << std::string(fn->get_name()->get_value().data(), fn->get_name()->get_value().len()) << ",[";
+        for (u32 i = 0; i < fn->get_parameters().size(); ++i) {
             if (i)
                 out << ",";
-            out << sigExpr(fn->getParameters()[i]);
+            out << sig_expr(fn->get_parameters()[i]);
         }
-        out << "]," << sigStmt(fn->getBody()) << ")";
+        out << "]," << sig_stmt(fn->get_body()) << ")";
         return out.str();
     }
     case AST::Fa_Stmt::Kind::RETURN: {
         auto const* ret = static_cast<AST::Fa_ReturnStmt const*>(stmt);
-        return std::string("return(") + (ret->hasValue() ? sigExpr(ret->getValue()) : "nil") + ")";
+        return std::string("return(") + (ret->has_value() ? sig_expr(ret->get_value()) : "nil") + ")";
     }
     default:
         return "stmt(?)";
     }
 }
 
-std::string sigProgram(Fa_Array<AST::Fa_Stmt*> const& stmts)
+std::string sig_program(Fa_Array<AST::Fa_Stmt*> const& stmts)
 {
     std::ostringstream out;
     out << "program[";
     for (u32 i = 0; i < stmts.size(); ++i) {
         if (i)
             out << ",";
-        out << sigStmt(stmts[i]);
+        out << sig_stmt(stmts[i]);
     }
     out << "]";
     return out.str();
@@ -290,13 +290,13 @@ TEST(ParserGolden, ValidCorpus)
         Fa_Parser parser(&fm);
 
         if (gc.kind == "expr") {
-            auto expr = parser.parse();
-            ASSERT_TRUE(expr.hasValue()) << entry.path();
-            EXPECT_EQ(sigExpr(expr.value()), gc.expected);
+            auto m_expr = parser.parse();
+            ASSERT_TRUE(m_expr.has_value()) << entry.path();
+            EXPECT_EQ(sig_expr(m_expr.m_value()), gc.expected);
         } else if (gc.kind == "program") {
-            auto program = parser.parseProgram();
-            EXPECT_EQ(sigProgram(program), gc.expected);
-            EXPECT_FALSE(diagnostic::hasErrors()) << diagnostic::engine.toJSON();
+            auto program = parser.parse_program();
+            EXPECT_EQ(sig_program(program), gc.expected);
+            EXPECT_FALSE(diagnostic::has_errors()) << diagnostic::engine.to_json();
         } else {
             FAIL() << "unknown kind: " << gc.kind;
         }
@@ -322,16 +322,16 @@ TEST(ParserGolden, InvalidCorpus)
         Fa_Parser parser(&fm);
 
         if (gc.kind == "expr") {
-            auto expr = parser.parse();
-            EXPECT_TRUE(expr.hasError());
+            auto m_expr = parser.parse();
+            EXPECT_TRUE(m_expr.has_error());
         } else if (gc.kind == "program") {
-            parser.parseProgram();
-            EXPECT_TRUE(diagnostic::hasErrors());
+            parser.parse_program();
+            EXPECT_TRUE(diagnostic::has_errors());
         } else {
             FAIL() << "unknown kind: " << gc.kind;
         }
 
-        std::string json = diagnostic::engine.toJSON();
+        std::string json = diagnostic::engine.to_json();
         EXPECT_NE(json.find(gc.expected), std::string::npos) << json;
     }
 }

@@ -12,47 +12,47 @@
 namespace fairuz::runtime {
 
 struct LocalVar {
-    Fa_StringRef name;
+    Fa_StringRef m_name;
     unsigned int depth;
-    u8 reg;
+    u8 m_reg;
 }; // struct LocalVar
 
 struct UpvalueDesc {
-    bool isLocal;
-    u8 index;
+    bool is_local;
+    u8 m_index;
 }; // struct UpvalueDesc
 
 struct CompilerState {
     Fa_Chunk* chunk { nullptr };
     Fa_Array<LocalVar> locals;
-    unsigned int scopeDepth { 0 };
-    u8 nextReg { 0 };
-    u8 maxReg { 0 };
-    Fa_StringRef funcName;
-    bool isTopLevel { false };
-    bool isDead_ { false };
+    unsigned int scope_depth { 0 };
+    u8 next_reg { 0 };
+    u8 max_reg { 0 };
+    Fa_StringRef func_name;
+    bool is_top_level { false };
+    bool m_is_dead { false };
 
     struct LoopContext {
-        Fa_Array<u32> breakPatches;
-        Fa_Array<u32> continuePatches;
-        u32 loopStart;
+        Fa_Array<u32> break_patches;
+        Fa_Array<u32> continue_patches;
+        u32 loop_start;
     };
-    Fa_Array<LoopContext> loopStack;
+    Fa_Array<LoopContext> loop_stack;
     CompilerState* enclosing { nullptr };
 
-    u8 allocRegister()
+    u8 alloc_register()
     {
-        u8 reg = nextReg++;
-        if (nextReg > maxReg)
-            maxReg = nextReg;
-        return reg;
+        u8 m_reg = next_reg++;
+        if (next_reg > max_reg)
+            max_reg = next_reg;
+        return m_reg;
     }
-    void freeRegister()
+    void free_register()
     {
-        if (nextReg > 0)
-            nextReg--;
+        if (next_reg > 0)
+            next_reg--;
     }
-    void freeRegsTo(u8 m) { nextReg = m; }
+    void free_regs_to(u8 m) { next_reg = m; }
 }; // struct CompilerState
 
 struct RegMark {
@@ -61,13 +61,13 @@ struct RegMark {
 
     explicit RegMark(CompilerState* s)
         : state(s)
-        , mark(s->nextReg)
+        , mark(s->next_reg)
     {
     }
 
     ~RegMark()
     {
-        state->freeRegsTo(mark);
+        state->free_regs_to(mark);
     }
 }; // struct RegMark
 
@@ -132,13 +132,13 @@ struct Fa_ExprResult {
         return e;
     }
 
-    bool isConst() const
+    bool is_const() const
     {
         return kind == Kind::KINT || kind == Kind::KFLOAT || kind == Kind::KBOOL || kind == Kind::KNIL;
     }
 
-    bool isReg() const { return kind == Kind::REG; }
-    bool isReloc() const { return kind == Kind::RELOC; }
+    bool is_reg() const { return kind == Kind::REG; }
+    bool is_reloc() const { return kind == Kind::RELOC; }
 }; // struct Fa_ExprResult
 
 class Compiler {
@@ -149,7 +149,7 @@ public:
     Fa_Chunk* compile(Fa_Array<AST::Fa_Stmt*> const& stmts);
 
 private:
-    CompilerState* Current_ { nullptr };
+    CompilerState* m_current { nullptr };
 
     struct PairHash {
         size_t operator()(std::pair<Fa_StringRef, Fa_Chunk*> const& p) const noexcept
@@ -165,76 +165,78 @@ private:
             return lhs.first == rhs.first && lhs.second == rhs.second;
         }
     };
-    Fa_HashTable<std::pair<Fa_StringRef, Fa_Chunk*>, u16, PairHash, PairEqual> StringCache_;
+    Fa_HashTable<std::pair<Fa_StringRef, Fa_Chunk*>, u16, PairHash, PairEqual> m_string_cache;
 
     struct VarInfo {
         enum class Kind {
             LOCAL,
             GLOBAL
         } kind;
-        u8 index;
+        u8 m_index;
     };
 
-    void compileStmt(AST::Fa_Stmt const* s);
-    void compileBlock(AST::Fa_BlockStmt const* s);
-    void compileExprStmt(AST::Fa_ExprStmt const* s);
-    void compileAssignmentStmt(AST::Fa_AssignmentStmt const* s);
-    void compileIf(AST::Fa_IfStmt const* s);
-    void compileWhile(AST::Fa_WhileStmt const* s);
-    void compileFunctionDef(AST::Fa_FunctionDef const* f);
-    void compileReturn(AST::Fa_ReturnStmt const* s);
-    void compileFor(AST::Fa_ForStmt const* s);
+    void compile_stmt(AST::Fa_Stmt const* s);
+    void compile_block(AST::Fa_BlockStmt const* s);
+    void compile_expr_stmt(AST::Fa_ExprStmt const* s);
+    void compile_assignment_stmt(AST::Fa_AssignmentStmt const* s);
+    void compile_if(AST::Fa_IfStmt const* s);
+    void compile_while(AST::Fa_WhileStmt const* s);
+    void compile_function_def(AST::Fa_FunctionDef const* f);
+    void compile_return(AST::Fa_ReturnStmt const* s);
+    void compile_for(AST::Fa_ForStmt const* s);
 
-    Fa_ExprResult compileExprI(AST::Fa_Expr const* e);
-    Fa_ExprResult compileLiteralI(AST::Fa_LiteralExpr const* e);
-    Fa_ExprResult compileNameI(AST::Fa_NameExpr const* e);
-    Fa_ExprResult compileUnaryI(AST::Fa_UnaryExpr const* e);
-    Fa_ExprResult compileBinaryI(AST::Fa_BinaryExpr const* e);
-    Fa_ExprResult compileAssignI(AST::Fa_AssignmentExpr const* e);
-    Fa_ExprResult compileCallImpl(AST::Fa_CallExpr const* e, u8* dst, bool tail = false);
-    Fa_ExprResult compileListI(AST::Fa_ListExpr const* e);
-    Fa_ExprResult compileIndexI(AST::Fa_IndexExpr const* e);
+    Fa_ExprResult compile_expr_i(AST::Fa_Expr const* e);
+    Fa_ExprResult compile_literal_i(AST::Fa_LiteralExpr const* e);
+    Fa_ExprResult compile_name_i(AST::Fa_NameExpr const* e);
+    Fa_ExprResult compile_unary_i(AST::Fa_UnaryExpr const* e);
+    Fa_ExprResult compile_binary_i(AST::Fa_BinaryExpr const* e);
+    Fa_ExprResult compile_assign_i(AST::Fa_AssignmentExpr const* e);
+    Fa_ExprResult compile_call_impl(AST::Fa_CallExpr const* e, u8* dst, bool tail = false);
+    Fa_ExprResult compile_list_i(AST::Fa_ListExpr const* e);
+    Fa_ExprResult compile_index_i(AST::Fa_IndexExpr const* e);
+    Fa_ExprResult compile_dict_i(AST::Fa_DictExpr const* e);
 
     void discharge(Fa_ExprResult const& r, u8 dst, Fa_SourceLocation loc);
 
-    u8 anyReg(Fa_ExprResult const& r, Fa_SourceLocation loc);
+    u8 any_reg(Fa_ExprResult const& r, Fa_SourceLocation loc);
 
-    u8 compileExpr(AST::Fa_Expr const* e, u8* dst = nullptr);
-    u8 compileLiteral(AST::Fa_LiteralExpr const* e, u8* dst);
-    u8 compileName(AST::Fa_NameExpr const* e, u8* dst);
-    u8 compileUnary(AST::Fa_UnaryExpr const* e, u8* dst);
-    u8 compileBinary(AST::Fa_BinaryExpr const* e, u8* dst);
-    u8 compileAssignmentExpr(AST::Fa_AssignmentExpr const* e, u8* dst);
-    u8 compileCall(AST::Fa_CallExpr const* e, u8* dst, bool tail = false);
-    u8 compileList(AST::Fa_ListExpr const* e, u8* dst);
-    u8 compileIndex(AST::Fa_IndexExpr const* e, u8* dst);
+    u8 compile_expr(AST::Fa_Expr const* e, u8* dst = nullptr);
+    u8 compile_literal(AST::Fa_LiteralExpr const* e, u8* dst);
+    u8 compile_name(AST::Fa_NameExpr const* e, u8* dst);
+    u8 compile_unary(AST::Fa_UnaryExpr const* e, u8* dst);
+    u8 compile_binary(AST::Fa_BinaryExpr const* e, u8* dst);
+    u8 compile_assignment_expr(AST::Fa_AssignmentExpr const* e, u8* dst);
+    u8 compile_call(AST::Fa_CallExpr const* e, u8* dst, bool tail = false);
+    u8 compile_list(AST::Fa_ListExpr const* e, u8* dst);
+    u8 compile_index(AST::Fa_IndexExpr const* e, u8* dst);
+    u8 compile_dict(AST::Fa_DictExpr const* e, u8* dst);
 
-    u8 errorReg() const;
-    u8 ensureReg(u8 const* reg);
-    u8 allocRegister();
+    u8 error_reg() const;
+    u8 ensure_reg(u8 const* m_reg);
+    u8 alloc_register();
 
-    void declareLocal(Fa_StringRef const& name, u8 reg);
-    VarInfo resolveName(Fa_StringRef const& name);
+    void declare_local(Fa_StringRef const& m_name, u8 m_reg);
+    VarInfo resolve_name(Fa_StringRef const& m_name);
 
-    int resolveUpvalue(CompilerState* state, Fa_StringRef const& name);
-    int addUpvalue(CompilerState* state, bool is_local, u8 index);
+    int resolve_upvalue(CompilerState* state, Fa_StringRef const& m_name);
+    int add_upvalue(CompilerState* state, bool is_local, u8 m_index);
 
     u32 emit(u32 instr, Fa_SourceLocation loc);
-    u32 emitJump(Fa_OpCode op, u8 cond, Fa_SourceLocation loc);
+    u32 emit_jump(Fa_OpCode op, u8 cond, Fa_SourceLocation loc);
 
-    void patchJump(u32 idx);
-    void pushLoop(u32 loop_start);
-    void popLoop(u32 loop_exit, u32 continue_target, u32 line);
-    void patchJumpTo(u32 instr_idx, u32 target);
-    void emitLoadValue(u8 dst, Fa_Value v, Fa_SourceLocation loc);
+    void patch_jump(u32 idx);
+    void push_loop(u32 loop_start);
+    void pop_loop(u32 loop_exit, u32 continue_target, u32 m_line);
+    void patch_jump_to(u32 instr_idx, u32 m_target);
+    void emit_load_value(u8 dst, Fa_Value v, Fa_SourceLocation loc);
 
-    Fa_Chunk* currentChunk() const;
-    u32 currentOffset() const;
+    Fa_Chunk* current_chunk() const;
+    u32 current_offset() const;
 
-    void beginScope();
-    void endScope(Fa_SourceLocation loc);
+    void begin_scope();
+    void end_scope(Fa_SourceLocation loc);
 
-    u32 internString(Fa_StringRef const& str);
+    u32 intern_string(Fa_StringRef const& str);
 }; // class Compiler
 
 } // namespace fairuz::runtime

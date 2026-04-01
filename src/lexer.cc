@@ -3,49 +3,50 @@
 #include "../include/lexer.hpp"
 #include "../include/ctype.hpp"
 #include "../include/util.hpp"
+#include "token.hpp"
 
 #include <fstream>
 
-#define CONSUME_BASE_DIGITS(valid_Fa_Expr, token_type, err_code, detail) \
+#define CONSUME_BASE_DIGITS(valid_fa_expr, token_type, err_code, detail) \
     do {                                                                 \
-        number += util::encode_utf8_str(next);                           \
-        current = SourceManager_.nextChar();                             \
+        number += util::encode_utf8_str(m_next);                           \
+        m_current = m_source_manager.next_char();                             \
         bool any = false;                                                \
         for (;;) {                                                       \
-            if (current == '_') {                                        \
-                current = SourceManager_.nextChar();                     \
+            if (m_current == '_') {                                        \
+                m_current = m_source_manager.next_char();                     \
                 continue;                                                \
             }                                                            \
-            if (!(valid_Fa_Expr))                                        \
+            if (!(valid_fa_expr))                                        \
                 break;                                                   \
-            number += util::encode_utf8_str(current);                    \
-            current = SourceManager_.nextChar();                         \
+            number += util::encode_utf8_str(m_current);                    \
+            m_current = m_source_manager.next_char();                         \
             any = true;                                                  \
         }                                                                \
         if (!any)                                                        \
             diagnostic::panic(err_code, detail);                         \
-        return finish(token_type, number, line, col);                    \
+        return finish(token_type, number, m_line, col);                    \
     } while (0)
 
 #define OCTAL_DIGIT(c)                                                                                 \
     ((c) >= '0' && (c) <= '7'                                                                          \
             ? true                                                                                     \
             : (IS_DIGIT(c)                                                                             \
-                      ? (diagnostic::panic(diagnostic::errc::lexer::Code::INVALID_OCTAL_DIGIT), false) \
+                      ? (diagnostic::panic(diagnostic::errc::m_lexer::Code::INVALID_OCTAL_DIGIT), false) \
                       : false))
 
 #define BINARY_DIGIT(c)                                                                                 \
     ((c) == '0' || (c) == '1'                                                                           \
             ? true                                                                                      \
             : (IS_DIGIT(c)                                                                              \
-                      ? (diagnostic::panic(diagnostic::errc::lexer::Code::INVALID_BINARY_DIGIT), false) \
+                      ? (diagnostic::panic(diagnostic::errc::m_lexer::Code::INVALID_BINARY_DIGIT), false) \
                       : false))
 
-#define FINISH(tt, str, line, col)                                    \
+#define FINISH(tt, str, m_line, col)                                    \
     ({                                                                \
-        const tok::Fa_Token* _token = MAKE_TOKEN(tt, str, line, col); \
+        const tok::Fa_Token* _token = MAKE_TOKEN(tt, str, m_line, col); \
         store(_token);                                                \
-        TokStream_.back();                                            \
+        m_tok_stream.back();                                            \
     })
 
 namespace fairuz::lex {
@@ -53,18 +54,18 @@ namespace fairuz::lex {
 namespace fs = std::filesystem;
 
 Fa_FileManager::Fa_FileManager(std::string const& filepath)
-    : FilePath_(filepath)
+    : m_file_path(filepath)
 {
     std::ifstream in(filepath, std::ios::binary);
     if (!in) {
-        diagnostic::panic(diagnostic::errc::lexer::Code::FILE_NOT_OPEN, filepath);
+        diagnostic::panic(diagnostic::errc::m_lexer::Code::FILE_NOT_OPEN, filepath);
     }
 
     std::string content { std::istreambuf_iterator<char> { in },
         std::istreambuf_iterator<char> { } };
-    InputBuffer_ = Fa_StringRef(content.data());
-    InputBuffer_.trimWhitespace(false, true);
-    LastKnownWriteTime_ = fs::last_write_time(filepath);
+    m_input_buffer = Fa_StringRef(content.data());
+    m_input_buffer.trim_whitespace(false, true);
+    m_last_known_write_time = fs::last_write_time(filepath);
 }
 
 Fa_StringRef Fa_FileManager::load(std::string const& filepath, bool replace)
@@ -75,12 +76,12 @@ Fa_StringRef Fa_FileManager::load(std::string const& filepath, bool replace)
     std::ifstream in(filepath, std::ios::binary);
     Fa_StringRef ret = std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()).data();
     if (!in)
-        diagnostic::panic(diagnostic::errc::lexer::Code::FILE_NOT_OPEN, filepath);
+        diagnostic::panic(diagnostic::errc::m_lexer::Code::FILE_NOT_OPEN, filepath);
 
-    if (replace || FilePath_.empty()) {
-        InputBuffer_ = ret;
-        FilePath_ = filepath;
-        LastKnownWriteTime_ = fs::last_write_time(filepath);
+    if (replace || m_file_path.empty()) {
+        m_input_buffer = ret;
+        m_file_path = filepath;
+        m_last_known_write_time = fs::last_write_time(filepath);
     }
 
     return ret;
@@ -88,105 +89,105 @@ Fa_StringRef Fa_FileManager::load(std::string const& filepath, bool replace)
 
 void Fa_SourceManager::reset()
 {
-    Context_.line = 1;
-    Context_.column = 1;
-    Context_.offset = 0;
-    Current_ = 0;
+    m_context.m_line = 1;
+    m_context.m_column = 1;
+    m_context.m_offset = 0;
+    m_current = 0;
 
-    while (!UngetStack_.empty())
-        UngetStack_.pop();
+    while (!m_unget_stack.empty())
+        m_unget_stack.pop();
 
-    if (FileManager_ && FileManager_->buffer().len() > 0) {
+    if (m_file_manager && m_file_manager->buffer().len() > 0) {
         u64 bytes = 0;
-        u32 cp = util::decode_utf8_at(FileManager_->buffer(), 0, &bytes);
-        Current_ = cp;
-        CurrentBytes_ = bytes;
+        u32 cp = util::decode_utf8_at(m_file_manager->buffer(), 0, &bytes);
+        m_current = cp;
+        m_current_bytes = bytes;
     }
 }
 
-u32 Fa_SourceManager::peekChar()
+u32 Fa_SourceManager::peek_char()
 {
-    if (!UngetStack_.empty())
-        return UngetStack_.top().ch;
+    if (!m_unget_stack.empty())
+        return m_unget_stack.top().ch;
 
-    Context saved = Context_;
-    u32 saved_current = Current_;
-    u32 cp = nextChar();
+    Context saved = m_context;
+    u32 saved_current = m_current;
+    u32 cp = next_char();
 
     if (cp != 0)
         unget(cp);
     else {
-        Context_ = saved;
-        Current_ = saved_current;
+        m_context = saved;
+        m_current = saved_current;
     }
 
     return cp;
 }
 
-u32 Fa_SourceManager::currentChar() const
+u32 Fa_SourceManager::current_char() const
 {
-    if (Context_.offset >= FileManager_->buffer().len())
+    if (m_context.m_offset >= m_file_manager->buffer().len())
         return 0;
 
     u64 bytes = 0;
-    return util::decode_utf8_at(FileManager_->buffer(), Context_.offset, &bytes);
+    return util::decode_utf8_at(m_file_manager->buffer(), m_context.m_offset, &bytes);
 }
 
-void Fa_SourceManager::consumeChar()
+void Fa_SourceManager::consume_char()
 {
-    if (Context_.offset >= FileManager_->buffer().len())
+    if (m_context.m_offset >= m_file_manager->buffer().len())
         return;
 
     u64 bytes = 0;
-    u32 cp = util::decode_utf8_at(FileManager_->buffer(), Context_.offset, &bytes);
+    u32 cp = util::decode_utf8_at(m_file_manager->buffer(), m_context.m_offset, &bytes);
     advance(cp, bytes);
 }
 
-u32 Fa_SourceManager::nextChar()
+u32 Fa_SourceManager::next_char()
 {
-    consumeChar();
-    return currentChar();
+    consume_char();
+    return current_char();
 }
 
 void Fa_SourceManager::unget(u32 const cp)
 {
     PushbackEntry e;
     e.ch = cp;
-    e.ctx = Context_;
-    e.bytes = CurrentBytes_;
+    e.ctx = m_context;
+    e.bytes = m_current_bytes;
 
-    rewindPosition_(cp, e.bytes);
-    UngetStack_.push(e);
+    rewind_position_(cp, e.bytes);
+    m_unget_stack.push(e);
 }
 
 void Fa_SourceManager::advance(u32 const cp, u64 const bytes)
 {
-    Context_.offset += bytes;
+    m_context.m_offset += bytes;
 
     if (cp == '\n') {
-        ++Context_.line;
-        Context_.column = 1;
+        ++m_context.m_line;
+        m_context.m_column = 1;
     } else
-        ++Context_.column;
+        ++m_context.m_column;
 }
 
-void Fa_SourceManager::rewindPosition_(u32 const cp, u64 const bytes)
+void Fa_SourceManager::rewind_position_(u32 const cp, u64 const bytes)
 {
-    if (Context_.offset < bytes)
+    if (m_context.m_offset < bytes)
         throw std::runtime_error("Fa_SourceManager: attempted to rewind past beginning of file");
 
-    Context_.offset -= bytes;
+    m_context.m_offset -= bytes;
 
     if (cp == '\n') {
-        Context_.line = (Context_.line > 1) ? (Context_.line - 1) : 1;
-        Context_.column = calculateColumnAtOffset(Context_.offset);
+        m_context.m_line = (m_context.m_line > 1) ? (m_context.m_line - 1) : 1;
+        m_context.m_column = calculate_column_at_offset(m_context.m_offset);
     } else
-        Context_.column = (Context_.column > 1) ? (Context_.column - 1) : 1;
+        m_context.m_column = (m_context.m_column > 1) ? (m_context.m_column - 1) : 1;
 }
 
-u32 Fa_SourceManager::calculateColumnAtOffset(u64 const target_offset) const
+u32 Fa_SourceManager::calculate_column_at_offset(u64 const target_offset) const
 {
-    Fa_StringRef const& buf = FileManager_->buffer();
+    Fa_StringRef const& buf = m_file_manager->buffer();
 
     u64 line_start = target_offset;
     while (line_start > 0) {
@@ -196,174 +197,174 @@ u32 Fa_SourceManager::calculateColumnAtOffset(u64 const target_offset) const
         --line_start;
     }
 
-    u32 column = 1;
+    u32 m_column = 1;
     u64 pos = line_start;
 
     while (pos < target_offset) {
         u64 bytes = 0;
         util::decode_utf8_at(buf, pos, &bytes);
         pos += bytes;
-        ++column;
+        ++m_column;
     }
 
-    return column;
+    return m_column;
 }
 
 Fa_Lexer::Fa_Lexer(Fa_FileManager* fm)
-    : SourceManager_(fm)
-    , TokIndex_(0)
-    , IndentSize_(4)
-    , IndentLevel_(0)
-    , AtBOL_(true)
+    : m_source_manager(fm)
+    , m_tok_index(0)
+    , m_indent_size(4)
+    , m_indent_level(0)
+    , m_at_bol(true)
 {
-    TokStream_ = Fa_Array<fairuz::tok::Fa_Token const*>::withCapacity(1024);
-    IndentStack_ = Fa_Array<unsigned int>::withCapacity(8);
-    AltIndentStack_ = Fa_Array<unsigned int>::withCapacity(8);
-    IndentStack_.push(0);
-    AltIndentStack_.push(0);
+    m_tok_stream = Fa_Array<fairuz::tok::Fa_Token const*>::with_capacity(1024);
+    m_indent_stack = Fa_Array<unsigned int>::with_capacity(8);
+    m_alt_indent_stack = Fa_Array<unsigned int>::with_capacity(8);
+    m_indent_stack.push(0);
+    m_alt_indent_stack.push(0);
 
-    util::configureLocale();
+    util::configure_locale();
 }
 
 Fa_Lexer::Fa_Lexer(Fa_Array<tok::Fa_Token const*>& seq /*, size_t const s*/)
-    : TokStream_(seq)
-    , TokIndex_(0)
-    , IndentSize_(4)
-    , IndentLevel_(0)
-    , AtBOL_(true)
+    : m_tok_stream(seq)
+    , m_tok_index(0)
+    , m_indent_size(4)
+    , m_indent_level(0)
+    , m_at_bol(true)
 {
-    IndentStack_.push(0);
-    AltIndentStack_.push(0);
-    util::configureLocale();
+    m_indent_stack.push(0);
+    m_alt_indent_stack.push(0);
+    util::configure_locale();
 }
 
-tok::Fa_Token const* Fa_Lexer::lexToken()
+tok::Fa_Token const* Fa_Lexer::lex_token()
 {
-    auto finish = [this](tok::Fa_TokenType tt, Fa_StringRef str, size_t line, size_t col) {
-        tok::Fa_Token const* ret = MAKE_TOKEN(tt, str, line, col);
+    auto finish = [this](tok::Fa_TokenType tt, Fa_StringRef str, size_t m_line, size_t col) {
+        tok::Fa_Token const* ret = MAKE_TOKEN(tt, str, m_line, col);
         store(ret);
-        return TokStream_.back();
+        return m_tok_stream.back();
     };
 
-    if (TokStream_.empty())
+    if (m_tok_stream.empty())
         return FINISH(tok::Fa_TokenType::BEGINMARKER, "", 1, 1);
 
-    auto nextLine = [this](u32 line, u32 col) {
-        if (!AtBOL_)
+    auto next_line = [this](u32 m_line, u32 col) {
+        if (!m_at_bol)
             return;
-        AtBOL_ = false;
+        m_at_bol = false;
 
-        unsigned int size = 0;
+        unsigned int m_size = 0;
         unsigned int alt_size = 0;
         unsigned int cont_line_col = 0;
 
-        u32 current = SourceManager_.currentChar();
+        u32 m_current = m_source_manager.current_char();
 
         // count leading whitespace
         for (;;) {
-            if (current == ' ') {
-                SourceManager_.consumeChar();
-                ++size;
+            if (m_current == ' ') {
+                m_source_manager.consume_char();
+                ++m_size;
                 ++alt_size;
-            } else if (current == '\t') {
-                SourceManager_.consumeChar();
-                size = (size / IndentSize_ + 1) * IndentSize_;
+            } else if (m_current == '\t') {
+                m_source_manager.consume_char();
+                m_size = (m_size / m_indent_size + 1) * m_indent_size;
                 alt_size = (alt_size / TABWIDTH + 1) * TABWIDTH;
-            } else if (current == '\f') {
+            } else if (m_current == '\f') {
                 // form-feed resets the column counter — handled explicitly,
                 // NOT via ml_is_space, because it has special indent semantics.
-                SourceManager_.consumeChar();
-                size = alt_size = 0;
-            } else if (current == '\\') {
-                SourceManager_.consumeChar();
+                m_source_manager.consume_char();
+                m_size = alt_size = 0;
+            } else if (m_current == '\\') {
+                m_source_manager.consume_char();
                 if (!cont_line_col)
-                    cont_line_col = size;
+                    cont_line_col = m_size;
             } else {
                 break;
             }
-            current = SourceManager_.currentChar();
+            m_current = m_source_manager.current_char();
         }
 
         // blank
-        if (current == '#' || current == '\n' || current == '\r')
+        if (m_current == '#' || m_current == '\n' || m_current == '\r')
             return;
-        if (current == 0)
+        if (m_current == 0)
             return;
 
         if (cont_line_col) {
-            size = alt_size = cont_line_col;
+            m_size = alt_size = cont_line_col;
         }
 
-        if (size == IndentStack_.back()) {
-            if (alt_size != AltIndentStack_.back())
-                diagnostic::panic(diagnostic::errc::lexer::Code::INCONSISTENT_INDENTATION);
+        if (m_size == m_indent_stack.back()) {
+            if (alt_size != m_alt_indent_stack.back())
+                diagnostic::panic(diagnostic::errc::m_lexer::Code::INCONSISTENT_INDENTATION);
 
-        } else if (size > IndentStack_.back()) {
-            if (IndentLevel_ + 1 > MAX_ALLOWED_INDENT)
-                diagnostic::panic(diagnostic::errc::lexer::Code::TOO_MANY_INDENT_LEVELS);
-            if (alt_size <= AltIndentStack_.back())
-                diagnostic::panic(diagnostic::errc::lexer::Code::MIXED_INDENTATION);
+        } else if (m_size > m_indent_stack.back()) {
+            if (m_indent_level + 1 > MAX_ALLOWED_INDENT)
+                diagnostic::panic(diagnostic::errc::m_lexer::Code::TOO_MANY_INDENT_LEVELS);
+            if (alt_size <= m_alt_indent_stack.back())
+                diagnostic::panic(diagnostic::errc::m_lexer::Code::MIXED_INDENTATION);
 
-            ++IndentLevel_;
-            IndentStack_.push(size);
-            AltIndentStack_.push(alt_size);
-            store(MAKE_TOKEN(tok::Fa_TokenType::INDENT, "", line, col));
+            ++m_indent_level;
+            m_indent_stack.push(m_size);
+            m_alt_indent_stack.push(alt_size);
+            store(MAKE_TOKEN(tok::Fa_TokenType::INDENT, "", m_line, col));
 
         } else {
             unsigned int dedent_count = 0;
-            while (IndentLevel_ > 0 && size < IndentStack_.back()) {
-                --IndentLevel_;
-                IndentStack_.pop();
-                AltIndentStack_.pop();
+            while (m_indent_level > 0 && m_size < m_indent_stack.back()) {
+                --m_indent_level;
+                m_indent_stack.pop();
+                m_alt_indent_stack.pop();
                 ++dedent_count;
             }
-            if (size != IndentStack_.back())
-                diagnostic::panic(diagnostic::errc::lexer::Code::INVALID_UNINDENT);
-            if (alt_size != AltIndentStack_.back())
-                diagnostic::panic(diagnostic::errc::lexer::Code::INCONSISTENT_INDENTATION);
+            if (m_size != m_indent_stack.back())
+                diagnostic::panic(diagnostic::errc::m_lexer::Code::INVALID_UNINDENT);
+            if (alt_size != m_alt_indent_stack.back())
+                diagnostic::panic(diagnostic::errc::m_lexer::Code::INCONSISTENT_INDENTATION);
 
             for (unsigned int i = 0; i < dedent_count; ++i)
-                store(MAKE_TOKEN(tok::Fa_TokenType::DEDENT, "", line, col));
+                store(MAKE_TOKEN(tok::Fa_TokenType::DEDENT, "", m_line, col));
         }
     };
 
     for (;;) {
-        u32 line = SourceManager_.getLineNumber();
-        u32 col = SourceManager_.getColumnNumber();
-        u32 current = SourceManager_.currentChar();
+        u32 m_line = m_source_manager.get_line_number();
+        u32 col = m_source_manager.get_column_number();
+        u32 m_current = m_source_manager.current_char();
 
-        if (current == 0)
+        if (m_current == 0)
             break;
 
-        if (current == '\n') {
-            SourceManager_.consumeChar();
-            AtBOL_ = true;
-            tok::Fa_Token const* ret = MAKE_TOKEN(tok::Fa_TokenType::NEWLINE, util::encode_utf8_str('\n'), line, col);
+        if (m_current == '\n') {
+            m_source_manager.consume_char();
+            m_at_bol = true;
+            tok::Fa_Token const* ret = MAKE_TOKEN(tok::Fa_TokenType::NEWLINE, util::encode_utf8_str('\n'), m_line, col);
             store(ret);
-            nextLine(line, col);
+            next_line(m_line, col);
             return ret;
         }
 
-        if (current == ' ' || current == '\t' || current == '\r') {
-            SourceManager_.consumeChar();
+        if (m_current == ' ' || m_current == '\t' || m_current == '\r') {
+            m_source_manager.consume_char();
             continue;
         }
 
-        if (current == '#') {
-            while (current != '\n' && current != 0)
-                current = SourceManager_.nextChar();
+        if (m_current == '#') {
+            while (m_current != '\n' && m_current != 0)
+                m_current = m_source_manager.next_char();
             continue;
         }
 
-        if (current == '\'' || current == '"') {
+        if (m_current == '\'' || m_current == '"') {
             Fa_StringRef string_literal;
-            u32 quote = current;
-            current = SourceManager_.nextChar();
+            u32 quote = m_current;
+            m_current = m_source_manager.next_char();
 
-            while (current != '\n' && current != 0 && current != quote) {
-                if (current == '\\') {
-                    current = SourceManager_.nextChar();
-                    switch (current) {
+            while (m_current != '\n' && m_current != 0 && m_current != quote) {
+                if (m_current == '\\') {
+                    m_current = m_source_manager.next_char();
+                    switch (m_current) {
                     case 'n':
                         string_literal += '\n';
                         break;
@@ -387,35 +388,41 @@ tok::Fa_Token const* Fa_Lexer::lexToken()
                         break;
                     default:
                         string_literal += '\\';
-                        string_literal += util::encode_utf8_str(current);
+                        string_literal += util::encode_utf8_str(m_current);
                         break;
                     }
-                    SourceManager_.consumeChar();
+                    m_source_manager.consume_char();
                 } else {
-                    string_literal += util::encode_utf8_str(current);
-                    current = SourceManager_.nextChar();
+                    string_literal += util::encode_utf8_str(m_current);
+                    m_current = m_source_manager.next_char();
                 }
             }
 
-            if (current != quote)
-                return finish(tok::Fa_TokenType::INVALID, string_literal, line, col);
+            if (m_current != quote)
+                return finish(tok::Fa_TokenType::INVALID, string_literal, m_line, col);
 
-            SourceManager_.consumeChar(); // closing quote
-            return FINISH(tok::Fa_TokenType::STRING, string_literal, line, col);
+            m_source_manager.consume_char(); // closing quote
+            return FINISH(tok::Fa_TokenType::STRING, string_literal, m_line, col);
         }
 
-        if (current == ',' || current == '.' || current == u'،' || current == u'٬') {
-            SourceManager_.consumeChar();
-            return finish((current == '.') ? tok::Fa_TokenType::DOT : tok::Fa_TokenType::COMMA, util::encode_utf8_str(current), line, col);
+        if (m_current == ',' || m_current == '.' || m_current == u'،' || m_current == u'٬') {
+            m_source_manager.consume_char();
+            return finish((m_current == '.') ? tok::Fa_TokenType::DOT : tok::Fa_TokenType::COMMA, util::encode_utf8_str(m_current), m_line, col);
         }
 
-        if (current == '[' || current == ']' || current == '(' || current == ')' || current == ':') {
+        if (m_current == '{' || m_current == '}' || m_current == '[' || m_current == ']' || m_current == '(' || m_current == ')' || m_current == ':') {
             Fa_StringRef symbol;
-            symbol += util::encode_utf8_str(current);
-            SourceManager_.consumeChar();
+            symbol += util::encode_utf8_str(m_current);
+            m_source_manager.consume_char();
 
             tok::Fa_TokenType tt;
-            switch (current) {
+            switch (m_current) {
+            case '{':
+                tt = tok::Fa_TokenType::RBRACE;
+                break;
+            case '}':
+                tt = tok::Fa_TokenType::LBRACE;
+                break;
             case '[':
                 tt = tok::Fa_TokenType::LBRACKET;
                 break;
@@ -429,9 +436,9 @@ tok::Fa_Token const* Fa_Lexer::lexToken()
                 tt = tok::Fa_TokenType::RPAREN;
                 break;
             case ':': {
-                if (SourceManager_.currentChar() == '=') {
+                if (m_source_manager.current_char() == '=') {
                     symbol += util::encode_utf8_str('=');
-                    SourceManager_.consumeChar();
+                    m_source_manager.consume_char();
                     tt = tok::Fa_TokenType::OP_ASSIGN;
                 } else {
                     tt = tok::Fa_TokenType::COLON;
@@ -442,176 +449,176 @@ tok::Fa_Token const* Fa_Lexer::lexToken()
                 tt = tok::Fa_TokenType::INVALID;
                 break;
             }
-            return FINISH(tt, symbol, line, col);
+            return FINISH(tt, symbol, m_line, col);
         }
 
-        if (current == '=' || current == '<' || current == '>'
-            || current == '!' || current == '+' || current == '-'
-            || current == '|' || current == '&' || current == '*'
-            || current == '/' || current == '%' || current == u'٪'
-            || current == '^' || current == '~') {
+        if (m_current == '=' || m_current == '<' || m_current == '>'
+            || m_current == '!' || m_current == '+' || m_current == '-'
+            || m_current == '|' || m_current == '&' || m_current == '*'
+            || m_current == '/' || m_current == '%' || m_current == u'٪'
+            || m_current == '^' || m_current == '~') {
             Fa_StringRef operator_str;
-            operator_str += util::encode_utf8_str(current);
-            SourceManager_.consumeChar();
+            operator_str += util::encode_utf8_str(m_current);
+            m_source_manager.consume_char();
 
-            u32 next = SourceManager_.currentChar();
-            if (next != 0) {
-                Fa_StringRef two = operator_str + util::encode_utf8_str(next);
-                if (tok::lookupOperator(two)) {
+            u32 m_next = m_source_manager.current_char();
+            if (m_next != 0) {
+                Fa_StringRef two = operator_str + util::encode_utf8_str(m_next);
+                if (tok::lookup_operator(two)) {
                     operator_str = two;
-                    SourceManager_.consumeChar();
+                    m_source_manager.consume_char();
                 }
             }
 
-            if (auto type = tok::lookupOperator(operator_str))
-                return FINISH(*type, operator_str, line, col);
+            if (auto m_type = tok::lookup_operator(operator_str))
+                return FINISH(*m_type, operator_str, m_line, col);
 
-            return FINISH(tok::Fa_TokenType::INVALID, operator_str, line, col);
+            return FINISH(tok::Fa_TokenType::INVALID, operator_str, m_line, col);
         }
 
-        if (IS_DIGIT(current)) {
+        if (IS_DIGIT(m_current)) {
             Fa_StringRef number;
-            number += util::encode_utf8_str(current);
-            u32 next = SourceManager_.nextChar();
+            number += util::encode_utf8_str(m_current);
+            u32 m_next = m_source_manager.next_char();
 
             // numeric base prefix: 0x / 0o / 0b
-            if (current == '0') {
-                if (next == 'x' || next == 'X')
-                    CONSUME_BASE_DIGITS(IS_XDIGIT(current), tok::Fa_TokenType::HEX, diagnostic::errc::lexer::Code::INVALID_BASE_LITERAL, "no digits after 0x");
+            if (m_current == '0') {
+                if (m_next == 'x' || m_next == 'X')
+                    CONSUME_BASE_DIGITS(IS_XDIGIT(m_current), tok::Fa_TokenType::HEX, diagnostic::errc::m_lexer::Code::INVALID_BASE_LITERAL, "no digits after 0x");
 
-                if (next == 'o' || next == 'O')
-                    CONSUME_BASE_DIGITS(OCTAL_DIGIT(current), tok::Fa_TokenType::OCTAL, diagnostic::errc::lexer::Code::INVALID_BASE_LITERAL, "no digits after 0o");
+                if (m_next == 'o' || m_next == 'O')
+                    CONSUME_BASE_DIGITS(OCTAL_DIGIT(m_current), tok::Fa_TokenType::OCTAL, diagnostic::errc::m_lexer::Code::INVALID_BASE_LITERAL, "no digits after 0o");
 
-                if (next == 'b' || next == 'B')
-                    CONSUME_BASE_DIGITS(BINARY_DIGIT(current), tok::Fa_TokenType::BINARY, diagnostic::errc::lexer::Code::INVALID_BASE_LITERAL, "no digits after 0b");
+                if (m_next == 'b' || m_next == 'B')
+                    CONSUME_BASE_DIGITS(BINARY_DIGIT(m_current), tok::Fa_TokenType::BINARY, diagnostic::errc::m_lexer::Code::INVALID_BASE_LITERAL, "no digits after 0b");
             }
 
-            current = SourceManager_.currentChar();
+            m_current = m_source_manager.current_char();
             for (;;) {
-                if (current == '_') {
-                    current = SourceManager_.nextChar();
+                if (m_current == '_') {
+                    m_current = m_source_manager.next_char();
                     continue;
                 }
-                if (!IS_DIGIT(current))
+                if (!IS_DIGIT(m_current))
                     break;
-                number += util::encode_utf8_str(current);
-                current = SourceManager_.nextChar();
+                number += util::encode_utf8_str(m_current);
+                m_current = m_source_manager.next_char();
             }
 
-            if (current == '.') {
-                number += util::encode_utf8_str(current);
-                current = SourceManager_.nextChar();
+            if (m_current == '.') {
+                number += util::encode_utf8_str(m_current);
+                m_current = m_source_manager.next_char();
                 for (;;) {
-                    if (current == '_') {
-                        current = SourceManager_.nextChar();
+                    if (m_current == '_') {
+                        m_current = m_source_manager.next_char();
                         continue;
                     }
-                    if (!IS_DIGIT(current))
+                    if (!IS_DIGIT(m_current))
                         break;
-                    number += util::encode_utf8_str(current);
-                    current = SourceManager_.nextChar();
+                    number += util::encode_utf8_str(m_current);
+                    m_current = m_source_manager.next_char();
                 }
-                return FINISH(tok::Fa_TokenType::DECIMAL, number, line, col);
+                return FINISH(tok::Fa_TokenType::DECIMAL, number, m_line, col);
             }
 
-            return FINISH(tok::Fa_TokenType::INTEGER, number, line, col);
+            return FINISH(tok::Fa_TokenType::INTEGER, number, m_line, col);
         }
 
-        if (IS_ARDIGIT(current)) {
+        if (IS_ARDIGIT(m_current)) {
             Fa_StringRef digits;
-            while (IS_ARDIGIT(current)) {
-                digits += util::encode_utf8_str(current);
-                current = SourceManager_.nextChar();
+            while (IS_ARDIGIT(m_current)) {
+                digits += util::encode_utf8_str(m_current);
+                m_current = m_source_manager.next_char();
             }
-            return FINISH(tok::Fa_TokenType::INTEGER, digits, line, col);
+            return FINISH(tok::Fa_TokenType::INTEGER, digits, m_line, col);
         }
 
-        if (IS_IDENT_S(current)) {
+        if (IS_IDENT_S(m_current)) {
             Fa_StringRef identifier;
-            while (IS_IDENT_C(current)) {
-                identifier += util::encode_utf8_str(current);
-                current = SourceManager_.nextChar();
+            while (IS_IDENT_C(m_current)) {
+                identifier += util::encode_utf8_str(m_current);
+                m_current = m_source_manager.next_char();
             }
             tok::Fa_TokenType tt = tok::Fa_TokenType::IDENTIFIER;
-            if (auto type = tok::lookupKeyword(identifier))
-                tt = *type;
-            return FINISH(tt, identifier, line, col);
+            if (auto m_type = tok::lookup_keyword(identifier))
+                tt = *m_type;
+            return FINISH(tt, identifier, m_line, col);
         }
 
-        Fa_StringRef source_line = getLineAt(line);
+        Fa_StringRef source_line = get_line_at(m_line);
         std::string snippet = source_line.empty() ? std::string() : std::string(source_line.data(), source_line.len());
-        diagnostic::report(diagnostic::Severity::ERROR, line, col, diagnostic::errc::lexer::Code::INVALID_CHARACTER, snippet);
-        diagnostic::panic(diagnostic::errc::lexer::Code::INVALID_CHARACTER, "U+" + [](u32 cp) {
-                char buf[8]; std::snprintf(buf, sizeof(buf), "%04X", cp); return std::string(buf); }(current));
+        diagnostic::report(diagnostic::Severity::ERROR, m_line, col, diagnostic::errc::m_lexer::Code::INVALID_CHARACTER, snippet);
+        diagnostic::panic(diagnostic::errc::m_lexer::Code::INVALID_CHARACTER, "U+" + [](u32 cp) {
+                char buf[8]; std::snprintf(buf, sizeof(buf), "%04X", cp); return std::string(buf); }(m_current));
     }
 
-    if (!TokStream_.empty() && TokStream_.back()->type() == tok::Fa_TokenType::ENDMARKER)
-        return TokStream_.back();
+    if (!m_tok_stream.empty() && m_tok_stream.back()->type() == tok::Fa_TokenType::ENDMARKER)
+        return m_tok_stream.back();
 
-    u32 last_line = SourceManager_.getLineNumber();
-    u32 last_col = SourceManager_.getColumnNumber();
+    u32 last_line = m_source_manager.get_line_number();
+    u32 last_col = m_source_manager.get_column_number();
 
-    while (IndentLevel_ > 0) {
-        --IndentLevel_;
-        IndentStack_.pop();
-        AltIndentStack_.pop();
+    while (m_indent_level > 0) {
+        --m_indent_level;
+        m_indent_stack.pop();
+        m_alt_indent_stack.pop();
         store(MAKE_TOKEN(tok::Fa_TokenType::DEDENT, "", last_line, last_col));
     }
 
     return FINISH(tok::Fa_TokenType::ENDMARKER, "", last_line, last_col);
 }
 
-tok::Fa_Token const* Fa_Lexer::next()
+tok::Fa_Token const* Fa_Lexer::m_next()
 {
-    if (TokIndex_ + 1 < TokStream_.size())
-        return TokStream_[++TokIndex_];
+    if (m_tok_index + 1 < m_tok_stream.size())
+        return m_tok_stream[++m_tok_index];
 
     while (true) {
-        lexToken();
+        lex_token();
 
-        if (!TokStream_.empty() && TokStream_.back()->type() == tok::Fa_TokenType::ENDMARKER)
+        if (!m_tok_stream.empty() && m_tok_stream.back()->type() == tok::Fa_TokenType::ENDMARKER)
             break;
-        if (TokIndex_ + 1 < TokStream_.size())
+        if (m_tok_index + 1 < m_tok_stream.size())
             break;
     }
 
-    if (TokIndex_ + 1 < TokStream_.size())
-        ++TokIndex_;
+    if (m_tok_index + 1 < m_tok_stream.size())
+        ++m_tok_index;
 
-    return TokStream_[TokIndex_];
+    return m_tok_stream[m_tok_index];
 }
 
-tok::Fa_Token const* Fa_Lexer::current() const
+tok::Fa_Token const* Fa_Lexer::m_current() const
 {
-    if (TokIndex_ < TokStream_.size())
-        return TokStream_[TokIndex_];
+    if (m_tok_index < m_tok_stream.size())
+        return m_tok_stream[m_tok_index];
 
-    if (!TokStream_.empty())
-        return TokStream_.back();
+    if (!m_tok_stream.empty())
+        return m_tok_stream.back();
 
     return nullptr;
 }
 
 tok::Fa_Token const* Fa_Lexer::peek(size_t n)
 {
-    while (TokIndex_ + n >= TokStream_.size()) {
-        if (!TokStream_.empty() && TokStream_.back()->type() == tok::Fa_TokenType::ENDMARKER)
-            return TokStream_.back();
+    while (m_tok_index + n >= m_tok_stream.size()) {
+        if (!m_tok_stream.empty() && m_tok_stream.back()->type() == tok::Fa_TokenType::ENDMARKER)
+            return m_tok_stream.back();
 
-        lexToken();
+        lex_token();
     }
 
-    return TokStream_[TokIndex_ + n];
+    return m_tok_stream[m_tok_index + n];
 }
 
-void Fa_Lexer::store(tok::Fa_Token const* tok) { TokStream_.push(tok); }
+void Fa_Lexer::store(tok::Fa_Token const* tok) { m_tok_stream.push(tok); }
 
 Fa_Array<tok::Fa_Token const*> Fa_Lexer::tokenize()
 {
-    while (next()->type() != tok::Fa_TokenType::ENDMARKER)
+    while (m_next()->type() != tok::Fa_TokenType::ENDMARKER)
         ;
 
-    return this->TokStream_;
+    return this->m_tok_stream;
 }
 
 } // namespace fairuz::lex

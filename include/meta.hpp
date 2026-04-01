@@ -11,8 +11,8 @@ namespace fairuz {
 
 struct AllocationHeader {
     uint_fast32_t magic;
-    uint_fast32_t size;
-    uint_fast32_t alignment;
+    uint_fast32_t m_size;
+    uint_fast32_t m_alignment;
     uint_fast32_t checksum;
     std::chrono::steady_clock::time_point timestamp;
     char32_t const* TypeName;
@@ -20,7 +20,7 @@ struct AllocationHeader {
     char32_t const* filename;
     static constexpr u32 MAGIC = 0xDEADC0DE;
 
-    u32 compute_checksum() const { return magic ^ size ^ alignment; }
+    u32 compute_checksum() const { return magic ^ m_size ^ m_alignment; }
 
     bool is_valid() const { return magic == MAGIC && checksum == compute_checksum(); }
 }; // struct AllocationHeader

@@ -7,9 +7,9 @@
 
 namespace fairuz::util {
 
-static inline bool isWhitespace(u32 const& ch) { return ch == u' ' || ch == u'\t' || ch == u'\r'; }
+static inline bool is_whitespace(u32 const& ch) { return ch == u' ' || ch == u'\t' || ch == u'\r'; }
 
-static inline bool const isOperator(u32 const& ch)
+static inline bool const is_operator(u32 const& ch)
 {
     switch (ch) {
     case '=':
@@ -28,7 +28,7 @@ static inline bool const isOperator(u32 const& ch)
     }
 }
 
-static inline bool isalphaArabic(u32 const c)
+static inline bool isalpha_arabic(u32 const c)
 {
     switch (c) {
     case 0x0621:
@@ -81,7 +81,7 @@ static u32 decode_utf8_at(Fa_StringRef const& buf, size_t const byte_pos, u64* o
         throw std::runtime_error("UTF8 decode past end of buffer");
 
     unsigned char const* p = (unsigned char const*)buf.data() + byte_pos;
-    unsigned char const* end = (unsigned char const*)buf.data() + buf.len();
+    unsigned char const* m_end = (unsigned char const*)buf.data() + buf.len();
 
     unsigned char const c = *p;
 
@@ -91,7 +91,7 @@ static u32 decode_utf8_at(Fa_StringRef const& buf, size_t const byte_pos, u64* o
     }
 
     if ((c & 0xE0) == 0xC0) {
-        if (p + 1 >= end)
+        if (p + 1 >= m_end)
             throw std::runtime_error("UTF8 truncated: incomplete 2-byte sequence");
 
         if ((p[1] & 0xC0) != 0x80)
@@ -107,7 +107,7 @@ static u32 decode_utf8_at(Fa_StringRef const& buf, size_t const byte_pos, u64* o
     }
 
     if ((c & 0xF0) == 0xE0) {
-        if (p + 2 >= end)
+        if (p + 2 >= m_end)
             throw std::runtime_error("UTF8 truncated: incomplete 3-byte sequence");
 
         if ((p[1] & 0xC0) != 0x80 || (p[2] & 0xC0) != 0x80)
@@ -126,7 +126,7 @@ static u32 decode_utf8_at(Fa_StringRef const& buf, size_t const byte_pos, u64* o
     }
 
     if ((c & 0xF8) == 0xF0) {
-        if (p + 3 >= end)
+        if (p + 3 >= m_end)
             throw std::runtime_error("UTF8 truncated: incomplete 4-byte sequence");
 
         if ((p[1] & 0xC0) != 0x80 || (p[2] & 0xC0) != 0x80 || (p[3] & 0xC0) != 0x80)
@@ -147,7 +147,7 @@ static u32 decode_utf8_at(Fa_StringRef const& buf, size_t const byte_pos, u64* o
     throw std::runtime_error("Invalid UTF-8: invalid start byte");
 }
 
-static void configureLocale()
+static void configure_locale()
 {
     try {
         std::locale::global(std::locale("ar_SA.UTF-8"));
@@ -197,7 +197,7 @@ static Fa_StringRef encode_utf8_str(u32 const cp)
     return Fa_StringRef(reinterpret_cast<char*>(bytes)).truncate(len);
 }
 
-static bool isArabDigit(u32 const cp)
+static bool is_arab_digit(u32 const cp)
 {
     switch (cp) {
     case u'٠': // 0
@@ -216,7 +216,7 @@ static bool isArabDigit(u32 const cp)
     }
 }
 
-static i64 parseIntegerLiteral(Fa_StringRef const& literal, int base)
+static i64 parse_integer_literal(Fa_StringRef const& literal, int base)
 {
     if (base == -1) /*false call */
         return INT16_MIN;
@@ -236,7 +236,7 @@ static i64 parseIntegerLiteral(Fa_StringRef const& literal, int base)
     else if (literal.at(i) == '0' && literal.len() > i + 1)
         ++i;
 
-    i64 value = 0;
+    i64 m_value = 0;
 
     for (; i < literal.len(); ++i) {
         char const c = literal.at(i);
@@ -256,13 +256,13 @@ static i64 parseIntegerLiteral(Fa_StringRef const& literal, int base)
         if (digit >= base)
             throw std::invalid_argument("Digit out of range for base (base=" + std::to_string(base) + ", digit=" + std::to_string(digit) + ")");
 
-        value = value * base + digit;
+        m_value = m_value * base + digit;
     }
 
-    return negative ? -value : value;
+    return negative ? -m_value : m_value;
 }
 
-static bool isIntegerValue(f64 d, i64& out)
+static bool is_integer_value(f64 d, i64& out)
 {
     if (!std::isfinite(d))
         return false;

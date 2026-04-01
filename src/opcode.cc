@@ -25,23 +25,23 @@ u32 Fa_Chunk::emit(u32 instr, Fa_SourceLocation loc)
 {
     locations.push(loc);
     code.push(instr);
-    addLine(loc.line);
+    add_line(loc.m_line);
     return static_cast<u32>(code.size() - 1);
 }
 
-bool Fa_Chunk::patchJump(u32 const instr_idx)
+bool Fa_Chunk::patch_jump(u32 const instr_idx)
 {
-    i32 const offset = static_cast<i32>(code.size()) - static_cast<i32>(instr_idx) - 1;
-    if (offset > JUMP_OFFSET || offset < -JUMP_OFFSET)
+    i32 const m_offset = static_cast<i32>(code.size()) - static_cast<i32>(instr_idx) - 1;
+    if (m_offset > JUMP_OFFSET || m_offset < -JUMP_OFFSET)
         return false;
 
     Fa_OpCode op = Fa_instr_op(code[instr_idx]);
     u8 A = Fa_instr_A(code[instr_idx]);
-    code[instr_idx] = Fa_make_AsBx(op, A, offset);
+    code[instr_idx] = Fa_make_AsBx(op, A, m_offset);
     return true;
 }
 
-u16 Fa_Chunk::addConstant(Fa_Value const v)
+u16 Fa_Chunk::add_constant(Fa_Value const v)
 {
     for (u16 i = 0, n = static_cast<u16>(constants.size()); i < n; ++i) {
         if (constants[i] == v)
@@ -52,28 +52,28 @@ u16 Fa_Chunk::addConstant(Fa_Value const v)
     return static_cast<u16>(constants.size() - 1);
 }
 
-u8 Fa_Chunk::allocIcSlot()
+u8 Fa_Chunk::alloc_ic_slot()
 {
-    icSlots.push(Fa_ICSlot());
-    return static_cast<u8>(icSlots.size() - 1);
+    ic_slots.push(Fa_ICSlot());
+    return static_cast<u8>(ic_slots.size() - 1);
 }
 
-u32 Fa_Chunk::getLine(u32 const instr_idx) const
+u32 Fa_Chunk::get_line(u32 const instr_idx) const
 {
-    u32 line = 0;
+    u32 m_line = 0;
 
     for (auto& e : lines) {
         if (e.start > instr_idx)
             break;
-        line = e.line;
+        m_line = e.m_line;
     }
 
-    return line;
+    return m_line;
 }
 
 void Fa_Chunk::disassemble() const
 {
-    ::printf("=== %s (arity=%d regs=%d upvals=%d) ===\n", name.data(), arity, localCount, upvalueCount);
+    ::printf("=== %s (arity=%d regs=%d upvals=%d) ===\n", m_name.data(), arity, local_count, upvalue_count);
 
     if (!constants.empty()) {
         ::printf("  constants:\n");
@@ -85,18 +85,18 @@ void Fa_Chunk::disassemble() const
         }
     }
 
-    if (!icSlots.empty())
-        ::printf("  ic_slots: %u\n", icSlots.size());
+    if (!ic_slots.empty())
+        ::printf("  ic_slots: %u\n", ic_slots.size());
 
     ::printf("  code:\n");
 
     for (u32 i = 0; i < static_cast<u32>(code.size()); ++i) {
         u32 ins = code[i];
         auto op = static_cast<Fa_OpCode>(Fa_instr_op(ins));
-        auto fmt = opcodeFormat(op);
-        u32 line = getLine(i);
+        auto fmt = opcode_format(op);
+        u32 m_line = get_line(i);
 
-        ::printf("    %04u  [%3u]  %-16s ", i, line, Fa_opcode_name(op).data());
+        ::printf("    %04u  [%3u]  %-16s ", i, m_line, Fa_opcode_name(op).data());
 
         switch (fmt) {
         case Fa_InstrFormat::ABC:
@@ -118,7 +118,7 @@ void Fa_Chunk::disassemble() const
             } else if (op == Fa_OpCode::CLOSURE) {
                 u16 idx = Fa_instr_Bx(ins);
                 if (idx < functions.size())
-                    ::printf("  ; fn '%s'", functions[idx]->name.data());
+                    ::printf("  ; fn '%s'", functions[idx]->m_name.data());
             }
             break;
 
@@ -143,10 +143,10 @@ void Fa_Chunk::disassemble() const
     }
 }
 
-void Fa_Chunk::addLine(u32 line)
+void Fa_Chunk::add_line(u32 m_line)
 {
-    if (lines.empty() || lines.back().line != line)
-        lines.push({ static_cast<u32>(code.size() - 1), line });
+    if (lines.empty() || lines.back().m_line != m_line)
+        lines.push({ static_cast<u32>(code.size() - 1), m_line });
 }
 
 } // namespace fairuz::runtime

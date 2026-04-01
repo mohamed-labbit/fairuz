@@ -10,89 +10,89 @@ template<typename K, typename V, typename Hash, typename Equal>
 class Fa_HashTable {
     struct Entry {
         K key { };
-        V value { };
-        u64 hash { 0 };
+        V m_value { };
+        u64 m_hash { 0 };
         bool occupied { false };
     }; // struct Entry
 
-    static constexpr u32 kMinCapacity = 16;
-    static constexpr u32 kLoadPercent = 70;
+    static constexpr u32 k_min_capacity = 16;
+    static constexpr u32 k_load_percent = 70;
 
-    Fa_Array<Entry> Buckets_;
-    u32 Size_ { 0 };
-    Hash Hash_ { };
-    Equal Equal_ { };
+    Fa_Array<Entry> m_buckets;
+    u32 m_size { 0 };
+    Hash m_hash { };
+    Equal m_equal { };
 
-    static u32 nextPowerOfTwo(u32 n)
+    static u32 next_power_of_two(u32 n)
     {
-        u32 cap = kMinCapacity;
-        while (cap < n)
-            cap <<= 1;
-        return cap;
+        u32 m_cap = k_min_capacity;
+        while (m_cap < n)
+            m_cap <<= 1;
+        return m_cap;
     }
 
     u32 mask() const
     {
-        assert(!Buckets_.empty());
-        return Buckets_.size() - 1;
+        assert(!m_buckets.empty());
+        return m_buckets.size() - 1;
     }
 
-    u32 bucketIndex(u64 hash) const
+    u32 bucket_index(u64 m_hash) const
     {
-        return static_cast<u32>(hash) & mask();
+        return static_cast<u32>(m_hash) & mask();
     }
 
-    void reinsertInto(Fa_Array<Entry>& dst, Entry const& src)
+    void reinsert_into(Fa_Array<Entry>& dst, Entry const& src)
     {
         u32 dst_mask = dst.size() - 1;
-        u32 idx = static_cast<u32>(src.hash) & dst_mask;
+        u32 idx = static_cast<u32>(src.m_hash) & dst_mask;
         while (dst[idx].occupied)
             idx = (idx + 1) & dst_mask;
         dst[idx] = src;
     }
 
-    void growIfNeeded()
+    void grow_if_needed()
     {
-        if (Buckets_.empty()) {
-            Buckets_ = Fa_Array<Entry>(kMinCapacity, Entry { });
+        if (m_buckets.empty()) {
+            m_buckets = Fa_Array<Entry>(k_min_capacity, Entry { });
             return;
         }
 
-        if ((Size_ + 1) * 100 < Buckets_.size() * kLoadPercent)
+        if ((m_size + 1) * 100 < m_buckets.size() * k_load_percent)
             return;
 
-        Fa_Array<Entry> grown(nextPowerOfTwo(Buckets_.size() << 1), Entry { });
-        for (u32 i = 0; i < Buckets_.size(); ++i) {
-            if (Buckets_[i].occupied)
-                reinsertInto(grown, Buckets_[i]);
+        Fa_Array<Entry> grown(next_power_of_two(m_buckets.size() << 1), Entry { });
+        for (u32 i = 0; i < m_buckets.size(); ++i) {
+            if (m_buckets[i].occupied)
+                reinsert_into(grown, m_buckets[i]);
         }
-        Buckets_ = std::move(grown);
+        m_buckets = std::move(grown);
     }
 
-    Entry* findEntry(K const& key, u64 hash)
+    Entry* find_entry(K const& key, u64 m_hash)
     {
-        if (Buckets_.empty())
+        if (m_buckets.empty())
             return nullptr;
 
-        u32 idx = bucketIndex(hash);
-        while (Buckets_[idx].occupied) {
-            Entry& entry = Buckets_[idx];
-            if (entry.hash == hash && Equal_(entry.key, key))
+        u32 idx = bucket_index(m_hash);
+        while (m_buckets[idx].occupied) {
+            Entry& entry = m_buckets[idx];
+            if (entry.m_hash == m_hash && m_equal(entry.key, key))
                 return &entry;
             idx = (idx + 1) & mask();
         }
         return nullptr;
     }
 
-    Entry const* findEntry(K const& key, u64 hash) const
+    Entry const* find_entry(K const& key, u64 m_hash) const
     {
-        if (Buckets_.empty())
+        if (m_buckets.empty())
             return nullptr;
 
-        u32 idx = bucketIndex(hash);
-        while (Buckets_[idx].occupied) {
-            Entry const& entry = Buckets_[idx];
-            if (entry.hash == hash && Equal_(entry.key, key))
+        u32 idx = bucket_index(m_hash);
+        while (m_buckets[idx].occupied) {
+            Entry const& entry = m_buckets[idx];
+            if (entry.m_hash == m_hash && m_equal(entry.key, key))
                 return &entry;
             idx = (idx + 1) & mask();
         }
@@ -108,94 +108,94 @@ public:
             return;
         
         for (const std::pair<K, V>& pair : list)
-            insertOrAssign(pair.first, pair.second);
+            insert_or_assign(pair.first, pair.second);
     }
     
     ~Fa_HashTable() {}
     
     V& operator[](const K& key) { 
-        auto hash = static_cast<u64>(Hash_(key));
-        if (Entry* entry = findEntry(key, hash))
-            return entry->value;
-        return insertOrAssign(key, V{});
+        auto hash_value = static_cast<u64>(m_hash(key));
+        if (Entry* entry = find_entry(key, hash_value))
+            return entry->m_value;
+        return insert_or_assign(key, V{});
     }
     
     const V& operator[](const K& key) const = delete;
 
     void clear()
     {
-        for (u32 i = 0; i < Buckets_.size(); ++i)
-            Buckets_[i] = Entry { };
-        Size_ = 0;
+        for (u32 i = 0; i < m_buckets.size(); ++i)
+            m_buckets[i] = Entry { };
+        m_size = 0;
     }
 
-    u32 size() const { return Size_; }
-    bool empty() const { return Size_ == 0; }
+    u32 size() const { return m_size; }
+    bool empty() const { return m_size == 0; }
 
-    V* findPtr(K const& key)
+    V* find_ptr(K const& key)
     {
-        auto hash = static_cast<u64>(Hash_(key));
-        Entry* entry = findEntry(key, hash);
-        return entry ? &entry->value : nullptr;
+        auto hash_value = static_cast<u64>(m_hash(key));
+        Entry* entry = find_entry(key, hash_value);
+        return entry ? &entry->m_value : nullptr;
     }
 
-    V const* findPtr(K const& key) const
+    V const* find_ptr(K const& key) const
     {
-        auto hash = static_cast<u64>(Hash_(key));
-        Entry const* entry = findEntry(key, hash);
-        return entry ? &entry->value : nullptr;
+        auto hash_value = static_cast<u64>(m_hash(key));
+        Entry const* entry = find_entry(key, hash_value);
+        return entry ? &entry->m_value : nullptr;
     }
 
-    bool contains(K const& key) const { return findPtr(key) != nullptr; }
+    bool contains(K const& key) const { return find_ptr(key) != nullptr; }
 
-    V& insertOrAssign(K const& key, V const& value)
+    V& insert_or_assign(K const& key, V const& m_value)
     {
-        growIfNeeded();
+        grow_if_needed();
 
-        auto hash = static_cast<u64>(Hash_(key));
-        if (Entry* existing = findEntry(key, hash)) {
-            existing->value = value;
-            return existing->value;
+        auto hash_value = static_cast<u64>(m_hash(key));
+        if (Entry* existing = find_entry(key, hash_value)) {
+            existing->m_value = m_value;
+            return existing->m_value;
         }
 
-        u32 idx = bucketIndex(hash);
-        while (Buckets_[idx].occupied)
+        u32 idx = bucket_index(hash_value);
+        while (m_buckets[idx].occupied)
             idx = (idx + 1) & mask();
 
-        Buckets_[idx].occupied = true;
-        Buckets_[idx].hash = hash;
-        Buckets_[idx].key = key;
-        Buckets_[idx].value = value;
-        ++Size_;
+        m_buckets[idx].occupied = true;
+        m_buckets[idx].m_hash = hash_value;
+        m_buckets[idx].key = key;
+        m_buckets[idx].m_value = m_value;
+        ++m_size;
 
-        return Buckets_[idx].value;
+        return m_buckets[idx].m_value;
     }
     
     struct Iterator {
         Entry* ptr;
-        Entry* end;
+        Entry* m_end;
     
         Iterator& operator++() {
             ++ptr;
-            while (ptr != end && !ptr->occupied)
+            while (ptr != m_end && !ptr->occupied)
                 ++ptr;
             return *this;
         }
     
-        std::pair<K const&, V&> operator*() const { return { ptr->key, ptr->value }; }
+        std::pair<K const&, V&> operator*() const { return { ptr->key, ptr->m_value }; }
         Entry* operator->() const { return ptr; }
         bool operator!=(const Iterator& other) const { return ptr != other.ptr; }
     };
     
     Iterator begin() {
-        Entry* p = Buckets_.begin();
-        Entry* e = Buckets_.end();
+        Entry* p = m_buckets.begin();
+        Entry* e = m_buckets.end();
         while (p != e && !p->occupied) ++p;
         return { p, e };
     }
     
     Iterator end() {
-        Entry* e = Buckets_.end();
+        Entry* e = m_buckets.end();
         return { e, e };
     }
 }; // class Fa_HashTable

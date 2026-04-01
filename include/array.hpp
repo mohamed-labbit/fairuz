@@ -59,10 +59,10 @@ class Fa_Array {
     }
 
     T* arr { nullptr };
-    u32 Size_ { 0 };
-    u32 Cap_ { 0 };
+    u32 m_size { 0 };
+    u32 m_cap { 0 };
 
-    static u32 nextCapacity(u32 const s) noexcept
+    static u32 next_capacity(u32 const s) noexcept
     {
         if (s <= DEFAULT_CAP)
             return DEFAULT_CAP;
@@ -83,36 +83,36 @@ public:
     Fa_Array& operator=(Fa_Array const& other);
     Fa_Array& operator=(Fa_Array&& other) noexcept;
 
-    ~Fa_Array() { destroy_range(arr, arr + Size_); }
+    ~Fa_Array() { destroy_range(arr, arr + m_size); }
 
-    static Fa_Array withCapacity(u32 capacity)
+    static Fa_Array with_capacity(u32 capacity)
     {
         Fa_Array a;
         if (capacity == 0)
             return a;
 
-        a.arr = getAllocator().allocateArray<T>(capacity);
+        a.arr = get_allocator().allocate_array<T>(capacity);
         assert(a.arr != nullptr);
-        a.Cap_ = capacity;
+        a.m_cap = capacity;
         return a;
     }
 
     template<typename... Args>
-    T& emplace(Args&&... args)
+    T& emplace(Args&&... m_args)
     {
         ensure_push_capacity();
-        T* slot = arr + Size_;
+        T* slot = arr + m_size;
 
         if constexpr (TRIVIAL_COPY)
-            *slot = T(std::forward<Args>(args)...);
+            *slot = T(std::forward<Args>(m_args)...);
         else
-            ::new (static_cast<void*>(slot)) T(std::forward<Args>(args)...);
+            ::new (static_cast<void*>(slot)) T(std::forward<Args>(m_args)...);
 
-        ++Size_;
+        ++m_size;
         return *slot;
     }
 
-    void clear() { Size_ = 0; }
+    void clear() { m_size = 0; }
 
     void push(T const& val);
     void push(T&& val);
@@ -126,75 +126,75 @@ public:
 
     T& back()
     {
-        if (Size_ == 0)
-            diagnostic::emit(diagnostic::errc::container::Code::ARRAY_EMPTY_BACK, diagnostic::Severity::FATAL);
+        if (m_size == 0)
+            diagnostic::emit(diagnostic::errc::m_container::Code::ARRAY_EMPTY_BACK, diagnostic::Severity::FATAL);
 
-        return arr[Size_ - 1];
+        return arr[m_size - 1];
     }
 
     T const& back() const
     {
-        if (Size_ == 0)
-            diagnostic::emit(diagnostic::errc::container::Code::ARRAY_EMPTY_BACK, diagnostic::Severity::FATAL);
+        if (m_size == 0)
+            diagnostic::emit(diagnostic::errc::m_container::Code::ARRAY_EMPTY_BACK, diagnostic::Severity::FATAL);
 
-        return arr[Size_ - 1];
+        return arr[m_size - 1];
     }
 
     T& front()
     {
-        if (Size_ == 0)
-            diagnostic::emit(diagnostic::errc::container::Code::ARRAY_EMPTY_FRONT, diagnostic::Severity::FATAL);
+        if (m_size == 0)
+            diagnostic::emit(diagnostic::errc::m_container::Code::ARRAY_EMPTY_FRONT, diagnostic::Severity::FATAL);
 
         return arr[0];
     }
 
     T const& front() const
     {
-        if (Size_ == 0)
-            diagnostic::emit(diagnostic::errc::container::Code::ARRAY_EMPTY_FRONT, diagnostic::Severity::FATAL);
+        if (m_size == 0)
+            diagnostic::emit(diagnostic::errc::m_container::Code::ARRAY_EMPTY_FRONT, diagnostic::Severity::FATAL);
 
         return arr[0];
     }
 
-    u32 size() const noexcept { return Size_; }
-    u32 cap() const noexcept { return Cap_; }
+    u32 size() const noexcept { return m_size; }
+    u32 cap() const noexcept { return m_cap; }
     T* data() noexcept { return arr; }
     T const* data() const noexcept { return arr; }
-    bool empty() const noexcept { return Size_ == 0; }
-    bool full() const noexcept { return Size_ == Cap_; }
+    bool empty() const noexcept { return m_size == 0; }
+    bool full() const noexcept { return m_size == m_cap; }
     T* begin() noexcept { return arr; }
-    T* end() noexcept { return arr + Size_; }
+    T* end() noexcept { return arr + m_size; }
     T const* begin() const noexcept { return arr; }
-    T const* end() const noexcept { return arr + Size_; }
+    T const* end() const noexcept { return arr + m_size; }
 }; // class Fa_Array
 
 template<typename T>
 void Fa_Array<T>::ensure_push_capacity()
 {
-    if (Size_ < Cap_)
+    if (m_size < m_cap)
         return;
-    u32 new_cap = Cap_ == 0 ? DEFAULT_CAP : Cap_ + (Cap_ >> 1);
+    u32 new_cap = m_cap == 0 ? DEFAULT_CAP : m_cap + (m_cap >> 1);
     // allocate new_cap directly, skip the nextCapacity rounding
-    T* new_arr = getAllocator().allocateArray<T>(new_cap);
-    if (arr && Size_ > 0)
-        relocate(new_arr, arr, Size_);
+    T* new_arr = get_allocator().allocate_array<T>(new_cap);
+    if (arr && m_size > 0)
+        relocate(new_arr, arr, m_size);
     arr = new_arr;
-    Cap_ = new_cap;
+    m_cap = new_cap;
 }
 
 template<typename T>
 Fa_Array<T>::Fa_Array(u32 capacity, T fill_v)
 {
     if (capacity > ARRAY_MAX)
-        diagnostic::emit(diagnostic::errc::container::Code::ARRAY_CAPACITY_EXCEEDED,
+        diagnostic::emit(diagnostic::errc::m_container::Code::ARRAY_CAPACITY_EXCEEDED,
             std::to_string(capacity) + " > " + std::to_string(ARRAY_MAX),
             diagnostic::Severity::FATAL);
 
     if (capacity == 0)
         return;
 
-    arr = getAllocator().allocateArray<T>(capacity);
-    Cap_ = capacity;
+    arr = get_allocator().allocate_array<T>(capacity);
+    m_cap = capacity;
 
     u32 i = 0;
     try {
@@ -209,31 +209,31 @@ Fa_Array<T>::Fa_Array(u32 capacity, T fill_v)
         destroy_range(arr, arr + i);
         throw;
     }
-    Size_ = capacity;
+    m_size = capacity;
 }
 
 template<typename T>
 Fa_Array<T>::Fa_Array(Fa_Array const& other)
-    : Cap_(other.Cap_)
+    : m_cap(other.m_cap)
 {
-    if (Cap_ == 0)
+    if (m_cap == 0)
         return;
 
-    arr = getAllocator().allocateArray<T>(Cap_);
+    arr = get_allocator().allocate_array<T>(m_cap);
     assert(arr != nullptr);
-    copy_construct_range(arr, other.arr, other.Size_);
-    Size_ = other.Size_;
+    copy_construct_range(arr, other.arr, other.m_size);
+    m_size = other.m_size;
 }
 
 template<typename T>
 Fa_Array<T>::Fa_Array(Fa_Array&& other) noexcept
     : arr(other.arr)
-    , Size_(other.Size_)
-    , Cap_(other.Cap_)
+    , m_size(other.m_size)
+    , m_cap(other.m_cap)
 {
     other.arr = nullptr;
-    other.Size_ = 0;
-    other.Cap_ = 0;
+    other.m_size = 0;
+    other.m_cap = 0;
 }
 
 template<typename T>
@@ -242,9 +242,9 @@ Fa_Array<T>::Fa_Array(std::initializer_list<T> list)
     if (list.size() == 0)
         return;
 
-    Size_ = static_cast<u32>(list.size());
-    Cap_ = nextCapacity(Size_);
-    arr = getAllocator().allocateArray<T>(Cap_);
+    m_size = static_cast<u32>(list.size());
+    m_cap = next_capacity(m_size);
+    arr = get_allocator().allocate_array<T>(m_cap);
     assert(arr != nullptr);
 
     u32 i = 0;
@@ -258,7 +258,7 @@ Fa_Array<T>::Fa_Array(std::initializer_list<T> list)
         }
     } catch (...) {
         destroy_range(arr, arr + i);
-        Size_ = 0;
+        m_size = 0;
         throw;
     }
 }
@@ -269,18 +269,18 @@ Fa_Array<T>& Fa_Array<T>::operator=(Fa_Array const& other)
     if (this == &other)
         return *this;
 
-    destroy_range(arr, arr + Size_);
-    Size_ = 0;
+    destroy_range(arr, arr + m_size);
+    m_size = 0;
 
-    if (other.Cap_ > Cap_) {
+    if (other.m_cap > m_cap) {
         // NOTE: arena – no free on arr here.
-        arr = getAllocator().allocateArray<T>(other.Cap_);
+        arr = get_allocator().allocate_array<T>(other.m_cap);
         assert(arr != nullptr);
-        Cap_ = other.Cap_;
+        m_cap = other.m_cap;
     }
 
-    copy_construct_range(arr, other.arr, other.Size_);
-    Size_ = other.Size_;
+    copy_construct_range(arr, other.arr, other.m_size);
+    m_size = other.m_size;
     return *this;
 }
 
@@ -290,16 +290,16 @@ Fa_Array<T>& Fa_Array<T>::operator=(Fa_Array&& other) noexcept
     if (this == &other)
         return *this;
 
-    destroy_range(arr, arr + Size_);
+    destroy_range(arr, arr + m_size);
     // NOTE: arena – no free on arr here.
 
     arr = other.arr;
-    Size_ = other.Size_;
-    Cap_ = other.Cap_;
+    m_size = other.m_size;
+    m_cap = other.m_cap;
 
     other.arr = nullptr;
-    other.Size_ = 0;
-    other.Cap_ = 0;
+    other.m_size = 0;
+    other.m_cap = 0;
 
     return *this;
 }
@@ -309,10 +309,10 @@ void Fa_Array<T>::push(T const& val)
 {
     ensure_push_capacity();
     if constexpr (TRIVIAL_COPY)
-        arr[Size_] = val;
+        arr[m_size] = val;
     else
-        ::new (static_cast<void*>(arr + Size_)) T(val);
-    ++Size_;
+        ::new (static_cast<void*>(arr + m_size)) T(val);
+    ++m_size;
 }
 
 template<typename T>
@@ -320,22 +320,22 @@ void Fa_Array<T>::push(T&& val)
 {
     ensure_push_capacity();
     if constexpr (TRIVIAL_COPY)
-        arr[Size_] = std::move(val);
+        arr[m_size] = std::move(val);
     else
-        ::new (static_cast<void*>(arr + Size_)) T(std::move(val));
-    ++Size_;
+        ::new (static_cast<void*>(arr + m_size)) T(std::move(val));
+    ++m_size;
 }
 
 template<typename T>
 T Fa_Array<T>::pop()
 {
-    assert(Size_ > 0 && "Fa_Array::pop — array is empty");
-    --Size_;
+    assert(m_size > 0 && "Fa_Array::pop — array is empty");
+    --m_size;
     if constexpr (TRIVIAL_DTOR)
-        return arr[Size_];
+        return arr[m_size];
     else {
-        T val(std::move(arr[Size_]));
-        arr[Size_].~T();
+        T val(std::move(arr[m_size]));
+        arr[m_size].~T();
         return val;
     }
 }
@@ -343,32 +343,32 @@ T Fa_Array<T>::pop()
 template<typename T>
 void Fa_Array<T>::reserve(u32 const s)
 {
-    if (s <= Cap_)
+    if (s <= m_cap)
         return;
 
-    u32 const rounded = nextCapacity(s);
-    T* new_arr = getAllocator().allocateArray<T>(rounded);
+    u32 const rounded = next_capacity(s);
+    T* new_arr = get_allocator().allocate_array<T>(rounded);
     assert(new_arr != nullptr);
 
-    if (arr && Size_ > 0)
-        relocate(new_arr, arr, Size_);
+    if (arr && m_size > 0)
+        relocate(new_arr, arr, m_size);
 
     // NOTE: arena – no free on arr here.
     arr = new_arr;
-    Cap_ = rounded;
+    m_cap = rounded;
 }
 
 template<typename T>
 void Fa_Array<T>::resize(u32 const s)
 {
-    if (s < Size_) {
-        destroy_range(arr + s, arr + Size_);
-        Size_ = s;
-    } else if (s > Size_) {
-        if (s > Cap_)
+    if (s < m_size) {
+        destroy_range(arr + s, arr + m_size);
+        m_size = s;
+    } else if (s > m_size) {
+        if (s > m_cap)
             reserve(s);
 
-        u32 i = Size_;
+        u32 i = m_size;
         try {
             if constexpr (TRIVIAL_COPY) {
                 for (; i < s; ++i)
@@ -378,42 +378,42 @@ void Fa_Array<T>::resize(u32 const s)
                     ::new (static_cast<void*>(arr + i)) T();
             }
         } catch (...) {
-            Size_ = i;
+            m_size = i;
             throw;
         }
-        Size_ = s;
+        m_size = s;
     }
 }
 
 template<typename T>
 void Fa_Array<T>::erase(u32 const at)
 {
-    if (at >= Size_)
-        diagnostic::emit(diagnostic::errc::container::Code::ARRAY_OUT_OF_BOUNDS, diagnostic::Severity::FATAL);
+    if (at >= m_size)
+        diagnostic::emit(diagnostic::errc::m_container::Code::ARRAY_OUT_OF_BOUNDS, diagnostic::Severity::FATAL);
 
     if constexpr (TRIVIAL_COPY) {
-        u32 const remaining = Size_ - at - 1;
+        u32 const remaining = m_size - at - 1;
         if (remaining > 0)
             ::memmove(arr + at, arr + at + 1, remaining * sizeof(T));
     } else {
         arr[at].~T();
-        for (u32 i = at; i < Size_ - 1; ++i) {
+        for (u32 i = at; i < m_size - 1; ++i) {
             ::new (static_cast<void*>(arr + i)) T(std::move(arr[i + 1]));
             arr[i + 1].~T();
         }
     }
 
-    --Size_;
+    --m_size;
 }
 
 template<typename T>
 T* Fa_Array<T>::erase(T const* p)
 {
-    if (p < arr || p >= arr + Size_)
+    if (p < arr || p >= arr + m_size)
         return const_cast<T*>(p);
 
     T* ptr = const_cast<T*>(p);
-    u32 remaining = static_cast<u32>((arr + Size_) - (ptr + 1));
+    u32 remaining = static_cast<u32>((arr + m_size) - (ptr + 1));
 
     if constexpr (TRIVIAL_COPY) {
         if (remaining > 0)
@@ -426,14 +426,14 @@ T* Fa_Array<T>::erase(T const* p)
         }
     }
 
-    --Size_;
+    --m_size;
     return ptr;
 }
 
 template<typename T, typename... Args>
-static Fa_Array<T> makeArray(Args&&... args)
+static Fa_Array<T> make_array(Args&&... m_args)
 {
-    return getAllocator().allocateArray<T>(std::forward<Args>(args)...);
+    return get_allocator().allocate_array<T>(std::forward<Args>(m_args)...);
 }
 
 } // namespace fairuz

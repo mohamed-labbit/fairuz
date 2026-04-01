@@ -6,9 +6,9 @@
 namespace fairuz {
 
 struct Fa_SourceLocation {
-    uint32_t line { 0 };
-    uint16_t column { 0 };
-    uint16_t length { 0 };
+    uint32_t m_line { 0 };
+    uint16_t m_column { 0 };
+    uint16_t m_length { 0 };
 }; // struct Fa_SourceLocation
 
 namespace Color {

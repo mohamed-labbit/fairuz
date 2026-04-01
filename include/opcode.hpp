@@ -115,6 +115,8 @@ enum class Fa_OpCode : u8 {
 
     IC_CALL, // func reg, argc, slot index
 
+    OP_INDEX,
+    
     // misc
     NOP,
     HALT,
@@ -144,16 +146,16 @@ inline u32 Fa_make_ABx(Fa_OpCode op, u8 A, u16 Bx)
     return (static_cast<u32>(op) << 24) | (static_cast<u32>(A) << 16) | (static_cast<u32>(Bx));
 }
 
-inline u32 Fa_make_AsBx(Fa_OpCode op, u8 A, i64 sBx)
+inline u32 Fa_make_AsBx(Fa_OpCode op, u8 A, i64 s_bx)
 {
-    u16 _sBx = static_cast<u16>(sBx + JUMP_OFFSET);
-    return (static_cast<u32>(op) << 24) | (static_cast<u32>(A) << 16) | (static_cast<u32>(_sBx));
+    u16 _s_bx = static_cast<u16>(s_bx + JUMP_OFFSET);
+    return (static_cast<u32>(op) << 24) | (static_cast<u32>(A) << 16) | (static_cast<u32>(_s_bx));
 }
 
-inline u32 Fa_make_ABSC(Fa_OpCode op, u8 A, u8 B, int8_t sC)
+inline u32 Fa_make_ABSC(Fa_OpCode op, u8 A, u8 B, int8_t s_c)
 {
     return (static_cast<u32>(op) << 24) | (static_cast<u32>(A) << 16)
-        | (static_cast<u32>(B) << 8) | static_cast<u32>(static_cast<u8>(sC + 128));
+        | (static_cast<u32>(B) << 8) | static_cast<u32>(static_cast<u8>(s_c + 128));
 }
 
 inline int8_t Fa_instr_sC(u32 i) { return static_cast<int8_t>(i & 0xFF) - 128; }
@@ -167,20 +169,20 @@ enum class Fa_InstrFormat : u8 {
 }; // enum Fa_InstrFormat
 
 struct Fa_ICSlot {
-    u8 seenLhs { 0 };
-    u8 seenRhs { 0 };
-    u8 seenRet { 0 };
-    u32 hitCount { 0 };
-    void* jitStub { nullptr };
+    u8 seen_lhs { 0 };
+    u8 seen_rhs { 0 };
+    u8 seen_ret { 0 };
+    u32 hit_count { 0 };
+    void* jit_stub { nullptr };
 
     // global ic
-    u64* globalPtr { nullptr };
+    u64* global_ptr { nullptr };
     u64 version { 0 };
 }; // struct Fa_ICSlot
 
 struct Fa_LineEntry {
     u32 start;
-    u32 line;
+    u32 m_line;
 }; // struct LineEntry
 
 static Fa_StringRef Fa_opcode_name(Fa_OpCode op)
@@ -361,7 +363,7 @@ static Fa_StringRef Fa_opcode_name(Fa_OpCode op)
     }
 }
 
-static Fa_InstrFormat opcodeFormat(Fa_OpCode op)
+static Fa_InstrFormat opcode_format(Fa_OpCode op)
 {
     switch (op) {
     case Fa_OpCode::LOAD_CONST:
@@ -389,18 +391,18 @@ static Fa_InstrFormat opcodeFormat(Fa_OpCode op)
 static void print_value(u64 v);
 
 struct Fa_Chunk {
-    Fa_StringRef name { "" };
+    Fa_StringRef m_name { "" };
     int arity { 0 };
-    unsigned int localCount { 0 };
-    unsigned int upvalueCount { 0 };
+    unsigned int local_count { 0 };
+    unsigned int upvalue_count { 0 };
 
     Fa_Array<u32> code;
     Fa_Array<Fa_SourceLocation> locations;
     Fa_Array<u64> constants; // constants are boxed values!!!
     Fa_Array<Fa_LineEntry> lines;
     Fa_Array<Fa_Chunk*> functions;
-    Fa_Array<Fa_ICSlot> icSlots;
-    Fa_Array<u64*> globalCache;
+    Fa_Array<Fa_ICSlot> ic_slots;
+    Fa_Array<u64*> global_cache;
 
     Fa_Chunk() = default;
     ~Fa_Chunk() = default;
@@ -412,18 +414,18 @@ struct Fa_Chunk {
     Fa_Chunk& operator=(Fa_Chunk&&) = default;
 
     u32 emit(u32 instr, Fa_SourceLocation loc);
-    bool patchJump(u32 const instr_idx);
-    u16 addConstant(u64 const v);
-    u8 allocIcSlot();
-    u32 getLine(u32 const instr_idx) const;
+    bool patch_jump(u32 const instr_idx);
+    u16 add_constant(u64 const v);
+    u8 alloc_ic_slot();
+    u32 get_line(u32 const instr_idx) const;
     void disassemble() const;
 
 private:
-    void addLine(u32 line);
+    void add_line(u32 m_line);
 }; // struct Fa_Chunk
 
 template<typename... Args>
-static Fa_Chunk* makeChunk(Args&&... args) { return getAllocator().allocateObject<Fa_Chunk>(std::forward<Args>(args)...); }
+static Fa_Chunk* make_chunk(Args&&... m_args) { return get_allocator().allocate_object<Fa_Chunk>(std::forward<Args>(m_args)...); }
 
 } // namespace fairuz::runtime
 

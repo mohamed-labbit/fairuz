@@ -14,7 +14,7 @@ private:
     union Storage {
         struct {
             char* ptr;
-            size_t cap;
+            size_t m_cap;
         } heap;
 
         char sso[SSO_SIZE];
@@ -23,23 +23,23 @@ private:
             : heap { nullptr, 0 }
         {
         }
-    } storage_;
+    } m_storage;
 
-    bool is_heap;
+    bool m_is_heap;
 
     mutable u32 RefCount { 1 };
 
 public:
     StringBase()
-        : is_heap { false }
+        : m_is_heap { false }
     {
-        storage_.sso[0] = 0;
+        m_storage.sso[0] = 0;
     }
 
     ~StringBase()
     {
-        if (isHeap())
-            getAllocator().deallocateArray<char>(storage_.heap.ptr, storage_.heap.cap);
+        if (is_heap())
+            get_allocator().deallocate_array<char>(m_storage.heap.ptr, m_storage.heap.m_cap);
     }
 
     StringBase(StringBase const&) = delete;
@@ -50,15 +50,15 @@ public:
     explicit StringBase(char const* s, size_t n);
     StringBase(char const* s);
 
-    static constexpr size_t kSSOSize = SSO_SIZE;
+    static constexpr size_t k_sso_size = SSO_SIZE;
 
-    bool isHeap() const noexcept { return is_heap; }
+    bool is_heap() const noexcept { return m_is_heap; }
 
-    char* ptr() noexcept { return UNLIKELY(isHeap()) ? storage_.heap.ptr : storage_.sso; }
+    char* ptr() noexcept { return UNLIKELY(is_heap()) ? m_storage.heap.ptr : m_storage.sso; }
 
-    char const* ptr() const noexcept { return UNLIKELY(isHeap()) ? storage_.heap.ptr : storage_.sso; }
+    char const* ptr() const noexcept { return UNLIKELY(is_heap()) ? m_storage.heap.ptr : m_storage.sso; }
 
-    size_t cap() const noexcept { return UNLIKELY(isHeap()) ? (storage_.heap.cap > 0 ? storage_.heap.cap - 1 : 0) : SSO_SIZE - 1; }
+    size_t cap() const noexcept { return UNLIKELY(is_heap()) ? (m_storage.heap.m_cap > 0 ? m_storage.heap.m_cap - 1 : 0) : SSO_SIZE - 1; }
 
     char operator[](size_t const i) const noexcept { return ptr()[i]; }
     char& operator[](size_t const i) noexcept { return ptr()[i]; }
@@ -66,40 +66,40 @@ public:
     void increment() const noexcept { RefCount++; }
     void decrement() const noexcept { RefCount--; }
 
-    u32 referenceCount() const noexcept { return RefCount; }
+    u32 reference_count() const noexcept { return RefCount; }
 }; // class StringBase
 
 namespace detail {
 
-StringBase* emptyStringSingleton() noexcept;
+StringBase* empty_string_singleton() noexcept;
 
 } // namespace detail
 
 class Fa_StringRef {
 private:
-    StringBase* StringData_ { nullptr };
-    size_t Offset_ { 0 };
-    size_t Length_ { 0 };
+    StringBase* m_string_data { nullptr };
+    size_t m_offset { 0 };
+    size_t m_length { 0 };
 
-    static StringBase* createEmpty()
+    static StringBase* create_empty()
     {
-        StringBase* s = getAllocator().allocateObject<StringBase>();
+        StringBase* s = get_allocator().allocate_object<StringBase>();
         return s;
     }
 
 public:
     // Default: points at the global empty singleton — zero heap allocation.
     Fa_StringRef() noexcept
-        : StringData_(detail::emptyStringSingleton())
-        , Offset_(0)
-        , Length_(0)
+        : m_string_data(detail::empty_string_singleton())
+        , m_offset(0)
+        , m_length(0)
     {
-        StringData_->increment();
+        m_string_data->increment();
     }
 
     explicit Fa_StringRef(size_t const s);
 
-    Fa_StringRef(Fa_StringRef const& other, size_t offset = 0, size_t length = 0);
+    Fa_StringRef(Fa_StringRef const& other, size_t m_offset = 0, size_t m_length = 0);
 
     Fa_StringRef(char const* lit);
 
@@ -107,7 +107,7 @@ public:
 
     Fa_StringRef(size_t const s, char const c);
 
-    explicit Fa_StringRef(StringBase* data, size_t offset = 0, size_t length = 0);
+    explicit Fa_StringRef(StringBase* data, size_t m_offset = 0, size_t m_length = 0);
 
     Fa_StringRef(Fa_StringRef&& other) noexcept;
 
@@ -119,29 +119,29 @@ public:
 
     [[nodiscard]] bool operator==(Fa_StringRef const& other) const noexcept
     {
-        if (StringData_ == other.StringData_ && Offset_ == other.Offset_ && Length_ == other.Length_)
+        if (m_string_data == other.m_string_data && m_offset == other.m_offset && m_length == other.m_length)
             return true;
-        if (Length_ != other.Length_)
+        if (m_length != other.m_length)
             return false;
-        if (!StringData_ || !other.StringData_)
-            return Length_ == 0;
-        return ::memcmp(data(), other.data(), Length_) == 0;
+        if (!m_string_data || !other.m_string_data)
+            return m_length == 0;
+        return ::memcmp(data(), other.data(), m_length) == 0;
     }
 
     [[nodiscard]] bool operator!=(Fa_StringRef const& other) const noexcept { return !(*this == other); }
 
     [[nodiscard]] bool operator<(Fa_StringRef const& other) const noexcept
     {
-        if (StringData_ == other.StringData_ && Offset_ == other.Offset_ && Length_ == other.Length_)
+        if (m_string_data == other.m_string_data && m_offset == other.m_offset && m_length == other.m_length)
             return false;
-        if (!StringData_)
-            return other.Length_ > 0;
-        if (!other.StringData_)
+        if (!m_string_data)
+            return other.m_length > 0;
+        if (!other.m_string_data)
             return false;
 
-        size_t const minLen = std::min(Length_, other.Length_);
-        int const cmp = ::memcmp(data(), other.data(), minLen);
-        return cmp != 0 ? cmp < 0 : Length_ < other.Length_;
+        size_t const min_len = std::min(m_length, other.m_length);
+        int const cmp = ::memcmp(data(), other.data(), min_len);
+        return cmp != 0 ? cmp < 0 : m_length < other.m_length;
     }
 
     [[nodiscard]] bool operator>(Fa_StringRef const& other) const noexcept { return other < *this; }
@@ -161,7 +161,7 @@ public:
     [[nodiscard]] char at(size_t const i) const;
     char& at(size_t const i);
 
-    Fa_StringRef& trimWhitespace(bool leading = true, bool trailing = true) noexcept;
+    Fa_StringRef& trim_whitespace(bool leading = true, bool trailing = true) noexcept;
 
     Fa_StringRef operator+(Fa_StringRef const& rhs) const
     {
@@ -171,11 +171,11 @@ public:
         if (r_len == 0)
             return *this;
 
-        size_t const new_len = Length_ + r_len;
-        StringBase* result = getAllocator().allocateObject<StringBase>(new_len);
+        size_t const new_len = m_length + r_len;
+        StringBase* result = get_allocator().allocate_object<StringBase>(new_len);
 
-        ::memcpy(result->ptr(), data(), Length_);
-        ::memcpy(result->ptr() + Length_, rhs.data(), r_len);
+        ::memcpy(result->ptr(), data(), m_length);
+        ::memcpy(result->ptr() + m_length, rhs.data(), r_len);
 
         result->ptr()[new_len] = 0;
 
@@ -214,17 +214,17 @@ public:
         return result;
     }
 
-    [[nodiscard]] size_t len() const noexcept { return Length_; }
-    [[nodiscard]] size_t cap() const noexcept { return StringData_ ? StringData_->cap() : 0; }
-    [[nodiscard]] StringBase* get() const noexcept { return StringData_; }
-    [[nodiscard]] bool empty() const noexcept { return Length_ == 0; }
-    [[nodiscard]] char const* data() const noexcept { return StringData_ ? StringData_->ptr() + Offset_ : nullptr; }
+    [[nodiscard]] size_t len() const noexcept { return m_length; }
+    [[nodiscard]] size_t cap() const noexcept { return m_string_data ? m_string_data->cap() : 0; }
+    [[nodiscard]] StringBase* get() const noexcept { return m_string_data; }
+    [[nodiscard]] bool empty() const noexcept { return m_length == 0; }
+    [[nodiscard]] char const* data() const noexcept { return m_string_data ? m_string_data->ptr() + m_offset : nullptr; }
 
     [[nodiscard]] char* data() noexcept
     {
-        if (StringData_) {
-            ensureUnique();
-            return StringData_->ptr() + Offset_;
+        if (m_string_data) {
+            ensure_unique();
+            return m_string_data->ptr() + m_offset;
         }
         return nullptr;
     }
@@ -239,8 +239,8 @@ public:
 
     void clear() noexcept
     {
-        Length_ = 0;
-        Offset_ = 0;
+        m_length = 0;
+        m_offset = 0;
     }
 
     void resize(size_t const s);
@@ -251,30 +251,30 @@ public:
     [[nodiscard]] std::optional<size_t> find_pos(char const c) const noexcept;
 
     Fa_StringRef& truncate(size_t const s) noexcept;
-    Fa_StringRef slice(size_t start, size_t end = SIZE_MAX) const;
-    Fa_StringRef substr(size_t start, size_t end = SIZE_MAX) const
+    Fa_StringRef slice(size_t start, size_t m_end = SIZE_MAX) const;
+    Fa_StringRef substr(size_t start, size_t m_end = SIZE_MAX) const
     {
-        if (Length_ == 0)
+        if (m_length == 0)
             return { };
-        if (start > Length_)
+        if (start > m_length)
             return { };
-        if (end > Length_ || end == SIZE_MAX)
-            end = Length_;
-        if (end < start)
+        if (m_end > m_length || m_end == SIZE_MAX)
+            m_end = m_length;
+        if (m_end < start)
             return { };
-        return substrCopy(start, end);
+        return substr_copy(start, m_end);
     }
-    Fa_StringRef substrCopy(size_t start, size_t end = SIZE_MAX) const;
+    Fa_StringRef substr_copy(size_t start, size_t m_end = SIZE_MAX) const;
 
-    f64 toDouble(size_t* pos = nullptr) const;
+    f64 to_double(size_t* pos = nullptr) const;
 
-    [[nodiscard]] static Fa_StringRef fromUtf16(char16_t const* utf16_cstr);
+    [[nodiscard]] static Fa_StringRef from_utf16(char16_t const* utf16_cstr);
 
-    void ensureUnique()
+    void ensure_unique()
     {
-        if (!StringData_)
+        if (!m_string_data)
             return;
-        if (LIKELY(StringData_->referenceCount() == 1))
+        if (LIKELY(m_string_data->reference_count() == 1))
             return;
         detach();
     }

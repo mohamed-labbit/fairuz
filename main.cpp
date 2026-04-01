@@ -100,11 +100,11 @@ bool parseArgs(int argc, char** argv, Options& options)
     return true;
 }
 
-void printAst(fairuz::Fa_Array<fairuz::AST::Fa_Stmt*> const& statements)
+void printAst(fairuz::Fa_Array<fairuz::AST::Fa_Stmt*> const& m_statements)
 {
     fairuz::AST::ASTPrinter printer(true);
-    for (u32 i = 0; i < statements.size(); ++i)
-        printer.print(statements[i]);
+    for (u32 i = 0; i < m_statements.size(); ++i)
+        printer.print(m_statements[i]);
 }
 
 } // namespace
@@ -142,20 +142,20 @@ int main(int argc, char** argv)
         fairuz::diagnostic::reset();
 
         fairuz::Fa_AllocatorContext allocator_context;
-        fairuz::setContext(&allocator_context);
+        fairuz::set_context(&allocator_context);
 
-        fairuz::lex::Fa_FileManager file_manager(options.input_path);
-        fairuz::parser::Fa_Parser parser(&file_manager);
-        fairuz::Fa_Array<fairuz::AST::Fa_Stmt*> statements = parser.parseProgram();
+        fairuz::lex::Fa_FileManager m_file_manager(options.input_path);
+        fairuz::parser::Fa_Parser parser(&m_file_manager);
+        fairuz::Fa_Array<fairuz::AST::Fa_Stmt*> m_statements = parser.parse_program();
 
-        if (fairuz::diagnostic::hasErrors())
+        if (fairuz::diagnostic::has_errors())
             return static_cast<int>(ExitCode::DataError);
 
         if (options.dump_ast)
-            printAst(statements);
+            printAst(m_statements);
 
         fairuz::runtime::Compiler compiler;
-        fairuz::runtime::Fa_Chunk* chunk = compiler.compile(statements);
+        fairuz::runtime::Fa_Chunk* chunk = compiler.compile(m_statements);
         if (!chunk) {
             std::cerr << "Compilation failed: no bytecode was produced\n";
             return static_cast<int>(ExitCode::Software);
@@ -170,10 +170,10 @@ int main(int argc, char** argv)
         fairuz::runtime::Fa_VM vm;
         auto const start = std::chrono::steady_clock::now();
         vm.run(chunk);
-        auto const end = std::chrono::steady_clock::now();
+        auto const m_end = std::chrono::steady_clock::now();
 
         if (options.print_time) {
-            std::chrono::duration<f64> elapsed = end - start;
+            std::chrono::duration<f64> elapsed = m_end - start;
             std::cerr << "time: " << elapsed.count() << "s\n";
         }
 

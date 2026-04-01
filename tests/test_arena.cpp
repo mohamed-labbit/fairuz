@@ -6,23 +6,23 @@ using namespace fairuz;
 
 class TestAllocator {
 private:
-    Fa_ArenaAllocator Allocator_;
+    Fa_ArenaAllocator allocator_;
 
 public:
     TestAllocator()
-        : Allocator_(static_cast<i32>(Fa_ArenaAllocator::GrowthStrategy::LINEAR))
+        : allocator_(static_cast<i32>(Fa_ArenaAllocator::GrowthStrategy::LINEAR))
     {
     }
 
-    Fa_ArenaAllocator& get() noexcept { return std::ref<Fa_ArenaAllocator>(Allocator_); }
+    Fa_ArenaAllocator& get() noexcept { return std::ref<Fa_ArenaAllocator>(allocator_); }
 
     template<typename T, typename... Args>
-    T* allocate(size_t count, Args&&... args)
+    T* allocate(size_t count, Args&&... m_args)
     {
-        void* mem = Allocator_.allocate(count * sizeof(T));
+        void* mem = allocator_.allocate(count * sizeof(T));
         if (!mem)
             return nullptr;
-        return new (mem) T(std::forward<Args>(args)...);
+        return new (mem) T(std::forward<Args>(m_args)...);
     }
 };
 
@@ -347,17 +347,17 @@ TEST(ArenaAllocatorTest, MixedSizeAllocations)
     std::vector<void*> ptrs;
 
     for (int i = 0; i < 10; ++i) {
-        size_t size = (i % 10) + 1;
+        size_t m_size = (i % 10) + 1;
         if (i % 3 == 0) {
-            int* ptr = arena.allocate<int>(size);
+            int* ptr = arena.allocate<int>(m_size);
             ASSERT_NE(ptr, nullptr);
             ptrs.push_back(ptr);
         } else if (i % 3 == 1) {
-            f64* ptr = arena.allocate<f64>(size);
+            f64* ptr = arena.allocate<f64>(m_size);
             ASSERT_NE(ptr, nullptr);
             ptrs.push_back(ptr);
         } else {
-            char* ptr = arena.allocate<char>(size * 100);
+            char* ptr = arena.allocate<char>(m_size * 100);
             ASSERT_NE(ptr, nullptr);
             ptrs.push_back(ptr);
         }
@@ -384,7 +384,7 @@ TEST(ArenaAllocatorTest, AllocateBlockDirect)
 {
     TestAllocator arena;
 
-    unsigned char* ptr = arena.get().allocateBlock(1024);
+    unsigned char* ptr = arena.get().allocate_block(1024);
     ASSERT_NE(ptr, nullptr);
 
     ptr[0] = 'A';
@@ -479,8 +479,8 @@ TEST(ArenaAllocatorPerformance, ResetPerformance)
 
     auto start = std::chrono::high_resolution_clock::now();
     arena.get().reset();
-    auto end = std::chrono::high_resolution_clock::now();
+    auto m_end = std::chrono::high_resolution_clock::now();
 
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(m_end - start);
     std::cout << "Reset took " << duration.count() << "μs\n";
 }

@@ -11,13 +11,13 @@ namespace fairuz {
 
 class Fa_ArenaBlock {
 private:
-    size_t Size_ { DEFAULT_BLOCK_SIZE };
-    unsigned char* Begin_ { nullptr };
-    unsigned char* Next_ { nullptr };
-    unsigned char* End_ { nullptr };
+    size_t m_size { DEFAULT_BLOCK_SIZE };
+    unsigned char* m_begin { nullptr };
+    unsigned char* m_next { nullptr };
+    unsigned char* m_end { nullptr };
 
 public:
-    explicit Fa_ArenaBlock(size_t const size = DEFAULT_BLOCK_SIZE, size_t const alignment = alignof(std::max_align_t));
+    explicit Fa_ArenaBlock(size_t const m_size = DEFAULT_BLOCK_SIZE, size_t const m_alignment = alignof(std::max_align_t));
 
     ~Fa_ArenaBlock();
 
@@ -31,7 +31,7 @@ public:
 
     [[nodiscard]] unsigned char* begin() const;
     [[nodiscard]] unsigned char* end() const;
-    [[nodiscard]] unsigned char* cNext() const;
+    [[nodiscard]] unsigned char* c_next() const;
 
     [[nodiscard]] size_t size() const;
     [[nodiscard]] size_t used() const;
@@ -39,7 +39,7 @@ public:
 
     bool pop(size_t bytes);
 
-    [[nodiscard]] unsigned char* allocate(size_t bytes, std::optional<size_t> alignment = std::nullopt);
+    [[nodiscard]] unsigned char* allocate(size_t bytes, std::optional<size_t> m_alignment = std::nullopt);
     unsigned char* reserve(size_t const bytes);
 }; // class Fa_ArenaBlock
 
@@ -53,19 +53,19 @@ public:
     using OutOfMemoryHandler = std::function<bool(size_t requested)>;
 
 private:
-    std::vector<Fa_ArenaBlock> Blocks_ { };
-    GrowthStrategy GrowthFactor_ { GrowthStrategy::LINEAR };
-    size_t BlockSize_ { DEFAULT_BLOCK_SIZE };
-    size_t NextBlockSize_ { DEFAULT_BLOCK_SIZE };
-    std::string Name_ { "arena" };
-    OutOfMemoryHandler OomHandler_ { nullptr };
-    size_t MaxBlockSize_ { MAX_BLOCK_SIZE };
-    void* LastPtr_ { nullptr };
-    unsigned char* Next_ { nullptr };
-    unsigned char* End_ { nullptr };
-    void* allocateSlow(size_t size, size_t alignment);
+    std::vector<Fa_ArenaBlock> m_blocks { };
+    GrowthStrategy m_growth_factor { GrowthStrategy::LINEAR };
+    size_t m_block_size { DEFAULT_BLOCK_SIZE };
+    size_t m_next_block_size { DEFAULT_BLOCK_SIZE };
+    std::string m_name { "arena" };
+    OutOfMemoryHandler m_oom_handler { nullptr };
+    size_t m_max_block_size { MAX_BLOCK_SIZE };
+    void* m_last_ptr { nullptr };
+    unsigned char* m_next { nullptr };
+    unsigned char* m_end { nullptr };
+    void* allocate_slow(size_t m_size, size_t m_alignment);
 #ifdef fairuz_DEBUG
-    void trackAllocation(unsigned char* ptr, size_t size, size_t alignment);
+    void track_allocation(unsigned char* ptr, size_t m_size, size_t m_alignment);
 #endif
 
 #ifdef fairuz_DEBUG
@@ -77,19 +77,19 @@ private:
         bool operator()(void const* a, void const* b) const noexcept { return a == b; }
     }; // struct VoidPtrEqual
 
-    DetailedAllocStats AllocStats_;
-    std::unordered_mape<void*, AllocationHeader, VoidPtrHash, VoidPtrEqual> AllocationMap_ { };
-    std::unordered_set<void*, VoidPtrHash, VoidPtrEqual> AllocatedPtrs_ { };
-    bool TrackAllocations_ { false };
-    bool DebugFeatures_ { false };
-    bool EnableStatistics_ { true };
+    DetailedAllocStats m_alloc_stats;
+    std::unordered_mape<void*, AllocationHeader, VoidPtrHash, VoidPtrEqual> m_allocation_map { };
+    std::unordered_set<void*, VoidPtrHash, VoidPtrEqual> m_allocated_ptrs { };
+    bool m_track_allocations { false };
+    bool m_debug_features { false };
+    bool m_enable_statistics { true };
 #endif // fairuz_DEBUG
 
-    static constexpr size_t Alignment_ = alignof(std::max_align_t);
+    static constexpr size_t m_alignment = alignof(std::max_align_t);
 
 public:
     explicit Fa_ArenaAllocator(i32 growth_strategy = static_cast<i32>(GrowthStrategy::EXPONENTIAL),
-        OutOfMemoryHandler oom_handler = nullptr, bool debug = true);
+        OutOfMemoryHandler m_oom_handler = nullptr, bool debug = true);
 
     ~Fa_ArenaAllocator() { reset(); }
 
@@ -99,51 +99,51 @@ public:
     Fa_ArenaAllocator(Fa_ArenaAllocator&&) noexcept = delete;
     Fa_ArenaAllocator& operator=(Fa_ArenaAllocator&&) noexcept = delete;
 
-    void setName(std::string const& name);
+    void set_name(std::string const& m_name);
     void reset();
 
-    [[nodiscard]] unsigned char* allocateBlock(size_t requested, size_t alignment_ = alignof(std::max_align_t), bool retry_on_oom = true);
+    [[nodiscard]] unsigned char* allocate_block(size_t requested, size_t m_alignment = alignof(std::max_align_t), bool retry_on_oom = true);
 
-    [[nodiscard]] void* allocate(size_t const size, size_t const alignment = alignof(std::max_align_t));
+    [[nodiscard]] void* allocate(size_t const m_size, size_t const m_alignment = alignof(std::max_align_t));
 
-    void deallocate(void* ptr, size_t const size);
+    void deallocate(void* ptr, size_t const m_size);
 
     template<typename T>
-    [[nodiscard]] T* allocateArray(size_t const count)
+    [[nodiscard]] T* allocate_array(size_t const count)
     {
         return static_cast<T*>(allocate(count * sizeof(T)));
     }
 
     template<typename T>
-    void deallocateArray(T* ptr, size_t const count) { deallocate(static_cast<void*>(ptr), count * sizeof(T)); }
+    void deallocate_array(T* ptr, size_t const count) { deallocate(static_cast<void*>(ptr), count * sizeof(T)); }
 
     template<typename T, typename... Args>
-    [[nodiscard]] T* allocateObject(Args&&... args)
+    [[nodiscard]] T* allocate_object(Args&&... m_args)
     {
         static_assert(std::is_constructible_v<T, Args...>, "T must be constructible with Args...");
-        return ::new (allocate(sizeof(T))) T(std::forward<Args>(args)...);
+        return ::new (allocate(sizeof(T))) T(std::forward<Args>(m_args)...);
     }
 
     template<typename T>
-    void deallocateObject(T* obj) { deallocate(static_cast<void*>(obj), sizeof(T)); }
+    void deallocate_object(T* obj) { deallocate(static_cast<void*>(obj), sizeof(T)); }
 
 #ifdef fairuz_DEBUG
-    size_t totalAllocated() const;
-    size_t totalAllocations() const;
-    size_t activeBlocks() const;
-    std::string toString(bool verbose) const;
-    void dumpStats(std::ostream& os, bool verbose) const;
-    [[nodiscard]] bool verifyAllocation(void* ptr) const;
+    size_t total_allocated() const;
+    size_t total_allocations() const;
+    size_t active_blocks() const;
+    std::string to_string(bool verbose) const;
+    void dump_stats(std::ostream& os, bool verbose) const;
+    [[nodiscard]] bool verify_allocation(void* ptr) const;
 #endif // fairuz_DEBUG
 
 private:
-    [[nodiscard]] unsigned char* allocateFromBlocks(size_t alloc_size, size_t align = alignof(std::max_align_t));
+    [[nodiscard]] unsigned char* allocate_from_blocks(size_t alloc_size, size_t align = alignof(std::max_align_t));
 
-    void updateNextBlockSize() noexcept;
+    void update_next_block_size() noexcept;
 
-    [[nodiscard]] static constexpr size_t getAligned(size_t n, size_t const alignment = alignof(std::max_align_t)) noexcept
+    [[nodiscard]] static constexpr size_t get_aligned(size_t n, size_t const m_alignment = alignof(std::max_align_t)) noexcept
     {
-        return (n + alignment - 1) & ~(alignment - 1);
+        return (n + m_alignment - 1) & ~(m_alignment - 1);
     }
 }; // class Fa_ArenaAllocator
 
@@ -153,9 +153,9 @@ struct Fa_AllocatorContext {
 
 inline Fa_AllocatorContext* g_context = nullptr;
 
-inline void setContext(Fa_AllocatorContext* ctx) { g_context = ctx; }
+inline void set_context(Fa_AllocatorContext* ctx) { g_context = ctx; }
 
-inline Fa_AllocatorContext& getContext()
+inline Fa_AllocatorContext& get_context()
 {
     if (UNLIKELY(!g_context)) {
         static Fa_AllocatorContext default_ctx;
@@ -164,7 +164,7 @@ inline Fa_AllocatorContext& getContext()
     return *g_context;
 }
 
-inline Fa_ArenaAllocator& getAllocator() { return getContext().allocator; }
+inline Fa_ArenaAllocator& get_allocator() { return get_context().allocator; }
 
 struct Fa_AllocatorContextScope {
     explicit Fa_AllocatorContextScope(Fa_AllocatorContext& ctx) { g_context = &ctx; }

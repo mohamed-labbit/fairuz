@@ -7,66 +7,75 @@ namespace fairuz::runtime {
 
 void Fa_GarbageCollector::collect(Fa_VM* vm)
 {
-    markRoots(vm);
-    traceReferences();
+    mark_roots(vm);
+    trace_references();
     sweep();
 }
 
-void Fa_GarbageCollector::markRoots(Fa_VM* vm)
+void Fa_GarbageCollector::mark_roots(Fa_VM* vm)
 {
     // Stack values
-    for (int i = 0; i < vm->StackTop_ && i < Fa_VM::STACK_SIZE; ++i) {
-        if (Fa_IS_OBJECT(vm->Stack_[i]))
-            markObject(Fa_AS_OBJECT(vm->Stack_[i]));
+    for (int i = 0; i < vm->m_stack_top && i < Fa_VM::STACK_SIZE; ++i) {
+        if (Fa_IS_OBJECT(vm->stack_[i]))
+            mark_object(Fa_AS_OBJECT(vm->stack_[i]));
     }
 
     // Call frames
-    for (int i = 0; i < vm->FramesTop_ && i < Fa_VM::MAX_FRAMES; ++i)
-        markObject(vm->Frames_[i].closure);
+    for (int i = 0; i < vm->m_frames_top && i < Fa_VM::MAX_FRAMES; ++i)
+        mark_object(vm->frames_[i].closure);
 
     // Open upvalues
-    for (u32 i = 0, n = vm->OpenUpvalues_.size(); i < n; ++i)
-        markObject(vm->OpenUpvalues_[i]);
+    for (u32 i = 0, n = vm->m_open_upvalues.size(); i < n; ++i)
+        mark_object(vm->m_open_upvalues[i]);
 
     // Global slots are the live Fa_VM roots for globals.
-    markValueArray(vm->GlobalSlots_);
+    mark_value_array(vm->m_global_slots);
 }
 
-void Fa_GarbageCollector::markObject(Fa_ObjHeader* p)
+void Fa_GarbageCollector::mark_object(Fa_ObjHeader* p)
 {
-    if (!p || p->isMarked)
+    if (!p || p->is_marked)
         return;
 
-    p->isMarked = true;
-    Grays_.push(p);
+    p->is_marked = true;
+    m_grays.push(p);
 }
 
-void Fa_GarbageCollector::blackenObject(Fa_ObjHeader* obj)
+void Fa_GarbageCollector::blacken_object(Fa_ObjHeader* obj)
 {
-    switch (obj->type) {
+    switch (obj->m_type) {
     case Fa_ObjType::CLOSURE: {
         auto cl = static_cast<Fa_ObjClosure*>(obj);
-        markObject(cl->function);
-        for (u32 i = 0, n = cl->upValues.size(); i < n; ++i)
-            markObject(cl->upValues[i]);
+        mark_object(cl->function);
+        for (u32 i = 0, n = cl->up_values.size(); i < n; ++i)
+            mark_object(cl->up_values[i]);
     } break;
     case Fa_ObjType::FUNCTION: {
-        markObject(static_cast<Fa_ObjFunction*>(obj)->name);
+        mark_object(static_cast<Fa_ObjFunction*>(obj)->m_name);
         auto constants = &static_cast<Fa_ObjFunction*>(obj)->chunk->constants;
-        markValueArray(*constants);
+        mark_value_array(*constants);
     } break;
     case Fa_ObjType::LIST: {
         auto lst = static_cast<Fa_ObjList*>(obj);
-        markValueArray(lst->elements);
+        mark_value_array(lst->m_elements);
+    } break;
+    case Fa_ObjType::DICT: {
+        auto dict = static_cast<Fa_ObjDict*>(obj);
+        for (u32 i = 0, n = dict->data.size(); i < n; ++i) {
+            if (Fa_IS_OBJECT(dict->data[i].first))
+                mark_object(Fa_AS_OBJECT(dict->data[i].first));
+            if (Fa_IS_OBJECT(dict->data[i].second))
+                mark_object(Fa_AS_OBJECT(dict->data[i].second));
+        }
     } break;
     case Fa_ObjType::NATIVE: // natives are static
     case Fa_ObjType::STRING: // strings are managed with arena
         break;
     case Fa_ObjType::UPVALUE: {
         auto* uv = static_cast<ObjUpvalue*>(obj);
-        if (uv->location == &uv->closed) {
+        if (uv->m_location == &uv->closed) {
             if (Fa_IS_OBJECT(uv->closed))
-                markObject(Fa_AS_OBJECT(uv->closed));
+                mark_object(Fa_AS_OBJECT(uv->closed));
         }
     } break;
     }
@@ -75,44 +84,44 @@ void Fa_GarbageCollector::blackenObject(Fa_ObjHeader* obj)
 void Fa_GarbageCollector::sweep()
 {
     u32 i = 0;
-    while (i < All_.size()) {
-        if (!All_[i]->isMarked) {
-            delete All_[i];
-            All_.erase(i);
+    while (i < m_all.size()) {
+        if (!m_all[i]->is_marked) {
+            delete m_all[i];
+            m_all.erase(i);
             // delay decrement until erase succeeds
-            CurrentSize_ -= sizeof(Fa_ObjHeader);
+            m_current_size -= sizeof(Fa_ObjHeader);
         } else {
-            All_[i]->isMarked = false;
+            m_all[i]->is_marked = false;
             ++i;
         }
     }
 }
 
-void Fa_GarbageCollector::markValueArray(Fa_Array<Fa_Value> const& arr)
+void Fa_GarbageCollector::mark_value_array(Fa_Array<Fa_Value> const& arr)
 {
     for (u32 i = 0, n = arr.size(); i < n; ++i) {
         if (Fa_IS_OBJECT(arr[i]))
-            markObject(Fa_AS_OBJECT(arr[i]));
+            mark_object(Fa_AS_OBJECT(arr[i]));
     }
 }
 
-void Fa_GarbageCollector::traceReferences()
+void Fa_GarbageCollector::trace_references()
 {
-    while (!Grays_.empty()) {
-        Fa_ObjHeader* obj = Grays_.back();
-        Grays_.pop();
-        blackenObject(obj);
+    while (!m_grays.empty()) {
+        Fa_ObjHeader* obj = m_grays.back();
+        m_grays.pop();
+        blacken_object(obj);
     }
 }
 
 // gc.cc
-void Fa_GarbageCollector::sweepAll()
+void Fa_GarbageCollector::sweep_all()
 {
-    for (u32 i = 0; i < All_.size(); ++i)
-        delete All_[i];
+    for (u32 i = 0; i < m_all.size(); ++i)
+        delete m_all[i];
 
-    All_.clear();
-    CurrentSize_ = 0;
+    m_all.clear();
+    m_current_size = 0;
 }
 
 } // namespace fairuz::runtime

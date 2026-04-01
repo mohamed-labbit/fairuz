@@ -7,9 +7,9 @@ using namespace fairuz;
 namespace {
 
 struct IntHash {
-    size_t operator()(int value) const
+    size_t operator()(int m_value) const
     {
-        return static_cast<size_t>(static_cast<u32>(value) * 2654435761u);
+        return static_cast<size_t>(static_cast<u32>(m_value) * 2654435761u);
     }
 };
 
@@ -37,13 +37,13 @@ TEST(Fa_HashTable, InsertAndFindSingleEntry)
     IntTable table;
 
     EXPECT_TRUE(table.empty());
-    EXPECT_EQ(table.findPtr(7), nullptr);
+    EXPECT_EQ(table.find_ptr(7), nullptr);
 
-    int& stored = table.insertOrAssign(7, 99);
+    int& stored = table.insert_or_assign(7, 99);
     EXPECT_EQ(stored, 99);
     EXPECT_EQ(table.size(), 1u);
-    ASSERT_NE(table.findPtr(7), nullptr);
-    EXPECT_EQ(*table.findPtr(7), 99);
+    ASSERT_NE(table.find_ptr(7), nullptr);
+    EXPECT_EQ(*table.find_ptr(7), 99);
     EXPECT_FALSE(table.empty());
 }
 
@@ -51,12 +51,12 @@ TEST(Fa_HashTable, OverwriteKeepsSizeStable)
 {
     IntTable table;
 
-    table.insertOrAssign(3, 10);
-    table.insertOrAssign(3, 42);
+    table.insert_or_assign(3, 10);
+    table.insert_or_assign(3, 42);
 
     EXPECT_EQ(table.size(), 1u);
-    ASSERT_NE(table.findPtr(3), nullptr);
-    EXPECT_EQ(*table.findPtr(3), 42);
+    ASSERT_NE(table.find_ptr(3), nullptr);
+    EXPECT_EQ(*table.find_ptr(3), 42);
 }
 
 TEST(Fa_HashTable, HandlesLinearProbingCollisions)
@@ -64,13 +64,13 @@ TEST(Fa_HashTable, HandlesLinearProbingCollisions)
     CollidingIntTable table;
 
     for (int i = 0; i < 32; ++i)
-        table.insertOrAssign(i, i * 10);
+        table.insert_or_assign(i, i * 10);
 
     EXPECT_EQ(table.size(), 32u);
     for (int i = 0; i < 32; ++i) {
-        int* value = table.findPtr(i);
-        ASSERT_NE(value, nullptr);
-        EXPECT_EQ(*value, i * 10);
+        int* m_value = table.find_ptr(i);
+        ASSERT_NE(m_value, nullptr);
+        EXPECT_EQ(*m_value, i * 10);
     }
 }
 
@@ -79,13 +79,13 @@ TEST(Fa_HashTable, GrowthPreservesExistingEntries)
     IntTable table;
 
     for (int i = 0; i < 1000; ++i)
-        table.insertOrAssign(i, i + 1);
+        table.insert_or_assign(i, i + 1);
 
     EXPECT_EQ(table.size(), 1000u);
     for (int i = 0; i < 1000; ++i) {
-        int* value = table.findPtr(i);
-        ASSERT_NE(value, nullptr);
-        EXPECT_EQ(*value, i + 1);
+        int* m_value = table.find_ptr(i);
+        ASSERT_NE(m_value, nullptr);
+        EXPECT_EQ(*m_value, i + 1);
     }
 }
 
@@ -94,17 +94,17 @@ TEST(Fa_HashTable, ClearRemovesEntriesAndAllowsReuse)
     IntTable table;
 
     for (int i = 0; i < 64; ++i)
-        table.insertOrAssign(i, i);
+        table.insert_or_assign(i, i);
 
     table.clear();
 
     EXPECT_TRUE(table.empty());
     EXPECT_EQ(table.size(), 0u);
     for (int i = 0; i < 64; ++i)
-        EXPECT_EQ(table.findPtr(i), nullptr);
+        EXPECT_EQ(table.find_ptr(i), nullptr);
 
-    table.insertOrAssign(123, 456);
-    ASSERT_NE(table.findPtr(123), nullptr);
-    EXPECT_EQ(*table.findPtr(123), 456);
+    table.insert_or_assign(123, 456);
+    ASSERT_NE(table.find_ptr(123), nullptr);
+    EXPECT_EQ(*table.find_ptr(123), 456);
     EXPECT_EQ(table.size(), 1u);
 }

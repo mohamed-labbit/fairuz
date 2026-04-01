@@ -2,7 +2,7 @@
 
 #include "../include/string.hpp"
 #include "../include/util.hpp"
-#include "diagnostic.hpp"
+#include "../include/diagnostic.hpp"
 
 #include <cassert>
 #include <charconv>
@@ -15,7 +15,7 @@ namespace detail {
 static char g_empty_string_storage[sizeof(StringBase)];
 static StringBase* g_empty_string = nullptr;
 
-StringBase* emptyStringSingleton() noexcept
+StringBase* empty_string_singleton() noexcept
 {
     if (LIKELY(g_empty_string != nullptr))
         return g_empty_string;
@@ -30,152 +30,152 @@ StringBase* emptyStringSingleton() noexcept
 } // namespace detail
 
 StringBase::StringBase(size_t const s)
-    : is_heap(s >= SSO_SIZE)
+    : m_is_heap(s >= SSO_SIZE)
 {
     if (s < SSO_SIZE) {
-        storage_.sso[0] = 0;
+        m_storage.sso[0] = 0;
     } else {
-        storage_.heap.cap = s + 1;
-        storage_.heap.ptr = getAllocator().allocateArray<char>(storage_.heap.cap);
-        storage_.heap.ptr[0] = 0;
+        m_storage.heap.m_cap = s + 1;
+        m_storage.heap.ptr = get_allocator().allocate_array<char>(m_storage.heap.m_cap);
+        m_storage.heap.ptr[0] = 0;
     }
 }
 
 StringBase::StringBase(size_t const s, char const c)
-    : is_heap(s >= SSO_SIZE)
+    : m_is_heap(s >= SSO_SIZE)
 {
     if (s < SSO_SIZE) {
-        ::memset(storage_.sso, c, s);
-        storage_.sso[s] = 0;
+        ::memset(m_storage.sso, c, s);
+        m_storage.sso[s] = 0;
     } else {
-        storage_.heap.cap = s + 1;
-        storage_.heap.ptr = getAllocator().allocateArray<char>(storage_.heap.cap);
-        ::memset(storage_.heap.ptr, c, s);
-        storage_.heap.ptr[s] = 0;
+        m_storage.heap.m_cap = s + 1;
+        m_storage.heap.ptr = get_allocator().allocate_array<char>(m_storage.heap.m_cap);
+        ::memset(m_storage.heap.ptr, c, s);
+        m_storage.heap.ptr[s] = 0;
     }
 }
 
 StringBase::StringBase(char const* s, size_t n)
 {
     if (!s || n == 0) {
-        is_heap = false;
-        storage_.sso[0] = 0;
+        m_is_heap = false;
+        m_storage.sso[0] = 0;
         return;
     }
 
-    is_heap = (n >= SSO_SIZE);
+    m_is_heap = (n >= SSO_SIZE);
 
-    if (!is_heap) {
-        ::memcpy(storage_.sso, s, n);
-        storage_.sso[n] = 0;
+    if (!m_is_heap) {
+        ::memcpy(m_storage.sso, s, n);
+        m_storage.sso[n] = 0;
     } else {
-        storage_.heap.cap = n + 1;
-        storage_.heap.ptr = getAllocator().allocateArray<char>(storage_.heap.cap);
-        if (!storage_.heap.ptr)
-            diagnostic::panic("allocateArray<char>(size=" + std::to_string(storage_.heap.cap) + ") failed!");
-        ::memcpy(storage_.heap.ptr, s, n);
-        storage_.heap.ptr[n] = 0;
+        m_storage.heap.m_cap = n + 1;
+        m_storage.heap.ptr = get_allocator().allocate_array<char>(m_storage.heap.m_cap);
+        if (!m_storage.heap.ptr)
+            diagnostic::panic("allocateArray<char>(size=" + std::to_string(m_storage.heap.m_cap) + ") failed!");
+        ::memcpy(m_storage.heap.ptr, s, n);
+        m_storage.heap.ptr[n] = 0;
     }
 }
 
 StringBase::StringBase(char const* s)
 {
     if (!s) {
-        is_heap = false;
-        storage_.sso[0] = 0;
+        m_is_heap = false;
+        m_storage.sso[0] = 0;
         return;
     }
 
     size_t n = ::strlen(s);
-    is_heap = (n >= SSO_SIZE);
+    m_is_heap = (n >= SSO_SIZE);
 
-    if (!is_heap) {
-        ::memcpy(storage_.sso, s, n + 1);
+    if (!m_is_heap) {
+        ::memcpy(m_storage.sso, s, n + 1);
     } else {
-        storage_.heap.cap = n + 1;
-        storage_.heap.ptr = getAllocator().allocateArray<char>(storage_.heap.cap);
-        if (!storage_.heap.ptr)
-            diagnostic::panic("allocateArray<char>(size=" + std::to_string(storage_.heap.cap) + ") failed!");
-        ::memcpy(storage_.heap.ptr, s, n + 1);
+        m_storage.heap.m_cap = n + 1;
+        m_storage.heap.ptr = get_allocator().allocate_array<char>(m_storage.heap.m_cap);
+        if (!m_storage.heap.ptr)
+            diagnostic::panic("allocateArray<char>(size=" + std::to_string(m_storage.heap.m_cap) + ") failed!");
+        ::memcpy(m_storage.heap.ptr, s, n + 1);
     }
 }
 
 Fa_StringRef::Fa_StringRef(size_t const s)
-    : StringData_(getAllocator().allocateObject<StringBase>(s))
-    , Offset_(0)
-    , Length_(0)
+    : m_string_data(get_allocator().allocate_object<StringBase>(s))
+    , m_offset(0)
+    , m_length(0)
 {
 }
 
-Fa_StringRef::Fa_StringRef(Fa_StringRef const& other, size_t offset, size_t length)
-    : StringData_(other.StringData_)
-    , Offset_(other.Offset_ + offset)
-    , Length_(length ? length : (other.Length_ > offset ? other.Length_ - offset : 0))
+Fa_StringRef::Fa_StringRef(Fa_StringRef const& other, size_t m_offset, size_t m_length)
+    : m_string_data(other.m_string_data)
+    , m_offset(other.m_offset + m_offset)
+    , m_length(m_length ? m_length : (other.m_length > m_offset ? other.m_length - m_offset : 0))
 {
-    if (StringData_)
-        StringData_->increment();
+    if (m_string_data)
+        m_string_data->increment();
 }
 
 // relies on lit being nul terminated
 Fa_StringRef::Fa_StringRef(char const* lit)
 {
     if (!lit || !lit[0]) {
-        StringData_ = detail::emptyStringSingleton();
-        StringData_->increment();
-        Offset_ = 0;
-        Length_ = 0;
+        m_string_data = detail::empty_string_singleton();
+        m_string_data->increment();
+        m_offset = 0;
+        m_length = 0;
         return;
     }
 
-    StringData_ = getAllocator().allocateObject<StringBase>(lit);
-    Offset_ = 0;
-    Length_ = ::strlen(lit);
+    m_string_data = get_allocator().allocate_object<StringBase>(lit);
+    m_offset = 0;
+    m_length = ::strlen(lit);
 }
 
 Fa_StringRef::Fa_StringRef(char16_t const* u16_str)
 {
     if (!u16_str || !u16_str[0]) {
-        StringData_ = detail::emptyStringSingleton();
-        StringData_->increment();
-        Offset_ = 0;
-        Length_ = 0;
+        m_string_data = detail::empty_string_singleton();
+        m_string_data->increment();
+        m_offset = 0;
+        m_length = 0;
         return;
     }
 
-    Fa_StringRef temp = fromUtf16(u16_str);
-    StringData_ = temp.StringData_;
-    Offset_ = temp.Offset_;
-    Length_ = temp.Length_;
-    temp.StringData_ = nullptr;
+    Fa_StringRef temp = from_utf16(u16_str);
+    m_string_data = temp.m_string_data;
+    m_offset = temp.m_offset;
+    m_length = temp.m_length;
+    temp.m_string_data = nullptr;
 }
 
 Fa_StringRef::Fa_StringRef(size_t const s, char const c)
-    : StringData_(getAllocator().allocateObject<StringBase>(s, c))
-    , Offset_(0)
-    , Length_(s)
+    : m_string_data(get_allocator().allocate_object<StringBase>(s, c))
+    , m_offset(0)
+    , m_length(s)
 {
 }
 
-Fa_StringRef::Fa_StringRef(StringBase* data, size_t offset, size_t length)
-    : StringData_(data ? data : detail::emptyStringSingleton())
-    , Offset_(offset)
-    , Length_(length)
+Fa_StringRef::Fa_StringRef(StringBase* data, size_t m_offset, size_t m_length)
+    : m_string_data(data ? data : detail::empty_string_singleton())
+    , m_offset(m_offset)
+    , m_length(m_length)
 {
-    if (!length) {
+    if (!m_length) {
         size_t const len = ::strlen(data->ptr());
-        Length_ = len > offset ? len - offset : 0;
+        m_length = len > m_offset ? len - m_offset : 0;
     }
-    StringData_->increment();
+    m_string_data->increment();
 }
 
 Fa_StringRef::Fa_StringRef(Fa_StringRef&& other) noexcept
-    : StringData_(other.StringData_)
-    , Offset_(other.Offset_)
-    , Length_(other.Length_)
+    : m_string_data(other.m_string_data)
+    , m_offset(other.m_offset)
+    , m_length(other.m_length)
 {
-    other.StringData_ = nullptr;
-    other.Offset_ = 0;
-    other.Length_ = 0;
+    other.m_string_data = nullptr;
+    other.m_offset = 0;
+    other.m_length = 0;
 }
 
 Fa_StringRef& Fa_StringRef::operator=(Fa_StringRef&& other) noexcept
@@ -183,34 +183,34 @@ Fa_StringRef& Fa_StringRef::operator=(Fa_StringRef&& other) noexcept
     if (this == &other)
         return *this;
 
-    if (StringData_) {
-        StringData_->decrement();
-        if (StringData_->referenceCount() == 0) {
-            StringData_->~StringBase();
-            getAllocator().deallocateObject<StringBase>(StringData_);
+    if (m_string_data) {
+        m_string_data->decrement();
+        if (m_string_data->reference_count() == 0) {
+            m_string_data->~StringBase();
+            get_allocator().deallocate_object<StringBase>(m_string_data);
         }
     }
 
-    StringData_ = other.StringData_;
-    Offset_ = other.Offset_;
-    Length_ = other.Length_;
-    other.StringData_ = nullptr;
-    other.Offset_ = 0;
-    other.Length_ = 0;
+    m_string_data = other.m_string_data;
+    m_offset = other.m_offset;
+    m_length = other.m_length;
+    other.m_string_data = nullptr;
+    other.m_offset = 0;
+    other.m_length = 0;
 
     return *this;
 }
 
 Fa_StringRef::~Fa_StringRef()
 {
-    if (!StringData_)
+    if (!m_string_data)
         return;
 
-    StringData_->decrement();
-    if (StringData_->referenceCount() == 0) {
-        StringData_->~StringBase();
-        getAllocator().deallocateObject<StringBase>(StringData_);
-        StringData_ = nullptr;
+    m_string_data->decrement();
+    if (m_string_data->reference_count() == 0) {
+        m_string_data->~StringBase();
+        get_allocator().deallocate_object<StringBase>(m_string_data);
+        m_string_data = nullptr;
     }
 }
 
@@ -219,22 +219,22 @@ Fa_StringRef& Fa_StringRef::operator=(Fa_StringRef const& other)
     if (this == &other)
         return *this;
 
-    if (StringData_)
-        StringData_->decrement();
+    if (m_string_data)
+        m_string_data->decrement();
 
-    StringData_ = other.StringData_;
-    Offset_ = other.Offset_;
-    Length_ = other.Length_;
+    m_string_data = other.m_string_data;
+    m_offset = other.m_offset;
+    m_length = other.m_length;
 
-    if (StringData_)
-        StringData_->increment();
+    if (m_string_data)
+        m_string_data->increment();
 
     return *this;
 }
 
 void Fa_StringRef::expand(size_t const new_size)
 {
-    ensureUnique();
+    ensure_unique();
 
     if (new_size <= cap())
         return;
@@ -244,20 +244,20 @@ void Fa_StringRef::expand(size_t const new_size)
 
     size_t new_capacity = (cap() < 1024) ? std::max(new_size + 1, cap() * 2) : std::max(new_size + 1, cap() + cap() / 2);
 
-    char* new_ptr = getAllocator().allocateArray<char>(new_capacity);
+    char* new_ptr = get_allocator().allocate_array<char>(new_capacity);
 
     if (old_ptr && old_len > 0)
         ::memcpy(new_ptr, old_ptr, old_len);
 
-    if (StringData_->isHeap() && StringData_->storage_.heap.ptr)
-        getAllocator().deallocateArray<char>(StringData_->storage_.heap.ptr, StringData_->storage_.heap.cap);
+    if (m_string_data->is_heap() && m_string_data->m_storage.heap.ptr)
+        get_allocator().deallocate_array<char>(m_string_data->m_storage.heap.ptr, m_string_data->m_storage.heap.m_cap);
 
-    StringData_->storage_.heap.ptr = new_ptr;
-    StringData_->storage_.heap.cap = new_capacity;
-    StringData_->is_heap = true;
-    Offset_ = 0;
+    m_string_data->m_storage.heap.ptr = new_ptr;
+    m_string_data->m_storage.heap.m_cap = new_capacity;
+    m_string_data->m_is_heap = true;
+    m_offset = 0;
 
-    StringData_->ptr()[Length_] = 0;
+    m_string_data->ptr()[m_length] = 0;
 }
 
 void Fa_StringRef::reserve(size_t const new_capacity)
@@ -273,23 +273,23 @@ void Fa_StringRef::erase(size_t const at)
         return;
 
     if (at == 0) {
-        ++Offset_;
-        --Length_;
+        ++m_offset;
+        --m_length;
         return;
     }
-    if (at == Length_ - 1) {
-        --Length_;
+    if (at == m_length - 1) {
+        --m_length;
         return;
     }
 
-    ensureUnique();
+    ensure_unique();
     if (!data())
         return;
 
     ::memmove(data() + at, data() + at + 1, len() - at - 1);
-    --Length_;
+    --m_length;
 
-    StringData_->ptr()[Length_] = 0;
+    m_string_data->ptr()[m_length] = 0;
 }
 
 Fa_StringRef& Fa_StringRef::operator+=(Fa_StringRef const& other)
@@ -297,69 +297,69 @@ Fa_StringRef& Fa_StringRef::operator+=(Fa_StringRef const& other)
     if (other.empty())
         return *this;
 
-    ensureUnique();
+    ensure_unique();
 
-    size_t new_len = Length_ + other.Length_;
-    if (Offset_ + new_len >= cap())
+    size_t new_len = m_length + other.m_length;
+    if (m_offset + new_len >= cap())
         expand(new_len);
 
-    ::memcpy(StringData_->ptr() + Offset_ + Length_, other.data(), other.Length_);
-    Length_ = new_len;
-    StringData_->ptr()[Length_] = 0;
+    ::memcpy(m_string_data->ptr() + m_offset + m_length, other.data(), other.m_length);
+    m_length = new_len;
+    m_string_data->ptr()[m_length] = 0;
 
     return *this;
 }
 
 Fa_StringRef& Fa_StringRef::operator+=(char c)
 {
-    ensureUnique();
+    ensure_unique();
 
-    if (UNLIKELY(Offset_ + Length_ + 1 >= StringData_->cap()))
-        expand(Length_ + 1);
+    if (UNLIKELY(m_offset + m_length + 1 >= m_string_data->cap()))
+        expand(m_length + 1);
 
-    StringData_->ptr()[Offset_ + Length_] = c;
-    StringData_->ptr()[++Length_] = 0;
+    m_string_data->ptr()[m_offset + m_length] = c;
+    m_string_data->ptr()[++m_length] = 0;
 
     return *this;
 }
 
 char Fa_StringRef::operator[](size_t const i) const
 {
-    if (UNLIKELY(i >= Length_))
+    if (UNLIKELY(i >= m_length))
         throw std::out_of_range("Fa_StringRef::operator[]: index out of bounds");
-    return (*StringData_)[i + Offset_];
+    return (*m_string_data)[i + m_offset];
 }
 
 char& Fa_StringRef::operator[](size_t const i)
 {
-    ensureUnique();
-    if (UNLIKELY(i >= Length_))
+    ensure_unique();
+    if (UNLIKELY(i >= m_length))
         throw std::out_of_range("Fa_StringRef::operator[]: index out of bounds");
-    return (*StringData_)[i + Offset_];
+    return (*m_string_data)[i + m_offset];
 }
 
 char Fa_StringRef::at(size_t const i) const
 {
-    if (UNLIKELY(i >= Length_))
+    if (UNLIKELY(i >= m_length))
         throw std::out_of_range("Fa_StringRef::at: index out of bounds");
-    return (*StringData_)[i + Offset_];
+    return (*m_string_data)[i + m_offset];
 }
 
 char& Fa_StringRef::at(size_t const i)
 {
-    ensureUnique();
-    if (UNLIKELY(i >= Length_))
+    ensure_unique();
+    if (UNLIKELY(i >= m_length))
         throw std::out_of_range("Fa_StringRef::at: index out of bounds");
-    return (*StringData_)[i + Offset_];
+    return (*m_string_data)[i + m_offset];
 }
 
 bool Fa_StringRef::find(char const c) const noexcept
 {
     char const* p = data();
-    char const* end = p + Length_;
-    while (p < end && *p != c)
+    char const* m_end = p + m_length;
+    while (p < m_end && *p != c)
         ++p;
-    return p < end;
+    return p < m_end;
 }
 
 bool Fa_StringRef::find(Fa_StringRef const& s) const noexcept
@@ -378,24 +378,24 @@ bool Fa_StringRef::find(Fa_StringRef const& s) const noexcept
 std::optional<size_t> Fa_StringRef::find_pos(char const c) const noexcept
 {
     char const* p = data();
-    char const* end = p + Length_;
-    while (p < end && *p != c)
+    char const* m_end = p + m_length;
+    while (p < m_end && *p != c)
         ++p;
-    return (p < end) ? std::optional<size_t>(p - data()) : std::nullopt;
+    return (p < m_end) ? std::optional<size_t>(p - data()) : std::nullopt;
 }
 
-Fa_StringRef& Fa_StringRef::trimWhitespace(bool leading, bool trailing) noexcept
+Fa_StringRef& Fa_StringRef::trim_whitespace(bool leading, bool trailing) noexcept
 {
     if (leading) {
-        while (Length_ > 0 && util::isWhitespace(data()[0])) {
-            ++Offset_;
-            --Length_;
+        while (m_length > 0 && util::is_whitespace(data()[0])) {
+            ++m_offset;
+            --m_length;
         }
     }
 
     if (trailing) {
-        while (Length_ > 0 && util::isWhitespace(data()[Length_ - 1]))
-            --Length_;
+        while (m_length > 0 && util::is_whitespace(data()[m_length - 1]))
+            --m_length;
     }
 
     return *this;
@@ -403,59 +403,59 @@ Fa_StringRef& Fa_StringRef::trimWhitespace(bool leading, bool trailing) noexcept
 
 Fa_StringRef& Fa_StringRef::truncate(size_t const s) noexcept
 {
-    if (s < Length_)
-        Length_ = s;
+    if (s < m_length)
+        m_length = s;
     return *this;
 }
 
 void Fa_StringRef::resize(size_t const s)
 {
-    ensureUnique();
+    ensure_unique();
     if (s > cap())
         expand(s);
 }
 
-Fa_StringRef Fa_StringRef::slice(size_t start, size_t end) const
+Fa_StringRef Fa_StringRef::slice(size_t start, size_t m_end) const
 {
-    if (Length_ == 0)
+    if (m_length == 0)
         return { };
 
-    if (start > Length_) {
-        diagnostic::emit(diagnostic::errc::container::Code::STRING_SLICE_START_OOB);
-        return { };
-    }
-
-    if (end > Length_ || end == SIZE_MAX)
-        end = Length_;
-
-    if (end < start) {
-        diagnostic::emit(diagnostic::errc::container::Code::STRING_SLICE_END_BEFORE_START);
+    if (start > m_length) {
+        diagnostic::emit(diagnostic::errc::m_container::Code::STRING_SLICE_START_OOB);
         return { };
     }
 
-    return Fa_StringRef(*this, start, end - start);
+    if (m_end > m_length || m_end == SIZE_MAX)
+        m_end = m_length;
+
+    if (m_end < start) {
+        diagnostic::emit(diagnostic::errc::m_container::Code::STRING_SLICE_END_BEFORE_START);
+        return { };
+    }
+
+    return Fa_StringRef(*this, start, m_end - start);
 }
 
-Fa_StringRef Fa_StringRef::substrCopy(size_t start, size_t end) const
+Fa_StringRef Fa_StringRef::substr_copy(size_t start, size_t m_end) const
 {
-    if (Length_ == 0)
+    if (m_length == 0)
         return { };
 
-    if (start > Length_)
+    if (start > m_length)
         throw std::out_of_range("Fa_StringRef::substrCopy: start index out of range");
 
-    if (end > Length_ || end == SIZE_MAX)
-        end = Length_;
+    if (m_end > m_length || m_end == SIZE_MAX)
+        m_end = m_length;
 
-    if (end < start)
+    if (m_end < start)
         throw std::invalid_argument("Fa_StringRef::substrCopy: end must be >= start");
 
-    size_t copy_len = end - start;
+    size_t copy_len = m_end - start;
 
     if (copy_len == 0)
         return { };
 
-    StringBase* ret = getAllocator().allocateObject<StringBase>(copy_len);
+    StringBase* ret = get_allocator().allocate_object<StringBase>(copy_len);
 
     ::memcpy(ret->ptr(), data() + start, copy_len);
     ret->ptr()[copy_len] = 0;
@@ -463,13 +463,13 @@ Fa_StringRef Fa_StringRef::substrCopy(size_t start, size_t end) const
     return Fa_StringRef(ret);
 }
 
-f64 Fa_StringRef::toDouble(size_t* pos) const
+f64 Fa_StringRef::to_double(size_t* pos) const
 {
     if (empty())
         throw std::invalid_argument("Fa_StringRef::toDouble: empty string");
 
     f64 result { };
-    auto [end_ptr, ec] = std::from_chars(data(), data() + Length_, result);
+    auto [end_ptr, ec] = std::from_chars(data(), data() + m_length, result);
 
     if (ec == std::errc::invalid_argument)
         throw std::invalid_argument("Fa_StringRef::toDouble: invalid number format");
@@ -483,7 +483,7 @@ f64 Fa_StringRef::toDouble(size_t* pos) const
     return result;
 }
 
-Fa_StringRef Fa_StringRef::fromUtf16(char16_t const* src)
+Fa_StringRef Fa_StringRef::from_utf16(char16_t const* src)
 {
     if (!src || !src[0])
         return { };
@@ -499,7 +499,7 @@ Fa_StringRef Fa_StringRef::fromUtf16(char16_t const* src)
 
     size_t utf8_len = simdutf::utf8_length_from_utf16(src, src_len);
 
-    StringBase* ret_data = getAllocator().allocateObject<StringBase>(utf8_len);
+    StringBase* ret_data = get_allocator().allocate_object<StringBase>(utf8_len);
     char* dest = ret_data->ptr();
 
     size_t written = simdutf::convert_utf16_to_utf8(src, src_len, dest);
@@ -512,20 +512,20 @@ Fa_StringRef Fa_StringRef::fromUtf16(char16_t const* src)
 
 void Fa_StringRef::detach()
 {
-    size_t const len = ::strlen(StringData_->ptr());
-    size_t const copy_len = Length_ > 0 ? Length_ : (len - Offset_);
+    size_t const len = ::strlen(m_string_data->ptr());
+    size_t const copy_len = m_length > 0 ? m_length : (len - m_offset);
 
-    StringBase* s = getAllocator().allocateObject<StringBase>(copy_len);
+    StringBase* s = get_allocator().allocate_object<StringBase>(copy_len);
 
     if (copy_len > 0)
-        ::memcpy(s->ptr(), StringData_->ptr() + Offset_, copy_len);
+        ::memcpy(s->ptr(), m_string_data->ptr() + m_offset, copy_len);
 
     s->ptr()[copy_len] = 0;
 
-    StringData_->decrement();
-    StringData_ = s;
-    Offset_ = 0;
-    Length_ = copy_len;
+    m_string_data->decrement();
+    m_string_data = s;
+    m_offset = 0;
+    m_length = copy_len;
 }
 
 } // namespace fairuz

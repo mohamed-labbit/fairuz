@@ -9,15 +9,15 @@ namespace fairuz::AST {
 
 class ASTPrinter {
 private:
-    bool UseColor_;
-    u32 NodeCount_ = 0;
+    bool m_use_color;
+    u32 m_node_count = 0;
 
     struct Prefix {
         std::string indent;
         bool last;
     }; // struct Prefix
 
-    Fa_StringRef const toString(Fa_UnaryOp const op)
+    Fa_StringRef const to_string(Fa_UnaryOp const op)
     {
         switch (op) {
         case Fa_UnaryOp::OP_PLUS:
@@ -33,7 +33,7 @@ private:
         }
     }
 
-    Fa_StringRef const toString(Fa_BinaryOp const op)
+    Fa_StringRef const to_string(Fa_BinaryOp const op)
     {
         switch (op) {
         case Fa_BinaryOp::OP_EQ:
@@ -80,70 +80,70 @@ private:
 
     std::string color(std::string const& s, std::string const& c) const
     {
-        if (!UseColor_)
+        if (!m_use_color)
             return s;
 
         return c + s + Color::RESET;
     }
 
-    void printExpr(Fa_Expr const* e, Prefix p)
+    void print_expr(Fa_Expr const* e, Prefix p)
     {
         if (!e)
             return;
 
-        NodeCount_++;
+        m_node_count++;
 
         std::cout << p.indent << glyph(p.last);
 
-        switch (e->getKind()) {
+        switch (e->get_kind()) {
         case Fa_Expr::Kind::NAME: {
             auto n = static_cast<Fa_NameExpr const*>(e);
-            std::cout << color("Name", Color::CYAN) << "(" << n->getValue() << ")\n";
+            std::cout << color("Name", Color::CYAN) << "(" << n->get_value() << ")\n";
             break;
         }
 
         case Fa_Expr::Kind::LITERAL: {
             auto l = static_cast<Fa_LiteralExpr const*>(e);
-            if (l->isNumeric())
-                std::cout << color("Literal", Color::GREEN) << "(" << l->toNumber() << ")\n";
-            else if (l->isString())
-                std::cout << color("Literal", Color::GREEN) << "(" << l->getStr() << ")\n";
-            else if (l->isBoolean())
-                std::cout << color("Literal", Color::GREEN) << "(" << l->getBool() << ")\n";
+            if (l->is_numeric())
+                std::cout << color("Literal", Color::GREEN) << "(" << l->is_number() << ")\n";
+            else if (l->is_string())
+                std::cout << color("Literal", Color::GREEN) << "(" << l->get_str() << ")\n";
+            else if (l->is_bool())
+                std::cout << color("Literal", Color::GREEN) << "(" << l->get_bool() << ")\n";
             break;
         }
 
         case Fa_Expr::Kind::UNARY: {
             auto u = static_cast<Fa_UnaryExpr const*>(e);
-            std::cout << color("Unary", Color::BOLD) << " " << toString(u->getOperator()) << "\n";
-            printExpr(u->getOperand(), { p.indent + pipe(p.last), true });
+            std::cout << color("Unary", Color::BOLD) << " " << to_string(u->get_operator()) << "\n";
+            print_expr(u->get_operand(), { p.indent + pipe(p.last), true });
             break;
         }
 
         case Fa_Expr::Kind::BINARY: {
             auto b = static_cast<Fa_BinaryExpr const*>(e);
-            std::cout << color("Binary", Color::BOLD) << " " << toString(b->getOperator()) << "\n";
-            printExpr(b->getLeft(), { p.indent + pipe(p.last), false });
-            printExpr(b->getRight(), { p.indent + pipe(p.last), true });
+            std::cout << color("Binary", Color::BOLD) << " " << to_string(b->get_operator()) << "\n";
+            print_expr(b->get_left(), { p.indent + pipe(p.last), false });
+            print_expr(b->get_right(), { p.indent + pipe(p.last), true });
             break;
         }
 
         case Fa_Expr::Kind::CALL: {
             auto c = static_cast<Fa_CallExpr const*>(e);
-            std::cout << color("Call", Color::MAGENTA) << " (" << c->getArgs().size() << " args)\n";
+            std::cout << color("Call", Color::MAGENTA) << " (" << c->get_args().size() << " args)\n";
             std::cout << p.indent + pipe(p.last) << "├─ callee:\n";
-            printExpr(c->getCallee(), { p.indent + pipe(p.last) + "│  ", true });
+            print_expr(c->get_callee(), { p.indent + pipe(p.last) + "│  ", true });
             std::cout << p.indent + pipe(p.last) << "└─ args:\n";
-            for (size_t i = 0; i < c->getArgs().size(); ++i)
-                printExpr(c->getArgs()[i], { p.indent + pipe(p.last) + "   ", i + 1 == c->getArgs().size() });
+            for (size_t i = 0; i < c->get_args().size(); ++i)
+                print_expr(c->get_args()[i], { p.indent + pipe(p.last) + "   ", i + 1 == c->get_args().size() });
             break;
         }
 
         case Fa_Expr::Kind::LIST: {
             auto l = static_cast<Fa_ListExpr const*>(e);
-            std::cout << color("List", Color::BLUE) << " [" << l->getElements().size() << "]\n";
-            for (size_t i = 0; i < l->getElements().size(); ++i)
-                printExpr(l->getElements()[i], { p.indent + pipe(p.last), i + 1 == l->getElements().size() });
+            std::cout << color("List", Color::BLUE) << " [" << l->get_elements().size() << "]\n";
+            for (size_t i = 0; i < l->get_elements().size(); ++i)
+                print_expr(l->get_elements()[i], { p.indent + pipe(p.last), i + 1 == l->get_elements().size() });
             break;
         }
 
@@ -151,9 +151,9 @@ private:
             auto a = static_cast<Fa_AssignmentExpr const*>(e);
             std::cout << color("Assignment", Color::YELLOW) << " :=\n";
             std::cout << p.indent + pipe(p.last) << "├─ target:\n";
-            printExpr(a->getTarget(), { p.indent + pipe(p.last) + "│  ", true });
+            print_expr(a->get_target(), { p.indent + pipe(p.last) + "│  ", true });
             std::cout << p.indent + pipe(p.last) << "└─ value:\n";
-            printExpr(a->getValue(), { p.indent + pipe(p.last) + "   ", true });
+            print_expr(a->get_value(), { p.indent + pipe(p.last) + "   ", true });
             break;
         }
 
@@ -162,38 +162,38 @@ private:
         }
     }
 
-    void printStmt(Fa_Stmt const* s, Prefix p)
+    void print_stmt(Fa_Stmt const* s, Prefix p)
     {
         if (!s)
             return;
 
-        NodeCount_++;
+        m_node_count++;
 
         std::cout << p.indent << glyph(p.last);
 
-        switch (s->getKind()) {
+        switch (s->get_kind()) {
         case Fa_Stmt::Kind::FUNC: {
             auto f = static_cast<Fa_FunctionDef const*>(s);
-            std::cout << color("Fa_FunctionDef", Color::BOLD) << " " << f->getName()->getValue() << "\n";
+            std::cout << color("Fa_FunctionDef", Color::BOLD) << " " << f->get_name()->get_value() << "\n";
             std::cout << p.indent + pipe(p.last) << "├─ params:\n";
-            for (size_t i = 0; i < f->getParameters().size(); ++i)
-                printExpr(f->getParameters()[i], { p.indent + pipe(p.last) + "│  ", i + 1 == f->getParameters().size() });
+            for (size_t i = 0; i < f->get_parameters().size(); ++i)
+                print_expr(f->get_parameters()[i], { p.indent + pipe(p.last) + "│  ", i + 1 == f->get_parameters().size() });
             std::cout << p.indent + pipe(p.last) << "└─ body:\n";
-            printStmt(f->getBody(), { p.indent + pipe(p.last) + "    ", true });
+            print_stmt(f->get_body(), { p.indent + pipe(p.last) + "    ", true });
             break;
         }
 
         case Fa_Stmt::Kind::RETURN: {
             auto r = static_cast<Fa_ReturnStmt const*>(s);
             std::cout << color("Return", Color::BOLD) << "\n";
-            printExpr(r->getValue(), { p.indent + pipe(p.last), true });
+            print_expr(r->get_value(), { p.indent + pipe(p.last), true });
             break;
         }
 
         case Fa_Stmt::Kind::EXPR: {
             auto e = static_cast<Fa_ExprStmt const*>(s);
             std::cout << color("Fa_ExprStmt", Color::BOLD) << "\n";
-            printExpr(e->getExpr(), { p.indent + pipe(p.last), true });
+            print_expr(e->get_expr(), { p.indent + pipe(p.last), true });
             break;
         }
 
@@ -201,30 +201,30 @@ private:
             auto w = static_cast<Fa_WhileStmt const*>(s);
             std::cout << color("While", Color::BOLD) << "\n";
             std::cout << p.indent + pipe(p.last) << "├─ condition:\n";
-            printExpr(w->getCondition(), { p.indent + pipe(p.last) + "│  ", true });
+            print_expr(w->get_condition(), { p.indent + pipe(p.last) + "│  ", true });
             std::cout << p.indent + pipe(p.last) << "└─ body:\n";
-            printStmt(w->getBody(), { p.indent + pipe(p.last) + "   ", true });
+            print_stmt(w->get_body(), { p.indent + pipe(p.last) + "   ", true });
             break;
         }
         case Fa_Stmt::Kind::IF: {
             auto i = static_cast<Fa_IfStmt const*>(s);
             std::cout << color("If", Color::BOLD) << "\n";
             std::cout << p.indent + pipe(p.last) << "├─ condition:\n";
-            printExpr(i->getCondition(), { p.indent + pipe(p.last) + "│  ", true });
-            std::cout << p.indent + pipe(p.last) << (i->getElse() ? "├─" : "└─") << " then:\n";
-            printStmt(i->getThen(), { p.indent + pipe(p.last) + (i->getElse() ? "│  " : "   "), true });
-            if (i->getElse()) {
+            print_expr(i->get_condition(), { p.indent + pipe(p.last) + "│  ", true });
+            std::cout << p.indent + pipe(p.last) << (i->get_else() ? "├─" : "└─") << " then:\n";
+            print_stmt(i->get_then(), { p.indent + pipe(p.last) + (i->get_else() ? "│  " : "   "), true });
+            if (i->get_else()) {
                 std::cout << p.indent + pipe(p.last) << "└─ else:\n";
-                printStmt(i->getElse(), { p.indent + pipe(p.last) + "   ", true });
+                print_stmt(i->get_else(), { p.indent + pipe(p.last) + "   ", true });
             }
             break;
         }
 
         case Fa_Stmt::Kind::BLOCK: {
             auto b = static_cast<Fa_BlockStmt const*>(s);
-            std::cout << color("Block", Color::BOLD) << " {" << b->getStatements().size() << " stmts}\n";
-            for (size_t i = 0; i < b->getStatements().size(); ++i)
-                printStmt(b->getStatements()[i], { p.indent + pipe(p.last), i + 1 == b->getStatements().size() });
+            std::cout << color("Block", Color::BOLD) << " {" << b->get_statements().size() << " stmts}\n";
+            for (size_t i = 0; i < b->get_statements().size(); ++i)
+                print_stmt(b->get_statements()[i], { p.indent + pipe(p.last), i + 1 == b->get_statements().size() });
             break;
         }
 
@@ -232,9 +232,9 @@ private:
             auto a = static_cast<Fa_AssignmentStmt const*>(s);
             std::cout << color("Assignment", Color::YELLOW) << " :=\n";
             std::cout << p.indent + pipe(p.last) << "├─ target:\n";
-            printExpr(a->getTarget(), { p.indent + pipe(p.last) + "│  ", true });
+            print_expr(a->get_target(), { p.indent + pipe(p.last) + "│  ", true });
             std::cout << p.indent + pipe(p.last) << "└─ value:\n";
-            printExpr(a->getValue(), { p.indent + pipe(p.last) + "   ", true });
+            print_expr(a->get_value(), { p.indent + pipe(p.last) + "   ", true });
             break;
         }
 
@@ -245,14 +245,14 @@ private:
 
 public:
     explicit ASTPrinter(bool const color = true)
-        : UseColor_(color)
+        : m_use_color(color)
     {
     }
 
-    void print(Fa_Expr const* e) { printExpr(e, { "", true }); }
-    void print(Fa_Stmt const* s) { printStmt(s, { "", true }); }
+    void print(Fa_Expr const* e) { print_expr(e, { "", true }); }
+    void print(Fa_Stmt const* s) { print_stmt(s, { "", true }); }
 
-    u32 getNodeCount() const { return NodeCount_; }
+    u32 get_node_count() const { return m_node_count; }
 }; // class ASTPrinter
 
 } // namespace fairuz::ast

@@ -132,9 +132,9 @@ TEST(Constants, MAX_CONSTANTS_Is16Bit) { EXPECT_EQ(MAX_CONSTANTS, 65535u); }
 TEST(OpCodeMeta, AllOpcodesHaveName)
 {
     for (int op = 0; op < static_cast<int>(Fa_OpCode::_COUNT); ++op) {
-        auto name = Fa_opcode_name(static_cast<Fa_OpCode>(op));
-        EXPECT_FALSE(name.empty()) << "opcode " << op << " has empty name";
-        EXPECT_NE(name, "???") << "opcode " << op << " has no name";
+        auto m_name = Fa_opcode_name(static_cast<Fa_OpCode>(op));
+        EXPECT_FALSE(m_name.empty()) << "opcode " << op << " has empty name";
+        EXPECT_NE(m_name, "???") << "opcode " << op << " has no name";
     }
 }
 
@@ -175,7 +175,7 @@ TEST(OpCodeMeta, KnownNames)
 TEST(OpCodeMeta, AllOpcodesHaveFormat)
 {
     for (int op = 0; op < static_cast<int>(Fa_OpCode::_COUNT); ++op) {
-        Fa_InstrFormat fmt = opcodeFormat(static_cast<Fa_OpCode>(op));
+        Fa_InstrFormat fmt = opcode_format(static_cast<Fa_OpCode>(op));
         int fv = static_cast<int>(fmt);
         EXPECT_GE(fv, 0) << "opcode " << op;
         EXPECT_LE(fv, static_cast<int>(Fa_InstrFormat::NONE)) << "opcode " << op;
@@ -184,36 +184,36 @@ TEST(OpCodeMeta, AllOpcodesHaveFormat)
 
 TEST(OpCodeMeta, JumpFormatIsAsBx)
 {
-    EXPECT_EQ(opcodeFormat(Fa_OpCode::JUMP), Fa_InstrFormat::AsBx);
-    EXPECT_EQ(opcodeFormat(Fa_OpCode::JUMP_IF_TRUE), Fa_InstrFormat::AsBx);
-    EXPECT_EQ(opcodeFormat(Fa_OpCode::JUMP_IF_FALSE), Fa_InstrFormat::AsBx);
-    EXPECT_EQ(opcodeFormat(Fa_OpCode::LOOP), Fa_InstrFormat::AsBx);
-    EXPECT_EQ(opcodeFormat(Fa_OpCode::FOR_PREP), Fa_InstrFormat::AsBx);
-    EXPECT_EQ(opcodeFormat(Fa_OpCode::FOR_STEP), Fa_InstrFormat::AsBx);
+    EXPECT_EQ(opcode_format(Fa_OpCode::JUMP), Fa_InstrFormat::AsBx);
+    EXPECT_EQ(opcode_format(Fa_OpCode::JUMP_IF_TRUE), Fa_InstrFormat::AsBx);
+    EXPECT_EQ(opcode_format(Fa_OpCode::JUMP_IF_FALSE), Fa_InstrFormat::AsBx);
+    EXPECT_EQ(opcode_format(Fa_OpCode::LOOP), Fa_InstrFormat::AsBx);
+    EXPECT_EQ(opcode_format(Fa_OpCode::FOR_PREP), Fa_InstrFormat::AsBx);
+    EXPECT_EQ(opcode_format(Fa_OpCode::FOR_STEP), Fa_InstrFormat::AsBx);
 }
 
 TEST(OpCodeMeta, LoadFormatIsABx)
 {
-    EXPECT_EQ(opcodeFormat(Fa_OpCode::LOAD_CONST), Fa_InstrFormat::ABx);
-    EXPECT_EQ(opcodeFormat(Fa_OpCode::LOAD_INT), Fa_InstrFormat::ABx);
-    EXPECT_EQ(opcodeFormat(Fa_OpCode::LOAD_GLOBAL), Fa_InstrFormat::ABx);
-    EXPECT_EQ(opcodeFormat(Fa_OpCode::STORE_GLOBAL), Fa_InstrFormat::ABx);
-    EXPECT_EQ(opcodeFormat(Fa_OpCode::CLOSURE), Fa_InstrFormat::ABx);
+    EXPECT_EQ(opcode_format(Fa_OpCode::LOAD_CONST), Fa_InstrFormat::ABx);
+    EXPECT_EQ(opcode_format(Fa_OpCode::LOAD_INT), Fa_InstrFormat::ABx);
+    EXPECT_EQ(opcode_format(Fa_OpCode::LOAD_GLOBAL), Fa_InstrFormat::ABx);
+    EXPECT_EQ(opcode_format(Fa_OpCode::STORE_GLOBAL), Fa_InstrFormat::ABx);
+    EXPECT_EQ(opcode_format(Fa_OpCode::CLOSURE), Fa_InstrFormat::ABx);
 }
 
 TEST(OpCodeMeta, ArithmeticFormatIsABC)
 {
-    EXPECT_EQ(opcodeFormat(Fa_OpCode::OP_ADD), Fa_InstrFormat::ABC);
-    EXPECT_EQ(opcodeFormat(Fa_OpCode::OP_SUB), Fa_InstrFormat::ABC);
-    EXPECT_EQ(opcodeFormat(Fa_OpCode::OP_MUL), Fa_InstrFormat::ABC);
-    EXPECT_EQ(opcodeFormat(Fa_OpCode::OP_DIV), Fa_InstrFormat::ABC);
-    EXPECT_EQ(opcodeFormat(Fa_OpCode::OP_MOD), Fa_InstrFormat::ABC);
-    EXPECT_EQ(opcodeFormat(Fa_OpCode::OP_POW), Fa_InstrFormat::ABC);
+    EXPECT_EQ(opcode_format(Fa_OpCode::OP_ADD), Fa_InstrFormat::ABC);
+    EXPECT_EQ(opcode_format(Fa_OpCode::OP_SUB), Fa_InstrFormat::ABC);
+    EXPECT_EQ(opcode_format(Fa_OpCode::OP_MUL), Fa_InstrFormat::ABC);
+    EXPECT_EQ(opcode_format(Fa_OpCode::OP_DIV), Fa_InstrFormat::ABC);
+    EXPECT_EQ(opcode_format(Fa_OpCode::OP_MOD), Fa_InstrFormat::ABC);
+    EXPECT_EQ(opcode_format(Fa_OpCode::OP_POW), Fa_InstrFormat::ABC);
 }
 
 TEST(OpCodeMeta, NoOpFormatIsNONE)
 {
-    EXPECT_EQ(opcodeFormat(Fa_OpCode::NOP), Fa_InstrFormat::NONE);
-    EXPECT_EQ(opcodeFormat(Fa_OpCode::HALT), Fa_InstrFormat::NONE);
-    EXPECT_EQ(opcodeFormat(Fa_OpCode::RETURN_NIL), Fa_InstrFormat::NONE);
+    EXPECT_EQ(opcode_format(Fa_OpCode::NOP), Fa_InstrFormat::NONE);
+    EXPECT_EQ(opcode_format(Fa_OpCode::HALT), Fa_InstrFormat::NONE);
+    EXPECT_EQ(opcode_format(Fa_OpCode::RETURN_NIL), Fa_InstrFormat::NONE);
 }

@@ -6,32 +6,32 @@
 
 namespace fairuz::runtime {
 
-static std::optional<Fa_Value> constValue(AST::Fa_Expr const* e)
+static std::optional<Fa_Value> const_value(AST::Fa_Expr const* e)
 {
-    if (!e || e->getKind() != AST::Fa_Expr::Kind::LITERAL)
+    if (!e || e->get_kind() != AST::Fa_Expr::Kind::LITERAL)
         return std::nullopt;
 
     auto lit = static_cast<AST::Fa_LiteralExpr const*>(e);
 
-    if (lit->isNil())
+    if (lit->is_nil())
         return NIL_VAL;
-    if (lit->isBoolean())
-        return Fa_MAKE_BOOL(lit->getBool());
-    if (lit->isInteger())
-        return Fa_MAKE_INTEGER(lit->getInt());
-    if (lit->isDecimal())
-        return Fa_MAKE_REAL(lit->getFloat());
+    if (lit->is_bool())
+        return Fa_MAKE_BOOL(lit->get_bool());
+    if (lit->is_integer())
+        return Fa_MAKE_INTEGER(lit->get_int());
+    if (lit->is_float())
+        return Fa_MAKE_REAL(lit->get_float());
 
     return std::nullopt;
 }
 
-static std::optional<Fa_Value> tryFoldUnary(AST::Fa_UnaryExpr const* e)
+static std::optional<Fa_Value> try_fold_unary(AST::Fa_UnaryExpr const* e)
 {
-    std::optional<Fa_Value> cv = constValue(e->getOperand());
+    std::optional<Fa_Value> cv = const_value(e->get_operand());
     if (!cv)
         return std::nullopt;
 
-    switch (e->getOperator()) {
+    switch (e->get_operator()) {
     case AST::Fa_UnaryOp::OP_NEG:
         if (Fa_IS_INTEGER(*cv))
             return Fa_IS_INTEGER(*cv) ? Fa_MAKE_INTEGER(-Fa_AS_INTEGER(*cv)) : Fa_MAKE_REAL(-Fa_AS_DOUBLE(*cv));
@@ -49,15 +49,15 @@ static std::optional<Fa_Value> tryFoldUnary(AST::Fa_UnaryExpr const* e)
     }
 }
 
-static std::optional<Fa_Value> _tryFoldBinary(AST::Fa_BinaryExpr const* e)
+static std::optional<Fa_Value> _try_fold_binary(AST::Fa_BinaryExpr const* e)
 {
-    auto L = constValue(e->getLeft());
-    auto R = constValue(e->getRight());
+    auto L = const_value(e->get_left());
+    auto R = const_value(e->get_right());
 
     if (!L || !R)
         return std::nullopt;
 
-    AST::Fa_BinaryOp op = e->getOperator();
+    AST::Fa_BinaryOp op = e->get_operator();
 
     if (op == AST::Fa_BinaryOp::OP_EQ)
         return Fa_MAKE_BOOL(*L == *R);
@@ -125,38 +125,38 @@ static std::optional<Fa_Value> _tryFoldBinary(AST::Fa_BinaryExpr const* e)
     }
 }
 
-static std::optional<Fa_Value> tryFoldBinary(AST::Fa_BinaryExpr const* e)
+static std::optional<Fa_Value> try_fold_binary(AST::Fa_BinaryExpr const* e)
 {
     if (!e)
         return std::nullopt;
 
-    AST::Fa_Expr* LE = e->getLeft();
-    AST::Fa_Expr* RE = e->getRight();
+    AST::Fa_Expr* LE = e->get_left();
+    AST::Fa_Expr* RE = e->get_right();
 
     if (!LE || !RE)
         return std::nullopt;
 
-    if (LE->getKind() == AST::Fa_Expr::Kind::LITERAL && RE->getKind() == AST::Fa_Expr::Kind::LITERAL)
-        return _tryFoldBinary(e);
+    if (LE->get_kind() == AST::Fa_Expr::Kind::LITERAL && RE->get_kind() == AST::Fa_Expr::Kind::LITERAL)
+        return _try_fold_binary(e);
 
     std::optional<Fa_Value> L, R;
 
-    if (LE->getKind() == AST::Fa_Expr::Kind::BINARY)
-        L = tryFoldBinary(static_cast<AST::Fa_BinaryExpr const*>(LE));
-    else if (LE->getKind() == AST::Fa_Expr::Kind::UNARY)
-        L = tryFoldUnary(static_cast<AST::Fa_UnaryExpr const*>(LE));
+    if (LE->get_kind() == AST::Fa_Expr::Kind::BINARY)
+        L = try_fold_binary(static_cast<AST::Fa_BinaryExpr const*>(LE));
+    else if (LE->get_kind() == AST::Fa_Expr::Kind::UNARY)
+        L = try_fold_unary(static_cast<AST::Fa_UnaryExpr const*>(LE));
 
-    if (RE->getKind() == AST::Fa_Expr::Kind::BINARY)
-        R = tryFoldBinary(static_cast<AST::Fa_BinaryExpr const*>(RE));
-    else if (RE->getKind() == AST::Fa_Expr::Kind::UNARY)
-        R = tryFoldUnary(static_cast<AST::Fa_UnaryExpr const*>(RE));
+    if (RE->get_kind() == AST::Fa_Expr::Kind::BINARY)
+        R = try_fold_binary(static_cast<AST::Fa_BinaryExpr const*>(RE));
+    else if (RE->get_kind() == AST::Fa_Expr::Kind::UNARY)
+        R = try_fold_unary(static_cast<AST::Fa_UnaryExpr const*>(RE));
 
     if (!R && !L)
         return std::nullopt;
 
     AST::Fa_BinaryExpr* ce = e->clone();
 
-    auto makeLiteralFromVal = [](Fa_Value const v) {
+    auto make_literal_from_val = [](Fa_Value const v) {
         if (Fa_IS_DOUBLE(v))
             return AST::Fa_makeLiteralFloat(Fa_AS_DOUBLE(v));
         if (Fa_IS_INTEGER(v))
@@ -168,25 +168,25 @@ static std::optional<Fa_Value> tryFoldBinary(AST::Fa_BinaryExpr const* e)
     };
 
     if (L)
-        ce->setLeft(makeLiteralFromVal(*L));
+        ce->set_left(make_literal_from_val(*L));
     if (R)
-        ce->setRight(makeLiteralFromVal(*R));
+        ce->set_right(make_literal_from_val(*R));
 
-    return _tryFoldBinary(ce);
+    return _try_fold_binary(ce);
 }
 
-static std::optional<Fa_Value> tryFoldExpr(AST::Fa_Expr const* e)
+static std::optional<Fa_Value> try_fold_expr(AST::Fa_Expr const* e)
 {
     if (!e)
         return std::nullopt;
 
-    switch (e->getKind()) {
+    switch (e->get_kind()) {
     case AST::Fa_Expr::Kind::LITERAL:
-        return constValue(e);
+        return const_value(e);
     case AST::Fa_Expr::Kind::UNARY:
-        return tryFoldUnary(static_cast<AST::Fa_UnaryExpr const*>(e));
+        return try_fold_unary(static_cast<AST::Fa_UnaryExpr const*>(e));
     case AST::Fa_Expr::Kind::BINARY:
-        return tryFoldBinary(static_cast<AST::Fa_BinaryExpr const*>(e));
+        return try_fold_binary(static_cast<AST::Fa_BinaryExpr const*>(e));
     default:
         return std::nullopt;
     }

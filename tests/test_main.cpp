@@ -17,7 +17,7 @@ int main(int argc, char** argv)
     ::testing::InitGoogleTest(&argc, argv);
 
     fairuz::Fa_AllocatorContext g_ctx;
-    fairuz::setContext(&g_ctx);
+    fairuz::set_context(&g_ctx);
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -37,13 +37,13 @@ int main(int argc, char** argv)
 #ifdef fairuz_DEBUG
 
     if (test_config::verbose) {
-        std::cout << getAllocator().toString(true) << '\n';
+        std::cout << get_allocator().to_string(true) << '\n';
         std::cout << '\n';
-        std::cout << getAllocator().toString(true) << '\n';
+        std::cout << get_allocator().to_string(true) << '\n';
         std::cout << '\n';
-        std::cout << getAllocator().toString(true) << '\n';
+        std::cout << get_allocator().to_string(true) << '\n';
         std::cout << '\n';
-        std::cout << getAllocator().toString(true) << std::endl;
+        std::cout << get_allocator().to_string(true) << std::endl;
     }
 #endif // fairuz_DEBUG
     fairuz::g_context = nullptr;

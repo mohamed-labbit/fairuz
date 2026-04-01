@@ -19,7 +19,7 @@ enum class Severity : u8 {
 
 namespace errc {
 
-namespace lexer {
+namespace m_lexer {
 
 enum class Code : u16 {
     FILE_NOT_OPEN = 0x0001,
@@ -61,11 +61,13 @@ enum class Code : u16 {
     UNEXPECTED_TOKEN = 0x0112,
     UNEXPECTED_EOF = 0x0113,
     INVALID_OPERATOR_SEQ = 0x0114,
+    EXPECTED_COLON_DICT = 0x0115,
+    EXPECTED_RBRACE_EXPR = 0x0116,
 }; // enum Code
 
 } // namespace parser
 
-namespace sema {
+namespace m_sema {
 
 enum class Code : u16 {
     UNDEFINED_VARIABLE = 0x0200,
@@ -166,7 +168,7 @@ enum class Code : u16 {
 
 } // namespace stdlib
 
-namespace container {
+namespace m_container {
 
 enum class Code : u16 {
     ARRAY_EMPTY_BACK = 0x0600,
@@ -195,7 +197,7 @@ enum class Code : u16 {
 
 } // namespace errc
 
-static constexpr char const* errorMessageFor(u16 code)
+static constexpr char const* error_message_for(u16 code)
 {
     switch (code) {
     // lexer
@@ -445,11 +447,11 @@ class Fa_DiagnosticEngine {
 public:
     struct Diagnostic {
         Severity severity;
-        u32 line;
-        u16 column;
+        u32 m_line;
+        u16 m_column;
         u16 err_code;
         std::string code;
-        std::vector<std::string> suggestions;
+        std::vector<std::string> m_suggestions;
         std::vector<std::pair<i32, std::string>> notes;
     }; // struct Diagnostic
 
@@ -462,12 +464,12 @@ public:
 
     // --- existing API, unchanged ---
 
-    constexpr void emit(std::string const& msg, Severity const sv = Severity::ERROR) { emitError(msg, sv); }
+    constexpr void emit(std::string const& msg, Severity const sv = Severity::ERROR) { emit_error(msg, sv); }
 
     [[noreturn]] constexpr void panic(std::string const& msg)
     {
-        if (hasErrors())
-            prettyPrint();
+        if (has_errors())
+            pretty_print();
         _panic(msg);
     }
 
@@ -475,48 +477,48 @@ public:
     // If the engine is saturated (error count >= LIMIT), non-FATAL diagnostics
     // are silently dropped — the existing diagnostic list is still valid and
     // will be emitted in full when dump() is called.
-    void report(Severity const sev, u32 const line, u16 const col, u16 err_code, std::string const& code = "");
+    void report(Severity const sev, u32 const m_line, u16 const col, u16 err_code, std::string const& code = "");
 
-    void addSuggestion(std::string const& suggestion);
-    void addNote(i32 line, std::string const& note);
+    void add_suggestion(std::string const& suggestion);
+    void add_note(i32 m_line, std::string const& note);
 
-    std::string toJSON() const;
+    std::string to_json() const;
 
     // Formats and writes all accumulated diagnostics to stderr. Safe to call
     // multiple times — subsequent calls are no-ops if nothing new was added.
-    void prettyPrint() const;
+    void pretty_print() const;
 
     // --- new query API ---
 
     // True if any ERROR or FATAL diagnostic has been recorded.
-    bool hasErrors() const noexcept { return ErrorCount_ > 0; }
+    bool has_errors() const noexcept { return error_count_ > 0; }
 
     // True once ErrorCount_ hits LIMIT. The parser should stop recovery
     // attempts and return early when this is true — continuing will only
     // produce noise.
-    bool isSaturated() const noexcept { return ErrorCount_ >= LIMIT; }
+    bool is_saturated() const noexcept { return error_count_ >= LIMIT; }
 
-    u32 errorCount() const noexcept { return ErrorCount_; }
-    u32 warningCount() const noexcept { return WarningCount_; }
+    u32 error_count() const noexcept { return error_count_; }
+    u32 get_warning_count() const noexcept { return m_warning_count; }
 
     // Clears all accumulated diagnostics. Intended for unit tests that run
     // multiple parse passes through the same engine instance.
     void reset() noexcept
     {
-        Diagnostics_.clear();
-        ErrorCount_ = 0;
-        WarningCount_ = 0;
+        m_diagnostics.clear();
+        error_count_ = 0;
+        m_warning_count = 0;
     }
 
 private:
-    std::vector<Diagnostic> Diagnostics_;
-    u32 ErrorCount_ = 0;
-    u32 WarningCount_ = 0;
+    std::vector<Diagnostic> m_diagnostics;
+    u32 error_count_ = 0;
+    u32 m_warning_count = 0;
 
-    void emitError(std::string const& msg, Severity const sv);
+    void emit_error(std::string const& msg, Severity const sv);
     [[noreturn]] void _panic(std::string const& msg) const;
-    static std::string svToStr(Severity const sv);
-    std::vector<std::string> splitLines(std::string const& text) const;
+    static std::string sv_to_str(Severity const sv);
+    std::vector<std::string> split_lines(std::string const& text) const;
 }; // class Fa_DiagnosticEngine
 
 // --- module-level singletons and forwarding functions, unchanged ---
@@ -524,7 +526,7 @@ private:
 inline Fa_DiagnosticEngine engine;
 
 template<typename CodeEnum>
-static constexpr u16 codeValue(CodeEnum code)
+static constexpr u16 code_value(CodeEnum code)
 {
     static_assert(std::is_enum_v<CodeEnum>, "diagnostic code must be an enum");
     return static_cast<u16>(code);
@@ -535,13 +537,13 @@ static void emit(std::string const& msg, Severity const sv = Severity::ERROR) { 
 template<typename CodeEnum>
 static void emit(CodeEnum code, Severity const sv = Severity::ERROR)
 {
-    engine.emit(errorMessageFor(codeValue(code)), sv);
+    engine.emit(error_message_for(code_value(code)), sv);
 }
 
 template<typename CodeEnum>
 static void emit(CodeEnum code, std::string const& detail, Severity const sv = Severity::ERROR)
 {
-    std::string message = errorMessageFor(codeValue(code));
+    std::string message = error_message_for(code_value(code));
     if (!detail.empty())
         message += ": " + detail;
     engine.emit(message, sv);
@@ -552,43 +554,43 @@ static void panic(std::string const& msg) { engine.panic(msg); }
 template<typename CodeEnum>
 [[noreturn]] static void panic(CodeEnum code)
 {
-    engine.panic(errorMessageFor(codeValue(code)));
+    engine.panic(error_message_for(code_value(code)));
 }
 
 template<typename CodeEnum>
 [[noreturn]] static void panic(CodeEnum code, std::string const& detail)
 {
-    std::string message = errorMessageFor(codeValue(code));
+    std::string message = error_message_for(code_value(code));
     if (!detail.empty())
         message += ": " + detail;
     engine.panic(message);
 }
 
-static void report(Severity const sev, u32 const line, u16 const col, u16 err_code, std::string const& code = "")
+static void report(Severity const sev, u32 const m_line, u16 const col, u16 err_code, std::string const& code = "")
 {
-    engine.report(sev, line, col, err_code, code);
+    engine.report(sev, m_line, col, err_code, code);
 }
 
 template<typename CodeEnum>
-static void report(Severity const sev, u32 const line, u16 const col, CodeEnum code, std::string const& snippet = "")
+static void report(Severity const sev, u32 const m_line, u16 const col, CodeEnum code, std::string const& snippet = "")
 {
-    engine.report(sev, line, col, codeValue(code), snippet);
+    engine.report(sev, m_line, col, code_value(code), snippet);
 }
 
-static void internalError(errc::general::Code err_code) { emit(err_code); }
+static void internal_error(errc::general::Code err_code) { emit(err_code); }
 
-static void runtimeError(errc::runtime::Code err_code) { emit(err_code); }
+static void runtime_error(errc::runtime::Code err_code) { emit(err_code); }
 
 // Emits all accumulated diagnostics. The parser calls this once after
 // parseProgram() returns, not after each individual error.
-static void dump() { engine.prettyPrint(); }
+static void dump() { engine.pretty_print(); }
 
 // Forwarding wrappers for the new query API so callers don't need to
 // reach into engine directly.
-static bool hasErrors() noexcept { return engine.hasErrors(); }
-static bool isSaturated() noexcept { return engine.isSaturated(); }
-static u32 errorCount() noexcept { return engine.errorCount(); }
-static u32 warningCount() noexcept { return engine.warningCount(); }
+static bool has_errors() noexcept { return engine.has_errors(); }
+static bool is_saturated() noexcept { return engine.is_saturated(); }
+static u32 error_count() noexcept { return engine.error_count(); }
+static u32 m_warning_count() noexcept { return engine.get_warning_count(); }
 static void reset() noexcept { engine.reset(); }
 
 } // namespace fairuz::diagnostic

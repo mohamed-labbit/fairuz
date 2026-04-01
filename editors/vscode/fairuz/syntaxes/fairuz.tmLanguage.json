@@ -1,0 +1,169 @@
+{
+  "name": "Fairuz",
+  "scopeName": "source.fairuz",
+  "fileTypes": [
+    "fa"
+  ],
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#function-definition"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#builtins"
+    },
+    {
+      "include": "#constants"
+    },
+    {
+      "include": "#operators"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.number-sign.fairuz",
+          "match": "#.*$"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.fairuz",
+          "begin": "\"",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.begin.fairuz"
+            }
+          },
+          "end": "\"",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.end.fairuz"
+            }
+          },
+          "patterns": [
+            {
+              "name": "constant.character.escape.fairuz",
+              "match": "\\\\(?:[\"'\\\\abfnrtv]|x[0-9A-Fa-f]{2}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})"
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.fairuz",
+          "begin": "'",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.begin.fairuz"
+            }
+          },
+          "end": "'",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.end.fairuz"
+            }
+          },
+          "patterns": [
+            {
+              "name": "constant.character.escape.fairuz",
+              "match": "\\\\(?:[\"'\\\\abfnrtv]|x[0-9A-Fa-f]{2}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})"
+            }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.fairuz",
+          "match": "(?x)(?<![\\p{L}\\p{N}_])(?:0[xX][0-9A-Fa-f](?:_?[0-9A-Fa-f])*|0[oO][0-7](?:_?[0-7])*|0[bB][01](?:_?[01])*|\\d(?:_?\\d)*(?:\\.\\d(?:_?\\d)*)?|[٠-٩]+)(?![\\p{L}\\p{N}_])"
+        }
+      ]
+    },
+    "function-definition": {
+      "patterns": [
+        {
+          "name": "meta.function.fairuz",
+          "match": "(?x)(?<![\\p{L}\\p{N}_])(دالة)\\s+([\\p{L}_][\\p{L}\\p{N}_]*)",
+          "captures": {
+            "1": {
+              "name": "keyword.control.function.fairuz"
+            },
+            "2": {
+              "name": "entity.name.function.fairuz"
+            }
+          }
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.fairuz",
+          "match": "(?x)(?<![\\p{L}\\p{N}_])(اذا|غيره|طالما|بكل|ارجع|اكمل|اخرج|دالة)(?![\\p{L}\\p{N}_])"
+        },
+        {
+          "name": "keyword.operator.logical.fairuz",
+          "match": "(?x)(?<![\\p{L}\\p{N}_])(و|او|ليس)(?![\\p{L}\\p{N}_])"
+        }
+      ]
+    },
+    "builtins": {
+      "patterns": [
+        {
+          "name": "support.function.builtin.fairuz",
+          "match": "(?x)(?<![\\p{L}\\p{N}_])(حجم|اضف|احذف|مقطع|اكتب|input|نوع|طبيعي|حقيقي|str|bool|قائمة|اقسم|join|substr|contains|trim|floor|ceil|round|abs|min|max|pow|sqrt|assert|clock|error|time)(?![\\p{L}\\p{N}_])"
+        }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        {
+          "name": "constant.language.boolean.fairuz",
+          "match": "(?x)(?<![\\p{L}\\p{N}_])(صحيح|خطا)(?![\\p{L}\\p{N}_])"
+        },
+        {
+          "name": "constant.language.null.fairuz",
+          "match": "(?x)(?<![\\p{L}\\p{N}_])(عدم)(?![\\p{L}\\p{N}_])"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.assignment.fairuz",
+          "match": ":=|\\+=|-=|\\*=|/=|%=|&=|\\|=|\\^=|<<=|>>="
+        },
+        {
+          "name": "keyword.operator.arithmetic.fairuz",
+          "match": "\\*\\*|<<|>>|<=|>=|!=|=|[+\\-*/%٪&|^~<>]"
+        },
+        {
+          "name": "punctuation.separator.fairuz",
+          "match": "[,:]|[،٬]"
+        },
+        {
+          "name": "punctuation.accessor.fairuz",
+          "match": "\\."
+        },
+        {
+          "name": "punctuation.brackets.fairuz",
+          "match": "[()\\[\\]{}]"
+        }
+      ]
+    }
+  }
+}

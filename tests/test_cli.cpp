@@ -31,7 +31,7 @@ std::filesystem::path test_binary()
     return std::filesystem::current_path() / "fairuz";
 }
 
-RunResult run_cli(std::string const& args)
+RunResult run_cli(std::string const& m_args)
 {
     auto const base = std::filesystem::temp_directory_path() / std::filesystem::path("fairuz_cli_XXXXXX");
     std::string tmpl = base.string();
@@ -44,7 +44,7 @@ RunResult run_cli(std::string const& args)
     auto out_path = dir_path / "stdout.txt";
     auto err_path = dir_path / "stderr.txt";
 
-    std::string cmd = shell_quote(test_binary().string()) + " " + args + " >" + shell_quote(out_path.string()) + " 2>" + shell_quote(err_path.string());
+    std::string cmd = shell_quote(test_binary().string()) + " " + m_args + " >" + shell_quote(out_path.string()) + " 2>" + shell_quote(err_path.string());
     int raw = std::system(cmd.c_str());
     int code = WIFEXITED(raw) ? WEXITSTATUS(raw) : raw;
 

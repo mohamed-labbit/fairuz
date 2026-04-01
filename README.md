@@ -13,15 +13,15 @@ This is a scrappy, work-in-progress attempt to build the first Turing-complete p
 After installation, run programs with:
 
 ```bash
-fairuz file.txt
+fairuz file.fa
 ```
 
 Options can appear before or after the file:
 
 ```bash
-fairuz file.txt --time
-fairuz --check file.txt
-fairuz file.txt --dump-bytecode
+fairuz file.fa --time
+fairuz --check file.fa
+fairuz file.fa --dump-bytecode
 ```
 
 Useful flags:
@@ -46,8 +46,14 @@ bash build.sh --clean test
 
 ### run a program
 ```bash
-bash build.sh run demo_factorial.txt
+bash build.sh run demo_factorial.fa
 ```
+
+Fairuz source files use the `.fa` extension by default.
+
+## Syntax Highlighting
+- A VS Code syntax package is included at [editors/vscode/fairuz](/Users/mohamedrabbit/code/fairuz/editors/vscode/fairuz).
+- It registers the `fairuz` language and associates it with `.fa` files.
 
 ### install locally from CMake
 ```bash

@@ -588,7 +588,7 @@ TEST_F(Fa_StringRefTest, FindPos_CharExists)
     Fa_StringRef s("Hello");
     auto pos = s.find_pos('e');
     ASSERT_TRUE(pos.has_value());
-    EXPECT_EQ(pos.value(), 1);
+    EXPECT_EQ(pos.m_value(), 1);
 }
 
 TEST_F(Fa_StringRefTest, FindPos_CharNotExists)
@@ -603,7 +603,7 @@ TEST_F(Fa_StringRefTest, FindPos_FirstOccurrence)
     Fa_StringRef s("Hello");
     auto pos = s.find_pos('l');
     ASSERT_TRUE(pos.has_value());
-    EXPECT_EQ(pos.value(), 2);
+    EXPECT_EQ(pos.m_value(), 2);
 }
 
 TEST_F(Fa_StringRefTest, Truncate_ToShorter)
@@ -806,44 +806,44 @@ TEST_F(Fa_StringRefTest, ToUtf8_RoundTrip)
 TEST_F(Fa_StringRefTest, ToDouble_Integer)
 {
     Fa_StringRef s("42");
-    EXPECT_DOUBLE_EQ(s.toDouble(), 42.0);
+    EXPECT_DOUBLE_EQ(s.to_double(), 42.0);
 }
 
 TEST_F(Fa_StringRefTest, ToDouble_Float)
 {
     Fa_StringRef s("3.14159");
-    EXPECT_DOUBLE_EQ(s.toDouble(), 3.14159);
+    EXPECT_DOUBLE_EQ(s.to_double(), 3.14159);
 }
 
 TEST_F(Fa_StringRefTest, ToDouble_Negative)
 {
     Fa_StringRef s("-123.456");
-    EXPECT_DOUBLE_EQ(s.toDouble(), -123.456);
+    EXPECT_DOUBLE_EQ(s.to_double(), -123.456);
 }
 
 TEST_F(Fa_StringRefTest, ToDouble_Scientific)
 {
     Fa_StringRef s("1.5e10");
-    EXPECT_DOUBLE_EQ(s.toDouble(), 1.5e10);
+    EXPECT_DOUBLE_EQ(s.to_double(), 1.5e10);
 }
 
 TEST_F(Fa_StringRefTest, ToDouble_EmptyString)
 {
     Fa_StringRef s;
-    EXPECT_THROW(s.toDouble(), std::invalid_argument);
+    EXPECT_THROW(s.to_double(), std::invalid_argument);
 }
 
 TEST_F(Fa_StringRefTest, ToDouble_InvalidFormat)
 {
     Fa_StringRef s("not a number");
-    EXPECT_THROW(s.toDouble(), std::invalid_argument);
+    EXPECT_THROW(s.to_double(), std::invalid_argument);
 }
 
 TEST_F(Fa_StringRefTest, ToDouble_WithPosition)
 {
     Fa_StringRef s("123.456abc");
     size_t pos = 0;
-    f64 result = s.toDouble(&pos);
+    f64 result = s.to_double(&pos);
     EXPECT_DOUBLE_EQ(result, 123.456);
     EXPECT_GT(pos, 0);
 }
@@ -859,8 +859,8 @@ TEST_F(Fa_StringRefTest, Hash_NonEmpty)
 {
     Fa_StringRefHash hasher;
     Fa_StringRef s("Hello");
-    size_t hash = hasher(s);
-    EXPECT_NE(hash, 0);
+    size_t m_hash = hasher(s);
+    EXPECT_NE(m_hash, 0);
 }
 
 TEST_F(Fa_StringRefTest, Hash_SameContent)
@@ -883,8 +883,8 @@ TEST_F(Fa_StringRefTest, StdHash_Works)
 {
     std::hash<Fa_StringRef> hasher;
     Fa_StringRef s("Test");
-    size_t hash = hasher(s);
-    EXPECT_NE(hash, 0);
+    size_t m_hash = hasher(s);
+    EXPECT_NE(m_hash, 0);
 }
 
 TEST_F(Fa_StringRefTest, Stress_ManyAppends)
@@ -1067,8 +1067,8 @@ TEST_F(Fa_StringRefTest, Performance_AppendChars)
     for (int i = 0; i < 10000; i++)
         s += char('A');
 
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    auto m_end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(m_end - start);
 
     EXPECT_EQ(s.len(), 10000);
     std::cout << "Append 10000 chars took: " << duration.count() << "ms\n";
@@ -1084,8 +1084,8 @@ TEST_F(Fa_StringRefTest, Performance_Concatenation)
     for (int i = 0; i < 1000; i++)
         result = result + part;
 
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    auto m_end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(m_end - start);
 
     EXPECT_EQ(result.len(), 4000);
     std::cout << "1000 concatenations took: " << duration.count() << "ms\n";
@@ -1102,8 +1102,8 @@ TEST_F(Fa_StringRefTest, Performance_Utf8Conversion)
         std::string back = s.data();
     }
 
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    auto m_end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(m_end - start);
 
     std::cout << "100 UTF-8 round-trips (10k chars) took: " << duration.count() << "ms\n";
 }
@@ -1114,9 +1114,9 @@ TEST_F(Fa_StringRefTest, TestTrim)
     Fa_StringRef s2 = "   abc";
     Fa_StringRef s3 = "   abc    ";
 
-    s1.trimWhitespace();
-    s2.trimWhitespace();
-    s3.trimWhitespace();
+    s1.trim_whitespace();
+    s2.trim_whitespace();
+    s3.trim_whitespace();
 
     EXPECT_EQ(s1, Fa_StringRef("abc"));
     EXPECT_EQ(s2, Fa_StringRef("abc"));
@@ -1623,7 +1623,7 @@ TEST_F(Fa_StringRefTest, ToDouble_1M_Integer)
 
     auto t0 = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < N; ++i)
-        acc += s.toDouble();
+        acc += s.to_double();
     f64 us = microseconds_since(t0);
 
     do_not_optimize(acc);
@@ -1639,7 +1639,7 @@ TEST_F(Fa_StringRefTest, ToDouble_1M_Float)
 
     auto t0 = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < N; ++i)
-        acc += s.toDouble();
+        acc += s.to_double();
     f64 us = microseconds_since(t0);
 
     do_not_optimize(acc);

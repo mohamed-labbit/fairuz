@@ -26,9 +26,9 @@ inline void PrintTo(tok::Fa_Token const& tok, std::ostream* os)
 
 TEST(LexerTest, RecognizesPlus)
 {
-    lex::Fa_FileManager file_manager(test_cases_path / "recognizes_plus.txt");
-    lex::Fa_Lexer lexer(&file_manager);
-    auto tokens = lexer.tokenize();
+    lex::Fa_FileManager m_file_manager(test_cases_path / "recognizes_plus.txt");
+    lex::Fa_Lexer m_lexer(&m_file_manager);
+    auto tokens = m_lexer.tokenize();
     tok::Fa_Token const* expected = MAKE_TOKEN(tok::Fa_TokenType::OP_PLUS, "+", 1, 1);
     EXPECT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0]->type(), tok::Fa_TokenType::BEGINMARKER);
@@ -38,9 +38,9 @@ TEST(LexerTest, RecognizesPlus)
 
 TEST(LexerTest, RecognizesInteger)
 {
-    lex::Fa_FileManager file_manager(test_cases_path / "recognizes_integer.txt");
-    lex::Fa_Lexer lexer(&file_manager);
-    auto tokens = lexer.tokenize();
+    lex::Fa_FileManager m_file_manager(test_cases_path / "recognizes_integer.txt");
+    lex::Fa_Lexer m_lexer(&m_file_manager);
+    auto tokens = m_lexer.tokenize();
     tok::Fa_Token const* expected = MAKE_TOKEN(tok::Fa_TokenType::INTEGER, "123", 1, 1);
     EXPECT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0]->type(), tok::Fa_TokenType::BEGINMARKER);
@@ -50,9 +50,9 @@ TEST(LexerTest, RecognizesInteger)
 
 TEST(LexerTest, RecognizesFloat)
 {
-    lex::Fa_FileManager file_manager(test_cases_path / "recognizes_float.txt");
-    lex::Fa_Lexer lexer(&file_manager);
-    auto tokens = lexer.tokenize();
+    lex::Fa_FileManager m_file_manager(test_cases_path / "recognizes_float.txt");
+    lex::Fa_Lexer m_lexer(&m_file_manager);
+    auto tokens = m_lexer.tokenize();
     tok::Fa_Token const* expected = MAKE_TOKEN(tok::Fa_TokenType::DECIMAL, "123.456", 1, 1);
     EXPECT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0]->type(), tok::Fa_TokenType::BEGINMARKER);
@@ -62,9 +62,9 @@ TEST(LexerTest, RecognizesFloat)
 
 TEST(LexerTest, RecognizesIdentifier)
 {
-    lex::Fa_FileManager file_manager(test_cases_path / "recognizes_identifier.txt");
-    lex::Fa_Lexer lexer(&file_manager);
-    auto tokens = lexer.tokenize();
+    lex::Fa_FileManager m_file_manager(test_cases_path / "recognizes_identifier.txt");
+    lex::Fa_Lexer m_lexer(&m_file_manager);
+    auto tokens = m_lexer.tokenize();
     tok::Fa_Token const* expected = MAKE_TOKEN(tok::Fa_TokenType::IDENTIFIER, "مرحبا", 1, 1);
     EXPECT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0]->type(), tok::Fa_TokenType::BEGINMARKER);
@@ -74,9 +74,9 @@ TEST(LexerTest, RecognizesIdentifier)
 
 TEST(LexerTest, RecognizesKeyword)
 {
-    lex::Fa_FileManager file_manager(test_cases_path / "recognizes_keyword.txt");
-    lex::Fa_Lexer lexer(&file_manager);
-    auto tokens = lexer.tokenize();
+    lex::Fa_FileManager m_file_manager(test_cases_path / "recognizes_keyword.txt");
+    lex::Fa_Lexer m_lexer(&m_file_manager);
+    auto tokens = m_lexer.tokenize();
     EXPECT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0]->type(), tok::Fa_TokenType::BEGINMARKER);
     EXPECT_EQ(tokens[1]->type(), tok::Fa_TokenType::KW_IF);
@@ -85,9 +85,9 @@ TEST(LexerTest, RecognizesKeyword)
 
 TEST(LexerTest, RecognizesNoneKeyword)
 {
-    lex::Fa_FileManager file_manager(test_cases_path / "recognizes_none_keyword.txt");
-    lex::Fa_Lexer lexer(&file_manager);
-    auto tokens = lexer.tokenize();
+    lex::Fa_FileManager m_file_manager(test_cases_path / "recognizes_none_keyword.txt");
+    lex::Fa_Lexer m_lexer(&m_file_manager);
+    auto tokens = m_lexer.tokenize();
     auto none_it = std::find_if(tokens.begin(), tokens.end(), [](auto const& tok) { return tok->type() == tok::Fa_TokenType::KW_NONE; });
     ASSERT_NE(none_it, tokens.end());
     EXPECT_EQ((*none_it)->lexeme(), "عدم");
@@ -95,9 +95,9 @@ TEST(LexerTest, RecognizesNoneKeyword)
 
 TEST(LexerTest, RecognizesBooleanKeywords)
 {
-    lex::Fa_FileManager file_manager(test_cases_path / "recognizes_boolean_keywords.txt");
-    lex::Fa_Lexer lexer(&file_manager);
-    auto tokens = lexer.tokenize();
+    lex::Fa_FileManager m_file_manager(test_cases_path / "recognizes_boolean_keywords.txt");
+    lex::Fa_Lexer m_lexer(&m_file_manager);
+    auto tokens = m_lexer.tokenize();
     auto has_true = std::any_of(tokens.begin(), tokens.end(), [](auto const& tok) { return tok->type() == tok::Fa_TokenType::KW_TRUE && tok->lexeme() == "صحيح"; });
     auto has_false = std::any_of(tokens.begin(), tokens.end(), [](auto const& tok) { return tok->type() == tok::Fa_TokenType::KW_FALSE && tok->lexeme() == "خطا"; });
     EXPECT_TRUE(has_true);
@@ -106,9 +106,9 @@ TEST(LexerTest, RecognizesBooleanKeywords)
 
 TEST(LexerTest, RecognizesStringLiteral)
 {
-    lex::Fa_FileManager file_manager(test_cases_path / "recognizes_string_literal.txt");
-    lex::Fa_Lexer lexer(&file_manager);
-    auto tokens = lexer.tokenize();
+    lex::Fa_FileManager m_file_manager(test_cases_path / "recognizes_string_literal.txt");
+    lex::Fa_Lexer m_lexer(&m_file_manager);
+    auto tokens = m_lexer.tokenize();
     tok::Fa_Token const* expected = MAKE_TOKEN(tok::Fa_TokenType::STRING, "العالم", 1, 1);
     EXPECT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0]->type(), tok::Fa_TokenType::BEGINMARKER);
@@ -118,9 +118,9 @@ TEST(LexerTest, RecognizesStringLiteral)
 
 TEST(LexerTest, RecognizesFa_Expression00)
 {
-    lex::Fa_FileManager file_manager(test_cases_path / "recognizes_expression.txt");
-    lex::Fa_Lexer lexer(&file_manager);
-    auto tokens = lexer.tokenize();
+    lex::Fa_FileManager m_file_manager(test_cases_path / "recognizes_expression.txt");
+    lex::Fa_Lexer m_lexer(&m_file_manager);
+    auto tokens = m_lexer.tokenize();
     std::vector<tok::Fa_Token const*> expected = {
         MAKE_TOKEN(tok::Fa_TokenType::BEGINMARKER, "", 1, 1), MAKE_TOKEN(tok::Fa_TokenType::IDENTIFIER, "س", 1, 1),
         MAKE_TOKEN(tok::Fa_TokenType::OP_EQ, "=", 1, 3), MAKE_TOKEN(tok::Fa_TokenType::INTEGER, "42", 1, 5),
@@ -135,9 +135,9 @@ TEST(LexerTest, RecognizesFa_Expression00)
 
 TEST(LexerTest, RecognizesStmt00)
 {
-    lex::Fa_FileManager file_manager(test_cases_path / "recognizes_stmt_00.txt");
-    lex::Fa_Lexer lexer(&file_manager);
-    auto tokens = lexer.tokenize();
+    lex::Fa_FileManager m_file_manager(test_cases_path / "recognizes_stmt_00.txt");
+    lex::Fa_Lexer m_lexer(&m_file_manager);
+    auto tokens = m_lexer.tokenize();
     std::vector<tok::Fa_Token const*> expected = {
         MAKE_TOKEN(tok::Fa_TokenType::BEGINMARKER, "", 1, 1), MAKE_TOKEN(tok::Fa_TokenType::KW_IF, "اذا", 1, 1),
         MAKE_TOKEN(tok::Fa_TokenType::IDENTIFIER, "س", 1, 5), MAKE_TOKEN(tok::Fa_TokenType::OP_EQ, "=", 1, 7),
@@ -151,9 +151,9 @@ TEST(LexerTest, RecognizesStmt00)
 
 TEST(LexerTest, RecognizesStmt01)
 {
-    lex::Fa_FileManager file_manager(test_cases_path / "recognizes_stmt_01.txt");
-    lex::Fa_Lexer lexer(&file_manager);
-    auto tokens = lexer.tokenize();
+    lex::Fa_FileManager m_file_manager(test_cases_path / "recognizes_stmt_01.txt");
+    lex::Fa_Lexer m_lexer(&m_file_manager);
+    auto tokens = m_lexer.tokenize();
     std::vector<tok::Fa_Token const*> expected = {
         MAKE_TOKEN(tok::Fa_TokenType::BEGINMARKER, "", 1, 1), MAKE_TOKEN(tok::Fa_TokenType::KW_WHILE, "طالما", 1, 1),
         MAKE_TOKEN(tok::Fa_TokenType::IDENTIFIER, "س", 1, 7), MAKE_TOKEN(tok::Fa_TokenType::OP_NEQ, "!=", 1, 9),
@@ -167,9 +167,9 @@ TEST(LexerTest, RecognizesStmt01)
 
 TEST(LexerTest, RecognizesStmt02)
 {
-    lex::Fa_FileManager file_manager(test_cases_path / "recognizes_stmt_02.txt");
-    lex::Fa_Lexer lexer(&file_manager);
-    auto tokens = lexer.tokenize();
+    lex::Fa_FileManager m_file_manager(test_cases_path / "recognizes_stmt_02.txt");
+    lex::Fa_Lexer m_lexer(&m_file_manager);
+    auto tokens = m_lexer.tokenize();
     std::vector<tok::Fa_Token const*> expected = {
         MAKE_TOKEN(tok::Fa_TokenType::BEGINMARKER, "", 1, 1), MAKE_TOKEN(tok::Fa_TokenType::KW_FOR, "بكل", 1, 1),
         MAKE_TOKEN(tok::Fa_TokenType::IDENTIFIER, "ل", 1, 5), MAKE_TOKEN(tok::Fa_TokenType::IDENTIFIER, "في", 1, 7),
@@ -183,9 +183,9 @@ TEST(LexerTest, RecognizesStmt02)
 
 TEST(LexerTest, RecognizesStmt03)
 {
-    lex::Fa_FileManager file_manager(test_cases_path / "recognizes_stmt_03.txt");
-    lex::Fa_Lexer lexer(&file_manager);
-    auto tokens = lexer.tokenize();
+    lex::Fa_FileManager m_file_manager(test_cases_path / "recognizes_stmt_03.txt");
+    lex::Fa_Lexer m_lexer(&m_file_manager);
+    auto tokens = m_lexer.tokenize();
     std::vector<tok::Fa_Token const*> expected = {
         MAKE_TOKEN(tok::Fa_TokenType::BEGINMARKER, "", 1, 1),
         MAKE_TOKEN(tok::Fa_TokenType::IDENTIFIER, "ا", 1, 1),
@@ -200,9 +200,9 @@ TEST(LexerTest, RecognizesStmt03)
 
 TEST(LexerTest, RecognizesStmt04)
 {
-    lex::Fa_FileManager file_manager(test_cases_path / "recognizes_stmt_04.txt");
-    lex::Fa_Lexer lexer(&file_manager);
-    auto tokens = lexer.tokenize();
+    lex::Fa_FileManager m_file_manager(test_cases_path / "recognizes_stmt_04.txt");
+    lex::Fa_Lexer m_lexer(&m_file_manager);
+    auto tokens = m_lexer.tokenize();
     std::vector<tok::Fa_Token const*> expected = {
         MAKE_TOKEN(tok::Fa_TokenType::BEGINMARKER, "", 1, 1), MAKE_TOKEN(tok::Fa_TokenType::KW_IF, "اذا", 1, 1),
         MAKE_TOKEN(tok::Fa_TokenType::IDENTIFIER, "ا", 1, 5), MAKE_TOKEN(tok::Fa_TokenType::OP_EQ, "=", 1, 7),

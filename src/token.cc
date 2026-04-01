@@ -4,7 +4,7 @@
 
 namespace fairuz::tok {
 
-static std::unordered_map<std::string_view, Fa_TokenType> const& getKeywords()
+static std::unordered_map<std::string_view, Fa_TokenType> const& get_keywords()
 {
     static std::unordered_map<std::string_view, Fa_TokenType> const map = {
         { "خطا", Fa_TokenType::KW_FALSE },
@@ -25,7 +25,7 @@ static std::unordered_map<std::string_view, Fa_TokenType> const& getKeywords()
     return map;
 }
 
-static std::unordered_map<std::string_view, Fa_TokenType> const& getOperators()
+static std::unordered_map<std::string_view, Fa_TokenType> const& get_operators()
 {
     static std::unordered_map<std::string_view, Fa_TokenType> const map = {
         { "=", Fa_TokenType::OP_EQ },
@@ -47,24 +47,24 @@ static std::unordered_map<std::string_view, Fa_TokenType> const& getOperators()
         { "&", Fa_TokenType::OP_BITAND },
         { "|", Fa_TokenType::OP_BITOR },
         { "~", Fa_TokenType::OP_BITNOT },
-        { "^", Fa_TokenType::OP_BITXOR }
+        { "^", Fa_TokenType::OP_BITXOR },
     };
     return map;
 }
 
-std::optional<Fa_TokenType> lookupKeyword(Fa_StringRef const& s)
+std::optional<Fa_TokenType> lookup_keyword(Fa_StringRef const& s)
 {
-    auto it = getKeywords().find(std::string_view(s.data(), s.len()));
-    if (it == getKeywords().end())
+    auto it = get_keywords().find(std::string_view(s.data(), s.len()));
+    if (it == get_keywords().end())
         return std::nullopt;
 
     return it->second;
 }
 
-std::optional<Fa_TokenType> lookupOperator(Fa_StringRef const& s)
+std::optional<Fa_TokenType> lookup_operator(Fa_StringRef const& s)
 {
-    auto it = getOperators().find(std::string_view(s.data(), s.len()));
-    if (it == getOperators().end())
+    auto it = get_operators().find(std::string_view(s.data(), s.len()));
+    if (it == get_operators().end())
         return std::nullopt;
 
     return it->second;
@@ -72,100 +72,100 @@ std::optional<Fa_TokenType> lookupOperator(Fa_StringRef const& s)
 
 bool Fa_Token::operator==(Fa_Token const& other) const
 {
-    if (Type_ == Fa_TokenType::INDENT || Type_ == Fa_TokenType::DEDENT || Type_ == Fa_TokenType::BEGINMARKER || Type_ == Fa_TokenType::ENDMARKER)
-        return Type_ == other.Type_;
+    if (m_type == Fa_TokenType::INDENT || m_type == Fa_TokenType::DEDENT || m_type == Fa_TokenType::BEGINMARKER || m_type == Fa_TokenType::ENDMARKER)
+        return m_type == other.m_type;
 
-    return Value_ == other.Value_ && Type_ == other.Type_ && Location_.line == other.Location_.line && Location_.column == other.Location_.column;
+    return m_value == other.m_value && m_type == other.m_type && m_location.m_line == other.m_location.m_line && m_location.m_column == other.m_location.m_column;
 }
 
 bool Fa_Token::operator!=(Fa_Token const& other) const { return !(*this == other); }
 
-Fa_StringRef const& Fa_Token::lexeme() const { return Value_; }
+Fa_StringRef const& Fa_Token::lexeme() const { return m_value; }
 
-Fa_TokenType const& Fa_Token::type() const { return Type_; }
+Fa_TokenType const& Fa_Token::type() const { return m_type; }
 
-u32 const& Fa_Token::line() const { return Location_.line; }
+u32 const& Fa_Token::line() const { return m_location.m_line; }
 
-u16 const& Fa_Token::column() const { return Location_.column; }
+u16 const& Fa_Token::column() const { return m_location.m_column; }
 
-Location const& Fa_Token::location() const { return Location_; }
+Location const& Fa_Token::location() const { return m_location; }
 
-std::string const& Fa_Token::filepath() const { return Location_.filepath; }
+std::string const& Fa_Token::filepath() const { return m_location.filepath; }
 
-bool Fa_Token::is(Fa_TokenType const tt) const { return tt == Type_; }
+bool Fa_Token::is(Fa_TokenType const tt) const { return tt == m_type; }
 
-bool Fa_Token::atbol() const { return Atbol_; }
+bool Fa_Token::atbol() const { return m_atbol; }
 
-bool Fa_Token::isOperator() const
+bool Fa_Token::is_operator() const
 {
-    return (Type_ >= Fa_TokenType::OP_PLUS && Type_ <= Fa_TokenType::OP_RSHIFTEQ)
-        || Type_ == Fa_TokenType::OP_AND || Type_ == Fa_TokenType::OP_OR;
+    return (m_type >= Fa_TokenType::OP_PLUS && m_type <= Fa_TokenType::OP_RSHIFTEQ)
+        || m_type == Fa_TokenType::OP_AND || m_type == Fa_TokenType::OP_OR;
 }
 
-bool Fa_Token::isUnaryOp() const
+bool Fa_Token::is_unary_op() const
 {
-    return Type_ == Fa_TokenType::OP_PLUS
-        || Type_ == Fa_TokenType::OP_MINUS
-        || Type_ == Fa_TokenType::OP_BITNOT
-        || Type_ == Fa_TokenType::OP_NOT;
+    return m_type == Fa_TokenType::OP_PLUS
+        || m_type == Fa_TokenType::OP_MINUS
+        || m_type == Fa_TokenType::OP_BITNOT
+        || m_type == Fa_TokenType::OP_NOT;
 }
 
-bool Fa_Token::isBinaryOp() const
+bool Fa_Token::is_binary_op() const
 {
-    return Type_ == Fa_TokenType::OP_PLUS
-        || Type_ == Fa_TokenType::OP_MINUS
-        || Type_ == Fa_TokenType::OP_STAR
-        || Type_ == Fa_TokenType::OP_SLASH
-        || Type_ == Fa_TokenType::OP_PERCENT
-        || Type_ == Fa_TokenType::OP_POWER
-        || Type_ == Fa_TokenType::OP_EQ
-        || Type_ == Fa_TokenType::OP_NEQ
-        || Type_ == Fa_TokenType::OP_LT
-        || Type_ == Fa_TokenType::OP_GT
-        || Type_ == Fa_TokenType::OP_LTE
-        || Type_ == Fa_TokenType::OP_GTE
-        || Type_ == Fa_TokenType::OP_BITAND
-        || Type_ == Fa_TokenType::OP_BITOR
-        || Type_ == Fa_TokenType::OP_BITXOR
-        || Type_ == Fa_TokenType::OP_LSHIFT
-        || Type_ == Fa_TokenType::OP_RSHIFT
-        || Type_ == Fa_TokenType::OP_AND
-        || Type_ == Fa_TokenType::OP_OR;
+    return m_type == Fa_TokenType::OP_PLUS
+        || m_type == Fa_TokenType::OP_MINUS
+        || m_type == Fa_TokenType::OP_STAR
+        || m_type == Fa_TokenType::OP_SLASH
+        || m_type == Fa_TokenType::OP_PERCENT
+        || m_type == Fa_TokenType::OP_POWER
+        || m_type == Fa_TokenType::OP_EQ
+        || m_type == Fa_TokenType::OP_NEQ
+        || m_type == Fa_TokenType::OP_LT
+        || m_type == Fa_TokenType::OP_GT
+        || m_type == Fa_TokenType::OP_LTE
+        || m_type == Fa_TokenType::OP_GTE
+        || m_type == Fa_TokenType::OP_BITAND
+        || m_type == Fa_TokenType::OP_BITOR
+        || m_type == Fa_TokenType::OP_BITXOR
+        || m_type == Fa_TokenType::OP_LSHIFT
+        || m_type == Fa_TokenType::OP_RSHIFT
+        || m_type == Fa_TokenType::OP_AND
+        || m_type == Fa_TokenType::OP_OR;
 }
 
-bool Fa_Token::isComparisonOp() const
+bool Fa_Token::is_comparison_op() const
 {
-    return Type_ == Fa_TokenType::OP_EQ
-        || Type_ == Fa_TokenType::OP_NEQ
-        || Type_ == Fa_TokenType::OP_LT
-        || Type_ == Fa_TokenType::OP_GT
-        || Type_ == Fa_TokenType::OP_LTE
-        || Type_ == Fa_TokenType::OP_GTE;
+    return m_type == Fa_TokenType::OP_EQ
+        || m_type == Fa_TokenType::OP_NEQ
+        || m_type == Fa_TokenType::OP_LT
+        || m_type == Fa_TokenType::OP_GT
+        || m_type == Fa_TokenType::OP_LTE
+        || m_type == Fa_TokenType::OP_GTE;
 }
 
-bool Fa_Token::isWhitespace() const
+bool Fa_Token::is_whitespace() const
 {
-    return Type_ == Fa_TokenType::INDENT
-        || Type_ == Fa_TokenType::DEDENT
-        || Type_ == Fa_TokenType::NEWLINE;
+    return m_type == Fa_TokenType::INDENT
+        || m_type == Fa_TokenType::DEDENT
+        || m_type == Fa_TokenType::NEWLINE;
 }
 
-bool Fa_Token::isNumeric() const
+bool Fa_Token::is_numeric() const
 {
-    return Type_ == Fa_TokenType::INTEGER
-        || Type_ == Fa_TokenType::HEX
-        || Type_ == Fa_TokenType::OCTAL
-        || Type_ == Fa_TokenType::BINARY
-        || Type_ == Fa_TokenType::DECIMAL;
+    return m_type == Fa_TokenType::INTEGER
+        || m_type == Fa_TokenType::HEX
+        || m_type == Fa_TokenType::OCTAL
+        || m_type == Fa_TokenType::BINARY
+        || m_type == Fa_TokenType::DECIMAL;
 }
 
-f64 Fa_Token::toDouble() const { return lexeme().toDouble(); }
+f64 Fa_Token::to_double() const { return lexeme().to_double(); }
 
-int Fa_Token::toInt() const { return static_cast<int>(lexeme().toDouble()); }
+int Fa_Token::to_int() const { return static_cast<int>(lexeme().to_double()); }
 
-int Fa_Token::getPrecedence(bool is_unary) const
+int Fa_Token::get_precedence(bool is_unary) const
 {
-    switch (Type_) {
+    switch (m_type) {
     case Fa_TokenType::DOT: // .
         return PREC_POSTFIX;
     case Fa_TokenType::OP_BITNOT: // ~
@@ -202,7 +202,7 @@ int Fa_Token::getPrecedence(bool is_unary) const
     }
 }
 
-Fa_StringRef const Fa_Token::toString(Fa_TokenType const tt)
+Fa_StringRef const Fa_Token::to_string(Fa_TokenType const tt)
 {
     switch (tt) {
     case Fa_TokenType::OP_EQ:
