@@ -224,8 +224,6 @@ Fa_Lexer::Fa_Lexer(Fa_FileManager* fm)
     m_alt_indent_stack = Fa_Array<unsigned int>::with_capacity(8);
     m_indent_stack.push(0);
     m_alt_indent_stack.push(0);
-
-    util::configure_locale();
 }
 
 Fa_Lexer::Fa_Lexer(Fa_Array<tok::Fa_Token const*>& seq /*, size_t const s*/)
@@ -237,7 +235,6 @@ Fa_Lexer::Fa_Lexer(Fa_Array<tok::Fa_Token const*>& seq /*, size_t const s*/)
 {
     m_indent_stack.push(0);
     m_alt_indent_stack.push(0);
-    util::configure_locale();
 }
 
 tok::Fa_Token const* Fa_Lexer::lex_token()
