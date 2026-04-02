@@ -62,7 +62,7 @@ class Fa_HashTable {
             return;
 
         Fa_Array<Entry> grown(next_power_of_two(m_buckets.size() << 1), Entry { });
-        for (u32 i = 0; i < m_buckets.size(); ++i) {
+        for (u32 i = 0; i < m_buckets.size(); i += 1) {
             if (m_buckets[i].occupied)
                 reinsert_into(grown, m_buckets[i]);
         }
@@ -101,30 +101,31 @@ class Fa_HashTable {
 
 public:
     Fa_HashTable() = default;
-    
-    explicit Fa_HashTable(std::initializer_list<std::pair<K, V>> list) 
-    {    
+
+    explicit Fa_HashTable(std::initializer_list<std::pair<K, V>> list)
+    {
         if (list.size() == 0)
             return;
-        
-        for (const std::pair<K, V>& pair : list)
+
+        for (std::pair<K, V> const& pair : list)
             insert_or_assign(pair.first, pair.second);
     }
-    
-    ~Fa_HashTable() {}
-    
-    V& operator[](const K& key) { 
+
+    ~Fa_HashTable() { }
+
+    V& operator[](K const& key)
+    {
         auto hash_value = static_cast<u64>(m_hash(key));
         if (Entry* entry = find_entry(key, hash_value))
             return entry->m_value;
-        return insert_or_assign(key, V{});
+        return insert_or_assign(key, V { });
     }
-    
-    const V& operator[](const K& key) const = delete;
+
+    V const& operator[](K const& key) const = delete;
 
     void clear()
     {
-        for (u32 i = 0; i < m_buckets.size(); ++i)
+        for (u32 i = 0; i < m_buckets.size(); i += 1)
             m_buckets[i] = Entry { };
         m_size = 0;
     }
@@ -166,35 +167,42 @@ public:
         m_buckets[idx].m_hash = hash_value;
         m_buckets[idx].key = key;
         m_buckets[idx].m_value = m_value;
-        ++m_size;
+        m_size += 1;
 
         return m_buckets[idx].m_value;
     }
-    
+
     struct Iterator {
         Entry* ptr;
         Entry* m_end;
-    
-        Iterator& operator++() {
-            ++ptr;
+
+        Iterator& operator++()
+        {
+            ptr += 1;
             while (ptr != m_end && !ptr->occupied)
-                ++ptr;
+                ptr += 1;
+
             return *this;
         }
-    
+
         std::pair<K const&, V&> operator*() const { return { ptr->key, ptr->m_value }; }
         Entry* operator->() const { return ptr; }
-        bool operator!=(const Iterator& other) const { return ptr != other.ptr; }
+        bool operator!=(Iterator const& other) const { return ptr != other.ptr; }
     };
-    
-    Iterator begin() {
+
+    Iterator begin()
+    {
         Entry* p = m_buckets.begin();
         Entry* e = m_buckets.end();
-        while (p != e && !p->occupied) ++p;
+        
+        while (p != e && !p->occupied)
+            p += 1;
+
         return { p, e };
     }
-    
-    Iterator end() {
+
+    Iterator end()
+    {
         Entry* e = m_buckets.end();
         return { e, e };
     }

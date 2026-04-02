@@ -18,6 +18,7 @@ void print_value(u64 v)
         ::printf("\"%s\"", Fa_AS_STRING(v)->str.data());
     else if (Fa_IS_OBJECT(v))
         ::printf("<obj %p>", (void*)(Fa_AS_OBJECT(v)));
+
     ::printf("?");
 }
 
@@ -43,7 +44,7 @@ bool Fa_Chunk::patch_jump(u32 const instr_idx)
 
 u16 Fa_Chunk::add_constant(Fa_Value const v)
 {
-    for (u16 i = 0, n = static_cast<u16>(constants.size()); i < n; ++i) {
+    for (u16 i = 0, n = static_cast<u16>(constants.size()); i < n; i += 1) {
         if (constants[i] == v)
             return i;
     }
@@ -65,6 +66,7 @@ u32 Fa_Chunk::get_line(u32 const instr_idx) const
     for (auto& e : lines) {
         if (e.start > instr_idx)
             break;
+
         m_line = e.m_line;
     }
 
@@ -78,7 +80,7 @@ void Fa_Chunk::disassemble() const
     if (!constants.empty()) {
         ::printf("  constants:\n");
 
-        for (size_t i = 0; i < constants.size(); ++i) {
+        for (size_t i = 0; i < constants.size(); i += 1) {
             ::printf("    [%3zu] ", i);
             print_value(constants[i]);
             ::printf("\n");
@@ -90,7 +92,7 @@ void Fa_Chunk::disassemble() const
 
     ::printf("  code:\n");
 
-    for (u32 i = 0; i < static_cast<u32>(code.size()); ++i) {
+    for (u32 i = 0; i < static_cast<u32>(code.size()); i += 1) {
         u32 ins = code[i];
         auto op = static_cast<Fa_OpCode>(Fa_instr_op(ins));
         auto fmt = opcode_format(op);
@@ -108,7 +110,6 @@ void Fa_Chunk::disassemble() const
             // Annotate with constant value
             if (op == Fa_OpCode::LOAD_CONST || op == Fa_OpCode::LOAD_GLOBAL || op == Fa_OpCode::STORE_GLOBAL) {
                 u16 idx = Fa_instr_Bx(ins);
-
                 if (idx < constants.size()) {
                     ::printf("  ; ");
                     print_value(constants[idx]);

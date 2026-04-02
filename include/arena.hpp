@@ -31,7 +31,7 @@ public:
 
     [[nodiscard]] unsigned char* begin() const;
     [[nodiscard]] unsigned char* end() const;
-    [[nodiscard]] unsigned char* c_next() const;
+    [[nodiscard]] unsigned char* next() const;
 
     [[nodiscard]] size_t size() const;
     [[nodiscard]] size_t used() const;

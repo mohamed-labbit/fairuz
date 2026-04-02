@@ -11,8 +11,9 @@ struct Fa_Pair {
     S second;
 };
 
-template <typename T, typename S = T>
-static Fa_Pair<T, S>  Fa_makePair(T f, S s) {
+template<typename T, typename S = T>
+static Fa_Pair<T, S> Fa_makePair(T f, S s)
+{
     return fairuz::get_allocator().allocate_object<Fa_Pair<T, S>>(f, s);
 }
 

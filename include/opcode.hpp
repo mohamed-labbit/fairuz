@@ -115,8 +115,8 @@ enum class Fa_OpCode : u8 {
 
     IC_CALL, // func reg, argc, slot index
 
-    OP_INDEX,
-    
+    INDEX,
+
     // misc
     NOP,
     HALT,
@@ -354,6 +354,8 @@ static Fa_StringRef Fa_opcode_name(Fa_OpCode op)
         return "RETURN1";
     case Fa_OpCode::IC_CALL:
         return "IC_CALL";
+    case Fa_OpCode::INDEX:
+        return "INDEX";
     case Fa_OpCode::NOP:
         return "NOP";
     case Fa_OpCode::HALT:

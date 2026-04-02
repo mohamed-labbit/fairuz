@@ -35,7 +35,7 @@ enum class Fa_TokenType : int {
     KW_CONTINUE,
     KW_BREAK,
     KW_FALSE,
-    KW_NONE,
+    KW_NIL,
     KW_TRUE,
     OP_AND,
     OP_OR,

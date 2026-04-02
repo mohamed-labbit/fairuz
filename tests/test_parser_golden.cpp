@@ -29,7 +29,7 @@ std::string trim(std::string s)
         s.pop_back();
     size_t start = 0;
     while (start < s.size() && (s[start] == '\n' || s[start] == '\r' || s[start] == ' ' || s[start] == '\t'))
-        ++start;
+        start += 1;
     return s.substr(start);
 }
 
@@ -143,7 +143,7 @@ std::string sig_list(AST::Fa_ListExpr const* list)
 {
     std::ostringstream out;
     out << "[";
-    for (u32 i = 0; i < list->get_elements().size(); ++i) {
+    for (u32 i = 0; i < list->get_elements().size(); i += 1) {
         if (i)
             out << ",";
         out << sig_expr(list->get_elements()[i]);
@@ -213,7 +213,7 @@ std::string sig_stmt(AST::Fa_Stmt const* stmt)
         auto const* block = static_cast<AST::Fa_BlockStmt const*>(stmt);
         std::ostringstream out;
         out << "block[";
-        for (u32 i = 0; i < block->get_statements().size(); ++i) {
+        for (u32 i = 0; i < block->get_statements().size(); i += 1) {
             if (i)
                 out << ",";
             out << sig_stmt(block->get_statements()[i]);
@@ -239,7 +239,7 @@ std::string sig_stmt(AST::Fa_Stmt const* stmt)
         auto const* fn = static_cast<AST::Fa_FunctionDef const*>(stmt);
         std::ostringstream out;
         out << "func(" << std::string(fn->get_name()->get_value().data(), fn->get_name()->get_value().len()) << ",[";
-        for (u32 i = 0; i < fn->get_parameters().size(); ++i) {
+        for (u32 i = 0; i < fn->get_parameters().size(); i += 1) {
             if (i)
                 out << ",";
             out << sig_expr(fn->get_parameters()[i]);
@@ -260,7 +260,7 @@ std::string sig_program(Fa_Array<AST::Fa_Stmt*> const& stmts)
 {
     std::ostringstream out;
     out << "program[";
-    for (u32 i = 0; i < stmts.size(); ++i) {
+    for (u32 i = 0; i < stmts.size(); i += 1) {
         if (i)
             out << ",";
         out << sig_stmt(stmts[i]);

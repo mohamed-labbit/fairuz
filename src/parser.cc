@@ -113,10 +113,7 @@ Fa_Array<typename Fa_SymbolTable::Symbol*> Fa_SymbolTable::get_unused_symbols()
 }
 
 Fa_HashTable<Fa_StringRef, typename Fa_SymbolTable::Symbol, Fa_StringRefHash, Fa_StringRefEqual> const&
-Fa_SymbolTable::get_symbols() const
-{
-    return m_symbols;
-}
+Fa_SymbolTable::get_symbols() const { return m_symbols; }
 
 // semantic analyzer
 
@@ -718,13 +715,16 @@ Fa_ErrorOr<AST::Fa_Stmt*> Fa_Parser::parse_if_stmt()
             auto nested = parse_if_stmt();
             if (nested.has_error())
                 return nested.error();
+
             else_block = nested.m_value();
         } else {
             if (!consume(tok::Fa_TokenType::COLON))
                 return report_error(ErrorCode::EXPECTED_COLON_IF);
+
             auto m_else_stmt = parse_indented_block();
             if (m_else_stmt.has_error())
                 return m_else_stmt.error();
+
             else_block = m_else_stmt.m_value();
         }
     }
@@ -768,6 +768,7 @@ Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_assignment_expr()
             bool decl = !m_sema.get_current_scope()->is_defined(name_target->get_value());
             return Fa_ErrorOr<AST::Fa_Expr*>::from_value(Fa_makeAssignmentExpr(name_target, R.m_value(), decl));
         }
+
         return Fa_ErrorOr<AST::Fa_Expr*>::from_value(Fa_makeAssignmentExpr(m_target, R.m_value(), /*decl=*/false));
     }
 
@@ -811,6 +812,7 @@ Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_comparison_expr()
     if (current_token()->is_comparison_op()) {
         tok::Fa_TokenType op = m_lexer.m_current()->type();
         advance();
+
         auto R = parse_binary_expr();
         if (R.has_error())
             return R.error();
@@ -904,40 +906,6 @@ Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_postfix_expr()
             continue;
         }
 
-        // dict
-        if (check(tok::Fa_TokenType::LBRACE)) {
-            advance();
-
-            Fa_Array<std::pair<AST::Fa_Expr*, AST::Fa_Expr*>> content;
-
-            if (!check(tok::Fa_TokenType::RBRACE)) {
-                do {
-                    skip_newlines();
-                    if (check(tok::Fa_TokenType::RBRACE))
-                        break;
-
-                    auto first = parse_expression();
-                    if (first.has_error())
-                        return first.error();
-
-                    if (!consume(tok::Fa_TokenType::COLON))
-                        return report_error(ErrorCode::EXPECTED_COLON_DICT);
-
-                    auto second = parse_expression();
-                    if (second.has_error())
-                        return second.error();
-
-                    content.push({ first.m_value(), second.m_value() });
-                } while (match(tok::Fa_TokenType::COMMA) && !check(tok::Fa_TokenType::RBRACE));
-            }
-
-            if (!consume(tok::Fa_TokenType::RBRACE))
-                return report_error(ErrorCode::EXPECTED_RBRACE_EXPR);
-
-            m_expr = AST::Fa_makeDict(content);
-            continue;
-        }
-
         if (check(tok::Fa_TokenType::LBRACKET)) {
             advance();
 
@@ -998,7 +966,7 @@ Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_primary_expr()
         return AST::Fa_makeLiteralBool(v == "صحيح" ? true : false);
     }
 
-    if (check(tok::Fa_TokenType::KW_NONE)) {
+    if (check(tok::Fa_TokenType::KW_NIL)) {
         advance();
         return AST::Fa_makeLiteralNil();
     }
@@ -1030,6 +998,11 @@ Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_primary_expr()
     if (check(tok::Fa_TokenType::LBRACKET)) {
         advance();
         return parse_list_literal();
+    }
+
+    if (check(tok::Fa_TokenType::LBRACE)) {
+        advance();
+        return parse_dict_literal();
     }
 
     if (we_done())
@@ -1064,6 +1037,38 @@ Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_list_literal()
     return Fa_makeList(std::move(m_elements));
 }
 
+Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_dict_literal()
+{
+    Fa_Array<std::pair<AST::Fa_Expr*, AST::Fa_Expr*>> content;
+
+    if (!check(tok::Fa_TokenType::RBRACE)) {
+        do {
+            skip_newlines();
+            if (check(tok::Fa_TokenType::RBRACE))
+                break;
+
+            auto first = parse_expression();
+            if (first.has_error())
+                return first.error();
+
+            if (!consume(tok::Fa_TokenType::COLON))
+                return report_error(ErrorCode::EXPECTED_COLON_DICT);
+
+            auto second = parse_expression();
+            if (second.has_error())
+                return second.error();
+
+            content.push({ first.m_value(), second.m_value() });
+            skip_newlines();
+        } while (match(tok::Fa_TokenType::COMMA) && !check(tok::Fa_TokenType::RBRACE));
+    }
+
+    if (!consume(tok::Fa_TokenType::RBRACE))
+        return report_error(ErrorCode::EXPECTED_RBRACE_EXPR);
+
+    return AST::Fa_makeDict(std::move(content));
+}
+
 Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_conditional_expr()
 {
     return parse_logical_expr();
@@ -1078,6 +1083,7 @@ bool Fa_Parser::match(tok::Fa_TokenType const m_type)
         advance();
         return true;
     }
+
     return false;
 }
 

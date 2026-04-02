@@ -59,7 +59,7 @@ bool parseArgs(int argc, char** argv, Options& options)
         return true;
     }
 
-    for (int i = 1; i < argc; ++i) {
+    for (int i = 1; i < argc; i += 1) {
         std::string_view arg(argv[i]);
 
         if (arg == "-h" || arg == "--help") {
@@ -103,7 +103,7 @@ bool parseArgs(int argc, char** argv, Options& options)
 void printAst(fairuz::Fa_Array<fairuz::AST::Fa_Stmt*> const& m_statements)
 {
     fairuz::AST::ASTPrinter printer(true);
-    for (u32 i = 0; i < m_statements.size(); ++i)
+    for (u32 i = 0; i < m_statements.size(); i += 1)
         printer.print(m_statements[i]);
 }
 

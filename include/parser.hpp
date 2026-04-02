@@ -165,6 +165,7 @@ public:
     Fa_ErrorOr<AST::Fa_Expr*> parse_expression();
     Fa_ErrorOr<AST::Fa_Expr*> parse_assignment_expr();
     Fa_ErrorOr<AST::Fa_Expr*> parse_list_literal();
+    Fa_ErrorOr<AST::Fa_Expr*> parse_dict_literal();
     Fa_ErrorOr<AST::Fa_Expr*> parse_conditional_expr();
     Fa_ErrorOr<AST::Fa_Expr*> parse_logical_expr();
     Fa_ErrorOr<AST::Fa_Expr*> parse_logical_expr_precedence(unsigned int min_precedence);

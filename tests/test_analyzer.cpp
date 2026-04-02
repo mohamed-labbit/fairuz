@@ -21,7 +21,7 @@ protected:
         size_t count = 0;
         for (Fa_SemanticAnalyzer::Issue const& issue : analyzer.get_issues()) {
             if (issue.severity == sev)
-                count++;
+                count += 1;
         }
         return count;
     }
@@ -337,7 +337,7 @@ TEST_F(SemanticAnalyzerTest, VariableFlowAnalysis)
     size_t unused_y_count = 0;
     for (Fa_SemanticAnalyzer::Issue const& issue : m_issues) {
         if (issue.message.find('y') && issue.message.find("Unused"))
-            unused_y_count++;
+            unused_y_count += 1;
     }
 
     EXPECT_GT(unused_y_count, 0);

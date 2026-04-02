@@ -23,7 +23,7 @@ std::string as_std_string(Fa_Value m_value)
 {
     EXPECT_TRUE(Fa_IS_STRING(m_value));
     if (!Fa_IS_STRING(m_value))
-        return {};
+        return { };
     return std::string(Fa_AS_STRING(m_value)->str.data(), Fa_AS_STRING(m_value)->str.len());
 }
 
@@ -216,6 +216,32 @@ TEST(StdlibRegression, StrStringifiesListsLikePrint)
     EXPECT_EQ(as_std_string(result), R"([1, false, "z"])");
 }
 
+TEST(StdlibRegression, StrStringifiesDictsLikePrint)
+{
+    Fa_VM vm;
+    Fa_Value dict = vm.Fa_dict(0, nullptr);
+    Fa_AS_DICT(dict)->data.push({ Fa_MAKE_STRING("k"), Fa_MAKE_INTEGER(3) });
+    Fa_AS_DICT(dict)->data.push({ Fa_MAKE_STRING("name"), Fa_MAKE_STRING("fairuz") });
+
+    Fa_Value result = vm.Fa_str(1, &dict);
+
+    ASSERT_TRUE(Fa_IS_STRING(result));
+    EXPECT_EQ(as_std_string(result), R"({"k": 3, "name": "fairuz"})");
+}
+
+TEST(StdlibRegression, LenSupportsDicts)
+{
+    Fa_VM vm;
+    Fa_Value dict = vm.Fa_dict(0, nullptr);
+    Fa_AS_DICT(dict)->data.push({ Fa_MAKE_STRING("a"), Fa_MAKE_INTEGER(1) });
+    Fa_AS_DICT(dict)->data.push({ Fa_MAKE_STRING("b"), Fa_MAKE_INTEGER(2) });
+
+    Fa_Value result = vm.Fa_len(1, &dict);
+
+    ASSERT_TRUE(Fa_IS_INTEGER(result));
+    EXPECT_EQ(Fa_AS_INTEGER(result), 2);
+}
+
 TEST(StdlibRegression, StrScalarConversionsMatchSurfaceSyntax)
 {
     Fa_VM vm;
@@ -256,7 +282,7 @@ TEST(StdlibPerf, SplitJoinRoundTripLargeCsv)
     Fa_VM vm;
     std::string csv;
     csv.reserve(32 * 2000);
-    for (int i = 0; i < 2000; ++i) {
+    for (int i = 0; i < 2000; i += 1) {
         if (i)
             csv += ',';
         csv += "field";
@@ -289,7 +315,7 @@ TEST(StdlibPerf, LenOnLargeString100kCalls)
 
     auto start = std::chrono::high_resolution_clock::now();
     i64 last = -1;
-    for (int i = 0; i < 100000; ++i) {
+    for (int i = 0; i < 100000; i += 1) {
         Fa_Value m_value = vm.Fa_len(1, &arg);
         ASSERT_TRUE(Fa_IS_INTEGER(m_value));
         last = Fa_AS_INTEGER(m_value);
@@ -310,7 +336,7 @@ TEST(StdlibPerf, TrimLargePaddedString50kCalls)
 
     auto start = std::chrono::high_resolution_clock::now();
     std::string last;
-    for (int i = 0; i < 50000; ++i)
+    for (int i = 0; i < 50000; i += 1)
         last = as_std_string(vm.Fa_trim(1, &arg));
     double total_us = elapsed_us(start);
 

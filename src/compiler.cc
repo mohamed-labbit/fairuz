@@ -2,9 +2,6 @@
 
 #include "../include/compiler.hpp"
 #include "../include/optim.hpp"
-#include "ast.hpp"
-#include "macros.hpp"
-#include "opcode.hpp"
 
 #include "gtest/gtest.h"
 #include <algorithm>
@@ -22,6 +19,7 @@ static bool is_terminal_top_level_call(AST::Fa_Stmt const* s)
     auto const* expr_stmt = dynamic_cast<AST::Fa_ExprStmt const*>(s);
     if (!expr_stmt)
         return false;
+
     return dynamic_cast<AST::Fa_CallExpr const*>(expr_stmt->get_expr()) != nullptr;
 }
 
@@ -43,7 +41,7 @@ Fa_Chunk* Compiler::compile(Fa_Array<AST::Fa_Stmt*> const& stmts)
     state.enclosing = nullptr;
     m_current = &state;
 
-    for (size_t i = 0; i < stmts.size(); ++i) {
+    for (size_t i = 0; i < stmts.size(); i += 1) {
         AST::Fa_Stmt const* stmt = stmts[i];
         if (i + 1 == stmts.size() && stmt && !state.m_is_dead && is_terminal_top_level_call(stmt)) {
             auto const* expr_stmt = static_cast<AST::Fa_ExprStmt const*>(stmt);
@@ -109,12 +107,14 @@ void Compiler::compile_stmt(AST::Fa_Stmt const* s)
 void Compiler::compile_block(AST::Fa_BlockStmt const* s)
 {
     begin_scope();
+
     for (AST::Fa_Stmt const* child : s->get_statements())
         compile_stmt(child);
 
     Fa_SourceLocation loc = { 1, 1, 0 };
     if (!s->get_statements().empty() && s->get_statements().back())
         loc = SRC_LOC(s->get_statements().back());
+
     end_scope(loc);
 }
 
@@ -168,6 +168,7 @@ void Compiler::compile_if(AST::Fa_IfStmt const* s)
             compile_stmt(s->get_then());
         else if (AST::Fa_Stmt* m_else_stmt = s->get_else())
             compile_stmt(m_else_stmt);
+
         m_current->m_is_dead = incoming_dead;
         return;
     }
@@ -205,12 +206,14 @@ void Compiler::compile_while(AST::Fa_WhileStmt const* s)
             emit(Fa_make_AsBx(Fa_OpCode::LOOP, 0, static_cast<i32>(loop_start) - static_cast<i32>(current_offset()) - 1), loc);
             pop_loop(current_offset(), loop_start, loc.m_line);
         }
+
         m_current->m_is_dead = incoming_dead;
         return;
     }
 
     u32 loop_start = current_offset();
     push_loop(loop_start);
+
     {
         RegMark mark(m_current);
         u8 cond = any_reg(compile_expr_i(s->get_condition()), loc);
@@ -219,6 +222,7 @@ void Compiler::compile_while(AST::Fa_WhileStmt const* s)
         emit(Fa_make_AsBx(Fa_OpCode::LOOP, 0, static_cast<i32>(loop_start) - static_cast<i32>(current_offset()) - 1), loc);
         patch_jump(exit_jump);
     }
+
     pop_loop(current_offset(), loop_start, loc.m_line);
     m_current->m_is_dead = incoming_dead;
 }
@@ -249,11 +253,12 @@ void Compiler::compile_function_def(AST::Fa_FunctionDef const* f)
     begin_scope();
     if (f->has_parameters()) {
         for (AST::Fa_Expr const* param : f->get_parameters()) {
-            auto const* param_name = dynamic_cast<AST::Fa_NameExpr const*>(param);
+            auto param_name = dynamic_cast<AST::Fa_NameExpr const*>(param);
             if (!param_name) {
                 diagnostic::emit(CompilerError::INVALID_FUNCTION_PARAMETER);
                 continue;
             }
+
             u8 m_reg = alloc_register();
             declare_local(param_name->get_value(), m_reg);
         }
@@ -269,10 +274,12 @@ void Compiler::compile_function_def(AST::Fa_FunctionDef const* f)
 
     u8 dst = alloc_register();
     emit(Fa_make_ABx(Fa_OpCode::CLOSURE, dst, fn_idx), loc);
+
     if (m_current && m_current->is_top_level) {
         u16 name_idx = intern_string(m_name->get_value());
         emit(Fa_make_ABx(Fa_OpCode::STORE_GLOBAL, dst, name_idx), loc);
     }
+
     declare_local(m_name->get_value(), dst);
 }
 
@@ -310,7 +317,7 @@ void Compiler::compile_return(AST::Fa_ReturnStmt const* s)
 void Compiler::compile_for(AST::Fa_ForStmt const* s)
 {
     Fa_SourceLocation loc = SRC_LOC(s);
-    auto const* m_target = dynamic_cast<AST::Fa_NameExpr const*>(s->get_target());
+    auto m_target = dynamic_cast<AST::Fa_NameExpr const*>(s->get_target());
     if (!m_target) {
         diagnostic::emit(CompilerError::INVALID_ASSIGNMENT_TARGET, "for loop target must be a name");
         return;
@@ -319,8 +326,8 @@ void Compiler::compile_for(AST::Fa_ForStmt const* s)
     bool incoming_dead = m_current->m_is_dead;
 
     begin_scope();
-
     u8 iter_reg = alloc_register();
+
     {
         declare_local("__for_iter", iter_reg);
         RegMark mark(m_current);
@@ -330,40 +337,30 @@ void Compiler::compile_for(AST::Fa_ForStmt const* s)
     u8 len_reg = alloc_register();
     declare_local("__for_len", len_reg);
     emit(Fa_make_ABC(Fa_OpCode::LIST_LEN, len_reg, iter_reg, 0), loc);
-
     u8 index_reg = alloc_register();
     declare_local("__for_index", index_reg);
     emit_load_value(index_reg, Fa_MAKE_INTEGER(0), loc);
-
     u8 target_reg = alloc_register();
     declare_local(m_target->get_value(), target_reg);
-
     u8 cond_reg = alloc_register();
     declare_local("__for_cond", cond_reg);
-
     u8 step_reg = alloc_register();
     declare_local("__for_step", step_reg);
     emit_load_value(step_reg, Fa_MAKE_INTEGER(1), loc);
-
     u32 loop_start = current_offset();
     push_loop(loop_start);
-
     emit(Fa_make_ABC(Fa_OpCode::OP_LT, cond_reg, index_reg, len_reg), loc);
     emit(Fa_make_ABC(Fa_OpCode::NOP, current_chunk()->alloc_ic_slot(), 0, 0), loc);
     u32 exit_jump = emit_jump(Fa_OpCode::JUMP_IF_FALSE, cond_reg, loc);
-
     emit(Fa_make_ABC(Fa_OpCode::LIST_GET, target_reg, iter_reg, index_reg), loc);
     compile_stmt(s->get_body());
-
     u32 continue_target = current_offset();
     emit(Fa_make_ABC(Fa_OpCode::OP_ADD, index_reg, index_reg, step_reg), loc);
     emit(Fa_make_ABC(Fa_OpCode::NOP, current_chunk()->alloc_ic_slot(), 0, 0), loc);
     emit(Fa_make_AsBx(Fa_OpCode::LOOP, 0, static_cast<i32>(loop_start) - static_cast<i32>(current_offset()) - 1), loc);
-
     patch_jump(exit_jump);
     pop_loop(current_offset(), continue_target, loc.m_line);
     end_scope(loc);
-
     m_current->m_is_dead = incoming_dead;
 }
 
@@ -489,36 +486,45 @@ Fa_ExprResult Compiler::compile_binary_i(AST::Fa_BinaryExpr const* e)
     AST::Fa_BinaryOp op = e->get_operator();
     if (op == AST::Fa_BinaryOp::OP_AND) {
         u8 dst = alloc_register();
+
         {
             RegMark mark(m_current);
             discharge(compile_expr_i(e->get_left()), dst, loc);
         }
+
         u32 skip = emit_jump(Fa_OpCode::JUMP_IF_FALSE, dst, loc);
+
         {
             RegMark mark(m_current);
             discharge(compile_expr_i(e->get_right()), dst, loc);
         }
+
         patch_jump(skip);
         return Fa_ExprResult::reg(dst);
     }
 
     if (op == AST::Fa_BinaryOp::OP_OR) {
         u8 dst = alloc_register();
+
         {
             RegMark mark(m_current);
             discharge(compile_expr_i(e->get_left()), dst, loc);
         }
+
         u32 skip = emit_jump(Fa_OpCode::JUMP_IF_TRUE, dst, loc);
+
         {
             RegMark mark(m_current);
             discharge(compile_expr_i(e->get_right()), dst, loc);
         }
+
         patch_jump(skip);
         return Fa_ExprResult::reg(dst);
     }
 
     Fa_OpCode bc_op = Fa_OpCode::NOP;
     bool swapped = false;
+
     switch (op) {
     case AST::Fa_BinaryOp::OP_ADD:
         bc_op = Fa_OpCode::OP_ADD;
@@ -579,11 +585,12 @@ Fa_ExprResult Compiler::compile_binary_i(AST::Fa_BinaryExpr const* e)
     }
 
     if (bc_op == Fa_OpCode::OP_LSHIFT || bc_op == Fa_OpCode::OP_RSHIFT) {
-        auto const* amount_expr = dynamic_cast<AST::Fa_LiteralExpr const*>(e->get_right());
+        auto amount_expr = dynamic_cast<AST::Fa_LiteralExpr const*>(e->get_right());
         if (!amount_expr || !amount_expr->is_integer()) {
             diagnostic::emit(CompilerError::SHIFT_AMOUNT_NOT_CONSTANT);
             return Fa_ExprResult::knil();
         }
+
         i64 amount = amount_expr->get_int();
         if (amount < 0 || amount > 63) {
             diagnostic::emit(CompilerError::SHIFT_AMOUNT_OUT_OF_RANGE, std::to_string(amount));
@@ -601,6 +608,7 @@ Fa_ExprResult Compiler::compile_binary_i(AST::Fa_BinaryExpr const* e)
     RegMark mark(m_current);
     u8 lhs = any_reg(compile_expr_i(e->get_left()), loc);
     u8 rhs = any_reg(compile_expr_i(e->get_right()), loc);
+
     if (swapped)
         std::swap(lhs, rhs);
 
@@ -625,7 +633,7 @@ Fa_ExprResult Compiler::compile_assign_i(AST::Fa_AssignmentExpr const* e)
         return Fa_ExprResult::reg(value_reg);
     }
 
-    auto const* m_name = dynamic_cast<AST::Fa_NameExpr const*>(m_target);
+    auto m_name = dynamic_cast<AST::Fa_NameExpr const*>(m_target);
     if (!m_name) {
         diagnostic::emit(CompilerError::INVALID_ASSIGNMENT_TARGET);
         return Fa_ExprResult::knil();
@@ -654,6 +662,7 @@ Fa_ExprResult Compiler::compile_call_impl(AST::Fa_CallExpr const* e, u8* dst, bo
     for (AST::Fa_Expr const* arg : e->get_args()) {
         u8 arg_reg = alloc_register();
         discharge(compile_expr_i(arg), arg_reg, loc);
+        m_current->free_regs_to(arg_reg + 1);
     }
 
     u8 argc = static_cast<u8>(e->get_args().size());
@@ -691,16 +700,31 @@ Fa_ExprResult Compiler::compile_index_i(AST::Fa_IndexExpr const* e)
     RegMark mark(m_current);
     u8 object_reg = any_reg(compile_expr_i(e->get_object()), loc);
     u8 index_reg = any_reg(compile_expr_i(e->get_index()), loc);
-
-    u32 pc = emit(Fa_make_ABC(Fa_OpCode::OP_INDEX, 0, object_reg, index_reg), loc);
+    u32 pc = emit(Fa_make_ABC(Fa_OpCode::INDEX, 0, object_reg, index_reg), loc);
     return Fa_ExprResult::reloc(pc);
 }
 
 Fa_ExprResult Compiler::compile_dict_i(AST::Fa_DictExpr const* e)
 {
-    (void)e;
-    diagnostic::emit(CompilerError::INVALID_EXPRESSION_NODE);
-    return Fa_ExprResult::knil();
+    Fa_SourceLocation loc = SRC_LOC(e);
+    u8 fn_reg = alloc_register();
+    u16 kidx = intern_string("جدول");
+    emit(Fa_make_ABx(Fa_OpCode::LOAD_GLOBAL, fn_reg, kidx), loc);
+
+    RegMark mark(m_current);
+    for (auto const& [key, value] : e->get_content()) {
+        u8 key_reg = alloc_register();
+        discharge(compile_expr_i(key), key_reg, SRC_LOC(key));
+
+        u8 value_reg = alloc_register();
+        discharge(compile_expr_i(value), value_reg, SRC_LOC(value));
+    }
+
+    u8 argc = static_cast<u8>(e->get_content().size() * 2);
+    u8 ic = current_chunk()->alloc_ic_slot();
+    emit(Fa_make_ABC(Fa_OpCode::IC_CALL, fn_reg, argc, ic), loc);
+    m_current->free_regs_to(fn_reg + 1);
+    return Fa_ExprResult::reg(fn_reg);
 }
 
 void Compiler::discharge(Fa_ExprResult const& r, u8 dst, Fa_SourceLocation loc)
@@ -749,6 +773,7 @@ u8 Compiler::compile_expr(AST::Fa_Expr const* e, u8* dst)
         discharge(r, *dst, loc);
         return *dst;
     }
+
     return any_reg(r, loc);
 }
 
@@ -760,6 +785,7 @@ u8 Compiler::compile_literal(AST::Fa_LiteralExpr const* e, u8* dst)
         discharge(r, *dst, loc);
         return *dst;
     }
+
     return any_reg(r, loc);
 }
 
@@ -771,6 +797,7 @@ u8 Compiler::compile_name(AST::Fa_NameExpr const* e, u8* dst)
         discharge(r, *dst, loc);
         return *dst;
     }
+
     return any_reg(r, loc);
 }
 
@@ -782,6 +809,7 @@ u8 Compiler::compile_unary(AST::Fa_UnaryExpr const* e, u8* dst)
         discharge(r, *dst, loc);
         return *dst;
     }
+
     return any_reg(r, loc);
 }
 
@@ -793,6 +821,7 @@ u8 Compiler::compile_binary(AST::Fa_BinaryExpr const* e, u8* dst)
         discharge(r, *dst, loc);
         return *dst;
     }
+
     return any_reg(r, loc);
 }
 
@@ -804,6 +833,7 @@ u8 Compiler::compile_assignment_expr(AST::Fa_AssignmentExpr const* e, u8* dst)
         discharge(r, *dst, loc);
         return *dst;
     }
+
     return any_reg(r, loc);
 }
 
@@ -821,6 +851,7 @@ u8 Compiler::compile_list(AST::Fa_ListExpr const* e, u8* dst)
         discharge(r, *dst, loc);
         return *dst;
     }
+
     return any_reg(r, loc);
 }
 
@@ -832,6 +863,7 @@ u8 Compiler::compile_index(AST::Fa_IndexExpr const* e, u8* dst)
         discharge(r, *dst, loc);
         return *dst;
     }
+
     return any_reg(r, loc);
 }
 
@@ -843,18 +875,13 @@ u8 Compiler::compile_dict(AST::Fa_DictExpr const* e, u8* dst)
         discharge(r, *dst, loc);
         return *dst;
     }
+
     return any_reg(r, loc);
 }
 
-u8 Compiler::error_reg() const
-{
-    return 0;
-}
+u8 Compiler::error_reg() const { return 0; }
 
-u8 Compiler::ensure_reg(u8 const* m_reg)
-{
-    return m_reg ? *m_reg : alloc_register();
-}
+u8 Compiler::ensure_reg(u8 const* m_reg) { return m_reg ? *m_reg : alloc_register(); }
 
 u8 Compiler::alloc_register()
 {
@@ -863,27 +890,29 @@ u8 Compiler::alloc_register()
         diagnostic::emit(CompilerError::TOO_MANY_REGISTERS, std::string(m_current->func_name.data(), m_current->func_name.len()));
         return 0;
     }
+
     return m_reg;
 }
 
-void Compiler::declare_local(Fa_StringRef const& m_name, u8 m_reg)
-{
-    m_current->locals.push({ m_name, m_current->scope_depth, m_reg });
-}
+void Compiler::declare_local(Fa_StringRef const& m_name, u8 m_reg) { m_current->locals.push({ m_name, m_current->scope_depth, m_reg }); }
 
 Compiler::VarInfo Compiler::resolve_name(Fa_StringRef const& m_name)
 {
     auto const& locals = m_current->locals;
-    for (auto i = static_cast<int>(locals.size()) - 1; i >= 0; --i) {
+    for (auto i = static_cast<int>(locals.size()) - 1; i >= 0; i -= 1) {
         if (locals[i].m_name == m_name)
             return { VarInfo::Kind::LOCAL, locals[i].m_reg };
     }
 
-    return { VarInfo::Kind::GLOBAL, 0 };
+    return VarInfo {
+        .kind = VarInfo::Kind::GLOBAL,
+        .m_index = 0
+    };
 }
 
 int Compiler::resolve_upvalue(CompilerState* state, Fa_StringRef const& m_name)
 {
+    // stub
     (void)state;
     (void)m_name;
     return -1;
@@ -891,21 +920,16 @@ int Compiler::resolve_upvalue(CompilerState* state, Fa_StringRef const& m_name)
 
 int Compiler::add_upvalue(CompilerState* state, bool is_local, u8 m_index)
 {
+    // stub
     (void)state;
     (void)is_local;
     (void)m_index;
     return -1;
 }
 
-u32 Compiler::emit(u32 instr, Fa_SourceLocation loc)
-{
-    return current_chunk()->emit(instr, loc);
-}
+u32 Compiler::emit(u32 instr, Fa_SourceLocation loc) { return current_chunk()->emit(instr, loc); }
 
-u32 Compiler::emit_jump(Fa_OpCode op, u8 cond, Fa_SourceLocation loc)
-{
-    return emit(Fa_make_AsBx(op, cond, 0), loc);
-}
+u32 Compiler::emit_jump(Fa_OpCode op, u8 cond, Fa_SourceLocation loc) { return emit(Fa_make_AsBx(op, cond, 0), loc); }
 
 void Compiler::patch_jump(u32 idx)
 {
@@ -913,10 +937,7 @@ void Compiler::patch_jump(u32 idx)
         diagnostic::emit(CompilerError::JUMP_OFFSET_OVERFLOW, diagnostic::Severity::FATAL);
 }
 
-void Compiler::push_loop(u32 loop_start)
-{
-    m_current->loop_stack.push({ { }, { }, loop_start });
-}
+void Compiler::push_loop(u32 loop_start) { m_current->loop_stack.push({ { }, { }, loop_start }); }
 
 void Compiler::pop_loop(u32 loop_exit, u32 continue_target, u32 m_line)
 {
@@ -965,30 +986,22 @@ void Compiler::emit_load_value(u8 dst, Fa_Value v, Fa_SourceLocation loc)
     emit(Fa_make_ABx(Fa_OpCode::LOAD_CONST, dst, current_chunk()->add_constant(v)), loc);
 }
 
-Fa_Chunk* Compiler::current_chunk() const
-{
-    return m_current->chunk;
-}
+Fa_Chunk* Compiler::current_chunk() const { return m_current->chunk; }
 
-u32 Compiler::current_offset() const
-{
-    return current_chunk()->code.size();
-}
+u32 Compiler::current_offset() const { return current_chunk()->code.size(); }
 
-void Compiler::begin_scope()
-{
-    ++m_current->scope_depth;
-}
+void Compiler::begin_scope() { m_current->scope_depth += 1; }
 
 void Compiler::end_scope(Fa_SourceLocation loc)
 {
     (void)loc;
-    unsigned int depth = --m_current->scope_depth;
+    m_current->scope_depth -= 1;
+    unsigned int depth = m_current->scope_depth;
     auto& locals = m_current->locals;
     size_t pop_from = locals.size();
 
     while (pop_from > 0 && locals[pop_from - 1].depth > depth)
-        --pop_from;
+        pop_from -= 1;
 
     if (pop_from < locals.size())
         m_current->next_reg = locals[pop_from].m_reg;
@@ -1000,14 +1013,8 @@ u32 Compiler::intern_string(Fa_StringRef const& str)
 {
     Fa_Chunk* chunk = current_chunk();
     auto key = std::make_pair(str, chunk);
-    /*
-     *
-    auto it = StringCache_.find(key);
-    if (it != StringCache_.end())
-        return it->second;
-    */
-
-    auto it = m_string_cache.find_ptr(key);
+    if (u16* idx = m_string_cache.find_ptr(key))
+        return *idx;
 
     Fa_ObjString* obj = Fa_MAKE_OBJ_STRING(str);
     u16 idx = chunk->add_constant(Fa_MAKE_OBJECT(obj));

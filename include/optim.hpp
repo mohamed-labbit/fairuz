@@ -67,11 +67,11 @@ static std::optional<Fa_Value> _try_fold_binary(AST::Fa_BinaryExpr const* e)
 
     bool both_ints = Fa_IS_INTEGER(*L) && Fa_IS_INTEGER(*R);
 
-    f64 ld = Fa_AS_DOUBLE(*L);
-    f64 rd = Fa_AS_DOUBLE(*R);
+    f64 ld = Fa_AS_DOUBLE_ANY(*L);
+    f64 rd = Fa_AS_DOUBLE_ANY(*R);
 
-    auto li = Fa_IS_INTEGER(*L) ? Fa_AS_INTEGER(*L) : static_cast<i64>(Fa_AS_DOUBLE(*L));
-    auto ri = Fa_IS_INTEGER(*R) ? Fa_AS_INTEGER(*R) : static_cast<i64>(Fa_AS_DOUBLE(*R));
+    auto li = Fa_IS_INTEGER(*L) ? Fa_AS_INTEGER(*L) : static_cast<i64>(Fa_AS_DOUBLE_ANY(*L));
+    auto ri = Fa_IS_INTEGER(*R) ? Fa_AS_INTEGER(*R) : static_cast<i64>(Fa_AS_DOUBLE_ANY(*R));
 
     switch (op) {
     case AST::Fa_BinaryOp::OP_ADD:

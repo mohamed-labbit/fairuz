@@ -6,33 +6,33 @@ namespace fairuz {
 void DetailedAllocStats::record_allocation_size(u64 m_size)
 {
     if (m_size <= 8)
-        Small8ByteAllocs++;
+        Small8ByteAllocs += 1;
     else if (m_size <= 16)
-        Small16ByteAllocs++;
+        Small16ByteAllocs += 1;
     else if (m_size <= 32)
-        Small32ByteAllocs++;
+        Small32ByteAllocs += 1;
     else if (m_size <= 64)
-        Small64ByteAllocs++;
+        Small64ByteAllocs += 1;
     else if (m_size <= 128)
-        Small128ByteAllocs++;
+        Small128ByteAllocs += 1;
     else if (m_size <= 256)
-        Small256ByteAllocs++;
+        Small256ByteAllocs += 1;
     else if (m_size <= 512)
-        Medium512ByteAllocs++;
+        Medium512ByteAllocs += 1;
     else if (m_size <= 1024)
-        Medium1KBAllocs++;
+        Medium1KBAllocs += 1;
     else if (m_size <= 2048)
-        Medium2KBAllocs++;
+        Medium2KBAllocs += 1;
     else if (m_size <= 4096)
-        Medium4KBAllocs++;
+        Medium4KBAllocs += 1;
     else if (m_size <= 8192)
-        Large8KBAllocs++;
+        Large8KBAllocs += 1;
     else if (m_size <= 16384)
-        Large16KBAllocs++;
+        Large16KBAllocs += 1;
     else if (m_size <= 32768)
-        Large32KBAllocs++;
+        Large32KBAllocs += 1;
     else
-        LargeHugeAllocs++;
+        LargeHugeAllocs += 1;
 }
 
 void DetailedAllocStats::update_peak(u64 m_current)
@@ -119,7 +119,7 @@ std::string StatsFormatter::format_bytes(u64 bytes, int precision)
 
     while (m_value >= 1024.0 && idx < num_suffixes - 1) {
         m_value /= 1024.0;
-        ++idx;
+        idx += 1;
     }
 
     std::ostringstream oss;
@@ -239,7 +239,7 @@ void StatsPrinter::print_core_metrics(std::ostream& os) const
     using std::m_right;
     using std::setw;
 
-    os << "\n+-- Core Metrics "
+    os << "\n+Core -- Metrics "
           "--------------------------------------------------------------------+"
           "\n";
     print_metric(os, "Total Allocations", StatsFormatter::format_number(m_stats.TotalAllocations));
@@ -266,7 +266,7 @@ void StatsPrinter::print_size_distribution(std::ostream& os) const
     if (m_stats.TotalAllocations == 0)
         return;
 
-    os << "\n+-- Allocation Size Distribution "
+    os << "\n+Allocation -- Size Distribution "
           "----------------------------------------------------+\n";
 
     struct SizeBucket {
@@ -310,7 +310,7 @@ void StatsPrinter::print_performance_metrics(std::ostream& os) const
     // u64 fast_total = fast_hits + fast_misses;
     // u64 free_total = free_hits + free_misses;
 
-    os << "\n+-- Performance Metrics "
+    os << "\n+Performance -- Metrics "
           "-------------------------------------------------------------+\n";
 
     // if (fast_total > 0)
@@ -353,7 +353,7 @@ void StatsPrinter::print_fragmentation_analysis(std::ostream& os) const
     if (m_stats.InternalFragmentation == 0 && m_stats.WastedCapacity == 0)
         return;
 
-    os << "\n+-- Fragmentation Analysis "
+    os << "\n+Fragmentation -- Analysis "
           "----------------------------------------------------------+\n";
 
     if (m_stats.InternalFragmentation > 0) {
@@ -374,7 +374,7 @@ void StatsPrinter::print_timing_statistics(std::ostream& os) const
     if (m_stats.TotalAllocTimeNs == 0 && m_stats.TotalDeallocTimeNs == 0)
         return;
 
-    os << "\n+-- Timing Statistics "
+    os << "\n+Timing -- Statistics "
           "---------------------------------------------------------------+\n";
 
     if (m_stats.TotalAllocations > 0 && m_stats.TotalAllocTimeNs > 0) {
@@ -402,7 +402,7 @@ void StatsPrinter::print_error_statistics(std::ostream& os) const
     if (m_stats.AllocationFailures == 0 && m_stats.DoubleFreeAttempts == 0 && m_stats.InvalidFreeAttempts == 0 && m_stats.ZeroByteRequests == 0)
         return;
 
-    os << "\n+-- Error Statistics "
+    os << "\n+Error -- Statistics "
           "----------------------------------------------------------------+\n";
 
     if (m_stats.AllocationFailures > 0)

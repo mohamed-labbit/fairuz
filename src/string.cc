@@ -1,8 +1,8 @@
 /// string.cc
 
 #include "../include/string.hpp"
-#include "../include/util.hpp"
 #include "../include/diagnostic.hpp"
+#include "../include/util.hpp"
 
 #include <cassert>
 #include <charconv>
@@ -21,7 +21,7 @@ StringBase* empty_string_singleton() noexcept
         return g_empty_string;
 
     g_empty_string = new (g_empty_string_storage) StringBase();
-    for (int i = 0; i < 1024; ++i)
+    for (int i = 0; i < 1024; i += 1)
         g_empty_string->increment();
 
     return g_empty_string;
@@ -161,10 +161,11 @@ Fa_StringRef::Fa_StringRef(StringBase* data, size_t m_offset, size_t m_length)
     , m_offset(m_offset)
     , m_length(m_length)
 {
-    if (!m_length) {
-        size_t const len = ::strlen(data->ptr());
-        m_length = len > m_offset ? len - m_offset : 0;
+    if (this->m_length == 0) {
+        size_t const len = ::strlen(m_string_data->ptr());
+        this->m_length = len > this->m_offset ? len - this->m_offset : 0;
     }
+
     m_string_data->increment();
 }
 
@@ -207,6 +208,7 @@ Fa_StringRef::~Fa_StringRef()
         return;
 
     m_string_data->decrement();
+
     if (m_string_data->reference_count() == 0) {
         m_string_data->~StringBase();
         get_allocator().deallocate_object<StringBase>(m_string_data);
@@ -243,7 +245,6 @@ void Fa_StringRef::expand(size_t const new_size)
     size_t old_len = len();
 
     size_t new_capacity = (cap() < 1024) ? std::max(new_size + 1, cap() * 2) : std::max(new_size + 1, cap() + cap() / 2);
-
     char* new_ptr = get_allocator().allocate_array<char>(new_capacity);
 
     if (old_ptr && old_len > 0)
@@ -255,15 +256,15 @@ void Fa_StringRef::expand(size_t const new_size)
     m_string_data->m_storage.heap.ptr = new_ptr;
     m_string_data->m_storage.heap.m_cap = new_capacity;
     m_string_data->m_is_heap = true;
-    m_offset = 0;
-
     m_string_data->ptr()[m_length] = 0;
+    m_offset = 0;
 }
 
 void Fa_StringRef::reserve(size_t const new_capacity)
 {
     if (new_capacity <= cap())
         return;
+
     expand(new_capacity);
 }
 
@@ -273,12 +274,13 @@ void Fa_StringRef::erase(size_t const at)
         return;
 
     if (at == 0) {
-        ++m_offset;
-        --m_length;
+        m_offset += 1;
+        m_length -= 1;
         return;
     }
+
     if (at == m_length - 1) {
-        --m_length;
+        m_length -= 1;
         return;
     }
 
@@ -287,8 +289,7 @@ void Fa_StringRef::erase(size_t const at)
         return;
 
     ::memmove(data() + at, data() + at + 1, len() - at - 1);
-    --m_length;
-
+    m_length -= 1;
     m_string_data->ptr()[m_length] = 0;
 }
 
@@ -318,7 +319,8 @@ Fa_StringRef& Fa_StringRef::operator+=(char c)
         expand(m_length + 1);
 
     m_string_data->ptr()[m_offset + m_length] = c;
-    m_string_data->ptr()[++m_length] = 0;
+    m_length += 1;
+    m_string_data->ptr()[m_offset + m_length] = 0;
 
     return *this;
 }
@@ -327,6 +329,7 @@ char Fa_StringRef::operator[](size_t const i) const
 {
     if (UNLIKELY(i >= m_length))
         throw std::out_of_range("Fa_StringRef::operator[]: index out of bounds");
+
     return (*m_string_data)[i + m_offset];
 }
 
@@ -335,6 +338,7 @@ char& Fa_StringRef::operator[](size_t const i)
     ensure_unique();
     if (UNLIKELY(i >= m_length))
         throw std::out_of_range("Fa_StringRef::operator[]: index out of bounds");
+
     return (*m_string_data)[i + m_offset];
 }
 
@@ -350,6 +354,7 @@ char& Fa_StringRef::at(size_t const i)
     ensure_unique();
     if (UNLIKELY(i >= m_length))
         throw std::out_of_range("Fa_StringRef::at: index out of bounds");
+
     return (*m_string_data)[i + m_offset];
 }
 
@@ -358,7 +363,7 @@ bool Fa_StringRef::find(char const c) const noexcept
     char const* p = data();
     char const* m_end = p + m_length;
     while (p < m_end && *p != c)
-        ++p;
+        p += 1;
     return p < m_end;
 }
 
@@ -366,12 +371,15 @@ bool Fa_StringRef::find(Fa_StringRef const& s) const noexcept
 {
     if (s.empty() || s.len() > len())
         return false;
+
     size_t search_len = s.len();
     size_t max_start = len() - search_len;
-    for (size_t i = 0; i <= max_start; ++i) {
+
+    for (size_t i = 0; i <= max_start; i += 1) {
         if (::memcmp(data() + i, s.data(), search_len) == 0)
             return true;
     }
+
     return false;
 }
 
@@ -379,8 +387,10 @@ std::optional<size_t> Fa_StringRef::find_pos(char const c) const noexcept
 {
     char const* p = data();
     char const* m_end = p + m_length;
+
     while (p < m_end && *p != c)
-        ++p;
+        p += 1;
+
     return (p < m_end) ? std::optional<size_t>(p - data()) : std::nullopt;
 }
 
@@ -388,14 +398,14 @@ Fa_StringRef& Fa_StringRef::trim_whitespace(bool leading, bool trailing) noexcep
 {
     if (leading) {
         while (m_length > 0 && util::is_whitespace(data()[0])) {
-            ++m_offset;
-            --m_length;
+            m_offset += 1;
+            m_length -= 1;
         }
     }
 
     if (trailing) {
         while (m_length > 0 && util::is_whitespace(data()[m_length - 1]))
-            --m_length;
+            m_length -= 1;
     }
 
     return *this;
@@ -405,6 +415,7 @@ Fa_StringRef& Fa_StringRef::truncate(size_t const s) noexcept
 {
     if (s < m_length)
         m_length = s;
+
     return *this;
 }
 
@@ -440,13 +451,10 @@ Fa_StringRef Fa_StringRef::substr_copy(size_t start, size_t m_end) const
 {
     if (m_length == 0)
         return { };
-
     if (start > m_length)
         throw std::out_of_range("Fa_StringRef::substrCopy: start index out of range");
-
     if (m_end > m_length || m_end == SIZE_MAX)
         m_end = m_length;
-
     if (m_end < start)
         throw std::invalid_argument("Fa_StringRef::substrCopy: end must be >= start");
 
@@ -473,10 +481,8 @@ f64 Fa_StringRef::to_double(size_t* pos) const
 
     if (ec == std::errc::invalid_argument)
         throw std::invalid_argument("Fa_StringRef::toDouble: invalid number format");
-
     if (ec == std::errc::result_out_of_range)
         throw std::out_of_range("Fa_StringRef::toDouble: number out of range");
-
     if (pos)
         *pos = static_cast<size_t>(end_ptr - data());
 
@@ -490,7 +496,7 @@ Fa_StringRef Fa_StringRef::from_utf16(char16_t const* src)
 
     char16_t const* p = src;
     while (*p)
-        ++p;
+        p += 1;
     auto src_len = static_cast<size_t>(p - src);
 
     simdutf::result validation = simdutf::validate_utf16_with_errors(src, src_len);
@@ -498,13 +504,10 @@ Fa_StringRef Fa_StringRef::from_utf16(char16_t const* src)
         throw std::runtime_error("Invalid UTF-16 at code unit " + std::to_string(validation.count));
 
     size_t utf8_len = simdutf::utf8_length_from_utf16(src, src_len);
-
     StringBase* ret_data = get_allocator().allocate_object<StringBase>(utf8_len);
     char* dest = ret_data->ptr();
-
     size_t written = simdutf::convert_utf16_to_utf8(src, src_len, dest);
     assert(written == utf8_len);
-
     ret_data->ptr()[utf8_len] = 0;
 
     return Fa_StringRef(ret_data);
@@ -514,14 +517,12 @@ void Fa_StringRef::detach()
 {
     size_t const len = ::strlen(m_string_data->ptr());
     size_t const copy_len = m_length > 0 ? m_length : (len - m_offset);
-
     StringBase* s = get_allocator().allocate_object<StringBase>(copy_len);
 
     if (copy_len > 0)
         ::memcpy(s->ptr(), m_string_data->ptr() + m_offset, copy_len);
 
     s->ptr()[copy_len] = 0;
-
     m_string_data->decrement();
     m_string_data = s;
     m_offset = 0;

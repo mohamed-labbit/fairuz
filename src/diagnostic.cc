@@ -19,9 +19,9 @@ void Fa_DiagnosticEngine::report(Severity const sev, u32 const m_line, u16 const
     m_diagnostics.push_back({ sev, m_line, col, err_code, code, { }, { } });
 
     if (sev == Severity::ERROR || sev == Severity::FATAL)
-        ++error_count_;
+        error_count_ += 1;
     else if (sev == Severity::WARNING)
-        ++m_warning_count;
+        m_warning_count += 1;
 }
 
 void Fa_DiagnosticEngine::add_suggestion(std::string const& suggestion)
@@ -70,8 +70,10 @@ std::vector<std::string> Fa_DiagnosticEngine::split_lines(std::string const& tex
     std::vector<std::string> lines;
     std::stringstream ss(text);
     std::string m_line;
+
     while (std::getline(ss, m_line))
         lines.push_back(m_line);
+
     return lines;
 }
 
@@ -79,7 +81,7 @@ std::string Fa_DiagnosticEngine::to_json() const
 {
     std::stringstream ss;
     ss << "[\n";
-    for (size_t i = 0; i < m_diagnostics.size(); ++i) {
+    for (size_t i = 0; i < m_diagnostics.size(); i += 1) {
         Diagnostic const& d = m_diagnostics[i];
         ss << "  {\n";
         ss << "    \"severity\": " << static_cast<i32>(d.severity) << ",\n";

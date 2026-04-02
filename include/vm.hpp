@@ -22,10 +22,10 @@ public:
     Fa_Value run(Fa_Chunk* chunk);
 
     /* STANDARD LIBRARY */
-    
+
     /* IO */
     Fa_Value Fa_print(int argc, Fa_Value* argv);
-    
+
     Fa_Value Fa_len(int argc, Fa_Value* argv);
     Fa_Value Fa_type(int argc, Fa_Value* argv);
     Fa_Value Fa_int(int argc, Fa_Value* argv);

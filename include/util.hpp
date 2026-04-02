@@ -226,7 +226,7 @@ static i64 parse_integer_literal(Fa_StringRef const& literal, int base)
 
     if (literal.at(i) == '-') {
         negative = true;
-        ++i;
+        i += 1;
     }
 
     if (literal.slice(i, 2) == "0x" || literal.slice(i, 2) == "0X"
@@ -234,11 +234,11 @@ static i64 parse_integer_literal(Fa_StringRef const& literal, int base)
         || literal.slice(i, 2) == "0o" || literal.slice(i, 2) == "0O")
         i += 2;
     else if (literal.at(i) == '0' && literal.len() > i + 1)
-        ++i;
+        i += 1;
 
     i64 m_value = 0;
 
-    for (; i < literal.len(); ++i) {
+    for (; i < literal.len(); i += 1) {
         char const c = literal.at(i);
 
         if (c == '\'')

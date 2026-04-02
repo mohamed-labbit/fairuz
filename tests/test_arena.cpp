@@ -72,10 +72,10 @@ TEST(ArenaAllocatorTest, AllocateArrayOfInts)
 
     ASSERT_NE(arr, nullptr);
 
-    for (size_t i = 0; i < count; ++i)
+    for (size_t i = 0; i < count; i += 1)
         arr[i] = static_cast<int>(i);
 
-    for (size_t i = 0; i < count; ++i)
+    for (size_t i = 0; i < count; i += 1)
         EXPECT_EQ(arr[i], static_cast<int>(i));
 }
 
@@ -87,7 +87,7 @@ TEST(ArenaAllocatorTest, AllocateLargeArray)
 
     ASSERT_NE(arr, nullptr);
 
-    for (size_t i = 0; i < count; ++i)
+    for (size_t i = 0; i < count; i += 1)
         arr[i] = static_cast<f64>(i) * 1.5;
 
     EXPECT_EQ(arr[0], 0.0);
@@ -273,7 +273,7 @@ TEST(ArenaAllocatorTest, MultipleResets)
 {
     TestAllocator arena;
 
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < 10; i += 1) {
         int* ptr = arena.allocate<int>(1000);
         ASSERT_NE(ptr, nullptr);
         arena.get().reset();
@@ -311,14 +311,14 @@ TEST(ArenaAllocatorTest, MultipleBlocksRequired)
 
     std::vector<int*> ptrs;
 
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < 10; i += 1) {
         int* ptr = arena.allocate<int>(10000);
         ASSERT_NE(ptr, nullptr);
         ptrs.push_back(ptr);
         *ptr = i;
     }
 
-    for (int i = 0; i < 10; ++i)
+    for (int i = 0; i < 10; i += 1)
         EXPECT_EQ(*ptrs[i], i);
 }
 
@@ -329,14 +329,14 @@ TEST(ArenaAllocatorTest, ManySmallAllocations)
     constexpr int count = 10;
     std::vector<int*> ptrs;
 
-    for (int i = 0; i < count; ++i) {
+    for (int i = 0; i < count; i += 1) {
         int* ptr = arena.allocate<int>(1);
         ASSERT_NE(ptr, nullptr);
         *ptr = i;
         ptrs.push_back(ptr);
     }
 
-    for (int i = 0; i < count; ++i)
+    for (int i = 0; i < count; i += 1)
         EXPECT_EQ(*ptrs[i], i);
 }
 
@@ -346,7 +346,7 @@ TEST(ArenaAllocatorTest, MixedSizeAllocations)
 
     std::vector<void*> ptrs;
 
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < 10; i += 1) {
         size_t m_size = (i % 10) + 1;
         if (i % 3 == 0) {
             int* ptr = arena.allocate<int>(m_size);
@@ -369,7 +369,7 @@ TEST(ArenaAllocatorTest, AlternatingLargeSmall)
     TestAllocator arena;
     size_t large_amount = 10000, small_amount = 1;
 
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < 10; i += 1) {
         if (i % 2 == 0) {
             char* large = arena.allocate<char>(large_amount);
             ASSERT_NE(large, nullptr);
@@ -471,7 +471,7 @@ TEST(ArenaAllocatorPerformance, ResetPerformance)
 {
     TestAllocator arena;
 
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < 10; i += 1) {
         char* p = arena.allocate<char>(1024);
         if (p == nullptr)
             throw std::bad_alloc();

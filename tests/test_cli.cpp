@@ -28,7 +28,7 @@ std::string read_file(std::filesystem::path const& path)
 
 std::filesystem::path test_binary()
 {
-    return std::filesystem::current_path() / "fairuz";
+    return std::filesystem::path(__FILE__).parent_path().parent_path() / "build" / "fairuz";
 }
 
 RunResult run_cli(std::string const& m_args)

@@ -48,8 +48,10 @@ public:
     {
         label_ = std::move(label);
         EXPECT_LT(pos_, chunk_.code.size()) << "ran off end of code at step \"" << label_ << "\"";
-        if (pos_ < chunk_.code.size())
-            cur_ = chunk_.code[pos_++];
+        if (pos_ < chunk_.code.size()) {
+            cur_ = chunk_.code[pos_];
+            pos_ += 1;
+        }
         return *this;
     }
 
@@ -595,7 +597,7 @@ TEST(CompilerIf, SimpleIfNoElse)
     dump(chunk);
 
     int jif_pos = -1;
-    for (int i = 0; i < (int)chunk->code.size(); ++i) {
+    for (int i = 0; i < (int)chunk->code.size(); i += 1) {
         if (Fa_instr_op(chunk->code[i]) == Fa_OpCode::JUMP_IF_FALSE)
             jif_pos = i;
     }
@@ -620,7 +622,7 @@ TEST(CompilerIf, IfElse)
     EXPECT_TRUE(has_jif) << "expected JUMP_IF_FALSE";
     EXPECT_TRUE(has_jmp) << "expected JUMP over else";
     int jif_pos = -1, jmp_pos = -1;
-    for (int i = 0; i < (int)chunk->code.size(); ++i) {
+    for (int i = 0; i < (int)chunk->code.size(); i += 1) {
         if (Fa_instr_op(chunk->code[i]) == Fa_OpCode::JUMP_IF_FALSE)
             jif_pos = i;
         else if (Fa_instr_op(chunk->code[i]) == Fa_OpCode::JUMP)
@@ -718,7 +720,7 @@ TEST(CompilerWhile, JumpIfFalsePointsPastLoop)
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     int jif_pos = -1;
-    for (int i = 0; i < (int)chunk->code.size(); ++i)
+    for (int i = 0; i < (int)chunk->code.size(); i += 1)
         if (Fa_instr_op(chunk->code[i]) == Fa_OpCode::JUMP_IF_FALSE)
             jif_pos = i;
     ASSERT_GE(jif_pos, 0);
@@ -729,13 +731,11 @@ TEST(CompilerWhile, JumpIfFalsePointsPastLoop)
 
 TEST(CompilerFor, ListIterationLowersToLoopBytecode)
 {
-    Fa_Chunk* chunk = compile_ok({
-        decl("items", AST::Fa_makeList({ AST::Fa_makeLiteralInt(1), AST::Fa_makeLiteralInt(2), AST::Fa_makeLiteralInt(3) })),
+    Fa_Chunk* chunk = compile_ok({ decl("items", AST::Fa_makeList({ AST::Fa_makeLiteralInt(1), AST::Fa_makeLiteralInt(2), AST::Fa_makeLiteralInt(3) })),
         decl("sum", AST::Fa_makeLiteralInt(0)),
         AST::Fa_makeFor(AST::Fa_makeName("item"),
             AST::Fa_makeName("items"),
-            blk(assign_stmt("sum", AST::Fa_makeBinary(AST::Fa_makeName("sum"), AST::Fa_makeName("item"), AST::Fa_BinaryOp::OP_ADD))))
-    });
+            blk(assign_stmt("sum", AST::Fa_makeBinary(AST::Fa_makeName("sum"), AST::Fa_makeName("item"), AST::Fa_BinaryOp::OP_ADD)))) });
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
 
@@ -773,6 +773,35 @@ TEST(CompilerFor, ListIterationLowersToLoopBytecode)
     EXPECT_TRUE(has_jif);
     EXPECT_TRUE(has_loop);
     EXPECT_TRUE(has_add);
+}
+
+TEST(CompilerDict, LiteralLowersToNativeConstructorCall)
+{
+    Fa_Chunk* chunk = compile_ok(AST::Fa_makeExprStmt(AST::Fa_makeDict({
+        { AST::Fa_makeLiteralString("a"), AST::Fa_makeLiteralInt(1) },
+        { AST::Fa_makeLiteralString("b"), AST::Fa_makeLiteralInt(2) },
+    })));
+    ASSERT_NE(chunk, nullptr);
+    dump(chunk);
+
+    BytecodeChecker bc(*chunk);
+    bc.m_next("LOAD_GLOBAL جدول").op(Fa_OpCode::LOAD_GLOBAL).A(1).Bx(0);
+    bc.m_next("LOAD_CONST key a").op(Fa_OpCode::LOAD_CONST).A(2).Bx(1);
+    bc.m_next("LOAD_INT value 1").op(Fa_OpCode::LOAD_INT).A(3).Bx(load_int_bx(1));
+    bc.m_next("LOAD_CONST key b").op(Fa_OpCode::LOAD_CONST).A(4).Bx(2);
+    bc.m_next("LOAD_INT value 2").op(Fa_OpCode::LOAD_INT).A(5).Bx(load_int_bx(2));
+    bc.m_next("IC_CALL").op(Fa_OpCode::IC_CALL).A(1).B(4);
+    bc.m_next("MOVE result").op(Fa_OpCode::MOVE).A(0).B(1);
+    bc.m_next("RETURN_NIL").op(Fa_OpCode::RETURN_NIL);
+    bc.done();
+
+    ASSERT_EQ(chunk->constants.size(), 3u);
+    EXPECT_TRUE(Fa_IS_STRING(chunk->constants[0]));
+    EXPECT_EQ(Fa_AS_STRING(chunk->constants[0])->str, "جدول");
+    EXPECT_TRUE(Fa_IS_STRING(chunk->constants[1]));
+    EXPECT_EQ(Fa_AS_STRING(chunk->constants[1])->str, "a");
+    EXPECT_TRUE(Fa_IS_STRING(chunk->constants[2]));
+    EXPECT_EQ(Fa_AS_STRING(chunk->constants[2])->str, "b");
 }
 
 TEST(CompilerReturn, ReturnNilEmitsReturnNil)
@@ -932,7 +961,7 @@ TEST(CompilerClosure, UpvalueDescriptorEmittedAfterClosure)
     dump(chunk);
     Fa_Chunk const* outer = chunk->functions[0];
     int closure_pos = -1;
-    for (int i = 0; i < (int)outer->code.size(); ++i) {
+    for (int i = 0; i < (int)outer->code.size(); i += 1) {
         if (Fa_instr_op(outer->code[i]) == Fa_OpCode::CLOSURE)
             closure_pos = i;
     }
@@ -1035,7 +1064,7 @@ TEST(CompilerList, ListWithElements)
 TEST(CompilerList, ListCapHintCappedAt255)
 {
     Fa_Array<AST::Fa_Expr*> elems;
-    for (int i = 0; i < 300; ++i)
+    for (int i = 0; i < 300; i += 1)
         elems.push(AST::Fa_makeLiteralInt(i));
     Fa_Chunk* chunk = compile_ok(AST::Fa_makeExprStmt(AST::Fa_makeList(std::move(elems))));
     ASSERT_NE(chunk, nullptr);
@@ -1194,7 +1223,7 @@ TEST(CompilerIntegration, StringConstantPoolDedup)
     int count = 0;
     for (auto& v : chunk->constants) {
         if (Fa_IS_STRING(v) && Fa_AS_STRING(v)->str == "hello")
-            ++count;
+            count += 1;
     }
     EXPECT_EQ(count, 1);
 }
@@ -1212,7 +1241,7 @@ TEST(CompilerIntegration, MixedLiteralsInList)
     int appends = 0;
     for (auto& ins : chunk->code) {
         if (Fa_instr_op(ins) == Fa_OpCode::LIST_APPEND)
-            ++appends;
+            appends += 1;
     }
     EXPECT_EQ(appends, 4);
 }

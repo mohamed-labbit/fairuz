@@ -19,7 +19,7 @@ int main(int argc, char** argv)
     fairuz::Fa_AllocatorContext g_ctx;
     fairuz::set_context(&g_ctx);
 
-    for (int i = 1; i < argc; ++i) {
+    for (int i = 1; i < argc; i += 1) {
         std::string arg = argv[i];
 
         if (arg == "--print-ast")

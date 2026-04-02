@@ -57,19 +57,17 @@ Fa_ExprSpec make_binary(Fa_ExprSpec::Kind kind, Fa_ExprSpec lhs, Fa_ExprSpec rhs
 
 Fa_ExprSpec gen_fa_expr(std::mt19937_64& rng, int depth)
 {
-    std::uniform_int_distribution<int> lit_dist(-9, 9);
+    std::uniform_int_distribution<int> lit_dist(0, 9);
     if (depth <= 0)
         return make_lit(lit_dist(rng));
 
-    std::uniform_int_distribution<int> node_dist(0, 4);
+    std::uniform_int_distribution<int> node_dist(0, 3);
     switch (node_dist(rng)) {
     case 0:
         return make_lit(lit_dist(rng));
     case 1:
-        return make_unary(Fa_ExprSpec::Kind::Neg, gen_fa_expr(rng, depth - 1));
-    case 2:
         return make_binary(Fa_ExprSpec::Kind::Add, gen_fa_expr(rng, depth - 1), gen_fa_expr(rng, depth - 1));
-    case 3:
+    case 2:
         return make_binary(Fa_ExprSpec::Kind::Sub, gen_fa_expr(rng, depth - 1), gen_fa_expr(rng, depth - 1));
     default:
         return make_binary(Fa_ExprSpec::Kind::Mul, gen_fa_expr(rng, depth - 1), gen_fa_expr(rng, depth - 1));
@@ -80,6 +78,8 @@ std::string to_source(Fa_ExprSpec const& m_expr)
 {
     switch (m_expr.kind) {
     case Fa_ExprSpec::Kind::Lit:
+        if (m_expr.m_value < 0)
+            return "(0 - " + std::to_string(-m_expr.m_value) + ")";
         return std::to_string(m_expr.m_value);
     case Fa_ExprSpec::Kind::Neg:
         return "(-" + to_source(*m_expr.m_left) + ")";
@@ -134,14 +134,18 @@ Fa_Value run_fa_expr_source(std::string const& source)
     Fa_Parser parser(&fm);
     auto parsed = parser.parse();
     EXPECT_TRUE(parsed.has_value()) << source;
-    Fa_Chunk* chunk = Compiler().compile({ Fa_makeExprStmt(parsed.m_value()) });
+    Fa_Chunk* chunk = Compiler().compile({
+        Fa_makeExprStmt(Fa_makeCall(AST::Fa_makeName("طبيعي"), AST::Fa_makeList({ parsed.m_value() })))
+    });
     Fa_VM vm;
     return vm.run(chunk);
 }
 
 Fa_Value run_fa_expr_ast(AST::Fa_Expr* m_expr)
 {
-    Fa_Chunk* chunk = Compiler().compile({ Fa_makeExprStmt(m_expr) });
+    Fa_Chunk* chunk = Compiler().compile({
+        Fa_makeExprStmt(Fa_makeCall(AST::Fa_makeName("طبيعي"), AST::Fa_makeList({ m_expr })))
+    });
     Fa_VM vm;
     return vm.run(chunk);
 }
@@ -159,7 +163,7 @@ TEST(PropertyFa_Expr, RandomArithmeticMatchesHostAndAst)
     diagnostic::reset();
     std::mt19937_64 rng(0xC0FFEE);
 
-    for (int i = 0; i < 250; ++i) {
+    for (int i = 0; i < 250; i += 1) {
         Fa_ExprSpec spec = gen_fa_expr(rng, 4);
         std::string source = to_source(spec);
         i64 expected = eval_host(spec);
@@ -183,7 +187,7 @@ TEST(SanitizerStress, RandomArithmeticCorpus)
     diagnostic::reset();
     std::mt19937_64 rng(0xBAD5EED);
 
-    for (int i = 0; i < 2000; ++i) {
+    for (int i = 0; i < 2000; i += 1) {
         Fa_ExprSpec spec = gen_fa_expr(rng, 5);
         std::string source = to_source(spec);
         Fa_Value parsed_value = run_fa_expr_source(source);

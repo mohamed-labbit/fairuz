@@ -4,6 +4,7 @@
 #include "../include/vm.hpp"
 
 #include <bit>
+#include <charconv>
 #include <chrono>
 #include <cstdlib>
 #include <gtest/gtest.h>
@@ -740,6 +741,81 @@ TEST(VMLists, LenOnNonListThrows)
     EXPECT_THROW(r.run(b), std::runtime_error);
 }
 
+TEST(VMDicts, IndexReturnsStoredValue)
+{
+    Fa_ObjString key(Fa_StringRef("lang"));
+    Fa_ObjDict* obj_dict = get_allocator().allocate_object<Fa_ObjDict>();
+    Fa_Value dict = Fa_MAKE_OBJECT(obj_dict);
+    Fa_AS_DICT(dict)->data.push({ Fa_MAKE_OBJECT(&key), Fa_MAKE_INTEGER(7) });
+
+    VMRunner r;
+    CB b;
+    u16 dict_k = b.ch->add_constant(dict);
+    u16 key_k = b.ch->add_constant(Fa_MAKE_OBJECT(&key));
+    b.regs(3)
+        .ABx(Fa_OpCode::LOAD_CONST, 0, dict_k)
+        .ABx(Fa_OpCode::LOAD_CONST, 1, key_k)
+        .ABC(Fa_OpCode::INDEX, 2, 0, 1)
+        .ret(2);
+
+    Fa_Value result = r.run(b);
+    ASSERT_TRUE(Fa_IS_INTEGER(result));
+    EXPECT_EQ(Fa_AS_INTEGER(result), 7);
+}
+
+TEST(VMDicts, SetUpdatesAndAppendsByKey)
+{
+    Fa_ObjString existing_key(Fa_StringRef("x"));
+    Fa_ObjString new_key(Fa_StringRef("y"));
+    Fa_ObjDict* obj_dict = get_allocator().allocate_object<Fa_ObjDict>();
+    Fa_Value dict = Fa_MAKE_OBJECT(obj_dict);
+    Fa_AS_DICT(dict)->data.push({ Fa_MAKE_OBJECT(&existing_key), Fa_MAKE_INTEGER(1) });
+
+    VMRunner r;
+    CB b;
+    u16 dict_k = b.ch->add_constant(dict);
+    u16 existing_key_k = b.ch->add_constant(Fa_MAKE_OBJECT(&existing_key));
+    u16 new_key_k = b.ch->add_constant(Fa_MAKE_OBJECT(&new_key));
+    b.regs(4)
+        .ABx(Fa_OpCode::LOAD_CONST, 0, dict_k)
+        .ABx(Fa_OpCode::LOAD_CONST, 1, existing_key_k)
+        .load_int(2, 99)
+        .ABC(Fa_OpCode::LIST_SET, 0, 1, 2)
+        .ABx(Fa_OpCode::LOAD_CONST, 1, new_key_k)
+        .load_int(2, 42)
+        .ABC(Fa_OpCode::LIST_SET, 0, 1, 2)
+        .ABx(Fa_OpCode::LOAD_CONST, 1, existing_key_k)
+        .ABC(Fa_OpCode::INDEX, 2, 0, 1)
+        .ABx(Fa_OpCode::LOAD_CONST, 1, new_key_k)
+        .ABC(Fa_OpCode::INDEX, 3, 0, 1)
+        .ret(3);
+
+    Fa_Value result = r.run(b);
+    ASSERT_TRUE(Fa_IS_INTEGER(result));
+    EXPECT_EQ(Fa_AS_INTEGER(result), 42);
+    ASSERT_EQ(Fa_AS_DICT(dict)->data.size(), 2u);
+    EXPECT_EQ(Fa_AS_INTEGER(Fa_AS_DICT(dict)->data[0].second), 99);
+}
+
+TEST(VMDicts, MissingKeyReturnsNil)
+{
+    Fa_ObjString key(Fa_StringRef("missing"));
+    Fa_ObjDict* obj_dict = get_allocator().allocate_object<Fa_ObjDict>();
+    Fa_Value dict = Fa_MAKE_OBJECT(obj_dict);
+
+    VMRunner r;
+    CB b;
+    u16 dict_k = b.ch->add_constant(dict);
+    u16 key_k = b.ch->add_constant(Fa_MAKE_OBJECT(&key));
+    b.regs(3)
+        .ABx(Fa_OpCode::LOAD_CONST, 0, dict_k)
+        .ABx(Fa_OpCode::LOAD_CONST, 1, key_k)
+        .ABC(Fa_OpCode::INDEX, 2, 0, 1)
+        .ret(2);
+
+    EXPECT_TRUE(Fa_IS_NIL(r.run(b)));
+}
+
 static Fa_Chunk* make_adder_chunk()
 {
     auto fn = make_chunk();
@@ -1370,8 +1446,11 @@ TEST(NativeStr, Float)
     Fa_Value arg = Fa_MAKE_REAL(1.5);
     Fa_Value r = vm.Fa_str(1, &arg);
     ASSERT_TRUE(Fa_IS_STRING(r));
-    // std::to_string(1.5) == "1.500000" — just verify it parses back
-    f64 parsed = std::stod(Fa_AS_STRING(r)->str.data());
+    char const* text_ptr = Fa_AS_STRING(r)->str.data();
+    f64 parsed = 0.0;
+    auto [end_ptr, ec] = std::from_chars(text_ptr, text_ptr + Fa_AS_STRING(r)->str.len(), parsed);
+    ASSERT_EQ(ec, std::errc());
+    ASSERT_EQ(end_ptr, text_ptr + Fa_AS_STRING(r)->str.len());
     EXPECT_DOUBLE_EQ(parsed, 1.5);
 }
 
@@ -2451,11 +2530,11 @@ TEST(VMPerfTest, Upvalue_GetSet_200k)
     constexpr int N = 200'000;
 
     // inner: loop N times, each iteration does GET_UPVALUE + ADD + SET_UPVALUE
-    auto* inner = makeChunk();
-    inner->name = "inner";
+    auto* inner = make_chunk();
+    inner->m_name = "inner";
     inner->arity = 0;
-    inner->upvalueCount = 1;
-    inner->localCount = 4;
+    inner->upvalue_count = 1;
+    inner->local_count = 4;
 
     inner->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 1, BX(0)), { }); // r1 = 0 (i)
     inner->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 2, BX(1)), { }); // r2 = 1
@@ -2471,10 +2550,10 @@ TEST(VMPerfTest, Upvalue_GetSet_200k)
     inner->emit(Fa_make_ABC(Fa_OpCode::GET_UPVALUE, 0, 0, 0), { }); // return upval
     inner->emit(Fa_make_ABC(Fa_OpCode::RETURN, 0, 1, 0), { });
 
-    auto* outer = makeChunk();
-    outer->name = "outer";
+    auto* outer = make_chunk();
+    outer->m_name = "outer";
     outer->arity = 0;
-    outer->localCount = 2;
+    outer->local_count = 2;
     outer->functions.push(inner);
     outer->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 0, BX(0)), { }); // r0 = 0 (upval seed)
     outer->emit(Fa_make_ABx(Fa_OpCode::CLOSURE, 1, 0), { });      // r1 = inner closure
@@ -2482,9 +2561,9 @@ TEST(VMPerfTest, Upvalue_GetSet_200k)
     outer->emit(Fa_make_ABC(Fa_OpCode::CALL, 1, 0, 0), { });      // call inner()
     outer->emit(Fa_make_ABC(Fa_OpCode::RETURN, 1, 1, 0), { });
 
-    auto* top = makeChunk();
-    top->name = "<upval_perf>";
-    top->localCount = 2;
+    auto* top = make_chunk();
+    top->m_name = "<upval_perf>";
+    top->local_count = 2;
     top->functions.push(outer);
     top->emit(Fa_make_ABx(Fa_OpCode::CLOSURE, 0, 0), { });
     top->emit(Fa_make_ABC(Fa_OpCode::CALL, 0, 0, 0), { });
@@ -2674,7 +2753,8 @@ TEST(VMPerfTest, Fib25_10reps)
 
 TEST(VMPerfStressTest, Dispatch_IntAdd_10M_Iterations)
 {
-    require_stress_perf();
+    if (!stress_perf_enabled())
+        GTEST_SKIP() << "Set fairuz_ENABLE_STRESS_PERF=1 to run large Fa_VM stress tests.";
 
     constexpr int N = 10'000'000;
 
@@ -2707,7 +2787,8 @@ TEST(VMPerfStressTest, Dispatch_IntAdd_10M_Iterations)
 
 TEST(VMPerfStressTest, NativeCall_Len_1M_ICHot)
 {
-    require_stress_perf();
+    if (!stress_perf_enabled())
+        GTEST_SKIP() << "Set fairuz_ENABLE_STRESS_PERF=1 to run large Fa_VM stress tests.";
 
     constexpr int N = 1'000'000;
 
@@ -2742,7 +2823,8 @@ TEST(VMPerfStressTest, NativeCall_Len_1M_ICHot)
 
 TEST(VMPerfStressTest, List_AppendAndSum_100k)
 {
-    require_stress_perf();
+    if (!stress_perf_enabled())
+        GTEST_SKIP() << "Set fairuz_ENABLE_STRESS_PERF=1 to run large Fa_VM stress tests.";
 
     constexpr int N = 100'000;
 

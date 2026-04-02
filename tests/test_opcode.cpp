@@ -131,7 +131,7 @@ TEST(Constants, MAX_CONSTANTS_Is16Bit) { EXPECT_EQ(MAX_CONSTANTS, 65535u); }
 
 TEST(OpCodeMeta, AllOpcodesHaveName)
 {
-    for (int op = 0; op < static_cast<int>(Fa_OpCode::_COUNT); ++op) {
+    for (int op = 0; op < static_cast<int>(Fa_OpCode::_COUNT); op += 1) {
         auto m_name = Fa_opcode_name(static_cast<Fa_OpCode>(op));
         EXPECT_FALSE(m_name.empty()) << "opcode " << op << " has empty name";
         EXPECT_NE(m_name, "???") << "opcode " << op << " has no name";
@@ -174,7 +174,7 @@ TEST(OpCodeMeta, KnownNames)
 
 TEST(OpCodeMeta, AllOpcodesHaveFormat)
 {
-    for (int op = 0; op < static_cast<int>(Fa_OpCode::_COUNT); ++op) {
+    for (int op = 0; op < static_cast<int>(Fa_OpCode::_COUNT); op += 1) {
         Fa_InstrFormat fmt = opcode_format(static_cast<Fa_OpCode>(op));
         int fv = static_cast<int>(fmt);
         EXPECT_GE(fv, 0) << "opcode " << op;

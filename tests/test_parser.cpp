@@ -725,7 +725,7 @@ TEST_F(ParserTest, DISABLED_ParseLargeFile)
     while (!parser.we_done()) {
         AST::Fa_Expr* m_expr = parser.parse().m_value();
         if (m_expr != nullptr)
-            Fa_Expr_count++;
+            Fa_Expr_count += 1;
         else
             break;
     }

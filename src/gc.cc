@@ -15,17 +15,17 @@ void Fa_GarbageCollector::collect(Fa_VM* vm)
 void Fa_GarbageCollector::mark_roots(Fa_VM* vm)
 {
     // Stack values
-    for (int i = 0; i < vm->m_stack_top && i < Fa_VM::STACK_SIZE; ++i) {
+    for (int i = 0; i < vm->m_stack_top && i < Fa_VM::STACK_SIZE; i += 1) {
         if (Fa_IS_OBJECT(vm->stack_[i]))
             mark_object(Fa_AS_OBJECT(vm->stack_[i]));
     }
 
     // Call frames
-    for (int i = 0; i < vm->m_frames_top && i < Fa_VM::MAX_FRAMES; ++i)
+    for (int i = 0; i < vm->m_frames_top && i < Fa_VM::MAX_FRAMES; i += 1)
         mark_object(vm->frames_[i].closure);
 
     // Open upvalues
-    for (u32 i = 0, n = vm->m_open_upvalues.size(); i < n; ++i)
+    for (u32 i = 0, n = vm->m_open_upvalues.size(); i < n; i += 1)
         mark_object(vm->m_open_upvalues[i]);
 
     // Global slots are the live Fa_VM roots for globals.
@@ -47,7 +47,7 @@ void Fa_GarbageCollector::blacken_object(Fa_ObjHeader* obj)
     case Fa_ObjType::CLOSURE: {
         auto cl = static_cast<Fa_ObjClosure*>(obj);
         mark_object(cl->function);
-        for (u32 i = 0, n = cl->up_values.size(); i < n; ++i)
+        for (u32 i = 0, n = cl->up_values.size(); i < n; i += 1)
             mark_object(cl->up_values[i]);
     } break;
     case Fa_ObjType::FUNCTION: {
@@ -61,7 +61,7 @@ void Fa_GarbageCollector::blacken_object(Fa_ObjHeader* obj)
     } break;
     case Fa_ObjType::DICT: {
         auto dict = static_cast<Fa_ObjDict*>(obj);
-        for (u32 i = 0, n = dict->data.size(); i < n; ++i) {
+        for (u32 i = 0, n = dict->data.size(); i < n; i += 1) {
             if (Fa_IS_OBJECT(dict->data[i].first))
                 mark_object(Fa_AS_OBJECT(dict->data[i].first));
             if (Fa_IS_OBJECT(dict->data[i].second))
@@ -92,14 +92,14 @@ void Fa_GarbageCollector::sweep()
             m_current_size -= sizeof(Fa_ObjHeader);
         } else {
             m_all[i]->is_marked = false;
-            ++i;
+            i += 1;
         }
     }
 }
 
 void Fa_GarbageCollector::mark_value_array(Fa_Array<Fa_Value> const& arr)
 {
-    for (u32 i = 0, n = arr.size(); i < n; ++i) {
+    for (u32 i = 0, n = arr.size(); i < n; i += 1) {
         if (Fa_IS_OBJECT(arr[i]))
             mark_object(Fa_AS_OBJECT(arr[i]));
     }
@@ -117,7 +117,7 @@ void Fa_GarbageCollector::trace_references()
 // gc.cc
 void Fa_GarbageCollector::sweep_all()
 {
-    for (u32 i = 0; i < m_all.size(); ++i)
+    for (u32 i = 0; i < m_all.size(); i += 1)
         delete m_all[i];
 
     m_all.clear();

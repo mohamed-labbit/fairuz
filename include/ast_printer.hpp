@@ -91,7 +91,7 @@ private:
         if (!e)
             return;
 
-        m_node_count++;
+        m_node_count += 1;
 
         std::cout << p.indent << glyph(p.last);
 
@@ -134,7 +134,7 @@ private:
             std::cout << p.indent + pipe(p.last) << "├─ callee:\n";
             print_expr(c->get_callee(), { p.indent + pipe(p.last) + "│  ", true });
             std::cout << p.indent + pipe(p.last) << "└─ args:\n";
-            for (size_t i = 0; i < c->get_args().size(); ++i)
+            for (size_t i = 0; i < c->get_args().size(); i += 1)
                 print_expr(c->get_args()[i], { p.indent + pipe(p.last) + "   ", i + 1 == c->get_args().size() });
             break;
         }
@@ -142,7 +142,7 @@ private:
         case Fa_Expr::Kind::LIST: {
             auto l = static_cast<Fa_ListExpr const*>(e);
             std::cout << color("List", Color::BLUE) << " [" << l->get_elements().size() << "]\n";
-            for (size_t i = 0; i < l->get_elements().size(); ++i)
+            for (size_t i = 0; i < l->get_elements().size(); i += 1)
                 print_expr(l->get_elements()[i], { p.indent + pipe(p.last), i + 1 == l->get_elements().size() });
             break;
         }
@@ -167,7 +167,7 @@ private:
         if (!s)
             return;
 
-        m_node_count++;
+        m_node_count += 1;
 
         std::cout << p.indent << glyph(p.last);
 
@@ -176,7 +176,7 @@ private:
             auto f = static_cast<Fa_FunctionDef const*>(s);
             std::cout << color("Fa_FunctionDef", Color::BOLD) << " " << f->get_name()->get_value() << "\n";
             std::cout << p.indent + pipe(p.last) << "├─ params:\n";
-            for (size_t i = 0; i < f->get_parameters().size(); ++i)
+            for (size_t i = 0; i < f->get_parameters().size(); i += 1)
                 print_expr(f->get_parameters()[i], { p.indent + pipe(p.last) + "│  ", i + 1 == f->get_parameters().size() });
             std::cout << p.indent + pipe(p.last) << "└─ body:\n";
             print_stmt(f->get_body(), { p.indent + pipe(p.last) + "    ", true });
@@ -223,7 +223,7 @@ private:
         case Fa_Stmt::Kind::BLOCK: {
             auto b = static_cast<Fa_BlockStmt const*>(s);
             std::cout << color("Block", Color::BOLD) << " {" << b->get_statements().size() << " stmts}\n";
-            for (size_t i = 0; i < b->get_statements().size(); ++i)
+            for (size_t i = 0; i < b->get_statements().size(); i += 1)
                 print_stmt(b->get_statements()[i], { p.indent + pipe(p.last), i + 1 == b->get_statements().size() });
             break;
         }

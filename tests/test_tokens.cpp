@@ -88,7 +88,7 @@ TEST(LexerTest, RecognizesNoneKeyword)
     lex::Fa_FileManager m_file_manager(test_cases_path / "recognizes_none_keyword.txt");
     lex::Fa_Lexer m_lexer(&m_file_manager);
     auto tokens = m_lexer.tokenize();
-    auto none_it = std::find_if(tokens.begin(), tokens.end(), [](auto const& tok) { return tok->type() == tok::Fa_TokenType::KW_NONE; });
+    auto none_it = std::find_if(tokens.begin(), tokens.end(), [](auto const& tok) { return tok->type() == tok::Fa_TokenType::KW_NIL; });
     ASSERT_NE(none_it, tokens.end());
     EXPECT_EQ((*none_it)->lexeme(), "عدم");
 }
@@ -129,7 +129,7 @@ TEST(LexerTest, RecognizesFa_Expression00)
     };
     EXPECT_EQ(tokens.size(), 7);
     EXPECT_EQ(tokens[0]->type(), tok::Fa_TokenType::BEGINMARKER);
-    for (size_t i = 0; i < tokens.size(); ++i)
+    for (size_t i = 0; i < tokens.size(); i += 1)
         EXPECT_EQ(*tokens[i], *expected[i]);
 }
 
@@ -145,7 +145,7 @@ TEST(LexerTest, RecognizesStmt00)
         MAKE_TOKEN(tok::Fa_TokenType::ENDMARKER, "", 1, 10)
     };
     EXPECT_EQ(tokens.size(), expected.size());
-    for (size_t i = 0; i < tokens.size(); ++i)
+    for (size_t i = 0; i < tokens.size(); i += 1)
         EXPECT_EQ(*tokens[i], *expected[i]);
 }
 
@@ -161,7 +161,7 @@ TEST(LexerTest, RecognizesStmt01)
         MAKE_TOKEN(tok::Fa_TokenType::ENDMARKER, "", 1, 13)
     };
     EXPECT_EQ(tokens.size(), expected.size());
-    for (size_t i = 0; i < tokens.size(); ++i)
+    for (size_t i = 0; i < tokens.size(); i += 1)
         EXPECT_EQ(*tokens[i], *expected[i]);
 }
 
@@ -177,7 +177,7 @@ TEST(LexerTest, RecognizesStmt02)
         MAKE_TOKEN(tok::Fa_TokenType::ENDMARKER, "", 1, 11)
     };
     EXPECT_EQ(tokens.size(), expected.size());
-    for (size_t i = 0; i < tokens.size(); ++i)
+    for (size_t i = 0; i < tokens.size(); i += 1)
         EXPECT_EQ(*tokens[i], *expected[i]);
 }
 
@@ -194,7 +194,7 @@ TEST(LexerTest, RecognizesStmt03)
         MAKE_TOKEN(tok::Fa_TokenType::ENDMARKER, "", 1, 8),
     };
     EXPECT_EQ(tokens.size(), expected.size());
-    for (size_t i = 0; i < tokens.size(); ++i)
+    for (size_t i = 0; i < tokens.size(); i += 1)
         EXPECT_EQ(*tokens[i], *expected[i]);
 }
 
@@ -213,6 +213,6 @@ TEST(LexerTest, RecognizesStmt04)
     };
 
     EXPECT_EQ(tokens.size(), expected.size());
-    for (size_t i = 0; i < tokens.size(); ++i)
+    for (size_t i = 0; i < tokens.size(); i += 1)
         EXPECT_EQ(*tokens[i], *expected[i]);
 }

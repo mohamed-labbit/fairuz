@@ -78,10 +78,7 @@ Fa_StringRef Fa_LiteralExpr::get_str() const
     return str_value;
 }
 
-bool Fa_LiteralExpr::is_integer() const
-{
-    return m_type == Type::INTEGER;
-}
+bool Fa_LiteralExpr::is_integer() const { return m_type == Type::INTEGER; }
 
 bool Fa_LiteralExpr::is_float() const { return m_type == Type::FLOAT; }
 
@@ -114,6 +111,7 @@ bool Fa_LiteralExpr::equals(Fa_Expr const* other) const
     case Type::NIL:
         return true; // two nil objects are always equal
     }
+
     return false;
 }
 
@@ -172,9 +170,10 @@ bool Fa_ListExpr::equals(Fa_Expr const* other) const
     if (m_elements.size() != list->m_elements.size())
         return false;
 
-    for (size_t i = 0; i < m_elements.size(); ++i)
+    for (size_t i = 0; i < m_elements.size(); i += 1) {
         if (!m_elements[i]->equals(list->m_elements[i]))
             return false;
+    }
 
     return true;
 }
@@ -228,12 +227,15 @@ bool Fa_DictExpr::equals(Fa_Expr const* other) const
     auto dict = static_cast<Fa_DictExpr const*>(other)->get_content();
     u32 const s1 = content.size();
     u32 const s2 = dict.size();
+
     if (s1 != s2)
         return false;
-    for (u32 i = 0; i < s1; ++i) {
+
+    for (u32 i = 0; i < s1; i += 1) {
         if (!content[i].first->equals(dict[i].first) || !content[i].second->equals(dict[i].second))
             return false;
     }
+
     return true;
 }
 
@@ -279,10 +281,11 @@ bool Fa_BlockStmt::equals(Fa_Stmt const* other) const
     if (m_statements.size() != block->m_statements.size())
         return false;
 
-    for (size_t i = 0; i < m_statements.size(); ++i) {
+    for (size_t i = 0; i < m_statements.size(); i += 1) {
         if (!m_statements[i]->equals(block->m_statements[i]))
             return false;
     }
+
     return true;
 }
 
@@ -359,8 +362,10 @@ bool Fa_IfStmt::equals(Fa_Stmt const* other) const
 
     auto if_stmt = static_cast<Fa_IfStmt const*>(other);
     bool eq_else = false;
+
     if (m_else_stmt && if_stmt->get_else())
         eq_else = m_else_stmt->equals(if_stmt->get_else());
+
     return m_condition->equals(if_stmt->get_condition()) && m_then_stmt->equals(if_stmt->get_then()) && eq_else;
 }
 

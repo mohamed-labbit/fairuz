@@ -107,7 +107,7 @@ TEST(Fa_Chunk, AddConstantIntAndDoubleNotDeduplicated)
 TEST(Fa_Chunk, AddConstantReturnSequentialIndices)
 {
     Fa_Chunk c;
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < 10; i += 1) {
         u16 idx = c.add_constant(Fa_MAKE_INTEGER(i * 1000));
         EXPECT_EQ(idx, static_cast<u16>(i));
     }
@@ -174,10 +174,10 @@ TEST(Fa_Chunk, GetLineMultipleLines)
 TEST(Fa_Chunk, GetLineRunLengthCompressed)
 {
     Fa_Chunk c;
-    for (int i = 0; i < 10; ++i)
+    for (int i = 0; i < 10; i += 1)
         c.emit(Fa_make_ABC(Fa_OpCode::NOP, 0, 0, 0), { 42 });
     EXPECT_EQ(c.lines.size(), 1u);
-    for (int i = 0; i < 10; ++i)
+    for (int i = 0; i < 10; i += 1)
         EXPECT_EQ(c.get_line(i), 42u);
 }
 

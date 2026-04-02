@@ -537,12 +537,14 @@ static void emit(std::string const& msg, Severity const sv = Severity::ERROR) { 
 template<typename CodeEnum>
 static void emit(CodeEnum code, Severity const sv = Severity::ERROR)
 {
+    engine.report(sv, 0, 0, code_value(code));
     engine.emit(error_message_for(code_value(code)), sv);
 }
 
 template<typename CodeEnum>
 static void emit(CodeEnum code, std::string const& detail, Severity const sv = Severity::ERROR)
 {
+    engine.report(sv, 0, 0, code_value(code), detail);
     std::string message = error_message_for(code_value(code));
     if (!detail.empty())
         message += ": " + detail;

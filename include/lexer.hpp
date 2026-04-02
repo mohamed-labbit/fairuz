@@ -90,16 +90,16 @@ public:
         u32 current_line = 1;
         size_t line_start = 0;
 
-        for (size_t i = 0; i <= m_size; ++i) {
+        for (size_t i = 0; i <= m_size; i += 1) {
             if (i == m_size || data[i] == '\n') {
                 if (current_line == line_idx) {
                     size_t len = i - line_start;
                     if (len > 0 && data[line_start + len - 1] == '\r')
-                        --len;
+                        len -= 1;
 
                     return Fa_StringRef(m_input_buffer.get(), line_start, len);
                 }
-                ++current_line;
+                current_line += 1;
                 line_start = i + 1;
             }
         }

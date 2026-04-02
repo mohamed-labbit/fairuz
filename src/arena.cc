@@ -11,10 +11,9 @@ using ErrorCode = diagnostic::errc::general::Code;
 Fa_ArenaBlock::Fa_ArenaBlock(size_t const m_size, size_t const m_alignment)
     : m_size(m_size)
 {
-    (void)m_alignment;
+    (void)m_alignment; // silence no-use
 
-    m_begin = reinterpret_cast<unsigned char*>(
-        mmap(reinterpret_cast<void*>(0x200000000ULL), m_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
+    m_begin = reinterpret_cast<unsigned char*>(mmap(reinterpret_cast<void*>(0x200000000ULL), m_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
 
     if (m_begin == MAP_FAILED)
         diagnostic::emit(ErrorCode::MMAP_FAILED, diagnostic::Severity::FATAL);
@@ -71,8 +70,11 @@ Fa_ArenaBlock& Fa_ArenaBlock::operator=(Fa_ArenaBlock&& other) noexcept
 }
 
 unsigned char* Fa_ArenaBlock::begin() const { return m_begin; }
+
 unsigned char* Fa_ArenaBlock::end() const { return m_end; }
-unsigned char* Fa_ArenaBlock::c_next() const { return m_next; }
+
+unsigned char* Fa_ArenaBlock::next() const { return m_next; }
+
 size_t Fa_ArenaBlock::size() const { return m_size; }
 
 size_t Fa_ArenaBlock::used() const
@@ -122,7 +124,6 @@ unsigned char* Fa_ArenaBlock::reserve(size_t const bytes)
 {
     if (!m_begin || bytes == 0)
         return nullptr;
-
     if (static_cast<size_t>(m_end - m_next) < bytes)
         return nullptr;
 
@@ -215,14 +216,16 @@ void* Fa_ArenaAllocator::allocate_slow(size_t m_size, size_t m_alignment)
     try {
         m_blocks.emplace_back(m_block_size, m_alignment);
 #ifdef fairuz_DEBUG
-        ++m_alloc_stats.ActiveBlocks;
+        m_alloc_stats.ActiveBlocks += 1;
 #endif
     } catch (std::bad_alloc const&) {
         if (m_oom_handler && m_oom_handler(m_block_size)) {
-            try {
-                m_blocks.emplace_back(m_block_size, m_alignment);
-            } catch (...) {
-                return nullptr;
+            {
+                try {
+                    m_blocks.emplace_back(m_block_size, m_alignment);
+                } catch (...) {
+                    return nullptr;
+                }
             }
         } else {
             return nullptr;
@@ -263,16 +266,16 @@ void Fa_ArenaAllocator::deallocate(void* ptr, size_t const m_size)
 
     Fa_ArenaBlock& block = m_blocks.back();
     if (block.pop(m_size)) {
-        m_next = block.c_next();
+        m_next = block.next();
         m_last_ptr = nullptr;
     }
 
 #ifdef fairuz_DEBUG
     if (m_alloc_stats.CurrentlyAllocated >= m_size)
         m_alloc_stats.CurrentlyAllocated -= m_size;
-    ++m_alloc_stats.TotalDeallocations;
+    m_alloc_stats.TotalDeallocations += 1;
     if (m_alloc_stats.ActiveBlocks)
-        --m_alloc_stats.ActiveBlocks;
+        m_alloc_stats.ActiveBlocks -= 1;
 #endif
 }
 
@@ -290,7 +293,7 @@ unsigned char* Fa_ArenaAllocator::allocate_block(size_t requested, size_t m_alig
     try {
         m_blocks.emplace_back(m_block_size, m_alignment);
 #ifdef fairuz_DEBUG
-        ++m_alloc_stats.ActiveBlocks;
+        m_alloc_stats.ActiveBlocks += 1;
 #endif
         Fa_ArenaBlock& blk = m_blocks.back();
         m_next = blk.begin();
@@ -309,7 +312,7 @@ unsigned char* Fa_ArenaAllocator::allocate_from_blocks(size_t alloc_size, size_t
     if (!m_blocks.empty()) {
         unsigned char* mem = m_blocks.back().allocate(alloc_size, align);
         if (mem) {
-            m_next = m_blocks.back().c_next();
+            m_next = m_blocks.back().next();
             return mem;
         }
     }
@@ -326,7 +329,8 @@ unsigned char* Fa_ArenaAllocator::allocate_from_blocks(size_t alloc_size, size_t
     update_next_block_size();
     unsigned char* mem = m_blocks.back().allocate(alloc_size, align);
     if (mem)
-        m_next = m_blocks.back().c_next();
+        m_next = m_blocks.back().next();
+
     return mem;
 }
 
@@ -353,7 +357,7 @@ void Fa_ArenaAllocator::track_allocation(unsigned char* ptr, size_t m_size, size
     }
 
     if (m_enable_statistics) {
-        m_alloc_stats.TotalAllocations++;
+        m_alloc_stats.TotalAllocations += 1;
         m_alloc_stats.TotalAllocated += m_size;
         m_alloc_stats.CurrentlyAllocated += m_size;
         m_alloc_stats.record_allocation_size(m_size);

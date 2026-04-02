@@ -367,7 +367,7 @@ TEST_F(Fa_StringRefTest, AppendChar_UnicodeChar)
 TEST_F(Fa_StringRefTest, AppendChar_TriggerExpansion)
 {
     Fa_StringRef s(2);
-    for (int i = 0; i < 100; i++)
+    for (int i = 0; i < 100; i += 1)
         s += 'A';
     EXPECT_EQ(s.len(), 100);
 }
@@ -588,7 +588,7 @@ TEST_F(Fa_StringRefTest, FindPos_CharExists)
     Fa_StringRef s("Hello");
     auto pos = s.find_pos('e');
     ASSERT_TRUE(pos.has_value());
-    EXPECT_EQ(pos.m_value(), 1);
+    EXPECT_EQ(pos.value(), 1);
 }
 
 TEST_F(Fa_StringRefTest, FindPos_CharNotExists)
@@ -603,7 +603,7 @@ TEST_F(Fa_StringRefTest, FindPos_FirstOccurrence)
     Fa_StringRef s("Hello");
     auto pos = s.find_pos('l');
     ASSERT_TRUE(pos.has_value());
-    EXPECT_EQ(pos.m_value(), 2);
+    EXPECT_EQ(pos.value(), 2);
 }
 
 TEST_F(Fa_StringRefTest, Truncate_ToShorter)
@@ -890,7 +890,7 @@ TEST_F(Fa_StringRefTest, StdHash_Works)
 TEST_F(Fa_StringRefTest, Stress_ManyAppends)
 {
     Fa_StringRef s;
-    for (int i = 0; i < 10000; i++)
+    for (int i = 0; i < 10000; i += 1)
         s += char('A' + (i % 26));
     EXPECT_EQ(s.len(), 10000);
 }
@@ -898,9 +898,9 @@ TEST_F(Fa_StringRefTest, Stress_ManyAppends)
 TEST_F(Fa_StringRefTest, Stress_ManyErases)
 {
     Fa_StringRef s;
-    for (int i = 0; i < 1000; i++)
+    for (int i = 0; i < 1000; i += 1)
         s += char('A');
-    for (int i = 0; i < 500; i++)
+    for (int i = 0; i < 500; i += 1)
         s.erase(0);
     EXPECT_EQ(s.len(), 500);
 }
@@ -910,13 +910,13 @@ TEST_F(Fa_StringRefTest, Stress_CopyAndModify)
     Fa_StringRef original("Original");
     std::vector<Fa_StringRef> copies;
 
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 100; i += 1) {
         copies.push_back(original);
         copies.back() += char('0' + i % 10);
     }
 
     EXPECT_EQ(original, "Original");
-    for (size_t i = 0; i < copies.size(); i++)
+    for (size_t i = 0; i < copies.size(); i += 1)
         EXPECT_NE(copies[i], original);
 }
 
@@ -930,7 +930,7 @@ TEST_F(Fa_StringRefTest, Stress_LargeString)
 TEST_F(Fa_StringRefTest, Stress_UnicodeAppends)
 {
     Fa_StringRef s;
-    for (int i = 0; i < 1000; i++)
+    for (int i = 0; i < 1000; i += 1)
         s = s + "مرحبا";
 
     EXPECT_EQ(s.len(), 10000);
@@ -941,8 +941,8 @@ TEST_F(Fa_StringRefTest, Stress_ManySubstrings)
     Fa_StringRef s("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
     std::vector<Fa_StringRef> subs;
 
-    for (size_t i = 0; i < s.len(); i++) {
-        for (size_t j = i; j < s.len(); j++)
+    for (size_t i = 0; i < s.len(); i += 1) {
+        for (size_t j = i; j < s.len(); j += 1)
             subs.push_back(s.substr(i, j));
     }
 
@@ -957,7 +957,7 @@ TEST_F(Fa_StringRefTest, Stress_RandomOperations)
 
     Fa_StringRef s;
 
-    for (int i = 0; i < 1000; i++) {
+    for (int i = 0; i < 1000; i += 1) {
         int op = op_dist(rng);
         switch (op) {
         case 0:
@@ -995,7 +995,7 @@ TEST_F(Fa_StringRefTest, EdgeCase_MaxSizeString)
 {
     size_t const large_size = 1000000;
     Fa_StringRef s(large_size);
-    for (size_t i = 0; i < 100; i++)
+    for (size_t i = 0; i < 100; i += 1)
         s += 'A';
     EXPECT_EQ(s.len(), 100);
 }
@@ -1021,7 +1021,7 @@ TEST_F(Fa_StringRefTest, EdgeCase_SurrogatesPairs)
 TEST_F(Fa_StringRefTest, EdgeCase_AllZeros)
 {
     Fa_StringRef s(10);
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < 10; i += 1)
         s += char { 0 };
     EXPECT_EQ(s.len(), 10);
 }
@@ -1034,7 +1034,7 @@ TEST_F(Fa_StringRefTest, EdgeCase_HighUnicodeValues)
 
 TEST_F(Fa_StringRefTest, NoLeak_MultipleConstructDestruct)
 {
-    for (int i = 0; i < 1000; i++)
+    for (int i = 0; i < 1000; i += 1)
         Fa_StringRef s("Test String");
     EXPECT_TRUE(true);
 }
@@ -1042,7 +1042,7 @@ TEST_F(Fa_StringRefTest, NoLeak_MultipleConstructDestruct)
 TEST_F(Fa_StringRefTest, NoLeak_CopyAssignmentLoop)
 {
     Fa_StringRef original("Original");
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 100; i += 1) {
         Fa_StringRef copy;
         copy = original;
     }
@@ -1051,7 +1051,7 @@ TEST_F(Fa_StringRefTest, NoLeak_CopyAssignmentLoop)
 
 TEST_F(Fa_StringRefTest, NoLeak_MoveAssignmentLoop)
 {
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 100; i += 1) {
         Fa_StringRef s1("Test");
         Fa_StringRef s2 = std::move(s1);
     }
@@ -1064,7 +1064,7 @@ TEST_F(Fa_StringRefTest, Performance_AppendChars)
 
     Fa_StringRef s;
     s.reserve(10000);
-    for (int i = 0; i < 10000; i++)
+    for (int i = 0; i < 10000; i += 1)
         s += char('A');
 
     auto m_end = std::chrono::high_resolution_clock::now();
@@ -1081,7 +1081,7 @@ TEST_F(Fa_StringRefTest, Performance_Concatenation)
     Fa_StringRef result;
     Fa_StringRef part("Part");
 
-    for (int i = 0; i < 1000; i++)
+    for (int i = 0; i < 1000; i += 1)
         result = result + part;
 
     auto m_end = std::chrono::high_resolution_clock::now();
@@ -1097,7 +1097,7 @@ TEST_F(Fa_StringRefTest, Performance_Utf8Conversion)
 
     auto start = std::chrono::high_resolution_clock::now();
 
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 100; i += 1) {
         Fa_StringRef s(utf8.data());
         std::string back = s.data();
     }
@@ -1177,7 +1177,7 @@ TEST_F(Fa_StringRefTest, Append_1M_Chars_PreReserved)
     s.reserve(N);
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; ++i)
+    for (int i = 0; i < N; i += 1)
         s += 'A';
     f64 us = microseconds_since(t0);
 
@@ -1195,7 +1195,7 @@ TEST_F(Fa_StringRefTest, Append_1M_Chars_NoReserve)
     Fa_StringRef s;
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; ++i)
+    for (int i = 0; i < N; i += 1)
         s += char('A' + i % 26);
     f64 us = microseconds_since(t0);
 
@@ -1215,7 +1215,7 @@ TEST_F(Fa_StringRefTest, Append_250k_ShortStrings)
     s.reserve(N * 4);
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; ++i)
+    for (int i = 0; i < N; i += 1)
         s += chunk;
     f64 us = microseconds_since(t0);
 
@@ -1238,7 +1238,7 @@ TEST_F(Fa_StringRefTest, Concat_10k_Growing)
     Fa_StringRef result;
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; ++i)
+    for (int i = 0; i < N; i += 1)
         result = result + part;
     f64 us = microseconds_since(t0);
 
@@ -1257,7 +1257,7 @@ TEST_F(Fa_StringRefTest, Concat_10k_AppendAssign)
     result.reserve(N);
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; ++i)
+    for (int i = 0; i < N; i += 1)
         result += part;
     f64 us = microseconds_since(t0);
 
@@ -1278,7 +1278,7 @@ TEST_F(Fa_StringRefTest, CoW_100k_ShallowCopies)
     Fa_StringRef original("The quick brown fox jumps over the lazy dog");
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; ++i) {
+    for (int i = 0; i < N; i += 1) {
         Fa_StringRef copy = original;
         do_not_optimize(copy);
     }
@@ -1295,7 +1295,7 @@ TEST_F(Fa_StringRefTest, CoW_100k_CopyThenMutate)
     Fa_StringRef original("The quick brown fox jumps over the lazy dog");
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; ++i) {
+    for (int i = 0; i < N; i += 1) {
         Fa_StringRef copy = original;
         copy[0] = 'X'; // triggers CoW detach
         do_not_optimize(copy);
@@ -1314,7 +1314,7 @@ TEST_F(Fa_StringRefTest, CoW_ShallowVsMutate_Ratio)
 
     // shallow
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; ++i) {
+    for (int i = 0; i < N; i += 1) {
         Fa_StringRef copy = original;
         do_not_optimize(copy);
     }
@@ -1322,7 +1322,7 @@ TEST_F(Fa_StringRefTest, CoW_ShallowVsMutate_Ratio)
 
     // mutating
     t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; ++i) {
+    for (int i = 0; i < N; i += 1) {
         Fa_StringRef copy = original;
         copy[0] = 'X';
         do_not_optimize(copy);
@@ -1352,7 +1352,7 @@ TEST_F(Fa_StringRefTest, Hash_1M_Short)
     size_t acc = 0;
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; ++i)
+    for (int i = 0; i < N; i += 1)
         acc ^= hasher(s);
     f64 us = microseconds_since(t0);
 
@@ -1370,7 +1370,7 @@ TEST_F(Fa_StringRefTest, Hash_1M_Long)
     size_t acc = 0;
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; ++i)
+    for (int i = 0; i < N; i += 1)
         acc ^= hasher(s);
     f64 us = microseconds_since(t0);
 
@@ -1392,12 +1392,12 @@ TEST_F(Fa_StringRefTest, Hash_ScalesWithLength)
     size_t acc = 0;
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; ++i)
+    for (int i = 0; i < N; i += 1)
         acc ^= hasher(s_short);
     f64 short_us = microseconds_since(t0);
 
     t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; ++i)
+    for (int i = 0; i < N; i += 1)
         acc ^= hasher(s_long);
     f64 long_us = microseconds_since(t0);
 
@@ -1462,7 +1462,7 @@ TEST_F(Fa_StringRefTest, Slice_1M_NoAlloc)
     Fa_StringRef s(buf.data());
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; ++i) {
+    for (int i = 0; i < N; i += 1) {
         Fa_StringRef sl = s.slice(0, 500);
         do_not_optimize(sl);
     }
@@ -1480,7 +1480,7 @@ TEST_F(Fa_StringRefTest, Substr_1M_Copies)
     Fa_StringRef s(buf.data());
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; ++i) {
+    for (int i = 0; i < N; i += 1) {
         Fa_StringRef sub = s.substr(0, 500);
         do_not_optimize(sub);
     }
@@ -1498,14 +1498,14 @@ TEST_F(Fa_StringRefTest, Slice_vs_Substr_Ratio)
     Fa_StringRef s(buf.data());
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; ++i) {
+    for (int i = 0; i < N; i += 1) {
         Fa_StringRef sl = s.slice(0, 250);
         do_not_optimize(sl);
     }
     f64 slice_us = microseconds_since(t0);
 
     t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; ++i) {
+    for (int i = 0; i < N; i += 1) {
         Fa_StringRef sub = s.substr(0, 250);
         do_not_optimize(sub);
     }
@@ -1531,7 +1531,7 @@ TEST_F(Fa_StringRefTest, Equality_2M_Equal)
     int hits = 0;
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; ++i)
+    for (int i = 0; i < N; i += 1)
         hits += (s1 == s2) ? 1 : 0;
     f64 us = microseconds_since(t0);
 
@@ -1554,7 +1554,7 @@ TEST_F(Fa_StringRefTest, Equality_2M_DifferLastByte)
     int hits = 0;
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; ++i)
+    for (int i = 0; i < N; i += 1)
         hits += (s1 == s2) ? 1 : 0;
     f64 us = microseconds_since(t0);
 
@@ -1575,7 +1575,7 @@ TEST_F(Fa_StringRefTest, Erase_100k_FromFront)
     constexpr int N = 100'000;
     Fa_StringRef s;
     s.reserve(N);
-    for (int i = 0; i < N; ++i)
+    for (int i = 0; i < N; i += 1)
         s += char('A' + i % 26);
 
     auto t0 = std::chrono::high_resolution_clock::now();
@@ -1601,7 +1601,7 @@ TEST_F(Fa_StringRefTest, Append_100k_ArabicChunks)
     s.reserve(N * 10);
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; ++i)
+    for (int i = 0; i < N; i += 1)
         s += chunk;
     f64 us = microseconds_since(t0);
 
@@ -1622,7 +1622,7 @@ TEST_F(Fa_StringRefTest, ToDouble_1M_Integer)
     f64 acc = 0;
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; ++i)
+    for (int i = 0; i < N; i += 1)
         acc += s.to_double();
     f64 us = microseconds_since(t0);
 
@@ -1638,7 +1638,7 @@ TEST_F(Fa_StringRefTest, ToDouble_1M_Float)
     f64 acc = 0;
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; ++i)
+    for (int i = 0; i < N; i += 1)
         acc += s.to_double();
     f64 us = microseconds_since(t0);
 
@@ -1670,7 +1670,7 @@ TEST_F(Fa_StringRefTest, Mixed_InterpreterInnerLoop)
     Fa_StringRef target("result");
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; ++i) {
+    for (int i = 0; i < N; i += 1) {
         Fa_StringRef const& id = identifiers[i % identifiers.size()];
         acc ^= hasher(id);                                          // hash lookup
         matches += (id == target);                                  // equality check

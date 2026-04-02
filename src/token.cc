@@ -8,7 +8,7 @@ static std::unordered_map<std::string_view, Fa_TokenType> const& get_keywords()
 {
     static std::unordered_map<std::string_view, Fa_TokenType> const map = {
         { "خطا", Fa_TokenType::KW_FALSE },
-        { "عدم", Fa_TokenType::KW_NONE },
+        { "عدم", Fa_TokenType::KW_NIL },
         { "صحيح", Fa_TokenType::KW_TRUE },
         { "و", Fa_TokenType::OP_AND },
         { "اخرج", Fa_TokenType::KW_BREAK },
@@ -98,16 +98,12 @@ bool Fa_Token::atbol() const { return m_atbol; }
 
 bool Fa_Token::is_operator() const
 {
-    return (m_type >= Fa_TokenType::OP_PLUS && m_type <= Fa_TokenType::OP_RSHIFTEQ)
-        || m_type == Fa_TokenType::OP_AND || m_type == Fa_TokenType::OP_OR;
+    return (m_type >= Fa_TokenType::OP_PLUS && m_type <= Fa_TokenType::OP_RSHIFTEQ) || m_type == Fa_TokenType::OP_AND || m_type == Fa_TokenType::OP_OR;
 }
 
 bool Fa_Token::is_unary_op() const
 {
-    return m_type == Fa_TokenType::OP_PLUS
-        || m_type == Fa_TokenType::OP_MINUS
-        || m_type == Fa_TokenType::OP_BITNOT
-        || m_type == Fa_TokenType::OP_NOT;
+    return m_type == Fa_TokenType::OP_PLUS || m_type == Fa_TokenType::OP_MINUS || m_type == Fa_TokenType::OP_BITNOT || m_type == Fa_TokenType::OP_NOT;
 }
 
 bool Fa_Token::is_binary_op() const
@@ -145,18 +141,12 @@ bool Fa_Token::is_comparison_op() const
 
 bool Fa_Token::is_whitespace() const
 {
-    return m_type == Fa_TokenType::INDENT
-        || m_type == Fa_TokenType::DEDENT
-        || m_type == Fa_TokenType::NEWLINE;
+    return m_type == Fa_TokenType::INDENT || m_type == Fa_TokenType::DEDENT || m_type == Fa_TokenType::NEWLINE;
 }
 
 bool Fa_Token::is_numeric() const
 {
-    return m_type == Fa_TokenType::INTEGER
-        || m_type == Fa_TokenType::HEX
-        || m_type == Fa_TokenType::OCTAL
-        || m_type == Fa_TokenType::BINARY
-        || m_type == Fa_TokenType::DECIMAL;
+    return m_type == Fa_TokenType::INTEGER || m_type == Fa_TokenType::HEX || m_type == Fa_TokenType::OCTAL || m_type == Fa_TokenType::BINARY || m_type == Fa_TokenType::DECIMAL;
 }
 
 f64 Fa_Token::to_double() const { return lexeme().to_double(); }

@@ -51,9 +51,17 @@ RunResult run_installed(std::filesystem::path const& binary, std::filesystem::pa
     return result;
 }
 
+std::filesystem::path write_program(std::string const& source)
+{
+    auto path = std::filesystem::temp_directory_path() / ("fairuz_regression_program_" + std::to_string(::getpid()) + ".fa");
+    std::ofstream out(path);
+    out << source;
+    return path;
+}
+
 std::filesystem::path binary_path()
 {
-    return std::filesystem::current_path() / "fairuz";
+    return std::filesystem::path(__FILE__).parent_path().parent_path() / "build" / "fairuz";
 }
 
 std::filesystem::path repo_root()
@@ -65,7 +73,8 @@ std::filesystem::path repo_root()
 
 TEST(RegressionCli, DemoElseAcceptsTrailingTimeFlag)
 {
-    RunResult r = run_installed(binary_path(), repo_root() / "demo_else.txt", "--time");
+    auto program = write_program("اذا 20 + 5 < 400:\n    اكتب(\"صحيح\")\nغيره:\n    اكتب(\"خطأ\")\n");
+    RunResult r = run_installed(binary_path(), program, "--time");
     EXPECT_EQ(r.exit_code, 0);
     EXPECT_NE(r.out.find("صحيح"), std::string::npos);
     EXPECT_NE(r.err.find("time:"), std::string::npos);
@@ -73,7 +82,8 @@ TEST(RegressionCli, DemoElseAcceptsTrailingTimeFlag)
 
 TEST(RegressionNatives, StringListDemoOutput)
 {
-    RunResult r = run_installed(binary_path(), repo_root() / "demo_strings_lists.txt");
+    auto program = write_program("اكتب(join([\"alpha\", \"beta\", \"gamma\", \"delta\"], \"|\"))\nاكتب(contains(\"alphabet\", \"alpha\"))\n");
+    RunResult r = run_installed(binary_path(), program);
     EXPECT_EQ(r.exit_code, 0);
     EXPECT_NE(r.out.find("alpha|beta|gamma|delta"), std::string::npos);
     EXPECT_NE(r.out.find("true"), std::string::npos);
@@ -81,7 +91,8 @@ TEST(RegressionNatives, StringListDemoOutput)
 
 TEST(RegressionNatives, NumericDemoOutput)
 {
-    RunResult r = run_installed(binary_path(), repo_root() / "demo_numeric_natives.txt");
+    auto program = write_program("اكتب(floor(1024.9))\nاكتب(ceil(189.1))\n");
+    RunResult r = run_installed(binary_path(), program);
     EXPECT_EQ(r.exit_code, 0);
     EXPECT_NE(r.out.find("1024"), std::string::npos);
     EXPECT_NE(r.out.find("190"), std::string::npos);

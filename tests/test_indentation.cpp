@@ -43,7 +43,7 @@ TEST(LexerTest, TestIndentationLevel1)
         MAKE_TOKEN(tok::Fa_TokenType::ENDMARKER, "", 3, 1) };
     // ASSERT_EQ(tokens.size(), 9);
     EXPECT_EQ(tokens[0]->type(), tok::Fa_TokenType::BEGINMARKER);
-    for (int i = 1; i < tokens.size() - 1; ++i)
+    for (int i = 1; i < tokens.size() - 1; i += 1)
         EXPECT_EQ(*expected[i], *tokens[i]);
     EXPECT_EQ(tokens.back()->type(), tok::Fa_TokenType::ENDMARKER);
 }
@@ -68,7 +68,7 @@ TEST(LexerTest, TestIndentationLevel2)
 
     ASSERT_EQ(tokens.size(), expected.size());
     EXPECT_EQ(tokens[0]->type(), tok::Fa_TokenType::BEGINMARKER);
-    for (int i = 1; i < tokens.size() - 1; ++i)
+    for (int i = 1; i < tokens.size() - 1; i += 1)
         EXPECT_EQ(*expected[i], *tokens[i]);
     EXPECT_EQ(tokens.back()->type(), tok::Fa_TokenType::ENDMARKER);
 }

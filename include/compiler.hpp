@@ -4,8 +4,8 @@
 #include "ast.hpp"
 #include "opcode.hpp"
 #include "string.hpp"
-#include "value.hpp"
 #include "table.hpp"
+#include "value.hpp"
 
 #include <utility>
 
@@ -42,7 +42,8 @@ struct CompilerState {
 
     u8 alloc_register()
     {
-        u8 m_reg = next_reg++;
+        u8 m_reg = next_reg;
+        next_reg += 1;
         if (next_reg > max_reg)
             max_reg = next_reg;
         return m_reg;
@@ -50,7 +51,7 @@ struct CompilerState {
     void free_register()
     {
         if (next_reg > 0)
-            next_reg--;
+            next_reg -= 1;
     }
     void free_regs_to(u8 m) { next_reg = m; }
 }; // struct CompilerState
@@ -160,7 +161,7 @@ private:
         }
     };
     struct PairEqual {
-        bool operator()(std::pair<Fa_StringRef, Fa_Chunk*> lhs, std::pair<Fa_StringRef, Fa_Chunk*> rhs) const noexcept 
+        bool operator()(std::pair<Fa_StringRef, Fa_Chunk*> lhs, std::pair<Fa_StringRef, Fa_Chunk*> rhs) const noexcept
         {
             return lhs.first == rhs.first && lhs.second == rhs.second;
         }

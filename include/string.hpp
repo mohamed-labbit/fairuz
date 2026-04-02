@@ -63,8 +63,8 @@ public:
     char operator[](size_t const i) const noexcept { return ptr()[i]; }
     char& operator[](size_t const i) noexcept { return ptr()[i]; }
 
-    void increment() const noexcept { RefCount++; }
-    void decrement() const noexcept { RefCount--; }
+    void increment() const noexcept { RefCount += 1; }
+    void decrement() const noexcept { RefCount -= 1; }
 
     u32 reference_count() const noexcept { return RefCount; }
 }; // class StringBase
