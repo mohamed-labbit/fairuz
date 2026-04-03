@@ -1,5 +1,6 @@
 #include "../include/ast.hpp"
 #include "../include/compiler.hpp"
+#include "../include/diagnostic.hpp"
 #include "../include/opcode.hpp"
 #include "../include/vm.hpp"
 
@@ -93,11 +94,13 @@ struct VMRunner {
 
     Fa_Value run(CB& b)
     {
+        diagnostic::reset();
         chunk_ = b.ch;
         return vm.run(chunk_);
     }
     Fa_Value run(Fa_Chunk* c)
     {
+        diagnostic::reset();
         chunk_ = c;
         return vm.run(chunk_);
     }
@@ -113,7 +116,11 @@ VMRunner& native_runner()
 
 Fa_Chunk* compile_program(Fa_Array<AST::Fa_Stmt*> stmts)
 {
-    return Compiler().compile(stmts);
+    diagnostic::reset();
+    Fa_Chunk* chunk = Compiler().compile(stmts);
+    EXPECT_FALSE(diagnostic::has_errors());
+    diagnostic::reset();
+    return chunk;
 }
 
 Fa_Chunk* compile_calling(AST::Fa_Stmt* fn)
@@ -311,7 +318,6 @@ TEST(VMArith, AddDoubles)
 
 TEST(VMArith, AddStringsConcat)
 {
-    GTEST_SKIP() << "Not supported yet.";
     VMRunner r;
     CB b;
     b.regs(3);
@@ -952,132 +958,59 @@ TEST(VMCalls, StackOverflowDetected)
     EXPECT_THROW(r.run(top), std::runtime_error);
 }
 
-TEST(VMClosures, CaptureLocal_GetUpvalue)
+TEST(VMGlobals, UndefinedGlobalRaisesRuntimeError)
 {
-    auto inner = make_chunk();
-    inner->m_name = "inner";
-    inner->arity = 0;
-    inner->upvalue_count = 1;
-    inner->local_count = 1;
-    inner->emit(Fa_make_ABC(Fa_OpCode::GET_UPVALUE, 0, 0, 0), { });
-    inner->emit(Fa_make_ABC(Fa_OpCode::RETURN, 0, 1, 0), { });
-
-    auto outer = make_chunk();
-    outer->m_name = "outer";
-    outer->arity = 0;
-    outer->local_count = 2;
-    outer->upvalue_count = 0;
-    outer->functions.push(inner);
-    outer->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 0, BX(10)), { });
-    outer->emit(Fa_make_ABx(Fa_OpCode::CLOSURE, 1, 0), { });
-    outer->emit(Fa_make_ABC(Fa_OpCode::MOVE, 1, 0, 0), { });
-    outer->emit(Fa_make_ABC(Fa_OpCode::CALL, 1, 0, 0), { });
-    outer->emit(Fa_make_ABC(Fa_OpCode::RETURN, 1, 1, 0), { });
-
-    auto top = make_chunk();
-    top->m_name = "<test>";
-    top->local_count = 2;
-    top->functions.push(outer);
-    top->emit(Fa_make_ABx(Fa_OpCode::CLOSURE, 0, 0), { });
-    top->emit(Fa_make_ABC(Fa_OpCode::CALL, 0, 0, 0), { });
-    top->emit(Fa_make_ABC(Fa_OpCode::RETURN, 0, 1, 0), { });
-    top->disassemble();
     VMRunner r;
-    EXPECT_EQ(Fa_AS_INTEGER(r.run(std::move(top))), 10);
+    CB b;
+    b.regs(1).ldg(0, "missing").ret(0);
+    b.dump();
+    EXPECT_THROW(r.run(b), Fa_RuntimeHalt);
+    diagnostic::reset();
 }
 
-TEST(VMClosures, CloseUpvalue_SurvivesFrame)
+TEST(VMIntegration, FunctionLocalDeclarationShadowsGlobal)
 {
-    auto add = make_chunk();
-    add->m_name = "add";
-    add->arity = 1;
-    add->upvalue_count = 1;
-    add->local_count = 3;
-    add->emit(Fa_make_ABC(Fa_OpCode::GET_UPVALUE, 1, 0, 0), { });
-    add->emit(Fa_make_ABC(Fa_OpCode::OP_ADD, 2, 1, 0), { });
-    add->emit(Fa_make_ABC(Fa_OpCode::RETURN, 2, 1, 0), { });
+    AST::Fa_Stmt* make_local = AST::Fa_makeFunction(
+        AST::Fa_makeName("make_local"),
+        AST::Fa_makeList(),
+        AST::Fa_makeBlock({
+            AST::Fa_makeExprStmt(AST::Fa_makeAssignmentExpr(AST::Fa_makeName("x"), AST::Fa_makeLiteralInt(2), true)),
+            AST::Fa_makeReturn(AST::Fa_makeName("x")),
+        }));
 
-    auto ma = make_chunk();
-    ma->m_name = "ma";
-    ma->arity = 1;
-    ma->local_count = 2;
-    ma->upvalue_count = 0;
-    ma->functions.push(add);
-    ma->emit(Fa_make_ABx(Fa_OpCode::CLOSURE, 1, 0), { });
-    ma->emit(Fa_make_ABC(Fa_OpCode::MOVE, 1, 0, 0), { });
-    ma->emit(Fa_make_ABC(Fa_OpCode::CLOSE_UPVALUE, 0, 0, 0), { });
-    ma->emit(Fa_make_ABC(Fa_OpCode::RETURN, 1, 1, 0), { });
+    AST::Fa_Stmt* read_global = AST::Fa_makeFunction(
+        AST::Fa_makeName("read_global"),
+        AST::Fa_makeList(),
+        AST::Fa_makeBlock({
+            AST::Fa_makeReturn(AST::Fa_makeName("x")),
+        }));
 
-    auto top = make_chunk();
-    top->m_name = "<test>";
-    top->local_count = 3;
-    top->functions.push(ma);
-    top->emit(Fa_make_ABx(Fa_OpCode::CLOSURE, 0, 0), { });
-    top->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 1, BX(10)), { });
-    top->emit(Fa_make_ABC(Fa_OpCode::CALL, 0, 1, 0), { });
-    top->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 1, BX(5)), { });
-    top->emit(Fa_make_ABC(Fa_OpCode::CALL, 0, 1, 0), { });
-    top->emit(Fa_make_ABC(Fa_OpCode::RETURN, 0, 1, 0), { });
+    AST::Fa_Stmt* main_fn = AST::Fa_makeFunction(
+        AST::Fa_makeName("main"),
+        AST::Fa_makeList(),
+        AST::Fa_makeBlock({
+            AST::Fa_makeReturn(AST::Fa_makeList({
+                AST::Fa_makeCall(AST::Fa_makeName("make_local"), AST::Fa_makeList()),
+                AST::Fa_makeCall(AST::Fa_makeName("read_global"), AST::Fa_makeList()),
+            })),
+        }));
+
+    Fa_Chunk* top = compile_program({
+        AST::Fa_makeExprStmt(AST::Fa_makeAssignmentExpr(AST::Fa_makeName("x"), AST::Fa_makeLiteralInt(1), true)),
+        make_local,
+        read_global,
+        main_fn,
+        AST::Fa_makeExprStmt(AST::Fa_makeCall(AST::Fa_makeName("main"), AST::Fa_makeList())),
+    });
+
     top->disassemble();
-
     VMRunner r;
-    EXPECT_EQ(Fa_AS_INTEGER(r.run(std::move(top))), 15);
-}
-
-TEST(VMClosures, SharedUpvalue_TwoClosuresOneSlot)
-{
-    auto get_fn = make_chunk();
-    get_fn->m_name = "get";
-    get_fn->arity = 0;
-    get_fn->upvalue_count = 1;
-    get_fn->local_count = 1;
-    get_fn->emit(Fa_make_ABC(Fa_OpCode::GET_UPVALUE, 0, 0, 0), { });
-    get_fn->emit(Fa_make_ABC(Fa_OpCode::RETURN, 0, 1, 0), { });
-
-    auto set_fn = make_chunk();
-    set_fn->m_name = "set";
-    set_fn->arity = 1;
-    set_fn->upvalue_count = 1;
-    set_fn->local_count = 1;
-    set_fn->emit(Fa_make_ABC(Fa_OpCode::SET_UPVALUE, 0, 0, 0), { });
-    set_fn->emit(Fa_make_ABC(Fa_OpCode::RETURN_NIL, 0, 0, 0), { });
-
-    auto mp = make_chunk();
-    mp->m_name = "mp";
-    mp->arity = 0;
-    mp->local_count = 4;
-    mp->upvalue_count = 0;
-    mp->functions.push(get_fn);
-    mp->functions.push(set_fn);
-    mp->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 0, BX(0)), { });
-    mp->emit(Fa_make_ABx(Fa_OpCode::CLOSURE, 1, 0), { });
-    mp->emit(Fa_make_ABC(Fa_OpCode::MOVE, 1, 0, 0), { });
-    mp->emit(Fa_make_ABx(Fa_OpCode::CLOSURE, 2, 1), { });
-    mp->emit(Fa_make_ABC(Fa_OpCode::MOVE, 1, 0, 0), { });
-    mp->emit(Fa_make_ABC(Fa_OpCode::LIST_NEW, 3, 2, 0), { });
-    mp->emit(Fa_make_ABC(Fa_OpCode::LIST_APPEND, 3, 1, 0), { });
-    mp->emit(Fa_make_ABC(Fa_OpCode::LIST_APPEND, 3, 2, 0), { });
-    mp->emit(Fa_make_ABC(Fa_OpCode::CLOSE_UPVALUE, 0, 0, 0), { });
-    mp->emit(Fa_make_ABC(Fa_OpCode::RETURN, 3, 1, 0), { });
-
-    auto top = make_chunk();
-    top->m_name = "<test>";
-    top->local_count = 5;
-    top->functions.push(mp);
-    top->emit(Fa_make_ABx(Fa_OpCode::CLOSURE, 0, 0), { });
-    top->emit(Fa_make_ABC(Fa_OpCode::CALL, 0, 0, 0), { });
-    top->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 2, BX(1)), { });
-    top->emit(Fa_make_ABC(Fa_OpCode::LIST_GET, 1, 0, 2), { });
-    top->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 2, BX(99)), { });
-    top->emit(Fa_make_ABC(Fa_OpCode::CALL, 1, 1, 0), { });
-    top->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 2, BX(0)), { });
-    top->emit(Fa_make_ABC(Fa_OpCode::LIST_GET, 1, 0, 2), { });
-    top->emit(Fa_make_ABC(Fa_OpCode::CALL, 1, 0, 0), { });
-    top->emit(Fa_make_ABC(Fa_OpCode::RETURN, 1, 1, 0), { });
-    top->disassemble();
-
-    VMRunner r;
-    EXPECT_EQ(Fa_AS_INTEGER(r.run(std::move(top))), 99);
+    Fa_Value v = r.run(top);
+    ASSERT_TRUE(Fa_IS_LIST(v));
+    auto const& elems = Fa_AS_LIST(v)->m_elements;
+    ASSERT_EQ(elems.size(), 2u);
+    EXPECT_EQ(Fa_AS_INTEGER(elems[0]), 2);
+    EXPECT_EQ(Fa_AS_INTEGER(elems[1]), 1);
 }
 
 TEST(VMICProfile, BinaryOpUpdatesSlot)
@@ -1196,7 +1129,6 @@ TEST(VMIntegration, SumForLoopOverList)
 
 TEST(VMIntegration, StringConcat_3Parts)
 {
-    GTEST_SKIP() << "Compiler does not lower string concatenation yet.";
     AST::Fa_Stmt* test = AST::Fa_makeFunction(
         AST::Fa_makeName("test"),
         AST::Fa_makeList(),
@@ -1234,41 +1166,44 @@ TEST(VMIntegration, EmptyForLoopLeavesStateUnchanged)
     EXPECT_EQ(Fa_AS_INTEGER(r.run(top)), 99);
 }
 
-TEST(VMIntegration, NestedAdderClosure)
+TEST(VMIntegration, BreakAndContinueWorkInLoops)
 {
-    auto add_fn = make_chunk();
-    add_fn->m_name = "add";
-    add_fn->arity = 1;
-    add_fn->upvalue_count = 1;
-    add_fn->local_count = 3;
-    add_fn->emit(Fa_make_ABC(Fa_OpCode::GET_UPVALUE, 1, 0, 0), { });
-    add_fn->emit(Fa_make_ABC(Fa_OpCode::OP_ADD, 2, 1, 0), { });
-    add_fn->emit(Fa_make_ABC(Fa_OpCode::RETURN, 2, 1, 0), { });
+    AST::Fa_Stmt* test = AST::Fa_makeFunction(
+        AST::Fa_makeName("test"),
+        AST::Fa_makeList(),
+        AST::Fa_makeBlock({
+            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("items"),
+                AST::Fa_makeList({
+                    AST::Fa_makeLiteralInt(1),
+                    AST::Fa_makeLiteralInt(2),
+                    AST::Fa_makeLiteralInt(3),
+                    AST::Fa_makeLiteralInt(4),
+                    AST::Fa_makeLiteralInt(5),
+                }),
+                true),
+            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("total"), AST::Fa_makeLiteralInt(0), true),
+            AST::Fa_makeFor(
+                AST::Fa_makeName("item"),
+                AST::Fa_makeName("items"),
+                AST::Fa_makeBlock({
+                    AST::Fa_makeIf(
+                        AST::Fa_makeBinary(AST::Fa_makeName("item"), AST::Fa_makeLiteralInt(2), AST::Fa_BinaryOp::OP_EQ),
+                        AST::Fa_makeBlock({ AST::Fa_makeContinue() })),
+                    AST::Fa_makeIf(
+                        AST::Fa_makeBinary(AST::Fa_makeName("item"), AST::Fa_makeLiteralInt(5), AST::Fa_BinaryOp::OP_EQ),
+                        AST::Fa_makeBlock({ AST::Fa_makeBreak() })),
+                    AST::Fa_makeAssignmentStmt(
+                        AST::Fa_makeName("total"),
+                        AST::Fa_makeBinary(AST::Fa_makeName("total"), AST::Fa_makeName("item"), AST::Fa_BinaryOp::OP_ADD),
+                        false),
+                })),
+            AST::Fa_makeReturn(AST::Fa_makeName("total")),
+        }));
 
-    auto make_adder = make_chunk();
-    make_adder->m_name = "ma";
-    make_adder->arity = 1;
-    make_adder->local_count = 2;
-    make_adder->functions.push(add_fn);
-    make_adder->emit(Fa_make_ABx(Fa_OpCode::CLOSURE, 1, 0), { });
-    make_adder->emit(Fa_make_ABC(Fa_OpCode::MOVE, 1, 0, 0), { });
-    make_adder->emit(Fa_make_ABC(Fa_OpCode::CLOSE_UPVALUE, 0, 0, 0), { });
-    make_adder->emit(Fa_make_ABC(Fa_OpCode::RETURN, 1, 1, 0), { });
-
-    auto top = make_chunk();
-    top->m_name = "<test>";
-    top->local_count = 3;
-    top->functions.push(make_adder);
-    top->emit(Fa_make_ABx(Fa_OpCode::CLOSURE, 0, 0), { });
-    top->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 1, BX(5)), { });
-    top->emit(Fa_make_ABC(Fa_OpCode::CALL, 0, 1, 0), { });
-    top->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 1, BX(3)), { });
-    top->emit(Fa_make_ABC(Fa_OpCode::CALL, 0, 1, 0), { });
-    top->emit(Fa_make_ABC(Fa_OpCode::RETURN, 0, 1, 0), { });
+    Fa_Chunk* top = compile_calling(test);
     top->disassemble();
-
     VMRunner r;
-    EXPECT_EQ(Fa_AS_INTEGER(r.run(std::move(top))), 8);
+    EXPECT_EQ(Fa_AS_INTEGER(r.run(top)), 8);
 }
 
 TEST(NativeLen, NullArgv)
@@ -2520,69 +2455,7 @@ TEST(VMPerfTest, TailCall_vs_RegularLoop_Ratio)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 7. Upvalue capture and access throughput
-//    A closure reads its upvalue N times in a loop.
-//    Measures GET_UPVALUE dispatch + indirection cost.
-// ─────────────────────────────────────────────────────────────────────────────
-
-TEST(VMPerfTest, Upvalue_GetSet_200k)
-{
-    constexpr int N = 200'000;
-
-    // inner: loop N times, each iteration does GET_UPVALUE + ADD + SET_UPVALUE
-    auto* inner = make_chunk();
-    inner->m_name = "inner";
-    inner->arity = 0;
-    inner->upvalue_count = 1;
-    inner->local_count = 4;
-
-    inner->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 1, BX(0)), { }); // r1 = 0 (i)
-    inner->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 2, BX(1)), { }); // r2 = 1
-    inner->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 3, BX(N)), { }); // r3 = N
-    // loop: GET_UPVALUE r0, 0; r0 += r2; SET_UPVALUE; r1 += 1; cmp; loop
-    inner->emit(Fa_make_ABC(Fa_OpCode::GET_UPVALUE, 0, 0, 0), { }); // r0 = upval[0]
-    inner->emit(Fa_make_ABC(Fa_OpCode::OP_ADD, 0, 0, 2), { });      // r0 += 1
-    inner->emit(Fa_make_ABC(Fa_OpCode::SET_UPVALUE, 0, 0, 0), { }); // upval[0] = r0
-    inner->emit(Fa_make_ABC(Fa_OpCode::OP_ADD, 1, 1, 2), { });      // r1 += 1
-    inner->emit(Fa_make_ABC(Fa_OpCode::OP_LT, 0, 1, 3), { });       // r0 = i < N
-    inner->emit(Fa_make_AsBx(Fa_OpCode::JUMP_IF_FALSE, 0, 1), { }); // exit loop
-    inner->emit(Fa_make_AsBx(Fa_OpCode::LOOP, 0, -7), { });         // back
-    inner->emit(Fa_make_ABC(Fa_OpCode::GET_UPVALUE, 0, 0, 0), { }); // return upval
-    inner->emit(Fa_make_ABC(Fa_OpCode::RETURN, 0, 1, 0), { });
-
-    auto* outer = make_chunk();
-    outer->m_name = "outer";
-    outer->arity = 0;
-    outer->local_count = 2;
-    outer->functions.push(inner);
-    outer->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 0, BX(0)), { }); // r0 = 0 (upval seed)
-    outer->emit(Fa_make_ABx(Fa_OpCode::CLOSURE, 1, 0), { });      // r1 = inner closure
-    outer->emit(Fa_make_ABC(Fa_OpCode::MOVE, 1, 0, 0), { });      // capture r0 as upvalue
-    outer->emit(Fa_make_ABC(Fa_OpCode::CALL, 1, 0, 0), { });      // call inner()
-    outer->emit(Fa_make_ABC(Fa_OpCode::RETURN, 1, 1, 0), { });
-
-    auto* top = make_chunk();
-    top->m_name = "<upval_perf>";
-    top->local_count = 2;
-    top->functions.push(outer);
-    top->emit(Fa_make_ABx(Fa_OpCode::CLOSURE, 0, 0), { });
-    top->emit(Fa_make_ABC(Fa_OpCode::CALL, 0, 0, 0), { });
-    top->emit(Fa_make_ABC(Fa_OpCode::RETURN, 0, 1, 0), { });
-
-    top->disassemble();
-    Fa_VM vm;
-
-    auto t0 = std::chrono::high_resolution_clock::now();
-    Fa_Value result = vm.run(top);
-    f64 us = microseconds_since(t0);
-
-    do_not_optimize(result);
-    std::printf("  Upvalue get+set %dk iters:          %.1f µs  (%.2f ns/op)\n",
-        N / 1000, us, us * 1000.0 / N);
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 8. List operations throughput
+// 7. List operations throughput
 //    Builds a list of N elements then iterates over it summing values.
 // ─────────────────────────────────────────────────────────────────────────────
 

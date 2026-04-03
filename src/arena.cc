@@ -42,7 +42,7 @@ Fa_ArenaBlock::Fa_ArenaBlock(Fa_ArenaBlock&& other) noexcept
 
 Fa_ArenaBlock::~Fa_ArenaBlock()
 {
-    if (m_begin) {
+    if (m_begin != nullptr) {
         munmap(m_begin, m_size);
         m_begin = nullptr;
         m_next = nullptr;
@@ -53,7 +53,7 @@ Fa_ArenaBlock::~Fa_ArenaBlock()
 Fa_ArenaBlock& Fa_ArenaBlock::operator=(Fa_ArenaBlock&& other) noexcept
 {
     if (this != &other) {
-        if (m_begin)
+        if (m_begin != nullptr)
             munmap(m_begin, m_size);
 
         m_size = other.m_size;
@@ -79,7 +79,7 @@ size_t Fa_ArenaBlock::size() const { return m_size; }
 
 size_t Fa_ArenaBlock::used() const
 {
-    if (!m_begin || m_next < m_begin)
+    if (m_begin == nullptr || m_next < m_begin)
         return 0;
 
     return static_cast<size_t>(m_next - m_begin);
@@ -87,7 +87,7 @@ size_t Fa_ArenaBlock::used() const
 
 size_t Fa_ArenaBlock::remaining() const
 {
-    if (!m_begin)
+    if (m_begin == nullptr)
         return 0;
 
     return static_cast<size_t>(m_end - m_next);
@@ -95,7 +95,7 @@ size_t Fa_ArenaBlock::remaining() const
 
 bool Fa_ArenaBlock::pop(size_t bytes)
 {
-    if (!m_begin || m_next < m_begin + bytes)
+    if (m_begin == nullptr || m_next < m_begin + bytes)
         return false;
 
     m_next -= bytes;
@@ -104,7 +104,7 @@ bool Fa_ArenaBlock::pop(size_t bytes)
 
 unsigned char* Fa_ArenaBlock::allocate(size_t bytes, std::optional<size_t> m_alignment)
 {
-    if (!m_begin || bytes == 0)
+    if (m_begin == nullptr || bytes == 0)
         return nullptr;
 
     size_t align = m_alignment.value_or(alignof(std::max_align_t));
@@ -122,7 +122,7 @@ unsigned char* Fa_ArenaBlock::allocate(size_t bytes, std::optional<size_t> m_ali
 
 unsigned char* Fa_ArenaBlock::reserve(size_t const bytes)
 {
-    if (!m_begin || bytes == 0)
+    if (m_begin == nullptr || bytes == 0)
         return nullptr;
     if (static_cast<size_t>(m_end - m_next) < bytes)
         return nullptr;
@@ -255,7 +255,7 @@ void* Fa_ArenaAllocator::allocate_slow(size_t m_size, size_t m_alignment)
 
 void Fa_ArenaAllocator::deallocate(void* ptr, size_t const m_size)
 {
-    if (!ptr || m_size == 0 || m_blocks.empty())
+    if (ptr == nullptr || m_size == 0 || m_blocks.empty())
         return;
 
     auto expected = static_cast<unsigned char*>(ptr);
@@ -311,14 +311,14 @@ unsigned char* Fa_ArenaAllocator::allocate_from_blocks(size_t alloc_size, size_t
 {
     if (!m_blocks.empty()) {
         unsigned char* mem = m_blocks.back().allocate(alloc_size, align);
-        if (mem) {
+        if (mem != nullptr) {
             m_next = m_blocks.back().next();
             return mem;
         }
     }
 
     size_t new_block_size = std::max(alloc_size, m_next_block_size);
-    if (!allocate_block(new_block_size, align)) {
+    if (allocate_block(new_block_size, align) == nullptr) {
 #ifdef fairuz_DEBUG
         if (m_debug_features)
             std::cerr << "-- Failed to allocate block : Fa_ArenaAllocator::allocate_block()" << std::endl;
@@ -328,7 +328,7 @@ unsigned char* Fa_ArenaAllocator::allocate_from_blocks(size_t alloc_size, size_t
 
     update_next_block_size();
     unsigned char* mem = m_blocks.back().allocate(alloc_size, align);
-    if (mem)
+    if (mem != nullptr)
         m_next = m_blocks.back().next();
 
     return mem;

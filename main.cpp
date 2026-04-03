@@ -160,6 +160,8 @@ int main(int argc, char** argv)
             std::cerr << "Compilation failed: no bytecode was produced\n";
             return static_cast<int>(ExitCode::Software);
         }
+        if (fairuz::diagnostic::has_errors())
+            return static_cast<int>(ExitCode::DataError);
 
         if (options.dump_bytecode)
             chunk->disassemble();
@@ -178,6 +180,8 @@ int main(int argc, char** argv)
         }
 
         return static_cast<int>(ExitCode::Success);
+    } catch (fairuz::runtime::Fa_RuntimeHalt const&) {
+        return static_cast<int>(ExitCode::DataError);
     } catch (std::exception const& ex) {
         std::cerr << "fatal: " << ex.what() << "\n";
         return static_cast<int>(ExitCode::Software);

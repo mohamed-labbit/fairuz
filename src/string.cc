@@ -57,7 +57,7 @@ StringBase::StringBase(size_t const s, char const c)
 
 StringBase::StringBase(char const* s, size_t n)
 {
-    if (!s || n == 0) {
+    if (s == nullptr || n == 0) {
         m_is_heap = false;
         m_storage.sso[0] = 0;
         return;
@@ -71,7 +71,7 @@ StringBase::StringBase(char const* s, size_t n)
     } else {
         m_storage.heap.m_cap = n + 1;
         m_storage.heap.ptr = get_allocator().allocate_array<char>(m_storage.heap.m_cap);
-        if (!m_storage.heap.ptr)
+        if (m_storage.heap.ptr == nullptr)
             diagnostic::panic("allocateArray<char>(size=" + std::to_string(m_storage.heap.m_cap) + ") failed!");
         ::memcpy(m_storage.heap.ptr, s, n);
         m_storage.heap.ptr[n] = 0;
@@ -80,7 +80,7 @@ StringBase::StringBase(char const* s, size_t n)
 
 StringBase::StringBase(char const* s)
 {
-    if (!s) {
+    if (s == nullptr) {
         m_is_heap = false;
         m_storage.sso[0] = 0;
         return;
@@ -94,7 +94,7 @@ StringBase::StringBase(char const* s)
     } else {
         m_storage.heap.m_cap = n + 1;
         m_storage.heap.ptr = get_allocator().allocate_array<char>(m_storage.heap.m_cap);
-        if (!m_storage.heap.ptr)
+        if (m_storage.heap.ptr == nullptr)
             diagnostic::panic("allocateArray<char>(size=" + std::to_string(m_storage.heap.m_cap) + ") failed!");
         ::memcpy(m_storage.heap.ptr, s, n + 1);
     }
@@ -119,7 +119,7 @@ Fa_StringRef::Fa_StringRef(Fa_StringRef const& other, size_t m_offset, size_t m_
 // relies on lit being nul terminated
 Fa_StringRef::Fa_StringRef(char const* lit)
 {
-    if (!lit || !lit[0]) {
+    if (lit == nullptr || !lit[0]) {
         m_string_data = detail::empty_string_singleton();
         m_string_data->increment();
         m_offset = 0;
@@ -134,7 +134,7 @@ Fa_StringRef::Fa_StringRef(char const* lit)
 
 Fa_StringRef::Fa_StringRef(char16_t const* u16_str)
 {
-    if (!u16_str || !u16_str[0]) {
+    if (u16_str == nullptr || !u16_str[0]) {
         m_string_data = detail::empty_string_singleton();
         m_string_data->increment();
         m_offset = 0;
@@ -204,7 +204,7 @@ Fa_StringRef& Fa_StringRef::operator=(Fa_StringRef&& other) noexcept
 
 Fa_StringRef::~Fa_StringRef()
 {
-    if (!m_string_data)
+    if (m_string_data == nullptr)
         return;
 
     m_string_data->decrement();
@@ -228,7 +228,7 @@ Fa_StringRef& Fa_StringRef::operator=(Fa_StringRef const& other)
     m_offset = other.m_offset;
     m_length = other.m_length;
 
-    if (m_string_data)
+    if (m_string_data != nullptr)
         m_string_data->increment();
 
     return *this;
@@ -247,7 +247,7 @@ void Fa_StringRef::expand(size_t const new_size)
     size_t new_capacity = (cap() < 1024) ? std::max(new_size + 1, cap() * 2) : std::max(new_size + 1, cap() + cap() / 2);
     char* new_ptr = get_allocator().allocate_array<char>(new_capacity);
 
-    if (old_ptr && old_len > 0)
+    if (old_ptr != nullptr && old_len > 0)
         ::memcpy(new_ptr, old_ptr, old_len);
 
     if (m_string_data->is_heap() && m_string_data->m_storage.heap.ptr)
@@ -285,7 +285,7 @@ void Fa_StringRef::erase(size_t const at)
     }
 
     ensure_unique();
-    if (!data())
+    if (data() == nullptr)
         return;
 
     ::memmove(data() + at, data() + at + 1, len() - at - 1);
@@ -491,7 +491,7 @@ f64 Fa_StringRef::to_double(size_t* pos) const
 
 Fa_StringRef Fa_StringRef::from_utf16(char16_t const* src)
 {
-    if (!src || !src[0])
+    if (src == nullptr || !src[0])
         return { };
 
     char16_t const* p = src;

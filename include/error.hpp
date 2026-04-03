@@ -23,6 +23,7 @@ public:
 
     Fa_Error(Fa_Error const&) = default;
     Fa_Error& operator=(Fa_Error const&) = default;
+
     Fa_Error(Fa_Error&&) = default;
     Fa_Error& operator=(Fa_Error&&) = default;
 
@@ -102,7 +103,7 @@ public:
     bool has_value() const noexcept { return m_is_value; }
     bool has_error() const noexcept { return !m_is_value; }
 
-    T m_value() const
+    T value() const
     {
         // In a debug build you want an assert here rather than silent UB.
         assert(m_is_value && "called value() on an Fa_ErrorOr holding an error");
@@ -151,11 +152,12 @@ private:
 static Fa_Error _report_error(u16 err_code, Fa_SourceLocation loc, lex::Fa_Lexer* lex)
 {
     std::string snippet;
-    if (lex) {
+    if (lex != nullptr) {
         Fa_StringRef m_line = lex->get_line_at(loc.m_line);
         if (!m_line.empty())
             snippet.assign(m_line.data(), m_line.len());
     }
+
     diagnostic::report(diagnostic::Severity::ERROR, loc.m_line, loc.m_column, err_code, snippet);
     return Fa_Error(err_code);
 }

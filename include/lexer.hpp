@@ -120,7 +120,7 @@ public:
     explicit Fa_SourceManager(Fa_FileManager* fm)
         : m_file_manager(fm)
     {
-        if (!m_file_manager)
+        if (m_file_manager == nullptr)
             throw std::runtime_error("Fa_SourceManager: Fa_FileManager is null");
 
         reset();

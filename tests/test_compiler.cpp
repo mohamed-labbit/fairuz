@@ -1,5 +1,6 @@
 #include "../include/ast_printer.hpp"
 #include "../include/compiler.hpp"
+#include "../include/diagnostic.hpp"
 
 #include <algorithm>
 #include <gtest/gtest.h>
@@ -110,7 +111,14 @@ private:
     Fa_StringRef label_;
 };
 
-static Fa_Chunk* compile_ok(Fa_Array<AST::Fa_Stmt*> stmts, Compiler& c) { return c.compile(stmts); }
+static Fa_Chunk* compile_ok(Fa_Array<AST::Fa_Stmt*> stmts, Compiler& c)
+{
+    diagnostic::reset();
+    Fa_Chunk* chunk = c.compile(stmts);
+    EXPECT_FALSE(diagnostic::has_errors());
+    diagnostic::reset();
+    return chunk;
+}
 
 static void dump(Fa_Chunk const* c)
 {
@@ -138,6 +146,22 @@ static Fa_Chunk* compile_ok(AST::Fa_Stmt* root, Compiler& c)
     Fa_Array<AST::Fa_Stmt*> stmts;
     stmts.push(root);
     return compile_ok(stmts, c);
+}
+
+static Fa_Chunk* compile_fail(Fa_Array<AST::Fa_Stmt*> stmts)
+{
+    diagnostic::reset();
+    Fa_Chunk* chunk = Compiler().compile(stmts);
+    EXPECT_TRUE(diagnostic::has_errors());
+    diagnostic::reset();
+    return chunk;
+}
+
+static Fa_Chunk* compile_fail(AST::Fa_Stmt* root)
+{
+    Fa_Array<AST::Fa_Stmt*> stmts;
+    stmts.push(root);
+    return compile_fail(stmts);
 }
 
 static u16 load_int_bx(i64 i) { return static_cast<u16>(i + 32767); }
@@ -928,49 +952,24 @@ TEST(CompilerFunc, RecursiveFunctionBodyCompiles)
     EXPECT_FALSE(chunk->functions[0]->code.empty());
 }
 
-TEST(CompilerClosure, CapturesLocalFromEnclosingScope)
+TEST(CompilerFunc, NestedFunctionRejected)
 {
-    GTEST_SKIP() << "Upvalues are intentionally unsupported in the simplified compiler.";
-    Fa_Chunk* chunk = compile_ok(func_stmt("outer", { }, blk(decl("x", AST::Fa_makeLiteralInt(1)), func_stmt("inner", { }, blk(Fa_makeReturn(AST::Fa_makeName("x")))))));
+    Fa_Chunk* chunk = compile_fail(func_stmt("outer", { },
+        blk(decl("x", AST::Fa_makeLiteralInt(1)),
+            func_stmt("inner", { }, blk(Fa_makeReturn(AST::Fa_makeName("x")))))));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     ASSERT_EQ(chunk->functions.size(), 1u);
-    Fa_Chunk const* outer = chunk->functions[0];
-    ASSERT_EQ(outer->functions.size(), 1u);
-    Fa_Chunk const* inner = outer->functions[0];
-    EXPECT_EQ(inner->upvalue_count, 1);
-    bool has_get_uv = false;
-    for (auto& ins : inner->code) {
-        if (Fa_instr_op(ins) == Fa_OpCode::GET_UPVALUE)
-            has_get_uv = true;
-    }
-    EXPECT_TRUE(has_get_uv) << "inner should GET_UPVALUE for x";
-    bool has_close_uv = false;
-    for (auto& ins : outer->code) {
-        if (Fa_instr_op(ins) == Fa_OpCode::CLOSE_UPVALUE)
-            has_close_uv = true;
-    }
-    EXPECT_TRUE(has_close_uv) << "outer should CLOSE_UPVALUE when x goes out of scope";
+    EXPECT_EQ(chunk->functions[0]->m_name, "outer");
+    EXPECT_TRUE(chunk->functions[0]->functions.empty());
 }
 
-TEST(CompilerClosure, UpvalueDescriptorEmittedAfterClosure)
+TEST(CompilerFunc, FunctionInsideTopLevelBlockRejected)
 {
-    GTEST_SKIP() << "Upvalues are intentionally unsupported in the simplified compiler.";
-    Fa_Chunk* chunk = compile_ok(func_stmt("outer", { }, blk(decl("x", AST::Fa_makeLiteralInt(1)), func_stmt("inner", { }, blk(Fa_makeReturn(AST::Fa_makeName("x")))))));
+    Fa_Chunk* chunk = compile_fail(blk(func_stmt("inner", { }, blk())));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
-    Fa_Chunk const* outer = chunk->functions[0];
-    int closure_pos = -1;
-    for (int i = 0; i < (int)outer->code.size(); i += 1) {
-        if (Fa_instr_op(outer->code[i]) == Fa_OpCode::CLOSURE)
-            closure_pos = i;
-    }
-    ASSERT_GE(closure_pos, 0) << "CLOSURE not found in outer";
-    ASSERT_LT(closure_pos + 1, (int)outer->code.size());
-    u32 desc = outer->code[closure_pos + 1];
-    EXPECT_EQ(Fa_instr_op(desc), Fa_OpCode::MOVE) << "upvalue descriptor MOVE must follow CLOSURE";
-    EXPECT_EQ(Fa_instr_A(desc), 1u) << "is_local=1 for direct local capture";
-    EXPECT_EQ(Fa_instr_B(desc), 0u) << "captures r0 (x)";
+    EXPECT_TRUE(chunk->functions.empty());
 }
 
 TEST(CompilerCall, CallWithNoArgs)
@@ -1064,9 +1063,11 @@ TEST(CompilerList, ListWithElements)
 TEST(CompilerList, ListCapHintCappedAt255)
 {
     Fa_Array<AST::Fa_Expr*> elems;
+    
     for (int i = 0; i < 300; i += 1)
         elems.push(AST::Fa_makeLiteralInt(i));
-    Fa_Chunk* chunk = compile_ok(AST::Fa_makeExprStmt(AST::Fa_makeList(std::move(elems))));
+    
+    Fa_Chunk* chunk = compile_fail(AST::Fa_makeExprStmt(AST::Fa_makeList(std::move(elems)))); // too many regs
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     ASSERT_FALSE(chunk->code.empty());
@@ -1177,27 +1178,56 @@ TEST(CompilerIntegration, Fibonacci)
     EXPECT_GE(fib->ic_slots.size(), 2u);
 }
 
-TEST(CompilerIntegration, CounterWithClosure)
+TEST(CompilerLoop, BreakPatchesToLoopExit)
 {
-    GTEST_SKIP() << "Upvalues are intentionally unsupported in the simplified compiler.";
-    Fa_Chunk* chunk = compile_ok(func_stmt("make_counter", { },
-        blk(decl("count", AST::Fa_makeLiteralInt(0)),
-            func_stmt("inc", { }, blk(assign_stmt("count", Fa_makeBinary(AST::Fa_makeName("count"), AST::Fa_makeLiteralInt(1), AST::Fa_BinaryOp::OP_ADD)))),
-            Fa_makeReturn(AST::Fa_makeName("inc")))));
+    Fa_Chunk* chunk = compile_ok(Fa_makeWhile(AST::Fa_makeName("cond"), blk(AST::Fa_makeBreak(), decl("x", AST::Fa_makeLiteralInt(1)))));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
-    ASSERT_EQ(chunk->functions.size(), 1u);
-    Fa_Chunk const* mc = chunk->functions[0];
-    ASSERT_EQ(mc->functions.size(), 1u);
-    Fa_Chunk const* inc = mc->functions[0];
 
-    bool has_set_uv = false;
-    for (auto& ins : inc->code) {
-        if (Fa_instr_op(ins) == Fa_OpCode::SET_UPVALUE)
-            has_set_uv = true;
+    int jump_pos = -1;
+    int loop_pos = -1;
+    for (int i = 0; i < (int)chunk->code.size(); i += 1) {
+        if (Fa_instr_op(chunk->code[i]) == Fa_OpCode::JUMP && jump_pos < 0)
+            jump_pos = i;
+        if (Fa_instr_op(chunk->code[i]) == Fa_OpCode::LOOP)
+            loop_pos = i;
     }
-    EXPECT_TRUE(has_set_uv) << "inc() should SET_UPVALUE for count";
-    EXPECT_EQ(inc->upvalue_count, 1);
+
+    ASSERT_GE(jump_pos, 0);
+    ASSERT_GE(loop_pos, 0);
+    EXPECT_GT(jump_pos + 1 + Fa_instr_sBx(chunk->code[jump_pos]), loop_pos);
+}
+
+TEST(CompilerLoop, ContinuePatchesToLoopLatch)
+{
+    Fa_Chunk* chunk = compile_ok(Fa_makeWhile(AST::Fa_makeName("cond"), blk(AST::Fa_makeContinue(), decl("x", AST::Fa_makeLiteralInt(1)))));
+    ASSERT_NE(chunk, nullptr);
+    dump(chunk);
+
+    int jump_pos = -1;
+    int loop_pos = -1;
+    for (int i = 0; i < (int)chunk->code.size(); i += 1) {
+        if (Fa_instr_op(chunk->code[i]) == Fa_OpCode::JUMP && jump_pos < 0)
+            jump_pos = i;
+        if (Fa_instr_op(chunk->code[i]) == Fa_OpCode::LOOP)
+            loop_pos = i;
+    }
+
+    ASSERT_GE(jump_pos, 0);
+    ASSERT_GE(loop_pos, 0);
+    EXPECT_EQ(jump_pos + 1 + Fa_instr_sBx(chunk->code[jump_pos]), loop_pos);
+}
+
+TEST(CompilerLoop, BreakOutsideLoopIsRejected)
+{
+    Fa_Chunk* chunk = compile_fail(AST::Fa_makeBreak());
+    ASSERT_NE(chunk, nullptr);
+}
+
+TEST(CompilerLoop, ContinueOutsideLoopIsRejected)
+{
+    Fa_Chunk* chunk = compile_fail(AST::Fa_makeContinue());
+    ASSERT_NE(chunk, nullptr);
 }
 
 TEST(CompilerIntegration, NestedArithmetic)

@@ -29,12 +29,11 @@ enum class Fa_ObjType : u8 {
     DICT,
     FUNCTION,
     CLOSURE,
-    NATIVE,
-    UPVALUE
+    NATIVE
 }; // enum Fa_ObjType
 
 struct Fa_ObjHeader {
-    Fa_ObjType m_type { Fa_ObjType::UPVALUE };
+    Fa_ObjType m_type { Fa_ObjType::STRING };
     bool is_marked { false };
     Fa_ObjHeader* m_next { nullptr };
 
@@ -79,7 +78,6 @@ struct Fa_ObjDict final : public Fa_ObjHeader {
 
 struct Fa_ObjFunction final : public Fa_ObjHeader {
     unsigned int arity { 0 };
-    unsigned int upvalue_count { 0 };
     Fa_Chunk* chunk { nullptr };
     Fa_ObjString* m_name { nullptr };
 
@@ -90,26 +88,12 @@ struct Fa_ObjFunction final : public Fa_ObjHeader {
     }
 }; // struct Fa_ObjFunction
 
-struct ObjUpvalue final : public Fa_ObjHeader {
-    Fa_Value* m_location { nullptr };
-    Fa_Value closed;
-    ObjUpvalue* next_open { nullptr };
-
-    explicit ObjUpvalue(Fa_Value* slot) noexcept
-        : Fa_ObjHeader(Fa_ObjType::UPVALUE)
-        , m_location(slot)
-    {
-    }
-}; // struct ObjUpvalue
-
 struct Fa_ObjClosure final : public Fa_ObjHeader {
     Fa_ObjFunction* function { nullptr };
-    Fa_Array<ObjUpvalue*> up_values;
 
     explicit Fa_ObjClosure(Fa_ObjFunction* fn)
         : Fa_ObjHeader(Fa_ObjType::CLOSURE)
         , function(fn)
-        , up_values(fn->upvalue_count, nullptr)
     {
     }
 }; // struct Fa_ObjClosure
@@ -133,7 +117,6 @@ struct Fa_ObjNative final : public Fa_ObjHeader {
 #define Fa_MAKE_OBJ_LIST() GC_.make<Fa_ObjList>()
 #define Fa_MAKE_OBJ_DICT() GC_.make<Fa_ObjDict>()
 #define Fa_MAKE_OBJ_FUNCTION(ch) GC_.make<Fa_ObjFunction>(ch)
-#define Fa_MAKE_OBJ_UPVALUE(slot) GC_.make<ObjUpvalue>(slot)
 #define Fa_MAKE_OBJ_CLOSURE(fn) GC_.make<Fa_ObjClosure>(fn)
 
 #define Fa_MAKE_OBJECT(p) TAG_OBJ | (reinterpret_cast<uintptr_t>(p) & PAYLOAD_MASK)
@@ -155,11 +138,6 @@ struct Fa_ObjNative final : public Fa_ObjHeader {
 #define Fa_MAKE_FUNCTION(ch)                                         \
     ({                                                               \
         Fa_ObjFunction* obj = GC_.make<Fa_ObjFunction>(ch);          \
-        TAG_OBJ | (reinterpret_cast<uintptr_t>(obj) & PAYLOAD_MASK); \
-    })
-#define Fa_MAKE_UPVALUE(slot)                                        \
-    ({                                                               \
-        ObjUpvalue* obj = GC_.make<ObjUpvalue>(slot);                \
         TAG_OBJ | (reinterpret_cast<uintptr_t>(obj) & PAYLOAD_MASK); \
     })
 #define Fa_MAKE_CLOSURE(fn)                                          \

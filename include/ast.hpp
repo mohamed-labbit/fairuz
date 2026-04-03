@@ -363,7 +363,7 @@ public:
         , m_args(a)
         , m_call_location(loc)
     {
-        if (!m_args)
+        if (m_args == nullptr)
             m_args = Fa_makeList();
 
         assert(m_callee != nullptr);
@@ -424,6 +424,7 @@ public:
     [[nodiscard]] Fa_Expr* get_value() const;
     void set_target(Fa_Expr* t);
     void set_value(Fa_Expr* v);
+    void set_decl();
     [[nodiscard]] bool is_declaration() const;
 }; // Fa_AssignmentExpr
 
@@ -468,6 +469,8 @@ public:
         FOR,
         FUNC,
         RETURN,
+        BREAK,
+        CONTINUE,
         BLOCK,
         INVALID
     };
@@ -568,6 +571,9 @@ public:
     [[nodiscard]] bool is_declaration() const;
     void set_value(Fa_Expr* v);
     void set_target(Fa_Expr* t);
+    void set_decl();
+    
+    Fa_AssignmentExpr* get_expr() { return m_expr; }
 }; // struct Fa_AssignmentExpr
 
 struct Fa_IfStmt final : public Fa_Stmt {
@@ -712,7 +718,6 @@ public:
     explicit Fa_ReturnStmt(Fa_Expr* m_value)
         : m_value(m_value)
     {
-        assert(m_value != nullptr);
         kind = Kind::RETURN;
     }
 
@@ -723,11 +728,36 @@ public:
 
     [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
     [[nodiscard]] Fa_ReturnStmt* clone() const override;
+    [[nodiscard]] Fa_Expr* get_value();
     [[nodiscard]] Fa_Expr const* get_value() const;
     [[nodiscard]] bool has_value() const;
 
     void set_value(Fa_Expr* v);
 }; // struct Fa_ReturnStmt
+
+struct Fa_BreakStmt final : public Fa_Stmt {
+    Fa_BreakStmt() { kind = Kind::BREAK; }
+
+    Fa_BreakStmt(Fa_BreakStmt&&) noexcept = delete;
+    Fa_BreakStmt(Fa_BreakStmt const&) noexcept = delete;
+
+    Fa_BreakStmt& operator=(Fa_BreakStmt const&) noexcept = delete;
+
+    [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
+    [[nodiscard]] Fa_BreakStmt* clone() const override;
+}; // struct Fa_BreakStmt
+
+struct Fa_ContinueStmt final : public Fa_Stmt {
+    Fa_ContinueStmt() { kind = Kind::CONTINUE; }
+
+    Fa_ContinueStmt(Fa_ContinueStmt&&) noexcept = delete;
+    Fa_ContinueStmt(Fa_ContinueStmt const&) noexcept = delete;
+
+    Fa_ContinueStmt& operator=(Fa_ContinueStmt const&) noexcept = delete;
+
+    [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
+    [[nodiscard]] Fa_ContinueStmt* clone() const override;
+}; // struct Fa_ContinueStmt
 
 static Fa_BinaryExpr* Fa_makeBinary(Fa_Expr* l, Fa_Expr* r, Fa_BinaryOp const op)
 {
@@ -816,6 +846,14 @@ static Fa_FunctionDef* Fa_makeFunction(Fa_NameExpr* m_name, Fa_ListExpr* m_param
 static Fa_ReturnStmt* Fa_makeReturn(Fa_Expr* m_value = nullptr)
 {
     return get_allocator().allocate_object<Fa_ReturnStmt>(m_value);
+}
+static Fa_BreakStmt* Fa_makeBreak()
+{
+    return get_allocator().allocate_object<Fa_BreakStmt>();
+}
+static Fa_ContinueStmt* Fa_makeContinue()
+{
+    return get_allocator().allocate_object<Fa_ContinueStmt>();
 }
 
 } // namespace fairuz::ast

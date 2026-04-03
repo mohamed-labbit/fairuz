@@ -20,7 +20,7 @@ public:
         UNKNOWN
     }; // enum SymbolType
 
-    enum class DataType_t {
+    enum class DataType {
         INTEGER,
         FLOAT,
         STRING,
@@ -32,18 +32,18 @@ public:
         FUNCTION,
         ANY,
         UNKNOWN
-    }; // enum DataType_t
+    }; // enum DataType
 
     struct Symbol {
         Fa_StringRef m_name;
         SymbolType symbol_type;
-        DataType_t data_type;
+        DataType data_type;
         bool is_used = false;
         i32 definition_line = 0;
         Fa_Array<i32> usage_lines;
-        Fa_Array<DataType_t> param_types;
-        DataType_t return_type = DataType_t::UNKNOWN;
-        std::unordered_set<DataType_t> possible_types;
+        Fa_Array<DataType> param_types;
+        DataType return_type = DataType::UNKNOWN;
+        std::unordered_set<DataType> possible_types;
     }; // struct Symbol
 
     Fa_SymbolTable* m_parent = nullptr;
@@ -76,6 +76,7 @@ public:
         }; // enum Severity
 
         Severity severity;
+        u16 code;
         Fa_StringRef message;
         i32 m_line;
         Fa_StringRef suggestion;
@@ -88,10 +89,10 @@ private:
 
 public:
     Fa_SemanticAnalyzer();
-    Fa_SymbolTable::DataType_t infer_type(AST::Fa_Expr const* m_expr);
-    void report_issue(Issue::Severity sev, Fa_StringRef msg, i32 m_line, Fa_StringRef const& sugg = "");
-    void analyze_fa_expr(AST::Fa_Expr const* m_expr);
-    void analyze_stmt(AST::Fa_Stmt const* stmt);
+    Fa_SymbolTable::DataType infer_type(AST::Fa_Expr* m_expr);
+    void report_issue(Issue::Severity sev, diagnostic::errc::m_sema::Code code, Fa_StringRef msg, i32 m_line, Fa_StringRef const& sugg = "");
+    void analyze_fa_expr(AST::Fa_Expr* m_expr);
+    void analyze_stmt(AST::Fa_Stmt* stmt);
     void analyze(Fa_Array<AST::Fa_Stmt*> const& m_statements);
     Fa_Array<Issue> const& get_issues() const;
     Fa_SymbolTable const* get_global_scope() const;
@@ -141,7 +142,7 @@ public:
     explicit Fa_Parser(lex::Fa_FileManager* fm)
         : m_lexer(fm)
     {
-        if (!fm)
+        if (fm == nullptr)
             diagnostic::panic(diagnostic::errc::general::Code::INTERNAL_ERROR, "parser received a null Fa_FileManager");
 
         m_lexer.m_next();
@@ -155,7 +156,10 @@ public:
     Fa_ErrorOr<AST::Fa_Stmt*> parse_expression_stmt();
     Fa_ErrorOr<AST::Fa_Stmt*> parse_if_stmt();
     Fa_ErrorOr<AST::Fa_Stmt*> parse_while_stmt();
+    Fa_ErrorOr<AST::Fa_Stmt*> parse_for_stmt();
     Fa_ErrorOr<AST::Fa_Stmt*> parse_return_stmt();
+    Fa_ErrorOr<AST::Fa_Stmt*> parse_break_stmt();
+    Fa_ErrorOr<AST::Fa_Stmt*> parse_continue_stmt();
     Fa_ErrorOr<AST::Fa_Stmt*> parse_function_def();
     Fa_ErrorOr<AST::Fa_Expr*> parse_parenthesized_expr_content();
     Fa_ErrorOr<AST::Fa_Expr*> parse_call_expr(AST::Fa_Expr* m_callee);
@@ -188,7 +192,6 @@ public:
 
 private:
     lex::Fa_Lexer m_lexer;
-    Fa_SymbolTable m_sym_table;
     Fa_SemanticAnalyzer m_sema;
 
     tok::Fa_Token const* peek(size_t m_offset = 1) { return m_lexer.peek(m_offset); }
@@ -214,7 +217,6 @@ private:
             ;
     }
 
-    void enter_scope();
     void synchronize();
 }; // class Fa_Parser
 

@@ -44,9 +44,9 @@ bool Fa_Chunk::patch_jump(u32 const instr_idx)
 
 u16 Fa_Chunk::add_constant(Fa_Value const v)
 {
-    for (u16 i = 0, n = static_cast<u16>(constants.size()); i < n; i += 1) {
+    for (u32 i = 0, n = constants.size(); i < n; i += 1) {
         if (constants[i] == v)
-            return i;
+            return static_cast<u16>(i);
     }
 
     constants.push(v);
@@ -75,7 +75,7 @@ u32 Fa_Chunk::get_line(u32 const instr_idx) const
 
 void Fa_Chunk::disassemble() const
 {
-    ::printf("=== %s (arity=%d regs=%d upvals=%d) ===\n", m_name.data(), arity, local_count, upvalue_count);
+    ::printf("=== %s (arity=%d regs=%d) ===\n", m_name.data(), arity, local_count);
 
     if (!constants.empty()) {
         ::printf("  constants:\n");

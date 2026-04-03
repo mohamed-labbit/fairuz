@@ -134,18 +134,14 @@ Fa_Value run_fa_expr_source(std::string const& source)
     Fa_Parser parser(&fm);
     auto parsed = parser.parse();
     EXPECT_TRUE(parsed.has_value()) << source;
-    Fa_Chunk* chunk = Compiler().compile({
-        Fa_makeExprStmt(Fa_makeCall(AST::Fa_makeName("طبيعي"), AST::Fa_makeList({ parsed.m_value() })))
-    });
+    Fa_Chunk* chunk = Compiler().compile({ Fa_makeExprStmt(Fa_makeCall(AST::Fa_makeName("طبيعي"), AST::Fa_makeList({ parsed.value() }))) });
     Fa_VM vm;
     return vm.run(chunk);
 }
 
 Fa_Value run_fa_expr_ast(AST::Fa_Expr* m_expr)
 {
-    Fa_Chunk* chunk = Compiler().compile({
-        Fa_makeExprStmt(Fa_makeCall(AST::Fa_makeName("طبيعي"), AST::Fa_makeList({ m_expr })))
-    });
+    Fa_Chunk* chunk = Compiler().compile({ Fa_makeExprStmt(Fa_makeCall(AST::Fa_makeName("طبيعي"), AST::Fa_makeList({ m_expr }))) });
     Fa_VM vm;
     return vm.run(chunk);
 }

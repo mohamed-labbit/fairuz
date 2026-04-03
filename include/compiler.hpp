@@ -17,11 +17,6 @@ struct LocalVar {
     u8 m_reg;
 }; // struct LocalVar
 
-struct UpvalueDesc {
-    bool is_local;
-    u8 m_index;
-}; // struct UpvalueDesc
-
 struct CompilerState {
     Fa_Chunk* chunk { nullptr };
     Fa_Array<LocalVar> locals;
@@ -185,6 +180,8 @@ private:
     void compile_function_def(AST::Fa_FunctionDef const* f);
     void compile_return(AST::Fa_ReturnStmt const* s);
     void compile_for(AST::Fa_ForStmt const* s);
+    void compile_break(AST::Fa_BreakStmt const* s);
+    void compile_continue(AST::Fa_ContinueStmt const* s);
 
     Fa_ExprResult compile_expr_i(AST::Fa_Expr const* e);
     Fa_ExprResult compile_literal_i(AST::Fa_LiteralExpr const* e);
@@ -217,10 +214,8 @@ private:
     u8 alloc_register();
 
     void declare_local(Fa_StringRef const& m_name, u8 m_reg);
+    LocalVar const* lookup_local(Fa_StringRef const& m_name) const;
     VarInfo resolve_name(Fa_StringRef const& m_name);
-
-    int resolve_upvalue(CompilerState* state, Fa_StringRef const& m_name);
-    int add_upvalue(CompilerState* state, bool is_local, u8 m_index);
 
     u32 emit(u32 instr, Fa_SourceLocation loc);
     u32 emit_jump(Fa_OpCode op, u8 cond, Fa_SourceLocation loc);

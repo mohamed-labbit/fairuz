@@ -511,6 +511,7 @@ tok::Fa_Token const* Fa_Lexer::lex_token()
             if (m_current == '.') {
                 number += util::encode_utf8_str(m_current);
                 m_current = m_source_manager.next_char();
+
                 for (;;) {
                     if (m_current == '_') {
                         m_current = m_source_manager.next_char();
@@ -523,6 +524,7 @@ tok::Fa_Token const* Fa_Lexer::lex_token()
                     number += util::encode_utf8_str(m_current);
                     m_current = m_source_manager.next_char();
                 }
+
                 return FINISH(tok::Fa_TokenType::DECIMAL, number, m_line, col);
             }
 

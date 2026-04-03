@@ -6,9 +6,18 @@
 #include "table.hpp"
 #include "value.hpp"
 
+#include <stdexcept>
+
 namespace fairuz::runtime {
 
 using ErrorCode = diagnostic::errc::runtime::Code;
+
+struct Fa_RuntimeHalt final : public std::runtime_error {
+    Fa_RuntimeHalt()
+        : std::runtime_error("runtime error")
+    {
+    }
+};
 
 class Fa_VM {
 public:
@@ -85,12 +94,9 @@ public:
     int m_stack_top { 0 };
     int m_frames_top { 0 };
 
-    int m_open_upvalue_count { 0 };
-
     Fa_HashTable<Fa_StringRef, u32, Fa_StringRefHash, Fa_StringRefEqual> m_global_index;
     Fa_HashTable<Fa_StringRef, Fa_ObjString*, Fa_StringRefHash, Fa_StringRefEqual> m_string_table;
     Fa_Array<Fa_Value> m_global_slots;
-    Fa_Array<ObjUpvalue*> m_open_upvalues;
     bool m_is_dead { false };
 
     Fa_Value execute();
@@ -102,9 +108,7 @@ public:
 
     Fa_ObjString* intern(Fa_StringRef const& str);
     void ensure_stack(int needed);
-    void close_upvalues(unsigned int from_stack_pos);
     void update_ic_binary(Fa_Chunk* ch, u32 nop_ip, Fa_Value lhs, Fa_Value rhs, Fa_Value result);
-    ObjUpvalue* capture_upvalue(unsigned int stack_pos);
     void call_value(Fa_Value m_callee, int argc, int base, bool tail);
     Fa_Value call_native(Fa_ObjNative* nat, int argc, int base);
     void return_from_call(int ret_reg, int n_ret);
@@ -113,7 +117,7 @@ public:
     void register_native(Fa_StringRef const& m_name, NativeFn fn, int arity = -1);
 
     Fa_SourceLocation current_location() const;
-    void runtime_error(ErrorCode code);
+    void runtime_error(ErrorCode code, std::string const& detail = "");
     [[noreturn]] void halt();
     void intern_chunk_constants(Fa_Chunk* ch);
 
@@ -131,7 +135,6 @@ public:
     Fa_Value& reg_a(Fa_CallFrame const& f, u32 instr);
     Fa_Value& reg_b(Fa_CallFrame const& f, u32 instr);
     Fa_Value& reg_c(Fa_CallFrame const& f, u32 instr);
-    void close_upvalues_for_frame(Fa_CallFrame const& f);
 }; // class Fa_VM
 
 } // namespace fairuz::runtime

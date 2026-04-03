@@ -24,17 +24,13 @@ void Fa_GarbageCollector::mark_roots(Fa_VM* vm)
     for (int i = 0; i < vm->m_frames_top && i < Fa_VM::MAX_FRAMES; i += 1)
         mark_object(vm->frames_[i].closure);
 
-    // Open upvalues
-    for (u32 i = 0, n = vm->m_open_upvalues.size(); i < n; i += 1)
-        mark_object(vm->m_open_upvalues[i]);
-
     // Global slots are the live Fa_VM roots for globals.
     mark_value_array(vm->m_global_slots);
 }
 
 void Fa_GarbageCollector::mark_object(Fa_ObjHeader* p)
 {
-    if (!p || p->is_marked)
+    if (p == nullptr || p->is_marked)
         return;
 
     p->is_marked = true;
@@ -47,8 +43,6 @@ void Fa_GarbageCollector::blacken_object(Fa_ObjHeader* obj)
     case Fa_ObjType::CLOSURE: {
         auto cl = static_cast<Fa_ObjClosure*>(obj);
         mark_object(cl->function);
-        for (u32 i = 0, n = cl->up_values.size(); i < n; i += 1)
-            mark_object(cl->up_values[i]);
     } break;
     case Fa_ObjType::FUNCTION: {
         mark_object(static_cast<Fa_ObjFunction*>(obj)->m_name);
@@ -71,13 +65,6 @@ void Fa_GarbageCollector::blacken_object(Fa_ObjHeader* obj)
     case Fa_ObjType::NATIVE: // natives are static
     case Fa_ObjType::STRING: // strings are managed with arena
         break;
-    case Fa_ObjType::UPVALUE: {
-        auto* uv = static_cast<ObjUpvalue*>(obj);
-        if (uv->m_location == &uv->closed) {
-            if (Fa_IS_OBJECT(uv->closed))
-                mark_object(Fa_AS_OBJECT(uv->closed));
-        }
-    } break;
     }
 }
 

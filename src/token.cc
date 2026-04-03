@@ -16,6 +16,7 @@ static std::unordered_map<std::string_view, Fa_TokenType> const& get_keywords()
         { "دالة", Fa_TokenType::KW_FN },
         { "او", Fa_TokenType::OP_OR },
         { "بكل", Fa_TokenType::KW_FOR },
+        { "في", Fa_TokenType::KW_IN },
         { "اذا", Fa_TokenType::KW_IF },
         { "غيره", Fa_TokenType::KW_ELSE },
         { "ليس", Fa_TokenType::OP_NOT },

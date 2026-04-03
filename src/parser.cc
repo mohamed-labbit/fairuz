@@ -12,13 +12,11 @@
 namespace fairuz::parser {
 
 using ErrorCode = diagnostic::errc::parser::Code;
-
-static bool is_valid_node(AST::Fa_Expr const* e) { return e->get_kind() != AST::Fa_Expr::Kind::INVALID; }
-static bool is_valid_node(AST::Fa_Stmt const* s) { return s->get_kind() != AST::Fa_Stmt::Kind::INVALID; }
+using SemaCode = diagnostic::errc::m_sema::Code;
 
 static bool stmt_definitely_returns(AST::Fa_Stmt const* stmt)
 {
-    if (!stmt)
+    if (stmt == nullptr)
         return false;
 
     switch (stmt->get_kind()) {
@@ -39,6 +37,26 @@ static bool stmt_definitely_returns(AST::Fa_Stmt const* stmt)
     default:
         return false;
     }
+}
+
+template<typename T>
+static T* stamp_from_token(T* node, tok::Fa_Token const* token)
+{
+    if (node != nullptr && token != nullptr) {
+        node->set_line(token->line());
+        node->set_column(token->column());
+    }
+    return node;
+}
+
+template<typename T, typename U>
+static T* stamp_from_node(T* node, U const* other)
+{
+    if (node != nullptr && other != nullptr) {
+        node->set_line(other->get_line());
+        node->set_column(other->get_column());
+    }
+    return node;
 }
 
 Fa_Error Fa_Parser::report_error(ErrorCode err_code)
@@ -117,117 +135,160 @@ Fa_SymbolTable::get_symbols() const { return m_symbols; }
 
 // semantic analyzer
 
-typename Fa_SymbolTable::DataType_t Fa_SemanticAnalyzer::infer_type(AST::Fa_Expr const* m_expr)
+typename Fa_SymbolTable::DataType Fa_SemanticAnalyzer::infer_type(AST::Fa_Expr* expr)
 {
-    if (!m_expr)
-        return Fa_SymbolTable::DataType_t::UNKNOWN;
+    if (expr == nullptr)
+        return Fa_SymbolTable::DataType::UNKNOWN;
 
-    switch (m_expr->get_kind()) {
+    switch (expr->get_kind()) {
     case AST::Fa_Expr::Kind::LITERAL: {
-        auto lit = static_cast<AST::Fa_LiteralExpr const*>(m_expr);
+        auto lit = static_cast<AST::Fa_LiteralExpr const*>(expr);
 
         if (lit->is_string())
-            return Fa_SymbolTable::DataType_t::STRING;
+            return Fa_SymbolTable::DataType::STRING;
         if (lit->is_float())
-            return Fa_SymbolTable::DataType_t::FLOAT;
+            return Fa_SymbolTable::DataType::FLOAT;
         if (lit->is_integer())
-            return Fa_SymbolTable::DataType_t::INTEGER;
+            return Fa_SymbolTable::DataType::INTEGER;
         if (lit->is_bool())
-            return Fa_SymbolTable::DataType_t::BOOLEAN;
+            return Fa_SymbolTable::DataType::BOOLEAN;
 
-        return Fa_SymbolTable::DataType_t::NONE;
+        return Fa_SymbolTable::DataType::NONE;
     }
 
     case AST::Fa_Expr::Kind::NAME: {
-        auto m_name = static_cast<AST::Fa_NameExpr const*>(m_expr);
-        Fa_SymbolTable::Symbol* sym = m_current_scope->lookup(m_name->get_value());
-        if (sym)
+        auto name = static_cast<AST::Fa_NameExpr const*>(expr);
+        Fa_SymbolTable::Symbol* sym = m_current_scope->lookup(name->get_value());
+        if (sym != nullptr)
             return sym->data_type;
     } break;
 
     case AST::Fa_Expr::Kind::BINARY: {
-        auto bin = static_cast<AST::Fa_BinaryExpr const*>(m_expr);
+        auto bin = static_cast<AST::Fa_BinaryExpr const*>(expr);
 
-        Fa_SymbolTable::DataType_t left_type = infer_type(bin->get_left());
-        Fa_SymbolTable::DataType_t right_type = infer_type(bin->get_right());
+        Fa_SymbolTable::DataType left_type = infer_type(bin->get_left());
+        Fa_SymbolTable::DataType right_type = infer_type(bin->get_right());
 
-        // Type promotion rules
-        if (left_type == Fa_SymbolTable::DataType_t::FLOAT || right_type == Fa_SymbolTable::DataType_t::FLOAT)
-            return Fa_SymbolTable::DataType_t::FLOAT;
-        if (left_type == Fa_SymbolTable::DataType_t::INTEGER && right_type == Fa_SymbolTable::DataType_t::INTEGER)
-            return Fa_SymbolTable::DataType_t::INTEGER;
-        if (bin->get_operator() == AST::Fa_BinaryOp::OP_ADD && left_type == Fa_SymbolTable::DataType_t::STRING)
-            return Fa_SymbolTable::DataType_t::STRING;
+        // type promotion rules
+        if (left_type == Fa_SymbolTable::DataType::FLOAT || right_type == Fa_SymbolTable::DataType::FLOAT)
+            return Fa_SymbolTable::DataType::FLOAT;
+        if (left_type == Fa_SymbolTable::DataType::INTEGER && right_type == Fa_SymbolTable::DataType::INTEGER)
+            return Fa_SymbolTable::DataType::INTEGER;
+        if (bin->get_operator() == AST::Fa_BinaryOp::OP_ADD && left_type == Fa_SymbolTable::DataType::STRING)
+            return Fa_SymbolTable::DataType::STRING;
         if (bin->get_operator() == AST::Fa_BinaryOp::OP_AND || bin->get_operator() == AST::Fa_BinaryOp::OP_OR)
-            return Fa_SymbolTable::DataType_t::BOOLEAN;
+            return Fa_SymbolTable::DataType::BOOLEAN;
     } break;
+    
+    case AST::Fa_Expr::Kind::INDEX: {
+        auto index_expr = static_cast<const AST::Fa_IndexExpr*>(expr);
+        Fa_SymbolTable::DataType container_type = infer_type(index_expr->get_object());
+        switch (container_type) {
+        case Fa_SymbolTable::DataType::LIST:
+        {
+            auto container_expr = static_cast<const AST::Fa_ListExpr*>(index_expr->get_object());
+            if (container_expr->is_empty())
+                return Fa_SymbolTable::DataType::ANY;
 
-    case AST::Fa_Expr::Kind::LIST:
-        return Fa_SymbolTable::DataType_t::LIST;
-    case AST::Fa_Expr::Kind::CALL:
-        return Fa_SymbolTable::DataType_t::ANY;
+            return infer_type(container_expr->get_elements()[0]);
+        } 
+        case Fa_SymbolTable::DataType::STRING:
+            return Fa_SymbolTable::DataType::STRING;
+        case Fa_SymbolTable::DataType::DICT:
+        {
+            auto dict_expr = static_cast<const AST::Fa_DictExpr*>(expr);
+            if (dict_expr->get_content().empty())
+                return Fa_SymbolTable::DataType::ANY;
+            
+            for (const auto& [k, v] : dict_expr->get_content()) {
+                if (k->equals(index_expr))
+                    return infer_type(v);
+            }
 
-    default:
-        break;
+            return Fa_SymbolTable::DataType::ANY;
+        }
+        default:
+            return Fa_SymbolTable::DataType::UNKNOWN;
+        }
     }
 
-    return Fa_SymbolTable::DataType_t::UNKNOWN;
+    case AST::Fa_Expr::Kind::UNARY:
+        return infer_type(static_cast<const AST::Fa_UnaryExpr*>(expr)->get_operand());
+    case AST::Fa_Expr::Kind::ASSIGNMENT: 
+        return infer_type(static_cast<const AST::Fa_AssignmentExpr*>(expr)->get_value());
+        
+    // terminals
+    case AST::Fa_Expr::Kind::LIST:
+        return Fa_SymbolTable::DataType::LIST;
+    case AST::Fa_Expr::Kind::CALL:
+        return Fa_SymbolTable::DataType::ANY;
+    case AST::Fa_Expr::Kind::DICT:
+        return Fa_SymbolTable::DataType::DICT;
+    
+    default:
+        return Fa_SymbolTable::DataType::UNKNOWN;
+    }
+
+    return Fa_SymbolTable::DataType::UNKNOWN; // unreachable
 }
 
-void Fa_SemanticAnalyzer::report_issue(Issue::Severity sev, Fa_StringRef msg, i32 m_line, Fa_StringRef const& sugg)
+void Fa_SemanticAnalyzer::report_issue(Issue::Severity sev, SemaCode code, Fa_StringRef msg, i32 m_line, Fa_StringRef const& sugg)
 {
-    m_issues.push({ sev, msg, m_line, sugg });
+    m_issues.push({ sev, static_cast<u16>(code), msg, m_line, sugg });
 }
 
-void Fa_SemanticAnalyzer::analyze_fa_expr(AST::Fa_Expr const* m_expr)
+void Fa_SemanticAnalyzer::analyze_fa_expr(AST::Fa_Expr* expr)
 {
-    if (!m_expr)
+    if (expr == nullptr)
         return;
 
-    switch (m_expr->get_kind()) {
+    switch (expr->get_kind()) {
     case AST::Fa_Expr::Kind::NAME: {
-        auto m_name = static_cast<AST::Fa_NameExpr const*>(m_expr);
+        auto m_name = static_cast<AST::Fa_NameExpr const*>(expr);
 
         if (!m_current_scope->is_defined(m_name->get_value()))
-            report_issue(Issue::Severity::ERROR, "Undefined variable: " + m_name->get_value(), m_expr->get_line(), "Did you forget to initialize it?");
+            report_issue(Issue::Severity::ERROR, SemaCode::UNDEFINED_VARIABLE, "Undefined variable: " + m_name->get_value(), expr->get_line(), "Did you forget to initialize it?");
         else
-            m_current_scope->mark_used(m_name->get_value(), m_expr->get_line());
+            m_current_scope->mark_used(m_name->get_value(), expr->get_line());
     } break;
 
     case AST::Fa_Expr::Kind::BINARY: {
-        auto bin = static_cast<AST::Fa_BinaryExpr const*>(m_expr);
+        auto bin = static_cast<AST::Fa_BinaryExpr const*>(expr);
 
         analyze_fa_expr(bin->get_left());
         analyze_fa_expr(bin->get_right());
 
-        Fa_SymbolTable::DataType_t left_type = infer_type(bin->get_left());
-        Fa_SymbolTable::DataType_t right_type = infer_type(bin->get_right());
+        Fa_SymbolTable::DataType left_type = infer_type(bin->get_left());
+        Fa_SymbolTable::DataType right_type = infer_type(bin->get_right());
 
-        if (left_type != right_type && left_type != Fa_SymbolTable::DataType_t::UNKNOWN && right_type != Fa_SymbolTable::DataType_t::UNKNOWN)
-            report_issue(Issue::Severity::ERROR, "Type mismatch in binary Fa_Expression", m_expr->get_line(), "Left and right operands must have same type");
+        if (left_type != right_type && left_type != Fa_SymbolTable::DataType::UNKNOWN && right_type != Fa_SymbolTable::DataType::UNKNOWN
+            && left_type != Fa_SymbolTable::DataType::ANY && right_type != Fa_SymbolTable::DataType::ANY)
+            report_issue(Issue::Severity::ERROR, SemaCode::TYPE_MISMATCH, "Type mismatch in binary Fa_Expression", expr->get_line(), "Left and right operands must have same type");
 
-        if (left_type == Fa_SymbolTable::DataType_t::STRING || right_type == Fa_SymbolTable::DataType_t::STRING) {
-            if (bin->get_operator() != AST::Fa_BinaryOp::OP_ADD)
-                report_issue(Issue::Severity::ERROR, "Invalid operation on string", m_expr->get_line(), "Only '+' is allowed for strings");
+        if (left_type == Fa_SymbolTable::DataType::STRING || right_type == Fa_SymbolTable::DataType::STRING) {
+            AST::Fa_BinaryOp op = bin->get_operator();
+            if (op != AST::Fa_BinaryOp::OP_ADD && op != AST::Fa_BinaryOp::OP_EQ && op != AST::Fa_BinaryOp::OP_NEQ && op != AST::Fa_BinaryOp::OP_LT 
+                && op != AST::Fa_BinaryOp::OP_LTE && op != AST::Fa_BinaryOp::OP_GT && op != AST::Fa_BinaryOp::OP_GTE)
+                report_issue(Issue::Severity::ERROR, SemaCode::INVALID_STRING_OP, "Invalid operation on string", expr->get_line());
         }
 
         if (bin->get_operator() == AST::Fa_BinaryOp::OP_DIV && bin->get_right()->get_kind() == AST::Fa_Expr::Kind::LITERAL) {
             auto lit = static_cast<AST::Fa_LiteralExpr const*>(bin->get_right());
             if (lit->is_numeric() && lit->is_number() == 0)
-                report_issue(Issue::Severity::ERROR, "Division by zero", m_expr->get_line(), "This will cause a runtime error");
+                report_issue(Issue::Severity::ERROR, SemaCode::DIVISION_BY_ZERO_CONST, "Division by zero", expr->get_line(), "This will cause a runtime error");
         }
     } break;
 
     case AST::Fa_Expr::Kind::UNARY: {
-        auto un = static_cast<AST::Fa_UnaryExpr const*>(m_expr);
+        auto un = static_cast<AST::Fa_UnaryExpr const*>(expr);
         analyze_fa_expr(un->get_operand());
     } break;
 
     case AST::Fa_Expr::Kind::CALL: {
-        auto call = static_cast<AST::Fa_CallExpr const*>(m_expr);
+        auto call = static_cast<AST::Fa_CallExpr const*>(expr);
         analyze_fa_expr(call->get_callee());
 
-        for (AST::Fa_Expr const* const& arg : call->get_args())
+        for (AST::Fa_Expr* arg : call->get_args())
             analyze_fa_expr(arg);
 
         if (call->get_callee()->get_kind() == AST::Fa_Expr::Kind::NAME) {
@@ -235,7 +296,7 @@ void Fa_SemanticAnalyzer::analyze_fa_expr(AST::Fa_Expr const* m_expr)
 
             if (Fa_SymbolTable::Symbol* sym = m_current_scope->lookup(m_name->get_value())) {
                 if (sym->symbol_type != Fa_SymbolTable::SymbolType::FUNCTION)
-                    report_issue(Issue::Severity::ERROR, "'" + m_name->get_value() + "' is not callable", m_expr->get_line());
+                    report_issue(Issue::Severity::ERROR, SemaCode::NOT_CALLABLE, "'" + m_name->get_value() + "' is not callable", expr->get_line());
             }
         }
 
@@ -243,42 +304,40 @@ void Fa_SemanticAnalyzer::analyze_fa_expr(AST::Fa_Expr const* m_expr)
             auto m_name = static_cast<AST::Fa_NameExpr const*>(call->get_callee());
             Fa_SymbolTable::Symbol* sym = m_current_scope->lookup(m_name->get_value());
 
-            if (!sym)
-                report_issue(Issue::Severity::ERROR, "Undefined function: " + m_name->get_value(), m_expr->get_line());
+            if (sym == nullptr)
+                report_issue(Issue::Severity::ERROR, SemaCode::UNDEFINED_FUNCTION, "Undefined function: " + m_name->get_value(), expr->get_line());
             else if (sym->symbol_type != Fa_SymbolTable::SymbolType::FUNCTION)
-                report_issue(Issue::Severity::ERROR, "'" + m_name->get_value() + "' is not callable", m_expr->get_line());
+                report_issue(Issue::Severity::ERROR, SemaCode::NOT_CALLABLE, "'" + m_name->get_value() + "' is not callable", expr->get_line());
         }
     } break;
 
     case AST::Fa_Expr::Kind::LIST: {
-        auto list = static_cast<AST::Fa_ListExpr const*>(m_expr);
-        for (AST::Fa_Expr const* const& elem : list->get_elements())
+        auto list = static_cast<AST::Fa_ListExpr const*>(expr);
+        for (AST::Fa_Expr* elem : list->get_elements())
             analyze_fa_expr(elem);
     } break;
 
     case AST::Fa_Expr::Kind::INDEX: {
-        auto idx = static_cast<AST::Fa_IndexExpr const*>(m_expr);
+        auto idx = static_cast<AST::Fa_IndexExpr const*>(expr);
         analyze_fa_expr(idx->get_object());
         analyze_fa_expr(idx->get_index());
     } break;
 
-    default:
-        break;
-    }
-}
+    case AST::Fa_Expr::Kind::DICT: {
+        auto dict = static_cast<AST::Fa_DictExpr const*>(expr);
+        for (auto const& [key, value] : dict->get_content()) {
+            analyze_fa_expr(key);
+            analyze_fa_expr(value);
+        }
+    } break;
 
-void Fa_SemanticAnalyzer::analyze_stmt(AST::Fa_Stmt const* stmt)
-{
-    if (!stmt)
-        return;
-
-    switch (stmt->get_kind()) {
-    case AST::Fa_Stmt::Kind::ASSIGNMENT: {
-        auto assign = static_cast<AST::Fa_AssignmentStmt const*>(stmt);
+    case AST::Fa_Expr::Kind::ASSIGNMENT: {
+        auto assign = static_cast<AST::Fa_AssignmentExpr*>(expr);
         analyze_fa_expr(assign->get_value());
 
         AST::Fa_Expr* m_target = assign->get_target();
-        assert(m_target);
+        if (m_target == nullptr)
+            break;
 
         if (m_target->get_kind() == AST::Fa_Expr::Kind::INDEX) {
             analyze_fa_expr(m_target);
@@ -287,52 +346,85 @@ void Fa_SemanticAnalyzer::analyze_stmt(AST::Fa_Stmt const* stmt)
 
         if (m_target->get_kind() == AST::Fa_Expr::Kind::NAME) {
             Fa_StringRef target_name = static_cast<AST::Fa_NameExpr*>(m_target)->get_value();
+            bool const local_exists = m_current_scope->lookup_local(target_name) != nullptr;
+            bool const visible_exists = m_current_scope->lookup(target_name) != nullptr;
+            bool const global_exists = m_global_scope->lookup_local(target_name) != nullptr;
+            bool const can_shadow_global = m_current_scope != m_global_scope && visible_exists && global_exists;
 
-            if (!m_current_scope->lookup_local(target_name)) {
-                // First assignment in this scope — declare it
+            if (!visible_exists && !global_exists)
+                assign->set_decl();
+    
+            if (!local_exists && (!visible_exists || can_shadow_global)) {
                 Fa_SymbolTable::Symbol sym;
                 sym.symbol_type = Fa_SymbolTable::SymbolType::VARIABLE;
                 sym.data_type = infer_type(assign->get_value());
-                sym.definition_line = stmt->get_line();
+                sym.definition_line = expr->get_line();
                 m_current_scope->define(target_name, sym);
             } else {
-                m_current_scope->mark_used(target_name, stmt->get_line());
+                m_current_scope->mark_used(target_name, expr->get_line());
             }
         }
     } break;
 
+    default:
+        break;
+    }
+}
+
+void Fa_SemanticAnalyzer::analyze_stmt(AST::Fa_Stmt* stmt)
+{
+    if (stmt == nullptr)
+        return;
+
+    switch (stmt->get_kind()) {
+    case AST::Fa_Stmt::Kind::BLOCK: {
+        auto block = static_cast<AST::Fa_BlockStmt const*>(stmt);
+        Fa_SymbolTable* previous = m_current_scope;
+        m_current_scope = m_current_scope->create_child();
+
+        for (AST::Fa_Stmt* child : block->get_statements())
+            analyze_stmt(child);
+
+        m_current_scope = previous;
+    } break;
+
+    case AST::Fa_Stmt::Kind::ASSIGNMENT:
+        analyze_fa_expr(static_cast<AST::Fa_AssignmentStmt*>(stmt)->get_expr());
+        break;
+
     case AST::Fa_Stmt::Kind::EXPR: {
         auto Fa_Expr_stmt = static_cast<AST::Fa_ExprStmt const*>(stmt);
         analyze_fa_expr(Fa_Expr_stmt->get_expr());
-        if (Fa_Expr_stmt->get_expr()->get_kind() != AST::Fa_Expr::Kind::CALL)
-            report_issue(Issue::Severity::INFO, "Fa_Expression result not used", stmt->get_line());
+        if (Fa_Expr_stmt->get_expr()->get_kind() != AST::Fa_Expr::Kind::CALL
+            && Fa_Expr_stmt->get_expr()->get_kind() != AST::Fa_Expr::Kind::ASSIGNMENT)
+            report_issue(Issue::Severity::INFO, SemaCode::UNUSED_EXPR_RESULT, "Fa_Expression result not used", stmt->get_line());
     } break;
 
     case AST::Fa_Stmt::Kind::IF: {
         auto if_stmt = static_cast<AST::Fa_IfStmt const*>(stmt);
         analyze_fa_expr(if_stmt->get_condition());
 
-        AST::Fa_Stmt const* then_block = if_stmt->get_then();
-        AST::Fa_Stmt const* else_block = if_stmt->get_else();
+        AST::Fa_Stmt* then_block = if_stmt->get_then();
+        AST::Fa_Stmt* else_block = if_stmt->get_else();
 
         if (if_stmt->get_condition()->get_kind() == AST::Fa_Expr::Kind::LITERAL)
-            report_issue(Issue::Severity::WARNING, "Condition is always constant", stmt->get_line(), "Consider removing if statement");
+            report_issue(Issue::Severity::WARNING, SemaCode::CONSTANT_CONDITION, "Condition is always constant", stmt->get_line(), "Consider removing if statement");
 
-        if (then_block)
+        if (then_block != nullptr)
             analyze_stmt(then_block);
-        if (else_block)
+        if (else_block != nullptr)
             analyze_stmt(else_block);
     } break;
 
     case AST::Fa_Stmt::Kind::WHILE: {
-        auto while_stmt = static_cast<AST::Fa_WhileStmt const*>(stmt);
+        auto while_stmt = static_cast<AST::Fa_WhileStmt*>(stmt);
         analyze_fa_expr(while_stmt->get_condition());
 
         // Detect infinite loops
         if (while_stmt->get_condition()->get_kind() == AST::Fa_Expr::Kind::LITERAL) {
             AST::Fa_LiteralExpr const* lit = static_cast<AST::Fa_LiteralExpr const*>(while_stmt->get_condition());
             if (lit->is_bool() && lit->get_bool() == true)
-                report_issue(Issue::Severity::WARNING, "Infinite loop detected", stmt->get_line(), "Add a break condition");
+                report_issue(Issue::Severity::WARNING, SemaCode::INFINITE_LOOP, "Infinite loop detected", stmt->get_line(), "Add a break condition");
         }
 
         analyze_stmt(while_stmt->get_body());
@@ -345,13 +437,13 @@ void Fa_SemanticAnalyzer::analyze_stmt(AST::Fa_Stmt const* stmt)
         m_current_scope = m_current_scope->create_child();
         Fa_SymbolTable::Symbol loop_var;
         loop_var.symbol_type = Fa_SymbolTable::SymbolType::VARIABLE;
-        loop_var.data_type = Fa_SymbolTable::DataType_t::ANY;
+        loop_var.data_type = Fa_SymbolTable::DataType::ANY;
         m_current_scope->define(for_stmt->get_target()->get_value(), loop_var);
 
         analyze_stmt(for_stmt->get_body());
 
         if (m_current_scope->m_parent && m_current_scope->m_parent->lookup_local(for_stmt->get_target()->get_value()))
-            report_issue(Issue::Severity::WARNING, "Loop variable shadows outer variable", stmt->get_line());
+            report_issue(Issue::Severity::WARNING, SemaCode::LOOP_VAR_SHADOW, "Loop variable shadows outer variable", stmt->get_line());
 
         m_current_scope = m_current_scope->m_parent;
     } break;
@@ -360,7 +452,7 @@ void Fa_SemanticAnalyzer::analyze_stmt(AST::Fa_Stmt const* stmt)
         auto func_def = static_cast<AST::Fa_FunctionDef const*>(stmt);
         Fa_SymbolTable::Symbol func_sym;
         func_sym.symbol_type = Fa_SymbolTable::SymbolType::FUNCTION;
-        func_sym.data_type = Fa_SymbolTable::DataType_t::FUNCTION;
+        func_sym.data_type = Fa_SymbolTable::DataType::FUNCTION;
         func_sym.definition_line = stmt->get_line();
         m_current_scope->define(func_def->get_name()->get_value(), func_sym);
 
@@ -369,21 +461,25 @@ void Fa_SemanticAnalyzer::analyze_stmt(AST::Fa_Stmt const* stmt)
         for (AST::Fa_Expr const* const& param : func_def->get_parameters()) {
             Fa_SymbolTable::Symbol param_sym;
             param_sym.symbol_type = Fa_SymbolTable::SymbolType::VARIABLE;
-            param_sym.data_type = Fa_SymbolTable::DataType_t::ANY;
+            param_sym.data_type = Fa_SymbolTable::DataType::ANY;
             m_current_scope->define(static_cast<AST::Fa_NameExpr const*>(param)->get_value(), param_sym);
         }
 
         analyze_stmt(func_def->get_body());
         if (!stmt_definitely_returns(func_def->get_body()))
-            report_issue(Issue::Severity::INFO, "Function may not return a value", stmt->get_line());
+            report_issue(Issue::Severity::INFO, SemaCode::MISSING_RETURN, "Function may not return a value", stmt->get_line());
         // Exit function scope
         m_current_scope = m_current_scope->m_parent;
     } break;
 
     case AST::Fa_Stmt::Kind::RETURN: {
-        auto ret = static_cast<AST::Fa_ReturnStmt const*>(stmt);
+        auto ret = static_cast<AST::Fa_ReturnStmt*>(stmt);
         analyze_fa_expr(ret->get_value());
     } break;
+
+    case AST::Fa_Stmt::Kind::BREAK:
+    case AST::Fa_Stmt::Kind::CONTINUE:
+        break;
 
     default:
         break;
@@ -395,21 +491,77 @@ Fa_SemanticAnalyzer::Fa_SemanticAnalyzer()
     m_global_scope = get_allocator().allocate_object<Fa_SymbolTable>();
     m_current_scope = m_global_scope;
 
-    Fa_SymbolTable::Symbol print_sym;
-    print_sym.m_name = "print";
-    print_sym.symbol_type = Fa_SymbolTable::SymbolType::FUNCTION;
-    print_sym.data_type = Fa_SymbolTable::DataType_t::FUNCTION;
-    m_global_scope->define("print", print_sym);
+    auto register_builtin = [this](Fa_StringRef name) {
+        Fa_SymbolTable::Symbol sym;
+        sym.m_name = name;
+        sym.symbol_type = Fa_SymbolTable::SymbolType::FUNCTION;
+        sym.data_type = Fa_SymbolTable::DataType::FUNCTION;
+        m_global_scope->define(name, sym);
+    };
+
+    register_builtin("print");
+    register_builtin("اكتب");
+    register_builtin("len");
+    register_builtin("حجم");
+    register_builtin("append");
+    register_builtin("اضف");
+    register_builtin("احذف");
+    register_builtin("مقطع");
+    register_builtin("input");
+    register_builtin("نوع");
+    register_builtin("طبيعي");
+    register_builtin("حقيقي");
+    register_builtin("str");
+    register_builtin("bool");
+    register_builtin("قائمة");
+    register_builtin("جدول");
+    register_builtin("dict");
+    register_builtin("اقسم");
+    register_builtin("join");
+    register_builtin("substr");
+    register_builtin("contains");
+    register_builtin("trim");
+    register_builtin("floor");
+    register_builtin("ceil");
+    register_builtin("round");
+    register_builtin("abs");
+    register_builtin("min");
+    register_builtin("max");
+    register_builtin("pow");
+    register_builtin("sqrt");
+    register_builtin("assert");
+    register_builtin("clock");
+    register_builtin("error");
+    register_builtin("time");
 }
 
 void Fa_SemanticAnalyzer::analyze(Fa_Array<AST::Fa_Stmt*> const& m_statements)
 {
-    for (AST::Fa_Stmt const* const& stmt : m_statements)
+    for (AST::Fa_Stmt* stmt : m_statements)
         analyze_stmt(stmt);
 
     Fa_Array<Fa_SymbolTable::Symbol*> unused = m_global_scope->get_unused_symbols();
     for (Fa_SymbolTable::Symbol* sym : unused)
-        report_issue(Issue::Severity::WARNING, "Unused variable: " + sym->m_name, sym->definition_line, "Consider removing if not needed");
+        report_issue(Issue::Severity::WARNING, SemaCode::UNUSED_VARIABLE, "Unused variable: " + sym->m_name, sym->definition_line, "Consider removing if not needed");
+
+    for (Issue const& issue : m_issues) {
+        diagnostic::Severity sev = diagnostic::Severity::NOTE;
+        switch (issue.severity) {
+        case Issue::Severity::ERROR:
+            sev = diagnostic::Severity::ERROR;
+            break;
+        case Issue::Severity::WARNING:
+            sev = diagnostic::Severity::WARNING;
+            break;
+        case Issue::Severity::INFO:
+            sev = diagnostic::Severity::NOTE;
+            break;
+        }
+
+        diagnostic::report(sev, issue.m_line, 0, issue.code);
+        if (!issue.suggestion.empty())
+            diagnostic::engine.add_suggestion(std::string(issue.suggestion.data(), issue.suggestion.len()));
+    }
 }
 
 Fa_Array<typename Fa_SemanticAnalyzer::Issue> const& Fa_SemanticAnalyzer::get_issues() const { return m_issues; }
@@ -521,7 +673,7 @@ Fa_Array<AST::Fa_Stmt*> Fa_Parser::parse_program()
 
         auto stmt = parse_statement();
         if (stmt.has_value()) {
-            m_statements.push(stmt.m_value());
+            m_statements.push(stmt.value());
         } else {
             if (diagnostic::is_saturated())
                 break;
@@ -547,8 +699,14 @@ Fa_ErrorOr<AST::Fa_Stmt*> Fa_Parser::parse_statement()
         return parse_if_stmt();
     if (check(tok::Fa_TokenType::KW_WHILE))
         return parse_while_stmt();
+    if (check(tok::Fa_TokenType::KW_FOR))
+        return parse_for_stmt();
     if (check(tok::Fa_TokenType::KW_RETURN))
         return parse_return_stmt();
+    if (check(tok::Fa_TokenType::KW_BREAK))
+        return parse_break_stmt();
+    if (check(tok::Fa_TokenType::KW_CONTINUE))
+        return parse_continue_stmt();
     if (check(tok::Fa_TokenType::KW_FN))
         return parse_function_def();
 
@@ -557,21 +715,37 @@ Fa_ErrorOr<AST::Fa_Stmt*> Fa_Parser::parse_statement()
 
 Fa_ErrorOr<AST::Fa_Stmt*> Fa_Parser::parse_return_stmt()
 {
+    tok::Fa_Token const* start = current_token();
     if (!consume(tok::Fa_TokenType::KW_RETURN))
         return report_error(ErrorCode::EXPECTED_RETURN);
 
     if (check(tok::Fa_TokenType::NEWLINE) || we_done())
-        return AST::Fa_makeReturn();
+        return stamp_from_token(AST::Fa_makeReturn(), start);
 
     auto ret = parse_expression();
     if (ret.has_error())
         return ret.error();
 
-    return AST::Fa_makeReturn(ret.m_value());
+    return stamp_from_token(AST::Fa_makeReturn(ret.value()), start);
+}
+
+Fa_ErrorOr<AST::Fa_Stmt*> Fa_Parser::parse_break_stmt()
+{
+    tok::Fa_Token const* start = current_token();
+    advance();
+    return stamp_from_token(AST::Fa_makeBreak(), start);
+}
+
+Fa_ErrorOr<AST::Fa_Stmt*> Fa_Parser::parse_continue_stmt()
+{
+    tok::Fa_Token const* start = current_token();
+    advance();
+    return stamp_from_token(AST::Fa_makeContinue(), start);
 }
 
 Fa_ErrorOr<AST::Fa_Stmt*> Fa_Parser::parse_while_stmt()
 {
+    tok::Fa_Token const* start = current_token();
     if (!consume(tok::Fa_TokenType::KW_WHILE))
         return report_error(ErrorCode::EXPECTED_WHILE_KEYWORD);
 
@@ -586,11 +760,46 @@ Fa_ErrorOr<AST::Fa_Stmt*> Fa_Parser::parse_while_stmt()
     if (while_block.has_error())
         return while_block.error();
 
-    return Fa_makeWhile(m_condition.m_value(), static_cast<AST::Fa_BlockStmt*>(while_block.m_value()));
+    return stamp_from_token(Fa_makeWhile(m_condition.value(), static_cast<AST::Fa_BlockStmt*>(while_block.value())), start);
+}
+
+Fa_ErrorOr<AST::Fa_Stmt*> Fa_Parser::parse_for_stmt()
+{
+    tok::Fa_Token const* start = current_token();
+    if (!consume(tok::Fa_TokenType::KW_FOR))
+        return report_error(ErrorCode::UNEXPECTED_TOKEN);
+
+    if (!check(tok::Fa_TokenType::IDENTIFIER))
+        return report_error(ErrorCode::EXPECTED_FOR_TARGET);
+
+    auto* target = stamp_from_token(AST::Fa_makeName(current_token()->lexeme()), current_token());
+    advance();
+
+    bool saw_in = consume(tok::Fa_TokenType::KW_IN);
+    if (!saw_in && check(tok::Fa_TokenType::IDENTIFIER) && current_token()->lexeme() == "في") {
+        advance();
+        saw_in = true;
+    }
+    if (!saw_in)
+        return report_error(ErrorCode::EXPECTED_IN_KEYWORD);
+
+    auto iter = parse_expression();
+    if (iter.has_error())
+        return iter.error();
+
+    if (!consume(tok::Fa_TokenType::COLON))
+        return report_error(ErrorCode::EXPECTED_COLON_FOR);
+
+    auto body = parse_indented_block();
+    if (body.has_error())
+        return body.error();
+
+    return stamp_from_token(AST::Fa_makeFor(target, iter.value(), body.value()), start);
 }
 
 Fa_ErrorOr<AST::Fa_Stmt*> Fa_Parser::parse_indented_block()
 {
+    tok::Fa_Token const* start = current_token();
     if (check(tok::Fa_TokenType::NEWLINE))
         advance();
 
@@ -601,7 +810,7 @@ Fa_ErrorOr<AST::Fa_Stmt*> Fa_Parser::parse_indented_block()
 
     if (check(tok::Fa_TokenType::DEDENT)) {
         advance();
-        return Fa_makeBlock(m_statements);
+        return stamp_from_token(Fa_makeBlock(m_statements), start);
     }
 
     while (!check(tok::Fa_TokenType::DEDENT) && !we_done()) {
@@ -611,9 +820,9 @@ Fa_ErrorOr<AST::Fa_Stmt*> Fa_Parser::parse_indented_block()
 
         auto stmt = parse_statement();
 
-        if (stmt.has_value())
-            m_statements.push(stmt.m_value());
-        else {
+        if (stmt.has_value()) {
+            m_statements.push(stmt.value());
+        } else {
             synchronize();
             if (check(tok::Fa_TokenType::DEDENT) || we_done())
                 break;
@@ -621,11 +830,14 @@ Fa_ErrorOr<AST::Fa_Stmt*> Fa_Parser::parse_indented_block()
     }
 
     if (check(tok::Fa_TokenType::ENDMARKER))
-        return Fa_makeBlock(m_statements);
+        return stamp_from_token(Fa_makeBlock(m_statements), start);
     else if (!consume(tok::Fa_TokenType::DEDENT))
         return report_error(ErrorCode::EXPECTED_DEDENT);
 
-    return Fa_makeBlock(m_statements);
+    auto* block = Fa_makeBlock(m_statements);
+    if (!m_statements.empty())
+        return stamp_from_node(block, m_statements[0]);
+    return stamp_from_token(block, start);
 }
 
 Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_parameters_list()
@@ -644,9 +856,10 @@ Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_parameters_list()
             if (!check(tok::Fa_TokenType::IDENTIFIER))
                 return report_error(ErrorCode::EXPECTED_PARAM_NAME);
 
-            Fa_StringRef param_name = current_token()->lexeme();
+            tok::Fa_Token const* param_tok = current_token();
+            Fa_StringRef param_name = param_tok->lexeme();
             advance();
-            parameters.push(AST::Fa_makeName(param_name));
+            parameters.push(stamp_from_token(AST::Fa_makeName(param_name), param_tok));
             skip_newlines();
         } while (match(tok::Fa_TokenType::COMMA) && !check(tok::Fa_TokenType::RPAREN));
     }
@@ -655,22 +868,24 @@ Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_parameters_list()
         return report_error(ErrorCode::EXPECTED_RPAREN_EXPR);
 
     if (parameters.empty())
-        return Fa_makeList(Fa_Array<AST::Fa_Expr*> { });
+        return stamp_from_token(Fa_makeList(Fa_Array<AST::Fa_Expr*> { }), current_token());
 
-    return Fa_makeList(parameters);
+    return stamp_from_node(Fa_makeList(parameters), parameters[0]);
 }
 
 Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_expression() { return parse_assignment_expr(); }
 
 Fa_ErrorOr<AST::Fa_Stmt*> Fa_Parser::parse_function_def()
 {
+    tok::Fa_Token const* start = current_token();
     if (!consume(tok::Fa_TokenType::KW_FN))
         return report_error(ErrorCode::EXPECTED_FN_KEYWORD);
 
     if (!check(tok::Fa_TokenType::IDENTIFIER))
         return report_error(ErrorCode::EXPECTED_FN_NAME);
 
-    Fa_StringRef function_name = current_token()->lexeme();
+    tok::Fa_Token const* name_tok = current_token();
+    Fa_StringRef function_name = name_tok->lexeme();
     advance();
 
     auto parameters_list = parse_parameters_list();
@@ -684,11 +899,16 @@ Fa_ErrorOr<AST::Fa_Stmt*> Fa_Parser::parse_function_def()
     if (function_body.has_error())
         return function_body.error();
 
-    return Fa_makeFunction(AST::Fa_makeName(function_name), static_cast<AST::Fa_ListExpr*>(parameters_list.m_value()), static_cast<AST::Fa_BlockStmt*>(function_body.m_value()));
+    return stamp_from_token(
+        Fa_makeFunction(stamp_from_token(AST::Fa_makeName(function_name), name_tok),
+            static_cast<AST::Fa_ListExpr*>(parameters_list.value()),
+            static_cast<AST::Fa_BlockStmt*>(function_body.value())),
+        start);
 }
 
 Fa_ErrorOr<AST::Fa_Stmt*> Fa_Parser::parse_if_stmt()
 {
+    tok::Fa_Token const* start = current_token();
     if (!consume(tok::Fa_TokenType::KW_IF))
         return report_error(ErrorCode::EXPECTED_IF_KEYWORD);
 
@@ -716,7 +936,7 @@ Fa_ErrorOr<AST::Fa_Stmt*> Fa_Parser::parse_if_stmt()
             if (nested.has_error())
                 return nested.error();
 
-            else_block = nested.m_value();
+            else_block = nested.value();
         } else {
             if (!consume(tok::Fa_TokenType::COLON))
                 return report_error(ErrorCode::EXPECTED_COLON_IF);
@@ -725,23 +945,25 @@ Fa_ErrorOr<AST::Fa_Stmt*> Fa_Parser::parse_if_stmt()
             if (m_else_stmt.has_error())
                 return m_else_stmt.error();
 
-            else_block = m_else_stmt.m_value();
+            else_block = m_else_stmt.value();
         }
     }
 
-    return Fa_makeIf(
-        m_condition.m_value(),
-        static_cast<AST::Fa_BlockStmt*>(then_block.m_value()),
-        else_block);
+    return stamp_from_token(
+        Fa_makeIf(
+            m_condition.value(),
+            static_cast<AST::Fa_BlockStmt*>(then_block.value()),
+            else_block),
+        start);
 }
 
 Fa_ErrorOr<AST::Fa_Stmt*> Fa_Parser::parse_expression_stmt()
 {
-    auto m_expr = parse_expression();
-    if (m_expr.has_error())
-        return m_expr.error();
+    auto expr = parse_expression();
+    if (expr.has_error())
+        return expr.error();
 
-    return Fa_makeExprStmt(m_expr.m_value());
+    return stamp_from_node(Fa_makeExprStmt(expr.value()), expr.value());
 }
 
 Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_assignment_expr()
@@ -751,7 +973,7 @@ Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_assignment_expr()
         return L.error();
 
     if (check(tok::Fa_TokenType::OP_ASSIGN)) {
-        AST::Fa_Expr* m_target = L.m_value();
+        AST::Fa_Expr* m_target = L.value();
         AST::Fa_Expr::Kind kind = m_target->get_kind();
 
         if (kind != AST::Fa_Expr::Kind::NAME && kind != AST::Fa_Expr::Kind::INDEX)
@@ -765,14 +987,15 @@ Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_assignment_expr()
 
         if (kind == AST::Fa_Expr::Kind::NAME) {
             auto name_target = static_cast<AST::Fa_NameExpr*>(m_target);
-            bool decl = !m_sema.get_current_scope()->is_defined(name_target->get_value());
-            return Fa_ErrorOr<AST::Fa_Expr*>::from_value(Fa_makeAssignmentExpr(name_target, R.m_value(), decl));
+            return Fa_ErrorOr<AST::Fa_Expr*>::from_value(
+                stamp_from_node(Fa_makeAssignmentExpr(name_target, R.value(), /*decl=*/ false), name_target)); // let the sema detect decl vs assign
         }
 
-        return Fa_ErrorOr<AST::Fa_Expr*>::from_value(Fa_makeAssignmentExpr(m_target, R.m_value(), /*decl=*/false));
+        return Fa_ErrorOr<AST::Fa_Expr*>::from_value(
+            stamp_from_node(Fa_makeAssignmentExpr(m_target, R.value(), /*decl=*/false), m_target));
     }
 
-    return L.m_value();
+    return L.value();
 }
 
 Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_logical_expr_precedence(unsigned int min_precedence)
@@ -797,10 +1020,11 @@ Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_logical_expr_precedence(unsigned int 
         if (R.has_error())
             return R.error();
 
-        L.set_value(Fa_makeBinary(L.m_value(), R.m_value(), to_binary_op(op)));
+        AST::Fa_Expr* lhs = L.value();
+        L.set_value(stamp_from_node(Fa_makeBinary(lhs, R.value(), to_binary_op(op)), lhs));
     }
 
-    return L.m_value();
+    return L.value();
 }
 
 Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_comparison_expr()
@@ -817,10 +1041,11 @@ Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_comparison_expr()
         if (R.has_error())
             return R.error();
 
-        L.set_value(Fa_makeBinary(L.m_value(), R.m_value(), to_binary_op(op)));
+        AST::Fa_Expr* lhs = L.value();
+        L.set_value(stamp_from_node(Fa_makeBinary(lhs, R.value(), to_binary_op(op)), lhs));
     }
 
-    return L.m_value();
+    return L.value();
 }
 
 Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_binary_expr() { return parse_binary_expr_precedence(0); }
@@ -848,10 +1073,10 @@ Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_binary_expr_precedence(unsigned int m
         if (R.has_error())
             return R.error();
 
-        L.set_value(Fa_makeBinary(L.m_value(), R.m_value(), to_binary_op(op)));
+        L.set_value(Fa_makeBinary(L.value(), R.value(), to_binary_op(op)));
     }
 
-    return L.m_value();
+    return L.value();
 }
 
 Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_unary_expr()
@@ -861,11 +1086,11 @@ Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_unary_expr()
         tok::Fa_TokenType op = m_lexer.m_current()->type();
         advance();
 
-        auto m_expr = parse_unary_expr();
-        if (m_expr.has_error())
-            return m_expr.error();
+        auto expr = parse_unary_expr();
+        if (expr.has_error())
+            return expr.error();
 
-        return Fa_makeUnary(m_expr.m_value(), to_unary_op(op));
+        return stamp_from_token(Fa_makeUnary(expr.value(), to_unary_op(op)), tok);
     }
     return parse_postfix_expr();
 }
@@ -876,10 +1101,11 @@ Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_postfix_expr()
     if (expr_or.has_error())
         return expr_or.error();
 
-    AST::Fa_Expr* m_expr = expr_or.m_value();
+    AST::Fa_Expr* expr = expr_or.value();
 
     for (;;) {
         if (check(tok::Fa_TokenType::LPAREN)) {
+            tok::Fa_Token const* start = current_token();
             advance();
 
             Fa_Array<AST::Fa_Expr*> m_args = Fa_Array<AST::Fa_Expr*>::with_capacity(4);
@@ -894,7 +1120,7 @@ Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_postfix_expr()
                     if (arg.has_error())
                         return arg.error();
 
-                    m_args.push(arg.m_value());
+                    m_args.push(arg.value());
                     skip_newlines();
                 } while (match(tok::Fa_TokenType::COMMA) && !check(tok::Fa_TokenType::RPAREN));
             }
@@ -902,7 +1128,7 @@ Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_postfix_expr()
             if (!consume(tok::Fa_TokenType::RPAREN))
                 return report_error(ErrorCode::EXPECTED_RPAREN_EXPR);
 
-            m_expr = Fa_makeCall(m_expr, Fa_makeList(std::move(m_args)));
+            expr = stamp_from_node(Fa_makeCall(expr, stamp_from_token(Fa_makeList(std::move(m_args)), start)), expr);
             continue;
         }
 
@@ -916,14 +1142,14 @@ Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_postfix_expr()
             if (!consume(tok::Fa_TokenType::RBRACKET))
                 return report_error(ErrorCode::EXPECTED_RBRACKET);
 
-            m_expr = Fa_makeIndex(m_expr, m_index.m_value());
+            expr = stamp_from_node(Fa_makeIndex(expr, m_index.value()), expr);
             continue;
         }
 
         break;
     }
 
-    return m_expr;
+    return expr;
 }
 
 bool Fa_Parser::we_done() const { return m_lexer.m_current()->is(tok::Fa_TokenType::ENDMARKER); }
@@ -945,54 +1171,54 @@ Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_primary_expr()
         tok::Fa_TokenType tt = tok->type();
 
         if (tt == tok::Fa_TokenType::DECIMAL)
-            return AST::Fa_makeLiteralFloat(v.to_double());
+            return stamp_from_token(AST::Fa_makeLiteralFloat(v.to_double()), tok);
 
         if (tt == tok::Fa_TokenType::INTEGER || tt == tok::Fa_TokenType::HEX || tt == tok::Fa_TokenType::OCTAL || tt == tok::Fa_TokenType::BINARY) {
             static constexpr int BASE_FOR_TYPE[] = { 2, 8, 10, 16 };
-            return AST::Fa_makeLiteralInt(util::parse_integer_literal(v,
-                /*base=*/BASE_FOR_TYPE[static_cast<int>(tt) - static_cast<int>(tok::Fa_TokenType::BINARY)]));
+            return stamp_from_token(AST::Fa_makeLiteralInt(util::parse_integer_literal(v,
+                /*base=*/BASE_FOR_TYPE[static_cast<int>(tt) - static_cast<int>(tok::Fa_TokenType::BINARY)])), tok);
         }
     }
 
     if (check(tok::Fa_TokenType::STRING)) {
         Fa_StringRef v = tok->lexeme();
         advance();
-        return AST::Fa_makeLiteralString(v);
+        return stamp_from_token(AST::Fa_makeLiteralString(v), tok);
     }
 
     if (check(tok::Fa_TokenType::KW_TRUE) || check(tok::Fa_TokenType::KW_FALSE)) {
         Fa_StringRef v = tok->lexeme();
         advance();
-        return AST::Fa_makeLiteralBool(v == "صحيح" ? true : false);
+        return stamp_from_token(AST::Fa_makeLiteralBool(v == "صحيح" ? true : false), tok);
     }
 
     if (check(tok::Fa_TokenType::KW_NIL)) {
         advance();
-        return AST::Fa_makeLiteralNil();
+        return stamp_from_token(AST::Fa_makeLiteralNil(), tok);
     }
 
     if (check(tok::Fa_TokenType::IDENTIFIER)) {
         Fa_StringRef m_name = tok->lexeme();
         advance();
-        return AST::Fa_makeName(m_name);
+        return stamp_from_token(AST::Fa_makeName(m_name), tok);
     }
 
     if (check(tok::Fa_TokenType::LPAREN)) {
         advance();
         if (check(tok::Fa_TokenType::RPAREN)) {
             advance();
-            return Fa_makeList(Fa_Array<AST::Fa_Expr*> { });
+            return stamp_from_token(Fa_makeList(Fa_Array<AST::Fa_Expr*> { }), tok);
         }
 
-        auto m_expr = parse_expression();
+        auto expr = parse_expression();
 
-        if (m_expr.has_error())
-            return m_expr.error();
+        if (expr.has_error())
+            return expr.error();
 
         if (!consume(tok::Fa_TokenType::RPAREN))
             return report_error(ErrorCode::EXPECTED_RPAREN_EXPR);
 
-        return m_expr.m_value();
+        return expr.value();
     }
 
     if (check(tok::Fa_TokenType::LBRACKET)) {
@@ -1014,6 +1240,7 @@ Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_primary_expr()
 
 Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_list_literal()
 {
+    tok::Fa_Token const* start = current_token();
     Fa_Array<AST::Fa_Expr*> m_elements = Fa_Array<AST::Fa_Expr*>::with_capacity(4);
 
     if (!check(tok::Fa_TokenType::RBRACKET)) {
@@ -1026,7 +1253,7 @@ Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_list_literal()
             if (elem.has_error())
                 return elem.error();
 
-            m_elements.push(elem.m_value());
+            m_elements.push(elem.value());
             skip_newlines();
         } while (match(tok::Fa_TokenType::COMMA) && !check(tok::Fa_TokenType::RBRACKET));
     }
@@ -1034,11 +1261,15 @@ Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_list_literal()
     if (!consume(tok::Fa_TokenType::RBRACKET))
         return report_error(ErrorCode::EXPECTED_RBRACKET);
 
-    return Fa_makeList(std::move(m_elements));
+    AST::Fa_Expr* first = m_elements.empty() ? nullptr : m_elements[0];
+    if (m_elements.empty())
+        return stamp_from_token(Fa_makeList(std::move(m_elements)), start);
+    return stamp_from_node(Fa_makeList(std::move(m_elements)), first);
 }
 
 Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_dict_literal()
 {
+    tok::Fa_Token const* start = current_token();
     Fa_Array<std::pair<AST::Fa_Expr*, AST::Fa_Expr*>> content;
 
     if (!check(tok::Fa_TokenType::RBRACE)) {
@@ -1058,7 +1289,7 @@ Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_dict_literal()
             if (second.has_error())
                 return second.error();
 
-            content.push({ first.m_value(), second.m_value() });
+            content.push({ first.value(), second.value() });
             skip_newlines();
         } while (match(tok::Fa_TokenType::COMMA) && !check(tok::Fa_TokenType::RBRACE));
     }
@@ -1066,7 +1297,10 @@ Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_dict_literal()
     if (!consume(tok::Fa_TokenType::RBRACE))
         return report_error(ErrorCode::EXPECTED_RBRACE_EXPR);
 
-    return AST::Fa_makeDict(std::move(content));
+    AST::Fa_Expr* first_key = content.empty() ? nullptr : content[0].first;
+    if (content.empty())
+        return stamp_from_token(AST::Fa_makeDict(std::move(content)), start);
+    return stamp_from_node(AST::Fa_makeDict(std::move(content)), first_key);
 }
 
 Fa_ErrorOr<AST::Fa_Expr*> Fa_Parser::parse_conditional_expr()
@@ -1095,7 +1329,9 @@ void Fa_Parser::synchronize()
             return;
         }
 
-        if (check(tok::Fa_TokenType::KW_IF) || check(tok::Fa_TokenType::KW_WHILE) || check(tok::Fa_TokenType::KW_RETURN) || check(tok::Fa_TokenType::KW_FN))
+        if (check(tok::Fa_TokenType::KW_IF) || check(tok::Fa_TokenType::KW_WHILE) || check(tok::Fa_TokenType::KW_FOR)
+            || check(tok::Fa_TokenType::KW_RETURN) || check(tok::Fa_TokenType::KW_BREAK)
+            || check(tok::Fa_TokenType::KW_CONTINUE) || check(tok::Fa_TokenType::KW_FN))
             return;
 
         advance();

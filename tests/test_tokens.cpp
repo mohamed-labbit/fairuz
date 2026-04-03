@@ -172,7 +172,7 @@ TEST(LexerTest, RecognizesStmt02)
     auto tokens = m_lexer.tokenize();
     std::vector<tok::Fa_Token const*> expected = {
         MAKE_TOKEN(tok::Fa_TokenType::BEGINMARKER, "", 1, 1), MAKE_TOKEN(tok::Fa_TokenType::KW_FOR, "بكل", 1, 1),
-        MAKE_TOKEN(tok::Fa_TokenType::IDENTIFIER, "ل", 1, 5), MAKE_TOKEN(tok::Fa_TokenType::IDENTIFIER, "في", 1, 7),
+        MAKE_TOKEN(tok::Fa_TokenType::IDENTIFIER, "ل", 1, 5), MAKE_TOKEN(tok::Fa_TokenType::KW_IN, "في", 1, 7),
         MAKE_TOKEN(tok::Fa_TokenType::IDENTIFIER, "ك", 1, 10), MAKE_TOKEN(tok::Fa_TokenType::COLON, ":", 1, 11),
         MAKE_TOKEN(tok::Fa_TokenType::ENDMARKER, "", 1, 11)
     };

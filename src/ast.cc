@@ -92,11 +92,11 @@ bool Fa_LiteralExpr::is_nil() const { return m_type == Type::NIL; }
 
 bool Fa_LiteralExpr::equals(Fa_Expr const* other) const
 {
-    if (!other || other->get_kind() != kind)
+    if (other == nullptr || other->get_kind() != kind)
         return false;
 
     auto lit = static_cast<Fa_LiteralExpr const*>(other);
-    if (!lit || m_type != lit->m_type)
+    if (lit == nullptr || m_type != lit->m_type)
         return false;
 
     switch (m_type) {
@@ -258,7 +258,7 @@ bool Fa_AssignmentExpr::equals(Fa_Expr const* other) const
 
 Fa_AssignmentExpr* Fa_AssignmentExpr::clone() const
 {
-    return Fa_makeAssignmentExpr(m_target->clone(), m_value->clone());
+    return Fa_makeAssignmentExpr(m_target->clone(), m_value->clone(), m_is_decl);
 }
 
 Fa_Expr* Fa_AssignmentExpr::get_target() const { return m_target; }
@@ -269,11 +269,13 @@ void Fa_AssignmentExpr::set_target(Fa_Expr* t) { m_target = t; }
 
 void Fa_AssignmentExpr::set_value(Fa_Expr* v) { m_value = v; }
 
+void Fa_AssignmentExpr::set_decl() { m_is_decl = true; }
+
 bool Fa_AssignmentExpr::is_declaration() const { return m_is_decl; }
 
 bool Fa_BlockStmt::equals(Fa_Stmt const* other) const
 {
-    if (!other || other->get_kind() != Kind::BLOCK)
+    if (other == nullptr || other->get_kind() != Kind::BLOCK)
         return false;
 
     auto block = static_cast<Fa_BlockStmt const*>(other);
@@ -291,11 +293,11 @@ bool Fa_BlockStmt::equals(Fa_Stmt const* other) const
 
 bool Fa_IndexExpr::equals(Fa_Expr const* other) const
 {
-    if (!other || other->get_kind() != Kind::INDEX)
+    if (other == nullptr || other->get_kind() != Kind::INDEX)
         return false;
 
-    auto m_index = static_cast<Fa_IndexExpr const*>(other);
-    return m_object->equals(m_index->get_object()) && m_index->equals(m_index->get_index());
+    auto idx = static_cast<Fa_IndexExpr const*>(other);
+    return m_object->equals(idx->get_object()) && m_index->equals(idx->get_index());
 }
 
 Fa_IndexExpr* Fa_IndexExpr::clone() const { return Fa_makeIndex(m_object->clone(), m_index->clone()); }
@@ -353,6 +355,8 @@ void Fa_AssignmentStmt::set_value(Fa_Expr* v) { m_expr->set_value(v); }
 
 void Fa_AssignmentStmt::set_target(Fa_Expr* t) { m_expr->set_target(t); }
 
+void Fa_AssignmentStmt::set_decl() { m_expr->set_decl(); }
+
 bool Fa_AssignmentStmt::is_declaration() const { return m_expr->is_declaration(); }
 
 bool Fa_IfStmt::equals(Fa_Stmt const* other) const
@@ -363,7 +367,7 @@ bool Fa_IfStmt::equals(Fa_Stmt const* other) const
     auto if_stmt = static_cast<Fa_IfStmt const*>(other);
     bool eq_else = false;
 
-    if (m_else_stmt && if_stmt->get_else())
+    if (m_else_stmt != nullptr && if_stmt->get_else())
         eq_else = m_else_stmt->equals(if_stmt->get_else());
 
     return m_condition->equals(if_stmt->get_condition()) && m_then_stmt->equals(if_stmt->get_then()) && eq_else;
@@ -453,7 +457,12 @@ void Fa_FunctionDef::set_body(Fa_Stmt* b) { m_body = b; }
 
 bool Fa_FunctionDef::has_parameters() const { return m_params && !m_params->is_empty(); }
 
-Fa_ReturnStmt* Fa_ReturnStmt::clone() const { return Fa_makeReturn(m_value->clone()); }
+Fa_ReturnStmt* Fa_ReturnStmt::clone() const
+{
+    return Fa_makeReturn(m_value == nullptr ? nullptr : m_value->clone());
+}
+
+Fa_Expr* Fa_ReturnStmt::get_value() { return m_value; }
 
 Fa_Expr const* Fa_ReturnStmt::get_value() const { return m_value; }
 
@@ -467,7 +476,24 @@ bool Fa_ReturnStmt::has_value() const { return m_value != nullptr; }
         return false;
 
     auto ret_stmt = static_cast<Fa_ReturnStmt const*>(other);
+    if (m_value == nullptr || ret_stmt->get_value() == nullptr)
+        return m_value == ret_stmt->get_value();
+
     return m_value->equals(ret_stmt->get_value());
 }
+
+bool Fa_BreakStmt::equals(Fa_Stmt const* other) const
+{
+    return other != nullptr && other->get_kind() == Kind::BREAK;
+}
+
+Fa_BreakStmt* Fa_BreakStmt::clone() const { return Fa_makeBreak(); }
+
+bool Fa_ContinueStmt::equals(Fa_Stmt const* other) const
+{
+    return other != nullptr && other->get_kind() == Kind::CONTINUE;
+}
+
+Fa_ContinueStmt* Fa_ContinueStmt::clone() const { return Fa_makeContinue(); }
 
 } // namespace fairuz::ast

@@ -43,11 +43,11 @@ TEST_F(SemanticAnalyzerTest, InferType_Primitive)
     AST::Fa_LiteralExpr* Fa_Expr2 = AST::Fa_makeLiteralString("hello");
     AST::Fa_LiteralExpr* Fa_Expr3 = AST::Fa_makeLiteralBool(true);
 
-    EXPECT_EQ(analyzer.infer_type(Fa_Expr0), Fa_SymbolTable::DataType_t::INTEGER);
-    EXPECT_EQ(analyzer.infer_type(Fa_Expr1), Fa_SymbolTable::DataType_t::FLOAT);
-    EXPECT_EQ(analyzer.infer_type(Fa_Expr2), Fa_SymbolTable::DataType_t::STRING);
-    EXPECT_EQ(analyzer.infer_type(Fa_Expr3), Fa_SymbolTable::DataType_t::BOOLEAN);
-    EXPECT_EQ(analyzer.infer_type(nullptr), Fa_SymbolTable::DataType_t::UNKNOWN);
+    EXPECT_EQ(analyzer.infer_type(Fa_Expr0), Fa_SymbolTable::DataType::INTEGER);
+    EXPECT_EQ(analyzer.infer_type(Fa_Expr1), Fa_SymbolTable::DataType::FLOAT);
+    EXPECT_EQ(analyzer.infer_type(Fa_Expr2), Fa_SymbolTable::DataType::STRING);
+    EXPECT_EQ(analyzer.infer_type(Fa_Expr3), Fa_SymbolTable::DataType::BOOLEAN);
+    EXPECT_EQ(analyzer.infer_type(nullptr), Fa_SymbolTable::DataType::UNKNOWN);
 }
 
 TEST_F(SemanticAnalyzerTest, InferType_BinaryFa_Expr_Add)
@@ -56,9 +56,9 @@ TEST_F(SemanticAnalyzerTest, InferType_BinaryFa_Expr_Add)
     AST::Fa_BinaryExpr* Fa_Expr1 = AST::Fa_makeBinary(AST::Fa_makeLiteralInt(10), AST::Fa_makeLiteralFloat(20.5), AST::Fa_BinaryOp::OP_ADD);
     AST::Fa_BinaryExpr* Fa_Expr2 = AST::Fa_makeBinary(AST::Fa_makeLiteralString("hello"), AST::Fa_makeLiteralString("world"), AST::Fa_BinaryOp::OP_ADD);
 
-    EXPECT_EQ(analyzer.infer_type(Fa_Expr0), Fa_SymbolTable::DataType_t::INTEGER);
-    EXPECT_EQ(analyzer.infer_type(Fa_Expr1), Fa_SymbolTable::DataType_t::FLOAT);
-    EXPECT_EQ(analyzer.infer_type(Fa_Expr2), Fa_SymbolTable::DataType_t::STRING);
+    EXPECT_EQ(analyzer.infer_type(Fa_Expr0), Fa_SymbolTable::DataType::INTEGER);
+    EXPECT_EQ(analyzer.infer_type(Fa_Expr1), Fa_SymbolTable::DataType::FLOAT);
+    EXPECT_EQ(analyzer.infer_type(Fa_Expr2), Fa_SymbolTable::DataType::STRING);
 }
 
 TEST_F(SemanticAnalyzerTest, InferType_BinaryFa_Expr_LogicalOp)
@@ -69,11 +69,11 @@ TEST_F(SemanticAnalyzerTest, InferType_BinaryFa_Expr_LogicalOp)
     AST::Fa_BinaryExpr* Fa_Expr3 = AST::Fa_makeBinary(AST::Fa_makeLiteralBool(true), Fa_Expr2, AST::Fa_BinaryOp::OP_AND);
     AST::Fa_BinaryExpr* Fa_Expr4 = AST::Fa_makeBinary(AST::Fa_makeLiteralBool(false), Fa_Expr3, AST::Fa_BinaryOp::OP_AND);
 
-    EXPECT_EQ(analyzer.infer_type(Fa_Expr0), Fa_SymbolTable::DataType_t::BOOLEAN);
-    EXPECT_EQ(analyzer.infer_type(Fa_Expr1), Fa_SymbolTable::DataType_t::BOOLEAN);
-    EXPECT_EQ(analyzer.infer_type(Fa_Expr2), Fa_SymbolTable::DataType_t::BOOLEAN);
-    EXPECT_EQ(analyzer.infer_type(Fa_Expr3), Fa_SymbolTable::DataType_t::BOOLEAN);
-    EXPECT_EQ(analyzer.infer_type(Fa_Expr4), Fa_SymbolTable::DataType_t::BOOLEAN);
+    EXPECT_EQ(analyzer.infer_type(Fa_Expr0), Fa_SymbolTable::DataType::BOOLEAN);
+    EXPECT_EQ(analyzer.infer_type(Fa_Expr1), Fa_SymbolTable::DataType::BOOLEAN);
+    EXPECT_EQ(analyzer.infer_type(Fa_Expr2), Fa_SymbolTable::DataType::BOOLEAN);
+    EXPECT_EQ(analyzer.infer_type(Fa_Expr3), Fa_SymbolTable::DataType::BOOLEAN);
+    EXPECT_EQ(analyzer.infer_type(Fa_Expr4), Fa_SymbolTable::DataType::BOOLEAN);
 }
 
 TEST_F(SemanticAnalyzerTest, UndefinedVariable_ReportsError)
@@ -221,6 +221,28 @@ TEST_F(SemanticAnalyzerTest, FunctionCallFa_Expression_NoUnusedWarning)
     size_t info_count = count_issues_by_severity(Fa_SemanticAnalyzer::Issue::Severity::INFO);
 }
 
+TEST_F(SemanticAnalyzerTest, AssignmentExpressionStatement_NoUnusedWarning)
+{
+    AST::Fa_ExprStmt* expr_stmt = AST::Fa_makeExprStmt(
+        AST::Fa_makeAssignmentExpr(AST::Fa_makeName("x"), AST::Fa_makeLiteralInt(42), true));
+
+    analyzer.analyze_stmt(expr_stmt);
+
+    EXPECT_EQ(count_issues_by_severity(Fa_SemanticAnalyzer::Issue::Severity::INFO), 0);
+}
+
+TEST_F(SemanticAnalyzerTest, AssignmentExpressionDeclarationDefinesSymbol)
+{
+    AST::Fa_ExprStmt* expr_stmt = AST::Fa_makeExprStmt(
+        AST::Fa_makeAssignmentExpr(AST::Fa_makeName("x"), AST::Fa_makeLiteralInt(42), true));
+    m_statements.push(expr_stmt);
+
+    analyzer.analyze(m_statements);
+    analyzer.analyze_fa_expr(AST::Fa_makeName("x"));
+
+    EXPECT_EQ(count_issues_by_severity(Fa_SemanticAnalyzer::Issue::Severity::ERROR), 0);
+}
+
 TEST_F(SemanticAnalyzerTest, ForLoopVariableShadowing_ReportsWarning)
 {
     AST::Fa_AssignmentStmt* outer_assign = AST::Fa_makeAssignmentStmt(AST::Fa_makeName("i"), AST::Fa_makeLiteralInt(10));
@@ -260,14 +282,14 @@ TEST_F(SemanticAnalyzerTest, NestedBinaryFa_Expressions_InfersCorrectType)
     AST::Fa_BinaryExpr* inner_binary = AST::Fa_makeBinary(AST::Fa_makeLiteralInt(10), AST::Fa_makeLiteralInt(20), AST::Fa_BinaryOp::OP_ADD);
     AST::Fa_BinaryExpr* outer_binary = AST::Fa_makeBinary(inner_binary, AST::Fa_makeLiteralFloat(2.5), AST::Fa_BinaryOp::OP_MUL);
 
-    EXPECT_EQ(analyzer.infer_type(outer_binary), Fa_SymbolTable::DataType_t::FLOAT);
+    EXPECT_EQ(analyzer.infer_type(outer_binary), Fa_SymbolTable::DataType::FLOAT);
 }
 
 TEST_F(SemanticAnalyzerTest, ListFa_Expression_InfersListType)
 {
     AST::Fa_ListExpr* list_fa_expr = AST::Fa_makeList({ AST::Fa_makeLiteralInt(1), AST::Fa_makeLiteralInt(2), AST::Fa_makeLiteralInt(3) });
 
-    EXPECT_EQ(analyzer.infer_type(list_fa_expr), Fa_SymbolTable::DataType_t::LIST);
+    EXPECT_EQ(analyzer.infer_type(list_fa_expr), Fa_SymbolTable::DataType::LIST);
 
     analyzer.analyze_fa_expr(list_fa_expr);
 }
@@ -347,7 +369,7 @@ TEST_F(SemanticAnalyzerTest, CallFa_Expression_InfersAnyType)
 {
     AST::Fa_CallExpr* call = Fa_makeCall(AST::Fa_makeName("some_function"), AST::Fa_makeList({ }) /*, 1*/);
 
-    EXPECT_EQ(analyzer.infer_type(call), Fa_SymbolTable::DataType_t::ANY);
+    EXPECT_EQ(analyzer.infer_type(call), Fa_SymbolTable::DataType::ANY);
 }
 
 TEST_F(SemanticAnalyzerTest, CallWithArguments_AnalyzesAllArgs)

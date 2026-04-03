@@ -123,7 +123,7 @@ public:
             return true;
         if (m_length != other.m_length)
             return false;
-        if (!m_string_data || !other.m_string_data)
+        if (m_string_data == nullptr || !other.m_string_data)
             return m_length == 0;
         return ::memcmp(data(), other.data(), m_length) == 0;
     }
@@ -134,9 +134,9 @@ public:
     {
         if (m_string_data == other.m_string_data && m_offset == other.m_offset && m_length == other.m_length)
             return false;
-        if (!m_string_data)
+        if (m_string_data == nullptr)
             return other.m_length > 0;
-        if (!other.m_string_data)
+        if (other.m_string_data == nullptr)
             return false;
 
         size_t const min_len = std::min(m_length, other.m_length);
@@ -184,7 +184,7 @@ public:
 
     Fa_StringRef operator+(char const* rhs) const
     {
-        if (!rhs || !rhs[0])
+        if (rhs == nullptr || !rhs[0])
             return *this;
         Fa_StringRef rhs_str = rhs;
         return *this + rhs_str;
@@ -192,7 +192,7 @@ public:
 
     friend Fa_StringRef operator+(char const* lhs, Fa_StringRef const& rhs)
     {
-        if (!lhs || !lhs[0])
+        if (lhs == nullptr || !lhs[0])
             return Fa_StringRef(rhs);
         Fa_StringRef lhs_str = lhs;
         return lhs_str + rhs;
@@ -222,7 +222,7 @@ public:
 
     [[nodiscard]] char* data() noexcept
     {
-        if (m_string_data) {
+        if (m_string_data != nullptr) {
             ensure_unique();
             return m_string_data->ptr() + m_offset;
         }
@@ -272,7 +272,7 @@ public:
 
     void ensure_unique()
     {
-        if (!m_string_data)
+        if (m_string_data == nullptr)
             return;
         if (LIKELY(m_string_data->reference_count() == 1))
             return;

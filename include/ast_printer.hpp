@@ -88,7 +88,7 @@ private:
 
     void print_expr(Fa_Expr const* e, Prefix p)
     {
-        if (!e)
+        if (e == nullptr)
             return;
 
         m_node_count += 1;
@@ -164,7 +164,7 @@ private:
 
     void print_stmt(Fa_Stmt const* s, Prefix p)
     {
-        if (!s)
+        if (s == nullptr)
             return;
 
         m_node_count += 1;
@@ -213,7 +213,7 @@ private:
             print_expr(i->get_condition(), { p.indent + pipe(p.last) + "│  ", true });
             std::cout << p.indent + pipe(p.last) << (i->get_else() ? "├─" : "└─") << " then:\n";
             print_stmt(i->get_then(), { p.indent + pipe(p.last) + (i->get_else() ? "│  " : "   "), true });
-            if (i->get_else()) {
+            if (i->get_else() != nullptr) {
                 std::cout << p.indent + pipe(p.last) << "└─ else:\n";
                 print_stmt(i->get_else(), { p.indent + pipe(p.last) + "   ", true });
             }

@@ -17,7 +17,7 @@ using CompilerError = diagnostic::errc::compiler::Code;
 static bool is_terminal_top_level_call(AST::Fa_Stmt const* s)
 {
     auto const* expr_stmt = dynamic_cast<AST::Fa_ExprStmt const*>(s);
-    if (!expr_stmt)
+    if (expr_stmt == nullptr)
         return false;
 
     return dynamic_cast<AST::Fa_CallExpr const*>(expr_stmt->get_expr()) != nullptr;
@@ -63,14 +63,13 @@ Fa_Chunk* Compiler::compile(Fa_Array<AST::Fa_Stmt*> const& stmts)
         emit(Fa_make_ABC(Fa_OpCode::RETURN_NIL, 0, 0, 0), loc);
 
     chunk->local_count = state.max_reg;
-    chunk->upvalue_count = 0;
     m_current = nullptr;
     return chunk;
 }
 
 void Compiler::compile_stmt(AST::Fa_Stmt const* s)
 {
-    if (!s || m_current->m_is_dead)
+    if (s == nullptr || m_current->m_is_dead)
         return;
 
     switch (s->get_kind()) {
@@ -97,6 +96,12 @@ void Compiler::compile_stmt(AST::Fa_Stmt const* s)
         break;
     case AST::Fa_Stmt::Kind::FOR:
         compile_for(static_cast<AST::Fa_ForStmt const*>(s));
+        break;
+    case AST::Fa_Stmt::Kind::BREAK:
+        compile_break(static_cast<AST::Fa_BreakStmt const*>(s));
+        break;
+    case AST::Fa_Stmt::Kind::CONTINUE:
+        compile_continue(static_cast<AST::Fa_ContinueStmt const*>(s));
         break;
     case AST::Fa_Stmt::Kind::INVALID:
         diagnostic::emit(CompilerError::INVALID_STATEMENT_NODE);
@@ -130,12 +135,18 @@ void Compiler::compile_assignment_stmt(AST::Fa_AssignmentStmt const* s)
 {
     Fa_SourceLocation loc = SRC_LOC(s);
     auto const* m_name = dynamic_cast<AST::Fa_NameExpr const*>(s->get_target());
-    if (!m_name) {
+    if (m_name == nullptr) {
         diagnostic::emit(CompilerError::INVALID_ASSIGNMENT_TARGET, "only simple name assignments are supported");
         return;
     }
 
     if (s->is_declaration()) {
+        if (LocalVar const* local = lookup_local(m_name->get_value())) {
+            u8 local_reg = local->m_reg;
+            compile_expr(s->get_value(), &local_reg);
+            return;
+        }
+
         u8 m_reg = alloc_register();
         Fa_ExprResult m_value = compile_expr_i(s->get_value());
         discharge(m_value, m_reg, loc);
@@ -157,7 +168,7 @@ void Compiler::compile_assignment_stmt(AST::Fa_AssignmentStmt const* s)
 
 void Compiler::compile_if(AST::Fa_IfStmt const* s)
 {
-    if (!s)
+    if (s == nullptr)
         return;
 
     Fa_SourceLocation loc = SRC_LOC(s);
@@ -192,7 +203,7 @@ void Compiler::compile_if(AST::Fa_IfStmt const* s)
 
 void Compiler::compile_while(AST::Fa_WhileStmt const* s)
 {
-    if (!s)
+    if (s == nullptr)
         return;
 
     Fa_SourceLocation loc = SRC_LOC(s);
@@ -230,8 +241,13 @@ void Compiler::compile_while(AST::Fa_WhileStmt const* s)
 void Compiler::compile_function_def(AST::Fa_FunctionDef const* f)
 {
     Fa_SourceLocation loc = SRC_LOC(f);
+    if (!m_current->is_top_level || m_current->scope_depth != 0) {
+        diagnostic::emit(CompilerError::NESTED_FUNCTION_UNSUPPORTED);
+        return;
+    }
+
     AST::Fa_NameExpr* m_name = f->get_name();
-    if (!m_name) {
+    if (m_name == nullptr) {
         diagnostic::emit(CompilerError::NULL_FUNCTION_NAME, diagnostic::Severity::FATAL);
         return;
     }
@@ -239,7 +255,6 @@ void Compiler::compile_function_def(AST::Fa_FunctionDef const* f)
     Fa_Chunk* fn_chunk = make_chunk();
     fn_chunk->m_name = m_name->get_value();
     fn_chunk->arity = f->has_parameters() ? static_cast<int>(f->get_parameters().size()) : 0;
-    fn_chunk->upvalue_count = 0;
 
     auto fn_idx = static_cast<u16>(current_chunk()->functions.size());
     current_chunk()->functions.push(fn_chunk);
@@ -254,7 +269,7 @@ void Compiler::compile_function_def(AST::Fa_FunctionDef const* f)
     if (f->has_parameters()) {
         for (AST::Fa_Expr const* param : f->get_parameters()) {
             auto param_name = dynamic_cast<AST::Fa_NameExpr const*>(param);
-            if (!param_name) {
+            if (param_name == nullptr) {
                 diagnostic::emit(CompilerError::INVALID_FUNCTION_PARAMETER);
                 continue;
             }
@@ -275,7 +290,7 @@ void Compiler::compile_function_def(AST::Fa_FunctionDef const* f)
     u8 dst = alloc_register();
     emit(Fa_make_ABx(Fa_OpCode::CLOSURE, dst, fn_idx), loc);
 
-    if (m_current && m_current->is_top_level) {
+    if (m_current != nullptr && m_current->is_top_level) {
         u16 name_idx = intern_string(m_name->get_value());
         emit(Fa_make_ABx(Fa_OpCode::STORE_GLOBAL, dst, name_idx), loc);
     }
@@ -318,7 +333,7 @@ void Compiler::compile_for(AST::Fa_ForStmt const* s)
 {
     Fa_SourceLocation loc = SRC_LOC(s);
     auto m_target = dynamic_cast<AST::Fa_NameExpr const*>(s->get_target());
-    if (!m_target) {
+    if (m_target == nullptr) {
         diagnostic::emit(CompilerError::INVALID_ASSIGNMENT_TARGET, "for loop target must be a name");
         return;
     }
@@ -364,9 +379,33 @@ void Compiler::compile_for(AST::Fa_ForStmt const* s)
     m_current->m_is_dead = incoming_dead;
 }
 
+void Compiler::compile_break(AST::Fa_BreakStmt const* s)
+{
+    if (m_current->loop_stack.empty()) {
+        diagnostic::emit(CompilerError::BREAK_OUTSIDE_LOOP);
+        return;
+    }
+
+    Fa_SourceLocation loc = SRC_LOC(s);
+    m_current->loop_stack.back().break_patches.push(emit_jump(Fa_OpCode::JUMP, 0, loc));
+    m_current->m_is_dead = true;
+}
+
+void Compiler::compile_continue(AST::Fa_ContinueStmt const* s)
+{
+    if (m_current->loop_stack.empty()) {
+        diagnostic::emit(CompilerError::CONTINUE_OUTSIDE_LOOP);
+        return;
+    }
+
+    Fa_SourceLocation loc = SRC_LOC(s);
+    m_current->loop_stack.back().continue_patches.push(emit_jump(Fa_OpCode::JUMP, 0, loc));
+    m_current->m_is_dead = true;
+}
+
 Fa_ExprResult Compiler::compile_expr_i(AST::Fa_Expr const* e)
 {
-    if (!e)
+    if (e == nullptr)
         return Fa_ExprResult::knil();
 
     switch (e->get_kind()) {
@@ -586,7 +625,7 @@ Fa_ExprResult Compiler::compile_binary_i(AST::Fa_BinaryExpr const* e)
 
     if (bc_op == Fa_OpCode::OP_LSHIFT || bc_op == Fa_OpCode::OP_RSHIFT) {
         auto amount_expr = dynamic_cast<AST::Fa_LiteralExpr const*>(e->get_right());
-        if (!amount_expr || !amount_expr->is_integer()) {
+        if (amount_expr == nullptr || !amount_expr->is_integer()) {
             diagnostic::emit(CompilerError::SHIFT_AMOUNT_NOT_CONSTANT);
             return Fa_ExprResult::knil();
         }
@@ -634,9 +673,30 @@ Fa_ExprResult Compiler::compile_assign_i(AST::Fa_AssignmentExpr const* e)
     }
 
     auto m_name = dynamic_cast<AST::Fa_NameExpr const*>(m_target);
-    if (!m_name) {
+    if (m_name == nullptr) {
         diagnostic::emit(CompilerError::INVALID_ASSIGNMENT_TARGET);
         return Fa_ExprResult::knil();
+    }
+
+    if (e->is_declaration()) {
+        if (LocalVar const* local = lookup_local(m_name->get_value())) {
+            u8 local_reg = local->m_reg;
+            compile_expr(e->get_value(), &local_reg);
+            return Fa_ExprResult::reg(local_reg);
+        }
+
+        if (m_current->is_top_level && m_current->scope_depth == 0) {
+            RegMark mark(m_current);
+            u8 src = any_reg(compile_expr_i(e->get_value()), loc);
+            u16 kidx = intern_string(m_name->get_value());
+            emit(Fa_make_ABx(Fa_OpCode::STORE_GLOBAL, src, kidx), loc);
+            return Fa_ExprResult::reg(src);
+        }
+
+        u8 m_reg = alloc_register();
+        discharge(compile_expr_i(e->get_value()), m_reg, loc);
+        declare_local(m_name->get_value(), m_reg);
+        return Fa_ExprResult::reg(m_reg);
     }
 
     VarInfo vi = resolve_name(m_name->get_value());
@@ -686,9 +746,13 @@ Fa_ExprResult Compiler::compile_list_i(AST::Fa_ListExpr const* e)
     emit(Fa_make_ABC(Fa_OpCode::LIST_NEW, dst, m_cap, 0), loc);
 
     RegMark mark(m_current);
+    int i = 0;
     for (AST::Fa_Expr const* elem : e->get_elements()) {
+        if (i == 0xFF)
+            break;
         u8 m_reg = any_reg(compile_expr_i(elem), loc);
         emit(Fa_make_ABC(Fa_OpCode::LIST_APPEND, dst, m_reg, 0), loc);
+        i += 1;
     }
 
     return Fa_ExprResult::reg(dst);
@@ -764,12 +828,12 @@ u8 Compiler::any_reg(Fa_ExprResult const& r, Fa_SourceLocation loc)
 
 u8 Compiler::compile_expr(AST::Fa_Expr const* e, u8* dst)
 {
-    if (!e)
+    if (e == nullptr)
         return error_reg();
 
     Fa_SourceLocation loc = SRC_LOC(e);
     Fa_ExprResult r = compile_expr_i(e);
-    if (dst) {
+    if (dst != nullptr) {
         discharge(r, *dst, loc);
         return *dst;
     }
@@ -781,7 +845,7 @@ u8 Compiler::compile_literal(AST::Fa_LiteralExpr const* e, u8* dst)
 {
     Fa_SourceLocation loc = SRC_LOC(e);
     Fa_ExprResult r = compile_literal_i(e);
-    if (dst) {
+    if (dst != nullptr) {
         discharge(r, *dst, loc);
         return *dst;
     }
@@ -793,7 +857,7 @@ u8 Compiler::compile_name(AST::Fa_NameExpr const* e, u8* dst)
 {
     Fa_SourceLocation loc = SRC_LOC(e);
     Fa_ExprResult r = compile_name_i(e);
-    if (dst) {
+    if (dst != nullptr) {
         discharge(r, *dst, loc);
         return *dst;
     }
@@ -805,7 +869,7 @@ u8 Compiler::compile_unary(AST::Fa_UnaryExpr const* e, u8* dst)
 {
     Fa_SourceLocation loc = SRC_LOC(e);
     Fa_ExprResult r = compile_unary_i(e);
-    if (dst) {
+    if (dst != nullptr) {
         discharge(r, *dst, loc);
         return *dst;
     }
@@ -817,7 +881,7 @@ u8 Compiler::compile_binary(AST::Fa_BinaryExpr const* e, u8* dst)
 {
     Fa_SourceLocation loc = SRC_LOC(e);
     Fa_ExprResult r = compile_binary_i(e);
-    if (dst) {
+    if (dst != nullptr) {
         discharge(r, *dst, loc);
         return *dst;
     }
@@ -829,7 +893,7 @@ u8 Compiler::compile_assignment_expr(AST::Fa_AssignmentExpr const* e, u8* dst)
 {
     Fa_SourceLocation loc = SRC_LOC(e);
     Fa_ExprResult r = compile_assign_i(e);
-    if (dst) {
+    if (dst != nullptr) {
         discharge(r, *dst, loc);
         return *dst;
     }
@@ -847,7 +911,7 @@ u8 Compiler::compile_list(AST::Fa_ListExpr const* e, u8* dst)
 {
     Fa_SourceLocation loc = SRC_LOC(e);
     Fa_ExprResult r = compile_list_i(e);
-    if (dst) {
+    if (dst != nullptr) {
         discharge(r, *dst, loc);
         return *dst;
     }
@@ -859,7 +923,7 @@ u8 Compiler::compile_index(AST::Fa_IndexExpr const* e, u8* dst)
 {
     Fa_SourceLocation loc = SRC_LOC(e);
     Fa_ExprResult r = compile_index_i(e);
-    if (dst) {
+    if (dst != nullptr) {
         discharge(r, *dst, loc);
         return *dst;
     }
@@ -871,7 +935,7 @@ u8 Compiler::compile_dict(AST::Fa_DictExpr const* e, u8* dst)
 {
     Fa_SourceLocation loc = SRC_LOC(e);
     Fa_ExprResult r = compile_dict_i(e);
-    if (dst) {
+    if (dst != nullptr) {
         discharge(r, *dst, loc);
         return *dst;
     }
@@ -896,35 +960,26 @@ u8 Compiler::alloc_register()
 
 void Compiler::declare_local(Fa_StringRef const& m_name, u8 m_reg) { m_current->locals.push({ m_name, m_current->scope_depth, m_reg }); }
 
-Compiler::VarInfo Compiler::resolve_name(Fa_StringRef const& m_name)
+LocalVar const* Compiler::lookup_local(Fa_StringRef const& m_name) const
 {
     auto const& locals = m_current->locals;
     for (auto i = static_cast<int>(locals.size()) - 1; i >= 0; i -= 1) {
         if (locals[i].m_name == m_name)
-            return { VarInfo::Kind::LOCAL, locals[i].m_reg };
+            return &locals[i];
     }
+
+    return nullptr;
+}
+
+Compiler::VarInfo Compiler::resolve_name(Fa_StringRef const& m_name)
+{
+    if (LocalVar const* local = lookup_local(m_name))
+        return { VarInfo::Kind::LOCAL, local->m_reg };
 
     return VarInfo {
         .kind = VarInfo::Kind::GLOBAL,
         .m_index = 0
     };
-}
-
-int Compiler::resolve_upvalue(CompilerState* state, Fa_StringRef const& m_name)
-{
-    // stub
-    (void)state;
-    (void)m_name;
-    return -1;
-}
-
-int Compiler::add_upvalue(CompilerState* state, bool is_local, u8 m_index)
-{
-    // stub
-    (void)state;
-    (void)is_local;
-    (void)m_index;
-    return -1;
 }
 
 u32 Compiler::emit(u32 instr, Fa_SourceLocation loc) { return current_chunk()->emit(instr, loc); }

@@ -106,7 +106,7 @@ static Fa_StringRef value_to_string(Fa_Value v)
 
 Fa_Value Fa_VM::Fa_len(int argc, Fa_Value* argv)
 {
-    if (argc == 0 || !argv)
+    if (argc == 0 || argv == nullptr)
         return NIL_VAL;
 
     if (argc == 1) {
@@ -238,10 +238,6 @@ static void print_runtime_value(Fa_Value v, int depth = 0)
             std::cout << '>';
             return;
         }
-
-        case Fa_ObjType::UPVALUE:
-            std::cout << "<upvalue>";
-            return;
         }
     }
 
@@ -255,7 +251,7 @@ static void print_runtime_value(Fa_Value v, int depth = 0)
 
 Fa_Value Fa_VM::Fa_print(int argc, Fa_Value* argv)
 {
-    if (argc == 0 || !argv) {
+    if (argc == 0 || argv == nullptr) {
         std::cout << '\n';
         return NIL_VAL;
     }
@@ -271,7 +267,7 @@ Fa_Value Fa_VM::Fa_print(int argc, Fa_Value* argv)
 
 Fa_Value Fa_VM::Fa_type(int argc, Fa_Value* argv)
 {
-    if (argc != 1 || !argv)
+    if (argc != 1 || argv == nullptr)
         return NIL_VAL;
 
     return Fa_MAKE_INTEGER(static_cast<i64>(value_type_tag(argv[0])));
@@ -279,7 +275,7 @@ Fa_Value Fa_VM::Fa_type(int argc, Fa_Value* argv)
 
 Fa_Value Fa_VM::Fa_int(int argc, Fa_Value* argv)
 {
-    if (argc != 1 || !argv)
+    if (argc != 1 || argv == nullptr)
         return NIL_VAL;
     if (Fa_IS_NUMBER(argv[0]))
         return Fa_MAKE_INTEGER(static_cast<i64>(Fa_AS_DOUBLE_ANY(argv[0])));
@@ -288,7 +284,7 @@ Fa_Value Fa_VM::Fa_int(int argc, Fa_Value* argv)
 
 Fa_Value Fa_VM::Fa_float(int argc, Fa_Value* argv)
 {
-    if (argc != 1 || !argv)
+    if (argc != 1 || argv == nullptr)
         return NIL_VAL;
 
     if (Fa_IS_NUMBER(argv[0]))
@@ -299,7 +295,7 @@ Fa_Value Fa_VM::Fa_float(int argc, Fa_Value* argv)
 
 Fa_Value Fa_VM::Fa_append(int argc, Fa_Value* argv)
 {
-    if (argc < 2 || !argv) {
+    if (argc < 2 || argv == nullptr) {
         diagnostic::emit(StdlibError::APPEND_ARG_COUNT, "got " + std::to_string(argc));
         diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
@@ -322,7 +318,7 @@ Fa_Value Fa_VM::Fa_append(int argc, Fa_Value* argv)
 
 Fa_Value Fa_VM::Fa_pop(int argc, Fa_Value* argv)
 {
-    if (argc != 1 || !argv) {
+    if (argc != 1 || argv == nullptr) {
         diagnostic::emit(StdlibError::POP_ARG_COUNT, "got " + std::to_string(argc));
         diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
@@ -390,7 +386,7 @@ Fa_Value Fa_VM::Fa_str(int argc, Fa_Value* argv)
 
     Fa_StringRef output = "";
 
-    if (argc == 0 || !argv)
+    if (argc == 0 || argv == nullptr)
         return Fa_MAKE_OBJECT((Fa_MAKE_OBJ_STRING(output))); // return empty on no arg
 
     if (Fa_IS_STRING(argv[0]))
@@ -402,7 +398,7 @@ Fa_Value Fa_VM::Fa_str(int argc, Fa_Value* argv)
 
 Fa_Value Fa_VM::Fa_bool(int argc, Fa_Value* argv)
 {
-    if (argc != 1 || !argv) {
+    if (argc != 1 || argv == nullptr) {
         diagnostic::emit(StdlibError::BOOL_ARG_COUNT, "got " + std::to_string(argc));
         diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
@@ -430,14 +426,15 @@ Fa_Value Fa_VM::Fa_dict(int argc, Fa_Value* argv)
     // this is structurally false because it relys on the structure of the dict
     // to have only one single key for each value (1 : 1)
     for (int i = 0; i < argc - 1; i += 2)
-        dict_obj->data.push({ argv[i], argv[i + 1] });
+        dict_obj->data.push({ .first = argv[i],
+            .second = argv[i + 1] });
 
     return ret;
 }
 
 Fa_Value Fa_VM::Fa_split(int argc, Fa_Value* argv)
 {
-    if (argc != 2 || !argv)
+    if (argc != 2 || argv == nullptr)
         return NIL_VAL;
     if (!Fa_IS_STRING(argv[0]) || !Fa_IS_STRING(argv[1]))
         return NIL_VAL;
@@ -480,7 +477,7 @@ Fa_Value Fa_VM::Fa_split(int argc, Fa_Value* argv)
 
 Fa_Value Fa_VM::Fa_join(int argc, Fa_Value* argv)
 {
-    if (argc != 2 || !argv)
+    if (argc != 2 || argv == nullptr)
         return NIL_VAL;
     if (!Fa_IS_LIST(argv[0]) || !Fa_IS_STRING(argv[1]))
         return NIL_VAL;
@@ -501,7 +498,7 @@ Fa_Value Fa_VM::Fa_join(int argc, Fa_Value* argv)
 
 Fa_Value Fa_VM::Fa_substr(int argc, Fa_Value* argv)
 {
-    if (argc != 3 || !argv) {
+    if (argc != 3 || argv == nullptr) {
         diagnostic::emit(StdlibError::SUBSTR_ARG_COUNT, "got " + std::to_string(argc));
         diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
@@ -518,7 +515,7 @@ Fa_Value Fa_VM::Fa_substr(int argc, Fa_Value* argv)
 
 Fa_Value Fa_VM::Fa_contains(int argc, Fa_Value* argv)
 {
-    if (argc != 2 || !argv)
+    if (argc != 2 || argv == nullptr)
         return NIL_VAL;
     if (!Fa_IS_STRING(argv[0]) || !Fa_IS_STRING(argv[1]))
         return NIL_VAL;
@@ -533,7 +530,7 @@ Fa_Value Fa_VM::Fa_contains(int argc, Fa_Value* argv)
 
 Fa_Value Fa_VM::Fa_trim(int argc, Fa_Value* argv)
 {
-    if (argc != 1 || !argv)
+    if (argc != 1 || argv == nullptr)
         return NIL_VAL;
     if (!Fa_IS_STRING(argv[0]))
         return NIL_VAL;
@@ -556,7 +553,7 @@ Fa_Value Fa_VM::Fa_trim(int argc, Fa_Value* argv)
 
 Fa_Value Fa_VM::Fa_floor(int argc, Fa_Value* argv)
 {
-    if (argc != 1 || !argv) {
+    if (argc != 1 || argv == nullptr) {
         diagnostic::emit(StdlibError::FLOOR_ARG_COUNT, "got " + std::to_string(argc));
         diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
@@ -576,7 +573,7 @@ Fa_Value Fa_VM::Fa_floor(int argc, Fa_Value* argv)
 
 Fa_Value Fa_VM::Fa_ceil(int argc, Fa_Value* argv)
 {
-    if (argc != 1 || !argv) {
+    if (argc != 1 || argv == nullptr) {
         diagnostic::emit(StdlibError::CEIL_ARG_COUNT, "got " + std::to_string(argc));
         diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
@@ -596,7 +593,7 @@ Fa_Value Fa_VM::Fa_ceil(int argc, Fa_Value* argv)
 
 Fa_Value Fa_VM::Fa_round(int argc, Fa_Value* argv)
 {
-    if (argc != 1 || !argv) {
+    if (argc != 1 || argv == nullptr) {
         diagnostic::emit(StdlibError::ROUND_ARG_COUNT, "got " + std::to_string(argc));
         diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
@@ -614,7 +611,7 @@ Fa_Value Fa_VM::Fa_round(int argc, Fa_Value* argv)
 
 Fa_Value Fa_VM::Fa_abs(int argc, Fa_Value* argv)
 {
-    if (argc != 1 || !argv) {
+    if (argc != 1 || argv == nullptr) {
         diagnostic::emit(StdlibError::ABS_ARG_COUNT, "got " + std::to_string(argc));
         diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
@@ -679,7 +676,7 @@ Fa_Value Fa_VM::Fa_min(int argc, Fa_Value* argv)
 
 Fa_Value Fa_VM::Fa_max(int argc, Fa_Value* argv)
 {
-    if (argc < 1 || !argv) {
+    if (argc < 1 || argv == nullptr) {
         diagnostic::emit(StdlibError::MAX_ARG_COUNT, "got " + std::to_string(argc));
         diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
@@ -718,7 +715,7 @@ Fa_Value Fa_VM::Fa_max(int argc, Fa_Value* argv)
 
 Fa_Value Fa_VM::Fa_pow(int argc, Fa_Value* argv)
 {
-    if (argc != 2 || !argv) {
+    if (argc != 2 || argv == nullptr) {
         diagnostic::emit(StdlibError::POW_ARG_COUNT, "got " + std::to_string(argc));
         diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
@@ -744,7 +741,7 @@ Fa_Value Fa_VM::Fa_pow(int argc, Fa_Value* argv)
 
 Fa_Value Fa_VM::Fa_sqrt(int argc, Fa_Value* argv)
 {
-    if (argc != 1 || !argv) {
+    if (argc != 1 || argv == nullptr) {
         diagnostic::emit(StdlibError::SQRT_ARG_COUNT, "got " + std::to_string(argc));
         diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;
@@ -767,7 +764,7 @@ Fa_Value Fa_VM::Fa_sqrt(int argc, Fa_Value* argv)
 
 Fa_Value Fa_VM::Fa_assert(int argc, Fa_Value* argv)
 {
-    if (argc < 1 || !argv) {
+    if (argc < 1 || argv == nullptr) {
         diagnostic::emit(StdlibError::ASSERT_ARG_COUNT, "got" + std::to_string(argc));
         diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
         return NIL_VAL;

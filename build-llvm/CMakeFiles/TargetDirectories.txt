@@ -1,0 +1,10 @@
+/Users/mohamedrabbit/code/fairuz/build-llvm/CMakeFiles/fairuz_objects.dir
+/Users/mohamedrabbit/code/fairuz/build-llvm/CMakeFiles/fairuz.dir
+/Users/mohamedrabbit/code/fairuz/build-llvm/CMakeFiles/fairuz_tests.dir
+/Users/mohamedrabbit/code/fairuz/build-llvm/CMakeFiles/test.dir
+/Users/mohamedrabbit/code/fairuz/build-llvm/CMakeFiles/edit_cache.dir
+/Users/mohamedrabbit/code/fairuz/build-llvm/CMakeFiles/rebuild_cache.dir
+/Users/mohamedrabbit/code/fairuz/build-llvm/CMakeFiles/list_install_components.dir
+/Users/mohamedrabbit/code/fairuz/build-llvm/CMakeFiles/install.dir
+/Users/mohamedrabbit/code/fairuz/build-llvm/CMakeFiles/install/local.dir
+/Users/mohamedrabbit/code/fairuz/build-llvm/CMakeFiles/install/strip.dir

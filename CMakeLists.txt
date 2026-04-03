@@ -78,19 +78,6 @@ install(FILES
     DESTINATION ${CMAKE_INSTALL_DOCDIR}
 )
 
-install(FILES
-    ${CMAKE_SOURCE_DIR}/demo.txt
-    ${CMAKE_SOURCE_DIR}/demo_.txt
-    ${CMAKE_SOURCE_DIR}/demo_else.txt
-    ${CMAKE_SOURCE_DIR}/demo_factorial.txt
-    ${CMAKE_SOURCE_DIR}/demo_primes_200.txt
-    ${CMAKE_SOURCE_DIR}/demo_strings_lists.txt
-    ${CMAKE_SOURCE_DIR}/demo_numeric_natives.txt
-    ${CMAKE_SOURCE_DIR}/demo_lists_working.txt
-    ${CMAKE_SOURCE_DIR}/demo_native_regressions.txt
-    DESTINATION ${CMAKE_INSTALL_DATADIR}/fairuz/examples
-)
-
 # ─── Test executable (only when BUILD_TESTS=ON) ──────────────────────────────
 if(BUILD_TESTS)
     message(STATUS "Building tests")

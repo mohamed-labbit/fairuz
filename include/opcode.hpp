@@ -30,10 +30,6 @@ enum class Fa_OpCode : u8 {
 
     MOVE, // dst, src, -
 
-    GET_UPVALUE,   // dst, index
-    SET_UPVALUE,   // src, index
-    CLOSE_UPVALUE, // first reg to close (close all the above), - , -
-
     // * is the value inside the given reg, if you have to ask ,then don't touch
     // this code
     // *A = *left OP *right
@@ -106,7 +102,6 @@ enum class Fa_OpCode : u8 {
     FOR_STEP, // base, jump back to top of block if not done
 
     CLOSURE,    // dst, function const index
-                // followed by upvalue descriptors, one MOVE per upvalue
     CALL,       // func reg, argc, expected ret (0xFF=discard)
     CALL_TAIL,  // func reg, argc | tail call optimized
     RETURN,     // first result reg, result count (0=RETURN NIL)
@@ -208,12 +203,6 @@ static Fa_StringRef Fa_opcode_name(Fa_OpCode op)
         return "LOAD_GLOBAL_CACHED";
     case Fa_OpCode::STORE_GLOBAL_CACHED:
         return "STORE_GLOBAL_CACHED";
-    case Fa_OpCode::GET_UPVALUE:
-        return "GET_UPVALUE";
-    case Fa_OpCode::SET_UPVALUE:
-        return "SET_UPVALUE";
-    case Fa_OpCode::CLOSE_UPVALUE:
-        return "CLOSE_UPVALUE";
     case Fa_OpCode::OP_ADD:
         return "OP_ADD";
     case Fa_OpCode::OP_ADD_II:
@@ -396,7 +385,6 @@ struct Fa_Chunk {
     Fa_StringRef m_name { "" };
     int arity { 0 };
     unsigned int local_count { 0 };
-    unsigned int upvalue_count { 0 };
 
     Fa_Array<u32> code;
     Fa_Array<Fa_SourceLocation> locations;

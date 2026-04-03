@@ -292,7 +292,7 @@ TEST(ParserGolden, ValidCorpus)
         if (gc.kind == "expr") {
             auto m_expr = parser.parse();
             ASSERT_TRUE(m_expr.has_value()) << entry.path();
-            EXPECT_EQ(sig_expr(m_expr.m_value()), gc.expected);
+            EXPECT_EQ(sig_expr(m_expr.value()), gc.expected);
         } else if (gc.kind == "program") {
             auto program = parser.parse_program();
             EXPECT_EQ(sig_program(program), gc.expected);

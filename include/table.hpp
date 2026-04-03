@@ -194,7 +194,7 @@ public:
     {
         Entry* p = m_buckets.begin();
         Entry* e = m_buckets.end();
-        
+
         while (p != e && !p->occupied)
             p += 1;
 

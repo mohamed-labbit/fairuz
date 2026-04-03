@@ -8,7 +8,7 @@ namespace fairuz::runtime {
 
 static std::optional<Fa_Value> const_value(AST::Fa_Expr const* e)
 {
-    if (!e || e->get_kind() != AST::Fa_Expr::Kind::LITERAL)
+    if (e == nullptr || e->get_kind() != AST::Fa_Expr::Kind::LITERAL)
         return std::nullopt;
 
     auto lit = static_cast<AST::Fa_LiteralExpr const*>(e);
@@ -127,7 +127,7 @@ static std::optional<Fa_Value> _try_fold_binary(AST::Fa_BinaryExpr const* e)
 
 static std::optional<Fa_Value> try_fold_binary(AST::Fa_BinaryExpr const* e)
 {
-    if (!e)
+    if (e == nullptr)
         return std::nullopt;
 
     AST::Fa_Expr* LE = e->get_left();
@@ -177,7 +177,7 @@ static std::optional<Fa_Value> try_fold_binary(AST::Fa_BinaryExpr const* e)
 
 static std::optional<Fa_Value> try_fold_expr(AST::Fa_Expr const* e)
 {
-    if (!e)
+    if (e == nullptr)
         return std::nullopt;
 
     switch (e->get_kind()) {

@@ -3,7 +3,6 @@
 
 #include "macros.hpp"
 
-#include <cstdint>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -63,6 +62,9 @@ enum class Code : u16 {
     INVALID_OPERATOR_SEQ = 0x0114,
     EXPECTED_COLON_DICT = 0x0115,
     EXPECTED_RBRACE_EXPR = 0x0116,
+    EXPECTED_FOR_TARGET = 0x0117,
+    EXPECTED_IN_KEYWORD = 0x0118,
+    EXPECTED_COLON_FOR = 0x0119,
 }; // enum Code
 
 } // namespace parser
@@ -105,6 +107,9 @@ enum class Code : u16 {
     TOO_MANY_REGISTERS = 0x030C,
     JUMP_OFFSET_OVERFLOW = 0x030D,
     LOOP_JUMP_OFFSET_OVERFLOW = 0x030E,
+    NESTED_FUNCTION_UNSUPPORTED = 0x030F,
+    BREAK_OUTSIDE_LOOP = 0x0310,
+    CONTINUE_OUTSIDE_LOOP = 0x0311,
 }; // enum Code
 
 } // namespace compiler
@@ -124,7 +129,6 @@ enum class Code : u16 {
     UNDEFINED_LOCAL = 0x0409,
     INDEX_OUT_OF_BOUNDS = 0x040A,
     INDEX_TYPE_ERROR = 0x040B,
-    UPVALUE_ESCAPE = 0x040C,
     INVALID_OPCODE = 0x040D,
     FRAME_OVERFLOW = 0x040E,
     NEGATIVE_EXPONENT = 0x040F,
@@ -266,6 +270,16 @@ static constexpr char const* error_message_for(u16 code)
         return "Unexpected end of input";
     case 0x0114:
         return "Invalid operator sequence";
+    case 0x0115:
+        return "Expected ':' after dictionary key";
+    case 0x0116:
+        return "Expected '}' after dictionary literal";
+    case 0x0117:
+        return "Expected loop variable name after 'for'";
+    case 0x0118:
+        return "Expected 'in' after loop variable";
+    case 0x0119:
+        return "Expected ':' after for loop header";
     // sema
     case 0x0200:
         return "Undefined variable";
@@ -324,6 +338,12 @@ static constexpr char const* error_message_for(u16 code)
         return "Jump offset overflow";
     case 0x030E:
         return "Loop jump offset overflow";
+    case 0x030F:
+        return "Nested function definitions are not supported";
+    case 0x0310:
+        return "break used outside of a loop";
+    case 0x0311:
+        return "continue used outside of a loop";
     // runtime
     case 0x0400:
         return "Stack overflow";
@@ -349,8 +369,6 @@ static constexpr char const* error_message_for(u16 code)
         return "List index out of bounds";
     case 0x040B:
         return "List index must be an integer";
-    case 0x040C:
-        return "Upvalue accessed after enclosing scope exited";
     case 0x040D:
         return "Invalid opcode in dispatch loop";
     case 0x040E:
@@ -580,7 +598,6 @@ static void report(Severity const sev, u32 const m_line, u16 const col, CodeEnum
 }
 
 static void internal_error(errc::general::Code err_code) { emit(err_code); }
-
 static void runtime_error(errc::runtime::Code err_code) { emit(err_code); }
 
 // Emits all accumulated diagnostics. The parser calls this once after
