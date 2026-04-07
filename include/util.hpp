@@ -81,7 +81,7 @@ static u32 decode_utf8_at(Fa_StringRef const& buf, size_t const byte_pos, u64* o
         throw std::runtime_error("UTF8 decode past end of buffer");
 
     unsigned char const* p = (unsigned char const*)buf.data() + byte_pos;
-    unsigned char const* m_end = (unsigned char const*)buf.data() + buf.len();
+    unsigned char const* end = (unsigned char const*)buf.data() + buf.len();
 
     unsigned char const c = *p;
 
@@ -91,7 +91,7 @@ static u32 decode_utf8_at(Fa_StringRef const& buf, size_t const byte_pos, u64* o
     }
 
     if ((c & 0xE0) == 0xC0) {
-        if (p + 1 >= m_end)
+        if (p + 1 >= end)
             throw std::runtime_error("UTF8 truncated: incomplete 2-byte sequence");
 
         if ((p[1] & 0xC0) != 0x80)
@@ -107,7 +107,7 @@ static u32 decode_utf8_at(Fa_StringRef const& buf, size_t const byte_pos, u64* o
     }
 
     if ((c & 0xF0) == 0xE0) {
-        if (p + 2 >= m_end)
+        if (p + 2 >= end)
             throw std::runtime_error("UTF8 truncated: incomplete 3-byte sequence");
 
         if ((p[1] & 0xC0) != 0x80 || (p[2] & 0xC0) != 0x80)
@@ -126,7 +126,7 @@ static u32 decode_utf8_at(Fa_StringRef const& buf, size_t const byte_pos, u64* o
     }
 
     if ((c & 0xF8) == 0xF0) {
-        if (p + 3 >= m_end)
+        if (p + 3 >= end)
             throw std::runtime_error("UTF8 truncated: incomplete 4-byte sequence");
 
         if ((p[1] & 0xC0) != 0x80 || (p[2] & 0xC0) != 0x80 || (p[3] & 0xC0) != 0x80)
@@ -236,7 +236,7 @@ static i64 parse_integer_literal(Fa_StringRef const& literal, int base)
     else if (literal.at(i) == '0' && literal.len() > i + 1)
         i += 1;
 
-    i64 m_value = 0;
+    i64 value = 0;
 
     for (; i < literal.len(); i += 1) {
         char const c = literal.at(i);
@@ -256,10 +256,10 @@ static i64 parse_integer_literal(Fa_StringRef const& literal, int base)
         if (digit >= base)
             throw std::invalid_argument("Digit out of range for base (base=" + std::to_string(base) + ", digit=" + std::to_string(digit) + ")");
 
-        m_value = m_value * base + digit;
+        value = value * base + digit;
     }
 
-    return negative ? -m_value : m_value;
+    return negative ? -value : value;
 }
 
 static bool is_integer_value(f64 d, i64& out)

@@ -752,7 +752,7 @@ TEST(VMDicts, IndexReturnsStoredValue)
     Fa_ObjString key(Fa_StringRef("lang"));
     Fa_ObjDict* obj_dict = get_allocator().allocate_object<Fa_ObjDict>();
     Fa_Value dict = Fa_MAKE_OBJECT(obj_dict);
-    Fa_AS_DICT(dict)->data.push({ Fa_MAKE_OBJECT(&key), Fa_MAKE_INTEGER(7) });
+    Fa_AS_DICT(dict)->data[Fa_MAKE_OBJECT(&key)] = Fa_MAKE_INTEGER(7);
 
     VMRunner r;
     CB b;
@@ -775,7 +775,7 @@ TEST(VMDicts, SetUpdatesAndAppendsByKey)
     Fa_ObjString new_key(Fa_StringRef("y"));
     Fa_ObjDict* obj_dict = get_allocator().allocate_object<Fa_ObjDict>();
     Fa_Value dict = Fa_MAKE_OBJECT(obj_dict);
-    Fa_AS_DICT(dict)->data.push({ Fa_MAKE_OBJECT(&existing_key), Fa_MAKE_INTEGER(1) });
+    Fa_AS_DICT(dict)->data[Fa_MAKE_OBJECT(&existing_key)] = Fa_MAKE_INTEGER(1);
 
     VMRunner r;
     CB b;
@@ -800,7 +800,7 @@ TEST(VMDicts, SetUpdatesAndAppendsByKey)
     ASSERT_TRUE(Fa_IS_INTEGER(result));
     EXPECT_EQ(Fa_AS_INTEGER(result), 42);
     ASSERT_EQ(Fa_AS_DICT(dict)->data.size(), 2u);
-    EXPECT_EQ(Fa_AS_INTEGER(Fa_AS_DICT(dict)->data[0].second), 99);
+    EXPECT_EQ(Fa_AS_INTEGER(Fa_AS_DICT(dict)->data[0]), 99);
 }
 
 TEST(VMDicts, MissingKeyReturnsNil)
@@ -1007,7 +1007,7 @@ TEST(VMIntegration, FunctionLocalDeclarationShadowsGlobal)
     VMRunner r;
     Fa_Value v = r.run(top);
     ASSERT_TRUE(Fa_IS_LIST(v));
-    auto const& elems = Fa_AS_LIST(v)->m_elements;
+    auto const& elems = Fa_AS_LIST(v)->elements;
     ASSERT_EQ(elems.size(), 2u);
     EXPECT_EQ(Fa_AS_INTEGER(elems[0]), 2);
     EXPECT_EQ(Fa_AS_INTEGER(elems[1]), 1);
@@ -2015,13 +2015,13 @@ TEST(NativeSplit, BasicSplit)
     Fa_Value m_args[] = { Fa_MAKE_STRING("a,b,c"), Fa_MAKE_STRING(",") };
     Fa_Value r = vm.Fa_split(2, m_args);
     ASSERT_TRUE(Fa_IS_LIST(r));
-    EXPECT_EQ(Fa_AS_LIST(r)->m_elements.size(), 3u);
-    ASSERT_TRUE(Fa_IS_STRING(Fa_AS_LIST(r)->m_elements[0]));
-    ASSERT_TRUE(Fa_IS_STRING(Fa_AS_LIST(r)->m_elements[1]));
-    ASSERT_TRUE(Fa_IS_STRING(Fa_AS_LIST(r)->m_elements[2]));
-    EXPECT_EQ(std::string(Fa_AS_STRING(Fa_AS_LIST(r)->m_elements[0])->str.data()), "a");
-    EXPECT_EQ(std::string(Fa_AS_STRING(Fa_AS_LIST(r)->m_elements[1])->str.data()), "b");
-    EXPECT_EQ(std::string(Fa_AS_STRING(Fa_AS_LIST(r)->m_elements[2])->str.data()), "c");
+    EXPECT_EQ(Fa_AS_LIST(r)->elements.size(), 3u);
+    ASSERT_TRUE(Fa_IS_STRING(Fa_AS_LIST(r)->elements[0]));
+    ASSERT_TRUE(Fa_IS_STRING(Fa_AS_LIST(r)->elements[1]));
+    ASSERT_TRUE(Fa_IS_STRING(Fa_AS_LIST(r)->elements[2]));
+    EXPECT_EQ(std::string(Fa_AS_STRING(Fa_AS_LIST(r)->elements[0])->str.data()), "a");
+    EXPECT_EQ(std::string(Fa_AS_STRING(Fa_AS_LIST(r)->elements[1])->str.data()), "b");
+    EXPECT_EQ(std::string(Fa_AS_STRING(Fa_AS_LIST(r)->elements[2])->str.data()), "c");
 }
 
 TEST(NativeSplit, NoDelimiterFound)
@@ -2030,9 +2030,9 @@ TEST(NativeSplit, NoDelimiterFound)
     Fa_Value m_args[] = { Fa_MAKE_STRING("hello"), Fa_MAKE_STRING(",") };
     Fa_Value r = vm.Fa_split(2, m_args);
     ASSERT_TRUE(Fa_IS_LIST(r));
-    EXPECT_EQ(Fa_AS_LIST(r)->m_elements.size(), 1u);
-    ASSERT_TRUE(Fa_IS_STRING(Fa_AS_LIST(r)->m_elements[0]));
-    EXPECT_EQ(std::string(Fa_AS_STRING(Fa_AS_LIST(r)->m_elements[0])->str.data()), "hello");
+    EXPECT_EQ(Fa_AS_LIST(r)->elements.size(), 1u);
+    ASSERT_TRUE(Fa_IS_STRING(Fa_AS_LIST(r)->elements[0]));
+    EXPECT_EQ(std::string(Fa_AS_STRING(Fa_AS_LIST(r)->elements[0])->str.data()), "hello");
 }
 
 TEST(NativeSubstr, BasicSubstr)
@@ -2107,9 +2107,9 @@ TEST(NativeJoin, BasicJoin)
     Fa_VM vm;
     Fa_Value list = vm.Fa_list(0, nullptr);
     Fa_ObjList* l = Fa_AS_LIST(list);
-    l->m_elements.push(Fa_MAKE_STRING("a"));
-    l->m_elements.push(Fa_MAKE_STRING("b"));
-    l->m_elements.push(Fa_MAKE_STRING("c"));
+    l->elements.push(Fa_MAKE_STRING("a"));
+    l->elements.push(Fa_MAKE_STRING("b"));
+    l->elements.push(Fa_MAKE_STRING("c"));
     Fa_Value m_args[] = { list, Fa_MAKE_STRING("|") };
     Fa_Value r = vm.Fa_join(2, m_args);
     ASSERT_TRUE(Fa_IS_STRING(r));

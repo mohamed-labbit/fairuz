@@ -2,6 +2,7 @@
 
 #include "../include/util.hpp"
 #include "../include/vm.hpp"
+#include "value.hpp"
 
 #include <charconv>
 #include <cmath>
@@ -61,10 +62,10 @@ static void append_rendered_value(Fa_StringRef& out, Fa_Value v, bool quote_stri
     if (Fa_IS_LIST(v)) {
         Fa_ObjList* list = Fa_AS_LIST(v);
         out += '[';
-        for (u32 i = 0, n = list->m_elements.size(); i < n; i += 1) {
+        for (u32 i = 0, n = list->elements.size(); i < n; i += 1) {
             if (i > 0)
                 out += ", ";
-            append_rendered_value(out, list->m_elements[i], true);
+            append_rendered_value(out, list->elements[i], true);
         }
         out += ']';
         return;
@@ -72,14 +73,12 @@ static void append_rendered_value(Fa_StringRef& out, Fa_Value v, bool quote_stri
     if (Fa_IS_DICT(v)) {
         Fa_ObjDict* dict = Fa_AS_DICT(v);
         out += '{';
-        for (u32 i = 0, n = dict->data.size(); i < n; i += 1) {
-            if (i > 0)
-                out += ", ";
-            auto [k, value] = dict->data[i];
+        for (auto [k, v] : dict->data) {
             append_rendered_value(out, k, Fa_IS_STRING(k));
             out += ": ";
-            append_rendered_value(out, value, Fa_IS_STRING(value));
+            append_rendered_value(out, v, Fa_IS_STRING(v));
         }
+        
         out += '}';
         return;
     }
@@ -126,7 +125,7 @@ Fa_Value Fa_VM::Fa_len(int argc, Fa_Value* argv)
         }
 
         if (Fa_IS_LIST(argv[0]))
-            return Fa_MAKE_INTEGER(Fa_AS_LIST(argv[0])->m_elements.size());
+            return Fa_MAKE_INTEGER(Fa_AS_LIST(argv[0])->elements.size());
         if (Fa_IS_DICT(argv[0]))
             return Fa_MAKE_INTEGER(Fa_AS_DICT(argv[0])->data.size());
     }
@@ -155,7 +154,7 @@ static void print_runtime_value(Fa_Value v, int depth = 0)
     if (Fa_IS_OBJECT(v)) {
         Fa_ObjHeader* obj = Fa_AS_OBJECT(v);
 
-        switch (obj->m_type) {
+        switch (obj->type) {
         case Fa_ObjType::STRING:
             std::cout << static_cast<Fa_ObjString*>(obj)->str;
             return;
@@ -163,11 +162,11 @@ static void print_runtime_value(Fa_Value v, int depth = 0)
         case Fa_ObjType::LIST: {
             auto list = static_cast<Fa_ObjList*>(obj);
             std::cout << '[';
-            for (u32 i = 0, n = list->m_elements.size(); i < n; i += 1) {
+            for (u32 i = 0, n = list->elements.size(); i < n; i += 1) {
                 if (i > 0)
                     std::cout << ", ";
-                Fa_Value elem = list->m_elements[i];
-                if (Fa_IS_OBJECT(elem) && Fa_AS_OBJECT(elem)->m_type == Fa_ObjType::STRING) {
+                Fa_Value elem = list->elements[i];
+                if (Fa_IS_OBJECT(elem) && Fa_AS_OBJECT(elem)->type == Fa_ObjType::STRING) {
                     std::cout << '"';
                     std::cout << Fa_AS_STRING((elem))->str;
                     std::cout << '"';
@@ -182,10 +181,7 @@ static void print_runtime_value(Fa_Value v, int depth = 0)
         case Fa_ObjType::DICT: {
             auto dict = static_cast<Fa_ObjDict*>(obj);
             std::cout << '{';
-            for (u32 i = 0, n = dict->data.size(); i < n; i += 1) {
-                if (i > 0)
-                    std::cout << ", ";
-                auto [k, v] = dict->data[i];
+            for (auto [k, v] : dict->data) {
                 if (Fa_IS_STRING(k)) {
                     std::cout << '"';
                     std::cout << Fa_AS_STRING(k)->str;
@@ -201,6 +197,7 @@ static void print_runtime_value(Fa_Value v, int depth = 0)
                 } else {
                     print_runtime_value(v, depth + 1);
                 }
+                std::cout << ", ";
             }
             std::cout << '}';
             return;
@@ -209,8 +206,8 @@ static void print_runtime_value(Fa_Value v, int depth = 0)
         case Fa_ObjType::CLOSURE: {
             auto cl = static_cast<Fa_ObjClosure*>(obj);
             std::cout << "<function ";
-            if (cl->function && cl->function->m_name)
-                std::cout << cl->function->m_name->str;
+            if (cl->function && cl->function->name)
+                std::cout << cl->function->name->str;
             else
                 std::cout << "?";
             std::cout << '>';
@@ -220,8 +217,8 @@ static void print_runtime_value(Fa_Value v, int depth = 0)
         case Fa_ObjType::NATIVE: {
             auto nat = static_cast<Fa_ObjNative*>(obj);
             std::cout << "<native ";
-            if (nat->m_name)
-                std::cout << nat->m_name->str;
+            if (nat->name)
+                std::cout << nat->name->str;
             else
                 std::cout << "?";
             std::cout << '>';
@@ -231,8 +228,8 @@ static void print_runtime_value(Fa_Value v, int depth = 0)
         case Fa_ObjType::FUNCTION: {
             auto fn = static_cast<Fa_ObjFunction*>(obj);
             std::cout << "<function ";
-            if (fn->m_name)
-                std::cout << fn->m_name->str;
+            if (fn->name)
+                std::cout << fn->name->str;
             else
                 std::cout << "?";
             std::cout << '>';
@@ -311,7 +308,7 @@ Fa_Value Fa_VM::Fa_append(int argc, Fa_Value* argv)
     Fa_ObjList* list_obj = Fa_AS_LIST(list_v);
 
     for (int i = 1; i < argc; i += 1)
-        list_obj->m_elements.push(argv[i]);
+        list_obj->elements.push(argv[i]);
 
     return NIL_VAL;
 }
@@ -331,7 +328,7 @@ Fa_Value Fa_VM::Fa_pop(int argc, Fa_Value* argv)
         return NIL_VAL;
     }
 
-    Fa_AS_LIST(list_v)->m_elements.pop();
+    Fa_AS_LIST(list_v)->elements.pop();
     return NIL_VAL;
 }
 
@@ -356,7 +353,7 @@ Fa_Value Fa_VM::Fa_slice(int argc, Fa_Value* argv)
     u32 b = argc == 3 ? Fa_AS_INTEGER(argv[2]) : list_obj->size() - 1;
 
     for (int i = a; i <= b; i += 1)
-        ret_list->m_elements.push(list_obj->m_elements[i]);
+        ret_list->elements.push(list_obj->elements[i]);
 
     return ret;
 }
@@ -413,24 +410,12 @@ Fa_Value Fa_VM::Fa_list(int argc, Fa_Value* argv)
     Fa_ObjList* list_obj = Fa_AS_LIST(ret);
 
     for (int i = 0; i < argc; i += 1)
-        list_obj->m_elements.push(argv[i]);
+        list_obj->elements.push(argv[i]);
 
     return ret;
 }
 
-Fa_Value Fa_VM::Fa_dict(int argc, Fa_Value* argv)
-{
-    Fa_Value ret = Fa_MAKE_DICT();
-    Fa_ObjDict* dict_obj = Fa_AS_DICT(ret);
-
-    // this is structurally false because it relys on the structure of the dict
-    // to have only one single key for each value (1 : 1)
-    for (int i = 0; i < argc - 1; i += 2)
-        dict_obj->data.push({ .first = argv[i],
-            .second = argv[i + 1] });
-
-    return ret;
-}
+Fa_Value Fa_VM::Fa_dict(int argc, Fa_Value* argv) { return Fa_MAKE_DICT(); }
 
 Fa_Value Fa_VM::Fa_split(int argc, Fa_Value* argv)
 {
@@ -446,7 +431,7 @@ Fa_Value Fa_VM::Fa_split(int argc, Fa_Value* argv)
     Fa_ObjList* list = Fa_AS_LIST(ret);
 
     if (delim.empty()) {
-        list->m_elements.push(Fa_MAKE_STRING(src));
+        list->elements.push(Fa_MAKE_STRING(src));
         return ret;
     }
 
@@ -464,11 +449,11 @@ Fa_Value Fa_VM::Fa_split(int argc, Fa_Value* argv)
         }
 
         if (!found) {
-            list->m_elements.push(Fa_MAKE_STRING(src.substr(start, src.len())));
+            list->elements.push(Fa_MAKE_STRING(src.substr(start, src.len())));
             break;
         }
 
-        list->m_elements.push(Fa_MAKE_STRING(src.substr(start, pos)));
+        list->elements.push(Fa_MAKE_STRING(src.substr(start, pos)));
         start = pos + delim.len();
     }
 
@@ -486,11 +471,11 @@ Fa_Value Fa_VM::Fa_join(int argc, Fa_Value* argv)
     Fa_StringRef delim = Fa_AS_STRING(argv[1])->str;
     Fa_StringRef out = "";
 
-    for (u32 i = 0; i < list->m_elements.size(); i += 1) {
+    for (u32 i = 0; i < list->elements.size(); i += 1) {
         if (i > 0)
             out += delim;
 
-        out += value_to_string(list->m_elements[i]);
+        out += value_to_string(list->elements[i]);
     }
 
     return Fa_MAKE_STRING(out);
@@ -775,7 +760,7 @@ Fa_Value Fa_VM::Fa_assert(int argc, Fa_Value* argv)
         {
             Fa_SourceLocation loc = current_location();
             /// TODO: find a way to print the line code with pretty error
-            diagnostic::report(diagnostic::Severity::ERROR, loc.m_line, loc.m_column, ErrorCode::ASSERTION_FAILED);
+            diagnostic::report(diagnostic::Severity::ERROR, loc.line, loc.column, ErrorCode::ASSERTION_FAILED);
             diagnostic::runtime_error(ErrorCode::ASSERTION_FAILED);
         }
     }
@@ -786,5 +771,22 @@ Fa_Value Fa_VM::Fa_assert(int argc, Fa_Value* argv)
 Fa_Value Fa_VM::Fa_clock(int /*argc*/, Fa_Value* /*argv*/) { return NIL_VAL; }
 Fa_Value Fa_VM::Fa_error(int /*argc*/, Fa_Value* /*argv*/) { return NIL_VAL; }
 Fa_Value Fa_VM::Fa_time(int /*argc*/, Fa_Value* /*argv*/) { return NIL_VAL; }
+
+// stdlib helpers
+void Fa_VM::Fa_dict_put(Fa_Value* dict_ptr, Fa_Value k, Fa_Value v) {
+    if (UNLIKELY(dict_ptr == nullptr))
+        return;
+    
+    Fa_ObjDict* as_dict = Fa_AS_DICT(*dict_ptr);
+    as_dict->data[k] = v;
+}
+
+Fa_Value Fa_VM::Fa_dict_get(Fa_Value* dict_ptr, Fa_Value k) {
+    if (UNLIKELY(dict_ptr == nullptr))
+        return NIL_VAL;
+    
+    Fa_ObjDict* as_dict = Fa_AS_DICT(*dict_ptr);
+    return as_dict->data[k];
+}
 
 } // namespace fairuz::runtime

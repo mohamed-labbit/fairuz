@@ -153,19 +153,19 @@ static Fa_Error _report_error(u16 err_code, Fa_SourceLocation loc, lex::Fa_Lexer
 {
     std::string snippet;
     if (lex != nullptr) {
-        Fa_StringRef m_line = lex->get_line_at(loc.m_line);
+        Fa_StringRef m_line = lex->get_line_at(loc.line);
         if (!m_line.empty())
             snippet.assign(m_line.data(), m_line.len());
     }
 
-    diagnostic::report(diagnostic::Severity::ERROR, loc.m_line, loc.m_column, err_code, snippet);
+    diagnostic::report(diagnostic::Severity::ERROR, loc.line, loc.column, err_code, snippet);
     return Fa_Error(err_code);
 }
 static Fa_Error report_error(diagnostic::errc::parser::Code err_code, Fa_SourceLocation loc, lex::Fa_Lexer* lex = nullptr)
 {
     return _report_error(static_cast<u16>(err_code), loc, lex);
 }
-static Fa_Error report_error(diagnostic::errc::m_sema::Code err_code, Fa_SourceLocation loc, lex::Fa_Lexer* lex = nullptr)
+static Fa_Error report_error(diagnostic::errc::sema::Code err_code, Fa_SourceLocation loc, lex::Fa_Lexer* lex = nullptr)
 {
     return _report_error(static_cast<u16>(err_code), loc, lex);
 }

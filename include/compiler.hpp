@@ -12,9 +12,9 @@
 namespace fairuz::runtime {
 
 struct LocalVar {
-    Fa_StringRef m_name;
+    Fa_StringRef name;
     unsigned int depth;
-    u8 m_reg;
+    u8 reg;
 }; // struct LocalVar
 
 struct CompilerState {
@@ -25,7 +25,7 @@ struct CompilerState {
     u8 max_reg { 0 };
     Fa_StringRef func_name;
     bool is_top_level { false };
-    bool m_is_dead { false };
+    bool is_dead { false };
 
     struct LoopContext {
         Fa_Array<u32> break_patches;
@@ -37,11 +37,11 @@ struct CompilerState {
 
     u8 alloc_register()
     {
-        u8 m_reg = next_reg;
+        u8 reg = next_reg;
         next_reg += 1;
         if (next_reg > max_reg)
             max_reg = next_reg;
-        return m_reg;
+        return reg;
     }
     void free_register()
     {
@@ -168,7 +168,7 @@ private:
             LOCAL,
             GLOBAL
         } kind;
-        u8 m_index;
+        u8 index;
     };
 
     void compile_stmt(AST::Fa_Stmt const* s);
@@ -210,20 +210,20 @@ private:
     u8 compile_dict(AST::Fa_DictExpr const* e, u8* dst);
 
     u8 error_reg() const;
-    u8 ensure_reg(u8 const* m_reg);
+    u8 ensure_reg(u8 const* reg);
     u8 alloc_register();
 
-    void declare_local(Fa_StringRef const& m_name, u8 m_reg);
-    LocalVar const* lookup_local(Fa_StringRef const& m_name) const;
-    VarInfo resolve_name(Fa_StringRef const& m_name);
+    void declare_local(Fa_StringRef const& name, u8 reg);
+    LocalVar const* lookup_local(Fa_StringRef const& name) const;
+    VarInfo resolve_name(Fa_StringRef const& name);
 
     u32 emit(u32 instr, Fa_SourceLocation loc);
     u32 emit_jump(Fa_OpCode op, u8 cond, Fa_SourceLocation loc);
 
     void patch_jump(u32 idx);
     void push_loop(u32 loop_start);
-    void pop_loop(u32 loop_exit, u32 continue_target, u32 m_line);
-    void patch_jump_to(u32 instr_idx, u32 m_target);
+    void pop_loop(u32 loop_exit, u32 continue_target, u32 line);
+    void patch_jump_to(u32 instr_idx, u32 target);
     void emit_load_value(u8 dst, Fa_Value v, Fa_SourceLocation loc);
 
     Fa_Chunk* current_chunk() const;

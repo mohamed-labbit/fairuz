@@ -148,8 +148,8 @@ bool Fa_NameExpr::equals(Fa_Expr const* other) const
     if (other->get_kind() != kind)
         return false;
 
-    auto m_name = static_cast<Fa_NameExpr const*>(other);
-    return m_value == m_name->get_value();
+    auto name = static_cast<Fa_NameExpr const*>(other);
+    return m_value == name->get_value();
 }
 
 Fa_NameExpr* Fa_NameExpr::clone() const { return Fa_makeName(m_value); }
@@ -245,7 +245,7 @@ void Fa_DictExpr::set_content(Fa_Array<std::pair<Fa_Expr*, Fa_Expr*>> c) { conte
 
 typename Fa_CallExpr::CallLocation Fa_CallExpr::get_call_location() const { return m_call_location; }
 
-bool Fa_CallExpr::has_arguments() const { return m_args && !m_args->is_empty(); }
+bool Fa_CallExpr::has_arguments() const { return m_args != nullptr && !m_args->is_empty(); }
 
 bool Fa_AssignmentExpr::equals(Fa_Expr const* other) const
 {

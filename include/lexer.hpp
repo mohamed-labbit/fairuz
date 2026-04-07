@@ -128,11 +128,11 @@ public:
 
     void reset();
 
-    u32 get_line_number() const { return m_context.m_line; }
-    u32 get_column_number() const { return m_context.m_column; }
-    u64 get_file_offset() const { return m_context.m_offset; }
+    u32 get_line_number() const { return m_context.line; }
+    u32 get_column_number() const { return m_context.column; }
+    u64 get_file_offset() const { return m_context.offset; }
     std::string fpath() const noexcept { return m_file_manager->get_path(); }
-    bool done() const { return m_context.m_offset >= m_file_manager->buffer().len(); }
+    bool done() const { return m_context.offset >= m_file_manager->buffer().len(); }
     [[nodiscard]] u32 peek_char();
     u32 current_char() const;
     void consume_char();
@@ -142,9 +142,9 @@ public:
 
 private:
     struct Context {
-        u32 m_line { 1 };
-        u32 m_column { 1 };
-        u64 m_offset { 0 }; // byte offset
+        u32 line { 1 };
+        u32 column { 1 };
+        u64 offset { 0 }; // byte offset
     }; // struct Context
 
     struct PushbackEntry {
@@ -172,7 +172,7 @@ public:
     explicit Fa_Lexer(Fa_Array<tok::Fa_Token const*>& seq /*, size_t const s*/);
 
     tok::Fa_Token const* operator()() { return m_next(); }
-    tok::Fa_Token const* m_current() const;
+    tok::Fa_Token const* current() const;
     tok::Fa_Token const* m_next();
     tok::Fa_Token const* peek(size_t n = 1);
     Fa_Array<tok::Fa_Token const*> tokenize();

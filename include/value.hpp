@@ -3,13 +3,18 @@
 
 #include "opcode.hpp"
 #include "pair.hpp"
+#include "table.hpp"
 #include <cstdint>
 
 namespace fairuz::runtime {
 
 class Fa_VM; // forward
 using Fa_Value = u64;
-using Fa_DictType = Fa_Array<Fa_Pair<Fa_Value, Fa_Value>>;
+
+struct Fa_ValueHash { size_t operator()(const Fa_Value& v) const { return v; } };// Fa_Value's are inherently distinct
+struct Fa_ValueEqual { size_t operator()(const Fa_Value& lhs, const Fa_Value& rhs) { return lhs == rhs; } };
+
+using Fa_DictType = Fa_HashTable<Fa_Value, Fa_Value, Fa_ValueHash, Fa_ValueEqual>;
 using NativeFn = Fa_Value (Fa_VM::*)(int, Fa_Value*);
 
 static constexpr Fa_Value NANBOX_QNAN = UINT64_C(0x7FF8000000000000);
@@ -33,38 +38,38 @@ enum class Fa_ObjType : u8 {
 }; // enum Fa_ObjType
 
 struct Fa_ObjHeader {
-    Fa_ObjType m_type { Fa_ObjType::STRING };
+    Fa_ObjType type { Fa_ObjType::STRING };
     bool is_marked { false };
-    Fa_ObjHeader* m_next { nullptr };
+    Fa_ObjHeader* next { nullptr };
 
     explicit Fa_ObjHeader(Fa_ObjType t) noexcept
-        : m_type(t)
+        : type(t)
     {
     }
 }; // struct Fa_ObjHeader
 
 struct Fa_ObjString final : public Fa_ObjHeader {
     Fa_StringRef str;
-    u64 m_hash;
+    u64 hash;
 
     explicit Fa_ObjString(Fa_StringRef s)
         : Fa_ObjHeader(Fa_ObjType::STRING)
         , str(s)
-        , m_hash(static_cast<u64>(std::hash<Fa_StringRef> { }(s)))
+        , hash(static_cast<u64>(std::hash<Fa_StringRef> { }(s)))
     {
     }
 }; // struct Fa_ObjString
 
 struct Fa_ObjList final : public Fa_ObjHeader {
-    Fa_Array<Fa_Value> m_elements;
+    Fa_Array<Fa_Value> elements;
 
     Fa_ObjList()
         : Fa_ObjHeader(Fa_ObjType::LIST)
     {
     }
 
-    void reserve(u32 m_cap) { m_elements.reserve(m_cap); }
-    u32 size() const { return m_elements.size(); }
+    void reserve(u32 cap) { elements.reserve(cap); }
+    u32 size() const { return elements.size(); }
 }; // struct Fa_ObjList
 
 struct Fa_ObjDict final : public Fa_ObjHeader {
@@ -79,7 +84,7 @@ struct Fa_ObjDict final : public Fa_ObjHeader {
 struct Fa_ObjFunction final : public Fa_ObjHeader {
     unsigned int arity { 0 };
     Fa_Chunk* chunk { nullptr };
-    Fa_ObjString* m_name { nullptr };
+    Fa_ObjString* name { nullptr };
 
     explicit Fa_ObjFunction(Fa_Chunk* ch = nullptr)
         : Fa_ObjHeader(Fa_ObjType::FUNCTION)
@@ -100,13 +105,13 @@ struct Fa_ObjClosure final : public Fa_ObjHeader {
 
 struct Fa_ObjNative final : public Fa_ObjHeader {
     NativeFn fn;
-    Fa_ObjString* m_name { nullptr };
+    Fa_ObjString* name { nullptr };
     int arity;
 
     Fa_ObjNative(NativeFn f, Fa_ObjString* n, int a)
         : Fa_ObjHeader(Fa_ObjType::NATIVE)
         , fn(f)
-        , m_name(n)
+        , name(n)
         , arity(a)
     {
     }
@@ -114,41 +119,41 @@ struct Fa_ObjNative final : public Fa_ObjHeader {
 
 #define Fa_MAKE_OBJ_STRING(s) get_allocator().allocate_object<Fa_ObjString>(s)
 #define Fa_MAKE_OBJ_NATIVE(f, n, a) get_allocator().allocate_object<Fa_ObjNative>(f, n, a)
-#define Fa_MAKE_OBJ_LIST() GC_.make<Fa_ObjList>()
-#define Fa_MAKE_OBJ_DICT() GC_.make<Fa_ObjDict>()
-#define Fa_MAKE_OBJ_FUNCTION(ch) GC_.make<Fa_ObjFunction>(ch)
-#define Fa_MAKE_OBJ_CLOSURE(fn) GC_.make<Fa_ObjClosure>(fn)
+#define Fa_MAKE_OBJ_LIST() m_gc.make<Fa_ObjList>()
+#define Fa_MAKE_OBJ_DICT() m_gc.make<Fa_ObjDict>()
+#define Fa_MAKE_OBJ_FUNCTION(ch) m_gc.make<Fa_ObjFunction>(ch)
+#define Fa_MAKE_OBJ_CLOSURE(fn) m_gc.make<Fa_ObjClosure>(fn)
 
 #define Fa_MAKE_OBJECT(p) TAG_OBJ | (reinterpret_cast<uintptr_t>(p) & PAYLOAD_MASK)
 #define Fa_MAKE_STRING(v)                                                     \
     ({                                                                        \
-        Fa_ObjString* obj = get_allocator().allocate_object<Fa_ObjString>(v); \
-        TAG_OBJ | (reinterpret_cast<uintptr_t>(obj) & PAYLOAD_MASK);          \
+        Fa_ObjString* _obj = get_allocator().allocate_object<Fa_ObjString>(v); \
+        TAG_OBJ | (reinterpret_cast<uintptr_t>(_obj) & PAYLOAD_MASK);          \
     })
 #define Fa_MAKE_LIST()                                               \
     ({                                                               \
-        Fa_ObjList* obj = GC_.make<Fa_ObjList>();                    \
-        TAG_OBJ | (reinterpret_cast<uintptr_t>(obj) & PAYLOAD_MASK); \
+        Fa_ObjList* _obj = m_gc.make<Fa_ObjList>();                    \
+        TAG_OBJ | (reinterpret_cast<uintptr_t>(_obj) & PAYLOAD_MASK); \
     })
 #define Fa_MAKE_DICT()                                               \
     ({                                                               \
-        Fa_ObjDict* obj = GC_.make<Fa_ObjDict>();                    \
-        TAG_OBJ | (reinterpret_cast<uintptr_t>(obj) & PAYLOAD_MASK); \
+        Fa_ObjDict* _obj = m_gc.make<Fa_ObjDict>();                    \
+        TAG_OBJ | (reinterpret_cast<uintptr_t>(_obj) & PAYLOAD_MASK); \
     })
 #define Fa_MAKE_FUNCTION(ch)                                         \
     ({                                                               \
-        Fa_ObjFunction* obj = GC_.make<Fa_ObjFunction>(ch);          \
-        TAG_OBJ | (reinterpret_cast<uintptr_t>(obj) & PAYLOAD_MASK); \
+        Fa_ObjFunction* _obj = m_gc.make<Fa_ObjFunction>(ch);          \
+        TAG_OBJ | (reinterpret_cast<uintptr_t>(_obj) & PAYLOAD_MASK); \
     })
 #define Fa_MAKE_CLOSURE(fn)                                          \
     ({                                                               \
-        Fa_ObjClosure* obj = GC_.make<Fa_ObjClosure>(fn);            \
-        TAG_OBJ | (reinterpret_cast<uintptr_t>(obj) & PAYLOAD_MASK); \
+        Fa_ObjClosure* _obj = m_gc.make<Fa_ObjClosure>(fn);            \
+        TAG_OBJ | (reinterpret_cast<uintptr_t>(_obj) & PAYLOAD_MASK); \
     })
 #define Fa_MAKE_NATIVE(f, n, a)                                                     \
     ({                                                                              \
-        Fa_ObjNative* obj = get_allocator().allocate_object<Fa_ObjNative>(f, n, a); \
-        TAG_OBJ | (reinterpret_cast<uintptr_t>(obj) & PAYLOAD_MASK);                \
+        Fa_ObjNative* _obj = get_allocator().allocate_object<Fa_ObjNative>(f, n, a); \
+        TAG_OBJ | (reinterpret_cast<uintptr_t>(_obj) & PAYLOAD_MASK);                \
     })
 
 #define Fa_MAKE_REAL(d)                               \
@@ -177,12 +182,12 @@ struct Fa_ObjNative final : public Fa_ObjHeader {
         u64 _top = _vn >> 48;                                                                        \
         (_top == INT_TAG16) || (_top != OBJ_TAG16 && !((_vn | 1) == TRUE_VAL) && !(_vn == NIL_VAL)); \
     })
-#define Fa_IS_STRING(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->m_type == Fa_ObjType::STRING)
-#define Fa_IS_LIST(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->m_type == Fa_ObjType::LIST)
-#define Fa_IS_DICT(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->m_type == Fa_ObjType::DICT)
-#define Fa_IS_FUNCTION(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->m_type == Fa_ObjType::FUNCTION)
-#define Fa_IS_CLOSURE(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->m_type == Fa_ObjType::CLOSURE)
-#define Fa_IS_NATIVE(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->m_type == Fa_ObjType::NATIVE)
+#define Fa_IS_STRING(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::STRING)
+#define Fa_IS_LIST(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::LIST)
+#define Fa_IS_DICT(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::DICT)
+#define Fa_IS_FUNCTION(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::FUNCTION)
+#define Fa_IS_CLOSURE(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::CLOSURE)
+#define Fa_IS_NATIVE(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::NATIVE)
 #define Fa_IS_TRUTHY(v)                          \
     ({                                           \
         Fa_Value _v = (v);                       \
@@ -270,7 +275,7 @@ inline Fa_TypeTag& operator|=(Fa_TypeTag& a, Fa_TypeTag b) noexcept { return a =
         return Fa_TypeTag::DOUBLE;
 
     if (Fa_IS_OBJECT(v)) {
-        switch (Fa_AS_OBJECT(v)->m_type) {
+        switch (Fa_AS_OBJECT(v)->type) {
         case Fa_ObjType::STRING:
             return Fa_TypeTag::STRING;
         case Fa_ObjType::LIST:

@@ -177,7 +177,7 @@ struct Fa_ICSlot {
 
 struct Fa_LineEntry {
     u32 start;
-    u32 m_line;
+    u32 line;
 }; // struct LineEntry
 
 static Fa_StringRef Fa_opcode_name(Fa_OpCode op)

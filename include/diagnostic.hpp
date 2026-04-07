@@ -18,7 +18,7 @@ enum class Severity : u8 {
 
 namespace errc {
 
-namespace m_lexer {
+namespace lexer {
 
 enum class Code : u16 {
     FILE_NOT_OPEN = 0x0001,
@@ -69,7 +69,7 @@ enum class Code : u16 {
 
 } // namespace parser
 
-namespace m_sema {
+namespace sema {
 
 enum class Code : u16 {
     UNDEFINED_VARIABLE = 0x0200,
@@ -172,7 +172,7 @@ enum class Code : u16 {
 
 } // namespace stdlib
 
-namespace m_container {
+namespace container {
 
 enum class Code : u16 {
     ARRAY_EMPTY_BACK = 0x0600,
@@ -465,11 +465,11 @@ class Fa_DiagnosticEngine {
 public:
     struct Diagnostic {
         Severity severity;
-        u32 m_line;
+        u32 line;
         u16 m_column;
         u16 err_code;
         std::string code;
-        std::vector<std::string> m_suggestions;
+        std::vector<std::string> suggestions;
         std::vector<std::pair<i32, std::string>> notes;
     }; // struct Diagnostic
 

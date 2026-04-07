@@ -65,6 +65,10 @@ public:
     Fa_Value Fa_error(int argc, Fa_Value* argv);
     Fa_Value Fa_time(int argc, Fa_Value* argv);
 
+    // stdlib helpers
+    void Fa_dict_put(Fa_Value* dict_ptr, Fa_Value k, Fa_Value v);
+    Fa_Value Fa_dict_get(Fa_Value* dict_ptr, Fa_Value k);
+    
     friend class Fa_GarbageCollector;
 
     struct Fa_CallFrame {
@@ -86,10 +90,10 @@ public:
         }
     }; // struct Fa_CallFrame
 
-    Fa_GarbageCollector GC_;
+    Fa_GarbageCollector m_gc;
 
-    Fa_Value stack_[STACK_SIZE];
-    Fa_CallFrame frames_[MAX_FRAMES];
+    Fa_Value m_stack[STACK_SIZE];
+    Fa_CallFrame m_frames[MAX_FRAMES];
 
     int m_stack_top { 0 };
     int m_frames_top { 0 };

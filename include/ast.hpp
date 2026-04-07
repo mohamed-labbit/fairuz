@@ -17,11 +17,11 @@ struct Fa_Stmt;
 struct Fa_BlockStmt;
 struct Fa_AssignmentStmt;
 
-static Fa_ListExpr* Fa_makeList(Fa_Array<Fa_Expr*> m_elements = { });
+static Fa_ListExpr* Fa_makeList(Fa_Array<Fa_Expr*> elements = { });
 static Fa_BlockStmt* Fa_makeBlock(Fa_Array<Fa_Stmt*> stmts = { });
 static Fa_NameExpr* Fa_makeName(Fa_StringRef const str);
-static Fa_AssignmentExpr* Fa_makeAssignmentExpr(Fa_Expr* m_target, Fa_Expr* m_value, bool decl = false);
-static Fa_AssignmentStmt* Fa_makeAssignmentStmt(Fa_Expr* m_target, Fa_Expr* m_value, bool decl = false);
+static Fa_AssignmentExpr* Fa_makeAssignmentExpr(Fa_Expr* target, Fa_Expr* value, bool decl = false);
+static Fa_AssignmentStmt* Fa_makeAssignmentStmt(Fa_Expr* target, Fa_Expr* value, bool decl = false);
 
 struct Fa_ASTNode {
 public:
@@ -48,7 +48,7 @@ public:
     [[nodiscard]] virtual NodeType get_node_type() const;
     [[nodiscard]] u32 get_line() const;
     [[nodiscard]] u16 get_column() const;
-    void set_line(u32 m_line);
+    void set_line(u32 line);
     void set_column(u16 col);
     virtual ~Fa_ASTNode() = default;
 }; // struct Fa_ASTNode
@@ -165,8 +165,8 @@ private:
 public:
     Fa_UnaryExpr() = delete;
 
-    Fa_UnaryExpr(Fa_Expr* m_operand, Fa_UnaryOp op)
-        : m_operand(m_operand)
+    Fa_UnaryExpr(Fa_Expr* operand, Fa_UnaryOp op)
+        : m_operand(operand)
         , m_operator(op)
     {
         assert(m_operand != nullptr);
@@ -215,22 +215,22 @@ public:
         kind = Kind::LITERAL;
     }
 
-    Fa_LiteralExpr(i64 m_value, Type m_type)
-        : m_type(m_type)
-        , int_value(m_value)
+    Fa_LiteralExpr(i64 value, Type type)
+        : m_type(type)
+        , int_value(value)
     {
         kind = Kind::LITERAL;
     }
-    Fa_LiteralExpr(f64 m_value, Type m_type)
-        : m_type(m_type)
-        , float_value(m_value)
+    Fa_LiteralExpr(f64 value, Type type)
+        : m_type(type)
+        , float_value(value)
     {
         kind = Kind::LITERAL;
     }
 
-    explicit Fa_LiteralExpr(bool m_value)
+    explicit Fa_LiteralExpr(bool value)
         : m_type(Type::BOOLEAN)
-        , bool_value(m_value)
+        , bool_value(value)
     {
         kind = Kind::LITERAL;
     }
@@ -300,8 +300,8 @@ private:
 public:
     Fa_ListExpr() = default;
 
-    explicit Fa_ListExpr(Fa_Array<Fa_Expr*> m_elements)
-        : m_elements(std::move(m_elements))
+    explicit Fa_ListExpr(Fa_Array<Fa_Expr*> elements)
+        : m_elements(std::move(elements))
     {
         kind = Kind::LIST;
     }
@@ -400,9 +400,9 @@ private:
 public:
     Fa_AssignmentExpr() = delete;
 
-    Fa_AssignmentExpr(Fa_Expr* m_target, Fa_Expr* m_value, bool decl = false)
-        : m_target(m_target)
-        , m_value(m_value)
+    Fa_AssignmentExpr(Fa_Expr* target, Fa_Expr* value, bool decl = false)
+        : m_target(target)
+        , m_value(value)
         , m_is_decl(decl)
     {
         assert(m_target != nullptr);
@@ -553,9 +553,9 @@ public:
         kind = Kind::ASSIGNMENT;
     }
 
-    Fa_AssignmentStmt(Fa_Expr* m_target, Fa_Expr* m_value, bool decl = false)
+    Fa_AssignmentStmt(Fa_Expr* target, Fa_Expr* value, bool decl = false)
     {
-        m_expr = Fa_makeAssignmentExpr(m_target, m_value, decl); // Fa_AssignmentExpr will assert args for us
+        m_expr = Fa_makeAssignmentExpr(target, value, decl); // Fa_AssignmentExpr will assert args for us
         kind = Kind::ASSIGNMENT;
     }
 
@@ -585,10 +585,10 @@ private:
 public:
     Fa_IfStmt() = delete;
 
-    Fa_IfStmt(Fa_Expr* m_condition, Fa_Stmt* m_then_stmt, Fa_Stmt* m_else_stmt)
-        : m_condition(m_condition)
-        , m_then_stmt(m_then_stmt)
-        , m_else_stmt(m_else_stmt)
+    Fa_IfStmt(Fa_Expr* condition, Fa_Stmt* then_stmt, Fa_Stmt* else_stmt)
+        : m_condition(condition)
+        , m_then_stmt(then_stmt)
+        , m_else_stmt(else_stmt)
     {
         assert(m_condition != nullptr);
         assert(m_then_stmt != nullptr);
@@ -648,10 +648,10 @@ private:
 public:
     Fa_ForStmt() = delete;
 
-    Fa_ForStmt(Fa_Expr* m_target, Fa_Expr* m_iter, Fa_Stmt* m_body)
-        : m_container(m_target)
-        , m_iter(m_iter)
-        , m_body(m_body)
+    Fa_ForStmt(Fa_Expr* target, Fa_Expr* iter, Fa_Stmt* body)
+        : m_container(target)
+        , m_iter(iter)
+        , m_body(body)
     {
         assert(m_container != nullptr);
         assert(m_iter != nullptr);
@@ -682,10 +682,10 @@ private:
 public:
     Fa_FunctionDef() = delete;
 
-    Fa_FunctionDef(Fa_NameExpr* m_name, Fa_ListExpr* m_params, Fa_Stmt* m_body)
-        : m_name(m_name)
-        , m_params(m_params)
-        , m_body(m_body)
+    Fa_FunctionDef(Fa_NameExpr* name, Fa_ListExpr* params, Fa_Stmt* body)
+        : m_name(name)
+        , m_params(params)
+        , m_body(body)
     {
         assert(m_name != nullptr);
         assert(m_params != nullptr);

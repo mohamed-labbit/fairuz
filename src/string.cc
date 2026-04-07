@@ -10,6 +10,8 @@
 
 namespace fairuz {
 
+using ErrorCode = diagnostic::errc::container::Code;
+
 namespace detail {
 
 static char g_empty_string_storage[sizeof(StringBase)];
@@ -35,8 +37,8 @@ StringBase::StringBase(size_t const s)
     if (s < SSO_SIZE) {
         m_storage.sso[0] = 0;
     } else {
-        m_storage.heap.m_cap = s + 1;
-        m_storage.heap.ptr = get_allocator().allocate_array<char>(m_storage.heap.m_cap);
+        m_storage.heap.cap = s + 1;
+        m_storage.heap.ptr = get_allocator().allocate_array<char>(m_storage.heap.cap);
         m_storage.heap.ptr[0] = 0;
     }
 }
@@ -48,8 +50,8 @@ StringBase::StringBase(size_t const s, char const c)
         ::memset(m_storage.sso, c, s);
         m_storage.sso[s] = 0;
     } else {
-        m_storage.heap.m_cap = s + 1;
-        m_storage.heap.ptr = get_allocator().allocate_array<char>(m_storage.heap.m_cap);
+        m_storage.heap.cap = s + 1;
+        m_storage.heap.ptr = get_allocator().allocate_array<char>(m_storage.heap.cap);
         ::memset(m_storage.heap.ptr, c, s);
         m_storage.heap.ptr[s] = 0;
     }
@@ -69,10 +71,10 @@ StringBase::StringBase(char const* s, size_t n)
         ::memcpy(m_storage.sso, s, n);
         m_storage.sso[n] = 0;
     } else {
-        m_storage.heap.m_cap = n + 1;
-        m_storage.heap.ptr = get_allocator().allocate_array<char>(m_storage.heap.m_cap);
+        m_storage.heap.cap = n + 1;
+        m_storage.heap.ptr = get_allocator().allocate_array<char>(m_storage.heap.cap);
         if (m_storage.heap.ptr == nullptr)
-            diagnostic::panic("allocateArray<char>(size=" + std::to_string(m_storage.heap.m_cap) + ") failed!");
+            diagnostic::panic("allocateArray<char>(size=" + std::to_string(m_storage.heap.cap) + ") failed!");
         ::memcpy(m_storage.heap.ptr, s, n);
         m_storage.heap.ptr[n] = 0;
     }
@@ -92,10 +94,10 @@ StringBase::StringBase(char const* s)
     if (!m_is_heap) {
         ::memcpy(m_storage.sso, s, n + 1);
     } else {
-        m_storage.heap.m_cap = n + 1;
-        m_storage.heap.ptr = get_allocator().allocate_array<char>(m_storage.heap.m_cap);
+        m_storage.heap.cap = n + 1;
+        m_storage.heap.ptr = get_allocator().allocate_array<char>(m_storage.heap.cap);
         if (m_storage.heap.ptr == nullptr)
-            diagnostic::panic("allocateArray<char>(size=" + std::to_string(m_storage.heap.m_cap) + ") failed!");
+            diagnostic::panic("allocateArray<char>(size=" + std::to_string(m_storage.heap.cap) + ") failed!");
         ::memcpy(m_storage.heap.ptr, s, n + 1);
     }
 }
@@ -251,10 +253,10 @@ void Fa_StringRef::expand(size_t const new_size)
         ::memcpy(new_ptr, old_ptr, old_len);
 
     if (m_string_data->is_heap() && m_string_data->m_storage.heap.ptr)
-        get_allocator().deallocate_array<char>(m_string_data->m_storage.heap.ptr, m_string_data->m_storage.heap.m_cap);
+        get_allocator().deallocate_array<char>(m_string_data->m_storage.heap.ptr, m_string_data->m_storage.heap.cap);
 
     m_string_data->m_storage.heap.ptr = new_ptr;
-    m_string_data->m_storage.heap.m_cap = new_capacity;
+    m_string_data->m_storage.heap.cap = new_capacity;
     m_string_data->m_is_heap = true;
     m_string_data->ptr()[m_length] = 0;
     m_offset = 0;
@@ -432,7 +434,7 @@ Fa_StringRef Fa_StringRef::slice(size_t start, size_t m_end) const
         return { };
 
     if (start > m_length) {
-        diagnostic::emit(diagnostic::errc::m_container::Code::STRING_SLICE_START_OOB);
+        diagnostic::emit(ErrorCode::STRING_SLICE_START_OOB);
         return { };
     }
 
@@ -440,7 +442,7 @@ Fa_StringRef Fa_StringRef::slice(size_t start, size_t m_end) const
         m_end = m_length;
 
     if (m_end < start) {
-        diagnostic::emit(diagnostic::errc::m_container::Code::STRING_SLICE_END_BEFORE_START);
+        diagnostic::emit(ErrorCode::STRING_SLICE_END_BEFORE_START);
         return { };
     }
 

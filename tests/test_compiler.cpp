@@ -1063,10 +1063,10 @@ TEST(CompilerList, ListWithElements)
 TEST(CompilerList, ListCapHintCappedAt255)
 {
     Fa_Array<AST::Fa_Expr*> elems;
-    
+
     for (int i = 0; i < 300; i += 1)
         elems.push(AST::Fa_makeLiteralInt(i));
-    
+
     Fa_Chunk* chunk = compile_fail(AST::Fa_makeExprStmt(AST::Fa_makeList(std::move(elems)))); // too many regs
     ASSERT_NE(chunk, nullptr);
     dump(chunk);

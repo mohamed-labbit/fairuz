@@ -9,16 +9,16 @@ namespace fairuz::tok {
 
 struct Location {
     std::string filepath { "" };
-    u32 m_line { 0 };
-    u16 m_column { 0 };
+    u32 line { 0 };
+    u16 column { 0 };
     u64 FilePos { 0 };
 
     Location() = default;
 
     Location(std::string fpath, size_t m_line, size_t col, size_t fpos)
         : filepath(fpath)
-        , m_line(m_line)
-        , m_column(col)
+        , line(m_line)
+        , column(col)
         , FilePos(fpos)
     {
     }
@@ -176,8 +176,8 @@ public:
     // friend ostream operator for pretty-printing in tests/logs
     friend std::ostream& operator<<(std::ostream& os, Fa_Token const& tok)
     {
-        os << "Fa_Token(\"" << tok.m_value << "\", type=" << static_cast<i32>(tok.m_type) << ", line=" << tok.m_location.m_line
-           << ", col=" << tok.m_location.m_column << ", file_pos=" << tok.m_location.FilePos << ", file_path=" << tok.m_location.filepath << ")";
+        os << "Fa_Token(\"" << tok.m_value << "\", type=" << static_cast<i32>(tok.m_type) << ", line=" << tok.m_location.line
+           << ", col=" << tok.m_location.column << ", file_pos=" << tok.m_location.FilePos << ", file_path=" << tok.m_location.filepath << ")";
         return os;
     }
 

@@ -223,10 +223,13 @@ std::string sig_stmt(AST::Fa_Stmt const* stmt)
     }
     case AST::Fa_Stmt::Kind::EXPR:
         return "expr(" + sig_expr(static_cast<AST::Fa_ExprStmt const*>(stmt)->get_expr()) + ")";
+    /*
+     * 
     case AST::Fa_Stmt::Kind::ASSIGNMENT: {
         auto const* a = static_cast<AST::Fa_AssignmentStmt const*>(stmt);
         return "assignstmt(" + sig_expr(a->get_target()) + "," + sig_expr(a->get_value()) + ",decl=" + std::string(a->is_declaration() ? "true" : "false") + ")";
     }
+     */
     case AST::Fa_Stmt::Kind::IF: {
         auto const* i = static_cast<AST::Fa_IfStmt const*>(stmt);
         return "if(" + sig_expr(i->get_condition()) + "," + sig_stmt(i->get_then()) + "," + sig_stmt(i->get_else()) + ")";

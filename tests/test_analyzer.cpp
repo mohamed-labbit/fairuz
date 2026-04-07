@@ -80,7 +80,7 @@ TEST_F(SemanticAnalyzerTest, UndefinedVariable_ReportsError)
 {
     AST::Fa_NameExpr* name_fa_expr = AST::Fa_makeName("undefined_var");
 
-    analyzer.analyze_fa_expr(name_fa_expr);
+    analyzer.analyze_expr(name_fa_expr);
 
     EXPECT_GT(count_issues_by_severity(Fa_SemanticAnalyzer::Issue::Severity::ERROR), 0);
     EXPECT_TRUE(has_issue_containing("Undefined variable"));
@@ -88,21 +88,21 @@ TEST_F(SemanticAnalyzerTest, UndefinedVariable_ReportsError)
 
 TEST_F(SemanticAnalyzerTest, DefinedVariable_NoError)
 {
-    AST::Fa_AssignmentStmt* assign = AST::Fa_makeAssignmentStmt(AST::Fa_makeName("x"), AST::Fa_makeLiteralInt(42));
-    m_statements.push(assign);
+    AST::Fa_AssignmentExpr* assign = AST::Fa_makeAssignmentExpr(AST::Fa_makeName("x"), AST::Fa_makeLiteralInt(42));
+    m_statements.push(AST::Fa_makeExprStmt(assign));
 
     analyzer.analyze(m_statements);
 
     AST::Fa_NameExpr* use_fa_expr = AST::Fa_makeName("x");
-    analyzer.analyze_fa_expr(use_fa_expr);
+    analyzer.analyze_expr(use_fa_expr);
 
     EXPECT_EQ(count_issues_by_severity(Fa_SemanticAnalyzer::Issue::Severity::ERROR), 0);
 }
 
 TEST_F(SemanticAnalyzerTest, UnusedVariable_ReportsWarning)
 {
-    AST::Fa_AssignmentStmt* assign = AST::Fa_makeAssignmentStmt(AST::Fa_makeName("unused_var"), AST::Fa_makeLiteralInt(42));
-    m_statements.push(assign);
+    AST::Fa_AssignmentExpr* assign = AST::Fa_makeAssignmentExpr(AST::Fa_makeName("unused_var"), AST::Fa_makeLiteralInt(42));
+    m_statements.push(AST::Fa_makeExprStmt(assign));
 
     analyzer.analyze(m_statements);
 
@@ -114,7 +114,7 @@ TEST_F(SemanticAnalyzerTest, InvalidStringOperation_Subtraction)
 {
     AST::Fa_BinaryExpr* binary = AST::Fa_makeBinary(AST::Fa_makeLiteralString("hello"), AST::Fa_makeLiteralString("world"), AST::Fa_BinaryOp::OP_SUB);
 
-    analyzer.analyze_fa_expr(binary);
+    analyzer.analyze_expr(binary);
 
     EXPECT_GT(count_issues_by_severity(Fa_SemanticAnalyzer::Issue::Severity::ERROR), 0);
     EXPECT_TRUE(has_issue_containing("Invalid operation on string"));
@@ -124,7 +124,7 @@ TEST_F(SemanticAnalyzerTest, InvalidStringOperation_Multiplication)
 {
     AST::Fa_BinaryExpr* binary = AST::Fa_makeBinary(AST::Fa_makeLiteralString("hello"), AST::Fa_makeLiteralInt(3), AST::Fa_BinaryOp::OP_MUL);
 
-    analyzer.analyze_fa_expr(binary);
+    analyzer.analyze_expr(binary);
 
     EXPECT_GT(count_issues_by_severity(Fa_SemanticAnalyzer::Issue::Severity::ERROR), 0);
     EXPECT_TRUE(has_issue_containing("Invalid operation on string"));
@@ -134,7 +134,7 @@ TEST_F(SemanticAnalyzerTest, InvalidStringOperation_Division)
 {
     AST::Fa_BinaryExpr* binary = AST::Fa_makeBinary(AST::Fa_makeLiteralString("hello"), AST::Fa_makeLiteralInt(2), AST::Fa_BinaryOp::OP_DIV);
 
-    analyzer.analyze_fa_expr(binary);
+    analyzer.analyze_expr(binary);
 
     EXPECT_GT(count_issues_by_severity(Fa_SemanticAnalyzer::Issue::Severity::ERROR), 0);
     EXPECT_TRUE(has_issue_containing("Invalid operation on string"));
@@ -144,7 +144,7 @@ TEST_F(SemanticAnalyzerTest, DivisionByZero_ReportsError)
 {
     AST::Fa_BinaryExpr* binary = AST::Fa_makeBinary(AST::Fa_makeLiteralInt(10), AST::Fa_makeLiteralInt(0), AST::Fa_BinaryOp::OP_DIV);
 
-    analyzer.analyze_fa_expr(binary);
+    analyzer.analyze_expr(binary);
 
     EXPECT_GT(count_issues_by_severity(Fa_SemanticAnalyzer::Issue::Severity::ERROR), 0);
     EXPECT_TRUE(has_issue_containing("Division by zero"));
@@ -154,7 +154,7 @@ TEST_F(SemanticAnalyzerTest, DivisionByNonZero_NoError)
 {
     AST::Fa_BinaryExpr* binary = AST::Fa_makeBinary(AST::Fa_makeLiteralInt(10), AST::Fa_makeLiteralInt(5), AST::Fa_BinaryOp::OP_DIV);
 
-    analyzer.analyze_fa_expr(binary);
+    analyzer.analyze_expr(binary);
 
     EXPECT_FALSE(has_issue_containing("Division by zero"));
 }
@@ -163,20 +163,20 @@ TEST_F(SemanticAnalyzerTest, BuiltInFunction_Print_IsDefined)
 {
     AST::Fa_NameExpr* print_name = AST::Fa_makeName("print");
 
-    analyzer.analyze_fa_expr(print_name);
+    analyzer.analyze_expr(print_name);
 
     EXPECT_EQ(count_issues_by_severity(Fa_SemanticAnalyzer::Issue::Severity::ERROR), 0);
 }
 
 TEST_F(SemanticAnalyzerTest, CallNonCallable_ReportsError)
 {
-    AST::Fa_AssignmentStmt* assign = AST::Fa_makeAssignmentStmt(AST::Fa_makeName("not_a_function"), AST::Fa_makeLiteralInt(42));
-    m_statements.push(assign);
+    AST::Fa_AssignmentExpr* assign = AST::Fa_makeAssignmentExpr(AST::Fa_makeName("not_a_function"), AST::Fa_makeLiteralInt(42));
+    m_statements.push(AST::Fa_makeExprStmt(assign));
     analyzer.analyze(m_statements);
 
     AST::Fa_CallExpr* call = Fa_makeCall(AST::Fa_makeName("not_a_function"), AST::Fa_makeList());
 
-    analyzer.analyze_fa_expr(call);
+    analyzer.analyze_expr(call);
 
     EXPECT_TRUE(has_issue_containing("is not callable"));
 }
@@ -238,15 +238,15 @@ TEST_F(SemanticAnalyzerTest, AssignmentExpressionDeclarationDefinesSymbol)
     m_statements.push(expr_stmt);
 
     analyzer.analyze(m_statements);
-    analyzer.analyze_fa_expr(AST::Fa_makeName("x"));
+    analyzer.analyze_expr(AST::Fa_makeName("x"));
 
     EXPECT_EQ(count_issues_by_severity(Fa_SemanticAnalyzer::Issue::Severity::ERROR), 0);
 }
 
 TEST_F(SemanticAnalyzerTest, ForLoopVariableShadowing_ReportsWarning)
 {
-    AST::Fa_AssignmentStmt* outer_assign = AST::Fa_makeAssignmentStmt(AST::Fa_makeName("i"), AST::Fa_makeLiteralInt(10));
-    m_statements.push(outer_assign);
+    AST::Fa_AssignmentExpr* outer_assign = AST::Fa_makeAssignmentExpr(AST::Fa_makeName("i"), AST::Fa_makeLiteralInt(10));
+    m_statements.push(AST::Fa_makeExprStmt(outer_assign));
 
     analyzer.analyze(m_statements);
 
@@ -291,12 +291,12 @@ TEST_F(SemanticAnalyzerTest, ListFa_Expression_InfersListType)
 
     EXPECT_EQ(analyzer.infer_type(list_fa_expr), Fa_SymbolTable::DataType::LIST);
 
-    analyzer.analyze_fa_expr(list_fa_expr);
+    analyzer.analyze_expr(list_fa_expr);
 }
 
 TEST_F(SemanticAnalyzerTest, AnalyzeNullStatement_NoError) { EXPECT_NO_THROW(analyzer.analyze_stmt(nullptr)); }
 
-TEST_F(SemanticAnalyzerTest, AnalyzeNullFa_Expression_NoError) { EXPECT_NO_THROW(analyzer.analyze_fa_expr(nullptr)); }
+TEST_F(SemanticAnalyzerTest, AnalyzeNullFa_Expression_NoError) { EXPECT_NO_THROW(analyzer.analyze_expr(nullptr)); }
 
 TEST_F(SemanticAnalyzerTest, EmptyStatementList_NoIssues)
 {
@@ -308,7 +308,7 @@ TEST_F(SemanticAnalyzerTest, PrintReport_NoIssues) { EXPECT_NO_THROW(analyzer.pr
 
 TEST_F(SemanticAnalyzerTest, PrintReport_WithIssues)
 {
-    analyzer.analyze_fa_expr(AST::Fa_makeName("undefined"));
+    analyzer.analyze_expr(AST::Fa_makeName("undefined"));
     EXPECT_NO_THROW(analyzer.print_report());
 }
 
@@ -316,8 +316,8 @@ TEST_F(SemanticAnalyzerTest, GetGlobalScope_NotNull) { EXPECT_NE(analyzer.get_gl
 
 TEST_F(SemanticAnalyzerTest, AssignmentCreatesSymbol)
 {
-    AST::Fa_AssignmentStmt* assign = AST::Fa_makeAssignmentStmt(AST::Fa_makeName("x"), AST::Fa_makeLiteralInt(42));
-    m_statements.push(assign);
+    AST::Fa_AssignmentExpr* assign = AST::Fa_makeAssignmentExpr(AST::Fa_makeName("x"), AST::Fa_makeLiteralInt(42));
+    m_statements.push(AST::Fa_makeExprStmt(assign));
 
     analyzer.analyze(m_statements);
 
@@ -334,8 +334,8 @@ TEST_F(SemanticAnalyzerTest, ComplFa_Exprogram_MultipleIssues)
     AST::Fa_ExprStmt* Fa_ExprStmt2 = AST::Fa_makeExprStmt(div_fa_expr);
     m_statements.push(Fa_ExprStmt2);
 
-    AST::Fa_AssignmentStmt* assign = AST::Fa_makeAssignmentStmt(AST::Fa_makeName("unused"), AST::Fa_makeLiteralInt(100));
-    m_statements.push(assign);
+    AST::Fa_AssignmentExpr* assign = AST::Fa_makeAssignmentExpr(AST::Fa_makeName("unused"), AST::Fa_makeLiteralInt(100));
+    m_statements.push(AST::Fa_makeExprStmt(assign));
 
     analyzer.analyze(m_statements);
 
@@ -346,12 +346,12 @@ TEST_F(SemanticAnalyzerTest, ComplFa_Exprogram_MultipleIssues)
 
 TEST_F(SemanticAnalyzerTest, VariableFlowAnalysis)
 {
-    AST::Fa_AssignmentStmt* assign1 = AST::Fa_makeAssignmentStmt(AST::Fa_makeName("x"), AST::Fa_makeLiteralInt(10));
-    m_statements.push(assign1);
+    AST::Fa_AssignmentExpr* assign1 = AST::Fa_makeAssignmentExpr(AST::Fa_makeName("x"), AST::Fa_makeLiteralInt(10));
+    m_statements.push(AST::Fa_makeExprStmt(assign1));
 
     AST::Fa_BinaryExpr* binary = AST::Fa_makeBinary(AST::Fa_makeName("x"), AST::Fa_makeLiteralInt(5), AST::Fa_BinaryOp::OP_ADD);
-    AST::Fa_AssignmentStmt* assign2 = AST::Fa_makeAssignmentStmt(AST::Fa_makeName("y"), binary);
-    m_statements.push(assign2);
+    AST::Fa_AssignmentExpr* assign2 = AST::Fa_makeAssignmentExpr(AST::Fa_makeName("y"), binary);
+    m_statements.push(AST::Fa_makeExprStmt(assign2));
 
     analyzer.analyze(m_statements);
 
@@ -376,5 +376,5 @@ TEST_F(SemanticAnalyzerTest, CallWithArguments_AnalyzesAllArgs)
 {
     AST::Fa_CallExpr* call = Fa_makeCall(AST::Fa_makeName("print"), AST::Fa_makeList({ AST::Fa_makeLiteralInt(1), AST::Fa_makeLiteralString("hello"), AST::Fa_makeLiteralBool(true) }));
 
-    EXPECT_NO_THROW(analyzer.analyze_fa_expr(call));
+    EXPECT_NO_THROW(analyzer.analyze_expr(call));
 }

@@ -10,8 +10,8 @@ template<typename K, typename V, typename Hash, typename Equal>
 class Fa_HashTable {
     struct Entry {
         K key { };
-        V m_value { };
-        u64 m_hash { 0 };
+        V val { };
+        u64 hash { 0 };
         bool occupied { false };
     }; // struct Entry
 
@@ -37,15 +37,15 @@ class Fa_HashTable {
         return m_buckets.size() - 1;
     }
 
-    u32 bucket_index(u64 m_hash) const
+    u32 bucket_index(u64 hash) const
     {
-        return static_cast<u32>(m_hash) & mask();
+        return static_cast<u32>(hash) & mask();
     }
 
     void reinsert_into(Fa_Array<Entry>& dst, Entry const& src)
     {
         u32 dst_mask = dst.size() - 1;
-        u32 idx = static_cast<u32>(src.m_hash) & dst_mask;
+        u32 idx = static_cast<u32>(src.hash) & dst_mask;
         while (dst[idx].occupied)
             idx = (idx + 1) & dst_mask;
         dst[idx] = src;
@@ -69,30 +69,30 @@ class Fa_HashTable {
         m_buckets = std::move(grown);
     }
 
-    Entry* find_entry(K const& key, u64 m_hash)
+    Entry* find_entry(K const& key, u64 hash)
     {
         if (m_buckets.empty())
             return nullptr;
 
-        u32 idx = bucket_index(m_hash);
+        u32 idx = bucket_index(hash);
         while (m_buckets[idx].occupied) {
             Entry& entry = m_buckets[idx];
-            if (entry.m_hash == m_hash && m_equal(entry.key, key))
+            if (entry.hash == hash && m_equal(entry.key, key))
                 return &entry;
             idx = (idx + 1) & mask();
         }
         return nullptr;
     }
 
-    Entry const* find_entry(K const& key, u64 m_hash) const
+    Entry const* find_entry(K const& key, u64 hash) const
     {
         if (m_buckets.empty())
             return nullptr;
 
-        u32 idx = bucket_index(m_hash);
+        u32 idx = bucket_index(hash);
         while (m_buckets[idx].occupied) {
             Entry const& entry = m_buckets[idx];
-            if (entry.m_hash == m_hash && m_equal(entry.key, key))
+            if (entry.hash == hash && m_equal(entry.key, key))
                 return &entry;
             idx = (idx + 1) & mask();
         }
@@ -117,7 +117,7 @@ public:
     {
         auto hash_value = static_cast<u64>(m_hash(key));
         if (Entry* entry = find_entry(key, hash_value))
-            return entry->m_value;
+            return entry->val;
         return insert_or_assign(key, V { });
     }
 
@@ -137,26 +137,26 @@ public:
     {
         auto hash_value = static_cast<u64>(m_hash(key));
         Entry* entry = find_entry(key, hash_value);
-        return entry ? &entry->m_value : nullptr;
+        return entry ? &entry->val : nullptr;
     }
 
     V const* find_ptr(K const& key) const
     {
         auto hash_value = static_cast<u64>(m_hash(key));
         Entry const* entry = find_entry(key, hash_value);
-        return entry ? &entry->m_value : nullptr;
+        return entry ? &entry->val : nullptr;
     }
 
     bool contains(K const& key) const { return find_ptr(key) != nullptr; }
 
-    V& insert_or_assign(K const& key, V const& m_value)
+    V& insert_or_assign(K const& key, V const& value)
     {
         grow_if_needed();
 
         auto hash_value = static_cast<u64>(m_hash(key));
         if (Entry* existing = find_entry(key, hash_value)) {
-            existing->m_value = m_value;
-            return existing->m_value;
+            existing->val = value;
+            return existing->val;
         }
 
         u32 idx = bucket_index(hash_value);
@@ -164,28 +164,28 @@ public:
             idx = (idx + 1) & mask();
 
         m_buckets[idx].occupied = true;
-        m_buckets[idx].m_hash = hash_value;
+        m_buckets[idx].hash = hash_value;
         m_buckets[idx].key = key;
-        m_buckets[idx].m_value = m_value;
+        m_buckets[idx].val = value;
         m_size += 1;
 
-        return m_buckets[idx].m_value;
+        return m_buckets[idx].val;
     }
 
     struct Iterator {
         Entry* ptr;
-        Entry* m_end;
+        Entry* end;
 
         Iterator& operator++()
         {
             ptr += 1;
-            while (ptr != m_end && !ptr->occupied)
+            while (ptr != end && !ptr->occupied)
                 ptr += 1;
 
             return *this;
         }
 
-        std::pair<K const&, V&> operator*() const { return { ptr->key, ptr->m_value }; }
+        std::pair<K const&, V&> operator*() const { return { ptr->key, ptr->val }; }
         Entry* operator->() const { return ptr; }
         bool operator!=(Iterator const& other) const { return ptr != other.ptr; }
     };

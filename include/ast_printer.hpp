@@ -227,7 +227,8 @@ private:
                 print_stmt(b->get_statements()[i], { p.indent + pipe(p.last), i + 1 == b->get_statements().size() });
             break;
         }
-
+/*
+ * 
         case Fa_Stmt::Kind::ASSIGNMENT: {
             auto a = static_cast<Fa_AssignmentStmt const*>(s);
             std::cout << color("Assignment", Color::YELLOW) << " :=\n";
@@ -237,6 +238,7 @@ private:
             print_expr(a->get_value(), { p.indent + pipe(p.last) + "   ", true });
             break;
         }
+ */
 
         default:
             std::cout << color("<unknown stmt>", Color::RED) << "\n";

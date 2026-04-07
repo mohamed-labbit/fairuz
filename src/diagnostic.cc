@@ -9,14 +9,14 @@
 
 namespace fairuz::diagnostic {
 
-void Fa_DiagnosticEngine::report(Severity const sev, u32 const m_line, u16 const col, u16 err_code, std::string const& code)
+void Fa_DiagnosticEngine::report(Severity const sev, u32 const line, u16 const col, u16 err_code, std::string const& code)
 {
     if (sev == Severity::ERROR && error_count_ >= LIMIT)
         return;
     if (sev == Severity::WARNING && m_warning_count >= LIMIT)
         return;
 
-    m_diagnostics.push_back({ sev, m_line, col, err_code, code, { }, { } });
+    m_diagnostics.push_back({ sev, line, col, err_code, code, { }, { } });
 
     if (sev == Severity::ERROR || sev == Severity::FATAL)
         error_count_ += 1;
@@ -27,13 +27,13 @@ void Fa_DiagnosticEngine::report(Severity const sev, u32 const m_line, u16 const
 void Fa_DiagnosticEngine::add_suggestion(std::string const& suggestion)
 {
     if (!m_diagnostics.empty())
-        m_diagnostics.back().m_suggestions.push_back(suggestion);
+        m_diagnostics.back().suggestions.push_back(suggestion);
 }
 
-void Fa_DiagnosticEngine::add_note(i32 m_line, std::string const& note)
+void Fa_DiagnosticEngine::add_note(i32 line, std::string const& note)
 {
     if (!m_diagnostics.empty())
-        m_diagnostics.back().notes.push_back({ m_line, note });
+        m_diagnostics.back().notes.push_back({ line, note });
 }
 
 void Fa_DiagnosticEngine::emit_error(std::string const& msg, Severity const sv)
@@ -69,10 +69,10 @@ std::vector<std::string> Fa_DiagnosticEngine::split_lines(std::string const& tex
 {
     std::vector<std::string> lines;
     std::stringstream ss(text);
-    std::string m_line;
+    std::string line;
 
-    while (std::getline(ss, m_line))
-        lines.push_back(m_line);
+    while (std::getline(ss, line))
+        lines.push_back(line);
 
     return lines;
 }
@@ -85,7 +85,7 @@ std::string Fa_DiagnosticEngine::to_json() const
         Diagnostic const& d = m_diagnostics[i];
         ss << "  {\n";
         ss << "    \"severity\": " << static_cast<i32>(d.severity) << ",\n";
-        ss << "    \"line\": " << d.m_line << ",\n";
+        ss << "    \"line\": " << d.line << ",\n";
         ss << "    \"column\": " << d.m_column << ",\n";
         ss << "    \"message\": \"" << error_message_for(d.err_code) << "\",\n";
         ss << "    \"code\": \"" << d.code << "\"\n";
@@ -135,12 +135,12 @@ void Fa_DiagnosticEngine::pretty_print() const
             std::cerr << "[" << diag.code << "]";
         std::cerr << ": " << error_message_for(diag.err_code) << "\n";
 
-        if (diag.m_line > 0)
-            std::cerr << "  --> line " << diag.m_line << ":" << diag.m_column << "\n";
+        if (diag.line > 0)
+            std::cerr << "  --> line " << diag.line << ":" << diag.m_column << "\n";
 
-        if (!diag.m_suggestions.empty()) {
+        if (!diag.suggestions.empty()) {
             std::cerr << Color::BOLD << Color::CYAN << "help" << Color::RESET << ":\n";
-            for (std::string const& sugg : diag.m_suggestions)
+            for (std::string const& sugg : diag.suggestions)
                 std::cerr << "    • " << sugg << "\n";
         }
 

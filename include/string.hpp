@@ -14,7 +14,7 @@ private:
     union Storage {
         struct {
             char* ptr;
-            size_t m_cap;
+            size_t cap;
         } heap;
 
         char sso[SSO_SIZE];
@@ -39,7 +39,7 @@ public:
     ~StringBase()
     {
         if (is_heap())
-            get_allocator().deallocate_array<char>(m_storage.heap.ptr, m_storage.heap.m_cap);
+            get_allocator().deallocate_array<char>(m_storage.heap.ptr, m_storage.heap.cap);
     }
 
     StringBase(StringBase const&) = delete;
@@ -58,7 +58,7 @@ public:
 
     char const* ptr() const noexcept { return UNLIKELY(is_heap()) ? m_storage.heap.ptr : m_storage.sso; }
 
-    size_t cap() const noexcept { return UNLIKELY(is_heap()) ? (m_storage.heap.m_cap > 0 ? m_storage.heap.m_cap - 1 : 0) : SSO_SIZE - 1; }
+    size_t cap() const noexcept { return UNLIKELY(is_heap()) ? (m_storage.heap.cap > 0 ? m_storage.heap.cap - 1 : 0) : SSO_SIZE - 1; }
 
     char operator[](size_t const i) const noexcept { return ptr()[i]; }
     char& operator[](size_t const i) noexcept { return ptr()[i]; }

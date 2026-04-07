@@ -16,13 +16,13 @@ void Fa_GarbageCollector::mark_roots(Fa_VM* vm)
 {
     // Stack values
     for (int i = 0; i < vm->m_stack_top && i < Fa_VM::STACK_SIZE; i += 1) {
-        if (Fa_IS_OBJECT(vm->stack_[i]))
-            mark_object(Fa_AS_OBJECT(vm->stack_[i]));
+        if (Fa_IS_OBJECT(vm->m_stack[i]))
+            mark_object(Fa_AS_OBJECT(vm->m_stack[i]));
     }
 
     // Call frames
     for (int i = 0; i < vm->m_frames_top && i < Fa_VM::MAX_FRAMES; i += 1)
-        mark_object(vm->frames_[i].closure);
+        mark_object(vm->m_frames[i].closure);
 
     // Global slots are the live Fa_VM roots for globals.
     mark_value_array(vm->m_global_slots);
@@ -39,28 +39,22 @@ void Fa_GarbageCollector::mark_object(Fa_ObjHeader* p)
 
 void Fa_GarbageCollector::blacken_object(Fa_ObjHeader* obj)
 {
-    switch (obj->m_type) {
+    switch (obj->type) {
     case Fa_ObjType::CLOSURE: {
         auto cl = static_cast<Fa_ObjClosure*>(obj);
         mark_object(cl->function);
     } break;
     case Fa_ObjType::FUNCTION: {
-        mark_object(static_cast<Fa_ObjFunction*>(obj)->m_name);
+        mark_object(static_cast<Fa_ObjFunction*>(obj)->name);
         auto constants = &static_cast<Fa_ObjFunction*>(obj)->chunk->constants;
         mark_value_array(*constants);
     } break;
     case Fa_ObjType::LIST: {
         auto lst = static_cast<Fa_ObjList*>(obj);
-        mark_value_array(lst->m_elements);
+        mark_value_array(lst->elements);
     } break;
     case Fa_ObjType::DICT: {
-        auto dict = static_cast<Fa_ObjDict*>(obj);
-        for (u32 i = 0, n = dict->data.size(); i < n; i += 1) {
-            if (Fa_IS_OBJECT(dict->data[i].first))
-                mark_object(Fa_AS_OBJECT(dict->data[i].first));
-            if (Fa_IS_OBJECT(dict->data[i].second))
-                mark_object(Fa_AS_OBJECT(dict->data[i].second));
-        }
+        /// TODO:
     } break;
     case Fa_ObjType::NATIVE: // natives are static
     case Fa_ObjType::STRING: // strings are managed with arena

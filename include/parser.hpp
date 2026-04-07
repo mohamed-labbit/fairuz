@@ -35,7 +35,7 @@ public:
     }; // enum DataType
 
     struct Symbol {
-        Fa_StringRef m_name;
+        Fa_StringRef name;
         SymbolType symbol_type;
         DataType data_type;
         bool is_used = false;
@@ -78,7 +78,7 @@ public:
         Severity severity;
         u16 code;
         Fa_StringRef message;
-        i32 m_line;
+        i32 line;
         Fa_StringRef suggestion;
     }; // struct Issue
 
@@ -90,8 +90,8 @@ private:
 public:
     Fa_SemanticAnalyzer();
     Fa_SymbolTable::DataType infer_type(AST::Fa_Expr* m_expr);
-    void report_issue(Issue::Severity sev, diagnostic::errc::m_sema::Code code, Fa_StringRef msg, i32 m_line, Fa_StringRef const& sugg = "");
-    void analyze_fa_expr(AST::Fa_Expr* m_expr);
+    void report_issue(Issue::Severity sev, diagnostic::errc::sema::Code code, Fa_StringRef msg, i32 m_line, Fa_StringRef const& sugg = "");
+    void analyze_expr(AST::Fa_Expr* m_expr);
     void analyze_stmt(AST::Fa_Stmt* stmt);
     void analyze(Fa_Array<AST::Fa_Stmt*> const& m_statements);
     Fa_Array<Issue> const& get_issues() const;
@@ -102,7 +102,8 @@ public:
 
 class Fa_ParseError : public std::runtime_error {
 public:
-    i32 m_line, m_column;
+    i32 m_line;
+    i32 m_column;
     Fa_StringRef m_context;
     Fa_Array<Fa_StringRef> m_suggestions;
 
@@ -188,7 +189,7 @@ public:
     bool we_done() const;
     bool check(tok::Fa_TokenType m_type);
 
-    tok::Fa_Token const* current_token();
+    tok::Fa_Token const* current_token() const;
 
 private:
     lex::Fa_Lexer m_lexer;

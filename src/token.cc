@@ -49,6 +49,10 @@ static std::unordered_map<std::string_view, Fa_TokenType> const& get_operators()
         { "|", Fa_TokenType::OP_BITOR },
         { "~", Fa_TokenType::OP_BITNOT },
         { "^", Fa_TokenType::OP_BITXOR },
+        { "+=", Fa_TokenType::OP_PLUSEQ },
+        { "-=", Fa_TokenType::OP_MINUSEQ },
+        { "*=", Fa_TokenType::OP_STAREQ },
+        { "/=", Fa_TokenType::OP_SLASHEQ }
     };
     return map;
 }
@@ -76,7 +80,7 @@ bool Fa_Token::operator==(Fa_Token const& other) const
     if (m_type == Fa_TokenType::INDENT || m_type == Fa_TokenType::DEDENT || m_type == Fa_TokenType::BEGINMARKER || m_type == Fa_TokenType::ENDMARKER)
         return m_type == other.m_type;
 
-    return m_value == other.m_value && m_type == other.m_type && m_location.m_line == other.m_location.m_line && m_location.m_column == other.m_location.m_column;
+    return m_value == other.m_value && m_type == other.m_type && m_location.line == other.m_location.line && m_location.column == other.m_location.column;
 }
 
 bool Fa_Token::operator!=(Fa_Token const& other) const { return !(*this == other); }
@@ -85,9 +89,9 @@ Fa_StringRef const& Fa_Token::lexeme() const { return m_value; }
 
 Fa_TokenType const& Fa_Token::type() const { return m_type; }
 
-u32 const& Fa_Token::line() const { return m_location.m_line; }
+u32 const& Fa_Token::line() const { return m_location.line; }
 
-u16 const& Fa_Token::column() const { return m_location.m_column; }
+u16 const& Fa_Token::column() const { return m_location.column; }
 
 Location const& Fa_Token::location() const { return m_location; }
 

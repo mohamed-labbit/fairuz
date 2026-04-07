@@ -26,7 +26,7 @@ u32 Fa_Chunk::emit(u32 instr, Fa_SourceLocation loc)
 {
     locations.push(loc);
     code.push(instr);
-    add_line(loc.m_line);
+    add_line(loc.line);
     return static_cast<u32>(code.size() - 1);
 }
 
@@ -67,7 +67,7 @@ u32 Fa_Chunk::get_line(u32 const instr_idx) const
         if (e.start > instr_idx)
             break;
 
-        m_line = e.m_line;
+        m_line = e.line;
     }
 
     return m_line;
@@ -146,7 +146,7 @@ void Fa_Chunk::disassemble() const
 
 void Fa_Chunk::add_line(u32 m_line)
 {
-    if (lines.empty() || lines.back().m_line != m_line)
+    if (lines.empty() || lines.back().line != m_line)
         lines.push({ static_cast<u32>(code.size() - 1), m_line });
 }
 
