@@ -1107,7 +1107,8 @@ TEST(VMIntegration, SumForLoopOverList)
         AST::Fa_makeName("sum"),
         AST::Fa_makeList(),
         AST::Fa_makeBlock({
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("items"), AST::Fa_makeList({ AST::Fa_makeLiteralInt(1), AST::Fa_makeLiteralInt(2), AST::Fa_makeLiteralInt(3), AST::Fa_makeLiteralInt(4), AST::Fa_makeLiteralInt(5) }),
+            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("items"), AST::Fa_makeList({ AST::Fa_makeLiteralInt(1), 
+                AST::Fa_makeLiteralInt(2), AST::Fa_makeLiteralInt(3), AST::Fa_makeLiteralInt(4), AST::Fa_makeLiteralInt(5) }),
                 true),
             AST::Fa_makeAssignmentStmt(AST::Fa_makeName("total"), AST::Fa_makeLiteralInt(0), true),
             AST::Fa_makeFor(AST::Fa_makeName("item"),
@@ -2309,44 +2310,29 @@ TEST(VMPerfTest, IC_Quickening_ColdVsWarm_Ratio)
 //    STORE_GLOBAL + LOAD_GLOBAL in a loop — exercises the globals hash map.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/*
-TEST(VMPerfTest, GlobalLookup_100k_Roundtrips)
+TEST(VMPerfTest, GlobalLookup_1M_Roundtrips)
 {
-    constexpr int N = 100'000;
+    constexpr int N = 1'000'000;
+    
+    AST::Fa_AssignmentStmt* decl = AST::Fa_makeAssignmentStmt(AST::Fa_makeName("a"), AST::Fa_makeLiteralInt(0));
+    AST::Fa_WhileStmt* while_loop = AST::Fa_makeWhile(
+        AST::Fa_makeBinary(AST::Fa_makeName("a"), AST::Fa_makeLiteralInt(N), AST::Fa_BinaryOp::OP_LT), 
+        AST::Fa_makeAssignmentStmt(AST::Fa_makeName("a"), AST::Fa_makeBinary(AST::Fa_makeName("a"), AST::Fa_makeLiteralInt(1), AST::Fa_BinaryOp::OP_ADD))
+    );
 
-    CB b;
-    b.regs(3);
-    b.load_int(0, 0);
-    b.load_int(1, 1);
-    b.load_val(2, N);
-    // loop: r0 += 1; store r0 -> "counter"; load "counter" -> r0; compare; loop
-    // (deliberately alternating store/load to stress lookup symmetrically)
-    b.ABC(Fa_OpCode::OP_LT, 1, 0, 2);           // reuse r1 as cmp result
-    b.AsBx(Fa_OpCode::JUMP_IF_FALSE, 1, 4);
-    b.stg(0, "counter");
-    b.ldg(0, "counter");
-    b.load_int(1, 1);
-    b.ABC(Fa_OpCode::OP_ADD, 0, 0, 1);
-    b.AsBx(Fa_OpCode::LOOP, 0, -7);
-    b.ret(0);
-
-    b.dump();
+    Fa_Chunk* top = Compiler().compile({ decl, while_loop });
+    if (top != nullptr)
+        top->disassemble();
+    
     Fa_VM vm;
-
+    
     auto t0 = std::chrono::high_resolution_clock::now();
-    Fa_Value result = vm.run(b.ch);
+    Fa_Value result = vm.run(top);
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
     ::printf("  Global store+load %dk roundtrips:  %.1f µs  (%.2f ns/op)\n", N / 1000, us, us * 1000.0 / N);
 }
-*/
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 5. Function call overhead
-//    Calls a trivial two-arg add closure N times from a loop.
-//    Measures: CALL setup, frame push/pop, RETURN teardown.
-// ─────────────────────────────────────────────────────────────────────────────
 
 static Fa_Chunk* make_add2_chunk()
 {

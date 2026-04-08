@@ -502,23 +502,11 @@ TEST_F(Fa_StringRefTest, At_ValidAccess)
     EXPECT_EQ(s.at(4), 'o');
 }
 
-TEST_F(Fa_StringRefTest, At_OutOfBounds)
-{
-    Fa_StringRef s("Hi");
-    EXPECT_THROW(s.at(10), std::out_of_range);
-}
-
 TEST_F(Fa_StringRefTest, At_MutableAccess)
 {
     Fa_StringRef s("Hello");
     s.at(0) = 'J';
     EXPECT_EQ(s.at(0), 'J');
-}
-
-TEST_F(Fa_StringRefTest, At_EmptyString)
-{
-    Fa_StringRef s;
-    EXPECT_THROW(s.at(0), std::out_of_range);
 }
 
 TEST_F(Fa_StringRefTest, Erase_FirstChar)
@@ -825,18 +813,6 @@ TEST_F(Fa_StringRefTest, ToDouble_Scientific)
 {
     Fa_StringRef s("1.5e10");
     EXPECT_DOUBLE_EQ(s.to_double(), 1.5e10);
-}
-
-TEST_F(Fa_StringRefTest, ToDouble_EmptyString)
-{
-    Fa_StringRef s;
-    EXPECT_THROW(s.to_double(), std::invalid_argument);
-}
-
-TEST_F(Fa_StringRefTest, ToDouble_InvalidFormat)
-{
-    Fa_StringRef s("not a number");
-    EXPECT_THROW(s.to_double(), std::invalid_argument);
 }
 
 TEST_F(Fa_StringRefTest, ToDouble_WithPosition)

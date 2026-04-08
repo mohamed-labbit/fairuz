@@ -17,7 +17,7 @@ inline void PrintTo(tok::Fa_Token const& tok, std::ostream* os)
 
 TEST(LexerTest, TestIndentationLevel0)
 {
-    lex::Fa_FileManager m_file_manager(lexer_test_cases_dir() / "recognizes_indentation_level0.txt");
+    lex::Fa_FileManager m_file_manager(lexer_test_cases_dir() / "recognizes_indentation_level0.fa");
     lex::Fa_Lexer m_lexer(&m_file_manager);
     auto tokens = m_lexer.tokenize();
     tok::Fa_Token const* expected = MAKE_TOKEN(tok::Fa_TokenType::IDENTIFIER, "ا", 1, 1);
@@ -29,7 +29,7 @@ TEST(LexerTest, TestIndentationLevel0)
 
 TEST(LexerTest, TestIndentationLevel1)
 {
-    lex::Fa_FileManager m_file_manager(lexer_test_cases_dir() / "recognizes_indentation_level1.txt");
+    lex::Fa_FileManager m_file_manager(lexer_test_cases_dir() / "recognizes_indentation_level1.fa");
     lex::Fa_Lexer m_lexer(&m_file_manager);
     auto tokens = m_lexer.tokenize();
     std::vector<tok::Fa_Token const*> expected = { MAKE_TOKEN(tok::Fa_TokenType::BEGINMARKER, "", 1, 1),
@@ -50,7 +50,7 @@ TEST(LexerTest, TestIndentationLevel1)
 
 TEST(LexerTest, TestIndentationLevel2)
 {
-    lex::Fa_FileManager m_file_manager(lexer_test_cases_dir() / "recognizes_indentation_level2.txt");
+    lex::Fa_FileManager m_file_manager(lexer_test_cases_dir() / "recognizes_indentation_level2.fa");
     lex::Fa_Lexer m_lexer(&m_file_manager);
     auto tokens = m_lexer.tokenize();
     std::vector<tok::Fa_Token const*> expected = { MAKE_TOKEN(tok::Fa_TokenType::BEGINMARKER, "", 1, 1),

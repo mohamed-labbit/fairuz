@@ -13,10 +13,7 @@ struct RunResult {
     std::string err;
 };
 
-std::string shell_quote(std::string const& s)
-{
-    return "'" + s + "'";
-}
+std::string shell_quote(std::string const& s) { return "'" + s + "'"; }
 
 std::string read_file(std::filesystem::path const& path)
 {
@@ -36,8 +33,8 @@ RunResult run_installed(std::filesystem::path const& binary, std::filesystem::pa
     EXPECT_NE(dir, nullptr);
 
     std::filesystem::path dir_path(dir);
-    auto out_path = dir_path / "stdout.txt";
-    auto err_path = dir_path / "stderr.txt";
+    auto out_path = dir_path / "stdout.fa";
+    auto err_path = dir_path / "stderr.fa";
     std::string cmd = shell_quote(binary.string()) + " " + shell_quote(input.string());
     if (!extra.empty())
         cmd += " " + extra;

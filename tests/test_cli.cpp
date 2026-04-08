@@ -41,8 +41,8 @@ RunResult run_cli(std::string const& m_args)
     EXPECT_NE(dir, nullptr);
 
     std::filesystem::path dir_path(dir);
-    auto out_path = dir_path / "stdout.txt";
-    auto err_path = dir_path / "stderr.txt";
+    auto out_path = dir_path / "stdout.fa";
+    auto err_path = dir_path / "stderr.fa";
 
     std::string cmd = shell_quote(test_binary().string()) + " " + m_args + " >" + shell_quote(out_path.string()) + " 2>" + shell_quote(err_path.string());
     int raw = std::system(cmd.c_str());
@@ -55,7 +55,7 @@ RunResult run_cli(std::string const& m_args)
 
 std::filesystem::path write_program(std::string const& source)
 {
-    auto path = std::filesystem::temp_directory_path() / ("fairuz_cli_program_" + std::to_string(::getpid()) + ".txt");
+    auto path = std::filesystem::temp_directory_path() / ("fairuz_cli_program_" + std::to_string(::getpid()) + ".fa");
     std::ofstream out(path);
     out << source;
     return path;
@@ -97,7 +97,7 @@ TEST(CliE2E, FileThenTrailingOption)
 
 TEST(CliE2E, MissingFile)
 {
-    RunResult r = run_cli(shell_quote("/tmp/definitely_missing_fairuz_input.txt"));
+    RunResult r = run_cli(shell_quote("/tmp/definitely_missing_fairuz_input.fa"));
     EXPECT_EQ(r.exit_code, 66);
     EXPECT_NE(r.err.find("Input file not found"), std::string::npos);
 }

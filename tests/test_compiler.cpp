@@ -8,25 +8,25 @@
 using namespace fairuz::runtime;
 using namespace fairuz;
 
-static constexpr AST::Fa_AssignmentExpr* assign_fa_expr(Fa_StringRef m_name, AST::Fa_Expr* val, u32 m_line = 1)
+static constexpr AST::Fa_AssignmentExpr* assign_fa_expr(Fa_StringRef m_name, AST::Fa_Expr* val)
 {
     return AST::Fa_makeAssignmentExpr(AST::Fa_makeName(m_name), val /*, line*/);
 }
-static constexpr AST::Fa_CallExpr* call(AST::Fa_Expr* m_callee, Fa_Array<AST::Fa_Expr*> m_args = { }, u32 m_line = 1)
+static constexpr AST::Fa_CallExpr* call(AST::Fa_Expr* m_callee, Fa_Array<AST::Fa_Expr*> m_args = { })
 {
-    return Fa_makeCall(m_callee, AST::Fa_makeList(m_args) /*, line*/);
+    return Fa_makeCall(m_callee, AST::Fa_makeList(m_args));
 }
-static constexpr AST::Fa_AssignmentStmt* decl(Fa_StringRef nm, AST::Fa_Expr* val, bool is_const = false, u32 m_line = 1)
+static constexpr AST::Fa_AssignmentStmt* decl(Fa_StringRef nm, AST::Fa_Expr* val)
 {
     return Fa_makeAssignmentStmt(AST::Fa_makeName(nm), val, true);
 }
-static constexpr AST::Fa_AssignmentStmt* assign_stmt(Fa_StringRef nm, AST::Fa_Expr* val, u32 m_line = 1)
+static constexpr AST::Fa_AssignmentStmt* assign_stmt(Fa_StringRef nm, AST::Fa_Expr* val)
 {
     return Fa_makeAssignmentStmt(AST::Fa_makeName(nm), val, false);
 }
-static constexpr AST::Fa_FunctionDef* func_stmt(Fa_StringRef nm, Fa_Array<AST::Fa_Expr*> m_params, AST::Fa_BlockStmt* m_body, u32 m_line = 1)
+static constexpr AST::Fa_FunctionDef* func_stmt(Fa_StringRef nm, Fa_Array<AST::Fa_Expr*> m_params, AST::Fa_BlockStmt* m_body)
 {
-    return Fa_makeFunction(AST::Fa_makeName(nm), AST::Fa_makeList(m_params), m_body /*, line*/);
+    return Fa_makeFunction(AST::Fa_makeName(nm), AST::Fa_makeList(m_params), m_body);
 }
 
 template<typename... Stmts>
@@ -1149,7 +1149,7 @@ TEST(CompilerMeta, FunctionNameSetCorrectly)
 
 TEST(CompilerMeta, LineInfoPresent)
 {
-    Fa_Chunk* chunk = compile_ok(decl("x", AST::Fa_makeLiteralInt(42), false, /*line=*/7));
+    Fa_Chunk* chunk = compile_ok(decl("x", AST::Fa_makeLiteralInt(42)));
     ASSERT_NE(chunk, nullptr);
     dump(chunk);
     EXPECT_FALSE(chunk->lines.empty());
