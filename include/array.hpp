@@ -3,13 +3,15 @@
 
 #include "arena.hpp"
 #include "diagnostic.hpp"
+#include "macros.hpp"
 
 #include <bit>
 #include <cassert>
 
 namespace fairuz {
 
-using ErrorCode = diagnostic::errc::container::Code;
+using ArrayErrorCode = diagnostic::errc::container::Code;
+using GenericErrorCode = diagnostic::errc::general::Code;
 
 template<typename T>
 class Fa_Array {
@@ -55,7 +57,7 @@ class Fa_Array {
                     ::new (static_cast<void*>(dst + i)) T(src[i]);
             } catch (...) {
                 destroy_range(dst, dst + i);
-                throw;
+                diagnostic::emit(GenericErrorCode::INTERNAL_ERROR, diagnostic::Severity::FATAL);
             }
         }
     }
@@ -130,7 +132,7 @@ public:
     T& back()
     {
         if (m_size == 0)
-            diagnostic::emit(ErrorCode::ARRAY_EMPTY_BACK, diagnostic::Severity::FATAL);
+            diagnostic::emit(ArrayErrorCode::ARRAY_EMPTY_BACK, diagnostic::Severity::FATAL);
 
         return m_arr[m_size - 1];
     }
@@ -138,7 +140,7 @@ public:
     T const& back() const
     {
         if (m_size == 0)
-            diagnostic::emit(ErrorCode::ARRAY_EMPTY_BACK, diagnostic::Severity::FATAL);
+            diagnostic::emit(ArrayErrorCode::ARRAY_EMPTY_BACK, diagnostic::Severity::FATAL);
 
         return m_arr[m_size - 1];
     }
@@ -146,7 +148,7 @@ public:
     T& front()
     {
         if (m_size == 0)
-            diagnostic::emit(ErrorCode::ARRAY_EMPTY_FRONT, diagnostic::Severity::FATAL);
+            diagnostic::emit(ArrayErrorCode::ARRAY_EMPTY_FRONT, diagnostic::Severity::FATAL);
 
         return m_arr[0];
     }
@@ -154,7 +156,7 @@ public:
     T const& front() const
     {
         if (m_size == 0)
-            diagnostic::emit(ErrorCode::ARRAY_EMPTY_FRONT, diagnostic::Severity::FATAL);
+            diagnostic::emit(ArrayErrorCode::ARRAY_EMPTY_FRONT, diagnostic::Severity::FATAL);
 
         return m_arr[0];
     }
@@ -191,8 +193,7 @@ template<typename T>
 Fa_Array<T>::Fa_Array(u32 capacity, T fill_v)
 {
     if (capacity > ARRAY_MAX)
-        diagnostic::emit(ErrorCode::ARRAY_CAPACITY_EXCEEDED,
-            std::to_string(capacity) + " > " + std::to_string(ARRAY_MAX), diagnostic::Severity::FATAL);
+        diagnostic::emit(ArrayErrorCode::ARRAY_CAPACITY_EXCEEDED, std::to_string(capacity) + " > " + std::to_string(ARRAY_MAX), diagnostic::Severity::FATAL);
 
     if (capacity == 0)
         return;
@@ -211,7 +212,7 @@ Fa_Array<T>::Fa_Array(u32 capacity, T fill_v)
         }
     } catch (...) {
         destroy_range(m_arr, m_arr + i);
-        throw;
+        diagnostic::emit(GenericErrorCode::INTERNAL_ERROR, diagnostic::Severity::FATAL);
     }
 
     m_size = capacity;
@@ -268,7 +269,7 @@ Fa_Array<T>::Fa_Array(std::initializer_list<T> list)
     } catch (...) {
         destroy_range(m_arr, m_arr + i);
         m_size = 0;
-        throw;
+        diagnostic::emit(GenericErrorCode::INTERNAL_ERROR, diagnostic::Severity::FATAL);
     }
 }
 
@@ -388,7 +389,7 @@ void Fa_Array<T>::resize(u32 const s)
             }
         } catch (...) {
             m_size = i;
-            throw;
+            diagnostic::emit(GenericErrorCode::INTERNAL_ERROR, diagnostic::Severity::FATAL);
         }
 
         m_size = s;
@@ -399,7 +400,7 @@ template<typename T>
 void Fa_Array<T>::erase(u32 const at)
 {
     if (at >= m_size)
-        diagnostic::emit(ErrorCode::ARRAY_OUT_OF_BOUNDS, diagnostic::Severity::FATAL);
+        diagnostic::emit(ArrayErrorCode::ARRAY_OUT_OF_BOUNDS, diagnostic::Severity::FATAL);
 
     if constexpr (TRIVIAL_COPY) {
         u32 const remaining = m_size - at - 1;
