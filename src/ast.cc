@@ -6,13 +6,13 @@ namespace fairuz::AST {
 
 typename Fa_ASTNode::NodeType Fa_ASTNode::get_node_type() const { return node_type; }
 
-u32 Fa_ASTNode::get_line() const { return m_line; }
+u32 Fa_ASTNode::get_line() const { return m_loc.line; }
 
-u16 Fa_ASTNode::get_column() const { return m_column; }
+u16 Fa_ASTNode::get_column() const { return m_loc.column; }
 
-void Fa_ASTNode::set_line(u32 const line_value) { m_line = line_value; }
+Fa_SourceLocation Fa_ASTNode::get_location() const { return m_loc; }
 
-void Fa_ASTNode::set_column(u16 const col) { m_column = col; }
+void Fa_ASTNode::set_location(Fa_SourceLocation loc)  { m_loc = loc; }
 
 bool Fa_BinaryExpr::equals(Fa_Expr const* other) const
 {
@@ -470,7 +470,7 @@ void Fa_ReturnStmt::set_value(Fa_Expr* v) { m_value = v; }
 
 bool Fa_ReturnStmt::has_value() const { return m_value != nullptr; }
 
-[[nodiscard]] bool Fa_ReturnStmt::equals(Fa_Stmt const* other) const
+bool Fa_ReturnStmt::equals(Fa_Stmt const* other) const
 {
     if (kind != other->get_kind())
         return false;
@@ -481,6 +481,47 @@ bool Fa_ReturnStmt::has_value() const { return m_value != nullptr; }
 
     return m_value->equals(ret_stmt->get_value());
 }
+
+bool Fa_ClassDef::equals(Fa_Stmt const* other) const
+{
+    if (kind != other->get_kind())
+        return false;
+
+    auto class_def = static_cast<Fa_ClassDef const*>(other);
+
+    Fa_Array<Fa_Expr*> other_members = class_def->get_members();
+    Fa_Array<Fa_Stmt*> other_methods = class_def->get_methods();
+    if (other_members.size() != m_members.size() || other_methods.size() != m_methods.size())
+        return false;
+
+    for (u32 i = 0, n = other_members.size(); i < n; ++i) {
+        if (!other_members[i]->equals(m_members[i]))
+            return false;
+    }
+
+    for (u32 i = 0, n = other_methods.size(); i < n; ++i) {
+        if (!other_methods[i]->equals(m_methods[i]))
+            return false;
+    }
+
+    return m_name->equals(class_def->get_name());
+}
+
+Fa_ClassDef* Fa_ClassDef::clone() const
+{
+    Fa_Array<Fa_Expr*> member_clones;
+    Fa_Array<Fa_Stmt*> method_clones;
+    for (Fa_Expr* mem : m_members)
+        member_clones.push(mem->clone());
+    for (Fa_Stmt* met : m_methods)
+        method_clones.push(met->clone());
+    return Fa_makeClassDef(m_name->clone(), member_clones, method_clones);
+}
+
+Fa_Array<Fa_Expr*> Fa_ClassDef::get_members() const { return m_members; }
+Fa_Array<Fa_Stmt*> Fa_ClassDef::get_methods() const { return m_methods; }
+
+Fa_Expr* Fa_ClassDef::get_name() const { return m_name; }
 
 bool Fa_BreakStmt::equals(Fa_Stmt const* other) const
 {
