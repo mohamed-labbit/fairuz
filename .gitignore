@@ -9,8 +9,7 @@ some.cpp
 build/
 lines.py
 cleanup.sh
-demo.txt
-demo_.txt
 demo
 demo.cpp
 demo.py
+build-llvm
