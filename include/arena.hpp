@@ -4,6 +4,12 @@
 #include "diagnostic.hpp"
 #include "macros.hpp"
 
+#ifdef FAIRUZ_DEBUG
+#    include "stats.hpp"
+#    include <unordered_map>
+#    include <unordered_set>
+#endif // FAIRUZ_DEBUG
+
 #include <functional>
 #include <optional>
 
@@ -46,8 +52,7 @@ public:
 class Fa_ArenaAllocator {
 public:
     enum class GrowthStrategy : i32 {
-        LINEAR,
-        EXPONENTIAL
+        LINEAR
     }; // enum GrowthStrategy
 
     using OutOfMemoryHandler = std::function<bool(size_t requested)>;
@@ -61,14 +66,23 @@ private:
     OutOfMemoryHandler m_oom_handler { nullptr };
     size_t m_max_block_size { MAX_BLOCK_SIZE };
     void* m_last_ptr { nullptr };
+    size_t m_last_size { 0 };
+    size_t m_last_consumed { 0 };
     unsigned char* m_next { nullptr };
     unsigned char* m_end { nullptr };
     void* allocate_slow(size_t m_size, size_t m_alignment);
-#ifdef fairuz_DEBUG
-    void track_allocation(unsigned char* ptr, size_t m_size, size_t m_alignment);
+#ifdef FAIRUZ_DEBUG
+    struct AllocationHeader {
+        void* ptr { nullptr };
+        u64 size { 0 };
+        u64 consumed { 0 };
+        u64 alignment { 0 };
+    };
+
+    void track_allocation(unsigned char* ptr, size_t m_size, size_t consumed, size_t m_alignment);
 #endif
 
-#ifdef fairuz_DEBUG
+#ifdef FAIRUZ_DEBUG
     struct VoidPtrHash {
         size_t operator()(void const* ptr) const noexcept { return std::hash<uintptr_t>()(reinterpret_cast<uintptr_t>(ptr)); }
     }; // struct VoidPtrHash
@@ -78,17 +92,17 @@ private:
     }; // struct VoidPtrEqual
 
     DetailedAllocStats m_alloc_stats;
-    std::unordered_mape<void*, AllocationHeader, VoidPtrHash, VoidPtrEqual> m_allocation_map { };
+    std::unordered_map<void*, AllocationHeader, VoidPtrHash, VoidPtrEqual> m_allocation_map { };
     std::unordered_set<void*, VoidPtrHash, VoidPtrEqual> m_allocated_ptrs { };
     bool m_track_allocations { false };
     bool m_debug_features { false };
     bool m_enable_statistics { true };
-#endif // fairuz_DEBUG
+#endif // FAIRUZ_DEBUG
 
     static constexpr size_t m_alignment = alignof(std::max_align_t);
 
 public:
-    explicit Fa_ArenaAllocator(i32 growth_strategy = static_cast<i32>(GrowthStrategy::EXPONENTIAL),
+    explicit Fa_ArenaAllocator(GrowthStrategy growth_strategy = GrowthStrategy::LINEAR,
         OutOfMemoryHandler m_oom_handler = nullptr, bool debug = true);
 
     ~Fa_ArenaAllocator() { reset(); }
@@ -127,19 +141,18 @@ public:
     template<typename T>
     void deallocate_object(T* obj) { deallocate(static_cast<void*>(obj), sizeof(T)); }
 
-#ifdef fairuz_DEBUG
+#ifdef FAIRUZ_DEBUG
     size_t total_allocated() const;
     size_t total_allocations() const;
     size_t active_blocks() const;
+    DetailedAllocStats const& stats() const;
     std::string to_string(bool verbose) const;
     void dump_stats(std::ostream& os, bool verbose) const;
     [[nodiscard]] bool verify_allocation(void* ptr) const;
-#endif // fairuz_DEBUG
+#endif // FAIRUZ_DEBUG
 
 private:
     [[nodiscard]] unsigned char* allocate_from_blocks(size_t alloc_size, size_t align = alignof(std::max_align_t));
-
-    void update_next_block_size() noexcept;
 
     [[nodiscard]] static constexpr size_t get_aligned(size_t n, size_t const m_alignment = alignof(std::max_align_t)) noexcept
     {
@@ -148,7 +161,7 @@ private:
 }; // class Fa_ArenaAllocator
 
 struct Fa_AllocatorContext {
-    Fa_ArenaAllocator allocator;
+    Fa_ArenaAllocator allocator { Fa_ArenaAllocator::GrowthStrategy::LINEAR, nullptr, false };
 }; // struct Fa_AllocatorContext
 
 inline Fa_AllocatorContext* g_context = nullptr;
