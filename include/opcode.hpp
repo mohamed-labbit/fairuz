@@ -176,8 +176,8 @@ struct Fa_ICSlot {
 }; // struct Fa_ICSlot
 
 struct Fa_LineEntry {
-    u32 start;
-    u32 line;
+    u32 start { 0 };
+    u32 line { 0 };
 }; // struct LineEntry
 
 static Fa_StringRef Fa_opcode_name(Fa_OpCode op)
@@ -382,7 +382,7 @@ static Fa_InstrFormat opcode_format(Fa_OpCode op)
 static void print_value(u64 v);
 
 struct Fa_Chunk {
-    Fa_StringRef m_name { "" };
+    Fa_StringRef name { "" };
     int arity { 0 };
     unsigned int local_count { 0 };
 
