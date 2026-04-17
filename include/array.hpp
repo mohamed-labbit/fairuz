@@ -7,6 +7,7 @@
 
 #include <bit>
 #include <cassert>
+#include <initializer_list>
 
 namespace fairuz {
 
