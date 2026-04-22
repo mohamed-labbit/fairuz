@@ -1,5 +1,5 @@
-#include "../include/ast.hpp"
-#include "../include/parser.hpp"
+#include "../fairuz/ast.hpp"
+#include "../fairuz/parser.hpp"
 
 #include <filesystem>
 #include <fstream>
@@ -224,7 +224,7 @@ std::string sig_stmt(AST::Fa_Stmt const* stmt)
     case AST::Fa_Stmt::Kind::EXPR:
         return "expr(" + sig_expr(static_cast<AST::Fa_ExprStmt const*>(stmt)->get_expr()) + ")";
     /*
-     * 
+     *
     case AST::Fa_Stmt::Kind::ASSIGNMENT: {
         auto const* a = static_cast<AST::Fa_AssignmentStmt const*>(stmt);
         return "assignstmt(" + sig_expr(a->get_target()) + "," + sig_expr(a->get_value()) + ",decl=" + std::string(a->is_declaration() ? "true" : "false") + ")";

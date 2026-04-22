@@ -1,4 +1,4 @@
-#include "../include/compiler.hpp"
+#include "../fairuz/compiler.hpp"
 
 #include <gtest/gtest.h>
 
@@ -193,7 +193,7 @@ TEST(Fa_Chunk, OwnsSubFunctions)
 {
     auto* m_parent = fairuz::runtime::make_chunk();
     auto* child = fairuz::runtime::make_chunk();
-    child->m_name = "child";
+    child->name = "child";
     m_parent->functions.push(child);
     SUCCEED();
 }
@@ -202,13 +202,13 @@ TEST(Fa_Chunk, SubFunctionPreservesData)
 {
     Fa_Chunk m_parent;
     auto* child = fairuz::runtime::make_chunk();
-    child->m_name = "myfunc";
+    child->name = "myfunc";
     child->arity = 2;
     child->emit(Fa_make_ABC(Fa_OpCode::RETURN_NIL, 0, 0, 0), { });
     m_parent.functions.push(child);
 
     EXPECT_EQ(m_parent.functions.size(), 1u);
-    EXPECT_EQ(m_parent.functions[0]->m_name, "myfunc");
+    EXPECT_EQ(m_parent.functions[0]->name, "myfunc");
     EXPECT_EQ(m_parent.functions[0]->arity, 2);
     EXPECT_EQ(m_parent.functions[0]->code.size(), 1u);
 }
@@ -216,20 +216,20 @@ TEST(Fa_Chunk, SubFunctionPreservesData)
 TEST(Fa_Chunk, IsMoveConstructible)
 {
     Fa_Chunk a;
-    a.m_name = "moved";
+    a.name = "moved";
     a.emit(Fa_make_ABC(Fa_OpCode::NOP, 0, 0, 0), { });
     Fa_Chunk b(std::move(a));
-    EXPECT_EQ(b.m_name, "moved");
+    EXPECT_EQ(b.name, "moved");
     EXPECT_EQ(b.code.size(), 1u);
 }
 
 TEST(Fa_Chunk, IsMoveAssignable)
 {
     Fa_Chunk a;
-    a.m_name = "src";
+    a.name = "src";
     Fa_Chunk b;
     b = std::move(a);
-    EXPECT_EQ(b.m_name, "src");
+    EXPECT_EQ(b.name, "src");
 }
 
 TEST(CompilerState, AllocRegIncrementsWatermark)

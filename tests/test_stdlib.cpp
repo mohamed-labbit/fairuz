@@ -1,5 +1,5 @@
-#include "../include/diagnostic.hpp"
-#include "../include/vm.hpp"
+#include "../fairuz/diagnostic.hpp"
+#include "../fairuz/vm.hpp"
 
 #include <chrono>
 #include <cstdio>
@@ -233,8 +233,8 @@ TEST(StdlibRegression, LenSupportsDicts)
 {
     Fa_VM vm;
     Fa_Value dict = vm.Fa_dict(0, nullptr);
-    Fa_AS_DICT(dict)->data[Fa_MAKE_STRING("a")]= Fa_MAKE_INTEGER(1);
-    Fa_AS_DICT(dict)->data[Fa_MAKE_STRING("b")]= Fa_MAKE_INTEGER(2);
+    Fa_AS_DICT(dict)->data[Fa_MAKE_STRING("a")] = Fa_MAKE_INTEGER(1);
+    Fa_AS_DICT(dict)->data[Fa_MAKE_STRING("b")] = Fa_MAKE_INTEGER(2);
 
     Fa_Value result = vm.Fa_len(1, &dict);
 

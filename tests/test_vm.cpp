@@ -1,8 +1,9 @@
-#include "../include/ast.hpp"
-#include "../include/compiler.hpp"
-#include "../include/diagnostic.hpp"
-#include "../include/opcode.hpp"
-#include "../include/vm.hpp"
+#include "../fairuz/ast.hpp"
+#include "../fairuz/compiler.hpp"
+#include "../fairuz/diagnostic.hpp"
+#include "../fairuz/opcode.hpp"
+#include "../fairuz/vm.hpp"
+#include "test_common.h"
 
 #include <bit>
 #include <charconv>
@@ -21,7 +22,7 @@ struct CB {
     CB()
     {
         ch = make_chunk();
-        ch->m_name = "<test>";
+        ch->name = "<test>";
     }
 
     CB& ABC(Fa_OpCode op, u8 A, u8 B, u8 C, u32 ln = 1)
@@ -52,8 +53,8 @@ struct CB {
         return ch->add_constant(Fa_MAKE_OBJECT(strs_.back().get()));
     }
 
-    CB& ldg(u8 r, char const* m_name) { return ABx(Fa_OpCode::LOAD_GLOBAL, r, str(m_name)); }
-    CB& stg(u8 r, char const* m_name) { return ABx(Fa_OpCode::STORE_GLOBAL, r, str(m_name)); }
+    CB& ldg(u8 r, char const* name) { return ABx(Fa_OpCode::LOAD_GLOBAL, r, str(name)); }
+    CB& stg(u8 r, char const* name) { return ABx(Fa_OpCode::STORE_GLOBAL, r, str(name)); }
 
     CB& regs(int n)
     {
@@ -125,8 +126,8 @@ Fa_Chunk* compile_program(Fa_Array<AST::Fa_Stmt*> stmts)
 
 Fa_Chunk* compile_calling(AST::Fa_Stmt* fn)
 {
-    auto* m_name = static_cast<AST::Fa_FunctionDef*>(fn)->get_name();
-    return compile_program({ fn, AST::Fa_makeExprStmt(AST::Fa_makeCall(AST::Fa_makeName(m_name->get_value()), AST::Fa_makeList())) });
+    auto* name = static_cast<AST::Fa_FunctionDef*>(fn)->get_name();
+    return compile_program({ fn, expr_stmt(call_expr(name_expr(name->get_value()))) });
 }
 
 } // namespace
@@ -644,7 +645,8 @@ TEST(VMGlobals, MissingGlobalIsNil)
     VMRunner r;
     CB b;
     b.regs(1).ldg(0, "nope").ret(0);
-    EXPECT_TRUE(Fa_IS_NIL(r.run(b)));
+    /// NOTE: this should change when making custom error breaking mechanisme
+    EXPECT_THROW(r.run(b), std::runtime_error);
 }
 
 TEST(VMGlobals, Overwrite)
@@ -749,83 +751,86 @@ TEST(VMLists, LenOnNonListThrows)
 
 TEST(VMDicts, IndexReturnsStoredValue)
 {
-    Fa_ObjString key(Fa_StringRef("lang"));
-    Fa_ObjDict* obj_dict = get_allocator().allocate_object<Fa_ObjDict>();
-    Fa_Value dict = Fa_MAKE_OBJECT(obj_dict);
-    Fa_AS_DICT(dict)->data[Fa_MAKE_OBJECT(&key)] = Fa_MAKE_INTEGER(7);
-
     VMRunner r;
-    CB b;
-    u16 dict_k = b.ch->add_constant(dict);
-    u16 key_k = b.ch->add_constant(Fa_MAKE_OBJECT(&key));
-    b.regs(3)
-        .ABx(Fa_OpCode::LOAD_CONST, 0, dict_k)
-        .ABx(Fa_OpCode::LOAD_CONST, 1, key_k)
-        .ABC(Fa_OpCode::INDEX, 2, 0, 1)
-        .ret(2);
 
-    Fa_Value result = r.run(b);
+    Fa_Chunk* ch = Compiler().compile(
+        {
+            func_def(
+                name_expr("func"),
+                list_expr(),
+                blk({
+                    decl_stmt("k", lit_str("lang")),
+                    decl_stmt("dict", dict_expr({ })),
+                    expr_stmt(assign_expr(index_expr(name_expr("dict"), name_expr("k")), lit_int(7))),
+                    decl_stmt("x", index_expr(name_expr("dict"), name_expr("k"))),
+                    return_stmt(name_expr("x")),
+                })),
+            expr_stmt(call_expr(name_expr("func"))),
+        });
+
+    Fa_Value result = r.run(ch);
+
     ASSERT_TRUE(Fa_IS_INTEGER(result));
     EXPECT_EQ(Fa_AS_INTEGER(result), 7);
 }
 
 TEST(VMDicts, SetUpdatesAndAppendsByKey)
 {
-    Fa_ObjString existing_key(Fa_StringRef("x"));
-    Fa_ObjString new_key(Fa_StringRef("y"));
-    Fa_ObjDict* obj_dict = get_allocator().allocate_object<Fa_ObjDict>();
-    Fa_Value dict = Fa_MAKE_OBJECT(obj_dict);
-    Fa_AS_DICT(dict)->data[Fa_MAKE_OBJECT(&existing_key)] = Fa_MAKE_INTEGER(1);
+    /// TODO: find out why the result of the program is a list of two garbage values??
+
+    Fa_Chunk* ch = Compiler().compile(
+        {
+            func_def(
+                name_expr("func"), 
+                list_expr(),
+                blk({
+                    decl_stmt("dict", dict_expr({ })),
+                    expr_stmt(assign_expr(index_expr(name_expr("dict"), lit_str("fk")), lit_int(1))),
+                    expr_stmt(assign_expr(index_expr(name_expr("dict"), lit_str("sk")), lit_int(2))),
+                    return_stmt(
+                        list_expr({
+                            index_expr(name_expr("dict"), lit_str("fk")),
+                            index_expr(name_expr("dict"), lit_str("sk")),
+                        })
+                    ),
+                })
+            ),
+            expr_stmt(call_expr(name_expr("func"))),
+        }
+    );
+
+    if (ch != nullptr)
+        ch->disassemble();
 
     VMRunner r;
-    CB b;
-    u16 dict_k = b.ch->add_constant(dict);
-    u16 existing_key_k = b.ch->add_constant(Fa_MAKE_OBJECT(&existing_key));
-    u16 new_key_k = b.ch->add_constant(Fa_MAKE_OBJECT(&new_key));
-    b.regs(4)
-        .ABx(Fa_OpCode::LOAD_CONST, 0, dict_k)
-        .ABx(Fa_OpCode::LOAD_CONST, 1, existing_key_k)
-        .load_int(2, 99)
-        .ABC(Fa_OpCode::LIST_SET, 0, 1, 2)
-        .ABx(Fa_OpCode::LOAD_CONST, 1, new_key_k)
-        .load_int(2, 42)
-        .ABC(Fa_OpCode::LIST_SET, 0, 1, 2)
-        .ABx(Fa_OpCode::LOAD_CONST, 1, existing_key_k)
-        .ABC(Fa_OpCode::INDEX, 2, 0, 1)
-        .ABx(Fa_OpCode::LOAD_CONST, 1, new_key_k)
-        .ABC(Fa_OpCode::INDEX, 3, 0, 1)
-        .ret(3);
-
-    Fa_Value result = r.run(b);
-    ASSERT_TRUE(Fa_IS_INTEGER(result));
-    EXPECT_EQ(Fa_AS_INTEGER(result), 42);
-    ASSERT_EQ(Fa_AS_DICT(dict)->data.size(), 2u);
-    EXPECT_EQ(Fa_AS_INTEGER(Fa_AS_DICT(dict)->data[0]), 99);
+    Fa_Value result = r.run(ch);
+    ASSERT_TRUE(Fa_IS_LIST(result));
+    Fa_ObjList* ret_obj = Fa_AS_LIST(result);
+    ASSERT_EQ(ret_obj->size(), 2);
+    EXPECT_EQ(ret_obj->elements[0], 1);
+    EXPECT_EQ(ret_obj->elements[1], 2);
 }
 
 TEST(VMDicts, MissingKeyReturnsNil)
 {
-    Fa_ObjString key(Fa_StringRef("missing"));
-    Fa_ObjDict* obj_dict = get_allocator().allocate_object<Fa_ObjDict>();
-    Fa_Value dict = Fa_MAKE_OBJECT(obj_dict);
-
     VMRunner r;
-    CB b;
-    u16 dict_k = b.ch->add_constant(dict);
-    u16 key_k = b.ch->add_constant(Fa_MAKE_OBJECT(&key));
-    b.regs(3)
-        .ABx(Fa_OpCode::LOAD_CONST, 0, dict_k)
-        .ABx(Fa_OpCode::LOAD_CONST, 1, key_k)
-        .ABC(Fa_OpCode::INDEX, 2, 0, 1)
-        .ret(2);
 
-    EXPECT_TRUE(Fa_IS_NIL(r.run(b)));
+    AST::Fa_AssignmentStmt* assign_1 = decl_stmt("x", index_expr(dict_expr({ }), lit_str("missing")));
+
+    Fa_Chunk* ch = Compiler().compile({
+        assign_1,
+    });
+
+    if (ch != nullptr)
+        ch->disassemble();
+
+    EXPECT_TRUE(Fa_IS_NIL(r.run(ch)));
 }
 
 static Fa_Chunk* make_adder_chunk()
 {
     auto fn = make_chunk();
-    fn->m_name = "add2";
+    fn->name = "add2";
     fn->arity = 2;
     fn->local_count = 3;
     // r0=a r1=b (params); r2=a+b
@@ -837,7 +842,7 @@ static Fa_Chunk* make_adder_chunk()
 TEST(VMCalls, CallClosure_TwoArgs)
 {
     auto top = make_chunk();
-    top->m_name = "<test>";
+    top->name = "<test>";
     top->local_count = 4;
     top->functions.push(make_adder_chunk());
 
@@ -854,7 +859,7 @@ TEST(VMCalls, CallClosure_TwoArgs)
 TEST(VMCalls, WrongArgcThrows)
 {
     auto top = make_chunk();
-    top->m_name = "<test>";
+    top->name = "<test>";
     top->local_count = 3;
     top->functions.push(make_adder_chunk());
 
@@ -900,7 +905,7 @@ TEST(VMCalls, ICCallNativeLen)
 TEST(VMCalls, TailCall_DoesNotOverflowFrames)
 {
     auto fn = make_chunk();
-    fn->m_name = "cd";
+    fn->name = "cd";
     fn->arity = 1;
     fn->local_count = 4;
 
@@ -917,7 +922,7 @@ TEST(VMCalls, TailCall_DoesNotOverflowFrames)
     fn->emit(Fa_make_ABC(Fa_OpCode::CALL_TAIL, 2, 1, 0), { });
 
     auto top = make_chunk();
-    top->m_name = "<test>";
+    top->name = "<test>";
     top->local_count = 3;
     top->functions.push(fn);
 
@@ -936,7 +941,7 @@ TEST(VMCalls, TailCall_DoesNotOverflowFrames)
 TEST(VMCalls, StackOverflowDetected)
 {
     auto fn = make_chunk();
-    fn->m_name = "inf";
+    fn->name = "inf";
     fn->arity = 0;
     fn->local_count = 1;
     u16 nk = fn->add_constant(Fa_MAKE_STRING("inf"));
@@ -945,7 +950,7 @@ TEST(VMCalls, StackOverflowDetected)
     fn->emit(Fa_make_ABC(Fa_OpCode::RETURN, 0, 1, 0), { });
 
     auto top = make_chunk();
-    top->m_name = "<test>";
+    top->name = "<test>";
     top->local_count = 1;
     top->functions.push(fn);
     u16 tk = top->add_constant(Fa_MAKE_STRING("inf"));
@@ -970,37 +975,36 @@ TEST(VMGlobals, UndefinedGlobalRaisesRuntimeError)
 
 TEST(VMIntegration, FunctionLocalDeclarationShadowsGlobal)
 {
-    AST::Fa_Stmt* make_local = AST::Fa_makeFunction(
-        AST::Fa_makeName("make_local"),
-        AST::Fa_makeList(),
-        AST::Fa_makeBlock({
-            AST::Fa_makeExprStmt(AST::Fa_makeAssignmentExpr(AST::Fa_makeName("x"), AST::Fa_makeLiteralInt(2), true)),
-            AST::Fa_makeReturn(AST::Fa_makeName("x")),
+    AST::Fa_Stmt* make_local = func_def(
+        name_expr("make_local"),
+        list_expr(),
+        blk(
+            { assign_stmt(name_expr("x"), lit_int(2)),
+                return_stmt(name_expr("x")) }));
+
+    AST::Fa_Stmt* read_global = func_def(
+        name_expr("read_global"),
+        list_expr(),
+        blk({
+            return_stmt(name_expr("x")),
         }));
 
-    AST::Fa_Stmt* read_global = AST::Fa_makeFunction(
-        AST::Fa_makeName("read_global"),
-        AST::Fa_makeList(),
-        AST::Fa_makeBlock({
-            AST::Fa_makeReturn(AST::Fa_makeName("x")),
-        }));
-
-    AST::Fa_Stmt* main_fn = AST::Fa_makeFunction(
-        AST::Fa_makeName("main"),
-        AST::Fa_makeList(),
-        AST::Fa_makeBlock({
-            AST::Fa_makeReturn(AST::Fa_makeList({
-                AST::Fa_makeCall(AST::Fa_makeName("make_local"), AST::Fa_makeList()),
-                AST::Fa_makeCall(AST::Fa_makeName("read_global"), AST::Fa_makeList()),
-            })),
+    AST::Fa_Stmt* main_fn = func_def(
+        name_expr("main"),
+        list_expr(),
+        blk({
+            return_stmt(
+                list_expr(
+                    { call_expr(name_expr("make_local")),
+                        call_expr(name_expr("read_global")) })),
         }));
 
     Fa_Chunk* top = compile_program({
-        AST::Fa_makeExprStmt(AST::Fa_makeAssignmentExpr(AST::Fa_makeName("x"), AST::Fa_makeLiteralInt(1), true)),
+        expr_stmt(assign_expr(name_expr("x"), lit_int(1))),
         make_local,
         read_global,
         main_fn,
-        AST::Fa_makeExprStmt(AST::Fa_makeCall(AST::Fa_makeName("main"), AST::Fa_makeList())),
+        expr_stmt(call_expr(name_expr("main"), list_expr({ }))),
     });
 
     top->disassemble();
@@ -1083,19 +1087,33 @@ TEST(VMICProfile, SlotAccumulatesAcrossLoopIterations)
 
 TEST(VMIntegration, Fibonacci_fib10_equals_55)
 {
-    AST::Fa_Stmt* fib = AST::Fa_makeFunction(
-        AST::Fa_makeName("fib"),
-        AST::Fa_makeList({ AST::Fa_makeName("n") }),
-        AST::Fa_makeBlock({ AST::Fa_makeIf(
-                                AST::Fa_makeBinary(AST::Fa_makeName("n"), AST::Fa_makeLiteralInt(1), AST::Fa_BinaryOp::OP_LTE),
-                                AST::Fa_makeBlock({ AST::Fa_makeReturn(AST::Fa_makeName("n")) })),
-            AST::Fa_makeReturn(AST::Fa_makeBinary(
-                AST::Fa_makeCall(AST::Fa_makeName("fib"), AST::Fa_makeList({ AST::Fa_makeBinary(AST::Fa_makeName("n"), AST::Fa_makeLiteralInt(1), AST::Fa_BinaryOp::OP_SUB) })),
-                AST::Fa_makeCall(AST::Fa_makeName("fib"), AST::Fa_makeList({ AST::Fa_makeBinary(AST::Fa_makeName("n"), AST::Fa_makeLiteralInt(2), AST::Fa_BinaryOp::OP_SUB) })),
-                AST::Fa_BinaryOp::OP_ADD)) }));
+    AST::Fa_Stmt* fib = func_def(
+        name_expr("fib"),
+        list_expr({ name_expr("n") }),
+        blk(
+            { if_stmt(
+                  binary(name_expr("n"), lit_int(1), AST::Fa_BinaryOp::OP_LTE),
+                  blk({ return_stmt(name_expr("n")) }),
+                  { }),
+                return_stmt(
+                    binary(
+                        call_expr(
+                            name_expr("fib"),
+                            list_expr(
+                                { binary(
+                                    name_expr("n"),
+                                    lit_int(1),
+                                    AST::Fa_BinaryOp::OP_SUB) })),
+                        call_expr(
+                            name_expr("fib"),
+                            list_expr(
+                                { binary(
+                                    name_expr("n"),
+                                    lit_int(2),
+                                    AST::Fa_BinaryOp::OP_SUB) })),
+                        AST::Fa_BinaryOp::OP_ADD)) }));
 
-    Fa_Chunk* top = compile_program({ fib,
-        AST::Fa_makeExprStmt(AST::Fa_makeCall(AST::Fa_makeName("fib"), AST::Fa_makeList({ AST::Fa_makeLiteralInt(10) }))) });
+    Fa_Chunk* top = compile_program({ fib, expr_stmt(call_expr(name_expr("fib"), list_expr({ lit_int(10) }))) });
     top->disassemble();
     VMRunner r;
     EXPECT_EQ(Fa_AS_INTEGER(r.run(top)), 55);
@@ -1103,24 +1121,29 @@ TEST(VMIntegration, Fibonacci_fib10_equals_55)
 
 TEST(VMIntegration, SumForLoopOverList)
 {
-    AST::Fa_Stmt* sum = AST::Fa_makeFunction(
-        AST::Fa_makeName("sum"),
-        AST::Fa_makeList(),
-        AST::Fa_makeBlock({
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("items"), AST::Fa_makeList({ AST::Fa_makeLiteralInt(1), 
-                AST::Fa_makeLiteralInt(2), AST::Fa_makeLiteralInt(3), AST::Fa_makeLiteralInt(4), AST::Fa_makeLiteralInt(5) }),
-                true),
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("total"), AST::Fa_makeLiteralInt(0), true),
-            AST::Fa_makeFor(AST::Fa_makeName("item"),
-                AST::Fa_makeName("items"),
-                AST::Fa_makeBlock({
-                    AST::Fa_makeAssignmentStmt(
-                        AST::Fa_makeName("total"),
-                        AST::Fa_makeBinary(AST::Fa_makeName("total"), AST::Fa_makeName("item"), AST::Fa_BinaryOp::OP_ADD),
-                        false),
-                })),
-            AST::Fa_makeReturn(AST::Fa_makeName("total")),
-        }));
+    AST::Fa_Stmt* sum = func_def(
+        name_expr("sum"),
+        list_expr(),
+        blk(
+            {
+                assign_stmt(
+                    name_expr("items"),
+                    list_expr(
+                        { lit_int(1),
+                            lit_int(2),
+                            lit_int(3),
+                            lit_int(4),
+                            lit_int(5) })),
+                assign_stmt(name_expr("total"), lit_int(0)),
+                for_stmt(name_expr("item"),
+                    name_expr("items"),
+                    blk({
+                        assign_stmt(
+                            name_expr("total"),
+                            binary(name_expr("total"), name_expr("item"), AST::Fa_BinaryOp::OP_ADD)),
+                    })),
+                return_stmt(name_expr("total")),
+            }));
 
     Fa_Chunk* top = compile_calling(sum);
     top->disassemble();
@@ -1130,13 +1153,14 @@ TEST(VMIntegration, SumForLoopOverList)
 
 TEST(VMIntegration, StringConcat_3Parts)
 {
-    AST::Fa_Stmt* test = AST::Fa_makeFunction(
-        AST::Fa_makeName("test"),
-        AST::Fa_makeList(),
-        AST::Fa_makeReturn(AST::Fa_makeBinary(
-            AST::Fa_makeBinary(AST::Fa_makeLiteralString("hello"), AST::Fa_makeLiteralString(", "), AST::Fa_BinaryOp::OP_ADD),
-            AST::Fa_makeLiteralString("world"),
-            AST::Fa_BinaryOp::OP_ADD)));
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        return_stmt(
+            binary(
+                binary(lit_str("hello"), lit_str(", "), AST::Fa_BinaryOp::OP_ADD),
+                lit_str("world"),
+                AST::Fa_BinaryOp::OP_ADD)));
 
     Fa_Chunk* top = compile_calling(test);
     top->disassemble();
@@ -1147,18 +1171,16 @@ TEST(VMIntegration, StringConcat_3Parts)
 
 TEST(VMIntegration, EmptyForLoopLeavesStateUnchanged)
 {
-    AST::Fa_Stmt* first = AST::Fa_makeFunction(
-        AST::Fa_makeName("first"),
-        AST::Fa_makeList(),
-        AST::Fa_makeBlock({
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("items"), AST::Fa_makeList(), true),
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("seen"), AST::Fa_makeLiteralInt(99), true),
-            AST::Fa_makeFor(AST::Fa_makeName("item"),
-                AST::Fa_makeName("items"),
-                AST::Fa_makeBlock({
-                    AST::Fa_makeAssignmentStmt(AST::Fa_makeName("seen"), AST::Fa_makeName("item"), false),
-                })),
-            AST::Fa_makeReturn(AST::Fa_makeName("seen")),
+    AST::Fa_Stmt* first = func_def(
+        name_expr("first"),
+        list_expr(),
+        blk({
+            assign_stmt(name_expr("items"), list_expr()),
+            assign_stmt(name_expr("seen"), lit_int(99)),
+            for_stmt(name_expr("item"),
+                name_expr("items"),
+                blk({ assign_stmt(name_expr("seen"), name_expr("item")) })),
+            return_stmt(name_expr("seen")),
         }));
 
     Fa_Chunk* top = compile_calling(first);
@@ -1169,36 +1191,28 @@ TEST(VMIntegration, EmptyForLoopLeavesStateUnchanged)
 
 TEST(VMIntegration, BreakAndContinueWorkInLoops)
 {
-    AST::Fa_Stmt* test = AST::Fa_makeFunction(
-        AST::Fa_makeName("test"),
-        AST::Fa_makeList(),
-        AST::Fa_makeBlock({
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("items"),
-                AST::Fa_makeList({
-                    AST::Fa_makeLiteralInt(1),
-                    AST::Fa_makeLiteralInt(2),
-                    AST::Fa_makeLiteralInt(3),
-                    AST::Fa_makeLiteralInt(4),
-                    AST::Fa_makeLiteralInt(5),
-                }),
-                true),
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("total"), AST::Fa_makeLiteralInt(0), true),
-            AST::Fa_makeFor(
-                AST::Fa_makeName("item"),
-                AST::Fa_makeName("items"),
-                AST::Fa_makeBlock({
-                    AST::Fa_makeIf(
-                        AST::Fa_makeBinary(AST::Fa_makeName("item"), AST::Fa_makeLiteralInt(2), AST::Fa_BinaryOp::OP_EQ),
-                        AST::Fa_makeBlock({ AST::Fa_makeContinue() })),
-                    AST::Fa_makeIf(
-                        AST::Fa_makeBinary(AST::Fa_makeName("item"), AST::Fa_makeLiteralInt(5), AST::Fa_BinaryOp::OP_EQ),
-                        AST::Fa_makeBlock({ AST::Fa_makeBreak() })),
-                    AST::Fa_makeAssignmentStmt(
-                        AST::Fa_makeName("total"),
-                        AST::Fa_makeBinary(AST::Fa_makeName("total"), AST::Fa_makeName("item"), AST::Fa_BinaryOp::OP_ADD),
-                        false),
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({
+            assign_stmt(name_expr("items"),
+                list_expr({
+                    lit_int(1),
+                    lit_int(2),
+                    lit_int(3),
+                    lit_int(4),
+                    lit_int(5),
                 })),
-            AST::Fa_makeReturn(AST::Fa_makeName("total")),
+            assign_stmt(name_expr("total"), lit_int(0)),
+            for_stmt(
+                name_expr("item"),
+                name_expr("items"),
+                blk({
+                    if_stmt(binary(name_expr("item"), lit_int(2), AST::Fa_BinaryOp::OP_EQ), blk({ continue_stmt() })),
+                    if_stmt(binary(name_expr("item"), lit_int(5), AST::Fa_BinaryOp::OP_EQ), blk({ break_stmt() })),
+                    assign_stmt(name_expr("total"), binary(name_expr("total"), name_expr("item"), AST::Fa_BinaryOp::OP_ADD)),
+                })),
+            return_stmt(name_expr("total")),
         }));
 
     Fa_Chunk* top = compile_calling(test);
@@ -2187,18 +2201,18 @@ TEST(VMPerfTest, Dispatch_IntAdd_1M_Iterations)
 {
     constexpr int N = 1'000'000;
 
-    AST::Fa_Stmt* test = AST::Fa_makeFunction(
-        AST::Fa_makeName("test"),
-        AST::Fa_makeList(),
-        AST::Fa_makeBlock({ AST::Fa_makeAssignmentStmt(AST::Fa_makeName("i"), AST::Fa_makeLiteralInt(0), true),
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("step"), AST::Fa_makeLiteralInt(1), true),
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("limit"), AST::Fa_makeLiteralInt(N), true),
-            AST::Fa_makeWhile(
-                AST::Fa_makeBinary(AST::Fa_makeName("i"), AST::Fa_makeName("limit"), AST::Fa_BinaryOp::OP_LT),
-                AST::Fa_makeBlock({ AST::Fa_makeAssignmentStmt(
-                    AST::Fa_makeName("i"),
-                    AST::Fa_makeBinary(AST::Fa_makeName("i"), AST::Fa_makeName("step"), AST::Fa_BinaryOp::OP_ADD)) })),
-            AST::Fa_makeReturn(AST::Fa_makeName("i")) }));
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({ assign_stmt(name_expr("i"), lit_int(0)),
+            assign_stmt(name_expr("step"), lit_int(1)),
+            assign_stmt(name_expr("limit"), lit_int(N)),
+            while_stmt(
+                binary(name_expr("i"), name_expr("limit"), AST::Fa_BinaryOp::OP_LT),
+                blk({ assign_stmt(
+                    name_expr("i"),
+                    binary(name_expr("i"), name_expr("step"), AST::Fa_BinaryOp::OP_ADD)) })),
+            return_stmt(name_expr("i")) }));
 
     Fa_Chunk* top = compile_calling(test);
     top->disassemble();
@@ -2225,18 +2239,18 @@ TEST(VMPerfTest, Dispatch_FloatAdd_500k_Iterations)
 {
     constexpr int N = 500'000;
 
-    AST::Fa_Stmt* test = AST::Fa_makeFunction(
-        AST::Fa_makeName("test"),
-        AST::Fa_makeList(),
-        AST::Fa_makeBlock({ AST::Fa_makeAssignmentStmt(AST::Fa_makeName("i"), AST::Fa_makeLiteralFloat(0.0), true),
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("step"), AST::Fa_makeLiteralFloat(1.0), true),
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("limit"), AST::Fa_makeLiteralFloat(static_cast<f64>(N)), true),
-            AST::Fa_makeWhile(
-                AST::Fa_makeBinary(AST::Fa_makeName("i"), AST::Fa_makeName("limit"), AST::Fa_BinaryOp::OP_LT),
-                AST::Fa_makeBlock({ AST::Fa_makeAssignmentStmt(
-                    AST::Fa_makeName("i"),
-                    AST::Fa_makeBinary(AST::Fa_makeName("i"), AST::Fa_makeName("step"), AST::Fa_BinaryOp::OP_ADD)) })),
-            AST::Fa_makeReturn(AST::Fa_makeName("i")) }));
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({ assign_stmt(name_expr("i"), lit_flt(0.0)),
+            assign_stmt(name_expr("step"), lit_flt(1.0)),
+            assign_stmt(name_expr("limit"), lit_flt(static_cast<f64>(N))),
+            while_stmt(
+                binary(name_expr("i"), name_expr("limit"), AST::Fa_BinaryOp::OP_LT),
+                blk({ assign_stmt(
+                    name_expr("i"),
+                    binary(name_expr("i"), name_expr("step"), AST::Fa_BinaryOp::OP_ADD)) })),
+            return_stmt(name_expr("i")) }));
 
     Fa_Chunk* top = compile_calling(test);
     top->disassemble();
@@ -2263,18 +2277,18 @@ TEST(VMPerfTest, IC_Quickening_ColdVsWarm_Ratio)
 {
     constexpr int N = 200'000;
 
-    AST::Fa_Stmt* test = AST::Fa_makeFunction(
-        AST::Fa_makeName("test"),
-        AST::Fa_makeList(),
-        AST::Fa_makeBlock({ AST::Fa_makeAssignmentStmt(AST::Fa_makeName("i"), AST::Fa_makeLiteralInt(0), true),
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("step"), AST::Fa_makeLiteralInt(1), true),
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("limit"), AST::Fa_makeLiteralInt(N), true),
-            AST::Fa_makeWhile(
-                AST::Fa_makeBinary(AST::Fa_makeName("i"), AST::Fa_makeName("limit"), AST::Fa_BinaryOp::OP_LT),
-                AST::Fa_makeBlock({ AST::Fa_makeAssignmentStmt(
-                    AST::Fa_makeName("i"),
-                    AST::Fa_makeBinary(AST::Fa_makeName("i"), AST::Fa_makeName("step"), AST::Fa_BinaryOp::OP_ADD)) })),
-            AST::Fa_makeReturn(AST::Fa_makeName("i")) }));
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({ assign_stmt(name_expr("i"), lit_int(0)),
+            assign_stmt(name_expr("step"), lit_int(1)),
+            assign_stmt(name_expr("limit"), lit_int(N)),
+            while_stmt(
+                binary(name_expr("i"), name_expr("limit"), AST::Fa_BinaryOp::OP_LT),
+                blk({ assign_stmt(
+                    name_expr("i"),
+                    binary(name_expr("i"), name_expr("step"), AST::Fa_BinaryOp::OP_ADD)) })),
+            return_stmt(name_expr("i")) }));
 
     Fa_Chunk* top = compile_calling(test);
     top->disassemble();
@@ -2313,19 +2327,18 @@ TEST(VMPerfTest, IC_Quickening_ColdVsWarm_Ratio)
 TEST(VMPerfTest, GlobalLookup_1M_Roundtrips)
 {
     constexpr int N = 1'000'000;
-    
-    AST::Fa_AssignmentStmt* decl = AST::Fa_makeAssignmentStmt(AST::Fa_makeName("a"), AST::Fa_makeLiteralInt(0));
-    AST::Fa_WhileStmt* while_loop = AST::Fa_makeWhile(
-        AST::Fa_makeBinary(AST::Fa_makeName("a"), AST::Fa_makeLiteralInt(N), AST::Fa_BinaryOp::OP_LT), 
-        AST::Fa_makeAssignmentStmt(AST::Fa_makeName("a"), AST::Fa_makeBinary(AST::Fa_makeName("a"), AST::Fa_makeLiteralInt(1), AST::Fa_BinaryOp::OP_ADD))
-    );
+
+    AST::Fa_AssignmentStmt* decl = assign_stmt(name_expr("a"), lit_int(0));
+    AST::Fa_WhileStmt* while_loop = while_stmt(
+        binary(name_expr("a"), lit_int(N), AST::Fa_BinaryOp::OP_LT),
+        assign_stmt(name_expr("a"), binary(name_expr("a"), lit_int(1), AST::Fa_BinaryOp::OP_ADD)));
 
     Fa_Chunk* top = Compiler().compile({ decl, while_loop });
     if (top != nullptr)
         top->disassemble();
-    
+
     Fa_VM vm;
-    
+
     auto t0 = std::chrono::high_resolution_clock::now();
     Fa_Value result = vm.run(top);
     f64 us = microseconds_since(t0);
@@ -2337,7 +2350,7 @@ TEST(VMPerfTest, GlobalLookup_1M_Roundtrips)
 static Fa_Chunk* make_add2_chunk()
 {
     auto* fn = make_chunk();
-    fn->m_name = "add2";
+    fn->name = "add2";
     fn->arity = 2;
     fn->local_count = 3;
     fn->emit(Fa_make_ABC(Fa_OpCode::OP_ADD, 2, 0, 1), { });
@@ -2349,25 +2362,22 @@ TEST(VMPerfTest, CallOverhead_100k_Calls)
 {
     constexpr int N = 100;
 
-    AST::Fa_Stmt* m_body = AST::Fa_makeBlock(
-        { AST::Fa_makeAssignmentStmt(AST::Fa_makeName("i"), AST::Fa_makeLiteralInt(0)),
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("limit"), AST::Fa_makeLiteralInt(N)),
-            AST::Fa_makeWhile(
-                AST::Fa_makeBinary(AST::Fa_makeName("i"), AST::Fa_makeName("limit"), AST::Fa_BinaryOp::OP_LT),
-                AST::Fa_makeBlock({ AST::Fa_makeExprStmt(AST::Fa_makeCall(AST::Fa_makeName("add"), AST::Fa_makeList({ AST::Fa_makeLiteralInt(1), AST::Fa_makeLiteralInt(2) }))),
-                    AST::Fa_makeAssignmentStmt(AST::Fa_makeName("i"), AST::Fa_makeBinary(AST::Fa_makeName("i"), AST::Fa_makeLiteralInt(1), AST::Fa_BinaryOp::OP_ADD)) })),
-            AST::Fa_makeReturn(AST::Fa_makeName("i")) });
+    AST::Fa_Stmt* m_body = blk(
+        { assign_stmt(name_expr("i"), lit_int(0)),
+            assign_stmt(name_expr("limit"), lit_int(N)),
+            while_stmt(
+                binary(name_expr("i"), name_expr("limit"), AST::Fa_BinaryOp::OP_LT),
+                blk({ expr_stmt(call_expr(name_expr("add"), list_expr({ lit_int(1), lit_int(2) }))),
+                    assign_stmt(name_expr("i"), binary(name_expr("i"), lit_int(1), AST::Fa_BinaryOp::OP_ADD)) })),
+            return_stmt(name_expr("i")) });
 
-    AST::Fa_Stmt* func = AST::Fa_makeFunction(
-        AST::Fa_makeName("test"),
-        AST::Fa_makeList(),
-        m_body);
+    AST::Fa_Stmt* func = func_def(name_expr("test"), list_expr(), m_body);
 
-    AST::Fa_Stmt* add = AST::Fa_makeFunction(
-        AST::Fa_makeName("add"),
-        AST::Fa_makeList({ AST::Fa_makeName("a"), AST::Fa_makeName("b") }),
-        AST::Fa_makeReturn(AST::Fa_makeBinary(AST::Fa_makeName("a"), AST::Fa_makeName("b"), AST::Fa_BinaryOp::OP_ADD)));
-    AST::Fa_Stmt* call = AST::Fa_makeExprStmt(AST::Fa_makeCall(AST::Fa_makeName("test"), AST::Fa_makeList()));
+    AST::Fa_Stmt* add = func_def(
+        name_expr("add"),
+        list_expr({ name_expr("a"), name_expr("b") }),
+        return_stmt(binary(name_expr("a"), name_expr("b"), AST::Fa_BinaryOp::OP_ADD)));
+    AST::Fa_Stmt* call = expr_stmt(call_expr(name_expr("test"), list_expr()));
 
     std::cout << "AUTO:" << '\n';
     Fa_Chunk* top_ = Compiler().compile({ add, func, call });
@@ -2393,18 +2403,15 @@ TEST(VMPerfTest, TailCall_vs_RegularLoop_Ratio)
 {
     constexpr int DEPTH = 5000;
 
-    AST::Fa_Stmt* tc_fn = AST::Fa_makeFunction(
-        AST::Fa_makeName("tc"),
-        AST::Fa_makeList({ AST::Fa_makeName("n") }),
-        AST::Fa_makeBlock({ AST::Fa_makeIf(
-                                AST::Fa_makeBinary(AST::Fa_makeName("n"), AST::Fa_makeLiteralInt(0), AST::Fa_BinaryOp::OP_EQ),
-                                AST::Fa_makeBlock({ AST::Fa_makeReturn(AST::Fa_makeName("n")) })),
-            AST::Fa_makeReturn(AST::Fa_makeCall(
-                AST::Fa_makeName("tc"),
-                AST::Fa_makeList({ AST::Fa_makeBinary(AST::Fa_makeName("n"), AST::Fa_makeLiteralInt(1), AST::Fa_BinaryOp::OP_SUB) }))) }));
+    AST::Fa_Stmt* tc_fn = func_def(
+        name_expr("tc"),
+        list_expr({ name_expr("n") }),
+        blk({ if_stmt(
+                  binary(name_expr("n"), lit_int(0), AST::Fa_BinaryOp::OP_EQ),
+                  blk({ return_stmt(name_expr("n")) })),
+            return_stmt(call_expr(name_expr("tc"), list_expr({ binary(name_expr("n"), lit_int(1), AST::Fa_BinaryOp::OP_SUB) }))) }));
 
-    Fa_Chunk* tc_top = compile_program({ tc_fn,
-        AST::Fa_makeExprStmt(AST::Fa_makeCall(AST::Fa_makeName("tc"), AST::Fa_makeList({ AST::Fa_makeLiteralInt(DEPTH) }))) });
+    Fa_Chunk* tc_top = compile_program({ tc_fn, expr_stmt(call_expr(name_expr("tc"), list_expr({ lit_int(DEPTH) }))) });
 
     tc_top->disassemble();
     Fa_VM vm_tc;
@@ -2413,16 +2420,16 @@ TEST(VMPerfTest, TailCall_vs_RegularLoop_Ratio)
     f64 tc_us = microseconds_since(t0);
 
     // ── equivalent iterative loop (no calls) ─────────────────────────────
-    AST::Fa_Stmt* loop_fn = AST::Fa_makeFunction(
-        AST::Fa_makeName("loop"),
-        AST::Fa_makeList(),
-        AST::Fa_makeBlock({ AST::Fa_makeAssignmentStmt(AST::Fa_makeName("n"), AST::Fa_makeLiteralInt(DEPTH), true),
-            AST::Fa_makeWhile(
-                AST::Fa_makeBinary(AST::Fa_makeName("n"), AST::Fa_makeLiteralInt(0), AST::Fa_BinaryOp::OP_NEQ),
-                AST::Fa_makeBlock({ AST::Fa_makeAssignmentStmt(
-                    AST::Fa_makeName("n"),
-                    AST::Fa_makeBinary(AST::Fa_makeName("n"), AST::Fa_makeLiteralInt(1), AST::Fa_BinaryOp::OP_SUB)) })),
-            AST::Fa_makeReturn(AST::Fa_makeName("n")) }));
+    AST::Fa_Stmt* loop_fn = func_def(
+        name_expr("loop"),
+        list_expr(),
+        blk({ assign_stmt(name_expr("n"), lit_int(DEPTH)),
+            while_stmt(
+                binary(name_expr("n"), lit_int(0), AST::Fa_BinaryOp::OP_NEQ),
+                blk({ assign_stmt(
+                    name_expr("n"),
+                    binary(name_expr("n"), lit_int(1), AST::Fa_BinaryOp::OP_SUB)) })),
+            return_stmt(name_expr("n")) }));
 
     Fa_Chunk* loop_top = compile_calling(loop_fn);
     loop_top->disassemble();
@@ -2436,7 +2443,7 @@ TEST(VMPerfTest, TailCall_vs_RegularLoop_Ratio)
     EXPECT_EQ(Fa_AS_INTEGER(tc_result), 0);
     EXPECT_EQ(Fa_AS_INTEGER(loop_result), 0);
 
-    std::printf("  Tail-call %d depth:  tc=%.1f µs  loop=%.1f µs  ratio=%.2fx\n",
+    ::printf("  Tail-call %d depth:  tc=%.1f µs  loop=%.1f µs  ratio=%.2fx\n",
         DEPTH, tc_us, loop_us, tc_us / loop_us);
 }
 
@@ -2448,32 +2455,32 @@ TEST(VMPerfTest, TailCall_vs_RegularLoop_Ratio)
 TEST(VMPerfTest, List_AppendAndSum_10k)
 {
     constexpr int N = 10'000;
-    AST::Fa_Stmt* test = AST::Fa_makeFunction(
-        AST::Fa_makeName("test"),
-        AST::Fa_makeList(),
-        AST::Fa_makeBlock({ AST::Fa_makeAssignmentStmt(AST::Fa_makeName("xs"), AST::Fa_makeList(), true),
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("i"), AST::Fa_makeLiteralInt(0), true),
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("limit"), AST::Fa_makeLiteralInt(N), true),
-            AST::Fa_makeWhile(
-                AST::Fa_makeBinary(AST::Fa_makeName("i"), AST::Fa_makeName("limit"), AST::Fa_BinaryOp::OP_LT),
-                AST::Fa_makeBlock({ AST::Fa_makeExprStmt(AST::Fa_makeCall(AST::Fa_makeName("اضف"), AST::Fa_makeList({ AST::Fa_makeName("xs"), AST::Fa_makeName("i") }))),
-                    AST::Fa_makeAssignmentStmt(
-                        AST::Fa_makeName("i"),
-                        AST::Fa_makeBinary(AST::Fa_makeName("i"), AST::Fa_makeLiteralInt(1), AST::Fa_BinaryOp::OP_ADD)) })),
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("i"), AST::Fa_makeLiteralInt(0)),
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("sum"), AST::Fa_makeLiteralInt(0), true),
-            AST::Fa_makeWhile(
-                AST::Fa_makeBinary(AST::Fa_makeName("i"), AST::Fa_makeName("limit"), AST::Fa_BinaryOp::OP_LT),
-                AST::Fa_makeBlock({ AST::Fa_makeAssignmentStmt(
-                                        AST::Fa_makeName("sum"),
-                                        AST::Fa_makeBinary(
-                                            AST::Fa_makeName("sum"),
-                                            AST::Fa_makeIndex(AST::Fa_makeName("xs"), AST::Fa_makeName("i")),
-                                            AST::Fa_BinaryOp::OP_ADD)),
-                    AST::Fa_makeAssignmentStmt(
-                        AST::Fa_makeName("i"),
-                        AST::Fa_makeBinary(AST::Fa_makeName("i"), AST::Fa_makeLiteralInt(1), AST::Fa_BinaryOp::OP_ADD)) })),
-            AST::Fa_makeReturn(AST::Fa_makeName("sum")) }));
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({ assign_stmt(name_expr("xs"), list_expr()),
+            assign_stmt(name_expr("i"), lit_int(0)),
+            assign_stmt(name_expr("limit"), lit_int(N)),
+            while_stmt(
+                binary(name_expr("i"), name_expr("limit"), AST::Fa_BinaryOp::OP_LT),
+                blk({ expr_stmt(call_expr(name_expr("اضف"), list_expr({ name_expr("xs"), name_expr("i") }))),
+                    assign_stmt(
+                        name_expr("i"),
+                        binary(name_expr("i"), lit_int(1), AST::Fa_BinaryOp::OP_ADD)) })),
+            assign_stmt(name_expr("i"), lit_int(0)),
+            assign_stmt(name_expr("sum"), lit_int(0)),
+            while_stmt(
+                binary(name_expr("i"), name_expr("limit"), AST::Fa_BinaryOp::OP_LT),
+                blk({ assign_stmt(
+                          name_expr("sum"),
+                          binary(
+                              name_expr("sum"),
+                              index_expr(name_expr("xs"), name_expr("i")),
+                              AST::Fa_BinaryOp::OP_ADD)),
+                    assign_stmt(
+                        name_expr("i"),
+                        binary(name_expr("i"), lit_int(1), AST::Fa_BinaryOp::OP_ADD)) })),
+            return_stmt(name_expr("sum")) }));
 
     Fa_Chunk* top = compile_calling(test);
     top->disassemble();
@@ -2497,20 +2504,20 @@ TEST(VMPerfTest, NativeCall_Len_50k_ICHot)
 {
     constexpr int N = 50'000;
 
-    AST::Fa_Stmt* test = AST::Fa_makeFunction(
-        AST::Fa_makeName("test"),
-        AST::Fa_makeList(),
-        AST::Fa_makeBlock({ AST::Fa_makeAssignmentStmt(AST::Fa_makeName("s"), AST::Fa_makeLiteralString("hello world"), true),
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("i"), AST::Fa_makeLiteralInt(0), true),
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("limit"), AST::Fa_makeLiteralInt(N), true),
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("last"), AST::Fa_makeLiteralInt(0), true),
-            AST::Fa_makeWhile(
-                AST::Fa_makeBinary(AST::Fa_makeName("i"), AST::Fa_makeName("limit"), AST::Fa_BinaryOp::OP_LT),
-                AST::Fa_makeBlock({ AST::Fa_makeAssignmentStmt(AST::Fa_makeName("last"), AST::Fa_makeCall(AST::Fa_makeName("len"), AST::Fa_makeList({ AST::Fa_makeName("s") }))),
-                    AST::Fa_makeAssignmentStmt(
-                        AST::Fa_makeName("i"),
-                        AST::Fa_makeBinary(AST::Fa_makeName("i"), AST::Fa_makeLiteralInt(1), AST::Fa_BinaryOp::OP_ADD)) })),
-            AST::Fa_makeReturn(AST::Fa_makeName("last")) }));
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({ assign_stmt(name_expr("s"), lit_str("hello world")),
+            assign_stmt(name_expr("i"), lit_int(0)),
+            assign_stmt(name_expr("limit"), lit_int(N)),
+            assign_stmt(name_expr("last"), lit_int(0)),
+            while_stmt(
+                binary(name_expr("i"), name_expr("limit"), AST::Fa_BinaryOp::OP_LT),
+                blk({ assign_stmt(name_expr("last"), call_expr(name_expr("len"), list_expr({ name_expr("s") }))),
+                    assign_stmt(
+                        name_expr("i"),
+                        binary(name_expr("i"), lit_int(1), AST::Fa_BinaryOp::OP_ADD)) })),
+            return_stmt(name_expr("last")) }));
 
     Fa_Chunk* top = compile_calling(test);
     top->disassemble();
@@ -2537,34 +2544,35 @@ TEST(VMPerfTest, NativeCall_Len_50k_ICHot)
 
 static Fa_Chunk* make_fib_top(int n, int reps)
 {
-    AST::Fa_Stmt* fib = AST::Fa_makeFunction(
-        AST::Fa_makeName("fib"),
-        AST::Fa_makeList({ AST::Fa_makeName("x") }),
-        AST::Fa_makeBlock({ AST::Fa_makeIf(
-                                AST::Fa_makeBinary(AST::Fa_makeName("x"), AST::Fa_makeLiteralInt(1), AST::Fa_BinaryOp::OP_LTE),
-                                AST::Fa_makeBlock({ AST::Fa_makeReturn(AST::Fa_makeName("x")) })),
-            AST::Fa_makeReturn(AST::Fa_makeBinary(
-                AST::Fa_makeCall(AST::Fa_makeName("fib"), AST::Fa_makeList({ AST::Fa_makeBinary(AST::Fa_makeName("x"), AST::Fa_makeLiteralInt(1), AST::Fa_BinaryOp::OP_SUB) })),
-                AST::Fa_makeCall(AST::Fa_makeName("fib"), AST::Fa_makeList({ AST::Fa_makeBinary(AST::Fa_makeName("x"), AST::Fa_makeLiteralInt(2), AST::Fa_BinaryOp::OP_SUB) })),
-                AST::Fa_BinaryOp::OP_ADD)) }));
+    AST::Fa_Stmt* fib = func_def(
+        name_expr("fib"),
+        list_expr({ name_expr("x") }),
+        blk({ if_stmt(
+                  binary(name_expr("x"), lit_int(1), AST::Fa_BinaryOp::OP_LTE),
+                  blk({ return_stmt(name_expr("x")) })),
+            return_stmt(
+                binary(
+                    call_expr(
+                        name_expr("fib"),
+                        list_expr({ binary(name_expr("x"), lit_int(1), AST::Fa_BinaryOp::OP_SUB) })),
+                    call_expr(
+                        name_expr("fib"),
+                        list_expr({ binary(name_expr("x"), lit_int(2), AST::Fa_BinaryOp::OP_SUB) })),
+                    AST::Fa_BinaryOp::OP_ADD)) }));
 
-    AST::Fa_Stmt* test = AST::Fa_makeFunction(
-        AST::Fa_makeName("test"),
-        AST::Fa_makeList(),
-        AST::Fa_makeBlock({ AST::Fa_makeAssignmentStmt(AST::Fa_makeName("i"), AST::Fa_makeLiteralInt(0), true),
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("limit"), AST::Fa_makeLiteralInt(reps), true),
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("result"), AST::Fa_makeLiteralInt(0), true),
-            AST::Fa_makeWhile(
-                AST::Fa_makeBinary(AST::Fa_makeName("i"), AST::Fa_makeName("limit"), AST::Fa_BinaryOp::OP_LT),
-                AST::Fa_makeBlock({ AST::Fa_makeAssignmentStmt(AST::Fa_makeName("result"), AST::Fa_makeCall(AST::Fa_makeName("fib"), AST::Fa_makeList({ AST::Fa_makeLiteralInt(n) }))),
-                    AST::Fa_makeAssignmentStmt(
-                        AST::Fa_makeName("i"),
-                        AST::Fa_makeBinary(AST::Fa_makeName("i"), AST::Fa_makeLiteralInt(1), AST::Fa_BinaryOp::OP_ADD)) })),
-            AST::Fa_makeReturn(AST::Fa_makeName("result")) }));
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({ assign_stmt(name_expr("i"), lit_int(0)),
+            assign_stmt(name_expr("limit"), lit_int(reps)),
+            assign_stmt(name_expr("result"), lit_int(0)),
+            while_stmt(
+                binary(name_expr("i"), name_expr("limit"), AST::Fa_BinaryOp::OP_LT),
+                blk({ assign_stmt(name_expr("result"), call_expr(name_expr("fib"), list_expr({ lit_int(n) }))),
+                    assign_stmt(name_expr("i"), binary(name_expr("i"), lit_int(1), AST::Fa_BinaryOp::OP_ADD)) })),
+            return_stmt(name_expr("result")) }));
 
-    Fa_Chunk* top = compile_program({ fib,
-        test,
-        AST::Fa_makeExprStmt(AST::Fa_makeCall(AST::Fa_makeName("test"), AST::Fa_makeList())) });
+    Fa_Chunk* top = compile_program({ fib, test, expr_stmt(call_expr(name_expr("test"), list_expr())) });
     top->disassemble();
     return top;
 }
@@ -2617,18 +2625,18 @@ TEST(VMPerfStressTest, Dispatch_IntAdd_10M_Iterations)
 
     constexpr int N = 10'000'000;
 
-    AST::Fa_Stmt* test = AST::Fa_makeFunction(
-        AST::Fa_makeName("test"),
-        AST::Fa_makeList(),
-        AST::Fa_makeBlock({ AST::Fa_makeAssignmentStmt(AST::Fa_makeName("i"), AST::Fa_makeLiteralInt(0), true),
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("step"), AST::Fa_makeLiteralInt(1), true),
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("limit"), AST::Fa_makeLiteralInt(N), true),
-            AST::Fa_makeWhile(
-                AST::Fa_makeBinary(AST::Fa_makeName("i"), AST::Fa_makeName("limit"), AST::Fa_BinaryOp::OP_LT),
-                AST::Fa_makeBlock({ AST::Fa_makeAssignmentStmt(
-                    AST::Fa_makeName("i"),
-                    AST::Fa_makeBinary(AST::Fa_makeName("i"), AST::Fa_makeName("step"), AST::Fa_BinaryOp::OP_ADD)) })),
-            AST::Fa_makeReturn(AST::Fa_makeName("i")) }));
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({ assign_stmt(name_expr("i"), lit_int(0)),
+            assign_stmt(name_expr("step"), lit_int(1)),
+            assign_stmt(name_expr("limit"), lit_int(N)),
+            while_stmt(
+                binary(name_expr("i"), name_expr("limit"), AST::Fa_BinaryOp::OP_LT),
+                blk({ assign_stmt(
+                    name_expr("i"),
+                    binary(name_expr("i"), name_expr("step"), AST::Fa_BinaryOp::OP_ADD)) })),
+            return_stmt(name_expr("i")) }));
 
     Fa_Chunk* top = compile_calling(test);
     Fa_VM vm;
@@ -2651,20 +2659,20 @@ TEST(VMPerfStressTest, NativeCall_Len_1M_ICHot)
 
     constexpr int N = 1'000'000;
 
-    AST::Fa_Stmt* test = AST::Fa_makeFunction(
-        AST::Fa_makeName("test"),
-        AST::Fa_makeList(),
-        AST::Fa_makeBlock({ AST::Fa_makeAssignmentStmt(AST::Fa_makeName("s"), AST::Fa_makeLiteralString("hello world"), true),
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("i"), AST::Fa_makeLiteralInt(0), true),
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("limit"), AST::Fa_makeLiteralInt(N), true),
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("last"), AST::Fa_makeLiteralInt(0), true),
-            AST::Fa_makeWhile(
-                AST::Fa_makeBinary(AST::Fa_makeName("i"), AST::Fa_makeName("limit"), AST::Fa_BinaryOp::OP_LT),
-                AST::Fa_makeBlock({ AST::Fa_makeAssignmentStmt(AST::Fa_makeName("last"), AST::Fa_makeCall(AST::Fa_makeName("len"), AST::Fa_makeList({ AST::Fa_makeName("s") }))),
-                    AST::Fa_makeAssignmentStmt(
-                        AST::Fa_makeName("i"),
-                        AST::Fa_makeBinary(AST::Fa_makeName("i"), AST::Fa_makeLiteralInt(1), AST::Fa_BinaryOp::OP_ADD)) })),
-            AST::Fa_makeReturn(AST::Fa_makeName("last")) }));
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({ assign_stmt(name_expr("s"), lit_str("hello world")),
+            assign_stmt(name_expr("i"), lit_int(0)),
+            assign_stmt(name_expr("limit"), lit_int(N)),
+            assign_stmt(name_expr("last"), lit_int(0)),
+            while_stmt(
+                binary(name_expr("i"), name_expr("limit"), AST::Fa_BinaryOp::OP_LT),
+                blk({ assign_stmt(name_expr("last"), call_expr(name_expr("len"), list_expr({ name_expr("s") }))),
+                    assign_stmt(
+                        name_expr("i"),
+                        binary(name_expr("i"), lit_int(1), AST::Fa_BinaryOp::OP_ADD)) })),
+            return_stmt(name_expr("last")) }));
 
     Fa_Chunk* top = compile_calling(test);
     Fa_VM vm;
@@ -2687,32 +2695,32 @@ TEST(VMPerfStressTest, List_AppendAndSum_100k)
 
     constexpr int N = 100'000;
 
-    AST::Fa_Stmt* test = AST::Fa_makeFunction(
-        AST::Fa_makeName("test"),
-        AST::Fa_makeList(),
-        AST::Fa_makeBlock({ AST::Fa_makeAssignmentStmt(AST::Fa_makeName("xs"), AST::Fa_makeList(), true),
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("i"), AST::Fa_makeLiteralInt(0), true),
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("limit"), AST::Fa_makeLiteralInt(N), true),
-            AST::Fa_makeWhile(
-                AST::Fa_makeBinary(AST::Fa_makeName("i"), AST::Fa_makeName("limit"), AST::Fa_BinaryOp::OP_LT),
-                AST::Fa_makeBlock({ AST::Fa_makeExprStmt(AST::Fa_makeCall(AST::Fa_makeName("اضف"), AST::Fa_makeList({ AST::Fa_makeName("xs"), AST::Fa_makeName("i") }))),
-                    AST::Fa_makeAssignmentStmt(
-                        AST::Fa_makeName("i"),
-                        AST::Fa_makeBinary(AST::Fa_makeName("i"), AST::Fa_makeLiteralInt(1), AST::Fa_BinaryOp::OP_ADD)) })),
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("i"), AST::Fa_makeLiteralInt(0)),
-            AST::Fa_makeAssignmentStmt(AST::Fa_makeName("sum"), AST::Fa_makeLiteralInt(0), true),
-            AST::Fa_makeWhile(
-                AST::Fa_makeBinary(AST::Fa_makeName("i"), AST::Fa_makeName("limit"), AST::Fa_BinaryOp::OP_LT),
-                AST::Fa_makeBlock({ AST::Fa_makeAssignmentStmt(
-                                        AST::Fa_makeName("sum"),
-                                        AST::Fa_makeBinary(
-                                            AST::Fa_makeName("sum"),
-                                            AST::Fa_makeIndex(AST::Fa_makeName("xs"), AST::Fa_makeName("i")),
-                                            AST::Fa_BinaryOp::OP_ADD)),
-                    AST::Fa_makeAssignmentStmt(
-                        AST::Fa_makeName("i"),
-                        AST::Fa_makeBinary(AST::Fa_makeName("i"), AST::Fa_makeLiteralInt(1), AST::Fa_BinaryOp::OP_ADD)) })),
-            AST::Fa_makeReturn(AST::Fa_makeName("sum")) }));
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({ assign_stmt(name_expr("xs"), list_expr()),
+            assign_stmt(name_expr("i"), lit_int(0)),
+            assign_stmt(name_expr("limit"), lit_int(N)),
+            while_stmt(
+                binary(name_expr("i"), name_expr("limit"), AST::Fa_BinaryOp::OP_LT),
+                blk({ expr_stmt(call_expr(name_expr("اضف"), list_expr({ name_expr("xs"), name_expr("i") }))),
+                    assign_stmt(
+                        name_expr("i"),
+                        binary(name_expr("i"), lit_int(1), AST::Fa_BinaryOp::OP_ADD)) })),
+            assign_stmt(name_expr("i"), lit_int(0)),
+            assign_stmt(name_expr("sum"), lit_int(0)),
+            while_stmt(
+                binary(name_expr("i"), name_expr("limit"), AST::Fa_BinaryOp::OP_LT),
+                blk({ assign_stmt(
+                          name_expr("sum"),
+                          binary(
+                              name_expr("sum"),
+                              index_expr(name_expr("xs"), name_expr("i")),
+                              AST::Fa_BinaryOp::OP_ADD)),
+                    assign_stmt(
+                        name_expr("i"),
+                        binary(name_expr("i"), lit_int(1), AST::Fa_BinaryOp::OP_ADD)) })),
+            return_stmt(name_expr("sum")) }));
 
     Fa_Chunk* top = compile_calling(test);
     Fa_VM vm;

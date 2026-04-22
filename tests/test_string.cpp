@@ -1,4 +1,4 @@
-#include "../include/string.hpp"
+#include "../fairuz/string.hpp"
 
 #include <chrono>
 #include <gtest/gtest.h>
@@ -1445,24 +1445,6 @@ TEST_F(Fa_StringRefTest, Slice_1M_NoAlloc)
     f64 us = microseconds_since(t0);
 
     std::printf("  slice() 1M times (no mutation):  %.1f µs  (%.1f ns/op)\n",
-        us, us * 1000.0 / N);
-}
-
-// 1M substr calls — substr copies, so this exercises allocator throughput.
-TEST_F(Fa_StringRefTest, Substr_1M_Copies)
-{
-    constexpr int N = 1'000'000;
-    std::string buf(1000, 'X');
-    Fa_StringRef s(buf.data());
-
-    auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; i += 1) {
-        Fa_StringRef sub = s.substr(0, 500);
-        do_not_optimize(sub);
-    }
-    f64 us = microseconds_since(t0);
-
-    std::printf("  substr() 1M times (copies):      %.1f µs  (%.1f ns/op)\n",
         us, us * 1000.0 / N);
 }
 

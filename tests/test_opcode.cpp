@@ -1,4 +1,4 @@
-#include "../include/opcode.hpp"
+#include "../fairuz/opcode.hpp"
 
 #include <gtest/gtest.h>
 

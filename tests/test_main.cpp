@@ -1,4 +1,4 @@
-#include "../include/arena.hpp"
+#include "../fairuz/../fairuz/arena.hpp"
 #include "test_config.h"
 
 #include <gtest/gtest.h>
@@ -34,7 +34,7 @@ int main(int argc, char** argv)
 
     int ret = RUN_ALL_TESTS();
 
-#ifdef fairuz_DEBUG
+#ifdef FAIRUZ_DEBUG
 
     if (test_config::verbose) {
         std::cout << get_allocator().to_string(true) << '\n';
@@ -45,7 +45,7 @@ int main(int argc, char** argv)
         std::cout << '\n';
         std::cout << get_allocator().to_string(true) << std::endl;
     }
-#endif // fairuz_DEBUG
+#endif // FAIRUZ_DEBUG
     fairuz::g_context = nullptr;
 
     return ret;

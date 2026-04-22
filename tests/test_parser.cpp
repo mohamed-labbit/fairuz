@@ -1,10 +1,10 @@
-#include "../include/ast_printer.hpp"
-#include "../include/parser.hpp"
-#include "ast.hpp"
-#include "lexer.hpp"
+#include "../fairuz/ast_printer.hpp"
+#include "../fairuz/parser.hpp"
 #include "test_config.h"
 
+#include <fstream>
 #include <gtest/gtest.h>
+#include <iostream>
 
 using namespace fairuz;
 using namespace fairuz::parser;
@@ -29,13 +29,13 @@ public:
     }
 
     template<typename T>
-    T* parse_and_cast(Fa_Parser& parser, AST::Fa_Expr*& m_expr)
+    T* parse_and_cast(AST::Fa_Expr*& expr)
     {
-        EXPECT_NE(m_expr, nullptr) << "Expression should not be null";
-        if (!m_expr)
+        EXPECT_NE(expr, nullptr) << "Expression should not be null";
+        if (!expr)
             return nullptr;
 
-        T* casted = reinterpret_cast<T*>(m_expr);
+        T* casted = reinterpret_cast<T*>(expr);
         EXPECT_NE(casted, nullptr) << "Failed to cast to expected type";
         return casted;
     }
@@ -841,93 +841,144 @@ TEST_F(ParserTest, ParseComplexeIfStatement)
     EXPECT_FALSE(as<AST::Fa_LiteralExpr>(assign->get_value())->get_bool());
 }
 
-
-TEST_F(ParserTest, ParseAugmentedAssignmentPlus) {
+TEST_F(ParserTest, ParseAugmentedAssignmentPlus)
+{
     // a += b -> a := a + b
     Fa_FileManager file_manager(parser_test_cases_dir() / "augmented_assign_plus.fa");
     Fa_Parser parser(&file_manager);
-    
+
     auto assign_expr = as<AST::Fa_AssignmentExpr>(parser.parse_assignment_expr().value());
     if (test_config::print_ast)
         AST_Printer.print(assign_expr);
-    
+
     auto target = assign_expr->get_target();
     auto value_as_binary = as<AST::Fa_BinaryExpr>(assign_expr->get_value());
-    
+
     EXPECT_EQ(as<AST::Fa_NameExpr>(target)->get_value(), "ا");
     EXPECT_EQ(as<AST::Fa_NameExpr>(value_as_binary->get_left())->get_value(), "ا");
     EXPECT_EQ(as<AST::Fa_NameExpr>(value_as_binary->get_right())->get_value(), "ب");
     EXPECT_EQ(value_as_binary->get_operator(), AST::Fa_BinaryOp::OP_ADD);
 }
 
-TEST_F(ParserTest, ParseAugmentedAssignmentMinus) {
+TEST_F(ParserTest, ParseAugmentedAssignmentMinus)
+{
     // a -= b -> a := a - b
     Fa_FileManager file_manager(parser_test_cases_dir() / "augmented_assign_minus.fa");
     Fa_Parser parser(&file_manager);
-    
+
     auto assign_expr = as<AST::Fa_AssignmentExpr>(parser.parse_assignment_expr().value());
     if (test_config::print_ast)
         AST_Printer.print(assign_expr);
-    
+
     auto target = assign_expr->get_target();
     auto value_as_binary = as<AST::Fa_BinaryExpr>(assign_expr->get_value());
-    
+
     EXPECT_EQ(as<AST::Fa_NameExpr>(target)->get_value(), "ا");
     EXPECT_EQ(as<AST::Fa_NameExpr>(value_as_binary->get_left())->get_value(), "ا");
     EXPECT_EQ(as<AST::Fa_NameExpr>(value_as_binary->get_right())->get_value(), "ب");
     EXPECT_EQ(value_as_binary->get_operator(), AST::Fa_BinaryOp::OP_SUB);
 }
 
-TEST_F(ParserTest, ParseAugmentedAssignmentTimes) {
+TEST_F(ParserTest, ParseAugmentedAssignmentTimes)
+{
     // a *= b -> a := a * b
     Fa_FileManager file_manager(parser_test_cases_dir() / "augmented_assign_times.fa");
     Fa_Parser parser(&file_manager);
-    
+
     auto assign_expr = as<AST::Fa_AssignmentExpr>(parser.parse_assignment_expr().value());
     if (test_config::print_ast)
         AST_Printer.print(assign_expr);
-    
+
     auto target = assign_expr->get_target();
     auto value_as_binary = as<AST::Fa_BinaryExpr>(assign_expr->get_value());
-    
+
     EXPECT_EQ(as<AST::Fa_NameExpr>(target)->get_value(), "ا");
     EXPECT_EQ(as<AST::Fa_NameExpr>(value_as_binary->get_left())->get_value(), "ا");
     EXPECT_EQ(as<AST::Fa_NameExpr>(value_as_binary->get_right())->get_value(), "ب");
     EXPECT_EQ(value_as_binary->get_operator(), AST::Fa_BinaryOp::OP_MUL);
 }
 
-TEST_F(ParserTest, ParseAugmentedAssignmentDiv) {
+TEST_F(ParserTest, ParseAugmentedAssignmentDiv)
+{
     // a /= b -> a := a / b
     Fa_FileManager file_manager(parser_test_cases_dir() / "augmented_assign_div.fa");
     Fa_Parser parser(&file_manager);
-    
+
     auto assign_expr = as<AST::Fa_AssignmentExpr>(parser.parse_assignment_expr().value());
     if (test_config::print_ast)
         AST_Printer.print(assign_expr);
-    
+
     auto target = assign_expr->get_target();
     auto value_as_binary = as<AST::Fa_BinaryExpr>(assign_expr->get_value());
-    
+
     EXPECT_EQ(as<AST::Fa_NameExpr>(target)->get_value(), "ا");
     EXPECT_EQ(as<AST::Fa_NameExpr>(value_as_binary->get_left())->get_value(), "ا");
     EXPECT_EQ(as<AST::Fa_NameExpr>(value_as_binary->get_right())->get_value(), "ب");
     EXPECT_EQ(value_as_binary->get_operator(), AST::Fa_BinaryOp::OP_DIV);
 }
 
-TEST_F(ParserTest, ParseAugmentedAssignmentMod) {
+TEST_F(ParserTest, ParseAugmentedAssignmentMod)
+{
     // a %= b -> a := a % b
     Fa_FileManager file_manager(parser_test_cases_dir() / "augmented_assign_mod.fa");
     Fa_Parser parser(&file_manager);
-    
+
     auto assign_expr = as<AST::Fa_AssignmentExpr>(parser.parse_assignment_expr().value());
     if (test_config::print_ast)
         AST_Printer.print(assign_expr);
-    
+
     auto target = assign_expr->get_target();
     auto value_as_binary = as<AST::Fa_BinaryExpr>(assign_expr->get_value());
-    
+
     EXPECT_EQ(as<AST::Fa_NameExpr>(target)->get_value(), "ا");
     EXPECT_EQ(as<AST::Fa_NameExpr>(value_as_binary->get_left())->get_value(), "ا");
     EXPECT_EQ(as<AST::Fa_NameExpr>(value_as_binary->get_right())->get_value(), "ب");
     EXPECT_EQ(value_as_binary->get_operator(), AST::Fa_BinaryOp::OP_MOD);
+}
+
+TEST_F(ParserTest, ParseClassMethodPreservesMetadataAndMemberInit)
+{
+    auto path = std::filesystem::temp_directory_path() / "fairuz_class_parser_test.fa";
+    {
+        std::ofstream out(path);
+        ASSERT_TRUE(out.good());
+        out << std::string("نوع Point:\n"
+                           "    دالة make(x, y):\n"
+                           "        .x := x\n"
+                           "        .y := y\n");
+    }
+
+    Fa_FileManager fm(path);
+    Fa_Parser parser(&fm);
+    Fa_Array<AST::Fa_Stmt*> program = parser.parse_program();
+
+    ASSERT_EQ(program.size(), 1u);
+
+    auto* class_def = as<AST::Fa_ClassDef>(program[0]);
+    ASSERT_NE(class_def, nullptr);
+
+    auto* class_name = as<AST::Fa_NameExpr>(class_def->get_name());
+    EXPECT_EQ(class_name->get_value(), "Point");
+
+    ASSERT_EQ(class_def->get_members().size(), 2u);
+    EXPECT_EQ(as<AST::Fa_NameExpr>(class_def->get_members()[0])->get_value(), "x");
+    EXPECT_EQ(as<AST::Fa_NameExpr>(class_def->get_members()[1])->get_value(), "y");
+
+    ASSERT_EQ(class_def->get_methods().size(), 1u);
+    auto* method = as<AST::Fa_FunctionDef>(class_def->get_methods()[0]);
+    EXPECT_EQ(method->get_name()->get_value(), "make");
+    ASSERT_EQ(method->get_parameters().size(), 2u);
+    EXPECT_EQ(as<AST::Fa_NameExpr>(method->get_parameters()[0])->get_value(), "x");
+    EXPECT_EQ(as<AST::Fa_NameExpr>(method->get_parameters()[1])->get_value(), "y");
+
+    auto* body = as<AST::Fa_BlockStmt>(method->get_body());
+    ASSERT_EQ(body->get_statements().size(), 2u);
+
+    auto* first_stmt = as<AST::Fa_ExprStmt>(body->get_statements()[0]);
+    auto* first_assign = as<AST::Fa_AssignmentExpr>(first_stmt->get_expr());
+    auto* first_target = as<AST::Fa_IndexExpr>(first_assign->get_target());
+
+    EXPECT_EQ(as<AST::Fa_NameExpr>(first_target->get_object())->get_value(), "__class$instance");
+    EXPECT_EQ(as<AST::Fa_LiteralExpr>(first_target->get_index())->get_str(), "x");
+    EXPECT_EQ(as<AST::Fa_NameExpr>(first_assign->get_value())->get_value(), "x");
 }

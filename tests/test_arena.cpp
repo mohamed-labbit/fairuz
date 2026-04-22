@@ -1,4 +1,4 @@
-#include "../include/arena.hpp"
+#include "../fairuz/../fairuz/arena.hpp"
 
 #include <gtest/gtest.h>
 
@@ -10,7 +10,7 @@ private:
 
 public:
     TestAllocator()
-        : allocator_(static_cast<i32>(Fa_ArenaAllocator::GrowthStrategy::LINEAR))
+        : allocator_(Fa_ArenaAllocator::GrowthStrategy::LINEAR)
     {
     }
 
@@ -466,6 +466,106 @@ TEST(F_ArenaBlockTest, MoveConstruction)
     EXPECT_EQ(block1.size(), 0);
     EXPECT_EQ(block1.begin(), nullptr);
 }
+
+#ifdef FAIRUZ_DEBUG
+TEST(ArenaAllocatorStatsTest, TracksRequestedBytesPeakAndBlocks)
+{
+    Fa_ArenaAllocator allocator(Fa_ArenaAllocator::GrowthStrategy::LINEAR, nullptr, true);
+
+    void* first = allocator.allocate(13);
+    void* second = allocator.allocate(29);
+
+    ASSERT_NE(first, nullptr);
+    ASSERT_NE(second, nullptr);
+
+    DetailedAllocStats const& after_alloc = allocator.stats();
+    EXPECT_EQ(after_alloc.TotalAllocations, 2u);
+    EXPECT_EQ(after_alloc.TotalDeallocations, 0u);
+    EXPECT_EQ(after_alloc.TotalAllocated, 42u);
+    EXPECT_EQ(after_alloc.TotalDeallocated, 0u);
+    EXPECT_EQ(after_alloc.CurrentlyAllocated, 42u);
+    EXPECT_EQ(after_alloc.PeakAllocated, 42u);
+    EXPECT_EQ(after_alloc.ActiveBlocks, 1u);
+    EXPECT_EQ(after_alloc.BlockAllocations, 1u);
+    EXPECT_EQ(after_alloc.BlockExpansions, 0u);
+    EXPECT_TRUE(allocator.verify_allocation(first));
+    EXPECT_TRUE(allocator.verify_allocation(second));
+
+    allocator.deallocate(second, 29);
+
+    DetailedAllocStats const& after_dealloc = allocator.stats();
+    EXPECT_EQ(after_dealloc.TotalDeallocations, 1u);
+    EXPECT_EQ(after_dealloc.TotalDeallocated, 29u);
+    EXPECT_EQ(after_dealloc.CurrentlyAllocated, 13u);
+    EXPECT_EQ(after_dealloc.PeakAllocated, 42u);
+    EXPECT_EQ(after_dealloc.ActiveBlocks, 1u);
+    EXPECT_TRUE(allocator.verify_allocation(first));
+    EXPECT_FALSE(allocator.verify_allocation(second));
+}
+
+TEST(ArenaAllocatorStatsTest, DeallocateReclaimsAlignmentPadding)
+{
+    Fa_ArenaAllocator allocator(Fa_ArenaAllocator::GrowthStrategy::LINEAR, nullptr, true);
+
+    void* first = allocator.allocate(1);
+    void* aligned = allocator.allocate(1, 64);
+
+    ASSERT_NE(first, nullptr);
+    ASSERT_NE(aligned, nullptr);
+
+    allocator.deallocate(aligned, 1);
+
+    void* third = allocator.allocate(1);
+    ASSERT_NE(third, nullptr);
+    EXPECT_NE(third, aligned);
+
+    DetailedAllocStats const& stats = allocator.stats();
+    EXPECT_EQ(stats.TotalAllocations, 3u);
+    EXPECT_EQ(stats.TotalDeallocations, 1u);
+    EXPECT_EQ(stats.CurrentlyAllocated, 2u);
+}
+
+TEST(ArenaAllocatorStatsTest, DistinguishesInvalidAndDoubleFreeAttempts)
+{
+    Fa_ArenaAllocator allocator(Fa_ArenaAllocator::GrowthStrategy::LINEAR, nullptr, true);
+
+    void* first = allocator.allocate(8);
+    void* second = allocator.allocate(16);
+
+    ASSERT_NE(first, nullptr);
+    ASSERT_NE(second, nullptr);
+
+    allocator.deallocate(first, 8);
+
+    DetailedAllocStats const& after_invalid = allocator.stats();
+    EXPECT_EQ(after_invalid.InvalidFreeAttempts, 1u);
+    EXPECT_EQ(after_invalid.DoubleFreeAttempts, 0u);
+    EXPECT_EQ(after_invalid.TotalDeallocations, 0u);
+
+    allocator.deallocate(second, 16);
+    allocator.deallocate(second, 16);
+
+    DetailedAllocStats const& after_double = allocator.stats();
+    EXPECT_EQ(after_double.InvalidFreeAttempts, 1u);
+    EXPECT_EQ(after_double.DoubleFreeAttempts, 1u);
+    EXPECT_EQ(after_double.TotalDeallocations, 1u);
+    EXPECT_EQ(after_double.TotalDeallocated, 16u);
+    EXPECT_EQ(after_double.CurrentlyAllocated, 8u);
+}
+
+TEST(ArenaAllocatorStatsTest, TracksBlockAllocationAndExpansionCounts)
+{
+    Fa_ArenaAllocator allocator(Fa_ArenaAllocator::GrowthStrategy::LINEAR, nullptr, true);
+
+    ASSERT_NE(allocator.allocate(DEFAULT_BLOCK_SIZE), nullptr);
+    ASSERT_NE(allocator.allocate(DEFAULT_BLOCK_SIZE), nullptr);
+
+    DetailedAllocStats const& stats = allocator.stats();
+    EXPECT_EQ(stats.ActiveBlocks, 2u);
+    EXPECT_EQ(stats.BlockAllocations, 2u);
+    EXPECT_EQ(stats.BlockExpansions, 1u);
+}
+#endif // FAIRUZ_DEBUG
 
 TEST(ArenaAllocatorPerformance, ResetPerformance)
 {

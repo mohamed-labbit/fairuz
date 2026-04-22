@@ -1,4 +1,4 @@
-#include "../include/table.hpp"
+#include "../fairuz/table.hpp"
 
 #include <gtest/gtest.h>
 
