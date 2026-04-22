@@ -781,7 +781,7 @@ TEST(VMDicts, SetUpdatesAndAppendsByKey)
     Fa_Chunk* ch = Compiler().compile(
         {
             func_def(
-                name_expr("func"), 
+                name_expr("func"),
                 list_expr(),
                 blk({
                     decl_stmt("dict", dict_expr({ })),
@@ -791,13 +791,10 @@ TEST(VMDicts, SetUpdatesAndAppendsByKey)
                         list_expr({
                             index_expr(name_expr("dict"), lit_str("fk")),
                             index_expr(name_expr("dict"), lit_str("sk")),
-                        })
-                    ),
-                })
-            ),
+                        })),
+                })),
             expr_stmt(call_expr(name_expr("func"))),
-        }
-    );
+        });
 
     if (ch != nullptr)
         ch->disassemble();
@@ -807,8 +804,8 @@ TEST(VMDicts, SetUpdatesAndAppendsByKey)
     ASSERT_TRUE(Fa_IS_LIST(result));
     Fa_ObjList* ret_obj = Fa_AS_LIST(result);
     ASSERT_EQ(ret_obj->size(), 2);
-    EXPECT_EQ(ret_obj->elements[0], 1);
-    EXPECT_EQ(ret_obj->elements[1], 2);
+    EXPECT_EQ(Fa_AS_INTEGER(ret_obj->elements[0]), 1);
+    EXPECT_EQ(Fa_AS_INTEGER(ret_obj->elements[1]), 2);
 }
 
 TEST(VMDicts, MissingKeyReturnsNil)
