@@ -148,6 +148,8 @@ public:
     void unget(u32 const cp);
     Fa_StringRef get_line_at(u32 const line_idx) const { return m_file_manager->get_line_at(line_idx); }
     Fa_SourceLocation get_source_location() const { return m_context; }
+    Fa_StringRef source_slice(u64 const start, u64 const end) { return m_file_manager->buffer().slice(start, end); }
+    void refresh_current_();
 
 private:
     struct PushbackEntry {

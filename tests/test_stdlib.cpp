@@ -24,7 +24,7 @@ std::string as_std_string(Fa_Value m_value)
     EXPECT_TRUE(Fa_IS_STRING(m_value));
     if (!Fa_IS_STRING(m_value))
         return { };
-    return std::string(Fa_AS_STRING(m_value)->str.data(), Fa_AS_STRING(m_value)->str.len());
+    return std::string(Fa_AS_STRING(m_value)->str.data());
 }
 
 double elapsed_us(std::chrono::high_resolution_clock::time_point start)

@@ -1,12 +1,14 @@
-#include "include/ast_printer.hpp"
-#include "include/compiler.hpp"
-#include "include/diagnostic.hpp"
-#include "include/lexer.hpp"
-#include "include/parser.hpp"
-#include "include/vm.hpp"
+#include "fairuz/ast_printer.hpp"
+#include "fairuz/compiler.hpp"
+#include "fairuz/diagnostic.hpp"
+#include "fairuz/formatter.hpp"
+#include "fairuz/lexer.hpp"
+#include "fairuz/parser.hpp"
+#include "fairuz/vm.hpp"
 
 #include <chrono>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <string>
 #include <string_view>
@@ -34,12 +36,14 @@ struct Options {
     bool check_only { false };
     bool show_help { false };
     bool show_version { false };
+    bool format_file { false };
     std::string input_path;
 }; // struct Options
 
 void printUsage(std::ostream& out, std::string_view program)
 {
     out << "Usage: " << program << " <file> [options]\n"
+        << "       " << program << " format <file>\n"
         << "\n"
         << "Options:\n"
         << "  -h, --help           Show this help message\n"
@@ -48,6 +52,7 @@ void printUsage(std::ostream& out, std::string_view program)
         << "  --dump-bytecode      Print compiled bytecode\n"
         << "  --time               Print execution time to stderr\n"
         << "  --check              Parse and compile only, do not execute\n"
+        << "  format               Rewrite the input file with canonical formatting\n"
         << "\n"
         << "Options may appear before or after <file>.\n";
 }
@@ -86,6 +91,10 @@ bool parseArgs(int argc, char** argv, Options& options)
             options.check_only = true;
             continue;
         }
+        if (arg == "format") {
+            options.format_file = true;
+            continue;
+        }
         if (!arg.empty() && arg.front() == '-') {
             std::cerr << "Unknown option: " << arg << "\n";
             return false;
@@ -100,11 +109,11 @@ bool parseArgs(int argc, char** argv, Options& options)
     return true;
 }
 
-void printAst(fairuz::Fa_Array<fairuz::AST::Fa_Stmt*> const& m_statements)
+void printAst(fairuz::Fa_Array<fairuz::AST::Fa_Stmt*> const& stmts)
 {
     fairuz::AST::ASTPrinter printer(true);
-    for (u32 i = 0; i < m_statements.size(); i += 1)
-        printer.print(m_statements[i]);
+    for (u32 i = 0; i < stmts.size(); i += 1)
+        printer.print(stmts[i]);
 }
 
 } // namespace
@@ -144,18 +153,37 @@ int main(int argc, char** argv)
         fairuz::Fa_AllocatorContext allocator_context;
         fairuz::set_context(&allocator_context);
 
-        fairuz::lex::Fa_FileManager m_file_manager(options.input_path);
-        fairuz::parser::Fa_Parser parser(&m_file_manager);
-        fairuz::Fa_Array<fairuz::AST::Fa_Stmt*> m_statements = parser.parse_program();
+        fairuz::lex::Fa_FileManager fm(options.input_path);
+        fairuz::parser::Fa_Parser parser(&fm);
+        fairuz::Fa_Array<fairuz::AST::Fa_Stmt*> stmts = parser.parse_program();
+
+        if (options.format_file) {
+            fairuz::Fa_Formatter fmter;
+            fairuz::Fa_StringRef fmted = fmter.format(stmts);
+            std::ofstream file(options.input_path, std::ios::binary | std::ios::trunc);
+            if (!file)
+            {
+                std::cerr << "Failed to open input file for formatting: " << options.input_path << "\n";
+                return static_cast<int>(ExitCode::Software);
+            }
+            char const* data = fmted.empty() ? "" : fmted.data();
+            file.write(data, static_cast<std::streamsize>(fmted.len()));
+            if (!file)
+            {
+                std::cerr << "Failed to write formatted output to: " << options.input_path << "\n";
+                return static_cast<int>(ExitCode::Software);
+            }
+            return static_cast<int>(ExitCode::Success);
+        }
 
         if (fairuz::diagnostic::has_errors())
             return static_cast<int>(ExitCode::DataError);
 
         if (options.dump_ast)
-            printAst(m_statements);
+            printAst(stmts);
 
         fairuz::runtime::Compiler compiler;
-        fairuz::runtime::Fa_Chunk* chunk = compiler.compile(m_statements);
+        fairuz::runtime::Fa_Chunk* chunk = compiler.compile(stmts);
         if (!chunk) {
             std::cerr << "Compilation failed: no bytecode was produced\n";
             return static_cast<int>(ExitCode::Software);

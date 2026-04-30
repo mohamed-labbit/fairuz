@@ -45,7 +45,7 @@ else()
 endif()
 
 # Collect source files from src/
-file(GLOB_RECURSE fairuz_SOURCES ${CMAKE_SOURCE_DIR}/src/*.cpp ${CMAKE_SOURCE_DIR}/src/*.cc)
+file(GLOB_RECURSE fairuz_SOURCES ${CMAKE_SOURCE_DIR}/fairuz/*.cc)
 
 # Build an object library from your language sources
 add_library(fairuz_objects OBJECT ${fairuz_SOURCES})
@@ -78,7 +78,6 @@ install(FILES
     DESTINATION ${CMAKE_INSTALL_DOCDIR}
 )
 
-# ─── Test executable (only when BUILD_TESTS=ON) ──────────────────────────────
 if(BUILD_TESTS)
     message(STATUS "Building tests")
 
@@ -112,6 +111,8 @@ if(BUILD_TESTS)
     )
 
     target_compile_options(fairuz_tests PRIVATE
+        -Wunused-variable 
+        -Wunused-parameter
         $<$<CXX_COMPILER_ID:GNU,Clang>:-O0>
         $<$<CXX_COMPILER_ID:MSVC>:/Od>
         -march=native          # use all instructions available on this specific CPU

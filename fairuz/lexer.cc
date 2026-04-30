@@ -6,25 +6,24 @@
 
 #include <fstream>
 
-#define CONSUME_BASE_DIGITS(valid_fa_expr, token_type, err_code, detail) \
-    do {                                                                 \
-        number += util::encode_utf8_str(next);                           \
-        current = m_source_manager.next_char();                          \
-        bool any = false;                                                \
-        for (;;) {                                                       \
-            if (current == '_') {                                        \
-                current = m_source_manager.next_char();                  \
-                continue;                                                \
-            }                                                            \
-            if (!(valid_fa_expr))                                        \
-                break;                                                   \
-            number += util::encode_utf8_str(current);                    \
-            current = m_source_manager.next_char();                      \
-            any = true;                                                  \
-        }                                                                \
-        if (!any)                                                        \
-            diagnostic::panic(err_code, detail);                         \
-        return finish(token_type, number, src_loc);                      \
+#define CONSUME_BASE_DIGITS(valid_fa_expr, token_type, err_code, detail)                                     \
+    do {                                                                                                     \
+        current = m_source_manager.next_char();                                                              \
+        bool any = false;                                                                                    \
+        for (;;) {                                                                                           \
+            if (current == '_') {                                                                            \
+                current = m_source_manager.next_char();                                                      \
+                continue;                                                                                    \
+            }                                                                                                \
+            if (!(valid_fa_expr))                                                                            \
+                break;                                                                                       \
+            current = m_source_manager.next_char();                                                          \
+            any = true;                                                                                      \
+        }                                                                                                    \
+        if (!any)                                                                                            \
+            diagnostic::panic(err_code, detail);                                                             \
+        Fa_StringRef number = m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset()); \
+        return finish(token_type, number, src_loc);                                                          \
     } while (0)
 
 #define OCTAL_DIGIT(c)                                                             \
@@ -80,66 +79,69 @@ Fa_StringRef Fa_FileManager::load(std::string const& filepath, bool replace)
     return ret;
 }
 
+void Fa_SourceManager::refresh_current_()
+{
+    if (!m_file_manager || m_context.offset >= m_file_manager->buffer().len()) {
+        m_current = 0;
+        m_current_bytes = 0;
+        return;
+    }
+
+    m_current = util::decode_utf8_at(
+        m_file_manager->buffer(),
+        m_context.offset,
+        &m_current_bytes);
+}
+
 void Fa_SourceManager::reset()
 {
     m_context.line = 1;
     m_context.column = 1;
     m_context.offset = 0;
-    m_current = 0;
 
     while (!m_unget_stack.empty())
         m_unget_stack.pop();
 
-    if (m_file_manager && m_file_manager->buffer().len() > 0) {
-        u64 bytes = 0;
-        u32 cp = util::decode_utf8_at(m_file_manager->buffer(), 0, &bytes);
-        m_current = cp;
-        m_current_bytes = bytes;
-    }
+    refresh_current_();
 }
 
 u32 Fa_SourceManager::peek_char()
 {
-    if (!m_unget_stack.empty())
-        return m_unget_stack.top().ch;
-
-    Fa_SourceLocation saved = m_context;
+    Fa_SourceLocation saved_ctx = m_context;
     u32 saved_current = m_current;
-    u32 cp = next_char();
+    u64 saved_bytes = m_current_bytes;
 
-    if (cp != 0) {
-        unget(cp);
-    } else {
-        m_context = saved;
-        m_current = saved_current;
-    }
+    consume_char();
+    u32 cp = m_current;
+
+    m_context = saved_ctx;
+    m_current = saved_current;
+    m_current_bytes = saved_bytes;
 
     return cp;
 }
 
 u32 Fa_SourceManager::current_char() const
 {
-    if (m_context.offset >= m_file_manager->buffer().len())
-        return 0;
-
-    u64 bytes = 0;
-    return util::decode_utf8_at(m_file_manager->buffer(), m_context.offset, &bytes);
+    return m_current;
 }
 
 void Fa_SourceManager::consume_char()
 {
-    if (m_context.offset >= m_file_manager->buffer().len())
+    if (m_context.offset >= m_file_manager->buffer().len()) {
+        m_current = 0;
+        m_current_bytes = 0;
         return;
+    }
 
-    u64 bytes = 0;
-    u32 cp = util::decode_utf8_at(m_file_manager->buffer(), m_context.offset, &bytes);
-    advance(cp, bytes);
+    advance(m_current, m_current_bytes);
+    refresh_current_();
 }
 
 u32 Fa_SourceManager::next_char()
 {
     consume_char();
-    return current_char();
+    return m_current;
 }
 
 void Fa_SourceManager::unget(u32 const cp)
@@ -331,9 +333,11 @@ tok::Fa_Token const* Fa_Lexer::lex_token()
             break;
 
         if (current == '\n') {
+            u32 const start_byte = m_source_manager.get_file_offset();
             m_source_manager.consume_char();
             m_at_bol = true;
-            tok::Fa_Token const* ret = make_token(tok::Fa_TokenType::NEWLINE, util::encode_utf8_str('\n'), src_loc);
+            Fa_StringRef endl_str = m_source_manager.source_slice(start_byte, start_byte + 1);
+            tok::Fa_Token const* ret = make_token(tok::Fa_TokenType::NEWLINE, endl_str, src_loc);
             store(ret);
             next_line(src_loc);
             return ret;
@@ -352,62 +356,32 @@ tok::Fa_Token const* Fa_Lexer::lex_token()
         }
 
         if (current == '\'' || current == '"') {
-            Fa_StringRef string_literal;
             u32 quote = current;
             current = m_source_manager.next_char();
+            u32 const start_byte = m_source_manager.get_file_offset();
 
-            while (current != '\n' && current != 0 && current != quote) {
-                if (current == '\\') {
-                    current = m_source_manager.next_char();
-                    switch (current) {
-                    case 'n':
-                        string_literal += '\n';
-                        break;
-                    case 't':
-                        string_literal += '\t';
-                        break;
-                    case 'r':
-                        string_literal += '\r';
-                        break;
-                    case '\\':
-                        string_literal += '\\';
-                        break;
-                    case '\'':
-                        string_literal += '\'';
-                        break;
-                    case '"':
-                        string_literal += '"';
-                        break;
-                    case '0':
-                        string_literal += '\0';
-                        break;
-                    default:
-                        string_literal += '\\';
-                        string_literal += util::encode_utf8_str(current);
-                        break;
-                    }
-                    m_source_manager.consume_char();
-                } else {
-                    string_literal += util::encode_utf8_str(current);
-                    current = m_source_manager.next_char();
-                }
+            while (current != '\n' && current != 0 && current != quote)
+                current = m_source_manager.next_char();
+
+            if (current != quote) {
+                Fa_StringRef str_lit = m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset());
+                return finish(tok::Fa_TokenType::INVALID, str_lit, src_loc);
             }
 
-            if (current != quote)
-                return finish(tok::Fa_TokenType::INVALID, string_literal, src_loc);
-
+            Fa_StringRef str_lit = m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset());
             m_source_manager.consume_char(); // closing quote
-            return finish(tok::Fa_TokenType::STRING, string_literal, src_loc);
+            return finish(tok::Fa_TokenType::STRING, str_lit, src_loc);
         }
 
         if (current == ',' || current == '.' || current == u'،' || current == u'٬') {
+            u32 const start_byte = m_source_manager.get_file_offset();
             m_source_manager.consume_char();
+            Fa_StringRef comma = m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset());
             return finish((current == '.') ? tok::Fa_TokenType::DOT : tok::Fa_TokenType::COMMA, util::encode_utf8_str(current), src_loc);
         }
 
         if (current == '{' || current == '}' || current == '[' || current == ']' || current == '(' || current == ')' || current == ':') {
-            Fa_StringRef symbol;
-            symbol += util::encode_utf8_str(current);
+            u32 const start_byte = m_source_manager.get_file_offset();
             m_source_manager.consume_char();
 
             tok::Fa_TokenType tt;
@@ -432,7 +406,6 @@ tok::Fa_Token const* Fa_Lexer::lex_token()
                 break;
             case ':': {
                 if (m_source_manager.current_char() == '=') {
-                    symbol += util::encode_utf8_str('=');
                     m_source_manager.consume_char();
                     tt = tok::Fa_TokenType::OP_ASSIGN;
                 } else {
@@ -444,34 +417,36 @@ tok::Fa_Token const* Fa_Lexer::lex_token()
                 tt = tok::Fa_TokenType::INVALID;
                 break;
             }
+
+            Fa_StringRef symbol = m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset());
             return finish(tt, symbol, src_loc);
         }
 
         if (current == '=' || current == '<' || current == '>' || current == '!' || current == '+' || current == '-' || current == '|'
             || current == '&' || current == '*' || current == '/' || current == '%' || current == u'٪' || current == '^' || current == '~') {
 
-            Fa_StringRef operator_str;
-            operator_str += util::encode_utf8_str(current);
+            u32 const start_byte = m_source_manager.get_file_offset();
             m_source_manager.consume_char();
 
-            u32 m_next = m_source_manager.current_char();
-            if (m_next != 0) {
-                Fa_StringRef two = operator_str + util::encode_utf8_str(m_next);
-                if (tok::lookup_operator(two)) {
-                    operator_str = two;
+            u32 next = m_source_manager.current_char();
+            if (next != 0) {
+                Fa_StringRef two = m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset() + util::utf8_codepoint_size(next));
+                if (auto type = tok::lookup_operator(two)) {
                     m_source_manager.consume_char();
+                    return finish(*type, two, src_loc);
                 }
             }
 
-            if (auto m_type = tok::lookup_operator(operator_str))
-                return finish(*m_type, operator_str, src_loc);
+            Fa_StringRef operator_str = m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset());
+
+            if (auto type = tok::lookup_operator(operator_str))
+                return finish(*type, operator_str, src_loc);
 
             return finish(tok::Fa_TokenType::INVALID, operator_str, src_loc);
         }
 
         if (IS_DIGIT(current)) {
-            Fa_StringRef number;
-            number += util::encode_utf8_str(current);
+            u32 const start_byte = m_source_manager.get_file_offset();
             u32 next = m_source_manager.next_char();
 
             // numeric base prefix: 0x / 0o / 0b
@@ -494,12 +469,10 @@ tok::Fa_Token const* Fa_Lexer::lex_token()
                 if (!IS_DIGIT(current))
                     break;
 
-                number += util::encode_utf8_str(current);
                 current = m_source_manager.next_char();
             }
 
             if (current == '.') {
-                number += util::encode_utf8_str(current);
                 current = m_source_manager.next_char();
 
                 for (;;) {
@@ -511,38 +484,41 @@ tok::Fa_Token const* Fa_Lexer::lex_token()
                     if (!IS_DIGIT(current))
                         break;
 
-                    number += util::encode_utf8_str(current);
                     current = m_source_manager.next_char();
                 }
 
+                Fa_StringRef number = m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset());
                 return finish(tok::Fa_TokenType::DECIMAL, number, src_loc);
             }
 
+            Fa_StringRef number = m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset());
             return finish(tok::Fa_TokenType::INTEGER, number, src_loc);
         }
 
         if (IS_ARDIGIT(current)) {
-            Fa_StringRef digits;
-            while (IS_ARDIGIT(current)) {
-                digits += util::encode_utf8_str(current);
-                current = m_source_manager.next_char();
-            }
+            u32 const start_byte = m_source_manager.get_file_offset();
 
-            return finish(tok::Fa_TokenType::INTEGER, digits, src_loc);
+            while (IS_ARDIGIT(current))
+                current = m_source_manager.next_char();
+
+            u32 const end_byte = m_source_manager.get_file_offset();
+            return finish(tok::Fa_TokenType::INTEGER, m_source_manager.source_slice(start_byte, end_byte), src_loc);
         }
 
         if (IS_IDENT_S(current)) {
-            Fa_StringRef identifier;
-            while (IS_IDENT_C(current)) {
-                identifier += util::encode_utf8_str(current);
+            u32 const start_byte = m_source_manager.get_file_offset();
+
+            while (IS_IDENT_C(current))
                 current = m_source_manager.next_char();
-            }
+
+            u32 const end_byte = m_source_manager.get_file_offset();
+            Fa_StringRef ident = m_source_manager.source_slice(start_byte, end_byte);
 
             tok::Fa_TokenType tt = tok::Fa_TokenType::IDENTIFIER;
-            if (auto m_type = tok::lookup_keyword(identifier))
+            if (auto m_type = tok::lookup_keyword(ident))
                 tt = *m_type;
 
-            return finish(tt, identifier, src_loc);
+            return finish(tt, ident, src_loc);
         }
 
         Fa_StringRef source_line = get_line_at(src_loc.line);

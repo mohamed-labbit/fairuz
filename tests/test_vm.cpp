@@ -776,8 +776,6 @@ TEST(VMDicts, IndexReturnsStoredValue)
 
 TEST(VMDicts, SetUpdatesAndAppendsByKey)
 {
-    /// TODO: find out why the result of the program is a list of two garbage values??
-
     Fa_Chunk* ch = Compiler().compile(
         {
             func_def(
@@ -812,10 +810,8 @@ TEST(VMDicts, MissingKeyReturnsNil)
 {
     VMRunner r;
 
-    AST::Fa_AssignmentStmt* assign_1 = decl_stmt("x", index_expr(dict_expr({ }), lit_str("missing")));
-
     Fa_Chunk* ch = Compiler().compile({
-        assign_1,
+        decl_stmt("x", index_expr(dict_expr({ }), lit_str("missing"))),
     });
 
     if (ch != nullptr)
@@ -2277,9 +2273,9 @@ TEST(VMPerfTest, IC_Quickening_ColdVsWarm_Ratio)
     AST::Fa_Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
-        blk({ assign_stmt(name_expr("i"), lit_int(0)),
-            assign_stmt(name_expr("step"), lit_int(1)),
-            assign_stmt(name_expr("limit"), lit_int(N)),
+        blk({ decl_stmt("i", lit_int(0)),
+            decl_stmt("step", lit_int(1)),
+            decl_stmt("limit", lit_int(N)),
             while_stmt(
                 binary(name_expr("i"), name_expr("limit"), AST::Fa_BinaryOp::OP_LT),
                 blk({ assign_stmt(

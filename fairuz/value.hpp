@@ -2,7 +2,6 @@
 #define VALUE_HPP
 
 #include "opcode.hpp"
-#include "pair.hpp"
 #include "table.hpp"
 #include <cstdint>
 

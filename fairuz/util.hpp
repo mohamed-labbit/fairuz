@@ -161,6 +161,24 @@ static void configure_locale()
     }
 }
 
+static size_t utf8_codepoint_size(u32 const cp)
+{
+    if (cp < 0x80)
+        return 1;
+    if (cp < 0x800)
+        return 2;
+    if (cp < 0x10000) {
+        if (cp >= 0xD800 && cp <= 0xDFFF)
+            diagnostic::emit(ErrorCode::INTERNAL_ERROR, "Invalid cp: UTF-16 surrogate", diagnostic::Severity::FATAL);
+        return 3;
+    }
+    if (cp <= 0x10FFFF)
+        return 4;
+
+    diagnostic::emit(ErrorCode::INTERNAL_ERROR, "Invalid cp: exceeds Unicode range", diagnostic::Severity::FATAL);
+    return -1; // unreachable
+}
+
 static size_t encode_utf8(u32 const cp, unsigned char* out_bytes)
 {
     if (cp < 0x80) {
@@ -223,6 +241,34 @@ static bool is_arab_digit(u32 const cp)
     }
 }
 
+static u8 arab_digit_to_canon(u32 const cp)
+{
+    switch (cp) {
+    case u'٠':
+        return 0;
+    case u'١':
+        return 1;
+    case u'٢':
+        return 2;
+    case u'٣':
+        return 3;
+    case u'٤':
+        return 4;
+    case u'٥':
+        return 5;
+    case u'٦':
+        return 6;
+    case u'٧':
+        return 7;
+    case u'٨':
+        return 8;
+    case u'٩':
+        return 9;
+    default:
+        return 0xFF;
+    }
+}
+
 static i64 parse_integer_literal(Fa_StringRef const& literal, int base)
 {
     if (base == -1) /*false call*/
@@ -244,19 +290,25 @@ static i64 parse_integer_literal(Fa_StringRef const& literal, int base)
         i += 1;
 
     i64 value = 0;
+    u64 bytes = 0, out_bytes = 0;
+    bool is_arab = false;
 
     for (; i < literal.len(); i += 1) {
-        char const c = literal.at(i);
+        u32 const cp = decode_utf8_at(literal, bytes, &out_bytes);
 
-        if (c == '\'')
+        bytes += out_bytes;
+
+        if (cp == '\'')
             continue;
 
         int digit = 0;
 
-        if (::isdigit(c))
-            digit = c - '0';
-        else if (::isalpha(c))
-            digit = ::tolower(c) - 'a' + 10;
+        if (::isdigit(cp))
+            digit = cp - '0';
+        else if (is_arab_digit(cp))
+            digit = arab_digit_to_canon(cp);
+        else if (::isalpha(cp))
+            digit = ::tolower(cp) - 'a' + 10;
         else
             diagnostic::emit(ErrorCode::INTERNAL_ERROR, "Invalid digit", diagnostic::Severity::FATAL);
 

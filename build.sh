@@ -8,6 +8,7 @@ RUN_TESTS=false
 RUN_MAIN=false
 RUN_INCLUDES=false
 RUN_INSTALL=false
+FORMAT=false
 
 TEST_ARGS=()
 MAIN_ARGS=()
@@ -32,6 +33,9 @@ for arg in "$@"; do
             ;;
         install)
             RUN_INSTALL=true
+            ;;
+        format)
+            FORMAT=true
             ;;
         *)
             if [[ "$RUN_TESTS" == true ]]; then
@@ -121,4 +125,14 @@ if [[ "$RUN_INSTALL" == true ]]; then
     echo
     echo "If you want 'fairuz' on your PATH for this shell:"
     echo "  export PATH=\"$INSTALL_PREFIX/bin:\$PATH\""
+fi
+
+if [[ "$FORMAT" == true ]]; then
+    if [[ ${#MAIN_ARGS[@]} -eq 0 ]]; then
+        echo "usage: ./build.sh format <file.fa>"
+        exit 1
+    fi
+
+    ASAN_OPTIONS=detect_leaks="$DEBUG" \
+        "$PROJECT_ROOT/build/fairuz" format "${MAIN_ARGS[@]}"
 fi

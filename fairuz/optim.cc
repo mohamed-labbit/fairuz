@@ -1,6 +1,5 @@
 #include "optim.hpp"
 
-
 namespace fairuz::runtime {
 
 std::optional<Fa_Value> const_value(AST::Fa_Expr const* e)

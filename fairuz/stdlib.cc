@@ -72,10 +72,15 @@ static void append_rendered_value(Fa_StringRef& out, Fa_Value v, bool quote_stri
     if (Fa_IS_DICT(v)) {
         Fa_ObjDict* dict = Fa_AS_DICT(v);
         out += '{';
+        u32 i = 0, end = dict->data.size() - 1;
         for (auto [k, v] : dict->data) {
             append_rendered_value(out, k, Fa_IS_STRING(k));
             out += ": ";
             append_rendered_value(out, v, Fa_IS_STRING(v));
+            if (i == end)
+                break;
+            out += ", ";
+            i++;
         }
 
         out += '}';

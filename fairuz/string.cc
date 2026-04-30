@@ -112,7 +112,8 @@ Fa_StringRef::Fa_StringRef(size_t const s)
 Fa_StringRef::Fa_StringRef(Fa_StringRef const& other, size_t offset, size_t length)
     : m_string_data(other.m_string_data)
     , m_offset(other.m_offset + offset)
-    , m_length(length ? length : (other.m_length > m_offset ? other.m_length - offset : 0))
+    // , m_length(length ? length : (other.m_length > m_offset ? other.m_length - offset : 0))
+    , m_length(length ? length : (offset <= other.m_length ? other.m_length - offset : 0))
 {
     if (m_string_data)
         m_string_data->increment();
