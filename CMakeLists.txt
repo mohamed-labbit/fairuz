@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(MyProgrammingLanguage VERSION 0.0.0 LANGUAGES C CXX)
+project(Fairuz VERSION 0.1.0 LANGUAGES C CXX)
 
 include(GNUInstallDirs)
 
@@ -76,6 +76,12 @@ install(FILES
     ${CMAKE_SOURCE_DIR}/README.md
     ${CMAKE_SOURCE_DIR}/LICENSE
     DESTINATION ${CMAKE_INSTALL_DOCDIR}
+)
+
+install(DIRECTORY
+    ${CMAKE_SOURCE_DIR}/examples/
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/fairuz/examples
+    FILES_MATCHING PATTERN "*.fa"
 )
 
 if(BUILD_TESTS)

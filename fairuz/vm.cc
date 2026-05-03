@@ -314,7 +314,6 @@ Fa_Value Fa_VM::execute()
 
             u32 slot_idx = *slot;
             Fa_RA() = m_global_slots[slot_idx];
-            cur_chunk->code[ip - 1] = Fa_make_ABx(Fa_OpCode::LOAD_GLOBAL_CACHED, Fa_instr_A(instr), slot_idx);
         }
         Fa_DISPATCH();
     }
@@ -343,7 +342,6 @@ Fa_Value Fa_VM::execute()
             }
 
             m_global_slots[slot_idx] = Fa_RA();
-            cur_chunk->code[ip - 1] = Fa_make_ABx(Fa_OpCode::STORE_GLOBAL_CACHED, Fa_instr_A(instr), slot_idx);
         }
         Fa_DISPATCH();
     }

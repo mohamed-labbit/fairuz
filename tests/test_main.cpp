@@ -9,6 +9,7 @@ namespace test_config {
 
 bool print_ast = false;
 bool verbose = false;
+bool dump_bytecode = false;
 
 } // namespace test_config
 
@@ -24,6 +25,8 @@ int main(int argc, char** argv)
 
         if (arg == "--print-ast")
             test_config::print_ast = true;
+        else if (arg == "--dump-bytecode")
+            test_config::dump_bytecode = true;
         else if (arg == "-v")
             test_config::verbose = true;
         else {

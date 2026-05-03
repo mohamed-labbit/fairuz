@@ -16,7 +16,7 @@
 namespace {
 
 #ifndef fairuz_VERSION
-#    define fairuz_VERSION "0.0.0"
+#    define fairuz_VERSION "0.1.0"
 #endif
 
 constexpr char const* kVersion = fairuz_VERSION;

@@ -15,5 +15,6 @@ demo.py
 build-llvm
 .plan.txt
 build_fmt.sh
-examples/
 fib.fa
+.zed/
+*.vsix

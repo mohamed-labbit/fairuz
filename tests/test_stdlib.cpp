@@ -242,6 +242,28 @@ TEST(StdlibRegression, LenSupportsDicts)
     EXPECT_EQ(Fa_AS_INTEGER(result), 2);
 }
 
+TEST(StdlibRegression, DictConstructorPopulatesPairs)
+{
+    Fa_VM vm;
+    Fa_Value m_args[] = {
+        Fa_MAKE_STRING("a"),
+        Fa_MAKE_INTEGER(1),
+        Fa_MAKE_STRING("b"),
+        Fa_MAKE_BOOL(true),
+    };
+
+    Fa_Value dict = vm.Fa_dict(4, m_args);
+
+    ASSERT_TRUE(Fa_IS_DICT(dict));
+    Fa_Value* a = Fa_AS_DICT(dict)->data.find_ptr(m_args[0]);
+    Fa_Value* b = Fa_AS_DICT(dict)->data.find_ptr(m_args[2]);
+    ASSERT_NE(a, nullptr);
+    ASSERT_NE(b, nullptr);
+    EXPECT_EQ(Fa_AS_INTEGER(*a), 1);
+    EXPECT_TRUE(Fa_IS_BOOL(*b));
+    EXPECT_TRUE(Fa_AS_BOOL(*b));
+}
+
 TEST(StdlibRegression, StrScalarConversionsMatchSurfaceSyntax)
 {
     Fa_VM vm;

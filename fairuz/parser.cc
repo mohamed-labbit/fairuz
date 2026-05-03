@@ -754,26 +754,26 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_return_stmt()
     Fa_VERIFY_TOKEN(TokType::KW_RETURN, ParserCode::EXPECTED_RETURN);
 
     if (check(TokType::NEWLINE) || we_done())
-        return AST::Fa_makeReturn(start_loc);
+        return AST::Fa_make_return(start_loc);
 
     auto ret = parse_expression();
     Fa_VERIFY_NODE(ret);
 
-    return AST::Fa_makeReturn(start_loc, ret.value());
+    return AST::Fa_make_return(start_loc, ret.value());
 }
 
 Fa_ErrorOr<StmtPtr> Fa_Parser::parse_break_stmt()
 {
     TokenPtr start = current_token();
     advance();
-    return AST::Fa_makeBreak(start->location());
+    return AST::Fa_make_break(start->location());
 }
 
 Fa_ErrorOr<StmtPtr> Fa_Parser::parse_continue_stmt()
 {
     TokenPtr start = current_token();
     advance();
-    return AST::Fa_makeContinue(start->location());
+    return AST::Fa_make_continue(start->location());
 }
 
 Fa_ErrorOr<StmtPtr> Fa_Parser::parse_while_stmt()
@@ -790,7 +790,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_while_stmt()
     auto while_block = parse_indented_block();
     Fa_VERIFY_NODE(while_block);
 
-    return Fa_makeWhile(condition.value(), static_cast<AST::Fa_BlockStmt*>(while_block.value()), start->location());
+    return Fa_make_while(condition.value(), static_cast<AST::Fa_BlockStmt*>(while_block.value()), start->location());
 }
 
 Fa_ErrorOr<StmtPtr> Fa_Parser::parse_for_stmt()
@@ -803,7 +803,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_for_stmt()
     if (!check(TokType::IDENTIFIER))
         return report_error(ParserCode::EXPECTED_FOR_TARGET);
 
-    auto* target = AST::Fa_makeName(current_token()->lexeme(), current_token()->location());
+    auto* target = AST::Fa_make_name(current_token()->lexeme(), current_token()->location());
     advance();
 
     bool saw_in = match(TokType::KW_IN);
@@ -822,7 +822,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_for_stmt()
     auto body = parse_indented_block();
     Fa_VERIFY_NODE(body);
 
-    return AST::Fa_makeFor(target, iter.value(), body.value(), start_loc);
+    return AST::Fa_make_for(target, iter.value(), body.value(), start_loc);
 }
 
 Fa_ErrorOr<StmtPtr> Fa_Parser::parse_indented_block()
@@ -837,7 +837,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_indented_block()
     Fa_Array<StmtPtr> stmts;
 
     if (match(TokType::DEDENT))
-        return Fa_makeBlock(stmts, start_loc);
+        return Fa_make_block(stmts, start_loc);
 
     while (!check(TokType::DEDENT) && !we_done()) {
         skip_newlines();
@@ -856,11 +856,11 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_indented_block()
     }
 
     if (check(TokType::ENDMARKER))
-        return Fa_makeBlock(stmts, start->location());
+        return Fa_make_block(stmts, start->location());
 
     Fa_VERIFY_TOKEN(TokType::DEDENT, ParserCode::EXPECTED_DEDENT);
 
-    auto* block = Fa_makeBlock(stmts, start->location());
+    auto* block = Fa_make_block(stmts, start->location());
     if (!stmts.empty())
         return block;
     return block;
@@ -888,7 +888,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_def()
         methods.push(method.value());
     } while (!match(TokType::DEDENT));
 
-    return AST::Fa_makeClassDef(class_name.value(), members, methods, start->location());
+    return AST::Fa_make_class_def(class_name.value(), members, methods, start->location());
 }
 
 Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_method(Fa_Array<ExprPtr>& members)
@@ -921,9 +921,9 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_method(Fa_Array<ExprPtr>& members)
             Fa_StringRef member_name = member_tok->lexeme();
             advance();
 
-            AST::Fa_Expr* target = AST::Fa_makeIndex(
-                AST::Fa_makeName(kClassInstanceName, member_tok->location()),
-                AST::Fa_makeLiteralString(member_name, member_tok->location()),
+            AST::Fa_Expr* target = AST::Fa_make_index(
+                AST::Fa_make_name(kClassInstanceName, member_tok->location()),
+                AST::Fa_make_literal_string(member_name, member_tok->location()),
                 member_tok->location());
 
             AST::Fa_AssignmentExpr* member_assign = nullptr;
@@ -932,7 +932,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_method(Fa_Array<ExprPtr>& members)
                 advance();
                 auto rhs = parse_assignment_expr();
                 Fa_VERIFY_NODE(rhs);
-                member_assign = AST::Fa_makeAssignmentExpr(target, rhs.value(), member_tok->location(), false);
+                member_assign = AST::Fa_make_assignment_expr(target, rhs.value(), member_tok->location(), false);
             } else if (check(TokType::OP_PLUSEQ) || check(TokType::OP_MINUSEQ) || check(TokType::OP_STAREQ)
                 || check(TokType::OP_SLASHEQ) || check(TokType::OP_PERCENTEQ)) {
                 TokenPtr op_tok = current_token();
@@ -948,14 +948,14 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_method(Fa_Array<ExprPtr>& members)
                 };
 
                 AST::Fa_BinaryOp op = bin_ops[static_cast<int>(op_tok->type()) - static_cast<int>(TokType::OP_PLUSEQ)];
-                AST::Fa_BinaryExpr* bin = AST::Fa_makeBinary(target->clone(), rhs.value(), op, target->get_location());
-                member_assign = AST::Fa_makeAssignmentExpr(target, bin, member_tok->location(), false);
+                AST::Fa_BinaryExpr* bin = AST::Fa_make_binary(target->clone(), rhs.value(), op, target->get_location());
+                member_assign = AST::Fa_make_assignment_expr(target, bin, member_tok->location(), false);
             } else {
                 return report_error(ParserCode::INVALID_ASSIGN_TARGET);
             }
 
-            members.push(AST::Fa_makeName(member_name, member_tok->location()));
-            stmts.push(AST::Fa_makeExprStmt(member_assign, member_tok->location()));
+            members.push(AST::Fa_make_name(member_name, member_tok->location()));
+            stmts.push(AST::Fa_make_expr_stmt(member_assign, member_tok->location()));
             continue;
         }
 
@@ -965,18 +965,18 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_method(Fa_Array<ExprPtr>& members)
     }
 
     if (check(TokType::ENDMARKER)) {
-        return AST::Fa_makeFunction(
-            AST::Fa_makeName(name_tok->lexeme(), name_tok->location()),
+        return AST::Fa_make_function(
+            AST::Fa_make_name(name_tok->lexeme(), name_tok->location()),
             static_cast<AST::Fa_ListExpr*>(parameter_list.value()),
-            AST::Fa_makeBlock(stmts, stmts[0]->get_location()),
+            AST::Fa_make_block(stmts, stmts[0]->get_location()),
             start->location());
     }
 
     Fa_VERIFY_TOKEN(TokType::DEDENT, ParserCode::EXPECTED_DEDENT);
 
-    AST::Fa_BlockStmt* block = AST::Fa_makeBlock(stmts, stmts[0]->get_location());
-    return AST::Fa_makeFunction(
-        AST::Fa_makeName(name_tok->lexeme(), name_tok->location()),
+    AST::Fa_BlockStmt* block = AST::Fa_make_block(stmts, stmts[0]->get_location());
+    return AST::Fa_make_function(
+        AST::Fa_make_name(name_tok->lexeme(), name_tok->location()),
         static_cast<AST::Fa_ListExpr*>(parameter_list.value()),
         block,
         start->location());
@@ -1000,7 +1000,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_parameters_list()
             TokenPtr param_tok = current_token();
             Fa_StringRef param_name = param_tok->lexeme();
             advance();
-            parameters.push(AST::Fa_makeName(param_name, param_tok->location()));
+            parameters.push(AST::Fa_make_name(param_name, param_tok->location()));
             skip_newlines();
         } while (match(TokType::COMMA) && !check(TokType::RPAREN));
     }
@@ -1009,10 +1009,10 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_parameters_list()
 
     if (parameters.empty()) {
         TokenPtr cur_tok = current_token();
-        return Fa_makeList(Fa_Array<ExprPtr> { }, cur_tok->location());
+        return Fa_make_list(Fa_Array<ExprPtr> { }, cur_tok->location());
     }
 
-    return Fa_makeList(parameters, parameters[0]->get_location());
+    return Fa_make_list(parameters, parameters[0]->get_location());
 }
 
 Fa_ErrorOr<ExprPtr> Fa_Parser::parse_expression() { return parse_assignment_expr(); }
@@ -1038,7 +1038,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_function_def()
     auto function_body = parse_indented_block();
     Fa_VERIFY_NODE(function_body);
 
-    return Fa_makeFunction(AST::Fa_makeName(function_name, name_tok->location()),
+    return Fa_make_function(AST::Fa_make_name(function_name, name_tok->location()),
         static_cast<AST::Fa_ListExpr*>(parameters_list.value()),
         static_cast<AST::Fa_BlockStmt*>(function_body.value()),
         start->location());
@@ -1081,7 +1081,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_if_stmt()
         }
     }
 
-    return Fa_makeIf(
+    return Fa_make_if(
         condition.value(),
         static_cast<AST::Fa_BlockStmt*>(then_block.value()),
         start->location(),
@@ -1093,7 +1093,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_expression_stmt()
     auto expr = parse_expression();
     Fa_VERIFY_NODE(expr);
     ExprPtr expr_node = expr.value();
-    return Fa_makeExprStmt(expr_node, expr_node->get_location());
+    return Fa_make_expr_stmt(expr_node, expr_node->get_location());
 }
 
 Fa_ErrorOr<ExprPtr> Fa_Parser::parse_assignment_expr()
@@ -1125,10 +1125,10 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_assignment_expr()
 
             AST::Fa_BinaryOp op = bin_ops[static_cast<int>(op_tok->type()) - static_cast<int>(TokType::OP_PLUSEQ)];
             AST::Fa_Expr* c_lhs = lhs.value()->clone();
-            AST::Fa_BinaryExpr* bin = AST::Fa_makeBinary(c_lhs, rhs.value(), op, c_lhs->get_location());
+            AST::Fa_BinaryExpr* bin = AST::Fa_make_binary(c_lhs, rhs.value(), op, c_lhs->get_location());
 
             return Fa_ErrorOr<ExprPtr>::from_value(
-                Fa_makeAssignmentExpr(target, bin, target->get_location(), /*decl=*/false));
+                Fa_make_assignment_expr(target, bin, target->get_location(), /*decl=*/false));
         }
 
         advance();
@@ -1137,7 +1137,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_assignment_expr()
         Fa_VERIFY_NODE(rhs);
 
         return Fa_ErrorOr<ExprPtr>::from_value(
-            Fa_makeAssignmentExpr(target, rhs.value(), target->get_location(), /*decl=*/false));
+            Fa_make_assignment_expr(target, rhs.value(), target->get_location(), /*decl=*/false));
     }
 
     return lhs.value();
@@ -1163,7 +1163,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_logical_expr_precedence(unsigned int min_pr
         auto rhs = parse_logical_expr_precedence(precedence + 1);
         Fa_VERIFY_NODE(rhs);
 
-        return Fa_makeBinary(lhs.value(), rhs.value(), to_binary_op(op), lhs.value()->get_location());
+        return Fa_make_binary(lhs.value(), rhs.value(), to_binary_op(op), lhs.value()->get_location());
     }
 
     return lhs.value();
@@ -1182,7 +1182,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_comparison_expr()
         auto rhs = parse_binary_expr();
         Fa_VERIFY_NODE(rhs);
 
-        return Fa_makeBinary(lhs.value(), rhs.value(), to_binary_op(op), lhs.value()->get_location());
+        return Fa_make_binary(lhs.value(), rhs.value(), to_binary_op(op), lhs.value()->get_location());
     }
 
     return lhs.value();
@@ -1211,7 +1211,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_binary_expr_precedence(unsigned int min_pre
         auto rhs = parse_binary_expr_precedence(next_min);
         Fa_VERIFY_NODE(rhs);
 
-        return Fa_makeBinary(lhs.value(), rhs.value(), to_binary_op(op), lhs.value()->get_location());
+        return Fa_make_binary(lhs.value(), rhs.value(), to_binary_op(op), lhs.value()->get_location());
     }
 
     return lhs.value();
@@ -1227,7 +1227,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_unary_expr()
         auto expr = parse_unary_expr();
         Fa_VERIFY_NODE(expr);
 
-        return Fa_makeUnary(expr.value(), to_unary_op(op), expr.value()->get_location());
+        return Fa_make_unary(expr.value(), to_unary_op(op), expr.value()->get_location());
     }
 
     return parse_postfix_expr();
@@ -1262,7 +1262,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_postfix_expr()
 
             Fa_VERIFY_TOKEN(TokType::RPAREN, ParserCode::EXPECTED_RPAREN_EXPR);
             Fa_SourceLocation arg_loc = !args.empty() && args[0] ? args[0]->get_location() : Fa_SourceLocation { };
-            expr = Fa_makeCall(expr, Fa_makeList(std::move(args), arg_loc), expr ? expr->get_location() : Fa_SourceLocation { });
+            expr = Fa_make_call(expr, Fa_make_list(std::move(args), arg_loc), expr ? expr->get_location() : Fa_SourceLocation { });
             continue;
         }
 
@@ -1272,7 +1272,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_postfix_expr()
 
             Fa_VERIFY_TOKEN(TokType::RBRACKET, ParserCode::EXPECTED_RBRACKET);
 
-            expr = Fa_makeIndex(expr, index.value(), expr ? expr->get_location() : Fa_SourceLocation { });
+            expr = Fa_make_index(expr, index.value(), expr ? expr->get_location() : Fa_SourceLocation { });
             continue;
         }
 
@@ -1301,33 +1301,33 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_primary_expr()
         TokType tt = cur_tok->type();
 
         if (tt == TokType::DECIMAL)
-            return AST::Fa_makeLiteralFloat(v.to_double(), cur_tok->location());
+            return AST::Fa_make_literal_float(v.to_double(), cur_tok->location());
 
         if (tt == TokType::INTEGER || tt == TokType::HEX || tt == TokType::OCTAL || tt == TokType::BINARY) {
             static constexpr int BASE_FOR_TYPE[] = { 2, 8, 10, 16 };
-            return AST::Fa_makeLiteralInt(util::parse_integer_literal(v,
-                                              /*base=*/BASE_FOR_TYPE[static_cast<int>(tt) - static_cast<int>(TokType::BINARY)]),
+            return AST::Fa_make_literal_int(util::parse_integer_literal(v,
+                                                /*base=*/BASE_FOR_TYPE[static_cast<int>(tt) - static_cast<int>(TokType::BINARY)]),
                 cur_tok->location());
         }
     }
 
     if (match(TokType::STRING))
-        return AST::Fa_makeLiteralString(cur_tok->lexeme(), cur_tok->location());
+        return AST::Fa_make_literal_string(cur_tok->lexeme(), cur_tok->location());
 
     if (check(TokType::KW_TRUE) || check(TokType::KW_FALSE)) {
         advance();
-        return AST::Fa_makeLiteralBool(cur_tok->lexeme() == "صحيح" ? true : false, cur_tok->location());
+        return AST::Fa_make_literal_bool(cur_tok->lexeme() == "صحيح" ? true : false, cur_tok->location());
     }
 
     if (match(TokType::KW_NIL))
-        return AST::Fa_makeLiteralNil(cur_tok->location());
+        return AST::Fa_make_literal_nil(cur_tok->location());
 
     if (match(TokType::IDENTIFIER))
-        return AST::Fa_makeName(cur_tok->lexeme(), cur_tok->location());
+        return AST::Fa_make_name(cur_tok->lexeme(), cur_tok->location());
 
     if (match(TokType::LPAREN)) {
         if (match(TokType::RPAREN))
-            return Fa_makeList(Fa_Array<ExprPtr> { }, cur_tok->location());
+            return Fa_make_list(Fa_Array<ExprPtr> { }, cur_tok->location());
 
         auto expr = parse_expression();
         Fa_VERIFY_NODE(expr);
@@ -1373,8 +1373,8 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_list_literal()
 
     ExprPtr first = elements.empty() ? nullptr : elements[0];
     if (elements.empty())
-        return Fa_makeList(std::move(elements), start->location());
-    return Fa_makeList(std::move(elements), first->get_location());
+        return Fa_make_list(std::move(elements), start->location());
+    return Fa_make_list(std::move(elements), first->get_location());
 }
 
 Fa_ErrorOr<ExprPtr> Fa_Parser::parse_dict_literal()
@@ -1405,8 +1405,8 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_dict_literal()
 
     ExprPtr first_key = content.empty() ? nullptr : content[0].first;
     if (content.empty())
-        return AST::Fa_makeDict(std::move(content), start->location());
-    return AST::Fa_makeDict(std::move(content), first_key->get_location());
+        return AST::Fa_make_dict(std::move(content), start->location());
+    return AST::Fa_make_dict(std::move(content), first_key->get_location());
 }
 
 Fa_ErrorOr<ExprPtr> Fa_Parser::parse_conditional_expr()

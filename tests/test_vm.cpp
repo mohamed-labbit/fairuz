@@ -4,6 +4,7 @@
 #include "../fairuz/opcode.hpp"
 #include "../fairuz/vm.hpp"
 #include "test_common.h"
+#include "test_config.h"
 
 #include <bit>
 #include <charconv>
@@ -137,7 +138,8 @@ TEST(VMLoads, Nil)
     VMRunner r;
     CB b;
     b.regs(1).ABC(Fa_OpCode::LOAD_NIL, 0, 0, 1).ret(0);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_TRUE(Fa_IS_NIL(r.run(b)));
 }
 
@@ -146,7 +148,8 @@ TEST(VMLoads, NilFillsMultiple)
     VMRunner r;
     CB b;
     b.regs(3).ABC(Fa_OpCode::LOAD_NIL, 0, 0, 3).ret(2);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_TRUE(Fa_IS_NIL(r.run(b)));
 }
 
@@ -155,7 +158,8 @@ TEST(VMLoads, True)
     VMRunner r;
     CB b;
     b.regs(1).ABC(Fa_OpCode::LOAD_TRUE, 0, 0, 0).ret(0);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     Fa_Value v = r.run(b);
     EXPECT_TRUE(Fa_IS_BOOL(v) && Fa_AS_BOOL(v));
 }
@@ -165,7 +169,8 @@ TEST(VMLoads, False)
     VMRunner r;
     CB b;
     b.regs(1).ABC(Fa_OpCode::LOAD_FALSE, 0, 0, 0).ret(0);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     Fa_Value v = r.run(b);
     EXPECT_TRUE(Fa_IS_BOOL(v) && !Fa_AS_BOOL(v));
 }
@@ -185,7 +190,8 @@ TEST(VMLoads, IntZero)
     VMRunner r;
     CB b;
     b.regs(1).load_int(0, 0).ret(0);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     Fa_Value v = r.run(b);
     EXPECT_TRUE(Fa_IS_INTEGER(v));
     EXPECT_EQ(Fa_AS_INTEGER(v), 0);
@@ -196,7 +202,8 @@ TEST(VMLoads, IntNegative)
     VMRunner r;
     CB b;
     b.regs(1).load_int(0, -100).ret(0);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     Fa_Value v = r.run(b);
     EXPECT_TRUE(Fa_IS_INTEGER(v));
     EXPECT_EQ(Fa_AS_INTEGER(v), -100);
@@ -207,7 +214,8 @@ TEST(VMLoads, IntMaxEncodable)
     VMRunner r;
     CB b;
     b.regs(1).ABx(Fa_OpCode::LOAD_INT, 0, 65535).ret(0);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     Fa_Value v = r.run(b);
     EXPECT_TRUE(Fa_IS_INTEGER(v));
     EXPECT_EQ(Fa_AS_INTEGER(v), 32768);
@@ -218,7 +226,8 @@ TEST(VMLoads, IntMinEncodable)
     VMRunner r;
     CB b;
     b.regs(1).ABx(Fa_OpCode::LOAD_INT, 0, 0).ret(0);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     Fa_Value v = r.run(b);
     EXPECT_TRUE(Fa_IS_INTEGER(v));
     EXPECT_EQ(Fa_AS_INTEGER(v), -32767);
@@ -231,7 +240,8 @@ TEST(VMLoads, ConstDouble)
     b.regs(1);
     u16 k = b.ch->add_constant(Fa_MAKE_REAL(3.14));
     b.ABx(Fa_OpCode::LOAD_CONST, 0, k).ret(0);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     Fa_Value v = r.run(b);
     EXPECT_TRUE(Fa_IS_DOUBLE(v));
     EXPECT_DOUBLE_EQ(Fa_AS_DOUBLE(v), 3.14);
@@ -244,7 +254,8 @@ TEST(VMLoads, ConstString)
     b.regs(1);
     u16 k = b.str("hello");
     b.ABx(Fa_OpCode::LOAD_CONST, 0, k).ret(0);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     Fa_Value v = r.run(b);
     EXPECT_TRUE(Fa_IS_STRING(v));
     EXPECT_EQ(Fa_AS_STRING(v)->str, "hello");
@@ -257,7 +268,8 @@ TEST(VMLoads, ConstLargeInt)
     b.regs(1);
     u16 k = b.ch->add_constant(Fa_MAKE_INTEGER(1000000LL));
     b.ABx(Fa_OpCode::LOAD_CONST, 0, k).ret(0);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     Fa_Value v = r.run(b);
     EXPECT_TRUE(Fa_IS_INTEGER(v));
     EXPECT_EQ(Fa_AS_INTEGER(v), 1000000LL);
@@ -276,7 +288,8 @@ TEST(VMMove, Copies)
     VMRunner r;
     CB b;
     b.regs(2).load_int(0, 77).mov(1, 0).ret(1);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     Fa_Value v = r.run(b);
     EXPECT_TRUE(Fa_IS_INTEGER(v));
     EXPECT_EQ(Fa_AS_INTEGER(v), 77);
@@ -287,7 +300,8 @@ TEST(VMMove, SourceUnchanged)
     VMRunner r;
     CB b;
     b.regs(2).load_int(0, 55).mov(1, 0).ret(0);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     Fa_Value v = r.run(b);
     EXPECT_EQ(Fa_AS_INTEGER(v), 55);
 }
@@ -297,7 +311,8 @@ TEST(VMArith, AddIntFastPath)
     VMRunner r;
     CB b;
     b.regs(3).slot().load_int(0, 10).load_int(1, 32).ABC(Fa_OpCode::OP_ADD, 2, 0, 1).nop().ret(2);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     Fa_Value v = r.run(b);
     EXPECT_TRUE(Fa_IS_INTEGER(v));
     EXPECT_EQ(Fa_AS_INTEGER(v), 42);
@@ -311,7 +326,8 @@ TEST(VMArith, AddDoubles)
     u16 k0 = b.ch->add_constant(Fa_MAKE_REAL(1.5));
     u16 k1 = b.ch->add_constant(Fa_MAKE_REAL(2.5));
     b.ABx(Fa_OpCode::LOAD_CONST, 0, k0).ABx(Fa_OpCode::LOAD_CONST, 1, k1).ABC(Fa_OpCode::OP_ADD, 2, 0, 1).ret(2);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     Fa_Value v = r.run(b);
     EXPECT_TRUE(Fa_IS_DOUBLE(v));
     EXPECT_DOUBLE_EQ(Fa_AS_DOUBLE(v), 4.0);
@@ -325,7 +341,8 @@ TEST(VMArith, AddStringsConcat)
     u16 k0 = b.str("foo");
     u16 k1 = b.str("bar");
     b.ABx(Fa_OpCode::LOAD_CONST, 0, k0).ABx(Fa_OpCode::LOAD_CONST, 1, k1).ABC(Fa_OpCode::OP_ADD, 2, 0, 1).ret(2);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     Fa_Value v = r.run(b);
     EXPECT_TRUE(Fa_IS_STRING(v));
     EXPECT_EQ(Fa_AS_STRING(v)->str, "foobar");
@@ -336,7 +353,8 @@ TEST(VMArith, SubInt)
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, 100).load_int(1, 58).ABC(Fa_OpCode::OP_SUB, 2, 0, 1).ret(2);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_EQ(Fa_AS_INTEGER(r.run(b)), 42);
 }
 
@@ -345,7 +363,8 @@ TEST(VMArith, MulInt)
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, 6).load_int(1, 7).ABC(Fa_OpCode::OP_MUL, 2, 0, 1).ret(2);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_EQ(Fa_AS_INTEGER(r.run(b)), 42);
 }
 
@@ -357,7 +376,8 @@ TEST(VMArith, DivDouble)
     u16 k0 = b.ch->add_constant(Fa_MAKE_REAL(84.0));
     u16 k1 = b.ch->add_constant(Fa_MAKE_REAL(2.0));
     b.ABx(Fa_OpCode::LOAD_CONST, 0, k0).ABx(Fa_OpCode::LOAD_CONST, 1, k1).ABC(Fa_OpCode::OP_DIV, 2, 0, 1).ret(2);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_DOUBLE_EQ(Fa_AS_DOUBLE(r.run(b)), 42.0);
 }
 
@@ -366,7 +386,8 @@ TEST(VMArith, ModPositive)
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, 17).load_int(1, 5).ABC(Fa_OpCode::OP_MOD, 2, 0, 1).ret(2);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_DOUBLE_EQ(Fa_AS_DOUBLE(r.run(b)), 2.0);
 }
 
@@ -375,7 +396,8 @@ TEST(VMArith, Pow)
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, 2).load_int(1, 10).ABC(Fa_OpCode::OP_POW, 2, 0, 1).ret(2);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_DOUBLE_EQ(Fa_AS_DOUBLE(r.run(b)), 1024.0);
 }
 
@@ -384,7 +406,8 @@ TEST(VMArith, NegInt)
     VMRunner r;
     CB b;
     b.regs(2).load_int(0, 7).ABC(Fa_OpCode::OP_NEG, 1, 0, 0).ret(1);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_EQ(Fa_AS_INTEGER(r.run(b)), -7);
 }
 
@@ -395,7 +418,8 @@ TEST(VMArith, NegDouble)
     b.regs(2);
     u16 k = b.ch->add_constant(Fa_MAKE_REAL(3.5));
     b.ABx(Fa_OpCode::LOAD_CONST, 0, k).ABC(Fa_OpCode::OP_NEG, 1, 0, 0).ret(1);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_DOUBLE_EQ(Fa_AS_DOUBLE(r.run(b)), -3.5);
 }
 
@@ -407,7 +431,8 @@ TEST(VMArith, DivByZeroThrows)
     u16 k0 = b.ch->add_constant(Fa_MAKE_REAL(1.0));
     u16 k1 = b.ch->add_constant(Fa_MAKE_REAL(0.0));
     b.ABx(Fa_OpCode::LOAD_CONST, 0, k0).ABx(Fa_OpCode::LOAD_CONST, 1, k1).ABC(Fa_OpCode::OP_DIV, 2, 0, 1).ret(2);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_THROW(r.run(b), std::runtime_error);
 }
 
@@ -416,7 +441,8 @@ TEST(VMArith, NegOnStringThrows)
     VMRunner r;
     CB b;
     b.regs(2).ABx(Fa_OpCode::LOAD_CONST, 0, b.str("x")).ABC(Fa_OpCode::OP_NEG, 1, 0, 0).ret(1);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_THROW(r.run(b), std::runtime_error);
 }
 
@@ -425,7 +451,8 @@ TEST(VMBitwise, And)
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, 0b1111).load_int(1, 0b1010).ABC(Fa_OpCode::OP_BITAND, 2, 0, 1).ret(2);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_EQ(Fa_AS_INTEGER(r.run(b)), 0b1010);
 }
 
@@ -434,7 +461,8 @@ TEST(VMBitwise, Or)
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, 0b1100).load_int(1, 0b0011).ABC(Fa_OpCode::OP_BITOR, 2, 0, 1).ret(2);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_EQ(Fa_AS_INTEGER(r.run(b)), 0b1111);
 }
 
@@ -443,7 +471,8 @@ TEST(VMBitwise, Xor)
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, 0b1111).load_int(1, 0b0101).ABC(Fa_OpCode::OP_BITXOR, 2, 0, 1).ret(2);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_EQ(Fa_AS_INTEGER(r.run(b)), 0b1010);
 }
 
@@ -452,7 +481,8 @@ TEST(VMBitwise, Not)
     VMRunner r;
     CB b;
     b.regs(2).load_int(0, 0).ABC(Fa_OpCode::OP_BITNOT, 1, 0, 0).ret(1);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_EQ(Fa_AS_INTEGER(r.run(b)), ~i64(0));
 }
 
@@ -461,7 +491,8 @@ TEST(VMBitwise, Shl)
     VMRunner r;
     CB b;
     b.regs(2).load_int(0, 1).ABC(Fa_OpCode::OP_LSHIFT, 1, 0, 8).ret(1);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_EQ(Fa_AS_INTEGER(r.run(b)), 256);
 }
 
@@ -470,7 +501,8 @@ TEST(VMBitwise, Shr)
     VMRunner r;
     CB b;
     b.regs(2).load_int(0, 1024).ABC(Fa_OpCode::OP_RSHIFT, 1, 0, 3).ret(1);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_EQ(Fa_AS_INTEGER(r.run(b)), 128);
 }
 
@@ -479,7 +511,8 @@ TEST(VMBitwise, ShrLogical_NegativeInput)
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, -8).load_int(1, 1).ABC(Fa_OpCode::OP_RSHIFT, 2, 0, 1).ret(2);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     Fa_Value v = r.run(b);
     EXPECT_TRUE(Fa_IS_DOUBLE(v));
     EXPECT_GT(Fa_AS_DOUBLE(v), 0.0);
@@ -492,7 +525,8 @@ TEST(VMBitwise, AndOnDoubleThrows)
     b.regs(3);
     u16 k = b.ch->add_constant(Fa_MAKE_REAL(1.0));
     b.ABx(Fa_OpCode::LOAD_CONST, 0, k).load_int(1, 1).ABC(Fa_OpCode::OP_BITAND, 2, 0, 1).ret(2);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_THROW(r.run(b), std::runtime_error);
 }
 
@@ -501,7 +535,8 @@ TEST(VMCompare, EqIntsTrue)
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, 5).load_int(1, 5).ABC(Fa_OpCode::OP_EQ, 2, 0, 1).ret(2);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     Fa_Value v = r.run(b);
     EXPECT_TRUE(Fa_IS_BOOL(v) && Fa_AS_BOOL(v));
 }
@@ -511,7 +546,8 @@ TEST(VMCompare, EqIntsFalse)
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, 5).load_int(1, 6).ABC(Fa_OpCode::OP_EQ, 2, 0, 1).ret(2);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     Fa_Value v = r.run(b);
     EXPECT_TRUE(Fa_IS_BOOL(v) && !Fa_AS_BOOL(v));
 }
@@ -530,7 +566,8 @@ TEST(VMCompare, LtTrue)
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, 3).load_int(1, 7).ABC(Fa_OpCode::OP_LT, 2, 0, 1).ret(2);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     Fa_Value v = r.run(b);
     EXPECT_TRUE(Fa_IS_BOOL(v) && Fa_AS_BOOL(v));
 }
@@ -540,7 +577,8 @@ TEST(VMCompare, LtFalseEqual)
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, 5).load_int(1, 5).ABC(Fa_OpCode::OP_LT, 2, 0, 1).ret(2);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     Fa_Value v = r.run(b);
     EXPECT_TRUE(Fa_IS_BOOL(v) && !Fa_AS_BOOL(v));
 }
@@ -550,7 +588,8 @@ TEST(VMCompare, LeTrue_Equal)
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, 5).load_int(1, 5).ABC(Fa_OpCode::OP_LTE, 2, 0, 1).ret(2);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     Fa_Value v = r.run(b);
     EXPECT_TRUE(Fa_IS_BOOL(v) && Fa_AS_BOOL(v));
 }
@@ -560,7 +599,8 @@ TEST(VMCompare, LeFalse)
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, 6).load_int(1, 5).ABC(Fa_OpCode::OP_LTE, 2, 0, 1).ret(2);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     Fa_Value v = r.run(b);
     EXPECT_TRUE(Fa_IS_BOOL(v) && !Fa_AS_BOOL(v));
 }
@@ -573,7 +613,8 @@ TEST(VMCompare, EqSameString)
     u16 k0 = b.str("hello");
     u16 k1 = b.str("hello");
     b.ABx(Fa_OpCode::LOAD_CONST, 0, k0).ABx(Fa_OpCode::LOAD_CONST, 1, k1).ABC(Fa_OpCode::OP_EQ, 2, 0, 1).ret(2);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     Fa_Value v = r.run(b);
     EXPECT_TRUE(Fa_IS_BOOL(v) && Fa_AS_BOOL(v));
 }
@@ -583,7 +624,8 @@ TEST(VMCompare, NotFalseIsTrue)
     VMRunner r;
     CB b;
     b.regs(2).ABC(Fa_OpCode::LOAD_FALSE, 0, 0, 0).ABC(Fa_OpCode::OP_NOT, 1, 0, 0).ret(1);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     Fa_Value v = r.run(b);
     EXPECT_TRUE(Fa_IS_BOOL(v) && Fa_AS_BOOL(v));
 }
@@ -593,7 +635,8 @@ TEST(VMCompare, NotTrueIsFalse)
     VMRunner r;
     CB b;
     b.regs(2).ABC(Fa_OpCode::LOAD_TRUE, 0, 0, 0).ABC(Fa_OpCode::OP_NOT, 1, 0, 0).ret(1);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     Fa_Value v = r.run(b);
     EXPECT_TRUE(Fa_IS_BOOL(v) && !Fa_AS_BOOL(v));
 }
@@ -603,7 +646,8 @@ TEST(VMCompare, NotNilIsTrue)
     VMRunner r;
     CB b;
     b.regs(2).ABC(Fa_OpCode::LOAD_NIL, 0, 0, 1).ABC(Fa_OpCode::OP_NOT, 1, 0, 0).ret(1);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     Fa_Value v = r.run(b);
     EXPECT_TRUE(Fa_IS_BOOL(v) && Fa_AS_BOOL(v));
 }
@@ -613,7 +657,8 @@ TEST(VMCompare, NotZeroIsTrue)
     VMRunner r;
     CB b;
     b.regs(2).load_int(0, 0).ABC(Fa_OpCode::OP_NOT, 1, 0, 0).ret(1);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     Fa_Value v = r.run(b);
     EXPECT_TRUE(Fa_IS_BOOL(v) && Fa_AS_BOOL(v));
 }
@@ -626,7 +671,8 @@ TEST(VMCompare, LtStrings)
     u16 ka = b.str("apple");
     u16 kb = b.str("banana");
     b.ABx(Fa_OpCode::LOAD_CONST, 0, ka).ABx(Fa_OpCode::LOAD_CONST, 1, kb).ABC(Fa_OpCode::OP_LT, 2, 0, 1).ret(2);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     Fa_Value v = r.run(b);
     EXPECT_TRUE(Fa_IS_BOOL(v) && Fa_AS_BOOL(v));
 }
@@ -636,7 +682,8 @@ TEST(VMGlobals, StoreAndLoad)
     VMRunner r;
     CB b;
     b.regs(2).load_int(0, 123).stg(0, "g").load_int(0, 0).ldg(1, "g").ret(1);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_EQ(Fa_AS_INTEGER(r.run(b)), 123);
 }
 
@@ -654,7 +701,8 @@ TEST(VMGlobals, Overwrite)
     VMRunner r;
     CB b;
     b.regs(2).load_int(0, 1).stg(0, "x").load_int(0, 2).stg(0, "x").ldg(1, "x").ret(1);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_EQ(Fa_AS_INTEGER(r.run(b)), 2);
 }
 
@@ -663,7 +711,8 @@ TEST(VMLists, NewEmpty)
     VMRunner r;
     CB b;
     b.regs(2).ABC(Fa_OpCode::LIST_NEW, 0, 0, 0).ABC(Fa_OpCode::LIST_LEN, 1, 0, 0).ret(1);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_EQ(Fa_AS_INTEGER(r.run(b)), 0);
 }
 
@@ -675,7 +724,8 @@ TEST(VMLists, AppendAndLen)
     for (int v : { 10, 20, 30 })
         b.load_int(1, v).ABC(Fa_OpCode::LIST_APPEND, 0, 1, 0);
     b.ABC(Fa_OpCode::LIST_LEN, 1, 0, 0).ret(1);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_EQ(Fa_AS_INTEGER(r.run(b)), 3);
 }
 
@@ -692,7 +742,8 @@ TEST(VMLists, GetFirst)
         .load_int(1, 0)
         .ABC(Fa_OpCode::LIST_GET, 2, 0, 1)
         .ret(2);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_EQ(Fa_AS_INTEGER(r.run(b)), 77);
 }
 
@@ -709,7 +760,8 @@ TEST(VMLists, GetLast)
         .load_int(1, 1)
         .ABC(Fa_OpCode::LIST_GET, 2, 0, 1)
         .ret(2);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_EQ(Fa_AS_INTEGER(r.run(b)), 20);
 }
 
@@ -727,7 +779,8 @@ TEST(VMLists, Set)
         .load_int(1, 0)
         .ABC(Fa_OpCode::LIST_GET, 2, 0, 1)
         .ret(2);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_EQ(Fa_AS_INTEGER(r.run(b)), 99);
 }
 
@@ -736,7 +789,8 @@ TEST(VMLists, OutOfBoundsThrows)
     VMRunner r;
     CB b;
     b.regs(3).ABC(Fa_OpCode::LIST_NEW, 0, 0, 0).load_int(1, 0).ABC(Fa_OpCode::LIST_GET, 2, 0, 1).ret(2);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_THROW(r.run(b), std::runtime_error);
 }
 
@@ -745,7 +799,8 @@ TEST(VMLists, LenOnNonListThrows)
     VMRunner r;
     CB b;
     b.regs(2).load_int(0, 5).ABC(Fa_OpCode::LIST_LEN, 1, 0, 0).ret(1);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_THROW(r.run(b), std::runtime_error);
 }
 
@@ -794,7 +849,7 @@ TEST(VMDicts, SetUpdatesAndAppendsByKey)
             expr_stmt(call_expr(name_expr("func"))),
         });
 
-    if (ch != nullptr)
+    if (ch != nullptr && test_config::dump_bytecode)
         ch->disassemble();
 
     VMRunner r;
@@ -814,7 +869,7 @@ TEST(VMDicts, MissingKeyReturnsNil)
         decl_stmt("x", index_expr(dict_expr({ }), lit_str("missing"))),
     });
 
-    if (ch != nullptr)
+    if (ch != nullptr && test_config::dump_bytecode)
         ch->disassemble();
 
     EXPECT_TRUE(Fa_IS_NIL(r.run(ch)));
@@ -844,7 +899,8 @@ TEST(VMCalls, CallClosure_TwoArgs)
     top->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 2, BX(4)), { });
     top->emit(Fa_make_ABC(Fa_OpCode::CALL, 0, 2, 0), { });
     top->emit(Fa_make_ABC(Fa_OpCode::RETURN, 0, 1, 0), { });
-    top->disassemble();
+    if (test_config::dump_bytecode)
+        top->disassemble();
     VMRunner r;
     EXPECT_EQ(Fa_AS_INTEGER(r.run(top)), 7);
 }
@@ -860,7 +916,8 @@ TEST(VMCalls, WrongArgcThrows)
     top->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 1, BX(1)), { });
     top->emit(Fa_make_ABC(Fa_OpCode::CALL, 0, 1, 0), { });
     top->emit(Fa_make_ABC(Fa_OpCode::RETURN, 0, 1, 0), { });
-    top->disassemble();
+    if (test_config::dump_bytecode)
+        top->disassemble();
     VMRunner r;
     EXPECT_THROW(r.run(top), std::runtime_error);
 }
@@ -870,7 +927,8 @@ TEST(VMCalls, CallNonFunctionThrows)
     VMRunner r;
     CB b;
     b.regs(2).load_int(0, 5).ABC(Fa_OpCode::CALL, 0, 0, 0).ret(0);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_THROW(r.run(b), std::runtime_error);
 }
 
@@ -891,7 +949,8 @@ TEST(VMCalls, ICCallNativeLen)
         .mov(2, 0)
         .ABC(Fa_OpCode::IC_CALL, 1, 1, 0)
         .ret(1);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_EQ(Fa_AS_INTEGER(r.run(b)), 3);
 }
 
@@ -925,7 +984,8 @@ TEST(VMCalls, TailCall_DoesNotOverflowFrames)
     top->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 1, BX(300)), { });
     top->emit(Fa_make_ABC(Fa_OpCode::CALL, 0, 1, 0), { });
     top->emit(Fa_make_ABC(Fa_OpCode::RETURN, 0, 1, 0), { });
-    top->disassemble();
+    if (test_config::dump_bytecode)
+        top->disassemble();
     VMRunner r;
     Fa_Value v = r.run(std::move(top));
     EXPECT_EQ(Fa_AS_INTEGER(v), 0);
@@ -951,7 +1011,8 @@ TEST(VMCalls, StackOverflowDetected)
     top->emit(Fa_make_ABx(Fa_OpCode::STORE_GLOBAL, 0, tk), { });
     top->emit(Fa_make_ABC(Fa_OpCode::CALL, 0, 0, 0), { });
     top->emit(Fa_make_ABC(Fa_OpCode::RETURN, 0, 1, 0), { });
-    top->disassemble();
+    if (test_config::dump_bytecode)
+        top->disassemble();
     VMRunner r;
     EXPECT_THROW(r.run(top), std::runtime_error);
 }
@@ -961,7 +1022,8 @@ TEST(VMGlobals, UndefinedGlobalRaisesRuntimeError)
     VMRunner r;
     CB b;
     b.regs(1).ldg(0, "missing").ret(0);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     EXPECT_THROW(r.run(b), Fa_RuntimeHalt);
     diagnostic::reset();
 }
@@ -1000,7 +1062,8 @@ TEST(VMIntegration, FunctionLocalDeclarationShadowsGlobal)
         expr_stmt(call_expr(name_expr("main"), list_expr({ }))),
     });
 
-    top->disassemble();
+    if (test_config::dump_bytecode)
+        top->disassemble();
     VMRunner r;
     Fa_Value v = r.run(top);
     ASSERT_TRUE(Fa_IS_LIST(v));
@@ -1016,7 +1079,8 @@ TEST(VMICProfile, BinaryOpUpdatesSlot)
     CB b;
     b.regs(3).slot().load_int(0, 3).load_int(1, 4).ABC(Fa_OpCode::OP_ADD, 2, 0, 1).nop(0).ret(2);
     r.run(b);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     auto const& s = r.chunk_->ic_slots[0];
     EXPECT_TRUE(has_tag(Fa_TypeTag(s.seen_lhs), Fa_TypeTag::INT));
     EXPECT_TRUE(has_tag(Fa_TypeTag(s.seen_rhs), Fa_TypeTag::INT));
@@ -1029,7 +1093,8 @@ TEST(VMICProfile, SubUpdatesSlot)
     VMRunner r;
     CB b;
     b.regs(3).slot().load_int(0, 10).load_int(1, 3).ABC(Fa_OpCode::OP_SUB, 2, 0, 1).nop(0).ret(2);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     r.run(b);
     EXPECT_GE(r.chunk_->ic_slots[0].hit_count, 1u);
 }
@@ -1049,7 +1114,8 @@ TEST(VMICProfile, ICCallUpdatesSlot)
         .mov(2, 0)
         .ABC(Fa_OpCode::IC_CALL, 1, 1, 0)
         .ret(1);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     r.run(b);
     auto const& s = r.chunk_->ic_slots[0];
     EXPECT_TRUE(has_tag(Fa_TypeTag(s.seen_lhs), Fa_TypeTag::NATIVE));
@@ -1073,9 +1139,37 @@ TEST(VMICProfile, SlotAccumulatesAcrossLoopIterations)
         .nop(0)
         .AsBx(Fa_OpCode::LOOP, 0, -6)
         .ret(0);
-    b.dump();
+    if (test_config::dump_bytecode)
+        b.dump();
     r.run(b);
     EXPECT_EQ(r.chunk_->ic_slots[0].hit_count, 5u);
+}
+
+TEST(VMIntegration, TopLevelWhileAssignmentUpdatesGlobal)
+{
+    AST::Fa_Stmt* read_global = func_def(
+        name_expr("read_global"),
+        list_expr(),
+        blk({
+            return_stmt(name_expr("x")),
+        }));
+
+    Fa_Chunk* top = compile_program({
+        expr_stmt(assign_expr(name_expr("x"), lit_int(0))),
+        expr_stmt(assign_expr(name_expr("limit"), lit_int(3))),
+        while_stmt(
+            binary(name_expr("x"), name_expr("limit"), AST::Fa_BinaryOp::OP_LT),
+            blk({
+                assign_stmt(name_expr("x"), binary(name_expr("x"), lit_int(1), AST::Fa_BinaryOp::OP_ADD)),
+            })),
+        read_global,
+        expr_stmt(call_expr(name_expr("read_global"), list_expr({ }))),
+    });
+
+    VMRunner r;
+    Fa_Value v = r.run(top);
+    ASSERT_TRUE(Fa_IS_INTEGER(v));
+    EXPECT_EQ(Fa_AS_INTEGER(v), 3);
 }
 
 TEST(VMIntegration, Fibonacci_fib10_equals_55)
@@ -1107,7 +1201,8 @@ TEST(VMIntegration, Fibonacci_fib10_equals_55)
                         AST::Fa_BinaryOp::OP_ADD)) }));
 
     Fa_Chunk* top = compile_program({ fib, expr_stmt(call_expr(name_expr("fib"), list_expr({ lit_int(10) }))) });
-    top->disassemble();
+    if (test_config::dump_bytecode)
+        top->disassemble();
     VMRunner r;
     EXPECT_EQ(Fa_AS_INTEGER(r.run(top)), 55);
 }
@@ -1139,7 +1234,8 @@ TEST(VMIntegration, SumForLoopOverList)
             }));
 
     Fa_Chunk* top = compile_calling(sum);
-    top->disassemble();
+    if (test_config::dump_bytecode)
+        top->disassemble();
     VMRunner r;
     EXPECT_EQ(Fa_AS_INTEGER(r.run(top)), 15);
 }
@@ -1156,7 +1252,8 @@ TEST(VMIntegration, StringConcat_3Parts)
                 AST::Fa_BinaryOp::OP_ADD)));
 
     Fa_Chunk* top = compile_calling(test);
-    top->disassemble();
+    if (test_config::dump_bytecode)
+        top->disassemble();
     VMRunner r;
     Fa_Value v = r.run(top);
     EXPECT_EQ(Fa_AS_STRING(v)->str, "hello, world");
@@ -1177,7 +1274,8 @@ TEST(VMIntegration, EmptyForLoopLeavesStateUnchanged)
         }));
 
     Fa_Chunk* top = compile_calling(first);
-    top->disassemble();
+    if (test_config::dump_bytecode)
+        top->disassemble();
     VMRunner r;
     EXPECT_EQ(Fa_AS_INTEGER(r.run(top)), 99);
 }
@@ -1209,7 +1307,8 @@ TEST(VMIntegration, BreakAndContinueWorkInLoops)
         }));
 
     Fa_Chunk* top = compile_calling(test);
-    top->disassemble();
+    if (test_config::dump_bytecode)
+        top->disassemble();
     VMRunner r;
     EXPECT_EQ(Fa_AS_INTEGER(r.run(top)), 8);
 }
@@ -2208,7 +2307,8 @@ TEST(VMPerfTest, Dispatch_IntAdd_1M_Iterations)
             return_stmt(name_expr("i")) }));
 
     Fa_Chunk* top = compile_calling(test);
-    top->disassemble();
+    if (test_config::dump_bytecode)
+        top->disassemble();
     Fa_VM vm;
     // Warm up — lets the IC quicken the ADD opcode.
     vm.run(top);
@@ -2246,7 +2346,8 @@ TEST(VMPerfTest, Dispatch_FloatAdd_500k_Iterations)
             return_stmt(name_expr("i")) }));
 
     Fa_Chunk* top = compile_calling(test);
-    top->disassemble();
+    if (test_config::dump_bytecode)
+        top->disassemble();
     Fa_VM vm;
     vm.run(top);
 
@@ -2284,7 +2385,8 @@ TEST(VMPerfTest, IC_Quickening_ColdVsWarm_Ratio)
             return_stmt(name_expr("i")) }));
 
     Fa_Chunk* top = compile_calling(test);
-    top->disassemble();
+    if (test_config::dump_bytecode)
+        top->disassemble();
     Fa_VM vm_cold, vm_warm;
 
     // Cold — no prior run.
@@ -2327,7 +2429,7 @@ TEST(VMPerfTest, GlobalLookup_1M_Roundtrips)
         assign_stmt(name_expr("a"), binary(name_expr("a"), lit_int(1), AST::Fa_BinaryOp::OP_ADD)));
 
     Fa_Chunk* top = Compiler().compile({ decl, while_loop });
-    if (top != nullptr)
+    if (top != nullptr && test_config::dump_bytecode)
         top->disassemble();
 
     Fa_VM vm;
@@ -2374,7 +2476,8 @@ TEST(VMPerfTest, CallOverhead_100k_Calls)
 
     std::cout << "AUTO:" << '\n';
     Fa_Chunk* top_ = Compiler().compile({ add, func, call });
-    top_->disassemble();
+    if (test_config::dump_bytecode)
+        top_->disassemble();
     Fa_VM vm;
     auto t0 = std::chrono::high_resolution_clock::now();
     Fa_Value result = vm.run(top_);
@@ -2406,7 +2509,8 @@ TEST(VMPerfTest, TailCall_vs_RegularLoop_Ratio)
 
     Fa_Chunk* tc_top = compile_program({ tc_fn, expr_stmt(call_expr(name_expr("tc"), list_expr({ lit_int(DEPTH) }))) });
 
-    tc_top->disassemble();
+    if (test_config::dump_bytecode)
+        tc_top->disassemble();
     Fa_VM vm_tc;
     auto t0 = std::chrono::high_resolution_clock::now();
     Fa_Value tc_result = vm_tc.run(tc_top);
@@ -2425,7 +2529,8 @@ TEST(VMPerfTest, TailCall_vs_RegularLoop_Ratio)
             return_stmt(name_expr("n")) }));
 
     Fa_Chunk* loop_top = compile_calling(loop_fn);
-    loop_top->disassemble();
+    if (test_config::dump_bytecode)
+        loop_top->disassemble();
     Fa_VM vm_loop;
     t0 = std::chrono::high_resolution_clock::now();
     Fa_Value loop_result = vm_loop.run(loop_top);
@@ -2476,7 +2581,8 @@ TEST(VMPerfTest, List_AppendAndSum_10k)
             return_stmt(name_expr("sum")) }));
 
     Fa_Chunk* top = compile_calling(test);
-    top->disassemble();
+    if (test_config::dump_bytecode)
+        top->disassemble();
     Fa_VM vm;
     auto t0 = std::chrono::high_resolution_clock::now();
     Fa_Value result = vm.run(top);
@@ -2513,7 +2619,8 @@ TEST(VMPerfTest, NativeCall_Len_50k_ICHot)
             return_stmt(name_expr("last")) }));
 
     Fa_Chunk* top = compile_calling(test);
-    top->disassemble();
+    if (test_config::dump_bytecode)
+        top->disassemble();
     Fa_VM vm;
 
     // Cold run to prime the IC.
@@ -2566,7 +2673,8 @@ static Fa_Chunk* make_fib_top(int n, int reps)
             return_stmt(name_expr("result")) }));
 
     Fa_Chunk* top = compile_program({ fib, test, expr_stmt(call_expr(name_expr("test"), list_expr())) });
-    top->disassemble();
+    if (test_config::dump_bytecode)
+        top->disassemble();
     return top;
 }
 

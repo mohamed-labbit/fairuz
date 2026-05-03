@@ -422,7 +422,18 @@ Fa_Value Fa_VM::Fa_list(int argc, Fa_Value* argv)
     return ret;
 }
 
-Fa_Value Fa_VM::Fa_dict(int argc, Fa_Value* argv) { return Fa_MAKE_DICT(); }
+Fa_Value Fa_VM::Fa_dict(int argc, Fa_Value* argv)
+{
+    Fa_Value ret = Fa_MAKE_DICT();
+    if (argc <= 0 || argv == nullptr)
+        return ret;
+
+    Fa_ObjDict* dict_obj = Fa_AS_DICT(ret);
+    for (int i = 0; i + 1 < argc; i += 2)
+        dict_obj->data[argv[i]] = argv[i + 1];
+
+    return ret;
+}
 
 Fa_Value Fa_VM::Fa_split(int argc, Fa_Value* argv)
 {

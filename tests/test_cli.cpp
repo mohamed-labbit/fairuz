@@ -75,7 +75,7 @@ TEST(CliE2E, Version)
 {
     RunResult r = run_cli("--version");
     EXPECT_EQ(r.exit_code, 0);
-    EXPECT_NE(r.out.find("fairuz 0.0.0"), std::string::npos);
+    EXPECT_NE(r.out.find("fairuz 0.1.0"), std::string::npos);
 }
 
 TEST(CliE2E, CheckOnly)

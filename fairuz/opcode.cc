@@ -73,6 +73,7 @@ u32 Fa_Chunk::get_line(u32 const instr_idx) const
     return line;
 }
 
+/// NOTE: this disassembler is entirely generated using Anthropic's Claude (with mods for style)
 void Fa_Chunk::disassemble() const
 {
     ::printf("=== %s (arity=%d regs=%d) ===\n", name.data(), arity, local_count);

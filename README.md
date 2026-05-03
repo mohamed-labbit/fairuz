@@ -1,76 +1,99 @@
-# My Programming Language
+# Fairuz
 
-This is a scrappy, work-in-progress attempt to build the first Turing-complete programming language with Arabic-first syntax. It is meant to be easy to read, pythonic in spirit, and a fun playground for learning how lexers, parsers, and runtimes fit together.
+Fairuz is an Arabic-first experimental programming language with a register-based bytecode compiler and virtual machine written in C++23.
 
-## What's inside
-- `src/lex` and `include/lexer`: tokenization utilities and experiments for Arabic-oriented text.
-- `src/parser`: early parsing work and AST scaffolding.
-- `src/runtime`: runtime building blocks and value handling.
-- `tests/`: GoogleTest suites that cover the lexer and memory arena.
-- C++23 code built with CMake; uses `simdutf`, OpenMP, and GoogleTest for tooling and runtime validation.
+This `0.1.0` release is the first public source release. The interpreter currently supports UTF-8 source files, Arabic identifiers, functions, conditionals, loops, lists, dictionaries, indexing, and a small standard library.
 
-## Command line
-After installation, run programs with:
+## Build
 
-```bash
-fairuz file.fa
-```
+Requirements:
 
-Options can appear before or after the file:
+- CMake 3.14+
+- A C++23 compiler
+- `simdutf` available via your package manager, or a working CMake network fetch path
+- OpenMP support is optional but recommended
+
+Configure and build:
 
 ```bash
-fairuz file.fa --time
-fairuz --check file.fa
-fairuz file.fa --dump-bytecode
+cmake -S . -B build -DBUILD_TESTS=ON -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+cmake --build build --target fairuz -j4
 ```
 
-Useful flags:
+Run the test suite:
+
+```bash
+cmake --build build --target fairuz_tests -j4
+./build/fairuz_tests
+```
+
+## Run
+
+```bash
+./build/fairuz examples/hello.fa
+./build/fairuz examples/fibonacci.fa
+./build/fairuz --check examples/sum_list.fa
+```
+
+Install to a custom prefix:
+
+```bash
+cmake --install build --prefix /tmp/fairuz
+```
+
+Installed files:
+
+- `bin/fairuz`
+- `share/doc/Fairuz/README.md`
+- `share/doc/Fairuz/LICENSE`
+- `share/fairuz/examples/*.fa`
+
+## Language Example
+
+```fa
+دالة فيب(ن):
+    اذا ن <= 1:
+        ارجع ن
+
+    ارجع فيب(ن - 1) + فيب(ن - 2)
+
+اكتب(فيب(10))
+```
+
+## Command Line
+
+```bash
+fairuz <file.fa> [options]
+fairuz format <file.fa>
+```
+
+Available options:
+
 - `--check` parses and compiles without executing
 - `--dump-ast` prints the parsed AST
-- `--dump-bytecode` prints compiled bytecode
+- `--dump-bytecode` prints the compiled bytecode
 - `--time` prints execution time to stderr
-- `--help` and `--version`
+- `--help`
+- `--version`
 
-## Testing and security
-Thanks to Mohamed Labbit and Mohamed Salem Eddah for pushing on testing and tightening security edges.
+## Editor Support
 
-## Build and test
+A VS Code extension is included in `editors/vscode/fairuz`.
+
+To package and install it locally:
+
 ```bash
-bash build.sh test
+cd editors/vscode/fairuz
+vsce package
+code --install-extension fairuz-language-0.1.0.vsix
 ```
-
-### cleanup and rebuild
-```bash
-bash build.sh --clean test
-```
-
-### run a program
-```bash
-bash build.sh run demo_factorial.fa
-```
-
-Fairuz source files use the `.fa` extension by default.
-
-## Syntax Highlighting
-- A VS Code syntax package is included at [editors/vscode/fairuz](/Users/mohamedrabbit/code/fairuz/editors/vscode/fairuz).
-- It registers the `fairuz` language and associates it with `.fa` files.
-
-### install locally from CMake
-```bash
-bash build.sh install /tmp/fairuz-prefix
-```
-
-This installs:
-- `bin/fairuz`
-- docs under `share/doc`
-- example programs under `share/fairuz/examples`
 
 ## Homebrew
-A Homebrew formula template is included at:
 
-- [packaging/homebrew/fairuz.rb](/Users/mohamedrabbit/code/fairuz/packaging/homebrew/fairuz.rb)
+A Homebrew formula template for release packaging is included at `packaging/homebrew/fairuz.rb`.
 
-Typical release flow:
-1. Create a tagged source release, for example `v0.0.0`
-2. Fill in the release tarball `sha256` in the formula
-3. Install with `brew install --build-from-source ./packaging/homebrew/fairuz.rb`
+Before publishing it, replace the `sha256` placeholder with the checksum of the `v0.1.0` release tarball.
+
+## License
+
+MIT

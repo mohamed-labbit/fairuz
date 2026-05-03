@@ -15,7 +15,7 @@ bool Fa_BinaryExpr::equals(Fa_Expr const* other) const
     return m_operator == bin->get_operator() && m_left->equals(bin->get_left()) && m_right->equals(bin->get_right());
 }
 
-Fa_BinaryExpr* Fa_BinaryExpr::clone() const { return Fa_makeBinary(m_left->clone(), m_right->clone(), m_operator, m_loc); }
+Fa_BinaryExpr* Fa_BinaryExpr::clone() const { return Fa_make_binary(m_left->clone(), m_right->clone(), m_operator, m_loc); }
 
 Fa_Expr* Fa_BinaryExpr::get_left() const { return m_left; }
 
@@ -38,7 +38,7 @@ bool Fa_UnaryExpr::equals(Fa_Expr const* other) const
     return m_operator == un->get_operator() && m_operand->equals(un->get_operand());
 }
 
-Fa_UnaryExpr* Fa_UnaryExpr::clone() const { return Fa_makeUnary(m_operand->clone(), m_operator, m_loc); }
+Fa_UnaryExpr* Fa_UnaryExpr::clone() const { return Fa_make_unary(m_operand->clone(), m_operator, m_loc); }
 
 Fa_Expr* Fa_UnaryExpr::get_operand() const { return m_operand; }
 
@@ -111,15 +111,15 @@ Fa_LiteralExpr* Fa_LiteralExpr::clone() const
 {
     switch (m_type) {
     case Type::INTEGER:
-        return Fa_makeLiteralInt(int_value, m_loc);
+        return Fa_make_literal_int(int_value, m_loc);
     case Type::FLOAT:
-        return Fa_makeLiteralFloat(float_value, m_loc);
+        return Fa_make_literal_float(float_value, m_loc);
     case Type::BOOLEAN:
-        return Fa_makeLiteralBool(bool_value, m_loc);
+        return Fa_make_literal_bool(bool_value, m_loc);
     case Type::STRING:
-        return Fa_makeLiteralString(str_value, m_loc);
+        return Fa_make_literal_string(str_value, m_loc);
     case Type::NIL:
-        return Fa_makeLiteralNil(m_loc);
+        return Fa_make_literal_nil(m_loc);
     default:
         return nullptr; // should never happen
     }
@@ -144,7 +144,7 @@ bool Fa_NameExpr::equals(Fa_Expr const* other) const
     return m_value == name->get_value();
 }
 
-Fa_NameExpr* Fa_NameExpr::clone() const { return Fa_makeName(m_value, m_loc); }
+Fa_NameExpr* Fa_NameExpr::clone() const { return Fa_make_name(m_value, m_loc); }
 
 Fa_StringRef Fa_NameExpr::get_value() const { return m_value; }
 
@@ -170,7 +170,7 @@ bool Fa_ListExpr::equals(Fa_Expr const* other) const
     return true;
 }
 
-Fa_ListExpr* Fa_ListExpr::clone() const { return Fa_makeList(m_elements, m_loc); }
+Fa_ListExpr* Fa_ListExpr::clone() const { return Fa_make_list(m_elements, m_loc); }
 
 Fa_Array<Fa_Expr*> const& Fa_ListExpr::get_elements() const { return m_elements; }
 
@@ -189,7 +189,7 @@ bool Fa_CallExpr::equals(Fa_Expr const* other) const
     return m_callee->equals(call->get_callee()) && m_args->equals(call->get_args_as_list_expr()) && m_call_location == call->get_call_location();
 }
 
-Fa_CallExpr* Fa_CallExpr::clone() const { return Fa_makeCall(m_callee->clone(), m_args->clone(), m_loc); }
+Fa_CallExpr* Fa_CallExpr::clone() const { return Fa_make_call(m_callee->clone(), m_args->clone(), m_loc); }
 
 Fa_Expr* Fa_CallExpr::get_callee() const { return m_callee; }
 
@@ -231,7 +231,7 @@ bool Fa_DictExpr::equals(Fa_Expr const* other) const
     return true;
 }
 
-Fa_Expr* Fa_DictExpr::clone() const { return Fa_makeDict(content, m_loc); }
+Fa_Expr* Fa_DictExpr::clone() const { return Fa_make_dict(content, m_loc); }
 Fa_Array<std::pair<Fa_Expr*, Fa_Expr*>> Fa_DictExpr::get_content() const { return content; }
 void Fa_DictExpr::set_content(Fa_Array<std::pair<Fa_Expr*, Fa_Expr*>> c) { content = c; }
 
@@ -250,7 +250,7 @@ bool Fa_AssignmentExpr::equals(Fa_Expr const* other) const
 
 Fa_AssignmentExpr* Fa_AssignmentExpr::clone() const
 {
-    return Fa_makeAssignmentExpr(m_target->clone(), m_value->clone(), m_loc, m_is_decl);
+    return Fa_make_assignment_expr(m_target->clone(), m_value->clone(), m_loc, m_is_decl);
 }
 
 Fa_Expr* Fa_AssignmentExpr::get_target() const { return m_target; }
@@ -292,13 +292,13 @@ bool Fa_IndexExpr::equals(Fa_Expr const* other) const
     return m_object->equals(idx->get_object()) && m_index->equals(idx->get_index());
 }
 
-Fa_IndexExpr* Fa_IndexExpr::clone() const { return Fa_makeIndex(m_object->clone(), m_index->clone(), m_loc); }
+Fa_IndexExpr* Fa_IndexExpr::clone() const { return Fa_make_index(m_object->clone(), m_index->clone(), m_loc); }
 
 Fa_Expr* Fa_IndexExpr::get_object() const { return m_object; }
 
 Fa_Expr* Fa_IndexExpr::get_index() const { return m_index; }
 
-Fa_BlockStmt* Fa_BlockStmt::clone() const { return Fa_makeBlock(m_statements, m_loc); }
+Fa_BlockStmt* Fa_BlockStmt::clone() const { return Fa_make_block(m_statements, m_loc); }
 
 Fa_Array<Fa_Stmt*> const& Fa_BlockStmt::get_statements() const { return m_statements; }
 
@@ -317,7 +317,7 @@ bool Fa_ExprStmt::equals(Fa_Stmt const* other) const
     return m_expr->equals(block->get_expr());
 }
 
-Fa_ExprStmt* Fa_ExprStmt::clone() const { return Fa_makeExprStmt(m_expr->clone(), m_loc); }
+Fa_ExprStmt* Fa_ExprStmt::clone() const { return Fa_make_expr_stmt(m_expr->clone(), m_loc); }
 
 Fa_Expr* Fa_ExprStmt::get_expr() const { return m_expr; }
 
@@ -336,7 +336,7 @@ bool Fa_AssignmentStmt::equals(Fa_Stmt const* other) const
 
 Fa_AssignmentStmt* Fa_AssignmentStmt::clone() const
 {
-    return Fa_makeAssignmentStmt(m_expr->get_target(), m_expr->get_value(), m_loc, m_expr->is_declaration());
+    return Fa_make_assignment_stmt(m_expr->get_target(), m_expr->get_value(), m_loc, m_expr->is_declaration());
 }
 
 Fa_Expr* Fa_AssignmentStmt::get_value() const { return m_expr->get_value(); }
@@ -367,7 +367,7 @@ bool Fa_IfStmt::equals(Fa_Stmt const* other) const
 
 Fa_IfStmt* Fa_IfStmt::clone() const
 {
-    return Fa_makeIf(m_condition->clone(), m_then_stmt->clone(), m_loc, LIKELY(m_else_stmt == nullptr) ? nullptr : m_else_stmt->clone());
+    return Fa_make_if(m_condition->clone(), m_then_stmt->clone(), m_loc, LIKELY(m_else_stmt == nullptr) ? nullptr : m_else_stmt->clone());
 }
 
 Fa_Expr* Fa_IfStmt::get_condition() const { return m_condition; }
@@ -389,7 +389,7 @@ bool Fa_WhileStmt::equals(Fa_Stmt const* other) const
     return m_condition->equals(block->get_condition()) && m_body->equals(block->get_body());
 }
 
-Fa_WhileStmt* Fa_WhileStmt::clone() const { return Fa_makeWhile(m_condition->clone(), m_body->clone(), m_loc); }
+Fa_WhileStmt* Fa_WhileStmt::clone() const { return Fa_make_while(m_condition->clone(), m_body->clone(), m_loc); }
 
 Fa_Expr* Fa_WhileStmt::get_condition() const { return m_condition; }
 
@@ -434,7 +434,7 @@ bool Fa_FunctionDef::equals(Fa_Stmt const* other) const
 
 Fa_FunctionDef* Fa_FunctionDef::clone() const
 {
-    return Fa_makeFunction(m_name->clone(), m_params->clone(), m_body->clone(), m_loc);
+    return Fa_make_function(m_name->clone(), m_params->clone(), m_body->clone(), m_loc);
 }
 
 Fa_NameExpr* Fa_FunctionDef::get_name() const { return m_name; }
@@ -451,7 +451,7 @@ bool Fa_FunctionDef::has_parameters() const { return m_params && !m_params->is_e
 
 Fa_ReturnStmt* Fa_ReturnStmt::clone() const
 {
-    return Fa_makeReturn(m_loc, m_value == nullptr ? nullptr : m_value->clone());
+    return Fa_make_return(m_loc, m_value == nullptr ? nullptr : m_value->clone());
 }
 
 Fa_Expr* Fa_ReturnStmt::get_value() { return m_value; }
@@ -507,7 +507,7 @@ Fa_ClassDef* Fa_ClassDef::clone() const
         member_clones.push(mem->clone());
     for (Fa_Stmt* met : m_methods)
         method_clones.push(met->clone());
-    return Fa_makeClassDef(m_name->clone(), member_clones, method_clones, m_loc);
+    return Fa_make_class_def(m_name->clone(), member_clones, method_clones, m_loc);
 }
 
 Fa_Array<Fa_Expr*> Fa_ClassDef::get_members() const { return m_members; }
@@ -520,13 +520,13 @@ bool Fa_BreakStmt::equals(Fa_Stmt const* other) const
     return other != nullptr && other->get_kind() == Kind::BREAK;
 }
 
-Fa_BreakStmt* Fa_BreakStmt::clone() const { return Fa_makeBreak(m_loc); }
+Fa_BreakStmt* Fa_BreakStmt::clone() const { return Fa_make_break(m_loc); }
 
 bool Fa_ContinueStmt::equals(Fa_Stmt const* other) const
 {
     return other != nullptr && other->get_kind() == Kind::CONTINUE;
 }
 
-Fa_ContinueStmt* Fa_ContinueStmt::clone() const { return Fa_makeContinue(m_loc); }
+Fa_ContinueStmt* Fa_ContinueStmt::clone() const { return Fa_make_continue(m_loc); }
 
 } // namespace fairuz::ast

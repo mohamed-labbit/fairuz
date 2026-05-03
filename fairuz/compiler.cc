@@ -138,6 +138,15 @@ void Compiler::compile_assignment_stmt(AST::Fa_AssignmentStmt const* s)
 {
     Fa_SourceLocation loc = s->get_location();
 
+    if (auto const* index_expr = dynamic_cast<AST::Fa_IndexExpr const*>(s->get_target())) {
+        RegMark mark(m_current);
+        u8 object_reg = any_reg(compile_expr_i(index_expr->get_object()), loc);
+        u8 index_reg = any_reg(compile_expr_i(index_expr->get_index()), loc);
+        u8 value_reg = any_reg(compile_expr_i(s->get_value()), loc);
+        emit(Fa_make_ABC(Fa_OpCode::LIST_SET, object_reg, index_reg, value_reg), loc);
+        return;
+    }
+
     auto const* name = dynamic_cast<AST::Fa_NameExpr const*>(s->get_target());
     if (name == nullptr) {
         diagnostic::emit(CompilerError::INVALID_ASSIGNMENT_TARGET, "only simple name assignments are supported");
@@ -161,6 +170,13 @@ void Compiler::compile_assignment_stmt(AST::Fa_AssignmentStmt const* s)
     VarInfo vi = resolve_name(name->get_value());
     if (vi.kind == VarInfo::Kind::LOCAL) {
         compile_expr(s->get_value(), &vi.index);
+        return;
+    }
+
+    if (!m_current->is_top_level) {
+        u8 reg = alloc_register();
+        discharge(compile_expr_i(s->get_value()), reg, loc);
+        declare_local(name->get_value(), reg);
         return;
     }
 
@@ -220,8 +236,9 @@ void Compiler::compile_while(AST::Fa_WhileStmt const* s)
             u32 loop_start = current_offset();
             push_loop(loop_start);
             compile_stmt(s->get_body());
+            u32 continue_target = current_offset();
             emit(Fa_make_AsBx(Fa_OpCode::LOOP, 0, static_cast<i32>(loop_start) - static_cast<i32>(current_offset()) - 1), loc);
-            pop_loop(current_offset(), loop_start, loc.line);
+            pop_loop(current_offset(), continue_target, loc.line);
         }
 
         m_current->is_dead = incoming_dead;
@@ -236,11 +253,11 @@ void Compiler::compile_while(AST::Fa_WhileStmt const* s)
         u8 cond = any_reg(compile_expr_i(s->get_condition()), loc);
         u32 exit_jump = emit_jump(Fa_OpCode::JUMP_IF_FALSE, cond, loc);
         compile_stmt(s->get_body());
+        u32 continue_target = current_offset();
         emit(Fa_make_AsBx(Fa_OpCode::LOOP, 0, static_cast<i32>(loop_start) - static_cast<i32>(current_offset()) - 1), loc);
         patch_jump(exit_jump);
+        pop_loop(current_offset(), continue_target, loc.line);
     }
-
-    pop_loop(current_offset(), loop_start, loc.line);
     m_current->is_dead = incoming_dead;
     end_scope(loc);
 }
@@ -358,23 +375,30 @@ void Compiler::compile_for(AST::Fa_ForStmt const* s)
     u8 len_reg = alloc_register();
     declare_local("__for_len", len_reg);
     emit(Fa_make_ABC(Fa_OpCode::LIST_LEN, len_reg, iter_reg, 0), loc);
+
     u8 index_reg = alloc_register();
     declare_local("__for_index", index_reg);
     emit_load_value(index_reg, Fa_MAKE_INTEGER(0), loc);
+
     u8 target_reg = alloc_register();
     declare_local(target->get_value(), target_reg);
+
     u8 cond_reg = alloc_register();
     declare_local("__for_cond", cond_reg);
+
     u8 step_reg = alloc_register();
     declare_local("__for_step", step_reg);
     emit_load_value(step_reg, Fa_MAKE_INTEGER(1), loc);
+
     u32 loop_start = current_offset();
     push_loop(loop_start);
     emit(Fa_make_ABC(Fa_OpCode::OP_LT, cond_reg, index_reg, len_reg), loc);
     emit(Fa_make_ABC(Fa_OpCode::NOP, current_chunk()->alloc_ic_slot(), 0, 0), loc);
+
     u32 exit_jump = emit_jump(Fa_OpCode::JUMP_IF_FALSE, cond_reg, loc);
     emit(Fa_make_ABC(Fa_OpCode::LIST_GET, target_reg, iter_reg, index_reg), loc);
     compile_stmt(s->get_body());
+
     u32 continue_target = current_offset();
     emit(Fa_make_ABC(Fa_OpCode::OP_ADD, index_reg, index_reg, step_reg), loc);
     emit(Fa_make_ABC(Fa_OpCode::NOP, current_chunk()->alloc_ic_slot(), 0, 0), loc);
@@ -382,6 +406,7 @@ void Compiler::compile_for(AST::Fa_ForStmt const* s)
     patch_jump(exit_jump);
     pop_loop(current_offset(), continue_target, loc.line);
     end_scope(loc);
+
     m_current->is_dead = incoming_dead;
 }
 
@@ -443,9 +468,8 @@ void Compiler::compile_class_def(AST::Fa_ClassDef const* s)
         Fa_Chunk* fn_chunk = make_chunk();
         fn_chunk->name = class_name->get_value() + "." + method_name->get_value();
 
-        // Arity includes implicit instance as first parameter
         int explicit_param_count = method->has_parameters() ? static_cast<int>(method->get_parameters().size()) : 0;
-        fn_chunk->arity = 1 + explicit_param_count;
+        fn_chunk->arity = explicit_param_count;
 
         u16 fn_idx = static_cast<u16>(current_chunk()->functions.size());
         current_chunk()->functions.push(fn_chunk);
@@ -458,11 +482,6 @@ void Compiler::compile_class_def(AST::Fa_ClassDef const* s)
 
         begin_scope();
 
-        // Allocate register for implicit instance parameter
-        u8 instance_reg = alloc_register();
-        declare_local(kClassInstanceName, instance_reg);
-
-        // Allocate registers for explicit parameters
         if (method->has_parameters()) {
             for (AST::Fa_Expr const* param : method->get_parameters()) {
                 auto const* param_name = dynamic_cast<AST::Fa_NameExpr const*>(param);
@@ -476,6 +495,10 @@ void Compiler::compile_class_def(AST::Fa_ClassDef const* s)
             }
         }
 
+        u8 instance_reg = alloc_register();
+        declare_local(kClassInstanceName, instance_reg);
+        emit_empty_dict(instance_reg, method_loc);
+
         if (auto const* body_block = dynamic_cast<AST::Fa_BlockStmt const*>(method->get_body())) {
             for (AST::Fa_Stmt const* child : body_block->get_statements())
                 compile_stmt(child);
@@ -483,12 +506,8 @@ void Compiler::compile_class_def(AST::Fa_ClassDef const* s)
             compile_stmt(method->get_body());
         }
 
-        // Default return: return nil (methods mutate instance in-place)
-        if (!fn_state.is_dead) {
-            u8 nil_reg = alloc_register();
-            emit(Fa_make_ABx(Fa_OpCode::LOAD_CONST, nil_reg, intern_string("nil")), method_loc);
-            emit(Fa_make_ABC(Fa_OpCode::RETURN, nil_reg, 1, 0), method_loc);
-        }
+        if (!fn_state.is_dead)
+            emit(Fa_make_ABC(Fa_OpCode::RETURN, instance_reg, 1, 0), method_loc);
 
         end_scope(method_loc);
         fn_chunk->local_count = fn_state.max_reg;
@@ -637,6 +656,9 @@ Fa_ExprResult Compiler::compile_unary_i(AST::Fa_UnaryExpr const* e)
             return Fa_ExprResult::knil();
     }
 
+    if (auto reduced = try_strength_reduce_unary(e))
+        return compile_expr_i(*reduced);
+
     Fa_OpCode op = Fa_OpCode::NOP;
     switch (e->get_operator()) {
     case AST::Fa_UnaryOp::OP_NEG:
@@ -674,6 +696,9 @@ Fa_ExprResult Compiler::compile_binary_i(AST::Fa_BinaryExpr const* e)
         if (Fa_IS_NIL(v))
             return Fa_ExprResult::knil();
     }
+
+    if (auto reduced = try_strength_reduce_binary(e))
+        return compile_expr_i(*reduced);
 
     AST::Fa_BinaryOp op = e->get_operator();
     if (op == AST::Fa_BinaryOp::OP_AND) {
@@ -856,6 +881,13 @@ Fa_ExprResult Compiler::compile_assign_i(AST::Fa_AssignmentExpr const* e)
     if (vi.kind == VarInfo::Kind::LOCAL) {
         compile_expr(e->get_value(), &vi.index);
         return Fa_ExprResult::reg(vi.index);
+    }
+
+    if (!m_current->is_top_level) {
+        u8 reg = alloc_register();
+        discharge(compile_expr_i(e->get_value()), reg, loc);
+        declare_local(name->get_value(), reg);
+        return Fa_ExprResult::reg(reg);
     }
 
     RegMark mark(m_current);

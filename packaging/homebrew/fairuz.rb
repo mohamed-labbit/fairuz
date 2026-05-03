@@ -1,7 +1,7 @@
-class fairuz < Formula
+class Fairuz < Formula
   desc "Arabic-first experimental programming language"
-  homepage "https://github.com/REPLACE_ME/fairuz"
-  url "https://github.com/REPLACE_ME/fairuz/archive/refs/tags/v0.0.0.tar.gz"
+  homepage "https://github.com/Mohammed0101-lgtm/my-programming-language"
+  url "https://github.com/Mohammed0101-lgtm/my-programming-language/archive/refs/tags/v0.1.0.tar.gz"
   sha256 "REPLACE_WITH_RELEASE_TARBALL_SHA256"
   license "MIT"
 
