@@ -251,12 +251,7 @@ std::optional<AST::Fa_Expr const*> try_strength_reduce_binary(AST::Fa_Expr const
                 if (lit_lhs->is_integer() && lit_rhs->is_integer() && lit_rhs->get_int() == 3) {
                     AST::Fa_BinaryExpr* bin_clone = binary_expr->clone();
                     bin_clone->set_operator(AST::Fa_BinaryOp::OP_ADD);
-                    bin_clone->set_right(
-                        AST::Fa_make_binary(
-                            lhs->clone(),
-                            AST::Fa_make_literal_int(1, { }),
-                            AST::Fa_BinaryOp::OP_LSHIFT,
-                            rhs->get_location()));
+                    bin_clone->set_right(AST::Fa_make_binary(lhs->clone(), AST::Fa_make_literal_int(1, { }), AST::Fa_BinaryOp::OP_LSHIFT, rhs->get_location()));
                     return bin_clone;
                 }
 
@@ -264,12 +259,7 @@ std::optional<AST::Fa_Expr const*> try_strength_reduce_binary(AST::Fa_Expr const
                 if (lit_rhs->is_integer() && lit_rhs->get_int() == 3) {
                     AST::Fa_BinaryExpr* bin_clone = binary_expr->clone();
                     bin_clone->set_operator(AST::Fa_BinaryOp::OP_ADD);
-                    bin_clone->set_right(
-                        AST::Fa_make_binary(
-                            lhs->clone(),
-                            lhs->clone(),
-                            AST::Fa_BinaryOp::OP_ADD,
-                            rhs->get_location()));
+                    bin_clone->set_right(AST::Fa_make_binary(lhs->clone(), lhs->clone(), AST::Fa_BinaryOp::OP_ADD, rhs->get_location()));
                     return bin_clone;
                 }
 
@@ -277,31 +267,16 @@ std::optional<AST::Fa_Expr const*> try_strength_reduce_binary(AST::Fa_Expr const
                 if (lit_lhs->is_integer() && lit_rhs->is_integer() && lit_rhs->get_int() == 5) {
                     AST::Fa_BinaryExpr* bin_clone = binary_expr->clone();
                     bin_clone->set_operator(AST::Fa_BinaryOp::OP_ADD);
-                    bin_clone->set_right(
-                        AST::Fa_make_binary(
-                            lhs->clone(),
-                            AST::Fa_make_literal_int(2, { }),
-                            AST::Fa_BinaryOp::OP_LSHIFT,
-                            rhs->get_location()));
+                    bin_clone->set_right(AST::Fa_make_binary(lhs->clone(), AST::Fa_make_literal_int(2, { }), AST::Fa_BinaryOp::OP_LSHIFT, rhs->get_location()));
                     return bin_clone;
                 }
 
                 // if x is int : x * 6 = (x << 1) + (x << 2)
                 if (lit_lhs->is_integer() && lit_rhs->is_integer() && lit_rhs->get_int() == 6) {
                     AST::Fa_BinaryExpr* bin_clone = binary_expr->clone();
-                    bin_clone->set_left(
-                        AST::Fa_make_binary(
-                            lhs->clone(),
-                            AST::Fa_make_literal_int(1, { }),
-                            AST::Fa_BinaryOp::OP_LSHIFT,
-                            lhs->get_location()));
                     bin_clone->set_operator(AST::Fa_BinaryOp::OP_ADD);
-                    bin_clone->set_right(
-                        AST::Fa_make_binary(
-                            lhs->clone(),
-                            AST::Fa_make_literal_int(2, { }),
-                            AST::Fa_BinaryOp::OP_LSHIFT,
-                            rhs->get_location()));
+                    bin_clone->set_left(AST::Fa_make_binary(lhs->clone(), AST::Fa_make_literal_int(1, { }), AST::Fa_BinaryOp::OP_LSHIFT, lhs->get_location()));
+                    bin_clone->set_right(AST::Fa_make_binary(lhs->clone(), AST::Fa_make_literal_int(2, { }), AST::Fa_BinaryOp::OP_LSHIFT, rhs->get_location()));
                     return bin_clone;
                 }
 
@@ -309,11 +284,7 @@ std::optional<AST::Fa_Expr const*> try_strength_reduce_binary(AST::Fa_Expr const
                 if (lit_lhs->is_integer() && lit_rhs->is_integer() && lit_rhs->get_int() == 7) {
                     AST::Fa_BinaryExpr* bin_clone = binary_expr->clone();
                     bin_clone->set_left(
-                        AST::Fa_make_binary(
-                            lhs->clone(),
-                            AST::Fa_make_literal_int(3, { }),
-                            AST::Fa_BinaryOp::OP_LSHIFT,
-                            lhs->get_location()));
+                        AST::Fa_make_binary(lhs->clone(), AST::Fa_make_literal_int(3, { }), AST::Fa_BinaryOp::OP_LSHIFT, lhs->get_location()));
                     bin_clone->set_operator(AST::Fa_BinaryOp::OP_SUB);
                     bin_clone->set_right(lhs->clone());
                     return bin_clone;
@@ -322,12 +293,7 @@ std::optional<AST::Fa_Expr const*> try_strength_reduce_binary(AST::Fa_Expr const
                 // FIXED: if x is int : x * 9 = (x << 3) + x
                 if (lit_lhs->is_integer() && lit_rhs->is_integer() && lit_rhs->get_int() == 9) {
                     AST::Fa_BinaryExpr* bin_clone = binary_expr->clone();
-                    bin_clone->set_left(
-                        AST::Fa_make_binary(
-                            lhs->clone(),
-                            AST::Fa_make_literal_int(3, { }),
-                            AST::Fa_BinaryOp::OP_LSHIFT,
-                            lhs->get_location()));
+                    bin_clone->set_left(AST::Fa_make_binary(lhs->clone(), AST::Fa_make_literal_int(3, { }), AST::Fa_BinaryOp::OP_LSHIFT, lhs->get_location()));
                     bin_clone->set_operator(AST::Fa_BinaryOp::OP_ADD);
                     bin_clone->set_right(lhs->clone());
                     return bin_clone;
@@ -417,15 +383,13 @@ std::optional<AST::Fa_Expr const*> try_strength_reduce_binary(AST::Fa_Expr const
         if (rkind == AST::Fa_Expr::Kind::LITERAL) {
             auto lit_rhs = static_cast<AST::Fa_LiteralExpr const*>(rhs);
             if (lit_rhs->is_bool())
-                return lit_rhs->get_bool() ? lhs->clone()
-                                           : AST::Fa_make_literal_bool(false, binary_expr->get_location());
+                return lit_rhs->get_bool() ? lhs->clone() : AST::Fa_make_literal_bool(false, binary_expr->get_location());
         }
 
         if (lkind == AST::Fa_Expr::Kind::LITERAL) {
             auto lit_lhs = static_cast<AST::Fa_LiteralExpr const*>(lhs);
             if (lit_lhs->is_bool())
-                return lit_lhs->get_bool() ? rhs->clone()
-                                           : AST::Fa_make_literal_bool(false, binary_expr->get_location());
+                return lit_lhs->get_bool() ? rhs->clone() : AST::Fa_make_literal_bool(false, binary_expr->get_location());
         }
     }
 
@@ -433,15 +397,13 @@ std::optional<AST::Fa_Expr const*> try_strength_reduce_binary(AST::Fa_Expr const
         if (rkind == AST::Fa_Expr::Kind::LITERAL) {
             auto lit_rhs = static_cast<AST::Fa_LiteralExpr const*>(rhs);
             if (lit_rhs->is_bool())
-                return lit_rhs->get_bool() ? AST::Fa_make_literal_bool(true, binary_expr->get_location())
-                                           : lhs->clone();
+                return lit_rhs->get_bool() ? AST::Fa_make_literal_bool(true, binary_expr->get_location()) : lhs->clone();
         }
 
         if (lkind == AST::Fa_Expr::Kind::LITERAL) {
             auto lit_lhs = static_cast<AST::Fa_LiteralExpr const*>(lhs);
             if (lit_lhs->is_bool())
-                return lit_lhs->get_bool() ? AST::Fa_make_literal_bool(true, binary_expr->get_location())
-                                           : rhs->clone();
+                return lit_lhs->get_bool() ? AST::Fa_make_literal_bool(true, binary_expr->get_location()) : rhs->clone();
         }
     }
 
@@ -466,12 +428,8 @@ std::optional<AST::Fa_Expr const*> try_strength_reduce_unary(AST::Fa_Expr const*
                 auto inner_operand = inner->get_operand();
                 if (!inner_operand)
                     return std::nullopt;
-                    
-                return AST::Fa_make_binary(
-                    inner_operand->clone(),
-                    AST::Fa_make_literal_int(0, { }),
-                    AST::Fa_BinaryOp::OP_NEQ,
-                    unary_expr->get_location());
+
+                return AST::Fa_make_binary(inner_operand->clone(), AST::Fa_make_literal_int(0, { }), AST::Fa_BinaryOp::OP_NEQ, unary_expr->get_location());
             }
         }
 
@@ -531,7 +489,7 @@ std::optional<AST::Fa_Stmt const*> try_strength_reduce_loop(AST::Fa_Stmt const* 
         return std::nullopt;
 
     /// TODO: loop strength reduction
-    
+
     return std::nullopt;
 }
 

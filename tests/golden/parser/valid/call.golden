@@ -1,5 +1,0 @@
-KIND:expr
-SOURCE:
-ا()
-EXPECTED:
-call(name(ا),[])

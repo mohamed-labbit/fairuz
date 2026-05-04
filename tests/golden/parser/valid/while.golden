@@ -1,6 +1,0 @@
-KIND:program
-SOURCE:
-طالما ا:
-    ب
-EXPECTED:
-program[while(name(ا),block[expr(name(ب))])]

@@ -1,5 +1,0 @@
-KIND:expr
-SOURCE:
-1.5
-EXPECTED:
-float(1.500000)

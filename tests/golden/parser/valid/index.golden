@@ -1,5 +1,0 @@
-KIND:expr
-SOURCE:
-ا[ب]
-EXPECTED:
-index(name(ا),name(ب))

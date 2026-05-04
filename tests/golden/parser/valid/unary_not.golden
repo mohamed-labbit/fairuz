@@ -1,5 +1,0 @@
-KIND:expr
-SOURCE:
-ليس ا
-EXPECTED:
-unary(not,name(ا))

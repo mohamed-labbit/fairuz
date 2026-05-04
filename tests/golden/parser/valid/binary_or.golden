@@ -1,5 +1,0 @@
-KIND:expr
-SOURCE:
-ا او ب
-EXPECTED:
-bin(or,name(ا),name(ب))

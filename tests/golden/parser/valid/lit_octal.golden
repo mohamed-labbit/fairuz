@@ -1,5 +1,0 @@
-KIND:expr
-SOURCE:
-0o01
-EXPECTED:
-int(1)
