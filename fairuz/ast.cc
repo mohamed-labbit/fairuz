@@ -148,6 +148,10 @@ Fa_NameExpr* Fa_NameExpr::clone() const { return Fa_make_name(m_value, m_loc); }
 
 Fa_StringRef Fa_NameExpr::get_value() const { return m_value; }
 
+bool Fa_NameExpr::is_local() const { return m_is_local; }
+
+void Fa_NameExpr::set_local() { m_is_local = true; }
+
 Fa_Expr* Fa_ListExpr::operator[](size_t const i) { return m_elements[i]; }
 
 Fa_Expr const* Fa_ListExpr::operator[](size_t const i) const { return m_elements[i]; }
@@ -298,6 +302,10 @@ Fa_Expr* Fa_IndexExpr::get_object() const { return m_object; }
 
 Fa_Expr* Fa_IndexExpr::get_index() const { return m_index; }
 
+bool Fa_IndexExpr::is_unsafe() const { return m_unsafe; }
+
+void Fa_IndexExpr::make_unsafe() { m_unsafe = true; }
+
 Fa_BlockStmt* Fa_BlockStmt::clone() const { return Fa_make_block(m_statements, m_loc); }
 
 Fa_Array<Fa_Stmt*> const& Fa_BlockStmt::get_statements() const { return m_statements; }
@@ -420,6 +428,10 @@ Fa_NameExpr* Fa_ForStmt::get_target() const { return static_cast<Fa_NameExpr*>(m
 Fa_Expr* Fa_ForStmt::get_iter() const { return m_iter; }
 
 Fa_Stmt* Fa_ForStmt::get_body() const { return m_body; }
+
+std::unordered_map<const Fa_Expr*, const Fa_Expr*> Fa_ForStmt::get_header() const { return m_header; }
+
+void Fa_ForStmt::set_header(std::unordered_map<const Fa_Expr*, const Fa_Expr*> h) const { m_header = h; }
 
 void Fa_ForStmt::set_body(Fa_Stmt* b) { m_body = b; }
 

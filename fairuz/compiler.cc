@@ -949,7 +949,7 @@ Fa_ExprResult Compiler::compile_index_i(AST::Fa_IndexExpr const* e)
     RegMark mark(m_current);
     u8 object_reg = any_reg(compile_expr_i(e->get_object()), loc);
     u8 index_reg = any_reg(compile_expr_i(e->get_index()), loc);
-    u32 pc = emit(Fa_make_ABC(Fa_OpCode::INDEX, 0, object_reg, index_reg), loc);
+    u32 pc = emit(Fa_make_ABC(e->is_unsafe() ? Fa_OpCode::UNSAFE_INDEX : Fa_OpCode::INDEX, 0, object_reg, index_reg), loc);
     return Fa_ExprResult::reloc(pc);
 }
 

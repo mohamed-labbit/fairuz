@@ -5,8 +5,11 @@
 #include "array.hpp"
 #include "macros.hpp"
 #include "string.hpp"
+#include "table.hpp"
+
 #include <cassert>
 #include <cstddef>
+#include <unordered_map>
 
 namespace fairuz::AST {
 
@@ -283,6 +286,8 @@ class Fa_NameExpr final : public Fa_Expr {
 private:
     Fa_StringRef m_value;
 
+    bool m_is_local { false };
+
 public:
     Fa_NameExpr() = default;
 
@@ -304,6 +309,9 @@ public:
     [[nodiscard]] bool equals(Fa_Expr const* other) const override;
     [[nodiscard]] Fa_NameExpr* clone() const override;
     [[nodiscard]] Fa_StringRef get_value() const;
+    [[nodiscard]] bool is_local() const;
+
+    void set_local();
 }; // class Fa_NameExpr
 
 class Fa_ListExpr final : public Fa_Expr {
@@ -450,6 +458,8 @@ private:
     Fa_Expr* m_object { nullptr };
     Fa_Expr* m_index { nullptr };
 
+    bool m_unsafe { false };
+
 public:
     Fa_IndexExpr() = delete;
 
@@ -475,6 +485,9 @@ public:
     [[nodiscard]] Fa_IndexExpr* clone() const override;
     [[nodiscard]] Fa_Expr* get_object() const;
     [[nodiscard]] Fa_Expr* get_index() const;
+    [[nodiscard]] bool is_unsafe() const;
+
+    void make_unsafe();
 }; // class Fa_IndexExpr
 
 class Fa_Stmt : public Fa_ASTNode {
@@ -678,6 +691,10 @@ private:
     Fa_Expr* m_container { nullptr };
     Fa_Expr* m_iter { nullptr };
     Fa_Stmt* m_body { nullptr };
+    /*
+        captures the values of variables modified inside the loop body at init time
+    */
+    std::unordered_map<const Fa_Expr*, const Fa_Expr*> m_header;
 
 public:
     Fa_ForStmt() = delete;
@@ -705,6 +722,8 @@ public:
     [[nodiscard]] Fa_NameExpr* get_target() const;
     [[nodiscard]] Fa_Expr* get_iter() const;
     [[nodiscard]] Fa_Stmt* get_body() const;
+    [[nodiscard]] std::unordered_map<const Fa_Expr*, const Fa_Expr*> get_header() const;
+    void set_header(std::unordered_map<const Fa_Expr*, const Fa_Expr*> h) const;
     void set_body(Fa_Stmt* b);
 }; // class Fa_ForStmt
 

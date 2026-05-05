@@ -1,8 +1,5 @@
 #ifndef CTYPE_HPP
 #define CTYPE_HPP
-// ASCII path: direct table[cp] for cp < 128
-// Arabic path: arabic_ctype[cp & 0xFF] for (cp >> 8) == 0x06
-// Everything else: 0x00
 
 #include "macros.hpp"
 
@@ -23,12 +20,6 @@ namespace fairuz {
 #define IS_ARDIGIT(cp) (ml_ctype(cp) & CT_ARDIG)
 
 // 0x40, 0x80 reserved
-
-// ── ASCII table ──────────────────────────────────────────────────────────────
-// Only the codepoints your lexer actually needs classification for.
-// Operators, brackets, quotes, '#', '.' etc. are all 0x00 — handled
-// by explicit switch cases and never tested via ctype predicates.
-
 inline constexpr u8 ml_ascii_ctype[128] = {
     // 0x00  NUL   SOH   STX   ETX   EOT   ENQ   ACK   BEL
     0x00,
@@ -176,16 +167,6 @@ inline constexpr u8 ml_ascii_ctype[128] = {
     0x00,
     0x00,
 };
-
-// ── Arabic block table (U+0600–U+06FF) ───────────────────────────────────────
-// Indexed by (cp & 0xFF). Only the 256 codepoints in the U+06xx page.
-// Every entry not explicitly set is 0x00.
-//
-// Flag key:
-//   CT_IDENT_S | CT_IDENT_C = 0x18  → Arabic letter (identifier start + continue)
-//   CT_IDENT_C              = 0x10  → tatweel (continue only)
-//   CT_ARDIG | CT_DIGIT | CT_IDENT_C = 0x32 → Arabic-Indic digit
-//   0x00                            → punctuation handled by switch (،  ٬  ٪)
 
 inline constexpr u8 ml_arabic_ctype[256] = {
     // ── U+0600–U+060F ─────────────────────────────────────────────────────────

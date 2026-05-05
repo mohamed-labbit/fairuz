@@ -12,6 +12,14 @@ struct Fa_SourceLocation {
     uint64_t offset { 0 }; // byte offset
 }; // struct Fa_SourceLocation
 
+struct VoidPtrHash {
+    size_t operator()(void const* ptr) const noexcept { return std::hash<uintptr_t>()(reinterpret_cast<uintptr_t>(ptr)); }
+}; // struct VoidPtrHash
+
+struct VoidPtrEqual {
+    bool operator()(void const* a, void const* b) const noexcept { return a == b; }
+}; // struct VoidPtrEqual
+
 namespace Color {
 
 std::string const RESET = "\033[0m";

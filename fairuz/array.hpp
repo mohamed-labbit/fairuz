@@ -181,7 +181,6 @@ void Fa_Array<T>::ensure_push_capacity()
         return;
 
     u32 new_cap = m_cap == 0 ? DEFAULT_CAP : m_cap + (m_cap >> 1);
-    // allocate new_cap directly, skip the nextCapacity rounding
     T* new_arr = get_allocator().allocate_array<T>(new_cap);
     if (m_arr && m_size > 0)
         relocate(new_arr, m_arr, m_size);
@@ -364,7 +363,7 @@ void Fa_Array<T>::reserve(u32 const s)
     if (m_arr && m_size > 0)
         relocate(new_arr, m_arr, m_size);
 
-    // NOTE: arena – no free on m_arr here.
+    /// NOTE: arena – no free on m_arr here
     m_arr = new_arr;
     m_cap = rounded;
 }

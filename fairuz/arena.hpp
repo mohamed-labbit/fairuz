@@ -83,14 +83,6 @@ private:
 #endif
 
 #ifdef FAIRUZ_DEBUG
-    struct VoidPtrHash {
-        size_t operator()(void const* ptr) const noexcept { return std::hash<uintptr_t>()(reinterpret_cast<uintptr_t>(ptr)); }
-    }; // struct VoidPtrHash
-
-    struct VoidPtrEqual {
-        bool operator()(void const* a, void const* b) const noexcept { return a == b; }
-    }; // struct VoidPtrEqual
-
     DetailedAllocStats m_alloc_stats;
     std::unordered_map<void*, AllocationHeader, VoidPtrHash, VoidPtrEqual> m_allocation_map { };
     std::unordered_set<void*, VoidPtrHash, VoidPtrEqual> m_allocated_ptrs { };
