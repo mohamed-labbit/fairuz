@@ -15,19 +15,10 @@ bool Fa_BinaryExpr::equals(Fa_Expr const* other) const
     return m_operator == bin->get_operator() && m_left->equals(bin->get_left()) && m_right->equals(bin->get_right());
 }
 
-Fa_BinaryExpr* Fa_BinaryExpr::clone() const { return Fa_make_binary(m_left->clone(), m_right->clone(), m_operator, m_loc); }
-
-Fa_Expr* Fa_BinaryExpr::get_left() const { return m_left; }
-
-Fa_Expr* Fa_BinaryExpr::get_right() const { return m_right; }
-
-Fa_BinaryOp Fa_BinaryExpr::get_operator() const { return m_operator; }
-
-void Fa_BinaryExpr::set_left(Fa_Expr* l) { m_left = l; }
-
-void Fa_BinaryExpr::set_right(Fa_Expr* r) { m_right = r; }
-
-void Fa_BinaryExpr::set_operator(Fa_BinaryOp op) { m_operator = op; }
+Fa_BinaryExpr* Fa_BinaryExpr::clone() const
+{
+    return Fa_make_binary(m_left->clone(), m_right->clone(), m_operator, m_loc);
+}
 
 bool Fa_UnaryExpr::equals(Fa_Expr const* other) const
 {
@@ -38,49 +29,10 @@ bool Fa_UnaryExpr::equals(Fa_Expr const* other) const
     return m_operator == un->get_operator() && m_operand->equals(un->get_operand());
 }
 
-Fa_UnaryExpr* Fa_UnaryExpr::clone() const { return Fa_make_unary(m_operand->clone(), m_operator, m_loc); }
-
-Fa_Expr* Fa_UnaryExpr::get_operand() const { return m_operand; }
-
-Fa_UnaryOp Fa_UnaryExpr::get_operator() const { return m_operator; }
-
-typename Fa_LiteralExpr::Type Fa_LiteralExpr::get_type() const { return m_type; }
-
-i64 Fa_LiteralExpr::get_int() const
+Fa_UnaryExpr* Fa_UnaryExpr::clone() const
 {
-    assert(is_integer());
-    return int_value;
+    return Fa_make_unary(m_operand->clone(), m_operator, m_loc);
 }
-
-f64 Fa_LiteralExpr::get_float() const
-{
-    assert(is_float());
-    return float_value;
-}
-
-bool Fa_LiteralExpr::get_bool() const
-{
-    assert(is_bool());
-    return bool_value;
-}
-
-Fa_StringRef Fa_LiteralExpr::get_str() const
-{
-    assert(is_string());
-    return str_value;
-}
-
-bool Fa_LiteralExpr::is_integer() const { return m_type == Type::INTEGER; }
-
-bool Fa_LiteralExpr::is_float() const { return m_type == Type::FLOAT; }
-
-bool Fa_LiteralExpr::is_bool() const { return m_type == Type::BOOLEAN; }
-
-bool Fa_LiteralExpr::is_string() const { return m_type == Type::STRING; }
-
-bool Fa_LiteralExpr::is_numeric() const { return is_integer() || is_float(); }
-
-bool Fa_LiteralExpr::is_nil() const { return m_type == Type::NIL; }
 
 bool Fa_LiteralExpr::equals(Fa_Expr const* other) const
 {
@@ -125,16 +77,6 @@ Fa_LiteralExpr* Fa_LiteralExpr::clone() const
     }
 }
 
-f64 Fa_LiteralExpr::is_number() const
-{
-    if (is_integer())
-        return static_cast<f64>(int_value);
-    if (is_float())
-        return float_value;
-
-    return 0.0;
-}
-
 bool Fa_NameExpr::equals(Fa_Expr const* other) const
 {
     if (other->get_kind() != m_kind)
@@ -144,17 +86,10 @@ bool Fa_NameExpr::equals(Fa_Expr const* other) const
     return m_value == name->get_value();
 }
 
-Fa_NameExpr* Fa_NameExpr::clone() const { return Fa_make_name(m_value, m_loc); }
-
-Fa_StringRef Fa_NameExpr::get_value() const { return m_value; }
-
-bool Fa_NameExpr::is_local() const { return m_is_local; }
-
-void Fa_NameExpr::set_local() { m_is_local = true; }
-
-Fa_Expr* Fa_ListExpr::operator[](size_t const i) { return m_elements[i]; }
-
-Fa_Expr const* Fa_ListExpr::operator[](size_t const i) const { return m_elements[i]; }
+Fa_NameExpr* Fa_NameExpr::clone() const
+{
+    return Fa_make_name(m_value, m_loc);
+}
 
 bool Fa_ListExpr::equals(Fa_Expr const* other) const
 {
@@ -174,15 +109,10 @@ bool Fa_ListExpr::equals(Fa_Expr const* other) const
     return true;
 }
 
-Fa_ListExpr* Fa_ListExpr::clone() const { return Fa_make_list(m_elements, m_loc); }
-
-Fa_Array<Fa_Expr*> const& Fa_ListExpr::get_elements() const { return m_elements; }
-
-Fa_Array<Fa_Expr*>& Fa_ListExpr::get_elements() { return m_elements; }
-
-bool Fa_ListExpr::is_empty() const { return m_elements.empty(); }
-
-size_t Fa_ListExpr::size() const { return m_elements.size(); }
+Fa_ListExpr* Fa_ListExpr::clone() const
+{
+    return Fa_make_list(m_elements, m_loc);
+}
 
 bool Fa_CallExpr::equals(Fa_Expr const* other) const
 {
@@ -190,28 +120,15 @@ bool Fa_CallExpr::equals(Fa_Expr const* other) const
         return false;
 
     auto call = static_cast<Fa_CallExpr const*>(other);
-    return m_callee->equals(call->get_callee()) && m_args->equals(call->get_args_as_list_expr()) && m_call_location == call->get_call_location();
+    return m_callee->equals(call->get_callee())
+        && m_args->equals(call->get_args_as_list_expr())
+        && m_call_location == call->get_call_location();
 }
 
-Fa_CallExpr* Fa_CallExpr::clone() const { return Fa_make_call(m_callee->clone(), m_args->clone(), m_loc); }
-
-Fa_Expr* Fa_CallExpr::get_callee() const { return m_callee; }
-
-Fa_Array<Fa_Expr*> const& Fa_CallExpr::get_args() const
+Fa_CallExpr* Fa_CallExpr::clone() const
 {
-    static Fa_Array<Fa_Expr*> const empty;
-    return m_args ? m_args->get_elements() : empty;
+    return Fa_make_call(m_callee->clone(), m_args->clone(), m_loc);
 }
-
-Fa_Array<Fa_Expr*>& Fa_CallExpr::get_args()
-{
-    assert(m_args && "Attempting to get mutable args when Args_ is null");
-    return m_args->get_elements();
-}
-
-Fa_ListExpr* Fa_CallExpr::get_args_as_list_expr() { return m_args; }
-
-Fa_ListExpr const* Fa_CallExpr::get_args_as_list_expr() const { return m_args; }
 
 bool Fa_DictExpr::equals(Fa_Expr const* other) const
 {
@@ -235,7 +152,11 @@ bool Fa_DictExpr::equals(Fa_Expr const* other) const
     return true;
 }
 
-Fa_Expr* Fa_DictExpr::clone() const { return Fa_make_dict(content, m_loc); }
+Fa_Expr* Fa_DictExpr::clone() const
+{
+    return Fa_make_dict(content, m_loc);
+}
+
 Fa_Array<std::pair<Fa_Expr*, Fa_Expr*>> Fa_DictExpr::get_content() const { return content; }
 void Fa_DictExpr::set_content(Fa_Array<std::pair<Fa_Expr*, Fa_Expr*>> c) { content = c; }
 
@@ -256,18 +177,6 @@ Fa_AssignmentExpr* Fa_AssignmentExpr::clone() const
 {
     return Fa_make_assignment_expr(m_target->clone(), m_value->clone(), m_loc, m_is_decl);
 }
-
-Fa_Expr* Fa_AssignmentExpr::get_target() const { return m_target; }
-
-Fa_Expr* Fa_AssignmentExpr::get_value() const { return m_value; }
-
-void Fa_AssignmentExpr::set_target(Fa_Expr* t) { m_target = t; }
-
-void Fa_AssignmentExpr::set_value(Fa_Expr* v) { m_value = v; }
-
-void Fa_AssignmentExpr::set_decl() { m_is_decl = true; }
-
-bool Fa_AssignmentExpr::is_declaration() const { return m_is_decl; }
 
 bool Fa_BlockStmt::equals(Fa_Stmt const* other) const
 {
@@ -296,20 +205,17 @@ bool Fa_IndexExpr::equals(Fa_Expr const* other) const
     return m_object->equals(idx->get_object()) && m_index->equals(idx->get_index());
 }
 
-Fa_IndexExpr* Fa_IndexExpr::clone() const { return Fa_make_index(m_object->clone(), m_index->clone(), m_loc); }
+Fa_IndexExpr* Fa_IndexExpr::clone() const
+{
+    return Fa_make_index(m_object->clone(), m_index->clone(), m_loc);
+}
 
-Fa_Expr* Fa_IndexExpr::get_object() const { return m_object; }
-
-Fa_Expr* Fa_IndexExpr::get_index() const { return m_index; }
-
-bool Fa_IndexExpr::is_unsafe() const { return m_unsafe; }
-
-void Fa_IndexExpr::make_unsafe() { m_unsafe = true; }
-
-Fa_BlockStmt* Fa_BlockStmt::clone() const { return Fa_make_block(m_statements, m_loc); }
+Fa_BlockStmt* Fa_BlockStmt::clone() const
+{
+    return Fa_make_block(m_statements, m_loc);
+}
 
 Fa_Array<Fa_Stmt*> const& Fa_BlockStmt::get_statements() const { return m_statements; }
-
 void Fa_BlockStmt::set_statements(Fa_Array<Fa_Stmt*>& stmts) { m_statements = stmts; }
 
 bool Fa_BlockStmt::is_empty() const { return m_statements.empty(); }
@@ -325,10 +231,12 @@ bool Fa_ExprStmt::equals(Fa_Stmt const* other) const
     return m_expr->equals(block->get_expr());
 }
 
-Fa_ExprStmt* Fa_ExprStmt::clone() const { return Fa_make_expr_stmt(m_expr->clone(), m_loc); }
+Fa_ExprStmt* Fa_ExprStmt::clone() const
+{
+    return Fa_make_expr_stmt(m_expr->clone(), m_loc);
+}
 
 Fa_Expr* Fa_ExprStmt::get_expr() const { return m_expr; }
-
 void Fa_ExprStmt::set_expr(Fa_Expr* e) { m_expr = e; }
 
 // assignment stmt
@@ -348,13 +256,10 @@ Fa_AssignmentStmt* Fa_AssignmentStmt::clone() const
 }
 
 Fa_Expr* Fa_AssignmentStmt::get_value() const { return m_expr->get_value(); }
-
 Fa_Expr* Fa_AssignmentStmt::get_target() const { return m_expr->get_target(); }
 
 void Fa_AssignmentStmt::set_value(Fa_Expr* v) { m_expr->set_value(v); }
-
 void Fa_AssignmentStmt::set_target(Fa_Expr* t) { m_expr->set_target(t); }
-
 void Fa_AssignmentStmt::set_decl() { m_expr->set_decl(); }
 
 bool Fa_AssignmentStmt::is_declaration() const { return m_expr->is_declaration(); }
@@ -375,17 +280,17 @@ bool Fa_IfStmt::equals(Fa_Stmt const* other) const
 
 Fa_IfStmt* Fa_IfStmt::clone() const
 {
-    return Fa_make_if(m_condition->clone(), m_then_stmt->clone(), m_loc, LIKELY(m_else_stmt == nullptr) ? nullptr : m_else_stmt->clone());
+    return Fa_make_if(
+        m_condition->clone(),
+        m_then_stmt->clone(), m_loc,
+        LIKELY(m_else_stmt == nullptr) ? nullptr : m_else_stmt->clone());
 }
 
 Fa_Expr* Fa_IfStmt::get_condition() const { return m_condition; }
-
 Fa_Stmt* Fa_IfStmt::get_then() const { return m_then_stmt; }
-
 Fa_Stmt* Fa_IfStmt::get_else() const { return m_else_stmt; }
 
 void Fa_IfStmt::set_then(Fa_Stmt* t) { m_then_stmt = t; }
-
 void Fa_IfStmt::set_else(Fa_Stmt* e) { m_else_stmt = e; }
 
 bool Fa_WhileStmt::equals(Fa_Stmt const* other) const
@@ -397,14 +302,17 @@ bool Fa_WhileStmt::equals(Fa_Stmt const* other) const
     return m_condition->equals(block->get_condition()) && m_body->equals(block->get_body());
 }
 
-Fa_WhileStmt* Fa_WhileStmt::clone() const { return Fa_make_while(m_condition->clone(), m_body->clone(), m_loc); }
+Fa_WhileStmt* Fa_WhileStmt::clone() const
+{
+    return Fa_make_while(m_condition->clone(), m_body->clone(), m_loc);
+}
 
 Fa_Expr* Fa_WhileStmt::get_condition() const { return m_condition; }
-
 Fa_Stmt* Fa_WhileStmt::get_body() { return m_body; }
-
 Fa_Stmt const* Fa_WhileStmt::get_body() const { return m_body; }
+LoopHeader Fa_WhileStmt::get_header() const { return m_header; }
 
+void Fa_WhileStmt::set_header(LoopHeader h) { m_header = h; }
 void Fa_WhileStmt::set_body(Fa_Stmt* b) { m_body = b; }
 
 bool Fa_ForStmt::equals(Fa_Stmt const* other) const
@@ -422,17 +330,12 @@ Fa_ForStmt* Fa_ForStmt::clone() const
 }
 
 Fa_Expr* Fa_ForStmt::get_container() const { return m_container; }
-
 Fa_NameExpr* Fa_ForStmt::get_target() const { return static_cast<Fa_NameExpr*>(m_container); }
-
 Fa_Expr* Fa_ForStmt::get_iter() const { return m_iter; }
-
 Fa_Stmt* Fa_ForStmt::get_body() const { return m_body; }
+LoopHeader Fa_ForStmt::get_header() const { return m_header; }
 
-std::unordered_map<const Fa_Expr*, const Fa_Expr*> Fa_ForStmt::get_header() const { return m_header; }
-
-void Fa_ForStmt::set_header(std::unordered_map<const Fa_Expr*, const Fa_Expr*> h) const { m_header = h; }
-
+void Fa_ForStmt::set_header(LoopHeader h) { m_header = h; }
 void Fa_ForStmt::set_body(Fa_Stmt* b) { m_body = b; }
 
 bool Fa_FunctionDef::equals(Fa_Stmt const* other) const
@@ -450,11 +353,8 @@ Fa_FunctionDef* Fa_FunctionDef::clone() const
 }
 
 Fa_NameExpr* Fa_FunctionDef::get_name() const { return m_name; }
-
 Fa_Array<Fa_Expr*> const& Fa_FunctionDef::get_parameters() const { return m_params->get_elements(); }
-
 Fa_ListExpr* Fa_FunctionDef::get_parameter_list() const { return m_params; }
-
 Fa_Stmt* Fa_FunctionDef::get_body() const { return m_body; }
 
 void Fa_FunctionDef::set_body(Fa_Stmt* b) { m_body = b; }
@@ -467,11 +367,9 @@ Fa_ReturnStmt* Fa_ReturnStmt::clone() const
 }
 
 Fa_Expr* Fa_ReturnStmt::get_value() { return m_value; }
-
 Fa_Expr const* Fa_ReturnStmt::get_value() const { return m_value; }
 
 void Fa_ReturnStmt::set_value(Fa_Expr* v) { m_value = v; }
-
 bool Fa_ReturnStmt::has_value() const { return m_value != nullptr; }
 
 bool Fa_ReturnStmt::equals(Fa_Stmt const* other) const
