@@ -89,6 +89,11 @@ public:
     Fa_Array& operator=(Fa_Array const& other);
     Fa_Array& operator=(Fa_Array&& other) noexcept;
 
+    [[nodiscard]] bool operator==(Fa_Array const& other) const
+    {
+        return m_size == other.m_size && std::equal(m_arr, m_arr + m_size, other.m_arr);
+    }
+
     ~Fa_Array() { destroy_range(m_arr, m_arr + m_size); }
 
     static Fa_Array with_capacity(u32 capacity)
