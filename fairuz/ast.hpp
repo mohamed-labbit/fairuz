@@ -3,6 +3,7 @@
 
 #include "arena.hpp"
 #include "array.hpp"
+#include "loop_header.hpp"
 #include "macros.hpp"
 #include "string.hpp"
 #include "table.hpp"
@@ -157,13 +158,14 @@ public:
 
     [[nodiscard]] bool equals(Fa_Expr const* other) const override;
     [[nodiscard]] Fa_BinaryExpr* clone() const override;
-    [[nodiscard]] Fa_Expr* get_left() const;
-    [[nodiscard]] Fa_Expr* get_right() const;
-    [[nodiscard]] Fa_BinaryOp get_operator() const;
 
-    void set_left(Fa_Expr* l);
-    void set_right(Fa_Expr* r);
-    void set_operator(Fa_BinaryOp op);
+    [[nodiscard]] Fa_Expr* get_left() const { return m_left; }
+    [[nodiscard]] Fa_Expr* get_right() const { return m_right; }
+    [[nodiscard]] Fa_BinaryOp get_operator() const { return m_operator; }
+
+    void set_left(Fa_Expr* l) { m_left = l; }
+    void set_right(Fa_Expr* r) { m_right = r; }
+    void set_operator(Fa_BinaryOp op) { m_operator = op; }
 }; // class Fa_BinaryExpr
 
 class Fa_UnaryExpr final : public Fa_Expr {
@@ -193,8 +195,9 @@ public:
 
     [[nodiscard]] bool equals(Fa_Expr const* other) const override;
     [[nodiscard]] Fa_UnaryExpr* clone() const override;
-    [[nodiscard]] Fa_Expr* get_operand() const;
-    [[nodiscard]] Fa_UnaryOp get_operator() const;
+
+    [[nodiscard]] Fa_Expr* get_operand() const { return m_operand; }
+    [[nodiscard]] Fa_UnaryOp get_operator() const { return m_operator; }
 }; // class Fa_UnaryExpr
 
 class Fa_LiteralExpr final : public Fa_Expr {
@@ -264,22 +267,51 @@ public:
     Fa_LiteralExpr& operator=(Fa_LiteralExpr const&) noexcept = delete;
     Fa_LiteralExpr& operator=(Fa_LiteralExpr&&) noexcept = delete;
 
-    [[nodiscard]] Type get_type() const;
-    [[nodiscard]] i64 get_int() const;
-    [[nodiscard]] f64 get_float() const;
-    [[nodiscard]] bool get_bool() const;
-    [[nodiscard]] Fa_StringRef get_str() const;
+    [[nodiscard]] Type get_type() const { return m_type; }
 
-    [[nodiscard]] bool is_integer() const;
-    [[nodiscard]] bool is_float() const;
-    [[nodiscard]] bool is_bool() const;
-    [[nodiscard]] bool is_string() const;
-    [[nodiscard]] bool is_numeric() const;
-    [[nodiscard]] bool is_nil() const;
+    [[nodiscard]] i64 get_int() const
+    {
+        assert(is_integer());
+        return int_value;
+    }
+
+    [[nodiscard]] f64 get_float() const
+    {
+        assert(is_float());
+        return float_value;
+    }
+
+    [[nodiscard]] bool get_bool() const
+    {
+        assert(is_bool());
+        return bool_value;
+    }
+
+    [[nodiscard]] Fa_StringRef get_str() const
+    {
+        assert(is_string());
+        return str_value;
+    }
+
+    [[nodiscard]] bool is_integer() const { return m_type == Type::INTEGER; }
+    [[nodiscard]] bool is_float() const { return m_type == Type::FLOAT; }
+    [[nodiscard]] bool is_bool() const { return m_type == Type::BOOLEAN; }
+    [[nodiscard]] bool is_string() const { return m_type == Type::STRING; }
+    [[nodiscard]] bool is_numeric() const { return is_integer() || is_float(); }
+    [[nodiscard]] bool is_nil() const { return m_type == Type::NIL; }
+
+    [[nodiscard]] f64 is_number() const
+    {
+        if (is_integer())
+            return static_cast<f64>(int_value);
+        if (is_float())
+            return float_value;
+
+        return 0.0;
+    }
 
     [[nodiscard]] bool equals(Fa_Expr const* other) const override;
     [[nodiscard]] Fa_LiteralExpr* clone() const override;
-    [[nodiscard]] f64 is_number() const;
 }; // class Fa_LiteralExpr
 
 class Fa_NameExpr final : public Fa_Expr {
@@ -308,10 +340,11 @@ public:
 
     [[nodiscard]] bool equals(Fa_Expr const* other) const override;
     [[nodiscard]] Fa_NameExpr* clone() const override;
-    [[nodiscard]] Fa_StringRef get_value() const;
-    [[nodiscard]] bool is_local() const;
 
-    void set_local();
+    [[nodiscard]] Fa_StringRef get_value() const { return m_value; }
+    [[nodiscard]] bool is_local() const { return m_is_local; }
+
+    void set_local() { m_is_local = true; }
 }; // class Fa_NameExpr
 
 class Fa_ListExpr final : public Fa_Expr {
@@ -330,8 +363,8 @@ public:
 
     ~Fa_ListExpr() override = default;
 
-    Fa_Expr* operator[](size_t const i);
-    Fa_Expr const* operator[](size_t const i) const;
+    Fa_Expr* operator[](size_t const i) { return m_elements[i]; }
+    Fa_Expr const* operator[](size_t const i) const { return m_elements[i]; }
 
     Fa_ListExpr(Fa_ListExpr&&) noexcept = delete;
     Fa_ListExpr(Fa_ListExpr const&) noexcept = delete;
@@ -341,10 +374,12 @@ public:
 
     [[nodiscard]] bool equals(Fa_Expr const* other) const override;
     [[nodiscard]] Fa_ListExpr* clone() const override;
-    [[nodiscard]] Fa_Array<Fa_Expr*> const& get_elements() const;
-    [[nodiscard]] Fa_Array<Fa_Expr*>& get_elements();
-    [[nodiscard]] bool is_empty() const;
-    [[nodiscard]] size_t size() const;
+
+    [[nodiscard]] Fa_Array<Fa_Expr*> const& get_elements() const { return m_elements; }
+    [[nodiscard]] Fa_Array<Fa_Expr*>& get_elements() { return m_elements; }
+
+    [[nodiscard]] bool is_empty() const { return m_elements.empty(); }
+    [[nodiscard]] size_t size() const { return m_elements.size(); }
 }; // class Fa_ListExpr
 
 class Fa_DictExpr final : public Fa_Expr {
@@ -405,11 +440,23 @@ public:
 
     [[nodiscard]] bool equals(Fa_Expr const* other) const override;
     [[nodiscard]] Fa_CallExpr* clone() const override;
-    [[nodiscard]] Fa_Expr* get_callee() const;
-    [[nodiscard]] Fa_Array<Fa_Expr*> const& get_args() const;
-    [[nodiscard]] Fa_Array<Fa_Expr*>& get_args();
-    [[nodiscard]] Fa_ListExpr* get_args_as_list_expr();
-    [[nodiscard]] Fa_ListExpr const* get_args_as_list_expr() const;
+
+    [[nodiscard]] Fa_Expr* get_callee() const { return m_callee; }
+
+    [[nodiscard]] Fa_Array<Fa_Expr*> const& get_args() const
+    {
+        static Fa_Array<Fa_Expr*> const empty;
+        return m_args ? m_args->get_elements() : empty;
+    }
+    [[nodiscard]] Fa_Array<Fa_Expr*>& get_args()
+    {
+        assert(m_args && "Attempting to get mutable args when Args_ is null");
+        return m_args->get_elements();
+    }
+
+    [[nodiscard]] Fa_ListExpr* get_args_as_list_expr() { return m_args; }
+    [[nodiscard]] Fa_ListExpr const* get_args_as_list_expr() const { return m_args; }
+
     [[nodiscard]] CallLocation get_call_location() const;
     [[nodiscard]] bool has_arguments() const;
 }; // class Fa_CallExpr
@@ -445,12 +492,15 @@ public:
 
     [[nodiscard]] bool equals(Fa_Expr const* other) const override;
     [[nodiscard]] Fa_AssignmentExpr* clone() const override;
-    [[nodiscard]] Fa_Expr* get_target() const;
-    [[nodiscard]] Fa_Expr* get_value() const;
-    void set_target(Fa_Expr* t);
-    void set_value(Fa_Expr* v);
-    void set_decl();
-    [[nodiscard]] bool is_declaration() const;
+
+    [[nodiscard]] Fa_Expr* get_target() const { return m_target; }
+    [[nodiscard]] Fa_Expr* get_value() const { return m_value; }
+
+    void set_target(Fa_Expr* t) { m_target = t; }
+    void set_value(Fa_Expr* v) { m_value = v; }
+    void set_decl() { m_is_decl = true; }
+
+    [[nodiscard]] bool is_declaration() const { return m_is_decl; }
 }; // Fa_AssignmentExpr
 
 class Fa_IndexExpr final : public Fa_Expr {
@@ -458,7 +508,7 @@ private:
     Fa_Expr* m_object { nullptr };
     Fa_Expr* m_index { nullptr };
 
-    bool m_unsafe { false };
+    bool m_safe { false };
 
 public:
     Fa_IndexExpr() = delete;
@@ -483,11 +533,13 @@ public:
 
     [[nodiscard]] bool equals(Fa_Expr const* other) const override;
     [[nodiscard]] Fa_IndexExpr* clone() const override;
-    [[nodiscard]] Fa_Expr* get_object() const;
-    [[nodiscard]] Fa_Expr* get_index() const;
-    [[nodiscard]] bool is_unsafe() const;
 
-    void make_unsafe();
+    [[nodiscard]] Fa_Expr* get_object() const { return m_object; }
+    [[nodiscard]] Fa_Expr* get_index() const { return m_index; }
+
+    [[nodiscard]] bool is_safe() const { return m_safe; }
+    void make_safe() { m_safe = true; }
+
 }; // class Fa_IndexExpr
 
 class Fa_Stmt : public Fa_ASTNode {
@@ -660,6 +712,8 @@ private:
     Fa_Expr* m_condition { nullptr };
     Fa_Stmt* m_body { nullptr };
 
+    LoopHeader m_header;
+
 public:
     Fa_WhileStmt() = delete;
 
@@ -683,6 +737,9 @@ public:
     [[nodiscard]] Fa_Expr* get_condition() const;
     [[nodiscard]] Fa_Stmt* get_body();
     [[nodiscard]] Fa_Stmt const* get_body() const;
+    [[nodiscard]] LoopHeader get_header() const;
+
+    void set_header(LoopHeader h);
     void set_body(Fa_Stmt* b);
 }; // class Fa_WhileStmt
 
@@ -691,10 +748,8 @@ private:
     Fa_Expr* m_container { nullptr };
     Fa_Expr* m_iter { nullptr };
     Fa_Stmt* m_body { nullptr };
-    /*
-        captures the values of variables modified inside the loop body at init time
-    */
-    std::unordered_map<const Fa_Expr*, const Fa_Expr*> m_header;
+
+    LoopHeader m_header;
 
 public:
     Fa_ForStmt() = delete;
@@ -722,8 +777,9 @@ public:
     [[nodiscard]] Fa_NameExpr* get_target() const;
     [[nodiscard]] Fa_Expr* get_iter() const;
     [[nodiscard]] Fa_Stmt* get_body() const;
-    [[nodiscard]] std::unordered_map<const Fa_Expr*, const Fa_Expr*> get_header() const;
-    void set_header(std::unordered_map<const Fa_Expr*, const Fa_Expr*> h) const;
+    [[nodiscard]] LoopHeader get_header() const;
+
+    void set_header(LoopHeader h);
     void set_body(Fa_Stmt* b);
 }; // class Fa_ForStmt
 
