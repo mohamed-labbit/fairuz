@@ -852,11 +852,16 @@ private:
     Fa_Expr* m_name { nullptr };
     Fa_Array<Fa_Expr*> m_members { nullptr };
     Fa_Array<Fa_Stmt*> m_methods { nullptr };
+    Fa_Array<Fa_Stmt*> m_sp_methods { nullptr };
 
 public:
     Fa_ClassDef() = delete;
 
-    explicit Fa_ClassDef(Fa_Expr* name, Fa_Array<Fa_Expr*> members, Fa_Array<Fa_Stmt*> methods, Fa_SourceLocation loc)
+    explicit Fa_ClassDef(
+        Fa_Expr* name,
+        Fa_Array<Fa_Expr*> members,
+        Fa_Array<Fa_Stmt*> methods,
+        Fa_SourceLocation loc)
         : m_name(name)
         , m_members(members)
         , m_methods(methods)
@@ -913,10 +918,16 @@ public:
 
 #define ALLOCATE_AST_NODE(type, ...) get_allocator().allocate_object<type>(__VA_ARGS__);
 
-static Fa_BinaryExpr* Fa_make_binary(Fa_Expr* lhs, Fa_Expr* rhs, Fa_BinaryOp const op, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_BinaryExpr, lhs, rhs, op, loc); }
+static Fa_BinaryExpr* Fa_make_binary(Fa_Expr* lhs, Fa_Expr* rhs, Fa_BinaryOp const op, Fa_SourceLocation loc)
+{
+    return ALLOCATE_AST_NODE(Fa_BinaryExpr, lhs, rhs, op, loc);
+}
 static Fa_UnaryExpr* Fa_make_unary(Fa_Expr* operand, Fa_UnaryOp const op, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_UnaryExpr, operand, op, loc); }
 static Fa_LiteralExpr* Fa_make_literal_nil(Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_LiteralExpr, loc); }
-static Fa_LiteralExpr* Fa_make_literal_int(int value, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_LiteralExpr, static_cast<i64>(value), Fa_LiteralExpr::Type::INTEGER, loc); }
+static Fa_LiteralExpr* Fa_make_literal_int(int value, Fa_SourceLocation loc)
+{
+    return ALLOCATE_AST_NODE(Fa_LiteralExpr, static_cast<i64>(value), Fa_LiteralExpr::Type::INTEGER, loc);
+}
 static Fa_LiteralExpr* Fa_make_literal_int(i64 value, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_LiteralExpr, value, Fa_LiteralExpr::Type::INTEGER, loc); }
 static Fa_LiteralExpr* Fa_make_literal_float(f64 value, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_LiteralExpr, value, Fa_LiteralExpr::Type::FLOAT, loc); }
 static Fa_LiteralExpr* Fa_make_literal_string(Fa_StringRef value, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_LiteralExpr, value, loc); }
@@ -925,17 +936,39 @@ static Fa_NameExpr* Fa_make_name(Fa_StringRef const str, Fa_SourceLocation loc) 
 static Fa_ListExpr* Fa_make_list(Fa_Array<Fa_Expr*> elements, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_ListExpr, elements, loc); }
 static Fa_DictExpr* Fa_make_dict(Fa_Array<std::pair<Fa_Expr*, Fa_Expr*>> content, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_DictExpr, content, loc); }
 static Fa_CallExpr* Fa_make_call(Fa_Expr* callee, Fa_ListExpr* args, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_CallExpr, callee, args, loc); }
-static Fa_AssignmentExpr* Fa_make_assignment_expr(Fa_Expr* target, Fa_Expr* value, Fa_SourceLocation loc, bool decl) { return ALLOCATE_AST_NODE(Fa_AssignmentExpr, target, value, loc, decl); }
+static Fa_AssignmentExpr* Fa_make_assignment_expr(Fa_Expr* target, Fa_Expr* value, Fa_SourceLocation loc, bool decl)
+{
+    return ALLOCATE_AST_NODE(Fa_AssignmentExpr, target, value, loc, decl);
+}
 static Fa_IndexExpr* Fa_make_index(Fa_Expr* obj, Fa_Expr* idx, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_IndexExpr, obj, idx, loc); }
 static Fa_BlockStmt* Fa_make_block(Fa_Array<Fa_Stmt*> stmts, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_BlockStmt, stmts, loc); }
 static Fa_ExprStmt* Fa_make_expr_stmt(Fa_Expr* expr, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_ExprStmt, expr, loc); }
-static Fa_AssignmentStmt* Fa_make_assignment_stmt(Fa_Expr* target, Fa_Expr* value, Fa_SourceLocation loc, bool decl) { return ALLOCATE_AST_NODE(Fa_AssignmentStmt, target, value, loc, decl); }
-static Fa_IfStmt* Fa_make_if(Fa_Expr* cond, Fa_Stmt* then_block, Fa_SourceLocation loc, Fa_Stmt* else_block = nullptr) { return ALLOCATE_AST_NODE(Fa_IfStmt, cond, then_block, loc, else_block); }
+static Fa_AssignmentStmt* Fa_make_assignment_stmt(Fa_Expr* target, Fa_Expr* value, Fa_SourceLocation loc, bool decl)
+{
+    return ALLOCATE_AST_NODE(Fa_AssignmentStmt, target, value, loc, decl);
+}
+static Fa_IfStmt* Fa_make_if(Fa_Expr* cond, Fa_Stmt* then_block, Fa_SourceLocation loc, Fa_Stmt* else_block = nullptr)
+{
+    return ALLOCATE_AST_NODE(Fa_IfStmt, cond, then_block, loc, else_block);
+}
 static Fa_WhileStmt* Fa_make_while(Fa_Expr* cond, Fa_Stmt* body, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_WhileStmt, cond, body, loc); }
-static Fa_ForStmt* Fa_make_for(Fa_NameExpr* target, Fa_Expr* iter, Fa_Stmt* body, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_ForStmt, target, iter, body, loc); }
-static Fa_FunctionDef* Fa_make_function(Fa_NameExpr* name, Fa_ListExpr* params, Fa_Stmt* body, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_FunctionDef, name, params, body, loc); }
-static Fa_ReturnStmt* Fa_make_return(Fa_SourceLocation loc, Fa_Expr* value = nullptr) { return ALLOCATE_AST_NODE(Fa_ReturnStmt, value, loc); }
-static Fa_ClassDef* Fa_make_class_def(Fa_Expr* name, Fa_Array<Fa_Expr*> members, Fa_Array<Fa_Stmt*> methods, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_ClassDef, name, members, methods, loc); }
+static Fa_ForStmt* Fa_make_for(Fa_NameExpr* target, Fa_Expr* iter, Fa_Stmt* body, Fa_SourceLocation loc)
+{
+    return ALLOCATE_AST_NODE(Fa_ForStmt, target, iter, body, loc);
+}
+static Fa_FunctionDef* Fa_make_function(Fa_NameExpr* name, Fa_ListExpr* params, Fa_Stmt* body, Fa_SourceLocation loc)
+{
+    return ALLOCATE_AST_NODE(Fa_FunctionDef, name, params, body, loc);
+}
+static Fa_ReturnStmt* Fa_make_return(Fa_SourceLocation loc, Fa_Expr* value = nullptr)
+{
+    return ALLOCATE_AST_NODE(Fa_ReturnStmt, value, loc);
+}
+static Fa_ClassDef* Fa_make_class_def(Fa_Expr* name, Fa_Array<Fa_Expr*> members,
+    Fa_Array<Fa_Stmt*> methods, Fa_SourceLocation loc)
+{
+    return ALLOCATE_AST_NODE(Fa_ClassDef, name, members, methods, loc);
+}
 static Fa_BreakStmt* Fa_make_break(Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_BreakStmt, loc); }
 static Fa_ContinueStmt* Fa_make_continue(Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_ContinueStmt, loc); }
 
