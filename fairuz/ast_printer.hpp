@@ -180,22 +180,19 @@ private:
                 print_expr(f->get_parameters()[i], { p.indent + pipe(p.last) + "│  ", i + 1 == f->get_parameters().size() });
             std::cout << p.indent + pipe(p.last) << "└─ body:\n";
             print_stmt(f->get_body(), { p.indent + pipe(p.last) + "    ", true });
-            break;
-        }
+        } break;
 
         case Fa_Stmt::Kind::RETURN: {
             auto r = static_cast<Fa_ReturnStmt const*>(s);
             std::cout << color("Return", Color::BOLD) << "\n";
             print_expr(r->get_value(), { p.indent + pipe(p.last), true });
-            break;
-        }
+        } break;
 
         case Fa_Stmt::Kind::EXPR: {
             auto e = static_cast<Fa_ExprStmt const*>(s);
             std::cout << color("Fa_ExprStmt", Color::BOLD) << "\n";
             print_expr(e->get_expr(), { p.indent + pipe(p.last), true });
-            break;
-        }
+        } break;
 
         case Fa_Stmt::Kind::WHILE: {
             auto w = static_cast<Fa_WhileStmt const*>(s);
@@ -204,8 +201,8 @@ private:
             print_expr(w->get_condition(), { p.indent + pipe(p.last) + "│  ", true });
             std::cout << p.indent + pipe(p.last) << "└─ body:\n";
             print_stmt(w->get_body(), { p.indent + pipe(p.last) + "   ", true });
-            break;
-        }
+        } break;
+
         case Fa_Stmt::Kind::IF: {
             auto i = static_cast<Fa_IfStmt const*>(s);
             std::cout << color("If", Color::BOLD) << "\n";
@@ -217,28 +214,14 @@ private:
                 std::cout << p.indent + pipe(p.last) << "└─ else:\n";
                 print_stmt(i->get_else(), { p.indent + pipe(p.last) + "   ", true });
             }
-            break;
-        }
+        } break;
 
         case Fa_Stmt::Kind::BLOCK: {
             auto b = static_cast<Fa_BlockStmt const*>(s);
             std::cout << color("Block", Color::BOLD) << " {" << b->get_statements().size() << " stmts}\n";
             for (size_t i = 0; i < b->get_statements().size(); i += 1)
                 print_stmt(b->get_statements()[i], { p.indent + pipe(p.last), i + 1 == b->get_statements().size() });
-            break;
-        }
-            /*
-             *
-                    case Fa_Stmt::Kind::ASSIGNMENT: {
-                        auto a = static_cast<Fa_AssignmentStmt const*>(s);
-                        std::cout << color("Assignment", Color::YELLOW) << " :=\n";
-                        std::cout << p.indent + pipe(p.last) << "├─ target:\n";
-                        print_expr(a->get_target(), { p.indent + pipe(p.last) + "│  ", true });
-                        std::cout << p.indent + pipe(p.last) << "└─ value:\n";
-                        print_expr(a->get_value(), { p.indent + pipe(p.last) + "   ", true });
-                        break;
-                    }
-             */
+        } break;
 
         default:
             std::cout << color("<unknown stmt>", Color::RED) << "\n";
