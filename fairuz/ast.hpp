@@ -974,6 +974,38 @@ static Fa_ContinueStmt* Fa_make_continue(Fa_SourceLocation loc) { return ALLOCAT
 
 #undef ALLOCATE_AST_NODE
 
+static Fa_AssignmentExpr* as_assignment(Fa_Stmt* s)
+{
+    if (s == nullptr)
+        return nullptr;
+
+    if (s->get_kind() == Fa_Stmt::Kind::ASSIGNMENT)
+        return static_cast<Fa_AssignmentStmt*>(s)->get_expr();
+    if (s->get_kind() == Fa_Stmt::Kind::EXPR) {
+        auto e = static_cast<Fa_ExprStmt*>(s)->get_expr();
+        if (e->get_kind() == Fa_Expr::Kind::ASSIGNMENT)
+            return static_cast<Fa_AssignmentExpr*>(e);
+    }
+
+    return nullptr;
+}
+
+static Fa_AssignmentExpr const* as_assignment(Fa_Stmt const* s)
+{
+    if (s == nullptr)
+        return nullptr;
+
+    if (s->get_kind() == Fa_Stmt::Kind::ASSIGNMENT)
+        return static_cast<Fa_AssignmentStmt const*>(s)->get_expr();
+    if (s->get_kind() == Fa_Stmt::Kind::EXPR) {
+        auto e = static_cast<Fa_ExprStmt const*>(s)->get_expr();
+        if (e->get_kind() == Fa_Expr::Kind::ASSIGNMENT)
+            return static_cast<Fa_AssignmentExpr const*>(e);
+    }
+
+    return nullptr;
+}
+
 } // namespace fairuz::ast
 
 #endif // AST_HPP
