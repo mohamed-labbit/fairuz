@@ -1006,6 +1006,52 @@ static Fa_AssignmentExpr const* as_assignment(Fa_Stmt const* s)
     return nullptr;
 }
 
+// helper macros
+#define AS_IF(_n) static_cast<AST::Fa_IfStmt*>(_n)
+#define AS_WHILE(_n) static_cast<AST::Fa_WhileStmt*>(_n)
+#define AS_FOR(_n) static_cast<AST::Fa_ForStmt*>(_n)
+#define AS_RETURN(_n) static_cast<AST::Fa_ReturnStmt*>(_n)
+#define AS_BREAK(_n) static_cast<AST::Fa_BreakStmt*>(_n)
+#define AS_CONTINUE(_n) static_cast<AST::Fa_ContinueStmt*>(_n)
+#define AS_BLOCK(_n) static_cast<AST::Fa_BlockStmt*>(_n)
+#define AS_FUNCTION_DEF(_n) static_cast<AST::Fa_FunctionDef*>(_n)
+#define AS_CLASS_DEF(_n) static_cast<AST::Fa_ClassDef*>(_n)
+#define AS_ASSIGNMENT_STMT(_n) static_cast<AST::Fa_AssignmentStmt*>(_n)
+#define AS_EXPR_STMT(_n) static_cast<AST::Fa_ExprStmt*>(_n)
+
+#define AS_BINARY(_n) static_cast<AST::Fa_BinaryExpr*>(_n)
+#define AS_UNARY(_n) static_cast<AST::Fa_UnaryExpr*>(_n)
+#define AS_LITERAL(_n) static_cast<AST::Fa_LiteralExpr*>(_n)
+#define AS_NAME(_n) static_cast<AST::Fa_NameExpr*>(_n)
+#define AS_INDEX(_n) static_cast<AST::Fa_IndexExpr*>(_n)
+#define AS_DICT(_n) static_cast<AST::Fa_DictExpr*>(_n)
+#define AS_LIST(_n) static_cast<AST::Fa_ListExpr*>(_n)
+#define AS_CALL(_n) static_cast<AST::Fa_CallExpr*>(_n)
+#define AS_ASSIGNMENT_EXPR(_n) static_cast<AST::Fa_AssignmentExpr*>(_n)
+
+#define AS_CONST_IF(_n) static_cast<AST::Fa_IfStmt const*>(_n)
+#define AS_CONST_WHILE(_n) static_cast<AST::Fa_WhileStmt const*>(_n)
+#define AS_CONST_FOR(_n) static_cast<AST::Fa_ForStmt const*>(_n)
+#define AS_CONST_RETURN(_n) static_cast<AST::Fa_ReturnStmt const*>(_n)
+#define AS_CONST_BREAK(_n) static_cast<AST::Fa_BreakStmt const*>(_n)
+#define AS_CONST_CONTINUE(_n) static_cast<AST::Fa_ContinueStmt const*>(_n)
+#define AS_CONST_BLOCK(_n) static_cast<AST::Fa_BlockStmt const*>(_n)
+#define AS_CONST_FUNCTION_DEF(_n) static_cast<AST::Fa_FunctionDef const*>(_n)
+#define AS_CONST_CLASS_DEF(_n) static_cast<AST::Fa_ClassDef const*>(_n)
+#define AS_CONST_ASSIGNMENT_STMT(_n) static_cast<AST::Fa_AssignmentStmt const*>(_n)
+#define AS_CONST_EXPR_STMT(_n) static_cast<AST::Fa_ExprStmt const*>(_n)
+
+#define AS_CONST_BINARY(_n) static_cast<AST::Fa_BinaryExpr const*>(_n)
+#define AS_CONST_UNARY(_n) static_cast<AST::Fa_UnaryExpr const*>(_n)
+#define AS_CONST_LITERAL(_n) static_cast<AST::Fa_LiteralExpr const*>(_n)
+#define AS_CONST_NAME(_n) static_cast<AST::Fa_NameExpr const*>(_n)
+#define AS_CONST_INDEX(_n) static_cast<AST::Fa_IndexExpr const*>(_n)
+#define AS_CONST_DICT(_n) static_cast<AST::Fa_DictExpr const*>(_n)
+#define AS_CONST_LIST(_n) static_cast<AST::Fa_ListExpr const*>(_n)
+#define AS_CONST_CALL(_n) static_cast<AST::Fa_CallExpr const*>(_n)
+#define AS_CONST_ASSIGNMENT_EXPR(_n) static_cast<AST::Fa_AssignmentExpr const*>(_n)
+
+
 } // namespace fairuz::ast
 
 #endif // AST_HPP
