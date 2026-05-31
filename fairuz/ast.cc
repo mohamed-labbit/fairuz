@@ -11,7 +11,7 @@ bool Fa_BinaryExpr::equals(Fa_Expr const* other) const
     if (other->get_kind() != m_kind)
         return false;
 
-    auto bin = static_cast<Fa_BinaryExpr const*>(other);
+    auto bin = AS_CONST_BINARY(other);
     return m_operator == bin->get_operator() && m_left->equals(bin->get_left()) && m_right->equals(bin->get_right());
 }
 
@@ -39,7 +39,7 @@ bool Fa_LiteralExpr::equals(Fa_Expr const* other) const
     if (other == nullptr || other->get_kind() != m_kind)
         return false;
 
-    auto lit = static_cast<Fa_LiteralExpr const*>(other);
+    auto lit = AS_CONST_LITERAL(other);
     if (lit == nullptr || m_type != lit->m_type)
         return false;
 
@@ -82,7 +82,7 @@ bool Fa_NameExpr::equals(Fa_Expr const* other) const
     if (other->get_kind() != m_kind)
         return false;
 
-    auto name = static_cast<Fa_NameExpr const*>(other);
+    auto name = AS_CONST_NAME(other);
     return m_value == name->get_value();
 }
 
@@ -96,7 +96,7 @@ bool Fa_ListExpr::equals(Fa_Expr const* other) const
     if (other->get_kind() != m_kind)
         return false;
 
-    auto list = static_cast<Fa_ListExpr const*>(other);
+    auto list = AS_CONST_LIST(other);
 
     if (m_elements.size() != list->m_elements.size())
         return false;
@@ -137,7 +137,7 @@ bool Fa_DictExpr::equals(Fa_Expr const* other) const
 
     // a dictionary normally doesn't care about order so this is logically not correct
     // but we gonna stub an implementation that requires order until someone fixes this
-    auto dict = static_cast<Fa_DictExpr const*>(other)->get_content();
+    auto dict = AS_CONST_DICT(other)->get_content();
     u32 const s1 = content.size();
     u32 const s2 = dict.size();
 
