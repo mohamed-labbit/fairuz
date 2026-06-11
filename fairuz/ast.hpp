@@ -10,6 +10,7 @@
 
 #include <cassert>
 #include <cstddef>
+#include <tuple>
 #include <unordered_map>
 
 namespace fairuz::AST {
@@ -1051,6 +1052,40 @@ static Fa_AssignmentExpr const* as_assignment(Fa_Stmt const* s)
 #define AS_CONST_CALL(_n) static_cast<AST::Fa_CallExpr const*>(_n)
 #define AS_CONST_ASSIGNMENT_EXPR(_n) static_cast<AST::Fa_AssignmentExpr const*>(_n)
 
+static bool is_class_def(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::CLASS_DEF; }
+static bool is_if(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::IF; }
+static bool is_while(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::WHILE; }
+static bool is_for(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::FOR; }
+static bool is_return(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::RETURN; }
+static bool is_break(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::BREAK; }
+static bool is_continue(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::CONTINUE; }
+static bool is_func(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::FUNC; }
+static bool is_expr(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::EXPR; }
+static bool is_block(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::BLOCK; }
+
+static bool is_binary(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::BINARY; }
+static bool is_unary(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::UNARY; }
+static bool is_literal(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::LITERAL; }
+static bool is_name(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::NAME; }
+static bool is_index(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::INDEX; }
+static bool is_dict(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::DICT; }
+static bool is_list(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::LIST; }
+static bool is_call(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::CALL; }
+static bool is_assignment(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::ASSIGNMENT; }
+
+static std::tuple<Fa_Expr*, Fa_Expr*> assignment_parts(Fa_AssignmentExpr* e)
+{
+    return std::make_tuple<Fa_Expr*, Fa_Expr*>(e->get_target(), e->get_value());
+}
+static std::tuple<Fa_Expr*, Fa_Expr*> assignment_parts(Fa_AssignmentExpr const* e)
+{
+    return std::make_tuple<Fa_Expr*, Fa_Expr*>(e->get_target(), e->get_value());
+}
+
+static int literal_int(Fa_Expr const* e) { return AS_CONST_LITERAL(e)->get_int(); }
+static Fa_StringRef literal_str(Fa_Expr const* e) { return AS_CONST_LITERAL(e)->get_str(); }
+static float literal_float(Fa_Expr const* e) { return AS_CONST_LITERAL(e)->get_float(); }
+static bool literal_bool(Fa_Expr const* e) { return AS_CONST_LITERAL(e)->get_bool(); }
 
 } // namespace fairuz::ast
 
