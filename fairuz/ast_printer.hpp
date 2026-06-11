@@ -97,13 +97,13 @@ private:
 
         switch (e->get_kind()) {
         case Fa_Expr::Kind::NAME: {
-            auto n = static_cast<Fa_NameExpr const*>(e);
+            auto n = AS_CONST_NAME(e);
             std::cout << color("Name", Color::CYAN) << "(" << n->get_value() << ")\n";
             break;
         }
 
         case Fa_Expr::Kind::LITERAL: {
-            auto l = static_cast<Fa_LiteralExpr const*>(e);
+            auto l = AS_CONST_LITERAL(e);
             if (l->is_numeric())
                 std::cout << color("Literal", Color::GREEN) << "(" << l->is_number() << ")\n";
             else if (l->is_string())
@@ -121,7 +121,7 @@ private:
         }
 
         case Fa_Expr::Kind::BINARY: {
-            auto b = static_cast<Fa_BinaryExpr const*>(e);
+            auto b = AS_CONST_BINARY(e);
             std::cout << color("Binary", Color::BOLD) << " " << to_string(b->get_operator()) << "\n";
             print_expr(b->get_left(), { p.indent + pipe(p.last), false });
             print_expr(b->get_right(), { p.indent + pipe(p.last), true });
@@ -140,7 +140,7 @@ private:
         }
 
         case Fa_Expr::Kind::LIST: {
-            auto l = static_cast<Fa_ListExpr const*>(e);
+            auto l = AS_CONST_LIST(e);
             std::cout << color("List", Color::BLUE) << " [" << l->get_elements().size() << "]\n";
             for (size_t i = 0; i < l->get_elements().size(); i += 1)
                 print_expr(l->get_elements()[i], { p.indent + pipe(p.last), i + 1 == l->get_elements().size() });
