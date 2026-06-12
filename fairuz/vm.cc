@@ -5,6 +5,8 @@
 #include "vm.hpp"
 #include "util.hpp"
 
+namespace fairuz::runtime {
+
 #define Fa_DISPATCH()                                              \
     do {                                                           \
         instr = cur_chunk->code[ip];                               \
@@ -99,6 +101,7 @@
         &&H_RETURN1,             \
         &&H_IC_CALL,             \
         &&H_INDEX,               \
+        &&H_UNSAFE_INDEX,        \
         &&H_NOP,                 \
         &&H_HALT
 
@@ -146,8 +149,6 @@
         if (!Fa_IS_NUMBER(v))                           \
             runtime_error(ErrorCode::TYPE_ERROR_ARITH); \
     } while (0)
-
-namespace fairuz::runtime {
 
 static bool values_equal(Fa_Value lhs, Fa_Value rhs)
 {
@@ -1217,6 +1218,45 @@ Fa_Value Fa_VM::execute()
                 runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
 
             Fa_RA() = Fa_AS_LIST(obj)->elements[idx_int];
+        } else if (Fa_IS_DICT(obj)) {
+            Fa_ObjDict* dict_obj = Fa_AS_DICT(obj);
+            if (dict_obj->data.find_ptr(idx) == nullptr)
+                Fa_RA() = NIL_VAL;
+            else
+                Fa_RA() = dict_obj->data[idx];
+        } else {
+            runtime_error(ErrorCode::INDEX_TYPE_ERROR);
+        }
+
+        Fa_DISPATCH();
+    }
+    Fa_CASE(UNSAFE_INDEX)
+    {
+        Fa_Value obj = Fa_RB();
+        Fa_Value idx = Fa_RC();
+
+        if (Fa_IS_STRING(obj)) {
+            i64 idx_int = Fa_AS_INTEGER(idx);
+
+            Fa_StringRef const& str = Fa_AS_STRING(obj)->str;
+
+            size_t byte_pos = 0;
+            i64 char_pos = 0;
+            u64 char_bytes = 0;
+
+            while (byte_pos < str.len() && char_pos < idx_int) {
+                u64 step = 0;
+                util::decode_utf8_at(str, byte_pos, &step);
+                byte_pos += step;
+                char_pos += 1;
+            }
+
+            util::decode_utf8_at(str, byte_pos, &char_bytes);
+
+            Fa_StringRef ch = str.slice(byte_pos, byte_pos + char_bytes);
+            Fa_RA() = Fa_MAKE_STRING(ch);
+        } else if (Fa_IS_LIST(obj)) {
+            Fa_RA() = Fa_AS_LIST(obj)->elements[Fa_AS_INTEGER(idx)];
         } else if (Fa_IS_DICT(obj)) {
             Fa_ObjDict* dict_obj = Fa_AS_DICT(obj);
             if (dict_obj->data.find_ptr(idx) == nullptr)
