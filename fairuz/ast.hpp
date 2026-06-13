@@ -8,6 +8,7 @@
 #include "string.hpp"
 #include "table.hpp"
 
+#include "gtest/gtest.h"
 #include <cassert>
 #include <cstddef>
 #include <tuple>
@@ -100,7 +101,8 @@ public:
         LIST,
         INDEX,
         DICT,
-        INVALID
+        GET,
+        INVALID,
     }; // enum Kind
 
 protected:
@@ -543,6 +545,36 @@ public:
 
 }; // class Fa_IndexExpr
 
+class Fa_GetExpr final : public Fa_Expr {
+private:
+    Fa_Expr * m_object {nullptr};
+    Fa_Expr * m_member {nullptr};
+public:
+    Fa_GetExpr() = delete;
+    Fa_GetExpr(Fa_Expr* obj, Fa_Expr* mem, Fa_SourceLocation loc)
+        : m_object(obj), m_member(mem)
+    {
+        assert(m_object != nullptr);
+        assert(m_member != nullptr);
+        m_kind = Kind::GET;
+        m_loc = loc;
+    }
+
+    ~Fa_GetExpr() override = default;
+
+    Fa_GetExpr(Fa_GetExpr&&) noexcept = delete;
+    Fa_GetExpr(Fa_GetExpr const&) noexcept = delete;
+
+    Fa_GetExpr& operator=(Fa_GetExpr const&) noexcept = delete;
+    Fa_GetExpr& operator=(Fa_GetExpr&&) noexcept = delete;
+
+    [[nodiscard]] bool equals(Fa_Expr const* other) const override;
+    [[nodiscard]] Fa_GetExpr* clone() const override;
+
+    [[nodiscard]] Fa_Expr* get_object() const { return m_object; }
+    [[nodiscard]] Fa_Expr* get_member() const { return m_member; }
+};
+
 class Fa_Stmt : public Fa_ASTNode {
 public:
     enum class Kind : u8 {
@@ -936,6 +968,7 @@ static Fa_LiteralExpr* Fa_make_literal_bool(bool value, Fa_SourceLocation loc) {
 static Fa_NameExpr* Fa_make_name(Fa_StringRef const str, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_NameExpr, str, loc); }
 static Fa_ListExpr* Fa_make_list(Fa_Array<Fa_Expr*> elements, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_ListExpr, elements, loc); }
 static Fa_DictExpr* Fa_make_dict(Fa_Array<std::pair<Fa_Expr*, Fa_Expr*>> content, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_DictExpr, content, loc); }
+static Fa_GetExpr* Fa_make_get_expr(Fa_Expr* obj, Fa_Expr* member, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_GetExpr, obj, member, loc) }
 static Fa_CallExpr* Fa_make_call(Fa_Expr* callee, Fa_ListExpr* args, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_CallExpr, callee, args, loc); }
 static Fa_AssignmentExpr* Fa_make_assignment_expr(Fa_Expr* target, Fa_Expr* value, Fa_SourceLocation loc, bool decl)
 {
@@ -1029,6 +1062,7 @@ static Fa_AssignmentExpr const* as_assignment(Fa_Stmt const* s)
 #define AS_LIST(_n) static_cast<AST::Fa_ListExpr*>(_n)
 #define AS_CALL(_n) static_cast<AST::Fa_CallExpr*>(_n)
 #define AS_ASSIGNMENT_EXPR(_n) static_cast<AST::Fa_AssignmentExpr*>(_n)
+#define AS_GET_EXPR(_n) static_cast<AST::Fa_GetExpr*>(_n)
 
 #define AS_CONST_IF(_n) static_cast<AST::Fa_IfStmt const*>(_n)
 #define AS_CONST_WHILE(_n) static_cast<AST::Fa_WhileStmt const*>(_n)
@@ -1051,6 +1085,7 @@ static Fa_AssignmentExpr const* as_assignment(Fa_Stmt const* s)
 #define AS_CONST_LIST(_n) static_cast<AST::Fa_ListExpr const*>(_n)
 #define AS_CONST_CALL(_n) static_cast<AST::Fa_CallExpr const*>(_n)
 #define AS_CONST_ASSIGNMENT_EXPR(_n) static_cast<AST::Fa_AssignmentExpr const*>(_n)
+#define AS_CONST_GET_EXPR(_n) static_cast<const AST::Fa_GetExpr*>(_n)
 
 static bool is_class_def(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::CLASS_DEF; }
 static bool is_if(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::IF; }
@@ -1072,6 +1107,7 @@ static bool is_dict(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::D
 static bool is_list(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::LIST; }
 static bool is_call(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::CALL; }
 static bool is_assignment(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::ASSIGNMENT; }
+static bool is_get(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::GET; }
 
 static std::tuple<Fa_Expr*, Fa_Expr*> assignment_parts(Fa_AssignmentExpr* e)
 {
