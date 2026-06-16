@@ -210,15 +210,16 @@ Fa_IndexExpr* Fa_IndexExpr::clone() const
     return Fa_make_index(m_object->clone(), m_index->clone(), m_loc);
 }
 
-bool Fa_GetExpr::equals(Fa_Expr const* other) const {
+bool Fa_GetExpr::equals(Fa_Expr const* other) const
+{
     if (other == nullptr || !is_get(other))
         return false;
 
-    const Fa_GetExpr* get_expr = AS_CONST_GET_EXPR(other);
+    Fa_GetExpr const* get_expr = AS_CONST_GET_EXPR(other);
     return m_object->equals(get_expr->get_object()) && m_member->equals(get_expr->get_member());
 }
 
-Fa_GetExpr* Fa_GetExpr::clone() const 
+Fa_GetExpr* Fa_GetExpr::clone() const
 {
     return Fa_make_get_expr(m_object->clone(), m_member->clone(), m_loc);
 }

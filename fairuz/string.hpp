@@ -400,13 +400,7 @@ inline u64 wyhash(void const* key, size_t len, u64 seed) noexcept
 
 } // namespace detail
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Drop-in replacement — same interface as the FNV-1a version.
-// ─────────────────────────────────────────────────────────────────────────────
-
 struct Fa_StringRefHash {
-    // Seed is exposed so callers can build seeded hash tables if needed,
-    // but the default zero-seed is fine for HashTable / StringCache_.
     u64 seed { 0 };
 
     size_t operator()(Fa_StringRef const& str) const noexcept

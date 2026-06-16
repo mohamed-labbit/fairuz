@@ -14,7 +14,7 @@ struct Fa_ValueHash {
     size_t operator()(Fa_Value const& v) const { return v; }
 }; // Fa_Value's are inherently distinct
 struct Fa_ValueEqual {
-    size_t operator()(Fa_Value const& lhs, Fa_Value const& rhs) { return lhs == rhs; }
+    bool operator()(Fa_Value const& lhs, Fa_Value const& rhs) { return lhs == rhs; }
 };
 
 using Fa_DictType = Fa_HashTable<Fa_Value, Fa_Value, Fa_ValueHash, Fa_ValueEqual>;
@@ -38,7 +38,9 @@ enum class Fa_ObjType : u8 {
     FUNCTION,
     CLOSURE,
     NATIVE,
-    CLASS
+    CLASS,
+    INSTANCE,
+    _COUNT,
 }; // enum Fa_ObjType
 
 struct Fa_ObjHeader {
@@ -125,13 +127,90 @@ struct Fa_ObjClass final : public Fa_ObjHeader {
     Fa_ObjString* name { nullptr };
     Fa_Array<Fa_ObjHeader*> members;
 
+    // special methods
+    i16 init_idx { -1 };
+    i16 call_idx { -1 };
+    i16 repr_idx { -1 };
+    i16 add_idx { -1 };
+    i16 sub_idx { -1 };
+    i16 neg_idx { -1 };
+    i16 mul_idx { -1 };
+    i16 div_idx { -1 };
+    i16 mod_idx { -1 };
+
+    bool has_init() const { return init_idx != -1; }
+    bool has_call() const { return call_idx != -1; }
+    bool has_repr() const { return repr_idx != -1; }
+    bool has_add() const { return add_idx != -1; }
+    bool has_sub() const { return sub_idx != -1; }
+    bool has_neg() const { return neg_idx != -1; }
+    bool has_mul() const { return mul_idx != -1; }
+    bool has_div() const { return div_idx != -1; }
+    bool has_mod() const { return mod_idx != -1; }
+
     explicit Fa_ObjClass(Fa_ObjString* class_name, Fa_Array<Fa_ObjHeader*> member_list)
         : Fa_ObjHeader(Fa_ObjType::CLASS)
         , name(class_name)
         , members(member_list)
     {
+        Fa_Array<Fa_StringRef> sp_methods_names = {
+            "بداية",
+            "نداء",
+            "كتابة",
+            "عملية+",
+            "عملية-",
+            "عملية*",
+            "عملية/",
+            /// TODO: others
+        };
+
+        u32 i = 0;
+        for (; i < members.size(); ++i) {
+            if (members[i]->type == Fa_ObjType::FUNCTION) {
+                auto method = static_cast<Fa_ObjFunction const*>(members[i]);
+                Fa_StringRef method_name = method->name->str;
+                if (std::find(sp_methods_names.begin(), sp_methods_names.end(), method_name) != sp_methods_names.end()) {
+                    if (method_name == "بداية")
+                        init_idx = i;
+                    else if (method_name == "نداء")
+                        call_idx = i;
+                    else if (method_name == "كتابة")
+                        repr_idx = i;
+                    else if (method_name == "عملية+")
+                        add_idx = i;
+                    else if (method_name == "عملية-")
+                        sub_idx = i;
+                    else if (method_name == "عملية*")
+                        mul_idx = i;
+                    else if (method_name == "عملية/")
+                        div_idx = i;
+                }
+            }
+        }
     }
 }; // struct Fa_ObjClass
+
+struct Fa_ObjInstance final : public Fa_ObjHeader {
+    Fa_ObjClass* kclass;
+    Fa_DictType fields;
+
+    Fa_ObjInstance(Fa_ObjClass* k, Fa_DictType f)
+        : Fa_ObjHeader(Fa_ObjType::INSTANCE)
+        , kclass(k)
+        , fields(f)
+    {
+    }
+
+    bool has_init() const { return kclass->has_init(); }
+    bool has_call() const { return kclass->has_call(); }
+    bool has_repr() const { return kclass->has_repr(); }
+    bool has_add() const { return kclass->has_add(); }
+    bool has_sub() const { return kclass->has_sub(); }
+    bool has_neg() const { return kclass->has_neg(); }
+    bool has_mul() const { return kclass->has_mul(); }
+    bool has_div() const { return kclass->has_div(); }
+    bool has_mod() const { return kclass->has_mod(); }
+};
 
 #define Fa_MAKE_OBJ_STRING(s) get_allocator().allocate_object<Fa_ObjString>(s)
 #define Fa_MAKE_OBJ_NATIVE(f, n, a) get_allocator().allocate_object<Fa_ObjNative>(f, n, a)
@@ -172,10 +251,15 @@ struct Fa_ObjClass final : public Fa_ObjHeader {
         Fa_ObjNative* _obj = get_allocator().allocate_object<Fa_ObjNative>(f, n, a); \
         TAG_OBJ | (reinterpret_cast<uintptr_t>(_obj) & PAYLOAD_MASK);                \
     })
-#define Fa_MAKE_CLASS(n, m)                                           \
-    ({                                                                \
-        Fa_ObjClass* _obj = m_gc.allocate_object<Fa_ObjClass>(n, m);  \
-        TAG_OBJ | (reinterpret_cast<uintptr_t>(_obj) & PAYLOAD_MASK); \
+#define Fa_MAKE_CLASS(n, m)                                                     \
+    ({                                                                          \
+        Fa_ObjClass* _obj = get_allocator().allocate_object<Fa_ObjClass>(n, m); \
+        TAG_OBJ | (reinterpret_cast<uintptr_t>(_obj) & PAYLOAD_MASK);           \
+    })
+#define Fa_MAKE_INSANCE(k, f)                                                         \
+    ({                                                                                \
+        Fa_ObjInstance* _obj = get_allocator().allocate_object<Fa_ObjInstance>(k, f); \
+        TAG_OBJ | (reinterpret_cast<uintptr_t>(_obj) & PAYLOAD_MASK);                 \
     })
 
 #define Fa_MAKE_REAL(d)                               \
@@ -194,15 +278,13 @@ struct Fa_ObjClass final : public Fa_ObjHeader {
 #define Fa_IS_OBJECT(v) (((v) >> 48) == OBJ_TAG16)
 #define Fa_IS_DOUBLE(v)                                                                            \
     ({                                                                                             \
-        Fa_Value _vd = (v);                                                                        \
-        u64 _top = _vd >> 48;                                                                      \
-        (_top != INT_TAG16 && _top != OBJ_TAG16 && !((_vd | 1) == TRUE_VAL) && !(_vd == NIL_VAL)); \
+        u64 _top = (v) >> 48;                                                                      \
+        (_top != INT_TAG16 && _top != OBJ_TAG16 && !(((v) | 1) == TRUE_VAL) && !((v) == NIL_VAL)); \
     })
 #define Fa_IS_NUMBER(v)                                                                              \
     ({                                                                                               \
-        Fa_Value _vn = (v);                                                                          \
-        u64 _top = _vn >> 48;                                                                        \
-        (_top == INT_TAG16) || (_top != OBJ_TAG16 && !((_vn | 1) == TRUE_VAL) && !(_vn == NIL_VAL)); \
+        u64 _top = (v) >> 48;                                                                        \
+        (_top == INT_TAG16) || (_top != OBJ_TAG16 && !(((v) | 1) == TRUE_VAL) && !((v) == NIL_VAL)); \
     })
 #define Fa_IS_STRING(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::STRING)
 #define Fa_IS_LIST(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::LIST)
@@ -210,7 +292,8 @@ struct Fa_ObjClass final : public Fa_ObjHeader {
 #define Fa_IS_FUNCTION(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::FUNCTION)
 #define Fa_IS_CLOSURE(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::CLOSURE)
 #define Fa_IS_NATIVE(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::NATIVE)
-#define Fa_IS_CLASS(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjClass*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::CLASS)
+#define Fa_IS_CLASS(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::CLASS)
+#define Fa_IS_INSTANCE(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::INSTANCE)
 #define Fa_IS_TRUTHY(v)                          \
     ({                                           \
         Fa_Value _v = (v);                       \
@@ -264,6 +347,7 @@ struct Fa_ObjClass final : public Fa_ObjHeader {
 #define Fa_AS_CLOSURE(v) static_cast<Fa_ObjClosure*>(Fa_AS_OBJECT(v))
 #define Fa_AS_NATIVE(v) static_cast<Fa_ObjNative*>(Fa_AS_OBJECT(v))
 #define Fa_AS_CLASS(v) static_cast<Fa_ObjClass*>(Fa_AS_OBJECT(v))
+#define Fa_AS_INSTANCE(v) static_cast<Fa_ObjInstance*>(Fa_AS_OBJECT(v))
 
 enum class Fa_TypeTag : u8 {
     NONE,
@@ -276,10 +360,14 @@ enum class Fa_TypeTag : u8 {
     CLOSURE,
     NATIVE,
     CLASS,
+    INSTANCE,
     DICT,
 }; // enum Fa_TypeTag
 
-[[nodiscard]] inline bool has_tag(Fa_TypeTag mask, Fa_TypeTag t) noexcept { return (static_cast<u8>(mask) & static_cast<u8>(t)) != 0; }
+[[nodiscard]] inline bool has_tag(Fa_TypeTag mask, Fa_TypeTag t) noexcept 
+{
+    return (static_cast<u8>(mask) & static_cast<u8>(t)) != 0;
+}
 
 [[nodiscard]] inline Fa_TypeTag operator|(Fa_TypeTag a, Fa_TypeTag b) noexcept
 {
@@ -313,6 +401,8 @@ inline Fa_TypeTag& operator|=(Fa_TypeTag& a, Fa_TypeTag b) noexcept { return a =
             return Fa_TypeTag::NATIVE;
         case Fa_ObjType::CLASS:
             return Fa_TypeTag::CLASS;
+        case Fa_ObjType::INSTANCE:
+            return Fa_TypeTag::INSTANCE;
         default:
             return Fa_TypeTag::NONE;
         }

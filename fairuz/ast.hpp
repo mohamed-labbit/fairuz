@@ -547,12 +547,14 @@ public:
 
 class Fa_GetExpr final : public Fa_Expr {
 private:
-    Fa_Expr * m_object {nullptr};
-    Fa_Expr * m_member {nullptr};
+    Fa_Expr* m_object { nullptr };
+    Fa_Expr* m_member { nullptr };
+
 public:
     Fa_GetExpr() = delete;
     Fa_GetExpr(Fa_Expr* obj, Fa_Expr* mem, Fa_SourceLocation loc)
-        : m_object(obj), m_member(mem)
+        : m_object(obj)
+        , m_member(mem)
     {
         assert(m_object != nullptr);
         assert(m_member != nullptr);

@@ -152,7 +152,8 @@ bool Fa_Token::is_whitespace() const
 
 bool Fa_Token::is_numeric() const
 {
-    return m_type == Fa_TokenType::INTEGER || m_type == Fa_TokenType::HEX || m_type == Fa_TokenType::OCTAL || m_type == Fa_TokenType::BINARY || m_type == Fa_TokenType::DECIMAL;
+    return m_type == Fa_TokenType::INTEGER || m_type == Fa_TokenType::HEX || m_type == Fa_TokenType::OCTAL
+        || m_type == Fa_TokenType::BINARY || m_type == Fa_TokenType::DECIMAL;
 }
 
 f64 Fa_Token::to_double() const { return lexeme().to_double(); }

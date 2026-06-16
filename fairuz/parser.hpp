@@ -86,6 +86,7 @@ private:
     Fa_SymbolTable* m_current_scope;
     Fa_SymbolTable* m_global_scope;
     Fa_Array<Issue> m_issues;
+    Fa_Array<AST::Fa_Stmt const*> m_preceding_stmts;
 
 public:
     Fa_SemanticAnalyzer();
@@ -97,7 +98,9 @@ public:
     Fa_Array<Issue> const& get_issues() const;
     Fa_SymbolTable const* get_global_scope() const;
     Fa_SymbolTable const* get_current_scope() const;
+    bool is_local(Fa_StringRef name, Fa_SymbolTable* current);
     void print_report() const;
+    Fa_Array<AST::Fa_Stmt const*> get_preceding_statements() const { return m_preceding_stmts; }
 }; // class Fa_SemanticAnalyzer
 
 class Fa_ParseError : public std::runtime_error {
@@ -147,6 +150,8 @@ public:
             diagnostic::panic(diagnostic::errc::general::Code::INTERNAL_ERROR, "parser received a null Fa_FileManager");
 
         m_lexer.m_next();
+        if (current_token() != nullptr && current_token()->type() == tok::Fa_TokenType::BEGINMARKER)
+            m_lexer.m_next();
     }
 
     explicit Fa_Parser(Fa_Array<tok::Fa_Token> seq, std::optional<size_t> s = std::nullopt);
@@ -180,6 +185,7 @@ public:
     Fa_ErrorOr<AST::Fa_Stmt*> parse_indented_block();
     Fa_ErrorOr<AST::Fa_Stmt*> parse_class_def();
     Fa_ErrorOr<AST::Fa_Stmt*> parse_class_method(Fa_Array<AST::Fa_Expr*>& members);
+    Fa_ErrorOr<AST::Fa_Expr*> parse_member_access();
 
     bool we_done() const;
     bool check(tok::Fa_TokenType m_type);

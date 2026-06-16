@@ -1,6 +1,7 @@
 /// parser.cc
 
 #include "parser.hpp"
+#include "loop_header.hpp"
 #include "macros.hpp"
 #include "util.hpp"
 
@@ -19,6 +20,20 @@ namespace fairuz::parser {
         if (UNLIKELY(n.has_error())) \
             return n.error();        \
     } while (0)
+
+#define Fa_PARSE_EXPRESSION_SAFE()   \
+    ({                               \
+        auto e = parse_expression(); \
+        Fa_VERIFY_NODE(e);           \
+        e;                           \
+    })
+
+#define Fa_PARSE_EXPR_SAFE(type)        \
+    ({                                  \
+        auto e = parse_##type##_expr(); \
+        Fa_VERIFY_NODE(e);              \
+        e.value();                      \
+    })
 
 using TokType = tok::Fa_TokenType;
 using StmtPtr = AST::Fa_Stmt*;
@@ -39,7 +54,7 @@ static bool stmt_definitely_returns(AST::Fa_Stmt const* stmt)
     case AST::Fa_Stmt::Kind::RETURN:
         return true;
     case AST::Fa_Stmt::Kind::BLOCK: {
-        auto block = static_cast<AST::Fa_BlockStmt const*>(stmt);
+        auto block = AS_CONST_BLOCK(stmt);
         for (AST::Fa_Stmt const* child : block->get_statements()) {
             if (stmt_definitely_returns(child))
                 return true;
@@ -47,7 +62,7 @@ static bool stmt_definitely_returns(AST::Fa_Stmt const* stmt)
         return false;
     }
     case AST::Fa_Stmt::Kind::IF: {
-        auto if_stmt = static_cast<AST::Fa_IfStmt const*>(stmt);
+        auto if_stmt = AS_CONST_IF(stmt);
         return stmt_definitely_returns(if_stmt->get_then()) && stmt_definitely_returns(if_stmt->get_else());
     }
     default:
@@ -138,7 +153,7 @@ Fa_Type Fa_SemanticAnalyzer::infer_type(ExprPtr expr)
 
     switch (expr->get_kind()) {
     case AST::Fa_Expr::Kind::LITERAL: {
-        auto lit = static_cast<AST::Fa_LiteralExpr const*>(expr);
+        auto lit = AS_CONST_LITERAL(expr);
 
         if (lit->is_string())
             return Fa_Type::STRING;
@@ -153,14 +168,14 @@ Fa_Type Fa_SemanticAnalyzer::infer_type(ExprPtr expr)
     }
 
     case AST::Fa_Expr::Kind::NAME: {
-        auto name = static_cast<AST::Fa_NameExpr const*>(expr);
+        auto name = AS_CONST_NAME(expr);
         Fa_SymbolTable::Symbol* sym = m_current_scope->lookup(name->get_value());
         if (sym != nullptr)
             return sym->data_type;
     } break;
 
     case AST::Fa_Expr::Kind::BINARY: {
-        auto bin = static_cast<AST::Fa_BinaryExpr const*>(expr);
+        auto bin = AS_CONST_BINARY(expr);
 
         Fa_Type left_type = infer_type(bin->get_left());
         Fa_Type right_type = infer_type(bin->get_right());
@@ -177,11 +192,11 @@ Fa_Type Fa_SemanticAnalyzer::infer_type(ExprPtr expr)
     } break;
 
     case AST::Fa_Expr::Kind::INDEX: {
-        auto index_expr = static_cast<AST::Fa_IndexExpr const*>(expr);
+        auto index_expr = AS_CONST_INDEX(expr);
         Fa_Type container_type = infer_type(index_expr->get_object());
         switch (container_type) {
         case Fa_Type::LIST: {
-            auto container_expr = static_cast<AST::Fa_ListExpr const*>(index_expr->get_object());
+            auto container_expr = AS_CONST_LIST(index_expr->get_object());
             if (container_expr->is_empty())
                 return Fa_Type::ANY;
 
@@ -190,7 +205,7 @@ Fa_Type Fa_SemanticAnalyzer::infer_type(ExprPtr expr)
         case Fa_Type::STRING:
             return Fa_Type::STRING;
         case Fa_Type::DICT: {
-            auto dict_expr = static_cast<AST::Fa_DictExpr const*>(expr);
+            auto dict_expr = AS_CONST_DICT(expr);
             if (dict_expr->get_content().empty())
                 return Fa_Type::ANY;
 
@@ -207,9 +222,9 @@ Fa_Type Fa_SemanticAnalyzer::infer_type(ExprPtr expr)
     }
 
     case AST::Fa_Expr::Kind::UNARY:
-        return infer_type(static_cast<AST::Fa_UnaryExpr const*>(expr)->get_operand());
+        return infer_type(AS_CONST_UNARY(expr)->get_operand());
     case AST::Fa_Expr::Kind::ASSIGNMENT:
-        return infer_type(static_cast<AST::Fa_AssignmentExpr const*>(expr)->get_value());
+        return infer_type(AS_CONST_ASSIGNMENT_EXPR(expr)->get_value());
 
     // terminals
     case AST::Fa_Expr::Kind::LIST:
@@ -231,6 +246,17 @@ void Fa_SemanticAnalyzer::report_issue(Issue::Severity sev, SemaCode code, Fa_St
     m_issues.push({ sev, static_cast<u16>(code), msg, loc, sugg });
 }
 
+bool Fa_SemanticAnalyzer::is_local(Fa_StringRef name, Fa_SymbolTable* current)
+{
+    Fa_SymbolTable* s = current;
+    while (s != nullptr) {
+        if (s->is_defined(name))
+            return true;
+        s = s->m_parent;
+    }
+    return false;
+}
+
 void Fa_SemanticAnalyzer::analyze_expr(ExprPtr expr)
 {
     if (expr == nullptr)
@@ -238,16 +264,19 @@ void Fa_SemanticAnalyzer::analyze_expr(ExprPtr expr)
 
     switch (expr->get_kind()) {
     case AST::Fa_Expr::Kind::NAME: {
-        auto name = static_cast<AST::Fa_NameExpr const*>(expr);
+        auto name = AS_NAME(expr);
 
         if (!m_current_scope->is_defined(name->get_value()))
             report_issue(Issue::Severity::ERROR, SemaCode::UNDEFINED_VARIABLE, "Undefined variable: " + name->get_value(), expr->get_location(), "Did you forget to initialize it?");
         else
             m_current_scope->mark_used(name->get_value(), expr->get_location().line);
+
+        if (is_local(name->get_value(), m_current_scope))
+            name->set_local();
     } break;
 
     case AST::Fa_Expr::Kind::BINARY: {
-        auto bin = static_cast<AST::Fa_BinaryExpr const*>(expr);
+        auto bin = AS_CONST_BINARY(expr);
 
         analyze_expr(bin->get_left());
         analyze_expr(bin->get_right());
@@ -267,26 +296,26 @@ void Fa_SemanticAnalyzer::analyze_expr(ExprPtr expr)
         }
 
         if (bin->get_operator() == AST::Fa_BinaryOp::OP_DIV && bin->get_right()->get_kind() == AST::Fa_Expr::Kind::LITERAL) {
-            auto lit = static_cast<AST::Fa_LiteralExpr const*>(bin->get_right());
+            auto lit = AS_CONST_LITERAL(bin->get_right());
             if (lit->is_numeric() && lit->is_number() == 0)
                 report_issue(Issue::Severity::ERROR, SemaCode::DIVISION_BY_ZERO_CONST, "Division by zero", expr->get_location(), "This will cause a runtime error");
         }
     } break;
 
     case AST::Fa_Expr::Kind::UNARY: {
-        auto un = static_cast<AST::Fa_UnaryExpr const*>(expr);
+        auto un = AS_CONST_UNARY(expr);
         analyze_expr(un->get_operand());
     } break;
 
     case AST::Fa_Expr::Kind::CALL: {
-        auto call = static_cast<AST::Fa_CallExpr const*>(expr);
+        auto call = AS_CALL(expr);
         analyze_expr(call->get_callee());
 
         for (ExprPtr arg : call->get_args())
             analyze_expr(arg);
 
         if (call->get_callee()->get_kind() == AST::Fa_Expr::Kind::NAME) {
-            auto name = static_cast<AST::Fa_NameExpr const*>(call->get_callee());
+            auto name = AS_CONST_NAME(call->get_callee());
 
             if (Fa_SymbolTable::Symbol* sym = m_current_scope->lookup(name->get_value())) {
                 if (sym->symbol_type != Fa_SymbolTable::SymbolType::FUNCTION)
@@ -295,7 +324,7 @@ void Fa_SemanticAnalyzer::analyze_expr(ExprPtr expr)
         }
 
         if (call->get_callee()->get_kind() == AST::Fa_Expr::Kind::NAME) {
-            auto name = static_cast<AST::Fa_NameExpr const*>(call->get_callee());
+            auto name = AS_CONST_NAME(call->get_callee());
             Fa_SymbolTable::Symbol* sym = m_current_scope->lookup(name->get_value());
 
             if (sym == nullptr)
@@ -306,19 +335,19 @@ void Fa_SemanticAnalyzer::analyze_expr(ExprPtr expr)
     } break;
 
     case AST::Fa_Expr::Kind::LIST: {
-        auto list = static_cast<AST::Fa_ListExpr const*>(expr);
+        auto list = AS_CONST_LIST(expr);
         for (ExprPtr elem : list->get_elements())
             analyze_expr(elem);
     } break;
 
     case AST::Fa_Expr::Kind::INDEX: {
-        auto idx = static_cast<AST::Fa_IndexExpr const*>(expr);
+        auto idx = AS_CONST_INDEX(expr);
         analyze_expr(idx->get_object());
         analyze_expr(idx->get_index());
     } break;
 
     case AST::Fa_Expr::Kind::DICT: {
-        auto dict = static_cast<AST::Fa_DictExpr const*>(expr);
+        auto dict = AS_CONST_DICT(expr);
         for (auto const& [key, value] : dict->get_content()) {
             analyze_expr(key);
             analyze_expr(value);
@@ -326,7 +355,7 @@ void Fa_SemanticAnalyzer::analyze_expr(ExprPtr expr)
     } break;
 
     case AST::Fa_Expr::Kind::ASSIGNMENT: {
-        auto assign = static_cast<AST::Fa_AssignmentExpr*>(expr);
+        auto assign = AS_ASSIGNMENT_EXPR(expr);
         analyze_expr(assign->get_value());
 
         ExprPtr target = assign->get_target();
@@ -339,7 +368,7 @@ void Fa_SemanticAnalyzer::analyze_expr(ExprPtr expr)
         }
 
         if (target->get_kind() == AST::Fa_Expr::Kind::NAME) {
-            Fa_StringRef target_name = static_cast<AST::Fa_NameExpr*>(target)->get_value();
+            Fa_StringRef target_name = AS_NAME(target)->get_value();
             bool const local_exists = m_current_scope->lookup_local(target_name) != nullptr;
             bool const visible_exists = m_current_scope->lookup(target_name) != nullptr;
             bool const global_exists = m_global_scope->lookup_local(target_name) != nullptr;
@@ -372,7 +401,7 @@ void Fa_SemanticAnalyzer::analyze_stmt(StmtPtr stmt)
 
     switch (stmt->get_kind()) {
     case AST::Fa_Stmt::Kind::BLOCK: {
-        auto block = static_cast<AST::Fa_BlockStmt const*>(stmt);
+        auto block = AS_CONST_BLOCK(stmt);
         Fa_SymbolTable* previous = m_current_scope;
         m_current_scope = m_current_scope->create_child();
 
@@ -383,11 +412,11 @@ void Fa_SemanticAnalyzer::analyze_stmt(StmtPtr stmt)
     } break;
 
     case AST::Fa_Stmt::Kind::ASSIGNMENT:
-        analyze_expr(static_cast<AST::Fa_AssignmentStmt*>(stmt)->get_expr());
+        analyze_expr(AS_ASSIGNMENT_STMT(stmt)->get_expr());
         break;
 
     case AST::Fa_Stmt::Kind::EXPR: {
-        auto Fa_Expr_stmt = static_cast<AST::Fa_ExprStmt const*>(stmt);
+        auto Fa_Expr_stmt = AS_EXPR_STMT(stmt);
         analyze_expr(Fa_Expr_stmt->get_expr());
         if (Fa_Expr_stmt->get_expr()->get_kind() != AST::Fa_Expr::Kind::CALL
             && Fa_Expr_stmt->get_expr()->get_kind() != AST::Fa_Expr::Kind::ASSIGNMENT)
@@ -395,7 +424,7 @@ void Fa_SemanticAnalyzer::analyze_stmt(StmtPtr stmt)
     } break;
 
     case AST::Fa_Stmt::Kind::IF: {
-        auto if_stmt = static_cast<AST::Fa_IfStmt const*>(stmt);
+        auto if_stmt = AS_CONST_IF(stmt);
         analyze_expr(if_stmt->get_condition());
 
         StmtPtr then_block = if_stmt->get_then();
@@ -410,22 +439,8 @@ void Fa_SemanticAnalyzer::analyze_stmt(StmtPtr stmt)
             analyze_stmt(else_block);
     } break;
 
-    case AST::Fa_Stmt::Kind::WHILE: {
-        auto while_stmt = static_cast<AST::Fa_WhileStmt*>(stmt);
-        analyze_expr(while_stmt->get_condition());
-
-        // Detect infinite loops
-        if (while_stmt->get_condition()->get_kind() == AST::Fa_Expr::Kind::LITERAL) {
-            AST::Fa_LiteralExpr const* lit = static_cast<AST::Fa_LiteralExpr const*>(while_stmt->get_condition());
-            if (lit->is_bool() && lit->get_bool() == true)
-                report_issue(Issue::Severity::WARNING, SemaCode::INFINITE_LOOP, "Infinite loop detected", stmt->get_location(), "Add a break condition");
-        }
-
-        analyze_stmt(while_stmt->get_body());
-    } break;
-
     case AST::Fa_Stmt::Kind::FOR: {
-        auto for_stmt = static_cast<AST::Fa_ForStmt const*>(stmt);
+        auto for_stmt = AS_FOR(stmt);
         analyze_expr(for_stmt->get_iter());
 
         m_current_scope = m_current_scope->create_child();
@@ -436,27 +451,54 @@ void Fa_SemanticAnalyzer::analyze_stmt(StmtPtr stmt)
 
         analyze_stmt(for_stmt->get_body());
 
+        auto previous_scope = m_current_scope->m_parent;
+
         if (m_current_scope->m_parent && m_current_scope->m_parent->lookup_local(for_stmt->get_target()->get_value()))
             report_issue(Issue::Severity::WARNING, SemaCode::LOOP_VAR_SHADOW, "Loop variable shadows outer variable", stmt->get_location());
 
+        Fa_Array<AST::Fa_Stmt const*> preceding = get_preceding_statements();
+
+        LoopHeader header = build_for_header_with_values(for_stmt, previous_scope, preceding);
+
+        for_stmt->set_header(header);
+
+        analyze_stmt(for_stmt->get_body());
         m_current_scope = m_current_scope->m_parent;
     } break;
 
+    case AST::Fa_Stmt::Kind::WHILE: {
+        auto while_stmt = AS_WHILE(stmt);
+        analyze_expr(while_stmt->get_condition());
+
+        Fa_SymbolTable* previous_scope = m_current_scope->m_parent == nullptr ? m_current_scope : m_current_scope->m_parent;
+        Fa_Array<AST::Fa_Stmt const*> preceding = get_preceding_statements();
+        LoopHeader header = build_while_header_with_values(while_stmt, previous_scope, preceding);
+
+        while_stmt->set_header(header);
+
+        if (while_stmt->get_condition()->get_kind() == AST::Fa_Expr::Kind::LITERAL) {
+            AST::Fa_LiteralExpr const* lit = AS_CONST_LITERAL(while_stmt->get_condition());
+            if (lit->is_bool() && lit->get_bool() == true)
+                report_issue(Issue::Severity::WARNING, SemaCode::INFINITE_LOOP, "Infinite loop detected", stmt->get_location(), "Add a break condition");
+        }
+
+        analyze_stmt(while_stmt->get_body());
+    } break;
+
     case AST::Fa_Stmt::Kind::FUNC: {
-        auto func_def = static_cast<AST::Fa_FunctionDef const*>(stmt);
+        auto func_def = AS_CONST_FUNCTION_DEF(stmt);
         Fa_SymbolTable::Symbol func_sym;
         func_sym.symbol_type = Fa_SymbolTable::SymbolType::FUNCTION;
         func_sym.data_type = Fa_Type::FUNCTION;
         func_sym.definition_loc = stmt->get_location();
         m_current_scope->define(func_def->get_name()->get_value(), func_sym);
-
         m_current_scope = m_current_scope->create_child();
 
         for (AST::Fa_Expr const* const& param : func_def->get_parameters()) {
             Fa_SymbolTable::Symbol param_sym;
             param_sym.symbol_type = Fa_SymbolTable::SymbolType::VARIABLE;
             param_sym.data_type = Fa_Type::ANY;
-            m_current_scope->define(static_cast<AST::Fa_NameExpr const*>(param)->get_value(), param_sym);
+            m_current_scope->define(AS_CONST_NAME(param)->get_value(), param_sym);
         }
 
         analyze_stmt(func_def->get_body());
@@ -467,7 +509,7 @@ void Fa_SemanticAnalyzer::analyze_stmt(StmtPtr stmt)
     } break;
 
     case AST::Fa_Stmt::Kind::RETURN: {
-        auto ret = static_cast<AST::Fa_ReturnStmt*>(stmt);
+        auto ret = AS_RETURN(stmt);
         analyze_expr(ret->get_value());
     } break;
 
@@ -476,7 +518,7 @@ void Fa_SemanticAnalyzer::analyze_stmt(StmtPtr stmt)
         break;
 
     case AST::Fa_Stmt::Kind::CLASS_DEF: {
-        auto class_def = static_cast<AST::Fa_ClassDef const*>(stmt);
+        auto class_def = AS_CONST_CLASS_DEF(stmt);
 
         if (auto const* class_name = dynamic_cast<AST::Fa_NameExpr const*>(class_def->get_name())) {
             Fa_SymbolTable::Symbol class_sym;
@@ -500,7 +542,7 @@ void Fa_SemanticAnalyzer::analyze_stmt(StmtPtr stmt)
             m_current_scope->define(kClassInstanceName, instance_sym);
 
             for (AST::Fa_Expr const* const& param : method->get_parameters()) {
-                auto const* param_name = static_cast<AST::Fa_NameExpr const*>(param);
+                auto const* param_name = AS_CONST_NAME(param);
                 Fa_SymbolTable::Symbol param_sym;
                 param_sym.symbol_type = Fa_SymbolTable::SymbolType::VARIABLE;
                 param_sym.data_type = Fa_Type::ANY;
@@ -515,6 +557,8 @@ void Fa_SemanticAnalyzer::analyze_stmt(StmtPtr stmt)
     default:
         break;
     }
+
+    m_preceding_stmts.push(stmt);
 }
 
 Fa_SemanticAnalyzer::Fa_SemanticAnalyzer()
@@ -596,7 +640,6 @@ void Fa_SemanticAnalyzer::analyze(Fa_Array<StmtPtr> const& stmts)
 }
 
 Fa_Array<typename Fa_SemanticAnalyzer::Issue> const& Fa_SemanticAnalyzer::get_issues() const { return m_issues; }
-
 Fa_SymbolTable const* Fa_SemanticAnalyzer::get_global_scope() const { return m_global_scope; }
 Fa_SymbolTable const* Fa_SemanticAnalyzer::get_current_scope() const { return m_current_scope; }
 
@@ -634,44 +677,25 @@ void Fa_SemanticAnalyzer::print_report() const
 AST::Fa_BinaryOp to_binary_op(TokType const op)
 {
     switch (op) {
-    case TokType::OP_PLUS:
-        return AST::Fa_BinaryOp::OP_ADD;
-    case TokType::OP_MINUS:
-        return AST::Fa_BinaryOp::OP_SUB;
-    case TokType::OP_STAR:
-        return AST::Fa_BinaryOp::OP_MUL;
-    case TokType::OP_SLASH:
-        return AST::Fa_BinaryOp::OP_DIV;
-    case TokType::OP_PERCENT:
-        return AST::Fa_BinaryOp::OP_MOD;
-    case TokType::OP_POWER:
-        return AST::Fa_BinaryOp::OP_POW;
-    case TokType::OP_EQ:
-        return AST::Fa_BinaryOp::OP_EQ;
-    case TokType::OP_NEQ:
-        return AST::Fa_BinaryOp::OP_NEQ;
-    case TokType::OP_LT:
-        return AST::Fa_BinaryOp::OP_LT;
-    case TokType::OP_GT:
-        return AST::Fa_BinaryOp::OP_GT;
-    case TokType::OP_LTE:
-        return AST::Fa_BinaryOp::OP_LTE;
-    case TokType::OP_GTE:
-        return AST::Fa_BinaryOp::OP_GTE;
-    case TokType::OP_BITAND:
-        return AST::Fa_BinaryOp::OP_BITAND;
-    case TokType::OP_BITOR:
-        return AST::Fa_BinaryOp::OP_BITOR;
-    case TokType::OP_BITXOR:
-        return AST::Fa_BinaryOp::OP_BITXOR;
-    case TokType::OP_LSHIFT:
-        return AST::Fa_BinaryOp::OP_LSHIFT;
-    case TokType::OP_RSHIFT:
-        return AST::Fa_BinaryOp::OP_RSHIFT;
-    case TokType::OP_AND:
-        return AST::Fa_BinaryOp::OP_AND;
-    case TokType::OP_OR:
-        return AST::Fa_BinaryOp::OP_OR;
+    case TokType::OP_PLUS: return AST::Fa_BinaryOp::OP_ADD;
+    case TokType::OP_MINUS: return AST::Fa_BinaryOp::OP_SUB;
+    case TokType::OP_STAR: return AST::Fa_BinaryOp::OP_MUL;
+    case TokType::OP_SLASH: return AST::Fa_BinaryOp::OP_DIV;
+    case TokType::OP_PERCENT: return AST::Fa_BinaryOp::OP_MOD;
+    case TokType::OP_POWER: return AST::Fa_BinaryOp::OP_POW;
+    case TokType::OP_EQ: return AST::Fa_BinaryOp::OP_EQ;
+    case TokType::OP_NEQ: return AST::Fa_BinaryOp::OP_NEQ;
+    case TokType::OP_LT: return AST::Fa_BinaryOp::OP_LT;
+    case TokType::OP_GT: return AST::Fa_BinaryOp::OP_GT;
+    case TokType::OP_LTE: return AST::Fa_BinaryOp::OP_LTE;
+    case TokType::OP_GTE: return AST::Fa_BinaryOp::OP_GTE;
+    case TokType::OP_BITAND: return AST::Fa_BinaryOp::OP_BITAND;
+    case TokType::OP_BITOR: return AST::Fa_BinaryOp::OP_BITOR;
+    case TokType::OP_BITXOR: return AST::Fa_BinaryOp::OP_BITXOR;
+    case TokType::OP_LSHIFT: return AST::Fa_BinaryOp::OP_LSHIFT;
+    case TokType::OP_RSHIFT: return AST::Fa_BinaryOp::OP_RSHIFT;
+    case TokType::OP_AND: return AST::Fa_BinaryOp::OP_AND;
+    case TokType::OP_OR: return AST::Fa_BinaryOp::OP_OR;
     default:
         return AST::Fa_BinaryOp::INVALID;
     }
@@ -756,8 +780,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_return_stmt()
     if (check(TokType::NEWLINE) || we_done())
         return AST::Fa_make_return(start_loc);
 
-    auto ret = parse_expression();
-    Fa_VERIFY_NODE(ret);
+    auto ret = Fa_PARSE_EXPRESSION_SAFE();
 
     return AST::Fa_make_return(start_loc, ret.value());
 }
@@ -782,15 +805,14 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_while_stmt()
 
     Fa_VERIFY_TOKEN(TokType::KW_WHILE, ParserCode::EXPECTED_WHILE_KEYWORD);
 
-    auto condition = parse_expression();
-    Fa_VERIFY_NODE(condition);
+    auto condition = Fa_PARSE_EXPRESSION_SAFE();
 
     Fa_VERIFY_TOKEN(TokType::COLON, ParserCode::EXPECTED_COLON_WHILE);
 
     auto while_block = parse_indented_block();
     Fa_VERIFY_NODE(while_block);
 
-    return Fa_make_while(condition.value(), static_cast<AST::Fa_BlockStmt*>(while_block.value()), start->location());
+    return Fa_make_while(condition.value(), AS_BLOCK(while_block.value()), start->location());
 }
 
 Fa_ErrorOr<StmtPtr> Fa_Parser::parse_for_stmt()
@@ -814,8 +836,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_for_stmt()
     if (!saw_in)
         return report_error(ParserCode::EXPECTED_IN_KEYWORD);
 
-    auto iter = parse_expression();
-    Fa_VERIFY_NODE(iter);
+    auto iter = Fa_PARSE_EXPRESSION_SAFE();
 
     Fa_VERIFY_TOKEN(TokType::COLON, ParserCode::EXPECTED_COLON_FOR);
 
@@ -875,8 +896,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_def()
     Fa_Array<ExprPtr> members = Fa_Array<ExprPtr>::with_capacity(4);
     Fa_Array<StmtPtr> methods = Fa_Array<StmtPtr>::with_capacity(4);
 
-    auto class_name = parse_expression();
-    Fa_VERIFY_NODE(class_name);
+    auto class_name = Fa_PARSE_EXPRESSION_SAFE();
 
     Fa_VERIFY_TOKEN(TokType::COLON, ParserCode::EXPECTED_COLON_CLASS);
     skip_newlines();
@@ -930,25 +950,25 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_method(Fa_Array<ExprPtr>& members)
 
             if (check(TokType::OP_ASSIGN)) {
                 advance();
-                auto rhs = parse_assignment_expr();
-                Fa_VERIFY_NODE(rhs);
-                member_assign = AST::Fa_make_assignment_expr(target, rhs.value(), member_tok->location(), false);
+                auto rhs = Fa_PARSE_EXPR_SAFE(assignment);
+                member_assign = AST::Fa_make_assignment_expr(target, rhs, member_tok->location(), false);
             } else if (check(TokType::OP_PLUSEQ) || check(TokType::OP_MINUSEQ) || check(TokType::OP_STAREQ)
                 || check(TokType::OP_SLASHEQ) || check(TokType::OP_PERCENTEQ)) {
                 TokenPtr op_tok = current_token();
                 advance();
 
-                auto rhs = parse_assignment_expr();
-                Fa_VERIFY_NODE(rhs);
+                auto rhs = Fa_PARSE_EXPR_SAFE(assignment);
 
                 AST::Fa_BinaryOp bin_ops[] = {
-                    AST::Fa_BinaryOp::OP_ADD, AST::Fa_BinaryOp::OP_SUB,
-                    AST::Fa_BinaryOp::OP_MUL, AST::Fa_BinaryOp::OP_DIV,
-                    AST::Fa_BinaryOp::OP_MOD
+                    AST::Fa_BinaryOp::OP_ADD,
+                    AST::Fa_BinaryOp::OP_SUB,
+                    AST::Fa_BinaryOp::OP_MUL,
+                    AST::Fa_BinaryOp::OP_DIV,
+                    AST::Fa_BinaryOp::OP_MOD,
                 };
 
                 AST::Fa_BinaryOp op = bin_ops[static_cast<int>(op_tok->type()) - static_cast<int>(TokType::OP_PLUSEQ)];
-                AST::Fa_BinaryExpr* bin = AST::Fa_make_binary(target->clone(), rhs.value(), op, target->get_location());
+                AST::Fa_BinaryExpr* bin = AST::Fa_make_binary(target->clone(), rhs, op, target->get_location());
                 member_assign = AST::Fa_make_assignment_expr(target, bin, member_tok->location(), false);
             } else {
                 return report_error(ParserCode::INVALID_ASSIGN_TARGET);
@@ -967,7 +987,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_method(Fa_Array<ExprPtr>& members)
     if (check(TokType::ENDMARKER)) {
         return AST::Fa_make_function(
             AST::Fa_make_name(name_tok->lexeme(), name_tok->location()),
-            static_cast<AST::Fa_ListExpr*>(parameter_list.value()),
+            AS_LIST(parameter_list.value()),
             AST::Fa_make_block(stmts, stmts[0]->get_location()),
             start->location());
     }
@@ -975,11 +995,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_method(Fa_Array<ExprPtr>& members)
     Fa_VERIFY_TOKEN(TokType::DEDENT, ParserCode::EXPECTED_DEDENT);
 
     AST::Fa_BlockStmt* block = AST::Fa_make_block(stmts, stmts[0]->get_location());
-    return AST::Fa_make_function(
-        AST::Fa_make_name(name_tok->lexeme(), name_tok->location()),
-        static_cast<AST::Fa_ListExpr*>(parameter_list.value()),
-        block,
-        start->location());
+    return AST::Fa_make_function(AST::Fa_make_name(name_tok->lexeme(), name_tok->location()), AS_LIST(parameter_list.value()), block, start->location());
 }
 
 Fa_ErrorOr<ExprPtr> Fa_Parser::parse_parameters_list()
@@ -1038,10 +1054,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_function_def()
     auto function_body = parse_indented_block();
     Fa_VERIFY_NODE(function_body);
 
-    return Fa_make_function(AST::Fa_make_name(function_name, name_tok->location()),
-        static_cast<AST::Fa_ListExpr*>(parameters_list.value()),
-        static_cast<AST::Fa_BlockStmt*>(function_body.value()),
-        start->location());
+    return Fa_make_function(AST::Fa_make_name(function_name, name_tok->location()), AS_LIST(parameters_list.value()), AS_BLOCK(function_body.value()), start->location());
 }
 
 Fa_ErrorOr<StmtPtr> Fa_Parser::parse_if_stmt()
@@ -1050,8 +1063,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_if_stmt()
 
     Fa_VERIFY_TOKEN(TokType::KW_IF, ParserCode::EXPECTED_IF_KEYWORD);
 
-    auto condition = parse_expression();
-    Fa_VERIFY_NODE(condition);
+    auto condition = Fa_PARSE_EXPRESSION_SAFE();
 
     Fa_VERIFY_TOKEN(TokType::COLON, ParserCode::EXPECTED_COLON_IF);
 
@@ -1081,41 +1093,35 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_if_stmt()
         }
     }
 
-    return Fa_make_if(
-        condition.value(),
-        static_cast<AST::Fa_BlockStmt*>(then_block.value()),
-        start->location(),
-        else_block);
+    return Fa_make_if(condition.value(), AS_BLOCK(then_block.value()), start->location(), else_block);
 }
 
 Fa_ErrorOr<StmtPtr> Fa_Parser::parse_expression_stmt()
 {
-    auto expr = parse_expression();
-    Fa_VERIFY_NODE(expr);
+    auto expr = Fa_PARSE_EXPRESSION_SAFE();
     ExprPtr expr_node = expr.value();
     return Fa_make_expr_stmt(expr_node, expr_node->get_location());
 }
 
 Fa_ErrorOr<ExprPtr> Fa_Parser::parse_assignment_expr()
 {
-    auto lhs = parse_conditional_expr();
-    Fa_VERIFY_NODE(lhs);
+    auto lhs = Fa_PARSE_EXPR_SAFE(conditional);
 
     if (check(TokType::OP_ASSIGN) || /*augmented assign */ check(TokType::OP_PLUSEQ) || check(TokType::OP_MINUSEQ)
         || check(TokType::OP_STAREQ) || check(TokType::OP_SLASHEQ) || check(TokType::OP_PERCENTEQ)) {
-        ExprPtr target = lhs.value();
+        ExprPtr target = lhs;
         AST::Fa_Expr::Kind kind = target->get_kind();
 
-        if (kind != AST::Fa_Expr::Kind::NAME && kind != AST::Fa_Expr::Kind::INDEX)
+        if (kind != AST::Fa_Expr::Kind::NAME && kind != AST::Fa_Expr::Kind::INDEX && kind != AST::Fa_Expr::Kind::GET)
             return report_error(ParserCode::INVALID_ASSIGN_TARGET);
 
-        if (check(TokType::OP_PLUSEQ) || check(TokType::OP_MINUSEQ) || check(TokType::OP_STAREQ)
-            || check(TokType::OP_SLASHEQ) || check(TokType::OP_PERCENTEQ)) {
+        if (check(TokType::OP_PLUSEQ) || check(TokType::OP_MINUSEQ)
+            || check(TokType::OP_STAREQ) || check(TokType::OP_SLASHEQ)
+            || check(TokType::OP_PERCENTEQ)) {
             TokenPtr op_tok = current_token();
             advance();
 
-            auto rhs = parse_assignment_expr();
-            Fa_VERIFY_NODE(rhs);
+            auto rhs = Fa_PARSE_EXPR_SAFE(assignment);
 
             AST::Fa_BinaryOp bin_ops[] = {
                 AST::Fa_BinaryOp::OP_ADD, AST::Fa_BinaryOp::OP_SUB,
@@ -1124,29 +1130,25 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_assignment_expr()
             };
 
             AST::Fa_BinaryOp op = bin_ops[static_cast<int>(op_tok->type()) - static_cast<int>(TokType::OP_PLUSEQ)];
-            AST::Fa_Expr* c_lhs = lhs.value()->clone();
-            AST::Fa_BinaryExpr* bin = AST::Fa_make_binary(c_lhs, rhs.value(), op, c_lhs->get_location());
+            AST::Fa_Expr* c_lhs = lhs->clone();
+            AST::Fa_BinaryExpr* bin = AST::Fa_make_binary(c_lhs, rhs, op, c_lhs->get_location());
 
-            return Fa_ErrorOr<ExprPtr>::from_value(
-                Fa_make_assignment_expr(target, bin, target->get_location(), /*decl=*/false));
+            return Fa_ErrorOr<ExprPtr>::from_value(Fa_make_assignment_expr(target, bin, target->get_location(), /*decl=*/false));
         }
 
         advance();
 
-        auto rhs = parse_assignment_expr();
-        Fa_VERIFY_NODE(rhs);
+        auto rhs = Fa_PARSE_EXPR_SAFE(assignment);
 
-        return Fa_ErrorOr<ExprPtr>::from_value(
-            Fa_make_assignment_expr(target, rhs.value(), target->get_location(), /*decl=*/false));
+        return Fa_ErrorOr<ExprPtr>::from_value(Fa_make_assignment_expr(target, rhs, target->get_location(), /*decl=*/false));
     }
 
-    return lhs.value();
+    return lhs;
 }
 
 Fa_ErrorOr<ExprPtr> Fa_Parser::parse_logical_expr_precedence(unsigned int min_precedence)
 {
-    auto lhs = parse_comparison_expr();
-    Fa_VERIFY_NODE(lhs);
+    auto lhs = Fa_PARSE_EXPR_SAFE(comparison);
 
     for (;;) {
         TokenPtr cur_tok = current_token();
@@ -1163,37 +1165,34 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_logical_expr_precedence(unsigned int min_pr
         auto rhs = parse_logical_expr_precedence(precedence + 1);
         Fa_VERIFY_NODE(rhs);
 
-        return Fa_make_binary(lhs.value(), rhs.value(), to_binary_op(op), lhs.value()->get_location());
+        return Fa_make_binary(lhs, rhs.value(), to_binary_op(op), lhs->get_location());
     }
 
-    return lhs.value();
+    return lhs;
 }
 
 Fa_ErrorOr<ExprPtr> Fa_Parser::parse_comparison_expr()
 {
-    auto lhs = parse_binary_expr();
-    Fa_VERIFY_NODE(lhs);
+    auto lhs = Fa_PARSE_EXPR_SAFE(binary);
 
     TokenPtr cur_tok = current_token();
     if (cur_tok->is_comparison_op()) {
         TokType op = cur_tok->type();
         advance();
 
-        auto rhs = parse_binary_expr();
-        Fa_VERIFY_NODE(rhs);
+        auto rhs = Fa_PARSE_EXPR_SAFE(binary);
 
-        return Fa_make_binary(lhs.value(), rhs.value(), to_binary_op(op), lhs.value()->get_location());
+        return Fa_make_binary(lhs, rhs, to_binary_op(op), lhs->get_location());
     }
 
-    return lhs.value();
+    return lhs;
 }
 
 Fa_ErrorOr<ExprPtr> Fa_Parser::parse_binary_expr() { return parse_binary_expr_precedence(0); }
 
 Fa_ErrorOr<ExprPtr> Fa_Parser::parse_binary_expr_precedence(unsigned int min_precedence)
 {
-    auto lhs = parse_unary_expr();
-    Fa_VERIFY_NODE(lhs);
+    auto lhs = Fa_PARSE_EXPR_SAFE(unary);
 
     for (;;) {
         TokenPtr cur_tok = current_token();
@@ -1211,10 +1210,10 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_binary_expr_precedence(unsigned int min_pre
         auto rhs = parse_binary_expr_precedence(next_min);
         Fa_VERIFY_NODE(rhs);
 
-        return Fa_make_binary(lhs.value(), rhs.value(), to_binary_op(op), lhs.value()->get_location());
+        return Fa_make_binary(lhs, rhs.value(), to_binary_op(op), lhs->get_location());
     }
 
-    return lhs.value();
+    return lhs;
 }
 
 Fa_ErrorOr<ExprPtr> Fa_Parser::parse_unary_expr()
@@ -1224,10 +1223,9 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_unary_expr()
         TokType op = cur_tok->type();
         advance();
 
-        auto expr = parse_unary_expr();
-        Fa_VERIFY_NODE(expr);
+        auto expr = Fa_PARSE_EXPR_SAFE(unary);
 
-        return Fa_make_unary(expr.value(), to_unary_op(op), expr.value()->get_location());
+        return Fa_make_unary(expr, to_unary_op(op), expr->get_location());
     }
 
     return parse_postfix_expr();
@@ -1235,10 +1233,8 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_unary_expr()
 
 Fa_ErrorOr<ExprPtr> Fa_Parser::parse_postfix_expr()
 {
-    auto expr_or = parse_primary_expr();
-    Fa_VERIFY_NODE(expr_or);
-
-    ExprPtr expr = expr_or.value();
+    auto expr_or = Fa_PARSE_EXPR_SAFE(primary);
+    ExprPtr expr = expr_or;
 
     for (;;) {
         if (check(TokType::LPAREN)) {
@@ -1252,8 +1248,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_postfix_expr()
                     if (check(TokType::RPAREN))
                         break;
 
-                    auto arg = parse_expression();
-                    Fa_VERIFY_NODE(arg);
+                    auto arg = Fa_PARSE_EXPRESSION_SAFE();
 
                     args.push(arg.value());
                     skip_newlines();
@@ -1267,12 +1262,18 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_postfix_expr()
         }
 
         if (match(TokType::LBRACKET)) {
-            auto index = parse_expression();
-            Fa_VERIFY_NODE(index);
+            auto index = Fa_PARSE_EXPRESSION_SAFE();
 
             Fa_VERIFY_TOKEN(TokType::RBRACKET, ParserCode::EXPECTED_RBRACKET);
 
             expr = Fa_make_index(expr, index.value(), expr ? expr->get_location() : Fa_SourceLocation { });
+            continue;
+        }
+
+        // member access
+        if (match(TokType::DOT)) {
+            auto member = Fa_PARSE_EXPRESSION_SAFE();
+            expr = Fa_make_get_expr(expr, member.value(), expr ? expr->get_location() : Fa_SourceLocation { });
             continue;
         }
 
@@ -1329,9 +1330,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_primary_expr()
         if (match(TokType::RPAREN))
             return Fa_make_list(Fa_Array<ExprPtr> { }, cur_tok->location());
 
-        auto expr = parse_expression();
-        Fa_VERIFY_NODE(expr);
-
+        auto expr = Fa_PARSE_EXPRESSION_SAFE();
         Fa_VERIFY_TOKEN(TokType::RPAREN, ParserCode::EXPECTED_RPAREN_EXPR);
 
         return expr.value();
@@ -1361,8 +1360,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_list_literal()
             if (check(TokType::RBRACKET))
                 break;
 
-            auto elem = parse_expression();
-            Fa_VERIFY_NODE(elem);
+            auto elem = Fa_PARSE_EXPRESSION_SAFE();
 
             elements.push(elem.value());
             skip_newlines();
@@ -1388,13 +1386,11 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_dict_literal()
             if (check(TokType::RBRACE))
                 break;
 
-            auto first = parse_expression();
-            Fa_VERIFY_NODE(first);
+            auto first = Fa_PARSE_EXPRESSION_SAFE();
 
             Fa_VERIFY_TOKEN(TokType::COLON, ParserCode::EXPECTED_COLON_DICT);
 
-            auto second = parse_expression();
-            Fa_VERIFY_NODE(second);
+            auto second = Fa_PARSE_EXPRESSION_SAFE();
 
             content.push({ first.value(), second.value() });
             skip_newlines();

@@ -111,6 +111,7 @@ enum class Fa_OpCode : u8 {
     IC_CALL, // func reg, argc, slot index
 
     INDEX,
+    UNSAFE_INDEX,
 
     // misc
     NOP,
@@ -345,6 +346,8 @@ static Fa_StringRef Fa_opcode_name(Fa_OpCode op)
         return "IC_CALL";
     case Fa_OpCode::INDEX:
         return "INDEX";
+    case Fa_OpCode::UNSAFE_INDEX:
+        return "UNSAFE_INDEX";
     case Fa_OpCode::NOP:
         return "NOP";
     case Fa_OpCode::HALT:
@@ -409,8 +412,6 @@ struct Fa_Chunk {
     u8 alloc_ic_slot();
     u32 get_line(u32 const instr_idx) const;
     void disassemble() const;
-
-private:
     void add_line(u32 m_line);
 }; // struct Fa_Chunk
 

@@ -24,7 +24,7 @@ void Fa_GarbageCollector::mark_roots(Fa_VM* vm)
     for (int i = 0; i < vm->m_frames_top && i < Fa_VM::MAX_FRAMES; i += 1)
         mark_object(vm->m_frames[i].closure);
 
-    // Global slots are the live Fa_VM roots for globals.
+    // Global slots are the live Fa_VM roots for globals
     mark_value_array(vm->m_global_slots);
 }
 
@@ -54,12 +54,28 @@ void Fa_GarbageCollector::blacken_object(Fa_ObjHeader* obj)
         for (auto& mem : static_cast<Fa_ObjClass*>(obj)->members)
             mark_object(mem);
     } break;
+    case Fa_ObjType::INSTANCE: {
+        auto inst = static_cast<Fa_ObjInstance*>(obj);
+        mark_object(inst->kclass);
+        for (auto [k, v] : inst->fields) {
+            if (Fa_IS_OBJECT(k))
+                mark_object(Fa_AS_OBJECT(k));
+            if (Fa_IS_OBJECT(v))
+                mark_object(Fa_AS_OBJECT(v));
+        }
+    } break;
     case Fa_ObjType::LIST: {
         auto lst = static_cast<Fa_ObjList*>(obj);
         mark_value_array(lst->elements);
     } break;
     case Fa_ObjType::DICT: {
-        /// TODO:
+        auto dict = static_cast<Fa_ObjDict*>(obj);
+        for (auto [k, v] : dict->data) {
+            if (Fa_IS_OBJECT(k))
+                mark_object(Fa_AS_OBJECT(k));
+            if (Fa_IS_OBJECT(v))
+                mark_object(Fa_AS_OBJECT(v));
+        }
     } break;
     case Fa_ObjType::NATIVE: // natives are static
     case Fa_ObjType::STRING: // strings are managed with arena

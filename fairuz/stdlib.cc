@@ -43,11 +43,10 @@ static void append_rendered_value(Fa_StringRef& out, Fa_Value v, bool quote_stri
     }
     if (Fa_IS_DOUBLE(v)) {
         f64 d = Fa_AS_DOUBLE(v);
-        if (d == std::floor(d) && std::isfinite(d) && std::abs(d) < 1e15) {
+        if (d == std::floor(d) && std::isfinite(d) && std::abs(d) < 1e15)
             out += Fa_StringRef(std::to_string(static_cast<i64>(d)).c_str());
-        } else {
+        else
             out += format_double_string(d);
-        }
         return;
     }
     if (Fa_IS_STRING(v)) {
@@ -96,6 +95,20 @@ static void append_rendered_value(Fa_StringRef& out, Fa_Value v, bool quote_stri
     }
     if (Fa_IS_FUNCTION(v)) {
         out += "<function>";
+        return;
+    }
+    if (Fa_IS_CLASS(v)) {
+        out += "<class ";
+        Fa_ObjClass* klass = Fa_AS_CLASS(v);
+        out += klass->name ? klass->name->str : Fa_StringRef("?");
+        out += '>';
+        return;
+    }
+    if (Fa_IS_INSTANCE(v)) {
+        out += '<';
+        Fa_ObjInstance* instance = Fa_AS_INSTANCE(v);
+        out += (instance->kclass && instance->kclass->name) ? instance->kclass->name->str : Fa_StringRef("?");
+        out += " instance>";
         return;
     }
 }
@@ -241,7 +254,29 @@ static void print_runtime_value(Fa_Value v, int depth = 0)
         }
 
         case Fa_ObjType::CLASS: {
-        } break;
+            auto klass = static_cast<Fa_ObjClass*>(obj);
+            std::cout << "<class ";
+            if (klass->name)
+                std::cout << klass->name->str;
+            else
+                std::cout << "?";
+            std::cout << '>';
+            return;
+        }
+
+        case Fa_ObjType::INSTANCE: {
+            auto instance = static_cast<Fa_ObjInstance*>(obj);
+            std::cout << '<';
+            if (instance->kclass && instance->kclass->name)
+                std::cout << instance->kclass->name->str;
+            else
+                std::cout << "?";
+            std::cout << " instance>";
+            return;
+        }
+
+        case Fa_ObjType::_COUNT:
+            break;
         }
     }
 
@@ -508,9 +543,12 @@ Fa_Value Fa_VM::Fa_substr(int argc, Fa_Value* argv)
     }
 
     Fa_StringRef str = Fa_AS_STRING(argv[0])->str;
-    Fa_Value a = Fa_AS_INTEGER(argv[1]);
-    Fa_Value b = Fa_AS_INTEGER(argv[2]);
-    /// TODO: check a, b types
+
+    Fa_Value a = Fa_IS_INTEGER(argv[1]) ? Fa_AS_INTEGER(argv[1]) : NIL_VAL;
+    Fa_Value b = Fa_IS_INTEGER(argv[1]) ? Fa_AS_INTEGER(argv[2]) : NIL_VAL;
+
+    if (UNLIKELY(a == NIL_VAL || b == NIL_VAL))
+        return NIL_VAL;
 
     Fa_StringRef ret = str.substr(a, b);
     return Fa_MAKE_STRING(ret);
@@ -784,6 +822,25 @@ Fa_Value Fa_VM::Fa_assert(int argc, Fa_Value* argv)
     }
 
     return NIL_VAL; // success
+}
+
+Fa_Value Fa_open_file(int argc, Fa_Value* argv)
+{
+    if (argc < 1 || argv == nullptr) {
+        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
+        return NIL_VAL;
+    }
+
+    char const* filename = Fa_AS_STRING(argv[0])->str.data();
+    char const* mode = Fa_AS_STRING(argv[1])->str.data();
+
+    FILE* fp = fopen(filename, mode);
+    if (fp == NULL) {
+        diagnostic::runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
+        return NIL_VAL;
+    }
+
+    return NIL_VAL;
 }
 
 Fa_Value Fa_VM::Fa_clock(int /*argc*/, Fa_Value* /*argv*/) { return NIL_VAL; }

@@ -229,7 +229,7 @@ bool Fa_Formatter::is_class_member_target(AST::Fa_Expr const* expr) const
     if (expr == nullptr || expr->get_kind() != AST::Fa_Expr::Kind::INDEX)
         return false;
 
-    auto const* index_expr = static_cast<AST::Fa_IndexExpr const*>(expr);
+    auto const* index_expr = AS_CONST_INDEX(expr);
     if (index_expr->get_object() == nullptr || index_expr->get_index() == nullptr)
         return false;
     if (index_expr->get_object()->get_kind() != AST::Fa_Expr::Kind::NAME)
@@ -237,8 +237,8 @@ bool Fa_Formatter::is_class_member_target(AST::Fa_Expr const* expr) const
     if (index_expr->get_index()->get_kind() != AST::Fa_Expr::Kind::LITERAL)
         return false;
 
-    auto const* object_expr = static_cast<AST::Fa_NameExpr const*>(index_expr->get_object());
-    auto const* member_expr = static_cast<AST::Fa_LiteralExpr const*>(index_expr->get_index());
+    auto const* object_expr = AS_CONST_NAME(index_expr->get_object());
+    auto const* member_expr = AS_CONST_LITERAL(index_expr->get_index());
 
     return object_expr->get_value() == kClassInstanceName && member_expr->is_string();
 }
@@ -262,7 +262,7 @@ int Fa_Formatter::precedence(AST::Fa_Expr const* expr) const
     case AST::Fa_Expr::Kind::DICT:
         return kPrecAtom;
     case AST::Fa_Expr::Kind::BINARY: {
-        auto const* bin_expr = static_cast<AST::Fa_BinaryExpr const*>(expr);
+        auto const* bin_expr = AS_CONST_BINARY(expr);
         switch (bin_expr->get_operator()) {
         case AST::Fa_BinaryOp::OP_OR:
             return kPrecLogicalOr;
@@ -314,8 +314,8 @@ void Fa_Formatter::format_comma_separated(Fa_Array<AST::Fa_Expr*> const& exprs)
 void Fa_Formatter::format_assignment_target(AST::Fa_Expr const* expr)
 {
     if (is_class_member_target(expr)) {
-        auto const* index_expr = static_cast<AST::Fa_IndexExpr const*>(expr);
-        auto const* member_expr = static_cast<AST::Fa_LiteralExpr const*>(index_expr->get_index());
+        auto const* index_expr = AS_CONST_INDEX(expr);
+        auto const* member_expr = AS_CONST_LITERAL(index_expr->get_index());
         write(".");
         write(member_expr->get_str());
         return;
@@ -339,14 +339,14 @@ void Fa_Formatter::format_expression(AST::Fa_Expr const* expr, int parent_preced
 
     switch (expr->get_kind()) {
     case AST::Fa_Expr::Kind::ASSIGNMENT: {
-        auto const* assign_expr = static_cast<AST::Fa_AssignmentExpr const*>(expr);
+        auto const* assign_expr = AS_CONST_ASSIGNMENT_EXPR(expr);
         format_assignment_target(assign_expr->get_target());
         write(" := ");
         format_expression(assign_expr->get_value(), kPrecAssignment, false);
         break;
     }
     case AST::Fa_Expr::Kind::BINARY: {
-        auto const* bin_expr = static_cast<AST::Fa_BinaryExpr const*>(expr);
+        auto const* bin_expr = AS_CONST_BINARY(expr);
         format_expression(bin_expr->get_left(), current_precedence, false);
         write(" ");
         write(binary_op_string(bin_expr->get_operator()));
@@ -355,7 +355,7 @@ void Fa_Formatter::format_expression(AST::Fa_Expr const* expr, int parent_preced
         break;
     }
     case AST::Fa_Expr::Kind::CALL: {
-        auto const* call_expr = static_cast<AST::Fa_CallExpr const*>(expr);
+        auto const* call_expr = AS_CONST_CALL(expr);
         format_expression(call_expr->get_callee(), current_precedence, false);
         write('(');
         format_comma_separated(call_expr->get_args());
@@ -363,7 +363,7 @@ void Fa_Formatter::format_expression(AST::Fa_Expr const* expr, int parent_preced
         break;
     }
     case AST::Fa_Expr::Kind::DICT: {
-        auto const* dict_expr = static_cast<AST::Fa_DictExpr const*>(expr);
+        auto const* dict_expr = AS_CONST_DICT(expr);
         write('{');
         write_newline();
         m_indent_level++;
@@ -379,7 +379,7 @@ void Fa_Formatter::format_expression(AST::Fa_Expr const* expr, int parent_preced
         break;
     }
     case AST::Fa_Expr::Kind::INDEX: {
-        auto const* index_expr = static_cast<AST::Fa_IndexExpr const*>(expr);
+        auto const* index_expr = AS_CONST_INDEX(expr);
         format_expression(index_expr->get_object(), current_precedence, false);
         write('[');
         format_expression(index_expr->get_index());
@@ -387,14 +387,14 @@ void Fa_Formatter::format_expression(AST::Fa_Expr const* expr, int parent_preced
         break;
     }
     case AST::Fa_Expr::Kind::LIST: {
-        auto const* list_expr = static_cast<AST::Fa_ListExpr const*>(expr);
+        auto const* list_expr = AS_CONST_LIST(expr);
         write('[');
         format_comma_separated(list_expr->get_elements());
         write(']');
         break;
     }
     case AST::Fa_Expr::Kind::LITERAL: {
-        auto const* literal_expr = static_cast<AST::Fa_LiteralExpr const*>(expr);
+        auto const* literal_expr = AS_CONST_LITERAL(expr);
         switch (literal_expr->get_type()) {
         case AST::Fa_LiteralExpr::Type::BOOLEAN:
             write(literal_expr->get_bool() ? "صحيح" : "خطا");
@@ -415,12 +415,12 @@ void Fa_Formatter::format_expression(AST::Fa_Expr const* expr, int parent_preced
         break;
     }
     case AST::Fa_Expr::Kind::NAME: {
-        auto const* name_expr = static_cast<AST::Fa_NameExpr const*>(expr);
+        auto const* name_expr = AS_CONST_NAME(expr);
         write(name_expr->get_value());
         break;
     }
     case AST::Fa_Expr::Kind::UNARY: {
-        auto const* unary_expr = static_cast<AST::Fa_UnaryExpr const*>(expr);
+        auto const* unary_expr = AS_CONST_UNARY(expr);
         Fa_StringRef op = unary_op_string(unary_expr->get_operator());
         write(op);
         if (op == "ليس")
@@ -444,7 +444,7 @@ void Fa_Formatter::format_body(AST::Fa_Stmt const* stmt)
     m_indent_level += 1;
 
     if (stmt->get_kind() == AST::Fa_Stmt::Kind::BLOCK) {
-        auto const* block_stmt = static_cast<AST::Fa_BlockStmt const*>(stmt);
+        auto const* block_stmt = AS_CONST_BLOCK(stmt);
         if (block_stmt->get_statements().empty()) {
             write_newline();
         } else {
@@ -474,9 +474,9 @@ void Fa_Formatter::format_if_statement(AST::Fa_IfStmt const* stmt)
     write_newline();
     write("غيره");
 
-    if (stmt->get_else()->get_kind() == AST::Fa_Stmt::Kind::IF) {
+    if (AST::is_if(stmt->get_else())) {
         write(" ");
-        format_if_statement(static_cast<AST::Fa_IfStmt const*>(stmt->get_else()));
+        format_if_statement(AS_CONST_IF(stmt->get_else()));
         return;
     }
 
@@ -491,12 +491,12 @@ void Fa_Formatter::format_statement(AST::Fa_Stmt const* stmt)
 
     switch (stmt->get_kind()) {
     case AST::Fa_Stmt::Kind::ASSIGNMENT: {
-        auto const* assign_stmt = static_cast<AST::Fa_AssignmentStmt const*>(stmt);
+        auto const* assign_stmt = AS_CONST_ASSIGNMENT_STMT(stmt);
         format_expression(assign_stmt->get_expr());
         break;
     }
     case AST::Fa_Stmt::Kind::BLOCK: {
-        auto const* block_stmt = static_cast<AST::Fa_BlockStmt const*>(stmt);
+        auto const* block_stmt = AS_CONST_BLOCK(stmt);
         for (u32 i = 0; i < block_stmt->get_statements().size(); i += 1) {
             if (i != 0)
                 write_newline();
@@ -508,7 +508,7 @@ void Fa_Formatter::format_statement(AST::Fa_Stmt const* stmt)
         write("اخرج");
         break;
     case AST::Fa_Stmt::Kind::CLASS_DEF: {
-        auto const* class_stmt = static_cast<AST::Fa_ClassDef const*>(stmt);
+        auto const* class_stmt = AS_CONST_CLASS_DEF(stmt);
         write("نوع ");
         format_expression(class_stmt->get_name());
         write(":");
@@ -526,12 +526,12 @@ void Fa_Formatter::format_statement(AST::Fa_Stmt const* stmt)
         write("اكمل");
         break;
     case AST::Fa_Stmt::Kind::EXPR: {
-        auto const* expr_stmt = static_cast<AST::Fa_ExprStmt const*>(stmt);
+        auto const* expr_stmt = AS_CONST_EXPR_STMT(stmt);
         format_expression(expr_stmt->get_expr());
         break;
     }
     case AST::Fa_Stmt::Kind::FOR: {
-        auto const* for_stmt = static_cast<AST::Fa_ForStmt const*>(stmt);
+        auto const* for_stmt = AS_CONST_FOR(stmt);
         write("بكل ");
         format_expression(for_stmt->get_target());
         write(" في ");
@@ -541,7 +541,7 @@ void Fa_Formatter::format_statement(AST::Fa_Stmt const* stmt)
         break;
     }
     case AST::Fa_Stmt::Kind::FUNC: {
-        auto const* fn_stmt = static_cast<AST::Fa_FunctionDef const*>(stmt);
+        auto const* fn_stmt = AS_CONST_FUNCTION_DEF(stmt);
         write("دالة ");
         format_expression(fn_stmt->get_name());
         write('(');
@@ -551,10 +551,10 @@ void Fa_Formatter::format_statement(AST::Fa_Stmt const* stmt)
         break;
     }
     case AST::Fa_Stmt::Kind::IF:
-        format_if_statement(static_cast<AST::Fa_IfStmt const*>(stmt));
+        format_if_statement(AS_CONST_IF(stmt));
         break;
     case AST::Fa_Stmt::Kind::RETURN: {
-        auto const* ret_stmt = static_cast<AST::Fa_ReturnStmt const*>(stmt);
+        auto const* ret_stmt = AS_CONST_RETURN(stmt);
         write("ارجع");
         if (ret_stmt->has_value()) {
             write(" ");
@@ -563,7 +563,7 @@ void Fa_Formatter::format_statement(AST::Fa_Stmt const* stmt)
         break;
     }
     case AST::Fa_Stmt::Kind::WHILE: {
-        auto const* while_stmt = static_cast<AST::Fa_WhileStmt const*>(stmt);
+        auto const* while_stmt = AS_CONST_WHILE(stmt);
         write("طالما ");
         format_expression(while_stmt->get_condition());
         write(":");
