@@ -20,6 +20,7 @@ static Fa_DictExpr* dict_expr(Fa_Array<std::pair<Fa_Expr*, Fa_Expr*>> c) { retur
 static Fa_CallExpr* call_expr(Fa_Expr* c, Fa_ListExpr* a = nullptr) { return Fa_make_call(c, a, { }); }
 static Fa_AssignmentExpr* assign_expr(Fa_Expr* t, Fa_Expr* v) { return Fa_make_assignment_expr(t, v, { }, false); }
 static Fa_IndexExpr* index_expr(Fa_Expr* obj, Fa_Expr* idx) { return Fa_make_index(obj, idx, { }); }
+static Fa_GetExpr* get_expr(Fa_Expr* obj, Fa_Expr* member) { return Fa_make_get_expr(obj, member, { }); }
 static Fa_BlockStmt* blk(Fa_Array<Fa_Stmt*> stmts) { return Fa_make_block(stmts, { }); }
 static Fa_ExprStmt* expr_stmt(Fa_Expr* e) { return Fa_make_expr_stmt(e, { }); }
 static Fa_AssignmentStmt* assign_stmt(Fa_Expr* t, Fa_Expr* v) { return Fa_make_assignment_stmt(t, v, { }, false); }

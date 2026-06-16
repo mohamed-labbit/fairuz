@@ -858,6 +858,47 @@ TEST(CompilerDict, LiteralLowersToNativeConstructorCall)
     EXPECT_EQ(Fa_AS_STRING(chunk->constants[2])->str, "b");
 }
 
+TEST(CompilerGet, MemberNameLowersToStringKeyIndex)
+{
+    Fa_Chunk* chunk = compile_ok(
+        expr_stmt(
+            get_expr(
+                dict_expr({
+                    { lit_str("field"), lit_int(42) },
+                }),
+                name_expr("field"))));
+    ASSERT_NE(chunk, nullptr);
+    if (test_config::dump_bytecode)
+        dump(chunk);
+
+    bool has_index = false;
+    bool has_member_key = false;
+    bool has_legacy_class_global = false;
+
+    for (u32 ins : chunk->code) {
+        Fa_OpCode op = Fa_instr_op(ins);
+        if (op == Fa_OpCode::INDEX)
+            has_index = true;
+
+        if (op != Fa_OpCode::LOAD_CONST && op != Fa_OpCode::LOAD_GLOBAL)
+            continue;
+
+        Fa_Value constant = chunk->constants[Fa_instr_Bx(ins)];
+        if (!Fa_IS_STRING(constant))
+            continue;
+
+        Fa_StringRef text = Fa_AS_STRING(constant)->str;
+        if (text == "field")
+            has_member_key = true;
+        if (text == "__class__")
+            has_legacy_class_global = true;
+    }
+
+    EXPECT_TRUE(has_index);
+    EXPECT_TRUE(has_member_key);
+    EXPECT_FALSE(has_legacy_class_global);
+}
+
 TEST(CompilerReturn, ReturnNilEmitsReturnNil)
 {
     Fa_Chunk* chunk = compile_ok(return_stmt(lit_nil()));
@@ -1430,17 +1471,13 @@ TEST(CompilerClass, DefinitionLowersToNamespaceDictAndConstructorClosure)
     Fa_Chunk* ctor = chunk->functions[0];
     ASSERT_NE(ctor, nullptr);
     EXPECT_EQ(ctor->name, "Point.make");
-    EXPECT_EQ(ctor->arity, 2);
+    EXPECT_EQ(ctor->arity, 3);
 
-    bool method_has_dict_ctor = false;
     bool method_has_return = false;
     int method_sets = 0;
 
     for (u32 ins : ctor->code) {
         switch (Fa_instr_op(ins)) {
-        case Fa_OpCode::LOAD_GLOBAL:
-            method_has_dict_ctor = true;
-            break;
         case Fa_OpCode::LIST_SET:
             method_sets += 1;
             break;
@@ -1452,7 +1489,6 @@ TEST(CompilerClass, DefinitionLowersToNamespaceDictAndConstructorClosure)
         }
     }
 
-    EXPECT_TRUE(method_has_dict_ctor);
     EXPECT_EQ(method_sets, 2);
     EXPECT_TRUE(method_has_return);
 }

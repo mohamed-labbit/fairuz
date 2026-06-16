@@ -685,12 +685,12 @@ TEST_F(ParserTest, ParseChainedAssignment)
     AST::Fa_AssignmentExpr* outer = dynamic_cast<AST::Fa_AssignmentExpr*>(m_expr);
 
     ASSERT_NE(outer, nullptr) << "Outer should be Fa_AssignmentExpr";
-    EXPECT_EQ(static_cast<AST::Fa_NameExpr*>(outer->get_target())->get_value(), "ا");
+    EXPECT_EQ(AS_NAME(outer->get_target())->get_value(), "ا");
 
     AST::Fa_AssignmentExpr* inner = dynamic_cast<AST::Fa_AssignmentExpr*>(outer->get_value());
 
     ASSERT_NE(inner, nullptr) << "Inner value should be Fa_AssignmentExpr";
-    EXPECT_EQ(static_cast<AST::Fa_NameExpr*>(inner->get_target())->get_value(), "ب");
+    EXPECT_EQ(AS_NAME(inner->get_target())->get_value(), "ب");
 
     if (test_config::print_ast)
         AST_Printer.print(m_expr);
@@ -709,8 +709,8 @@ TEST_F(ParserTest, ParseChainedAssignmentWithExpr)
     AST::Fa_AssignmentExpr* inner = as<AST::Fa_AssignmentExpr>(outer->get_value());
     AST::Fa_BinaryExpr* binary = as<AST::Fa_BinaryExpr>(inner->get_value());
 
-    EXPECT_EQ(static_cast<AST::Fa_NameExpr*>(outer->get_target())->get_value(), "ا");
-    EXPECT_EQ(static_cast<AST::Fa_NameExpr*>(inner->get_target())->get_value(), "ب");
+    EXPECT_EQ(AS_NAME(outer->get_target())->get_value(), "ا");
+    EXPECT_EQ(AS_NAME(inner->get_target())->get_value(), "ب");
     EXPECT_EQ(binary->get_operator(), AST::Fa_BinaryOp::OP_ADD);
     EXPECT_EQ(as<AST::Fa_NameExpr>(binary->get_left())->get_value(), "م");
     EXPECT_EQ(as<AST::Fa_NameExpr>(binary->get_right())->get_value(), "ل");

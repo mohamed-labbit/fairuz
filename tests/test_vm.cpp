@@ -127,11 +127,63 @@ Fa_Chunk* compile_program(Fa_Array<AST::Fa_Stmt*> stmts)
 
 Fa_Chunk* compile_calling(AST::Fa_Stmt* fn)
 {
-    auto* name = static_cast<AST::Fa_FunctionDef*>(fn)->get_name();
+    auto* name = AS_FUNCTION_DEF(fn)->get_name();
     return compile_program({ fn, expr_stmt(call_expr(name_expr(name->get_value()))) });
 }
 
 } // namespace
+
+TEST(VMClass, ConstructorInitializesInstanceFields)
+{
+    auto* init = func_def(
+        name_expr("init"),
+        list_expr({ name_expr("x") }),
+        blk({ assign_stmt(index_expr(name_expr("__class$instance"), lit_str("x")), name_expr("x")) }));
+    auto* get_x = func_def(
+        name_expr("get_x"),
+        list_expr(),
+        blk({ return_stmt(index_expr(name_expr("__class$instance"), lit_str("x"))) }));
+
+    Fa_Chunk* chunk = compile_program({
+        class_def(name_expr("Point"), { name_expr("x") }, { init, get_x }),
+        decl_stmt("p", call_expr(name_expr("Point"), list_expr({ lit_int(41) }))),
+        expr_stmt(call_expr(get_expr(name_expr("p"), name_expr("get_x")))),
+    });
+
+    VMRunner r;
+    Fa_Value result = r.run(chunk);
+    ASSERT_TRUE(Fa_IS_INTEGER(result));
+    EXPECT_EQ(Fa_AS_INTEGER(result), 41);
+}
+
+TEST(VMClass, MethodsMutateTheSameInstance)
+{
+    auto* init = func_def(
+        name_expr("init"),
+        list_expr(),
+        blk({ assign_stmt(index_expr(name_expr("__class$instance"), lit_str("count")), lit_int(0)) }));
+    auto* inc = func_def(
+        name_expr("inc"),
+        list_expr(),
+        blk({
+            assign_stmt(
+                index_expr(name_expr("__class$instance"), lit_str("count")),
+                binary(index_expr(name_expr("__class$instance"), lit_str("count")), lit_int(1), AST::Fa_BinaryOp::OP_ADD)),
+            return_stmt(index_expr(name_expr("__class$instance"), lit_str("count"))),
+        }));
+
+    Fa_Chunk* chunk = compile_program({
+        class_def(name_expr("Counter"), { name_expr("count") }, { init, inc }),
+        decl_stmt("c", call_expr(name_expr("Counter"))),
+        expr_stmt(call_expr(get_expr(name_expr("c"), name_expr("inc")))),
+        expr_stmt(call_expr(get_expr(name_expr("c"), name_expr("inc")))),
+    });
+
+    VMRunner r;
+    Fa_Value result = r.run(chunk);
+    ASSERT_TRUE(Fa_IS_INTEGER(result));
+    EXPECT_EQ(Fa_AS_INTEGER(result), 2);
+}
 
 TEST(VMLoads, Nil)
 {
@@ -2121,11 +2173,14 @@ TEST(NativeSplit, BasicSplit)
     Fa_VM vm;
     Fa_Value m_args[] = { Fa_MAKE_STRING("a,b,c"), Fa_MAKE_STRING(",") };
     Fa_Value r = vm.Fa_split(2, m_args);
+
     ASSERT_TRUE(Fa_IS_LIST(r));
     EXPECT_EQ(Fa_AS_LIST(r)->elements.size(), 3u);
+
     ASSERT_TRUE(Fa_IS_STRING(Fa_AS_LIST(r)->elements[0]));
     ASSERT_TRUE(Fa_IS_STRING(Fa_AS_LIST(r)->elements[1]));
     ASSERT_TRUE(Fa_IS_STRING(Fa_AS_LIST(r)->elements[2]));
+
     EXPECT_EQ(std::string(Fa_AS_STRING(Fa_AS_LIST(r)->elements[0])->str.data()), "a");
     EXPECT_EQ(std::string(Fa_AS_STRING(Fa_AS_LIST(r)->elements[1])->str.data()), "b");
     EXPECT_EQ(std::string(Fa_AS_STRING(Fa_AS_LIST(r)->elements[2])->str.data()), "c");
