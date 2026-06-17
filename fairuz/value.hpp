@@ -219,6 +219,7 @@ struct Fa_ObjInstance final : public Fa_ObjHeader {
 #define Fa_MAKE_OBJ_FUNCTION(ch) m_gc.make<Fa_ObjFunction>(ch)
 #define Fa_MAKE_OBJ_CLOSURE(fn) m_gc.make<Fa_ObjClosure>(fn)
 #define Fa_MAKE_OBJ_CLASS(n, m) m_gc.make<Fa_ObjClass>(n, m)
+#define Fa_MAKE_OBJ_INSTANCE(k, f) m_gc.make<Fa_ObjInstance>(k, f)
 
 #define Fa_MAKE_OBJECT(p) TAG_OBJ | (reinterpret_cast<uintptr_t>(p) & PAYLOAD_MASK)
 #define Fa_MAKE_STRING(v)                                                      \
