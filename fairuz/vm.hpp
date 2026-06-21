@@ -123,6 +123,7 @@ public:
     Fa_CallFrame& top_frame();
     Fa_CallFrame const& top_frame() const;
     Fa_Value& get_reg(Fa_CallFrame const& f, int m_reg);
+    void invoke_method(Fa_Chunk* target_chunk, Fa_Value self_val, int dst_reg, int cur_frame_base, int explicit_argc, u32);
 }; // class Fa_VM
 
 } // namespace fairuz::runtime

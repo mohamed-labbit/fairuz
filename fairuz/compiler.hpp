@@ -171,6 +171,31 @@ private:
         u8 index { 0 };
     };
 
+    struct ClassDesc {
+        Fa_StringRef name;
+        Fa_Array<Fa_StringRef> field_names;
+        Fa_Array<Fa_StringRef> method_names;
+
+        using IndexTable = Fa_HashTable<Fa_StringRef, u32, Fa_StringRefHash, Fa_StringRefEqual>;
+
+        IndexTable field_map;
+        IndexTable method_map;
+
+        int field_index(Fa_StringRef name) const
+        {
+            u32 const* p = field_map.find_ptr(name);
+            return LIKELY(p != nullptr) ? static_cast<int>(*p) : -1;
+        }
+
+        int method_index(Fa_StringRef name) const
+        {
+            u32 const* p = method_map.find_ptr(name);
+            return LIKELY(p != nullptr) ? static_cast<int>(*p) : -1;
+        }
+    };
+
+    Fa_HashTable<Fa_StringRef, ClassDesc, Fa_StringRefHash, Fa_StringRefEqual> m_class_registry;
+
     void compile_stmt(AST::Fa_Stmt* s);
     void compile_block(AST::Fa_BlockStmt* s);
     void compile_expr_stmt(AST::Fa_ExprStmt* s);
@@ -235,6 +260,8 @@ private:
     void end_scope(Fa_SourceLocation loc);
 
     u32 intern_string(Fa_StringRef const& str);
+
+    ClassDesc const* resolve_reciever_class(AST::Fa_Expr const* e) const;
 }; // class Compiler
 
 } // namespace fairuz::runtime

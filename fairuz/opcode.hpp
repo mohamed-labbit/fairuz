@@ -113,6 +113,14 @@ enum class Fa_OpCode : u8 {
     INDEX,
     UNSAFE_INDEX,
 
+    NEW_CLASS,
+
+    // instances
+    NEW_INSTANCE, // A: new Fa_ObjInstance Bx: constant idx of Fa_ObjClass*
+    INVOKE,       // A: instance reg B: vtable idx reg C: args
+    GET_FIELD,    // A: result reg, B: instance reg, C: field reg
+    SET_FIELD,    // A: instance reg, B: field reg, C: src reg
+
     // misc
     NOP,
     HALT,
@@ -348,6 +356,16 @@ static Fa_StringRef Fa_opcode_name(Fa_OpCode op)
         return "INDEX";
     case Fa_OpCode::UNSAFE_INDEX:
         return "UNSAFE_INDEX";
+    case Fa_OpCode::NEW_CLASS:
+        return "NEW_CLASS";
+    case Fa_OpCode::NEW_INSTANCE:
+        return "NEW_INSTANCE";
+    case Fa_OpCode::INVOKE:
+        return "INVOKE";
+    case Fa_OpCode::GET_FIELD:
+        return "GET_FIELD";
+    case Fa_OpCode::SET_FIELD:
+        return "SET_FIELD";
     case Fa_OpCode::NOP:
         return "NOP";
     case Fa_OpCode::HALT:

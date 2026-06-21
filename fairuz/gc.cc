@@ -49,19 +49,14 @@ void Fa_GarbageCollector::blacken_object(Fa_ObjHeader* obj)
         auto constants = &static_cast<Fa_ObjFunction*>(obj)->chunk->constants;
         mark_value_array(*constants);
     } break;
-    case Fa_ObjType::CLASS: {
-        mark_object(static_cast<Fa_ObjClass*>(obj)->name);
-        for (auto& mem : static_cast<Fa_ObjClass*>(obj)->members)
-            mark_object(mem);
-    } break;
+    case Fa_ObjType::CLASS:
+        /// classes aren managed using arena
+        break;
     case Fa_ObjType::INSTANCE: {
         auto inst = static_cast<Fa_ObjInstance*>(obj);
-        mark_object(inst->kclass);
-        for (auto [k, v] : inst->fields) {
-            if (Fa_IS_OBJECT(k))
-                mark_object(Fa_AS_OBJECT(k));
-            if (Fa_IS_OBJECT(v))
-                mark_object(Fa_AS_OBJECT(v));
+        for (u32 i = 0, n = inst->field_count; i < n; i++) {
+            if (Fa_IS_OBJECT(inst->fields[i]))
+                mark_object(Fa_AS_OBJECT(inst->fields[i]));
         }
     } break;
     case Fa_ObjType::LIST: {

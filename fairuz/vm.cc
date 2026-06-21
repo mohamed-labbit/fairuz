@@ -3,6 +3,8 @@
 //
 
 #include "vm.hpp"
+#include "macros.hpp"
+#include "opcode.hpp"
 #include "util.hpp"
 #include "value.hpp"
 
@@ -105,6 +107,11 @@ static constexpr char kClassMetadataKey[] = "__class__";
         &&H_IC_CALL,             \
         &&H_INDEX,               \
         &&H_UNSAFE_INDEX,        \
+        &&H_NEW_CLASS,           \
+        &&H_NEW_INSTANCE,        \
+        &&H_INVOKE,              \
+        &&H_GET_FIELD,           \
+        &&H_SET_FIELD,           \
         &&H_NOP,                 \
         &&H_HALT
 
@@ -119,6 +126,39 @@ static constexpr char kClassMetadataKey[] = "__class__";
 #define Fa_VM_SUBF(lhs, rhs) Fa_VMOPF(lhs, rhs, -)
 #define Fa_VM_MULF(lhs, rhs) Fa_VMOPF(lhs, rhs, *)
 #define Fa_VM_DIVF(lhs, rhs) Fa_VMOPF(lhs, rhs, /)
+
+#define Fa_VM_INSTANCE_OP(op_name)                                                \
+    do {                                                                          \
+        Fa_ObjClass* self_klass = nullptr;                                        \
+        Fa_Value self_val, arg_val = NIL_VAL;                                     \
+        int slot = -1;                                                            \
+        if (Fa_IS_INSTANCE(lhs)) {                                                \
+            self_klass = Fa_AS_INSTANCE(lhs)->klass;                              \
+            slot = self_klass->method_slot(sp_method_name(Fa_ObjClass::op_name)); \
+            if (slot >= 0) {                                                      \
+                self_val = lhs;                                                   \
+                arg_val = rhs;                                                    \
+            }                                                                     \
+        }                                                                         \
+        if (slot < 0 && Fa_IS_INSTANCE(rhs)) {                                    \
+            self_klass = Fa_AS_INSTANCE(rhs)->klass;                              \
+            slot = self_klass->method_slot(sp_method_name(Fa_ObjClass::op_name)); \
+            if (slot >= 0) {                                                      \
+                self_val = rhs;                                                   \
+                arg_val = lhs;                                                    \
+            }                                                                     \
+        }                                                                         \
+        if (UNLIKELY(slot < 0))                                                   \
+            runtime_error(ErrorCode::TYPE_ERROR_ARITH);                           \
+        Fa_Chunk* target_chunk = self_klass->vtable[static_cast<u32>(slot)];      \
+        int call_base = cur_frame_base + a + 1;                                   \
+        if (UNLIKELY(m_stack_top + 2 >= STACK_SIZE))                              \
+            runtime_error(ErrorCode::STACK_OVERFLOW);                             \
+        if (m_stack_top < call_base + 2)                                          \
+            m_stack_top = call_base + 2;                                          \
+        m_stack[call_base + 1] = arg_val;                                         \
+        invoke_method(target_chunk, self_val, a, cur_frame_base, 1, ip);          \
+    } while (0)
 
 #define Fa_VM_ABC(op) cur_chunk->code[ip - 1] = Fa_make_ABC(op, a, b, c)
 
@@ -153,32 +193,25 @@ static constexpr char kClassMetadataKey[] = "__class__";
             runtime_error(ErrorCode::TYPE_ERROR_ARITH); \
     } while (0)
 
-static bool require_arith(Fa_Value v, Fa_OpCode op)
+Fa_StringRef sp_method_name(int m)
 {
-    // check i the given op applies to the given object
-    // for performance reasons we will trust the caller to provide arithmetic op
-    if (Fa_IS_NUMBER(v))
-        return true;
-
-    if (Fa_IS_INSTANCE(v)) {
-        auto ins = Fa_AS_INSTANCE(v);
-        switch (op) {
-        case Fa_OpCode::OP_ADD:
-            return ins->has_add();
-        case Fa_OpCode::OP_SUB:
-            return ins->has_sub();
-        case Fa_OpCode::OP_MUL:
-            return ins->has_mul();
-        case Fa_OpCode::OP_DIV:
-            return ins->has_div();
-        case Fa_OpCode::OP_MOD:
-            return ins->has_mod();
-        default:
-            return false;
-        }
+    switch (m) {
+    case Fa_ObjClass::INIT:
+        return "بداية";
+    case Fa_ObjClass::ADD:
+        return "عملية+";
+    case Fa_ObjClass::SUB:
+        return "عملية-";
+    case Fa_ObjClass::MUL:
+        return "عملية*";
+    case Fa_ObjClass::DIV:
+        return "عملية/";
+    case Fa_ObjClass::MOD:
+        return "عملية%";
+    case Fa_ObjClass::REPR:
+        return "كتابة";
+    default:
     }
-
-    return false;
 }
 
 static bool values_equal(Fa_Value lhs, Fa_Value rhs)
@@ -412,14 +445,10 @@ Fa_Value Fa_VM::execute()
             cur_base[a] = Fa_MAKE_REAL(Fa_VM_ADDF(lhs, rhs));
             Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
             Fa_VM_ABC(Fa_OpCode::OP_ADD_FF);
-        } else if (Fa_IS_INSTANCE(rhs)) {
-            // adding one object to another value
-            Fa_ObjInstance* inst_obj = Fa_AS_INSTANCE(rhs);
-            if (inst_obj->has_add()) {
-                
-            }
-            Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
-            Fa_VM_ABC(Fa_OpCode::OP_ADD);
+        } else if (Fa_IS_INSTANCE(lhs) || Fa_IS_INSTANCE(rhs)) {
+            Fa_VM_INSTANCE_OP(ADD);
+            LOAD_FRAME();
+            Fa_DISPATCH();
         } else {
             runtime_error(ErrorCode::TYPE_ERROR_ARITH);
         }
@@ -451,17 +480,20 @@ Fa_Value Fa_VM::execute()
         u8 a = Fa_instr_A(instr), b = Fa_instr_B(instr), c = Fa_instr_C(instr);
         Fa_Value lhs = cur_base[b], rhs = cur_base[c];
 
-        if (UNLIKELY(!Fa_IS_NUMBER(lhs) || !Fa_IS_NUMBER(rhs)))
-            runtime_error(ErrorCode::TYPE_ERROR_ARITH);
-
         if (Fa_IS_INTEGER(lhs) && Fa_IS_INTEGER(rhs)) {
             cur_base[a] = Fa_MAKE_INTEGER(Fa_VM_SUBI(lhs, rhs));
             Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
             Fa_VM_ABC(Fa_OpCode::OP_SUB_II);
-        } else {
+        } else if (Fa_IS_NUMBER(lhs) || Fa_IS_NUMBER(rhs)) {
             cur_base[a] = Fa_MAKE_REAL(Fa_VM_SUBF(lhs, rhs));
             Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
             Fa_VM_ABC(Fa_OpCode::OP_SUB_FF);
+        } else if (Fa_IS_INSTANCE(lhs) || Fa_IS_INSTANCE(rhs)) {
+            Fa_VM_INSTANCE_OP(SUB);
+            LOAD_FRAME();
+            Fa_DISPATCH();
+        } else {
+            runtime_error(ErrorCode::TYPE_ERROR_ARITH);
         }
 
         Fa_DISPATCH();
@@ -491,17 +523,20 @@ Fa_Value Fa_VM::execute()
         u8 a = Fa_instr_A(instr), b = Fa_instr_B(instr), c = Fa_instr_C(instr);
         Fa_Value lhs = cur_base[b], rhs = cur_base[c];
 
-        if (UNLIKELY(!Fa_IS_NUMBER(lhs) || !Fa_IS_NUMBER(rhs)))
-            runtime_error(ErrorCode::TYPE_ERROR_ARITH);
-
         if (Fa_IS_INTEGER(lhs) && Fa_IS_INTEGER(rhs)) {
             cur_base[a] = Fa_MAKE_INTEGER(Fa_VM_MULI(lhs, rhs));
             Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
             Fa_VM_ABC(Fa_OpCode::OP_MUL_II);
-        } else {
+        } else if (Fa_IS_NUMBER(lhs) && Fa_IS_NUMBER(rhs)) {
             cur_base[a] = Fa_MAKE_REAL(Fa_VM_MULF(lhs, rhs));
             Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
             Fa_VM_ABC(Fa_OpCode::OP_MUL_FF);
+        } else if (Fa_IS_INSTANCE(lhs) || Fa_IS_INSTANCE(rhs)) {
+            Fa_VM_INSTANCE_OP(MUL);
+            LOAD_FRAME();
+            Fa_DISPATCH();
+        } else {
+            runtime_error(ErrorCode::TYPE_ERROR_ARITH);
         }
 
         Fa_DISPATCH();
@@ -540,10 +575,16 @@ Fa_Value Fa_VM::execute()
             cur_base[a] = Fa_MAKE_INTEGER(Fa_VM_DIVI(lhs, rhs));
             Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
             Fa_VM_ABC(Fa_OpCode::OP_DIV_II);
-        } else {
+        } else if (Fa_IS_NUMBER(lhs) && Fa_IS_NUMBER(rhs)) {
             cur_base[a] = Fa_MAKE_REAL(Fa_VM_DIVF(lhs, rhs));
             Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
             Fa_VM_ABC(Fa_OpCode::OP_DIV_FF);
+        } else if (Fa_IS_INSTANCE(lhs) || Fa_IS_INSTANCE(rhs)) {
+            Fa_VM_INSTANCE_OP(DIV);
+            LOAD_FRAME();
+            Fa_DISPATCH();
+        } else {
+            runtime_error(ErrorCode::TYPE_ERROR_ARITH);
         }
 
         Fa_DISPATCH();
@@ -574,10 +615,16 @@ Fa_Value Fa_VM::execute()
             cur_base[a] = Fa_MAKE_REAL(static_cast<f64>(Fa_VMOPI(lhs, rhs, %)));
             Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
             Fa_VM_ABC(Fa_OpCode::OP_MOD_II);
-        } else {
+        } else if (Fa_IS_NUMBER(lhs) && Fa_IS_NUMBER(rhs)) {
             cur_base[a] = Fa_MAKE_REAL(std::fmod(Fa_AS_DOUBLE_ANY(lhs), Fa_AS_DOUBLE_ANY(rhs)));
             Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
             Fa_VM_ABC(Fa_OpCode::OP_MOD_FF);
+        } else if (Fa_IS_INSTANCE(lhs) || Fa_IS_INSTANCE(rhs)) {
+            Fa_VM_INSTANCE_OP(MOD);
+            LOAD_FRAME();
+            Fa_DISPATCH();
+        } else {
+            runtime_error(ErrorCode::TYPE_ERROR_ARITH);
         }
 
         Fa_DISPATCH();
@@ -1270,12 +1317,6 @@ Fa_Value Fa_VM::execute()
                 Fa_RA() = NIL_VAL;
             else
                 Fa_RA() = dict_obj->data[idx];
-        } else if (Fa_IS_INSTANCE(obj)) {
-            Fa_ObjInstance* instance_obj = Fa_AS_INSTANCE(obj);
-            if (Fa_Value* value = instance_obj->fields.find_ptr(idx))
-                Fa_RA() = *value;
-            else
-                Fa_RA() = NIL_VAL;
         } else {
             runtime_error(ErrorCode::INDEX_TYPE_ERROR);
         }
@@ -1315,16 +1356,75 @@ Fa_Value Fa_VM::execute()
                 Fa_RA() = NIL_VAL;
             else
                 Fa_RA() = dict_obj->data[idx];
-        } else if (Fa_IS_INSTANCE(obj)) {
-            Fa_ObjInstance* instance_obj = Fa_AS_INSTANCE(obj);
-            if (Fa_Value* value = instance_obj->fields.find_ptr(idx))
-                Fa_RA() = *value;
-            else
-                Fa_RA() = NIL_VAL;
         } else {
             runtime_error(ErrorCode::INDEX_TYPE_ERROR);
         }
 
+        Fa_DISPATCH();
+    }
+    Fa_CASE(NEW_CLASS)
+    {
+        Fa_RA() = cur_chunk->constants[Fa_instr_Bx(instr)];
+        Fa_DISPATCH();
+    }
+    Fa_CASE(NEW_INSTANCE)
+    {
+        Fa_ObjClass* klass = Fa_AS_CLASS(cur_chunk->constants[Fa_instr_Bx(instr)]);
+        Fa_ObjInstance* inst = Fa_MAKE_OBJ_INSTANCE(klass);
+        Fa_RA() = Fa_MAKE_OBJECT(inst);
+        Fa_DISPATCH();
+    }
+    Fa_CASE(INVOKE)
+    {
+        u8 self_reg = Fa_instr_A(instr);
+        u8 slot = Fa_instr_B(instr);
+        u8 argc = Fa_instr_C(instr);
+
+        u32 nop = cur_chunk->code[ip];
+        u8 ic_idx = Fa_instr_A(nop);
+        ++ip; // consume the trailing NOP carrying the IC slot index
+
+        int base = cur_frame_base + self_reg + 1;
+        Fa_Value self_val = cur_base[self_reg];
+
+        if (UNLIKELY(!Fa_IS_INSTANCE(self_val)))
+            runtime_error(ErrorCode::TYPE_ERROR_CALL, "INVOKE on non-instance");
+
+        Fa_ObjInstance* inst = Fa_AS_INSTANCE(self_val);
+
+        invoke_method(inst->klass->vtable[slot], self_val, self_reg, cur_frame_base, argc - 1, ip);
+
+        LOAD_FRAME();
+        Fa_DISPATCH();
+    }
+    Fa_CASE(GET_FIELD)
+    {
+        Fa_Value obj_v = Fa_RB();
+        if (UNLIKELY(!Fa_IS_INSTANCE(obj_v)))
+            runtime_error(ErrorCode::TYPE_ERROR_CALL, "GET_FIELD on non-instance");
+
+        Fa_ObjInstance* inst = Fa_AS_INSTANCE(obj_v);
+        u8 field_idx = Fa_instr_C(instr);
+
+        if (UNLIKELY(field_idx >= inst->field_count))
+            runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
+
+        Fa_RA() = inst->fields[field_idx];
+        Fa_DISPATCH();
+    }
+    Fa_CASE(SET_FIELD)
+    {
+        Fa_Value obj_v = Fa_RA();
+        if (UNLIKELY(!Fa_IS_INSTANCE(obj_v)))
+            runtime_error(ErrorCode::TYPE_ERROR_CALL, "SET_FIELD on non-instance");
+
+        Fa_ObjInstance* inst = Fa_AS_INSTANCE(obj_v);
+        u8 field_idx = Fa_instr_B(instr);
+
+        if (UNLIKELY(field_idx >= inst->field_count))
+            runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
+
+        inst->fields[field_idx] = Fa_RC();
         Fa_DISPATCH();
     }
 
@@ -1340,6 +1440,36 @@ Fa_Value Fa_VM::execute()
     Fa_END_DISPATCH();
 
     return NIL_VAL; // UNREACHABLE
+}
+
+// calls target_chunk and adding the self_val as implicit first arg
+void Fa_VM::invoke_method(Fa_Chunk* target_chunk, Fa_Value self_val, int dst_reg, int cur_frame_base, int explicit_argc, u32 ip)
+{
+    int call_base = cur_frame_base + dst_reg + 1;
+    int total_argc = explicit_argc + 1; // +1 for self
+
+    if (UNLIKELY(total_argc != target_chunk->arity))
+        runtime_error(ErrorCode::WRONG_ARG_COUNT);
+    if (UNLIKELY(m_frames_top >= MAX_FRAMES))
+        runtime_error(ErrorCode::STACK_OVERFLOW);
+
+    int local_count = target_chunk->local_count;
+    int new_top = call_base + local_count + 1;
+    while (m_stack_top < new_top) {
+        m_stack[m_stack_top] = NIL_VAL;
+        m_stack_top += 1;
+    }
+
+    m_stack[call_base] = self_val; // self lands in register 0 of the callee
+    // explicit args are assumed already placed at call_base+1 .. call_base+explicit_argc
+    // by the caller, before this is invoked.
+
+    for (int i = total_argc; i < local_count; i += 1)
+        m_stack[call_base + i] = NIL_VAL;
+
+    SAVE_IP();
+    m_frames[m_frames_top] = Fa_CallFrame(nullptr, target_chunk, 0, call_base, local_count);
+    m_frames_top += 1;
 }
 
 void Fa_VM::call_value(Fa_Value callee, int argc, int call_base, bool tail)
@@ -1400,55 +1530,54 @@ void Fa_VM::call_value(Fa_Value callee, int argc, int call_base, bool tail)
         return;
     }
 
-    if (Fa_IS_DICT(callee)) {
-        Fa_ObjDict* class_dict = Fa_AS_DICT(callee);
-        Fa_Value metadata_key = Fa_MAKE_OBJECT(intern(kClassMetadataKey));
-        Fa_Value* metadata_value = class_dict->data.find_ptr(metadata_key);
-        if (metadata_value == nullptr || !Fa_IS_CLASS(*metadata_value))
-            goto non_function_call;
+    if (Fa_IS_CLASS(callee)) {
+        Fa_ObjClass* klass = Fa_AS_CLASS(callee);
+        Fa_ObjInstance* inst = Fa_MAKE_OBJ_INSTANCE(klass);
+        Fa_Value instance = Fa_MAKE_OBJECT(inst);
 
-        Fa_ObjClass* class_meta = Fa_AS_CLASS(*metadata_value);
-        Fa_DictType fields;
-        for (Fa_ObjHeader* member : class_meta->members) {
-            if (member != nullptr && member->type == Fa_ObjType::STRING) {
-                Fa_ObjString* member_name = static_cast<Fa_ObjString*>(member);
-                fields[Fa_MAKE_OBJECT(intern(member_name->str))] = NIL_VAL;
-            }
-        }
+        int ctor_slot = klass->method_slot("بداية");
+        if (ctor_slot < 0)
+            ctor_slot = klass->method_slot("init");
 
-        for (auto [key, value] : class_dict->data) {
-            if (key != metadata_key && fields.find_ptr(key) == nullptr)
-                fields[key] = value;
-        }
-
-        Fa_Value instance = Fa_MAKE_OBJECT(m_gc.make<Fa_ObjInstance>(class_meta, fields));
-        Fa_Value init_key = Fa_MAKE_OBJECT(intern("init"));
-        Fa_Value arabic_init_key = Fa_MAKE_OBJECT(intern("بداية"));
-        Fa_Value* init = class_dict->data.find_ptr(init_key);
-        if (init == nullptr)
-            init = class_dict->data.find_ptr(arabic_init_key);
-
-        if (init == nullptr) {
+        if (ctor_slot < 0) {
             if (argc != 0)
                 runtime_error(ErrorCode::WRONG_ARG_COUNT);
             m_stack[call_base - 1] = instance;
             return;
         }
 
+        Fa_Chunk* ctor_chunk = klass->vtable[static_cast<u32>(ctor_slot)];
+
+        if (UNLIKELY(argc + 1 != ctor_chunk->arity))
+            runtime_error(ErrorCode::WRONG_ARG_COUNT);
         if (UNLIKELY(m_stack_top + 1 >= STACK_SIZE))
             runtime_error(ErrorCode::STACK_OVERFLOW);
 
         for (int i = argc - 1; i >= 0; i -= 1)
             m_stack[call_base + i + 1] = m_stack[call_base + i];
         m_stack[call_base] = instance;
+
         if (m_stack_top < call_base + argc + 1)
             m_stack_top = call_base + argc + 1;
 
-        call_value(*init, argc + 1, call_base, tail);
+        int local_count = ctor_chunk->local_count;
+        int new_top = call_base + local_count + 1;
+        while (m_stack_top < new_top) {
+            m_stack[m_stack_top] = NIL_VAL;
+            m_stack_top += 1;
+        }
+
+        for (int i = argc + 1; i < local_count; i += 1)
+            m_stack[call_base + i] = NIL_VAL;
+
+        if (UNLIKELY(m_frames_top >= MAX_FRAMES))
+            runtime_error(ErrorCode::STACK_OVERFLOW);
+
+        m_frames[m_frames_top] = Fa_CallFrame(nullptr, ctor_chunk, 0, call_base, local_count);
+        m_frames_top += 1;
         return;
     }
 
-non_function_call:
     Fa_StringRef fn_name;
     if (Fa_IS_FUNCTION(callee) && Fa_AS_FUNCTION(callee)->name)
         fn_name = Fa_AS_FUNCTION(callee)->name->str;

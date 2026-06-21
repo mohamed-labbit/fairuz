@@ -2,6 +2,7 @@
 #define VALUE_HPP
 
 #include "opcode.hpp"
+#include "ssa_loop.hpp"
 #include "table.hpp"
 #include <cstdint>
 
@@ -11,15 +12,16 @@ class Fa_VM; // forward
 using Fa_Value = u64;
 
 struct Fa_ValueHash {
-    size_t operator()(Fa_Value const& v) const { return v; }
+    size_t operator()(Fa_Value const& v) const noexcept { return v; }
 }; // Fa_Value's are inherently distinct
 struct Fa_ValueEqual {
-    bool operator()(Fa_Value const& lhs, Fa_Value const& rhs) { return lhs == rhs; }
+    bool operator()(Fa_Value const& lhs, Fa_Value const& rhs) const noexcept { return lhs == rhs; }
 };
 
 using Fa_DictType = Fa_HashTable<Fa_Value, Fa_Value, Fa_ValueHash, Fa_ValueEqual>;
 using NativeFn = Fa_Value (Fa_VM::*)(int, Fa_Value*);
 
+/// NOTE: exclude any added tag from Fa_IS_DOUBLE macro
 static constexpr Fa_Value NANBOX_QNAN = UINT64_C(0x7FF8000000000000);
 static constexpr Fa_Value NANBOX_SIGN_BIT = UINT64_C(0x8000000000000000);
 static constexpr Fa_Value TAG_INT = UINT64_C(0x7FF9000000000000);
@@ -124,103 +126,108 @@ struct Fa_ObjNative final : public Fa_ObjHeader {
 }; // struct Fa_ObjNative
 
 struct Fa_ObjClass final : public Fa_ObjHeader {
-    Fa_ObjString* name { nullptr };
-    Fa_Array<Fa_ObjHeader*> members;
+    /* special mehtods indices */
+    enum : u32 {
+        INIT,
+        CALL,
+        ADD,
+        SUB,
+        MUL,
+        DIV,
+        MOD,
+        REPR,
+        EQ,
+        NEQ,
+        NEG,
+        _COUNT,
+    };
 
-    // special methods
-    i16 init_idx { -1 };
-    i16 call_idx { -1 };
-    i16 repr_idx { -1 };
-    i16 add_idx { -1 };
-    i16 sub_idx { -1 };
-    i16 neg_idx { -1 };
-    i16 mul_idx { -1 };
-    i16 div_idx { -1 };
-    i16 mod_idx { -1 };
+    Fa_StringRef name;
 
-    bool has_init() const { return init_idx != -1; }
-    bool has_call() const { return call_idx != -1; }
-    bool has_repr() const { return repr_idx != -1; }
-    bool has_add() const { return add_idx != -1; }
-    bool has_sub() const { return sub_idx != -1; }
-    bool has_neg() const { return neg_idx != -1; }
-    bool has_mul() const { return mul_idx != -1; }
-    bool has_div() const { return div_idx != -1; }
-    bool has_mod() const { return mod_idx != -1; }
+    // fields
+    Fa_Array<Fa_StringRef> field_names;
+    u32 field_count { 0 };
 
-    explicit Fa_ObjClass(Fa_ObjString* class_name, Fa_Array<Fa_ObjHeader*> member_list)
+    // methods
+    Fa_Array<Fa_StringRef> method_names;
+    Fa_Array<Fa_Chunk*> vtable;
+
+    // loopk-up map
+    using IndexTable = Fa_HashTable<Fa_StringRef, u32, Fa_StringRefHash, Fa_StringRefEqual>;
+
+    IndexTable field_index_map;
+    IndexTable method_slot_map;
+
+    Fa_ObjClass() = delete;
+
+    explicit Fa_ObjClass(Fa_StringRef n, Fa_Array<Fa_StringRef> f, Fa_Array<Fa_StringRef> m, Fa_Array<Fa_Chunk*> v)
         : Fa_ObjHeader(Fa_ObjType::CLASS)
-        , name(class_name)
-        , members(member_list)
+        , name(n)
+        , field_names(f)
+        , method_names(m)
+        , vtable(v)
     {
-        Fa_Array<Fa_StringRef> sp_methods_names = {
-            "بداية",
-            "نداء",
-            "كتابة",
-            "عملية+",
-            "عملية-",
-            "عملية*",
-            "عملية/",
-            /// TODO: others
-        };
+        field_count = field_names.size();
+        build_indices();
+    }
 
-        u32 i = 0;
-        for (; i < members.size(); ++i) {
-            if (members[i]->type == Fa_ObjType::FUNCTION) {
-                auto method = static_cast<Fa_ObjFunction const*>(members[i]);
-                Fa_StringRef method_name = method->name->str;
-                if (std::find(sp_methods_names.begin(), sp_methods_names.end(), method_name) != sp_methods_names.end()) {
-                    if (method_name == "بداية")
-                        init_idx = i;
-                    else if (method_name == "نداء")
-                        call_idx = i;
-                    else if (method_name == "كتابة")
-                        repr_idx = i;
-                    else if (method_name == "عملية+")
-                        add_idx = i;
-                    else if (method_name == "عملية-")
-                        sub_idx = i;
-                    else if (method_name == "عملية*")
-                        mul_idx = i;
-                    else if (method_name == "عملية/")
-                        div_idx = i;
-                }
-            }
-        }
+    void build_indices()
+    {
+        for (u32 i = 0, n = field_names.size(); i < n; i++)
+            field_index_map[field_names[i]] = i;
+
+        for (u32 i = 0, n = method_names.size(); i < n; i++)
+            method_slot_map[method_names[i]] = i;
+    }
+
+    // access
+    int field_index(Fa_StringRef name) const
+    {
+        u32 const* p = field_index_map.find_ptr(name);
+        return p != nullptr ? static_cast<int>(*p) : -1;
+    }
+
+    int method_slot(Fa_StringRef name) const
+    {
+        u32 const* p = method_slot_map.find_ptr(name);
+        return p != nullptr ? static_cast<int>(*p) : -1;
     }
 }; // struct Fa_ObjClass
 
 struct Fa_ObjInstance final : public Fa_ObjHeader {
-    Fa_ObjClass* kclass;
-    Fa_DictType fields;
+    Fa_ObjClass* klass { nullptr };
+    Fa_Value* fields { nullptr };
+    u32 field_count { 0 };
 
-    Fa_ObjInstance(Fa_ObjClass* k, Fa_DictType f)
+    Fa_ObjInstance(Fa_ObjClass* k)
         : Fa_ObjHeader(Fa_ObjType::INSTANCE)
-        , kclass(k)
-        , fields(f)
+        , klass(k)
     {
+        if (klass != nullptr) {
+            field_count = klass->field_names.size();
+            fields = new Fa_Value[field_count];
+
+            for (int i = 0, n = field_count; i < n; ++i)
+                fields[i] = NIL_VAL;
+        }
     }
 
-    bool has_init() const { return kclass->has_init(); }
-    bool has_call() const { return kclass->has_call(); }
-    bool has_repr() const { return kclass->has_repr(); }
-    bool has_add() const { return kclass->has_add(); }
-    bool has_sub() const { return kclass->has_sub(); }
-    bool has_neg() const { return kclass->has_neg(); }
-    bool has_mul() const { return kclass->has_mul(); }
-    bool has_div() const { return kclass->has_div(); }
-    bool has_mod() const { return kclass->has_mod(); }
+    ~Fa_ObjInstance() { delete[] fields; }
 };
 
+/* ------ Factory macros  ------- */
+
+// tagged objects
 #define Fa_MAKE_OBJ_STRING(s) get_allocator().allocate_object<Fa_ObjString>(s)
 #define Fa_MAKE_OBJ_NATIVE(f, n, a) get_allocator().allocate_object<Fa_ObjNative>(f, n, a)
 #define Fa_MAKE_OBJ_LIST() m_gc.make<Fa_ObjList>()
 #define Fa_MAKE_OBJ_DICT() m_gc.make<Fa_ObjDict>()
 #define Fa_MAKE_OBJ_FUNCTION(ch) m_gc.make<Fa_ObjFunction>(ch)
 #define Fa_MAKE_OBJ_CLOSURE(fn) m_gc.make<Fa_ObjClosure>(fn)
-#define Fa_MAKE_OBJ_CLASS(n, m) m_gc.make<Fa_ObjClass>(n, m)
-#define Fa_MAKE_OBJ_INSTANCE(k, f) m_gc.make<Fa_ObjInstance>(k, f)
+#define Fa_MAKE_OBJ_CLASS(n, f, m, v) get_allocator().allocate_object<Fa_ObjClass>(n, f, m, v)
+#define Fa_MAKE_OBJ_INSTANCE(k) m_gc.make<Fa_ObjInstance>(k)
 
+// runtime values
 #define Fa_MAKE_OBJECT(p) TAG_OBJ | (reinterpret_cast<uintptr_t>(p) & PAYLOAD_MASK)
 #define Fa_MAKE_STRING(v)                                                      \
     ({                                                                         \
@@ -252,17 +259,16 @@ struct Fa_ObjInstance final : public Fa_ObjHeader {
         Fa_ObjNative* _obj = get_allocator().allocate_object<Fa_ObjNative>(f, n, a); \
         TAG_OBJ | (reinterpret_cast<uintptr_t>(_obj) & PAYLOAD_MASK);                \
     })
-#define Fa_MAKE_CLASS(n, m)                                                     \
-    ({                                                                          \
-        Fa_ObjClass* _obj = get_allocator().allocate_object<Fa_ObjClass>(n, m); \
-        TAG_OBJ | (reinterpret_cast<uintptr_t>(_obj) & PAYLOAD_MASK);           \
-    })
-#define Fa_MAKE_INSANCE(k, f)                                                         \
+#define Fa_MAKE_CLASS(n, f, m, v)                                                     \
     ({                                                                                \
-        Fa_ObjInstance* _obj = get_allocator().allocate_object<Fa_ObjInstance>(k, f); \
+        Fa_ObjClass* _obj = get_allocator().allocate_object<Fa_ObjClass>(n, f, m, v); \
         TAG_OBJ | (reinterpret_cast<uintptr_t>(_obj) & PAYLOAD_MASK);                 \
     })
-
+#define Fa_MAKE_INSTANCE(k)                                           \
+    ({                                                                \
+        Fa_ObjInstance* _obj = m_gc.make<Fa_ObjInstance>(k);          \
+        TAG_OBJ | (reinterpret_cast<uintptr_t>(_obj) & PAYLOAD_MASK); \
+    })
 #define Fa_MAKE_REAL(d)                               \
     ({                                                \
         auto _tmp = (d);                              \
@@ -272,6 +278,8 @@ struct Fa_ObjInstance final : public Fa_ObjHeader {
     })
 #define Fa_MAKE_BOOL(b) ((b) ? TRUE_VAL : FALSE_VAL)
 #define Fa_MAKE_INTEGER(v) (static_cast<Fa_Value>(v) & PAYLOAD_MASK) | TAG_INT
+
+/* ------- Truth macros  ------- */
 
 #define Fa_IS_NIL(v) ((v) == NIL_VAL)
 #define Fa_IS_BOOL(v) (((v) | 1) == TRUE_VAL)
@@ -295,25 +303,27 @@ struct Fa_ObjInstance final : public Fa_ObjHeader {
 #define Fa_IS_NATIVE(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::NATIVE)
 #define Fa_IS_CLASS(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::CLASS)
 #define Fa_IS_INSTANCE(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::INSTANCE)
-#define Fa_IS_TRUTHY(v)                          \
-    ({                                           \
-        Fa_Value _v = (v);                       \
-        u64 _tag = _v >> 48;                     \
-        bool _res;                               \
-                                                 \
-        if (UNLIKELY(Fa_IS_NIL(_v)))             \
-            _res = false;                        \
-        else if (UNLIKELY((_v | 1) == TRUE_VAL)) \
-            _res = (_v & 1);                     \
-        else if (LIKELY(_tag == INT_TAG16))      \
-            _res = ((_v & PAYLOAD_MASK) != 0);   \
-        else if (UNLIKELY(_tag == OBJ_TAG16))    \
-            _res = true;                         \
-        else                                     \
-            _res = LIKELY((_v << 1) != 0);       \
-                                                 \
-        _res;                                    \
+#define Fa_IS_TRUTHY(v)                        \
+    ({                                         \
+        Fa_Value _v = (v);                     \
+        u64 _tag = _v >> 48;                   \
+        bool _res;                             \
+                                               \
+        if Fa_IS_NIL (_v)                      \
+            _res = false;                      \
+        else if ((_v | 1) == TRUE_VAL)         \
+            _res = (_v & 1);                   \
+        else if (_tag == INT_TAG16)            \
+            _res = ((_v & PAYLOAD_MASK) != 0); \
+        else if (_tag == OBJ_TAG16)            \
+            _res = true;                       \
+        else                                   \
+            _res = ((_v << 1) != 0);           \
+                                               \
+        _res;                                  \
     })
+
+/* -------- Casting macros -------- */
 
 #define Fa_AS_BOOL(v) ((v) & 1)
 #define Fa_AS_INTEGER(v)                          \
@@ -350,29 +360,30 @@ struct Fa_ObjInstance final : public Fa_ObjHeader {
 #define Fa_AS_CLASS(v) static_cast<Fa_ObjClass*>(Fa_AS_OBJECT(v))
 #define Fa_AS_INSTANCE(v) static_cast<Fa_ObjInstance*>(Fa_AS_OBJECT(v))
 
-enum class Fa_TypeTag : u8 {
-    NONE,
-    NIL,
-    BOOL,
-    INT,
-    DOUBLE,
-    STRING,
-    LIST,
-    CLOSURE,
-    NATIVE,
-    CLASS,
-    INSTANCE,
-    DICT,
+enum class Fa_TypeTag : u16 {
+    NONE = 0,
+    NIL = 1 << 0,
+    BOOL = 1 << 1,
+    INT = 1 << 2,
+    DOUBLE = 1 << 3,
+    STRING = 1 << 4,
+    LIST = 1 << 5,
+    CLOSURE = 1 << 6,
+    FUNCTION = 1 << 7,
+    NATIVE = 1 << 8,
+    CLASS = 1 << 9,
+    INSTANCE = 1 << 10,
+    DICT = 1 << 11,
 }; // enum Fa_TypeTag
 
-[[nodiscard]] inline bool has_tag(Fa_TypeTag mask, Fa_TypeTag t) noexcept 
+[[nodiscard]] inline bool has_tag(Fa_TypeTag mask, Fa_TypeTag t) noexcept
 {
-    return (static_cast<u8>(mask) & static_cast<u8>(t)) != 0;
+    return (static_cast<u16>(mask) & static_cast<u16>(t)) != 0;
 }
 
 [[nodiscard]] inline Fa_TypeTag operator|(Fa_TypeTag a, Fa_TypeTag b) noexcept
 {
-    return static_cast<Fa_TypeTag>(static_cast<u8>(a) | static_cast<u8>(b));
+    return static_cast<Fa_TypeTag>(static_cast<u16>(a) | static_cast<u16>(b));
 }
 
 inline Fa_TypeTag& operator|=(Fa_TypeTag& a, Fa_TypeTag b) noexcept { return a = a | b; }
@@ -398,6 +409,8 @@ inline Fa_TypeTag& operator|=(Fa_TypeTag& a, Fa_TypeTag b) noexcept { return a =
             return Fa_TypeTag::DICT;
         case Fa_ObjType::CLOSURE:
             return Fa_TypeTag::CLOSURE;
+        case Fa_ObjType::FUNCTION:
+            return Fa_TypeTag::FUNCTION;
         case Fa_ObjType::NATIVE:
             return Fa_TypeTag::NATIVE;
         case Fa_ObjType::CLASS:

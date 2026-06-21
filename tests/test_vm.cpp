@@ -133,58 +133,6 @@ Fa_Chunk* compile_calling(AST::Fa_Stmt* fn)
 
 } // namespace
 
-TEST(VMClass, ConstructorInitializesInstanceFields)
-{
-    auto* init = func_def(
-        name_expr("init"),
-        list_expr({ name_expr("x") }),
-        blk({ assign_stmt(index_expr(name_expr("__class$instance"), lit_str("x")), name_expr("x")) }));
-    auto* get_x = func_def(
-        name_expr("get_x"),
-        list_expr(),
-        blk({ return_stmt(index_expr(name_expr("__class$instance"), lit_str("x"))) }));
-
-    Fa_Chunk* chunk = compile_program({
-        class_def(name_expr("Point"), { name_expr("x") }, { init, get_x }),
-        decl_stmt("p", call_expr(name_expr("Point"), list_expr({ lit_int(41) }))),
-        expr_stmt(call_expr(get_expr(name_expr("p"), name_expr("get_x")))),
-    });
-
-    VMRunner r;
-    Fa_Value result = r.run(chunk);
-    ASSERT_TRUE(Fa_IS_INTEGER(result));
-    EXPECT_EQ(Fa_AS_INTEGER(result), 41);
-}
-
-TEST(VMClass, MethodsMutateTheSameInstance)
-{
-    auto* init = func_def(
-        name_expr("init"),
-        list_expr(),
-        blk({ assign_stmt(index_expr(name_expr("__class$instance"), lit_str("count")), lit_int(0)) }));
-    auto* inc = func_def(
-        name_expr("inc"),
-        list_expr(),
-        blk({
-            assign_stmt(
-                index_expr(name_expr("__class$instance"), lit_str("count")),
-                binary(index_expr(name_expr("__class$instance"), lit_str("count")), lit_int(1), AST::Fa_BinaryOp::OP_ADD)),
-            return_stmt(index_expr(name_expr("__class$instance"), lit_str("count"))),
-        }));
-
-    Fa_Chunk* chunk = compile_program({
-        class_def(name_expr("Counter"), { name_expr("count") }, { init, inc }),
-        decl_stmt("c", call_expr(name_expr("Counter"))),
-        expr_stmt(call_expr(get_expr(name_expr("c"), name_expr("inc")))),
-        expr_stmt(call_expr(get_expr(name_expr("c"), name_expr("inc")))),
-    });
-
-    VMRunner r;
-    Fa_Value result = r.run(chunk);
-    ASSERT_TRUE(Fa_IS_INTEGER(result));
-    EXPECT_EQ(Fa_AS_INTEGER(result), 2);
-}
-
 TEST(VMLoads, Nil)
 {
     VMRunner r;

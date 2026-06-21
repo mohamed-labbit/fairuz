@@ -677,25 +677,44 @@ void Fa_SemanticAnalyzer::print_report() const
 AST::Fa_BinaryOp to_binary_op(TokType const op)
 {
     switch (op) {
-    case TokType::OP_PLUS: return AST::Fa_BinaryOp::OP_ADD;
-    case TokType::OP_MINUS: return AST::Fa_BinaryOp::OP_SUB;
-    case TokType::OP_STAR: return AST::Fa_BinaryOp::OP_MUL;
-    case TokType::OP_SLASH: return AST::Fa_BinaryOp::OP_DIV;
-    case TokType::OP_PERCENT: return AST::Fa_BinaryOp::OP_MOD;
-    case TokType::OP_POWER: return AST::Fa_BinaryOp::OP_POW;
-    case TokType::OP_EQ: return AST::Fa_BinaryOp::OP_EQ;
-    case TokType::OP_NEQ: return AST::Fa_BinaryOp::OP_NEQ;
-    case TokType::OP_LT: return AST::Fa_BinaryOp::OP_LT;
-    case TokType::OP_GT: return AST::Fa_BinaryOp::OP_GT;
-    case TokType::OP_LTE: return AST::Fa_BinaryOp::OP_LTE;
-    case TokType::OP_GTE: return AST::Fa_BinaryOp::OP_GTE;
-    case TokType::OP_BITAND: return AST::Fa_BinaryOp::OP_BITAND;
-    case TokType::OP_BITOR: return AST::Fa_BinaryOp::OP_BITOR;
-    case TokType::OP_BITXOR: return AST::Fa_BinaryOp::OP_BITXOR;
-    case TokType::OP_LSHIFT: return AST::Fa_BinaryOp::OP_LSHIFT;
-    case TokType::OP_RSHIFT: return AST::Fa_BinaryOp::OP_RSHIFT;
-    case TokType::OP_AND: return AST::Fa_BinaryOp::OP_AND;
-    case TokType::OP_OR: return AST::Fa_BinaryOp::OP_OR;
+    case TokType::OP_PLUS:
+        return AST::Fa_BinaryOp::OP_ADD;
+    case TokType::OP_MINUS:
+        return AST::Fa_BinaryOp::OP_SUB;
+    case TokType::OP_STAR:
+        return AST::Fa_BinaryOp::OP_MUL;
+    case TokType::OP_SLASH:
+        return AST::Fa_BinaryOp::OP_DIV;
+    case TokType::OP_PERCENT:
+        return AST::Fa_BinaryOp::OP_MOD;
+    case TokType::OP_POWER:
+        return AST::Fa_BinaryOp::OP_POW;
+    case TokType::OP_EQ:
+        return AST::Fa_BinaryOp::OP_EQ;
+    case TokType::OP_NEQ:
+        return AST::Fa_BinaryOp::OP_NEQ;
+    case TokType::OP_LT:
+        return AST::Fa_BinaryOp::OP_LT;
+    case TokType::OP_GT:
+        return AST::Fa_BinaryOp::OP_GT;
+    case TokType::OP_LTE:
+        return AST::Fa_BinaryOp::OP_LTE;
+    case TokType::OP_GTE:
+        return AST::Fa_BinaryOp::OP_GTE;
+    case TokType::OP_BITAND:
+        return AST::Fa_BinaryOp::OP_BITAND;
+    case TokType::OP_BITOR:
+        return AST::Fa_BinaryOp::OP_BITOR;
+    case TokType::OP_BITXOR:
+        return AST::Fa_BinaryOp::OP_BITXOR;
+    case TokType::OP_LSHIFT:
+        return AST::Fa_BinaryOp::OP_LSHIFT;
+    case TokType::OP_RSHIFT:
+        return AST::Fa_BinaryOp::OP_RSHIFT;
+    case TokType::OP_AND:
+        return AST::Fa_BinaryOp::OP_AND;
+    case TokType::OP_OR:
+        return AST::Fa_BinaryOp::OP_OR;
     default:
         return AST::Fa_BinaryOp::INVALID;
     }

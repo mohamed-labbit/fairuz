@@ -5,6 +5,7 @@
 #include "macros.hpp"
 #include "optim.hpp"
 #include "ssa_loop.hpp"
+#include "value.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -456,149 +457,147 @@ void Compiler::compile_class_def(AST::Fa_ClassDef* s)
         return;
     }
 
-    auto* class_name = dynamic_cast<AST::Fa_NameExpr*>(s->get_name());
-    if (class_name == nullptr) {
-        diagnostic::emit(CompilerError::INVALID_ASSIGNMENT_TARGET, "class name must be a simple name");
-        return;
-    }
+    Fa_Array<AST::Fa_Expr*> fields = s->get_members();
+    Fa_Array<AST::Fa_Stmt*> methods = s->get_methods();
+    Fa_StringRef class_name = AS_NAME(s->get_name())->get_value();
 
-    auto emit_empty_dict = [&](u8 dst, Fa_SourceLocation where) {
-        u16 ctor_idx = intern_string("جدول");
-        emit(Fa_make_ABx(Fa_OpCode::LOAD_GLOBAL, dst, ctor_idx), where);
-        emit(Fa_make_ABC(Fa_OpCode::IC_CALL, dst, 0, current_chunk()->alloc_ic_slot()), where);
-    };
-
-    auto compile_method_closure = [&](AST::Fa_FunctionDef* method) -> u8 {
+    auto compile_method_closure = [&](AST::Fa_FunctionDef* method) -> std::tuple<u8, Fa_Chunk*> {
         Fa_SourceLocation method_loc = method->get_location();
         AST::Fa_NameExpr* method_name = method->get_name();
         if (method_name == nullptr) {
             diagnostic::emit(CompilerError::NULL_FUNCTION_NAME, diagnostic::Severity::FATAL);
-            return error_reg();
+            return { error_reg(), nullptr };
         }
 
-        Fa_Chunk* fn_chunk = make_chunk();
-        fn_chunk->name = class_name->get_value() + "." + method_name->get_value();
+        Fa_Chunk* ch = make_chunk();
+        ch->name = class_name + "." + method_name->get_value();
+        int ex_param_count = method->has_parameters() ? static_cast<int>(method->get_parameters().size()) : 0;
+        ch->arity = ex_param_count + 1;
 
-        int explicit_param_count = method->has_parameters() ? static_cast<int>(method->get_parameters().size()) : 0;
-        fn_chunk->arity = explicit_param_count + 1;
+        auto fn_idx = static_cast<u16>(current_chunk()->functions.size());
+        current_chunk()->functions.push(ch);
 
-        u16 fn_idx = static_cast<u16>(current_chunk()->functions.size());
-        current_chunk()->functions.push(fn_chunk);
-
-        CompilerState fn_state;
-        fn_state.chunk = fn_chunk;
-        fn_state.func_name = fn_chunk->name;
-        fn_state.enclosing = m_current;
-        m_current = &fn_state;
+        CompilerState state;
+        state.chunk = ch;
+        state.func_name = method_name->get_value();
+        state.enclosing = m_current;
+        m_current = &state;
 
         begin_scope();
-
-        u8 instance_reg = alloc_register();
-        declare_local(kClassInstanceName, instance_reg);
+        u8 inst_reg = alloc_register();
+        declare_local(kClassInstanceName, inst_reg);
 
         if (method->has_parameters()) {
-            for (AST::Fa_Expr* param : method->get_parameters()) {
-                auto* param_name = dynamic_cast<AST::Fa_NameExpr*>(param);
-                if (param_name == nullptr) {
+            for (AST::Fa_Expr* p : method->get_parameters()) {
+                auto* p_name = dynamic_cast<AST::Fa_NameExpr*>(p);
+                if (p_name == nullptr) {
                     diagnostic::emit(CompilerError::INVALID_FUNCTION_PARAMETER);
                     continue;
                 }
-
                 u8 reg = alloc_register();
-                declare_local(param_name->get_value(), reg);
+                declare_local(p_name->get_value(), reg);
             }
         }
 
-        if (auto* body_block = dynamic_cast<AST::Fa_BlockStmt*>(method->get_body())) {
-            for (AST::Fa_Stmt* child : body_block->get_statements())
-                compile_stmt(child);
-        } else {
-            compile_stmt(method->get_body());
-        }
-
-        if (!fn_state.is_dead)
-            emit(Fa_make_ABC(Fa_OpCode::RETURN, instance_reg, 1, 0), method_loc);
+        compile_stmt(method->get_body());
+        if (!state.is_dead)
+            emit(Fa_make_ABC(Fa_OpCode::RETURN, inst_reg, 1, 0), method_loc);
 
         end_scope(method_loc);
-        fn_chunk->local_count = fn_state.max_reg;
-        m_current = fn_state.enclosing;
+        ch->local_count = state.max_reg;
+        m_current = state.enclosing;
 
         u8 dst = alloc_register();
         emit(Fa_make_ABx(Fa_OpCode::CLOSURE, dst, fn_idx), method_loc);
-        return dst;
+        return { dst, ch };
     };
 
-    u8 class_reg = alloc_register();
-    emit_empty_dict(class_reg, loc);
+    Fa_Array<Fa_Chunk*> vtable = Fa_Array<Fa_Chunk*>(Fa_ObjClass::_COUNT, /* fill_v= */ nullptr);
+    Fa_Array<Fa_StringRef> method_names;
+    Fa_Array<Fa_StringRef> field_names;
 
-    // Deduplicate members: simple linear scan with string comparison (safe, no hash table lifetime issues)
-    Fa_Array<Fa_ObjHeader*> member_names = Fa_Array<Fa_ObjHeader*>::with_capacity(s->get_members().size());
-
-    for (AST::Fa_Expr* member_expr : s->get_members()) {
-        auto* member_name = dynamic_cast<AST::Fa_NameExpr*>(member_expr);
-        if (member_name == nullptr)
-            continue;
-
-        Fa_StringRef name = member_name->get_value();
-        bool seen = false;
-        for (Fa_ObjHeader* existing : member_names) {
-            if (static_cast<Fa_ObjString*>(existing)->str == name) {
-                seen = true;
-                break;
-            }
-        }
-
-        if (!seen)
-            member_names.push(static_cast<Fa_ObjHeader*>(Fa_MAKE_OBJ_STRING(name)));
-    }
-
-    Fa_ObjClass* class_meta = get_allocator().allocate_object<Fa_ObjClass>(Fa_MAKE_OBJ_STRING(class_name->get_value()), member_names);
-
-    {
-        RegMark mark(m_current);
-        u8 key_reg = alloc_register();
-        emit(Fa_make_ABx(Fa_OpCode::LOAD_CONST, key_reg, intern_string(kClassMetadataKey)), loc);
-
-        u8 meta_reg = alloc_register();
-        emit_load_value(meta_reg, Fa_MAKE_OBJECT(class_meta), loc);
-        emit(Fa_make_ABC(Fa_OpCode::LIST_SET, class_reg, key_reg, meta_reg), loc);
-    }
-
-    Fa_Array<Fa_StringRef> sp_methods_names = {
-        "بداية",
-        "نداء",
-        "كتابة",
-        "عملية",
-        "عملية+",
-        "عملية-",
-        "عملية*",
-        "عملية/",
-        /// TODO: others
-    };
-
-    for (AST::Fa_Stmt* method_stmt : s->get_methods()) {
-        auto* method = dynamic_cast<AST::Fa_FunctionDef*>(method_stmt);
-        if (method == nullptr) {
+    for (AST::Fa_Stmt* m : methods) {
+        if (m->get_kind() != AST::Fa_Stmt::Kind::FUNC) {
             diagnostic::emit(CompilerError::INVALID_STATEMENT_NODE, "class body entries must be methods");
             continue;
         }
 
+        auto* method = AS_FUNCTION_DEF(m);
         Fa_StringRef method_name = method->get_name()->get_value();
-        if (std::find(sp_methods_names.begin(), sp_methods_names.end(), method_name) != sp_methods_names.end()) {
-            //
+
+        bool seen = false;
+        for (Fa_StringRef const& existing : method_names) {
+            if (existing == method_name) {
+                seen = true;
+                break;
+            }
+        }
+        if (seen) {
+            diagnostic::emit(CompilerError::INVALID_STATEMENT_NODE, "duplicate method name");
+            continue;
         }
 
-        RegMark mark(m_current);
-        u8 key_reg = alloc_register();
-        emit(Fa_make_ABx(Fa_OpCode::LOAD_CONST, key_reg, intern_string(method->get_name()->get_value())), method->get_location());
+        auto [reg, chunk] = compile_method_closure(method);
+        if (chunk == nullptr)
+            continue;
 
-        u8 method_reg = compile_method_closure(method);
-        emit(Fa_make_ABC(Fa_OpCode::LIST_SET, class_reg, key_reg, method_reg), method->get_location());
+        if (method_name == "بداية")
+            vtable[Fa_ObjClass::INIT] = chunk;
+        else if (method_name == "عملية+")
+            vtable[Fa_ObjClass::ADD] = chunk;
+        else if (method_name == "عملية-")
+            vtable[Fa_ObjClass::SUB] = chunk;
+        else if (method_name == "عملية*")
+            vtable[Fa_ObjClass::MUL] = chunk;
+        else if (method_name == "عملية/")
+            vtable[Fa_ObjClass::DIV] = chunk;
+        else if (method_name == "عملية%" || method_name == "عملية٪")
+            vtable[Fa_ObjClass::MOD] = chunk;
+        else
+            vtable.push(chunk);
+
+        method_names.push(method_name);
     }
 
-    u16 name_idx = intern_string(class_name->get_value());
+    for (AST::Fa_Expr* field : fields) {
+        if (field->get_kind() != AST::Fa_Expr::Kind::NAME) {
+            diagnostic::emit(CompilerError::INVALID_ASSIGNMENT_TARGET, "field name must be a simple name");
+            continue;
+        }
+
+        auto* name = AS_NAME(field);
+        Fa_StringRef fname = name->get_value();
+
+        bool seen = false;
+        for (Fa_StringRef const& existing : field_names) {
+            if (existing == fname) {
+                seen = true;
+                break;
+            }
+        }
+        if (!seen)
+            field_names.push(fname);
+    }
+
+    Fa_ObjClass* class_obj = Fa_MAKE_OBJ_CLASS(class_name, field_names, method_names, vtable);
+    u16 klass_const = current_chunk()->add_constant(Fa_MAKE_OBJECT(class_obj));
+    u8 class_reg = alloc_register();
+    emit(Fa_make_ABx(Fa_OpCode::NEW_CLASS, class_reg, klass_const), loc);
+
+    u16 name_idx = intern_string(class_name);
     emit(Fa_make_ABx(Fa_OpCode::STORE_GLOBAL, class_reg, name_idx), loc);
-    declare_local(class_name->get_value(), class_reg);
+    declare_local(class_name, class_reg);
+
+    // Register descriptor for static call-site resolution later
+    ClassDesc desc;
+    desc.name = class_name;
+    desc.field_names = field_names;
+    desc.method_names = method_names;
+    for (size_t i = 0; i < field_names.size(); i++)
+        desc.field_map[field_names[i]] = static_cast<int>(i);
+    for (size_t i = 0; i < method_names.size(); i++)
+        desc.method_map[method_names[i]] = static_cast<int>(i);
+    m_class_registry[class_name] = std::move(desc);
 }
 
 Fa_ExprResult Compiler::compile_expr_i(AST::Fa_Expr* e)
@@ -936,11 +935,10 @@ Fa_ExprResult Compiler::compile_call_impl(AST::Fa_CallExpr* e, u8* dst, bool tai
         discharge(compile_expr_i(get->get_object()), receiver_reg, get->get_object()->get_location());
 
         u8 member_reg = alloc_register();
-        if (AST::Fa_NameExpr* member_name = as_simple_member_name(get->get_member())) {
+        if (AST::Fa_NameExpr* member_name = as_simple_member_name(get->get_member()))
             emit(Fa_make_ABx(Fa_OpCode::LOAD_CONST, member_reg, intern_string(member_name->get_value())), get->get_member()->get_location());
-        } else {
+        else
             discharge(compile_expr_i(get->get_member()), member_reg, get->get_member()->get_location());
-        }
 
         emit(Fa_make_ABC(Fa_OpCode::INDEX, fn_reg, receiver_reg, member_reg), loc);
         m_current->free_regs_to(receiver_reg + 1);
@@ -1217,7 +1215,10 @@ u8 Compiler::alloc_register()
     return reg;
 }
 
-void Compiler::declare_local(Fa_StringRef const& m_name, u8 m_reg) { m_current->locals.push({ m_name, m_current->scope_depth, m_reg }); }
+void Compiler::declare_local(Fa_StringRef const& m_name, u8 m_reg)
+{
+    m_current->locals.push({ m_name, m_current->scope_depth, m_reg });
+}
 
 LocalVar const* Compiler::lookup_local(Fa_StringRef const& m_name) const
 {
@@ -1334,6 +1335,18 @@ u32 Compiler::intern_string(Fa_StringRef const& str)
     u16 idx = chunk->add_constant(Fa_MAKE_OBJECT(obj));
     m_string_cache[key] = idx;
     return idx;
+}
+
+Compiler::ClassDesc const* Compiler::resolve_reciever_class(AST::Fa_Expr const* e) const
+{
+    using EK = AST::Fa_Expr::Kind;
+    EK e_kind = e->get_kind();
+    if (e_kind != EK::NAME)
+        return nullptr;
+    Fa_StringRef const name = AS_CONST_NAME(e)->get_value();
+    if (auto* d = m_class_registry.find_ptr(name))
+        return d;
+    return nullptr;
 }
 
 } // namespace fairuz::runtime

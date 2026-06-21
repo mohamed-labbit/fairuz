@@ -100,14 +100,14 @@ static void append_rendered_value(Fa_StringRef& out, Fa_Value v, bool quote_stri
     if (Fa_IS_CLASS(v)) {
         out += "<class ";
         Fa_ObjClass* klass = Fa_AS_CLASS(v);
-        out += klass->name ? klass->name->str : Fa_StringRef("?");
+        out += klass->name;
         out += '>';
         return;
     }
     if (Fa_IS_INSTANCE(v)) {
         out += '<';
         Fa_ObjInstance* instance = Fa_AS_INSTANCE(v);
-        out += (instance->kclass && instance->kclass->name) ? instance->kclass->name->str : Fa_StringRef("?");
+        out += instance->klass ? instance->klass->name : Fa_StringRef("?");
         out += " instance>";
         return;
     }
@@ -255,20 +255,15 @@ static void print_runtime_value(Fa_Value v, int depth = 0)
 
         case Fa_ObjType::CLASS: {
             auto klass = static_cast<Fa_ObjClass*>(obj);
-            std::cout << "<class ";
-            if (klass->name)
-                std::cout << klass->name->str;
-            else
-                std::cout << "?";
-            std::cout << '>';
+            std::cout << "<class " << klass->name << '>';
             return;
         }
 
         case Fa_ObjType::INSTANCE: {
             auto instance = static_cast<Fa_ObjInstance*>(obj);
             std::cout << '<';
-            if (instance->kclass && instance->kclass->name)
-                std::cout << instance->kclass->name->str;
+            if (instance->klass)
+                std::cout << instance->klass->name;
             else
                 std::cout << "?";
             std::cout << " instance>";
