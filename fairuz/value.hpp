@@ -401,18 +401,12 @@ inline Fa_TypeTag& operator|=(Fa_TypeTag& a, Fa_TypeTag b) noexcept { return a =
 
     if (Fa_IS_OBJECT(v)) {
         switch (Fa_AS_OBJECT(v)->type) {
-        case Fa_ObjType::STRING:
-            return Fa_TypeTag::STRING;
-        case Fa_ObjType::LIST:
-            return Fa_TypeTag::LIST;
-        case Fa_ObjType::DICT:
-            return Fa_TypeTag::DICT;
-        case Fa_ObjType::CLOSURE:
-            return Fa_TypeTag::CLOSURE;
-        case Fa_ObjType::FUNCTION:
-            return Fa_TypeTag::FUNCTION;
-        case Fa_ObjType::NATIVE:
-            return Fa_TypeTag::NATIVE;
+        case Fa_ObjType::STRING: return Fa_TypeTag::STRING;
+        case Fa_ObjType::LIST: return Fa_TypeTag::LIST;
+        case Fa_ObjType::DICT: return Fa_TypeTag::DICT;
+        case Fa_ObjType::CLOSURE: return Fa_TypeTag::CLOSURE;
+        case Fa_ObjType::FUNCTION: return Fa_TypeTag::FUNCTION;
+        case Fa_ObjType::NATIVE: return Fa_TypeTag::NATIVE;
         case Fa_ObjType::CLASS:
             return Fa_TypeTag::CLASS;
         case Fa_ObjType::INSTANCE:

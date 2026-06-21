@@ -244,28 +244,17 @@ static bool is_arab_digit(u32 const cp)
 static u8 arab_digit_to_canon(u32 const cp)
 {
     switch (cp) {
-    case u'٠':
-        return 0;
-    case u'١':
-        return 1;
-    case u'٢':
-        return 2;
-    case u'٣':
-        return 3;
-    case u'٤':
-        return 4;
-    case u'٥':
-        return 5;
-    case u'٦':
-        return 6;
-    case u'٧':
-        return 7;
-    case u'٨':
-        return 8;
-    case u'٩':
-        return 9;
-    default:
-        return 0xFF;
+    case u'٠': return 0;
+    case u'١': return 1;
+    case u'٢': return 2;
+    case u'٣': return 3;
+    case u'٤': return 4;
+    case u'٥': return 5;
+    case u'٦': return 6;
+    case u'٧': return 7;
+    case u'٨': return 8;
+    case u'٩': return 9;
+    default: return 0xFF;
     }
 }
 

@@ -68,51 +68,35 @@ std::optional<Fa_Value> _try_fold_binary(AST::Fa_BinaryExpr const* e)
     auto ri = Fa_IS_INTEGER(*R) ? Fa_AS_INTEGER(*R) : static_cast<i64>(Fa_AS_DOUBLE_ANY(*R));
 
     switch (op) {
-    case AST::Fa_BinaryOp::OP_ADD:
-        return both_ints ? Fa_MAKE_INTEGER(li + ri) : Fa_MAKE_REAL(ld + rd);
-    case AST::Fa_BinaryOp::OP_SUB:
-        return both_ints ? Fa_MAKE_INTEGER(li - ri) : Fa_MAKE_REAL(ld - rd);
-    case AST::Fa_BinaryOp::OP_MUL:
-        return both_ints ? Fa_MAKE_INTEGER(li * ri) : Fa_MAKE_REAL(ld * rd);
+    case AST::Fa_BinaryOp::OP_ADD: return both_ints ? Fa_MAKE_INTEGER(li + ri) : Fa_MAKE_REAL(ld + rd);
+    case AST::Fa_BinaryOp::OP_SUB: return both_ints ? Fa_MAKE_INTEGER(li - ri) : Fa_MAKE_REAL(ld - rd);
+    case AST::Fa_BinaryOp::OP_MUL: return both_ints ? Fa_MAKE_INTEGER(li * ri) : Fa_MAKE_REAL(ld * rd);
     case AST::Fa_BinaryOp::OP_DIV:
         if (rd == 0.0)
             return std::nullopt;
-
         return Fa_MAKE_REAL(ld / rd);
     case AST::Fa_BinaryOp::OP_MOD: {
         if (rd == 0.0)
             return std::nullopt;
-
         if (both_ints)
             return Fa_MAKE_INTEGER(li % ri);
-
         return Fa_MAKE_REAL(std::fmod(ld, rd));
     }
-    case AST::Fa_BinaryOp::OP_POW:
-        return Fa_MAKE_REAL(std::pow(ld, rd));
-    case AST::Fa_BinaryOp::OP_LT:
-        return Fa_MAKE_BOOL(ld < rd);
-    case AST::Fa_BinaryOp::OP_GT:
-        return Fa_MAKE_BOOL(ld > rd);
-    case AST::Fa_BinaryOp::OP_LTE:
-        return Fa_MAKE_BOOL(ld <= rd);
-    case AST::Fa_BinaryOp::OP_GTE:
-        return Fa_MAKE_BOOL(ld >= rd);
-    case AST::Fa_BinaryOp::OP_BITAND:
-        return both_ints ? Fa_MAKE_INTEGER(li & ri) : std::optional<Fa_Value> { };
-    case AST::Fa_BinaryOp::OP_BITOR:
-        return both_ints ? Fa_MAKE_INTEGER(li | ri) : std::optional<Fa_Value> { };
-    case AST::Fa_BinaryOp::OP_BITXOR:
-        return both_ints ? Fa_MAKE_INTEGER(li ^ ri) : std::optional<Fa_Value> { };
+    case AST::Fa_BinaryOp::OP_POW: return Fa_MAKE_REAL(std::pow(ld, rd));
+    case AST::Fa_BinaryOp::OP_LT: return Fa_MAKE_BOOL(ld < rd);
+    case AST::Fa_BinaryOp::OP_GT: return Fa_MAKE_BOOL(ld > rd);
+    case AST::Fa_BinaryOp::OP_LTE: return Fa_MAKE_BOOL(ld <= rd);
+    case AST::Fa_BinaryOp::OP_GTE: return Fa_MAKE_BOOL(ld >= rd);
+    case AST::Fa_BinaryOp::OP_BITAND: return both_ints ? Fa_MAKE_INTEGER(li & ri) : std::optional<Fa_Value> { };
+    case AST::Fa_BinaryOp::OP_BITOR: return both_ints ? Fa_MAKE_INTEGER(li | ri) : std::optional<Fa_Value> { };
+    case AST::Fa_BinaryOp::OP_BITXOR: return both_ints ? Fa_MAKE_INTEGER(li ^ ri) : std::optional<Fa_Value> { };
     case AST::Fa_BinaryOp::OP_LSHIFT:
         if (!both_ints || ri < 0 || ri >= 64)
             return std::nullopt;
-
         return Fa_MAKE_INTEGER(li << ri);
     case AST::Fa_BinaryOp::OP_RSHIFT:
         if (!both_ints || ri < 0 || ri >= 64)
             return std::nullopt;
-
         return Fa_MAKE_INTEGER(li >> ri);
     default:
         return std::nullopt;
@@ -175,14 +159,10 @@ std::optional<Fa_Value> try_fold_expr(AST::Fa_Expr const* e)
         return std::nullopt;
 
     switch (e->get_kind()) {
-    case AST::Fa_Expr::Kind::LITERAL:
-        return const_value(e);
-    case AST::Fa_Expr::Kind::UNARY:
-        return try_fold_unary(AS_CONST_UNARY(e));
-    case AST::Fa_Expr::Kind::BINARY:
-        return try_fold_binary(AS_CONST_BINARY(e));
-    default:
-        return std::nullopt;
+    case AST::Fa_Expr::Kind::LITERAL: return const_value(e);
+    case AST::Fa_Expr::Kind::UNARY: return try_fold_unary(AS_CONST_UNARY(e));
+    case AST::Fa_Expr::Kind::BINARY: return try_fold_binary(AS_CONST_BINARY(e));
+    default: return std::nullopt;
     }
 }
 

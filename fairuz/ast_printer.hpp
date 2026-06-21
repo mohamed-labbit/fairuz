@@ -20,58 +20,35 @@ private:
     Fa_StringRef const to_string(Fa_UnaryOp const op)
     {
         switch (op) {
-        case Fa_UnaryOp::OP_PLUS:
-            return "+";
-        case Fa_UnaryOp::OP_NEG:
-            return "-";
-        case Fa_UnaryOp::OP_BITNOT:
-            return "~";
-        case Fa_UnaryOp::OP_NOT:
-            return "ليس";
-        default:
-            return "";
+        case Fa_UnaryOp::OP_PLUS: return "+";
+        case Fa_UnaryOp::OP_NEG: return "-";
+        case Fa_UnaryOp::OP_BITNOT: return "~";
+        case Fa_UnaryOp::OP_NOT: return "ليس";
+        default: return "";
         }
     }
 
     Fa_StringRef const to_string(Fa_BinaryOp const op)
     {
         switch (op) {
-        case Fa_BinaryOp::OP_EQ:
-            return "=";
-        case Fa_BinaryOp::OP_ADD:
-            return "+";
-        case Fa_BinaryOp::OP_SUB:
-            return "-";
-        case Fa_BinaryOp::OP_MUL:
-            return "*";
-        case Fa_BinaryOp::OP_DIV:
-            return "/";
-        case Fa_BinaryOp::OP_MOD:
-            return "%";
-        case Fa_BinaryOp::OP_POW:
-            return "**";
-        case Fa_BinaryOp::OP_LT:
-            return "<";
-        case Fa_BinaryOp::OP_GT:
-            return ">";
-        case Fa_BinaryOp::OP_LTE:
-            return "<=";
-        case Fa_BinaryOp::OP_GTE:
-            return ">=";
-        case Fa_BinaryOp::OP_NEQ:
-            return "!=";
-        case Fa_BinaryOp::OP_BITAND:
-            return "&";
-        case Fa_BinaryOp::OP_BITOR:
-            return "|";
-        case Fa_BinaryOp::OP_BITXOR:
-            return "^";
-        case Fa_BinaryOp::OP_LSHIFT:
-            return "<<";
-        case Fa_BinaryOp::OP_RSHIFT:
-            return ">>";
-        default:
-            return "";
+        case Fa_BinaryOp::OP_EQ: return "=";
+        case Fa_BinaryOp::OP_ADD: return "+";
+        case Fa_BinaryOp::OP_SUB: return "-";
+        case Fa_BinaryOp::OP_MUL: return "*";
+        case Fa_BinaryOp::OP_DIV: return "/";
+        case Fa_BinaryOp::OP_MOD: return "%";
+        case Fa_BinaryOp::OP_POW: return "**";
+        case Fa_BinaryOp::OP_LT: return "<";
+        case Fa_BinaryOp::OP_GT: return ">";
+        case Fa_BinaryOp::OP_LTE: return "<=";
+        case Fa_BinaryOp::OP_GTE: return ">=";
+        case Fa_BinaryOp::OP_NEQ: return "!=";
+        case Fa_BinaryOp::OP_BITAND: return "&";
+        case Fa_BinaryOp::OP_BITOR: return "|";
+        case Fa_BinaryOp::OP_BITXOR: return "^";
+        case Fa_BinaryOp::OP_LSHIFT: return "<<";
+        case Fa_BinaryOp::OP_RSHIFT: return ">>";
+        default: return "";
         }
     }
 

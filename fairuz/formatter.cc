@@ -32,62 +32,37 @@ enum Precedence : int {
 Fa_StringRef binary_op_string(AST::Fa_BinaryOp op)
 {
     switch (op) {
-    case AST::Fa_BinaryOp::OP_ADD:
-        return "+";
-    case AST::Fa_BinaryOp::OP_SUB:
-        return "-";
-    case AST::Fa_BinaryOp::OP_MUL:
-        return "*";
-    case AST::Fa_BinaryOp::OP_DIV:
-        return "/";
-    case AST::Fa_BinaryOp::OP_MOD:
-        return "%";
-    case AST::Fa_BinaryOp::OP_POW:
-        return "**";
-    case AST::Fa_BinaryOp::OP_EQ:
-        return "=";
-    case AST::Fa_BinaryOp::OP_NEQ:
-        return "!=";
-    case AST::Fa_BinaryOp::OP_LT:
-        return "<";
-    case AST::Fa_BinaryOp::OP_GT:
-        return ">";
-    case AST::Fa_BinaryOp::OP_LTE:
-        return "<=";
-    case AST::Fa_BinaryOp::OP_GTE:
-        return ">=";
-    case AST::Fa_BinaryOp::OP_BITAND:
-        return "&";
-    case AST::Fa_BinaryOp::OP_BITOR:
-        return "|";
-    case AST::Fa_BinaryOp::OP_BITXOR:
-        return "^";
-    case AST::Fa_BinaryOp::OP_LSHIFT:
-        return "<<";
-    case AST::Fa_BinaryOp::OP_RSHIFT:
-        return ">>";
-    case AST::Fa_BinaryOp::OP_AND:
-        return "و";
-    case AST::Fa_BinaryOp::OP_OR:
-        return "او";
-    default:
-        return "";
+    case AST::Fa_BinaryOp::OP_ADD: return "+";
+    case AST::Fa_BinaryOp::OP_SUB: return "-";
+    case AST::Fa_BinaryOp::OP_MUL: return "*";
+    case AST::Fa_BinaryOp::OP_DIV: return "/";
+    case AST::Fa_BinaryOp::OP_MOD: return "%";
+    case AST::Fa_BinaryOp::OP_POW: return "**";
+    case AST::Fa_BinaryOp::OP_EQ: return "=";
+    case AST::Fa_BinaryOp::OP_NEQ: return "!=";
+    case AST::Fa_BinaryOp::OP_LT: return "<";
+    case AST::Fa_BinaryOp::OP_GT: return ">";
+    case AST::Fa_BinaryOp::OP_LTE: return "<=";
+    case AST::Fa_BinaryOp::OP_GTE: return ">=";
+    case AST::Fa_BinaryOp::OP_BITAND: return "&";
+    case AST::Fa_BinaryOp::OP_BITOR: return "|";
+    case AST::Fa_BinaryOp::OP_BITXOR: return "^";
+    case AST::Fa_BinaryOp::OP_LSHIFT: return "<<";
+    case AST::Fa_BinaryOp::OP_RSHIFT: return ">>";
+    case AST::Fa_BinaryOp::OP_AND: return "و";
+    case AST::Fa_BinaryOp::OP_OR: return "او";
+    default: return "";
     }
 }
 
 Fa_StringRef unary_op_string(AST::Fa_UnaryOp op)
 {
     switch (op) {
-    case AST::Fa_UnaryOp::OP_PLUS:
-        return "+";
-    case AST::Fa_UnaryOp::OP_NEG:
-        return "-";
-    case AST::Fa_UnaryOp::OP_BITNOT:
-        return "~";
-    case AST::Fa_UnaryOp::OP_NOT:
-        return "ليس";
-    default:
-        return "";
+    case AST::Fa_UnaryOp::OP_PLUS: return "+";
+    case AST::Fa_UnaryOp::OP_NEG: return "-";
+    case AST::Fa_UnaryOp::OP_BITNOT: return "~";
+    case AST::Fa_UnaryOp::OP_NOT: return "ليس";
+    default: return "";
     }
 }
 
@@ -127,24 +102,12 @@ std::string escape_string_literal(Fa_StringRef value)
     for (size_t i = 0; i < value.len(); i += 1) {
         char ch = value[i];
         switch (ch) {
-        case '\\':
-            out += "\\\\";
-            break;
-        case '"':
-            out += "\\\"";
-            break;
-        case '\n':
-            out += "\\n";
-            break;
-        case '\r':
-            out += "\\r";
-            break;
-        case '\t':
-            out += "\\t";
-            break;
-        default:
-            out.push_back(ch);
-            break;
+        case '\\': out += "\\\\"; break;
+        case '"': out += "\\\""; break;
+        case '\n': out += "\\n"; break;
+        case '\r': out += "\\r"; break;
+        case '\t': out += "\\t"; break;
+        default: out.push_back(ch); break;
         }
     }
 
@@ -396,21 +359,11 @@ void Fa_Formatter::format_expression(AST::Fa_Expr const* expr, int parent_preced
     case AST::Fa_Expr::Kind::LITERAL: {
         auto const* literal_expr = AS_CONST_LITERAL(expr);
         switch (literal_expr->get_type()) {
-        case AST::Fa_LiteralExpr::Type::BOOLEAN:
-            write(literal_expr->get_bool() ? "صحيح" : "خطا");
-            break;
-        case AST::Fa_LiteralExpr::Type::FLOAT:
-            write(Fa_StringRef(format_float_literal(literal_expr->get_float()).c_str()));
-            break;
-        case AST::Fa_LiteralExpr::Type::INTEGER:
-            write(Fa_StringRef(std::to_string(literal_expr->get_int()).c_str()));
-            break;
-        case AST::Fa_LiteralExpr::Type::NIL:
-            write("عدم");
-            break;
-        case AST::Fa_LiteralExpr::Type::STRING:
-            write(Fa_StringRef(escape_string_literal(literal_expr->get_str()).c_str()));
-            break;
+        case AST::Fa_LiteralExpr::Type::BOOLEAN: write(literal_expr->get_bool() ? "صحيح" : "خطا"); break;
+        case AST::Fa_LiteralExpr::Type::FLOAT: write(Fa_StringRef(format_float_literal(literal_expr->get_float()).c_str())); break;
+        case AST::Fa_LiteralExpr::Type::INTEGER: write(Fa_StringRef(std::to_string(literal_expr->get_int()).c_str())); break;
+        case AST::Fa_LiteralExpr::Type::NIL: write("عدم"); break;
+        case AST::Fa_LiteralExpr::Type::STRING: write(Fa_StringRef(escape_string_literal(literal_expr->get_str()).c_str())); break;
         }
         break;
     }

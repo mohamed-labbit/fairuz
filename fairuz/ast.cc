@@ -44,16 +44,11 @@ bool Fa_LiteralExpr::equals(Fa_Expr const* other) const
         return false;
 
     switch (m_type) {
-    case Type::INTEGER:
-        return int_value == lit->int_value;
-    case Type::FLOAT:
-        return float_value == lit->float_value;
-    case Type::BOOLEAN:
-        return bool_value == lit->bool_value;
-    case Type::STRING:
-        return str_value == lit->str_value;
-    case Type::NIL:
-        return true; // two nil objects are always equal
+    case Type::INTEGER: return int_value == lit->int_value;
+    case Type::FLOAT: return float_value == lit->float_value;
+    case Type::BOOLEAN: return bool_value == lit->bool_value;
+    case Type::STRING: return str_value == lit->str_value;
+    case Type::NIL: return true; // two nil objects are always equal
     }
 
     return false;
@@ -62,18 +57,12 @@ bool Fa_LiteralExpr::equals(Fa_Expr const* other) const
 Fa_LiteralExpr* Fa_LiteralExpr::clone() const
 {
     switch (m_type) {
-    case Type::INTEGER:
-        return Fa_make_literal_int(int_value, m_loc);
-    case Type::FLOAT:
-        return Fa_make_literal_float(float_value, m_loc);
-    case Type::BOOLEAN:
-        return Fa_make_literal_bool(bool_value, m_loc);
-    case Type::STRING:
-        return Fa_make_literal_string(str_value, m_loc);
-    case Type::NIL:
-        return Fa_make_literal_nil(m_loc);
-    default:
-        return nullptr; // should never happen
+    case Type::INTEGER: return Fa_make_literal_int(int_value, m_loc);
+    case Type::FLOAT: return Fa_make_literal_float(float_value, m_loc);
+    case Type::BOOLEAN: return Fa_make_literal_bool(bool_value, m_loc);
+    case Type::STRING: return Fa_make_literal_string(str_value, m_loc);
+    case Type::NIL: return Fa_make_literal_nil(m_loc);
+    default: return nullptr; // should never happen
     }
 }
 

@@ -181,87 +181,50 @@ int Fa_Token::get_precedence(bool is_unary) const
     case Fa_TokenType::OP_LT:  // >
     case Fa_TokenType::OP_LTE: // >=
         return PREC_CMP;
-    case Fa_TokenType::OP_EQ:  // ==
-    case Fa_TokenType::OP_NEQ: // !=
-        return PREC_EQ;
-    case Fa_TokenType::OP_BITAND: // &
-        return PREC_BITAND;
-    case Fa_TokenType::OP_BITXOR: // ^
-        return PREC_BITXOR;
-    case Fa_TokenType::OP_BITOR: // |
-        return PREC_BITOR;
-    case Fa_TokenType::OP_AND: // and
-        return PREC_AND;
-    case Fa_TokenType::OP_OR: // or
-        return PREC_OR;
-    default:
-        return PREC_NONE;
+    case Fa_TokenType::OP_EQ:                         // ==
+    case Fa_TokenType::OP_NEQ: return PREC_EQ;        // !=
+    case Fa_TokenType::OP_BITAND: return PREC_BITAND; // &
+    case Fa_TokenType::OP_BITXOR: return PREC_BITXOR; // ^
+    case Fa_TokenType::OP_BITOR: return PREC_BITOR;   // |
+    case Fa_TokenType::OP_AND: return PREC_AND;       // and
+    case Fa_TokenType::OP_OR: return PREC_OR;         // or
+    default: return PREC_NONE;
     }
 }
 
 Fa_StringRef const Fa_Token::to_string(Fa_TokenType const tt)
 {
     switch (tt) {
-    case Fa_TokenType::OP_EQ:
-        return "=";
-    case Fa_TokenType::OP_ASSIGN:
-        return ":=";
-    case Fa_TokenType::OP_PLUS:
-        return "+";
-    case Fa_TokenType::OP_MINUS:
-        return "-";
-    case Fa_TokenType::OP_STAR:
-        return "*";
-    case Fa_TokenType::OP_SLASH:
-        return "/";
-    case Fa_TokenType::OP_PERCENT:
-        return "%";
-    case Fa_TokenType::OP_POWER:
-        return "**";
-    case Fa_TokenType::OP_LT:
-        return "<";
-    case Fa_TokenType::OP_GT:
-        return ">";
-    case Fa_TokenType::OP_LTE:
-        return "<=";
-    case Fa_TokenType::OP_GTE:
-        return ">=";
-    case Fa_TokenType::OP_NEQ:
-        return "!=";
-    case Fa_TokenType::OP_BITAND:
-        return "&";
-    case Fa_TokenType::OP_BITOR:
-        return "|";
-    case Fa_TokenType::OP_BITXOR:
-        return "^";
-    case Fa_TokenType::OP_BITNOT:
-        return "~";
-    case Fa_TokenType::OP_LSHIFT:
-        return "<<";
-    case Fa_TokenType::OP_RSHIFT:
-        return ">>";
-    case Fa_TokenType::OP_PLUSEQ:
-        return "+=";
-    case Fa_TokenType::OP_MINUSEQ:
-        return "-=";
-    case Fa_TokenType::OP_STAREQ:
-        return "*=";
-    case Fa_TokenType::OP_SLASHEQ:
-        return "/=";
-    case Fa_TokenType::OP_PERCENTEQ:
-        return "%=";
-    case Fa_TokenType::OP_ANDEQ:
-        return "&=";
-    case Fa_TokenType::OP_OREQ:
-        return "|=";
-    case Fa_TokenType::OP_XOREQ:
-        return "^=";
-    case Fa_TokenType::OP_LSHIFTEQ:
-        return "<<=";
-    case Fa_TokenType::OP_RSHIFTEQ:
-        return ">>=";
-    default:
-        return "";
+    case Fa_TokenType::OP_EQ: return "=";
+    case Fa_TokenType::OP_ASSIGN: return ":=";
+    case Fa_TokenType::OP_PLUS: return "+";
+    case Fa_TokenType::OP_MINUS: return "-";
+    case Fa_TokenType::OP_STAR: return "*";
+    case Fa_TokenType::OP_SLASH: return "/";
+    case Fa_TokenType::OP_PERCENT: return "%";
+    case Fa_TokenType::OP_POWER: return "**";
+    case Fa_TokenType::OP_LT: return "<";
+    case Fa_TokenType::OP_GT: return ">";
+    case Fa_TokenType::OP_LTE: return "<=";
+    case Fa_TokenType::OP_GTE: return ">=";
+    case Fa_TokenType::OP_NEQ: return "!=";
+    case Fa_TokenType::OP_BITAND: return "&";
+    case Fa_TokenType::OP_BITOR: return "|";
+    case Fa_TokenType::OP_BITXOR: return "^";
+    case Fa_TokenType::OP_BITNOT: return "~";
+    case Fa_TokenType::OP_LSHIFT: return "<<";
+    case Fa_TokenType::OP_RSHIFT: return ">>";
+    case Fa_TokenType::OP_PLUSEQ: return "+=";
+    case Fa_TokenType::OP_MINUSEQ: return "-=";
+    case Fa_TokenType::OP_STAREQ: return "*=";
+    case Fa_TokenType::OP_SLASHEQ: return "/=";
+    case Fa_TokenType::OP_PERCENTEQ: return "%=";
+    case Fa_TokenType::OP_ANDEQ: return "&=";
+    case Fa_TokenType::OP_OREQ: return "|=";
+    case Fa_TokenType::OP_XOREQ: return "^=";
+    case Fa_TokenType::OP_LSHIFTEQ: return "<<=";
+    case Fa_TokenType::OP_RSHIFTEQ: return ">>=";
+    default: return "";
     }
 }
 

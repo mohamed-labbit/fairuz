@@ -1099,30 +1099,6 @@ TEST(VMICProfile, SubUpdatesSlot)
     EXPECT_GE(r.chunk_->ic_slots[0].hit_count, 1u);
 }
 
-TEST(VMICProfile, ICCallUpdatesSlot)
-{
-    VMRunner r;
-    CB b;
-    b.regs(3)
-        .slot()
-        .ABC(Fa_OpCode::LIST_NEW, 0, 2, 0)
-        .load_int(2, 1)
-        .ABC(Fa_OpCode::LIST_APPEND, 0, 2, 0)
-        .load_int(2, 2)
-        .ABC(Fa_OpCode::LIST_APPEND, 0, 2, 0)
-        .ldg(1, "len")
-        .mov(2, 0)
-        .ABC(Fa_OpCode::IC_CALL, 1, 1, 0)
-        .ret(1);
-    if (test_config::dump_bytecode)
-        b.dump();
-    r.run(b);
-    auto const& s = r.chunk_->ic_slots[0];
-    EXPECT_TRUE(has_tag(Fa_TypeTag(s.seen_lhs), Fa_TypeTag::NATIVE));
-    EXPECT_TRUE(has_tag(Fa_TypeTag(s.seen_ret), Fa_TypeTag::INT));
-    EXPECT_GE(s.hit_count, 1u);
-}
-
 TEST(VMICProfile, SlotAccumulatesAcrossLoopIterations)
 {
     VMRunner r;

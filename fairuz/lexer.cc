@@ -386,24 +386,12 @@ tok::Fa_Token const* Fa_Lexer::lex_token()
 
             tok::Fa_TokenType tt;
             switch (current) {
-            case '{':
-                tt = tok::Fa_TokenType::LBRACE;
-                break;
-            case '}':
-                tt = tok::Fa_TokenType::RBRACE;
-                break;
-            case '[':
-                tt = tok::Fa_TokenType::LBRACKET;
-                break;
-            case ']':
-                tt = tok::Fa_TokenType::RBRACKET;
-                break;
-            case '(':
-                tt = tok::Fa_TokenType::LPAREN;
-                break;
-            case ')':
-                tt = tok::Fa_TokenType::RPAREN;
-                break;
+            case '{': tt = tok::Fa_TokenType::LBRACE; break;
+            case '}': tt = tok::Fa_TokenType::RBRACE; break;
+            case '[': tt = tok::Fa_TokenType::LBRACKET; break;
+            case ']': tt = tok::Fa_TokenType::RBRACKET; break;
+            case '(': tt = tok::Fa_TokenType::LPAREN; break;
+            case ')': tt = tok::Fa_TokenType::RPAREN; break;
             case ':': {
                 if (m_source_manager.current_char() == '=') {
                     m_source_manager.consume_char();

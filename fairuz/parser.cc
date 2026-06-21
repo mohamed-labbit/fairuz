@@ -45,6 +45,28 @@ using SemaCode = diagnostic::errc::sema::Code;
 
 static constexpr char kClassInstanceName[] = "__class$instance";
 
+// Maps OP_PLUSEQ/OP_MINUSEQ/OP_STAREQ/OP_SLASHEQ/OP_PERCENTEQ -> binary op,
+// without relying on the tokens being contiguous in the TokType enum.
+// This replaces the previous fragile pointer-arithmetic indexing used in
+// both parse_assignment_expr and parse_class_method.
+static AST::Fa_BinaryOp augmented_assign_to_binary_op(TokType t)
+{
+    switch (t) {
+    case TokType::OP_PLUSEQ: return AST::Fa_BinaryOp::OP_ADD;
+    case TokType::OP_MINUSEQ: return AST::Fa_BinaryOp::OP_SUB;
+    case TokType::OP_STAREQ: return AST::Fa_BinaryOp::OP_MUL;
+    case TokType::OP_SLASHEQ: return AST::Fa_BinaryOp::OP_DIV;
+    case TokType::OP_PERCENTEQ: return AST::Fa_BinaryOp::OP_MOD;
+    default: return AST::Fa_BinaryOp::INVALID;
+    }
+}
+
+static bool is_augmented_assign_tok(TokenPtr t)
+{
+    return t->is(TokType::OP_PLUSEQ) || t->is(TokType::OP_MINUSEQ) || t->is(TokType::OP_STAREQ)
+        || t->is(TokType::OP_SLASHEQ) || t->is(TokType::OP_PERCENTEQ);
+}
+
 static bool stmt_definitely_returns(AST::Fa_Stmt const* stmt)
 {
     if (stmt == nullptr)
@@ -189,6 +211,13 @@ Fa_Type Fa_SemanticAnalyzer::infer_type(ExprPtr expr)
             return Fa_Type::STRING;
         if (bin->get_operator() == AST::Fa_BinaryOp::OP_AND || bin->get_operator() == AST::Fa_BinaryOp::OP_OR)
             return Fa_Type::BOOLEAN;
+
+        // Operator overloading: if either side is a known instance type and
+        // the operator isn't handled above, we can't statically know the
+        // overload's return type without resolving the class's method —
+        // fall through to UNKNOWN rather than misclassifying it.
+        if (left_type == Fa_Type::INSTANCE || right_type == Fa_Type::INSTANCE)
+            return Fa_Type::UNKNOWN;
     } break;
 
     case AST::Fa_Expr::Kind::INDEX: {
@@ -205,20 +234,46 @@ Fa_Type Fa_SemanticAnalyzer::infer_type(ExprPtr expr)
         case Fa_Type::STRING:
             return Fa_Type::STRING;
         case Fa_Type::DICT: {
-            auto dict_expr = AS_CONST_DICT(expr);
+            // Guard: only treat this as a dict-literal lookup if the
+            // object expression is actually a dict literal. Previously
+            // this unconditionally cast `expr` (the INDEX node itself)
+            // to a dict-literal node, which is wrong whenever the
+            // container is a NAME or other expression typed DICT
+            // (e.g. a variable holding a dict) rather than a literal.
+            if (index_expr->get_object()->get_kind() != AST::Fa_Expr::Kind::DICT)
+                return Fa_Type::ANY;
+
+            auto dict_expr = AS_CONST_DICT(index_expr->get_object());
             if (dict_expr->get_content().empty())
                 return Fa_Type::ANY;
 
             for (auto const& [k, v] : dict_expr->get_content()) {
-                if (k->equals(index_expr))
+                if (k->equals(index_expr->get_index()))
                     return infer_type(v);
             }
 
             return Fa_Type::ANY;
         }
+        case Fa_Type::INSTANCE:
+            // Field access on an instance via index-form ([] or legacy
+            // desugaring) — without resolving the class's field table
+            // here, the safe answer is UNKNOWN rather than guessing.
+            return Fa_Type::UNKNOWN;
         default:
             return Fa_Type::UNKNOWN;
         }
+    }
+
+    case AST::Fa_Expr::Kind::GET: {
+        auto get_expr = AS_CONST_GET_EXPR(expr);
+        Fa_Type object_type = infer_type(get_expr->get_object());
+        if (object_type == Fa_Type::INSTANCE) {
+            // Resolving the actual field/method type requires consulting
+            // the class registry (compiler-side), which sema doesn't have
+            // access to. UNKNOWN is the honest answer here, not a guess.
+            return Fa_Type::UNKNOWN;
+        }
+        return Fa_Type::UNKNOWN;
     }
 
     case AST::Fa_Expr::Kind::UNARY:
@@ -227,12 +282,9 @@ Fa_Type Fa_SemanticAnalyzer::infer_type(ExprPtr expr)
         return infer_type(AS_CONST_ASSIGNMENT_EXPR(expr)->get_value());
 
     // terminals
-    case AST::Fa_Expr::Kind::LIST:
-        return Fa_Type::LIST;
-    case AST::Fa_Expr::Kind::CALL:
-        return Fa_Type::ANY;
-    case AST::Fa_Expr::Kind::DICT:
-        return Fa_Type::DICT;
+    case AST::Fa_Expr::Kind::LIST: return Fa_Type::LIST;
+    case AST::Fa_Expr::Kind::CALL: return Fa_Type::ANY;
+    case AST::Fa_Expr::Kind::DICT: return Fa_Type::DICT;
 
     default:
         return Fa_Type::UNKNOWN;
@@ -284,11 +336,18 @@ void Fa_SemanticAnalyzer::analyze_expr(ExprPtr expr)
         Fa_Type left_type = infer_type(bin->get_left());
         Fa_Type right_type = infer_type(bin->get_right());
 
-        if (left_type != right_type && left_type != Fa_Type::UNKNOWN && right_type != Fa_Type::UNKNOWN
-            && left_type != Fa_Type::ANY && right_type != Fa_Type::ANY)
-            report_issue(Issue::Severity::ERROR, SemaCode::TYPE_MISMATCH, "Type mismatch in binary Fa_Expression", expr->get_location(), "Left and right operands must have same type");
+        // Skip the strict type-match check entirely when either side is an
+        // instance: operator overloading means a Vector + Vector or
+        // Vector + int may be perfectly valid even though sema can't
+        // verify it without resolving the class's overload table.
+        bool either_is_instance = (left_type == Fa_Type::INSTANCE || right_type == Fa_Type::INSTANCE);
 
-        if (left_type == Fa_Type::STRING || right_type == Fa_Type::STRING) {
+        if (!either_is_instance && left_type != right_type && left_type != Fa_Type::UNKNOWN && right_type != Fa_Type::UNKNOWN
+            && left_type != Fa_Type::ANY && right_type != Fa_Type::ANY)
+            report_issue(Issue::Severity::ERROR, SemaCode::TYPE_MISMATCH, "Type mismatch in binary Fa_Expression",
+                expr->get_location(), "Left and right operands must have same type");
+
+        if (!either_is_instance && (left_type == Fa_Type::STRING || right_type == Fa_Type::STRING)) {
             AST::Fa_BinaryOp op = bin->get_operator();
             if (op != AST::Fa_BinaryOp::OP_ADD && op != AST::Fa_BinaryOp::OP_EQ && op != AST::Fa_BinaryOp::OP_NEQ && op != AST::Fa_BinaryOp::OP_LT
                 && op != AST::Fa_BinaryOp::OP_LTE && op != AST::Fa_BinaryOp::OP_GT && op != AST::Fa_BinaryOp::OP_GTE)
@@ -314,23 +373,22 @@ void Fa_SemanticAnalyzer::analyze_expr(ExprPtr expr)
         for (ExprPtr arg : call->get_args())
             analyze_expr(arg);
 
-        if (call->get_callee()->get_kind() == AST::Fa_Expr::Kind::NAME) {
-            auto name = AS_CONST_NAME(call->get_callee());
-
-            if (Fa_SymbolTable::Symbol* sym = m_current_scope->lookup(name->get_value())) {
-                if (sym->symbol_type != Fa_SymbolTable::SymbolType::FUNCTION)
-                    report_issue(Issue::Severity::ERROR, SemaCode::NOT_CALLABLE, "'" + name->get_value() + "' is not callable", expr->get_location());
-            }
-        }
-
+        // Method calls (obj.method(...)) have a GET callee, not a NAME
+        // callee — the "is it callable / is it defined" checks below only
+        // apply to bare-name calls. Method-call validity is the class
+        // registry's job at compile time, not sema's, since sema has no
+        // visibility into class member tables.
         if (call->get_callee()->get_kind() == AST::Fa_Expr::Kind::NAME) {
             auto name = AS_CONST_NAME(call->get_callee());
             Fa_SymbolTable::Symbol* sym = m_current_scope->lookup(name->get_value());
 
             if (sym == nullptr)
                 report_issue(Issue::Severity::ERROR, SemaCode::UNDEFINED_FUNCTION, "Undefined function: " + name->get_value(), expr->get_location());
-            else if (sym->symbol_type != Fa_SymbolTable::SymbolType::FUNCTION)
+            else if (sym->symbol_type != Fa_SymbolTable::SymbolType::FUNCTION
+                && sym->symbol_type != Fa_SymbolTable::SymbolType::CLASS) // calling a class constructs an instance
                 report_issue(Issue::Severity::ERROR, SemaCode::NOT_CALLABLE, "'" + name->get_value() + "' is not callable", expr->get_location());
+        } else if (call->get_callee()->get_kind() == AST::Fa_Expr::Kind::GET) {
+            analyze_expr(call->get_callee());
         }
     } break;
 
@@ -344,6 +402,14 @@ void Fa_SemanticAnalyzer::analyze_expr(ExprPtr expr)
         auto idx = AS_CONST_INDEX(expr);
         analyze_expr(idx->get_object());
         analyze_expr(idx->get_index());
+    } break;
+
+    case AST::Fa_Expr::Kind::GET: {
+        auto get_expr = AS_CONST_GET_EXPR(expr);
+        analyze_expr(get_expr->get_object());
+        // Member name itself is not a variable reference — don't analyze
+        // it as a NAME lookup (it would otherwise report a false
+        // "undefined variable" for the member identifier).
     } break;
 
     case AST::Fa_Expr::Kind::DICT: {
@@ -364,6 +430,13 @@ void Fa_SemanticAnalyzer::analyze_expr(ExprPtr expr)
 
         if (target->get_kind() == AST::Fa_Expr::Kind::INDEX) {
             analyze_expr(target);
+            break;
+        }
+
+        if (target->get_kind() == AST::Fa_Expr::Kind::GET) {
+            // obj.field = value — validate the object side, but the
+            // member name is not itself a variable to resolve.
+            analyze_expr(AS_GET_EXPR(target)->get_object());
             break;
         }
 
@@ -431,7 +504,8 @@ void Fa_SemanticAnalyzer::analyze_stmt(StmtPtr stmt)
         StmtPtr else_block = if_stmt->get_else();
 
         if (if_stmt->get_condition()->get_kind() == AST::Fa_Expr::Kind::LITERAL)
-            report_issue(Issue::Severity::WARNING, SemaCode::CONSTANT_CONDITION, "Condition is always constant", stmt->get_location(), "Consider removing if statement");
+            report_issue(Issue::Severity::WARNING, SemaCode::CONSTANT_CONDITION, "Condition is always constant",
+                stmt->get_location(), "Consider removing if statement");
 
         if (then_block != nullptr)
             analyze_stmt(then_block);
@@ -528,17 +602,41 @@ void Fa_SemanticAnalyzer::analyze_stmt(StmtPtr stmt)
             m_current_scope->define(class_name->get_value(), class_sym);
         }
 
+        // Register fields as symbols within a dedicated class scope so
+        // they're at least visible to lookups against a class-level table,
+        // even though field VALIDATION against specific instances still
+        // requires the compiler's class registry (sema has no notion of
+        // "this NAME refers to an instance of class X" — that's tracked
+        // compiler-side). This at minimum stops fields from being
+        // silently invisible to any tooling that walks the symbol table.
+        Fa_SymbolTable* class_scope = m_current_scope->create_child();
+        for (ExprPtr member : class_def->get_members()) {
+            auto const* member_name = dynamic_cast<AST::Fa_NameExpr const*>(member);
+            if (member_name == nullptr)
+                continue;
+
+            Fa_SymbolTable::Symbol field_sym;
+            field_sym.symbol_type = Fa_SymbolTable::SymbolType::VARIABLE;
+            field_sym.data_type = Fa_Type::ANY;
+            field_sym.definition_loc = stmt->get_location();
+            class_scope->define(member_name->get_value(), field_sym);
+        }
+
         for (StmtPtr method_stmt : class_def->get_methods()) {
             auto const* method = dynamic_cast<AST::Fa_FunctionDef const*>(method_stmt);
             if (method == nullptr)
                 continue;
 
             Fa_SymbolTable* previous = m_current_scope;
-            m_current_scope = m_current_scope->create_child();
+            m_current_scope = class_scope->create_child();
 
+            // `self` is now a real instance, not a dict — tag it INSTANCE
+            // so infer_type's GET/INDEX-on-instance branches engage
+            // correctly instead of misinterpreting field access as a
+            // dict-literal lookup.
             Fa_SymbolTable::Symbol instance_sym;
             instance_sym.symbol_type = Fa_SymbolTable::SymbolType::VARIABLE;
-            instance_sym.data_type = Fa_Type::DICT;
+            instance_sym.data_type = Fa_Type::INSTANCE;
             m_current_scope->define(kClassInstanceName, instance_sym);
 
             for (AST::Fa_Expr const* const& param : method->get_parameters()) {
@@ -622,15 +720,9 @@ void Fa_SemanticAnalyzer::analyze(Fa_Array<StmtPtr> const& stmts)
     for (Issue const& issue : m_issues) {
         diagnostic::Severity sev = diagnostic::Severity::NOTE;
         switch (issue.severity) {
-        case Issue::Severity::ERROR:
-            sev = diagnostic::Severity::ERROR;
-            break;
-        case Issue::Severity::WARNING:
-            sev = diagnostic::Severity::WARNING;
-            break;
-        case Issue::Severity::INFO:
-            sev = diagnostic::Severity::NOTE;
-            break;
+        case Issue::Severity::ERROR: sev = diagnostic::Severity::ERROR; break;
+        case Issue::Severity::WARNING: sev = diagnostic::Severity::WARNING; break;
+        case Issue::Severity::INFO: sev = diagnostic::Severity::NOTE; break;
         }
 
         diagnostic::report(sev, issue.loc, issue.code);
@@ -654,15 +746,9 @@ void Fa_SemanticAnalyzer::print_report() const
     for (Fa_SemanticAnalyzer::Issue const& issue : m_issues) {
         Fa_StringRef sev_str;
         switch (issue.severity) {
-        case Issue::Severity::ERROR:
-            sev_str = "ERROR";
-            break;
-        case Issue::Severity::WARNING:
-            sev_str = "WARNING";
-            break;
-        case Issue::Severity::INFO:
-            sev_str = "INFO";
-            break;
+        case Issue::Severity::ERROR: sev_str = "ERROR"; break;
+        case Issue::Severity::WARNING: sev_str = "WARNING"; break;
+        case Issue::Severity::INFO: sev_str = "INFO"; break;
         }
 
         std::cout << "[" << sev_str << "] Line " << issue.loc.line << ": " << issue.message << "\n";
@@ -677,62 +763,37 @@ void Fa_SemanticAnalyzer::print_report() const
 AST::Fa_BinaryOp to_binary_op(TokType const op)
 {
     switch (op) {
-    case TokType::OP_PLUS:
-        return AST::Fa_BinaryOp::OP_ADD;
-    case TokType::OP_MINUS:
-        return AST::Fa_BinaryOp::OP_SUB;
-    case TokType::OP_STAR:
-        return AST::Fa_BinaryOp::OP_MUL;
-    case TokType::OP_SLASH:
-        return AST::Fa_BinaryOp::OP_DIV;
-    case TokType::OP_PERCENT:
-        return AST::Fa_BinaryOp::OP_MOD;
-    case TokType::OP_POWER:
-        return AST::Fa_BinaryOp::OP_POW;
-    case TokType::OP_EQ:
-        return AST::Fa_BinaryOp::OP_EQ;
-    case TokType::OP_NEQ:
-        return AST::Fa_BinaryOp::OP_NEQ;
-    case TokType::OP_LT:
-        return AST::Fa_BinaryOp::OP_LT;
-    case TokType::OP_GT:
-        return AST::Fa_BinaryOp::OP_GT;
-    case TokType::OP_LTE:
-        return AST::Fa_BinaryOp::OP_LTE;
-    case TokType::OP_GTE:
-        return AST::Fa_BinaryOp::OP_GTE;
-    case TokType::OP_BITAND:
-        return AST::Fa_BinaryOp::OP_BITAND;
-    case TokType::OP_BITOR:
-        return AST::Fa_BinaryOp::OP_BITOR;
-    case TokType::OP_BITXOR:
-        return AST::Fa_BinaryOp::OP_BITXOR;
-    case TokType::OP_LSHIFT:
-        return AST::Fa_BinaryOp::OP_LSHIFT;
-    case TokType::OP_RSHIFT:
-        return AST::Fa_BinaryOp::OP_RSHIFT;
-    case TokType::OP_AND:
-        return AST::Fa_BinaryOp::OP_AND;
-    case TokType::OP_OR:
-        return AST::Fa_BinaryOp::OP_OR;
-    default:
-        return AST::Fa_BinaryOp::INVALID;
+    case TokType::OP_PLUS: return AST::Fa_BinaryOp::OP_ADD;
+    case TokType::OP_MINUS: return AST::Fa_BinaryOp::OP_SUB;
+    case TokType::OP_STAR: return AST::Fa_BinaryOp::OP_MUL;
+    case TokType::OP_SLASH: return AST::Fa_BinaryOp::OP_DIV;
+    case TokType::OP_PERCENT: return AST::Fa_BinaryOp::OP_MOD;
+    case TokType::OP_POWER: return AST::Fa_BinaryOp::OP_POW;
+    case TokType::OP_EQ: return AST::Fa_BinaryOp::OP_EQ;
+    case TokType::OP_NEQ: return AST::Fa_BinaryOp::OP_NEQ;
+    case TokType::OP_LT: return AST::Fa_BinaryOp::OP_LT;
+    case TokType::OP_GT: return AST::Fa_BinaryOp::OP_GT;
+    case TokType::OP_LTE: return AST::Fa_BinaryOp::OP_LTE;
+    case TokType::OP_GTE: return AST::Fa_BinaryOp::OP_GTE;
+    case TokType::OP_BITAND: return AST::Fa_BinaryOp::OP_BITAND;
+    case TokType::OP_BITOR: return AST::Fa_BinaryOp::OP_BITOR;
+    case TokType::OP_BITXOR: return AST::Fa_BinaryOp::OP_BITXOR;
+    case TokType::OP_LSHIFT: return AST::Fa_BinaryOp::OP_LSHIFT;
+    case TokType::OP_RSHIFT: return AST::Fa_BinaryOp::OP_RSHIFT;
+    case TokType::OP_AND: return AST::Fa_BinaryOp::OP_AND;
+    case TokType::OP_OR: return AST::Fa_BinaryOp::OP_OR;
+    default: return AST::Fa_BinaryOp::INVALID;
     }
 }
 
 AST::Fa_UnaryOp to_unary_op(TokType const op)
 {
     switch (op) {
-    case TokType::OP_PLUS:
-        return AST::Fa_UnaryOp::OP_PLUS;
-    case TokType::OP_MINUS:
-        return AST::Fa_UnaryOp::OP_NEG;
-    case TokType::OP_BITNOT:
-        return AST::Fa_UnaryOp::OP_BITNOT;
-    case TokType::OP_NOT:
-        return AST::Fa_UnaryOp::OP_NOT;
-    default:
-        return AST::Fa_UnaryOp::INVALID;
+    case TokType::OP_PLUS: return AST::Fa_UnaryOp::OP_PLUS;
+    case TokType::OP_MINUS: return AST::Fa_UnaryOp::OP_NEG;
+    case TokType::OP_BITNOT: return AST::Fa_UnaryOp::OP_BITNOT;
+    case TokType::OP_NOT: return AST::Fa_UnaryOp::OP_NOT;
+    default: return AST::Fa_UnaryOp::INVALID;
     }
 }
 
@@ -921,11 +982,27 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_def()
     skip_newlines();
     Fa_VERIFY_TOKEN(TokType::INDENT, ParserCode::EXPECTED_INDENT);
 
-    do {
+    // Recover on a per-method basis rather than aborting the whole class
+    // the moment one method fails to parse. Each failed method is
+    // reported and skipped; parsing continues with the next one.
+    while (!check(TokType::DEDENT) && !we_done()) {
         auto method = parse_class_method(members);
-        Fa_VERIFY_NODE(method);
-        methods.push(method.value());
-    } while (!match(TokType::DEDENT));
+
+        if (method.has_value()) {
+            methods.push(method.value());
+        } else {
+            if (diagnostic::is_saturated())
+                break;
+            synchronize();
+            if (check(TokType::DEDENT) || we_done())
+                break;
+        }
+    }
+
+    if (check(TokType::ENDMARKER))
+        return AST::Fa_make_class_def(class_name.value(), members, methods, start->location());
+
+    Fa_VERIFY_TOKEN(TokType::DEDENT, ParserCode::EXPECTED_DEDENT);
 
     return AST::Fa_make_class_def(class_name.value(), members, methods, start->location());
 }
@@ -960,9 +1037,17 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_method(Fa_Array<ExprPtr>& members)
             Fa_StringRef member_name = member_tok->lexeme();
             advance();
 
-            AST::Fa_Expr* target = AST::Fa_make_index(
+            // Desugar `.field` to a proper GET expression (instance.field),
+            // NOT an index expression with a string-literal key. The
+            // compiler's fast field-access path (compile_get_i,
+            // compile_assignment_stmt's GET branch) specifically looks for
+            // Fa_GetExpr with a simple NAME member — an index-form lookup
+            // here would silently and permanently fall back to the slow
+            // dict-style INDEX/LIST_SET path for every field access
+            // written this way.
+            AST::Fa_Expr* target = AST::Fa_make_get_expr(
                 AST::Fa_make_name(kClassInstanceName, member_tok->location()),
-                AST::Fa_make_literal_string(member_name, member_tok->location()),
+                AST::Fa_make_name(member_name, member_tok->location()),
                 member_tok->location());
 
             AST::Fa_AssignmentExpr* member_assign = nullptr;
@@ -971,22 +1056,16 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_method(Fa_Array<ExprPtr>& members)
                 advance();
                 auto rhs = Fa_PARSE_EXPR_SAFE(assignment);
                 member_assign = AST::Fa_make_assignment_expr(target, rhs, member_tok->location(), false);
-            } else if (check(TokType::OP_PLUSEQ) || check(TokType::OP_MINUSEQ) || check(TokType::OP_STAREQ)
-                || check(TokType::OP_SLASHEQ) || check(TokType::OP_PERCENTEQ)) {
+            } else if (is_augmented_assign_tok(current_token())) {
                 TokenPtr op_tok = current_token();
                 advance();
 
                 auto rhs = Fa_PARSE_EXPR_SAFE(assignment);
 
-                AST::Fa_BinaryOp bin_ops[] = {
-                    AST::Fa_BinaryOp::OP_ADD,
-                    AST::Fa_BinaryOp::OP_SUB,
-                    AST::Fa_BinaryOp::OP_MUL,
-                    AST::Fa_BinaryOp::OP_DIV,
-                    AST::Fa_BinaryOp::OP_MOD,
-                };
-
-                AST::Fa_BinaryOp op = bin_ops[static_cast<int>(op_tok->type()) - static_cast<int>(TokType::OP_PLUSEQ)];
+                AST::Fa_BinaryOp op = augmented_assign_to_binary_op(op_tok->type());
+                // target->clone() reads the current field value (GET);
+                // the outer assignment writes the new value back through
+                // the original `target` GET node.
                 AST::Fa_BinaryExpr* bin = AST::Fa_make_binary(target->clone(), rhs, op, target->get_location());
                 member_assign = AST::Fa_make_assignment_expr(target, bin, member_tok->location(), false);
             } else {
@@ -1007,13 +1086,13 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_method(Fa_Array<ExprPtr>& members)
         return AST::Fa_make_function(
             AST::Fa_make_name(name_tok->lexeme(), name_tok->location()),
             AS_LIST(parameter_list.value()),
-            AST::Fa_make_block(stmts, stmts[0]->get_location()),
+            AST::Fa_make_block(stmts, stmts.empty() ? start->location() : stmts[0]->get_location()),
             start->location());
     }
 
     Fa_VERIFY_TOKEN(TokType::DEDENT, ParserCode::EXPECTED_DEDENT);
 
-    AST::Fa_BlockStmt* block = AST::Fa_make_block(stmts, stmts[0]->get_location());
+    AST::Fa_BlockStmt* block = AST::Fa_make_block(stmts, stmts.empty() ? start->location() : stmts[0]->get_location());
     return AST::Fa_make_function(AST::Fa_make_name(name_tok->lexeme(), name_tok->location()), AS_LIST(parameter_list.value()), block, start->location());
 }
 
@@ -1073,7 +1152,8 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_function_def()
     auto function_body = parse_indented_block();
     Fa_VERIFY_NODE(function_body);
 
-    return Fa_make_function(AST::Fa_make_name(function_name, name_tok->location()), AS_LIST(parameters_list.value()), AS_BLOCK(function_body.value()), start->location());
+    return Fa_make_function(AST::Fa_make_name(function_name, name_tok->location()),
+        AS_LIST(parameters_list.value()), AS_BLOCK(function_body.value()), start->location());
 }
 
 Fa_ErrorOr<StmtPtr> Fa_Parser::parse_if_stmt()
@@ -1126,29 +1206,20 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_assignment_expr()
 {
     auto lhs = Fa_PARSE_EXPR_SAFE(conditional);
 
-    if (check(TokType::OP_ASSIGN) || /*augmented assign */ check(TokType::OP_PLUSEQ) || check(TokType::OP_MINUSEQ)
-        || check(TokType::OP_STAREQ) || check(TokType::OP_SLASHEQ) || check(TokType::OP_PERCENTEQ)) {
+    if (check(TokType::OP_ASSIGN) || is_augmented_assign_tok(current_token())) {
         ExprPtr target = lhs;
         AST::Fa_Expr::Kind kind = target->get_kind();
 
         if (kind != AST::Fa_Expr::Kind::NAME && kind != AST::Fa_Expr::Kind::INDEX && kind != AST::Fa_Expr::Kind::GET)
             return report_error(ParserCode::INVALID_ASSIGN_TARGET);
 
-        if (check(TokType::OP_PLUSEQ) || check(TokType::OP_MINUSEQ)
-            || check(TokType::OP_STAREQ) || check(TokType::OP_SLASHEQ)
-            || check(TokType::OP_PERCENTEQ)) {
+        if (is_augmented_assign_tok(current_token())) {
             TokenPtr op_tok = current_token();
             advance();
 
             auto rhs = Fa_PARSE_EXPR_SAFE(assignment);
 
-            AST::Fa_BinaryOp bin_ops[] = {
-                AST::Fa_BinaryOp::OP_ADD, AST::Fa_BinaryOp::OP_SUB,
-                AST::Fa_BinaryOp::OP_MUL, AST::Fa_BinaryOp::OP_DIV,
-                AST::Fa_BinaryOp::OP_MOD
-            };
-
-            AST::Fa_BinaryOp op = bin_ops[static_cast<int>(op_tok->type()) - static_cast<int>(TokType::OP_PLUSEQ)];
+            AST::Fa_BinaryOp op = augmented_assign_to_binary_op(op_tok->type());
             AST::Fa_Expr* c_lhs = lhs->clone();
             AST::Fa_BinaryExpr* bin = AST::Fa_make_binary(c_lhs, rhs, op, c_lhs->get_location());
 

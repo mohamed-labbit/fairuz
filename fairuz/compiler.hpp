@@ -15,6 +15,7 @@ struct LocalVar {
     Fa_StringRef name { "" };
     unsigned int depth { 0 };
     u8 reg { 0 };
+    Fa_ObjClass* known_class { nullptr };
 }; // struct LocalVar
 
 struct CompilerState {
@@ -187,7 +188,7 @@ private:
             return LIKELY(p != nullptr) ? static_cast<int>(*p) : -1;
         }
 
-        int method_index(Fa_StringRef name) const
+        int method_slot(Fa_StringRef name) const
         {
             u32 const* p = method_map.find_ptr(name);
             return LIKELY(p != nullptr) ? static_cast<int>(*p) : -1;
@@ -210,17 +211,17 @@ private:
     void compile_class_def(AST::Fa_ClassDef* s);
     void compile_class_method(AST::Fa_Stmt* s);
 
-    Fa_ExprResult compile_expr_i(AST::Fa_Expr* e);
-    Fa_ExprResult compile_literal_i(AST::Fa_LiteralExpr* e);
-    Fa_ExprResult compile_name_i(AST::Fa_NameExpr* e);
-    Fa_ExprResult compile_unary_i(AST::Fa_UnaryExpr* e);
-    Fa_ExprResult compile_binary_i(AST::Fa_BinaryExpr* e);
-    Fa_ExprResult compile_assign_i(AST::Fa_AssignmentExpr* e);
+    Fa_ExprResult compile_expr_impl(AST::Fa_Expr* e);
+    Fa_ExprResult compile_literal_impl(AST::Fa_LiteralExpr* e);
+    Fa_ExprResult compile_name_impl(AST::Fa_NameExpr* e);
+    Fa_ExprResult compile_unary_impl(AST::Fa_UnaryExpr* e);
+    Fa_ExprResult compile_binary_impl(AST::Fa_BinaryExpr* e);
+    Fa_ExprResult compile_assign_impl(AST::Fa_AssignmentExpr* e);
     Fa_ExprResult compile_call_impl(AST::Fa_CallExpr* e, u8* dst, bool tail = false);
-    Fa_ExprResult compile_list_i(AST::Fa_ListExpr* e);
-    Fa_ExprResult compile_index_i(AST::Fa_IndexExpr* e);
-    Fa_ExprResult compile_dict_i(AST::Fa_DictExpr* e);
-    Fa_ExprResult compile_get_i(AST::Fa_GetExpr* e);
+    Fa_ExprResult compile_list_impl(AST::Fa_ListExpr* e);
+    Fa_ExprResult compile_index_impl(AST::Fa_IndexExpr* e);
+    Fa_ExprResult compile_dict_impl(AST::Fa_DictExpr* e);
+    Fa_ExprResult compile_get_impl(AST::Fa_GetExpr* e);
 
     u8 compile_expr(AST::Fa_Expr* e, u8* dst = nullptr);
     u8 compile_literal(AST::Fa_LiteralExpr* e, u8* dst);
@@ -261,7 +262,7 @@ private:
 
     u32 intern_string(Fa_StringRef const& str);
 
-    ClassDesc const* resolve_reciever_class(AST::Fa_Expr const* e) const;
+    ClassDesc const* resolve_receiver_class(AST::Fa_Expr const* e) const;
 }; // class Compiler
 
 } // namespace fairuz::runtime

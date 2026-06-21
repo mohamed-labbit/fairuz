@@ -1417,4 +1417,3 @@ TEST(CompilerIntegration, MixedLiteralsInList)
     }
     EXPECT_EQ(appends, 4);
 }
-

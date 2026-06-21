@@ -52,16 +52,11 @@ void Fa_DiagnosticEngine::emit_error(std::string const& msg, Severity const sv)
 std::string Fa_DiagnosticEngine::sv_to_str(Severity const sv)
 {
     switch (sv) {
-    case Severity::NOTE:
-        return Color::BOLD + Color::CYAN + "note" + Color::RESET;
-    case Severity::FATAL:
-        return Color::BOLD + Color::RED + "fatal" + Color::RESET;
-    case Severity::ERROR:
-        return Color::BOLD + Color::RED + "error" + Color::RESET;
-    case Severity::WARNING:
-        return Color::BOLD + Color::YELLOW + "warning" + Color::RESET;
-    default:
-        return Color::BOLD + "unknown" + Color::RESET;
+    case Severity::NOTE: return Color::BOLD + Color::CYAN + "note" + Color::RESET;
+    case Severity::FATAL: return Color::BOLD + Color::RED + "fatal" + Color::RESET;
+    case Severity::ERROR: return Color::BOLD + Color::RED + "error" + Color::RESET;
+    case Severity::WARNING: return Color::BOLD + Color::YELLOW + "warning" + Color::RESET;
+    default: return Color::BOLD + "unknown" + Color::RESET;
     }
 }
 
@@ -108,26 +103,11 @@ void Fa_DiagnosticEngine::pretty_print() const
         std::string sev_str;
 
         switch (diag.severity) {
-        case Severity::NOTE:
-            sev_str = "note";
-            color = Color::CYAN;
-            break;
-        case Severity::WARNING:
-            sev_str = "warning";
-            color = Color::YELLOW;
-            break;
-        case Severity::ERROR:
-            sev_str = "error";
-            color = Color::RED;
-            break;
-        case Severity::FATAL:
-            sev_str = "fatal";
-            color = Color::RED;
-            break;
-        default:
-            sev_str = "unknown";
-            color = Color::RESET;
-            break;
+        case Severity::NOTE: sev_str = "note", color = Color::CYAN; break;
+        case Severity::WARNING: sev_str = "warning", color = Color::YELLOW; break;
+        case Severity::ERROR: sev_str = "error", color = Color::RED; break;
+        case Severity::FATAL: sev_str = "fatal", color = Color::RED; break;
+        default: sev_str = "unknown", color = Color::RESET; break;
         }
 
         std::cerr << Color::BOLD << color << sev_str << Color::RESET;

@@ -67,18 +67,12 @@ std::optional<Range> derive_range_for_var(AST::Fa_Expr const* cond, Fa_StringRef
 
     auto literal_range = [](i64 val, AST::Fa_BinaryOp comp_op) -> std::optional<Range> {
         switch (comp_op) {
-        case AST::Fa_BinaryOp::OP_EQ:
-            return Range(LinearBound::make_const(val), LinearBound::make_const(val));
-        case AST::Fa_BinaryOp::OP_LT:
-            return Range(LinearBound::make_const(KNegInf), LinearBound::make_const(val - 1));
-        case AST::Fa_BinaryOp::OP_LTE:
-            return Range(LinearBound::make_const(KNegInf), LinearBound::make_const(val));
-        case AST::Fa_BinaryOp::OP_GT:
-            return Range(LinearBound::make_const(val + 1), LinearBound::make_const(KInf));
-        case AST::Fa_BinaryOp::OP_GTE:
-            return Range(LinearBound::make_const(val), LinearBound::make_const(KInf));
-        default:
-            return std::nullopt;
+        case AST::Fa_BinaryOp::OP_EQ: return Range(LinearBound::make_const(val), LinearBound::make_const(val));
+        case AST::Fa_BinaryOp::OP_LT: return Range(LinearBound::make_const(KNegInf), LinearBound::make_const(val - 1));
+        case AST::Fa_BinaryOp::OP_LTE: return Range(LinearBound::make_const(KNegInf), LinearBound::make_const(val));
+        case AST::Fa_BinaryOp::OP_GT: return Range(LinearBound::make_const(val + 1), LinearBound::make_const(KInf));
+        case AST::Fa_BinaryOp::OP_GTE: return Range(LinearBound::make_const(val), LinearBound::make_const(KInf));
+        default: return std::nullopt;
         }
     };
 
@@ -106,16 +100,11 @@ std::optional<Range> derive_range_for_var(AST::Fa_Expr const* cond, Fa_StringRef
         return std::nullopt;
 
     switch (op) {
-    case AST::Fa_BinaryOp::OP_LT:
-        return literal_range(*value, AST::Fa_BinaryOp::OP_GT);
-    case AST::Fa_BinaryOp::OP_LTE:
-        return literal_range(*value, AST::Fa_BinaryOp::OP_GTE);
-    case AST::Fa_BinaryOp::OP_GT:
-        return literal_range(*value, AST::Fa_BinaryOp::OP_LT);
-    case AST::Fa_BinaryOp::OP_GTE:
-        return literal_range(*value, AST::Fa_BinaryOp::OP_LTE);
-    default:
-        return literal_range(*value, op);
+    case AST::Fa_BinaryOp::OP_LT: return literal_range(*value, AST::Fa_BinaryOp::OP_GT);
+    case AST::Fa_BinaryOp::OP_LTE: return literal_range(*value, AST::Fa_BinaryOp::OP_GTE);
+    case AST::Fa_BinaryOp::OP_GT: return literal_range(*value, AST::Fa_BinaryOp::OP_LT);
+    case AST::Fa_BinaryOp::OP_GTE: return literal_range(*value, AST::Fa_BinaryOp::OP_LTE);
+    default: return literal_range(*value, op);
     }
 }
 
@@ -685,14 +674,10 @@ std::optional<Range> derive_range_from_loop_condition(AST::Fa_Expr const* cond)
                     intervals.push(Interval { LinearBound::make_const(val_i + 1), LinearBound::make_const(KInf) });
                     return Range(intervals);
                 }
-                case AST::Fa_BinaryOp::OP_LT:
-                    return Range(LinearBound::make_const(KNegInf), LinearBound::make_const(static_cast<i64>(std::floor(val_f))));
-                case AST::Fa_BinaryOp::OP_LTE:
-                    return Range(LinearBound::make_const(KNegInf), LinearBound::make_const(static_cast<i64>(std::floor(val_f))));
-                case AST::Fa_BinaryOp::OP_GT:
-                    return Range(LinearBound::make_const(static_cast<i64>(std::ceil(val_f))), LinearBound::make_const(KInf));
-                case AST::Fa_BinaryOp::OP_GTE:
-                    return Range(LinearBound::make_const(static_cast<i64>(std::ceil(val_f))), LinearBound::make_const(KInf));
+                case AST::Fa_BinaryOp::OP_LT: return Range(LinearBound::make_const(KNegInf), LinearBound::make_const(static_cast<i64>(std::floor(val_f))));
+                case AST::Fa_BinaryOp::OP_LTE: return Range(LinearBound::make_const(KNegInf), LinearBound::make_const(static_cast<i64>(std::floor(val_f))));
+                case AST::Fa_BinaryOp::OP_GT: return Range(LinearBound::make_const(static_cast<i64>(std::ceil(val_f))), LinearBound::make_const(KInf));
+                case AST::Fa_BinaryOp::OP_GTE: return Range(LinearBound::make_const(static_cast<i64>(std::ceil(val_f))), LinearBound::make_const(KInf));
                 default:
                     return std::nullopt;
                 }
@@ -712,14 +697,10 @@ std::optional<Range> derive_range_from_loop_condition(AST::Fa_Expr const* cond)
             return Range(intervals);
         }
 
-        case AST::Fa_BinaryOp::OP_LT:
-            return Range(LinearBound::make_const(KNegInf), LinearBound::make_const(val - 1));
-        case AST::Fa_BinaryOp::OP_LTE:
-            return Range(LinearBound::make_const(KNegInf), LinearBound::make_const(val));
-        case AST::Fa_BinaryOp::OP_GT:
-            return Range(LinearBound::make_const(val + 1), LinearBound::make_const(KInf));
-        case AST::Fa_BinaryOp::OP_GTE:
-            return Range(LinearBound::make_const(val), LinearBound::make_const(KInf));
+        case AST::Fa_BinaryOp::OP_LT: return Range(LinearBound::make_const(KNegInf), LinearBound::make_const(val - 1));
+        case AST::Fa_BinaryOp::OP_LTE: return Range(LinearBound::make_const(KNegInf), LinearBound::make_const(val));
+        case AST::Fa_BinaryOp::OP_GT: return Range(LinearBound::make_const(val + 1), LinearBound::make_const(KInf));
+        case AST::Fa_BinaryOp::OP_GTE: return Range(LinearBound::make_const(val), LinearBound::make_const(KInf));
 
         default:
             return std::nullopt;
@@ -733,20 +714,11 @@ std::optional<Range> derive_range_from_loop_condition(AST::Fa_Expr const* cond)
         // Flip comparison: c < var becomes var > c
         AST::Fa_BinaryOp flipped_op = op;
         switch (op) {
-        case AST::Fa_BinaryOp::OP_LT:
-            flipped_op = AST::Fa_BinaryOp::OP_GT;
-            break;
-        case AST::Fa_BinaryOp::OP_LTE:
-            flipped_op = AST::Fa_BinaryOp::OP_GTE;
-            break;
-        case AST::Fa_BinaryOp::OP_GT:
-            flipped_op = AST::Fa_BinaryOp::OP_LT;
-            break;
-        case AST::Fa_BinaryOp::OP_GTE:
-            flipped_op = AST::Fa_BinaryOp::OP_LTE;
-            break;
-        default:
-            break;
+        case AST::Fa_BinaryOp::OP_LT: flipped_op = AST::Fa_BinaryOp::OP_GT; break;
+        case AST::Fa_BinaryOp::OP_LTE: flipped_op = AST::Fa_BinaryOp::OP_GTE; break;
+        case AST::Fa_BinaryOp::OP_GT: flipped_op = AST::Fa_BinaryOp::OP_LT; break;
+        case AST::Fa_BinaryOp::OP_GTE: flipped_op = AST::Fa_BinaryOp::OP_LTE; break;
+        default: break;
         }
 
         return range_from_comparison(AS_CONST_LITERAL(lhs), rhs, flipped_op);

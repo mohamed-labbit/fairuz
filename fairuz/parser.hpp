@@ -30,6 +30,7 @@ public:
         TUPLE,
         NONE,
         FUNCTION,
+        INSTANCE,
         ANY,
         UNKNOWN
     }; // enum DataType
