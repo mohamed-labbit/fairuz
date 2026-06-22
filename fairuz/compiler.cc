@@ -891,9 +891,7 @@ Fa_ExprResult Compiler::compile_call_impl(AST::Fa_CallExpr* e, u8* dst, bool tai
                     }
 
                     u8 argc = static_cast<u8>(e->get_args().size() + 1); // +1 for self
-                    emit(Fa_make_ABC(Fa_OpCode::INVOKE, receiver_reg,
-                             static_cast<u8>(slot), argc),
-                        loc);
+                    emit(Fa_make_ABC(Fa_OpCode::INVOKE, receiver_reg, static_cast<u8>(slot), argc), loc);
                     m_current->free_regs_to(receiver_reg + 1);
                     return Fa_ExprResult::reg(receiver_reg);
                 }
