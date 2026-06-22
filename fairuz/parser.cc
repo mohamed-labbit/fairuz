@@ -319,7 +319,11 @@ void Fa_SemanticAnalyzer::analyze_expr(ExprPtr expr)
         auto name = AS_NAME(expr);
 
         if (!m_current_scope->is_defined(name->get_value()))
-            report_issue(Issue::Severity::ERROR, SemaCode::UNDEFINED_VARIABLE, "Undefined variable: " + name->get_value(), expr->get_location(), "Did you forget to initialize it?");
+            report_issue(Issue::Severity::ERROR,
+                SemaCode::UNDEFINED_VARIABLE,
+                "Undefined variable: " + name->get_value(),
+                expr->get_location(),
+                "Did you forget to initialize it?");
         else
             m_current_scope->mark_used(name->get_value(), expr->get_location().line);
 
