@@ -6,6 +6,7 @@ AlignTrailingComments:
 BasedOnStyle: WebKit
 BraceWrapping:
     AfterFunction: true
+AllowShortCaseLabelsOnASingleLine: true
 BreakBeforeBraces: Custom
 BreakBeforeInheritanceComma: true
 BreakConstructorInitializers: BeforeComma
