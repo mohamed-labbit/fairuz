@@ -196,21 +196,15 @@ static constexpr char kClassMetadataKey[] = "__class__";
 Fa_StringRef sp_method_name(int m)
 {
     switch (m) {
-    case Fa_ObjClass::INIT:
-        return "بداية";
-    case Fa_ObjClass::ADD:
-        return "عملية+";
-    case Fa_ObjClass::SUB:
-        return "عملية-";
-    case Fa_ObjClass::MUL:
-        return "عملية*";
-    case Fa_ObjClass::DIV:
-        return "عملية/";
-    case Fa_ObjClass::MOD:
-        return "عملية%";
-    case Fa_ObjClass::REPR:
-        return "كتابة";
+    case Fa_ObjClass::INIT: return "بداية";
+    case Fa_ObjClass::ADD: return "عملية+";
+    case Fa_ObjClass::SUB: return "عملية-";
+    case Fa_ObjClass::MUL: return "عملية*";
+    case Fa_ObjClass::DIV: return "عملية/";
+    case Fa_ObjClass::MOD: return "عملية%";
+    case Fa_ObjClass::REPR: return "كتابة";
     default:
+        return {};
     }
 }
 
