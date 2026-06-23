@@ -24,7 +24,7 @@ static Fa_GetExpr* get_expr(Fa_Expr* obj, Fa_Expr* member) { return Fa_make_get_
 static Fa_BlockStmt* blk(Fa_Array<Fa_Stmt*> stmts) { return Fa_make_block(stmts, { }); }
 static Fa_ExprStmt* expr_stmt(Fa_Expr* e) { return Fa_make_expr_stmt(e, { }); }
 static Fa_AssignmentStmt* assign_stmt(Fa_Expr* t, Fa_Expr* v) { return Fa_make_assignment_stmt(t, v, { }, false); }
-static AST::Fa_AssignmentStmt* decl_stmt(Fa_StringRef nm, AST::Fa_Expr* val) { return Fa_make_assignment_stmt(name_expr(nm), val, { }, true); }
+static Fa_AssignmentStmt* decl_stmt(Fa_StringRef nm, AST::Fa_Expr* val) { return Fa_make_assignment_stmt(name_expr(nm), val, { }, true); }
 static Fa_IfStmt* if_stmt(Fa_Expr* c, Fa_Stmt* t, Fa_Stmt* e = nullptr) { return Fa_make_if(c, t, { }, e); }
 static Fa_WhileStmt* while_stmt(Fa_Expr* c, Fa_Stmt* b) { return Fa_make_while(c, b, { }); }
 static Fa_ForStmt* for_stmt(Fa_NameExpr* t, Fa_Expr* i, Fa_Stmt* b) { return Fa_make_for(t, i, b, { }); }
