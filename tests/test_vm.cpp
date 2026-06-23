@@ -2835,3 +2835,673 @@ TEST(VMPerfStressTest, Fib28_20reps_Hot)
     std::printf("  STRESS fib(%d) × %d reps hot:       %.1f µs  (%.1f µs/call)\n",
         FIB_N, REPS, us, us / REPS);
 }
+
+// TODO: take this to the head of the current file
+Fa_StringRef sp_method_name(int m)
+{
+    switch (m) {
+    case Fa_ObjClass::INIT: return "بداية";
+    case Fa_ObjClass::ADD: return "عملية+";
+    case Fa_ObjClass::SUB: return "عملية-";
+    case Fa_ObjClass::MUL: return "عملية*";
+    case Fa_ObjClass::DIV: return "عملية/";
+    case Fa_ObjClass::MOD: return "عملية%";
+    case Fa_ObjClass::REPR: return "كتابة";
+    default: return {};
+    }
+}
+
+static Fa_FunctionDef* class_method(Fa_StringRef name, Fa_Array<Fa_Expr*> params, Fa_Array<Fa_Stmt*> body)
+{
+    return func_def(name_expr(name), list_expr(params), blk(body));
+}
+
+TEST(VMClass, TestConstruction)
+{
+    AST::Fa_Stmt* klass = class_def(name_expr("TestClass"), { }, { });
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({
+            decl_stmt("instance", call_expr(name_expr("TestClass"))),
+            return_stmt(name_expr("instance")),
+        }));
+
+    Fa_Chunk* top = compile_program({
+        klass,
+        test,
+        expr_stmt(call_expr(name_expr("test"))),
+    });
+
+    VMRunner r;
+    Fa_Value result = r.run(top);
+    ASSERT_TRUE(Fa_IS_INSTANCE(result));
+    EXPECT_EQ(Fa_AS_INSTANCE(result)->klass->name, "TestClass");
+}
+
+TEST(VMClass, ClassDefinitionStoresRuntimeClass)
+{
+    AST::Fa_Stmt* klass = class_def(
+        name_expr("Point"),
+        {
+            name_expr("x"),
+            name_expr("y"),
+        },
+        { });
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({
+            return_stmt(name_expr("Point")),
+        }));
+
+    Fa_Chunk* top = compile_program({
+        klass,
+        test,
+        expr_stmt(call_expr(name_expr("test"))),
+    });
+
+    VMRunner r;
+    Fa_Value point = r.run(top);
+    ASSERT_TRUE(Fa_IS_CLASS(point));
+
+    Fa_ObjClass* point_class = Fa_AS_CLASS(point);
+    EXPECT_EQ(point_class->name, "Point");
+    ASSERT_EQ(point_class->field_names.size(), 2);
+    EXPECT_EQ(point_class->field_names[0], "x");
+    EXPECT_EQ(point_class->field_names[1], "y");
+}
+
+TEST(VMClass, ConstructorAcceptsArgumentsAndReturnsInstance)
+{
+    AST::Fa_Stmt* klass = class_def(
+        name_expr("Box"),
+        { name_expr("value") },
+        {
+            func_def(
+                name_expr(sp_method_name(Fa_ObjClass::INIT)),
+                list_expr({ name_expr("value") }),
+                blk({ })),
+        });
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({
+            decl_stmt("instance", call_expr(name_expr("Box"), list_expr({ lit_int(42) }))),
+            return_stmt(name_expr("instance")),
+        }));
+
+    Fa_Chunk* top = compile_program({
+        klass,
+        test,
+        expr_stmt(call_expr(name_expr("test"))),
+    });
+
+    VMRunner r;
+    Fa_Value result = r.run(top);
+    ASSERT_TRUE(Fa_IS_INSTANCE(result));
+    EXPECT_EQ(Fa_AS_INSTANCE(result)->klass->name, "Box");
+    EXPECT_EQ(Fa_AS_INSTANCE(result)->field_count, 1);
+}
+
+TEST(VMClass, ConstructorRejectsWrongArgumentCount)
+{
+    AST::Fa_Stmt* klass = class_def(
+        name_expr("NeedsArg"),
+        { },
+        {
+            func_def(
+                name_expr(sp_method_name(Fa_ObjClass::INIT)),
+                list_expr({ name_expr("arg") }),
+                blk({ })),
+    });
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({
+            decl_stmt("instance", call_expr(name_expr("NeedsArg"))),
+            return_stmt(name_expr("instance")),
+        }));
+
+    Fa_Chunk* top = compile_program({
+        klass,
+        test,
+        expr_stmt(call_expr(name_expr("test"))),
+    });
+
+    VMRunner r;
+    EXPECT_THROW(r.run(top), std::runtime_error);
+}
+
+TEST(VMClass, ConstructorWithoutInitRejectsArguments)
+{
+    AST::Fa_Stmt* klass = class_def(name_expr("Plain"), { }, { });
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({
+            decl_stmt("instance", call_expr(name_expr("Plain"), list_expr({ lit_int(1) }))),
+            return_stmt(name_expr("instance")),
+        }));
+
+    Fa_Chunk* top = compile_program({
+        klass,
+        test,
+        expr_stmt(call_expr(name_expr("test"))),
+    });
+
+    VMRunner r;
+    EXPECT_THROW(r.run(top), std::runtime_error);
+}
+
+TEST(VMClass, EnglishInitConstructorIsAccepted)
+{
+    AST::Fa_Stmt* klass = class_def(
+        name_expr("EnglishInit"),
+        { name_expr("value") },
+        {
+            class_method("init", { name_expr("value") }, { }),
+        });
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({
+            decl_stmt("instance", call_expr(name_expr("EnglishInit"), list_expr({ lit_int(9) }))),
+            return_stmt(name_expr("instance")),
+        }));
+
+    Fa_Chunk* top = compile_program({
+        klass,
+        test,
+        expr_stmt(call_expr(name_expr("test"))),
+    });
+
+    VMRunner r;
+    Fa_Value result = NIL_VAL;
+    ASSERT_NO_THROW(result = r.run(top));
+    ASSERT_TRUE(Fa_IS_INSTANCE(result));
+    EXPECT_EQ(Fa_AS_INSTANCE(result)->klass->name, "EnglishInit");
+}
+
+TEST(VMClass, InstanceFieldsDefaultToNil)
+{
+    AST::Fa_Stmt* klass = class_def(
+        name_expr("Point"),
+        {
+            name_expr("x"),
+            name_expr("y"),
+        },
+        { });
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({
+            decl_stmt("point", call_expr(name_expr("Point"))),
+            return_stmt(name_expr("point")),
+        }));
+
+    Fa_Chunk* top = compile_program({
+        klass,
+        test,
+        expr_stmt(call_expr(name_expr("test"))),
+    });
+
+    VMRunner r;
+    Fa_Value result = NIL_VAL;
+    ASSERT_NO_THROW(result = r.run(top));
+    ASSERT_TRUE(Fa_IS_INSTANCE(result));
+
+    Fa_ObjInstance* point = Fa_AS_INSTANCE(result);
+    ASSERT_EQ(point->field_count, 2);
+    EXPECT_TRUE(Fa_IS_NIL(point->fields[0]));
+    EXPECT_TRUE(Fa_IS_NIL(point->fields[1]));
+}
+
+TEST(VMClass, ConstructorInitializesFieldsFromParameters)
+{
+    AST::Fa_Stmt* klass = class_def(
+        name_expr("Point"),
+        {
+            name_expr("x"),
+            name_expr("y"),
+        },
+        {
+            class_method(
+                sp_method_name(Fa_ObjClass::INIT),
+                { name_expr("x"), name_expr("y") },
+                {
+                    assign_stmt(name_expr("x"), name_expr("x")),
+                    assign_stmt(name_expr("y"), name_expr("y")),
+                }),
+        });
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({
+            decl_stmt("point", call_expr(name_expr("Point"), list_expr({ lit_int(3), lit_int(4) }))),
+            return_stmt(name_expr("point")),
+        }));
+
+    Fa_Chunk* top = compile_program({
+        klass,
+        test,
+        expr_stmt(call_expr(name_expr("test"))),
+    });
+
+    VMRunner r;
+    Fa_Value result = NIL_VAL;
+    ASSERT_NO_THROW(result = r.run(top));
+    ASSERT_TRUE(Fa_IS_INSTANCE(result));
+
+    Fa_ObjInstance* point = Fa_AS_INSTANCE(result);
+    ASSERT_EQ(point->field_count, 2);
+    ASSERT_TRUE(Fa_IS_INTEGER(point->fields[0]));
+    ASSERT_TRUE(Fa_IS_INTEGER(point->fields[1]));
+    EXPECT_EQ(Fa_AS_INTEGER(point->fields[0]), 3);
+    EXPECT_EQ(Fa_AS_INTEGER(point->fields[1]), 4);
+}
+
+TEST(VMClass, FieldGetExpressionReadsInstanceField)
+{
+    AST::Fa_Stmt* klass = class_def(
+        name_expr("Box"),
+        { name_expr("value") },
+        {
+            class_method(
+                sp_method_name(Fa_ObjClass::INIT),
+                { name_expr("value") },
+                {
+                    assign_stmt(name_expr("value"), name_expr("value")),
+                }),
+        });
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({
+            decl_stmt("box", call_expr(name_expr("Box"), list_expr({ lit_int(12) }))),
+            return_stmt(get_expr(name_expr("box"), name_expr("value"))),
+        }));
+
+    Fa_Chunk* top = compile_program({
+        klass,
+        test,
+        expr_stmt(call_expr(name_expr("test"))),
+    });
+
+    VMRunner r;
+    Fa_Value result = NIL_VAL;
+    ASSERT_NO_THROW(result = r.run(top));
+    ASSERT_TRUE(Fa_IS_INTEGER(result));
+    EXPECT_EQ(Fa_AS_INTEGER(result), 12);
+}
+
+TEST(VMClass, FieldAssignmentUpdatesInstanceField)
+{
+    AST::Fa_Stmt* klass = class_def(
+        name_expr("Box"),
+        { name_expr("value") },
+        { });
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({
+            decl_stmt("box", call_expr(name_expr("Box"))),
+            assign_stmt(get_expr(name_expr("box"), name_expr("value")), lit_int(25)),
+            return_stmt(get_expr(name_expr("box"), name_expr("value"))),
+        }));
+
+    Fa_Chunk* top = compile_program({
+        klass,
+        test,
+        expr_stmt(call_expr(name_expr("test"))),
+    });
+
+    VMRunner r;
+    Fa_Value result = NIL_VAL;
+    ASSERT_NO_THROW(result = r.run(top));
+    ASSERT_TRUE(Fa_IS_INTEGER(result));
+    EXPECT_EQ(Fa_AS_INTEGER(result), 25);
+}
+
+TEST(VMClass, MethodReceivesExplicitArguments)
+{
+    AST::Fa_Stmt* klass = class_def(
+        name_expr("Adder"),
+        { },
+        {
+            class_method(
+                "add",
+                { name_expr("a"), name_expr("b") },
+                {
+                    return_stmt(binary(name_expr("a"), name_expr("b"), AST::Fa_BinaryOp::OP_ADD)),
+                }),
+        });
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({
+            decl_stmt("adder", call_expr(name_expr("Adder"))),
+            return_stmt(call_expr(get_expr(name_expr("adder"), name_expr("add")), list_expr({ lit_int(2), lit_int(5) }))),
+        }));
+
+    Fa_Chunk* top = compile_program({
+        klass,
+        test,
+        expr_stmt(call_expr(name_expr("test"))),
+    });
+
+    VMRunner r;
+    Fa_Value result = NIL_VAL;
+    ASSERT_NO_THROW(result = r.run(top));
+    ASSERT_TRUE(Fa_IS_INTEGER(result));
+    EXPECT_EQ(Fa_AS_INTEGER(result), 7);
+}
+
+TEST(VMClass, MethodReadsInstanceField)
+{
+    AST::Fa_Stmt* klass = class_def(
+        name_expr("Box"),
+        { name_expr("value") },
+        {
+            class_method(
+                sp_method_name(Fa_ObjClass::INIT),
+                { name_expr("value") },
+                {
+                    assign_stmt(name_expr("value"), name_expr("value")),
+                }),
+            class_method(
+                "get_value",
+                { },
+                {
+                    return_stmt(name_expr("value")),
+                }),
+        });
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({
+            decl_stmt("box", call_expr(name_expr("Box"), list_expr({ lit_int(31) }))),
+            return_stmt(call_expr(get_expr(name_expr("box"), name_expr("get_value")))),
+        }));
+
+    Fa_Chunk* top = compile_program({
+        klass,
+        test,
+        expr_stmt(call_expr(name_expr("test"))),
+    });
+
+    VMRunner r;
+    Fa_Value result = NIL_VAL;
+    ASSERT_NO_THROW(result = r.run(top));
+    ASSERT_TRUE(Fa_IS_INTEGER(result));
+    EXPECT_EQ(Fa_AS_INTEGER(result), 31);
+}
+
+TEST(VMClass, MethodMutatesInstanceFieldAndPersists)
+{
+    AST::Fa_Stmt* klass = class_def(
+        name_expr("Counter"),
+        { name_expr("count") },
+        {
+            class_method(
+                sp_method_name(Fa_ObjClass::INIT),
+                { },
+                {
+                    assign_stmt(name_expr("count"), lit_int(0)),
+                }),
+            class_method(
+                "increment",
+                { },
+                {
+                    assign_stmt(name_expr("count"), binary(name_expr("count"), lit_int(1), AST::Fa_BinaryOp::OP_ADD)),
+                    return_stmt(name_expr("count")),
+                }),
+        });
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({
+            decl_stmt("counter", call_expr(name_expr("Counter"))),
+            expr_stmt(call_expr(get_expr(name_expr("counter"), name_expr("increment")))),
+            return_stmt(call_expr(get_expr(name_expr("counter"), name_expr("increment")))),
+        }));
+
+    Fa_Chunk* top = compile_program({
+        klass,
+        test,
+        expr_stmt(call_expr(name_expr("test"))),
+    });
+
+    VMRunner r;
+    Fa_Value result = NIL_VAL;
+    ASSERT_NO_THROW(result = r.run(top));
+    ASSERT_TRUE(Fa_IS_INTEGER(result));
+    EXPECT_EQ(Fa_AS_INTEGER(result), 2);
+}
+
+TEST(VMClass, MultipleInstancesKeepIndependentFieldState)
+{
+    AST::Fa_Stmt* klass = class_def(
+        name_expr("Box"),
+        { name_expr("value") },
+        {
+            class_method(
+                sp_method_name(Fa_ObjClass::INIT),
+                { name_expr("value") },
+                {
+                    assign_stmt(name_expr("value"), name_expr("value")),
+                }),
+            class_method(
+                "get_value",
+                { },
+                {
+                    return_stmt(name_expr("value")),
+                }),
+        });
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({
+            decl_stmt("left", call_expr(name_expr("Box"), list_expr({ lit_int(10) }))),
+            decl_stmt("right", call_expr(name_expr("Box"), list_expr({ lit_int(20) }))),
+            return_stmt(binary(
+                call_expr(get_expr(name_expr("left"), name_expr("get_value"))),
+                call_expr(get_expr(name_expr("right"), name_expr("get_value"))),
+                AST::Fa_BinaryOp::OP_ADD)),
+        }));
+
+    Fa_Chunk* top = compile_program({
+        klass,
+        test,
+        expr_stmt(call_expr(name_expr("test"))),
+    });
+
+    VMRunner r;
+    Fa_Value result = NIL_VAL;
+    ASSERT_NO_THROW(result = r.run(top));
+    ASSERT_TRUE(Fa_IS_INTEGER(result));
+    EXPECT_EQ(Fa_AS_INTEGER(result), 30);
+}
+
+TEST(VMClass, MethodReturningNoValueReturnsSelf)
+{
+    AST::Fa_Stmt* klass = class_def(
+        name_expr("Fluent"),
+        { },
+        {
+            class_method("touch", { }, { }),
+        });
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({
+            decl_stmt("fluent", call_expr(name_expr("Fluent"))),
+            return_stmt(call_expr(get_expr(name_expr("fluent"), name_expr("touch")))),
+        }));
+
+    Fa_Chunk* top = compile_program({
+        klass,
+        test,
+        expr_stmt(call_expr(name_expr("test"))),
+    });
+
+    VMRunner r;
+    Fa_Value result = NIL_VAL;
+    ASSERT_NO_THROW(result = r.run(top));
+    ASSERT_TRUE(Fa_IS_INSTANCE(result));
+    EXPECT_EQ(Fa_AS_INSTANCE(result)->klass->name, "Fluent");
+}
+
+TEST(VMClass, MethodRejectsWrongArgumentCount)
+{
+    AST::Fa_Stmt* klass = class_def(
+        name_expr("Adder"),
+        { },
+        {
+            class_method(
+                "add",
+                { name_expr("value") },
+                {
+                    return_stmt(name_expr("value")),
+                }),
+        });
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({
+            decl_stmt("adder", call_expr(name_expr("Adder"))),
+            return_stmt(call_expr(get_expr(name_expr("adder"), name_expr("add")))),
+        }));
+
+    Fa_Chunk* top = compile_program({
+        klass,
+        test,
+        expr_stmt(call_expr(name_expr("test"))),
+    });
+
+    VMRunner r;
+    EXPECT_THROW(r.run(top), std::runtime_error);
+}
+
+TEST(VMClass, UnknownMethodRaisesRuntimeError)
+{
+    AST::Fa_Stmt* klass = class_def(name_expr("Empty"), { }, { });
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({
+            decl_stmt("empty", call_expr(name_expr("Empty"))),
+            return_stmt(call_expr(get_expr(name_expr("empty"), name_expr("missing")))),
+        }));
+
+    Fa_Chunk* top = compile_program({
+        klass,
+        test,
+        expr_stmt(call_expr(name_expr("test"))),
+    });
+
+    VMRunner r;
+    EXPECT_THROW(r.run(top), std::runtime_error);
+}
+
+TEST(VMClass, DuplicateFieldsAreDeduplicatedInDeclarationOrder)
+{
+    AST::Fa_Stmt* klass = class_def(
+        name_expr("Record"),
+        {
+            name_expr("id"),
+            name_expr("name"),
+            name_expr("id"),
+        },
+        { });
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({
+            return_stmt(name_expr("Record")),
+        }));
+
+    Fa_Chunk* top = compile_program({
+        klass,
+        test,
+        expr_stmt(call_expr(name_expr("test"))),
+    });
+
+    VMRunner r;
+    Fa_Value result = NIL_VAL;
+    ASSERT_NO_THROW(result = r.run(top));
+    ASSERT_TRUE(Fa_IS_CLASS(result));
+
+    Fa_ObjClass* klass_obj = Fa_AS_CLASS(result);
+    ASSERT_EQ(klass_obj->field_names.size(), 2);
+    EXPECT_EQ(klass_obj->field_names[0], "id");
+    EXPECT_EQ(klass_obj->field_names[1], "name");
+}
+
+TEST(VMClass, MultipleMethodsAreStoredInRuntimeClass)
+{
+    AST::Fa_Stmt* klass = class_def(
+        name_expr("Ops"),
+        { },
+        {
+            class_method("first", { }, { return_stmt(lit_int(1)) }),
+            class_method("second", { }, { return_stmt(lit_int(2)) }),
+        });
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({
+            return_stmt(name_expr("Ops")),
+        }));
+
+    Fa_Chunk* top = compile_program({
+        klass,
+        test,
+        expr_stmt(call_expr(name_expr("test"))),
+    });
+
+    VMRunner r;
+    Fa_Value result = NIL_VAL;
+    ASSERT_NO_THROW(result = r.run(top));
+    ASSERT_TRUE(Fa_IS_CLASS(result));
+
+    Fa_ObjClass* klass_obj = Fa_AS_CLASS(result);
+    EXPECT_GE(klass_obj->method_names.size(), static_cast<u32>(Fa_ObjClass::_COUNT + 2));
+    EXPECT_GE(klass_obj->method_slot("first"), 0);
+    EXPECT_GE(klass_obj->method_slot("second"), 0);
+}
+
+TEST(VMClass, AddSpecialMethodHandlesBinaryPlus)
+{
+    AST::Fa_Stmt* klass = class_def(
+        name_expr("Numberish"),
+        { },
+        {
+            class_method(
+                sp_method_name(Fa_ObjClass::ADD),
+                { name_expr("other") },
+                {
+                    return_stmt(lit_int(99)),
+                }),
+        });
+    AST::Fa_Stmt* test = func_def(
+        name_expr("test"),
+        list_expr(),
+        blk({
+            decl_stmt("left", call_expr(name_expr("Numberish"))),
+            decl_stmt("right", call_expr(name_expr("Numberish"))),
+            return_stmt(binary(name_expr("left"), name_expr("right"), AST::Fa_BinaryOp::OP_ADD)),
+        }));
+
+    Fa_Chunk* top = compile_program({
+        klass,
+        test,
+        expr_stmt(call_expr(name_expr("test"))),
+    });
+
+    VMRunner r;
+    Fa_Value result = NIL_VAL;
+    ASSERT_NO_THROW(result = r.run(top));
+    ASSERT_TRUE(Fa_IS_INTEGER(result));
+    EXPECT_EQ(Fa_AS_INTEGER(result), 99);
+}
