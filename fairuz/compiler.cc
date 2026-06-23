@@ -1351,7 +1351,7 @@ Compiler::ClassDesc const* Compiler::resolve_receiver_class(AST::Fa_Expr const* 
     // Case 2: the expression is a local variable known to hold an
     // instance of some class (e.g. obj after obj = كلب.بداية()).
     if (LocalVar const* local = lookup_local(name)) {
-        if (!local->known_class) {
+        if (local->known_class) {
             if (auto* d = m_class_registry.find_ptr(local->known_class->name))
                 return d;
         }
