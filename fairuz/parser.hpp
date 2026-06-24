@@ -4,6 +4,7 @@
 #include "ast.hpp"
 #include "error.hpp"
 #include "lexer.hpp"
+#include "string.hpp"
 #include "table.hpp"
 
 #include <unordered_set>
@@ -57,14 +58,16 @@ private:
 public:
     explicit Fa_SymbolTable(Fa_SymbolTable* p = nullptr, i32 level = 0);
 
-    void define(Fa_StringRef const& m_name, Symbol symbol);
-    Symbol* lookup(Fa_StringRef const& m_name);
-    Symbol* lookup_local(Fa_StringRef const& m_name);
-    bool is_defined(Fa_StringRef const& m_name) const;
-    void mark_used(Fa_StringRef const& m_name, i32 m_line);
+    void define(Fa_StringRef const& name, Symbol symbol);
+    Symbol const* lookup(Fa_StringRef const& name) const;
+    Symbol* lookup(Fa_StringRef const& name);
+    Symbol* lookup_local(Fa_StringRef const& name);
+    bool is_defined(Fa_StringRef const& name) const;
+    void mark_used(Fa_StringRef const& name, i32 line);
     Fa_SymbolTable* create_child();
     Fa_Array<Symbol*> get_unused_symbols();
     Fa_HashTable<Fa_StringRef, Symbol, Fa_StringRefHash, Fa_StringRefEqual> const& get_symbols() const;
+    Fa_SymbolTable* get_parent() const;
 }; // class Fa_SymbolTable
 
 class Fa_SemanticAnalyzer {
@@ -189,7 +192,8 @@ public:
     Fa_ErrorOr<AST::Fa_Expr*> parse_member_access();
 
     bool we_done() const;
-    bool check(tok::Fa_TokenType m_type);
+
+    bool check(tok::Fa_TokenType type) const;
 
     tok::Fa_Token const* current_token() const;
 
@@ -197,15 +201,15 @@ private:
     lex::Fa_Lexer m_lexer;
     Fa_SemanticAnalyzer m_sema;
 
-    tok::Fa_Token const* peek(size_t m_offset = 1) { return m_lexer.peek(m_offset); }
+    tok::Fa_Token const* peek(size_t offset = 1) { return m_lexer.peek(offset); }
     tok::Fa_Token const* advance() { return m_lexer.m_next(); }
 
-    bool match(tok::Fa_TokenType const m_type);
+    bool match(tok::Fa_TokenType const type);
 
     [[nodiscard]]
-    bool consume(tok::Fa_TokenType m_type)
+    bool consume(tok::Fa_TokenType type)
     {
-        if (check(m_type)) {
+        if (check(type)) {
             advance();
             return true;
         }
