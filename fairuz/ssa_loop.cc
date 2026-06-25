@@ -6,8 +6,6 @@
 #include "loop_header.hpp"
 
 #include <cmath>
-#include <iostream>
-#include <limits>
 #include <optional>
 
 namespace fairuz {
@@ -302,8 +300,7 @@ static bool check_expr_for_writes(AST::Fa_Expr const* expr, AST::Fa_Expr const* 
         if (target->equals(obj))
             return true;
 
-        if (target->get_kind() == EK::INDEX
-            && AS_CONST_INDEX(target)->get_object()->equals(obj))
+        if (target->get_kind() == EK::INDEX && AS_CONST_INDEX(target)->get_object()->equals(obj))
             return true;
 
         return false;
