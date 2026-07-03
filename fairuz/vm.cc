@@ -204,7 +204,7 @@ Fa_StringRef sp_method_name(int m)
     case Fa_ObjClass::MOD: return "عملية%";
     case Fa_ObjClass::REPR: return "كتابة";
     default:
-        return {};
+        return { };
     }
 }
 

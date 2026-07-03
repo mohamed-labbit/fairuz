@@ -3,6 +3,7 @@
 
 #include "gc.hpp"
 #include "opcode.hpp"
+#include "string.hpp"
 #include "table.hpp"
 #include "value.hpp"
 
@@ -20,7 +21,7 @@ struct Fa_RuntimeHalt final : public std::runtime_error {
 };
 
 struct Fa_CallFrame {
-    Fa_ObjClosure* closure { nullptr };
+    Fa_ObjFunction* func { nullptr };
     Fa_Chunk* chunk { nullptr };
     u32 ip { 0 };
     u16 base { 0 };
@@ -28,8 +29,8 @@ struct Fa_CallFrame {
 
     Fa_CallFrame() = default;
 
-    explicit Fa_CallFrame(Fa_ObjClosure* cl, Fa_Chunk* ch, u32 ip, u16 b, u16 lc)
-        : closure(cl)
+    explicit Fa_CallFrame(Fa_ObjFunction* cl, Fa_Chunk* ch, u32 ip, u16 b, u16 lc)
+        : func(cl)
         , chunk(ch)
         , ip(ip)
         , base(b)

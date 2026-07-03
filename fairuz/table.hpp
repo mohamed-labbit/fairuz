@@ -205,7 +205,7 @@ public:
     {
         Entry* e = m_buckets.end();
         return { e, e };
-    }    
+    }
 }; // class Fa_HashTable
 
 } // namespace fairuz

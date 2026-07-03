@@ -2847,7 +2847,7 @@ Fa_StringRef sp_method_name(int m)
     case Fa_ObjClass::DIV: return "عملية/";
     case Fa_ObjClass::MOD: return "عملية%";
     case Fa_ObjClass::REPR: return "كتابة";
-    default: return {};
+    default: return { };
     }
 }
 
@@ -2954,7 +2954,7 @@ TEST(VMClass, ConstructorRejectsWrongArgumentCount)
                 name_expr(sp_method_name(Fa_ObjClass::INIT)),
                 list_expr({ name_expr("arg") }),
                 blk({ })),
-    });
+        });
     AST::Fa_Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
@@ -3082,11 +3082,7 @@ TEST(VMClass, ConstructorInitializesFieldsFromParameters)
             return_stmt(name_expr("point")),
         }));
 
-    Fa_Chunk* top = compile_program({
-        klass,
-        test,
-        expr_stmt(call_expr(name_expr("test"))),
-    });
+    Fa_Chunk* top = compile_program({ klass, test, expr_stmt(call_expr(name_expr("test"))) });
 
     VMRunner r;
     Fa_Value result = NIL_VAL;
@@ -3095,8 +3091,10 @@ TEST(VMClass, ConstructorInitializesFieldsFromParameters)
 
     Fa_ObjInstance* point = Fa_AS_INSTANCE(result);
     ASSERT_EQ(point->field_count, 2);
+
     ASSERT_TRUE(Fa_IS_INTEGER(point->fields[0]));
     ASSERT_TRUE(Fa_IS_INTEGER(point->fields[1]));
+
     EXPECT_EQ(Fa_AS_INTEGER(point->fields[0]), 3);
     EXPECT_EQ(Fa_AS_INTEGER(point->fields[1]), 4);
 }

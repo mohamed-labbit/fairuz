@@ -192,184 +192,95 @@ struct Fa_LineEntry {
 static Fa_StringRef Fa_opcode_name(Fa_OpCode op)
 {
     switch (op) {
-    case Fa_OpCode::LOAD_NIL:
-        return "LOAD_NIL";
-    case Fa_OpCode::LOAD_TRUE:
-        return "LOAD_TRUE";
-    case Fa_OpCode::LOAD_FALSE:
-        return "LOAD_FALSE";
-    case Fa_OpCode::LOAD_CONST:
-        return "LOAD_CONST";
-    case Fa_OpCode::LOAD_INT:
-        return "LOAD_INT";
-    case Fa_OpCode::LOAD_GLOBAL:
-        return "LOAD_GLOBAL";
-    case Fa_OpCode::STORE_GLOBAL:
-        return "STORE_GLOBAL";
-    case Fa_OpCode::MOVE:
-        return "MOVE";
-    case Fa_OpCode::LOAD_GLOBAL_CACHED:
-        return "LOAD_GLOBAL_CACHED";
-    case Fa_OpCode::STORE_GLOBAL_CACHED:
-        return "STORE_GLOBAL_CACHED";
-    case Fa_OpCode::OP_ADD:
-        return "OP_ADD";
-    case Fa_OpCode::OP_ADD_II:
-        return "OP_ADD_II";
-    case Fa_OpCode::OP_ADD_FF:
-        return "OP_ADD_FF";
-    case Fa_OpCode::OP_ADD_RI:
-        return "OP_ADD_RI";
-    case Fa_OpCode::OP_SUB:
-        return "OP_SUB";
-    case Fa_OpCode::OP_SUB_II:
-        return "OP_SUB_II";
-    case Fa_OpCode::OP_SUB_FF:
-        return "OP_SUB_FF";
-    case Fa_OpCode::OP_SUB_RI:
-        return "OP_SUB_RI";
-    case Fa_OpCode::OP_MUL:
-        return "OP_MUL";
-    case Fa_OpCode::OP_MUL_II:
-        return "OP_MUL_II";
-    case Fa_OpCode::OP_MUL_FF:
-        return "OP_MUL_FF";
-    case Fa_OpCode::OP_MUL_RI:
-        return "OP_MUL_RI";
-    case Fa_OpCode::OP_DIV:
-        return "OP_DIV";
-    case Fa_OpCode::OP_DIV_II:
-        return "OP_DIV_II";
-    case Fa_OpCode::OP_DIV_FF:
-        return "OP_DIV_FF";
-    case Fa_OpCode::OP_MOD:
-        return "OP_MOD";
-    case Fa_OpCode::OP_MOD_II:
-        return "OP_MOD_II";
-    case Fa_OpCode::OP_MOD_FF:
-        return "OP_MOD_FF";
-    case Fa_OpCode::OP_POW:
-        return "OP_POW";
-    case Fa_OpCode::OP_NEG:
-        return "OP_NEG";
-    case Fa_OpCode::OP_NEG_I:
-        return "OP_NEG_I";
-    case Fa_OpCode::OP_NEG_F:
-        return "OP_NEG_F";
-    case Fa_OpCode::OP_BITAND:
-        return "OP_BITAND";
-    case Fa_OpCode::OP_BITAND_I:
-        return "OP_BITAND_I";
-    case Fa_OpCode::OP_BITOR:
-        return "OP_BITOR";
-    case Fa_OpCode::OP_BITOR_I:
-        return "OP_BITOR_I";
-    case Fa_OpCode::OP_BITXOR:
-        return "OP_BITXOR";
-    case Fa_OpCode::OP_BITXOR_I:
-        return "OP_BITXOR_I";
-    case Fa_OpCode::OP_BITNOT:
-        return "OP_BITNOT";
-    case Fa_OpCode::OP_LSHIFT:
-        return "OP_LSHIFT";
-    case Fa_OpCode::OP_RSHIFT:
-        return "OP_RSHIFT";
-    case Fa_OpCode::OP_EQ:
-        return "OP_EQ";
-    case Fa_OpCode::OP_EQ_II:
-        return "OP_EQ_II";
-    case Fa_OpCode::OP_EQ_FF:
-        return "OP_EQ_FF";
-    case Fa_OpCode::OP_EQ_SS:
-        return "OP_EQ_SS";
-    case Fa_OpCode::OP_EQ_RI:
-        return "OP_EQ_RI";
-    case Fa_OpCode::OP_NEQ:
-        return "OP_NEQ";
-    case Fa_OpCode::OP_NEQ_II:
-        return "OP_NEQ_II";
-    case Fa_OpCode::OP_NEQ_FF:
-        return "OP_NEQ_FF";
-    case Fa_OpCode::OP_NEQ_SS:
-        return "OP_NEQ_SS";
-    case Fa_OpCode::OP_LT:
-        return "OP_LT";
-    case Fa_OpCode::OP_LT_II:
-        return "OP_LT_II";
-    case Fa_OpCode::OP_LT_FF:
-        return "OP_LT_FF";
-    case Fa_OpCode::OP_LT_SS:
-        return "OP_LT_SS";
-    case Fa_OpCode::OP_LT_RI:
-        return "OP_LT_RI";
-    case Fa_OpCode::OP_LTE:
-        return "OP_LTE";
-    case Fa_OpCode::OP_LTE_II:
-        return "OP_LTE_II";
-    case Fa_OpCode::OP_LTE_FF:
-        return "OP_LTE_FF";
-    case Fa_OpCode::OP_LTE_SS:
-        return "OP_LTE_SS";
-    case Fa_OpCode::OP_LTE_RI:
-        return "OP_LTE_RI";
-    case Fa_OpCode::OP_NOT:
-        return "OP_NOT";
-    case Fa_OpCode::CONCAT:
-        return "CONCAT";
-    case Fa_OpCode::LIST_NEW:
-        return "LIST_NEW";
-    case Fa_OpCode::LIST_APPEND:
-        return "LIST_APPEND";
-    case Fa_OpCode::LIST_GET:
-        return "LIST_GET";
-    case Fa_OpCode::LIST_SET:
-        return "LIST_SET";
-    case Fa_OpCode::LIST_LEN:
-        return "LIST_LEN";
-    case Fa_OpCode::JUMP:
-        return "JUMP";
-    case Fa_OpCode::JUMP_IF_TRUE:
-        return "JUMP_IF_TRUE";
-    case Fa_OpCode::JUMP_IF_FALSE:
-        return "JUMP_IF_FALSE";
-    case Fa_OpCode::LOOP:
-        return "LOOP";
-    case Fa_OpCode::FOR_PREP:
-        return "FOR_PREP";
-    case Fa_OpCode::FOR_STEP:
-        return "FOR_STEP";
-    case Fa_OpCode::CLOSURE:
-        return "CLOSURE";
-    case Fa_OpCode::CALL:
-        return "CALL";
-    case Fa_OpCode::CALL_TAIL:
-        return "CALL_TAIL";
-    case Fa_OpCode::RETURN:
-        return "RETURN";
-    case Fa_OpCode::RETURN_NIL:
-        return "RETURN_NIL";
-    case Fa_OpCode::RETURN1:
-        return "RETURN1";
-    case Fa_OpCode::IC_CALL:
-        return "IC_CALL";
-    case Fa_OpCode::INDEX:
-        return "INDEX";
-    case Fa_OpCode::UNSAFE_INDEX:
-        return "UNSAFE_INDEX";
-    case Fa_OpCode::NEW_CLASS:
-        return "NEW_CLASS";
-    case Fa_OpCode::NEW_INSTANCE:
-        return "NEW_INSTANCE";
-    case Fa_OpCode::INVOKE:
-        return "INVOKE";
-    case Fa_OpCode::GET_FIELD:
-        return "GET_FIELD";
-    case Fa_OpCode::SET_FIELD:
-        return "SET_FIELD";
-    case Fa_OpCode::NOP:
-        return "NOP";
-    case Fa_OpCode::HALT:
-        return "HALT";
+    case Fa_OpCode::LOAD_NIL: return "LOAD_NIL";
+    case Fa_OpCode::LOAD_TRUE: return "LOAD_TRUE";
+    case Fa_OpCode::LOAD_FALSE: return "LOAD_FALSE";
+    case Fa_OpCode::LOAD_CONST: return "LOAD_CONST";
+    case Fa_OpCode::LOAD_INT: return "LOAD_INT";
+    case Fa_OpCode::LOAD_GLOBAL: return "LOAD_GLOBAL";
+    case Fa_OpCode::STORE_GLOBAL: return "STORE_GLOBAL";
+    case Fa_OpCode::MOVE: return "MOVE";
+    case Fa_OpCode::LOAD_GLOBAL_CACHED: return "LOAD_GLOBAL_CACHED";
+    case Fa_OpCode::STORE_GLOBAL_CACHED: return "STORE_GLOBAL_CACHED";
+    case Fa_OpCode::OP_ADD: return "OP_ADD";
+    case Fa_OpCode::OP_ADD_II: return "OP_ADD_II";
+    case Fa_OpCode::OP_ADD_FF: return "OP_ADD_FF";
+    case Fa_OpCode::OP_ADD_RI: return "OP_ADD_RI";
+    case Fa_OpCode::OP_SUB: return "OP_SUB";
+    case Fa_OpCode::OP_SUB_II: return "OP_SUB_II";
+    case Fa_OpCode::OP_SUB_FF: return "OP_SUB_FF";
+    case Fa_OpCode::OP_SUB_RI: return "OP_SUB_RI";
+    case Fa_OpCode::OP_MUL: return "OP_MUL";
+    case Fa_OpCode::OP_MUL_II: return "OP_MUL_II";
+    case Fa_OpCode::OP_MUL_FF: return "OP_MUL_FF";
+    case Fa_OpCode::OP_MUL_RI: return "OP_MUL_RI";
+    case Fa_OpCode::OP_DIV: return "OP_DIV";
+    case Fa_OpCode::OP_DIV_II: return "OP_DIV_II";
+    case Fa_OpCode::OP_DIV_FF: return "OP_DIV_FF";
+    case Fa_OpCode::OP_MOD: return "OP_MOD";
+    case Fa_OpCode::OP_MOD_II: return "OP_MOD_II";
+    case Fa_OpCode::OP_MOD_FF: return "OP_MOD_FF";
+    case Fa_OpCode::OP_POW: return "OP_POW";
+    case Fa_OpCode::OP_NEG: return "OP_NEG";
+    case Fa_OpCode::OP_NEG_I: return "OP_NEG_I";
+    case Fa_OpCode::OP_NEG_F: return "OP_NEG_F";
+    case Fa_OpCode::OP_BITAND: return "OP_BITAND";
+    case Fa_OpCode::OP_BITAND_I: return "OP_BITAND_I";
+    case Fa_OpCode::OP_BITOR: return "OP_BITOR";
+    case Fa_OpCode::OP_BITOR_I: return "OP_BITOR_I";
+    case Fa_OpCode::OP_BITXOR: return "OP_BITXOR";
+    case Fa_OpCode::OP_BITXOR_I: return "OP_BITXOR_I";
+    case Fa_OpCode::OP_BITNOT: return "OP_BITNOT";
+    case Fa_OpCode::OP_LSHIFT: return "OP_LSHIFT";
+    case Fa_OpCode::OP_RSHIFT: return "OP_RSHIFT";
+    case Fa_OpCode::OP_EQ: return "OP_EQ";
+    case Fa_OpCode::OP_EQ_II: return "OP_EQ_II";
+    case Fa_OpCode::OP_EQ_FF: return "OP_EQ_FF";
+    case Fa_OpCode::OP_EQ_SS: return "OP_EQ_SS";
+    case Fa_OpCode::OP_EQ_RI: return "OP_EQ_RI";
+    case Fa_OpCode::OP_NEQ: return "OP_NEQ";
+    case Fa_OpCode::OP_NEQ_II: return "OP_NEQ_II";
+    case Fa_OpCode::OP_NEQ_FF: return "OP_NEQ_FF";
+    case Fa_OpCode::OP_NEQ_SS: return "OP_NEQ_SS";
+    case Fa_OpCode::OP_LT: return "OP_LT";
+    case Fa_OpCode::OP_LT_II: return "OP_LT_II";
+    case Fa_OpCode::OP_LT_FF: return "OP_LT_FF";
+    case Fa_OpCode::OP_LT_SS: return "OP_LT_SS";
+    case Fa_OpCode::OP_LT_RI: return "OP_LT_RI";
+    case Fa_OpCode::OP_LTE: return "OP_LTE";
+    case Fa_OpCode::OP_LTE_II: return "OP_LTE_II";
+    case Fa_OpCode::OP_LTE_FF: return "OP_LTE_FF";
+    case Fa_OpCode::OP_LTE_SS: return "OP_LTE_SS";
+    case Fa_OpCode::OP_LTE_RI: return "OP_LTE_RI";
+    case Fa_OpCode::OP_NOT: return "OP_NOT";
+    case Fa_OpCode::CONCAT: return "CONCAT";
+    case Fa_OpCode::LIST_NEW: return "LIST_NEW";
+    case Fa_OpCode::LIST_APPEND: return "LIST_APPEND";
+    case Fa_OpCode::LIST_GET: return "LIST_GET";
+    case Fa_OpCode::LIST_SET: return "LIST_SET";
+    case Fa_OpCode::LIST_LEN: return "LIST_LEN";
+    case Fa_OpCode::JUMP: return "JUMP";
+    case Fa_OpCode::JUMP_IF_TRUE: return "JUMP_IF_TRUE";
+    case Fa_OpCode::JUMP_IF_FALSE: return "JUMP_IF_FALSE";
+    case Fa_OpCode::LOOP: return "LOOP";
+    case Fa_OpCode::FOR_PREP: return "FOR_PREP";
+    case Fa_OpCode::FOR_STEP: return "FOR_STEP";
+    case Fa_OpCode::CLOSURE: return "CLOSURE";
+    case Fa_OpCode::CALL: return "CALL";
+    case Fa_OpCode::CALL_TAIL: return "CALL_TAIL";
+    case Fa_OpCode::RETURN: return "RETURN";
+    case Fa_OpCode::RETURN_NIL: return "RETURN_NIL";
+    case Fa_OpCode::RETURN1: return "RETURN1";
+    case Fa_OpCode::IC_CALL: return "IC_CALL";
+    case Fa_OpCode::INDEX: return "INDEX";
+    case Fa_OpCode::UNSAFE_INDEX: return "UNSAFE_INDEX";
+    case Fa_OpCode::NEW_CLASS: return "NEW_CLASS";
+    case Fa_OpCode::NEW_INSTANCE: return "NEW_INSTANCE";
+    case Fa_OpCode::INVOKE: return "INVOKE";
+    case Fa_OpCode::GET_FIELD: return "GET_FIELD";
+    case Fa_OpCode::SET_FIELD: return "SET_FIELD";
+    case Fa_OpCode::NOP: return "NOP";
+    case Fa_OpCode::HALT: return "HALT";
     default:
         return "???";
     }

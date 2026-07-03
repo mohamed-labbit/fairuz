@@ -1676,4 +1676,3 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_binary_expr()
 }
 
 } // namespace fairuz::parser
-
