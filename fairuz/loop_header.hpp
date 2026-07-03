@@ -4,7 +4,6 @@
 
 #include "array.hpp"
 #include "string.hpp"
-#include "table.hpp"
 
 #include <optional>
 #include <sstream>
@@ -43,14 +42,8 @@ struct VariableValue {
 struct LoopHeader {
     /// Set of variable names used in loop body from outer scope
     std::unordered_set<Fa_StringRef, Fa_StringRefHash, Fa_StringRefEqual> external_vars;
-
     /// For each external variable, store its last assigned value before loop
-    std::unordered_map<
-        Fa_StringRef,
-        VariableValue,
-        Fa_StringRefHash,
-        Fa_StringRefEqual>
-        var_to_value;
+    std::unordered_map<Fa_StringRef, VariableValue, Fa_StringRefHash, Fa_StringRefEqual> var_to_value;
 
     bool empty() const { return external_vars.empty(); }
     size_t size() const { return external_vars.size(); }
@@ -84,14 +77,8 @@ public:
 private:
     /// All assignments seen in the current scope, in order
     Fa_Array<Assignment> assignments;
-
     /// Latest assignment for each variable
-    std::unordered_map<
-        Fa_StringRef,
-        Assignment,
-        Fa_StringRefHash,
-        Fa_StringRefEqual>
-        latest_assignment;
+    std::unordered_map<Fa_StringRef, Assignment, Fa_StringRefHash, Fa_StringRefEqual> latest_assignment;
 
 public:
     /// Record an assignment
