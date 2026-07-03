@@ -170,6 +170,7 @@ inline Fa_AllocatorContext& get_context()
 }
 
 inline Fa_ArenaAllocator& get_allocator() { return get_context().allocator; }
+inline Fa_ArenaAllocator* get_allocator_ptr() { return &get_context().allocator; }
 
 struct Fa_AllocatorContextScope {
     explicit Fa_AllocatorContextScope(Fa_AllocatorContext& ctx) { g_context = &ctx; }
