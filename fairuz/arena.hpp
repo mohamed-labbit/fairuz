@@ -124,10 +124,10 @@ public:
     void deallocate_array(T* ptr, size_t const count) { deallocate(static_cast<void*>(ptr), count * sizeof(T)); }
 
     template<typename T, typename... Args>
-    [[nodiscard]] T* allocate_object(Args&&... m_args)
+    [[nodiscard]] T* allocate_object(Args&&... args)
     {
         static_assert(std::is_constructible_v<T, Args...>, "T must be constructible with Args...");
-        return ::new (allocate(sizeof(T))) T(std::forward<Args>(m_args)...);
+        return ::new (allocate(sizeof(T))) T(std::forward<Args>(args)...);
     }
 
     template<typename T>
