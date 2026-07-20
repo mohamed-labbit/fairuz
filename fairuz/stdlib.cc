@@ -1,5 +1,6 @@
 /// stdlib.cc
 
+#include "fobject.hpp"
 #include "util.hpp"
 #include "vm.hpp"
 
@@ -14,20 +15,20 @@ namespace fairuz::runtime {
 using ErrorCode = diagnostic::errc::runtime::Code;
 using StdlibError = diagnostic::errc::stdlib::Code;
 
-static Fa_StringRef format_double_string(f64 value)
+static Fa_RTStringRef format_double_string(f64 value)
 {
     char buf[64];
     auto [ptr, ec] = std::to_chars(buf, buf + sizeof(buf), value);
     if (ec == std::errc())
-        return Fa_StringRef(std::string(buf, static_cast<size_t>(ptr - buf)).c_str());
+        return Fa_RTStringRef(std::string(buf, static_cast<size_t>(ptr - buf)).c_str());
 
     std::ostringstream oss;
     oss.imbue(std::locale::classic());
     oss << std::setprecision(14) << std::noshowpoint << value;
-    return Fa_StringRef(oss.str().c_str());
+    return Fa_RTStringRef(oss.str().c_str());
 }
 
-static void append_rendered_value(Fa_StringRef& out, Fa_Value v, bool quote_strings)
+static void append_rendered_value(Fa_RTStringRef& out, Fa_Value v, bool quote_strings)
 {
     if (Fa_IS_NIL(v)) {
         out += "nil";
@@ -38,13 +39,13 @@ static void append_rendered_value(Fa_StringRef& out, Fa_Value v, bool quote_stri
         return;
     }
     if (Fa_IS_INTEGER(v)) {
-        out += Fa_StringRef(std::to_string(Fa_AS_INTEGER(v)).c_str());
+        out += Fa_RTStringRef(std::to_string(Fa_AS_INTEGER(v)).c_str());
         return;
     }
     if (Fa_IS_DOUBLE(v)) {
         f64 d = Fa_AS_DOUBLE(v);
         if (d == std::floor(d) && std::isfinite(d) && std::abs(d) < 1e15)
-            out += Fa_StringRef(std::to_string(static_cast<i64>(d)).c_str());
+            out += Fa_RTStringRef(std::to_string(static_cast<i64>(d)).c_str());
         else
             out += format_double_string(d);
         return;
@@ -85,10 +86,6 @@ static void append_rendered_value(Fa_StringRef& out, Fa_Value v, bool quote_stri
         out += '}';
         return;
     }
-    if (Fa_IS_CLOSURE(v)) {
-        out += "<function>";
-        return;
-    }
     if (Fa_IS_NATIVE(v)) {
         out += "<native>";
         return;
@@ -107,15 +104,15 @@ static void append_rendered_value(Fa_StringRef& out, Fa_Value v, bool quote_stri
     if (Fa_IS_INSTANCE(v)) {
         out += '<';
         Fa_ObjInstance* instance = Fa_AS_INSTANCE(v);
-        out += instance->klass ? instance->klass->name : Fa_StringRef("?");
+        out += instance->klass->name;
         out += " instance>";
         return;
     }
 }
 
-static Fa_StringRef value_to_string(Fa_Value v)
+static Fa_RTStringRef value_to_string(Fa_Value v)
 {
-    Fa_StringRef out = "";
+    Fa_RTStringRef out = "";
     append_rendered_value(out, v, false);
     return out;
 }
@@ -127,13 +124,13 @@ Fa_Value Fa_VM::Fa_len(int argc, Fa_Value* argv)
 
     if (argc == 1) {
         if (Fa_IS_STRING(argv[0])) {
-            Fa_StringRef const& str = Fa_AS_STRING(argv[0])->str;
+            Fa_RTStringRef const& str = Fa_AS_STRING(argv[0])->str;
             size_t byte_pos = 0;
             i64 char_count = 0;
 
             while (byte_pos < str.len()) {
                 u64 step = 0;
-                util::decode_utf8_at(str, byte_pos, &step);
+                util::decode_utf8_at(str.data(), byte_pos, &step);
                 byte_pos += step;
                 char_count += 1;
             }
@@ -173,13 +170,13 @@ static void print_runtime_value(Fa_Value v, int depth = 0)
 
         switch (obj->type) {
         case Fa_ObjType::STRING:
-            std::cout << static_cast<Fa_ObjString*>(obj)->str;
+            std::cout << Fa_obj_cast<Fa_ObjString>(obj, Fa_ObjType::STRING)->str;
             return;
 
         case Fa_ObjType::LIST: {
-            auto list = static_cast<Fa_ObjList*>(obj);
+            auto list = Fa_obj_cast<Fa_ObjList>(obj, Fa_ObjType::LIST);
             std::cout << '[';
-            for (u32 i = 0, n = list->elements.size(); i < n; i += 1) {
+            for (u32 i = 0, n = list->size(); i < n; i += 1) {
                 if (i > 0)
                     std::cout << ", ";
                 Fa_Value elem = list->elements[i];
@@ -196,7 +193,7 @@ static void print_runtime_value(Fa_Value v, int depth = 0)
         }
 
         case Fa_ObjType::DICT: {
-            auto dict = static_cast<Fa_ObjDict*>(obj);
+            auto dict = Fa_obj_cast<Fa_ObjDict>(obj, Fa_ObjType::DICT);
             std::cout << '{';
             for (auto [k, v] : dict->data) {
                 if (Fa_IS_STRING(k)) {
@@ -220,19 +217,8 @@ static void print_runtime_value(Fa_Value v, int depth = 0)
             return;
         }
 
-        case Fa_ObjType::CLOSURE: {
-            auto cl = static_cast<Fa_ObjClosure*>(obj);
-            std::cout << "<function ";
-            if (cl->function && cl->function->name)
-                std::cout << cl->function->name->str;
-            else
-                std::cout << "?";
-            std::cout << '>';
-            return;
-        }
-
         case Fa_ObjType::NATIVE: {
-            auto nat = static_cast<Fa_ObjNative*>(obj);
+            auto nat = Fa_obj_cast<Fa_ObjNative>(obj, Fa_ObjType::NATIVE);
             std::cout << "<native ";
             if (nat->name)
                 std::cout << nat->name->str;
@@ -243,24 +229,21 @@ static void print_runtime_value(Fa_Value v, int depth = 0)
         }
 
         case Fa_ObjType::FUNCTION: {
-            auto fn = static_cast<Fa_ObjFunction*>(obj);
+            auto* fn = Fa_obj_cast<Fa_ObjFunction>(obj, Fa_ObjType::FUNCTION);
             std::cout << "<function ";
-            if (fn->name)
-                std::cout << fn->name->str;
-            else
-                std::cout << "?";
+            std::cout << fn->name();
             std::cout << '>';
             return;
         }
 
         case Fa_ObjType::CLASS: {
-            auto klass = static_cast<Fa_ObjClass*>(obj);
+            auto klass = Fa_obj_cast<Fa_ObjClass>(obj, Fa_ObjType::CLASS);
             std::cout << "<class " << klass->name << '>';
             return;
         }
 
         case Fa_ObjType::INSTANCE: {
-            auto instance = static_cast<Fa_ObjInstance*>(obj);
+            auto instance = Fa_obj_cast<Fa_ObjInstance>(obj, Fa_ObjType::INSTANCE);
             std::cout << '<';
             if (instance->klass)
                 std::cout << instance->klass->name;
@@ -421,12 +404,12 @@ Fa_Value Fa_VM::Fa_str(int argc, Fa_Value* argv)
     Fa_StringRef output = "";
 
     if (argc == 0 || argv == nullptr)
-        return Fa_MAKE_OBJECT((Fa_MAKE_OBJ_STRING(output))); // return empty on no arg
+        return Fa_MAKE_OBJECT(m_gc.make_obj_string(output)); // return empty on no arg
 
     if (Fa_IS_STRING(argv[0]))
         return Fa_MAKE_STRING(Fa_AS_STRING(argv[0])->str);
 
-    Fa_StringRef rendered = value_to_string(argv[0]);
+    Fa_RTStringRef rendered = value_to_string(argv[0]);
     return Fa_MAKE_STRING(rendered);
 }
 
@@ -472,8 +455,8 @@ Fa_Value Fa_VM::Fa_split(int argc, Fa_Value* argv)
     if (!Fa_IS_STRING(argv[0]) || !Fa_IS_STRING(argv[1]))
         return NIL_VAL;
 
-    Fa_StringRef src = Fa_AS_STRING(argv[0])->str;
-    Fa_StringRef delim = Fa_AS_STRING(argv[1])->str;
+    Fa_RTStringRef src = Fa_AS_STRING(argv[0])->str;
+    Fa_RTStringRef delim = Fa_AS_STRING(argv[1])->str;
 
     Fa_Value ret = Fa_MAKE_LIST();
     Fa_ObjList* list = Fa_AS_LIST(ret);
@@ -516,8 +499,8 @@ Fa_Value Fa_VM::Fa_join(int argc, Fa_Value* argv)
         return NIL_VAL;
 
     Fa_ObjList* list = Fa_AS_LIST(argv[0]);
-    Fa_StringRef delim = Fa_AS_STRING(argv[1])->str;
-    Fa_StringRef out = "";
+    Fa_RTStringRef delim = Fa_AS_STRING(argv[1])->str;
+    Fa_RTStringRef out = "";
 
     for (u32 i = 0; i < list->elements.size(); i += 1) {
         if (i > 0)
@@ -537,7 +520,7 @@ Fa_Value Fa_VM::Fa_substr(int argc, Fa_Value* argv)
         return NIL_VAL;
     }
 
-    Fa_StringRef str = Fa_AS_STRING(argv[0])->str;
+    Fa_RTStringRef str = Fa_AS_STRING(argv[0])->str;
 
     Fa_Value a = Fa_IS_INTEGER(argv[1]) ? Fa_AS_INTEGER(argv[1]) : NIL_VAL;
     Fa_Value b = Fa_IS_INTEGER(argv[1]) ? Fa_AS_INTEGER(argv[2]) : NIL_VAL;
@@ -545,7 +528,7 @@ Fa_Value Fa_VM::Fa_substr(int argc, Fa_Value* argv)
     if (UNLIKELY(a == NIL_VAL || b == NIL_VAL))
         return NIL_VAL;
 
-    Fa_StringRef ret = str.substr(a, b);
+    Fa_RTStringRef ret = str.substr(a, b);
     return Fa_MAKE_STRING(ret);
 }
 
@@ -556,8 +539,8 @@ Fa_Value Fa_VM::Fa_contains(int argc, Fa_Value* argv)
     if (!Fa_IS_STRING(argv[0]) || !Fa_IS_STRING(argv[1]))
         return NIL_VAL;
 
-    Fa_StringRef haystack = Fa_AS_STRING(argv[0])->str;
-    Fa_StringRef needle = Fa_AS_STRING(argv[1])->str;
+    Fa_RTStringRef haystack = Fa_AS_STRING(argv[0])->str;
+    Fa_RTStringRef needle = Fa_AS_STRING(argv[1])->str;
     if (needle.empty())
         return Fa_MAKE_BOOL(true);
 
@@ -571,7 +554,7 @@ Fa_Value Fa_VM::Fa_trim(int argc, Fa_Value* argv)
     if (!Fa_IS_STRING(argv[0]))
         return NIL_VAL;
 
-    Fa_StringRef str = Fa_AS_STRING(argv[0])->str;
+    Fa_RTStringRef str = Fa_AS_STRING(argv[0])->str;
     size_t start = 0;
     size_t end = str.len();
 

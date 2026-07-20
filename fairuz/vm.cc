@@ -3,6 +3,8 @@
 //
 
 #include "vm.hpp"
+#include "diagnostic.hpp"
+#include "fobject.hpp"
 #include "macros.hpp"
 #include "opcode.hpp"
 #include "util.hpp"
@@ -193,7 +195,7 @@ static constexpr char kClassMetadataKey[] = "__class__";
             runtime_error(ErrorCode::TYPE_ERROR_ARITH); \
     } while (0)
 
-Fa_StringRef sp_method_name(int m)
+Fa_RTStringRef sp_method_name(int m)
 {
     switch (m) {
     case Fa_ObjClass::INIT: return "بداية";
@@ -297,19 +299,17 @@ Fa_Value Fa_VM::run(Fa_Chunk* chunk)
     m_stack_top = 0;
     m_frames_top = 0;
 
-    Fa_ObjFunction* fn = Fa_MAKE_OBJ_FUNCTION();
-    fn->chunk = chunk;
-    Fa_ObjClosure* cl = Fa_MAKE_OBJ_CLOSURE(fn);
+    Fa_ObjFunction* fn = m_gc.make_obj_function(chunk);
 
-    m_stack[0] = Fa_MAKE_OBJECT(cl);
+    m_stack[0] = Fa_MAKE_OBJECT(fn);
     m_stack_top = static_cast<int>(chunk->local_count) + 2;
 
     if (m_frames_top >= MAX_FRAMES || m_stack_top >= STACK_SIZE)
         runtime_error(ErrorCode::STACK_OVERFLOW);
 
-    m_frames[m_frames_top] = Fa_CallFrame(cl, chunk, 0, 1, static_cast<int>(chunk->local_count));
+    m_frames[m_frames_top] = Fa_CallFrame(fn, chunk, 0, 1, static_cast<int>(chunk->local_count));
     m_frames_top += 1;
-    intern_chunk_constants(cl->function->chunk);
+    intern_chunk_constants(fn->chunk);
 
     if (m_gc.current_memory() >= GC_THRESHOLD)
         m_gc.collect(this);
@@ -366,7 +366,7 @@ Fa_Value Fa_VM::execute()
     {
         {
             Fa_Value name_v = cur_chunk->constants[Fa_instr_Bx(instr)];
-            Fa_StringRef name = Fa_AS_STRING(name_v)->str;
+            Fa_RTStringRef name = Fa_AS_STRING(name_v)->str;
             u32* slot = m_global_index.find_ptr(name);
             if (slot == nullptr)
                 runtime_error(ErrorCode::UNDEFINED_GLOBAL, std::string(name.data(), name.len()));
@@ -389,7 +389,7 @@ Fa_Value Fa_VM::execute()
     {
         {
             Fa_Value name_v = cur_chunk->constants[Fa_instr_Bx(instr)];
-            Fa_StringRef name = Fa_AS_STRING(name_v)->str;
+            Fa_RTStringRef name = Fa_AS_STRING(name_v)->str;
             u32 slot_idx;
 
             if (u32* slot = m_global_index.find_ptr(name)) {
@@ -978,7 +978,7 @@ Fa_Value Fa_VM::execute()
     }
     Fa_CASE(LIST_NEW)
     {
-        Fa_ObjList* list_obj = Fa_MAKE_OBJ_LIST();
+        Fa_ObjList* list_obj = m_gc.make_obj_list();
         list_obj->reserve(Fa_instr_B(instr));
         Fa_RA() = Fa_MAKE_OBJECT(list_obj);
         Fa_DISPATCH();
@@ -1123,9 +1123,8 @@ Fa_Value Fa_VM::execute()
     {
         u16 fn_idx = Fa_instr_Bx(instr);
         Fa_Chunk* fn_chunk = cur_chunk->functions[fn_idx];
-        Fa_ObjFunction* fn = Fa_MAKE_OBJ_FUNCTION(fn_chunk);
-        fn->arity = fn_chunk->arity;
-        Fa_RA() = Fa_MAKE_OBJECT(Fa_MAKE_OBJ_CLOSURE(fn));
+        Fa_ObjFunction* fn = m_gc.make_obj_function(fn_chunk);
+        Fa_RA() = Fa_MAKE_OBJECT(fn);
         Fa_DISPATCH();
     }
     Fa_CASE(CALL)
@@ -1135,29 +1134,29 @@ Fa_Value Fa_VM::execute()
         Fa_Value callee = cur_base[fn_reg];
         int base = cur_frame_base + fn_reg + 1;
 
-        if (Fa_IS_CLOSURE(callee)) {
-            Fa_ObjClosure* cl = Fa_AS_CLOSURE(callee);
-            Fa_Chunk* fchk = cl->function->chunk;
+        // if (Fa_IS_CLOSURE(callee)) {
+        //     Fa_ObjClosure* cl = Fa_AS_CLOSURE(callee);
+        //     Fa_Chunk* fchk = cl->function->chunk;
 
-            if (UNLIKELY(argc != fchk->arity))
-                runtime_error(ErrorCode::WRONG_ARG_COUNT);
-            if (UNLIKELY(m_frames_top >= MAX_FRAMES))
-                runtime_error(ErrorCode::STACK_OVERFLOW);
+        //     if (UNLIKELY(argc != fchk->arity))
+        //         runtime_error(ErrorCode::WRONG_ARG_COUNT);
+        //     if (UNLIKELY(m_frames_top >= MAX_FRAMES))
+        //         runtime_error(ErrorCode::STACK_OVERFLOW);
 
-            int local_count = fchk->local_count;
-            int new_top = base + local_count + 1;
-            while (m_stack_top < new_top) {
-                m_stack[m_stack_top] = NIL_VAL;
-                m_stack_top += 1;
-            }
+        //     int local_count = fchk->local_count;
+        //     int new_top = base + local_count + 1;
+        //     while (m_stack_top < new_top) {
+        //         m_stack[m_stack_top] = NIL_VAL;
+        //         m_stack_top += 1;
+        //     }
 
-            SAVE_IP();
-            m_frames[m_frames_top] = Fa_CallFrame(cl, fchk, 0, base, local_count);
-            m_frames_top += 1;
-        } else {
-            SAVE_IP();
-            call_value(callee, argc, base, false);
-        }
+        //     SAVE_IP();
+        //     m_frames[m_frames_top] = Fa_CallFrame(cl, fchk, 0, base, local_count);
+        //     m_frames_top += 1;
+        // } else {
+        SAVE_IP();
+        call_value(callee, argc, base, false);
+        // }
 
         LOAD_FRAME();
         Fa_DISPATCH();
@@ -1192,29 +1191,29 @@ Fa_Value Fa_VM::execute()
         Fa_Chunk* caller_chunk = cur_chunk;
         int result_slot = base - 1;
 
-        if (Fa_IS_CLOSURE(callee)) {
-            Fa_ObjClosure* cl = Fa_AS_CLOSURE(callee);
-            Fa_Chunk* fchk = cl->function->chunk;
+        // if (Fa_IS_CLOSURE(callee)) {
+        //     Fa_ObjClosure* cl = Fa_AS_CLOSURE(callee);
+        //     Fa_Chunk* fchk = cl->function->chunk;
 
-            if (UNLIKELY(argc != fchk->arity))
-                runtime_error(ErrorCode::WRONG_ARG_COUNT);
-            if (UNLIKELY(m_frames_top >= MAX_FRAMES))
-                runtime_error(ErrorCode::STACK_OVERFLOW);
+        //     if (UNLIKELY(argc != fchk->arity))
+        //         runtime_error(ErrorCode::WRONG_ARG_COUNT);
+        //     if (UNLIKELY(m_frames_top >= MAX_FRAMES))
+        //         runtime_error(ErrorCode::STACK_OVERFLOW);
 
-            int local_count = fchk->local_count;
-            int new_top = base + local_count + 1;
-            while (m_stack_top < new_top) {
-                m_stack[m_stack_top] = NIL_VAL;
-                m_stack_top += 1;
-            }
+        //     int local_count = fchk->local_count;
+        //     int new_top = base + local_count + 1;
+        //     while (m_stack_top < new_top) {
+        //         m_stack[m_stack_top] = NIL_VAL;
+        //         m_stack_top += 1;
+        //     }
 
-            SAVE_IP();
-            m_frames[m_frames_top] = Fa_CallFrame(cl, fchk, 0, base, local_count);
-            m_frames_top += 1;
-        } else {
-            SAVE_IP();
-            call_value(callee, argc, base, false);
-        }
+        //     SAVE_IP();
+        //     m_frames[m_frames_top] = Fa_CallFrame(cl, fchk, 0, base, local_count);
+        //     m_frames_top += 1;
+        // } else {
+        SAVE_IP();
+        call_value(callee, argc, base, false);
+        // }
 
         LOAD_FRAME();
 
@@ -1275,7 +1274,7 @@ Fa_Value Fa_VM::execute()
             if (UNLIKELY(idx_int < 0))
                 runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
 
-            Fa_StringRef const& str = Fa_AS_STRING(obj)->str;
+            Fa_RTStringRef const& str = Fa_AS_STRING(obj)->str;
 
             size_t byte_pos = 0;
             i64 char_pos = 0;
@@ -1283,7 +1282,7 @@ Fa_Value Fa_VM::execute()
 
             while (byte_pos < str.len() && char_pos < idx_int) {
                 u64 step = 0;
-                util::decode_utf8_at(str, byte_pos, &step);
+                util::decode_utf8_at(str.data(), byte_pos, &step);
                 byte_pos += step;
                 char_pos += 1;
             }
@@ -1291,9 +1290,9 @@ Fa_Value Fa_VM::execute()
             if (UNLIKELY(byte_pos >= str.len()))
                 runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
 
-            util::decode_utf8_at(str, byte_pos, &char_bytes);
+            util::decode_utf8_at(str.data(), byte_pos, &char_bytes);
 
-            Fa_StringRef ch = str.slice(byte_pos, byte_pos + char_bytes);
+            Fa_RTStringRef ch = str.slice(byte_pos, byte_pos + char_bytes);
             Fa_RA() = Fa_MAKE_STRING(ch);
         } else if (Fa_IS_LIST(obj)) {
             if (UNLIKELY(!Fa_IS_INTEGER(idx)))
@@ -1325,7 +1324,7 @@ Fa_Value Fa_VM::execute()
         if (Fa_IS_STRING(obj)) {
             i64 idx_int = Fa_AS_INTEGER(idx);
 
-            Fa_StringRef const& str = Fa_AS_STRING(obj)->str;
+            Fa_RTStringRef const& str = Fa_AS_STRING(obj)->str;
 
             size_t byte_pos = 0;
             i64 char_pos = 0;
@@ -1333,14 +1332,14 @@ Fa_Value Fa_VM::execute()
 
             while (byte_pos < str.len() && char_pos < idx_int) {
                 u64 step = 0;
-                util::decode_utf8_at(str, byte_pos, &step);
+                util::decode_utf8_at(str.data(), byte_pos, &step);
                 byte_pos += step;
                 char_pos += 1;
             }
 
-            util::decode_utf8_at(str, byte_pos, &char_bytes);
+            util::decode_utf8_at(str.data(), byte_pos, &char_bytes);
 
-            Fa_StringRef ch = str.slice(byte_pos, byte_pos + char_bytes);
+            Fa_RTStringRef ch = str.slice(byte_pos, byte_pos + char_bytes);
             Fa_RA() = Fa_MAKE_STRING(ch);
         } else if (Fa_IS_LIST(obj)) {
             Fa_RA() = Fa_AS_LIST(obj)->elements[Fa_AS_INTEGER(idx)];
@@ -1358,13 +1357,60 @@ Fa_Value Fa_VM::execute()
     }
     Fa_CASE(NEW_CLASS)
     {
-        Fa_RA() = cur_chunk->constants[Fa_instr_Bx(instr)];
+        Fa_ObjClass* klass = nullptr;
+        {
+            u32 desc_idx = Fa_instr_Bx(instr);
+            Fa_ClassDescriptor klass_desc = cur_chunk->class_descriptors[desc_idx];
+            Fa_RTStringRef kname = klass_desc.name.data();
+            u32 field_count = klass_desc.field_count;
+            u32 method_count = klass_desc.method_names.size();
+            u32 vtable_size = klass_desc.vtable_size;
+            /// populate field names
+            /// NOTE: it's entirely reasonable to use memcpy instead
+            /// but that runs into the fact that they've got different layouts based on different allocators
+            Fa_RTStringRef* kfield_names = new Fa_RTStringRef[field_count]();
+            if (kfield_names == nullptr)
+                diagnostic::panic(diagnostic::errc::general::Code::ALLOC_FAILED);
+
+            for (u32 i = 0; i < field_count; ++i)
+                kfield_names[i] = klass_desc.field_names[i].data();
+
+            // populate method names
+            Fa_RTStringRef* kmethod_names = new Fa_RTStringRef[method_count]();
+            if (kmethod_names == nullptr) {
+                delete[] kfield_names;
+                diagnostic::panic(diagnostic::errc::general::Code::ALLOC_FAILED);
+            }
+
+            for (u32 i = 0; i < method_count; ++i)
+                kmethod_names[i] = klass_desc.method_names[i].data();
+
+            Fa_Chunk** kvtable = new Fa_Chunk*[vtable_size]();
+            if (kvtable == nullptr) {
+                delete[] kfield_names;
+                delete[] kmethod_names;
+                diagnostic::panic(diagnostic::errc::general::Code::ALLOC_FAILED);
+            }
+
+            for (u32 i = 0; i < vtable_size; ++i)
+                kvtable[i] = cur_chunk->functions[klass_desc.vtable_indices[i]];
+
+            Fa_RA() = Fa_MAKE_CLASS(
+                kname,
+                kfield_names,
+                field_count,
+                kmethod_names,
+                method_count,
+                kvtable,
+                vtable_size);
+        }
+
         Fa_DISPATCH();
     }
     Fa_CASE(NEW_INSTANCE)
     {
         Fa_ObjClass* klass = Fa_AS_CLASS(cur_chunk->constants[Fa_instr_Bx(instr)]);
-        Fa_ObjInstance* inst = Fa_MAKE_OBJ_INSTANCE(klass);
+        Fa_ObjInstance* inst = m_gc.make_obj_instance(klass);
         Fa_RA() = Fa_MAKE_OBJECT(inst);
         Fa_DISPATCH();
     }
@@ -1468,9 +1514,52 @@ void Fa_VM::invoke_method(Fa_Chunk* target_chunk, Fa_Value self_val, int dst_reg
 
 void Fa_VM::call_value(Fa_Value callee, int argc, int call_base, bool tail)
 {
-    if (Fa_IS_CLOSURE(callee)) {
-        Fa_ObjClosure* cl = Fa_AS_CLOSURE(callee);
-        Fa_Chunk* fchk = cl->function->chunk;
+    // if (Fa_IS_CLOSURE(callee)) {
+    //     Fa_ObjClosure* cl = Fa_AS_CLOSURE(callee);
+    //     Fa_Chunk* fchk = cl->function->chunk;
+    //     int arity = fchk->arity;
+    //     int local_count = fchk->local_count;
+
+    //     if (argc != arity) {
+    //         diagnostic::emit(ErrorCode::WRONG_ARG_COUNT, "expected " + std::to_string(arity) + " arguments but got " + std::to_string(argc));
+    //         runtime_error(ErrorCode::WRONG_ARG_COUNT);
+    //     }
+
+    //     if (local_count < argc)
+    //         runtime_error(ErrorCode::WRONG_ARG_COUNT);
+
+    //     if (tail && m_frames_top > 0) {
+    //         int cur_base = m_frames[m_frames_top - 1].base;
+
+    //         for (int i = 0; i < argc; i += 1)
+    //             m_stack[cur_base + i] = m_stack[call_base + i];
+    //         for (int i = argc; i < local_count; i += 1)
+    //             m_stack[cur_base + i] = NIL_VAL;
+
+    //         m_frames[m_frames_top - 1] = Fa_CallFrame(cl, fchk, 0, cur_base, local_count);
+
+    //         int new_top = cur_base + local_count + 1;
+    //         if (m_stack_top < new_top)
+    //             m_stack_top = new_top;
+    //     } else {
+    //         int new_top = call_base + local_count + 1;
+    //         while (m_stack_top < new_top) {
+    //             m_stack[m_stack_top] = NIL_VAL;
+    //             m_stack_top += 1;
+    //         }
+
+    //         for (int i = argc; i < local_count; i += 1)
+    //             m_stack[call_base + i] = NIL_VAL;
+
+    //         m_frames[m_frames_top] = Fa_CallFrame(cl, fchk, 0, call_base, local_count);
+    //         m_frames_top += 1;
+    //     }
+    //     return;
+    // }
+
+    if (Fa_IS_FUNCTION(callee)) {
+        Fa_ObjFunction* fn = Fa_AS_FUNCTION(callee);
+        Fa_Chunk* fchk = fn->chunk;
         int arity = fchk->arity;
         int local_count = fchk->local_count;
 
@@ -1490,7 +1579,7 @@ void Fa_VM::call_value(Fa_Value callee, int argc, int call_base, bool tail)
             for (int i = argc; i < local_count; i += 1)
                 m_stack[cur_base + i] = NIL_VAL;
 
-            m_frames[m_frames_top - 1] = Fa_CallFrame(cl, fchk, 0, cur_base, local_count);
+            m_frames[m_frames_top - 1] = Fa_CallFrame(fn, fchk, 0, cur_base, local_count);
 
             int new_top = cur_base + local_count + 1;
             if (m_stack_top < new_top)
@@ -1505,7 +1594,7 @@ void Fa_VM::call_value(Fa_Value callee, int argc, int call_base, bool tail)
             for (int i = argc; i < local_count; i += 1)
                 m_stack[call_base + i] = NIL_VAL;
 
-            m_frames[m_frames_top] = Fa_CallFrame(cl, fchk, 0, call_base, local_count);
+            m_frames[m_frames_top] = Fa_CallFrame(fn, fchk, 0, call_base, local_count);
             m_frames_top += 1;
         }
         return;
@@ -1526,12 +1615,13 @@ void Fa_VM::call_value(Fa_Value callee, int argc, int call_base, bool tail)
 
     if (Fa_IS_CLASS(callee)) {
         Fa_ObjClass* klass = Fa_AS_CLASS(callee);
-        Fa_ObjInstance* inst = Fa_MAKE_OBJ_INSTANCE(klass);
+        Fa_ObjInstance* inst = m_gc.make_obj_instance(klass);
         Fa_Value instance = Fa_MAKE_OBJECT(inst);
 
-        int ctor_slot = klass->method_slot("بداية");
+        int ctor_slot = klass->method_slot(Fa_RTStringRef { "بداية" });
         if (ctor_slot < 0)
-            ctor_slot = klass->method_slot("init");
+            /// TODO: Need to report that the init was not found
+            return;
 
         if (ctor_slot < 0) {
             if (argc != 0)
@@ -1572,9 +1662,9 @@ void Fa_VM::call_value(Fa_Value callee, int argc, int call_base, bool tail)
         return;
     }
 
-    Fa_StringRef fn_name;
-    if (Fa_IS_FUNCTION(callee) && Fa_AS_FUNCTION(callee)->name)
-        fn_name = Fa_AS_FUNCTION(callee)->name->str;
+    Fa_StringRef fn_name = "";
+    if (Fa_IS_FUNCTION(callee))
+        fn_name = Fa_AS_FUNCTION(callee)->name();
 
     diagnostic::emit(ErrorCode::NON_FUNCTION_CALL, std::string(fn_name.data(), fn_name.len()));
     runtime_error(ErrorCode::NON_FUNCTION_CALL);
@@ -1590,7 +1680,7 @@ Fa_ObjString* Fa_VM::intern(Fa_StringRef const& str)
     if (Fa_ObjString** existing = m_string_table.find_ptr(str))
         return *existing;
 
-    Fa_ObjString* obj = Fa_MAKE_OBJ_STRING(str);
+    Fa_ObjString* obj = m_gc.make_obj_string(str);
     m_string_table.insert_or_assign(str, obj);
     return obj;
 }
@@ -1602,7 +1692,7 @@ void Fa_VM::intern_chunk_constants(Fa_Chunk* ch)
 
     for (u32 i = 0; i < ch->constants.size(); i += 1) {
         if (Fa_IS_STRING(ch->constants[i]))
-            ch->constants[i] = Fa_MAKE_OBJECT(intern(Fa_AS_STRING(ch->constants[i])->str));
+            ch->constants[i] = Fa_MAKE_OBJECT(intern(Fa_AS_STRING(ch->constants[i])->str.data()));
     }
 
     for (auto* fn : ch->functions)
@@ -1647,15 +1737,15 @@ void Fa_VM::open_stdlib()
 
 void Fa_VM::register_native(Fa_StringRef const& name, NativeFn fn, int arity)
 {
-    Fa_ObjString* name_obj = Fa_MAKE_OBJ_STRING(name);
+    Fa_ObjString* name_obj = m_gc.make_obj_string(name);
     Fa_Value val = Fa_MAKE_NATIVE(fn, name_obj, arity);
 
-    if (u32* slot = m_global_index.find_ptr(name)) {
+    if (u32* slot = m_global_index.find_ptr(name.data())) {
         m_global_slots[*slot] = val;
     } else {
         auto slot_idx = m_global_slots.size();
         m_global_slots.push(val);
-        m_global_index.insert_or_assign(name, slot_idx);
+        m_global_index.insert_or_assign(name.data(), slot_idx);
     }
 }
 
@@ -1691,8 +1781,8 @@ void Fa_VM::runtime_error(ErrorCode code, std::string const& detail)
 
         Fa_SourceLocation frame_loc = ch.locations[off];
         std::string note = "at " + std::to_string(frame_loc.line) + ":" + std::to_string(frame_loc.column);
-        if (p->closure && p->closure->function && p->closure->function->name) {
-            Fa_StringRef fname = p->closure->function->name->str;
+        if (p->func) {
+            Fa_StringRef fname = p->func->name();
             note = "in '" + std::string(fname.data(), fname.len()) + "' " + note;
         }
 

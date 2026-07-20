@@ -3,6 +3,7 @@
 
 #include "array.hpp"
 #include "string.hpp"
+#include "fobject.hpp"
 
 namespace fairuz::runtime {
 
@@ -313,6 +314,17 @@ static Fa_InstrFormat opcode_format(Fa_OpCode op)
 
 static void print_value(u64 v);
 
+struct Fa_ClassDescriptor {
+    Fa_StringRef name;
+    u32 field_count { 0 };
+    Fa_Array<Fa_StringRef> field_names; // for runtime slot-map / debug info
+    u32 vtable_size { 0 };
+    Fa_Array<Fa_StringRef> method_names; // parallel to vtable_indices
+    Fa_Array<u32> vtable_indices;       // indices into Fa_Chunk::functions[]
+                                        // of the enclosing (top-level) chunk
+    static constexpr u32 NULL_SLOT = UINT32_MAX;
+};
+
 struct Fa_Chunk {
     Fa_StringRef name { "" };
     int arity { 0 };
@@ -325,6 +337,12 @@ struct Fa_Chunk {
     Fa_Array<Fa_Chunk*> functions;
     Fa_Array<Fa_ICSlot> ic_slots;
     Fa_Array<u64*> global_cache;
+    Fa_Array<Fa_ClassDescriptor> class_descriptors; // new
+
+    u16 add_class_descriptor(Fa_ClassDescriptor&& d) {
+        class_descriptors.push(std::move(d));
+        return static_cast<u16>(class_descriptors.size() - 1);
+    }
 
     Fa_Chunk() = default;
     ~Fa_Chunk() = default;

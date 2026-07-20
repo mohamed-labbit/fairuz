@@ -1,0 +1,41 @@
+file(REMOVE_RECURSE
+  "CMakeFiles/fairuz_objects.dir/fairuz/arena.cc.o"
+  "CMakeFiles/fairuz_objects.dir/fairuz/arena.cc.o.d"
+  "CMakeFiles/fairuz_objects.dir/fairuz/ast.cc.o"
+  "CMakeFiles/fairuz_objects.dir/fairuz/ast.cc.o.d"
+  "CMakeFiles/fairuz_objects.dir/fairuz/compiler.cc.o"
+  "CMakeFiles/fairuz_objects.dir/fairuz/compiler.cc.o.d"
+  "CMakeFiles/fairuz_objects.dir/fairuz/diagnostic.cc.o"
+  "CMakeFiles/fairuz_objects.dir/fairuz/diagnostic.cc.o.d"
+  "CMakeFiles/fairuz_objects.dir/fairuz/fobject.cc.o"
+  "CMakeFiles/fairuz_objects.dir/fairuz/fobject.cc.o.d"
+  "CMakeFiles/fairuz_objects.dir/fairuz/formatter.cc.o"
+  "CMakeFiles/fairuz_objects.dir/fairuz/formatter.cc.o.d"
+  "CMakeFiles/fairuz_objects.dir/fairuz/gc.cc.o"
+  "CMakeFiles/fairuz_objects.dir/fairuz/gc.cc.o.d"
+  "CMakeFiles/fairuz_objects.dir/fairuz/lexer.cc.o"
+  "CMakeFiles/fairuz_objects.dir/fairuz/lexer.cc.o.d"
+  "CMakeFiles/fairuz_objects.dir/fairuz/loop_header.cc.o"
+  "CMakeFiles/fairuz_objects.dir/fairuz/loop_header.cc.o.d"
+  "CMakeFiles/fairuz_objects.dir/fairuz/opcode.cc.o"
+  "CMakeFiles/fairuz_objects.dir/fairuz/opcode.cc.o.d"
+  "CMakeFiles/fairuz_objects.dir/fairuz/optim.cc.o"
+  "CMakeFiles/fairuz_objects.dir/fairuz/optim.cc.o.d"
+  "CMakeFiles/fairuz_objects.dir/fairuz/parser.cc.o"
+  "CMakeFiles/fairuz_objects.dir/fairuz/parser.cc.o.d"
+  "CMakeFiles/fairuz_objects.dir/fairuz/ssa_loop.cc.o"
+  "CMakeFiles/fairuz_objects.dir/fairuz/ssa_loop.cc.o.d"
+  "CMakeFiles/fairuz_objects.dir/fairuz/stats.cc.o"
+  "CMakeFiles/fairuz_objects.dir/fairuz/stats.cc.o.d"
+  "CMakeFiles/fairuz_objects.dir/fairuz/stdlib.cc.o"
+  "CMakeFiles/fairuz_objects.dir/fairuz/stdlib.cc.o.d"
+  "CMakeFiles/fairuz_objects.dir/fairuz/token.cc.o"
+  "CMakeFiles/fairuz_objects.dir/fairuz/token.cc.o.d"
+  "CMakeFiles/fairuz_objects.dir/fairuz/vm.cc.o"
+  "CMakeFiles/fairuz_objects.dir/fairuz/vm.cc.o.d"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang CXX)
+  include(CMakeFiles/fairuz_objects.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

@@ -1,7 +1,6 @@
 #ifndef ARENA_HPP
 #define ARENA_HPP
 
-#include "diagnostic.hpp"
 #include "macros.hpp"
 
 #ifdef FAIRUZ_DEBUG
@@ -12,6 +11,7 @@
 
 #include <functional>
 #include <optional>
+#include <vector>
 
 namespace fairuz {
 
@@ -23,7 +23,7 @@ private:
     unsigned char* m_end { nullptr };
 
 public:
-    explicit Fa_ArenaBlock(size_t const m_size = DEFAULT_BLOCK_SIZE, size_t const m_alignment = alignof(std::max_align_t));
+    explicit Fa_ArenaBlock(size_t const size = DEFAULT_BLOCK_SIZE, size_t const alignment = alignof(std::max_align_t));
 
     ~Fa_ArenaBlock();
 
@@ -45,7 +45,7 @@ public:
 
     bool pop(size_t bytes);
 
-    [[nodiscard]] unsigned char* allocate(size_t bytes, std::optional<size_t> m_alignment = std::nullopt);
+    [[nodiscard]] unsigned char* allocate(size_t bytes, std::optional<size_t> alignment = std::nullopt);
     unsigned char* reserve(size_t const bytes);
 }; // class Fa_ArenaBlock
 
@@ -70,7 +70,7 @@ private:
     size_t m_last_consumed { 0 };
     unsigned char* m_next { nullptr };
     unsigned char* m_end { nullptr };
-    void* allocate_slow(size_t m_size, size_t m_alignment);
+    void* allocate_slow(size_t size, size_t alignment);
 #ifdef FAIRUZ_DEBUG
     struct AllocationHeader {
         void* ptr { nullptr };
@@ -79,7 +79,7 @@ private:
         u64 alignment { 0 };
     };
 
-    void track_allocation(unsigned char* ptr, size_t m_size, size_t consumed, size_t m_alignment);
+    void track_allocation(unsigned char* ptr, size_t size, size_t consumed, size_t alignment);
 #endif
 
 #ifdef FAIRUZ_DEBUG
@@ -91,11 +91,11 @@ private:
     bool m_enable_statistics { true };
 #endif // FAIRUZ_DEBUG
 
-    static constexpr size_t m_alignment = alignof(std::max_align_t);
+    static constexpr size_t ALIGNMENT = alignof(std::max_align_t);
 
 public:
     explicit Fa_ArenaAllocator(GrowthStrategy growth_strategy = GrowthStrategy::LINEAR,
-        OutOfMemoryHandler m_oom_handler = nullptr, bool debug = true);
+        OutOfMemoryHandler oom_handler = nullptr, bool debug = true);
 
     ~Fa_ArenaAllocator() { reset(); }
 
@@ -108,11 +108,11 @@ public:
     void set_name(std::string const& m_name);
     void reset();
 
-    unsigned char* allocate_block(size_t requested, size_t m_alignment = alignof(std::max_align_t), bool retry_on_oom = true);
+    unsigned char* allocate_block(size_t requested, size_t alignment = alignof(std::max_align_t), bool retry_on_oom = true);
 
-    [[nodiscard]] void* allocate(size_t const m_size, size_t const m_alignment = alignof(std::max_align_t));
+    [[nodiscard]] void* allocate(size_t const size, size_t const alignment = alignof(std::max_align_t));
 
-    void deallocate(void* ptr, size_t const m_size);
+    void deallocate(void* ptr, size_t const size);
 
     template<typename T>
     [[nodiscard]] T* allocate_array(size_t const count)
@@ -146,9 +146,9 @@ public:
 private:
     [[nodiscard]] unsigned char* allocate_from_blocks(size_t alloc_size, size_t align = alignof(std::max_align_t));
 
-    [[nodiscard]] static constexpr size_t get_aligned(size_t n, size_t const m_alignment = alignof(std::max_align_t)) noexcept
+    [[nodiscard]] static constexpr size_t get_aligned(size_t n, size_t const alignment = alignof(std::max_align_t)) noexcept
     {
-        return (n + m_alignment - 1) & ~(m_alignment - 1);
+        return (n + alignment - 1) & ~(alignment - 1);
     }
 }; // class Fa_ArenaAllocator
 

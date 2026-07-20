@@ -15,7 +15,7 @@ struct LocalVar {
     Fa_StringRef name { "" };
     unsigned int depth { 0 };
     u8 reg { 0 };
-    Fa_ObjClass* known_class { nullptr };
+    Fa_ClassDescriptor* known_class { nullptr };
 }; // struct LocalVar
 
 struct CompilerState {

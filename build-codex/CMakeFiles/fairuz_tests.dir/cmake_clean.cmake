@@ -1,0 +1,41 @@
+file(REMOVE_RECURSE
+  "CMakeFiles/fairuz_tests.dir/tests/test_analyzer.cpp.o"
+  "CMakeFiles/fairuz_tests.dir/tests/test_analyzer.cpp.o.d"
+  "CMakeFiles/fairuz_tests.dir/tests/test_arena.cpp.o"
+  "CMakeFiles/fairuz_tests.dir/tests/test_arena.cpp.o.d"
+  "CMakeFiles/fairuz_tests.dir/tests/test_chunk.cpp.o"
+  "CMakeFiles/fairuz_tests.dir/tests/test_chunk.cpp.o.d"
+  "CMakeFiles/fairuz_tests.dir/tests/test_cli.cpp.o"
+  "CMakeFiles/fairuz_tests.dir/tests/test_cli.cpp.o.d"
+  "CMakeFiles/fairuz_tests.dir/tests/test_compiler.cpp.o"
+  "CMakeFiles/fairuz_tests.dir/tests/test_compiler.cpp.o.d"
+  "CMakeFiles/fairuz_tests.dir/tests/test_indentation.cpp.o"
+  "CMakeFiles/fairuz_tests.dir/tests/test_indentation.cpp.o.d"
+  "CMakeFiles/fairuz_tests.dir/tests/test_main.cpp.o"
+  "CMakeFiles/fairuz_tests.dir/tests/test_main.cpp.o.d"
+  "CMakeFiles/fairuz_tests.dir/tests/test_narrow_table.cpp.o"
+  "CMakeFiles/fairuz_tests.dir/tests/test_narrow_table.cpp.o.d"
+  "CMakeFiles/fairuz_tests.dir/tests/test_opcode.cpp.o"
+  "CMakeFiles/fairuz_tests.dir/tests/test_opcode.cpp.o.d"
+  "CMakeFiles/fairuz_tests.dir/tests/test_parser.cpp.o"
+  "CMakeFiles/fairuz_tests.dir/tests/test_parser.cpp.o.d"
+  "CMakeFiles/fairuz_tests.dir/tests/test_property.cpp.o"
+  "CMakeFiles/fairuz_tests.dir/tests/test_property.cpp.o.d"
+  "CMakeFiles/fairuz_tests.dir/tests/test_regressions.cpp.o"
+  "CMakeFiles/fairuz_tests.dir/tests/test_regressions.cpp.o.d"
+  "CMakeFiles/fairuz_tests.dir/tests/test_stdlib.cpp.o"
+  "CMakeFiles/fairuz_tests.dir/tests/test_stdlib.cpp.o.d"
+  "CMakeFiles/fairuz_tests.dir/tests/test_string.cpp.o"
+  "CMakeFiles/fairuz_tests.dir/tests/test_string.cpp.o.d"
+  "CMakeFiles/fairuz_tests.dir/tests/test_tokens.cpp.o"
+  "CMakeFiles/fairuz_tests.dir/tests/test_tokens.cpp.o.d"
+  "CMakeFiles/fairuz_tests.dir/tests/test_vm.cpp.o"
+  "CMakeFiles/fairuz_tests.dir/tests/test_vm.cpp.o.d"
+  "fairuz_tests"
+  "fairuz_tests.pdb"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang CXX)
+  include(CMakeFiles/fairuz_tests.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

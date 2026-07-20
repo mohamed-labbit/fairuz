@@ -407,12 +407,9 @@ inline Fa_TypeTag& operator|=(Fa_TypeTag& a, Fa_TypeTag b) noexcept { return a =
         case Fa_ObjType::CLOSURE: return Fa_TypeTag::CLOSURE;
         case Fa_ObjType::FUNCTION: return Fa_TypeTag::FUNCTION;
         case Fa_ObjType::NATIVE: return Fa_TypeTag::NATIVE;
-        case Fa_ObjType::CLASS:
-            return Fa_TypeTag::CLASS;
-        case Fa_ObjType::INSTANCE:
-            return Fa_TypeTag::INSTANCE;
-        default:
-            return Fa_TypeTag::NONE;
+        case Fa_ObjType::CLASS: return Fa_TypeTag::CLASS;
+        case Fa_ObjType::INSTANCE: return Fa_TypeTag::INSTANCE;
+        default: return Fa_TypeTag::NONE;
         }
     }
 

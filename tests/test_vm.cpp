@@ -15,6 +15,10 @@
 using namespace fairuz;
 using namespace fairuz::runtime;
 
+namespace {
+Fa_GarbageCollector m_gc;
+}
+
 static constexpr u16 BX(int v) { return static_cast<u16>(v + 32767); }
 
 struct CB {
@@ -991,6 +995,8 @@ TEST(VMCalls, TailCall_DoesNotOverflowFrames)
     EXPECT_EQ(Fa_AS_INTEGER(v), 0);
 }
 
+/*
+ * 
 TEST(VMCalls, StackOverflowDetected)
 {
     auto fn = make_chunk();
@@ -1016,9 +1022,25 @@ TEST(VMCalls, StackOverflowDetected)
     VMRunner r;
     EXPECT_THROW(r.run(top), std::runtime_error);
 }
+ */
+
+TEST(VMCalls, StackOverflowDetected) {
+    auto fn = func_def(name_expr("inf"), list_expr(), blk({
+        return_stmt(call_expr(name_expr("inf")))
+    }));
+
+    auto ch = Compiler().compile({
+        fn,
+        expr_stmt(call_expr(name_expr("inf"))),
+    });
+    if (ch != nullptr) ch->disassemble();
+    VMRunner r;
+    EXPECT_THROW(r.run(ch), std::runtime_error);
+}
 
 TEST(VMGlobals, UndefinedGlobalRaisesRuntimeError)
 {
+   
     VMRunner r;
     CB b;
     b.regs(1).ldg(0, "missing").ret(0);
@@ -1954,7 +1976,7 @@ TEST(NativeMin, StringFirstArg_ReturnsNil)
 {
     Fa_VM vm;
     Fa_Value m_args[] = { Fa_MAKE_STRING("a"), Fa_MAKE_STRING("b") };
-    EXPECT_EQ(Fa_AS_STRING(vm.Fa_min(2, m_args))->str, Fa_MAKE_OBJ_STRING("a")->str);
+    EXPECT_EQ(Fa_AS_STRING(vm.Fa_min(2, m_args))->str, "a");
 }
 
 TEST(NativeMax, NoArgs_ReturnsNil)
@@ -2010,7 +2032,7 @@ TEST(NativeMax, StringFirstArg_ReturnsArg)
 {
     Fa_VM vm;
     Fa_Value m_args[] = { Fa_MAKE_STRING("a"), Fa_MAKE_STRING("b") };
-    EXPECT_EQ(Fa_AS_STRING(vm.Fa_max(2, m_args))->str, Fa_MAKE_OBJ_STRING("b")->str);
+    EXPECT_EQ(Fa_AS_STRING(vm.Fa_max(2, m_args))->str, "b");
 }
 
 TEST(NativeRound, HalfRoundsUp)
@@ -2907,7 +2929,7 @@ TEST(VMClass, ClassDefinitionStoresRuntimeClass)
 
     Fa_ObjClass* point_class = Fa_AS_CLASS(point);
     EXPECT_EQ(point_class->name, "Point");
-    ASSERT_EQ(point_class->field_names.size(), 2);
+    ASSERT_EQ(point_class->field_count, 2u);
     EXPECT_EQ(point_class->field_names[0], "x");
     EXPECT_EQ(point_class->field_names[1], "y");
 }
@@ -3431,7 +3453,7 @@ TEST(VMClass, DuplicateFieldsAreDeduplicatedInDeclarationOrder)
     ASSERT_TRUE(Fa_IS_CLASS(result));
 
     Fa_ObjClass* klass_obj = Fa_AS_CLASS(result);
-    ASSERT_EQ(klass_obj->field_names.size(), 2);
+    ASSERT_EQ(klass_obj->field_count, 2u);
     EXPECT_EQ(klass_obj->field_names[0], "id");
     EXPECT_EQ(klass_obj->field_names[1], "name");
 }
@@ -3464,7 +3486,7 @@ TEST(VMClass, MultipleMethodsAreStoredInRuntimeClass)
     ASSERT_TRUE(Fa_IS_CLASS(result));
 
     Fa_ObjClass* klass_obj = Fa_AS_CLASS(result);
-    EXPECT_GE(klass_obj->method_names.size(), static_cast<u32>(Fa_ObjClass::_COUNT + 2));
+    EXPECT_GE(klass_obj->method_count, static_cast<u32>(Fa_ObjClass::_COUNT + 2));
     EXPECT_GE(klass_obj->method_slot("first"), 0);
     EXPECT_GE(klass_obj->method_slot("second"), 0);
 }

@@ -11,6 +11,8 @@ using namespace fairuz::runtime;
 
 namespace {
 
+Fa_GarbageCollector m_gc;
+
 Fa_Value make_list(Fa_VM& vm, std::initializer_list<Fa_Value> values)
 {
     Fa_Value list = vm.Fa_list(0, nullptr);

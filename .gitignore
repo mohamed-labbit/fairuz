@@ -18,3 +18,4 @@ build_fmt.sh
 fib.fa
 .zed/
 *.vsix
+INVARIANTS.md

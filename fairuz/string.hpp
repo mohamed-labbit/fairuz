@@ -2,13 +2,19 @@
 #define STRING_HPP
 
 #include "arena.hpp"
+#include "diagnostic.hpp"
 
 #include <ostream>
 
 namespace fairuz {
 
+template<class Allocator>
+class Fa_StringRefImpl;
+
+template<class Allocator = Fa_ArenaAllocator>
 class StringBase {
-    friend class Fa_StringRef;
+    template<class>
+    friend class Fa_StringRefImpl;
 
 private:
     union Storage {
@@ -26,12 +32,29 @@ private:
     } m_storage;
 
     bool m_is_heap;
+    Allocator* m_allocator { nullptr };
 
     mutable u32 ref_count { 1 };
+
+    // Fa_ArenaAllocator uses the global arena; other allocator types fall
+    // back to one process-local singleton per allocator instantiation.
+    static Allocator* resolve_allocator(Allocator* allocator)
+    {
+        if (allocator != nullptr)
+            return allocator;
+
+        if constexpr (std::is_same_v<Allocator, Fa_ArenaAllocator>) {
+            return &get_allocator();
+        } else {
+            static Allocator default_allocator;
+            return &default_allocator;
+        }
+    }
 
 public:
     StringBase()
         : m_is_heap { false }
+        , m_allocator(resolve_allocator(nullptr))
     {
         m_storage.sso[0] = 0;
     }
@@ -39,23 +62,25 @@ public:
     ~StringBase()
     {
         if (is_heap())
-            get_allocator().deallocate_array<char>(m_storage.heap.ptr, m_storage.heap.cap);
+            m_allocator->template deallocate_array<char>(m_storage.heap.ptr, m_storage.heap.cap);
     }
 
     StringBase(StringBase const&) = delete;
     StringBase& operator=(StringBase const&) = delete;
 
-    explicit StringBase(size_t const s);
+    explicit StringBase(size_t const s, Allocator* allocator = nullptr);
 
-    explicit StringBase(size_t const s, char const c);
+    explicit StringBase(size_t const s, char const c, Allocator* allocator = nullptr);
 
-    explicit StringBase(char const* s, size_t n);
+    explicit StringBase(char const* s, size_t n, Allocator* allocator = nullptr);
 
-    StringBase(char const* s);
+    StringBase(char const* s, Allocator* allocator = nullptr);
 
     static constexpr size_t k_sso_size = SSO_SIZE;
 
     bool is_heap() const noexcept { return m_is_heap; }
+
+    Allocator* allocator() const noexcept { return m_allocator; }
 
     char* ptr() noexcept { return UNLIKELY(is_heap()) ? m_storage.heap.ptr : m_storage.sso; }
 
@@ -74,53 +99,69 @@ public:
 
 namespace detail {
 
-StringBase* empty_string_singleton() noexcept;
+// One singleton per Allocator instantiation.
+template<class Allocator>
+StringBase<Allocator>* empty_string_singleton() noexcept;
 
 } // namespace detail
 
-class Fa_StringRef {
+template<class Allocator = Fa_ArenaAllocator>
+class Fa_StringRefImpl {
 private:
-    StringBase* m_string_data { nullptr };
+    StringBase<Allocator>* m_string_data { nullptr };
     size_t m_offset { 0 };
     size_t m_length { 0 };
+    Allocator* m_allocator { nullptr };
 
-    static StringBase* create_empty()
+    // Same rule as StringBase::resolve_allocator.
+    static Allocator* resolve_allocator(Allocator* allocator)
     {
-        StringBase* s = get_allocator().allocate_object<StringBase>();
-        return s;
+        if (allocator != nullptr)
+            return allocator;
+
+        if constexpr (std::is_same_v<Allocator, Fa_ArenaAllocator>) {
+            return &get_allocator();
+        } else {
+            static Allocator default_allocator;
+            return &default_allocator;
+        }
     }
 
 public:
     // Default: points at the global empty singleton — zero heap allocation.
-    Fa_StringRef() noexcept
-        : m_string_data(detail::empty_string_singleton())
+    // Uses the allocator fallback selected by resolve_allocator().
+    Fa_StringRefImpl() noexcept
+        : m_string_data(detail::empty_string_singleton<Allocator>())
         , m_offset(0)
         , m_length(0)
+        , m_allocator(resolve_allocator(nullptr))
     {
         m_string_data->increment();
     }
 
-    explicit Fa_StringRef(size_t const s);
+    explicit Fa_StringRefImpl(size_t const s, Allocator* allocator = nullptr);
 
-    Fa_StringRef(Fa_StringRef const& other, size_t m_offset = 0, size_t m_length = 0);
+    Fa_StringRefImpl(Fa_StringRefImpl const& other, size_t offset = 0, size_t length = 0);
 
-    Fa_StringRef(char const* lit);
+    Fa_StringRefImpl(char const* lit, Allocator* allocator = nullptr);
 
-    Fa_StringRef(char16_t const* u16_str);
+    Fa_StringRefImpl(char16_t const* u16_str, Allocator* allocator = nullptr);
 
-    Fa_StringRef(size_t const s, char const c);
+    Fa_StringRefImpl(size_t const s, char const c, Allocator* allocator = nullptr);
 
-    explicit Fa_StringRef(StringBase* data, size_t m_offset = 0, size_t m_length = 0);
+    explicit Fa_StringRefImpl(StringBase<Allocator>* data, size_t offset = 0, size_t length = 0);
 
-    Fa_StringRef(Fa_StringRef&& other) noexcept;
+    Fa_StringRefImpl(Fa_StringRefImpl&& other) noexcept;
 
-    Fa_StringRef& operator=(Fa_StringRef&& other) noexcept;
+    Fa_StringRefImpl& operator=(Fa_StringRefImpl&& other) noexcept;
 
-    ~Fa_StringRef();
+    ~Fa_StringRefImpl();
 
-    Fa_StringRef& operator=(Fa_StringRef const& other);
+    Fa_StringRefImpl& operator=(Fa_StringRefImpl const& other);
 
-    [[nodiscard]] bool operator==(Fa_StringRef const& other) const noexcept
+    Allocator* allocator() const noexcept { return m_allocator; }
+
+    [[nodiscard]] bool operator==(Fa_StringRefImpl const& other) const noexcept
     {
         if (m_string_data == other.m_string_data && m_offset == other.m_offset && m_length == other.m_length)
             return true;
@@ -131,9 +172,9 @@ public:
         return ::memcmp(data(), other.data(), m_length) == 0;
     }
 
-    [[nodiscard]] bool operator!=(Fa_StringRef const& other) const noexcept { return !(*this == other); }
+    [[nodiscard]] bool operator!=(Fa_StringRefImpl const& other) const noexcept { return !(*this == other); }
 
-    [[nodiscard]] bool operator<(Fa_StringRef const& other) const noexcept
+    [[nodiscard]] bool operator<(Fa_StringRefImpl const& other) const noexcept
     {
         if (m_string_data == other.m_string_data && m_offset == other.m_offset && m_length == other.m_length)
             return false;
@@ -147,16 +188,16 @@ public:
         return cmp != 0 ? cmp < 0 : m_length < other.m_length;
     }
 
-    [[nodiscard]] bool operator>(Fa_StringRef const& other) const noexcept { return other < *this; }
-    [[nodiscard]] bool operator<=(Fa_StringRef const& other) const noexcept { return !(*this > other); }
-    [[nodiscard]] bool operator>=(Fa_StringRef const& other) const noexcept { return !(*this < other); }
+    [[nodiscard]] bool operator>(Fa_StringRefImpl const& other) const noexcept { return other < *this; }
+    [[nodiscard]] bool operator<=(Fa_StringRefImpl const& other) const noexcept { return !(*this > other); }
+    [[nodiscard]] bool operator>=(Fa_StringRefImpl const& other) const noexcept { return !(*this < other); }
 
     void expand(size_t const new_size);
     void reserve(size_t const new_capacity);
     void erase(size_t const at);
 
-    Fa_StringRef& operator+=(Fa_StringRef const& other);
-    Fa_StringRef& operator+=(char c);
+    Fa_StringRefImpl& operator+=(Fa_StringRefImpl const& other);
+    Fa_StringRefImpl& operator+=(char c);
 
     char operator[](size_t const i) const;
     char& operator[](size_t const i);
@@ -164,53 +205,53 @@ public:
     [[nodiscard]] char at(size_t const i) const;
     char& at(size_t const i);
 
-    Fa_StringRef& trim_whitespace(bool leading = true, bool trailing = true) noexcept;
+    Fa_StringRefImpl& trim_whitespace(bool leading = true, bool trailing = true) noexcept;
 
-    Fa_StringRef operator+(Fa_StringRef const& rhs) const
+    Fa_StringRefImpl operator+(Fa_StringRefImpl const& rhs) const
     {
         size_t const r_len = rhs.len();
         if (empty())
-            return Fa_StringRef(rhs);
+            return Fa_StringRefImpl(rhs);
         if (r_len == 0)
             return *this;
 
         size_t const new_len = m_length + r_len;
-        StringBase* result = get_allocator().allocate_object<StringBase>(new_len);
+        StringBase<Allocator>* result = m_allocator->template allocate_object<StringBase<Allocator>>(new_len, m_allocator);
 
         ::memcpy(result->ptr(), data(), m_length);
         ::memcpy(result->ptr() + m_length, rhs.data(), r_len);
 
         result->ptr()[new_len] = 0;
 
-        return Fa_StringRef(result);
+        return Fa_StringRefImpl(result);
     }
 
-    Fa_StringRef operator+(char const* rhs) const
+    Fa_StringRefImpl operator+(char const* rhs) const
     {
         if (rhs == nullptr || !rhs[0])
             return *this;
-        Fa_StringRef rhs_str = rhs;
+        Fa_StringRefImpl rhs_str(rhs, m_allocator);
         return *this + rhs_str;
     }
 
-    friend Fa_StringRef operator+(char const* lhs, Fa_StringRef const& rhs)
+    friend Fa_StringRefImpl operator+(char const* lhs, Fa_StringRefImpl const& rhs)
     {
         if (lhs == nullptr || !lhs[0])
-            return Fa_StringRef(rhs);
-        Fa_StringRef lhs_str = lhs;
+            return Fa_StringRefImpl(rhs);
+        Fa_StringRefImpl lhs_str(lhs, rhs.m_allocator);
         return lhs_str + rhs;
     }
 
-    friend Fa_StringRef operator+(Fa_StringRef const& lhs, char rhs)
+    friend Fa_StringRefImpl operator+(Fa_StringRefImpl const& lhs, char rhs)
     {
-        Fa_StringRef result(lhs);
+        Fa_StringRefImpl result(lhs);
         result += rhs;
         return result;
     }
 
-    friend Fa_StringRef operator+(char lhs, Fa_StringRef const& rhs)
+    friend Fa_StringRefImpl operator+(char lhs, Fa_StringRefImpl const& rhs)
     {
-        Fa_StringRef result;
+        Fa_StringRefImpl result(static_cast<size_t>(0), rhs.m_allocator);
         result.reserve(rhs.len() + 1);
         result += lhs;
         result += rhs;
@@ -219,7 +260,7 @@ public:
 
     [[nodiscard]] size_t len() const noexcept { return m_length; }
     [[nodiscard]] size_t cap() const noexcept { return m_string_data ? m_string_data->cap() : 0; }
-    [[nodiscard]] StringBase* get() const noexcept { return m_string_data; }
+    [[nodiscard]] StringBase<Allocator>* get() const noexcept { return m_string_data; }
     [[nodiscard]] bool empty() const noexcept { return m_length == 0; }
     [[nodiscard]] char const* data() const noexcept { return m_string_data ? m_string_data->ptr() + m_offset : nullptr; }
 
@@ -232,7 +273,7 @@ public:
         return nullptr;
     }
 
-    friend std::ostream& operator<<(std::ostream& os, Fa_StringRef const& str)
+    friend std::ostream& operator<<(std::ostream& os, Fa_StringRefImpl const& str)
     {
         if (!str.empty())
             os.write(str.data(), static_cast<std::streamsize>(str.len()));
@@ -249,29 +290,29 @@ public:
     void resize(size_t const s);
 
     [[nodiscard]] bool find(char const c) const noexcept;
-    [[nodiscard]] bool find(Fa_StringRef const& s) const noexcept;
+    [[nodiscard]] bool find(Fa_StringRefImpl const& s) const noexcept;
 
     [[nodiscard]] std::optional<size_t> find_pos(char const c) const noexcept;
 
-    Fa_StringRef& truncate(size_t const s) noexcept;
-    Fa_StringRef slice(size_t start, size_t m_end = SIZE_MAX) const;
-    Fa_StringRef substr(size_t start, size_t m_end = SIZE_MAX) const
+    Fa_StringRefImpl& truncate(size_t const s) noexcept;
+    Fa_StringRefImpl slice(size_t start, size_t m_end = SIZE_MAX) const;
+    Fa_StringRefImpl substr(size_t start, size_t end = SIZE_MAX) const
     {
         if (m_length == 0)
-            return { };
+            return Fa_StringRefImpl(static_cast<size_t>(0), m_allocator);
         if (start > m_length)
-            return { };
-        if (m_end > m_length || m_end == SIZE_MAX)
-            m_end = m_length;
-        if (m_end < start)
-            return { };
-        return substr_copy(start, m_end);
+            return Fa_StringRefImpl(static_cast<size_t>(0), m_allocator);
+        if (end > m_length || end == SIZE_MAX)
+            end = m_length;
+        if (end < start)
+            return Fa_StringRefImpl(static_cast<size_t>(0), m_allocator);
+        return substr_copy(start, end);
     }
-    Fa_StringRef substr_copy(size_t start, size_t m_end = SIZE_MAX) const;
+    Fa_StringRefImpl substr_copy(size_t start, size_t m_end = SIZE_MAX) const;
 
     f64 to_double(size_t* pos = nullptr) const;
 
-    [[nodiscard]] static Fa_StringRef from_utf16(char16_t const* utf16_cstr);
+    [[nodiscard]] static Fa_StringRefImpl from_utf16(char16_t const* utf16_cstr, Allocator* allocator = nullptr);
 
     void ensure_unique()
     {
@@ -283,11 +324,10 @@ public:
     }
 
     void detach();
-}; // class Fa_StringRef
+}; // class Fa_StringRefImpl
 
 namespace detail {
 
-// wy_read helpers — always read unaligned, the compiler emits ldr on ARM64.
 inline u64 wy_read8(void const* p) noexcept
 {
     u64 v;
@@ -301,7 +341,6 @@ inline u32 wy_read4(void const* p) noexcept
     return v;
 }
 
-// 128-bit multiply — GCC/Clang both lower this to a single MUL on ARM64/x86-64.
 inline void wymix(u64& a, u64& b) noexcept
 {
 #if defined(__SIZEOF_INT128__)
@@ -309,7 +348,6 @@ inline void wymix(u64& a, u64& b) noexcept
     a = static_cast<u64>(r);
     b = static_cast<u64>(r >> 64);
 #else
-    // 32-bit fallback via four 32×32→64 multiplies.
     u64 ha = a >> 32, hb = b >> 32;
     u64 la = static_cast<u32>(a), lb = static_cast<u32>(b);
     u64 hh = ha * hb, hl = ha * lb, lh = la * hb, ll = la * lb;
@@ -320,7 +358,6 @@ inline void wymix(u64& a, u64& b) noexcept
     a ^= b;
 }
 
-// wyhash secret constants (from the reference implementation).
 static constexpr u64 WY_P0 = UINT64_C(0xa0761d6478bd642f);
 static constexpr u64 WY_P1 = UINT64_C(0xe7037ed1a0b428db);
 static constexpr u64 WY_P2 = UINT64_C(0x8ebc6af09c88c6e3);
@@ -335,22 +372,18 @@ inline u64 wyhash(void const* key, size_t len, u64 seed) noexcept
 
     if (len <= 16) {
         if (len >= 4) {
-            // Read 4 bytes from each end; they may overlap for len in [4,7].
             a = (static_cast<u64>(wy_read4(p)) << 32)
                 | wy_read4(p + ((len >> 3) << 2));
             b = (static_cast<u64>(wy_read4(p + len - 4)) << 32)
                 | wy_read4(p + len - 4 - ((len >> 3) << 2));
         } else if (len > 0) {
-            // 1–3 bytes: spread across three positions without branching.
             a = (static_cast<u64>(p[0]) << 16)
                 | (static_cast<u64>(p[len >> 1]) << 8)
                 | p[len - 1];
             b = 0;
         }
-        // len == 0: a = b = 0, falls through to final mix.
     } else {
         size_t i = len;
-        // If not 8-byte aligned, read one full 8-byte pair to align the loop.
         if (i > 48) {
             u64 see1 = seed, see2 = seed;
             do {
@@ -383,7 +416,6 @@ inline u64 wyhash(void const* key, size_t len, u64 seed) noexcept
             p += 16;
             i -= 16;
         }
-        // Final 9–16 bytes (always two overlapping 8-byte reads).
         a = wy_read8(p + i - 16);
         b = wy_read8(p + i - 8);
     }
@@ -400,10 +432,11 @@ inline u64 wyhash(void const* key, size_t len, u64 seed) noexcept
 
 } // namespace detail
 
-struct Fa_StringRefHash {
+template<class Allocator = Fa_ArenaAllocator>
+struct Fa_StringRefHashImpl {
     u64 seed { 0 };
 
-    size_t operator()(Fa_StringRef const& str) const noexcept
+    size_t operator()(Fa_StringRefImpl<Allocator> const& str) const noexcept
     {
         if (str.empty())
             return 0;
@@ -412,21 +445,16 @@ struct Fa_StringRefHash {
         auto const* p = reinterpret_cast<u8 const*>(str.data());
 
         if (n <= 16) {
-            // Read up to 16 bytes using two overlapping reads,
-            // same trick as wyhash's short path — no memcpy, no loop.
             u64 a = 0, b = 0;
             if (n >= 8) {
-                // Two 8-byte reads, potentially overlapping.
                 __builtin_memcpy(&a, p, 8);
                 __builtin_memcpy(&b, p + n - 8, 8);
             } else if (n >= 4) {
                 __builtin_memcpy(&a, p, 4);
                 __builtin_memcpy(&b, p + n - 4, 4);
             } else {
-                // 1–3 bytes: spread across three positions.
                 a = (u64(p[0]) << 16) | (u64(p[n >> 1]) << 8) | p[n - 1];
             }
-            // Murmur-style finalizer — two multiplies, fast on ARM64.
             a ^= b ^ n;
             a ^= a >> 33;
             a *= UINT64_C(0xff51afd7ed558ccd);
@@ -440,19 +468,33 @@ struct Fa_StringRefHash {
     }
 }; // struct Fa_StringRefHash
 
-struct Fa_StringRefEqual {
-    bool operator()(Fa_StringRef const& lhs, Fa_StringRef const& rhs) const noexcept { return lhs == rhs; }
+template<class Allocator = Fa_ArenaAllocator>
+struct Fa_StringRefEqualImpl {
+    bool operator()(Fa_StringRefImpl<Allocator> const& lhs, Fa_StringRefImpl<Allocator> const& rhs) const noexcept
+    {
+        return lhs == rhs;
+    }
 }; // struct Fa_StringRefEqual
+
+using Fa_StringRef = Fa_StringRefImpl<>;
+using Fa_StringRefHash = Fa_StringRefHashImpl<>;
+using Fa_StringRefEqual = Fa_StringRefEqualImpl<>;
+
 
 } // namespace fairuz
 
 namespace std {
 
-template<>
-struct hash<fairuz::Fa_StringRef> {
-    size_t operator()(fairuz::Fa_StringRef const& str) const noexcept { return fairuz::Fa_StringRefHash { }(str); }
+template<class Allocator>
+struct hash<fairuz::Fa_StringRefImpl<Allocator>> {
+    size_t operator()(fairuz::Fa_StringRefImpl<Allocator> const& str) const noexcept
+    {
+        return fairuz::Fa_StringRefHashImpl<Allocator> { }(str);
+    }
 }; // struct hash
 
 } // namespace std
+
+#include "string.tpp"
 
 #endif // STRING_HPP

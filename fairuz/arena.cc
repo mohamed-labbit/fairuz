@@ -1,6 +1,7 @@
 // arena.cc
 
 #include "arena.hpp"
+#include "diagnostic.hpp"
 
 #include <sys/mman.h>
 

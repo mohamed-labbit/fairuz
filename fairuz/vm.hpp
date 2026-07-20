@@ -5,7 +5,6 @@
 #include "opcode.hpp"
 #include "string.hpp"
 #include "table.hpp"
-#include "value.hpp"
 
 #include <stdexcept>
 
@@ -52,7 +51,6 @@ public:
 
     /* STANDARD LIBRARY */
 
-    /* IO */
     Fa_Value Fa_print(int argc, Fa_Value* argv);
     Fa_Value Fa_len(int argc, Fa_Value* argv);
     Fa_Value Fa_type(int argc, Fa_Value* argv);
@@ -95,7 +93,8 @@ public:
     Fa_CallFrame m_frames[MAX_FRAMES];
     int m_stack_top { 0 };
     int m_frames_top { 0 };
-    Fa_HashTable<Fa_StringRef, u32, Fa_StringRefHash, Fa_StringRefEqual> m_global_index;
+
+    Fa_HashTable<Fa_RTStringRef, u32, Fa_RTStringRefHash, Fa_RTStringRefEqual> m_global_index;
     Fa_HashTable<Fa_StringRef, Fa_ObjString*, Fa_StringRefHash, Fa_StringRefEqual> m_string_table;
     Fa_Array<Fa_Value> m_global_slots;
     bool m_is_dead { false };
@@ -109,11 +108,11 @@ public:
 
     Fa_ObjString* intern(Fa_StringRef const& str);
     void update_ic_binary(Fa_Chunk* ch, u32 nop_ip, Fa_Value lhs, Fa_Value rhs, Fa_Value result);
-    void call_value(Fa_Value m_callee, int argc, int base, bool tail);
+    void call_value(Fa_Value callee, int argc, int base, bool tail);
     Fa_Value call_native(Fa_ObjNative* nat, int argc, int base);
 
     void open_stdlib();
-    void register_native(Fa_StringRef const& m_name, NativeFn fn, int arity = -1);
+    void register_native(Fa_StringRef const& name, NativeFn fn, int arity = -1);
 
     Fa_SourceLocation current_location() const;
     void runtime_error(ErrorCode code, std::string const& detail = "");
@@ -123,7 +122,7 @@ public:
     void ensure_stack_slots(int needed);
     Fa_CallFrame& top_frame();
     Fa_CallFrame const& top_frame() const;
-    Fa_Value& get_reg(Fa_CallFrame const& f, int m_reg);
+    Fa_Value& get_reg(Fa_CallFrame const& f, int reg);
     void invoke_method(Fa_Chunk* target_chunk, Fa_Value self_val, int dst_reg, int cur_frame_base, int explicit_argc, u32);
 }; // class Fa_VM
 

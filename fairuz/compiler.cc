@@ -429,7 +429,8 @@ void Compiler::compile_class_def(AST::Fa_ClassDef* s)
 
     Fa_SourceLocation loc = s->get_location();
     if (!m_current->is_top_level || m_current->scope_depth != 0) {
-        diagnostic::emit(CompilerError::NESTED_FUNCTION_UNSUPPORTED, "classes must be declared at top level");
+        diagnostic::emit(CompilerError::NESTED_FUNCTION_UNSUPPORTED,
+            "classes must be declared at top level");
         return;
     }
 
@@ -512,7 +513,6 @@ void Compiler::compile_class_def(AST::Fa_ClassDef* s)
     Fa_Array<Fa_Chunk*> vtable(static_cast<u32>(Fa_ObjClass::_COUNT), /* fill_v= */ nullptr);
     Fa_Array<Fa_StringRef> method_names(static_cast<u32>(Fa_ObjClass::_COUNT), Fa_StringRef { });
     Fa_Array<Fa_StringRef> field_names;
-
     Fa_Array<Fa_StringRef> seen_names; // dedup guard across BOTH special and ordinary methods
 
     for (AST::Fa_Stmt* m : methods) {
@@ -525,16 +525,18 @@ void Compiler::compile_class_def(AST::Fa_ClassDef* s)
         Fa_StringRef method_name = method->get_name()->get_value();
 
         bool seen = false;
-        for (Fa_StringRef const& existing : seen_names) {
+        for (auto& existing : seen_names) {
             if (existing == method_name) {
                 seen = true;
                 break;
             }
         }
+
         if (seen) {
             diagnostic::emit(CompilerError::INVALID_STATEMENT_NODE, "duplicate method name");
             continue;
         }
+
         seen_names.push(method_name);
 
         auto [reg, chunk] = compile_method_closure(method);
@@ -543,12 +545,9 @@ void Compiler::compile_class_def(AST::Fa_ClassDef* s)
 
         int special = special_slot_for(method_name);
         if (special >= 0) {
-            // Fixed slot: vtable[special] and method_names[special] must
-            // correspond to the SAME index for method_slot_map to be correct.
             vtable[static_cast<u32>(special)] = chunk;
             method_names[static_cast<u32>(special)] = method_name;
         } else {
-            // Ordinary method: append after the reserved region.
             vtable.push(chunk);
             method_names.push(method_name);
         }
@@ -564,7 +563,7 @@ void Compiler::compile_class_def(AST::Fa_ClassDef* s)
         Fa_StringRef fname = name->get_value();
 
         bool seen = false;
-        for (Fa_StringRef const& existing : field_names) {
+        for (auto& existing : field_names) {
             if (existing == fname) {
                 seen = true;
                 break;
@@ -574,29 +573,62 @@ void Compiler::compile_class_def(AST::Fa_ClassDef* s)
             field_names.push(fname);
     }
 
-    Fa_ObjClass* class_obj = Fa_MAKE_OBJ_CLASS(class_name, field_names, method_names, vtable);
-    u16 klass_const = current_chunk()->add_constant(Fa_MAKE_OBJECT(class_obj));
+    // Build the descriptor from the same arrays already computed above.
+    // vtable_indices[i] is the index into current_chunk()->functions[] of the
+    // chunk that compile_method_closure() pushed there.  The parallel between
+    // vtable[] (Fa_Chunk*) and current_chunk()->functions[] is exact because
+    // compile_method_closure() does:
+    //   auto fn_idx = static_cast<u16>(current_chunk()->functions.size());
+    //   current_chunk()->functions.push(ch);
+    // so we reconstruct those indices here by scanning for each chunk pointer.
+    Fa_Array<u32> vtable_indices;
+    for (u32 i = 0; i < vtable.size(); ++i) {
+        if (vtable[i] == nullptr) {
+            vtable_indices.push(Fa_ClassDescriptor::NULL_SLOT);
+            continue;
+        }
+        // Find the index that compile_method_closure pushed this chunk at
+        u32 fn_idx = UINT32_MAX;
+        for (u32 j = 0; j < current_chunk()->functions.size(); ++j) {
+            if (current_chunk()->functions[j] == vtable[i]) {
+                fn_idx = j;
+                break;
+            }
+        }
+        assert(fn_idx != UINT32_MAX && "vtable chunk not found in functions[]");
+        vtable_indices.push(fn_idx);
+    }
+
+    Fa_ClassDescriptor desc_data;
+    desc_data.name = Fa_StringRef(class_name);
+    desc_data.field_count = static_cast<u32>(field_names.size());
+    desc_data.field_names = field_names;
+    desc_data.vtable_size = static_cast<u32>(vtable.size());
+    desc_data.method_names = method_names;
+    desc_data.vtable_indices = std::move(vtable_indices);
+
+    u16 desc_idx = current_chunk()->add_class_descriptor(std::move(desc_data));
     u8 class_reg = alloc_register();
-    emit(Fa_make_ABx(Fa_OpCode::NEW_CLASS, class_reg, klass_const), loc);
+    emit(Fa_make_ABx(Fa_OpCode::NEW_CLASS, class_reg, desc_idx), loc);
 
     u16 name_idx = intern_string(class_name);
     emit(Fa_make_ABx(Fa_OpCode::STORE_GLOBAL, class_reg, name_idx), loc);
     declare_local(class_name, class_reg);
 
-    // Register descriptor for static call-site resolution later.
-    // NOTE: built from the SAME field_names/method_names/index layout as
-    // class_obj, so compile-time resolution and the runtime vtable agree.
-    ClassDesc desc;
-    desc.name = class_name;
-    desc.field_names = field_names;
-    desc.method_names = method_names;
+    // ClassDesc registration — unchanged
+    ClassDesc cdesc;
+    cdesc.name = class_name;
+    cdesc.field_names = field_names;
+    cdesc.method_names = method_names;
+
     for (size_t i = 0; i < field_names.size(); i++)
-        desc.field_map[field_names[i]] = static_cast<int>(i);
+        cdesc.field_map[field_names[i]] = static_cast<int>(i);
     for (size_t i = 0; i < method_names.size(); i++) {
-        if (!method_names[i].empty()) // skip unused reserved slots
-            desc.method_map[method_names[i]] = static_cast<int>(i);
+        if (!method_names[i].empty())
+            cdesc.method_map[method_names[i]] = static_cast<int>(i);
     }
-    m_class_registry[class_name] = std::move(desc);
+
+    m_class_registry[class_name] = std::move(cdesc);
 }
 
 Fa_ExprResult Compiler::compile_expr_impl(AST::Fa_Expr* e)
@@ -615,9 +647,7 @@ Fa_ExprResult Compiler::compile_expr_impl(AST::Fa_Expr* e)
     case AST::Fa_Expr::Kind::DICT: return compile_dict_impl(AS_DICT(e));
     case AST::Fa_Expr::Kind::INDEX: return compile_index_impl(AS_INDEX(e));
     case AST::Fa_Expr::Kind::GET: return compile_get_impl(AS_GET_EXPR(e));
-    case AST::Fa_Expr::Kind::INVALID:
-        diagnostic::emit(CompilerError::INVALID_EXPRESSION_NODE);
-        return Fa_ExprResult::knil();
+    case AST::Fa_Expr::Kind::INVALID: diagnostic::emit(CompilerError::INVALID_EXPRESSION_NODE); return Fa_ExprResult::knil();
     }
 
     return Fa_ExprResult::knil();
@@ -1202,23 +1232,23 @@ u8 Compiler::alloc_register()
 {
     u8 reg = m_current->alloc_register();
     if (reg >= MAX_REGS) {
-        diagnostic::emit(CompilerError::TOO_MANY_REGISTERS, std::string(m_current->func_name.data(), m_current->func_name.len()));
+        diagnostic::emit(CompilerError::TOO_MANY_REGISTERS, {m_current->func_name.data(), m_current->func_name.len()});
         return 0;
     }
 
     return reg;
 }
 
-void Compiler::declare_local(Fa_StringRef const& m_name, u8 m_reg)
+void Compiler::declare_local(Fa_StringRef const& name, u8 m_reg)
 {
-    m_current->locals.push({ m_name, m_current->scope_depth, m_reg });
+    m_current->locals.push({ name, m_current->scope_depth, m_reg });
 }
 
-LocalVar const* Compiler::lookup_local(Fa_StringRef const& m_name) const
+LocalVar const* Compiler::lookup_local(Fa_StringRef const& name) const
 {
     auto const& locals = m_current->locals;
     for (auto i = static_cast<int>(locals.size()) - 1; i >= 0; i -= 1) {
-        if (locals[i].name == m_name)
+        if (locals[i].name == name)
             return &locals[i];
     }
 
@@ -1238,7 +1268,10 @@ Compiler::VarInfo Compiler::resolve_name(Fa_StringRef const& name)
 
 u32 Compiler::emit(u32 instr, Fa_SourceLocation loc) { return current_chunk()->emit(instr, loc); }
 
-u32 Compiler::emit_jump(Fa_OpCode op, u8 cond, Fa_SourceLocation loc) { return emit(Fa_make_AsBx(op, cond, 0), loc); }
+u32 Compiler::emit_jump(Fa_OpCode op, u8 cond, Fa_SourceLocation loc)
+{
+    return emit(Fa_make_AsBx(op, cond, 0), loc);
+}
 
 void Compiler::patch_jump(u32 idx)
 {
@@ -1246,7 +1279,10 @@ void Compiler::patch_jump(u32 idx)
         diagnostic::emit(CompilerError::JUMP_OFFSET_OVERFLOW, diagnostic::Severity::FATAL);
 }
 
-void Compiler::push_loop(u32 loop_start) { m_current->loop_stack.push({ { }, { }, loop_start }); }
+void Compiler::push_loop(u32 loop_start)
+{
+    m_current->loop_stack.push({ { }, { }, loop_start });
+}
 
 void Compiler::pop_loop(u32 loop_exit, u32 continue_target, u32 line)
 {
@@ -1325,15 +1361,11 @@ u32 Compiler::intern_string(Fa_StringRef const& str)
     if (u16* idx = m_string_cache.find_ptr(key))
         return *idx;
 
-    Fa_ObjString* obj = Fa_MAKE_OBJ_STRING(str);
+    Fa_ObjString* obj = get_allocator().allocate_object<Fa_ObjString>(str.data());
     u16 idx = chunk->add_constant(Fa_MAKE_OBJECT(obj));
     m_string_cache[key] = idx;
     return idx;
 }
-
-// In compiler.hpp, LocalVar gains an optional class tag:
-// struct LocalVar { Fa_StringRef name; unsigned depth; u8 reg; Fa_StringRef known_class; };
-// (known_class is empty Fa_StringRef when the local's type isn't statically known)
 
 Compiler::ClassDesc const* Compiler::resolve_receiver_class(AST::Fa_Expr const* e) const
 {

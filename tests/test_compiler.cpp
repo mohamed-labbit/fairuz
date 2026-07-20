@@ -887,7 +887,7 @@ TEST(CompilerGet, MemberNameLowersToStringKeyIndex)
         if (!Fa_IS_STRING(constant))
             continue;
 
-        Fa_StringRef text = Fa_AS_STRING(constant)->str;
+        Fa_RTStringRef text = Fa_AS_STRING(constant)->str;
         if (text == "field")
             has_member_key = true;
         if (text == "__class__")
