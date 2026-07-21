@@ -480,7 +480,6 @@ using Fa_StringRef = Fa_StringRefImpl<>;
 using Fa_StringRefHash = Fa_StringRefHashImpl<>;
 using Fa_StringRefEqual = Fa_StringRefEqualImpl<>;
 
-
 } // namespace fairuz
 
 namespace std {

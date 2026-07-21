@@ -1392,8 +1392,10 @@ Fa_Value Fa_VM::execute()
                 diagnostic::panic(diagnostic::errc::general::Code::ALLOC_FAILED);
             }
 
-            for (u32 i = 0; i < vtable_size; ++i)
-                kvtable[i] = cur_chunk->functions[klass_desc.vtable_indices[i]];
+            for (u32 i = 0; i < vtable_size; ++i) {
+                u32 fn_idx = klass_desc.vtable_indices[i];
+                kvtable[i] = fn_idx == Fa_ClassDescriptor::NULL_SLOT ? nullptr : cur_chunk->functions[fn_idx];
+            }
 
             Fa_RA() = Fa_MAKE_CLASS(
                 kname,
@@ -1432,7 +1434,8 @@ Fa_Value Fa_VM::execute()
 
         Fa_ObjInstance* inst = Fa_AS_INSTANCE(self_val);
 
-        invoke_method(inst->klass->vtable[slot], self_val, self_reg, cur_frame_base, argc - 1, ip);
+        // invoke_method(inst->klass->vtable[slot], self_val, self_reg, cur_frame_base, argc - 1, ip);
+        invoke_method(inst->klass->vtable[slot], self_val, self_reg, cur_frame_base, argc, ip);
 
         LOAD_FRAME();
         Fa_DISPATCH();
@@ -1495,6 +1498,9 @@ void Fa_VM::invoke_method(Fa_Chunk* target_chunk, Fa_Value self_val, int dst_reg
 
     int local_count = target_chunk->local_count;
     int new_top = call_base + local_count + 1;
+    if (UNLIKELY(new_top > STACK_SIZE))
+        runtime_error(ErrorCode::STACK_OVERFLOW);
+
     while (m_stack_top < new_top) {
         m_stack[m_stack_top] = NIL_VAL;
         m_stack_top += 1;
@@ -1573,6 +1579,9 @@ void Fa_VM::call_value(Fa_Value callee, int argc, int call_base, bool tail)
 
         if (tail && m_frames_top > 0) {
             int cur_base = m_frames[m_frames_top - 1].base;
+            int new_top = cur_base + local_count + 1;
+            if (UNLIKELY(new_top > STACK_SIZE))
+                runtime_error(ErrorCode::STACK_OVERFLOW);
 
             for (int i = 0; i < argc; i += 1)
                 m_stack[cur_base + i] = m_stack[call_base + i];
@@ -1581,11 +1590,16 @@ void Fa_VM::call_value(Fa_Value callee, int argc, int call_base, bool tail)
 
             m_frames[m_frames_top - 1] = Fa_CallFrame(fn, fchk, 0, cur_base, local_count);
 
-            int new_top = cur_base + local_count + 1;
             if (m_stack_top < new_top)
                 m_stack_top = new_top;
         } else {
+            if (UNLIKELY(m_frames_top >= MAX_FRAMES))
+                runtime_error(ErrorCode::STACK_OVERFLOW);
+
             int new_top = call_base + local_count + 1;
+            if (UNLIKELY(new_top > STACK_SIZE))
+                runtime_error(ErrorCode::STACK_OVERFLOW);
+
             while (m_stack_top < new_top) {
                 m_stack[m_stack_top] = NIL_VAL;
                 m_stack_top += 1;
@@ -1620,9 +1634,7 @@ void Fa_VM::call_value(Fa_Value callee, int argc, int call_base, bool tail)
 
         int ctor_slot = klass->method_slot(Fa_RTStringRef { "بداية" });
         if (ctor_slot < 0)
-            /// TODO: Need to report that the init was not found
-            return;
-
+            ctor_slot = klass->method_slot(Fa_RTStringRef { "init" });
         if (ctor_slot < 0) {
             if (argc != 0)
                 runtime_error(ErrorCode::WRONG_ARG_COUNT);
@@ -1646,6 +1658,9 @@ void Fa_VM::call_value(Fa_Value callee, int argc, int call_base, bool tail)
 
         int local_count = ctor_chunk->local_count;
         int new_top = call_base + local_count + 1;
+        if (UNLIKELY(new_top > STACK_SIZE))
+            runtime_error(ErrorCode::STACK_OVERFLOW);
+
         while (m_stack_top < new_top) {
             m_stack[m_stack_top] = NIL_VAL;
             m_stack_top += 1;

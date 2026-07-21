@@ -132,6 +132,21 @@ void Compiler::compile_assignment_stmt(AST::Fa_AssignmentStmt* s)
         return;
     }
 
+    if (auto* get_expr = dynamic_cast<AST::Fa_GetExpr*>(s->get_target())) {
+        if (AST::Fa_NameExpr* member_name = as_simple_member_name(get_expr->get_member())) {
+            if (ClassDesc const* desc = resolve_receiver_class(get_expr->get_object())) {
+                int field_idx = desc->field_index(member_name->get_value());
+                if (field_idx >= 0) {
+                    RegMark mark(m_current);
+                    u8 object_reg = any_reg(compile_expr_impl(get_expr->get_object()), loc);
+                    u8 value_reg = any_reg(compile_expr_impl(s->get_value()), loc);
+                    emit(Fa_make_ABC(Fa_OpCode::SET_FIELD, object_reg, static_cast<u8>(field_idx), value_reg), loc);
+                    return;
+                }
+            }
+        }
+    }
+
     auto* name = dynamic_cast<AST::Fa_NameExpr*>(s->get_target());
     if (name == nullptr) {
         diagnostic::emit(CompilerError::INVALID_ASSIGNMENT_TARGET, "only simple name assignments are supported");
@@ -148,7 +163,20 @@ void Compiler::compile_assignment_stmt(AST::Fa_AssignmentStmt* s)
         u8 reg = alloc_register();
         Fa_ExprResult value = compile_expr_impl(s->get_value());
         discharge(value, reg, loc);
-        declare_local(name->get_value(), reg);
+        declare_local(name->get_value(), reg, infer_constructed_class(s->get_value()));
+        return;
+    }
+
+    if (int field_idx = current_method_field_index(name->get_value()); field_idx >= 0) {
+        RegMark mark(m_current);
+        LocalVar const* self = lookup_local(kClassInstanceName);
+        if (self == nullptr) {
+            diagnostic::emit(CompilerError::INVALID_ASSIGNMENT_TARGET, "class field assignment without instance");
+            return;
+        }
+
+        u8 value_reg = any_reg(compile_expr_impl(s->get_value()), loc);
+        emit(Fa_make_ABC(Fa_OpCode::SET_FIELD, self->reg, static_cast<u8>(field_idx), value_reg), loc);
         return;
     }
 
@@ -437,6 +465,27 @@ void Compiler::compile_class_def(AST::Fa_ClassDef* s)
     Fa_Array<AST::Fa_Expr*> fields = s->get_members();
     Fa_Array<AST::Fa_Stmt*> methods = s->get_methods();
     Fa_StringRef class_name = AS_NAME(s->get_name())->get_value();
+    Fa_Array<Fa_StringRef> field_names;
+
+    for (AST::Fa_Expr* field : fields) {
+        if (field->get_kind() != AST::Fa_Expr::Kind::NAME) {
+            diagnostic::emit(CompilerError::INVALID_ASSIGNMENT_TARGET, "field name must be a simple name");
+            continue;
+        }
+
+        auto* name = AS_NAME(field);
+        Fa_StringRef fname = name->get_value();
+
+        bool seen = false;
+        for (auto& existing : field_names) {
+            if (existing == fname) {
+                seen = true;
+                break;
+            }
+        }
+        if (!seen)
+            field_names.push(fname);
+    }
 
     auto compile_method_closure = [&](AST::Fa_FunctionDef* method) -> std::tuple<u8, Fa_Chunk*> {
         Fa_SourceLocation method_loc = method->get_location();
@@ -458,6 +507,8 @@ void Compiler::compile_class_def(AST::Fa_ClassDef* s)
         state.chunk = ch;
         state.func_name = method_name->get_value();
         state.enclosing = m_current;
+        state.is_class_method = true;
+        state.class_field_names = field_names;
         m_current = &state;
 
         begin_scope();
@@ -494,7 +545,7 @@ void Compiler::compile_class_def(AST::Fa_ClassDef* s)
     // fixed-slot layout — both the vtable build and method_names/
     // method_slot_map below must agree with it.
     auto special_slot_for = [](Fa_StringRef const& name) -> int {
-        if (name == "بداية")
+        if (name == "بداية" || name == "init")
             return Fa_ObjClass::INIT;
         if (name == "عملية+")
             return Fa_ObjClass::ADD;
@@ -512,7 +563,6 @@ void Compiler::compile_class_def(AST::Fa_ClassDef* s)
     // Pre-size the reserved region; ordinary methods are appended after it.
     Fa_Array<Fa_Chunk*> vtable(static_cast<u32>(Fa_ObjClass::_COUNT), /* fill_v= */ nullptr);
     Fa_Array<Fa_StringRef> method_names(static_cast<u32>(Fa_ObjClass::_COUNT), Fa_StringRef { });
-    Fa_Array<Fa_StringRef> field_names;
     Fa_Array<Fa_StringRef> seen_names; // dedup guard across BOTH special and ordinary methods
 
     for (AST::Fa_Stmt* m : methods) {
@@ -551,26 +601,6 @@ void Compiler::compile_class_def(AST::Fa_ClassDef* s)
             vtable.push(chunk);
             method_names.push(method_name);
         }
-    }
-
-    for (AST::Fa_Expr* field : fields) {
-        if (field->get_kind() != AST::Fa_Expr::Kind::NAME) {
-            diagnostic::emit(CompilerError::INVALID_ASSIGNMENT_TARGET, "field name must be a simple name");
-            continue;
-        }
-
-        auto* name = AS_NAME(field);
-        Fa_StringRef fname = name->get_value();
-
-        bool seen = false;
-        for (auto& existing : field_names) {
-            if (existing == fname) {
-                seen = true;
-                break;
-            }
-        }
-        if (!seen)
-            field_names.push(fname);
     }
 
     // Build the descriptor from the same arrays already computed above.
@@ -680,6 +710,17 @@ Fa_ExprResult Compiler::compile_name_impl(AST::Fa_NameExpr* e)
 
     if (vi.kind == VarInfo::Kind::LOCAL)
         return Fa_ExprResult::reg(vi.index);
+
+    if (int field_idx = current_method_field_index(e->get_value()); field_idx >= 0) {
+        LocalVar const* self = lookup_local(kClassInstanceName);
+        if (self == nullptr) {
+            diagnostic::emit(CompilerError::INVALID_EXPRESSION_NODE, "class field access without instance");
+            return Fa_ExprResult::knil();
+        }
+
+        u32 pc = emit(Fa_make_ABC(Fa_OpCode::GET_FIELD, 0, self->reg, static_cast<u8>(field_idx)), loc);
+        return Fa_ExprResult::reloc(pc);
+    }
 
     u16 kidx = intern_string(e->get_value());
     u32 pc = emit(Fa_make_ABx(Fa_OpCode::LOAD_GLOBAL, 0, kidx), loc);
@@ -854,6 +895,22 @@ Fa_ExprResult Compiler::compile_assign_impl(AST::Fa_AssignmentExpr* e)
         return Fa_ExprResult::reg(value_reg);
     }
 
+    if (target->get_kind() == AST::Fa_Expr::Kind::GET) {
+        auto get_expr = AS_GET_EXPR(target);
+        if (AST::Fa_NameExpr* member_name = as_simple_member_name(get_expr->get_member())) {
+            if (ClassDesc const* desc = resolve_receiver_class(get_expr->get_object())) {
+                int field_idx = desc->field_index(member_name->get_value());
+                if (field_idx >= 0) {
+                    RegMark mark(m_current);
+                    u8 object_reg = any_reg(compile_expr_impl(get_expr->get_object()), loc);
+                    u8 value_reg = any_reg(compile_expr_impl(e->get_value()), loc);
+                    emit(Fa_make_ABC(Fa_OpCode::SET_FIELD, object_reg, static_cast<u8>(field_idx), value_reg), loc);
+                    return Fa_ExprResult::reg(value_reg);
+                }
+            }
+        }
+    }
+
     auto name = dynamic_cast<AST::Fa_NameExpr*>(target);
     if (name == nullptr) {
         diagnostic::emit(CompilerError::INVALID_ASSIGNMENT_TARGET);
@@ -877,8 +934,21 @@ Fa_ExprResult Compiler::compile_assign_impl(AST::Fa_AssignmentExpr* e)
 
         u8 reg = alloc_register();
         discharge(compile_expr_impl(e->get_value()), reg, loc);
-        declare_local(name->get_value(), reg);
+        declare_local(name->get_value(), reg, infer_constructed_class(e->get_value()));
         return Fa_ExprResult::reg(reg);
+    }
+
+    if (int field_idx = current_method_field_index(name->get_value()); field_idx >= 0) {
+        RegMark mark(m_current);
+        LocalVar const* self = lookup_local(kClassInstanceName);
+        if (self == nullptr) {
+            diagnostic::emit(CompilerError::INVALID_ASSIGNMENT_TARGET, "class field assignment without instance");
+            return Fa_ExprResult::knil();
+        }
+
+        u8 value_reg = any_reg(compile_expr_impl(e->get_value()), loc);
+        emit(Fa_make_ABC(Fa_OpCode::SET_FIELD, self->reg, static_cast<u8>(field_idx), value_reg), loc);
+        return Fa_ExprResult::reg(value_reg);
     }
 
     VarInfo vi = resolve_name(name->get_value());
@@ -915,6 +985,7 @@ Fa_ExprResult Compiler::compile_call_impl(AST::Fa_CallExpr* e, u8* dst, bool tai
                     u8 receiver_reg = fn_reg;
                     discharge(compile_expr_impl(get->get_object()), receiver_reg, get->get_object()->get_location());
 
+                    alloc_register(); // reserve callee frame slot 0 for implicit self
                     for (AST::Fa_Expr* arg : e->get_args()) {
                         u8 arg_reg = alloc_register();
                         discharge(compile_expr_impl(arg), arg_reg, loc);
@@ -922,6 +993,7 @@ Fa_ExprResult Compiler::compile_call_impl(AST::Fa_CallExpr* e, u8* dst, bool tai
 
                     u8 argc = static_cast<u8>(e->get_args().size() + 1); // +1 for self
                     emit(Fa_make_ABC(Fa_OpCode::INVOKE, receiver_reg, static_cast<u8>(slot), argc), loc);
+                    emit(Fa_make_ABC(Fa_OpCode::NOP, current_chunk()->alloc_ic_slot(), 0, 0), loc);
                     m_current->free_regs_to(receiver_reg + 1);
                     return Fa_ExprResult::reg(receiver_reg);
                 }
@@ -1232,7 +1304,7 @@ u8 Compiler::alloc_register()
 {
     u8 reg = m_current->alloc_register();
     if (reg >= MAX_REGS) {
-        diagnostic::emit(CompilerError::TOO_MANY_REGISTERS, {m_current->func_name.data(), m_current->func_name.len()});
+        diagnostic::emit(CompilerError::TOO_MANY_REGISTERS, { m_current->func_name.data(), m_current->func_name.len() });
         return 0;
     }
 
@@ -1241,7 +1313,12 @@ u8 Compiler::alloc_register()
 
 void Compiler::declare_local(Fa_StringRef const& name, u8 m_reg)
 {
-    m_current->locals.push({ name, m_current->scope_depth, m_reg });
+    declare_local(name, m_reg, "");
+}
+
+void Compiler::declare_local(Fa_StringRef const& name, u8 m_reg, Fa_StringRef const& known_class)
+{
+    m_current->locals.push({ name, m_current->scope_depth, m_reg, known_class });
 }
 
 LocalVar const* Compiler::lookup_local(Fa_StringRef const& name) const
@@ -1383,13 +1460,40 @@ Compiler::ClassDesc const* Compiler::resolve_receiver_class(AST::Fa_Expr const* 
     // Case 2: the expression is a local variable known to hold an
     // instance of some class (e.g. obj after obj = كلب.بداية()).
     if (LocalVar const* local = lookup_local(name)) {
-        if (local->known_class) {
-            if (auto* d = m_class_registry.find_ptr(local->known_class->name))
+        if (!local->known_class.empty()) {
+            if (auto* d = m_class_registry.find_ptr(local->known_class))
                 return d;
         }
     }
 
     return nullptr;
+}
+
+Fa_StringRef Compiler::infer_constructed_class(AST::Fa_Expr const* e) const
+{
+    if (e == nullptr || e->get_kind() != AST::Fa_Expr::Kind::CALL)
+        return "";
+
+    auto const* call = AS_CONST_CALL(e);
+    AST::Fa_Expr const* callee = call->get_callee();
+    if (callee == nullptr || callee->get_kind() != AST::Fa_Expr::Kind::NAME)
+        return "";
+
+    Fa_StringRef name = AS_CONST_NAME(callee)->get_value();
+    return m_class_registry.find_ptr(name) != nullptr ? name : Fa_StringRef { "" };
+}
+
+int Compiler::current_method_field_index(Fa_StringRef const& name) const
+{
+    if (m_current == nullptr || !m_current->is_class_method)
+        return -1;
+
+    for (u32 i = 0, n = m_current->class_field_names.size(); i < n; i += 1) {
+        if (m_current->class_field_names[i] == name)
+            return static_cast<int>(i);
+    }
+
+    return -1;
 }
 
 } // namespace fairuz::runtime

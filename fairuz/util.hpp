@@ -321,6 +321,14 @@ static bool is_integer_value(f64 d, i64& out)
     return true;
 }
 
+struct Fa_ValueHash {
+    size_t operator()(u64 const& v) const noexcept { return v; }
+};
+
+struct Fa_ValueEqual {
+    bool operator()(u64 const& lhs, u64 const& rhs) const noexcept { return lhs == rhs; }
+};
+
 } // namespace fairuz::util
 
 #endif // UTIL_HPP

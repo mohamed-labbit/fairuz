@@ -35,5 +35,4 @@ int Fa_ObjClass::method_slot(Fa_RTStringRef method_name) const
     return p != nullptr ? static_cast<int>(*p) : -1;
 }
 
-
 } // namespace fairuz::runtime

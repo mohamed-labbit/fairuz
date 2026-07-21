@@ -14,14 +14,6 @@ namespace fairuz::runtime {
 
 using Fa_Value = u64;
 
-struct Fa_ValueHash {
-    size_t operator()(Fa_Value const& v) const noexcept { return v; }
-};
-
-struct Fa_ValueEqual {
-    bool operator()(Fa_Value const& lhs, Fa_Value const& rhs) const noexcept { return lhs == rhs; }
-};
-
 class Fa_VM;
 class Fa_Chunk;
 
@@ -60,7 +52,8 @@ struct _Allocator {
     {
         if (obj == nullptr)
             return;
-        obj->~T(); delete obj;
+        obj->~T();
+        delete obj;
     }
 }; // _Allocator
 
@@ -70,7 +63,7 @@ inline _Allocator& runtime_string_allocator()
     return allocator;
 }
 
-using Fa_DictType = Fa_HashTable<Fa_Value, Fa_Value, Fa_ValueHash, Fa_ValueEqual>;
+using Fa_DictType = Fa_HashTable<Fa_Value, Fa_Value, util::Fa_ValueHash, util::Fa_ValueEqual>;
 using NativeFn = Fa_Value (Fa_VM::*)(int, Fa_Value*);
 /// a runtime string entirely collectable by the gc
 using Fa_RTStringRef = Fa_StringRefImpl<_Allocator>;
@@ -226,8 +219,8 @@ struct Fa_ObjClass {
 
     using IndexTable = Fa_HashTable<Fa_RTStringRef, u32, Fa_RTStringRefHash, Fa_RTStringRefEqual>;
 
-    IndexTable field_index_map = {};
-    IndexTable method_slot_map = {};
+    IndexTable field_index_map = { };
+    IndexTable method_slot_map = { };
 
     Fa_ObjClass() = default;
 
@@ -250,11 +243,12 @@ struct Fa_ObjClass {
     int field_index(Fa_RTStringRef field_name) const;
     int method_slot(Fa_RTStringRef method_name) const;
 
-    ~Fa_ObjClass() {
+    ~Fa_ObjClass()
+    {
         if (field_names != nullptr)
-            delete [] field_names;
+            delete[] field_names;
         if (method_names != nullptr)
-            delete [] method_names;
+            delete[] method_names;
     }
 };
 

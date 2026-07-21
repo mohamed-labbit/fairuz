@@ -154,7 +154,8 @@ Fa_ObjString* Fa_GarbageCollector::make_obj_string(Fa_RTStringRef str)
     return make<Fa_ObjString>(str);
 }
 
-Fa_ObjString* Fa_GarbageCollector::make_obj_string(Fa_StringRef str) {
+Fa_ObjString* Fa_GarbageCollector::make_obj_string(Fa_StringRef str)
+{
     return make<Fa_ObjString>(str.data());
 }
 
@@ -188,7 +189,7 @@ Fa_ObjNative* Fa_GarbageCollector::make_obj_native(NativeFn fn, Fa_ObjString* na
     return make<Fa_ObjNative>(fn, name, arity);
 }
 
-Fa_ObjClass* Fa_GarbageCollector::make_obj_class(Fa_RTStringRef name, Fa_RTStringRef* fields, 
+Fa_ObjClass* Fa_GarbageCollector::make_obj_class(Fa_RTStringRef name, Fa_RTStringRef* fields,
     u32 field_count, Fa_RTStringRef* methods, u32 method_count, Fa_Chunk** vtable, u32 vtable_size)
 {
     return make<Fa_ObjClass>(name, fields, field_count, methods, method_count, vtable, vtable_size);

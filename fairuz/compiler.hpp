@@ -15,7 +15,7 @@ struct LocalVar {
     Fa_StringRef name { "" };
     unsigned int depth { 0 };
     u8 reg { 0 };
-    Fa_ClassDescriptor* known_class { nullptr };
+    Fa_StringRef known_class { "" };
 }; // struct LocalVar
 
 struct CompilerState {
@@ -27,6 +27,8 @@ struct CompilerState {
     Fa_StringRef func_name { "" };
     bool is_top_level { false };
     bool is_dead { false };
+    bool is_class_method { false };
+    Fa_Array<Fa_StringRef> class_field_names;
 
     struct LoopContext {
         Fa_Array<u32> break_patches;
@@ -242,8 +244,11 @@ private:
     u8 alloc_register();
 
     void declare_local(Fa_StringRef const& name, u8 reg);
+    void declare_local(Fa_StringRef const& name, u8 reg, Fa_StringRef const& known_class);
     LocalVar const* lookup_local(Fa_StringRef const& name) const;
     VarInfo resolve_name(Fa_StringRef const& name);
+    Fa_StringRef infer_constructed_class(AST::Fa_Expr const* e) const;
+    int current_method_field_index(Fa_StringRef const& name) const;
 
     u32 emit(u32 instr, Fa_SourceLocation loc);
     u32 emit_jump(Fa_OpCode op, u8 cond, Fa_SourceLocation loc);

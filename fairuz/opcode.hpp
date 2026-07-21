@@ -2,8 +2,8 @@
 #define OPCODE_HPP
 
 #include "array.hpp"
-#include "string.hpp"
 #include "fobject.hpp"
+#include "string.hpp"
 
 namespace fairuz::runtime {
 
@@ -320,8 +320,8 @@ struct Fa_ClassDescriptor {
     Fa_Array<Fa_StringRef> field_names; // for runtime slot-map / debug info
     u32 vtable_size { 0 };
     Fa_Array<Fa_StringRef> method_names; // parallel to vtable_indices
-    Fa_Array<u32> vtable_indices;       // indices into Fa_Chunk::functions[]
-                                        // of the enclosing (top-level) chunk
+    Fa_Array<u32> vtable_indices;        // indices into Fa_Chunk::functions[]
+                                         // of the enclosing (top-level) chunk
     static constexpr u32 NULL_SLOT = UINT32_MAX;
 };
 
@@ -339,7 +339,8 @@ struct Fa_Chunk {
     Fa_Array<u64*> global_cache;
     Fa_Array<Fa_ClassDescriptor> class_descriptors; // new
 
-    u16 add_class_descriptor(Fa_ClassDescriptor&& d) {
+    u16 add_class_descriptor(Fa_ClassDescriptor&& d)
+    {
         class_descriptors.push(std::move(d));
         return static_cast<u16>(class_descriptors.size() - 1);
     }

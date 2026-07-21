@@ -11,10 +11,10 @@ class Fa_VM;
 
 class Fa_GarbageCollector {
 private:
-    Fa_Array<Fa_ObjHeader*> m_all; // all tracked objects list
+    Fa_Array<Fa_ObjHeader*> m_all;   // all tracked objects list
     Fa_Array<Fa_ObjHeader*> m_grays; // all gray objects list
-    u64 m_current_size { 0 }; // current tracked memory in bytes
-  
+    u64 m_current_size { 0 };        // current tracked memory in bytes
+
 public:
     Fa_GarbageCollector() = default;
 
@@ -39,10 +39,10 @@ public:
     Fa_ObjString* make_obj_string(char const* str);
     Fa_ObjString* make_obj_string(char* str);
     Fa_ObjList* make_obj_list();
-    Fa_ObjDict* make_obj_dict(Fa_DictType data = {});
+    Fa_ObjDict* make_obj_dict(Fa_DictType data = { });
     Fa_ObjFunction* make_obj_function(Fa_Chunk* chunk);
     Fa_ObjNative* make_obj_native(NativeFn fn, Fa_ObjString* name, int arity);
-    Fa_ObjClass* make_obj_class(Fa_RTStringRef name, Fa_RTStringRef* fields, 
+    Fa_ObjClass* make_obj_class(Fa_RTStringRef name, Fa_RTStringRef* fields,
         u32 field_count, Fa_RTStringRef* methods, u32 method_count, Fa_Chunk** vtable, u32 vtable_size);
     Fa_ObjInstance* make_obj_instance(Fa_ObjClass* klass);
 
