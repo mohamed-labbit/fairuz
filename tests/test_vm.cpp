@@ -16,7 +16,9 @@ using namespace fairuz;
 using namespace fairuz::runtime;
 
 namespace {
+
 Fa_GarbageCollector m_gc;
+
 }
 
 static constexpr u16 BX(int v) { return static_cast<u16>(v + 32767); }
@@ -996,7 +998,7 @@ TEST(VMCalls, TailCall_DoesNotOverflowFrames)
 }
 
 /*
- * 
+ *
 TEST(VMCalls, StackOverflowDetected)
 {
     auto fn = make_chunk();
@@ -1024,23 +1026,26 @@ TEST(VMCalls, StackOverflowDetected)
 }
  */
 
-TEST(VMCalls, StackOverflowDetected) {
+TEST(VMCalls, StackOverflowDetected)
+{
     auto fn = func_def(name_expr("inf"), list_expr(), blk({
-        return_stmt(call_expr(name_expr("inf")))
+        expr_stmt(call_expr(name_expr("inf"))),
+        return_stmt(lit_nil()),
     }));
 
     auto ch = Compiler().compile({
         fn,
         expr_stmt(call_expr(name_expr("inf"))),
     });
-    if (ch != nullptr) ch->disassemble();
+    if (test_config::dump_bytecode && ch != nullptr)
+        ch->disassemble();
     VMRunner r;
     EXPECT_THROW(r.run(ch), std::runtime_error);
 }
 
 TEST(VMGlobals, UndefinedGlobalRaisesRuntimeError)
 {
-   
+
     VMRunner r;
     CB b;
     b.regs(1).ldg(0, "missing").ret(0);

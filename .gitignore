@@ -19,3 +19,4 @@ fib.fa
 .zed/
 *.vsix
 INVARIANTS.md
+format_mylang.sh
