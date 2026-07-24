@@ -39,9 +39,9 @@ static constexpr u64 OBJ_TAG16 = UINT64_C(0xFFF8);
 #define Fa_MAKE_BOOL(b) ((b) ? TRUE_VAL : FALSE_VAL)
 #define Fa_MAKE_INTEGER(v) (static_cast<Fa_Value>(v) & PAYLOAD_MASK) | TAG_INT
 
-#define Fa_MAKE_STRING(s)                                            \
+#define Fa_MAKE_STRING(s)                                           \
     ({                                                              \
-        Fa_ObjString* _o = m_gc.make_obj_string(s);                  \
+        Fa_ObjString* _o = m_gc.make_obj_string(s);                 \
         TAG_OBJ | (reinterpret_cast<uintptr_t>(_o) & PAYLOAD_MASK); \
     })
 #define Fa_MAKE_LIST()                                              \
@@ -59,16 +59,16 @@ static constexpr u64 OBJ_TAG16 = UINT64_C(0xFFF8);
         Fa_ObjFunction* _o = m_gc.make_obj_function();              \
         TAG_OBJ | (reinterpret_cast<uintptr_t>(_o) & PAYLOAD_MASK); \
     })
-#define Fa_MAKE_NATIVE(f, n, a)                                            \
+#define Fa_MAKE_NATIVE(f, n, a)                                     \
     ({                                                              \
-        Fa_ObjNative* _o = m_gc.make_obj_native(f, n, a);                  \
+        Fa_ObjNative* _o = m_gc.make_obj_native(f, n, a);           \
         TAG_OBJ | (reinterpret_cast<uintptr_t>(_o) & PAYLOAD_MASK); \
     })
 
-#define Fa_MAKE_CLASS(n, f, f_c, m, m_c, v, v_c)                                             \
-    ({                                                              \
-        Fa_ObjClass* _o = m_gc.make_obj_class(n, f, f_c, m, m_c, v, v_c);                    \
-        TAG_OBJ | (reinterpret_cast<uintptr_t>(_o) & PAYLOAD_MASK); \
+#define Fa_MAKE_CLASS(n, f, f_c, m, m_c, v, v_c)                          \
+    ({                                                                    \
+        Fa_ObjClass* _o = m_gc.make_obj_class(n, f, f_c, m, m_c, v, v_c); \
+        TAG_OBJ | (reinterpret_cast<uintptr_t>(_o) & PAYLOAD_MASK);       \
     })
 #define Fa_MAKE_INSTANCE()                                          \
     ({                                                              \

@@ -1029,9 +1029,9 @@ TEST(VMCalls, StackOverflowDetected)
 TEST(VMCalls, StackOverflowDetected)
 {
     auto fn = func_def(name_expr("inf"), list_expr(), blk({
-        expr_stmt(call_expr(name_expr("inf"))),
-        return_stmt(lit_nil()),
-    }));
+                                                          expr_stmt(call_expr(name_expr("inf"))),
+                                                          return_stmt(lit_nil()),
+                                                      }));
 
     auto ch = Compiler().compile({
         fn,
