@@ -20,3 +20,4 @@ fib.fa
 *.vsix
 INVARIANTS.md
 format_mylang.sh
+build-codex/
