@@ -1,5 +1,3 @@
-#pragma once
-
 #include "fobject.hpp"
 
 namespace fairuz::runtime {
@@ -23,13 +21,13 @@ void Fa_ObjClass::build_indices()
         method_slot_map[method_names[i]] = i;
 }
 
-int Fa_ObjClass::field_index(Fa_RTStringRef field_name) const
+int Fa_ObjClass::field_index(Fa_StringRef field_name) const
 {
     u32 const* p = field_index_map.find_ptr(field_name);
     return p != nullptr ? static_cast<int>(*p) : -1;
 }
 
-int Fa_ObjClass::method_slot(Fa_RTStringRef method_name) const
+int Fa_ObjClass::method_slot(Fa_StringRef method_name) const
 {
     u32 const* p = method_slot_map.find_ptr(method_name);
     return p != nullptr ? static_cast<int>(*p) : -1;

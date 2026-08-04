@@ -1,10 +1,10 @@
 #pragma once
 
-#include "array.hpp"
-#include "macros.hpp"
-#include "opcode.hpp"
-#include "string.hpp"
-#include "table.hpp"
+#include "farray.hpp"
+#include "fmacros.hpp"
+#include "fopcode.hpp"
+#include "fstring.hpp"
+#include "ftable.hpp"
 
 #include <cassert>
 #include <cstddef>
@@ -65,13 +65,8 @@ inline _Allocator& runtime_string_allocator()
 
 using Fa_DictType = Fa_HashTable<Fa_Value, Fa_Value, util::Fa_ValueHash, util::Fa_ValueEqual>;
 using NativeFn = Fa_Value (Fa_VM::*)(int, Fa_Value*);
-/// a runtime string entirely collectable by the gc
-using Fa_RTStringRef = Fa_StringRefImpl<_Allocator>;
-using Fa_RTStringRefHash = Fa_StringRefHashImpl<_Allocator>;
-using Fa_RTStringRefEqual = Fa_StringRefEqualImpl<_Allocator>;
 
-enum class Fa_ObjType : u8 {
-    STRING,
+enum class Fa_ObjType : u8 {    STRING,
     LIST,
     DICT,
     FUNCTION,
@@ -98,25 +93,20 @@ struct Fa_ObjHeader {
 
 struct Fa_ObjString {
     Fa_ObjHeader obj;
-    Fa_RTStringRef str;
+    Fa_StringRef str;
     u64 hash { 0 };
 
     Fa_ObjString() = delete;
 
-    explicit Fa_ObjString(Fa_RTStringRef s)
+    explicit Fa_ObjString(Fa_StringRef s)
         : str(s)
-        , hash(static_cast<u64>(std::hash<Fa_RTStringRef> { }(s)))
+        , hash(static_cast<u64>(std::hash<Fa_StringRef> { }(s)))
     {
         obj = { Fa_ObjType::STRING };
     }
 
     explicit Fa_ObjString(char const* s)
-        : Fa_ObjString(Fa_RTStringRef(s, &runtime_string_allocator()))
-    {
-    }
-
-    explicit Fa_ObjString(Fa_StringRef s)
-        : Fa_ObjString(Fa_RTStringRef(s.data(), &runtime_string_allocator()))
+        : Fa_ObjString(Fa_StringRef(s))
     {
     }
 };
@@ -194,37 +184,37 @@ struct Fa_ObjClass {
         _COUNT,
     };
 
-    Fa_RTStringRef name = "";
+    Fa_StringRef name = "";
 
     // Field slots are fixed once the class object is constructed. Instances keep a
     // flat array with this exact slot count; no re-classing or dynamic shape change
     // is supported by this object model.
-    // Fa_Array<Fa_RTStringRef> field_names;
-    Fa_RTStringRef* field_names { nullptr };
+    // Fa_Array<Fa_StringRef> field_names;
+    Fa_StringRef* field_names { nullptr };
     u32 field_count { 0 };
 
     // Single-inheritance/method resolution is flattened by the compiler into this
     // vtable. Runtime dispatch does a direct slot lookup through method_slot_map.
-    // Fa_Array<Fa_RTStringRef> method_names;
+    // Fa_Array<Fa_StringRef> method_names;
     // Fa_Array<Fa_Chunk*> vtable;
 
     /// NOTE: We use raw pointers so objects can be easily collected by the gc,
     /// however, methods and variables exist statically regardless of their own
     /// state, so using a fixed size dynamically allocated array won't create
     /// reallocation and out of bounds access issues anyway
-    Fa_RTStringRef* method_names { nullptr };
+    Fa_StringRef* method_names { nullptr };
     Fa_Chunk** vtable { nullptr };
     u32 method_count { 0 };
     u32 vtable_size { 0 };
 
-    using IndexTable = Fa_HashTable<Fa_RTStringRef, u32, Fa_RTStringRefHash, Fa_RTStringRefEqual>;
+    using IndexTable = Fa_HashTable<Fa_StringRef, u32, Fa_StringRefHash, Fa_StringRefEqual>;
 
     IndexTable field_index_map = { };
     IndexTable method_slot_map = { };
 
     Fa_ObjClass() = default;
 
-    explicit Fa_ObjClass(Fa_RTStringRef n, Fa_RTStringRef* f, u32 f_c, Fa_RTStringRef* m, u32 m_c, Fa_Chunk** v, u32 v_c)
+    explicit Fa_ObjClass(Fa_StringRef n, Fa_StringRef* f, u32 f_c, Fa_StringRef* m, u32 m_c, Fa_Chunk** v, u32 v_c)
         : name(n)
         , field_names(f)
         , field_count(f_c)
@@ -240,8 +230,8 @@ struct Fa_ObjClass {
 
     void build_indices();
 
-    int field_index(Fa_RTStringRef field_name) const;
-    int method_slot(Fa_RTStringRef method_name) const;
+    int field_index(Fa_StringRef field_name) const;
+    int method_slot(Fa_StringRef method_name) const;
 
     ~Fa_ObjClass()
     {
