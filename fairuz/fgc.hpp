@@ -13,7 +13,7 @@ class Fa_GarbageCollector {
 private:
     Fa_Set<Fa_ObjHeader*> m_all;   // all tracked objects list
     Fa_Set<Fa_ObjHeader*> m_grays; // all gray objects list
-    u64 m_current_size { 0 };        // current tracked memory in bytes
+    u64 m_current_size { 0 };      // current tracked memory in bytes
 
 public:
     Fa_GarbageCollector() = default;

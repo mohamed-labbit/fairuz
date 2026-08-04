@@ -492,11 +492,11 @@ public:
     T& back() { return m_arr.back(); }
     T const& back() const { return m_arr.back(); }
 
-    void erase(T const *p) { m_arr.erase(p); }
+    void erase(T const* p) { m_arr.erase(p); }
     void erase(u32 at) { m_arr.erase(at); }
 
-    T& operator[](const u32 at) { return m_arr[at]; }
-    T operator[](const u32 at) const { return m_arr[at]; }
+    T& operator[](u32 const at) { return m_arr[at]; }
+    T operator[](u32 const at) const { return m_arr[at]; }
 };
 
 } // namespace fairuz

@@ -1,8 +1,8 @@
 #ifndef FORMAT_HPP
 #define FORMAT_HPP
 
-#include "farray.hpp"
 #include "fAST.hpp"
+#include "farray.hpp"
 #include "fstring.hpp"
 
 namespace fairuz {

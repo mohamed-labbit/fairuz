@@ -156,7 +156,7 @@ Fa_ObjString* Fa_GarbageCollector::make_obj_string(Fa_StringRef str)
 
 // Fa_ObjString* Fa_GarbageCollector::make_obj_string(Fa_StringRef str)
 // {
-    // return make<Fa_ObjString>(str.data());
+// return make<Fa_ObjString>(str.data());
 // }
 
 Fa_ObjString* Fa_GarbageCollector::make_obj_string(char const* str)

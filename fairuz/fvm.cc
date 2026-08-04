@@ -4,8 +4,8 @@
 
 #include "fvm.hpp"
 #include "fdiagnostic.hpp"
-#include "fobject.hpp"
 #include "fmacros.hpp"
+#include "fobject.hpp"
 #include "fopcode.hpp"
 #include "futil.hpp"
 #include "fvalue.hpp"

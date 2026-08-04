@@ -20,7 +20,7 @@ class Fa_Chunk;
 using Fa_DictType = Fa_HashTable<Fa_Value, Fa_Value, util::Fa_ValueHash, util::Fa_ValueEqual>;
 using NativeFn = Fa_Value (Fa_VM::*)(int, Fa_Value*);
 
-enum class Fa_ObjType : u8 {    STRING,
+enum class Fa_ObjType : u8 { STRING,
     LIST,
     DICT,
     FUNCTION,
