@@ -936,12 +936,8 @@ TEST_F(Fa_StringRefTest, Stress_RandomOperations)
     for (int i = 0; i < 1000; i += 1) {
         int op = op_dist(rng);
         switch (op) {
-        case 0:
-            s += char(char_dist(rng));
-            break;
-        case 1:
-            s.clear();
-            break;
+        case 0: s += char(char_dist(rng)); break;
+        case 1: s.clear(); break;
         case 2:
             if (!s.empty())
                 s.erase(0);
@@ -1159,8 +1155,7 @@ TEST_F(Fa_StringRefTest, Append_1M_Chars_PreReserved)
 
     do_not_optimize(s);
     EXPECT_EQ(s.len(), static_cast<size_t>(N));
-    std::printf("  Append 1M chars (pre-reserved):  %.1f µs  (%.1f ns/op)\n",
-        us, us * 1000.0 / N);
+    std::printf("  Append 1M chars (pre-reserved):  %.1f µs  (%.1f ns/op)\n", us, us * 1000.0 / N);
 }
 
 // Append with no pre-reservation — measures reallocation overhead.
@@ -1177,8 +1172,7 @@ TEST_F(Fa_StringRefTest, Append_1M_Chars_NoReserve)
 
     do_not_optimize(s);
     EXPECT_EQ(s.len(), static_cast<size_t>(N));
-    std::printf("  Append 1M chars (no reserve):    %.1f µs  (%.1f ns/op)\n",
-        us, us * 1000.0 / N);
+    std::printf("  Append 1M chars (no reserve):    %.1f µs  (%.1f ns/op)\n", us, us * 1000.0 / N);
 }
 
 // Append short string chunks — 250k * 4 bytes = 1 MB total.
@@ -1197,8 +1191,7 @@ TEST_F(Fa_StringRefTest, Append_250k_ShortStrings)
 
     do_not_optimize(s);
     EXPECT_EQ(s.len(), static_cast<size_t>(N * 4));
-    std::printf("  Append 250k short strings:       %.1f µs  (%.1f ns/op)\n",
-        us, us * 1000.0 / N);
+    std::printf("  Append 250k short strings:       %.1f µs  (%.1f ns/op)\n", us, us * 1000.0 / N);
 }
 
 // ---------------------------------------------------------------------------
@@ -1220,8 +1213,7 @@ TEST_F(Fa_StringRefTest, Concat_10k_Growing)
 
     do_not_optimize(result);
     EXPECT_EQ(result.len(), static_cast<size_t>(N));
-    std::printf("  Concat 10k growing (operator+):  %.1f µs  (%.1f ns/op)\n",
-        us, us * 1000.0 / N);
+    std::printf("  Concat 10k growing (operator+):  %.1f µs  (%.1f ns/op)\n", us, us * 1000.0 / N);
 }
 
 // Same total bytes but using += — should be significantly faster.
@@ -1239,8 +1231,7 @@ TEST_F(Fa_StringRefTest, Concat_10k_AppendAssign)
 
     do_not_optimize(result);
     EXPECT_EQ(result.len(), static_cast<size_t>(N));
-    std::printf("  Concat 10k via +=:               %.1f µs  (%.1f ns/op)\n",
-        us, us * 1000.0 / N);
+    std::printf("  Concat 10k via +=:               %.1f µs  (%.1f ns/op)\n", us, us * 1000.0 / N);
 }
 
 // ---------------------------------------------------------------------------
@@ -1260,8 +1251,7 @@ TEST_F(Fa_StringRefTest, CoW_100k_ShallowCopies)
     }
     f64 us = microseconds_since(t0);
 
-    std::printf("  CoW 100k shallow copies:         %.1f µs  (%.1f ns/op)\n",
-        us, us * 1000.0 / N);
+    std::printf("  CoW 100k shallow copies:         %.1f µs  (%.1f ns/op)\n", us, us * 1000.0 / N);
 }
 
 // 100k copy-then-mutate — each forces a real allocation (CoW break).
@@ -1278,8 +1268,7 @@ TEST_F(Fa_StringRefTest, CoW_100k_CopyThenMutate)
     }
     f64 us = microseconds_since(t0);
 
-    std::printf("  CoW 100k copy+mutate (break):    %.1f µs  (%.1f ns/op)\n",
-        us, us * 1000.0 / N);
+    std::printf("  CoW 100k copy+mutate (break):    %.1f µs  (%.1f ns/op)\n", us, us * 1000.0 / N);
 }
 
 // Ratio test: shallow copy should be substantially faster than copy+mutate.
@@ -1333,8 +1322,7 @@ TEST_F(Fa_StringRefTest, Hash_1M_Short)
     f64 us = microseconds_since(t0);
 
     do_not_optimize(acc);
-    std::printf("  Hash 1M (15-byte string):        %.1f µs  (%.1f ns/op)\n",
-        us, us * 1000.0 / N);
+    std::printf("  Hash 1M (15-byte string):        %.1f µs  (%.1f ns/op)\n", us, us * 1000.0 / N);
 }
 
 TEST_F(Fa_StringRefTest, Hash_1M_Long)
@@ -1351,8 +1339,7 @@ TEST_F(Fa_StringRefTest, Hash_1M_Long)
     f64 us = microseconds_since(t0);
 
     do_not_optimize(acc);
-    std::printf("  Hash 1M (256-byte string):       %.1f µs  (%.1f ns/op)\n",
-        us, us * 1000.0 / N);
+    std::printf("  Hash 1M (256-byte string):       %.1f µs  (%.1f ns/op)\n", us, us * 1000.0 / N);
 }
 
 // Hash throughput should scale roughly linearly with length, not quadratically.
@@ -1444,8 +1431,7 @@ TEST_F(Fa_StringRefTest, Slice_1M_NoAlloc)
     }
     f64 us = microseconds_since(t0);
 
-    std::printf("  slice() 1M times (no mutation):  %.1f µs  (%.1f ns/op)\n",
-        us, us * 1000.0 / N);
+    std::printf("  slice() 1M times (no mutation):  %.1f µs  (%.1f ns/op)\n", us, us * 1000.0 / N);
 }
 
 // Slice should be significantly faster than substr (no alloc vs alloc).
@@ -1469,8 +1455,7 @@ TEST_F(Fa_StringRefTest, Slice_vs_Substr_Ratio)
     }
     f64 substr_us = microseconds_since(t0);
 
-    std::printf("  slice=%.1f µs  substr=%.1f µs  ratio=%.1fx\n",
-        slice_us, substr_us, substr_us / slice_us);
+    std::printf("  slice=%.1f µs  substr=%.1f µs  ratio=%.1fx\n", slice_us, substr_us, substr_us / slice_us);
 
     EXPECT_LT(slice_us, substr_us)
         << "slice() should be faster than substr() — slice is zero-copy";
@@ -1495,8 +1480,7 @@ TEST_F(Fa_StringRefTest, Equality_2M_Equal)
 
     do_not_optimize(hits);
     EXPECT_EQ(hits, N);
-    std::printf("  Equality 2M (equal, 18B):        %.1f µs  (%.1f ns/op)\n",
-        us, us * 1000.0 / N);
+    std::printf("  Equality 2M (equal, 18B):        %.1f µs  (%.1f ns/op)\n", us, us * 1000.0 / N);
 }
 
 // 2M equality checks on strings that differ in the last byte — worst case.
@@ -1565,8 +1549,7 @@ TEST_F(Fa_StringRefTest, Append_100k_ArabicChunks)
 
     do_not_optimize(s);
     EXPECT_EQ(s.len(), static_cast<size_t>(N * 10));
-    std::printf("  Append 100k Arabic chunks:       %.1f µs  (%.1f ns/op)\n",
-        us, us * 1000.0 / N);
+    std::printf("  Append 100k Arabic chunks:       %.1f µs  (%.1f ns/op)\n", us, us * 1000.0 / N);
 }
 
 // ---------------------------------------------------------------------------
@@ -1585,8 +1568,7 @@ TEST_F(Fa_StringRefTest, ToDouble_1M_Integer)
     f64 us = microseconds_since(t0);
 
     do_not_optimize(acc);
-    std::printf("  toDouble() 1M integer parses:    %.1f µs  (%.1f ns/op)\n",
-        us, us * 1000.0 / N);
+    std::printf("  toDouble() 1M integer parses:    %.1f µs  (%.1f ns/op)\n", us, us * 1000.0 / N);
 }
 
 TEST_F(Fa_StringRefTest, ToDouble_1M_Float)
@@ -1601,8 +1583,7 @@ TEST_F(Fa_StringRefTest, ToDouble_1M_Float)
     f64 us = microseconds_since(t0);
 
     do_not_optimize(acc);
-    std::printf("  toDouble() 1M float parses:      %.1f µs  (%.1f ns/op)\n",
-        us, us * 1000.0 / N);
+    std::printf("  toDouble() 1M float parses:      %.1f µs  (%.1f ns/op)\n", us, us * 1000.0 / N);
 }
 
 // ---------------------------------------------------------------------------
@@ -1638,7 +1619,6 @@ TEST_F(Fa_StringRefTest, Mixed_InterpreterInnerLoop)
     f64 us = microseconds_since(t0);
 
     do_not_optimize(acc);
-    std::printf("  Mixed interpreter loop 500k:     %.1f µs  (%.1f ns/op)\n",
-        us, us * 1000.0 / N);
+    std::printf("  Mixed interpreter loop 500k:     %.1f µs  (%.1f ns/op)\n", us, us * 1000.0 / N);
     std::printf("    (matches=%d, hash_acc=0x%zx)\n", matches, acc);
 }

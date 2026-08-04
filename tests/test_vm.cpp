@@ -1011,35 +1011,6 @@ TEST(VMCalls, TailCall_DoesNotOverflowFrames)
     EXPECT_EQ(Fa_AS_INTEGER(v), 0);
 }
 
-/*
- *
-TEST(VMCalls, StackOverflowDetected)
-{
-    auto fn = make_chunk();
-    fn->name = "inf";
-    fn->arity = 0;
-    fn->local_count = 1;
-    u16 nk = fn->add_constant(Fa_MAKE_STRING("inf"));
-    fn->emit(Fa_make_ABx(Fa_OpCode::LOAD_GLOBAL, 0, nk), { });
-    fn->emit(Fa_make_ABC(Fa_OpCode::CALL, 0, 0, 0), { });
-    fn->emit(Fa_make_ABC(Fa_OpCode::RETURN, 0, 1, 0), { });
-
-    auto top = make_chunk();
-    top->name = "<test>";
-    top->local_count = 1;
-    top->functions.push(fn);
-    u16 tk = top->add_constant(Fa_MAKE_STRING("inf"));
-    top->emit(Fa_make_ABx(Fa_OpCode::CLOSURE, 0, 0), { });
-    top->emit(Fa_make_ABx(Fa_OpCode::STORE_GLOBAL, 0, tk), { });
-    top->emit(Fa_make_ABC(Fa_OpCode::CALL, 0, 0, 0), { });
-    top->emit(Fa_make_ABC(Fa_OpCode::RETURN, 0, 1, 0), { });
-    if (test_config::dump_bytecode)
-        top->disassemble();
-    VMRunner r;
-    EXPECT_THROW(r.run(top), std::runtime_error);
-}
- */
-
 TEST(VMCalls, StackOverflowDetected)
 {
     auto fn = func_def(name_expr("inf"), list_expr(), blk({
@@ -2300,14 +2271,10 @@ static void require_stress_perf()
         GTEST_SKIP() << "Set fairuz_ENABLE_STRESS_PERF=1 to run large Fa_VM stress tests.";
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 1. Dispatch throughput — tight integer arithmetic loop
-//
 // Measures raw opcode dispatch speed. The loop body is:
 //   r2 = r0 + r1  (OP_ADD, integer fast path)
 //   r0 = r2       (MOVE)
 // N iterations → N ADD + N MOVE dispatched.
-// ─────────────────────────────────────────────────────────────────────────────
 
 TEST(VMPerfTest, Dispatch_IntAdd_1M_Iterations)
 {
@@ -2343,10 +2310,8 @@ TEST(VMPerfTest, Dispatch_IntAdd_1M_Iterations)
         N / 1000, us, us * 1000.0 / N);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // 2. Dispatch throughput — float arithmetic loop
 //    Same structure, but f64 accumulator — exercises the FF fast path.
-// ─────────────────────────────────────────────────────────────────────────────
 
 TEST(VMPerfTest, Dispatch_FloatAdd_500k_Iterations)
 {
@@ -2381,11 +2346,9 @@ TEST(VMPerfTest, Dispatch_FloatAdd_500k_Iterations)
         N / 1000, us, us * 1000.0 / N);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // 3. IC quickening benefit — compare cold vs warm dispatch on same chunk
 //    Cold: first run, generic opcode handlers.
 //    Warm: second run, quickened ADD_II / ADD_FF specialisations.
-// ─────────────────────────────────────────────────────────────────────────────
 
 TEST(VMPerfTest, IC_Quickening_ColdVsWarm_Ratio)
 {
@@ -2735,7 +2698,7 @@ TEST(VMPerfTest, Fib25_10reps)
 // ─────────────────────────────────────────────────────────────────────────────
 // 11. Large stress tests (opt-in)
 //     These are intentionally much larger than the regular perf tests and are
-//     gated behind fairuz_ENABLE_STRESS_PERF=1 so they do not dominate normal
+//     gated behind ENABLE_STRESS_PERF=1 so they do not dominate normal
 //     test runs.
 // ─────────────────────────────────────────────────────────────────────────────
 
