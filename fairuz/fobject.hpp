@@ -17,52 +17,6 @@ using Fa_Value = u64;
 class Fa_VM;
 class Fa_Chunk;
 
-struct _Allocator {
-    template<typename T, typename... Args>
-    [[nodiscard]] T* allocate_object(Args&&... args)
-    {
-        static_assert(std::is_constructible_v<T, Args...>, "T must be constructible with Args...");
-        T* mem = new T(std::forward<Args>(args)...);
-        if (mem == nullptr)
-            diagnostic::panic(diagnostic::errc::general::Code::ALLOC_FAILED);
-        return mem;
-    }
-
-    template<typename T>
-    T* allocate_array(u32 const count = 1)
-    {
-        T* mem = new T[count] { };
-        if (mem == nullptr)
-            diagnostic::panic(diagnostic::errc::general::Code::ALLOC_FAILED);
-        return mem;
-    }
-
-    template<typename T>
-    void deallocate_array(T* ptr, u32 const count)
-    {
-        if (ptr == nullptr)
-            return;
-        for (u32 i = 0; i < count; ++i)
-            ptr[i].~T();
-        delete[] ptr;
-    }
-
-    template<typename T>
-    void deallocate_object(T* obj)
-    {
-        if (obj == nullptr)
-            return;
-        obj->~T();
-        delete obj;
-    }
-}; // _Allocator
-
-inline _Allocator& runtime_string_allocator()
-{
-    static _Allocator allocator;
-    return allocator;
-}
-
 using Fa_DictType = Fa_HashTable<Fa_Value, Fa_Value, util::Fa_ValueHash, util::Fa_ValueEqual>;
 using NativeFn = Fa_Value (Fa_VM::*)(int, Fa_Value*);
 
