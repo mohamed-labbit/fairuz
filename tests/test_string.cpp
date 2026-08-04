@@ -1,4 +1,4 @@
-#include "../fairuz/string.hpp"
+#include "../fairuz/fstring.hpp"
 
 #include <chrono>
 #include <gtest/gtest.h>

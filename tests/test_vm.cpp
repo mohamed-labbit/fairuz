@@ -1,8 +1,8 @@
-#include "../fairuz/ast.hpp"
-#include "../fairuz/compiler.hpp"
-#include "../fairuz/diagnostic.hpp"
-#include "../fairuz/opcode.hpp"
-#include "../fairuz/vm.hpp"
+#include "../fairuz/fAST.hpp"
+#include "../fairuz/fcompiler.hpp"
+#include "../fairuz/fdiagnostic.hpp"
+#include "../fairuz/fopcode.hpp"
+#include "../fairuz/fvm.hpp"
 #include "test_common.h"
 #include "test_config.h"
 
@@ -18,6 +18,20 @@ using namespace fairuz::runtime;
 namespace {
 
 Fa_GarbageCollector m_gc;
+Fa_StringRef sp_method_name(int m)
+{
+    switch (m) {
+    case Fa_ObjClass::INIT: return "بداية";
+    case Fa_ObjClass::ADD: return "عملية+";
+    case Fa_ObjClass::SUB: return "عملية-";
+    case Fa_ObjClass::MUL: return "عملية*";
+    case Fa_ObjClass::DIV: return "عملية/";
+    case Fa_ObjClass::MOD: return "عملية%";
+    case Fa_ObjClass::REPR: return "كتابة";
+    default:
+        return { };
+    }
+}
 
 }
 
@@ -2863,21 +2877,6 @@ TEST(VMPerfStressTest, Fib28_20reps_Hot)
         FIB_N, REPS, us, us / REPS);
 }
 
-// TODO: take this to the head of the current file
-Fa_StringRef sp_method_name(int m)
-{
-    switch (m) {
-    case Fa_ObjClass::INIT: return "بداية";
-    case Fa_ObjClass::ADD: return "عملية+";
-    case Fa_ObjClass::SUB: return "عملية-";
-    case Fa_ObjClass::MUL: return "عملية*";
-    case Fa_ObjClass::DIV: return "عملية/";
-    case Fa_ObjClass::MOD: return "عملية%";
-    case Fa_ObjClass::REPR: return "كتابة";
-    default: return { };
-    }
-}
-
 static Fa_FunctionDef* class_method(Fa_StringRef name, Fa_Array<Fa_Expr*> params, Fa_Array<Fa_Stmt*> body)
 {
     return func_def(name_expr(name), list_expr(params), blk(body));
@@ -3195,7 +3194,7 @@ TEST(VMClass, MethodReceivesExplicitArguments)
         { },
         {
             class_method(
-                "add",
+                sp_method_name(Fa_ObjClass::ADD),
                 { name_expr("a"), name_expr("b") },
                 {
                     return_stmt(binary(name_expr("a"), name_expr("b"), AST::Fa_BinaryOp::OP_ADD)),
@@ -3206,7 +3205,7 @@ TEST(VMClass, MethodReceivesExplicitArguments)
         list_expr(),
         blk({
             decl_stmt("adder", call_expr(name_expr("Adder"))),
-            return_stmt(call_expr(get_expr(name_expr("adder"), name_expr("add")), list_expr({ lit_int(2), lit_int(5) }))),
+            return_stmt(call_expr(get_expr(name_expr("adder"), name_expr(sp_method_name(Fa_ObjClass::ADD))), list_expr({ lit_int(2), lit_int(5) }))),
         }));
 
     Fa_Chunk* top = compile_program({

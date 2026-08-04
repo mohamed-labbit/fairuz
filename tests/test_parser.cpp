@@ -1,5 +1,5 @@
-#include "../fairuz/ast_printer.hpp"
-#include "../fairuz/parser.hpp"
+#include "../fairuz/fAST_printer.hpp"
+#include "../fairuz/fparser.hpp"
 #include "test_config.h"
 
 #include <fstream>

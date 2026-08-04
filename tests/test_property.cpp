@@ -1,7 +1,7 @@
-#include "../fairuz/ast.hpp"
-#include "../fairuz/compiler.hpp"
-#include "../fairuz/parser.hpp"
-#include "../fairuz/vm.hpp"
+#include "../fairuz/fAST.hpp"
+#include "../fairuz/fcompiler.hpp"
+#include "../fairuz/fparser.hpp"
+#include "../fairuz/fvm.hpp"
 #include "test_common.h"
 
 #include <gtest/gtest.h>

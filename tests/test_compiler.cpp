@@ -1,8 +1,8 @@
-#include "../fairuz/ast.hpp"
-#include "../fairuz/ast_printer.hpp"
-#include "../fairuz/compiler.hpp"
-#include "../fairuz/diagnostic.hpp"
-#include "../fairuz/string.hpp"
+#include "../fairuz/fAST.hpp"
+#include "../fairuz/fAST_printer.hpp"
+#include "../fairuz/fcompiler.hpp"
+#include "../fairuz/fdiagnostic.hpp"
+#include "../fairuz/fstring.hpp"
 #include "test_common.h"
 #include "test_config.h"
 
@@ -887,7 +887,7 @@ TEST(CompilerGet, MemberNameLowersToStringKeyIndex)
         if (!Fa_IS_STRING(constant))
             continue;
 
-        Fa_RTStringRef text = Fa_AS_STRING(constant)->str;
+        Fa_StringRef text = Fa_AS_STRING(constant)->str;
         if (text == "field")
             has_member_key = true;
         if (text == "__class__")

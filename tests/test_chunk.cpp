@@ -1,4 +1,4 @@
-#include "../fairuz/compiler.hpp"
+#include "../fairuz/fcompiler.hpp"
 
 #include <gtest/gtest.h>
 

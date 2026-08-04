@@ -1,7 +1,7 @@
 #ifndef TEST_COMMON_H
 #define TEST_COMMON_H
 
-#include "../fairuz/ast.hpp"
+#include "../fairuz/fAST.hpp"
 
 using namespace fairuz;
 using namespace fairuz::AST;

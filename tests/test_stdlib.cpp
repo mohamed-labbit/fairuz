@@ -1,5 +1,5 @@
-#include "../fairuz/diagnostic.hpp"
-#include "../fairuz/vm.hpp"
+#include "../fairuz/fdiagnostic.hpp"
+#include "../fairuz/fvm.hpp"
 
 #include <chrono>
 #include <cstdio>
@@ -340,9 +340,9 @@ TEST(StdlibPerf, LenOnLargeString100kCalls)
     auto start = std::chrono::high_resolution_clock::now();
     i64 last = -1;
     for (int i = 0; i < 100000; i += 1) {
-        Fa_Value m_value = vm.Fa_len(1, &arg);
-        ASSERT_TRUE(Fa_IS_INTEGER(m_value));
-        last = Fa_AS_INTEGER(m_value);
+        Fa_Value value = vm.Fa_len(1, &arg);
+        ASSERT_TRUE(Fa_IS_INTEGER(value));
+        last = Fa_AS_INTEGER(value);
     }
     double total_us = elapsed_us(start);
 

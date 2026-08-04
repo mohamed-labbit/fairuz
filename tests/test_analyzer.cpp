@@ -1,6 +1,6 @@
-#include "../fairuz/ast.hpp"
-#include "../fairuz/parser.hpp"
-#include "../fairuz/string.hpp"
+#include "../fairuz/fAST.hpp"
+#include "../fairuz/fparser.hpp"
+#include "../fairuz/fstring.hpp"
 #include "test_common.h"
 
 #include <gtest/gtest.h>
