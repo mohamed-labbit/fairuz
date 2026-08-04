@@ -1,12 +1,13 @@
-#include "fairuz/ast_printer.hpp"
-#include "fairuz/compiler.hpp"
-#include "fairuz/diagnostic.hpp"
-#include "fairuz/formatter.hpp"
-#include "fairuz/lexer.hpp"
-#include "fairuz/parser.hpp"
-#include "fairuz/vm.hpp"
+#include "fairuz/fAST_printer.hpp"
+#include "fairuz/fcompiler.hpp"
+#include "fairuz/fdiagnostic.hpp"
+#include "fairuz/fformatter.hpp"
+#include "fairuz/flexer.hpp"
+#include "fairuz/fparser.hpp"
+#include "fairuz/fvm.hpp"
 
 #include <chrono>
+#include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -27,7 +28,7 @@ enum class ExitCode : int {
     DataError = 65,
     NoInput = 66,
     Software = 70,
-}; // enum ExitCode
+};
 
 struct Options {
     bool dump_ast { false };
@@ -38,7 +39,7 @@ struct Options {
     bool show_version { false };
     bool format_file { false };
     std::string input_path;
-}; // struct Options
+};
 
 void printUsage(std::ostream& out, std::string_view program)
 {
@@ -106,6 +107,11 @@ bool parseArgs(int argc, char** argv, Options& options)
         options.input_path = std::string(arg);
     }
 
+    if (options.format_file && (options.dump_ast || options.dump_bytecode || options.print_time || options.check_only)) {
+        std::cerr << "format cannot be combined with --dump-ast, --dump-bytecode, --time, or --check\n";
+        return false;
+    }
+
     return true;
 }
 
@@ -114,6 +120,39 @@ void printAst(fairuz::Fa_Array<fairuz::AST::Fa_Stmt*> const& stmts)
     fairuz::AST::ASTPrinter printer(true);
     for (u32 i = 0; i < stmts.size(); i += 1)
         printer.print(stmts[i]);
+}
+
+bool writeFileAtomic(std::string const& path, char const* data, std::streamsize len, std::string& error_out)
+{
+    std::filesystem::path target(path);
+    std::filesystem::path tmp = target;
+    tmp += ".fairuz-fmt-tmp";
+
+    {
+        std::ofstream file(tmp, std::ios::binary | std::ios::trunc);
+        if (!file) {
+            error_out = "Failed to open temporary file for formatting: " + tmp.string();
+            return false;
+        }
+        file.write(data, len);
+        if (!file) {
+            error_out = "Failed to write formatted output to: " + tmp.string();
+            file.close();
+            std::error_code ec;
+            std::filesystem::remove(tmp, ec);
+            return false;
+        }
+    }
+
+    std::error_code ec;
+    std::filesystem::rename(tmp, target, ec);
+    if (ec) {
+        error_out = "Failed to replace original file with formatted output: " + ec.message();
+        std::filesystem::remove(tmp, ec);
+        return false;
+    }
+
+    return true;
 }
 
 } // namespace
@@ -160,17 +199,10 @@ int main(int argc, char** argv)
         if (options.format_file) {
             fairuz::Fa_Formatter fmter;
             fairuz::Fa_StringRef fmted = fmter.format(stmts);
-            std::ofstream file(options.input_path, std::ios::binary | std::ios::trunc);
-            if (!file)
-            {
-                std::cerr << "Failed to open input file for formatting: " << options.input_path << "\n";
-                return static_cast<int>(ExitCode::Software);
-            }
             char const* data = fmted.empty() ? "" : fmted.data();
-            file.write(data, static_cast<std::streamsize>(fmted.len()));
-            if (!file)
-            {
-                std::cerr << "Failed to write formatted output to: " << options.input_path << "\n";
+            std::string error;
+            if (!writeFileAtomic(options.input_path, data, static_cast<std::streamsize>(fmted.len()), error)) {
+                std::cerr << error << "\n";
                 return static_cast<int>(ExitCode::Software);
             }
             return static_cast<int>(ExitCode::Success);
