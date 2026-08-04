@@ -67,6 +67,8 @@ enum class Code : u16 {
     EXPECTED_COLON_FOR = 0x0119,
     EXPECTED_CLASS_KEYWORD = 0x0120,
     EXPECTED_COLON_CLASS = 0x0121,
+    EXPECTED_CLASS_NAME = 0x0122,
+    EXPECTED_MEMBER_NAME = 0x0123,
 }; // enum Code
 
 } // namespace parser
@@ -247,6 +249,8 @@ static constexpr char const* error_message_for(u16 code)
     case 0x0119: return "Expected ':' after for loop header";
     case 0x0120: return "Expected class keyword";
     case 0x0121: return "Expected ':' after class name";
+    case 0x0122: return "Expected class name";
+    case 0x0123: return "Expected member name";
     // sema
     case 0x0200: return "Undefined variable";
     case 0x0201: return "Undefined function";

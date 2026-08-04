@@ -1,26 +1,6 @@
-/// parser.cc — refactored
-///
-/// ============================================================================
-/// REQUIRED CHANGES TO parser.hpp (keep this list, delete once done):
-///
-///   Fa_SymbolTable:
-///     + Fa_SymbolTable* get_parent() const;          ← new accessor
-///     + Symbol const*   lookup(Fa_StringRef const&) const;  ← const overload
-///       (optional but enables const-correct infer_type one day)
-///
-///   Fa_SemanticAnalyzer:
-///     - bool is_local(Fa_StringRef, Fa_SymbolTable*);   ← remove entirely
-///
-///   Fa_Parser:
-///     ~ bool check(TokType) const;   ← add const qualifier
-///     Remove declarations (keep as delegating stubs in .cc until cleaned up):
-///       parse_logical_expr, parse_logical_expr_precedence,
-///       parse_comparison_expr, parse_binary_expr, parse_binary_expr_precedence
-///     They now all delegate to the unified parse_binary_expr_precedence.
-///     Alternatively, rename parse_binary_expr_precedence in the header to make
-///     the unification visible; a new private method name is not needed because
-///     we reuse the existing signature.
-/// ============================================================================
+//
+// parser.cc
+//
 
 #include "fparser.hpp"
 #include "fmacros.hpp"
@@ -30,9 +10,7 @@
 
 namespace fairuz::parser {
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Macros
-// ─────────────────────────────────────────────────────────────────────────────
 
 // Consume a token, early-return the error code if the token doesn't match.
 #define Fa_VERIFY_TOKEN(expected, errc) \
@@ -65,9 +43,7 @@ namespace fairuz::parser {
         return FA_CONCAT(fa_try_, __LINE__).error();        \
     auto var = std::move(FA_CONCAT(fa_try_, __LINE__)).value()
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Type aliases
-// ─────────────────────────────────────────────────────────────────────────────
 
 using TokType = tok::Fa_TokenType;
 using StmtPtr = AST::Fa_Stmt*;
@@ -82,9 +58,7 @@ using SemaCode = diagnostic::errc::sema::Code;
 // are ever split into separate translation units.
 static constexpr char kClassInstanceName[] = "__class$instance";
 
-// ─────────────────────────────────────────────────────────────────────────────
 // File-local helpers
-// ─────────────────────────────────────────────────────────────────────────────
 
 namespace {
 
@@ -120,34 +94,22 @@ bool stmt_definitely_returns(AST::Fa_Stmt const* stmt)
         return true;
 
     case AST::Fa_Stmt::Kind::BLOCK: {
-        for (AST::Fa_Stmt const* child : AS_CONST_BLOCK(stmt)->get_statements())
+        for (AST::Fa_Stmt const* child : AS_CONST_BLOCK(stmt)->get_statements()) {
             if (stmt_definitely_returns(child))
                 return true;
+        }
         return false;
     }
 
     case AST::Fa_Stmt::Kind::IF: {
         auto* s = AS_CONST_IF(stmt);
-        return stmt_definitely_returns(s->get_then())
-            && stmt_definitely_returns(s->get_else());
+        return stmt_definitely_returns(s->get_then()) && stmt_definitely_returns(s->get_else());
     }
 
     default:
         return false;
     }
 }
-
-// ─── RAII scope guard ────────────────────────────────────────────────────────
-//
-// Usage A – create a fresh child scope automatically:
-//   ScopeGuard guard{m_current_scope};
-//
-// Usage B – adopt an existing child scope (e.g. class method scopes that are
-//   children of class_scope, not of m_current_scope):
-//   ScopeGuard guard{m_current_scope, class_scope->create_child()};
-//
-// In both cases the destructor restores m_current_scope to its original value,
-// even if analysis of the body returns early.
 
 struct ScopeGuard {
     Fa_SymbolTable*& ref;
@@ -177,9 +139,7 @@ struct ScopeGuard {
 
 } // anonymous namespace
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Fa_SymbolTable
-// ─────────────────────────────────────────────────────────────────────────────
 
 Fa_SymbolTable::Fa_SymbolTable(Fa_SymbolTable* p, i32 level)
     : m_parent(p)
@@ -203,8 +163,8 @@ typename Fa_SymbolTable::Symbol* Fa_SymbolTable::lookup(Fa_StringRef const& name
     return m_parent ? m_parent->lookup(name) : nullptr;
 }
 
-// Const overload for use from const contexts (e.g. infer_type if made const).
-// NOTE: Add declaration to parser.hpp.
+/// Const overload for use from const contexts (e.g. infer_type if made const).
+/// NOTE: Add declaration to parser.hpp.
 typename Fa_SymbolTable::Symbol const* Fa_SymbolTable::lookup(Fa_StringRef const& name) const
 {
     if (m_symbols.contains(name))
@@ -253,13 +213,10 @@ Fa_Array<typename Fa_SymbolTable::Symbol*> Fa_SymbolTable::get_unused_symbols()
     return unused;
 }
 
-Fa_HashTable<Fa_StringRef, typename Fa_SymbolTable::Symbol,
-    Fa_StringRefHash, Fa_StringRefEqual> const&
+Fa_HashTable<Fa_StringRef, typename Fa_SymbolTable::Symbol, Fa_StringRefHash, Fa_StringRefEqual> const&
 Fa_SymbolTable::get_symbols() const { return m_symbols; }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Fa_SemanticAnalyzer — constructor
-// ─────────────────────────────────────────────────────────────────────────────
 
 Fa_SemanticAnalyzer::Fa_SemanticAnalyzer()
 {
@@ -318,9 +275,7 @@ Fa_SemanticAnalyzer::Fa_SemanticAnalyzer()
         register_builtin(name);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Fa_SemanticAnalyzer — type inference
-// ─────────────────────────────────────────────────────────────────────────────
 
 Fa_Type Fa_SemanticAnalyzer::infer_type(ExprPtr expr)
 {
@@ -343,8 +298,6 @@ Fa_Type Fa_SemanticAnalyzer::infer_type(ExprPtr expr)
     }
 
     case AST::Fa_Expr::Kind::NAME: {
-        // FIX: explicit return in both branches — avoids the silent fall-through
-        // to UNKNOWN that made the "symbol found, return its type" path implicit.
         auto name = AS_CONST_NAME(expr);
         Fa_SymbolTable::Symbol const* sym = m_current_scope->lookup(name->get_value());
         return sym ? sym->data_type : Fa_Type::UNKNOWN;
@@ -404,16 +357,9 @@ Fa_Type Fa_SemanticAnalyzer::infer_type(ExprPtr expr)
         }
     }
 
-    case AST::Fa_Expr::Kind::GET:
-        // Resolving member types requires the compiler's class registry.
-        return Fa_Type::UNKNOWN;
-
-    case AST::Fa_Expr::Kind::UNARY:
-        return infer_type(AS_CONST_UNARY(expr)->get_operand());
-
-    case AST::Fa_Expr::Kind::ASSIGNMENT:
-        return infer_type(AS_CONST_ASSIGNMENT_EXPR(expr)->get_value());
-
+    case AST::Fa_Expr::Kind::GET: return Fa_Type::UNKNOWN;
+    case AST::Fa_Expr::Kind::UNARY: return infer_type(AS_CONST_UNARY(expr)->get_operand());
+    case AST::Fa_Expr::Kind::ASSIGNMENT: return infer_type(AS_CONST_ASSIGNMENT_EXPR(expr)->get_value());
     case AST::Fa_Expr::Kind::LIST: return Fa_Type::LIST;
     case AST::Fa_Expr::Kind::CALL: return Fa_Type::ANY;
     case AST::Fa_Expr::Kind::DICT: return Fa_Type::DICT;
@@ -423,9 +369,7 @@ Fa_Type Fa_SemanticAnalyzer::infer_type(ExprPtr expr)
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Fa_SemanticAnalyzer — helpers
-// ─────────────────────────────────────────────────────────────────────────────
 
 void Fa_SemanticAnalyzer::report_issue(
     Issue::Severity sev, SemaCode code,
@@ -434,9 +378,7 @@ void Fa_SemanticAnalyzer::report_issue(
     m_issues.push({ sev, static_cast<u16>(code), msg, loc, sugg });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Fa_SemanticAnalyzer — expression analysis
-// ─────────────────────────────────────────────────────────────────────────────
 
 void Fa_SemanticAnalyzer::analyze_expr(ExprPtr expr)
 {
@@ -455,9 +397,6 @@ void Fa_SemanticAnalyzer::analyze_expr(ExprPtr expr)
                 "Did you forget to initialize it?");
         } else {
             m_current_scope->mark_used(name->get_value(), expr->get_location().line);
-            // FIX: is_local(name, scope) was identical to scope->is_defined(name) —
-            // both walk the parent chain via the same recursive lookup.
-            // Removed is_local entirely; is_defined is the single source of truth.
             name->set_local();
         }
     } break;
@@ -508,10 +447,6 @@ void Fa_SemanticAnalyzer::analyze_expr(ExprPtr expr)
 
     case AST::Fa_Expr::Kind::CALL: {
         auto* call = AS_CALL(expr);
-
-        // FIX: analyze the callee exactly ONCE here.  The previous code had an
-        // `else if (kind == GET) { analyze_expr(callee); }` branch that re-ran
-        // analysis on GET callees that had already been handled by this line.
         analyze_expr(call->get_callee());
 
         for (ExprPtr arg : call->get_args())
@@ -603,9 +538,7 @@ void Fa_SemanticAnalyzer::analyze_expr(ExprPtr expr)
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Fa_SemanticAnalyzer — statement analysis
-// ─────────────────────────────────────────────────────────────────────────────
 
 void Fa_SemanticAnalyzer::analyze_stmt(StmtPtr stmt)
 {
@@ -666,7 +599,7 @@ void Fa_SemanticAnalyzer::analyze_stmt(StmtPtr stmt)
 
         // Shadow check.  get_parent() is preferred; direct m_parent is used
         // here because the parser.hpp header still exposes it.
-        // TODO: switch to get_parent() once the accessor is in the header.
+        /// TODO: switch to get_parent() once the accessor is in the header.
         if (m_current_scope->m_parent
             && m_current_scope->m_parent->lookup_local(
                 for_stmt->get_target()->get_value()))
@@ -805,9 +738,7 @@ void Fa_SemanticAnalyzer::analyze_stmt(StmtPtr stmt)
     m_preceding_stmts.push(stmt);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Fa_SemanticAnalyzer — analysis entry point, reporting, and accessors
-// ─────────────────────────────────────────────────────────────────────────────
 
 void Fa_SemanticAnalyzer::analyze(Fa_Array<StmtPtr> const& stmts)
 {
@@ -865,12 +796,8 @@ void Fa_SemanticAnalyzer::print_report() const
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Token → AST op converters
-// ─────────────────────────────────────────────────────────────────────────────
-// NOTE: These are logically a property of the token type and would be better
-// placed as methods on Fa_Token or in a token_ops.hpp utility header.
-// Kept here to avoid header changes in this refactoring pass.
+/// NOTE: These are logically a property of the token type and would be better
+/// placed as methods on Fa_Token or in a token_ops.hpp utility header.
 
 AST::Fa_BinaryOp to_binary_op(TokType const op)
 {
@@ -909,17 +836,12 @@ AST::Fa_UnaryOp to_unary_op(TokType const op)
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Fa_Parser — utilities
-// ─────────────────────────────────────────────────────────────────────────────
 
 Fa_Error Fa_Parser::report_error(ParserCode err_code)
 {
     auto* tok = current_token();
-    Fa_SourceLocation loc = {
-        tok->line(), tok->column(),
-        static_cast<u16>(tok->lexeme().len())
-    };
+    Fa_SourceLocation loc = { tok->line(), tok->column(), static_cast<u16>(tok->lexeme().len()) };
     return fairuz::report_error(err_code, loc, &m_lexer);
 }
 
@@ -954,9 +876,7 @@ void Fa_Parser::synchronize()
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Fa_Parser — top-level
-// ─────────────────────────────────────────────────────────────────────────────
 
 Fa_Array<StmtPtr> Fa_Parser::parse_program()
 {
@@ -1011,9 +931,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_statement()
     return parse_expression_stmt();
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Fa_Parser — statement parsers
-// ─────────────────────────────────────────────────────────────────────────────
 
 Fa_ErrorOr<StmtPtr> Fa_Parser::parse_return_stmt()
 {
@@ -1155,9 +1073,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_indented_block()
     return Fa_make_block(stmts, start->location());
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Fa_Parser — function and class parsers
-// ─────────────────────────────────────────────────────────────────────────────
 
 Fa_ErrorOr<StmtPtr> Fa_Parser::parse_function_def()
 {
@@ -1190,7 +1106,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_def()
     Fa_VERIFY_TOKEN(TokType::KW_CLASS, ParserCode::EXPECTED_CLASS_KEYWORD);
 
     if (!check(TokType::IDENTIFIER))
-        return report_error(ParserCode::UNEXPECTED_TOKEN); // replace with EXPECTED_CLASS_NAME if added to ParserCode
+        return report_error(ParserCode::EXPECTED_CLASS_NAME);
 
     TokenPtr name_tok = current_token();
     advance();
@@ -1342,9 +1258,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_parameters_list()
     return Fa_make_list(params, loc);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Fa_Parser — expression parsers
-// ─────────────────────────────────────────────────────────────────────────────
 
 Fa_ErrorOr<ExprPtr> Fa_Parser::parse() { return parse_expression(); }
 
@@ -1382,28 +1296,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_assignment_expr()
     return lhs;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Unified Pratt parser
-// ─────────────────────────────────────────────────────────────────────────────
-//
-// This function replaces the previous four-function cascade:
-//   parse_logical_expr_precedence → parse_comparison_expr
-//                                 → parse_binary_expr_precedence → parse_unary_expr
-//
-// The old design had two critical defects:
-//
-//   (a) Left-associativity was broken.  Both Pratt parsers used `return` inside
-//       their loops, so `5 - 3 - 1` produced `5 - (3 - 1) = 3` instead of
-//       `(5 - 3) - 1 = 1`.  The bug was masked for some cases by the two-level
-//       cascade accidentally picking up the remaining operator at the logical
-//       level, but the fix was fragile and implicit.
-//
-//   (b) The separation into "logical" and "arithmetic" levels was meaningless
-//       because both parsers accepted all binary operators; the precedence
-//       values from get_precedence() already encode the correct hierarchy.
-//
-// Fix: accumulate with `lhs = make_binary(lhs, rhs, op)` and continue the loop
-// (left-associative for all operators except OP_POWER which is right-associative).
 
 Fa_ErrorOr<ExprPtr> Fa_Parser::parse_binary_expr_precedence(unsigned int min_prec)
 {
@@ -1492,18 +1385,16 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_postfix_expr()
             continue;
         }
 
-        // Member access: expr.member
-        // FIX: parse only a plain IDENTIFIER after '.', not a full expression.
-        // The old code called parse_expression(), so `obj.a + b` was silently
-        // parsed as GET(obj, BinaryExpr(a,+,b)) instead of being a syntax error.
         if (match(TokType::DOT)) {
             if (!check(TokType::IDENTIFIER))
-                return report_error(ParserCode::UNEXPECTED_TOKEN); // replace with EXPECTED_MEMBER_NAME if added
+                return report_error(ParserCode::EXPECTED_MEMBER_NAME);
             TokenPtr member_tok = current_token();
             advance();
             expr = Fa_make_get_expr(
                 expr,
-                AST::Fa_make_name(member_tok->lexeme(), member_tok->location()),
+                AST::Fa_make_name(
+                    member_tok->lexeme(),
+                    member_tok->location()),
                 expr ? expr->get_location() : Fa_SourceLocation { });
             continue;
         }
@@ -1526,10 +1417,6 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_primary_expr()
         if (tt == TokType::DECIMAL)
             return AST::Fa_make_literal_float(cur->lexeme().to_double(), cur->location());
 
-        // FIX: determine the numeric base via a switch statement, not by
-        // indexing into an array with enum arithmetic.  The old code assumed
-        // BINARY/OCTAL/INTEGER/HEX were contiguous in the enum; this makes no
-        // such assumption.
         int base = 10;
         switch (tt) {
         case TokType::BINARY: base = 2; break;
@@ -1546,9 +1433,6 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_primary_expr()
     if (match(TokType::STRING))
         return AST::Fa_make_literal_string(cur->lexeme(), cur->location());
 
-    // FIX: use the token type to distinguish true/false, not a lexeme string
-    // comparison against the Arabic spelling "صحيح".  The lexer already
-    // encodes this distinction in KW_TRUE vs KW_FALSE.
     if (check(TokType::KW_TRUE) || check(TokType::KW_FALSE)) {
         bool val = cur->is(TokType::KW_TRUE);
         advance();
@@ -1631,15 +1515,8 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_dict_literal()
     return AST::Fa_make_dict(std::move(content), loc);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Compatibility stubs
-// ─────────────────────────────────────────────────────────────────────────────
-//
-// These thin wrappers exist only so that existing parser.hpp declarations
-// remain valid while the header is being cleaned up.  They add no logic;
-// all behaviour now lives in parse_binary_expr_precedence.
-//
-// TODO: remove these declarations from parser.hpp, then delete the stubs.
+/// TODO: remove these declarations from parser.hpp, then delete the stubs.
 
 Fa_ErrorOr<ExprPtr> Fa_Parser::parse_conditional_expr()
 {
