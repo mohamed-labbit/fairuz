@@ -294,6 +294,8 @@ Fa_Value Fa_VM::execute()
     Fa_Value* cur_base = &m_stack[cur_frame_base];
     u32 ip = frame().ip;
 
+    using reg_t = u8;
+
     Fa_BEGIN_DISPATCH();
 
     Fa_CASE(LOAD_NIL)
@@ -384,23 +386,24 @@ Fa_Value Fa_VM::execute()
     }
     Fa_CASE(OP_ADD)
     {
-        u8 a = Fa_instr_A(instr), b = Fa_instr_B(instr), c = Fa_instr_C(instr);
-        Fa_Value lhs = cur_base[b], rhs = cur_base[c];
+        Fa_Value& res = Fa_RA();
+        Fa_Value lhs = Fa_RA();
+        Fa_Value rhs = Fa_RB();
         bool both_str = Fa_IS_STRING(lhs) && Fa_IS_STRING(rhs);
 
         if (both_str) {
             // String concatenation
-            cur_base[a] = Fa_MAKE_STRING(Fa_AS_STRING(lhs)->str + Fa_AS_STRING(rhs)->str);
-            Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
+            res = Fa_MAKE_STRING(Fa_AS_STRING(lhs)->str + Fa_AS_STRING(rhs)->str);
+            Fa_RECORD_BINARY_IC(lhs, rhs, res);
             // Fa_VM_ABC(Fa_OpCode::OP_ADD_SS);
         } else if (Fa_IS_INTEGER(lhs) && Fa_IS_INTEGER(rhs)) {
             // Integer addition
-            cur_base[a] = Fa_MAKE_INTEGER(Fa_VM_ADDI(lhs, rhs));
-            Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
+            res = Fa_MAKE_INTEGER(Fa_VM_ADDI(lhs, rhs));
+            Fa_RECORD_BINARY_IC(lhs, rhs, res);
         } else if (Fa_IS_NUMBER(lhs) && Fa_IS_NUMBER(rhs)) {
             // Float addition (includes mixed int/float)
-            cur_base[a] = Fa_MAKE_REAL(Fa_VM_ADDF(lhs, rhs));
-            Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
+            res = Fa_MAKE_REAL(Fa_VM_ADDF(lhs, rhs));
+            Fa_RECORD_BINARY_IC(lhs, rhs, res);
         } else if (Fa_IS_INSTANCE(lhs) || Fa_IS_INSTANCE(rhs)) {
             Fa_VM_INSTANCE_OP(ADD);
             LOAD_FRAME();
@@ -411,37 +414,18 @@ Fa_Value Fa_VM::execute()
 
         Fa_DISPATCH();
     }
-    Fa_CASE(OP_ADD_II)
-    {
-        Fa_RA() = Fa_MAKE_INTEGER(Fa_VM_ADDI(Fa_RB(), Fa_RC()));
-        Fa_RECORD_BINARY_IC(Fa_RB(), Fa_RC(), Fa_RA());
-        Fa_DISPATCH();
-    }
-    Fa_CASE(OP_ADD_FF)
-    {
-        Fa_RA() = Fa_MAKE_REAL(Fa_VM_ADDF(Fa_RB(), Fa_RC()));
-        Fa_RECORD_BINARY_IC(Fa_RB(), Fa_RC(), Fa_RA());
-        Fa_DISPATCH();
-    }
-    Fa_CASE(OP_ADD_RI)
-    {
-        Fa_Value lhs = Fa_RB();
-        auto imm = static_cast<int8_t>(Fa_instr_C(instr) - 128);
-        Fa_RA() = LIKELY(Fa_IS_INTEGER(lhs)) ? Fa_MAKE_INTEGER(Fa_AS_INTEGER(lhs) + imm)
-                                             : Fa_MAKE_REAL(Fa_AS_DOUBLE(lhs) + imm);
-        Fa_DISPATCH();
-    }
     Fa_CASE(OP_SUB)
     {
-        u8 a = Fa_instr_A(instr), b = Fa_instr_B(instr), c = Fa_instr_C(instr);
-        Fa_Value lhs = cur_base[b], rhs = cur_base[c];
+        Fa_Value& res = Fa_RA();
+        Fa_Value lhs = Fa_RB();
+        Fa_Value rhs = Fa_RC();
 
         if (Fa_IS_INTEGER(lhs) && Fa_IS_INTEGER(rhs)) {
-            cur_base[a] = Fa_MAKE_INTEGER(Fa_VM_SUBI(lhs, rhs));
-            Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
+            res = Fa_MAKE_INTEGER(Fa_VM_SUBI(lhs, rhs));
+            Fa_RECORD_BINARY_IC(lhs, rhs, res);
         } else if (Fa_IS_NUMBER(lhs) || Fa_IS_NUMBER(rhs)) {
-            cur_base[a] = Fa_MAKE_REAL(Fa_VM_SUBF(lhs, rhs));
-            Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
+            res = Fa_MAKE_REAL(Fa_VM_SUBF(lhs, rhs));
+            Fa_RECORD_BINARY_IC(lhs, rhs, res);
         } else if (Fa_IS_INSTANCE(lhs) || Fa_IS_INSTANCE(rhs)) {
             Fa_VM_INSTANCE_OP(SUB);
             LOAD_FRAME();
@@ -452,37 +436,18 @@ Fa_Value Fa_VM::execute()
 
         Fa_DISPATCH();
     }
-    Fa_CASE(OP_SUB_II)
-    {
-        Fa_RA() = Fa_MAKE_INTEGER(Fa_VM_SUBI(Fa_RB(), Fa_RC()));
-        Fa_RECORD_BINARY_IC(Fa_RB(), Fa_RC(), Fa_RA());
-        Fa_DISPATCH();
-    }
-    Fa_CASE(OP_SUB_FF)
-    {
-        Fa_RA() = Fa_MAKE_REAL(Fa_VM_SUBF(Fa_RB(), Fa_RC()));
-        Fa_RECORD_BINARY_IC(Fa_RB(), Fa_RC(), Fa_RA());
-        Fa_DISPATCH();
-    }
-    Fa_CASE(OP_SUB_RI)
-    {
-        Fa_Value lhs = Fa_RB();
-        auto imm = static_cast<int8_t>(Fa_instr_C(instr) - 128);
-        Fa_RA() = LIKELY(Fa_IS_INTEGER(lhs)) ? Fa_MAKE_INTEGER(Fa_AS_INTEGER(lhs) - imm)
-                                             : Fa_MAKE_REAL(Fa_AS_DOUBLE(lhs) - imm);
-        Fa_DISPATCH();
-    }
     Fa_CASE(OP_MUL)
     {
-        u8 a = Fa_instr_A(instr), b = Fa_instr_B(instr), c = Fa_instr_C(instr);
-        Fa_Value lhs = cur_base[b], rhs = cur_base[c];
+        Fa_Value& res = Fa_RA();
+        Fa_Value lhs = Fa_RB();
+        Fa_Value rhs = Fa_RC();
 
         if (Fa_IS_INTEGER(lhs) && Fa_IS_INTEGER(rhs)) {
-            cur_base[a] = Fa_MAKE_INTEGER(Fa_VM_MULI(lhs, rhs));
-            Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
+            res = Fa_MAKE_INTEGER(Fa_VM_MULI(lhs, rhs));
+            Fa_RECORD_BINARY_IC(lhs, rhs, res);
         } else if (Fa_IS_NUMBER(lhs) && Fa_IS_NUMBER(rhs)) {
-            cur_base[a] = Fa_MAKE_REAL(Fa_VM_MULF(lhs, rhs));
-            Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
+            res = Fa_MAKE_REAL(Fa_VM_MULF(lhs, rhs));
+            Fa_RECORD_BINARY_IC(lhs, rhs, res);
         } else if (Fa_IS_INSTANCE(lhs) || Fa_IS_INSTANCE(rhs)) {
             Fa_VM_INSTANCE_OP(MUL);
             LOAD_FRAME();
@@ -493,30 +458,9 @@ Fa_Value Fa_VM::execute()
 
         Fa_DISPATCH();
     }
-    Fa_CASE(OP_MUL_II)
-    {
-        Fa_RA() = Fa_MAKE_INTEGER(Fa_VM_MULI(Fa_RB(), Fa_RC()));
-        Fa_RECORD_BINARY_IC(Fa_RB(), Fa_RC(), Fa_RA());
-        Fa_DISPATCH();
-    }
-    Fa_CASE(OP_MUL_FF)
-    {
-        Fa_RA() = Fa_MAKE_REAL(Fa_VMOPF(Fa_RB(), Fa_RC(), *));
-        Fa_RECORD_BINARY_IC(Fa_RB(), Fa_RC(), Fa_RA());
-        Fa_DISPATCH();
-    }
-    Fa_CASE(OP_MUL_RI)
-    {
-        Fa_Value lhs = Fa_RB();
-        auto imm = static_cast<int8_t>(Fa_instr_C(instr) - 128);
-        Fa_RA() = LIKELY(Fa_IS_INTEGER(lhs)) ? Fa_MAKE_INTEGER(Fa_AS_INTEGER(lhs) * imm)
-                                             : Fa_MAKE_REAL(Fa_AS_DOUBLE(lhs) * imm);
-        Fa_DISPATCH();
-    }
     Fa_CASE(OP_DIV)
     {
-        u8 a = Fa_instr_A(instr), b = Fa_instr_B(instr), c = Fa_instr_C(instr);
-        Fa_Value lhs = cur_base[b], rhs = cur_base[c];
+        Fa_Value lhs = Fa_RB(), rhs = Fa_RC();
 
         if (UNLIKELY(!Fa_IS_NUMBER(lhs) || !Fa_IS_NUMBER(rhs)))
             runtime_error(ErrorCode::TYPE_ERROR_ARITH);
@@ -524,11 +468,11 @@ Fa_Value Fa_VM::execute()
             runtime_error(ErrorCode::DIVISION_BY_ZERO);
 
         if (Fa_IS_INTEGER(lhs) && Fa_IS_INTEGER(rhs)) {
-            cur_base[a] = Fa_MAKE_INTEGER(Fa_VM_DIVI(lhs, rhs));
-            Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
+            Fa_RA() = Fa_MAKE_INTEGER(Fa_VM_DIVI(lhs, rhs));
+            Fa_RECORD_BINARY_IC(lhs, rhs, Fa_RA());
         } else if (Fa_IS_NUMBER(lhs) && Fa_IS_NUMBER(rhs)) {
-            cur_base[a] = Fa_MAKE_REAL(Fa_VM_DIVF(lhs, rhs));
-            Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
+            Fa_RA() = Fa_MAKE_REAL(Fa_VM_DIVF(lhs, rhs));
+            Fa_RECORD_BINARY_IC(lhs, rhs, Fa_RA());
         } else if (Fa_IS_INSTANCE(lhs) || Fa_IS_INSTANCE(rhs)) {
             Fa_VM_INSTANCE_OP(DIV);
             LOAD_FRAME();
@@ -539,21 +483,11 @@ Fa_Value Fa_VM::execute()
 
         Fa_DISPATCH();
     }
-    Fa_CASE(OP_DIV_II)
-    {
-        Fa_RA() = Fa_MAKE_INTEGER(Fa_VM_DIVI(Fa_RB(), Fa_RC()));
-        Fa_RECORD_BINARY_IC(Fa_RB(), Fa_RC(), Fa_RA());
-        Fa_DISPATCH();
-    }
-    Fa_CASE(OP_DIV_FF)
-    {
-        Fa_RA() = Fa_MAKE_REAL(Fa_VM_DIVF(Fa_RB(), Fa_RC()));
-        Fa_RECORD_BINARY_IC(Fa_RB(), Fa_RC(), Fa_RA());
-        Fa_DISPATCH();
-    }
     Fa_CASE(OP_MOD)
     {
-        Fa_Value lhs = Fa_RB(), rhs = Fa_RC();
+        Fa_Value& res = Fa_RA();
+        Fa_Value lhs = Fa_RB();
+        Fa_Value rhs = Fa_RC();
 
         if (UNLIKELY(!Fa_IS_NUMBER(lhs) || !Fa_IS_NUMBER(rhs)))
             runtime_error(ErrorCode::TYPE_ERROR_ARITH);
@@ -561,11 +495,11 @@ Fa_Value Fa_VM::execute()
             runtime_error(ErrorCode::MODULO_BY_ZERO);
 
         if (Fa_IS_INTEGER(lhs) && Fa_IS_INTEGER(rhs)) {
-            Fa_RA() = Fa_MAKE_REAL(static_cast<f64>(Fa_VMOPI(lhs, rhs, %)));
-            Fa_RECORD_BINARY_IC(lhs, rhs, Fa_RA());
+            res = Fa_MAKE_REAL(static_cast<f64>(Fa_VMOPI(lhs, rhs, %)));
+            Fa_RECORD_BINARY_IC(lhs, rhs, res);
         } else if (Fa_IS_NUMBER(lhs) && Fa_IS_NUMBER(rhs)) {
-            Fa_RA() = Fa_MAKE_REAL(std::fmod(Fa_AS_DOUBLE_ANY(lhs), Fa_AS_DOUBLE_ANY(rhs)));
-            Fa_RECORD_BINARY_IC(lhs, rhs, Fa_RA());
+            res = Fa_MAKE_REAL(std::fmod(Fa_AS_DOUBLE_ANY(lhs), Fa_AS_DOUBLE_ANY(rhs)));
+            Fa_RECORD_BINARY_IC(lhs, rhs, res);
         } else if (Fa_IS_INSTANCE(lhs) || Fa_IS_INSTANCE(rhs)) {
             Fa_VM_INSTANCE_OP(MOD);
             LOAD_FRAME();
@@ -576,107 +510,96 @@ Fa_Value Fa_VM::execute()
 
         Fa_DISPATCH();
     }
-    Fa_CASE(OP_MOD_II)
-    {
-        Fa_RA() = Fa_MAKE_REAL(static_cast<f64>(Fa_VMOPI(Fa_RB(), Fa_RC(), %)));
-        Fa_RECORD_BINARY_IC(Fa_RB(), Fa_RC(), Fa_RA());
-        Fa_DISPATCH();
-    }
-    Fa_CASE(OP_MOD_FF)
-    {
-        Fa_RA() = Fa_MAKE_REAL(std::fmod(Fa_AS_DOUBLE_ANY(Fa_RB()), Fa_AS_DOUBLE_ANY(Fa_RC())));
-        Fa_RECORD_BINARY_IC(Fa_RB(), Fa_RC(), Fa_RA());
-        Fa_DISPATCH();
-    }
     Fa_CASE(OP_POW)
     {
-        Fa_Value lhs = Fa_RB(), rhs = Fa_RC();
+        Fa_Value& res = Fa_RA();
+        Fa_Value lhs = Fa_RB();
+        Fa_Value rhs = Fa_RC();
+    
         REQUIRE_NUMBER(lhs);
         REQUIRE_NUMBER(rhs);
-        Fa_RA() = Fa_MAKE_REAL(std::pow(Fa_AS_DOUBLE_ANY(lhs), Fa_AS_DOUBLE_ANY(rhs)));
+    
+        res = Fa_MAKE_REAL(std::pow(Fa_AS_DOUBLE_ANY(lhs), Fa_AS_DOUBLE_ANY(rhs)));
         Fa_DISPATCH();
     }
     Fa_CASE(OP_NEG)
     {
+        Fa_Value& res = Fa_RA();
         Fa_Value operand = Fa_RB();
 
-        if (UNLIKELY(!Fa_IS_NUMBER(operand)))
-            runtime_error(ErrorCode::TYPE_ERROR_ARITH);
-
         if (Fa_IS_INTEGER(operand)) {
-            Fa_RA() = Fa_MAKE_INTEGER(-Fa_AS_INTEGER(operand));
+            res = Fa_MAKE_INTEGER(-Fa_AS_INTEGER(operand));
+        } else if (Fa_IS_DOUBLE(operand)) {
+            res = Fa_MAKE_REAL(-Fa_AS_DOUBLE_ANY(operand));
+        } else if (Fa_IS_INSTANCE(operand)) {
+            Fa_ObjInstance* instance = Fa_AS_INSTANCE(operand);
+            Fa_ObjClass* self_klass = instance->klass;
+            int slot = self_klass->method_slot(sp_method_name(Fa_ObjClass::NEG));
+            if (UNLIKELY(slot < 0))
+                runtime_error(ErrorCode::UNDEFINED_METHOD);
+            Fa_Chunk* target_chunk = self_klass->vtable[static_cast<u32>(slot)];
+            int call_base = cur_frame_base + Fa_instr_A(instr) + 1;
+            if (UNLIKELY(m_stack_top + 1 >= STACK_SIZE))
+                runtime_error(ErrorCode::STACK_OVERFLOW);
+            if (m_stack_top < call_base + 2)
+                m_stack_top = call_base + 2;
+            m_stack[call_base + 1] = operand;
+            invoke_method(target_chunk, operand, Fa_instr_A(instr), cur_frame_base, 1, ip);
         } else {
-            Fa_RA() = Fa_MAKE_REAL(-Fa_AS_DOUBLE_ANY(operand));
+            runtime_error(ErrorCode::TYPE_ERROR_ARITH);
         }
 
         Fa_DISPATCH();
     }
-    Fa_CASE(OP_NEG_I)
-    {
-        Fa_RA() = Fa_MAKE_INTEGER(-Fa_AS_INTEGER(Fa_RB()));
-        Fa_DISPATCH();
-    }
-    Fa_CASE(OP_NEG_F)
-    {
-        Fa_RA() = Fa_MAKE_REAL(-Fa_AS_DOUBLE_ANY(Fa_RB()));
-        Fa_DISPATCH();
-    }
     Fa_CASE(OP_BITAND)
     {
-        Fa_Value lhs = Fa_RB(), rhs = Fa_RC();
+        Fa_Value& res = Fa_RA();
+        Fa_Value lhs = Fa_RB();
+        Fa_Value rhs = Fa_RC();
 
         if (UNLIKELY(!Fa_IS_INTEGER(lhs) || !Fa_IS_INTEGER(rhs)))
             runtime_error(ErrorCode::TYPE_ERROR_ARITH);
 
-        Fa_RA() = Fa_MAKE_INTEGER(Fa_VMOPI(lhs, rhs, &));
-        Fa_DISPATCH();
-    }
-    Fa_CASE(OP_BITAND_I)
-    {
-        Fa_RA() = Fa_MAKE_INTEGER(Fa_VMOPI(Fa_RB(), Fa_RC(), &));
+        res = Fa_MAKE_INTEGER(Fa_VMOPI(lhs, rhs, &));
         Fa_DISPATCH();
     }
     Fa_CASE(OP_BITOR)
     {
-        Fa_Value lhs = Fa_RB(), rhs = Fa_RC();
+        Fa_Value & res = Fa_RA();
+        Fa_Value lhs = Fa_RB();
+        Fa_Value rhs = Fa_RC();
 
         if (UNLIKELY(!Fa_IS_INTEGER(lhs) || !Fa_IS_INTEGER(rhs)))
             runtime_error(ErrorCode::TYPE_ERROR_ARITH);
 
-        Fa_RA() = Fa_MAKE_INTEGER(Fa_VMOPI(lhs, rhs, |));
-        Fa_DISPATCH();
-    }
-    Fa_CASE(OP_BITOR_I)
-    {
-        Fa_RA() = Fa_MAKE_INTEGER(Fa_VMOPI(Fa_RB(), Fa_RC(), |));
+        res = Fa_MAKE_INTEGER(Fa_VMOPI(lhs, rhs, |));
         Fa_DISPATCH();
     }
     Fa_CASE(OP_BITXOR)
     {
-        Fa_Value lhs = Fa_RB(), rhs = Fa_RC();
+        Fa_Value& res = Fa_RA();
+        Fa_Value lhs = Fa_RB();
+        Fa_Value rhs = Fa_RC();
 
         if (UNLIKELY(!Fa_IS_INTEGER(lhs) || !Fa_IS_INTEGER(rhs)))
             runtime_error(ErrorCode::TYPE_ERROR_ARITH);
 
-        Fa_RA() = Fa_MAKE_INTEGER(Fa_VMOPI(lhs, rhs, ^));
-        Fa_DISPATCH();
-    }
-    Fa_CASE(OP_BITXOR_I)
-    {
-        Fa_RA() = Fa_MAKE_INTEGER(Fa_VMOPI(Fa_RB(), Fa_RC(), ^));
+        res = Fa_MAKE_INTEGER(Fa_VMOPI(lhs, rhs, ^));
         Fa_DISPATCH();
     }
     Fa_CASE(OP_BITNOT)
     {
+        Fa_Value& res = Fa_RA();
         Fa_Value operand = Fa_RB();
         if (UNLIKELY(!Fa_IS_INTEGER(operand)))
             runtime_error(ErrorCode::TYPE_ERROR_ARITH);
 
-        Fa_RA() = Fa_MAKE_INTEGER(~Fa_AS_INTEGER(operand));
+        res = Fa_MAKE_INTEGER(~Fa_AS_INTEGER(operand));
         Fa_DISPATCH();
     }
     Fa_CASE(OP_LSHIFT)
     {
+        Fa_Value& res = Fa_RA();
         Fa_Value lhs = Fa_RB();
         if (UNLIKELY(!Fa_IS_INTEGER(lhs)))
             runtime_error(ErrorCode::TYPE_ERROR_ARITH);
@@ -685,11 +608,12 @@ Fa_Value Fa_VM::execute()
         if (imm > 64)
             runtime_error(ErrorCode::INDEX_TYPE_ERROR);
 
-        Fa_RA() = Fa_MAKE_INTEGER(static_cast<i64>(static_cast<u64>(Fa_AS_INTEGER(lhs)) << imm));
+        res = Fa_MAKE_INTEGER(static_cast<i64>(static_cast<u64>(Fa_AS_INTEGER(lhs)) << imm));
         Fa_DISPATCH();
     }
     Fa_CASE(OP_RSHIFT)
     {
+        Fa_Value& res = Fa_RA();
         Fa_Value lhs = Fa_RB();
         if (UNLIKELY(!Fa_IS_INTEGER(lhs)))
             runtime_error(ErrorCode::TYPE_ERROR_ARITH);
@@ -701,198 +625,104 @@ Fa_Value Fa_VM::execute()
         auto shifted = static_cast<u64>(Fa_AS_INTEGER(lhs)) >> imm;
 
         if (Fa_AS_INTEGER(lhs) < 0)
-            Fa_RA() = Fa_MAKE_REAL(static_cast<f64>(shifted));
+            res = Fa_MAKE_REAL(static_cast<f64>(shifted));
         else
-            Fa_RA() = Fa_MAKE_INTEGER(static_cast<i64>(shifted));
+            res = Fa_MAKE_INTEGER(static_cast<i64>(shifted));
 
         Fa_DISPATCH();
     }
     Fa_CASE(OP_EQ)
     {
-        u8 a = Fa_instr_A(instr), b = Fa_instr_B(instr), c = Fa_instr_C(instr);
-        Fa_Value lhs = cur_base[b], rhs = cur_base[c];
+        Fa_Value& res = Fa_RA();
+        Fa_Value lhs = Fa_RB();
+        Fa_Value rhs = Fa_RC();
 
         if (Fa_IS_INTEGER(lhs) && Fa_IS_INTEGER(rhs)) {
-            cur_base[a] = Fa_MAKE_BOOL(Fa_VMOPI(lhs, rhs, ==));
-            Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
+            res = Fa_MAKE_BOOL(Fa_VMOPI(lhs, rhs, ==));
+            Fa_RECORD_BINARY_IC(lhs, rhs, res);
         } else if (Fa_IS_STRING(lhs) && Fa_IS_STRING(rhs)) {
-            cur_base[a] = Fa_MAKE_BOOL(Fa_AS_STRING(lhs)->str == Fa_AS_STRING(rhs)->str);
-            Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
+            res = Fa_MAKE_BOOL(Fa_AS_STRING(lhs)->str == Fa_AS_STRING(rhs)->str);
+            Fa_RECORD_BINARY_IC(lhs, rhs, res);
+        } else if (Fa_IS_NUMBER(lhs) && Fa_IS_NUMBER(rhs)) {
+            res = Fa_MAKE_BOOL(Fa_AS_DOUBLE_ANY(lhs) == Fa_AS_DOUBLE_ANY(rhs));
+            Fa_RECORD_BINARY_IC(lhs, rhs, res);
+        } else if (Fa_IS_INSTANCE(rhs) || Fa_IS_INSTANCE(rhs)) {
+            Fa_VM_INSTANCE_OP(EQ);
+            Fa_RECORD_BINARY_IC(lhs, rhs, res);
         } else {
-            cur_base[a] = Fa_MAKE_BOOL(Fa_AS_DOUBLE_ANY(lhs) == Fa_AS_DOUBLE_ANY(rhs));
-            Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
-        }
-
-        Fa_DISPATCH();
-    }
-    Fa_CASE(OP_EQ_II)
-    {
-        Fa_RA() = Fa_MAKE_BOOL(Fa_VMOPI(Fa_RB(), Fa_RC(), ==));
-        Fa_RECORD_BINARY_IC(Fa_RB(), Fa_RC(), Fa_RA());
-        Fa_DISPATCH();
-    }
-    Fa_CASE(OP_EQ_FF)
-    {
-        Fa_RA() = Fa_MAKE_BOOL(Fa_AS_DOUBLE_ANY(Fa_RB()) == Fa_AS_DOUBLE_ANY(Fa_RC()));
-        Fa_RECORD_BINARY_IC(Fa_RB(), Fa_RC(), Fa_RA());
-        Fa_DISPATCH();
-    }
-    Fa_CASE(OP_EQ_SS)
-    {
-        Fa_RA() = Fa_MAKE_BOOL(Fa_AS_STRING(Fa_RB())->str == Fa_AS_STRING(Fa_RC())->str);
-        Fa_RECORD_BINARY_IC(Fa_RB(), Fa_RC(), Fa_RA());
-        Fa_DISPATCH();
-    }
-    Fa_CASE(OP_EQ_RI)
-    {
-        Fa_Value lhs = Fa_RB();
-        auto imm = static_cast<int8_t>(Fa_instr_C(instr) - 128);
-
-        if (LIKELY(Fa_IS_INTEGER(lhs))) {
-            Fa_RA() = Fa_MAKE_BOOL(Fa_AS_INTEGER(lhs) == static_cast<i64>(imm));
-        } else {
-            if (UNLIKELY(!Fa_IS_DOUBLE(lhs)))
-                runtime_error(ErrorCode::TYPE_ERROR_ARITH);
-
-            Fa_RA() = Fa_MAKE_BOOL(Fa_AS_DOUBLE(lhs) == static_cast<f64>(imm));
+            runtime_error(ErrorCode::TYPE_ERROR_COMPARE);
         }
 
         Fa_DISPATCH();
     }
     Fa_CASE(OP_NEQ)
     {
-        Fa_Value lhs = Fa_RB(), rhs = Fa_RC();
+        Fa_Value& res = Fa_RA();
+        Fa_Value lhs = Fa_RB();
+        Fa_Value rhs = Fa_RC();
 
         if (Fa_IS_INTEGER(lhs) && Fa_IS_INTEGER(rhs)) {
-            Fa_RA() = Fa_MAKE_BOOL(Fa_VMOPI(lhs, rhs, !=));
-            Fa_RECORD_BINARY_IC(lhs, rhs, Fa_RA());
+            res = Fa_MAKE_BOOL(Fa_VMOPI(lhs, rhs, !=));
+            Fa_RECORD_BINARY_IC(lhs, rhs, res);
         } else if (Fa_IS_STRING(lhs) && Fa_IS_STRING(rhs)) {
-            Fa_RA() = Fa_MAKE_BOOL(Fa_AS_STRING(lhs)->str != Fa_AS_STRING(rhs)->str);
-            Fa_RECORD_BINARY_IC(lhs, rhs, Fa_RA());
+            res = Fa_MAKE_BOOL(Fa_AS_STRING(lhs)->str != Fa_AS_STRING(rhs)->str);
+            Fa_RECORD_BINARY_IC(lhs, rhs, res);
+        } else if (Fa_IS_NUMBER(lhs) && Fa_IS_NUMBER(rhs)) {
+            res = Fa_MAKE_BOOL(Fa_AS_DOUBLE_ANY(lhs) != Fa_AS_DOUBLE_ANY(rhs));
+            Fa_RECORD_BINARY_IC(lhs, rhs, res);
+        } else if (Fa_IS_INSTANCE(lhs) || Fa_IS_INSTANCE(rhs))  {
+            Fa_VM_INSTANCE_OP(NEQ);
+            Fa_RECORD_BINARY_IC(lhs, rhs, res);
         } else {
-            Fa_RA() = Fa_MAKE_BOOL(Fa_AS_DOUBLE_ANY(lhs) != Fa_AS_DOUBLE_ANY(rhs));
-            Fa_RECORD_BINARY_IC(lhs, rhs, Fa_RA());
+            runtime_error(ErrorCode::TYPE_ERROR_COMPARE);
         }
 
-        Fa_DISPATCH();
-    }
-    Fa_CASE(OP_NEQ_II)
-    {
-        Fa_RA() = Fa_MAKE_BOOL(Fa_VMOPI(Fa_RB(), Fa_RC(), !=));
-        Fa_RECORD_BINARY_IC(Fa_RB(), Fa_RC(), Fa_RA());
-        Fa_DISPATCH();
-    }
-    Fa_CASE(OP_NEQ_FF)
-    {
-        Fa_RA() = Fa_MAKE_BOOL(Fa_AS_DOUBLE_ANY(Fa_RB()) != Fa_AS_DOUBLE_ANY(Fa_RC()));
-        Fa_RECORD_BINARY_IC(Fa_RB(), Fa_RC(), Fa_RA());
-        Fa_DISPATCH();
-    }
-    Fa_CASE(OP_NEQ_SS)
-    {
-        Fa_RA() = Fa_MAKE_BOOL(Fa_AS_STRING(Fa_RB())->str != Fa_AS_STRING(Fa_RC())->str);
-        Fa_RECORD_BINARY_IC(Fa_RB(), Fa_RC(), Fa_RA());
         Fa_DISPATCH();
     }
     Fa_CASE(OP_LT)
     {
-        Fa_Value lhs = Fa_RB(), rhs = Fa_RC();
+        Fa_Value& res = Fa_RA();
+        Fa_Value lhs = Fa_RB();
+        Fa_Value rhs = Fa_RC();
 
         if (Fa_IS_INTEGER(lhs) && Fa_IS_INTEGER(rhs)) {
-            Fa_RA() = Fa_MAKE_BOOL(Fa_VMOPI(lhs, rhs, <));
-            Fa_RECORD_BINARY_IC(lhs, rhs, Fa_RA());
+            res = Fa_MAKE_BOOL(Fa_VMOPI(lhs, rhs, <));
+            Fa_RECORD_BINARY_IC(lhs, rhs, res);
         } else if (Fa_IS_STRING(lhs) && Fa_IS_STRING(rhs)) {
-            Fa_RA() = Fa_MAKE_BOOL(Fa_AS_STRING(lhs)->str < Fa_AS_STRING(rhs)->str);
-            Fa_RECORD_BINARY_IC(lhs, rhs, Fa_RA());
+            res = Fa_MAKE_BOOL(Fa_AS_STRING(lhs)->str < Fa_AS_STRING(rhs)->str);
+            Fa_RECORD_BINARY_IC(lhs, rhs, res);
+        } else if (Fa_IS_NUMBER(lhs) && Fa_IS_NUMBER(rhs)) {
+            res = Fa_MAKE_BOOL(Fa_AS_DOUBLE_ANY(lhs) < Fa_AS_DOUBLE_ANY(rhs));
+            Fa_RECORD_BINARY_IC(lhs, rhs, res);
+        } else if (Fa_IS_INSTANCE(lhs) || Fa_IS_INSTANCE(rhs)) {
+            Fa_VM_INSTANCE_OP(LT);
+            Fa_RECORD_BINARY_IC(lhs, rhs, res);
         } else {
-            Fa_RA() = Fa_MAKE_BOOL(Fa_AS_DOUBLE_ANY(lhs) < Fa_AS_DOUBLE_ANY(rhs));
-            Fa_RECORD_BINARY_IC(lhs, rhs, Fa_RA());
-        }
-
-        Fa_DISPATCH();
-    }
-    Fa_CASE(OP_LT_II)
-    {
-        Fa_RA() = Fa_MAKE_BOOL(Fa_VMOPI(Fa_RB(), Fa_RC(), <));
-        Fa_RECORD_BINARY_IC(Fa_RB(), Fa_RC(), Fa_RA());
-        Fa_DISPATCH();
-    }
-    Fa_CASE(OP_LT_FF)
-    {
-        Fa_RA() = Fa_MAKE_BOOL(Fa_AS_DOUBLE_ANY(Fa_RB()) < Fa_AS_DOUBLE_ANY(Fa_RC()));
-        Fa_RECORD_BINARY_IC(Fa_RB(), Fa_RC(), Fa_RA());
-        Fa_DISPATCH();
-    }
-    Fa_CASE(OP_LT_SS)
-    {
-        Fa_RA() = Fa_MAKE_BOOL(Fa_AS_STRING(Fa_RB())->str < Fa_AS_STRING(Fa_RC())->str);
-        Fa_RECORD_BINARY_IC(Fa_RB(), Fa_RC(), Fa_RA());
-        Fa_DISPATCH();
-    }
-    Fa_CASE(OP_LT_RI)
-    {
-        Fa_Value lhs = Fa_RB();
-        auto imm = static_cast<int8_t>(Fa_instr_C(instr) - 128);
-
-        if (LIKELY(Fa_IS_INTEGER(lhs))) {
-            Fa_RA() = Fa_MAKE_BOOL(Fa_AS_INTEGER(lhs) < static_cast<i64>(imm));
-        } else {
-            if (UNLIKELY(!Fa_IS_DOUBLE(lhs)))
-                runtime_error(ErrorCode::TYPE_ERROR_ARITH);
-
-            Fa_RA() = Fa_MAKE_BOOL(Fa_AS_DOUBLE(lhs) < static_cast<f64>(imm));
+            runtime_error(ErrorCode::TYPE_ERROR_COMPARE);
         }
 
         Fa_DISPATCH();
     }
     Fa_CASE(OP_LTE)
     {
-        u8 a = Fa_instr_A(instr), b = Fa_instr_B(instr), c = Fa_instr_C(instr);
-        Fa_Value lhs = cur_base[b], rhs = cur_base[c];
+        Fa_Value& res = Fa_RA();
+        Fa_Value lhs = Fa_RB();
+        Fa_Value rhs = Fa_RC();
 
         if (Fa_IS_INTEGER(lhs) && Fa_IS_INTEGER(rhs)) {
-            cur_base[a] = Fa_MAKE_BOOL(Fa_VMOPI(lhs, rhs, <=));
-            Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
+            res = Fa_MAKE_BOOL(Fa_VMOPI(lhs, rhs, <=));
+            Fa_RECORD_BINARY_IC(lhs, rhs, res);
         } else if (Fa_IS_STRING(lhs) && Fa_IS_STRING(rhs)) {
-            cur_base[a] = Fa_MAKE_BOOL(Fa_AS_STRING(lhs)->str <= Fa_AS_STRING(rhs)->str);
-            Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
+            res = Fa_MAKE_BOOL(Fa_AS_STRING(lhs)->str <= Fa_AS_STRING(rhs)->str);
+            Fa_RECORD_BINARY_IC(lhs, rhs, res);
+        } else if (Fa_IS_NUMBER(lhs) && Fa_IS_NUMBER(rhs)) {
+            res = Fa_MAKE_BOOL(Fa_AS_DOUBLE_ANY(lhs) <= Fa_AS_DOUBLE_ANY(rhs));
+            Fa_RECORD_BINARY_IC(lhs, rhs, res);
+        } else if (Fa_IS_INSTANCE(lhs) || Fa_IS_INSTANCE(rhs)) {
+            Fa_VM_INSTANCE_OP(LTE);
+            Fa_RECORD_BINARY_IC(lhs, rhs, res);
         } else {
-            cur_base[a] = Fa_MAKE_BOOL(Fa_AS_DOUBLE_ANY(lhs) <= Fa_AS_DOUBLE_ANY(rhs));
-            Fa_RECORD_BINARY_IC(lhs, rhs, cur_base[a]);
-        }
-
-        Fa_DISPATCH();
-    }
-    Fa_CASE(OP_LTE_II)
-    {
-        Fa_RA() = Fa_MAKE_BOOL(Fa_VMOPI(Fa_RB(), Fa_RC(), <=));
-        Fa_RECORD_BINARY_IC(Fa_RB(), Fa_RC(), Fa_RA());
-        Fa_DISPATCH();
-    }
-    Fa_CASE(OP_LTE_FF)
-    {
-        Fa_RA() = Fa_MAKE_BOOL(Fa_AS_DOUBLE_ANY(Fa_RB()) <= Fa_AS_DOUBLE_ANY(Fa_RC()));
-        Fa_RECORD_BINARY_IC(Fa_RB(), Fa_RC(), Fa_RA());
-        Fa_DISPATCH();
-    }
-    Fa_CASE(OP_LTE_SS)
-    {
-        Fa_RA() = Fa_MAKE_BOOL(Fa_AS_STRING(Fa_RB())->str <= Fa_AS_STRING(Fa_RC())->str);
-        Fa_RECORD_BINARY_IC(Fa_RB(), Fa_RC(), Fa_RA());
-        Fa_DISPATCH();
-    }
-    Fa_CASE(OP_LTE_RI)
-    {
-        Fa_Value lhs = Fa_RB();
-        auto imm = static_cast<int8_t>(Fa_instr_C(instr) - 128);
-
-        if (LIKELY(Fa_IS_INTEGER(lhs))) {
-            Fa_RA() = Fa_MAKE_BOOL(Fa_AS_INTEGER(lhs) <= static_cast<i64>(imm));
-        } else {
-            if (UNLIKELY(!Fa_IS_DOUBLE(lhs)))
-                runtime_error(ErrorCode::TYPE_ERROR_ARITH);
-
-            Fa_RA() = Fa_MAKE_BOOL(Fa_AS_DOUBLE(lhs) <= static_cast<f64>(imm));
+            runtime_error(ErrorCode::TYPE_ERROR_COMPARE);
         }
 
         Fa_DISPATCH();
@@ -915,7 +745,7 @@ Fa_Value Fa_VM::execute()
     }
     Fa_CASE(LIST_APPEND)
     {
-        Fa_Value list_v = Fa_RA();
+        Fa_Value& list_v = Fa_RA();
         if (!Fa_IS_LIST(list_v))
             runtime_error(ErrorCode::TYPE_ERROR_CALL);
 
@@ -924,7 +754,8 @@ Fa_Value Fa_VM::execute()
     }
     Fa_CASE(LIST_GET)
     {
-        Fa_Value list_v = Fa_RB(), index_v = Fa_RC();
+        Fa_Value list_v = Fa_RB();
+        Fa_Value index_v = Fa_RC();
 
         if (!Fa_IS_LIST(list_v))
             runtime_error(ErrorCode::TYPE_ERROR_CALL);
@@ -941,7 +772,10 @@ Fa_Value Fa_VM::execute()
     }
     Fa_CASE(LIST_SET)
     {
-        Fa_Value object_v = Fa_RA(), index_v = Fa_RB(), new_val = Fa_RC();
+        Fa_Value& object_v = Fa_RA();
+        Fa_Value index_v = Fa_RB();
+        Fa_Value new_val = Fa_RC();
+        
         if (Fa_IS_LIST(object_v)) {
             if (!Fa_IS_INTEGER(index_v))
                 runtime_error(ErrorCode::INDEX_TYPE_ERROR);

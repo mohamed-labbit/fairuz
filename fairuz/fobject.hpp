@@ -131,10 +131,14 @@ struct Fa_ObjClass {
         MUL,
         DIV,
         MOD,
-        REPR,
+        NEG,
         EQ,
         NEQ,
-        NEG,
+        LT,
+        LTE,
+        GT,
+        GTE,
+        REPR,
         _COUNT,
     };
 

@@ -140,6 +140,7 @@ enum class Code : u16 {
     NATIVE_ARG_COUNT = 0x0411,
     NATIVE_TYPE_ERROR = 0x0412,
     ASSERTION_FAILED = 0x0413,
+    UNDEFINED_METHOD = 0x0414,
 }; // enum Code
 
 } // namespace runtime
@@ -303,6 +304,7 @@ static constexpr char const* error_message_for(u16 code)
     case 0x0410: return "Attempted to call a non-function value";
     case 0x0411: return "Native call received the wrong number of arguments";
     case 0x0412: return "Native call received arguments of the wrong type";
+    case 0x0414: return "Call to undefined method";
     // stdlib
     case 0x0500: return "append() expects at least two arguments";
     case 0x0501: return "append() expects a list as the first argument";
