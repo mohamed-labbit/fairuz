@@ -104,7 +104,7 @@ public:
     Fa_CallFrame& frame();
     Fa_CallFrame const& frame() const;
     Fa_Chunk* chunk();
-    Fa_Value& m_reg(int r);
+    Fa_Value& reg(int r);
 
     Fa_ObjString* intern(Fa_StringRef const& str);
     void update_ic_binary(Fa_Chunk* ch, u32 nop_ip, Fa_Value lhs, Fa_Value rhs, Fa_Value result);

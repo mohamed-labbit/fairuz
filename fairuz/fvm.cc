@@ -387,8 +387,8 @@ Fa_Value Fa_VM::execute()
     Fa_CASE(OP_ADD)
     {
         Fa_Value& res = Fa_RA();
-        Fa_Value lhs = Fa_RA();
-        Fa_Value rhs = Fa_RB();
+        Fa_Value lhs = Fa_RB();
+        Fa_Value rhs = Fa_RC();
         bool both_str = Fa_IS_STRING(lhs) && Fa_IS_STRING(rhs);
 
         if (both_str) {
@@ -460,7 +460,9 @@ Fa_Value Fa_VM::execute()
     }
     Fa_CASE(OP_DIV)
     {
-        Fa_Value lhs = Fa_RB(), rhs = Fa_RC();
+        Fa_Value& res = Fa_RA();
+        Fa_Value lhs = Fa_RB();
+        Fa_Value rhs = Fa_RC();
 
         if (UNLIKELY(!Fa_IS_NUMBER(lhs) || !Fa_IS_NUMBER(rhs)))
             runtime_error(ErrorCode::TYPE_ERROR_ARITH);
@@ -468,11 +470,11 @@ Fa_Value Fa_VM::execute()
             runtime_error(ErrorCode::DIVISION_BY_ZERO);
 
         if (Fa_IS_INTEGER(lhs) && Fa_IS_INTEGER(rhs)) {
-            Fa_RA() = Fa_MAKE_INTEGER(Fa_VM_DIVI(lhs, rhs));
-            Fa_RECORD_BINARY_IC(lhs, rhs, Fa_RA());
+            res = Fa_MAKE_INTEGER(Fa_VM_DIVI(lhs, rhs));
+            Fa_RECORD_BINARY_IC(lhs, rhs, res);
         } else if (Fa_IS_NUMBER(lhs) && Fa_IS_NUMBER(rhs)) {
-            Fa_RA() = Fa_MAKE_REAL(Fa_VM_DIVF(lhs, rhs));
-            Fa_RECORD_BINARY_IC(lhs, rhs, Fa_RA());
+            res = Fa_MAKE_REAL(Fa_VM_DIVF(lhs, rhs));
+            Fa_RECORD_BINARY_IC(lhs, rhs, res);
         } else if (Fa_IS_INSTANCE(lhs) || Fa_IS_INSTANCE(rhs)) {
             Fa_VM_INSTANCE_OP(DIV);
             LOAD_FRAME();
@@ -515,10 +517,10 @@ Fa_Value Fa_VM::execute()
         Fa_Value& res = Fa_RA();
         Fa_Value lhs = Fa_RB();
         Fa_Value rhs = Fa_RC();
-    
+
         REQUIRE_NUMBER(lhs);
         REQUIRE_NUMBER(rhs);
-    
+
         res = Fa_MAKE_REAL(std::pow(Fa_AS_DOUBLE_ANY(lhs), Fa_AS_DOUBLE_ANY(rhs)));
         Fa_DISPATCH();
     }
@@ -534,15 +536,19 @@ Fa_Value Fa_VM::execute()
         } else if (Fa_IS_INSTANCE(operand)) {
             Fa_ObjInstance* instance = Fa_AS_INSTANCE(operand);
             Fa_ObjClass* self_klass = instance->klass;
+            
             int slot = self_klass->method_slot(sp_method_name(Fa_ObjClass::NEG));
             if (UNLIKELY(slot < 0))
                 runtime_error(ErrorCode::UNDEFINED_METHOD);
+            
             Fa_Chunk* target_chunk = self_klass->vtable[static_cast<u32>(slot)];
             int call_base = cur_frame_base + Fa_instr_A(instr) + 1;
+            
             if (UNLIKELY(m_stack_top + 1 >= STACK_SIZE))
                 runtime_error(ErrorCode::STACK_OVERFLOW);
             if (m_stack_top < call_base + 2)
                 m_stack_top = call_base + 2;
+            
             m_stack[call_base + 1] = operand;
             invoke_method(target_chunk, operand, Fa_instr_A(instr), cur_frame_base, 1, ip);
         } else {
@@ -565,7 +571,7 @@ Fa_Value Fa_VM::execute()
     }
     Fa_CASE(OP_BITOR)
     {
-        Fa_Value & res = Fa_RA();
+        Fa_Value& res = Fa_RA();
         Fa_Value lhs = Fa_RB();
         Fa_Value rhs = Fa_RC();
 
@@ -646,7 +652,7 @@ Fa_Value Fa_VM::execute()
         } else if (Fa_IS_NUMBER(lhs) && Fa_IS_NUMBER(rhs)) {
             res = Fa_MAKE_BOOL(Fa_AS_DOUBLE_ANY(lhs) == Fa_AS_DOUBLE_ANY(rhs));
             Fa_RECORD_BINARY_IC(lhs, rhs, res);
-        } else if (Fa_IS_INSTANCE(rhs) || Fa_IS_INSTANCE(rhs)) {
+        } else if (Fa_IS_INSTANCE(lhs) || Fa_IS_INSTANCE(rhs)) {
             Fa_VM_INSTANCE_OP(EQ);
             Fa_RECORD_BINARY_IC(lhs, rhs, res);
         } else {
@@ -670,7 +676,7 @@ Fa_Value Fa_VM::execute()
         } else if (Fa_IS_NUMBER(lhs) && Fa_IS_NUMBER(rhs)) {
             res = Fa_MAKE_BOOL(Fa_AS_DOUBLE_ANY(lhs) != Fa_AS_DOUBLE_ANY(rhs));
             Fa_RECORD_BINARY_IC(lhs, rhs, res);
-        } else if (Fa_IS_INSTANCE(lhs) || Fa_IS_INSTANCE(rhs))  {
+        } else if (Fa_IS_INSTANCE(lhs) || Fa_IS_INSTANCE(rhs)) {
             Fa_VM_INSTANCE_OP(NEQ);
             Fa_RECORD_BINARY_IC(lhs, rhs, res);
         } else {
@@ -754,6 +760,7 @@ Fa_Value Fa_VM::execute()
     }
     Fa_CASE(LIST_GET)
     {
+        Fa_Value& res = Fa_RA();
         Fa_Value list_v = Fa_RB();
         Fa_Value index_v = Fa_RC();
 
@@ -767,7 +774,7 @@ Fa_Value Fa_VM::execute()
         if (idx < 0 || idx >= static_cast<i64>(elems.size()))
             runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
 
-        Fa_RA() = elems[static_cast<u32>(idx)];
+        res = elems[static_cast<u32>(idx)];
         Fa_DISPATCH();
     }
     Fa_CASE(LIST_SET)
@@ -775,7 +782,7 @@ Fa_Value Fa_VM::execute()
         Fa_Value& object_v = Fa_RA();
         Fa_Value index_v = Fa_RB();
         Fa_Value new_val = Fa_RC();
-        
+
         if (Fa_IS_LIST(object_v)) {
             if (!Fa_IS_INTEGER(index_v))
                 runtime_error(ErrorCode::INDEX_TYPE_ERROR);
@@ -985,6 +992,7 @@ Fa_Value Fa_VM::execute()
     }
     Fa_CASE(INDEX)
     {
+        Fa_Value& res = Fa_RA();
         Fa_Value obj = Fa_RB();
         Fa_Value idx = Fa_RC();
 
@@ -1015,7 +1023,7 @@ Fa_Value Fa_VM::execute()
             util::decode_utf8_at(str, byte_pos, &char_bytes);
 
             Fa_StringRef ch = str.slice(byte_pos, byte_pos + char_bytes);
-            Fa_RA() = Fa_MAKE_STRING(ch);
+            res = Fa_MAKE_STRING(ch);
         } else if (Fa_IS_LIST(obj)) {
             if (UNLIKELY(!Fa_IS_INTEGER(idx)))
                 runtime_error(ErrorCode::INDEX_TYPE_ERROR);
@@ -1025,13 +1033,13 @@ Fa_Value Fa_VM::execute()
             if (UNLIKELY(idx_int >= list.size() || idx_int < 0))
                 runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
 
-            Fa_RA() = Fa_AS_LIST(obj)->elements[idx_int];
+            res = Fa_AS_LIST(obj)->elements[idx_int];
         } else if (Fa_IS_DICT(obj)) {
             Fa_ObjDict* dict_obj = Fa_AS_DICT(obj);
             if (dict_obj->data.find_ptr(idx) == nullptr)
-                Fa_RA() = NIL_VAL;
+                res = NIL_VAL;
             else
-                Fa_RA() = dict_obj->data[idx];
+                res = dict_obj->data[idx];
         } else {
             runtime_error(ErrorCode::INDEX_TYPE_ERROR);
         }
@@ -1042,6 +1050,7 @@ Fa_Value Fa_VM::execute()
     {
         Fa_ObjClass* klass = nullptr;
         {
+            Fa_Value& res = Fa_RA();
             u32 desc_idx = Fa_instr_Bx(instr);
             Fa_ClassDescriptor klass_desc = cur_chunk->class_descriptors[desc_idx];
             u32 field_count = klass_desc.field_count;
@@ -1079,7 +1088,7 @@ Fa_Value Fa_VM::execute()
                 kvtable[i] = fn_idx == Fa_ClassDescriptor::NULL_SLOT ? nullptr : cur_chunk->functions[fn_idx];
             }
 
-            Fa_RA() = Fa_MAKE_CLASS(
+            res = Fa_MAKE_CLASS(
                 klass_desc.name,
                 kfield_names,
                 field_count,
@@ -1126,6 +1135,7 @@ Fa_Value Fa_VM::execute()
     }
     Fa_CASE(GET_FIELD)
     {
+        Fa_Value& res = Fa_RA();
         Fa_Value obj_v = Fa_RB();
         if (UNLIKELY(!Fa_IS_INSTANCE(obj_v)))
             runtime_error(ErrorCode::TYPE_ERROR_CALL, "GET_FIELD on non-instance");
@@ -1136,7 +1146,7 @@ Fa_Value Fa_VM::execute()
         if (UNLIKELY(field_idx >= inst->field_count))
             runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
 
-        Fa_RA() = inst->fields[field_idx];
+        res = inst->fields[field_idx];
         Fa_DISPATCH();
     }
     Fa_CASE(SET_FIELD)
@@ -1200,49 +1210,6 @@ void Fa_VM::invoke_method(Fa_Chunk* target_chunk, Fa_Value self_val, int dst_reg
 
 void Fa_VM::call_value(Fa_Value callee, int argc, int call_base, bool tail)
 {
-    // if (Fa_IS_CLOSURE(callee)) {
-    //     Fa_ObjClosure* cl = Fa_AS_CLOSURE(callee);
-    //     Fa_Chunk* fchk = cl->function->chunk;
-    //     int arity = fchk->arity;
-    //     int local_count = fchk->local_count;
-
-    //     if (argc != arity) {
-    //         diagnostic::emit(ErrorCode::WRONG_ARG_COUNT, "expected " + std::to_string(arity) + " arguments but got " + std::to_string(argc));
-    //         runtime_error(ErrorCode::WRONG_ARG_COUNT);
-    //     }
-
-    //     if (local_count < argc)
-    //         runtime_error(ErrorCode::WRONG_ARG_COUNT);
-
-    //     if (tail && m_frames_top > 0) {
-    //         int cur_base = m_frames[m_frames_top - 1].base;
-
-    //         for (int i = 0; i < argc; i += 1)
-    //             m_stack[cur_base + i] = m_stack[call_base + i];
-    //         for (int i = argc; i < local_count; i += 1)
-    //             m_stack[cur_base + i] = NIL_VAL;
-
-    //         m_frames[m_frames_top - 1] = Fa_CallFrame(cl, fchk, 0, cur_base, local_count);
-
-    //         int new_top = cur_base + local_count + 1;
-    //         if (m_stack_top < new_top)
-    //             m_stack_top = new_top;
-    //     } else {
-    //         int new_top = call_base + local_count + 1;
-    //         while (m_stack_top < new_top) {
-    //             m_stack[m_stack_top] = NIL_VAL;
-    //             m_stack_top += 1;
-    //         }
-
-    //         for (int i = argc; i < local_count; i += 1)
-    //             m_stack[call_base + i] = NIL_VAL;
-
-    //         m_frames[m_frames_top] = Fa_CallFrame(cl, fchk, 0, call_base, local_count);
-    //         m_frames_top += 1;
-    //     }
-    //     return;
-    // }
-
     if (Fa_IS_FUNCTION(callee)) {
         Fa_ObjFunction* fn = Fa_AS_FUNCTION(callee);
         Fa_Chunk* fchk = fn->chunk;
@@ -1499,7 +1466,7 @@ Fa_CallFrame& Fa_VM::frame() { return m_frames[m_frames_top - 1]; }
 Fa_CallFrame const& Fa_VM::frame() const { return m_frames[m_frames_top - 1]; }
 
 Fa_Chunk* Fa_VM::chunk() { return top_frame().chunk; }
-Fa_Value& Fa_VM::m_reg(int r) { return m_stack[top_frame().base + r]; }
+Fa_Value& Fa_VM::reg(int r) { return m_stack[top_frame().base + r]; }
 
 void Fa_VM::update_ic_binary(Fa_Chunk* ch, u32 nop_ip, Fa_Value lhs, Fa_Value rhs, Fa_Value result)
 {
