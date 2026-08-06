@@ -1439,7 +1439,8 @@ u32 Compiler::intern_string(Fa_StringRef const& str)
     if (u16* idx = m_string_cache.find_ptr(key))
         return *idx;
 
-    Fa_ObjString* obj = get_allocator().allocate_object<Fa_ObjString>(str);
+    Fa_ObjString* obj = get_allocator().allocate_object<Fa_ObjString>();
+    obj->str = str;
     u16 idx = chunk->add_constant(Fa_MAKE_OBJECT(obj));
     m_string_cache[key] = idx;
     return idx;

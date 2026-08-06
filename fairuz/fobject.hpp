@@ -39,7 +39,7 @@ struct Fa_ObjHeader {
     Fa_ObjHeader* next { nullptr };
 
     Fa_ObjHeader() = default;
-    Fa_ObjHeader(Fa_ObjType t)
+    explicit Fa_ObjHeader(Fa_ObjType t)
         : type(t)
     {
     }
@@ -50,26 +50,28 @@ struct Fa_ObjString {
     Fa_StringRef str;
     u64 hash { 0 };
 
-    Fa_ObjString() = delete;
+    Fa_ObjString() { obj = Fa_ObjHeader { Fa_ObjType::STRING }; }
 
+    /*
     explicit Fa_ObjString(Fa_StringRef s)
-        : str(s)
-        , hash(static_cast<u64>(std::hash<Fa_StringRef> { }(s)))
+    : str(s)
+    , hash(static_cast<u64>(std::hash<Fa_StringRef> { }(s)))
     {
         obj = { Fa_ObjType::STRING };
     }
 
     explicit Fa_ObjString(char const* s)
-        : Fa_ObjString(Fa_StringRef(s))
+    : Fa_ObjString(Fa_StringRef(s))
     {
     }
+    */
 };
 
 struct Fa_ObjList {
     Fa_ObjHeader obj;
     Fa_Array<Fa_Value> elements;
 
-    Fa_ObjList() { obj = { Fa_ObjType::LIST }; }
+    Fa_ObjList() { obj = Fa_ObjHeader { Fa_ObjType::LIST }; }
 
     void reserve(u32 cap);
     u32 size() const;
@@ -81,24 +83,30 @@ struct Fa_ObjDict {
     Fa_ObjHeader obj;
     Fa_DictType data;
 
-    Fa_ObjDict() { obj = { Fa_ObjType::DICT }; }
+    Fa_ObjDict() { obj = Fa_ObjHeader { Fa_ObjType::DICT }; }
 
+    /*
     explicit Fa_ObjDict(Fa_DictType d)
-        : data(std::move(d))
+    : data(std::move(d))
     {
         obj = { Fa_ObjType::DICT };
     }
+    */
 };
 
 struct Fa_ObjFunction {
     Fa_ObjHeader obj;
     Fa_Chunk* chunk { nullptr };
 
+    Fa_ObjFunction() { obj = Fa_ObjHeader { Fa_ObjType::FUNCTION }; }
+    
+    /*
     explicit Fa_ObjFunction(Fa_Chunk* ch = nullptr)
-        : chunk(ch)
+    : chunk(ch)
     {
         obj = { Fa_ObjType::FUNCTION };
     }
+    */
 
     Fa_StringRef name() const;
     u32 arity() const;
@@ -110,14 +118,18 @@ struct Fa_ObjNative {
     Fa_ObjString* name { nullptr };
     int arity { 0 };
 
+    Fa_ObjNative() { obj = Fa_ObjHeader { Fa_ObjType::NATIVE }; }
+    
+    /*
     Fa_ObjNative(NativeFn f, Fa_ObjString* n, int a)
-        : fn(f)
-        , name(n)
-        , arity(a)
+    : fn(f)
+    , name(n)
+    , arity(a)
     {
         assert(f != nullptr && "native function pointer must not be null");
         obj = { Fa_ObjType::NATIVE };
     }
+    */
 };
 
 struct Fa_ObjClass {
@@ -170,21 +182,23 @@ struct Fa_ObjClass {
     IndexTable field_index_map = { };
     IndexTable method_slot_map = { };
 
-    Fa_ObjClass() = default;
+    Fa_ObjClass() { obj = Fa_ObjHeader { Fa_ObjType::CLASS }; }
 
+    /*
     explicit Fa_ObjClass(Fa_StringRef n, Fa_StringRef* f, u32 f_c, Fa_StringRef* m, u32 m_c, Fa_Chunk** v, u32 v_c)
-        : name(n)
-        , field_names(f)
-        , field_count(f_c)
-        , method_names(m)
-        , vtable(v)
-        , method_count(m_c)
-        , vtable_size(v_c)
+    : name(n)
+    , field_names(f)
+    , field_count(f_c)
+    , method_names(m)
+    , vtable(v)
+    , method_count(m_c)
+    , vtable_size(v_c)
     {
         assert(field_names != nullptr && method_names != nullptr && vtable != nullptr);
         obj = { Fa_ObjType::CLASS };
         build_indices();
     }
+    */
 
     void build_indices();
 
@@ -206,14 +220,17 @@ struct Fa_ObjInstance {
     Fa_Value* fields { nullptr };
     u32 field_count { 0 };
 
+    Fa_ObjInstance() { obj = Fa_ObjHeader { Fa_ObjType::INSTANCE }; }
+    /*
     explicit Fa_ObjInstance(Fa_ObjClass* k, Fa_Value* fs = nullptr, u32 fc = 0)
-        : klass(k)
-        , fields(fs)
-        , field_count(fc)
+    : klass(k)
+    , fields(fs)
+    , field_count(fc)
     {
         assert(k != nullptr && "instance must be constructed with a valid class");
         obj = { Fa_ObjType::INSTANCE };
     }
+    */
 
     ~Fa_ObjInstance() { delete[] fields; }
 };

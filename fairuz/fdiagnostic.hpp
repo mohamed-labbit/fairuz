@@ -200,6 +200,7 @@ enum class Code : u16 {
     ALLOCATOR_CONTEXT_NOT_INITIALIZED = 0x0704,
     MMAP_FAILED = 0x0705,
     NANBOX_ADDRESS_UNSAFE = 0x0706,
+    INVALID_PARAMETER = 0x0707,
 }; // enum Code
 
 } // namespace general
@@ -344,6 +345,7 @@ static constexpr char const* error_message_for(u16 code)
     case 0x0704: return "Fa_AllocatorContext is not initialized";
     case 0x0705: return "mmap failed";
     case 0x0706: return "mmap returned an address unsafe for NaN-boxing";
+    case 0x0707: return "Invalid parameters to function";
     default: return "Unknown error";
     }
 }

@@ -2,6 +2,7 @@
 #define GC_HPP
 
 #include "farray.hpp"
+#include "fdiagnostic.hpp"
 #include "fobject.hpp"
 #include "fvalue.hpp"
 
@@ -24,6 +25,8 @@ public:
     T* make(Args&&... m_args)
     {
         T* obj = new T(std::forward<Args>(m_args)...);
+        if (obj == nullptr)
+            diagnostic::panic(diagnostic::errc::general::Code::ALLOC_FAILED);
         m_all.push(&obj->obj);
         m_current_size += sizeof(T); // reasonable estimate
         return obj;

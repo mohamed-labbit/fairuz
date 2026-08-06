@@ -1,6 +1,7 @@
 #include "fgc.hpp"
 #include "fdiagnostic.hpp"
 #include "fmacros.hpp"
+#include "fstring.hpp"
 #include "fvalue.hpp"
 #include "fvm.hpp"
 
@@ -151,7 +152,10 @@ void Fa_GarbageCollector::sweep_all()
 
 Fa_ObjString* Fa_GarbageCollector::make_obj_string(Fa_StringRef str)
 {
-    return make<Fa_ObjString>(str);
+    auto ret = make<Fa_ObjString>();
+    ret->str = str;
+    ret->hash = Fa_StringRefHash()(ret->str);
+    return ret;
 }
 
 // Fa_ObjString* Fa_GarbageCollector::make_obj_string(Fa_StringRef str)
@@ -161,7 +165,10 @@ Fa_ObjString* Fa_GarbageCollector::make_obj_string(Fa_StringRef str)
 
 Fa_ObjString* Fa_GarbageCollector::make_obj_string(char const* str)
 {
-    return make<Fa_ObjString>(str);
+    auto ret = make<Fa_ObjString>();
+    ret->str = str;
+    ret->hash = Fa_StringRefHash()(ret->str);
+    return ret;
 }
 
 Fa_ObjString* Fa_GarbageCollector::make_obj_string(char* str)
@@ -171,28 +178,58 @@ Fa_ObjString* Fa_GarbageCollector::make_obj_string(char* str)
 
 Fa_ObjList* Fa_GarbageCollector::make_obj_list()
 {
-    return make<Fa_ObjList>();
+    auto ret = make<Fa_ObjList>();
+    return ret;
 }
 
 Fa_ObjDict* Fa_GarbageCollector::make_obj_dict(Fa_DictType data)
 {
-    return make<Fa_ObjDict>(std::move(data));
+    auto ret = make<Fa_ObjDict>();
+    ret->data = std::move(data);
+    return ret;
 }
 
 Fa_ObjFunction* Fa_GarbageCollector::make_obj_function(Fa_Chunk* chunk)
 {
-    return make<Fa_ObjFunction>(chunk);
+    auto ret = make<Fa_ObjFunction>();
+    ret->chunk = chunk;
+    return ret;
 }
 
 Fa_ObjNative* Fa_GarbageCollector::make_obj_native(NativeFn fn, Fa_ObjString* name, int arity)
 {
-    return make<Fa_ObjNative>(fn, name, arity);
+    if (name == nullptr || fn == nullptr) {
+        diagnostic::emit(diagnostic::errc::general::Code::INVALID_PARAMETER);
+        return nullptr;
+    }
+
+    auto ret = make<Fa_ObjNative>();
+    ret->arity = arity;
+    ret->name = name;
+    ret->fn = fn;
+    return ret;    
 }
 
 Fa_ObjClass* Fa_GarbageCollector::make_obj_class(Fa_StringRef name, Fa_StringRef* fields,
     u32 field_count, Fa_StringRef* methods, u32 method_count, Fa_Chunk** vtable, u32 vtable_size)
 {
-    return make<Fa_ObjClass>(name, fields, field_count, methods, method_count, vtable, vtable_size);
+    if (fields == nullptr || methods == nullptr || vtable == nullptr)
+    {
+        diagnostic::emit(diagnostic::errc::general::Code::INVALID_PARAMETER);
+        return nullptr;
+    }
+
+    auto ret = make<Fa_ObjClass>();
+    ret->name = name;
+    ret->field_names = fields;
+    ret->field_count = field_count;
+    ret->method_names = methods;
+    ret->method_count = method_count;
+    ret->vtable = vtable;
+    ret->vtable_size = vtable_size;
+    ret->build_indices();
+
+    return ret;
 }
 
 Fa_ObjInstance* Fa_GarbageCollector::make_obj_instance(Fa_ObjClass* klass)
@@ -208,14 +245,11 @@ Fa_ObjInstance* Fa_GarbageCollector::make_obj_instance(Fa_ObjClass* klass)
             fields[i] = NIL_VAL;
     }
 
-    Fa_ObjInstance* obj = new (std::nothrow) Fa_ObjInstance(klass, fields, klass->field_count);
-    if (obj == nullptr) {
-        delete[] fields;
-        diagnostic::panic(diagnostic::errc::general::Code::ALLOC_FAILED);
-    }
+    Fa_ObjInstance* obj = make<Fa_ObjInstance>();
+    obj->field_count = klass->field_count;
+    obj->fields = fields;
+    obj->klass = klass;
 
-    m_all.push(&obj->obj);
-    m_current_size += sizeof(Fa_ObjInstance) + sizeof(Fa_Value) * obj->field_count;
     return obj;
 }
 
