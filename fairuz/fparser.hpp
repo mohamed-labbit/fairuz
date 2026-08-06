@@ -11,102 +11,6 @@
 
 namespace fairuz::parser {
 
-class Fa_SymbolTable {
-public:
-    enum class SymbolType {
-        VARIABLE,
-        FUNCTION,
-        CLASS,
-        MODULE,
-        UNKNOWN
-    }; // enum SymbolType
-
-    enum class DataType {
-        INTEGER,
-        FLOAT,
-        STRING,
-        BOOLEAN,
-        LIST,
-        DICT,
-        TUPLE,
-        NONE,
-        FUNCTION,
-        INSTANCE,
-        ANY,
-        UNKNOWN
-    }; // enum DataType
-
-    struct Symbol {
-        Fa_StringRef name { "" };
-        SymbolType symbol_type;
-        DataType data_type;
-        bool is_used { false };
-        Fa_SourceLocation definition_loc;
-        Fa_Array<i32> usage_lines;
-        Fa_Array<DataType> param_types;
-        DataType return_type = DataType::UNKNOWN;
-        std::unordered_set<DataType> possible_types;
-    }; // struct Symbol
-
-    Fa_SymbolTable* m_parent = nullptr;
-
-private:
-    Fa_HashTable<Fa_StringRef, Symbol, Fa_StringRefHash, Fa_StringRefEqual> m_symbols;
-    Fa_Array<Fa_SymbolTable*> m_children;
-    unsigned int m_scope_level { 0 };
-
-public:
-    explicit Fa_SymbolTable(Fa_SymbolTable* p = nullptr, i32 level = 0);
-
-    void define(Fa_StringRef const& name, Symbol symbol);
-    Symbol const* lookup(Fa_StringRef const& name) const;
-    Symbol* lookup(Fa_StringRef const& name);
-    Symbol* lookup_local(Fa_StringRef const& name);
-    bool is_defined(Fa_StringRef const& name) const;
-    void mark_used(Fa_StringRef const& name, i32 line);
-    Fa_SymbolTable* create_child();
-    Fa_Array<Symbol*> get_unused_symbols();
-    Fa_HashTable<Fa_StringRef, Symbol, Fa_StringRefHash, Fa_StringRefEqual> const& get_symbols() const;
-    Fa_SymbolTable* get_parent() const;
-}; // class Fa_SymbolTable
-
-class Fa_SemanticAnalyzer {
-public:
-    struct Issue {
-        enum class Severity {
-            ERROR,
-            WARNING,
-            INFO
-        }; // enum Severity
-
-        Severity severity { Severity::ERROR };
-        u16 code { 0 };
-        Fa_StringRef message;
-        Fa_SourceLocation loc;
-        Fa_StringRef suggestion;
-    }; // struct Issue
-
-private:
-    Fa_SymbolTable* m_current_scope;
-    Fa_SymbolTable* m_global_scope;
-    Fa_Array<Issue> m_issues;
-    Fa_Array<AST::Fa_Stmt const*> m_preceding_stmts;
-
-public:
-    Fa_SemanticAnalyzer();
-    Fa_SymbolTable::DataType infer_type(AST::Fa_Expr* m_expr);
-    void report_issue(Issue::Severity sev, diagnostic::errc::sema::Code code, Fa_StringRef msg, Fa_SourceLocation loc, Fa_StringRef const& sugg = "");
-    void analyze_expr(AST::Fa_Expr* m_expr);
-    void analyze_stmt(AST::Fa_Stmt* stmt);
-    void analyze(Fa_Array<AST::Fa_Stmt*> const& m_statements);
-    Fa_Array<Issue> const& get_issues() const;
-    Fa_SymbolTable const* get_global_scope() const;
-    Fa_SymbolTable const* get_current_scope() const;
-    bool is_local(Fa_StringRef name, Fa_SymbolTable* current);
-    void print_report() const;
-    Fa_Array<AST::Fa_Stmt const*> get_preceding_statements() const { return m_preceding_stmts; }
-}; // class Fa_SemanticAnalyzer
-
 class Fa_ParseError : public std::runtime_error {
 public:
     i32 m_line;
@@ -199,7 +103,6 @@ public:
 
 private:
     lex::Fa_Lexer m_lexer;
-    Fa_SemanticAnalyzer m_sema;
 
     tok::Fa_Token const* peek(size_t offset = 1) { return m_lexer.peek(offset); }
     tok::Fa_Token const* advance() { return m_lexer.m_next(); }
