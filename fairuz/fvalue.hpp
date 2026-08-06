@@ -27,7 +27,7 @@ static constexpr u64 INT_TAG16 = UINT64_C(0x7FF9);
 static constexpr u64 OBJ_TAG16 = UINT64_C(0xFFF8);
 
 // runtime values
-#define Fa_MAKE_OBJECT(p) TAG_OBJ | (reinterpret_cast<uintptr_t>(p) & PAYLOAD_MASK)
+#define Fa_MAKE_OBJECT(p) (TAG_OBJ | (reinterpret_cast<uintptr_t>(p) & PAYLOAD_MASK))
 #define Fa_MAKE_REAL(d)                               \
     ({                                                \
         auto _tmp = (d);                              \
