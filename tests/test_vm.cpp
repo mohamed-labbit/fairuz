@@ -11,6 +11,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <gtest/gtest.h>
+#include <memory>
 
 using namespace fairuz;
 using namespace fairuz::runtime;
@@ -70,7 +71,9 @@ struct CB {
 
     u16 str(char const* s)
     {
-        strs_.emplace_back(std::make_unique<Fa_ObjString>(Fa_StringRef(s)));
+        auto p = std::make_unique<Fa_ObjString>();
+        p->str = s;
+        strs_.emplace_back(std::move(p));
         return ch->add_constant(Fa_MAKE_OBJECT(strs_.back().get()));
     }
 
@@ -1153,6 +1156,9 @@ TEST(VMIntegration, TopLevelWhileAssignmentUpdatesGlobal)
         read_global,
         expr_stmt(call_expr(name_expr("read_global"), list_expr({ }))),
     });
+
+    if (test_config::dump_bytecode)
+        top->disassemble();
 
     VMRunner r;
     Fa_Value v = r.run(top);
