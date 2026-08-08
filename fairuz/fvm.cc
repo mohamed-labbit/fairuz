@@ -1361,38 +1361,42 @@ void Fa_VM::intern_chunk_constants(Fa_Chunk* ch)
 
 void Fa_VM::open_stdlib()
 {
-    register_native("حجم", &Fa_VM::Fa_len, -1);
-    register_native("len", &Fa_VM::Fa_len, -1);
+    // Collections
+    register_native("طول", &Fa_VM::Fa_len, -1);
     register_native("اضف", &Fa_VM::Fa_append, -1);
     register_native("احذف", &Fa_VM::Fa_pop, -1);
     register_native("مقطع", &Fa_VM::Fa_slice, -1);
+    register_native("قائمة", &Fa_VM::Fa_list, -1);
+    register_native("قاموس", &Fa_VM::Fa_dict, -1);
+    // I/O
     register_native("اكتب", &Fa_VM::Fa_print, -1);
-    register_native("input", &Fa_VM::Fa_input, -1);
-    register_native("نوع", &Fa_VM::Fa_type, -1);
+    register_native("ادخل", &Fa_VM::Fa_input, -1);
+    // Type system / conversion
+    register_native("صنف", &Fa_VM::Fa_type, -1);
     register_native("طبيعي", &Fa_VM::Fa_int, -1);
     register_native("حقيقي", &Fa_VM::Fa_float, -1);
-    register_native("str", &Fa_VM::Fa_str, -1);
-    register_native("bool", &Fa_VM::Fa_bool, -1);
-    register_native("قائمة", &Fa_VM::Fa_list, -1);
-    register_native("جدول", &Fa_VM::Fa_dict, -1);
-    register_native("dict", &Fa_VM::Fa_dict, -1);
+    register_native("سلسلة", &Fa_VM::Fa_str, -1);
+    register_native("منطقي", &Fa_VM::Fa_bool, -1);
+    // String ops
     register_native("اقسم", &Fa_VM::Fa_split, -1);
-    register_native("join", &Fa_VM::Fa_join, -1);
-    register_native("substr", &Fa_VM::Fa_substr, -1);
-    register_native("contains", &Fa_VM::Fa_contains, -1);
-    register_native("trim", &Fa_VM::Fa_trim, -1);
-    register_native("floor", &Fa_VM::Fa_floor, -1);
-    register_native("ceil", &Fa_VM::Fa_ceil, -1);
-    register_native("round", &Fa_VM::Fa_round, -1);
-    register_native("abs", &Fa_VM::Fa_abs, -1);
-    register_native("min", &Fa_VM::Fa_min, -1);
-    register_native("max", &Fa_VM::Fa_max, -1);
-    register_native("pow", &Fa_VM::Fa_pow, -1);
-    register_native("sqrt", &Fa_VM::Fa_sqrt, -1);
-    register_native("assert", &Fa_VM::Fa_assert, -1);
-    register_native("clock", &Fa_VM::Fa_clock, -1);
-    register_native("error", &Fa_VM::Fa_error, -1);
-    register_native("time", &Fa_VM::Fa_time, -1);
+    register_native("اجمع", &Fa_VM::Fa_join, -1);
+    register_native("جزء", &Fa_VM::Fa_substr, -1);
+    register_native("يحتوي", &Fa_VM::Fa_contains, -1);
+    register_native("قص", &Fa_VM::Fa_trim, -1);
+    // Math
+    register_native("ادنى", &Fa_VM::Fa_floor, -1);
+    register_native("اعلى", &Fa_VM::Fa_ceil, -1);
+    register_native("تقريب", &Fa_VM::Fa_round, -1);
+    register_native("مطلق", &Fa_VM::Fa_abs, -1);
+    register_native("اصغر", &Fa_VM::Fa_min, -1);
+    register_native("اكبر", &Fa_VM::Fa_max, -1);
+    register_native("قوة", &Fa_VM::Fa_pow, -1);
+    register_native("جذر", &Fa_VM::Fa_sqrt, -1);
+    // Runtime / diagnostics
+    register_native("تاكد", &Fa_VM::Fa_assert, -1);
+    register_native("ساعة", &Fa_VM::Fa_clock, -1);
+    register_native("عطل", &Fa_VM::Fa_error, -1);
+    register_native("وقت", &Fa_VM::Fa_time, -1);
 }
 
 void Fa_VM::register_native(Fa_StringRef const& name, NativeFn fn, int arity)
@@ -1475,7 +1479,7 @@ void Fa_VM::update_ic_binary(Fa_Chunk* ch, u32 nop_ip, Fa_Value lhs, Fa_Value rh
     u8 ic_idx = Fa_instr_A(nop);
 
     if (ic_idx < ch->ic_slots.size()) {
-        auto& slot = ch->ic_slots[ic_idx];
+        Fa_ICSlot& slot = ch->ic_slots[ic_idx];
         slot.seen_lhs |= static_cast<u8>(value_type_tag(lhs));
         slot.seen_rhs |= static_cast<u8>(value_type_tag(rhs));
         slot.seen_ret |= static_cast<u8>(value_type_tag(result));
