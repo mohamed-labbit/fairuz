@@ -1,9 +1,15 @@
+// 
+// fobject.cc
+//
+
 #include "fobject.hpp"
+#include "fgc.hpp"
 
 namespace fairuz::runtime {
 
 // object defs
 
+Fa_ObjList::Fa_ObjList(Fa_ListType elems) : elements(std::move(elems)) { obj = Fa_ObjHeader { Fa_ObjType::LIST }; }
 void Fa_ObjList::reserve(u32 cap) { elements.reserve(cap); }
 u32 Fa_ObjList::size() const { return elements.size(); }
 void Fa_ObjList::push(Fa_Value& v) { elements.push(v); }
@@ -31,6 +37,12 @@ int Fa_ObjClass::method_slot(Fa_StringRef method_name) const
 {
     u32 const* p = method_slot_map.find_ptr(method_name);
     return p != nullptr ? static_cast<int>(*p) : -1;
+}
+
+Fa_ObjInstance::Fa_ObjInstance(Fa_Array<Fa_Value, /*_Alloc=*/Fa_GarbageCollector> fields)
+    : obj(Fa_ObjType::INSTANCE)
+    , fields(fields)
+{
 }
 
 } // namespace fairuz::runtime

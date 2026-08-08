@@ -61,7 +61,7 @@ TEST(StdlibRegression, JoinStringifiesMixedScalarValues)
                                       Fa_MAKE_INTEGER(7),
                                       Fa_MAKE_BOOL(true),
                                       Fa_MAKE_STRING("ok"),
-                                      NIL_VAL,
+                                      Fa_MAKE_NIL(),
                                   });
     Fa_Value m_args[] = { list, Fa_MAKE_STRING("|") };
     Fa_Value result = vm.Fa_join(2, m_args);
@@ -272,7 +272,7 @@ TEST(StdlibRegression, StrScalarConversionsMatchSurfaceSyntax)
 
     Fa_Value int_value = Fa_MAKE_INTEGER(42);
     Fa_Value bool_value = Fa_MAKE_BOOL(true);
-    Fa_Value nil_value = NIL_VAL;
+    Fa_Value nil_value = Fa_MAKE_NIL();
 
     EXPECT_EQ(as_std_string(vm.Fa_str(1, &int_value)), "42");
     EXPECT_EQ(as_std_string(vm.Fa_str(1, &bool_value)), "true");

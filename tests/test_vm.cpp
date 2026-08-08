@@ -1088,6 +1088,7 @@ TEST(VMIntegration, FunctionLocalDeclarationShadowsGlobal)
     EXPECT_EQ(Fa_AS_INTEGER(elems[1]), 1);
 }
 
+#if FA_USE_NANBOX
 TEST(VMICProfile, BinaryOpUpdatesSlot)
 {
     VMRunner r;
@@ -1102,6 +1103,7 @@ TEST(VMICProfile, BinaryOpUpdatesSlot)
     EXPECT_TRUE(has_tag(Fa_TypeTag(s.seen_ret), Fa_TypeTag::INT));
     EXPECT_GE(s.hit_count, 1u);
 }
+#endif // FA_USE_NANBOX
 
 TEST(VMICProfile, SubUpdatesSlot)
 {
@@ -1359,7 +1361,7 @@ TEST(NativeLen, BoolArg_ReturnsNil)
 TEST(NativeLen, NilArg_ReturnsNil)
 {
     Fa_VM vm;
-    Fa_Value arg = NIL_VAL;
+    Fa_Value arg = Fa_MAKE_NIL();
     EXPECT_TRUE(Fa_IS_NIL(vm.Fa_len(1, &arg)));
 }
 
@@ -1407,7 +1409,7 @@ TEST(NativePrint, BoolArg_False)
 TEST(NativePrint, NilArg)
 {
     Fa_VM vm;
-    Fa_Value arg = NIL_VAL;
+    Fa_Value arg = Fa_MAKE_NIL();
     EXPECT_TRUE(Fa_IS_NIL(vm.Fa_print(1, &arg)));
 }
 
@@ -1502,7 +1504,7 @@ TEST(NativeStr, StringPassthrough)
 TEST(NativeStr, NilArg_ReturnsNil)
 {
     Fa_VM vm;
-    Fa_Value arg = NIL_VAL;
+    Fa_Value arg = Fa_MAKE_NIL();
     EXPECT_NO_FATAL_FAILURE(vm.Fa_str(1, &arg));
 }
 
@@ -1559,7 +1561,7 @@ TEST(NativeBool, ZeroInteger_IsFalsy)
 TEST(NativeBool, NilArg)
 {
     Fa_VM vm;
-    Fa_Value arg = NIL_VAL;
+    Fa_Value arg = Fa_MAKE_NIL();
     Fa_Value r = vm.Fa_bool(1, &arg);
     ASSERT_TRUE(Fa_IS_BOOL(r));
     EXPECT_FALSE(Fa_AS_BOOL(r));
@@ -1617,7 +1619,7 @@ TEST(NativeInt, StringArg_ReturnsNil)
 TEST(NativeInt, NilArg_ReturnsNil)
 {
     Fa_VM vm;
-    Fa_Value arg = NIL_VAL;
+    Fa_Value arg = Fa_MAKE_NIL();
     EXPECT_TRUE(Fa_IS_NIL(vm.Fa_int(1, &arg)));
 }
 
@@ -1671,7 +1673,7 @@ TEST(NativeFloat, StringArg_ReturnsNil)
 TEST(NativeFloat, NilArg_ReturnsNil)
 {
     Fa_VM vm;
-    Fa_Value arg = NIL_VAL;
+    Fa_Value arg = Fa_MAKE_NIL();
     EXPECT_TRUE(Fa_IS_NIL(vm.Fa_float(1, &arg)));
 }
 
@@ -1687,7 +1689,7 @@ TEST(NativeType, ReturnsInteger)
     Fa_Value i = Fa_MAKE_INTEGER(0);
     Fa_Value f = Fa_MAKE_REAL(0.0);
     Fa_Value b = Fa_MAKE_BOOL(false);
-    Fa_Value n = NIL_VAL;
+    Fa_Value n = Fa_MAKE_NIL();
     Fa_Value s = Fa_MAKE_STRING("x");
     EXPECT_TRUE(Fa_IS_INTEGER(vm.Fa_type(1, &i)));
     EXPECT_TRUE(Fa_IS_INTEGER(vm.Fa_type(1, &f)));
@@ -1702,7 +1704,7 @@ TEST(NativeType, DifferentTypesHaveDifferentTags)
     Fa_Value i = Fa_MAKE_INTEGER(0);
     Fa_Value f = Fa_MAKE_REAL(0.0);
     Fa_Value b = Fa_MAKE_BOOL(false);
-    Fa_Value n = NIL_VAL;
+    Fa_Value n = Fa_MAKE_NIL();
     Fa_Value s = Fa_MAKE_STRING("x");
     i64 int_tag = Fa_AS_INTEGER(vm.Fa_type(1, &i));
     i64 flt_tag = Fa_AS_INTEGER(vm.Fa_type(1, &f));
@@ -1790,7 +1792,7 @@ TEST(NativeFloor, StringArg_ReturnsNil)
 TEST(NativeFloor, NilArg_ReturnsNil)
 {
     Fa_VM vm;
-    Fa_Value arg = NIL_VAL;
+    Fa_Value arg = Fa_MAKE_NIL();
     EXPECT_TRUE(Fa_IS_NIL(vm.Fa_floor(1, &arg)));
 }
 
@@ -1850,7 +1852,7 @@ TEST(NativeCeil, StringArg_ReturnsNil)
 TEST(NativeCeil, NilArg_ReturnsNil)
 {
     Fa_VM vm;
-    Fa_Value arg = NIL_VAL;
+    Fa_Value arg = Fa_MAKE_NIL();
     EXPECT_TRUE(Fa_IS_NIL(vm.Fa_ceil(1, &arg)));
 }
 
@@ -1915,7 +1917,7 @@ TEST(NativeAbs, StringArg_ReturnsNil)
 TEST(NativeAbs, NilArg_ReturnsNil)
 {
     Fa_VM vm;
-    Fa_Value arg = NIL_VAL;
+    Fa_Value arg = Fa_MAKE_NIL();
     EXPECT_TRUE(Fa_IS_NIL(vm.Fa_abs(1, &arg)));
 }
 
@@ -2267,7 +2269,7 @@ static void do_not_optimize(T const& v)
 
 static bool stress_perf_enabled()
 {
-    char const* m_value = std::getenv("fairuz_ENABLE_STRESS_PERF");
+    char const* m_value = std::getenv("ENABLE_STRESS_PERF");
     return m_value && m_value[0] == '1';
 }
 
@@ -2710,8 +2712,7 @@ TEST(VMPerfTest, Fib25_10reps)
 
 TEST(VMPerfStressTest, Dispatch_IntAdd_10M_Iterations)
 {
-    if (!stress_perf_enabled())
-        GTEST_SKIP() << "Set fairuz_ENABLE_STRESS_PERF=1 to run large Fa_VM stress tests.";
+    require_stress_perf();
 
     constexpr int N = 10'000'000;
 
@@ -2744,8 +2745,7 @@ TEST(VMPerfStressTest, Dispatch_IntAdd_10M_Iterations)
 
 TEST(VMPerfStressTest, NativeCall_Len_1M_ICHot)
 {
-    if (!stress_perf_enabled())
-        GTEST_SKIP() << "Set fairuz_ENABLE_STRESS_PERF=1 to run large Fa_VM stress tests.";
+    require_stress_perf();
 
     constexpr int N = 1'000'000;
 
@@ -2780,8 +2780,7 @@ TEST(VMPerfStressTest, NativeCall_Len_1M_ICHot)
 
 TEST(VMPerfStressTest, List_AppendAndSum_100k)
 {
-    if (!stress_perf_enabled())
-        GTEST_SKIP() << "Set fairuz_ENABLE_STRESS_PERF=1 to run large Fa_VM stress tests.";
+    require_stress_perf();
 
     constexpr int N = 100'000;
 
@@ -2936,7 +2935,7 @@ TEST(VMClass, ConstructorAcceptsArgumentsAndReturnsInstance)
     Fa_Value result = r.run(top);
     ASSERT_TRUE(Fa_IS_INSTANCE(result));
     EXPECT_EQ(Fa_AS_INSTANCE(result)->klass->name, "Box");
-    EXPECT_EQ(Fa_AS_INSTANCE(result)->field_count, 1);
+    EXPECT_EQ(Fa_AS_INSTANCE(result)->fields.size(), 1);
 }
 
 TEST(VMClass, ConstructorRejectsWrongArgumentCount)
@@ -3012,7 +3011,7 @@ TEST(VMClass, EnglishInitConstructorIsAccepted)
     });
 
     VMRunner r;
-    Fa_Value result = NIL_VAL;
+    Fa_Value result = Fa_MAKE_NIL();
     ASSERT_NO_THROW(result = r.run(top));
     ASSERT_TRUE(Fa_IS_INSTANCE(result));
     EXPECT_EQ(Fa_AS_INSTANCE(result)->klass->name, "EnglishInit");
@@ -3042,12 +3041,12 @@ TEST(VMClass, InstanceFieldsDefaultToNil)
     });
 
     VMRunner r;
-    Fa_Value result = NIL_VAL;
+    Fa_Value result = Fa_MAKE_NIL();
     ASSERT_NO_THROW(result = r.run(top));
     ASSERT_TRUE(Fa_IS_INSTANCE(result));
 
     Fa_ObjInstance* point = Fa_AS_INSTANCE(result);
-    ASSERT_EQ(point->field_count, 2);
+    ASSERT_EQ(point->fields.size(), 2);
     EXPECT_TRUE(Fa_IS_NIL(point->fields[0]));
     EXPECT_TRUE(Fa_IS_NIL(point->fields[1]));
 }
@@ -3080,12 +3079,12 @@ TEST(VMClass, ConstructorInitializesFieldsFromParameters)
     Fa_Chunk* top = compile_program({ klass, test, expr_stmt(call_expr(name_expr("test"))) });
 
     VMRunner r;
-    Fa_Value result = NIL_VAL;
+    Fa_Value result = Fa_MAKE_NIL();
     ASSERT_NO_THROW(result = r.run(top));
     ASSERT_TRUE(Fa_IS_INSTANCE(result));
 
     Fa_ObjInstance* point = Fa_AS_INSTANCE(result);
-    ASSERT_EQ(point->field_count, 2);
+    ASSERT_EQ(point->fields.size(), 2);
 
     ASSERT_TRUE(Fa_IS_INTEGER(point->fields[0]));
     ASSERT_TRUE(Fa_IS_INTEGER(point->fields[1]));
@@ -3122,7 +3121,7 @@ TEST(VMClass, FieldGetExpressionReadsInstanceField)
     });
 
     VMRunner r;
-    Fa_Value result = NIL_VAL;
+    Fa_Value result = Fa_MAKE_NIL();
     ASSERT_NO_THROW(result = r.run(top));
     ASSERT_TRUE(Fa_IS_INTEGER(result));
     EXPECT_EQ(Fa_AS_INTEGER(result), 12);
@@ -3150,7 +3149,7 @@ TEST(VMClass, FieldAssignmentUpdatesInstanceField)
     });
 
     VMRunner r;
-    Fa_Value result = NIL_VAL;
+    Fa_Value result = Fa_MAKE_NIL();
     ASSERT_NO_THROW(result = r.run(top));
     ASSERT_TRUE(Fa_IS_INTEGER(result));
     EXPECT_EQ(Fa_AS_INTEGER(result), 25);
@@ -3184,7 +3183,7 @@ TEST(VMClass, MethodReceivesExplicitArguments)
     });
 
     VMRunner r;
-    Fa_Value result = NIL_VAL;
+    Fa_Value result = Fa_MAKE_NIL();
     ASSERT_NO_THROW(result = r.run(top));
     ASSERT_TRUE(Fa_IS_INTEGER(result));
     EXPECT_EQ(Fa_AS_INTEGER(result), 7);
@@ -3224,7 +3223,7 @@ TEST(VMClass, MethodReadsInstanceField)
     });
 
     VMRunner r;
-    Fa_Value result = NIL_VAL;
+    Fa_Value result = Fa_MAKE_NIL();
     ASSERT_NO_THROW(result = r.run(top));
     ASSERT_TRUE(Fa_IS_INTEGER(result));
     EXPECT_EQ(Fa_AS_INTEGER(result), 31);
@@ -3266,7 +3265,7 @@ TEST(VMClass, MethodMutatesInstanceFieldAndPersists)
     });
 
     VMRunner r;
-    Fa_Value result = NIL_VAL;
+    Fa_Value result = Fa_MAKE_NIL();
     ASSERT_NO_THROW(result = r.run(top));
     ASSERT_TRUE(Fa_IS_INTEGER(result));
     EXPECT_EQ(Fa_AS_INTEGER(result), 2);
@@ -3310,7 +3309,7 @@ TEST(VMClass, MultipleInstancesKeepIndependentFieldState)
     });
 
     VMRunner r;
-    Fa_Value result = NIL_VAL;
+    Fa_Value result = Fa_MAKE_NIL();
     ASSERT_NO_THROW(result = r.run(top));
     ASSERT_TRUE(Fa_IS_INTEGER(result));
     EXPECT_EQ(Fa_AS_INTEGER(result), 30);
@@ -3339,7 +3338,7 @@ TEST(VMClass, MethodReturningNoValueReturnsSelf)
     });
 
     VMRunner r;
-    Fa_Value result = NIL_VAL;
+    Fa_Value result = Fa_MAKE_NIL();
     ASSERT_NO_THROW(result = r.run(top));
     ASSERT_TRUE(Fa_IS_INSTANCE(result));
     EXPECT_EQ(Fa_AS_INSTANCE(result)->klass->name, "Fluent");
@@ -3421,7 +3420,7 @@ TEST(VMClass, DuplicateFieldsAreDeduplicatedInDeclarationOrder)
     });
 
     VMRunner r;
-    Fa_Value result = NIL_VAL;
+    Fa_Value result = Fa_MAKE_NIL();
     ASSERT_NO_THROW(result = r.run(top));
     ASSERT_TRUE(Fa_IS_CLASS(result));
 
@@ -3454,7 +3453,7 @@ TEST(VMClass, MultipleMethodsAreStoredInRuntimeClass)
     });
 
     VMRunner r;
-    Fa_Value result = NIL_VAL;
+    Fa_Value result = Fa_MAKE_NIL();
     ASSERT_NO_THROW(result = r.run(top));
     ASSERT_TRUE(Fa_IS_CLASS(result));
 
@@ -3493,7 +3492,7 @@ TEST(VMClass, AddSpecialMethodHandlesBinaryPlus)
     });
 
     VMRunner r;
-    Fa_Value result = NIL_VAL;
+    Fa_Value result = Fa_MAKE_NIL();
     ASSERT_NO_THROW(result = r.run(top));
     ASSERT_TRUE(Fa_IS_INTEGER(result));
     EXPECT_EQ(Fa_AS_INTEGER(result), 99);

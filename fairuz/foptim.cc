@@ -10,7 +10,7 @@ std::optional<Fa_Value> const_value(AST::Fa_Expr const* e)
     auto lit = AS_CONST_LITERAL(e);
 
     if (lit->is_nil())
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     if (lit->is_bool())
         return Fa_MAKE_BOOL(lit->get_bool());
     if (lit->is_integer())

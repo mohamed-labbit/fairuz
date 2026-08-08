@@ -1,10 +1,11 @@
 /// opcode.cc
 
 #include "fvalue.hpp"
+#include "fobject.hpp"
 
 namespace fairuz::runtime {
 
-void print_value(u64 v)
+void print_value(Fa_Value v)
 {
     if (Fa_IS_NIL(v))
         ::printf("nil");

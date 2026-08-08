@@ -80,8 +80,8 @@ TEST(Fa_Chunk, AddConstantDeduplicatesDoubles)
 TEST(Fa_Chunk, AddConstantDeduplicatesNil)
 {
     Fa_Chunk c;
-    u16 i0 = c.add_constant(NIL_VAL);
-    u16 i1 = c.add_constant(NIL_VAL);
+    u16 i0 = c.add_constant(Fa_MAKE_NIL());
+    u16 i1 = c.add_constant(Fa_MAKE_NIL());
     EXPECT_EQ(i0, i1);
     EXPECT_EQ(c.constants.size(), 1u);
 }

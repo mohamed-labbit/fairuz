@@ -1154,7 +1154,7 @@ void Compiler::discharge(Fa_ExprResult const& r, u8 dst, Fa_SourceLocation loc)
     case Fa_ExprResult::Kind::KINT: emit_load_value(dst, Fa_MAKE_INTEGER(r.ival), loc); break;
     case Fa_ExprResult::Kind::KFLOAT: emit_load_value(dst, Fa_MAKE_REAL(r.dval), loc); break;
     case Fa_ExprResult::Kind::KBOOL: emit_load_value(dst, Fa_MAKE_BOOL(r.bval), loc); break;
-    case Fa_ExprResult::Kind::KNIL: emit_load_value(dst, NIL_VAL, loc); break;
+    case Fa_ExprResult::Kind::KNIL: emit_load_value(dst, Fa_MAKE_NIL(), loc); break;
     }
 }
 

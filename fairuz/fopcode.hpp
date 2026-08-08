@@ -257,6 +257,12 @@ struct Fa_ClassDescriptor {
     static constexpr u32 NULL_SLOT = UINT32_MAX;
 };
 
+#if FA_USE_NANBOX
+    using Fa_Value = u64;
+#else
+    struct Fa_Value;
+#endif
+
 struct Fa_Chunk {
     Fa_StringRef name { "" };
     int arity { 0 };
@@ -264,7 +270,7 @@ struct Fa_Chunk {
 
     Fa_Array<u32> code;
     Fa_Array<Fa_SourceLocation> locations;
-    Fa_Array<u64> constants; // constants are boxed values!!!
+    Fa_Array<Fa_Value> constants;
     Fa_Array<Fa_LineEntry> lines;
     Fa_Array<Fa_Chunk*> functions;
     Fa_Array<Fa_ICSlot> ic_slots;
@@ -288,7 +294,7 @@ struct Fa_Chunk {
 
     u32 emit(u32 instr, Fa_SourceLocation loc);
     bool patch_jump(u32 const instr_idx);
-    u16 add_constant(u64 const v);
+    u16 add_constant(Fa_Value const v);
     u8 alloc_ic_slot();
     u32 get_line(u32 const instr_idx) const;
     void disassemble() const;

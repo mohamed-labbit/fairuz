@@ -98,7 +98,7 @@ static constexpr char kClassMetadataKey[] = "__class__";
 #define Fa_VM_INSTANCE_OP(op_name)                                                       \
     do {                                                                                 \
         Fa_ObjClass* self_klass = nullptr;                                               \
-        Fa_Value self_val, arg_val = NIL_VAL;                                            \
+        Fa_Value self_val, arg_val = Fa_MAKE_NIL();                                            \
         int slot = -1;                                                                   \
         if (Fa_IS_INSTANCE(lhs)) {                                                       \
             self_klass = Fa_AS_INSTANCE(lhs)->klass;                                     \
@@ -205,7 +205,7 @@ static void check_stack_index(int index, int stack_size, char const* m_context)
 
 Fa_VM::Fa_VM()
 {
-    std::fill(m_stack, m_stack + STACK_SIZE, NIL_VAL);
+    std::fill(m_stack, m_stack + STACK_SIZE, Fa_MAKE_NIL());
     std::fill(m_frames, m_frames + MAX_FRAMES, Fa_CallFrame());
 
     open_stdlib();
@@ -232,7 +232,7 @@ void Fa_VM::ensure_stack_slots(int needed)
         runtime_error(ErrorCode::STACK_OVERFLOW);
 
     while (m_stack_top < needed)
-        PUSH_VALUE(NIL_VAL);
+        PUSH_VALUE(Fa_MAKE_NIL());
 }
 
 // Reference to the topmost call frame.
@@ -258,7 +258,7 @@ Fa_Value& Fa_VM::get_reg(Fa_CallFrame const& f, int reg)
 Fa_Value Fa_VM::run(Fa_Chunk* chunk)
 {
     if (chunk == nullptr)
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
 
     m_stack_top = 0;
     m_frames_top = 0;
@@ -286,7 +286,7 @@ Fa_Value Fa_VM::execute()
     static void const* dispatch_table[] = { Fa_TABLE_INIT };
 
     if (m_frames_top == 0)
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
 
     u32 instr;
     Fa_Chunk* cur_chunk = frame().chunk;
@@ -304,7 +304,7 @@ Fa_Value Fa_VM::execute()
         u8 count = Fa_instr_C(instr);
 
         for (u8 i = 0; i < count; i += 1)
-            cur_base[start + i] = NIL_VAL;
+            cur_base[start + i] = Fa_MAKE_NIL();
 
         Fa_DISPATCH();
     }
@@ -362,7 +362,7 @@ Fa_Value Fa_VM::execute()
                 slot_idx = *slot;
             } else {
                 slot_idx = static_cast<u32>(m_global_slots.size());
-                m_global_slots.push(NIL_VAL);
+                m_global_slots.push(Fa_MAKE_NIL());
                 m_global_index.insert_or_assign(name, slot_idx);
             }
 
@@ -799,8 +799,6 @@ Fa_Value Fa_VM::execute()
         } else if (Fa_IS_DICT(object_v)) {
             Fa_ObjDict* as_dict = Fa_AS_DICT(object_v);
             as_dict->data[index_v] = new_val;
-        } else if (Fa_IS_INSTANCE(object_v)) {
-            Fa_AS_INSTANCE(object_v)->fields[index_v] = new_val;
         } else {
             runtime_error(ErrorCode::TYPE_ERROR_CALL);
         }
@@ -957,7 +955,7 @@ Fa_Value Fa_VM::execute()
     {
         u8 src = Fa_instr_A(instr);
         u8 n_ret = Fa_instr_B(instr);
-        Fa_Value ret = n_ret > 0 ? cur_base[src] : NIL_VAL;
+        Fa_Value ret = n_ret > 0 ? cur_base[src] : Fa_MAKE_NIL();
         m_stack[cur_frame_base - 1] = ret;
         m_frames_top -= 1;
 
@@ -969,11 +967,11 @@ Fa_Value Fa_VM::execute()
     }
     Fa_CASE(RETURN_NIL)
     {
-        m_stack[cur_frame_base - 1] = NIL_VAL;
+        m_stack[cur_frame_base - 1] = Fa_MAKE_NIL();
         m_frames_top -= 1;
 
         if (LIKELY(m_frames_top == 0))
-            return NIL_VAL;
+            return Fa_MAKE_NIL();
 
         LOAD_FRAME();
         Fa_DISPATCH();
@@ -1029,7 +1027,7 @@ Fa_Value Fa_VM::execute()
                 runtime_error(ErrorCode::INDEX_TYPE_ERROR);
 
             i64 idx_int = Fa_AS_INTEGER(idx);
-            Fa_Array<Fa_Value> list = Fa_AS_LIST(obj)->elements;
+            Fa_ListType list = Fa_AS_LIST(obj)->elements;
             if (UNLIKELY(idx_int >= list.size() || idx_int < 0))
                 runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
 
@@ -1037,7 +1035,7 @@ Fa_Value Fa_VM::execute()
         } else if (Fa_IS_DICT(obj)) {
             Fa_ObjDict* dict_obj = Fa_AS_DICT(obj);
             if (dict_obj->data.find_ptr(idx) == nullptr)
-                res = NIL_VAL;
+                res = Fa_MAKE_NIL();
             else
                 res = dict_obj->data[idx];
         } else {
@@ -1143,7 +1141,7 @@ Fa_Value Fa_VM::execute()
         Fa_ObjInstance* inst = Fa_AS_INSTANCE(obj_v);
         u8 field_idx = Fa_instr_C(instr);
 
-        if (UNLIKELY(field_idx >= inst->field_count))
+        if (UNLIKELY(field_idx >= inst->fields.size()))
             runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
 
         res = inst->fields[field_idx];
@@ -1158,7 +1156,7 @@ Fa_Value Fa_VM::execute()
         Fa_ObjInstance* inst = Fa_AS_INSTANCE(obj_v);
         u8 field_idx = Fa_instr_B(instr);
 
-        if (UNLIKELY(field_idx >= inst->field_count))
+        if (UNLIKELY(field_idx >= inst->fields.size()))
             runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
 
         inst->fields[field_idx] = Fa_RC();
@@ -1170,7 +1168,7 @@ Fa_Value Fa_VM::execute()
 
     Fa_END_DISPATCH();
 
-    return NIL_VAL; // UNREACHABLE
+    return Fa_MAKE_NIL(); // UNREACHABLE
 }
 
 // Calls target_chunk with self_val in callee register 0. total_argc includes
@@ -1192,7 +1190,7 @@ void Fa_VM::invoke_method(Fa_Chunk* target_chunk, Fa_Value self_val, int dst_reg
         runtime_error(ErrorCode::STACK_OVERFLOW);
 
     while (m_stack_top < new_top) {
-        m_stack[m_stack_top] = NIL_VAL;
+        m_stack[m_stack_top] = Fa_MAKE_NIL();
         m_stack_top += 1;
     }
 
@@ -1201,7 +1199,7 @@ void Fa_VM::invoke_method(Fa_Chunk* target_chunk, Fa_Value self_val, int dst_reg
     // by the caller, before this is invoked.
 
     for (int i = total_argc; i < local_count; i += 1)
-        m_stack[call_base + i] = NIL_VAL;
+        m_stack[call_base + i] = Fa_MAKE_NIL();
 
     SAVE_IP();
     m_frames[m_frames_top] = Fa_CallFrame(nullptr, target_chunk, 0, call_base, local_count);
@@ -1233,7 +1231,7 @@ void Fa_VM::call_value(Fa_Value callee, int argc, int call_base, bool tail)
             for (int i = 0; i < argc; i += 1)
                 m_stack[cur_base + i] = m_stack[call_base + i];
             for (int i = argc; i < local_count; i += 1)
-                m_stack[cur_base + i] = NIL_VAL;
+                m_stack[cur_base + i] = Fa_MAKE_NIL();
 
             m_frames[m_frames_top - 1] = Fa_CallFrame(fn, fchk, 0, cur_base, local_count);
 
@@ -1248,12 +1246,12 @@ void Fa_VM::call_value(Fa_Value callee, int argc, int call_base, bool tail)
                 runtime_error(ErrorCode::STACK_OVERFLOW);
 
             while (m_stack_top < new_top) {
-                m_stack[m_stack_top] = NIL_VAL;
+                m_stack[m_stack_top] = Fa_MAKE_NIL();
                 m_stack_top += 1;
             }
 
             for (int i = argc; i < local_count; i += 1)
-                m_stack[call_base + i] = NIL_VAL;
+                m_stack[call_base + i] = Fa_MAKE_NIL();
 
             m_frames[m_frames_top] = Fa_CallFrame(fn, fchk, 0, call_base, local_count);
             m_frames_top += 1;
@@ -1309,12 +1307,12 @@ void Fa_VM::call_value(Fa_Value callee, int argc, int call_base, bool tail)
             runtime_error(ErrorCode::STACK_OVERFLOW);
 
         while (m_stack_top < new_top) {
-            m_stack[m_stack_top] = NIL_VAL;
+            m_stack[m_stack_top] = Fa_MAKE_NIL();
             m_stack_top += 1;
         }
 
         for (int i = argc + 1; i < local_count; i += 1)
-            m_stack[call_base + i] = NIL_VAL;
+            m_stack[call_base + i] = Fa_MAKE_NIL();
 
         if (UNLIKELY(m_frames_top >= MAX_FRAMES))
             runtime_error(ErrorCode::STACK_OVERFLOW);

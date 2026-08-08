@@ -120,7 +120,7 @@ static Fa_StringRef value_to_string(Fa_Value v)
 Fa_Value Fa_VM::Fa_len(int argc, Fa_Value* argv)
 {
     if (argc == 0 || argv == nullptr)
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
 
     if (argc == 1) {
         if (Fa_IS_STRING(argv[0])) {
@@ -145,7 +145,7 @@ Fa_Value Fa_VM::Fa_len(int argc, Fa_Value* argv)
     }
 
     /// do not accept multiple args for len
-    return NIL_VAL;
+    return Fa_MAKE_NIL();
 }
 
 static void print_runtime_value(Fa_Value v, int depth = 0)
@@ -270,7 +270,7 @@ Fa_Value Fa_VM::Fa_print(int argc, Fa_Value* argv)
 {
     if (argc == 0 || argv == nullptr) {
         std::cout << '\n';
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     }
 
     for (int i = 0; i < argc; i += 1) {
@@ -279,13 +279,13 @@ Fa_Value Fa_VM::Fa_print(int argc, Fa_Value* argv)
         print_runtime_value(argv[i]);
     }
     std::cout << '\n';
-    return NIL_VAL;
+    return Fa_MAKE_NIL();
 }
 
 Fa_Value Fa_VM::Fa_type(int argc, Fa_Value* argv)
 {
     if (argc != 1 || argv == nullptr)
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
 
     return Fa_MAKE_INTEGER(static_cast<i64>(value_type_tag(argv[0])));
 }
@@ -293,21 +293,21 @@ Fa_Value Fa_VM::Fa_type(int argc, Fa_Value* argv)
 Fa_Value Fa_VM::Fa_int(int argc, Fa_Value* argv)
 {
     if (argc != 1 || argv == nullptr)
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     if (Fa_IS_NUMBER(argv[0]))
         return Fa_MAKE_INTEGER(static_cast<i64>(Fa_AS_DOUBLE_ANY(argv[0])));
-    return NIL_VAL;
+    return Fa_MAKE_NIL();
 }
 
 Fa_Value Fa_VM::Fa_float(int argc, Fa_Value* argv)
 {
     if (argc != 1 || argv == nullptr)
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
 
     if (Fa_IS_NUMBER(argv[0]))
         return Fa_MAKE_REAL(Fa_AS_DOUBLE_ANY(argv[0]));
 
-    return NIL_VAL;
+    return Fa_MAKE_NIL();
 }
 
 Fa_Value Fa_VM::Fa_append(int argc, Fa_Value* argv)
@@ -315,14 +315,14 @@ Fa_Value Fa_VM::Fa_append(int argc, Fa_Value* argv)
     if (argc < 2 || argv == nullptr) {
         diagnostic::emit(StdlibError::APPEND_ARG_COUNT, "got " + std::to_string(argc));
         diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     }
 
     Fa_Value& list_v = argv[0];
     if (!Fa_IS_LIST(list_v)) {
         diagnostic::emit(StdlibError::APPEND_TYPE_ERROR);
         diagnostic::runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     }
 
     Fa_ObjList* list_obj = Fa_AS_LIST(list_v);
@@ -330,7 +330,7 @@ Fa_Value Fa_VM::Fa_append(int argc, Fa_Value* argv)
     for (int i = 1; i < argc; i += 1)
         list_obj->elements.push(argv[i]);
 
-    return NIL_VAL;
+    return Fa_MAKE_NIL();
 }
 
 Fa_Value Fa_VM::Fa_pop(int argc, Fa_Value* argv)
@@ -338,18 +338,18 @@ Fa_Value Fa_VM::Fa_pop(int argc, Fa_Value* argv)
     if (argc != 1 || argv == nullptr) {
         diagnostic::emit(StdlibError::POP_ARG_COUNT, "got " + std::to_string(argc));
         diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     }
 
     Fa_Value& list_v = argv[0];
     if (!Fa_IS_LIST(list_v)) {
         diagnostic::emit(StdlibError::POP_TYPE_ERROR);
         diagnostic::runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     }
 
     Fa_AS_LIST(list_v)->elements.pop();
-    return NIL_VAL;
+    return Fa_MAKE_NIL();
 }
 
 Fa_Value Fa_VM::Fa_slice(int argc, Fa_Value* argv)
@@ -362,7 +362,7 @@ Fa_Value Fa_VM::Fa_slice(int argc, Fa_Value* argv)
     if (argc < 2) {
         diagnostic::emit(StdlibError::SLICE_ARG_COUNT, "got " + std::to_string(argc));
         diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     }
 
     Fa_ObjList* list_obj = Fa_AS_LIST(argv[0]);
@@ -386,7 +386,7 @@ Fa_Value Fa_VM::Fa_input(int /*argc*/, Fa_Value* /*argv*/) // input takes no arg
 
     if (!std::getline(std::cin, help))
         // don't know what error to report
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
 
     ret_str = help.data();
     Fa_Value ret = Fa_MAKE_STRING(ret_str);
@@ -398,7 +398,7 @@ Fa_Value Fa_VM::Fa_str(int argc, Fa_Value* argv)
     if (argc > 1) {
         diagnostic::emit(StdlibError::STR_ARG_COUNT, "got " + std::to_string(argc));
         diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     }
 
     Fa_StringRef output = "";
@@ -418,7 +418,7 @@ Fa_Value Fa_VM::Fa_bool(int argc, Fa_Value* argv)
     if (argc != 1 || argv == nullptr) {
         diagnostic::emit(StdlibError::BOOL_ARG_COUNT, "got " + std::to_string(argc));
         diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     }
 
     return Fa_IS_TRUTHY(argv[0]) ? Fa_MAKE_BOOL(true) : Fa_MAKE_BOOL(false);
@@ -451,9 +451,9 @@ Fa_Value Fa_VM::Fa_dict(int argc, Fa_Value* argv)
 Fa_Value Fa_VM::Fa_split(int argc, Fa_Value* argv)
 {
     if (argc != 2 || argv == nullptr)
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     if (!Fa_IS_STRING(argv[0]) || !Fa_IS_STRING(argv[1]))
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
 
     Fa_StringRef src = Fa_AS_STRING(argv[0])->str;
     Fa_StringRef delim = Fa_AS_STRING(argv[1])->str;
@@ -494,9 +494,9 @@ Fa_Value Fa_VM::Fa_split(int argc, Fa_Value* argv)
 Fa_Value Fa_VM::Fa_join(int argc, Fa_Value* argv)
 {
     if (argc != 2 || argv == nullptr)
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     if (!Fa_IS_LIST(argv[0]) || !Fa_IS_STRING(argv[1]))
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
 
     Fa_ObjList* list = Fa_AS_LIST(argv[0]);
     Fa_StringRef delim = Fa_AS_STRING(argv[1])->str;
@@ -517,16 +517,16 @@ Fa_Value Fa_VM::Fa_substr(int argc, Fa_Value* argv)
     if (argc != 3 || argv == nullptr) {
         diagnostic::emit(StdlibError::SUBSTR_ARG_COUNT, "got " + std::to_string(argc));
         diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     }
 
     Fa_StringRef str = Fa_AS_STRING(argv[0])->str;
 
-    Fa_Value a = Fa_IS_INTEGER(argv[1]) ? Fa_AS_INTEGER(argv[1]) : NIL_VAL;
-    Fa_Value b = Fa_IS_INTEGER(argv[1]) ? Fa_AS_INTEGER(argv[2]) : NIL_VAL;
+    if (UNLIKELY(Fa_IS_NIL(argv[1]) || Fa_IS_NIL(argv[2])))
+        return Fa_MAKE_NIL();
 
-    if (UNLIKELY(a == NIL_VAL || b == NIL_VAL))
-        return NIL_VAL;
+    i64 a = Fa_AS_INTEGER(argv[1]);
+    i64 b = Fa_AS_INTEGER(argv[2]);
 
     Fa_StringRef ret = str.substr(a, b);
     return Fa_MAKE_STRING(ret);
@@ -535,9 +535,9 @@ Fa_Value Fa_VM::Fa_substr(int argc, Fa_Value* argv)
 Fa_Value Fa_VM::Fa_contains(int argc, Fa_Value* argv)
 {
     if (argc != 2 || argv == nullptr)
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     if (!Fa_IS_STRING(argv[0]) || !Fa_IS_STRING(argv[1]))
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
 
     Fa_StringRef haystack = Fa_AS_STRING(argv[0])->str;
     Fa_StringRef needle = Fa_AS_STRING(argv[1])->str;
@@ -550,9 +550,9 @@ Fa_Value Fa_VM::Fa_contains(int argc, Fa_Value* argv)
 Fa_Value Fa_VM::Fa_trim(int argc, Fa_Value* argv)
 {
     if (argc != 1 || argv == nullptr)
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     if (!Fa_IS_STRING(argv[0]))
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
 
     Fa_StringRef str = Fa_AS_STRING(argv[0])->str;
     size_t start = 0;
@@ -575,13 +575,13 @@ Fa_Value Fa_VM::Fa_floor(int argc, Fa_Value* argv)
     if (argc != 1 || argv == nullptr) {
         diagnostic::emit(StdlibError::FLOOR_ARG_COUNT, "got " + std::to_string(argc));
         diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     }
 
     if (!Fa_IS_NUMBER(argv[0])) {
         diagnostic::emit(StdlibError::FLOOR_TYPE_ERROR);
         diagnostic::runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     }
 
     if (Fa_IS_INTEGER(argv[0]))
@@ -595,13 +595,13 @@ Fa_Value Fa_VM::Fa_ceil(int argc, Fa_Value* argv)
     if (argc != 1 || argv == nullptr) {
         diagnostic::emit(StdlibError::CEIL_ARG_COUNT, "got " + std::to_string(argc));
         diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     }
 
     if (!Fa_IS_NUMBER(argv[0])) {
         diagnostic::emit(StdlibError::CEIL_TYPE_ERROR);
         diagnostic::runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     }
 
     if (Fa_IS_INTEGER(argv[0]))
@@ -615,12 +615,12 @@ Fa_Value Fa_VM::Fa_round(int argc, Fa_Value* argv)
     if (argc != 1 || argv == nullptr) {
         diagnostic::emit(StdlibError::ROUND_ARG_COUNT, "got " + std::to_string(argc));
         diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     }
     if (!Fa_IS_NUMBER(argv[0])) {
         diagnostic::emit(StdlibError::ROUND_TYPE_ERROR);
         diagnostic::runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     }
     if (Fa_IS_INTEGER(argv[0]))
         return argv[0];
@@ -633,20 +633,20 @@ Fa_Value Fa_VM::Fa_abs(int argc, Fa_Value* argv)
     if (argc != 1 || argv == nullptr) {
         diagnostic::emit(StdlibError::ABS_ARG_COUNT, "got " + std::to_string(argc));
         diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     }
 
     if (!Fa_IS_NUMBER(argv[0])) {
         diagnostic::emit(StdlibError::ABS_TYPE_ERROR);
         diagnostic::runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     }
 
     if (Fa_IS_INTEGER(argv[0])) {
         i64 v = Fa_AS_INTEGER(argv[0]);
         if (v == INT64_MIN) {
             diagnostic::emit(StdlibError::ABS_OUT_OF_RANGE);
-            return NIL_VAL;
+            return Fa_MAKE_NIL();
         }
         return Fa_MAKE_INTEGER(std::abs(Fa_AS_INTEGER(argv[0])));
     }
@@ -658,7 +658,7 @@ Fa_Value Fa_VM::Fa_min(int argc, Fa_Value* argv)
     if (argc < 1 || !argv) {
         diagnostic::emit(StdlibError::MIN_ARG_COUNT, "got " + std::to_string(argc));
         diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     }
 
     // Determine mode from argv[0]
@@ -698,7 +698,7 @@ Fa_Value Fa_VM::Fa_max(int argc, Fa_Value* argv)
     if (argc < 1 || argv == nullptr) {
         diagnostic::emit(StdlibError::MAX_ARG_COUNT, "got " + std::to_string(argc));
         diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     }
 
     // Determine mode from argv[0]
@@ -737,7 +737,7 @@ Fa_Value Fa_VM::Fa_pow(int argc, Fa_Value* argv)
     if (argc != 2 || argv == nullptr) {
         diagnostic::emit(StdlibError::POW_ARG_COUNT, "got " + std::to_string(argc));
         diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     }
 
     Fa_Value base = argv[0];
@@ -746,7 +746,7 @@ Fa_Value Fa_VM::Fa_pow(int argc, Fa_Value* argv)
     if (UNLIKELY(!Fa_IS_NUMBER(base) || !Fa_IS_NUMBER(exponent))) {
         diagnostic::emit(StdlibError::POW_TYPE_ERROR);
         diagnostic::runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     }
 
     if (Fa_IS_INTEGER(base) && Fa_IS_INTEGER(exponent))
@@ -755,7 +755,7 @@ Fa_Value Fa_VM::Fa_pow(int argc, Fa_Value* argv)
     else
         return Fa_MAKE_REAL(std::pow(Fa_AS_DOUBLE_ANY(base), Fa_AS_DOUBLE_ANY(exponent)));
 
-    return NIL_VAL;
+    return Fa_MAKE_NIL();
 }
 
 Fa_Value Fa_VM::Fa_sqrt(int argc, Fa_Value* argv)
@@ -763,7 +763,7 @@ Fa_Value Fa_VM::Fa_sqrt(int argc, Fa_Value* argv)
     if (argc != 1 || argv == nullptr) {
         diagnostic::emit(StdlibError::SQRT_ARG_COUNT, "got " + std::to_string(argc));
         diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     }
 
     Fa_Value n = argv[0];
@@ -771,12 +771,12 @@ Fa_Value Fa_VM::Fa_sqrt(int argc, Fa_Value* argv)
     if (UNLIKELY(!Fa_IS_NUMBER(n))) {
         diagnostic::emit(StdlibError::SQRT_TYPE_ERROR);
         diagnostic::runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     }
 
     f64 val = Fa_AS_DOUBLE_ANY(n);
     if (val < 0.0)
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
 
     return Fa_MAKE_REAL(std::sqrt(val));
 }
@@ -786,7 +786,7 @@ Fa_Value Fa_VM::Fa_assert(int argc, Fa_Value* argv)
     if (argc < 1 || argv == nullptr) {
         diagnostic::emit(StdlibError::ASSERT_ARG_COUNT, "got" + std::to_string(argc));
         diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     }
 
     for (int i = 0; i < argc; i += 1) {
@@ -799,14 +799,14 @@ Fa_Value Fa_VM::Fa_assert(int argc, Fa_Value* argv)
         }
     }
 
-    return NIL_VAL; // success
+    return Fa_MAKE_NIL(); // success
 }
 
 Fa_Value Fa_open_file(int argc, Fa_Value* argv)
 {
     if (argc < 1 || argv == nullptr) {
         diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     }
 
     char const* filename = Fa_AS_STRING(argv[0])->str.data();
@@ -815,15 +815,15 @@ Fa_Value Fa_open_file(int argc, Fa_Value* argv)
     FILE* fp = fopen(filename, mode);
     if (fp == NULL) {
         diagnostic::runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
     }
 
-    return NIL_VAL;
+    return Fa_MAKE_NIL();
 }
 
-Fa_Value Fa_VM::Fa_clock(int /*argc*/, Fa_Value* /*argv*/) { return NIL_VAL; }
-Fa_Value Fa_VM::Fa_error(int /*argc*/, Fa_Value* /*argv*/) { return NIL_VAL; }
-Fa_Value Fa_VM::Fa_time(int /*argc*/, Fa_Value* /*argv*/) { return NIL_VAL; }
+Fa_Value Fa_VM::Fa_clock(int /*argc*/, Fa_Value* /*argv*/) { return Fa_MAKE_NIL(); }
+Fa_Value Fa_VM::Fa_error(int /*argc*/, Fa_Value* /*argv*/) { return Fa_MAKE_NIL(); }
+Fa_Value Fa_VM::Fa_time(int /*argc*/, Fa_Value* /*argv*/) { return Fa_MAKE_NIL(); }
 
 // stdlib helpers
 void Fa_VM::Fa_dict_put(Fa_Value* dict_ptr, Fa_Value k, Fa_Value v)
@@ -838,7 +838,7 @@ void Fa_VM::Fa_dict_put(Fa_Value* dict_ptr, Fa_Value k, Fa_Value v)
 Fa_Value Fa_VM::Fa_dict_get(Fa_Value* dict_ptr, Fa_Value k)
 {
     if (UNLIKELY(dict_ptr == nullptr))
-        return NIL_VAL;
+        return Fa_MAKE_NIL();
 
     Fa_ObjDict* as_dict = Fa_AS_DICT(*dict_ptr);
     return as_dict->data[k];
