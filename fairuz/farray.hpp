@@ -6,15 +6,16 @@
 #include "fmacros.hpp"
 
 #include <bit>
-#include <cassert>
+#include <assert.h>
 #include <initializer_list>
+#include <type_traits>
 
 namespace fairuz {
 
 using ArrayErrorCode = diagnostic::errc::container::Code;
 using GenericErrorCode = diagnostic::errc::general::Code;
 
-template<typename T>
+template<typename T, class _Alloc = Fa_ArenaAllocator>
 class Fa_Array {
     static constexpr u32 ARRAY_MAX = __UINT32_MAX__;
     static constexpr u32 DEFAULT_CAP = 8;
@@ -66,6 +67,7 @@ class Fa_Array {
     T* m_arr { nullptr };
     u32 m_size { 0 };
     u32 m_cap { 0 };
+    _Alloc* m_allocator { nullptr };
 
     static u32 next_capacity(u32 const s) noexcept
     {
@@ -79,12 +81,25 @@ class Fa_Array {
 
     void ensure_push_capacity();
 
+    void resolve_allocator(_Alloc* allocator) {
+        if constexpr (std::is_same_v<_Alloc, Fa_ArenaAllocator>) {
+            if (allocator == nullptr) {
+                m_allocator = get_allocator_ptr();
+                assert(m_allocator != nullptr);
+            } else {
+                m_allocator = allocator;
+            }
+        } else {
+            assert(allocator != nullptr && "null allocator only valid for Fa_ArenaAllocator");
+            m_allocator = allocator;
+        }
+    }
 public:
-    Fa_Array() = default;
-    explicit Fa_Array(u32 capacity, T fill_v = T());
+    Fa_Array(_Alloc* allocator = nullptr) { resolve_allocator(allocator); }
+    explicit Fa_Array(u32 capacity, T fill_v = T(), _Alloc* allocator = nullptr);
     Fa_Array(Fa_Array const& other);
     Fa_Array(Fa_Array&& other) noexcept;
-    Fa_Array(std::initializer_list<T> list);
+    Fa_Array(std::initializer_list<T> list, _Alloc* allocator = nullptr);
 
     Fa_Array& operator=(Fa_Array const& other);
     Fa_Array& operator=(Fa_Array&& other) noexcept;
@@ -94,15 +109,19 @@ public:
         return m_size == other.m_size && std::equal(m_arr, m_arr + m_size, other.m_arr);
     }
 
-    ~Fa_Array() { destroy_range(m_arr, m_arr + m_size); }
-
+    ~Fa_Array() { 
+        destroy_range(m_arr, m_arr + m_size);
+        if constexpr (!std::is_same_v<_Alloc, Fa_ArenaAllocator>)
+            m_allocator->deallocate(m_arr, m_cap);
+    }
+    
     static Fa_Array with_capacity(u32 capacity)
     {
         Fa_Array a;
         if (capacity == 0)
             return a;
 
-        a.m_arr = get_allocator().allocate_array<T>(capacity);
+        a.m_arr = a.m_allocator-> template allocate_array<T>(capacity);
         assert(a.m_arr != nullptr);
         a.m_cap = capacity;
         return a;
@@ -179,14 +198,14 @@ public:
     T const* end() const noexcept { return m_arr + m_size; }
 }; // class Fa_Array
 
-template<typename T>
-void Fa_Array<T>::ensure_push_capacity()
+template<typename T, class _Alloc>
+void Fa_Array<T, _Alloc>::ensure_push_capacity()
 {
     if (m_size < m_cap)
         return;
 
     u32 new_cap = m_cap == 0 ? DEFAULT_CAP : m_cap + (m_cap >> 1);
-    T* new_arr = get_allocator().allocate_array<T>(new_cap);
+    T* new_arr = m_allocator-> template allocate_array<T>(new_cap);
     if (m_arr && m_size > 0)
         relocate(new_arr, m_arr, m_size);
 
@@ -194,16 +213,17 @@ void Fa_Array<T>::ensure_push_capacity()
     m_cap = new_cap;
 }
 
-template<typename T>
-Fa_Array<T>::Fa_Array(u32 capacity, T fill_v)
+template<typename T, class _Alloc>
+Fa_Array<T, _Alloc>::Fa_Array(u32 capacity, T fill_v, _Alloc* allocator)
 {
+    resolve_allocator(allocator);
     if (capacity > ARRAY_MAX)
         diagnostic::emit(ArrayErrorCode::ARRAY_CAPACITY_EXCEEDED, std::to_string(capacity) + " > " + std::to_string(ARRAY_MAX), diagnostic::Severity::FATAL);
 
     if (capacity == 0)
         return;
 
-    m_arr = get_allocator().allocate_array<T>(capacity);
+    m_arr = m_allocator-> template allocate_array<T>(capacity);
     m_cap = capacity;
 
     u32 i = 0;
@@ -223,39 +243,42 @@ Fa_Array<T>::Fa_Array(u32 capacity, T fill_v)
     m_size = capacity;
 }
 
-template<typename T>
-Fa_Array<T>::Fa_Array(Fa_Array const& other)
+template<typename T, class _Alloc>
+Fa_Array<T, _Alloc>::Fa_Array(Fa_Array const& other)
     : m_cap(other.m_cap)
+    , m_allocator(other.m_allocator)
 {
     if (m_cap == 0)
         return;
 
-    m_arr = get_allocator().allocate_array<T>(m_cap);
+    m_arr = m_allocator-> template allocate_array<T>(m_cap);
     assert(m_arr != nullptr);
     copy_construct_range(m_arr, other.m_arr, other.m_size);
     m_size = other.m_size;
 }
 
-template<typename T>
-Fa_Array<T>::Fa_Array(Fa_Array&& other) noexcept
+template<typename T, class _Alloc>
+Fa_Array<T, _Alloc>::Fa_Array(Fa_Array&& other) noexcept
     : m_arr(other.m_arr)
     , m_size(other.m_size)
     , m_cap(other.m_cap)
+    , m_allocator(other.m_allocator)
 {
     other.m_arr = nullptr;
     other.m_size = 0;
     other.m_cap = 0;
 }
 
-template<typename T>
-Fa_Array<T>::Fa_Array(std::initializer_list<T> list)
+template<typename T, class _Alloc>
+Fa_Array<T, _Alloc>::Fa_Array(std::initializer_list<T> list, _Alloc* allocator)
 {
+    resolve_allocator(allocator);
     if (list.size() == 0)
         return;
 
     m_size = static_cast<u32>(list.size());
     m_cap = next_capacity(m_size);
-    m_arr = get_allocator().allocate_array<T>(m_cap);
+    m_arr = m_allocator-> template allocate_array<T>(m_cap);
     assert(m_arr != nullptr);
 
     u32 i = 0;
@@ -278,8 +301,8 @@ Fa_Array<T>::Fa_Array(std::initializer_list<T> list)
     }
 }
 
-template<typename T>
-Fa_Array<T>& Fa_Array<T>::operator=(Fa_Array const& other)
+template<typename T, class _Alloc>
+Fa_Array<T, _Alloc>& Fa_Array<T, _Alloc>::operator=(Fa_Array const& other)
 {
     if (this == &other)
         return *this;
@@ -289,7 +312,7 @@ Fa_Array<T>& Fa_Array<T>::operator=(Fa_Array const& other)
 
     if (other.m_cap > m_cap) {
         // NOTE: arena – no free on m_arr here.
-        m_arr = get_allocator().allocate_array<T>(other.m_cap);
+        m_arr = m_allocator-> template allocate_array<T>(other.m_cap);
         assert(m_arr != nullptr);
         m_cap = other.m_cap;
     }
@@ -299,8 +322,8 @@ Fa_Array<T>& Fa_Array<T>::operator=(Fa_Array const& other)
     return *this;
 }
 
-template<typename T>
-Fa_Array<T>& Fa_Array<T>::operator=(Fa_Array&& other) noexcept
+template<typename T, class _Alloc>
+Fa_Array<T, _Alloc>& Fa_Array<T, _Alloc>::operator=(Fa_Array&& other) noexcept
 {
     if (this == &other)
         return *this;
@@ -319,8 +342,8 @@ Fa_Array<T>& Fa_Array<T>::operator=(Fa_Array&& other) noexcept
     return *this;
 }
 
-template<typename T>
-void Fa_Array<T>::push(T const& val)
+template<typename T, class _Alloc>
+void Fa_Array<T, _Alloc>::push(T const& val)
 {
     ensure_push_capacity();
     if constexpr (TRIVIAL_COPY)
@@ -330,8 +353,8 @@ void Fa_Array<T>::push(T const& val)
     m_size += 1;
 }
 
-template<typename T>
-void Fa_Array<T>::push(T&& val)
+template<typename T, class _Alloc>
+void Fa_Array<T, _Alloc>::push(T&& val)
 {
     ensure_push_capacity();
     if constexpr (TRIVIAL_COPY)
@@ -341,8 +364,8 @@ void Fa_Array<T>::push(T&& val)
     m_size += 1;
 }
 
-template<typename T>
-T Fa_Array<T>::pop()
+template<typename T, class _Alloc>
+T Fa_Array<T, _Alloc>::pop()
 {
     assert(m_size > 0 && "Fa_Array::pop — array is empty");
     m_size -= 1;
@@ -355,14 +378,14 @@ T Fa_Array<T>::pop()
     }
 }
 
-template<typename T>
-void Fa_Array<T>::reserve(u32 const s)
+template<typename T, class _Alloc>
+void Fa_Array<T, _Alloc>::reserve(u32 const s)
 {
     if (s <= m_cap)
         return;
 
     u32 const rounded = next_capacity(s);
-    T* new_arr = get_allocator().allocate_array<T>(rounded);
+    T* new_arr = m_allocator-> template allocate_array<T>(rounded);
     assert(new_arr != nullptr);
 
     if (m_arr && m_size > 0)
@@ -373,8 +396,8 @@ void Fa_Array<T>::reserve(u32 const s)
     m_cap = rounded;
 }
 
-template<typename T>
-void Fa_Array<T>::resize(u32 const s)
+template<typename T, class _Alloc>
+void Fa_Array<T, _Alloc>::resize(u32 const s)
 {
     if (s < m_size) {
         destroy_range(m_arr + s, m_arr + m_size);
@@ -401,8 +424,8 @@ void Fa_Array<T>::resize(u32 const s)
     }
 }
 
-template<typename T>
-void Fa_Array<T>::erase(u32 const at)
+template<typename T, class _Alloc>
+void Fa_Array<T, _Alloc>::erase(u32 const at)
 {
     if (at >= m_size)
         diagnostic::emit(ArrayErrorCode::ARRAY_OUT_OF_BOUNDS, diagnostic::Severity::FATAL);
@@ -422,8 +445,8 @@ void Fa_Array<T>::erase(u32 const at)
     m_size -= 1;
 }
 
-template<typename T>
-T* Fa_Array<T>::erase(T const* p)
+template<typename T, class _Alloc>
+T* Fa_Array<T, _Alloc>::erase(T const* p)
 {
     if (p < m_arr || p >= m_arr + m_size)
         return const_cast<T*>(p);
@@ -452,10 +475,10 @@ static Fa_Array<T> make_array(Args&&... args)
     return get_allocator().allocate_array<T>(std::forward<Args>(args)...);
 }
 
-template<typename T>
+template<typename T, class _Alloc = Fa_ArenaAllocator>
 class Fa_Set {
 private:
-    Fa_Array<T> m_arr;
+    Fa_Array<T, _Alloc> m_arr;
 
 public:
     Fa_Set() = default;
