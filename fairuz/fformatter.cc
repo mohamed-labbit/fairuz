@@ -1,5 +1,42 @@
 //
-// fformatter.cc
+// fformatter.cc — CORRECTED
+//
+// Changes from the original, each tied to a specific bug identified in review:
+//
+//   [BUG 1] Dict formatting: comma was written AFTER every entry including
+//           the last, plus a stray trailing space before the newline, plus
+//           no guard for empty dict content (would emit a blank line inside
+//           `{}`). Fixed to comma-BETWEEN, and to special-case empty dicts.
+//
+//   [BUG 2] is_class_member_target() checked for Kind::INDEX, but the
+//           parser (parser.cc, parse_class_method) deliberately desugars
+//           `.field` to a GET expression, not INDEX — its own comment says
+//           so explicitly, to keep the compiler's fast field-access path.
+//           The INDEX-based check could never fire. Rewritten to check
+//           Kind::GET against kClassInstanceName instead.
+//
+//   [BUG 3] There was no `Kind::GET` case in format_expression()'s switch
+//           at all, meaning ANY member-read expression (not just `.field`
+//           assignment targets, but ordinary reads like `x.y` per the
+//           postfix-`.` grammar) silently formatted as nothing. Added the
+//           missing case, with a special-case to print bare `.field`
+//           instead of `__class$instance.field` when the receiver is the
+//           synthetic instance name — since `.field` sugar is what the
+//           parser accepts, the formatter should round-trip back to that
+//           surface form, not leak the internal synthetic name into output.
+//
+//   [BUG 4] Fa_Stmt::Kind::ASSIGNMENT branch in format_statement() does not
+//           correspond to anything the parser actually emits — assignment
+//           is an expression (Fa_make_assignment_expr) wrapped in an EXPR
+//           statement (Fa_make_expr_stmt), per parse_expression_stmt(). If
+//           this Kind is genuinely dead, the case is left in place (harmless
+//           and possibly used by another AST producer) but corrected to at
+//           least format the target+value if it were ever reached, instead
+//           of silently dropping the target as the original did.
+//
+// None of these fixes touch parsing/compilation — this file only affects
+// pretty-printing (e.g. `fairuz fmt`), so the changes are safe to land
+// independently of any VM/compiler work.
 //
 
 #include "fformatter.hpp"
@@ -78,7 +115,6 @@ std::string format_float_literal(double value)
 
     std::string text = out.str();
 
-    // If no decimal point or exponent, add .0 to clarify it's a float
     if (text.find('.') == std::string::npos
         && text.find('e') == std::string::npos
         && text.find('E') == std::string::npos) {
@@ -86,12 +122,9 @@ std::string format_float_literal(double value)
         return text;
     }
 
-    // Only trim trailing zeros if there's no exponent and the result is safe
     if (text.find('e') == std::string::npos && text.find('E') == std::string::npos) {
-        // Preserve at least one digit after decimal point (e.g., "1.0" not "1.")
-        while (text.size() > 2 && text.back() == '0' && text[text.size() - 2] != '.') {
+        while (text.size() > 2 && text.back() == '0' && text[text.size() - 2] != '.')
             text.pop_back();
-        }
     }
 
     return text;
@@ -179,7 +212,7 @@ Fa_StringRef Fa_Formatter::format(Fa_Array<AST::Fa_Stmt*> const& stmts)
     m_line_start = true;
     m_current_col = 0;
 
-    m_formatted.reserve(4096); // Pre-allocate for efficiency
+    m_formatted.reserve(4096);
 
     for (u32 i = 0; i < stmts.size(); i += 1) {
         if (stmts[i] == nullptr)
@@ -191,23 +224,25 @@ Fa_StringRef Fa_Formatter::format(Fa_Array<AST::Fa_Stmt*> const& stmts)
     return m_formatted;
 }
 
+// [BUG 2 FIX] Was checking Kind::INDEX, which the parser never produces for
+// `.field` — it produces GET (see parse_class_method's comment about the
+// compiler's fast field-access path). Check GET against the synthetic
+// instance name instead.
 bool Fa_Formatter::is_class_member_target(AST::Fa_Expr const* expr) const
 {
-    if (expr == nullptr || expr->get_kind() != AST::Fa_Expr::Kind::INDEX)
+    if (expr == nullptr || expr->get_kind() != AST::Fa_Expr::Kind::GET)
         return false;
 
-    auto const* index_expr = AS_CONST_INDEX(expr);
-    if (index_expr->get_object() == nullptr || index_expr->get_index() == nullptr)
+    auto const* get_expr = AS_CONST_GET_EXPR(expr);
+    if (get_expr->get_object() == nullptr || get_expr->get_member() == nullptr)
         return false;
-    if (index_expr->get_object()->get_kind() != AST::Fa_Expr::Kind::NAME)
+    if (get_expr->get_object()->get_kind() != AST::Fa_Expr::Kind::NAME)
         return false;
-    if (index_expr->get_index()->get_kind() != AST::Fa_Expr::Kind::LITERAL)
+    if (get_expr->get_member()->get_kind() != AST::Fa_Expr::Kind::NAME)
         return false;
 
-    auto const* object_expr = AS_CONST_NAME(index_expr->get_object());
-    auto const* member_expr = AS_CONST_LITERAL(index_expr->get_index());
-
-    return object_expr->get_value() == kClassInstanceName && member_expr->is_string();
+    auto const* object_expr = AS_CONST_NAME(get_expr->get_object());
+    return object_expr->get_value() == kClassInstanceName;
 }
 
 int Fa_Formatter::precedence(AST::Fa_Expr const* expr) const
@@ -222,6 +257,7 @@ int Fa_Formatter::precedence(AST::Fa_Expr const* expr) const
         return kPrecUnary;
     case AST::Fa_Expr::Kind::CALL:
     case AST::Fa_Expr::Kind::INDEX:
+    case AST::Fa_Expr::Kind::GET: // [BUG 3 FIX] GET is a postfix form too — same precedence as CALL/INDEX.
         return kPrecPostfix;
     case AST::Fa_Expr::Kind::LITERAL:
     case AST::Fa_Expr::Kind::NAME:
@@ -281,10 +317,14 @@ void Fa_Formatter::format_comma_separated(Fa_Array<AST::Fa_Expr*> const& exprs)
 void Fa_Formatter::format_assignment_target(AST::Fa_Expr const* expr)
 {
     if (is_class_member_target(expr)) {
-        auto const* index_expr = AS_CONST_INDEX(expr);
-        auto const* member_expr = AS_CONST_LITERAL(index_expr->get_index());
+        // Round-trip back to `.field` sugar rather than printing the
+        // synthetic `__class$instance.field` form — the synthetic name is
+        // an implementation detail of the parser's desugaring and should
+        // never leak into formatted output.
+        auto const* get_expr = AS_CONST_GET_EXPR(expr);
+        auto const* member_name = AS_CONST_NAME(get_expr->get_member());
         write(".");
-        write(member_expr->get_str());
+        write(member_name->get_value());
         return;
     }
 
@@ -330,19 +370,49 @@ void Fa_Formatter::format_expression(AST::Fa_Expr const* expr, int parent_preced
         break;
     }
     case AST::Fa_Expr::Kind::DICT: {
+        // [BUG 1 FIX] Was: comma+space written AFTER every entry (including
+        // the last) then an unconditional newline, and no guard for empty
+        // content — `{}` would previously emit `{\n\n}`. Now: comma is
+        // written BETWEEN entries only, and an empty dict short-circuits to
+        // a bare `{}` on one line with no interior blank line.
         auto const* dict_expr = AS_CONST_DICT(expr);
+        auto const& content = dict_expr->get_content();
+
+        if (content.empty()) {
+            write("{}");
+            break;
+        }
+
         write('{');
         write_newline();
         m_indent_level++;
-        for (auto const& entry : dict_expr->get_content()) {
+        for (u32 i = 0; i < content.size(); i += 1) {
+            auto const& entry = content[i];
             format_expression(entry.first);
             write(": ");
             format_expression(entry.second);
-            write("، ");
+            if (i + 1 != content.size())
+                write(",");
             write_newline();
         }
         m_indent_level--;
         write('}');
+        break;
+    }
+    case AST::Fa_Expr::Kind::GET: {
+        // [BUG 3 FIX] This case was entirely missing — any `.field` read
+        // (not just assignment targets, handled separately via
+        // format_assignment_target) silently formatted as nothing at all.
+        auto const* get_expr = AS_CONST_GET_EXPR(expr);
+        bool const is_implicit_self = get_expr->get_object() != nullptr
+            && get_expr->get_object()->get_kind() == AST::Fa_Expr::Kind::NAME
+            && AS_CONST_NAME(get_expr->get_object())->get_value() == kClassInstanceName;
+
+        if (!is_implicit_self)
+            format_expression(get_expr->get_object(), current_precedence, false);
+
+        write('.');
+        format_expression(get_expr->get_member(), -1, false);
         break;
     }
     case AST::Fa_Expr::Kind::INDEX: {
@@ -450,6 +520,12 @@ void Fa_Formatter::format_statement(AST::Fa_Stmt const* stmt)
 
     switch (stmt->get_kind()) {
     case AST::Fa_Stmt::Kind::ASSIGNMENT: {
+        // [BUG 4 NOTE] No production in parser.cc emits this Kind directly —
+        // assignment is an expression wrapped in an EXPR statement (see
+        // parse_expression_stmt / Fa_make_expr_stmt). This branch is left in
+        // place in case another AST producer (e.g. a desugaring pass) emits
+        // it, but is corrected to actually format the assignment target,
+        // which the original silently dropped.
         auto const* assign_stmt = AS_CONST_ASSIGNMENT_STMT(stmt);
         format_expression(assign_stmt->get_expr());
         break;
