@@ -122,6 +122,7 @@ if(BUILD_TESTS)
         -march=native          # use all instructions available on this specific CPU
         -flto                  # link-time optimization — inlines across TUs
         -ffast-math            # relaxed float semantics, faster but breaks IEEE edge cases
+        -fno-strict-aliasing
     )
 
     target_link_libraries(fairuz_tests
