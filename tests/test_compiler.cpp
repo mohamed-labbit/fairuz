@@ -839,7 +839,7 @@ TEST(CompilerDict, LiteralLowersToNativeConstructorCall)
         dump(chunk);
 
     BytecodeChecker bc(*chunk);
-    bc.m_next("LOAD_GLOBAL جدول").op(Fa_OpCode::LOAD_GLOBAL).A(1).Bx(0);
+    bc.m_next("LOAD_GLOBAL قاموس").op(Fa_OpCode::LOAD_GLOBAL).A(1).Bx(0);
     bc.m_next("LOAD_CONST key a").op(Fa_OpCode::LOAD_CONST).A(2).Bx(1);
     bc.m_next("LOAD_INT value 1").op(Fa_OpCode::LOAD_INT).A(3).Bx(load_int_bx(1));
     bc.m_next("LOAD_CONST key b").op(Fa_OpCode::LOAD_CONST).A(4).Bx(2);
@@ -851,7 +851,7 @@ TEST(CompilerDict, LiteralLowersToNativeConstructorCall)
 
     ASSERT_EQ(chunk->constants.size(), 3u);
     EXPECT_TRUE(Fa_IS_STRING(chunk->constants[0]));
-    EXPECT_EQ(Fa_AS_STRING(chunk->constants[0])->str, "جدول");
+    EXPECT_EQ(Fa_AS_STRING(chunk->constants[0])->str, "قاموس");
     EXPECT_TRUE(Fa_IS_STRING(chunk->constants[1]));
     EXPECT_EQ(Fa_AS_STRING(chunk->constants[1])->str, "a");
     EXPECT_TRUE(Fa_IS_STRING(chunk->constants[2]));

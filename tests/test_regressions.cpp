@@ -79,7 +79,7 @@ TEST(RegressionCli, DemoElseAcceptsTrailingTimeFlag)
 
 TEST(RegressionNatives, StringListDemoOutput)
 {
-    auto program = write_program("اكتب(join([\"alpha\", \"beta\", \"gamma\", \"delta\"], \"|\"))\nاكتب(contains(\"alphabet\", \"alpha\"))\n");
+    auto program = write_program("اكتب(اجمع([\"alpha\", \"beta\", \"gamma\", \"delta\"], \"|\"))\nاكتب(يحتوي(\"alphabet\", \"alpha\"))\n");
     RunResult r = run_installed(binary_path(), program);
     EXPECT_EQ(r.exit_code, 0);
     EXPECT_NE(r.out.find("alpha|beta|gamma|delta"), std::string::npos);
@@ -88,7 +88,7 @@ TEST(RegressionNatives, StringListDemoOutput)
 
 TEST(RegressionNatives, NumericDemoOutput)
 {
-    auto program = write_program("اكتب(floor(1024.9))\nاكتب(ceil(189.1))\n");
+    auto program = write_program("اكتب(ادنى(1024.9))\nاكتب(اعلى(189.1))\n");
     RunResult r = run_installed(binary_path(), program);
     EXPECT_EQ(r.exit_code, 0);
     EXPECT_NE(r.out.find("1024"), std::string::npos);

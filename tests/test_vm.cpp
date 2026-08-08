@@ -968,7 +968,7 @@ TEST(VMCalls, ICCallNativeLen)
         .ABC(Fa_OpCode::LIST_APPEND, 0, 2, 0)
         .load_int(2, 3)
         .ABC(Fa_OpCode::LIST_APPEND, 0, 2, 0)
-        .ldg(1, "حجم")
+        .ldg(1, "طول")
         .mov(2, 0)
         .ABC(Fa_OpCode::IC_CALL, 1, 1, 0)
         .ret(1);
@@ -2603,7 +2603,7 @@ TEST(VMPerfTest, NativeCall_Len_50k_ICHot)
             assign_stmt(name_expr("last"), lit_int(0)),
             while_stmt(
                 binary(name_expr("i"), name_expr("limit"), AST::Fa_BinaryOp::OP_LT),
-                blk({ assign_stmt(name_expr("last"), call_expr(name_expr("len"), list_expr({ name_expr("s") }))),
+                blk({ assign_stmt(name_expr("last"), call_expr(name_expr("طول"), list_expr({ name_expr("s") }))),
                     assign_stmt(
                         name_expr("i"),
                         binary(name_expr("i"), lit_int(1), AST::Fa_BinaryOp::OP_ADD)) })),
@@ -2758,7 +2758,7 @@ TEST(VMPerfStressTest, NativeCall_Len_1M_ICHot)
             assign_stmt(name_expr("last"), lit_int(0)),
             while_stmt(
                 binary(name_expr("i"), name_expr("limit"), AST::Fa_BinaryOp::OP_LT),
-                blk({ assign_stmt(name_expr("last"), call_expr(name_expr("len"), list_expr({ name_expr("s") }))),
+                blk({ assign_stmt(name_expr("last"), call_expr(name_expr("طول"), list_expr({ name_expr("s") }))),
                     assign_stmt(
                         name_expr("i"),
                         binary(name_expr("i"), lit_int(1), AST::Fa_BinaryOp::OP_ADD)) })),
