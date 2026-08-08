@@ -49,11 +49,30 @@ public:
         u32 field_count, Fa_StringRef* methods, u32 method_count, Fa_Chunk** vtable, u32 vtable_size);
     Fa_ObjInstance* make_obj_instance(Fa_ObjClass* klass);
 
+    /* allocator api */
+    template<typename T>
+    T* allocate_array(const u32 count) {
+        return static_cast<T*>(allocate(count * sizeof(T)));
+    }
+
+    void* allocate(const u32 size) {
+        void *mem = ::operator new(size, std::nothrow);
+        if (mem == nullptr)
+            diagnostic::panic(diagnostic::errc::general::Code::ALLOC_FAILED);
+        m_current_size += size;
+        return mem;
+    }
+
+    void deallocate(void* ptr, const u32 size) {
+        ::operator delete(ptr);
+        m_current_size -= size;
+    }
 private:
     void mark_roots(Fa_VM* vm);
     void mark_object(Fa_ObjHeader* p);
     void blacken_object(Fa_ObjHeader* obj);
     void sweep();
+    void mark_value_array(Fa_Array<Fa_Value, /*_Alloc=*/Fa_GarbageCollector> const& arr);
     void mark_value_array(Fa_Array<Fa_Value> const& arr);
     void trace_references();
 }; // class Fa_GarbageCollector

@@ -1,4 +1,5 @@
 #include "fgc.hpp"
+#include "farray.hpp"
 #include "fdiagnostic.hpp"
 #include "fmacros.hpp"
 #include "fstring.hpp"
@@ -80,10 +81,7 @@ void Fa_GarbageCollector::blacken_object(Fa_ObjHeader* obj)
     case Fa_ObjType::INSTANCE: {
         Fa_ObjInstance* inst = Fa_obj_cast<Fa_ObjInstance>(obj, Fa_ObjType::INSTANCE);
         mark_object(&inst->klass->obj);
-        for (u32 i = 0, n = inst->field_count; i < n; i += 1) {
-            if (Fa_IS_OBJECT(inst->fields[i]))
-                mark_object(Fa_AS_OBJECT(inst->fields[i]));
-        }
+        mark_value_array(inst->fields);
         break;
     }
     case Fa_ObjType::LIST: {
@@ -120,6 +118,14 @@ void Fa_GarbageCollector::sweep()
             obj->is_marked = false;
             i += 1;
         }
+    }
+}
+
+void Fa_GarbageCollector::mark_value_array(Fa_Array<Fa_Value, /*_Alloc=*/Fa_GarbageCollector> const& arr)
+{
+    for (u32 i = 0, n = arr.size(); i < n; i += 1) {
+        if (Fa_IS_OBJECT(arr[i]))
+            mark_object(Fa_AS_OBJECT(arr[i]));
     }
 }
 
@@ -176,9 +182,26 @@ Fa_ObjString* Fa_GarbageCollector::make_obj_string(char* str)
     return make_obj_string(static_cast<char const*>(str));
 }
 
+/*
 Fa_ObjList* Fa_GarbageCollector::make_obj_list()
 {
     auto ret = make<Fa_ObjList>();
+    return ret;
+}
+*/
+
+Fa_ObjList* Fa_GarbageCollector::make_obj_list()
+{
+    void* mem = ::operator new(sizeof(Fa_ObjList), std::nothrow);
+    if (mem == nullptr)
+        diagnostic::panic(diagnostic::errc::general::Code::ALLOC_FAILED);
+    
+    auto elems = Fa_Array<Fa_Value, /*_Alloc=*/ Fa_GarbageCollector>{this};
+
+    Fa_ObjList* ret = new (mem) Fa_ObjList(elems);
+
+    m_all.push(&ret->obj);
+    m_current_size += sizeof(Fa_ObjList);
     return ret;
 }
 
@@ -236,18 +259,8 @@ Fa_ObjInstance* Fa_GarbageCollector::make_obj_instance(Fa_ObjClass* klass)
 {
     assert(klass != nullptr && "instance must be constructed with a valid class");
 
-    Fa_Value* fields = nullptr;
-    if (klass->field_count > 0) {
-        fields = new (std::nothrow) Fa_Value[klass->field_count];
-        if (fields == nullptr)
-            diagnostic::panic(diagnostic::errc::general::Code::ALLOC_FAILED);
-        for (u32 i = 0; i < klass->field_count; i += 1)
-            fields[i] = NIL_VAL;
-    }
-
-    Fa_ObjInstance* obj = make<Fa_ObjInstance>();
-    obj->field_count = klass->field_count;
-    obj->fields = fields;
+    Fa_Array<Fa_Value, /*_Alloc=*/Fa_GarbageCollector> fields{klass->field_count, Fa_MAKE_NIL(), this};
+    Fa_ObjInstance* obj = make<Fa_ObjInstance>(fields);
     obj->klass = klass;
 
     return obj;
