@@ -23,6 +23,7 @@ static std::unordered_map<std::string_view, Fa_TokenType> const& get_keywords()
         { "ارجع", Fa_TokenType::KW_RETURN },
         { "طالما", Fa_TokenType::KW_WHILE },
         { "نوع", Fa_TokenType::KW_CLASS },
+        { "هذا", Fa_TokenType::KW_THIS },
     };
     return map;
 }
@@ -56,6 +57,11 @@ static std::unordered_map<std::string_view, Fa_TokenType> const& get_operators()
         { "/=", Fa_TokenType::OP_SLASHEQ },
         { "%=", Fa_TokenType::OP_PERCENTEQ },
         { "٪=", Fa_TokenType::OP_PERCENTEQ },
+        { "&=", Fa_TokenType::OP_ANDEQ },
+        { "|=", Fa_TokenType::OP_OREQ },
+        { "^=", Fa_TokenType::OP_XOREQ },
+        { "<<=", Fa_TokenType::OP_LSHIFTEQ },
+        { ">>=", Fa_TokenType::OP_RSHIFTEQ },
     };
     return map;
 }

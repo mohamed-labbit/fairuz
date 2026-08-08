@@ -21,6 +21,7 @@ enum class Fa_TokenType : int {
     KW_NIL,
     KW_TRUE,
     KW_CLASS,
+    KW_THIS,
     OP_AND,
     OP_OR,
     OP_NOT,

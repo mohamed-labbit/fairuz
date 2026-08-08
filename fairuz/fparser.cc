@@ -77,9 +77,16 @@ AST::Fa_BinaryOp augmented_assign_to_binary_op(TokType t)
 
 bool is_augmented_assign_tok(TokenPtr t)
 {
-    return t->is(TokType::OP_PLUSEQ) || t->is(TokType::OP_MINUSEQ)
-        || t->is(TokType::OP_STAREQ) || t->is(TokType::OP_SLASHEQ)
-        || t->is(TokType::OP_PERCENTEQ);
+    return t->is(TokType::OP_PLUSEQ)
+        || t->is(TokType::OP_MINUSEQ)
+        || t->is(TokType::OP_STAREQ)
+        || t->is(TokType::OP_SLASHEQ)
+        || t->is(TokType::OP_PERCENTEQ)
+        || t->is(TokType::OP_ANDEQ)
+        || t->is(TokType::OP_OREQ)
+        || t->is(TokType::OP_XOREQ)
+        || t->is(TokType::OP_LSHIFTEQ)
+        || t->is(TokType::OP_RSHIFTEQ);
 }
 
 // Conservative definite-return check used to warn about missing returns.
@@ -298,9 +305,8 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_for_stmt()
     auto* target = AST::Fa_make_name(current_token()->lexeme(), current_token()->location());
     advance();
 
-    // Accept both the lexer keyword KW_IN and the Arabic identifier "في".
-    bool saw_in = match(TokType::KW_IN);
-    if (!saw_in && check(TokType::IDENTIFIER) && current_token()->lexeme() == "في") {
+    bool saw_in = false;
+    if (!check(TokType::IDENTIFIER)) {
         advance();
         saw_in = true;
     }
@@ -755,6 +761,9 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_primary_expr()
 
     if (match(TokType::KW_NIL))
         return AST::Fa_make_literal_nil(cur->location());
+
+    if (match(TokType::KW_THIS))
+        return AST::Fa_make_name(kClassInstanceName, cur->location());
 
     if (match(TokType::IDENTIFIER))
         return AST::Fa_make_name(cur->lexeme(), cur->location());
