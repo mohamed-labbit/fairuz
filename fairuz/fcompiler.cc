@@ -1091,7 +1091,7 @@ Fa_ExprResult Compiler::compile_dict_impl(AST::Fa_DictExpr* e)
 {
     Fa_SourceLocation loc = e->get_location();
     u8 fn_reg = alloc_register();
-    u16 kidx = intern_string("جدول");
+    u16 kidx = intern_string("قاموس");
     emit(Fa_make_ABx(Fa_OpCode::LOAD_GLOBAL, fn_reg, kidx), loc);
 
     RegMark mark(m_current);
