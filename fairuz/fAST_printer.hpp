@@ -48,6 +48,8 @@ private:
         case Fa_BinaryOp::OP_BITXOR: return "^";
         case Fa_BinaryOp::OP_LSHIFT: return "<<";
         case Fa_BinaryOp::OP_RSHIFT: return ">>";
+        case Fa_BinaryOp::OP_AND: return "و"; // logical and
+        case Fa_BinaryOp::OP_OR: return "أو"; // logical or
         default: return "";
         }
     }
@@ -86,7 +88,9 @@ private:
             else if (l->is_string())
                 std::cout << color("Literal", Color::GREEN) << "(" << l->get_str() << ")\n";
             else if (l->is_bool())
-                std::cout << color("Literal", Color::GREEN) << "(" << l->get_bool() << ")\n";
+                std::cout << color("Literal", Color::GREEN) << "(" << (l->get_bool() ? "true" : "false") << ")\n";
+            else if (l->is_nil())
+                std::cout << color("Literal", Color::GREEN) << "(nil)\n";
             break;
         }
 
@@ -131,6 +135,40 @@ private:
             print_expr(a->get_target(), { p.indent + pipe(p.last) + "│  ", true });
             std::cout << p.indent + pipe(p.last) << "└─ value:\n";
             print_expr(a->get_value(), { p.indent + pipe(p.last) + "   ", true });
+            break;
+        }
+
+        case Fa_Expr::Kind::INDEX: {
+            auto ix = static_cast<Fa_IndexExpr const*>(e);
+            std::cout << color("Index", Color::MAGENTA) << (ix->is_safe() ? " (safe)" : "") << "\n";
+            std::cout << p.indent + pipe(p.last) << "├─ object:\n";
+            print_expr(ix->get_object(), { p.indent + pipe(p.last) + "│  ", true });
+            std::cout << p.indent + pipe(p.last) << "└─ index:\n";
+            print_expr(ix->get_index(), { p.indent + pipe(p.last) + "   ", true });
+            break;
+        }
+
+        case Fa_Expr::Kind::DICT: {
+            auto d = AS_CONST_DICT(e);
+            auto content = d->get_content();
+            std::cout << color("Dict", Color::BLUE) << " {" << content.size() << "}\n";
+            for (size_t i = 0; i < content.size(); i += 1) {
+                bool const last_pair = i + 1 == content.size();
+                std::cout << p.indent + pipe(p.last) << glyph(last_pair) << "pair:\n";
+                std::string const inner = p.indent + pipe(p.last) + pipe(last_pair);
+                print_expr(content[i].first, { inner, false });
+                print_expr(content[i].second, { inner, true });
+            }
+            break;
+        }
+
+        case Fa_Expr::Kind::GET: {
+            auto g = AS_CONST_GET_EXPR(e);
+            std::cout << color("Get", Color::MAGENTA) << " .\n";
+            std::cout << p.indent + pipe(p.last) << "├─ object:\n";
+            print_expr(g->get_object(), { p.indent + pipe(p.last) + "│  ", true });
+            std::cout << p.indent + pipe(p.last) << "└─ member:\n";
+            print_expr(g->get_member(), { p.indent + pipe(p.last) + "   ", true });
             break;
         }
 
@@ -200,8 +238,51 @@ private:
                 print_stmt(b->get_statements()[i], { p.indent + pipe(p.last), i + 1 == b->get_statements().size() });
         } break;
 
-        default:
-            std::cout << color("<unknown stmt>", Color::RED) << "\n";
+        case Fa_Stmt::Kind::ASSIGNMENT: {
+            auto a = AS_CONST_ASSIGNMENT_STMT(s);
+            std::cout << color("AssignmentStmt", Color::YELLOW) << (a->is_declaration() ? " (decl) :=" : " :=") << "\n";
+            std::cout << p.indent + pipe(p.last) << "├─ target:\n";
+            print_expr(a->get_target(), { p.indent + pipe(p.last) + "│  ", true });
+            std::cout << p.indent + pipe(p.last) << "└─ value:\n";
+            print_expr(a->get_value(), { p.indent + pipe(p.last) + "   ", true });
+        } break;
+
+        case Fa_Stmt::Kind::FOR: {
+            auto f = AS_CONST_FOR(s);
+            std::cout << color("For", Color::BOLD) << "\n";
+            std::cout << p.indent + pipe(p.last) << "├─ target:\n";
+            print_expr(f->get_target(), { p.indent + pipe(p.last) + "│  ", true });
+            std::cout << p.indent + pipe(p.last) << "├─ iter:\n";
+            print_expr(f->get_iter(), { p.indent + pipe(p.last) + "│  ", true });
+            std::cout << p.indent + pipe(p.last) << "└─ body:\n";
+            print_stmt(f->get_body(), { p.indent + pipe(p.last) + "   ", true });
+        } break;
+
+        case Fa_Stmt::Kind::BREAK: std::cout << color("Break", Color::BOLD) << "\n"; break;
+        case Fa_Stmt::Kind::CONTINUE: std::cout << color("Continue", Color::BOLD) << "\n"; break;
+
+        case Fa_Stmt::Kind::CLASS_DEF: {
+            auto c = AS_CONST_CLASS_DEF(s);
+            auto members = c->get_members();
+            auto methods = c->get_methods();
+            std::cout << color("ClassDef", Color::BOLD) << "\n";
+            std::cout << p.indent + pipe(p.last) << "├─ name:\n";
+            print_expr(c->get_name(), { p.indent + pipe(p.last) + "│  ", true });
+
+            bool const has_methods = !methods.empty();
+            std::cout << p.indent + pipe(p.last) << (has_methods ? "├─" : "└─") << " members:\n";
+            std::string const members_prefix = p.indent + pipe(p.last) + (has_methods ? "│  " : "   ");
+            for (size_t i = 0; i < members.size(); i += 1)
+                print_expr(members[i], { members_prefix, i + 1 == members.size() });
+
+            if (has_methods) {
+                std::cout << p.indent + pipe(p.last) << "└─ methods:\n";
+                for (size_t i = 0; i < methods.size(); i += 1)
+                    print_stmt(methods[i], { p.indent + pipe(p.last) + "   ", i + 1 == methods.size() });
+            }
+        } break;
+
+        default: std::cout << color("<unknown stmt>", Color::RED) << "\n";
         }
     }
 
