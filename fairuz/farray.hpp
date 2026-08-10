@@ -5,8 +5,8 @@
 #include "fdiagnostic.hpp"
 #include "fmacros.hpp"
 
-#include <bit>
 #include <assert.h>
+#include <bit>
 #include <initializer_list>
 #include <type_traits>
 
@@ -59,7 +59,7 @@ class Fa_Array {
                     ::new (static_cast<void*>(dst + i)) T(src[i]);
             } catch (...) {
                 destroy_range(dst, dst + i);
-                diagnostic::emit(GenericErrorCode::INTERNAL_ERROR, diagnostic::Severity::FATAL);
+                diagnostic::panic(GenericErrorCode::INTERNAL_ERROR);
             }
         }
     }
@@ -81,7 +81,8 @@ class Fa_Array {
 
     void ensure_push_capacity();
 
-    void resolve_allocator(_Alloc* allocator) {
+    void resolve_allocator(_Alloc* allocator)
+    {
         if constexpr (std::is_same_v<_Alloc, Fa_ArenaAllocator>) {
             if (allocator == nullptr) {
                 m_allocator = get_allocator_ptr();
@@ -94,6 +95,7 @@ class Fa_Array {
             m_allocator = allocator;
         }
     }
+
 public:
     Fa_Array(_Alloc* allocator = nullptr) { resolve_allocator(allocator); }
     explicit Fa_Array(u32 capacity, T fill_v = T(), _Alloc* allocator = nullptr);
@@ -109,19 +111,20 @@ public:
         return m_size == other.m_size && std::equal(m_arr, m_arr + m_size, other.m_arr);
     }
 
-    ~Fa_Array() { 
+    ~Fa_Array()
+    {
         destroy_range(m_arr, m_arr + m_size);
         if constexpr (!std::is_same_v<_Alloc, Fa_ArenaAllocator>)
             m_allocator->deallocate(m_arr, m_cap);
     }
-    
+
     static Fa_Array with_capacity(u32 capacity)
     {
         Fa_Array a;
         if (capacity == 0)
             return a;
 
-        a.m_arr = a.m_allocator-> template allocate_array<T>(capacity);
+        a.m_arr = a.m_allocator->template allocate_array<T>(capacity);
         assert(a.m_arr != nullptr);
         a.m_cap = capacity;
         return a;
@@ -157,7 +160,7 @@ public:
     T& back()
     {
         if (m_size == 0)
-            diagnostic::emit(ArrayErrorCode::ARRAY_EMPTY_BACK, diagnostic::Severity::FATAL);
+            diagnostic::fatal_error(ArrayErrorCode::ARRAY_EMPTY_BACK);
 
         return m_arr[m_size - 1];
     }
@@ -165,7 +168,7 @@ public:
     T const& back() const
     {
         if (m_size == 0)
-            diagnostic::emit(ArrayErrorCode::ARRAY_EMPTY_BACK, diagnostic::Severity::FATAL);
+            diagnostic::fatal_error(ArrayErrorCode::ARRAY_EMPTY_BACK);
 
         return m_arr[m_size - 1];
     }
@@ -173,7 +176,7 @@ public:
     T& front()
     {
         if (m_size == 0)
-            diagnostic::emit(ArrayErrorCode::ARRAY_EMPTY_FRONT, diagnostic::Severity::FATAL);
+            diagnostic::fatal_error(ArrayErrorCode::ARRAY_EMPTY_FRONT);
 
         return m_arr[0];
     }
@@ -181,7 +184,7 @@ public:
     T const& front() const
     {
         if (m_size == 0)
-            diagnostic::emit(ArrayErrorCode::ARRAY_EMPTY_FRONT, diagnostic::Severity::FATAL);
+            diagnostic::fatal_error(ArrayErrorCode::ARRAY_EMPTY_FRONT);
 
         return m_arr[0];
     }
@@ -205,7 +208,7 @@ void Fa_Array<T, _Alloc>::ensure_push_capacity()
         return;
 
     u32 new_cap = m_cap == 0 ? DEFAULT_CAP : m_cap + (m_cap >> 1);
-    T* new_arr = m_allocator-> template allocate_array<T>(new_cap);
+    T* new_arr = m_allocator->template allocate_array<T>(new_cap);
     if (m_arr && m_size > 0)
         relocate(new_arr, m_arr, m_size);
 
@@ -218,12 +221,13 @@ Fa_Array<T, _Alloc>::Fa_Array(u32 capacity, T fill_v, _Alloc* allocator)
 {
     resolve_allocator(allocator);
     if (capacity > ARRAY_MAX)
-        diagnostic::emit(ArrayErrorCode::ARRAY_CAPACITY_EXCEEDED, std::to_string(capacity) + " > " + std::to_string(ARRAY_MAX), diagnostic::Severity::FATAL);
+        diagnostic::fatal_error(ArrayErrorCode::ARRAY_CAPACITY_EXCEEDED,
+            std::to_string(capacity) + " > " + std::to_string(ARRAY_MAX));
 
     if (capacity == 0)
         return;
 
-    m_arr = m_allocator-> template allocate_array<T>(capacity);
+    m_arr = m_allocator->template allocate_array<T>(capacity);
     m_cap = capacity;
 
     u32 i = 0;
@@ -237,7 +241,7 @@ Fa_Array<T, _Alloc>::Fa_Array(u32 capacity, T fill_v, _Alloc* allocator)
         }
     } catch (...) {
         destroy_range(m_arr, m_arr + i);
-        diagnostic::emit(GenericErrorCode::INTERNAL_ERROR, diagnostic::Severity::FATAL);
+        diagnostic::fatal_error(GenericErrorCode::INTERNAL_ERROR);
     }
 
     m_size = capacity;
@@ -251,7 +255,7 @@ Fa_Array<T, _Alloc>::Fa_Array(Fa_Array const& other)
     if (m_cap == 0)
         return;
 
-    m_arr = m_allocator-> template allocate_array<T>(m_cap);
+    m_arr = m_allocator->template allocate_array<T>(m_cap);
     assert(m_arr != nullptr);
     copy_construct_range(m_arr, other.m_arr, other.m_size);
     m_size = other.m_size;
@@ -278,7 +282,7 @@ Fa_Array<T, _Alloc>::Fa_Array(std::initializer_list<T> list, _Alloc* allocator)
 
     m_size = static_cast<u32>(list.size());
     m_cap = next_capacity(m_size);
-    m_arr = m_allocator-> template allocate_array<T>(m_cap);
+    m_arr = m_allocator->template allocate_array<T>(m_cap);
     assert(m_arr != nullptr);
 
     u32 i = 0;
@@ -297,7 +301,7 @@ Fa_Array<T, _Alloc>::Fa_Array(std::initializer_list<T> list, _Alloc* allocator)
     } catch (...) {
         destroy_range(m_arr, m_arr + i);
         m_size = 0;
-        diagnostic::emit(GenericErrorCode::INTERNAL_ERROR, diagnostic::Severity::FATAL);
+        diagnostic::fatal_error(GenericErrorCode::INTERNAL_ERROR);
     }
 }
 
@@ -312,7 +316,7 @@ Fa_Array<T, _Alloc>& Fa_Array<T, _Alloc>::operator=(Fa_Array const& other)
 
     if (other.m_cap > m_cap) {
         // NOTE: arena – no free on m_arr here.
-        m_arr = m_allocator-> template allocate_array<T>(other.m_cap);
+        m_arr = m_allocator->template allocate_array<T>(other.m_cap);
         assert(m_arr != nullptr);
         m_cap = other.m_cap;
     }
@@ -385,7 +389,7 @@ void Fa_Array<T, _Alloc>::reserve(u32 const s)
         return;
 
     u32 const rounded = next_capacity(s);
-    T* new_arr = m_allocator-> template allocate_array<T>(rounded);
+    T* new_arr = m_allocator->template allocate_array<T>(rounded);
     assert(new_arr != nullptr);
 
     if (m_arr && m_size > 0)
@@ -417,7 +421,7 @@ void Fa_Array<T, _Alloc>::resize(u32 const s)
             }
         } catch (...) {
             m_size = i;
-            diagnostic::emit(GenericErrorCode::INTERNAL_ERROR, diagnostic::Severity::FATAL);
+            diagnostic::fatal_error(GenericErrorCode::INTERNAL_ERROR);
         }
 
         m_size = s;
@@ -428,7 +432,7 @@ template<typename T, class _Alloc>
 void Fa_Array<T, _Alloc>::erase(u32 const at)
 {
     if (at >= m_size)
-        diagnostic::emit(ArrayErrorCode::ARRAY_OUT_OF_BOUNDS, diagnostic::Severity::FATAL);
+        diagnostic::fatal_error(ArrayErrorCode::ARRAY_OUT_OF_BOUNDS);
 
     if constexpr (TRIVIAL_COPY) {
         u32 const remaining = m_size - at - 1;

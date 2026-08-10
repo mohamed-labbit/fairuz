@@ -82,7 +82,7 @@ static inline bool isalpha_arabic(u32 const c)
 static u32 decode_utf8_at(Fa_StringRef const& buf, size_t const byte_pos, u64* out_bytes)
 {
     if (byte_pos >= buf.len())
-        diagnostic::emit(ErrorCode::INTERNAL_ERROR, "UTF8 decode past end of buffer", diagnostic::Severity::FATAL);
+        diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "UTF8 decode past end of buffer");
 
     unsigned char const* p = (unsigned char const*)buf.data() + byte_pos;
     unsigned char const* end = (unsigned char const*)buf.data() + buf.len();
@@ -96,59 +96,59 @@ static u32 decode_utf8_at(Fa_StringRef const& buf, size_t const byte_pos, u64* o
 
     if ((c & 0xE0) == 0xC0) {
         if (p + 1 >= end)
-            diagnostic::emit(ErrorCode::INTERNAL_ERROR, "UTF8 truncated: incomplete 2-byte sequence", diagnostic::Severity::FATAL);
+            diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "UTF8 truncated: incomplete 2-byte sequence");
 
         if ((p[1] & 0xC0) != 0x80)
-            diagnostic::emit(ErrorCode::INTERNAL_ERROR, "Invalid UTF-8: bad continuation byte", diagnostic::Severity::FATAL);
+            diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "Invalid UTF-8: bad continuation byte");
 
         *out_bytes = 2;
         u32 const result = ((p[0] & 0x1F) << 6) | (p[1] & 0x3F);
 
         if (result < 0x80)
-            diagnostic::emit(ErrorCode::INTERNAL_ERROR, "Invalid UTF-8: overlong 2-byte sequence", diagnostic::Severity::FATAL);
+            diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "Invalid UTF-8: overlong 2-byte sequence");
 
         return result;
     }
 
     if ((c & 0xF0) == 0xE0) {
         if (p + 2 >= end)
-            diagnostic::emit(ErrorCode::INTERNAL_ERROR, "UTF8 truncated: incomplete 3-byte sequence", diagnostic::Severity::FATAL);
+            diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "UTF8 truncated: incomplete 3-byte sequence");
 
         if ((p[1] & 0xC0) != 0x80 || (p[2] & 0xC0) != 0x80)
-            diagnostic::emit(ErrorCode::INTERNAL_ERROR, "Invalid UTF-8: bad continuation byte", diagnostic::Severity::FATAL);
+            diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "Invalid UTF-8: bad continuation byte");
 
         *out_bytes = 3;
         u32 const result = ((p[0] & 0x0F) << 12) | ((p[1] & 0x3F) << 6) | (p[2] & 0x3F);
 
         if (result < 0x800)
-            diagnostic::emit(ErrorCode::INTERNAL_ERROR, "Invalid UTF-8: overlong 3-byte sequence", diagnostic::Severity::FATAL);
+            diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "Invalid UTF-8: overlong 3-byte sequence");
 
         if (result >= 0xD800 && result <= 0xDFFF)
-            diagnostic::emit(ErrorCode::INTERNAL_ERROR, "Invalid UTF-8: surrogate pair", diagnostic::Severity::FATAL);
+            diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "Invalid UTF-8: surrogate pair");
 
         return result;
     }
 
     if ((c & 0xF8) == 0xF0) {
         if (p + 3 >= end)
-            diagnostic::emit(ErrorCode::INTERNAL_ERROR, "UTF8 truncated: incomplete 4-byte sequence", diagnostic::Severity::FATAL);
+            diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "UTF8 truncated: incomplete 4-byte sequence");
 
         if ((p[1] & 0xC0) != 0x80 || (p[2] & 0xC0) != 0x80 || (p[3] & 0xC0) != 0x80)
-            diagnostic::emit(ErrorCode::INTERNAL_ERROR, "Invalid UTF-8: bad continuation byte", diagnostic::Severity::FATAL);
+            diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "Invalid UTF-8: bad continuation byte");
 
         *out_bytes = 4;
         u32 const result = ((p[0] & 0x07) << 18) | ((p[1] & 0x3F) << 12) | ((p[2] & 0x3F) << 6) | (p[3] & 0x3F);
 
         if (result < 0x10000)
-            diagnostic::emit(ErrorCode::INTERNAL_ERROR, "Invalid UTF-8: overlong 4-byte sequence", diagnostic::Severity::FATAL);
+            diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "Invalid UTF-8: overlong 4-byte sequence");
 
         if (result > 0x10FFFF)
-            diagnostic::emit(ErrorCode::INTERNAL_ERROR, "Invalid UTF-8: cp out of range", diagnostic::Severity::FATAL);
+            diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "Invalid UTF-8: cp out of range");
 
         return result;
     }
 
-    diagnostic::emit(ErrorCode::INTERNAL_ERROR, "Invalid UTF-8: invalid start byte", diagnostic::Severity::FATAL);
+    diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "Invalid UTF-8: invalid start byte");
     return -1; // unreachable
 }
 
@@ -169,13 +169,13 @@ static size_t utf8_codepoint_size(u32 const cp)
         return 2;
     if (cp < 0x10000) {
         if (cp >= 0xD800 && cp <= 0xDFFF)
-            diagnostic::emit(ErrorCode::INTERNAL_ERROR, "Invalid cp: UTF-16 surrogate", diagnostic::Severity::FATAL);
+            diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "Invalid cp: UTF-16 surrogate");
         return 3;
     }
     if (cp <= 0x10FFFF)
         return 4;
 
-    diagnostic::emit(ErrorCode::INTERNAL_ERROR, "Invalid cp: exceeds Unicode range", diagnostic::Severity::FATAL);
+    diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "Invalid cp: exceeds Unicode range");
     return -1; // unreachable
 }
 
@@ -194,7 +194,7 @@ static size_t encode_utf8(u32 const cp, unsigned char* out_bytes)
     }
     if (cp < 0x10000) {
         if (cp >= 0xD800 && cp <= 0xDFFF)
-            diagnostic::emit(ErrorCode::INTERNAL_ERROR, "Invalid cp: UTF-16 surrogate", diagnostic::Severity::FATAL);
+            diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "Invalid cp: UTF-16 surrogate");
 
         out_bytes[0] = static_cast<unsigned char>(0xE0 | (cp >> 12));
         out_bytes[1] = static_cast<unsigned char>(0x80 | ((cp >> 6) & 0x3F));
@@ -211,7 +211,7 @@ static size_t encode_utf8(u32 const cp, unsigned char* out_bytes)
         return 4;
     }
 
-    diagnostic::emit(ErrorCode::INTERNAL_ERROR, "Invalid cp: exceeds Unicode range", diagnostic::Severity::FATAL);
+    diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "Invalid cp: exceeds Unicode range");
     return -1; // unreachable
 }
 
@@ -298,10 +298,10 @@ static i64 parse_integer_literal(Fa_StringRef const& literal, int base)
         else if (::isalpha(cp))
             digit = ::tolower(cp) - 'a' + 10;
         else
-            diagnostic::emit(ErrorCode::INTERNAL_ERROR, "Invalid digit", diagnostic::Severity::FATAL);
+            diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "Invalid digit");
 
         if (digit >= base)
-            diagnostic::emit(ErrorCode::INTERNAL_ERROR, "Digit out of range for base (base=" + std::to_string(base) + ", digit=" + std::to_string(digit) + ")", diagnostic::Severity::FATAL);
+            diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "Digit out of range for base (base=" + std::to_string(base) + ", digit=" + std::to_string(digit) + ")");
 
         value = value * base + digit;
     }
@@ -319,7 +319,7 @@ static bool is_integer_value(f64 d, i64& out)
     out = iv;
     return true;
 }
-    
+
 } // namespace fairuz::util
 
 #endif // UTIL_HPP

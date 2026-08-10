@@ -222,7 +222,9 @@ Fa_ObjFunction* Fa_GarbageCollector::make_obj_function(Fa_Chunk* chunk)
 Fa_ObjNative* Fa_GarbageCollector::make_obj_native(NativeFn fn, Fa_ObjString* name, int arity)
 {
     if (name == nullptr || fn == nullptr) {
-        diagnostic::emit(diagnostic::errc::general::Code::INVALID_PARAMETER);
+        /// NOTE: this should never happen in production
+        /// if it was ever detected, it must be patched right away
+        diagnostic::panic(diagnostic::errc::general::Code::INVALID_PARAMETER);
         return nullptr;
     }
 
@@ -238,7 +240,7 @@ Fa_ObjClass* Fa_GarbageCollector::make_obj_class(Fa_StringRef name, Fa_StringRef
 {
     if (fields == nullptr || methods == nullptr || vtable == nullptr)
     {
-        diagnostic::emit(diagnostic::errc::general::Code::INVALID_PARAMETER);
+        diagnostic::panic(diagnostic::errc::general::Code::INVALID_PARAMETER);
         return nullptr;
     }
 

@@ -98,7 +98,7 @@ static constexpr char kClassMetadataKey[] = "__class__";
 #define Fa_VM_INSTANCE_OP(op_name)                                                       \
     do {                                                                                 \
         Fa_ObjClass* self_klass = nullptr;                                               \
-        Fa_Value self_val, arg_val = Fa_MAKE_NIL();                                            \
+        Fa_Value self_val, arg_val = Fa_MAKE_NIL();                                      \
         int slot = -1;                                                                   \
         if (Fa_IS_INSTANCE(lhs)) {                                                       \
             self_klass = Fa_AS_INSTANCE(lhs)->klass;                                     \
@@ -197,14 +197,15 @@ static void check_stack_index(int index, int stack_size, char const* m_context)
 {
     if (index < 0 || index >= stack_size)
         // This is a Fa_VM internal error, not a user error.
-        diagnostic::emit(diagnostic::errc::general::Code::INTERNAL_ERROR,
+        diagnostic::panic(diagnostic::errc::general::Code::INTERNAL_ERROR,
             std::string(" : ") + std::string("Fa_VM internal error: stack index ") + std::to_string(index)
-                + " out of range [0," + std::to_string(stack_size) + ") in " + m_context,
-            diagnostic::Severity::FATAL);
+                + " out of range [0," + std::to_string(stack_size) + ") in " + m_context);
 }
 
 Fa_VM::Fa_VM()
 {
+    diagnostic::reset();
+
     std::fill(m_stack, m_stack + STACK_SIZE, Fa_MAKE_NIL());
     std::fill(m_frames, m_frames + MAX_FRAMES, Fa_CallFrame());
 
@@ -536,19 +537,19 @@ Fa_Value Fa_VM::execute()
         } else if (Fa_IS_INSTANCE(operand)) {
             Fa_ObjInstance* instance = Fa_AS_INSTANCE(operand);
             Fa_ObjClass* self_klass = instance->klass;
-            
+
             int slot = self_klass->method_slot(sp_method_name(Fa_ObjClass::NEG));
             if (UNLIKELY(slot < 0))
                 runtime_error(ErrorCode::UNDEFINED_METHOD);
-            
+
             Fa_Chunk* target_chunk = self_klass->vtable[static_cast<u32>(slot)];
             int call_base = cur_frame_base + Fa_instr_A(instr) + 1;
-            
+
             if (UNLIKELY(m_stack_top + 1 >= STACK_SIZE))
                 runtime_error(ErrorCode::STACK_OVERFLOW);
             if (m_stack_top < call_base + 2)
                 m_stack_top = call_base + 2;
-            
+
             m_stack[call_base + 1] = operand;
             invoke_method(target_chunk, operand, Fa_instr_A(instr), cur_frame_base, 1, ip);
         } else {
@@ -1215,7 +1216,7 @@ void Fa_VM::call_value(Fa_Value callee, int argc, int call_base, bool tail)
         int local_count = fchk->local_count;
 
         if (argc != arity) {
-            diagnostic::emit(ErrorCode::WRONG_ARG_COUNT, "expected " + std::to_string(arity) + " arguments but got " + std::to_string(argc));
+            runtime_error(ErrorCode::WRONG_ARG_COUNT, "expected " + std::to_string(arity) + " arguments but got " + std::to_string(argc));
             runtime_error(ErrorCode::WRONG_ARG_COUNT);
         }
 
@@ -1263,7 +1264,7 @@ void Fa_VM::call_value(Fa_Value callee, int argc, int call_base, bool tail)
         Fa_ObjNative* nat = Fa_AS_NATIVE(callee);
         if (nat->arity >= 0 && argc != nat->arity) {
             std::string name = (nat->name ? std::string(nat->name->str.data(), nat->name->str.len()) : "?");
-            diagnostic::emit(ErrorCode::NATIVE_ARG_COUNT,
+            runtime_error(ErrorCode::NATIVE_ARG_COUNT,
                 std::string("native '") + name + "' expected " + std::to_string(nat->arity) + " args, got " + std::to_string(argc));
             runtime_error(ErrorCode::NATIVE_ARG_COUNT);
         }
@@ -1326,8 +1327,7 @@ void Fa_VM::call_value(Fa_Value callee, int argc, int call_base, bool tail)
     if (Fa_IS_FUNCTION(callee))
         fn_name = Fa_AS_FUNCTION(callee)->name();
 
-    diagnostic::emit(ErrorCode::NON_FUNCTION_CALL, std::string(fn_name.data(), fn_name.len()));
-    runtime_error(ErrorCode::NON_FUNCTION_CALL);
+    runtime_error(ErrorCode::NON_FUNCTION_CALL, std::string(fn_name.data(), fn_name.len()));
 }
 
 Fa_Value Fa_VM::call_native(Fa_ObjNative* nat, int argc, int call_base)
@@ -1371,6 +1371,7 @@ void Fa_VM::open_stdlib()
     // I/O
     register_native("اكتب", &Fa_VM::Fa_print, -1);
     register_native("ادخل", &Fa_VM::Fa_input, -1);
+    register_native("افتح", &Fa_VM::Fa_open, -1);
     // Type system / conversion
     register_native("صنف", &Fa_VM::Fa_type, -1);
     register_native("طبيعي", &Fa_VM::Fa_int, -1);
@@ -1428,11 +1429,12 @@ Fa_SourceLocation Fa_VM::current_location() const
     return { };
 }
 
-void Fa_VM::runtime_error(ErrorCode code, std::string const& detail)
+void Fa_VM::_runtime_error(u16 errc, std::string const& detail)
 {
     Fa_SourceLocation loc = current_location();
-    diagnostic::report(diagnostic::Severity::ERROR, loc, static_cast<u16>(code), detail);
+    auto id = diagnostic::report_deferred(diagnostic::Severity::ERROR, loc, static_cast<u16>(errc), detail);
 
+    int frame_no = 0;
     for (int i = m_frames_top - 1; i >= 0; i -= 1) {
         Fa_CallFrame* p = &m_frames[i];
         if (p->chunk == nullptr)
@@ -1444,17 +1446,30 @@ void Fa_VM::runtime_error(ErrorCode code, std::string const& detail)
             continue;
 
         Fa_SourceLocation frame_loc = ch.locations[off];
-        std::string note = "at " + std::to_string(frame_loc.line) + ":" + std::to_string(frame_loc.column);
+        std::string note = "stack trace #" + std::to_string(frame_no++) + ": at "
+            + std::to_string(frame_loc.line) + ":" + std::to_string(frame_loc.column);
         if (p->func) {
             Fa_StringRef fname = p->func->name();
             note = "in '" + std::string(fname.data(), fname.len()) + "' " + note;
+        } else if (!p->chunk->name.empty()) {
+            note = "in '" + std::string(p->chunk->name.data(), p->chunk->name.len()) + "' " + note;
         }
 
-        diagnostic::engine.add_note(frame_loc.line, note);
+        diagnostic::engine.add_note(id, frame_loc.line, note);
     }
 
     diagnostic::dump();
     halt();
+}
+
+void Fa_VM::runtime_error(ErrorCode errc, std::string const& detail)
+{
+    _runtime_error(static_cast<u16>(errc), detail);
+}
+
+void Fa_VM::stdlib_error(diagnostic::errc::stdlib::Code errc, std::string const& detail)
+{
+    _runtime_error(static_cast<u16>(errc), detail);
 }
 
 void Fa_VM::halt()

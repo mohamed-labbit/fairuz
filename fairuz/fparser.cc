@@ -165,7 +165,7 @@ Fa_Error Fa_Parser::report_error(ParserCode err_code)
 {
     auto* tok = current_token();
     Fa_SourceLocation loc = { tok->line(), tok->column(), static_cast<u16>(tok->lexeme().len()) };
-    return fairuz::report_error(err_code, loc, &m_lexer);
+    return fairuz::report_error(err_code, loc);
 }
 
 bool Fa_Parser::we_done() const { return current_token()->is(TokType::ENDMARKER); }
@@ -459,6 +459,41 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_def()
     return AST::Fa_make_class_def(class_name, members, methods, start->location());
 }
 
+bool same_name(AST::Fa_Expr const* e, Fa_StringRef const& n)
+{
+    return e != nullptr
+        && e->get_kind() == AST::Fa_Expr::Kind::NAME
+        && AS_CONST_NAME(e)->get_value() == n;
+}
+
+void push_member_once(Fa_Array<ExprPtr>& members, AST::Fa_NameExpr* name)
+{
+    for (auto* member : members) {
+        if (same_name(member, name->get_value()))
+            return;
+    }
+    members.push(AST::Fa_make_name(name->get_value(), name->get_location()));
+}
+
+void collect_this_field_assignment(Fa_Array<ExprPtr>& members, StmtPtr stmt)
+{
+    auto* expr_stmt = dynamic_cast<AST::Fa_ExprStmt*>(stmt);
+    if (expr_stmt == nullptr)
+        return;
+
+    auto* assign = dynamic_cast<AST::Fa_AssignmentExpr*>(expr_stmt->get_expr());
+    if (assign == nullptr)
+        return;
+
+    auto* get = dynamic_cast<AST::Fa_GetExpr*>(assign->get_target());
+    if (get == nullptr || !same_name(get->get_object(), kClassInstanceName))
+        return;
+
+    auto* member = dynamic_cast<AST::Fa_NameExpr*>(get->get_member());
+    if (member != nullptr)
+        push_member_once(members, member);
+}
+
 Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_method(Fa_Array<ExprPtr>& members)
 {
     TokenPtr start = current_token();
@@ -522,13 +557,14 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_method(Fa_Array<ExprPtr>& members)
                 return report_error(ParserCode::INVALID_ASSIGN_TARGET);
             }
 
-            members.push(AST::Fa_make_name(mname, member_tok->location()));
+            push_member_once(members, AST::Fa_make_name(mname, member_tok->location()));
             stmts.push(AST::Fa_make_expr_stmt(member_assign, member_tok->location()));
             continue;
         }
 
         // Regular statement inside the method body.
         Fa_TRY(s, parse_statement());
+        collect_this_field_assignment(members, s);
         stmts.push(s);
     }
 

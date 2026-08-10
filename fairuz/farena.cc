@@ -17,12 +17,12 @@ Fa_ArenaBlock::Fa_ArenaBlock(size_t const size, size_t const alignment)
     m_begin = reinterpret_cast<unsigned char*>(mmap(reinterpret_cast<void*>(0x200000000ULL), m_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
 
     if (m_begin == MAP_FAILED)
-        diagnostic::emit(ErrorCode::MMAP_FAILED, diagnostic::Severity::FATAL);
+        diagnostic::panic(ErrorCode::MMAP_FAILED);
 
     if (reinterpret_cast<uintptr_t>(m_begin) > UINT64_C(0x0000FFFFFFFFFFFF)) {
         munmap(m_begin, m_size);
         m_begin = nullptr;
-        diagnostic::emit(ErrorCode::NANBOX_ADDRESS_UNSAFE, diagnostic::Severity::FATAL);
+        diagnostic::panic(ErrorCode::NANBOX_ADDRESS_UNSAFE);
     }
 
     m_next = m_begin;
@@ -198,8 +198,7 @@ void* Fa_ArenaAllocator::allocate(size_t const size, size_t const alignment)
         if (m_enable_statistics)
             m_alloc_stats.AllocationFailures += 1;
 #endif
-        diagnostic::emit(ErrorCode::ALLOC_FAILED, "allocation m_size is too large: " + std::to_string(size));
-        diagnostic::internal_error(ErrorCode::ALLOC_FAILED);
+        diagnostic::panic(ErrorCode::ALLOC_FAILED, "allocation size is too large: " + std::to_string(size));
     }
 
     uintptr_t cur = reinterpret_cast<uintptr_t>(m_next);

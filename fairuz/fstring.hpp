@@ -4,6 +4,7 @@
 #include "farena.hpp"
 #include "fdiagnostic.hpp"
 
+#include <cstdint>
 #include <ostream>
 
 namespace fairuz {
@@ -129,7 +130,7 @@ public:
 
     explicit Fa_StringRefImpl(size_t const s, Allocator* allocator = nullptr);
 
-    Fa_StringRefImpl(Fa_StringRefImpl const& other, size_t offset = 0, size_t length = 0);
+    Fa_StringRefImpl(Fa_StringRefImpl const& other, size_t offset = 0, size_t length = SIZE_MAX);
 
     Fa_StringRefImpl(char const* lit, Allocator* allocator = nullptr);
 
@@ -137,7 +138,7 @@ public:
 
     Fa_StringRefImpl(size_t const s, char const c, Allocator* allocator = nullptr);
 
-    explicit Fa_StringRefImpl(StringBase<Allocator>* data, size_t offset = 0, size_t length = 0);
+    explicit Fa_StringRefImpl(StringBase<Allocator>* data, size_t offset = 0, size_t length = SIZE_MAX);
 
     Fa_StringRefImpl(Fa_StringRefImpl&& other) noexcept;
 

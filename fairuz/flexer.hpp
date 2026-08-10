@@ -115,7 +115,7 @@ public:
         : m_file_manager(fm)
     {
         if (m_file_manager == nullptr)
-            diagnostic::emit(diagnostic::errc::general::Code::INTERNAL_ERROR, diagnostic::Severity::FATAL);
+            diagnostic::fatal_error(diagnostic::errc::general::Code::INTERNAL_ERROR);
 
         reset();
     }

@@ -105,7 +105,7 @@ template<class Allocator>
 Fa_StringRefImpl<Allocator>::Fa_StringRefImpl(Fa_StringRefImpl const& other, size_t offset, size_t length)
     : m_string_data(other.m_string_data)
     , m_offset(other.m_offset + offset)
-    , m_length(length ? length : (offset <= other.m_length ? other.m_length - offset : 0))
+    , m_length(length != SIZE_MAX ? length : (offset <= other.m_length ? other.m_length - offset : 0))
     , m_allocator(other.m_allocator)
 {
     if (m_string_data)
@@ -171,7 +171,7 @@ Fa_StringRefImpl<Allocator>::Fa_StringRefImpl(StringBase<Allocator>* data, size_
         m_allocator = detail::resolve_allocator<Allocator>(nullptr);
     }
 
-    if (this->m_length == 0) {
+    if (this->m_length == SIZE_MAX) {
         size_t const len = ::strlen(m_string_data->ptr());
         this->m_length = len > this->m_offset ? len - this->m_offset : 0;
     }
@@ -368,8 +368,8 @@ template<class Allocator>
 char Fa_StringRefImpl<Allocator>::at(size_t const i) const
 {
     if (UNLIKELY(i >= m_length))
-        diagnostic::emit(diagnostic::errc::general::Code::INTERNAL_ERROR,
-            "Fa_StringRefImpl::at: index out of bounds", diagnostic::Severity::FATAL);
+        diagnostic::fatal_error(diagnostic::errc::general::Code::INTERNAL_ERROR,
+            "Fa_StringRefImpl::at: index out of bounds");
 
     return (*m_string_data)[i + m_offset];
 }
@@ -379,8 +379,8 @@ char& Fa_StringRefImpl<Allocator>::at(size_t const i)
 {
     ensure_unique();
     if (UNLIKELY(i >= m_length))
-        diagnostic::emit(diagnostic::errc::general::Code::INTERNAL_ERROR,
-            "Fa_StringRefImpl::at: index out of bounds", diagnostic::Severity::FATAL);
+        diagnostic::fatal_error(diagnostic::errc::general::Code::INTERNAL_ERROR,
+            "Fa_StringRefImpl::at: index out of bounds");
 
     return (*m_string_data)[i + m_offset];
 }
@@ -466,7 +466,7 @@ Fa_StringRefImpl<Allocator> Fa_StringRefImpl<Allocator>::slice(size_t start, siz
         return Fa_StringRefImpl(static_cast<size_t>(0), m_allocator);
 
     if (start > m_length) {
-        diagnostic::emit(ErrorCode::STRING_SLICE_START_OOB);
+        diagnostic::fatal_error(ErrorCode::STRING_SLICE_START_OOB);
         return Fa_StringRefImpl(static_cast<size_t>(0), m_allocator);
     }
 
@@ -474,7 +474,7 @@ Fa_StringRefImpl<Allocator> Fa_StringRefImpl<Allocator>::slice(size_t start, siz
         end = m_length;
 
     if (end < start) {
-        diagnostic::emit(ErrorCode::STRING_SLICE_END_BEFORE_START);
+        diagnostic::fatal_error(ErrorCode::STRING_SLICE_END_BEFORE_START);
         return Fa_StringRefImpl(static_cast<size_t>(0), m_allocator);
     }
 
@@ -487,14 +487,14 @@ Fa_StringRefImpl<Allocator> Fa_StringRefImpl<Allocator>::substr_copy(size_t star
     if (m_length == 0)
         return Fa_StringRefImpl(static_cast<size_t>(0), m_allocator);
     if (start > m_length)
-        diagnostic::emit(diagnostic::errc::general::Code::INTERNAL_ERROR,
-            "Fa_StringRefImpl::substrCopy: start index out of range", diagnostic::Severity::FATAL);
+        diagnostic::fatal_error(diagnostic::errc::general::Code::INTERNAL_ERROR,
+            "Fa_StringRefImpl::substrCopy: start index out of range");
 
     if (end > m_length || end == SIZE_MAX)
         end = m_length;
     if (end < start)
-        diagnostic::emit(diagnostic::errc::general::Code::INTERNAL_ERROR,
-            "Fa_StringRefImpl::substrCopy: start index out of range", diagnostic::Severity::FATAL);
+        diagnostic::fatal_error(diagnostic::errc::general::Code::INTERNAL_ERROR,
+            "Fa_StringRefImpl::substrCopy: start index out of range");
 
     size_t copy_len = end - start;
 
@@ -513,18 +513,18 @@ template<class Allocator>
 f64 Fa_StringRefImpl<Allocator>::to_double(size_t* pos) const
 {
     if (empty())
-        diagnostic::emit(diagnostic::errc::general::Code::INTERNAL_ERROR,
-            "Fa_StringRefImpl::toDouble: empty string", diagnostic::Severity::FATAL);
+        diagnostic::fatal_error(diagnostic::errc::general::Code::INTERNAL_ERROR,
+            "Fa_StringRefImpl::toDouble: empty string");
 
     f64 result { };
     auto [end_ptr, ec] = std::from_chars(data(), data() + m_length, result);
 
     if (ec == std::errc::invalid_argument)
-        diagnostic::emit(diagnostic::errc::general::Code::INTERNAL_ERROR,
-            "Fa_StringRefImpl::toDouble: invalid number format", diagnostic::Severity::FATAL);
+        diagnostic::fatal_error(diagnostic::errc::general::Code::INTERNAL_ERROR,
+            "Fa_StringRefImpl::toDouble: invalid number format");
     if (ec == std::errc::result_out_of_range)
-        diagnostic::emit(diagnostic::errc::general::Code::INTERNAL_ERROR,
-            "Fa_StringRefImpl::toDouble: number out of range", diagnostic::Severity::FATAL);
+        diagnostic::fatal_error(diagnostic::errc::general::Code::INTERNAL_ERROR,
+            "Fa_StringRefImpl::toDouble: number out of range");
 
     if (pos)
         *pos = static_cast<size_t>(end_ptr - data());
@@ -547,8 +547,8 @@ Fa_StringRefImpl<Allocator> Fa_StringRefImpl<Allocator>::from_utf16(char16_t con
 
     simdutf::result validation = simdutf::validate_utf16_with_errors(src, src_len);
     if (validation.error != simdutf::error_code::SUCCESS)
-        diagnostic::emit(diagnostic::errc::general::Code::INTERNAL_ERROR,
-            "Invalid UTF-16 at code unit " + std::to_string(validation.count), diagnostic::Severity::FATAL);
+        diagnostic::fatal_error(diagnostic::errc::general::Code::INTERNAL_ERROR,
+            "Invalid UTF-16 at code unit " + std::to_string(validation.count));
 
     size_t utf8_len = simdutf::utf8_length_from_utf16(src, src_len);
     StringBase<Allocator>* ret_data = used_allocator->template allocate_object<StringBase<Allocator>>(utf8_len, used_allocator);
@@ -563,8 +563,7 @@ Fa_StringRefImpl<Allocator> Fa_StringRefImpl<Allocator>::from_utf16(char16_t con
 template<class Allocator>
 void Fa_StringRefImpl<Allocator>::detach()
 {
-    size_t const len = ::strlen(m_string_data->ptr());
-    size_t const copy_len = m_length > 0 ? m_length : (len - m_offset);
+    size_t const copy_len = m_length;
     StringBase<Allocator>* s = m_allocator->template allocate_object<StringBase<Allocator>>(copy_len, m_allocator);
 
     if (copy_len > 0)

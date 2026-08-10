@@ -12,8 +12,8 @@
 
 namespace fairuz::runtime {
 
-using ErrorCode = diagnostic::errc::runtime::Code;
-using StdlibError = diagnostic::errc::stdlib::Code;
+using RuntimeErrorCode = diagnostic::errc::runtime::Code;
+using StdlibErrorCode = diagnostic::errc::stdlib::Code;
 
 static Fa_StringRef format_double_string(f64 value)
 {
@@ -313,15 +313,13 @@ Fa_Value Fa_VM::Fa_float(int argc, Fa_Value* argv)
 Fa_Value Fa_VM::Fa_append(int argc, Fa_Value* argv)
 {
     if (argc < 2 || argv == nullptr) {
-        diagnostic::emit(StdlibError::APPEND_ARG_COUNT, "got " + std::to_string(argc));
-        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
+        stdlib_error(StdlibErrorCode::APPEND_ARG_COUNT, "got " + std::to_string(argc));
         return Fa_MAKE_NIL();
     }
 
     Fa_Value& list_v = argv[0];
     if (!Fa_IS_LIST(list_v)) {
-        diagnostic::emit(StdlibError::APPEND_TYPE_ERROR);
-        diagnostic::runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
+        stdlib_error(StdlibErrorCode::APPEND_TYPE_ERROR);
         return Fa_MAKE_NIL();
     }
 
@@ -336,15 +334,13 @@ Fa_Value Fa_VM::Fa_append(int argc, Fa_Value* argv)
 Fa_Value Fa_VM::Fa_pop(int argc, Fa_Value* argv)
 {
     if (argc != 1 || argv == nullptr) {
-        diagnostic::emit(StdlibError::POP_ARG_COUNT, "got " + std::to_string(argc));
-        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
+        stdlib_error(StdlibErrorCode::POP_ARG_COUNT, "got " + std::to_string(argc));
         return Fa_MAKE_NIL();
     }
 
     Fa_Value& list_v = argv[0];
     if (!Fa_IS_LIST(list_v)) {
-        diagnostic::emit(StdlibError::POP_TYPE_ERROR);
-        diagnostic::runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
+        stdlib_error(StdlibErrorCode::POP_TYPE_ERROR);
         return Fa_MAKE_NIL();
     }
 
@@ -360,8 +356,7 @@ Fa_Value Fa_VM::Fa_slice(int argc, Fa_Value* argv)
     /// if b is null then cut [a:]
 
     if (argc < 2) {
-        diagnostic::emit(StdlibError::SLICE_ARG_COUNT, "got " + std::to_string(argc));
-        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
+        stdlib_error(StdlibErrorCode::SLICE_ARG_COUNT, "got " + std::to_string(argc));
         return Fa_MAKE_NIL();
     }
 
@@ -396,8 +391,7 @@ Fa_Value Fa_VM::Fa_input(int /*argc*/, Fa_Value* /*argv*/) // input takes no arg
 Fa_Value Fa_VM::Fa_str(int argc, Fa_Value* argv)
 {
     if (argc > 1) {
-        diagnostic::emit(StdlibError::STR_ARG_COUNT, "got " + std::to_string(argc));
-        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
+        stdlib_error(StdlibErrorCode::STR_ARG_COUNT, "got " + std::to_string(argc));
         return Fa_MAKE_NIL();
     }
 
@@ -416,8 +410,7 @@ Fa_Value Fa_VM::Fa_str(int argc, Fa_Value* argv)
 Fa_Value Fa_VM::Fa_bool(int argc, Fa_Value* argv)
 {
     if (argc != 1 || argv == nullptr) {
-        diagnostic::emit(StdlibError::BOOL_ARG_COUNT, "got " + std::to_string(argc));
-        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
+        stdlib_error(StdlibErrorCode::BOOL_ARG_COUNT, "got " + std::to_string(argc));
         return Fa_MAKE_NIL();
     }
 
@@ -515,8 +508,7 @@ Fa_Value Fa_VM::Fa_join(int argc, Fa_Value* argv)
 Fa_Value Fa_VM::Fa_substr(int argc, Fa_Value* argv)
 {
     if (argc != 3 || argv == nullptr) {
-        diagnostic::emit(StdlibError::SUBSTR_ARG_COUNT, "got " + std::to_string(argc));
-        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
+        stdlib_error(StdlibErrorCode::SUBSTR_ARG_COUNT, "got " + std::to_string(argc));
         return Fa_MAKE_NIL();
     }
 
@@ -573,14 +565,12 @@ Fa_Value Fa_VM::Fa_trim(int argc, Fa_Value* argv)
 Fa_Value Fa_VM::Fa_floor(int argc, Fa_Value* argv)
 {
     if (argc != 1 || argv == nullptr) {
-        diagnostic::emit(StdlibError::FLOOR_ARG_COUNT, "got " + std::to_string(argc));
-        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
+        stdlib_error(StdlibErrorCode::FLOOR_ARG_COUNT, "got " + std::to_string(argc));
         return Fa_MAKE_NIL();
     }
 
     if (!Fa_IS_NUMBER(argv[0])) {
-        diagnostic::emit(StdlibError::FLOOR_TYPE_ERROR);
-        diagnostic::runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
+        stdlib_error(StdlibErrorCode::FLOOR_TYPE_ERROR);
         return Fa_MAKE_NIL();
     }
 
@@ -593,14 +583,12 @@ Fa_Value Fa_VM::Fa_floor(int argc, Fa_Value* argv)
 Fa_Value Fa_VM::Fa_ceil(int argc, Fa_Value* argv)
 {
     if (argc != 1 || argv == nullptr) {
-        diagnostic::emit(StdlibError::CEIL_ARG_COUNT, "got " + std::to_string(argc));
-        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
+        stdlib_error(StdlibErrorCode::CEIL_ARG_COUNT, "got " + std::to_string(argc));
         return Fa_MAKE_NIL();
     }
 
     if (!Fa_IS_NUMBER(argv[0])) {
-        diagnostic::emit(StdlibError::CEIL_TYPE_ERROR);
-        diagnostic::runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
+        stdlib_error(StdlibErrorCode::CEIL_TYPE_ERROR);
         return Fa_MAKE_NIL();
     }
 
@@ -613,13 +601,11 @@ Fa_Value Fa_VM::Fa_ceil(int argc, Fa_Value* argv)
 Fa_Value Fa_VM::Fa_round(int argc, Fa_Value* argv)
 {
     if (argc != 1 || argv == nullptr) {
-        diagnostic::emit(StdlibError::ROUND_ARG_COUNT, "got " + std::to_string(argc));
-        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
+        stdlib_error(StdlibErrorCode::ROUND_ARG_COUNT, "got " + std::to_string(argc));
         return Fa_MAKE_NIL();
     }
     if (!Fa_IS_NUMBER(argv[0])) {
-        diagnostic::emit(StdlibError::ROUND_TYPE_ERROR);
-        diagnostic::runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
+        stdlib_error(StdlibErrorCode::ROUND_TYPE_ERROR);
         return Fa_MAKE_NIL();
     }
     if (Fa_IS_INTEGER(argv[0]))
@@ -631,21 +617,19 @@ Fa_Value Fa_VM::Fa_round(int argc, Fa_Value* argv)
 Fa_Value Fa_VM::Fa_abs(int argc, Fa_Value* argv)
 {
     if (argc != 1 || argv == nullptr) {
-        diagnostic::emit(StdlibError::ABS_ARG_COUNT, "got " + std::to_string(argc));
-        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
+        stdlib_error(StdlibErrorCode::ABS_ARG_COUNT, "got " + std::to_string(argc));
         return Fa_MAKE_NIL();
     }
 
     if (!Fa_IS_NUMBER(argv[0])) {
-        diagnostic::emit(StdlibError::ABS_TYPE_ERROR);
-        diagnostic::runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
+        stdlib_error(StdlibErrorCode::ABS_TYPE_ERROR);
         return Fa_MAKE_NIL();
     }
 
     if (Fa_IS_INTEGER(argv[0])) {
         i64 v = Fa_AS_INTEGER(argv[0]);
         if (v == INT64_MIN) {
-            diagnostic::emit(StdlibError::ABS_OUT_OF_RANGE);
+            stdlib_error(StdlibErrorCode::ABS_OUT_OF_RANGE);
             return Fa_MAKE_NIL();
         }
         return Fa_MAKE_INTEGER(std::abs(Fa_AS_INTEGER(argv[0])));
@@ -656,8 +640,7 @@ Fa_Value Fa_VM::Fa_abs(int argc, Fa_Value* argv)
 Fa_Value Fa_VM::Fa_min(int argc, Fa_Value* argv)
 {
     if (argc < 1 || !argv) {
-        diagnostic::emit(StdlibError::MIN_ARG_COUNT, "got " + std::to_string(argc));
-        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
+        stdlib_error(StdlibErrorCode::MIN_ARG_COUNT, "got " + std::to_string(argc));
         return Fa_MAKE_NIL();
     }
 
@@ -696,8 +679,7 @@ Fa_Value Fa_VM::Fa_min(int argc, Fa_Value* argv)
 Fa_Value Fa_VM::Fa_max(int argc, Fa_Value* argv)
 {
     if (argc < 1 || argv == nullptr) {
-        diagnostic::emit(StdlibError::MAX_ARG_COUNT, "got " + std::to_string(argc));
-        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
+        stdlib_error(StdlibErrorCode::MAX_ARG_COUNT, "got " + std::to_string(argc));
         return Fa_MAKE_NIL();
     }
 
@@ -735,8 +717,7 @@ Fa_Value Fa_VM::Fa_max(int argc, Fa_Value* argv)
 Fa_Value Fa_VM::Fa_pow(int argc, Fa_Value* argv)
 {
     if (argc != 2 || argv == nullptr) {
-        diagnostic::emit(StdlibError::POW_ARG_COUNT, "got " + std::to_string(argc));
-        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
+        stdlib_error(StdlibErrorCode::POW_ARG_COUNT, "got " + std::to_string(argc));
         return Fa_MAKE_NIL();
     }
 
@@ -744,8 +725,7 @@ Fa_Value Fa_VM::Fa_pow(int argc, Fa_Value* argv)
     Fa_Value exponent = argv[1];
 
     if (UNLIKELY(!Fa_IS_NUMBER(base) || !Fa_IS_NUMBER(exponent))) {
-        diagnostic::emit(StdlibError::POW_TYPE_ERROR);
-        diagnostic::runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
+        stdlib_error(StdlibErrorCode::POW_TYPE_ERROR);
         return Fa_MAKE_NIL();
     }
 
@@ -761,16 +741,14 @@ Fa_Value Fa_VM::Fa_pow(int argc, Fa_Value* argv)
 Fa_Value Fa_VM::Fa_sqrt(int argc, Fa_Value* argv)
 {
     if (argc != 1 || argv == nullptr) {
-        diagnostic::emit(StdlibError::SQRT_ARG_COUNT, "got " + std::to_string(argc));
-        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
+        stdlib_error(StdlibErrorCode::SQRT_ARG_COUNT, "got " + std::to_string(argc));
         return Fa_MAKE_NIL();
     }
 
     Fa_Value n = argv[0];
 
     if (UNLIKELY(!Fa_IS_NUMBER(n))) {
-        diagnostic::emit(StdlibError::SQRT_TYPE_ERROR);
-        diagnostic::runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
+        stdlib_error(StdlibErrorCode::SQRT_TYPE_ERROR);
         return Fa_MAKE_NIL();
     }
 
@@ -784,28 +762,22 @@ Fa_Value Fa_VM::Fa_sqrt(int argc, Fa_Value* argv)
 Fa_Value Fa_VM::Fa_assert(int argc, Fa_Value* argv)
 {
     if (argc < 1 || argv == nullptr) {
-        diagnostic::emit(StdlibError::ASSERT_ARG_COUNT, "got" + std::to_string(argc));
-        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
+        stdlib_error(StdlibErrorCode::ASSERT_ARG_COUNT, "got" + std::to_string(argc));
         return Fa_MAKE_NIL();
     }
 
     for (int i = 0; i < argc; i += 1) {
         if (!Fa_IS_TRUTHY(argv[i])) // eval entire expr
-        {
-            Fa_SourceLocation loc = current_location();
-            /// TODO: find a way to print the line code with pretty error
-            diagnostic::report(diagnostic::Severity::ERROR, loc, ErrorCode::ASSERTION_FAILED);
-            diagnostic::runtime_error(ErrorCode::ASSERTION_FAILED);
-        }
+            stdlib_error(StdlibErrorCode::ASSERT_FAILED);
     }
 
     return Fa_MAKE_NIL(); // success
 }
 
-Fa_Value Fa_open_file(int argc, Fa_Value* argv)
+Fa_Value Fa_VM::Fa_open(int argc, Fa_Value* argv)
 {
     if (argc < 1 || argv == nullptr) {
-        diagnostic::runtime_error(ErrorCode::NATIVE_ARG_COUNT);
+        stdlib_error(StdlibErrorCode::OPEN_ARG_COUNT);
         return Fa_MAKE_NIL();
     }
 
@@ -814,7 +786,8 @@ Fa_Value Fa_open_file(int argc, Fa_Value* argv)
 
     FILE* fp = fopen(filename, mode);
     if (fp == NULL) {
-        diagnostic::runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
+        /// TODO: revisit this error
+        runtime_error(RuntimeErrorCode::NATIVE_TYPE_ERROR);
         return Fa_MAKE_NIL();
     }
 

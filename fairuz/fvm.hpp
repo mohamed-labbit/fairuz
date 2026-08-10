@@ -52,6 +52,7 @@ public:
     /* STANDARD LIBRARY */
 
     Fa_Value Fa_print(int argc, Fa_Value* argv);
+    Fa_Value Fa_open(int argc, Fa_Value* argv);
     Fa_Value Fa_len(int argc, Fa_Value* argv);
     Fa_Value Fa_type(int argc, Fa_Value* argv);
     Fa_Value Fa_int(int argc, Fa_Value* argv);
@@ -115,7 +116,10 @@ public:
     void register_native(Fa_StringRef const& name, NativeFn fn, int arity = -1);
 
     Fa_SourceLocation current_location() const;
-    void runtime_error(ErrorCode code, std::string const& detail = "");
+    void runtime_error(ErrorCode errc, std::string const& detail = "");
+    void stdlib_error(diagnostic::errc::stdlib::Code errc, std::string const& detail = "");
+    void _runtime_error(u16 errc, std::string const& detail = "");
+
     [[noreturn]] void halt();
     void intern_chunk_constants(Fa_Chunk* ch);
 

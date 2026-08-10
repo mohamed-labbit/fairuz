@@ -2,6 +2,8 @@
 
 #include "fcompiler.hpp"
 #include "fAST.hpp"
+#include "fdiagnostic.hpp"
+#include "ferror.hpp"
 #include "fmacros.hpp"
 #include "foptim.hpp"
 #include "fvalue.hpp"
@@ -92,7 +94,9 @@ void Compiler::compile_stmt(AST::Fa_Stmt* s)
     case AST::Fa_Stmt::Kind::BREAK: compile_break(AS_BREAK(s)); break;
     case AST::Fa_Stmt::Kind::CONTINUE: compile_continue(AS_CONTINUE(s)); break;
     case AST::Fa_Stmt::Kind::CLASS_DEF: compile_class_def(AS_CLASS_DEF(s)); break;
-    case AST::Fa_Stmt::Kind::INVALID: diagnostic::emit(CompilerError::INVALID_STATEMENT_NODE); break;
+    case AST::Fa_Stmt::Kind::INVALID:
+        report_error(CompilerError::INVALID_STATEMENT_NODE, s->get_location());
+        break;
     }
 }
 
@@ -148,7 +152,8 @@ void Compiler::compile_assignment_stmt(AST::Fa_AssignmentStmt* s)
 
     auto* name = dynamic_cast<AST::Fa_NameExpr*>(s->get_target());
     if (name == nullptr) {
-        diagnostic::emit(CompilerError::INVALID_ASSIGNMENT_TARGET, "only simple name assignments are supported");
+        /// TODO: go to report_error def and add an option to put addition text errors
+        report_error(CompilerError::INVALID_ASSIGNMENT_TARGET, s->get_location());
         return;
     }
 
@@ -170,7 +175,7 @@ void Compiler::compile_assignment_stmt(AST::Fa_AssignmentStmt* s)
         RegMark mark(m_current);
         LocalVar const* self = lookup_local(kClassInstanceName);
         if (self == nullptr) {
-            diagnostic::emit(CompilerError::INVALID_ASSIGNMENT_TARGET, "class field assignment without instance");
+            report_error(CompilerError::INVALID_ASSIGNMENT_TARGET, name->get_location());
             return;
         }
 
@@ -278,13 +283,13 @@ void Compiler::compile_function_def(AST::Fa_FunctionDef* f)
 {
     Fa_SourceLocation loc = f->get_location();
     if (!m_current->is_top_level || m_current->scope_depth != 0) {
-        diagnostic::emit(CompilerError::NESTED_FUNCTION_UNSUPPORTED);
+        report_error(CompilerError::NESTED_FUNCTION_UNSUPPORTED, f->get_location());
         return;
     }
 
     AST::Fa_NameExpr* name = f->get_name();
     if (name == nullptr) {
-        diagnostic::emit(CompilerError::NULL_FUNCTION_NAME, diagnostic::Severity::FATAL);
+        report_error(CompilerError::NULL_FUNCTION_NAME, f->get_location());
         return;
     }
 
@@ -306,7 +311,7 @@ void Compiler::compile_function_def(AST::Fa_FunctionDef* f)
         for (AST::Fa_Expr* param : f->get_parameters()) {
             auto param_name = dynamic_cast<AST::Fa_NameExpr*>(param);
             if (param_name == nullptr) {
-                diagnostic::emit(CompilerError::INVALID_FUNCTION_PARAMETER);
+                report_error(CompilerError::INVALID_FUNCTION_PARAMETER, param->get_location());
                 continue;
             }
 
@@ -368,7 +373,7 @@ void Compiler::compile_for(AST::Fa_ForStmt* s)
 {
     Fa_SourceLocation loc = s->get_location();
     if (!AST::is_name(s->get_target())) {
-        diagnostic::emit(CompilerError::INVALID_ASSIGNMENT_TARGET, "for loop target must be a name");
+        report_error(CompilerError::INVALID_ASSIGNMENT_TARGET, s->get_location());
         return;
     }
 
@@ -426,7 +431,7 @@ void Compiler::compile_for(AST::Fa_ForStmt* s)
 void Compiler::compile_break(AST::Fa_BreakStmt* s)
 {
     if (m_current->loop_stack.empty()) {
-        diagnostic::emit(CompilerError::BREAK_OUTSIDE_LOOP);
+        report_error(CompilerError::BREAK_OUTSIDE_LOOP, s->get_location());
         return;
     }
 
@@ -438,7 +443,7 @@ void Compiler::compile_break(AST::Fa_BreakStmt* s)
 void Compiler::compile_continue(AST::Fa_ContinueStmt* s)
 {
     if (m_current->loop_stack.empty()) {
-        diagnostic::emit(CompilerError::CONTINUE_OUTSIDE_LOOP);
+        report_error(CompilerError::CONTINUE_OUTSIDE_LOOP, s->get_location());
         return;
     }
 
@@ -454,8 +459,7 @@ void Compiler::compile_class_def(AST::Fa_ClassDef* s)
 
     Fa_SourceLocation loc = s->get_location();
     if (!m_current->is_top_level || m_current->scope_depth != 0) {
-        diagnostic::emit(CompilerError::NESTED_FUNCTION_UNSUPPORTED,
-            "classes must be declared at top level");
+        report_error(CompilerError::NESTED_FUNCTION_UNSUPPORTED, loc);
         return;
     }
 
@@ -466,7 +470,7 @@ void Compiler::compile_class_def(AST::Fa_ClassDef* s)
 
     for (AST::Fa_Expr* field : fields) {
         if (field->get_kind() != AST::Fa_Expr::Kind::NAME) {
-            diagnostic::emit(CompilerError::INVALID_ASSIGNMENT_TARGET, "field name must be a simple name");
+            report_error(CompilerError::INVALID_ASSIGNMENT_TARGET, field->get_location());
             continue;
         }
 
@@ -488,7 +492,7 @@ void Compiler::compile_class_def(AST::Fa_ClassDef* s)
         Fa_SourceLocation method_loc = method->get_location();
         AST::Fa_NameExpr* method_name = method->get_name();
         if (method_name == nullptr) {
-            diagnostic::emit(CompilerError::NULL_FUNCTION_NAME, diagnostic::Severity::FATAL);
+            report_error(CompilerError::NULL_FUNCTION_NAME, method_name->get_location());
             return { error_reg(), nullptr };
         }
 
@@ -510,13 +514,13 @@ void Compiler::compile_class_def(AST::Fa_ClassDef* s)
 
         begin_scope();
         u8 inst_reg = alloc_register();
-        declare_local(kClassInstanceName, inst_reg);
+        declare_local(kClassInstanceName, inst_reg, class_name);
 
         if (method->has_parameters()) {
             for (AST::Fa_Expr* p : method->get_parameters()) {
                 auto* p_name = dynamic_cast<AST::Fa_NameExpr*>(p);
                 if (p_name == nullptr) {
-                    diagnostic::emit(CompilerError::INVALID_FUNCTION_PARAMETER);
+                    report_error(CompilerError::INVALID_FUNCTION_PARAMETER, p->get_location());
                     continue;
                 }
                 u8 reg = alloc_register();
@@ -564,7 +568,7 @@ void Compiler::compile_class_def(AST::Fa_ClassDef* s)
 
     for (AST::Fa_Stmt* m : methods) {
         if (m->get_kind() != AST::Fa_Stmt::Kind::FUNC) {
-            diagnostic::emit(CompilerError::INVALID_STATEMENT_NODE, "class body entries must be methods");
+            report_error(CompilerError::INVALID_STATEMENT_NODE, m->get_location());
             continue;
         }
 
@@ -580,7 +584,7 @@ void Compiler::compile_class_def(AST::Fa_ClassDef* s)
         }
 
         if (seen) {
-            diagnostic::emit(CompilerError::INVALID_STATEMENT_NODE, "duplicate method name");
+            report_error(CompilerError::INVALID_STATEMENT_NODE, method->get_location());
             continue;
         }
 
@@ -674,7 +678,9 @@ Fa_ExprResult Compiler::compile_expr_impl(AST::Fa_Expr* e)
     case AST::Fa_Expr::Kind::DICT: return compile_dict_impl(AS_DICT(e));
     case AST::Fa_Expr::Kind::INDEX: return compile_index_impl(AS_INDEX(e));
     case AST::Fa_Expr::Kind::GET: return compile_get_impl(AS_GET_EXPR(e));
-    case AST::Fa_Expr::Kind::INVALID: diagnostic::emit(CompilerError::INVALID_EXPRESSION_NODE); return Fa_ExprResult::knil();
+    case AST::Fa_Expr::Kind::INVALID:
+        report_error(CompilerError::INVALID_EXPRESSION_NODE, e->get_location());
+        return Fa_ExprResult::knil();
     }
 
     return Fa_ExprResult::knil();
@@ -696,7 +702,7 @@ Fa_ExprResult Compiler::compile_literal_impl(AST::Fa_LiteralExpr* e)
     if (e->is_nil())
         return Fa_ExprResult::knil();
 
-    diagnostic::emit(CompilerError::UNKNOWN_LITERAL_TYPE);
+    report_error(CompilerError::UNKNOWN_LITERAL_TYPE, e->get_location());
     return Fa_ExprResult::knil();
 }
 
@@ -711,7 +717,7 @@ Fa_ExprResult Compiler::compile_name_impl(AST::Fa_NameExpr* e)
     if (int field_idx = current_method_field_index(e->get_value()); field_idx >= 0) {
         LocalVar const* self = lookup_local(kClassInstanceName);
         if (self == nullptr) {
-            diagnostic::emit(CompilerError::INVALID_EXPRESSION_NODE, "class field access without instance");
+            report_error(CompilerError::INVALID_EXPRESSION_NODE, e->get_location());
             return Fa_ExprResult::knil();
         }
 
@@ -749,7 +755,7 @@ Fa_ExprResult Compiler::compile_unary_impl(AST::Fa_UnaryExpr* e)
     case AST::Fa_UnaryOp::OP_BITNOT: op = Fa_OpCode::OP_BITNOT; break;
     case AST::Fa_UnaryOp::OP_NOT: op = Fa_OpCode::OP_NOT; break;
     default:
-        diagnostic::emit(CompilerError::UNKNOWN_UNARY_OPERATOR, diagnostic::Severity::FATAL);
+        report_error(CompilerError::UNKNOWN_UNARY_OPERATOR, e->get_location());
         return Fa_ExprResult::knil();
     }
 
@@ -839,20 +845,20 @@ Fa_ExprResult Compiler::compile_binary_impl(AST::Fa_BinaryExpr* e)
     case AST::Fa_BinaryOp::OP_LSHIFT: bc_op = Fa_OpCode::OP_LSHIFT; break;
     case AST::Fa_BinaryOp::OP_RSHIFT: bc_op = Fa_OpCode::OP_RSHIFT; break;
     default:
-        diagnostic::emit(CompilerError::UNKNOWN_BINARY_OPERATOR, diagnostic::Severity::FATAL);
+        report_error(CompilerError::UNKNOWN_BINARY_OPERATOR, e->get_location());
         return Fa_ExprResult::knil();
     }
 
     if (bc_op == Fa_OpCode::OP_LSHIFT || bc_op == Fa_OpCode::OP_RSHIFT) {
         auto amount_expr = dynamic_cast<AST::Fa_LiteralExpr*>(e->get_right());
         if (amount_expr == nullptr || !amount_expr->is_integer()) {
-            diagnostic::emit(CompilerError::SHIFT_AMOUNT_NOT_CONSTANT);
+            report_error(CompilerError::SHIFT_AMOUNT_NOT_CONSTANT, amount_expr->get_location());
             return Fa_ExprResult::knil();
         }
 
         i64 amount = amount_expr->get_int();
         if (amount < 0 || amount > 63) {
-            diagnostic::emit(CompilerError::SHIFT_AMOUNT_OUT_OF_RANGE, std::to_string(amount));
+            report_error(CompilerError::SHIFT_AMOUNT_OUT_OF_RANGE, amount_expr->get_location());
             return Fa_ExprResult::knil();
         }
 
@@ -910,7 +916,7 @@ Fa_ExprResult Compiler::compile_assign_impl(AST::Fa_AssignmentExpr* e)
 
     auto name = dynamic_cast<AST::Fa_NameExpr*>(target);
     if (name == nullptr) {
-        diagnostic::emit(CompilerError::INVALID_ASSIGNMENT_TARGET);
+        report_error(CompilerError::INVALID_ASSIGNMENT_TARGET, target->get_location());
         return Fa_ExprResult::knil();
     }
 
@@ -939,7 +945,7 @@ Fa_ExprResult Compiler::compile_assign_impl(AST::Fa_AssignmentExpr* e)
         RegMark mark(m_current);
         LocalVar const* self = lookup_local(kClassInstanceName);
         if (self == nullptr) {
-            diagnostic::emit(CompilerError::INVALID_ASSIGNMENT_TARGET, "class field assignment without instance");
+            report_error(CompilerError::INVALID_ASSIGNMENT_TARGET, name->get_location());
             return Fa_ExprResult::knil();
         }
 
@@ -1305,7 +1311,7 @@ u8 Compiler::alloc_register()
 {
     u8 reg = m_current->alloc_register();
     if (reg >= MAX_REGS) {
-        diagnostic::emit(CompilerError::TOO_MANY_REGISTERS, { m_current->func_name.data(), m_current->func_name.len() });
+        report_error(CompilerError::TOO_MANY_REGISTERS, { });
         return 0;
     }
 
@@ -1354,7 +1360,7 @@ u32 Compiler::emit_jump(Fa_OpCode op, u8 cond, Fa_SourceLocation loc)
 void Compiler::patch_jump(u32 idx)
 {
     if (!current_chunk()->patch_jump(idx))
-        diagnostic::emit(CompilerError::JUMP_OFFSET_OVERFLOW, diagnostic::Severity::FATAL);
+        diagnostic::panic(CompilerError::JUMP_OFFSET_OVERFLOW);
 }
 
 void Compiler::push_loop(u32 loop_start)
@@ -1380,7 +1386,7 @@ void Compiler::patch_jump_to(u32 instr_idx, u32 target)
 {
     auto offset = static_cast<i32>(target) - static_cast<i32>(instr_idx) - 1;
     if (offset > JUMP_OFFSET || offset < -JUMP_OFFSET)
-        diagnostic::emit(CompilerError::LOOP_JUMP_OFFSET_OVERFLOW, diagnostic::Severity::FATAL);
+        diagnostic::panic(CompilerError::LOOP_JUMP_OFFSET_OVERFLOW);
 
     u32 word = current_chunk()->code[instr_idx];
     current_chunk()->code[instr_idx] = Fa_make_AsBx(Fa_instr_op(word), Fa_instr_A(word), offset);
