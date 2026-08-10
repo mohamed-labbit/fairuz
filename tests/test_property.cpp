@@ -149,7 +149,7 @@ Fa_Value run_fa_expr_ast(AST::Fa_Expr* m_expr)
 
 bool sanitizer_stress_enabled()
 {
-    char const* v = std::getenv("fairuz_ENABLE_SANITIZER_STRESS");
+    char const* v = std::getenv("ENABLE_SANITIZER_STRESS");
     return v && std::string(v) == "1";
 }
 
@@ -179,7 +179,7 @@ TEST(PropertyFa_Expr, RandomArithmeticMatchesHostAndAst)
 TEST(SanitizerStress, RandomArithmeticCorpus)
 {
     if (!sanitizer_stress_enabled())
-        GTEST_SKIP() << "set fairuz_ENABLE_SANITIZER_STRESS=1 to enable";
+        GTEST_SKIP() << "set ENABLE_SANITIZER_STRESS=1 to enable";
 
     diagnostic::reset();
     std::mt19937_64 rng(0xBAD5EED);

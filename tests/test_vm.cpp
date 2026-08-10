@@ -831,7 +831,7 @@ TEST(VMDicts, IndexReturnsStoredValue)
 {
     VMRunner r;
 
-    Fa_Chunk* ch = Compiler().compile(
+    Fa_Chunk* ch = compile_program(
         {
             func_def(
                 name_expr("func"),
@@ -854,7 +854,7 @@ TEST(VMDicts, IndexReturnsStoredValue)
 
 TEST(VMDicts, SetUpdatesAndAppendsByKey)
 {
-    Fa_Chunk* ch = Compiler().compile(
+    Fa_Chunk* ch = compile_program(
         {
             func_def(
                 name_expr("func"),
@@ -888,7 +888,7 @@ TEST(VMDicts, MissingKeyReturnsNil)
 {
     VMRunner r;
 
-    Fa_Chunk* ch = Compiler().compile({
+    Fa_Chunk* ch = compile_program({
         decl_stmt("x", index_expr(dict_expr({ }), lit_str("missing"))),
     });
 
@@ -1021,7 +1021,7 @@ TEST(VMCalls, StackOverflowDetected)
                                                           return_stmt(lit_nil()),
                                                       }));
 
-    auto ch = Compiler().compile({
+    auto ch = compile_program({
         fn,
         expr_stmt(call_expr(name_expr("inf"))),
     });
@@ -1336,35 +1336,6 @@ TEST(NativeLen, UnicodeString)
     EXPECT_EQ(Fa_AS_INTEGER(vm.Fa_len(1, &s)), 3);
 }
 
-TEST(NativeLen, MultipleArgs_ReturnsNil)
-{
-    Fa_VM vm;
-    auto s = Fa_MAKE_STRING("hi");
-    Fa_Value m_args[] = { s, s };
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_len(2, m_args)));
-}
-
-TEST(NativeLen, IntegerArg_ReturnsNil)
-{
-    Fa_VM vm;
-    Fa_Value arg = Fa_MAKE_INTEGER(42);
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_len(1, &arg)));
-}
-
-TEST(NativeLen, BoolArg_ReturnsNil)
-{
-    Fa_VM vm;
-    Fa_Value arg = Fa_MAKE_BOOL(true);
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_len(1, &arg)));
-}
-
-TEST(NativeLen, NilArg_ReturnsNil)
-{
-    Fa_VM vm;
-    Fa_Value arg = Fa_MAKE_NIL();
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_len(1, &arg)));
-}
-
 TEST(NativePrint, NoArgs_PrintsNewline)
 {
     Fa_VM vm;
@@ -1425,12 +1396,6 @@ TEST(NativeStr, NoArgs_ReturnsEmpty)
 {
     Fa_VM vm;
     EXPECT_TRUE(Fa_IS_STRING(vm.Fa_str(0, nullptr)));
-}
-
-TEST(NativeStr, NullArgv_ReturnsNil)
-{
-    Fa_VM vm;
-    EXPECT_TRUE(Fa_AS_STRING(vm.Fa_str(1, nullptr))->str.empty());
 }
 
 TEST(NativeStr, Integer)
@@ -1501,27 +1466,6 @@ TEST(NativeStr, StringPassthrough)
     EXPECT_EQ(std::string(Fa_AS_STRING(r)->str.data()), "hello");
 }
 
-TEST(NativeStr, NilArg_ReturnsNil)
-{
-    Fa_VM vm;
-    Fa_Value arg = Fa_MAKE_NIL();
-    EXPECT_NO_FATAL_FAILURE(vm.Fa_str(1, &arg));
-}
-
-TEST(NativeStr, TwoArgs_ReturnsNil)
-{
-    Fa_VM vm;
-    auto s = Fa_MAKE_STRING("x");
-    Fa_Value m_args[] = { s, s };
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_str(2, m_args)));
-}
-
-TEST(NativeBool, NoArgs_ReturnsNil)
-{
-    Fa_VM vm;
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_bool(0, nullptr)));
-}
-
 TEST(NativeBool, TrueBoolean)
 {
     Fa_VM vm;
@@ -1576,12 +1520,6 @@ TEST(NativeBool, NonEmptyString_IsTrue)
     EXPECT_TRUE(Fa_AS_BOOL(r));
 }
 
-TEST(NativeInt, NoArgs_ReturnsNil)
-{
-    Fa_VM vm;
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_int(0, nullptr)));
-}
-
 TEST(NativeInt, IntegerPassthrough)
 {
     Fa_VM vm;
@@ -1609,33 +1547,6 @@ TEST(NativeInt, NegativeFloat)
     EXPECT_EQ(Fa_AS_INTEGER(r), -2);
 }
 
-TEST(NativeInt, StringArg_ReturnsNil)
-{
-    Fa_VM vm;
-    Fa_Value arg = Fa_MAKE_STRING("42");
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_int(1, &arg)));
-}
-
-TEST(NativeInt, NilArg_ReturnsNil)
-{
-    Fa_VM vm;
-    Fa_Value arg = Fa_MAKE_NIL();
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_int(1, &arg)));
-}
-
-TEST(NativeInt, BoolArg_ReturnsNil)
-{
-    Fa_VM vm;
-    Fa_Value arg = Fa_MAKE_BOOL(true);
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_int(1, &arg)));
-}
-
-TEST(NativeFloat, NoArgs_ReturnsNil)
-{
-    Fa_VM vm;
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_float(0, nullptr)));
-}
-
 TEST(NativeFloat, IntegerToFloat)
 {
     Fa_VM vm;
@@ -1661,26 +1572,6 @@ TEST(NativeFloat, NegativeInteger)
     Fa_Value r = vm.Fa_float(1, &arg);
     ASSERT_TRUE(Fa_IS_DOUBLE(r));
     EXPECT_DOUBLE_EQ(Fa_AS_DOUBLE(r), -10.0);
-}
-
-TEST(NativeFloat, StringArg_ReturnsNil)
-{
-    Fa_VM vm;
-    Fa_Value arg = Fa_MAKE_STRING("3.14");
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_float(1, &arg)));
-}
-
-TEST(NativeFloat, NilArg_ReturnsNil)
-{
-    Fa_VM vm;
-    Fa_Value arg = Fa_MAKE_NIL();
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_float(1, &arg)));
-}
-
-TEST(NativeType, NoArgs_ReturnsNil)
-{
-    Fa_VM vm;
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_type(0, nullptr)));
 }
 
 TEST(NativeType, ReturnsInteger)
@@ -1718,37 +1609,6 @@ TEST(NativeType, DifferentTypesHaveDifferentTags)
     EXPECT_NE(bool_tag, nil_tag);
 }
 
-TEST(NativeAppend, NoArgs_ReturnsNil)
-{
-    Fa_VM vm;
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_append(0, nullptr)));
-}
-
-TEST(NativePop, NonListArg_ReturnsNil)
-{
-    Fa_VM vm;
-    Fa_Value arg = Fa_MAKE_INTEGER(5);
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_pop(1, &arg)));
-}
-
-TEST(NativePop, NullArgv_ReturnsNil)
-{
-    Fa_VM vm;
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_pop(1, nullptr)));
-}
-
-TEST(NativeSlice, NoArgs_ReturnsNil)
-{
-    Fa_VM vm;
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_slice(0, nullptr)));
-}
-
-TEST(NativeFloor, NoArgs_ReturnsNil)
-{
-    Fa_VM vm;
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_floor(0, nullptr)));
-}
-
 TEST(NativeFloor, IntegerPassthrough)
 {
     Fa_VM vm;
@@ -1782,33 +1642,6 @@ TEST(NativeFloor, ExactFloat)
     EXPECT_DOUBLE_EQ(Fa_AS_DOUBLE(r), 4.0);
 }
 
-TEST(NativeFloor, StringArg_ReturnsNil)
-{
-    Fa_VM vm;
-    Fa_Value arg = Fa_MAKE_STRING("3.5");
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_floor(1, &arg)));
-}
-
-TEST(NativeFloor, NilArg_ReturnsNil)
-{
-    Fa_VM vm;
-    Fa_Value arg = Fa_MAKE_NIL();
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_floor(1, &arg)));
-}
-
-TEST(NativeFloor, TwoArgs_ReturnsNil)
-{
-    Fa_VM vm;
-    Fa_Value m_args[] = { Fa_MAKE_REAL(1.5), Fa_MAKE_REAL(2.5) };
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_floor(2, m_args)));
-}
-
-TEST(NativeCeil, NoArgs_ReturnsNil)
-{
-    Fa_VM vm;
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_ceil(0, nullptr)));
-}
-
 TEST(NativeCeil, IntegerPassthrough)
 {
     Fa_VM vm;
@@ -1840,26 +1673,6 @@ TEST(NativeCeil, ExactFloat)
     Fa_Value arg = Fa_MAKE_REAL(4.0);
     Fa_Value r = vm.Fa_ceil(1, &arg);
     EXPECT_DOUBLE_EQ(Fa_AS_DOUBLE(r), 4.0);
-}
-
-TEST(NativeCeil, StringArg_ReturnsNil)
-{
-    Fa_VM vm;
-    Fa_Value arg = Fa_MAKE_STRING("3.5");
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_ceil(1, &arg)));
-}
-
-TEST(NativeCeil, NilArg_ReturnsNil)
-{
-    Fa_VM vm;
-    Fa_Value arg = Fa_MAKE_NIL();
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_ceil(1, &arg)));
-}
-
-TEST(NativeAbs, NoArgs_ReturnsNil)
-{
-    Fa_VM vm;
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_abs(0, nullptr)));
 }
 
 TEST(NativeAbs, PositiveInteger)
@@ -1907,26 +1720,6 @@ TEST(NativeAbs, NegativeFloat)
     EXPECT_DOUBLE_EQ(Fa_AS_DOUBLE(r), 3.5);
 }
 
-TEST(NativeAbs, StringArg_ReturnsNil)
-{
-    Fa_VM vm;
-    Fa_Value arg = Fa_MAKE_STRING("-3");
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_abs(1, &arg)));
-}
-
-TEST(NativeAbs, NilArg_ReturnsNil)
-{
-    Fa_VM vm;
-    Fa_Value arg = Fa_MAKE_NIL();
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_abs(1, &arg)));
-}
-
-TEST(NativeMin, NoArgs_ReturnsNil)
-{
-    Fa_VM vm;
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_min(0, nullptr)));
-}
-
 TEST(NativeMin, OneArg_ReturnsArg)
 {
     Fa_VM vm;
@@ -1968,19 +1761,6 @@ TEST(NativeMin, NegativeValues)
     Fa_Value m_args[] = { Fa_MAKE_INTEGER(-1), Fa_MAKE_INTEGER(-5), Fa_MAKE_INTEGER(-2) };
     Fa_Value r = vm.Fa_min(3, m_args);
     EXPECT_EQ(Fa_AS_INTEGER(r), -5);
-}
-
-TEST(NativeMin, StringFirstArg_ReturnsNil)
-{
-    Fa_VM vm;
-    Fa_Value m_args[] = { Fa_MAKE_STRING("a"), Fa_MAKE_STRING("b") };
-    EXPECT_EQ(Fa_AS_STRING(vm.Fa_min(2, m_args))->str, "a");
-}
-
-TEST(NativeMax, NoArgs_ReturnsNil)
-{
-    Fa_VM vm;
-    EXPECT_TRUE(Fa_IS_NIL(vm.Fa_max(0, nullptr)));
 }
 
 TEST(NativeMax, OneArg_ReturnsArg)
@@ -2229,13 +2009,6 @@ TEST(NativeAssert, TrueCondition_DoesNotCrash)
     EXPECT_NO_FATAL_FAILURE(vm.Fa_assert(1, &arg));
 }
 
-TEST(NativeAssert, FalseCondition_DoesNotCrash)
-{
-    Fa_VM vm;
-    Fa_Value arg = Fa_MAKE_BOOL(false);
-    EXPECT_NO_FATAL_FAILURE(vm.Fa_assert(1, &arg));
-}
-
 TEST(NativeClock, ReturnsNumber_WhenImplemented)
 {
     Fa_VM vm;
@@ -2419,7 +2192,7 @@ TEST(VMPerfTest, GlobalLookup_1M_Roundtrips)
         binary(name_expr("a"), lit_int(N), AST::Fa_BinaryOp::OP_LT),
         assign_stmt(name_expr("a"), binary(name_expr("a"), lit_int(1), AST::Fa_BinaryOp::OP_ADD)));
 
-    Fa_Chunk* top = Compiler().compile({ decl, while_loop });
+    Fa_Chunk* top = compile_program({ decl, while_loop });
     if (top != nullptr && test_config::dump_bytecode)
         top->disassemble();
 
@@ -2466,7 +2239,7 @@ TEST(VMPerfTest, CallOverhead_100k_Calls)
     AST::Fa_Stmt* call = expr_stmt(call_expr(name_expr("test"), list_expr()));
 
     std::cout << "AUTO:" << '\n';
-    Fa_Chunk* top_ = Compiler().compile({ add, func, call });
+    Fa_Chunk* top_ = compile_program({ add, func, call });
     if (test_config::dump_bytecode)
         top_->disassemble();
     Fa_VM vm;

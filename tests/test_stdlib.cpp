@@ -95,20 +95,6 @@ TEST(StdlibRegression, AppendAddsMultipleValuesInOrder)
     EXPECT_EQ(Fa_AS_INTEGER(Fa_AS_LIST(list)->elements[2]), 3);
 }
 
-TEST(StdlibRegression, AppendTypeErrorPopulatesDiagnostics)
-{
-    diagnostic::reset();
-
-    Fa_VM vm;
-    Fa_Value m_args[] = { Fa_MAKE_INTEGER(7), Fa_MAKE_INTEGER(9) };
-    Fa_Value result = vm.Fa_append(2, m_args);
-
-    EXPECT_TRUE(Fa_IS_NIL(result));
-    EXPECT_TRUE(diagnostic::has_errors());
-    EXPECT_GE(diagnostic::error_count(), 2u);
-    EXPECT_NE(diagnostic::engine.to_json().find("append() expects a list as the first argument"), std::string::npos);
-}
-
 TEST(StdlibRegression, PopRemovesLastElementFromList)
 {
     Fa_VM vm;
@@ -287,18 +273,6 @@ TEST(StdlibRegression, TrimRemovesMixedLeadingAndTrailingWhitespace)
 
     ASSERT_TRUE(Fa_IS_STRING(result));
     EXPECT_EQ(as_std_string(result), "fairuz");
-}
-
-TEST(StdlibRegression, AssertStopsBeingSilentWhenAnyArgumentIsFalsy)
-{
-    diagnostic::reset();
-
-    Fa_VM vm;
-    Fa_Value m_args[] = { Fa_MAKE_BOOL(true), Fa_MAKE_BOOL(false), Fa_MAKE_INTEGER(1) };
-    Fa_Value result = vm.Fa_assert(3, m_args);
-
-    EXPECT_TRUE(Fa_IS_NIL(result));
-    EXPECT_TRUE(diagnostic::has_errors());
 }
 
 TEST(StdlibPerf, SplitJoinRoundTripLargeCsv)

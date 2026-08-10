@@ -2,7 +2,6 @@
 #include "../fairuz/fparser.hpp"
 #include "test_config.h"
 
-#include <fstream>
 #include <gtest/gtest.h>
 #include <iostream>
 
@@ -58,7 +57,7 @@ public:
 
     void TearDown() override
     {
-        if (diagnostic::has_errors() || diagnostic::m_warning_count() > 0)
+        if (diagnostic::has_errors() || diagnostic::warning_count() > 0)
             diagnostic::dump();
     }
 };
