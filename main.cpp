@@ -191,8 +191,8 @@ int main(int argc, char** argv)
 
         fairuz::Fa_AllocatorContext allocator_context;
         fairuz::set_context(&allocator_context);
-
         fairuz::lex::Fa_FileManager fm(options.input_path);
+        fairuz::diagnostic::set_source(&fm);
         fairuz::parser::Fa_Parser parser(&fm);
         fairuz::Fa_Array<fairuz::AST::Fa_Stmt*> stmts = parser.parse_program();
 
@@ -232,10 +232,10 @@ int main(int argc, char** argv)
         fairuz::runtime::Fa_VM vm;
         auto const start = std::chrono::steady_clock::now();
         vm.run(chunk);
-        auto const m_end = std::chrono::steady_clock::now();
+        auto const end = std::chrono::steady_clock::now();
 
         if (options.print_time) {
-            std::chrono::duration<f64> elapsed = m_end - start;
+            std::chrono::duration<f64> elapsed = end - start;
             std::cerr << "time: " << elapsed.count() << "s\n";
         }
 
