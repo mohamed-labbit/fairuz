@@ -51,22 +51,26 @@ public:
 
     /* allocator api */
     template<typename T>
-    T* allocate_array(const u32 count) {
+    T* allocate_array(u32 const count)
+    {
         return static_cast<T*>(allocate(count * sizeof(T)));
     }
 
-    void* allocate(const u32 size) {
-        void *mem = ::operator new(size, std::nothrow);
+    void* allocate(u32 const size)
+    {
+        void* mem = ::operator new(size, std::nothrow);
         if (mem == nullptr)
             diagnostic::panic(diagnostic::errc::general::Code::ALLOC_FAILED);
         m_current_size += size;
         return mem;
     }
 
-    void deallocate(void* ptr, const u32 size) {
+    void deallocate(void* ptr, u32 const size)
+    {
         ::operator delete(ptr);
         m_current_size -= size;
     }
+
 private:
     void mark_roots(Fa_VM* vm);
     void mark_object(Fa_ObjHeader* p);

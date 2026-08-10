@@ -46,7 +46,9 @@ public:
     // constructed "as if" it were a general::Code). Marked explicit and
     // named distinctly via the tag type below so it can never be called
     // by accident where a real enum overload was intended.
-    struct RawCode { u16 value; };
+    struct RawCode {
+        u16 value;
+    };
     explicit Fa_Error(RawCode raw)
         : m_code(raw.value)
     {

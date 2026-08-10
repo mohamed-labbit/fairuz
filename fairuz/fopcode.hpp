@@ -258,9 +258,9 @@ struct Fa_ClassDescriptor {
 };
 
 #if FA_USE_NANBOX
-    using Fa_Value = u64;
+using Fa_Value = u64;
 #else
-    struct Fa_Value;
+struct Fa_Value;
 #endif
 
 struct Fa_Chunk {

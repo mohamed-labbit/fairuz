@@ -195,8 +195,8 @@ Fa_ObjList* Fa_GarbageCollector::make_obj_list()
     void* mem = ::operator new(sizeof(Fa_ObjList), std::nothrow);
     if (mem == nullptr)
         diagnostic::panic(diagnostic::errc::general::Code::ALLOC_FAILED);
-    
-    auto elems = Fa_Array<Fa_Value, /*_Alloc=*/ Fa_GarbageCollector>{this};
+
+    auto elems = Fa_Array<Fa_Value, /*_Alloc=*/Fa_GarbageCollector> { this };
 
     Fa_ObjList* ret = new (mem) Fa_ObjList(elems);
 
@@ -232,14 +232,13 @@ Fa_ObjNative* Fa_GarbageCollector::make_obj_native(NativeFn fn, Fa_ObjString* na
     ret->arity = arity;
     ret->name = name;
     ret->fn = fn;
-    return ret;    
+    return ret;
 }
 
 Fa_ObjClass* Fa_GarbageCollector::make_obj_class(Fa_StringRef name, Fa_StringRef* fields,
     u32 field_count, Fa_StringRef* methods, u32 method_count, Fa_Chunk** vtable, u32 vtable_size)
 {
-    if (fields == nullptr || methods == nullptr || vtable == nullptr)
-    {
+    if (fields == nullptr || methods == nullptr || vtable == nullptr) {
         diagnostic::panic(diagnostic::errc::general::Code::INVALID_PARAMETER);
         return nullptr;
     }
@@ -261,7 +260,7 @@ Fa_ObjInstance* Fa_GarbageCollector::make_obj_instance(Fa_ObjClass* klass)
 {
     assert(klass != nullptr && "instance must be constructed with a valid class");
 
-    Fa_Array<Fa_Value, /*_Alloc=*/Fa_GarbageCollector> fields{klass->field_count, Fa_MAKE_NIL(), this};
+    Fa_Array<Fa_Value, /*_Alloc=*/Fa_GarbageCollector> fields { klass->field_count, Fa_MAKE_NIL(), this };
     Fa_ObjInstance* obj = make<Fa_ObjInstance>(fields);
     obj->klass = klass;
 

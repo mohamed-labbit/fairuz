@@ -1,4 +1,4 @@
-// 
+//
 // fobject.cc
 //
 
@@ -9,7 +9,11 @@ namespace fairuz::runtime {
 
 // object defs
 
-Fa_ObjList::Fa_ObjList(Fa_ListType elems) : elements(std::move(elems)) { obj = Fa_ObjHeader { Fa_ObjType::LIST }; }
+Fa_ObjList::Fa_ObjList(Fa_ListType elems)
+    : elements(std::move(elems))
+{
+    obj = Fa_ObjHeader { Fa_ObjType::LIST };
+}
 void Fa_ObjList::reserve(u32 cap) { elements.reserve(cap); }
 u32 Fa_ObjList::size() const { return elements.size(); }
 void Fa_ObjList::push(Fa_Value& v) { elements.push(v); }

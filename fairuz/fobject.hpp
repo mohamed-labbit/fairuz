@@ -2,10 +2,10 @@
 
 #include "farray.hpp"
 #include "fmacros.hpp"
+#include "fobj_header.hpp"
 #include "fopcode.hpp"
 #include "fstring.hpp"
 #include "ftable.hpp"
-#include "fobj_header.hpp"
 #include "fvalue.hpp"
 
 #include <cassert>
@@ -13,7 +13,7 @@
 #include <type_traits>
 
 namespace fairuz::runtime {
-    
+
 class Fa_VM;
 class Fa_Chunk;
 class Fa_GarbageCollector;
@@ -142,7 +142,7 @@ struct Fa_ObjInstance {
     Fa_ObjHeader obj;
     Fa_ObjClass* klass { nullptr };
     Fa_Array<Fa_Value, /*_Alloc=*/Fa_GarbageCollector> fields;
-    
+
     Fa_ObjInstance(Fa_Array<Fa_Value, /*_Alloc=*/Fa_GarbageCollector> fields);
 
     ~Fa_ObjInstance() = default;

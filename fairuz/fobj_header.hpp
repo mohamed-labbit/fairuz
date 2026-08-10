@@ -5,7 +5,7 @@
 
 namespace fairuz::runtime {
 
-enum class Fa_ObjType : u8 { 
+enum class Fa_ObjType : u8 {
     STRING,
     LIST,
     DICT,

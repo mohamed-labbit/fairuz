@@ -8,9 +8,11 @@
 #include <vector>
 
 namespace fairuz::lex {
+
 class Fa_FileManager; // full definition in flexer.hpp; only a pointer is
-                       // needed here, and including flexer.hpp would be
-                       // circular (flexer.hpp already includes this file).
+                      // needed here, and including flexer.hpp would be
+                      // circular (flexer.hpp already includes this file).
+
 } // namespace fairuz::lex
 
 namespace fairuz::diagnostic {
@@ -218,144 +220,144 @@ static constexpr char const* error_message_for(u16 code)
 {
     switch (code) {
     // lexer
-    case /*FILE_NOT_OPEN =*/ 0x0001: return "Source file could not be opened";
-    case /*INVALID_OCTAL_DIGIT =*/ 0x0002: return "Invalid digit in octal literal";
-    case /*INVALID_BINARY_DIGIT =*/ 0x0003: return "Invalid digit in binary literal";
-    case /*INVALID_BASE_LITERAL =*/ 0x0004: return "Invalid base-prefixed numeric literal";
-    case /*INCONSISTENT_INDENTATION =*/ 0x0005: return "Inconsistent indentation";
-    case /*TOO_MANY_INDENT_LEVELS =*/ 0x0006: return "Too many indentation levels";
-    case /*MIXED_INDENTATION =*/ 0x0007: return "Mixed tabs and spaces in indentation";
-    case /*INVALID_UNINDENT =*/ 0x0008: return "Unindent does not match an outer indentation level";
-    case /*INVALID_ESCAPE_SEQUENCE =*/ 0x0009: return "Invalid escape sequence in string literal";
-    case /*INVALID_CHARACTER =*/ 0x000A: return "Invalid character";
-    case /*INVALID_OPERATOR =*/ 0x000B: return "Invalid operator token";
-    case /*INVALID_NUMBER_LITERAL =*/ 0x000C: return "Invalid numeric literal";
+    case /*FILE_NOT_OPEN =*/0x0001: return "Source file could not be opened";
+    case /*INVALID_OCTAL_DIGIT =*/0x0002: return "Invalid digit in octal literal";
+    case /*INVALID_BINARY_DIGIT =*/0x0003: return "Invalid digit in binary literal";
+    case /*INVALID_BASE_LITERAL =*/0x0004: return "Invalid base-prefixed numeric literal";
+    case /*INCONSISTENT_INDENTATION =*/0x0005: return "Inconsistent indentation";
+    case /*TOO_MANY_INDENT_LEVELS =*/0x0006: return "Too many indentation levels";
+    case /*MIXED_INDENTATION =*/0x0007: return "Mixed tabs and spaces in indentation";
+    case /*INVALID_UNINDENT =*/0x0008: return "Unindent does not match an outer indentation level";
+    case /*INVALID_ESCAPE_SEQUENCE =*/0x0009: return "Invalid escape sequence in string literal";
+    case /*INVALID_CHARACTER =*/0x000A: return "Invalid character";
+    case /*INVALID_OPERATOR =*/0x000B: return "Invalid operator token";
+    case /*INVALID_NUMBER_LITERAL =*/0x000C: return "Invalid numeric literal";
     // parser
-    case /*EXPECTED_INDENT =*/ 0x0101: return "Expected indented block";
-    case /*EXPECTED_DEDENT =*/ 0x0102: return "Expected dedent after block";
-    case /*EXPECTED_LPAREN =*/ 0x0103: return "Expected '(' before parameters";
-    case /*EXPECTED_RPAREN_PARAMS =*/ 0x0104: return "Expected ')' after parameters";
-    case /*EXPECTED_RPAREN_ARGS =*/ 0x0105: return "Expected ')' after arguments";
-    case /*EXPECTED_RPAREN_EXPR =*/ 0x0106: return "Expected ')' after expression";
-    case /*EXPECTED_RBRACKET =*/ 0x0107: return "Expected ']' after list elements";
-    case /*EXPECTED_COLON_IF =*/ 0x0108: return "Expected ':' after if condition";
-    case /*EXPECTED_COLON_WHILE =*/ 0x0109: return "Expected ':' after while condition";
-    case /*EXPECTED_COLON_FN =*/ 0x010A: return "Expected ':' after function parameters";
-    case /*EXPECTED_FN_KEYWORD =*/ 0x010B: return "Expected 'fn' keyword";
-    case /*EXPECTED_FN_NAME =*/ 0x010C: return "Expected function name after 'fn'";
-    case /*EXPECTED_PARAM_NAME =*/ 0x010D: return "Expected parameter name";
-    case /*EXPECTED_RETURN =*/ 0x010E: return "Expected 'return' keyword";
-    case /*EXPECTED_IF_KEYWORD =*/ 0x010F: return "Expected 'if' keyword";
-    case /*EXPECTED_WHILE_KEYWORD =*/ 0x0110: return "Expected 'while' keyword";
-    case /*INVALID_ASSIGN_TARGET =*/ 0x0111: return "Invalid assignment target";
-    case /*UNEXPECTED_TOKEN =*/ 0x0112: return "Unexpected token";
-    case /*UNEXPECTED_EOF =*/ 0x0113: return "Unexpected end of input";
-    case /*INVALID_OPERATOR_SEQ =*/ 0x0114: return "Invalid operator sequence";
-    case /*EXPECTED_COLON_DICT =*/ 0x0115: return "Expected ':' after dictionary key";
-    case /*EXPECTED_RBRACE_EXPR =*/ 0x0116: return "Expected '}' after dictionary literal";
-    case /*EXPECTED_FOR_TARGET =*/ 0x0117: return "Expected loop variable name after 'for'";
-    case /*EXPECTED_IN_KEYWORD =*/ 0x0118: return "Expected 'in' after loop variable";
-    case /*EXPECTED_COLON_FOR =*/ 0x0119: return "Expected ':' after for loop header";
-    case /*EXPECTED_CLASS_KEYWORD =*/ 0x0120: return "Expected class keyword";
-    case /*EXPECTED_COLON_CLASS =*/ 0x0121: return "Expected ':' after class name";
-    case /*EXPECTED_CLASS_NAME =*/ 0x0122: return "Expected class name";
-    case /*EXPECTED_MEMBER_NAME =*/ 0x0123: return "Expected member name";
+    case /*EXPECTED_INDENT =*/0x0101: return "Expected indented block";
+    case /*EXPECTED_DEDENT =*/0x0102: return "Expected dedent after block";
+    case /*EXPECTED_LPAREN =*/0x0103: return "Expected '(' before parameters";
+    case /*EXPECTED_RPAREN_PARAMS =*/0x0104: return "Expected ')' after parameters";
+    case /*EXPECTED_RPAREN_ARGS =*/0x0105: return "Expected ')' after arguments";
+    case /*EXPECTED_RPAREN_EXPR =*/0x0106: return "Expected ')' after expression";
+    case /*EXPECTED_RBRACKET =*/0x0107: return "Expected ']' after list elements";
+    case /*EXPECTED_COLON_IF =*/0x0108: return "Expected ':' after if condition";
+    case /*EXPECTED_COLON_WHILE =*/0x0109: return "Expected ':' after while condition";
+    case /*EXPECTED_COLON_FN =*/0x010A: return "Expected ':' after function parameters";
+    case /*EXPECTED_FN_KEYWORD =*/0x010B: return "Expected 'fn' keyword";
+    case /*EXPECTED_FN_NAME =*/0x010C: return "Expected function name after 'fn'";
+    case /*EXPECTED_PARAM_NAME =*/0x010D: return "Expected parameter name";
+    case /*EXPECTED_RETURN =*/0x010E: return "Expected 'return' keyword";
+    case /*EXPECTED_IF_KEYWORD =*/0x010F: return "Expected 'if' keyword";
+    case /*EXPECTED_WHILE_KEYWORD =*/0x0110: return "Expected 'while' keyword";
+    case /*INVALID_ASSIGN_TARGET =*/0x0111: return "Invalid assignment target";
+    case /*UNEXPECTED_TOKEN =*/0x0112: return "Unexpected token";
+    case /*UNEXPECTED_EOF =*/0x0113: return "Unexpected end of input";
+    case /*INVALID_OPERATOR_SEQ =*/0x0114: return "Invalid operator sequence";
+    case /*EXPECTED_COLON_DICT =*/0x0115: return "Expected ':' after dictionary key";
+    case /*EXPECTED_RBRACE_EXPR =*/0x0116: return "Expected '}' after dictionary literal";
+    case /*EXPECTED_FOR_TARGET =*/0x0117: return "Expected loop variable name after 'for'";
+    case /*EXPECTED_IN_KEYWORD =*/0x0118: return "Expected 'in' after loop variable";
+    case /*EXPECTED_COLON_FOR =*/0x0119: return "Expected ':' after for loop header";
+    case /*EXPECTED_CLASS_KEYWORD =*/0x0120: return "Expected class keyword";
+    case /*EXPECTED_COLON_CLASS =*/0x0121: return "Expected ':' after class name";
+    case /*EXPECTED_CLASS_NAME =*/0x0122: return "Expected class name";
+    case /*EXPECTED_MEMBER_NAME =*/0x0123: return "Expected member name";
     // sema
-    case /*UNDEFINED_VARIABLE =*/ 0x0200: return "Undefined variable";
-    case /*UNDEFINED_FUNCTION =*/ 0x0201: return "Undefined function";
-    case /*NOT_CALLABLE =*/ 0x0202: return "expression is not callable";
-    case /*REDECLARATION =*/ 0x0203: return "Redeclaration of identifier";
-    case /*TYPE_MISMATCH =*/ 0x0204: return "Type mismatch in binary expression";
-    case /*INVALID_STRING_OP =*/ 0x0205: return "Only '+' is valid for string operands";
-    case /*DIVISION_BY_ZERO_CONST =*/ 0x0206: return "Division by zero (constant expression)";
-    case /*MISSING_RETURN =*/ 0x0207: return "Function may not return a value";
-    case /*UNUSED_VARIABLE =*/ 0x0208: return "Unused variable";
-    case /*LOOP_VAR_SHADOW =*/ 0x0209: return "Loop variable shadows outer variable";
-    case /*CONSTANT_CONDITION =*/ 0x020A: return "Condition is always constant";
-    case /*INFINITE_LOOP =*/ 0x020B: return "Infinite loop detected (condition is always true)";
-    case /*UNUSED_EXPR_RESULT =*/ 0x020C: return "expression result is not used";
+    case /*UNDEFINED_VARIABLE =*/0x0200: return "Undefined variable";
+    case /*UNDEFINED_FUNCTION =*/0x0201: return "Undefined function";
+    case /*NOT_CALLABLE =*/0x0202: return "expression is not callable";
+    case /*REDECLARATION =*/0x0203: return "Redeclaration of identifier";
+    case /*TYPE_MISMATCH =*/0x0204: return "Type mismatch in binary expression";
+    case /*INVALID_STRING_OP =*/0x0205: return "Only '+' is valid for string operands";
+    case /*DIVISION_BY_ZERO_CONST =*/0x0206: return "Division by zero (constant expression)";
+    case /*MISSING_RETURN =*/0x0207: return "Function may not return a value";
+    case /*UNUSED_VARIABLE =*/0x0208: return "Unused variable";
+    case /*LOOP_VAR_SHADOW =*/0x0209: return "Loop variable shadows outer variable";
+    case /*CONSTANT_CONDITION =*/0x020A: return "Condition is always constant";
+    case /*INFINITE_LOOP =*/0x020B: return "Infinite loop detected (condition is always true)";
+    case /*UNUSED_EXPR_RESULT =*/0x020C: return "expression result is not used";
     // compiler
-    case /*NULL_AST_ROOT =*/ 0x0300: return "Compiler received a null AST root";
-    case /*INVALID_STATEMENT_NODE =*/ 0x0301: return "Invalid statement node";
-    case /*INVALID_EXPRESSION_NODE =*/ 0x0302: return "Invalid expression node";
-    case /*NULL_FUNCTION_NAME =*/ 0x0303: return "Function name is missing";
-    case /*INVALID_FUNCTION_PARAMETER =*/ 0x0304: return "Function parameter must be a name";
-    case /*FOR_NOT_IMPLEMENTED =*/ 0x0305: return "For loops are not implemented in the compiler";
-    case /*UNKNOWN_LITERAL_TYPE =*/ 0x0306: return "Unknown literal type";
-    case /*UNKNOWN_UNARY_OPERATOR =*/ 0x0307: return "Unknown unary operator";
-    case /*UNKNOWN_BINARY_OPERATOR =*/ 0x0308: return "Unknown binary operator";
-    case /*SHIFT_AMOUNT_NOT_CONSTANT =*/ 0x0309: return "Shift amount must be a constant integer";
-    case /*SHIFT_AMOUNT_OUT_OF_RANGE =*/ 0x030A: return "Shift amount is out of range";
-    case /*INVALID_ASSIGNMENT_TARGET =*/ 0x030B: return "Invalid assignment target";
-    case /*TOO_MANY_REGISTERS =*/ 0x030C: return "Too many registers allocated for function";
-    case /*JUMP_OFFSET_OVERFLOW =*/ 0x030D: return "Jump offset overflow";
-    case /*LOOP_JUMP_OFFSET_OVERFLOW =*/ 0x030E: return "Loop jump offset overflow";
-    case /*NESTED_FUNCTION_UNSUPPORTED =*/ 0x030F: return "Nested function definitions are not supported";
-    case /*BREAK_OUTSIDE_LOOP =*/ 0x0310: return "break used outside of a loop";
-    case /*CONTINUE_OUTSIDE_LOOP =*/ 0x0311: return "continue used outside of a loop";
+    case /*NULL_AST_ROOT =*/0x0300: return "Compiler received a null AST root";
+    case /*INVALID_STATEMENT_NODE =*/0x0301: return "Invalid statement node";
+    case /*INVALID_EXPRESSION_NODE =*/0x0302: return "Invalid expression node";
+    case /*NULL_FUNCTION_NAME =*/0x0303: return "Function name is missing";
+    case /*INVALID_FUNCTION_PARAMETER =*/0x0304: return "Function parameter must be a name";
+    case /*FOR_NOT_IMPLEMENTED =*/0x0305: return "For loops are not implemented in the compiler";
+    case /*UNKNOWN_LITERAL_TYPE =*/0x0306: return "Unknown literal type";
+    case /*UNKNOWN_UNARY_OPERATOR =*/0x0307: return "Unknown unary operator";
+    case /*UNKNOWN_BINARY_OPERATOR =*/0x0308: return "Unknown binary operator";
+    case /*SHIFT_AMOUNT_NOT_CONSTANT =*/0x0309: return "Shift amount must be a constant integer";
+    case /*SHIFT_AMOUNT_OUT_OF_RANGE =*/0x030A: return "Shift amount is out of range";
+    case /*INVALID_ASSIGNMENT_TARGET =*/0x030B: return "Invalid assignment target";
+    case /*TOO_MANY_REGISTERS =*/0x030C: return "Too many registers allocated for function";
+    case /*JUMP_OFFSET_OVERFLOW =*/0x030D: return "Jump offset overflow";
+    case /*LOOP_JUMP_OFFSET_OVERFLOW =*/0x030E: return "Loop jump offset overflow";
+    case /*NESTED_FUNCTION_UNSUPPORTED =*/0x030F: return "Nested function definitions are not supported";
+    case /*BREAK_OUTSIDE_LOOP =*/0x0310: return "break used outside of a loop";
+    case /*CONTINUE_OUTSIDE_LOOP =*/0x0311: return "continue used outside of a loop";
     // runtime
-    case /*STACK_OVERFLOW =*/ 0x0400: return "Stack overflow";
-    case /*STACK_UNDERFLOW =*/ 0x0401: return "Stack underflow";
-    case /*DIVISION_BY_ZERO =*/ 0x0402: return "Division by zero";
-    case /*MODULO_BY_ZERO =*/ 0x0403: return "Modulo by zero";
-    case /*TYPE_ERROR_ARITH =*/ 0x0404: return "Arithmetic on non-numeric value";
-    case /*TYPE_ERROR_COMPARE =*/ 0x0405: return "Comparison between incompatible types";
-    case /*TYPE_ERROR_CALL =*/ 0x0406: return "Attempted to call a non-callable value";
-    case /*WRONG_ARG_COUNT =*/ 0x0407: return "Wrong number of arguments";
-    case /*UNDEFINED_GLOBAL =*/ 0x0408: return "Undefined global variable";
-    case /*UNDEFINED_LOCAL =*/ 0x0409: return "Undefined local variable";
-    case /*INDEX_OUT_OF_BOUNDS =*/ 0x040A: return "List index out of bounds";
-    case /*INDEX_TYPE_ERROR =*/ 0x040B: return "List index must be an integer";
-    case /*INVALID_OPCODE =*/ 0x040D: return "Invalid opcode in dispatch loop";
-    case /*FRAME_OVERFLOW =*/ 0x040E: return "Call frame limit exceeded";
-    case /*NEGATIVE_EXPONENT =*/ 0x040F: return "Integer exponentiation with negative exponent";
-    case /*NON_FUNCTION_CALL =*/ 0x0410: return "Attempted to call a non-function value";
-    case /*NATIVE_ARG_COUNT =*/ 0x0411: return "Native call received the wrong number of arguments";
-    case /*NATIVE_TYPE_ERROR =*/ 0x0412: return "Native call received arguments of the wrong type";
-    case /*UNDEFINED_METHOD =*/ 0x0414: return "Call to undefined method";
+    case /*STACK_OVERFLOW =*/0x0400: return "Stack overflow";
+    case /*STACK_UNDERFLOW =*/0x0401: return "Stack underflow";
+    case /*DIVISION_BY_ZERO =*/0x0402: return "Division by zero";
+    case /*MODULO_BY_ZERO =*/0x0403: return "Modulo by zero";
+    case /*TYPE_ERROR_ARITH =*/0x0404: return "Arithmetic on non-numeric value";
+    case /*TYPE_ERROR_COMPARE =*/0x0405: return "Comparison between incompatible types";
+    case /*TYPE_ERROR_CALL =*/0x0406: return "Attempted to call a non-callable value";
+    case /*WRONG_ARG_COUNT =*/0x0407: return "Wrong number of arguments";
+    case /*UNDEFINED_GLOBAL =*/0x0408: return "Undefined global variable";
+    case /*UNDEFINED_LOCAL =*/0x0409: return "Undefined local variable";
+    case /*INDEX_OUT_OF_BOUNDS =*/0x040A: return "List index out of bounds";
+    case /*INDEX_TYPE_ERROR =*/0x040B: return "List index must be an integer";
+    case /*INVALID_OPCODE =*/0x040D: return "Invalid opcode in dispatch loop";
+    case /*FRAME_OVERFLOW =*/0x040E: return "Call frame limit exceeded";
+    case /*NEGATIVE_EXPONENT =*/0x040F: return "Integer exponentiation with negative exponent";
+    case /*NON_FUNCTION_CALL =*/0x0410: return "Attempted to call a non-function value";
+    case /*NATIVE_ARG_COUNT =*/0x0411: return "Native call received the wrong number of arguments";
+    case /*NATIVE_TYPE_ERROR =*/0x0412: return "Native call received arguments of the wrong type";
+    case /*UNDEFINED_METHOD =*/0x0414: return "Call to undefined method";
     // stdlib
-    case /*APPEND_ARG_COUNT =*/ 0x0500: return "append() expects at least two arguments";
-    case /*APPEND_TYPE_ERROR =*/ 0x0501: return "append() expects a list as the first argument";
-    case /*POP_ARG_COUNT =*/ 0x0502: return "pop() expects exactly one argument";
-    case /*POP_TYPE_ERROR =*/ 0x0503: return "pop() expects a list argument";
-    case /*SLICE_ARG_COUNT =*/ 0x0504: return "slice() expects at least two arguments";
-    case /*STR_ARG_COUNT =*/ 0x0505: return "str() expects zero or one argument";
-    case /*BOOL_ARG_COUNT =*/ 0x0506: return "bool() expects exactly one argument";
-    case /*SUBSTR_ARG_COUNT =*/ 0x0507: return "substr() expects exactly three arguments";
-    case /*FLOOR_ARG_COUNT =*/ 0x0508: return "floor() expects exactly one argument";
-    case /*FLOOR_TYPE_ERROR =*/ 0x0509: return "floor() expects a numeric argument";
-    case /*CEIL_ARG_COUNT =*/ 0x050A: return "ceil() expects exactly one argument";
-    case /*CEIL_TYPE_ERROR =*/ 0x050B: return "ceil() expects a numeric argument";
-    case /*ROUND_ARG_COUNT =*/ 0x050C: return "round() expects exactly one argument";
-    case /*ROUND_TYPE_ERROR =*/ 0x050D: return "round() expects a numeric argument";
-    case /*ABS_ARG_COUNT =*/ 0x050E: return "abs() expects exactly one argument";
-    case /*ABS_TYPE_ERROR =*/ 0x050F: return "abs() expects a numeric argument";
-    case /*ABS_OUT_OF_RANGE =*/ 0x0510: return "abs() argument is out of range";
-    case /*MIN_ARG_COUNT =*/ 0x0511: return "min() expects at least one argument";
-    case /*MAX_ARG_COUNT =*/ 0x0512: return "max() expects at least one argument";
-    case /*POW_ARG_COUNT =*/ 0x0513: return "pow() expects exactly two arguments";
-    case /*POW_TYPE_ERROR =*/ 0x0514: return "pow() expects numeric arguments";
-    case /*SQRT_ARG_COUNT =*/ 0x0515: return "sqrt() expects exactly one argument";
-    case /*SQRT_TYPE_ERROR =*/ 0x0516: return "sqrt() expects a numeric argument";
-    case /*ASSERT_ARG_COUNT =*/ 0x0517: return "assert expects at least one argument";
-    case /*ASSERT_FAILED =*/ 0x0518: return "assertion failed";
-    case /*OPEN_ARG_COUNT =*/ 0x0519: return "open() expects at least one argument";
+    case /*APPEND_ARG_COUNT =*/0x0500: return "append() expects at least two arguments";
+    case /*APPEND_TYPE_ERROR =*/0x0501: return "append() expects a list as the first argument";
+    case /*POP_ARG_COUNT =*/0x0502: return "pop() expects exactly one argument";
+    case /*POP_TYPE_ERROR =*/0x0503: return "pop() expects a list argument";
+    case /*SLICE_ARG_COUNT =*/0x0504: return "slice() expects at least two arguments";
+    case /*STR_ARG_COUNT =*/0x0505: return "str() expects zero or one argument";
+    case /*BOOL_ARG_COUNT =*/0x0506: return "bool() expects exactly one argument";
+    case /*SUBSTR_ARG_COUNT =*/0x0507: return "substr() expects exactly three arguments";
+    case /*FLOOR_ARG_COUNT =*/0x0508: return "floor() expects exactly one argument";
+    case /*FLOOR_TYPE_ERROR =*/0x0509: return "floor() expects a numeric argument";
+    case /*CEIL_ARG_COUNT =*/0x050A: return "ceil() expects exactly one argument";
+    case /*CEIL_TYPE_ERROR =*/0x050B: return "ceil() expects a numeric argument";
+    case /*ROUND_ARG_COUNT =*/0x050C: return "round() expects exactly one argument";
+    case /*ROUND_TYPE_ERROR =*/0x050D: return "round() expects a numeric argument";
+    case /*ABS_ARG_COUNT =*/0x050E: return "abs() expects exactly one argument";
+    case /*ABS_TYPE_ERROR =*/0x050F: return "abs() expects a numeric argument";
+    case /*ABS_OUT_OF_RANGE =*/0x0510: return "abs() argument is out of range";
+    case /*MIN_ARG_COUNT =*/0x0511: return "min() expects at least one argument";
+    case /*MAX_ARG_COUNT =*/0x0512: return "max() expects at least one argument";
+    case /*POW_ARG_COUNT =*/0x0513: return "pow() expects exactly two arguments";
+    case /*POW_TYPE_ERROR =*/0x0514: return "pow() expects numeric arguments";
+    case /*SQRT_ARG_COUNT =*/0x0515: return "sqrt() expects exactly one argument";
+    case /*SQRT_TYPE_ERROR =*/0x0516: return "sqrt() expects a numeric argument";
+    case /*ASSERT_ARG_COUNT =*/0x0517: return "assert expects at least one argument";
+    case /*ASSERT_FAILED =*/0x0518: return "assertion failed";
+    case /*OPEN_ARG_COUNT =*/0x0519: return "open() expects at least one argument";
     // containers
-    case /*ARRAY_EMPTY_BACK =*/ 0x0600: return "Fa_Array::back() called on an empty array";
-    case /*ARRAY_EMPTY_FRONT =*/ 0x0601: return "Fa_Array::front() called on an empty array";
-    case /*ARRAY_CAPACITY_EXCEEDED =*/ 0x0602: return "Requested array capacity exceeds the maximum";
-    case /*ARRAY_OUT_OF_BOUNDS =*/ 0x0603: return "Fa_Array index is out of bounds";
-    case /*STRING_SLICE_START_OOB =*/ 0x0604: return "String slice start index is out of range";
-    case /*STRING_SLICE_END_BEFORE_START =*/ 0x0605: return "String slice end must not precede start";
+    case /*ARRAY_EMPTY_BACK =*/0x0600: return "Fa_Array::back() called on an empty array";
+    case /*ARRAY_EMPTY_FRONT =*/0x0601: return "Fa_Array::front() called on an empty array";
+    case /*ARRAY_CAPACITY_EXCEEDED =*/0x0602: return "Requested array capacity exceeds the maximum";
+    case /*ARRAY_OUT_OF_BOUNDS =*/0x0603: return "Fa_Array index is out of bounds";
+    case /*STRING_SLICE_START_OOB =*/0x0604: return "String slice start index is out of range";
+    case /*STRING_SLICE_END_BEFORE_START =*/0x0605: return "String slice end must not precede start";
     // general
-    case /*ALLOC_FAILED =*/ 0x0700: return "Memory allocation failed";
-    case /*ARENA_EXHAUSTED =*/ 0x0701: return "Arena allocator exhausted";
-    case /*INTERNAL_ERROR =*/ 0x0702: return "Internal compiler error";
-    case /*UNKNOWN =*/ 0x0703: return "Unknown error";
-    case /*ALLOCATOR_CONTEXT_NOT_INITIALIZED =*/ 0x0704: return "Fa_AllocatorContext is not initialized";
-    case /*MMAP_FAILED =*/ 0x0705: return "mmap failed";
-    case /*NANBOX_ADDRESS_UNSAFE =*/ 0x0706: return "mmap returned an address unsafe for NaN-boxing";
-    case /*INVALID_PARAMETER =*/ 0x0707: return "Invalid parameters to function";
+    case /*ALLOC_FAILED =*/0x0700: return "Memory allocation failed";
+    case /*ARENA_EXHAUSTED =*/0x0701: return "Arena allocator exhausted";
+    case /*INTERNAL_ERROR =*/0x0702: return "Internal compiler error";
+    case /*UNKNOWN =*/0x0703: return "Unknown error";
+    case /*ALLOCATOR_CONTEXT_NOT_INITIALIZED =*/0x0704: return "Fa_AllocatorContext is not initialized";
+    case /*MMAP_FAILED =*/0x0705: return "mmap failed";
+    case /*NANBOX_ADDRESS_UNSAFE =*/0x0706: return "mmap returned an address unsafe for NaN-boxing";
+    case /*INVALID_PARAMETER =*/0x0707: return "Invalid parameters to function";
     default: return "Unknown error";
     }
 }
@@ -507,7 +509,7 @@ static void emit(CodeEnum code, Severity const sv = Severity::ERROR)
 }
 
 template<typename CodeEnum>
-static void fatal_error(CodeEnum code, std::string const& detail= "")
+static void fatal_error(CodeEnum code, std::string const& detail = "")
 {
     engine.report_deferred(Severity::FATAL, { }, code_value(code), detail);
     std::string message = error_message_for(code_value(code));

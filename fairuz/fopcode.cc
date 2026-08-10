@@ -1,7 +1,7 @@
 /// opcode.cc
 
-#include "fvalue.hpp"
 #include "fobject.hpp"
+#include "fvalue.hpp"
 
 namespace fairuz::runtime {
 
