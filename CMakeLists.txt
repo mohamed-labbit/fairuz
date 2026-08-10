@@ -1,6 +1,12 @@
 cmake_minimum_required(VERSION 3.14)
 project(Fairuz VERSION 0.1.0 LANGUAGES C CXX)
 
+# Add right after project()
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
+endif()
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 include(GNUInstallDirs)
 
 set(CMAKE_CXX_STANDARD 26)
