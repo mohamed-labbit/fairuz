@@ -1102,8 +1102,7 @@ Fa_Value Fa_VM::execute()
     Fa_CASE(NEW_INSTANCE)
     {
         Fa_ObjClass* klass = Fa_AS_CLASS(cur_chunk->constants[Fa_instr_Bx(instr)]);
-        Fa_ObjInstance* inst = m_gc.make_obj_instance(klass);
-        Fa_RA() = Fa_MAKE_OBJECT(inst);
+        Fa_RA() = Fa_MAKE_INSTANCE(klass);
         Fa_DISPATCH();
     }
     Fa_CASE(INVOKE)

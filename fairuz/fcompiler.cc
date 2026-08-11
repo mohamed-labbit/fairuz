@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstdio>
 #include <utility>
 
 namespace fairuz::runtime {
@@ -37,6 +38,21 @@ static void patch_a(Fa_Chunk* chunk, u32 pc, u8 a)
 static AST::Fa_NameExpr* as_simple_member_name(AST::Fa_Expr* e)
 {
     return e != nullptr && e->get_kind() == AST::Fa_Expr::Kind::NAME ? AS_NAME(e) : nullptr;
+}
+
+// Mirrors fairuz::parser::same_name (fparser.cc), which is file-local to
+// that translation unit and not visible here. Used to detect `this.field`
+// GET targets (object side is the synthetic kClassInstanceName NAME node)
+// so we can fall back to current_method_field_index() instead of
+// resolve_receiver_class(), which depends on m_class_registry — and the
+// class currently being compiled is NOT YET in m_class_registry while its
+// own methods are still being compiled (see compile_class_def: the
+// registry insert happens only after the full method-compilation loop).
+static bool is_this_reference(AST::Fa_Expr const* e)
+{
+    return e != nullptr
+        && e->get_kind() == AST::Fa_Expr::Kind::NAME
+        && AS_CONST_NAME(e)->get_value() == Fa_StringRef(kClassInstanceName);
 }
 
 Fa_Chunk* Compiler::compile(Fa_Array<AST::Fa_Stmt*> const& stmts)
@@ -137,6 +153,9 @@ void Compiler::compile_assignment_stmt(AST::Fa_AssignmentStmt* s)
 
     if (auto* get_expr = dynamic_cast<AST::Fa_GetExpr*>(s->get_target())) {
         if (AST::Fa_NameExpr* member_name = as_simple_member_name(get_expr->get_member())) {
+            // Fast path: receiver's class is already registered in
+            // m_class_registry (e.g. `obj.field := x` where obj's class
+            // finished compiling earlier).
             if (ClassDesc const* desc = resolve_receiver_class(get_expr->get_object())) {
                 int field_idx = desc->field_index(member_name->get_value());
                 if (field_idx >= 0) {
@@ -145,6 +164,27 @@ void Compiler::compile_assignment_stmt(AST::Fa_AssignmentStmt* s)
                     u8 value_reg = any_reg(compile_expr_impl(s->get_value()), loc);
                     emit(Fa_make_ABC(Fa_OpCode::SET_FIELD, object_reg, static_cast<u8>(field_idx), value_reg), loc);
                     return;
+                }
+            }
+
+            // `this.field := x` inside the class's own method body, while
+            // that class is still being compiled. m_class_registry doesn't
+            // have this class yet (compile_class_def registers it only
+            // after all methods finish compiling), but
+            // state.class_field_names was pre-populated from the parser's
+            // this.field-assignment scan before any method body compiled,
+            // so current_method_field_index() already knows about this
+            // field even though resolve_receiver_class() can't see it yet.
+            if (is_this_reference(get_expr->get_object())) {
+                int field_idx = current_method_field_index(member_name->get_value());
+                if (field_idx >= 0) {
+                    RegMark mark(m_current);
+                    LocalVar const* self = lookup_local(kClassInstanceName);
+                    if (self != nullptr) {
+                        u8 value_reg = any_reg(compile_expr_impl(s->get_value()), loc);
+                        emit(Fa_make_ABC(Fa_OpCode::SET_FIELD, self->reg, static_cast<u8>(field_idx), value_reg), loc);
+                        return;
+                    }
                 }
             }
         }
@@ -459,7 +499,7 @@ void Compiler::compile_class_def(AST::Fa_ClassDef* s)
 
     Fa_SourceLocation loc = s->get_location();
     if (!m_current->is_top_level || m_current->scope_depth != 0) {
-        report_error(CompilerError::NESTED_FUNCTION_UNSUPPORTED, loc);
+        report_error(CompilerError::NESTED_CLASS_UNSUPPORTED, loc);
         return;
     }
 
@@ -883,12 +923,24 @@ Fa_ExprResult Compiler::compile_binary_impl(AST::Fa_BinaryExpr* e)
     return Fa_ExprResult::reloc(pc);
 }
 
+bool Compiler::is_declaration(AST::Fa_AssignmentExpr const* e) const {
+    if (!AST::is_name(e->get_target())) {
+        // complex expression cannot be used for decl
+        return false;
+    }
+
+    auto name = AS_CONST_NAME(e->get_target());
+    if (lookup_local(name->get_value())) 
+        return false;
+    return true;
+}
+
 Fa_ExprResult Compiler::compile_assign_impl(AST::Fa_AssignmentExpr* e)
 {
     Fa_SourceLocation loc = e->get_location();
     AST::Fa_Expr* target = e->get_target();
 
-    if (target->get_kind() == AST::Fa_Expr::Kind::INDEX) {
+    if (AST::is_index(target)) {
         auto index_expr = AS_INDEX(target);
         RegMark mark(m_current);
         u8 list_reg = any_reg(compile_expr_impl(index_expr->get_object()), loc);
@@ -901,6 +953,9 @@ Fa_ExprResult Compiler::compile_assign_impl(AST::Fa_AssignmentExpr* e)
     if (target->get_kind() == AST::Fa_Expr::Kind::GET) {
         auto get_expr = AS_GET_EXPR(target);
         if (AST::Fa_NameExpr* member_name = as_simple_member_name(get_expr->get_member())) {
+            // Fast path: receiver's class is already registered in
+            // m_class_registry (e.g. `obj.field := x` where obj's class
+            // finished compiling earlier).
             if (ClassDesc const* desc = resolve_receiver_class(get_expr->get_object())) {
                 int field_idx = desc->field_index(member_name->get_value());
                 if (field_idx >= 0) {
@@ -909,6 +964,27 @@ Fa_ExprResult Compiler::compile_assign_impl(AST::Fa_AssignmentExpr* e)
                     u8 value_reg = any_reg(compile_expr_impl(e->get_value()), loc);
                     emit(Fa_make_ABC(Fa_OpCode::SET_FIELD, object_reg, static_cast<u8>(field_idx), value_reg), loc);
                     return Fa_ExprResult::reg(value_reg);
+                }
+            }
+
+            // `this.field := x` inside the class's own method body, while
+            // that class is still being compiled. m_class_registry doesn't
+            // have this class yet (compile_class_def registers it only
+            // after all methods finish compiling), but
+            // state.class_field_names was pre-populated from the parser's
+            // this.field-assignment scan before any method body compiled,
+            // so current_method_field_index() already knows about this
+            // field even though resolve_receiver_class() can't see it yet.
+            if (is_this_reference(get_expr->get_object())) {
+                int field_idx = current_method_field_index(member_name->get_value());
+                if (field_idx >= 0) {
+                    RegMark mark(m_current);
+                    LocalVar const* self = lookup_local(kClassInstanceName);
+                    if (self != nullptr) {
+                        u8 value_reg = any_reg(compile_expr_impl(e->get_value()), loc);
+                        emit(Fa_make_ABC(Fa_OpCode::SET_FIELD, self->reg, static_cast<u8>(field_idx), value_reg), loc);
+                        return Fa_ExprResult::reg(value_reg);
+                    }
                 }
             }
         }
@@ -920,21 +996,19 @@ Fa_ExprResult Compiler::compile_assign_impl(AST::Fa_AssignmentExpr* e)
         return Fa_ExprResult::knil();
     }
 
-    if (e->is_declaration()) {
-        if (LocalVar const* local = lookup_local(name->get_value())) {
-            u8 local_reg = local->reg;
-            compile_expr(e->get_value(), &local_reg);
-            return Fa_ExprResult::reg(local_reg);
-        }
+    if (is_declaration(e)) {
+        ::fprintf(stderr, "Sure is a declaration\n");
 
         if (m_current->is_top_level && m_current->scope_depth == 0) {
+            if (!infer_constructed_class(e->get_value()).empty())
+                goto instance_decl;
             RegMark mark(m_current);
             u8 src = any_reg(compile_expr_impl(e->get_value()), loc);
             u16 kidx = intern_string(name->get_value());
             emit(Fa_make_ABx(Fa_OpCode::STORE_GLOBAL, src, kidx), loc);
             return Fa_ExprResult::reg(src);
         }
-
+instance_decl:
         u8 reg = alloc_register();
         discharge(compile_expr_impl(e->get_value()), reg, loc);
         declare_local(name->get_value(), reg, infer_constructed_class(e->get_value()));
@@ -1121,7 +1195,9 @@ Fa_ExprResult Compiler::compile_get_impl(AST::Fa_GetExpr* e)
     Fa_SourceLocation loc = e->get_location();
 
     if (AST::Fa_NameExpr* member_name = as_simple_member_name(e->get_member())) {
+        ::fprintf(stderr, "shbong\n");
         if (ClassDesc const* desc = resolve_receiver_class(e->get_object())) {
+            ::fprintf(stderr, "shbong shbong\n");
             int idx = desc->field_index(member_name->get_value());
             if (idx >= 0) {
                 RegMark mark(m_current);
@@ -1134,7 +1210,28 @@ Fa_ExprResult Compiler::compile_get_impl(AST::Fa_GetExpr* e)
             // Name matches the class but isn't a field — could be a bound
             // method reference; fall through to the slow path below.
         }
+
+        // `this.field` read inside the class's own method body, while that
+        // class is still being compiled — same m_class_registry-not-yet-
+        // populated situation as compile_assign_impl/compile_assignment_stmt.
+        // Use current_method_field_index() instead, which was pre-populated
+        // before any method body started compiling.
+        if (is_this_reference(e->get_object())) {
+            ::fprintf(stderr, "shbong shbong shbong\n");
+            int idx = current_method_field_index(member_name->get_value());
+            if (idx >= 0) {
+                LocalVar const* self = lookup_local(kClassInstanceName);
+                if (self != nullptr) {
+                    u32 pc = emit(Fa_make_ABC(Fa_OpCode::GET_FIELD, 0, self->reg,
+                                      static_cast<u8>(idx)),
+                        loc);
+                    return Fa_ExprResult::reloc(pc);
+                }
+            }
+        }
     }
+
+    fprintf(stderr, "Fuuuuuck\n");
 
     RegMark mark(m_current);
     u8 object_reg = any_reg(compile_expr_impl(e->get_object()), loc);

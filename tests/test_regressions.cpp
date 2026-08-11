@@ -83,7 +83,7 @@ TEST(RegressionNatives, StringListDemoOutput)
     RunResult r = run_installed(binary_path(), program);
     EXPECT_EQ(r.exit_code, 0);
     EXPECT_NE(r.out.find("alpha|beta|gamma|delta"), std::string::npos);
-    EXPECT_NE(r.out.find("true"), std::string::npos);
+    EXPECT_NE(r.out.find("صحيح"), std::string::npos);
 }
 
 TEST(RegressionNatives, NumericDemoOutput)

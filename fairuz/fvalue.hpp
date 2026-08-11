@@ -82,9 +82,9 @@ static constexpr u64 OBJ_TAG16 = UINT64_C(0xFFF8);
             Fa_ObjClass* _o = m_gc.make_obj_class(n, f, f_c, m, m_c, v, v_c); \
             TAG_OBJ | (reinterpret_cast<uintptr_t>(_o) & PAYLOAD_MASK);       \
         })
-#    define Fa_MAKE_INSTANCE()                                          \
+#    define Fa_MAKE_INSTANCE(k)                                          \
         ({                                                              \
-            Fa_ObjInstance* _o = m_gc.make_obj_instance();              \
+            Fa_ObjInstance* _o = m_gc.make_obj_instance(k);              \
             TAG_OBJ | (reinterpret_cast<uintptr_t>(_o) & PAYLOAD_MASK); \
         })
 
@@ -342,7 +342,7 @@ public:
 #    define Fa_MAKE_FUNCTION() Fa_Value::from_object((Fa_ObjHeader*)(m_gc.make_obj_function()))
 #    define Fa_MAKE_NATIVE(f, n, a) Fa_Value::from_object((Fa_ObjHeader*)(m_gc.make_obj_native(f, n, a)))
 #    define Fa_MAKE_CLASS(n, f, f_c, m, m_c, v, v_c) Fa_Value::from_object((Fa_ObjHeader*)(m_gc.make_obj_class(n, f, f_c, m, m_c, v, v_c)))
-#    define Fa_MAKE_INSTANCE() Fa_Value::from_object((Fa_ObjHeader*)(m_gc.make_obj_instance()))
+#    define Fa_MAKE_INSTANCE(k) Fa_Value::from_object((Fa_ObjHeader*)(m_gc.make_obj_instance(k)))
 
 /* ------- Truth macros  ------- */
 

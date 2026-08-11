@@ -67,7 +67,7 @@ TEST(StdlibRegression, JoinStringifiesMixedScalarValues)
     Fa_Value result = vm.Fa_join(2, m_args);
 
     ASSERT_TRUE(Fa_IS_STRING(result));
-    EXPECT_EQ(as_std_string(result), "7|true|ok|nil");
+    EXPECT_EQ(as_std_string(result), "7|صحيح|ok|nil");
 }
 
 TEST(StdlibRegression, JoinEmptyListReturnsEmptyString)
@@ -201,7 +201,7 @@ TEST(StdlibRegression, StrStringifiesListsLikePrint)
     Fa_Value result = vm.Fa_str(1, &list);
 
     ASSERT_TRUE(Fa_IS_STRING(result));
-    EXPECT_EQ(as_std_string(result), R"([1, false, "z"])");
+    EXPECT_EQ(as_std_string(result), R"([1, خطا, "z"])");
 }
 
 TEST(StdlibRegression, StrStringifiesDictsLikePrint)
@@ -261,7 +261,7 @@ TEST(StdlibRegression, StrScalarConversionsMatchSurfaceSyntax)
     Fa_Value nil_value = Fa_MAKE_NIL();
 
     EXPECT_EQ(as_std_string(vm.Fa_str(1, &int_value)), "42");
-    EXPECT_EQ(as_std_string(vm.Fa_str(1, &bool_value)), "true");
+    EXPECT_EQ(as_std_string(vm.Fa_str(1, &bool_value)), "صحيح");
     EXPECT_EQ(as_std_string(vm.Fa_str(1, &nil_value)), "nil");
 }
 

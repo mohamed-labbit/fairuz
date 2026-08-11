@@ -268,6 +268,7 @@ private:
     u32 intern_string(Fa_StringRef const& str);
 
     ClassDesc const* resolve_receiver_class(AST::Fa_Expr const* e) const;
+    bool is_declaration(AST::Fa_AssignmentExpr const* e) const;
 }; // class Compiler
 
 } // namespace fairuz::runtime

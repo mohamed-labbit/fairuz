@@ -1431,7 +1431,7 @@ TEST(NativeStr, BoolTrue)
     Fa_Value arg = Fa_MAKE_BOOL(true);
     Fa_Value r = vm.Fa_str(1, &arg);
     ASSERT_TRUE(Fa_IS_STRING(r));
-    EXPECT_EQ(std::string(Fa_AS_STRING(r)->str.data()), "true");
+    EXPECT_EQ(std::string(Fa_AS_STRING(r)->str.data()), "صحيح");
 }
 
 TEST(NativeStr, BoolFalse)
@@ -1440,7 +1440,7 @@ TEST(NativeStr, BoolFalse)
     Fa_Value arg = Fa_MAKE_BOOL(false);
     Fa_Value r = vm.Fa_str(1, &arg);
     ASSERT_TRUE(Fa_IS_STRING(r));
-    EXPECT_EQ(std::string(Fa_AS_STRING(r)->str.data()), "false");
+    EXPECT_EQ(std::string(Fa_AS_STRING(r)->str.data()), "خطا");
 }
 
 TEST(NativeStr, Float)

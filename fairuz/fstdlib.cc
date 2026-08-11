@@ -35,7 +35,7 @@ static void append_rendered_value(Fa_StringRef& out, Fa_Value v, bool quote_stri
         return;
     }
     if (Fa_IS_BOOL(v)) {
-        out += Fa_AS_BOOL(v) ? "true" : "false";
+        out += Fa_AS_BOOL(v) ? "صحيح" : "خطا";
         return;
     }
     if (Fa_IS_INTEGER(v)) {
@@ -156,7 +156,7 @@ static void print_runtime_value(Fa_Value v, int depth = 0)
     }
 
     if (Fa_IS_BOOL(v)) {
-        std::cout << (Fa_AS_BOOL(v) ? "true" : "false");
+        std::cout << (Fa_AS_BOOL(v) ? "صحيح" : "خطا");
         return;
     }
 

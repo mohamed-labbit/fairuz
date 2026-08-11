@@ -10,7 +10,7 @@ void print_value(Fa_Value v)
     if (Fa_IS_NIL(v))
         ::printf("nil");
     else if (Fa_IS_BOOL(v))
-        ::printf("%s", Fa_AS_BOOL(v) ? "true" : "false");
+        ::printf("%s", Fa_AS_BOOL(v) ? "صحيح" : "خطا");
     else if (Fa_IS_INTEGER(v))
         ::printf("%lli", Fa_AS_INTEGER(v));
     else if (Fa_IS_DOUBLE(v))
