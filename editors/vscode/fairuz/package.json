@@ -1,33 +1,23 @@
 {
   "name": "fairuz-language",
   "displayName": "Fairuz Language Support",
-  "description": "Syntax highlighting and language configuration for the Fairuz programming language.",
+  "description": "Syntax highlighting and RTL editor for the Fairuz Arabic-syntax language",
   "version": "0.1.0",
-  "publisher": "fairuz",
-  "license": "MIT",
-  "main": "./extension.js",
   "engines": {
     "vscode": "^1.85.0"
   },
-  "categories": [
-    "Programming Languages"
-  ],
+  "categories": ["Programming Languages"],
+  "main": "./src/extension.js",
   "activationEvents": [
     "onLanguage:fairuz",
-    "onCommand:fairuz.openRtlEditor",
     "onCustomEditor:fairuz.rtlEditor"
   ],
   "contributes": {
     "languages": [
       {
         "id": "fairuz",
-        "aliases": [
-          "Fairuz",
-          "fairuz"
-        ],
-        "extensions": [
-          ".fa"
-        ],
+        "aliases": ["Fairuz", "fairuz"],
+        "extensions": [".fa"],
         "configuration": "./language-configuration.json"
       }
     ],
@@ -38,23 +28,27 @@
         "path": "./syntaxes/fairuz.tmLanguage.json"
       }
     ],
-    "commands": [
-      {
-        "command": "fairuz.openRtlEditor",
-        "title": "Fairuz: Open RTL Editor"
-      }
-    ],
     "customEditors": [
       {
         "viewType": "fairuz.rtlEditor",
         "displayName": "Fairuz RTL Editor",
-        "selector": [
-          {
-            "filenamePattern": "*.fa"
-          }
-        ],
-        "priority": "option"
+        "selector": [{ "filenamePattern": "*.fa" }],
+        "priority": "default"
+      }
+    ],
+    "commands": [
+      {
+        "command": "fairuz.openRtlEditor",
+        "title": "Fairuz: Open in RTL Editor"
       }
     ]
+  },
+  "scripts": {
+    "vscode:prepublish": "node ./scripts/copy-monaco.js",
+    "package": "npm run vscode:prepublish && vsce package"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^3.0.0",
+    "monaco-editor": "^0.52.0"
   }
 }
