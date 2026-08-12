@@ -1226,8 +1226,6 @@ Fa_ExprResult Compiler::compile_get_impl(AST::Fa_GetExpr* e)
         }
     }
 
-    fprintf(stderr, "Fuuuuuck\n");
-
     RegMark mark(m_current);
     u8 object_reg = any_reg(compile_expr_impl(e->get_object()), loc);
     u8 member_reg = alloc_register();
