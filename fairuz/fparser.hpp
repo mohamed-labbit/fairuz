@@ -119,7 +119,7 @@ private:
         return false;
     }
 
-    Fa_Error report_error(diagnostic::errc::parser::Code err_code);
+    Fa_Error report_error(diagnostic::errc::parser::Code err_code, diagnostic::Severity sv = diagnostic::Severity::ERROR);
 
     void skip_newlines()
     {

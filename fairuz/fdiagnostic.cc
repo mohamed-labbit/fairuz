@@ -20,6 +20,8 @@ Fa_DiagnosticEngine::DiagnosticId Fa_DiagnosticEngine::report(
     if (sev == Severity::ERROR || sev == Severity::FATAL || sev == Severity::WARNING) {
         pretty_print();
         m_diagnostics.clear();
+        if (sev == Severity::FATAL)
+            panic("exited on fatal error");
     }
 
     return id;

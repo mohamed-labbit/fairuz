@@ -3,6 +3,7 @@
 //
 
 #include "fparser.hpp"
+#include "fdiagnostic.hpp"
 #include "fmacros.hpp"
 #include "futil.hpp"
 
@@ -161,11 +162,11 @@ AST::Fa_UnaryOp to_unary_op(TokType const op)
 
 // Fa_Parser — utilities
 
-Fa_Error Fa_Parser::report_error(ParserCode err_code)
+Fa_Error Fa_Parser::report_error(ParserCode err_code, diagnostic::Severity sv)
 {
     auto* tok = current_token();
     Fa_SourceLocation loc = { tok->line(), tok->column(), static_cast<u16>(tok->lexeme().len()) };
-    return fairuz::report_error(err_code, loc);
+    return fairuz::report_error(err_code, loc, sv);
 }
 
 bool Fa_Parser::we_done() const { return current_token()->is(TokType::ENDMARKER); }
@@ -818,10 +819,10 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_primary_expr()
         return parse_dict_literal();
 
     if (we_done())
-        return report_error(ParserCode::UNEXPECTED_EOF);
+        return report_error(ParserCode::UNEXPECTED_EOF, diagnostic::Severity::FATAL);
 
     skip_newlines();
-    return report_error(ParserCode::UNEXPECTED_TOKEN);
+    return report_error(ParserCode::UNEXPECTED_TOKEN, diagnostic::Severity::FATAL);
 }
 
 Fa_ErrorOr<ExprPtr> Fa_Parser::parse_list_literal()

@@ -997,8 +997,6 @@ Fa_ExprResult Compiler::compile_assign_impl(AST::Fa_AssignmentExpr* e)
     }
 
     if (is_declaration(e)) {
-        ::fprintf(stderr, "Sure is a declaration\n");
-
         if (m_current->is_top_level && m_current->scope_depth == 0) {
             if (!infer_constructed_class(e->get_value()).empty())
                 goto instance_decl;
@@ -1195,9 +1193,7 @@ Fa_ExprResult Compiler::compile_get_impl(AST::Fa_GetExpr* e)
     Fa_SourceLocation loc = e->get_location();
 
     if (AST::Fa_NameExpr* member_name = as_simple_member_name(e->get_member())) {
-        ::fprintf(stderr, "shbong\n");
         if (ClassDesc const* desc = resolve_receiver_class(e->get_object())) {
-            ::fprintf(stderr, "shbong shbong\n");
             int idx = desc->field_index(member_name->get_value());
             if (idx >= 0) {
                 RegMark mark(m_current);
@@ -1217,7 +1213,6 @@ Fa_ExprResult Compiler::compile_get_impl(AST::Fa_GetExpr* e)
         // Use current_method_field_index() instead, which was pre-populated
         // before any method body started compiling.
         if (is_this_reference(e->get_object())) {
-            ::fprintf(stderr, "shbong shbong shbong\n");
             int idx = current_method_field_index(member_name->get_value());
             if (idx >= 0) {
                 LocalVar const* self = lookup_local(kClassInstanceName);

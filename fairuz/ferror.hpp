@@ -1,6 +1,7 @@
 #ifndef ERROR_OR
 #define ERROR_OR
 
+#include "fdiagnostic.hpp"
 #include "flexer.hpp"
 #include "fmacros.hpp"
 
@@ -200,9 +201,9 @@ private:
 // [FIX 1 follow-through] report() now returns a DiagnosticId; _report_error
 // captures it and stores it on the Fa_Error it returns, so callers get the
 // stable handle "for free" without changing every call site's signature.
-static Fa_Error _report_error(u16 errc, Fa_SourceLocation loc)
+static Fa_Error _report_error(u16 errc, Fa_SourceLocation loc, diagnostic::Severity sv = diagnostic::Severity::ERROR)
 {
-    auto id = diagnostic::report(diagnostic::Severity::ERROR, loc, errc);
+    auto id = diagnostic::report(sv, loc, errc);
 
     // Uses the RawCode constructor — errc here is already a u16
     // recovered from whichever phase-specific enum the caller passed in
@@ -218,9 +219,9 @@ static Fa_Error report_error(diagnostic::errc::compiler::Code errc, Fa_SourceLoc
 {
     return _report_error(static_cast<u16>(errc), loc);
 }
-static Fa_Error report_error(diagnostic::errc::parser::Code errc, Fa_SourceLocation loc)
+static Fa_Error report_error(diagnostic::errc::parser::Code errc, Fa_SourceLocation loc, diagnostic::Severity sv = diagnostic::Severity::ERROR)
 {
-    return _report_error(static_cast<u16>(errc), loc);
+    return _report_error(static_cast<u16>(errc), loc, sv);
 }
 static Fa_Error report_error(diagnostic::errc::sema::Code errc, Fa_SourceLocation loc)
 {
