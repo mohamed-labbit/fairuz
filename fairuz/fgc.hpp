@@ -49,7 +49,7 @@ public:
         u32 field_count, Fa_StringRef* methods, u32 method_count, Fa_Chunk** vtable, u32 vtable_size);
     Fa_ObjInstance* make_obj_instance(Fa_ObjClass* klass);
 
-    /* allocator api */
+    /* --- allocator api --- */
     template<typename T>
     T* allocate_array(u32 const count)
     {

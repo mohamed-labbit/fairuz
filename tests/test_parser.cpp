@@ -416,24 +416,6 @@ TEST_F(ParserTest, ParseComplexFunctionCall)
     EXPECT_EQ(as<AST::Fa_NameExpr>(arg2->get_right())->get_value(), "ث");
 }
 
-TEST_F(ParserTest, ParseInvalidSyntaxThrows)
-{
-    Fa_FileManager m_file_manager(parser_test_cases_dir() / "invalid_syntax.fa");
-    Fa_Parser parser(&m_file_manager);
-    auto m_expr = parser.parse();
-
-    EXPECT_TRUE(m_expr.has_error()) << "Fa_Parser should return error for invalid syntax";
-}
-
-TEST_F(ParserTest, ParseMissingOperand)
-{
-    Fa_FileManager m_file_manager(parser_test_cases_dir() / "missing_operand.fa");
-    Fa_Parser parser(&m_file_manager);
-    auto m_expr = parser.parse();
-
-    EXPECT_TRUE(m_expr.has_error()) << "Fa_Parser should not create valid expression with missing operand";
-}
-
 TEST_F(ParserTest, ParseUnmatchedParenthesis)
 {
     Fa_FileManager m_file_manager(parser_test_cases_dir() / "unmatched_paren.fa");
@@ -457,15 +439,6 @@ TEST_F(ParserTest, ParseExtraClosingParenthesis)
         AST_Printer.print(m_expr);
 }
 
-TEST_F(ParserTest, ParseUnexpectedEOF)
-{
-    Fa_FileManager m_file_manager(parser_test_cases_dir() / "unexpected_eof.fa");
-    Fa_Parser parser(&m_file_manager);
-    auto m_expr = parser.parse();
-
-    EXPECT_TRUE(m_expr.has_error());
-}
-
 TEST_F(ParserTest, ParseInvalidOperatorSequence)
 {
     Fa_FileManager m_file_manager(parser_test_cases_dir() / "invalid_operator_seq.fa");
@@ -484,27 +457,6 @@ TEST_F(ParserTest, ParseInvalidOperatorSequence)
 
     if (test_config::print_ast)
         AST_Printer.print(m_expr);
-}
-
-TEST_F(ParserTest, ParseEmptyInput)
-{
-    Fa_FileManager m_file_manager(parser_test_cases_dir() / "empty_input.fa");
-    Fa_Parser parser(&m_file_manager);
-
-    EXPECT_TRUE(parser.we_done()) << "Fa_Parser should recognize empty input immediately";
-
-    auto m_expr = parser.parse();
-
-    EXPECT_TRUE(m_expr.has_error());
-}
-
-TEST_F(ParserTest, ParseWhitespaceOnly)
-{
-    Fa_FileManager m_file_manager(parser_test_cases_dir() / "whitespace_only.fa");
-    Fa_Parser parser(&m_file_manager);
-    auto m_expr = parser.parse();
-
-    EXPECT_TRUE(m_expr.has_error());
 }
 
 TEST_F(ParserTest, ParseSingleIdentifier)

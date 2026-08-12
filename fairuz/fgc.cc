@@ -164,11 +164,6 @@ Fa_ObjString* Fa_GarbageCollector::make_obj_string(Fa_StringRef str)
     return ret;
 }
 
-// Fa_ObjString* Fa_GarbageCollector::make_obj_string(Fa_StringRef str)
-// {
-// return make<Fa_ObjString>(str.data());
-// }
-
 Fa_ObjString* Fa_GarbageCollector::make_obj_string(char const* str)
 {
     auto ret = make<Fa_ObjString>();
@@ -181,14 +176,6 @@ Fa_ObjString* Fa_GarbageCollector::make_obj_string(char* str)
 {
     return make_obj_string(static_cast<char const*>(str));
 }
-
-/*
-Fa_ObjList* Fa_GarbageCollector::make_obj_list()
-{
-    auto ret = make<Fa_ObjList>();
-    return ret;
-}
-*/
 
 Fa_ObjList* Fa_GarbageCollector::make_obj_list()
 {

@@ -1231,7 +1231,8 @@ Fa_ExprResult Compiler::compile_get_impl(AST::Fa_GetExpr* e)
     u8 member_reg = alloc_register();
 
     if (AST::Fa_NameExpr* member_name = as_simple_member_name(e->get_member()))
-        emit(Fa_make_ABx(Fa_OpCode::LOAD_CONST, member_reg, intern_string(member_name->get_value())), e->get_member()->get_location());
+        emit(Fa_make_ABx(Fa_OpCode::LOAD_CONST, member_reg, 
+            intern_string(member_name->get_value())), e->get_member()->get_location());
     else
         discharge(compile_expr_impl(e->get_member()), member_reg, e->get_member()->get_location());
 

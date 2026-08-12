@@ -33,11 +33,6 @@ Fa_DiagnosticEngine::DiagnosticId Fa_DiagnosticEngine::report_deferred(
     if (sev == Severity::ERROR && m_error_count >= LIMIT)
         _panic("Too many errors (error limit = 20)");
 
-    /*
-    if (sev == Severity::WARNING && m_warning_count >= LIMIT)
-        return INVALID_ID;
-    */
-
     DiagnosticId const id = static_cast<DiagnosticId>(m_diagnostics.size());
     m_diagnostics.push_back({ sev, loc, err_code, code, { }, { } });
 
@@ -191,14 +186,8 @@ void Fa_DiagnosticEngine::pretty_print() const
 
         if (m_source != nullptr)
             std::cerr << Color::BOLD << Color::RESET << m_source->get_path() << ": " << Color::RESET;
-        std::cerr << sev_str << Color::RESET << ":";
-
-        /*
-        if (!diag.code.empty())
-            std::cerr << "[" << diag.code << "]";
-        */
-
-        std::cerr << Color::RESET << " " << error_message_for(diag.err_code) << "\n";
+        
+        std::cerr << sev_str << Color::RESET << ":" << " " << error_message_for(diag.err_code) << "\n";
 
         if (diag.src_loc.line > 0) {
             std::cerr << "  --> line " << diag.src_loc.line << ":" << diag.src_loc.column << "\n";
