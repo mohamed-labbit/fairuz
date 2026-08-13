@@ -2,6 +2,8 @@
 #include "farray.hpp"
 #include "fdiagnostic.hpp"
 #include "fmacros.hpp"
+#include "fobj_header.hpp"
+#include "fobject.hpp"
 #include "fstring.hpp"
 #include "fvalue.hpp"
 #include "fvm.hpp"
@@ -20,6 +22,7 @@ static void fa_delete_object(Fa_ObjHeader* obj)
     case Fa_ObjType::NATIVE: delete Fa_obj_cast<Fa_ObjNative>(obj, Fa_ObjType::NATIVE); break;
     case Fa_ObjType::CLASS: delete Fa_obj_cast<Fa_ObjClass>(obj, Fa_ObjType::CLASS); break;
     case Fa_ObjType::INSTANCE: delete Fa_obj_cast<Fa_ObjInstance>(obj, Fa_ObjType::INSTANCE); break;
+    case Fa_ObjType::FILE_HANDLE: delete Fa_obj_cast<Fa_ObjInstance>(obj, Fa_ObjType::FILE_HANDLE); break;
     case Fa_ObjType::_COUNT: diagnostic::panic(ErrorCode::TYPE_ERROR_CALL); break; /// unreachable break
     }
 }
@@ -99,10 +102,9 @@ void Fa_GarbageCollector::blacken_object(Fa_ObjHeader* obj)
         }
         break;
     }
-    case Fa_ObjType::STRING:
-        break;
-    case Fa_ObjType::_COUNT:
-        diagnostic::panic(ErrorCode::TYPE_ERROR_CALL);
+    case Fa_ObjType::FILE_HANDLE: break;
+    case Fa_ObjType::STRING: break;
+    case Fa_ObjType::_COUNT: diagnostic::panic(ErrorCode::TYPE_ERROR_CALL);
     }
 }
 
@@ -248,10 +250,21 @@ Fa_ObjInstance* Fa_GarbageCollector::make_obj_instance(Fa_ObjClass* klass)
     assert(klass != nullptr && "instance must be constructed with a valid class");
 
     Fa_Array<Fa_Value, /*_Alloc=*/Fa_GarbageCollector> fields { klass->field_count, Fa_MAKE_NIL(), this };
-    Fa_ObjInstance* obj = make<Fa_ObjInstance>(fields);
-    obj->klass = klass;
+    auto ret = make<Fa_ObjInstance>(fields);
+    ret->klass = klass;
 
-    return obj;
+    return ret;
+}
+
+Fa_ObjFileHandle* Fa_GarbageCollector::make_obj_file_handle(FILE* fp)
+{
+    assert(fp != nullptr && "file handle object must be constructed with a valid file pointer");
+
+    auto ret = make<Fa_ObjFileHandle>();
+    ret->fp = fp;
+    ret->is_open = true;
+    
+    return ret;
 }
 
 } // namespace fairuz::runtime

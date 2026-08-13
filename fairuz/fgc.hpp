@@ -38,7 +38,6 @@ public:
     /* --- obj factory --- */
 
     Fa_ObjString* make_obj_string(Fa_StringRef str);
-    // Fa_ObjString* make_obj_string(Fa_StringRef str);
     Fa_ObjString* make_obj_string(char const* str);
     Fa_ObjString* make_obj_string(char* str);
     Fa_ObjList* make_obj_list();
@@ -48,6 +47,7 @@ public:
     Fa_ObjClass* make_obj_class(Fa_StringRef name, Fa_StringRef* fields,
         u32 field_count, Fa_StringRef* methods, u32 method_count, Fa_Chunk** vtable, u32 vtable_size);
     Fa_ObjInstance* make_obj_instance(Fa_ObjClass* klass);
+    Fa_ObjFileHandle* make_obj_file_handle(FILE* fp);
 
     /* --- allocator api --- */
     template<typename T>
