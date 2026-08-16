@@ -133,9 +133,9 @@ void Compiler::compile_block(AST::Fa_BlockStmt* s)
 void Compiler::compile_expr_stmt(AST::Fa_ExprStmt* s)
 {
     RegMark mark(m_current);
-    u8 tmp = alloc_register();
     Fa_ExprResult r = compile_expr_impl(s->get_expr());
-    discharge(r, tmp, s->get_location());
+    u8 tmp = any_reg(r, s->get_location());
+    (void)tmp;
 }
 
 void Compiler::compile_assignment_stmt(AST::Fa_AssignmentStmt* s)
@@ -586,8 +586,10 @@ void Compiler::compile_class_def(AST::Fa_ClassDef* s)
     // fixed-slot layout — both the vtable build and method_names/
     // method_slot_map below must agree with it.
     auto special_slot_for = [](Fa_StringRef const& name) -> int {
-        if (name == "بداية" || name == "init")
+        if (name == "بداية")
             return Fa_ObjClass::INIT;
+        if (name == "نداء")
+            return Fa_ObjClass::CALL;
         if (name == "عملية+")
             return Fa_ObjClass::ADD;
         if (name == "عملية-")
@@ -598,6 +600,22 @@ void Compiler::compile_class_def(AST::Fa_ClassDef* s)
             return Fa_ObjClass::DIV;
         if (name == "عملية%" || name == "عملية٪")
             return Fa_ObjClass::MOD;
+        if (name == "سالب")
+            return Fa_ObjClass::NEG;
+        if (name == "يساوي")
+            return Fa_ObjClass::EQ;
+        if (name == "لا_يساوي")
+            return Fa_ObjClass::NEQ;
+        if (name == "اصغر_من")
+            return Fa_ObjClass::LT;
+        if (name == "اصغر_او_يساوي")
+            return Fa_ObjClass::LTE;
+        if (name == "اكبر_من")
+            return Fa_ObjClass::GT;
+        if (name == "اكبر_او_يساوي")
+            return Fa_ObjClass::GTE;
+        if (name == "كتابة")
+            return Fa_ObjClass::REPR;
         return -1;
     };
 
@@ -923,14 +941,15 @@ Fa_ExprResult Compiler::compile_binary_impl(AST::Fa_BinaryExpr* e)
     return Fa_ExprResult::reloc(pc);
 }
 
-bool Compiler::is_declaration(AST::Fa_AssignmentExpr const* e) const {
+bool Compiler::is_declaration(AST::Fa_AssignmentExpr const* e) const
+{
     if (!AST::is_name(e->get_target())) {
         // complex expression cannot be used for decl
         return false;
     }
 
     auto name = AS_CONST_NAME(e->get_target());
-    if (lookup_local(name->get_value())) 
+    if (lookup_local(name->get_value()))
         return false;
     return true;
 }
@@ -1006,7 +1025,7 @@ Fa_ExprResult Compiler::compile_assign_impl(AST::Fa_AssignmentExpr* e)
             emit(Fa_make_ABx(Fa_OpCode::STORE_GLOBAL, src, kidx), loc);
             return Fa_ExprResult::reg(src);
         }
-instance_decl:
+    instance_decl:
         u8 reg = alloc_register();
         discharge(compile_expr_impl(e->get_value()), reg, loc);
         declare_local(name->get_value(), reg, infer_constructed_class(e->get_value()));
@@ -1057,7 +1076,7 @@ Fa_ExprResult Compiler::compile_call_impl(AST::Fa_CallExpr* e, u8* dst, bool tai
                 int slot = desc->method_slot(member_name->get_value());
                 if (slot >= 0) {
                     // FAST PATH: statically known instance + known method slot.
-                    u8 receiver_reg = fn_reg;
+                    u8 receiver_reg = alloc_register();
                     discharge(compile_expr_impl(get->get_object()), receiver_reg, get->get_object()->get_location());
 
                     alloc_register(); // reserve callee frame slot 0 for implicit self
@@ -1087,7 +1106,8 @@ Fa_ExprResult Compiler::compile_call_impl(AST::Fa_CallExpr* e, u8* dst, bool tai
 
         u8 member_reg = alloc_register();
         if (AST::Fa_NameExpr* member_name = as_simple_member_name(get->get_member()))
-            emit(Fa_make_ABx(Fa_OpCode::LOAD_CONST, member_reg, intern_string(member_name->get_value())), get->get_member()->get_location());
+            emit(Fa_make_ABx(Fa_OpCode::LOAD_CONST, member_reg, 
+                intern_string(member_name->get_value())), get->get_member()->get_location());
         else
             discharge(compile_expr_impl(get->get_member()), member_reg, get->get_member()->get_location());
 
@@ -1231,8 +1251,9 @@ Fa_ExprResult Compiler::compile_get_impl(AST::Fa_GetExpr* e)
     u8 member_reg = alloc_register();
 
     if (AST::Fa_NameExpr* member_name = as_simple_member_name(e->get_member()))
-        emit(Fa_make_ABx(Fa_OpCode::LOAD_CONST, member_reg, 
-            intern_string(member_name->get_value())), e->get_member()->get_location());
+        emit(Fa_make_ABx(Fa_OpCode::LOAD_CONST, member_reg,
+                 intern_string(member_name->get_value())),
+            e->get_member()->get_location());
     else
         discharge(compile_expr_impl(e->get_member()), member_reg, e->get_member()->get_location());
 
