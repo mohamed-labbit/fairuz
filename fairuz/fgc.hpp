@@ -44,8 +44,11 @@ public:
     Fa_ObjDict* make_obj_dict(Fa_DictType data = { });
     Fa_ObjFunction* make_obj_function(Fa_Chunk* chunk);
     Fa_ObjNative* make_obj_native(NativeFn fn, Fa_ObjString* name, int arity);
-    Fa_ObjClass* make_obj_class(Fa_StringRef name, Fa_StringRef* fields,
-        u32 field_count, Fa_StringRef* methods, u32 method_count, Fa_Chunk** vtable, u32 vtable_size);
+    Fa_ObjClass* make_obj_class(
+        Fa_StringRef name,
+        Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> fields,
+        Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> methods,
+        Fa_Array<Fa_Chunk*, /*_Alloc=*/Fa_GarbageCollector> vtable);
     Fa_ObjInstance* make_obj_instance(Fa_ObjClass* klass);
     Fa_ObjFileHandle* make_obj_file_handle(FILE* fp);
 
@@ -74,6 +77,7 @@ public:
 private:
     void mark_roots(Fa_VM* vm);
     void mark_object(Fa_ObjHeader* p);
+    void mark_chunk_constants(Fa_Chunk* chunk);
     void blacken_object(Fa_ObjHeader* obj);
     void sweep();
     void mark_value_array(Fa_Array<Fa_Value, /*_Alloc=*/Fa_GarbageCollector> const& arr);

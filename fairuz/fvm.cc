@@ -14,12 +14,17 @@ namespace fairuz::runtime {
 
 static constexpr char kClassMetadataKey[] = "__class__";
 
-#define Fa_DISPATCH()                                              \
-    do {                                                           \
-        instr = cur_chunk->code[ip];                               \
-        ip += 1;                                                   \
-        SAVE_IP();                                                 \
-        goto* dispatch_table[static_cast<u8>(Fa_instr_op(instr))]; \
+#define Fa_DISPATCH()                                                                                     \
+    do {                                                                                                  \
+        instr = cur_chunk->code[ip];                                                                      \
+        if (UNLIKELY(static_cast<u8>(Fa_instr_op(instr)) >= static_cast<u8>(Fa_OpCode::_COUNT))) {        \
+            fprintf(stderr, "BAD OPCODE %u at ip=%u chunk=%s size=%zu\n",                                 \
+                static_cast<u8>(Fa_instr_op(instr)), ip, cur_chunk->name.data(), cur_chunk->code.size()); \
+            abort();                                                                                      \
+        }                                                                                                 \
+        ip += 1;                                                                                          \
+        SAVE_IP();                                                                                        \
+        goto* dispatch_table[static_cast<u8>(Fa_instr_op(instr))];                                        \
     } while (0)
 
 #define Fa_BEGIN_DISPATCH() Fa_DISPATCH()
@@ -335,8 +340,17 @@ Fa_Value Fa_VM::execute()
             Fa_Value name_v = cur_chunk->constants[Fa_instr_Bx(instr)];
             Fa_StringRef name = Fa_AS_STRING(name_v)->str;
             u32* slot = m_global_index.find_ptr(name);
-            if (slot == nullptr)
+            /*
+                        if (slot == nullptr)
+                            runtime_error(ErrorCode::UNDEFINED_GLOBAL, std::string(name.data(), name.len()));
+            */
+            if (slot == nullptr) {
+                fprintf(stderr, "MISS: name.len()=%zu bytes=", name.len());
+                for (size_t i = 0; i < name.len(); i++)
+                    fprintf(stderr, "%02x ", (unsigned char)name.data()[i]);
+                fprintf(stderr, "\n");
                 runtime_error(ErrorCode::UNDEFINED_GLOBAL, std::string(name.data(), name.len()));
+            }
 
             u32 slot_idx = *slot;
             Fa_RA() = m_global_slots[slot_idx];
@@ -644,7 +658,10 @@ Fa_Value Fa_VM::execute()
         Fa_Value lhs = Fa_RB();
         Fa_Value rhs = Fa_RC();
 
-        if (Fa_IS_INTEGER(lhs) && Fa_IS_INTEGER(rhs)) {
+        if (Fa_IS_NIL(lhs) || Fa_IS_NIL(rhs)) {
+            res = Fa_MAKE_BOOL(Fa_IS_NIL(lhs) && Fa_IS_NIL(rhs));
+            Fa_RECORD_BINARY_IC(lhs, rhs, res);
+        } else if (Fa_IS_INTEGER(lhs) && Fa_IS_INTEGER(rhs)) {
             res = Fa_MAKE_BOOL(Fa_VMOPI(lhs, rhs, ==));
             Fa_RECORD_BINARY_IC(lhs, rhs, res);
         } else if (Fa_IS_STRING(lhs) && Fa_IS_STRING(rhs)) {
@@ -754,7 +771,7 @@ Fa_Value Fa_VM::execute()
     {
         Fa_Value& list_v = Fa_RA();
         if (!Fa_IS_LIST(list_v))
-            runtime_error(ErrorCode::TYPE_ERROR_CALL);
+            runtime_error(ErrorCode::TYPE_ERROR_CALL, "attempting to append on a non list");
 
         Fa_AS_LIST(list_v)->elements.push(Fa_RB());
         Fa_DISPATCH();
@@ -766,9 +783,9 @@ Fa_Value Fa_VM::execute()
         Fa_Value index_v = Fa_RC();
 
         if (!Fa_IS_LIST(list_v))
-            runtime_error(ErrorCode::TYPE_ERROR_CALL);
+            runtime_error(ErrorCode::TYPE_ERROR_CALL, "attempting get on a non list");
         if (!Fa_IS_INTEGER(index_v))
-            runtime_error(ErrorCode::INDEX_TYPE_ERROR);
+            runtime_error(ErrorCode::INDEX_TYPE_ERROR, "attempting get with a non integer index");
 
         auto& elems = Fa_AS_LIST(list_v)->elements;
         i64 idx = Fa_AS_INTEGER(index_v);
@@ -801,7 +818,7 @@ Fa_Value Fa_VM::execute()
             Fa_ObjDict* as_dict = Fa_AS_DICT(object_v);
             as_dict->data[index_v] = new_val;
         } else {
-            runtime_error(ErrorCode::TYPE_ERROR_CALL);
+            runtime_error(ErrorCode::TYPE_ERROR_CALL, "attempting set on a non list value");
         }
 
         Fa_DISPATCH();
@@ -810,7 +827,7 @@ Fa_Value Fa_VM::execute()
     {
         Fa_Value list_v = Fa_RB();
         if (!Fa_IS_LIST(list_v))
-            runtime_error(ErrorCode::TYPE_ERROR_CALL);
+            runtime_error(ErrorCode::TYPE_ERROR_CALL, "attempting len on a non list value");
 
         Fa_RA() = Fa_MAKE_INTEGER(static_cast<i64>(Fa_AS_LIST(list_v)->elements.size()));
         Fa_DISPATCH();
@@ -916,6 +933,30 @@ Fa_Value Fa_VM::execute()
         u8 argc = Fa_instr_B(instr);
         Fa_Value callee = cur_base[fn_reg];
         int base = cur_frame_base + fn_reg + 1;
+
+        if (Fa_IS_NATIVE(callee)) {
+            Fa_ObjNative* nat = Fa_AS_NATIVE(callee);
+            if (UNLIKELY(nat->arity >= 0 && argc != nat->arity)) {
+                std::string name = (nat->name ? std::string(nat->name->str.data(), nat->name->str.len()) : "?");
+                runtime_error(ErrorCode::NATIVE_ARG_COUNT,
+                    std::string("native '") + name + "' expected " + std::to_string(nat->arity) + " args, got " + std::to_string(argc));
+            }
+
+            // Natives run synchronously with no pushed frame, so a tail call to
+            // one must perform *this* frame's own return afterward — the
+            // compiler omits a trailing RETURN for CALL_TAIL sites, trusting
+            // the callee to terminate the frame itself.
+            Fa_Value ret = call_native(nat, argc, base);
+            m_stack[cur_frame_base - 1] = ret;
+            m_frames_top -= 1;
+
+            if (LIKELY(m_frames_top == 0))
+                return ret;
+
+            LOAD_FRAME();
+            Fa_DISPATCH();
+        }
+
         SAVE_IP();
         call_value(callee, argc, base, true);
         LOAD_FRAME();
@@ -1055,46 +1096,23 @@ Fa_Value Fa_VM::execute()
             u32 field_count = klass_desc.field_count;
             u32 method_count = klass_desc.method_names.size();
             u32 vtable_size = klass_desc.vtable_size;
-            /// populate field names
-            /// NOTE: it's entirely reasonable to use memcpy instead
-            /// but that runs into the fact that they've got different layouts based on different allocators
-            Fa_StringRef* kfield_names = new Fa_StringRef[field_count]();
-            if (kfield_names == nullptr)
-                diagnostic::panic(diagnostic::errc::general::Code::ALLOC_FAILED);
+
+            Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> kfield_names { field_count, { }, &m_gc };
+            Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> kmethod_names { method_count, { }, &m_gc };
+            Fa_Array<Fa_Chunk*, /*_Alloc=*/Fa_GarbageCollector> kvtable { vtable_size, { }, &m_gc };
 
             for (u32 i = 0; i < field_count; ++i)
                 kfield_names[i] = klass_desc.field_names[i];
 
-            // populate method names
-            Fa_StringRef* kmethod_names = new Fa_StringRef[method_count]();
-            if (kmethod_names == nullptr) {
-                delete[] kfield_names;
-                diagnostic::panic(diagnostic::errc::general::Code::ALLOC_FAILED);
-            }
-
             for (u32 i = 0; i < method_count; ++i)
                 kmethod_names[i] = klass_desc.method_names[i];
-
-            Fa_Chunk** kvtable = new Fa_Chunk*[vtable_size]();
-            if (kvtable == nullptr) {
-                delete[] kfield_names;
-                delete[] kmethod_names;
-                diagnostic::panic(diagnostic::errc::general::Code::ALLOC_FAILED);
-            }
 
             for (u32 i = 0; i < vtable_size; ++i) {
                 u32 fn_idx = klass_desc.vtable_indices[i];
                 kvtable[i] = fn_idx == Fa_ClassDescriptor::NULL_SLOT ? nullptr : cur_chunk->functions[fn_idx];
             }
 
-            res = Fa_MAKE_CLASS(
-                klass_desc.name,
-                kfield_names,
-                field_count,
-                kmethod_names,
-                method_count,
-                kvtable,
-                vtable_size);
+            res = Fa_MAKE_CLASS(klass_desc.name, kfield_names, kmethod_names, kvtable);
         }
 
         Fa_DISPATCH();
@@ -1123,7 +1141,7 @@ Fa_Value Fa_VM::execute()
 
         Fa_ObjInstance* inst = Fa_AS_INSTANCE(self_val);
 
-        if (UNLIKELY(slot >= inst->klass->vtable_size || inst->klass->vtable[slot] == nullptr))
+        if (UNLIKELY(slot >= inst->klass->vtable.size() || inst->klass->vtable[slot] == nullptr))
             runtime_error(ErrorCode::TYPE_ERROR_CALL, "method slot is empty");
 
         invoke_method(inst->klass->vtable[slot], self_val, self_reg, cur_frame_base, argc, ip);
@@ -1214,10 +1232,8 @@ void Fa_VM::call_value(Fa_Value callee, int argc, int call_base, bool tail)
         int arity = fchk->arity;
         int local_count = fchk->local_count;
 
-        if (argc != arity) {
+        if (argc != arity)
             runtime_error(ErrorCode::WRONG_ARG_COUNT, "expected " + std::to_string(arity) + " arguments but got " + std::to_string(argc));
-            runtime_error(ErrorCode::WRONG_ARG_COUNT);
-        }
 
         if (local_count < argc)
             runtime_error(ErrorCode::WRONG_ARG_COUNT);
@@ -1265,7 +1281,6 @@ void Fa_VM::call_value(Fa_Value callee, int argc, int call_base, bool tail)
             std::string name = (nat->name ? std::string(nat->name->str.data(), nat->name->str.len()) : "?");
             runtime_error(ErrorCode::NATIVE_ARG_COUNT,
                 std::string("native '") + name + "' expected " + std::to_string(nat->arity) + " args, got " + std::to_string(argc));
-            runtime_error(ErrorCode::NATIVE_ARG_COUNT);
         }
 
         m_stack[call_base - 1] = call_native(nat, argc, call_base);
@@ -1361,45 +1376,47 @@ void Fa_VM::intern_chunk_constants(Fa_Chunk* ch)
 void Fa_VM::open_stdlib()
 {
     // Collections
-    register_native("طول", &Fa_VM::Fa_len, -1);
-    register_native("اضف", &Fa_VM::Fa_append, -1);
-    register_native("احذف", &Fa_VM::Fa_pop, -1);
-    register_native("مقطع", &Fa_VM::Fa_slice, -1);
-    register_native("قائمة", &Fa_VM::Fa_list, -1);
-    register_native("قاموس", &Fa_VM::Fa_dict, -1);
+    assert(register_native("طول", &Fa_VM::Fa_len, -1) && "Failed to register native 'len'");
+    assert(register_native("اضف", &Fa_VM::Fa_append, -1) && "Failed to register native 'append'");
+    assert(register_native("احذف", &Fa_VM::Fa_pop, -1) && "Failed to register native 'pop'");
+    assert(register_native("مقطع", &Fa_VM::Fa_slice, -1) && "Failed to register native 'slice'");
+    assert(register_native("قائمة", &Fa_VM::Fa_list, -1) && "Failed to register native 'list'");
+    assert(register_native("قاموس", &Fa_VM::Fa_dict, -1) && "Failed to register native 'dict'");
     // I/O
-    register_native("اكتب", &Fa_VM::Fa_print, -1);
-    register_native("ادخل", &Fa_VM::Fa_input, -1);
-    register_native("افتح", &Fa_VM::Fa_open, -1);
+    assert(register_native("اكتب", &Fa_VM::Fa_print, -1) && "Failed to register native 'print'");
+    assert(register_native("ادخل", &Fa_VM::Fa_input, -1) && "Failed to register native 'input'");
+    assert(register_native("افتح", &Fa_VM::Fa_open, -1) && "Failed to register native 'open'");
+    assert(register_native("اضف_ملف", &Fa_VM::Fa_append_file, -1) && "Failed to register native 'append_file'");
+    assert(register_native("اغلق", &Fa_VM::Fa_close, -1) && "Failed to register native 'close'");
     // Type system / conversion
-    register_native("صنف", &Fa_VM::Fa_type, -1);
-    register_native("طبيعي", &Fa_VM::Fa_int, -1);
-    register_native("حقيقي", &Fa_VM::Fa_float, -1);
-    register_native("سلسلة", &Fa_VM::Fa_str, -1);
-    register_native("منطقي", &Fa_VM::Fa_bool, -1);
+    assert(register_native("صنف", &Fa_VM::Fa_type, -1) && "Failed to register native 'type'");
+    assert(register_native("طبيعي", &Fa_VM::Fa_int, -1) && "Failed to register native 'int'");
+    assert(register_native("حقيقي", &Fa_VM::Fa_float, -1) && "Failed to register native 'float'");
+    assert(register_native("سلسلة", &Fa_VM::Fa_str, -1) && "Failed to register native 'str'");
+    assert(register_native("منطقي", &Fa_VM::Fa_bool, -1) && "Failed to register native 'bool'");
     // String ops
-    register_native("اقسم", &Fa_VM::Fa_split, -1);
-    register_native("اجمع", &Fa_VM::Fa_join, -1);
-    register_native("جزء", &Fa_VM::Fa_substr, -1);
-    register_native("يحتوي", &Fa_VM::Fa_contains, -1);
-    register_native("قص", &Fa_VM::Fa_trim, -1);
+    assert(register_native("اقسم", &Fa_VM::Fa_split, -1) && "Failed to register native 'split'");
+    assert(register_native("اجمع", &Fa_VM::Fa_join, -1) && "Failed to register native 'join'");
+    assert(register_native("جزء", &Fa_VM::Fa_substr, -1) && "Failed to register native 'substr'");
+    assert(register_native("يحتوي", &Fa_VM::Fa_contains, -1) && "Failed to register native 'contains'");
+    assert(register_native("قص", &Fa_VM::Fa_trim, -1) && "Failed to register native 'trim'");
     // Math
-    register_native("ادنى", &Fa_VM::Fa_floor, -1);
-    register_native("اعلى", &Fa_VM::Fa_ceil, -1);
-    register_native("تقريب", &Fa_VM::Fa_round, -1);
-    register_native("مطلق", &Fa_VM::Fa_abs, -1);
-    register_native("اصغر", &Fa_VM::Fa_min, -1);
-    register_native("اكبر", &Fa_VM::Fa_max, -1);
-    register_native("قوة", &Fa_VM::Fa_pow, -1);
-    register_native("جذر", &Fa_VM::Fa_sqrt, -1);
+    assert(register_native("ادنى", &Fa_VM::Fa_floor, -1) && "Failed to register native 'floor'");
+    assert(register_native("اعلى", &Fa_VM::Fa_ceil, -1) && "Failed to register native 'ceil'");
+    assert(register_native("تقريب", &Fa_VM::Fa_round, -1) && "Failed to register native 'round'");
+    assert(register_native("مطلق", &Fa_VM::Fa_abs, -1) && "Failed to register native 'abs'");
+    assert(register_native("اصغر", &Fa_VM::Fa_min, -1) && "Failed to register native 'min'");
+    assert(register_native("اكبر", &Fa_VM::Fa_max, -1) && "Failed to register native 'max'");
+    assert(register_native("قوة", &Fa_VM::Fa_pow, -1) && "Failed to register native 'pow'");
+    assert(register_native("جذر", &Fa_VM::Fa_sqrt, -1) && "Failed to register native 'sqrt'");
     // Runtime / diagnostics
-    register_native("تاكد", &Fa_VM::Fa_assert, -1);
-    register_native("ساعة", &Fa_VM::Fa_clock, -1);
-    register_native("عطل", &Fa_VM::Fa_error, -1);
-    register_native("وقت", &Fa_VM::Fa_time, -1);
+    assert(register_native("تاكد", &Fa_VM::Fa_assert, -1) && "Failed to register native 'assert'");
+    assert(register_native("ساعة", &Fa_VM::Fa_clock, -1) && "Failed to register native 'clock'");
+    assert(register_native("عطل", &Fa_VM::Fa_error, -1) && "Failed to register native 'error'");
+    assert(register_native("وقت", &Fa_VM::Fa_time, -1) && "Failed to register native 'time'");
 }
 
-void Fa_VM::register_native(Fa_StringRef const& name, NativeFn fn, int arity)
+bool Fa_VM::register_native(Fa_StringRef const& name, NativeFn fn, int arity)
 {
     Fa_ObjString* name_obj = m_gc.make_obj_string(name);
     Fa_Value val = Fa_MAKE_NATIVE(fn, name_obj, arity);
@@ -1411,6 +1428,8 @@ void Fa_VM::register_native(Fa_StringRef const& name, NativeFn fn, int arity)
         m_global_slots.push(val);
         m_global_index.insert_or_assign(name, slot_idx);
     }
+
+    return true;
 }
 
 Fa_SourceLocation Fa_VM::current_location() const

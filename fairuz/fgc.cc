@@ -22,8 +22,8 @@ static void fa_delete_object(Fa_ObjHeader* obj)
     case Fa_ObjType::NATIVE: delete Fa_obj_cast<Fa_ObjNative>(obj, Fa_ObjType::NATIVE); break;
     case Fa_ObjType::CLASS: delete Fa_obj_cast<Fa_ObjClass>(obj, Fa_ObjType::CLASS); break;
     case Fa_ObjType::INSTANCE: delete Fa_obj_cast<Fa_ObjInstance>(obj, Fa_ObjType::INSTANCE); break;
-    case Fa_ObjType::FILE_HANDLE: delete Fa_obj_cast<Fa_ObjInstance>(obj, Fa_ObjType::FILE_HANDLE); break;
-    case Fa_ObjType::_COUNT: diagnostic::panic(ErrorCode::TYPE_ERROR_CALL); break; /// unreachable break
+    case Fa_ObjType::FILE_HANDLE: delete Fa_obj_cast<Fa_ObjFileHandle>(obj, Fa_ObjType::FILE_HANDLE); break;
+    case Fa_ObjType::_COUNT: diagnostic::panic(ErrorCode::TYPE_ERROR_CALL, "attempting to delete an unknown type"); break; /// unreachable break
     }
 }
 
@@ -58,13 +58,24 @@ void Fa_GarbageCollector::mark_object(Fa_ObjHeader* p)
     m_grays.push(p);
 }
 
+void Fa_GarbageCollector::mark_chunk_constants(Fa_Chunk* chunk)
+{
+    if (chunk == nullptr)
+        return;
+
+    mark_value_array(chunk->constants);
+
+    for (auto* fn : chunk->functions)
+        mark_chunk_constants(fn);
+}
+
 void Fa_GarbageCollector::blacken_object(Fa_ObjHeader* obj)
 {
     switch (obj->type) {
     case Fa_ObjType::FUNCTION: {
         Fa_ObjFunction* fn = Fa_obj_cast<Fa_ObjFunction>(obj, Fa_ObjType::FUNCTION);
         if (fn->chunk != nullptr)
-            mark_value_array(fn->chunk->constants);
+            mark_chunk_constants(fn->chunk);
         break;
     }
     case Fa_ObjType::NATIVE: {
@@ -75,9 +86,9 @@ void Fa_GarbageCollector::blacken_object(Fa_ObjHeader* obj)
     }
     case Fa_ObjType::CLASS: {
         Fa_ObjClass* klass = Fa_obj_cast<Fa_ObjClass>(obj, Fa_ObjType::CLASS);
-        for (u32 i = 0, n = klass->vtable_size; i < n; i += 1) {
+        for (u32 i = 0, n = klass->vtable.size(); i < n; i += 1) {
             if (klass->vtable[i] != nullptr)
-                mark_value_array(klass->vtable[i]->constants);
+                mark_chunk_constants(klass->vtable[i]);
         }
         break;
     }
@@ -104,7 +115,7 @@ void Fa_GarbageCollector::blacken_object(Fa_ObjHeader* obj)
     }
     case Fa_ObjType::FILE_HANDLE: break;
     case Fa_ObjType::STRING: break;
-    case Fa_ObjType::_COUNT: diagnostic::panic(ErrorCode::TYPE_ERROR_CALL);
+    case Fa_ObjType::_COUNT: diagnostic::panic(ErrorCode::TYPE_ERROR_CALL, "attempting to blacken an unknown object type");
     }
 }
 
@@ -224,22 +235,14 @@ Fa_ObjNative* Fa_GarbageCollector::make_obj_native(NativeFn fn, Fa_ObjString* na
     return ret;
 }
 
-Fa_ObjClass* Fa_GarbageCollector::make_obj_class(Fa_StringRef name, Fa_StringRef* fields,
-    u32 field_count, Fa_StringRef* methods, u32 method_count, Fa_Chunk** vtable, u32 vtable_size)
+Fa_ObjClass* Fa_GarbageCollector::make_obj_class(
+    Fa_StringRef name,
+    Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> fields,
+    Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> methods,
+    Fa_Array<Fa_Chunk*, /*_Alloc=*/Fa_GarbageCollector> vtable)
 {
-    if (fields == nullptr || methods == nullptr || vtable == nullptr) {
-        diagnostic::panic(diagnostic::errc::general::Code::INVALID_PARAMETER);
-        return nullptr;
-    }
-
-    auto ret = make<Fa_ObjClass>();
+    auto ret = make<Fa_ObjClass>(fields, methods, vtable);
     ret->name = name;
-    ret->field_names = fields;
-    ret->field_count = field_count;
-    ret->method_names = methods;
-    ret->method_count = method_count;
-    ret->vtable = vtable;
-    ret->vtable_size = vtable_size;
     ret->build_indices();
 
     return ret;
@@ -249,7 +252,8 @@ Fa_ObjInstance* Fa_GarbageCollector::make_obj_instance(Fa_ObjClass* klass)
 {
     assert(klass != nullptr && "instance must be constructed with a valid class");
 
-    Fa_Array<Fa_Value, /*_Alloc=*/Fa_GarbageCollector> fields { klass->field_count, Fa_MAKE_NIL(), this };
+    Fa_Array<Fa_Value, /*_Alloc=*/Fa_GarbageCollector> fields { 
+        klass->field_names.size(), Fa_MAKE_NIL(), this };
     auto ret = make<Fa_ObjInstance>(fields);
     ret->klass = klass;
 
@@ -263,7 +267,7 @@ Fa_ObjFileHandle* Fa_GarbageCollector::make_obj_file_handle(FILE* fp)
     auto ret = make<Fa_ObjFileHandle>();
     ret->fp = fp;
     ret->is_open = true;
-    
+
     return ret;
 }
 
