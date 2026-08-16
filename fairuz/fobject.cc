@@ -22,12 +22,21 @@ bool Fa_ObjList::empty() const { return elements.empty(); }
 Fa_StringRef Fa_ObjFunction::name() const { return chunk->name; }
 u32 Fa_ObjFunction::arity() const { return chunk->arity; }
 
+Fa_ObjClass:: Fa_ObjClass(
+    Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> f,
+    Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> m,
+    Fa_Array<Fa_Chunk*, /*_Alloc=*/Fa_GarbageCollector> vt)
+    : field_names(f)
+    , method_names(m)
+    , vtable(vt)
+{
+}
+
 void Fa_ObjClass::build_indices()
 {
-    for (u32 i = 0, n = field_count; i < n; i += 1)
+    for (u32 i = 0, n = field_names.size(); i < n; i += 1)
         field_index_map[field_names[i]] = i;
-
-    for (u32 i = 0, n = method_count; i < n; i += 1)
+    for (u32 i = 0, n = method_names.size(); i < n; i += 1)
         method_slot_map[method_names[i]] = i;
 }
 

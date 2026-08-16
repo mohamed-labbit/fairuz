@@ -27,11 +27,11 @@ using Fa_ListType = Fa_Array<Fa_Value, /*_Alloc=*/Fa_GarbageCollector>;
 /// runtime type tag. Do not add C++ virtual functions or inheritance to these types.
 
 struct Fa_ObjString {
-    Fa_ObjHeader obj;
-    Fa_StringRef str;
+    Fa_ObjHeader obj { Fa_ObjType::STRING };
+    Fa_StringRef str = "";
     u64 hash { 0 };
 
-    Fa_ObjString() { obj = Fa_ObjHeader { Fa_ObjType::STRING }; }
+    Fa_ObjString() = default;
 };
 
 struct Fa_ObjList {
@@ -47,33 +47,33 @@ struct Fa_ObjList {
 };
 
 struct Fa_ObjDict {
-    Fa_ObjHeader obj;
-    Fa_DictType data;
+    Fa_ObjHeader obj { Fa_ObjType::DICT };
+    Fa_DictType data = { };
 
-    Fa_ObjDict() { obj = Fa_ObjHeader { Fa_ObjType::DICT }; }
+    Fa_ObjDict() = default;
 };
 
 struct Fa_ObjFunction {
-    Fa_ObjHeader obj;
+    Fa_ObjHeader obj { Fa_ObjType::FUNCTION };
     Fa_Chunk* chunk { nullptr };
 
-    Fa_ObjFunction() { obj = Fa_ObjHeader { Fa_ObjType::FUNCTION }; }
+    Fa_ObjFunction() = default;
 
     Fa_StringRef name() const;
     u32 arity() const;
 };
 
 struct Fa_ObjNative {
-    Fa_ObjHeader obj;
+    Fa_ObjHeader obj { Fa_ObjType::NATIVE };
     NativeFn fn { nullptr };
     Fa_ObjString* name { nullptr };
     int arity { 0 };
 
-    Fa_ObjNative() { obj = Fa_ObjHeader { Fa_ObjType::NATIVE }; }
+    Fa_ObjNative() = default;
 };
 
 struct Fa_ObjClass {
-    Fa_ObjHeader obj;
+    using IndexTable = Fa_HashTable<Fa_StringRef, u32, Fa_StringRefHash, Fa_StringRefEqual>;
 
     enum : u32 {
         INIT,
@@ -94,48 +94,23 @@ struct Fa_ObjClass {
         _COUNT,
     };
 
+    Fa_ObjHeader obj { Fa_ObjType::CLASS };
     Fa_StringRef name = "";
-
-    // Field slots are fixed once the class object is constructed. Instances keep a
-    // flat array with this exact slot count; no re-classing or dynamic shape change
-    // is supported by this object model.
-    // Fa_Array<Fa_StringRef> field_names;
-    Fa_StringRef* field_names { nullptr };
-    u32 field_count { 0 };
-
-    // Single-inheritance/method resolution is flattened by the compiler into this
-    // vtable. Runtime dispatch does a direct slot lookup through method_slot_map.
-    // Fa_Array<Fa_StringRef> method_names;
-    // Fa_Array<Fa_Chunk*> vtable;
-
-    /// NOTE: We use raw pointers so objects can be easily collected by the gc,
-    /// however, methods and variables exist statically regardless of their own
-    /// state, so using a fixed size dynamically allocated array won't create
-    /// reallocation and out of bounds access issues anyway
-    Fa_StringRef* method_names { nullptr };
-    Fa_Chunk** vtable { nullptr };
-    u32 method_count { 0 };
-    u32 vtable_size { 0 };
-
-    using IndexTable = Fa_HashTable<Fa_StringRef, u32, Fa_StringRefHash, Fa_StringRefEqual>;
-
+    Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> field_names;
+    Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> method_names;
+    Fa_Array<Fa_Chunk*, /*_Alloc=*/Fa_GarbageCollector> vtable;
     IndexTable field_index_map = { };
     IndexTable method_slot_map = { };
 
-    Fa_ObjClass() { obj = Fa_ObjHeader { Fa_ObjType::CLASS }; }
+    Fa_ObjClass(
+        Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> f,
+        Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> m,
+        Fa_Array<Fa_Chunk*, /*_Alloc=*/Fa_GarbageCollector> vt);
 
     void build_indices();
 
     int field_index(Fa_StringRef field_name) const;
     int method_slot(Fa_StringRef method_name) const;
-
-    ~Fa_ObjClass()
-    {
-        if (field_names != nullptr)
-            delete[] field_names;
-        if (method_names != nullptr)
-            delete[] method_names;
-    }
 };
 
 struct Fa_ObjInstance {
@@ -148,6 +123,34 @@ struct Fa_ObjInstance {
     ~Fa_ObjInstance() = default;
 };
 
+struct Fa_ObjFileHandle {
+    Fa_ObjHeader obj { Fa_ObjType::FILE_HANDLE };
+    FILE* fp { nullptr };
+    bool is_open { false };
+
+    Fa_ObjFileHandle() = default;
+    Fa_ObjFileHandle(Fa_ObjFileHandle const&) = delete;
+    Fa_ObjFileHandle& operator=(Fa_ObjFileHandle const&) = delete;
+
+    bool close() {
+        if (is_open == false)
+            return true;
+
+        if (fp == nullptr)
+            return false;
+
+        bool const ok = (::fclose(fp) == 0);
+        fp = nullptr;
+        is_open = false;
+        return ok;
+    }
+
+    ~Fa_ObjFileHandle()
+    {
+        close();
+    }
+};
+
 static_assert(std::is_standard_layout_v<Fa_ObjHeader>, "Fa_ObjHeader must remain standard-layout");
 static_assert(!std::is_polymorphic_v<Fa_ObjHeader>, "Fa_ObjHeader must not gain a vtable");
 static_assert(offsetof(Fa_ObjString, obj) == 0, "Fa_ObjHeader must be the first member of Fa_ObjString");
@@ -157,6 +160,7 @@ static_assert(offsetof(Fa_ObjFunction, obj) == 0, "Fa_ObjHeader must be the firs
 static_assert(offsetof(Fa_ObjNative, obj) == 0, "Fa_ObjHeader must be the first member of Fa_ObjNative");
 static_assert(offsetof(Fa_ObjClass, obj) == 0, "Fa_ObjHeader must be the first member of Fa_ObjClass");
 static_assert(offsetof(Fa_ObjInstance, obj) == 0, "Fa_ObjHeader must be the first member of Fa_ObjInstance");
+static_assert(offsetof(Fa_ObjFileHandle, obj) == 0, "Fa_ObjHeader must be the first member of Fa_ObjFileHandle");
 
 template<typename T>
 inline T* Fa_obj_cast(Fa_ObjHeader* obj, Fa_ObjType expected)
