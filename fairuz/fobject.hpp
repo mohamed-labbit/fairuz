@@ -132,7 +132,8 @@ struct Fa_ObjFileHandle {
     Fa_ObjFileHandle(Fa_ObjFileHandle const&) = delete;
     Fa_ObjFileHandle& operator=(Fa_ObjFileHandle const&) = delete;
 
-    bool close() {
+    bool close()
+    {
         if (is_open == false)
             return true;
 

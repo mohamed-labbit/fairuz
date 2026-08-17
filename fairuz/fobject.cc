@@ -22,7 +22,7 @@ bool Fa_ObjList::empty() const { return elements.empty(); }
 Fa_StringRef Fa_ObjFunction::name() const { return chunk->name; }
 u32 Fa_ObjFunction::arity() const { return chunk->arity; }
 
-Fa_ObjClass:: Fa_ObjClass(
+Fa_ObjClass::Fa_ObjClass(
     Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> f,
     Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> m,
     Fa_Array<Fa_Chunk*, /*_Alloc=*/Fa_GarbageCollector> vt)

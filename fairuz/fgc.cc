@@ -252,8 +252,9 @@ Fa_ObjInstance* Fa_GarbageCollector::make_obj_instance(Fa_ObjClass* klass)
 {
     assert(klass != nullptr && "instance must be constructed with a valid class");
 
-    Fa_Array<Fa_Value, /*_Alloc=*/Fa_GarbageCollector> fields { 
-        klass->field_names.size(), Fa_MAKE_NIL(), this };
+    Fa_Array<Fa_Value, /*_Alloc=*/Fa_GarbageCollector> fields {
+        klass->field_names.size(), Fa_MAKE_NIL(), this
+    };
     auto ret = make<Fa_ObjInstance>(fields);
     ret->klass = klass;
 

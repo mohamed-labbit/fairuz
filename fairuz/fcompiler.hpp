@@ -2,11 +2,11 @@
 #define COMPILER_HPP
 
 #include "fAST.hpp"
+#include "ferror.hpp"
 #include "fopcode.hpp"
 #include "fstring.hpp"
 #include "ftable.hpp"
 #include "fvalue.hpp"
-#include "ferror.hpp"
 
 #include <utility>
 

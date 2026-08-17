@@ -180,7 +180,8 @@ public:
     }
 
     template<typename _Tp>
-    Fa_ErrorOr<_Tp> error_or(_Tp v) {
+    Fa_ErrorOr<_Tp> error_or(_Tp v)
+    {
         if (has_error())
             return get_error();
         return v;

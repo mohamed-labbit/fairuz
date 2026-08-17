@@ -1078,8 +1078,9 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_assign_impl(AST::Fa_AssignmentExpr* 
                     auto value_reg = any_reg(value_expr_result.value(), loc);
                     Fa_VERIFY_RESULT(object_reg);
                     Fa_VERIFY_RESULT(value_reg);
-                    emit(Fa_make_ABC(Fa_OpCode::SET_FIELD, object_reg.value(), 
-                        static_cast<u8>(field_idx), value_reg.value()), loc);
+                    emit(Fa_make_ABC(Fa_OpCode::SET_FIELD, object_reg.value(),
+                             static_cast<u8>(field_idx), value_reg.value()),
+                        loc);
                     return Fa_ExprResult::reg(value_reg.value());
                 }
             }
@@ -1102,8 +1103,9 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_assign_impl(AST::Fa_AssignmentExpr* 
                         Fa_VERIFY_RESULT(expr_result);
                         auto value_reg = any_reg(expr_result.value(), loc);
                         Fa_VERIFY_RESULT(value_reg);
-                        emit(Fa_make_ABC(Fa_OpCode::SET_FIELD, self->reg, 
-                            static_cast<u8>(field_idx), value_reg.value()), loc);
+                        emit(Fa_make_ABC(Fa_OpCode::SET_FIELD, self->reg,
+                                 static_cast<u8>(field_idx), value_reg.value()),
+                            loc);
                         return Fa_ExprResult::reg(value_reg.value());
                     }
                 }
@@ -1232,7 +1234,8 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_call_impl(AST::Fa_CallExpr* e, u8* d
         Fa_VERIFY_RESULT(member_reg);
         if (AST::Fa_NameExpr* member_name = as_simple_member_name(get->get_member())) {
             emit(Fa_make_ABx(Fa_OpCode::LOAD_CONST, member_reg.value(),
-                     intern_string(member_name->get_value())), get->get_member()->get_location());
+                     intern_string(member_name->get_value())),
+                get->get_member()->get_location());
         } else {
             auto expr_result = compile_expr_impl(get->get_member());
             Fa_VERIFY_RESULT(expr_result);
@@ -1408,7 +1411,8 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_get_impl(AST::Fa_GetExpr* e)
 
     if (AST::Fa_NameExpr* member_name = as_simple_member_name(e->get_member())) {
         emit(Fa_make_ABx(Fa_OpCode::LOAD_CONST, member_reg.value(),
-                 intern_string(member_name->get_value())), e->get_member()->get_location());
+                 intern_string(member_name->get_value())),
+            e->get_member()->get_location());
     } else {
         auto expr_result = compile_expr_impl(e->get_member());
         Fa_VERIFY_RESULT(expr_result);

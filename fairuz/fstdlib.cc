@@ -814,14 +814,12 @@ Fa_Value Fa_VM::Fa_append_file(int argc, Fa_Value* argv)
     Fa_Value& file = argv[0];
     Fa_Value& content = argv[1];
 
-    if (!Fa_IS_FILE_HANDLE(file))
-    {
+    if (!Fa_IS_FILE_HANDLE(file)) {
         stdlib_error(StdlibErrorCode::APPEND_FILE_TYPE_ERROR);
         return Fa_MAKE_NIL();
     }
 
-    if (!Fa_IS_STRING(content))
-    {
+    if (!Fa_IS_STRING(content)) {
         stdlib_error(StdlibErrorCode::APPEND_FILE_TYPE_ERROR);
         return Fa_MAKE_NIL();
     }
@@ -845,15 +843,14 @@ Fa_Value Fa_VM::Fa_append_file(int argc, Fa_Value* argv)
     return Fa_MAKE_BOOL(true);
 }
 
-Fa_Value Fa_VM::Fa_close(int argc, Fa_Value* argv) {
-    if (argc != 1 || argv == nullptr)
-    {
+Fa_Value Fa_VM::Fa_close(int argc, Fa_Value* argv)
+{
+    if (argc != 1 || argv == nullptr) {
         stdlib_error(StdlibErrorCode::CLOSE_ARG_COUNT);
         return Fa_MAKE_BOOL(false);
     }
 
-    if (!Fa_IS_FILE_HANDLE(argv[0]))
-    {
+    if (!Fa_IS_FILE_HANDLE(argv[0])) {
         stdlib_error(StdlibErrorCode::CLOSE_TYPE_ERROR);
         return Fa_MAKE_BOOL(false);
     }

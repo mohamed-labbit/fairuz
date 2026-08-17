@@ -77,10 +77,10 @@ static constexpr u64 OBJ_TAG16 = UINT64_C(0xFFF8);
             TAG_OBJ | (reinterpret_cast<uintptr_t>(_o) & PAYLOAD_MASK); \
         })
 
-#    define Fa_MAKE_CLASS(n, f, m, v)                          \
-        ({                                                                    \
-            Fa_ObjClass* _o = m_gc.make_obj_class(n, f, m, v); \
-            TAG_OBJ | (reinterpret_cast<uintptr_t>(_o) & PAYLOAD_MASK);       \
+#    define Fa_MAKE_CLASS(n, f, m, v)                                   \
+        ({                                                              \
+            Fa_ObjClass* _o = m_gc.make_obj_class(n, f, m, v);          \
+            TAG_OBJ | (reinterpret_cast<uintptr_t>(_o) & PAYLOAD_MASK); \
         })
 #    define Fa_MAKE_INSTANCE(k)                                         \
         ({                                                              \

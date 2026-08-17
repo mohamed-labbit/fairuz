@@ -7,9 +7,9 @@
 
 #include <assert.h>
 #include <bit>
+#include <concepts>
 #include <initializer_list>
 #include <type_traits>
-#include <concepts>
 
 namespace fairuz {
 
@@ -89,7 +89,7 @@ class Fa_Array {
     // get_allocator_ptr(). This overload only participates in overload
     // resolution when IS_ARENA is true.
     void resolve_allocator(_Alloc* allocator)
-        requires IS_ARENA
+    requires IS_ARENA
     {
         m_allocator = (allocator != nullptr) ? allocator : get_allocator_ptr();
         assert(m_allocator != nullptr && "get_allocator_ptr() returned null for Fa_ArenaAllocator");
@@ -100,7 +100,7 @@ class Fa_Array {
     // allocator gets a compile error at the constructor call site (see
     // below), not a runtime assert here.
     void resolve_allocator(_Alloc* allocator)
-        requires (!IS_ARENA)
+    requires(!IS_ARENA)
     {
         assert(allocator != nullptr && "null allocator only valid for Fa_ArenaAllocator");
         m_allocator = allocator;
@@ -114,7 +114,7 @@ public:
     // compiler at the call site, so "which instance violated it" becomes
     // "which line failed to build."
     Fa_Array()
-        requires IS_ARENA
+    requires IS_ARENA
     {
         resolve_allocator(nullptr);
     }
@@ -129,17 +129,17 @@ public:
     }
 
     explicit Fa_Array(u32 capacity, T fill_v, _Alloc* allocator)
-        requires (!IS_ARENA);
+    requires(!IS_ARENA);
     explicit Fa_Array(u32 capacity, T fill_v = T(), _Alloc* allocator = nullptr)
-        requires IS_ARENA;
+    requires IS_ARENA;
 
     Fa_Array(Fa_Array const& other);
     Fa_Array(Fa_Array&& other) noexcept;
 
     Fa_Array(std::initializer_list<T> list, _Alloc* allocator)
-        requires (!IS_ARENA);
+    requires(!IS_ARENA);
     Fa_Array(std::initializer_list<T> list, _Alloc* allocator = nullptr)
-        requires IS_ARENA;
+    requires IS_ARENA;
 
     Fa_Array& operator=(Fa_Array const& other);
     Fa_Array& operator=(Fa_Array&& other) noexcept;
@@ -157,7 +157,7 @@ public:
     }
 
     static Fa_Array with_capacity(u32 capacity)
-        requires IS_ARENA
+    requires IS_ARENA
     {
         Fa_Array a;
         if (capacity == 0)
@@ -170,7 +170,7 @@ public:
     }
 
     static Fa_Array with_capacity(u32 capacity, _Alloc* allocator)
-        requires (!IS_ARENA)
+    requires(!IS_ARENA)
     {
         Fa_Array a(allocator);
         if (capacity == 0)
@@ -270,7 +270,7 @@ void Fa_Array<T, _Alloc>::ensure_push_capacity()
 
 template<typename T, class _Alloc>
 Fa_Array<T, _Alloc>::Fa_Array(u32 capacity, T fill_v, _Alloc* allocator)
-    requires (!Fa_Array<T, _Alloc>::IS_ARENA)
+requires(!Fa_Array<T, _Alloc>::IS_ARENA)
 {
     resolve_allocator(allocator);
     if (capacity > ARRAY_MAX)
@@ -302,7 +302,7 @@ Fa_Array<T, _Alloc>::Fa_Array(u32 capacity, T fill_v, _Alloc* allocator)
 
 template<typename T, class _Alloc>
 Fa_Array<T, _Alloc>::Fa_Array(u32 capacity, T fill_v, _Alloc* allocator)
-    requires Fa_Array<T, _Alloc>::IS_ARENA
+requires Fa_Array<T, _Alloc>::IS_ARENA
 {
     resolve_allocator(allocator);
     if (capacity > ARRAY_MAX)
@@ -360,7 +360,7 @@ Fa_Array<T, _Alloc>::Fa_Array(Fa_Array&& other) noexcept
 
 template<typename T, class _Alloc>
 Fa_Array<T, _Alloc>::Fa_Array(std::initializer_list<T> list, _Alloc* allocator)
-    requires (!Fa_Array<T, _Alloc>::IS_ARENA)
+requires(!Fa_Array<T, _Alloc>::IS_ARENA)
 {
     resolve_allocator(allocator);
     if (list.size() == 0)
@@ -393,7 +393,7 @@ Fa_Array<T, _Alloc>::Fa_Array(std::initializer_list<T> list, _Alloc* allocator)
 
 template<typename T, class _Alloc>
 Fa_Array<T, _Alloc>::Fa_Array(std::initializer_list<T> list, _Alloc* allocator)
-    requires Fa_Array<T, _Alloc>::IS_ARENA
+requires Fa_Array<T, _Alloc>::IS_ARENA
 {
     resolve_allocator(allocator);
     if (list.size() == 0)
