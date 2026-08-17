@@ -77,14 +77,19 @@ static constexpr u64 OBJ_TAG16 = UINT64_C(0xFFF8);
             TAG_OBJ | (reinterpret_cast<uintptr_t>(_o) & PAYLOAD_MASK); \
         })
 
-#    define Fa_MAKE_CLASS(n, f, f_c, m, m_c, v, v_c)                          \
+#    define Fa_MAKE_CLASS(n, f, m, v)                          \
         ({                                                                    \
-            Fa_ObjClass* _o = m_gc.make_obj_class(n, f, f_c, m, m_c, v, v_c); \
+            Fa_ObjClass* _o = m_gc.make_obj_class(n, f, m, v); \
             TAG_OBJ | (reinterpret_cast<uintptr_t>(_o) & PAYLOAD_MASK);       \
         })
-#    define Fa_MAKE_INSTANCE(k)                                          \
+#    define Fa_MAKE_INSTANCE(k)                                         \
         ({                                                              \
-            Fa_ObjInstance* _o = m_gc.make_obj_instance(k);              \
+            Fa_ObjInstance* _o = m_gc.make_obj_instance(k);             \
+            TAG_OBJ | (reinterpret_cast<uintptr_t>(_o) & PAYLOAD_MASK); \
+        })
+#    define Fa_MAKE_FILE_HANDLE(p)                                      \
+        ({                                                              \
+            Fa_ObjFileHandle* _o = m_gc.make_obj_file_handle(p);        \
             TAG_OBJ | (reinterpret_cast<uintptr_t>(_o) & PAYLOAD_MASK); \
         })
 
@@ -112,6 +117,7 @@ static constexpr u64 OBJ_TAG16 = UINT64_C(0xFFF8);
 #    define Fa_IS_NATIVE(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::NATIVE)
 #    define Fa_IS_CLASS(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::CLASS)
 #    define Fa_IS_INSTANCE(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::INSTANCE)
+#    define Fa_IS_FILE_HANDLE(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::FILE_HANDLE)
 #    define Fa_IS_TRUTHY(v)                        \
         ({                                         \
             Fa_Value _v = (v);                     \
@@ -167,6 +173,7 @@ static constexpr u64 OBJ_TAG16 = UINT64_C(0xFFF8);
 #    define Fa_AS_NATIVE(v) Fa_obj_cast<Fa_ObjNative>(Fa_AS_OBJECT(v), Fa_ObjType::NATIVE)
 #    define Fa_AS_CLASS(v) Fa_obj_cast<Fa_ObjClass>(Fa_AS_OBJECT(v), Fa_ObjType::CLASS)
 #    define Fa_AS_INSTANCE(v) Fa_obj_cast<Fa_ObjInstance>(Fa_AS_OBJECT(v), Fa_ObjType::INSTANCE)
+#    define Fa_AS_FILE_HANDLE(v) Fa_obj_cast<Fa_ObjFileHandle>(Fa_AS_OBJECT(v), Fa_ObjType::FILE_HANDLE)
 
 enum class Fa_TypeTag : u16 {
     NONE = 0,
@@ -182,6 +189,7 @@ enum class Fa_TypeTag : u16 {
     CLASS = 1 << 9,
     INSTANCE = 1 << 10,
     DICT = 1 << 11,
+    FILE_HANDLE = 1 << 12,
 }; // enum Fa_TypeTag
 
 [[nodiscard]] inline bool has_tag(Fa_TypeTag mask, Fa_TypeTag t) noexcept
@@ -216,6 +224,7 @@ inline Fa_TypeTag& operator|=(Fa_TypeTag& a, Fa_TypeTag b) noexcept { return a =
         case Fa_ObjType::NATIVE: return Fa_TypeTag::NATIVE;
         case Fa_ObjType::CLASS: return Fa_TypeTag::CLASS;
         case Fa_ObjType::INSTANCE: return Fa_TypeTag::INSTANCE;
+        case Fa_ObjType::FILE_HANDLE: return Fa_TypeTag::FILE_HANDLE;
         default: return Fa_TypeTag::NONE;
         }
     }
@@ -240,6 +249,7 @@ enum class Fa_TypeTag : u16 {
     CLASS,
     INSTANCE,
     DICT,
+    FILE_HANDLE,
 }; // enum Fa_TypeTag
 
 class Fa_Value {
@@ -295,6 +305,7 @@ public:
         case Fa_ObjType::LIST: v.m_type = Fa_TypeTag::LIST; break;
         case Fa_ObjType::NATIVE: v.m_type = Fa_TypeTag::NATIVE; break;
         case Fa_ObjType::STRING: v.m_type = Fa_TypeTag::STRING; break;
+        case Fa_ObjType::FILE_HANDLE: v.m_type = Fa_TypeTag::FILE_HANDLE; break;
         default: v.m_type = Fa_TypeTag::NONE;
         }
         v.as.o = oval;
@@ -305,7 +316,7 @@ public:
     bool is_bool() const { return m_type == Fa_TypeTag::BOOL; }
     bool is_int() const { return m_type == Fa_TypeTag::INT; }
     bool is_double() const { return m_type == Fa_TypeTag::DOUBLE; }
-    bool is_object() const { return m_type >= Fa_TypeTag::STRING && m_type <= Fa_TypeTag::DICT; }
+    bool is_object() const { return m_type >= Fa_TypeTag::STRING && m_type <= Fa_TypeTag::FILE_HANDLE; }
 
     bool as_bool() const { return as.b; }
     i64 as_int() const { return as.i; }
@@ -343,6 +354,7 @@ public:
 #    define Fa_MAKE_NATIVE(f, n, a) Fa_Value::from_object((Fa_ObjHeader*)(m_gc.make_obj_native(f, n, a)))
 #    define Fa_MAKE_CLASS(n, f, f_c, m, m_c, v, v_c) Fa_Value::from_object((Fa_ObjHeader*)(m_gc.make_obj_class(n, f, f_c, m, m_c, v, v_c)))
 #    define Fa_MAKE_INSTANCE(k) Fa_Value::from_object((Fa_ObjHeader*)(m_gc.make_obj_instance(k)))
+#    define Fa_MAKE_FILE_HANDLE(p) Fa_Value::from_object((Fa_ObjHeader*)(m_gc.make_obj_file_handle(p)))
 
 /* ------- Truth macros  ------- */
 
@@ -360,6 +372,7 @@ public:
 #    define Fa_IS_NATIVE(v) ((v).is_object() && (v).as_object()->type == Fa_ObjType::NATIVE)
 #    define Fa_IS_CLASS(v) ((v).is_object() && (v).as_object()->type == Fa_ObjType::CLASS)
 #    define Fa_IS_INSTANCE(v) ((v).is_object() && (v).as_object()->type == Fa_ObjType::INSTANCE)
+#    define Fa_IS_FILE_HANDLE(v) ((v).is_object() && (v).as_object()->type == Fa_ObjType::FILE_HANDLE)
 #    define Fa_IS_TRUTHY(v)                \
         ({                                 \
             Fa_Value _v = (v);             \
@@ -394,6 +407,7 @@ public:
 #    define Fa_AS_NATIVE(v) Fa_obj_cast<Fa_ObjNative>((v).as_object(), Fa_ObjType::NATIVE)
 #    define Fa_AS_CLASS(v) Fa_obj_cast<Fa_ObjClass>((v).as_object(), Fa_ObjType::CLASS)
 #    define Fa_AS_INSTANCE(v) Fa_obj_cast<Fa_ObjInstance>((v).as_object(), Fa_ObjType::INSTANCE)
+#    define Fa_AS_FILE_HANDLE(v) Fa_obj_cast<Fa_ObjFileHandle>((v).as_object(), Fa_ObjType::FILE_HANDLE)
 
 [[nodiscard]] inline Fa_TypeTag value_type_tag(Fa_Value v) noexcept
 {

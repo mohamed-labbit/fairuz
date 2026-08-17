@@ -298,11 +298,11 @@ struct Fa_Chunk {
     u8 alloc_ic_slot();
     u32 get_line(u32 const instr_idx) const;
     void disassemble() const;
-    void add_line(u32 m_line);
+    void add_line(u32 line);
 }; // struct Fa_Chunk
 
 template<typename... Args>
-static Fa_Chunk* make_chunk(Args&&... m_args) { return get_allocator().allocate_object<Fa_Chunk>(std::forward<Args>(m_args)...); }
+static Fa_Chunk* make_chunk(Args&&... args) { return get_allocator().allocate_object<Fa_Chunk>(std::forward<Args>(args)...); }
 
 } // namespace fairuz::runtime
 

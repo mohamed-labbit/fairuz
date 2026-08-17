@@ -179,6 +179,13 @@ public:
         m_is_value = false;
     }
 
+    template<typename _Tp>
+    Fa_ErrorOr<_Tp> error_or(_Tp v) {
+        if (has_error())
+            return get_error();
+        return v;
+    }
+
 private:
     alignas(T) alignas(E) std::byte m_storage[sizeof(T) > sizeof(E) ? sizeof(T) : sizeof(E)];
     bool m_is_value;

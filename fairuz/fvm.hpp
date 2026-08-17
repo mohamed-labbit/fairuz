@@ -82,6 +82,8 @@ public:
     Fa_Value Fa_clock(int argc, Fa_Value* argv);
     Fa_Value Fa_error(int argc, Fa_Value* argv);
     Fa_Value Fa_time(int argc, Fa_Value* argv);
+    Fa_Value Fa_append_file(int argc, Fa_Value* argv);
+    Fa_Value Fa_close(int argc, Fa_Value* argv);
 
     // stdlib helpers
     void Fa_dict_put(Fa_Value* dict_ptr, Fa_Value k, Fa_Value v);
@@ -113,7 +115,7 @@ public:
     Fa_Value call_native(Fa_ObjNative* nat, int argc, int base);
 
     void open_stdlib();
-    void register_native(Fa_StringRef const& name, NativeFn fn, int arity = -1);
+    bool register_native(Fa_StringRef const& name, NativeFn fn, int arity = -1);
 
     Fa_SourceLocation current_location() const;
     void runtime_error(ErrorCode errc, std::string const& detail = "");

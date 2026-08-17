@@ -199,11 +199,15 @@ Fa_StringRefImpl<Allocator>& Fa_StringRefImpl<Allocator>::operator=(Fa_StringRef
         return *this;
 
     if (m_string_data) {
-        m_string_data->decrement();
-        if (m_string_data->reference_count() == 0) {
-            Allocator* freeing_allocator = m_string_data->allocator();
-            m_string_data->~StringBase();
-            freeing_allocator->template deallocate_object<StringBase<Allocator>>(m_string_data);
+        if (m_string_data == detail::empty_string_singleton<Allocator>()) {
+            m_string_data->decrement();
+        } else {
+            m_string_data->decrement();
+            if (m_string_data->reference_count() == 0) {
+                Allocator* freeing_allocator = m_string_data->allocator();
+                m_string_data->~StringBase();
+                freeing_allocator->template deallocate_object<StringBase<Allocator>>(m_string_data);
+            }
         }
     }
 
@@ -225,6 +229,11 @@ Fa_StringRefImpl<Allocator>::~Fa_StringRefImpl()
     if (m_string_data == nullptr)
         return;
 
+    if (m_string_data == detail::empty_string_singleton<Allocator>()) {
+        m_string_data->decrement();
+        return;
+    }
+
     m_string_data->decrement();
 
     if (m_string_data->reference_count() == 0) {
@@ -241,8 +250,18 @@ Fa_StringRefImpl<Allocator>& Fa_StringRefImpl<Allocator>::operator=(Fa_StringRef
     if (this == &other)
         return *this;
 
-    if (m_string_data)
-        m_string_data->decrement();
+    if (m_string_data) {
+        if (m_string_data == detail::empty_string_singleton<Allocator>()) {
+            m_string_data->decrement();
+        } else {
+            m_string_data->decrement();
+            if (m_string_data->reference_count() == 0) {
+                Allocator* freeing_allocator = m_string_data->allocator();
+                m_string_data->~StringBase();
+                freeing_allocator->template deallocate_object<StringBase<Allocator>>(m_string_data);
+            }
+        }
+    }
 
     m_string_data = other.m_string_data;
     m_offset = other.m_offset;

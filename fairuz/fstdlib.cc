@@ -6,6 +6,7 @@
 
 #include <charconv>
 #include <cmath>
+#include <cstdio>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -782,16 +783,86 @@ Fa_Value Fa_VM::Fa_open(int argc, Fa_Value* argv)
     }
 
     char const* filename = Fa_AS_STRING(argv[0])->str.data();
-    char const* mode = Fa_AS_STRING(argv[1])->str.data();
+    Fa_StringRef mode_arg = Fa_AS_STRING(argv[1])->str;
 
-    FILE* fp = fopen(filename, mode);
+    Fa_StringRef fmode;
+    if (mode_arg == "اضف")
+        fmode = "a";
+    else if (mode_arg == "اقرا")
+        fmode = "r";
+    else if (mode_arg == "اكتب")
+        fmode = "w";
+    else
+        runtime_error(RuntimeErrorCode::NATIVE_TYPE_ERROR);
+
+    FILE* fp = fopen(filename, fmode.data());
     if (fp == NULL) {
-        /// TODO: revisit this error
         runtime_error(RuntimeErrorCode::NATIVE_TYPE_ERROR);
         return Fa_MAKE_NIL();
     }
 
-    return Fa_MAKE_NIL();
+    return Fa_MAKE_FILE_HANDLE(fp);
+}
+
+Fa_Value Fa_VM::Fa_append_file(int argc, Fa_Value* argv)
+{
+    if (argc < 2 || argv == nullptr) {
+        stdlib_error(StdlibErrorCode::APPEND_FILE_ARG_COUNT);
+        return Fa_MAKE_NIL();
+    }
+
+    Fa_Value& file = argv[0];
+    Fa_Value& content = argv[1];
+
+    if (!Fa_IS_FILE_HANDLE(file))
+    {
+        stdlib_error(StdlibErrorCode::APPEND_FILE_TYPE_ERROR);
+        return Fa_MAKE_NIL();
+    }
+
+    if (!Fa_IS_STRING(content))
+    {
+        stdlib_error(StdlibErrorCode::APPEND_FILE_TYPE_ERROR);
+        return Fa_MAKE_NIL();
+    }
+
+    Fa_ObjFileHandle* file_handle = Fa_AS_FILE_HANDLE(file);
+    Fa_ObjString* str_obj = Fa_AS_STRING(content);
+    FILE* fp = file_handle->fp;
+    Fa_StringRef content_str = str_obj->str;
+
+    if (content_str.empty())
+        return Fa_MAKE_BOOL(true); // nothing to write is trivially successful
+
+    size_t const written = std::fwrite(content_str.data(), 1, content_str.len(), fp);
+    // ::fflush(fp);
+
+    if (written != content_str.len()) {
+        stdlib_error(StdlibErrorCode::APPEND_FILE_FAILED, std::strerror(errno));
+        return Fa_MAKE_BOOL(false);
+    }
+
+    return Fa_MAKE_BOOL(true);
+}
+
+Fa_Value Fa_VM::Fa_close(int argc, Fa_Value* argv) {
+    if (argc != 1 || argv == nullptr)
+    {
+        stdlib_error(StdlibErrorCode::CLOSE_ARG_COUNT);
+        return Fa_MAKE_BOOL(false);
+    }
+
+    if (!Fa_IS_FILE_HANDLE(argv[0]))
+    {
+        stdlib_error(StdlibErrorCode::CLOSE_TYPE_ERROR);
+        return Fa_MAKE_BOOL(false);
+    }
+
+    Fa_ObjFileHandle* file_handle = Fa_AS_FILE_HANDLE(argv[0]);
+    if (file_handle->close())
+        return Fa_MAKE_BOOL(true);
+
+    return Fa_MAKE_BOOL(false);
 }
 
 Fa_Value Fa_VM::Fa_clock(int /*argc*/, Fa_Value* /*argv*/) { return Fa_MAKE_NIL(); }

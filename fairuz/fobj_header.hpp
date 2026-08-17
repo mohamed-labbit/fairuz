@@ -13,6 +13,7 @@ enum class Fa_ObjType : u8 {
     NATIVE,
     CLASS,
     INSTANCE,
+    FILE_HANDLE,
     _COUNT,
 };
 

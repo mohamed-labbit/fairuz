@@ -7,8 +7,6 @@
 #include "fmacros.hpp"
 #include "futil.hpp"
 
-#include <iostream>
-
 namespace fairuz::parser {
 
 // Macros

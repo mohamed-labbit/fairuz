@@ -183,6 +183,11 @@ enum class Code : u16 {
     ASSERT_ARG_COUNT = 0x0517,
     ASSERT_FAILED = 0x0518,
     OPEN_ARG_COUNT = 0x0519,
+    APPEND_FILE_ARG_COUNT = 0x0520,
+    APPEND_FILE_TYPE_ERROR = 0x0521,
+    APPEND_FILE_FAILED = 0x0522,
+    CLOSE_ARG_COUNT = 0x0523,
+    CLOSE_TYPE_ERROR = 0x0524,
 }; // enum Code
 
 } // namespace stdlib
@@ -344,6 +349,11 @@ static constexpr char const* error_message_for(u16 code)
     case /*ASSERT_ARG_COUNT =*/0x0517: return "assert expects at least one argument";
     case /*ASSERT_FAILED =*/0x0518: return "assertion failed";
     case /*OPEN_ARG_COUNT =*/0x0519: return "open() expects at least one argument";
+    case /*APPEND_FILE_ARG_COUNT =*/0x0520: return "append_file() expects at least two arguments";
+    case /*APPEND_FILE_TYPE_ERROR =*/0x0521: return "append_file() expects a file as first argument and a string as second argument";
+    case /*APPEND_FILE_FAILED =*/0x0522: return "append_file() failed to write";
+    case /*CLOSE_ARG_COUNT =*/0x0523: return "close() expects exactly one argument";
+    case /*CLOSE_TYPE_ERROR =*/0x0524: return "close() expects a file value as argument";
     // containers
     case /*ARRAY_EMPTY_BACK =*/0x0600: return "Fa_Array::back() called on an empty array";
     case /*ARRAY_EMPTY_FRONT =*/0x0601: return "Fa_Array::front() called on an empty array";

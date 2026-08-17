@@ -186,8 +186,8 @@ void Fa_DiagnosticEngine::pretty_print() const
 
         if (m_source != nullptr)
             std::cerr << Color::BOLD << Color::RESET << m_source->get_path() << ": " << Color::RESET;
-        
-        std::cerr << sev_str << Color::RESET << ":" << " " << error_message_for(diag.err_code) << "\n";
+
+        std::cerr << sev_str << Color::RESET << ":" << " " << error_message_for(diag.err_code) << " " << diag.code << "\n";
 
         if (diag.src_loc.line > 0) {
             std::cerr << "  --> line " << diag.src_loc.line << ":" << diag.src_loc.column << "\n";

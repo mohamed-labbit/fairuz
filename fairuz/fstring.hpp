@@ -161,6 +161,15 @@ public:
         return ::memcmp(data(), other.data(), m_length) == 0;
     }
 
+    [[nodiscard]] bool operator==(char const* other) const noexcept
+    {
+        if (m_string_data == nullptr || other == nullptr)
+            return m_length == 0;
+        if (m_length != ::strlen(other))
+            return false;
+        return ::memcmp(data(), other, m_length) == 0;
+    }
+
     [[nodiscard]] bool operator!=(Fa_StringRefImpl const& other) const noexcept { return !(*this == other); }
 
     [[nodiscard]] bool operator<(Fa_StringRefImpl const& other) const noexcept
@@ -430,30 +439,8 @@ struct Fa_StringRefHashImpl {
         if (str.empty())
             return 0;
 
-        size_t n = str.len();
-        auto const* p = reinterpret_cast<u8 const*>(str.data());
-
-        if (n <= 16) {
-            u64 a = 0, b = 0;
-            if (n >= 8) {
-                __builtin_memcpy(&a, p, 8);
-                __builtin_memcpy(&b, p + n - 8, 8);
-            } else if (n >= 4) {
-                __builtin_memcpy(&a, p, 4);
-                __builtin_memcpy(&b, p + n - 4, 4);
-            } else {
-                a = (u64(p[0]) << 16) | (u64(p[n >> 1]) << 8) | p[n - 1];
-            }
-            a ^= b ^ n;
-            a ^= a >> 33;
-            a *= UINT64_C(0xff51afd7ed558ccd);
-            a ^= a >> 33;
-            a *= UINT64_C(0xc4ceb9fe1a85ec53);
-            a ^= a >> 33;
-            return static_cast<size_t>(a);
-        }
-
-        return static_cast<size_t>(detail::wyhash(p, n, seed));
+        return static_cast<size_t>(detail::wyhash(
+            reinterpret_cast<u8 const*>(str.data()), str.len(), seed));
     }
 }; // struct Fa_StringRefHash
 
