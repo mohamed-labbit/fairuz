@@ -1,4 +1,6 @@
-/// string.tpp
+//
+// string.tpp
+//
 
 #include "fdiagnostic.hpp"
 #include "futil.hpp"

@@ -1,5 +1,5 @@
-#ifndef META_HPP
-#define META_HPP
+#ifndef FA_META_HPP
+#define FA_META_HPP
 
 #ifdef FAIRUZ_DEBUG
 
@@ -37,4 +37,4 @@ struct AllocationFooter {
 
 #endif // FAIRUZ_DEBUG
 
-#endif // META_HPP
+#endif // FA_META_HPP

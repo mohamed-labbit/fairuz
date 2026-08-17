@@ -1,5 +1,5 @@
-#ifndef VM_HPP
-#define VM_HPP
+#ifndef FA_VM_HPP
+#define FA_VM_HPP
 
 #include "fgc.hpp"
 #include "fopcode.hpp"
@@ -134,4 +134,4 @@ public:
 
 } // namespace fairuz::runtime
 
-#endif // VM_HPP
+#endif // FA_VM_HPP

@@ -1,5 +1,5 @@
-#ifndef VALUE_HPP
-#define VALUE_HPP
+#ifndef FA_VALUE_HPP
+#define FA_VALUE_HPP
 
 #include "fmacros.hpp"
 #include "fobj_header.hpp"
@@ -426,4 +426,4 @@ struct Fa_ValueEqual {
 
 } // namespace fairuz::runtime
 
-#endif // VALUE_HPP
+#endif // FA_VALUE_HPP

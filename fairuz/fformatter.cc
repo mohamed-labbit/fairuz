@@ -1,42 +1,5 @@
 //
-// fformatter.cc — CORRECTED
-//
-// Changes from the original, each tied to a specific bug identified in review:
-//
-//   [BUG 1] Dict formatting: comma was written AFTER every entry including
-//           the last, plus a stray trailing space before the newline, plus
-//           no guard for empty dict content (would emit a blank line inside
-//           `{}`). Fixed to comma-BETWEEN, and to special-case empty dicts.
-//
-//   [BUG 2] is_class_member_target() checked for Kind::INDEX, but the
-//           parser (parser.cc, parse_class_method) deliberately desugars
-//           `.field` to a GET expression, not INDEX — its own comment says
-//           so explicitly, to keep the compiler's fast field-access path.
-//           The INDEX-based check could never fire. Rewritten to check
-//           Kind::GET against kClassInstanceName instead.
-//
-//   [BUG 3] There was no `Kind::GET` case in format_expression()'s switch
-//           at all, meaning ANY member-read expression (not just `.field`
-//           assignment targets, but ordinary reads like `x.y` per the
-//           postfix-`.` grammar) silently formatted as nothing. Added the
-//           missing case, with a special-case to print bare `.field`
-//           instead of `__class$instance.field` when the receiver is the
-//           synthetic instance name — since `.field` sugar is what the
-//           parser accepts, the formatter should round-trip back to that
-//           surface form, not leak the internal synthetic name into output.
-//
-//   [BUG 4] Fa_Stmt::Kind::ASSIGNMENT branch in format_statement() does not
-//           correspond to anything the parser actually emits — assignment
-//           is an expression (Fa_make_assignment_expr) wrapped in an EXPR
-//           statement (Fa_make_expr_stmt), per parse_expression_stmt(). If
-//           this Kind is genuinely dead, the case is left in place (harmless
-//           and possibly used by another AST producer) but corrected to at
-//           least format the target+value if it were ever reached, instead
-//           of silently dropping the target as the original did.
-//
-// None of these fixes touch parsing/compilation — this file only affects
-// pretty-printing (e.g. `fairuz fmt`), so the changes are safe to land
-// independently of any VM/compiler work.
+// fformatter.cc
 //
 
 #include "fformatter.hpp"

@@ -1,5 +1,5 @@
-#ifndef DIAGNOSTIC_HPP
-#define DIAGNOSTIC_HPP
+#ifndef FA_DIAGNOSTIC_HPP
+#define FA_DIAGNOSTIC_HPP
 
 #include "fmacros.hpp"
 
@@ -588,4 +588,4 @@ static Fa_DiagnosticEngine::DiagnosticId report_deferred(Severity const sev, Fa_
 
 } // namespace fairuz::diagnostic
 
-#endif // DIAGNOSTIC_HPP
+#endif // FA_DIAGNOSTIC_HPP

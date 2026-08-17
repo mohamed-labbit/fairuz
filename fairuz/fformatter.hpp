@@ -1,5 +1,5 @@
-#ifndef FORMAT_HPP
-#define FORMAT_HPP
+#ifndef FA_FORMAT_HPP
+#define FA_FORMAT_HPP
 
 #include "fAST.hpp"
 #include "farray.hpp"
@@ -39,4 +39,4 @@ public:
 
 } // namespace fairuz
 
-#endif // FORMAT_HPP
+#endif // FA_FORMAT_HPP

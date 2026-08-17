@@ -1,13 +1,10 @@
-#ifndef PARSER_HPP
-#define PARSER_HPP
+#ifndef FA_PARSER_HPP
+#define FA_PARSER_HPP
 
 #include "fAST.hpp"
 #include "ferror.hpp"
 #include "flexer.hpp"
 #include "fstring.hpp"
-#include "ftable.hpp"
-
-#include <unordered_set>
 
 namespace fairuz::parser {
 
@@ -132,4 +129,4 @@ private:
 
 } // namespace fairuz::parser
 
-#endif // PARSER_HPP
+#endif // FA_PARSER_HPP

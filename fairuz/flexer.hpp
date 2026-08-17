@@ -1,5 +1,5 @@
-#ifndef LEXER_HPP
-#define LEXER_HPP
+#ifndef FA_LEXER_HPP
+#define FA_LEXER_HPP
 
 #include "farray.hpp"
 #include "fdiagnostic.hpp"
@@ -187,4 +187,4 @@ private:
 
 } // namespace fairuz::lex
 
-#endif // LEXER_HPP
+#endif // FA_LEXER_HPP

@@ -1,5 +1,5 @@
 //
-// lexer.cc
+// flexer.cc
 //
 
 #include "flexer.hpp"

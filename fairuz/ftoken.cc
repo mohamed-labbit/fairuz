@@ -1,4 +1,6 @@
-/// token.cc
+//
+// token.cc
+//
 
 #include "ftoken.hpp"
 

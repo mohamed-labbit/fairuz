@@ -1,4 +1,6 @@
-/// diagnostic.cc
+//
+// fdiagnostic.cc
+//
 
 #include "fdiagnostic.hpp"
 #include "flexer.hpp" // for Fa_FileManager::get_line_at() — kept out of the

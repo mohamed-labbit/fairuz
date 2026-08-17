@@ -1,5 +1,5 @@
-#ifndef ARRAY_HPP
-#define ARRAY_HPP
+#ifndef FA_ARRAY_HPP
+#define FA_ARRAY_HPP
 
 #include "farena.hpp"
 #include "fdiagnostic.hpp"
@@ -651,4 +651,4 @@ public:
 
 } // namespace fairuz
 
-#endif // ARRAY_HPP
+#endif // FA_ARRAY_HPP

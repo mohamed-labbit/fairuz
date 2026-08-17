@@ -1,5 +1,5 @@
-#ifndef MACROS_HPP
-#define MACROS_HPP
+#ifndef FA_MACROS_HPP
+#define FA_MACROS_HPP
 
 #include <string>
 
@@ -65,4 +65,4 @@ using f64 = double;
 #    define FA_USE_NANBOX 0
 #endif
 
-#endif // MACROS_HPP
+#endif // FA_MACROS_HPP

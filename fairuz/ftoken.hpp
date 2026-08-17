@@ -1,5 +1,5 @@
-#ifndef TOKEN_HPP
-#define TOKEN_HPP
+#ifndef FA_TOKEN_HPP
+#define FA_TOKEN_HPP
 
 #include "fstring.hpp"
 
@@ -177,4 +177,4 @@ private:
 
 } // namespace fairuz::tok
 
-#endif // TOKEN_HPP
+#endif // FA_TOKEN_HPP

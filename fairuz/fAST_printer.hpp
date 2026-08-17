@@ -1,5 +1,5 @@
-#ifndef AST_PRINTER_HPP
-#define AST_PRINTER_HPP
+#ifndef FA_AST_PRINTER_HPP
+#define FA_AST_PRINTER_HPP
 
 #include "fAST.hpp"
 
@@ -300,4 +300,4 @@ public:
 
 } // namespace fairuz::ast
 
-#endif // AST_PRINTER_HPP
+#endif // FA_AST_PRINTER_HPP

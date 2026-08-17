@@ -1,5 +1,5 @@
-#ifndef COMPILER_HPP
-#define COMPILER_HPP
+#ifndef FA_COMPILER_HPP
+#define FA_COMPILER_HPP
 
 #include "fAST.hpp"
 #include "ferror.hpp"
@@ -271,4 +271,4 @@ private:
 
 } // namespace fairuz::runtime
 
-#endif // COMPILER_HPP
+#endif // FA_COMPILER_HPP

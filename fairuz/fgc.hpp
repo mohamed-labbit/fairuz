@@ -1,5 +1,5 @@
-#ifndef GC_HPP
-#define GC_HPP
+#ifndef FA_GC_HPP
+#define FA_GC_HPP
 
 #include "farray.hpp"
 #include "fdiagnostic.hpp"
@@ -87,4 +87,4 @@ private:
 
 } // namespace fairuz::runtime
 
-#endif // GC_HPP
+#endif // FA_GC_HPP

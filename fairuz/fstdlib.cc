@@ -1,4 +1,6 @@
-/// stdlib.cc
+//
+// stdlib.cc
+//
 
 #include "fobject.hpp"
 #include "futil.hpp"

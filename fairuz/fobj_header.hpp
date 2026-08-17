@@ -1,5 +1,5 @@
-#ifndef FOBJ_HEADER_HPP
-#define FOBJ_HEADER_HPP
+#ifndef FA_FOBJ_HEADER_HPP
+#define FA_FOBJ_HEADER_HPP
 
 #include "fmacros.hpp"
 
@@ -31,4 +31,4 @@ struct Fa_ObjHeader {
 
 } // namespace fairuz::runtime
 
-#endif // FOBJ_HEADER_HPP
+#endif // FA_FOBJ_HEADER_HPP

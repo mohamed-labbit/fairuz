@@ -14,17 +14,12 @@ namespace fairuz::runtime {
 
 static constexpr char kClassMetadataKey[] = "__class__";
 
-#define Fa_DISPATCH()                                                                                     \
-    do {                                                                                                  \
-        instr = cur_chunk->code[ip];                                                                      \
-        if (UNLIKELY(static_cast<u8>(Fa_instr_op(instr)) >= static_cast<u8>(Fa_OpCode::_COUNT))) {        \
-            fprintf(stderr, "BAD OPCODE %u at ip=%u chunk=%s size=%zu\n",                                 \
-                static_cast<u8>(Fa_instr_op(instr)), ip, cur_chunk->name.data(), cur_chunk->code.size()); \
-            abort();                                                                                      \
-        }                                                                                                 \
-        ip += 1;                                                                                          \
-        SAVE_IP();                                                                                        \
-        goto* dispatch_table[static_cast<u8>(Fa_instr_op(instr))];                                        \
+#define Fa_DISPATCH()                                              \
+    do {                                                           \
+        instr = cur_chunk->code[ip];                               \
+        ip += 1;                                                   \
+        SAVE_IP();                                                 \
+        goto* dispatch_table[static_cast<u8>(Fa_instr_op(instr))]; \
     } while (0)
 
 #define Fa_BEGIN_DISPATCH() Fa_DISPATCH()

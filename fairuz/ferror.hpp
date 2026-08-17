@@ -1,33 +1,9 @@
-#ifndef ERROR_OR
-#define ERROR_OR
+#ifndef FA_ERROR_HPP
+#define FA_ERROR_HPP
 
 #include "fdiagnostic.hpp"
-#include "flexer.hpp"
 #include "fmacros.hpp"
-
-#include <string>
-
-// ============================================================
-// CHANGES FROM THE ORIGINAL:
-//
-// [FIX 3] Fa_Error's broken templated default constructor
-//             template<typename CodeEnum> Fa_Error() : m_code(CodeEnum::UNKNOWN) {}
-//         is removed — CodeEnum could never be deduced from a
-//         zero-argument call, making this dead/uncompilable-if-touched
-//         code. Replaced with a plain default that stores a sentinel
-//         u16 value (0xFFFF, matching no real error code in any phase's
-//         0x0001-0x07FF range) rather than trying to default-construct
-//         into a specific phase's UNKNOWN value that the type has no way
-//         to know about.
-//
-// [FIX 1 follow-through] report_error()/_report_error() now return the
-// same Fa_Error as before, but also thread the new DiagnosticId through
-// so a caller that wants to attach a suggestion/note to THIS specific
-// diagnostic can do so immediately after reporting it, without relying
-// on the fragile "attach to whatever was reported last" behavior.
-// Fa_Error itself gains an optional stored DiagnosticId for this purpose
-// — existing call sites that ignore it are unaffected.
-// ============================================================
+#include "fstring.hpp"
 
 namespace fairuz {
 
@@ -39,14 +15,6 @@ public:
     {
     }
 
-    // [FIX 3 addendum] Non-templated raw-code constructor. This is what
-    // _report_error() now uses instead of casting an arbitrary u16 through
-    // an unrelated phase's Code enum (which the original single-argument
-    // template technically allowed you to do by force-casting, but which
-    // is semantically wrong — a lexer error code has no business being
-    // constructed "as if" it were a general::Code). Marked explicit and
-    // named distinctly via the tag type below so it can never be called
-    // by accident where a real enum overload was intended.
     struct RawCode {
         u16 value;
     };
@@ -55,11 +23,6 @@ public:
     {
     }
 
-    // Plain, non-templated default — no phantom CodeEnum deduction.
-    // 0xFFFF is reserved as "no specific code" and deliberately falls
-    // outside every phase's 0x0001-0x07FF range, so phase_of(0xFFFF)
-    // correctly resolves to Phase::UNKNOWN rather than aliasing a real
-    // phase's block by accident.
     Fa_Error() = default;
 
     Fa_Error(Fa_Error const&) = default;
@@ -73,11 +36,6 @@ public:
     Fa_StringRef get_error_message() const { return diagnostic::error_message_for(m_code); }
     u16 get_code() const { return m_code; }
 
-    // [FIX 1 follow-through] New — lets a caller that just received this
-    // Fa_Error from report_error() immediately attach a suggestion/note
-    // to the exact diagnostic that was reported, e.g.:
-    //     Fa_Error err = report_error(ParserCode::EXPECTED_COLON_IF, loc, &lexer);
-    //     diagnostic::engine.add_suggestion(err.diag_id(), "did you forget a ':' here?");
     diagnostic::Fa_DiagnosticEngine::DiagnosticId diag_id() const { return m_diag_id; }
     void set_diag_id(diagnostic::Fa_DiagnosticEngine::DiagnosticId id) { m_diag_id = id; }
 
@@ -206,18 +164,9 @@ private:
     }
 }; // class Fa_ErrorOr
 
-// [FIX 1 follow-through] report() now returns a DiagnosticId; _report_error
-// captures it and stores it on the Fa_Error it returns, so callers get the
-// stable handle "for free" without changing every call site's signature.
 static Fa_Error _report_error(u16 errc, Fa_SourceLocation loc, diagnostic::Severity sv = diagnostic::Severity::ERROR)
 {
     auto id = diagnostic::report(sv, loc, errc);
-
-    // Uses the RawCode constructor — errc here is already a u16
-    // recovered from whichever phase-specific enum the caller passed in
-    // (parser::Code, sema::Code, etc. — see the typed overloads below),
-    // so there's no need to force-cast it through an unrelated enum just
-    // to satisfy the templated constructor.
     Fa_Error err { Fa_Error::RawCode { errc } };
     err.set_diag_id(id);
     return err;
@@ -250,4 +199,4 @@ static Fa_Error report_error(diagnostic::errc::stdlib::Code errc, Fa_SourceLocat
 
 } // namespace fairuz
 
-#endif // ERROR_OR
+#endif // FA_ERROR_HPP

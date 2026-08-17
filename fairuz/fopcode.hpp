@@ -1,5 +1,5 @@
-#ifndef OPCODE_HPP
-#define OPCODE_HPP
+#ifndef FA_OPCODE_HPP
+#define FA_OPCODE_HPP
 
 #include "farray.hpp"
 #include "fobject.hpp"
@@ -306,4 +306,4 @@ static Fa_Chunk* make_chunk(Args&&... args) { return get_allocator().allocate_ob
 
 } // namespace fairuz::runtime
 
-#endif // OPCODE_HPP
+#endif // FA_OPCODE_HPP

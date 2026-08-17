@@ -1,5 +1,5 @@
-#ifndef ARENA_HPP
-#define ARENA_HPP
+#ifndef FA_ARENA_HPP
+#define FA_ARENA_HPP
 
 #include "fmacros.hpp"
 
@@ -182,4 +182,4 @@ struct Fa_AllocatorContextScope {
 
 } // namespace fairuz
 
-#endif // ARENA_HPP
+#endif // FA_ARENA_HPP

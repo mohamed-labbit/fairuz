@@ -1,5 +1,5 @@
-#ifndef OPTIM_HPP
-#define OPTIM_HPP
+#ifndef FA_OPTIM_HPP
+#define FA_OPTIM_HPP
 
 #include "fAST.hpp"
 #include "fmacros.hpp"
@@ -17,4 +17,4 @@ std::optional<AST::Fa_Expr*> try_strength_reduce_unary(AST::Fa_Expr* e);
 
 } // namespace fairuz::runtime
 
-#endif // OPTIM_HPP
+#endif // FA_OPTIM_HPP

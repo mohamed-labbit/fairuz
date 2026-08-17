@@ -1,5 +1,5 @@
-#ifndef CTYPE_HPP
-#define CTYPE_HPP
+#ifndef FA_CTYPE_HPP
+#define FA_CTYPE_HPP
 
 #include "fmacros.hpp"
 
@@ -457,4 +457,4 @@ inline constexpr u8 ml_arabic_ctype[256] = {
 
 } // namespace fairuz
 
-#endif // CTYPE_HPP
+#endif // FA_CTYPE_HPP

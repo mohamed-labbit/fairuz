@@ -1,16 +1,14 @@
-#ifndef AST_HPP
-#define AST_HPP
+#ifndef FA_AST_HPP
+#define FA_AST_HPP
 
 #include "farena.hpp"
 #include "farray.hpp"
 #include "fmacros.hpp"
 #include "fstring.hpp"
-#include "ftable.hpp"
 
 #include <cassert>
 #include <cstddef>
 #include <tuple>
-#include <unordered_map>
 
 namespace fairuz::AST {
 
@@ -1117,4 +1115,4 @@ static bool literal_bool(Fa_Expr const* e) { return AS_CONST_LITERAL(e)->get_boo
 
 } // namespace fairuz::ast
 
-#endif // AST_HPP
+#endif // FA_AST_HPP

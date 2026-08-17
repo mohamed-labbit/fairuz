@@ -1,8 +1,9 @@
-// arena.cc
+//
+// farena.cc
+//
 
 #include "farena.hpp"
 #include "fdiagnostic.hpp"
-#include "ferror.hpp"
 
 #include <sys/mman.h>
 

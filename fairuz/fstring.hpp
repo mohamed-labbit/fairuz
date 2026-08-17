@@ -1,5 +1,5 @@
-#ifndef STRING_HPP
-#define STRING_HPP
+#ifndef FA_STRING_HPP
+#define FA_STRING_HPP
 
 #include "farena.hpp"
 #include "fdiagnostic.hpp"
@@ -472,4 +472,4 @@ struct hash<fairuz::Fa_StringRefImpl<Allocator>> {
 
 #include "fstring.tpp"
 
-#endif // STRING_HPP
+#endif // FA_STRING_HPP

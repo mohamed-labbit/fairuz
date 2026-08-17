@@ -1,5 +1,5 @@
-#ifndef UTIL_HPP
-#define UTIL_HPP
+#ifndef FA_UTIL_HPP
+#define FA_UTIL_HPP
 
 #include "fdiagnostic.hpp"
 #include "fmacros.hpp"
@@ -322,4 +322,4 @@ static bool is_integer_value(f64 d, i64& out)
 
 } // namespace fairuz::util
 
-#endif // UTIL_HPP
+#endif // FA_UTIL_HPP

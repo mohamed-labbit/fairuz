@@ -1,4 +1,5 @@
-#pragma once
+#ifndef FA_OBJECT_HPP
+#define FA_OBJECT_HPP
 
 #include "farray.hpp"
 #include "fmacros.hpp"
@@ -180,3 +181,5 @@ inline T const* Fa_obj_cast(Fa_ObjHeader const* obj, Fa_ObjType expected)
 }
 
 } // namespace fairuz::runtime
+
+#endif // FA_OBJECT_HPP
