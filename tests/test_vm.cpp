@@ -2674,7 +2674,7 @@ TEST(VMClass, ClassDefinitionStoresRuntimeClass)
 
     Fa_ObjClass* point_class = Fa_AS_CLASS(point);
     EXPECT_EQ(point_class->name, "Point");
-    ASSERT_EQ(point_class->field_count, 2u);
+    ASSERT_EQ(point_class->field_names.size(), 2u);
     EXPECT_EQ(point_class->field_names[0], "x");
     EXPECT_EQ(point_class->field_names[1], "y");
 }
@@ -3198,7 +3198,7 @@ TEST(VMClass, DuplicateFieldsAreDeduplicatedInDeclarationOrder)
     ASSERT_TRUE(Fa_IS_CLASS(result));
 
     Fa_ObjClass* klass_obj = Fa_AS_CLASS(result);
-    ASSERT_EQ(klass_obj->field_count, 2u);
+    ASSERT_EQ(klass_obj->field_names.size(), 2u);
     EXPECT_EQ(klass_obj->field_names[0], "id");
     EXPECT_EQ(klass_obj->field_names[1], "name");
 }
@@ -3231,7 +3231,7 @@ TEST(VMClass, MultipleMethodsAreStoredInRuntimeClass)
     ASSERT_TRUE(Fa_IS_CLASS(result));
 
     Fa_ObjClass* klass_obj = Fa_AS_CLASS(result);
-    EXPECT_GE(klass_obj->method_count, static_cast<u32>(Fa_ObjClass::_COUNT + 2));
+    EXPECT_GE(klass_obj->method_names.size(), static_cast<u32>(Fa_ObjClass::_COUNT + 2));
     EXPECT_GE(klass_obj->method_slot("first"), 0);
     EXPECT_GE(klass_obj->method_slot("second"), 0);
 }

@@ -588,7 +588,7 @@ TEST(CompilerBinary, LogicalAndShortCircuit)
     bc.m_next("decl_stmt a").op(Fa_OpCode::LOAD_TRUE).A(0);
     bc.m_next("decl_stmt b").op(Fa_OpCode::LOAD_FALSE).A(1);
     u32 jif_idx;
-    bc.m_next("LHS into temp").op(Fa_OpCode::MOVE).A(3).B(0);
+    bc.m_next("LHS into temp").op(Fa_OpCode::MOVE).A(2).B(0);
     (void)jif_idx;
     bool found_jif = false, found_b = false;
     for (auto& instr : chunk->code) {
