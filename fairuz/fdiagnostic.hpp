@@ -123,6 +123,7 @@ enum class Code : u16 {
     BREAK_OUTSIDE_LOOP = 0x0310,
     CONTINUE_OUTSIDE_LOOP = 0x0311,
     NESTED_CLASS_UNSUPPORTED = 0x0312,
+    TOO_MANY_LIST_ELEMENTS = 0x0313,
 }; // enum Code
 
 } // namespace compiler
@@ -302,6 +303,7 @@ static constexpr char const* error_message_for(u16 code)
     case /*BREAK_OUTSIDE_LOOP =*/0x0310: return "break used outside of a loop";
     case /*CONTINUE_OUTSIDE_LOOP =*/0x0311: return "continue used outside of a loop";
     case /*NESTED_CLASS_UNSUPPORTED =*/0x0312: return "nested class definition is not supported";
+    case /*TOO_MANY_LIST_ELEMENTS =*/0x0313: return "Too many elements in list object (max 255)";
     // runtime
     case /*STACK_OVERFLOW =*/0x0400: return "Stack overflow";
     case /*STACK_UNDERFLOW =*/0x0401: return "Stack underflow";

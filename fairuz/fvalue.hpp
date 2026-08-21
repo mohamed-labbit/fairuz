@@ -4,9 +4,8 @@
 #include "fmacros.hpp"
 #include "fobj_header.hpp"
 #include "ftable.hpp"
+
 #include <cstdint>
-#include <functional>
-#include <memory>
 
 namespace fairuz::runtime {
 

@@ -19,6 +19,11 @@ private:
 public:
     Fa_GarbageCollector() = default;
 
+    ~Fa_GarbageCollector()
+    {
+        sweep_all();
+    }
+
     void collect(Fa_VM* vm);
 
     template<typename T, typename... Args>

@@ -47,6 +47,8 @@ private:
 template<typename T, typename E = Fa_Error>
 class [[nodiscard]] Fa_ErrorOr {
 public:
+    Fa_ErrorOr() = default;
+
     Fa_ErrorOr(T val)
         : m_is_value(true)
     {

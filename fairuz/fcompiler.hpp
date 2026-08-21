@@ -267,6 +267,16 @@ private:
 
     ClassDesc const* resolve_receiver_class(AST::Fa_Expr const* e) const;
     bool is_declaration(AST::Fa_AssignmentExpr const* e) const;
+
+    // fcompiler.cc
+    void reserve_register(u8 r)
+    {
+        if (r >= m_current->next_reg) {
+            m_current->next_reg = r + 1;
+            if (m_current->next_reg > m_current->max_reg)
+                m_current->max_reg = m_current->next_reg;
+        }
+    }
 }; // class Compiler
 
 } // namespace fairuz::runtime
