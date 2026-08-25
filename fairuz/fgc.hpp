@@ -6,6 +6,8 @@
 #include "fobject.hpp"
 #include "fvalue.hpp"
 
+#include <new>
+
 namespace fairuz::runtime {
 
 class Fa_VM;
