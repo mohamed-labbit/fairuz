@@ -84,7 +84,7 @@ void Fa_Chunk::disassemble() const
     if (!constants.empty()) {
         ::printf("  constants:\n");
 
-        for (size_t i = 0; i < constants.size(); i += 1) {
+        for (std::size_t i = 0; i < constants.size(); i += 1) {
             ::printf("    [%3zu] ", i);
             print_value(constants[i]);
             ::printf("\n");

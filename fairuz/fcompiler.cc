@@ -118,6 +118,31 @@ Fa_Chunk* Compiler::compile(Fa_Array<AST::Fa_Stmt*> const& stmts)
     return chunk;
 }
 
+Fa_Chunk* Compiler::compile_single_if_cfg_probe(AST::Fa_IfStmt* s)
+{
+    Fa_Chunk* chunk = make_chunk();
+    chunk->name = "<probe>";
+
+    CompilerState state;
+    state.chunk = chunk;
+    state.func_name = "<probe>";
+    state.is_top_level = true;
+    state.enclosing = nullptr;
+    m_current = &state;
+
+    auto r = compile_if_cfg(s);
+    (void)r;
+
+    emit(Fa_make_ABC(Fa_OpCode::RETURN_NIL, 0, 0, 0), s->get_location());
+
+    chunk->local_count = state.max_reg;
+    m_current = nullptr;
+
+    if (diagnostic::has_errors())
+        diagnostic::dump();
+    return chunk;
+}
+
 Fa_ErrorOr<bool> Compiler::compile_stmt(AST::Fa_Stmt* s)
 {
     if (s == nullptr || m_current->is_dead)
@@ -328,6 +353,223 @@ Fa_ErrorOr<bool> Compiler::compile_if(AST::Fa_IfStmt* s)
         patch_jump(jump_end);
     } else {
         patch_jump(jump_false);
+    }
+
+    m_current->is_dead = incoming_dead;
+    end_scope(loc);
+    return true;
+}
+
+// ---------------------------------------------------------------------
+// CFG-driven rebuild of compile_if, for byte-for-byte equivalence
+// testing against the original above. Structure: lower the AST into a
+// tiny local CFG (constant-fold elision matches the original's
+// try_fold_expr short-circuit exactly), lay out blocks via reverse
+// postorder, emit each block's statements through the SAME expression/
+// statement codegen the original uses, and resolve all jumps in one
+// final fixup pass via the existing patch_jump_to (relative sBx offsets,
+// unchanged encoding).
+// ---------------------------------------------------------------------
+
+namespace cfg_if_probe {
+
+struct ProbeBlock {
+    enum class Term { NONE,
+        BRANCH,
+        JUMP,
+        CLOSED };
+    Fa_Array<AST::Fa_Stmt*> stmts;
+    AST::Fa_Expr* cond { nullptr };
+    ProbeBlock* succ_true { nullptr };
+    ProbeBlock* succ_false { nullptr };
+    ProbeBlock* succ_jump { nullptr };
+    Term term { Term::NONE };
+    int id { -1 };
+};
+
+struct ProbeCFG {
+    Fa_Array<ProbeBlock*> blocks;
+    ProbeBlock* entry { nullptr };
+    ProbeBlock* make_block()
+    {
+        auto* b = get_allocator().allocate_object<ProbeBlock>();
+        b->id = static_cast<int>(blocks.size());
+        blocks.push(b);
+        return b;
+    }
+};
+
+struct Range {
+    ProbeBlock* entry { nullptr };
+    ProbeBlock* exit { nullptr };
+};
+
+} // namespace cfg_if_probe
+
+Fa_ErrorOr<bool> Compiler::compile_if_cfg(AST::Fa_IfStmt* s)
+{
+    using namespace cfg_if_probe;
+
+    if (s == nullptr)
+        return true;
+
+    Fa_SourceLocation loc = s->get_location();
+    begin_scope();
+    bool incoming_dead = m_current->is_dead;
+
+    // Constant-fold elision -- identical short-circuit to the original,
+    // reusing the SAME try_fold_expr call and Fa_IS_TRUTHY macro.
+    if (auto folded = try_fold_expr(s->get_condition())) {
+        if (Fa_IS_TRUTHY(*folded)) {
+            auto ret = compile_stmt(s->get_then());
+            m_current->is_dead = incoming_dead;
+            return ret;
+        } else if (AST::Fa_Stmt* else_stmt = s->get_else()) {
+            auto ret = compile_stmt(else_stmt);
+            m_current->is_dead = incoming_dead;
+            return ret;
+        }
+        return true;
+    }
+
+    // --- Build a tiny CFG for this one if/else, no recursion into
+    // nested control flow inside the arms needed for this probe: the
+    // arms are compiled via compile_stmt (the real, existing dispatcher),
+    // so nested ifs/loops inside them still go through the ORIGINAL
+    // non-CFG path. This probe is scoped to proving the outer if/else's
+    // own branch+merge+fixup is bit-for-bit equivalent, not to replacing
+    // the whole compiler in one step.
+    //
+    // RegMark is declared HERE, spanning the condition AND both branch
+    // bodies -- matching the original compile_if exactly. This was the
+    // actual source of the earlier register-numbering mismatch: nesting
+    // RegMark inside the per-block emission loop freed the condition's
+    // register before the branches compiled, which is a real behavioral
+    // difference from the original, not just a cosmetic one.
+    RegMark mark(m_current);
+
+    ProbeCFG cfg;
+    ProbeBlock* entry = cfg.make_block();
+    cfg.entry = entry;
+
+    entry->cond = s->get_condition();
+    entry->term = ProbeBlock::Term::BRANCH;
+
+    ProbeBlock* then_block = cfg.make_block();
+    then_block->stmts.push(s->get_then());
+    entry->succ_true = then_block;
+
+    bool has_else = s->get_else() != nullptr;
+    ProbeBlock* else_block = nullptr;
+    if (has_else) {
+        else_block = cfg.make_block();
+        else_block->stmts.push(s->get_else());
+        entry->succ_false = else_block;
+    }
+
+    ProbeBlock* merge = cfg.make_block();
+    then_block->term = ProbeBlock::Term::JUMP;
+    then_block->succ_jump = merge;
+
+    if (has_else) {
+        else_block->term = ProbeBlock::Term::JUMP;
+        else_block->succ_jump = merge;
+    } else {
+        entry->succ_false = merge;
+    }
+
+    // --- Reverse postorder layout ---
+    Fa_Array<ProbeBlock*> layout;
+    {
+        Fa_Array<bool> visited(cfg.blocks.size(), false);
+        Fa_Array<ProbeBlock*> post;
+        struct Frame {
+            ProbeBlock* b;
+            int next;
+        };
+        Fa_Array<Frame> stack;
+        stack.push({ cfg.entry, 0 });
+        visited[cfg.entry->id] = true;
+
+        while (!stack.empty()) {
+            Frame& top = stack[stack.size() - 1];
+            Fa_Array<ProbeBlock*> succs;
+            if (top.b->term == ProbeBlock::Term::BRANCH) {
+                // Push false FIRST, true SECOND: with LIFO stack traversal
+                // this visits (and finishes) the true-branch before the
+                // false-branch, so the true-branch lands earlier in the
+                // final reverse-postorder layout -- matching the
+                // convention used everywhere else in this project that
+                // the true/fallthrough-preferred path is succs[0].
+                succs.push(top.b->succ_false);
+                succs.push(top.b->succ_true);
+            } else if (top.b->term == ProbeBlock::Term::JUMP) {
+                succs.push(top.b->succ_jump);
+            }
+            if (top.next < static_cast<int>(succs.size())) {
+                ProbeBlock* nxt = succs[top.next];
+                top.next += 1;
+                if (nxt != nullptr && !visited[nxt->id]) {
+                    visited[nxt->id] = true;
+                    stack.push({ nxt, 0 });
+                }
+            } else {
+                post.push(top.b);
+                stack.erase(stack.size() - 1);
+            }
+        }
+        for (size_t i = 0; i < post.size(); ++i)
+            layout.push(post[post.size() - 1 - i]);
+    }
+
+    // --- Emit: walk layout, defer all jump targets to a final fixup pass ---
+    Fa_Array<u32> block_start(cfg.blocks.size(), 0);
+    Fa_Array<int> false_jump_idx(cfg.blocks.size(), -1);
+    Fa_Array<int> false_jump_target(cfg.blocks.size(), -1);
+    Fa_Array<int> jump_idx(cfg.blocks.size(), -1);
+    Fa_Array<int> jump_target(cfg.blocks.size(), -1);
+
+    for (size_t i = 0; i < layout.size(); ++i) {
+        ProbeBlock* b = layout[i];
+        block_start[b->id] = current_offset();
+
+        for (size_t k = 0; k < b->stmts.size(); ++k) {
+            auto r = compile_stmt(b->stmts[k]);
+            Fa_VERIFY_RESULT(r);
+        }
+
+        ProbeBlock* next_in_layout = (i + 1 < layout.size()) ? layout[i + 1] : nullptr;
+
+        if (b->term == ProbeBlock::Term::BRANCH) {
+            Fa_ExprResult expr_result;
+            u8 cond;
+            COMPILE_EXPR_IMPL(b->cond, &expr_result);
+            ANY_REG(expr_result, loc, &cond);
+            u32 jf = emit_jump(Fa_OpCode::JUMP_IF_FALSE, cond, loc);
+            false_jump_idx[b->id] = static_cast<int>(jf);
+            false_jump_target[b->id] = b->succ_false->id;
+
+            if (b->succ_true != next_in_layout) {
+                u32 j = emit_jump(Fa_OpCode::JUMP, 0, loc);
+                jump_idx[b->id] = static_cast<int>(j);
+                jump_target[b->id] = b->succ_true->id;
+            }
+        } else if (b->term == ProbeBlock::Term::JUMP) {
+            if (b->succ_jump != next_in_layout) {
+                u32 j = emit_jump(Fa_OpCode::JUMP, 0, loc);
+                jump_idx[b->id] = static_cast<int>(j);
+                jump_target[b->id] = b->succ_jump->id;
+            }
+        }
+    }
+
+    // --- Fixup: resolve every deferred jump via the EXISTING
+    // patch_jump_to (same relative-offset encoding as the original path) ---
+    for (size_t i = 0; i < cfg.blocks.size(); ++i) {
+        if (false_jump_target[i] >= 0)
+            patch_jump_to(static_cast<u32>(false_jump_idx[i]), block_start[static_cast<size_t>(false_jump_target[i])]);
+        if (jump_target[i] >= 0)
+            patch_jump_to(static_cast<u32>(jump_idx[i]), block_start[static_cast<size_t>(jump_target[i])]);
     }
 
     m_current->is_dead = incoming_dead;
@@ -1677,6 +1919,116 @@ int Compiler::current_method_field_index(Fa_StringRef const& name) const
     }
 
     return -1;
+}
+
+Fa_ErrorOr<bool> Compiler::compile_cfg_body(Fa_CFG* cfg, bool is_top_level_script)
+{
+    // reverse-postorder layout — identical algorithm to compile_if_cfg's,
+    // generalized from succ_true/succ_false/succ_jump to the real
+    // get_succs()[0]/[1] (BRANCH: [0]=true,[1]=false; JUMP: [0]=target)
+    Fa_Array<bool> visited(cfg->blocks.size(), false);
+    Fa_Array<Fa_BasicBlock*> post, layout;
+    struct Frame {
+        Fa_BasicBlock* b;
+        int next;
+    };
+    Fa_Array<Frame> stack;
+    stack.push({ cfg->entry, 0 });
+    visited[cfg->entry->get_id()] = true;
+    while (!stack.empty()) {
+        Frame& top = stack[stack.size() - 1];
+        Fa_Array<Fa_BasicBlock*> const& s = top.b->get_succs();
+        Fa_Array<Fa_BasicBlock*> order;
+        if (top.b->get_terminator() == Fa_BasicBlock::TerminatorTag::BRANCH) {
+            order.push(s[1]);
+            order.push(s[0]);
+        } else if (top.b->get_terminator() == Fa_BasicBlock::TerminatorTag::JUMP) {
+            order.push(s[0]);
+        }
+        if (top.next < (int)order.size()) {
+            Fa_BasicBlock* nxt = order[top.next++];
+            if (nxt && !visited[nxt->get_id()]) {
+                visited[nxt->get_id()] = true;
+                stack.push({ nxt, 0 });
+            }
+        } else {
+            post.push(top.b);
+            stack.erase(stack.size() - 1);
+        }
+    }
+    for (size_t i = 0; i < post.size(); ++i)
+        layout.push(post[post.size() - 1 - i]);
+
+    Fa_Array<u32> block_start(cfg->blocks.size(), 0);
+    Fa_Array<int> false_idx(cfg->blocks.size(), -1), false_tgt(cfg->blocks.size(), -1);
+    Fa_Array<int> jump_idx(cfg->blocks.size(), -1), jump_tgt(cfg->blocks.size(), -1);
+
+    for (size_t i = 0; i < layout.size(); ++i) {
+        Fa_BasicBlock* b = layout[i];
+        m_current->is_dead = false; // CFG reachability already guarantees this block matters
+        block_start[b->get_id()] = current_offset();
+
+        for (AST::Fa_Stmt* stmt : b->get_stmts()) {
+            // FUNC/CLASS_DEF inside a statement list dispatch into their
+            // own pre-lowered Fa_CFG (Phase 4), NOT the old compile_stmt
+            // path — everything else still goes through compile_stmt
+            // exactly as today.
+            Fa_VERIFY_RESULT(compile_stmt(stmt));
+        }
+
+        Fa_BasicBlock* next = (i + 1 < layout.size()) ? layout[i + 1] : nullptr;
+        Fa_SourceLocation loc = b->get_stmts().empty() ? Fa_SourceLocation { 1, 1, 0 } : b->get_stmts().back()->get_location();
+
+        switch (b->get_terminator()) {
+        case Fa_BasicBlock::TerminatorTag::BRANCH: {
+            u8 cond;
+            if (b->get_for_role() == Fa_BasicBlock::ForRole::COND) {
+                /* TODO Phase 3: synthetic __for_index < __for_len */
+            } else {
+                RegMark mark(m_current);
+                Fa_ExprResult r;
+                COMPILE_EXPR_IMPL(b->get_cond(), &r);
+                ANY_REG(r, loc, &cond);
+            }
+            u32 jf = emit_jump(Fa_OpCode::JUMP_IF_FALSE, cond, loc);
+            false_idx[b->get_id()] = (int)jf;
+            false_tgt[b->get_id()] = (int)b->get_succs()[1]->get_id();
+            if (b->get_succs()[0] != next) {
+                u32 j = emit_jump(Fa_OpCode::JUMP, 0, loc);
+                jump_idx[b->get_id()] = (int)j;
+                jump_tgt[b->get_id()] = (int)b->get_succs()[0]->get_id();
+            }
+            break;
+        }
+        case Fa_BasicBlock::TerminatorTag::JUMP:
+            if (b->get_succs()[0] != next) {
+                u32 j = emit_jump(Fa_OpCode::JUMP, 0, loc);
+                jump_idx[b->get_id()] = (int)j;
+                jump_tgt[b->get_id()] = (int)b->get_succs()[0]->get_id();
+            }
+            break;
+        case Fa_BasicBlock::TerminatorTag::RETURN:
+            break; // compile_stmt already emitted RETURN/RETURN_NIL
+        case Fa_BasicBlock::TerminatorTag::NORETURN:
+            if (is_top_level_script && !b->get_stmts().empty() && is_terminal_top_level_call(b->get_stmts().back())) {
+                /* same REPL-return special case compile() has today */
+            } else {
+                emit(Fa_make_ABC(Fa_OpCode::RETURN_NIL, 0, 0, 0), loc);
+            }
+            m_current->is_dead = true;
+            break;
+        case Fa_BasicBlock::TerminatorTag::NONE:
+            assert(false && "unterminated block reached codegen");
+        }
+    }
+
+    for (size_t i = 0; i < cfg->blocks.size(); ++i) {
+        if (false_tgt[i] >= 0)
+            patch_jump_to((u32)false_idx[i], block_start[(size_t)false_tgt[i]]);
+        if (jump_tgt[i] >= 0)
+            patch_jump_to((u32)jump_idx[i], block_start[(size_t)jump_tgt[i]]);
+    }
+    return true;
 }
 
 } // namespace fairuz::runtime

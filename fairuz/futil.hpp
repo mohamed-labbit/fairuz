@@ -79,7 +79,7 @@ static inline bool isalpha_arabic(u32 const c)
     return (c >= 0x0600 && c <= 0x06FF);
 }
 
-static u32 decode_utf8_at(Fa_StringRef const& buf, size_t const byte_pos, u64* out_bytes)
+static u32 decode_utf8_at(Fa_StringRef const& buf, std::size_t const byte_pos, u64* out_bytes)
 {
     if (byte_pos >= buf.len())
         diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "UTF8 decode past end of buffer");
@@ -161,7 +161,7 @@ static void configure_locale()
     }
 }
 
-static size_t utf8_codepoint_size(u32 const cp)
+static std::size_t utf8_codepoint_size(u32 const cp)
 {
     if (cp < 0x80)
         return 1;
@@ -179,7 +179,7 @@ static size_t utf8_codepoint_size(u32 const cp)
     return -1; // unreachable
 }
 
-static size_t encode_utf8(u32 const cp, unsigned char* out_bytes)
+static std::size_t encode_utf8(u32 const cp, unsigned char* out_bytes)
 {
     if (cp < 0x80) {
         out_bytes[0] = static_cast<unsigned char>(cp);
@@ -218,7 +218,7 @@ static size_t encode_utf8(u32 const cp, unsigned char* out_bytes)
 static Fa_StringRef encode_utf8_str(u32 const cp)
 {
     unsigned char bytes[5];
-    size_t const len = encode_utf8(cp, bytes);
+    std::size_t const len = encode_utf8(cp, bytes);
     return Fa_StringRef(reinterpret_cast<char*>(bytes)).truncate(len);
 }
 
@@ -263,7 +263,7 @@ static i64 parse_integer_literal(Fa_StringRef const& literal, int base)
     if (base == -1) /*false call*/
         return INT16_MIN;
 
-    size_t i = 0;
+    std::size_t i = 0;
     bool negative = false;
 
     if (literal.at(i) == '-') {

@@ -12,8 +12,6 @@
 #include "fvalue.hpp"
 #include "fvm.hpp"
 
-#include <new>
-
 namespace fairuz::runtime {
 
 static void fa_delete_object(Fa_ObjHeader* obj)

@@ -7,6 +7,7 @@
 #include "fstring.hpp"
 #include "ftable.hpp"
 #include "fvalue.hpp"
+#include "fcfg.hpp"
 
 #include <utility>
 
@@ -147,15 +148,16 @@ public:
     ~Compiler() = default;
 
     Fa_Chunk* compile(Fa_Array<AST::Fa_Stmt*> const& stmts);
+    Fa_Chunk* compile(Fa_Program* program);
 
 private:
     CompilerState* m_current { nullptr };
 
     struct PairHash {
-        size_t operator()(std::pair<Fa_StringRef, Fa_Chunk*> const& p) const noexcept
+        std::size_t operator()(std::pair<Fa_StringRef, Fa_Chunk*> const& p) const noexcept
         {
-            size_t h1 = std::hash<Fa_StringRef> { }(p.first);
-            size_t h2 = std::hash<Fa_Chunk*> { }(p.second);
+            std::size_t h1 = std::hash<Fa_StringRef> { }(p.first);
+            std::size_t h2 = std::hash<Fa_Chunk*> { }(p.second);
             return h1 ^ (h2 * 0x9e3779b97f4a7c15ULL + (h1 << 6) + (h1 >> 2));
         }
     };
@@ -235,6 +237,9 @@ private:
     Fa_ErrorOr<u8> compile_index(AST::Fa_IndexExpr* e, u8* dst);
     Fa_ErrorOr<u8> compile_dict(AST::Fa_DictExpr* e, u8* dst);
     Fa_ErrorOr<u8> compile_get(AST::Fa_GetExpr* e, u8* dst);
+    Fa_Chunk* compile_single_if_cfg_probe(AST::Fa_IfStmt* s);
+    Fa_ErrorOr<bool> compile_if_cfg(AST::Fa_IfStmt* s);
+    Fa_ErrorOr<bool> compile_cfg_body(Fa_CFG* cfg, bool is_top_level_script);
 
     void discharge(Fa_ExprResult const& r, u8 dst, Fa_SourceLocation loc);
     Fa_ErrorOr<u8> any_reg(Fa_ExprResult const& r, Fa_SourceLocation loc);

@@ -115,7 +115,7 @@ private:
             std::cout << p.indent + pipe(p.last) << "├─ callee:\n";
             print_expr(c->get_callee(), { p.indent + pipe(p.last) + "│  ", true });
             std::cout << p.indent + pipe(p.last) << "└─ args:\n";
-            for (size_t i = 0; i < c->get_args().size(); i += 1)
+            for (std::size_t i = 0; i < c->get_args().size(); i += 1)
                 print_expr(c->get_args()[i], { p.indent + pipe(p.last) + "   ", i + 1 == c->get_args().size() });
             break;
         }
@@ -123,7 +123,7 @@ private:
         case Fa_Expr::Kind::LIST: {
             auto l = AS_CONST_LIST(e);
             std::cout << color("List", Color::BLUE) << " [" << l->get_elements().size() << "]\n";
-            for (size_t i = 0; i < l->get_elements().size(); i += 1)
+            for (std::size_t i = 0; i < l->get_elements().size(); i += 1)
                 print_expr(l->get_elements()[i], { p.indent + pipe(p.last), i + 1 == l->get_elements().size() });
             break;
         }
@@ -152,7 +152,7 @@ private:
             auto d = AS_CONST_DICT(e);
             auto content = d->get_content();
             std::cout << color("Dict", Color::BLUE) << " {" << content.size() << "}\n";
-            for (size_t i = 0; i < content.size(); i += 1) {
+            for (std::size_t i = 0; i < content.size(); i += 1) {
                 bool const last_pair = i + 1 == content.size();
                 std::cout << p.indent + pipe(p.last) << glyph(last_pair) << "pair:\n";
                 std::string const inner = p.indent + pipe(p.last) + pipe(last_pair);
@@ -191,7 +191,7 @@ private:
             auto f = static_cast<Fa_FunctionDef const*>(s);
             std::cout << color("Fa_FunctionDef", Color::BOLD) << " " << f->get_name()->get_value() << "\n";
             std::cout << p.indent + pipe(p.last) << "├─ params:\n";
-            for (size_t i = 0; i < f->get_parameters().size(); i += 1)
+            for (std::size_t i = 0; i < f->get_parameters().size(); i += 1)
                 print_expr(f->get_parameters()[i], { p.indent + pipe(p.last) + "│  ", i + 1 == f->get_parameters().size() });
             std::cout << p.indent + pipe(p.last) << "└─ body:\n";
             print_stmt(f->get_body(), { p.indent + pipe(p.last) + "    ", true });
@@ -234,7 +234,7 @@ private:
         case Fa_Stmt::Kind::BLOCK: {
             auto b = static_cast<Fa_BlockStmt const*>(s);
             std::cout << color("Block", Color::BOLD) << " {" << b->get_statements().size() << " stmts}\n";
-            for (size_t i = 0; i < b->get_statements().size(); i += 1)
+            for (std::size_t i = 0; i < b->get_statements().size(); i += 1)
                 print_stmt(b->get_statements()[i], { p.indent + pipe(p.last), i + 1 == b->get_statements().size() });
         } break;
 
@@ -272,12 +272,12 @@ private:
             bool const has_methods = !methods.empty();
             std::cout << p.indent + pipe(p.last) << (has_methods ? "├─" : "└─") << " members:\n";
             std::string const members_prefix = p.indent + pipe(p.last) + (has_methods ? "│  " : "   ");
-            for (size_t i = 0; i < members.size(); i += 1)
+            for (std::size_t i = 0; i < members.size(); i += 1)
                 print_expr(members[i], { members_prefix, i + 1 == members.size() });
 
             if (has_methods) {
                 std::cout << p.indent + pipe(p.last) << "└─ methods:\n";
-                for (size_t i = 0; i < methods.size(); i += 1)
+                for (std::size_t i = 0; i < methods.size(); i += 1)
                     print_stmt(methods[i], { p.indent + pipe(p.last) + "   ", i + 1 == methods.size() });
             }
         } break;

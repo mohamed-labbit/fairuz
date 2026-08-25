@@ -13,7 +13,7 @@ struct Fa_SourceLocation {
 }; // struct Fa_SourceLocation
 
 struct VoidPtrHash {
-    size_t operator()(void const* ptr) const noexcept { return std::hash<uintptr_t>()(reinterpret_cast<uintptr_t>(ptr)); }
+    std::size_t operator()(void const* ptr) const noexcept { return std::hash<uintptr_t>()(reinterpret_cast<uintptr_t>(ptr)); }
 }; // struct VoidPtrHash
 
 struct VoidPtrEqual {

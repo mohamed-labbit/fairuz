@@ -1,4 +1,5 @@
 #include "fairuz/fAST_printer.hpp"
+#include "fairuz/fcfg.hpp"
 #include "fairuz/fcompiler.hpp"
 #include "fairuz/fdiagnostic.hpp"
 #include "fairuz/fformatter.hpp"
@@ -32,6 +33,7 @@ enum class ExitCode : int {
 
 struct Options {
     bool dump_ast { false };
+    bool dump_cfg { false };
     bool dump_bytecode { false };
     bool print_time { false };
     bool check_only { false };
@@ -50,6 +52,7 @@ void printUsage(std::ostream& out, std::string_view program)
         << "  -h, --help           Show this help message\n"
         << "  -V, --version        Show the language version\n"
         << "  --dump-ast           Print the parsed AST\n"
+        << "  --dump-cfg           Print the lowered control-flow graph\n"
         << "  --dump-bytecode      Print compiled bytecode\n"
         << "  --time               Print execution time to stderr\n"
         << "  --check              Parse and compile only, do not execute\n"
@@ -80,6 +83,10 @@ bool parseArgs(int argc, char** argv, Options& options)
             options.dump_ast = true;
             continue;
         }
+        if (arg == "--dump-cfg") {
+            options.dump_cfg = true;
+            continue;
+        }
         if (arg == "--dump-bytecode") {
             options.dump_bytecode = true;
             continue;
@@ -107,8 +114,8 @@ bool parseArgs(int argc, char** argv, Options& options)
         options.input_path = std::string(arg);
     }
 
-    if (options.format_file && (options.dump_ast || options.dump_bytecode || options.print_time || options.check_only)) {
-        std::cerr << "format cannot be combined with --dump-ast, --dump-bytecode, --time, or --check\n";
+    if (options.format_file && (options.dump_ast || options.dump_cfg || options.dump_bytecode || options.print_time || options.check_only)) {
+        std::cerr << "format cannot be combined with --dump-ast, --dump-cfg, --dump-bytecode, --time, or --check\n";
         return false;
     }
 
@@ -120,6 +127,45 @@ void printAst(fairuz::Fa_Array<fairuz::AST::Fa_Stmt*> const& stmts)
     fairuz::AST::ASTPrinter printer(true);
     for (u32 i = 0; i < stmts.size(); i += 1)
         printer.print(stmts[i]);
+}
+
+char const* terminatorName(fairuz::Fa_BasicBlock::TerminatorTag t)
+{
+    switch (t) {
+    case fairuz::Fa_BasicBlock::TerminatorTag::BRANCH: return "BRANCH";
+    case fairuz::Fa_BasicBlock::TerminatorTag::JUMP: return "JUMP";
+    case fairuz::Fa_BasicBlock::TerminatorTag::RETURN: return "RETURN";
+    case fairuz::Fa_BasicBlock::TerminatorTag::NORETURN: return "NORETURN";
+    case fairuz::Fa_BasicBlock::TerminatorTag::NONE: return "NONE";
+    }
+    return "?";
+}
+
+void printCfg(fairuz::Fa_Program const& program)
+{
+    auto const& functions = program.get_functions();
+    for (size_t fi = 0; fi < functions.size(); fi += 1) {
+        auto const* fn = functions[fi];
+        std::string_view name = fn->def == nullptr ? "<script>" : "<function>";
+
+        std::cout << "=== CFG: " << name << " (entry block "
+                   << (fn->cfg->entry ? fn->cfg->entry->get_id() : 0) << ") ===\n";
+
+        for (size_t bi = 0; bi < fn->cfg->blocks.size(); bi += 1) {
+            auto const* b = fn->cfg->blocks[bi];
+            std::cout << "  block " << b->get_id()
+                       << " [" << terminatorName(b->get_terminator()) << "]"
+                       << " stmts=" << b->get_stmts().size()
+                       << " preds={";
+            for (size_t pi = 0; pi < b->get_preds().size(); pi += 1)
+                std::cout << b->get_preds()[pi]->get_id() << (pi + 1 < b->get_preds().size() ? "," : "");
+            std::cout << "} succs={";
+            for (size_t si = 0; si < b->get_succs().size(); si += 1)
+                std::cout << b->get_succs()[si]->get_id() << (si + 1 < b->get_succs().size() ? "," : "");
+            std::cout << "}\n";
+        }
+        std::cout << "\n";
+    }
 }
 
 bool writeFileAtomic(std::string const& path, char const* data, std::streamsize len, std::string& error_out)
@@ -213,6 +259,25 @@ int main(int argc, char** argv)
 
         if (options.dump_ast)
             printAst(stmts);
+
+        // --- CFG stage: sits between parsing and compilation. -----------
+        // lower_program() builds one Fa_CFG per function (plus one for
+        // the top-level script body) from the same `stmts` the compiler
+        // is about to consume. At present this is an inspectable,
+        // side-by-side intermediate representation: Compiler::compile()
+        // below still consumes `stmts` directly and is unmodified. Wiring
+        // the compiler itself to consume `program` instead of `stmts` is
+        // the next step, once compile_if/compile_while/compile_for/
+        // compile_break/compile_continue each have a CFG-driven
+        // equivalent verified byte-for-byte against the existing
+        // AST-driven implementation.
+        fairuz::Fa_Program* program = fairuz::lower_program(stmts);
+
+        if (fairuz::diagnostic::has_errors())
+            return static_cast<int>(ExitCode::DataError);
+
+        if (options.dump_cfg)
+            printCfg(*program);
 
         fairuz::runtime::Compiler compiler;
         fairuz::runtime::Fa_Chunk* chunk = compiler.compile(stmts);
