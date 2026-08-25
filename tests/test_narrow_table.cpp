@@ -7,7 +7,7 @@ using namespace fairuz;
 namespace {
 
 struct IntHash {
-    size_t operator()(int m_value) const
+    std::size_t operator()(int m_value) const
     {
         return static_cast<size_t>(static_cast<u32>(m_value) * 2654435761u);
     }
@@ -21,7 +21,7 @@ struct IntEqual {
 };
 
 struct CollidingHash {
-    size_t operator()(int) const
+    std::size_t operator()(int) const
     {
         return 1;
     }

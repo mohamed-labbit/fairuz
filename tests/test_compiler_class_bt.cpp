@@ -25,7 +25,7 @@ protected:
     }
 
     // Helper: Extract function from chunk by index
-    Fa_Chunk* get_function(Fa_Chunk* chunk, size_t idx)
+    Fa_Chunk* get_function(Fa_Chunk* chunk, std::size_t idx)
     {
         if (chunk == nullptr || idx >= chunk->functions.size())
             return nullptr;

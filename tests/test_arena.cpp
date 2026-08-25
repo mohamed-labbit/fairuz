@@ -17,7 +17,7 @@ public:
     Fa_ArenaAllocator& get() noexcept { return std::ref<Fa_ArenaAllocator>(allocator_); }
 
     template<typename T, typename... Args>
-    T* allocate(size_t count, Args&&... m_args)
+    T* allocate(std::size_t count, Args&&... m_args)
     {
         void* mem = allocator_.allocate(count * sizeof(T));
         if (!mem)
@@ -67,27 +67,27 @@ TEST(ArenaAllocatorTest, AllocateZeroCount)
 TEST(ArenaAllocatorTest, AllocateArrayOfInts)
 {
     TestAllocator arena;
-    constexpr size_t count = 100;
+    constexpr std::size_t count = 100;
     int* arr = arena.allocate<int>(count);
 
     ASSERT_NE(arr, nullptr);
 
-    for (size_t i = 0; i < count; i += 1)
+    for (std::size_t i = 0; i < count; i += 1)
         arr[i] = static_cast<int>(i);
 
-    for (size_t i = 0; i < count; i += 1)
+    for (std::size_t i = 0; i < count; i += 1)
         EXPECT_EQ(arr[i], static_cast<int>(i));
 }
 
 TEST(ArenaAllocatorTest, AllocateLargeArray)
 {
     TestAllocator arena;
-    constexpr size_t count = 10000;
+    constexpr std::size_t count = 10000;
     f64* arr = arena.allocate<f64>(count);
 
     ASSERT_NE(arr, nullptr);
 
-    for (size_t i = 0; i < count; i += 1)
+    for (std::size_t i = 0; i < count; i += 1)
         arr[i] = static_cast<f64>(i) * 1.5;
 
     EXPECT_EQ(arr[0], 0.0);
@@ -347,7 +347,7 @@ TEST(ArenaAllocatorTest, MixedSizeAllocations)
     std::vector<void*> ptrs;
 
     for (int i = 0; i < 10; i += 1) {
-        size_t m_size = (i % 10) + 1;
+        std::size_t m_size = (i % 10) + 1;
         if (i % 3 == 0) {
             int* ptr = arena.allocate<int>(m_size);
             ASSERT_NE(ptr, nullptr);
@@ -367,7 +367,7 @@ TEST(ArenaAllocatorTest, MixedSizeAllocations)
 TEST(ArenaAllocatorTest, AlternatingLargeSmall)
 {
     TestAllocator arena;
-    size_t large_amount = 10000, small_amount = 1;
+    std::size_t large_amount = 10000, small_amount = 1;
 
     for (int i = 0; i < 10; i += 1) {
         if (i % 2 == 0) {
@@ -414,8 +414,8 @@ TEST(ArenaAllocatorTest, ConsecutiveAllocations)
     ASSERT_NE(ptr2, nullptr);
     ASSERT_NE(ptr3, nullptr);
 
-    size_t diff1 = reinterpret_cast<uintptr_t>(ptr2) - reinterpret_cast<uintptr_t>(ptr1);
-    size_t diff2 = reinterpret_cast<uintptr_t>(ptr3) - reinterpret_cast<uintptr_t>(ptr2);
+    std::size_t diff1 = reinterpret_cast<uintptr_t>(ptr2) - reinterpret_cast<uintptr_t>(ptr1);
+    std::size_t diff2 = reinterpret_cast<uintptr_t>(ptr3) - reinterpret_cast<uintptr_t>(ptr2);
 
     EXPECT_GE(diff1, sizeof(int));
     EXPECT_GE(diff2, sizeof(int));

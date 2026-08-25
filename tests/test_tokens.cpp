@@ -134,7 +134,7 @@ TEST(LexerTest, RecognizesFa_Expression00)
     };
     EXPECT_EQ(tokens.size(), 7);
     EXPECT_EQ(tokens[0]->type(), tok::Fa_TokenType::BEGINMARKER);
-    for (size_t i = 0; i < tokens.size(); i += 1)
+    for (std::size_t i = 0; i < tokens.size(); i += 1)
         EXPECT_EQ(*tokens[i], *expected[i]);
 }
 
@@ -150,7 +150,7 @@ TEST(LexerTest, RecognizesStmt00)
         make_token(tok::Fa_TokenType::ENDMARKER, "", { 1, 10, 0, 0 })
     };
     EXPECT_EQ(tokens.size(), expected.size());
-    for (size_t i = 0; i < tokens.size(); i += 1)
+    for (std::size_t i = 0; i < tokens.size(); i += 1)
         EXPECT_EQ(*tokens[i], *expected[i]);
 }
 
@@ -166,7 +166,7 @@ TEST(LexerTest, RecognizesStmt01)
         make_token(tok::Fa_TokenType::ENDMARKER, "", { 1, 13, 0, 0 })
     };
     EXPECT_EQ(tokens.size(), expected.size());
-    for (size_t i = 0; i < tokens.size(); i += 1)
+    for (std::size_t i = 0; i < tokens.size(); i += 1)
         EXPECT_EQ(*tokens[i], *expected[i]);
 }
 
@@ -182,7 +182,7 @@ TEST(LexerTest, RecognizesStmt02)
         make_token(tok::Fa_TokenType::ENDMARKER, "", { 1, 11, 0, 0 })
     };
     EXPECT_EQ(tokens.size(), expected.size());
-    for (size_t i = 0; i < tokens.size(); i += 1)
+    for (std::size_t i = 0; i < tokens.size(); i += 1)
         EXPECT_EQ(*tokens[i], *expected[i]);
 }
 
@@ -199,7 +199,7 @@ TEST(LexerTest, RecognizesStmt03)
         make_token(tok::Fa_TokenType::ENDMARKER, "", { 1, 8, 0, 0 }),
     };
     EXPECT_EQ(tokens.size(), expected.size());
-    for (size_t i = 0; i < tokens.size(); i += 1)
+    for (std::size_t i = 0; i < tokens.size(); i += 1)
         EXPECT_EQ(*tokens[i], *expected[i]);
 }
 
@@ -218,6 +218,6 @@ TEST(LexerTest, RecognizesStmt04)
     };
 
     EXPECT_EQ(tokens.size(), expected.size());
-    for (size_t i = 0; i < tokens.size(); i += 1)
+    for (std::size_t i = 0; i < tokens.size(); i += 1)
         EXPECT_EQ(*tokens[i], *expected[i]);
 }

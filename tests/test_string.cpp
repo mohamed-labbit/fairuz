@@ -108,7 +108,7 @@ TEST_F(Fa_StringRefTest, MoveConstructor_NonEmpty)
 {
     Fa_StringRef s1("Hello");
     char const* old_ptr = s1.data();
-    size_t old_len = s1.len();
+    std::size_t old_len = s1.len();
 
     Fa_StringRef s2(std::move(s1));
 
@@ -287,7 +287,7 @@ TEST_F(Fa_StringRefTest, Expand_FromEmpty)
 TEST_F(Fa_StringRefTest, Expand_AlreadyLargeEnough)
 {
     Fa_StringRef s(100);
-    size_t old_cap = s.cap();
+    std::size_t old_cap = s.cap();
     s.expand(50);
     EXPECT_EQ(s.cap(), old_cap);
 }
@@ -818,7 +818,7 @@ TEST_F(Fa_StringRefTest, ToDouble_Scientific)
 TEST_F(Fa_StringRefTest, ToDouble_WithPosition)
 {
     Fa_StringRef s("123.456abc");
-    size_t pos = 0;
+    std::size_t pos = 0;
     f64 result = s.to_double(&pos);
     EXPECT_DOUBLE_EQ(result, 123.456);
     EXPECT_GT(pos, 0);
@@ -835,7 +835,7 @@ TEST_F(Fa_StringRefTest, Hash_NonEmpty)
 {
     Fa_StringRefHash hasher;
     Fa_StringRef s("Hello");
-    size_t m_hash = hasher(s);
+    std::size_t m_hash = hasher(s);
     EXPECT_NE(m_hash, 0);
 }
 
@@ -859,7 +859,7 @@ TEST_F(Fa_StringRefTest, StdHash_Works)
 {
     std::hash<Fa_StringRef> hasher;
     Fa_StringRef s("Test");
-    size_t m_hash = hasher(s);
+    std::size_t m_hash = hasher(s);
     EXPECT_NE(m_hash, 0);
 }
 
@@ -892,7 +892,7 @@ TEST_F(Fa_StringRefTest, Stress_CopyAndModify)
     }
 
     EXPECT_EQ(original, "Original");
-    for (size_t i = 0; i < copies.size(); i += 1)
+    for (std::size_t i = 0; i < copies.size(); i += 1)
         EXPECT_NE(copies[i], original);
 }
 
@@ -917,8 +917,8 @@ TEST_F(Fa_StringRefTest, Stress_ManySubstrings)
     Fa_StringRef s("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
     std::vector<Fa_StringRef> subs;
 
-    for (size_t i = 0; i < s.len(); i += 1) {
-        for (size_t j = i; j < s.len(); j += 1)
+    for (std::size_t i = 0; i < s.len(); i += 1) {
+        for (std::size_t j = i; j < s.len(); j += 1)
             subs.push_back(s.substr(i, j));
     }
 
@@ -965,9 +965,9 @@ TEST_F(Fa_StringRefTest, EdgeCase_NullTerminatorInMiddle)
 
 TEST_F(Fa_StringRefTest, EdgeCase_MaxSizeString)
 {
-    size_t const large_size = 1000000;
+    std::size_t const large_size = 1000000;
     Fa_StringRef s(large_size);
-    for (size_t i = 0; i < 100; i += 1)
+    for (std::size_t i = 0; i < 100; i += 1)
         s += 'A';
     EXPECT_EQ(s.len(), 100);
 }
@@ -1314,7 +1314,7 @@ TEST_F(Fa_StringRefTest, Hash_1M_Short)
     constexpr int N = 1'000'000;
     Fa_StringRefHash hasher;
     Fa_StringRef s("identifier_name");
-    size_t acc = 0;
+    std::size_t acc = 0;
 
     auto t0 = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < N; i += 1)
@@ -1331,7 +1331,7 @@ TEST_F(Fa_StringRefTest, Hash_1M_Long)
     Fa_StringRefHash hasher;
     std::string buf(256, 'x');
     Fa_StringRef s(buf.data());
-    size_t acc = 0;
+    std::size_t acc = 0;
 
     auto t0 = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < N; i += 1)
@@ -1352,7 +1352,7 @@ TEST_F(Fa_StringRefTest, Hash_ScalesWithLength)
     std::string long_buf(1024, 'a');
     Fa_StringRef s_short(short_buf.data());
     Fa_StringRef s_long(long_buf.data());
-    size_t acc = 0;
+    std::size_t acc = 0;
 
     auto t0 = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < N; i += 1)
@@ -1382,7 +1382,7 @@ TEST_F(Fa_StringRefTest, Hash_ScalesWithLength)
 // find_pos over a 1 MB string — worst case (char not present).
 TEST_F(Fa_StringRefTest, FindPos_1MB_Miss)
 {
-    constexpr size_t SZ = 1'000'000;
+    constexpr std::size_t SZ = 1'000'000;
     std::string buf(SZ, 'A');
     Fa_StringRef s(buf.data());
 
@@ -1398,7 +1398,7 @@ TEST_F(Fa_StringRefTest, FindPos_1MB_Miss)
 // find_pos hit at the very end.
 TEST_F(Fa_StringRefTest, FindPos_1MB_HitAtEnd)
 {
-    constexpr size_t SZ = 1'000'000;
+    constexpr std::size_t SZ = 1'000'000;
     std::string buf(SZ, 'A');
     buf.back() = 'Z';
     Fa_StringRef s(buf.data());
@@ -1604,7 +1604,7 @@ TEST_F(Fa_StringRefTest, Mixed_InterpreterInnerLoop)
     };
 
     Fa_StringRefHash hasher;
-    size_t acc = 0;
+    std::size_t acc = 0;
     int matches = 0;
     Fa_StringRef target("result");
 
