@@ -65,13 +65,10 @@ COMMON_FLAGS=(
 
 if [[ "$DEBUG" == 1 || "$RUN_TESTS" == true ]]; then
     COMMON_FLAGS+=(
-        -DCMAKE_BUILD_TYPE=Debug
         -DCMAKE_CXX_FLAGS="-fsanitize=address -g"
     )
 else
     COMMON_FLAGS+=(
-        -DCMAKE_BUILD_TYPE=Release
-        -DCMAKE_CXX_FLAGS="-Ofast -DNDEBUG -flto=thin"
         -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
     )
 fi
