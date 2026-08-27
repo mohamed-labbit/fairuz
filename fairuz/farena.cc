@@ -230,9 +230,6 @@ void* Fa_ArenaAllocator::allocate_slow(size_t size, size_t alignment)
     m_last_size = size;
     m_last_consumed = static_cast<size_t>(next_addr - cur);
 
-#ifdef FAIRUZ_DEBUG
-    track_allocation(reinterpret_cast<unsigned char*>(aligned), size, m_last_consumed, alignment);
-#endif
     return reinterpret_cast<void*>(aligned);
 }
 
