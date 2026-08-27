@@ -124,6 +124,7 @@ enum class Code : u16 {
     CONTINUE_OUTSIDE_LOOP = 0x0311,
     NESTED_CLASS_UNSUPPORTED = 0x0312,
     TOO_MANY_LIST_ELEMENTS = 0x0313,
+    MISSING_CFG = 0x0314,
 }; // enum Code
 
 } // namespace compiler
@@ -304,6 +305,7 @@ static constexpr char const* error_message_for(u16 code)
     case /*CONTINUE_OUTSIDE_LOOP =*/0x0311: return "continue used outside of a loop";
     case /*NESTED_CLASS_UNSUPPORTED =*/0x0312: return "nested class definition is not supported";
     case /*TOO_MANY_LIST_ELEMENTS =*/0x0313: return "Too many elements in list object (max 255)";
+    case /*MISSING_CFG =*/0x0314: return "Control Flow Graph is missing here";
     // runtime
     case /*STACK_OVERFLOW =*/0x0400: return "Stack overflow";
     case /*STACK_UNDERFLOW =*/0x0401: return "Stack underflow";

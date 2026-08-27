@@ -1132,7 +1132,7 @@ Fa_Value Fa_VM::execute()
         Fa_Value self_val = cur_base[self_reg];
 
         if (UNLIKELY(!Fa_IS_INSTANCE(self_val)))
-            runtime_error(ErrorCode::TYPE_ERROR_CALL, "INVOKE on non-instance");
+            runtime_error(ErrorCode::TYPE_ERROR_CALL, ": INVOKE on non-instance");
 
         Fa_ObjInstance* inst = Fa_AS_INSTANCE(self_val);
 

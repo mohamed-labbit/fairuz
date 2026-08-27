@@ -17,8 +17,13 @@
 
 #include "fcfg.hpp"
 #include "fAST.hpp"
+#include "farray.hpp"
+#include "fdiagnostic.hpp"
 
 #include <cassert>
+#include <cstdlib>
+
+/// TODO: short circuit, constant folding, try use what's in foptim.cc already
 
 namespace fairuz {
 
@@ -48,22 +53,23 @@ struct LoopContext {
 void add_branch_succs(Fa_BasicBlock* block, AST::Fa_Expr* cond,
     Fa_BasicBlock* true_target, Fa_BasicBlock* false_target)
 {
-    block->set_condition(cond);
-    block->set_terminator(Fa_BasicBlock::TerminatorTag::BRANCH);
+    block->cond = cond;
+    block->terminator = TerminatorTag::BRANCH;
     block->add_succ(true_target);
     block->add_succ(false_target);
 }
 
 void add_jump_succ(Fa_BasicBlock* block, Fa_BasicBlock* target)
 {
-    block->set_terminator(Fa_BasicBlock::TerminatorTag::JUMP);
+    block->terminator = TerminatorTag::JUMP;
     block->add_succ(target);
 }
 
 class Lowerer {
 public:
-    explicit Lowerer(Fa_CFG& cfg)
+    explicit Lowerer(Fa_CFG& cfg, u32 scope_depth)
         : m_cfg(cfg)
+        , m_scope_depth(scope_depth)
     {
     }
 
@@ -76,26 +82,28 @@ public:
         Fa_BasicBlock* current = first;
 
         for (size_t i = 0; i < stmts.size(); ++i) {
-            if (current == nullptr) {
-                // Prior statement already terminated control flow --
-                // everything after it is unreachable. Don't lower
-                // dead code into real blocks with real edges.
+            if (current == nullptr)
+                // dead code
                 break;
-            }
             current = lower_stmt_into(current, stmts[i]);
         }
 
         return { first, current };
     }
 
+    void enter_scope() { m_scope_depth++; }
+    void exit_scope() { m_scope_depth--; }
+
 private:
     Fa_CFG& m_cfg;
     LoopContext const* m_loop_stack { nullptr };
+    u32 m_scope_depth { 0 };
 
     Fa_BasicBlock* new_block()
     {
         Fa_BasicBlock* b = make_basic_block();
-        b->set_id(m_cfg.blocks.size());
+        b->id = m_cfg.blocks.size();
+        b->scope_depth = m_scope_depth;
         m_cfg.blocks.push(b);
         return b;
     }
@@ -113,8 +121,8 @@ private:
         case SK::FOR:
             return lower_for(block, AS_FOR(stmt));
         case SK::RETURN:
-            block->append_stmt(stmt);
-            block->set_terminator(Fa_BasicBlock::TerminatorTag::RETURN);
+            block->stmts.push(stmt);
+            block->terminator = TerminatorTag::RETURN;
             return nullptr;
         case SK::BREAK:
             return lower_break(block);
@@ -131,7 +139,7 @@ private:
             // function's body is a separate CFG with its own fresh
             // loop-context, lowered by lower_program's discovery
             // walk, not inline here.
-            block->append_stmt(stmt);
+            block->stmts.push(stmt);
             return block;
         }
     }
@@ -149,6 +157,7 @@ private:
     {
         bool has_else = if_stmt->get_else() != nullptr;
 
+        enter_scope();
         // Both arms are fully lowered BEFORE any wiring decision is
         // made -- we don't know whether a merge block is even needed
         // until we know whether either arm can fall through.
@@ -157,14 +166,13 @@ private:
         if (has_else)
             else_range = lower_as_range(if_stmt->get_else());
 
+        exit_scope();
+
         bool then_falls = then_range.exit != nullptr;
         bool else_falls = has_else ? (else_range.exit != nullptr) : true;
 
         if (!then_falls && !else_falls) {
-            // Both arms terminate -- only possible when has_else is
-            // true (with no else, the implicit false-edge always
-            // falls through, forcing else_falls true above).
-            assert(has_else);
+            // Both terminate
             add_branch_succs(block, if_stmt->get_condition(), then_range.entry, else_range.entry);
             return nullptr;
         }
@@ -186,10 +194,10 @@ private:
     // fcompiler.cc::compile_while's continue_target == loop_start.
     Fa_BasicBlock* lower_while(Fa_BasicBlock* preheader, AST::Fa_WhileStmt* while_stmt)
     {
-        Fa_BasicBlock* header = new_block();
+        Fa_BasicBlock* after_loop = new_block(); // outer depth
+        enter_scope();
+        Fa_BasicBlock* header = new_block();     // inner depth
         add_jump_succ(preheader, header);
-
-        Fa_BasicBlock* after_loop = new_block();
 
         LoopContext ctx { /*continue_target=*/header, /*break_target=*/after_loop, m_loop_stack };
         LoopContext const* saved = m_loop_stack;
@@ -198,46 +206,53 @@ private:
         m_loop_stack = saved;
 
         add_branch_succs(header, while_stmt->get_condition(), body_range.entry, after_loop);
-
         if (body_range.exit != nullptr)
-            add_jump_succ(body_range.exit, header); // back-edge
+            add_jump_succ(body_range.exit, header);
 
+        exit_scope();
         return after_loop;
     }
 
-    // for (target in iter) { body }
-    // Matches fcompiler.cc::compile_for's index-based desugaring.
-    // continue -> the increment step, NOT the condition check -- this
-    // is the real asymmetry with while, confirmed against
-    // pop_loop's continue_target argument in compile_for.
+    static AST::Fa_WhileStmt* transforme_for_to_while(AST::Fa_ForStmt* const for_stmt)
+    {
+        /// synthesize AST nodes for index, increment ...
+        /// converting 'for' loop to the equivalent 'while' representation
+        /// 'for i in [ x ... y ]'
+        ///     some code
+        /// becomes
+        /// i := x
+        /// while x < y:
+        ///     same some code
+        ///     synthetic 'x++'
+
+        AST::Fa_Expr* iter = for_stmt->get_iter()->clone();
+        AST::Fa_Expr* container = for_stmt->get_container()->clone();
+        AST::Fa_Stmt* body = for_stmt->get_body()->clone();
+        AST::Fa_Expr* idx = AST::Fa_make_name("__idx__", { });
+        AST::Fa_Stmt* increment = AST::Fa_make_assignment_stmt(iter, idx, { });
+
+        if (AST::is_block(body)) {
+            auto body_as_block = AS_BLOCK(body);
+            auto new_body_stmts = body_as_block->get_statements();
+            new_body_stmts.push(increment);
+            body_as_block->set_statements(new_body_stmts);
+            body = body_as_block;
+        } else {
+            body = AST::Fa_make_block({ body, increment }, body->get_location());
+        }
+
+        AST::Fa_Expr* len = AST::Fa_make_call(AST::Fa_make_name("طول", { }),
+            AST::Fa_make_list({ container }, { }), { });
+        AST::Fa_Expr* cond = AST::Fa_make_binary(idx, len, AST::Fa_BinaryOp::OP_LT, for_stmt->get_location());
+        AST::Fa_WhileStmt* eq_while = AST::Fa_make_while(cond, body, for_stmt->get_location());
+        return eq_while;
+    }
+
+    // desugar for stmt to the equivalent while loop and lower from there
     Fa_BasicBlock* lower_for(Fa_BasicBlock* preheader, AST::Fa_ForStmt* for_stmt)
     {
-        Fa_BasicBlock* cond_block = new_block(); // __for_index < __for_len check; back-edge target
-        add_jump_succ(preheader, cond_block);
-
-        Fa_BasicBlock* after_loop = new_block();
-        Fa_BasicBlock* bind_block = new_block();      // target = LIST_GET(iter, index); true-edge only
-        Fa_BasicBlock* increment_block = new_block(); // __for_index += __for_step; continue-target
-
-        LoopContext ctx { /*continue_target=*/increment_block, /*break_target=*/after_loop, m_loop_stack };
-        LoopContext const* saved = m_loop_stack;
-        m_loop_stack = &ctx;
-        Range body_range = lower_as_range(for_stmt->get_body());
-        m_loop_stack = saved;
-
-        // The condition here is synthetic (index < len); for_stmt's
-        // iter expr is passed only as debug/provenance, not as the
-        // literal comparison to emit -- codegen consuming this CFG
-        // must not treat get_cond() on this block as literal.
-        add_branch_succs(cond_block, for_stmt->get_iter(), bind_block, after_loop);
-        add_jump_succ(bind_block, body_range.entry);
-
-        if (body_range.exit != nullptr)
-            add_jump_succ(body_range.exit, increment_block);
-
-        add_jump_succ(increment_block, cond_block); // back-edge
-
-        return after_loop;
+        AST::Fa_WhileStmt* while_stmt = transforme_for_to_while(for_stmt);
+        return lower_while(preheader, while_stmt);
     }
 
     Fa_BasicBlock* lower_break(Fa_BasicBlock* block)
@@ -254,8 +269,8 @@ private:
         return nullptr;
     }
 
-    // Lowers a single Fa_Stmt* used as a sub-body (if-then, if-else,
-    // loop body) into its own Range, whether it's a Fa_BlockStmt or a
+    // Lowers a single Fa_Stmt* used as a sub-body
+    // into its own Range, whether it's a Fa_BlockStmt or a
     // single bare statement.
     Range lower_as_range(AST::Fa_Stmt* stmt)
     {
@@ -270,20 +285,14 @@ private:
 
 } // namespace
 
-Fa_CFG* lower_to_cfg(Fa_Array<AST::Fa_Stmt*> const& stmts)
+Fa_CFG* lower_to_cfg(Fa_Array<AST::Fa_Stmt*> const& stmts, u32 base_scope_depth)
 {
     Fa_CFG* cfg = make_cfg();
-    Lowerer lowerer(*cfg);
-
+    Lowerer lowerer(*cfg, base_scope_depth);
     Range top = lowerer.lower_block(stmts);
     cfg->entry = top.entry;
-
-    // If control can fall off the end (no explicit return on every
-    // path), that final block still needs an explicit terminator --
-    // NONE is never a valid final state.
     if (top.exit != nullptr)
-        top.exit->set_terminator(Fa_BasicBlock::TerminatorTag::NORETURN);
-
+        top.exit->terminator = TerminatorTag::NORETURN;
     return cfg;
 }
 
@@ -313,14 +322,15 @@ void discover_functions(Fa_Array<AST::Fa_Stmt*> const& stmts, Fa_Program& progra
 
             Fa_CFG_Function* entry = make_cfg_function();
             entry->def = fn;
-            entry->cfg = lower_to_cfg(body_stmts);
+            u32 const base_depth = owning_class != nullptr ? 2 : 1;
+            entry->cfg = lower_to_cfg(body_stmts, base_depth);
             entry->owning_class = owning_class;
             program.add_function(entry);
-            discover_functions(body_stmts, program, owning_class);
             break;
         }
         case SK::CLASS_DEF:
-            discover_functions(AS_CLASS_DEF(stmt)->get_methods(), program, AS_CLASS_DEF(stmt));
+            discover_functions(AS_CLASS_DEF(stmt)->get_methods(),
+                program, AS_CLASS_DEF(stmt));
             break;
         case SK::IF: {
             auto* if_stmt = AS_IF(stmt);
@@ -337,13 +347,11 @@ void discover_functions(Fa_Array<AST::Fa_Stmt*> const& stmts, Fa_Program& progra
         case SK::WHILE: {
             Fa_Array<AST::Fa_Stmt*> single;
             single.push(AS_WHILE(stmt)->get_body());
-            discover_functions(single, program);
             break;
         }
         case SK::FOR: {
             Fa_Array<AST::Fa_Stmt*> single;
             single.push(AS_FOR(stmt)->get_body());
-            discover_functions(single, program);
             break;
         }
         case SK::BLOCK:
@@ -360,11 +368,7 @@ void discover_functions(Fa_Array<AST::Fa_Stmt*> const& stmts, Fa_Program& progra
 Fa_Program* lower_program(Fa_Array<AST::Fa_Stmt*> const& stmts)
 {
     Fa_Program* program = make_program();
-
-    Fa_CFG_Function* script_entry = make_cfg_function();
-    script_entry->def = nullptr;
-    script_entry->cfg = lower_to_cfg(stmts);
-    program->add_function(script_entry);
+    program->set_main(lower_to_cfg(stmts));
 
     discover_functions(stmts, *program);
 

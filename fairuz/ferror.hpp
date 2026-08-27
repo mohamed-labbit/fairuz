@@ -166,21 +166,21 @@ private:
     }
 }; // class Fa_ErrorOr
 
-static Fa_Error _report_error(u16 errc, Fa_SourceLocation loc, diagnostic::Severity sv = diagnostic::Severity::ERROR)
+static Fa_Error _report_error(u16 errc, Fa_SourceLocation loc, diagnostic::Severity sv = diagnostic::Severity::ERROR, std::string detail = "")
 {
-    auto id = diagnostic::report(sv, loc, errc);
+    auto id = diagnostic::report(sv, loc, errc, detail);
     Fa_Error err { Fa_Error::RawCode { errc } };
     err.set_diag_id(id);
     return err;
 }
 
-static Fa_Error report_error(diagnostic::errc::compiler::Code errc, Fa_SourceLocation loc)
+static Fa_Error report_error(diagnostic::errc::compiler::Code errc, Fa_SourceLocation loc, std::string detail = "")
 {
-    return _report_error(static_cast<u16>(errc), loc);
+    return _report_error(static_cast<u16>(errc), loc, diagnostic::Severity::ERROR, detail);
 }
-static Fa_Error report_error(diagnostic::errc::parser::Code errc, Fa_SourceLocation loc, diagnostic::Severity sv = diagnostic::Severity::ERROR)
+static Fa_Error report_error(diagnostic::errc::parser::Code errc, Fa_SourceLocation loc, diagnostic::Severity sv = diagnostic::Severity::ERROR, std::string detail = "")
 {
-    return _report_error(static_cast<u16>(errc), loc, sv);
+    return _report_error(static_cast<u16>(errc), loc, sv, detail);
 }
 static Fa_Error report_error(diagnostic::errc::sema::Code errc, Fa_SourceLocation loc)
 {

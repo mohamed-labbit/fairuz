@@ -2,13 +2,15 @@
 // fcompiler.cc
 //
 
-#include "fcompiler.hpp"
+#include "fcfg_compiler.hpp"
 #include "fAST.hpp"
+#include "fcfg.hpp"
 #include "fdiagnostic.hpp"
 #include "ferror.hpp"
 #include "fmacros.hpp"
 #include "fopcode.hpp"
 #include "foptim.hpp"
+#include "fstring.hpp"
 #include "fvalue.hpp"
 
 #include <algorithm>
@@ -27,10 +29,12 @@
 #define ANY_REG(v, l, r) ({ auto _r = any_reg(v, l); Fa_VERIFY_RESULT(_r); *r = _r.value(); })
 #define ALLOC_REG(r) ({ auto _r = alloc_register(); Fa_VERIFY_RESULT(_r); *r = _r.value(); })
 
+static u8 const ERROR_REG = 0;
+
 namespace fairuz::runtime {
 
 using CompilerError = diagnostic::errc::compiler::Code;
-using cmp_ret = Fa_ErrorOr<Fa_ExprResult>;
+using cmp_ret = Fa_ErrorOr<CFG_Fa_ExprResult>;
 
 static constexpr char kClassInstanceName[] = "__class$instance";
 static constexpr char kClassMetadataKey[] = "__class__";
@@ -42,6 +46,18 @@ static bool is_terminal_top_level_call(AST::Fa_Stmt const* s)
         return false;
 
     return dynamic_cast<AST::Fa_CallExpr const*>(expr_stmt->get_expr()) != nullptr;
+}
+
+bool CFG_Compiler::is_declaration(AST::Fa_AssignmentExpr const* e) const
+{
+    if (!AST::is_name(e->get_target()))
+        // complex expression cannot be used for decl
+        return false;
+
+    auto name = AS_CONST_NAME(e->get_target());
+    if (lookup_local(name->get_value()))
+        return false;
+    return true;
 }
 
 static void patch_a(Fa_Chunk* chunk, u32 pc, u8 a)
@@ -70,80 +86,34 @@ static bool is_this_reference(AST::Fa_Expr const* e)
         && AS_CONST_NAME(e)->get_value() == Fa_StringRef(kClassInstanceName);
 }
 
-Fa_Chunk* Compiler::compile(Fa_Array<AST::Fa_Stmt*> const& stmts)
+Fa_Chunk* CFG_Compiler::compile(Fa_Program* program)
 {
+    if (!program)
+        return nullptr;
+
+    set_program(program);
+
+    Fa_CFG* main = program->get_main();
     Fa_Chunk* chunk = make_chunk();
     chunk->name = "<main>";
-
-    CompilerState state;
+    CFG_CompilerState state;
     state.chunk = chunk;
-    state.func_name = "<main>";
+    state.func_name = chunk->name;
     state.is_top_level = true;
     state.enclosing = nullptr;
     m_current = &state;
 
-    for (size_t i = 0; i < stmts.size(); i += 1) {
-        AST::Fa_Stmt* stmt = stmts[i];
-        if (i + 1 == stmts.size() && stmt && !state.is_dead && is_terminal_top_level_call(stmt)) {
-            auto const* expr_stmt = AS_CONST_EXPR_STMT(stmt);
-            Fa_SourceLocation loc = expr_stmt->get_location();
-            RegMark mark(m_current);
-            auto expr_result = compile_expr_impl(expr_stmt->get_expr());
-            if (expr_result.has_error())
-                break;
-            auto src = any_reg(expr_result.value(), loc);
-            if (src.has_error())
-                break;
-            emit(Fa_make_ABC(Fa_OpCode::RETURN, src.value(), 1, 0), loc);
-            state.is_dead = true;
-            break;
-        }
-        auto stmt_result = compile_stmt(stmt);
-        if (stmt_result.has_error())
-            break;
+    auto ret = compile_cfg_body(main, true);
+    if (ret.has_error()) {
+        if (diagnostic::has_errors())
+            diagnostic::dump();
+        return nullptr;
     }
 
-    Fa_SourceLocation loc = { 1, 1, 0 };
-    if (!stmts.empty() && stmts.back())
-        loc = stmts.back()->get_location();
-
-    if (!state.is_dead)
-        emit(Fa_make_ABC(Fa_OpCode::RETURN_NIL, 0, 0, 0), loc);
-
-    chunk->local_count = state.max_reg;
-    m_current = nullptr;
-
-    if (diagnostic::has_errors())
-        diagnostic::dump();
     return chunk;
 }
 
-Fa_Chunk* Compiler::compile_single_if_cfg_probe(AST::Fa_IfStmt* s)
-{
-    Fa_Chunk* chunk = make_chunk();
-    chunk->name = "<probe>";
-
-    CompilerState state;
-    state.chunk = chunk;
-    state.func_name = "<probe>";
-    state.is_top_level = true;
-    state.enclosing = nullptr;
-    m_current = &state;
-
-    auto r = compile_if_cfg(s);
-    (void)r;
-
-    emit(Fa_make_ABC(Fa_OpCode::RETURN_NIL, 0, 0, 0), s->get_location());
-
-    chunk->local_count = state.max_reg;
-    m_current = nullptr;
-
-    if (diagnostic::has_errors())
-        diagnostic::dump();
-    return chunk;
-}
-
-Fa_ErrorOr<bool> Compiler::compile_stmt(AST::Fa_Stmt* s)
+Fa_ErrorOr<bool> CFG_Compiler::compile_stmt(AST::Fa_Stmt* s)
 {
     if (s == nullptr || m_current->is_dead)
         return true;
@@ -152,20 +122,16 @@ Fa_ErrorOr<bool> Compiler::compile_stmt(AST::Fa_Stmt* s)
     case AST::Fa_Stmt::Kind::BLOCK: return compile_block(AS_BLOCK(s));
     case AST::Fa_Stmt::Kind::EXPR: return compile_expr_stmt(AS_EXPR_STMT(s));
     case AST::Fa_Stmt::Kind::ASSIGNMENT: return compile_assignment_stmt(AS_ASSIGNMENT_STMT(s));
-    case AST::Fa_Stmt::Kind::IF: return compile_if(AS_IF(s));
-    case AST::Fa_Stmt::Kind::WHILE: return compile_while(AS_WHILE(s));
     case AST::Fa_Stmt::Kind::FUNC: return compile_function_def(AS_FUNCTION_DEF(s));
     case AST::Fa_Stmt::Kind::RETURN: return compile_return(AS_RETURN(s));
-    case AST::Fa_Stmt::Kind::FOR: return compile_for(AS_FOR(s));
-    case AST::Fa_Stmt::Kind::BREAK: return compile_break(AS_BREAK(s));
-    case AST::Fa_Stmt::Kind::CONTINUE: return compile_continue(AS_CONTINUE(s));
     case AST::Fa_Stmt::Kind::CLASS_DEF: return compile_class_def(AS_CLASS_DEF(s));
     case AST::Fa_Stmt::Kind::INVALID:
+    default:
         return report_error(CompilerError::INVALID_STATEMENT_NODE, s->get_location());
     }
 }
 
-Fa_ErrorOr<bool> Compiler::compile_block(AST::Fa_BlockStmt* s)
+Fa_ErrorOr<bool> CFG_Compiler::compile_block(AST::Fa_BlockStmt* s)
 {
     begin_scope();
 
@@ -182,23 +148,23 @@ Fa_ErrorOr<bool> Compiler::compile_block(AST::Fa_BlockStmt* s)
     return true;
 }
 
-Fa_ErrorOr<bool> Compiler::compile_expr_stmt(AST::Fa_ExprStmt* s)
+Fa_ErrorOr<bool> CFG_Compiler::compile_expr_stmt(AST::Fa_ExprStmt* s)
 {
-    RegMark mark(m_current);
-    Fa_ExprResult r;
+    CFG_RegMark mark(m_current);
+    CFG_Fa_ExprResult r;
     COMPILE_EXPR_IMPL(s->get_expr(), &r);
     u8 tmp;
     ANY_REG(r, s->get_location(), &tmp);
     return true;
 }
 
-Fa_ErrorOr<bool> Compiler::compile_assignment_stmt(AST::Fa_AssignmentStmt* s)
+Fa_ErrorOr<bool> CFG_Compiler::compile_assignment_stmt(AST::Fa_AssignmentStmt* s)
 {
     Fa_SourceLocation loc = s->get_location();
 
     if (auto* index_expr = dynamic_cast<AST::Fa_IndexExpr*>(s->get_target())) {
-        RegMark mark(m_current);
-        Fa_ExprResult object_expr_result, index_expr_result, value_expr_result;
+        CFG_RegMark mark(m_current);
+        CFG_Fa_ExprResult object_expr_result, index_expr_result, value_expr_result;
         COMPILE_EXPR_IMPL(index_expr->get_object(), &object_expr_result);
         COMPILE_EXPR_IMPL(index_expr->get_index(), &index_expr_result);
         COMPILE_EXPR_IMPL(s->get_value(), &value_expr_result);
@@ -218,8 +184,8 @@ Fa_ErrorOr<bool> Compiler::compile_assignment_stmt(AST::Fa_AssignmentStmt* s)
             if (ClassDesc const* desc = resolve_receiver_class(get_expr->get_object())) {
                 int field_idx = desc->field_index(member_name->get_value());
                 if (field_idx >= 0) {
-                    RegMark mark(m_current);
-                    Fa_ExprResult object_expr_result, value_expr_result;
+                    CFG_RegMark mark(m_current);
+                    CFG_Fa_ExprResult object_expr_result, value_expr_result;
                     COMPILE_EXPR_IMPL(get_expr->get_object(), &object_expr_result);
                     COMPILE_EXPR_IMPL(s->get_value(), &value_expr_result);
                     u8 object_reg, value_reg;
@@ -241,10 +207,10 @@ Fa_ErrorOr<bool> Compiler::compile_assignment_stmt(AST::Fa_AssignmentStmt* s)
             if (is_this_reference(get_expr->get_object())) {
                 int field_idx = current_method_field_index(member_name->get_value());
                 if (field_idx >= 0) {
-                    RegMark mark(m_current);
-                    LocalVar const* self = lookup_local(kClassInstanceName);
+                    CFG_RegMark mark(m_current);
+                    CFG_LocalVar const* self = lookup_local(kClassInstanceName);
                     if (self != nullptr) {
-                        Fa_ExprResult value_expr_result;
+                        CFG_Fa_ExprResult value_expr_result;
                         COMPILE_EXPR_IMPL(s->get_value(), &value_expr_result);
                         u8 value_reg;
                         ANY_REG(value_expr_result, loc, &value_reg);
@@ -262,14 +228,14 @@ Fa_ErrorOr<bool> Compiler::compile_assignment_stmt(AST::Fa_AssignmentStmt* s)
         return report_error(CompilerError::INVALID_ASSIGNMENT_TARGET, s->get_location());
 
     if (s->is_declaration()) {
-        if (LocalVar const* local = lookup_local(name->get_value())) {
+        if (CFG_LocalVar const* local = lookup_local(name->get_value())) {
             u8 local_reg = local->reg;
             return compile_expr(s->get_value(), &local_reg).error_or(true);
         }
 
         u8 reg;
         ALLOC_REG(&reg);
-        Fa_ExprResult value_expr_result;
+        CFG_Fa_ExprResult value_expr_result;
         COMPILE_EXPR_IMPL(s->get_value(), &value_expr_result);
         discharge(value_expr_result, reg, loc);
         declare_local(name->get_value(), reg, infer_constructed_class(s->get_value()));
@@ -277,12 +243,12 @@ Fa_ErrorOr<bool> Compiler::compile_assignment_stmt(AST::Fa_AssignmentStmt* s)
     }
 
     if (int field_idx = current_method_field_index(name->get_value()); field_idx >= 0) {
-        RegMark mark(m_current);
-        LocalVar const* self = lookup_local(kClassInstanceName);
+        CFG_RegMark mark(m_current);
+        CFG_LocalVar const* self = lookup_local(kClassInstanceName);
         if (self == nullptr)
             return report_error(CompilerError::INVALID_ASSIGNMENT_TARGET, name->get_location());
 
-        Fa_ExprResult value_expr_result;
+        CFG_Fa_ExprResult value_expr_result;
         COMPILE_EXPR_IMPL(s->get_value(), &value_expr_result);
         u8 value_reg;
         ANY_REG(value_expr_result, loc, &value_reg);
@@ -297,15 +263,15 @@ Fa_ErrorOr<bool> Compiler::compile_assignment_stmt(AST::Fa_AssignmentStmt* s)
     if (!m_current->is_top_level) {
         u8 reg;
         ALLOC_REG(&reg);
-        Fa_ExprResult expr_result;
+        CFG_Fa_ExprResult expr_result;
         COMPILE_EXPR_IMPL(s->get_value(), &expr_result);
         discharge(expr_result, reg, loc);
         declare_local(name->get_value(), reg);
         return true;
     }
 
-    RegMark mark(m_current);
-    Fa_ExprResult expr_result;
+    CFG_RegMark mark(m_current);
+    CFG_Fa_ExprResult expr_result;
     COMPILE_EXPR_IMPL(s->get_value(), &expr_result);
     u8 src;
     ANY_REG(expr_result, loc, &src);
@@ -314,316 +280,56 @@ Fa_ErrorOr<bool> Compiler::compile_assignment_stmt(AST::Fa_AssignmentStmt* s)
     return true;
 }
 
-Fa_ErrorOr<bool> Compiler::compile_if(AST::Fa_IfStmt* s)
+Fa_ErrorOr<bool> CFG_Compiler::compile_function_def(Fa_CFG_Function* f)
 {
-    if (s == nullptr)
-        return true;
+    AST::Fa_FunctionDef* fn_node = f->def;
+    Fa_SourceLocation loc = fn_node->get_location();
+    if (!m_current->is_top_level || m_current->scope_depth != 0)
+        return report_error(CompilerError::NESTED_FUNCTION_UNSUPPORTED, loc);
 
-    Fa_SourceLocation loc = s->get_location();
+    Fa_StringRef fn_name = fn_node->get_name()->get_value();
+    Fa_Chunk* fn_chunk = make_chunk();
+    fn_chunk->name = fn_name;
+    fn_chunk->arity = fn_node->has_parameters() ? static_cast<int>(fn_node->get_parameters().size()) : 0;
+    auto fn_idx = static_cast<u16>(current_chunk()->functions.size());
+    current_chunk()->functions.push(fn_chunk);
+    CFG_CompilerState fn_state;
+    fn_state.chunk = fn_chunk;
+    fn_state.func_name = fn_name;
+    fn_state.enclosing = m_current;
+    m_current = &fn_state;
     begin_scope();
-    bool incoming_dead = m_current->is_dead;
 
-    if (auto folded = try_fold_expr(s->get_condition())) {
-        if (Fa_IS_TRUTHY(*folded)) {
-            auto ret = compile_stmt(s->get_then());
-            m_current->is_dead = incoming_dead;
-            return ret;
-        } else if (AST::Fa_Stmt* m_else_stmt = s->get_else()) {
-            auto ret = compile_stmt(m_else_stmt);
-            m_current->is_dead = incoming_dead;
-            return ret;
+    if (fn_node->has_parameters()) {
+        for (AST::Fa_Expr* param : fn_node->get_parameters()) {
+            u8 reg;
+            ALLOC_REG(&reg);
+            declare_local(AS_CONST_NAME(param)->get_value(), reg);
         }
-        return true;
     }
 
-    RegMark mark(m_current);
-    Fa_ExprResult expr_result;
-    u8 cond;
-    COMPILE_EXPR_IMPL(s->get_condition(), &expr_result);
-    ANY_REG(expr_result, loc, &cond);
-    u32 jump_false = emit_jump(Fa_OpCode::JUMP_IF_FALSE, cond, loc);
-    COMPILE_STMT_DISCARD(s->get_then());
+    // we call it as top level functions simply
+    // because nested functions are not supported
+    auto ret_body = compile_cfg_body(f->cfg, true);
+    Fa_VERIFY_RESULT(ret_body);
 
-    if (AST::Fa_Stmt* else_stmt = s->get_else()) {
-        u32 jump_end = emit_jump(Fa_OpCode::JUMP, 0, loc);
-        patch_jump(jump_false);
-        auto else_ret = compile_stmt(else_stmt);
-        Fa_VERIFY_RESULT(else_ret);
-        (void)else_ret;
-        patch_jump(jump_end);
-    } else {
-        patch_jump(jump_false);
-    }
-
-    m_current->is_dead = incoming_dead;
     end_scope(loc);
+    fn_chunk->local_count = fn_state.max_reg;
+    m_current = fn_state.enclosing;
+    u8 dst;
+    ALLOC_REG(&dst);
+    emit(Fa_make_ABx(Fa_OpCode::CLOSURE, dst, fn_idx), loc);
+
+    if (m_current != nullptr && m_current->is_top_level) {
+        u16 name_idx = intern_string(fn_name);
+        emit(Fa_make_ABx(Fa_OpCode::STORE_GLOBAL, dst, name_idx), loc);
+    }
+
+    declare_local(fn_name, dst);
     return true;
 }
 
-// ---------------------------------------------------------------------
-// CFG-driven rebuild of compile_if, for byte-for-byte equivalence
-// testing against the original above. Structure: lower the AST into a
-// tiny local CFG (constant-fold elision matches the original's
-// try_fold_expr short-circuit exactly), lay out blocks via reverse
-// postorder, emit each block's statements through the SAME expression/
-// statement codegen the original uses, and resolve all jumps in one
-// final fixup pass via the existing patch_jump_to (relative sBx offsets,
-// unchanged encoding).
-// ---------------------------------------------------------------------
-
-namespace cfg_if_probe {
-
-struct ProbeBlock {
-    enum class Term { NONE,
-        BRANCH,
-        JUMP,
-        CLOSED };
-    Fa_Array<AST::Fa_Stmt*> stmts;
-    AST::Fa_Expr* cond { nullptr };
-    ProbeBlock* succ_true { nullptr };
-    ProbeBlock* succ_false { nullptr };
-    ProbeBlock* succ_jump { nullptr };
-    Term term { Term::NONE };
-    int id { -1 };
-};
-
-struct ProbeCFG {
-    Fa_Array<ProbeBlock*> blocks;
-    ProbeBlock* entry { nullptr };
-    ProbeBlock* make_block()
-    {
-        auto* b = get_allocator().allocate_object<ProbeBlock>();
-        b->id = static_cast<int>(blocks.size());
-        blocks.push(b);
-        return b;
-    }
-};
-
-struct Range {
-    ProbeBlock* entry { nullptr };
-    ProbeBlock* exit { nullptr };
-};
-
-} // namespace cfg_if_probe
-
-Fa_ErrorOr<bool> Compiler::compile_if_cfg(AST::Fa_IfStmt* s)
-{
-    using namespace cfg_if_probe;
-
-    if (s == nullptr)
-        return true;
-
-    Fa_SourceLocation loc = s->get_location();
-    begin_scope();
-    bool incoming_dead = m_current->is_dead;
-
-    // Constant-fold elision -- identical short-circuit to the original,
-    // reusing the SAME try_fold_expr call and Fa_IS_TRUTHY macro.
-    if (auto folded = try_fold_expr(s->get_condition())) {
-        if (Fa_IS_TRUTHY(*folded)) {
-            auto ret = compile_stmt(s->get_then());
-            m_current->is_dead = incoming_dead;
-            return ret;
-        } else if (AST::Fa_Stmt* else_stmt = s->get_else()) {
-            auto ret = compile_stmt(else_stmt);
-            m_current->is_dead = incoming_dead;
-            return ret;
-        }
-        return true;
-    }
-
-    // --- Build a tiny CFG for this one if/else, no recursion into
-    // nested control flow inside the arms needed for this probe: the
-    // arms are compiled via compile_stmt (the real, existing dispatcher),
-    // so nested ifs/loops inside them still go through the ORIGINAL
-    // non-CFG path. This probe is scoped to proving the outer if/else's
-    // own branch+merge+fixup is bit-for-bit equivalent, not to replacing
-    // the whole compiler in one step.
-    //
-    // RegMark is declared HERE, spanning the condition AND both branch
-    // bodies -- matching the original compile_if exactly. This was the
-    // actual source of the earlier register-numbering mismatch: nesting
-    // RegMark inside the per-block emission loop freed the condition's
-    // register before the branches compiled, which is a real behavioral
-    // difference from the original, not just a cosmetic one.
-    RegMark mark(m_current);
-
-    ProbeCFG cfg;
-    ProbeBlock* entry = cfg.make_block();
-    cfg.entry = entry;
-
-    entry->cond = s->get_condition();
-    entry->term = ProbeBlock::Term::BRANCH;
-
-    ProbeBlock* then_block = cfg.make_block();
-    then_block->stmts.push(s->get_then());
-    entry->succ_true = then_block;
-
-    bool has_else = s->get_else() != nullptr;
-    ProbeBlock* else_block = nullptr;
-    if (has_else) {
-        else_block = cfg.make_block();
-        else_block->stmts.push(s->get_else());
-        entry->succ_false = else_block;
-    }
-
-    ProbeBlock* merge = cfg.make_block();
-    then_block->term = ProbeBlock::Term::JUMP;
-    then_block->succ_jump = merge;
-
-    if (has_else) {
-        else_block->term = ProbeBlock::Term::JUMP;
-        else_block->succ_jump = merge;
-    } else {
-        entry->succ_false = merge;
-    }
-
-    // --- Reverse postorder layout ---
-    Fa_Array<ProbeBlock*> layout;
-    {
-        Fa_Array<bool> visited(cfg.blocks.size(), false);
-        Fa_Array<ProbeBlock*> post;
-        struct Frame {
-            ProbeBlock* b;
-            int next;
-        };
-        Fa_Array<Frame> stack;
-        stack.push({ cfg.entry, 0 });
-        visited[cfg.entry->id] = true;
-
-        while (!stack.empty()) {
-            Frame& top = stack[stack.size() - 1];
-            Fa_Array<ProbeBlock*> succs;
-            if (top.b->term == ProbeBlock::Term::BRANCH) {
-                // Push false FIRST, true SECOND: with LIFO stack traversal
-                // this visits (and finishes) the true-branch before the
-                // false-branch, so the true-branch lands earlier in the
-                // final reverse-postorder layout -- matching the
-                // convention used everywhere else in this project that
-                // the true/fallthrough-preferred path is succs[0].
-                succs.push(top.b->succ_false);
-                succs.push(top.b->succ_true);
-            } else if (top.b->term == ProbeBlock::Term::JUMP) {
-                succs.push(top.b->succ_jump);
-            }
-            if (top.next < static_cast<int>(succs.size())) {
-                ProbeBlock* nxt = succs[top.next];
-                top.next += 1;
-                if (nxt != nullptr && !visited[nxt->id]) {
-                    visited[nxt->id] = true;
-                    stack.push({ nxt, 0 });
-                }
-            } else {
-                post.push(top.b);
-                stack.erase(stack.size() - 1);
-            }
-        }
-        for (size_t i = 0; i < post.size(); ++i)
-            layout.push(post[post.size() - 1 - i]);
-    }
-
-    // --- Emit: walk layout, defer all jump targets to a final fixup pass ---
-    Fa_Array<u32> block_start(cfg.blocks.size(), 0);
-    Fa_Array<int> false_jump_idx(cfg.blocks.size(), -1);
-    Fa_Array<int> false_jump_target(cfg.blocks.size(), -1);
-    Fa_Array<int> jump_idx(cfg.blocks.size(), -1);
-    Fa_Array<int> jump_target(cfg.blocks.size(), -1);
-
-    for (size_t i = 0; i < layout.size(); ++i) {
-        ProbeBlock* b = layout[i];
-        block_start[b->id] = current_offset();
-
-        for (size_t k = 0; k < b->stmts.size(); ++k) {
-            auto r = compile_stmt(b->stmts[k]);
-            Fa_VERIFY_RESULT(r);
-        }
-
-        ProbeBlock* next_in_layout = (i + 1 < layout.size()) ? layout[i + 1] : nullptr;
-
-        if (b->term == ProbeBlock::Term::BRANCH) {
-            Fa_ExprResult expr_result;
-            u8 cond;
-            COMPILE_EXPR_IMPL(b->cond, &expr_result);
-            ANY_REG(expr_result, loc, &cond);
-            u32 jf = emit_jump(Fa_OpCode::JUMP_IF_FALSE, cond, loc);
-            false_jump_idx[b->id] = static_cast<int>(jf);
-            false_jump_target[b->id] = b->succ_false->id;
-
-            if (b->succ_true != next_in_layout) {
-                u32 j = emit_jump(Fa_OpCode::JUMP, 0, loc);
-                jump_idx[b->id] = static_cast<int>(j);
-                jump_target[b->id] = b->succ_true->id;
-            }
-        } else if (b->term == ProbeBlock::Term::JUMP) {
-            if (b->succ_jump != next_in_layout) {
-                u32 j = emit_jump(Fa_OpCode::JUMP, 0, loc);
-                jump_idx[b->id] = static_cast<int>(j);
-                jump_target[b->id] = b->succ_jump->id;
-            }
-        }
-    }
-
-    // --- Fixup: resolve every deferred jump via the EXISTING
-    // patch_jump_to (same relative-offset encoding as the original path) ---
-    for (size_t i = 0; i < cfg.blocks.size(); ++i) {
-        if (false_jump_target[i] >= 0)
-            patch_jump_to(static_cast<u32>(false_jump_idx[i]), block_start[static_cast<size_t>(false_jump_target[i])]);
-        if (jump_target[i] >= 0)
-            patch_jump_to(static_cast<u32>(jump_idx[i]), block_start[static_cast<size_t>(jump_target[i])]);
-    }
-
-    m_current->is_dead = incoming_dead;
-    end_scope(loc);
-    return true;
-}
-
-Fa_ErrorOr<bool> Compiler::compile_while(AST::Fa_WhileStmt* s)
-{
-    if (s == nullptr)
-        return true;
-
-    Fa_SourceLocation loc = s->get_location();
-
-    begin_scope();
-
-    bool incoming_dead = m_current->is_dead;
-    if (auto folded = try_fold_expr(s->get_condition())) {
-        if (Fa_IS_TRUTHY(*folded)) {
-            u32 loop_start = current_offset();
-            push_loop(loop_start);
-            COMPILE_STMT_DISCARD(s->get_body());
-            u32 continue_target = current_offset();
-            emit(Fa_make_AsBx(Fa_OpCode::LOOP, 0, static_cast<i32>(loop_start) - static_cast<i32>(current_offset()) - 1), loc);
-            pop_loop(current_offset(), continue_target, loc.line);
-        }
-
-        m_current->is_dead = incoming_dead;
-        return true;
-    }
-
-    u32 loop_start = current_offset();
-    push_loop(loop_start);
-
-    {
-        RegMark mark(m_current);
-        Fa_ExprResult expr_result;
-        u8 cond;
-        COMPILE_EXPR_IMPL(s->get_condition(), &expr_result);
-        ANY_REG(expr_result, loc, &cond);
-        u32 exit_jump = emit_jump(Fa_OpCode::JUMP_IF_FALSE, cond, loc);
-        COMPILE_STMT_DISCARD(s->get_body());
-        u32 continue_target = current_offset();
-        emit(Fa_make_AsBx(Fa_OpCode::LOOP, 0, static_cast<i32>(loop_start) - static_cast<i32>(current_offset()) - 1), loc);
-        patch_jump(exit_jump);
-        pop_loop(current_offset(), continue_target, loc.line);
-    }
-    m_current->is_dead = incoming_dead;
-
-    end_scope(loc);
-    return true;
-}
-
-Fa_ErrorOr<bool> Compiler::compile_function_def(AST::Fa_FunctionDef* f)
+Fa_ErrorOr<bool> CFG_Compiler::compile_function_def(AST::Fa_FunctionDef* f)
 {
     Fa_SourceLocation loc = f->get_location();
     if (!m_current->is_top_level || m_current->scope_depth != 0)
@@ -640,7 +346,7 @@ Fa_ErrorOr<bool> Compiler::compile_function_def(AST::Fa_FunctionDef* f)
     auto fn_idx = static_cast<u16>(current_chunk()->functions.size());
     current_chunk()->functions.push(fn_chunk);
 
-    CompilerState fn_state;
+    CFG_CompilerState fn_state;
     fn_state.chunk = fn_chunk;
     fn_state.func_name = name->get_value();
     fn_state.enclosing = m_current;
@@ -683,7 +389,7 @@ Fa_ErrorOr<bool> Compiler::compile_function_def(AST::Fa_FunctionDef* f)
     return true;
 }
 
-Fa_ErrorOr<bool> Compiler::compile_return(AST::Fa_ReturnStmt* s)
+Fa_ErrorOr<bool> CFG_Compiler::compile_return(AST::Fa_ReturnStmt* s)
 {
     Fa_SourceLocation loc = s->get_location();
 
@@ -701,7 +407,7 @@ Fa_ErrorOr<bool> Compiler::compile_return(AST::Fa_ReturnStmt* s)
     }
 
     if (value->get_kind() == AST::Fa_Expr::Kind::CALL && !m_current->is_top_level) {
-        RegMark mark(m_current);
+        CFG_RegMark mark(m_current);
         auto call_ret = compile_call_impl(AS_CALL(value), nullptr, true);
         Fa_VERIFY_RESULT(call_ret);
         (void)call_ret;
@@ -709,8 +415,8 @@ Fa_ErrorOr<bool> Compiler::compile_return(AST::Fa_ReturnStmt* s)
         return true;
     }
 
-    RegMark mark(m_current);
-    Fa_ExprResult expr_result;
+    CFG_RegMark mark(m_current);
+    CFG_Fa_ExprResult expr_result;
     u8 src;
     COMPILE_EXPR_IMPL(value, &expr_result);
     ANY_REG(expr_result, loc, &src);
@@ -719,91 +425,7 @@ Fa_ErrorOr<bool> Compiler::compile_return(AST::Fa_ReturnStmt* s)
     return true;
 }
 
-Fa_ErrorOr<bool> Compiler::compile_for(AST::Fa_ForStmt* s)
-{
-    Fa_SourceLocation loc = s->get_location();
-    if (!AST::is_name(s->get_target()))
-        return report_error(CompilerError::INVALID_ASSIGNMENT_TARGET, s->get_location());
-
-    auto target = AS_NAME(s->get_target());
-    bool incoming_dead = m_current->is_dead;
-
-    begin_scope();
-
-    u8 iter_reg;
-    ALLOC_REG(&iter_reg);
-    {
-        declare_local("__for_iter", iter_reg);
-        RegMark mark(m_current);
-        Fa_ExprResult expr_result;
-        COMPILE_EXPR_IMPL(s->get_iter(), &expr_result);
-        discharge(expr_result, iter_reg, loc);
-    }
-
-    u8 len_reg, index_reg, target_reg, cond_reg, step_reg;
-
-    ALLOC_REG(&len_reg);
-    ALLOC_REG(&index_reg);
-    ALLOC_REG(&target_reg);
-    ALLOC_REG(&cond_reg);
-    ALLOC_REG(&step_reg);
-
-    declare_local("__for_len", len_reg);
-    declare_local("__for_index", index_reg);
-    declare_local(target->get_value(), target_reg);
-    declare_local("__for_cond", cond_reg);
-    declare_local("__for_step", step_reg);
-
-    emit(Fa_make_ABC(Fa_OpCode::LIST_LEN, len_reg, iter_reg, 0), loc);
-    emit_load_value(index_reg, Fa_MAKE_INTEGER(0), loc);
-    emit_load_value(step_reg, Fa_MAKE_INTEGER(1), loc);
-
-    u32 loop_start = current_offset();
-    push_loop(loop_start);
-    emit(Fa_make_ABC(Fa_OpCode::OP_LT, cond_reg, index_reg, len_reg), loc);
-    emit(Fa_make_ABC(Fa_OpCode::NOP, current_chunk()->alloc_ic_slot(), 0, 0), loc);
-
-    u32 exit_jump = emit_jump(Fa_OpCode::JUMP_IF_FALSE, cond_reg, loc);
-    emit(Fa_make_ABC(Fa_OpCode::LIST_GET, target_reg, iter_reg, index_reg), loc);
-    COMPILE_STMT_DISCARD(s->get_body());
-
-    u32 continue_target = current_offset();
-    emit(Fa_make_ABC(Fa_OpCode::OP_ADD, index_reg, index_reg, step_reg), loc);
-    emit(Fa_make_ABC(Fa_OpCode::NOP, current_chunk()->alloc_ic_slot(), 0, 0), loc);
-    emit(Fa_make_AsBx(Fa_OpCode::LOOP, 0, static_cast<i32>(loop_start) - static_cast<i32>(current_offset()) - 1), loc);
-
-    patch_jump(exit_jump);
-    pop_loop(current_offset(), continue_target, loc.line);
-
-    end_scope(loc);
-
-    m_current->is_dead = incoming_dead;
-    return true;
-}
-
-Fa_ErrorOr<bool> Compiler::compile_break(AST::Fa_BreakStmt* s)
-{
-    if (m_current->loop_stack.empty())
-        return report_error(CompilerError::BREAK_OUTSIDE_LOOP, s->get_location());
-
-    Fa_SourceLocation loc = s->get_location();
-    m_current->loop_stack.back().break_patches.push(emit_jump(Fa_OpCode::JUMP, 0, loc));
-    m_current->is_dead = true;
-    return true;
-}
-
-Fa_ErrorOr<bool> Compiler::compile_continue(AST::Fa_ContinueStmt* s)
-{
-    if (m_current->loop_stack.empty())
-        return report_error(CompilerError::CONTINUE_OUTSIDE_LOOP, s->get_location());
-
-    Fa_SourceLocation loc = s->get_location();
-    m_current->loop_stack.back().continue_patches.push(emit_jump(Fa_OpCode::JUMP, 0, loc));
-    m_current->is_dead = true;
-    return true;
-}
-
-Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
+Fa_ErrorOr<bool> CFG_Compiler::compile_class_def(AST::Fa_ClassDef* s)
 {
     if (s == nullptr)
         return true;
@@ -835,23 +457,20 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
             field_names.push(fname);
     }
 
-    auto compile_method_closure = [&](AST::Fa_FunctionDef* method) -> Fa_ErrorOr<std::tuple<u8, Fa_Chunk*>> {
-        Fa_SourceLocation method_loc = method->get_location();
-        AST::Fa_NameExpr* method_name = method->get_name();
-        if (method_name == nullptr)
-            return report_error(CompilerError::NULL_FUNCTION_NAME, method_name->get_location());
-
+    auto compile_method_closure = [&](Fa_CFG_Function* method) -> Fa_ErrorOr<std::tuple<u8, Fa_Chunk*>> {
+        assert(method != nullptr);
+        AST::Fa_FunctionDef* method_node = method->def;
+        Fa_SourceLocation method_loc = method_node->get_location();
+        Fa_StringRef method_name = class_name + "." + method_node->get_name()->get_value();
         Fa_Chunk* ch = make_chunk();
-        ch->name = class_name + "." + method_name->get_value();
-        int ex_param_count = method->has_parameters() ? static_cast<int>(method->get_parameters().size()) : 0;
-        ch->arity = ex_param_count + 1;
-
+        ch->name = method_name;
+        int ex_param_count = method_node->has_parameters() ? static_cast<int>(method_node->get_parameters().size()) : 0;
+        ch->arity = ex_param_count + 1; // always adding implicit 'this' parameter
         auto fn_idx = static_cast<u16>(current_chunk()->functions.size());
         current_chunk()->functions.push(ch);
-
-        CompilerState state;
+        CFG_CompilerState state;
         state.chunk = ch;
-        state.func_name = method_name->get_value();
+        state.func_name = method_name;
         state.enclosing = m_current;
         state.is_class_method = true;
         state.class_field_names = field_names;
@@ -862,21 +481,16 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
         ALLOC_REG(&inst_reg);
         declare_local(kClassInstanceName, inst_reg, class_name);
 
-        if (method->has_parameters()) {
-            for (AST::Fa_Expr* p : method->get_parameters()) {
-                auto* p_name = dynamic_cast<AST::Fa_NameExpr*>(p);
-                if (p_name == nullptr)
-                    return report_error(CompilerError::INVALID_FUNCTION_PARAMETER, p->get_location());
-
+        if (method_node->has_parameters()) {
+            for (AST::Fa_Expr* p : method_node->get_parameters()) {
                 u8 reg;
                 ALLOC_REG(&reg);
-                declare_local(p_name->get_value(), reg);
+                declare_local(AS_CONST_NAME(p)->get_value(), reg);
             }
         }
 
-        COMPILE_STMT_DISCARD(method->get_body());
-        if (!state.is_dead)
-            emit(Fa_make_ABC(Fa_OpCode::RETURN, inst_reg, 1, 0), method_loc);
+        auto ret_body = compile_cfg_body(method->cfg, false);
+        Fa_VERIFY_RESULT(ret_body);
 
         end_scope(method_loc);
         ch->local_count = state.max_reg;
@@ -932,7 +546,7 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
     Fa_Array<Fa_StringRef> seen_names; // dedup guard across BOTH special and ordinary methods
 
     for (AST::Fa_Stmt* m : methods) {
-        if (!AST::is_func(m))
+        if (m->get_kind() != AST::Fa_Stmt::Kind::FUNC)
             return report_error(CompilerError::INVALID_STATEMENT_NODE, m->get_location());
 
         auto* method = AS_FUNCTION_DEF(m);
@@ -950,7 +564,12 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
             return report_error(CompilerError::INVALID_STATEMENT_NODE, method->get_location());
 
         seen_names.push(method_name);
-        auto result = compile_method_closure(method);
+        assert(m_program && "==> DEBUG: m_program is null here");
+        auto method_cfg = m_program->cfg_of_method(s, method_name);
+        if (method_cfg == nullptr)
+            return report_error(CompilerError::MISSING_CFG, loc,
+                "missing cfg for this method: " + std::string(method->get_name()->get_value().data()) + "\n");
+        auto result = compile_method_closure(method_cfg);
         Fa_VERIFY_RESULT(result);
         auto [reg, chunk] = result.value();
 
@@ -1027,10 +646,10 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
     return true;
 }
 
-Fa_ErrorOr<Fa_ExprResult> Compiler::compile_expr_impl(AST::Fa_Expr* e)
+Fa_ErrorOr<CFG_Fa_ExprResult> CFG_Compiler::compile_expr_impl(AST::Fa_Expr* e)
 {
     if (e == nullptr)
-        return Fa_ExprResult::knil();
+        return CFG_Fa_ExprResult::knil();
 
     switch (e->get_kind()) {
     case AST::Fa_Expr::Kind::LITERAL: return compile_literal_impl(AS_LITERAL(e));
@@ -1047,64 +666,64 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_expr_impl(AST::Fa_Expr* e)
         return report_error(CompilerError::INVALID_EXPRESSION_NODE, e->get_location());
     }
 
-    return Fa_ExprResult::knil();
+    return CFG_Fa_ExprResult::knil();
 }
 
-Fa_ErrorOr<Fa_ExprResult> Compiler::compile_literal_impl(AST::Fa_LiteralExpr* e)
+Fa_ErrorOr<CFG_Fa_ExprResult> CFG_Compiler::compile_literal_impl(AST::Fa_LiteralExpr* e)
 {
     if (e->is_string()) {
         u16 kidx = intern_string(e->get_str());
         u32 pc = emit(Fa_make_ABx(Fa_OpCode::LOAD_CONST, 0, kidx), e->get_location());
-        return Fa_ExprResult::reloc(pc);
+        return CFG_Fa_ExprResult::reloc(pc);
     }
     if (e->is_integer())
-        return Fa_ExprResult::kint(e->get_int());
+        return CFG_Fa_ExprResult::kint(e->get_int());
     if (e->is_float())
-        return Fa_ExprResult::kfloat(e->get_float());
+        return CFG_Fa_ExprResult::kfloat(e->get_float());
     if (e->is_bool())
-        return Fa_ExprResult::kbool(e->get_bool());
+        return CFG_Fa_ExprResult::kbool(e->get_bool());
     if (e->is_nil())
-        return Fa_ExprResult::knil();
+        return CFG_Fa_ExprResult::knil();
 
     return report_error(CompilerError::UNKNOWN_LITERAL_TYPE, e->get_location());
 }
 
-Fa_ErrorOr<Fa_ExprResult> Compiler::compile_name_impl(AST::Fa_NameExpr* e)
+Fa_ErrorOr<CFG_Fa_ExprResult> CFG_Compiler::compile_name_impl(AST::Fa_NameExpr* e)
 {
     Fa_SourceLocation loc = e->get_location();
     VarInfo vi = resolve_name(e->get_value());
 
     if (vi.kind == VarInfo::Kind::LOCAL)
-        return Fa_ExprResult::reg(vi.index);
+        return CFG_Fa_ExprResult::reg(vi.index);
 
     if (int field_idx = current_method_field_index(e->get_value()); field_idx >= 0) {
-        LocalVar const* self = lookup_local(kClassInstanceName);
+        CFG_LocalVar const* self = lookup_local(kClassInstanceName);
         if (self == nullptr)
             return report_error(CompilerError::INVALID_EXPRESSION_NODE, e->get_location());
 
         u32 pc = emit(Fa_make_ABC(Fa_OpCode::GET_FIELD, 0, self->reg, static_cast<u8>(field_idx)), loc);
-        return Fa_ExprResult::reloc(pc);
+        return CFG_Fa_ExprResult::reloc(pc);
     }
 
     u16 kidx = intern_string(e->get_value());
     u32 pc = emit(Fa_make_ABx(Fa_OpCode::LOAD_GLOBAL, 0, kidx), loc);
-    return Fa_ExprResult::reloc(pc);
+    return CFG_Fa_ExprResult::reloc(pc);
 }
 
-Fa_ErrorOr<Fa_ExprResult> Compiler::compile_unary_impl(AST::Fa_UnaryExpr* e)
+Fa_ErrorOr<CFG_Fa_ExprResult> CFG_Compiler::compile_unary_impl(AST::Fa_UnaryExpr* e)
 {
     Fa_SourceLocation loc = e->get_location();
 
     if (auto folded = try_fold_unary(e)) {
         Fa_Value v = *folded;
         if (Fa_IS_INTEGER(v))
-            return Fa_ExprResult::kint(Fa_AS_INTEGER(v));
+            return CFG_Fa_ExprResult::kint(Fa_AS_INTEGER(v));
         if (Fa_IS_DOUBLE(v))
-            return Fa_ExprResult::kfloat(Fa_AS_DOUBLE(v));
+            return CFG_Fa_ExprResult::kfloat(Fa_AS_DOUBLE(v));
         if (Fa_IS_BOOL(v))
-            return Fa_ExprResult::kbool(Fa_AS_BOOL(v));
+            return CFG_Fa_ExprResult::kbool(Fa_AS_BOOL(v));
         if (Fa_IS_NIL(v))
-            return Fa_ExprResult::knil();
+            return CFG_Fa_ExprResult::knil();
     }
 
     if (auto reduced = try_strength_reduce_unary(e))
@@ -1119,82 +738,36 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_unary_impl(AST::Fa_UnaryExpr* e)
         return report_error(CompilerError::UNKNOWN_UNARY_OPERATOR, e->get_location());
     }
 
-    RegMark mark(m_current);
-    Fa_ExprResult expr_result;
+    CFG_RegMark mark(m_current);
+    CFG_Fa_ExprResult expr_result;
     COMPILE_EXPR_IMPL(e->get_operand(), &expr_result);
     u8 src;
     ANY_REG(expr_result, loc, &src);
     u32 pc = emit(Fa_make_ABC(op, 0, src, 0), loc);
-    return Fa_ExprResult::reloc(pc);
+    return CFG_Fa_ExprResult::reloc(pc);
 }
 
-Fa_ErrorOr<Fa_ExprResult> Compiler::compile_binary_impl(AST::Fa_BinaryExpr* e)
+Fa_ErrorOr<CFG_Fa_ExprResult> CFG_Compiler::compile_binary_impl(AST::Fa_BinaryExpr* e)
 {
     Fa_SourceLocation loc = e->get_location();
 
     if (auto folded = try_fold_binary(e)) {
         Fa_Value v = *folded;
         if (Fa_IS_INTEGER(v))
-            return Fa_ExprResult::kint(Fa_AS_INTEGER(v));
+            return CFG_Fa_ExprResult::kint(Fa_AS_INTEGER(v));
         if (Fa_IS_DOUBLE(v))
-            return Fa_ExprResult::kfloat(Fa_AS_DOUBLE(v));
+            return CFG_Fa_ExprResult::kfloat(Fa_AS_DOUBLE(v));
         if (Fa_IS_BOOL(v))
-            return Fa_ExprResult::kbool(Fa_AS_BOOL(v));
+            return CFG_Fa_ExprResult::kbool(Fa_AS_BOOL(v));
         if (Fa_IS_NIL(v))
-            return Fa_ExprResult::knil();
+            return CFG_Fa_ExprResult::knil();
     }
 
     if (auto reduced = try_strength_reduce_binary(e))
         return compile_expr_impl(*reduced);
 
     AST::Fa_BinaryOp op = e->get_operator();
-    if (op == AST::Fa_BinaryOp::OP_AND) {
-        u8 dst;
-        ALLOC_REG(&dst);
-
-        {
-            RegMark mark(m_current);
-            Fa_ExprResult expr_result;
-            COMPILE_EXPR_IMPL(e->get_left(), &expr_result);
-            discharge(expr_result, dst, loc);
-        }
-
-        u32 skip = emit_jump(Fa_OpCode::JUMP_IF_FALSE, dst, loc);
-
-        {
-            RegMark mark(m_current);
-            Fa_ExprResult expr_result;
-            COMPILE_EXPR_IMPL(e->get_right(), &expr_result);
-            discharge(expr_result, dst, loc);
-        }
-
-        patch_jump(skip);
-        return Fa_ExprResult::reg(dst);
-    }
-
-    if (op == AST::Fa_BinaryOp::OP_OR) {
-        u8 dst;
-        ALLOC_REG(&dst);
-
-        {
-            RegMark mark(m_current);
-            Fa_ExprResult expr_result;
-            COMPILE_EXPR_IMPL(e->get_left(), &expr_result);
-            discharge(expr_result, dst, loc);
-        }
-
-        u32 skip = emit_jump(Fa_OpCode::JUMP_IF_TRUE, dst, loc);
-
-        {
-            RegMark mark(m_current);
-            Fa_ExprResult expr_result;
-            COMPILE_EXPR_IMPL(e->get_right(), &expr_result);
-            discharge(expr_result, dst, loc);
-        }
-
-        patch_jump(skip);
-        return Fa_ExprResult::reg(dst);
-    }
+    /// TODO: short circuit AND / OR 
 
     Fa_OpCode bc_op = Fa_OpCode::NOP;
     bool swapped = false;
@@ -1230,8 +803,8 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_binary_impl(AST::Fa_BinaryExpr* e)
         if (amount < 0 || amount > 63)
             return report_error(CompilerError::SHIFT_AMOUNT_OUT_OF_RANGE, amount_expr->get_location());
 
-        RegMark mark(m_current);
-        Fa_ExprResult expr_result;
+        CFG_RegMark mark(m_current);
+        CFG_Fa_ExprResult expr_result;
         u8 lhs;
 
         COMPILE_EXPR_IMPL(e->get_left(), &expr_result);
@@ -1239,11 +812,11 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_binary_impl(AST::Fa_BinaryExpr* e)
         u32 pc = emit(Fa_make_ABC(bc_op, 0, lhs, static_cast<u8>(amount)), loc);
         u8 ic = current_chunk()->alloc_ic_slot();
         emit(Fa_make_ABC(Fa_OpCode::NOP, ic, 0, 0), loc);
-        return Fa_ExprResult::reloc(pc);
+        return CFG_Fa_ExprResult::reloc(pc);
     }
 
-    RegMark mark(m_current);
-    Fa_ExprResult lhs_ret, rhs_ret;
+    CFG_RegMark mark(m_current);
+    CFG_Fa_ExprResult lhs_ret, rhs_ret;
     u8 lhs, rhs;
 
     COMPILE_EXPR_IMPL(e->get_left(), &lhs_ret);
@@ -1257,30 +830,18 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_binary_impl(AST::Fa_BinaryExpr* e)
     u32 pc = emit(Fa_make_ABC(bc_op, 0, lhs, rhs), loc);
     u8 ic = current_chunk()->alloc_ic_slot();
     emit(Fa_make_ABC(Fa_OpCode::NOP, ic, 0, 0), loc);
-    return Fa_ExprResult::reloc(pc);
+    return CFG_Fa_ExprResult::reloc(pc);
 }
 
-bool Compiler::is_declaration(AST::Fa_AssignmentExpr const* e) const
-{
-    if (!AST::is_name(e->get_target()))
-        // complex expression cannot be used for decl
-        return false;
-
-    auto name = AS_CONST_NAME(e->get_target());
-    if (lookup_local(name->get_value()))
-        return false;
-    return true;
-}
-
-Fa_ErrorOr<Fa_ExprResult> Compiler::compile_assign_impl(AST::Fa_AssignmentExpr* e)
+Fa_ErrorOr<CFG_Fa_ExprResult> CFG_Compiler::compile_assign_impl(AST::Fa_AssignmentExpr* e)
 {
     Fa_SourceLocation loc = e->get_location();
     AST::Fa_Expr* target = e->get_target();
 
     if (AST::is_index(target)) {
         auto index_expr = AS_INDEX(target);
-        RegMark mark(m_current);
-        Fa_ExprResult list_expr_result, index_expr_result, value_expr_result;
+        CFG_RegMark mark(m_current);
+        CFG_Fa_ExprResult list_expr_result, index_expr_result, value_expr_result;
         u8 list_reg, index_reg, value_reg;
 
         COMPILE_EXPR_IMPL(index_expr->get_object(), &list_expr_result);
@@ -1290,7 +851,7 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_assign_impl(AST::Fa_AssignmentExpr* 
         ANY_REG(index_expr_result, loc, &index_reg);
         ANY_REG(value_expr_result, loc, &value_reg);
         emit(Fa_make_ABC(Fa_OpCode::LIST_SET, list_reg, index_reg, value_reg), loc);
-        return Fa_ExprResult::reg(value_reg);
+        return CFG_Fa_ExprResult::reg(value_reg);
     }
 
     if (target->get_kind() == AST::Fa_Expr::Kind::GET) {
@@ -1302,8 +863,8 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_assign_impl(AST::Fa_AssignmentExpr* 
             if (ClassDesc const* desc = resolve_receiver_class(get_expr->get_object())) {
                 int field_idx = desc->field_index(member_name->get_value());
                 if (field_idx >= 0) {
-                    RegMark mark(m_current);
-                    Fa_ExprResult object_expr_result, value_expr_result;
+                    CFG_RegMark mark(m_current);
+                    CFG_Fa_ExprResult object_expr_result, value_expr_result;
                     u8 object_reg, value_reg;
 
                     COMPILE_EXPR_IMPL(get_expr->get_object(), &object_expr_result);
@@ -1313,7 +874,7 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_assign_impl(AST::Fa_AssignmentExpr* 
                     emit(Fa_make_ABC(Fa_OpCode::SET_FIELD, object_reg,
                              static_cast<u8>(field_idx), value_reg),
                         loc);
-                    return Fa_ExprResult::reg(value_reg);
+                    return CFG_Fa_ExprResult::reg(value_reg);
                 }
             }
 
@@ -1328,10 +889,10 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_assign_impl(AST::Fa_AssignmentExpr* 
             if (is_this_reference(get_expr->get_object())) {
                 int field_idx = current_method_field_index(member_name->get_value());
                 if (field_idx >= 0) {
-                    RegMark mark(m_current);
-                    LocalVar const* self = lookup_local(kClassInstanceName);
+                    CFG_RegMark mark(m_current);
+                    CFG_LocalVar const* self = lookup_local(kClassInstanceName);
                     if (self != nullptr) {
-                        Fa_ExprResult expr_result;
+                        CFG_Fa_ExprResult expr_result;
                         u8 value_reg;
 
                         COMPILE_EXPR_IMPL(e->get_value(), &expr_result);
@@ -1339,7 +900,7 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_assign_impl(AST::Fa_AssignmentExpr* 
                         emit(Fa_make_ABC(Fa_OpCode::SET_FIELD, self->reg,
                                  static_cast<u8>(field_idx), value_reg),
                             loc);
-                        return Fa_ExprResult::reg(value_reg);
+                        return CFG_Fa_ExprResult::reg(value_reg);
                     }
                 }
             }
@@ -1355,71 +916,71 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_assign_impl(AST::Fa_AssignmentExpr* 
             if (!infer_constructed_class(e->get_value()).empty())
                 goto instance_decl;
 
-            RegMark mark(m_current);
-            Fa_ExprResult expr_result;
+            CFG_RegMark mark(m_current);
+            CFG_Fa_ExprResult expr_result;
             u8 src;
 
             COMPILE_EXPR_IMPL(e->get_value(), &expr_result);
             ANY_REG(expr_result, loc, &src);
             u16 kidx = intern_string(name->get_value());
             emit(Fa_make_ABx(Fa_OpCode::STORE_GLOBAL, src, kidx), loc);
-            return Fa_ExprResult::reg(src);
+            return CFG_Fa_ExprResult::reg(src);
         }
     instance_decl:
         u8 reg;
-        Fa_ExprResult expr_result;
+        CFG_Fa_ExprResult expr_result;
 
         ALLOC_REG(&reg);
         COMPILE_EXPR_IMPL(e->get_value(), &expr_result);
         discharge(expr_result, reg, loc);
         declare_local(name->get_value(), reg, infer_constructed_class(e->get_value()));
-        return Fa_ExprResult::reg(reg);
+        return CFG_Fa_ExprResult::reg(reg);
     }
 
     if (int field_idx = current_method_field_index(name->get_value()); field_idx >= 0) {
-        RegMark mark(m_current);
-        LocalVar const* self = lookup_local(kClassInstanceName);
+        CFG_RegMark mark(m_current);
+        CFG_LocalVar const* self = lookup_local(kClassInstanceName);
         if (self == nullptr)
             return report_error(CompilerError::INVALID_ASSIGNMENT_TARGET, name->get_location());
 
-        Fa_ExprResult expr_result;
+        CFG_Fa_ExprResult expr_result;
         u8 value_reg;
 
         COMPILE_EXPR_IMPL(e->get_value(), &expr_result);
         ANY_REG(expr_result, loc, &value_reg);
         emit(Fa_make_ABC(Fa_OpCode::SET_FIELD, self->reg, static_cast<u8>(field_idx), value_reg), loc);
-        return Fa_ExprResult::reg(value_reg);
+        return CFG_Fa_ExprResult::reg(value_reg);
     }
 
     VarInfo vi = resolve_name(name->get_value());
     if (vi.kind == VarInfo::Kind::LOCAL) {
         auto ret = compile_expr(e->get_value(), &vi.index);
-        return Fa_ExprResult::reg(vi.index);
+        return CFG_Fa_ExprResult::reg(vi.index);
     }
 
     if (!m_current->is_top_level) {
         u8 reg;
-        Fa_ExprResult expr_result;
+        CFG_Fa_ExprResult expr_result;
 
         ALLOC_REG(&reg);
         COMPILE_EXPR_IMPL(e->get_value(), &expr_result);
         discharge(expr_result, reg, loc);
         declare_local(name->get_value(), reg);
-        return Fa_ExprResult::reg(reg);
+        return CFG_Fa_ExprResult::reg(reg);
     }
 
-    RegMark mark(m_current);
-    Fa_ExprResult expr_result;
+    CFG_RegMark mark(m_current);
+    CFG_Fa_ExprResult expr_result;
     u8 src;
 
     COMPILE_EXPR_IMPL(e->get_value(), &expr_result);
     ANY_REG(expr_result, loc, &src);
     u16 kidx = intern_string(name->get_value());
     emit(Fa_make_ABx(Fa_OpCode::STORE_GLOBAL, src, kidx), loc);
-    return Fa_ExprResult::reg(src);
+    return CFG_Fa_ExprResult::reg(src);
 }
 
-Fa_ErrorOr<Fa_ExprResult> Compiler::compile_call_impl(AST::Fa_CallExpr* e, u8* dst, bool tail)
+Fa_ErrorOr<CFG_Fa_ExprResult> CFG_Compiler::compile_call_impl(AST::Fa_CallExpr* e, u8* dst, bool tail)
 {
     Fa_SourceLocation loc = e->get_location();
     auto fn_reg_ret = dst ? *dst : alloc_register();
@@ -1433,7 +994,7 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_call_impl(AST::Fa_CallExpr* e, u8* d
                 if (slot >= 0) {
                     // FAST PATH: statically known instance + known method slot.
                     u8 receiver_reg, reserved_reg;
-                    Fa_ExprResult expr_result;
+                    CFG_Fa_ExprResult expr_result;
 
                     ALLOC_REG(&receiver_reg);
                     COMPILE_EXPR_IMPL(get->get_object(), &expr_result);
@@ -1442,7 +1003,7 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_call_impl(AST::Fa_CallExpr* e, u8* d
 
                     for (AST::Fa_Expr* arg : e->get_args()) {
                         u8 arg_reg;
-                        Fa_ExprResult expr_result;
+                        CFG_Fa_ExprResult expr_result;
                         ALLOC_REG(&arg_reg);
                         COMPILE_EXPR_IMPL(arg, &expr_result);
                         discharge(expr_result, arg_reg, loc);
@@ -1456,7 +1017,7 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_call_impl(AST::Fa_CallExpr* e, u8* d
                         emit(Fa_make_ABC(Fa_OpCode::RETURN, receiver_reg, 1, 0), loc);
 
                     m_current->free_regs_to(receiver_reg + 1);
-                    return Fa_ExprResult::reg(receiver_reg);
+                    return CFG_Fa_ExprResult::reg(receiver_reg);
                 }
                 // Name resolved to the class but not to a known method
                 // (e.g. dynamically-added attribute) — fall through.
@@ -1466,7 +1027,7 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_call_impl(AST::Fa_CallExpr* e, u8* d
         // SLOW PATH — unchanged dict-style dispatch for unknown receivers.
         u8 receiver_reg;
         ALLOC_REG(&receiver_reg);
-        Fa_ExprResult expr_result;
+        CFG_Fa_ExprResult expr_result;
         COMPILE_EXPR_IMPL(get->get_object(), &expr_result);
         discharge(expr_result, receiver_reg, get->get_object()->get_location());
 
@@ -1477,7 +1038,7 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_call_impl(AST::Fa_CallExpr* e, u8* d
                      intern_string(member_name->get_value())),
                 get->get_member()->get_location());
         } else {
-            Fa_ExprResult expr_result;
+            CFG_Fa_ExprResult expr_result;
             COMPILE_EXPR_IMPL(get->get_member(), &expr_result);
             discharge(expr_result, member_reg, get->get_member()->get_location());
         }
@@ -1488,7 +1049,7 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_call_impl(AST::Fa_CallExpr* e, u8* d
         for (AST::Fa_Expr* arg : e->get_args()) {
             u8 arg_reg;
             ALLOC_REG(&arg_reg);
-            Fa_ExprResult expr_result;
+            CFG_Fa_ExprResult expr_result;
             COMPILE_EXPR_IMPL(arg, &expr_result);
             discharge(expr_result, arg_reg, loc);
             m_current->free_regs_to(arg_reg + 1);
@@ -1498,24 +1059,24 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_call_impl(AST::Fa_CallExpr* e, u8* d
         if (tail && !m_current->is_top_level) {
             emit(Fa_make_ABC(Fa_OpCode::CALL_TAIL, fn_reg, argc, 0), loc);
             m_current->free_regs_to(fn_reg);
-            return Fa_ExprResult::reg(fn_reg);
+            return CFG_Fa_ExprResult::reg(fn_reg);
         }
 
         u8 ic = current_chunk()->alloc_ic_slot();
         emit(Fa_make_ABC(Fa_OpCode::IC_CALL, fn_reg, argc, ic), loc);
         m_current->free_regs_to(fn_reg + 1);
-        return Fa_ExprResult::reg(fn_reg);
+        return CFG_Fa_ExprResult::reg(fn_reg);
     }
 
     // Plain function call (no GetExpr callee) — unchanged.
-    Fa_ExprResult expr_result;
+    CFG_Fa_ExprResult expr_result;
     COMPILE_EXPR_IMPL(e->get_callee(), &expr_result);
     discharge(expr_result, fn_reg, loc);
 
     for (AST::Fa_Expr* arg : e->get_args()) {
         u8 arg_reg;
         ALLOC_REG(&arg_reg);
-        Fa_ExprResult expr_result;
+        CFG_Fa_ExprResult expr_result;
         COMPILE_EXPR_IMPL(arg, &expr_result);
         discharge(expr_result, arg_reg, loc);
         m_current->free_regs_to(arg_reg + 1);
@@ -1525,16 +1086,16 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_call_impl(AST::Fa_CallExpr* e, u8* d
     if (tail && !m_current->is_top_level) {
         emit(Fa_make_ABC(Fa_OpCode::CALL_TAIL, fn_reg, argc, 0), loc);
         m_current->free_regs_to(fn_reg);
-        return Fa_ExprResult::reg(fn_reg);
+        return CFG_Fa_ExprResult::reg(fn_reg);
     }
 
     u8 ic = current_chunk()->alloc_ic_slot();
     emit(Fa_make_ABC(Fa_OpCode::IC_CALL, fn_reg, argc, ic), loc);
     m_current->free_regs_to(fn_reg + 1);
-    return Fa_ExprResult::reg(fn_reg);
+    return CFG_Fa_ExprResult::reg(fn_reg);
 }
 
-Fa_ErrorOr<Fa_ExprResult> Compiler::compile_list_impl(AST::Fa_ListExpr* e)
+Fa_ErrorOr<CFG_Fa_ExprResult> CFG_Compiler::compile_list_impl(AST::Fa_ListExpr* e)
 {
     Fa_SourceLocation loc = e->get_location();
 
@@ -1550,7 +1111,7 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_list_impl(AST::Fa_ListExpr* e)
     emit(Fa_make_ABC(Fa_OpCode::LIST_NEW, list_reg, cap, 0), loc);
 
     for (AST::Fa_Expr* elem : e->get_elements()) {
-        Fa_ExprResult expr_result;
+        CFG_Fa_ExprResult expr_result;
         u8 reg;
         ALLOC_REG(&reg);
         COMPILE_EXPR_IMPL(elem, &expr_result);
@@ -1563,24 +1124,24 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_list_impl(AST::Fa_ListExpr* e)
         emit(Fa_make_ABC(Fa_OpCode::MOVE, dst, list_reg, 0), loc);
 
     m_current->free_regs_to(dst + 1);
-    return Fa_ExprResult::reg(dst);
+    return CFG_Fa_ExprResult::reg(dst);
 }
 
-Fa_ErrorOr<Fa_ExprResult> Compiler::compile_index_impl(AST::Fa_IndexExpr* e)
+Fa_ErrorOr<CFG_Fa_ExprResult> CFG_Compiler::compile_index_impl(AST::Fa_IndexExpr* e)
 {
     Fa_SourceLocation loc = e->get_location();
-    RegMark mark(m_current);
-    Fa_ExprResult object_expr_result, index_expr_result;
+    CFG_RegMark mark(m_current);
+    CFG_Fa_ExprResult object_expr_result, index_expr_result;
     COMPILE_EXPR_IMPL(e->get_object(), &object_expr_result);
     COMPILE_EXPR_IMPL(e->get_index(), &index_expr_result);
     u8 object_reg, index_reg;
     ANY_REG(object_expr_result, loc, &object_reg);
     ANY_REG(index_expr_result, loc, &index_reg);
     u32 pc = emit(Fa_make_ABC(Fa_OpCode::INDEX, 0, object_reg, index_reg), loc);
-    return Fa_ExprResult::reloc(pc);
+    return CFG_Fa_ExprResult::reloc(pc);
 }
 
-Fa_ErrorOr<Fa_ExprResult> Compiler::compile_dict_impl(AST::Fa_DictExpr* e)
+Fa_ErrorOr<CFG_Fa_ExprResult> CFG_Compiler::compile_dict_impl(AST::Fa_DictExpr* e)
 {
     Fa_SourceLocation loc = e->get_location();
 
@@ -1594,13 +1155,13 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_dict_impl(AST::Fa_DictExpr* e)
 
     for (auto const& [key, value] : e->get_content()) {
         u8 key_reg;
-        Fa_ExprResult expr_result;
+        CFG_Fa_ExprResult expr_result;
         ALLOC_REG(&key_reg);
         COMPILE_EXPR_IMPL(key, &expr_result);
         discharge(expr_result, key_reg, key->get_location());
 
         u8 value_reg;
-        Fa_ExprResult val_expr_result;
+        CFG_Fa_ExprResult val_expr_result;
         ALLOC_REG(&value_reg);
         COMPILE_EXPR_IMPL(value, &val_expr_result);
         discharge(val_expr_result, value_reg, value->get_location());
@@ -1614,10 +1175,10 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_dict_impl(AST::Fa_DictExpr* e)
         emit(Fa_make_ABC(Fa_OpCode::MOVE, dst, fn_reg, 0), loc);
 
     m_current->free_regs_to(dst + 1);
-    return Fa_ExprResult::reg(dst);
+    return CFG_Fa_ExprResult::reg(dst);
 }
 
-Fa_ErrorOr<Fa_ExprResult> Compiler::compile_get_impl(AST::Fa_GetExpr* e)
+Fa_ErrorOr<CFG_Fa_ExprResult> CFG_Compiler::compile_get_impl(AST::Fa_GetExpr* e)
 {
     Fa_SourceLocation loc = e->get_location();
 
@@ -1625,15 +1186,15 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_get_impl(AST::Fa_GetExpr* e)
         if (ClassDesc const* desc = resolve_receiver_class(e->get_object())) {
             int idx = desc->field_index(member_name->get_value());
             if (idx >= 0) {
-                RegMark mark(m_current);
-                Fa_ExprResult expr_result;
+                CFG_RegMark mark(m_current);
+                CFG_Fa_ExprResult expr_result;
                 u8 obj_reg;
 
                 COMPILE_EXPR_IMPL(e->get_object(), &expr_result);
                 ANY_REG(expr_result, loc, &obj_reg);
 
                 u32 pc = emit(Fa_make_ABC(Fa_OpCode::GET_FIELD, 0, obj_reg, static_cast<u8>(idx)), loc);
-                return Fa_ExprResult::reloc(pc);
+                return CFG_Fa_ExprResult::reloc(pc);
             }
             // Name matches the class but isn't a field — could be a bound
             // method reference; fall through to the slow path below.
@@ -1647,17 +1208,17 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_get_impl(AST::Fa_GetExpr* e)
         if (is_this_reference(e->get_object())) {
             int idx = current_method_field_index(member_name->get_value());
             if (idx >= 0) {
-                LocalVar const* self = lookup_local(kClassInstanceName);
+                CFG_LocalVar const* self = lookup_local(kClassInstanceName);
                 if (self != nullptr) {
                     u32 pc = emit(Fa_make_ABC(Fa_OpCode::GET_FIELD, 0, self->reg, static_cast<u8>(idx)), loc);
-                    return Fa_ExprResult::reloc(pc);
+                    return CFG_Fa_ExprResult::reloc(pc);
                 }
             }
         }
     }
 
-    RegMark mark(m_current);
-    Fa_ExprResult object_expr_result;
+    CFG_RegMark mark(m_current);
+    CFG_Fa_ExprResult object_expr_result;
     u8 object_reg;
 
     COMPILE_EXPR_IMPL(e->get_object(), &object_expr_result);
@@ -1671,33 +1232,33 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_get_impl(AST::Fa_GetExpr* e)
                  intern_string(member_name->get_value())),
             e->get_member()->get_location());
     } else {
-        Fa_ExprResult expr_result;
+        CFG_Fa_ExprResult expr_result;
         COMPILE_EXPR_IMPL(e->get_member(), &expr_result);
         discharge(expr_result, member_reg, e->get_member()->get_location());
     }
 
     u32 pc = emit(Fa_make_ABC(Fa_OpCode::INDEX, 0, object_reg, member_reg), loc);
-    return Fa_ExprResult::reloc(pc);
+    return CFG_Fa_ExprResult::reloc(pc);
 }
 
-void Compiler::discharge(Fa_ExprResult const& r, u8 dst, Fa_SourceLocation loc)
+void CFG_Compiler::discharge(CFG_Fa_ExprResult const& r, u8 dst, Fa_SourceLocation loc)
 {
     switch (r.kind) {
-    case Fa_ExprResult::Kind::REG:
+    case CFG_Fa_ExprResult::Kind::REG:
         if (r.reg_ != dst)
             emit(Fa_make_ABC(Fa_OpCode::MOVE, dst, r.reg_, 0), loc);
         break;
-    case Fa_ExprResult::Kind::RELOC: patch_a(current_chunk(), r.reloc_pc, dst); break;
-    case Fa_ExprResult::Kind::KINT: emit_load_value(dst, Fa_MAKE_INTEGER(r.ival), loc); break;
-    case Fa_ExprResult::Kind::KFLOAT: emit_load_value(dst, Fa_MAKE_REAL(r.dval), loc); break;
-    case Fa_ExprResult::Kind::KBOOL: emit_load_value(dst, Fa_MAKE_BOOL(r.bval), loc); break;
-    case Fa_ExprResult::Kind::KNIL: emit_load_value(dst, Fa_MAKE_NIL(), loc); break;
+    case CFG_Fa_ExprResult::Kind::RELOC: patch_a(current_chunk(), r.reloc_pc, dst); break;
+    case CFG_Fa_ExprResult::Kind::KINT: emit_load_value(dst, Fa_MAKE_INTEGER(r.ival), loc); break;
+    case CFG_Fa_ExprResult::Kind::KFLOAT: emit_load_value(dst, Fa_MAKE_REAL(r.dval), loc); break;
+    case CFG_Fa_ExprResult::Kind::KBOOL: emit_load_value(dst, Fa_MAKE_BOOL(r.bval), loc); break;
+    case CFG_Fa_ExprResult::Kind::KNIL: emit_load_value(dst, Fa_MAKE_NIL(), loc); break;
     }
 }
 
-Fa_ErrorOr<u8> Compiler::any_reg(Fa_ExprResult const& r, Fa_SourceLocation loc)
+Fa_ErrorOr<u8> CFG_Compiler::any_reg(CFG_Fa_ExprResult const& r, Fa_SourceLocation loc)
 {
-    if (r.kind == Fa_ExprResult::Kind::REG)
+    if (r.kind == CFG_Fa_ExprResult::Kind::REG)
         return r.reg_;
 
     u8 dst;
@@ -1706,16 +1267,16 @@ Fa_ErrorOr<u8> Compiler::any_reg(Fa_ExprResult const& r, Fa_SourceLocation loc)
     return dst;
 }
 
-Fa_ErrorOr<u8> Compiler::compile_expr(AST::Fa_Expr* e, u8* dst)
+Fa_ErrorOr<u8> CFG_Compiler::compile_expr(AST::Fa_Expr* e, u8* dst)
 {
     if (e == nullptr)
-        return error_reg();
+        return ERROR_REG;
 
     if (dst != nullptr)
         reserve_register(*dst);
 
     Fa_SourceLocation loc = e->get_location();
-    Fa_ExprResult r;
+    CFG_Fa_ExprResult r;
     COMPILE_EXPR_IMPL(e, &r);
     if (dst != nullptr) {
         discharge(r, *dst, loc);
@@ -1725,9 +1286,7 @@ Fa_ErrorOr<u8> Compiler::compile_expr(AST::Fa_Expr* e, u8* dst)
     return any_reg(r, loc);
 }
 
-u8 Compiler::error_reg() const { return 0; }
-
-Fa_ErrorOr<u8> Compiler::alloc_register()
+Fa_ErrorOr<u8> CFG_Compiler::alloc_register()
 {
     u8 reg = m_current->alloc_register();
     if (reg >= MAX_REGS)
@@ -1735,17 +1294,17 @@ Fa_ErrorOr<u8> Compiler::alloc_register()
     return reg;
 }
 
-void Compiler::declare_local(Fa_StringRef const& name, u8 m_reg)
+void CFG_Compiler::declare_local(Fa_StringRef const& name, u8 m_reg)
 {
     declare_local(name, m_reg, "");
 }
 
-void Compiler::declare_local(Fa_StringRef const& name, u8 m_reg, Fa_StringRef const& known_class)
+void CFG_Compiler::declare_local(Fa_StringRef const& name, u8 m_reg, Fa_StringRef const& known_class)
 {
     m_current->locals.push({ name, m_current->scope_depth, m_reg, known_class });
 }
 
-LocalVar const* Compiler::lookup_local(Fa_StringRef const& name) const
+CFG_LocalVar const* CFG_Compiler::lookup_local(Fa_StringRef const& name) const
 {
     auto const& locals = m_current->locals;
     for (auto i = static_cast<int>(locals.size()) - 1; i >= 0; i -= 1) {
@@ -1756,9 +1315,9 @@ LocalVar const* Compiler::lookup_local(Fa_StringRef const& name) const
     return nullptr;
 }
 
-Compiler::VarInfo Compiler::resolve_name(Fa_StringRef const& name)
+CFG_Compiler::VarInfo CFG_Compiler::resolve_name(Fa_StringRef const& name)
 {
-    if (LocalVar const* local = lookup_local(name))
+    if (CFG_LocalVar const* local = lookup_local(name))
         return { VarInfo::Kind::LOCAL, local->reg };
 
     return VarInfo {
@@ -1767,49 +1326,17 @@ Compiler::VarInfo Compiler::resolve_name(Fa_StringRef const& name)
     };
 }
 
-u32 Compiler::emit(u32 instr, Fa_SourceLocation loc) { return current_chunk()->emit(instr, loc); }
+u32 CFG_Compiler::emit(u32 instr, Fa_SourceLocation loc)
+{
+    return current_chunk()->emit(instr, loc);
+}
 
-u32 Compiler::emit_jump(Fa_OpCode op, u8 cond, Fa_SourceLocation loc)
+u32 CFG_Compiler::emit_jump(Fa_OpCode op, u8 cond, Fa_SourceLocation loc)
 {
     return emit(Fa_make_AsBx(op, cond, 0), loc);
 }
 
-void Compiler::patch_jump(u32 idx)
-{
-    if (!current_chunk()->patch_jump(idx))
-        diagnostic::panic(CompilerError::JUMP_OFFSET_OVERFLOW);
-}
-
-void Compiler::push_loop(u32 loop_start)
-{
-    m_current->loop_stack.push({ { }, { }, loop_start });
-}
-
-void Compiler::pop_loop(u32 loop_exit, u32 continue_target, u32 line)
-{
-    (void)line;
-    assert(!m_current->loop_stack.empty());
-    auto& ctx = m_current->loop_stack.back();
-
-    for (u32 idx : ctx.break_patches)
-        patch_jump_to(idx, loop_exit);
-    for (u32 idx : ctx.continue_patches)
-        patch_jump_to(idx, continue_target);
-
-    m_current->loop_stack.pop();
-}
-
-void Compiler::patch_jump_to(u32 instr_idx, u32 target)
-{
-    auto offset = static_cast<i32>(target) - static_cast<i32>(instr_idx) - 1;
-    if (offset > JUMP_OFFSET || offset < -JUMP_OFFSET)
-        diagnostic::panic(CompilerError::LOOP_JUMP_OFFSET_OVERFLOW);
-
-    u32 word = current_chunk()->code[instr_idx];
-    current_chunk()->code[instr_idx] = Fa_make_AsBx(Fa_instr_op(word), Fa_instr_A(word), offset);
-}
-
-void Compiler::emit_load_value(u8 dst, Fa_Value v, Fa_SourceLocation loc)
+void CFG_Compiler::emit_load_value(u8 dst, Fa_Value v, Fa_SourceLocation loc)
 {
     if (Fa_IS_NIL(v)) {
         emit(Fa_make_ABC(Fa_OpCode::LOAD_NIL, dst, dst, 1), loc);
@@ -1832,16 +1359,32 @@ void Compiler::emit_load_value(u8 dst, Fa_Value v, Fa_SourceLocation loc)
     emit(Fa_make_ABx(Fa_OpCode::LOAD_CONST, dst, current_chunk()->add_constant(v)), loc);
 }
 
-Fa_Chunk* Compiler::current_chunk() const { return m_current->chunk; }
+Fa_Chunk* CFG_Compiler::current_chunk() const { return m_current->chunk; }
 
-u32 Compiler::current_offset() const { return current_chunk()->code.size(); }
+u32 CFG_Compiler::current_offset() const { return current_chunk()->code.size(); }
 
-void Compiler::begin_scope() { m_current->scope_depth += 1; }
+void CFG_Compiler::begin_scope() { m_current->scope_depth += 1; }
 
-void Compiler::end_scope(Fa_SourceLocation loc)
+// wherever CFG_Compiler::end_scope lives
+void CFG_Compiler::end_scope_no_reclaim(Fa_SourceLocation loc)
 {
     (void)loc;
     m_current->scope_depth -= 1;
+    unsigned int depth = m_current->scope_depth;
+    auto& locals = m_current->locals;
+    size_t pop_from = locals.size();
+    while (pop_from > 0 && locals[pop_from - 1].depth > depth)
+        pop_from -= 1;
+    // No next_reg rollback: monotonic allocation stays monotonic.
+    locals.resize(static_cast<u32>(pop_from));
+}
+
+void CFG_Compiler::end_scope(Fa_SourceLocation loc)
+{
+    (void)loc;
+    if (m_current->scope_depth > 0)
+        m_current->scope_depth -= 1;
+
     unsigned int depth = m_current->scope_depth;
     auto& locals = m_current->locals;
     size_t pop_from = locals.size();
@@ -1855,13 +1398,12 @@ void Compiler::end_scope(Fa_SourceLocation loc)
     locals.resize(static_cast<u32>(pop_from));
 }
 
-u32 Compiler::intern_string(Fa_StringRef const& str)
+u32 CFG_Compiler::intern_string(Fa_StringRef const& str)
 {
     Fa_Chunk* chunk = current_chunk();
     auto key = std::make_pair(str, chunk);
     if (u16* idx = m_string_cache.find_ptr(key))
         return *idx;
-
     Fa_ObjString* obj = get_allocator().allocate_object<Fa_ObjString>();
     obj->str = str;
     u16 idx = chunk->add_constant(Fa_MAKE_OBJECT(obj));
@@ -1869,7 +1411,7 @@ u32 Compiler::intern_string(Fa_StringRef const& str)
     return idx;
 }
 
-Compiler::ClassDesc const* Compiler::resolve_receiver_class(AST::Fa_Expr const* e) const
+CFG_Compiler::ClassDesc const* CFG_Compiler::resolve_receiver_class(AST::Fa_Expr const* e) const
 {
     using EK = AST::Fa_Expr::Kind;
     EK e_kind = e->get_kind();
@@ -1884,7 +1426,7 @@ Compiler::ClassDesc const* Compiler::resolve_receiver_class(AST::Fa_Expr const* 
 
     // Case 2: the expression is a local variable known to hold an
     // instance of some class (e.g. obj after obj = كلب.بداية()).
-    if (LocalVar const* local = lookup_local(name)) {
+    if (CFG_LocalVar const* local = lookup_local(name)) {
         if (!local->known_class.empty()) {
             if (auto* d = m_class_registry.find_ptr(local->known_class))
                 return d;
@@ -1894,21 +1436,21 @@ Compiler::ClassDesc const* Compiler::resolve_receiver_class(AST::Fa_Expr const* 
     return nullptr;
 }
 
-Fa_StringRef Compiler::infer_constructed_class(AST::Fa_Expr const* e) const
+Fa_StringRef CFG_Compiler::infer_constructed_class(AST::Fa_Expr const* e) const
 {
     if (e == nullptr || e->get_kind() != AST::Fa_Expr::Kind::CALL)
-        return "";
+        return { };
 
     auto const* call = AS_CONST_CALL(e);
     AST::Fa_Expr const* callee = call->get_callee();
     if (callee == nullptr || callee->get_kind() != AST::Fa_Expr::Kind::NAME)
-        return "";
+        return { };
 
     Fa_StringRef name = AS_CONST_NAME(callee)->get_value();
     return m_class_registry.find_ptr(name) != nullptr ? name : Fa_StringRef { "" };
 }
 
-int Compiler::current_method_field_index(Fa_StringRef const& name) const
+int CFG_Compiler::current_method_field_index(Fa_StringRef const& name) const
 {
     if (m_current == nullptr || !m_current->is_class_method)
         return -1;
@@ -1921,20 +1463,26 @@ int Compiler::current_method_field_index(Fa_StringRef const& name) const
     return -1;
 }
 
-Fa_ErrorOr<bool> Compiler::compile_cfg_body(Fa_CFG* cfg, bool is_top_level_script)
+Fa_ErrorOr<bool> CFG_Compiler::compile_cfg_body(Fa_CFG* cfg, bool is_top_level_script)
 {
+    if (cfg == nullptr)
+        return report_error(CompilerError::MISSING_CFG, { });
+
     // reverse-postorder layout — identical algorithm to compile_if_cfg's,
     // generalized from succ_true/succ_false/succ_jump to the real
     // get_succs()[0]/[1] (BRANCH: [0]=true,[1]=false; JUMP: [0]=target)
     Fa_Array<bool> visited(cfg->blocks.size(), false);
     Fa_Array<Fa_BasicBlock*> post, layout;
+
     struct Frame {
         Fa_BasicBlock* b;
         int next;
     };
+
     Fa_Array<Frame> stack;
     stack.push({ cfg->entry, 0 });
     visited[cfg->entry->id] = true;
+
     while (!stack.empty()) {
         Frame& top = stack[stack.size() - 1];
         Fa_Array<Fa_BasicBlock*> const& s = top.b->succs;
@@ -1956,6 +1504,7 @@ Fa_ErrorOr<bool> Compiler::compile_cfg_body(Fa_CFG* cfg, bool is_top_level_scrip
             stack.erase(stack.size() - 1);
         }
     }
+
     for (size_t i = 0; i < post.size(); ++i)
         layout.push(post[post.size() - 1 - i]);
 
@@ -1966,15 +1515,18 @@ Fa_ErrorOr<bool> Compiler::compile_cfg_body(Fa_CFG* cfg, bool is_top_level_scrip
     for (size_t i = 0; i < layout.size(); ++i) {
         Fa_BasicBlock* b = layout[i];
         m_current->is_dead = false; // CFG reachability already guarantees this block matters
+        while (m_current->scope_depth < b->scope_depth)
+            begin_scope();
+        while (m_current->scope_depth > b->scope_depth)
+            end_scope_no_reclaim({ 1, 1, 0 });
         block_start[b->id] = current_offset();
 
-        for (AST::Fa_Stmt* stmt : b->stmts) {
+        for (AST::Fa_Stmt* stmt : b->stmts)
             // FUNC/CLASS_DEF inside a statement list dispatch into their
             // own pre-lowered Fa_CFG (Phase 4), NOT the old compile_stmt
             // path — everything else still goes through compile_stmt
             // exactly as today.
-            Fa_VERIFY_RESULT(compile_stmt(stmt));
-        }
+            COMPILE_STMT_DISCARD(stmt);
 
         Fa_BasicBlock* next = (i + 1 < layout.size()) ? layout[i + 1] : nullptr;
         Fa_SourceLocation loc = b->stmts.empty() ? Fa_SourceLocation { 1, 1, 0 } : b->stmts.back()->get_location();
@@ -1982,8 +1534,7 @@ Fa_ErrorOr<bool> Compiler::compile_cfg_body(Fa_CFG* cfg, bool is_top_level_scrip
         switch (b->terminator) {
         case TerminatorTag::BRANCH: {
             u8 cond;
-            RegMark mark(m_current);
-            Fa_ExprResult r;
+            CFG_Fa_ExprResult r;
             COMPILE_EXPR_IMPL(b->cond, &r);
             ANY_REG(r, loc, &cond);
             u32 jf = emit_jump(Fa_OpCode::JUMP_IF_FALSE, cond, loc);
@@ -2007,7 +1558,17 @@ Fa_ErrorOr<bool> Compiler::compile_cfg_body(Fa_CFG* cfg, bool is_top_level_scrip
             break; // compile_stmt already emitted RETURN/RETURN_NIL
         case TerminatorTag::NORETURN:
             if (is_top_level_script && !b->stmts.empty() && is_terminal_top_level_call(b->stmts.back())) {
-                /* same REPL-return special case compile() has today */
+                auto const* expr_stmt = AS_CONST_EXPR_STMT(b->stmts.back());
+                Fa_SourceLocation loc = expr_stmt->get_location();
+                CFG_RegMark mark(m_current);
+                auto expr_result = compile_expr_impl(expr_stmt->get_expr());
+                if (expr_result.has_error())
+                    break;
+                auto src = any_reg(expr_result.value(), loc);
+                if (src.has_error())
+                    break;
+                emit(Fa_make_ABC(Fa_OpCode::RETURN, src.value(), 1, 0), loc);
+                break;
             } else {
                 emit(Fa_make_ABC(Fa_OpCode::RETURN_NIL, 0, 0, 0), loc);
             }
@@ -2018,12 +1579,6 @@ Fa_ErrorOr<bool> Compiler::compile_cfg_body(Fa_CFG* cfg, bool is_top_level_scrip
         }
     }
 
-    for (size_t i = 0; i < cfg->blocks.size(); ++i) {
-        if (false_tgt[i] >= 0)
-            patch_jump_to((u32)false_idx[i], block_start[(size_t)false_tgt[i]]);
-        if (jump_tgt[i] >= 0)
-            patch_jump_to((u32)jump_idx[i], block_start[(size_t)jump_tgt[i]]);
-    }
     return true;
 }
 

@@ -1,16 +1,22 @@
 #include "fairuz/fAST_printer.hpp"
 #include "fairuz/fcfg.hpp"
+#include "fairuz/fcfg_compiler.hpp"
+#include "fairuz/fcfg_printer.hpp"
 #include "fairuz/fcompiler.hpp"
 #include "fairuz/fdiagnostic.hpp"
+#include "fairuz/ferror.hpp"
 #include "fairuz/fformatter.hpp"
 #include "fairuz/flexer.hpp"
+#include "fairuz/fopcode.hpp"
 #include "fairuz/fparser.hpp"
 #include "fairuz/fvm.hpp"
 
 #include <chrono>
+#include <cstdint>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <future>
 #include <iostream>
 #include <string>
 #include <string_view>
@@ -129,43 +135,16 @@ void printAst(fairuz::Fa_Array<fairuz::AST::Fa_Stmt*> const& stmts)
         printer.print(stmts[i]);
 }
 
-char const* terminatorName(fairuz::Fa_BasicBlock::TerminatorTag t)
+char const* terminatorName(fairuz::TerminatorTag t)
 {
     switch (t) {
-    case fairuz::Fa_BasicBlock::TerminatorTag::BRANCH: return "BRANCH";
-    case fairuz::Fa_BasicBlock::TerminatorTag::JUMP: return "JUMP";
-    case fairuz::Fa_BasicBlock::TerminatorTag::RETURN: return "RETURN";
-    case fairuz::Fa_BasicBlock::TerminatorTag::NORETURN: return "NORETURN";
-    case fairuz::Fa_BasicBlock::TerminatorTag::NONE: return "NONE";
+    case fairuz::TerminatorTag::BRANCH: return "BRANCH";
+    case fairuz::TerminatorTag::JUMP: return "JUMP";
+    case fairuz::TerminatorTag::RETURN: return "RETURN";
+    case fairuz::TerminatorTag::NORETURN: return "NORETURN";
+    case fairuz::TerminatorTag::NONE: return "NONE";
     }
     return "?";
-}
-
-void printCfg(fairuz::Fa_Program const& program)
-{
-    auto const& functions = program.get_functions();
-    for (size_t fi = 0; fi < functions.size(); fi += 1) {
-        auto const* fn = functions[fi];
-        std::string_view name = fn->def == nullptr ? "<script>" : "<function>";
-
-        std::cout << "=== CFG: " << name << " (entry block "
-                   << (fn->cfg->entry ? fn->cfg->entry->get_id() : 0) << ") ===\n";
-
-        for (size_t bi = 0; bi < fn->cfg->blocks.size(); bi += 1) {
-            auto const* b = fn->cfg->blocks[bi];
-            std::cout << "  block " << b->get_id()
-                       << " [" << terminatorName(b->get_terminator()) << "]"
-                       << " stmts=" << b->get_stmts().size()
-                       << " preds={";
-            for (size_t pi = 0; pi < b->get_preds().size(); pi += 1)
-                std::cout << b->get_preds()[pi]->get_id() << (pi + 1 < b->get_preds().size() ? "," : "");
-            std::cout << "} succs={";
-            for (size_t si = 0; si < b->get_succs().size(); si += 1)
-                std::cout << b->get_succs()[si]->get_id() << (si + 1 < b->get_succs().size() ? "," : "");
-            std::cout << "}\n";
-        }
-        std::cout << "\n";
-    }
 }
 
 bool writeFileAtomic(std::string const& path, char const* data, std::streamsize len, std::string& error_out)
@@ -277,7 +256,9 @@ int main(int argc, char** argv)
             return static_cast<int>(ExitCode::DataError);
 
         if (options.dump_cfg)
-            printCfg(*program);
+        {
+            fairuz::cfgprint::printCfg(*program);
+        }
 
         fairuz::runtime::Compiler compiler;
         fairuz::runtime::Fa_Chunk* chunk = compiler.compile(stmts);
@@ -291,12 +272,25 @@ int main(int argc, char** argv)
         if (options.dump_bytecode)
             chunk->disassemble();
 
+        fairuz::runtime::CFG_Compiler cfg_compiler;
+        fairuz::runtime::Fa_Chunk* cfg_chunk = cfg_compiler.compile(program);
+        if (!cfg_chunk) {
+            std::cerr << "CFG Compilation failed: no bytecode was produced\n";
+            return static_cast<int>(ExitCode::DataError);
+        }
+        if (fairuz::diagnostic::has_errors())
+            return static_cast<int>(ExitCode::DataError);
+        if (options.dump_bytecode) {
+            printf("\nCFG compiled bytecode:\n");
+            cfg_chunk->disassemble();
+        }
+
         if (options.check_only)
             return static_cast<int>(ExitCode::Success);
 
         fairuz::runtime::Fa_VM vm;
         auto const start = std::chrono::steady_clock::now();
-        vm.run(chunk);
+        vm.run(cfg_chunk);
         auto const end = std::chrono::steady_clock::now();
 
         if (options.print_time) {
