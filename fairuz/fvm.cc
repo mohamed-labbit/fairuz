@@ -335,17 +335,8 @@ Fa_Value Fa_VM::execute()
             Fa_Value name_v = cur_chunk->constants[Fa_instr_Bx(instr)];
             Fa_StringRef name = Fa_AS_STRING(name_v)->str;
             u32* slot = m_global_index.find_ptr(name);
-            /*
-                        if (slot == nullptr)
-                            runtime_error(ErrorCode::UNDEFINED_GLOBAL, std::string(name.data(), name.len()));
-            */
-            if (slot == nullptr) {
-                fprintf(stderr, "MISS: name.len()=%zu bytes=", name.len());
-                for (size_t i = 0; i < name.len(); i++)
-                    fprintf(stderr, "%02x ", (unsigned char)name.data()[i]);
-                fprintf(stderr, "\n");
+            if (slot == nullptr)
                 runtime_error(ErrorCode::UNDEFINED_GLOBAL, std::string(name.data(), name.len()));
-            }
 
             u32 slot_idx = *slot;
             Fa_RA() = m_global_slots[slot_idx];
