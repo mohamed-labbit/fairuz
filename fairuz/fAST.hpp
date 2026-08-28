@@ -646,8 +646,8 @@ private:
 public:
     Fa_ExprStmt() = delete;
 
-    explicit Fa_ExprStmt(Fa_Expr* m_expr, Fa_SourceLocation loc)
-        : m_expr(m_expr)
+    explicit Fa_ExprStmt(Fa_Expr* expr, Fa_SourceLocation loc)
+        : m_expr(expr)
     {
         assert(m_expr != nullptr);
         m_kind = Kind::EXPR;

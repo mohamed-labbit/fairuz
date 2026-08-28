@@ -166,6 +166,7 @@ private:
         }
     };
     Fa_HashTable<std::pair<Fa_StringRef, Fa_Chunk*>, u16, PairHash, PairEqual> m_string_cache;
+    Fa_HashTable<Fa_StringRef, bool, Fa_StringRefHash, Fa_StringRefEqual> m_globals;
 
     struct VarInfo {
         enum class Kind {

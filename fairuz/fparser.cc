@@ -866,10 +866,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_dict_literal()
     }
 
     Fa_VERIFY_TOKEN(TokType::RBRACE, ParserCode::EXPECTED_RBRACE_EXPR);
-
-    Fa_SourceLocation loc = content.empty()
-        ? start->location()
-        : content[0].first->get_location();
+    Fa_SourceLocation loc = content.empty() ? start->location() : content[0].first->get_location();
     return AST::Fa_make_dict(std::move(content), loc);
 }
 

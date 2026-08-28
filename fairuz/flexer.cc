@@ -335,6 +335,10 @@ tok::Fa_Token const* Fa_Lexer::lex_token()
             break;
 
         if (current == '\n') {
+            if (m_bracket_depth > 0) {
+                m_source_manager.consume_char();
+                continue;   // inside ( [ { — newline is just whitespace, no NEWLINE/INDENT tracking
+            }
             u32 const start_byte = m_source_manager.get_file_offset();
             m_source_manager.consume_char();
             m_at_bol = true;
@@ -388,12 +392,33 @@ tok::Fa_Token const* Fa_Lexer::lex_token()
 
             tok::Fa_TokenType tt;
             switch (current) {
-            case '{': tt = tok::Fa_TokenType::LBRACE; break;
-            case '}': tt = tok::Fa_TokenType::RBRACE; break;
-            case '[': tt = tok::Fa_TokenType::LBRACKET; break;
-            case ']': tt = tok::Fa_TokenType::RBRACKET; break;
-            case '(': tt = tok::Fa_TokenType::LPAREN; break;
-            case ')': tt = tok::Fa_TokenType::RPAREN; break;
+            case '{':
+                tt = tok::Fa_TokenType::LBRACE;
+                m_bracket_depth += 1;
+                break;
+            case '}':
+                tt = tok::Fa_TokenType::RBRACE;
+                if (m_bracket_depth > 0)
+                    m_bracket_depth -= 1;
+                break;
+            case '[':
+                tt = tok::Fa_TokenType::LBRACKET;
+                m_bracket_depth += 1;
+                break;
+            case ']':
+                tt = tok::Fa_TokenType::RBRACKET;
+                if (m_bracket_depth > 0)
+                    m_bracket_depth -= 1;
+                break;
+            case '(':
+                tt = tok::Fa_TokenType::LPAREN;
+                m_bracket_depth += 1;
+                break;
+            case ')':
+                tt = tok::Fa_TokenType::RPAREN;
+                if (m_bracket_depth > 0)
+                    m_bracket_depth -= 1;
+                break;
             case ':': {
                 if (m_source_manager.current_char() == '=') {
                     m_source_manager.consume_char();

@@ -178,6 +178,7 @@ private:
     Fa_Array<unsigned int> m_indent_stack;
     Fa_Array<unsigned int> m_alt_indent_stack;
     bool m_at_bol { true };
+    unsigned int m_bracket_depth { 0 };
 
     // main lexer loop
     tok::Fa_Token const* lex_token();

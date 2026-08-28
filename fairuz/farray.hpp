@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <bit>
 #include <concepts>
+#include <cstring>
 #include <initializer_list>
 #include <type_traits>
 
@@ -18,6 +19,7 @@ using GenericErrorCode = diagnostic::errc::general::Code;
 
 template<typename T, class _Alloc = Fa_ArenaAllocator>
 class Fa_Array {
+private:
     static constexpr u32 ARRAY_MAX = __UINT32_MAX__;
     static constexpr u32 DEFAULT_CAP = 8;
     static constexpr bool TRIVIAL_COPY = std::is_trivially_copyable_v<T>;

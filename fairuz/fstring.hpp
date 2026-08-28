@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <ostream>
+#include <cstring>
 
 namespace fairuz {
 
@@ -293,7 +294,7 @@ public:
     [[nodiscard]] std::optional<size_t> find_pos(char const c) const noexcept;
 
     Fa_StringRefImpl& truncate(size_t const s) noexcept;
-    Fa_StringRefImpl slice(size_t start, size_t m_end = SIZE_MAX) const;
+    Fa_StringRefImpl slice(size_t start, size_t end = SIZE_MAX) const;
     Fa_StringRefImpl substr(size_t start, size_t end = SIZE_MAX) const
     {
         if (m_length == 0)
@@ -306,7 +307,7 @@ public:
             return Fa_StringRefImpl(static_cast<size_t>(0), m_allocator);
         return substr_copy(start, end);
     }
-    Fa_StringRefImpl substr_copy(size_t start, size_t m_end = SIZE_MAX) const;
+    Fa_StringRefImpl substr_copy(size_t start, size_t end = SIZE_MAX) const;
 
     f64 to_double(size_t* pos = nullptr) const;
 

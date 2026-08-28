@@ -441,7 +441,7 @@ public:
     // DiagnosticId-taking overloads below when a report() call and its
     // annotation aren't textually adjacent.
     void add_suggestion(std::string const& suggestion);
-    void add_note(i32 m_line, std::string const& note);
+    void add_note(i32 line, std::string const& note);
 
     // Id-targeted overloads: attach to a SPECIFIC diagnostic regardless
     // of what's been reported since. No-op (not an error) if id is
@@ -450,7 +450,7 @@ public:
     // holding an INVALID_ID from a saturated report() should be able to
     // keep calling these unconditionally without checking first.
     void add_suggestion(DiagnosticId id, std::string const& suggestion);
-    void add_note(DiagnosticId id, i32 m_line, std::string const& note);
+    void add_note(DiagnosticId id, i32 line, std::string const& note);
 
     std::string to_json() const;
 

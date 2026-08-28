@@ -4,8 +4,10 @@
 #include "fdiagnostic.hpp"
 #include "fmacros.hpp"
 #include "fstring.hpp"
+
 #include <cstdint>
 #include <string>
+#include <cmath>
 
 namespace fairuz::util {
 
