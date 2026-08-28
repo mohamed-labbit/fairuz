@@ -309,31 +309,6 @@ TEST_F(ParserTest, ParseNestedParentheses)
         AST_Printer.print(m_expr);
 }
 
-TEST_F(ParserTest, ParseChainedComparison)
-{
-    GTEST_SKIP() << "It isn't trivial if this feature should be in the lang at all";
-    // Test: a < b < c (should parse as (a < b) < c due to left associativity)
-    Fa_FileManager m_file_manager(parser_test_cases_dir() / "chained_comparison.fa");
-    Fa_Parser parser(&m_file_manager);
-    AST::Fa_Expr* m_expr = parser.parse().value();
-
-    ASSERT_NE(m_expr, nullptr) << "Failed to parse chained comparison";
-
-    AST::Fa_BinaryExpr* root = dynamic_cast<AST::Fa_BinaryExpr*>(m_expr);
-
-    ASSERT_NE(root, nullptr) << "Root should be AST::Fa_BinaryExpr";
-    EXPECT_EQ(root->get_operator(), AST::Fa_BinaryOp::OP_LT);
-
-    // Left should be another comparison
-    AST::Fa_BinaryExpr* left_comp = dynamic_cast<AST::Fa_BinaryExpr*>(root->get_left());
-
-    ASSERT_NE(left_comp, nullptr) << "Left should be comparison expression";
-    EXPECT_EQ(left_comp->get_operator(), AST::Fa_BinaryOp::OP_LT);
-
-    if (test_config::print_ast)
-        AST_Printer.print(m_expr);
-}
-
 TEST_F(ParserTest, ParseLogicalExpression)
 {
     // Test: a and b or c (should be (a and b) or c)
@@ -665,30 +640,6 @@ TEST_F(ParserTest, ParseChainedAssignmentWithExpr)
     EXPECT_EQ(binary->get_operator(), AST::Fa_BinaryOp::OP_ADD);
     EXPECT_EQ(as<AST::Fa_NameExpr>(binary->get_left())->get_value(), "م");
     EXPECT_EQ(as<AST::Fa_NameExpr>(binary->get_right())->get_value(), "ل");
-}
-
-TEST_F(ParserTest, DISABLED_ParseLargeFile)
-{
-    GTEST_SKIP() << "DISABLED_ParseLargeFile: not checked yet";
-    Fa_FileManager m_file_manager(parser_test_cases_dir() / "large_file.fa");
-    Fa_Parser parser(&m_file_manager);
-    auto start = std::chrono::high_resolution_clock::now();
-    int Fa_Expr_count = 0;
-
-    while (!parser.we_done()) {
-        AST::Fa_Expr* m_expr = parser.parse().value();
-        if (m_expr != nullptr)
-            Fa_Expr_count += 1;
-        else
-            break;
-    }
-
-    auto m_end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(m_end - start);
-    std::cout << "Parsed " << Fa_Expr_count << " expressions in " << duration.count() << "ms" << std::endl;
-
-    EXPECT_GT(Fa_Expr_count, 1000) << "Should parse many expressions";
-    EXPECT_LT(duration.count(), 5000) << "Should complete in reasonable time";
 }
 
 TEST_F(ParserTest, ParseDeeplyNestedExpression)

@@ -13,9 +13,30 @@ bool dump_bytecode = false;
 
 } // namespace test_config
 
+class QuietOutputListener : public ::testing::EmptyTestEventListener {
+    void OnTestStart(::testing::TestInfo const&) override
+    {
+        ::testing::internal::CaptureStdout();
+        ::testing::internal::CaptureStderr();
+    }
+
+    void OnTestEnd(::testing::TestInfo const& test_info) override
+    {
+        std::string out = ::testing::internal::GetCapturedStdout();
+        std::string err = ::testing::internal::GetCapturedStderr();
+        // Replay only on failure -- keeps green runs silent, but you
+        // still get the diagnostic text when a test actually breaks.
+        if (test_info.result()->Failed()) {
+            if (!out.empty()) std::cout << out;
+            if (!err.empty()) std::cerr << err;
+        }
+    }
+};
+
 int main(int argc, char** argv)
 {
     ::testing::InitGoogleTest(&argc, argv);
+    ::testing::UnitTest::GetInstance()->listeners().Append(new QuietOutputListener());
 
     fairuz::Fa_AllocatorContext g_ctx;
     fairuz::set_context(&g_ctx);
@@ -36,19 +57,6 @@ int main(int argc, char** argv)
     }
 
     int ret = RUN_ALL_TESTS();
-
-#ifdef FAIRUZ_DEBUG
-
-    if (test_config::verbose) {
-        std::cout << get_allocator().to_string(true) << '\n';
-        std::cout << '\n';
-        std::cout << get_allocator().to_string(true) << '\n';
-        std::cout << '\n';
-        std::cout << get_allocator().to_string(true) << '\n';
-        std::cout << '\n';
-        std::cout << get_allocator().to_string(true) << std::endl;
-    }
-#endif // FAIRUZ_DEBUG
     fairuz::g_context = nullptr;
 
     return ret;

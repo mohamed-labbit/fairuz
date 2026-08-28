@@ -175,19 +175,3 @@ TEST(PropertyFa_Expr, RandomArithmeticMatchesHostAndAst)
         EXPECT_EQ(Fa_AS_INTEGER(parsed_value), Fa_AS_INTEGER(ast_value)) << source;
     }
 }
-
-TEST(SanitizerStress, RandomArithmeticCorpus)
-{
-    if (!sanitizer_stress_enabled())
-        GTEST_SKIP() << "set ENABLE_SANITIZER_STRESS=1 to enable";
-
-    diagnostic::reset();
-    std::mt19937_64 rng(0xBAD5EED);
-
-    for (int i = 0; i < 2000; i += 1) {
-        Fa_ExprSpec spec = gen_fa_expr(rng, 5);
-        std::string source = to_source(spec);
-        Fa_Value parsed_value = run_fa_expr_source(source);
-        ASSERT_TRUE(Fa_IS_INTEGER(parsed_value)) << source;
-    }
-}

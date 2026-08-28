@@ -2040,18 +2040,6 @@ static void do_not_optimize(T const& v)
     (void)sink;
 }
 
-static bool stress_perf_enabled()
-{
-    char const* m_value = std::getenv("ENABLE_STRESS_PERF");
-    return m_value && m_value[0] == '1';
-}
-
-static void require_stress_perf()
-{
-    if (!stress_perf_enabled())
-        GTEST_SKIP() << "Set fairuz_ENABLE_STRESS_PERF=1 to run large Fa_VM stress tests.";
-}
-
 // Measures raw opcode dispatch speed. The loop body is:
 //   r2 = r0 + r1  (OP_ADD, integer fast path)
 //   r0 = r2       (MOVE)
@@ -2485,8 +2473,6 @@ TEST(VMPerfTest, Fib25_10reps)
 
 TEST(VMPerfStressTest, Dispatch_IntAdd_10M_Iterations)
 {
-    require_stress_perf();
-
     constexpr int N = 10'000'000;
 
     AST::Fa_Stmt* test = func_def(
@@ -2518,8 +2504,6 @@ TEST(VMPerfStressTest, Dispatch_IntAdd_10M_Iterations)
 
 TEST(VMPerfStressTest, NativeCall_Len_1M_ICHot)
 {
-    require_stress_perf();
-
     constexpr int N = 1'000'000;
 
     AST::Fa_Stmt* test = func_def(
@@ -2553,8 +2537,6 @@ TEST(VMPerfStressTest, NativeCall_Len_1M_ICHot)
 
 TEST(VMPerfStressTest, List_AppendAndSum_100k)
 {
-    require_stress_perf();
-
     constexpr int N = 100'000;
 
     AST::Fa_Stmt* test = func_def(
@@ -2599,8 +2581,6 @@ TEST(VMPerfStressTest, List_AppendAndSum_100k)
 
 TEST(VMPerfStressTest, Fib28_20reps_Hot)
 {
-    require_stress_perf();
-
     constexpr int FIB_N = 28;
     constexpr int REPS = 20;
 
