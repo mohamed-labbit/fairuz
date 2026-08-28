@@ -1,4 +1,39 @@
 cmake_minimum_required(VERSION 3.14)
+
+# ─── Compiler selection ─────────────────────────────────────────────────────
+# Default preference: clang/clang++. Fall back to gcc/g++ if clang isn't
+# found, or force gcc/g++ regardless via -DUSE_GCC=ON.
+# This must run before project() — that's what actually fixes the compiler,
+# and it will not pick up a CMAKE_CXX_COMPILER set afterward.
+option(USE_GCC "Force compiling with GCC instead of Clang" OFF)
+
+if(NOT CMAKE_C_COMPILER AND NOT CMAKE_CXX_COMPILER)
+    find_program(CLANG_C_COMPILER NAMES clang)
+    find_program(CLANG_CXX_COMPILER NAMES clang++)
+    find_program(GCC_C_COMPILER NAMES gcc)
+    find_program(GCC_CXX_COMPILER NAMES g++)
+
+    if(USE_GCC)
+        if(GCC_C_COMPILER AND GCC_CXX_COMPILER)
+            message(STATUS "USE_GCC is ON: using GCC (${GCC_C_COMPILER}, ${GCC_CXX_COMPILER})")
+            set(CMAKE_C_COMPILER ${GCC_C_COMPILER})
+            set(CMAKE_CXX_COMPILER ${GCC_CXX_COMPILER})
+        else()
+            message(FATAL_ERROR "USE_GCC is ON but gcc/g++ could not be found")
+        endif()
+    elseif(CLANG_C_COMPILER AND CLANG_CXX_COMPILER)
+        message(STATUS "Using Clang (${CLANG_C_COMPILER}, ${CLANG_CXX_COMPILER})")
+        set(CMAKE_C_COMPILER ${CLANG_C_COMPILER})
+        set(CMAKE_CXX_COMPILER ${CLANG_CXX_COMPILER})
+    elseif(GCC_C_COMPILER AND GCC_CXX_COMPILER)
+        message(STATUS "Clang not found, falling back to GCC (${GCC_C_COMPILER}, ${GCC_CXX_COMPILER})")
+        set(CMAKE_C_COMPILER ${GCC_C_COMPILER})
+        set(CMAKE_CXX_COMPILER ${GCC_CXX_COMPILER})
+    else()
+        message(FATAL_ERROR "Neither clang/clang++ nor gcc/g++ could be found")
+    endif()
+endif()
+
 project(Fairuz VERSION 0.1.0 LANGUAGES C CXX)
 
 # Add right after project()
@@ -9,7 +44,26 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(GNUInstallDirs)
 
-set(CMAKE_CXX_STANDARD 26)
+# ─── C++ standard selection ─────────────────────────────────────────────────
+# Prefer C++26, but fall back to C++23 if (and only if) the selected
+# compiler can't actually compile with -std=c++26 — e.g. GCC < 14, where
+# C++26 support doesn't exist yet. This must run before CMAKE_CXX_STANDARD
+# is set: once that's set with CMAKE_CXX_STANDARD_REQUIRED ON, every
+# try_compile (including ones inside find_package calls below, like
+# FindOpenMP) fails hard on an unsupported dialect instead of letting us
+# probe for one.
+include(CheckCXXCompilerFlag)
+
+check_cxx_compiler_flag("-std=c++26" COMPILER_SUPPORTS_CXX26)
+
+if(COMPILER_SUPPORTS_CXX26)
+    set(CMAKE_CXX_STANDARD 26)
+    message(STATUS "Using C++26 (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
+else()
+    set(CMAKE_CXX_STANDARD 23)
+    message(STATUS "C++26 not supported by ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}, falling back to C++23")
+endif()
+
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -101,22 +155,17 @@ if(BUILD_TESTS)
         add_library(GTest::gtest_main ALIAS minimal_gtest)
     endif()
 
+    # Picks up every .cpp under tests/, including subdirectories, except
+    # tests/support/, which holds the minimal_gtest helper built separately
+    # above (compiling it again here would duplicate its main() at link
+    # time). Note: this list is captured at configure time — adding a new
+    # test file requires re-running cmake (or a --clean build) before it's
+    # picked up.
+    file(GLOB_RECURSE fairuz_TEST_SOURCES ${CMAKE_SOURCE_DIR}/tests/*.cpp)
+    list(FILTER fairuz_TEST_SOURCES EXCLUDE REGEX "/tests/support/")
+
     add_executable(fairuz_tests
-        tests/test_main.cpp
-        tests/test_arena.cpp
-        tests/test_narrow_table.cpp
-        tests/test_string.cpp
-        tests/test_tokens.cpp
-        tests/test_indentation.cpp
-        tests/test_parser.cpp
-        tests/test_opcode.cpp
-        tests/test_chunk.cpp
-        tests/test_compiler.cpp
-        tests/test_vm.cpp
-        tests/test_stdlib.cpp
-        tests/test_cli.cpp
-        tests/test_regressions.cpp
-        tests/test_property.cpp
+        ${fairuz_TEST_SOURCES}
         $<TARGET_OBJECTS:fairuz_objects>
     )
 
