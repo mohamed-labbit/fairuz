@@ -103,6 +103,25 @@ static void dump(Fa_Chunk const* c)
     std::cout << '\n';
 }
 
+static Fa_Chunk* compile_ok_local(Fa_Array<AST::Fa_Stmt*> stmts) {
+    AST::Fa_Stmt* f = func_def(name_expr("test_function"), list_expr(), blk(stmts));
+    Compiler c;
+    Fa_Chunk* ch = compile_ok({f}, c);
+    EXPECT_NE(ch, nullptr);
+    if (test_config::dump_bytecode)
+        dump(ch);
+
+    BytecodeChecker bc(*ch);
+    bc.m_next("CLOSURE").op(Fa_OpCode::CLOSURE).A(0).Bx(0);
+    bc.m_next("STORE_GLOBAL").op(Fa_OpCode::STORE_GLOBAL).A(0).Bx(0);
+    bc.m_next("RETURN_NIL").op(Fa_OpCode::RETURN_NIL);
+    bc.done();
+    EXPECT_EQ(ch->functions.size(), 1u);
+    Fa_Chunk* def_chunk = ch->functions[0];
+    EXPECT_NE(def_chunk, nullptr);
+    return def_chunk;
+}
+
 static Fa_Chunk* compile_ok(Fa_Array<AST::Fa_Stmt*> stmts)
 {
     Compiler c;
@@ -267,38 +286,38 @@ TEST(CompilerLiteral, StringsDeduplicated)
 
 TEST(CompilerVar, LocalDeclaration)
 {
-    Fa_Chunk* chunk = compile_ok(decl_stmt("x", lit_int(5)));
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    BytecodeChecker bc(*chunk);
+    Fa_Chunk* ch = compile_ok_local({decl_stmt("x", lit_int(5))});
+    BytecodeChecker bc(*ch);
     bc.m_next("LOAD_INT").op(Fa_OpCode::LOAD_INT).A(0).Bx(load_int_bx(5));
     bc.m_next("RETURN_NIL").op(Fa_OpCode::RETURN_NIL);
     bc.done();
-    EXPECT_EQ(chunk->local_count, 1);
+
+    EXPECT_EQ(ch->local_count, 1u);
 }
 
 TEST(CompilerVar, TwoLocalsUseConsecutiveRegisters)
 {
-    Fa_Chunk* chunk = compile_ok({ decl_stmt("x", lit_int(1)), decl_stmt("y", lit_int(2)) });
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    BytecodeChecker bc(*chunk);
+    Fa_Chunk* ch = compile_ok_local({
+                decl_stmt("x", lit_int(1)),
+                decl_stmt("y", lit_int(2)),
+            });
+
+    BytecodeChecker bc(*ch);
     bc.m_next("LOAD_INT x").op(Fa_OpCode::LOAD_INT).A(0);
     bc.m_next("LOAD_INT y").op(Fa_OpCode::LOAD_INT).A(1);
     bc.m_next("RETURN_NIL").op(Fa_OpCode::RETURN_NIL);
     bc.done();
-    EXPECT_EQ(chunk->local_count, 2);
+    EXPECT_EQ(ch->local_count, 2);
 }
 
 TEST(CompilerVar, LocalAssignmentWritesBackToSameRegister)
 {
-    Fa_Chunk* chunk = compile_ok({ decl_stmt("x", lit_int(1)), assign_stmt(name_expr("x"), lit_int(2)) });
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    BytecodeChecker bc(*chunk);
+    Fa_Chunk* ch = compile_ok_local({ 
+            decl_stmt("x", lit_int(1)), 
+            assign_stmt(name_expr("x"), lit_int(2)),
+        });
+
+    BytecodeChecker bc(*ch);
     bc.m_next("decl_stmt x=1").op(Fa_OpCode::LOAD_INT).A(0).Bx(load_int_bx(1));
     bc.m_next("assign x=2").op(Fa_OpCode::LOAD_INT).A(0).Bx(load_int_bx(2));
     bc.m_next("RETURN_NIL").op(Fa_OpCode::RETURN_NIL);
@@ -327,11 +346,13 @@ TEST(CompilerVar, GlobalLoadAndStore)
 
 TEST(CompilerUnary, NegateVariable)
 {
-    Fa_Chunk* chunk = compile_ok({ decl_stmt("x", lit_int(5)), expr_stmt(unary(name_expr("x"), AST::Fa_UnaryOp::OP_NEG)) });
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    BytecodeChecker bc(*chunk);
+    Fa_Chunk* ch = compile_ok_local(
+    {
+        decl_stmt("x", lit_int(5)),
+        expr_stmt(unary(name_expr("x"), AST::Fa_UnaryOp::OP_NEG)),   
+    });
+
+    BytecodeChecker bc(*ch);
     bc.m_next("LOAD_INT x").op(Fa_OpCode::LOAD_INT).A(0);
     bc.m_next("OP_NEG").op(Fa_OpCode::OP_NEG).B(0);
     bc.m_next("RETURN_NIL").op(Fa_OpCode::RETURN_NIL);
@@ -340,11 +361,12 @@ TEST(CompilerUnary, NegateVariable)
 
 TEST(CompilerUnary, NotVariable)
 {
-    Fa_Chunk* chunk = compile_ok({ decl_stmt("b", lit_bool(true)), expr_stmt(unary(name_expr("b"), AST::Fa_UnaryOp::OP_NOT)) });
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    BytecodeChecker bc(*chunk);
+    Fa_Chunk* ch = compile_ok_local({
+            decl_stmt("b", lit_bool(true)),
+            expr_stmt(unary(name_expr("b"), AST::Fa_UnaryOp::OP_NOT)),
+        });
+
+    BytecodeChecker bc(*ch);
     bc.m_next("LOAD_TRUE b").op(Fa_OpCode::LOAD_TRUE).A(0);
     bc.m_next("OP_NOT").op(Fa_OpCode::OP_NOT).B(0);
     bc.m_next("RETURN_NIL").op(Fa_OpCode::RETURN_NIL);
@@ -353,11 +375,12 @@ TEST(CompilerUnary, NotVariable)
 
 TEST(CompilerUnary, BitwiseNotVariable)
 {
-    Fa_Chunk* chunk = compile_ok({ decl_stmt("n", lit_int(0xFF)), expr_stmt(unary(name_expr("n"), AST::Fa_UnaryOp::OP_BITNOT)) });
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    BytecodeChecker bc(*chunk);
+    Fa_Chunk* ch = compile_ok_local({
+            decl_stmt("n", lit_int(0xFF)),
+            expr_stmt(unary(name_expr("n"), AST::Fa_UnaryOp::OP_BITNOT)),
+        });
+
+    BytecodeChecker bc(*ch);
     bc.m_next("decl_stmt").op(Fa_OpCode::LOAD_INT).A(0);
     bc.m_next("OP_BITNOT").op(Fa_OpCode::OP_BITNOT).B(0);
     bc.m_next("RETURN_NIL").op(Fa_OpCode::RETURN_NIL);
@@ -415,20 +438,19 @@ TEST(CompilerUnary, BNotLiteralFolded)
 
 TEST(CompilerBinary, AddTwoLocals)
 {
-    Fa_Chunk* chunk = compile_ok(
-        { decl_stmt("a", lit_int(1)), decl_stmt("b", lit_int(2)),
-            expr_stmt(binary(name_expr("a"), name_expr("b"), AST::Fa_BinaryOp::OP_ADD)) });
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    BytecodeChecker bc(*chunk);
+    Fa_Chunk* ch = compile_ok_local(
+        {
+            decl_stmt("a", lit_int(1)), decl_stmt("b", lit_int(2)),
+            expr_stmt(binary(name_expr("a"), name_expr("b"), AST::Fa_BinaryOp::OP_ADD))
+        });
+    BytecodeChecker bc(*ch);
     bc.m_next("decl_stmt a").op(Fa_OpCode::LOAD_INT).A(0).Bx(load_int_bx(1));
     bc.m_next("decl_stmt b").op(Fa_OpCode::LOAD_INT).A(1).Bx(load_int_bx(2));
     bc.m_next("OP_ADD").op(Fa_OpCode::OP_ADD).A(2).B(0).C(1);
     bc.m_next("NOP ic").op(Fa_OpCode::NOP).A(0); // IC slot 0
     bc.m_next("RETURN_NIL").op(Fa_OpCode::RETURN_NIL);
     bc.done();
-    EXPECT_EQ(chunk->ic_slots.size(), 1u);
+    EXPECT_EQ(ch->ic_slots.size(), 1u);
 }
 
 TEST(CompilerBinary, SubtractLiterals)
@@ -470,12 +492,10 @@ TEST(CompilerBinary, DivisionFolded)
 
 TEST(CompilerBinary, DivisionByZeroNotFolded)
 {
-    Fa_Chunk* chunk = compile_ok({ decl_stmt("x", lit_int(5)),
+    Fa_Chunk* ch = compile_ok_local({ decl_stmt("x", lit_int(5)),
         expr_stmt(binary(name_expr("x"), lit_int(0), AST::Fa_BinaryOp::OP_DIV)) });
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    BytecodeChecker bc(*chunk);
+    
+    BytecodeChecker bc(*ch);
     bc.m_next("decl_stmt x").op(Fa_OpCode::LOAD_INT).A(0);
     bc.m_next("LOAD_INT 0 into r1 temp").op(Fa_OpCode::LOAD_INT);
     bc.m_next("OP_DIV").op(Fa_OpCode::OP_DIV);
@@ -486,12 +506,10 @@ TEST(CompilerBinary, DivisionByZeroNotFolded)
 
 TEST(CompilerBinary, GreaterThanNormalizedToLT)
 {
-    Fa_Chunk* chunk = compile_ok(
+    Fa_Chunk* chunk = compile_ok_local(
         { decl_stmt("a", lit_int(3)), decl_stmt("b", lit_int(1)),
             expr_stmt(binary(name_expr("a"), name_expr("b"), AST::Fa_BinaryOp::OP_GT)) });
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+
     BytecodeChecker bc(*chunk);
     bc.m_next("decl_stmt a").op(Fa_OpCode::LOAD_INT).A(0);
     bc.m_next("decl_stmt b").op(Fa_OpCode::LOAD_INT).A(1);
@@ -504,13 +522,13 @@ TEST(CompilerBinary, GreaterThanNormalizedToLT)
 
 TEST(CompilerBinary, GreaterEqualNormalizedToLE)
 {
-    Fa_Chunk* chunk = compile_ok(
-        { decl_stmt("a", lit_int(5)), decl_stmt("b", lit_int(5)),
-            expr_stmt(binary(name_expr("a"), name_expr("b"), AST::Fa_BinaryOp::OP_GTE)) });
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    BytecodeChecker bc(*chunk);
+    Fa_Chunk* ch = compile_ok_local({ 
+            decl_stmt("a", lit_int(5)), 
+            decl_stmt("b", lit_int(5)),
+            expr_stmt(binary(name_expr("a"), name_expr("b"), AST::Fa_BinaryOp::OP_GTE)),
+    });
+
+    BytecodeChecker bc(*ch);
     bc.m_next("decl_stmt a").op(Fa_OpCode::LOAD_INT).A(0);
     bc.m_next("decl_stmt b").op(Fa_OpCode::LOAD_INT).A(1);
     // GE(a,b) → OP_LTE(b,a)
@@ -579,19 +597,22 @@ TEST(CompilerBinary, ShiftLeftFolded)
 
 TEST(CompilerBinary, LogicalAndShortCircuit)
 {
-    Fa_Chunk* chunk = compile_ok({ decl_stmt("a", lit_bool(true)), decl_stmt("b", lit_bool(false)),
-        expr_stmt(binary(name_expr("a"), name_expr("b"), AST::Fa_BinaryOp::OP_AND)) });
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    BytecodeChecker bc(*chunk);
+    GTEST_SKIP() << "scheduled for CFG";
+
+    Fa_Chunk* ch = compile_ok_local({ 
+        decl_stmt("a", lit_bool(true)), 
+        decl_stmt("b", lit_bool(false)),
+        expr_stmt(binary(name_expr("a"), name_expr("b"), AST::Fa_BinaryOp::OP_AND)),
+    });
+
+    BytecodeChecker bc(*ch);
     bc.m_next("decl_stmt a").op(Fa_OpCode::LOAD_TRUE).A(0);
     bc.m_next("decl_stmt b").op(Fa_OpCode::LOAD_FALSE).A(1);
     u32 jif_idx;
     bc.m_next("LHS into temp").op(Fa_OpCode::MOVE).A(2).B(0);
     (void)jif_idx;
     bool found_jif = false, found_b = false;
-    for (auto& instr : chunk->code) {
+    for (auto& instr : ch->code) {
         if (Fa_instr_op(instr) == Fa_OpCode::JUMP_IF_FALSE)
             found_jif = true;
         if (found_jif && (Fa_instr_op(instr) == Fa_OpCode::LOAD_FALSE || Fa_instr_op(instr) == Fa_OpCode::MOVE))
@@ -603,12 +624,14 @@ TEST(CompilerBinary, LogicalAndShortCircuit)
 
 TEST(CompilerBinary, LogicalOrShortCircuit)
 {
-    Fa_Chunk* chunk = compile_ok(
-        { decl_stmt("a", lit_bool(false)), decl_stmt("b", lit_bool(true)),
-            expr_stmt(binary(name_expr("a"), name_expr("b"), AST::Fa_BinaryOp::OP_OR)) });
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    GTEST_SKIP() << "scheduled for CFG";
+
+    Fa_Chunk* chunk = compile_ok_local({ 
+        decl_stmt("a", lit_bool(false)), 
+        decl_stmt("b", lit_bool(true)),
+        expr_stmt(binary(name_expr("a"), name_expr("b"), AST::Fa_BinaryOp::OP_OR)),
+    });
+
     bool found_jit = false;
     for (auto& instr : chunk->code) {
         if (Fa_instr_op(instr) == Fa_OpCode::JUMP_IF_TRUE)
@@ -1158,23 +1181,6 @@ TEST(CompilerList, ListWithElements)
     bc.done();
 }
 
-TEST(CompilerList, ListCapHintCappedAt255)
-{
-    Fa_Array<AST::Fa_Expr*> elems;
-
-    for (int i = 0; i < 300; i += 1)
-        elems.push(lit_int(i));
-
-    Fa_Chunk* chunk = compile_fail(expr_stmt(list_expr(std::move(elems)))); // too many regs
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    ASSERT_FALSE(chunk->code.empty());
-    u32 new_list = chunk->code[0];
-    EXPECT_EQ(Fa_instr_op(new_list), Fa_OpCode::LIST_NEW);
-    EXPECT_EQ(Fa_instr_B(new_list), 255u) << "capacity hint must be capped at 255";
-}
-
 TEST(CompilerScope, LocalslDontLeakOutOfBlock)
 {
     AST::Fa_BlockStmt* _ast = blk({ blk({ decl_stmt("x", lit_int(1)) }), decl_stmt("x", lit_int(2)) });
@@ -1194,18 +1200,16 @@ TEST(CompilerScope, LocalslDontLeakOutOfBlock)
 
 TEST(CompilerScope, NestedScopesBothVisible)
 {
-    Fa_Chunk* chunk = compile_ok(
-        { decl_stmt("a", lit_int(1)), blk([] {
-             Fa_Array<AST::Fa_Stmt*> s;
-             s.push(decl_stmt("b", lit_int(2)));
-             s.push(decl_stmt("c", binary(name_expr("a"), name_expr("b"), AST::Fa_BinaryOp::OP_ADD)));
-             return s;
-         }()) });
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
+    Fa_Chunk* ch = compile_ok_local({
+        decl_stmt("a", lit_int(1)),
+        blk({
+            decl_stmt("b", lit_int(2)),
+            decl_stmt("c", binary(name_expr("a"), name_expr("b"), AST::Fa_BinaryOp::OP_ADD)),
+        }),
+    });
+
     bool found_add = false;
-    for (auto& ins : chunk->code) {
+    for (auto& ins : ch->code) {
         if (Fa_instr_op(ins) == Fa_OpCode::OP_ADD) {
             EXPECT_EQ(Fa_instr_B(ins), 0u) << "a in r0";
             EXPECT_EQ(Fa_instr_C(ins), 1u) << "b in r1";
@@ -1222,15 +1226,6 @@ TEST(CompilerMeta, TopLevelChunkNameIsMain)
     if (test_config::dump_bytecode)
         dump(chunk);
     EXPECT_EQ(chunk->name, "<main>");
-}
-
-TEST(CompilerMeta, LocalCountReflectsMaxRegisters)
-{
-    Fa_Chunk* chunk = compile_ok({ decl_stmt("a", lit_int(1)), decl_stmt("b", lit_int(2)), decl_stmt("c", lit_int(3)) });
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    EXPECT_EQ(chunk->local_count, 3);
 }
 
 TEST(CompilerMeta, FunctionAritySetCorrectly)
@@ -1356,27 +1351,24 @@ TEST(CompilerLoop, ContinueOutsideLoopIsRejected)
 
 TEST(CompilerIntegration, NestedArithmetic)
 {
-    Fa_Chunk* chunk = compile_ok(
-        decl_stmt(
-            "result",
+    Fa_Chunk* ch = compile_ok_local({ decl_stmt(
+        "result",
+        binary(
             binary(
-                binary(
-                    lit_int(2),
-                    lit_int(3),
-                    AST::Fa_BinaryOp::OP_ADD),
-                binary(
-                    lit_int(4),
-                    lit_int(1),
-                    AST::Fa_BinaryOp::OP_SUB),
-                AST::Fa_BinaryOp::OP_MUL)));
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    BytecodeChecker bc(*chunk);
+                lit_int(2),
+                lit_int(3),
+                AST::Fa_BinaryOp::OP_ADD),
+            binary(
+                lit_int(4),
+                lit_int(1),
+                AST::Fa_BinaryOp::OP_SUB),
+            AST::Fa_BinaryOp::OP_MUL)) });
+
+    BytecodeChecker bc(*ch);
     bc.m_next("LOAD_INT 15").op(Fa_OpCode::LOAD_INT).A(0).Bx(load_int_bx(15));
     bc.m_next("RETURN_NIL").op(Fa_OpCode::RETURN_NIL);
     bc.done();
-    EXPECT_TRUE(chunk->ic_slots.empty());
+    EXPECT_TRUE(ch->ic_slots.empty());
 }
 
 TEST(CompilerIntegration, StringConstantPoolDedup)

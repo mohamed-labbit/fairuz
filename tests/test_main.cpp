@@ -36,8 +36,7 @@ class QuietOutputListener : public ::testing::EmptyTestEventListener {
 int main(int argc, char** argv)
 {
     ::testing::InitGoogleTest(&argc, argv);
-    ::testing::UnitTest::GetInstance()->listeners().Append(new QuietOutputListener());
-
+    
     fairuz::Fa_AllocatorContext g_ctx;
     fairuz::set_context(&g_ctx);
 
@@ -55,6 +54,9 @@ int main(int argc, char** argv)
             return 1;
         }
     }
+
+    if (!test_config::dump_bytecode && !test_config::verbose)
+        ::testing::UnitTest::GetInstance()->listeners().Append(new QuietOutputListener());
 
     int ret = RUN_ALL_TESTS();
     fairuz::g_context = nullptr;
