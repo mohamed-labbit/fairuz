@@ -53,6 +53,12 @@ include(GNUInstallDirs)
 # FindOpenMP) fails hard on an unsupported dialect instead of letting us
 # probe for one.
 include(CheckCXXCompilerFlag)
+include(FetchContent)
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/refs/tags/v1.15.2.zip
+)
+FetchContent_MakeAvailable(googletest)
 
 check_cxx_compiler_flag("-std=c++26" COMPILER_SUPPORTS_CXX26)
 
