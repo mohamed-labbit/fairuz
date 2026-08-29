@@ -146,7 +146,7 @@ Fa_Chunk* compile_program(Fa_Array<AST::Fa_Stmt*> stmts)
     diagnostic::reset();
     Fa_Chunk* chunk = Compiler().compile(stmts);
     if (diagnostic::has_errors()) {
-        diagnostic::dump();   // or whatever prints pending diagnostics
+        diagnostic::dump(); // or whatever prints pending diagnostics
     }
     // ASSERT_FALSE(diagnostic::has_errors());
     diagnostic::reset();

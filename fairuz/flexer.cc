@@ -337,7 +337,7 @@ tok::Fa_Token const* Fa_Lexer::lex_token()
         if (current == '\n') {
             if (m_bracket_depth > 0) {
                 m_source_manager.consume_char();
-                continue;   // inside ( [ { — newline is just whitespace, no NEWLINE/INDENT tracking
+                continue; // inside ( [ { — newline is just whitespace, no NEWLINE/INDENT tracking
             }
             u32 const start_byte = m_source_manager.get_file_offset();
             m_source_manager.consume_char();

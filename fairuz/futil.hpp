@@ -5,9 +5,9 @@
 #include "fmacros.hpp"
 #include "fstring.hpp"
 
+#include <cmath>
 #include <cstdint>
 #include <string>
-#include <cmath>
 
 namespace fairuz::util {
 

@@ -5,8 +5,8 @@
 #include "fdiagnostic.hpp"
 
 #include <cstdint>
-#include <ostream>
 #include <cstring>
+#include <ostream>
 
 namespace fairuz {
 

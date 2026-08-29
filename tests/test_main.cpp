@@ -27,8 +27,10 @@ class QuietOutputListener : public ::testing::EmptyTestEventListener {
         // Replay only on failure -- keeps green runs silent, but you
         // still get the diagnostic text when a test actually breaks.
         if (test_info.result()->Failed()) {
-            if (!out.empty()) std::cout << out;
-            if (!err.empty()) std::cerr << err;
+            if (!out.empty())
+                std::cout << out;
+            if (!err.empty())
+                std::cerr << err;
         }
     }
 };
@@ -36,7 +38,7 @@ class QuietOutputListener : public ::testing::EmptyTestEventListener {
 int main(int argc, char** argv)
 {
     ::testing::InitGoogleTest(&argc, argv);
-    
+
     fairuz::Fa_AllocatorContext g_ctx;
     fairuz::set_context(&g_ctx);
 
