@@ -171,7 +171,7 @@ fi
 
 if [[ "$DEBUG" == 1 || "$RUN_TESTS" == true ]]; then
     COMMON_FLAGS+=(
-        -DCMAKE_CXX_FLAGS="-fsanitize=address -g"
+        -DCMAKE_CXX_FLAGS="-fsanitize=address -g -Wall -Wextra -Wpedantic"
     )
 else
     COMMON_FLAGS+=(
