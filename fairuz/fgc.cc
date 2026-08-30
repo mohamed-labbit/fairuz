@@ -41,8 +41,8 @@ void Fa_GarbageCollector::collect(Fa_VM* vm)
 void Fa_GarbageCollector::mark_roots(Fa_VM* vm)
 {
     for (int i = 0; i < vm->m_stack_top && i < Fa_VM::STACK_SIZE; i += 1) {
-        if (Fa_IS_OBJECT(vm->m_stack[i]))
-            mark_object(Fa_AS_OBJECT(vm->m_stack[i]));
+        if (Fa_is_obj(vm->m_stack[i]))
+            mark_object(Fa_as_obj(vm->m_stack[i]));
     }
 
     for (int i = 0; i < vm->m_frames_top && i < Fa_VM::MAX_FRAMES; i += 1) {
@@ -110,10 +110,10 @@ void Fa_GarbageCollector::blacken_object(Fa_ObjHeader* obj)
     case Fa_ObjType::DICT: {
         Fa_ObjDict* dict = Fa_obj_cast<Fa_ObjDict>(obj, Fa_ObjType::DICT);
         for (auto [k, v] : dict->data) {
-            if (Fa_IS_OBJECT(k))
-                mark_object(Fa_AS_OBJECT(k));
-            if (Fa_IS_OBJECT(v))
-                mark_object(Fa_AS_OBJECT(v));
+            if (Fa_is_obj(k))
+                mark_object(Fa_as_obj(k));
+            if (Fa_is_obj(v))
+                mark_object(Fa_as_obj(v));
         }
         break;
     }
@@ -141,16 +141,16 @@ void Fa_GarbageCollector::sweep()
 void Fa_GarbageCollector::mark_value_array(Fa_Array<Fa_Value, /*_Alloc=*/Fa_GarbageCollector> const& arr)
 {
     for (u32 i = 0, n = arr.size(); i < n; i += 1) {
-        if (Fa_IS_OBJECT(arr[i]))
-            mark_object(Fa_AS_OBJECT(arr[i]));
+        if (Fa_is_obj(arr[i]))
+            mark_object(Fa_as_obj(arr[i]));
     }
 }
 
 void Fa_GarbageCollector::mark_value_array(Fa_Array<Fa_Value> const& arr)
 {
     for (u32 i = 0, n = arr.size(); i < n; i += 1) {
-        if (Fa_IS_OBJECT(arr[i]))
-            mark_object(Fa_AS_OBJECT(arr[i]));
+        if (Fa_is_obj(arr[i]))
+            mark_object(Fa_as_obj(arr[i]));
     }
 }
 
@@ -257,7 +257,7 @@ Fa_ObjInstance* Fa_GarbageCollector::make_obj_instance(Fa_ObjClass* klass)
     assert(klass != nullptr && "instance must be constructed with a valid class");
 
     Fa_Array<Fa_Value, /*_Alloc=*/Fa_GarbageCollector> fields {
-        klass->field_names.size(), Fa_MAKE_NIL(), this
+        klass->field_names.size(), Fa_make_nil(), this
     };
     auto ret = make<Fa_ObjInstance>(fields);
     ret->klass = klass;
@@ -274,6 +274,61 @@ Fa_ObjFileHandle* Fa_GarbageCollector::make_obj_file_handle(FILE* fp)
     ret->is_open = true;
 
     return ret;
+}
+
+Fa_Value Fa_GarbageCollector::make_string(Fa_StringRef str)
+{
+    Fa_ObjString* obj = make_obj_string(str);
+    return Fa_from_string(obj);
+}
+Fa_Value Fa_GarbageCollector::make_string(char const* str)
+{
+    Fa_ObjString* obj = make_obj_string(str);
+    return Fa_from_string(obj);
+}
+Fa_Value Fa_GarbageCollector::make_string(char* str)
+{
+    Fa_ObjString* obj = make_obj_string(str);
+    return Fa_from_string(obj);
+}
+Fa_Value Fa_GarbageCollector::make_list()
+{
+    Fa_ObjList* obj = make_obj_list();
+    return Fa_from_list(obj);
+}
+Fa_Value Fa_GarbageCollector::make_dict(Fa_DictType data)
+{
+    Fa_ObjDict* obj = make_obj_dict(data);
+    return Fa_from_dict(obj);
+}
+Fa_Value Fa_GarbageCollector::make_function(Fa_Chunk* chunk)
+{
+    Fa_ObjFunction* obj = make_obj_function(chunk);
+    return Fa_from_func(obj);
+}
+Fa_Value Fa_GarbageCollector::make_native(NativeFn fn, Fa_ObjString* name, int arity)
+{
+    Fa_ObjNative* obj = make_obj_native(fn, name, arity);
+    return Fa_from_native(obj);
+}
+Fa_Value Fa_GarbageCollector::make_class(
+    Fa_StringRef name,
+    Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> fields,
+    Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> methods,
+    Fa_Array<Fa_Chunk*, /*_Alloc=*/Fa_GarbageCollector> vtable)
+{
+    Fa_ObjClass* obj = make_obj_class(name, fields, methods, vtable);
+    return Fa_from_class(obj);
+}
+Fa_Value Fa_GarbageCollector::make_instance(Fa_ObjClass* klass)
+{
+    Fa_ObjInstance* obj = make_obj_instance(klass);
+    return Fa_from_instance(obj);
+}
+Fa_Value Fa_GarbageCollector::make_file_handle(FILE* fp)
+{
+    Fa_ObjFileHandle* obj = make_obj_file_handle(fp);
+    return Fa_from_file_handle(obj);
 }
 
 } // namespace fairuz::runtime

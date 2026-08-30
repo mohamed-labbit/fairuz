@@ -14,7 +14,7 @@
 
 namespace fairuz::diagnostic {
 
-Fa_DiagnosticEngine::DiagnosticId Fa_DiagnosticEngine::report(
+/*Fa_DiagnosticEngine::DiagnosticId Fa_DiagnosticEngine::report(
     Severity const sev, Fa_SourceLocation const loc, u16 err_code, std::string const& code)
 {
     DiagnosticId const id = report_deferred(sev, loc, err_code, code);
@@ -27,7 +27,7 @@ Fa_DiagnosticEngine::DiagnosticId Fa_DiagnosticEngine::report(
     }
 
     return id;
-}
+}*/
 
 Fa_DiagnosticEngine::DiagnosticId Fa_DiagnosticEngine::report_deferred(
     Severity const sev, Fa_SourceLocation const loc, u16 err_code, std::string const& code)

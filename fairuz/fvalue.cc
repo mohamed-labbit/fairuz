@@ -12,7 +12,7 @@ size_t Fa_ValueHash::operator()(Fa_Value const& v) const
     case Fa_TypeTag::BOOL: return std::hash<bool> { }(v.as_bool());
     case Fa_TypeTag::INT: return std::hash<i64> { }(v.as_int());
     case Fa_TypeTag::DOUBLE: return std::hash<f64> { }(v.as_double());
-    case Fa_TypeTag::STRING: return Fa_AS_STRING(v)->hash;
+    case Fa_TypeTag::STRING: return Fa_as_string(v)->hash;
     default: return std::hash<void*> { }(v.as_object());
     }
 }

@@ -9,18 +9,18 @@ namespace fairuz::runtime {
 
 void print_value(Fa_Value v)
 {
-    if (Fa_IS_NIL(v))
+    if (Fa_is_nil(v))
         ::printf("nil");
-    else if (Fa_IS_BOOL(v))
-        ::printf("%s", Fa_AS_BOOL(v) ? "صحيح" : "خطا");
-    else if (Fa_IS_INTEGER(v))
-        ::printf("%lli", Fa_AS_INTEGER(v));
-    else if (Fa_IS_DOUBLE(v))
-        ::printf("%g", Fa_AS_DOUBLE(v));
+    else if (Fa_is_bool(v))
+        ::printf("%s", Fa_as_bool(v) ? "صحيح" : "خطا");
+    else if (Fa_is_int(v))
+        ::printf("%lli", Fa_as_int(v));
+    else if (Fa_is_double(v))
+        ::printf("%g", Fa_as_double(v));
     else if (Fa_IS_STRING(v))
-        ::printf("\"%s\"", Fa_AS_STRING(v)->str.data());
-    else if (Fa_IS_OBJECT(v))
-        ::printf("<obj %p>", (void*)(Fa_AS_OBJECT(v)));
+        ::printf("\"%s\"", Fa_as_string(v)->str.data());
+    else if (Fa_is_obj(v))
+        ::printf("<obj %p>", (void*)(Fa_as_obj(v)));
 
     ::printf("?");
 }

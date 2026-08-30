@@ -15,8 +15,8 @@
 
 namespace fairuz::runtime {
 
+struct Fa_Chunk;
 class Fa_VM;
-class Fa_Chunk;
 class Fa_GarbageCollector;
 
 using Fa_DictType = Fa_HashTable<Fa_Value, Fa_Value, Fa_ValueHash, Fa_ValueEqual>;

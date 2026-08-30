@@ -431,7 +431,7 @@ public:
     // and non-FATAL) — callers that don't need the id can ignore the
     // return value as before; this is a source-compatible change from the
     // previous void-returning signature.
-    DiagnosticId report(Severity const sev, Fa_SourceLocation const loc, u16 err_code, std::string const& code = "");
+    // DiagnosticId report(Severity const sev, Fa_SourceLocation const loc, u16 err_code, std::string const& code = "");
     DiagnosticId report_deferred(Severity const sev, Fa_SourceLocation const loc, u16 err_code, std::string const& code = "");
 
     // Existing behavior, unchanged: attaches to whichever diagnostic was
@@ -509,21 +509,21 @@ private:
 inline Fa_DiagnosticEngine engine;
 
 template<typename CodeEnum>
-static constexpr u16 code_value(CodeEnum code)
+static inline constexpr u16 code_value(CodeEnum code)
 {
     static_assert(std::is_enum_v<CodeEnum>, "diagnostic code must be an enum");
     return static_cast<u16>(code);
 }
 
 template<typename CodeEnum>
-static void emit(CodeEnum code, Severity const sv = Severity::ERROR)
+static inline void emit(CodeEnum code, Severity const sv = Severity::ERROR)
 {
     engine.report_deferred(sv, { }, code_value(code));
     engine.emit(error_message_for(code_value(code)), sv);
 }
 
 template<typename CodeEnum>
-static void fatal_error(CodeEnum code, std::string const& detail = "")
+static inline void fatal_error(CodeEnum code, std::string const& detail = "")
 {
     engine.report_deferred(Severity::FATAL, { }, code_value(code), detail);
     std::string message = error_message_for(code_value(code));
@@ -533,7 +533,7 @@ static void fatal_error(CodeEnum code, std::string const& detail = "")
 }
 
 template<typename CodeEnum>
-static void emit(CodeEnum code, std::string const& detail, Severity const sv = Severity::ERROR)
+static inline void emit(CodeEnum code, std::string const& detail, Severity const sv = Severity::ERROR)
 {
     engine.report_deferred(sv, { }, code_value(code), detail);
     std::string message = error_message_for(code_value(code));
@@ -543,13 +543,13 @@ static void emit(CodeEnum code, std::string const& detail, Severity const sv = S
 }
 
 template<typename CodeEnum>
-[[noreturn]] static void panic(CodeEnum code)
+[[noreturn]] static inline void panic(CodeEnum code)
 {
     engine.panic(error_message_for(code_value(code)));
 }
 
 template<typename CodeEnum>
-[[noreturn]] static void panic(CodeEnum code, std::string const& detail)
+[[noreturn]] static inline void panic(CodeEnum code, std::string const& detail)
 {
     std::string message = error_message_for(code_value(code));
     if (!detail.empty())
@@ -557,33 +557,33 @@ template<typename CodeEnum>
     engine.panic(message);
 }
 
-static Fa_DiagnosticEngine::DiagnosticId report(Severity const sev, Fa_SourceLocation const loc, u16 err_code, std::string const& code = "")
+static inline Fa_DiagnosticEngine::DiagnosticId report(Severity const sev, Fa_SourceLocation const loc, u16 err_code, std::string const& code = "")
 {
-    return engine.report(sev, loc, err_code, code);
+    return engine.report_deferred(sev, loc, err_code, code);
 }
 
 template<typename CodeEnum>
-static Fa_DiagnosticEngine::DiagnosticId report(Severity const sev, Fa_SourceLocation const loc, CodeEnum code, std::string const& snippet = "")
+static inline Fa_DiagnosticEngine::DiagnosticId report(Severity const sev, Fa_SourceLocation const loc, CodeEnum code, std::string const& snippet = "")
 {
-    return engine.report(sev, loc, code_value(code), snippet);
+    return engine.report_deferred(sev, loc, code_value(code), snippet);
 }
 
-static void internal_error(errc::general::Code err_code) { emit(err_code); }
-static void runtime_error(errc::runtime::Code err_code) { emit(err_code); }
+static inline void internal_error(errc::general::Code err_code) { emit(err_code); }
+static inline void runtime_error(errc::runtime::Code err_code) { emit(err_code); }
 
 // Emits all accumulated diagnostics. The parser calls this once after
 // parseProgram() returns, not after each individual error.
-static void dump() { engine.pretty_print(); }
+static inline void dump() { engine.pretty_print(); }
 
 // Forwarding wrappers for the new query API so callers don't need to
 // reach into engine directly.
-static bool has_errors() noexcept { return engine.has_errors(); }
-static bool is_saturated() noexcept { return engine.is_saturated(); }
-static u32 error_count() noexcept { return engine.error_count(); }
-static u32 warning_count() noexcept { return engine.get_warning_count(); }
-static void reset() noexcept { engine.reset(); }
-static void set_source(lex::Fa_FileManager const* fm) noexcept { engine.set_source(fm); }
-static Fa_DiagnosticEngine::DiagnosticId report_deferred(Severity const sev, Fa_SourceLocation const loc, u16 err_code, std::string const& code = "")
+static inline bool has_errors() noexcept { return engine.has_errors(); }
+static inline bool is_saturated() noexcept { return engine.is_saturated(); }
+static inline u32 error_count() noexcept { return engine.error_count(); }
+static inline u32 warning_count() noexcept { return engine.get_warning_count(); }
+static inline void reset() noexcept { engine.reset(); }
+static inline void set_source(lex::Fa_FileManager const* fm) noexcept { engine.set_source(fm); }
+static inline Fa_DiagnosticEngine::DiagnosticId report_deferred(Severity const sev, Fa_SourceLocation const loc, u16 err_code, std::string const& code = "")
 {
     return engine.report_deferred(sev, loc, err_code, code);
 }

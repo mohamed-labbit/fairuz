@@ -53,7 +53,6 @@ public:
 
 private:
     std::vector<Fa_ArenaBlock> m_blocks { };
-    GrowthStrategy m_growth_factor { GrowthStrategy::LINEAR };
     size_t m_block_size { DEFAULT_BLOCK_SIZE };
     size_t m_next_block_size { DEFAULT_BLOCK_SIZE };
     std::string m_name { "arena" };
@@ -69,7 +68,7 @@ private:
     static constexpr size_t ALIGNMENT = alignof(std::max_align_t);
 
 public:
-    explicit Fa_ArenaAllocator(GrowthStrategy growth_strategy = GrowthStrategy::LINEAR, OutOfMemoryHandler oom_handler = nullptr);
+    explicit Fa_ArenaAllocator(OutOfMemoryHandler oom_handler = nullptr);
 
     ~Fa_ArenaAllocator() { reset(); }
 
@@ -117,7 +116,7 @@ private:
 }; // class Fa_ArenaAllocator
 
 struct Fa_AllocatorContext {
-    Fa_ArenaAllocator allocator { Fa_ArenaAllocator::GrowthStrategy::LINEAR, nullptr };
+    Fa_ArenaAllocator allocator { nullptr };
 }; // struct Fa_AllocatorContext
 
 inline Fa_AllocatorContext* g_context = nullptr;

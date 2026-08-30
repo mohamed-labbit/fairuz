@@ -156,7 +156,7 @@ struct Fa_LineEntry {
     u32 line { 0 };
 }; // struct LineEntry
 
-static Fa_StringRef Fa_opcode_name(Fa_OpCode op)
+static inline Fa_StringRef Fa_opcode_name(Fa_OpCode op)
 {
     switch (op) {
     case Fa_OpCode::LOAD_NIL: return "LOAD_NIL";
@@ -219,7 +219,7 @@ static Fa_StringRef Fa_opcode_name(Fa_OpCode op)
     }
 }
 
-static Fa_InstrFormat opcode_format(Fa_OpCode op)
+static inline Fa_InstrFormat opcode_format(Fa_OpCode op)
 {
     switch (op) {
     case Fa_OpCode::LOAD_CONST:
@@ -244,7 +244,7 @@ static Fa_InstrFormat opcode_format(Fa_OpCode op)
     }
 }
 
-static void print_value(u64 v);
+static inline void print_value(u64 v);
 
 struct Fa_ClassDescriptor {
     Fa_StringRef name;
@@ -302,7 +302,7 @@ struct Fa_Chunk {
 }; // struct Fa_Chunk
 
 template<typename... Args>
-static Fa_Chunk* make_chunk(Args&&... args) { return get_allocator().allocate_object<Fa_Chunk>(std::forward<Args>(args)...); }
+static inline Fa_Chunk* Fa_make_chunk(Args&&... args) { return get_allocator().allocate_object<Fa_Chunk>(std::forward<Args>(args)...); }
 
 } // namespace fairuz::runtime
 

@@ -4,6 +4,7 @@
 #include "fmacros.hpp"
 #include "fobj_header.hpp"
 #include "ftable.hpp"
+#include "fstring.hpp"
 
 #include <cstdint>
 
@@ -25,7 +26,7 @@ using Fa_Value = u64;
 using Fa_DictType = Fa_HashTable<Fa_Value, Fa_Value, Fa_ValueHash, Fa_ValueEqual>;
 using NativeFn = Fa_Value (Fa_VM::*)(int, Fa_Value*);
 
-/// NOTE: exclude any added tag from Fa_IS_DOUBLE macro
+/// NOTE: exclude any added tag from Fa_is_double macro
 static constexpr Fa_Value NANBOX_QNAN = UINT64_C(0x7FF8000000000000);
 static constexpr Fa_Value NANBOX_SIGN_BIT = UINT64_C(0x8000000000000000);
 static constexpr Fa_Value TAG_INT = UINT64_C(0x7FF9000000000000);
@@ -38,141 +39,133 @@ static constexpr u64 INT_TAG16 = UINT64_C(0x7FF9);
 static constexpr u64 OBJ_TAG16 = UINT64_C(0xFFF8);
 
 // runtime values
-#    define Fa_MAKE_NIL() NIL_VAL
-#    define Fa_MAKE_OBJECT(p) (TAG_OBJ | (reinterpret_cast<uintptr_t>(p) & PAYLOAD_MASK))
-#    define Fa_MAKE_REAL(d)                               \
-        ({                                                \
-            auto _tmp = (d);                              \
-            Fa_Value bits;                                \
-            __builtin_memcpy(&bits, &_tmp, sizeof(bits)); \
-            bits;                                         \
-        })
-#    define Fa_MAKE_BOOL(b) ((b) ? TRUE_VAL : FALSE_VAL)
-#    define Fa_MAKE_INTEGER(v) (static_cast<Fa_Value>(v) & PAYLOAD_MASK) | TAG_INT
+static inline Fa_Value Fa_make_nil() { return NIL_VAL; }
+static inline Fa_Value Fa_make_obj(Fa_ObjHeader const* p) { return TAG_OBJ | (reinterpret_cast<uintptr_t>(p) & PAYLOAD_MASK); }
+static inline Fa_Value Fa_make_real(f64 const d)
+{
+    Fa_Value bits;
+    ::memcpy(&bits, &d, sizeof(bits));
+    return bits;
+}
+static inline Fa_Value Fa_make_bool(bool const b) { return b ? TRUE_VAL : FALSE_VAL; }
+static inline Fa_Value Fa_make_int(i64 const v) { return (static_cast<Fa_Value>(v) & PAYLOAD_MASK) | TAG_INT; }
 
-#    define Fa_MAKE_STRING(s)                                           \
-        ({                                                              \
-            Fa_ObjString* _o = m_gc.make_obj_string(s);                 \
-            TAG_OBJ | (reinterpret_cast<uintptr_t>(_o) & PAYLOAD_MASK); \
-        })
-#    define Fa_MAKE_LIST()                                              \
-        ({                                                              \
-            Fa_ObjList* _o = m_gc.make_obj_list();                      \
-            TAG_OBJ | (reinterpret_cast<uintptr_t>(_o) & PAYLOAD_MASK); \
-        })
-#    define Fa_MAKE_DICT()                                              \
-        ({                                                              \
-            Fa_ObjDict* _o = m_gc.make_obj_dict();                      \
-            TAG_OBJ | (reinterpret_cast<uintptr_t>(_o) & PAYLOAD_MASK); \
-        })
-#    define Fa_MAKE_FUNCTION()                                          \
-        ({                                                              \
-            Fa_ObjFunction* _o = m_gc.make_obj_function();              \
-            TAG_OBJ | (reinterpret_cast<uintptr_t>(_o) & PAYLOAD_MASK); \
-        })
-#    define Fa_MAKE_NATIVE(f, n, a)                                     \
-        ({                                                              \
-            Fa_ObjNative* _o = m_gc.make_obj_native(f, n, a);           \
-            TAG_OBJ | (reinterpret_cast<uintptr_t>(_o) & PAYLOAD_MASK); \
-        })
+// forward
+struct Fa_ObjString;
+struct Fa_ObjList;
+struct Fa_ObjDict;
+struct Fa_ObjFunction;
+struct Fa_ObjNative;
+struct Fa_ObjClass;
+struct Fa_ObjInstance;
+struct Fa_ObjFileHandle;
 
-#    define Fa_MAKE_CLASS(n, f, m, v)                                   \
-        ({                                                              \
-            Fa_ObjClass* _o = m_gc.make_obj_class(n, f, m, v);          \
-            TAG_OBJ | (reinterpret_cast<uintptr_t>(_o) & PAYLOAD_MASK); \
-        })
-#    define Fa_MAKE_INSTANCE(k)                                         \
-        ({                                                              \
-            Fa_ObjInstance* _o = m_gc.make_obj_instance(k);             \
-            TAG_OBJ | (reinterpret_cast<uintptr_t>(_o) & PAYLOAD_MASK); \
-        })
-#    define Fa_MAKE_FILE_HANDLE(p)                                      \
-        ({                                                              \
-            Fa_ObjFileHandle* _o = m_gc.make_obj_file_handle(p);        \
-            TAG_OBJ | (reinterpret_cast<uintptr_t>(_o) & PAYLOAD_MASK); \
-        })
+static inline Fa_Value Fa_from_string(Fa_ObjString const* s)
+{
+    return TAG_OBJ | (reinterpret_cast<uintptr_t>(s) & PAYLOAD_MASK);
+}
+static inline Fa_Value Fa_from_list(Fa_ObjList const* l)
+{
+    return TAG_OBJ | (reinterpret_cast<uintptr_t>(l) & PAYLOAD_MASK);
+}
+static inline Fa_Value Fa_from_dict(Fa_ObjDict const* d)
+{
+    return TAG_OBJ | (reinterpret_cast<uintptr_t>(d) & PAYLOAD_MASK);
+}
+static inline Fa_Value Fa_from_func(Fa_ObjFunction const* f)
+{
+    return TAG_OBJ | (reinterpret_cast<uintptr_t>(f) & PAYLOAD_MASK);
+}
+static inline Fa_Value Fa_from_native(Fa_ObjNative const* n)
+{
+    return TAG_OBJ | (reinterpret_cast<uintptr_t>(n) & PAYLOAD_MASK);
+}
+static inline Fa_Value Fa_from_class(Fa_ObjClass const* c)
+{
+    return TAG_OBJ | (reinterpret_cast<uintptr_t>(c) & PAYLOAD_MASK);
+}
+static inline Fa_Value Fa_from_instance(Fa_ObjInstance const* i)
+{
+    return TAG_OBJ | (reinterpret_cast<uintptr_t>(i) & PAYLOAD_MASK);
+}
+static inline Fa_Value Fa_from_file_handle(Fa_ObjFileHandle const* p)
+{
+    return TAG_OBJ | (reinterpret_cast<uintptr_t>(p) & PAYLOAD_MASK);
+}
 
 /* ------- Truth macros  ------- */
 
-#    define Fa_IS_NIL(v) ((v) == NIL_VAL)
-#    define Fa_IS_BOOL(v) (((v) | 1) == TRUE_VAL)
-#    define Fa_IS_INTEGER(v) (((v) >> 48) == INT_TAG16)
-#    define Fa_IS_OBJECT(v) (((v) >> 48) == OBJ_TAG16)
-#    define Fa_IS_DOUBLE(v)                                                                            \
-        ({                                                                                             \
-            u64 _top = (v) >> 48;                                                                      \
-            (_top != INT_TAG16 && _top != OBJ_TAG16 && !(((v) | 1) == TRUE_VAL) && !((v) == NIL_VAL)); \
-        })
-#    define Fa_IS_NUMBER(v)                                                                              \
-        ({                                                                                               \
-            u64 _top = (v) >> 48;                                                                        \
-            (_top == INT_TAG16) || (_top != OBJ_TAG16 && !(((v) | 1) == TRUE_VAL) && !((v) == NIL_VAL)); \
-        })
-#    define Fa_IS_STRING(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::STRING)
-#    define Fa_IS_LIST(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::LIST)
-#    define Fa_IS_DICT(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::DICT)
-#    define Fa_IS_FUNCTION(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::FUNCTION)
-#    define Fa_IS_CLOSURE(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::CLOSURE)
-#    define Fa_IS_NATIVE(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::NATIVE)
-#    define Fa_IS_CLASS(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::CLASS)
-#    define Fa_IS_INSTANCE(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::INSTANCE)
-#    define Fa_IS_FILE_HANDLE(v) (Fa_IS_OBJECT(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::FILE_HANDLE)
-#    define Fa_IS_TRUTHY(v)                        \
-        ({                                         \
-            Fa_Value _v = (v);                     \
-            u64 _tag = _v >> 48;                   \
-            bool _res;                             \
-                                                   \
-            if Fa_IS_NIL (_v)                      \
-                _res = false;                      \
-            else if ((_v | 1) == TRUE_VAL)         \
-                _res = (_v & 1);                   \
-            else if (_tag == INT_TAG16)            \
-                _res = ((_v & PAYLOAD_MASK) != 0); \
-            else if (_tag == OBJ_TAG16)            \
-                _res = true;                       \
-            else                                   \
-                _res = ((_v << 1) != 0);           \
-                                                   \
-            _res;                                  \
-        })
+static inline bool Fa_is_nil(Fa_Value const v) { return v == NIL_VAL; }
+static inline bool Fa_is_bool(Fa_Value const v) { return (v | 1) == TRUE_VAL; }
+static inline bool Fa_is_int(Fa_Value const v) { return (v >> 48) == INT_TAG16; }
+static inline bool Fa_is_obj(Fa_Value const v) { return (v >> 48) == OBJ_TAG16; }
+static inline bool Fa_is_double(Fa_Value const v)
+{
+    u64 top = v >> 48;
+    return top != INT_TAG16 && top != OBJ_TAG16 && !((v | 1) == TRUE_VAL) && !(v == NIL_VAL);
+}
+static inline bool Fa_is_number(Fa_Value const v)
+{
+    u64 top = v >> 48;
+    return (top == INT_TAG16) || (top != OBJ_TAG16 && !((v | 1) == TRUE_VAL) && !(v == NIL_VAL));
+}
+
+#    define Fa_IS_STRING(v) (Fa_is_obj(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::STRING)
+#    define Fa_IS_LIST(v) (Fa_is_obj(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::LIST)
+#    define Fa_IS_DICT(v) (Fa_is_obj(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::DICT)
+#    define Fa_IS_FUNCTION(v) (Fa_is_obj(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::FUNCTION)
+#    define Fa_IS_CLOSURE(v) (Fa_is_obj(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::CLOSURE)
+#    define Fa_IS_NATIVE(v) (Fa_is_obj(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::NATIVE)
+#    define Fa_IS_CLASS(v) (Fa_is_obj(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::CLASS)
+#    define Fa_IS_INSTANCE(v) (Fa_is_obj(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::INSTANCE)
+#    define Fa_IS_FILE_HANDLE(v) (Fa_is_obj(v) && reinterpret_cast<Fa_ObjHeader*>((v) & PAYLOAD_MASK)->type == Fa_ObjType::FILE_HANDLE)
+
+static inline bool Fa_is_truthy(Fa_Value const v)
+{
+    if (Fa_is_nil(v))
+        return false;
+    else if (Fa_is_bool(v))
+        return v & 1;
+    else if (Fa_is_int(v))
+        return (v & PAYLOAD_MASK) != 0;
+    else if (Fa_is_obj(v))
+        return true;
+    return (v << 1) != 0;
+}
 
 /* -------- Casting macros -------- */
 
-#    define Fa_AS_BOOL(v) ((v) & 1)
-#    define Fa_AS_INTEGER(v)                          \
-        ({                                            \
-            i64 _payload = (i64)((v) & PAYLOAD_MASK); \
-            if (_payload & (INT64_C(1) << 47))        \
-                _payload |= ~PAYLOAD_MASK;            \
-            _payload;                                 \
-        })
-#    define Fa_AS_DOUBLE(v)                         \
-        ({                                          \
-            Fa_Value _v = (v);                      \
-            f64 _d;                                 \
-            __builtin_memcpy(&_d, &_v, sizeof(_d)); \
-            _d;                                     \
-        })
-#    define Fa_AS_DOUBLE_ANY(v)                         \
-        ({                                              \
-            Fa_Value _v = (v);                          \
-            f64 _d;                                     \
-            if (Fa_IS_INTEGER(_v))                      \
-                _d = (f64)Fa_AS_INTEGER(_v);            \
-            else                                        \
-                __builtin_memcpy(&_d, &_v, sizeof(_d)); \
-            _d;                                         \
-        })
-#    define Fa_AS_OBJECT(v) reinterpret_cast<Fa_ObjHeader*>(static_cast<uintptr_t>((v) & PAYLOAD_MASK))
-#    define Fa_AS_STRING(v) Fa_obj_cast<Fa_ObjString>(Fa_AS_OBJECT(v), Fa_ObjType::STRING)
-#    define Fa_AS_LIST(v) Fa_obj_cast<Fa_ObjList>(Fa_AS_OBJECT(v), Fa_ObjType::LIST)
-#    define Fa_AS_DICT(v) Fa_obj_cast<Fa_ObjDict>(Fa_AS_OBJECT(v), Fa_ObjType::DICT)
-#    define Fa_AS_FUNCTION(v) Fa_obj_cast<Fa_ObjFunction>(Fa_AS_OBJECT(v), Fa_ObjType::FUNCTION)
-#    define Fa_AS_NATIVE(v) Fa_obj_cast<Fa_ObjNative>(Fa_AS_OBJECT(v), Fa_ObjType::NATIVE)
-#    define Fa_AS_CLASS(v) Fa_obj_cast<Fa_ObjClass>(Fa_AS_OBJECT(v), Fa_ObjType::CLASS)
-#    define Fa_AS_INSTANCE(v) Fa_obj_cast<Fa_ObjInstance>(Fa_AS_OBJECT(v), Fa_ObjType::INSTANCE)
-#    define Fa_AS_FILE_HANDLE(v) Fa_obj_cast<Fa_ObjFileHandle>(Fa_AS_OBJECT(v), Fa_ObjType::FILE_HANDLE)
+static inline bool Fa_as_bool(Fa_Value const v)
+{
+    return v & 1;
+}
+static inline i64 Fa_as_int(Fa_Value const v)
+{
+    i64 payload = static_cast<i64>(v & PAYLOAD_MASK);
+    if (payload & (INT64_C(1) << 47))
+        return payload | ~PAYLOAD_MASK;
+    return payload;
+}
+static inline f64 Fa_as_double(Fa_Value const v)
+{
+    f64 d;
+    ::memcpy(&d, &v, sizeof(d));
+    return d;
+}
+static inline f64 Fa_as_double_any(Fa_Value v)
+{
+    return Fa_is_int(v) ? static_cast<f64>(Fa_as_int(v)) : Fa_as_double(v);
+}
+
+#    define Fa_as_obj(v) reinterpret_cast<Fa_ObjHeader*>(static_cast<uintptr_t>((v) & PAYLOAD_MASK))
+#    define Fa_as_string(v) Fa_obj_cast<Fa_ObjString>(Fa_as_obj(v), Fa_ObjType::STRING)
+#    define Fa_as_list(v) Fa_obj_cast<Fa_ObjList>(Fa_as_obj(v), Fa_ObjType::LIST)
+#    define Fa_as_dict(v) Fa_obj_cast<Fa_ObjDict>(Fa_as_obj(v), Fa_ObjType::DICT)
+#    define Fa_as_func(v) Fa_obj_cast<Fa_ObjFunction>(Fa_as_obj(v), Fa_ObjType::FUNCTION)
+#    define Fa_as_native(v) Fa_obj_cast<Fa_ObjNative>(Fa_as_obj(v), Fa_ObjType::NATIVE)
+#    define Fa_as_class(v) Fa_obj_cast<Fa_ObjClass>(Fa_as_obj(v), Fa_ObjType::CLASS)
+#    define Fa_as_instance(v) Fa_obj_cast<Fa_ObjInstance>(Fa_as_obj(v), Fa_ObjType::INSTANCE)
+#    define Fa_as_file_handle(v) Fa_obj_cast<Fa_ObjFileHandle>(Fa_as_obj(v), Fa_ObjType::FILE_HANDLE)
 
 enum class Fa_TypeTag : u16 {
     NONE = 0,
@@ -205,17 +198,17 @@ inline Fa_TypeTag& operator|=(Fa_TypeTag& a, Fa_TypeTag b) noexcept { return a =
 
 [[nodiscard]] inline Fa_TypeTag value_type_tag(Fa_Value v) noexcept
 {
-    if (Fa_IS_NIL(v))
+    if (Fa_is_nil(v))
         return Fa_TypeTag::NIL;
-    if (Fa_IS_BOOL(v))
+    if (Fa_is_bool(v))
         return Fa_TypeTag::BOOL;
-    if (Fa_IS_INTEGER(v))
+    if (Fa_is_int(v))
         return Fa_TypeTag::INT;
-    if (Fa_IS_DOUBLE(v))
+    if (Fa_is_double(v))
         return Fa_TypeTag::DOUBLE;
 
-    if (Fa_IS_OBJECT(v)) {
-        switch (Fa_AS_OBJECT(v)->type) {
+    if (Fa_is_obj(v)) {
+        switch (Fa_as_obj(v)->type) {
         case Fa_ObjType::STRING: return Fa_TypeTag::STRING;
         case Fa_ObjType::LIST: return Fa_TypeTag::LIST;
         case Fa_ObjType::DICT: return Fa_TypeTag::DICT;
@@ -341,28 +334,28 @@ public:
 
 /* ------- Factory macros ------- */
 
-#    define Fa_MAKE_NIL() Fa_Value::nil()
-#    define Fa_MAKE_OBJECT(p) Fa_Value::from_object((Fa_ObjHeader*)(p))
-#    define Fa_MAKE_REAL(d) Fa_Value::from_double(d)
-#    define Fa_MAKE_BOOL(b) Fa_Value::from_bool(b)
-#    define Fa_MAKE_INTEGER(v) Fa_Value::from_int(v)
-#    define Fa_MAKE_STRING(s) Fa_Value::from_object((Fa_ObjHeader*)(m_gc.make_obj_string(s)))
-#    define Fa_MAKE_LIST() Fa_Value::from_object((Fa_ObjHeader*)(m_gc.make_obj_list()))
-#    define Fa_MAKE_DICT() Fa_Value::from_object((Fa_ObjHeader*)(m_gc.make_obj_dict()))
-#    define Fa_MAKE_FUNCTION() Fa_Value::from_object((Fa_ObjHeader*)(m_gc.make_obj_function()))
-#    define Fa_MAKE_NATIVE(f, n, a) Fa_Value::from_object((Fa_ObjHeader*)(m_gc.make_obj_native(f, n, a)))
-#    define Fa_MAKE_CLASS(n, f, f_c, m, m_c, v, v_c) Fa_Value::from_object((Fa_ObjHeader*)(m_gc.make_obj_class(n, f, f_c, m, m_c, v, v_c)))
-#    define Fa_MAKE_INSTANCE(k) Fa_Value::from_object((Fa_ObjHeader*)(m_gc.make_obj_instance(k)))
-#    define Fa_MAKE_FILE_HANDLE(p) Fa_Value::from_object((Fa_ObjHeader*)(m_gc.make_obj_file_handle(p)))
+#    define Fa_make_nil() Fa_Value::nil()
+#    define Fa_make_obj(p) Fa_Value::from_object((Fa_ObjHeader*)(p))
+#    define Fa_make_real(d) Fa_Value::from_double(d)
+#    define Fa_make_bool(b) Fa_Value::from_bool(b)
+#    define Fa_make_int(v) Fa_Value::from_int(v)
+#    define m_gc.make_string(s) Fa_Value::from_object((Fa_ObjHeader*)(m_gc.make_obj_string(s)))
+#    define m_gc.make_list() Fa_Value::from_object((Fa_ObjHeader*)(m_gc.make_obj_list()))
+#    define m_gc.make_dict() Fa_Value::from_object((Fa_ObjHeader*)(m_gc.make_obj_dict()))
+#    define Fa_make_func() Fa_Value::from_object((Fa_ObjHeader*)(m_gc.make_obj_function()))
+#    define Fa_make_native(f, n, a) Fa_Value::from_object((Fa_ObjHeader*)(m_gc.make_obj_native(f, n, a)))
+#    define Fa_make_class(n, f, f_c, m, m_c, v, v_c) Fa_Value::from_object((Fa_ObjHeader*)(m_gc.make_obj_class(n, f, f_c, m, m_c, v, v_c)))
+#    define Fa_make_instance(k) Fa_Value::from_object((Fa_ObjHeader*)(m_gc.make_obj_instance(k)))
+#    define Fa_make_file_handle(p) Fa_Value::from_object((Fa_ObjHeader*)(m_gc.make_obj_file_handle(p)))
 
 /* ------- Truth macros  ------- */
 
-#    define Fa_IS_NIL(v) (v).is_nil()
-#    define Fa_IS_BOOL(v) (v).is_bool()
-#    define Fa_IS_INTEGER(v) (v).is_int()
-#    define Fa_IS_OBJECT(v) (v).is_object()
-#    define Fa_IS_DOUBLE(v) (v).is_double()
-#    define Fa_IS_NUMBER(v) ((v).is_double() || (v).is_int())
+#    define Fa_is_nil(v) (v).is_nil()
+#    define Fa_is_bool(v) (v).is_bool()
+#    define Fa_is_int(v) (v).is_int()
+#    define Fa_is_obj(v) (v).is_object()
+#    define Fa_is_double(v) (v).is_double()
+#    define Fa_is_number(v) ((v).is_double() || (v).is_int())
 #    define Fa_IS_STRING(v) ((v).is_object() && (v).as_object()->type == Fa_ObjType::STRING)
 #    define Fa_IS_LIST(v) ((v).is_object() && (v).as_object()->type == Fa_ObjType::LIST)
 #    define Fa_IS_DICT(v) ((v).is_object() && (v).as_object()->type == Fa_ObjType::DICT)
@@ -372,41 +365,40 @@ public:
 #    define Fa_IS_CLASS(v) ((v).is_object() && (v).as_object()->type == Fa_ObjType::CLASS)
 #    define Fa_IS_INSTANCE(v) ((v).is_object() && (v).as_object()->type == Fa_ObjType::INSTANCE)
 #    define Fa_IS_FILE_HANDLE(v) ((v).is_object() && (v).as_object()->type == Fa_ObjType::FILE_HANDLE)
-#    define Fa_IS_TRUTHY(v)                \
-        ({                                 \
-            Fa_Value _v = (v);             \
-            bool _res;                     \
-            if (_v.is_nil())               \
-                _res = false;              \
-            else if (_v.is_bool())         \
-                _res = _v.as_bool();       \
-            else if (_v.is_int())          \
-                _res = (_v.as_int() != 0); \
-            else if (_v.is_object())       \
-                _res = true;               \
-            _res;                          \
-        })
+
+static inline bool Fa_is_truthy(Fa_Value const v)
+{
+    if (v.is_nil())
+        return false;
+    else if (v.is_bool())
+        return v.as_bool();
+    else if (v.is_int())
+        return v.as_int() != 0;
+    else if (v.is_object())
+        return true;
+    return true;
+}
 
 /* -------- Casting macros -------- */
 
-#    define Fa_AS_BOOL(v) (v).as_bool()
-#    define Fa_AS_INTEGER(v) (v).as_int()
-#    define Fa_AS_DOUBLE(v) (v).as_double()
-#    define Fa_AS_DOUBLE_ANY(v)                                         \
-        ({                                                              \
-            Fa_Value _v = (v);                                          \
-            f64 _d = _v.is_int() ? (f64)(_v.as_int()) : _v.as_double(); \
-            _d;                                                         \
-        })
-#    define Fa_AS_OBJECT(v) (v).as_object()
-#    define Fa_AS_STRING(v) Fa_obj_cast<Fa_ObjString>((v).as_object(), Fa_ObjType::STRING)
-#    define Fa_AS_LIST(v) Fa_obj_cast<Fa_ObjList>((v).as_object(), Fa_ObjType::LIST)
-#    define Fa_AS_DICT(v) Fa_obj_cast<Fa_ObjDict>((v).as_object(), Fa_ObjType::DICT)
-#    define Fa_AS_FUNCTION(v) Fa_obj_cast<Fa_ObjFunction>((v).as_object(), Fa_ObjType::FUNCTION)
-#    define Fa_AS_NATIVE(v) Fa_obj_cast<Fa_ObjNative>((v).as_object(), Fa_ObjType::NATIVE)
-#    define Fa_AS_CLASS(v) Fa_obj_cast<Fa_ObjClass>((v).as_object(), Fa_ObjType::CLASS)
-#    define Fa_AS_INSTANCE(v) Fa_obj_cast<Fa_ObjInstance>((v).as_object(), Fa_ObjType::INSTANCE)
-#    define Fa_AS_FILE_HANDLE(v) Fa_obj_cast<Fa_ObjFileHandle>((v).as_object(), Fa_ObjType::FILE_HANDLE)
+#    define Fa_as_bool(v) (v).as_bool()
+#    define Fa_as_int(v) (v).as_int()
+#    define Fa_as_double(v) (v).as_double()
+
+static inline f64 Fa_as_double_any(v)
+{
+    return v.is_int() ? static_cast<f64>(v.as_int()) : v.as_double();
+}
+
+#    define Fa_as_obj(v) (v).as_object()
+#    define Fa_as_string(v) Fa_obj_cast<Fa_ObjString>((v).as_object(), Fa_ObjType::STRING)
+#    define Fa_as_list(v) Fa_obj_cast<Fa_ObjList>((v).as_object(), Fa_ObjType::LIST)
+#    define Fa_as_dict(v) Fa_obj_cast<Fa_ObjDict>((v).as_object(), Fa_ObjType::DICT)
+#    define Fa_as_func(v) Fa_obj_cast<Fa_ObjFunction>((v).as_object(), Fa_ObjType::FUNCTION)
+#    define Fa_as_native(v) Fa_obj_cast<Fa_ObjNative>((v).as_object(), Fa_ObjType::NATIVE)
+#    define Fa_as_class(v) Fa_obj_cast<Fa_ObjClass>((v).as_object(), Fa_ObjType::CLASS)
+#    define Fa_as_instance(v) Fa_obj_cast<Fa_ObjInstance>((v).as_object(), Fa_ObjType::INSTANCE)
+#    define Fa_as_file_handle(v) Fa_obj_cast<Fa_ObjFileHandle>((v).as_object(), Fa_ObjType::FILE_HANDLE)
 
 [[nodiscard]] inline Fa_TypeTag value_type_tag(Fa_Value v) noexcept
 {

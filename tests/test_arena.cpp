@@ -10,7 +10,7 @@ private:
 
 public:
     TestAllocator()
-        : allocator_(Fa_ArenaAllocator::GrowthStrategy::LINEAR)
+        : allocator_(nullptr)
     {
     }
 

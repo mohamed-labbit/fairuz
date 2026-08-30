@@ -62,8 +62,8 @@ TEST(Fa_Chunk, PatchJumpPreservesOpAndA)
 TEST(Fa_Chunk, AddConstantDeduplicatesIntegers)
 {
     Fa_Chunk c;
-    u16 i0 = c.add_constant(Fa_MAKE_INTEGER(42));
-    u16 i1 = c.add_constant(Fa_MAKE_INTEGER(42));
+    u16 i0 = c.add_constant(Fa_make_int(42));
+    u16 i1 = c.add_constant(Fa_make_int(42));
     EXPECT_EQ(i0, i1);
     EXPECT_EQ(c.constants.size(), 1u);
 }
@@ -71,8 +71,8 @@ TEST(Fa_Chunk, AddConstantDeduplicatesIntegers)
 TEST(Fa_Chunk, AddConstantDeduplicatesDoubles)
 {
     Fa_Chunk c;
-    u16 i0 = c.add_constant(Fa_MAKE_REAL(3.14));
-    u16 i1 = c.add_constant(Fa_MAKE_REAL(3.14));
+    u16 i0 = c.add_constant(Fa_make_real(3.14));
+    u16 i1 = c.add_constant(Fa_make_real(3.14));
     EXPECT_EQ(i0, i1);
     EXPECT_EQ(c.constants.size(), 1u);
 }
@@ -80,8 +80,8 @@ TEST(Fa_Chunk, AddConstantDeduplicatesDoubles)
 TEST(Fa_Chunk, AddConstantDeduplicatesNil)
 {
     Fa_Chunk c;
-    u16 i0 = c.add_constant(Fa_MAKE_NIL());
-    u16 i1 = c.add_constant(Fa_MAKE_NIL());
+    u16 i0 = c.add_constant(Fa_make_nil());
+    u16 i1 = c.add_constant(Fa_make_nil());
     EXPECT_EQ(i0, i1);
     EXPECT_EQ(c.constants.size(), 1u);
 }
@@ -89,8 +89,8 @@ TEST(Fa_Chunk, AddConstantDeduplicatesNil)
 TEST(Fa_Chunk, AddConstantDistinguishesDifferentValues)
 {
     Fa_Chunk c;
-    u16 i0 = c.add_constant(Fa_MAKE_INTEGER(1));
-    u16 i1 = c.add_constant(Fa_MAKE_INTEGER(2));
+    u16 i0 = c.add_constant(Fa_make_int(1));
+    u16 i1 = c.add_constant(Fa_make_int(2));
     EXPECT_NE(i0, i1);
     EXPECT_EQ(c.constants.size(), 2u);
 }
@@ -98,8 +98,8 @@ TEST(Fa_Chunk, AddConstantDistinguishesDifferentValues)
 TEST(Fa_Chunk, AddConstantIntAndDoubleNotDeduplicated)
 {
     Fa_Chunk c;
-    u16 i0 = c.add_constant(Fa_MAKE_INTEGER(1));
-    u16 i1 = c.add_constant(Fa_MAKE_REAL(1.0));
+    u16 i0 = c.add_constant(Fa_make_int(1));
+    u16 i1 = c.add_constant(Fa_make_real(1.0));
     EXPECT_NE(i0, i1);
     EXPECT_EQ(c.constants.size(), 2u);
 }
@@ -108,7 +108,7 @@ TEST(Fa_Chunk, AddConstantReturnSequentialIndices)
 {
     Fa_Chunk c;
     for (int i = 0; i < 10; i += 1) {
-        u16 idx = c.add_constant(Fa_MAKE_INTEGER(i * 1000));
+        u16 idx = c.add_constant(Fa_make_int(i * 1000));
         EXPECT_EQ(idx, static_cast<u16>(i));
     }
 }
@@ -191,8 +191,8 @@ TEST(Fa_Chunk, GetLineNewEntryOnLineChange)
 
 TEST(Fa_Chunk, OwnsSubFunctions)
 {
-    auto* m_parent = fairuz::runtime::make_chunk();
-    auto* child = fairuz::runtime::make_chunk();
+    auto* m_parent = fairuz::runtime::Fa_make_chunk();
+    auto* child = fairuz::runtime::Fa_make_chunk();
     child->name = "child";
     m_parent->functions.push(child);
     SUCCEED();
@@ -201,7 +201,7 @@ TEST(Fa_Chunk, OwnsSubFunctions)
 TEST(Fa_Chunk, SubFunctionPreservesData)
 {
     Fa_Chunk m_parent;
-    auto* child = fairuz::runtime::make_chunk();
+    auto* child = fairuz::runtime::Fa_make_chunk();
     child->name = "myfunc";
     child->arity = 2;
     child->emit(Fa_make_ABC(Fa_OpCode::RETURN_NIL, 0, 0, 0), { });

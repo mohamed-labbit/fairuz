@@ -7,6 +7,7 @@
 #include "fdiagnostic.hpp"
 #include "ferror.hpp"
 #include "fmacros.hpp"
+#include "fobj_header.hpp"
 #include "fopcode.hpp"
 #include "foptim.hpp"
 #include "fvalue.hpp"
@@ -21,11 +22,23 @@
         if (UNLIKELY((r).has_error())) \
             return (r).error();        \
     } while (0)
+#define Fa_TRY_ASSIGN(out, expr) \
+    do {                         \
+        auto _r = (expr);        \
+        Fa_VERIFY_RESULT(_r);    \
+        *(out) = _r.value();     \
+    } while (0)
+#define Fa_TRY_DISCARD(expr)  \
+    do {                      \
+        auto _r = (expr);     \
+        Fa_VERIFY_RESULT(_r); \
+        (void)_r;             \
+    } while (0)
 
-#define COMPILE_EXPR_IMPL(e, r) ({ auto _r = compile_expr_impl(e); Fa_VERIFY_RESULT(_r); *r = _r.value(); })
-#define COMPILE_STMT_DISCARD(s) ({ auto _r = compile_stmt(s); Fa_VERIFY_RESULT(_r); (void)_r; })
-#define ANY_REG(v, l, r) ({ auto _r = any_reg(v, l); Fa_VERIFY_RESULT(_r); *r = _r.value(); })
-#define ALLOC_REG(r) ({ auto _r = alloc_register(); Fa_VERIFY_RESULT(_r); *r = _r.value(); })
+#define COMPILE_EXPR_IMPL(e, r) Fa_TRY_ASSIGN(r, compile_expr_impl(e))
+#define COMPILE_STMT_DISCARD(s) Fa_TRY_DISCARD(compile_stmt(s))
+#define ANY_REG(v, l, out) Fa_TRY_ASSIGN(out, any_reg((v), (l)))
+#define ALLOC_REG(out) Fa_TRY_ASSIGN(out, alloc_register())
 
 namespace fairuz::runtime {
 
@@ -33,7 +46,6 @@ using CompilerError = diagnostic::errc::compiler::Code;
 using cmp_ret = Fa_ErrorOr<Fa_ExprResult>;
 
 static constexpr char kClassInstanceName[] = "__class$instance";
-static constexpr char kClassMetadataKey[] = "__class__";
 
 static bool is_terminal_top_level_call(AST::Fa_Stmt const* s)
 {
@@ -72,7 +84,7 @@ static bool is_this_reference(AST::Fa_Expr const* e)
 
 Fa_Chunk* Compiler::compile(Fa_Array<AST::Fa_Stmt*> const& stmts)
 {
-    Fa_Chunk* chunk = make_chunk();
+    Fa_Chunk* chunk = Fa_make_chunk();
     chunk->name = "<main>";
 
     CompilerState state;
@@ -190,7 +202,7 @@ Fa_ErrorOr<bool> Compiler::compile_if(AST::Fa_IfStmt* s)
     bool incoming_dead = m_current->is_dead;
 
     if (auto folded = try_fold_expr(s->get_condition())) {
-        if (Fa_IS_TRUTHY(*folded)) {
+        if (Fa_is_truthy(*folded)) {
             auto ret = compile_stmt(s->get_then());
             m_current->is_dead = incoming_dead;
             return ret;
@@ -237,7 +249,7 @@ Fa_ErrorOr<bool> Compiler::compile_while(AST::Fa_WhileStmt* s)
 
     bool incoming_dead = m_current->is_dead;
     if (auto folded = try_fold_expr(s->get_condition())) {
-        if (Fa_IS_TRUTHY(*folded)) {
+        if (Fa_is_truthy(*folded)) {
             u32 loop_start = current_offset();
             push_loop(loop_start);
             COMPILE_STMT_DISCARD(s->get_body());
@@ -282,7 +294,7 @@ Fa_ErrorOr<bool> Compiler::compile_function_def(AST::Fa_FunctionDef* f)
     if (name == nullptr)
         return report_error(CompilerError::NULL_FUNCTION_NAME, f->get_location());
 
-    Fa_Chunk* fn_chunk = make_chunk();
+    Fa_Chunk* fn_chunk = Fa_make_chunk();
     fn_chunk->name = name->get_value();
     fn_chunk->arity = f->has_parameters() ? static_cast<int>(f->get_parameters().size()) : 0;
 
@@ -404,8 +416,8 @@ Fa_ErrorOr<bool> Compiler::compile_for(AST::Fa_ForStmt* s)
     declare_local("__for_step", step_reg);
 
     emit(Fa_make_ABC(Fa_OpCode::LIST_LEN, len_reg, iter_reg, 0), loc);
-    emit_load_value(index_reg, Fa_MAKE_INTEGER(0), loc);
-    emit_load_value(step_reg, Fa_MAKE_INTEGER(1), loc);
+    emit_load_value(index_reg, Fa_make_int(0), loc);
+    emit_load_value(step_reg, Fa_make_int(1), loc);
 
     u32 loop_start = current_offset();
     push_loop(loop_start);
@@ -490,7 +502,7 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
         if (method_name == nullptr)
             return report_error(CompilerError::NULL_FUNCTION_NAME, method_name->get_location());
 
-        Fa_Chunk* ch = make_chunk();
+        Fa_Chunk* ch = Fa_make_chunk();
         ch->name = class_name + "." + method_name->get_value();
         int ex_param_count = method->has_parameters() ? static_cast<int>(method->get_parameters().size()) : 0;
         ch->arity = ex_param_count + 1;
@@ -746,13 +758,13 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_unary_impl(AST::Fa_UnaryExpr* e)
 
     if (auto folded = try_fold_unary(e)) {
         Fa_Value v = *folded;
-        if (Fa_IS_INTEGER(v))
-            return Fa_ExprResult::kint(Fa_AS_INTEGER(v));
-        if (Fa_IS_DOUBLE(v))
-            return Fa_ExprResult::kfloat(Fa_AS_DOUBLE(v));
-        if (Fa_IS_BOOL(v))
-            return Fa_ExprResult::kbool(Fa_AS_BOOL(v));
-        if (Fa_IS_NIL(v))
+        if (Fa_is_int(v))
+            return Fa_ExprResult::kint(Fa_as_int(v));
+        if (Fa_is_double(v))
+            return Fa_ExprResult::kfloat(Fa_as_double(v));
+        if (Fa_is_bool(v))
+            return Fa_ExprResult::kbool(Fa_as_bool(v));
+        if (Fa_is_nil(v))
             return Fa_ExprResult::knil();
     }
 
@@ -783,13 +795,13 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_binary_impl(AST::Fa_BinaryExpr* e)
 
     if (auto folded = try_fold_binary(e)) {
         Fa_Value v = *folded;
-        if (Fa_IS_INTEGER(v))
-            return Fa_ExprResult::kint(Fa_AS_INTEGER(v));
-        if (Fa_IS_DOUBLE(v))
-            return Fa_ExprResult::kfloat(Fa_AS_DOUBLE(v));
-        if (Fa_IS_BOOL(v))
-            return Fa_ExprResult::kbool(Fa_AS_BOOL(v));
-        if (Fa_IS_NIL(v))
+        if (Fa_is_int(v))
+            return Fa_ExprResult::kint(Fa_as_int(v));
+        if (Fa_is_double(v))
+            return Fa_ExprResult::kfloat(Fa_as_double(v));
+        if (Fa_is_bool(v))
+            return Fa_ExprResult::kbool(Fa_as_bool(v));
+        if (Fa_is_nil(v))
             return Fa_ExprResult::knil();
     }
 
@@ -1341,10 +1353,10 @@ void Compiler::discharge(Fa_ExprResult const& r, u8 dst, Fa_SourceLocation loc)
             emit(Fa_make_ABC(Fa_OpCode::MOVE, dst, r.reg_, 0), loc);
         break;
     case Fa_ExprResult::Kind::RELOC: patch_a(current_chunk(), r.reloc_pc, dst); break;
-    case Fa_ExprResult::Kind::KINT: emit_load_value(dst, Fa_MAKE_INTEGER(r.ival), loc); break;
-    case Fa_ExprResult::Kind::KFLOAT: emit_load_value(dst, Fa_MAKE_REAL(r.dval), loc); break;
-    case Fa_ExprResult::Kind::KBOOL: emit_load_value(dst, Fa_MAKE_BOOL(r.bval), loc); break;
-    case Fa_ExprResult::Kind::KNIL: emit_load_value(dst, Fa_MAKE_NIL(), loc); break;
+    case Fa_ExprResult::Kind::KINT: emit_load_value(dst, Fa_make_int(r.ival), loc); break;
+    case Fa_ExprResult::Kind::KFLOAT: emit_load_value(dst, Fa_make_real(r.dval), loc); break;
+    case Fa_ExprResult::Kind::KBOOL: emit_load_value(dst, Fa_make_bool(r.bval), loc); break;
+    case Fa_ExprResult::Kind::KNIL: emit_load_value(dst, Fa_make_nil(), loc); break;
     }
 }
 
@@ -1464,18 +1476,18 @@ void Compiler::patch_jump_to(u32 instr_idx, u32 target)
 
 void Compiler::emit_load_value(u8 dst, Fa_Value v, Fa_SourceLocation loc)
 {
-    if (Fa_IS_NIL(v)) {
+    if (Fa_is_nil(v)) {
         emit(Fa_make_ABC(Fa_OpCode::LOAD_NIL, dst, dst, 1), loc);
         return;
     }
 
-    if (Fa_IS_BOOL(v)) {
-        emit(Fa_make_ABC(Fa_AS_BOOL(v) ? Fa_OpCode::LOAD_TRUE : Fa_OpCode::LOAD_FALSE, dst, 0, 0), loc);
+    if (Fa_is_bool(v)) {
+        emit(Fa_make_ABC(Fa_as_bool(v) ? Fa_OpCode::LOAD_TRUE : Fa_OpCode::LOAD_FALSE, dst, 0, 0), loc);
         return;
     }
 
-    if (Fa_IS_INTEGER(v)) {
-        i64 iv = Fa_AS_INTEGER(v);
+    if (Fa_is_int(v)) {
+        i64 iv = Fa_as_int(v);
         if (iv >= -JUMP_OFFSET && iv <= JUMP_OFFSET) {
             emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, dst, static_cast<u16>(iv + JUMP_OFFSET)), loc);
             return;
@@ -1517,7 +1529,7 @@ u32 Compiler::intern_string(Fa_StringRef const& str)
 
     Fa_ObjString* obj = get_allocator().allocate_object<Fa_ObjString>();
     obj->str = str;
-    u16 idx = chunk->add_constant(Fa_MAKE_OBJECT(obj));
+    u16 idx = chunk->add_constant(Fa_make_obj((Fa_ObjHeader*)(obj)));
     m_string_cache[key] = idx;
     return idx;
 }

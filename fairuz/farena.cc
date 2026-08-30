@@ -134,9 +134,8 @@ unsigned char* Fa_ArenaBlock::reserve(size_t const bytes)
     return m_next;
 }
 
-Fa_ArenaAllocator::Fa_ArenaAllocator(GrowthStrategy growth_strategy, OutOfMemoryHandler oom_handler)
-    : m_growth_factor(growth_strategy)
-    , m_oom_handler(oom_handler)
+Fa_ArenaAllocator::Fa_ArenaAllocator(OutOfMemoryHandler oom_handler)
+    : m_oom_handler(oom_handler)
 {
 }
 

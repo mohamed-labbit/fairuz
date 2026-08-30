@@ -242,8 +242,8 @@ TEST(CompilerLiteral, LargeIntegerUsesConstantPool)
     BytecodeChecker bc(*chunk);
     bc.m_next("LOAD_CONST").op(Fa_OpCode::LOAD_CONST).A(0).Bx(0);
     ASSERT_FALSE(chunk->constants.empty());
-    EXPECT_TRUE(Fa_IS_INTEGER(chunk->constants[0]));
-    EXPECT_EQ(Fa_AS_INTEGER(chunk->constants[0]), 100000);
+    EXPECT_TRUE(Fa_is_int(chunk->constants[0]));
+    EXPECT_EQ(Fa_as_int(chunk->constants[0]), 100000);
 }
 
 TEST(CompilerLiteral, FloatUsesConstantPool)
@@ -255,8 +255,8 @@ TEST(CompilerLiteral, FloatUsesConstantPool)
     BytecodeChecker bc(*chunk);
     bc.m_next("LOAD_CONST").op(Fa_OpCode::LOAD_CONST).A(0).Bx(0);
     ASSERT_FALSE(chunk->constants.empty());
-    EXPECT_TRUE(Fa_IS_DOUBLE(chunk->constants[0]));
-    EXPECT_NEAR(Fa_AS_DOUBLE(chunk->constants[0]), 3.14, 1e-9);
+    EXPECT_TRUE(Fa_is_double(chunk->constants[0]));
+    EXPECT_NEAR(Fa_as_double(chunk->constants[0]), 3.14, 1e-9);
 }
 
 TEST(CompilerLiteral, StringUsesConstantPool)
@@ -269,7 +269,7 @@ TEST(CompilerLiteral, StringUsesConstantPool)
     bc.m_next("LOAD_CONST").op(Fa_OpCode::LOAD_CONST).A(0).Bx(0);
     ASSERT_FALSE(chunk->constants.empty());
     EXPECT_TRUE(Fa_IS_STRING(chunk->constants[0]));
-    EXPECT_EQ(Fa_AS_STRING(chunk->constants[0])->str, "hello");
+    EXPECT_EQ(Fa_as_string(chunk->constants[0])->str, "hello");
 }
 
 TEST(CompilerLiteral, StringsDeduplicated)
@@ -339,7 +339,7 @@ TEST(CompilerVar, GlobalLoadAndStore)
     bc.done();
     bool found = false;
     for (auto& v : chunk->constants) {
-        if (Fa_IS_STRING(v) && Fa_AS_STRING(v)->str == "g")
+        if (Fa_IS_STRING(v) && Fa_as_string(v)->str == "g")
             found = true;
     }
     EXPECT_TRUE(found) << "global name_expr 'g' not interned into constant pool";
@@ -486,7 +486,7 @@ TEST(CompilerBinary, DivisionFolded)
     BytecodeChecker bc(*chunk);
     bc.m_next("LOAD_CONST 0.5").op(Fa_OpCode::LOAD_CONST).A(0).Bx(0);
     ASSERT_FALSE(chunk->constants.empty());
-    EXPECT_DOUBLE_EQ(Fa_AS_DOUBLE(chunk->constants[0]), 0.5);
+    EXPECT_DOUBLE_EQ(Fa_as_double(chunk->constants[0]), 0.5);
 }
 
 TEST(CompilerBinary, DivisionByZeroNotFolded)
@@ -707,7 +707,7 @@ TEST(CompilerIf, ConstantTrueConditionDCE)
     for (auto& ins : chunk->code)
         EXPECT_NE(Fa_instr_op(ins), Fa_OpCode::JUMP_IF_FALSE) << "JUMP_IF_FALSE should not exist when condition is const-true";
     for (auto& v : chunk->constants)
-        EXPECT_NE(Fa_AS_INTEGER(v), 999);
+        EXPECT_NE(Fa_as_int(v), 999);
 }
 
 TEST(CompilerIf, ConstantFalseConditionDCE)
@@ -873,11 +873,11 @@ TEST(CompilerDict, LiteralLowersToNativeConstructorCall)
 
     ASSERT_EQ(chunk->constants.size(), 3u);
     EXPECT_TRUE(Fa_IS_STRING(chunk->constants[0]));
-    EXPECT_EQ(Fa_AS_STRING(chunk->constants[0])->str, "قاموس");
+    EXPECT_EQ(Fa_as_string(chunk->constants[0])->str, "قاموس");
     EXPECT_TRUE(Fa_IS_STRING(chunk->constants[1]));
-    EXPECT_EQ(Fa_AS_STRING(chunk->constants[1])->str, "a");
+    EXPECT_EQ(Fa_as_string(chunk->constants[1])->str, "a");
     EXPECT_TRUE(Fa_IS_STRING(chunk->constants[2]));
-    EXPECT_EQ(Fa_AS_STRING(chunk->constants[2])->str, "b");
+    EXPECT_EQ(Fa_as_string(chunk->constants[2])->str, "b");
 }
 
 TEST(CompilerGet, MemberNameLowersToStringKeyIndex)
@@ -909,7 +909,7 @@ TEST(CompilerGet, MemberNameLowersToStringKeyIndex)
         if (!Fa_IS_STRING(constant))
             continue;
 
-        Fa_StringRef text = Fa_AS_STRING(constant)->str;
+        Fa_StringRef text = Fa_as_string(constant)->str;
         if (text == "field")
             has_member_key = true;
         if (text == "__class__")
@@ -951,7 +951,7 @@ TEST(CompilerReturn, ReturnIsDeadCodeBarrier)
     if (test_config::dump_bytecode)
         dump(chunk);
     for (auto& v : chunk->constants)
-        EXPECT_NE(Fa_AS_INTEGER(v), 99) << "dead code leaked into constant pool";
+        EXPECT_NE(Fa_as_int(v), 99) << "dead code leaked into constant pool";
     bool found_99 = false;
     for (auto& ins : chunk->code) {
         if (Fa_instr_op(ins) == Fa_OpCode::LOAD_INT && Fa_instr_Bx(ins) == load_int_bx(99))
@@ -1063,7 +1063,8 @@ TEST(CompilerFunc, RecursiveFunctionBodyCompiles)
 
 TEST(CompilerFunc, NestedFunctionRejected)
 {
-    Fa_Chunk* chunk = compile_fail(func_def(name_expr("outer"), list_expr(),
+    Fa_Chunk* chunk = compile_fail(
+        func_def(name_expr("outer"), list_expr(),
         blk({ decl_stmt("x",
                   lit_int(1)),
             func_def(
@@ -1384,7 +1385,7 @@ TEST(CompilerIntegration, StringConstantPoolDedup)
         dump(chunk);
     int count = 0;
     for (auto& v : chunk->constants) {
-        if (Fa_IS_STRING(v) && Fa_AS_STRING(v)->str == "hello")
+        if (Fa_IS_STRING(v) && Fa_as_string(v)->str == "hello")
             count += 1;
     }
     EXPECT_EQ(count, 1);

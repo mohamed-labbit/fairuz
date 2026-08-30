@@ -174,27 +174,27 @@ static Fa_Error _report_error(u16 errc, Fa_SourceLocation loc, diagnostic::Sever
     return err;
 }
 
-static Fa_Error report_error(diagnostic::errc::compiler::Code errc, Fa_SourceLocation loc)
+static inline Fa_Error report_error(diagnostic::errc::compiler::Code errc, Fa_SourceLocation loc)
 {
     return _report_error(static_cast<u16>(errc), loc);
 }
-static Fa_Error report_error(diagnostic::errc::parser::Code errc, Fa_SourceLocation loc, diagnostic::Severity sv = diagnostic::Severity::ERROR)
+static inline Fa_Error report_error(diagnostic::errc::parser::Code errc, Fa_SourceLocation loc, diagnostic::Severity sv = diagnostic::Severity::ERROR)
 {
     return _report_error(static_cast<u16>(errc), loc, sv);
 }
-static Fa_Error report_error(diagnostic::errc::sema::Code errc, Fa_SourceLocation loc)
+static inline Fa_Error report_error(diagnostic::errc::sema::Code errc, Fa_SourceLocation loc)
 {
     return _report_error(static_cast<u16>(errc), loc);
 }
-static Fa_Error report_error(diagnostic::errc::runtime::Code errc, Fa_SourceLocation loc)
+static inline Fa_Error report_error(diagnostic::errc::runtime::Code errc, Fa_SourceLocation loc)
 {
     return _report_error(static_cast<u16>(errc), loc);
 }
-static Fa_Error report_error(diagnostic::errc::general::Code errc, Fa_SourceLocation loc)
+static inline Fa_Error report_error(diagnostic::errc::general::Code errc, Fa_SourceLocation loc)
 {
     return _report_error(static_cast<u16>(errc), loc);
 }
-static Fa_Error report_error(diagnostic::errc::stdlib::Code errc, Fa_SourceLocation loc)
+static inline Fa_Error report_error(diagnostic::errc::stdlib::Code errc, Fa_SourceLocation loc)
 {
     return _report_error(static_cast<u16>(errc), loc);
 }

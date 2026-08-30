@@ -102,8 +102,8 @@ public:
     }; // enum Kind
 
 protected:
-    Fa_SourceLocation m_loc;
     Kind m_kind { Kind::INVALID };
+    Fa_SourceLocation m_loc;
 
 public:
     Fa_Expr()
@@ -591,8 +591,8 @@ public:
     };
 
 protected:
-    Fa_SourceLocation m_loc;
     Kind m_kind { Kind::INVALID };
+    Fa_SourceLocation m_loc;
 
 public:
     Fa_Stmt() = default;
@@ -941,64 +941,115 @@ public:
 
 #define ALLOCATE_AST_NODE(type, ...) get_allocator().allocate_object<type>(__VA_ARGS__);
 
-static Fa_BinaryExpr* Fa_make_binary(Fa_Expr* lhs, Fa_Expr* rhs, Fa_BinaryOp const op, Fa_SourceLocation loc)
+static inline Fa_BinaryExpr* Fa_make_binary(Fa_Expr* lhs, Fa_Expr* rhs, Fa_BinaryOp const op, Fa_SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(Fa_BinaryExpr, lhs, rhs, op, loc);
 }
-static Fa_UnaryExpr* Fa_make_unary(Fa_Expr* operand, Fa_UnaryOp const op, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_UnaryExpr, operand, op, loc); }
-static Fa_LiteralExpr* Fa_make_literal_nil(Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_LiteralExpr, loc); }
-static Fa_LiteralExpr* Fa_make_literal_int(int value, Fa_SourceLocation loc)
+static inline Fa_UnaryExpr* Fa_make_unary(Fa_Expr* operand, Fa_UnaryOp const op, Fa_SourceLocation loc)
+{
+    return ALLOCATE_AST_NODE(Fa_UnaryExpr, operand, op, loc);
+}
+static inline Fa_LiteralExpr* Fa_make_literal_nil(Fa_SourceLocation loc)
+{
+    return ALLOCATE_AST_NODE(Fa_LiteralExpr, loc);
+}
+static inline Fa_LiteralExpr* Fa_make_literal_int(int value, Fa_SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(Fa_LiteralExpr, static_cast<i64>(value), Fa_LiteralExpr::Type::INTEGER, loc);
 }
-static Fa_LiteralExpr* Fa_make_literal_int(i64 value, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_LiteralExpr, value, Fa_LiteralExpr::Type::INTEGER, loc); }
-static Fa_LiteralExpr* Fa_make_literal_float(f64 value, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_LiteralExpr, value, Fa_LiteralExpr::Type::FLOAT, loc); }
-static Fa_LiteralExpr* Fa_make_literal_string(Fa_StringRef value, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_LiteralExpr, value, loc); }
-static Fa_LiteralExpr* Fa_make_literal_bool(bool value, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_LiteralExpr, value, loc); }
-static Fa_NameExpr* Fa_make_name(Fa_StringRef const str, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_NameExpr, str, loc); }
-static Fa_ListExpr* Fa_make_list(Fa_Array<Fa_Expr*> elements, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_ListExpr, elements, loc); }
-static Fa_DictExpr* Fa_make_dict(Fa_Array<std::pair<Fa_Expr*, Fa_Expr*>> content, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_DictExpr, content, loc); }
-static Fa_GetExpr* Fa_make_get_expr(Fa_Expr* obj, Fa_Expr* member, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_GetExpr, obj, member, loc) }
-static Fa_CallExpr* Fa_make_call(Fa_Expr* callee, Fa_ListExpr* args, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_CallExpr, callee, args, loc); }
-static Fa_AssignmentExpr* Fa_make_assignment_expr(Fa_Expr* target, Fa_Expr* value, Fa_SourceLocation loc, bool decl)
+static inline Fa_LiteralExpr* Fa_make_literal_int(i64 value, Fa_SourceLocation loc)
+{
+    return ALLOCATE_AST_NODE(Fa_LiteralExpr, value, Fa_LiteralExpr::Type::INTEGER, loc);
+}
+static inline Fa_LiteralExpr* Fa_make_literal_float(f64 value, Fa_SourceLocation loc)
+{
+    return ALLOCATE_AST_NODE(Fa_LiteralExpr, value, Fa_LiteralExpr::Type::FLOAT, loc);
+}
+static inline Fa_LiteralExpr* Fa_make_literal_string(Fa_StringRef value, Fa_SourceLocation loc)
+{
+    return ALLOCATE_AST_NODE(Fa_LiteralExpr, value, loc);
+}
+static inline Fa_LiteralExpr* Fa_make_literal_bool(bool value, Fa_SourceLocation loc)
+{
+    return ALLOCATE_AST_NODE(Fa_LiteralExpr, value, loc);
+}
+static inline Fa_NameExpr* Fa_make_name(Fa_StringRef const str, Fa_SourceLocation loc)
+{
+    return ALLOCATE_AST_NODE(Fa_NameExpr, str, loc);
+}
+static inline Fa_ListExpr* Fa_make_list(Fa_Array<Fa_Expr*> elements, Fa_SourceLocation loc)
+{
+    return ALLOCATE_AST_NODE(Fa_ListExpr, elements, loc);
+}
+static inline Fa_DictExpr* Fa_make_dict(Fa_Array<std::pair<Fa_Expr*, Fa_Expr*>> content, Fa_SourceLocation loc)
+{
+    return ALLOCATE_AST_NODE(Fa_DictExpr, content, loc);
+}
+static inline Fa_GetExpr* Fa_make_get_expr(Fa_Expr* obj, Fa_Expr* member, Fa_SourceLocation loc)
+{
+    return ALLOCATE_AST_NODE(Fa_GetExpr, obj, member, loc)
+}
+static inline Fa_CallExpr* Fa_make_call(Fa_Expr* callee, Fa_ListExpr* args, Fa_SourceLocation loc)
+{
+    return ALLOCATE_AST_NODE(Fa_CallExpr, callee, args, loc);
+}
+static inline Fa_AssignmentExpr* Fa_make_assignment_expr(Fa_Expr* target, Fa_Expr* value, Fa_SourceLocation loc, bool decl)
 {
     return ALLOCATE_AST_NODE(Fa_AssignmentExpr, target, value, loc, decl);
 }
-static Fa_IndexExpr* Fa_make_index(Fa_Expr* obj, Fa_Expr* idx, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_IndexExpr, obj, idx, loc); }
-static Fa_BlockStmt* Fa_make_block(Fa_Array<Fa_Stmt*> stmts, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_BlockStmt, stmts, loc); }
-static Fa_ExprStmt* Fa_make_expr_stmt(Fa_Expr* expr, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_ExprStmt, expr, loc); }
-static Fa_AssignmentStmt* Fa_make_assignment_stmt(Fa_Expr* target, Fa_Expr* value, Fa_SourceLocation loc, bool decl)
+static inline Fa_IndexExpr* Fa_make_index(Fa_Expr* obj, Fa_Expr* idx, Fa_SourceLocation loc)
+{
+    return ALLOCATE_AST_NODE(Fa_IndexExpr, obj, idx, loc);
+}
+static inline Fa_BlockStmt* Fa_make_block(Fa_Array<Fa_Stmt*> stmts, Fa_SourceLocation loc)
+{
+    return ALLOCATE_AST_NODE(Fa_BlockStmt, stmts, loc);
+}
+static inline Fa_ExprStmt* Fa_make_expr_stmt(Fa_Expr* expr, Fa_SourceLocation loc)
+{
+    return ALLOCATE_AST_NODE(Fa_ExprStmt, expr, loc);
+}
+static inline Fa_AssignmentStmt* Fa_make_assignment_stmt(Fa_Expr* target, Fa_Expr* value, Fa_SourceLocation loc, bool decl)
 {
     return ALLOCATE_AST_NODE(Fa_AssignmentStmt, target, value, loc, decl);
 }
-static Fa_IfStmt* Fa_make_if(Fa_Expr* cond, Fa_Stmt* then_block, Fa_SourceLocation loc, Fa_Stmt* else_block = nullptr)
+static inline Fa_IfStmt* Fa_make_if(Fa_Expr* cond, Fa_Stmt* then_block, Fa_SourceLocation loc, Fa_Stmt* else_block = nullptr)
 {
     return ALLOCATE_AST_NODE(Fa_IfStmt, cond, then_block, loc, else_block);
 }
-static Fa_WhileStmt* Fa_make_while(Fa_Expr* cond, Fa_Stmt* body, Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_WhileStmt, cond, body, loc); }
-static Fa_ForStmt* Fa_make_for(Fa_NameExpr* target, Fa_Expr* iter, Fa_Stmt* body, Fa_SourceLocation loc)
+static inline Fa_WhileStmt* Fa_make_while(Fa_Expr* cond, Fa_Stmt* body, Fa_SourceLocation loc)
+{
+    return ALLOCATE_AST_NODE(Fa_WhileStmt, cond, body, loc);
+}
+static inline Fa_ForStmt* Fa_make_for(Fa_NameExpr* target, Fa_Expr* iter, Fa_Stmt* body, Fa_SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(Fa_ForStmt, target, iter, body, loc);
 }
-static Fa_FunctionDef* Fa_make_function(Fa_NameExpr* name, Fa_ListExpr* params, Fa_Stmt* body, Fa_SourceLocation loc)
+static inline Fa_FunctionDef* Fa_make_function(Fa_NameExpr* name, Fa_ListExpr* params, Fa_Stmt* body, Fa_SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(Fa_FunctionDef, name, params, body, loc);
 }
-static Fa_ReturnStmt* Fa_make_return(Fa_SourceLocation loc, Fa_Expr* value = nullptr)
+static inline Fa_ReturnStmt* Fa_make_return(Fa_SourceLocation loc, Fa_Expr* value = nullptr)
 {
     return ALLOCATE_AST_NODE(Fa_ReturnStmt, value, loc);
 }
-static Fa_ClassDef* Fa_make_class_def(Fa_Expr* name, Fa_Array<Fa_Expr*> members,
+static inline Fa_ClassDef* Fa_make_class_def(Fa_Expr* name, Fa_Array<Fa_Expr*> members,
     Fa_Array<Fa_Stmt*> methods, Fa_SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(Fa_ClassDef, name, members, methods, loc);
 }
-static Fa_BreakStmt* Fa_make_break(Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_BreakStmt, loc); }
-static Fa_ContinueStmt* Fa_make_continue(Fa_SourceLocation loc) { return ALLOCATE_AST_NODE(Fa_ContinueStmt, loc); }
+static inline Fa_BreakStmt* Fa_make_break(Fa_SourceLocation loc)
+{
+    return ALLOCATE_AST_NODE(Fa_BreakStmt, loc);
+}
+static inline Fa_ContinueStmt* Fa_make_continue(Fa_SourceLocation loc)
+{
+    return ALLOCATE_AST_NODE(Fa_ContinueStmt, loc);
+}
 
 #undef ALLOCATE_AST_NODE
 
-static Fa_AssignmentExpr* as_assignment(Fa_Stmt* s)
+static inline Fa_AssignmentExpr* as_assignment(Fa_Stmt* s)
 {
     if (s == nullptr)
         return nullptr;
@@ -1014,7 +1065,7 @@ static Fa_AssignmentExpr* as_assignment(Fa_Stmt* s)
     return nullptr;
 }
 
-static Fa_AssignmentExpr const* as_assignment(Fa_Stmt const* s)
+static inline Fa_AssignmentExpr const* as_assignment(Fa_Stmt const* s)
 {
     if (s == nullptr)
         return nullptr;
@@ -1077,41 +1128,41 @@ static Fa_AssignmentExpr const* as_assignment(Fa_Stmt const* s)
 #define AS_CONST_ASSIGNMENT_EXPR(_n) static_cast<AST::Fa_AssignmentExpr const*>(_n)
 #define AS_CONST_GET_EXPR(_n) static_cast<const AST::Fa_GetExpr*>(_n)
 
-static bool is_class_def(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::CLASS_DEF; }
-static bool is_if(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::IF; }
-static bool is_while(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::WHILE; }
-static bool is_for(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::FOR; }
-static bool is_return(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::RETURN; }
-static bool is_break(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::BREAK; }
-static bool is_continue(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::CONTINUE; }
-static bool is_func(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::FUNC; }
-static bool is_expr(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::EXPR; }
-static bool is_block(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::BLOCK; }
+static inline bool is_class_def(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::CLASS_DEF; }
+static inline bool is_if(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::IF; }
+static inline bool is_while(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::WHILE; }
+static inline bool is_for(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::FOR; }
+static inline bool is_return(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::RETURN; }
+static inline bool is_break(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::BREAK; }
+static inline bool is_continue(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::CONTINUE; }
+static inline bool is_func(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::FUNC; }
+static inline bool is_expr(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::EXPR; }
+static inline bool is_block(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::BLOCK; }
 
-static bool is_binary(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::BINARY; }
-static bool is_unary(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::UNARY; }
-static bool is_literal(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::LITERAL; }
-static bool is_name(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::NAME; }
-static bool is_index(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::INDEX; }
-static bool is_dict(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::DICT; }
-static bool is_list(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::LIST; }
-static bool is_call(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::CALL; }
-static bool is_assignment(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::ASSIGNMENT; }
-static bool is_get(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::GET; }
+static inline bool is_binary(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::BINARY; }
+static inline bool is_unary(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::UNARY; }
+static inline bool is_literal(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::LITERAL; }
+static inline bool is_name(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::NAME; }
+static inline bool is_index(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::INDEX; }
+static inline bool is_dict(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::DICT; }
+static inline bool is_list(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::LIST; }
+static inline bool is_call(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::CALL; }
+static inline bool is_assignment(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::ASSIGNMENT; }
+static inline bool is_get(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::GET; }
 
-static std::tuple<Fa_Expr*, Fa_Expr*> assignment_parts(Fa_AssignmentExpr* e)
+static inline std::tuple<Fa_Expr*, Fa_Expr*> assignment_parts(Fa_AssignmentExpr* e)
 {
     return std::make_tuple<Fa_Expr*, Fa_Expr*>(e->get_target(), e->get_value());
 }
-static std::tuple<Fa_Expr*, Fa_Expr*> assignment_parts(Fa_AssignmentExpr const* e)
+static inline std::tuple<Fa_Expr*, Fa_Expr*> assignment_parts(Fa_AssignmentExpr const* e)
 {
     return std::make_tuple<Fa_Expr*, Fa_Expr*>(e->get_target(), e->get_value());
 }
 
-static int literal_int(Fa_Expr const* e) { return AS_CONST_LITERAL(e)->get_int(); }
-static Fa_StringRef literal_str(Fa_Expr const* e) { return AS_CONST_LITERAL(e)->get_str(); }
-static float literal_float(Fa_Expr const* e) { return AS_CONST_LITERAL(e)->get_float(); }
-static bool literal_bool(Fa_Expr const* e) { return AS_CONST_LITERAL(e)->get_bool(); }
+static inline int literal_int(Fa_Expr const* e) { return AS_CONST_LITERAL(e)->get_int(); }
+static inline Fa_StringRef literal_str(Fa_Expr const* e) { return AS_CONST_LITERAL(e)->get_str(); }
+static inline float literal_float(Fa_Expr const* e) { return AS_CONST_LITERAL(e)->get_float(); }
+static inline bool literal_bool(Fa_Expr const* e) { return AS_CONST_LITERAL(e)->get_bool(); }
 
 } // namespace fairuz::ast
 

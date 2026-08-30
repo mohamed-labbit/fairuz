@@ -599,7 +599,7 @@ T* Fa_Array<T, _Alloc>::erase(T const* p)
 }
 
 template<typename T, typename... Args>
-static Fa_Array<T> make_array(Args&&... args)
+static inline Fa_Array<T> make_array(Args&&... args)
 {
     return get_allocator().allocate_array<T>(std::forward<Args>(args)...);
 }

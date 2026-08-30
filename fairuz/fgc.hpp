@@ -81,6 +81,21 @@ public:
         m_current_size -= size;
     }
 
+    Fa_Value make_string(Fa_StringRef str);
+    Fa_Value make_string(char const* str);
+    Fa_Value make_string(char* str);
+    Fa_Value make_list();
+    Fa_Value make_dict(Fa_DictType data = { });
+    Fa_Value make_function(Fa_Chunk* chunk);
+    Fa_Value make_native(NativeFn fn, Fa_ObjString* name, int arity);
+    Fa_Value make_class(
+        Fa_StringRef name,
+        Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> fields,
+        Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> methods,
+        Fa_Array<Fa_Chunk*, /*_Alloc=*/Fa_GarbageCollector> vtable);
+    Fa_Value make_instance(Fa_ObjClass* klass);
+    Fa_Value make_file_handle(FILE* fp);
+
 private:
     void mark_roots(Fa_VM* vm);
     void mark_object(Fa_ObjHeader* p);

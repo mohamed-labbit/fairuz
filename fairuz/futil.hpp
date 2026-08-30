@@ -15,7 +15,7 @@ using ErrorCode = diagnostic::errc::general::Code;
 
 static inline bool is_whitespace(u32 const& ch) { return ch == u' ' || ch == u'\t' || ch == u'\r'; }
 
-static inline bool const is_operator(u32 const& ch)
+static inline bool is_operator(u32 const& ch)
 {
     switch (ch) {
     case '=':
@@ -154,7 +154,7 @@ static u32 decode_utf8_at(Fa_StringRef const& buf, size_t const byte_pos, u64* o
     return -1; // unreachable
 }
 
-static void configure_locale()
+static inline void configure_locale()
 {
     try {
         std::locale::global(std::locale("ar_SA.UTF-8"));
@@ -163,7 +163,7 @@ static void configure_locale()
     }
 }
 
-static size_t utf8_codepoint_size(u32 const cp)
+static inline size_t utf8_codepoint_size(u32 const cp)
 {
     if (cp < 0x80)
         return 1;
@@ -217,7 +217,7 @@ static size_t encode_utf8(u32 const cp, unsigned char* out_bytes)
     return -1; // unreachable
 }
 
-static Fa_StringRef encode_utf8_str(u32 const cp)
+static inline Fa_StringRef encode_utf8_str(u32 const cp)
 {
     unsigned char bytes[5];
     size_t const len = encode_utf8(cp, bytes);
@@ -260,7 +260,7 @@ static u8 arab_digit_to_canon(u32 const cp)
     }
 }
 
-static i64 parse_integer_literal(Fa_StringRef const& literal, int base)
+static inline i64 parse_integer_literal(Fa_StringRef const& literal, int base)
 {
     if (base == -1) /*false call*/
         return INT16_MIN;
@@ -311,7 +311,7 @@ static i64 parse_integer_literal(Fa_StringRef const& literal, int base)
     return negative ? -value : value;
 }
 
-static bool is_integer_value(f64 d, i64& out)
+static inline bool is_integer_value(f64 d, i64& out)
 {
     if (!std::isfinite(d))
         return false;
