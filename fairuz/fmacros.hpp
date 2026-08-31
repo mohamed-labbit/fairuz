@@ -2,6 +2,7 @@
 #define FA_MACROS_HPP
 
 #include <string>
+#include <cstdint>
 
 namespace fairuz {
 
