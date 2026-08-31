@@ -13,8 +13,6 @@
 
 namespace fairuz::runtime {
 
-static constexpr char kClassMetadataKey[] = "__class__";
-
 #define Fa_DISPATCH()                                              \
     do {                                                           \
         instr = cur_chunk->code[ip];                               \
@@ -175,25 +173,6 @@ Fa_StringRef sp_method_name(int m)
     }
 }
 
-static bool values_equal(Fa_Value lhs, Fa_Value rhs)
-{
-    if (lhs == rhs)
-        return true;
-
-    if (Fa_is_int(lhs) && Fa_is_int(rhs))
-        return Fa_as_int(lhs) == Fa_as_int(rhs);
-    if (Fa_is_bool(lhs) && Fa_is_bool(rhs))
-        return Fa_as_bool(lhs) == Fa_as_bool(rhs);
-    if (Fa_is_nil(lhs) && Fa_is_nil(rhs))
-        return true;
-    if (Fa_is_number(lhs) && Fa_is_number(rhs))
-        return Fa_as_double_any(lhs) == Fa_as_double_any(rhs);
-    if (Fa_IS_STRING(lhs) && Fa_IS_STRING(rhs))
-        return Fa_as_string(lhs)->str == Fa_as_string(rhs)->str;
-
-    return false;
-}
-
 static void check_stack_index(int index, int stack_size, char const* m_context)
 {
     if (index < 0 || index >= stack_size)
@@ -283,6 +262,11 @@ Fa_Value Fa_VM::run(Fa_Chunk* chunk)
     return execute();
 }
 
+#if defined(__GNUC__) || defined(__clang__)
+#    pragma GCC diagnostic push
+#    pragma GCC diagnostic ignored "-Wpedantic"
+#endif
+
 Fa_Value Fa_VM::execute()
 {
     static void const* dispatch_table[] = { Fa_TABLE_INIT };
@@ -302,8 +286,8 @@ Fa_Value Fa_VM::execute()
 
     Fa_CASE(LOAD_NIL)
     {
-        u8 start = Fa_instr_B(instr);
-        u8 count = Fa_instr_C(instr);
+        reg_t start = Fa_instr_B(instr);
+        reg_t count = Fa_instr_C(instr);
 
         for (u8 i = 0; i < count; i += 1)
             cur_base[start + i] = Fa_make_nil();
@@ -612,7 +596,7 @@ Fa_Value Fa_VM::execute()
         if (UNLIKELY(!Fa_is_int(lhs)))
             runtime_error(ErrorCode::TYPE_ERROR_ARITH);
 
-        u8 imm = Fa_instr_C(instr);
+        reg_t imm = Fa_instr_C(instr);
         if (imm > 64)
             runtime_error(ErrorCode::INDEX_TYPE_ERROR);
 
@@ -626,7 +610,7 @@ Fa_Value Fa_VM::execute()
         if (UNLIKELY(!Fa_is_int(lhs)))
             runtime_error(ErrorCode::TYPE_ERROR_ARITH);
 
-        u8 imm = Fa_instr_C(instr);
+        reg_t imm = Fa_instr_C(instr);
         if (imm > 64)
             runtime_error(ErrorCode::INDEX_TYPE_ERROR);
 
@@ -845,7 +829,7 @@ Fa_Value Fa_VM::execute()
     }
     Fa_CASE(FOR_PREP)
     {
-        u8 base_reg = Fa_instr_A(instr);
+        reg_t base_reg = Fa_instr_A(instr);
         Fa_Value init_v = cur_base[base_reg];
         Fa_Value limit_v = cur_base[base_reg + 1];
         Fa_Value step_v = cur_base[base_reg + 2];
@@ -870,7 +854,7 @@ Fa_Value Fa_VM::execute()
     }
     Fa_CASE(FOR_STEP)
     {
-        u8 base_reg = Fa_instr_A(instr);
+        reg_t base_reg = Fa_instr_A(instr);
         Fa_Value limit_v = cur_base[base_reg];
         Fa_Value step_v = cur_base[base_reg + 1];
         Fa_Value control_v = cur_base[base_reg + 2];
@@ -879,7 +863,7 @@ Fa_Value Fa_VM::execute()
             i64 control = Fa_as_int(control_v) + Fa_as_int(step_v);
             cur_base[base_reg + 2] = Fa_make_int(control);
             bool continues = (Fa_as_int(step_v) > 0) ? (control <= Fa_as_int(limit_v))
-                                                         : (control >= Fa_as_int(limit_v));
+                                                     : (control >= Fa_as_int(limit_v));
             if (continues)
                 ip += Fa_instr_sBx(instr);
         } else {
@@ -902,8 +886,8 @@ Fa_Value Fa_VM::execute()
     }
     Fa_CASE(CALL)
     {
-        u8 fn_reg = Fa_instr_A(instr);
-        u8 argc = Fa_instr_B(instr);
+        reg_t fn_reg = Fa_instr_A(instr);
+        reg_t argc = Fa_instr_B(instr);
         Fa_Value callee = cur_base[fn_reg];
         int base = cur_frame_base + fn_reg + 1;
 
@@ -915,8 +899,8 @@ Fa_Value Fa_VM::execute()
     }
     Fa_CASE(CALL_TAIL)
     {
-        u8 fn_reg = Fa_instr_A(instr);
-        u8 argc = Fa_instr_B(instr);
+        reg_t fn_reg = Fa_instr_A(instr);
+        reg_t argc = Fa_instr_B(instr);
         Fa_Value callee = cur_base[fn_reg];
         int base = cur_frame_base + fn_reg + 1;
 
@@ -950,9 +934,9 @@ Fa_Value Fa_VM::execute()
     }
     Fa_CASE(IC_CALL)
     {
-        u8 fn_reg = Fa_instr_A(instr);
-        u8 argc = Fa_instr_B(instr);
-        u8 ic_idx = Fa_instr_C(instr);
+        reg_t fn_reg = Fa_instr_A(instr);
+        reg_t argc = Fa_instr_B(instr);
+        reg_t ic_idx = Fa_instr_C(instr);
         u32 call_ip = ip - 1;
         Fa_Value callee = cur_base[fn_reg];
         int base = cur_frame_base + fn_reg + 1;
@@ -981,8 +965,8 @@ Fa_Value Fa_VM::execute()
     }
     Fa_CASE(RETURN)
     {
-        u8 src = Fa_instr_A(instr);
-        u8 n_ret = Fa_instr_B(instr);
+        reg_t src = Fa_instr_A(instr);
+        reg_t n_ret = Fa_instr_B(instr);
         Fa_Value ret = n_ret > 0 ? cur_base[src] : Fa_make_nil();
         m_stack[cur_frame_base - 1] = ret;
         m_frames_top -= 1;
@@ -1074,7 +1058,6 @@ Fa_Value Fa_VM::execute()
     }
     Fa_CASE(NEW_CLASS)
     {
-        Fa_ObjClass* klass = nullptr;
         {
             Fa_Value& res = Fa_RA();
             u32 desc_idx = Fa_instr_Bx(instr);
@@ -1111,15 +1094,12 @@ Fa_Value Fa_VM::execute()
     }
     Fa_CASE(INVOKE)
     {
-        u8 self_reg = Fa_instr_A(instr);
-        u8 slot = Fa_instr_B(instr);
-        u8 argc = Fa_instr_C(instr);
+        reg_t self_reg = Fa_instr_A(instr);
+        reg_t slot = Fa_instr_B(instr);
+        reg_t argc = Fa_instr_C(instr);
 
-        u32 nop = cur_chunk->code[ip];
-        u8 ic_idx = Fa_instr_A(nop);
         ++ip; // consume the trailing NOP carrying the IC slot index
 
-        int base = cur_frame_base + self_reg + 1;
         Fa_Value self_val = cur_base[self_reg];
 
         if (UNLIKELY(!Fa_IS_INSTANCE(self_val)))
@@ -1143,7 +1123,7 @@ Fa_Value Fa_VM::execute()
             runtime_error(ErrorCode::TYPE_ERROR_CALL, "GET_FIELD on non-instance");
 
         Fa_ObjInstance* inst = Fa_as_instance(obj_v);
-        u8 field_idx = Fa_instr_C(instr);
+        reg_t field_idx = Fa_instr_C(instr);
 
         if (UNLIKELY(field_idx >= inst->fields.size()))
             runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
@@ -1158,7 +1138,7 @@ Fa_Value Fa_VM::execute()
             runtime_error(ErrorCode::TYPE_ERROR_CALL, "SET_FIELD on non-instance");
 
         Fa_ObjInstance* inst = Fa_as_instance(obj_v);
-        u8 field_idx = Fa_instr_B(instr);
+        reg_t field_idx = Fa_instr_B(instr);
 
         if (UNLIKELY(field_idx >= inst->fields.size()))
             runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
@@ -1174,6 +1154,10 @@ Fa_Value Fa_VM::execute()
 
     return Fa_make_nil(); // UNREACHABLE
 }
+
+#if defined(__GNUC__) || defined(__clang__)
+#    pragma GCC diagnostic pop
+#endif
 
 // Calls target_chunk with self_val in callee register 0. total_argc includes
 // that implicit self slot; explicit arguments must already follow it.

@@ -144,7 +144,7 @@ TEST_F(Fa_StringRefTest, CStyleConstructor_NonEmpty)
 TEST_F(Fa_StringRefTest, CopyAssignment_SelfAssignment)
 {
     Fa_StringRef s("Test");
-    s = s;
+    s = s; // will trigger warning, but ignore it
     EXPECT_EQ(s, "Test");
 }
 
@@ -191,7 +191,7 @@ TEST_F(Fa_StringRefTest, CopyAssignment_ReplaceContent)
 TEST_F(Fa_StringRefTest, MoveAssignment_SelfAssignment)
 {
     Fa_StringRef s("Test");
-    s = std::move(s);
+    s = std::move(s); // will trigger warning, but ignore it
     EXPECT_EQ(s, "Test");
 }
 

@@ -7,7 +7,7 @@
 
 namespace fairuz::runtime {
 
-void print_value(Fa_Value v)
+static inline void print_value(Fa_Value v)
 {
     if (Fa_is_nil(v))
         ::printf("nil");

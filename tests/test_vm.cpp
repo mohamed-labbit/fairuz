@@ -135,12 +135,6 @@ struct VMRunner {
 
 namespace {
 
-VMRunner& native_runner()
-{
-    static VMRunner r;
-    return r;
-}
-
 Fa_Chunk* compile_program(Fa_Array<AST::Fa_Stmt*> stmts)
 {
     diagnostic::reset();
@@ -2197,17 +2191,6 @@ TEST(VMPerfTest, GlobalLookup_1M_Roundtrips)
 
     do_not_optimize(result);
     ::printf("  Global store+load %dk roundtrips:  %.1f µs  (%.2f ns/op)\n", N / 1000, us, us * 1000.0 / N);
-}
-
-static Fa_Chunk* make_add2_chunk()
-{
-    auto* fn = Fa_make_chunk();
-    fn->name = "add2";
-    fn->arity = 2;
-    fn->local_count = 3;
-    fn->emit(Fa_make_ABC(Fa_OpCode::OP_ADD, 2, 0, 1), { });
-    fn->emit(Fa_make_ABC(Fa_OpCode::RETURN, 2, 1, 0), { });
-    return fn;
 }
 
 TEST(VMPerfTest, CallOverhead_100k_Calls)

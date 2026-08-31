@@ -244,8 +244,6 @@ static inline Fa_InstrFormat opcode_format(Fa_OpCode op)
     }
 }
 
-static inline void print_value(u64 v);
-
 struct Fa_ClassDescriptor {
     Fa_StringRef name;
     u32 field_count { 0 };

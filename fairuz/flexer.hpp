@@ -10,7 +10,7 @@
 
 namespace fairuz {
 
-static tok::Fa_Token const* make_token(tok::Fa_TokenType tt, Fa_StringRef lexeme, Fa_SourceLocation loc)
+static inline tok::Fa_Token const* Fa_make_token(tok::Fa_TokenType tt, Fa_StringRef lexeme, Fa_SourceLocation loc)
 {
     return get_allocator().allocate_object<tok::Fa_Token>(lexeme, tt, loc);
 }

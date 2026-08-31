@@ -16,11 +16,11 @@ public:
     Fa_Array<Fa_StringRef> m_suggestions;
 
     Fa_ParseError(Fa_StringRef const& msg, unsigned int l, unsigned int c, Fa_StringRef ctx = "", Fa_Array<Fa_StringRef> sugg = { })
-        : m_line(l)
+        : std::runtime_error(msg.data())
+        , m_line(l)
         , m_column(c)
         , m_context(ctx)
         , m_suggestions(sugg)
-        , std::runtime_error(msg.data())
     {
     }
 

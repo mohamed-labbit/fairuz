@@ -11,12 +11,6 @@ namespace {
 
 std::filesystem::path const test_cases_path = std::filesystem::path(__FILE__).parent_path() / "test_cases" / "test_tokens";
 
-Fa_StringRef load_source(std::filesystem::path const& path)
-{
-    std::ifstream file(path, std::ios::binary);
-    return std::string((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>()).data();
-}
-
 } // namespace
 
 inline void PrintTo(tok::Fa_Token const& tok, std::ostream* os)
@@ -30,7 +24,7 @@ TEST(LexerTest, RecognizesPlus)
     lex::Fa_Lexer m_lexer(&m_file_manager);
     auto tokens = m_lexer.tokenize();
     Fa_SourceLocation loc = { 1, 1, 0, 0 };
-    tok::Fa_Token const* expected = make_token(tok::Fa_TokenType::OP_PLUS, "+", loc);
+    tok::Fa_Token const* expected = Fa_make_token(tok::Fa_TokenType::OP_PLUS, "+", loc);
     EXPECT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0]->type(), tok::Fa_TokenType::BEGINMARKER);
     EXPECT_EQ(*tokens[1], *expected);
@@ -43,7 +37,7 @@ TEST(LexerTest, RecognizesInteger)
     lex::Fa_Lexer m_lexer(&m_file_manager);
     auto tokens = m_lexer.tokenize();
     Fa_SourceLocation loc = { 1, 1, 0, 0 };
-    tok::Fa_Token const* expected = make_token(tok::Fa_TokenType::INTEGER, "123", loc);
+    tok::Fa_Token const* expected = Fa_make_token(tok::Fa_TokenType::INTEGER, "123", loc);
     EXPECT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0]->type(), tok::Fa_TokenType::BEGINMARKER);
     EXPECT_EQ(*tokens[1], *expected);
@@ -56,7 +50,7 @@ TEST(LexerTest, RecognizesFloat)
     lex::Fa_Lexer m_lexer(&m_file_manager);
     auto tokens = m_lexer.tokenize();
     Fa_SourceLocation loc = { 1, 1, 0, 0 };
-    tok::Fa_Token const* expected = make_token(tok::Fa_TokenType::DECIMAL, "123.456", loc);
+    tok::Fa_Token const* expected = Fa_make_token(tok::Fa_TokenType::DECIMAL, "123.456", loc);
     EXPECT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0]->type(), tok::Fa_TokenType::BEGINMARKER);
     EXPECT_EQ(*tokens[1], *expected);
@@ -69,7 +63,7 @@ TEST(LexerTest, RecognizesIdentifier)
     lex::Fa_Lexer m_lexer(&m_file_manager);
     auto tokens = m_lexer.tokenize();
     Fa_SourceLocation loc = { 1, 1, 0, 0 };
-    tok::Fa_Token const* expected = make_token(tok::Fa_TokenType::IDENTIFIER, "مرحبا", loc);
+    tok::Fa_Token const* expected = Fa_make_token(tok::Fa_TokenType::IDENTIFIER, "مرحبا", loc);
     EXPECT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0]->type(), tok::Fa_TokenType::BEGINMARKER);
     EXPECT_EQ(*tokens[1], *expected);
@@ -114,7 +108,7 @@ TEST(LexerTest, RecognizesStringLiteral)
     lex::Fa_Lexer m_lexer(&m_file_manager);
     auto tokens = m_lexer.tokenize();
     Fa_SourceLocation loc = { 1, 1, 0, 0 };
-    tok::Fa_Token const* expected = make_token(tok::Fa_TokenType::STRING, "العالم", loc);
+    tok::Fa_Token const* expected = Fa_make_token(tok::Fa_TokenType::STRING, "العالم", loc);
     EXPECT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0]->type(), tok::Fa_TokenType::BEGINMARKER);
     EXPECT_EQ(*tokens[1], *expected);
@@ -127,10 +121,10 @@ TEST(LexerTest, RecognizesFa_Expression00)
     lex::Fa_Lexer m_lexer(&m_file_manager);
     auto tokens = m_lexer.tokenize();
     std::vector<tok::Fa_Token const*> expected = {
-        make_token(tok::Fa_TokenType::BEGINMARKER, "", { 1, 1, 0, 0 }), make_token(tok::Fa_TokenType::IDENTIFIER, "س", { 1, 1, 0, 0 }),
-        make_token(tok::Fa_TokenType::OP_EQ, "=", { 1, 3, 0, 0 }), make_token(tok::Fa_TokenType::INTEGER, "42", { 1, 5, 0, 0 }),
-        make_token(tok::Fa_TokenType::OP_PLUS, "+", { 1, 8, 0, 0 }), make_token(tok::Fa_TokenType::IDENTIFIER, "ي", { 1, 10, 0, 0 }),
-        make_token(tok::Fa_TokenType::ENDMARKER, "", { 1, 10, 0, 0 })
+        Fa_make_token(tok::Fa_TokenType::BEGINMARKER, "", { 1, 1, 0, 0 }), Fa_make_token(tok::Fa_TokenType::IDENTIFIER, "س", { 1, 1, 0, 0 }),
+        Fa_make_token(tok::Fa_TokenType::OP_EQ, "=", { 1, 3, 0, 0 }), Fa_make_token(tok::Fa_TokenType::INTEGER, "42", { 1, 5, 0, 0 }),
+        Fa_make_token(tok::Fa_TokenType::OP_PLUS, "+", { 1, 8, 0, 0 }), Fa_make_token(tok::Fa_TokenType::IDENTIFIER, "ي", { 1, 10, 0, 0 }),
+        Fa_make_token(tok::Fa_TokenType::ENDMARKER, "", { 1, 10, 0, 0 })
     };
     EXPECT_EQ(tokens.size(), 7);
     EXPECT_EQ(tokens[0]->type(), tok::Fa_TokenType::BEGINMARKER);
@@ -144,10 +138,10 @@ TEST(LexerTest, RecognizesStmt00)
     lex::Fa_Lexer m_lexer(&m_file_manager);
     auto tokens = m_lexer.tokenize();
     std::vector<tok::Fa_Token const*> expected = {
-        make_token(tok::Fa_TokenType::BEGINMARKER, "", { 1, 1, 0, 0 }), make_token(tok::Fa_TokenType::KW_IF, "اذا", { 1, 1, 0, 0 }),
-        make_token(tok::Fa_TokenType::IDENTIFIER, "س", { 1, 5, 0, 0 }), make_token(tok::Fa_TokenType::OP_EQ, "=", { 1, 7, 0, 0 }),
-        make_token(tok::Fa_TokenType::IDENTIFIER, "د", { 1, 9, 0, 0 }), make_token(tok::Fa_TokenType::COLON, ":", { 1, 10, 0, 0 }),
-        make_token(tok::Fa_TokenType::ENDMARKER, "", { 1, 10, 0, 0 })
+        Fa_make_token(tok::Fa_TokenType::BEGINMARKER, "", { 1, 1, 0, 0 }), Fa_make_token(tok::Fa_TokenType::KW_IF, "اذا", { 1, 1, 0, 0 }),
+        Fa_make_token(tok::Fa_TokenType::IDENTIFIER, "س", { 1, 5, 0, 0 }), Fa_make_token(tok::Fa_TokenType::OP_EQ, "=", { 1, 7, 0, 0 }),
+        Fa_make_token(tok::Fa_TokenType::IDENTIFIER, "د", { 1, 9, 0, 0 }), Fa_make_token(tok::Fa_TokenType::COLON, ":", { 1, 10, 0, 0 }),
+        Fa_make_token(tok::Fa_TokenType::ENDMARKER, "", { 1, 10, 0, 0 })
     };
     EXPECT_EQ(tokens.size(), expected.size());
     for (size_t i = 0; i < tokens.size(); i += 1)
@@ -160,10 +154,10 @@ TEST(LexerTest, RecognizesStmt01)
     lex::Fa_Lexer m_lexer(&m_file_manager);
     auto tokens = m_lexer.tokenize();
     std::vector<tok::Fa_Token const*> expected = {
-        make_token(tok::Fa_TokenType::BEGINMARKER, "", { 1, 1, 0, 0 }), make_token(tok::Fa_TokenType::KW_WHILE, "طالما", { 1, 1, 0, 0 }),
-        make_token(tok::Fa_TokenType::IDENTIFIER, "س", { 1, 7, 0, 0 }), make_token(tok::Fa_TokenType::OP_NEQ, "!=", { 1, 9, 0, 0 }),
-        make_token(tok::Fa_TokenType::IDENTIFIER, "د", { 1, 12, 0, 0 }), make_token(tok::Fa_TokenType::COLON, ":", { 1, 13, 0, 0 }),
-        make_token(tok::Fa_TokenType::ENDMARKER, "", { 1, 13, 0, 0 })
+        Fa_make_token(tok::Fa_TokenType::BEGINMARKER, "", { 1, 1, 0, 0 }), Fa_make_token(tok::Fa_TokenType::KW_WHILE, "طالما", { 1, 1, 0, 0 }),
+        Fa_make_token(tok::Fa_TokenType::IDENTIFIER, "س", { 1, 7, 0, 0 }), Fa_make_token(tok::Fa_TokenType::OP_NEQ, "!=", { 1, 9, 0, 0 }),
+        Fa_make_token(tok::Fa_TokenType::IDENTIFIER, "د", { 1, 12, 0, 0 }), Fa_make_token(tok::Fa_TokenType::COLON, ":", { 1, 13, 0, 0 }),
+        Fa_make_token(tok::Fa_TokenType::ENDMARKER, "", { 1, 13, 0, 0 })
     };
     EXPECT_EQ(tokens.size(), expected.size());
     for (size_t i = 0; i < tokens.size(); i += 1)
@@ -176,10 +170,10 @@ TEST(LexerTest, RecognizesStmt02)
     lex::Fa_Lexer m_lexer(&m_file_manager);
     auto tokens = m_lexer.tokenize();
     std::vector<tok::Fa_Token const*> expected = {
-        make_token(tok::Fa_TokenType::BEGINMARKER, "", { 1, 1, 0, 0 }), make_token(tok::Fa_TokenType::KW_FOR, "بكل", { 1, 1, 0, 0 }),
-        make_token(tok::Fa_TokenType::IDENTIFIER, "ل", { 1, 5, 0, 0 }), make_token(tok::Fa_TokenType::KW_IN, "في", { 1, 7, 0, 0 }),
-        make_token(tok::Fa_TokenType::IDENTIFIER, "ك", { 1, 10, 0, 0 }), make_token(tok::Fa_TokenType::COLON, ":", { 1, 11, 0, 0 }),
-        make_token(tok::Fa_TokenType::ENDMARKER, "", { 1, 11, 0, 0 })
+        Fa_make_token(tok::Fa_TokenType::BEGINMARKER, "", { 1, 1, 0, 0 }), Fa_make_token(tok::Fa_TokenType::KW_FOR, "بكل", { 1, 1, 0, 0 }),
+        Fa_make_token(tok::Fa_TokenType::IDENTIFIER, "ل", { 1, 5, 0, 0 }), Fa_make_token(tok::Fa_TokenType::KW_IN, "في", { 1, 7, 0, 0 }),
+        Fa_make_token(tok::Fa_TokenType::IDENTIFIER, "ك", { 1, 10, 0, 0 }), Fa_make_token(tok::Fa_TokenType::COLON, ":", { 1, 11, 0, 0 }),
+        Fa_make_token(tok::Fa_TokenType::ENDMARKER, "", { 1, 11, 0, 0 })
     };
     EXPECT_EQ(tokens.size(), expected.size());
     for (size_t i = 0; i < tokens.size(); i += 1)
@@ -192,11 +186,11 @@ TEST(LexerTest, RecognizesStmt03)
     lex::Fa_Lexer m_lexer(&m_file_manager);
     auto tokens = m_lexer.tokenize();
     std::vector<tok::Fa_Token const*> expected = {
-        make_token(tok::Fa_TokenType::BEGINMARKER, "", { 1, 1, 0, 0 }),
-        make_token(tok::Fa_TokenType::IDENTIFIER, "ا", { 1, 1, 0, 0 }),
-        make_token(tok::Fa_TokenType::OP_ASSIGN, ":=", { 1, 3, 0, 0 }),
-        make_token(tok::Fa_TokenType::KW_FALSE, "خطا", { 1, 6, 0, 0 }),
-        make_token(tok::Fa_TokenType::ENDMARKER, "", { 1, 8, 0, 0 }),
+        Fa_make_token(tok::Fa_TokenType::BEGINMARKER, "", { 1, 1, 0, 0 }),
+        Fa_make_token(tok::Fa_TokenType::IDENTIFIER, "ا", { 1, 1, 0, 0 }),
+        Fa_make_token(tok::Fa_TokenType::OP_ASSIGN, ":=", { 1, 3, 0, 0 }),
+        Fa_make_token(tok::Fa_TokenType::KW_FALSE, "خطا", { 1, 6, 0, 0 }),
+        Fa_make_token(tok::Fa_TokenType::ENDMARKER, "", { 1, 8, 0, 0 }),
     };
     EXPECT_EQ(tokens.size(), expected.size());
     for (size_t i = 0; i < tokens.size(); i += 1)
@@ -209,12 +203,12 @@ TEST(LexerTest, RecognizesStmt04)
     lex::Fa_Lexer m_lexer(&m_file_manager);
     auto tokens = m_lexer.tokenize();
     std::vector<tok::Fa_Token const*> expected = {
-        make_token(tok::Fa_TokenType::BEGINMARKER, "", { 1, 1, 0, 0 }), make_token(tok::Fa_TokenType::KW_IF, "اذا", { 1, 1, 0, 0 }),
-        make_token(tok::Fa_TokenType::IDENTIFIER, "ا", { 1, 5, 0, 0 }), make_token(tok::Fa_TokenType::OP_EQ, "=", { 1, 7, 0, 0 }),
-        make_token(tok::Fa_TokenType::INTEGER, "3", { 1, 9, 0, 0 }), make_token(tok::Fa_TokenType::COLON, ":", { 1, 10, 0, 0 }),
-        make_token(tok::Fa_TokenType::NEWLINE, "\n", { 1, 11, 0, 0 }), make_token(tok::Fa_TokenType::INDENT, "", { 0, 0, 0, 0 }),
-        make_token(tok::Fa_TokenType::KW_RETURN, "ارجع", { 2, 5, 0, 0 }), make_token(tok::Fa_TokenType::DEDENT, "", { 0, 0, 0, 0 }),
-        make_token(tok::Fa_TokenType::ENDMARKER, "", { 2, 8, 0, 0 })
+        Fa_make_token(tok::Fa_TokenType::BEGINMARKER, "", { 1, 1, 0, 0 }), Fa_make_token(tok::Fa_TokenType::KW_IF, "اذا", { 1, 1, 0, 0 }),
+        Fa_make_token(tok::Fa_TokenType::IDENTIFIER, "ا", { 1, 5, 0, 0 }), Fa_make_token(tok::Fa_TokenType::OP_EQ, "=", { 1, 7, 0, 0 }),
+        Fa_make_token(tok::Fa_TokenType::INTEGER, "3", { 1, 9, 0, 0 }), Fa_make_token(tok::Fa_TokenType::COLON, ":", { 1, 10, 0, 0 }),
+        Fa_make_token(tok::Fa_TokenType::NEWLINE, "\n", { 1, 11, 0, 0 }), Fa_make_token(tok::Fa_TokenType::INDENT, "", { 0, 0, 0, 0 }),
+        Fa_make_token(tok::Fa_TokenType::KW_RETURN, "ارجع", { 2, 5, 0, 0 }), Fa_make_token(tok::Fa_TokenType::DEDENT, "", { 0, 0, 0, 0 }),
+        Fa_make_token(tok::Fa_TokenType::ENDMARKER, "", { 2, 8, 0, 0 })
     };
 
     EXPECT_EQ(tokens.size(), expected.size());

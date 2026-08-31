@@ -225,10 +225,10 @@ Fa_Lexer::Fa_Lexer(Fa_FileManager* fm)
 }
 
 Fa_Lexer::Fa_Lexer(Fa_Array<tok::Fa_Token const*>& seq)
-    : m_tok_stream(seq)
-    , m_tok_index(0)
+    : m_tok_index(0)
     , m_indent_size(4)
     , m_indent_level(0)
+    , m_tok_stream(seq)
     , m_at_bol(true)
 {
     m_indent_stack.push(0);
@@ -238,7 +238,7 @@ Fa_Lexer::Fa_Lexer(Fa_Array<tok::Fa_Token const*>& seq)
 tok::Fa_Token const* Fa_Lexer::lex_token()
 {
     auto finish = [this](tok::Fa_TokenType tt, Fa_StringRef str, Fa_SourceLocation src_loc) {
-        tok::Fa_Token const* ret = make_token(tt, str, src_loc);
+        tok::Fa_Token const* ret = Fa_make_token(tt, str, src_loc);
         store(ret);
         return m_tok_stream.back();
     };
@@ -306,7 +306,7 @@ tok::Fa_Token const* Fa_Lexer::lex_token()
             m_indent_level += 1;
             m_indent_stack.push(size);
             m_alt_indent_stack.push(alt_size);
-            store(make_token(tok::Fa_TokenType::INDENT, "", src_loc));
+            store(Fa_make_token(tok::Fa_TokenType::INDENT, "", src_loc));
 
         } else {
             unsigned int dedent_count = 0;
@@ -323,7 +323,7 @@ tok::Fa_Token const* Fa_Lexer::lex_token()
                 diagnostic::panic(ErrorCode::INCONSISTENT_INDENTATION);
 
             for (unsigned int i = 0; i < dedent_count; i += 1)
-                store(make_token(tok::Fa_TokenType::DEDENT, "", src_loc));
+                store(Fa_make_token(tok::Fa_TokenType::DEDENT, "", src_loc));
         }
     };
 
@@ -343,7 +343,7 @@ tok::Fa_Token const* Fa_Lexer::lex_token()
             m_source_manager.consume_char();
             m_at_bol = true;
             Fa_StringRef endl_str = m_source_manager.source_slice(start_byte, start_byte + 1);
-            tok::Fa_Token const* ret = make_token(tok::Fa_TokenType::NEWLINE, endl_str, src_loc);
+            tok::Fa_Token const* ret = Fa_make_token(tok::Fa_TokenType::NEWLINE, endl_str, src_loc);
             store(ret);
             next_line(src_loc);
             return ret;
@@ -551,7 +551,7 @@ tok::Fa_Token const* Fa_Lexer::lex_token()
         m_indent_level -= 1;
         m_indent_stack.pop();
         m_alt_indent_stack.pop();
-        store(make_token(tok::Fa_TokenType::DEDENT, "", last_loc));
+        store(Fa_make_token(tok::Fa_TokenType::DEDENT, "", last_loc));
     }
 
     return finish(tok::Fa_TokenType::ENDMARKER, "", last_loc);

@@ -61,11 +61,6 @@ std::filesystem::path binary_path()
     return std::filesystem::path(__FILE__).parent_path().parent_path() / "build" / "fairuz";
 }
 
-std::filesystem::path repo_root()
-{
-    return std::filesystem::path(__FILE__).parent_path().parent_path();
-}
-
 } // namespace
 
 TEST(RegressionCli, DemoElseAcceptsTrailingTimeFlag)

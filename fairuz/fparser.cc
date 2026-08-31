@@ -88,34 +88,6 @@ bool is_augmented_assign_tok(TokenPtr t)
         || t->is(TokType::OP_RSHIFTEQ);
 }
 
-// Conservative definite-return check used to warn about missing returns.
-bool stmt_definitely_returns(AST::Fa_Stmt const* stmt)
-{
-    if (stmt == nullptr)
-        return false;
-
-    switch (stmt->get_kind()) {
-    case AST::Fa_Stmt::Kind::RETURN:
-        return true;
-
-    case AST::Fa_Stmt::Kind::BLOCK: {
-        for (AST::Fa_Stmt const* child : AS_CONST_BLOCK(stmt)->get_statements()) {
-            if (stmt_definitely_returns(child))
-                return true;
-        }
-        return false;
-    }
-
-    case AST::Fa_Stmt::Kind::IF: {
-        auto* s = AS_CONST_IF(stmt);
-        return stmt_definitely_returns(s->get_then()) && stmt_definitely_returns(s->get_else());
-    }
-
-    default:
-        return false;
-    }
-}
-
 } // anonymous namespace
 
 /// NOTE: These are logically a property of the token type and would be better

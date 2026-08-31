@@ -9,13 +9,13 @@ namespace fairuz {
 
 class Fa_Formatter {
 private:
-    int m_indent_sz { 4 };
-    int m_indent_level { 0 };
-    int m_line_width { 100 };
+    u32 m_indent_sz { 4 };
+    u32 m_indent_level { 0 };
+    u32 m_line_width { 100 };
     bool m_line_start { true };
 
-    int m_current_line { 0 };
-    int m_current_col { 0 };
+    u32 m_current_line { 0 };
+    u32 m_current_col { 0 };
 
     Fa_StringRef m_formatted;
 

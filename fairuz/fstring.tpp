@@ -153,9 +153,9 @@ Fa_StringRefImpl<Allocator>::Fa_StringRefImpl(char16_t const* u16_str, Allocator
 
 template<class Allocator>
 Fa_StringRefImpl<Allocator>::Fa_StringRefImpl(size_t const s, char const c, Allocator* allocator)
-    : m_allocator(detail::resolve_allocator<Allocator>(allocator))
-    , m_offset(0)
+    : m_offset(0)
     , m_length(s)
+    , m_allocator(detail::resolve_allocator<Allocator>(allocator))
 {
     m_string_data = m_allocator->template allocate_object<StringBase<Allocator>>(s, c, m_allocator);
 }

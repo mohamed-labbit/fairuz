@@ -39,14 +39,6 @@ Fa_ExprSpec make_lit(i64 v)
     return e;
 }
 
-Fa_ExprSpec make_unary(Fa_ExprSpec::Kind kind, Fa_ExprSpec child)
-{
-    Fa_ExprSpec e;
-    e.kind = kind;
-    e.m_left = std::make_unique<Fa_ExprSpec>(std::move(child));
-    return e;
-}
-
 Fa_ExprSpec make_binary(Fa_ExprSpec::Kind kind, Fa_ExprSpec lhs, Fa_ExprSpec rhs)
 {
     Fa_ExprSpec e;
@@ -145,12 +137,6 @@ Fa_Value run_fa_expr_ast(AST::Fa_Expr* m_expr)
     Fa_Chunk* chunk = Compiler().compile({ expr_stmt(call_expr(name_expr("طبيعي"), list_expr({ m_expr }))) });
     Fa_VM vm;
     return vm.run(chunk);
-}
-
-bool sanitizer_stress_enabled()
-{
-    char const* v = std::getenv("ENABLE_SANITIZER_STRESS");
-    return v && std::string(v) == "1";
 }
 
 } // namespace

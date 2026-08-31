@@ -136,13 +136,6 @@ static Fa_Chunk* compile_ok(AST::Fa_Stmt* root)
     return compile_ok(stmts);
 }
 
-static Fa_Chunk* compile_ok(AST::Fa_Stmt* root, Compiler& c)
-{
-    Fa_Array<AST::Fa_Stmt*> stmts;
-    stmts.push(root);
-    return compile_ok(stmts, c);
-}
-
 static Fa_Chunk* compile_fail(Fa_Array<AST::Fa_Stmt*> stmts)
 {
     diagnostic::reset();
