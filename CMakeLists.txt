@@ -153,14 +153,6 @@ install(DIRECTORY
 if(BUILD_TESTS)
     message(STATUS "Building tests")
 
-    find_package(GTest CONFIG QUIET)
-
-    if(NOT GTest_FOUND)
-        add_library(minimal_gtest STATIC tests/support/minimal_gtest_main.cpp)
-        target_include_directories(minimal_gtest PUBLIC ${CMAKE_SOURCE_DIR}/tests/support)
-        add_library(GTest::gtest_main ALIAS minimal_gtest)
-    endif()
-
     # Picks up every .cpp under tests/, including subdirectories, except
     # tests/support/, which holds the minimal_gtest helper built separately
     # above (compiling it again here would duplicate its main() at link
