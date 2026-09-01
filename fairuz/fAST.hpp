@@ -36,9 +36,14 @@ public:
 
 private:
     NodeType node_type { NodeType::INVALID };
+    Fa_SourceLocation m_loc { };
 
 public:
     Fa_ASTNode() = default;
+    Fa_ASTNode(Fa_SourceLocation loc)
+        : m_loc(loc)
+    {
+    }
     Fa_ASTNode(Fa_ASTNode const&) = delete;
     Fa_ASTNode(Fa_ASTNode&&) = delete;
 
@@ -103,7 +108,6 @@ public:
 
 protected:
     Kind m_kind { Kind::INVALID };
-    Fa_SourceLocation m_loc;
 
 public:
     Fa_Expr()
@@ -111,9 +115,9 @@ public:
     {
     }
 
-    Fa_Expr(Fa_SourceLocation loc)
-        : m_kind(Kind::INVALID)
-        , m_loc(loc)
+    Fa_Expr(Fa_SourceLocation loc, Kind kind)
+        : Fa_ASTNode(loc)
+        , m_kind(kind)
     {
     }
 
@@ -123,7 +127,6 @@ public:
     virtual Fa_Expr* clone() const = 0;
 
     Kind get_kind() const { return m_kind; }
-    Fa_SourceLocation get_location() const { return m_loc; }
     NodeType get_node_type() const override { return NodeType::EXPRESSION; }
 }; // class Fa_Expr
 
@@ -137,23 +140,14 @@ public:
     Fa_BinaryExpr() = delete;
 
     Fa_BinaryExpr(Fa_Expr* l, Fa_Expr* r, Fa_BinaryOp op, Fa_SourceLocation loc)
-        : m_left(l)
+        : Fa_Expr(loc, Kind::BINARY)
+        , m_left(l)
         , m_right(r)
         , m_operator(op)
     {
         assert(m_left != nullptr);
         assert(m_right != nullptr);
-        m_kind = Kind::BINARY;
-        m_loc = loc;
     }
-
-    ~Fa_BinaryExpr() override = default;
-
-    Fa_BinaryExpr(Fa_BinaryExpr&&) noexcept = delete;
-    Fa_BinaryExpr(Fa_BinaryExpr const&) noexcept = delete;
-
-    Fa_BinaryExpr& operator=(Fa_BinaryExpr const&) noexcept = delete;
-    Fa_BinaryExpr& operator=(Fa_BinaryExpr&&) noexcept = delete;
 
     [[nodiscard]] bool equals(Fa_Expr const* other) const override;
     [[nodiscard]] Fa_BinaryExpr* clone() const override;
@@ -176,21 +170,12 @@ public:
     Fa_UnaryExpr() = delete;
 
     Fa_UnaryExpr(Fa_Expr* operand, Fa_UnaryOp op, Fa_SourceLocation loc)
-        : m_operand(operand)
+        : Fa_Expr(loc, Kind::UNARY)
+        , m_operand(operand)
         , m_operator(op)
     {
         assert(m_operand != nullptr);
-        m_kind = Kind::UNARY;
-        m_loc = loc;
     }
-
-    ~Fa_UnaryExpr() override = default;
-
-    Fa_UnaryExpr(Fa_UnaryExpr&&) noexcept = delete;
-    Fa_UnaryExpr(Fa_UnaryExpr const&) noexcept = delete;
-
-    Fa_UnaryExpr& operator=(Fa_UnaryExpr const&) noexcept = delete;
-    Fa_UnaryExpr& operator=(Fa_UnaryExpr&&) noexcept = delete;
 
     [[nodiscard]] bool equals(Fa_Expr const* other) const override;
     [[nodiscard]] Fa_UnaryExpr* clone() const override;
@@ -222,49 +207,35 @@ private:
 
 public:
     explicit Fa_LiteralExpr(Fa_SourceLocation loc)
-        : m_type(Type::NIL)
+        : Fa_Expr(loc, Kind::LITERAL)
+        , m_type(Type::NIL)
     {
-        m_kind = Kind::LITERAL;
-        m_loc = loc;
     }
 
     Fa_LiteralExpr(i64 value, Type type, Fa_SourceLocation loc)
-        : m_type(type)
+        : Fa_Expr(loc, Kind::LITERAL)
+        , m_type(type)
         , int_value(value)
     {
-        m_kind = Kind::LITERAL;
-        m_loc = loc;
     }
     Fa_LiteralExpr(f64 value, Type type, Fa_SourceLocation loc)
-        : m_type(type)
+        : Fa_Expr(loc, Kind::LITERAL)
+        , m_type(type)
         , float_value(value)
     {
-        m_kind = Kind::LITERAL;
-        m_loc = loc;
     }
-
     explicit Fa_LiteralExpr(bool value, Fa_SourceLocation loc)
-        : m_type(Type::BOOLEAN)
+        : Fa_Expr(loc, Kind::LITERAL)
+        , m_type(Type::BOOLEAN)
         , bool_value(value)
     {
-        m_kind = Kind::LITERAL;
-        m_loc = loc;
     }
     explicit Fa_LiteralExpr(Fa_StringRef str, Fa_SourceLocation loc)
-        : m_type(Type::STRING)
+        : Fa_Expr(loc, Kind::LITERAL)
+        , m_type(Type::STRING)
         , str_value(std::move(str))
     {
-        m_kind = Kind::LITERAL;
-        m_loc = loc;
     }
-
-    ~Fa_LiteralExpr() override = default;
-
-    Fa_LiteralExpr(Fa_LiteralExpr&&) noexcept = delete;
-    Fa_LiteralExpr(Fa_LiteralExpr const&) noexcept = delete;
-
-    Fa_LiteralExpr& operator=(Fa_LiteralExpr const&) noexcept = delete;
-    Fa_LiteralExpr& operator=(Fa_LiteralExpr&&) noexcept = delete;
 
     [[nodiscard]] Type get_type() const { return m_type; }
 
@@ -316,26 +287,16 @@ public:
 class Fa_NameExpr final : public Fa_Expr {
 private:
     Fa_StringRef m_value;
-
     bool m_is_local { false };
 
 public:
     Fa_NameExpr() = default;
 
     explicit Fa_NameExpr(Fa_StringRef s, Fa_SourceLocation loc)
-        : m_value(std::move(s))
+        : Fa_Expr(loc, Kind::NAME)
+        , m_value(std::move(s))
     {
-        m_kind = Kind::NAME;
-        m_loc = loc;
     }
-
-    ~Fa_NameExpr() override = default;
-
-    Fa_NameExpr(Fa_NameExpr&&) noexcept = delete;
-    Fa_NameExpr(Fa_NameExpr const&) noexcept = delete;
-
-    Fa_NameExpr& operator=(Fa_NameExpr const&) noexcept = delete;
-    Fa_NameExpr& operator=(Fa_NameExpr&&) noexcept = delete;
 
     [[nodiscard]] bool equals(Fa_Expr const* other) const override;
     [[nodiscard]] Fa_NameExpr* clone() const override;
@@ -354,22 +315,13 @@ public:
     Fa_ListExpr() = default;
 
     explicit Fa_ListExpr(Fa_Array<Fa_Expr*> elements, Fa_SourceLocation loc)
-        : m_elements(std::move(elements))
+        : Fa_Expr(loc, Kind::LIST)
+        , m_elements(std::move(elements))
     {
-        m_kind = Kind::LIST;
-        m_loc = loc;
     }
-
-    ~Fa_ListExpr() override = default;
 
     Fa_Expr* operator[](size_t const i) { return m_elements[i]; }
     Fa_Expr const* operator[](size_t const i) const { return m_elements[i]; }
-
-    Fa_ListExpr(Fa_ListExpr&&) noexcept = delete;
-    Fa_ListExpr(Fa_ListExpr const&) noexcept = delete;
-
-    Fa_ListExpr& operator=(Fa_ListExpr const&) noexcept = delete;
-    Fa_ListExpr& operator=(Fa_ListExpr&&) noexcept = delete;
 
     [[nodiscard]] bool equals(Fa_Expr const* other) const override;
     [[nodiscard]] Fa_ListExpr* clone() const override;
@@ -387,10 +339,9 @@ private:
 
 public:
     Fa_DictExpr(Fa_Array<std::pair<Fa_Expr*, Fa_Expr*>> content, Fa_SourceLocation loc)
-        : content(content)
+        : Fa_Expr(loc, Kind::DICT)
+        , content(content)
     {
-        m_kind = Kind::DICT;
-        m_loc = loc;
     }
 
     bool equals(Fa_Expr const* other) const override;
@@ -416,7 +367,8 @@ public:
     Fa_CallExpr() = delete;
 
     explicit Fa_CallExpr(Fa_Expr* c, Fa_ListExpr* a, Fa_SourceLocation loc, CallLocation call_loc = CallLocation::GLOBAL)
-        : m_callee(c)
+        : Fa_Expr(loc, Kind::CALL)
+        , m_callee(c)
         , m_args(a)
         , m_call_location(call_loc)
     {
@@ -425,33 +377,15 @@ public:
 
         assert(m_callee != nullptr);
         assert(m_args != nullptr);
-        m_kind = Kind::CALL;
-        m_loc = loc;
     }
-
-    ~Fa_CallExpr() override = default;
-
-    Fa_CallExpr(Fa_CallExpr&&) noexcept = delete;
-    Fa_CallExpr(Fa_CallExpr const&) noexcept = delete;
-
-    Fa_CallExpr& operator=(Fa_CallExpr const&) noexcept = delete;
-    Fa_CallExpr& operator=(Fa_CallExpr&&) noexcept = delete;
 
     [[nodiscard]] bool equals(Fa_Expr const* other) const override;
     [[nodiscard]] Fa_CallExpr* clone() const override;
 
     [[nodiscard]] Fa_Expr* get_callee() const { return m_callee; }
 
-    [[nodiscard]] Fa_Array<Fa_Expr*> const& get_args() const
-    {
-        static Fa_Array<Fa_Expr*> const empty;
-        return m_args ? m_args->get_elements() : empty;
-    }
-    [[nodiscard]] Fa_Array<Fa_Expr*>& get_args()
-    {
-        assert(m_args && "Attempting to get mutable args when Args_ is null");
-        return m_args->get_elements();
-    }
+    [[nodiscard]] Fa_Array<Fa_Expr*> const& get_args() const { return m_args->get_elements(); }
+    [[nodiscard]] Fa_Array<Fa_Expr*>& get_args() { return m_args->get_elements(); }
 
     [[nodiscard]] Fa_ListExpr* get_args_as_list_expr() { return m_args; }
     [[nodiscard]] Fa_ListExpr const* get_args_as_list_expr() const { return m_args; }
@@ -468,26 +402,15 @@ private:
     bool m_is_decl = false;
 
 public:
-    Fa_AssignmentExpr() = delete;
-
     Fa_AssignmentExpr(Fa_Expr* target, Fa_Expr* value, Fa_SourceLocation loc, bool decl = false)
-        : m_target(target)
+        : Fa_Expr(loc, Kind::ASSIGNMENT)
+        , m_target(target)
         , m_value(value)
         , m_is_decl(decl)
     {
         assert(m_target != nullptr);
         assert(m_value != nullptr);
-        m_kind = Kind::ASSIGNMENT;
-        m_loc = loc;
     }
-
-    ~Fa_AssignmentExpr() override = default;
-
-    Fa_AssignmentExpr(Fa_AssignmentExpr&&) noexcept = delete;
-    Fa_AssignmentExpr(Fa_AssignmentExpr const&) noexcept = delete;
-
-    Fa_AssignmentExpr& operator=(Fa_AssignmentExpr const&) noexcept = delete;
-    Fa_AssignmentExpr& operator=(Fa_AssignmentExpr&&) noexcept = delete;
 
     [[nodiscard]] bool equals(Fa_Expr const* other) const override;
     [[nodiscard]] Fa_AssignmentExpr* clone() const override;
@@ -510,25 +433,14 @@ private:
     bool m_safe { false };
 
 public:
-    Fa_IndexExpr() = delete;
-
     Fa_IndexExpr(Fa_Expr* obj, Fa_Expr* idx, Fa_SourceLocation loc)
-        : m_object(obj)
+        : Fa_Expr(loc, Kind::INDEX)
+        , m_object(obj)
         , m_index(idx)
     {
         assert(m_object != nullptr);
         assert(m_index != nullptr);
-        m_kind = Kind::INDEX;
-        m_loc = loc;
     }
-
-    ~Fa_IndexExpr() override = default;
-
-    Fa_IndexExpr(Fa_IndexExpr&&) noexcept = delete;
-    Fa_IndexExpr(Fa_IndexExpr const&) noexcept = delete;
-
-    Fa_IndexExpr& operator=(Fa_IndexExpr const&) noexcept = delete;
-    Fa_IndexExpr& operator=(Fa_IndexExpr&&) noexcept = delete;
 
     [[nodiscard]] bool equals(Fa_Expr const* other) const override;
     [[nodiscard]] Fa_IndexExpr* clone() const override;
@@ -547,24 +459,14 @@ private:
     Fa_Expr* m_member { nullptr };
 
 public:
-    Fa_GetExpr() = delete;
     Fa_GetExpr(Fa_Expr* obj, Fa_Expr* mem, Fa_SourceLocation loc)
-        : m_object(obj)
+        : Fa_Expr(loc, Kind::GET)
+        , m_object(obj)
         , m_member(mem)
     {
         assert(m_object != nullptr);
         assert(m_member != nullptr);
-        m_kind = Kind::GET;
-        m_loc = loc;
     }
-
-    ~Fa_GetExpr() override = default;
-
-    Fa_GetExpr(Fa_GetExpr&&) noexcept = delete;
-    Fa_GetExpr(Fa_GetExpr const&) noexcept = delete;
-
-    Fa_GetExpr& operator=(Fa_GetExpr const&) noexcept = delete;
-    Fa_GetExpr& operator=(Fa_GetExpr&&) noexcept = delete;
 
     [[nodiscard]] bool equals(Fa_Expr const* other) const override;
     [[nodiscard]] Fa_GetExpr* clone() const override;
@@ -592,14 +494,13 @@ public:
 
 protected:
     Kind m_kind { Kind::INVALID };
-    Fa_SourceLocation m_loc;
 
 public:
     Fa_Stmt() = default;
 
-    explicit Fa_Stmt(Fa_SourceLocation loc)
-        : m_kind(Kind::INVALID)
-        , m_loc(loc)
+    explicit Fa_Stmt(Fa_SourceLocation loc, Kind kind)
+        : Fa_ASTNode(loc)
+        , m_kind(kind)
     {
     }
 
@@ -609,7 +510,6 @@ public:
     virtual bool equals(Fa_Stmt const* other) const = 0;
 
     Kind get_kind() const { return m_kind; }
-    Fa_SourceLocation get_location() const { return m_loc; }
     NodeType get_node_type() const override { return NodeType::STATEMENT; }
 }; // class Fa_Stmt
 
@@ -618,19 +518,11 @@ private:
     Fa_Array<Fa_Stmt*> m_statements;
 
 public:
-    Fa_BlockStmt() = delete;
-
     explicit Fa_BlockStmt(Fa_Array<Fa_Stmt*> stmts, Fa_SourceLocation loc)
-        : m_statements(stmts)
+        : Fa_Stmt(loc, Kind::BLOCK)
+        , m_statements(stmts)
     {
-        m_kind = Kind::BLOCK;
-        m_loc = loc;
     }
-
-    Fa_BlockStmt(Fa_BlockStmt&&) noexcept = delete;
-    Fa_BlockStmt(Fa_BlockStmt const&) noexcept = delete;
-
-    Fa_BlockStmt& operator=(Fa_BlockStmt const&) noexcept = delete;
 
     [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
     [[nodiscard]] Fa_BlockStmt* clone() const override;
@@ -644,20 +536,12 @@ private:
     Fa_Expr* m_expr { nullptr };
 
 public:
-    Fa_ExprStmt() = delete;
-
     explicit Fa_ExprStmt(Fa_Expr* expr, Fa_SourceLocation loc)
-        : m_expr(expr)
+        : Fa_Stmt(loc, Kind::EXPR)
+        , m_expr(expr)
     {
         assert(m_expr != nullptr);
-        m_kind = Kind::EXPR;
-        m_loc = loc;
     }
-
-    Fa_ExprStmt(Fa_ExprStmt&&) noexcept = delete;
-    Fa_ExprStmt(Fa_ExprStmt const&) noexcept = delete;
-
-    Fa_ExprStmt& operator=(Fa_ExprStmt const&) noexcept = delete;
 
     [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
     [[nodiscard]] Fa_ExprStmt* clone() const override;
@@ -670,27 +554,18 @@ private:
     Fa_AssignmentExpr* m_expr;
 
 public:
-    Fa_AssignmentStmt() = delete;
-
     explicit Fa_AssignmentStmt(Fa_AssignmentExpr* e, Fa_SourceLocation loc)
-        : m_expr(e->clone())
+        : Fa_Stmt(loc, Kind::ASSIGNMENT)
+        , m_expr(e->clone())
     {
         assert(m_expr != nullptr);
-        m_kind = Kind::ASSIGNMENT;
-        m_loc = loc;
     }
 
     Fa_AssignmentStmt(Fa_Expr* target, Fa_Expr* value, Fa_SourceLocation loc, bool decl = false)
+        : Fa_Stmt(loc, Kind::ASSIGNMENT)
     {
         m_expr = Fa_make_assignment_expr(target, value, loc, decl); // Fa_AssignmentExpr will assert args for us
-        m_kind = Kind::ASSIGNMENT;
-        m_loc = loc;
     }
-
-    Fa_AssignmentStmt(Fa_AssignmentStmt&&) noexcept = delete;
-    Fa_AssignmentStmt(Fa_AssignmentStmt const&) noexcept = delete;
-
-    Fa_AssignmentStmt& operator=(Fa_AssignmentStmt const&) noexcept = delete;
 
     [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
     [[nodiscard]] Fa_AssignmentStmt* clone() const override;
@@ -711,23 +586,15 @@ private:
     Fa_Stmt* m_else_stmt { nullptr };
 
 public:
-    Fa_IfStmt() = delete;
-
     Fa_IfStmt(Fa_Expr* condition, Fa_Stmt* then_stmt, Fa_SourceLocation loc, Fa_Stmt* else_stmt)
-        : m_condition(condition)
+        : Fa_Stmt(loc, Kind::IF)
+        , m_condition(condition)
         , m_then_stmt(then_stmt)
         , m_else_stmt(else_stmt)
     {
         assert(m_condition != nullptr);
         assert(m_then_stmt != nullptr);
-        m_kind = Kind::IF;
-        m_loc = loc;
     }
-
-    Fa_IfStmt(Fa_IfStmt&&) noexcept = delete;
-    Fa_IfStmt(Fa_IfStmt const&) noexcept = delete;
-
-    Fa_IfStmt& operator=(Fa_IfStmt const&) noexcept = delete;
 
     [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
     [[nodiscard]] Fa_IfStmt* clone() const override;
@@ -744,22 +611,14 @@ private:
     Fa_Stmt* m_body { nullptr };
 
 public:
-    Fa_WhileStmt() = delete;
-
     Fa_WhileStmt(Fa_Expr* cond, Fa_Stmt* body, Fa_SourceLocation loc)
-        : m_condition(cond)
+        : Fa_Stmt(loc, Kind::WHILE)
+        , m_condition(cond)
         , m_body(body)
     {
         assert(m_condition != nullptr);
         assert(m_body != nullptr);
-        m_kind = Kind::WHILE;
-        m_loc = loc;
     }
-
-    Fa_WhileStmt(Fa_WhileStmt&&) noexcept = delete;
-    Fa_WhileStmt(Fa_WhileStmt const&) noexcept = delete;
-
-    Fa_WhileStmt& operator=(Fa_WhileStmt const&) noexcept = delete;
 
     [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
     [[nodiscard]] Fa_WhileStmt* clone() const override;
@@ -777,24 +636,16 @@ private:
     Fa_Stmt* m_body { nullptr };
 
 public:
-    Fa_ForStmt() = delete;
-
     Fa_ForStmt(Fa_Expr* target, Fa_Expr* iter, Fa_Stmt* body, Fa_SourceLocation loc)
-        : m_container(target)
+        : Fa_Stmt(loc, Kind::FOR)
+        , m_container(target)
         , m_iter(iter)
         , m_body(body)
     {
         assert(m_container != nullptr);
         assert(m_iter != nullptr);
         assert(m_body != nullptr);
-        m_kind = Kind::FOR;
-        m_loc = loc;
     }
-
-    Fa_ForStmt(Fa_ForStmt&&) noexcept = delete;
-    Fa_ForStmt(Fa_ForStmt const&) noexcept = delete;
-
-    Fa_ForStmt& operator=(Fa_ForStmt const&) noexcept = delete;
 
     [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
     [[nodiscard]] Fa_ForStmt* clone() const override;
@@ -813,24 +664,17 @@ private:
     Fa_Stmt* m_body { nullptr };
 
 public:
-    Fa_FunctionDef() = delete;
-
     Fa_FunctionDef(Fa_NameExpr* name, Fa_ListExpr* params, Fa_Stmt* body, Fa_SourceLocation loc)
-        : m_name(name)
+        : Fa_Stmt(loc, Kind::FUNC)
+        , m_name(name)
         , m_params(params)
         , m_body(body)
     {
         assert(m_name != nullptr);
         assert(m_params != nullptr);
         assert(m_body != nullptr);
-        m_kind = Kind::FUNC;
-        m_loc = loc;
     }
 
-    Fa_FunctionDef(Fa_FunctionDef&&) noexcept = delete;
-    Fa_FunctionDef(Fa_FunctionDef const&) noexcept = delete;
-
-    Fa_FunctionDef& operator=(Fa_FunctionDef const&) noexcept = delete;
     [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
     [[nodiscard]] Fa_FunctionDef* clone() const override;
     [[nodiscard]] Fa_NameExpr* get_name() const;
@@ -847,19 +691,11 @@ private:
     Fa_Expr* m_value { nullptr };
 
 public:
-    Fa_ReturnStmt() = delete;
-
     explicit Fa_ReturnStmt(Fa_Expr* value, Fa_SourceLocation loc)
-        : m_value(value)
+        : Fa_Stmt(loc, Kind::RETURN)
+        , m_value(value)
     {
-        m_kind = Kind::RETURN;
-        m_loc = loc;
     }
-
-    Fa_ReturnStmt(Fa_ReturnStmt&&) noexcept = delete;
-    Fa_ReturnStmt(Fa_ReturnStmt const&) noexcept = delete;
-
-    Fa_ReturnStmt& operator=(Fa_ReturnStmt const&) noexcept = delete;
 
     [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
     [[nodiscard]] Fa_ReturnStmt* clone() const override;
@@ -878,25 +714,17 @@ private:
     Fa_Array<Fa_Stmt*> m_sp_methods { nullptr };
 
 public:
-    Fa_ClassDef() = delete;
-
     explicit Fa_ClassDef(
         Fa_Expr* name,
         Fa_Array<Fa_Expr*> members,
         Fa_Array<Fa_Stmt*> methods,
         Fa_SourceLocation loc)
-        : m_name(name)
+        : Fa_Stmt(loc, Kind::CLASS_DEF)
+        , m_name(name)
         , m_members(members)
         , m_methods(methods)
     {
-        m_kind = Kind::CLASS_DEF;
-        m_loc = loc;
     }
-
-    Fa_ClassDef(Fa_ClassDef&&) noexcept = delete;
-    Fa_ClassDef(Fa_ClassDef const&) noexcept = delete;
-
-    Fa_ClassDef& operator=(Fa_ClassDef const&) noexcept = delete;
 
     [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
     [[nodiscard]] Fa_ClassDef* clone() const override;
@@ -908,15 +736,9 @@ public:
 class Fa_BreakStmt final : public Fa_Stmt {
 public:
     explicit Fa_BreakStmt(Fa_SourceLocation loc)
+        : Fa_Stmt(loc, Kind::BREAK)
     {
-        m_kind = Kind::BREAK;
-        m_loc = loc;
     }
-
-    Fa_BreakStmt(Fa_BreakStmt&&) noexcept = delete;
-    Fa_BreakStmt(Fa_BreakStmt const&) noexcept = delete;
-
-    Fa_BreakStmt& operator=(Fa_BreakStmt const&) noexcept = delete;
 
     [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
     [[nodiscard]] Fa_BreakStmt* clone() const override;
@@ -925,15 +747,9 @@ public:
 class Fa_ContinueStmt final : public Fa_Stmt {
 public:
     explicit Fa_ContinueStmt(Fa_SourceLocation loc)
+        : Fa_Stmt(loc, Kind::CONTINUE)
     {
-        m_kind = Kind::CONTINUE;
-        m_loc = loc;
     }
-
-    Fa_ContinueStmt(Fa_ContinueStmt&&) noexcept = delete;
-    Fa_ContinueStmt(Fa_ContinueStmt const&) noexcept = delete;
-
-    Fa_ContinueStmt& operator=(Fa_ContinueStmt const&) noexcept = delete;
 
     [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
     [[nodiscard]] Fa_ContinueStmt* clone() const override;
@@ -1082,6 +898,7 @@ static inline Fa_AssignmentExpr const* as_assignment(Fa_Stmt const* s)
 }
 
 // helper macros
+
 #define AS_IF(_n) static_cast<AST::Fa_IfStmt*>(_n)
 #define AS_WHILE(_n) static_cast<AST::Fa_WhileStmt*>(_n)
 #define AS_FOR(_n) static_cast<AST::Fa_ForStmt*>(_n)
