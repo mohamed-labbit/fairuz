@@ -39,6 +39,8 @@ struct Fa_ObjString {
     Fa_ObjHeader obj { Fa_ObjType::STRING };
     Fa_StringRef str = "";
     u64 hash { 0 };
+
+    ~Fa_ObjString() { }
 };
 
 struct Fa_ObjList {
