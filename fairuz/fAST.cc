@@ -6,7 +6,10 @@
 
 namespace fairuz::AST {
 
-typename Fa_ASTNode::NodeType Fa_ASTNode::get_node_type() const { return node_type; }
+typename Fa_ASTNode::NodeType Fa_ASTNode::get_node_type() const
+{
+    return node_type;
+}
 
 bool Fa_BinaryExpr::equals(Fa_Expr const* other) const
 {
@@ -19,7 +22,7 @@ bool Fa_BinaryExpr::equals(Fa_Expr const* other) const
 
 Fa_BinaryExpr* Fa_BinaryExpr::clone() const
 {
-    return Fa_make_binary(m_left->clone(), m_right->clone(), m_operator, m_loc);
+    return Fa_make_binary(m_left->clone(), m_right->clone(), m_operator, get_location());
 }
 
 bool Fa_UnaryExpr::equals(Fa_Expr const* other) const
@@ -33,7 +36,7 @@ bool Fa_UnaryExpr::equals(Fa_Expr const* other) const
 
 Fa_UnaryExpr* Fa_UnaryExpr::clone() const
 {
-    return Fa_make_unary(m_operand->clone(), m_operator, m_loc);
+    return Fa_make_unary(m_operand->clone(), m_operator, get_location());
 }
 
 bool Fa_LiteralExpr::equals(Fa_Expr const* other) const
@@ -59,11 +62,11 @@ bool Fa_LiteralExpr::equals(Fa_Expr const* other) const
 Fa_LiteralExpr* Fa_LiteralExpr::clone() const
 {
     switch (m_type) {
-    case Type::INTEGER: return Fa_make_literal_int(int_value, m_loc);
-    case Type::FLOAT: return Fa_make_literal_float(float_value, m_loc);
-    case Type::BOOLEAN: return Fa_make_literal_bool(bool_value, m_loc);
-    case Type::STRING: return Fa_make_literal_string(str_value, m_loc);
-    case Type::NIL: return Fa_make_literal_nil(m_loc);
+    case Type::INTEGER: return Fa_make_literal_int(int_value, get_location());
+    case Type::FLOAT: return Fa_make_literal_float(float_value, get_location());
+    case Type::BOOLEAN: return Fa_make_literal_bool(bool_value, get_location());
+    case Type::STRING: return Fa_make_literal_string(str_value, get_location());
+    case Type::NIL: return Fa_make_literal_nil(get_location());
     default: return nullptr; // should never happen
     }
 }
@@ -79,7 +82,7 @@ bool Fa_NameExpr::equals(Fa_Expr const* other) const
 
 Fa_NameExpr* Fa_NameExpr::clone() const
 {
-    return Fa_make_name(m_value, m_loc);
+    return Fa_make_name(m_value, get_location());
 }
 
 bool Fa_ListExpr::equals(Fa_Expr const* other) const
@@ -102,7 +105,7 @@ bool Fa_ListExpr::equals(Fa_Expr const* other) const
 
 Fa_ListExpr* Fa_ListExpr::clone() const
 {
-    return Fa_make_list(m_elements, m_loc);
+    return Fa_make_list(m_elements, get_location());
 }
 
 bool Fa_CallExpr::equals(Fa_Expr const* other) const
@@ -118,7 +121,7 @@ bool Fa_CallExpr::equals(Fa_Expr const* other) const
 
 Fa_CallExpr* Fa_CallExpr::clone() const
 {
-    return Fa_make_call(m_callee->clone(), m_args->clone(), m_loc);
+    return Fa_make_call(m_callee->clone(), m_args->clone(), get_location());
 }
 
 bool Fa_DictExpr::equals(Fa_Expr const* other) const
@@ -145,15 +148,28 @@ bool Fa_DictExpr::equals(Fa_Expr const* other) const
 
 Fa_Expr* Fa_DictExpr::clone() const
 {
-    return Fa_make_dict(content, m_loc);
+    return Fa_make_dict(content, get_location());
 }
 
-Fa_Array<std::pair<Fa_Expr*, Fa_Expr*>> Fa_DictExpr::get_content() const { return content; }
-void Fa_DictExpr::set_content(Fa_Array<std::pair<Fa_Expr*, Fa_Expr*>> c) { content = c; }
+Fa_Array<std::pair<Fa_Expr*, Fa_Expr*>> Fa_DictExpr::get_content() const
+{
+    return content;
+}
 
-typename Fa_CallExpr::CallLocation Fa_CallExpr::get_call_location() const { return m_call_location; }
+void Fa_DictExpr::set_content(Fa_Array<std::pair<Fa_Expr*, Fa_Expr*>> c)
+{
+    content = c;
+}
 
-bool Fa_CallExpr::has_arguments() const { return m_args != nullptr && !m_args->is_empty(); }
+typename Fa_CallExpr::CallLocation Fa_CallExpr::get_call_location() const
+{
+    return m_call_location;
+}
+
+bool Fa_CallExpr::has_arguments() const
+{
+    return m_args != nullptr && !m_args->is_empty();
+}
 
 bool Fa_AssignmentExpr::equals(Fa_Expr const* other) const
 {
@@ -166,7 +182,7 @@ bool Fa_AssignmentExpr::equals(Fa_Expr const* other) const
 
 Fa_AssignmentExpr* Fa_AssignmentExpr::clone() const
 {
-    return Fa_make_assignment_expr(m_target->clone(), m_value->clone(), m_loc, m_is_decl);
+    return Fa_make_assignment_expr(m_target->clone(), m_value->clone(), get_location());
 }
 
 bool Fa_BlockStmt::equals(Fa_Stmt const* other) const
@@ -198,7 +214,7 @@ bool Fa_IndexExpr::equals(Fa_Expr const* other) const
 
 Fa_IndexExpr* Fa_IndexExpr::clone() const
 {
-    return Fa_make_index(m_object->clone(), m_index->clone(), m_loc);
+    return Fa_make_index(m_object->clone(), m_index->clone(), get_location());
 }
 
 bool Fa_GetExpr::equals(Fa_Expr const* other) const
@@ -212,18 +228,27 @@ bool Fa_GetExpr::equals(Fa_Expr const* other) const
 
 Fa_GetExpr* Fa_GetExpr::clone() const
 {
-    return Fa_make_get_expr(m_object->clone(), m_member->clone(), m_loc);
+    return Fa_make_get_expr(m_object->clone(), m_member->clone(), get_location());
 }
 
 Fa_BlockStmt* Fa_BlockStmt::clone() const
 {
-    return Fa_make_block(m_statements, m_loc);
+    return Fa_make_block(m_statements, get_location());
 }
 
-Fa_Array<Fa_Stmt*> const& Fa_BlockStmt::get_statements() const { return m_statements; }
-void Fa_BlockStmt::set_statements(Fa_Array<Fa_Stmt*>& stmts) { m_statements = stmts; }
+Fa_Array<Fa_Stmt*> const& Fa_BlockStmt::get_statements() const
+{
+    return m_statements;
+}
+void Fa_BlockStmt::set_statements(Fa_Array<Fa_Stmt*>& stmts)
+{
+    m_statements = stmts;
+}
 
-bool Fa_BlockStmt::is_empty() const { return m_statements.empty(); }
+bool Fa_BlockStmt::is_empty() const
+{
+    return m_statements.empty();
+}
 
 // Fa_Expr stmt
 
@@ -238,11 +263,17 @@ bool Fa_ExprStmt::equals(Fa_Stmt const* other) const
 
 Fa_ExprStmt* Fa_ExprStmt::clone() const
 {
-    return Fa_make_expr_stmt(m_expr->clone(), m_loc);
+    return Fa_make_expr_stmt(m_expr->clone(), get_location());
 }
 
-Fa_Expr* Fa_ExprStmt::get_expr() const { return m_expr; }
-void Fa_ExprStmt::set_expr(Fa_Expr* e) { m_expr = e; }
+Fa_Expr* Fa_ExprStmt::get_expr() const
+{
+    return m_expr;
+}
+void Fa_ExprStmt::set_expr(Fa_Expr* e)
+{
+    m_expr = e;
+}
 
 // assignment stmt
 
@@ -257,17 +288,26 @@ bool Fa_AssignmentStmt::equals(Fa_Stmt const* other) const
 
 Fa_AssignmentStmt* Fa_AssignmentStmt::clone() const
 {
-    return Fa_make_assignment_stmt(m_expr->get_target(), m_expr->get_value(), m_loc, m_expr->is_declaration());
+    return Fa_make_assignment_stmt(m_expr->get_target(), m_expr->get_value(), get_location());
 }
 
-Fa_Expr* Fa_AssignmentStmt::get_value() const { return m_expr->get_value(); }
-Fa_Expr* Fa_AssignmentStmt::get_target() const { return m_expr->get_target(); }
+Fa_Expr* Fa_AssignmentStmt::get_value() const
+{
+    return m_expr->get_value();
+}
+Fa_Expr* Fa_AssignmentStmt::get_target() const
+{
+    return m_expr->get_target();
+}
 
-void Fa_AssignmentStmt::set_value(Fa_Expr* v) { m_expr->set_value(v); }
-void Fa_AssignmentStmt::set_target(Fa_Expr* t) { m_expr->set_target(t); }
-void Fa_AssignmentStmt::set_decl() { m_expr->set_decl(); }
-
-bool Fa_AssignmentStmt::is_declaration() const { return m_expr->is_declaration(); }
+void Fa_AssignmentStmt::set_value(Fa_Expr* v)
+{
+    m_expr->set_value(v);
+}
+void Fa_AssignmentStmt::set_target(Fa_Expr* t)
+{
+    m_expr->set_target(t);
+}
 
 bool Fa_IfStmt::equals(Fa_Stmt const* other) const
 {
@@ -287,16 +327,31 @@ Fa_IfStmt* Fa_IfStmt::clone() const
 {
     return Fa_make_if(
         m_condition->clone(),
-        m_then_stmt->clone(), m_loc,
+        m_then_stmt->clone(), get_location(),
         LIKELY(m_else_stmt == nullptr) ? nullptr : m_else_stmt->clone());
 }
 
-Fa_Expr* Fa_IfStmt::get_condition() const { return m_condition; }
-Fa_Stmt* Fa_IfStmt::get_then() const { return m_then_stmt; }
-Fa_Stmt* Fa_IfStmt::get_else() const { return m_else_stmt; }
+Fa_Expr* Fa_IfStmt::get_condition() const
+{
+    return m_condition;
+}
+Fa_Stmt* Fa_IfStmt::get_then() const
+{
+    return m_then_stmt;
+}
+Fa_Stmt* Fa_IfStmt::get_else() const
+{
+    return m_else_stmt;
+}
 
-void Fa_IfStmt::set_then(Fa_Stmt* t) { m_then_stmt = t; }
-void Fa_IfStmt::set_else(Fa_Stmt* e) { m_else_stmt = e; }
+void Fa_IfStmt::set_then(Fa_Stmt* t)
+{
+    m_then_stmt = t;
+}
+void Fa_IfStmt::set_else(Fa_Stmt* e)
+{
+    m_else_stmt = e;
+}
 
 bool Fa_WhileStmt::equals(Fa_Stmt const* other) const
 {
@@ -309,14 +364,26 @@ bool Fa_WhileStmt::equals(Fa_Stmt const* other) const
 
 Fa_WhileStmt* Fa_WhileStmt::clone() const
 {
-    return Fa_make_while(m_condition->clone(), m_body->clone(), m_loc);
+    return Fa_make_while(m_condition->clone(), m_body->clone(), get_location());
 }
 
-Fa_Expr* Fa_WhileStmt::get_condition() const { return m_condition; }
-Fa_Stmt* Fa_WhileStmt::get_body() { return m_body; }
-Fa_Stmt const* Fa_WhileStmt::get_body() const { return m_body; }
+Fa_Expr* Fa_WhileStmt::get_condition() const
+{
+    return m_condition;
+}
+Fa_Stmt* Fa_WhileStmt::get_body()
+{
+    return m_body;
+}
+Fa_Stmt const* Fa_WhileStmt::get_body() const
+{
+    return m_body;
+}
 
-void Fa_WhileStmt::set_body(Fa_Stmt* b) { m_body = b; }
+void Fa_WhileStmt::set_body(Fa_Stmt* b)
+{
+    m_body = b;
+}
 
 bool Fa_ForStmt::equals(Fa_Stmt const* other) const
 {
@@ -329,7 +396,7 @@ bool Fa_ForStmt::equals(Fa_Stmt const* other) const
 
 Fa_ForStmt* Fa_ForStmt::clone() const
 {
-    return get_allocator().allocate_object<Fa_ForStmt>(m_container->clone(), m_iter->clone(), m_body->clone(), m_loc);
+    return get_allocator().allocate_object<Fa_ForStmt>(m_container->clone(), m_iter->clone(), m_body->clone(), get_location());
 }
 
 Fa_Expr* Fa_ForStmt::get_container() const { return m_container; }
@@ -350,7 +417,7 @@ bool Fa_FunctionDef::equals(Fa_Stmt const* other) const
 
 Fa_FunctionDef* Fa_FunctionDef::clone() const
 {
-    return Fa_make_function(m_name->clone(), m_params->clone(), m_body->clone(), m_loc);
+    return Fa_make_function(m_name->clone(), m_params->clone(), m_body->clone(), get_location());
 }
 
 Fa_NameExpr* Fa_FunctionDef::get_name() const { return m_name; }
@@ -364,7 +431,7 @@ bool Fa_FunctionDef::has_parameters() const { return m_params && !m_params->is_e
 
 Fa_ReturnStmt* Fa_ReturnStmt::clone() const
 {
-    return Fa_make_return(m_loc, m_value == nullptr ? nullptr : m_value->clone());
+    return Fa_make_return(get_location(), m_value == nullptr ? nullptr : m_value->clone());
 }
 
 Fa_Expr* Fa_ReturnStmt::get_value() { return m_value; }
@@ -418,7 +485,7 @@ Fa_ClassDef* Fa_ClassDef::clone() const
         member_clones.push(mem->clone());
     for (Fa_Stmt* met : m_methods)
         method_clones.push(met->clone());
-    return Fa_make_class_def(m_name->clone(), member_clones, method_clones, m_loc);
+    return Fa_make_class_def(m_name->clone(), member_clones, method_clones, get_location());
 }
 
 Fa_Array<Fa_Expr*> Fa_ClassDef::get_members() const { return m_members; }
@@ -431,13 +498,13 @@ bool Fa_BreakStmt::equals(Fa_Stmt const* other) const
     return other != nullptr && other->get_kind() == Kind::BREAK;
 }
 
-Fa_BreakStmt* Fa_BreakStmt::clone() const { return Fa_make_break(m_loc); }
+Fa_BreakStmt* Fa_BreakStmt::clone() const { return Fa_make_break(get_location()); }
 
 bool Fa_ContinueStmt::equals(Fa_Stmt const* other) const
 {
     return other != nullptr && other->get_kind() == Kind::CONTINUE;
 }
 
-Fa_ContinueStmt* Fa_ContinueStmt::clone() const { return Fa_make_continue(m_loc); }
+Fa_ContinueStmt* Fa_ContinueStmt::clone() const { return Fa_make_continue(get_location()); }
 
 } // namespace fairuz::ast

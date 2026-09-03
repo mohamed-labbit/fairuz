@@ -13,18 +13,35 @@
 namespace fairuz::AST {
 
 class Fa_Expr;
-class Fa_ListExpr;
-class Fa_NameExpr;
-class Fa_AssignmentExpr;
 class Fa_Stmt;
-class Fa_BlockStmt;
+class Fa_BinaryExpr;
+class Fa_UnaryExpr;
+class Fa_LiteralExpr;
+class Fa_NameExpr;
+class Fa_CallExpr;
+class Fa_AssignmentExpr;
+class Fa_ListExpr;
+class Fa_IndexExpr;
+class Fa_DictExpr;
+class Fa_GetExpr;
+
+class Fa_ExprStmt;
 class Fa_AssignmentStmt;
+class Fa_IfStmt;
+class Fa_WhileStmt;
+class Fa_ForStmt;
+class Fa_FunctionDef;
+class Fa_ReturnStmt;
+class Fa_BreakStmt;
+class Fa_ContinueStmt;
+class Fa_BlockStmt;
+class Fa_ClassDef;
 
 static Fa_ListExpr* Fa_make_list(Fa_Array<Fa_Expr*> elements, Fa_SourceLocation loc);
 static Fa_BlockStmt* Fa_make_block(Fa_Array<Fa_Stmt*> stmts, Fa_SourceLocation loc);
 static Fa_NameExpr* Fa_make_name(Fa_StringRef const str, Fa_SourceLocation loc);
-static Fa_AssignmentExpr* Fa_make_assignment_expr(Fa_Expr* target, Fa_Expr* value, Fa_SourceLocation loc, bool decl = false);
-static Fa_AssignmentStmt* Fa_make_assignment_stmt(Fa_Expr* target, Fa_Expr* value, Fa_SourceLocation loc, bool decl = false);
+static Fa_AssignmentExpr* Fa_make_assignment_expr(Fa_Expr* target, Fa_Expr* value, Fa_SourceLocation loc);
+static Fa_AssignmentStmt* Fa_make_assignment_stmt(Fa_Expr* target, Fa_Expr* value, Fa_SourceLocation loc);
 
 class Fa_ASTNode {
 public:
@@ -53,9 +70,43 @@ public:
     [[nodiscard]] virtual NodeType get_node_type() const;
     [[nodiscard]] u32 get_line() const;
     [[nodiscard]] u16 get_column() const;
+    Fa_SourceLocation get_location() const { return m_loc; }
 
     virtual ~Fa_ASTNode() = default;
 }; // class Fa_ASTNode
+
+class Fa_ExprVisitor {
+public:
+    virtual ~Fa_ExprVisitor() = default;
+
+    virtual void visit(Fa_BinaryExpr&) = 0;
+    virtual void visit(Fa_UnaryExpr&) = 0;
+    virtual void visit(Fa_LiteralExpr&) = 0;
+    virtual void visit(Fa_NameExpr&) = 0;
+    virtual void visit(Fa_CallExpr&) = 0;
+    virtual void visit(Fa_AssignmentExpr&) = 0;
+    virtual void visit(Fa_ListExpr&) = 0;
+    virtual void visit(Fa_IndexExpr&) = 0;
+    virtual void visit(Fa_DictExpr&) = 0;
+    virtual void visit(Fa_GetExpr&) = 0;
+};
+
+class Fa_StmtVisitor {
+public:
+    virtual ~Fa_StmtVisitor() = default;
+
+    virtual void visit(Fa_ExprStmt&) = 0;
+    virtual void visit(Fa_AssignmentStmt&) = 0;
+    virtual void visit(Fa_IfStmt&) = 0;
+    virtual void visit(Fa_WhileStmt&) = 0;
+    virtual void visit(Fa_ForStmt&) = 0;
+    virtual void visit(Fa_FunctionDef&) = 0;
+    virtual void visit(Fa_ReturnStmt&) = 0;
+    virtual void visit(Fa_BreakStmt&) = 0;
+    virtual void visit(Fa_ContinueStmt&) = 0;
+    virtual void visit(Fa_BlockStmt&) = 0;
+    virtual void visit(Fa_ClassDef&) = 0;
+};
 
 enum class Fa_BinaryOp : u8 {
     OP_ADD,
@@ -125,6 +176,7 @@ public:
 
     virtual bool equals(Fa_Expr const* other) const = 0;
     virtual Fa_Expr* clone() const = 0;
+    virtual void accept(Fa_ExprVisitor& v) = 0;
 
     Kind get_kind() const { return m_kind; }
     NodeType get_node_type() const override { return NodeType::EXPRESSION; }
@@ -151,6 +203,7 @@ public:
 
     [[nodiscard]] bool equals(Fa_Expr const* other) const override;
     [[nodiscard]] Fa_BinaryExpr* clone() const override;
+    void accept(Fa_ExprVisitor& v) override { v.visit(*this); }
 
     [[nodiscard]] Fa_Expr* get_left() const { return m_left; }
     [[nodiscard]] Fa_Expr* get_right() const { return m_right; }
@@ -179,6 +232,7 @@ public:
 
     [[nodiscard]] bool equals(Fa_Expr const* other) const override;
     [[nodiscard]] Fa_UnaryExpr* clone() const override;
+    void accept(Fa_ExprVisitor& v) override { v.visit(*this); }
 
     [[nodiscard]] Fa_Expr* get_operand() const { return m_operand; }
     [[nodiscard]] Fa_UnaryOp get_operator() const { return m_operator; }
@@ -270,7 +324,7 @@ public:
     [[nodiscard]] bool is_numeric() const { return is_integer() || is_float(); }
     [[nodiscard]] bool is_nil() const { return m_type == Type::NIL; }
 
-    [[nodiscard]] f64 is_number() const
+    [[nodiscard]] f64 as_number() const
     {
         if (is_integer())
             return static_cast<f64>(int_value);
@@ -282,6 +336,7 @@ public:
 
     [[nodiscard]] bool equals(Fa_Expr const* other) const override;
     [[nodiscard]] Fa_LiteralExpr* clone() const override;
+    void accept(Fa_ExprVisitor& v) override { v.visit(*this); }
 }; // class Fa_LiteralExpr
 
 class Fa_NameExpr final : public Fa_Expr {
@@ -300,6 +355,7 @@ public:
 
     [[nodiscard]] bool equals(Fa_Expr const* other) const override;
     [[nodiscard]] Fa_NameExpr* clone() const override;
+    void accept(Fa_ExprVisitor& v) override { v.visit(*this); }
 
     [[nodiscard]] Fa_StringRef get_value() const { return m_value; }
     [[nodiscard]] bool is_local() const { return m_is_local; }
@@ -325,6 +381,7 @@ public:
 
     [[nodiscard]] bool equals(Fa_Expr const* other) const override;
     [[nodiscard]] Fa_ListExpr* clone() const override;
+    void accept(Fa_ExprVisitor& v) override { v.visit(*this); }
 
     [[nodiscard]] Fa_Array<Fa_Expr*> const& get_elements() const { return m_elements; }
     [[nodiscard]] Fa_Array<Fa_Expr*>& get_elements() { return m_elements; }
@@ -346,6 +403,7 @@ public:
 
     bool equals(Fa_Expr const* other) const override;
     Fa_Expr* clone() const override;
+    void accept(Fa_ExprVisitor& v) override { v.visit(*this); }
 
     Fa_Array<std::pair<Fa_Expr*, Fa_Expr*>> get_content() const;
     void set_content(Fa_Array<std::pair<Fa_Expr*, Fa_Expr*>> c);
@@ -381,6 +439,7 @@ public:
 
     [[nodiscard]] bool equals(Fa_Expr const* other) const override;
     [[nodiscard]] Fa_CallExpr* clone() const override;
+    void accept(Fa_ExprVisitor& v) override { v.visit(*this); }
 
     [[nodiscard]] Fa_Expr* get_callee() const { return m_callee; }
 
@@ -399,14 +458,11 @@ private:
     Fa_Expr* m_target { nullptr };
     Fa_Expr* m_value { nullptr };
 
-    bool m_is_decl = false;
-
 public:
-    Fa_AssignmentExpr(Fa_Expr* target, Fa_Expr* value, Fa_SourceLocation loc, bool decl = false)
+    Fa_AssignmentExpr(Fa_Expr* target, Fa_Expr* value, Fa_SourceLocation loc)
         : Fa_Expr(loc, Kind::ASSIGNMENT)
         , m_target(target)
         , m_value(value)
-        , m_is_decl(decl)
     {
         assert(m_target != nullptr);
         assert(m_value != nullptr);
@@ -414,15 +470,13 @@ public:
 
     [[nodiscard]] bool equals(Fa_Expr const* other) const override;
     [[nodiscard]] Fa_AssignmentExpr* clone() const override;
+    void accept(Fa_ExprVisitor& v) override { v.visit(*this); }
 
     [[nodiscard]] Fa_Expr* get_target() const { return m_target; }
     [[nodiscard]] Fa_Expr* get_value() const { return m_value; }
 
     void set_target(Fa_Expr* t) { m_target = t; }
     void set_value(Fa_Expr* v) { m_value = v; }
-    void set_decl() { m_is_decl = true; }
-
-    [[nodiscard]] bool is_declaration() const { return m_is_decl; }
 }; // Fa_AssignmentExpr
 
 class Fa_IndexExpr final : public Fa_Expr {
@@ -444,6 +498,7 @@ public:
 
     [[nodiscard]] bool equals(Fa_Expr const* other) const override;
     [[nodiscard]] Fa_IndexExpr* clone() const override;
+    void accept(Fa_ExprVisitor& v) override { v.visit(*this); }
 
     [[nodiscard]] Fa_Expr* get_object() const { return m_object; }
     [[nodiscard]] Fa_Expr* get_index() const { return m_index; }
@@ -470,6 +525,7 @@ public:
 
     [[nodiscard]] bool equals(Fa_Expr const* other) const override;
     [[nodiscard]] Fa_GetExpr* clone() const override;
+    void accept(Fa_ExprVisitor& v) override { v.visit(*this); }
 
     [[nodiscard]] Fa_Expr* get_object() const { return m_object; }
     [[nodiscard]] Fa_Expr* get_member() const { return m_member; }
@@ -508,6 +564,7 @@ public:
 
     virtual Fa_Stmt* clone() const = 0;
     virtual bool equals(Fa_Stmt const* other) const = 0;
+    virtual void accept(Fa_StmtVisitor& v) = 0;
 
     Kind get_kind() const { return m_kind; }
     NodeType get_node_type() const override { return NodeType::STATEMENT; }
@@ -526,6 +583,7 @@ public:
 
     [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
     [[nodiscard]] Fa_BlockStmt* clone() const override;
+    void accept(Fa_StmtVisitor& v) override { v.visit(*this); }
     [[nodiscard]] Fa_Array<Fa_Stmt*> const& get_statements() const;
     [[nodiscard]] bool is_empty() const;
     void set_statements(Fa_Array<Fa_Stmt*>& stmts);
@@ -545,6 +603,7 @@ public:
 
     [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
     [[nodiscard]] Fa_ExprStmt* clone() const override;
+    void accept(Fa_StmtVisitor& v) override { v.visit(*this); }
     [[nodiscard]] Fa_Expr* get_expr() const;
     void set_expr(Fa_Expr* e);
 }; // class Fa_ExprStmt
@@ -561,14 +620,15 @@ public:
         assert(m_expr != nullptr);
     }
 
-    Fa_AssignmentStmt(Fa_Expr* target, Fa_Expr* value, Fa_SourceLocation loc, bool decl = false)
+    Fa_AssignmentStmt(Fa_Expr* target, Fa_Expr* value, Fa_SourceLocation loc)
         : Fa_Stmt(loc, Kind::ASSIGNMENT)
     {
-        m_expr = Fa_make_assignment_expr(target, value, loc, decl); // Fa_AssignmentExpr will assert args for us
+        m_expr = Fa_make_assignment_expr(target, value, loc); // Fa_AssignmentExpr will assert args for us
     }
 
     [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
     [[nodiscard]] Fa_AssignmentStmt* clone() const override;
+    void accept(Fa_StmtVisitor& v) override { v.visit(*this); }
     [[nodiscard]] Fa_Expr* get_value() const;
     [[nodiscard]] Fa_Expr* get_target() const;
     [[nodiscard]] bool is_declaration() const;
@@ -598,6 +658,7 @@ public:
 
     [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
     [[nodiscard]] Fa_IfStmt* clone() const override;
+    void accept(Fa_StmtVisitor& v) override { v.visit(*this); }
     [[nodiscard]] Fa_Expr* get_condition() const;
     [[nodiscard]] Fa_Stmt* get_then() const;
     [[nodiscard]] Fa_Stmt* get_else() const;
@@ -622,6 +683,7 @@ public:
 
     [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
     [[nodiscard]] Fa_WhileStmt* clone() const override;
+    void accept(Fa_StmtVisitor& v) override { v.visit(*this); }
     [[nodiscard]] Fa_Expr* get_condition() const;
     [[nodiscard]] Fa_Stmt* get_body();
     [[nodiscard]] Fa_Stmt const* get_body() const;
@@ -649,6 +711,7 @@ public:
 
     [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
     [[nodiscard]] Fa_ForStmt* clone() const override;
+    void accept(Fa_StmtVisitor& v) override { v.visit(*this); }
     [[nodiscard]] Fa_Expr* get_container() const;
     [[nodiscard]] Fa_NameExpr* get_target() const;
     [[nodiscard]] Fa_Expr* get_iter() const;
@@ -677,6 +740,7 @@ public:
 
     [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
     [[nodiscard]] Fa_FunctionDef* clone() const override;
+    void accept(Fa_StmtVisitor& v) override { v.visit(*this); }
     [[nodiscard]] Fa_NameExpr* get_name() const;
     [[nodiscard]] Fa_Array<Fa_Expr*> const& get_parameters() const;
     [[nodiscard]] Fa_ListExpr* get_parameter_list() const;
@@ -699,6 +763,7 @@ public:
 
     [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
     [[nodiscard]] Fa_ReturnStmt* clone() const override;
+    void accept(Fa_StmtVisitor& v) override { v.visit(*this); }
     [[nodiscard]] Fa_Expr* get_value();
     [[nodiscard]] Fa_Expr const* get_value() const;
     [[nodiscard]] bool has_value() const;
@@ -728,6 +793,7 @@ public:
 
     [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
     [[nodiscard]] Fa_ClassDef* clone() const override;
+    void accept(Fa_StmtVisitor& v) override { v.visit(*this); }
     [[nodiscard]] Fa_Array<Fa_Expr*> get_members() const;
     [[nodiscard]] Fa_Array<Fa_Stmt*> get_methods() const;
     [[nodiscard]] Fa_Expr* get_name() const;
@@ -742,6 +808,7 @@ public:
 
     [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
     [[nodiscard]] Fa_BreakStmt* clone() const override;
+    void accept(Fa_StmtVisitor& v) override { v.visit(*this); }
 }; // class Fa_BreakStmt
 
 class Fa_ContinueStmt final : public Fa_Stmt {
@@ -753,6 +820,7 @@ public:
 
     [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
     [[nodiscard]] Fa_ContinueStmt* clone() const override;
+    void accept(Fa_StmtVisitor& v) override { v.visit(*this); }
 }; // class Fa_ContinueStmt
 
 #define ALLOCATE_AST_NODE(type, ...) get_allocator().allocate_object<type>(__VA_ARGS__);
@@ -809,9 +877,9 @@ static inline Fa_CallExpr* Fa_make_call(Fa_Expr* callee, Fa_ListExpr* args, Fa_S
 {
     return ALLOCATE_AST_NODE(Fa_CallExpr, callee, args, loc);
 }
-static inline Fa_AssignmentExpr* Fa_make_assignment_expr(Fa_Expr* target, Fa_Expr* value, Fa_SourceLocation loc, bool decl)
+static inline Fa_AssignmentExpr* Fa_make_assignment_expr(Fa_Expr* target, Fa_Expr* value, Fa_SourceLocation loc)
 {
-    return ALLOCATE_AST_NODE(Fa_AssignmentExpr, target, value, loc, decl);
+    return ALLOCATE_AST_NODE(Fa_AssignmentExpr, target, value, loc);
 }
 static inline Fa_IndexExpr* Fa_make_index(Fa_Expr* obj, Fa_Expr* idx, Fa_SourceLocation loc)
 {
@@ -825,9 +893,9 @@ static inline Fa_ExprStmt* Fa_make_expr_stmt(Fa_Expr* expr, Fa_SourceLocation lo
 {
     return ALLOCATE_AST_NODE(Fa_ExprStmt, expr, loc);
 }
-static inline Fa_AssignmentStmt* Fa_make_assignment_stmt(Fa_Expr* target, Fa_Expr* value, Fa_SourceLocation loc, bool decl)
+static inline Fa_AssignmentStmt* Fa_make_assignment_stmt(Fa_Expr* target, Fa_Expr* value, Fa_SourceLocation loc)
 {
-    return ALLOCATE_AST_NODE(Fa_AssignmentStmt, target, value, loc, decl);
+    return ALLOCATE_AST_NODE(Fa_AssignmentStmt, target, value, loc);
 }
 static inline Fa_IfStmt* Fa_make_if(Fa_Expr* cond, Fa_Stmt* then_block, Fa_SourceLocation loc, Fa_Stmt* else_block = nullptr)
 {
