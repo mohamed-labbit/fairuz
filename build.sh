@@ -1,8 +1,19 @@
 #!/usr/bin/env bash
+#
+# -e: exit immediately if any command fails.
+# -u: treat unset variables as an error instead of expanding to empty.
+# -o pipefail: a pipeline's exit status is its first failing command, not
+#   just its last one (relevant to the `find | xargs` pipeline below).
+# Without these, a failing step earlier in the script (e.g. a bad cmake
+# configure) can be silently swallowed and the script carries on with
+# whatever partial state resulted — exactly what "production grade CI"
+# must not do.
+set -euo pipefail
 
 PROJECT_ROOT="$(pwd)"
 
 DEBUG=0
+DETECT_LEAKS=""
 CLEAN_BUILD=false
 RUN_TESTS=false
 RUN_MAIN=false
@@ -25,6 +36,12 @@ for arg in "$@"; do
             ;;
         --debug)
             DEBUG=1
+            ;;
+        --leak-check)
+            DETECT_LEAKS=1
+            ;;
+        --no-leak-check)
+            DETECT_LEAKS=0
             ;;
         --includes)
             RUN_INCLUDES=true
@@ -84,9 +101,16 @@ find_versioned_compiler() {
         cxx_prefix="clang++"
     fi
 
+    # NOTE: every `command -v` below is followed by `|| true`. Under
+    # `set -e` (enabled for this whole script), a bare
+    # `x="$(command -v not-found)"` aborts the script the instant the
+    # substitution fails — before the surrounding `if [[ -n "$x" ]]` ever
+    # gets a chance to handle the not-found case. `|| true` neutralizes
+    # that so "not found" stays a normal, checked condition instead of a
+    # fatal error.
     if [[ -n "$requested" ]]; then
-        c_bin="$(command -v "${c_prefix}-${requested}" 2>/dev/null)"
-        cxx_bin="$(command -v "${cxx_prefix}-${requested}" 2>/dev/null)"
+        c_bin="$(command -v "${c_prefix}-${requested}" 2>/dev/null || true)"
+        cxx_bin="$(command -v "${cxx_prefix}-${requested}" 2>/dev/null || true)"
         if [[ -n "$c_bin" && -n "$cxx_bin" ]]; then
             echo "$c_bin|$cxx_bin"
             return 0
@@ -96,8 +120,8 @@ find_versioned_compiler() {
 
     # No version requested: take the highest versioned binary on the system.
     for v in $(seq 25 -1 9); do
-        c_bin="$(command -v "${c_prefix}-${v}" 2>/dev/null)"
-        cxx_bin="$(command -v "${cxx_prefix}-${v}" 2>/dev/null)"
+        c_bin="$(command -v "${c_prefix}-${v}" 2>/dev/null || true)"
+        cxx_bin="$(command -v "${cxx_prefix}-${v}" 2>/dev/null || true)"
         if [[ -n "$c_bin" && -n "$cxx_bin" ]]; then
             echo "$c_bin|$cxx_bin"
             return 0
@@ -105,8 +129,8 @@ find_versioned_compiler() {
     done
 
     # Fall back to the unversioned binary.
-    c_bin="$(command -v "$c_prefix" 2>/dev/null)"
-    cxx_bin="$(command -v "$cxx_prefix" 2>/dev/null)"
+    c_bin="$(command -v "$c_prefix" 2>/dev/null || true)"
+    cxx_bin="$(command -v "$cxx_prefix" 2>/dev/null || true)"
     if [[ -n "$c_bin" && -n "$cxx_bin" ]]; then
         echo "$c_bin|$cxx_bin"
         return 0
@@ -187,17 +211,31 @@ fi
 
 make || exit 1
 
+# Resolve the effective leak-detection setting. Precedence:
+#   1. explicit --leak-check / --no-leak-check, if given
+#   2. otherwise, on whenever ASan is in play (i.e. --debug or `test`),
+#      since that's the whole point of running under ASan/LSan in CI
+#   3. otherwise off (a plain optimized `run` has no sanitizer runtime at all)
+if [[ -z "$DETECT_LEAKS" ]]; then
+    if [[ "$DEBUG" == 1 || "$RUN_TESTS" == true ]]; then
+        DETECT_LEAKS=1
+    else
+        DETECT_LEAKS=0
+    fi
+fi
+
 if [[ "$RUN_INCLUDES" == true ]]; then
     echo "🔍 Running clang include-cleaner..."
 
-    find src -name "*.cpp" \
+    # Fairuz's sources are fairuz/*.cc (plus main.cpp), not src/*.cpp.
+    find fairuz -name "*.cc" -o -name "*.hpp" -o -name "*.tpp" \
     | xargs -P 8 -I {} clangd --check="{}" \
         --compile-commands-dir=build \
         --enable-config
 fi
 
 if [[ "$RUN_TESTS" == true ]]; then
-    ASAN_OPTIONS=detect_leaks="$DEBUG" \
+    ASAN_OPTIONS="detect_leaks=$DETECT_LEAKS" \
         "$PROJECT_ROOT/build/fairuz_tests" "${TEST_ARGS[@]}"
 fi
 
@@ -207,7 +245,7 @@ if [[ "$RUN_MAIN" == true ]]; then
         exit 1
     fi
 
-    ASAN_OPTIONS=detect_leaks="$DEBUG" \
+    ASAN_OPTIONS="detect_leaks=$DETECT_LEAKS" \
         "$PROJECT_ROOT/build/fairuz" "${MAIN_ARGS[@]}"
 fi
 
@@ -236,6 +274,6 @@ if [[ "$FORMAT" == true ]]; then
         exit 1
     fi
 
-    ASAN_OPTIONS=detect_leaks="$DEBUG" \
+    ASAN_OPTIONS="detect_leaks=$DETECT_LEAKS" \
         "$PROJECT_ROOT/build/fairuz" format "${MAIN_ARGS[@]}"
 fi
