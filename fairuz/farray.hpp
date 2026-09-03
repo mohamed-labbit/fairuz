@@ -264,7 +264,11 @@ void Fa_Array<T, _Alloc>::ensure_push_capacity()
     u32 new_cap = m_cap == 0 ? DEFAULT_CAP : m_cap + (m_cap >> 1);
     T* new_arr = m_allocator->template allocate_array<T>(new_cap);
     if (m_arr && m_size > 0)
+    {
         relocate(new_arr, m_arr, m_size);
+        if constexpr (!IS_ARENA)
+            m_allocator->deallocate(m_arr, m_size);
+    }
 
     m_arr = new_arr;
     m_cap = new_cap;
@@ -634,6 +638,12 @@ public:
             return;
         m_arr.push(val);
     }
+
+    T* begin() { return m_arr.begin(); }
+    T const* begin() const { return m_arr.begin(); }
+
+    T* end() { return m_arr.end(); }
+    T const* end() const { return m_arr.end(); }
 
     void pop() { m_arr.pop(); }
     void clear() { m_arr.clear(); }

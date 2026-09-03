@@ -3,6 +3,9 @@
 
 #include "../fairuz/fAST.hpp"
 #include "../fairuz/fgc.hpp"
+#include "farena.hpp"
+#include "fstring.hpp"
+#include <functional>
 
 using namespace fairuz;
 using namespace fairuz::AST;
@@ -114,8 +117,11 @@ static inline Fa_ContinueStmt* continue_stmt()
     return Fa_make_continue({ });
 }
 
-inline Fa_GarbageCollector gc;
-
-static inline Fa_Value str(char const* s) { return gc.make_string(s); }
+static inline Fa_Value str(char const* s) {
+    Fa_ObjString* obj =  get_allocator().allocate_object<Fa_ObjString>();
+    obj->str = s;
+    obj->hash = std::hash<Fa_StringRef>()(obj->str);
+    return Fa_from_string(obj);
+}
 
 #endif // TEST_COMMON_H

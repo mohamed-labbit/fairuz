@@ -171,8 +171,11 @@ void Fa_GarbageCollector::trace_references()
 
 void Fa_GarbageCollector::sweep_all()
 {
-    for (u32 i = 0; i < m_all.size(); i += 1)
-        fa_delete_object(m_all[i]);
+    for (auto* object : m_all)
+    {
+        if (object != nullptr)
+            fa_delete_object(object);
+    }
 
     m_all.clear();
     m_grays.clear();

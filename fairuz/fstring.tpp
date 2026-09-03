@@ -236,12 +236,10 @@ Fa_StringRefImpl<Allocator>::~Fa_StringRefImpl()
         return;
     }
 
-    m_string_data->decrement();
+    // m_string_data->decrement();
 
-    if (m_string_data->reference_count() == 0) {
-        Allocator* freeing_allocator = m_string_data->allocator();
-        m_string_data->~StringBase();
-        freeing_allocator->template deallocate_object<StringBase<Allocator>>(m_string_data);
+    if (m_string_data->reference_count() == 0)
+    {
         m_string_data = nullptr;
     }
 }

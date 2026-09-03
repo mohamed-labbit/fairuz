@@ -66,7 +66,7 @@ public:
     ~StringBase()
     {
         if (is_heap())
-            m_allocator->template deallocate_array<char>(m_storage.heap.ptr, m_storage.heap.cap);
+            m_storage.heap.ptr = nullptr;
     }
 
     StringBase(StringBase const&) = delete;
