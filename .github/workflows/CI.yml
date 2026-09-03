@@ -1,0 +1,141 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Lets you trigger a run by hand from the Actions tab, useful for
+  # re-checking a flaky-looking failure without pushing an empty commit.
+  workflow_dispatch:
+
+# Cancel superseded runs on the same branch/PR so pushing twice quickly
+# doesn't burn double the CI minutes on a build nobody will look at.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test (${{ matrix.compiler }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # A failure on one OS/compiler leg shouldn't cancel the others — we
+      # want the full compatibility picture from a single CI run.
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            compiler: clang
+          - os: ubuntu-latest
+            compiler: gcc
+          - os: macos-latest
+            compiler: clang
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build libomp-dev
+          if [ "${{ matrix.compiler }}" = "clang" ]; then
+            sudo apt-get install -y clang
+          else
+            sudo apt-get install -y gcc g++
+          fi
+
+      - name: Install macOS build dependencies
+        if: runner.os == 'macOS'
+        run: brew install cmake ninja libomp
+
+      - name: Cache CMake FetchContent downloads
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          # Falling back to a same-OS cache on a miss still saves the
+          # network fetch even when CMakeLists.txt itself changed.
+          key: fetchcontent-${{ runner.os }}-${{ matrix.compiler }}-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: |
+            fetchcontent-${{ runner.os }}-${{ matrix.compiler }}-
+
+      - name: Build and run tests
+        run: |
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then
+            ./build.sh test --gcc --debug
+          else
+            ./build.sh test --debug
+          fi
+
+      - name: Smoke-test the interpreter on the example programs
+        run: |
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then
+            EXTRA_FLAG="--gcc"
+          else
+            EXTRA_FLAG=""
+          fi
+          for f in examples/*.fa; do
+            echo "::group::$f"
+            ./build.sh run $EXTRA_FLAG "$f"
+            echo "::endgroup::"
+          done
+
+  release-build:
+    name: release build (no sanitizers)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake clang libomp-dev
+
+      - name: Cache CMake FetchContent downloads
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: fetchcontent-release-${{ hashFiles('CMakeLists.txt') }}
+          restore-keys: |
+            fetchcontent-release-
+
+      - name: Build fairuz (optimized, no ASan)
+        # Deliberately not `test` or `--debug`, so this leg exercises the
+        # actual release configuration (LTO, no sanitizer) that gets shipped
+        # — the debug+ASan legs above never touch this path.
+        run: ./build.sh run examples/hello.fa
+
+  format-check:
+    name: formatter is idempotent
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake clang libomp-dev
+
+      - name: Build fairuz
+        run: |
+          mkdir -p build && cd build
+          cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ ..
+          make fairuz -j"$(nproc)"
+
+      - name: Check every example is already canonically formatted
+        # `fairuz format` rewrites in place, so this diffs before/after and
+        # fails the build if formatting the tracked examples would change
+        # them — catching both formatter regressions and unformatted
+        # example files in the same check.
+        run: |
+          for f in examples/*.fa; do
+            cp "$f" "$f.orig"
+            ./build/fairuz format "$f"
+            if ! diff -q "$f.orig" "$f" > /dev/null; then
+              echo "::error file=$f::not canonically formatted (run 'fairuz format' and commit the result)"
+              diff -u "$f.orig" "$f" || true
+              exit 1
+            fi
+            rm "$f.orig"
+          done
