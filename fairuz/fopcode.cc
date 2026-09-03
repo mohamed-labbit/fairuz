@@ -2,9 +2,9 @@
 // opcode.cc
 //
 
+#include "fopcode.hpp"
 #include "fobject.hpp"
 #include "fvalue.hpp"
-#include "fopcode.hpp"
 
 namespace fairuz::runtime {
 
