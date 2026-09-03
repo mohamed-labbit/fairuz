@@ -4,7 +4,6 @@
 #include "farray.hpp"
 #include "fmacros.hpp"
 #include "fobj_header.hpp"
-#include "fopcode.hpp"
 #include "fstring.hpp"
 #include "ftable.hpp"
 #include "fvalue.hpp"
@@ -27,12 +26,19 @@ using Fa_ListType = Fa_Array<Fa_Value, /*_Alloc=*/Fa_GarbageCollector>;
 /// Code casts Fa_ObjHeader* to concrete object pointers based on this layout and the
 /// runtime type tag. Do not add C++ virtual functions or inheritance to these types.
 
+#if FA_USE_NANBOX
+
+struct Fa_ObjInt {
+    Fa_ObjHeader obj { Fa_ObjType::INT };
+    i64 val { UINT64_C(0) };
+};
+
+#endif // FA_USE_NANBOX
+
 struct Fa_ObjString {
     Fa_ObjHeader obj { Fa_ObjType::STRING };
     Fa_StringRef str = "";
     u64 hash { 0 };
-
-    Fa_ObjString() = default;
 };
 
 struct Fa_ObjList {
@@ -50,15 +56,11 @@ struct Fa_ObjList {
 struct Fa_ObjDict {
     Fa_ObjHeader obj { Fa_ObjType::DICT };
     Fa_DictType data = { };
-
-    Fa_ObjDict() = default;
 };
 
 struct Fa_ObjFunction {
     Fa_ObjHeader obj { Fa_ObjType::FUNCTION };
     Fa_Chunk* chunk { nullptr };
-
-    Fa_ObjFunction() = default;
 
     Fa_StringRef name() const;
     u32 arity() const;
@@ -69,8 +71,6 @@ struct Fa_ObjNative {
     NativeFn fn { nullptr };
     Fa_ObjString* name { nullptr };
     int arity { 0 };
-
-    Fa_ObjNative() = default;
 };
 
 struct Fa_ObjClass {
@@ -179,6 +179,82 @@ inline T const* Fa_obj_cast(Fa_ObjHeader const* obj, Fa_ObjType expected)
     assert(obj->type == expected && "Fa_Obj type tag mismatch on cast");
     return reinterpret_cast<T const*>(obj);
 }
+
+#if FA_USE_NANBOX
+
+static inline Fa_ObjString* Fa_as_string(Fa_Value const v)
+{
+    return Fa_obj_cast<Fa_ObjString>(Fa_as_obj(v), Fa_ObjType::STRING);
+}
+static inline Fa_ObjList* Fa_as_list(Fa_Value const v)
+{
+    return Fa_obj_cast<Fa_ObjList>(Fa_as_obj(v), Fa_ObjType::LIST);
+}
+static inline Fa_ObjDict* Fa_as_dict(Fa_Value const v)
+{
+    return Fa_obj_cast<Fa_ObjDict>(Fa_as_obj(v), Fa_ObjType::DICT);
+}
+static inline Fa_ObjFunction* Fa_as_func(Fa_Value const v)
+{
+    return Fa_obj_cast<Fa_ObjFunction>(Fa_as_obj(v), Fa_ObjType::FUNCTION);
+}
+static inline Fa_ObjNative* Fa_as_native(Fa_Value const v)
+{
+    return Fa_obj_cast<Fa_ObjNative>(Fa_as_obj(v), Fa_ObjType::NATIVE);
+}
+static inline Fa_ObjClass* Fa_as_class(Fa_Value const v)
+{
+    return Fa_obj_cast<Fa_ObjClass>(Fa_as_obj(v), Fa_ObjType::CLASS);
+}
+static inline Fa_ObjInstance* Fa_as_instance(Fa_Value const v)
+{
+    return Fa_obj_cast<Fa_ObjInstance>(Fa_as_obj(v), Fa_ObjType::INSTANCE);
+}
+static inline Fa_ObjFileHandle* Fa_as_file_handle(Fa_Value const v)
+{
+    return Fa_obj_cast<Fa_ObjFileHandle>(Fa_as_obj(v), Fa_ObjType::FILE_HANDLE);
+}
+
+#else
+
+static inline Fa_ObjHeader* Fa_as_obj(Fa_Value const v)
+{
+    return v.as_object();
+}
+static inline Fa_ObjString* Fa_as_string(Fa_Value const v)
+{
+    return Fa_obj_cast<Fa_ObjString>((v).as_object(), Fa_ObjType::STRING);
+}
+static inline Fa_ObjList* Fa_as_list(Fa_Value const v)
+{
+    return Fa_obj_cast<Fa_ObjList>((v).as_object(), Fa_ObjType::LIST);
+}
+static inline Fa_ObjDict* Fa_as_dict(Fa_Value const v)
+{
+    return Fa_obj_cast<Fa_ObjDict>((v).as_object(), Fa_ObjType::DICT);
+}
+static inline Fa_ObjFunction* Fa_as_func(Fa_Value const v)
+{
+    return Fa_obj_cast<Fa_ObjFunction>((v).as_object(), Fa_ObjType::FUNCTION);
+}
+static inline Fa_ObjNative* Fa_as_native(Fa_Value const v)
+{
+    return Fa_obj_cast<Fa_ObjNative>((v).as_object(), Fa_ObjType::NATIVE);
+}
+static inline Fa_ObjClass* Fa_as_class(Fa_Value const v)
+{
+    return Fa_obj_cast<Fa_ObjClass>((v).as_object(), Fa_ObjType::CLASS);
+}
+static inline Fa_ObjInstance* Fa_as_instance(Fa_Value const v)
+{
+    return Fa_obj_cast<Fa_ObjInstance>((v).as_object(), Fa_ObjType::INSTANCE);
+}
+static inline Fa_ObjFileHandle* Fa_as_file_handle(Fa_Value const v)
+{
+    return Fa_obj_cast<Fa_ObjFileHandle>((v).as_object(), Fa_ObjType::FILE_HANDLE);
+}
+
+#endif // FA_USE_NANBOX
 
 } // namespace fairuz::runtime
 

@@ -4,6 +4,7 @@
 
 #include "fobject.hpp"
 #include "fgc.hpp"
+#include "fopcode.hpp"
 
 namespace fairuz::runtime {
 

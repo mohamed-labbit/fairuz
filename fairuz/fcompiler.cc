@@ -1529,7 +1529,7 @@ u32 Compiler::intern_string(Fa_StringRef const& str)
 
     Fa_ObjString* obj = get_allocator().allocate_object<Fa_ObjString>();
     obj->str = str;
-    u16 idx = chunk->add_constant(Fa_make_obj((Fa_ObjHeader*)(obj)));
+    u16 idx = chunk->add_constant(Fa_make_obj(reinterpret_cast<Fa_ObjHeader*>(obj)));
     m_string_cache[key] = idx;
     return idx;
 }

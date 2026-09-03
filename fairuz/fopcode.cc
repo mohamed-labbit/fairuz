@@ -4,6 +4,7 @@
 
 #include "fobject.hpp"
 #include "fvalue.hpp"
+#include "fopcode.hpp"
 
 namespace fairuz::runtime {
 
@@ -17,7 +18,7 @@ static inline void print_value(Fa_Value v)
         ::printf("%lli", Fa_as_int(v));
     else if (Fa_is_double(v))
         ::printf("%g", Fa_as_double(v));
-    else if (Fa_IS_STRING(v))
+    else if (Fa_is_string(v))
         ::printf("\"%s\"", Fa_as_string(v)->str.data());
     else if (Fa_is_obj(v))
         ::printf("<obj %p>", (void*)(Fa_as_obj(v)));

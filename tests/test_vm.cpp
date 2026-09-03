@@ -76,7 +76,7 @@ struct CB {
         auto p = std::make_unique<Fa_ObjString>();
         p->str = s;
         strs_.emplace_back(std::move(p));
-        return ch->add_constant(Fa_make_obj((Fa_ObjHeader*)(strs_.back().get())));
+        return ch->add_constant(Fa_make_obj(reinterpret_cast<Fa_ObjHeader*>(strs_.back().get())));
     }
 
     CB& ldg(u8 r, char const* name) { return ABx(Fa_OpCode::LOAD_GLOBAL, r, str(name)); }
@@ -279,7 +279,7 @@ TEST(VMLoads, ConstString)
     if (test_config::dump_bytecode)
         b.dump();
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_IS_STRING(v));
+    EXPECT_TRUE(Fa_is_string(v));
     EXPECT_EQ(Fa_as_string(v)->str, "hello");
 }
 
@@ -366,7 +366,7 @@ TEST(VMArith, AddStringsConcat)
     if (test_config::dump_bytecode)
         b.dump();
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_IS_STRING(v));
+    EXPECT_TRUE(Fa_is_string(v));
     EXPECT_EQ(Fa_as_string(v)->str, "foobar");
 }
 
@@ -876,7 +876,7 @@ TEST(VMDicts, SetUpdatesAndAppendsByKey)
 
     VMRunner r;
     Fa_Value result = r.run(ch);
-    ASSERT_TRUE(Fa_IS_LIST(result));
+    ASSERT_TRUE(Fa_is_list(result));
     Fa_ObjList* ret_obj = Fa_as_list(result);
     ASSERT_EQ(ret_obj->size(), 2);
     EXPECT_EQ(Fa_as_int(ret_obj->elements[0]), 1);
@@ -983,7 +983,7 @@ TEST(VMCalls, TailCall_DoesNotOverflowFrames)
     fn->arity = 1;
     fn->local_count = 4;
 
-    u16 nk = fn->add_constant(gc.make_string("cd"));
+    u16 nk = fn->add_constant(str("cd"));
 
     fn->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 1, BX(0)), { });
     fn->emit(Fa_make_ABC(Fa_OpCode::OP_EQ, 1, 0, 1), { });
@@ -1000,7 +1000,7 @@ TEST(VMCalls, TailCall_DoesNotOverflowFrames)
     top->local_count = 3;
     top->functions.push(fn);
 
-    u16 tk = top->add_constant(gc.make_string("cd"));
+    u16 tk = top->add_constant(str("cd"));
     top->emit(Fa_make_ABx(Fa_OpCode::CLOSURE, 0, 0), { });
     top->emit(Fa_make_ABx(Fa_OpCode::STORE_GLOBAL, 0, tk), { });
     top->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 1, BX(300)), { });
@@ -1080,7 +1080,7 @@ TEST(VMIntegration, FunctionLocalDeclarationShadowsGlobal)
         top->disassemble();
     VMRunner r;
     Fa_Value v = r.run(top);
-    ASSERT_TRUE(Fa_IS_LIST(v));
+    ASSERT_TRUE(Fa_is_list(v));
     auto const& elems = Fa_as_list(v)->elements;
     ASSERT_EQ(elems.size(), 2u);
     EXPECT_EQ(Fa_as_int(elems[0]), 2);
@@ -1317,21 +1317,21 @@ TEST(NativeLen, NullArgv)
 TEST(NativeLen, EmptyString)
 {
     Fa_VM vm;
-    auto s = gc.make_string("");
+    auto s = str("");
     EXPECT_EQ(Fa_as_int(vm.Fa_len(1, &s)), 0);
 }
 
 TEST(NativeLen, NonEmptyString)
 {
     Fa_VM vm;
-    auto s = gc.make_string("hello");
+    auto s = str("hello");
     EXPECT_EQ(Fa_as_int(vm.Fa_len(1, &s)), 5);
 }
 
 TEST(NativeLen, UnicodeString)
 {
     Fa_VM vm;
-    auto s = gc.make_string("abc");
+    auto s = str("abc");
     EXPECT_EQ(Fa_as_int(vm.Fa_len(1, &s)), 3);
 }
 
@@ -1344,7 +1344,7 @@ TEST(NativePrint, NoArgs_PrintsNewline)
 TEST(NativePrint, StringArg)
 {
     Fa_VM vm;
-    auto s = gc.make_string("hello world");
+    auto s = str("hello world");
     EXPECT_TRUE(Fa_is_nil(vm.Fa_print(1, &s)));
 }
 
@@ -1386,7 +1386,7 @@ TEST(NativePrint, NilArg)
 TEST(NativePrint, TwoArgs_DoesNotCrash)
 {
     Fa_VM vm;
-    auto s = gc.make_string("a");
+    auto s = str("a");
     Fa_Value m_args[] = { s, s };
     EXPECT_TRUE(Fa_is_nil(vm.Fa_print(2, m_args)));
 }
@@ -1394,7 +1394,7 @@ TEST(NativePrint, TwoArgs_DoesNotCrash)
 TEST(NativeStr, NoArgs_ReturnsEmpty)
 {
     Fa_VM vm;
-    EXPECT_TRUE(Fa_IS_STRING(vm.Fa_str(0, nullptr)));
+    EXPECT_TRUE(Fa_is_string(vm.Fa_str(0, nullptr)));
 }
 
 TEST(NativeStr, Integer)
@@ -1402,7 +1402,7 @@ TEST(NativeStr, Integer)
     Fa_VM vm;
     Fa_Value arg = Fa_make_int(42);
     Fa_Value r = vm.Fa_str(1, &arg);
-    ASSERT_TRUE(Fa_IS_STRING(r));
+    ASSERT_TRUE(Fa_is_string(r));
     EXPECT_EQ(std::string(Fa_as_string(r)->str.data()), "42");
 }
 
@@ -1411,7 +1411,7 @@ TEST(NativeStr, NegativeInteger)
     Fa_VM vm;
     Fa_Value arg = Fa_make_int(-7);
     Fa_Value r = vm.Fa_str(1, &arg);
-    ASSERT_TRUE(Fa_IS_STRING(r));
+    ASSERT_TRUE(Fa_is_string(r));
     EXPECT_EQ(std::string(Fa_as_string(r)->str.data()), "-7");
 }
 
@@ -1420,7 +1420,7 @@ TEST(NativeStr, Zero)
     Fa_VM vm;
     Fa_Value arg = Fa_make_int(0);
     Fa_Value r = vm.Fa_str(1, &arg);
-    ASSERT_TRUE(Fa_IS_STRING(r));
+    ASSERT_TRUE(Fa_is_string(r));
     EXPECT_EQ(std::string(Fa_as_string(r)->str.data()), "0");
 }
 
@@ -1429,7 +1429,7 @@ TEST(NativeStr, BoolTrue)
     Fa_VM vm;
     Fa_Value arg = Fa_make_bool(true);
     Fa_Value r = vm.Fa_str(1, &arg);
-    ASSERT_TRUE(Fa_IS_STRING(r));
+    ASSERT_TRUE(Fa_is_string(r));
     EXPECT_EQ(std::string(Fa_as_string(r)->str.data()), "صحيح");
 }
 
@@ -1438,7 +1438,7 @@ TEST(NativeStr, BoolFalse)
     Fa_VM vm;
     Fa_Value arg = Fa_make_bool(false);
     Fa_Value r = vm.Fa_str(1, &arg);
-    ASSERT_TRUE(Fa_IS_STRING(r));
+    ASSERT_TRUE(Fa_is_string(r));
     EXPECT_EQ(std::string(Fa_as_string(r)->str.data()), "خطا");
 }
 
@@ -1447,7 +1447,7 @@ TEST(NativeStr, Float)
     Fa_VM vm;
     Fa_Value arg = Fa_make_real(1.5);
     Fa_Value r = vm.Fa_str(1, &arg);
-    ASSERT_TRUE(Fa_IS_STRING(r));
+    ASSERT_TRUE(Fa_is_string(r));
     char const* text_ptr = Fa_as_string(r)->str.data();
     f64 parsed = 0.0;
     auto [end_ptr, ec] = std::from_chars(text_ptr, text_ptr + Fa_as_string(r)->str.len(), parsed);
@@ -1459,9 +1459,9 @@ TEST(NativeStr, Float)
 TEST(NativeStr, StringPassthrough)
 {
     Fa_VM vm;
-    Fa_Value s = gc.make_string("hello");
+    Fa_Value s = str("hello");
     Fa_Value r = vm.Fa_str(1, &s);
-    ASSERT_TRUE(Fa_IS_STRING(r));
+    ASSERT_TRUE(Fa_is_string(r));
     EXPECT_EQ(std::string(Fa_as_string(r)->str.data()), "hello");
 }
 
@@ -1513,7 +1513,7 @@ TEST(NativeBool, NilArg)
 TEST(NativeBool, NonEmptyString_IsTrue)
 {
     Fa_VM vm;
-    Fa_Value arg = gc.make_string("hi");
+    Fa_Value arg = str("hi");
     Fa_Value r = vm.Fa_bool(1, &arg);
     ASSERT_TRUE(Fa_is_bool(r));
     EXPECT_TRUE(Fa_as_bool(r));
@@ -1580,7 +1580,7 @@ TEST(NativeType, ReturnsInteger)
     Fa_Value f = Fa_make_real(0.0);
     Fa_Value b = Fa_make_bool(false);
     Fa_Value n = Fa_make_nil();
-    Fa_Value s = gc.make_string("x");
+    Fa_Value s = str("x");
     EXPECT_TRUE(Fa_is_int(vm.Fa_type(1, &i)));
     EXPECT_TRUE(Fa_is_int(vm.Fa_type(1, &f)));
     EXPECT_TRUE(Fa_is_int(vm.Fa_type(1, &b)));
@@ -1595,7 +1595,7 @@ TEST(NativeType, DifferentTypesHaveDifferentTags)
     Fa_Value f = Fa_make_real(0.0);
     Fa_Value b = Fa_make_bool(false);
     Fa_Value n = Fa_make_nil();
-    Fa_Value s = gc.make_string("x");
+    Fa_Value s = str("x");
     i64 int_tag = Fa_as_int(vm.Fa_type(1, &i));
     i64 flt_tag = Fa_as_int(vm.Fa_type(1, &f));
     i64 bool_tag = Fa_as_int(vm.Fa_type(1, &b));
@@ -1808,7 +1808,7 @@ TEST(NativeMax, MixedFloatAndInteger)
 TEST(NativeMax, StringFirstArg_ReturnsArg)
 {
     Fa_VM vm;
-    Fa_Value m_args[] = { gc.make_string("a"), gc.make_string("b") };
+    Fa_Value m_args[] = { str("a"), str("b") };
     EXPECT_EQ(Fa_as_string(vm.Fa_max(2, m_args))->str, "b");
 }
 
@@ -1894,15 +1894,15 @@ TEST(NativeSqrt, NegativeInput_SpecBehavior)
 TEST(NativeSplit, BasicSplit)
 {
     Fa_VM vm;
-    Fa_Value m_args[] = { gc.make_string("a,b,c"), gc.make_string(",") };
+    Fa_Value m_args[] = { str("a,b,c"), str(",") };
     Fa_Value r = vm.Fa_split(2, m_args);
 
-    ASSERT_TRUE(Fa_IS_LIST(r));
+    ASSERT_TRUE(Fa_is_list(r));
     EXPECT_EQ(Fa_as_list(r)->elements.size(), 3u);
 
-    ASSERT_TRUE(Fa_IS_STRING(Fa_as_list(r)->elements[0]));
-    ASSERT_TRUE(Fa_IS_STRING(Fa_as_list(r)->elements[1]));
-    ASSERT_TRUE(Fa_IS_STRING(Fa_as_list(r)->elements[2]));
+    ASSERT_TRUE(Fa_is_string(Fa_as_list(r)->elements[0]));
+    ASSERT_TRUE(Fa_is_string(Fa_as_list(r)->elements[1]));
+    ASSERT_TRUE(Fa_is_string(Fa_as_list(r)->elements[2]));
 
     EXPECT_EQ(std::string(Fa_as_string(Fa_as_list(r)->elements[0])->str.data()), "a");
     EXPECT_EQ(std::string(Fa_as_string(Fa_as_list(r)->elements[1])->str.data()), "b");
@@ -1912,21 +1912,21 @@ TEST(NativeSplit, BasicSplit)
 TEST(NativeSplit, NoDelimiterFound)
 {
     Fa_VM vm;
-    Fa_Value m_args[] = { gc.make_string("hello"), gc.make_string(",") };
+    Fa_Value m_args[] = { str("hello"), str(",") };
     Fa_Value r = vm.Fa_split(2, m_args);
-    ASSERT_TRUE(Fa_IS_LIST(r));
+    ASSERT_TRUE(Fa_is_list(r));
     EXPECT_EQ(Fa_as_list(r)->elements.size(), 1u);
-    ASSERT_TRUE(Fa_IS_STRING(Fa_as_list(r)->elements[0]));
+    ASSERT_TRUE(Fa_is_string(Fa_as_list(r)->elements[0]));
     EXPECT_EQ(std::string(Fa_as_string(Fa_as_list(r)->elements[0])->str.data()), "hello");
 }
 
 TEST(NativeSubstr, BasicSubstr)
 {
     Fa_VM vm; // substr is exclusive
-    Fa_Value m_args[] = { gc.make_string("hello"), Fa_make_int(1), Fa_make_int(4) };
+    Fa_Value m_args[] = { str("hello"), Fa_make_int(1), Fa_make_int(4) };
     Fa_Value r = vm.Fa_substr(3, m_args);
     if (!Fa_is_nil(r)) {
-        ASSERT_TRUE(Fa_IS_STRING(r));
+        ASSERT_TRUE(Fa_is_string(r));
         EXPECT_EQ(std::string(Fa_as_string(r)->str.data()), "ell");
     }
 }
@@ -1934,10 +1934,10 @@ TEST(NativeSubstr, BasicSubstr)
 TEST(NativeSubstr, FromStart)
 {
     Fa_VM vm; // substr is exclusive
-    Fa_Value m_args[] = { gc.make_string("hello"), Fa_make_int(0), Fa_make_int(3) };
+    Fa_Value m_args[] = { str("hello"), Fa_make_int(0), Fa_make_int(3) };
     Fa_Value r = vm.Fa_substr(3, m_args);
     if (!Fa_is_nil(r)) {
-        ASSERT_TRUE(Fa_IS_STRING(r));
+        ASSERT_TRUE(Fa_is_string(r));
         EXPECT_EQ(std::string(Fa_as_string(r)->str.data()), "hel");
     }
 }
@@ -1945,7 +1945,7 @@ TEST(NativeSubstr, FromStart)
 TEST(NativeContains, StringContains_True)
 {
     Fa_VM vm;
-    Fa_Value m_args[] = { gc.make_string("hello world"), gc.make_string("world") };
+    Fa_Value m_args[] = { str("hello world"), str("world") };
     Fa_Value r = vm.Fa_contains(2, m_args);
     ASSERT_TRUE(Fa_is_bool(r));
     EXPECT_TRUE(Fa_as_bool(r));
@@ -1954,7 +1954,7 @@ TEST(NativeContains, StringContains_True)
 TEST(NativeContains, StringContains_False)
 {
     Fa_VM vm;
-    Fa_Value m_args[] = { gc.make_string("hello"), gc.make_string("xyz") };
+    Fa_Value m_args[] = { str("hello"), str("xyz") };
     Fa_Value r = vm.Fa_contains(2, m_args);
     ASSERT_TRUE(Fa_is_bool(r));
     EXPECT_FALSE(Fa_as_bool(r));
@@ -1963,27 +1963,27 @@ TEST(NativeContains, StringContains_False)
 TEST(NativeTrim, LeadingAndTrailingSpaces)
 {
     Fa_VM vm;
-    Fa_Value arg = gc.make_string("  hello  ");
+    Fa_Value arg = str("  hello  ");
     Fa_Value r = vm.Fa_trim(1, &arg);
-    ASSERT_TRUE(Fa_IS_STRING(r));
+    ASSERT_TRUE(Fa_is_string(r));
     EXPECT_EQ(std::string(Fa_as_string(r)->str.data()), "hello");
 }
 
 TEST(NativeTrim, NoSpaces)
 {
     Fa_VM vm;
-    Fa_Value arg = gc.make_string("hello");
+    Fa_Value arg = str("hello");
     Fa_Value r = vm.Fa_trim(1, &arg);
-    ASSERT_TRUE(Fa_IS_STRING(r));
+    ASSERT_TRUE(Fa_is_string(r));
     EXPECT_EQ(std::string(Fa_as_string(r)->str.data()), "hello");
 }
 
 TEST(NativeTrim, OnlySpaces)
 {
     Fa_VM vm;
-    Fa_Value arg = gc.make_string("   ");
+    Fa_Value arg = str("   ");
     Fa_Value r = vm.Fa_trim(1, &arg);
-    ASSERT_TRUE(Fa_IS_STRING(r));
+    ASSERT_TRUE(Fa_is_string(r));
     EXPECT_EQ(std::string(Fa_as_string(r)->str.data()), "");
 }
 
@@ -1992,12 +1992,12 @@ TEST(NativeJoin, BasicJoin)
     Fa_VM vm;
     Fa_Value list = vm.Fa_list(0, nullptr);
     Fa_ObjList* l = Fa_as_list(list);
-    l->elements.push(gc.make_string("a"));
-    l->elements.push(gc.make_string("b"));
-    l->elements.push(gc.make_string("c"));
-    Fa_Value m_args[] = { list, gc.make_string("|") };
+    l->elements.push(str("a"));
+    l->elements.push(str("b"));
+    l->elements.push(str("c"));
+    Fa_Value m_args[] = { list, str("|") };
     Fa_Value r = vm.Fa_join(2, m_args);
-    ASSERT_TRUE(Fa_IS_STRING(r));
+    ASSERT_TRUE(Fa_is_string(r));
     EXPECT_EQ(std::string(Fa_as_string(r)->str.data()), "a|b|c");
 }
 
@@ -2610,7 +2610,7 @@ TEST(VMClass, TestConstruction)
 
     VMRunner r;
     Fa_Value result = r.run(top);
-    ASSERT_TRUE(Fa_IS_INSTANCE(result));
+    ASSERT_TRUE(Fa_is_instance(result));
     EXPECT_EQ(Fa_as_instance(result)->klass->name, "TestClass");
 }
 
@@ -2638,7 +2638,7 @@ TEST(VMClass, ClassDefinitionStoresRuntimeClass)
 
     VMRunner r;
     Fa_Value point = r.run(top);
-    ASSERT_TRUE(Fa_IS_CLASS(point));
+    ASSERT_TRUE(Fa_is_class(point));
 
     Fa_ObjClass* point_class = Fa_as_class(point);
     EXPECT_EQ(point_class->name, "Point");
@@ -2674,7 +2674,7 @@ TEST(VMClass, ConstructorAcceptsArgumentsAndReturnsInstance)
 
     VMRunner r;
     Fa_Value result = r.run(top);
-    ASSERT_TRUE(Fa_IS_INSTANCE(result));
+    ASSERT_TRUE(Fa_is_instance(result));
     EXPECT_EQ(Fa_as_instance(result)->klass->name, "Box");
     EXPECT_EQ(Fa_as_instance(result)->fields.size(), 1);
 }
@@ -2754,7 +2754,7 @@ TEST(VMClass, EnglishInitConstructorIsAccepted)
     VMRunner r;
     Fa_Value result = Fa_make_nil();
     ASSERT_NO_THROW(result = r.run(top));
-    ASSERT_TRUE(Fa_IS_INSTANCE(result));
+    ASSERT_TRUE(Fa_is_instance(result));
     EXPECT_EQ(Fa_as_instance(result)->klass->name, "EnglishInit");
 }
 
@@ -2784,7 +2784,7 @@ TEST(VMClass, InstanceFieldsDefaultToNil)
     VMRunner r;
     Fa_Value result = Fa_make_nil();
     ASSERT_NO_THROW(result = r.run(top));
-    ASSERT_TRUE(Fa_IS_INSTANCE(result));
+    ASSERT_TRUE(Fa_is_instance(result));
 
     Fa_ObjInstance* point = Fa_as_instance(result);
     ASSERT_EQ(point->fields.size(), 2);
@@ -2822,7 +2822,7 @@ TEST(VMClass, ConstructorInitializesFieldsFromParameters)
     VMRunner r;
     Fa_Value result = Fa_make_nil();
     ASSERT_NO_THROW(result = r.run(top));
-    ASSERT_TRUE(Fa_IS_INSTANCE(result));
+    ASSERT_TRUE(Fa_is_instance(result));
 
     Fa_ObjInstance* point = Fa_as_instance(result);
     ASSERT_EQ(point->fields.size(), 2);
@@ -3091,7 +3091,7 @@ TEST(VMClass, MethodReturningNoValueReturnsSelf)
     VMRunner r;
     Fa_Value result = Fa_make_nil();
     ASSERT_NO_THROW(result = r.run(top));
-    ASSERT_TRUE(Fa_IS_INSTANCE(result));
+    ASSERT_TRUE(Fa_is_instance(result));
     EXPECT_EQ(Fa_as_instance(result)->klass->name, "Fluent");
 }
 
@@ -3173,7 +3173,7 @@ TEST(VMClass, DuplicateFieldsAreDeduplicatedInDeclarationOrder)
     VMRunner r;
     Fa_Value result = Fa_make_nil();
     ASSERT_NO_THROW(result = r.run(top));
-    ASSERT_TRUE(Fa_IS_CLASS(result));
+    ASSERT_TRUE(Fa_is_class(result));
 
     Fa_ObjClass* klass_obj = Fa_as_class(result);
     ASSERT_EQ(klass_obj->field_names.size(), 2u);
@@ -3206,7 +3206,7 @@ TEST(VMClass, MultipleMethodsAreStoredInRuntimeClass)
     VMRunner r;
     Fa_Value result = Fa_make_nil();
     ASSERT_NO_THROW(result = r.run(top));
-    ASSERT_TRUE(Fa_IS_CLASS(result));
+    ASSERT_TRUE(Fa_is_class(result));
 
     Fa_ObjClass* klass_obj = Fa_as_class(result);
     EXPECT_GE(klass_obj->method_names.size(), static_cast<u32>(Fa_ObjClass::_COUNT + 2));

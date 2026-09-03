@@ -1,8 +1,8 @@
 #ifndef FA_MACROS_HPP
 #define FA_MACROS_HPP
 
-#include <string>
 #include <cstdint>
+#include <string>
 
 namespace fairuz {
 

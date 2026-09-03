@@ -511,8 +511,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_method(Fa_Array<ExprPtr>& members)
             if (check(TokType::OP_ASSIGN)) {
                 advance();
                 Fa_TRY(rhs, parse_assignment_expr());
-                member_assign = AST::Fa_make_assignment_expr(
-                    target, rhs, member_tok->location(), /*decl=*/false);
+                member_assign = AST::Fa_make_assignment_expr(target, rhs, member_tok->location());
             } else if (is_augmented_assign_tok(current_token())) {
                 TokenPtr op_tok = current_token();
                 advance();
@@ -522,8 +521,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_method(Fa_Array<ExprPtr>& members)
                 // `target` itself is the write target.
                 auto* bin = AST::Fa_make_binary(
                     target->clone(), rhs, op, target->get_location());
-                member_assign = AST::Fa_make_assignment_expr(
-                    target, bin, member_tok->location(), /*decl=*/false);
+                member_assign = AST::Fa_make_assignment_expr(target, bin, member_tok->location());
             } else {
                 return report_error(ParserCode::INVALID_ASSIGN_TARGET);
             }
@@ -612,12 +610,12 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_assignment_expr()
             Fa_TRY(rhs, parse_assignment_expr());
             AST::Fa_BinaryOp op = augmented_assign_to_binary_op(op_tok->type());
             auto* bin = AST::Fa_make_binary(lhs->clone(), rhs, op, lhs->get_location());
-            return Fa_make_assignment_expr(target, bin, target->get_location(), /*decl=*/false);
+            return Fa_make_assignment_expr(target, bin, target->get_location());
         }
 
         advance(); // consume '='
         Fa_TRY(rhs, parse_assignment_expr());
-        return Fa_make_assignment_expr(target, rhs, target->get_location(), /*decl=*/false);
+        return Fa_make_assignment_expr(target, rhs, target->get_location());
     }
 
     return lhs;

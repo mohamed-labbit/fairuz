@@ -181,6 +181,27 @@ C_COMPILER="${COMPILER_PAIR%%|*}"
 CXX_COMPILER="${COMPILER_PAIR##*|}"
 echo "⚙️  Using compiler: $C_COMPILER / $CXX_COMPILER"
 
+# CMakeCache.txt (and everything under build/_deps, including a from-source
+# GoogleTest) is tied to whatever compiler configured it. Switching
+# compilers (clang -> gcc or back) without wiping the build directory
+# leaves stale, incompatible object files and static libraries around —
+# this is what produces the wall of "Undefined symbols ... std::__1:: vs
+# std::__cxx11::" linker errors when GTest was built by one compiler and
+# the test .cpp files by another. Detect the switch here and force the
+# same clean that --clean would do, so nobody has to remember it by hand.
+PREVIOUS_COMPILER_MARKER="compiler.marker"
+CURRENT_COMPILER_MARKER="$CXX_COMPILER"
+if [[ -f "$PREVIOUS_COMPILER_MARKER" ]]; then
+    if [[ "$(cat "$PREVIOUS_COMPILER_MARKER")" != "$CURRENT_COMPILER_MARKER" ]]; then
+        echo "⚠️  Compiler changed since the last build in this build/ directory — cleaning to avoid a stale, ABI-incompatible mix (e.g. a GTest built by the old compiler linked against object files from the new one)."
+        cd ..
+        rm -rf build
+        mkdir -p build
+        cd build || exit 1
+    fi
+fi
+echo "$CURRENT_COMPILER_MARKER" > "$PREVIOUS_COMPILER_MARKER"
+
 COMMON_FLAGS+=(
     -DCMAKE_C_COMPILER="$C_COMPILER"
     -DCMAKE_CXX_COMPILER="$CXX_COMPILER"
@@ -235,8 +256,15 @@ if [[ "$RUN_INCLUDES" == true ]]; then
 fi
 
 if [[ "$RUN_TESTS" == true ]]; then
+    # ${arr[@]:-} is NOT equivalent to ${arr[@]} when arr is empty: it still
+    # expands to one empty-string argument ("") instead of zero arguments,
+    # which fairuz_tests' own argv loop then rejects as an unrecognized
+    # option. ${arr[@]+"${arr[@]}"} is the actual portable idiom: it only
+    # expands the array at all if at least one element is set, so an empty
+    # array correctly produces zero arguments on every bash version,
+    # including macOS's stock bash 3.2.
     ASAN_OPTIONS="detect_leaks=$DETECT_LEAKS" \
-        "$PROJECT_ROOT/build/fairuz_tests" "${TEST_ARGS[@]}"
+        "$PROJECT_ROOT/build/fairuz_tests" ${TEST_ARGS[@]+"${TEST_ARGS[@]}"}
 fi
 
 if [[ "$RUN_MAIN" == true ]]; then
@@ -246,7 +274,7 @@ if [[ "$RUN_MAIN" == true ]]; then
     fi
 
     ASAN_OPTIONS="detect_leaks=$DETECT_LEAKS" \
-        "$PROJECT_ROOT/build/fairuz" "${MAIN_ARGS[@]}"
+        "$PROJECT_ROOT/build/fairuz" ${MAIN_ARGS[@]+"${MAIN_ARGS[@]}"}
 fi
 
 if [[ "$RUN_INSTALL" == true ]]; then
@@ -275,5 +303,5 @@ if [[ "$FORMAT" == true ]]; then
     fi
 
     ASAN_OPTIONS="detect_leaks=$DETECT_LEAKS" \
-        "$PROJECT_ROOT/build/fairuz" format "${MAIN_ARGS[@]}"
+        "$PROJECT_ROOT/build/fairuz" format ${MAIN_ARGS[@]+"${MAIN_ARGS[@]}"}
 fi

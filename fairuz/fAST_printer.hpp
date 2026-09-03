@@ -84,7 +84,7 @@ private:
         case Fa_Expr::Kind::LITERAL: {
             auto l = AS_CONST_LITERAL(e);
             if (l->is_numeric())
-                std::cout << color("Literal", Color::GREEN) << "(" << l->is_number() << ")\n";
+                std::cout << color("Literal", Color::GREEN) << "(" << l->is_numeric() << ")\n";
             else if (l->is_string())
                 std::cout << color("Literal", Color::GREEN) << "(" << l->get_str() << ")\n";
             else if (l->is_bool())
@@ -240,7 +240,7 @@ private:
 
         case Fa_Stmt::Kind::ASSIGNMENT: {
             auto a = AS_CONST_ASSIGNMENT_STMT(s);
-            std::cout << color("AssignmentStmt", Color::YELLOW) << (a->is_declaration() ? " (decl) :=" : " :=") << "\n";
+            std::cout << color("AssignmentStmt", Color::YELLOW) << " :=" << "\n";
             std::cout << p.indent + pipe(p.last) << "├─ target:\n";
             print_expr(a->get_target(), { p.indent + pipe(p.last) + "│  ", true });
             std::cout << p.indent + pipe(p.last) << "└─ value:\n";

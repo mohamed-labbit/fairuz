@@ -53,12 +53,6 @@ include(GNUInstallDirs)
 # FindOpenMP) fails hard on an unsupported dialect instead of letting us
 # probe for one.
 include(CheckCXXCompilerFlag)
-include(FetchContent)
-FetchContent_Declare(
-  googletest
-  URL https://github.com/google/googletest/archive/refs/tags/v1.15.2.zip
-)
-FetchContent_MakeAvailable(googletest)
 
 check_cxx_compiler_flag("-std=c++26" COMPILER_SUPPORTS_CXX26)
 
@@ -73,8 +67,11 @@ endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Add include directories
-include_directories(${CMAKE_SOURCE_DIR}/include)
+# Fairuz's own headers live flat inside fairuz/, next to their matching .cc
+# files (e.g. fairuz/fvm.hpp), not under a separate include/ tree — so no
+# extra include_directories() call is needed for them. Headers are found via
+# each target's own target_include_directories(... ${CMAKE_SOURCE_DIR}/fairuz)
+# below.
 
 # Optional: build tests (pass -DBUILD_TESTS=ON or use the 'test' preset)
 option(BUILD_TESTS "Build the test suite" OFF)
@@ -110,13 +107,13 @@ else()
     message(STATUS "Found simdutf via package manager")
 endif()
 
-# Collect source files from src/
-file(GLOB_RECURSE fairuz_SOURCES ${CMAKE_SOURCE_DIR}/fairuz/*.cc)
+# Collect source files from fairuz/
+file(GLOB_RECURSE fairuz_SOURCES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/fairuz/*.cc)
 
 # Build an object library from your language sources
 add_library(fairuz_objects OBJECT ${fairuz_SOURCES})
 target_include_directories(fairuz_objects PUBLIC
-    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/fairuz
 )
 target_link_libraries(fairuz_objects PUBLIC simdutf::simdutf)
 
@@ -126,7 +123,7 @@ add_executable(fairuz
     $<TARGET_OBJECTS:fairuz_objects>
 )
 
-target_include_directories(fairuz PRIVATE ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(fairuz PRIVATE ${CMAKE_SOURCE_DIR}/fairuz)
 target_link_libraries(fairuz PRIVATE simdutf::simdutf)
 target_compile_definitions(fairuz PRIVATE fairuz_VERSION="${PROJECT_VERSION}")
 
@@ -153,28 +150,59 @@ install(DIRECTORY
 if(BUILD_TESTS)
     message(STATUS "Building tests")
 
-    # Picks up every .cpp under tests/, including subdirectories, except
-    # tests/support/, which holds the minimal_gtest helper built separately
-    # above (compiling it again here would duplicate its main() at link
-    # time). Note: this list is captured at configure time — adding a new
-    # test file requires re-running cmake (or a --clean build) before it's
-    # picked up.
-    file(GLOB_RECURSE fairuz_TEST_SOURCES ${CMAKE_SOURCE_DIR}/tests/*.cpp)
-    list(FILTER fairuz_TEST_SOURCES EXCLUDE REGEX "/tests/support/")
+    # A prebuilt GTest (from Homebrew, apt, or a previous CMake run) is only
+    # safe to link if it was built with the exact same compiler/standard
+    # library this configure is using. This project supports switching
+    # between GCC and Clang on the same machine (build.sh --gcc / --clang),
+    # and a prebuilt libgtest.a is fixed to whichever one built it — mixing
+    # a Clang-built libgtest.a into a GCC-built test binary (or vice versa)
+    # produces a wall of "Undefined symbols" at link time, because libc++'s
+    # std::__1::basic_string and libstdc++'s std::__cxx11::basic_string are
+    # different, incompatible types under the hood despite both being
+    # "std::string" in source. So: always build GoogleTest from source,
+    # with the same compiler as everything else in this configure. This
+    # costs a one-time source build per compiler instead of a prebuilt
+    # library, but it's the only way to guarantee ABI compatibility across
+    # a GCC/Clang-switching workflow.
+    message(STATUS "Fetching GoogleTest from source (built with the active compiler to guarantee ABI compatibility)")
+
+    include(FetchContent)
+    FetchContent_Declare(
+        googletest
+        URL https://github.com/google/googletest/archive/refs/tags/v1.15.2.zip
+    )
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(googletest)
+
+    # Picks up every .cpp under tests/, including subdirectories.
+    # CONFIGURE_DEPENDS asks CMake to re-glob on every build (not just every
+    # manual re-configure), so a newly added test file is picked up on the
+    # next build without anyone having to remember to rerun cmake by hand.
+    # Not all CMake generators honor this equally well, so CI should still
+    # do a fresh configure per run rather than reuse a stale build dir.
+    file(GLOB_RECURSE fairuz_TEST_SOURCES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/tests/*.cpp)
 
     add_executable(fairuz_tests
         ${fairuz_TEST_SOURCES}
         $<TARGET_OBJECTS:fairuz_objects>
     )
 
+    # Test-build flags favor catching bugs over raw speed:
+    #  - no -march=native: the test binary must run correctly on whatever
+    #    CPU the CI runner (or a contributor's machine) happens to have.
+    #    -march=native bakes in the *build* machine's instruction set and
+    #    can SIGILL when run elsewhere.
+    #  - no -ffast-math: it changes floating-point semantics (NaN handling,
+    #    rounding, associativity) and can hide or introduce numeric bugs
+    #    that the test suite exists to catch.
+    #  - no -flto here: LTO is a release-build optimization; keeping it out
+    #    of the test build keeps rebuild-after-single-file-change fast and
+    #    avoids LTO/ASan interaction issues on some toolchains.
     target_compile_options(fairuz_tests PRIVATE
-        -Wunused-variable 
+        -Wunused-variable
         -Wunused-parameter
         $<$<CXX_COMPILER_ID:GNU,Clang>:-O0>
         $<$<CXX_COMPILER_ID:MSVC>:/Od>
-        -march=native          # use all instructions available on this specific CPU
-        -flto                  # link-time optimization — inlines across TUs
-        -ffast-math            # relaxed float semantics, faster but breaks IEEE edge cases
         -fno-strict-aliasing
     )
 
@@ -188,7 +216,7 @@ if(BUILD_TESTS)
         target_link_libraries(fairuz_tests PRIVATE OpenMP::OpenMP_CXX)
     endif()
 
-    target_include_directories(fairuz_tests PRIVATE ${CMAKE_SOURCE_DIR}/include)
+    target_include_directories(fairuz_tests PRIVATE ${CMAKE_SOURCE_DIR}/fairuz)
 
     enable_testing()
     add_test(NAME AllTestsInMain COMMAND fairuz_tests)

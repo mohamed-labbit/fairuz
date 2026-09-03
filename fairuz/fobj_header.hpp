@@ -6,6 +6,7 @@
 namespace fairuz::runtime {
 
 enum class Fa_ObjType : u8 {
+    INT,
     STRING,
     LIST,
     DICT,

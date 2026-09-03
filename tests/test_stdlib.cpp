@@ -1,5 +1,5 @@
-#include "../fairuz/fdiagnostic.hpp"
 #include "../fairuz/fvm.hpp"
+#include "test_common.h"
 
 #include <chrono>
 #include <cstdio>
@@ -11,8 +11,6 @@ using namespace fairuz::runtime;
 
 namespace {
 
-Fa_GarbageCollector m_gc;
-
 Fa_Value make_list(Fa_VM& vm, std::initializer_list<Fa_Value> values)
 {
     Fa_Value list = vm.Fa_list(0, nullptr);
@@ -23,8 +21,8 @@ Fa_Value make_list(Fa_VM& vm, std::initializer_list<Fa_Value> values)
 
 std::string as_std_string(Fa_Value m_value)
 {
-    EXPECT_TRUE(Fa_IS_STRING(m_value));
-    if (!Fa_IS_STRING(m_value))
+    EXPECT_TRUE(Fa_is_string(m_value));
+    if (!Fa_is_string(m_value))
         return { };
     return std::string(Fa_as_string(m_value)->str.data());
 }
@@ -42,10 +40,10 @@ double elapsed_us(std::chrono::high_resolution_clock::time_point start)
 TEST(StdlibRegression, SplitPreservesEmptyFieldsAtBothEnds)
 {
     Fa_VM vm;
-    Fa_Value m_args[] = { m_gc.make_string(",alpha,,omega,"), m_gc.make_string(",") };
+    Fa_Value m_args[] = { str(",alpha,,omega,"), str(",") };
     Fa_Value result = vm.Fa_split(2, m_args);
 
-    ASSERT_TRUE(Fa_IS_LIST(result));
+    ASSERT_TRUE(Fa_is_list(result));
     ASSERT_EQ(Fa_as_list(result)->elements.size(), 5u);
     EXPECT_EQ(as_std_string(Fa_as_list(result)->elements[0]), "");
     EXPECT_EQ(as_std_string(Fa_as_list(result)->elements[1]), "alpha");
@@ -60,13 +58,13 @@ TEST(StdlibRegression, JoinStringifiesMixedScalarValues)
     Fa_Value list = make_list(vm, {
                                       Fa_make_int(7),
                                       Fa_make_bool(true),
-                                      m_gc.make_string("ok"),
+                                      str("ok"),
                                       Fa_make_nil(),
                                   });
-    Fa_Value m_args[] = { list, m_gc.make_string("|") };
+    Fa_Value m_args[] = { list, str("|") };
     Fa_Value result = vm.Fa_join(2, m_args);
 
-    ASSERT_TRUE(Fa_IS_STRING(result));
+    ASSERT_TRUE(Fa_is_string(result));
     EXPECT_EQ(as_std_string(result), "7|صحيح|ok|nil");
 }
 
@@ -74,10 +72,10 @@ TEST(StdlibRegression, JoinEmptyListReturnsEmptyString)
 {
     Fa_VM vm;
     Fa_Value list = vm.Fa_list(0, nullptr);
-    Fa_Value m_args[] = { list, m_gc.make_string("|") };
+    Fa_Value m_args[] = { list, str("|") };
     Fa_Value result = vm.Fa_join(2, m_args);
 
-    ASSERT_TRUE(Fa_IS_STRING(result));
+    ASSERT_TRUE(Fa_is_string(result));
     EXPECT_EQ(as_std_string(result), "");
 }
 
@@ -123,7 +121,7 @@ TEST(StdlibRegression, SliceReturnsCopyNotAlias)
     Fa_Value m_args[] = { source, Fa_make_int(1), Fa_make_int(2) };
     Fa_Value result = vm.Fa_slice(3, m_args);
 
-    ASSERT_TRUE(Fa_IS_LIST(result));
+    ASSERT_TRUE(Fa_is_list(result));
     ASSERT_EQ(Fa_as_list(result)->elements.size(), 2u);
     EXPECT_EQ(Fa_as_int(Fa_as_list(result)->elements[0]), 2);
     EXPECT_EQ(Fa_as_int(Fa_as_list(result)->elements[1]), 3);
@@ -144,7 +142,7 @@ TEST(StdlibRegression, SliceTwoArgsReturnsTail)
     Fa_Value m_args[] = { source, Fa_make_int(2) };
     Fa_Value result = vm.Fa_slice(2, m_args);
 
-    ASSERT_TRUE(Fa_IS_LIST(result));
+    ASSERT_TRUE(Fa_is_list(result));
     ASSERT_EQ(Fa_as_list(result)->elements.size(), 2u);
     EXPECT_EQ(Fa_as_int(Fa_as_list(result)->elements[0]), 6);
     EXPECT_EQ(Fa_as_int(Fa_as_list(result)->elements[1]), 7);
@@ -153,27 +151,27 @@ TEST(StdlibRegression, SliceTwoArgsReturnsTail)
 TEST(StdlibRegression, SubstrClampsEndPastStringLength)
 {
     Fa_VM vm;
-    Fa_Value m_args[] = { m_gc.make_string("fairuz"), Fa_make_int(2), Fa_make_int(99) };
+    Fa_Value m_args[] = { str("fairuz"), Fa_make_int(2), Fa_make_int(99) };
     Fa_Value result = vm.Fa_substr(3, m_args);
 
-    ASSERT_TRUE(Fa_IS_STRING(result));
+    ASSERT_TRUE(Fa_is_string(result));
     EXPECT_EQ(as_std_string(result), "iruz");
 }
 
 TEST(StdlibRegression, SubstrZeroWidthRangeReturnsEmptyString)
 {
     Fa_VM vm;
-    Fa_Value m_args[] = { m_gc.make_string("fairuz"), Fa_make_int(3), Fa_make_int(3) };
+    Fa_Value m_args[] = { str("fairuz"), Fa_make_int(3), Fa_make_int(3) };
     Fa_Value result = vm.Fa_substr(3, m_args);
 
-    ASSERT_TRUE(Fa_IS_STRING(result));
+    ASSERT_TRUE(Fa_is_string(result));
     EXPECT_EQ(as_std_string(result), "");
 }
 
 TEST(StdlibRegression, ContainsEmptyNeedleIsTrue)
 {
     Fa_VM vm;
-    Fa_Value m_args[] = { m_gc.make_string("fairuz"), m_gc.make_string("") };
+    Fa_Value m_args[] = { str("fairuz"), str("") };
     Fa_Value result = vm.Fa_contains(2, m_args);
 
     ASSERT_TRUE(Fa_is_bool(result));
@@ -183,7 +181,7 @@ TEST(StdlibRegression, ContainsEmptyNeedleIsTrue)
 TEST(StdlibRegression, ContainsExactMatchIsTrue)
 {
     Fa_VM vm;
-    Fa_Value m_args[] = { m_gc.make_string("fairuz"), m_gc.make_string("fairuz") };
+    Fa_Value m_args[] = { str("fairuz"), str("fairuz") };
     Fa_Value result = vm.Fa_contains(2, m_args);
 
     ASSERT_TRUE(Fa_is_bool(result));
@@ -196,11 +194,11 @@ TEST(StdlibRegression, StrStringifiesListsLikePrint)
     Fa_Value list = make_list(vm, {
                                       Fa_make_int(1),
                                       Fa_make_bool(false),
-                                      m_gc.make_string("z"),
+                                      str("z"),
                                   });
     Fa_Value result = vm.Fa_str(1, &list);
 
-    ASSERT_TRUE(Fa_IS_STRING(result));
+    ASSERT_TRUE(Fa_is_string(result));
     EXPECT_EQ(as_std_string(result), R"([1, خطا, "z"])");
 }
 
@@ -208,12 +206,12 @@ TEST(StdlibRegression, StrStringifiesDictsLikePrint)
 {
     Fa_VM vm;
     Fa_Value dict = vm.Fa_dict(0, nullptr);
-    Fa_as_dict(dict)->data[m_gc.make_string("k")] = Fa_make_int(3);
-    Fa_as_dict(dict)->data[m_gc.make_string("name")] = m_gc.make_string("fairuz");
+    Fa_as_dict(dict)->data[str("k")] = Fa_make_int(3);
+    Fa_as_dict(dict)->data[str("name")] = str("fairuz");
 
     Fa_Value result = vm.Fa_str(1, &dict);
 
-    ASSERT_TRUE(Fa_IS_STRING(result));
+    ASSERT_TRUE(Fa_is_string(result));
     EXPECT_EQ(as_std_string(result), R"({"k": 3, "name": "fairuz"})");
 }
 
@@ -221,8 +219,8 @@ TEST(StdlibRegression, LenSupportsDicts)
 {
     Fa_VM vm;
     Fa_Value dict = vm.Fa_dict(0, nullptr);
-    Fa_as_dict(dict)->data[m_gc.make_string("a")] = Fa_make_int(1);
-    Fa_as_dict(dict)->data[m_gc.make_string("b")] = Fa_make_int(2);
+    Fa_as_dict(dict)->data[str("a")] = Fa_make_int(1);
+    Fa_as_dict(dict)->data[str("b")] = Fa_make_int(2);
 
     Fa_Value result = vm.Fa_len(1, &dict);
 
@@ -234,15 +232,15 @@ TEST(StdlibRegression, DictConstructorPopulatesPairs)
 {
     Fa_VM vm;
     Fa_Value m_args[] = {
-        m_gc.make_string("a"),
+        str("a"),
         Fa_make_int(1),
-        m_gc.make_string("b"),
+        str("b"),
         Fa_make_bool(true),
     };
 
     Fa_Value dict = vm.Fa_dict(4, m_args);
 
-    ASSERT_TRUE(Fa_IS_DICT(dict));
+    ASSERT_TRUE(Fa_is_dict(dict));
     Fa_Value* a = Fa_as_dict(dict)->data.find_ptr(m_args[0]);
     Fa_Value* b = Fa_as_dict(dict)->data.find_ptr(m_args[2]);
     ASSERT_NE(a, nullptr);
@@ -268,10 +266,10 @@ TEST(StdlibRegression, StrScalarConversionsMatchSurfaceSyntax)
 TEST(StdlibRegression, TrimRemovesMixedLeadingAndTrailingWhitespace)
 {
     Fa_VM vm;
-    Fa_Value arg = m_gc.make_string("\n\t  fairuz  \r\n");
+    Fa_Value arg = str("\n\t  fairuz  \r\n");
     Fa_Value result = vm.Fa_trim(1, &arg);
 
-    ASSERT_TRUE(Fa_IS_STRING(result));
+    ASSERT_TRUE(Fa_is_string(result));
     EXPECT_EQ(as_std_string(result), "fairuz");
 }
 
@@ -287,20 +285,20 @@ TEST(StdlibPerf, SplitJoinRoundTripLargeCsv)
         csv += std::to_string(i);
     }
 
-    Fa_Value split_args[] = { m_gc.make_string(csv.c_str()), m_gc.make_string(",") };
+    Fa_Value split_args[] = { str(csv.c_str()), str(",") };
     auto start = std::chrono::high_resolution_clock::now();
     Fa_Value parts = vm.Fa_split(2, split_args);
     double split_us = elapsed_us(start);
 
-    ASSERT_TRUE(Fa_IS_LIST(parts));
+    ASSERT_TRUE(Fa_is_list(parts));
     ASSERT_EQ(Fa_as_list(parts)->elements.size(), 2000u);
 
-    Fa_Value join_args[] = { parts, m_gc.make_string(",") };
+    Fa_Value join_args[] = { parts, str(",") };
     start = std::chrono::high_resolution_clock::now();
     Fa_Value roundtrip = vm.Fa_join(2, join_args);
     double join_us = elapsed_us(start);
 
-    ASSERT_TRUE(Fa_IS_STRING(roundtrip));
+    ASSERT_TRUE(Fa_is_string(roundtrip));
     EXPECT_EQ(as_std_string(roundtrip), csv);
     std::printf("  stdlib split 2k fields: %.1f us, join: %.1f us\n", split_us, join_us);
 }
@@ -309,7 +307,7 @@ TEST(StdlibPerf, LenOnLargeString100kCalls)
 {
     Fa_VM vm;
     std::string payload(8192, 'x');
-    Fa_Value arg = m_gc.make_string(payload.c_str());
+    Fa_Value arg = str(payload.c_str());
 
     auto start = std::chrono::high_resolution_clock::now();
     i64 last = -1;
@@ -330,7 +328,7 @@ TEST(StdlibPerf, TrimLargePaddedString50kCalls)
     std::string payload(1024, ' ');
     payload += "fairuz";
     payload.append(1024, '\t');
-    Fa_Value arg = m_gc.make_string(payload.c_str());
+    Fa_Value arg = str(payload.c_str());
 
     auto start = std::chrono::high_resolution_clock::now();
     std::string last;
