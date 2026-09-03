@@ -118,7 +118,6 @@ if [[ "$RUN_MAIN" == true || "$FORMAT" == true ]]; then
     fi
 fi
 
-<<<<<<< ours
 # Resolve a timeout implementation once, cross-platform.
 #
 # - Linux typically ships GNU coreutils `timeout`.
@@ -188,8 +187,6 @@ portable_timeout() {
     return $?
 }
 
-=======
->>>>>>> theirs
 # Resolve a compiler family ("gcc" or "clang") plus optional version to a
 # concrete C/C++ binary pair. With no version, scans for the highest
 # versioned binary present (e.g. gcc-14, gcc-13, ...) before falling back
@@ -453,15 +450,9 @@ echo "⚙️  Using compiler: $C_COMPILER / $CXX_COMPILER"
 # compilers (clang -> gcc or back) without wiping the build directory
 # leaves stale, incompatible object files and static libraries around —
 # this is what produces the wall of "Undefined symbols ... std::__1:: vs
-<<<<<<< ours
-# std::__cxx11::" linker errors when GTest was built by one compiler and
-# the test .cpp files by another. Detect the switch here and force the same
-# clean that --clean would do, so nobody has to remember it by hand.
-=======
 # std::__cxx11::" linker errors when GTest was built by one compiler and the
 # test .cpp files by another. Detect the switch here and force the same clean
 # that --clean would do, so nobody has to remember it by hand.
->>>>>>> theirs
 PREVIOUS_COMPILER_MARKER="compiler.marker"
 CURRENT_COMPILER_MARKER="$CXX_COMPILER"
 
