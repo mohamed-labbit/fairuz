@@ -27,9 +27,9 @@ static void fa_delete_object(Fa_ObjHeader* obj)
     case Fa_ObjType::CLASS: delete Fa_obj_cast<Fa_ObjClass>(obj, Fa_ObjType::CLASS); break;
     case Fa_ObjType::INSTANCE: delete Fa_obj_cast<Fa_ObjInstance>(obj, Fa_ObjType::INSTANCE); break;
     case Fa_ObjType::FILE_HANDLE: delete Fa_obj_cast<Fa_ObjFileHandle>(obj, Fa_ObjType::FILE_HANDLE); break;
-    #if FA_USE_NANBOX
+#if FA_USE_NANBOX
     case Fa_ObjType::INT: // TODO:
-    #endif
+#endif
     case Fa_ObjType::_COUNT: diagnostic::panic(ErrorCode::TYPE_ERROR_CALL, "attempting to delete an unknown type"); break; /// unreachable break
     }
 }
@@ -122,9 +122,9 @@ void Fa_GarbageCollector::blacken_object(Fa_ObjHeader* obj)
     }
     case Fa_ObjType::FILE_HANDLE: break;
     case Fa_ObjType::STRING: break;
-    #if FA_USE_NANBOX
+#if FA_USE_NANBOX
     case Fa_ObjType::INT: // TODO:
-    #endif
+#endif
     case Fa_ObjType::_COUNT: diagnostic::panic(ErrorCode::TYPE_ERROR_CALL, "attempting to blacken an unknown object type");
     }
 }
