@@ -10,7 +10,11 @@
 # must not do.
 set -euo pipefail
 
-PROJECT_ROOT="$(pwd)"
+# Always resolve the project root from this script's location rather than
+# from the caller's current working directory. This keeps all paths stable
+# even when build.sh is invoked from elsewhere.
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$PROJECT_ROOT"
 
 DEBUG=0
 DETECT_LEAKS=""
@@ -83,6 +87,33 @@ for arg in "$@"; do
             ;;
     esac
 done
+
+# Resolve fairuz input files while we're still in the project root.
+#
+# build.sh changes its working directory to build/ below. If we passed a
+# relative path such as examples/hello.fa through unchanged, fairuz would
+# look for:
+#
+#   build/examples/hello.fa
+#
+# instead of:
+#
+#   examples/hello.fa
+#
+# Converting the first argument to an absolute path before entering build/
+# makes run/format independent of fairuz's current working directory.
+if [[ "$RUN_MAIN" == true || "$FORMAT" == true ]]; then
+    if [[ ${#MAIN_ARGS[@]} -gt 0 ]]; then
+        INPUT_FILE="${MAIN_ARGS[0]}"
+
+        if [[ ! -f "$INPUT_FILE" ]]; then
+            echo "error: input file not found: $INPUT_FILE" >&2
+            exit 1
+        fi
+
+        MAIN_ARGS[0]="$(cd "$(dirname "$INPUT_FILE")" && pwd)/$(basename "$INPUT_FILE")"
+    fi
+fi
 
 # Resolve a compiler family ("gcc" or "clang") plus optional version to a
 # concrete C/C++ binary pair. With no version, scans for the highest
@@ -186,11 +217,12 @@ echo "⚙️  Using compiler: $C_COMPILER / $CXX_COMPILER"
 # compilers (clang -> gcc or back) without wiping the build directory
 # leaves stale, incompatible object files and static libraries around —
 # this is what produces the wall of "Undefined symbols ... std::__1:: vs
-# std::__cxx11::" linker errors when GTest was built by one compiler and
-# the test .cpp files by another. Detect the switch here and force the
-# same clean that --clean would do, so nobody has to remember it by hand.
+# std::__cxx11::" linker errors when GTest was built by one compiler and the
+# test .cpp files by another. Detect the switch here and force the same clean
+# that --clean would do, so nobody has to remember it by hand.
 PREVIOUS_COMPILER_MARKER="compiler.marker"
 CURRENT_COMPILER_MARKER="$CXX_COMPILER"
+
 if [[ -f "$PREVIOUS_COMPILER_MARKER" ]]; then
     if [[ "$(cat "$PREVIOUS_COMPILER_MARKER")" != "$CURRENT_COMPILER_MARKER" ]]; then
         echo "⚠️  Compiler changed since the last build in this build/ directory — cleaning to avoid a stale, ABI-incompatible mix (e.g. a GTest built by the old compiler linked against object files from the new one)."
@@ -200,6 +232,7 @@ if [[ -f "$PREVIOUS_COMPILER_MARKER" ]]; then
         cd build || exit 1
     fi
 fi
+
 echo "$CURRENT_COMPILER_MARKER" > "$PREVIOUS_COMPILER_MARKER"
 
 COMMON_FLAGS+=(
@@ -279,6 +312,7 @@ fi
 
 if [[ "$RUN_INSTALL" == true ]]; then
     INSTALL_PREFIX=""
+
     if [[ ${#INSTALL_ARGS[@]} -gt 0 ]]; then
         INSTALL_PREFIX="${INSTALL_ARGS[0]}"
         cmake --install . --prefix "$INSTALL_PREFIX" || exit 1
