@@ -358,7 +358,7 @@ EOF
     # falls back to disabled, while an explicit --leak-check still fails
     # loudly (handled by the caller via LEAK_CHECK_EXPLICIT).
     if [[ "$status" -eq 124 ]]; then
-        echo "⚠️  LeakSanitizer probe timed out after 10s (likely blocked by sandbox/container ptrace restrictions)" >&2
+        echo "-- LeakSanitizer probe timed out after 10s (likely blocked by sandbox/container ptrace restrictions)" >&2
         cleanup_lsan_probe
         return 1
     fi
@@ -443,7 +443,7 @@ fi
 C_COMPILER="${COMPILER_PAIR%%|*}"
 CXX_COMPILER="${COMPILER_PAIR##*|}"
 
-echo "⚙️  Using compiler: $C_COMPILER / $CXX_COMPILER"
+echo "-- Using compiler: $C_COMPILER / $CXX_COMPILER"
 
 # CMakeCache.txt (and everything under build/_deps, including a from-source
 # GoogleTest) is tied to whatever compiler configured it. Switching
@@ -458,7 +458,7 @@ CURRENT_COMPILER_MARKER="$CXX_COMPILER"
 
 if [[ -f "$PREVIOUS_COMPILER_MARKER" ]]; then
     if [[ "$(cat "$PREVIOUS_COMPILER_MARKER")" != "$CURRENT_COMPILER_MARKER" ]]; then
-        echo "⚠️  Compiler changed since the last build in this build/ directory — cleaning to avoid a stale, ABI-incompatible mix (e.g. a GTest built by the old compiler linked against object files from the new one)."
+        echo "-- Compiler changed since the last build in this build/ directory — cleaning to avoid a stale, ABI-incompatible mix (e.g. a GTest built by the old compiler linked against object files from the new one)."
 
         cd ..
         rm -rf build
@@ -496,7 +496,7 @@ fi
 DSYMUTIL_WORKAROUND=false
 
 if [[ "$OSTYPE" == darwin* && "$USE_GCC" == true ]]; then
-    echo "⚠️  Skipping automatic dSYM generation for this GCC build (adding -save-temps) — dsymutil is known to crash on this system's GCC/dsymutil pairing for a real multi-file link. No dSYM bundle will be produced."
+    echo "-- Skipping automatic dSYM generation for this GCC build (adding -save-temps) — dsymutil is known to crash on this system's GCC/dsymutil pairing for a real multi-file link. No dSYM bundle will be produced."
     DSYMUTIL_WORKAROUND=true
 fi
 
@@ -574,16 +574,16 @@ if [[ "$DETECT_LEAKS" == 1 && "$RUN_TESTS" == true ]]; then
         # explicit — an unsupported runtime shouldn't hard-fail the whole
         # build/test run, it just means leak checking can't happen here.
         if [[ "$LEAK_CHECK_EXPLICIT" == true ]]; then
-            echo "⚠️  --leak-check was requested, but LeakSanitizer is not supported by this runtime; disabling leak detection" >&2
+            echo "-- --leak-check was requested, but LeakSanitizer is not supported by this runtime; disabling leak detection" >&2
         else
-            echo "⚠️  LeakSanitizer is not supported by this runtime; disabling leak detection"
+            echo "-- LeakSanitizer is not supported by this runtime; disabling leak detection"
         fi
         DETECT_LEAKS=0
     fi
 fi
 
 if [[ "$RUN_INCLUDES" == true ]]; then
-    echo "🔍 Running clang include-cleaner..."
+    echo "-- Running clang include-cleaner..."
 
     # Fairuz's sources are fairuz/*.cc (plus main.cpp), not src/*.cpp.
     find fairuz -name "*.cc" -o -name "*.hpp" -o -name "*.tpp" \
