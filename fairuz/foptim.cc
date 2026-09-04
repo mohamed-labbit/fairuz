@@ -257,153 +257,82 @@ std::optional<AST::Fa_Expr*> try_strength_reduce_binary(AST::Fa_Expr* e)
     AST::Fa_Expr* rhs = binary_expr->get_right();
     AST::Fa_BinaryOp bin_op = binary_expr->get_operator();
 
-    // x * c (where c is a compile time constant)
-    if (AST::is_literal(rhs) && Fa_is_pure(lhs)) {
+    if (!Fa_is_pure(lhs))
+        /// NOTE: do not optimize non-pure expressions since they have side effects
+        return std::nullopt;
+
+    // x * c (where c is a compile time constant) and x is a pure expression node
+    if (AST::is_literal(rhs)) {
         auto lit_rhs = AS_CONST_LITERAL(rhs);
-        if (lit_rhs->is_numeric() && bin_op == AST::Fa_BinaryOp::OP_MUL) {
+        if (!lit_rhs->is_numeric())
+            return std::nullopt;
+
+        if (bin_op == AST::Fa_BinaryOp::OP_MUL) {
             // x * 0 = 0
-            if ((lit_rhs->is_integer() && lit_rhs->get_int() == 0) || (lit_rhs->is_float() && lit_rhs->get_float() == 0.0f))
-                return AST::Fa_make_literal_int(0, e->get_location());
+            f64 lit_rhs_val = lit_rhs->as_number();
+
+            if (lit_rhs_val == 0.0f)
+                return lit_rhs->is_float() ? AST::Fa_make_literal_float(0.0f, e->get_location())
+                                           : AST::Fa_make_literal_int(INT64_C(0), e->get_location());
 
             // x * 1 = x
-            if ((lit_rhs->is_integer() && lit_rhs->get_int() == 1) || (lit_rhs->is_float() && lit_rhs->get_float() == 1.0f))
-                return lhs;
+            if (lit_rhs_val == 1.0f)
+                return lhs->clone();
 
             // x * 2
-            if ((lit_rhs->is_integer() && lit_rhs->get_int() == 2) || (lit_rhs->is_float() && lit_rhs->get_float() == 2.0f)) {
-                // if lhs is int then : x * 2 = x << 1
-                if (AST::is_literal(lhs) && AS_CONST_LITERAL(lhs)->is_integer()) {
-                    AST::Fa_BinaryExpr* bin_clone = binary_expr->clone();
-                    bin_clone->set_operator(AST::Fa_BinaryOp::OP_LSHIFT);
-                    bin_clone->set_right(AST::Fa_make_literal_int(1, rhs->get_location()));
-                    return bin_clone;
-                }
-
-                // else return x + x
+            if (lit_rhs_val == 2.0f) {
+                // x + x
                 AST::Fa_BinaryExpr* bin_clone = binary_expr->clone();
                 bin_clone->set_operator(AST::Fa_BinaryOp::OP_ADD);
                 bin_clone->set_right(lhs->clone());
                 return bin_clone;
             }
-
-            // if lhs is int literal
-            if (AST::is_literal(lhs)) {
-                auto lit_lhs = AS_CONST_LITERAL(lhs);
-
-                // x * 4 = x << 2
-                if (lit_lhs->is_integer() && lit_rhs->is_integer() && lit_rhs->get_int() == 4) {
-                    AST::Fa_BinaryExpr* bin_clone = binary_expr->clone();
-                    bin_clone->set_operator(AST::Fa_BinaryOp::OP_LSHIFT);
-                    bin_clone->set_right(AST::Fa_make_literal_int(2, rhs->get_location()));
-                    return bin_clone;
-                }
-
-                // x * 8 = x << 3
-                if (lit_lhs->is_integer() && lit_rhs->is_integer() && lit_rhs->get_int() == 8) {
-                    AST::Fa_BinaryExpr* bin_clone = binary_expr->clone();
-                    bin_clone->set_operator(AST::Fa_BinaryOp::OP_LSHIFT);
-                    bin_clone->set_right(AST::Fa_make_literal_int(3, rhs->get_location()));
-                    return bin_clone;
-                }
-
-                // if x is int : x * 3 = x + (x << 1)
-                if (lit_lhs->is_integer() && lit_rhs->is_integer() && lit_rhs->get_int() == 3) {
-                    AST::Fa_BinaryExpr* bin_clone = binary_expr->clone();
-                    bin_clone->set_operator(AST::Fa_BinaryOp::OP_ADD);
-                    bin_clone->set_right(AST::Fa_make_binary(lhs->clone(), AST::Fa_make_literal_int(1, { }), AST::Fa_BinaryOp::OP_LSHIFT, rhs->get_location()));
-                    return bin_clone;
-                }
-
-                // x * 3 = x + x + x (for non-integer or fallback)
-                if (lit_rhs->is_integer() && lit_rhs->get_int() == 3) {
-                    AST::Fa_BinaryExpr* bin_clone = binary_expr->clone();
-                    bin_clone->set_operator(AST::Fa_BinaryOp::OP_ADD);
-                    bin_clone->set_right(AST::Fa_make_binary(lhs->clone(), lhs->clone(), AST::Fa_BinaryOp::OP_ADD, rhs->get_location()));
-                    return bin_clone;
-                }
-
-                // if x is int : x * 5 = (x << 2) + x
-                if (lit_lhs->is_integer() && lit_rhs->is_integer() && lit_rhs->get_int() == 5) {
-                    AST::Fa_BinaryExpr* bin_clone = binary_expr->clone();
-                    bin_clone->set_operator(AST::Fa_BinaryOp::OP_ADD);
-                    bin_clone->set_right(AST::Fa_make_binary(lhs->clone(), AST::Fa_make_literal_int(2, { }), AST::Fa_BinaryOp::OP_LSHIFT, rhs->get_location()));
-                    return bin_clone;
-                }
-
-                // if x is int : x * 6 = (x << 1) + (x << 2)
-                if (lit_lhs->is_integer() && lit_rhs->is_integer() && lit_rhs->get_int() == 6) {
-                    AST::Fa_BinaryExpr* bin_clone = binary_expr->clone();
-                    bin_clone->set_operator(AST::Fa_BinaryOp::OP_ADD);
-                    bin_clone->set_left(AST::Fa_make_binary(lhs->clone(), AST::Fa_make_literal_int(1, { }), AST::Fa_BinaryOp::OP_LSHIFT, lhs->get_location()));
-                    bin_clone->set_right(AST::Fa_make_binary(lhs->clone(), AST::Fa_make_literal_int(2, { }), AST::Fa_BinaryOp::OP_LSHIFT, rhs->get_location()));
-                    return bin_clone;
-                }
-
-                // FIXED: if x is int : x * 7 = (x << 3) - x
-                if (lit_lhs->is_integer() && lit_rhs->is_integer() && lit_rhs->get_int() == 7) {
-                    AST::Fa_BinaryExpr* bin_clone = binary_expr->clone();
-                    bin_clone->set_left(
-                        AST::Fa_make_binary(lhs->clone(), AST::Fa_make_literal_int(3, { }), AST::Fa_BinaryOp::OP_LSHIFT, lhs->get_location()));
-                    bin_clone->set_operator(AST::Fa_BinaryOp::OP_SUB);
-                    bin_clone->set_right(lhs->clone());
-                    return bin_clone;
-                }
-
-                // FIXED: if x is int : x * 9 = (x << 3) + x
-                if (lit_lhs->is_integer() && lit_rhs->is_integer() && lit_rhs->get_int() == 9) {
-                    AST::Fa_BinaryExpr* bin_clone = binary_expr->clone();
-                    bin_clone->set_left(AST::Fa_make_binary(lhs->clone(), AST::Fa_make_literal_int(3, { }), AST::Fa_BinaryOp::OP_LSHIFT, lhs->get_location()));
-                    bin_clone->set_operator(AST::Fa_BinaryOp::OP_ADD);
-                    bin_clone->set_right(lhs->clone());
-                    return bin_clone;
-                }
-            }
         }
 
         if (lit_rhs->is_numeric() && bin_op == AST::Fa_BinaryOp::OP_DIV) {
-            f64 rhs_v = lit_rhs->as_number();
+            f64 lit_rhs_val = lit_rhs->as_number();
 
             // x / 1 = x
-            if (rhs_v == 1.0f)
+            if (lit_rhs_val == 1.0f)
                 return lhs->clone();
 
             // x / -1 = -x
-            if (rhs_v == -1.0f)
+            if (lit_rhs_val == -1.0f)
                 return AST::Fa_make_unary(lhs->clone(), AST::Fa_UnaryOp::OP_NEG, lhs->get_location());
         }
 
         if (lit_rhs->is_integer()) {
-            i64 v = lit_rhs->get_int();
+            i64 lit_rhs_val = lit_rhs->get_int();
             // &
             if (bin_op == AST::Fa_BinaryOp::OP_BITAND) {
                 // x & 0 = 0
-                if (v == 0)
+                if (lit_rhs_val == 0)
                     return AST::Fa_make_literal_int(0, { });
 
                 // x & -1 = x
-                if (v == -1)
+                if (lit_rhs_val == -1)
                     return lhs->clone();
             }
 
             // |
             if (bin_op == AST::Fa_BinaryOp::OP_BITOR) {
                 // x | 0 = x
-                if (v == 0)
+                if (lit_rhs_val == 0)
                     return lhs->clone();
 
                 // x | -1 = -1
-                if (v == -1)
+                if (lit_rhs_val == -1)
                     return AST::Fa_make_literal_int(-1, { });
             }
 
             // ^
             if (bin_op == AST::Fa_BinaryOp::OP_BITXOR) {
                 // x ^ 0 = x
-                if (v == 0)
+                if (lit_rhs_val == 0)
                     return lhs->clone();
 
                 // x ^ -1 = ~x
-                if (v == -1)
+                if (lit_rhs_val == -1)
                     return AST::Fa_make_unary(lhs->clone(), AST::Fa_UnaryOp::OP_BITNOT, binary_expr->get_location());
             }
 
@@ -446,7 +375,7 @@ std::optional<AST::Fa_Expr*> try_strength_reduce_binary(AST::Fa_Expr* e)
 
 std::optional<AST::Fa_Expr*> try_strength_reduce_unary(AST::Fa_Expr* e)
 {
-    if (e == nullptr || e->get_kind() != AST::Fa_Expr::Kind::UNARY)
+    if (e == nullptr || !AST::is_unary(e))
         return std::nullopt;
 
     auto unary_expr = AS_CONST_UNARY(e);
@@ -456,14 +385,12 @@ std::optional<AST::Fa_Expr*> try_strength_reduce_unary(AST::Fa_Expr* e)
     // ~
     if (un_op == AST::Fa_UnaryOp::OP_BITNOT) {
         // ~~x = x != 0
-        if (operand->get_kind() == AST::Fa_Expr::Kind::UNARY) {
+        if (AST::is_unary(operand)) {
             auto inner = AS_CONST_UNARY(operand);
             if (inner->get_operator() == AST::Fa_UnaryOp::OP_BITNOT) {
                 auto inner_operand = inner->get_operand();
-                if (!inner_operand)
-                    return std::nullopt;
-
-                return AST::Fa_make_binary(inner_operand->clone(), AST::Fa_make_literal_int(0, { }), AST::Fa_BinaryOp::OP_NEQ, unary_expr->get_location());
+                return AST::Fa_make_binary(inner_operand->clone(),
+                    AST::Fa_make_literal_int(0, { }), AST::Fa_BinaryOp::OP_NEQ, unary_expr->get_location());
             }
         }
 
