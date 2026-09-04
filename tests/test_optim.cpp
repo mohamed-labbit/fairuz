@@ -110,9 +110,9 @@ TEST(OptimTest, PurityChecks)
         name_expr("def"),
         list_expr({ name_expr("x") }),
         blk({ return_stmt(binary(name_expr("x"), name_expr("x"), Fa_BinaryOp::OP_ADD)) }));
-    auto call = call_expr(def->get_name());
-    auto var = name_expr("x");
-    auto assign = assign_expr(var, lit_int(0));
+    Fa_Expr* call = call_expr(def->get_name());
+    Fa_Expr* var = name_expr("x");
+    Fa_Expr* assign = assign_expr(var, lit_int(0));
 
     EXPECT_TRUE(Fa_is_pure(lit_int(0)));
     EXPECT_TRUE(Fa_is_pure(var));
