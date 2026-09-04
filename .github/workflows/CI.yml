@@ -27,6 +27,9 @@ jobs:
         include:
           - os: ubuntu-latest
             compiler: clang
+          # gcc leg disabled — linking issue under investigation.
+          # Re-enable this entry *and* restore the else-branch in the
+          # "Build and run tests" step below when it's fixed.
           #- os: ubuntu-latest
           #  compiler: gcc
           - os: macos-latest
@@ -62,13 +65,15 @@ jobs:
 
       - name: Build and run tests
         run: |
-
           if [ "${{ matrix.compiler }}" = "clang" ]; then
             ./build.sh test --debug
           fi
-#           else
-#            ./build.sh test --gcc --debug
-#          fi
+          # gcc branch removed while the gcc leg is disabled above. Restore:
+          #   if [ "${{ matrix.compiler }}" = "clang" ]; then
+          #     ./build.sh test --debug
+          #   else
+          #     ./build.sh test --gcc --debug
+          #   fi
 
       - name: Smoke-test the interpreter on the example programs
         run: |
