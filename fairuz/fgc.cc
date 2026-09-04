@@ -171,8 +171,7 @@ void Fa_GarbageCollector::trace_references()
 
 void Fa_GarbageCollector::sweep_all()
 {
-    for (auto* object : m_all)
-    {
+    for (auto* object : m_all) {
         if (object != nullptr)
             fa_delete_object(object);
     }

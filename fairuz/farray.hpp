@@ -263,8 +263,7 @@ void Fa_Array<T, _Alloc>::ensure_push_capacity()
 
     u32 new_cap = m_cap == 0 ? DEFAULT_CAP : m_cap + (m_cap >> 1);
     T* new_arr = m_allocator->template allocate_array<T>(new_cap);
-    if (m_arr && m_size > 0)
-    {
+    if (m_arr && m_size > 0) {
         relocate(new_arr, m_arr, m_size);
         if constexpr (!IS_ARENA)
             m_allocator->deallocate(m_arr, m_size);

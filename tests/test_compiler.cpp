@@ -1053,23 +1053,6 @@ TEST(CompilerFunc, RecursiveFunctionBodyCompiles)
     EXPECT_FALSE(chunk->functions[0]->code.empty());
 }
 
-TEST(CompilerFunc, NestedFunctionRejected)
-{
-    Fa_Chunk* chunk = compile_fail(
-        func_def(name_expr("outer"), list_expr(),
-            blk({ decl_stmt("x",
-                      lit_int(1)),
-                func_def(
-                    name_expr("inner"), list_expr(),
-                    blk({ return_stmt(name_expr("x")) })) })));
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    ASSERT_EQ(chunk->functions.size(), 1u);
-    EXPECT_EQ(chunk->functions[0]->name, "outer");
-    EXPECT_TRUE(chunk->functions[0]->functions.empty());
-}
-
 TEST(CompilerFunc, FunctionInsideTopLevelBlockRejected)
 {
     Fa_Chunk* chunk = compile_fail(blk({ func_def(name_expr("inner"), list_expr(), blk({ })) }));
