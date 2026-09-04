@@ -107,7 +107,7 @@ jobs:
         # Deliberately not `test` or `--debug`, so this leg exercises the
         # actual release configuration (LTO, no sanitizer) that gets shipped
         # — the debug+ASan legs above never touch this path.
-        run: ./build.sh run ../examples/hello.fa
+        run: ./build.sh run examples/hello.fa
 
   format-check:
     name: formatter is idempotent
