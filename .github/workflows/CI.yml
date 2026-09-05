@@ -34,6 +34,8 @@ jobs:
           #  compiler: gcc
           - os: macos-latest
             compiler: clang
+          - os: windows-latest
+            compiler: clang
 
     steps:
       - uses: actions/checkout@v4
@@ -52,6 +54,10 @@ jobs:
       - name: Install macOS build dependencies
         if: runner.os == 'macOS'
         run: brew install cmake ninja libomp
+      
+      - name: Set up MSVC developer environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
 
       - name: Cache CMake FetchContent downloads
         uses: actions/cache@v4
@@ -64,6 +70,7 @@ jobs:
             fetchcontent-${{ runner.os }}-${{ matrix.compiler }}-
 
       - name: Build and run tests
+        shell: bash
         run: |
           if [ "${{ matrix.compiler }}" = "clang" ]; then
             ./build.sh test --debug
@@ -76,6 +83,7 @@ jobs:
           #   fi
 
       - name: Smoke-test the interpreter on the example programs
+        shell: bash
         run: |
           EXTRA_FLAG=""
           for f in examples/*.fa; do
