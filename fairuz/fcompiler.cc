@@ -8,8 +8,10 @@
 #include "ferror.hpp"
 #include "fmacros.hpp"
 #include "fobj_header.hpp"
+#include "fobject.hpp"
 #include "fopcode.hpp"
 #include "foptim.hpp"
+#include "fstring.hpp"
 #include "fvalue.hpp"
 
 #include <algorithm>
@@ -475,6 +477,7 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
     Fa_Array<AST::Fa_Stmt*> methods = s->get_methods();
     Fa_StringRef class_name = AS_NAME(s->get_name())->get_value();
     Fa_Array<Fa_StringRef> field_names;
+    Fa_Array<Fa_StringRef> method_names(static_cast<u32>(Fa_ObjClass::_COUNT), Fa_StringRef { });
 
     for (AST::Fa_Expr* field : fields) {
         auto* name = AS_NAME(field);
@@ -511,6 +514,7 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
         state.enclosing = m_current;
         state.is_class_method = true;
         state.class_field_names = field_names;
+        state.class_method_names = method_names;
         m_current = &state;
 
         begin_scope();
@@ -584,7 +588,17 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
 
     // Pre-size the reserved region; ordinary methods are appended after it.
     Fa_Array<Fa_Chunk*> vtable(static_cast<u32>(Fa_ObjClass::_COUNT), /* fill_v= */ nullptr);
-    Fa_Array<Fa_StringRef> method_names(static_cast<u32>(Fa_ObjClass::_COUNT), Fa_StringRef { });
+
+    for (AST::Fa_Stmt* m : methods) {
+        auto* method = AS_FUNCTION_DEF(m);
+        Fa_StringRef method_name = method->get_name()->get_value();
+        int special = special_slot_for(method_name);
+        if (special >= 0)
+            method_names[static_cast<u32>(special)] = method_name;
+        else
+            method_names.push(method_name);
+    }
+
     Fa_Array<Fa_StringRef> seen_names; // dedup guard across BOTH special and ordinary methods
 
     for (AST::Fa_Stmt* m : methods) {
@@ -1117,6 +1131,42 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_call_impl(AST::Fa_CallExpr* e, u8* d
                 // Name resolved to the class but not to a known method
                 // (e.g. dynamically-added attribute) — fall through.
             }
+
+            // `this.method()` inside the class's own method body, while
+            // that class is still being compiled (m_class_registry doesn't have
+            // it yet; see is_this_reference's comment above). Mirrors the field
+            // fallback in compile_get_impl/compile_assign_impl, but for method
+            // slots via current_method_slot() instead of field indices.
+            if (is_this_reference(get->get_object())) {
+                int slot = current_method_slot(member_name->get_value());
+                if (slot >= 0) {
+                    u8 receiver_reg, reserved_reg;
+                    Fa_ExprResult expr_result;
+
+                    ALLOC_REG(&receiver_reg);
+                    COMPILE_EXPR_IMPL(get->get_object(), &expr_result);
+                    discharge(expr_result, receiver_reg, get->get_object()->get_location());
+                    ALLOC_REG(&reserved_reg);
+
+                    for (AST::Fa_Expr* arg : e->get_args()) {
+                        u8 arg_reg;
+                        Fa_ExprResult expr_result;
+                        ALLOC_REG(&arg_reg);
+                        COMPILE_EXPR_IMPL(arg, &expr_result);
+                        discharge(expr_result, arg_reg, loc);
+                    }
+
+                    u8 argc = static_cast<u8>(e->get_args().size() + 1);
+                    emit(Fa_make_ABC(Fa_OpCode::INVOKE, receiver_reg, static_cast<u8>(slot), argc), loc);
+                    emit(Fa_make_ABC(Fa_OpCode::NOP, current_chunk()->alloc_ic_slot(), 0, 0), loc);
+
+                    if (tail && !m_current->is_top_level)
+                        emit(Fa_make_ABC(Fa_OpCode::RETURN, receiver_reg, 1, 0), loc);
+
+                    m_current->free_regs_to(receiver_reg + 1);
+                    return Fa_ExprResult::reg(receiver_reg);
+                }
+            }
         }
 
         // SLOW PATH — unchanged dict-style dispatch for unknown receivers.
@@ -1564,6 +1614,19 @@ Fa_StringRef Compiler::infer_constructed_class(AST::Fa_Expr const* e) const
 
     Fa_StringRef name = AS_CONST_NAME(callee)->get_value();
     return m_class_registry.find_ptr(name) != nullptr ? name : Fa_StringRef { "" };
+}
+
+int Compiler::current_method_slot(Fa_StringRef const& name) const
+{
+    if (m_current == nullptr || !m_current->is_class_method)
+        return -1;
+
+    for (u32 i = 0, n = m_current->class_method_names.size(); i < n; i += 1) {
+        if (m_current->class_method_names[i] == name)
+            return static_cast<int>(i);
+    }
+
+    return -1;
 }
 
 int Compiler::current_method_field_index(Fa_StringRef const& name) const
