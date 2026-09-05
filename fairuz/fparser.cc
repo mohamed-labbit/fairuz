@@ -3,6 +3,7 @@
 //
 
 #include "fparser.hpp"
+#include "fAST.hpp"
 #include "fdiagnostic.hpp"
 #include "fmacros.hpp"
 #include "futil.hpp"
@@ -448,21 +449,49 @@ void push_member_once(Fa_Array<ExprPtr>& members, AST::Fa_NameExpr* name)
 
 void collect_this_field_assignment(Fa_Array<ExprPtr>& members, StmtPtr stmt)
 {
-    auto* expr_stmt = dynamic_cast<AST::Fa_ExprStmt*>(stmt);
-    if (expr_stmt == nullptr)
+    if (stmt == nullptr) return;
+
+    if (AST::is_block(stmt)) {
+        for (auto* s : AS_BLOCK(stmt)->get_statements())
+            collect_this_field_assignment(members, s);
+        return;
+    }
+
+    if (AST::is_if(stmt)) {
+        collect_this_field_assignment(members, AS_IF(stmt)->get_then());
+        collect_this_field_assignment(members, AS_IF(stmt)->get_else());
+        return;
+    }
+
+    if (AST::is_for(stmt)) {
+        collect_this_field_assignment(members, AS_FOR(stmt)->get_body());
+        return;
+    }
+
+    if (AST::is_while(stmt)) {
+        collect_this_field_assignment(members, AS_WHILE(stmt)->get_body());
+        return;
+    }
+
+    if (!AST::is_expr(stmt))
         return;
 
-    auto* assign = dynamic_cast<AST::Fa_AssignmentExpr*>(expr_stmt->get_expr());
-    if (assign == nullptr)
-        return;
+    auto* expr = AS_EXPR_STMT(stmt)->get_expr();
 
-    auto* get = dynamic_cast<AST::Fa_GetExpr*>(assign->get_target());
-    if (get == nullptr || !same_name(get->get_object(), kClassInstanceName))
-        return;
-
-    auto* member = dynamic_cast<AST::Fa_NameExpr*>(get->get_member());
-    if (member != nullptr)
-        push_member_once(members, member);
+    if (AST::is_assignment(expr)) {
+        auto* assign = AS_ASSIGNMENT_EXPR(expr);
+        auto* t = assign->get_target();
+        if (!AST::is_get(t))
+            return;
+        auto* get = AS_GET_EXPR(t);
+        if (!same_name(get->get_object(), kClassInstanceName))
+            return; /// not of the form this.foo
+        auto* mem = get->get_member();
+        if (AST::is_name(mem)) {
+            push_member_once(members, AS_NAME(mem));
+            return;
+        }
+    }
 }
 
 Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_method(Fa_Array<ExprPtr>& members)
