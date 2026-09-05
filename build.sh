@@ -411,6 +411,7 @@ cd build || exit 1
 
 COMMON_FLAGS=(
     -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+    -G Ninja
 )
 
 if [[ "$USE_GCC" == true && "$USE_CLANG" == true ]]; then
@@ -541,7 +542,7 @@ else
     cmake "${COMMON_FLAGS[@]}" .. || exit 1
 fi
 
-make || exit 1
+cmake --build . || exit 1
 
 # Resolve the effective leak-detection setting.
 #
