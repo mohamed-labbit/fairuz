@@ -115,7 +115,6 @@ enum class Code : u16 {
     UNKNOWN_BINARY_OPERATOR = 0x0308,
     SHIFT_AMOUNT_NOT_CONSTANT = 0x0309,
     SHIFT_AMOUNT_OUT_OF_RANGE = 0x030A,
-    INVALID_ASSIGNMENT_TARGET = 0x030B,
     TOO_MANY_REGISTERS = 0x030C,
     JUMP_OFFSET_OVERFLOW = 0x030D,
     LOOP_JUMP_OFFSET_OVERFLOW = 0x030E,
@@ -295,7 +294,6 @@ static constexpr char const* error_message_for(u16 code)
     case /*UNKNOWN_BINARY_OPERATOR =*/0x0308: return "Unknown binary operator";
     case /*SHIFT_AMOUNT_NOT_CONSTANT =*/0x0309: return "Shift amount must be a constant integer";
     case /*SHIFT_AMOUNT_OUT_OF_RANGE =*/0x030A: return "Shift amount is out of range";
-    case /*INVALID_ASSIGNMENT_TARGET =*/0x030B: return "Invalid assignment target";
     case /*TOO_MANY_REGISTERS =*/0x030C: return "Too many registers allocated for function";
     case /*JUMP_OFFSET_OVERFLOW =*/0x030D: return "Jump offset overflow";
     case /*LOOP_JUMP_OFFSET_OVERFLOW =*/0x030E: return "Loop jump offset overflow";
