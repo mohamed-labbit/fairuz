@@ -1263,12 +1263,14 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_dict_impl(AST::Fa_DictExpr* e)
         ALLOC_REG(&key_reg);
         COMPILE_EXPR_IMPL(key, &expr_result);
         discharge(expr_result, key_reg, key->get_location());
+        m_current->free_regs_to(key_reg + 1);
 
         u8 value_reg;
         Fa_ExprResult val_expr_result;
         ALLOC_REG(&value_reg);
         COMPILE_EXPR_IMPL(value, &val_expr_result);
         discharge(val_expr_result, value_reg, value->get_location());
+        m_current->free_regs_to(value_reg + 1);
     }
 
     u8 argc = static_cast<u8>(e->get_content().size() * 2);
