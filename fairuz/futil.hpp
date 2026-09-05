@@ -302,9 +302,6 @@ static inline i64 parse_integer_literal(Fa_StringRef const& literal, int base)
         else
             diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "Invalid digit");
 
-        if (digit >= base)
-            diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "Digit out of range for base (base=" + std::to_string(base) + ", digit=" + std::to_string(digit) + ")");
-
         value = value * base + digit;
     }
 
