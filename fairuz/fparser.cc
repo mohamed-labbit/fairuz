@@ -473,6 +473,16 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_method(Fa_Array<ExprPtr>& members)
     TokenPtr name_tok = current_token();
     Fa_VERIFY_TOKEN(TokType::IDENTIFIER, ParserCode::EXPECTED_FN_NAME);
 
+    auto fn_name = name_tok->lexeme();
+    auto cur = current_token()->lexeme();
+    if (cur == "+" || cur == "-" || cur == "*" || cur == "/" || cur == "%" || cur == "٪") {
+        if (fn_name == "عملية") {
+            fn_name += cur;
+            advance();
+        }
+        /// NOTE: do not raise an error here, parse_parameters_list() will take care of it
+    }
+
     auto params = parse_parameters_list();
     Fa_VERIFY_NODE(params);
 
@@ -543,12 +553,12 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_method(Fa_Array<ExprPtr>& members)
 
     if (check(TokType::ENDMARKER))
         return AST::Fa_make_function(
-            AST::Fa_make_name(name_tok->lexeme(), name_tok->location()),
+            AST::Fa_make_name(fn_name, name_tok->location()),
             AS_LIST(params.value()), block, start->location());
 
     Fa_VERIFY_TOKEN(TokType::DEDENT, ParserCode::EXPECTED_DEDENT);
     return AST::Fa_make_function(
-        AST::Fa_make_name(name_tok->lexeme(), name_tok->location()),
+        AST::Fa_make_name(fn_name, name_tok->location()),
         AS_LIST(params.value()), block, start->location());
 }
 
