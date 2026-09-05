@@ -82,6 +82,9 @@ void Fa_DiagnosticEngine::emit_error(std::string const& msg, Severity const sv)
 
 [[noreturn]] void Fa_DiagnosticEngine::_panic(std::string const& msg) const
 {
+    if (has_errors())
+        dump();
+
     std::cerr << Color::BOLD << Color::RED << "fatal" << Color::RESET << ": " << msg << "\n";
     std::terminate();
 }
