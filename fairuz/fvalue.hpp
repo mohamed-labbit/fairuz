@@ -126,8 +126,7 @@ static inline bool Fa_is_double(Fa_Value const v)
 }
 static inline bool Fa_is_number(Fa_Value const v)
 {
-    u64 top = v >> 48;
-    return (top == INT_TAG16) || (top != OBJ_TAG16 && !((v | 1) == TRUE_VAL) && !(v == NIL_VAL));
+    return Fa_is_int(v) || Fa_is_double(v);
 }
 
 static inline bool Fa_is_string(Fa_Value const v)
@@ -212,7 +211,6 @@ enum class Fa_TypeTag : u16 {
     DOUBLE = 1 << 3,
     STRING = 1 << 4,
     LIST = 1 << 5,
-    CLOSURE = 1 << 6,
     FUNCTION = 1 << 7,
     NATIVE = 1 << 8,
     CLASS = 1 << 9,
@@ -254,7 +252,7 @@ inline Fa_TypeTag& operator|=(Fa_TypeTag& a, Fa_TypeTag b) noexcept { return a =
         case Fa_ObjType::CLASS: return Fa_TypeTag::CLASS;
         case Fa_ObjType::INSTANCE: return Fa_TypeTag::INSTANCE;
         case Fa_ObjType::FILE_HANDLE: return Fa_TypeTag::FILE_HANDLE;
-        default: return Fa_TypeTag::NONE;
+        case Fa_ObjType::_COUNT: return Fa_TypeTag::NONE;
         }
     }
 
