@@ -5,6 +5,7 @@
 #include "fobj_header.hpp"
 #include "fobject.hpp"
 #include "futil.hpp"
+#include "fvalue.hpp"
 #include "fvm.hpp"
 
 #include <charconv>
@@ -303,7 +304,25 @@ Fa_Value Fa_VM::Fa_type(int argc, Fa_Value* argv)
     if (argc != 1 || argv == nullptr)
         return Fa_make_nil();
 
-    return Fa_make_int(static_cast<i64>(value_type_tag(argv[0])));
+    Fa_Value& v = argv[0];
+    Fa_TypeTag type = value_type_tag(v);
+    switch (type) {
+    case Fa_TypeTag::NONE: return m_gc.make_string("لاشيء");
+    case Fa_TypeTag::NIL: return m_gc.make_string("عدم");
+    case Fa_TypeTag::BOOL: return m_gc.make_string("منطقي");
+    case Fa_TypeTag::INT: return m_gc.make_string("طبيعي");
+    case Fa_TypeTag::DOUBLE: return m_gc.make_string("حقيقي");
+    case Fa_TypeTag::STRING: return m_gc.make_string("سلسلة");
+    case Fa_TypeTag::LIST: return m_gc.make_string("قائمة");
+    case Fa_TypeTag::FUNCTION: return m_gc.make_string("دالة");
+    case Fa_TypeTag::NATIVE: return m_gc.make_string("دالة");
+    case Fa_TypeTag::CLASS: return m_gc.make_string(Fa_as_class(v)->name);
+    case Fa_TypeTag::INSTANCE: return m_gc.make_string(Fa_as_instance(v)->klass->name);
+    case Fa_TypeTag::DICT: return m_gc.make_string("قاموس");
+    case Fa_TypeTag::FILE_HANDLE: return m_gc.make_string("ملف");
+    }
+
+    return Fa_make_nil(); // unreachable
 }
 
 Fa_Value Fa_VM::Fa_int(int argc, Fa_Value* argv)
