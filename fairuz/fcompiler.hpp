@@ -30,6 +30,7 @@ struct CompilerState {
     bool is_dead { false };
     bool is_class_method { false };
     Fa_Array<Fa_StringRef> class_field_names;
+    Fa_Array<Fa_StringRef> class_method_names;
 
     struct LoopContext {
         Fa_Array<u32> break_patches;
@@ -58,18 +59,22 @@ struct CompilerState {
 struct RegMark {
     CompilerState* state { nullptr };
     u8 mark { 0 };
+    size_t locals_mark { 0 };   // NEW: locals.size() at construction
 
     explicit RegMark(CompilerState* s)
-        : state(s)
-        , mark(s->next_reg)
-    {
-    }
+        : state(s), mark(s->next_reg), locals_mark(s->locals.size())
+    {}
 
     ~RegMark()
     {
-        state->free_regs_to(mark);
+        // If a local was declared inside this RegMark's scope, its
+        // register must survive the rewind.
+        u8 floor = mark;
+        for (size_t i = locals_mark; i < state->locals.size(); ++i)
+            floor = std::max<u8>(floor, state->locals[i].reg + 1);
+        state->free_regs_to(floor);
     }
-}; // struct RegMark
+};
 
 struct Fa_ExprResult {
     enum class Kind : u8 {
@@ -248,6 +253,7 @@ private:
     VarInfo resolve_name(Fa_StringRef const& name);
     Fa_StringRef infer_constructed_class(AST::Fa_Expr const* e) const;
     int current_method_field_index(Fa_StringRef const& name) const;
+    int current_method_slot(Fa_StringRef const& name) const;
 
     u32 emit(u32 instr, Fa_SourceLocation loc);
     u32 emit_jump(Fa_OpCode op, u8 cond, Fa_SourceLocation loc);
