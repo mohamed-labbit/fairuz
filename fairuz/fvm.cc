@@ -479,8 +479,6 @@ Fa_Value Fa_VM::execute()
         Fa_Value lhs = Fa_RB();
         Fa_Value rhs = Fa_RC();
 
-        if (UNLIKELY(!Fa_is_number(lhs) || !Fa_is_number(rhs)))
-            runtime_error(ErrorCode::TYPE_ERROR_ARITH);
         if (Fa_as_double_any(rhs) == 0.0)
             runtime_error(ErrorCode::MODULO_BY_ZERO);
 
@@ -658,7 +656,10 @@ Fa_Value Fa_VM::execute()
         Fa_Value lhs = Fa_RB();
         Fa_Value rhs = Fa_RC();
 
-        if (Fa_is_int(lhs) && Fa_is_int(rhs)) {
+        if (Fa_is_nil(lhs) || Fa_is_nil(rhs)) {
+            res = Fa_make_bool(Fa_is_nil(lhs) && Fa_is_nil(rhs));
+            Fa_RECORD_BINARY_IC(lhs, rhs, res);
+        } else if (Fa_is_int(lhs) && Fa_is_int(rhs)) {
             res = Fa_make_bool(Fa_VMOPI(lhs, rhs, !=));
             Fa_RECORD_BINARY_IC(lhs, rhs, res);
         } else if (Fa_is_string(lhs) && Fa_is_string(rhs)) {
@@ -1052,6 +1053,14 @@ Fa_Value Fa_VM::execute()
                 res = Fa_make_nil();
             else
                 res = dict_obj->data[idx];
+        } else if (Fa_is_instance(obj)) {
+            if (!Fa_is_string(idx))
+                runtime_error(ErrorCode::INDEX_TYPE_ERROR);
+            Fa_ObjInstance* inst = Fa_as_instance(obj);
+            int field_idx = inst->klass->field_index(Fa_as_string(idx)->str);
+            if (field_idx < 0)
+                runtime_error(ErrorCode::UNDEFINED_METHOD); // or a dedicated "no such field" code
+            res = inst->fields[field_idx];
         } else {
             runtime_error(ErrorCode::INDEX_TYPE_ERROR);
         }
@@ -1267,6 +1276,7 @@ void Fa_VM::call_value(Fa_Value callee, int argc, int call_base, bool tail)
         int ctor_slot = klass->method_slot(Fa_StringRef { "بداية" });
         if (ctor_slot < 0)
             ctor_slot = klass->method_slot(Fa_StringRef { "init" });
+
         if (ctor_slot < 0) {
             if (argc != 0)
                 runtime_error(ErrorCode::WRONG_ARG_COUNT);
@@ -1275,37 +1285,40 @@ void Fa_VM::call_value(Fa_Value callee, int argc, int call_base, bool tail)
         }
 
         Fa_Chunk* ctor_chunk = klass->vtable[static_cast<u32>(ctor_slot)];
-
         if (UNLIKELY(argc + 1 != ctor_chunk->arity))
             runtime_error(ErrorCode::WRONG_ARG_COUNT);
+
+        int local_count = ctor_chunk->local_count;
+
+        // NEW: honor tail — reuse the caller's own frame slot instead of
+        // stacking a fresh one, exactly like the Fa_is_function tail path does.
+        int dest_base = (tail && m_frames_top > 0) ? m_frames[m_frames_top - 1].base : call_base;
+
         if (UNLIKELY(m_stack_top + 1 >= STACK_SIZE))
             runtime_error(ErrorCode::STACK_OVERFLOW);
 
         for (int i = argc - 1; i >= 0; i -= 1)
-            m_stack[call_base + i + 1] = m_stack[call_base + i];
-        m_stack[call_base] = instance;
+            m_stack[dest_base + i + 1] = m_stack[call_base + i];
+        m_stack[dest_base] = instance;
 
-        if (m_stack_top < call_base + argc + 1)
-            m_stack_top = call_base + argc + 1;
-
-        int local_count = ctor_chunk->local_count;
-        int new_top = call_base + local_count + 1;
+        int new_top = dest_base + local_count + 1;
         if (UNLIKELY(new_top > STACK_SIZE))
             runtime_error(ErrorCode::STACK_OVERFLOW);
-
         while (m_stack_top < new_top) {
             m_stack[m_stack_top] = Fa_make_nil();
             m_stack_top += 1;
         }
-
         for (int i = argc + 1; i < local_count; i += 1)
-            m_stack[call_base + i] = Fa_make_nil();
+            m_stack[dest_base + i] = Fa_make_nil();
 
-        if (UNLIKELY(m_frames_top >= MAX_FRAMES))
-            runtime_error(ErrorCode::STACK_OVERFLOW);
-
-        m_frames[m_frames_top] = Fa_CallFrame(nullptr, ctor_chunk, 0, call_base, local_count);
-        m_frames_top += 1;
+        if (tail && m_frames_top > 0) {
+            m_frames[m_frames_top - 1] = Fa_CallFrame(nullptr, ctor_chunk, 0, dest_base, local_count);
+        } else {
+            if (UNLIKELY(m_frames_top >= MAX_FRAMES))
+                runtime_error(ErrorCode::STACK_OVERFLOW);
+            m_frames[m_frames_top] = Fa_CallFrame(nullptr, ctor_chunk, 0, dest_base, local_count);
+            m_frames_top += 1;
+        }
         return;
     }
 
