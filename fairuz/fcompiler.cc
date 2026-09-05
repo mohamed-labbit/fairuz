@@ -383,8 +383,6 @@ Fa_ErrorOr<bool> Compiler::compile_return(AST::Fa_ReturnStmt* s)
 Fa_ErrorOr<bool> Compiler::compile_for(AST::Fa_ForStmt* s)
 {
     Fa_SourceLocation loc = s->get_location();
-    if (!AST::is_name(s->get_target()))
-        return report_error(CompilerError::INVALID_ASSIGNMENT_TARGET, s->get_location());
 
     auto target = AS_NAME(s->get_target());
     bool incoming_dead = m_current->is_dead;
@@ -479,9 +477,6 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
     Fa_Array<Fa_StringRef> field_names;
 
     for (AST::Fa_Expr* field : fields) {
-        if (field->get_kind() != AST::Fa_Expr::Kind::NAME)
-            return report_error(CompilerError::INVALID_ASSIGNMENT_TARGET, field->get_location());
-
         auto* name = AS_NAME(field);
         Fa_StringRef fname = name->get_value();
 
@@ -1010,9 +1005,7 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_assign_impl(AST::Fa_AssignmentExpr* 
         }
     }
 
-    auto name = dynamic_cast<AST::Fa_NameExpr*>(target);
-    if (name == nullptr)
-        return report_error(CompilerError::INVALID_ASSIGNMENT_TARGET, target->get_location());
+    auto name = AS_NAME(target);
 
     if (is_declaration(e)) {
         if (m_current->is_top_level && m_current->scope_depth == 0) {
@@ -1044,8 +1037,6 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_assign_impl(AST::Fa_AssignmentExpr* 
     if (int field_idx = current_method_field_index(name->get_value()); field_idx >= 0) {
         RegMark mark(m_current);
         LocalVar const* self = lookup_local(kClassInstanceName);
-        if (self == nullptr)
-            return report_error(CompilerError::INVALID_ASSIGNMENT_TARGET, name->get_location());
 
         Fa_ExprResult expr_result;
         u8 value_reg;
