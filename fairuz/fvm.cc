@@ -10,6 +10,7 @@
 #include "fopcode.hpp"
 #include "futil.hpp"
 #include "fvalue.hpp"
+#include <cstdio>
 
 namespace fairuz::runtime {
 
@@ -1119,7 +1120,13 @@ Fa_Value Fa_VM::execute()
         Fa_ObjInstance* inst = Fa_as_instance(self_val);
 
         if (UNLIKELY(slot >= inst->klass->vtable.size() || inst->klass->vtable[slot] == nullptr))
+        {
+            ::fprintf(stderr, "==> DEBUG: vtable size : %i\n", inst->klass->vtable.size());
+            int i = 0;
+            for (auto m : inst->klass->method_names)
+                ::fprintf(stderr, "==> DEBUG: method name [%i]: %s\n", i++, m.data());
             runtime_error(ErrorCode::TYPE_ERROR_CALL, "method slot is empty");
+        }
 
         invoke_method(inst->klass->vtable[slot], self_val, self_reg, cur_frame_base, argc, ip);
 

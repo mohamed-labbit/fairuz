@@ -588,17 +588,6 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
 
     // Pre-size the reserved region; ordinary methods are appended after it.
     Fa_Array<Fa_Chunk*> vtable(static_cast<u32>(Fa_ObjClass::_COUNT), /* fill_v= */ nullptr);
-
-    for (AST::Fa_Stmt* m : methods) {
-        auto* method = AS_FUNCTION_DEF(m);
-        Fa_StringRef method_name = method->get_name()->get_value();
-        int special = special_slot_for(method_name);
-        if (special >= 0)
-            method_names[static_cast<u32>(special)] = method_name;
-        else
-            method_names.push(method_name);
-    }
-
     Fa_Array<Fa_StringRef> seen_names; // dedup guard across BOTH special and ordinary methods
 
     for (AST::Fa_Stmt* m : methods) {

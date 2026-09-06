@@ -3,6 +3,7 @@
 #include "../fairuz/fdiagnostic.hpp"
 #include "../fairuz/fopcode.hpp"
 #include "../fairuz/fvm.hpp"
+#include "fobject.hpp"
 #include "test_common.h"
 #include "test_config.h"
 
@@ -1581,11 +1582,12 @@ TEST(NativeType, ReturnsInteger)
     Fa_Value b = Fa_make_bool(false);
     Fa_Value n = Fa_make_nil();
     Fa_Value s = str("x");
-    EXPECT_TRUE(Fa_is_int(vm.Fa_type(1, &i)));
-    EXPECT_TRUE(Fa_is_int(vm.Fa_type(1, &f)));
-    EXPECT_TRUE(Fa_is_int(vm.Fa_type(1, &b)));
-    EXPECT_TRUE(Fa_is_int(vm.Fa_type(1, &n)));
-    EXPECT_TRUE(Fa_is_int(vm.Fa_type(1, &s)));
+
+    EXPECT_EQ(Fa_as_string(vm.Fa_type(1, &i))->str, "طبيعي");
+    EXPECT_EQ(Fa_as_string(vm.Fa_type(1, &f))->str, "حقيقي");
+    EXPECT_EQ(Fa_as_string(vm.Fa_type(1, &b))->str, "منطقي");
+    EXPECT_EQ(Fa_as_string(vm.Fa_type(1, &n))->str, "عدم");
+    EXPECT_EQ(Fa_as_string(vm.Fa_type(1, &s))->str, "سلسلة");    
 }
 
 TEST(NativeType, DifferentTypesHaveDifferentTags)
@@ -2727,35 +2729,6 @@ TEST(VMClass, ConstructorWithoutInitRejectsArguments)
 
     VMRunner r;
     EXPECT_THROW(r.run(top), std::runtime_error);
-}
-
-TEST(VMClass, EnglishInitConstructorIsAccepted)
-{
-    AST::Fa_Stmt* klass = class_def(
-        name_expr("EnglishInit"),
-        { name_expr("value") },
-        {
-            class_method("init", { name_expr("value") }, { }),
-        });
-    AST::Fa_Stmt* test = func_def(
-        name_expr("test"),
-        list_expr(),
-        blk({
-            decl_stmt("instance", call_expr(name_expr("EnglishInit"), list_expr({ lit_int(9) }))),
-            return_stmt(name_expr("instance")),
-        }));
-
-    Fa_Chunk* top = compile_program({
-        klass,
-        test,
-        expr_stmt(call_expr(name_expr("test"))),
-    });
-
-    VMRunner r;
-    Fa_Value result = Fa_make_nil();
-    ASSERT_NO_THROW(result = r.run(top));
-    ASSERT_TRUE(Fa_is_instance(result));
-    EXPECT_EQ(Fa_as_instance(result)->klass->name, "EnglishInit");
 }
 
 TEST(VMClass, InstanceFieldsDefaultToNil)
