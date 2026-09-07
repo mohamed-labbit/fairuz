@@ -55,6 +55,13 @@ static constexpr Fa_Value FALSE_VAL = UINT64_C(0x7FF8000000000002);
 static constexpr Fa_Value TRUE_VAL = UINT64_C(0x7FF8000000000003);
 static constexpr u64 INT_TAG16 = UINT64_C(0x7FF9);
 static constexpr u64 OBJ_TAG16 = UINT64_C(0xFFF8);
+constexpr i64 FA_INT48_MIN = -(1LL << 47);
+constexpr i64 FA_INT48_MAX = (1LL << 47) - 1;
+
+static inline bool fits_in_int48(i64 value)
+{
+    return value >= FA_INT48_MIN && value <= FA_INT48_MAX;
+}
 
 // runtime values
 static inline Fa_Value Fa_make_nil()
@@ -252,6 +259,7 @@ inline Fa_TypeTag& operator|=(Fa_TypeTag& a, Fa_TypeTag b) noexcept { return a =
         case Fa_ObjType::CLASS: return Fa_TypeTag::CLASS;
         case Fa_ObjType::INSTANCE: return Fa_TypeTag::INSTANCE;
         case Fa_ObjType::FILE_HANDLE: return Fa_TypeTag::FILE_HANDLE;
+        case Fa_ObjType::INT: return Fa_TypeTag::INT;
         case Fa_ObjType::_COUNT: return Fa_TypeTag::NONE;
         }
     }

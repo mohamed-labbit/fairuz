@@ -1072,6 +1072,8 @@ Fa_Value Fa_VM::execute()
         Fa_Value idx = Fa_RB();
         Fa_Value val = Fa_RC();
 
+        /// NOTE: 'str' is immutable by design, so INDEX_WRITE falls back to runtime_error
+
         if (Fa_is_list(obj)) {
             if (!Fa_is_int(idx))
                 runtime_error(ErrorCode::INDEX_TYPE_ERROR);
