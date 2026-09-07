@@ -257,11 +257,7 @@ struct Fa_ClassDescriptor {
     static constexpr u32 NULL_SLOT = UINT32_MAX;
 };
 
-#if FA_USE_NANBOX
-using Fa_Value = u64;
-#else
 class Fa_Value;
-#endif
 
 struct Fa_Chunk {
     Fa_StringRef name { "" };

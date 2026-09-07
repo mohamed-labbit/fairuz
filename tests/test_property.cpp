@@ -154,10 +154,10 @@ TEST(PropertyFa_Expr, RandomArithmeticMatchesHostAndAst)
         Fa_Value parsed_value = run_fa_expr_source(source);
         Fa_Value ast_value = run_fa_expr_ast(build_ast(spec));
 
-        ASSERT_TRUE(Fa_is_int(parsed_value)) << source;
-        ASSERT_TRUE(Fa_is_int(ast_value)) << source;
-        EXPECT_EQ(Fa_as_int(parsed_value), expected) << source;
-        EXPECT_EQ(Fa_as_int(ast_value), expected) << source;
-        EXPECT_EQ(Fa_as_int(parsed_value), Fa_as_int(ast_value)) << source;
+        ASSERT_TRUE(parsed_value.is_int()) << source;
+        ASSERT_TRUE(ast_value.is_int()) << source;
+        EXPECT_EQ(parsed_value.as_int(), expected) << source;
+        EXPECT_EQ(ast_value.as_int(), expected) << source;
+        EXPECT_EQ(parsed_value.as_int(), ast_value.as_int()) << source;
     }
 }

@@ -32,183 +32,134 @@ struct Fa_ObjFileHandle;
 
 class Fa_VM; // forward
 
+/// NOTE: exclude any added tag from Fa_is_double macro
+
+class Fa_Value {
+private:
+    static constexpr u64 NANBOX_QNAN = UINT64_C(0x7FF8000000000000);
+    static constexpr u64 NANBOX_SIGN_BIT = UINT64_C(0x8000000000000000);
+    static constexpr u64 TAG_INT = UINT64_C(0x7FF9000000000000);
+    static constexpr u64 TAG_OBJ = UINT64_C(0xFFF8000000000000);
+    static constexpr u64 PAYLOAD_MASK = UINT64_C(0x0000FFFFFFFFFFFF);
+    static constexpr u64 NIL_VAL = UINT64_C(0x7FF8000000000001);
+    static constexpr u64 FALSE_VAL = UINT64_C(0x7FF8000000000002);
+    static constexpr u64 TRUE_VAL = UINT64_C(0x7FF8000000000003);
+    static constexpr u64 INT_TAG16 = UINT64_C(0x7FF9);
+    static constexpr u64 OBJ_TAG16 = UINT64_C(0xFFF8);
+    static constexpr i64 INT48_MIN = -(1LL << 47);
+    static constexpr i64 INT48_MAX = (1LL << 47) - 1;
+
+    u64 m_value { NIL_VAL };
+
+public:
+    friend struct Fa_ValueHash;
+
+    static Fa_Value nil() { return NIL_VAL; }
+    static Fa_Value from_obj(Fa_ObjHeader const* p) { return TAG_OBJ | (reinterpret_cast<uintptr_t>(p) & PAYLOAD_MASK); }
+    static Fa_Value from_bool(bool const b) { return b ? TRUE_VAL : FALSE_VAL; }
+    static Fa_Value from_int(i64 const v) { return (static_cast<u64>(v) & PAYLOAD_MASK) | TAG_INT; }
+    static Fa_Value from_real(f64 const d)
+    {
+        u64 bits;
+        ::memcpy(&bits, &d, sizeof(bits));
+        return bits;
+    }
+
+    static Fa_Value from_string(Fa_ObjString const* s) { return TAG_OBJ | (reinterpret_cast<uintptr_t>(s) & PAYLOAD_MASK); }
+    static Fa_Value from_list(Fa_ObjList const* l) { return TAG_OBJ | (reinterpret_cast<uintptr_t>(l) & PAYLOAD_MASK); }
+    static Fa_Value from_dict(Fa_ObjDict const* d) { return TAG_OBJ | (reinterpret_cast<uintptr_t>(d) & PAYLOAD_MASK); }
+    static Fa_Value from_func(Fa_ObjFunction const* f) { return TAG_OBJ | (reinterpret_cast<uintptr_t>(f) & PAYLOAD_MASK); }
+    static Fa_Value from_native(Fa_ObjNative const* n) { return TAG_OBJ | (reinterpret_cast<uintptr_t>(n) & PAYLOAD_MASK); }
+    static Fa_Value from_class(Fa_ObjClass const* c) { return TAG_OBJ | (reinterpret_cast<uintptr_t>(c) & PAYLOAD_MASK); }
+    static Fa_Value from_instance(Fa_ObjInstance const* i) { return TAG_OBJ | (reinterpret_cast<uintptr_t>(i) & PAYLOAD_MASK); }
+    static Fa_Value from_file_handle(Fa_ObjFileHandle const* p) { return TAG_OBJ | (reinterpret_cast<uintptr_t>(p) & PAYLOAD_MASK); }
+
+    Fa_Value() = default;
+
+    Fa_Value(u64 v)
+        : m_value(v)
+    {
+    }
+
+    bool operator==(Fa_Value const& other) const { return other.m_value == m_value; }
+    bool operator!=(Fa_Value const& other) const { return other.m_value != m_value; }
+
+    Fa_ObjHeader* as_obj() const { return reinterpret_cast<Fa_ObjHeader*>(static_cast<uintptr_t>(m_value & PAYLOAD_MASK)); }
+
+    bool is_nil() const { return m_value == NIL_VAL; }
+    bool is_bool() const { return (m_value | 1) == TRUE_VAL; }
+    bool is_int() const { return (m_value >> 48) == INT_TAG16; }
+    bool is_obj() const { return (m_value >> 48) == OBJ_TAG16; }
+    bool is_double() const
+    {
+        u64 top = m_value >> 48;
+        return top != INT_TAG16 && top != OBJ_TAG16 && !((m_value | 1) == TRUE_VAL) && !(m_value == NIL_VAL);
+    }
+
+    bool is_number() const { return is_int() || is_double(); }
+    bool is_string() const { return (is_obj() && as_obj()->type == Fa_ObjType::STRING); }
+    bool is_list() const { return (is_obj() && as_obj()->type == Fa_ObjType::LIST); }
+    bool is_dict() const { return (is_obj() && as_obj()->type == Fa_ObjType::DICT); }
+    bool is_function() const { return (is_obj() && as_obj()->type == Fa_ObjType::FUNCTION); }
+    bool is_native() const { return (is_obj() && as_obj()->type == Fa_ObjType::NATIVE); }
+    bool is_class() const { return (is_obj() && as_obj()->type == Fa_ObjType::CLASS); }
+    bool is_instance() const { return (is_obj() && as_obj()->type == Fa_ObjType::INSTANCE); }
+    bool is_file_handle() const { return (is_obj() && as_obj()->type == Fa_ObjType::FILE_HANDLE); }
+    bool is_truthy() const
+    {
+        if (is_nil())
+            return false;
+        else if (is_bool())
+            return m_value & 1;
+        else if (is_int())
+            return (m_value & PAYLOAD_MASK) != 0;
+        else if (is_obj())
+            return true;
+        return (m_value << 1) != 0;
+    }
+
+    bool as_bool() const { return m_value & 1; }
+    i64 as_int() const
+    {
+        i64 payload = static_cast<i64>(m_value & PAYLOAD_MASK);
+        if (payload & (INT64_C(1) << 47))
+            return payload | ~PAYLOAD_MASK;
+        return payload;
+    }
+    f64 as_double() const
+    {
+        f64 d;
+        ::memcpy(&d, &m_value, sizeof(d));
+        return d;
+    }
+    f64 as_double_any() const
+    {
+        return is_int() ? static_cast<f64>(as_int()) : as_double();
+    }
+
+    Fa_ObjString* as_string() const;
+    Fa_ObjList* as_list() const;
+    Fa_ObjDict* as_dict() const;
+    Fa_ObjFunction* as_func() const;
+    Fa_ObjNative* as_native() const;
+    Fa_ObjClass* as_class() const;
+    Fa_ObjInstance* as_instance() const;
+    Fa_ObjFileHandle* as_file_handle() const;
+
+private:
+    static bool fits_in_int48(i64 v) { return v >= INT48_MIN && v <= INT48_MAX; }
+};
+
+static_assert(sizeof(Fa_Value) == 8, "Size of Fa_Value must be 64 bits (8 bytes) when using NANBOX (FA_USE_NANBOX = 1)");
+
 struct Fa_ValueHash {
-    size_t operator()(u64 const& v) const noexcept { return v; }
+    friend class Fa_Value;
+    size_t operator()(Fa_Value const& v) const noexcept { return v.m_value; }
 };
 
 struct Fa_ValueEqual {
-    bool operator()(u64 const& lhs, u64 const& rhs) const noexcept { return lhs == rhs; }
+    bool operator()(Fa_Value const& lhs, Fa_Value const& rhs) const noexcept { return lhs == rhs; }
 };
-
-using Fa_Value = u64;
-using Fa_DictType = Fa_HashTable<Fa_Value, Fa_Value, Fa_ValueHash, Fa_ValueEqual>;
-using NativeFn = Fa_Value (Fa_VM::*)(int, Fa_Value*);
-
-/// NOTE: exclude any added tag from Fa_is_double macro
-static constexpr Fa_Value NANBOX_QNAN = UINT64_C(0x7FF8000000000000);
-static constexpr Fa_Value NANBOX_SIGN_BIT = UINT64_C(0x8000000000000000);
-static constexpr Fa_Value TAG_INT = UINT64_C(0x7FF9000000000000);
-static constexpr Fa_Value TAG_OBJ = UINT64_C(0xFFF8000000000000);
-static constexpr Fa_Value PAYLOAD_MASK = UINT64_C(0x0000FFFFFFFFFFFF);
-static constexpr Fa_Value NIL_VAL = UINT64_C(0x7FF8000000000001);
-static constexpr Fa_Value FALSE_VAL = UINT64_C(0x7FF8000000000002);
-static constexpr Fa_Value TRUE_VAL = UINT64_C(0x7FF8000000000003);
-static constexpr u64 INT_TAG16 = UINT64_C(0x7FF9);
-static constexpr u64 OBJ_TAG16 = UINT64_C(0xFFF8);
-constexpr i64 FA_INT48_MIN = -(1LL << 47);
-constexpr i64 FA_INT48_MAX = (1LL << 47) - 1;
-
-static inline bool fits_in_int48(i64 value)
-{
-    return value >= FA_INT48_MIN && value <= FA_INT48_MAX;
-}
-
-// runtime values
-static inline Fa_Value Fa_make_nil()
-{
-    return NIL_VAL;
-}
-static inline Fa_Value Fa_make_obj(Fa_ObjHeader const* p)
-{
-    return TAG_OBJ | (reinterpret_cast<uintptr_t>(p) & PAYLOAD_MASK);
-}
-static inline Fa_Value Fa_make_real(f64 const d)
-{
-    Fa_Value bits;
-    ::memcpy(&bits, &d, sizeof(bits));
-    return bits;
-}
-static inline Fa_Value Fa_make_bool(bool const b)
-{
-    return b ? TRUE_VAL : FALSE_VAL;
-}
-static inline Fa_Value Fa_make_int(i64 const v)
-{
-    return (static_cast<Fa_Value>(v) & PAYLOAD_MASK) | TAG_INT;
-}
-
-static inline Fa_Value Fa_from_string(Fa_ObjString const* s)
-{
-    return TAG_OBJ | (reinterpret_cast<uintptr_t>(s) & PAYLOAD_MASK);
-}
-static inline Fa_Value Fa_from_list(Fa_ObjList const* l)
-{
-    return TAG_OBJ | (reinterpret_cast<uintptr_t>(l) & PAYLOAD_MASK);
-}
-static inline Fa_Value Fa_from_dict(Fa_ObjDict const* d)
-{
-    return TAG_OBJ | (reinterpret_cast<uintptr_t>(d) & PAYLOAD_MASK);
-}
-static inline Fa_Value Fa_from_func(Fa_ObjFunction const* f)
-{
-    return TAG_OBJ | (reinterpret_cast<uintptr_t>(f) & PAYLOAD_MASK);
-}
-static inline Fa_Value Fa_from_native(Fa_ObjNative const* n)
-{
-    return TAG_OBJ | (reinterpret_cast<uintptr_t>(n) & PAYLOAD_MASK);
-}
-static inline Fa_Value Fa_from_class(Fa_ObjClass const* c)
-{
-    return TAG_OBJ | (reinterpret_cast<uintptr_t>(c) & PAYLOAD_MASK);
-}
-static inline Fa_Value Fa_from_instance(Fa_ObjInstance const* i)
-{
-    return TAG_OBJ | (reinterpret_cast<uintptr_t>(i) & PAYLOAD_MASK);
-}
-static inline Fa_Value Fa_from_file_handle(Fa_ObjFileHandle const* p)
-{
-    return TAG_OBJ | (reinterpret_cast<uintptr_t>(p) & PAYLOAD_MASK);
-}
-
-/* ------- Truth macros  ------- */
-
-static inline bool Fa_is_nil(Fa_Value const v) { return v == NIL_VAL; }
-static inline bool Fa_is_bool(Fa_Value const v) { return (v | 1) == TRUE_VAL; }
-static inline bool Fa_is_int(Fa_Value const v) { return (v >> 48) == INT_TAG16; }
-static inline bool Fa_is_obj(Fa_Value const v) { return (v >> 48) == OBJ_TAG16; }
-static inline bool Fa_is_double(Fa_Value const v)
-{
-    u64 top = v >> 48;
-    return top != INT_TAG16 && top != OBJ_TAG16 && !((v | 1) == TRUE_VAL) && !(v == NIL_VAL);
-}
-static inline bool Fa_is_number(Fa_Value const v)
-{
-    return Fa_is_int(v) || Fa_is_double(v);
-}
-
-static inline bool Fa_is_string(Fa_Value const v)
-{
-    return (Fa_is_obj(v) && reinterpret_cast<Fa_ObjHeader*>((v)&PAYLOAD_MASK)->type == Fa_ObjType::STRING);
-}
-static inline bool Fa_is_list(Fa_Value const v)
-{
-    return (Fa_is_obj(v) && reinterpret_cast<Fa_ObjHeader*>((v)&PAYLOAD_MASK)->type == Fa_ObjType::LIST);
-}
-static inline bool Fa_is_dict(Fa_Value const v)
-{
-    return (Fa_is_obj(v) && reinterpret_cast<Fa_ObjHeader*>((v)&PAYLOAD_MASK)->type == Fa_ObjType::DICT);
-}
-static inline bool Fa_is_function(Fa_Value const v)
-{
-    return (Fa_is_obj(v) && reinterpret_cast<Fa_ObjHeader*>((v)&PAYLOAD_MASK)->type == Fa_ObjType::FUNCTION);
-}
-static inline bool Fa_is_native(Fa_Value const v)
-{
-    return (Fa_is_obj(v) && reinterpret_cast<Fa_ObjHeader*>((v)&PAYLOAD_MASK)->type == Fa_ObjType::NATIVE);
-}
-static inline bool Fa_is_class(Fa_Value const v)
-{
-    return (Fa_is_obj(v) && reinterpret_cast<Fa_ObjHeader*>((v)&PAYLOAD_MASK)->type == Fa_ObjType::CLASS);
-}
-static inline bool Fa_is_instance(Fa_Value const v)
-{
-    return (Fa_is_obj(v) && reinterpret_cast<Fa_ObjHeader*>((v)&PAYLOAD_MASK)->type == Fa_ObjType::INSTANCE);
-}
-static inline bool Fa_is_file_handle(Fa_Value const v)
-{
-    return (Fa_is_obj(v) && reinterpret_cast<Fa_ObjHeader*>((v)&PAYLOAD_MASK)->type == Fa_ObjType::FILE_HANDLE);
-}
-
-static inline bool Fa_is_truthy(Fa_Value const v)
-{
-    if (Fa_is_nil(v))
-        return false;
-    else if (Fa_is_bool(v))
-        return v & 1;
-    else if (Fa_is_int(v))
-        return (v & PAYLOAD_MASK) != 0;
-    else if (Fa_is_obj(v))
-        return true;
-    return (v << 1) != 0;
-}
-
-/* -------- Casting macros -------- */
-
-static inline bool Fa_as_bool(Fa_Value const v)
-{
-    return v & 1;
-}
-static inline i64 Fa_as_int(Fa_Value const v)
-{
-    i64 payload = static_cast<i64>(v & PAYLOAD_MASK);
-    if (payload & (INT64_C(1) << 47))
-        return payload | ~PAYLOAD_MASK;
-    return payload;
-}
-static inline f64 Fa_as_double(Fa_Value const v)
-{
-    f64 d;
-    ::memcpy(&d, &v, sizeof(d));
-    return d;
-}
-static inline f64 Fa_as_double_any(Fa_Value v)
-{
-    return Fa_is_int(v) ? static_cast<f64>(Fa_as_int(v)) : Fa_as_double(v);
-}
-static inline Fa_ObjHeader* Fa_as_obj(Fa_Value const v)
-{
-    return reinterpret_cast<Fa_ObjHeader*>(static_cast<uintptr_t>(v & PAYLOAD_MASK));
-}
 
 enum class Fa_TypeTag : u16 {
     NONE = 0,
@@ -240,17 +191,17 @@ inline Fa_TypeTag& operator|=(Fa_TypeTag& a, Fa_TypeTag b) noexcept { return a =
 
 [[nodiscard]] inline Fa_TypeTag value_type_tag(Fa_Value v) noexcept
 {
-    if (Fa_is_nil(v))
+    if (v.is_nil())
         return Fa_TypeTag::NIL;
-    if (Fa_is_bool(v))
+    if (v.is_bool())
         return Fa_TypeTag::BOOL;
-    if (Fa_is_int(v))
+    if (v.is_int())
         return Fa_TypeTag::INT;
-    if (Fa_is_double(v))
+    if (v.is_double())
         return Fa_TypeTag::DOUBLE;
 
-    if (Fa_is_obj(v)) {
-        switch (Fa_as_obj(v)->type) {
+    if (v.is_obj()) {
+        switch (v.as_obj()->type) {
         case Fa_ObjType::STRING: return Fa_TypeTag::STRING;
         case Fa_ObjType::LIST: return Fa_TypeTag::LIST;
         case Fa_ObjType::DICT: return Fa_TypeTag::DICT;
@@ -321,14 +272,14 @@ public:
         v.as.i = ival;
         return v;
     }
-    static Fa_Value from_double(f64 fval)
+    static Fa_Value from_real(f64 fval)
     {
         Fa_Value v;
         v.m_type = Fa_TypeTag::DOUBLE;
         v.as.f = fval;
         return v;
     }
-    static Fa_Value from_object(Fa_ObjHeader* oval)
+    static Fa_Value from_obj(Fa_ObjHeader* oval)
     {
         assert(oval != nullptr);
         Fa_Value v;
@@ -351,12 +302,35 @@ public:
     bool is_bool() const { return m_type == Fa_TypeTag::BOOL; }
     bool is_int() const { return m_type == Fa_TypeTag::INT; }
     bool is_double() const { return m_type == Fa_TypeTag::DOUBLE; }
-    bool is_object() const { return m_type >= Fa_TypeTag::STRING && m_type <= Fa_TypeTag::FILE_HANDLE; }
+    bool is_obj() const { return m_type >= Fa_TypeTag::STRING && m_type <= Fa_TypeTag::FILE_HANDLE; }
+    bool is_number() const { return is_double() || is_int(); }
+    bool is_truthy() const
+    {
+        if (is_nil())
+            return false;
+        else if (is_bool())
+            return as_bool();
+        else if (is_int())
+            return as_int() != 0;
+        else if (is_obj())
+            return true;
+        return as_double() != 0.0f;
+    }
 
     bool as_bool() const { return as.b; }
     i64 as_int() const { return as.i; }
     f64 as_double() const { return as.f; }
-    Fa_ObjHeader* as_object() const { return as.o; }
+    f64 as_double_any() const { return is_int() ? static_cast<f64>(as_int()) : as_double(); }
+    Fa_ObjHeader* as_obj() const { return as.o; }
+
+    Fa_ObjString* as_string() const;
+    Fa_ObjList* as_list() const;
+    Fa_ObjDict* as_dict() const;
+    Fa_ObjFunction* as_func() const;
+    Fa_ObjNative* as_native() const;
+    Fa_ObjClass* as_class() const;
+    Fa_ObjInstance* as_instance() const;
+    Fa_ObjFileHandle* as_file_handle() const;
 
     bool operator==(Fa_Value const& other) const
     {
@@ -368,151 +342,30 @@ public:
         case Fa_TypeTag::BOOL: return as_bool() == other.as_bool();
         case Fa_TypeTag::INT: return as_int() == other.as_int();
         case Fa_TypeTag::DOUBLE: return as_double() == other.as_double();
-        default: return as_object() == other.as_object();
+        default: return as_obj() == other.as_obj();
         }
     }
 
     bool operator!=(Fa_Value const& other) const { return !(*this == other); }
+
+    static Fa_Value from_string(Fa_ObjString* s) { return from_obj(reinterpret_cast<Fa_ObjHeader*>(s)); }
+    static Fa_Value from_list(Fa_ObjList* l) { return from_obj(reinterpret_cast<Fa_ObjHeader*>(l)); }
+    static Fa_Value from_dict(Fa_ObjDict* d) { return from_obj(reinterpret_cast<Fa_ObjHeader*>(d)); }
+    static Fa_Value from_func(Fa_ObjFunction* f) { return from_obj(reinterpret_cast<Fa_ObjHeader*>(f)); }
+    static Fa_Value from_native(Fa_ObjNative* n) { return from_obj(reinterpret_cast<Fa_ObjHeader*>(n)); }
+    static Fa_Value from_class(Fa_ObjClass* c) { return from_obj(reinterpret_cast<Fa_ObjHeader*>(c)); }
+    static Fa_Value from_instance(Fa_ObjInstance* i) { return from_obj(reinterpret_cast<Fa_ObjHeader*>(i)); }
+    static Fa_Value from_file_handle(Fa_ObjFileHandle* f) { return from_obj(reinterpret_cast<Fa_ObjHeader*>(f)); }
+
+    bool is_string() const { return is_obj() && m_type == Fa_TypeTag::STRING; }
+    bool is_list() const { return is_obj() && m_type == Fa_TypeTag::LIST; }
+    bool is_dict() const { return is_obj() && m_type == Fa_TypeTag::DICT; }
+    bool is_function() const { return is_obj() && m_type == Fa_TypeTag::FUNCTION; }
+    bool is_native() const { return is_obj() && m_type == Fa_TypeTag::NATIVE; }
+    bool is_class() const { return is_obj() && m_type == Fa_TypeTag::CLASS; }
+    bool is_instance() const { return is_obj() && m_type == Fa_TypeTag::INSTANCE; }
+    bool is_file_handle() const { return is_obj() && m_type == Fa_TypeTag::FILE_HANDLE; }
 };
-
-/* ------- Factory macros ------- */
-
-static inline Fa_Value Fa_make_nil()
-{
-    return Fa_Value::nil();
-}
-static inline Fa_Value Fa_make_obj(Fa_ObjHeader const* p)
-{
-    return Fa_Value::from_object(reinterpret_cast<Fa_ObjHeader*>(p));
-}
-static inline Fa_Value Fa_make_real(f64 d)
-{
-    return Fa_Value::from_double(d);
-}
-static inline Fa_Value Fa_make_bool(bool b)
-{
-    return Fa_Value::from_bool(b);
-}
-static inline Fa_Value Fa_make_int(i64 v)
-{
-    return Fa_Value::from_int(v);
-}
-
-static inline Fa_Value Fa_from_string(Fa_ObjString const* s)
-{
-    return Fa_Value::from_object(reinterpret_cast<Fa_ObjHeader*>(s));
-}
-static inline Fa_Value Fa_from_list(Fa_ObjList const* l)
-{
-    return Fa_Value::from_object(reinterpret_cast<Fa_ObjHeader*>(l));
-}
-static inline Fa_Value Fa_from_dict(Fa_ObjDict const* d)
-{
-    return Fa_Value::from_object(reinterpret_cast<Fa_ObjHeader*>(d));
-}
-static inline Fa_Value Fa_from_func(Fa_ObjFunction const* f)
-{
-    return Fa_Value::from_object(reinterpret_cast<Fa_ObjHeader*>(f));
-}
-static inline Fa_Value Fa_from_native(Fa_ObjNative const* n)
-{
-    return Fa_Value::from_object(reinterpret_cast<Fa_ObjHeader*>(n));
-}
-static inline Fa_Value Fa_from_class(Fa_ObjClass const* c)
-{
-    return Fa_Value::from_object(reinterpret_cast<Fa_ObjHeader*>(c));
-}
-static inline Fa_Value Fa_from_instance(Fa_ObjInstance const* i)
-{
-    return Fa_Value::from_object(reinterpret_cast<Fa_ObjHeader*>(i));
-}
-static inline Fa_Value Fa_from_file_handle(Fa_ObjFileHandle const* f)
-{
-    return Fa_Value::from_object(reinterpret_cast<Fa_ObjHeader*>(f));
-}
-
-/* ------- Truth macros  ------- */
-
-static inline bool Fa_is_nil(Fa_Value const v)
-{
-    return v.is_nil();
-}
-static inline bool Fa_is_bool(Fa_Value const v)
-{
-    return v.is_bool();
-}
-static inline bool Fa_is_int(Fa_Value const v)
-{
-    return v.is_int();
-}
-static inline bool Fa_is_obj(Fa_Value const v)
-{
-    return v.is_object();
-}
-static inline bool Fa_is_double(Fa_Value const v)
-{
-    return v.is_double();
-}
-static inline bool Fa_is_number(Fa_Value const v)
-{
-    return v.is_double() || v.is_int();
-}
-
-static inline bool Fa_is_string(Fa_Value const v)
-{
-    return v.is_object() && v.as_object()->type == Fa_ObjType::STRING;
-}
-static inline bool Fa_is_list(Fa_Value const v)
-{
-    return v.is_object() && v.as_object()->type == Fa_ObjType::LIST;
-}
-static inline bool Fa_is_dict(Fa_Value const v)
-{
-    return v.is_object() && v.as_object()->type == Fa_ObjType::DICT;
-}
-static inline bool Fa_is_function(Fa_Value const v)
-{
-    return v.is_object() && v.as_object()->type == Fa_ObjType::FUNCTION;
-}
-static inline bool Fa_is_native(Fa_Value const v)
-{
-    return v.is_object() && v.as_object()->type == Fa_ObjType::NATIVE;
-}
-static inline bool Fa_is_class(Fa_Value const v)
-{
-    return v.is_object() && v.as_object()->type == Fa_ObjType::CLASS;
-}
-static inline bool Fa_is_instance(Fa_Value const v)
-{
-    return v.is_object() && v.as_object()->type == Fa_ObjType::INSTANCE;
-}
-static inline bool Fa_is_file_handle(Fa_Value const v)
-{
-    return v.is_object() && v.as_object()->type == Fa_ObjType::FILE_HANDLE;
-}
-
-static inline bool Fa_is_truthy(Fa_Value const v)
-{
-    if (v.is_nil())
-        return false;
-    else if (v.is_bool())
-        return v.as_bool();
-    else if (v.is_int())
-        return v.as_int() != 0;
-    else if (v.is_object())
-        return true;
-    return v.as_double() != 0.0f;
-}
-
-/* -------- Casting macros -------- */
-
-static inline bool Fa_as_bool(Fa_Value const v) { return v.as_bool(); }
-static inline i64 Fa_as_int(Fa_Value const v) { return v.as_int(); }
-static inline f64 Fa_as_double(Fa_Value const v) { return v.as_double(); }
-static inline f64 Fa_as_double_any(Fa_Value const v)
-{
-    return v.is_int() ? static_cast<f64>(v.as_int()) : v.as_double();
-}
 
 [[nodiscard]] inline Fa_TypeTag value_type_tag(Fa_Value v) noexcept
 {

@@ -121,7 +121,7 @@ static inline Fa_Value str(char const* s) {
     Fa_ObjString* obj =  get_allocator().allocate_object<Fa_ObjString>();
     obj->str = s;
     obj->hash = std::hash<Fa_StringRef>()(obj->str);
-    return Fa_from_string(obj);
+    return Fa_Value::from_string(obj);
 }
 
 #endif // TEST_COMMON_H

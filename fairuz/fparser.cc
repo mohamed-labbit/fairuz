@@ -449,7 +449,8 @@ void push_member_once(Fa_Array<ExprPtr>& members, AST::Fa_NameExpr* name)
 
 void collect_this_field_assignment(Fa_Array<ExprPtr>& members, StmtPtr stmt)
 {
-    if (stmt == nullptr) return;
+    if (stmt == nullptr)
+        return;
 
     if (AST::is_block(stmt)) {
         for (auto* s : AS_BLOCK(stmt)->get_statements())

@@ -77,7 +77,7 @@ struct CB {
         auto p = std::make_unique<Fa_ObjString>();
         p->str = s;
         strs_.emplace_back(std::move(p));
-        return ch->add_constant(Fa_make_obj(reinterpret_cast<Fa_ObjHeader*>(strs_.back().get())));
+        return ch->add_constant(Fa_Value::from_obj(reinterpret_cast<Fa_ObjHeader*>(strs_.back().get())));
     }
 
     CB& ldg(u8 r, char const* name) { return ABx(Fa_OpCode::LOAD_GLOBAL, r, str(name)); }
@@ -107,7 +107,7 @@ struct CB {
         if (v >= -32767 && v <= 32768) {
             return load_int(r, static_cast<int>(v)); // fits in LOAD_INT
         } else {
-            u16 k = ch->add_constant(Fa_make_int(v));
+            u16 k = ch->add_constant(Fa_Value::from_int(v));
             return ABx(Fa_OpCode::LOAD_CONST, r, k); // spill to constant pool
         }
     }
@@ -163,7 +163,7 @@ TEST(VMLoads, Nil)
     b.regs(1).ABC(Fa_OpCode::LOAD_NIL, 0, 0, 1).ret(0);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_TRUE(Fa_is_nil(r.run(b)));
+    EXPECT_TRUE(r.run(b).is_nil());
 }
 
 TEST(VMLoads, NilFillsMultiple)
@@ -173,7 +173,7 @@ TEST(VMLoads, NilFillsMultiple)
     b.regs(3).ABC(Fa_OpCode::LOAD_NIL, 0, 0, 3).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_TRUE(Fa_is_nil(r.run(b)));
+    EXPECT_TRUE(r.run(b).is_nil());
 }
 
 TEST(VMLoads, True)
@@ -184,7 +184,7 @@ TEST(VMLoads, True)
     if (test_config::dump_bytecode)
         b.dump();
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_is_bool(v) && Fa_as_bool(v));
+    EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
 TEST(VMLoads, False)
@@ -195,7 +195,7 @@ TEST(VMLoads, False)
     if (test_config::dump_bytecode)
         b.dump();
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_is_bool(v) && !Fa_as_bool(v));
+    EXPECT_TRUE(v.is_bool() && !v.as_bool());
 }
 
 TEST(VMLoads, IntPositive)
@@ -204,8 +204,8 @@ TEST(VMLoads, IntPositive)
     CB b;
     b.regs(1).load_int(0, 42).ret(0);
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_is_int(v));
-    EXPECT_EQ(Fa_as_int(v), 42);
+    EXPECT_TRUE(v.is_int());
+    EXPECT_EQ(v.as_int(), 42);
 }
 
 TEST(VMLoads, IntZero)
@@ -216,8 +216,8 @@ TEST(VMLoads, IntZero)
     if (test_config::dump_bytecode)
         b.dump();
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_is_int(v));
-    EXPECT_EQ(Fa_as_int(v), 0);
+    EXPECT_TRUE(v.is_int());
+    EXPECT_EQ(v.as_int(), 0);
 }
 
 TEST(VMLoads, IntNegative)
@@ -228,8 +228,8 @@ TEST(VMLoads, IntNegative)
     if (test_config::dump_bytecode)
         b.dump();
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_is_int(v));
-    EXPECT_EQ(Fa_as_int(v), -100);
+    EXPECT_TRUE(v.is_int());
+    EXPECT_EQ(v.as_int(), -100);
 }
 
 TEST(VMLoads, IntMaxEncodable)
@@ -240,8 +240,8 @@ TEST(VMLoads, IntMaxEncodable)
     if (test_config::dump_bytecode)
         b.dump();
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_is_int(v));
-    EXPECT_EQ(Fa_as_int(v), 32768);
+    EXPECT_TRUE(v.is_int());
+    EXPECT_EQ(v.as_int(), 32768);
 }
 
 TEST(VMLoads, IntMinEncodable)
@@ -252,8 +252,8 @@ TEST(VMLoads, IntMinEncodable)
     if (test_config::dump_bytecode)
         b.dump();
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_is_int(v));
-    EXPECT_EQ(Fa_as_int(v), -32767);
+    EXPECT_TRUE(v.is_int());
+    EXPECT_EQ(v.as_int(), -32767);
 }
 
 TEST(VMLoads, ConstDouble)
@@ -261,13 +261,13 @@ TEST(VMLoads, ConstDouble)
     VMRunner r;
     CB b;
     b.regs(1);
-    u16 k = b.ch->add_constant(Fa_make_real(3.14));
+    u16 k = b.ch->add_constant(Fa_Value::from_real(3.14));
     b.ABx(Fa_OpCode::LOAD_CONST, 0, k).ret(0);
     if (test_config::dump_bytecode)
         b.dump();
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_is_double(v));
-    EXPECT_DOUBLE_EQ(Fa_as_double(v), 3.14);
+    EXPECT_TRUE(v.is_double());
+    EXPECT_DOUBLE_EQ(v.as_double(), 3.14);
 }
 
 TEST(VMLoads, ConstString)
@@ -280,8 +280,8 @@ TEST(VMLoads, ConstString)
     if (test_config::dump_bytecode)
         b.dump();
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_is_string(v));
-    EXPECT_EQ(Fa_as_string(v)->str, "hello");
+    EXPECT_TRUE(v.is_string());
+    EXPECT_EQ(v.as_string()->str, "hello");
 }
 
 TEST(VMLoads, ConstLargeInt)
@@ -289,13 +289,13 @@ TEST(VMLoads, ConstLargeInt)
     VMRunner r;
     CB b;
     b.regs(1);
-    u16 k = b.ch->add_constant(Fa_make_int(1000000LL));
+    u16 k = b.ch->add_constant(Fa_Value::from_int(1000000LL));
     b.ABx(Fa_OpCode::LOAD_CONST, 0, k).ret(0);
     if (test_config::dump_bytecode)
         b.dump();
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_is_int(v));
-    EXPECT_EQ(Fa_as_int(v), 1000000LL);
+    EXPECT_TRUE(v.is_int());
+    EXPECT_EQ(v.as_int(), 1000000LL);
 }
 
 TEST(VMLoads, ReturnNil)
@@ -303,7 +303,7 @@ TEST(VMLoads, ReturnNil)
     VMRunner r;
     CB b;
     b.regs(1).ret_nil();
-    EXPECT_TRUE(Fa_is_nil(r.run(b)));
+    EXPECT_TRUE(r.run(b).is_nil());
 }
 
 TEST(VMMove, Copies)
@@ -314,8 +314,8 @@ TEST(VMMove, Copies)
     if (test_config::dump_bytecode)
         b.dump();
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_is_int(v));
-    EXPECT_EQ(Fa_as_int(v), 77);
+    EXPECT_TRUE(v.is_int());
+    EXPECT_EQ(v.as_int(), 77);
 }
 
 TEST(VMMove, SourceUnchanged)
@@ -326,7 +326,7 @@ TEST(VMMove, SourceUnchanged)
     if (test_config::dump_bytecode)
         b.dump();
     Fa_Value v = r.run(b);
-    EXPECT_EQ(Fa_as_int(v), 55);
+    EXPECT_EQ(v.as_int(), 55);
 }
 
 TEST(VMArith, AddIntFastPath)
@@ -337,8 +337,8 @@ TEST(VMArith, AddIntFastPath)
     if (test_config::dump_bytecode)
         b.dump();
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_is_int(v));
-    EXPECT_EQ(Fa_as_int(v), 42);
+    EXPECT_TRUE(v.is_int());
+    EXPECT_EQ(v.as_int(), 42);
 }
 
 TEST(VMArith, AddDoubles)
@@ -346,14 +346,14 @@ TEST(VMArith, AddDoubles)
     VMRunner r;
     CB b;
     b.regs(3);
-    u16 k0 = b.ch->add_constant(Fa_make_real(1.5));
-    u16 k1 = b.ch->add_constant(Fa_make_real(2.5));
+    u16 k0 = b.ch->add_constant(Fa_Value::from_real(1.5));
+    u16 k1 = b.ch->add_constant(Fa_Value::from_real(2.5));
     b.ABx(Fa_OpCode::LOAD_CONST, 0, k0).ABx(Fa_OpCode::LOAD_CONST, 1, k1).ABC(Fa_OpCode::OP_ADD, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_is_double(v));
-    EXPECT_DOUBLE_EQ(Fa_as_double(v), 4.0);
+    EXPECT_TRUE(v.is_double());
+    EXPECT_DOUBLE_EQ(v.as_double(), 4.0);
 }
 
 TEST(VMArith, AddStringsConcat)
@@ -367,8 +367,8 @@ TEST(VMArith, AddStringsConcat)
     if (test_config::dump_bytecode)
         b.dump();
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_is_string(v));
-    EXPECT_EQ(Fa_as_string(v)->str, "foobar");
+    EXPECT_TRUE(v.is_string());
+    EXPECT_EQ(v.as_string()->str, "foobar");
 }
 
 TEST(VMArith, SubInt)
@@ -378,7 +378,7 @@ TEST(VMArith, SubInt)
     b.regs(3).load_int(0, 100).load_int(1, 58).ABC(Fa_OpCode::OP_SUB, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(Fa_as_int(r.run(b)), 42);
+    EXPECT_EQ(r.run(b).as_int(), 42);
 }
 
 TEST(VMArith, MulInt)
@@ -388,7 +388,7 @@ TEST(VMArith, MulInt)
     b.regs(3).load_int(0, 6).load_int(1, 7).ABC(Fa_OpCode::OP_MUL, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(Fa_as_int(r.run(b)), 42);
+    EXPECT_EQ(r.run(b).as_int(), 42);
 }
 
 TEST(VMArith, DivDouble)
@@ -396,12 +396,12 @@ TEST(VMArith, DivDouble)
     VMRunner r;
     CB b;
     b.regs(3);
-    u16 k0 = b.ch->add_constant(Fa_make_real(84.0));
-    u16 k1 = b.ch->add_constant(Fa_make_real(2.0));
+    u16 k0 = b.ch->add_constant(Fa_Value::from_real(84.0));
+    u16 k1 = b.ch->add_constant(Fa_Value::from_real(2.0));
     b.ABx(Fa_OpCode::LOAD_CONST, 0, k0).ABx(Fa_OpCode::LOAD_CONST, 1, k1).ABC(Fa_OpCode::OP_DIV, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_DOUBLE_EQ(Fa_as_double(r.run(b)), 42.0);
+    EXPECT_DOUBLE_EQ(r.run(b).as_double(), 42.0);
 }
 
 TEST(VMArith, ModPositive)
@@ -411,7 +411,7 @@ TEST(VMArith, ModPositive)
     b.regs(3).load_int(0, 17).load_int(1, 5).ABC(Fa_OpCode::OP_MOD, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_DOUBLE_EQ(Fa_as_double(r.run(b)), 2.0);
+    EXPECT_DOUBLE_EQ(r.run(b).as_double(), 2.0);
 }
 
 TEST(VMArith, Pow)
@@ -421,7 +421,7 @@ TEST(VMArith, Pow)
     b.regs(3).load_int(0, 2).load_int(1, 10).ABC(Fa_OpCode::OP_POW, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_DOUBLE_EQ(Fa_as_double(r.run(b)), 1024.0);
+    EXPECT_DOUBLE_EQ(r.run(b).as_double(), 1024.0);
 }
 
 TEST(VMArith, NegInt)
@@ -431,7 +431,7 @@ TEST(VMArith, NegInt)
     b.regs(2).load_int(0, 7).ABC(Fa_OpCode::OP_NEG, 1, 0, 0).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(Fa_as_int(r.run(b)), -7);
+    EXPECT_EQ(r.run(b).as_int(), -7);
 }
 
 TEST(VMArith, NegDouble)
@@ -439,11 +439,11 @@ TEST(VMArith, NegDouble)
     VMRunner r;
     CB b;
     b.regs(2);
-    u16 k = b.ch->add_constant(Fa_make_real(3.5));
+    u16 k = b.ch->add_constant(Fa_Value::from_real(3.5));
     b.ABx(Fa_OpCode::LOAD_CONST, 0, k).ABC(Fa_OpCode::OP_NEG, 1, 0, 0).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_DOUBLE_EQ(Fa_as_double(r.run(b)), -3.5);
+    EXPECT_DOUBLE_EQ(r.run(b).as_double(), -3.5);
 }
 
 TEST(VMArith, DivByZeroThrows)
@@ -451,8 +451,8 @@ TEST(VMArith, DivByZeroThrows)
     VMRunner r;
     CB b;
     b.regs(3);
-    u16 k0 = b.ch->add_constant(Fa_make_real(1.0));
-    u16 k1 = b.ch->add_constant(Fa_make_real(0.0));
+    u16 k0 = b.ch->add_constant(Fa_Value::from_real(1.0));
+    u16 k1 = b.ch->add_constant(Fa_Value::from_real(0.0));
     b.ABx(Fa_OpCode::LOAD_CONST, 0, k0).ABx(Fa_OpCode::LOAD_CONST, 1, k1).ABC(Fa_OpCode::OP_DIV, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
@@ -476,7 +476,7 @@ TEST(VMBitwise, And)
     b.regs(3).load_int(0, 0b1111).load_int(1, 0b1010).ABC(Fa_OpCode::OP_BITAND, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(Fa_as_int(r.run(b)), 0b1010);
+    EXPECT_EQ(r.run(b).as_int(), 0b1010);
 }
 
 TEST(VMBitwise, Or)
@@ -486,7 +486,7 @@ TEST(VMBitwise, Or)
     b.regs(3).load_int(0, 0b1100).load_int(1, 0b0011).ABC(Fa_OpCode::OP_BITOR, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(Fa_as_int(r.run(b)), 0b1111);
+    EXPECT_EQ(r.run(b).as_int(), 0b1111);
 }
 
 TEST(VMBitwise, Xor)
@@ -496,7 +496,7 @@ TEST(VMBitwise, Xor)
     b.regs(3).load_int(0, 0b1111).load_int(1, 0b0101).ABC(Fa_OpCode::OP_BITXOR, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(Fa_as_int(r.run(b)), 0b1010);
+    EXPECT_EQ(r.run(b).as_int(), 0b1010);
 }
 
 TEST(VMBitwise, Not)
@@ -506,7 +506,7 @@ TEST(VMBitwise, Not)
     b.regs(2).load_int(0, 0).ABC(Fa_OpCode::OP_BITNOT, 1, 0, 0).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(Fa_as_int(r.run(b)), ~i64(0));
+    EXPECT_EQ(r.run(b).as_int(), ~i64(0));
 }
 
 TEST(VMBitwise, Shl)
@@ -516,7 +516,7 @@ TEST(VMBitwise, Shl)
     b.regs(2).load_int(0, 1).ABC(Fa_OpCode::OP_LSHIFT, 1, 0, 8).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(Fa_as_int(r.run(b)), 256);
+    EXPECT_EQ(r.run(b).as_int(), 256);
 }
 
 TEST(VMBitwise, Shr)
@@ -526,7 +526,7 @@ TEST(VMBitwise, Shr)
     b.regs(2).load_int(0, 1024).ABC(Fa_OpCode::OP_RSHIFT, 1, 0, 3).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(Fa_as_int(r.run(b)), 128);
+    EXPECT_EQ(r.run(b).as_int(), 128);
 }
 
 TEST(VMBitwise, ShrLogical_NegativeInput)
@@ -537,8 +537,8 @@ TEST(VMBitwise, ShrLogical_NegativeInput)
     if (test_config::dump_bytecode)
         b.dump();
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_is_double(v));
-    EXPECT_GT(Fa_as_double(v), 0.0);
+    EXPECT_TRUE(v.is_double());
+    EXPECT_GT(v.as_double(), 0.0);
 }
 
 TEST(VMBitwise, AndOnDoubleThrows)
@@ -546,7 +546,7 @@ TEST(VMBitwise, AndOnDoubleThrows)
     VMRunner r;
     CB b;
     b.regs(3);
-    u16 k = b.ch->add_constant(Fa_make_real(1.0));
+    u16 k = b.ch->add_constant(Fa_Value::from_real(1.0));
     b.ABx(Fa_OpCode::LOAD_CONST, 0, k).load_int(1, 1).ABC(Fa_OpCode::OP_BITAND, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
@@ -561,7 +561,7 @@ TEST(VMCompare, EqIntsTrue)
     if (test_config::dump_bytecode)
         b.dump();
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_is_bool(v) && Fa_as_bool(v));
+    EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
 TEST(VMCompare, EqIntsFalse)
@@ -572,7 +572,7 @@ TEST(VMCompare, EqIntsFalse)
     if (test_config::dump_bytecode)
         b.dump();
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_is_bool(v) && !Fa_as_bool(v));
+    EXPECT_TRUE(v.is_bool() && !v.as_bool());
 }
 
 TEST(VMCompare, NeqTrue)
@@ -581,7 +581,7 @@ TEST(VMCompare, NeqTrue)
     CB b;
     b.regs(3).load_int(0, 5).load_int(1, 6).ABC(Fa_OpCode::OP_NEQ, 2, 0, 1).ret(2);
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_is_bool(v) && Fa_as_bool(v));
+    EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
 TEST(VMCompare, LtTrue)
@@ -592,7 +592,7 @@ TEST(VMCompare, LtTrue)
     if (test_config::dump_bytecode)
         b.dump();
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_is_bool(v) && Fa_as_bool(v));
+    EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
 TEST(VMCompare, LtFalseEqual)
@@ -603,7 +603,7 @@ TEST(VMCompare, LtFalseEqual)
     if (test_config::dump_bytecode)
         b.dump();
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_is_bool(v) && !Fa_as_bool(v));
+    EXPECT_TRUE(v.is_bool() && !v.as_bool());
 }
 
 TEST(VMCompare, LeTrue_Equal)
@@ -614,7 +614,7 @@ TEST(VMCompare, LeTrue_Equal)
     if (test_config::dump_bytecode)
         b.dump();
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_is_bool(v) && Fa_as_bool(v));
+    EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
 TEST(VMCompare, LeFalse)
@@ -625,7 +625,7 @@ TEST(VMCompare, LeFalse)
     if (test_config::dump_bytecode)
         b.dump();
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_is_bool(v) && !Fa_as_bool(v));
+    EXPECT_TRUE(v.is_bool() && !v.as_bool());
 }
 
 TEST(VMCompare, EqSameString)
@@ -639,7 +639,7 @@ TEST(VMCompare, EqSameString)
     if (test_config::dump_bytecode)
         b.dump();
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_is_bool(v) && Fa_as_bool(v));
+    EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
 TEST(VMCompare, NotFalseIsTrue)
@@ -650,7 +650,7 @@ TEST(VMCompare, NotFalseIsTrue)
     if (test_config::dump_bytecode)
         b.dump();
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_is_bool(v) && Fa_as_bool(v));
+    EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
 TEST(VMCompare, NotTrueIsFalse)
@@ -661,7 +661,7 @@ TEST(VMCompare, NotTrueIsFalse)
     if (test_config::dump_bytecode)
         b.dump();
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_is_bool(v) && !Fa_as_bool(v));
+    EXPECT_TRUE(v.is_bool() && !v.as_bool());
 }
 
 TEST(VMCompare, NotNilIsTrue)
@@ -672,7 +672,7 @@ TEST(VMCompare, NotNilIsTrue)
     if (test_config::dump_bytecode)
         b.dump();
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_is_bool(v) && Fa_as_bool(v));
+    EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
 TEST(VMCompare, NotZeroIsTrue)
@@ -683,7 +683,7 @@ TEST(VMCompare, NotZeroIsTrue)
     if (test_config::dump_bytecode)
         b.dump();
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_is_bool(v) && Fa_as_bool(v));
+    EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
 TEST(VMCompare, LtStrings)
@@ -697,7 +697,7 @@ TEST(VMCompare, LtStrings)
     if (test_config::dump_bytecode)
         b.dump();
     Fa_Value v = r.run(b);
-    EXPECT_TRUE(Fa_is_bool(v) && Fa_as_bool(v));
+    EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
 TEST(VMGlobals, StoreAndLoad)
@@ -707,7 +707,7 @@ TEST(VMGlobals, StoreAndLoad)
     b.regs(2).load_int(0, 123).stg(0, "g").load_int(0, 0).ldg(1, "g").ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(Fa_as_int(r.run(b)), 123);
+    EXPECT_EQ(r.run(b).as_int(), 123);
 }
 
 TEST(VMGlobals, MissingGlobalIsNil)
@@ -726,7 +726,7 @@ TEST(VMGlobals, Overwrite)
     b.regs(2).load_int(0, 1).stg(0, "x").load_int(0, 2).stg(0, "x").ldg(1, "x").ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(Fa_as_int(r.run(b)), 2);
+    EXPECT_EQ(r.run(b).as_int(), 2);
 }
 
 TEST(VMLists, NewEmpty)
@@ -736,7 +736,7 @@ TEST(VMLists, NewEmpty)
     b.regs(2).ABC(Fa_OpCode::LIST_NEW, 0, 0, 0).ABC(Fa_OpCode::LIST_LEN, 1, 0, 0).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(Fa_as_int(r.run(b)), 0);
+    EXPECT_EQ(r.run(b).as_int(), 0);
 }
 
 TEST(VMLists, AppendAndLen)
@@ -749,7 +749,7 @@ TEST(VMLists, AppendAndLen)
     b.ABC(Fa_OpCode::LIST_LEN, 1, 0, 0).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(Fa_as_int(r.run(b)), 3);
+    EXPECT_EQ(r.run(b).as_int(), 3);
 }
 
 TEST(VMLists, GetFirst)
@@ -767,7 +767,7 @@ TEST(VMLists, GetFirst)
         .ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(Fa_as_int(r.run(b)), 77);
+    EXPECT_EQ(r.run(b).as_int(), 77);
 }
 
 TEST(VMLists, GetLast)
@@ -785,7 +785,7 @@ TEST(VMLists, GetLast)
         .ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(Fa_as_int(r.run(b)), 20);
+    EXPECT_EQ(r.run(b).as_int(), 20);
 }
 
 TEST(VMLists, Set)
@@ -804,7 +804,7 @@ TEST(VMLists, Set)
         .ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(Fa_as_int(r.run(b)), 99);
+    EXPECT_EQ(r.run(b).as_int(), 99);
 }
 
 TEST(VMLists, OutOfBoundsThrows)
@@ -850,8 +850,8 @@ TEST(VMDicts, IndexReturnsStoredValue)
 
     Fa_Value result = r.run(ch);
 
-    ASSERT_TRUE(Fa_is_int(result));
-    EXPECT_EQ(Fa_as_int(result), 7);
+    ASSERT_TRUE(result.is_int());
+    EXPECT_EQ(result.as_int(), 7);
 }
 
 TEST(VMDicts, SetUpdatesAndAppendsByKey)
@@ -879,11 +879,11 @@ TEST(VMDicts, SetUpdatesAndAppendsByKey)
 
     VMRunner r;
     Fa_Value result = r.run(ch);
-    ASSERT_TRUE(Fa_is_list(result));
-    Fa_ObjList* ret_obj = Fa_as_list(result);
+    ASSERT_TRUE(result.is_list());
+    Fa_ObjList* ret_obj = result.as_list();
     ASSERT_EQ(ret_obj->size(), 2);
-    EXPECT_EQ(Fa_as_int(ret_obj->elements[0]), 1);
-    EXPECT_EQ(Fa_as_int(ret_obj->elements[1]), 2);
+    EXPECT_EQ(ret_obj->elements[0].as_int(), 1);
+    EXPECT_EQ(ret_obj->elements[1].as_int(), 2);
 }
 
 TEST(VMDicts, MissingKeyReturnsNil)
@@ -897,7 +897,7 @@ TEST(VMDicts, MissingKeyReturnsNil)
     if (ch != nullptr && test_config::dump_bytecode)
         ch->disassemble();
 
-    EXPECT_TRUE(Fa_is_nil(r.run(ch)));
+    EXPECT_TRUE(r.run(ch).is_nil());
 }
 
 static Fa_Chunk* make_adder_chunk()
@@ -927,7 +927,7 @@ TEST(VMCalls, CallClosure_TwoArgs)
     if (test_config::dump_bytecode)
         top->disassemble();
     VMRunner r;
-    EXPECT_EQ(Fa_as_int(r.run(top)), 7);
+    EXPECT_EQ(r.run(top).as_int(), 7);
 }
 
 TEST(VMCalls, WrongArgcThrows)
@@ -976,7 +976,7 @@ TEST(VMCalls, ICCallNativeLen)
         .ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(Fa_as_int(r.run(b)), 3);
+    EXPECT_EQ(r.run(b).as_int(), 3);
 }
 
 TEST(VMCalls, TailCall_DoesNotOverflowFrames)
@@ -1013,7 +1013,7 @@ TEST(VMCalls, TailCall_DoesNotOverflowFrames)
         top->disassemble();
     VMRunner r;
     Fa_Value v = r.run(std::move(top));
-    EXPECT_EQ(Fa_as_int(v), 0);
+    EXPECT_EQ(v.as_int(), 0);
 }
 
 TEST(VMCalls, StackOverflowDetected)
@@ -1083,11 +1083,11 @@ TEST(VMIntegration, FunctionLocalDeclarationShadowsGlobal)
         top->disassemble();
     VMRunner r;
     Fa_Value v = r.run(top);
-    ASSERT_TRUE(Fa_is_list(v));
-    auto const& elems = Fa_as_list(v)->elements;
+    ASSERT_TRUE(v.is_list());
+    auto const& elems = v.as_list()->elements;
     ASSERT_EQ(elems.size(), 2u);
-    EXPECT_EQ(Fa_as_int(elems[0]), 2);
-    EXPECT_EQ(Fa_as_int(elems[1]), 1);
+    EXPECT_EQ(elems[0].as_int(), 2);
+    EXPECT_EQ(elems[1].as_int(), 1);
 }
 
 #if FA_USE_NANBOX
@@ -1166,8 +1166,8 @@ TEST(VMIntegration, TopLevelWhileAssignmentUpdatesGlobal)
 
     VMRunner r;
     Fa_Value v = r.run(top);
-    ASSERT_TRUE(Fa_is_int(v));
-    EXPECT_EQ(Fa_as_int(v), 3);
+    ASSERT_TRUE(v.is_int());
+    EXPECT_EQ(v.as_int(), 3);
 }
 
 TEST(VMIntegration, Fibonacci_fib10_equals_55)
@@ -1202,7 +1202,7 @@ TEST(VMIntegration, Fibonacci_fib10_equals_55)
     if (test_config::dump_bytecode)
         top->disassemble();
     VMRunner r;
-    EXPECT_EQ(Fa_as_int(r.run(top)), 55);
+    EXPECT_EQ(r.run(top).as_int(), 55);
 }
 
 TEST(VMIntegration, SumForLoopOverList)
@@ -1235,7 +1235,7 @@ TEST(VMIntegration, SumForLoopOverList)
     if (test_config::dump_bytecode)
         top->disassemble();
     VMRunner r;
-    EXPECT_EQ(Fa_as_int(r.run(top)), 15);
+    EXPECT_EQ(r.run(top).as_int(), 15);
 }
 
 TEST(VMIntegration, StringConcat_3Parts)
@@ -1254,7 +1254,7 @@ TEST(VMIntegration, StringConcat_3Parts)
         top->disassemble();
     VMRunner r;
     Fa_Value v = r.run(top);
-    EXPECT_EQ(Fa_as_string(v)->str, "hello, world");
+    EXPECT_EQ(v.as_string()->str, "hello, world");
 }
 
 TEST(VMIntegration, EmptyForLoopLeavesStateUnchanged)
@@ -1275,7 +1275,7 @@ TEST(VMIntegration, EmptyForLoopLeavesStateUnchanged)
     if (test_config::dump_bytecode)
         top->disassemble();
     VMRunner r;
-    EXPECT_EQ(Fa_as_int(r.run(top)), 99);
+    EXPECT_EQ(r.run(top).as_int(), 99);
 }
 
 TEST(VMIntegration, BreakAndContinueWorkInLoops)
@@ -1308,82 +1308,82 @@ TEST(VMIntegration, BreakAndContinueWorkInLoops)
     if (test_config::dump_bytecode)
         top->disassemble();
     VMRunner r;
-    EXPECT_EQ(Fa_as_int(r.run(top)), 8);
+    EXPECT_EQ(r.run(top).as_int(), 8);
 }
 
 TEST(NativeLen, NullArgv)
 {
     Fa_VM vm;
-    EXPECT_TRUE(Fa_is_nil(vm.Fa_len(1, nullptr)));
+    EXPECT_TRUE(vm.Fa_len(1, nullptr).is_nil());
 }
 
 TEST(NativeLen, EmptyString)
 {
     Fa_VM vm;
     auto s = str("");
-    EXPECT_EQ(Fa_as_int(vm.Fa_len(1, &s)), 0);
+    EXPECT_EQ(vm.Fa_len(1, &s).as_int(), 0);
 }
 
 TEST(NativeLen, NonEmptyString)
 {
     Fa_VM vm;
     auto s = str("hello");
-    EXPECT_EQ(Fa_as_int(vm.Fa_len(1, &s)), 5);
+    EXPECT_EQ(vm.Fa_len(1, &s).as_int(), 5);
 }
 
 TEST(NativeLen, UnicodeString)
 {
     Fa_VM vm;
     auto s = str("abc");
-    EXPECT_EQ(Fa_as_int(vm.Fa_len(1, &s)), 3);
+    EXPECT_EQ(vm.Fa_len(1, &s).as_int(), 3);
 }
 
 TEST(NativePrint, NoArgs_PrintsNewline)
 {
     Fa_VM vm;
-    EXPECT_TRUE(Fa_is_nil(vm.Fa_print(0, nullptr)));
+    EXPECT_TRUE(vm.Fa_print(0, nullptr).is_nil());
 }
 
 TEST(NativePrint, StringArg)
 {
     Fa_VM vm;
     auto s = str("hello world");
-    EXPECT_TRUE(Fa_is_nil(vm.Fa_print(1, &s)));
+    EXPECT_TRUE(vm.Fa_print(1, &s).is_nil());
 }
 
 TEST(NativePrint, IntegerArg)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_int(42);
-    EXPECT_TRUE(Fa_is_nil(vm.Fa_print(1, &arg)));
+    Fa_Value arg = Fa_Value::from_int(42);
+    EXPECT_TRUE(vm.Fa_print(1, &arg).is_nil());
 }
 
 TEST(NativePrint, FloatArg)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_real(3.14);
-    EXPECT_TRUE(Fa_is_nil(vm.Fa_print(1, &arg)));
+    Fa_Value arg = Fa_Value::from_real(3.14);
+    EXPECT_TRUE(vm.Fa_print(1, &arg).is_nil());
 }
 
 TEST(NativePrint, BoolArg_True)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_bool(true);
-    EXPECT_TRUE(Fa_is_nil(vm.Fa_print(1, &arg)));
+    Fa_Value arg = Fa_Value::from_bool(true);
+    EXPECT_TRUE(vm.Fa_print(1, &arg).is_nil());
 }
 
 TEST(NativePrint, BoolArg_False)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_bool(false);
-    EXPECT_TRUE(Fa_is_nil(vm.Fa_print(1, &arg)));
+    Fa_Value arg = Fa_Value::from_bool(false);
+    EXPECT_TRUE(vm.Fa_print(1, &arg).is_nil());
 }
 
 TEST(NativePrint, NilArg)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_nil();
-    EXPECT_TRUE(Fa_is_nil(vm.Fa_print(1, &arg)));
+    Fa_Value arg = Fa_Value::nil();
+    EXPECT_TRUE(vm.Fa_print(1, &arg).is_nil());
 }
 
 TEST(NativePrint, TwoArgs_DoesNotCrash)
@@ -1391,71 +1391,71 @@ TEST(NativePrint, TwoArgs_DoesNotCrash)
     Fa_VM vm;
     auto s = str("a");
     Fa_Value m_args[] = { s, s };
-    EXPECT_TRUE(Fa_is_nil(vm.Fa_print(2, m_args)));
+    EXPECT_TRUE(vm.Fa_print(2, m_args).is_nil());
 }
 
 TEST(NativeStr, NoArgs_ReturnsEmpty)
 {
     Fa_VM vm;
-    EXPECT_TRUE(Fa_is_string(vm.Fa_str(0, nullptr)));
+    EXPECT_TRUE(vm.Fa_str(0, nullptr).is_string());
 }
 
 TEST(NativeStr, Integer)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_int(42);
+    Fa_Value arg = Fa_Value::from_int(42);
     Fa_Value r = vm.Fa_str(1, &arg);
-    ASSERT_TRUE(Fa_is_string(r));
-    EXPECT_EQ(std::string(Fa_as_string(r)->str.data()), "42");
+    ASSERT_TRUE(r.is_string());
+    EXPECT_EQ(std::string(r.as_string()->str.data()), "42");
 }
 
 TEST(NativeStr, NegativeInteger)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_int(-7);
+    Fa_Value arg = Fa_Value::from_int(-7);
     Fa_Value r = vm.Fa_str(1, &arg);
-    ASSERT_TRUE(Fa_is_string(r));
-    EXPECT_EQ(std::string(Fa_as_string(r)->str.data()), "-7");
+    ASSERT_TRUE(r.is_string());
+    EXPECT_EQ(std::string(r.as_string()->str.data()), "-7");
 }
 
 TEST(NativeStr, Zero)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_int(0);
+    Fa_Value arg = Fa_Value::from_int(0);
     Fa_Value r = vm.Fa_str(1, &arg);
-    ASSERT_TRUE(Fa_is_string(r));
-    EXPECT_EQ(std::string(Fa_as_string(r)->str.data()), "0");
+    ASSERT_TRUE(r.is_string());
+    EXPECT_EQ(std::string(r.as_string()->str.data()), "0");
 }
 
 TEST(NativeStr, BoolTrue)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_bool(true);
+    Fa_Value arg = Fa_Value::from_bool(true);
     Fa_Value r = vm.Fa_str(1, &arg);
-    ASSERT_TRUE(Fa_is_string(r));
-    EXPECT_EQ(std::string(Fa_as_string(r)->str.data()), "صحيح");
+    ASSERT_TRUE(r.is_string());
+    EXPECT_EQ(std::string(r.as_string()->str.data()), "صحيح");
 }
 
 TEST(NativeStr, BoolFalse)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_bool(false);
+    Fa_Value arg = Fa_Value::from_bool(false);
     Fa_Value r = vm.Fa_str(1, &arg);
-    ASSERT_TRUE(Fa_is_string(r));
-    EXPECT_EQ(std::string(Fa_as_string(r)->str.data()), "خطا");
+    ASSERT_TRUE(r.is_string());
+    EXPECT_EQ(std::string(r.as_string()->str.data()), "خطا");
 }
 
 TEST(NativeStr, Float)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_real(1.5);
+    Fa_Value arg = Fa_Value::from_real(1.5);
     Fa_Value r = vm.Fa_str(1, &arg);
-    ASSERT_TRUE(Fa_is_string(r));
-    char const* text_ptr = Fa_as_string(r)->str.data();
+    ASSERT_TRUE(r.is_string());
+    char const* text_ptr = r.as_string()->str.data();
     f64 parsed = 0.0;
-    auto [end_ptr, ec] = std::from_chars(text_ptr, text_ptr + Fa_as_string(r)->str.len(), parsed);
+    auto [end_ptr, ec] = std::from_chars(text_ptr, text_ptr + r.as_string()->str.len(), parsed);
     ASSERT_EQ(ec, std::errc());
-    ASSERT_EQ(end_ptr, text_ptr + Fa_as_string(r)->str.len());
+    ASSERT_EQ(end_ptr, text_ptr + r.as_string()->str.len());
     EXPECT_DOUBLE_EQ(parsed, 1.5);
 }
 
@@ -1464,53 +1464,53 @@ TEST(NativeStr, StringPassthrough)
     Fa_VM vm;
     Fa_Value s = str("hello");
     Fa_Value r = vm.Fa_str(1, &s);
-    ASSERT_TRUE(Fa_is_string(r));
-    EXPECT_EQ(std::string(Fa_as_string(r)->str.data()), "hello");
+    ASSERT_TRUE(r.is_string());
+    EXPECT_EQ(std::string(r.as_string()->str.data()), "hello");
 }
 
 TEST(NativeBool, TrueBoolean)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_bool(true);
+    Fa_Value arg = Fa_Value::from_bool(true);
     Fa_Value r = vm.Fa_bool(1, &arg);
-    ASSERT_TRUE(Fa_is_bool(r));
-    EXPECT_TRUE(Fa_as_bool(r));
+    ASSERT_TRUE(r.is_bool());
+    EXPECT_TRUE(r.as_bool());
 }
 
 TEST(NativeBool, FalseBoolean)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_bool(false);
+    Fa_Value arg = Fa_Value::from_bool(false);
     Fa_Value r = vm.Fa_bool(1, &arg);
-    ASSERT_TRUE(Fa_is_bool(r));
-    EXPECT_FALSE(Fa_as_bool(r));
+    ASSERT_TRUE(r.is_bool());
+    EXPECT_FALSE(r.as_bool());
 }
 
 TEST(NativeBool, NonZeroInteger_IsTrue)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_int(1);
+    Fa_Value arg = Fa_Value::from_int(1);
     Fa_Value r = vm.Fa_bool(1, &arg);
-    ASSERT_TRUE(Fa_is_bool(r));
-    EXPECT_TRUE(Fa_as_bool(r));
+    ASSERT_TRUE(r.is_bool());
+    EXPECT_TRUE(r.as_bool());
 }
 
 TEST(NativeBool, ZeroInteger_IsFalsy)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_int(0);
+    Fa_Value arg = Fa_Value::from_int(0);
     Fa_Value r = vm.Fa_bool(1, &arg);
-    ASSERT_TRUE(Fa_is_bool(r));
-    EXPECT_FALSE(Fa_as_bool(r));
+    ASSERT_TRUE(r.is_bool());
+    EXPECT_FALSE(r.as_bool());
 }
 
 TEST(NativeBool, NilArg)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_nil();
+    Fa_Value arg = Fa_Value::nil();
     Fa_Value r = vm.Fa_bool(1, &arg);
-    ASSERT_TRUE(Fa_is_bool(r));
-    EXPECT_FALSE(Fa_as_bool(r));
+    ASSERT_TRUE(r.is_bool());
+    EXPECT_FALSE(r.as_bool());
 }
 
 TEST(NativeBool, NonEmptyString_IsTrue)
@@ -1518,93 +1518,93 @@ TEST(NativeBool, NonEmptyString_IsTrue)
     Fa_VM vm;
     Fa_Value arg = str("hi");
     Fa_Value r = vm.Fa_bool(1, &arg);
-    ASSERT_TRUE(Fa_is_bool(r));
-    EXPECT_TRUE(Fa_as_bool(r));
+    ASSERT_TRUE(r.is_bool());
+    EXPECT_TRUE(r.as_bool());
 }
 
 TEST(NativeInt, IntegerPassthrough)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_int(7);
+    Fa_Value arg = Fa_Value::from_int(7);
     Fa_Value r = vm.Fa_int(1, &arg);
-    ASSERT_TRUE(Fa_is_int(r));
-    EXPECT_EQ(Fa_as_int(r), 7);
+    ASSERT_TRUE(r.is_int());
+    EXPECT_EQ(r.as_int(), 7);
 }
 
 TEST(NativeInt, FloatTruncates)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_real(3.9);
+    Fa_Value arg = Fa_Value::from_real(3.9);
     Fa_Value r = vm.Fa_int(1, &arg);
-    ASSERT_TRUE(Fa_is_int(r));
-    EXPECT_EQ(Fa_as_int(r), 3);
+    ASSERT_TRUE(r.is_int());
+    EXPECT_EQ(r.as_int(), 3);
 }
 
 TEST(NativeInt, NegativeFloat)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_real(-2.7);
+    Fa_Value arg = Fa_Value::from_real(-2.7);
     Fa_Value r = vm.Fa_int(1, &arg);
-    ASSERT_TRUE(Fa_is_int(r));
-    EXPECT_EQ(Fa_as_int(r), -2);
+    ASSERT_TRUE(r.is_int());
+    EXPECT_EQ(r.as_int(), -2);
 }
 
 TEST(NativeFloat, IntegerToFloat)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_int(3);
+    Fa_Value arg = Fa_Value::from_int(3);
     Fa_Value r = vm.Fa_float(1, &arg);
-    ASSERT_TRUE(Fa_is_double(r));
-    EXPECT_DOUBLE_EQ(Fa_as_double(r), 3.0);
+    ASSERT_TRUE(r.is_double());
+    EXPECT_DOUBLE_EQ(r.as_double(), 3.0);
 }
 
 TEST(NativeFloat, FloatPassthrough)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_real(2.5);
+    Fa_Value arg = Fa_Value::from_real(2.5);
     Fa_Value r = vm.Fa_float(1, &arg);
-    ASSERT_TRUE(Fa_is_double(r));
-    EXPECT_DOUBLE_EQ(Fa_as_double(r), 2.5);
+    ASSERT_TRUE(r.is_double());
+    EXPECT_DOUBLE_EQ(r.as_double(), 2.5);
 }
 
 TEST(NativeFloat, NegativeInteger)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_int(-10);
+    Fa_Value arg = Fa_Value::from_int(-10);
     Fa_Value r = vm.Fa_float(1, &arg);
-    ASSERT_TRUE(Fa_is_double(r));
-    EXPECT_DOUBLE_EQ(Fa_as_double(r), -10.0);
+    ASSERT_TRUE(r.is_double());
+    EXPECT_DOUBLE_EQ(r.as_double(), -10.0);
 }
 
 TEST(NativeType, ReturnsInteger)
 {
     Fa_VM vm;
-    Fa_Value i = Fa_make_int(0);
-    Fa_Value f = Fa_make_real(0.0);
-    Fa_Value b = Fa_make_bool(false);
-    Fa_Value n = Fa_make_nil();
+    Fa_Value i = Fa_Value::from_int(0);
+    Fa_Value f = Fa_Value::from_real(0.0);
+    Fa_Value b = Fa_Value::from_bool(false);
+    Fa_Value n = Fa_Value::nil();
     Fa_Value s = str("x");
 
-    EXPECT_EQ(Fa_as_string(vm.Fa_type(1, &i))->str, "طبيعي");
-    EXPECT_EQ(Fa_as_string(vm.Fa_type(1, &f))->str, "حقيقي");
-    EXPECT_EQ(Fa_as_string(vm.Fa_type(1, &b))->str, "منطقي");
-    EXPECT_EQ(Fa_as_string(vm.Fa_type(1, &n))->str, "عدم");
-    EXPECT_EQ(Fa_as_string(vm.Fa_type(1, &s))->str, "سلسلة");    
+    EXPECT_EQ(vm.Fa_type(1, &i).as_string()->str, "طبيعي");
+    EXPECT_EQ(vm.Fa_type(1, &f).as_string()->str, "حقيقي");
+    EXPECT_EQ(vm.Fa_type(1, &b).as_string()->str, "منطقي");
+    EXPECT_EQ(vm.Fa_type(1, &n).as_string()->str, "عدم");
+    EXPECT_EQ(vm.Fa_type(1, &s).as_string()->str, "سلسلة");
 }
 
 TEST(NativeType, DifferentTypesHaveDifferentTags)
 {
     Fa_VM vm;
-    Fa_Value i = Fa_make_int(0);
-    Fa_Value f = Fa_make_real(0.0);
-    Fa_Value b = Fa_make_bool(false);
-    Fa_Value n = Fa_make_nil();
+    Fa_Value i = Fa_Value::from_int(0);
+    Fa_Value f = Fa_Value::from_real(0.0);
+    Fa_Value b = Fa_Value::from_bool(false);
+    Fa_Value n = Fa_Value::nil();
     Fa_Value s = str("x");
-    i64 int_tag = Fa_as_int(vm.Fa_type(1, &i));
-    i64 flt_tag = Fa_as_int(vm.Fa_type(1, &f));
-    i64 bool_tag = Fa_as_int(vm.Fa_type(1, &b));
-    i64 nil_tag = Fa_as_int(vm.Fa_type(1, &n));
-    i64 str_tag = Fa_as_int(vm.Fa_type(1, &s));
+    i64 int_tag = vm.Fa_type(1, &i).as_int();
+    i64 flt_tag = vm.Fa_type(1, &f).as_int();
+    i64 bool_tag = vm.Fa_type(1, &b).as_int();
+    i64 nil_tag = vm.Fa_type(1, &n).as_int();
+    i64 str_tag = vm.Fa_type(1, &s).as_int();
 
     EXPECT_NE(int_tag, flt_tag);
     EXPECT_NE(int_tag, nil_tag);
@@ -1615,283 +1615,283 @@ TEST(NativeType, DifferentTypesHaveDifferentTags)
 TEST(NativeFloor, IntegerPassthrough)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_int(5);
+    Fa_Value arg = Fa_Value::from_int(5);
     Fa_Value r = vm.Fa_floor(1, &arg);
-    EXPECT_TRUE(Fa_is_int(r));
-    EXPECT_EQ(Fa_as_int(r), 5);
+    EXPECT_TRUE(r.is_int());
+    EXPECT_EQ(r.as_int(), 5);
 }
 
 TEST(NativeFloor, PositiveFloat)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_real(3.7);
+    Fa_Value arg = Fa_Value::from_real(3.7);
     Fa_Value r = vm.Fa_floor(1, &arg);
-    EXPECT_DOUBLE_EQ(Fa_as_double(r), 3.0);
+    EXPECT_DOUBLE_EQ(r.as_double(), 3.0);
 }
 
 TEST(NativeFloor, NegativeFloat)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_real(-2.3);
+    Fa_Value arg = Fa_Value::from_real(-2.3);
     Fa_Value r = vm.Fa_floor(1, &arg);
-    EXPECT_DOUBLE_EQ(Fa_as_double(r), -3.0);
+    EXPECT_DOUBLE_EQ(r.as_double(), -3.0);
 }
 
 TEST(NativeFloor, ExactFloat)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_real(4.0);
+    Fa_Value arg = Fa_Value::from_real(4.0);
     Fa_Value r = vm.Fa_floor(1, &arg);
-    EXPECT_DOUBLE_EQ(Fa_as_double(r), 4.0);
+    EXPECT_DOUBLE_EQ(r.as_double(), 4.0);
 }
 
 TEST(NativeCeil, IntegerPassthrough)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_int(5);
+    Fa_Value arg = Fa_Value::from_int(5);
     Fa_Value r = vm.Fa_ceil(1, &arg);
-    EXPECT_TRUE(Fa_is_int(r));
-    EXPECT_EQ(Fa_as_int(r), 5);
+    EXPECT_TRUE(r.is_int());
+    EXPECT_EQ(r.as_int(), 5);
 }
 
 TEST(NativeCeil, PositiveFloat)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_real(3.2);
+    Fa_Value arg = Fa_Value::from_real(3.2);
     Fa_Value r = vm.Fa_ceil(1, &arg);
-    EXPECT_DOUBLE_EQ(Fa_as_double(r), 4.0);
+    EXPECT_DOUBLE_EQ(r.as_double(), 4.0);
 }
 
 TEST(NativeCeil, NegativeFloat)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_real(-2.7);
+    Fa_Value arg = Fa_Value::from_real(-2.7);
     Fa_Value r = vm.Fa_ceil(1, &arg);
-    EXPECT_DOUBLE_EQ(Fa_as_double(r), -2.0);
+    EXPECT_DOUBLE_EQ(r.as_double(), -2.0);
 }
 
 TEST(NativeCeil, ExactFloat)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_real(4.0);
+    Fa_Value arg = Fa_Value::from_real(4.0);
     Fa_Value r = vm.Fa_ceil(1, &arg);
-    EXPECT_DOUBLE_EQ(Fa_as_double(r), 4.0);
+    EXPECT_DOUBLE_EQ(r.as_double(), 4.0);
 }
 
 TEST(NativeAbs, PositiveInteger)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_int(5);
+    Fa_Value arg = Fa_Value::from_int(5);
     Fa_Value r = vm.Fa_abs(1, &arg);
-    ASSERT_TRUE(Fa_is_int(r));
-    EXPECT_EQ(Fa_as_int(r), 5);
+    ASSERT_TRUE(r.is_int());
+    EXPECT_EQ(r.as_int(), 5);
 }
 
 TEST(NativeAbs, NegativeInteger)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_int(-5);
+    Fa_Value arg = Fa_Value::from_int(-5);
     Fa_Value r = vm.Fa_abs(1, &arg);
-    ASSERT_TRUE(Fa_is_int(r));
-    EXPECT_EQ(Fa_as_int(r), 5);
+    ASSERT_TRUE(r.is_int());
+    EXPECT_EQ(r.as_int(), 5);
 }
 
 TEST(NativeAbs, ZeroInteger)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_int(0);
+    Fa_Value arg = Fa_Value::from_int(0);
     Fa_Value r = vm.Fa_abs(1, &arg);
-    ASSERT_TRUE(Fa_is_int(r));
-    EXPECT_EQ(Fa_as_int(r), 0);
+    ASSERT_TRUE(r.is_int());
+    EXPECT_EQ(r.as_int(), 0);
 }
 
 TEST(NativeAbs, PositiveFloat)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_real(3.5);
+    Fa_Value arg = Fa_Value::from_real(3.5);
     Fa_Value r = vm.Fa_abs(1, &arg);
-    ASSERT_TRUE(Fa_is_double(r));
-    EXPECT_DOUBLE_EQ(Fa_as_double(r), 3.5);
+    ASSERT_TRUE(r.is_double());
+    EXPECT_DOUBLE_EQ(r.as_double(), 3.5);
 }
 
 TEST(NativeAbs, NegativeFloat)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_real(-3.5);
+    Fa_Value arg = Fa_Value::from_real(-3.5);
     Fa_Value r = vm.Fa_abs(1, &arg);
-    ASSERT_TRUE(Fa_is_double(r));
-    EXPECT_DOUBLE_EQ(Fa_as_double(r), 3.5);
+    ASSERT_TRUE(r.is_double());
+    EXPECT_DOUBLE_EQ(r.as_double(), 3.5);
 }
 
 TEST(NativeMin, OneArg_ReturnsArg)
 {
     Fa_VM vm;
     srand(static_cast<unsigned>(time(nullptr)));
-    Fa_Value n = Fa_make_int(static_cast<i64>(rand()));
+    Fa_Value n = Fa_Value::from_int(static_cast<i64>(rand()));
     Fa_Value result = vm.Fa_min(1, &n);
-    EXPECT_EQ(Fa_as_int(result), Fa_as_int(n));
+    EXPECT_EQ(result.as_int(), n.as_int());
 }
 
 TEST(NativeMin, TwoPositiveIntegers)
 {
     Fa_VM vm;
-    Fa_Value m_args[] = { Fa_make_int(3), Fa_make_int(7) };
+    Fa_Value m_args[] = { Fa_Value::from_int(3), Fa_Value::from_int(7) };
     Fa_Value r = vm.Fa_min(2, m_args);
-    EXPECT_EQ(Fa_as_int(r), 3);
+    EXPECT_EQ(r.as_int(), 3);
 }
 
 TEST(NativeMin, AllIntegersReturnsInteger)
 {
     Fa_VM vm;
-    Fa_Value m_args[] = { Fa_make_int(5), Fa_make_int(2), Fa_make_int(8) };
+    Fa_Value m_args[] = { Fa_Value::from_int(5), Fa_Value::from_int(2), Fa_Value::from_int(8) };
     Fa_Value r = vm.Fa_min(3, m_args);
-    EXPECT_TRUE(Fa_is_int(r));
-    EXPECT_EQ(Fa_as_int(r), 2);
+    EXPECT_TRUE(r.is_int());
+    EXPECT_EQ(r.as_int(), 2);
 }
 
 TEST(NativeMin, MixedFloatAndInteger_ReturnsFloat)
 {
     Fa_VM vm;
-    Fa_Value m_args[] = { Fa_make_int(3), Fa_make_real(1.5) };
+    Fa_Value m_args[] = { Fa_Value::from_int(3), Fa_Value::from_real(1.5) };
     Fa_Value r = vm.Fa_min(2, m_args);
-    EXPECT_TRUE(Fa_is_double(r));
-    EXPECT_DOUBLE_EQ(Fa_as_double(r), 1.5);
+    EXPECT_TRUE(r.is_double());
+    EXPECT_DOUBLE_EQ(r.as_double(), 1.5);
 }
 
 TEST(NativeMin, NegativeValues)
 {
     Fa_VM vm;
-    Fa_Value m_args[] = { Fa_make_int(-1), Fa_make_int(-5), Fa_make_int(-2) };
+    Fa_Value m_args[] = { Fa_Value::from_int(-1), Fa_Value::from_int(-5), Fa_Value::from_int(-2) };
     Fa_Value r = vm.Fa_min(3, m_args);
-    EXPECT_EQ(Fa_as_int(r), -5);
+    EXPECT_EQ(r.as_int(), -5);
 }
 
 TEST(NativeMax, OneArg_ReturnsArg)
 {
     Fa_VM vm;
     srand(static_cast<unsigned>(time(nullptr)));
-    Fa_Value n = Fa_make_int(static_cast<i64>(rand()));
+    Fa_Value n = Fa_Value::from_int(static_cast<i64>(rand()));
     Fa_Value result = vm.Fa_max(1, &n);
-    EXPECT_EQ(Fa_as_int(result), Fa_as_int(n));
+    EXPECT_EQ(result.as_int(), n.as_int());
 }
 
 TEST(NativeMax, TwoPositiveIntegers)
 {
     Fa_VM vm;
-    Fa_Value m_args[] = { Fa_make_int(3), Fa_make_int(7) };
+    Fa_Value m_args[] = { Fa_Value::from_int(3), Fa_Value::from_int(7) };
     Fa_Value r = vm.Fa_max(2, m_args);
-    EXPECT_EQ(Fa_as_int(r), 7);
+    EXPECT_EQ(r.as_int(), 7);
 }
 
 TEST(NativeMax, NegativeValues)
 {
     Fa_VM vm;
-    Fa_Value m_args[] = { Fa_make_int(-3), Fa_make_int(-1) };
+    Fa_Value m_args[] = { Fa_Value::from_int(-3), Fa_Value::from_int(-1) };
     Fa_Value r = vm.Fa_max(2, m_args);
-    EXPECT_EQ(Fa_as_int(r), -1);
+    EXPECT_EQ(r.as_int(), -1);
 }
 
 TEST(NativeMax, AllIntegersReturnsInteger)
 {
     Fa_VM vm;
-    Fa_Value m_args[] = { Fa_make_int(1), Fa_make_int(9), Fa_make_int(4) };
+    Fa_Value m_args[] = { Fa_Value::from_int(1), Fa_Value::from_int(9), Fa_Value::from_int(4) };
     Fa_Value r = vm.Fa_max(3, m_args);
-    EXPECT_TRUE(Fa_is_int(r));
-    EXPECT_EQ(Fa_as_int(r), 9);
+    EXPECT_TRUE(r.is_int());
+    EXPECT_EQ(r.as_int(), 9);
 }
 
 TEST(NativeMax, MixedFloatAndInteger)
 {
     Fa_VM vm;
-    Fa_Value m_args[] = { Fa_make_int(3), Fa_make_real(3.5) };
+    Fa_Value m_args[] = { Fa_Value::from_int(3), Fa_Value::from_real(3.5) };
     Fa_Value r = vm.Fa_max(2, m_args);
-    EXPECT_TRUE(Fa_is_double(r));
-    EXPECT_DOUBLE_EQ(Fa_as_double(r), 3.5);
+    EXPECT_TRUE(r.is_double());
+    EXPECT_DOUBLE_EQ(r.as_double(), 3.5);
 }
 
 TEST(NativeMax, StringFirstArg_ReturnsArg)
 {
     Fa_VM vm;
     Fa_Value m_args[] = { str("a"), str("b") };
-    EXPECT_EQ(Fa_as_string(vm.Fa_max(2, m_args))->str, "b");
+    EXPECT_EQ(vm.Fa_max(2, m_args).as_string()->str, "b");
 }
 
 TEST(NativeRound, HalfRoundsUp)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_real(2.5);
+    Fa_Value arg = Fa_Value::from_real(2.5);
     Fa_Value r = vm.Fa_round(1, &arg);
-    ASSERT_TRUE(Fa_is_double(r));
-    EXPECT_DOUBLE_EQ(Fa_as_double(r), 3.0);
+    ASSERT_TRUE(r.is_double());
+    EXPECT_DOUBLE_EQ(r.as_double(), 3.0);
 }
 
 TEST(NativeRound, HalfNegativeRoundsDown)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_real(-2.5);
+    Fa_Value arg = Fa_Value::from_real(-2.5);
     Fa_Value r = vm.Fa_round(1, &arg);
-    ASSERT_TRUE(Fa_is_double(r));
-    EXPECT_DOUBLE_EQ(Fa_as_double(r), -3.0);
+    ASSERT_TRUE(r.is_double());
+    EXPECT_DOUBLE_EQ(r.as_double(), -3.0);
 }
 
 TEST(NativeRound, IntegerPassthrough)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_int(4);
+    Fa_Value arg = Fa_Value::from_int(4);
     Fa_Value r = vm.Fa_round(1, &arg);
-    ASSERT_TRUE(Fa_is_int(r));
-    EXPECT_EQ(Fa_as_int(r), 4);
+    ASSERT_TRUE(r.is_int());
+    EXPECT_EQ(r.as_int(), 4);
 }
 
 TEST(NativePow, BasicSquare)
 {
     Fa_VM vm;
-    Fa_Value m_args[] = { Fa_make_real(3.0), Fa_make_real(2.0) };
+    Fa_Value m_args[] = { Fa_Value::from_real(3.0), Fa_Value::from_real(2.0) };
     Fa_Value r = vm.Fa_pow(2, m_args);
-    if (!Fa_is_nil(r))
-        EXPECT_DOUBLE_EQ(Fa_as_double(r), 9.0);
+    if (!r.is_nil())
+        EXPECT_DOUBLE_EQ(r.as_double(), 9.0);
 }
 
 TEST(NativePow, ZeroExponent)
 {
     Fa_VM vm;
-    Fa_Value m_args[] = { Fa_make_real(5.0), Fa_make_real(0.0) };
+    Fa_Value m_args[] = { Fa_Value::from_real(5.0), Fa_Value::from_real(0.0) };
     Fa_Value r = vm.Fa_pow(2, m_args);
-    if (!Fa_is_nil(r))
-        EXPECT_DOUBLE_EQ(Fa_as_double(r), 1.0);
+    if (!r.is_nil())
+        EXPECT_DOUBLE_EQ(r.as_double(), 1.0);
 }
 
 TEST(NativePow, NegativeExponent)
 {
     Fa_VM vm;
-    Fa_Value m_args[] = { Fa_make_real(2.0), Fa_make_real(-1.0) };
+    Fa_Value m_args[] = { Fa_Value::from_real(2.0), Fa_Value::from_real(-1.0) };
     Fa_Value r = vm.Fa_pow(2, m_args);
-    if (!Fa_is_nil(r))
-        EXPECT_DOUBLE_EQ(Fa_as_double(r), 0.5);
+    if (!r.is_nil())
+        EXPECT_DOUBLE_EQ(r.as_double(), 0.5);
 }
 
 TEST(NativeSqrt, PerfectSquare)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_real(9.0);
+    Fa_Value arg = Fa_Value::from_real(9.0);
     Fa_Value r = vm.Fa_sqrt(1, &arg);
-    ASSERT_TRUE(Fa_is_double(r));
-    EXPECT_DOUBLE_EQ(Fa_as_double(r), 3.0);
+    ASSERT_TRUE(r.is_double());
+    EXPECT_DOUBLE_EQ(r.as_double(), 3.0);
 }
 
 TEST(NativeSqrt, Zero)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_real(0.0);
+    Fa_Value arg = Fa_Value::from_real(0.0);
     Fa_Value r = vm.Fa_sqrt(1, &arg);
-    ASSERT_TRUE(Fa_is_double(r));
-    EXPECT_DOUBLE_EQ(Fa_as_double(r), 0.0);
+    ASSERT_TRUE(r.is_double());
+    EXPECT_DOUBLE_EQ(r.as_double(), 0.0);
 }
 
 TEST(NativeSqrt, NegativeInput_SpecBehavior)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_real(-1.0);
+    Fa_Value arg = Fa_Value::from_real(-1.0);
     EXPECT_NO_FATAL_FAILURE(vm.Fa_sqrt(1, &arg));
 }
 
@@ -1901,16 +1901,16 @@ TEST(NativeSplit, BasicSplit)
     Fa_Value m_args[] = { str("a,b,c"), str(",") };
     Fa_Value r = vm.Fa_split(2, m_args);
 
-    ASSERT_TRUE(Fa_is_list(r));
-    EXPECT_EQ(Fa_as_list(r)->elements.size(), 3u);
+    ASSERT_TRUE(r.is_list());
+    EXPECT_EQ(r.as_list()->elements.size(), 3u);
 
-    ASSERT_TRUE(Fa_is_string(Fa_as_list(r)->elements[0]));
-    ASSERT_TRUE(Fa_is_string(Fa_as_list(r)->elements[1]));
-    ASSERT_TRUE(Fa_is_string(Fa_as_list(r)->elements[2]));
+    ASSERT_TRUE(r.as_list()->elements[0].is_string());
+    ASSERT_TRUE(r.as_list()->elements[1].is_string());
+    ASSERT_TRUE(r.as_list()->elements[2].is_string());
 
-    EXPECT_EQ(std::string(Fa_as_string(Fa_as_list(r)->elements[0])->str.data()), "a");
-    EXPECT_EQ(std::string(Fa_as_string(Fa_as_list(r)->elements[1])->str.data()), "b");
-    EXPECT_EQ(std::string(Fa_as_string(Fa_as_list(r)->elements[2])->str.data()), "c");
+    EXPECT_EQ(std::string(r.as_list()->elements[0].as_string()->str.data()), "a");
+    EXPECT_EQ(std::string(r.as_list()->elements[1].as_string()->str.data()), "b");
+    EXPECT_EQ(std::string(r.as_list()->elements[2].as_string()->str.data()), "c");
 }
 
 TEST(NativeSplit, NoDelimiterFound)
@@ -1918,31 +1918,31 @@ TEST(NativeSplit, NoDelimiterFound)
     Fa_VM vm;
     Fa_Value m_args[] = { str("hello"), str(",") };
     Fa_Value r = vm.Fa_split(2, m_args);
-    ASSERT_TRUE(Fa_is_list(r));
-    EXPECT_EQ(Fa_as_list(r)->elements.size(), 1u);
-    ASSERT_TRUE(Fa_is_string(Fa_as_list(r)->elements[0]));
-    EXPECT_EQ(std::string(Fa_as_string(Fa_as_list(r)->elements[0])->str.data()), "hello");
+    ASSERT_TRUE(r.is_list());
+    EXPECT_EQ(r.as_list()->elements.size(), 1u);
+    ASSERT_TRUE(r.as_list()->elements[0].as_string());
+    EXPECT_EQ(std::string(r.as_list()->elements[0].as_string()->str.data()), "hello");
 }
 
 TEST(NativeSubstr, BasicSubstr)
 {
     Fa_VM vm; // substr is exclusive
-    Fa_Value m_args[] = { str("hello"), Fa_make_int(1), Fa_make_int(4) };
+    Fa_Value m_args[] = { str("hello"), Fa_Value::from_int(1), Fa_Value::from_int(4) };
     Fa_Value r = vm.Fa_substr(3, m_args);
-    if (!Fa_is_nil(r)) {
-        ASSERT_TRUE(Fa_is_string(r));
-        EXPECT_EQ(std::string(Fa_as_string(r)->str.data()), "ell");
+    if (!r.is_nil()) {
+        ASSERT_TRUE(r.is_string());
+        EXPECT_EQ(std::string(r.as_string()->str.data()), "ell");
     }
 }
 
 TEST(NativeSubstr, FromStart)
 {
     Fa_VM vm; // substr is exclusive
-    Fa_Value m_args[] = { str("hello"), Fa_make_int(0), Fa_make_int(3) };
+    Fa_Value m_args[] = { str("hello"), Fa_Value::from_int(0), Fa_Value::from_int(3) };
     Fa_Value r = vm.Fa_substr(3, m_args);
-    if (!Fa_is_nil(r)) {
-        ASSERT_TRUE(Fa_is_string(r));
-        EXPECT_EQ(std::string(Fa_as_string(r)->str.data()), "hel");
+    if (!r.is_nil()) {
+        ASSERT_TRUE(r.is_string());
+        EXPECT_EQ(std::string(r.as_string()->str.data()), "hel");
     }
 }
 
@@ -1951,8 +1951,8 @@ TEST(NativeContains, StringContains_True)
     Fa_VM vm;
     Fa_Value m_args[] = { str("hello world"), str("world") };
     Fa_Value r = vm.Fa_contains(2, m_args);
-    ASSERT_TRUE(Fa_is_bool(r));
-    EXPECT_TRUE(Fa_as_bool(r));
+    ASSERT_TRUE(r.is_bool());
+    EXPECT_TRUE(r.as_bool());
 }
 
 TEST(NativeContains, StringContains_False)
@@ -1960,8 +1960,8 @@ TEST(NativeContains, StringContains_False)
     Fa_VM vm;
     Fa_Value m_args[] = { str("hello"), str("xyz") };
     Fa_Value r = vm.Fa_contains(2, m_args);
-    ASSERT_TRUE(Fa_is_bool(r));
-    EXPECT_FALSE(Fa_as_bool(r));
+    ASSERT_TRUE(r.is_bool());
+    EXPECT_FALSE(r.as_bool());
 }
 
 TEST(NativeTrim, LeadingAndTrailingSpaces)
@@ -1969,8 +1969,8 @@ TEST(NativeTrim, LeadingAndTrailingSpaces)
     Fa_VM vm;
     Fa_Value arg = str("  hello  ");
     Fa_Value r = vm.Fa_trim(1, &arg);
-    ASSERT_TRUE(Fa_is_string(r));
-    EXPECT_EQ(std::string(Fa_as_string(r)->str.data()), "hello");
+    ASSERT_TRUE(r.is_string());
+    EXPECT_EQ(std::string(r.as_string()->str.data()), "hello");
 }
 
 TEST(NativeTrim, NoSpaces)
@@ -1978,8 +1978,8 @@ TEST(NativeTrim, NoSpaces)
     Fa_VM vm;
     Fa_Value arg = str("hello");
     Fa_Value r = vm.Fa_trim(1, &arg);
-    ASSERT_TRUE(Fa_is_string(r));
-    EXPECT_EQ(std::string(Fa_as_string(r)->str.data()), "hello");
+    ASSERT_TRUE(r.is_string());
+    EXPECT_EQ(std::string(r.as_string()->str.data()), "hello");
 }
 
 TEST(NativeTrim, OnlySpaces)
@@ -1987,28 +1987,28 @@ TEST(NativeTrim, OnlySpaces)
     Fa_VM vm;
     Fa_Value arg = str("   ");
     Fa_Value r = vm.Fa_trim(1, &arg);
-    ASSERT_TRUE(Fa_is_string(r));
-    EXPECT_EQ(std::string(Fa_as_string(r)->str.data()), "");
+    ASSERT_TRUE(r.is_string());
+    EXPECT_EQ(std::string(r.as_string()->str.data()), "");
 }
 
 TEST(NativeJoin, BasicJoin)
 {
     Fa_VM vm;
     Fa_Value list = vm.Fa_list(0, nullptr);
-    Fa_ObjList* l = Fa_as_list(list);
+    Fa_ObjList* l = list.as_list();
     l->elements.push(str("a"));
     l->elements.push(str("b"));
     l->elements.push(str("c"));
     Fa_Value m_args[] = { list, str("|") };
     Fa_Value r = vm.Fa_join(2, m_args);
-    ASSERT_TRUE(Fa_is_string(r));
-    EXPECT_EQ(std::string(Fa_as_string(r)->str.data()), "a|b|c");
+    ASSERT_TRUE(r.is_string());
+    EXPECT_EQ(std::string(r.as_string()->str.data()), "a|b|c");
 }
 
 TEST(NativeAssert, TrueCondition_DoesNotCrash)
 {
     Fa_VM vm;
-    Fa_Value arg = Fa_make_bool(true);
+    Fa_Value arg = Fa_Value::from_bool(true);
     EXPECT_NO_FATAL_FAILURE(vm.Fa_assert(1, &arg));
 }
 
@@ -2016,16 +2016,16 @@ TEST(NativeClock, ReturnsNumber_WhenImplemented)
 {
     Fa_VM vm;
     Fa_Value r = vm.Fa_clock(0, nullptr);
-    if (!Fa_is_nil(r))
-        EXPECT_TRUE(Fa_is_int(r));
+    if (!r.is_nil())
+        EXPECT_TRUE(r.is_int());
 }
 
 TEST(NativeTime, ReturnsNumber_WhenImplemented)
 {
     Fa_VM vm;
     Fa_Value r = vm.Fa_time(0, nullptr);
-    if (!Fa_is_nil(r))
-        EXPECT_TRUE(Fa_is_int(r));
+    if (!r.is_nil())
+        EXPECT_TRUE(r.is_int());
 }
 
 static f64 microseconds_since(std::chrono::high_resolution_clock::time_point t0)
@@ -2077,7 +2077,7 @@ TEST(VMPerfTest, Dispatch_IntAdd_1M_Iterations)
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
-    EXPECT_EQ(Fa_as_int(result), N);
+    EXPECT_EQ(result.as_int(), N);
     std::printf("  Dispatch IntAdd loop %dk iters:    %.1f µs  (%.2f ns/op)\n",
         N / 1000, us, us * 1000.0 / N);
 }
@@ -2113,7 +2113,7 @@ TEST(VMPerfTest, Dispatch_FloatAdd_500k_Iterations)
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
-    EXPECT_TRUE(Fa_is_double(result));
+    EXPECT_TRUE(result.is_double());
     std::printf("  Dispatch FloatAdd loop %dk iters:  %.1f µs  (%.2f ns/op)\n",
         N / 1000, us, us * 1000.0 / N);
 }
@@ -2156,8 +2156,8 @@ TEST(VMPerfTest, IC_Quickening_ColdVsWarm_Ratio)
 
     do_not_optimize(cold_result);
     do_not_optimize(warm_result);
-    EXPECT_EQ(Fa_as_int(cold_result), N);
-    EXPECT_EQ(Fa_as_int(warm_result), N);
+    EXPECT_EQ(cold_result.as_int(), N);
+    EXPECT_EQ(warm_result.as_int(), N);
 
     f64 ratio = cold_us / warm_us;
     std::printf("  IC quickening: cold=%.1f µs  warm=%.1f µs  speedup=%.2fx\n",
@@ -2228,7 +2228,7 @@ TEST(VMPerfTest, CallOverhead_100k_Calls)
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
-    EXPECT_EQ(Fa_as_int(result), N);
+    EXPECT_EQ(result.as_int(), N);
     std::printf("  Call overhead %dk calls:            %.1f µs  (%.2f ns/call)\n",
         N / 1000, us, us * 1000.0 / N);
 }
@@ -2282,8 +2282,8 @@ TEST(VMPerfTest, TailCall_vs_RegularLoop_Ratio)
 
     do_not_optimize(tc_result);
     do_not_optimize(loop_result);
-    EXPECT_EQ(Fa_as_int(tc_result), 0);
-    EXPECT_EQ(Fa_as_int(loop_result), 0);
+    EXPECT_EQ(tc_result.as_int(), 0);
+    EXPECT_EQ(loop_result.as_int(), 0);
 
     ::printf("  Tail-call %d depth:  tc=%.1f µs  loop=%.1f µs  ratio=%.2fx\n",
         DEPTH, tc_us, loop_us, tc_us / loop_us);
@@ -2334,7 +2334,7 @@ TEST(VMPerfTest, List_AppendAndSum_10k)
     do_not_optimize(result);
 
     constexpr i64 expected = static_cast<i64>(N) * (N - 1) / 2;
-    EXPECT_EQ(Fa_as_int(result), expected);
+    EXPECT_EQ(result.as_int(), expected);
     std::printf("  List append+sum N=%d:               %.1f µs\n", N, us);
 }
 
@@ -2375,7 +2375,7 @@ TEST(VMPerfTest, NativeCall_Len_50k_ICHot)
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
-    EXPECT_EQ(Fa_as_int(result), 11);
+    EXPECT_EQ(result.as_int(), 11);
     std::printf("  NativeCall len() IC hot %dk:        %.1f µs  (%.2f ns/call)\n",
         N / 1000, us, us * 1000.0 / N);
 }
@@ -2435,7 +2435,7 @@ TEST(VMPerfTest, Fib20_100reps)
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
-    EXPECT_EQ(Fa_as_int(result), 6765); // fib(20)
+    EXPECT_EQ(result.as_int(), 6765); // fib(20)
     ::printf("  fib(%d) × %d reps:                  %.1f µs  (%.1f µs/call)\n", FIB_N, REPS, us, us / REPS);
 }
 
@@ -2452,7 +2452,7 @@ TEST(VMPerfTest, Fib25_10reps)
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
-    EXPECT_EQ(Fa_as_int(result), 75025); // fib(25)
+    EXPECT_EQ(result.as_int(), 75025); // fib(25)
     ::printf("  fib(%d) × %d reps:                   %.1f µs  (%.1f µs/call)\n", FIB_N, REPS, us, us / REPS);
 }
 
@@ -2489,7 +2489,7 @@ TEST(VMPerfStressTest, Dispatch_IntAdd_10M_Iterations)
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
-    EXPECT_EQ(Fa_as_int(result), N);
+    EXPECT_EQ(result.as_int(), N);
     std::printf("  STRESS IntAdd loop %dM iters:       %.1f µs  (%.2f ns/op)\n",
         N / 1'000'000, us, us * 1000.0 / N);
 }
@@ -2522,7 +2522,7 @@ TEST(VMPerfStressTest, NativeCall_Len_1M_ICHot)
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
-    EXPECT_EQ(Fa_as_int(result), 11);
+    EXPECT_EQ(result.as_int(), 11);
     std::printf("  STRESS native len() %dM calls:      %.1f µs  (%.2f ns/call)\n",
         N / 1'000'000, us, us * 1000.0 / N);
 }
@@ -2567,7 +2567,7 @@ TEST(VMPerfStressTest, List_AppendAndSum_100k)
 
     constexpr i64 expected = static_cast<i64>(N) * (N - 1) / 2;
     do_not_optimize(result);
-    EXPECT_EQ(Fa_as_int(result), expected);
+    EXPECT_EQ(result.as_int(), expected);
     std::printf("  STRESS list append+sum N=%d:        %.1f µs\n", N, us);
 }
 
@@ -2585,7 +2585,7 @@ TEST(VMPerfStressTest, Fib28_20reps_Hot)
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
-    EXPECT_EQ(Fa_as_int(result), 317811);
+    EXPECT_EQ(result.as_int(), 317811);
     std::printf("  STRESS fib(%d) × %d reps hot:       %.1f µs  (%.1f µs/call)\n",
         FIB_N, REPS, us, us / REPS);
 }
@@ -2614,8 +2614,8 @@ TEST(VMClass, TestConstruction)
 
     VMRunner r;
     Fa_Value result = r.run(top);
-    ASSERT_TRUE(Fa_is_instance(result));
-    EXPECT_EQ(Fa_as_instance(result)->klass->name, "TestClass");
+    ASSERT_TRUE(result.is_instance());
+    EXPECT_EQ(result.as_instance()->klass->name, "TestClass");
 }
 
 TEST(VMClass, ClassDefinitionStoresRuntimeClass)
@@ -2642,9 +2642,9 @@ TEST(VMClass, ClassDefinitionStoresRuntimeClass)
 
     VMRunner r;
     Fa_Value point = r.run(top);
-    ASSERT_TRUE(Fa_is_class(point));
+    ASSERT_TRUE(point.is_class());
 
-    Fa_ObjClass* point_class = Fa_as_class(point);
+    Fa_ObjClass* point_class = point.as_class();
     EXPECT_EQ(point_class->name, "Point");
     ASSERT_EQ(point_class->field_names.size(), 2u);
     EXPECT_EQ(point_class->field_names[0], "x");
@@ -2678,9 +2678,9 @@ TEST(VMClass, ConstructorAcceptsArgumentsAndReturnsInstance)
 
     VMRunner r;
     Fa_Value result = r.run(top);
-    ASSERT_TRUE(Fa_is_instance(result));
-    EXPECT_EQ(Fa_as_instance(result)->klass->name, "Box");
-    EXPECT_EQ(Fa_as_instance(result)->fields.size(), 1);
+    ASSERT_TRUE(result.is_instance());
+    EXPECT_EQ(result.as_instance()->klass->name, "Box");
+    EXPECT_EQ(result.as_instance()->fields.size(), 1);
 }
 
 TEST(VMClass, ConstructorRejectsWrongArgumentCount)
@@ -2757,14 +2757,14 @@ TEST(VMClass, InstanceFieldsDefaultToNil)
     });
 
     VMRunner r;
-    Fa_Value result = Fa_make_nil();
+    Fa_Value result = Fa_Value::nil();
     ASSERT_NO_THROW(result = r.run(top));
-    ASSERT_TRUE(Fa_is_instance(result));
+    ASSERT_TRUE(result.is_instance());
 
-    Fa_ObjInstance* point = Fa_as_instance(result);
+    Fa_ObjInstance* point = result.as_instance();
     ASSERT_EQ(point->fields.size(), 2);
-    EXPECT_TRUE(Fa_is_nil(point->fields[0]));
-    EXPECT_TRUE(Fa_is_nil(point->fields[1]));
+    EXPECT_TRUE(point->fields[0].is_nil());
+    EXPECT_TRUE(point->fields[1].is_nil());
 }
 
 TEST(VMClass, ConstructorInitializesFieldsFromParameters)
@@ -2795,18 +2795,18 @@ TEST(VMClass, ConstructorInitializesFieldsFromParameters)
     Fa_Chunk* top = compile_program({ klass, test, expr_stmt(call_expr(name_expr("test"))) });
 
     VMRunner r;
-    Fa_Value result = Fa_make_nil();
+    Fa_Value result = Fa_Value::nil();
     ASSERT_NO_THROW(result = r.run(top));
-    ASSERT_TRUE(Fa_is_instance(result));
+    ASSERT_TRUE(result.is_instance());
 
-    Fa_ObjInstance* point = Fa_as_instance(result);
+    Fa_ObjInstance* point = result.as_instance();
     ASSERT_EQ(point->fields.size(), 2);
 
-    ASSERT_TRUE(Fa_is_int(point->fields[0]));
-    ASSERT_TRUE(Fa_is_int(point->fields[1]));
+    ASSERT_TRUE(point->fields[0].is_int());
+    ASSERT_TRUE(point->fields[1].is_int());
 
-    EXPECT_EQ(Fa_as_int(point->fields[0]), 3);
-    EXPECT_EQ(Fa_as_int(point->fields[1]), 4);
+    EXPECT_EQ(point->fields[0].as_int(), 3);
+    EXPECT_EQ(point->fields[1].as_int(), 4);
 }
 
 TEST(VMClass, FieldGetExpressionReadsInstanceField)
@@ -2837,10 +2837,10 @@ TEST(VMClass, FieldGetExpressionReadsInstanceField)
     });
 
     VMRunner r;
-    Fa_Value result = Fa_make_nil();
+    Fa_Value result = Fa_Value::nil();
     ASSERT_NO_THROW(result = r.run(top));
-    ASSERT_TRUE(Fa_is_int(result));
-    EXPECT_EQ(Fa_as_int(result), 12);
+    ASSERT_TRUE(result.is_int());
+    EXPECT_EQ(result.as_int(), 12);
 }
 
 TEST(VMClass, FieldAssignmentUpdatesInstanceField)
@@ -2865,10 +2865,10 @@ TEST(VMClass, FieldAssignmentUpdatesInstanceField)
     });
 
     VMRunner r;
-    Fa_Value result = Fa_make_nil();
+    Fa_Value result = Fa_Value::nil();
     ASSERT_NO_THROW(result = r.run(top));
-    ASSERT_TRUE(Fa_is_int(result));
-    EXPECT_EQ(Fa_as_int(result), 25);
+    ASSERT_TRUE(result.is_int());
+    EXPECT_EQ(result.as_int(), 25);
 }
 
 TEST(VMClass, MethodReceivesExplicitArguments)
@@ -2899,10 +2899,10 @@ TEST(VMClass, MethodReceivesExplicitArguments)
     });
 
     VMRunner r;
-    Fa_Value result = Fa_make_nil();
+    Fa_Value result = Fa_Value::nil();
     ASSERT_NO_THROW(result = r.run(top));
-    ASSERT_TRUE(Fa_is_int(result));
-    EXPECT_EQ(Fa_as_int(result), 7);
+    ASSERT_TRUE(result.is_int());
+    EXPECT_EQ(result.as_int(), 7);
 }
 
 TEST(VMClass, MethodReadsInstanceField)
@@ -2939,10 +2939,10 @@ TEST(VMClass, MethodReadsInstanceField)
     });
 
     VMRunner r;
-    Fa_Value result = Fa_make_nil();
+    Fa_Value result = Fa_Value::nil();
     ASSERT_NO_THROW(result = r.run(top));
-    ASSERT_TRUE(Fa_is_int(result));
-    EXPECT_EQ(Fa_as_int(result), 31);
+    ASSERT_TRUE(result.is_int());
+    EXPECT_EQ(result.as_int(), 31);
 }
 
 TEST(VMClass, MethodMutatesInstanceFieldAndPersists)
@@ -2991,10 +2991,10 @@ TEST(VMClass, MethodMutatesInstanceFieldAndPersists)
     top->disassemble();
 
     VMRunner r;
-    Fa_Value result = Fa_make_nil();
+    Fa_Value result = Fa_Value::nil();
     ASSERT_NO_THROW(result = r.run(top));
-    ASSERT_TRUE(Fa_is_int(result));
-    EXPECT_EQ(Fa_as_int(result), 2);
+    ASSERT_TRUE(result.is_int());
+    EXPECT_EQ(result.as_int(), 2);
 }
 
 TEST(VMClass, MultipleInstancesKeepIndependentFieldState)
@@ -3035,10 +3035,10 @@ TEST(VMClass, MultipleInstancesKeepIndependentFieldState)
     });
 
     VMRunner r;
-    Fa_Value result = Fa_make_nil();
+    Fa_Value result = Fa_Value::nil();
     ASSERT_NO_THROW(result = r.run(top));
-    ASSERT_TRUE(Fa_is_int(result));
-    EXPECT_EQ(Fa_as_int(result), 30);
+    ASSERT_TRUE(result.is_int());
+    EXPECT_EQ(result.as_int(), 30);
 }
 
 TEST(VMClass, MethodReturningNoValueReturnsSelf)
@@ -3064,10 +3064,10 @@ TEST(VMClass, MethodReturningNoValueReturnsSelf)
     });
 
     VMRunner r;
-    Fa_Value result = Fa_make_nil();
+    Fa_Value result = Fa_Value::nil();
     ASSERT_NO_THROW(result = r.run(top));
-    ASSERT_TRUE(Fa_is_instance(result));
-    EXPECT_EQ(Fa_as_instance(result)->klass->name, "Fluent");
+    ASSERT_TRUE(result.is_instance());
+    EXPECT_EQ(result.as_instance()->klass->name, "Fluent");
 }
 
 TEST(VMClass, MethodRejectsWrongArgumentCount)
@@ -3146,11 +3146,11 @@ TEST(VMClass, DuplicateFieldsAreDeduplicatedInDeclarationOrder)
     });
 
     VMRunner r;
-    Fa_Value result = Fa_make_nil();
+    Fa_Value result = Fa_Value::nil();
     ASSERT_NO_THROW(result = r.run(top));
-    ASSERT_TRUE(Fa_is_class(result));
+    ASSERT_TRUE(result.is_class());
 
-    Fa_ObjClass* klass_obj = Fa_as_class(result);
+    Fa_ObjClass* klass_obj = result.as_class();
     ASSERT_EQ(klass_obj->field_names.size(), 2u);
     EXPECT_EQ(klass_obj->field_names[0], "id");
     EXPECT_EQ(klass_obj->field_names[1], "name");
@@ -3179,11 +3179,11 @@ TEST(VMClass, MultipleMethodsAreStoredInRuntimeClass)
     });
 
     VMRunner r;
-    Fa_Value result = Fa_make_nil();
+    Fa_Value result = Fa_Value::nil();
     ASSERT_NO_THROW(result = r.run(top));
-    ASSERT_TRUE(Fa_is_class(result));
+    ASSERT_TRUE(result.is_class());
 
-    Fa_ObjClass* klass_obj = Fa_as_class(result);
+    Fa_ObjClass* klass_obj = result.as_class();
     EXPECT_GE(klass_obj->method_names.size(), static_cast<u32>(Fa_ObjClass::_COUNT + 2));
     EXPECT_GE(klass_obj->method_slot("first"), 0);
     EXPECT_GE(klass_obj->method_slot("second"), 0);
@@ -3218,8 +3218,8 @@ TEST(VMClass, AddSpecialMethodHandlesBinaryPlus)
     });
 
     VMRunner r;
-    Fa_Value result = Fa_make_nil();
+    Fa_Value result = Fa_Value::nil();
     ASSERT_NO_THROW(result = r.run(top));
-    ASSERT_TRUE(Fa_is_int(result));
-    EXPECT_EQ(Fa_as_int(result), 99);
+    ASSERT_TRUE(result.is_int());
+    EXPECT_EQ(result.as_int(), 99);
 }

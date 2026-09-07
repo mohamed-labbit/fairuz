@@ -62,8 +62,8 @@ TEST(Fa_Chunk, PatchJumpPreservesOpAndA)
 TEST(Fa_Chunk, AddConstantDeduplicatesIntegers)
 {
     Fa_Chunk c;
-    u16 i0 = c.add_constant(Fa_make_int(42));
-    u16 i1 = c.add_constant(Fa_make_int(42));
+    u16 i0 = c.add_constant(Fa_Value::from_int(42));
+    u16 i1 = c.add_constant(Fa_Value::from_int(42));
     EXPECT_EQ(i0, i1);
     EXPECT_EQ(c.constants.size(), 1u);
 }
@@ -71,8 +71,8 @@ TEST(Fa_Chunk, AddConstantDeduplicatesIntegers)
 TEST(Fa_Chunk, AddConstantDeduplicatesDoubles)
 {
     Fa_Chunk c;
-    u16 i0 = c.add_constant(Fa_make_real(3.14));
-    u16 i1 = c.add_constant(Fa_make_real(3.14));
+    u16 i0 = c.add_constant(Fa_Value::from_real(3.14));
+    u16 i1 = c.add_constant(Fa_Value::from_real(3.14));
     EXPECT_EQ(i0, i1);
     EXPECT_EQ(c.constants.size(), 1u);
 }
@@ -80,8 +80,8 @@ TEST(Fa_Chunk, AddConstantDeduplicatesDoubles)
 TEST(Fa_Chunk, AddConstantDeduplicatesNil)
 {
     Fa_Chunk c;
-    u16 i0 = c.add_constant(Fa_make_nil());
-    u16 i1 = c.add_constant(Fa_make_nil());
+    u16 i0 = c.add_constant(Fa_Value::nil());
+    u16 i1 = c.add_constant(Fa_Value::nil());
     EXPECT_EQ(i0, i1);
     EXPECT_EQ(c.constants.size(), 1u);
 }
@@ -89,8 +89,8 @@ TEST(Fa_Chunk, AddConstantDeduplicatesNil)
 TEST(Fa_Chunk, AddConstantDistinguishesDifferentValues)
 {
     Fa_Chunk c;
-    u16 i0 = c.add_constant(Fa_make_int(1));
-    u16 i1 = c.add_constant(Fa_make_int(2));
+    u16 i0 = c.add_constant(Fa_Value::from_int(1));
+    u16 i1 = c.add_constant(Fa_Value::from_int(2));
     EXPECT_NE(i0, i1);
     EXPECT_EQ(c.constants.size(), 2u);
 }
@@ -98,8 +98,8 @@ TEST(Fa_Chunk, AddConstantDistinguishesDifferentValues)
 TEST(Fa_Chunk, AddConstantIntAndDoubleNotDeduplicated)
 {
     Fa_Chunk c;
-    u16 i0 = c.add_constant(Fa_make_int(1));
-    u16 i1 = c.add_constant(Fa_make_real(1.0));
+    u16 i0 = c.add_constant(Fa_Value::from_int(1));
+    u16 i1 = c.add_constant(Fa_Value::from_real(1.0));
     EXPECT_NE(i0, i1);
     EXPECT_EQ(c.constants.size(), 2u);
 }
@@ -108,7 +108,7 @@ TEST(Fa_Chunk, AddConstantReturnSequentialIndices)
 {
     Fa_Chunk c;
     for (int i = 0; i < 10; i += 1) {
-        u16 idx = c.add_constant(Fa_make_int(i * 1000));
+        u16 idx = c.add_constant(Fa_Value::from_int(i * 1000));
         EXPECT_EQ(idx, static_cast<u16>(i));
     }
 }

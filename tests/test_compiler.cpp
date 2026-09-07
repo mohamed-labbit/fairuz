@@ -234,8 +234,8 @@ TEST(CompilerLiteral, LargeIntegerUsesConstantPool)
     BytecodeChecker bc(*chunk);
     bc.next("LOAD_CONST").op(Fa_OpCode::LOAD_CONST).A(0).Bx(0);
     ASSERT_FALSE(chunk->constants.empty());
-    EXPECT_TRUE(Fa_is_int(chunk->constants[0]));
-    EXPECT_EQ(Fa_as_int(chunk->constants[0]), 100000);
+    EXPECT_TRUE(chunk->constants[0].is_int());
+    EXPECT_EQ(chunk->constants[0].as_int(), 100000);
 }
 
 TEST(CompilerLiteral, FloatUsesConstantPool)
@@ -247,8 +247,8 @@ TEST(CompilerLiteral, FloatUsesConstantPool)
     BytecodeChecker bc(*chunk);
     bc.next("LOAD_CONST").op(Fa_OpCode::LOAD_CONST).A(0).Bx(0);
     ASSERT_FALSE(chunk->constants.empty());
-    EXPECT_TRUE(Fa_is_double(chunk->constants[0]));
-    EXPECT_NEAR(Fa_as_double(chunk->constants[0]), 3.14, 1e-9);
+    EXPECT_TRUE(chunk->constants[0].is_double());
+    EXPECT_NEAR(chunk->constants[0].as_double(), 3.14, 1e-9);
 }
 
 TEST(CompilerLiteral, StringUsesConstantPool)
@@ -260,8 +260,8 @@ TEST(CompilerLiteral, StringUsesConstantPool)
     BytecodeChecker bc(*chunk);
     bc.next("LOAD_CONST").op(Fa_OpCode::LOAD_CONST).A(0).Bx(0);
     ASSERT_FALSE(chunk->constants.empty());
-    EXPECT_TRUE(Fa_is_string(chunk->constants[0]));
-    EXPECT_EQ(Fa_as_string(chunk->constants[0])->str, "hello");
+    EXPECT_TRUE(chunk->constants[0].is_string());
+    EXPECT_EQ(chunk->constants[0].as_string()->str, "hello");
 }
 
 TEST(CompilerLiteral, StringsDeduplicated)
@@ -273,7 +273,7 @@ TEST(CompilerLiteral, StringsDeduplicated)
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
-    long string_constants = std::count_if(chunk->constants.begin(), chunk->constants.end(), [](Fa_Value const& v) { return Fa_is_string(v); });
+    long string_constants = std::count_if(chunk->constants.begin(), chunk->constants.end(), [](Fa_Value const& v) { return v.is_string(); });
     EXPECT_EQ(string_constants, 1);
 }
 
@@ -331,7 +331,7 @@ TEST(CompilerVar, GlobalLoadAndStore)
     bc.done();
     bool found = false;
     for (auto& v : chunk->constants) {
-        if (Fa_is_string(v) && Fa_as_string(v)->str == "g")
+        if (v.is_string() && v.as_string()->str == "g")
             found = true;
     }
     EXPECT_TRUE(found) << "global name_expr 'g' not interned into constant pool";
@@ -478,7 +478,7 @@ TEST(CompilerBinary, DivisionFolded)
     BytecodeChecker bc(*chunk);
     bc.next("LOAD_CONST 0.5").op(Fa_OpCode::LOAD_CONST).A(0).Bx(0);
     ASSERT_FALSE(chunk->constants.empty());
-    EXPECT_DOUBLE_EQ(Fa_as_double(chunk->constants[0]), 0.5);
+    EXPECT_DOUBLE_EQ(chunk->constants[0].as_double(), 0.5);
 }
 
 TEST(CompilerBinary, DivisionByZeroNotFolded)
@@ -699,7 +699,7 @@ TEST(CompilerIf, ConstantTrueConditionDCE)
     for (auto& ins : chunk->code)
         EXPECT_NE(Fa_instr_op(ins), Fa_OpCode::JUMP_IF_FALSE) << "JUMP_IF_FALSE should not exist when condition is const-true";
     for (auto& v : chunk->constants)
-        EXPECT_NE(Fa_as_int(v), 999);
+        EXPECT_NE(v.as_int(), 999);
 }
 
 TEST(CompilerIf, ConstantFalseConditionDCE)
@@ -864,12 +864,12 @@ TEST(CompilerDict, LiteralLowersToNativeConstructorCall)
     bc.done();
 
     ASSERT_EQ(chunk->constants.size(), 3u);
-    EXPECT_TRUE(Fa_is_string(chunk->constants[0]));
-    EXPECT_EQ(Fa_as_string(chunk->constants[0])->str, "قاموس");
-    EXPECT_TRUE(Fa_is_string(chunk->constants[1]));
-    EXPECT_EQ(Fa_as_string(chunk->constants[1])->str, "a");
-    EXPECT_TRUE(Fa_is_string(chunk->constants[2]));
-    EXPECT_EQ(Fa_as_string(chunk->constants[2])->str, "b");
+    EXPECT_TRUE(chunk->constants[0].is_string());
+    EXPECT_EQ(chunk->constants[0].as_string()->str, "قاموس");
+    EXPECT_TRUE(chunk->constants[1].is_string());
+    EXPECT_EQ(chunk->constants[1].as_string()->str, "a");
+    EXPECT_TRUE(chunk->constants[2].is_string());
+    EXPECT_EQ(chunk->constants[2].as_string()->str, "b");
 }
 
 // Regression test for a register-allocation bug in compile_dict_impl.
@@ -929,12 +929,12 @@ TEST(CompilerDict, NestedListValueKeepsLaterEntriesContiguous)
     bc.done();
 
     ASSERT_EQ(chunk->constants.size(), 3u);
-    EXPECT_TRUE(Fa_is_string(chunk->constants[0]));
-    EXPECT_EQ(Fa_as_string(chunk->constants[0])->str, "قاموس");
-    EXPECT_TRUE(Fa_is_string(chunk->constants[1]));
-    EXPECT_EQ(Fa_as_string(chunk->constants[1])->str, "a");
-    EXPECT_TRUE(Fa_is_string(chunk->constants[2]));
-    EXPECT_EQ(Fa_as_string(chunk->constants[2])->str, "b");
+    EXPECT_TRUE(chunk->constants[0].is_string());
+    EXPECT_EQ(chunk->constants[0].as_string()->str, "قاموس");
+    EXPECT_TRUE(chunk->constants[1].is_string());
+    EXPECT_EQ(chunk->constants[1].as_string()->str, "a");
+    EXPECT_TRUE(chunk->constants[2].is_string());
+    EXPECT_EQ(chunk->constants[2].as_string()->str, "b");
 }
 
 TEST(CompilerGet, MemberNameLowersToStringKeyIndex)
@@ -963,10 +963,10 @@ TEST(CompilerGet, MemberNameLowersToStringKeyIndex)
             continue;
 
         Fa_Value constant = chunk->constants[Fa_instr_Bx(ins)];
-        if (!Fa_is_string(constant))
+        if (!constant.is_string())
             continue;
 
-        Fa_StringRef text = Fa_as_string(constant)->str;
+        Fa_StringRef text = constant.as_string()->str;
         if (text == "field")
             has_member_key = true;
         if (text == "__class__")
@@ -1008,7 +1008,7 @@ TEST(CompilerReturn, ReturnIsDeadCodeBarrier)
     if (test_config::dump_bytecode)
         dump(chunk);
     for (auto& v : chunk->constants)
-        EXPECT_NE(Fa_as_int(v), 99) << "dead code leaked into constant pool";
+        EXPECT_NE(v.as_int(), 99) << "dead code leaked into constant pool";
     bool found_99 = false;
     for (auto& ins : chunk->code) {
         if (Fa_instr_op(ins) == Fa_OpCode::LOAD_INT && Fa_instr_Bx(ins) == load_int_bx(99))
@@ -1425,7 +1425,7 @@ TEST(CompilerIntegration, StringConstantPoolDedup)
         dump(chunk);
     int count = 0;
     for (auto& v : chunk->constants) {
-        if (Fa_is_string(v) && Fa_as_string(v)->str == "hello")
+        if (v.is_string() && v.as_string()->str == "hello")
             count += 1;
     }
     EXPECT_EQ(count, 1);

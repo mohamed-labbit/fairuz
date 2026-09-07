@@ -316,7 +316,7 @@ static constexpr char const* error_message_for(u16 code)
     case /*UNDEFINED_LOCAL =*/0x0409: return "Undefined local variable";
     case /*INDEX_OUT_OF_BOUNDS =*/0x040A: return "Index out of bounds";
     case /*INDEX_TYPE_ERROR =*/0x040B: return "Index must be an integer";
-    case /*INDEX_OBJECT_TYPE_ERROR =*/ 0x040D: return "Indexing into object which doesn't support index operator";
+    case /*INDEX_OBJECT_TYPE_ERROR =*/0x040D: return "Indexing into object which doesn't support index operator";
     case /*INVALID_OPCODE =*/0x040E: return "Invalid opcode in dispatch loop";
     case /*FRAME_OVERFLOW =*/0x040F: return "Call frame limit exceeded";
     case /*NEGATIVE_EXPONENT =*/0x0410: return "Integer exponentiation with negative exponent";

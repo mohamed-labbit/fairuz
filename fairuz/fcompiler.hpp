@@ -59,11 +59,14 @@ struct CompilerState {
 struct RegMark {
     CompilerState* state { nullptr };
     u8 mark { 0 };
-    size_t locals_mark { 0 };   // NEW: locals.size() at construction
+    size_t locals_mark { 0 }; // NEW: locals.size() at construction
 
     explicit RegMark(CompilerState* s)
-        : state(s), mark(s->next_reg), locals_mark(s->locals.size())
-    {}
+        : state(s)
+        , mark(s->next_reg)
+        , locals_mark(s->locals.size())
+    {
+    }
 
     ~RegMark()
     {

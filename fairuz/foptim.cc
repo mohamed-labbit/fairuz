@@ -75,13 +75,13 @@ std::optional<Fa_Value> const_value(AST::Fa_Expr const* e)
     auto lit = AS_CONST_LITERAL(e);
 
     if (lit->is_nil())
-        return Fa_make_nil();
+        return Fa_Value::nil();
     if (lit->is_bool())
-        return Fa_make_bool(lit->get_bool());
+        return Fa_Value::from_bool(lit->get_bool());
     if (lit->is_integer())
-        return Fa_make_int(lit->get_int());
+        return Fa_Value::from_int(lit->get_int());
     if (lit->is_float())
-        return Fa_make_real(lit->get_float());
+        return Fa_Value::from_real(lit->get_float());
 
     return std::nullopt;
 }
@@ -94,14 +94,14 @@ std::optional<Fa_Value> try_fold_unary(AST::Fa_UnaryExpr const* e)
 
     switch (e->get_operator()) {
     case AST::Fa_UnaryOp::OP_NEG:
-        if (Fa_is_int(*cv))
-            return Fa_is_int(*cv) ? Fa_make_int(-Fa_as_int(*cv)) : Fa_make_real(-Fa_as_double(*cv));
+        if (cv->is_int())
+            return cv->is_int() ? Fa_Value::from_int(-cv->as_int()) : Fa_Value::from_real(-cv->as_double());
         return std::nullopt;
     case AST::Fa_UnaryOp::OP_NOT:
-        return Fa_make_bool(!Fa_is_truthy(*cv));
+        return Fa_Value::from_bool(!cv->is_truthy());
     case AST::Fa_UnaryOp::OP_BITNOT:
-        if (Fa_is_int(*cv))
-            return Fa_make_int(~Fa_as_int(*cv));
+        if (cv->is_int())
+            return Fa_Value::from_int(~cv->as_int());
         return std::nullopt;
     default:
         return std::nullopt;
@@ -119,50 +119,50 @@ std::optional<Fa_Value> _try_fold_binary(AST::Fa_BinaryExpr const* e)
     AST::Fa_BinaryOp op = e->get_operator();
 
     if (op == AST::Fa_BinaryOp::OP_EQ)
-        return Fa_make_bool(*L == *R);
+        return Fa_Value::from_bool(*L == *R);
 
     if (op == AST::Fa_BinaryOp::OP_NEQ)
-        return Fa_make_bool(*L != *R);
+        return Fa_Value::from_bool(*L != *R);
 
-    bool both_ints = Fa_is_int(*L) && Fa_is_int(*R);
+    bool both_ints = L->is_int() && R->is_int();
 
-    f64 ld = Fa_as_double_any(*L);
-    f64 rd = Fa_as_double_any(*R);
+    f64 ld = L->as_double_any();
+    f64 rd = R->as_double_any();
 
-    auto li = Fa_is_int(*L) ? Fa_as_int(*L) : static_cast<i64>(Fa_as_double_any(*L));
-    auto ri = Fa_is_int(*R) ? Fa_as_int(*R) : static_cast<i64>(Fa_as_double_any(*R));
+    auto li = L->is_int() ? L->as_int() : static_cast<i64>(L->as_double_any());
+    auto ri = R->is_int() ? R->as_int() : static_cast<i64>(R->as_double_any());
 
     switch (op) {
-    case AST::Fa_BinaryOp::OP_ADD: return both_ints ? Fa_make_int(li + ri) : Fa_make_real(ld + rd);
-    case AST::Fa_BinaryOp::OP_SUB: return both_ints ? Fa_make_int(li - ri) : Fa_make_real(ld - rd);
-    case AST::Fa_BinaryOp::OP_MUL: return both_ints ? Fa_make_int(li * ri) : Fa_make_real(ld * rd);
+    case AST::Fa_BinaryOp::OP_ADD: return both_ints ? Fa_Value::from_int(li + ri) : Fa_Value::from_real(ld + rd);
+    case AST::Fa_BinaryOp::OP_SUB: return both_ints ? Fa_Value::from_int(li - ri) : Fa_Value::from_real(ld - rd);
+    case AST::Fa_BinaryOp::OP_MUL: return both_ints ? Fa_Value::from_int(li * ri) : Fa_Value::from_real(ld * rd);
     case AST::Fa_BinaryOp::OP_DIV:
         if (rd == 0.0)
             return std::nullopt;
-        return Fa_make_real(ld / rd);
+        return Fa_Value::from_real(ld / rd);
     case AST::Fa_BinaryOp::OP_MOD: {
         if (rd == 0.0)
             return std::nullopt;
         if (both_ints)
-            return Fa_make_int(li % ri);
-        return Fa_make_real(std::fmod(ld, rd));
+            return Fa_Value::from_int(li % ri);
+        return Fa_Value::from_real(std::fmod(ld, rd));
     }
-    case AST::Fa_BinaryOp::OP_POW: return Fa_make_real(std::pow(ld, rd));
-    case AST::Fa_BinaryOp::OP_LT: return Fa_make_bool(ld < rd);
-    case AST::Fa_BinaryOp::OP_GT: return Fa_make_bool(ld > rd);
-    case AST::Fa_BinaryOp::OP_LTE: return Fa_make_bool(ld <= rd);
-    case AST::Fa_BinaryOp::OP_GTE: return Fa_make_bool(ld >= rd);
-    case AST::Fa_BinaryOp::OP_BITAND: return both_ints ? Fa_make_int(li & ri) : std::optional<Fa_Value> { };
-    case AST::Fa_BinaryOp::OP_BITOR: return both_ints ? Fa_make_int(li | ri) : std::optional<Fa_Value> { };
-    case AST::Fa_BinaryOp::OP_BITXOR: return both_ints ? Fa_make_int(li ^ ri) : std::optional<Fa_Value> { };
+    case AST::Fa_BinaryOp::OP_POW: return Fa_Value::from_real(std::pow(ld, rd));
+    case AST::Fa_BinaryOp::OP_LT: return Fa_Value::from_bool(ld < rd);
+    case AST::Fa_BinaryOp::OP_GT: return Fa_Value::from_bool(ld > rd);
+    case AST::Fa_BinaryOp::OP_LTE: return Fa_Value::from_bool(ld <= rd);
+    case AST::Fa_BinaryOp::OP_GTE: return Fa_Value::from_bool(ld >= rd);
+    case AST::Fa_BinaryOp::OP_BITAND: return both_ints ? Fa_Value::from_int(li & ri) : std::optional<Fa_Value> { };
+    case AST::Fa_BinaryOp::OP_BITOR: return both_ints ? Fa_Value::from_int(li | ri) : std::optional<Fa_Value> { };
+    case AST::Fa_BinaryOp::OP_BITXOR: return both_ints ? Fa_Value::from_int(li ^ ri) : std::optional<Fa_Value> { };
     case AST::Fa_BinaryOp::OP_LSHIFT:
         if (!both_ints || ri < 0 || ri >= 64)
             return std::nullopt;
-        return Fa_make_int(li << ri);
+        return Fa_Value::from_int(li << ri);
     case AST::Fa_BinaryOp::OP_RSHIFT:
         if (!both_ints || ri < 0 || ri >= 64)
             return std::nullopt;
-        return Fa_make_int(li >> ri);
+        return Fa_Value::from_int(li >> ri);
     default:
         return std::nullopt;
     }
@@ -200,12 +200,12 @@ std::optional<Fa_Value> try_fold_binary(AST::Fa_BinaryExpr const* e)
     AST::Fa_BinaryExpr* ce = e->clone();
 
     auto make_literal_from_val = [](Fa_Value const v, Fa_SourceLocation loc) {
-        if (Fa_is_double(v))
-            return AST::Fa_make_literal_float(Fa_as_double(v), loc);
-        if (Fa_is_int(v))
-            return AST::Fa_make_literal_int(Fa_as_int(v), loc);
-        if (Fa_is_bool(v))
-            return AST::Fa_make_literal_bool(Fa_as_bool(v), loc);
+        if (v.is_double())
+            return AST::Fa_make_literal_float(v.as_double(), loc);
+        if (v.is_int())
+            return AST::Fa_make_literal_int(v.as_int(), loc);
+        if (v.is_bool())
+            return AST::Fa_make_literal_bool(v.as_bool(), loc);
 
         return AST::Fa_make_literal_nil(loc);
     };
