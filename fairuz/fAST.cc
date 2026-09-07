@@ -205,7 +205,7 @@ bool Fa_BlockStmt::equals(Fa_Stmt const* other) const
 
 bool Fa_IndexExpr::equals(Fa_Expr const* other) const
 {
-    if (other == nullptr || other->get_kind() != Kind::INDEX)
+    if (other == nullptr || other->get_kind() != Kind::INDEX_READ)
         return false;
 
     auto idx = static_cast<Fa_IndexExpr const*>(other);

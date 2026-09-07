@@ -74,7 +74,8 @@ namespace fairuz::runtime {
         &&H_RETURN_NIL,          \
         &&H_RETURN1,             \
         &&H_IC_CALL,             \
-        &&H_INDEX,               \
+        &&H_INDEX_READ,               \
+        &&H_INDEX_WRITE,\
         &&H_NEW_CLASS,           \
         &&H_NEW_INSTANCE,        \
         &&H_INVOKE,              \
@@ -789,9 +790,6 @@ Fa_Value Fa_VM::execute()
                 runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
 
             elems[static_cast<u32>(idx)] = new_val;
-        } else if (Fa_is_dict(object_v)) {
-            Fa_ObjDict* as_dict = Fa_as_dict(object_v);
-            as_dict->data[index_v] = new_val;
         } else {
             runtime_error(ErrorCode::TYPE_ERROR_CALL, "attempting set on a non list value");
         }
@@ -1004,7 +1002,7 @@ Fa_Value Fa_VM::execute()
         LOAD_FRAME();
         Fa_DISPATCH();
     }
-    Fa_CASE(INDEX)
+    Fa_CASE(INDEX_READ)
     {
         Fa_Value& res = Fa_RA();
         Fa_Value obj = Fa_RB();
@@ -1068,6 +1066,31 @@ Fa_Value Fa_VM::execute()
 
         Fa_DISPATCH();
     }
+    Fa_CASE(INDEX_WRITE)
+    {
+        Fa_Value& obj = Fa_RA();
+        Fa_Value idx = Fa_RB();
+        Fa_Value val = Fa_RC();
+
+        if (Fa_is_list(obj)) {
+            if (!Fa_is_int(idx))
+                runtime_error(ErrorCode::INDEX_TYPE_ERROR);
+            i64 idx_int = Fa_as_int(idx);
+            Fa_ObjList* list = Fa_as_list(obj);
+            if (idx_int >= list->size() || idx_int < 0)
+                runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
+            list->elements[Fa_as_int(idx)] = val;
+        } else if (Fa_is_dict(obj)) {
+            Fa_as_dict(obj)->data[idx] = val;
+        } else if (Fa_is_instance(obj)) {
+            /// TODO: go get the '[]' operator
+            runtime_error(ErrorCode::INDEX_OBJECT_TYPE_ERROR);
+        } else {
+            runtime_error(ErrorCode::INDEX_OBJECT_TYPE_ERROR);
+        }
+
+        Fa_DISPATCH();
+    }
     Fa_CASE(NEW_CLASS)
     {
         {
@@ -1120,13 +1143,7 @@ Fa_Value Fa_VM::execute()
         Fa_ObjInstance* inst = Fa_as_instance(self_val);
 
         if (UNLIKELY(slot >= inst->klass->vtable.size() || inst->klass->vtable[slot] == nullptr))
-        {
-            ::fprintf(stderr, "==> DEBUG: vtable size : %i\n", inst->klass->vtable.size());
-            int i = 0;
-            for (auto m : inst->klass->method_names)
-                ::fprintf(stderr, "==> DEBUG: method name [%i]: %s\n", i++, m.data());
             runtime_error(ErrorCode::TYPE_ERROR_CALL, "method slot is empty");
-        }
 
         invoke_method(inst->klass->vtable[slot], self_val, self_reg, cur_frame_base, argc, ip);
 

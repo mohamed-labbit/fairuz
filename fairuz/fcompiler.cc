@@ -550,8 +550,8 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
 
     // Map a method name to its reserved special slot, or -1 if it's an
     // ordinary user method. This is the single source of truth for the
-    // fixed-slot layout — both the vtable build and method_names/
-    // method_slot_map below must agree with it.
+    // fixed-slot layout — both the slot-resolution pass and the vtable
+    // build below must agree with it.
     auto special_slot_for = [](Fa_StringRef const& name) -> int {
         if (name == "بداية")
             return Fa_ObjClass::INIT;
@@ -586,9 +586,13 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
         return -1;
     };
 
-    // Pre-size the reserved region; ordinary methods are appended after it.
-    Fa_Array<Fa_Chunk*> vtable(static_cast<u32>(Fa_ObjClass::_COUNT), /* fill_v= */ nullptr);
+    // resolve every method's name -> vtable slot. No codegen
+    // happens here. This has to fully finish before any method body
+    // compiles: a method calling a sibling — forward, backward, or
+    // itself — needs the complete name/slot table to resolve through
+    // current_method_slot(), not just whatever happened to compile earlier.
     Fa_Array<Fa_StringRef> seen_names; // dedup guard across BOTH special and ordinary methods
+    Fa_Array<int> method_slots;        // parallel to `methods`: final vtable slot per method
 
     for (AST::Fa_Stmt* m : methods) {
         if (m->get_kind() != AST::Fa_Stmt::Kind::FUNC)
@@ -609,6 +613,25 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
             return report_error(CompilerError::INVALID_STATEMENT_NODE, method->get_location());
 
         seen_names.push(method_name);
+
+        int special = special_slot_for(method_name);
+        if (special >= 0) {
+            method_names[static_cast<u32>(special)] = method_name;
+            method_slots.push(special);
+        } else {
+            method_slots.push(static_cast<int>(method_names.size()));
+            method_names.push(method_name);
+        }
+    }
+
+    // compile bodies. `method_names` is complete now, and
+    // compile_method_closure captures it by reference, so every method
+    // body — including e.g. بداية calling a sibling declared later in the
+    // class — sees the full sibling table via current_method_slot(). ---
+    Fa_Array<Fa_Chunk*> vtable(static_cast<u32>(method_names.size()), /* fill_v= */ nullptr);
+
+    for (u32 i = 0, n = static_cast<u32>(methods.size()); i < n; i += 1) {
+        auto* method = AS_FUNCTION_DEF(methods[i]);
         auto result = compile_method_closure(method);
         Fa_VERIFY_RESULT(result);
         auto [reg, chunk] = result.value();
@@ -616,14 +639,7 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
         if (chunk == nullptr)
             continue;
 
-        int special = special_slot_for(method_name);
-        if (special >= 0) {
-            vtable[static_cast<u32>(special)] = chunk;
-            method_names[static_cast<u32>(special)] = method_name;
-        } else {
-            vtable.push(chunk);
-            method_names.push(method_name);
-        }
+        vtable[static_cast<u32>(method_slots[i])] = chunk;
     }
 
     // Build the descriptor from the same arrays already computed above.
@@ -640,7 +656,6 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
             vtable_indices.push(Fa_ClassDescriptor::NULL_SLOT);
             continue;
         }
-        // Find the index that compile_method_closure pushed this chunk at
         u32 fn_idx = UINT32_MAX;
         for (u32 j = 0; j < current_chunk()->functions.size(); ++j) {
             if (current_chunk()->functions[j] == vtable[i]) {
@@ -700,7 +715,7 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_expr_impl(AST::Fa_Expr* e)
     case AST::Fa_Expr::Kind::CALL: return compile_call_impl(AS_CALL(e), nullptr, false);
     case AST::Fa_Expr::Kind::LIST: return compile_list_impl(AS_LIST(e));
     case AST::Fa_Expr::Kind::DICT: return compile_dict_impl(AS_DICT(e));
-    case AST::Fa_Expr::Kind::INDEX: return compile_index_impl(AS_INDEX(e));
+    case AST::Fa_Expr::Kind::INDEX_READ: return compile_index_impl(AS_INDEX(e));
     case AST::Fa_Expr::Kind::GET: return compile_get_impl(AS_GET_EXPR(e));
     case AST::Fa_Expr::Kind::INVALID:
         return report_error(CompilerError::INVALID_EXPRESSION_NODE, e->get_location());
@@ -940,17 +955,18 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_assign_impl(AST::Fa_AssignmentExpr* 
     if (AST::is_index(target)) {
         auto index_expr = AS_INDEX(target);
         RegMark mark(m_current);
-        Fa_ExprResult list_expr_result, index_expr_result, value_expr_result;
-        u8 list_reg, index_reg, value_reg;
+        Fa_ExprResult object_expr_result, index_expr_result, value_expr_result;
+        u8 target_object_reg, index_reg, value_reg;
 
-        COMPILE_EXPR_IMPL(index_expr->get_object(), &list_expr_result);
-        ANY_REG(list_expr_result, loc, &list_reg);
+        COMPILE_EXPR_IMPL(index_expr->get_object(), &object_expr_result);
+        ANY_REG(object_expr_result, loc, &target_object_reg);
         COMPILE_EXPR_IMPL(index_expr->get_index(), &index_expr_result);
         ANY_REG(index_expr_result, loc, &index_reg);
         COMPILE_EXPR_IMPL(e->get_value(), &value_expr_result);
         ANY_REG(value_expr_result, loc, &value_reg);
 
-        emit(Fa_make_ABC(Fa_OpCode::LIST_SET, list_reg, index_reg, value_reg), loc);
+        emit(Fa_make_ABC(Fa_OpCode::INDEX_WRITE, target_object_reg, index_reg, value_reg), loc);
+
         return Fa_ExprResult::reg(value_reg);
     }
 
@@ -1177,7 +1193,7 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_call_impl(AST::Fa_CallExpr* e, u8* d
             discharge(expr_result, member_reg, get->get_member()->get_location());
         }
 
-        emit(Fa_make_ABC(Fa_OpCode::INDEX, fn_reg, receiver_reg, member_reg), loc);
+        emit(Fa_make_ABC(Fa_OpCode::INDEX_READ, fn_reg, receiver_reg, member_reg), loc);
         m_current->free_regs_to(receiver_reg + 1);
 
         for (AST::Fa_Expr* arg : e->get_args()) {
@@ -1271,7 +1287,7 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_index_impl(AST::Fa_IndexExpr* e)
     ANY_REG(object_expr_result, loc, &object_reg);
     COMPILE_EXPR_IMPL(e->get_index(), &index_expr_result);
     ANY_REG(index_expr_result, loc, &index_reg);
-    u32 pc = emit(Fa_make_ABC(Fa_OpCode::INDEX, 0, object_reg, index_reg), loc);
+    u32 pc = emit(Fa_make_ABC(Fa_OpCode::INDEX_READ, 0, object_reg, index_reg), loc);
     return Fa_ExprResult::reloc(pc);
 }
 
@@ -1373,7 +1389,7 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_get_impl(AST::Fa_GetExpr* e)
         discharge(expr_result, member_reg, e->get_member()->get_location());
     }
 
-    u32 pc = emit(Fa_make_ABC(Fa_OpCode::INDEX, 0, object_reg, member_reg), loc);
+    u32 pc = emit(Fa_make_ABC(Fa_OpCode::INDEX_READ, 0, object_reg, member_reg), loc);
     return Fa_ExprResult::reloc(pc);
 }
 

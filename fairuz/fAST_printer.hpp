@@ -138,7 +138,7 @@ private:
             break;
         }
 
-        case Fa_Expr::Kind::INDEX: {
+        case Fa_Expr::Kind::INDEX_READ: {
             auto ix = static_cast<Fa_IndexExpr const*>(e);
             std::cout << color("Index", Color::MAGENTA) << (ix->is_safe() ? " (safe)" : "") << "\n";
             std::cout << p.indent + pipe(p.last) << "├─ object:\n";

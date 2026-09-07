@@ -78,7 +78,8 @@ enum class Fa_OpCode : u8 {
 
     IC_CALL, // func reg, argc, slot index
 
-    INDEX,
+    INDEX_READ,
+    INDEX_WRITE,
 
     NEW_CLASS,
 
@@ -206,7 +207,8 @@ static inline Fa_StringRef Fa_opcode_name(Fa_OpCode op)
     case Fa_OpCode::RETURN_NIL: return "RETURN_NIL";
     case Fa_OpCode::RETURN1: return "RETURN1";
     case Fa_OpCode::IC_CALL: return "IC_CALL";
-    case Fa_OpCode::INDEX: return "INDEX";
+    case Fa_OpCode::INDEX_READ: return "INDEX_READ";
+    case Fa_OpCode::INDEX_WRITE: return "INDEX_WRITE";
     case Fa_OpCode::NEW_CLASS: return "NEW_CLASS";
     case Fa_OpCode::NEW_INSTANCE: return "NEW_INSTANCE";
     case Fa_OpCode::INVOKE: return "INVOKE";

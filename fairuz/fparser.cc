@@ -536,7 +536,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_method(Fa_Array<ExprPtr>& members)
             advance();
 
             // Desugar `.field` to a GET expression (instance.field), not an
-            // INDEX expression with a string key.  The compiler's fas
+            // INDEX_READ expression with a string key.  The compiler's fas
             // field-access path (compile_get_i / SET_FIELD) specifically looks
             // for Fa_GetExpr with a NAME member; an index form would silently
             // fall back to the slow dict-style path for every field access.
@@ -640,7 +640,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_assignment_expr()
         ExprPtr target = lhs;
         AST::Fa_Expr::Kind kind = target->get_kind();
 
-        if (kind != AST::Fa_Expr::Kind::NAME && kind != AST::Fa_Expr::Kind::INDEX && kind != AST::Fa_Expr::Kind::GET)
+        if (kind != AST::Fa_Expr::Kind::NAME && kind != AST::Fa_Expr::Kind::INDEX_READ && kind != AST::Fa_Expr::Kind::GET)
             return report_error(ParserCode::INVALID_ASSIGN_TARGET);
 
         if (is_augmented_assign_tok(current_token())) {

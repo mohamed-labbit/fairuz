@@ -151,7 +151,7 @@ public:
         CALL,
         ASSIGNMENT,
         LIST,
-        INDEX,
+        INDEX_READ,
         DICT,
         GET,
         INVALID,
@@ -488,7 +488,7 @@ private:
 
 public:
     Fa_IndexExpr(Fa_Expr* obj, Fa_Expr* idx, Fa_SourceLocation loc)
-        : Fa_Expr(loc, Kind::INDEX)
+        : Fa_Expr(loc, Kind::INDEX_READ)
         , m_object(obj)
         , m_index(idx)
     {
@@ -1028,7 +1028,7 @@ static inline bool is_binary(Fa_Expr const* e) { return e->get_kind() == Fa_Expr
 static inline bool is_unary(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::UNARY; }
 static inline bool is_literal(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::LITERAL; }
 static inline bool is_name(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::NAME; }
-static inline bool is_index(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::INDEX; }
+static inline bool is_index(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::INDEX_READ; }
 static inline bool is_dict(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::DICT; }
 static inline bool is_list(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::LIST; }
 static inline bool is_call(Fa_Expr const* e) { return e->get_kind() == Fa_Expr::Kind::CALL; }

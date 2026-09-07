@@ -187,7 +187,7 @@ Fa_StringRef Fa_Formatter::format(Fa_Array<AST::Fa_Stmt*> const& stmts)
     return m_formatted;
 }
 
-// [BUG 2 FIX] Was checking Kind::INDEX, which the parser never produces for
+// [BUG 2 FIX] Was checking Kind::INDEX_READ, which the parser never produces for
 // `.field` — it produces GET (see parse_class_method's comment about the
 // compiler's fast field-access path). Check GET against the synthetic
 // instance name instead.
@@ -219,8 +219,8 @@ int Fa_Formatter::precedence(AST::Fa_Expr const* expr) const
     case AST::Fa_Expr::Kind::UNARY:
         return kPrecUnary;
     case AST::Fa_Expr::Kind::CALL:
-    case AST::Fa_Expr::Kind::INDEX:
-    case AST::Fa_Expr::Kind::GET: // [BUG 3 FIX] GET is a postfix form too — same precedence as CALL/INDEX.
+    case AST::Fa_Expr::Kind::INDEX_READ:
+    case AST::Fa_Expr::Kind::GET: // [BUG 3 FIX] GET is a postfix form too — same precedence as CALL/INDEX_READ.
         return kPrecPostfix;
     case AST::Fa_Expr::Kind::LITERAL:
     case AST::Fa_Expr::Kind::NAME:
@@ -378,7 +378,7 @@ void Fa_Formatter::format_expression(AST::Fa_Expr const* expr, int parent_preced
         format_expression(get_expr->get_member(), -1, false);
         break;
     }
-    case AST::Fa_Expr::Kind::INDEX: {
+    case AST::Fa_Expr::Kind::INDEX_READ: {
         auto const* index_expr = AS_CONST_INDEX(expr);
         format_expression(index_expr->get_object(), current_precedence, false);
         write('[');

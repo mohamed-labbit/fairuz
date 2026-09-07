@@ -845,6 +845,8 @@ TEST(VMDicts, IndexReturnsStoredValue)
                 })),
             expr_stmt(call_expr(name_expr("func"))),
         });
+    if (test_config::dump_bytecode)
+        ch->disassemble();
 
     Fa_Value result = r.run(ch);
 

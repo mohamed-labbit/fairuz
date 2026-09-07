@@ -142,14 +142,15 @@ enum class Code : u16 {
     UNDEFINED_LOCAL = 0x0409,
     INDEX_OUT_OF_BOUNDS = 0x040A,
     INDEX_TYPE_ERROR = 0x040B,
-    INVALID_OPCODE = 0x040D,
-    FRAME_OVERFLOW = 0x040E,
-    NEGATIVE_EXPONENT = 0x040F,
-    NON_FUNCTION_CALL = 0x0410,
-    NATIVE_ARG_COUNT = 0x0411,
-    NATIVE_TYPE_ERROR = 0x0412,
-    ASSERTION_FAILED = 0x0413,
-    UNDEFINED_METHOD = 0x0414,
+    INDEX_OBJECT_TYPE_ERROR = 0x040D,
+    INVALID_OPCODE = 0x040E,
+    FRAME_OVERFLOW = 0x040F,
+    NEGATIVE_EXPONENT = 0x0410,
+    NON_FUNCTION_CALL = 0x0411,
+    NATIVE_ARG_COUNT = 0x0412,
+    NATIVE_TYPE_ERROR = 0x0413,
+    ASSERTION_FAILED = 0x0414,
+    UNDEFINED_METHOD = 0x0415,
 }; // enum Code
 
 } // namespace runtime
@@ -313,14 +314,15 @@ static constexpr char const* error_message_for(u16 code)
     case /*WRONG_ARG_COUNT =*/0x0407: return "Wrong number of arguments";
     case /*UNDEFINED_GLOBAL =*/0x0408: return "Undefined global variable";
     case /*UNDEFINED_LOCAL =*/0x0409: return "Undefined local variable";
-    case /*INDEX_OUT_OF_BOUNDS =*/0x040A: return "List index out of bounds";
-    case /*INDEX_TYPE_ERROR =*/0x040B: return "List index must be an integer";
-    case /*INVALID_OPCODE =*/0x040D: return "Invalid opcode in dispatch loop";
-    case /*FRAME_OVERFLOW =*/0x040E: return "Call frame limit exceeded";
-    case /*NEGATIVE_EXPONENT =*/0x040F: return "Integer exponentiation with negative exponent";
-    case /*NON_FUNCTION_CALL =*/0x0410: return "Attempted to call a non-function value";
-    case /*NATIVE_ARG_COUNT =*/0x0411: return "Native call received the wrong number of arguments";
-    case /*NATIVE_TYPE_ERROR =*/0x0412: return "Native call received arguments of the wrong type";
+    case /*INDEX_OUT_OF_BOUNDS =*/0x040A: return "Index out of bounds";
+    case /*INDEX_TYPE_ERROR =*/0x040B: return "Index must be an integer";
+    case /*INDEX_OBJECT_TYPE_ERROR =*/ 0x040D: return "Indexing into object which doesn't support index operator";
+    case /*INVALID_OPCODE =*/0x040E: return "Invalid opcode in dispatch loop";
+    case /*FRAME_OVERFLOW =*/0x040F: return "Call frame limit exceeded";
+    case /*NEGATIVE_EXPONENT =*/0x0410: return "Integer exponentiation with negative exponent";
+    case /*NON_FUNCTION_CALL =*/0x0411: return "Attempted to call a non-function value";
+    case /*NATIVE_ARG_COUNT =*/0x0412: return "Native call received the wrong number of arguments";
+    case /*NATIVE_TYPE_ERROR =*/0x0413: return "Native call received arguments of the wrong type";
     case /*UNDEFINED_METHOD =*/0x0414: return "Call to undefined method";
     // stdlib
     case /*APPEND_ARG_COUNT =*/0x0500: return "append() expects at least two arguments";

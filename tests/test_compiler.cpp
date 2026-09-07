@@ -956,7 +956,7 @@ TEST(CompilerGet, MemberNameLowersToStringKeyIndex)
 
     for (u32 ins : chunk->code) {
         Fa_OpCode op = Fa_instr_op(ins);
-        if (op == Fa_OpCode::INDEX)
+        if (op == Fa_OpCode::INDEX_READ)
             has_index = true;
 
         if (op != Fa_OpCode::LOAD_CONST && op != Fa_OpCode::LOAD_GLOBAL)
