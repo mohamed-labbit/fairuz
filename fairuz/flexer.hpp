@@ -10,7 +10,9 @@
 
 namespace fairuz {
 
-static inline tok::Fa_Token const* Fa_make_token(tok::Fa_TokenType tt, Fa_StringRef lexeme, Fa_SourceLocation loc)
+using TokenPtr = tok::Fa_Token const*;
+
+static inline TokenPtr Fa_make_token(tok::Fa_TokenType tt, Fa_StringRef lexeme, Fa_SourceLocation loc)
 {
     return get_allocator().allocate_object<tok::Fa_Token>(lexeme, tt, loc);
 }
@@ -19,41 +21,7 @@ static inline tok::Fa_Token const* Fa_make_token(tok::Fa_TokenType tt, Fa_String
 
 namespace fairuz::lex {
 
-enum class FileManagerError {
-    FILE_NOT_FOUND,
-    FILE_NOT_OPEN,
-    SEEK_OUT_OF_BOUND,
-    READ_ERROR,
-    INVALID_UTF8,
-    INVALID_CHAR_OFFSET,
-    PERMISSION_DENIED,
-    UNEXPECTED_EOF,
-    SYSTEM_ERROR,
-    ENCODING_ERROR,
-    CACHE_ERROR,
-    INVALID_LINE_NUMBER,
-    BUFFER_TOO_SMALL
-}; // enum FileManagerError
-
-static constexpr char const* to_string(FileManagerError error) noexcept
-{
-    switch (error) {
-    case FileManagerError::FILE_NOT_FOUND: return "File not found";
-    case FileManagerError::FILE_NOT_OPEN: return "File is not open";
-    case FileManagerError::SEEK_OUT_OF_BOUND: return "Seek position out of bounds";
-    case FileManagerError::READ_ERROR: return "Failed to read from file";
-    case FileManagerError::INVALID_UTF8: return "Invalid UTF-8 sequence encountered";
-    case FileManagerError::INVALID_CHAR_OFFSET: return "Invalid character offset";
-    case FileManagerError::PERMISSION_DENIED: return "Permission denied";
-    case FileManagerError::UNEXPECTED_EOF: return "Unexpected end of file";
-    case FileManagerError::SYSTEM_ERROR: return "System error occurred";
-    case FileManagerError::ENCODING_ERROR: return "Encoding conversion error";
-    case FileManagerError::CACHE_ERROR: return "Cache operation failed";
-    case FileManagerError::INVALID_LINE_NUMBER: return "Invalid line number";
-    case FileManagerError::BUFFER_TOO_SMALL: return "Buffer too small for operation";
-    default: return "Unknown error";
-    }
-}
+using FileManagerError = diagnostic::errc::FileManager::Code;
 
 class Fa_FileManager {
 public:
@@ -69,37 +37,13 @@ public:
     ~Fa_FileManager() = default;
 
     Fa_StringRef load(std::string const& filepath, bool const replace = false);
+
     Fa_StringRef& buffer() { return m_input_buffer; }
     Fa_StringRef const& buffer() const { return m_input_buffer; }
+
     std::string get_path() const { return m_file_path; }
 
-    Fa_StringRef get_line_at(u32 const line_idx) const
-    {
-        if (line_idx == 0 || m_input_buffer.empty())
-            return { };
-
-        char const* data = m_input_buffer.data();
-        size_t const m_size = m_input_buffer.len();
-
-        u32 current_line = 1;
-        size_t line_start = 0;
-
-        for (size_t i = 0; i <= m_size; i += 1) {
-            if (i == m_size || data[i] == '\n') {
-                if (current_line == line_idx) {
-                    size_t len = i - line_start;
-                    if (len > 0 && data[line_start + len - 1] == '\r')
-                        len -= 1;
-
-                    return Fa_StringRef(m_input_buffer.get(), line_start, len);
-                }
-                current_line += 1;
-                line_start = i + 1;
-            }
-        }
-
-        return { };
-    }
+    Fa_StringRef get_line_at(u32 const line_idx) const;
 
 private:
     std::string m_file_path;
@@ -125,16 +69,59 @@ public:
     u32 get_line_number() const { return m_context.line; }
     u32 get_column_number() const { return m_context.column; }
     u64 get_file_offset() const { return m_context.offset; }
-    std::string fpath() const noexcept { return m_file_manager->get_path(); }
+    std::string get_file_path() const noexcept { return m_file_manager->get_path(); }
+
     bool done() const { return m_context.offset >= m_file_manager->buffer().len(); }
-    [[nodiscard]] u32 peek_char();
-    u32 current_char() const;
-    void consume_char();
-    u32 next_char();
-    void unget(u32 const cp);
+
+    [[nodiscard]] u32 peek_char()
+    {
+        Fa_SourceLocation saved_ctx = m_context;
+        u32 saved_current = m_current;
+        u64 saved_bytes = m_current_bytes;
+
+        consume_char();
+        u32 cp = m_current;
+
+        m_context = saved_ctx;
+        m_current = saved_current;
+        m_current_bytes = saved_bytes;
+
+        return cp;
+    }
+
+    [[nodiscard]] u32 current_char() const { return m_current; }
+
+    void consume_char()
+    {
+        if (m_context.offset >= m_file_manager->buffer().len()) {
+            m_current = 0;
+            m_current_bytes = 0;
+            return;
+        }
+
+        advance(m_current, m_current_bytes);
+        refresh_current_();
+    }
+
+    u32 next_char()
+    {
+        consume_char();
+        return m_current;
+    }
+
+    void unget(u32 const cp)
+    {
+        PushbackEntry e = { cp, m_context, m_current_bytes };
+        rewind_position_(cp, e.bytes);
+        m_unget_stack.push(e);
+    }
+
     Fa_StringRef get_line_at(u32 const line_idx) const { return m_file_manager->get_line_at(line_idx); }
+
     Fa_SourceLocation get_source_location() const { return m_context; }
+
     Fa_StringRef source_slice(u64 const start, u64 const end) { return m_file_manager->buffer().slice(start, end); }
+
     void refresh_current_();
 
 private:
@@ -160,30 +147,30 @@ public:
     explicit Fa_Lexer() = default;
     explicit Fa_Lexer(Fa_FileManager* m_file_manager);
     explicit Fa_Lexer(Fa_Lexer const&) = delete;
-    explicit Fa_Lexer(Fa_Array<tok::Fa_Token const*>& seq);
+    explicit Fa_Lexer(Fa_Array<TokenPtr>& seq);
 
-    tok::Fa_Token const* operator()() { return m_next(); }
-    tok::Fa_Token const* current() const;
-    tok::Fa_Token const* m_next();
-    tok::Fa_Token const* peek(size_t n = 1);
-    Fa_Array<tok::Fa_Token const*> tokenize();
+    TokenPtr operator()() { return next(); }
+    TokenPtr current() const;
+    TokenPtr next();
+    TokenPtr peek(size_t n = 1);
+    Fa_Array<TokenPtr> tokenize();
     Fa_StringRef get_line_at(u32 const line_idx) const { return m_source_manager.get_line_at(line_idx); }
 
 private:
     Fa_SourceManager m_source_manager;
     size_t m_tok_index { 0 };
-    unsigned int m_indent_size { 0 };
-    unsigned int m_indent_level { 0 };
-    Fa_Array<tok::Fa_Token const*> m_tok_stream;
-    Fa_Array<unsigned int> m_indent_stack;
-    Fa_Array<unsigned int> m_alt_indent_stack;
+    u32 m_indent_size { 0 };
+    u32 m_indent_level { 0 };
+    Fa_Array<TokenPtr> m_tok_stream;
+    Fa_Array<u32> m_indent_stack;
+    Fa_Array<u32> m_alt_indent_stack;
     bool m_at_bol { true };
-    unsigned int m_bracket_depth { 0 };
+    u32 m_bracket_depth { 0 };
 
     // main lexer loop
-    tok::Fa_Token const* lex_token();
+    TokenPtr lex_token();
 
-    void store(tok::Fa_Token const* tok);
+    void store(TokenPtr tok);
 }; // class Fa_Lexer
 
 } // namespace fairuz::lex

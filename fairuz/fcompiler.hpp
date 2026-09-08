@@ -12,9 +12,11 @@
 
 namespace fairuz::runtime {
 
+using CompilerError = diagnostic::errc::compiler::Code;
+
 struct LocalVar {
     Fa_StringRef name { "" };
-    unsigned int depth { 0 };
+    u32 depth { 0 };
     u8 reg { 0 };
     Fa_StringRef known_class { "" };
 }; // struct LocalVar
@@ -22,7 +24,7 @@ struct LocalVar {
 struct CompilerState {
     Fa_Chunk* chunk { nullptr };
     Fa_Array<LocalVar> locals;
-    unsigned int scope_depth { 0 };
+    u32 scope_depth { 0 };
     u8 next_reg { 0 };
     u8 max_reg { 0 };
     Fa_StringRef func_name { "" };
@@ -248,29 +250,59 @@ private:
     void discharge(Fa_ExprResult const& r, u8 dst, Fa_SourceLocation loc);
     Fa_ErrorOr<u8> any_reg(Fa_ExprResult const& r, Fa_SourceLocation loc);
     u8 error_reg() const;
-    Fa_ErrorOr<u8> alloc_register();
+    Fa_ErrorOr<u8> alloc_register()
+    {
+        u8 reg = m_current->alloc_register();
+        if (reg >= MAX_REGS)
+            return report_error(CompilerError::TOO_MANY_REGISTERS, { });
+        return reg;
+    }
 
-    void declare_local(Fa_StringRef const& name, u8 reg);
-    void declare_local(Fa_StringRef const& name, u8 reg, Fa_StringRef const& known_class);
+    void declare_local(Fa_StringRef const& name, u8 reg)
+    {
+        declare_local(name, reg, "");
+    }
+    void declare_local(Fa_StringRef const& name, u8 reg, Fa_StringRef const& known_class)
+    {
+        m_current->locals.push({ name, m_current->scope_depth, reg, known_class });
+    }
+
     LocalVar const* lookup_local(Fa_StringRef const& name) const;
     VarInfo resolve_name(Fa_StringRef const& name);
     Fa_StringRef infer_constructed_class(AST::Fa_Expr const* e) const;
     int current_method_field_index(Fa_StringRef const& name) const;
     int current_method_slot(Fa_StringRef const& name) const;
 
-    u32 emit(u32 instr, Fa_SourceLocation loc);
-    u32 emit_jump(Fa_OpCode op, u8 cond, Fa_SourceLocation loc);
+    u32 emit(u32 instr, Fa_SourceLocation loc)
+    {
+        return current_chunk()->emit(instr, loc);
+    }
 
-    void patch_jump(u32 idx);
-    void push_loop(u32 loop_start);
+    u32 emit_jump(Fa_OpCode op, u8 cond, Fa_SourceLocation loc)
+    {
+        return emit(Fa_make_AsBx(op, cond, 0), loc);
+    }
+
+    void patch_jump(u32 idx)
+    {
+        if (!current_chunk()->patch_jump(idx))
+            diagnostic::panic(CompilerError::JUMP_OFFSET_OVERFLOW);
+    }
+    void push_loop(u32 loop_start)
+    {
+        m_current->loop_stack.push({ { }, { }, loop_start });
+    }
+
     void pop_loop(u32 loop_exit, u32 continue_target, u32 line);
     void patch_jump_to(u32 instr_idx, u32 target);
     void emit_load_value(u8 dst, Fa_Value v, Fa_SourceLocation loc);
 
-    Fa_Chunk* current_chunk() const;
-    u32 current_offset() const;
+    Fa_Chunk* current_chunk() const { return m_current->chunk; }
 
-    void begin_scope();
+    u32 current_offset() const { return current_chunk()->code.size(); }
+
+    void begin_scope() { m_current->scope_depth += 1; }
+
     void end_scope(Fa_SourceLocation loc);
 
     u32 intern_string(Fa_StringRef const& str);

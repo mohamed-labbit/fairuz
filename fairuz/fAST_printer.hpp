@@ -76,13 +76,13 @@ private:
 
         switch (e->get_kind()) {
         case Fa_Expr::Kind::NAME: {
-            auto n = AS_CONST_NAME(e);
+            auto n = as_name(e);
             std::cout << color("Name", Color::CYAN) << "(" << n->get_value() << ")\n";
             break;
         }
 
         case Fa_Expr::Kind::LITERAL: {
-            auto l = AS_CONST_LITERAL(e);
+            auto l = as_literal(e);
             if (l->is_numeric())
                 std::cout << color("Literal", Color::GREEN) << "(" << l->is_numeric() << ")\n";
             else if (l->is_string())
@@ -102,7 +102,7 @@ private:
         }
 
         case Fa_Expr::Kind::BINARY: {
-            auto b = AS_CONST_BINARY(e);
+            auto b = as_binary(e);
             std::cout << color("Binary", Color::BOLD) << " " << to_string(b->get_operator()) << "\n";
             print_expr(b->get_left(), { p.indent + pipe(p.last), false });
             print_expr(b->get_right(), { p.indent + pipe(p.last), true });
@@ -121,7 +121,7 @@ private:
         }
 
         case Fa_Expr::Kind::LIST: {
-            auto l = AS_CONST_LIST(e);
+            auto l = as_list(e);
             std::cout << color("List", Color::BLUE) << " [" << l->get_elements().size() << "]\n";
             for (size_t i = 0; i < l->get_elements().size(); i += 1)
                 print_expr(l->get_elements()[i], { p.indent + pipe(p.last), i + 1 == l->get_elements().size() });
@@ -149,7 +149,7 @@ private:
         }
 
         case Fa_Expr::Kind::DICT: {
-            auto d = AS_CONST_DICT(e);
+            auto d = as_dict(e);
             auto content = d->get_content();
             std::cout << color("Dict", Color::BLUE) << " {" << content.size() << "}\n";
             for (size_t i = 0; i < content.size(); i += 1) {
@@ -163,7 +163,7 @@ private:
         }
 
         case Fa_Expr::Kind::GET: {
-            auto g = AS_CONST_GET_EXPR(e);
+            auto g = as_get_expr(e);
             std::cout << color("Get", Color::MAGENTA) << " .\n";
             std::cout << p.indent + pipe(p.last) << "├─ object:\n";
             print_expr(g->get_object(), { p.indent + pipe(p.last) + "│  ", true });
@@ -239,7 +239,7 @@ private:
         } break;
 
         case Fa_Stmt::Kind::ASSIGNMENT: {
-            auto a = AS_CONST_ASSIGNMENT_STMT(s);
+            auto a = as_assignment_stmt(s);
             std::cout << color("AssignmentStmt", Color::YELLOW) << " :=" << "\n";
             std::cout << p.indent + pipe(p.last) << "├─ target:\n";
             print_expr(a->get_target(), { p.indent + pipe(p.last) + "│  ", true });
@@ -248,7 +248,7 @@ private:
         } break;
 
         case Fa_Stmt::Kind::FOR: {
-            auto f = AS_CONST_FOR(s);
+            auto f = as_for(s);
             std::cout << color("For", Color::BOLD) << "\n";
             std::cout << p.indent + pipe(p.last) << "├─ target:\n";
             print_expr(f->get_target(), { p.indent + pipe(p.last) + "│  ", true });
@@ -262,7 +262,7 @@ private:
         case Fa_Stmt::Kind::CONTINUE: std::cout << color("Continue", Color::BOLD) << "\n"; break;
 
         case Fa_Stmt::Kind::CLASS_DEF: {
-            auto c = AS_CONST_CLASS_DEF(s);
+            auto c = as_class_def(s);
             auto members = c->get_members();
             auto methods = c->get_methods();
             std::cout << color("ClassDef", Color::BOLD) << "\n";

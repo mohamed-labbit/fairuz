@@ -5,6 +5,7 @@
 
 #include <functional>
 #include <optional>
+#include <sys/mman.h>
 #include <vector>
 
 namespace fairuz {
@@ -19,28 +20,68 @@ private:
 public:
     explicit Fa_ArenaBlock(size_t const size = DEFAULT_BLOCK_SIZE, size_t const alignment = alignof(std::max_align_t));
 
-    ~Fa_ArenaBlock();
+    ~Fa_ArenaBlock()
+    {
+        if (m_begin != nullptr) {
+            munmap(m_begin, m_size);
+            m_begin = nullptr;
+            m_next = nullptr;
+            m_end = nullptr;
+        }
+    }
 
     // Non-copyable
     Fa_ArenaBlock(Fa_ArenaBlock const&) = delete;
     Fa_ArenaBlock& operator=(Fa_ArenaBlock const&) = delete;
 
-    Fa_ArenaBlock(Fa_ArenaBlock&& other) noexcept;
+    Fa_ArenaBlock(Fa_ArenaBlock&& other) noexcept
+        : m_size(other.m_size)
+        , m_begin(other.m_begin)
+        , m_next(other.m_next)
+        , m_end(other.m_end)
+    {
+        other.m_size = 0;
+        other.m_begin = nullptr;
+        other.m_next = nullptr;
+        other.m_end = nullptr;
+    }
 
     Fa_ArenaBlock& operator=(Fa_ArenaBlock&& other) noexcept;
 
-    [[nodiscard]] unsigned char* begin() const;
-    [[nodiscard]] unsigned char* end() const;
-    [[nodiscard]] unsigned char* next() const;
+    [[nodiscard]] unsigned char* begin() const { return m_begin; }
+    [[nodiscard]] unsigned char* end() const { return m_end; }
+    [[nodiscard]] unsigned char* next() const { return m_next; }
+    [[nodiscard]] size_t size() const { return m_size; }
 
-    [[nodiscard]] size_t size() const;
-    [[nodiscard]] size_t used() const;
-    [[nodiscard]] size_t remaining() const;
+    [[nodiscard]] size_t used() const
+    {
+        return (m_begin == nullptr || m_next < m_begin) ? 0 : static_cast<size_t>(m_next - m_begin);
+    }
 
-    bool pop(size_t bytes);
+    [[nodiscard]] size_t remaining() const
+    {
+        return (m_begin == nullptr) ? 0 : static_cast<size_t>(m_end - m_next);
+    }
+
+    bool pop(size_t bytes)
+    {
+        if (m_begin == nullptr || m_next < m_begin + bytes)
+            return false;
+
+        m_next -= bytes;
+        return true;
+    }
 
     [[nodiscard]] unsigned char* allocate(size_t bytes, std::optional<size_t> alignment = std::nullopt);
-    unsigned char* reserve(size_t const bytes);
+
+    unsigned char* reserve(size_t const bytes)
+    {
+        if ((m_begin == nullptr || bytes == 0) || static_cast<size_t>(m_end - m_next) < bytes)
+            return nullptr;
+
+        m_next += bytes;
+        return m_next;
+    }
 }; // class Fa_ArenaBlock
 
 class Fa_ArenaAllocator {
@@ -63,12 +104,14 @@ private:
     size_t m_last_consumed { 0 };
     unsigned char* m_next { nullptr };
     unsigned char* m_end { nullptr };
-    void* allocate_slow(size_t size, size_t alignment);
 
     static constexpr size_t ALIGNMENT = alignof(std::max_align_t);
 
 public:
-    explicit Fa_ArenaAllocator(OutOfMemoryHandler oom_handler = nullptr);
+    explicit Fa_ArenaAllocator(OutOfMemoryHandler oom_handler = nullptr)
+        : m_oom_handler(oom_handler)
+    {
+    }
 
     ~Fa_ArenaAllocator() { reset(); }
 
@@ -78,8 +121,20 @@ public:
     Fa_ArenaAllocator(Fa_ArenaAllocator&&) noexcept = delete;
     Fa_ArenaAllocator& operator=(Fa_ArenaAllocator&&) noexcept = delete;
 
-    void set_name(std::string const& m_name);
-    void reset();
+    void set_name(std::string const& name) { m_name = name; }
+
+    void reset()
+    {
+        m_blocks.clear();
+        m_last_ptr = nullptr;
+        m_last_size = 0;
+        m_last_consumed = 0;
+        m_next = nullptr;
+        m_end = nullptr;
+        m_next_block_size = m_block_size;
+
+        allocate_block(m_next_block_size, alignof(std::max_align_t));
+    }
 
     unsigned char* allocate_block(size_t requested, size_t alignment = alignof(std::max_align_t), bool retry_on_oom = true);
 
@@ -107,6 +162,8 @@ public:
     void deallocate_object(T* obj) { deallocate(static_cast<void*>(obj), sizeof(T)); }
 
 private:
+    void* allocate_slow(size_t size, size_t alignment);
+
     [[nodiscard]] unsigned char* allocate_from_blocks(size_t alloc_size, size_t align = alignof(std::max_align_t));
 
     [[nodiscard]] static constexpr size_t get_aligned(size_t n, size_t const alignment = alignof(std::max_align_t)) noexcept

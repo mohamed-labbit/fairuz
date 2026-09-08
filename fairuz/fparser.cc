@@ -48,7 +48,7 @@ namespace fairuz::parser {
 using TokType = tok::Fa_TokenType;
 using StmtPtr = AST::Fa_Stmt*;
 using ExprPtr = AST::Fa_Expr*;
-using TokenPtr = tok::Fa_Token const*;
+using TokenPtr = TokenPtr;
 using ParserCode = diagnostic::errc::parser::Code;
 using SemaCode = diagnostic::errc::sema::Code;
 
@@ -263,7 +263,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_while_stmt()
     auto while_block = parse_indented_block();
     Fa_VERIFY_NODE(while_block);
 
-    return Fa_make_while(condition, AS_BLOCK(while_block.value()), start->location());
+    return Fa_make_while(condition, as_block(while_block.value()), start->location());
 }
 
 Fa_ErrorOr<StmtPtr> Fa_Parser::parse_for_stmt()
@@ -323,7 +323,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_if_stmt()
         }
     }
 
-    return Fa_make_if(condition, AS_BLOCK(then_block.value()), start->location(), else_block);
+    return Fa_make_if(condition, as_block(then_block.value()), start->location(), else_block);
 }
 
 Fa_ErrorOr<StmtPtr> Fa_Parser::parse_expression_stmt()
@@ -387,8 +387,8 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_function_def()
 
     return Fa_make_function(
         AST::Fa_make_name(name_tok->lexeme(), name_tok->location()),
-        AS_LIST(params.value()),
-        AS_BLOCK(body.value()),
+        as_list(params.value()),
+        as_block(body.value()),
         start->location());
 }
 
@@ -435,7 +435,7 @@ bool same_name(AST::Fa_Expr const* e, Fa_StringRef const& n)
 {
     return e != nullptr
         && e->get_kind() == AST::Fa_Expr::Kind::NAME
-        && AS_CONST_NAME(e)->get_value() == n;
+        && as_name(e)->get_value() == n;
 }
 
 void push_member_once(Fa_Array<ExprPtr>& members, AST::Fa_NameExpr* name)
@@ -453,43 +453,43 @@ void collect_this_field_assignment(Fa_Array<ExprPtr>& members, StmtPtr stmt)
         return;
 
     if (AST::is_block(stmt)) {
-        for (auto* s : AS_BLOCK(stmt)->get_statements())
+        for (auto* s : as_block(stmt)->get_statements())
             collect_this_field_assignment(members, s);
         return;
     }
 
     if (AST::is_if(stmt)) {
-        collect_this_field_assignment(members, AS_IF(stmt)->get_then());
-        collect_this_field_assignment(members, AS_IF(stmt)->get_else());
+        collect_this_field_assignment(members, as_if(stmt)->get_then());
+        collect_this_field_assignment(members, as_if(stmt)->get_else());
         return;
     }
 
     if (AST::is_for(stmt)) {
-        collect_this_field_assignment(members, AS_FOR(stmt)->get_body());
+        collect_this_field_assignment(members, as_for(stmt)->get_body());
         return;
     }
 
     if (AST::is_while(stmt)) {
-        collect_this_field_assignment(members, AS_WHILE(stmt)->get_body());
+        collect_this_field_assignment(members, as_while(stmt)->get_body());
         return;
     }
 
     if (!AST::is_expr(stmt))
         return;
 
-    auto* expr = AS_EXPR_STMT(stmt)->get_expr();
+    auto* expr = as_expr_stmt(stmt)->get_expr();
 
     if (AST::is_assignment(expr)) {
-        auto* assign = AS_ASSIGNMENT_EXPR(expr);
+        auto* assign = as_assignment_expr(expr);
         auto* t = assign->get_target();
         if (!AST::is_get(t))
             return;
-        auto* get = AS_GET_EXPR(t);
+        auto* get = as_get_expr(t);
         if (!same_name(get->get_object(), kClassInstanceName))
             return; /// not of the form this.foo
         auto* mem = get->get_member();
         if (AST::is_name(mem)) {
-            push_member_once(members, AS_NAME(mem));
+            push_member_once(members, as_name(mem));
             return;
         }
     }
@@ -584,12 +584,12 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_method(Fa_Array<ExprPtr>& members)
     if (check(TokType::ENDMARKER))
         return AST::Fa_make_function(
             AST::Fa_make_name(fn_name, name_tok->location()),
-            AS_LIST(params.value()), block, start->location());
+            as_list(params.value()), block, start->location());
 
     Fa_VERIFY_TOKEN(TokType::DEDENT, ParserCode::EXPECTED_DEDENT);
     return AST::Fa_make_function(
         AST::Fa_make_name(fn_name, name_tok->location()),
-        AS_LIST(params.value()), block, start->location());
+        as_list(params.value()), block, start->location());
 }
 
 Fa_ErrorOr<ExprPtr> Fa_Parser::parse_parameters_list()
@@ -663,7 +663,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_assignment_expr()
 
 // Unified Pratt parser
 
-Fa_ErrorOr<ExprPtr> Fa_Parser::parse_binary_expr_precedence(unsigned int min_prec)
+Fa_ErrorOr<ExprPtr> Fa_Parser::parse_binary_expr_precedence(u32 min_prec)
 {
     Fa_TRY(lhs, parse_unary_expr());
 
@@ -673,7 +673,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_binary_expr_precedence(unsigned int min_pre
         if (!cur->is_binary_op() || cur->is(TokType::OP_ASSIGN))
             break;
 
-        unsigned int prec = cur->get_precedence();
+        u32 prec = cur->get_precedence();
         if (prec == tok::PREC_NONE || prec < min_prec)
             break;
 
@@ -683,7 +683,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_binary_expr_precedence(unsigned int min_pre
         // OP_POWER is right-associative: pass `prec` (not `prec+1`) so the
         // recursive call accepts another power op of the same precedence.
         // All other operators are left-associative: pass `prec+1`.
-        unsigned int next_min = (op_type == TokType::OP_POWER) ? prec : prec + 1;
+        u32 next_min = (op_type == TokType::OP_POWER) ? prec : prec + 1;
         Fa_TRY(rhs, parse_binary_expr_precedence(next_min));
 
         // FIX: assign to lhs and CONTINUE the loop — do not return here.
@@ -895,7 +895,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_logical_expr()
     return parse_binary_expr_precedence(0);
 }
 
-Fa_ErrorOr<ExprPtr> Fa_Parser::parse_logical_expr_precedence(unsigned int p)
+Fa_ErrorOr<ExprPtr> Fa_Parser::parse_logical_expr_precedence(u32 p)
 {
     return parse_binary_expr_precedence(p);
 }

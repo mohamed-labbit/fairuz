@@ -196,7 +196,7 @@ bool Fa_Formatter::is_class_member_target(AST::Fa_Expr const* expr) const
     if (expr == nullptr || expr->get_kind() != AST::Fa_Expr::Kind::GET)
         return false;
 
-    auto const* get_expr = AS_CONST_GET_EXPR(expr);
+    auto const* get_expr = as_get_expr(expr);
     if (get_expr->get_object() == nullptr || get_expr->get_member() == nullptr)
         return false;
     if (get_expr->get_object()->get_kind() != AST::Fa_Expr::Kind::NAME)
@@ -204,7 +204,7 @@ bool Fa_Formatter::is_class_member_target(AST::Fa_Expr const* expr) const
     if (get_expr->get_member()->get_kind() != AST::Fa_Expr::Kind::NAME)
         return false;
 
-    auto const* object_expr = AS_CONST_NAME(get_expr->get_object());
+    auto const* object_expr = as_name(get_expr->get_object());
     return object_expr->get_value() == kClassInstanceName;
 }
 
@@ -228,7 +228,7 @@ int Fa_Formatter::precedence(AST::Fa_Expr const* expr) const
     case AST::Fa_Expr::Kind::DICT:
         return kPrecAtom;
     case AST::Fa_Expr::Kind::BINARY: {
-        auto const* bin_expr = AS_CONST_BINARY(expr);
+        auto const* bin_expr = as_binary(expr);
         switch (bin_expr->get_operator()) {
         case AST::Fa_BinaryOp::OP_OR:
             return kPrecLogicalOr;
@@ -284,8 +284,8 @@ void Fa_Formatter::format_assignment_target(AST::Fa_Expr const* expr)
         // synthetic `__class$instance.field` form — the synthetic name is
         // an implementation detail of the parser's desugaring and should
         // never leak into formatted output.
-        auto const* get_expr = AS_CONST_GET_EXPR(expr);
-        auto const* member_name = AS_CONST_NAME(get_expr->get_member());
+        auto const* get_expr = as_get_expr(expr);
+        auto const* member_name = as_name(get_expr->get_member());
         write(".");
         write(member_name->get_value());
         return;
@@ -309,14 +309,14 @@ void Fa_Formatter::format_expression(AST::Fa_Expr const* expr, int parent_preced
 
     switch (expr->get_kind()) {
     case AST::Fa_Expr::Kind::ASSIGNMENT: {
-        auto const* assign_expr = AS_CONST_ASSIGNMENT_EXPR(expr);
+        auto const* assign_expr = as_assignment_expr(expr);
         format_assignment_target(assign_expr->get_target());
         write(" := ");
         format_expression(assign_expr->get_value(), kPrecAssignment, false);
         break;
     }
     case AST::Fa_Expr::Kind::BINARY: {
-        auto const* bin_expr = AS_CONST_BINARY(expr);
+        auto const* bin_expr = as_binary(expr);
         format_expression(bin_expr->get_left(), current_precedence, false);
         write(" ");
         write(binary_op_string(bin_expr->get_operator()));
@@ -325,7 +325,7 @@ void Fa_Formatter::format_expression(AST::Fa_Expr const* expr, int parent_preced
         break;
     }
     case AST::Fa_Expr::Kind::CALL: {
-        auto const* call_expr = AS_CONST_CALL(expr);
+        auto const* call_expr = as_call(expr);
         format_expression(call_expr->get_callee(), current_precedence, false);
         write('(');
         format_comma_separated(call_expr->get_args());
@@ -338,7 +338,7 @@ void Fa_Formatter::format_expression(AST::Fa_Expr const* expr, int parent_preced
         // content — `{}` would previously emit `{\n\n}`. Now: comma is
         // written BETWEEN entries only, and an empty dict short-circuits to
         // a bare `{}` on one line with no interior blank line.
-        auto const* dict_expr = AS_CONST_DICT(expr);
+        auto const* dict_expr = as_dict(expr);
         auto const& content = dict_expr->get_content();
 
         if (content.empty()) {
@@ -366,10 +366,10 @@ void Fa_Formatter::format_expression(AST::Fa_Expr const* expr, int parent_preced
         // [BUG 3 FIX] This case was entirely missing — any `.field` read
         // (not just assignment targets, handled separately via
         // format_assignment_target) silently formatted as nothing at all.
-        auto const* get_expr = AS_CONST_GET_EXPR(expr);
+        auto const* get_expr = as_get_expr(expr);
         bool const is_implicit_self = get_expr->get_object() != nullptr
             && get_expr->get_object()->get_kind() == AST::Fa_Expr::Kind::NAME
-            && AS_CONST_NAME(get_expr->get_object())->get_value() == kClassInstanceName;
+            && as_name(get_expr->get_object())->get_value() == kClassInstanceName;
 
         if (!is_implicit_self)
             format_expression(get_expr->get_object(), current_precedence, false);
@@ -379,7 +379,7 @@ void Fa_Formatter::format_expression(AST::Fa_Expr const* expr, int parent_preced
         break;
     }
     case AST::Fa_Expr::Kind::INDEX_READ: {
-        auto const* index_expr = AS_CONST_INDEX(expr);
+        auto const* index_expr = as_index(expr);
         format_expression(index_expr->get_object(), current_precedence, false);
         write('[');
         format_expression(index_expr->get_index());
@@ -387,14 +387,14 @@ void Fa_Formatter::format_expression(AST::Fa_Expr const* expr, int parent_preced
         break;
     }
     case AST::Fa_Expr::Kind::LIST: {
-        auto const* list_expr = AS_CONST_LIST(expr);
+        auto const* list_expr = as_list(expr);
         write('[');
         format_comma_separated(list_expr->get_elements());
         write(']');
         break;
     }
     case AST::Fa_Expr::Kind::LITERAL: {
-        auto const* literal_expr = AS_CONST_LITERAL(expr);
+        auto const* literal_expr = as_literal(expr);
         switch (literal_expr->get_type()) {
         case AST::Fa_LiteralExpr::Type::BOOLEAN: write(literal_expr->get_bool() ? "صحيح" : "خطا"); break;
         case AST::Fa_LiteralExpr::Type::FLOAT: write(Fa_StringRef(format_float_literal(literal_expr->get_float()).c_str())); break;
@@ -405,12 +405,12 @@ void Fa_Formatter::format_expression(AST::Fa_Expr const* expr, int parent_preced
         break;
     }
     case AST::Fa_Expr::Kind::NAME: {
-        auto const* name_expr = AS_CONST_NAME(expr);
+        auto const* name_expr = as_name(expr);
         write(name_expr->get_value());
         break;
     }
     case AST::Fa_Expr::Kind::UNARY: {
-        auto const* unary_expr = AS_CONST_UNARY(expr);
+        auto const* unary_expr = as_unary(expr);
         Fa_StringRef op = unary_op_string(unary_expr->get_operator());
         write(op);
         if (op == "ليس")
@@ -436,7 +436,7 @@ void Fa_Formatter::format_body(AST::Fa_Stmt const* stmt)
     m_indent_level += 1;
 
     if (stmt->get_kind() == AST::Fa_Stmt::Kind::BLOCK) {
-        auto const* block_stmt = AS_CONST_BLOCK(stmt);
+        auto const* block_stmt = as_block(stmt);
         if (block_stmt->get_statements().empty()) {
             write_newline();
         } else {
@@ -468,7 +468,7 @@ void Fa_Formatter::format_if_statement(AST::Fa_IfStmt const* stmt)
 
     if (AST::is_if(stmt->get_else())) {
         write(" ");
-        format_if_statement(AS_CONST_IF(stmt->get_else()));
+        format_if_statement(as_if(stmt->get_else()));
         return;
     }
 
@@ -489,12 +489,12 @@ void Fa_Formatter::format_statement(AST::Fa_Stmt const* stmt)
         // place in case another AST producer (e.g. a desugaring pass) emits
         // it, but is corrected to actually format the assignment target,
         // which the original silently dropped.
-        auto const* assign_stmt = AS_CONST_ASSIGNMENT_STMT(stmt);
+        auto const* assign_stmt = as_assignment_stmt(stmt);
         format_expression(assign_stmt->get_expr());
         break;
     }
     case AST::Fa_Stmt::Kind::BLOCK: {
-        auto const* block_stmt = AS_CONST_BLOCK(stmt);
+        auto const* block_stmt = as_block(stmt);
         for (u32 i = 0; i < block_stmt->get_statements().size(); i += 1) {
             if (i != 0)
                 write_newline();
@@ -506,7 +506,7 @@ void Fa_Formatter::format_statement(AST::Fa_Stmt const* stmt)
         write("اخرج");
         break;
     case AST::Fa_Stmt::Kind::CLASS_DEF: {
-        auto const* class_stmt = AS_CONST_CLASS_DEF(stmt);
+        auto const* class_stmt = as_class_def(stmt);
         write("نوع ");
         format_expression(class_stmt->get_name());
         write(":");
@@ -524,12 +524,12 @@ void Fa_Formatter::format_statement(AST::Fa_Stmt const* stmt)
         write("اكمل");
         break;
     case AST::Fa_Stmt::Kind::EXPR: {
-        auto const* expr_stmt = AS_CONST_EXPR_STMT(stmt);
+        auto const* expr_stmt = as_expr_stmt(stmt);
         format_expression(expr_stmt->get_expr());
         break;
     }
     case AST::Fa_Stmt::Kind::FOR: {
-        auto const* for_stmt = AS_CONST_FOR(stmt);
+        auto const* for_stmt = as_for(stmt);
         write("بكل ");
         format_expression(for_stmt->get_target());
         write(" في ");
@@ -539,7 +539,7 @@ void Fa_Formatter::format_statement(AST::Fa_Stmt const* stmt)
         break;
     }
     case AST::Fa_Stmt::Kind::FUNC: {
-        auto const* fn_stmt = AS_CONST_FUNCTION_DEF(stmt);
+        auto const* fn_stmt = as_function_def(stmt);
         write("دالة ");
         format_expression(fn_stmt->get_name());
         write('(');
@@ -549,10 +549,10 @@ void Fa_Formatter::format_statement(AST::Fa_Stmt const* stmt)
         break;
     }
     case AST::Fa_Stmt::Kind::IF:
-        format_if_statement(AS_CONST_IF(stmt));
+        format_if_statement(as_if(stmt));
         break;
     case AST::Fa_Stmt::Kind::RETURN: {
-        auto const* ret_stmt = AS_CONST_RETURN(stmt);
+        auto const* ret_stmt = as_return(stmt);
         write("ارجع");
         if (ret_stmt->has_value()) {
             write(" ");
@@ -561,7 +561,7 @@ void Fa_Formatter::format_statement(AST::Fa_Stmt const* stmt)
         break;
     }
     case AST::Fa_Stmt::Kind::WHILE: {
-        auto const* while_stmt = AS_CONST_WHILE(stmt);
+        auto const* while_stmt = as_while(stmt);
         write("طالما ");
         format_expression(while_stmt->get_condition());
         write(":");

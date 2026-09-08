@@ -15,7 +15,7 @@ public:
     Fa_StringRef m_context;
     Fa_Array<Fa_StringRef> m_suggestions;
 
-    Fa_ParseError(Fa_StringRef const& msg, unsigned int l, unsigned int c, Fa_StringRef ctx = "", Fa_Array<Fa_StringRef> sugg = { })
+    Fa_ParseError(Fa_StringRef const& msg, u32 l, u32 c, Fa_StringRef ctx = "", Fa_Array<Fa_StringRef> sugg = { })
         : std::runtime_error(msg.data())
         , m_line(l)
         , m_column(c)
@@ -54,9 +54,9 @@ public:
         if (fm == nullptr)
             diagnostic::panic(diagnostic::errc::general::Code::INTERNAL_ERROR, "parser received a null Fa_FileManager");
 
-        m_lexer.m_next();
+        m_lexer.next();
         if (current_token() != nullptr && current_token()->type() == tok::Fa_TokenType::BEGINMARKER)
-            m_lexer.m_next();
+            m_lexer.next();
     }
 
     explicit Fa_Parser(Fa_Array<tok::Fa_Token> seq, std::optional<size_t> s = std::nullopt);
@@ -78,8 +78,8 @@ public:
     Fa_ErrorOr<AST::Fa_Expr*> parse_dict_literal();
     Fa_ErrorOr<AST::Fa_Expr*> parse_conditional_expr();
     Fa_ErrorOr<AST::Fa_Expr*> parse_logical_expr();
-    Fa_ErrorOr<AST::Fa_Expr*> parse_logical_expr_precedence(unsigned int min_precedence);
-    Fa_ErrorOr<AST::Fa_Expr*> parse_binary_expr_precedence(unsigned int min_precedence);
+    Fa_ErrorOr<AST::Fa_Expr*> parse_logical_expr_precedence(u32 min_precedence);
+    Fa_ErrorOr<AST::Fa_Expr*> parse_binary_expr_precedence(u32 min_precedence);
     Fa_ErrorOr<AST::Fa_Expr*> parse_comparison_expr();
     Fa_ErrorOr<AST::Fa_Expr*> parse_binary_expr();
     Fa_ErrorOr<AST::Fa_Expr*> parse_unary_expr();
@@ -96,13 +96,13 @@ public:
 
     bool check(tok::Fa_TokenType type) const;
 
-    tok::Fa_Token const* current_token() const;
+    TokenPtr current_token() const;
 
 private:
     lex::Fa_Lexer m_lexer;
 
-    tok::Fa_Token const* peek(size_t offset = 1) { return m_lexer.peek(offset); }
-    tok::Fa_Token const* advance() { return m_lexer.m_next(); }
+    TokenPtr peek(size_t offset = 1) { return m_lexer.peek(offset); }
+    TokenPtr advance() { return m_lexer.next(); }
 
     bool match(tok::Fa_TokenType const type);
 

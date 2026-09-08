@@ -102,7 +102,7 @@ namespace fairuz::runtime {
         Fa_Value self_val, arg_val = Fa_Value::nil();                                    \
         int slot = -1;                                                                   \
         if (lhs.is_instance()) {                                                         \
-            self_klass = lhs.as_instance()->klass;                                     \
+            self_klass = lhs.as_instance()->klass;                                       \
             slot = self_klass->method_slot(sp_method_name(Fa_ObjClass::op_name));        \
             if (slot >= 0) {                                                             \
                 self_val = lhs;                                                          \
@@ -110,7 +110,7 @@ namespace fairuz::runtime {
             }                                                                            \
         }                                                                                \
         if (slot < 0 && rhs.is_instance()) {                                             \
-            self_klass = rhs.as_instance()->klass;                                     \
+            self_klass = rhs.as_instance()->klass;                                       \
             slot = self_klass->method_slot(sp_method_name(Fa_ObjClass::op_name));        \
             if (slot >= 0) {                                                             \
                 self_val = rhs;                                                          \

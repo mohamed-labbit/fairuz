@@ -72,7 +72,7 @@ std::optional<Fa_Value> const_value(AST::Fa_Expr const* e)
     if (e == nullptr || e->get_kind() != AST::Fa_Expr::Kind::LITERAL)
         return std::nullopt;
 
-    auto lit = AS_CONST_LITERAL(e);
+    auto lit = as_literal(e);
 
     if (lit->is_nil())
         return Fa_Value::nil();
@@ -185,14 +185,14 @@ std::optional<Fa_Value> try_fold_binary(AST::Fa_BinaryExpr const* e)
     std::optional<Fa_Value> L, R;
 
     if (LE->get_kind() == AST::Fa_Expr::Kind::BINARY)
-        L = try_fold_binary(AS_CONST_BINARY(LE));
+        L = try_fold_binary(as_binary(LE));
     else if (LE->get_kind() == AST::Fa_Expr::Kind::UNARY)
-        L = try_fold_unary(AS_CONST_UNARY(LE));
+        L = try_fold_unary(as_unary(LE));
 
     if (RE->get_kind() == AST::Fa_Expr::Kind::BINARY)
-        R = try_fold_binary(AS_CONST_BINARY(RE));
+        R = try_fold_binary(as_binary(RE));
     else if (RE->get_kind() == AST::Fa_Expr::Kind::UNARY)
-        R = try_fold_unary(AS_CONST_UNARY(RE));
+        R = try_fold_unary(as_unary(RE));
 
     if (!R && !L)
         return std::nullopt;
@@ -252,7 +252,7 @@ std::optional<AST::Fa_Expr*> try_strength_reduce_binary(AST::Fa_Expr* e)
     if (e == nullptr || !AST::is_binary(e))
         return std::nullopt;
 
-    auto binary_expr = AS_CONST_BINARY(e);
+    auto binary_expr = as_binary(e);
     AST::Fa_Expr* lhs = binary_expr->get_left();
     AST::Fa_Expr* rhs = binary_expr->get_right();
     AST::Fa_BinaryOp bin_op = binary_expr->get_operator();
@@ -263,7 +263,7 @@ std::optional<AST::Fa_Expr*> try_strength_reduce_binary(AST::Fa_Expr* e)
 
     // x * c (where c is a compile time constant) and x is a pure expression node
     if (AST::is_literal(rhs)) {
-        auto lit_rhs = AS_CONST_LITERAL(rhs);
+        auto lit_rhs = as_literal(rhs);
         if (!lit_rhs->is_numeric())
             return std::nullopt;
 
@@ -344,13 +344,13 @@ std::optional<AST::Fa_Expr*> try_strength_reduce_binary(AST::Fa_Expr* e)
 
     if (bin_op == AST::Fa_BinaryOp::OP_AND) {
         if (AST::is_literal(rhs) && Fa_is_pure(lhs)) {
-            auto lit_rhs = AS_CONST_LITERAL(rhs);
+            auto lit_rhs = as_literal(rhs);
             if (lit_rhs->is_bool())
                 return lit_rhs->get_bool() ? lhs->clone() : AST::Fa_make_literal_bool(false, binary_expr->get_location());
         }
 
         if (AST::is_literal(lhs) && Fa_is_pure(rhs)) {
-            auto lit_lhs = AS_CONST_LITERAL(lhs);
+            auto lit_lhs = as_literal(lhs);
             if (lit_lhs->is_bool())
                 return lit_lhs->get_bool() ? rhs->clone() : AST::Fa_make_literal_bool(false, binary_expr->get_location());
         }
@@ -358,13 +358,13 @@ std::optional<AST::Fa_Expr*> try_strength_reduce_binary(AST::Fa_Expr* e)
 
     if (bin_op == AST::Fa_BinaryOp::OP_OR) {
         if (AST::is_literal(rhs) && Fa_is_pure(lhs)) {
-            auto lit_rhs = AS_CONST_LITERAL(rhs);
+            auto lit_rhs = as_literal(rhs);
             if (lit_rhs->is_bool())
                 return lit_rhs->get_bool() ? AST::Fa_make_literal_bool(true, binary_expr->get_location()) : lhs->clone();
         }
 
         if (AST::is_literal(lhs) && Fa_is_pure(rhs)) {
-            auto lit_lhs = AS_CONST_LITERAL(lhs);
+            auto lit_lhs = as_literal(lhs);
             if (lit_lhs->is_bool())
                 return lit_lhs->get_bool() ? AST::Fa_make_literal_bool(true, binary_expr->get_location()) : rhs->clone();
         }
@@ -378,7 +378,7 @@ std::optional<AST::Fa_Expr*> try_strength_reduce_unary(AST::Fa_Expr* e)
     if (e == nullptr || !AST::is_unary(e))
         return std::nullopt;
 
-    auto unary_expr = AS_CONST_UNARY(e);
+    auto unary_expr = as_unary(e);
     AST::Fa_Expr const* operand = unary_expr->get_operand();
     AST::Fa_UnaryOp un_op = unary_expr->get_operator();
 
@@ -386,7 +386,7 @@ std::optional<AST::Fa_Expr*> try_strength_reduce_unary(AST::Fa_Expr* e)
     if (un_op == AST::Fa_UnaryOp::OP_BITNOT) {
         // ~~x = x != 0
         if (AST::is_unary(operand)) {
-            auto inner = AS_CONST_UNARY(operand);
+            auto inner = as_unary(operand);
             if (inner->get_operator() == AST::Fa_UnaryOp::OP_BITNOT) {
                 auto inner_operand = inner->get_operand();
                 return AST::Fa_make_binary(inner_operand->clone(),
@@ -395,7 +395,7 @@ std::optional<AST::Fa_Expr*> try_strength_reduce_unary(AST::Fa_Expr* e)
         }
 
         if (operand->get_kind() == AST::Fa_Expr::Kind::BINARY) {
-            auto inner = AS_CONST_BINARY(operand);
+            auto inner = as_binary(operand);
 
             auto setup_clone = [&](AST::Fa_BinaryOp op) -> AST::Fa_BinaryExpr* {
                 auto clone = inner->clone();

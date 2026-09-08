@@ -31,28 +31,6 @@ Fa_ArenaBlock::Fa_ArenaBlock(size_t const size, size_t const alignment)
     m_end = m_begin + m_size;
 }
 
-Fa_ArenaBlock::Fa_ArenaBlock(Fa_ArenaBlock&& other) noexcept
-    : m_size(other.m_size)
-    , m_begin(other.m_begin)
-    , m_next(other.m_next)
-    , m_end(other.m_end)
-{
-    other.m_size = 0;
-    other.m_begin = nullptr;
-    other.m_next = nullptr;
-    other.m_end = nullptr;
-}
-
-Fa_ArenaBlock::~Fa_ArenaBlock()
-{
-    if (m_begin != nullptr) {
-        munmap(m_begin, m_size);
-        m_begin = nullptr;
-        m_next = nullptr;
-        m_end = nullptr;
-    }
-}
-
 Fa_ArenaBlock& Fa_ArenaBlock::operator=(Fa_ArenaBlock&& other) noexcept
 {
     if (this != &other) {
@@ -72,39 +50,6 @@ Fa_ArenaBlock& Fa_ArenaBlock::operator=(Fa_ArenaBlock&& other) noexcept
     return *this;
 }
 
-unsigned char* Fa_ArenaBlock::begin() const { return m_begin; }
-
-unsigned char* Fa_ArenaBlock::end() const { return m_end; }
-
-unsigned char* Fa_ArenaBlock::next() const { return m_next; }
-
-size_t Fa_ArenaBlock::size() const { return m_size; }
-
-size_t Fa_ArenaBlock::used() const
-{
-    if (m_begin == nullptr || m_next < m_begin)
-        return 0;
-
-    return static_cast<size_t>(m_next - m_begin);
-}
-
-size_t Fa_ArenaBlock::remaining() const
-{
-    if (m_begin == nullptr)
-        return 0;
-
-    return static_cast<size_t>(m_end - m_next);
-}
-
-bool Fa_ArenaBlock::pop(size_t bytes)
-{
-    if (m_begin == nullptr || m_next < m_begin + bytes)
-        return false;
-
-    m_next -= bytes;
-    return true;
-}
-
 unsigned char* Fa_ArenaBlock::allocate(size_t bytes, std::optional<size_t> alignment)
 {
     if (m_begin == nullptr || bytes == 0)
@@ -122,37 +67,6 @@ unsigned char* Fa_ArenaBlock::allocate(size_t bytes, std::optional<size_t> align
     m_next = reinterpret_cast<unsigned char*>(next_addr);
     return reinterpret_cast<unsigned char*>(aligned);
 }
-
-unsigned char* Fa_ArenaBlock::reserve(size_t const bytes)
-{
-    if (m_begin == nullptr || bytes == 0)
-        return nullptr;
-    if (static_cast<size_t>(m_end - m_next) < bytes)
-        return nullptr;
-
-    m_next += bytes;
-    return m_next;
-}
-
-Fa_ArenaAllocator::Fa_ArenaAllocator(OutOfMemoryHandler oom_handler)
-    : m_oom_handler(oom_handler)
-{
-}
-
-void Fa_ArenaAllocator::reset()
-{
-    m_blocks.clear();
-    m_last_ptr = nullptr;
-    m_last_size = 0;
-    m_last_consumed = 0;
-    m_next = nullptr;
-    m_end = nullptr;
-    m_next_block_size = m_block_size;
-
-    allocate_block(m_next_block_size, alignof(std::max_align_t));
-}
-
-void Fa_ArenaAllocator::set_name(std::string const& name) { m_name = name; }
 
 void* Fa_ArenaAllocator::allocate(size_t const size, size_t const alignment)
 {
@@ -240,10 +154,7 @@ void Fa_ArenaAllocator::deallocate(void* ptr, size_t const size)
     auto expected = static_cast<unsigned char*>(ptr);
     auto last = static_cast<unsigned char*>(m_last_ptr);
 
-    if (expected != last)
-        return;
-
-    if (size != m_last_size)
+    if ((expected != last) || size != m_last_size)
         return;
 
     Fa_ArenaBlock& block = m_blocks.back();

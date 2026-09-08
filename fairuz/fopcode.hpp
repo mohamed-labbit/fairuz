@@ -262,7 +262,7 @@ class Fa_Value;
 struct Fa_Chunk {
     Fa_StringRef name { "" };
     int arity { 0 };
-    unsigned int local_count { 0 };
+    u32 local_count { 0 };
 
     Fa_Array<u32> code;
     Fa_Array<Fa_SourceLocation> locations;

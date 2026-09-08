@@ -81,6 +81,34 @@ Fa_StringRef Fa_FileManager::load(std::string const& filepath, bool replace)
     return ret;
 }
 
+Fa_StringRef Fa_FileManager::get_line_at(u32 const line_idx) const
+{
+    if (line_idx == 0 || m_input_buffer.empty())
+        return { };
+
+    char const* data = m_input_buffer.data();
+    size_t const m_size = m_input_buffer.len();
+
+    u32 current_line = 1;
+    size_t line_start = 0;
+
+    for (size_t i = 0; i <= m_size; i += 1) {
+        if (i == m_size || data[i] == '\n') {
+            if (current_line == line_idx) {
+                size_t len = i - line_start;
+                if (len > 0 && data[line_start + len - 1] == '\r')
+                    len -= 1;
+
+                return Fa_StringRef(m_input_buffer.get(), line_start, len);
+            }
+            current_line += 1;
+            line_start = i + 1;
+        }
+    }
+
+    return { };
+}
+
 void Fa_SourceManager::refresh_current_()
 {
     if (!m_file_manager || m_context.offset >= m_file_manager->buffer().len()) {
@@ -105,57 +133,6 @@ void Fa_SourceManager::reset()
         m_unget_stack.pop();
 
     refresh_current_();
-}
-
-u32 Fa_SourceManager::peek_char()
-{
-    Fa_SourceLocation saved_ctx = m_context;
-    u32 saved_current = m_current;
-    u64 saved_bytes = m_current_bytes;
-
-    consume_char();
-    u32 cp = m_current;
-
-    m_context = saved_ctx;
-    m_current = saved_current;
-    m_current_bytes = saved_bytes;
-
-    return cp;
-}
-
-u32 Fa_SourceManager::current_char() const
-{
-    return m_current;
-}
-
-void Fa_SourceManager::consume_char()
-{
-    if (m_context.offset >= m_file_manager->buffer().len()) {
-        m_current = 0;
-        m_current_bytes = 0;
-        return;
-    }
-
-    advance(m_current, m_current_bytes);
-    refresh_current_();
-}
-
-u32 Fa_SourceManager::next_char()
-{
-    consume_char();
-    return m_current;
-}
-
-void Fa_SourceManager::unget(u32 const cp)
-{
-    PushbackEntry e = {
-        .ch = cp,
-        .ctx = m_context,
-        .bytes = m_current_bytes
-    };
-
-    rewind_position_(cp, e.bytes);
-    m_unget_stack.push(e);
 }
 
 void Fa_SourceManager::advance(u32 const cp, u64 const bytes)
@@ -217,14 +194,14 @@ Fa_Lexer::Fa_Lexer(Fa_FileManager* fm)
     , m_indent_level(0)
     , m_at_bol(true)
 {
-    m_tok_stream = Fa_Array<fairuz::tok::Fa_Token const*>::with_capacity(1024);
-    m_indent_stack = Fa_Array<unsigned int>::with_capacity(8);
-    m_alt_indent_stack = Fa_Array<unsigned int>::with_capacity(8);
+    m_tok_stream = Fa_Array<TokenPtr>::with_capacity(1024);
+    m_indent_stack = Fa_Array<u32>::with_capacity(8);
+    m_alt_indent_stack = Fa_Array<u32>::with_capacity(8);
     m_indent_stack.push(0);
     m_alt_indent_stack.push(0);
 }
 
-Fa_Lexer::Fa_Lexer(Fa_Array<tok::Fa_Token const*>& seq)
+Fa_Lexer::Fa_Lexer(Fa_Array<TokenPtr>& seq)
     : m_tok_index(0)
     , m_indent_size(4)
     , m_indent_level(0)
@@ -235,10 +212,10 @@ Fa_Lexer::Fa_Lexer(Fa_Array<tok::Fa_Token const*>& seq)
     m_alt_indent_stack.push(0);
 }
 
-tok::Fa_Token const* Fa_Lexer::lex_token()
+TokenPtr Fa_Lexer::lex_token()
 {
     auto finish = [this](tok::Fa_TokenType tt, Fa_StringRef str, Fa_SourceLocation src_loc) {
-        tok::Fa_Token const* ret = Fa_make_token(tt, str, src_loc);
+        TokenPtr ret = Fa_make_token(tt, str, src_loc);
         store(ret);
         return m_tok_stream.back();
     };
@@ -252,10 +229,9 @@ tok::Fa_Token const* Fa_Lexer::lex_token()
 
         m_at_bol = false;
 
-        unsigned int size = 0;
-        unsigned int alt_size = 0;
-        unsigned int cont_line_col = 0;
-
+        u32 size = 0;
+        u32 alt_size = 0;
+        u32 cont_line_col = 0;
         u32 current = m_source_manager.current_char();
 
         // count leading whitespace
@@ -309,7 +285,7 @@ tok::Fa_Token const* Fa_Lexer::lex_token()
             store(Fa_make_token(tok::Fa_TokenType::INDENT, "", src_loc));
 
         } else {
-            unsigned int dedent_count = 0;
+            u32 dedent_count = 0;
             while (m_indent_level > 0 && size < m_indent_stack.back()) {
                 m_indent_level -= 1;
                 m_indent_stack.pop();
@@ -322,7 +298,7 @@ tok::Fa_Token const* Fa_Lexer::lex_token()
             if (alt_size != m_alt_indent_stack.back())
                 diagnostic::panic(ErrorCode::INCONSISTENT_INDENTATION);
 
-            for (unsigned int i = 0; i < dedent_count; i += 1)
+            for (u32 i = 0; i < dedent_count; i += 1)
                 store(Fa_make_token(tok::Fa_TokenType::DEDENT, "", src_loc));
         }
     };
@@ -343,7 +319,7 @@ tok::Fa_Token const* Fa_Lexer::lex_token()
             m_source_manager.consume_char();
             m_at_bol = true;
             Fa_StringRef endl_str = m_source_manager.source_slice(start_byte, start_byte + 1);
-            tok::Fa_Token const* ret = Fa_make_token(tok::Fa_TokenType::NEWLINE, endl_str, src_loc);
+            TokenPtr ret = Fa_make_token(tok::Fa_TokenType::NEWLINE, endl_str, src_loc);
             store(ret);
             next_line(src_loc);
             return ret;
@@ -557,7 +533,7 @@ tok::Fa_Token const* Fa_Lexer::lex_token()
     return finish(tok::Fa_TokenType::ENDMARKER, "", last_loc);
 }
 
-tok::Fa_Token const* Fa_Lexer::m_next()
+TokenPtr Fa_Lexer::next()
 {
     if (m_tok_index + 1 < m_tok_stream.size()) {
         m_tok_index += 1;
@@ -579,7 +555,7 @@ tok::Fa_Token const* Fa_Lexer::m_next()
     return m_tok_stream[m_tok_index];
 }
 
-tok::Fa_Token const* Fa_Lexer::current() const
+TokenPtr Fa_Lexer::current() const
 {
     if (m_tok_index < m_tok_stream.size())
         return m_tok_stream[m_tok_index];
@@ -589,7 +565,7 @@ tok::Fa_Token const* Fa_Lexer::current() const
     return nullptr;
 }
 
-tok::Fa_Token const* Fa_Lexer::peek(size_t n)
+TokenPtr Fa_Lexer::peek(size_t n)
 {
     while (m_tok_index + n >= m_tok_stream.size()) {
         if (!m_tok_stream.empty() && m_tok_stream.back()->type() == tok::Fa_TokenType::ENDMARKER)
@@ -601,11 +577,11 @@ tok::Fa_Token const* Fa_Lexer::peek(size_t n)
     return m_tok_stream[m_tok_index + n];
 }
 
-void Fa_Lexer::store(tok::Fa_Token const* tok) { m_tok_stream.push(tok); }
+void Fa_Lexer::store(TokenPtr tok) { m_tok_stream.push(tok); }
 
-Fa_Array<tok::Fa_Token const*> Fa_Lexer::tokenize()
+Fa_Array<TokenPtr> Fa_Lexer::tokenize()
 {
-    while (m_next()->type() != tok::Fa_TokenType::ENDMARKER)
+    while (next()->type() != tok::Fa_TokenType::ENDMARKER)
         ;
 
     return this->m_tok_stream;
