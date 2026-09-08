@@ -20,7 +20,7 @@ TEST(LexerTest, TestIndentationLevel0)
     lex::Fa_FileManager m_file_manager(lexer_test_cases_dir() / "recognizes_indentation_level0.fa");
     lex::Fa_Lexer m_lexer(&m_file_manager);
     auto tokens = m_lexer.tokenize();
-    tok::Fa_Token const* expected = Fa_make_token(tok::Fa_TokenType::IDENTIFIER, "ا", { 1, 1, 0, 0 });
+    TokenPtr expected = Fa_make_token(tok::Fa_TokenType::IDENTIFIER, "ا", { 1, 1, 0, 0 });
     ASSERT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0]->type(), tok::Fa_TokenType::BEGINMARKER);
     EXPECT_EQ(*tokens[1], *expected);
@@ -32,7 +32,7 @@ TEST(LexerTest, TestIndentationLevel1)
     lex::Fa_FileManager m_file_manager(lexer_test_cases_dir() / "recognizes_indentation_level1.fa");
     lex::Fa_Lexer m_lexer(&m_file_manager);
     auto tokens = m_lexer.tokenize();
-    std::vector<tok::Fa_Token const*> expected = { Fa_make_token(tok::Fa_TokenType::BEGINMARKER, "", { 1, 1, 0, 0 }),
+    std::vector<TokenPtr> expected = { Fa_make_token(tok::Fa_TokenType::BEGINMARKER, "", { 1, 1, 0, 0 }),
         Fa_make_token(tok::Fa_TokenType::IDENTIFIER, "ا", { 1, 1, 0, 0 }),
         Fa_make_token(tok::Fa_TokenType::NEWLINE, "\n", { 1, 2, 0, 0 }),
         Fa_make_token(tok::Fa_TokenType::INDENT, "", { 0, 0, 0, 0 }),
@@ -53,7 +53,7 @@ TEST(LexerTest, TestIndentationLevel2)
     lex::Fa_FileManager m_file_manager(lexer_test_cases_dir() / "recognizes_indentation_level2.fa");
     lex::Fa_Lexer m_lexer(&m_file_manager);
     auto tokens = m_lexer.tokenize();
-    std::vector<tok::Fa_Token const*> expected = { Fa_make_token(tok::Fa_TokenType::BEGINMARKER, "", { 1, 1, 0, 0 }),
+    std::vector<TokenPtr> expected = { Fa_make_token(tok::Fa_TokenType::BEGINMARKER, "", { 1, 1, 0, 0 }),
         Fa_make_token(tok::Fa_TokenType::IDENTIFIER, "ا", { 1, 1, 0, 0 }),
         Fa_make_token(tok::Fa_TokenType::NEWLINE, "\n", { 1, 2, 0, 0 }),
         Fa_make_token(tok::Fa_TokenType::INDENT, "", { 0, 0, 0, 0 }),

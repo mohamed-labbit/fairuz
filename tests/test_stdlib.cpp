@@ -11,6 +11,13 @@ using namespace fairuz::runtime;
 
 namespace {
 
+class Fa_StdlibPerfTest : public ::testing::Test {
+protected:
+    void SetUp() override { REQUIRE_PERF(); }
+
+    void TearDown() override { }
+};
+
 Fa_Value make_list(Fa_VM& vm, std::initializer_list<Fa_Value> values)
 {
     Fa_Value list = vm.Fa_list(0, nullptr);
@@ -274,7 +281,7 @@ TEST(StdlibRegression, TrimRemovesMixedLeadingAndTrailingWhitespace)
     EXPECT_EQ(as_std_string(result), "fairuz");
 }
 
-TEST(StdlibPerf, SplitJoinRoundTripLargeCsv)
+TEST_F(Fa_StdlibPerfTest, SplitJoinRoundTripLargeCsv)
 {
     Fa_VM vm;
     std::string csv;
@@ -304,7 +311,7 @@ TEST(StdlibPerf, SplitJoinRoundTripLargeCsv)
     std::printf("  stdlib split 2k fields: %.1f us, join: %.1f us\n", split_us, join_us);
 }
 
-TEST(StdlibPerf, LenOnLargeString100kCalls)
+TEST_F(Fa_StdlibPerfTest, LenOnLargeString100kCalls)
 {
     Fa_VM vm;
     std::string payload(8192, 'x');
@@ -323,7 +330,7 @@ TEST(StdlibPerf, LenOnLargeString100kCalls)
     std::printf("  stdlib len 100k calls (8 KiB string): %.1f us\n", total_us);
 }
 
-TEST(StdlibPerf, TrimLargePaddedString50kCalls)
+TEST_F(Fa_StdlibPerfTest, TrimLargePaddedString50kCalls)
 {
     Fa_VM vm;
     std::string payload(1024, ' ');

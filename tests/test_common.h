@@ -124,4 +124,20 @@ static inline Fa_Value str(char const* s) {
     return Fa_Value::from_string(obj);
 }
 
+static inline bool require_perf()
+{
+    if (auto v = std::getenv("TEST_PERF")) {
+        std::string s { v };
+        return s == "1" || s == "true";
+    }
+    return false;
+}
+
+#define REQUIRE_PERF()                                                                                   \
+    do {                                                                                                 \
+        if (!require_perf())                                                                             \
+            GTEST_SKIP(); \
+    } while (0);
+
+
 #endif // TEST_COMMON_H

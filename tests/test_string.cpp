@@ -1,4 +1,5 @@
 #include "../fairuz/fstring.hpp"
+#include "test_common.h"
 
 #include <chrono>
 #include <gtest/gtest.h>
@@ -11,6 +12,13 @@ using namespace fairuz;
 class Fa_StringRefTest : public ::testing::Test {
 protected:
     void SetUp() override { }
+
+    void TearDown() override { }
+};
+
+class Fa_StringRefPerfTest : public ::testing::Test {
+protected:
+    void SetUp() override { REQUIRE_PERF(); }
 
     void TearDown() override { }
 };
@@ -863,7 +871,7 @@ TEST_F(Fa_StringRefTest, StdHash_Works)
     EXPECT_NE(m_hash, 0);
 }
 
-TEST_F(Fa_StringRefTest, Stress_ManyAppends)
+TEST_F(Fa_StringRefPerfTest, Stress_ManyAppends)
 {
     Fa_StringRef s;
     for (int i = 0; i < 10000; i += 1)
@@ -871,7 +879,7 @@ TEST_F(Fa_StringRefTest, Stress_ManyAppends)
     EXPECT_EQ(s.len(), 10000);
 }
 
-TEST_F(Fa_StringRefTest, Stress_ManyErases)
+TEST_F(Fa_StringRefPerfTest, Stress_ManyErases)
 {
     Fa_StringRef s;
     for (int i = 0; i < 1000; i += 1)
@@ -881,7 +889,7 @@ TEST_F(Fa_StringRefTest, Stress_ManyErases)
     EXPECT_EQ(s.len(), 500);
 }
 
-TEST_F(Fa_StringRefTest, Stress_CopyAndModify)
+TEST_F(Fa_StringRefPerfTest, Stress_CopyAndModify)
 {
     Fa_StringRef original("Original");
     std::vector<Fa_StringRef> copies;
@@ -896,14 +904,14 @@ TEST_F(Fa_StringRefTest, Stress_CopyAndModify)
         EXPECT_NE(copies[i], original);
 }
 
-TEST_F(Fa_StringRefTest, Stress_LargeString)
+TEST_F(Fa_StringRefPerfTest, Stress_LargeString)
 {
     std::string large(100000, 'A');
     Fa_StringRef s(large.data());
     EXPECT_EQ(s.len(), 100000);
 }
 
-TEST_F(Fa_StringRefTest, Stress_UnicodeAppends)
+TEST_F(Fa_StringRefPerfTest, Stress_UnicodeAppends)
 {
     Fa_StringRef s;
     for (int i = 0; i < 1000; i += 1)
@@ -912,7 +920,7 @@ TEST_F(Fa_StringRefTest, Stress_UnicodeAppends)
     EXPECT_EQ(s.len(), 10000);
 }
 
-TEST_F(Fa_StringRefTest, Stress_ManySubstrings)
+TEST_F(Fa_StringRefPerfTest, Stress_ManySubstrings)
 {
     Fa_StringRef s("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
     std::vector<Fa_StringRef> subs;
@@ -925,7 +933,7 @@ TEST_F(Fa_StringRefTest, Stress_ManySubstrings)
     EXPECT_GT(subs.size(), 100);
 }
 
-TEST_F(Fa_StringRefTest, Stress_RandomOperations)
+TEST_F(Fa_StringRefPerfTest, Stress_RandomOperations)
 {
     std::mt19937 rng(42);
     std::uniform_int_distribution<> op_dist(0, 4);
@@ -963,7 +971,7 @@ TEST_F(Fa_StringRefTest, EdgeCase_NullTerminatorInMiddle)
     EXPECT_LE(s.len(), 5);
 }
 
-TEST_F(Fa_StringRefTest, EdgeCase_MaxSizeString)
+TEST_F(Fa_StringRefPerfTest, EdgeCase_MaxSizeString)
 {
     size_t const large_size = 1000000;
     Fa_StringRef s(large_size);
@@ -1030,7 +1038,7 @@ TEST_F(Fa_StringRefTest, NoLeak_MoveAssignmentLoop)
     EXPECT_TRUE(true);
 }
 
-TEST_F(Fa_StringRefTest, Performance_AppendChars)
+TEST_F(Fa_StringRefPerfTest, Performance_AppendChars)
 {
     auto start = std::chrono::high_resolution_clock::now();
 
@@ -1046,7 +1054,7 @@ TEST_F(Fa_StringRefTest, Performance_AppendChars)
     std::cout << "Append 10000 chars took: " << duration.count() << "ms\n";
 }
 
-TEST_F(Fa_StringRefTest, Performance_Concatenation)
+TEST_F(Fa_StringRefPerfTest, Performance_Concatenation)
 {
     auto start = std::chrono::high_resolution_clock::now();
 
@@ -1063,7 +1071,7 @@ TEST_F(Fa_StringRefTest, Performance_Concatenation)
     std::cout << "1000 concatenations took: " << duration.count() << "ms\n";
 }
 
-TEST_F(Fa_StringRefTest, Performance_Utf8Conversion)
+TEST_F(Fa_StringRefPerfTest, Performance_Utf8Conversion)
 {
     std::string utf8(10000, 'A');
 
@@ -1141,7 +1149,7 @@ static void do_not_optimize(T const& v)
 // ---------------------------------------------------------------------------
 
 // Baseline: 1 M single-char appends with pre-reserved buffer (pure write path).
-TEST_F(Fa_StringRefTest, Append_1M_Chars_PreReserved)
+TEST_F(Fa_StringRefPerfTest, Append_1M_Chars_PreReserved)
 {
     constexpr int N = 1'000'000;
 
@@ -1159,7 +1167,7 @@ TEST_F(Fa_StringRefTest, Append_1M_Chars_PreReserved)
 }
 
 // Append with no pre-reservation — measures reallocation overhead.
-TEST_F(Fa_StringRefTest, Append_1M_Chars_NoReserve)
+TEST_F(Fa_StringRefPerfTest, Append_1M_Chars_NoReserve)
 {
     constexpr int N = 1'000'000;
 
@@ -1176,7 +1184,7 @@ TEST_F(Fa_StringRefTest, Append_1M_Chars_NoReserve)
 }
 
 // Append short string chunks — 250k * 4 bytes = 1 MB total.
-TEST_F(Fa_StringRefTest, Append_250k_ShortStrings)
+TEST_F(Fa_StringRefPerfTest, Append_250k_ShortStrings)
 {
     constexpr int N = 250'000;
     Fa_StringRef chunk("abcd");
@@ -1200,7 +1208,7 @@ TEST_F(Fa_StringRefTest, Append_250k_ShortStrings)
 
 // 10k concatenations via operator+ building a growing string.
 // If operator+ is naive this is O(n²); a good impl should stay linear-ish.
-TEST_F(Fa_StringRefTest, Concat_10k_Growing)
+TEST_F(Fa_StringRefPerfTest, Concat_10k_Growing)
 {
     constexpr int N = 10'000;
     Fa_StringRef part("X");
@@ -1217,7 +1225,7 @@ TEST_F(Fa_StringRefTest, Concat_10k_Growing)
 }
 
 // Same total bytes but using += — should be significantly faster.
-TEST_F(Fa_StringRefTest, Concat_10k_AppendAssign)
+TEST_F(Fa_StringRefPerfTest, Concat_10k_AppendAssign)
 {
     constexpr int N = 10'000;
     Fa_StringRef part("X");
@@ -1239,7 +1247,7 @@ TEST_F(Fa_StringRefTest, Concat_10k_AppendAssign)
 // ---------------------------------------------------------------------------
 
 // 100k shallow copies (no mutation) — should be near-free if CoW shares data.
-TEST_F(Fa_StringRefTest, CoW_100k_ShallowCopies)
+TEST_F(Fa_StringRefPerfTest, CoW_100k_ShallowCopies)
 {
     constexpr int N = 100'000;
     Fa_StringRef original("The quick brown fox jumps over the lazy dog");
@@ -1255,7 +1263,7 @@ TEST_F(Fa_StringRefTest, CoW_100k_ShallowCopies)
 }
 
 // 100k copy-then-mutate — each forces a real allocation (CoW break).
-TEST_F(Fa_StringRefTest, CoW_100k_CopyThenMutate)
+TEST_F(Fa_StringRefPerfTest, CoW_100k_CopyThenMutate)
 {
     constexpr int N = 100'000;
     Fa_StringRef original("The quick brown fox jumps over the lazy dog");
@@ -1272,7 +1280,7 @@ TEST_F(Fa_StringRefTest, CoW_100k_CopyThenMutate)
 }
 
 // Ratio test: shallow copy should be substantially faster than copy+mutate.
-TEST_F(Fa_StringRefTest, CoW_ShallowVsMutate_Ratio)
+TEST_F(Fa_StringRefPerfTest, CoW_ShallowVsMutate_Ratio)
 {
     constexpr int N = 50'000;
     Fa_StringRef original("The quick brown fox jumps over the lazy dog");
@@ -1309,7 +1317,7 @@ TEST_F(Fa_StringRefTest, CoW_ShallowVsMutate_Ratio)
 // ---------------------------------------------------------------------------
 
 // Hash 1M times — exercises the hot path in hash maps.
-TEST_F(Fa_StringRefTest, Hash_1M_Short)
+TEST_F(Fa_StringRefPerfTest, Hash_1M_Short)
 {
     constexpr int N = 1'000'000;
     Fa_StringRefHash hasher;
@@ -1325,7 +1333,7 @@ TEST_F(Fa_StringRefTest, Hash_1M_Short)
     std::printf("  Hash 1M (15-byte string):        %.1f µs  (%.1f ns/op)\n", us, us * 1000.0 / N);
 }
 
-TEST_F(Fa_StringRefTest, Hash_1M_Long)
+TEST_F(Fa_StringRefPerfTest, Hash_1M_Long)
 {
     constexpr int N = 1'000'000;
     Fa_StringRefHash hasher;
@@ -1343,7 +1351,7 @@ TEST_F(Fa_StringRefTest, Hash_1M_Long)
 }
 
 // Hash throughput should scale roughly linearly with length, not quadratically.
-TEST_F(Fa_StringRefTest, Hash_ScalesWithLength)
+TEST_F(Fa_StringRefPerfTest, Hash_ScalesWithLength)
 {
     constexpr int N = 500'000;
     Fa_StringRefHash hasher;
@@ -1380,7 +1388,7 @@ TEST_F(Fa_StringRefTest, Hash_ScalesWithLength)
 // ---------------------------------------------------------------------------
 
 // find_pos over a 1 MB string — worst case (char not present).
-TEST_F(Fa_StringRefTest, FindPos_1MB_Miss)
+TEST_F(Fa_StringRefPerfTest, FindPos_1MB_Miss)
 {
     constexpr size_t SZ = 1'000'000;
     std::string buf(SZ, 'A');
@@ -1396,7 +1404,7 @@ TEST_F(Fa_StringRefTest, FindPos_1MB_Miss)
 }
 
 // find_pos hit at the very end.
-TEST_F(Fa_StringRefTest, FindPos_1MB_HitAtEnd)
+TEST_F(Fa_StringRefPerfTest, FindPos_1MB_HitAtEnd)
 {
     constexpr size_t SZ = 1'000'000;
     std::string buf(SZ, 'A');
@@ -1418,7 +1426,7 @@ TEST_F(Fa_StringRefTest, FindPos_1MB_HitAtEnd)
 // ---------------------------------------------------------------------------
 
 // 1M slices of a large string — should not allocate if slice is zero-copy.
-TEST_F(Fa_StringRefTest, Slice_1M_NoAlloc)
+TEST_F(Fa_StringRefPerfTest, Slice_1M_NoAlloc)
 {
     constexpr int N = 1'000'000;
     std::string buf(1000, 'X');
@@ -1435,7 +1443,7 @@ TEST_F(Fa_StringRefTest, Slice_1M_NoAlloc)
 }
 
 // Slice should be significantly faster than substr (no alloc vs alloc).
-TEST_F(Fa_StringRefTest, Slice_vs_Substr_Ratio)
+TEST_F(Fa_StringRefPerfTest, Slice_vs_Substr_Ratio)
 {
     constexpr int N = 200'000;
     std::string buf(500, 'Y');
@@ -1466,7 +1474,7 @@ TEST_F(Fa_StringRefTest, Slice_vs_Substr_Ratio)
 // ---------------------------------------------------------------------------
 
 // 2M equality checks on equal strings — hot path in interning / hash maps.
-TEST_F(Fa_StringRefTest, Equality_2M_Equal)
+TEST_F(Fa_StringRefPerfTest, Equality_2M_Equal)
 {
     constexpr int N = 2'000'000;
     Fa_StringRef s1("some_variable_name");
@@ -1484,7 +1492,7 @@ TEST_F(Fa_StringRefTest, Equality_2M_Equal)
 }
 
 // 2M equality checks on strings that differ in the last byte — worst case.
-TEST_F(Fa_StringRefTest, Equality_2M_DifferLastByte)
+TEST_F(Fa_StringRefPerfTest, Equality_2M_DifferLastByte)
 {
     constexpr int N = 2'000'000;
     std::string a(64, 'A');
@@ -1512,7 +1520,7 @@ TEST_F(Fa_StringRefTest, Equality_2M_DifferLastByte)
 
 // Erase first char 100k times from the front — O(n) per erase → O(n²) total.
 // Documents the cost so regressions are visible.
-TEST_F(Fa_StringRefTest, Erase_100k_FromFront)
+TEST_F(Fa_StringRefPerfTest, Erase_100k_FromFront)
 {
     constexpr int N = 100'000;
     Fa_StringRef s;
@@ -1535,7 +1543,7 @@ TEST_F(Fa_StringRefTest, Erase_100k_FromFront)
 // ---------------------------------------------------------------------------
 
 // Append 100k Arabic codepoints (2 bytes each in UTF-8).
-TEST_F(Fa_StringRefTest, Append_100k_ArabicChunks)
+TEST_F(Fa_StringRefPerfTest, Append_100k_ArabicChunks)
 {
     constexpr int N = 100'000;
     Fa_StringRef chunk("مرحبا"); // 10 UTF-8 bytes
@@ -1556,7 +1564,7 @@ TEST_F(Fa_StringRefTest, Append_100k_ArabicChunks)
 // toDouble throughput
 // ---------------------------------------------------------------------------
 
-TEST_F(Fa_StringRefTest, ToDouble_1M_Integer)
+TEST_F(Fa_StringRefPerfTest, ToDouble_1M_Integer)
 {
     constexpr int N = 1'000'000;
     Fa_StringRef s("123456");
@@ -1571,7 +1579,7 @@ TEST_F(Fa_StringRefTest, ToDouble_1M_Integer)
     std::printf("  toDouble() 1M integer parses:    %.1f µs  (%.1f ns/op)\n", us, us * 1000.0 / N);
 }
 
-TEST_F(Fa_StringRefTest, ToDouble_1M_Float)
+TEST_F(Fa_StringRefPerfTest, ToDouble_1M_Float)
 {
     constexpr int N = 1'000'000;
     Fa_StringRef s("3.14159265");
@@ -1590,7 +1598,7 @@ TEST_F(Fa_StringRefTest, ToDouble_1M_Float)
 // Mixed workload — simulates a realistic interpreter inner loop:
 // intern a name, look it up, compare, slice.
 // ---------------------------------------------------------------------------
-TEST_F(Fa_StringRefTest, Mixed_InterpreterInnerLoop)
+TEST_F(Fa_StringRefPerfTest, Mixed_InterpreterInnerLoop)
 {
     constexpr int N = 500'000;
 

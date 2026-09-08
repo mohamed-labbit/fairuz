@@ -7,7 +7,6 @@
 #include "test_common.h"
 #include "test_config.h"
 
-#include <bit>
 #include <charconv>
 #include <chrono>
 #include <cstdlib>
@@ -22,7 +21,7 @@ static constexpr char kClassInstanceName[] = "__class$instance";
 namespace {
 
 Fa_GarbageCollector gc;
-Fa_StringRef sp_method_name(int m)
+static inline Fa_StringRef sp_method_name(int m)
 {
     switch (m) {
     case Fa_ObjClass::INIT: return "بداية";
@@ -38,6 +37,13 @@ Fa_StringRef sp_method_name(int m)
 }
 
 }
+
+class Fa_VMPerfTest : public ::testing::Test {
+protected:
+    void SetUp() override { REQUIRE_PERF(); }
+
+    void TearDown() override { }
+};
 
 static constexpr u16 BX(int v) { return static_cast<u16>(v + 32767); }
 
@@ -150,7 +156,7 @@ Fa_Chunk* compile_program(Fa_Array<AST::Fa_Stmt*> stmts)
 
 Fa_Chunk* compile_calling(AST::Fa_Stmt* fn)
 {
-    auto* name = AS_FUNCTION_DEF(fn)->get_name();
+    auto* name = as_function_def(fn)->get_name();
     return compile_program({ fn, expr_stmt(call_expr(name_expr(name->get_value()))) });
 }
 
@@ -2048,7 +2054,7 @@ static void do_not_optimize(T const& v)
 //   r0 = r2       (MOVE)
 // N iterations → N ADD + N MOVE dispatched.
 
-TEST(VMPerfTest, Dispatch_IntAdd_1M_Iterations)
+TEST_F(Fa_VMPerfTest, Dispatch_IntAdd_1M_Iterations)
 {
     constexpr int N = 1'000'000;
 
@@ -2085,7 +2091,7 @@ TEST(VMPerfTest, Dispatch_IntAdd_1M_Iterations)
 // 2. Dispatch throughput — float arithmetic loop
 //    Same structure, but f64 accumulator — exercises the FF fast path.
 
-TEST(VMPerfTest, Dispatch_FloatAdd_500k_Iterations)
+TEST_F(Fa_VMPerfTest, Dispatch_FloatAdd_500k_Iterations)
 {
     constexpr int N = 500'000;
 
@@ -2122,7 +2128,7 @@ TEST(VMPerfTest, Dispatch_FloatAdd_500k_Iterations)
 //    Cold: first run, generic opcode handlers.
 //    Warm: second run, quickened ADD_II / ADD_FF specialisations.
 
-TEST(VMPerfTest, IC_Quickening_ColdVsWarm_Ratio)
+TEST_F(Fa_VMPerfTest, IC_Quickening_ColdVsWarm_Ratio)
 {
     constexpr int N = 200'000;
 
@@ -2174,7 +2180,7 @@ TEST(VMPerfTest, IC_Quickening_ColdVsWarm_Ratio)
 //    STORE_GLOBAL + LOAD_GLOBAL in a loop — exercises the globals hash map.
 // ─────────────────────────────────────────────────────────────────────────────
 
-TEST(VMPerfTest, GlobalLookup_1M_Roundtrips)
+TEST_F(Fa_VMPerfTest, GlobalLookup_1M_Roundtrips)
 {
     constexpr int N = 1'000'000;
 
@@ -2197,7 +2203,7 @@ TEST(VMPerfTest, GlobalLookup_1M_Roundtrips)
     ::printf("  Global store+load %dk roundtrips:  %.1f µs  (%.2f ns/op)\n", N / 1000, us, us * 1000.0 / N);
 }
 
-TEST(VMPerfTest, CallOverhead_100k_Calls)
+TEST_F(Fa_VMPerfTest, CallOverhead_100k_Calls)
 {
     constexpr int N = 100;
 
@@ -2239,7 +2245,7 @@ TEST(VMPerfTest, CallOverhead_100k_Calls)
 //    We measure time; the tail-call version must not be significantly slower.
 // ─────────────────────────────────────────────────────────────────────────────
 
-TEST(VMPerfTest, TailCall_vs_RegularLoop_Ratio)
+TEST_F(Fa_VMPerfTest, TailCall_vs_RegularLoop_Ratio)
 {
     constexpr int DEPTH = 5000;
 
@@ -2294,7 +2300,7 @@ TEST(VMPerfTest, TailCall_vs_RegularLoop_Ratio)
 //    Builds a list of N elements then iterates over it summing values.
 // ─────────────────────────────────────────────────────────────────────────────
 
-TEST(VMPerfTest, List_AppendAndSum_10k)
+TEST_F(Fa_VMPerfTest, List_AppendAndSum_10k)
 {
     constexpr int N = 10'000;
     AST::Fa_Stmt* test = func_def(
@@ -2343,7 +2349,7 @@ TEST(VMPerfTest, List_AppendAndSum_10k)
 //    IC_CALL path: first call warms the inline cache, subsequent calls hit it.
 // ─────────────────────────────────────────────────────────────────────────────
 
-TEST(VMPerfTest, NativeCall_Len_50k_ICHot)
+TEST_F(Fa_VMPerfTest, NativeCall_Len_50k_ICHot)
 {
     constexpr int N = 50'000;
 
@@ -2422,7 +2428,7 @@ static Fa_Chunk* make_fib_top(int n, int reps)
     return top;
 }
 
-TEST(VMPerfTest, Fib20_100reps)
+TEST_F(Fa_VMPerfTest, Fib20_100reps)
 {
     constexpr int FIB_N = 20;
     constexpr int REPS = 100;
@@ -2439,7 +2445,7 @@ TEST(VMPerfTest, Fib20_100reps)
     ::printf("  fib(%d) × %d reps:                  %.1f µs  (%.1f µs/call)\n", FIB_N, REPS, us, us / REPS);
 }
 
-TEST(VMPerfTest, Fib25_10reps)
+TEST_F(Fa_VMPerfTest, Fib25_10reps)
 {
     constexpr int FIB_N = 25;
     constexpr int REPS = 10;
@@ -2463,7 +2469,7 @@ TEST(VMPerfTest, Fib25_10reps)
 //     test runs.
 // ─────────────────────────────────────────────────────────────────────────────
 
-TEST(VMPerfStressTest, Dispatch_IntAdd_10M_Iterations)
+TEST_F(Fa_VMPerfTest, Dispatch_IntAdd_10M_Iterations)
 {
     constexpr int N = 10'000'000;
 
@@ -2494,7 +2500,7 @@ TEST(VMPerfStressTest, Dispatch_IntAdd_10M_Iterations)
         N / 1'000'000, us, us * 1000.0 / N);
 }
 
-TEST(VMPerfStressTest, NativeCall_Len_1M_ICHot)
+TEST_F(Fa_VMPerfTest, NativeCall_Len_1M_ICHot)
 {
     constexpr int N = 1'000'000;
 
@@ -2527,7 +2533,7 @@ TEST(VMPerfStressTest, NativeCall_Len_1M_ICHot)
         N / 1'000'000, us, us * 1000.0 / N);
 }
 
-TEST(VMPerfStressTest, List_AppendAndSum_100k)
+TEST_F(Fa_VMPerfTest, List_AppendAndSum_100k)
 {
     constexpr int N = 100'000;
 
@@ -2571,7 +2577,7 @@ TEST(VMPerfStressTest, List_AppendAndSum_100k)
     std::printf("  STRESS list append+sum N=%d:        %.1f µs\n", N, us);
 }
 
-TEST(VMPerfStressTest, Fib28_20reps_Hot)
+TEST_F(Fa_VMPerfTest, Fib28_20reps_Hot)
 {
     constexpr int FIB_N = 28;
     constexpr int REPS = 20;
