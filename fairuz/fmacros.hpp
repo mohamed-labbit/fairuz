@@ -60,7 +60,7 @@ using f64 = double;
 #if defined(__x86_64__) || defined(_M_X64)
 #    define FA_USE_NANBOX 1
 #elif defined(__aarch64__) || defined(_M_ARM64)
-#    define FA_USE_NANBOX 0
+#    define FA_USE_NANBOX 1
 #else
 #    define FA_USE_NANBOX 0
 #endif
