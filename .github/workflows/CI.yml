@@ -44,9 +44,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build libomp-dev
           if [ "${{ matrix.compiler }}" = "clang" ]; then
-            sudo apt-get install -y clang ninja
+            sudo apt-get install -y clang ninja-build
           else
-            sudo apt-get install -y gcc g++ ninja
+            sudo apt-get install -y gcc g++ ninja-build
           fi
 
       - name: Install macOS build dependencies
