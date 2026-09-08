@@ -10,6 +10,8 @@
 #include <cstddef>
 #include <tuple>
 
+#define ALLOCATE_AST_NODE(type, ...) get_allocator().allocate_object<type>(__VA_ARGS__);
+
 namespace fairuz::AST {
 
 class Fa_Expr;
@@ -37,12 +39,6 @@ class Fa_ContinueStmt;
 class Fa_BlockStmt;
 class Fa_ClassDef;
 
-static Fa_ListExpr* Fa_make_list(Fa_Array<Fa_Expr*> elements, Fa_SourceLocation loc);
-static Fa_BlockStmt* Fa_make_block(Fa_Array<Fa_Stmt*> stmts, Fa_SourceLocation loc);
-static Fa_NameExpr* Fa_make_name(Fa_StringRef const str, Fa_SourceLocation loc);
-static Fa_AssignmentExpr* Fa_make_assignment_expr(Fa_Expr* target, Fa_Expr* value, Fa_SourceLocation loc);
-static Fa_AssignmentStmt* Fa_make_assignment_stmt(Fa_Expr* target, Fa_Expr* value, Fa_SourceLocation loc);
-
 class Fa_ASTNode {
 public:
     enum class NodeType : int {
@@ -67,7 +63,10 @@ public:
     Fa_ASTNode& operator=(Fa_ASTNode const&) = delete;
     Fa_ASTNode& operator=(Fa_ASTNode&&) = delete;
 
-    [[nodiscard]] virtual NodeType get_node_type() const;
+    [[nodiscard]] virtual NodeType get_node_type() const
+    {
+        return node_type;
+    }
     [[nodiscard]] u32 get_line() const;
     [[nodiscard]] u16 get_column() const;
     Fa_SourceLocation get_location() const { return m_loc; }
@@ -201,8 +200,18 @@ public:
         assert(m_right != nullptr);
     }
 
-    [[nodiscard]] bool equals(Fa_Expr const* other) const override;
-    [[nodiscard]] Fa_BinaryExpr* clone() const override;
+    [[nodiscard]] bool equals(Fa_Expr const* other) const override
+    {
+        if (other->get_kind() != m_kind)
+            return false;
+
+        auto bin = static_cast<Fa_BinaryExpr const*>(other);
+        return m_operator == bin->get_operator() && m_left->equals(bin->get_left()) && m_right->equals(bin->get_right());
+    }
+    [[nodiscard]] Fa_BinaryExpr* clone() const override
+    {
+        return ALLOCATE_AST_NODE(Fa_BinaryExpr, m_left->clone(), m_right->clone(), m_operator, get_location());
+    }
     void accept(Fa_ExprVisitor& v) override { v.visit(*this); }
 
     [[nodiscard]] Fa_Expr* get_left() const { return m_left; }
@@ -230,8 +239,18 @@ public:
         assert(m_operand != nullptr);
     }
 
-    [[nodiscard]] bool equals(Fa_Expr const* other) const override;
-    [[nodiscard]] Fa_UnaryExpr* clone() const override;
+    [[nodiscard]] bool equals(Fa_Expr const* other) const override
+    {
+        if (other->get_kind() != m_kind)
+            return false;
+
+        auto un = static_cast<Fa_UnaryExpr const*>(other);
+        return m_operator == un->get_operator() && m_operand->equals(un->get_operand());
+    }
+    [[nodiscard]] Fa_UnaryExpr* clone() const override
+    {
+        return ALLOCATE_AST_NODE(Fa_UnaryExpr, m_operand->clone(), m_operator, get_location());
+    }
     void accept(Fa_ExprVisitor& v) override { v.visit(*this); }
 
     [[nodiscard]] Fa_Expr* get_operand() const { return m_operand; }
@@ -334,8 +353,36 @@ public:
         return 0.0;
     }
 
-    [[nodiscard]] bool equals(Fa_Expr const* other) const override;
-    [[nodiscard]] Fa_LiteralExpr* clone() const override;
+    [[nodiscard]] bool equals(Fa_Expr const* other) const override
+    {
+        if (other == nullptr || other->get_kind() != m_kind)
+            return false;
+
+        auto lit = static_cast<Fa_LiteralExpr const*>(other);
+        if (lit == nullptr || m_type != lit->m_type)
+            return false;
+
+        switch (m_type) {
+        case Type::INTEGER: return int_value == lit->int_value;
+        case Type::FLOAT: return float_value == lit->float_value;
+        case Type::BOOLEAN: return bool_value == lit->bool_value;
+        case Type::STRING: return str_value == lit->str_value;
+        case Type::NIL: return true; // two nil objects are always equal
+        }
+
+        return false;
+    }
+    [[nodiscard]] Fa_LiteralExpr* clone() const override
+    {
+        switch (m_type) {
+        case Type::INTEGER: return ALLOCATE_AST_NODE(Fa_LiteralExpr, int_value, Type::INTEGER, get_location());
+        case Type::FLOAT: return ALLOCATE_AST_NODE(Fa_LiteralExpr, float_value, Type::FLOAT, get_location());
+        case Type::BOOLEAN: return ALLOCATE_AST_NODE(Fa_LiteralExpr, bool_value, get_location());
+        case Type::STRING: return ALLOCATE_AST_NODE(Fa_LiteralExpr, str_value, get_location());
+        case Type::NIL: return ALLOCATE_AST_NODE(Fa_LiteralExpr, get_location());
+        default: return nullptr; // should never happen
+        }
+    }
     void accept(Fa_ExprVisitor& v) override { v.visit(*this); }
 }; // class Fa_LiteralExpr
 
@@ -353,8 +400,18 @@ public:
     {
     }
 
-    [[nodiscard]] bool equals(Fa_Expr const* other) const override;
-    [[nodiscard]] Fa_NameExpr* clone() const override;
+    [[nodiscard]] bool equals(Fa_Expr const* other) const override
+    {
+        if (other->get_kind() != m_kind)
+            return false;
+
+        auto name = static_cast<Fa_NameExpr const*>(other);
+        return m_value == name->get_value();
+    }
+    [[nodiscard]] Fa_NameExpr* clone() const override
+    {
+        return ALLOCATE_AST_NODE(Fa_NameExpr, m_value, get_location());
+    }
     void accept(Fa_ExprVisitor& v) override { v.visit(*this); }
 
     [[nodiscard]] Fa_StringRef get_value() const { return m_value; }
@@ -379,8 +436,27 @@ public:
     Fa_Expr* operator[](size_t const i) { return m_elements[i]; }
     Fa_Expr const* operator[](size_t const i) const { return m_elements[i]; }
 
-    [[nodiscard]] bool equals(Fa_Expr const* other) const override;
-    [[nodiscard]] Fa_ListExpr* clone() const override;
+    [[nodiscard]] bool equals(Fa_Expr const* other) const override
+    {
+        if (other->get_kind() != m_kind)
+            return false;
+
+        auto list = static_cast<Fa_ListExpr const*>(other);
+
+        if (m_elements.size() != list->m_elements.size())
+            return false;
+
+        for (size_t i = 0; i < m_elements.size(); i += 1) {
+            if (!m_elements[i]->equals(list->m_elements[i]))
+                return false;
+        }
+
+        return true;
+    }
+    [[nodiscard]] Fa_ListExpr* clone() const override
+    {
+        return ALLOCATE_AST_NODE(Fa_ListExpr, m_elements, get_location());
+    }
     void accept(Fa_ExprVisitor& v) override { v.visit(*this); }
 
     [[nodiscard]] Fa_Array<Fa_Expr*> const& get_elements() const { return m_elements; }
@@ -401,12 +477,41 @@ public:
     {
     }
 
-    bool equals(Fa_Expr const* other) const override;
-    Fa_Expr* clone() const override;
+    bool equals(Fa_Expr const* other) const override
+    {
+        if (m_kind != other->get_kind())
+            return false;
+
+        // a dictionary normally doesn't care about order so this is logically not correct
+        // but we gonna stub an implementation that requires order until someone fixes this
+        auto dict = static_cast<Fa_DictExpr const*>(other)->get_content();
+        u32 const s1 = content.size();
+        u32 const s2 = dict.size();
+
+        if (s1 != s2)
+            return false;
+
+        for (u32 i = 0; i < s1; i += 1) {
+            if (!content[i].first->equals(dict[i].first) || !content[i].second->equals(dict[i].second))
+                return false;
+        }
+
+        return true;
+    }
+    Fa_DictExpr* clone() const override
+    {
+        return ALLOCATE_AST_NODE(Fa_DictExpr, content, get_location());
+    }
     void accept(Fa_ExprVisitor& v) override { v.visit(*this); }
 
-    Fa_Array<std::pair<Fa_Expr*, Fa_Expr*>> get_content() const;
-    void set_content(Fa_Array<std::pair<Fa_Expr*, Fa_Expr*>> c);
+    Fa_Array<std::pair<Fa_Expr*, Fa_Expr*>> get_content() const
+    {
+        return content;
+    }
+    void set_content(Fa_Array<std::pair<Fa_Expr*, Fa_Expr*>> c)
+    {
+        content = c;
+    }
 };
 
 class Fa_CallExpr final : public Fa_Expr {
@@ -431,14 +536,26 @@ public:
         , m_call_location(call_loc)
     {
         if (m_args == nullptr)
-            m_args = Fa_make_list({ }, loc);
+            m_args = ALLOCATE_AST_NODE(Fa_ListExpr, Fa_Array<Fa_Expr*> { }, loc);
 
         assert(m_callee != nullptr);
         assert(m_args != nullptr);
     }
 
-    [[nodiscard]] bool equals(Fa_Expr const* other) const override;
-    [[nodiscard]] Fa_CallExpr* clone() const override;
+    [[nodiscard]] bool equals(Fa_Expr const* other) const override
+    {
+        if (other->get_kind() != m_kind)
+            return false;
+
+        auto call = static_cast<Fa_CallExpr const*>(other);
+        return m_callee->equals(call->get_callee())
+            && m_args->equals(call->get_args_as_list_expr())
+            && m_call_location == call->get_call_location();
+    }
+    [[nodiscard]] Fa_CallExpr* clone() const override
+    {
+        return ALLOCATE_AST_NODE(Fa_CallExpr, m_callee->clone(), m_args->clone(), get_location());
+    }
     void accept(Fa_ExprVisitor& v) override { v.visit(*this); }
 
     [[nodiscard]] Fa_Expr* get_callee() const { return m_callee; }
@@ -449,8 +566,14 @@ public:
     [[nodiscard]] Fa_ListExpr* get_args_as_list_expr() { return m_args; }
     [[nodiscard]] Fa_ListExpr const* get_args_as_list_expr() const { return m_args; }
 
-    [[nodiscard]] CallLocation get_call_location() const;
-    [[nodiscard]] bool has_arguments() const;
+    [[nodiscard]] CallLocation get_call_location() const
+    {
+        return m_call_location;
+    }
+    [[nodiscard]] bool has_arguments() const
+    {
+        return m_args != nullptr && !m_args->is_empty();
+    }
 }; // class Fa_CallExpr
 
 class Fa_AssignmentExpr final : public Fa_Expr {
@@ -468,8 +591,18 @@ public:
         assert(m_value != nullptr);
     }
 
-    [[nodiscard]] bool equals(Fa_Expr const* other) const override;
-    [[nodiscard]] Fa_AssignmentExpr* clone() const override;
+    [[nodiscard]] bool equals(Fa_Expr const* other) const override
+    {
+        if (other->get_kind() != m_kind)
+            return false;
+
+        auto bin = static_cast<Fa_AssignmentExpr const*>(other);
+        return m_target->equals(bin->get_target()) && m_value->equals(bin->get_value());
+    }
+    [[nodiscard]] Fa_AssignmentExpr* clone() const override
+    {
+        return ALLOCATE_AST_NODE(Fa_AssignmentExpr, m_target->clone(), m_value->clone(), get_location());
+    }
     void accept(Fa_ExprVisitor& v) override { v.visit(*this); }
 
     [[nodiscard]] Fa_Expr* get_target() const { return m_target; }
@@ -496,8 +629,18 @@ public:
         assert(m_index != nullptr);
     }
 
-    [[nodiscard]] bool equals(Fa_Expr const* other) const override;
-    [[nodiscard]] Fa_IndexExpr* clone() const override;
+    [[nodiscard]] bool equals(Fa_Expr const* other) const override
+    {
+        if (other == nullptr || other->get_kind() != Kind::INDEX_READ)
+            return false;
+
+        auto idx = static_cast<Fa_IndexExpr const*>(other);
+        return m_object->equals(idx->get_object()) && m_index->equals(idx->get_index());
+    }
+    [[nodiscard]] Fa_IndexExpr* clone() const override
+    {
+        return ALLOCATE_AST_NODE(Fa_IndexExpr, m_object->clone(), m_index->clone(), get_location());
+    }
     void accept(Fa_ExprVisitor& v) override { v.visit(*this); }
 
     [[nodiscard]] Fa_Expr* get_object() const { return m_object; }
@@ -523,8 +666,18 @@ public:
         assert(m_member != nullptr);
     }
 
-    [[nodiscard]] bool equals(Fa_Expr const* other) const override;
-    [[nodiscard]] Fa_GetExpr* clone() const override;
+    [[nodiscard]] bool equals(Fa_Expr const* other) const override
+    {
+        if (other == nullptr || other->get_kind() != m_kind)
+            return false;
+
+        auto get_expr = static_cast<Fa_GetExpr const*>(other);
+        return m_object->equals(get_expr->get_object()) && m_member->equals(get_expr->get_member());
+    }
+    [[nodiscard]] Fa_GetExpr* clone() const override
+    {
+        return ALLOCATE_AST_NODE(Fa_GetExpr, m_object->clone(), m_member->clone(), get_location());
+    }
     void accept(Fa_ExprVisitor& v) override { v.visit(*this); }
 
     [[nodiscard]] Fa_Expr* get_object() const { return m_object; }
@@ -581,12 +734,40 @@ public:
     {
     }
 
-    [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
-    [[nodiscard]] Fa_BlockStmt* clone() const override;
+    [[nodiscard]] bool equals(Fa_Stmt const* other) const override
+    {
+        if (other == nullptr || other->get_kind() != Kind::BLOCK)
+            return false;
+
+        auto block = static_cast<Fa_BlockStmt const*>(other);
+
+        if (m_statements.size() != block->m_statements.size())
+            return false;
+
+        for (size_t i = 0; i < m_statements.size(); i += 1) {
+            if (!m_statements[i]->equals(block->m_statements[i]))
+                return false;
+        }
+
+        return true;
+    }
+    [[nodiscard]] Fa_BlockStmt* clone() const override
+    {
+        return ALLOCATE_AST_NODE(Fa_BlockStmt, m_statements, get_location());
+    }
     void accept(Fa_StmtVisitor& v) override { v.visit(*this); }
-    [[nodiscard]] Fa_Array<Fa_Stmt*> const& get_statements() const;
-    [[nodiscard]] bool is_empty() const;
-    void set_statements(Fa_Array<Fa_Stmt*>& stmts);
+    [[nodiscard]] Fa_Array<Fa_Stmt*> const& get_statements() const
+    {
+        return m_statements;
+    }
+    [[nodiscard]] bool is_empty() const
+    {
+        return m_statements.empty();
+    }
+    void set_statements(Fa_Array<Fa_Stmt*>& stmts)
+    {
+        m_statements = stmts;
+    }
 }; // class Fa_BlockStmt
 
 class Fa_ExprStmt final : public Fa_Stmt {
@@ -601,11 +782,27 @@ public:
         assert(m_expr != nullptr);
     }
 
-    [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
-    [[nodiscard]] Fa_ExprStmt* clone() const override;
+    [[nodiscard]] bool equals(Fa_Stmt const* other) const override
+    {
+        if (m_kind != other->get_kind())
+            return false;
+
+        auto block = static_cast<Fa_ExprStmt const*>(other);
+        return m_expr->equals(block->get_expr());
+    }
+    [[nodiscard]] Fa_ExprStmt* clone() const override
+    {
+        return ALLOCATE_AST_NODE(Fa_ExprStmt, m_expr->clone(), get_location());
+    }
     void accept(Fa_StmtVisitor& v) override { v.visit(*this); }
-    [[nodiscard]] Fa_Expr* get_expr() const;
-    void set_expr(Fa_Expr* e);
+    [[nodiscard]] Fa_Expr* get_expr() const
+    {
+        return m_expr;
+    }
+    void set_expr(Fa_Expr* e)
+    {
+        m_expr = e;
+    }
 }; // class Fa_ExprStmt
 
 class Fa_AssignmentStmt final : public Fa_Stmt {
@@ -623,17 +820,39 @@ public:
     Fa_AssignmentStmt(Fa_Expr* target, Fa_Expr* value, Fa_SourceLocation loc)
         : Fa_Stmt(loc, Kind::ASSIGNMENT)
     {
-        m_expr = Fa_make_assignment_expr(target, value, loc); // Fa_AssignmentExpr will assert args for us
+        m_expr = ALLOCATE_AST_NODE(Fa_AssignmentExpr, target, value, loc); // Fa_AssignmentExpr will assert args for us
     }
 
-    [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
-    [[nodiscard]] Fa_AssignmentStmt* clone() const override;
+    [[nodiscard]] bool equals(Fa_Stmt const* other) const override
+    {
+        if (m_kind != other->get_kind())
+            return false;
+
+        auto block = static_cast<Fa_AssignmentStmt const*>(other);
+        return m_expr->get_value()->equals(block->get_value()) && m_expr->get_target()->equals(block->get_target());
+    }
+    [[nodiscard]] Fa_AssignmentStmt* clone() const override
+    {
+        return ALLOCATE_AST_NODE(Fa_AssignmentStmt, m_expr->get_target(), m_expr->get_value(), get_location());
+    }
     void accept(Fa_StmtVisitor& v) override { v.visit(*this); }
-    [[nodiscard]] Fa_Expr* get_value() const;
-    [[nodiscard]] Fa_Expr* get_target() const;
+    [[nodiscard]] Fa_Expr* get_value() const
+    {
+        return m_expr->get_value();
+    }
+    [[nodiscard]] Fa_Expr* get_target() const
+    {
+        return m_expr->get_target();
+    }
     [[nodiscard]] bool is_declaration() const;
-    void set_value(Fa_Expr* v);
-    void set_target(Fa_Expr* t);
+    void set_value(Fa_Expr* v)
+    {
+        m_expr->set_value(v);
+    }
+    void set_target(Fa_Expr* t)
+    {
+        m_expr->set_target(t);
+    }
     void set_decl();
 
     Fa_AssignmentExpr* get_expr() const { return m_expr; }
@@ -656,14 +875,47 @@ public:
         assert(m_then_stmt != nullptr);
     }
 
-    [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
-    [[nodiscard]] Fa_IfStmt* clone() const override;
+    [[nodiscard]] bool equals(Fa_Stmt const* other) const override
+    {
+        if (m_kind != other->get_kind())
+            return false;
+
+        auto if_stmt = static_cast<Fa_IfStmt const*>(other);
+        bool eq_else = false;
+
+        if (m_else_stmt != nullptr && if_stmt->get_else())
+            eq_else = m_else_stmt->equals(if_stmt->get_else());
+
+        return m_condition->equals(if_stmt->get_condition()) && m_then_stmt->equals(if_stmt->get_then()) && eq_else;
+    }
+    [[nodiscard]] Fa_IfStmt* clone() const override
+    {
+        return ALLOCATE_AST_NODE(Fa_IfStmt,
+            m_condition->clone(),
+            m_then_stmt->clone(), get_location(),
+            LIKELY(m_else_stmt == nullptr) ? nullptr : m_else_stmt->clone());
+    }
     void accept(Fa_StmtVisitor& v) override { v.visit(*this); }
-    [[nodiscard]] Fa_Expr* get_condition() const;
-    [[nodiscard]] Fa_Stmt* get_then() const;
-    [[nodiscard]] Fa_Stmt* get_else() const;
-    void set_then(Fa_Stmt* t);
-    void set_else(Fa_Stmt* e);
+    [[nodiscard]] Fa_Expr* get_condition() const
+    {
+        return m_condition;
+    }
+    [[nodiscard]] Fa_Stmt* get_then() const
+    {
+        return m_then_stmt;
+    }
+    [[nodiscard]] Fa_Stmt* get_else() const
+    {
+        return m_else_stmt;
+    }
+    void set_then(Fa_Stmt* t)
+    {
+        m_then_stmt = t;
+    }
+    void set_else(Fa_Stmt* e)
+    {
+        m_else_stmt = e;
+    }
 }; // class Fa_IfStmt
 
 class Fa_WhileStmt final : public Fa_Stmt {
@@ -681,14 +933,36 @@ public:
         assert(m_body != nullptr);
     }
 
-    [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
-    [[nodiscard]] Fa_WhileStmt* clone() const override;
-    void accept(Fa_StmtVisitor& v) override { v.visit(*this); }
-    [[nodiscard]] Fa_Expr* get_condition() const;
-    [[nodiscard]] Fa_Stmt* get_body();
-    [[nodiscard]] Fa_Stmt const* get_body() const;
+    [[nodiscard]] bool equals(Fa_Stmt const* other) const override
+    {
+        if (m_kind != other->get_kind())
+            return false;
 
-    void set_body(Fa_Stmt* b);
+        auto block = static_cast<Fa_WhileStmt const*>(other);
+        return m_condition->equals(block->get_condition()) && m_body->equals(block->get_body());
+    }
+    [[nodiscard]] Fa_WhileStmt* clone() const override
+    {
+        return ALLOCATE_AST_NODE(Fa_WhileStmt, m_condition->clone(), m_body->clone(), get_location());
+    }
+    void accept(Fa_StmtVisitor& v) override { v.visit(*this); }
+    [[nodiscard]] Fa_Expr* get_condition() const
+    {
+        return m_condition;
+    }
+    [[nodiscard]] Fa_Stmt* get_body()
+    {
+        return m_body;
+    }
+    [[nodiscard]] Fa_Stmt const* get_body() const
+    {
+        return m_body;
+    }
+
+    void set_body(Fa_Stmt* b)
+    {
+        m_body = b;
+    }
 }; // class Fa_WhileStmt
 
 class Fa_ForStmt final : public Fa_Stmt {
@@ -709,15 +983,25 @@ public:
         assert(m_body != nullptr);
     }
 
-    [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
-    [[nodiscard]] Fa_ForStmt* clone() const override;
-    void accept(Fa_StmtVisitor& v) override { v.visit(*this); }
-    [[nodiscard]] Fa_Expr* get_container() const;
-    [[nodiscard]] Fa_NameExpr* get_target() const;
-    [[nodiscard]] Fa_Expr* get_iter() const;
-    [[nodiscard]] Fa_Stmt* get_body() const;
+    [[nodiscard]] bool equals(Fa_Stmt const* other) const override
+    {
+        if (m_kind != other->get_kind())
+            return false;
 
-    void set_body(Fa_Stmt* b);
+        auto block = static_cast<Fa_ForStmt const*>(other);
+        return m_container->equals(block->get_container()) && m_iter->equals(block->get_iter()) && m_body->equals(block->get_body());
+    }
+    [[nodiscard]] Fa_ForStmt* clone() const override
+    {
+        return get_allocator().allocate_object<Fa_ForStmt>(m_container->clone(), m_iter->clone(), m_body->clone(), get_location());
+    }
+    void accept(Fa_StmtVisitor& v) override { v.visit(*this); }
+    [[nodiscard]] Fa_Expr* get_container() const { return m_container; }
+    [[nodiscard]] Fa_NameExpr* get_target() const { return static_cast<Fa_NameExpr*>(m_container); }
+    [[nodiscard]] Fa_Expr* get_iter() const { return m_iter; }
+    [[nodiscard]] Fa_Stmt* get_body() const { return m_body; }
+
+    void set_body(Fa_Stmt* b) { m_body = b; }
 }; // class Fa_ForStmt
 
 class Fa_FunctionDef final : public Fa_Stmt {
@@ -738,16 +1022,26 @@ public:
         assert(m_body != nullptr);
     }
 
-    [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
-    [[nodiscard]] Fa_FunctionDef* clone() const override;
-    void accept(Fa_StmtVisitor& v) override { v.visit(*this); }
-    [[nodiscard]] Fa_NameExpr* get_name() const;
-    [[nodiscard]] Fa_Array<Fa_Expr*> const& get_parameters() const;
-    [[nodiscard]] Fa_ListExpr* get_parameter_list() const;
-    [[nodiscard]] Fa_Stmt* get_body() const;
-    [[nodiscard]] bool has_parameters() const;
+    [[nodiscard]] bool equals(Fa_Stmt const* other) const override
+    {
+        if (m_kind != other->get_kind())
+            return false;
 
-    void set_body(Fa_Stmt* b);
+        auto block = static_cast<Fa_FunctionDef const*>(other);
+        return m_name->equals(block->get_name()) && m_params->equals(block->get_parameter_list()) && m_body->equals(block->get_body());
+    }
+    [[nodiscard]] Fa_FunctionDef* clone() const override
+    {
+        return ALLOCATE_AST_NODE(Fa_FunctionDef, m_name->clone(), m_params->clone(), m_body->clone(), get_location());
+    }
+    void accept(Fa_StmtVisitor& v) override { v.visit(*this); }
+    [[nodiscard]] Fa_NameExpr* get_name() const { return m_name; }
+    [[nodiscard]] Fa_Array<Fa_Expr*> const& get_parameters() const { return m_params->get_elements(); }
+    [[nodiscard]] Fa_ListExpr* get_parameter_list() const { return m_params; }
+    [[nodiscard]] Fa_Stmt* get_body() const { return m_body; }
+    [[nodiscard]] bool has_parameters() const { return m_params && !m_params->is_empty(); }
+
+    void set_body(Fa_Stmt* b) { m_body = b; }
 }; // class Fa_FunctionDef
 
 class Fa_ReturnStmt final : public Fa_Stmt {
@@ -761,14 +1055,28 @@ public:
     {
     }
 
-    [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
-    [[nodiscard]] Fa_ReturnStmt* clone() const override;
-    void accept(Fa_StmtVisitor& v) override { v.visit(*this); }
-    [[nodiscard]] Fa_Expr* get_value();
-    [[nodiscard]] Fa_Expr const* get_value() const;
-    [[nodiscard]] bool has_value() const;
+    [[nodiscard]] bool equals(Fa_Stmt const* other) const override
+    {
+        if (m_kind != other->get_kind())
+            return false;
 
-    void set_value(Fa_Expr* v);
+        auto ret_stmt = static_cast<Fa_ReturnStmt const*>(other);
+        if (m_value == nullptr || ret_stmt->get_value() == nullptr)
+            return m_value == ret_stmt->get_value();
+
+        return m_value->equals(ret_stmt->get_value());
+    }
+    [[nodiscard]] Fa_ReturnStmt* clone() const override
+    {
+        auto ret_value = m_value == nullptr ? nullptr : m_value->clone();
+        return ALLOCATE_AST_NODE(Fa_ReturnStmt, ret_value, get_location());
+    }
+    void accept(Fa_StmtVisitor& v) override { v.visit(*this); }
+    [[nodiscard]] Fa_Expr* get_value() { return m_value; }
+    [[nodiscard]] Fa_Expr const* get_value() const { return m_value; }
+    [[nodiscard]] bool has_value() const { return m_value != nullptr; }
+
+    void set_value(Fa_Expr* v) { m_value = v; }
 }; // class Fa_ReturnStmt
 
 class Fa_ClassDef final : public Fa_Stmt {
@@ -791,12 +1099,44 @@ public:
     {
     }
 
-    [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
-    [[nodiscard]] Fa_ClassDef* clone() const override;
+    [[nodiscard]] bool equals(Fa_Stmt const* other) const override
+    {
+        if (m_kind != other->get_kind())
+            return false;
+
+        auto class_def = static_cast<Fa_ClassDef const*>(other);
+
+        Fa_Array<Fa_Expr*> other_members = class_def->get_members();
+        Fa_Array<Fa_Stmt*> other_methods = class_def->get_methods();
+        if (other_members.size() != m_members.size() || other_methods.size() != m_methods.size())
+            return false;
+
+        for (u32 i = 0, n = other_members.size(); i < n; ++i) {
+            if (!other_members[i]->equals(m_members[i]))
+                return false;
+        }
+
+        for (u32 i = 0, n = other_methods.size(); i < n; ++i) {
+            if (!other_methods[i]->equals(m_methods[i]))
+                return false;
+        }
+
+        return m_name->equals(class_def->get_name());
+    }
+    [[nodiscard]] Fa_ClassDef* clone() const override
+    {
+        Fa_Array<Fa_Expr*> member_clones;
+        Fa_Array<Fa_Stmt*> method_clones;
+        for (Fa_Expr* mem : m_members)
+            member_clones.push(mem->clone());
+        for (Fa_Stmt* met : m_methods)
+            method_clones.push(met->clone());
+        return ALLOCATE_AST_NODE(Fa_ClassDef, m_name->clone(), member_clones, method_clones, get_location());
+    }
     void accept(Fa_StmtVisitor& v) override { v.visit(*this); }
-    [[nodiscard]] Fa_Array<Fa_Expr*> get_members() const;
-    [[nodiscard]] Fa_Array<Fa_Stmt*> get_methods() const;
-    [[nodiscard]] Fa_Expr* get_name() const;
+    [[nodiscard]] Fa_Array<Fa_Expr*> get_members() const { return m_members; }
+    [[nodiscard]] Fa_Array<Fa_Stmt*> get_methods() const { return m_methods; }
+    [[nodiscard]] Fa_Expr* get_name() const { return m_name; }
 }; // class Fa_ClassDef
 
 class Fa_BreakStmt final : public Fa_Stmt {
@@ -806,8 +1146,11 @@ public:
     {
     }
 
-    [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
-    [[nodiscard]] Fa_BreakStmt* clone() const override;
+    [[nodiscard]] bool equals(Fa_Stmt const* other) const override
+    {
+        return other != nullptr && other->get_kind() == Kind::BREAK;
+    }
+    [[nodiscard]] Fa_BreakStmt* clone() const override { return ALLOCATE_AST_NODE(Fa_BreakStmt, get_location()); }
     void accept(Fa_StmtVisitor& v) override { v.visit(*this); }
 }; // class Fa_BreakStmt
 
@@ -818,12 +1161,13 @@ public:
     {
     }
 
-    [[nodiscard]] bool equals(Fa_Stmt const* other) const override;
-    [[nodiscard]] Fa_ContinueStmt* clone() const override;
+    [[nodiscard]] bool equals(Fa_Stmt const* other) const override
+    {
+        return other != nullptr && other->get_kind() == Kind::CONTINUE;
+    }
+    [[nodiscard]] Fa_ContinueStmt* clone() const override { return ALLOCATE_AST_NODE(Fa_ContinueStmt, get_location()); }
     void accept(Fa_StmtVisitor& v) override { v.visit(*this); }
 }; // class Fa_ContinueStmt
-
-#define ALLOCATE_AST_NODE(type, ...) get_allocator().allocate_object<type>(__VA_ARGS__);
 
 static inline Fa_BinaryExpr* Fa_make_binary(Fa_Expr* lhs, Fa_Expr* rhs, Fa_BinaryOp const op, Fa_SourceLocation loc)
 {
@@ -967,51 +1311,51 @@ static inline Fa_AssignmentExpr const* as_assignment(Fa_Stmt const* s)
 
 // helper macros
 
-#define AS_IF(_n) static_cast<AST::Fa_IfStmt*>(_n)
-#define AS_WHILE(_n) static_cast<AST::Fa_WhileStmt*>(_n)
-#define AS_FOR(_n) static_cast<AST::Fa_ForStmt*>(_n)
-#define AS_RETURN(_n) static_cast<AST::Fa_ReturnStmt*>(_n)
-#define AS_BREAK(_n) static_cast<AST::Fa_BreakStmt*>(_n)
-#define AS_CONTINUE(_n) static_cast<AST::Fa_ContinueStmt*>(_n)
-#define AS_BLOCK(_n) static_cast<AST::Fa_BlockStmt*>(_n)
-#define AS_FUNCTION_DEF(_n) static_cast<AST::Fa_FunctionDef*>(_n)
-#define AS_CLASS_DEF(_n) static_cast<AST::Fa_ClassDef*>(_n)
-#define AS_ASSIGNMENT_STMT(_n) static_cast<AST::Fa_AssignmentStmt*>(_n)
-#define AS_EXPR_STMT(_n) static_cast<AST::Fa_ExprStmt*>(_n)
+inline Fa_IfStmt* as_if(Fa_Stmt* s) { return static_cast<Fa_IfStmt*>(s); }
+inline Fa_WhileStmt* as_while(Fa_Stmt* s) { return static_cast<Fa_WhileStmt*>(s); }
+inline Fa_ForStmt* as_for(Fa_Stmt* s) { return static_cast<Fa_ForStmt*>(s); }
+inline Fa_ReturnStmt* as_return(Fa_Stmt* s) { return static_cast<Fa_ReturnStmt*>(s); }
+inline Fa_BreakStmt* as_break(Fa_Stmt* s) { return static_cast<Fa_BreakStmt*>(s); }
+inline Fa_ContinueStmt* as_continue(Fa_Stmt* s) { return static_cast<Fa_ContinueStmt*>(s); }
+inline Fa_BlockStmt* as_block(Fa_Stmt* s) { return static_cast<Fa_BlockStmt*>(s); }
+inline Fa_FunctionDef* as_function_def(Fa_Stmt* s) { return static_cast<Fa_FunctionDef*>(s); }
+inline Fa_ClassDef* as_class_def(Fa_Stmt* s) { return static_cast<Fa_ClassDef*>(s); }
+inline Fa_AssignmentStmt* as_assignment_stmt(Fa_Stmt* s) { return static_cast<Fa_AssignmentStmt*>(s); }
+inline Fa_ExprStmt* as_expr_stmt(Fa_Stmt* s) { return static_cast<Fa_ExprStmt*>(s); }
 
-#define AS_BINARY(_n) static_cast<AST::Fa_BinaryExpr*>(_n)
-#define AS_UNARY(_n) static_cast<AST::Fa_UnaryExpr*>(_n)
-#define AS_LITERAL(_n) static_cast<AST::Fa_LiteralExpr*>(_n)
-#define AS_NAME(_n) static_cast<AST::Fa_NameExpr*>(_n)
-#define AS_INDEX(_n) static_cast<AST::Fa_IndexExpr*>(_n)
-#define AS_DICT(_n) static_cast<AST::Fa_DictExpr*>(_n)
-#define AS_LIST(_n) static_cast<AST::Fa_ListExpr*>(_n)
-#define AS_CALL(_n) static_cast<AST::Fa_CallExpr*>(_n)
-#define AS_ASSIGNMENT_EXPR(_n) static_cast<AST::Fa_AssignmentExpr*>(_n)
-#define AS_GET_EXPR(_n) static_cast<AST::Fa_GetExpr*>(_n)
+inline Fa_BinaryExpr* as_binary(Fa_Expr* e) { return static_cast<Fa_BinaryExpr*>(e); }
+inline Fa_UnaryExpr* as_unary(Fa_Expr* e) { return static_cast<Fa_UnaryExpr*>(e); }
+inline Fa_LiteralExpr* as_literal(Fa_Expr* e) { return static_cast<Fa_LiteralExpr*>(e); }
+inline Fa_NameExpr* as_name(Fa_Expr* e) { return static_cast<Fa_NameExpr*>(e); }
+inline Fa_IndexExpr* as_index(Fa_Expr* e) { return static_cast<Fa_IndexExpr*>(e); }
+inline Fa_DictExpr* as_dict(Fa_Expr* e) { return static_cast<Fa_DictExpr*>(e); }
+inline Fa_ListExpr* as_list(Fa_Expr* e) { return static_cast<Fa_ListExpr*>(e); }
+inline Fa_CallExpr* as_call(Fa_Expr* e) { return static_cast<Fa_CallExpr*>(e); }
+inline Fa_AssignmentExpr* as_assignment_expr(Fa_Expr* e) { return static_cast<Fa_AssignmentExpr*>(e); }
+inline Fa_GetExpr* as_get_expr(Fa_Expr* e) { return static_cast<Fa_GetExpr*>(e); }
 
-#define AS_CONST_IF(_n) static_cast<AST::Fa_IfStmt const*>(_n)
-#define AS_CONST_WHILE(_n) static_cast<AST::Fa_WhileStmt const*>(_n)
-#define AS_CONST_FOR(_n) static_cast<AST::Fa_ForStmt const*>(_n)
-#define AS_CONST_RETURN(_n) static_cast<AST::Fa_ReturnStmt const*>(_n)
-#define AS_CONST_BREAK(_n) static_cast<AST::Fa_BreakStmt const*>(_n)
-#define AS_CONST_CONTINUE(_n) static_cast<AST::Fa_ContinueStmt const*>(_n)
-#define AS_CONST_BLOCK(_n) static_cast<AST::Fa_BlockStmt const*>(_n)
-#define AS_CONST_FUNCTION_DEF(_n) static_cast<AST::Fa_FunctionDef const*>(_n)
-#define AS_CONST_CLASS_DEF(_n) static_cast<AST::Fa_ClassDef const*>(_n)
-#define AS_CONST_ASSIGNMENT_STMT(_n) static_cast<AST::Fa_AssignmentStmt const*>(_n)
-#define AS_CONST_EXPR_STMT(_n) static_cast<AST::Fa_ExprStmt const*>(_n)
+inline Fa_IfStmt const* as_if(Fa_Stmt const* s) { return static_cast<Fa_IfStmt const*>(s); }
+inline Fa_WhileStmt const* as_while(Fa_Stmt const* s) { return static_cast<Fa_WhileStmt const*>(s); }
+inline Fa_ForStmt const* as_for(Fa_Stmt const* s) { return static_cast<Fa_ForStmt const*>(s); }
+inline Fa_ReturnStmt const* as_return(Fa_Stmt const* s) { return static_cast<Fa_ReturnStmt const*>(s); }
+inline Fa_BreakStmt const* as_break(Fa_Stmt const* s) { return static_cast<Fa_BreakStmt const*>(s); }
+inline Fa_ContinueStmt const* as_continue(Fa_Stmt const* s) { return static_cast<Fa_ContinueStmt const*>(s); }
+inline Fa_BlockStmt const* as_block(Fa_Stmt const* s) { return static_cast<Fa_BlockStmt const*>(s); }
+inline Fa_FunctionDef const* as_function_def(Fa_Stmt const* s) { return static_cast<Fa_FunctionDef const*>(s); }
+inline Fa_ClassDef const* as_class_def(Fa_Stmt const* s) { return static_cast<Fa_ClassDef const*>(s); }
+inline Fa_AssignmentStmt const* as_assignment_stmt(Fa_Stmt const* s) { return static_cast<Fa_AssignmentStmt const*>(s); }
+inline Fa_ExprStmt const* as_expr_stmt(Fa_Stmt const* s) { return static_cast<Fa_ExprStmt const*>(s); }
 
-#define AS_CONST_BINARY(_n) static_cast<AST::Fa_BinaryExpr const*>(_n)
-#define AS_CONST_UNARY(_n) static_cast<AST::Fa_UnaryExpr const*>(_n)
-#define AS_CONST_LITERAL(_n) static_cast<AST::Fa_LiteralExpr const*>(_n)
-#define AS_CONST_NAME(_n) static_cast<AST::Fa_NameExpr const*>(_n)
-#define AS_CONST_INDEX(_n) static_cast<AST::Fa_IndexExpr const*>(_n)
-#define AS_CONST_DICT(_n) static_cast<AST::Fa_DictExpr const*>(_n)
-#define AS_CONST_LIST(_n) static_cast<AST::Fa_ListExpr const*>(_n)
-#define AS_CONST_CALL(_n) static_cast<AST::Fa_CallExpr const*>(_n)
-#define AS_CONST_ASSIGNMENT_EXPR(_n) static_cast<AST::Fa_AssignmentExpr const*>(_n)
-#define AS_CONST_GET_EXPR(_n) static_cast<const AST::Fa_GetExpr*>(_n)
+inline Fa_BinaryExpr const* as_binary(Fa_Expr const* e) { return static_cast<Fa_BinaryExpr const*>(e); }
+inline Fa_UnaryExpr const* as_unary(Fa_Expr const* e) { return static_cast<Fa_UnaryExpr const*>(e); }
+inline Fa_LiteralExpr const* as_literal(Fa_Expr const* e) { return static_cast<Fa_LiteralExpr const*>(e); }
+inline Fa_NameExpr const* as_name(Fa_Expr const* e) { return static_cast<Fa_NameExpr const*>(e); }
+inline Fa_IndexExpr const* as_index(Fa_Expr const* e) { return static_cast<Fa_IndexExpr const*>(e); }
+inline Fa_DictExpr const* as_dict(Fa_Expr const* e) { return static_cast<Fa_DictExpr const*>(e); }
+inline Fa_ListExpr const* as_list(Fa_Expr const* e) { return static_cast<Fa_ListExpr const*>(e); }
+inline Fa_CallExpr const* as_call(Fa_Expr const* e) { return static_cast<Fa_CallExpr const*>(e); }
+inline Fa_AssignmentExpr const* as_assignment_expr(Fa_Expr const* e) { return static_cast<Fa_AssignmentExpr const*>(e); }
+inline Fa_GetExpr const* as_get_expr(Fa_Expr const* e) { return static_cast<Fa_GetExpr const*>(e); }
 
 static inline bool is_class_def(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::CLASS_DEF; }
 static inline bool is_if(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::IF; }
@@ -1044,10 +1388,10 @@ static inline std::tuple<Fa_Expr*, Fa_Expr*> assignment_parts(Fa_AssignmentExpr 
     return std::make_tuple<Fa_Expr*, Fa_Expr*>(e->get_target(), e->get_value());
 }
 
-static inline int literal_int(Fa_Expr const* e) { return AS_CONST_LITERAL(e)->get_int(); }
-static inline Fa_StringRef literal_str(Fa_Expr const* e) { return AS_CONST_LITERAL(e)->get_str(); }
-static inline float literal_float(Fa_Expr const* e) { return AS_CONST_LITERAL(e)->get_float(); }
-static inline bool literal_bool(Fa_Expr const* e) { return AS_CONST_LITERAL(e)->get_bool(); }
+static inline int literal_int(Fa_Expr const* e) { return as_literal(e)->get_int(); }
+static inline Fa_StringRef literal_str(Fa_Expr const* e) { return as_literal(e)->get_str(); }
+static inline float literal_float(Fa_Expr const* e) { return as_literal(e)->get_float(); }
+static inline bool literal_bool(Fa_Expr const* e) { return as_literal(e)->get_bool(); }
 
 } // namespace fairuz::ast
 
