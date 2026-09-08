@@ -445,20 +445,44 @@ CXX_COMPILER="${COMPILER_PAIR##*|}"
 
 echo "-- Using compiler: $C_COMPILER / $CXX_COMPILER"
 
-# CMakeCache.txt (and everything under build/_deps, including a from-source
-# GoogleTest) is tied to whatever compiler configured it. Switching
-# compilers (clang -> gcc or back) without wiping the build directory
-# leaves stale, incompatible object files and static libraries around —
-# this is what produces the wall of "Undefined symbols ... std::__1:: vs
-# std::__cxx11::" linker errors when GTest was built by one compiler and the
-# test .cpp files by another. Detect the switch here and force the same clean
-# that --clean would do, so nobody has to remember it by hand.
-PREVIOUS_COMPILER_MARKER="compiler.marker"
-CURRENT_COMPILER_MARKER="$CXX_COMPILER"
+# Prefer the Ninja generator when it's available: Ninja natively prints
+# exactly the "[i/n] Building CXX object foo.cc.o" progress line — a single
+# status line that updates in place while things build, breaking into a
+# full "FAILED: ..." block with the compiler's own diagnostics the instant
+# something fails. That's exactly the interface fairuz_tests' own listener
+# hand-rolls, so for the real object-file build we just use the real thing
+# instead of reimplementing it over `make`'s output.
+#
+# Some distros install the binary as `ninja-build` instead of `ninja`
+# (Debian/Ubuntu, historically, due to a name clash with another package) —
+# same two-name situation as the timeout/gtimeout check above, so it gets
+# the same fallback treatment.
+if command -v ninja >/dev/null 2>&1 || command -v ninja-build >/dev/null 2>&1; then
+    GENERATOR="Ninja"
+else
+    GENERATOR="Unix Makefiles"
+    echo "-- ninja not found; falling back to Unix Makefiles (install ninja-build for the compact per-file build progress)"
+fi
 
-if [[ -f "$PREVIOUS_COMPILER_MARKER" ]]; then
-    if [[ "$(cat "$PREVIOUS_COMPILER_MARKER")" != "$CURRENT_COMPILER_MARKER" ]]; then
-        echo "-- Compiler changed since the last build in this build/ directory — cleaning to avoid a stale, ABI-incompatible mix (e.g. a GTest built by the old compiler linked against object files from the new one)."
+echo "-- Using generator: $GENERATOR"
+
+# CMakeCache.txt (and everything under build/_deps, including a from-source
+# GoogleTest) is tied to whatever compiler AND generator configured it.
+# This project supports switching between GCC and Clang on the same
+# machine (build.sh --gcc / --clang), and separately ends up switching
+# between Ninja and Make depending on whether ninja happens to be
+# installed. Reconfiguring an existing build/ after either changes leaves
+# stale state around: a compiler switch produces the ABI-mismatch linker
+# wall described below, and a generator switch makes CMake hard-error
+# outright ("Error: generator : Ninja Does not match the generator used
+# previously: Unix Makefiles"). Detect either change here and force the
+# same clean --clean would do, so nobody has to remember it by hand.
+PREVIOUS_BUILD_MARKER="build-config.marker"
+CURRENT_BUILD_MARKER="$CXX_COMPILER|$GENERATOR"
+
+if [[ -f "$PREVIOUS_BUILD_MARKER" ]]; then
+    if [[ "$(cat "$PREVIOUS_BUILD_MARKER")" != "$CURRENT_BUILD_MARKER" ]]; then
+        echo "-- Compiler or generator changed since the last build in this build/ directory — cleaning to avoid a stale, ABI-incompatible mix (e.g. a GTest built by the old compiler linked against object files from the new one) or a CMake generator mismatch error."
 
         cd ..
         rm -rf build
@@ -467,9 +491,10 @@ if [[ -f "$PREVIOUS_COMPILER_MARKER" ]]; then
     fi
 fi
 
-echo "$CURRENT_COMPILER_MARKER" > "$PREVIOUS_COMPILER_MARKER"
+echo "$CURRENT_BUILD_MARKER" > "$PREVIOUS_BUILD_MARKER"
 
 COMMON_FLAGS+=(
+    -G "$GENERATOR"
     -DCMAKE_C_COMPILER="$C_COMPILER"
     -DCMAKE_CXX_COMPILER="$CXX_COMPILER"
 )
@@ -541,7 +566,13 @@ else
     cmake "${COMMON_FLAGS[@]}" .. || exit 1
 fi
 
-make || exit 1
+# `cmake --build .` dispatches to whichever generator actually configured
+# this build/ directory (ninja or make) instead of hardcoding `make`, which
+# would fail outright against a Ninja-configured tree (no Makefile exists
+# in it). Ninja parallelizes across available cores on its own; Make's
+# default here stays single-threaded, same as the previous plain `make`
+# call, so nothing regresses on machines without ninja installed.
+cmake --build . || exit 1
 
 # Resolve the effective leak-detection setting.
 #
