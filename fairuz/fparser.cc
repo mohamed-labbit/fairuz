@@ -484,7 +484,7 @@ void collect_this_field_assignment(Fa_Array<ExprPtr>& members, StmtPtr stmt)
         auto* t = assign->get_target();
         if (!AST::is_get(t))
             return;
-        auto* get = as_get_expr(t);
+        auto* get = as_get(t);
         if (!same_name(get->get_object(), kClassInstanceName))
             return; /// not of the form this.foo
         auto* mem = get->get_member();
