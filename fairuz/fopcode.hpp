@@ -12,89 +12,166 @@ static constexpr u8 REG_NONE = 0xFF;
 static constexpr u16 MAX_CONSTANTS = 0xFFFF;
 static constexpr u8 MAX_REGS = 250;
 
+/*
+        /// [Op]: [A] , [B], [C]
+        /// or
+        /// [Op]: [A] , [  Bx  ]
+        /// or
+        /// [Op]: [A] , [  sBx ]
+
+        LOAD_NIL,           // dst, Start, Count - fill [B..B+C) with nil
+        LOAD_TRUE,          // dst, - , -
+        LOAD_FALSE,         // dst, - , -
+        LOAD_CONST,         // dst, Const pool index
+        LOAD_INT,           // dst, signed 16-bit int (with bias, for larger ints use u64)
+        LOAD_GLOBAL,        // dst, name const index
+        STORE_GLOBAL,       // src, name const index
+        LOAD_GLOBAL_CACHED, // A = dst, Bx = index into GlobalSlots_
+        STORE_GLOBAL_CACHED,
+
+        MOVE, // dst, src, -
+
+        // * is the value inside the given reg, if you have to ask ,then don't touch
+        // this code
+        // *A = *left OP *right
+        OP_ADD,
+        OP_SUB,
+        OP_MUL,
+        OP_DIV,
+        OP_MOD,
+        OP_POW,
+        OP_NEG, // *A = -(*B)
+        OP_BITAND,
+        OP_BITOR,
+        OP_BITXOR,
+        OP_BITNOT, // *A = ~(*B)
+        OP_LSHIFT,
+        OP_RSHIFT,
+        OP_EQ,
+        OP_NEQ,
+        OP_LT,
+        OP_LTE,
+        OP_NOT, // *A = !(*B)
+        CONCAT, // A: dst, B: first reg, C: count  — concat C registers starting at B
+
+        LIST_NEW,    // dst, init capacity hint, -
+        LIST_APPEND, // list reg, val reg, -
+        LIST_GET,    // dst, list reg, index reg
+        LIST_SET,    // list reg, index reg, value reg
+        LIST_LEN,    // dst, list reg
+
+        JUMP,          // -, sBx : unconditional jump
+        JUMP_IF_TRUE,  // cond reg, offset if truthy (DOESN'T pop)
+        JUMP_IF_FALSE, // cond reg, offset if falsy
+        LOOP,          // -, sBx: backward offset (neg = back)
+
+        FOR_PREP, // base, (lim=*A + 1, step = *A + 2, idx = *A + 3), jump past block
+                    // if done
+        FOR_STEP, // base, jump back to top of block if not done
+
+        CLOSURE,    // dst, function const index
+        CALL,       // func reg, argc, expected ret (0xFF=discard)
+        CALL_TAIL,  // func reg, argc | tail call optimized
+        RETURN,     // first result reg, result count (0=RETURN NIL)
+        RETURN_NIL, // no operands, fast path insead of load and return
+        RETURN1,
+
+        IC_CALL, // func reg, argc, slot index
+
+        INDEX_READ,
+        INDEX_WRITE,
+
+        NEW_CLASS,
+
+        // instances
+        NEW_INSTANCE, // A: new Fa_ObjInstance Bx: constant idx of Fa_ObjClass*
+        INVOKE,       // A: instance reg B: vtable idx reg C: args
+        GET_FIELD,    // A: result reg, B: instance reg, C: field reg
+        SET_FIELD,    // A: instance reg, B: field reg, C: src reg
+
+        // misc
+        NOP,
+        HALT,
+
+        _COUNT
+*/
+
+#define FA_OPCODE_LIST(X)  \
+    X(LOAD_NIL)            \
+    X(LOAD_TRUE)           \
+    X(LOAD_FALSE)          \
+    X(LOAD_CONST)          \
+    X(LOAD_INT)            \
+    X(LOAD_GLOBAL)         \
+    X(STORE_GLOBAL)        \
+    X(LOAD_GLOBAL_CACHED)  \
+    X(STORE_GLOBAL_CACHED) \
+    X(MOVE)                \
+    X(OP_ADD)              \
+    X(OP_SUB)              \
+    X(OP_MUL)              \
+    X(OP_DIV)              \
+    X(OP_MOD)              \
+    X(OP_POW)              \
+    X(OP_NEG)              \
+    X(OP_BITAND)           \
+    X(OP_BITOR)            \
+    X(OP_BITXOR)           \
+    X(OP_BITNOT)           \
+    X(OP_LSHIFT)           \
+    X(OP_RSHIFT)           \
+    X(OP_EQ)               \
+    X(OP_NEQ)              \
+    X(OP_LT)               \
+    X(OP_LTE)              \
+    X(OP_NOT)              \
+    X(CONCAT)              \
+    X(LIST_NEW)            \
+    X(LIST_APPEND)         \
+    X(LIST_GET)            \
+    X(LIST_SET)            \
+    X(LIST_LEN)            \
+    X(JUMP)                \
+    X(JUMP_IF_TRUE)        \
+    X(JUMP_IF_FALSE)       \
+    X(LOOP)                \
+    X(FOR_PREP)            \
+    X(FOR_STEP)            \
+    X(CLOSURE)             \
+    X(CALL)                \
+    X(CALL_TAIL)           \
+    X(RETURN)              \
+    X(RETURN_NIL)          \
+    X(RETURN1)             \
+    X(IC_CALL)             \
+    X(INDEX_READ)          \
+    X(INDEX_WRITE)         \
+    X(NEW_CLASS)           \
+    X(NEW_INSTANCE)        \
+    X(INVOKE)              \
+    X(INVOKE_NAMED)        \
+    X(GET_FIELD)           \
+    X(SET_FIELD)           \
+    X(NOP)                 \
+    X(HALT)
+
 enum class Fa_OpCode : u8 {
-    /// [Op]: [A] , [B], [C]
-    /// or
-    /// [Op]: [A] , [  Bx  ]
-    /// or
-    /// [Op]: [A] , [  sBx ]
+#define X(name) name,
+    FA_OPCODE_LIST(X)
+#undef X
+        _COUNT
+};
 
-    LOAD_NIL,           // dst, Start, Count - fill [B..B+C) with nil
-    LOAD_TRUE,          // dst, - , -
-    LOAD_FALSE,         // dst, - , -
-    LOAD_CONST,         // dst, Const pool index
-    LOAD_INT,           // dst, signed 16-bit int (with bias, for larger ints use u64)
-    LOAD_GLOBAL,        // dst, name const index
-    STORE_GLOBAL,       // src, name const index
-    LOAD_GLOBAL_CACHED, // A = dst, Bx = index into GlobalSlots_
-    STORE_GLOBAL_CACHED,
-
-    MOVE, // dst, src, -
-
-    // * is the value inside the given reg, if you have to ask ,then don't touch
-    // this code
-    // *A = *left OP *right
-    OP_ADD,
-    OP_SUB,
-    OP_MUL,
-    OP_DIV,
-    OP_MOD,
-    OP_POW,
-    OP_NEG, // *A = -(*B)
-    OP_BITAND,
-    OP_BITOR,
-    OP_BITXOR,
-    OP_BITNOT, // *A = ~(*B)
-    OP_LSHIFT,
-    OP_RSHIFT,
-    OP_EQ,
-    OP_NEQ,
-    OP_LT,
-    OP_LTE,
-    OP_NOT, // *A = !(*B)
-    CONCAT, // A: dst, B: first reg, C: count  — concat C registers starting at B
-
-    LIST_NEW,    // dst, init capacity hint, -
-    LIST_APPEND, // list reg, val reg, -
-    LIST_GET,    // dst, list reg, index reg
-    LIST_SET,    // list reg, index reg, value reg
-    LIST_LEN,    // dst, list reg
-
-    JUMP,          // -, sBx : unconditional jump
-    JUMP_IF_TRUE,  // cond reg, offset if truthy (DOESN'T pop)
-    JUMP_IF_FALSE, // cond reg, offset if falsy
-    LOOP,          // -, sBx: backward offset (neg = back)
-
-    FOR_PREP, // base, (lim=*A + 1, step = *A + 2, idx = *A + 3), jump past block
-              // if done
-    FOR_STEP, // base, jump back to top of block if not done
-
-    CLOSURE,    // dst, function const index
-    CALL,       // func reg, argc, expected ret (0xFF=discard)
-    CALL_TAIL,  // func reg, argc | tail call optimized
-    RETURN,     // first result reg, result count (0=RETURN NIL)
-    RETURN_NIL, // no operands, fast path insead of load and return
-    RETURN1,
-
-    IC_CALL, // func reg, argc, slot index
-
-    INDEX_READ,
-    INDEX_WRITE,
-
-    NEW_CLASS,
-
-    // instances
-    NEW_INSTANCE, // A: new Fa_ObjInstance Bx: constant idx of Fa_ObjClass*
-    INVOKE,       // A: instance reg B: vtable idx reg C: args
-    GET_FIELD,    // A: result reg, B: instance reg, C: field reg
-    SET_FIELD,    // A: instance reg, B: field reg, C: src reg
-
-    // misc
-    NOP,
-    HALT,
-
-    _COUNT
-}; // enum Fa_OpCode
+static inline Fa_StringRef Fa_opcode_name(Fa_OpCode op)
+{
+    switch (op) {
+#define X(name) \
+case Fa_OpCode::name: return #name;
+        FA_OPCODE_LIST(X)
+#undef X
+    default: return "???";
+    }
+}
 
 inline Fa_OpCode Fa_instr_op(u32 const i) { return static_cast<Fa_OpCode>((i >> 24) & 0xFF); }
 
@@ -156,70 +233,6 @@ struct Fa_LineEntry {
     u32 start { 0 };
     u32 line { 0 };
 }; // struct LineEntry
-
-static inline Fa_StringRef Fa_opcode_name(Fa_OpCode op)
-{
-    switch (op) {
-    case Fa_OpCode::LOAD_NIL: return "LOAD_NIL";
-    case Fa_OpCode::LOAD_TRUE: return "LOAD_TRUE";
-    case Fa_OpCode::LOAD_FALSE: return "LOAD_FALSE";
-    case Fa_OpCode::LOAD_CONST: return "LOAD_CONST";
-    case Fa_OpCode::LOAD_INT: return "LOAD_INT";
-    case Fa_OpCode::LOAD_GLOBAL: return "LOAD_GLOBAL";
-    case Fa_OpCode::STORE_GLOBAL: return "STORE_GLOBAL";
-    case Fa_OpCode::MOVE: return "MOVE";
-    case Fa_OpCode::LOAD_GLOBAL_CACHED: return "LOAD_GLOBAL_CACHED";
-    case Fa_OpCode::STORE_GLOBAL_CACHED: return "STORE_GLOBAL_CACHED";
-    case Fa_OpCode::OP_ADD: return "OP_ADD";
-    case Fa_OpCode::OP_SUB: return "OP_SUB";
-    case Fa_OpCode::OP_MUL: return "OP_MUL";
-    case Fa_OpCode::OP_DIV: return "OP_DIV";
-    case Fa_OpCode::OP_MOD: return "OP_MOD";
-    case Fa_OpCode::OP_POW: return "OP_POW";
-    case Fa_OpCode::OP_NEG: return "OP_NEG";
-    case Fa_OpCode::OP_BITAND: return "OP_BITAND";
-    case Fa_OpCode::OP_BITOR: return "OP_BITOR";
-    case Fa_OpCode::OP_BITXOR: return "OP_BITXOR";
-    case Fa_OpCode::OP_BITNOT: return "OP_BITNOT";
-    case Fa_OpCode::OP_LSHIFT: return "OP_LSHIFT";
-    case Fa_OpCode::OP_RSHIFT: return "OP_RSHIFT";
-    case Fa_OpCode::OP_EQ: return "OP_EQ";
-    case Fa_OpCode::OP_NEQ: return "OP_NEQ";
-    case Fa_OpCode::OP_LT: return "OP_LT";
-    case Fa_OpCode::OP_LTE: return "OP_LTE";
-    case Fa_OpCode::OP_NOT: return "OP_NOT";
-    case Fa_OpCode::CONCAT: return "CONCAT";
-    case Fa_OpCode::LIST_NEW: return "LIST_NEW";
-    case Fa_OpCode::LIST_APPEND: return "LIST_APPEND";
-    case Fa_OpCode::LIST_GET: return "LIST_GET";
-    case Fa_OpCode::LIST_SET: return "LIST_SET";
-    case Fa_OpCode::LIST_LEN: return "LIST_LEN";
-    case Fa_OpCode::JUMP: return "JUMP";
-    case Fa_OpCode::JUMP_IF_TRUE: return "JUMP_IF_TRUE";
-    case Fa_OpCode::JUMP_IF_FALSE: return "JUMP_IF_FALSE";
-    case Fa_OpCode::LOOP: return "LOOP";
-    case Fa_OpCode::FOR_PREP: return "FOR_PREP";
-    case Fa_OpCode::FOR_STEP: return "FOR_STEP";
-    case Fa_OpCode::CLOSURE: return "CLOSURE";
-    case Fa_OpCode::CALL: return "CALL";
-    case Fa_OpCode::CALL_TAIL: return "CALL_TAIL";
-    case Fa_OpCode::RETURN: return "RETURN";
-    case Fa_OpCode::RETURN_NIL: return "RETURN_NIL";
-    case Fa_OpCode::RETURN1: return "RETURN1";
-    case Fa_OpCode::IC_CALL: return "IC_CALL";
-    case Fa_OpCode::INDEX_READ: return "INDEX_READ";
-    case Fa_OpCode::INDEX_WRITE: return "INDEX_WRITE";
-    case Fa_OpCode::NEW_CLASS: return "NEW_CLASS";
-    case Fa_OpCode::NEW_INSTANCE: return "NEW_INSTANCE";
-    case Fa_OpCode::INVOKE: return "INVOKE";
-    case Fa_OpCode::GET_FIELD: return "GET_FIELD";
-    case Fa_OpCode::SET_FIELD: return "SET_FIELD";
-    case Fa_OpCode::NOP: return "NOP";
-    case Fa_OpCode::HALT: return "HALT";
-    default:
-        return "???";
-    }
-}
 
 static inline Fa_InstrFormat opcode_format(Fa_OpCode op)
 {
