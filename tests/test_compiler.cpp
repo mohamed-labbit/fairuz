@@ -588,8 +588,6 @@ TEST(CompilerBinary, ShiftLeftFolded)
 
 TEST(CompilerBinary, LogicalAndShortCircuit)
 {
-    GTEST_SKIP() << "scheduled for CFG";
-
     Fa_Chunk* ch = compile_ok_local({
         decl_stmt("a", lit_bool(true)),
         decl_stmt("b", lit_bool(false)),
@@ -615,8 +613,6 @@ TEST(CompilerBinary, LogicalAndShortCircuit)
 
 TEST(CompilerBinary, LogicalOrShortCircuit)
 {
-    GTEST_SKIP() << "scheduled for CFG";
-
     Fa_Chunk* chunk = compile_ok_local({
         decl_stmt("a", lit_bool(false)),
         decl_stmt("b", lit_bool(true)),
@@ -1143,10 +1139,8 @@ TEST(CompilerCall, CallWithNoArgs)
 
 TEST(CompilerCall, CallWithTwoArgs)
 {
-    Fa_Array<AST::Fa_Expr*> m_args;
-    m_args.push(lit_int(1));
-    m_args.push(lit_int(2));
-    Fa_Chunk* chunk = compile_ok(expr_stmt(call_expr(name_expr("f"), list_expr(std::move(m_args)))));
+    Fa_Array<AST::Fa_Expr*> args { lit_int(1), lit_int(2) };
+    Fa_Chunk* chunk = compile_ok(expr_stmt(call_expr(name_expr("f"), list_expr(std::move(args)))));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);

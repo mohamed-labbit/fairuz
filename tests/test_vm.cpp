@@ -2879,12 +2879,22 @@ TEST(VMClass, FieldAssignmentUpdatesInstanceField)
 
 TEST(VMClass, MethodReceivesExplicitArguments)
 {
+    /*
+        class Adder:
+            fn add(a, b):
+                return a + b
+
+        fn test():
+            adder = Adder()
+            return adder.add(2, 5)
+    */
+
     AST::Fa_Stmt* klass = class_def(
         name_expr("Adder"),
         { },
         {
             class_method(
-                sp_method_name(Fa_ObjClass::ADD),
+                "add",
                 { name_expr("a"), name_expr("b") },
                 {
                     return_stmt(binary(name_expr("a"), name_expr("b"), AST::Fa_BinaryOp::OP_ADD)),
@@ -2895,7 +2905,9 @@ TEST(VMClass, MethodReceivesExplicitArguments)
         list_expr(),
         blk({
             decl_stmt("adder", call_expr(name_expr("Adder"))),
-            return_stmt(call_expr(get_expr(name_expr("adder"), name_expr(sp_method_name(Fa_ObjClass::ADD))), list_expr({ lit_int(2), lit_int(5) }))),
+            return_stmt(
+                call_expr(get_expr(name_expr("adder"), name_expr("add")),
+                    list_expr({ lit_int(2), lit_int(5) }))),
         }));
 
     Fa_Chunk* top = compile_program({
@@ -2903,6 +2915,9 @@ TEST(VMClass, MethodReceivesExplicitArguments)
         test,
         expr_stmt(call_expr(name_expr("test"))),
     });
+
+    if (test_config::dump_bytecode)
+        top->disassemble();
 
     VMRunner r;
     Fa_Value result = Fa_Value::nil();
