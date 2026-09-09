@@ -196,7 +196,7 @@ bool Fa_Formatter::is_class_member_target(AST::Fa_Expr const* expr) const
     if (expr == nullptr || expr->get_kind() != AST::Fa_Expr::Kind::GET)
         return false;
 
-    auto const* get_expr = as_get_expr(expr);
+    auto const* get_expr = as_get(expr);
     if (get_expr->get_object() == nullptr || get_expr->get_member() == nullptr)
         return false;
     if (get_expr->get_object()->get_kind() != AST::Fa_Expr::Kind::NAME)
@@ -284,7 +284,7 @@ void Fa_Formatter::format_assignment_target(AST::Fa_Expr const* expr)
         // synthetic `__class$instance.field` form — the synthetic name is
         // an implementation detail of the parser's desugaring and should
         // never leak into formatted output.
-        auto const* get_expr = as_get_expr(expr);
+        auto const* get_expr = as_get(expr);
         auto const* member_name = as_name(get_expr->get_member());
         write(".");
         write(member_name->get_value());
@@ -366,7 +366,7 @@ void Fa_Formatter::format_expression(AST::Fa_Expr const* expr, int parent_preced
         // [BUG 3 FIX] This case was entirely missing — any `.field` read
         // (not just assignment targets, handled separately via
         // format_assignment_target) silently formatted as nothing at all.
-        auto const* get_expr = as_get_expr(expr);
+        auto const* get_expr = as_get(expr);
         bool const is_implicit_self = get_expr->get_object() != nullptr
             && get_expr->get_object()->get_kind() == AST::Fa_Expr::Kind::NAME
             && as_name(get_expr->get_object())->get_value() == kClassInstanceName;
