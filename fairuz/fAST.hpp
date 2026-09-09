@@ -14,6 +14,11 @@
 
 namespace fairuz::AST {
 
+/// INVARIANT: All AST nodes must be valid pointers (not nullptr)
+/// and all their children must also be valid, any node that can be empty
+/// like a list of arguments that is empty should be represented by a valid
+/// but empty AST node, therefore the compiler can assume all nodes are valid
+
 class Fa_Expr;
 class Fa_Stmt;
 class Fa_BinaryExpr;
@@ -1332,7 +1337,7 @@ inline Fa_DictExpr* as_dict(Fa_Expr* e) { return static_cast<Fa_DictExpr*>(e); }
 inline Fa_ListExpr* as_list(Fa_Expr* e) { return static_cast<Fa_ListExpr*>(e); }
 inline Fa_CallExpr* as_call(Fa_Expr* e) { return static_cast<Fa_CallExpr*>(e); }
 inline Fa_AssignmentExpr* as_assignment_expr(Fa_Expr* e) { return static_cast<Fa_AssignmentExpr*>(e); }
-inline Fa_GetExpr* as_get_expr(Fa_Expr* e) { return static_cast<Fa_GetExpr*>(e); }
+inline Fa_GetExpr* as_get(Fa_Expr* e) { return static_cast<Fa_GetExpr*>(e); }
 
 inline Fa_IfStmt const* as_if(Fa_Stmt const* s) { return static_cast<Fa_IfStmt const*>(s); }
 inline Fa_WhileStmt const* as_while(Fa_Stmt const* s) { return static_cast<Fa_WhileStmt const*>(s); }
@@ -1355,7 +1360,7 @@ inline Fa_DictExpr const* as_dict(Fa_Expr const* e) { return static_cast<Fa_Dict
 inline Fa_ListExpr const* as_list(Fa_Expr const* e) { return static_cast<Fa_ListExpr const*>(e); }
 inline Fa_CallExpr const* as_call(Fa_Expr const* e) { return static_cast<Fa_CallExpr const*>(e); }
 inline Fa_AssignmentExpr const* as_assignment_expr(Fa_Expr const* e) { return static_cast<Fa_AssignmentExpr const*>(e); }
-inline Fa_GetExpr const* as_get_expr(Fa_Expr const* e) { return static_cast<Fa_GetExpr const*>(e); }
+inline Fa_GetExpr const* as_get(Fa_Expr const* e) { return static_cast<Fa_GetExpr const*>(e); }
 
 static inline bool is_class_def(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::CLASS_DEF; }
 static inline bool is_if(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::IF; }
