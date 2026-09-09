@@ -8,6 +8,7 @@
 #include "fobj_header.hpp"
 #include "fobject.hpp"
 #include "fopcode.hpp"
+#include "fstring.hpp"
 #include "futil.hpp"
 #include "fvalue.hpp"
 #include <cstdio>
@@ -24,65 +25,7 @@ namespace fairuz::runtime {
 
 #define Fa_BEGIN_DISPATCH() Fa_DISPATCH()
 #define Fa_END_DISPATCH()
-#define Fa_CASE(op) H_##op:
-
-#define Fa_TABLE_INIT            \
-    &&H_LOAD_NIL,                \
-        &&H_LOAD_TRUE,           \
-        &&H_LOAD_FALSE,          \
-        &&H_LOAD_CONST,          \
-        &&H_LOAD_INT,            \
-        &&H_LOAD_GLOBAL,         \
-        &&H_STORE_GLOBAL,        \
-        &&H_LOAD_GLOBAL_CACHED,  \
-        &&H_STORE_GLOBAL_CACHED, \
-        &&H_MOVE,                \
-        &&H_OP_ADD,              \
-        &&H_OP_SUB,              \
-        &&H_OP_MUL,              \
-        &&H_OP_DIV,              \
-        &&H_OP_MOD,              \
-        &&H_OP_POW,              \
-        &&H_OP_NEG,              \
-        &&H_OP_BITAND,           \
-        &&H_OP_BITOR,            \
-        &&H_OP_BITXOR,           \
-        &&H_OP_BITNOT,           \
-        &&H_OP_LSHIFT,           \
-        &&H_OP_RSHIFT,           \
-        &&H_OP_EQ,               \
-        &&H_OP_NEQ,              \
-        &&H_OP_LT,               \
-        &&H_OP_LTE,              \
-        &&H_OP_NOT,              \
-        &&H_CONCAT,              \
-        &&H_LIST_NEW,            \
-        &&H_LIST_APPEND,         \
-        &&H_LIST_GET,            \
-        &&H_LIST_SET,            \
-        &&H_LIST_LEN,            \
-        &&H_JUMP,                \
-        &&H_JUMP_IF_TRUE,        \
-        &&H_JUMP_IF_FALSE,       \
-        &&H_LOOP,                \
-        &&H_FOR_PREP,            \
-        &&H_FOR_STEP,            \
-        &&H_CLOSURE,             \
-        &&H_CALL,                \
-        &&H_CALL_TAIL,           \
-        &&H_RETURN,              \
-        &&H_RETURN_NIL,          \
-        &&H_RETURN1,             \
-        &&H_IC_CALL,             \
-        &&H_INDEX_READ,          \
-        &&H_INDEX_WRITE,         \
-        &&H_NEW_CLASS,           \
-        &&H_NEW_INSTANCE,        \
-        &&H_INVOKE,              \
-        &&H_GET_FIELD,           \
-        &&H_SET_FIELD,           \
-        &&H_NOP,                 \
-        &&H_HALT
+#define Fa_CASE(op) Fa_##op:
 
 #define Fa_VMOPI(lhs, rhs, op) lhs.as_int() op rhs.as_int()
 #define Fa_VMOPF(lhs, rhs, op) lhs.as_double() op rhs.as_double()
@@ -271,7 +214,11 @@ Fa_Value Fa_VM::run(Fa_Chunk* chunk)
 
 Fa_Value Fa_VM::execute()
 {
-    static void const* dispatch_table[] = { Fa_TABLE_INIT };
+    static void* dispatch_table[] = {
+#define X(name) &&Fa_##name,
+        FA_OPCODE_LIST(X)
+#undef X
+    };
 
     if (m_frames_top == 0)
         return Fa_Value::nil();
@@ -1140,7 +1087,7 @@ Fa_Value Fa_VM::execute()
         Fa_Value self_val = cur_base[self_reg];
 
         if (UNLIKELY(!self_val.is_instance()))
-            runtime_error(ErrorCode::TYPE_ERROR_CALL, "INVOKE on non-instance");
+            runtime_error(ErrorCode::TYPE_ERROR_CALL, "(method call on non-instance)");
 
         Fa_ObjInstance* inst = self_val.as_instance();
 
@@ -1150,6 +1097,38 @@ Fa_Value Fa_VM::execute()
         invoke_method(inst->klass->vtable[slot], self_val, self_reg, cur_frame_base, argc, ip);
 
         LOAD_FRAME();
+        Fa_DISPATCH();
+    }
+    Fa_CASE(INVOKE_NAMED)
+    {
+        {
+            Fa_Value inst = Fa_RA();
+            u32 name_idx = Fa_instr_B(instr);
+            u32 argc = Fa_instr_C(instr);
+
+            if (!UNLIKELY(inst.is_instance()))
+                runtime_error(ErrorCode::TYPE_ERROR_CALL, "(method call on non-instance)");
+
+            Fa_ObjInstance* inst_obj = inst.as_instance();
+            /// there many unchecked operations that may potentially fail here
+            /// Fa_Compiler must guarantee that the name index in the constant table is valid
+            /// otherwise it should throw an early error, also that index should always contain
+            /// a string object and of course the index muse be an int, all of these must be
+            /// guaranteed by the compiler before emitting this instruction
+            Fa_StringRef method_name = cur_chunk->constants[name_idx].as_string()->str;
+            int slot = inst_obj->klass->method_slot(method_name);
+            if (slot == -1)
+                runtime_error(ErrorCode::TYPE_ERROR_CALL,
+                    "instance class does not define this method: " + std::string(method_name.data()));
+
+            ::fprintf(stderr, "==> DEBUG: method name is = %s\n", method_name.data());
+            invoke_method(inst_obj->klass->vtable[slot], inst,
+                Fa_instr_A(instr), cur_frame_base, static_cast<int>(argc), ip);
+            ::fprintf(stderr, "==> after invoke_method: m_frames_top=%d\n", m_frames_top);
+        }
+        LOAD_FRAME();
+        ::fprintf(stderr, "==> after LOAD_FRAME: cur_chunk=%p code.size()=%u ip=%u arity=%d local_count=%d\n",
+                (void*)cur_chunk, cur_chunk->code.size(), ip, cur_chunk->arity, cur_chunk->local_count);
         Fa_DISPATCH();
     }
     Fa_CASE(GET_FIELD)
