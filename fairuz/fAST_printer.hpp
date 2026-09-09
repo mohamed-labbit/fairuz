@@ -163,7 +163,7 @@ private:
         }
 
         case Fa_Expr::Kind::GET: {
-            auto g = as_get_expr(e);
+            auto g = as_get(e);
             std::cout << color("Get", Color::MAGENTA) << " .\n";
             std::cout << p.indent + pipe(p.last) << "├─ object:\n";
             print_expr(g->get_object(), { p.indent + pipe(p.last) + "│  ", true });
