@@ -1121,14 +1121,10 @@ Fa_Value Fa_VM::execute()
                 runtime_error(ErrorCode::TYPE_ERROR_CALL,
                     "instance class does not define this method: " + std::string(method_name.data()));
 
-            ::fprintf(stderr, "==> DEBUG: method name is = %s\n", method_name.data());
             invoke_method(inst_obj->klass->vtable[slot], inst,
                 Fa_instr_A(instr), cur_frame_base, static_cast<int>(argc), ip);
-            ::fprintf(stderr, "==> after invoke_method: m_frames_top=%d\n", m_frames_top);
         }
         LOAD_FRAME();
-        ::fprintf(stderr, "==> after LOAD_FRAME: cur_chunk=%p code.size()=%u ip=%u arity=%d local_count=%d\n",
-                (void*)cur_chunk, cur_chunk->code.size(), ip, cur_chunk->arity, cur_chunk->local_count);
         Fa_DISPATCH();
     }
     Fa_CASE(GET_FIELD)
