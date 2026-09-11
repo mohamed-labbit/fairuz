@@ -927,9 +927,9 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_binary_impl(AST::Fa_BinaryExpr* e)
         return report_error(CompilerError::UNKNOWN_BINARY_OPERATOR, e->get_location());
     }
 
-    if (bc_op == Fa_OpCode::OP_LSHIFT || bc_op == Fa_OpCode::OP_RSHIFT) {
-        auto* amount_expr = dynamic_cast<AST::Fa_LiteralExpr*>(e->get_right());
-        if (amount_expr == nullptr || !amount_expr->is_integer())
+    if ((bc_op == Fa_OpCode::OP_LSHIFT || bc_op == Fa_OpCode::OP_RSHIFT) && AST::is_literal(e->get_right())) {
+        auto* amount_expr = AST::as_literal(e->get_right());
+        if (!amount_expr->is_integer())
             return report_error(CompilerError::SHIFT_AMOUNT_NOT_CONSTANT, e->get_right()->get_location());
 
         i64 amount = amount_expr->get_int();
