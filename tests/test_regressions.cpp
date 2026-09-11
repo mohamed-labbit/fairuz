@@ -4,6 +4,7 @@
 #include <sstream>
 #include <string>
 #include <sys/wait.h>
+#include <unistd.h>
 
 namespace {
 
@@ -88,4 +89,31 @@ TEST(RegressionNatives, NumericDemoOutput)
     EXPECT_EQ(r.exit_code, 0);
     EXPECT_NE(r.out.find("1024"), std::string::npos);
     EXPECT_NE(r.out.find("190"), std::string::npos);
+}
+
+TEST(RegressionOperators, OpShift)
+{
+    std::string src = "x := 1\n"
+                      "y := 2\n"
+                      "اكتب(x &= y)\n"
+                      "اكتب(x |= y)\n"
+                      "اكتب(x ^= y)\n"
+                      "اكتب(x <<= y)\n"
+                      "اكتب(x >>= y)\n";
+
+    auto program = write_program(src);
+    RunResult r = run_installed(binary_path(), program);
+    EXPECT_EQ(r.exit_code, 0);
+    EXPECT_EQ(r.out, "0\n2\n0\n0\n0\n");
+}
+
+TEST(RegressionConstruct, IterateForLoop)
+{
+    std::string src = "ارقام := [1 , 2 , 3]\n"
+                      "لكل رقم في ارقام:\n"
+                      "    اكتب(رقم)\n";
+    auto program = write_program("ارقام := [1 , 2 , 3]\nلكل رقم في ارقام:\n    اكتب(رقم)");
+    RunResult r = run_installed(binary_path(), program);
+    EXPECT_EQ(r.exit_code, 0);
+    EXPECT_EQ(r.out, "1\n2\n3\n");
 }

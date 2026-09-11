@@ -170,7 +170,7 @@ TEST(LexerTest, RecognizesStmt02)
     lex::Fa_Lexer m_lexer(&m_file_manager);
     auto tokens = m_lexer.tokenize();
     std::vector<TokenPtr> expected = {
-        Fa_make_token(tok::Fa_TokenType::BEGINMARKER, "", { 1, 1, 0, 0 }), Fa_make_token(tok::Fa_TokenType::KW_FOR, "بكل", { 1, 1, 0, 0 }),
+        Fa_make_token(tok::Fa_TokenType::BEGINMARKER, "", { 1, 1, 0, 0 }), Fa_make_token(tok::Fa_TokenType::KW_FOR, "لكل", { 1, 1, 0, 0 }),
         Fa_make_token(tok::Fa_TokenType::IDENTIFIER, "ل", { 1, 5, 0, 0 }), Fa_make_token(tok::Fa_TokenType::KW_IN, "في", { 1, 7, 0, 0 }),
         Fa_make_token(tok::Fa_TokenType::IDENTIFIER, "ك", { 1, 10, 0, 0 }), Fa_make_token(tok::Fa_TokenType::COLON, ":", { 1, 11, 0, 0 }),
         Fa_make_token(tok::Fa_TokenType::ENDMARKER, "", { 1, 11, 0, 0 })

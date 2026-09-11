@@ -3253,6 +3253,9 @@ TEST(VMClass, AddSpecialMethodHandlesBinaryPlus)
         expr_stmt(call_expr(name_expr("test"))),
     });
 
+    if (test_config::dump_bytecode)
+        top->disassemble();
+
     VMRunner r;
     Fa_Value result = Fa_Value::nil();
     ASSERT_NO_THROW(result = r.run(top));
