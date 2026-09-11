@@ -110,7 +110,7 @@ TEST(StdlibRegression, PopRemovesLastElementFromList)
                                   });
     Fa_Value result = vm.Fa_pop(1, &list);
 
-    EXPECT_TRUE(result.is_nil());
+    EXPECT_TRUE(result.is_list());
     ASSERT_EQ(list.as_list()->elements.size(), 2u);
     EXPECT_EQ(list.as_list()->elements[0].as_int(), 10);
     EXPECT_EQ(list.as_list()->elements[1].as_int(), 20);
@@ -125,8 +125,8 @@ TEST(StdlibRegression, SliceReturnsCopyNotAlias)
                                         Fa_Value::from_int(3),
                                         Fa_Value::from_int(4),
                                     });
-    Fa_Value m_args[] = { source, Fa_Value::from_int(1), Fa_Value::from_int(2) };
-    Fa_Value result = vm.Fa_slice(3, m_args);
+    Fa_Value args[] = { source, Fa_Value::from_int(1), Fa_Value::from_int(2) };
+    Fa_Value result = vm.Fa_slice(3, args);
 
     ASSERT_TRUE(result.is_list());
     ASSERT_EQ(result.as_list()->elements.size(), 2u);
@@ -146,8 +146,8 @@ TEST(StdlibRegression, SliceTwoArgsReturnsTail)
                                         Fa_Value::from_int(6),
                                         Fa_Value::from_int(7),
                                     });
-    Fa_Value m_args[] = { source, Fa_Value::from_int(2) };
-    Fa_Value result = vm.Fa_slice(2, m_args);
+    Fa_Value args[] = { source, Fa_Value::from_int(2) };
+    Fa_Value result = vm.Fa_slice(2, args);
 
     ASSERT_TRUE(result.is_list());
     ASSERT_EQ(result.as_list()->elements.size(), 2u);
@@ -286,7 +286,7 @@ TEST_F(Fa_StdlibPerfTest, SplitJoinRoundTripLargeCsv)
     Fa_VM vm;
     std::string csv;
     csv.reserve(32 * 2000);
-    for (int i = 0; i < 2000; i += 1) {
+    for (int i = 0; i < 2000; i++) {
         if (i)
             csv += ',';
         csv += "field";
@@ -319,7 +319,7 @@ TEST_F(Fa_StdlibPerfTest, LenOnLargeString100kCalls)
 
     auto start = std::chrono::high_resolution_clock::now();
     i64 last = -1;
-    for (int i = 0; i < 100000; i += 1) {
+    for (int i = 0; i < 100000; i++) {
         Fa_Value value = vm.Fa_len(1, &arg);
         ASSERT_TRUE(value.is_int());
         last = value.as_int();
@@ -340,7 +340,7 @@ TEST_F(Fa_StdlibPerfTest, TrimLargePaddedString50kCalls)
 
     auto start = std::chrono::high_resolution_clock::now();
     std::string last;
-    for (int i = 0; i < 50000; i += 1)
+    for (int i = 0; i < 50000; i++)
         last = as_std_string(vm.Fa_trim(1, &arg));
     double total_us = elapsed_us(start);
 

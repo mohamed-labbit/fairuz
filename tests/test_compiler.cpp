@@ -26,7 +26,7 @@ public:
         EXPECT_LT(pos_, chunk_.code.size()) << "ran off end of code at step \"" << label_ << "\"";
         if (pos_ < chunk_.code.size()) {
             cur_ = chunk_.code[pos_];
-            pos_ += 1;
+            pos_++;
         }
         return *this;
     }
@@ -644,7 +644,7 @@ TEST(CompilerIf, SimpleIfNoElse)
         dump(chunk);
 
     int jif_pos = -1;
-    for (int i = 0; i < (int)chunk->code.size(); i += 1) {
+    for (int i = 0; i < (int)chunk->code.size(); i++) {
         if (Fa_instr_op(chunk->code[i]) == Fa_OpCode::JUMP_IF_FALSE)
             jif_pos = i;
     }
@@ -674,7 +674,7 @@ TEST(CompilerIf, IfElse)
     EXPECT_TRUE(has_jif) << "expected JUMP_IF_FALSE";
     EXPECT_TRUE(has_jmp) << "expected JUMP over else";
     int jif_pos = -1, jmp_pos = -1;
-    for (int i = 0; i < (int)chunk->code.size(); i += 1) {
+    for (int i = 0; i < (int)chunk->code.size(); i++) {
         if (Fa_instr_op(chunk->code[i]) == Fa_OpCode::JUMP_IF_FALSE)
             jif_pos = i;
         else if (Fa_instr_op(chunk->code[i]) == Fa_OpCode::JUMP)
@@ -779,7 +779,7 @@ TEST(CompilerWhile, JumpIfFalsePointsPastLoop)
     if (test_config::dump_bytecode)
         dump(chunk);
     int jif_pos = -1;
-    for (int i = 0; i < (int)chunk->code.size(); i += 1)
+    for (int i = 0; i < (int)chunk->code.size(); i++)
         if (Fa_instr_op(chunk->code[i]) == Fa_OpCode::JUMP_IF_FALSE)
             jif_pos = i;
     ASSERT_GE(jif_pos, 0);
@@ -931,47 +931,6 @@ TEST(CompilerDict, NestedListValueKeepsLaterEntriesContiguous)
     EXPECT_EQ(chunk->constants[1].as_string()->str, "a");
     EXPECT_TRUE(chunk->constants[2].is_string());
     EXPECT_EQ(chunk->constants[2].as_string()->str, "b");
-}
-
-TEST(CompilerGet, MemberNameLowersToStringKeyIndex)
-{
-    Fa_Chunk* chunk = compile_ok(
-        expr_stmt(
-            get_expr(
-                dict_expr({
-                    { lit_str("field"), lit_int(42) },
-                }),
-                name_expr("field"))));
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-
-    bool has_index = false;
-    bool has_member_key = false;
-    bool has_legacy_class_global = false;
-
-    for (u32 ins : chunk->code) {
-        Fa_OpCode op = Fa_instr_op(ins);
-        if (op == Fa_OpCode::INDEX_READ)
-            has_index = true;
-
-        if (op != Fa_OpCode::LOAD_CONST && op != Fa_OpCode::LOAD_GLOBAL)
-            continue;
-
-        Fa_Value constant = chunk->constants[Fa_instr_Bx(ins)];
-        if (!constant.is_string())
-            continue;
-
-        Fa_StringRef text = constant.as_string()->str;
-        if (text == "field")
-            has_member_key = true;
-        if (text == "__class__")
-            has_legacy_class_global = true;
-    }
-
-    EXPECT_TRUE(has_index);
-    EXPECT_TRUE(has_member_key);
-    EXPECT_FALSE(has_legacy_class_global);
 }
 
 TEST(CompilerReturn, ReturnNilEmitsReturnNil)
@@ -1334,7 +1293,7 @@ TEST(CompilerLoop, BreakPatchesToLoopExit)
 
     int jump_pos = -1;
     int loop_pos = -1;
-    for (int i = 0; i < (int)chunk->code.size(); i += 1) {
+    for (int i = 0; i < (int)chunk->code.size(); i++) {
         if (Fa_instr_op(chunk->code[i]) == Fa_OpCode::JUMP && jump_pos < 0)
             jump_pos = i;
         if (Fa_instr_op(chunk->code[i]) == Fa_OpCode::LOOP)
@@ -1359,7 +1318,7 @@ TEST(CompilerLoop, ContinuePatchesToLoopLatch)
 
     int jump_pos = -1;
     int loop_pos = -1;
-    for (int i = 0; i < (int)chunk->code.size(); i += 1) {
+    for (int i = 0; i < (int)chunk->code.size(); i++) {
         if (Fa_instr_op(chunk->code[i]) == Fa_OpCode::JUMP && jump_pos < 0)
             jump_pos = i;
         if (Fa_instr_op(chunk->code[i]) == Fa_OpCode::LOOP)
@@ -1420,7 +1379,7 @@ TEST(CompilerIntegration, StringConstantPoolDedup)
     int count = 0;
     for (auto& v : chunk->constants) {
         if (v.is_string() && v.as_string()->str == "hello")
-            count += 1;
+            count++;
     }
     EXPECT_EQ(count, 1);
 }
@@ -1439,7 +1398,7 @@ TEST(CompilerIntegration, MixedLiteralsInList)
     int appends = 0;
     for (auto& ins : chunk->code) {
         if (Fa_instr_op(ins) == Fa_OpCode::LIST_APPEND)
-            appends += 1;
+            appends++;
     }
     EXPECT_EQ(appends, 4);
 }

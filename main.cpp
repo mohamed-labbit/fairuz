@@ -8,6 +8,7 @@
 
 #include <chrono>
 #include <cstdio>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -65,7 +66,7 @@ bool parseArgs(int argc, char** argv, Options& options)
         return true;
     }
 
-    for (int i = 1; i < argc; i += 1) {
+    for (int i = 1; i < argc; i++) {
         std::string_view arg(argv[i]);
 
         if (arg == "-h" || arg == "--help") {
@@ -118,7 +119,7 @@ bool parseArgs(int argc, char** argv, Options& options)
 void printAst(fairuz::Fa_Array<fairuz::AST::Fa_Stmt*> const& stmts)
 {
     fairuz::AST::ASTPrinter printer(true);
-    for (u32 i = 0; i < stmts.size(); i += 1)
+    for (u32 i = 0; i < stmts.size(); i++)
         printer.print(stmts[i]);
 }
 
@@ -196,6 +197,11 @@ int main(int argc, char** argv)
         fairuz::parser::Fa_Parser parser(&fm);
         fairuz::Fa_Array<fairuz::AST::Fa_Stmt*> stmts = parser.parse_program();
 
+        if (fairuz::diagnostic::has_errors()) {
+            fairuz::diagnostic::dump();
+            return static_cast<int>(ExitCode::DataError);
+        }
+
         if (options.format_file) {
             fairuz::Fa_Formatter fmter;
             fairuz::Fa_StringRef fmted = fmter.format(stmts);
@@ -207,9 +213,6 @@ int main(int argc, char** argv)
             }
             return static_cast<int>(ExitCode::Success);
         }
-
-        if (fairuz::diagnostic::has_errors())
-            return static_cast<int>(ExitCode::DataError);
 
         if (options.dump_ast)
             printAst(stmts);

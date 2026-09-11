@@ -2817,6 +2817,16 @@ TEST(VMClass, ConstructorInitializesFieldsFromParameters)
 
 TEST(VMClass, FieldGetExpressionReadsInstanceField)
 {
+    /*
+        class Box:
+            fn init(this, value):
+                this.value := value
+
+        fn test():
+            box = Box(12)
+            return box.value
+    */
+
     AST::Fa_Stmt* klass = class_def(
         name_expr("Box"),
         { name_expr("value") },
@@ -2825,7 +2835,9 @@ TEST(VMClass, FieldGetExpressionReadsInstanceField)
                 sp_method_name(Fa_ObjClass::INIT),
                 { name_expr("value") },
                 {
-                    assign_stmt(name_expr("value"), name_expr("value")),
+                    assign_stmt(get_expr(name_expr(kClassInstanceName),
+                                    name_expr("value")),
+                        name_expr("value")),
                 }),
         });
     AST::Fa_Stmt* test = func_def(
@@ -2841,6 +2853,9 @@ TEST(VMClass, FieldGetExpressionReadsInstanceField)
         test,
         expr_stmt(call_expr(name_expr("test"))),
     });
+
+    if (test_config::dump_bytecode)
+        top->disassemble();
 
     VMRunner r;
     Fa_Value result = Fa_Value::nil();

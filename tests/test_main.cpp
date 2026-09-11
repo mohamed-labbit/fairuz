@@ -55,7 +55,7 @@ public:
 
     void OnTestStart(::testing::TestInfo const& test_info) override
     {
-        ++current_;
+       ++current_;
         failures_.clear();
 
         // Print (and flush) the line FIRST, while nothing is captured, so
@@ -162,7 +162,7 @@ int main(int argc, char** argv)
     fairuz::Fa_AllocatorContext g_ctx;
     fairuz::set_context(&g_ctx);
 
-    for (int i = 1; i < argc; i += 1) {
+    for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
 
         if (arg == "--print-ast")

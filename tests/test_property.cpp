@@ -146,7 +146,7 @@ TEST(PropertyFa_Expr, RandomArithmeticMatchesHostAndAst)
     diagnostic::reset();
     std::mt19937_64 rng(0xC0FFEE);
 
-    for (int i = 0; i < 250; i += 1) {
+    for (int i = 0; i < 250; i++) {
         Fa_ExprSpec spec = gen_fa_expr(rng, 4);
         std::string source = to_source(spec);
         i64 expected = eval_host(spec);
