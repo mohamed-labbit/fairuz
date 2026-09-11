@@ -18,6 +18,7 @@ private:
     Fa_Set<Fa_ObjHeader*> m_all;   // all tracked objects list
     Fa_Set<Fa_ObjHeader*> m_grays; // all gray objects list
     u64 m_current_size { 0 };      // current tracked memory in bytes
+    u64 m_next_collection { 4096 };
 
 public:
     Fa_GarbageCollector() = default;
@@ -28,6 +29,7 @@ public:
     }
 
     void collect(Fa_VM* vm);
+    bool should_collect() const { return m_current_size >= m_next_collection; }
 
     template<typename T, typename... Args>
     T* make(Args&&... m_args)
@@ -67,7 +69,7 @@ public:
         return static_cast<T*>(allocate(count * sizeof(T)));
     }
 
-    void* allocate(u32 const size)
+    void* allocate(size_t const size)
     {
         void* mem = ::operator new(size, std::nothrow);
         if (mem == nullptr)
@@ -76,10 +78,10 @@ public:
         return mem;
     }
 
-    void deallocate(void* ptr, u32 const size)
+    void deallocate(void* ptr, size_t const size)
     {
         ::operator delete(ptr);
-        m_current_size -= size;
+        m_current_size = size > m_current_size ? 0 : m_current_size - size;
     }
 
     /* --- Fa_Value constructors --- */
