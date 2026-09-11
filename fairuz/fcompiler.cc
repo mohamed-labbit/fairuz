@@ -304,6 +304,9 @@ Fa_ErrorOr<bool> Compiler::compile_function_def(AST::Fa_FunctionDef* f)
     if (name == nullptr)
         return report_error(CompilerError::NULL_FUNCTION_NAME, f->get_location());
 
+    if (current_chunk()->functions.size() > MAX_CONSTANTS)
+        return report_error(CompilerError::TOO_MANY_FUNCTIONS, loc);
+
     Fa_Chunk* fn_chunk = Fa_make_chunk();
     fn_chunk->name = name->get_value();
     fn_chunk->arity = f->has_parameters() ? static_cast<int>(f->get_parameters().size()) : 0;
@@ -315,7 +318,7 @@ Fa_ErrorOr<bool> Compiler::compile_function_def(AST::Fa_FunctionDef* f)
     fn_state.chunk = fn_chunk;
     fn_state.func_name = name->get_value();
     fn_state.enclosing = m_current;
-    m_current = &fn_state;
+    CompilerStateGuard state_guard(m_current, &fn_state);
 
     begin_scope();
 
@@ -323,7 +326,8 @@ Fa_ErrorOr<bool> Compiler::compile_function_def(AST::Fa_FunctionDef* f)
         for (AST::Fa_Expr* param : f->get_parameters()) {
             auto param_name = dynamic_cast<AST::Fa_NameExpr*>(param);
             if (param_name == nullptr)
-                return report_error(CompilerError::INVALID_FUNCTION_PARAMETER, param->get_location());
+                return report_error(CompilerError::INVALID_FUNCTION_PARAMETER,
+                    param ? param->get_location() : f->get_location());
 
             reg_t reg;
             ALLOC_REG(&reg);
@@ -339,7 +343,7 @@ Fa_ErrorOr<bool> Compiler::compile_function_def(AST::Fa_FunctionDef* f)
     end_scope(loc);
 
     fn_chunk->local_count = fn_state.max_reg;
-    m_current = fn_state.enclosing;
+    state_guard.restore();
 
     reg_t dst;
     ALLOC_REG(&dst);
@@ -518,7 +522,10 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
         Fa_SourceLocation method_loc = method->get_location();
         AST::Fa_NameExpr* method_name = method->get_name();
         if (method_name == nullptr)
-            return report_error(CompilerError::NULL_FUNCTION_NAME, method_name->get_location());
+            return report_error(CompilerError::NULL_FUNCTION_NAME, method_loc);
+
+        if (current_chunk()->functions.size() > MAX_CONSTANTS)
+            return report_error(CompilerError::TOO_MANY_FUNCTIONS, method_loc);
 
         Fa_Chunk* ch = Fa_make_chunk();
         ch->name = class_name + "." + method_name->get_value();
@@ -535,7 +542,7 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
         state.is_class_method = true;
         state.class_field_names = field_names;
         state.class_method_names = method_names;
-        m_current = &state;
+        CompilerStateGuard state_guard(m_current, &state);
 
         begin_scope();
         reg_t inst_reg;
@@ -546,7 +553,8 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
             for (AST::Fa_Expr* p : method->get_parameters()) {
                 auto* p_name = dynamic_cast<AST::Fa_NameExpr*>(p);
                 if (p_name == nullptr)
-                    return report_error(CompilerError::INVALID_FUNCTION_PARAMETER, p->get_location());
+                    return report_error(CompilerError::INVALID_FUNCTION_PARAMETER,
+                        p ? p->get_location() : method_loc);
 
                 reg_t reg;
                 ALLOC_REG(&reg);
@@ -560,7 +568,7 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
 
         end_scope(method_loc);
         ch->local_count = state.max_reg;
-        m_current = state.enclosing;
+        state_guard.restore();
 
         reg_t dst;
         ALLOC_REG(&dst);
@@ -920,13 +928,9 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_binary_impl(AST::Fa_BinaryExpr* e)
     }
 
     if (bc_op == Fa_OpCode::OP_LSHIFT || bc_op == Fa_OpCode::OP_RSHIFT) {
-        /// TODO: make it generalize from a literal integer to any value that is integer
-        /// ideally just leave it to be a runtime check
-        if (AST::is_literal(e->get_right()))
-            return report_error(CompilerError::SHIFT_AMOUNT_NOT_CONSTANT, e->get_location());
-        auto amount_expr = AST::as_literal(e->get_right());
-        if (!amount_expr->is_integer())
-            return report_error(CompilerError::SHIFT_AMOUNT_NOT_CONSTANT, amount_expr->get_location());
+        auto* amount_expr = dynamic_cast<AST::Fa_LiteralExpr*>(e->get_right());
+        if (amount_expr == nullptr || !amount_expr->is_integer())
+            return report_error(CompilerError::SHIFT_AMOUNT_NOT_CONSTANT, e->get_right()->get_location());
 
         i64 amount = amount_expr->get_int();
         if (amount < 0 || amount > 63)
@@ -1212,8 +1216,9 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_call_impl(AST::Fa_CallExpr* e, reg_t
 
             u8 argc = static_cast<u8>(args.size() + 1); // +1 for implicit 'this'
             /// emit INVOKE_NAMED to invoke this method by it's name from the vtable of the instance class
-            u32 idx = intern_string(AST::as_name(member)->get_value());
-            emit(Fa_make_ABC(Fa_OpCode::INVOKE_NAMED, object_reg, idx, argc), loc);
+            u16 idx = static_cast<u16>(intern_string(AST::as_name(member)->get_value()));
+            emit(Fa_make_ABC(Fa_OpCode::INVOKE_NAMED, object_reg, 0, argc), loc);
+            emit(Fa_make_ABx(Fa_OpCode::NOP, 0, idx), loc);
             if (tail && !m_current->is_top_level)
                 emit(Fa_make_ABC(Fa_OpCode::RETURN, object_reg, 1, 0), loc);
             /// move the cursor back where it was before compiling 'member'
