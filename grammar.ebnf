@@ -1,0 +1,300 @@
+(*
+  Fairuz language grammar
+
+  Formal EBNF inferred from the handwritten parser.
+
+  This grammar intentionally excludes implementation-specific special syntax,
+  including class-method `.field = value` initializers and operator-named
+  methods. Exact keyword spellings are defined by the lexer; token names are
+  used below where the parser does not reveal the spelling.
+*)
+
+(* ------------------------------------------------------------------------- *)
+(* Lexical terminals                                                       *)
+(* ------------------------------------------------------------------------- *)
+
+IDENTIFIER       = lexer-defined identifier ;
+INTEGER          = lexer-defined decimal integer ;
+BINARY_INTEGER   = lexer-defined binary integer ;
+OCTAL_INTEGER    = lexer-defined octal integer ;
+HEX_INTEGER      = lexer-defined hexadecimal integer ;
+DECIMAL          = lexer-defined floating-point literal ;
+STRING           = lexer-defined string literal ;
+
+TRUE             = KW_TRUE ;
+FALSE            = KW_FALSE ;
+NIL              = KW_NIL ;
+THIS             = KW_THIS ;
+IF               = KW_IF ;
+ELSE             = KW_ELSE ;
+WHILE            = KW_WHILE ;
+FOR              = KW_FOR ;
+IN               = KW_IN ;
+RETURN           = KW_RETURN ;
+BREAK            = KW_BREAK ;
+CONTINUE         = KW_CONTINUE ;
+FN               = KW_FN ;
+CLASS            = KW_CLASS ;
+
+ASSIGN           = OP_ASSIGN ;
+ADD_ASSIGN       = OP_PLUSEQ ;
+SUB_ASSIGN       = OP_MINUSEQ ;
+MUL_ASSIGN       = OP_STAREQ ;
+DIV_ASSIGN       = OP_SLASHEQ ;
+MOD_ASSIGN       = OP_PERCENTEQ ;
+BITAND_ASSIGN    = OP_ANDEQ ;
+BITOR_ASSIGN     = OP_OREQ ;
+BITXOR_ASSIGN    = OP_XOREQ ;
+LSHIFT_ASSIGN    = OP_LSHIFTEQ ;
+RSHIFT_ASSIGN    = OP_RSHIFTEQ ;
+
+ADD              = OP_PLUS ;
+SUB              = OP_MINUS ;
+MUL              = OP_STAR ;
+DIV              = OP_SLASH ;
+MOD              = OP_PERCENT ;
+POWER            = OP_POWER ;
+EQUAL            = OP_EQ ;
+NOT_EQUAL        = OP_NEQ ;
+LESS             = OP_LT ;
+GREATER          = OP_GT ;
+LESS_EQUAL       = OP_LTE ;
+GREATER_EQUAL    = OP_GTE ;
+BITAND           = OP_BITAND ;
+BITOR            = OP_BITOR ;
+BITXOR           = OP_BITXOR ;
+LSHIFT           = OP_LSHIFT ;
+RSHIFT           = OP_RSHIFT ;
+LOGICAL_AND      = OP_AND ;
+LOGICAL_OR       = OP_OR ;
+
+UNARY_PLUS       = OP_PLUS ;
+UNARY_MINUS      = OP_MINUS ;
+BITWISE_NOT      = OP_BITNOT ;
+LOGICAL_NOT      = OP_NOT ;
+
+LPAREN           = "(" ;
+RPAREN           = ")" ;
+LBRACKET         = "[" ;
+RBRACKET         = "]" ;
+LBRACE           = "{" ;
+RBRACE           = "}" ;
+COMMA            = "," ;
+COLON            = ":" ;
+DOT              = "." ;
+NEWLINE          = lexer-defined logical line break ;
+INDENT           = lexer-defined indentation increase ;
+DEDENT           = lexer-defined indentation decrease ;
+EOF              = ENDMARKER ;
+
+(* ------------------------------------------------------------------------- *)
+(* Program and layout                                                       *)
+(* ------------------------------------------------------------------------- *)
+
+program
+    = leading-newlines, statement-list, EOF ;
+
+leading-newlines
+    = { NEWLINE } ;
+
+statement-list
+    = [ statement, { NEWLINE, statement }, { NEWLINE } ] ;
+
+block
+    = { NEWLINE }, INDENT, statement-list, DEDENT ;
+
+(* ------------------------------------------------------------------------- *)
+(* Statements                                                                *)
+(* ------------------------------------------------------------------------- *)
+
+statement
+    = if-statement
+    | while-statement
+    | for-statement
+    | return-statement
+    | break-statement
+    | continue-statement
+    | function-definition
+    | class-definition
+    | expression-statement ;
+
+expression-statement
+    = expression ;
+
+return-statement
+    = RETURN, [ expression ] ;
+
+break-statement
+    = BREAK ;
+
+continue-statement
+    = CONTINUE ;
+
+while-statement
+    = WHILE, expression, COLON, block ;
+
+for-statement
+    = FOR, IDENTIFIER, IN, expression, COLON, block ;
+
+if-statement
+    = IF, expression, COLON, block, [ else-clause ] ;
+
+else-clause
+    = ELSE, IF, expression, COLON, block
+    | ELSE, COLON, block ;
+
+function-definition
+    = FN, IDENTIFIER, parameter-list, COLON, block ;
+
+class-definition
+    = CLASS, IDENTIFIER, COLON, class-body ;
+
+class-body
+    = { NEWLINE }, INDENT, { function-definition }, DEDENT ;
+
+(* ------------------------------------------------------------------------- *)
+(* Expressions                                                               *)
+(*                                                                            *)
+(* The precedence levels below reflect the Pratt parser's operator families. *)
+(* The exact numeric precedence values remain defined by the token table.    *)
+(* ------------------------------------------------------------------------- *)
+
+expression
+    = assignment-expression ;
+
+assignment-expression
+    = logical-or-expression,
+      [ assignment-operator, assignment-expression ] ;
+
+assignment-operator
+    = ASSIGN
+    | ADD_ASSIGN
+    | SUB_ASSIGN
+    | MUL_ASSIGN
+    | DIV_ASSIGN
+    | MOD_ASSIGN
+    | BITAND_ASSIGN
+    | BITOR_ASSIGN
+    | BITXOR_ASSIGN
+    | LSHIFT_ASSIGN
+    | RSHIFT_ASSIGN ;
+
+logical-or-expression
+    = logical-and-expression, { LOGICAL_OR, logical-and-expression } ;
+
+logical-and-expression
+    = comparison-expression, { LOGICAL_AND, comparison-expression } ;
+
+comparison-expression
+    = bitwise-or-expression,
+      { comparison-operator, bitwise-or-expression } ;
+
+comparison-operator
+    = EQUAL
+    | NOT_EQUAL
+    | LESS
+    | GREATER
+    | LESS_EQUAL
+    | GREATER_EQUAL ;
+
+bitwise-or-expression
+    = bitwise-xor-expression, { BITOR, bitwise-xor-expression } ;
+
+bitwise-xor-expression
+    = bitwise-and-expression, { BITXOR, bitwise-and-expression } ;
+
+bitwise-and-expression
+    = shift-expression, { BITAND, shift-expression } ;
+
+shift-expression
+    = additive-expression,
+      { ( LSHIFT | RSHIFT ), additive-expression } ;
+
+additive-expression
+    = multiplicative-expression,
+      { ( ADD | SUB ), multiplicative-expression } ;
+
+multiplicative-expression
+    = power-expression,
+      { ( MUL | DIV | MOD ), power-expression } ;
+
+(* The parser gives unary operators tighter binding than POWER on the left. *)
+power-expression
+    = unary-expression, [ POWER, power-expression ] ;
+
+unary-expression
+    = unary-operator, unary-expression
+    | postfix-expression ;
+
+unary-operator
+    = UNARY_PLUS
+    | UNARY_MINUS
+    | BITWISE_NOT
+    | LOGICAL_NOT ;
+
+postfix-expression
+    = primary-expression, { postfix-operation } ;
+
+postfix-operation
+    = call-expression
+    | index-expression
+    | member-expression ;
+
+call-expression
+    = LPAREN, [ argument-list ], RPAREN ;
+
+argument-list
+    = expression, { COMMA, expression }, [ COMMA ] ;
+
+index-expression
+    = LBRACKET, expression, RBRACKET ;
+
+member-expression
+    = DOT, IDENTIFIER ;
+
+(* ------------------------------------------------------------------------- *)
+(* Primary expressions                                                       *)
+(* ------------------------------------------------------------------------- *)
+
+primary-expression
+    = numeric-literal
+    | STRING
+    | TRUE
+    | FALSE
+    | NIL
+    | THIS
+    | IDENTIFIER
+    | parenthesized-expression
+    | empty-parenthesized-expression
+    | list-literal
+    | dictionary-literal ;
+
+numeric-literal
+    = INTEGER
+    | BINARY_INTEGER
+    | OCTAL_INTEGER
+    | HEX_INTEGER
+    | DECIMAL ;
+
+parenthesized-expression
+    = LPAREN, expression, RPAREN ;
+
+(* The current parser represents () as an empty list-like AST node. *)
+empty-parenthesized-expression
+    = LPAREN, RPAREN ;
+
+list-literal
+    = LBRACKET, [ element-list ], RBRACKET ;
+
+element-list
+    = expression, { COMMA, expression }, [ COMMA ] ;
+
+dictionary-literal
+    = LBRACE, [ dictionary-entry-list ], RBRACE ;
+
+dictionary-entry-list
+    = dictionary-entry, { COMMA, dictionary-entry }, [ COMMA ] ;
+
+dictionary-entry
+    = expression, COLON, expression ;
+

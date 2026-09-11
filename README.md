@@ -43,7 +43,7 @@ Core keywords:
 | Fairuz | Meaning | Fairuz | Meaning |
 |---|---|---|---|
 | `دالة` | function | `اذا` / `غيره` | if / else |
-| `طالما` | while | `بكل` ... `في` | for ... in |
+| `طالما` | while | `لكل` ... `في` | for ... in |
 | `ارجع` | return | `اخرج` / `اكمل` | break / continue |
 | `نوع` | class | `هذا` | this |
 | `صحيح` / `خطا` | true / false | `عدم` | nil |

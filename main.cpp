@@ -245,6 +245,8 @@ int main(int argc, char** argv)
         return static_cast<int>(ExitCode::Success);
     } catch (fairuz::runtime::Fa_RuntimeHalt const&) {
         return static_cast<int>(ExitCode::DataError);
+    } catch (fairuz::diagnostic::Fa_DiagnosticAbort const&) {
+        return static_cast<int>(ExitCode::DataError);
     } catch (std::exception const& ex) {
         std::cerr << "fatal: " << ex.what() << "\n";
         return static_cast<int>(ExitCode::Software);
