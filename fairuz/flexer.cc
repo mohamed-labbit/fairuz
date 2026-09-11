@@ -4,8 +4,12 @@
 
 #include "flexer.hpp"
 #include "fctype.hpp"
+#include "fmacros.hpp"
+#include "fstring.hpp"
+#include "ftoken.hpp"
 #include "futil.hpp"
 
+#include <cstdio>
 #include <fstream>
 
 #define CONSUME_BASE_DIGITS(valid_fa_expr, token_type, err_code, detail)                                     \
@@ -416,14 +420,34 @@ TokenPtr Fa_Lexer::lex_token()
         if (current == '=' || current == '<' || current == '>' || current == '!' || current == '+' || current == '-' || current == '|'
             || current == '&' || current == '*' || current == '/' || current == '%' || current == u'٪' || current == '^' || current == '~') {
 
+            auto is_shift_eq_prefix = [](u32 first, u32 second) -> bool {
+                return (first == '>' && second == '>') || (first == '<' && second == '<');
+            };
+
             u32 const start_byte = m_source_manager.get_file_offset();
             m_source_manager.consume_char();
 
-            u32 next = m_source_manager.current_char();
-            if (next != 0) {
-                Fa_StringRef two = m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset() + util::utf8_codepoint_size(next));
+            u32 second = m_source_manager.current_char();
+            if (second != 0) {
+                if (is_shift_eq_prefix(current, second)) {
+                    m_source_manager.consume_char(); // second
+                    m_source_manager.consume_char(); // third
+
+                    u32 const end_byte = m_source_manager.get_file_offset();
+                    Fa_StringRef op_str =
+                        m_source_manager.source_slice(start_byte, end_byte);
+
+                    if (auto type = tok::lookup_operator(op_str))
+                        return finish(*type, op_str, src_loc);
+
+                    return finish(tok::Fa_TokenType::INVALID, op_str, src_loc);
+                }
+
+                Fa_StringRef two = m_source_manager.source_slice(start_byte, 
+                    m_source_manager.get_file_offset() + util::utf8_codepoint_size(second));
                 if (auto type = tok::lookup_operator(two)) {
                     m_source_manager.consume_char();
+                    ::fprintf(stderr, "recognized: %s\n", two.data());
                     return finish(*type, two, src_loc);
                 }
             }

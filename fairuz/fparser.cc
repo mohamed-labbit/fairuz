@@ -5,7 +5,9 @@
 #include "fparser.hpp"
 #include "fAST.hpp"
 #include "fdiagnostic.hpp"
+#include "flexer.hpp"
 #include "fmacros.hpp"
+#include "ftoken.hpp"
 #include "futil.hpp"
 
 namespace fairuz::parser {
@@ -48,7 +50,6 @@ namespace fairuz::parser {
 using TokType = tok::Fa_TokenType;
 using StmtPtr = AST::Fa_Stmt*;
 using ExprPtr = AST::Fa_Expr*;
-using TokenPtr = TokenPtr;
 using ParserCode = diagnostic::errc::parser::Code;
 using SemaCode = diagnostic::errc::sema::Code;
 
@@ -71,6 +72,11 @@ AST::Fa_BinaryOp augmented_assign_to_binary_op(TokType t)
     case TokType::OP_STAREQ: return AST::Fa_BinaryOp::OP_MUL;
     case TokType::OP_SLASHEQ: return AST::Fa_BinaryOp::OP_DIV;
     case TokType::OP_PERCENTEQ: return AST::Fa_BinaryOp::OP_MOD;
+    case TokType::OP_ANDEQ: return AST::Fa_BinaryOp::OP_BITAND;
+    case TokType::OP_OREQ: return AST::Fa_BinaryOp::OP_BITOR;
+    case TokType::OP_XOREQ: return AST::Fa_BinaryOp::OP_BITXOR;
+    case TokType::OP_LSHIFTEQ: return AST::Fa_BinaryOp::OP_LSHIFT;
+    case TokType::OP_RSHIFTEQ: return AST::Fa_BinaryOp::OP_RSHIFT;
     default: return AST::Fa_BinaryOp::INVALID;
     }
 }
@@ -158,19 +164,26 @@ bool Fa_Parser::match(TokType const type)
 void Fa_Parser::synchronize()
 {
     while (!we_done()) {
-        if (check(TokType::NEWLINE) || check(TokType::DEDENT)) {
+        if (check(TokType::DEDENT))
+            return;
+
+        if (check(TokType::NEWLINE)) {
             advance();
             return;
         }
-        if (check(TokType::KW_IF) || check(TokType::KW_WHILE)
-            || check(TokType::KW_FOR) || check(TokType::KW_RETURN)
-            || check(TokType::KW_BREAK) || check(TokType::KW_CONTINUE)
+
+        if (check(TokType::KW_IF)
+            || check(TokType::KW_WHILE)
+            || check(TokType::KW_FOR)
+            || check(TokType::KW_RETURN)
+            || check(TokType::KW_BREAK)
+            || check(TokType::KW_CONTINUE)
             || check(TokType::KW_FN))
             return;
+
         advance();
     }
 }
-
 // Fa_Parser — top-level
 
 Fa_Array<StmtPtr> Fa_Parser::parse_program()
@@ -277,13 +290,8 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_for_stmt()
     auto* target = AST::Fa_make_name(current_token()->lexeme(), current_token()->location());
     advance();
 
-    bool saw_in = false;
-    if (!check(TokType::IDENTIFIER)) {
-        advance();
-        saw_in = true;
-    }
-    if (!saw_in)
-        return report_error(ParserCode::EXPECTED_IN_KEYWORD);
+    /// check 'in' after target
+    Fa_VERIFY_TOKEN(TokType::KW_IN, diagnostic::errc::parser::Code::EXPECTED_IN_KEYWORD);
 
     Fa_TRY(iter, parse_expression());
     Fa_VERIFY_TOKEN(TokType::COLON, ParserCode::EXPECTED_COLON_FOR);
@@ -329,13 +337,15 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_if_stmt()
 Fa_ErrorOr<StmtPtr> Fa_Parser::parse_expression_stmt()
 {
     Fa_TRY(expr, parse_expression());
+    if (UNLIKELY(!(check(TokType::NEWLINE) || check(TokType::DEDENT) || check(TokType::ENDMARKER))))
+        return report_error(ParserCode::UNEXPECTED_TOKEN);
     return Fa_make_expr_stmt(expr, expr->get_location());
 }
 
 Fa_ErrorOr<StmtPtr> Fa_Parser::parse_indented_block()
 {
     TokenPtr start = current_token();
-    match(TokType::NEWLINE);
+    skip_newlines();
     Fa_VERIFY_TOKEN(TokType::INDENT, ParserCode::EXPECTED_INDENT);
 
     Fa_Array<StmtPtr> stmts;
@@ -672,7 +682,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_binary_expr_precedence(u32 min_prec)
     for (;;) {
         TokenPtr cur = current_token();
         // Stop at non-binary-ops and at plain assignment (handled by parse_assignment_expr).
-        if (!cur->is_binary_op() || cur->is(TokType::OP_ASSIGN))
+        if (!cur->is_binary_op() || cur->is(TokType::OP_ASSIGN) || is_augmented_assign_tok(cur))
             break;
 
         u32 prec = cur->get_precedence();
@@ -856,11 +866,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_list_literal()
     }
 
     Fa_VERIFY_TOKEN(TokType::RBRACKET, ParserCode::EXPECTED_RBRACKET);
-
-    Fa_SourceLocation loc = elements.empty()
-        ? start->location()
-        : elements[0]->get_location();
-    return Fa_make_list(std::move(elements), loc);
+    return Fa_make_list(std::move(elements), start->location());
 }
 
 Fa_ErrorOr<ExprPtr> Fa_Parser::parse_dict_literal()
@@ -883,8 +889,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_dict_literal()
     }
 
     Fa_VERIFY_TOKEN(TokType::RBRACE, ParserCode::EXPECTED_RBRACE_EXPR);
-    Fa_SourceLocation loc = content.empty() ? start->location() : content[0].first->get_location();
-    return AST::Fa_make_dict(std::move(content), loc);
+    return AST::Fa_make_dict(std::move(content), start->location());
 }
 
 // Compatibility stubs

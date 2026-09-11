@@ -105,7 +105,11 @@ private:
     lex::Fa_Lexer m_lexer;
     u32 m_nesting_level { 0 };
 
-    static constexpr u32 MAX_NESTING_LEVEL = 255;
+    // Each syntactic level currently traverses several mutually-recursive
+    // parser helpers. Keep a bounded implementation-depth budget large
+    // enough for 255 source nesting levels while still protecting the C++
+    // stack from hostile input.
+    static constexpr u32 MAX_NESTING_LEVEL = 1280;
 
     struct NestingLevel {
         u32* p { nullptr };
