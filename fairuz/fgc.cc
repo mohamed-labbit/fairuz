@@ -13,6 +13,7 @@
 #include "fvm.hpp"
 
 #include <new>
+#include <algorithm>
 
 namespace fairuz::runtime {
 
@@ -34,11 +35,31 @@ static void fa_delete_object(Fa_ObjHeader* obj)
     }
 }
 
+static size_t fa_object_size(Fa_ObjHeader const* obj)
+{
+    switch (obj->type) {
+    case Fa_ObjType::STRING: return sizeof(Fa_ObjString);
+    case Fa_ObjType::LIST: return sizeof(Fa_ObjList);
+    case Fa_ObjType::DICT: return sizeof(Fa_ObjDict);
+    case Fa_ObjType::FUNCTION: return sizeof(Fa_ObjFunction);
+    case Fa_ObjType::NATIVE: return sizeof(Fa_ObjNative);
+    case Fa_ObjType::CLASS: return sizeof(Fa_ObjClass);
+    case Fa_ObjType::INSTANCE: return sizeof(Fa_ObjInstance);
+    case Fa_ObjType::FILE_HANDLE: return sizeof(Fa_ObjFileHandle);
+#if FA_USE_NANBOX
+    case Fa_ObjType::INT: return 0;
+#endif
+    case Fa_ObjType::_COUNT: return 0;
+    }
+    return 0;
+}
+
 void Fa_GarbageCollector::collect(Fa_VM* vm)
 {
     mark_roots(vm);
     trace_references();
     sweep();
+    m_next_collection = std::max<u64>(4096, m_current_size * 2);
 }
 
 void Fa_GarbageCollector::mark_roots(Fa_VM* vm)
@@ -54,6 +75,15 @@ void Fa_GarbageCollector::mark_roots(Fa_VM* vm)
     }
 
     mark_value_array(vm->m_global_slots);
+
+    // Interned strings are deliberately strong roots. This trades bounded
+    // per-VM interning retention for pointer stability and avoids returning
+    // dangling raw pointers after a collection.
+    for (auto [name, string] : vm->m_string_table) {
+        (void)name;
+        if (string != nullptr)
+            mark_object(&string->obj);
+    }
 }
 
 void Fa_GarbageCollector::mark_object(Fa_ObjHeader* p)
@@ -135,7 +165,9 @@ void Fa_GarbageCollector::sweep()
     while (i < m_all.size()) {
         Fa_ObjHeader* obj = m_all[i];
         if (!obj->is_marked) {
+            size_t object_size = fa_object_size(obj);
             fa_delete_object(obj);
+            m_current_size = object_size > m_current_size ? 0 : m_current_size - object_size;
             m_all.erase(i);
         } else {
             obj->is_marked = false;
