@@ -25,15 +25,20 @@ struct Fa_CallFrame {
     u32 ip { 0 };
     u16 base { 0 };
     u16 local_count { 0 };
+    u16 return_slot { 0 };
+    u16 caller_stack_top { 0 };
 
     Fa_CallFrame() = default;
 
-    explicit Fa_CallFrame(Fa_ObjFunction* cl, Fa_Chunk* ch, u32 ip, u16 b, u16 lc)
+    explicit Fa_CallFrame(Fa_ObjFunction* cl, Fa_Chunk* ch, u32 ip, u16 b, u16 lc,
+        u16 ret_slot, u16 saved_stack_top)
         : func(cl)
         , chunk(ch)
         , ip(ip)
         , base(b)
         , local_count(lc)
+        , return_slot(ret_slot)
+        , caller_stack_top(saved_stack_top)
     {
     }
 }; // struct Fa_CallFrame
@@ -102,7 +107,8 @@ public:
     Fa_Array<Fa_Value> m_global_slots;
     bool m_is_dead { false };
 
-    Fa_Value execute();
+    Fa_Value execute(int stop_frame_depth = 0);
+    Fa_Value call_special_sync(Fa_Value receiver, int special_slot);
 
     Fa_CallFrame& frame();
     Fa_CallFrame const& frame() const;
@@ -129,7 +135,8 @@ public:
     Fa_CallFrame& top_frame();
     Fa_CallFrame const& top_frame() const;
     Fa_Value& get_reg(Fa_CallFrame const& f, int reg);
-    void invoke_method(Fa_Chunk* target_chunk, Fa_Value self_val, int dst_reg, int cur_frame_base, int explicit_argc, u32);
+    void invoke_method(Fa_Chunk* target_chunk, Fa_Value self_val, int result_slot,
+        int call_base, int total_argc, u32 return_ip, int caller_stack_top);
 }; // class Fa_VM
 
 } // namespace fairuz::runtime
