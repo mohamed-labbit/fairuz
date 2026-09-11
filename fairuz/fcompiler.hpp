@@ -58,6 +58,26 @@ struct CompilerState {
     void free_regs_to(u8 m) { next_reg = m; }
 }; // struct CompilerState
 
+struct CompilerStateGuard {
+    CompilerState*& current;
+    CompilerState* previous;
+
+    CompilerStateGuard(CompilerState*& slot, CompilerState* next)
+        : current(slot)
+        , previous(slot)
+    {
+        current = next;
+    }
+
+    ~CompilerStateGuard() { restore(); }
+
+    void restore()
+    {
+        if (current != previous)
+            current = previous;
+    }
+};
+
 struct RegMark {
     CompilerState* state { nullptr };
     u8 mark { 0 };
