@@ -58,6 +58,8 @@ public:
     static Fa_Value from_obj(Fa_ObjHeader const* p) { return TAG_OBJ | (reinterpret_cast<uintptr_t>(p) & PAYLOAD_MASK); }
     static Fa_Value from_bool(bool const b) { return b ? TRUE_VAL : FALSE_VAL; }
     static Fa_Value from_int(i64 const v) { return (static_cast<u64>(v) & PAYLOAD_MASK) | TAG_INT; }
+    static constexpr i64 int_min() { return INT48_MIN; }
+    static constexpr i64 int_max() { return INT48_MAX; }
     static Fa_Value from_real(f64 const d)
     {
         u64 bits;
