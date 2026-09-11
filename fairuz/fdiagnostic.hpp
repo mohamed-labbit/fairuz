@@ -146,6 +146,7 @@ enum class Code : u16 {
     CONTINUE_OUTSIDE_LOOP = 0x0411,
     NESTED_CLASS_UNSUPPORTED = 0x0412,
     TOO_MANY_LIST_ELEMENTS = 0x0413,
+    TOO_MANY_FUNCTIONS = 0x0414,
 }; // enum Code
 
 } // namespace compiler
@@ -175,6 +176,7 @@ enum class Code : u16 {
     NATIVE_TYPE_ERROR = 0x0513,
     UNDEFINED_METHOD = 0x0514,
     UNDEFINED_FIELD = 0x0515,
+    NUMERIC_OUT_OF_RANGE = 0x0516,
 }; // enum Code
 
 } // namespace runtime
@@ -345,6 +347,7 @@ static constexpr char const* error_message_for(u16 code)
     case /*CONTINUE_OUTSIDE_LOOP =*/0x0411: return "'continue' used outside of a loop";
     case /*NESTED_CLASS_UNSUPPORTED =*/0x0412: return "Nested class definition is not supported";
     case /*TOO_MANY_LIST_ELEMENTS =*/0x0413: return "Too many elements in list object (max 255)";
+    case /*TOO_MANY_FUNCTIONS =*/0x0414: return "Too many nested function chunks (max 65536)";
     // runtime
     case /*STACK_OVERFLOW =*/0x0500: return "Stack overflow";
     case /*STACK_UNDERFLOW =*/0x0501: return "Stack underflow";
@@ -368,6 +371,7 @@ static constexpr char const* error_message_for(u16 code)
     case /*NATIVE_TYPE_ERROR =*/0x0513: return "Native call received arguments of the wrong type";
     case /*UNDEFINED_METHOD =*/0x0514: return "Call to undefined method";
     case /*UNDEFINED_FIELD =*/0x0515: return "Undefined field";
+    case /*NUMERIC_OUT_OF_RANGE =*/0x0516: return "Integer result is outside the signed 48-bit range";
     // stdlib
     case /*APPEND_ARG_COUNT =*/0x0600: return "append() expects at least two arguments";
     case /*APPEND_TYPE_ERROR =*/0x0601: return "append() expects a list as the first argument";
@@ -420,6 +424,13 @@ static constexpr char const* error_message_for(u16 code)
     default: return "Unknown error";
     }
 }
+
+struct Fa_DiagnosticAbort final : public std::runtime_error {
+    Fa_DiagnosticAbort()
+        : std::runtime_error("fatal diagnostic")
+    {
+    }
+};
 
 class Fa_DiagnosticEngine {
 public:

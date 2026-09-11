@@ -90,7 +90,7 @@ void Fa_DiagnosticEngine::emit_error(std::string const& msg, Severity const sv)
     pretty_print();
     if (!msg.empty())
         std::cerr << Color::RESET << msg << "\n";
-    exit(1);
+    throw Fa_DiagnosticAbort();
 }
 
 std::string Fa_DiagnosticEngine::sv_to_str(Severity const sv)
