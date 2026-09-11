@@ -92,7 +92,7 @@ Fa_StringRef Fa_FileManager::get_line_at(u32 const line_idx) const
     u32 current_line = 1;
     size_t line_start = 0;
 
-    for (size_t i = 0; i <= m_size; i += 1) {
+    for (size_t i = 0; i <= m_size; i++) {
         if (i == m_size || data[i] == '\n') {
             if (current_line == line_idx) {
                 size_t len = i - line_start;
@@ -101,7 +101,7 @@ Fa_StringRef Fa_FileManager::get_line_at(u32 const line_idx) const
 
                 return Fa_StringRef(m_input_buffer.get(), line_start, len);
             }
-            current_line += 1;
+            current_line++;
             line_start = i + 1;
         }
     }
@@ -140,10 +140,10 @@ void Fa_SourceManager::advance(u32 const cp, u64 const bytes)
     m_context.offset += bytes;
 
     if (cp == '\n') {
-        m_context.line += 1;
+        m_context.line++;
         m_context.column = 1;
     } else {
-        m_context.column += 1;
+        m_context.column++;
     }
 }
 
@@ -181,7 +181,7 @@ u32 Fa_SourceManager::calculate_column_at_offset(u64 const target_offset) const
         u64 bytes = 0;
         util::decode_utf8_at(buf, pos, &bytes);
         pos += bytes;
-        column += 1;
+        column++;
     }
 
     return column;
@@ -238,8 +238,8 @@ TokenPtr Fa_Lexer::lex_token()
         for (;;) {
             if (current == ' ') {
                 m_source_manager.consume_char();
-                size += 1;
-                alt_size += 1;
+                size++;
+                alt_size++;
             } else if (current == '\t') {
                 m_source_manager.consume_char();
                 size = (size / m_indent_size + 1) * m_indent_size;
@@ -279,7 +279,7 @@ TokenPtr Fa_Lexer::lex_token()
             if (alt_size <= m_alt_indent_stack.back())
                 diagnostic::panic(ErrorCode::MIXED_INDENTATION);
 
-            m_indent_level += 1;
+            m_indent_level++;
             m_indent_stack.push(size);
             m_alt_indent_stack.push(alt_size);
             store(Fa_make_token(tok::Fa_TokenType::INDENT, "", src_loc));
@@ -290,7 +290,7 @@ TokenPtr Fa_Lexer::lex_token()
                 m_indent_level -= 1;
                 m_indent_stack.pop();
                 m_alt_indent_stack.pop();
-                dedent_count += 1;
+                dedent_count++;
             }
 
             if (size != m_indent_stack.back())
@@ -298,7 +298,7 @@ TokenPtr Fa_Lexer::lex_token()
             if (alt_size != m_alt_indent_stack.back())
                 diagnostic::panic(ErrorCode::INCONSISTENT_INDENTATION);
 
-            for (u32 i = 0; i < dedent_count; i += 1)
+            for (u32 i = 0; i < dedent_count; i++)
                 store(Fa_make_token(tok::Fa_TokenType::DEDENT, "", src_loc));
         }
     };
@@ -370,7 +370,7 @@ TokenPtr Fa_Lexer::lex_token()
             switch (current) {
             case '{':
                 tt = tok::Fa_TokenType::LBRACE;
-                m_bracket_depth += 1;
+                m_bracket_depth++;
                 break;
             case '}':
                 tt = tok::Fa_TokenType::RBRACE;
@@ -379,7 +379,7 @@ TokenPtr Fa_Lexer::lex_token()
                 break;
             case '[':
                 tt = tok::Fa_TokenType::LBRACKET;
-                m_bracket_depth += 1;
+                m_bracket_depth++;
                 break;
             case ']':
                 tt = tok::Fa_TokenType::RBRACKET;
@@ -388,7 +388,7 @@ TokenPtr Fa_Lexer::lex_token()
                 break;
             case '(':
                 tt = tok::Fa_TokenType::LPAREN;
-                m_bracket_depth += 1;
+                m_bracket_depth++;
                 break;
             case ')':
                 tt = tok::Fa_TokenType::RPAREN;
@@ -536,7 +536,7 @@ TokenPtr Fa_Lexer::lex_token()
 TokenPtr Fa_Lexer::next()
 {
     if (m_tok_index + 1 < m_tok_stream.size()) {
-        m_tok_index += 1;
+        m_tok_index++;
         return m_tok_stream[m_tok_index];
     }
 
@@ -550,7 +550,7 @@ TokenPtr Fa_Lexer::next()
     }
 
     if (m_tok_index + 1 < m_tok_stream.size())
-        m_tok_index += 1;
+        m_tok_index++;
 
     return m_tok_stream[m_tok_index];
 }

@@ -29,7 +29,7 @@ private:
     static void destroy_range(T* first, T* last) noexcept
     {
         if constexpr (!TRIVIAL_DTOR) {
-            for (; first != last; first += 1)
+            for (; first != last; first++)
                 first->~T();
         }
     }
@@ -42,7 +42,7 @@ private:
         if constexpr (TRIVIAL_COPY) {
             ::memcpy(static_cast<void*>(dst), src, n * sizeof(T));
         } else {
-            for (u32 i = 0; i < n; i += 1) {
+            for (u32 i = 0; i < n; i++) {
                 ::new (static_cast<void*>(dst + i)) T(std::move(src[i]));
                 src[i].~T();
             }
@@ -59,7 +59,7 @@ private:
         } else {
             u32 i = 0;
             try {
-                for (; i < n; i += 1)
+                for (; i < n; i++)
                     ::new (static_cast<void*>(dst + i)) T(src[i]);
             } catch (...) {
                 destroy_range(dst, dst + i);
@@ -195,7 +195,7 @@ public:
         else
             ::new (static_cast<void*>(slot)) T(std::forward<Args>(args)...);
 
-        m_size += 1;
+        m_size++;
         return *slot;
     }
 
@@ -291,10 +291,10 @@ requires(!Fa_Array<T, _Alloc>::IS_ARENA)
     u32 i = 0;
     try {
         if constexpr (TRIVIAL_COPY) {
-            for (; i < capacity; i += 1)
+            for (; i < capacity; i++)
                 m_arr[i] = fill_v;
         } else {
-            for (; i < capacity; i += 1)
+            for (; i < capacity; i++)
                 ::new (static_cast<void*>(m_arr + i)) T(fill_v);
         }
     } catch (...) {
@@ -323,10 +323,10 @@ requires Fa_Array<T, _Alloc>::IS_ARENA
     u32 i = 0;
     try {
         if constexpr (TRIVIAL_COPY) {
-            for (; i < capacity; i += 1)
+            for (; i < capacity; i++)
                 m_arr[i] = fill_v;
         } else {
-            for (; i < capacity; i += 1)
+            for (; i < capacity; i++)
                 ::new (static_cast<void*>(m_arr + i)) T(fill_v);
         }
     } catch (...) {
@@ -381,12 +381,12 @@ requires(!Fa_Array<T, _Alloc>::IS_ARENA)
         if constexpr (TRIVIAL_COPY) {
             for (T const& val : list) {
                 m_arr[i] = val;
-                i += 1;
+                i++;
             }
         } else {
             for (T const& val : list) {
                 ::new (static_cast<void*>(m_arr + i)) T(val);
-                i += 1;
+                i++;
             }
         }
     } catch (...) {
@@ -414,12 +414,12 @@ requires Fa_Array<T, _Alloc>::IS_ARENA
         if constexpr (TRIVIAL_COPY) {
             for (T const& val : list) {
                 m_arr[i] = val;
-                i += 1;
+                i++;
             }
         } else {
             for (T const& val : list) {
                 ::new (static_cast<void*>(m_arr + i)) T(val);
-                i += 1;
+                i++;
             }
         }
     } catch (...) {
@@ -482,7 +482,7 @@ void Fa_Array<T, _Alloc>::push(T const& val)
         m_arr[m_size] = val;
     else
         ::new (static_cast<void*>(m_arr + m_size)) T(val);
-    m_size += 1;
+    m_size++;
 }
 
 template<typename T, class _Alloc>
@@ -493,7 +493,7 @@ void Fa_Array<T, _Alloc>::push(T&& val)
         m_arr[m_size] = std::move(val);
     else
         ::new (static_cast<void*>(m_arr + m_size)) T(std::move(val));
-    m_size += 1;
+    m_size++;
 }
 
 template<typename T, class _Alloc>
@@ -541,10 +541,10 @@ void Fa_Array<T, _Alloc>::resize(u32 const s)
         u32 i = m_size;
         try {
             if constexpr (TRIVIAL_COPY) {
-                for (; i < s; i += 1)
+                for (; i < s; i++)
                     m_arr[i] = T { };
             } else {
-                for (; i < s; i += 1)
+                for (; i < s; i++)
                     ::new (static_cast<void*>(m_arr + i)) T();
             }
         } catch (...) {
@@ -568,7 +568,7 @@ void Fa_Array<T, _Alloc>::erase(u32 const at)
             ::memmove(m_arr + at, m_arr + at + 1, remaining * sizeof(T));
     } else {
         m_arr[at].~T();
-        for (u32 i = at; i < m_size - 1; i += 1) {
+        for (u32 i = at; i < m_size - 1; i++) {
             ::new (static_cast<void*>(m_arr + i)) T(std::move(m_arr[i + 1]));
             m_arr[i + 1].~T();
         }
@@ -591,7 +591,7 @@ T* Fa_Array<T, _Alloc>::erase(T const* p)
             ::memmove(ptr, ptr + 1, remaining * sizeof(T));
     } else {
         ptr->~T();
-        for (u32 i = 0; i < remaining; i += 1) {
+        for (u32 i = 0; i < remaining; i++) {
             ::new (static_cast<void*>(ptr + i)) T(std::move(ptr[i + 1]));
             ptr[i + 1].~T();
         }
@@ -617,7 +617,7 @@ public:
 
     bool array_contains(T const& val) const
     {
-        for (u32 i = 0, n = m_arr.size(); i < n; ++i) {
+        for (u32 i = 0, n = m_arr.size(); i < n;++i) {
             if (m_arr[i] == val)
                 return true;
         }

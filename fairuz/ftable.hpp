@@ -62,7 +62,7 @@ class Fa_HashTable {
             return;
 
         Fa_Array<Entry> grown(next_power_of_two(m_buckets.size() << 1), Entry { });
-        for (u32 i = 0; i < m_buckets.size(); i += 1) {
+        for (u32 i = 0; i < m_buckets.size(); i++) {
             if (m_buckets[i].occupied)
                 reinsert_into(grown, m_buckets[i]);
         }
@@ -125,7 +125,7 @@ public:
 
     void clear()
     {
-        for (u32 i = 0; i < m_buckets.size(); i += 1)
+        for (u32 i = 0; i < m_buckets.size(); i++)
             m_buckets[i] = Entry { };
         m_size = 0;
     }
@@ -167,7 +167,7 @@ public:
         m_buckets[idx].hash = hash_value;
         m_buckets[idx].key = key;
         m_buckets[idx].val = value;
-        m_size += 1;
+        m_size++;
 
         return m_buckets[idx].val;
     }
@@ -178,9 +178,9 @@ public:
 
         Iterator& operator++()
         {
-            ptr += 1;
+            ptr++;
             while (ptr != end && !ptr->occupied)
-                ptr += 1;
+                ptr++;
 
             return *this;
         }
@@ -196,7 +196,7 @@ public:
         Entry* e = m_buckets.end();
 
         while (p != e && !p->occupied)
-            p += 1;
+            p++;
 
         return { p, e };
     }

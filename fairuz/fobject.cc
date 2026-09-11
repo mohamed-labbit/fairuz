@@ -35,9 +35,9 @@ Fa_ObjClass::Fa_ObjClass(
 
 void Fa_ObjClass::build_indices()
 {
-    for (u32 i = 0, n = field_names.size(); i < n; i += 1)
+    for (u32 i = 0, n = field_names.size(); i < n; i++)
         field_index_map[field_names[i]] = i;
-    for (u32 i = 0, n = method_names.size(); i < n; i += 1)
+    for (u32 i = 0, n = method_names.size(); i < n; i++)
         method_slot_map[method_names[i]] = i;
 }
 

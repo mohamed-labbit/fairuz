@@ -43,12 +43,12 @@ void Fa_GarbageCollector::collect(Fa_VM* vm)
 
 void Fa_GarbageCollector::mark_roots(Fa_VM* vm)
 {
-    for (int i = 0; i < vm->m_stack_top && i < Fa_VM::STACK_SIZE; i += 1) {
+    for (int i = 0; i < vm->m_stack_top && i < Fa_VM::STACK_SIZE; i++) {
         if (vm->m_stack[i].is_obj())
             mark_object(vm->m_stack[i].as_obj());
     }
 
-    for (int i = 0; i < vm->m_frames_top && i < Fa_VM::MAX_FRAMES; i += 1) {
+    for (int i = 0; i < vm->m_frames_top && i < Fa_VM::MAX_FRAMES; i++) {
         if (vm->m_frames[i].func != nullptr)
             mark_object(&vm->m_frames[i].func->obj);
     }
@@ -93,7 +93,7 @@ void Fa_GarbageCollector::blacken_object(Fa_ObjHeader* obj)
     }
     case Fa_ObjType::CLASS: {
         Fa_ObjClass* klass = Fa_obj_cast<Fa_ObjClass>(obj, Fa_ObjType::CLASS);
-        for (u32 i = 0, n = klass->vtable.size(); i < n; i += 1) {
+        for (u32 i = 0, n = klass->vtable.size(); i < n; i++) {
             if (klass->vtable[i] != nullptr)
                 mark_chunk_constants(klass->vtable[i]);
         }
@@ -139,7 +139,7 @@ void Fa_GarbageCollector::sweep()
             m_all.erase(i);
         } else {
             obj->is_marked = false;
-            i += 1;
+            i++;
         }
     }
 }

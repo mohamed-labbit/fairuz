@@ -632,6 +632,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_expression() { return parse_assignment_expr
 
 Fa_ErrorOr<ExprPtr> Fa_Parser::parse_assignment_expr()
 {
+    NestingLevel n { &m_nesting_level, current_loc() };
     // LHS goes through the full expression hierarchy (via parse_conditional_expr
     // → parse_binary_expr_precedence).  The Pratt parser stops at '=' and
     // augmented-assignment tokens, leaving them for this function to handle.
@@ -665,6 +666,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_assignment_expr()
 
 Fa_ErrorOr<ExprPtr> Fa_Parser::parse_binary_expr_precedence(u32 min_prec)
 {
+    NestingLevel n(&m_nesting_level, current_loc());
     Fa_TRY(lhs, parse_unary_expr());
 
     for (;;) {
@@ -696,6 +698,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_binary_expr_precedence(u32 min_prec)
 
 Fa_ErrorOr<ExprPtr> Fa_Parser::parse_unary_expr()
 {
+    NestingLevel n(&m_nesting_level, current_loc());
     TokenPtr op_tok = current_token();
     if (op_tok->is_unary_op()) {
         TokType op = op_tok->type();
@@ -710,6 +713,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_unary_expr()
 
 Fa_ErrorOr<ExprPtr> Fa_Parser::parse_postfix_expr()
 {
+    NestingLevel n(&m_nesting_level, current_loc());
     Fa_TRY(base, parse_primary_expr());
     ExprPtr expr = base;
 
@@ -772,6 +776,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_postfix_expr()
 
 Fa_ErrorOr<ExprPtr> Fa_Parser::parse_primary_expr()
 {
+    NestingLevel n(&m_nesting_level, current_loc());
     TokenPtr cur = current_token();
 
     // Numeric literals
@@ -835,6 +840,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_primary_expr()
 
 Fa_ErrorOr<ExprPtr> Fa_Parser::parse_list_literal()
 {
+    NestingLevel n(&m_nesting_level, current_loc());
     TokenPtr start = current_token();
     Fa_Array<ExprPtr> elements = Fa_Array<ExprPtr>::with_capacity(4);
 
@@ -859,6 +865,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_list_literal()
 
 Fa_ErrorOr<ExprPtr> Fa_Parser::parse_dict_literal()
 {
+    NestingLevel n(&m_nesting_level, current_loc());
     TokenPtr start = current_token();
     Fa_Array<std::pair<ExprPtr, ExprPtr>> content;
 

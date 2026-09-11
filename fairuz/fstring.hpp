@@ -95,7 +95,7 @@ public:
     char operator[](size_t const i) const noexcept { return ptr()[i]; }
     char& operator[](size_t const i) noexcept { return ptr()[i]; }
 
-    void increment() const noexcept { ref_count += 1; }
+    void increment() const noexcept { ref_count++; }
     void decrement() const noexcept { ref_count -= 1; }
 
     u32 reference_count() const noexcept { return ref_count; }

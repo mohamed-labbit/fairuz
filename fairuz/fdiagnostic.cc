@@ -8,6 +8,7 @@
 // header to avoid the circular include (flexer.hpp
 // includes fdiagnostic.hpp)
 
+#include <cstdlib>
 #include <exception>
 #include <iostream>
 #include <sstream>
@@ -38,10 +39,14 @@ Fa_DiagnosticEngine::DiagnosticId Fa_DiagnosticEngine::report_deferred(
     DiagnosticId const id = static_cast<DiagnosticId>(m_diagnostics.size());
     m_diagnostics.push_back({ sev, loc, err_code, code, { }, { } });
 
-    if (sev == Severity::ERROR || sev == Severity::FATAL) {
-        m_error_count += 1;
+    if (sev == Severity::FATAL) {
+        _panic("");
+    }
+
+    if (sev == Severity::ERROR) {
+        m_error_count++;
     } else if (sev == Severity::WARNING) {
-        m_warning_count += 1;
+        m_warning_count++;
     }
 
     return id;
@@ -82,11 +87,10 @@ void Fa_DiagnosticEngine::emit_error(std::string const& msg, Severity const sv)
 
 [[noreturn]] void Fa_DiagnosticEngine::_panic(std::string const& msg) const
 {
-    if (has_errors())
-        dump();
-
-    std::cerr << Color::BOLD << Color::RED << "fatal" << Color::RESET << ": " << msg << "\n";
-    std::terminate();
+    pretty_print();
+    if (!msg.empty())
+        std::cerr << Color::RESET << msg << "\n";
+    exit(1);
 }
 
 std::string Fa_DiagnosticEngine::sv_to_str(Severity const sv)
@@ -164,7 +168,7 @@ std::string Fa_DiagnosticEngine::to_json() const
 {
     std::stringstream ss;
     ss << "[\n";
-    for (size_t i = 0; i < m_diagnostics.size(); i += 1) {
+    for (size_t i = 0; i < m_diagnostics.size(); i++) {
         Diagnostic const& d = m_diagnostics[i];
         ss << "  {\n";
         ss << "    \"severity\": " << static_cast<i32>(d.severity) << ",\n";

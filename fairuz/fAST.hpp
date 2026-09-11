@@ -451,7 +451,7 @@ public:
         if (m_elements.size() != list->m_elements.size())
             return false;
 
-        for (size_t i = 0; i < m_elements.size(); i += 1) {
+        for (size_t i = 0; i < m_elements.size(); i++) {
             if (!m_elements[i]->equals(list->m_elements[i]))
                 return false;
         }
@@ -496,7 +496,7 @@ public:
         if (s1 != s2)
             return false;
 
-        for (u32 i = 0; i < s1; i += 1) {
+        for (u32 i = 0; i < s1; i++) {
             if (!content[i].first->equals(dict[i].first) || !content[i].second->equals(dict[i].second))
                 return false;
         }
@@ -749,7 +749,7 @@ public:
         if (m_statements.size() != block->m_statements.size())
             return false;
 
-        for (size_t i = 0; i < m_statements.size(); i += 1) {
+        for (size_t i = 0; i < m_statements.size(); i++) {
             if (!m_statements[i]->equals(block->m_statements[i]))
                 return false;
         }
@@ -1116,12 +1116,12 @@ public:
         if (other_members.size() != m_members.size() || other_methods.size() != m_methods.size())
             return false;
 
-        for (u32 i = 0, n = other_members.size(); i < n; ++i) {
+        for (u32 i = 0, n = other_members.size(); i < n;++i) {
             if (!other_members[i]->equals(m_members[i]))
                 return false;
         }
 
-        for (u32 i = 0, n = other_methods.size(); i < n; ++i) {
+        for (u32 i = 0, n = other_methods.size(); i < n;++i) {
             if (!other_methods[i]->equals(m_methods[i]))
                 return false;
         }

@@ -108,7 +108,7 @@ private:
 
     void mark_value_array(Fa_Array<Fa_Value, /*_Alloc=*/Fa_GarbageCollector> const& arr)
     {
-        for (u32 i = 0, n = arr.size(); i < n; i += 1) {
+        for (u32 i = 0, n = arr.size(); i < n; i++) {
             if (arr[i].is_obj())
                 mark_object(arr[i].as_obj());
         }
@@ -116,7 +116,7 @@ private:
 
     void mark_value_array(Fa_Array<Fa_Value> const& arr)
     {
-        for (u32 i = 0, n = arr.size(); i < n; i += 1) {
+        for (u32 i = 0, n = arr.size(); i < n; i++) {
             if (arr[i].is_obj())
                 mark_object(arr[i].as_obj());
         }

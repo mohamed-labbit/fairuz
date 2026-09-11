@@ -99,7 +99,7 @@ std::string escape_string_literal(Fa_StringRef value)
     out.reserve(value.len() + 2);
     out.push_back('"');
 
-    for (size_t i = 0; i < value.len(); i += 1) {
+    for (size_t i = 0; i < value.len(); i++) {
         char ch = value[i];
         switch (ch) {
         case '\\': out += "\\\\"; break;
@@ -177,7 +177,7 @@ Fa_StringRef Fa_Formatter::format(Fa_Array<AST::Fa_Stmt*> const& stmts)
 
     m_formatted.reserve(4096);
 
-    for (u32 i = 0; i < stmts.size(); i += 1) {
+    for (u32 i = 0; i < stmts.size(); i++) {
         if (stmts[i] == nullptr)
             continue;
         format_statement(stmts[i]);
@@ -270,7 +270,7 @@ int Fa_Formatter::precedence(AST::Fa_Expr const* expr) const
 
 void Fa_Formatter::format_comma_separated(Fa_Array<AST::Fa_Expr*> const& exprs)
 {
-    for (u32 i = 0; i < exprs.size(); i += 1) {
+    for (u32 i = 0; i < exprs.size(); i++) {
         if (i != 0)
             write("، ");
         format_expression(exprs[i]);
@@ -349,7 +349,7 @@ void Fa_Formatter::format_expression(AST::Fa_Expr const* expr, int parent_preced
         write('{');
         write_newline();
         m_indent_level++;
-        for (u32 i = 0; i < content.size(); i += 1) {
+        for (u32 i = 0; i < content.size(); i++) {
             auto const& entry = content[i];
             format_expression(entry.first);
             write(": ");
@@ -433,7 +433,7 @@ void Fa_Formatter::format_body(AST::Fa_Stmt const* stmt)
     if (stmt == nullptr)
         return;
 
-    m_indent_level += 1;
+    m_indent_level++;
 
     if (stmt->get_kind() == AST::Fa_Stmt::Kind::BLOCK) {
         auto const* block_stmt = as_block(stmt);
@@ -495,7 +495,7 @@ void Fa_Formatter::format_statement(AST::Fa_Stmt const* stmt)
     }
     case AST::Fa_Stmt::Kind::BLOCK: {
         auto const* block_stmt = as_block(stmt);
-        for (u32 i = 0; i < block_stmt->get_statements().size(); i += 1) {
+        for (u32 i = 0; i < block_stmt->get_statements().size(); i++) {
             if (i != 0)
                 write_newline();
             format_statement(block_stmt->get_statements()[i]);
@@ -512,7 +512,7 @@ void Fa_Formatter::format_statement(AST::Fa_Stmt const* stmt)
         write(":");
 
         Fa_Array<AST::Fa_Stmt*> methods = class_stmt->get_methods();
-        m_indent_level += 1;
+        m_indent_level++;
         for (AST::Fa_Stmt const* method : methods) {
             write_newline();
             format_statement(method);

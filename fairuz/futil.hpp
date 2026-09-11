@@ -270,7 +270,7 @@ static inline i64 parse_integer_literal(Fa_StringRef const& literal, int base)
 
     if (literal.at(i) == '-') {
         negative = true;
-        i += 1;
+        i++;
     }
 
     if (literal.slice(i, 2) == "0x" || literal.slice(i, 2) == "0X"
@@ -278,12 +278,12 @@ static inline i64 parse_integer_literal(Fa_StringRef const& literal, int base)
         || literal.slice(i, 2) == "0o" || literal.slice(i, 2) == "0O")
         i += 2;
     else if (literal.at(i) == '0' && literal.len() > i + 1)
-        i += 1;
+        i++;
 
     i64 value = 0;
     u64 bytes = 0, out_bytes = 0;
 
-    for (; i < literal.len(); i += 1) {
+    for (; i < literal.len(); i++) {
         u32 const cp = decode_utf8_at(literal, bytes, &out_bytes);
 
         bytes += out_bytes;

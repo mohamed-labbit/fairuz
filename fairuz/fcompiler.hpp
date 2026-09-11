@@ -45,7 +45,7 @@ struct CompilerState {
     u8 alloc_register()
     {
         u8 reg = next_reg;
-        next_reg += 1;
+        next_reg++;
         if (next_reg > max_reg)
             max_reg = next_reg;
         return reg;
@@ -61,7 +61,7 @@ struct CompilerState {
 struct RegMark {
     CompilerState* state { nullptr };
     u8 mark { 0 };
-    size_t locals_mark { 0 }; // NEW: locals.size() at construction
+    size_t locals_mark { 0 };
 
     explicit RegMark(CompilerState* s)
         : state(s)
@@ -75,7 +75,7 @@ struct RegMark {
         // If a local was declared inside this RegMark's scope, its
         // register must survive the rewind.
         u8 floor = mark;
-        for (size_t i = locals_mark; i < state->locals.size(); ++i)
+        for (size_t i = locals_mark; i < state->locals.size();++i)
             floor = std::max<u8>(floor, state->locals[i].reg + 1);
         state->free_regs_to(floor);
     }
@@ -235,6 +235,7 @@ private:
     Fa_ErrorOr<Fa_ExprResult> compile_index_impl(AST::Fa_IndexExpr* e);
     Fa_ErrorOr<Fa_ExprResult> compile_dict_impl(AST::Fa_DictExpr* e);
     Fa_ErrorOr<Fa_ExprResult> compile_get_impl(AST::Fa_GetExpr* e);
+    Fa_ErrorOr<Fa_ExprResult> compile_get_impl_(AST::Fa_GetExpr* e);
     Fa_ErrorOr<u8> compile_expr(AST::Fa_Expr* e, u8* dst = nullptr);
     Fa_ErrorOr<u8> compile_literal(AST::Fa_LiteralExpr* e, u8* dst);
     Fa_ErrorOr<u8> compile_name(AST::Fa_NameExpr* e, u8* dst);
@@ -301,7 +302,7 @@ private:
 
     u32 current_offset() const { return current_chunk()->code.size(); }
 
-    void begin_scope() { m_current->scope_depth += 1; }
+    void begin_scope() { m_current->scope_depth++; }
 
     void end_scope(Fa_SourceLocation loc);
 

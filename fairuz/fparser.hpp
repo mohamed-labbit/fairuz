@@ -2,8 +2,10 @@
 #define FA_PARSER_HPP
 
 #include "fAST.hpp"
+#include "fdiagnostic.hpp"
 #include "ferror.hpp"
 #include "flexer.hpp"
+#include "fmacros.hpp"
 #include "fstring.hpp"
 
 namespace fairuz::parser {
@@ -97,9 +99,30 @@ public:
     bool check(tok::Fa_TokenType type) const;
 
     TokenPtr current_token() const;
+    Fa_SourceLocation current_loc() const { return current_token()->location(); }
 
 private:
     lex::Fa_Lexer m_lexer;
+    u32 m_nesting_level { 0 };
+
+    static constexpr u32 MAX_NESTING_LEVEL = 255;
+
+    struct NestingLevel {
+        u32* p { nullptr };
+        NestingLevel(u32* c, Fa_SourceLocation loc)
+            : p(c)
+        {
+            assert(p != nullptr);
+            if (*p >= MAX_NESTING_LEVEL)
+                diagnostic::report(diagnostic::Severity::FATAL, loc, diagnostic::errc::parser::Code::EXCEEDED_MAX_NESTING_LIMIT);
+            (*p)++;
+        }
+        ~NestingLevel()
+        {
+            if (p != nullptr)
+                (*p)--;
+        }
+    };
 
     TokenPtr peek(size_t offset = 1) { return m_lexer.peek(offset); }
     TokenPtr advance() { return m_lexer.next(); }

@@ -14,9 +14,11 @@
 #include "foptim.hpp"
 #include "fstring.hpp"
 #include "fvalue.hpp"
+#include "fvm.hpp"
 
 #include <algorithm>
 #include <cassert>
+#include <cstdint>
 #include <cstdio>
 #include <utility>
 
@@ -48,6 +50,8 @@ namespace fairuz::runtime {
 /// TODO: run an analysis of whether or not null checks for AST nodes
 /// can be safely removed matching the AST validity invariant
 
+using ExprPtr = AST::Fa_Expr*;
+using StmtPtr = AST::Fa_Stmt*;
 using cmp_ret = Fa_ErrorOr<Fa_ExprResult>;
 using reg_t = u8;
 
@@ -100,7 +104,7 @@ Fa_Chunk* Compiler::compile(Fa_Array<AST::Fa_Stmt*> const& stmts)
     state.enclosing = nullptr;
     m_current = &state;
 
-    for (size_t i = 0; i < stmts.size(); i += 1) {
+    for (size_t i = 0; i < stmts.size(); i++) {
         AST::Fa_Stmt* stmt = stmts[i];
         if (i + 1 == stmts.size() && stmt && !state.is_dead && is_terminal_top_level_call(stmt)) {
             auto const* expr_stmt = as_expr_stmt(stmt);
@@ -368,10 +372,22 @@ Fa_ErrorOr<bool> Compiler::compile_return(AST::Fa_ReturnStmt* s)
     }
 
     if (value->get_kind() == AST::Fa_Expr::Kind::CALL && !m_current->is_top_level) {
+        auto* call_expr = as_call(value);
+        bool is_ctor_call = !AST::is_get(call_expr->get_callee())
+            && call_expr->get_callee()->get_kind() == AST::Fa_Expr::Kind::NAME
+            && m_class_registry.find_ptr(as_name(call_expr->get_callee())->get_value()) != nullptr;
+
         RegMark mark(m_current);
-        auto call_ret = compile_call_impl(as_call(value), nullptr, true);
+        auto call_ret = compile_call_impl(call_expr, nullptr, /*tail=*/!is_ctor_call);
         Fa_VERIFY_RESULT(call_ret);
         (void)call_ret;
+
+        if (is_ctor_call) {
+            // compile_call_impl didn't emit a RETURN for a non-tail call; do it here.
+            reg_t src;
+            ANY_REG(call_ret.value(), loc, &src);
+            emit(Fa_make_ABC(Fa_OpCode::RETURN, src, 1, 0), loc);
+        }
         m_current->is_dead = true;
         return true;
     }
@@ -634,7 +650,7 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
     // class — sees the full sibling table via current_method_slot(). ---
     Fa_Array<Fa_Chunk*> vtable(static_cast<u32>(method_names.size()), /* fill_v= */ nullptr);
 
-    for (u32 i = 0, n = static_cast<u32>(methods.size()); i < n; i += 1) {
+    for (u32 i = 0, n = static_cast<u32>(methods.size()); i < n; i++) {
         auto* method = as_function_def(methods[i]);
         auto result = compile_method_closure(method);
         Fa_VERIFY_RESULT(result);
@@ -655,13 +671,13 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
     //   current_chunk()->functions.push(ch);
     // so we reconstruct those indices here by scanning for each chunk pointer.
     Fa_Array<u32> vtable_indices;
-    for (u32 i = 0; i < vtable.size(); ++i) {
+    for (u32 i = 0; i < vtable.size();++i) {
         if (vtable[i] == nullptr) {
             vtable_indices.push(Fa_ClassDescriptor::NULL_SLOT);
             continue;
         }
         u32 fn_idx = UINT32_MAX;
-        for (u32 j = 0; j < current_chunk()->functions.size(); ++j) {
+        for (u32 j = 0; j < current_chunk()->functions.size();++j) {
             if (current_chunk()->functions[j] == vtable[i]) {
                 fn_idx = j;
                 break;
@@ -720,7 +736,7 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_expr_impl(AST::Fa_Expr* e)
     case AST::Fa_Expr::Kind::LIST: return compile_list_impl(as_list(e));
     case AST::Fa_Expr::Kind::DICT: return compile_dict_impl(as_dict(e));
     case AST::Fa_Expr::Kind::INDEX_READ: return compile_index_impl(as_index(e));
-    case AST::Fa_Expr::Kind::GET: return compile_get_impl(as_get(e));
+    case AST::Fa_Expr::Kind::GET: return compile_get_impl_(as_get(e));
     case AST::Fa_Expr::Kind::INVALID:
         return report_error(CompilerError::INVALID_EXPRESSION_NODE, e->get_location());
     }
@@ -904,8 +920,12 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_binary_impl(AST::Fa_BinaryExpr* e)
     }
 
     if (bc_op == Fa_OpCode::OP_LSHIFT || bc_op == Fa_OpCode::OP_RSHIFT) {
-        auto amount_expr = dynamic_cast<AST::Fa_LiteralExpr*>(e->get_right());
-        if (amount_expr == nullptr || !amount_expr->is_integer())
+        /// TODO: make it generalize from a literal integer to any value that is integer
+        /// ideally just leave it to be a runtime check
+        if (AST::is_literal(e->get_right()))
+            return report_error(CompilerError::SHIFT_AMOUNT_NOT_CONSTANT, e->get_location());
+        auto amount_expr = AST::as_literal(e->get_right());
+        if (!amount_expr->is_integer())
             return report_error(CompilerError::SHIFT_AMOUNT_NOT_CONSTANT, amount_expr->get_location());
 
         i64 amount = amount_expr->get_int();
@@ -1308,6 +1328,35 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_dict_impl(AST::Fa_DictExpr* e)
     return Fa_ExprResult::reg(dst);
 }
 
+Fa_ErrorOr<Fa_ExprResult> Compiler::compile_get_impl_(AST::Fa_GetExpr* e)
+{
+    Fa_SourceLocation loc = e->get_location();
+    AST::Fa_Expr* object = e->get_object();
+    /// the parser should guarantee that this is a Fa_NameExpr
+    AST::Fa_NameExpr* member = AST::as_name(e->get_member());
+    if (AST::is_name(object) && AST::as_name(object)->get_value() == kClassInstanceName) {
+        int idx = current_method_field_index(member->get_value());
+        if (idx >= 0) {
+            LocalVar const* self = lookup_local(kClassInstanceName);
+            if (self != nullptr) {
+                u32 pc = emit(Fa_make_ABC(Fa_OpCode::GET_FIELD, 0, self->reg, static_cast<u8>(idx)), loc);
+                return Fa_ExprResult::reloc(pc);
+            }
+        }
+        return report_error(ErrorCode::UNDEFINED_LOCAL, member->get_location());
+    }
+
+    u32 name_idx = intern_string(member->get_value());
+    reg_t object_reg;
+    Fa_ExprResult object_cmp_ret;
+    ALLOC_REG(&object_reg);
+    COMPILE_EXPR_IMPL(object, &object_cmp_ret);
+    discharge(object_cmp_ret, object_reg, object->get_location());
+    u32 pc = emit(Fa_make_ABC(Fa_OpCode::GET_FIELD, 0, object_reg, 0xFF), loc);
+    emit(Fa_make_ABx(Fa_OpCode::NOP, 0, static_cast<u16>(name_idx)), loc);
+    return Fa_ExprResult::reloc(pc);
+}
+
 Fa_ErrorOr<Fa_ExprResult> Compiler::compile_get_impl(AST::Fa_GetExpr* e)
 {
     Fa_SourceLocation loc = e->get_location();
@@ -1561,7 +1610,7 @@ int Compiler::current_method_slot(Fa_StringRef const& name) const
     if (m_current == nullptr || !m_current->is_class_method)
         return -1;
 
-    for (u32 i = 0, n = m_current->class_method_names.size(); i < n; i += 1) {
+    for (u32 i = 0, n = m_current->class_method_names.size(); i < n; i++) {
         if (m_current->class_method_names[i] == name)
             return static_cast<int>(i);
     }
@@ -1574,7 +1623,7 @@ int Compiler::current_method_field_index(Fa_StringRef const& name) const
     if (m_current == nullptr || !m_current->is_class_method)
         return -1;
 
-    for (u32 i = 0, n = m_current->class_field_names.size(); i < n; i += 1) {
+    for (u32 i = 0, n = m_current->class_field_names.size(); i < n; i++) {
         if (m_current->class_field_names[i] == name)
             return static_cast<int>(i);
     }

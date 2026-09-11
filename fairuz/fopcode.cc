@@ -48,7 +48,7 @@ bool Fa_Chunk::patch_jump(u32 const instr_idx)
 
 u16 Fa_Chunk::add_constant(Fa_Value const v)
 {
-    for (u32 i = 0, n = constants.size(); i < n; i += 1) {
+    for (u32 i = 0, n = constants.size(); i < n; i++) {
         if (constants[i] == v)
             return static_cast<u16>(i);
     }
@@ -85,7 +85,7 @@ void Fa_Chunk::disassemble() const
     if (!constants.empty()) {
         ::printf("  constants:\n");
 
-        for (size_t i = 0; i < constants.size(); i += 1) {
+        for (size_t i = 0; i < constants.size(); i++) {
             ::printf("    [%3zu] ", i);
             print_value(constants[i]);
             ::printf("\n");
@@ -97,7 +97,7 @@ void Fa_Chunk::disassemble() const
 
     ::printf("  code:\n");
 
-    for (u32 i = 0; i < static_cast<u32>(code.size()); i += 1) {
+    for (u32 i = 0; i < static_cast<u32>(code.size()); i++) {
         u32 ins = code[i];
         auto op = static_cast<Fa_OpCode>(Fa_instr_op(ins));
         auto fmt = opcode_format(op);

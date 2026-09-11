@@ -98,6 +98,7 @@ enum class Code : u16 {
     EXPECTED_COLON_CLASS = 0x0221,
     EXPECTED_CLASS_NAME = 0x0222,
     EXPECTED_MEMBER_NAME = 0x0223,
+    EXCEEDED_MAX_NESTING_LIMIT = 0x0224,
 }; // enum Code
 
 } // namespace parser
@@ -173,6 +174,7 @@ enum class Code : u16 {
     NATIVE_ARG_COUNT = 0x0512,
     NATIVE_TYPE_ERROR = 0x0513,
     UNDEFINED_METHOD = 0x0514,
+    UNDEFINED_FIELD = 0x0515,
 }; // enum Code
 
 } // namespace runtime
@@ -212,6 +214,7 @@ enum class Code : u16 {
     APPEND_FILE_FAILED = 0x0622,
     CLOSE_ARG_COUNT = 0x0623,
     CLOSE_TYPE_ERROR = 0x0624,
+    POP_EMPTY_LIST = 0x0625,
 }; // enum Code
 
 } // namespace stdlib
@@ -306,6 +309,7 @@ static constexpr char const* error_message_for(u16 code)
     case /*EXPECTED_COLON_CLASS =*/0x0221: return "Expected ':' after class name";
     case /*EXPECTED_CLASS_NAME =*/0x0222: return "Expected class name";
     case /*EXPECTED_MEMBER_NAME =*/0x0223: return "Expected member name";
+    case /*EXCEEDED_MAX_NESTING_LIMIT =*/0x0224: return "Exceeded max nesting limit";
     // sema
     case /*UNDEFINED_VARIABLE =*/0x0300: return "Undefined variable";
     case /*UNDEFINED_FUNCTION =*/0x0301: return "Undefined function";
@@ -363,12 +367,13 @@ static constexpr char const* error_message_for(u16 code)
     case /*NATIVE_ARG_COUNT =*/0x0512: return "Native call received the wrong number of arguments";
     case /*NATIVE_TYPE_ERROR =*/0x0513: return "Native call received arguments of the wrong type";
     case /*UNDEFINED_METHOD =*/0x0514: return "Call to undefined method";
+    case /*UNDEFINED_FIELD =*/0x0515: return "Undefined field";
     // stdlib
     case /*APPEND_ARG_COUNT =*/0x0600: return "append() expects at least two arguments";
     case /*APPEND_TYPE_ERROR =*/0x0601: return "append() expects a list as the first argument";
     case /*POP_ARG_COUNT =*/0x0602: return "pop() expects exactly one argument";
     case /*POP_TYPE_ERROR =*/0x0603: return "pop() expects a list argument";
-    case /*SLICE_ARG_COUNT =*/0x0604: return "slice() expects at least two arguments";
+    case /*SLICE_ARG_COUNT =*/0x0604: return "slice() expects exactly two or three arguments";
     case /*STR_ARG_COUNT =*/0x0605: return "str() expects zero or one argument";
     case /*BOOL_ARG_COUNT =*/0x0606: return "bool() expects exactly one argument";
     case /*SUBSTR_ARG_COUNT =*/0x0607: return "substr() expects exactly three arguments";
@@ -395,6 +400,7 @@ static constexpr char const* error_message_for(u16 code)
     case /*APPEND_FILE_FAILED =*/0x0622: return "append_file() failed to write";
     case /*CLOSE_ARG_COUNT =*/0x0623: return "close() expects exactly one argument";
     case /*CLOSE_TYPE_ERROR =*/0x0624: return "close() expects a file value as argument";
+    case /*POP_EMPTY_LIST =*/0x0625: return "pop() on an empty list";
     // containers
     case /*ARRAY_EMPTY_BACK =*/0x0700: return "Fa_Array::back() called on an empty array";
     case /*ARRAY_EMPTY_FRONT =*/0x0701: return "Fa_Array::front() called on an empty array";

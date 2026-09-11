@@ -2,6 +2,8 @@
 // stdlib.cc
 //
 
+#include "fdiagnostic.hpp"
+#include "fmacros.hpp"
 #include "fobj_header.hpp"
 #include "fobject.hpp"
 #include "futil.hpp"
@@ -66,7 +68,7 @@ static void append_rendered_value(Fa_StringRef& out, Fa_Value v, bool quote_stri
     if (v.is_list()) {
         Fa_ObjList* list = v.as_list();
         out += '[';
-        for (u32 i = 0, n = list->elements.size(); i < n; i += 1) {
+        for (u32 i = 0, n = list->elements.size(); i < n; i++) {
             if (i > 0)
                 out += ", ";
             append_rendered_value(out, list->elements[i], true);
@@ -137,7 +139,7 @@ Fa_Value Fa_VM::Fa_len(int argc, Fa_Value* argv)
                 u64 step = 0;
                 util::decode_utf8_at(str, byte_pos, &step);
                 byte_pos += step;
-                char_count += 1;
+                char_count++;
             }
 
             return Fa_Value::from_int(char_count);
@@ -181,7 +183,7 @@ static void print_runtime_value(Fa_Value v, int depth = 0)
         case Fa_ObjType::LIST: {
             auto list = Fa_obj_cast<Fa_ObjList>(obj, Fa_ObjType::LIST);
             std::cout << '[';
-            for (u32 i = 0, n = list->size(); i < n; i += 1) {
+            for (u32 i = 0, n = list->size(); i < n; i++) {
                 if (i > 0)
                     std::cout << ", ";
                 Fa_Value elem = list->elements[i];
@@ -290,7 +292,7 @@ Fa_Value Fa_VM::Fa_print(int argc, Fa_Value* argv)
         return Fa_Value::nil();
     }
 
-    for (int i = 0; i < argc; i += 1) {
+    for (int i = 0; i < argc; i++) {
         if (i > 0)
             std::cout << '\t';
         print_runtime_value(argv[i]);
@@ -360,7 +362,7 @@ Fa_Value Fa_VM::Fa_append(int argc, Fa_Value* argv)
 
     Fa_ObjList* list_obj = list_v.as_list();
 
-    for (int i = 1; i < argc; i += 1)
+    for (int i = 1; i < argc; i++)
         list_obj->elements.push(argv[i]);
 
     return Fa_Value::nil();
@@ -379,33 +381,70 @@ Fa_Value Fa_VM::Fa_pop(int argc, Fa_Value* argv)
         return Fa_Value::nil();
     }
 
-    list_v.as_list()->elements.pop();
-    return Fa_Value::nil();
+    Fa_ObjList* list_obj = list_v.as_list();
+
+    if (list_obj->empty())
+        stdlib_error(StdlibErrorCode::POP_EMPTY_LIST);
+
+    list_obj->elements.pop();
+    return list_v;
 }
 
 Fa_Value Fa_VM::Fa_slice(int argc, Fa_Value* argv)
 {
-    /// cut a copy of a list, with inclusive indices
-    /// accept [list, a, b]
+    /// cut a copy of a container, with inclusive indices
+    /// accept [container, start, end]
     /// a, b are the indices
-    /// if b is null then cut [a:]
+    /// if b is null then cut [start:]
 
-    if (argc < 2) {
+    if (argc < 2 || argc > 3) {
         stdlib_error(StdlibErrorCode::SLICE_ARG_COUNT, "got " + std::to_string(argc));
         return Fa_Value::nil();
     }
 
-    Fa_ObjList* list_obj = argv[0].as_list();
-    Fa_Value ret = m_gc.make_list();
-    Fa_ObjList* ret_list = ret.as_list();
-    /// Expects indices to be ints
-    u32 a = argv[1].as_int();
-    u32 b = argc == 3 ? argv[2].as_int() : list_obj->size() - 1;
+    auto resolve_end = [](Fa_Value& c) -> i64 {
+        if (c.is_string())
+            return c.as_string()->str.len() - 1;
+        if (c.is_list())
+            return c.as_list()->size() - 1;
+        return INT64_C(0);
+    };
 
-    for (u32 i = a; i <= b; i += 1)
-        ret_list->elements.push(list_obj->elements[i]);
+    Fa_Value container = argv[0];
+    Fa_Value start_value = argv[1];
+    Fa_Value end_value = argc < 3 ? Fa_Value::nil() : argv[2];
 
-    return ret;
+    if (UNLIKELY(!start_value.is_int() || !(end_value.is_nil() || end_value.is_int())))
+        runtime_error(RuntimeErrorCode::INDEX_TYPE_ERROR);
+
+    i64 start_i = start_value.as_int();
+    i64 end_i = end_value.is_nil() ? resolve_end(container) : end_value.as_int();
+
+    if (UNLIKELY(start_i < 0 || end_i < 0 || start_i > end_i))
+        runtime_error(RuntimeErrorCode::INDEX_OUT_OF_BOUNDS);
+
+    u32 start = static_cast<u32>(start_i);
+    u32 end = static_cast<u32>(end_i);
+
+    if (container.is_string()) {
+        Fa_ObjString* str_obj = container.as_string();
+        if (end >= str_obj->str.len())
+            runtime_error(RuntimeErrorCode::INDEX_OUT_OF_BOUNDS);
+
+        return m_gc.make_string(str_obj->str.slice(start, end));
+    } else if (container.is_list()) {
+        Fa_ObjList* list_obj = container.as_list();
+        if (end >= list_obj->size())
+            runtime_error(RuntimeErrorCode::INDEX_OUT_OF_BOUNDS);
+
+        Fa_ObjList* ret_list = m_gc.make_obj_list();
+        for (u32 i = start; i <= end; i++)
+            ret_list->elements.push(list_obj->elements[i]);
+
+        return Fa_Value::from_list(ret_list);
+    }
+
+    return Fa_Value::nil();
 }
 
 Fa_Value Fa_VM::Fa_input(int /*argc*/, Fa_Value* /*argv*/) // input takes no args for now
@@ -457,7 +496,7 @@ Fa_Value Fa_VM::Fa_list(int argc, Fa_Value* argv)
     Fa_Value ret = m_gc.make_list();
     Fa_ObjList* list_obj = ret.as_list();
 
-    for (int i = 0; i < argc; i += 1)
+    for (int i = 0; i < argc; i++)
         list_obj->elements.push(argv[i]);
 
     return ret;
@@ -504,7 +543,7 @@ Fa_Value Fa_VM::Fa_split(int argc, Fa_Value* argv)
                 break;
             }
 
-            pos += 1;
+            pos++;
         }
 
         if (!found) {
@@ -530,7 +569,7 @@ Fa_Value Fa_VM::Fa_join(int argc, Fa_Value* argv)
     Fa_StringRef delim = argv[1].as_string()->str;
     Fa_StringRef out = "";
 
-    for (u32 i = 0; i < list->elements.size(); i += 1) {
+    for (u32 i = 0; i < list->elements.size(); i++) {
         if (i > 0)
             out += delim;
 
@@ -590,7 +629,7 @@ Fa_Value Fa_VM::Fa_trim(int argc, Fa_Value* argv)
     };
 
     while (start < end && is_trim_space(str[start]))
-        start += 1;
+        start++;
     while (end > start && is_trim_space(str[end - 1]))
         end -= 1;
 
@@ -684,7 +723,7 @@ Fa_Value Fa_VM::Fa_min(int argc, Fa_Value* argv)
     bool all_strs = argv[0].is_string();
 
     // Validate all args match the expected type
-    for (int i = 1; i < argc; i += 1) {
+    for (int i = 1; i < argc; i++) {
         if (!argv[i].is_int())
             all_ints = false;
         if (!argv[i].is_string())
@@ -693,7 +732,7 @@ Fa_Value Fa_VM::Fa_min(int argc, Fa_Value* argv)
 
     if (all_strs) {
         Fa_Value ret = argv[0];
-        for (int i = 1; i < argc; i += 1) {
+        for (int i = 1; i < argc; i++) {
             if (argv[i].as_string()->str < ret.as_string()->str)
                 ret = argv[i];
         }
@@ -702,7 +741,7 @@ Fa_Value Fa_VM::Fa_min(int argc, Fa_Value* argv)
     }
 
     Fa_Value ret = Fa_Value::from_real(argv[0].as_double_any());
-    for (int i = 1; i < argc; i += 1)
+    for (int i = 1; i < argc; i++)
         ret = Fa_Value::from_real(std::fmin(ret.as_double_any(), argv[i].as_double_any()));
 
     if (all_ints)
@@ -723,7 +762,7 @@ Fa_Value Fa_VM::Fa_max(int argc, Fa_Value* argv)
     bool all_strs = argv[0].is_string();
 
     // Validate all args match the expected type
-    for (int i = 1; i < argc; i += 1) {
+    for (int i = 1; i < argc; i++) {
         if (!argv[i].is_int())
             all_ints = false;
         if (!argv[i].is_string())
@@ -732,7 +771,7 @@ Fa_Value Fa_VM::Fa_max(int argc, Fa_Value* argv)
 
     if (all_strs) {
         Fa_Value ret = argv[0];
-        for (int i = 1; i < argc; i += 1) {
+        for (int i = 1; i < argc; i++) {
             if (argv[i].as_string()->str > ret.as_string()->str)
                 ret = argv[i];
         }
@@ -740,7 +779,7 @@ Fa_Value Fa_VM::Fa_max(int argc, Fa_Value* argv)
     }
 
     Fa_Value ret = Fa_Value::from_real(argv[0].as_double_any());
-    for (int i = 1; i < argc; i += 1)
+    for (int i = 1; i < argc; i++)
         ret = Fa_Value::from_real(std::fmax(ret.as_double_any(), argv[i].as_double_any()));
 
     if (all_ints)
@@ -801,7 +840,7 @@ Fa_Value Fa_VM::Fa_assert(int argc, Fa_Value* argv)
         return Fa_Value::nil();
     }
 
-    for (int i = 0; i < argc; i += 1) {
+    for (int i = 0; i < argc; i++) {
         if (!argv[i].is_truthy()) // eval entire expr
             stdlib_error(StdlibErrorCode::ASSERT_FAILED);
     }
