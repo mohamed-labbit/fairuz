@@ -149,6 +149,15 @@ TEST(Fa_Chunk, ICSlotCanBeUpdated)
     EXPECT_EQ(slot.hit_count, 500u);
 }
 
+TEST(Fa_Chunk, RejectsMoreInlineCacheSlotsThanBytecodeCanEncode)
+{
+    Fa_Chunk c;
+    for (u32 i = 0; i <= MAX_IC_SLOTS; i++)
+        c.alloc_ic_slot();
+
+    EXPECT_THROW(c.alloc_ic_slot(), fairuz::diagnostic::Fa_DiagnosticAbort);
+}
+
 TEST(Fa_Chunk, GetLineSingleLine)
 {
     Fa_Chunk c;

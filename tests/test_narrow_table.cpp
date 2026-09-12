@@ -108,3 +108,20 @@ TEST(Fa_HashTable, ClearRemovesEntriesAndAllowsReuse)
     EXPECT_EQ(*table.find_ptr(123), 456);
     EXPECT_EQ(table.size(), 1u);
 }
+
+TEST(Fa_HashTable, EraseRepairsCollidingProbeCluster)
+{
+    CollidingIntTable table;
+    table.insert_or_assign(1, 10);
+    table.insert_or_assign(2, 20);
+    table.insert_or_assign(3, 30);
+
+    EXPECT_TRUE(table.erase(1));
+    EXPECT_FALSE(table.contains(1));
+    ASSERT_NE(table.find_ptr(2), nullptr);
+    ASSERT_NE(table.find_ptr(3), nullptr);
+    EXPECT_EQ(*table.find_ptr(2), 20);
+    EXPECT_EQ(*table.find_ptr(3), 30);
+    EXPECT_EQ(table.size(), 2u);
+    EXPECT_FALSE(table.erase(99));
+}

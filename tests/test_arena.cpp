@@ -1,4 +1,5 @@
 #include "../fairuz/farena.hpp"
+#include "../fairuz/farray.hpp"
 
 #include <gtest/gtest.h>
 
@@ -27,6 +28,136 @@ public:
 };
 
 inline TestAllocator test_allocator;
+
+namespace {
+
+struct DestructionProbe {
+    int* count;
+    ~DestructionProbe() { ++*count; }
+};
+
+} // namespace
+
+TEST(ArenaAllocatorTest, ResetDestroysNonTrivialObjects)
+{
+    Fa_ArenaAllocator allocator;
+    int destructions = 0;
+    (void)allocator.allocate_object<DestructionProbe>(&destructions);
+    EXPECT_EQ(destructions, 0);
+    allocator.reset();
+    EXPECT_EQ(destructions, 1);
+}
+
+TEST(ArenaAllocatorTest, AllocatorDestructionDestroysNonTrivialObjects)
+{
+    int destructions = 0;
+    {
+        Fa_ArenaAllocator allocator;
+        (void)allocator.allocate_object<DestructionProbe>(&destructions);
+    }
+    EXPECT_EQ(destructions, 1);
+}
+
+class CountingAllocator {
+public:
+    size_t bytes { 0 };
+
+    template<typename T>
+    T* allocate_array(u32 count)
+    {
+        size_t const allocation_size = static_cast<size_t>(count) * sizeof(T);
+        bytes += allocation_size;
+        return static_cast<T*>(::operator new(allocation_size));
+    }
+
+    void deallocate(void* ptr, size_t size)
+    {
+        ::operator delete(ptr);
+        bytes -= size;
+    }
+};
+
+struct LifetimeCounter {
+    inline static int live = 0;
+
+    LifetimeCounter() { live++; }
+    LifetimeCounter(LifetimeCounter const&) { live++; }
+    LifetimeCounter(LifetimeCounter&&) noexcept { live++; }
+    ~LifetimeCounter() { live--; }
+};
+
+TEST(ArrayAllocatorTest, ReserveAndDestructionTrackAllocatedBytes)
+{
+    CountingAllocator allocator;
+    {
+        Fa_Array<int, CountingAllocator> values(&allocator);
+        values.reserve(8);
+        EXPECT_EQ(allocator.bytes, values.cap() * sizeof(int));
+
+        values.reserve(64);
+        EXPECT_EQ(allocator.bytes, values.cap() * sizeof(int));
+    }
+    EXPECT_EQ(allocator.bytes, 0u);
+}
+
+TEST(ArrayAllocatorTest, CopyAssignmentTransfersAllocatorOwnership)
+{
+    CountingAllocator source_allocator;
+    CountingAllocator destination_allocator;
+    {
+        Fa_Array<int, CountingAllocator> source(&source_allocator);
+        source.reserve(8);
+        source.push(42);
+
+        Fa_Array<int, CountingAllocator> destination(&destination_allocator);
+        destination.reserve(64);
+        destination = source;
+
+        EXPECT_EQ(destination_allocator.bytes, 0u);
+        EXPECT_EQ(source_allocator.bytes, 2u * source.cap() * sizeof(int));
+        EXPECT_EQ(destination[0], 42);
+    }
+    EXPECT_EQ(source_allocator.bytes, 0u);
+    EXPECT_EQ(destination_allocator.bytes, 0u);
+}
+
+TEST(ArrayAllocatorTest, MoveAssignmentReleasesDestinationStorage)
+{
+    CountingAllocator allocator;
+    {
+        Fa_Array<int, CountingAllocator> source(&allocator);
+        source.reserve(8);
+        source.push(7);
+        size_t const source_bytes = source.cap() * sizeof(int);
+
+        Fa_Array<int, CountingAllocator> destination(&allocator);
+        destination.reserve(64);
+        destination = std::move(source);
+
+        EXPECT_EQ(allocator.bytes, source_bytes);
+        EXPECT_TRUE(source.empty());
+        EXPECT_EQ(source.cap(), 0u);
+        EXPECT_EQ(destination[0], 7);
+    }
+    EXPECT_EQ(allocator.bytes, 0u);
+}
+
+TEST(ArrayAllocatorTest, ClearDestroysLiveElements)
+{
+    CountingAllocator allocator;
+    LifetimeCounter::live = 0;
+    {
+        Fa_Array<LifetimeCounter, CountingAllocator> values(&allocator);
+        values.emplace();
+        values.emplace();
+        ASSERT_EQ(LifetimeCounter::live, 2);
+
+        values.clear();
+        EXPECT_EQ(LifetimeCounter::live, 0);
+    }
+    EXPECT_EQ(LifetimeCounter::live, 0);
+    EXPECT_EQ(allocator.bytes, 0u);
+}
 
 TEST(ArenaAllocatorTest, SingleIntAllocation)
 {

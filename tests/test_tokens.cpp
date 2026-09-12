@@ -115,6 +115,18 @@ TEST(LexerTest, RecognizesStringLiteral)
     EXPECT_EQ(tokens[2]->type(), tok::Fa_TokenType::ENDMARKER);
 }
 
+TEST(LexerTest, DecodesStringEscapesAndKeepsEscapedQuoteInsideLiteral)
+{
+    lex::Fa_FileManager source;
+    source.buffer() = R"FA("quote: \" slash: \\ newline:\n tab:\t unicode:\u0645")FA";
+    lex::Fa_Lexer lexer(&source);
+    auto tokens = lexer.tokenize();
+
+    ASSERT_EQ(tokens.size(), 3u);
+    ASSERT_EQ(tokens[1]->type(), tok::Fa_TokenType::STRING);
+    EXPECT_EQ(tokens[1]->lexeme(), "quote: \" slash: \\ newline:\n tab:\t unicode:م");
+}
+
 TEST(LexerTest, RecognizesFa_Expression00)
 {
     lex::Fa_FileManager m_file_manager(test_cases_path / "recognizes_expression.fa");

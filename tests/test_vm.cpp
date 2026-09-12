@@ -417,7 +417,9 @@ TEST(VMArith, ModPositive)
     b.regs(3).load_int(0, 17).load_int(1, 5).ABC(Fa_OpCode::OP_MOD, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_DOUBLE_EQ(r.run(b).as_double(), 2.0);
+    Fa_Value result = r.run(b);
+    ASSERT_TRUE(result.is_int());
+    EXPECT_EQ(result.as_int(), 2);
 }
 
 TEST(VMArith, Pow)
@@ -1632,7 +1634,8 @@ TEST(NativeFloor, PositiveFloat)
     Fa_VM vm;
     Fa_Value arg = Fa_Value::from_real(3.7);
     Fa_Value r = vm.Fa_floor(1, &arg);
-    EXPECT_DOUBLE_EQ(r.as_double(), 3.0);
+    ASSERT_TRUE(r.is_int());
+    EXPECT_EQ(r.as_int(), 3);
 }
 
 TEST(NativeFloor, NegativeFloat)
@@ -1640,7 +1643,8 @@ TEST(NativeFloor, NegativeFloat)
     Fa_VM vm;
     Fa_Value arg = Fa_Value::from_real(-2.3);
     Fa_Value r = vm.Fa_floor(1, &arg);
-    EXPECT_DOUBLE_EQ(r.as_double(), -3.0);
+    ASSERT_TRUE(r.is_int());
+    EXPECT_EQ(r.as_int(), -3);
 }
 
 TEST(NativeFloor, ExactFloat)
@@ -1648,7 +1652,8 @@ TEST(NativeFloor, ExactFloat)
     Fa_VM vm;
     Fa_Value arg = Fa_Value::from_real(4.0);
     Fa_Value r = vm.Fa_floor(1, &arg);
-    EXPECT_DOUBLE_EQ(r.as_double(), 4.0);
+    ASSERT_TRUE(r.is_int());
+    EXPECT_EQ(r.as_int(), 4);
 }
 
 TEST(NativeCeil, IntegerPassthrough)
@@ -1665,7 +1670,8 @@ TEST(NativeCeil, PositiveFloat)
     Fa_VM vm;
     Fa_Value arg = Fa_Value::from_real(3.2);
     Fa_Value r = vm.Fa_ceil(1, &arg);
-    EXPECT_DOUBLE_EQ(r.as_double(), 4.0);
+    ASSERT_TRUE(r.is_int());
+    EXPECT_EQ(r.as_int(), 4);
 }
 
 TEST(NativeCeil, NegativeFloat)
@@ -1673,7 +1679,8 @@ TEST(NativeCeil, NegativeFloat)
     Fa_VM vm;
     Fa_Value arg = Fa_Value::from_real(-2.7);
     Fa_Value r = vm.Fa_ceil(1, &arg);
-    EXPECT_DOUBLE_EQ(r.as_double(), -2.0);
+    ASSERT_TRUE(r.is_int());
+    EXPECT_EQ(r.as_int(), -2);
 }
 
 TEST(NativeCeil, ExactFloat)
@@ -1681,7 +1688,8 @@ TEST(NativeCeil, ExactFloat)
     Fa_VM vm;
     Fa_Value arg = Fa_Value::from_real(4.0);
     Fa_Value r = vm.Fa_ceil(1, &arg);
-    EXPECT_DOUBLE_EQ(r.as_double(), 4.0);
+    ASSERT_TRUE(r.is_int());
+    EXPECT_EQ(r.as_int(), 4);
 }
 
 TEST(NativeAbs, PositiveInteger)
@@ -1827,8 +1835,8 @@ TEST(NativeRound, HalfRoundsUp)
     Fa_VM vm;
     Fa_Value arg = Fa_Value::from_real(2.5);
     Fa_Value r = vm.Fa_round(1, &arg);
-    ASSERT_TRUE(r.is_double());
-    EXPECT_DOUBLE_EQ(r.as_double(), 3.0);
+    ASSERT_TRUE(r.is_int());
+    EXPECT_EQ(r.as_int(), 3);
 }
 
 TEST(NativeRound, HalfNegativeRoundsDown)
@@ -1836,8 +1844,8 @@ TEST(NativeRound, HalfNegativeRoundsDown)
     Fa_VM vm;
     Fa_Value arg = Fa_Value::from_real(-2.5);
     Fa_Value r = vm.Fa_round(1, &arg);
-    ASSERT_TRUE(r.is_double());
-    EXPECT_DOUBLE_EQ(r.as_double(), -3.0);
+    ASSERT_TRUE(r.is_int());
+    EXPECT_EQ(r.as_int(), -3);
 }
 
 TEST(NativeRound, IntegerPassthrough)
@@ -2016,6 +2024,13 @@ TEST(NativeAssert, TrueCondition_DoesNotCrash)
     Fa_VM vm;
     Fa_Value arg = Fa_Value::from_bool(true);
     EXPECT_NO_FATAL_FAILURE(vm.Fa_assert(1, &arg));
+}
+
+TEST(NativeAssert, OptionalMessageIsNotTreatedAsASecondCondition)
+{
+    Fa_VM vm;
+    Fa_Value args[] = { Fa_Value::from_bool(true), str("") };
+    EXPECT_NO_THROW(vm.Fa_assert(2, args));
 }
 
 TEST(NativeClock, ReturnsNumber_WhenImplemented)
@@ -3252,9 +3267,6 @@ TEST(VMClass, AddSpecialMethodHandlesBinaryPlus)
         test,
         expr_stmt(call_expr(name_expr("test"))),
     });
-
-    if (test_config::dump_bytecode)
-        top->disassemble();
 
     VMRunner r;
     Fa_Value result = Fa_Value::nil();

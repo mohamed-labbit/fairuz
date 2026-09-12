@@ -147,6 +147,7 @@ TEST(OpCodeMeta, KnownNames)
     EXPECT_EQ(Fa_opcode_name(Fa_OpCode::LOAD_INT), "LOAD_INT");
     EXPECT_EQ(Fa_opcode_name(Fa_OpCode::LOAD_GLOBAL), "LOAD_GLOBAL");
     EXPECT_EQ(Fa_opcode_name(Fa_OpCode::STORE_GLOBAL), "STORE_GLOBAL");
+    EXPECT_EQ(Fa_opcode_name(Fa_OpCode::IMPORT_MODULE), "IMPORT_MODULE");
     EXPECT_EQ(Fa_opcode_name(Fa_OpCode::MOVE), "MOVE");
     EXPECT_EQ(Fa_opcode_name(Fa_OpCode::OP_ADD), "OP_ADD");
     EXPECT_EQ(Fa_opcode_name(Fa_OpCode::OP_SUB), "OP_SUB");
@@ -198,6 +199,7 @@ TEST(OpCodeMeta, LoadFormatIsABx)
     EXPECT_EQ(opcode_format(Fa_OpCode::LOAD_INT), Fa_InstrFormat::ABx);
     EXPECT_EQ(opcode_format(Fa_OpCode::LOAD_GLOBAL), Fa_InstrFormat::ABx);
     EXPECT_EQ(opcode_format(Fa_OpCode::STORE_GLOBAL), Fa_InstrFormat::ABx);
+    EXPECT_EQ(opcode_format(Fa_OpCode::IMPORT_MODULE), Fa_InstrFormat::ABx);
     EXPECT_EQ(opcode_format(Fa_OpCode::CLOSURE), Fa_InstrFormat::ABx);
 }
 

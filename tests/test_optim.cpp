@@ -7,7 +7,7 @@
 using namespace fairuz::AST;
 using namespace fairuz::runtime;
 
-TEST(OptimTest, StrengthReduceSimpleBitnotExpressions)
+TEST(OptimTest, DoesNotRewriteBitnotAsLogicalOperations)
 {
     // ~~x;      => x != 0
     // ~(x == y) => x != y
@@ -36,24 +36,16 @@ TEST(OptimTest, StrengthReduceSimpleBitnotExpressions)
     auto ret_6 = try_strength_reduce_unary(ast_6);
     auto ret_7 = try_strength_reduce_unary(ast_7);
 
-    Fa_BinaryExpr* expected_1 = binary(x, lit_int(0), Fa_BinaryOp::OP_NEQ);
-    Fa_BinaryExpr* expected_2 = binary(x, y, Fa_BinaryOp::OP_NEQ);
-    Fa_BinaryExpr* expected_3 = binary(x, y, Fa_BinaryOp::OP_EQ);
-    Fa_BinaryExpr* expected_4 = binary(x, y, Fa_BinaryOp::OP_GTE);
-    Fa_BinaryExpr* expected_5 = binary(x, y, Fa_BinaryOp::OP_LTE);
-    Fa_BinaryExpr* expected_6 = binary(x, y, Fa_BinaryOp::OP_GT);
-    Fa_BinaryExpr* expected_7 = binary(x, y, Fa_BinaryOp::OP_LT);
-
-    EXPECT_TRUE(ret_1.has_value() && ret_1.value()->equals(expected_1));
-    EXPECT_TRUE(ret_2.has_value() && ret_2.value()->equals(expected_2));
-    EXPECT_TRUE(ret_3.has_value() && ret_3.value()->equals(expected_3));
-    EXPECT_TRUE(ret_4.has_value() && ret_4.value()->equals(expected_4));
-    EXPECT_TRUE(ret_5.has_value() && ret_5.value()->equals(expected_5));
-    EXPECT_TRUE(ret_6.has_value() && ret_6.value()->equals(expected_6));
-    EXPECT_TRUE(ret_7.has_value() && ret_7.value()->equals(expected_7));
+    EXPECT_FALSE(ret_1.has_value());
+    EXPECT_FALSE(ret_2.has_value());
+    EXPECT_FALSE(ret_3.has_value());
+    EXPECT_FALSE(ret_4.has_value());
+    EXPECT_FALSE(ret_5.has_value());
+    EXPECT_FALSE(ret_6.has_value());
+    EXPECT_FALSE(ret_7.has_value());
 }
 
-TEST(OptimTest, StrengthReduceSimplePureBinaryExpressions)
+TEST(OptimTest, DoesNotDiscardDynamicOperandErrorsOrOverloads)
 {
     // x * 0 = 0
     // x * 1 = x
@@ -89,19 +81,19 @@ TEST(OptimTest, StrengthReduceSimplePureBinaryExpressions)
     auto ret_12 = try_strength_reduce_binary(binary(x, zero, Fa_BinaryOp::OP_LSHIFT));
     auto ret_13 = try_strength_reduce_binary(binary(x, zero, Fa_BinaryOp::OP_RSHIFT));
 
-    EXPECT_TRUE(ret_1.has_value() && ret_1.value()->equals(zero->clone()));
-    EXPECT_TRUE(ret_2.has_value() && ret_2.value()->equals(x->clone()));
-    EXPECT_TRUE(ret_3.has_value() && ret_3.value()->equals(binary(x, x, Fa_BinaryOp::OP_ADD)));
-    EXPECT_TRUE(ret_4.has_value() && ret_4.value()->equals(x->clone()));
-    EXPECT_TRUE(ret_5.has_value() && ret_5.value()->equals(unary(x, Fa_UnaryOp::OP_NEG)));
-    EXPECT_TRUE(ret_6.has_value() && ret_6.value()->equals(zero->clone()));
-    EXPECT_TRUE(ret_7.has_value() && ret_7.value()->equals(x->clone()));
-    EXPECT_TRUE(ret_8.has_value() && ret_8.value()->equals(x->clone()));
-    EXPECT_TRUE(ret_9.has_value() && ret_9.value()->equals(neg->clone()));
-    EXPECT_TRUE(ret_10.has_value() && ret_10.value()->equals(x->clone()));
-    EXPECT_TRUE(ret_11.has_value() && ret_11.value()->equals(unary(x, Fa_UnaryOp::OP_BITNOT)));
-    EXPECT_TRUE(ret_12.has_value() && ret_12.value()->equals(x->clone()));
-    EXPECT_TRUE(ret_13.has_value() && ret_13.value()->equals(x->clone()));
+    EXPECT_FALSE(ret_1.has_value());
+    EXPECT_FALSE(ret_2.has_value());
+    EXPECT_FALSE(ret_3.has_value());
+    EXPECT_FALSE(ret_4.has_value());
+    EXPECT_FALSE(ret_5.has_value());
+    EXPECT_FALSE(ret_6.has_value());
+    EXPECT_FALSE(ret_7.has_value());
+    EXPECT_FALSE(ret_8.has_value());
+    EXPECT_FALSE(ret_9.has_value());
+    EXPECT_FALSE(ret_10.has_value());
+    EXPECT_FALSE(ret_11.has_value());
+    EXPECT_FALSE(ret_12.has_value());
+    EXPECT_FALSE(ret_13.has_value());
 }
 
 TEST(OptimTest, PurityChecks)
