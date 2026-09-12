@@ -413,6 +413,14 @@ COMMON_FLAGS=(
     -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 )
 
+# CI can keep downloaded, hash-verified dependencies outside build/ so
+# --clean removes stale compiler output without discarding the download cache.
+if [[ -n "${FAIRUZ_FETCHCONTENT_BASE_DIR:-}" ]]; then
+    COMMON_FLAGS+=(
+        -DFETCHCONTENT_BASE_DIR="$FAIRUZ_FETCHCONTENT_BASE_DIR"
+    )
+fi
+
 if [[ "$USE_GCC" == true && "$USE_CLANG" == true ]]; then
     echo "error: --gcc and --clang are mutually exclusive" >&2
     exit 1
@@ -533,9 +541,13 @@ fi
 CXX_EXTRA_FLAGS=""
 
 if [[ "$DEBUG" == 1 || "$RUN_TESTS" == true ]]; then
+    COMMON_FLAGS+=(
+        -DCMAKE_BUILD_TYPE=Debug
+    )
     CXX_EXTRA_FLAGS="-fsanitize=address -g -Wall -Wextra -Wpedantic"
 else
     COMMON_FLAGS+=(
+        -DCMAKE_BUILD_TYPE=Release
         -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
     )
 fi
@@ -633,6 +645,18 @@ if [[ "$RUN_TESTS" == true ]]; then
     # including macOS's stock bash 3.2.
     ASAN_OPTIONS="detect_leaks=$DETECT_LEAKS" \
         "$PROJECT_ROOT/build/fairuz_tests" ${TEST_ARGS[@]+"${TEST_ARGS[@]}"}
+
+    echo "-- Running Fairuz standard-library tests"
+    stdlib_test_count=0
+    for stdlib_test_file in "$PROJECT_ROOT"/stdlib/tests/test_*.fa; do
+        [[ -f "$stdlib_test_file" ]] || continue
+        stdlib_test_count=$((stdlib_test_count + 1))
+        echo "[$stdlib_test_count] $(basename "$stdlib_test_file")"
+        FAIRUZ_STDLIB="$PROJECT_ROOT/stdlib" \
+        ASAN_OPTIONS="detect_leaks=$DETECT_LEAKS" \
+            "$PROJECT_ROOT/build/fairuz" "$stdlib_test_file"
+    done
+    echo "✓ $stdlib_test_count Fairuz standard-library tests passed"
 fi
 
 if [[ "$RUN_MAIN" == true ]]; then

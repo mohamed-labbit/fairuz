@@ -19,6 +19,8 @@ jobs:
   test:
     name: test (${{ matrix.compiler }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    env:
+      FAIRUZ_FETCHCONTENT_BASE_DIR: ${{ runner.temp }}/fairuz-fetchcontent
     strategy:
       # A failure on one OS/compiler leg shouldn't cancel the others — we
       # want the full compatibility picture from a single CI run.
@@ -27,11 +29,8 @@ jobs:
         include:
           - os: ubuntu-latest
             compiler: clang
-          # gcc leg disabled — linking issue under investigation.
-          # Re-enable this entry *and* restore the else-branch in the
-          # "Build and run tests" step below when it's fixed.
-          #- os: ubuntu-latest
-          #  compiler: gcc
+          - os: ubuntu-latest
+            compiler: gcc
           - os: macos-latest
             compiler: clang
 
@@ -42,7 +41,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build libomp-dev
+          sudo apt-get install -y cmake ninja-build
           if [ "${{ matrix.compiler }}" = "clang" ]; then
             sudo apt-get install -y clang ninja-build
           else
@@ -51,12 +50,12 @@ jobs:
 
       - name: Install macOS build dependencies
         if: runner.os == 'macOS'
-        run: brew install cmake ninja libomp
+        run: brew install cmake ninja
 
       - name: Cache CMake FetchContent downloads
         uses: actions/cache@v4
         with:
-          path: build/_deps
+          path: ${{ runner.temp }}/fairuz-fetchcontent
           # Falling back to a same-OS cache on a miss still saves the
           # network fetch even when CMakeLists.txt itself changed.
           key: fetchcontent-${{ runner.os }}-${{ matrix.compiler }}-${{ hashFiles('CMakeLists.txt') }}
@@ -67,38 +66,35 @@ jobs:
         run: |
           if [ "${{ matrix.compiler }}" = "clang" ]; then
             ./build.sh test --clean --debug
+          else
+            ./build.sh test --clean --gcc --debug
           fi
-          # gcc branch removed while the gcc leg is disabled above. Restore:
-          #   if [ "${{ matrix.compiler }}" = "clang" ]; then
-          #     ./build.sh test --clean --debug
-          #   else
-          #     ./build.sh test --clean --gcc --debug
-          #   fi
 
       - name: Smoke-test the interpreter on the example programs
         run: |
-          EXTRA_FLAG=""
           for f in examples/*.fa; do
             echo "::group::$f"
-            ./build.sh --clean run $EXTRA_FLAG "$f"
+            ASAN_OPTIONS=detect_leaks=0 ./build/fairuz "$f"
             echo "::endgroup::"
           done
 
   release-build:
     name: release build (no sanitizers)
     runs-on: ubuntu-latest
+    env:
+      FAIRUZ_FETCHCONTENT_BASE_DIR: ${{ runner.temp }}/fairuz-fetchcontent
     steps:
       - uses: actions/checkout@v4
 
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake clang libomp-dev
+          sudo apt-get install -y cmake clang ninja-build
 
       - name: Cache CMake FetchContent downloads
         uses: actions/cache@v4
         with:
-          path: build/_deps
+          path: ${{ runner.temp }}/fairuz-fetchcontent
           key: fetchcontent-release-${{ hashFiles('CMakeLists.txt') }}
           restore-keys: |
             fetchcontent-release-
@@ -118,13 +114,12 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake clang libomp-dev
+          sudo apt-get install -y cmake clang ninja-build
 
       - name: Build fairuz
         run: |
-          mkdir -p build && cd build
-          cmake -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ ..
-          make fairuz -j"$(nproc)"
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+          cmake --build build --target fairuz
 
       - name: Check every example is already canonically formatted
         # `fairuz format` rewrites in place, so this diffs before/after and

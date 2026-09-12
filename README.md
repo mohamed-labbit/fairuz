@@ -6,7 +6,7 @@ identifiers, and standard library functions are all Arabic — the goal is a
 language that reads naturally right-to-left rather than one that merely
 transliterates English syntax.
 
-This `0.1.0` release is the first public source drop. The pipeline is a
+The planned `0.1.0` release is the first public source drop. The pipeline is a
 hand-written lexer and recursive-descent parser, a register-based bytecode
 compiler, and a computed-goto VM with a NaN-boxed value representation and a
 tricolor mark-and-sweep garbage collector.
@@ -67,7 +67,6 @@ Requirements:
 - CMake 3.14+
 - A C++23 compiler (Clang recommended; GCC via `-DUSE_GCC=ON`)
 - `simdutf`, available via your package manager or CMake's network fetch path
-- OpenMP support is optional but recommended
 
 Configure and build:
 
@@ -76,7 +75,7 @@ cmake -S . -B build -DBUILD_TESTS=ON -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPIL
 cmake --build build --target fairuz -j4
 ```
 
-Run the test suite (400+ cases across the lexer, parser, compiler, VM, and
+Run the test suite (600+ cases across the lexer, parser, compiler, VM, and
 stdlib):
 
 ```bash
@@ -124,12 +123,29 @@ Options:
 | `-V`, `--version` | Show the language version |
 
 `fairuz format <file.fa>` rewrites a file in place with canonical formatting.
+Diagnostics disable ANSI styling when stderr is redirected or `NO_COLOR` is
+set, and escape terminal control bytes from source text and paths.
+
+Fairuz programs execute with the permissions of the `fairuz` process and the
+standard library includes file I/O. Fairuz is not a sandbox: run untrusted
+source only inside an appropriately restricted container or operating-system
+sandbox.
+
+## Container
+
+Build the minimal, non-root runtime image and run a source file from the current
+directory:
+
+```bash
+docker build -t fairuz .
+docker run --rm -v "$PWD:/work:ro" fairuz examples/hello.fa
+```
 
 ## Project layout
 
 ```
 fairuz/          Compiler and VM sources (lexer, parser, compiler, VM, GC, stdlib)
-tests/           400+ unit and regression tests (GoogleTest), plus data-driven test_cases/
+tests/           600+ unit and regression tests (GoogleTest), plus data-driven test_cases/
 examples/        Sample .fa programs
 editors/vscode/  VS Code syntax/language extension
 packaging/       Homebrew formula template
@@ -152,7 +168,8 @@ code --install-extension fairuz-language-0.1.0.vsix
 
 A Homebrew formula template for release packaging is included at
 `packaging/homebrew/fairuz.rb`. Before publishing it, replace the `sha256`
-placeholder with the checksum of the `v0.1.0` release tarball.
+placeholder with the checksum of the `v0.1.0` release tarball after creating
+that tag.
 
 ## License
 

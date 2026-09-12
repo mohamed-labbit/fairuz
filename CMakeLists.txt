@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.14)
 
+if(POLICY CMP0135)
+    cmake_policy(SET CMP0135 NEW)
+endif()
+
 # ─── Compiler selection ─────────────────────────────────────────────────────
 # Default preference: clang/clang++. Fall back to gcc/g++ if clang isn't
 # found, or force gcc/g++ regardless via -DUSE_GCC=ON.
@@ -36,6 +40,10 @@ endif()
 
 project(Fairuz VERSION 0.1.0 LANGUAGES C CXX)
 
+# Compression is part of the core standard-library boundary.  Use the
+# platform zlib rather than carrying a second gzip implementation.
+find_package(ZLIB REQUIRED)
+
 # Add right after project()
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
@@ -44,25 +52,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(GNUInstallDirs)
 
-# ─── C++ standard selection ─────────────────────────────────────────────────
-# Prefer C++26, but fall back to C++23 if (and only if) the selected
-# compiler can't actually compile with -std=c++26 — e.g. GCC < 14, where
-# C++26 support doesn't exist yet. This must run before CMAKE_CXX_STANDARD
-# is set: once that's set with CMAKE_CXX_STANDARD_REQUIRED ON, every
-# try_compile (including ones inside find_package calls below, like
-# FindOpenMP) fails hard on an unsupported dialect instead of letting us
-# probe for one.
-include(CheckCXXCompilerFlag)
-
-check_cxx_compiler_flag("-std=c++26" COMPILER_SUPPORTS_CXX26)
-
-if(COMPILER_SUPPORTS_CXX26)
-    set(CMAKE_CXX_STANDARD 26)
-    message(STATUS "Using C++26 (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})")
-else()
-    set(CMAKE_CXX_STANDARD 23)
-    message(STATUS "C++26 not supported by ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}, falling back to C++23")
-endif()
+# ─── C++ standard ───────────────────────────────────────────────────────────
+# Keep release artifacts and CI builds on the documented language version,
+# independent of which experimental modes a particular compiler exposes.
+set(CMAKE_CXX_STANDARD 23)
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -76,13 +69,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Optional: build tests (pass -DBUILD_TESTS=ON or use the 'test' preset)
 option(BUILD_TESTS "Build the test suite" OFF)
 
-# Find OpenMP if available
-find_package(OpenMP)
-
-if(OpenMP_FOUND)
-    message(STATUS "Found OpenMP: ${OpenMP_CXX_FLAGS}")
-endif()
-
 # Find or fetch simdutf
 find_package(simdutf CONFIG QUIET)
 
@@ -92,9 +78,8 @@ if(NOT simdutf_FOUND)
     include(FetchContent)
     FetchContent_Declare(
         simdutf
-        GIT_REPOSITORY https://github.com/simdutf/simdutf.git
-        GIT_TAG v5.5.0
-        GIT_SHALLOW TRUE
+        URL https://github.com/simdutf/simdutf/archive/refs/tags/v5.5.0.tar.gz
+        URL_HASH SHA256=47090a770b8eecf610ac4d1fafadde60bb7ba3c9d576d2a3a545aba989a3d749
     )
 
     set(SIMDUTF_TESTS OFF CACHE BOOL "Disable simdutf tests" FORCE)
@@ -115,7 +100,11 @@ add_library(fairuz_objects OBJECT ${fairuz_SOURCES})
 target_include_directories(fairuz_objects PUBLIC
     ${CMAKE_SOURCE_DIR}/fairuz
 )
-target_link_libraries(fairuz_objects PUBLIC simdutf::simdutf)
+target_link_libraries(fairuz_objects PUBLIC simdutf::simdutf ZLIB::ZLIB)
+target_compile_definitions(fairuz_objects PRIVATE
+    FAIRUZ_SOURCE_STDLIB_DIR="${CMAKE_SOURCE_DIR}/stdlib"
+    FAIRUZ_INSTALL_STDLIB_DIR="${CMAKE_INSTALL_FULL_DATADIR}/fairuz/stdlib"
+)
 
 # ─── Main executable ────────────────────────────────────────────────────────
 add_executable(fairuz
@@ -124,12 +113,8 @@ add_executable(fairuz
 )
 
 target_include_directories(fairuz PRIVATE ${CMAKE_SOURCE_DIR}/fairuz)
-target_link_libraries(fairuz PRIVATE simdutf::simdutf)
+target_link_libraries(fairuz PRIVATE simdutf::simdutf ZLIB::ZLIB)
 target_compile_definitions(fairuz PRIVATE fairuz_VERSION="${PROJECT_VERSION}")
-
-if(OpenMP_FOUND)
-    target_link_libraries(fairuz PRIVATE OpenMP::OpenMP_CXX)
-endif()
 
 install(TARGETS fairuz
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
@@ -144,6 +129,12 @@ install(FILES
 install(DIRECTORY
     ${CMAKE_SOURCE_DIR}/examples/
     DESTINATION ${CMAKE_INSTALL_DATADIR}/fairuz/examples
+    FILES_MATCHING PATTERN "*.fa"
+)
+
+install(DIRECTORY
+    ${CMAKE_SOURCE_DIR}/stdlib/
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/fairuz/stdlib
     FILES_MATCHING PATTERN "*.fa"
 )
 
@@ -170,6 +161,7 @@ if(BUILD_TESTS)
     FetchContent_Declare(
         googletest
         URL https://github.com/google/googletest/archive/refs/tags/v1.15.2.zip
+        URL_HASH SHA256=f179ec217f9b3b3f3c6e8b02d3e7eda997b49e4ce26d6b235c9053bec9c0bf9f
     )
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(googletest)
@@ -210,14 +202,28 @@ if(BUILD_TESTS)
         PRIVATE
         GTest::gtest_main
         simdutf::simdutf
+        ZLIB::ZLIB
     )
-
-    if(OpenMP_FOUND)
-        target_link_libraries(fairuz_tests PRIVATE OpenMP::OpenMP_CXX)
-    endif()
 
     target_include_directories(fairuz_tests PRIVATE ${CMAKE_SOURCE_DIR}/fairuz)
 
     enable_testing()
     add_test(NAME AllTestsInMain COMMAND fairuz_tests)
+
+    # Every Fairuz standard-library test is also a first-class CTest case.
+    # CONFIGURE_DEPENDS makes newly added test_*.fa files appear after the
+    # next build without maintaining a second handwritten manifest.
+    file(GLOB fairuz_STDLIB_TESTS CONFIGURE_DEPENDS
+        ${CMAKE_SOURCE_DIR}/stdlib/tests/test_*.fa)
+    foreach(stdlib_test_file IN LISTS fairuz_STDLIB_TESTS)
+        get_filename_component(stdlib_test_name ${stdlib_test_file} NAME_WE)
+        add_test(
+            NAME Stdlib.${stdlib_test_name}
+            COMMAND $<TARGET_FILE:fairuz> ${stdlib_test_file}
+        )
+        set_tests_properties(Stdlib.${stdlib_test_name} PROPERTIES
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            ENVIRONMENT "FAIRUZ_STDLIB=${CMAKE_SOURCE_DIR}/stdlib"
+        )
+    endforeach()
 endif()
