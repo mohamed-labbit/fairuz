@@ -1,12 +1,11 @@
 class Fairuz < Formula
   desc "Arabic-first experimental programming language"
-  homepage "https://github.com/Mohammed0101-lgtm/my-programming-language"
-  url "https://github.com/Mohammed0101-lgtm/my-programming-language/archive/refs/tags/v0.1.0.tar.gz"
+  homepage "https://github.com/mohamed-labbit/fairuz"
+  url "https://github.com/mohamed-labbit/fairuz/archive/refs/tags/v0.1.0.tar.gz"
   sha256 "REPLACE_WITH_RELEASE_TARBALL_SHA256"
   license "MIT"
 
   depends_on "cmake" => :build
-  depends_on "libomp"
   depends_on "simdutf"
 
   def install
