@@ -1,0 +1,20 @@
+# هوية المكتبة ووحداتها. يستطيع محمّل الوحدات مستقبلاً قراءة هذه البيانات.
+
+مكتبة_فيروز := قاموس(
+    "name"، "fairuz-stdlib"،
+    "version"، "0.2.0"،
+    "language"، "Fairuz"،
+    "modules"، [
+        "runtime"، "result"، "functional"، "collections"، "iterators"،
+        "itertools"، "dicts"، "data_structures"، "strings"، "math"،
+        "numbers"، "statistics"، "datetime"، "time"، "random"،
+        "copy"، "textwrap"، "file"، "path"، "filesystem"،
+        "os"، "subprocess"، "async"، "regex"،
+        "json"، "csv"، "config"، "url"، "http"، "sqlite"،
+        "codecs"، "compression"، "secrets"، "uuid"، "logging"،
+        "argparse"، "testing"
+    ]
+)
+
+دالة معلومات_المكتبة():
+    ارجع قاموس_انسخ(مكتبة_فيروز)
