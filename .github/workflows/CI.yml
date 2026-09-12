@@ -19,8 +19,6 @@ jobs:
   test:
     name: test (${{ matrix.compiler }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    env:
-      FAIRUZ_FETCHCONTENT_BASE_DIR: ${{ runner.temp }}/fairuz-fetchcontent
     strategy:
       # A failure on one OS/compiler leg shouldn't cancel the others — we
       # want the full compatibility picture from a single CI run.
@@ -63,6 +61,10 @@ jobs:
             fetchcontent-${{ runner.os }}-${{ matrix.compiler }}-
 
       - name: Build and run tests
+        env:
+          # The runner context is available at step scope, but GitHub does
+          # not expose it while evaluating a job-level env mapping.
+          FAIRUZ_FETCHCONTENT_BASE_DIR: ${{ runner.temp }}/fairuz-fetchcontent
         run: |
           if [ "${{ matrix.compiler }}" = "clang" ]; then
             ./build.sh test --clean --debug
@@ -81,8 +83,6 @@ jobs:
   release-build:
     name: release build (no sanitizers)
     runs-on: ubuntu-latest
-    env:
-      FAIRUZ_FETCHCONTENT_BASE_DIR: ${{ runner.temp }}/fairuz-fetchcontent
     steps:
       - uses: actions/checkout@v4
 
@@ -100,6 +100,8 @@ jobs:
             fetchcontent-release-
 
       - name: Build fairuz (optimized, no ASan)
+        env:
+          FAIRUZ_FETCHCONTENT_BASE_DIR: ${{ runner.temp }}/fairuz-fetchcontent
         # Deliberately not `test` or `--debug`, so this leg exercises the
         # actual release configuration (LTO, no sanitizer) that gets shipped
         # — the debug+ASan legs above never touch this path.
