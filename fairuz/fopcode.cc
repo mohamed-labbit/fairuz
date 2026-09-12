@@ -53,12 +53,18 @@ u16 Fa_Chunk::add_constant(Fa_Value const v)
             return static_cast<u16>(i);
     }
 
+    if (constants.size() > MAX_CONSTANTS)
+        diagnostic::panic(diagnostic::errc::compiler::Code::TOO_MANY_CONSTANTS);
+
     constants.push(v);
     return static_cast<u16>(constants.size() - 1);
 }
 
 u8 Fa_Chunk::alloc_ic_slot()
 {
+    if (ic_slots.size() > MAX_IC_SLOTS)
+        diagnostic::panic(diagnostic::errc::compiler::Code::TOO_MANY_INLINE_CACHES);
+
     ic_slots.push(Fa_ICSlot());
     return static_cast<u8>(ic_slots.size() - 1);
 }
@@ -113,7 +119,8 @@ void Fa_Chunk::disassemble() const
         case Fa_InstrFormat::ABx:
             ::printf("A=%-3u  Bx=%-5u", Fa_instr_A(ins), Fa_instr_Bx(ins));
             // Annotate with constant value
-            if (op == Fa_OpCode::LOAD_CONST || op == Fa_OpCode::LOAD_GLOBAL || op == Fa_OpCode::STORE_GLOBAL) {
+            if (op == Fa_OpCode::LOAD_CONST || op == Fa_OpCode::LOAD_GLOBAL || op == Fa_OpCode::STORE_GLOBAL
+                || op == Fa_OpCode::IMPORT_MODULE) {
                 u16 idx = Fa_instr_Bx(ins);
                 if (idx < constants.size()) {
                     ::printf("  ; ");

@@ -91,6 +91,8 @@ public:
     Fa_ErrorOr<AST::Fa_Expr*> parse_parameters_list();
     Fa_ErrorOr<AST::Fa_Stmt*> parse_indented_block();
     Fa_ErrorOr<AST::Fa_Stmt*> parse_class_def();
+    Fa_ErrorOr<AST::Fa_Stmt*> parse_import_stmt();
+    Fa_ErrorOr<AST::Fa_Stmt*> parse_assert_stmt();
     Fa_ErrorOr<AST::Fa_Stmt*> parse_class_method(Fa_Array<AST::Fa_Expr*>& members);
     Fa_ErrorOr<AST::Fa_Expr*> parse_member_access();
 

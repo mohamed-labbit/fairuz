@@ -27,6 +27,7 @@ struct Fa_ObjNative;
 struct Fa_ObjClass;
 struct Fa_ObjInstance;
 struct Fa_ObjFileHandle;
+struct Fa_ObjModule;
 
 #if FA_USE_NANBOX
 
@@ -75,6 +76,7 @@ public:
     static Fa_Value from_class(Fa_ObjClass const* c) { return TAG_OBJ | (reinterpret_cast<uintptr_t>(c) & PAYLOAD_MASK); }
     static Fa_Value from_instance(Fa_ObjInstance const* i) { return TAG_OBJ | (reinterpret_cast<uintptr_t>(i) & PAYLOAD_MASK); }
     static Fa_Value from_file_handle(Fa_ObjFileHandle const* p) { return TAG_OBJ | (reinterpret_cast<uintptr_t>(p) & PAYLOAD_MASK); }
+    static Fa_Value from_module(Fa_ObjModule const* p) { return TAG_OBJ | (reinterpret_cast<uintptr_t>(p) & PAYLOAD_MASK); }
 
     Fa_Value() = default;
 
@@ -107,6 +109,7 @@ public:
     bool is_class() const { return (is_obj() && as_obj()->type == Fa_ObjType::CLASS); }
     bool is_instance() const { return (is_obj() && as_obj()->type == Fa_ObjType::INSTANCE); }
     bool is_file_handle() const { return (is_obj() && as_obj()->type == Fa_ObjType::FILE_HANDLE); }
+    bool is_module() const { return (is_obj() && as_obj()->type == Fa_ObjType::MODULE); }
     bool is_truthy() const
     {
         if (is_nil())
@@ -147,6 +150,7 @@ public:
     Fa_ObjClass* as_class() const;
     Fa_ObjInstance* as_instance() const;
     Fa_ObjFileHandle* as_file_handle() const;
+    Fa_ObjModule* as_module() const;
 
 private:
     static bool fits_in_int48(i64 v) { return v >= INT48_MIN && v <= INT48_MAX; }
@@ -155,12 +159,11 @@ private:
 static_assert(sizeof(Fa_Value) == 8, "Size of Fa_Value must be 64 bits (8 bytes) when using NANBOX (FA_USE_NANBOX = 1)");
 
 struct Fa_ValueHash {
-    friend class Fa_Value;
-    size_t operator()(Fa_Value const& v) const noexcept { return v.m_value; }
+    size_t operator()(Fa_Value const& v) const noexcept;
 };
 
 struct Fa_ValueEqual {
-    bool operator()(Fa_Value const& lhs, Fa_Value const& rhs) const noexcept { return lhs == rhs; }
+    bool operator()(Fa_Value const& lhs, Fa_Value const& rhs) const noexcept;
 };
 
 enum class Fa_TypeTag : u16 {
@@ -177,6 +180,7 @@ enum class Fa_TypeTag : u16 {
     INSTANCE = 1 << 10,
     DICT = 1 << 11,
     FILE_HANDLE = 1 << 12,
+    MODULE = 1 << 13,
 }; // enum Fa_TypeTag
 
 [[nodiscard]] inline bool has_tag(Fa_TypeTag mask, Fa_TypeTag t) noexcept
@@ -212,6 +216,7 @@ inline Fa_TypeTag& operator|=(Fa_TypeTag& a, Fa_TypeTag b) noexcept { return a =
         case Fa_ObjType::CLASS: return Fa_TypeTag::CLASS;
         case Fa_ObjType::INSTANCE: return Fa_TypeTag::INSTANCE;
         case Fa_ObjType::FILE_HANDLE: return Fa_TypeTag::FILE_HANDLE;
+        case Fa_ObjType::MODULE: return Fa_TypeTag::MODULE;
         case Fa_ObjType::INT: return Fa_TypeTag::INT;
         case Fa_ObjType::_COUNT: return Fa_TypeTag::NONE;
         }
@@ -238,6 +243,7 @@ enum class Fa_TypeTag : u16 {
     INSTANCE,
     DICT,
     FILE_HANDLE,
+    MODULE,
 }; // enum Fa_TypeTag
 
 class Fa_Value {
@@ -294,6 +300,7 @@ public:
         case Fa_ObjType::NATIVE: v.m_type = Fa_TypeTag::NATIVE; break;
         case Fa_ObjType::STRING: v.m_type = Fa_TypeTag::STRING; break;
         case Fa_ObjType::FILE_HANDLE: v.m_type = Fa_TypeTag::FILE_HANDLE; break;
+        case Fa_ObjType::MODULE: v.m_type = Fa_TypeTag::MODULE; break;
         default: v.m_type = Fa_TypeTag::NONE;
         }
         v.as.o = oval;
@@ -304,7 +311,7 @@ public:
     bool is_bool() const { return m_type == Fa_TypeTag::BOOL; }
     bool is_int() const { return m_type == Fa_TypeTag::INT; }
     bool is_double() const { return m_type == Fa_TypeTag::DOUBLE; }
-    bool is_obj() const { return m_type >= Fa_TypeTag::STRING && m_type <= Fa_TypeTag::FILE_HANDLE; }
+    bool is_obj() const { return m_type >= Fa_TypeTag::STRING && m_type <= Fa_TypeTag::MODULE; }
     bool is_number() const { return is_double() || is_int(); }
     bool is_truthy() const
     {
@@ -333,6 +340,7 @@ public:
     Fa_ObjClass* as_class() const;
     Fa_ObjInstance* as_instance() const;
     Fa_ObjFileHandle* as_file_handle() const;
+    Fa_ObjModule* as_module() const;
 
     bool operator==(Fa_Value const& other) const
     {
@@ -358,6 +366,7 @@ public:
     static Fa_Value from_class(Fa_ObjClass* c) { return from_obj(reinterpret_cast<Fa_ObjHeader*>(c)); }
     static Fa_Value from_instance(Fa_ObjInstance* i) { return from_obj(reinterpret_cast<Fa_ObjHeader*>(i)); }
     static Fa_Value from_file_handle(Fa_ObjFileHandle* f) { return from_obj(reinterpret_cast<Fa_ObjHeader*>(f)); }
+    static Fa_Value from_module(Fa_ObjModule* m) { return from_obj(reinterpret_cast<Fa_ObjHeader*>(m)); }
 
     bool is_string() const { return is_obj() && m_type == Fa_TypeTag::STRING; }
     bool is_list() const { return is_obj() && m_type == Fa_TypeTag::LIST; }
@@ -367,6 +376,7 @@ public:
     bool is_class() const { return is_obj() && m_type == Fa_TypeTag::CLASS; }
     bool is_instance() const { return is_obj() && m_type == Fa_TypeTag::INSTANCE; }
     bool is_file_handle() const { return is_obj() && m_type == Fa_TypeTag::FILE_HANDLE; }
+    bool is_module() const { return is_obj() && m_type == Fa_TypeTag::MODULE; }
 };
 
 [[nodiscard]] inline Fa_TypeTag value_type_tag(Fa_Value v) noexcept
@@ -375,11 +385,11 @@ public:
 }
 
 struct Fa_ValueHash {
-    size_t operator()(Fa_Value const& v) const;
+    size_t operator()(Fa_Value const& v) const noexcept;
 };
 
 struct Fa_ValueEqual {
-    bool operator()(Fa_Value const& lhs, Fa_Value const& rhs) const { return lhs == rhs; }
+    bool operator()(Fa_Value const& lhs, Fa_Value const& rhs) const noexcept;
 };
 
 #endif // FA_USE_NAN_BOXING

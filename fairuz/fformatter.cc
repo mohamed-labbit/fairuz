@@ -509,6 +509,11 @@ void Fa_Formatter::format_statement(AST::Fa_Stmt const* stmt)
         auto const* class_stmt = as_class_def(stmt);
         write("نوع ");
         format_expression(class_stmt->get_name());
+        if (class_stmt->get_parent() != nullptr) {
+            write("(");
+            format_expression(class_stmt->get_parent());
+            write(")");
+        }
         write(":");
 
         Fa_Array<AST::Fa_Stmt*> methods = class_stmt->get_methods();
@@ -518,6 +523,30 @@ void Fa_Formatter::format_statement(AST::Fa_Stmt const* stmt)
             format_statement(method);
         }
         m_indent_level -= 1;
+        break;
+    }
+    case AST::Fa_Stmt::Kind::IMPORT: {
+        auto const* import = as_import(stmt);
+        if (import->imports_member()) {
+            write("من ");
+            write(import->get_module());
+            write(" استورد ");
+            write(import->get_name());
+            if (import->get_alias() != import->get_name()) {
+                write(" باسم ");
+                write(import->get_alias());
+            }
+        } else {
+            write("استورد ");
+            write(import->get_module());
+            std::string_view module(import->get_module().data(), import->get_module().len());
+            size_t dot = module.find_last_of('.');
+            std::string_view default_alias = dot == std::string_view::npos ? module : module.substr(dot + 1);
+            if (std::string_view(import->get_alias().data(), import->get_alias().len()) != default_alias) {
+                write(" باسم ");
+                write(import->get_alias());
+            }
+        }
         break;
     }
     case AST::Fa_Stmt::Kind::CONTINUE:

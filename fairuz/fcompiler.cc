@@ -157,15 +157,42 @@ Fa_ErrorOr<bool> Compiler::compile_stmt(AST::Fa_Stmt* s)
     case AST::Fa_Stmt::Kind::BREAK: return compile_break(as_break(s));
     case AST::Fa_Stmt::Kind::CONTINUE: return compile_continue(as_continue(s));
     case AST::Fa_Stmt::Kind::CLASS_DEF: return compile_class_def(as_class_def(s));
+    case AST::Fa_Stmt::Kind::IMPORT: return compile_import(as_import(s));
     case AST::Fa_Stmt::Kind::INVALID:
     default:
         return report_error(CompilerError::INVALID_STATEMENT_NODE, s->get_location());
     }
 }
 
+Fa_ErrorOr<bool> Compiler::compile_import(AST::Fa_ImportStmt* s)
+{
+    if (s == nullptr)
+        return true;
+    if (!m_current->is_top_level || m_current->scope_depth != 0)
+        return report_error(CompilerError::INVALID_STATEMENT_NODE, s->get_location());
+
+    reg_t module_reg;
+    ALLOC_REG(&module_reg);
+    emit(Fa_make_ABx(Fa_OpCode::IMPORT_MODULE, module_reg, intern_string(s->get_module())), s->get_location());
+
+    reg_t value_reg = module_reg;
+    if (s->imports_member()) {
+        ALLOC_REG(&value_reg);
+        emit(Fa_make_ABC(Fa_OpCode::GET_FIELD, value_reg, module_reg, 0xFF), s->get_location());
+        emit(Fa_make_ABx(Fa_OpCode::NOP, 0, intern_string(s->get_name())), s->get_location());
+    }
+
+    emit(Fa_make_ABx(Fa_OpCode::STORE_GLOBAL, value_reg, intern_string(s->get_alias())), s->get_location());
+    declare_local(s->get_alias(), value_reg);
+    m_globals[s->get_alias()] = true;
+    if (!s->imports_member())
+        m_module_names[s->get_alias()] = true;
+    return true;
+}
+
 Fa_ErrorOr<bool> Compiler::compile_block(AST::Fa_BlockStmt* s)
 {
-    begin_scope();
+    ScopeGuard scope(m_current);
 
     for (AST::Fa_Stmt* child : s->get_statements()) {
         auto r = compile_stmt(child);
@@ -175,8 +202,6 @@ Fa_ErrorOr<bool> Compiler::compile_block(AST::Fa_BlockStmt* s)
     Fa_SourceLocation loc = { 1, 1, 0 };
     if (!s->get_statements().empty() && s->get_statements().back())
         loc = s->get_statements().back()->get_location();
-
-    end_scope(loc);
     return true;
 }
 
@@ -208,7 +233,7 @@ Fa_ErrorOr<bool> Compiler::compile_if(AST::Fa_IfStmt* s)
         return true;
 
     Fa_SourceLocation loc = s->get_location();
-    begin_scope();
+    ScopeGuard scope(m_current);
     bool incoming_dead = m_current->is_dead;
 
     if (auto folded = try_fold_expr(s->get_condition())) {
@@ -244,7 +269,6 @@ Fa_ErrorOr<bool> Compiler::compile_if(AST::Fa_IfStmt* s)
     }
 
     m_current->is_dead = incoming_dead;
-    end_scope(loc);
     return true;
 }
 
@@ -254,8 +278,7 @@ Fa_ErrorOr<bool> Compiler::compile_while(AST::Fa_WhileStmt* s)
         return true;
 
     Fa_SourceLocation loc = s->get_location();
-
-    begin_scope();
+    ScopeGuard scope(m_current);
 
     bool incoming_dead = m_current->is_dead;
     if (auto folded = try_fold_expr(s->get_condition())) {
@@ -289,8 +312,6 @@ Fa_ErrorOr<bool> Compiler::compile_while(AST::Fa_WhileStmt* s)
         pop_loop(current_offset(), continue_target, loc.line);
     }
     m_current->is_dead = incoming_dead;
-
-    end_scope(loc);
     return true;
 }
 
@@ -319,8 +340,7 @@ Fa_ErrorOr<bool> Compiler::compile_function_def(AST::Fa_FunctionDef* f)
     fn_state.func_name = name->get_value();
     fn_state.enclosing = m_current;
     CompilerStateGuard state_guard(m_current, &fn_state);
-
-    begin_scope();
+    ScopeGuard scope(m_current);
 
     if (f->has_parameters()) {
         for (AST::Fa_Expr* param : f->get_parameters()) {
@@ -339,8 +359,6 @@ Fa_ErrorOr<bool> Compiler::compile_function_def(AST::Fa_FunctionDef* f)
 
     if (!fn_state.is_dead)
         emit(Fa_make_ABC(Fa_OpCode::RETURN_NIL, 0, 0, 0), loc);
-
-    end_scope(loc);
 
     fn_chunk->local_count = fn_state.max_reg;
     state_guard.restore();
@@ -409,11 +427,10 @@ Fa_ErrorOr<bool> Compiler::compile_return(AST::Fa_ReturnStmt* s)
 Fa_ErrorOr<bool> Compiler::compile_for(AST::Fa_ForStmt* s)
 {
     Fa_SourceLocation loc = s->get_location();
+    ScopeGuard scope(m_current);
 
     auto target = as_name(s->get_target());
     bool incoming_dead = m_current->is_dead;
-
-    begin_scope();
 
     reg_t iter_reg;
     ALLOC_REG(&iter_reg);
@@ -460,8 +477,6 @@ Fa_ErrorOr<bool> Compiler::compile_for(AST::Fa_ForStmt* s)
     patch_jump(exit_jump);
     pop_loop(current_offset(), continue_target, loc.line);
 
-    end_scope(loc);
-
     m_current->is_dead = incoming_dead;
     return true;
 }
@@ -500,22 +515,44 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
     Fa_Array<AST::Fa_Expr*> fields = s->get_members();
     Fa_Array<AST::Fa_Stmt*> methods = s->get_methods();
     Fa_StringRef class_name = as_name(s->get_name())->get_value();
+    Fa_StringRef parent_name;
+    ClassDesc const* parent_desc = nullptr;
+    if (s->get_parent() != nullptr) {
+        parent_name = as_name(s->get_parent())->get_value();
+        parent_desc = m_class_registry.find_ptr(parent_name);
+    }
+
+    Fa_Array<Fa_StringRef> own_field_names;
     Fa_Array<Fa_StringRef> field_names;
     Fa_Array<Fa_StringRef> method_names(static_cast<u32>(Fa_ObjClass::_COUNT), Fa_StringRef { });
+    if (parent_desc != nullptr) {
+        field_names = parent_desc->field_names;
+        method_names = parent_desc->method_names;
+    }
 
     for (AST::Fa_Expr* field : fields) {
         auto* name = as_name(field);
         Fa_StringRef fname = name->get_value();
 
         bool seen = false;
-        for (auto& existing : field_names) {
+        for (auto& existing : own_field_names) {
             if (existing == fname) {
                 seen = true;
                 break;
             }
         }
-        if (!seen)
-            field_names.push(fname);
+        if (!seen) {
+            own_field_names.push(fname);
+            bool inherited = false;
+            for (auto& existing : field_names) {
+                if (existing == fname) {
+                    inherited = true;
+                    break;
+                }
+            }
+            if (!inherited)
+                field_names.push(fname);
+        }
     }
 
     auto compile_method_closure = [&](AST::Fa_FunctionDef* method) -> Fa_ErrorOr<std::tuple<reg_t, Fa_Chunk*>> {
@@ -541,10 +578,11 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
         state.enclosing = m_current;
         state.is_class_method = true;
         state.class_field_names = field_names;
+        state.class_layout_dynamic = s->get_parent() != nullptr && parent_desc == nullptr;
         state.class_method_names = method_names;
         CompilerStateGuard state_guard(m_current, &state);
+        ScopeGuard scope(m_current);
 
-        begin_scope();
         reg_t inst_reg;
         ALLOC_REG(&inst_reg);
         declare_local(kClassInstanceName, inst_reg, class_name);
@@ -566,7 +604,6 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
         if (!state.is_dead)
             emit(Fa_make_ABC(Fa_OpCode::RETURN, inst_reg, 1, 0), method_loc);
 
-        end_scope(method_loc);
         ch->local_count = state.max_reg;
         state_guard.restore();
 
@@ -647,8 +684,19 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
             method_names[static_cast<u32>(special)] = method_name;
             method_slots.push(special);
         } else {
-            method_slots.push(static_cast<int>(method_names.size()));
-            method_names.push(method_name);
+            int inherited_slot = -1;
+            for (u32 i = 0; i < method_names.size(); ++i) {
+                if (method_names[i] == method_name) {
+                    inherited_slot = static_cast<int>(i);
+                    break;
+                }
+            }
+            if (inherited_slot >= 0) {
+                method_slots.push(inherited_slot);
+            } else {
+                method_slots.push(static_cast<int>(method_names.size()));
+                method_names.push(method_name);
+            }
         }
     }
 
@@ -697,8 +745,9 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
 
     Fa_ClassDescriptor desc_data;
     desc_data.name = Fa_StringRef(class_name);
-    desc_data.field_count = static_cast<u32>(field_names.size());
-    desc_data.field_names = field_names;
+    desc_data.parent_name = parent_name;
+    desc_data.field_count = static_cast<u32>(own_field_names.size());
+    desc_data.field_names = own_field_names;
     desc_data.vtable_size = static_cast<u32>(vtable.size());
     desc_data.method_names = method_names;
     desc_data.vtable_indices = std::move(vtable_indices);
@@ -715,11 +764,12 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
     // ClassDesc registration — unchanged
     ClassDesc cdesc;
     cdesc.name = class_name;
-    cdesc.field_names = field_names;
+    if (s->get_parent() == nullptr || parent_desc != nullptr)
+        cdesc.field_names = field_names;
     cdesc.method_names = method_names;
 
-    for (size_t i = 0; i < field_names.size(); i++)
-        cdesc.field_map[field_names[i]] = static_cast<int>(i);
+    for (size_t i = 0; i < cdesc.field_names.size(); i++)
+        cdesc.field_map[cdesc.field_names[i]] = static_cast<int>(i);
     for (size_t i = 0; i < method_names.size(); i++) {
         if (!method_names[i].empty())
             cdesc.method_map[method_names[i]] = static_cast<int>(i);
@@ -981,9 +1031,16 @@ bool Compiler::is_declaration(AST::Fa_AssignmentExpr const* e) const
 
 Fa_ErrorOr<Fa_ExprResult> Compiler::compile_assign_impl(AST::Fa_AssignmentExpr* e)
 {
+    if (e == nullptr || e->get_target() == nullptr || e->get_value() == nullptr)
+        return report_error(CompilerError::INVALID_EXPRESSION_NODE,
+            e ? e->get_location() : Fa_SourceLocation { });
+
     Fa_SourceLocation loc = e->get_location();
     AST::Fa_Expr* target = e->get_target();
+    AST::Fa_Expr* value = e->get_value();
 
+    // Indexed assignment: evaluate the object and index before the value,
+    // then write the resulting value into the computed location.
     if (AST::is_index(target)) {
         auto index_expr = as_index(target);
         RegMark mark(m_current);
@@ -994,135 +1051,132 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_assign_impl(AST::Fa_AssignmentExpr* 
         ANY_REG(object_expr_result, loc, &target_object_reg);
         COMPILE_EXPR_IMPL(index_expr->get_index(), &index_expr_result);
         ANY_REG(index_expr_result, loc, &index_reg);
-        COMPILE_EXPR_IMPL(e->get_value(), &value_expr_result);
+        COMPILE_EXPR_IMPL(value, &value_expr_result);
         ANY_REG(value_expr_result, loc, &value_reg);
 
         emit(Fa_make_ABC(Fa_OpCode::INDEX_WRITE, target_object_reg, index_reg, value_reg), loc);
-
         return Fa_ExprResult::reg(value_reg);
     }
 
-    if (target->get_kind() == AST::Fa_Expr::Kind::GET) {
+    // Member assignment. Prefer a statically known field slot, but retain a
+    // named payload for receivers whose class is only known at runtime.
+    if (AST::is_get(target)) {
         auto get_expr = as_get(target);
-        if (AST::Fa_NameExpr* member_name = as_simple_member_name(get_expr->get_member())) {
-            // Fast path: receiver's class is already registered in
-            // m_class_registry (e.g. `obj.field := x` where obj's class
-            // finished compiling earlier).
-            if (ClassDesc const* desc = resolve_receiver_class(get_expr->get_object())) {
-                int field_idx = desc->field_index(member_name->get_value());
-                if (field_idx >= 0) {
-                    RegMark mark(m_current);
-                    Fa_ExprResult object_expr_result, value_expr_result;
-                    reg_t object_reg, value_reg;
+        auto* member_name = as_simple_member_name(get_expr->get_member());
+        if (member_name == nullptr)
+            return report_error(CompilerError::INVALID_EXPRESSION_NODE, loc);
 
-                    COMPILE_EXPR_IMPL(get_expr->get_object(), &object_expr_result);
-                    ANY_REG(object_expr_result, loc, &object_reg);
-                    COMPILE_EXPR_IMPL(e->get_value(), &value_expr_result);
-                    ANY_REG(value_expr_result, loc, &value_reg);
+        int field_idx = -1;
+        if (ClassDesc const* desc = resolve_receiver_class(get_expr->get_object()))
+            field_idx = desc->field_index(member_name->get_value());
+        if (field_idx < 0 && is_this_reference(get_expr->get_object()))
+            field_idx = current_method_field_index(member_name->get_value());
 
-                    emit(Fa_make_ABC(Fa_OpCode::SET_FIELD, object_reg,
-                             static_cast<reg_t>(field_idx), value_reg),
-                        loc);
-                    return Fa_ExprResult::reg(value_reg);
-                }
-            }
+        RegMark mark(m_current);
+        Fa_ExprResult object_expr_result, value_expr_result;
+        reg_t object_reg, value_reg;
 
-            // `this.field := x` inside the class's own method body, while
-            // that class is still being compiled. m_class_registry doesn't
-            // have this class yet (compile_class_def registers it only
-            // after all methods finish compiling), but
-            // state.class_field_names was pre-populated from the parser's
-            // this.field-assignment scan before any method body compiled,
-            // so current_method_field_index() already knows about this
-            // field even though resolve_receiver_class() can't see it yet.
-            if (is_this_reference(get_expr->get_object())) {
-                int field_idx = current_method_field_index(member_name->get_value());
-                if (field_idx >= 0) {
-                    RegMark mark(m_current);
-                    LocalVar const* self = lookup_local(kClassInstanceName);
-                    if (self != nullptr) {
-                        Fa_ExprResult expr_result;
-                        reg_t value_reg;
+        COMPILE_EXPR_IMPL(get_expr->get_object(), &object_expr_result);
+        ANY_REG(object_expr_result, loc, &object_reg);
+        COMPILE_EXPR_IMPL(value, &value_expr_result);
+        ANY_REG(value_expr_result, loc, &value_reg);
 
-                        COMPILE_EXPR_IMPL(e->get_value(), &expr_result);
-                        ANY_REG(expr_result, loc, &value_reg);
-                        emit(Fa_make_ABC(Fa_OpCode::SET_FIELD, self->reg,
-                                 static_cast<reg_t>(field_idx), value_reg),
-                            loc);
-                        return Fa_ExprResult::reg(value_reg);
-                    }
-                }
-            }
+        if (field_idx >= 0) {
+            emit(Fa_make_ABC(Fa_OpCode::SET_FIELD, object_reg,
+                     static_cast<reg_t>(field_idx), value_reg),
+                loc);
+        } else {
+            emit(Fa_make_ABC(Fa_OpCode::SET_FIELD, object_reg, 0xFF, value_reg), loc);
+            emit(Fa_make_ABx(Fa_OpCode::NOP, 0,
+                     static_cast<u16>(intern_string(member_name->get_value()))),
+                loc);
         }
+        return Fa_ExprResult::reg(value_reg);
     }
 
-    auto name = as_name(target);
+    // Name assignment: write into an existing local, create a local inside a
+    // function/method, or store a top-level name globally.
+    if (!AST::is_name(target))
+        return report_error(CompilerError::INVALID_EXPRESSION_NODE, loc);
+
+    auto* name = as_name(target);
+    Fa_StringRef const& name_value = name->get_value();
 
     if (is_declaration(e)) {
-        if (m_current->is_top_level && m_current->scope_depth == 0) {
-            if (!infer_constructed_class(e->get_value()).empty())
-                goto instance_decl;
-
+        if (m_current->is_top_level && m_current->scope_depth == 0
+            && infer_constructed_class(value).empty()) {
             RegMark mark(m_current);
-            Fa_ExprResult expr_result;
+            Fa_ExprResult value_result;
             reg_t src;
 
-            COMPILE_EXPR_IMPL(e->get_value(), &expr_result);
-            ANY_REG(expr_result, loc, &src);
-            u16 kidx = intern_string(name->get_value());
-            emit(Fa_make_ABx(Fa_OpCode::STORE_GLOBAL, src, kidx), loc);
-            m_globals[name->get_value()] = true;
+            COMPILE_EXPR_IMPL(value, &value_result);
+            ANY_REG(value_result, loc, &src);
+            emit(Fa_make_ABx(Fa_OpCode::STORE_GLOBAL, src,
+                     static_cast<u16>(intern_string(name_value))),
+                loc);
+            m_globals[name_value] = true;
             return Fa_ExprResult::reg(src);
         }
-    instance_decl:
-        reg_t reg;
-        Fa_ExprResult expr_result;
 
-        ALLOC_REG(&reg);
-        COMPILE_EXPR_IMPL(e->get_value(), &expr_result);
-        discharge(expr_result, reg, loc);
-        declare_local(name->get_value(), reg, infer_constructed_class(e->get_value()));
-        return Fa_ExprResult::reg(reg);
+        reg_t dst;
+        ALLOC_REG(&dst);
+
+        Fa_ExprResult value_result;
+        COMPILE_EXPR_IMPL(value, &value_result);
+        discharge(value_result, dst, loc);
+        declare_local(name_value, dst, infer_constructed_class(value));
+        return Fa_ExprResult::reg(dst);
     }
 
-    if (int field_idx = current_method_field_index(name->get_value()); field_idx >= 0) {
-        RegMark mark(m_current);
+    // In a method, an assignment to a parameter/local that shares a field
+    // name targets the instance field. The value expression still resolves
+    // the local normally (for example, `x := x` in an initializer).
+    if (int field_idx = current_method_field_index(name_value); field_idx >= 0) {
         LocalVar const* self = lookup_local(kClassInstanceName);
+        if (self == nullptr)
+            return report_error(CompilerError::INVALID_EXPRESSION_NODE, loc);
 
-        Fa_ExprResult expr_result;
+        RegMark mark(m_current);
+        Fa_ExprResult value_result;
         reg_t value_reg;
-
-        COMPILE_EXPR_IMPL(e->get_value(), &expr_result);
-        ANY_REG(expr_result, loc, &value_reg);
-        emit(Fa_make_ABC(Fa_OpCode::SET_FIELD, self->reg, static_cast<reg_t>(field_idx), value_reg), loc);
+        COMPILE_EXPR_IMPL(value, &value_result);
+        ANY_REG(value_result, loc, &value_reg);
+        emit(Fa_make_ABC(Fa_OpCode::SET_FIELD, self->reg,
+                 static_cast<reg_t>(field_idx), value_reg),
+            loc);
         return Fa_ExprResult::reg(value_reg);
     }
 
-    VarInfo vi = resolve_name(name->get_value());
-    if (vi.kind == VarInfo::Kind::LOCAL) {
-        auto ret = compile_expr(e->get_value(), &vi.index);
-        return Fa_ExprResult::reg(vi.index);
+    if (LocalVar const* local = lookup_local(name_value)) {
+        reg_t dst = local->reg;
+        auto result = compile_expr(value, &dst);
+        Fa_VERIFY_RESULT(result);
+        return Fa_ExprResult::reg(dst);
     }
 
+    // Assignment inside a function introduces a local even when a global of
+    // the same name already exists. Globals are only written at top level.
     if (!m_current->is_top_level) {
-        reg_t reg;
-        Fa_ExprResult expr_result;
+        reg_t dst;
+        ALLOC_REG(&dst);
 
-        ALLOC_REG(&reg);
-        COMPILE_EXPR_IMPL(e->get_value(), &expr_result);
-        discharge(expr_result, reg, loc);
-        declare_local(name->get_value(), reg);
-        return Fa_ExprResult::reg(reg);
+        Fa_ExprResult value_result;
+        COMPILE_EXPR_IMPL(value, &value_result);
+        discharge(value_result, dst, loc);
+        declare_local(name_value, dst, infer_constructed_class(value));
+        return Fa_ExprResult::reg(dst);
     }
 
     RegMark mark(m_current);
-    Fa_ExprResult expr_result;
+    Fa_ExprResult value_result;
+    COMPILE_EXPR_IMPL(value, &value_result);
     reg_t src;
+    ANY_REG(value_result, loc, &src);
 
-    COMPILE_EXPR_IMPL(e->get_value(), &expr_result);
-    ANY_REG(expr_result, loc, &src);
-    u16 kidx = intern_string(name->get_value());
-    emit(Fa_make_ABx(Fa_OpCode::STORE_GLOBAL, src, kidx), loc);
+    emit(Fa_make_ABx(Fa_OpCode::STORE_GLOBAL, src,
+             static_cast<u16>(intern_string(name_value))),
+        loc);
+    m_globals[name_value] = true;
     return Fa_ExprResult::reg(src);
 }
 
@@ -1147,8 +1201,15 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_call_impl(AST::Fa_CallExpr* e, reg_t
         return true;
     };
 
-    /// calling a method
+    bool module_member_call = false;
     if (AST::is_get(callee)) {
+        AST::Fa_Expr* object = AST::as_get(callee)->get_object();
+        module_member_call = AST::is_name(object)
+            && m_module_names.find_ptr(AST::as_name(object)->get_value()) != nullptr;
+    }
+
+    /// calling a method (module attributes are ordinary callable values)
+    if (AST::is_get(callee) && !module_member_call) {
         AST::Fa_GetExpr* get_expr = AST::as_get(callee);
         /// NOTE: we don't have to verify if this is in fact a method call
         /// and not a semantic error of calling a non-callable plain field
@@ -1168,6 +1229,11 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_call_impl(AST::Fa_CallExpr* e, reg_t
                 ALLOC_REG(&object_reg);
                 COMPILE_EXPR_IMPL(object, &object_cmp_ret);
                 discharge(object_cmp_ret, object_reg, object->get_location());
+                // Nested receiver expressions may temporarily allocate well above
+                // object_reg. Method calling convention requires self and explicit
+                // arguments to occupy consecutive registers, so discard those
+                // temporaries before reserving the self slot and arguments.
+                m_current->free_regs_to(object_reg + 1);
                 ALLOC_REG(&reserved_reg);
 
                 for (AST::Fa_Expr* arg : args) {
@@ -1188,7 +1254,13 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_call_impl(AST::Fa_CallExpr* e, reg_t
                 m_current->free_regs_to(object_reg + 1);
                 return Fa_ExprResult::reg(object_reg);
             }
-            return report_error(diagnostic::errc::runtime::Code::UNDEFINED_METHOD, loc);
+            // A member stored in a field can itself be callable. When no
+            // method slot exists, load the member value and use the ordinary
+            // CALL path instead of rejecting valid higher-order code.
+            Fa_ExprResult callee_cmp_ret;
+            COMPILE_EXPR_IMPL(callee, &callee_cmp_ret);
+            discharge(callee_cmp_ret, fn_reg, loc);
+            m_current->free_regs_to(fn_reg + 1);
         } else {
             /// external method call 'obj.method()'
             Fa_ExprResult object_cmp_ret;
@@ -1199,6 +1271,9 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_call_impl(AST::Fa_CallExpr* e, reg_t
             ALLOC_REG(&object_reg);
             COMPILE_EXPR_IMPL(object, &object_cmp_ret);
             discharge(object_cmp_ret, object_reg, object->get_location());
+            // Keep the runtime call frame contiguous even when `object` is itself
+            // a call such as value.first().second(arg).
+            m_current->free_regs_to(object_reg + 1);
             ALLOC_REG(&member_reg);
 
             if (AST::is_name(member)) {
@@ -1230,6 +1305,9 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_call_impl(AST::Fa_CallExpr* e, reg_t
         Fa_ExprResult callee_cmp_ret;
         COMPILE_EXPR_IMPL(callee, &callee_cmp_ret);
         discharge(callee_cmp_ret, fn_reg, loc);
+        // A computed callee can leave temporary registers live. Arguments must
+        // begin immediately after fn_reg for CALL/IC_CALL.
+        m_current->free_regs_to(fn_reg + 1);
     }
 
     auto args_cmp_ret = compile_args();
@@ -1341,12 +1419,16 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_get_impl_(AST::Fa_GetExpr* e)
     AST::Fa_NameExpr* member = AST::as_name(e->get_member());
     if (AST::is_name(object) && AST::as_name(object)->get_value() == kClassInstanceName) {
         int idx = current_method_field_index(member->get_value());
-        if (idx >= 0) {
-            LocalVar const* self = lookup_local(kClassInstanceName);
-            if (self != nullptr) {
+        LocalVar const* self = lookup_local(kClassInstanceName);
+        if (self != nullptr) {
+            if (idx >= 0) {
                 u32 pc = emit(Fa_make_ABC(Fa_OpCode::GET_FIELD, 0, self->reg, static_cast<u8>(idx)), loc);
                 return Fa_ExprResult::reloc(pc);
             }
+            u32 name_idx = intern_string(member->get_value());
+            u32 pc = emit(Fa_make_ABC(Fa_OpCode::GET_FIELD, 0, self->reg, 0xFF), loc);
+            emit(Fa_make_ABx(Fa_OpCode::NOP, 0, static_cast<u16>(name_idx)), loc);
+            return Fa_ExprResult::reloc(pc);
         }
         return report_error(ErrorCode::UNDEFINED_LOCAL, member->get_location());
     }
@@ -1540,23 +1622,6 @@ void Compiler::emit_load_value(reg_t dst, Fa_Value v, Fa_SourceLocation loc)
     emit(Fa_make_ABx(Fa_OpCode::LOAD_CONST, dst, current_chunk()->add_constant(v)), loc);
 }
 
-void Compiler::end_scope(Fa_SourceLocation loc)
-{
-    (void)loc;
-    m_current->scope_depth -= 1;
-    u32 depth = m_current->scope_depth;
-    auto& locals = m_current->locals;
-    size_t pop_from = locals.size();
-
-    while (pop_from > 0 && locals[pop_from - 1].depth > depth)
-        pop_from -= 1;
-
-    if (pop_from < locals.size())
-        m_current->next_reg = locals[pop_from].reg;
-
-    locals.resize(static_cast<u32>(pop_from));
-}
-
 u32 Compiler::intern_string(Fa_StringRef const& str)
 {
     Fa_Chunk* chunk = current_chunk();
@@ -1625,7 +1690,7 @@ int Compiler::current_method_slot(Fa_StringRef const& name) const
 
 int Compiler::current_method_field_index(Fa_StringRef const& name) const
 {
-    if (m_current == nullptr || !m_current->is_class_method)
+    if (m_current == nullptr || !m_current->is_class_method || m_current->class_layout_dynamic)
         return -1;
 
     for (u32 i = 0, n = m_current->class_field_names.size(); i < n; i++) {

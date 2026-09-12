@@ -149,6 +149,38 @@ public:
 
     bool contains(K const& key) const { return find_ptr(key) != nullptr; }
 
+    bool erase(K const& key)
+    {
+        if (m_buckets.empty())
+            return false;
+
+        u64 hash_value = static_cast<u64>(m_hash(key));
+        u32 idx = bucket_index(hash_value);
+        while (m_buckets[idx].occupied) {
+            Entry& entry = m_buckets[idx];
+            if (entry.hash == hash_value && m_equal(entry.key, key))
+                break;
+            idx = (idx + 1) & mask();
+        }
+        if (!m_buckets[idx].occupied)
+            return false;
+
+        m_buckets[idx] = Entry { };
+        m_size--;
+
+        // Closing an open-addressing hole must reinsert the remainder of the
+        // probe cluster; otherwise lookups can stop before later entries.
+        u32 scan = (idx + 1) & mask();
+        while (m_buckets[scan].occupied) {
+            Entry displaced = m_buckets[scan];
+            m_buckets[scan] = Entry { };
+            m_size--;
+            insert_or_assign(displaced.key, displaced.val);
+            scan = (scan + 1) & mask();
+        }
+        return true;
+    }
+
     V& insert_or_assign(K const& key, V const& value)
     {
         grow_if_needed();

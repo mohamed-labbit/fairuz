@@ -7,6 +7,12 @@
 #include "ftable.hpp"
 
 #include <stdexcept>
+#include <filesystem>
+#include <memory>
+#include <unordered_map>
+#include <vector>
+
+namespace fairuz::lex { class Fa_FileManager; }
 
 namespace fairuz::runtime {
 
@@ -27,11 +33,14 @@ struct Fa_CallFrame {
     u16 local_count { 0 };
     u16 return_slot { 0 };
     u16 caller_stack_top { 0 };
+    Fa_GlobalEnvironment* globals { nullptr };
+    Fa_ObjModule* module { nullptr };
 
     Fa_CallFrame() = default;
 
     explicit Fa_CallFrame(Fa_ObjFunction* cl, Fa_Chunk* ch, u32 ip, u16 b, u16 lc,
-        u16 ret_slot, u16 saved_stack_top)
+        u16 ret_slot, u16 saved_stack_top, Fa_GlobalEnvironment* env = nullptr,
+        Fa_ObjModule* module_obj = nullptr)
         : func(cl)
         , chunk(ch)
         , ip(ip)
@@ -39,6 +48,8 @@ struct Fa_CallFrame {
         , local_count(lc)
         , return_slot(ret_slot)
         , caller_stack_top(saved_stack_top)
+        , globals(env)
+        , module(module_obj)
     {
     }
 }; // struct Fa_CallFrame
@@ -70,11 +81,54 @@ public:
     Fa_Value Fa_bool(int argc, Fa_Value* argv);
     Fa_Value Fa_list(int argc, Fa_Value* argv);
     Fa_Value Fa_dict(int argc, Fa_Value* argv);
+    Fa_Value Fa_dict_keys(int argc, Fa_Value* argv);
+    Fa_Value Fa_dict_contains(int argc, Fa_Value* argv);
+    Fa_Value Fa_dict_delete(int argc, Fa_Value* argv);
     Fa_Value Fa_split(int argc, Fa_Value* argv);
     Fa_Value Fa_join(int argc, Fa_Value* argv);
     Fa_Value Fa_substr(int argc, Fa_Value* argv);
     Fa_Value Fa_contains(int argc, Fa_Value* argv);
     Fa_Value Fa_trim(int argc, Fa_Value* argv);
+    Fa_Value Fa_char_from_codepoint(int argc, Fa_Value* argv);
+    Fa_Value Fa_number_from_text(int argc, Fa_Value* argv);
+    Fa_Value Fa_number_finite(int argc, Fa_Value* argv);
+    Fa_Value Fa_number_is_nan(int argc, Fa_Value* argv);
+    Fa_Value Fa_json_escape(int argc, Fa_Value* argv);
+    Fa_Value Fa_json_read_string(int argc, Fa_Value* argv);
+    Fa_Value Fa_dynamic_call(int argc, Fa_Value* argv);
+    Fa_Value Fa_executor_new(int argc, Fa_Value* argv);
+    Fa_Value Fa_executor_close(int argc, Fa_Value* argv);
+    Fa_Value Fa_task_start(int argc, Fa_Value* argv);
+    Fa_Value Fa_task_done(int argc, Fa_Value* argv);
+    Fa_Value Fa_task_result(int argc, Fa_Value* argv);
+    Fa_Value Fa_task_cancel(int argc, Fa_Value* argv);
+    Fa_Value Fa_task_wait_all(int argc, Fa_Value* argv);
+    Fa_Value Fa_file_open(int argc, Fa_Value* argv);
+    Fa_Value Fa_file_read(int argc, Fa_Value* argv);
+    Fa_Value Fa_file_read_all(int argc, Fa_Value* argv);
+    Fa_Value Fa_file_read_line(int argc, Fa_Value* argv);
+    Fa_Value Fa_file_write(int argc, Fa_Value* argv);
+    Fa_Value Fa_file_flush(int argc, Fa_Value* argv);
+    Fa_Value Fa_path_delete(int argc, Fa_Value* argv);
+    Fa_Value Fa_path_glob(int argc, Fa_Value* argv);
+    Fa_Value Fa_temp_file(int argc, Fa_Value* argv);
+    Fa_Value Fa_temp_directory(int argc, Fa_Value* argv);
+    Fa_Value Fa_remove_tree(int argc, Fa_Value* argv);
+    Fa_Value Fa_datetime_now(int argc, Fa_Value* argv);
+    Fa_Value Fa_datetime_from_fields(int argc, Fa_Value* argv);
+    Fa_Value Fa_datetime_to_fields(int argc, Fa_Value* argv);
+    Fa_Value Fa_datetime_parse(int argc, Fa_Value* argv);
+    Fa_Value Fa_datetime_format(int argc, Fa_Value* argv);
+    Fa_Value Fa_base64_encode(int argc, Fa_Value* argv);
+    Fa_Value Fa_base64_decode(int argc, Fa_Value* argv);
+    Fa_Value Fa_hex_encode(int argc, Fa_Value* argv);
+    Fa_Value Fa_hex_decode(int argc, Fa_Value* argv);
+    Fa_Value Fa_hash_new(int argc, Fa_Value* argv);
+    Fa_Value Fa_hash_update(int argc, Fa_Value* argv);
+    Fa_Value Fa_hash_digest(int argc, Fa_Value* argv);
+    Fa_Value Fa_hmac(int argc, Fa_Value* argv);
+    Fa_Value Fa_compress(int argc, Fa_Value* argv);
+    Fa_Value Fa_decompress(int argc, Fa_Value* argv);
     Fa_Value Fa_floor(int argc, Fa_Value* argv);
     Fa_Value Fa_ceil(int argc, Fa_Value* argv);
     Fa_Value Fa_round(int argc, Fa_Value* argv);
@@ -102,13 +156,17 @@ public:
     int m_stack_top { 0 };
     int m_frames_top { 0 };
 
-    Fa_HashTable<Fa_StringRef, u32, Fa_StringRefHash, Fa_StringRefEqual> m_global_index;
     Fa_HashTable<Fa_StringRef, Fa_ObjString*, Fa_StringRefHash, Fa_StringRefEqual> m_string_table;
-    Fa_Array<Fa_Value> m_global_slots;
+    Fa_GlobalEnvironment m_builtin_environment;
+    Fa_GlobalEnvironment m_root_environment;
+    std::vector<std::unique_ptr<Fa_GlobalEnvironment>> m_module_environments;
+    std::vector<std::unique_ptr<lex::Fa_FileManager>> m_module_sources;
+    std::unordered_map<std::string, Fa_ObjModule*> m_module_cache;
     bool m_is_dead { false };
 
     Fa_Value execute(int stop_frame_depth = 0);
     Fa_Value call_special_sync(Fa_Value receiver, int special_slot);
+    Fa_Value call_value_sync(Fa_Value callee, Fa_ObjList* arguments);
 
     Fa_CallFrame& frame();
     Fa_CallFrame const& frame() const;
@@ -136,7 +194,13 @@ public:
     Fa_CallFrame const& top_frame() const;
     Fa_Value& get_reg(Fa_CallFrame const& f, int reg);
     void invoke_method(Fa_Chunk* target_chunk, Fa_Value self_val, int result_slot,
-        int call_base, int total_argc, u32 return_ip, int caller_stack_top);
+        int call_base, int total_argc, u32 return_ip, int caller_stack_top,
+        Fa_GlobalEnvironment* globals = nullptr);
+    Fa_GlobalEnvironment* current_globals();
+    Fa_Value const* find_global(Fa_GlobalEnvironment* env, Fa_StringRef const& name) const;
+    void store_global(Fa_GlobalEnvironment* env, Fa_StringRef const& name, Fa_Value value);
+    std::filesystem::path resolve_module_path(std::string const& name) const;
+    Fa_ObjModule* load_module(std::string const& name);
 }; // class Fa_VM
 
 } // namespace fairuz::runtime

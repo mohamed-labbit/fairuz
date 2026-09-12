@@ -12,6 +12,7 @@ Fa_ObjNative* Fa_Value::as_native() const { return Fa_obj_cast<Fa_ObjNative>(as_
 Fa_ObjClass* Fa_Value::as_class() const { return Fa_obj_cast<Fa_ObjClass>(as_obj(), Fa_ObjType::CLASS); }
 Fa_ObjInstance* Fa_Value::as_instance() const { return Fa_obj_cast<Fa_ObjInstance>(as_obj(), Fa_ObjType::INSTANCE); }
 Fa_ObjFileHandle* Fa_Value::as_file_handle() const { return Fa_obj_cast<Fa_ObjFileHandle>(as_obj(), Fa_ObjType::FILE_HANDLE); }
+Fa_ObjModule* Fa_Value::as_module() const { return Fa_obj_cast<Fa_ObjModule>(as_obj(), Fa_ObjType::MODULE); }
 
 #else
 
@@ -23,20 +24,30 @@ Fa_ObjNative* Fa_Value::as_native() const { return Fa_obj_cast<Fa_ObjNative>(as_
 Fa_ObjClass* Fa_Value::as_class() const { return Fa_obj_cast<Fa_ObjClass>(as_obj(), Fa_ObjType::CLASS); }
 Fa_ObjInstance* Fa_Value::as_instance() const { return Fa_obj_cast<Fa_ObjInstance>(as_obj(), Fa_ObjType::INSTANCE); }
 Fa_ObjFileHandle* Fa_Value::as_file_handle() const { return Fa_obj_cast<Fa_ObjFileHandle>(as_obj(), Fa_ObjType::FILE_HANDLE); }
+Fa_ObjModule* Fa_Value::as_module() const { return Fa_obj_cast<Fa_ObjModule>(as_obj(), Fa_ObjType::MODULE); }
 
-size_t Fa_ValueHash::operator()(Fa_Value const& v) const
+#endif
+
+size_t Fa_ValueHash::operator()(Fa_Value const& v) const noexcept
 {
     switch (value_type_tag(v)) {
     case Fa_TypeTag::NONE: return 0;
     case Fa_TypeTag::NIL: return 0;
     case Fa_TypeTag::BOOL: return std::hash<bool> { }(v.as_bool());
-    case Fa_TypeTag::INT: return std::hash<i64> { }(v.as_int());
+    case Fa_TypeTag::INT: return std::hash<f64> { }(static_cast<f64>(v.as_int()));
     case Fa_TypeTag::DOUBLE: return std::hash<f64> { }(v.as_double());
     case Fa_TypeTag::STRING: return v.as_string()->hash;
     default: return std::hash<void*> { }(v.as_obj());
     }
 }
 
-#endif
+bool Fa_ValueEqual::operator()(Fa_Value const& lhs, Fa_Value const& rhs) const noexcept
+{
+    if (lhs.is_string() && rhs.is_string())
+        return lhs.as_string()->str == rhs.as_string()->str;
+    if (lhs.is_number() && rhs.is_number())
+        return lhs.as_double_any() == rhs.as_double_any();
+    return lhs == rhs;
+}
 
 } // namespace fairuz::runtime

@@ -28,6 +28,7 @@ static void fa_delete_object(Fa_ObjHeader* obj)
     case Fa_ObjType::CLASS: delete Fa_obj_cast<Fa_ObjClass>(obj, Fa_ObjType::CLASS); break;
     case Fa_ObjType::INSTANCE: delete Fa_obj_cast<Fa_ObjInstance>(obj, Fa_ObjType::INSTANCE); break;
     case Fa_ObjType::FILE_HANDLE: delete Fa_obj_cast<Fa_ObjFileHandle>(obj, Fa_ObjType::FILE_HANDLE); break;
+    case Fa_ObjType::MODULE: delete Fa_obj_cast<Fa_ObjModule>(obj, Fa_ObjType::MODULE); break;
 #if FA_USE_NANBOX
     case Fa_ObjType::INT: // TODO:
 #endif
@@ -46,6 +47,7 @@ static size_t fa_object_size(Fa_ObjHeader const* obj)
     case Fa_ObjType::CLASS: return sizeof(Fa_ObjClass);
     case Fa_ObjType::INSTANCE: return sizeof(Fa_ObjInstance);
     case Fa_ObjType::FILE_HANDLE: return sizeof(Fa_ObjFileHandle);
+    case Fa_ObjType::MODULE: return sizeof(Fa_ObjModule);
 #if FA_USE_NANBOX
     case Fa_ObjType::INT: return 0;
 #endif
@@ -74,7 +76,17 @@ void Fa_GarbageCollector::mark_roots(Fa_VM* vm)
             mark_object(&vm->m_frames[i].func->obj);
     }
 
-    mark_value_array(vm->m_global_slots);
+    mark_value_array(vm->m_builtin_environment.slots);
+    mark_value_array(vm->m_root_environment.slots);
+    for (auto const& env : vm->m_module_environments) {
+        if (env != nullptr)
+            mark_value_array(env->slots);
+    }
+    for (auto const& [path, module] : vm->m_module_cache) {
+        (void)path;
+        if (module != nullptr)
+            mark_object(&module->obj);
+    }
 
     // Interned strings are deliberately strong roots. This trades bounded
     // per-VM interning retention for pointer stability and avoids returning
@@ -123,6 +135,8 @@ void Fa_GarbageCollector::blacken_object(Fa_ObjHeader* obj)
     }
     case Fa_ObjType::CLASS: {
         Fa_ObjClass* klass = Fa_obj_cast<Fa_ObjClass>(obj, Fa_ObjType::CLASS);
+        if (klass->parent != nullptr)
+            mark_object(&klass->parent->obj);
         for (u32 i = 0, n = klass->vtable.size(); i < n; i++) {
             if (klass->vtable[i] != nullptr)
                 mark_chunk_constants(klass->vtable[i]);
@@ -151,6 +165,14 @@ void Fa_GarbageCollector::blacken_object(Fa_ObjHeader* obj)
         break;
     }
     case Fa_ObjType::FILE_HANDLE: break;
+    case Fa_ObjType::MODULE: {
+        Fa_ObjModule* module = Fa_obj_cast<Fa_ObjModule>(obj, Fa_ObjType::MODULE);
+        if (module->globals != nullptr)
+            mark_value_array(module->globals->slots);
+        if (module->chunk != nullptr)
+            mark_chunk_constants(module->chunk);
+        break;
+    }
     case Fa_ObjType::STRING: break;
 #if FA_USE_NANBOX
     case Fa_ObjType::INT: // TODO:
@@ -228,13 +250,27 @@ Fa_ObjDict* Fa_GarbageCollector::make_obj_dict(Fa_DictType data)
 {
     auto ret = make<Fa_ObjDict>();
     ret->data = std::move(data);
+    for (auto [key, value] : ret->data) {
+        (void)value;
+        ret->insertion_order.push(key);
+    }
     return ret;
 }
 
-Fa_ObjFunction* Fa_GarbageCollector::make_obj_function(Fa_Chunk* chunk)
+Fa_ObjFunction* Fa_GarbageCollector::make_obj_function(Fa_Chunk* chunk, Fa_GlobalEnvironment* globals)
 {
     auto ret = make<Fa_ObjFunction>();
     ret->chunk = chunk;
+    ret->globals = globals;
+    return ret;
+}
+
+Fa_ObjModule* Fa_GarbageCollector::make_obj_module(std::string name, std::string path, Fa_GlobalEnvironment* globals)
+{
+    auto ret = make<Fa_ObjModule>();
+    ret->name = std::move(name);
+    ret->path = std::move(path);
+    ret->globals = globals;
     return ret;
 }
 

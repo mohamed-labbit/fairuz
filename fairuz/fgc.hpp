@@ -52,7 +52,7 @@ public:
     Fa_ObjString* make_obj_string(char* str);
     Fa_ObjList* make_obj_list();
     Fa_ObjDict* make_obj_dict(Fa_DictType data = { });
-    Fa_ObjFunction* make_obj_function(Fa_Chunk* chunk);
+    Fa_ObjFunction* make_obj_function(Fa_Chunk* chunk, Fa_GlobalEnvironment* globals = nullptr);
     Fa_ObjNative* make_obj_native(NativeFn fn, Fa_ObjString* name, int arity);
     Fa_ObjClass* make_obj_class(
         Fa_StringRef name,
@@ -61,6 +61,7 @@ public:
         Fa_Array<Fa_Chunk*, /*_Alloc=*/Fa_GarbageCollector> vtable);
     Fa_ObjInstance* make_obj_instance(Fa_ObjClass* klass);
     Fa_ObjFileHandle* make_obj_file_handle(FILE* fp);
+    Fa_ObjModule* make_obj_module(std::string name, std::string path, Fa_GlobalEnvironment* globals);
 
     /* --- allocator api --- */
     template<typename T>
@@ -91,10 +92,14 @@ public:
     Fa_Value make_string(char* str) { return Fa_Value::from_string(make_obj_string(str)); }
     Fa_Value make_list() { return Fa_Value::from_list(make_obj_list()); }
     Fa_Value make_dict(Fa_DictType data = { }) { return Fa_Value::from_dict(make_obj_dict(data)); }
-    Fa_Value make_function(Fa_Chunk* chunk) { return Fa_Value::from_func(make_obj_function(chunk)); }
+    Fa_Value make_function(Fa_Chunk* chunk, Fa_GlobalEnvironment* globals = nullptr) { return Fa_Value::from_func(make_obj_function(chunk, globals)); }
     Fa_Value make_native(NativeFn fn, Fa_ObjString* name, int arity) { return Fa_Value::from_native(make_obj_native(fn, name, arity)); }
     Fa_Value make_instance(Fa_ObjClass* klass) { return Fa_Value::from_instance(make_obj_instance(klass)); }
     Fa_Value make_file_handle(FILE* fp) { return Fa_Value::from_file_handle(make_obj_file_handle(fp)); }
+    Fa_Value make_module(std::string name, std::string path, Fa_GlobalEnvironment* globals)
+    {
+        return Fa_Value::from_module(make_obj_module(std::move(name), std::move(path), globals));
+    }
     Fa_Value make_class(Fa_StringRef name, StringArr fields, StringArr methods,
         Fa_Array<Fa_Chunk*, /*_Alloc=*/Fa_GarbageCollector> vtable)
     {

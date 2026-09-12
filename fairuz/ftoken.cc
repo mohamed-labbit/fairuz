@@ -26,6 +26,11 @@ static std::unordered_map<std::string_view, Fa_TokenType> const& get_keywords()
         { "طالما", Fa_TokenType::KW_WHILE },
         { "نوع", Fa_TokenType::KW_CLASS },
         { "هذا", Fa_TokenType::KW_THIS },
+        { "استورد", Fa_TokenType::KW_IMPORT },
+        { "من", Fa_TokenType::KW_FROM },
+        { "باسم", Fa_TokenType::KW_AS },
+        { "تاكد", Fa_TokenType::KW_ASSERT },
+        { "assert", Fa_TokenType::KW_ASSERT },
     };
     return map;
 }

@@ -18,6 +18,21 @@ struct Fa_Chunk;
 class Fa_VM;
 class Fa_GarbageCollector;
 
+struct Fa_GlobalEnvironment {
+    using IndexTable = Fa_HashTable<Fa_StringRef, u32, Fa_StringRefHash, Fa_StringRefEqual>;
+
+    IndexTable index;
+    Fa_Array<Fa_Value> slots;
+    Fa_GlobalEnvironment* fallback { nullptr };
+
+    Fa_Value const* find(Fa_StringRef const& name) const
+    {
+        if (u32 const* slot = index.find_ptr(name))
+            return *slot < slots.size() ? &slots[*slot] : nullptr;
+        return fallback == nullptr ? nullptr : fallback->find(name);
+    }
+};
+
 using Fa_DictType = Fa_HashTable<Fa_Value, Fa_Value, Fa_ValueHash, Fa_ValueEqual>;
 using NativeFn = Fa_Value (Fa_VM::*)(int, Fa_Value*);
 using Fa_ListType = Fa_Array<Fa_Value, /*_Alloc=*/Fa_GarbageCollector>;
@@ -58,11 +73,39 @@ struct Fa_ObjList {
 struct Fa_ObjDict {
     Fa_ObjHeader obj { Fa_ObjType::DICT };
     Fa_DictType data = { };
+    Fa_Array<Fa_Value> insertion_order = { };
+
+    void set(Fa_Value key, Fa_Value value)
+    {
+        if (!data.contains(key))
+            insertion_order.push(key);
+        data.insert_or_assign(key, value);
+    }
+
+    bool erase(Fa_Value key, Fa_Value* removed = nullptr)
+    {
+        Fa_Value* existing = data.find_ptr(key);
+        if (existing == nullptr)
+            return false;
+        if (removed != nullptr)
+            *removed = *existing;
+        if (!data.erase(key))
+            return false;
+        Fa_ValueEqual equal;
+        for (u32 i = 0; i < insertion_order.size(); ++i) {
+            if (equal(insertion_order[i], key)) {
+                insertion_order.erase(i);
+                break;
+            }
+        }
+        return true;
+    }
 };
 
 struct Fa_ObjFunction {
     Fa_ObjHeader obj { Fa_ObjType::FUNCTION };
     Fa_Chunk* chunk { nullptr };
+    Fa_GlobalEnvironment* globals { nullptr };
 
     Fa_StringRef name() const;
     u32 arity() const;
@@ -99,6 +142,8 @@ struct Fa_ObjClass {
 
     Fa_ObjHeader obj { Fa_ObjType::CLASS };
     Fa_StringRef name = "";
+    Fa_ObjClass* parent { nullptr };
+    Fa_GlobalEnvironment* globals { nullptr };
     Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> field_names;
     Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> method_names;
     Fa_Array<Fa_Chunk*, /*_Alloc=*/Fa_GarbageCollector> vtable;
@@ -114,6 +159,16 @@ struct Fa_ObjClass {
 
     int field_index(Fa_StringRef field_name) const;
     int method_slot(Fa_StringRef method_name) const;
+};
+
+struct Fa_ObjModule {
+    Fa_ObjHeader obj { Fa_ObjType::MODULE };
+    std::string name;
+    std::string path;
+    Fa_GlobalEnvironment* globals { nullptr };
+    Fa_Chunk* chunk { nullptr };
+    bool executing { false };
+    bool initialized { false };
 };
 
 struct Fa_ObjInstance {
@@ -161,6 +216,7 @@ static_assert(offsetof(Fa_ObjString, obj) == 0, "Fa_ObjHeader must be the first 
 static_assert(offsetof(Fa_ObjList, obj) == 0, "Fa_ObjHeader must be the first member of Fa_ObjList");
 static_assert(offsetof(Fa_ObjDict, obj) == 0, "Fa_ObjHeader must be the first member of Fa_ObjDict");
 static_assert(offsetof(Fa_ObjFunction, obj) == 0, "Fa_ObjHeader must be the first member of Fa_ObjFunction");
+static_assert(offsetof(Fa_ObjModule, obj) == 0, "Fa_ObjHeader must be the first member of Fa_ObjModule");
 static_assert(offsetof(Fa_ObjNative, obj) == 0, "Fa_ObjHeader must be the first member of Fa_ObjNative");
 static_assert(offsetof(Fa_ObjClass, obj) == 0, "Fa_ObjHeader must be the first member of Fa_ObjClass");
 static_assert(offsetof(Fa_ObjInstance, obj) == 0, "Fa_ObjHeader must be the first member of Fa_ObjInstance");

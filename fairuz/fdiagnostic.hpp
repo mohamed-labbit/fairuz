@@ -3,6 +3,7 @@
 
 #include "fmacros.hpp"
 
+#include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -99,6 +100,11 @@ enum class Code : u16 {
     EXPECTED_CLASS_NAME = 0x0222,
     EXPECTED_MEMBER_NAME = 0x0223,
     EXCEEDED_MAX_NESTING_LIMIT = 0x0224,
+    EXPECTED_MODULE_NAME = 0x0225,
+    EXPECTED_IMPORT_KEYWORD = 0x0226,
+    EXPECTED_IMPORT_NAME = 0x0227,
+    EXPECTED_ALIAS_NAME = 0x0228,
+    EXPECTED_RPAREN_CLASS = 0x0229,
 }; // enum Code
 
 } // namespace parser
@@ -147,6 +153,7 @@ enum class Code : u16 {
     NESTED_CLASS_UNSUPPORTED = 0x0412,
     TOO_MANY_LIST_ELEMENTS = 0x0413,
     TOO_MANY_FUNCTIONS = 0x0414,
+    TOO_MANY_INLINE_CACHES = 0x0415,
 }; // enum Code
 
 } // namespace compiler
@@ -312,6 +319,11 @@ static constexpr char const* error_message_for(u16 code)
     case /*EXPECTED_CLASS_NAME =*/0x0222: return "Expected class name";
     case /*EXPECTED_MEMBER_NAME =*/0x0223: return "Expected member name";
     case /*EXCEEDED_MAX_NESTING_LIMIT =*/0x0224: return "Exceeded max nesting limit";
+    case /*EXPECTED_MODULE_NAME =*/0x0225: return "Expected module name";
+    case /*EXPECTED_IMPORT_KEYWORD =*/0x0226: return "Expected 'import' keyword";
+    case /*EXPECTED_IMPORT_NAME =*/0x0227: return "Expected imported name";
+    case /*EXPECTED_ALIAS_NAME =*/0x0228: return "Expected alias name";
+    case /*EXPECTED_RPAREN_CLASS =*/0x0229: return "Expected ')' after parent class";
     // sema
     case /*UNDEFINED_VARIABLE =*/0x0300: return "Undefined variable";
     case /*UNDEFINED_FUNCTION =*/0x0301: return "Undefined function";
@@ -338,7 +350,7 @@ static constexpr char const* error_message_for(u16 code)
     case /*UNKNOWN_BINARY_OPERATOR =*/0x0408: return "Unknown binary operator";
     case /*SHIFT_AMOUNT_NOT_CONSTANT =*/0x0409: return "Shift amount must be a constant integer";
     case /*SHIFT_AMOUNT_OUT_OF_RANGE =*/0x040A: return "Shift amount is out of range";
-    case /*TOO_MANY_CONSTANTS =*/0x040B: return "Too many constants in function (max 255)";
+    case /*TOO_MANY_CONSTANTS =*/0x040B: return "Too many constants in function (max 65536)";
     case /*TOO_MANY_REGISTERS =*/0x040C: return "Too many registers allocated for function";
     case /*JUMP_OFFSET_OVERFLOW =*/0x040D: return "Jump offset overflow";
     case /*LOOP_JUMP_OFFSET_OVERFLOW =*/0x040E: return "Loop jump offset overflow";
@@ -348,6 +360,7 @@ static constexpr char const* error_message_for(u16 code)
     case /*NESTED_CLASS_UNSUPPORTED =*/0x0412: return "Nested class definition is not supported";
     case /*TOO_MANY_LIST_ELEMENTS =*/0x0413: return "Too many elements in list object (max 255)";
     case /*TOO_MANY_FUNCTIONS =*/0x0414: return "Too many nested function chunks (max 65536)";
+    case /*TOO_MANY_INLINE_CACHES =*/0x0415: return "Too many inline-cache slots in function (max 256)";
     // runtime
     case /*STACK_OVERFLOW =*/0x0500: return "Stack overflow";
     case /*STACK_UNDERFLOW =*/0x0501: return "Stack underflow";

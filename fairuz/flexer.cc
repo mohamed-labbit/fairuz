@@ -10,6 +10,7 @@
 #include "futil.hpp"
 
 #include <cstdio>
+#include <cstring>
 #include <fstream>
 
 #define CONSUME_BASE_DIGITS(valid_fa_expr, token_type, err_code, detail)                                     \
@@ -61,7 +62,9 @@ Fa_FileManager::Fa_FileManager(std::string const& filepath)
 
     std::string content { std::istreambuf_iterator<char> { in },
         std::istreambuf_iterator<char> { } };
-    m_input_buffer = Fa_StringRef(content.data());
+    m_input_buffer = Fa_StringRef(content.size(), '\0');
+    if (!content.empty())
+        ::memcpy(m_input_buffer.data(), content.data(), content.size());
     m_input_buffer.trim_whitespace(false, true);
     m_last_known_write_time = fs::last_write_time(filepath);
 }
@@ -72,7 +75,11 @@ Fa_StringRef Fa_FileManager::load(std::string const& filepath, bool replace)
         return "";
 
     std::ifstream in(filepath, std::ios::binary);
-    Fa_StringRef ret = std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>()).data();
+    std::string content { std::istreambuf_iterator<char> { in },
+        std::istreambuf_iterator<char> { } };
+    Fa_StringRef ret(content.size(), '\0');
+    if (!content.empty())
+        ::memcpy(ret.data(), content.data(), content.size());
     if (!in)
         diagnostic::panic(ErrorCode::FILE_NOT_OPEN, filepath);
 
@@ -311,8 +318,11 @@ TokenPtr Fa_Lexer::lex_token()
         Fa_SourceLocation src_loc = m_source_manager.get_source_location();
         u32 current = m_source_manager.current_char();
 
-        if (current == 0)
+        if (current == 0) {
+            if (!m_source_manager.done())
+                diagnostic::panic(ErrorCode::INVALID_CHARACTER, "U+0000");
             break;
+        }
 
         if (current == '\n') {
             if (m_bracket_depth > 0) {
@@ -346,15 +356,64 @@ TokenPtr Fa_Lexer::lex_token()
             current = m_source_manager.next_char();
             u32 const start_byte = m_source_manager.get_file_offset();
 
-            while (current != '\n' && current != 0 && current != quote)
+            std::string decoded;
+            bool escaped = false;
+            while (current != '\n' && current != 0 && current != quote) {
+                if (current != '\\') {
+                    Fa_StringRef bytes = util::encode_utf8_str(current);
+                    decoded.append(bytes.data(), bytes.len());
+                    current = m_source_manager.next_char();
+                    continue;
+                }
+
+                escaped = true;
                 current = m_source_manager.next_char();
+                switch (current) {
+                case '\\': decoded.push_back('\\'); break;
+                case '\'': decoded.push_back('\''); break;
+                case '"': decoded.push_back('"'); break;
+                case 'n': decoded.push_back('\n'); break;
+                case 'r': decoded.push_back('\r'); break;
+                case 't': decoded.push_back('\t'); break;
+                case 'b': decoded.push_back('\b'); break;
+                case 'f': decoded.push_back('\f'); break;
+                case '/': decoded.push_back('/'); break;
+                case 'u': {
+                    u32 codepoint = 0;
+                    for (int i = 0; i < 4; ++i) {
+                        current = m_source_manager.next_char();
+                        int digit = -1;
+                        if (current >= '0' && current <= '9') digit = static_cast<int>(current - '0');
+                        else if (current >= 'a' && current <= 'f') digit = static_cast<int>(current - 'a' + 10);
+                        else if (current >= 'A' && current <= 'F') digit = static_cast<int>(current - 'A' + 10);
+                        if (digit < 0)
+                            return finish(tok::Fa_TokenType::INVALID,
+                                m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset()), src_loc);
+                        codepoint = (codepoint << 4) | static_cast<u32>(digit);
+                    }
+                    if (codepoint >= 0xD800 && codepoint <= 0xDFFF)
+                        return finish(tok::Fa_TokenType::INVALID,
+                            m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset()), src_loc);
+                    Fa_StringRef bytes = util::encode_utf8_str(codepoint);
+                    decoded.append(bytes.data(), bytes.len());
+                    current = m_source_manager.next_char();
+                    continue;
+                }
+                default:
+                    return finish(tok::Fa_TokenType::INVALID,
+                        m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset()), src_loc);
+                }
+                current = m_source_manager.next_char();
+            }
 
             if (current != quote) {
                 Fa_StringRef str_lit = m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset());
                 return finish(tok::Fa_TokenType::INVALID, str_lit, src_loc);
             }
 
-            Fa_StringRef str_lit = m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset());
+            Fa_StringRef str_lit = escaped
+                ? Fa_StringRef(decoded.c_str())
+                : m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset());
             m_source_manager.consume_char(); // closing quote
             return finish(tok::Fa_TokenType::STRING, str_lit, src_loc);
         }
@@ -447,7 +506,6 @@ TokenPtr Fa_Lexer::lex_token()
                     m_source_manager.get_file_offset() + util::utf8_codepoint_size(second));
                 if (auto type = tok::lookup_operator(two)) {
                     m_source_manager.consume_char();
-                    ::fprintf(stderr, "recognized: %s\n", two.data());
                     return finish(*type, two, src_loc);
                 }
             }

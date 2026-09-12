@@ -281,26 +281,36 @@ static inline i64 parse_integer_literal(Fa_StringRef const& literal, int base)
         i++;
 
     i64 value = 0;
-    u64 bytes = 0, out_bytes = 0;
+    u64 bytes = i;
 
-    for (; i < literal.len(); i++) {
-        u32 const cp = decode_utf8_at(literal, bytes, &out_bytes);
+    while (bytes < literal.len()) {
+        u64 codepoint_bytes = 0;
+        u32 const cp = decode_utf8_at(literal, bytes, &codepoint_bytes);
+        bytes += codepoint_bytes;
 
-        bytes += out_bytes;
-
-        if (cp == '\'')
+        if (cp == '\'' || cp == '_')
             continue;
 
-        int digit = 0;
-
-        if (::isdigit(cp))
+        int digit = -1;
+        if (cp >= '0' && cp <= '9')
             digit = cp - '0';
         else if (is_arab_digit(cp))
             digit = arab_digit_to_canon(cp);
-        else if (::isalpha(cp))
-            digit = ::tolower(cp) - 'a' + 10;
-        else
-            diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "Invalid digit");
+        else if (cp >= 'a' && cp <= 'f')
+            digit = cp - 'a' + 10;
+        else if (cp >= 'A' && cp <= 'F')
+            digit = cp - 'A' + 10;
+        if (digit < 0)
+            diagnostic::fatal_error(diagnostic::errc::lexer::Code::INVALID_NUMBER_LITERAL,
+                "invalid digit in integer literal");
+
+        if (digit >= base)
+            diagnostic::fatal_error(diagnostic::errc::lexer::Code::INVALID_NUMBER_LITERAL,
+                "digit is not valid for the literal base");
+
+        if (value > (INT64_MAX - digit) / base)
+            diagnostic::fatal_error(diagnostic::errc::lexer::Code::INVALID_NUMBER_LITERAL,
+                "integer literal is out of range");
 
         value = value * base + digit;
     }

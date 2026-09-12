@@ -153,9 +153,12 @@ public:
 
     ~Fa_Array()
     {
-        destroy_range(m_arr, m_arr + m_size);
-        if constexpr (!IS_ARENA)
-            m_allocator->deallocate(m_arr, m_cap);
+        if (m_arr != nullptr)
+            destroy_range(m_arr, m_arr + m_size);
+        if constexpr (!IS_ARENA) {
+            if (m_allocator != nullptr && m_arr != nullptr)
+                m_allocator->deallocate(m_arr, static_cast<size_t>(m_cap) * sizeof(T));
+        }
     }
 
     static Fa_Array with_capacity(u32 capacity)
@@ -199,7 +202,12 @@ public:
         return *slot;
     }
 
-    void clear() { m_size = 0; }
+    void clear()
+    {
+        if (m_arr != nullptr)
+            destroy_range(m_arr, m_arr + m_size);
+        m_size = 0;
+    }
 
     void push(T const& val);
     void push(T&& val);
@@ -266,7 +274,7 @@ void Fa_Array<T, _Alloc>::ensure_push_capacity()
     if (m_arr && m_size > 0) {
         relocate(new_arr, m_arr, m_size);
         if constexpr (!IS_ARENA)
-            m_allocator->deallocate(m_arr, m_size);
+            m_allocator->deallocate(m_arr, static_cast<size_t>(m_cap) * sizeof(T));
     }
 
     m_arr = new_arr;
@@ -435,13 +443,25 @@ Fa_Array<T, _Alloc>& Fa_Array<T, _Alloc>::operator=(Fa_Array const& other)
     if (this == &other)
         return *this;
 
-    destroy_range(m_arr, m_arr + m_size);
+    _Alloc* const old_allocator = m_allocator;
+    if (m_arr != nullptr)
+        destroy_range(m_arr, m_arr + m_size);
     m_size = 0;
+
+    if constexpr (!IS_ARENA) {
+        if (m_arr != nullptr)
+            old_allocator->deallocate(m_arr, static_cast<size_t>(m_cap) * sizeof(T));
+        m_arr = nullptr;
+        m_cap = 0;
+    } else if (old_allocator != other.m_allocator) {
+        // Arena storage must not outlive the allocator that owns it.
+        m_arr = nullptr;
+        m_cap = 0;
+    }
 
     m_allocator = other.m_allocator;
 
     if (other.m_cap > m_cap) {
-        // NOTE: arena – no free on m_arr here.
         m_arr = m_allocator->template allocate_array<T>(other.m_cap);
         assert(m_arr != nullptr);
         m_cap = other.m_cap;
@@ -458,15 +478,18 @@ Fa_Array<T, _Alloc>& Fa_Array<T, _Alloc>::operator=(Fa_Array&& other) noexcept
     if (this == &other)
         return *this;
 
-    destroy_range(m_arr, m_arr + m_size);
-    // NOTE: arena – no free on m_arr here.
+    if (m_arr != nullptr)
+        destroy_range(m_arr, m_arr + m_size);
+    if constexpr (!IS_ARENA) {
+        if (m_allocator != nullptr && m_arr != nullptr)
+            m_allocator->deallocate(m_arr, static_cast<size_t>(m_cap) * sizeof(T));
+    }
 
     m_arr = other.m_arr;
     m_size = other.m_size;
     m_cap = other.m_cap;
     m_allocator = other.m_allocator;
 
-    other.m_allocator = nullptr;
     other.m_arr = nullptr;
     other.m_size = 0;
     other.m_cap = 0;
@@ -499,7 +522,9 @@ void Fa_Array<T, _Alloc>::push(T&& val)
 template<typename T, class _Alloc>
 T Fa_Array<T, _Alloc>::pop()
 {
-    assert(m_size > 0 && "Fa_Array::pop — array is empty");
+    if (UNLIKELY(m_size == 0))
+        diagnostic::panic(GenericErrorCode::INTERNAL_ERROR,
+            "Fa_Array::pop called on an empty array");
     m_size -= 1;
     if constexpr (TRIVIAL_DTOR)
         return m_arr[m_size];
@@ -520,10 +545,16 @@ void Fa_Array<T, _Alloc>::reserve(u32 const s)
     T* new_arr = m_allocator->template allocate_array<T>(rounded);
     assert(new_arr != nullptr);
 
-    if (m_arr && m_size > 0)
-        relocate(new_arr, m_arr, m_size);
+    T* old_arr = m_arr;
+    u32 old_cap = m_cap;
+    if (old_arr && m_size > 0)
+        relocate(new_arr, old_arr, m_size);
 
-    /// NOTE: arena – no free on m_arr here
+    if constexpr (!IS_ARENA) {
+        if (old_arr != nullptr)
+            m_allocator->deallocate(old_arr, static_cast<size_t>(old_cap) * sizeof(T));
+    }
+
     m_arr = new_arr;
     m_cap = rounded;
 }

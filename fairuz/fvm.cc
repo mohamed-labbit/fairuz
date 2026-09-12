@@ -3,7 +3,9 @@
 //
 
 #include "fvm.hpp"
+#include "fcompiler.hpp"
 #include "fdiagnostic.hpp"
+#include "flexer.hpp"
 #include "fmacros.hpp"
 #include "fobj_header.hpp"
 #include "fobject.hpp"
@@ -11,10 +13,70 @@
 #include "fstring.hpp"
 #include "futil.hpp"
 #include "fvalue.hpp"
+#include "fparser.hpp"
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
+#include <set>
+#include <system_error>
 
 namespace fairuz::runtime {
+
+namespace {
+
+using ComparedObjects = std::set<std::pair<Fa_ObjHeader const*, Fa_ObjHeader const*>>;
+
+bool values_equal_impl(Fa_Value lhs, Fa_Value rhs, ComparedObjects& seen)
+{
+    if (lhs == rhs)
+        return true;
+    if (lhs.is_number() && rhs.is_number())
+        return lhs.as_double_any() == rhs.as_double_any();
+    if (lhs.is_nil() || rhs.is_nil() || lhs.is_bool() || rhs.is_bool())
+        return false;
+    if (lhs.is_string() && rhs.is_string())
+        return lhs.as_string()->str == rhs.as_string()->str;
+    if (!lhs.is_obj() || !rhs.is_obj() || lhs.as_obj()->type != rhs.as_obj()->type)
+        return false;
+
+    auto pair = std::make_pair(static_cast<Fa_ObjHeader const*>(lhs.as_obj()),
+        static_cast<Fa_ObjHeader const*>(rhs.as_obj()));
+    if (!seen.insert(pair).second)
+        return true;
+
+    if (lhs.is_list()) {
+        Fa_ObjList* left = lhs.as_list();
+        Fa_ObjList* right = rhs.as_list();
+        if (left->elements.size() != right->elements.size())
+            return false;
+        for (u32 i = 0; i < left->elements.size(); ++i) {
+            if (!values_equal_impl(left->elements[i], right->elements[i], seen))
+                return false;
+        }
+        return true;
+    }
+    if (lhs.is_dict()) {
+        Fa_ObjDict* left = lhs.as_dict();
+        Fa_ObjDict* right = rhs.as_dict();
+        if (left->data.size() != right->data.size())
+            return false;
+        for (auto const& [key, value] : left->data) {
+            Fa_Value const* other = right->data.find_ptr(key);
+            if (other == nullptr || !values_equal_impl(value, *other, seen))
+                return false;
+        }
+        return true;
+    }
+    return false; // distinct functions, classes, instances, modules, and resources compare by identity
+}
+
+bool values_equal(Fa_Value lhs, Fa_Value rhs)
+{
+    ComparedObjects seen;
+    return values_equal_impl(lhs, rhs, seen);
+}
+
+} // namespace
 
 #define Fa_DISPATCH()                                              \
     do {                                                           \
@@ -78,7 +140,7 @@ namespace fairuz::runtime {
             runtime_error(ErrorCode::STACK_OVERFLOW);                                 \
         m_stack[call_base + 1] = arg_val;                                             \
         invoke_method(target_chunk, self_val, cur_frame_base + Fa_instr_A(instr),    \
-            call_base, 2, ip, caller_stack_top);                                      \
+            call_base, 2, ip, caller_stack_top, target_chunk->globals);               \
     } while (0)
 
 #define Fa_RA() cur_base[Fa_instr_A(instr)]
@@ -151,6 +213,8 @@ Fa_VM::Fa_VM()
     std::fill(m_stack, m_stack + STACK_SIZE, Fa_Value::nil());
     std::fill(m_frames, m_frames + MAX_FRAMES, Fa_CallFrame());
 
+    m_root_environment.fallback = &m_builtin_environment;
+
     open_stdlib();
 }
 
@@ -198,6 +262,107 @@ Fa_Value& Fa_VM::get_reg(Fa_CallFrame const& f, int reg)
     return m_stack[abs];
 }
 
+Fa_GlobalEnvironment* Fa_VM::current_globals()
+{
+    if (m_frames_top == 0 || frame().globals == nullptr)
+        return &m_root_environment;
+    return frame().globals;
+}
+
+Fa_Value const* Fa_VM::find_global(Fa_GlobalEnvironment* env, Fa_StringRef const& name) const
+{
+    if (env == nullptr)
+        env = const_cast<Fa_GlobalEnvironment*>(&m_root_environment);
+    return env->find(name);
+}
+
+void Fa_VM::store_global(Fa_GlobalEnvironment* env, Fa_StringRef const& name, Fa_Value value)
+{
+    if (env == nullptr)
+        env = &m_root_environment;
+    if (u32* slot = env->index.find_ptr(name)) {
+        env->slots[*slot] = value;
+        return;
+    }
+    u32 slot = env->slots.size();
+    env->slots.push(value);
+    env->index.insert_or_assign(name, slot);
+}
+
+std::filesystem::path Fa_VM::resolve_module_path(std::string const& name) const
+{
+    std::filesystem::path relative;
+    size_t begin = 0;
+    while (begin < name.size()) {
+        size_t dot = name.find('.', begin);
+        relative /= name.substr(begin, dot == std::string::npos ? std::string::npos : dot - begin);
+        if (dot == std::string::npos)
+            break;
+        begin = dot + 1;
+    }
+    relative += ".fa";
+
+    std::vector<std::filesystem::path> roots;
+    if (m_frames_top > 0 && !frame().chunk->source_path.empty())
+        roots.push_back(std::filesystem::path(frame().chunk->source_path).parent_path());
+    if (char const* configured = std::getenv("FAIRUZ_STDLIB"))
+        roots.emplace_back(configured);
+#ifdef FAIRUZ_SOURCE_STDLIB_DIR
+    roots.emplace_back(FAIRUZ_SOURCE_STDLIB_DIR);
+#endif
+#ifdef FAIRUZ_INSTALL_STDLIB_DIR
+    roots.emplace_back(FAIRUZ_INSTALL_STDLIB_DIR);
+#endif
+    roots.push_back(std::filesystem::current_path());
+
+    std::error_code ec;
+    for (auto const& root : roots) {
+        std::filesystem::path candidate = root / relative;
+        if (!std::filesystem::is_regular_file(candidate, ec)) {
+            ec.clear();
+            continue;
+        }
+        auto canonical = std::filesystem::weakly_canonical(candidate, ec);
+        return ec ? candidate.lexically_normal() : canonical;
+    }
+    return { };
+}
+
+Fa_ObjModule* Fa_VM::load_module(std::string const& name)
+{
+    std::filesystem::path path = resolve_module_path(name);
+    if (path.empty())
+        runtime_error(ErrorCode::UNDEFINED_GLOBAL, "module not found: " + name);
+    std::string key = path.string();
+    if (auto found = m_module_cache.find(key); found != m_module_cache.end())
+        return found->second;
+
+    auto globals = std::make_unique<Fa_GlobalEnvironment>();
+    globals->fallback = &m_builtin_environment;
+    Fa_GlobalEnvironment* globals_ptr = globals.get();
+    m_module_environments.push_back(std::move(globals));
+
+    Fa_ObjModule* module = m_gc.make_obj_module(name, key, globals_ptr);
+    m_module_cache.emplace(key, module); // publish first so import cycles terminate
+
+    auto source = std::make_unique<lex::Fa_FileManager>(key);
+    diagnostic::set_source(source.get());
+    parser::Fa_Parser parser(source.get());
+    Fa_Array<AST::Fa_Stmt*> statements = parser.parse_program();
+    if (diagnostic::has_errors())
+        halt();
+
+    Compiler compiler;
+    Fa_Chunk* imported_chunk = compiler.compile(statements);
+    if (imported_chunk == nullptr || diagnostic::has_errors())
+        halt();
+    imported_chunk->source_path = key;
+    imported_chunk->name = Fa_StringRef(module->name.data(), module->name.size());
+    module->chunk = imported_chunk;
+    m_module_sources.push_back(std::move(source));
+    return module;
+}
+
 Fa_Value Fa_VM::run(Fa_Chunk* chunk)
 {
     if (chunk == nullptr)
@@ -206,7 +371,7 @@ Fa_Value Fa_VM::run(Fa_Chunk* chunk)
     m_stack_top = 0;
     m_frames_top = 0;
 
-    Fa_ObjFunction* fn = m_gc.make_obj_function(chunk);
+    Fa_ObjFunction* fn = m_gc.make_obj_function(chunk, &m_root_environment);
 
     m_stack[0] = Fa_Value::from_obj(reinterpret_cast<Fa_ObjHeader*>(fn));
     m_stack_top = static_cast<int>(chunk->local_count) + 2;
@@ -215,7 +380,7 @@ Fa_Value Fa_VM::run(Fa_Chunk* chunk)
         runtime_error(ErrorCode::STACK_OVERFLOW);
 
     m_frames[m_frames_top] = Fa_CallFrame(fn, chunk, 0, 1,
-        static_cast<u16>(chunk->local_count), 0, 0);
+        static_cast<u16>(chunk->local_count), 0, 0, &m_root_environment);
     m_frames_top++;
     intern_chunk_constants(fn->chunk);
 
@@ -301,22 +466,20 @@ Fa_Value Fa_VM::execute(int stop_frame_depth)
                 runtime_error(ErrorCode::INVALID_OPCODE, "invalid global-name constant");
             Fa_Value name_v = cur_chunk->constants[index];
             Fa_StringRef name = name_v.as_string()->str;
-            u32* slot = m_global_index.find_ptr(name);
-            if (slot == nullptr)
+            Fa_Value const* value = find_global(current_globals(), name);
+            if (value == nullptr)
                 runtime_error(ErrorCode::UNDEFINED_GLOBAL, std::string(name.data(), name.len()));
-
-            u32 slot_idx = *slot;
-            Fa_RA() = m_global_slots[slot_idx];
+            Fa_RA() = *value;
         }
         Fa_DISPATCH();
     }
     Fa_CASE(LOAD_GLOBAL_CACHED)
     {
         u32 slot_idx = Fa_instr_Bx(instr);
-        if (UNLIKELY(slot_idx >= m_global_slots.size()))
+        Fa_GlobalEnvironment* env = current_globals();
+        if (UNLIKELY(env == nullptr || slot_idx >= env->slots.size()))
             runtime_error(ErrorCode::UNDEFINED_GLOBAL);
-
-        Fa_RA() = m_global_slots[slot_idx];
+        Fa_RA() = env->slots[slot_idx];
         Fa_DISPATCH();
     }
     Fa_CASE(STORE_GLOBAL)
@@ -328,27 +491,49 @@ Fa_Value Fa_VM::execute(int stop_frame_depth)
                 runtime_error(ErrorCode::INVALID_OPCODE, "invalid global-name constant");
             Fa_Value name_v = cur_chunk->constants[index];
             Fa_StringRef name = name_v.as_string()->str;
-            u32 slot_idx;
-
-            if (u32* slot = m_global_index.find_ptr(name)) {
-                slot_idx = *slot;
-            } else {
-                slot_idx = static_cast<u32>(m_global_slots.size());
-                m_global_slots.push(Fa_Value::nil());
-                m_global_index.insert_or_assign(name, slot_idx);
-            }
-
-            m_global_slots[slot_idx] = Fa_RA();
+            store_global(current_globals(), name, Fa_RA());
         }
         Fa_DISPATCH();
     }
     Fa_CASE(STORE_GLOBAL_CACHED)
     {
         u32 slot_idx = Fa_instr_Bx(instr);
-        if (UNLIKELY(slot_idx >= m_global_slots.size()))
+        Fa_GlobalEnvironment* env = current_globals();
+        if (UNLIKELY(env == nullptr || slot_idx >= env->slots.size()))
             runtime_error(ErrorCode::UNDEFINED_GLOBAL);
+        env->slots[slot_idx] = Fa_RA();
+        Fa_DISPATCH();
+    }
+    Fa_CASE(IMPORT_MODULE)
+    {
+        u16 index = Fa_instr_Bx(instr);
+        if (UNLIKELY(index >= cur_chunk->constants.size() || !cur_chunk->constants[index].is_string()))
+            runtime_error(ErrorCode::INVALID_OPCODE, "invalid module-name constant");
+        Fa_StringRef const& module_name = cur_chunk->constants[index].as_string()->str;
+        Fa_ObjModule* module = load_module(std::string(module_name.data(), module_name.len()));
+        Fa_RA() = Fa_Value::from_module(module);
 
-        m_global_slots[slot_idx] = Fa_RA();
+        if (module->initialized || module->executing) {
+            Fa_DISPATCH();
+        }
+
+        module->executing = true;
+        if (UNLIKELY(module->chunk == nullptr || m_frames_top >= MAX_FRAMES))
+            runtime_error(ErrorCode::INVALID_OPCODE, "invalid imported module");
+        int result_slot = cur_frame_base + Fa_instr_A(instr);
+        int module_base = m_stack_top;
+        int new_top = module_base + static_cast<int>(module->chunk->local_count) + 1;
+        if (UNLIKELY(new_top > STACK_SIZE))
+            runtime_error(ErrorCode::STACK_OVERFLOW);
+        while (m_stack_top < new_top)
+            m_stack[m_stack_top++] = Fa_Value::nil();
+        Fa_ObjFunction* module_fn = m_gc.make_obj_function(module->chunk, module->globals);
+        SAVE_IP();
+        m_frames[m_frames_top++] = Fa_CallFrame(module_fn, module->chunk, 0,
+            static_cast<u16>(module_base), static_cast<u16>(module->chunk->local_count),
+            static_cast<u16>(result_slot), static_cast<u16>(module_base), module->globals, module);
+        intern_chunk_constants(module->chunk);
+        LOAD_FRAME();
         Fa_DISPATCH();
     }
     Fa_CASE(MOVE)
@@ -470,7 +655,9 @@ Fa_Value Fa_VM::execute(int stop_frame_depth)
         if (lhs.is_int() && rhs.is_int()) {
             if (rhs.as_int() == 0)
                 runtime_error(ErrorCode::MODULO_BY_ZERO);
-            res = Fa_Value::from_real(static_cast<f64>(Fa_VMOPI(lhs, rhs, %)));
+            // Preserve integer type for integer modulo, matching arithmetic
+            // closure and making the result valid for indexing/ranges.
+            res = Fa_Value::from_int(Fa_VMOPI(lhs, rhs, %));
             Fa_RECORD_BINARY_IC(lhs, rhs, res);
         } else if (lhs.is_number() && rhs.is_number()) {
             if (rhs.as_double_any() == 0.0)
@@ -525,7 +712,7 @@ Fa_Value Fa_VM::execute(int stop_frame_depth)
             if (UNLIKELY(call_base + 1 >= STACK_SIZE))
                 runtime_error(ErrorCode::STACK_OVERFLOW);
             invoke_method(target_chunk, operand, cur_frame_base + Fa_instr_A(instr),
-                call_base, 1, ip, caller_stack_top);
+                call_base, 1, ip, caller_stack_top, target_chunk->globals);
             LOAD_FRAME();
             Fa_DISPATCH();
         } else {
@@ -620,25 +807,18 @@ Fa_Value Fa_VM::execute(int stop_frame_depth)
         Fa_Value lhs = Fa_RB();
         Fa_Value rhs = Fa_RC();
 
-        if (lhs.is_nil() || rhs.is_nil()) {
-            res = Fa_Value::from_bool(lhs.is_nil() && rhs.is_nil());
-            Fa_RECORD_BINARY_IC(lhs, rhs, res);
-        } else if (lhs.is_int() && rhs.is_int()) {
-            res = Fa_Value::from_bool(Fa_VMOPI(lhs, rhs, ==));
-            Fa_RECORD_BINARY_IC(lhs, rhs, res);
-        } else if (lhs.is_string() && rhs.is_string()) {
-            res = Fa_Value::from_bool(lhs.as_string()->str == rhs.as_string()->str);
-            Fa_RECORD_BINARY_IC(lhs, rhs, res);
-        } else if (lhs.is_number() && rhs.is_number()) {
-            res = Fa_Value::from_bool(lhs.as_double_any() == rhs.as_double_any());
-            Fa_RECORD_BINARY_IC(lhs, rhs, res);
-        } else if (lhs.is_instance() || rhs.is_instance()) {
+        bool has_overload = false;
+        if (lhs.is_instance())
+            has_overload = lhs.as_instance()->klass->method_slot(sp_method_name(Fa_ObjClass::EQ)) >= 0;
+        if (!has_overload && rhs.is_instance())
+            has_overload = rhs.as_instance()->klass->method_slot(sp_method_name(Fa_ObjClass::EQ)) >= 0;
+        if (has_overload) {
             Fa_VM_INSTANCE_OP(EQ);
             LOAD_FRAME();
             Fa_DISPATCH();
-        } else {
-            runtime_error(ErrorCode::TYPE_ERROR_COMPARE);
         }
+        res = Fa_Value::from_bool(values_equal(lhs, rhs));
+        Fa_RECORD_BINARY_IC(lhs, rhs, res);
 
         Fa_DISPATCH();
     }
@@ -648,25 +828,18 @@ Fa_Value Fa_VM::execute(int stop_frame_depth)
         Fa_Value lhs = Fa_RB();
         Fa_Value rhs = Fa_RC();
 
-        if (lhs.is_nil() || rhs.is_nil()) {
-            res = Fa_Value::from_bool(!(lhs.is_nil() && rhs.is_nil()));
-            Fa_RECORD_BINARY_IC(lhs, rhs, res);
-        } else if (lhs.is_int() && rhs.is_int()) {
-            res = Fa_Value::from_bool(Fa_VMOPI(lhs, rhs, !=));
-            Fa_RECORD_BINARY_IC(lhs, rhs, res);
-        } else if (lhs.is_string() && rhs.is_string()) {
-            res = Fa_Value::from_bool(lhs.as_string()->str != rhs.as_string()->str);
-            Fa_RECORD_BINARY_IC(lhs, rhs, res);
-        } else if (lhs.is_number() && rhs.is_number()) {
-            res = Fa_Value::from_bool(lhs.as_double_any() != rhs.as_double_any());
-            Fa_RECORD_BINARY_IC(lhs, rhs, res);
-        } else if (lhs.is_instance() || rhs.is_instance()) {
+        bool has_overload = false;
+        if (lhs.is_instance())
+            has_overload = lhs.as_instance()->klass->method_slot(sp_method_name(Fa_ObjClass::NEQ)) >= 0;
+        if (!has_overload && rhs.is_instance())
+            has_overload = rhs.as_instance()->klass->method_slot(sp_method_name(Fa_ObjClass::NEQ)) >= 0;
+        if (has_overload) {
             Fa_VM_INSTANCE_OP(NEQ);
             LOAD_FRAME();
             Fa_DISPATCH();
-        } else {
-            runtime_error(ErrorCode::TYPE_ERROR_COMPARE);
         }
+        res = Fa_Value::from_bool(!values_equal(lhs, rhs));
+        Fa_RECORD_BINARY_IC(lhs, rhs, res);
 
         Fa_DISPATCH();
     }
@@ -880,7 +1053,7 @@ Fa_Value Fa_VM::execute(int stop_frame_depth)
                 || cur_chunk->functions[fn_idx] == nullptr))
             runtime_error(ErrorCode::INVALID_OPCODE, "function index out of bounds");
         Fa_Chunk* fn_chunk = cur_chunk->functions[fn_idx];
-        Fa_RA() = m_gc.make_function(fn_chunk);
+        Fa_RA() = m_gc.make_function(fn_chunk, current_globals());
         Fa_DISPATCH();
     }
     Fa_CASE(CALL)
@@ -975,6 +1148,11 @@ Fa_Value Fa_VM::execute(int stop_frame_depth)
         reg_t n_ret = Fa_instr_B(instr);
         Fa_Value ret = n_ret > 0 ? cur_base[src] : Fa_Value::nil();
         Fa_CallFrame finished = frame();
+        if (finished.module != nullptr) {
+            finished.module->executing = false;
+            finished.module->initialized = true;
+            ret = Fa_Value::from_module(finished.module);
+        }
         m_stack[finished.return_slot] = ret;
         m_frames_top -= 1;
         m_stack_top = finished.caller_stack_top;
@@ -990,14 +1168,20 @@ Fa_Value Fa_VM::execute(int stop_frame_depth)
     Fa_CASE(RETURN_NIL)
     {
         Fa_CallFrame finished = frame();
-        m_stack[finished.return_slot] = Fa_Value::nil();
+        Fa_Value ret = Fa_Value::nil();
+        if (finished.module != nullptr) {
+            finished.module->executing = false;
+            finished.module->initialized = true;
+            ret = Fa_Value::from_module(finished.module);
+        }
+        m_stack[finished.return_slot] = ret;
         m_frames_top -= 1;
         m_stack_top = finished.caller_stack_top;
 
         if (m_frames_top == stop_frame_depth)
-            return Fa_Value::nil();
+            return ret;
         if (LIKELY(m_frames_top == 0))
-            return Fa_Value::nil();
+            return ret;
 
         LOAD_FRAME();
         Fa_DISPATCH();
@@ -1006,6 +1190,11 @@ Fa_Value Fa_VM::execute(int stop_frame_depth)
     {
         Fa_Value ret = cur_base[Fa_instr_A(instr)];
         Fa_CallFrame finished = frame();
+        if (finished.module != nullptr) {
+            finished.module->executing = false;
+            finished.module->initialized = true;
+            ret = Fa_Value::from_module(finished.module);
+        }
         m_stack[finished.return_slot] = ret;
         m_frames_top -= 1;
         m_stack_top = finished.caller_stack_top;
@@ -1099,7 +1288,7 @@ Fa_Value Fa_VM::execute(int stop_frame_depth)
                 runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
             list->elements[idx.as_int()] = val;
         } else if (obj.is_dict()) {
-            obj.as_dict()->data[idx] = val;
+            obj.as_dict()->set(idx, val);
         } else if (obj.is_instance()) {
             /// TODO: go get the '[]' operator
             runtime_error(ErrorCode::INDEX_OBJECT_TYPE_ERROR);
@@ -1117,29 +1306,95 @@ Fa_Value Fa_VM::execute(int stop_frame_depth)
             if (UNLIKELY(desc_idx >= cur_chunk->class_descriptors.size()))
                 runtime_error(ErrorCode::INVALID_OPCODE, "class descriptor index out of bounds");
             Fa_ClassDescriptor klass_desc = cur_chunk->class_descriptors[desc_idx];
-            u32 field_count = klass_desc.field_count;
-            u32 method_count = klass_desc.method_names.size();
-            u32 vtable_size = klass_desc.vtable_size;
+            Fa_ObjClass* parent = nullptr;
+            if (!klass_desc.parent_name.empty()) {
+                Fa_Value const* parent_value = find_global(current_globals(), klass_desc.parent_name);
+                if (parent_value == nullptr || !parent_value->is_class())
+                    runtime_error(ErrorCode::TYPE_ERROR_CALL,
+                        "parent is not a class: " + std::string(klass_desc.parent_name.data(), klass_desc.parent_name.len()));
+                parent = parent_value->as_class();
+            }
 
-            Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> kfield_names { field_count, { }, &m_gc };
-            Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> kmethod_names { method_count, { }, &m_gc };
-            Fa_Array<Fa_Chunk*, /*_Alloc=*/Fa_GarbageCollector> kvtable { vtable_size, { }, &m_gc };
+            std::vector<Fa_StringRef> fields;
+            std::vector<Fa_StringRef> methods;
+            std::vector<Fa_Chunk*> vtable;
+            if (parent != nullptr) {
+                for (auto const& field : parent->field_names)
+                    fields.push_back(field);
+                for (auto const& method : parent->method_names)
+                    methods.push_back(method);
+                for (auto* fn : parent->vtable)
+                    vtable.push_back(fn);
+            } else {
+                methods.resize(Fa_ObjClass::_COUNT);
+                vtable.resize(Fa_ObjClass::_COUNT, nullptr);
+            }
 
-            for (u32 i = 0; i < field_count;++i)
-                kfield_names[i] = klass_desc.field_names[i];
+            for (u32 i = 0; i < klass_desc.field_names.size(); ++i) {
+                bool duplicate = false;
+                for (auto const& inherited : fields) {
+                    if (inherited == klass_desc.field_names[i]) {
+                        duplicate = true;
+                        break;
+                    }
+                }
+                if (!duplicate)
+                    fields.push_back(klass_desc.field_names[i]);
+            }
 
-            for (u32 i = 0; i < method_count;++i)
-                kmethod_names[i] = klass_desc.method_names[i];
-
-            for (u32 i = 0; i < vtable_size;++i) {
+            for (u32 i = 0; i < klass_desc.vtable_size; ++i) {
                 u32 fn_idx = klass_desc.vtable_indices[i];
                 if (UNLIKELY(fn_idx != Fa_ClassDescriptor::NULL_SLOT
                         && fn_idx >= cur_chunk->functions.size()))
                     runtime_error(ErrorCode::INVALID_OPCODE, "class method index out of bounds");
-                kvtable[i] = fn_idx == Fa_ClassDescriptor::NULL_SLOT ? nullptr : cur_chunk->functions[fn_idx];
+                if (fn_idx == Fa_ClassDescriptor::NULL_SLOT || klass_desc.method_names[i].empty())
+                    continue;
+                Fa_Chunk* method_chunk = cur_chunk->functions[fn_idx];
+                method_chunk->globals = current_globals();
+
+                int target = -1;
+                if (i < Fa_ObjClass::_COUNT) {
+                    target = static_cast<int>(i);
+                } else {
+                    for (u32 j = 0; j < methods.size(); ++j) {
+                        if (methods[j] == klass_desc.method_names[i]) {
+                            target = static_cast<int>(j);
+                            break;
+                        }
+                    }
+                }
+                if (target < 0) {
+                    target = static_cast<int>(methods.size());
+                    methods.push_back(klass_desc.method_names[i]);
+                    vtable.push_back(nullptr);
+                }
+                if (static_cast<size_t>(target) >= methods.size()) {
+                    methods.resize(static_cast<size_t>(target) + 1);
+                    vtable.resize(static_cast<size_t>(target) + 1, nullptr);
+                }
+                methods[static_cast<size_t>(target)] = klass_desc.method_names[i];
+                vtable[static_cast<size_t>(target)] = method_chunk;
             }
 
+            Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> kfield_names {
+                static_cast<u32>(fields.size()), { }, &m_gc
+            };
+            Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> kmethod_names {
+                static_cast<u32>(methods.size()), { }, &m_gc
+            };
+            Fa_Array<Fa_Chunk*, /*_Alloc=*/Fa_GarbageCollector> kvtable {
+                static_cast<u32>(vtable.size()), { }, &m_gc
+            };
+            for (u32 i = 0; i < fields.size(); ++i)
+                kfield_names[i] = fields[i];
+            for (u32 i = 0; i < methods.size(); ++i)
+                kmethod_names[i] = methods[i];
+            for (u32 i = 0; i < vtable.size(); ++i)
+                kvtable[i] = vtable[i];
+
             res = m_gc.make_class(klass_desc.name, kfield_names, kmethod_names, kvtable);
+            res.as_class()->parent = parent;
+            res.as_class()->globals = current_globals();
         }
 
         Fa_DISPATCH();
@@ -1177,7 +1432,7 @@ Fa_Value Fa_VM::execute(int stop_frame_depth)
 
         invoke_method(inst->klass->vtable[slot], self_val,
             cur_frame_base + self_reg, cur_frame_base + self_reg + 1,
-            argc, ip, m_stack_top);
+            argc, ip, m_stack_top, inst->klass->vtable[slot]->globals);
 
         LOAD_FRAME();
         Fa_DISPATCH();
@@ -1216,7 +1471,7 @@ Fa_Value Fa_VM::execute(int stop_frame_depth)
             invoke_method(inst_obj->klass->vtable[slot], inst,
                 cur_frame_base + Fa_instr_A(instr),
                 cur_frame_base + Fa_instr_A(instr) + 1,
-                static_cast<int>(argc), ip, m_stack_top);
+                static_cast<int>(argc), ip, m_stack_top, inst_obj->klass->vtable[slot]->globals);
         }
         LOAD_FRAME();
         Fa_DISPATCH();
@@ -1225,6 +1480,23 @@ Fa_Value Fa_VM::execute(int stop_frame_depth)
     {
         Fa_Value& res = Fa_RA();
         Fa_Value obj_v = Fa_RB();
+
+        if (obj_v.is_module()) {
+            if (UNLIKELY(Fa_instr_C(instr) != 0xFF || ip >= cur_chunk->code.size()
+                    || Fa_instr_op(cur_chunk->code[ip]) != Fa_OpCode::NOP))
+                runtime_error(ErrorCode::INVALID_OPCODE, "module access requires a name payload");
+            u16 name_idx = Fa_instr_Bx(cur_chunk->code[ip++]);
+            if (UNLIKELY(name_idx >= cur_chunk->constants.size() || !cur_chunk->constants[name_idx].is_string()))
+                runtime_error(ErrorCode::INVALID_OPCODE, "invalid module attribute name");
+            Fa_ObjModule* module = obj_v.as_module();
+            Fa_StringRef const& name = cur_chunk->constants[name_idx].as_string()->str;
+            Fa_Value const* value = module->globals == nullptr ? nullptr : module->globals->find(name);
+            if (value == nullptr || (module->globals->index.find_ptr(name) == nullptr))
+                runtime_error(ErrorCode::UNDEFINED_GLOBAL,
+                    "module '" + module->name + "' has no export '" + std::string(name.data(), name.len()) + "'");
+            res = *value;
+            Fa_DISPATCH();
+        }
 
         if (!UNLIKELY(obj_v.is_instance()))
             runtime_error(ErrorCode::UNDEFINED_FIELD,
@@ -1270,6 +1542,27 @@ Fa_Value Fa_VM::execute(int stop_frame_depth)
         Fa_ObjInstance* inst = obj_v.as_instance();
         reg_t field_idx = Fa_instr_B(instr);
 
+        if (field_idx == 0xFF) {
+            if (UNLIKELY(ip >= cur_chunk->code.size()
+                    || Fa_instr_op(cur_chunk->code[ip]) != Fa_OpCode::NOP))
+                runtime_error(ErrorCode::INVALID_OPCODE, "missing SET_FIELD payload");
+            u32 payload = cur_chunk->code[ip++];
+            u16 name_idx = Fa_instr_Bx(payload);
+
+            if (UNLIKELY(name_idx >= cur_chunk->constants.size()
+                    || !cur_chunk->constants[name_idx].is_string()))
+                runtime_error(ErrorCode::INVALID_OPCODE, "invalid field-name constant");
+
+            Fa_ObjString* name_obj = cur_chunk->constants[name_idx].as_string();
+            int slot = inst->klass->field_index(name_obj->str);
+            if (UNLIKELY(slot < 0))
+                runtime_error(ErrorCode::UNDEFINED_FIELD,
+                    std::string(name_obj->str.data(), name_obj->str.len()));
+
+            inst->fields[static_cast<u32>(slot)] = Fa_RC();
+            Fa_DISPATCH();
+        }
+
         if (UNLIKELY(field_idx >= inst->fields.size()))
             runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
 
@@ -1292,7 +1585,8 @@ Fa_Value Fa_VM::execute(int stop_frame_depth)
 // Calls target_chunk with self_val in callee register 0. total_argc includes
 // that implicit self slot; explicit arguments must already follow call_base.
 void Fa_VM::invoke_method(Fa_Chunk* target_chunk, Fa_Value self_val,
-    int result_slot, int call_base, int total_argc, u32 ip, int caller_stack_top)
+    int result_slot, int call_base, int total_argc, u32 ip, int caller_stack_top,
+    Fa_GlobalEnvironment* globals)
 {
     if (UNLIKELY(target_chunk == nullptr))
         runtime_error(ErrorCode::TYPE_ERROR_CALL, "method slot is empty");
@@ -1326,7 +1620,8 @@ void Fa_VM::invoke_method(Fa_Chunk* target_chunk, Fa_Value self_val,
     SAVE_IP();
     m_frames[m_frames_top] = Fa_CallFrame(nullptr, target_chunk, 0,
         static_cast<u16>(call_base), static_cast<u16>(local_count),
-        static_cast<u16>(result_slot), static_cast<u16>(caller_stack_top));
+        static_cast<u16>(result_slot), static_cast<u16>(caller_stack_top),
+        globals == nullptr ? current_globals() : globals);
     m_frames_top++;
 }
 
@@ -1358,7 +1653,7 @@ void Fa_VM::call_value(Fa_Value callee, int argc, int call_base, bool tail)
 
             m_frames[m_frames_top - 1] = Fa_CallFrame(fn, fchk, 0,
                 static_cast<u16>(cur_base), static_cast<u16>(local_count),
-                old_frame.return_slot, old_frame.caller_stack_top);
+                old_frame.return_slot, old_frame.caller_stack_top, fn->globals);
             m_stack_top = new_top;
         } else {
             if (UNLIKELY(m_frames_top >= MAX_FRAMES))
@@ -1379,7 +1674,7 @@ void Fa_VM::call_value(Fa_Value callee, int argc, int call_base, bool tail)
 
             m_frames[m_frames_top] = Fa_CallFrame(fn, fchk, 0,
                 static_cast<u16>(call_base), static_cast<u16>(local_count),
-                static_cast<u16>(call_base - 1), static_cast<u16>(caller_stack_top));
+                static_cast<u16>(call_base - 1), static_cast<u16>(caller_stack_top), fn->globals);
             m_frames_top++;
         }
         return;
@@ -1459,14 +1754,14 @@ void Fa_VM::call_value(Fa_Value callee, int argc, int call_base, bool tail)
         if (tail && m_frames_top > 0) {
             m_frames[m_frames_top - 1] = Fa_CallFrame(nullptr, ctor_chunk, 0,
                 static_cast<u16>(dest_base), static_cast<u16>(local_count),
-                old_frame.return_slot, old_frame.caller_stack_top);
+                old_frame.return_slot, old_frame.caller_stack_top, ctor_chunk->globals);
             m_stack_top = new_top;
         } else {
             if (UNLIKELY(m_frames_top >= MAX_FRAMES))
                 runtime_error(ErrorCode::STACK_OVERFLOW);
             m_frames[m_frames_top] = Fa_CallFrame(nullptr, ctor_chunk, 0,
                 static_cast<u16>(dest_base), static_cast<u16>(local_count),
-                static_cast<u16>(call_base - 1), static_cast<u16>(caller_stack_top));
+                static_cast<u16>(call_base - 1), static_cast<u16>(caller_stack_top), ctor_chunk->globals);
             m_frames_top++;
         }
         return;
@@ -1496,7 +1791,7 @@ void Fa_VM::call_value(Fa_Value callee, int argc, int call_base, bool tail)
                 m_stack[dest_base + i] = Fa_Value::nil();
             m_frames[m_frames_top - 1] = Fa_CallFrame(nullptr, target, 0,
                 static_cast<u16>(dest_base), static_cast<u16>(target->local_count),
-                old_frame.return_slot, old_frame.caller_stack_top);
+                old_frame.return_slot, old_frame.caller_stack_top, target->globals);
             m_stack_top = new_top;
             return;
         }
@@ -1514,7 +1809,7 @@ void Fa_VM::call_value(Fa_Value callee, int argc, int call_base, bool tail)
         m_stack_top = new_top;
         m_frames[m_frames_top++] = Fa_CallFrame(nullptr, target, 0,
             static_cast<u16>(method_base), static_cast<u16>(target->local_count),
-            static_cast<u16>(call_base - 1), static_cast<u16>(caller_stack_top));
+            static_cast<u16>(call_base - 1), static_cast<u16>(caller_stack_top), target->globals);
         return;
     }
 
@@ -1528,6 +1823,28 @@ void Fa_VM::call_value(Fa_Value callee, int argc, int call_base, bool tail)
 Fa_Value Fa_VM::call_native(Fa_ObjNative* nat, int argc, int call_base)
 {
     return (this->*nat->fn)(argc, &m_stack[call_base]);
+}
+
+Fa_Value Fa_VM::call_value_sync(Fa_Value callee, Fa_ObjList* arguments)
+{
+    if (arguments == nullptr)
+        runtime_error(ErrorCode::NATIVE_TYPE_ERROR, "dynamic call expects an argument list");
+    int argc = static_cast<int>(arguments->elements.size());
+    int stop_depth = m_frames_top;
+    int saved_top = m_stack_top;
+    ensure_stack_slots(argc + 1);
+    int callee_slot = m_stack_top;
+    m_stack[callee_slot] = callee;
+    for (int i = 0; i < argc; ++i)
+        m_stack[callee_slot + 1 + i] = arguments->elements[static_cast<u32>(i)];
+    m_stack_top = callee_slot + argc + 1;
+
+    call_value(callee, argc, callee_slot + 1, false);
+    Fa_Value result = m_frames_top == stop_depth
+        ? m_stack[callee_slot]
+        : execute(stop_depth);
+    m_stack_top = saved_top;
+    return result;
 }
 
 Fa_Value Fa_VM::call_special_sync(Fa_Value receiver, int special_slot)
@@ -1549,7 +1866,7 @@ Fa_Value Fa_VM::call_special_sync(Fa_Value receiver, int special_slot)
     int result_slot = caller_top;
     int call_base = caller_top + 1;
     invoke_method(target, receiver, result_slot, call_base, 1,
-        frame().ip, caller_top);
+        frame().ip, caller_top, target->globals);
     return execute(stop_depth);
 }
 
@@ -1580,44 +1897,89 @@ void Fa_VM::intern_chunk_constants(Fa_Chunk* ch)
 void Fa_VM::open_stdlib()
 {
     // Collections
-    assert(register_native("طول", &Fa_VM::Fa_len, 1) && "Failed to register native 'len'");
-    assert(register_native("اضف", &Fa_VM::Fa_append, -1) && "Failed to register native 'append'");
-    assert(register_native("احذف", &Fa_VM::Fa_pop, 1) && "Failed to register native 'pop'");
-    assert(register_native("مقطع", &Fa_VM::Fa_slice, -1) && "Failed to register native 'slice'");
-    assert(register_native("قائمة", &Fa_VM::Fa_list, -1) && "Failed to register native 'list'");
-    assert(register_native("قاموس", &Fa_VM::Fa_dict, -1) && "Failed to register native 'dict'");
+    (void)register_native("طول", &Fa_VM::Fa_len, 1);
+    (void)register_native("اضف", &Fa_VM::Fa_append, -1);
+    (void)register_native("احذف", &Fa_VM::Fa_pop, 1);
+    (void)register_native("مقطع", &Fa_VM::Fa_slice, -1);
+    (void)register_native("قائمة", &Fa_VM::Fa_list, -1);
+    (void)register_native("قاموس", &Fa_VM::Fa_dict, -1);
+    (void)register_native("__قاموس_مفاتيح", &Fa_VM::Fa_dict_keys, 1);
+    (void)register_native("__قاموس_يحتوي", &Fa_VM::Fa_dict_contains, 2);
+    (void)register_native("__قاموس_احذف", &Fa_VM::Fa_dict_delete, 2);
     // I/O
-    assert(register_native("اكتب", &Fa_VM::Fa_print, -1) && "Failed to register native 'print'");
-    assert(register_native("ادخل", &Fa_VM::Fa_input, 0) && "Failed to register native 'input'");
-    assert(register_native("افتح", &Fa_VM::Fa_open, 2) && "Failed to register native 'open'");
-    assert(register_native("اضف_ملف", &Fa_VM::Fa_append_file, 2) && "Failed to register native 'append_file'");
-    assert(register_native("اغلق", &Fa_VM::Fa_close, 1) && "Failed to register native 'close'");
+    (void)register_native("اكتب", &Fa_VM::Fa_print, -1);
+    (void)register_native("ادخل", &Fa_VM::Fa_input, 0);
+    (void)register_native("افتح", &Fa_VM::Fa_open, 2);
+    (void)register_native("اضف_ملف", &Fa_VM::Fa_append_file, 2);
+    (void)register_native("اغلق", &Fa_VM::Fa_close, 1);
     // Type system / conversion
-    assert(register_native("صنف", &Fa_VM::Fa_type, 1) && "Failed to register native 'type'");
-    assert(register_native("طبيعي", &Fa_VM::Fa_int, 1) && "Failed to register native 'int'");
-    assert(register_native("حقيقي", &Fa_VM::Fa_float, 1) && "Failed to register native 'float'");
-    assert(register_native("سلسلة", &Fa_VM::Fa_str, -1) && "Failed to register native 'str'");
-    assert(register_native("منطقي", &Fa_VM::Fa_bool, 1) && "Failed to register native 'bool'");
+    (void)register_native("صنف", &Fa_VM::Fa_type, 1);
+    (void)register_native("طبيعي", &Fa_VM::Fa_int, 1);
+    (void)register_native("حقيقي", &Fa_VM::Fa_float, 1);
+    (void)register_native("سلسلة", &Fa_VM::Fa_str, -1);
+    (void)register_native("منطقي", &Fa_VM::Fa_bool, 1);
     // String ops
-    assert(register_native("اقسم", &Fa_VM::Fa_split, 2) && "Failed to register native 'split'");
-    assert(register_native("اجمع", &Fa_VM::Fa_join, 2) && "Failed to register native 'join'");
-    assert(register_native("جزء", &Fa_VM::Fa_substr, 3) && "Failed to register native 'substr'");
-    assert(register_native("يحتوي", &Fa_VM::Fa_contains, 2) && "Failed to register native 'contains'");
-    assert(register_native("قص", &Fa_VM::Fa_trim, 1) && "Failed to register native 'trim'");
+    (void)register_native("اقسم", &Fa_VM::Fa_split, 2);
+    (void)register_native("اجمع", &Fa_VM::Fa_join, 2);
+    (void)register_native("جزء", &Fa_VM::Fa_substr, 3);
+    (void)register_native("يحتوي", &Fa_VM::Fa_contains, 2);
+    (void)register_native("قص", &Fa_VM::Fa_trim, 1);
+    (void)register_native("__نص_من_رمز", &Fa_VM::Fa_char_from_codepoint, 1);
+    (void)register_native("__عدد_من_نص", &Fa_VM::Fa_number_from_text, 1);
+    (void)register_native("__عدد_منته", &Fa_VM::Fa_number_finite, 1);
+    (void)register_native("__عدد_ليس_رقما", &Fa_VM::Fa_number_is_nan, 1);
+    (void)register_native("__JSON_اهرب", &Fa_VM::Fa_json_escape, 1);
+    (void)register_native("__JSON_اقرا_سلسلة", &Fa_VM::Fa_json_read_string, 2);
+    (void)register_native("__استدعاء", &Fa_VM::Fa_dynamic_call, 2);
+    (void)register_native("__منفذ_جديد", &Fa_VM::Fa_executor_new, 1);
+    (void)register_native("__منفذ_اغلق", &Fa_VM::Fa_executor_close, 2);
+    (void)register_native("__مهمة_ابدأ", &Fa_VM::Fa_task_start, 3);
+    (void)register_native("__مهمة_تمت", &Fa_VM::Fa_task_done, 1);
+    (void)register_native("__مهمة_نتيجة", &Fa_VM::Fa_task_result, 2);
+    (void)register_native("__مهمة_الغ", &Fa_VM::Fa_task_cancel, 1);
+    (void)register_native("__مهمة_انتظر_الكل", &Fa_VM::Fa_task_wait_all, 2);
+    (void)register_native("__ملف_افتح", &Fa_VM::Fa_file_open, 2);
+    (void)register_native("__ملف_اقرا", &Fa_VM::Fa_file_read, 2);
+    (void)register_native("__ملف_اقرا_الكل", &Fa_VM::Fa_file_read_all, 1);
+    (void)register_native("__ملف_اقرا_سطر", &Fa_VM::Fa_file_read_line, 1);
+    (void)register_native("__ملف_اكتب", &Fa_VM::Fa_file_write, 2);
+    (void)register_native("__ملف_اضف", &Fa_VM::Fa_file_write, 2);
+    (void)register_native("__ملف_ادفع", &Fa_VM::Fa_file_flush, 1);
+    (void)register_native("__ملف_اغلق", &Fa_VM::Fa_close, 1);
+    (void)register_native("__مسار_احذف", &Fa_VM::Fa_path_delete, 1);
+    (void)register_native("__مسار_glob", &Fa_VM::Fa_path_glob, 2);
+    (void)register_native("__ملف_مؤقت", &Fa_VM::Fa_temp_file, 3);
+    (void)register_native("__مجلد_مؤقت", &Fa_VM::Fa_temp_directory, 2);
+    (void)register_native("__نظام_احذف_شجرة", &Fa_VM::Fa_remove_tree, 1);
+    (void)register_native("__وقت_الان", &Fa_VM::Fa_datetime_now, 0);
+    (void)register_native("__وقت_من_حقول", &Fa_VM::Fa_datetime_from_fields, 7);
+    (void)register_native("__وقت_الى_حقول", &Fa_VM::Fa_datetime_to_fields, 2);
+    (void)register_native("__وقت_حلل", &Fa_VM::Fa_datetime_parse, 3);
+    (void)register_native("__وقت_نسق", &Fa_VM::Fa_datetime_format, 3);
+    (void)register_native("__base64_رمز", &Fa_VM::Fa_base64_encode, 2);
+    (void)register_native("__base64_فك", &Fa_VM::Fa_base64_decode, 2);
+    (void)register_native("__hex_رمز", &Fa_VM::Fa_hex_encode, 1);
+    (void)register_native("__hex_فك", &Fa_VM::Fa_hex_decode, 1);
+    (void)register_native("__هاش_جديد", &Fa_VM::Fa_hash_new, 1);
+    (void)register_native("__هاش_حدث", &Fa_VM::Fa_hash_update, 2);
+    (void)register_native("__هاش_ناتج", &Fa_VM::Fa_hash_digest, 2);
+    (void)register_native("__HMAC", &Fa_VM::Fa_hmac, 3);
+    (void)register_native("__ضغط", &Fa_VM::Fa_compress, 3);
+    (void)register_native("__فك_ضغط", &Fa_VM::Fa_decompress, 3);
     // Math
-    assert(register_native("ادنى", &Fa_VM::Fa_floor, 1) && "Failed to register native 'floor'");
-    assert(register_native("اعلى", &Fa_VM::Fa_ceil, 1) && "Failed to register native 'ceil'");
-    assert(register_native("تقريب", &Fa_VM::Fa_round, 1) && "Failed to register native 'round'");
-    assert(register_native("مطلق", &Fa_VM::Fa_abs, 1) && "Failed to register native 'abs'");
-    assert(register_native("اصغر", &Fa_VM::Fa_min, -1) && "Failed to register native 'min'");
-    assert(register_native("اكبر", &Fa_VM::Fa_max, -1) && "Failed to register native 'max'");
-    assert(register_native("قوة", &Fa_VM::Fa_pow, 2) && "Failed to register native 'pow'");
-    assert(register_native("جذر", &Fa_VM::Fa_sqrt, 1) && "Failed to register native 'sqrt'");
+    (void)register_native("ادنى", &Fa_VM::Fa_floor, 1);
+    (void)register_native("اعلى", &Fa_VM::Fa_ceil, 1);
+    (void)register_native("تقريب", &Fa_VM::Fa_round, 1);
+    (void)register_native("مطلق", &Fa_VM::Fa_abs, 1);
+    (void)register_native("اصغر", &Fa_VM::Fa_min, -1);
+    (void)register_native("اكبر", &Fa_VM::Fa_max, -1);
+    (void)register_native("قوة", &Fa_VM::Fa_pow, 2);
+    (void)register_native("جذر", &Fa_VM::Fa_sqrt, 1);
     // Runtime / diagnostics
-    assert(register_native("تاكد", &Fa_VM::Fa_assert, -1) && "Failed to register native 'assert'");
-    assert(register_native("ساعة", &Fa_VM::Fa_clock, 0) && "Failed to register native 'clock'");
-    assert(register_native("عطل", &Fa_VM::Fa_error, -1) && "Failed to register native 'error'");
-    assert(register_native("وقت", &Fa_VM::Fa_time, 0) && "Failed to register native 'time'");
+    (void)register_native("تاكد", &Fa_VM::Fa_assert, -1);
+    (void)register_native("ساعة", &Fa_VM::Fa_clock, 0);
+    (void)register_native("عطل", &Fa_VM::Fa_error, -1);
+    (void)register_native("وقت", &Fa_VM::Fa_time, 0);
 }
 
 bool Fa_VM::register_native(Fa_StringRef const& name, NativeFn fn, int arity)
@@ -1625,13 +1987,7 @@ bool Fa_VM::register_native(Fa_StringRef const& name, NativeFn fn, int arity)
     Fa_ObjString* name_obj = m_gc.make_obj_string(name);
     Fa_Value val = m_gc.make_native(fn, name_obj, arity);
 
-    if (u32* slot = m_global_index.find_ptr(name)) {
-        m_global_slots[*slot] = val;
-    } else {
-        auto slot_idx = m_global_slots.size();
-        m_global_slots.push(val);
-        m_global_index.insert_or_assign(name, slot_idx);
-    }
+    store_global(&m_builtin_environment, name, val);
 
     return true;
 }

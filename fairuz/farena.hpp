@@ -6,6 +6,7 @@
 #include <functional>
 #include <optional>
 #include <sys/mman.h>
+#include <type_traits>
 #include <vector>
 
 namespace fairuz {
@@ -93,7 +94,13 @@ public:
     using OutOfMemoryHandler = std::function<bool(size_t requested)>;
 
 private:
+    struct DestructorRecord {
+        void* object { nullptr };
+        void (*destroy)(void*) { nullptr };
+    };
+
     std::vector<Fa_ArenaBlock> m_blocks { };
+    std::vector<DestructorRecord> m_destructors { };
     size_t m_block_size { DEFAULT_BLOCK_SIZE };
     size_t m_next_block_size { DEFAULT_BLOCK_SIZE };
     std::string m_name { "arena" };
@@ -113,7 +120,11 @@ public:
     {
     }
 
-    ~Fa_ArenaAllocator() { reset(); }
+    ~Fa_ArenaAllocator()
+    {
+        destroy_objects();
+        m_blocks.clear();
+    }
 
     Fa_ArenaAllocator(Fa_ArenaAllocator const&) = delete;
     Fa_ArenaAllocator& operator=(Fa_ArenaAllocator const&) = delete;
@@ -125,6 +136,7 @@ public:
 
     void reset()
     {
+        destroy_objects();
         m_blocks.clear();
         m_last_ptr = nullptr;
         m_last_size = 0;
@@ -155,13 +167,50 @@ public:
     [[nodiscard]] T* allocate_object(Args&&... args)
     {
         static_assert(std::is_constructible_v<T, Args...>, "T must be constructible with Args...");
-        return ::new (allocate(sizeof(T))) T(std::forward<Args>(args)...);
+        T* object = ::new (allocate(sizeof(T))) T(std::forward<Args>(args)...);
+        if constexpr (!std::is_trivially_destructible_v<T>) {
+            try {
+                m_destructors.push_back({ object, [](void* pointer) {
+                    static_cast<T*>(pointer)->~T();
+                } });
+            } catch (...) {
+                object->~T();
+                throw;
+            }
+        }
+        return object;
     }
 
     template<typename T>
-    void deallocate_object(T* obj) { deallocate(static_cast<void*>(obj), sizeof(T)); }
+    void deallocate_object(T* obj)
+    {
+        if constexpr (!std::is_trivially_destructible_v<T>)
+            unregister_destructor(obj);
+        deallocate(static_cast<void*>(obj), sizeof(T));
+    }
 
 private:
+    void destroy_objects()
+    {
+        // Pop before invoking so a destructor may safely release another
+        // arena object and unregister its pending callback.
+        while (!m_destructors.empty()) {
+            DestructorRecord record = m_destructors.back();
+            m_destructors.pop_back();
+            record.destroy(record.object);
+        }
+    }
+
+    void unregister_destructor(void* object)
+    {
+        for (size_t i = m_destructors.size(); i > 0; --i) {
+            if (m_destructors[i - 1].object == object) {
+                m_destructors.erase(m_destructors.begin() + static_cast<ptrdiff_t>(i - 1));
+                return;
+            }
+        }
+    }
+
     void* allocate_slow(size_t size, size_t alignment);
 
     [[nodiscard]] unsigned char* allocate_from_blocks(size_t alloc_size, size_t align = alignof(std::max_align_t));

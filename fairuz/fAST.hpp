@@ -43,6 +43,7 @@ class Fa_BreakStmt;
 class Fa_ContinueStmt;
 class Fa_BlockStmt;
 class Fa_ClassDef;
+class Fa_ImportStmt;
 
 class Fa_ASTNode {
 public:
@@ -110,6 +111,7 @@ public:
     virtual void visit(Fa_ContinueStmt&) = 0;
     virtual void visit(Fa_BlockStmt&) = 0;
     virtual void visit(Fa_ClassDef&) = 0;
+    virtual void visit(Fa_ImportStmt&) = 0;
 };
 
 enum class Fa_BinaryOp : u8 {
@@ -703,6 +705,7 @@ public:
         CONTINUE,
         BLOCK,
         CLASS_DEF,
+        IMPORT,
         INVALID
     };
 
@@ -1087,6 +1090,7 @@ public:
 class Fa_ClassDef final : public Fa_Stmt {
 private:
     Fa_Expr* m_name { nullptr };
+    Fa_Expr* m_parent { nullptr };
     Fa_Array<Fa_Expr*> m_members { nullptr };
     Fa_Array<Fa_Stmt*> m_methods { nullptr };
     Fa_Array<Fa_Stmt*> m_sp_methods { nullptr };
@@ -1094,11 +1098,13 @@ private:
 public:
     explicit Fa_ClassDef(
         Fa_Expr* name,
+        Fa_Expr* parent,
         Fa_Array<Fa_Expr*> members,
         Fa_Array<Fa_Stmt*> methods,
         Fa_SourceLocation loc)
         : Fa_Stmt(loc, Kind::CLASS_DEF)
         , m_name(name)
+        , m_parent(parent)
         , m_members(members)
         , m_methods(methods)
     {
@@ -1126,7 +1132,10 @@ public:
                 return false;
         }
 
-        return m_name->equals(class_def->get_name());
+        bool const parents_equal = (m_parent == nullptr || class_def->get_parent() == nullptr)
+            ? m_parent == class_def->get_parent()
+            : m_parent->equals(class_def->get_parent());
+        return parents_equal && m_name->equals(class_def->get_name());
     }
     [[nodiscard]] Fa_ClassDef* clone() const override
     {
@@ -1136,13 +1145,48 @@ public:
             member_clones.push(mem->clone());
         for (Fa_Stmt* met : m_methods)
             method_clones.push(met->clone());
-        return ALLOCATE_AST_NODE(Fa_ClassDef, m_name->clone(), member_clones, method_clones, get_location());
+        return ALLOCATE_AST_NODE(Fa_ClassDef, m_name->clone(),
+            m_parent == nullptr ? nullptr : m_parent->clone(), member_clones, method_clones, get_location());
     }
     void accept(Fa_StmtVisitor& v) override { v.visit(*this); }
     [[nodiscard]] Fa_Array<Fa_Expr*> get_members() const { return m_members; }
     [[nodiscard]] Fa_Array<Fa_Stmt*> get_methods() const { return m_methods; }
     [[nodiscard]] Fa_Expr* get_name() const { return m_name; }
+    [[nodiscard]] Fa_Expr* get_parent() const { return m_parent; }
 }; // class Fa_ClassDef
+
+class Fa_ImportStmt final : public Fa_Stmt {
+private:
+    Fa_StringRef m_module;
+    Fa_StringRef m_name;
+    Fa_StringRef m_alias;
+
+public:
+    Fa_ImportStmt(Fa_StringRef module, Fa_StringRef name, Fa_StringRef alias, Fa_SourceLocation loc)
+        : Fa_Stmt(loc, Kind::IMPORT)
+        , m_module(module)
+        , m_name(name)
+        , m_alias(alias)
+    {
+    }
+
+    [[nodiscard]] bool equals(Fa_Stmt const* other) const override
+    {
+        if (other == nullptr || other->get_kind() != Kind::IMPORT)
+            return false;
+        auto const* import = static_cast<Fa_ImportStmt const*>(other);
+        return m_module == import->m_module && m_name == import->m_name && m_alias == import->m_alias;
+    }
+    [[nodiscard]] Fa_ImportStmt* clone() const override
+    {
+        return ALLOCATE_AST_NODE(Fa_ImportStmt, m_module, m_name, m_alias, get_location());
+    }
+    void accept(Fa_StmtVisitor& v) override { v.visit(*this); }
+    [[nodiscard]] Fa_StringRef const& get_module() const { return m_module; }
+    [[nodiscard]] Fa_StringRef const& get_name() const { return m_name; }
+    [[nodiscard]] Fa_StringRef const& get_alias() const { return m_alias; }
+    [[nodiscard]] bool imports_member() const { return !m_name.empty(); }
+};
 
 class Fa_BreakStmt final : public Fa_Stmt {
 public:
@@ -1269,7 +1313,17 @@ static inline Fa_ReturnStmt* Fa_make_return(Fa_SourceLocation loc, Fa_Expr* valu
 static inline Fa_ClassDef* Fa_make_class_def(Fa_Expr* name, Fa_Array<Fa_Expr*> members,
     Fa_Array<Fa_Stmt*> methods, Fa_SourceLocation loc)
 {
-    return ALLOCATE_AST_NODE(Fa_ClassDef, name, members, methods, loc);
+    return ALLOCATE_AST_NODE(Fa_ClassDef, name, nullptr, members, methods, loc);
+}
+static inline Fa_ClassDef* Fa_make_class_def(Fa_Expr* name, Fa_Expr* parent,
+    Fa_Array<Fa_Expr*> members, Fa_Array<Fa_Stmt*> methods, Fa_SourceLocation loc)
+{
+    return ALLOCATE_AST_NODE(Fa_ClassDef, name, parent, members, methods, loc);
+}
+static inline Fa_ImportStmt* Fa_make_import(Fa_StringRef module, Fa_StringRef name,
+    Fa_StringRef alias, Fa_SourceLocation loc)
+{
+    return ALLOCATE_AST_NODE(Fa_ImportStmt, module, name, alias, loc);
 }
 static inline Fa_BreakStmt* Fa_make_break(Fa_SourceLocation loc)
 {
@@ -1325,6 +1379,7 @@ inline Fa_ContinueStmt* as_continue(Fa_Stmt* s) { return static_cast<Fa_Continue
 inline Fa_BlockStmt* as_block(Fa_Stmt* s) { return static_cast<Fa_BlockStmt*>(s); }
 inline Fa_FunctionDef* as_function_def(Fa_Stmt* s) { return static_cast<Fa_FunctionDef*>(s); }
 inline Fa_ClassDef* as_class_def(Fa_Stmt* s) { return static_cast<Fa_ClassDef*>(s); }
+inline Fa_ImportStmt* as_import(Fa_Stmt* s) { return static_cast<Fa_ImportStmt*>(s); }
 inline Fa_AssignmentStmt* as_assignment_stmt(Fa_Stmt* s) { return static_cast<Fa_AssignmentStmt*>(s); }
 inline Fa_ExprStmt* as_expr_stmt(Fa_Stmt* s) { return static_cast<Fa_ExprStmt*>(s); }
 
@@ -1348,6 +1403,7 @@ inline Fa_ContinueStmt const* as_continue(Fa_Stmt const* s) { return static_cast
 inline Fa_BlockStmt const* as_block(Fa_Stmt const* s) { return static_cast<Fa_BlockStmt const*>(s); }
 inline Fa_FunctionDef const* as_function_def(Fa_Stmt const* s) { return static_cast<Fa_FunctionDef const*>(s); }
 inline Fa_ClassDef const* as_class_def(Fa_Stmt const* s) { return static_cast<Fa_ClassDef const*>(s); }
+inline Fa_ImportStmt const* as_import(Fa_Stmt const* s) { return static_cast<Fa_ImportStmt const*>(s); }
 inline Fa_AssignmentStmt const* as_assignment_stmt(Fa_Stmt const* s) { return static_cast<Fa_AssignmentStmt const*>(s); }
 inline Fa_ExprStmt const* as_expr_stmt(Fa_Stmt const* s) { return static_cast<Fa_ExprStmt const*>(s); }
 
@@ -1363,6 +1419,7 @@ inline Fa_AssignmentExpr const* as_assignment_expr(Fa_Expr const* e) { return st
 inline Fa_GetExpr const* as_get(Fa_Expr const* e) { return static_cast<Fa_GetExpr const*>(e); }
 
 static inline bool is_class_def(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::CLASS_DEF; }
+static inline bool is_import(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::IMPORT; }
 static inline bool is_if(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::IF; }
 static inline bool is_while(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::WHILE; }
 static inline bool is_for(Fa_Stmt const* s) { return s->get_kind() == Fa_Stmt::Kind::FOR; }

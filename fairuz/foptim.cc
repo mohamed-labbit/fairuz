@@ -60,7 +60,7 @@ public:
     }
 };
 
-inline bool Fa_is_pure(AST::Fa_Expr* e)
+bool Fa_is_pure(AST::Fa_Expr* e)
 {
     Fa_PurityVisitor visitor;
     e->accept(visitor);
@@ -94,8 +94,10 @@ std::optional<Fa_Value> try_fold_unary(AST::Fa_UnaryExpr const* e)
 
     switch (e->get_operator()) {
     case AST::Fa_UnaryOp::OP_NEG:
-        if (cv->is_int())
-            return cv->is_int() ? Fa_Value::from_int(-cv->as_int()) : Fa_Value::from_real(-cv->as_double());
+        if (cv->is_int() && cv->as_int() != Fa_Value::int_min())
+            return Fa_Value::from_int(-cv->as_int());
+        if (cv->is_double())
+            return Fa_Value::from_real(-cv->as_double());
         return std::nullopt;
     case AST::Fa_UnaryOp::OP_NOT:
         return Fa_Value::from_bool(!cv->is_truthy());
@@ -118,33 +120,55 @@ std::optional<Fa_Value> _try_fold_binary(AST::Fa_BinaryExpr const* e)
 
     AST::Fa_BinaryOp op = e->get_operator();
 
-    if (op == AST::Fa_BinaryOp::OP_EQ)
-        return Fa_Value::from_bool(*L == *R);
-
-    if (op == AST::Fa_BinaryOp::OP_NEQ)
-        return Fa_Value::from_bool(*L != *R);
-
     bool both_ints = L->is_int() && R->is_int();
+    bool both_numbers = L->is_number() && R->is_number();
+
+    if (op == AST::Fa_BinaryOp::OP_EQ || op == AST::Fa_BinaryOp::OP_NEQ) {
+        bool equal;
+        if (L->is_nil() || R->is_nil())
+            equal = L->is_nil() && R->is_nil();
+        else if (both_numbers)
+            equal = L->as_double_any() == R->as_double_any();
+        else
+            return std::nullopt;
+        return Fa_Value::from_bool(op == AST::Fa_BinaryOp::OP_EQ ? equal : !equal);
+    }
+
+    if (!both_numbers)
+        return std::nullopt;
 
     f64 ld = L->as_double_any();
     f64 rd = R->as_double_any();
+    i64 li = both_ints ? L->as_int() : 0;
+    i64 ri = both_ints ? R->as_int() : 0;
 
-    auto li = L->is_int() ? L->as_int() : static_cast<i64>(L->as_double_any());
-    auto ri = R->is_int() ? R->as_int() : static_cast<i64>(R->as_double_any());
+    auto checked_int = [](auto value) -> std::optional<Fa_Value> {
+        if (value < static_cast<__int128>(Fa_Value::int_min()) || value > static_cast<__int128>(Fa_Value::int_max()))
+            return std::nullopt;
+        return Fa_Value::from_int(static_cast<i64>(value));
+    };
 
     switch (op) {
-    case AST::Fa_BinaryOp::OP_ADD: return both_ints ? Fa_Value::from_int(li + ri) : Fa_Value::from_real(ld + rd);
-    case AST::Fa_BinaryOp::OP_SUB: return both_ints ? Fa_Value::from_int(li - ri) : Fa_Value::from_real(ld - rd);
-    case AST::Fa_BinaryOp::OP_MUL: return both_ints ? Fa_Value::from_int(li * ri) : Fa_Value::from_real(ld * rd);
+    case AST::Fa_BinaryOp::OP_ADD:
+        return both_ints ? checked_int(static_cast<__int128>(li) + ri)
+                         : std::optional<Fa_Value> { Fa_Value::from_real(ld + rd) };
+    case AST::Fa_BinaryOp::OP_SUB:
+        return both_ints ? checked_int(static_cast<__int128>(li) - ri)
+                         : std::optional<Fa_Value> { Fa_Value::from_real(ld - rd) };
+    case AST::Fa_BinaryOp::OP_MUL:
+        return both_ints ? checked_int(static_cast<__int128>(li) * ri)
+                         : std::optional<Fa_Value> { Fa_Value::from_real(ld * rd) };
     case AST::Fa_BinaryOp::OP_DIV:
         if (rd == 0.0)
             return std::nullopt;
+        if (both_ints && li % ri == 0)
+            return Fa_Value::from_int(li / ri);
         return Fa_Value::from_real(ld / rd);
     case AST::Fa_BinaryOp::OP_MOD: {
         if (rd == 0.0)
             return std::nullopt;
         if (both_ints)
-            return Fa_Value::from_int(li % ri);
+            return Fa_Value::from_real(static_cast<f64>(li % ri));
         return Fa_Value::from_real(std::fmod(ld, rd));
     }
     case AST::Fa_BinaryOp::OP_POW: return Fa_Value::from_real(std::pow(ld, rd));
@@ -158,11 +182,15 @@ std::optional<Fa_Value> _try_fold_binary(AST::Fa_BinaryExpr const* e)
     case AST::Fa_BinaryOp::OP_LSHIFT:
         if (!both_ints || ri < 0 || ri >= 64)
             return std::nullopt;
-        return Fa_Value::from_int(li << ri);
-    case AST::Fa_BinaryOp::OP_RSHIFT:
+        return checked_int(static_cast<__int128>(li) * (static_cast<__int128>(1) << ri));
+    case AST::Fa_BinaryOp::OP_RSHIFT: {
         if (!both_ints || ri < 0 || ri >= 64)
             return std::nullopt;
-        return Fa_Value::from_int(li >> ri);
+        u64 shifted = static_cast<u64>(li) >> ri;
+        if (li < 0)
+            return Fa_Value::from_real(static_cast<f64>(shifted));
+        return Fa_Value::from_int(static_cast<i64>(shifted));
+    }
     default:
         return std::nullopt;
     }
@@ -247,190 +275,19 @@ std::optional<Fa_Value> try_fold_expr(AST::Fa_Expr* e)
     return visitor.result();
 }
 
-std::optional<AST::Fa_Expr*> try_strength_reduce_binary(AST::Fa_Expr* e)
+std::optional<AST::Fa_Expr*> try_strength_reduce_binary(AST::Fa_Expr*)
 {
-    if (e == nullptr || !AST::is_binary(e))
-        return std::nullopt;
-
-    auto binary_expr = as_binary(e);
-    AST::Fa_Expr* lhs = binary_expr->get_left();
-    AST::Fa_Expr* rhs = binary_expr->get_right();
-    AST::Fa_BinaryOp bin_op = binary_expr->get_operator();
-
-    if (!Fa_is_pure(lhs))
-        /// NOTE: do not optimize non-pure expressions since they have side effects
-        return std::nullopt;
-
-    // x * c (where c is a compile time constant) and x is a pure expression node
-    if (AST::is_literal(rhs)) {
-        auto lit_rhs = as_literal(rhs);
-        if (!lit_rhs->is_numeric())
-            return std::nullopt;
-
-        if (bin_op == AST::Fa_BinaryOp::OP_MUL) {
-            // x * 0 = 0
-            f64 lit_rhs_val = lit_rhs->as_number();
-
-            if (lit_rhs_val == 0.0f)
-                return lit_rhs->is_float() ? AST::Fa_make_literal_float(0.0f, e->get_location())
-                                           : AST::Fa_make_literal_int(INT64_C(0), e->get_location());
-
-            // x * 1 = x
-            if (lit_rhs_val == 1.0f)
-                return lhs->clone();
-
-            // x * 2
-            if (lit_rhs_val == 2.0f) {
-                // x + x
-                AST::Fa_BinaryExpr* bin_clone = binary_expr->clone();
-                bin_clone->set_operator(AST::Fa_BinaryOp::OP_ADD);
-                bin_clone->set_right(lhs->clone());
-                return bin_clone;
-            }
-        }
-
-        if (lit_rhs->is_numeric() && bin_op == AST::Fa_BinaryOp::OP_DIV) {
-            f64 lit_rhs_val = lit_rhs->as_number();
-
-            // x / 1 = x
-            if (lit_rhs_val == 1.0f)
-                return lhs->clone();
-
-            // x / -1 = -x
-            if (lit_rhs_val == -1.0f)
-                return AST::Fa_make_unary(lhs->clone(), AST::Fa_UnaryOp::OP_NEG, lhs->get_location());
-        }
-
-        if (lit_rhs->is_integer()) {
-            i64 lit_rhs_val = lit_rhs->get_int();
-            // &
-            if (bin_op == AST::Fa_BinaryOp::OP_BITAND) {
-                // x & 0 = 0
-                if (lit_rhs_val == 0)
-                    return AST::Fa_make_literal_int(0, { });
-
-                // x & -1 = x
-                if (lit_rhs_val == -1)
-                    return lhs->clone();
-            }
-
-            // |
-            if (bin_op == AST::Fa_BinaryOp::OP_BITOR) {
-                // x | 0 = x
-                if (lit_rhs_val == 0)
-                    return lhs->clone();
-
-                // x | -1 = -1
-                if (lit_rhs_val == -1)
-                    return AST::Fa_make_literal_int(-1, { });
-            }
-
-            // ^
-            if (bin_op == AST::Fa_BinaryOp::OP_BITXOR) {
-                // x ^ 0 = x
-                if (lit_rhs_val == 0)
-                    return lhs->clone();
-
-                // x ^ -1 = ~x
-                if (lit_rhs_val == -1)
-                    return AST::Fa_make_unary(lhs->clone(), AST::Fa_UnaryOp::OP_BITNOT, binary_expr->get_location());
-            }
-
-            // x << 0 = x , x >> 0 = x
-            if ((bin_op == AST::Fa_BinaryOp::OP_LSHIFT || bin_op == AST::Fa_BinaryOp::OP_RSHIFT) && lit_rhs->get_int() == 0)
-                return lhs->clone();
-        }
-    }
-
-    if (bin_op == AST::Fa_BinaryOp::OP_AND) {
-        if (AST::is_literal(rhs) && Fa_is_pure(lhs)) {
-            auto lit_rhs = as_literal(rhs);
-            if (lit_rhs->is_bool())
-                return lit_rhs->get_bool() ? lhs->clone() : AST::Fa_make_literal_bool(false, binary_expr->get_location());
-        }
-
-        if (AST::is_literal(lhs) && Fa_is_pure(rhs)) {
-            auto lit_lhs = as_literal(lhs);
-            if (lit_lhs->is_bool())
-                return lit_lhs->get_bool() ? rhs->clone() : AST::Fa_make_literal_bool(false, binary_expr->get_location());
-        }
-    }
-
-    if (bin_op == AST::Fa_BinaryOp::OP_OR) {
-        if (AST::is_literal(rhs) && Fa_is_pure(lhs)) {
-            auto lit_rhs = as_literal(rhs);
-            if (lit_rhs->is_bool())
-                return lit_rhs->get_bool() ? AST::Fa_make_literal_bool(true, binary_expr->get_location()) : lhs->clone();
-        }
-
-        if (AST::is_literal(lhs) && Fa_is_pure(rhs)) {
-            auto lit_lhs = as_literal(lhs);
-            if (lit_lhs->is_bool())
-                return lit_lhs->get_bool() ? AST::Fa_make_literal_bool(true, binary_expr->get_location()) : rhs->clone();
-        }
-    }
-
+    // Algebraic identities are not generally semantics-preserving in a
+    // dynamic language: evaluating a discarded operand may throw, and an
+    // instance may overload the original operator. Keep this pass disabled
+    // until type/effect information proves an individual rewrite safe.
     return std::nullopt;
 }
 
-std::optional<AST::Fa_Expr*> try_strength_reduce_unary(AST::Fa_Expr* e)
+std::optional<AST::Fa_Expr*> try_strength_reduce_unary(AST::Fa_Expr*)
 {
-    if (e == nullptr || !AST::is_unary(e))
-        return std::nullopt;
-
-    auto unary_expr = as_unary(e);
-    AST::Fa_Expr const* operand = unary_expr->get_operand();
-    AST::Fa_UnaryOp un_op = unary_expr->get_operator();
-
-    // ~
-    if (un_op == AST::Fa_UnaryOp::OP_BITNOT) {
-        // ~~x = x != 0
-        if (AST::is_unary(operand)) {
-            auto inner = as_unary(operand);
-            if (inner->get_operator() == AST::Fa_UnaryOp::OP_BITNOT) {
-                auto inner_operand = inner->get_operand();
-                return AST::Fa_make_binary(inner_operand->clone(),
-                    AST::Fa_make_literal_int(0, { }), AST::Fa_BinaryOp::OP_NEQ, unary_expr->get_location());
-            }
-        }
-
-        if (operand->get_kind() == AST::Fa_Expr::Kind::BINARY) {
-            auto inner = as_binary(operand);
-
-            auto setup_clone = [&](AST::Fa_BinaryOp op) -> AST::Fa_BinaryExpr* {
-                auto clone = inner->clone();
-                clone->set_operator(op);
-                return clone;
-            };
-
-            auto op = inner->get_operator();
-
-            // ~(x == y) = x != y
-            if (op == AST::Fa_BinaryOp::OP_EQ)
-                return setup_clone(AST::Fa_BinaryOp::OP_NEQ);
-
-            // ~(x != y) = x == y
-            if (op == AST::Fa_BinaryOp::OP_NEQ)
-                return setup_clone(AST::Fa_BinaryOp::OP_EQ);
-
-            // ~(x < y) = x >= y
-            if (op == AST::Fa_BinaryOp::OP_LT)
-                return setup_clone(AST::Fa_BinaryOp::OP_GTE);
-
-            // ~(x > y) = x <= y
-            if (op == AST::Fa_BinaryOp::OP_GT)
-                return setup_clone(AST::Fa_BinaryOp::OP_LTE);
-
-            // ~(x <= y) = x > y
-            if (op == AST::Fa_BinaryOp::OP_LTE)
-                return setup_clone(AST::Fa_BinaryOp::OP_GT);
-
-            // ~(x >= y) = x < y
-            if (op == AST::Fa_BinaryOp::OP_GTE)
-                return setup_clone(AST::Fa_BinaryOp::OP_LT);
-        }
-    }
-
+    // Bitwise complement is not logical negation, and dynamic operands may
+    // dispatch user code. No untyped unary rewrite is safe here.
     return std::nullopt;
 }
 

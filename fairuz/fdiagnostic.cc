@@ -8,12 +8,45 @@
 // header to avoid the circular include (flexer.hpp
 // includes fdiagnostic.hpp)
 
+#include <algorithm>
 #include <cstdlib>
 #include <exception>
 #include <iostream>
 #include <sstream>
+#include <string_view>
+#include <unistd.h>
 
 namespace fairuz::diagnostic {
+
+namespace {
+
+std::string const& terminal_color(std::string const& color)
+{
+    static std::string const empty;
+    static bool const enabled = ::isatty(STDERR_FILENO) != 0
+        && std::getenv("NO_COLOR") == nullptr;
+    return enabled ? color : empty;
+}
+
+std::string escape_terminal(std::string_view text)
+{
+    static constexpr char hex[] = "0123456789ABCDEF";
+    std::string escaped;
+    escaped.reserve(text.size());
+
+    for (unsigned char ch : text) {
+        if (ch < 0x20 || ch == 0x7f) {
+            escaped += "\\x";
+            escaped += hex[ch >> 4];
+            escaped += hex[ch & 0x0f];
+        } else {
+            escaped += static_cast<char>(ch);
+        }
+    }
+    return escaped;
+}
+
+} // namespace
 
 /*Fa_DiagnosticEngine::DiagnosticId Fa_DiagnosticEngine::report(
     Severity const sev, Fa_SourceLocation const loc, u16 err_code, std::string const& code)
@@ -80,7 +113,7 @@ void Fa_DiagnosticEngine::add_note(DiagnosticId id, i32 line, std::string const&
 
 void Fa_DiagnosticEngine::emit_error(std::string const& msg, Severity const sv)
 {
-    std::cerr << sv_to_str(sv) << ": " << msg << "\n";
+    std::cerr << sv_to_str(sv) << ": " << escape_terminal(msg) << "\n";
     if (sv == Severity::FATAL)
         panic("");
 }
@@ -89,18 +122,18 @@ void Fa_DiagnosticEngine::emit_error(std::string const& msg, Severity const sv)
 {
     pretty_print();
     if (!msg.empty())
-        std::cerr << Color::RESET << msg << "\n";
+        std::cerr << terminal_color(Color::RESET) << escape_terminal(msg) << "\n";
     throw Fa_DiagnosticAbort();
 }
 
 std::string Fa_DiagnosticEngine::sv_to_str(Severity const sv)
 {
     switch (sv) {
-    case Severity::NOTE: return Color::BOLD + Color::CYAN + "note";
-    case Severity::FATAL: return Color::BOLD + Color::RED + "fatal";
-    case Severity::ERROR: return Color::BOLD + Color::RED + "error";
-    case Severity::WARNING: return Color::BOLD + Color::YELLOW + "warning";
-    default: return Color::BOLD + "unknown";
+    case Severity::NOTE: return terminal_color(Color::BOLD) + terminal_color(Color::CYAN) + "note";
+    case Severity::FATAL: return terminal_color(Color::BOLD) + terminal_color(Color::RED) + "fatal";
+    case Severity::ERROR: return terminal_color(Color::BOLD) + terminal_color(Color::RED) + "error";
+    case Severity::WARNING: return terminal_color(Color::BOLD) + terminal_color(Color::YELLOW) + "warning";
+    default: return terminal_color(Color::BOLD) + "unknown";
     }
 }
 
@@ -145,9 +178,6 @@ void Fa_DiagnosticEngine::print_snippet(Fa_SourceLocation const& loc) const
     std::string line_num_str = std::to_string(loc.line);
     std::string gutter(line_num_str.size(), ' ');
 
-    std::cerr << "  " << Color::BOLD << Color::BLUE << line_num_str << " |" << Color::RESET
-              << " " << line_str << "\n";
-
     // column is 1-based (matches how the lexer/parser report it
     // elsewhere in this file, e.g. the "--> line N:col" text above);
     // guard against 0 so the caret math below can't underflow.
@@ -160,8 +190,20 @@ void Fa_DiagnosticEngine::print_snippet(Fa_SourceLocation const& loc) const
     if (caret_col < line_str.size() && caret_col + caret_len > line_str.size())
         caret_len = static_cast<u32>(line_str.size() - caret_col);
 
-    std::cerr << "  " << gutter << " |" << Color::RESET << " " << std::string(caret_col, ' ')
-              << Color::BOLD << Color::RED << std::string(caret_len, '^') << Color::RESET << "\n";
+    size_t source_col = std::min<size_t>(caret_col, line_str.size());
+    size_t source_len = std::min<size_t>(caret_len, line_str.size() - source_col);
+    size_t display_col = escape_terminal(
+        std::string_view(line_str).substr(0, source_col)).size();
+    size_t display_len = std::max<size_t>(1, escape_terminal(
+        std::string_view(line_str).substr(source_col, source_len)).size());
+
+    std::cerr << "  " << terminal_color(Color::BOLD) << terminal_color(Color::BLUE)
+              << line_num_str << " |" << terminal_color(Color::RESET)
+              << " " << escape_terminal(line_str) << "\n";
+    std::cerr << "  " << gutter << " |" << terminal_color(Color::RESET) << " "
+              << std::string(display_col, ' ') << terminal_color(Color::BOLD)
+              << terminal_color(Color::RED) << std::string(display_len, '^')
+              << terminal_color(Color::RESET) << "\n";
 }
 
 std::string Fa_DiagnosticEngine::to_json() const
@@ -194,9 +236,13 @@ void Fa_DiagnosticEngine::pretty_print() const
         std::string sev_str = sv_to_str(diag.severity);
 
         if (m_source != nullptr)
-            std::cerr << Color::BOLD << Color::RESET << m_source->get_path() << ": " << Color::RESET;
+            std::cerr << terminal_color(Color::BOLD) << terminal_color(Color::RESET)
+                      << escape_terminal(m_source->get_path()) << ": "
+                      << terminal_color(Color::RESET);
 
-        std::cerr << sev_str << Color::RESET << ":" << " " << error_message_for(diag.err_code) << " " << diag.code << "\n";
+        std::cerr << sev_str << terminal_color(Color::RESET) << ":" << " "
+                  << error_message_for(diag.err_code) << " "
+                  << escape_terminal(diag.code) << "\n";
 
         if (diag.src_loc.line > 0) {
             std::cerr << "  --> line " << diag.src_loc.line << ":" << diag.src_loc.column << "\n";
@@ -204,13 +250,16 @@ void Fa_DiagnosticEngine::pretty_print() const
         }
 
         if (!diag.suggestions.empty()) {
-            std::cerr << Color::BOLD << Color::CYAN << "help" << Color::RESET << ":\n";
+            std::cerr << terminal_color(Color::BOLD) << terminal_color(Color::CYAN)
+                      << "help" << terminal_color(Color::RESET) << ":\n";
             for (std::string const& sugg : diag.suggestions)
-                std::cerr << "    • " << sugg << "\n";
+                std::cerr << "    • " << escape_terminal(sugg) << "\n";
         }
 
         for (auto const& [note_line, note_msg] : diag.notes) {
-            std::cerr << Color::BOLD << Color::CYAN << "note" << Color::RESET << ": " << note_msg << "\n";
+            std::cerr << terminal_color(Color::BOLD) << terminal_color(Color::CYAN)
+                      << "note" << terminal_color(Color::RESET) << ": "
+                      << escape_terminal(note_msg) << "\n";
             if (note_line > 0)
                 std::cerr << "  --> line " << note_line << "\n";
         }
@@ -219,7 +268,8 @@ void Fa_DiagnosticEngine::pretty_print() const
     }
 
     if (is_saturated())
-        std::cerr << Color::BOLD << Color::YELLOW << "warning" << Color::RESET << ": " << m_error_count << " errors reported, "
+        std::cerr << terminal_color(Color::BOLD) << terminal_color(Color::YELLOW)
+                  << "warning" << terminal_color(Color::RESET) << ": " << m_error_count << " errors reported, "
                   << "further errors suppressed (limit: " << LIMIT << ")\n\n";
 }
 

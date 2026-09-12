@@ -2,7 +2,9 @@
 #define FA_COMPILER_HPP
 
 #include "fAST.hpp"
+#include "farray.hpp"
 #include "ferror.hpp"
+#include "fmacros.hpp"
 #include "fopcode.hpp"
 #include "fstring.hpp"
 #include "ftable.hpp"
@@ -31,6 +33,7 @@ struct CompilerState {
     bool is_top_level { false };
     bool is_dead { false };
     bool is_class_method { false };
+    bool class_layout_dynamic { false };
     Fa_Array<Fa_StringRef> class_field_names;
     Fa_Array<Fa_StringRef> class_method_names;
 
@@ -181,6 +184,28 @@ public:
 private:
     CompilerState* m_current { nullptr };
 
+    struct ScopeGuard {
+        CompilerState* cs { nullptr };
+
+        ScopeGuard(CompilerState* c)
+            : cs(c)
+        {
+            assert(cs != nullptr);
+            cs->scope_depth++;
+        }
+        ~ScopeGuard()
+        {
+            cs->scope_depth -= 1;
+            u32 depth = cs->scope_depth;
+            Fa_Array<LocalVar>& locals = cs->locals;
+            size_t pop_from = locals.size();
+            while (pop_from > 0 && locals[pop_from - 1].depth > depth)
+                pop_from -= 1;
+            if (pop_from < locals.size())
+                cs->next_reg = locals[pop_from].reg;
+            locals.resize(static_cast<u32>(pop_from));
+        }
+    };
     struct PairHash {
         size_t operator()(std::pair<Fa_StringRef, Fa_Chunk*> const& p) const noexcept
         {
@@ -197,6 +222,7 @@ private:
     };
     Fa_HashTable<std::pair<Fa_StringRef, Fa_Chunk*>, u16, PairHash, PairEqual> m_string_cache;
     Fa_HashTable<Fa_StringRef, bool, Fa_StringRefHash, Fa_StringRefEqual> m_globals;
+    Fa_HashTable<Fa_StringRef, bool, Fa_StringRefHash, Fa_StringRefEqual> m_module_names;
 
     struct VarInfo {
         enum class Kind {
@@ -243,6 +269,7 @@ private:
     Fa_ErrorOr<bool> compile_break(AST::Fa_BreakStmt* s);
     Fa_ErrorOr<bool> compile_continue(AST::Fa_ContinueStmt* s);
     Fa_ErrorOr<bool> compile_class_def(AST::Fa_ClassDef* s);
+    Fa_ErrorOr<bool> compile_import(AST::Fa_ImportStmt* s);
     Fa_ErrorOr<bool> compile_class_method(AST::Fa_Stmt* s);
     Fa_ErrorOr<Fa_ExprResult> compile_expr_impl(AST::Fa_Expr* e);
     Fa_ErrorOr<Fa_ExprResult> compile_literal_impl(AST::Fa_LiteralExpr* e);
@@ -321,10 +348,6 @@ private:
     Fa_Chunk* current_chunk() const { return m_current->chunk; }
 
     u32 current_offset() const { return current_chunk()->code.size(); }
-
-    void begin_scope() { m_current->scope_depth++; }
-
-    void end_scope(Fa_SourceLocation loc);
 
     u32 intern_string(Fa_StringRef const& str);
 

@@ -233,6 +233,10 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_statement()
         return parse_function_def();
     if (check(TokType::KW_CLASS))
         return parse_class_def();
+    if (check(TokType::KW_IMPORT) || check(TokType::KW_FROM))
+        return parse_import_stmt();
+    if (check(TokType::KW_ASSERT))
+        return parse_assert_stmt();
 
     return parse_expression_stmt();
 }
@@ -414,6 +418,16 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_def()
     advance();
     ExprPtr class_name = AST::Fa_make_name(name_tok->lexeme(), name_tok->location());
 
+    ExprPtr parent = nullptr;
+    if (consume(TokType::LPAREN)) {
+        if (!check(TokType::IDENTIFIER))
+            return report_error(ParserCode::EXPECTED_CLASS_NAME);
+        TokenPtr parent_tok = current_token();
+        advance();
+        parent = AST::Fa_make_name(parent_tok->lexeme(), parent_tok->location());
+        Fa_VERIFY_TOKEN(TokType::RPAREN, ParserCode::EXPECTED_RPAREN_CLASS);
+    }
+
     Fa_VERIFY_TOKEN(TokType::COLON, ParserCode::EXPECTED_COLON_CLASS);
     skip_newlines();
     Fa_VERIFY_TOKEN(TokType::INDENT, ParserCode::EXPECTED_INDENT);
@@ -435,10 +449,68 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_def()
     }
 
     if (check(TokType::ENDMARKER))
-        return AST::Fa_make_class_def(class_name, members, methods, start->location());
+        return AST::Fa_make_class_def(class_name, parent, members, methods, start->location());
 
     Fa_VERIFY_TOKEN(TokType::DEDENT, ParserCode::EXPECTED_DEDENT);
-    return AST::Fa_make_class_def(class_name, members, methods, start->location());
+    return AST::Fa_make_class_def(class_name, parent, members, methods, start->location());
+}
+
+Fa_ErrorOr<StmtPtr> Fa_Parser::parse_import_stmt()
+{
+    TokenPtr start = current_token();
+    bool const from_import = consume(TokType::KW_FROM);
+    if (!from_import)
+        Fa_VERIFY_TOKEN(TokType::KW_IMPORT, ParserCode::EXPECTED_IMPORT_KEYWORD);
+
+    if (!check(TokType::IDENTIFIER))
+        return report_error(ParserCode::EXPECTED_MODULE_NAME);
+
+    Fa_StringRef module = current_token()->lexeme();
+    advance();
+    while (consume(TokType::DOT)) {
+        if (!check(TokType::IDENTIFIER))
+            return report_error(ParserCode::EXPECTED_MODULE_NAME);
+        module = module + "." + current_token()->lexeme();
+        advance();
+    }
+
+    Fa_StringRef name;
+    Fa_StringRef alias;
+    if (from_import) {
+        Fa_VERIFY_TOKEN(TokType::KW_IMPORT, ParserCode::EXPECTED_IMPORT_KEYWORD);
+        if (!check(TokType::IDENTIFIER))
+            return report_error(ParserCode::EXPECTED_IMPORT_NAME);
+        name = current_token()->lexeme();
+        alias = name;
+        advance();
+    } else {
+        size_t last_dot = std::string_view(module.data(), module.len()).find_last_of('.');
+        alias = last_dot == std::string_view::npos ? module : module.slice(last_dot + 1, module.len());
+    }
+
+    if (consume(TokType::KW_AS)) {
+        if (!check(TokType::IDENTIFIER))
+            return report_error(ParserCode::EXPECTED_ALIAS_NAME);
+        alias = current_token()->lexeme();
+        advance();
+    }
+    return AST::Fa_make_import(module, name, alias, start->location());
+}
+
+Fa_ErrorOr<StmtPtr> Fa_Parser::parse_assert_stmt()
+{
+    TokenPtr start = current_token();
+    advance();
+    Fa_TRY(condition, parse_expression());
+    Fa_Array<ExprPtr> args;
+    args.push(condition);
+    if (consume(TokType::COMMA)) {
+        Fa_TRY(message, parse_expression());
+        args.push(message);
+    }
+    auto* callee = AST::Fa_make_name("تاكد", start->location());
+    auto* call = AST::Fa_make_call(callee, AST::Fa_make_list(args, start->location()), start->location());
+    return AST::Fa_make_expr_stmt(call, start->location());
 }
 
 bool same_name(AST::Fa_Expr const* e, Fa_StringRef const& n)

@@ -10,6 +10,7 @@ namespace fairuz::runtime {
 static constexpr u16 JUMP_OFFSET = 32767;
 static constexpr u8 REG_NONE = 0xFF;
 static constexpr u16 MAX_CONSTANTS = 0xFFFF;
+static constexpr u8 MAX_IC_SLOTS = 0xFF;
 static constexpr u8 MAX_REGS = 250;
 
 /*
@@ -28,6 +29,7 @@ static constexpr u8 MAX_REGS = 250;
         STORE_GLOBAL,       // src, name const index
         LOAD_GLOBAL_CACHED, // A = dst, Bx = index into GlobalSlots_
         STORE_GLOBAL_CACHED,
+        IMPORT_MODULE,     // dst, module-name constant index
 
         MOVE, // dst, src, -
 
@@ -106,6 +108,7 @@ static constexpr u8 MAX_REGS = 250;
     X(STORE_GLOBAL)        \
     X(LOAD_GLOBAL_CACHED)  \
     X(STORE_GLOBAL_CACHED) \
+    X(IMPORT_MODULE)       \
     X(MOVE)                \
     X(OP_ADD)              \
     X(OP_SUB)              \
@@ -241,6 +244,7 @@ static inline Fa_InstrFormat opcode_format(Fa_OpCode op)
     case Fa_OpCode::LOAD_INT:
     case Fa_OpCode::LOAD_GLOBAL:
     case Fa_OpCode::STORE_GLOBAL:
+    case Fa_OpCode::IMPORT_MODULE:
     case Fa_OpCode::CLOSURE:
         return Fa_InstrFormat::ABx;
     case Fa_OpCode::JUMP:
@@ -261,6 +265,7 @@ static inline Fa_InstrFormat opcode_format(Fa_OpCode op)
 
 struct Fa_ClassDescriptor {
     Fa_StringRef name;
+    Fa_StringRef parent_name;
     u32 field_count { 0 };
     Fa_Array<Fa_StringRef> field_names; // for runtime slot-map / debug info
     u32 vtable_size { 0 };
@@ -274,6 +279,8 @@ class Fa_Value;
 
 struct Fa_Chunk {
     Fa_StringRef name { "" };
+    std::string source_path;
+    Fa_GlobalEnvironment* globals { nullptr };
     int arity { 0 };
     u32 local_count { 0 };
 

@@ -15,6 +15,7 @@ enum class Fa_ObjType : u8 {
     CLASS,
     INSTANCE,
     FILE_HANDLE,
+    MODULE,
     _COUNT,
 };
 

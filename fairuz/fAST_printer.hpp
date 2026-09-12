@@ -282,6 +282,14 @@ private:
             }
         } break;
 
+        case Fa_Stmt::Kind::IMPORT: {
+            auto import = as_import(s);
+            std::cout << color("Import", Color::BOLD) << " " << import->get_module();
+            if (import->imports_member())
+                std::cout << "." << import->get_name();
+            std::cout << " as " << import->get_alias() << "\n";
+        } break;
+
         default: std::cout << color("<unknown stmt>", Color::RED) << "\n";
         }
     }
