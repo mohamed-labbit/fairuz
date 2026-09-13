@@ -1,0 +1,66 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Fairuz",
+  "scopeName": "source.fairuz",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#declarations" },
+    { "include": "#keywords" },
+    { "include": "#constants" },
+    { "include": "#numbers" },
+    { "include": "#operators" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        { "name": "comment.line.number-sign.fairuz", "match": "#.*$" }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.fairuz",
+          "begin": "\"",
+          "end": "\"|$",
+          "patterns": [{ "name": "constant.character.escape.fairuz", "match": "\\\\(?:[\\\\\"'nrtbf/]|u[0-9A-Fa-f]{4})" }]
+        },
+        {
+          "name": "string.quoted.single.fairuz",
+          "begin": "'",
+          "end": "'|$",
+          "patterns": [{ "name": "constant.character.escape.fairuz", "match": "\\\\(?:[\\\\\"'nrtbf/]|u[0-9A-Fa-f]{4})" }]
+        }
+      ]
+    },
+    "declarations": {
+      "patterns": [
+        { "match": "\\b(دالة)\\s+([\\p{L}_][\\p{L}\\p{N}_]*)", "captures": { "1": { "name": "storage.type.function.fairuz" }, "2": { "name": "entity.name.function.fairuz" } } },
+        { "match": "\\b(نوع)\\s+([\\p{L}_][\\p{L}\\p{N}_]*)", "captures": { "1": { "name": "storage.type.class.fairuz" }, "2": { "name": "entity.name.type.class.fairuz" } } }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        { "name": "keyword.control.fairuz", "match": "\\b(?:اذا|غيره|طالما|لكل|في|ارجع|اكمل|اخرج|دالة|نوع|استورد|من|باسم|تاكد|assert)\\b" },
+        { "name": "variable.language.this.fairuz", "match": "\\bهذا\\b" },
+        { "name": "keyword.operator.logical.fairuz", "match": "\\b(?:و|او|ليس)\\b" }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        { "name": "constant.language.boolean.fairuz", "match": "\\b(?:صحيح|خطا)\\b" },
+        { "name": "constant.language.null.fairuz", "match": "\\bعدم\\b" }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        { "name": "constant.numeric.fairuz", "match": "(?<![\\p{L}\\p{N}_])(?:0[xX][0-9A-Fa-f_]+|0[bB][01_]+|0[oO][0-7_]+|[0-9٠-٩_]+(?:\\.[0-9٠-٩_]+)?(?:[eE][+-]?[0-9_]+)?)(?![\\p{L}\\p{N}_])" }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        { "name": "keyword.operator.fairuz", "match": "<<=|>>=|\\*\\*|:=|!=|<=|>=|\\+=|-=|\\*=|/=|%=|٪=|&=|\\|=|\\^=|<<|>>|[+\\-*/%٪&|^~<>=]" }
+      ]
+    }
+  }
+}

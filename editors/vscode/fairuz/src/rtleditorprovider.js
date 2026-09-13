@@ -5,20 +5,37 @@ const crypto = require("crypto");
 const FAIRUZ_RTL_VIEW = "fairuz.rtlEditor";
 
 class FairuzRtlEditorProvider {
-  constructor(context) {
+  constructor(context, highlighter) {
     this.context = context;
+    this.highlighter = highlighter;
     this.editors = new Map();
   }
 
-  static register(context) {
-    const provider = new FairuzRtlEditorProvider(context);
-    return vscode.window.registerCustomEditorProvider(FAIRUZ_RTL_VIEW, provider, {
+  static register(context, highlighter) {
+    const provider = new FairuzRtlEditorProvider(context, highlighter);
+    provider.registration = vscode.window.registerCustomEditorProvider(FAIRUZ_RTL_VIEW, provider, {
       webviewOptions: {
         retainContextWhenHidden: true,
         enableFindWidget: true
       },
       supportsMultipleEditorsPerDocument: false
     });
+    return provider;
+  }
+
+  dispose() {
+    this.registration?.dispose();
+    for (const editorId of [...this.editors.keys()]) this.cleanupEditor(editorId);
+  }
+
+  runHistoryCommand(action) {
+    // `active` identifies the focused custom editor. The visible fallback is
+    // useful while VS Code is transferring focus from its menu/command UI.
+    const state = [...this.editors.values()].find((entry) => entry.webviewPanel.active)
+      || [...this.editors.values()].find((entry) => entry.webviewPanel.visible);
+    if (!state) return false;
+    state.webviewPanel.webview.postMessage({ type: "history", action });
+    return true;
   }
 
   async resolveCustomTextEditor(document, webviewPanel) {
@@ -27,6 +44,9 @@ class FairuzRtlEditorProvider {
       document,
       webviewPanel,
       changeSubscription: null,
+      semanticCancellation: null,
+      editQueue: Promise.resolve(),
+      synchronizedDocumentVersion: document.version,
       // True only while we are actively pushing a remote (document -> webview
       // or webview -> document) update through the pipe. This must wrap the
       // FULL round trip for a given direction, not just the inner await, or
@@ -40,8 +60,7 @@ class FairuzRtlEditorProvider {
     webviewPanel.webview.options = {
       enableScripts: true,
       localResourceRoots: [
-        vscode.Uri.joinPath(this.context.extensionUri, "media"),
-        vscode.Uri.joinPath(this.context.extensionUri, "node_modules", "monaco-editor")
+        vscode.Uri.joinPath(this.context.extensionUri, "media")
       ]
     };
 
@@ -52,18 +71,22 @@ class FairuzRtlEditorProvider {
       this.handleDocumentChange(editorId, event);
     });
 
-    webviewPanel.webview.onDidReceiveMessage(async (message) => {
-      try {
-        await this.handleWebviewMessage(editorId, message);
-      } catch (error) {
-        console.error("[fairuz-rtl] error handling webview message:", error);
+    webviewPanel.webview.onDidReceiveMessage((message) => {
+      const state = this.editors.get(editorId);
+      if (!state) return;
+      if (message.type === "edit") {
+        state.editQueue = state.editQueue
+          .then(() => this.handleWebviewMessage(editorId, message))
+          .catch((error) => console.error("[fairuz-rtl] error handling edit:", error));
+        return;
       }
+      this.handleWebviewMessage(editorId, message)
+        .catch((error) => console.error("[fairuz-rtl] error handling webview message:", error));
     });
 
     webviewPanel.onDidDispose(() => this.cleanupEditor(editorId));
 
-    // Wait for the webview to signal it's mounted before pushing initial
-    // content -- Monaco needs to finish its own async init first.
+    // Wait for the webview editor to mount before pushing initial content.
     const readySub = webviewPanel.webview.onDidReceiveMessage((message) => {
       if (message.type === "ready") {
         this.sendFullSync(editorId);
@@ -79,13 +102,22 @@ class FairuzRtlEditorProvider {
     if (!editorState) return;
 
     // If this change was caused by us applying a webview-originated edit,
-    // don't bounce it back -- Monaco already has this content locally.
-    if (editorState.applyingDocumentEdit) return;
+    // don't bounce it back -- the webview already has this content locally.
+    if (editorState.applyingDocumentEdit) {
+      editorState.synchronizedDocumentVersion = event.document.version;
+      return;
+    }
+
+    // Some VS Code builds deliver the document-change notification after the
+    // applyEdit promise settles. In that ordering `applyingDocumentEdit` is
+    // already false, but the accepted version is still exactly the version
+    // the webview has. Do not turn that acknowledgement into a full reload.
+    if (event.document.version === editorState.synchronizedDocumentVersion) return;
 
     // Any other source of change (external edit, git, formatter, another
     // view of the same doc) invalidates whatever the webview has: resync
     // fully rather than trying to translate VS Code's TextDocumentContentChangeEvent
-    // deltas into Monaco edits, since ordering/version skew between the two
+    // deltas into editor changes, since ordering/version skew between the two
     // models is exactly the bug we're removing.
     this.sendFullSync(editorId);
   }
@@ -94,6 +126,7 @@ class FairuzRtlEditorProvider {
     const editorState = this.editors.get(editorId);
     if (!editorState || !editorState.webviewPanel.visible) return;
 
+    editorState.synchronizedDocumentVersion = editorState.document.version;
     editorState.webviewPanel.webview.postMessage({
       type: "setText",
       text: editorState.document.getText(),
@@ -106,6 +139,26 @@ class FairuzRtlEditorProvider {
   async handleWebviewMessage(editorId, message) {
     const editorState = this.editors.get(editorId);
     if (!editorState) return;
+
+    if (message.type === "semanticTokens") {
+      editorState.semanticCancellation?.cancel();
+      editorState.semanticCancellation?.dispose();
+      const cancellation = new vscode.CancellationTokenSource();
+      editorState.semanticCancellation = cancellation;
+      const result = await this.highlighter.highlight(message.text, cancellation.token);
+      if (editorState.semanticCancellation !== cancellation) {
+        cancellation.dispose();
+        return;
+      }
+      editorState.semanticCancellation = null;
+      cancellation.dispose();
+      editorState.webviewPanel.webview.postMessage({
+        type: "semanticTokens",
+        requestId: message.requestId,
+        tokens: result ? result.tokens : []
+      });
+      return;
+    }
 
     if (message.type !== "edit") return;
 
@@ -153,6 +206,12 @@ class FairuzRtlEditorProvider {
       if (!applied) {
         console.warn("[fairuz-rtl] applyEdit returned false, resyncing");
         this.sendFullSync(editorId);
+      } else {
+        editorState.synchronizedDocumentVersion = document.version;
+        editorState.webviewPanel.webview.postMessage({
+          type: "ack",
+          version: document.version
+        });
       }
     } finally {
       editorState.applyingDocumentEdit = false;
@@ -162,6 +221,8 @@ class FairuzRtlEditorProvider {
   cleanupEditor(editorId) {
     const editorState = this.editors.get(editorId);
     if (!editorState) return;
+    editorState.semanticCancellation?.cancel();
+    editorState.semanticCancellation?.dispose();
     if (editorState.changeSubscription) editorState.changeSubscription.dispose();
     this.editors.delete(editorId);
   }
@@ -171,10 +232,9 @@ class FairuzRtlEditorProvider {
     const scriptUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.context.extensionUri, "media", "editor.js")
     );
-    const monacoBaseUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this.context.extensionUri, "node_modules", "monaco-editor", "min", "vs")
+    const styleUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.context.extensionUri, "media", "editor.css")
     );
-
     return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -188,16 +248,10 @@ class FairuzRtlEditorProvider {
   " />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Fairuz RTL Editor</title>
-  <style>
-    html, body, #container { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-  </style>
+  <link rel="stylesheet" href="${styleUri}" />
 </head>
 <body>
   <div id="container"></div>
-  <script nonce="${nonce}">
-    window.__fairuzMonacoBaseUri = "${monacoBaseUri}";
-  </script>
-  <script nonce="${nonce}" src="${monacoBaseUri}/loader.js"></script>
   <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;
