@@ -303,8 +303,10 @@ std::filesystem::path Fa_VM::resolve_module_path(std::string const& name) const
     relative += ".fa";
 
     std::vector<std::filesystem::path> roots;
-    if (m_frames_top > 0 && !frame().chunk->source_path.empty())
-        roots.push_back(std::filesystem::path(frame().chunk->source_path).parent_path());
+    // Standard-library roots are authoritative for module names they contain.
+    // This prevents a project file such as `file.fa` from accidentally
+    // shadowing the bundled module. Names absent from these roots still fall
+    // through to the importing module's directory for normal relative imports.
     if (char const* configured = std::getenv("FAIRUZ_STDLIB"))
         roots.emplace_back(configured);
 #ifdef FAIRUZ_SOURCE_STDLIB_DIR
@@ -313,6 +315,8 @@ std::filesystem::path Fa_VM::resolve_module_path(std::string const& name) const
 #ifdef FAIRUZ_INSTALL_STDLIB_DIR
     roots.emplace_back(FAIRUZ_INSTALL_STDLIB_DIR);
 #endif
+    if (m_frames_top > 0 && !frame().chunk->source_path.empty())
+        roots.push_back(std::filesystem::path(frame().chunk->source_path).parent_path());
     roots.push_back(std::filesystem::current_path());
 
     std::error_code ec;
@@ -1975,6 +1979,19 @@ void Fa_VM::open_stdlib()
     (void)register_native("اكبر", &Fa_VM::Fa_max, -1);
     (void)register_native("قوة", &Fa_VM::Fa_pow, 2);
     (void)register_native("جذر", &Fa_VM::Fa_sqrt, 1);
+    (void)register_native("__رياضيات", &Fa_VM::Fa_math_unary, 2);
+    (void)register_native("__رياضيات2", &Fa_VM::Fa_math_binary, 3);
+    (void)register_native("__URL_اهرب", &Fa_VM::Fa_url_encode, 1);
+    (void)register_native("__URL_فك", &Fa_VM::Fa_url_decode, 1);
+    (void)register_native("__URL_حلل", &Fa_VM::Fa_url_parse, 1);
+    (void)register_native("__URL_ركب", &Fa_VM::Fa_url_build, 1);
+    (void)register_native("__نمط_اجمع", &Fa_VM::Fa_regex_compile, 2);
+    (void)register_native("__نمط_بحث", &Fa_VM::Fa_regex_search, 3);
+    (void)register_native("__نمط_طابق", &Fa_VM::Fa_regex_match, 3);
+    (void)register_native("__نمط_كامل", &Fa_VM::Fa_regex_fullmatch, 2);
+    (void)register_native("__نمط_الكل", &Fa_VM::Fa_regex_findall, 2);
+    (void)register_native("__نمط_اقسم", &Fa_VM::Fa_regex_split, 3);
+    (void)register_native("__نمط_استبدل", &Fa_VM::Fa_regex_replace, 4);
     // Runtime / diagnostics
     (void)register_native("تاكد", &Fa_VM::Fa_assert, -1);
     (void)register_native("ساعة", &Fa_VM::Fa_clock, 0);

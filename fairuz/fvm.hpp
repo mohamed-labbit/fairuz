@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <filesystem>
 #include <memory>
+#include <regex>
 #include <unordered_map>
 #include <vector>
 
@@ -137,6 +138,20 @@ public:
     Fa_Value Fa_max(int argc, Fa_Value* argv);
     Fa_Value Fa_pow(int argc, Fa_Value* argv);
     Fa_Value Fa_sqrt(int argc, Fa_Value* argv);
+    Fa_Value Fa_math_unary(int argc, Fa_Value* argv);
+    Fa_Value Fa_math_binary(int argc, Fa_Value* argv);
+    Fa_Value Fa_url_encode(int argc, Fa_Value* argv);
+    Fa_Value Fa_url_decode(int argc, Fa_Value* argv);
+    Fa_Value Fa_url_parse(int argc, Fa_Value* argv);
+    Fa_Value Fa_url_build(int argc, Fa_Value* argv);
+    Fa_Value Fa_regex_compile(int argc, Fa_Value* argv);
+    Fa_Value Fa_regex_search(int argc, Fa_Value* argv);
+    Fa_Value Fa_regex_match(int argc, Fa_Value* argv);
+    Fa_Value Fa_regex_fullmatch(int argc, Fa_Value* argv);
+    Fa_Value Fa_regex_findall(int argc, Fa_Value* argv);
+    Fa_Value Fa_regex_split(int argc, Fa_Value* argv);
+    Fa_Value Fa_regex_replace(int argc, Fa_Value* argv);
+    Fa_Value make_regex_result(std::string const& input, std::smatch const& match, size_t base_offset);
     Fa_Value Fa_assert(int argc, Fa_Value* argv);
     Fa_Value Fa_clock(int argc, Fa_Value* argv);
     Fa_Value Fa_error(int argc, Fa_Value* argv);

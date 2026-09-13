@@ -4,6 +4,7 @@
 #include "fairuz/fformatter.hpp"
 #include "fairuz/flexer.hpp"
 #include "fairuz/fparser.hpp"
+#include "fairuz/fsyntax_highlighter.hpp"
 #include "fairuz/fvm.hpp"
 
 #include <chrono>
@@ -12,7 +13,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <iterator>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -45,6 +48,7 @@ struct Options {
     bool show_help { false };
     bool show_version { false };
     bool format_file { false };
+    bool semantic_tokens { false };
     std::string input_path;
 };
 
@@ -60,6 +64,7 @@ void printUsage(std::ostream& out, std::string_view program)
         << "  --dump-bytecode      Print compiled bytecode\n"
         << "  --time               Print execution time to stderr\n"
         << "  --check              Parse and compile only, do not execute\n"
+        << "  --semantic-tokens    Emit parser-backed semantic tokens as JSON\n"
         << "  format               Rewrite the input file with canonical formatting\n"
         << "\n"
         << "Options may appear before or after <file>.\n";
@@ -99,11 +104,15 @@ bool parseArgs(int argc, char** argv, Options& options)
             options.check_only = true;
             continue;
         }
+        if (arg == "--semantic-tokens") {
+            options.semantic_tokens = true;
+            continue;
+        }
         if (arg == "format") {
             options.format_file = true;
             continue;
         }
-        if (!arg.empty() && arg.front() == '-') {
+        if (arg != "-" && !arg.empty() && arg.front() == '-') {
             std::cerr << "Unknown option: " << arg << "\n";
             return false;
         }
@@ -114,12 +123,28 @@ bool parseArgs(int argc, char** argv, Options& options)
         options.input_path = std::string(arg);
     }
 
-    if (options.format_file && (options.dump_ast || options.dump_bytecode || options.print_time || options.check_only)) {
+    if (options.format_file && (options.dump_ast || options.dump_bytecode || options.print_time || options.check_only || options.semantic_tokens)) {
         std::cerr << "format cannot be combined with --dump-ast, --dump-bytecode, --time, or --check\n";
         return false;
     }
 
     return true;
+}
+
+void printSemanticTokens(fairuz::syntax::Result const& result)
+{
+    std::cout << "{\"astValid\":" << (result.ast_valid ? "true" : "false") << ",\"tokens\":[";
+    bool first = true;
+    for (auto const& token : result.tokens) {
+        if (!first) std::cout << ',';
+        first = false;
+        std::cout << "{\"line\":" << token.line
+                  << ",\"start\":" << token.start
+                  << ",\"length\":" << token.length
+                  << ",\"type\":\"" << token.type << "\""
+                  << ",\"declaration\":" << (token.declaration ? "true" : "false") << '}';
+    }
+    std::cout << "]}\n";
 }
 
 void printAst(fairuz::Fa_Array<fairuz::AST::Fa_Stmt*> const& stmts)
@@ -255,7 +280,7 @@ int main(int argc, char** argv)
         return static_cast<int>(ExitCode::Usage);
     }
 
-    if (!std::filesystem::exists(options.input_path)) {
+    if (options.input_path != "-" && !std::filesystem::exists(options.input_path)) {
         std::cerr << "Input file not found: " << options.input_path << "\n";
         return static_cast<int>(ExitCode::NoInput);
     }
@@ -265,6 +290,19 @@ int main(int argc, char** argv)
 
         fairuz::Fa_AllocatorContext allocator_context;
         fairuz::set_context(&allocator_context);
+        if (options.semantic_tokens) {
+            std::string input;
+            if (options.input_path == "-")
+                input.assign(std::istreambuf_iterator<char>(std::cin), std::istreambuf_iterator<char>());
+            else {
+                std::ifstream stream(options.input_path, std::ios::binary);
+                input.assign(std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>());
+            }
+            fairuz::Fa_StringRef source(input.size(), '\0');
+            if (!input.empty()) std::memcpy(source.data(), input.data(), input.size());
+            printSemanticTokens(fairuz::syntax::Highlighter().highlight(source));
+            return static_cast<int>(ExitCode::Success);
+        }
         fairuz::lex::Fa_FileManager fm(options.input_path);
         fairuz::diagnostic::set_source(&fm);
         fairuz::parser::Fa_Parser parser(&fm);

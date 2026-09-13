@@ -2080,6 +2080,343 @@ Fa_Value Fa_VM::Fa_sqrt(int argc, Fa_Value* argv)
     return Fa_Value::from_real(std::sqrt(val));
 }
 
+Fa_Value Fa_VM::Fa_math_unary(int argc, Fa_Value* argv)
+{
+    if (argc != 2 || argv == nullptr || !argv[0].is_string() || !argv[1].is_number())
+        return Fa_Value::nil();
+
+    std::string_view operation = string_bytes(argv[0]);
+    f64 value = argv[1].as_double_any();
+    if (operation == "sin")
+        return Fa_Value::from_real(std::sin(value));
+    if (operation == "cos")
+        return Fa_Value::from_real(std::cos(value));
+    if (operation == "tan")
+        return Fa_Value::from_real(std::tan(value));
+    if (operation == "log")
+        return Fa_Value::from_real(std::log(value));
+    if (operation == "exp")
+        return Fa_Value::from_real(std::exp(value));
+    return Fa_Value::nil();
+}
+
+Fa_Value Fa_VM::Fa_math_binary(int argc, Fa_Value* argv)
+{
+    if (argc != 3 || argv == nullptr || !argv[0].is_string()
+        || !argv[1].is_number() || !argv[2].is_number())
+        return Fa_Value::nil();
+
+    std::string_view operation = string_bytes(argv[0]);
+    f64 first = argv[1].as_double_any();
+    f64 second = argv[2].as_double_any();
+    if (operation == "hypot")
+        return Fa_Value::from_real(std::hypot(first, second));
+    if (operation == "atan2")
+        return Fa_Value::from_real(std::atan2(first, second));
+    return Fa_Value::nil();
+}
+
+Fa_Value Fa_VM::Fa_url_encode(int argc, Fa_Value* argv)
+{
+    if (argc != 1 || argv == nullptr || !argv[0].is_string())
+        return Fa_Value::nil();
+    constexpr char hex[] = "0123456789ABCDEF";
+    std::string output;
+    for (unsigned char byte : string_bytes(argv[0])) {
+        if ((byte >= 'a' && byte <= 'z') || (byte >= 'A' && byte <= 'Z')
+            || (byte >= '0' && byte <= '9') || byte == '-' || byte == '.'
+            || byte == '_' || byte == '~') {
+            output.push_back(static_cast<char>(byte));
+        } else {
+            output.push_back('%');
+            output.push_back(hex[byte >> 4]);
+            output.push_back(hex[byte & 0x0f]);
+        }
+    }
+    return m_gc.make_string(byte_string(output));
+}
+
+Fa_Value Fa_VM::Fa_url_decode(int argc, Fa_Value* argv)
+{
+    if (argc != 1 || argv == nullptr || !argv[0].is_string())
+        return Fa_Value::nil();
+    auto hex_value = [](char ch) -> int {
+        if (ch >= '0' && ch <= '9') return ch - '0';
+        if (ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
+        if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
+        return -1;
+    };
+    std::string_view input = string_bytes(argv[0]);
+    std::string output;
+    for (size_t i = 0; i < input.size(); ++i) {
+        if (input[i] == '+') {
+            output.push_back(' ');
+        } else if (input[i] == '%' && i + 2 < input.size()) {
+            int high = hex_value(input[i + 1]);
+            int low = hex_value(input[i + 2]);
+            if (high < 0 || low < 0)
+                return Fa_Value::nil();
+            output.push_back(static_cast<char>((high << 4) | low));
+            i += 2;
+        } else if (input[i] == '%') {
+            return Fa_Value::nil();
+        } else {
+            output.push_back(input[i]);
+        }
+    }
+    return m_gc.make_string(byte_string(output));
+}
+
+Fa_Value Fa_VM::Fa_url_parse(int argc, Fa_Value* argv)
+{
+    if (argc != 1 || argv == nullptr || !argv[0].is_string())
+        return Fa_Value::nil();
+    static std::regex const pattern(
+        R"(^([A-Za-z][A-Za-z0-9+.-]*)://(\[[^\]]+\]|[^/?#:]*)(?::([0-9]+))?([^?#]*)(?:\?([^#]*))?(?:#(.*))?$)");
+    std::string input(string_bytes(argv[0]));
+    std::smatch match;
+    if (!std::regex_match(input, match, pattern) || match[2].str().empty())
+        return Fa_Value::nil();
+
+    Fa_Value result = m_gc.make_dict();
+    Fa_dict_put(&result, m_gc.make_string("scheme"), m_gc.make_string(match[1].str().c_str()));
+    Fa_dict_put(&result, m_gc.make_string("host"), m_gc.make_string(match[2].str().c_str()));
+    Fa_Value port = Fa_Value::nil();
+    if (match[3].matched) {
+        std::string port_text = match[3].str();
+        i64 parsed_port = 0;
+        auto conversion = std::from_chars(port_text.data(), port_text.data() + port_text.size(), parsed_port);
+        if (conversion.ec != std::errc() || conversion.ptr != port_text.data() + port_text.size()
+            || parsed_port < 0 || parsed_port > 65535)
+            return Fa_Value::nil();
+        port = Fa_Value::from_int(parsed_port);
+    }
+    Fa_dict_put(&result, m_gc.make_string("port"), port);
+    Fa_dict_put(&result, m_gc.make_string("path"), m_gc.make_string(match[4].str().c_str()));
+    Fa_dict_put(&result, m_gc.make_string("query"), m_gc.make_string(match[5].str().c_str()));
+    Fa_dict_put(&result, m_gc.make_string("fragment"), m_gc.make_string(match[6].str().c_str()));
+    return result;
+}
+
+Fa_Value Fa_VM::Fa_url_build(int argc, Fa_Value* argv)
+{
+    if (argc != 1 || argv == nullptr || !argv[0].is_dict())
+        return Fa_Value::nil();
+    auto field = [&](char const* name) { return Fa_dict_get(&argv[0], m_gc.make_string(name)); };
+    Fa_Value scheme = field("scheme");
+    Fa_Value host = field("host");
+    Fa_Value port = field("port");
+    Fa_Value path = field("path");
+    Fa_Value query = field("query");
+    Fa_Value fragment = field("fragment");
+    if (!scheme.is_string() || !host.is_string())
+        return Fa_Value::nil();
+    std::string output(string_bytes(scheme));
+    output += "://";
+    output += string_bytes(host);
+    if (port.is_int()) {
+        output.push_back(':');
+        output += std::to_string(port.as_int());
+    }
+    if (path.is_string()) output += string_bytes(path);
+    if (query.is_string() && !string_bytes(query).empty()) {
+        output.push_back('?');
+        output += string_bytes(query);
+    }
+    if (fragment.is_string() && !string_bytes(fragment).empty()) {
+        output.push_back('#');
+        output += string_bytes(fragment);
+    }
+    return m_gc.make_string(byte_string(output));
+}
+
+namespace {
+size_t utf8_byte_offset(std::string_view text, i64 character_offset)
+{
+    if (character_offset < 0)
+        return std::string_view::npos;
+    i64 characters = 0;
+    for (size_t i = 0; i < text.size(); ++i) {
+        if ((static_cast<unsigned char>(text[i]) & 0xc0) != 0x80) {
+            if (characters == character_offset)
+                return i;
+            ++characters;
+        }
+    }
+    return characters == character_offset ? text.size() : std::string_view::npos;
+}
+
+i64 utf8_character_offset(std::string_view text, size_t byte_offset)
+{
+    i64 characters = 0;
+    for (size_t i = 0; i < std::min(byte_offset, text.size()); ++i) {
+        if ((static_cast<unsigned char>(text[i]) & 0xc0) != 0x80)
+            ++characters;
+    }
+    return characters;
+}
+}
+
+Fa_Value Fa_VM::make_regex_result(std::string const& input, std::smatch const& match, size_t base_offset)
+{
+    Fa_Value result = m_gc.make_dict();
+    size_t match_start = base_offset + static_cast<size_t>(match.position(0));
+    size_t match_end = match_start + static_cast<size_t>(match.length(0));
+    Fa_dict_put(&result, m_gc.make_string("start"),
+        Fa_Value::from_int(utf8_character_offset(input, match_start)));
+    Fa_dict_put(&result, m_gc.make_string("end"),
+        Fa_Value::from_int(utf8_character_offset(input, match_end)));
+
+    Fa_Value groups = m_gc.make_list();
+    for (size_t i = 0; i < match.size(); ++i) {
+        groups.as_list()->elements.push(match[i].matched
+            ? m_gc.make_string(byte_string(match[i].str())) : Fa_Value::nil());
+    }
+    Fa_dict_put(&result, m_gc.make_string("groups"), groups);
+    Fa_dict_put(&result, m_gc.make_string("named"), m_gc.make_dict());
+    return result;
+}
+
+Fa_Value Fa_VM::Fa_regex_compile(int argc, Fa_Value* argv)
+{
+    if (argc != 2 || argv == nullptr || !argv[0].is_string() || !argv[1].is_int())
+        return Fa_Value::nil();
+    try {
+        std::regex validation(std::string(string_bytes(argv[0])));
+        (void)validation;
+    } catch (std::regex_error const&) {
+        return Fa_Value::nil();
+    }
+    return argv[0];
+}
+
+Fa_Value Fa_VM::Fa_regex_search(int argc, Fa_Value* argv)
+{
+    if (argc != 3 || argv == nullptr || !argv[0].is_string()
+        || !argv[1].is_string() || !argv[2].is_int())
+        return Fa_Value::nil();
+    std::string input(string_bytes(argv[1]));
+    size_t start = utf8_byte_offset(input, argv[2].as_int());
+    if (start == std::string::npos)
+        return Fa_Value::nil();
+    try {
+        std::regex pattern(std::string(string_bytes(argv[0])));
+        std::smatch match;
+        std::string suffix = input.substr(start);
+        if (!std::regex_search(suffix, match, pattern))
+            return Fa_Value::nil();
+        return make_regex_result(input, match, start);
+    } catch (std::regex_error const&) {
+        return Fa_Value::nil();
+    }
+}
+
+Fa_Value Fa_VM::Fa_regex_match(int argc, Fa_Value* argv)
+{
+    if (argc != 3 || argv == nullptr || !argv[0].is_string()
+        || !argv[1].is_string() || !argv[2].is_int())
+        return Fa_Value::nil();
+    std::string input(string_bytes(argv[1]));
+    size_t start = utf8_byte_offset(input, argv[2].as_int());
+    if (start == std::string::npos)
+        return Fa_Value::nil();
+    try {
+        std::regex pattern(std::string(string_bytes(argv[0])));
+        std::smatch match;
+        std::string suffix = input.substr(start);
+        if (!std::regex_search(suffix, match, pattern, std::regex_constants::match_continuous))
+            return Fa_Value::nil();
+        return make_regex_result(input, match, start);
+    } catch (std::regex_error const&) {
+        return Fa_Value::nil();
+    }
+}
+
+Fa_Value Fa_VM::Fa_regex_fullmatch(int argc, Fa_Value* argv)
+{
+    if (argc != 2 || argv == nullptr || !argv[0].is_string() || !argv[1].is_string())
+        return Fa_Value::nil();
+    try {
+        std::regex pattern(std::string(string_bytes(argv[0])));
+        std::string input(string_bytes(argv[1]));
+        std::smatch match;
+        if (!std::regex_match(input, match, pattern))
+            return Fa_Value::nil();
+        return make_regex_result(input, match, 0);
+    } catch (std::regex_error const&) {
+        return Fa_Value::nil();
+    }
+}
+
+Fa_Value Fa_VM::Fa_regex_findall(int argc, Fa_Value* argv)
+{
+    if (argc != 2 || argv == nullptr || !argv[0].is_string() || !argv[1].is_string())
+        return Fa_Value::nil();
+    try {
+        std::regex pattern(std::string(string_bytes(argv[0])));
+        std::string input(string_bytes(argv[1]));
+        Fa_Value results = m_gc.make_list();
+        for (std::sregex_iterator it(input.begin(), input.end(), pattern), end; it != end; ++it)
+            results.as_list()->elements.push(make_regex_result(input, *it, 0));
+        return results;
+    } catch (std::regex_error const&) {
+        return Fa_Value::nil();
+    }
+}
+
+Fa_Value Fa_VM::Fa_regex_split(int argc, Fa_Value* argv)
+{
+    if (argc != 3 || argv == nullptr || !argv[0].is_string()
+        || !argv[1].is_string() || !argv[2].is_int() || argv[2].as_int() < 0)
+        return Fa_Value::nil();
+    try {
+        std::regex pattern(std::string(string_bytes(argv[0])));
+        std::string input(string_bytes(argv[1]));
+        i64 limit = argv[2].as_int();
+        size_t previous = 0;
+        i64 splits = 0;
+        Fa_Value results = m_gc.make_list();
+        for (std::sregex_iterator it(input.begin(), input.end(), pattern), end;
+             it != end && (limit == 0 || splits < limit); ++it, ++splits) {
+            size_t position = static_cast<size_t>(it->position());
+            results.as_list()->elements.push(m_gc.make_string(byte_string(
+                std::string_view(input).substr(previous, position - previous))));
+            previous = position + static_cast<size_t>(it->length());
+        }
+        results.as_list()->elements.push(m_gc.make_string(byte_string(std::string_view(input).substr(previous))));
+        return results;
+    } catch (std::regex_error const&) {
+        return Fa_Value::nil();
+    }
+}
+
+Fa_Value Fa_VM::Fa_regex_replace(int argc, Fa_Value* argv)
+{
+    if (argc != 4 || argv == nullptr || !argv[0].is_string() || !argv[1].is_string()
+        || !argv[2].is_string() || !argv[3].is_int() || argv[3].as_int() < 0)
+        return Fa_Value::nil();
+    try {
+        std::regex pattern(std::string(string_bytes(argv[0])));
+        std::string input(string_bytes(argv[1]));
+        std::string replacement(string_bytes(argv[2]));
+        i64 limit = argv[3].as_int();
+        size_t previous = 0;
+        i64 replacements = 0;
+        std::string output;
+        for (std::sregex_iterator it(input.begin(), input.end(), pattern), end;
+             it != end && (limit == 0 || replacements < limit); ++it, ++replacements) {
+            size_t position = static_cast<size_t>(it->position());
+            output.append(input, previous, position - previous);
+            output += it->format(replacement);
+            previous = position + static_cast<size_t>(it->length());
+        }
+        output.append(input, previous, std::string::npos);
+        return m_gc.make_string(byte_string(output));
+    } catch (std::regex_error const&) {
+        return Fa_Value::nil();
+    }
+}
+
 Fa_Value Fa_VM::Fa_assert(int argc, Fa_Value* argv)
 {
     if (argc < 1 || argc > 2 || argv == nullptr) {
@@ -2202,7 +2539,14 @@ Fa_Value Fa_VM::Fa_close(int argc, Fa_Value* argv)
     return Fa_Value::from_bool(false);
 }
 
-Fa_Value Fa_VM::Fa_clock(int /*argc*/, Fa_Value* /*argv*/) { return Fa_Value::nil(); }
+Fa_Value Fa_VM::Fa_clock(int argc, Fa_Value* argv)
+{
+    if (argc != 0)
+        return Fa_Value::nil();
+    (void)argv;
+    auto elapsed = std::chrono::steady_clock::now().time_since_epoch();
+    return Fa_Value::from_real(std::chrono::duration<f64>(elapsed).count());
+}
 Fa_Value Fa_VM::Fa_error(int /*argc*/, Fa_Value* /*argv*/) { return Fa_Value::nil(); }
 Fa_Value Fa_VM::Fa_time(int /*argc*/, Fa_Value* /*argv*/) { return Fa_Value::nil(); }
 

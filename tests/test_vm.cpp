@@ -9,6 +9,7 @@
 
 #include <charconv>
 #include <chrono>
+#include <cmath>
 #include <cstdlib>
 #include <gtest/gtest.h>
 #include <memory>
@@ -1909,6 +1910,121 @@ TEST(NativeSqrt, NegativeInput_SpecBehavior)
     EXPECT_NO_FATAL_FAILURE(vm.Fa_sqrt(1, &arg));
 }
 
+TEST(NativeMathDispatch, SupportsDocumentedUnaryOperations)
+{
+    Fa_VM vm;
+    Fa_Value sine_args[] = { str("sin"), Fa_Value::from_real(0.0) };
+    Fa_Value exp_args[] = { str("exp"), Fa_Value::from_real(0.0) };
+    EXPECT_DOUBLE_EQ(vm.Fa_math_unary(2, sine_args).as_double(), 0.0);
+    EXPECT_DOUBLE_EQ(vm.Fa_math_unary(2, exp_args).as_double(), 1.0);
+}
+
+TEST(NativeMathDispatch, SupportsDocumentedBinaryOperations)
+{
+    Fa_VM vm;
+    Fa_Value hypot_args[] = { str("hypot"), Fa_Value::from_int(3), Fa_Value::from_int(4) };
+    Fa_Value atan_args[] = { str("atan2"), Fa_Value::from_real(0.0), Fa_Value::from_real(1.0) };
+    EXPECT_DOUBLE_EQ(vm.Fa_math_binary(3, hypot_args).as_double(), 5.0);
+    EXPECT_DOUBLE_EQ(vm.Fa_math_binary(3, atan_args).as_double(), 0.0);
+}
+
+TEST(NativeMathDispatch, RejectsBadTypesAndUnknownOperations)
+{
+    Fa_VM vm;
+    Fa_Value bad_type[] = { str("sin"), str("not-a-number") };
+    Fa_Value unknown[] = { str("unknown"), Fa_Value::from_int(1) };
+    EXPECT_TRUE(vm.Fa_math_unary(2, bad_type).is_nil());
+    EXPECT_TRUE(vm.Fa_math_unary(2, unknown).is_nil());
+    EXPECT_TRUE(vm.Fa_math_binary(0, nullptr).is_nil());
+}
+
+TEST(NativeUrl, EncodesAndDecodesUtf8Bytes)
+{
+    Fa_VM vm;
+    Fa_Value input = str("لغة فيروز/1");
+    Fa_Value encoded = vm.Fa_url_encode(1, &input);
+    ASSERT_TRUE(encoded.is_string());
+    Fa_Value decoded = vm.Fa_url_decode(1, &encoded);
+    ASSERT_TRUE(decoded.is_string());
+    EXPECT_EQ(decoded.as_string()->str, input.as_string()->str);
+    Fa_Value malformed = str("%GG");
+    EXPECT_TRUE(vm.Fa_url_decode(1, &malformed).is_nil());
+}
+
+TEST(NativeUrl, ParsesAndRebuildsStructuredUrl)
+{
+    Fa_VM vm;
+    Fa_Value input = str("https://example.test:443/api?q=1#part");
+    Fa_Value parsed = vm.Fa_url_parse(1, &input);
+    ASSERT_TRUE(parsed.is_dict());
+    Fa_Value port = vm.Fa_dict_get(&parsed, str("port"));
+    ASSERT_TRUE(port.is_int());
+    EXPECT_EQ(port.as_int(), 443);
+    Fa_Value rebuilt = vm.Fa_url_build(1, &parsed);
+    ASSERT_TRUE(rebuilt.is_string());
+    EXPECT_EQ(rebuilt.as_string()->str, input.as_string()->str);
+}
+
+TEST(NativeUrl, RejectsInvalidBoundaryArguments)
+{
+    Fa_VM vm;
+    Fa_Value number = Fa_Value::from_int(42);
+    EXPECT_TRUE(vm.Fa_url_encode(1, &number).is_nil());
+    EXPECT_TRUE(vm.Fa_url_parse(1, &number).is_nil());
+    EXPECT_TRUE(vm.Fa_url_build(1, &number).is_nil());
+}
+
+TEST(NativeRegex, CompilesSearchesMatchesAndCaptures)
+{
+    Fa_VM vm;
+    Fa_Value compile_args[] = { str("([a-z])([0-9]+)"), Fa_Value::from_int(0) };
+    Fa_Value handle = vm.Fa_regex_compile(2, compile_args);
+    ASSERT_TRUE(handle.is_string());
+    Fa_Value search_args[] = { handle, str("قبل a12 بعد"), Fa_Value::from_int(0) };
+    Fa_Value found = vm.Fa_regex_search(3, search_args);
+    ASSERT_TRUE(found.is_dict());
+    EXPECT_EQ(vm.Fa_dict_get(&found, str("start")).as_int(), 4);
+    Fa_Value groups = vm.Fa_dict_get(&found, str("groups"));
+    ASSERT_TRUE(groups.is_list());
+    ASSERT_EQ(groups.as_list()->elements.size(), 3u);
+    EXPECT_EQ(groups.as_list()->elements[1].as_string()->str, Fa_StringRef("a"));
+
+    Fa_Value match_args[] = { handle, str("a12 tail"), Fa_Value::from_int(0) };
+    EXPECT_TRUE(vm.Fa_regex_match(3, match_args).is_dict());
+    Fa_Value full_args[] = { handle, str("a12") };
+    EXPECT_TRUE(vm.Fa_regex_fullmatch(2, full_args).is_dict());
+}
+
+TEST(NativeRegex, FindsAllSplitsAndReplacesWithLimits)
+{
+    Fa_VM vm;
+    Fa_Value handle = str("[0-9]+");
+    Fa_Value all_args[] = { handle, str("a1 b22 c333") };
+    Fa_Value all = vm.Fa_regex_findall(2, all_args);
+    ASSERT_TRUE(all.is_list());
+    EXPECT_EQ(all.as_list()->elements.size(), 3u);
+
+    Fa_Value split_args[] = { handle, str("a1b22c"), Fa_Value::from_int(1) };
+    Fa_Value split = vm.Fa_regex_split(3, split_args);
+    ASSERT_TRUE(split.is_list());
+    EXPECT_EQ(split.as_list()->elements.size(), 2u);
+
+    Fa_Value replace_args[] = { handle, str("a1b22c"), str("#"), Fa_Value::from_int(1) };
+    Fa_Value replaced = vm.Fa_regex_replace(4, replace_args);
+    ASSERT_TRUE(replaced.is_string());
+    EXPECT_EQ(replaced.as_string()->str, Fa_StringRef("a#b22c"));
+}
+
+TEST(NativeRegex, RejectsInvalidPatternsAndArguments)
+{
+    Fa_VM vm;
+    Fa_Value invalid[] = { str("["), Fa_Value::from_int(0) };
+    EXPECT_TRUE(vm.Fa_regex_compile(2, invalid).is_nil());
+    EXPECT_TRUE(vm.Fa_regex_search(0, nullptr).is_nil());
+    EXPECT_TRUE(vm.Fa_regex_split(0, nullptr).is_nil());
+    EXPECT_TRUE(vm.Fa_regex_replace(0, nullptr).is_nil());
+}
+
 TEST(NativeSplit, BasicSplit)
 {
     Fa_VM vm;
@@ -2033,12 +2149,17 @@ TEST(NativeAssert, OptionalMessageIsNotTreatedAsASecondCondition)
     EXPECT_NO_THROW(vm.Fa_assert(2, args));
 }
 
-TEST(NativeClock, ReturnsNumber_WhenImplemented)
+TEST(NativeClock, ReturnsFiniteMonotonicSeconds)
 {
     Fa_VM vm;
-    Fa_Value r = vm.Fa_clock(0, nullptr);
-    if (!r.is_nil())
-        EXPECT_TRUE(r.is_int());
+    Fa_Value first = vm.Fa_clock(0, nullptr);
+    Fa_Value second = vm.Fa_clock(0, nullptr);
+    ASSERT_TRUE(first.is_double());
+    ASSERT_TRUE(second.is_double());
+    EXPECT_TRUE(std::isfinite(first.as_double()));
+    EXPECT_GE(second.as_double(), first.as_double());
+    EXPECT_TRUE(vm.Fa_clock(0, &first).is_double());
+    EXPECT_TRUE(vm.Fa_clock(1, &first).is_nil());
 }
 
 TEST(NativeTime, ReturnsNumber_WhenImplemented)

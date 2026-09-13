@@ -5,9 +5,11 @@
 #include "../fairuz/fparser.hpp"
 #include "../fairuz/fvm.hpp"
 
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
+#include <optional>
 
 using namespace fairuz;
 using namespace fairuz::lex;
@@ -15,6 +17,37 @@ using namespace fairuz::parser;
 using namespace fairuz::runtime;
 
 namespace {
+
+class EnvironmentGuard {
+public:
+    explicit EnvironmentGuard(char const* name)
+        : m_name(name)
+    {
+        if (char const* old = std::getenv(name))
+            m_old_value = old;
+        unsetenv(m_name.c_str());
+    }
+
+    EnvironmentGuard(char const* name, std::string const& value)
+        : m_name(name)
+    {
+        if (char const* old = std::getenv(name))
+            m_old_value = old;
+        setenv(m_name.c_str(), value.c_str(), 1);
+    }
+
+    ~EnvironmentGuard()
+    {
+        if (m_old_value.has_value())
+            setenv(m_name.c_str(), m_old_value->c_str(), 1);
+        else
+            unsetenv(m_name.c_str());
+    }
+
+private:
+    std::string m_name;
+    std::optional<std::string> m_old_value;
+};
 
 class ModuleFixture : public ::testing::Test {
 protected:
@@ -134,6 +167,24 @@ TEST(ModuleCompiler, EmitsImportAndParentDescriptor)
     EXPECT_EQ(chunk->class_descriptors[0].parent_name, "اصل");
 }
 
+TEST(ModuleCompiler, HundredsOfImportsReuseTemporaryRegisters)
+{
+    diagnostic::reset();
+    Fa_FileManager source;
+    for (int i = 0; i < 300; ++i) {
+        source.buffer() += "من collections استورد مدى باسم اسم";
+        source.buffer() += Fa_StringRef(std::to_string(i).c_str());
+        source.buffer() += "\n";
+    }
+    source.buffer() += "اسم299(0، 1، 1)\n";
+
+    Fa_Parser parser(&source);
+    Fa_Chunk* chunk = Compiler().compile(parser.parse_program());
+    ASSERT_NE(chunk, nullptr);
+    EXPECT_FALSE(diagnostic::has_errors());
+    EXPECT_LT(chunk->local_count, 16u);
+}
+
 TEST_F(ModuleFixture, ChainedMethodCallsKeepArgumentsContiguous)
 {
     auto path = write("chained.fa",
@@ -175,6 +226,53 @@ TEST_F(ModuleFixture, LoadsOnceAndSupportsFromImport)
     Fa_Value result = run(main, vm);
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 1);
+}
+
+TEST_F(ModuleFixture, ExplicitStdlibDirectoryWinsOverLocalNameCollision)
+{
+    auto project = directory / "project";
+    auto stdlib = directory / "stdlib";
+    std::filesystem::create_directories(project);
+    std::filesystem::create_directories(stdlib);
+
+    {
+        std::ofstream local(project / "file.fa", std::ios::binary);
+        local << "دالة قيمة():\n    ارجع 1\n";
+    }
+    {
+        std::ofstream standard(stdlib / "file.fa", std::ios::binary);
+        standard << "دالة قيمة():\n    ارجع 2\n";
+    }
+    {
+        std::ofstream main(project / "main.fa", std::ios::binary);
+        main << "من file استورد قيمة\nقيمة()\n";
+    }
+
+    EnvironmentGuard configured_stdlib("FAIRUZ_STDLIB", stdlib.string());
+    Fa_VM vm;
+    Fa_Value result = run(project / "main.fa", vm);
+    ASSERT_TRUE(result.is_int());
+    EXPECT_EQ(result.as_int(), 2);
+}
+
+TEST_F(ModuleFixture, BundledStdlibWinsOverLocalNameCollisionWithoutEnvironmentOverride)
+{
+    auto project = directory / "project";
+    std::filesystem::create_directories(project);
+    {
+        std::ofstream local(project / "file.fa", std::ios::binary);
+        local << "دالة ملف(المسار، الوضع):\n    ارجع 1\n";
+    }
+    {
+        std::ofstream main(project / "main.fa", std::ios::binary);
+        main << "من file استورد ملف\nملف(\"x\"، \"قراءة\").يعمل()\n";
+    }
+
+    EnvironmentGuard no_override("FAIRUZ_STDLIB");
+    Fa_VM vm;
+    Fa_Value result = run(project / "main.fa", vm);
+    ASSERT_TRUE(result.is_bool());
+    EXPECT_FALSE(result.as_bool());
 }
 
 TEST_F(ModuleFixture, KeepsModuleGlobalsIsolated)

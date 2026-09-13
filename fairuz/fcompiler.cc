@@ -171,6 +171,12 @@ Fa_ErrorOr<bool> Compiler::compile_import(AST::Fa_ImportStmt* s)
     if (!m_current->is_top_level || m_current->scope_depth != 0)
         return report_error(CompilerError::INVALID_STATEMENT_NODE, s->get_location());
 
+    // Imported bindings live in the module's global environment. Keeping a
+    // permanent local register for every import makes a large module exhaust
+    // the 8-bit register file even though those temporary values are already
+    // stored globally. Rewind the load/extract temporaries after this
+    // statement and resolve later references through LOAD_GLOBAL.
+    RegMark mark(m_current);
     reg_t module_reg;
     ALLOC_REG(&module_reg);
     emit(Fa_make_ABx(Fa_OpCode::IMPORT_MODULE, module_reg, intern_string(s->get_module())), s->get_location());
@@ -183,7 +189,6 @@ Fa_ErrorOr<bool> Compiler::compile_import(AST::Fa_ImportStmt* s)
     }
 
     emit(Fa_make_ABx(Fa_OpCode::STORE_GLOBAL, value_reg, intern_string(s->get_alias())), s->get_location());
-    declare_local(s->get_alias(), value_reg);
     m_globals[s->get_alias()] = true;
     if (!s->imports_member())
         m_module_names[s->get_alias()] = true;
