@@ -1,8 +1,8 @@
 {
   "name": "fairuz-language",
   "displayName": "Fairuz Language Support",
-  "description": "Syntax highlighting and RTL editor for the Fairuz Arabic-syntax language",
-  "version": "0.2.2",
+  "description": "A comfortable Arabic RTL editor for Fairuz with semantic colors, compiler diagnostics, completion, formatting and run commands",
+  "version": "0.3.2",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -36,6 +36,42 @@
           "type": "string",
           "default": "",
           "description": "Path to the Fairuz executable used for AST semantic highlighting. Empty searches the workspace development build, then PATH."
+        },
+        "fairuz.fontSize": {
+          "scope": "resource",
+          "type": "number",
+          "default": 15,
+          "minimum": 10,
+          "maximum": 32,
+          "description": "Font size in the RTL editor."
+        },
+        "fairuz.lineHeight": {
+          "scope": "resource",
+          "type": "number",
+          "default": 1.8,
+          "minimum": 1.3,
+          "maximum": 2.5,
+          "description": "Line spacing multiplier in the RTL editor."
+        },
+        "fairuz.tabSize": {
+          "scope": "resource",
+          "type": "integer",
+          "default": 4,
+          "minimum": 1,
+          "maximum": 8,
+          "description": "Spaces per indentation level in the RTL editor."
+        },
+        "fairuz.wordWrap": {
+          "scope": "resource",
+          "type": "boolean",
+          "default": true,
+          "description": "Wrap long lines in the RTL editor."
+        },
+        "fairuz.liveDiagnostics": {
+          "scope": "resource",
+          "type": "boolean",
+          "default": true,
+          "description": "Check unsaved source after typing pauses. Does not execute the program."
         }
       }
     },
@@ -85,6 +121,51 @@
         "command": "fairuz.redo",
         "title": "Fairuz: Redo",
         "enablement": "activeCustomEditorId == 'fairuz.rtlEditor'"
+      },
+      {
+        "command": "fairuz.save",
+        "title": "Fairuz: Save",
+        "enablement": "activeCustomEditorId == 'fairuz.rtlEditor'"
+      },
+      {
+        "command": "fairuz.run",
+        "title": "Fairuz: Run File",
+        "enablement": "activeCustomEditorId == 'fairuz.rtlEditor'"
+      },
+      {
+        "command": "fairuz.stop",
+        "title": "Fairuz: Stop Running File",
+        "enablement": "activeCustomEditorId == 'fairuz.rtlEditor'"
+      },
+      {
+        "command": "fairuz.format",
+        "title": "Fairuz: Format Document",
+        "enablement": "activeCustomEditorId == 'fairuz.rtlEditor'"
+      },
+      {
+        "command": "fairuz.find",
+        "title": "Fairuz: Find",
+        "enablement": "activeCustomEditorId == 'fairuz.rtlEditor'"
+      },
+      {
+        "command": "fairuz.replace",
+        "title": "Fairuz: Replace",
+        "enablement": "activeCustomEditorId == 'fairuz.rtlEditor'"
+      },
+      {
+        "command": "fairuz.check",
+        "title": "Fairuz: Check File",
+        "enablement": "activeCustomEditorId == 'fairuz.rtlEditor'"
+      },
+      {
+        "command": "fairuz.wrap",
+        "title": "Fairuz: Toggle Word Wrap",
+        "enablement": "activeCustomEditorId == 'fairuz.rtlEditor'"
+      },
+      {
+        "command": "fairuz.outline",
+        "title": "Fairuz: Go to Symbol",
+        "enablement": "activeCustomEditorId == 'fairuz.rtlEditor'"
       }
     ],
     "keybindings": [
@@ -105,6 +186,48 @@
         "key": "ctrl+shift+z",
         "mac": "cmd+y",
         "when": "activeCustomEditorId == 'fairuz.rtlEditor'"
+      },
+      {
+        "command": "fairuz.save",
+        "key": "ctrl+s",
+        "mac": "cmd+s",
+        "when": "activeCustomEditorId == 'fairuz.rtlEditor'"
+      },
+      {
+        "command": "fairuz.run",
+        "key": "ctrl+enter",
+        "mac": "cmd+enter",
+        "when": "activeCustomEditorId == 'fairuz.rtlEditor'"
+      },
+      {
+        "command": "fairuz.format",
+        "key": "shift+alt+f",
+        "mac": "shift+alt+f",
+        "when": "activeCustomEditorId == 'fairuz.rtlEditor'"
+      },
+      {
+        "command": "fairuz.find",
+        "key": "ctrl+f",
+        "mac": "cmd+f",
+        "when": "activeCustomEditorId == 'fairuz.rtlEditor'"
+      },
+      {
+        "command": "fairuz.replace",
+        "key": "ctrl+h",
+        "mac": "alt+cmd+f",
+        "when": "activeCustomEditorId == 'fairuz.rtlEditor'"
+      },
+      {
+        "command": "fairuz.wrap",
+        "key": "alt+z",
+        "mac": "alt+z",
+        "when": "activeCustomEditorId == 'fairuz.rtlEditor'"
+      },
+      {
+        "command": "fairuz.outline",
+        "key": "ctrl+shift+o",
+        "mac": "cmd+shift+o",
+        "when": "activeCustomEditorId == 'fairuz.rtlEditor'"
       }
     ],
     "menus": {
@@ -118,6 +241,33 @@
           "command": "fairuz.redo",
           "when": "webviewId == 'fairuz.rtlEditor'",
           "group": "1_modification@2"
+        },
+        {
+          "command": "fairuz.save",
+          "when": "webviewId == 'fairuz.rtlEditor'",
+          "group": "2_editing"
+        },
+        {
+          "command": "fairuz.format",
+          "when": "webviewId == 'fairuz.rtlEditor'",
+          "group": "2_editing"
+        },
+        {
+          "command": "fairuz.find",
+          "when": "webviewId == 'fairuz.rtlEditor'",
+          "group": "2_editing"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "fairuz.run",
+          "when": "activeCustomEditorId == 'fairuz.rtlEditor'",
+          "group": "navigation"
+        },
+        {
+          "command": "fairuz.check",
+          "when": "activeCustomEditorId == 'fairuz.rtlEditor'",
+          "group": "navigation"
         }
       ]
     }
@@ -125,7 +275,10 @@
   "scripts": {
     "build:webview": "node ./scripts/build_editor.js",
     "vscode:prepublish": "npm run build:webview",
-    "package": "npm run vscode:prepublish && vsce package"
+    "package": "npm run vscode:prepublish && vsce package",
+    "test": "node --test test/*.test.cjs",
+    "test:compiler": "FAIRUZ_TEST_COMPILER=1 node --test test/compiler.test.cjs",
+    "test:host": "node scripts/test_host.js"
   },
   "devDependencies": {
     "@codemirror/commands": "^6.11.0",
@@ -133,6 +286,19 @@
     "@codemirror/view": "^6.43.11",
     "@vscode/vsce": "^3.0.0",
     "codemirror": "^6.0.2",
-    "esbuild": "^0.28.2"
+    "esbuild": "^0.28.2",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/lint": "^6.9.7",
+    "@codemirror/search": "^6.7.2",
+    "@codemirror/autocomplete": "^6.20.3"
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "Editing and lexical highlighting work. Compiler processes and Run require a trusted workspace.",
+      "restrictedConfigurations": [
+        "fairuz.executablePath"
+      ]
+    }
   }
 }

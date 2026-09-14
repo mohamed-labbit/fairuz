@@ -1,34 +1,65 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fairuz RTL editor harness</title>
-  <link rel="stylesheet" href="../media/editor.css">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fairuz editor · development harness</title>
+<link rel="stylesheet" href="../media/editor.css">
+<style>
+#harness { position: fixed; bottom: 34px; left: 12px; z-index: 120; direction: ltr; background: var(--panel); border: 1px solid var(--border); border-radius: 5px; padding: 5px; font: 11px system-ui; opacity: .75; }
+#harness:hover { opacity: 1; }
+#harness output { display: inline-block; max-width: 300px; }
+</style>
 </head>
 <body>
-  <div id="container"></div>
-  <script>
-    const sample = `# اختبار المحرر\nمن textwrap استورد التفاف\n\nدالة اختبر(النص):\n    نتيجة := التفاف(النص، 20)\n    تاكد نتيجة != عدم\n    ارجع نتيجة\n`;
-    window.acquireVsCodeApi = () => ({
-      postMessage(message) {
-        if (message.type === "ready") {
-          setTimeout(() => window.postMessage({
-            type: "setText",
-            text: sample,
-            version: 1
-          }), 0);
-        }
-        if (message.type === "semanticTokens") {
-          setTimeout(() => window.postMessage({
-            type: "semanticTokens",
-            requestId: message.requestId,
-            tokens: []
-          }), 0);
-        }
-      }
+<div id="app"></div>
+<div id="harness"><button id="theme">Light / dark</button><button id="external">External edit</button><button id="error">Diagnostic</button><button id="delay">Slow sync: off</button><button id="drop-ack">Drop next ack</button><output id="test-state">Ready</output></div>
+<script>
+let hostText = `# تقرير المبيعات — مثال صغير بلغة فيروز\nمن json استورد JSON_رمز\n\nدالة مجموع_المبيعات(المبيعات):\n    المجموع := 0\n    لكل قيمة في المبيعات:\n        المجموع := المجموع + قيمة\n    ارجع المجموع\n\nالمبيعات := [120، 85، 210، 95]\nالإجمالي := مجموع_المبيعات(المبيعات)\n\nاكتب("إجمالي المبيعات:", الإجمالي)\nاكتب(JSON_رمز(قاموس("total", الإجمالي)))\n`;
+let version = 1, slow = false, dirty = false, persisted = null, invalid = false, dropAck = false;
+let hostQueue = Promise.resolve();
+const post = message => window.postMessage(message, '*');
+const metadata = () => post({ type: 'metadata', name: 'تقرير_المبيعات.fa', dirty, trusted: true,
+  settings: { fontSize: 16, lineHeight: 1.8, wordWrap: true, tabSize: 4, liveDiagnostics: true } });
+const report = text => document.getElementById('test-state').textContent = text;
+window.acquireVsCodeApi = () => ({
+  getState: () => persisted, setState: state => { persisted = state; },
+  postMessage(message) {
+    if (message.type === 'ready') setTimeout(() => { post({ type: 'setText', text: hostText, version }); metadata(); }, 0);
+    if (message.type === 'sync') hostQueue.then(() => {
+      post({ type: 'setText', text: hostText, version, authoritative: true, recoveryId: message.recoveryId }); metadata(); report('Recovered v' + version);
     });
-  </script>
-  <script src="../media/editor.js"></script>
-</body>
-</html>
+    if (message.type === 'edit') {
+      report('Edit pending');
+      hostQueue = hostQueue.then(() => new Promise(resolve => setTimeout(() => {
+        if (message.baseVersion !== version) { post({ type: 'setText', text: hostText, version, rejected: true }); report('Conflict preserved'); resolve(); return; }
+        const c = message.change;
+        hostText = hostText.slice(0, c.from) + c.insert + hostText.slice(c.to);
+        version += 2; dirty = true;
+        if (dropAck) { dropAck = false; report('Ack dropped'); }
+        else { post({ type: 'ack', id: message.id, version }); report('Synced v' + version); }
+        metadata(); resolve();
+      }, slow ? 1200 : 20)));
+    }
+    if (message.type === 'semanticTokens') setTimeout(() => post({ type: 'semanticTokens', requestId: message.requestId, tokens: [] }), 10);
+    if (message.type === 'check') setTimeout(() => post({ type: 'diagnostics', requestId: message.requestId,
+      diagnostics: invalid ? [{ line: 3, start: 0, length: 4, message: 'Expected a closing parenthesis · قوس الإغلاق مفقود', severity: 'error' }] : [] }), 50);
+    if (message.type === 'action') {
+      if (message.version && message.version !== version) { report('ERROR: stale action'); return; }
+      if (message.action === 'save') { dirty = false; metadata(); post({ type: 'notice', message: 'تم الحفظ' }); report('Saved host v' + version); }
+      if (message.action === 'run') { report('Run requested after sync'); post({ type: 'runState', running: true }); }
+      if (message.action === 'stop') { report('Stopped'); post({ type: 'runState', running: false }); }
+    }
+  }
+});
+document.getElementById('external').onclick = () => { hostText += '\n# تعديل خارجي\n'; version++; post({ type: 'setText', text: hostText, version }); report('External v' + version); };
+document.getElementById('error').onclick = () => { invalid = !invalid; post({ type: 'command', action: 'check' }); };
+document.getElementById('delay').onclick = event => { slow = !slow; event.target.textContent = 'Slow sync: ' + (slow ? 'on' : 'off'); };
+document.getElementById('drop-ack').onclick = () => { dropAck = true; report('Next ack will be dropped'); };
+document.getElementById('theme').onclick = () => {
+  const light = document.body.classList.toggle('vscode-light');
+  const variables = { '--vscode-editor-background':'#fafbfc', '--vscode-editor-foreground':'#27343e', '--vscode-descriptionForeground':'#657481', '--vscode-panel-border':'#dae1e5', '--vscode-sideBar-background':'#f0f3f5', '--vscode-input-background':'#ffffff', '--vscode-input-foreground':'#27343e', '--vscode-editorCursor-foreground':'#27343e', '--vscode-editorLineNumber-foreground':'#82919d', '--vscode-editorLineNumber-activeForeground':'#27343e', '--vscode-editor-selectionBackground':'#c3e4e7', '--vscode-toolbar-hoverBackground':'#00000009' };
+  for (const [key, value] of Object.entries(variables)) light ? document.body.style.setProperty(key, value) : document.body.style.removeProperty(key);
+};
+</script>
+<script src="../media/editor.js"></script>
+</body></html>

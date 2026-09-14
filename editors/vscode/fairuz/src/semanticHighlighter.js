@@ -1,7 +1,7 @@
 const vscode = require("vscode");
 const path = require("path");
 const fs = require("fs");
-const { spawn } = require("child_process");
+const { runCompiler } = require("./compilerService");
 
 const TOKEN_TYPES = [
   "keyword", "comment", "string", "number", "operator", "boolean", "null",
@@ -18,6 +18,7 @@ class FairuzSemanticHighlighter {
   executable() {
     const configured = vscode.workspace.getConfiguration("fairuz").get("executablePath", "").trim();
     if (configured) return configured;
+    if (!vscode.workspace.isTrusted) return "fairuz";
 
     // An installed VSIX lives under ~/.vscode/extensions, so paths relative
     // to extensionPath cannot locate the compiler in the user's checkout.
@@ -41,61 +42,23 @@ class FairuzSemanticHighlighter {
     vscode.window.showWarningMessage(detail);
   }
 
-  highlight(text, cancellationToken) {
-    return new Promise((resolve) => {
-      if (typeof text !== "string" || Buffer.byteLength(text, "utf8") > 8 * 1024 * 1024) {
-        resolve(null);
-        return;
-      }
-      const child = spawn(this.executable(), ["--semantic-tokens", "-"], {
-        stdio: ["pipe", "pipe", "pipe"],
-        windowsHide: true
-      });
-      let stdout = "";
-      let settled = false;
-      let cancellationSubscription;
-      const finish = (value) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timer);
-        cancellationSubscription?.dispose();
-        resolve(value);
-      };
-      const timer = setTimeout(() => {
-        child.kill();
-        finish(null);
-      }, 5000);
-      cancellationSubscription = cancellationToken?.onCancellationRequested(() => {
-        child.kill();
-        finish(null);
-      });
-      // Diagnostics are irrelevant to the semantic-token protocol, but this
-      // pipe still has to be drained so it cannot back-pressure the child.
-      child.stderr.resume();
-      child.stdout.setEncoding("utf8");
-      child.stdout.on("data", (chunk) => {
-        stdout += chunk;
-        if (stdout.length > 16 * 1024 * 1024) {
-          child.kill();
-          finish(null);
-        }
-      });
-      child.on("error", (error) => {
-        this.reportUnavailable(error);
-        finish(null);
-      });
-      child.on("close", (code) => {
-        if (code !== 0) return finish(null);
-        try {
-          const parsed = JSON.parse(stdout);
-          finish(Array.isArray(parsed.tokens) ? parsed : null);
-        } catch (_) {
-          finish(null);
-        }
-      });
-      child.stdin.end(text, "utf8");
+  async highlight(text, cancellationToken) {
+    if (!vscode.workspace.isTrusted || typeof text !== "string"
+        || Buffer.byteLength(text, "utf8") > 8 * 1024 * 1024) return null;
+    const result = await runCompiler(this.executable(), ["--semantic-tokens", "-"], {
+      input: text, token: cancellationToken
     });
+    if (result.error) {
+      this.reportUnavailable(new Error(result.error));
+      return null;
+    }
+    if (result.cancelled || result.code !== 0) return null;
+    try {
+      const parsed = JSON.parse(result.stdout);
+      return Array.isArray(parsed.tokens) ? parsed : null;
+    } catch (_) { return null; }
   }
+
 }
 
 function registerDocumentSemanticTokens(context, highlighter) {
