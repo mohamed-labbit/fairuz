@@ -10,10 +10,10 @@
 #include "fobj_header.hpp"
 #include "fobject.hpp"
 #include "fopcode.hpp"
+#include "fparser.hpp"
 #include "fstring.hpp"
 #include "futil.hpp"
 #include "fvalue.hpp"
-#include "fparser.hpp"
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -78,19 +78,19 @@ bool values_equal(Fa_Value lhs, Fa_Value rhs)
 
 } // namespace
 
-#define Fa_DISPATCH()                                              \
-    do {                                                           \
-        if (UNLIKELY(m_gc.should_collect()))                       \
-            m_gc.collect(this);                                    \
-        if (UNLIKELY(ip >= cur_chunk->code.size()))                \
+#define Fa_DISPATCH()                                                                      \
+    do {                                                                                   \
+        if (UNLIKELY(m_gc.should_collect()))                                               \
+            m_gc.collect(this);                                                            \
+        if (UNLIKELY(ip >= cur_chunk->code.size()))                                        \
             runtime_error(ErrorCode::INVALID_OPCODE, "instruction pointer out of bounds"); \
-        instr = cur_chunk->code[ip];                               \
-        ip++;                                                      \
-        SAVE_IP();                                                 \
-        u8 opcode = static_cast<u8>(Fa_instr_op(instr));           \
-        if (UNLIKELY(opcode >= static_cast<u8>(Fa_OpCode::_COUNT))) \
-            runtime_error(ErrorCode::INVALID_OPCODE);              \
-        goto* dispatch_table[opcode];                              \
+        instr = cur_chunk->code[ip];                                                       \
+        ip++;                                                                              \
+        SAVE_IP();                                                                         \
+        u8 opcode = static_cast<u8>(Fa_instr_op(instr));                                   \
+        if (UNLIKELY(opcode >= static_cast<u8>(Fa_OpCode::_COUNT)))                        \
+            runtime_error(ErrorCode::INVALID_OPCODE);                                      \
+        goto* dispatch_table[opcode];                                                      \
     } while (0)
 
 #define Fa_BEGIN_DISPATCH() Fa_DISPATCH()
@@ -108,39 +108,39 @@ bool values_equal(Fa_Value lhs, Fa_Value rhs)
 #define Fa_VM_SUBF(lhs, rhs) Fa_VMOPF(lhs, rhs, -)
 #define Fa_VM_MULF(lhs, rhs) Fa_VMOPF(lhs, rhs, *)
 #define Fa_VM_DIVF(lhs, rhs) Fa_VMOPF(lhs, rhs, /)
-#define Fa_VM_INSTANCE_OP(op_name)                                                    \
-    do {                                                                              \
-        Fa_ObjClass* self_klass = nullptr;                                            \
-        Fa_Value self_val, arg_val = Fa_Value::nil();                                 \
-        int slot = -1;                                                                \
-        if (lhs.is_instance()) {                                                      \
-            self_klass = lhs.as_instance()->klass;                                    \
-            slot = self_klass->method_slot(sp_method_name(Fa_ObjClass::op_name));     \
-            if (slot >= 0) {                                                          \
-                self_val = lhs;                                                       \
-                arg_val = rhs;                                                        \
-            }                                                                         \
-        }                                                                             \
-        if (slot < 0 && rhs.is_instance()) {                                          \
-            self_klass = rhs.as_instance()->klass;                                    \
-            slot = self_klass->method_slot(sp_method_name(Fa_ObjClass::op_name));     \
-            if (slot >= 0) {                                                          \
-                self_val = rhs;                                                       \
-                arg_val = lhs;                                                        \
-            }                                                                         \
-        }                                                                             \
-        if (UNLIKELY(slot < 0))                                                       \
-            runtime_error(ErrorCode::TYPE_ERROR_ARITH);                               \
-        if (UNLIKELY(static_cast<u32>(slot) >= self_klass->vtable.size()))            \
-            runtime_error(ErrorCode::UNDEFINED_METHOD);                              \
-        Fa_Chunk* target_chunk = self_klass->vtable[static_cast<u32>(slot)];          \
-        int caller_stack_top = m_stack_top;                                           \
-        int call_base = caller_stack_top;                                             \
-        if (UNLIKELY(call_base + 2 >= STACK_SIZE))                                    \
-            runtime_error(ErrorCode::STACK_OVERFLOW);                                 \
-        m_stack[call_base + 1] = arg_val;                                             \
-        invoke_method(target_chunk, self_val, cur_frame_base + Fa_instr_A(instr),    \
-            call_base, 2, ip, caller_stack_top, target_chunk->globals);               \
+#define Fa_VM_INSTANCE_OP(op_name)                                                \
+    do {                                                                          \
+        Fa_ObjClass* self_klass = nullptr;                                        \
+        Fa_Value self_val, arg_val = Fa_Value::nil();                             \
+        int slot = -1;                                                            \
+        if (lhs.is_instance()) {                                                  \
+            self_klass = lhs.as_instance()->klass;                                \
+            slot = self_klass->method_slot(sp_method_name(Fa_ObjClass::op_name)); \
+            if (slot >= 0) {                                                      \
+                self_val = lhs;                                                   \
+                arg_val = rhs;                                                    \
+            }                                                                     \
+        }                                                                         \
+        if (slot < 0 && rhs.is_instance()) {                                      \
+            self_klass = rhs.as_instance()->klass;                                \
+            slot = self_klass->method_slot(sp_method_name(Fa_ObjClass::op_name)); \
+            if (slot >= 0) {                                                      \
+                self_val = rhs;                                                   \
+                arg_val = lhs;                                                    \
+            }                                                                     \
+        }                                                                         \
+        if (UNLIKELY(slot < 0))                                                   \
+            runtime_error(ErrorCode::TYPE_ERROR_ARITH);                           \
+        if (UNLIKELY(static_cast<u32>(slot) >= self_klass->vtable.size()))        \
+            runtime_error(ErrorCode::UNDEFINED_METHOD);                           \
+        Fa_Chunk* target_chunk = self_klass->vtable[static_cast<u32>(slot)];      \
+        int caller_stack_top = m_stack_top;                                       \
+        int call_base = caller_stack_top;                                         \
+        if (UNLIKELY(call_base + 2 >= STACK_SIZE))                                \
+            runtime_error(ErrorCode::STACK_OVERFLOW);                             \
+        m_stack[call_base + 1] = arg_val;                                         \
+        invoke_method(target_chunk, self_val, cur_frame_base + Fa_instr_A(instr), \
+            call_base, 2, ip, caller_stack_top, target_chunk->globals);           \
     } while (0)
 
 #define Fa_RA() cur_base[Fa_instr_A(instr)]
@@ -228,7 +228,7 @@ Fa_VM::~Fa_VM()
         if (m_stack_top == STACK_SIZE)                \
             runtime_error(ErrorCode::STACK_OVERFLOW); \
         m_stack[m_stack_top] = v;                     \
-        m_stack_top++;                             \
+        m_stack_top++;                                \
     } while (0);
 
 // Ensure the value stack has at least `needed` slots allocated, filling
@@ -1907,9 +1907,9 @@ void Fa_VM::open_stdlib()
     (void)register_native("مقطع", &Fa_VM::Fa_slice, -1);
     (void)register_native("قائمة", &Fa_VM::Fa_list, -1);
     (void)register_native("قاموس", &Fa_VM::Fa_dict, -1);
-    (void)register_native("__قاموس_مفاتيح", &Fa_VM::Fa_dict_keys, 1);
-    (void)register_native("__قاموس_يحتوي", &Fa_VM::Fa_dict_contains, 2);
-    (void)register_native("__قاموس_احذف", &Fa_VM::Fa_dict_delete, 2);
+    (void)register_native("__قاموس_مفاتيح__", &Fa_VM::Fa_dict_keys, 1);
+    (void)register_native("__قاموس_يحتوي__", &Fa_VM::Fa_dict_contains, 2);
+    (void)register_native("__قاموس_احذف__", &Fa_VM::Fa_dict_delete, 2);
     // I/O
     (void)register_native("اكتب", &Fa_VM::Fa_print, -1);
     (void)register_native("ادخل", &Fa_VM::Fa_input, 0);
@@ -1928,48 +1928,48 @@ void Fa_VM::open_stdlib()
     (void)register_native("جزء", &Fa_VM::Fa_substr, 3);
     (void)register_native("يحتوي", &Fa_VM::Fa_contains, 2);
     (void)register_native("قص", &Fa_VM::Fa_trim, 1);
-    (void)register_native("__نص_من_رمز", &Fa_VM::Fa_char_from_codepoint, 1);
-    (void)register_native("__عدد_من_نص", &Fa_VM::Fa_number_from_text, 1);
-    (void)register_native("__عدد_منته", &Fa_VM::Fa_number_finite, 1);
-    (void)register_native("__عدد_ليس_رقما", &Fa_VM::Fa_number_is_nan, 1);
-    (void)register_native("__JSON_اهرب", &Fa_VM::Fa_json_escape, 1);
-    (void)register_native("__JSON_اقرا_سلسلة", &Fa_VM::Fa_json_read_string, 2);
-    (void)register_native("__استدعاء", &Fa_VM::Fa_dynamic_call, 2);
-    (void)register_native("__منفذ_جديد", &Fa_VM::Fa_executor_new, 1);
-    (void)register_native("__منفذ_اغلق", &Fa_VM::Fa_executor_close, 2);
-    (void)register_native("__مهمة_ابدأ", &Fa_VM::Fa_task_start, 3);
-    (void)register_native("__مهمة_تمت", &Fa_VM::Fa_task_done, 1);
-    (void)register_native("__مهمة_نتيجة", &Fa_VM::Fa_task_result, 2);
-    (void)register_native("__مهمة_الغ", &Fa_VM::Fa_task_cancel, 1);
-    (void)register_native("__مهمة_انتظر_الكل", &Fa_VM::Fa_task_wait_all, 2);
-    (void)register_native("__ملف_افتح", &Fa_VM::Fa_file_open, 2);
-    (void)register_native("__ملف_اقرا", &Fa_VM::Fa_file_read, 2);
-    (void)register_native("__ملف_اقرا_الكل", &Fa_VM::Fa_file_read_all, 1);
-    (void)register_native("__ملف_اقرا_سطر", &Fa_VM::Fa_file_read_line, 1);
-    (void)register_native("__ملف_اكتب", &Fa_VM::Fa_file_write, 2);
-    (void)register_native("__ملف_اضف", &Fa_VM::Fa_file_write, 2);
-    (void)register_native("__ملف_ادفع", &Fa_VM::Fa_file_flush, 1);
-    (void)register_native("__ملف_اغلق", &Fa_VM::Fa_close, 1);
-    (void)register_native("__مسار_احذف", &Fa_VM::Fa_path_delete, 1);
-    (void)register_native("__مسار_glob", &Fa_VM::Fa_path_glob, 2);
-    (void)register_native("__ملف_مؤقت", &Fa_VM::Fa_temp_file, 3);
-    (void)register_native("__مجلد_مؤقت", &Fa_VM::Fa_temp_directory, 2);
-    (void)register_native("__نظام_احذف_شجرة", &Fa_VM::Fa_remove_tree, 1);
-    (void)register_native("__وقت_الان", &Fa_VM::Fa_datetime_now, 0);
-    (void)register_native("__وقت_من_حقول", &Fa_VM::Fa_datetime_from_fields, 7);
-    (void)register_native("__وقت_الى_حقول", &Fa_VM::Fa_datetime_to_fields, 2);
-    (void)register_native("__وقت_حلل", &Fa_VM::Fa_datetime_parse, 3);
-    (void)register_native("__وقت_نسق", &Fa_VM::Fa_datetime_format, 3);
-    (void)register_native("__base64_رمز", &Fa_VM::Fa_base64_encode, 2);
-    (void)register_native("__base64_فك", &Fa_VM::Fa_base64_decode, 2);
-    (void)register_native("__hex_رمز", &Fa_VM::Fa_hex_encode, 1);
-    (void)register_native("__hex_فك", &Fa_VM::Fa_hex_decode, 1);
-    (void)register_native("__هاش_جديد", &Fa_VM::Fa_hash_new, 1);
-    (void)register_native("__هاش_حدث", &Fa_VM::Fa_hash_update, 2);
-    (void)register_native("__هاش_ناتج", &Fa_VM::Fa_hash_digest, 2);
-    (void)register_native("__HMAC", &Fa_VM::Fa_hmac, 3);
-    (void)register_native("__ضغط", &Fa_VM::Fa_compress, 3);
-    (void)register_native("__فك_ضغط", &Fa_VM::Fa_decompress, 3);
+    (void)register_native("__نص_من_رمز__", &Fa_VM::Fa_char_from_codepoint, 1);
+    (void)register_native("__عدد_من_نص__", &Fa_VM::Fa_number_from_text, 1);
+    (void)register_native("__عدد_منته__", &Fa_VM::Fa_number_finite, 1);
+    (void)register_native("__عدد_ليس_رقما__", &Fa_VM::Fa_number_is_nan, 1);
+    (void)register_native("__JSON_اهرب__", &Fa_VM::Fa_json_escape, 1);
+    (void)register_native("__JSON_اقرا_سلسلة__", &Fa_VM::Fa_json_read_string, 2);
+    (void)register_native("__استدعاء__", &Fa_VM::Fa_dynamic_call, 2);
+    (void)register_native("__منفذ_جديد__", &Fa_VM::Fa_executor_new, 1);
+    (void)register_native("__منفذ_اغلق__", &Fa_VM::Fa_executor_close, 2);
+    (void)register_native("__مهمة_ابدأ__", &Fa_VM::Fa_task_start, 3);
+    (void)register_native("__مهمة_تمت__", &Fa_VM::Fa_task_done, 1);
+    (void)register_native("__مهمة_نتيجة__", &Fa_VM::Fa_task_result, 2);
+    (void)register_native("__مهمة_الغ__", &Fa_VM::Fa_task_cancel, 1);
+    (void)register_native("__مهمة_انتظر_الكل__", &Fa_VM::Fa_task_wait_all, 2);
+    (void)register_native("__ملف_افتح__", &Fa_VM::Fa_file_open, 2);
+    (void)register_native("__ملف_اقرا__", &Fa_VM::Fa_file_read, 2);
+    (void)register_native("__ملف_اقرا_الكل__", &Fa_VM::Fa_file_read_all, 1);
+    (void)register_native("__ملف_اقرا_سطر__", &Fa_VM::Fa_file_read_line, 1);
+    (void)register_native("__ملف_اكتب__", &Fa_VM::Fa_file_write, 2);
+    (void)register_native("__ملف_اضف__", &Fa_VM::Fa_file_write, 2);
+    (void)register_native("__ملف_ادفع__", &Fa_VM::Fa_file_flush, 1);
+    (void)register_native("__ملف_اغلق__", &Fa_VM::Fa_close, 1);
+    (void)register_native("__مسار_احذف__", &Fa_VM::Fa_path_delete, 1);
+    (void)register_native("__مسار_glob__", &Fa_VM::Fa_path_glob, 2);
+    (void)register_native("__ملف_مؤقت__", &Fa_VM::Fa_temp_file, 3);
+    (void)register_native("__مجلد_مؤقت__", &Fa_VM::Fa_temp_directory, 2);
+    (void)register_native("__نظام_احذف_شجرة__", &Fa_VM::Fa_remove_tree, 1);
+    (void)register_native("__وقت_الان__", &Fa_VM::Fa_datetime_now, 0);
+    (void)register_native("__وقت_من_حقول__", &Fa_VM::Fa_datetime_from_fields, 7);
+    (void)register_native("__وقت_الى_حقول__", &Fa_VM::Fa_datetime_to_fields, 2);
+    (void)register_native("__وقت_حلل__", &Fa_VM::Fa_datetime_parse, 3);
+    (void)register_native("__وقت_نسق__", &Fa_VM::Fa_datetime_format, 3);
+    (void)register_native("__64_رمز__", &Fa_VM::Fa_base64_encode, 2);
+    (void)register_native("__64_فك__", &Fa_VM::Fa_base64_decode, 2);
+    (void)register_native("__16_رمز__", &Fa_VM::Fa_hex_encode, 1);
+    (void)register_native("__16_فك__", &Fa_VM::Fa_hex_decode, 1);
+    (void)register_native("__هاش_جديد__", &Fa_VM::Fa_hash_new, 1);
+    (void)register_native("__هاش_حدث__", &Fa_VM::Fa_hash_update, 2);
+    (void)register_native("__هاش_ناتج__", &Fa_VM::Fa_hash_digest, 2);
+    (void)register_native("__HMAC__", &Fa_VM::Fa_hmac, 3);
+    (void)register_native("__ضغط__", &Fa_VM::Fa_compress, 3);
+    (void)register_native("__فك_ضغط__", &Fa_VM::Fa_decompress, 3);
     // Math
     (void)register_native("ادنى", &Fa_VM::Fa_floor, 1);
     (void)register_native("اعلى", &Fa_VM::Fa_ceil, 1);
@@ -1979,19 +1979,19 @@ void Fa_VM::open_stdlib()
     (void)register_native("اكبر", &Fa_VM::Fa_max, -1);
     (void)register_native("قوة", &Fa_VM::Fa_pow, 2);
     (void)register_native("جذر", &Fa_VM::Fa_sqrt, 1);
-    (void)register_native("__رياضيات", &Fa_VM::Fa_math_unary, 2);
-    (void)register_native("__رياضيات2", &Fa_VM::Fa_math_binary, 3);
-    (void)register_native("__URL_اهرب", &Fa_VM::Fa_url_encode, 1);
-    (void)register_native("__URL_فك", &Fa_VM::Fa_url_decode, 1);
-    (void)register_native("__URL_حلل", &Fa_VM::Fa_url_parse, 1);
-    (void)register_native("__URL_ركب", &Fa_VM::Fa_url_build, 1);
-    (void)register_native("__نمط_اجمع", &Fa_VM::Fa_regex_compile, 2);
-    (void)register_native("__نمط_بحث", &Fa_VM::Fa_regex_search, 3);
-    (void)register_native("__نمط_طابق", &Fa_VM::Fa_regex_match, 3);
-    (void)register_native("__نمط_كامل", &Fa_VM::Fa_regex_fullmatch, 2);
-    (void)register_native("__نمط_الكل", &Fa_VM::Fa_regex_findall, 2);
-    (void)register_native("__نمط_اقسم", &Fa_VM::Fa_regex_split, 3);
-    (void)register_native("__نمط_استبدل", &Fa_VM::Fa_regex_replace, 4);
+    (void)register_native("__رياضيات__", &Fa_VM::Fa_math_unary, 2);
+    (void)register_native("__رياضيات2__", &Fa_VM::Fa_math_binary, 3);
+    (void)register_native("__URL_اهرب__", &Fa_VM::Fa_url_encode, 1);
+    (void)register_native("__URL_فك__", &Fa_VM::Fa_url_decode, 1);
+    (void)register_native("__URL_حلل__", &Fa_VM::Fa_url_parse, 1);
+    (void)register_native("__URL_ركب__", &Fa_VM::Fa_url_build, 1);
+    (void)register_native("__نمط_اجمع__", &Fa_VM::Fa_regex_compile, 2);
+    (void)register_native("__نمط_بحث__", &Fa_VM::Fa_regex_search, 3);
+    (void)register_native("__نمط_طابق__", &Fa_VM::Fa_regex_match, 3);
+    (void)register_native("__نمط_كامل__", &Fa_VM::Fa_regex_fullmatch, 2);
+    (void)register_native("__نمط_الكل__", &Fa_VM::Fa_regex_findall, 2);
+    (void)register_native("__نمط_اقسم__", &Fa_VM::Fa_regex_split, 3);
+    (void)register_native("__نمط_استبدل__", &Fa_VM::Fa_regex_replace, 4);
     // Runtime / diagnostics
     (void)register_native("تاكد", &Fa_VM::Fa_assert, -1);
     (void)register_native("ساعة", &Fa_VM::Fa_clock, 0);

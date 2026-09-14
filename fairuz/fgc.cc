@@ -12,8 +12,8 @@
 #include "fvalue.hpp"
 #include "fvm.hpp"
 
-#include <new>
 #include <algorithm>
+#include <new>
 
 namespace fairuz::runtime {
 

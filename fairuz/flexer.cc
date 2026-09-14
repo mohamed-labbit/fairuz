@@ -383,9 +383,12 @@ TokenPtr Fa_Lexer::lex_token()
                     for (int i = 0; i < 4; ++i) {
                         current = m_source_manager.next_char();
                         int digit = -1;
-                        if (current >= '0' && current <= '9') digit = static_cast<int>(current - '0');
-                        else if (current >= 'a' && current <= 'f') digit = static_cast<int>(current - 'a' + 10);
-                        else if (current >= 'A' && current <= 'F') digit = static_cast<int>(current - 'A' + 10);
+                        if (current >= '0' && current <= '9')
+                            digit = static_cast<int>(current - '0');
+                        else if (current >= 'a' && current <= 'f')
+                            digit = static_cast<int>(current - 'a' + 10);
+                        else if (current >= 'A' && current <= 'F')
+                            digit = static_cast<int>(current - 'A' + 10);
                         if (digit < 0)
                             return finish(tok::Fa_TokenType::INVALID,
                                 m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset()), src_loc);
@@ -493,8 +496,7 @@ TokenPtr Fa_Lexer::lex_token()
                     m_source_manager.consume_char(); // third
 
                     u32 const end_byte = m_source_manager.get_file_offset();
-                    Fa_StringRef op_str =
-                        m_source_manager.source_slice(start_byte, end_byte);
+                    Fa_StringRef op_str = m_source_manager.source_slice(start_byte, end_byte);
 
                     if (auto type = tok::lookup_operator(op_str))
                         return finish(*type, op_str, src_loc);
@@ -502,7 +504,7 @@ TokenPtr Fa_Lexer::lex_token()
                     return finish(tok::Fa_TokenType::INVALID, op_str, src_loc);
                 }
 
-                Fa_StringRef two = m_source_manager.source_slice(start_byte, 
+                Fa_StringRef two = m_source_manager.source_slice(start_byte,
                     m_source_manager.get_file_offset() + util::utf8_codepoint_size(second));
                 if (auto type = tok::lookup_operator(two)) {
                     m_source_manager.consume_char();

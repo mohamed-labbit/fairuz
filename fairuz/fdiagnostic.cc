@@ -193,9 +193,9 @@ void Fa_DiagnosticEngine::print_snippet(Fa_SourceLocation const& loc) const
     size_t source_col = std::min<size_t>(caret_col, line_str.size());
     size_t source_len = std::min<size_t>(caret_len, line_str.size() - source_col);
     size_t display_col = escape_terminal(
-        std::string_view(line_str).substr(0, source_col)).size();
-    size_t display_len = std::max<size_t>(1, escape_terminal(
-        std::string_view(line_str).substr(source_col, source_len)).size());
+        std::string_view(line_str).substr(0, source_col))
+                             .size();
+    size_t display_len = std::max<size_t>(1, escape_terminal(std::string_view(line_str).substr(source_col, source_len)).size());
 
     std::cerr << "  " << terminal_color(Color::BOLD) << terminal_color(Color::BLUE)
               << line_num_str << " |" << terminal_color(Color::RESET)

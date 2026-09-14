@@ -1122,12 +1122,12 @@ public:
         if (other_members.size() != m_members.size() || other_methods.size() != m_methods.size())
             return false;
 
-        for (u32 i = 0, n = other_members.size(); i < n;++i) {
+        for (u32 i = 0, n = other_members.size(); i < n; ++i) {
             if (!other_members[i]->equals(m_members[i]))
                 return false;
         }
 
-        for (u32 i = 0, n = other_methods.size(); i < n;++i) {
+        for (u32 i = 0, n = other_methods.size(); i < n; ++i) {
             if (!other_methods[i]->equals(m_methods[i]))
                 return false;
         }

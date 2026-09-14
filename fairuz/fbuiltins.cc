@@ -10,16 +10,16 @@
 #include "fvalue.hpp"
 #include "fvm.hpp"
 
-#include <charconv>
 #include <algorithm>
 #include <array>
 #include <atomic>
 #include <cerrno>
+#include <charconv>
 #include <chrono>
 #include <cmath>
-#include <cstring>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
@@ -27,10 +27,10 @@
 #include <iostream>
 #include <limits>
 #include <regex>
+#include <simdutf.h>
 #include <sstream>
 #include <string_view>
 #include <unordered_set>
-#include <simdutf.h>
 #include <zlib.h>
 
 namespace fairuz::runtime {
@@ -878,9 +878,12 @@ Fa_Value Fa_VM::Fa_json_read_string(int argc, Fa_Value* argv)
     cp_pos++;
     std::string output;
     auto hex_digit = [](char ch) -> int {
-        if (ch >= '0' && ch <= '9') return ch - '0';
-        if (ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
-        if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
+        if (ch >= '0' && ch <= '9')
+            return ch - '0';
+        if (ch >= 'a' && ch <= 'f')
+            return ch - 'a' + 10;
+        if (ch >= 'A' && ch <= 'F')
+            return ch - 'A' + 10;
         return -1;
     };
     auto read_hex4 = [&](size_t at, u32* value) -> bool {
@@ -969,10 +972,12 @@ Fa_Value Fa_VM::Fa_dynamic_call(int argc, Fa_Value* argv)
 }
 
 namespace {
+
 Fa_Value* dict_field(Fa_ObjDict* dict, Fa_Value key)
 {
     return dict == nullptr ? nullptr : dict->data.find_ptr(key);
 }
+
 }
 
 Fa_Value Fa_VM::Fa_executor_new(int argc, Fa_Value* argv)
@@ -1072,10 +1077,14 @@ Fa_Value Fa_VM::Fa_file_open(int argc, Fa_Value* argv)
     if (::memchr(path.data(), '\0', path.len()) != nullptr)
         return Fa_Value::nil();
     char const* native_mode = nullptr;
-    if (mode == "قراءة" || mode == "اقرا") native_mode = "rb";
-    else if (mode == "كتابة" || mode == "اكتب") native_mode = "wb";
-    else if (mode == "اضافة" || mode == "اضف") native_mode = "ab+";
-    else return Fa_Value::nil();
+    if (mode == "قراءة" || mode == "اقرا")
+        native_mode = "rb";
+    else if (mode == "كتابة" || mode == "اكتب")
+        native_mode = "wb";
+    else if (mode == "اضافة" || mode == "اضف")
+        native_mode = "ab+";
+    else
+        return Fa_Value::nil();
     FILE* file = std::fopen(path.data(), native_mode);
     return file == nullptr ? Fa_Value::nil() : m_gc.make_file_handle(file);
 }
@@ -1163,6 +1172,7 @@ Fa_Value Fa_VM::Fa_file_flush(int argc, Fa_Value* argv)
 }
 
 namespace {
+
 std::string native_path(Fa_Value value)
 {
     if (!value.is_string())
@@ -1175,8 +1185,10 @@ std::string wildcard_regex(std::string const& pattern)
 {
     std::string result = "^";
     for (char ch : pattern) {
-        if (ch == '*') result += ".*";
-        else if (ch == '?') result += '.';
+        if (ch == '*')
+            result += ".*";
+        else if (ch == '?')
+            result += '.';
         else {
             if (ch == '.' || ch == '+' || ch == '(' || ch == ')' || ch == '[' || ch == ']'
                 || ch == '{' || ch == '}' || ch == '^' || ch == '$' || ch == '|' || ch == '\\')
@@ -1210,6 +1222,7 @@ std::filesystem::path unique_temporary_path(std::filesystem::path const& parent,
     }
     return { };
 }
+
 }
 
 Fa_Value Fa_VM::Fa_path_delete(int argc, Fa_Value* argv)
@@ -1228,7 +1241,8 @@ Fa_Value Fa_VM::Fa_path_glob(int argc, Fa_Value* argv)
             "glob expects a pattern and recursive flag");
     std::filesystem::path pattern(native_path(argv[0]));
     std::filesystem::path parent = pattern.parent_path();
-    if (parent.empty()) parent = ".";
+    if (parent.empty())
+        parent = ".";
     std::regex matcher(wildcard_regex(pattern.filename().string()));
     Fa_Value result = m_gc.make_list();
     std::error_code error;
@@ -1290,6 +1304,7 @@ Fa_Value Fa_VM::Fa_remove_tree(int argc, Fa_Value* argv)
 }
 
 namespace {
+
 bool utc_zone(Fa_Value value)
 {
     return value.is_string() && value.as_string()->str == "UTC";
@@ -1318,6 +1333,7 @@ std::time_t utc_timestamp(std::tm* value)
     return ::timegm(value);
 #endif
 }
+
 }
 
 Fa_Value Fa_VM::Fa_datetime_now(int argc, Fa_Value* argv)
@@ -1364,9 +1380,14 @@ Fa_Value Fa_VM::Fa_datetime_to_fields(int argc, Fa_Value* argv)
         return Fa_Value::nil();
     Fa_Value result = m_gc.make_list();
     i64 values[] = {
-        fields.tm_year + 1900, fields.tm_mon + 1, fields.tm_mday,
-        fields.tm_hour, fields.tm_min, fields.tm_sec,
-        fields.tm_wday, fields.tm_yday + 1,
+        fields.tm_year + 1900,
+        fields.tm_mon + 1,
+        fields.tm_mday,
+        fields.tm_hour,
+        fields.tm_min,
+        fields.tm_sec,
+        fields.tm_wday,
+        fields.tm_yday + 1,
     };
     for (i64 value : values)
         result.as_list()->elements.push(Fa_Value::from_int(value));
@@ -1429,8 +1450,7 @@ std::string_view string_bytes(Fa_Value value)
     return { text.data(), text.len() };
 }
 
-constexpr char BASE64_ALPHABET[] =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+constexpr char BASE64_ALPHABET[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
 std::string encode_base64(std::string_view input, bool url_safe)
 {
@@ -1566,22 +1586,70 @@ private:
     void transform(u8 const* block)
     {
         static constexpr std::array<u32, 64> constants {
-            0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5,
-            0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
-            0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
-            0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
-            0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc,
-            0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
-            0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7,
-            0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
-            0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13,
-            0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
-            0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3,
-            0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
-            0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5,
-            0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-            0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208,
-            0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
+            0x428a2f98,
+            0x71374491,
+            0xb5c0fbcf,
+            0xe9b5dba5,
+            0x3956c25b,
+            0x59f111f1,
+            0x923f82a4,
+            0xab1c5ed5,
+            0xd807aa98,
+            0x12835b01,
+            0x243185be,
+            0x550c7dc3,
+            0x72be5d74,
+            0x80deb1fe,
+            0x9bdc06a7,
+            0xc19bf174,
+            0xe49b69c1,
+            0xefbe4786,
+            0x0fc19dc6,
+            0x240ca1cc,
+            0x2de92c6f,
+            0x4a7484aa,
+            0x5cb0a9dc,
+            0x76f988da,
+            0x983e5152,
+            0xa831c66d,
+            0xb00327c8,
+            0xbf597fc7,
+            0xc6e00bf3,
+            0xd5a79147,
+            0x06ca6351,
+            0x14292967,
+            0x27b70a85,
+            0x2e1b2138,
+            0x4d2c6dfc,
+            0x53380d13,
+            0x650a7354,
+            0x766a0abb,
+            0x81c2c92e,
+            0x92722c85,
+            0xa2bfe8a1,
+            0xa81a664b,
+            0xc24b8b70,
+            0xc76c51a3,
+            0xd192e819,
+            0xd6990624,
+            0xf40e3585,
+            0x106aa070,
+            0x19a4c116,
+            0x1e376c08,
+            0x2748774c,
+            0x34b0bcb5,
+            0x391c0cb3,
+            0x4ed8aa4a,
+            0x5b9cca4f,
+            0x682e6ff3,
+            0x748f82ee,
+            0x78a5636f,
+            0x84c87814,
+            0x8cc70208,
+            0x90befffa,
+            0xa4506ceb,
+            0xbef9a3f7,
+            0xc67178f2,
         };
 
         std::array<u32, 64> words { };
@@ -1627,8 +1695,14 @@ private:
     }
 
     std::array<u32, 8> m_state {
-        0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
-        0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
+        0x6a09e667,
+        0xbb67ae85,
+        0x3c6ef372,
+        0xa54ff53a,
+        0x510e527f,
+        0x9b05688c,
+        0x1f83d9ab,
+        0x5be0cd19,
     };
     std::array<u8, 64> m_buffer { };
     size_t m_buffer_size { 0 };
@@ -2141,9 +2215,12 @@ Fa_Value Fa_VM::Fa_url_decode(int argc, Fa_Value* argv)
     if (argc != 1 || argv == nullptr || !argv[0].is_string())
         return Fa_Value::nil();
     auto hex_value = [](char ch) -> int {
-        if (ch >= '0' && ch <= '9') return ch - '0';
-        if (ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
-        if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
+        if (ch >= '0' && ch <= '9')
+            return ch - '0';
+        if (ch >= 'a' && ch <= 'f')
+            return ch - 'a' + 10;
+        if (ch >= 'A' && ch <= 'F')
+            return ch - 'A' + 10;
         return -1;
     };
     std::string_view input = string_bytes(argv[0]);
@@ -2218,7 +2295,8 @@ Fa_Value Fa_VM::Fa_url_build(int argc, Fa_Value* argv)
         output.push_back(':');
         output += std::to_string(port.as_int());
     }
-    if (path.is_string()) output += string_bytes(path);
+    if (path.is_string())
+        output += string_bytes(path);
     if (query.is_string() && !string_bytes(query).empty()) {
         output.push_back('?');
         output += string_bytes(query);
@@ -2231,6 +2309,7 @@ Fa_Value Fa_VM::Fa_url_build(int argc, Fa_Value* argv)
 }
 
 namespace {
+
 size_t utf8_byte_offset(std::string_view text, i64 character_offset)
 {
     if (character_offset < 0)
@@ -2255,6 +2334,7 @@ i64 utf8_character_offset(std::string_view text, size_t byte_offset)
     }
     return characters;
 }
+
 }
 
 Fa_Value Fa_VM::make_regex_result(std::string const& input, std::smatch const& match, size_t base_offset)
@@ -2270,7 +2350,8 @@ Fa_Value Fa_VM::make_regex_result(std::string const& input, std::smatch const& m
     Fa_Value groups = m_gc.make_list();
     for (size_t i = 0; i < match.size(); ++i) {
         groups.as_list()->elements.push(match[i].matched
-            ? m_gc.make_string(byte_string(match[i].str())) : Fa_Value::nil());
+                ? m_gc.make_string(byte_string(match[i].str()))
+                : Fa_Value::nil());
     }
     Fa_dict_put(&result, m_gc.make_string("groups"), groups);
     Fa_dict_put(&result, m_gc.make_string("named"), m_gc.make_dict());
@@ -2377,7 +2458,7 @@ Fa_Value Fa_VM::Fa_regex_split(int argc, Fa_Value* argv)
         i64 splits = 0;
         Fa_Value results = m_gc.make_list();
         for (std::sregex_iterator it(input.begin(), input.end(), pattern), end;
-             it != end && (limit == 0 || splits < limit); ++it, ++splits) {
+            it != end && (limit == 0 || splits < limit); ++it, ++splits) {
             size_t position = static_cast<size_t>(it->position());
             results.as_list()->elements.push(m_gc.make_string(byte_string(
                 std::string_view(input).substr(previous, position - previous))));
@@ -2404,7 +2485,7 @@ Fa_Value Fa_VM::Fa_regex_replace(int argc, Fa_Value* argv)
         i64 replacements = 0;
         std::string output;
         for (std::sregex_iterator it(input.begin(), input.end(), pattern), end;
-             it != end && (limit == 0 || replacements < limit); ++it, ++replacements) {
+            it != end && (limit == 0 || replacements < limit); ++it, ++replacements) {
             size_t position = static_cast<size_t>(it->position());
             output.append(input, previous, position - previous);
             output += it->format(replacement);

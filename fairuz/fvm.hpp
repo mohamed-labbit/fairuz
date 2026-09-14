@@ -6,14 +6,18 @@
 #include "fstring.hpp"
 #include "ftable.hpp"
 
-#include <stdexcept>
 #include <filesystem>
 #include <memory>
 #include <regex>
+#include <stdexcept>
 #include <unordered_map>
 #include <vector>
 
-namespace fairuz::lex { class Fa_FileManager; }
+namespace fairuz::lex {
+
+class Fa_FileManager;
+
+}
 
 namespace fairuz::runtime {
 

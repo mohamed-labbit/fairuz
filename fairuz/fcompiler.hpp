@@ -98,7 +98,7 @@ struct RegMark {
         // If a local was declared inside this RegMark's scope, its
         // register must survive the rewind.
         u8 floor = mark;
-        for (size_t i = locals_mark; i < state->locals.size();++i)
+        for (size_t i = locals_mark; i < state->locals.size(); ++i)
             floor = std::max<u8>(floor, state->locals[i].reg + 1);
         state->free_regs_to(floor);
     }

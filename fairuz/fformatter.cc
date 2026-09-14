@@ -1,605 +1,274 @@
-//
-// fformatter.cc
-//
-
 #include "fformatter.hpp"
 
-#include <iomanip>
-#include <limits>
-#include <locale>
-#include <sstream>
+#include "flexer.hpp"
+#include "fparser.hpp"
+
+#include <stdexcept>
 #include <string>
+#include <string_view>
+#include <vector>
 
 namespace fairuz {
-
 namespace {
 
-constexpr char kClassInstanceName[] = "__class$instance";
+using Kind = tok::Fa_TokenType;
 
-enum Precedence : int {
-    kPrecAssignment = 1,
-    kPrecLogicalOr = 2,
-    kPrecLogicalAnd = 3,
-    kPrecBitOr = 4,
-    kPrecBitXor = 5,
-    kPrecBitAnd = 6,
-    kPrecComparison = 7,
-    kPrecShift = 8,
-    kPrecAdditive = 9,
-    kPrecMultiplicative = 10,
-    kPrecPower = 11,
-    kPrecUnary = 12,
-    kPrecPostfix = 13,
-    kPrecAtom = 14,
+bool is_open(Kind kind)
+{
+    return kind == Kind::LPAREN || kind == Kind::LBRACKET || kind == Kind::LBRACE;
+}
+
+bool is_close(Kind kind)
+{
+    return kind == Kind::RPAREN || kind == Kind::RBRACKET || kind == Kind::RBRACE;
+}
+
+bool ends_expression(Kind kind)
+{
+    return is_close(kind) || kind == Kind::IDENTIFIER || kind == Kind::NAME
+        || kind == Kind::STRING || kind == Kind::INTEGER || kind == Kind::DECIMAL
+        || kind == Kind::HEX || kind == Kind::OCTAL || kind == Kind::BINARY
+        || kind == Kind::KW_THIS || kind == Kind::KW_TRUE || kind == Kind::KW_FALSE
+        || kind == Kind::KW_NIL;
+}
+
+bool is_symbolic_unary(Kind kind)
+{
+    return kind == Kind::OP_PLUS || kind == Kind::OP_MINUS || kind == Kind::OP_BITNOT;
+}
+
+bool needs_space(Kind previous, Kind current, bool previous_unary)
+{
+    if (current == Kind::COMMA || current == Kind::COLON || current == Kind::DOT || is_close(current))
+        return false;
+    if (previous == Kind::DOT || is_open(previous))
+        return false;
+    if ((current == Kind::LPAREN || current == Kind::LBRACKET) && ends_expression(previous))
+        return false;
+    if (previous_unary && !is_symbolic_unary(current))
+        return false;
+    return true;
+}
+
+size_t indentation(std::string_view line)
+{
+    size_t width = 0;
+    for (char ch : line) {
+        if (ch == ' ')
+            ++width;
+        else if (ch == '\t')
+            width += 4 - width % 4;
+        else if (ch == '\f')
+            width = 0;
+        else
+            break;
+    }
+    return width;
+}
+
+struct Line {
+    size_t start;
+    std::string_view text;
+    std::vector<TokenPtr> tokens;
+    size_t depth { 0 };
 };
 
-Fa_StringRef binary_op_string(AST::Fa_BinaryOp op)
+// String lexer values are decoded. Preserve their source spelling, including
+// quote style and escapes, instead of inventing new literals from AST values.
+size_t token_end(TokenPtr token, std::string_view source)
 {
-    switch (op) {
-    case AST::Fa_BinaryOp::OP_ADD: return "+";
-    case AST::Fa_BinaryOp::OP_SUB: return "-";
-    case AST::Fa_BinaryOp::OP_MUL: return "*";
-    case AST::Fa_BinaryOp::OP_DIV: return "/";
-    case AST::Fa_BinaryOp::OP_MOD: return "%";
-    case AST::Fa_BinaryOp::OP_POW: return "**";
-    case AST::Fa_BinaryOp::OP_EQ: return "=";
-    case AST::Fa_BinaryOp::OP_NEQ: return "!=";
-    case AST::Fa_BinaryOp::OP_LT: return "<";
-    case AST::Fa_BinaryOp::OP_GT: return ">";
-    case AST::Fa_BinaryOp::OP_LTE: return "<=";
-    case AST::Fa_BinaryOp::OP_GTE: return ">=";
-    case AST::Fa_BinaryOp::OP_BITAND: return "&";
-    case AST::Fa_BinaryOp::OP_BITOR: return "|";
-    case AST::Fa_BinaryOp::OP_BITXOR: return "^";
-    case AST::Fa_BinaryOp::OP_LSHIFT: return "<<";
-    case AST::Fa_BinaryOp::OP_RSHIFT: return ">>";
-    case AST::Fa_BinaryOp::OP_AND: return "و";
-    case AST::Fa_BinaryOp::OP_OR: return "او";
-    default: return "";
+    size_t start = token->location().offset;
+    if (token->type() != Kind::STRING)
+        return start + token->lexeme().len();
+    char quote = source.at(start);
+    for (size_t i = start + 1; i < source.size(); ++i) {
+        if (source[i] == '\\')
+            ++i;
+        else if (source[i] == quote)
+            return i + 1;
     }
+    throw std::runtime_error("Cannot format an unterminated string");
 }
 
-Fa_StringRef unary_op_string(AST::Fa_UnaryOp op)
+Fa_Array<TokenPtr> tokenize(lex::Fa_FileManager& file)
 {
-    switch (op) {
-    case AST::Fa_UnaryOp::OP_PLUS: return "+";
-    case AST::Fa_UnaryOp::OP_NEG: return "-";
-    case AST::Fa_UnaryOp::OP_BITNOT: return "~";
-    case AST::Fa_UnaryOp::OP_NOT: return "ليس";
-    default: return "";
-    }
+    lex::Fa_Lexer lexer(&file);
+    return lexer.tokenize();
 }
 
-std::string format_float_literal(double value)
+// Retain logical statement boundaries and indentation, but ignore blank lines
+// and the optional final newline. Comma spellings are equivalent in Fairuz.
+std::vector<TokenPtr> significant(Fa_Array<TokenPtr> const& tokens)
 {
-    std::ostringstream out;
-    out.imbue(std::locale::classic());
-    out << std::setprecision(std::numeric_limits<double>::max_digits10) << value;
-
-    std::string text = out.str();
-
-    if (text.find('.') == std::string::npos
-        && text.find('e') == std::string::npos
-        && text.find('E') == std::string::npos) {
-        text += ".0";
-        return text;
-    }
-
-    if (text.find('e') == std::string::npos && text.find('E') == std::string::npos) {
-        while (text.size() > 2 && text.back() == '0' && text[text.size() - 2] != '.')
-            text.pop_back();
-    }
-
-    return text;
-}
-
-std::string escape_string_literal(Fa_StringRef value)
-{
-    std::string out;
-    out.reserve(value.len() + 2);
-    out.push_back('"');
-
-    for (size_t i = 0; i < value.len(); i++) {
-        char ch = value[i];
-        switch (ch) {
-        case '\\': out += "\\\\"; break;
-        case '"': out += "\\\""; break;
-        case '\n': out += "\\n"; break;
-        case '\r': out += "\\r"; break;
-        case '\t': out += "\\t"; break;
-        default: out.push_back(ch); break;
+    std::vector<TokenPtr> result;
+    bool has_code = false;
+    for (auto token : tokens) {
+        Kind kind = token->type();
+        if (kind == Kind::BEGINMARKER || kind == Kind::ENDMARKER)
+            continue;
+        if (kind == Kind::NEWLINE) {
+            if (has_code)
+                result.push_back(token);
+            has_code = false;
+        } else if (kind == Kind::DEDENT || kind == Kind::INDENT) {
+            // A final newline can occur before EOF's implicit dedents.
+            if (!result.empty() && result.back()->type() == Kind::NEWLINE)
+                result.pop_back();
+            result.push_back(token);
+            has_code = false;
+        } else {
+            result.push_back(token);
+            has_code = true;
         }
     }
-
-    out.push_back('"');
-    return out;
+    if (!result.empty() && result.back()->type() == Kind::NEWLINE)
+        result.pop_back();
+    return result;
 }
 
 } // namespace
 
-void Fa_Formatter::write(Fa_StringRef const& text)
+Fa_StringRef Fa_Formatter::format(Fa_StringRef const& source)
 {
-    if (text.empty())
-        return;
+    lex::Fa_FileManager input;
+    input.buffer() = source;
+    auto tokens = tokenize(input);
+    if (diagnostic::has_errors())
+        throw std::runtime_error("Cannot format invalid source");
 
-    if (m_line_start) {
-        if (m_indent_level > 0) {
-            size_t indent_width = static_cast<size_t>(m_indent_level * m_indent_sz);
-            m_formatted += Fa_StringRef(indent_width, ' ');
-            m_current_col = indent_width + 1;
-        } else {
-            m_current_col = 1;
-        }
-        m_line_start = false;
+    std::string_view text(source.empty() ? "" : source.data(), source.len());
+    std::vector<Line> lines;
+    for (size_t start = 0; start < text.size();) {
+        size_t end = text.find('\n', start);
+        if (end == std::string_view::npos)
+            end = text.size();
+        size_t content_end = end;
+        if (content_end > start && text[content_end - 1] == '\r')
+            --content_end;
+        lines.push_back({ start, text.substr(start, content_end - start), { }, 0 });
+        start = end + 1;
     }
 
-    if (m_current_col + text.len() > m_line_width)
-        write_newline();
-
-    m_formatted += text;
-    m_current_col += text.len();
-}
-
-void Fa_Formatter::write(char ch)
-{
-    if (m_line_start) {
-        if (m_indent_level > 0) {
-            size_t indent_width = static_cast<size_t>(m_indent_level * m_indent_sz);
-            m_formatted += Fa_StringRef(indent_width, ' ');
-            m_current_col = indent_width + 1;
-        } else {
-            m_current_col = 1;
-        }
-        m_line_start = false;
-    }
-
-    if (m_current_col + 1 > m_line_width)
-        write_newline();
-
-    m_formatted += ch;
-    m_current_col++;
-}
-
-void Fa_Formatter::write_newline()
-{
-    m_formatted += '\n';
-    m_line_start = true;
-    m_current_line++;
-    m_current_col = 0;
-}
-
-Fa_StringRef Fa_Formatter::format(Fa_Array<AST::Fa_Stmt*> const& stmts)
-{
-    m_formatted.clear();
-    m_indent_level = 0;
-    m_line_start = true;
-    m_current_col = 0;
-
-    m_formatted.reserve(4096);
-
-    for (u32 i = 0; i < stmts.size(); i++) {
-        if (stmts[i] == nullptr)
+    size_t depth = 0;
+    for (auto token : tokens) {
+        Kind kind = token->type();
+        if (kind == Kind::INDENT) {
+            ++depth;
             continue;
-        format_statement(stmts[i]);
-        write_newline();
-    }
-
-    return m_formatted;
-}
-
-// [BUG 2 FIX] Was checking Kind::INDEX_READ, which the parser never produces for
-// `.field` — it produces GET (see parse_class_method's comment about the
-// compiler's fast field-access path). Check GET against the synthetic
-// instance name instead.
-bool Fa_Formatter::is_class_member_target(AST::Fa_Expr const* expr) const
-{
-    if (expr == nullptr || expr->get_kind() != AST::Fa_Expr::Kind::GET)
-        return false;
-
-    auto const* get_expr = as_get(expr);
-    if (get_expr->get_object() == nullptr || get_expr->get_member() == nullptr)
-        return false;
-    if (get_expr->get_object()->get_kind() != AST::Fa_Expr::Kind::NAME)
-        return false;
-    if (get_expr->get_member()->get_kind() != AST::Fa_Expr::Kind::NAME)
-        return false;
-
-    auto const* object_expr = as_name(get_expr->get_object());
-    return object_expr->get_value() == kClassInstanceName;
-}
-
-int Fa_Formatter::precedence(AST::Fa_Expr const* expr) const
-{
-    if (expr == nullptr)
-        return kPrecAtom;
-
-    switch (expr->get_kind()) {
-    case AST::Fa_Expr::Kind::ASSIGNMENT:
-        return kPrecAssignment;
-    case AST::Fa_Expr::Kind::UNARY:
-        return kPrecUnary;
-    case AST::Fa_Expr::Kind::CALL:
-    case AST::Fa_Expr::Kind::INDEX_READ:
-    case AST::Fa_Expr::Kind::GET: // [BUG 3 FIX] GET is a postfix form too — same precedence as CALL/INDEX_READ.
-        return kPrecPostfix;
-    case AST::Fa_Expr::Kind::LITERAL:
-    case AST::Fa_Expr::Kind::NAME:
-    case AST::Fa_Expr::Kind::LIST:
-    case AST::Fa_Expr::Kind::DICT:
-        return kPrecAtom;
-    case AST::Fa_Expr::Kind::BINARY: {
-        auto const* bin_expr = as_binary(expr);
-        switch (bin_expr->get_operator()) {
-        case AST::Fa_BinaryOp::OP_OR:
-            return kPrecLogicalOr;
-        case AST::Fa_BinaryOp::OP_AND:
-            return kPrecLogicalAnd;
-        case AST::Fa_BinaryOp::OP_BITOR:
-            return kPrecBitOr;
-        case AST::Fa_BinaryOp::OP_BITXOR:
-            return kPrecBitXor;
-        case AST::Fa_BinaryOp::OP_BITAND:
-            return kPrecBitAnd;
-        case AST::Fa_BinaryOp::OP_EQ:
-        case AST::Fa_BinaryOp::OP_NEQ:
-        case AST::Fa_BinaryOp::OP_LT:
-        case AST::Fa_BinaryOp::OP_GT:
-        case AST::Fa_BinaryOp::OP_LTE:
-        case AST::Fa_BinaryOp::OP_GTE:
-            return kPrecComparison;
-        case AST::Fa_BinaryOp::OP_LSHIFT:
-        case AST::Fa_BinaryOp::OP_RSHIFT:
-            return kPrecShift;
-        case AST::Fa_BinaryOp::OP_ADD:
-        case AST::Fa_BinaryOp::OP_SUB:
-            return kPrecAdditive;
-        case AST::Fa_BinaryOp::OP_MUL:
-        case AST::Fa_BinaryOp::OP_DIV:
-        case AST::Fa_BinaryOp::OP_MOD:
-            return kPrecMultiplicative;
-        case AST::Fa_BinaryOp::OP_POW:
-            return kPrecPower;
-        default:
-            return kPrecAtom;
         }
-    }
-    default:
-        return kPrecAtom;
-    }
-}
-
-void Fa_Formatter::format_comma_separated(Fa_Array<AST::Fa_Expr*> const& exprs)
-{
-    for (u32 i = 0; i < exprs.size(); i++) {
-        if (i != 0)
-            write("، ");
-        format_expression(exprs[i]);
-    }
-}
-
-void Fa_Formatter::format_assignment_target(AST::Fa_Expr const* expr)
-{
-    if (is_class_member_target(expr)) {
-        // Round-trip back to `.field` sugar rather than printing the
-        // synthetic `__class$instance.field` form — the synthetic name is
-        // an implementation detail of the parser's desugaring and should
-        // never leak into formatted output.
-        auto const* get_expr = as_get(expr);
-        auto const* member_name = as_name(get_expr->get_member());
-        write(".");
-        write(member_name->get_value());
-        return;
-    }
-
-    format_expression(expr, kPrecAssignment, false);
-}
-
-void Fa_Formatter::format_expression(AST::Fa_Expr const* expr, int parent_precedence, bool parenthesize_on_equal)
-{
-    if (expr == nullptr)
-        return;
-
-    int const current_precedence = precedence(expr);
-    bool const needs_parens = parent_precedence >= 0
-        && (current_precedence < parent_precedence
-            || (parenthesize_on_equal && current_precedence == parent_precedence));
-
-    if (needs_parens)
-        write('(');
-
-    switch (expr->get_kind()) {
-    case AST::Fa_Expr::Kind::ASSIGNMENT: {
-        auto const* assign_expr = as_assignment_expr(expr);
-        format_assignment_target(assign_expr->get_target());
-        write(" := ");
-        format_expression(assign_expr->get_value(), kPrecAssignment, false);
-        break;
-    }
-    case AST::Fa_Expr::Kind::BINARY: {
-        auto const* bin_expr = as_binary(expr);
-        format_expression(bin_expr->get_left(), current_precedence, false);
-        write(" ");
-        write(binary_op_string(bin_expr->get_operator()));
-        write(" ");
-        format_expression(bin_expr->get_right(), current_precedence, true);
-        break;
-    }
-    case AST::Fa_Expr::Kind::CALL: {
-        auto const* call_expr = as_call(expr);
-        format_expression(call_expr->get_callee(), current_precedence, false);
-        write('(');
-        format_comma_separated(call_expr->get_args());
-        write(')');
-        break;
-    }
-    case AST::Fa_Expr::Kind::DICT: {
-        // [BUG 1 FIX] Was: comma+space written AFTER every entry (including
-        // the last) then an unconditional newline, and no guard for empty
-        // content — `{}` would previously emit `{\n\n}`. Now: comma is
-        // written BETWEEN entries only, and an empty dict short-circuits to
-        // a bare `{}` on one line with no interior blank line.
-        auto const* dict_expr = as_dict(expr);
-        auto const& content = dict_expr->get_content();
-
-        if (content.empty()) {
-            write("{}");
-            break;
+        if (kind == Kind::DEDENT) {
+            if (depth)
+                --depth;
+            continue;
         }
-
-        write('{');
-        write_newline();
-        m_indent_level++;
-        for (u32 i = 0; i < content.size(); i++) {
-            auto const& entry = content[i];
-            format_expression(entry.first);
-            write(": ");
-            format_expression(entry.second);
-            if (i + 1 != content.size())
-                write(",");
-            write_newline();
-        }
-        m_indent_level--;
-        write('}');
-        break;
-    }
-    case AST::Fa_Expr::Kind::GET: {
-        // [BUG 3 FIX] This case was entirely missing — any `.field` read
-        // (not just assignment targets, handled separately via
-        // format_assignment_target) silently formatted as nothing at all.
-        auto const* get_expr = as_get(expr);
-        bool const is_implicit_self = get_expr->get_object() != nullptr
-            && get_expr->get_object()->get_kind() == AST::Fa_Expr::Kind::NAME
-            && as_name(get_expr->get_object())->get_value() == kClassInstanceName;
-
-        if (!is_implicit_self)
-            format_expression(get_expr->get_object(), current_precedence, false);
-
-        write('.');
-        format_expression(get_expr->get_member(), -1, false);
-        break;
-    }
-    case AST::Fa_Expr::Kind::INDEX_READ: {
-        auto const* index_expr = as_index(expr);
-        format_expression(index_expr->get_object(), current_precedence, false);
-        write('[');
-        format_expression(index_expr->get_index());
-        write(']');
-        break;
-    }
-    case AST::Fa_Expr::Kind::LIST: {
-        auto const* list_expr = as_list(expr);
-        write('[');
-        format_comma_separated(list_expr->get_elements());
-        write(']');
-        break;
-    }
-    case AST::Fa_Expr::Kind::LITERAL: {
-        auto const* literal_expr = as_literal(expr);
-        switch (literal_expr->get_type()) {
-        case AST::Fa_LiteralExpr::Type::BOOLEAN: write(literal_expr->get_bool() ? "صحيح" : "خطا"); break;
-        case AST::Fa_LiteralExpr::Type::FLOAT: write(Fa_StringRef(format_float_literal(literal_expr->get_float()).c_str())); break;
-        case AST::Fa_LiteralExpr::Type::INTEGER: write(Fa_StringRef(std::to_string(literal_expr->get_int()).c_str())); break;
-        case AST::Fa_LiteralExpr::Type::NIL: write("عدم"); break;
-        case AST::Fa_LiteralExpr::Type::STRING: write(Fa_StringRef(escape_string_literal(literal_expr->get_str()).c_str())); break;
-        }
-        break;
-    }
-    case AST::Fa_Expr::Kind::NAME: {
-        auto const* name_expr = as_name(expr);
-        write(name_expr->get_value());
-        break;
-    }
-    case AST::Fa_Expr::Kind::UNARY: {
-        auto const* unary_expr = as_unary(expr);
-        Fa_StringRef op = unary_op_string(unary_expr->get_operator());
-        write(op);
-        if (op == "ليس")
-            write(" ");
-        format_expression(unary_expr->get_operand(), current_precedence, false);
-        break;
-    }
-    case AST::Fa_Expr::Kind::INVALID:
-        break;
-    default:
-        break;
+        if (kind == Kind::BEGINMARKER || kind == Kind::ENDMARKER || kind == Kind::NEWLINE)
+            continue;
+        size_t line = token->line() - 1;
+        if (line >= lines.size())
+            throw std::runtime_error("Invalid formatter source location");
+        lines[line].tokens.push_back(token);
+        lines[line].depth = depth;
     }
 
-    if (needs_parens)
-        write(')');
-}
+    struct Bracket {
+        size_t indent;
+    };
+    std::vector<Bracket> brackets;
+    std::vector<size_t> source_indents { 0 };
+    std::string output;
+    std::string_view eol = text.find("\r\n") != std::string_view::npos ? "\r\n" : "\n";
+    Kind previous = Kind::NEWLINE;
+    bool previous_unary = false;
 
-void Fa_Formatter::format_body(AST::Fa_Stmt const* stmt)
-{
-    if (stmt == nullptr)
-        return;
-
-    m_indent_level++;
-
-    if (stmt->get_kind() == AST::Fa_Stmt::Kind::BLOCK) {
-        auto const* block_stmt = as_block(stmt);
-        if (block_stmt->get_statements().empty()) {
-            write_newline();
+    for (auto const& line : lines) {
+        size_t indent = line.depth * 4;
+        if (!brackets.empty()) {
+            indent = brackets.back().indent + 4;
+            size_t closing = 0;
+            for (auto token : line.tokens) {
+                if (!is_close(token->type()) || closing == brackets.size())
+                    break;
+                indent = brackets[brackets.size() - 1 - closing++].indent;
+            }
+        } else if (!line.tokens.empty()) {
+            source_indents.resize(line.depth + 1, indentation(line.text));
+            source_indents.back() = indentation(line.text);
+            previous = Kind::NEWLINE;
+            previous_unary = false;
         } else {
-            for (AST::Fa_Stmt const* inner : block_stmt->get_statements()) {
-                write_newline();
-                format_statement(inner);
-            }
+            // Comments do not cause lexer INDENT/DEDENT tokens. Locate their
+            // indentation in the active source block, including a new body
+            // whose first line is a comment.
+            size_t width = indentation(line.text);
+            size_t level = 0;
+            while (level + 1 < source_indents.size() && source_indents[level + 1] <= width)
+                ++level;
+            if (width > source_indents[level])
+                ++level;
+            indent = level * 4;
         }
-    } else {
-        write_newline();
-        format_statement(stmt);
-    }
 
-    m_indent_level -= 1;
-}
-
-void Fa_Formatter::format_if_statement(AST::Fa_IfStmt const* stmt)
-{
-    write("اذا ");
-    format_expression(stmt->get_condition());
-    write(":");
-    format_body(stmt->get_then());
-
-    if (stmt->get_else() == nullptr)
-        return;
-
-    write_newline();
-    write("غيره");
-
-    if (AST::is_if(stmt->get_else())) {
-        write(" ");
-        format_if_statement(as_if(stmt->get_else()));
-        return;
-    }
-
-    write(":");
-    format_body(stmt->get_else());
-}
-
-void Fa_Formatter::format_statement(AST::Fa_Stmt const* stmt)
-{
-    if (stmt == nullptr)
-        return;
-
-    switch (stmt->get_kind()) {
-    case AST::Fa_Stmt::Kind::ASSIGNMENT: {
-        // [BUG 4 NOTE] No production in parser.cc emits this Kind directly —
-        // assignment is an expression wrapped in an EXPR statement (see
-        // parse_expression_stmt / Fa_make_expr_stmt). This branch is left in
-        // place in case another AST producer (e.g. a desugaring pass) emits
-        // it, but is corrected to actually format the assignment target,
-        // which the original silently dropped.
-        auto const* assign_stmt = as_assignment_stmt(stmt);
-        format_expression(assign_stmt->get_expr());
-        break;
-    }
-    case AST::Fa_Stmt::Kind::BLOCK: {
-        auto const* block_stmt = as_block(stmt);
-        for (u32 i = 0; i < block_stmt->get_statements().size(); i++) {
-            if (i != 0)
-                write_newline();
-            format_statement(block_stmt->get_statements()[i]);
+        std::string rendered;
+        size_t consumed = line.start;
+        for (auto token : line.tokens) {
+            Kind kind = token->type();
+            bool unary = is_symbolic_unary(kind) && !ends_expression(previous);
+            if (!rendered.empty() && needs_space(previous, kind, previous_unary))
+                rendered += ' ';
+            size_t start = token->location().offset;
+            consumed = token_end(token, text);
+            if (kind == Kind::COMMA)
+                rendered += "،";
+            else
+                rendered.append(text.substr(start, consumed - start));
+            if (is_open(kind))
+                brackets.push_back({ indent });
+            else if (is_close(kind) && !brackets.empty())
+                brackets.pop_back();
+            previous = kind;
+            previous_unary = unary;
         }
-        break;
-    }
-    case AST::Fa_Stmt::Kind::BREAK:
-        write("اخرج");
-        break;
-    case AST::Fa_Stmt::Kind::CLASS_DEF: {
-        auto const* class_stmt = as_class_def(stmt);
-        write("نوع ");
-        format_expression(class_stmt->get_name());
-        if (class_stmt->get_parent() != nullptr) {
-            write("(");
-            format_expression(class_stmt->get_parent());
-            write(")");
-        }
-        write(":");
 
-        Fa_Array<AST::Fa_Stmt*> methods = class_stmt->get_methods();
-        m_indent_level++;
-        for (AST::Fa_Stmt const* method : methods) {
-            write_newline();
-            format_statement(method);
+        // Everything after the last token is whitespace or a comment. Hashes
+        // inside strings are already consumed with the raw string token.
+        size_t comment = line.text.find('#', consumed - line.start);
+        if (comment != std::string_view::npos) {
+            if (!rendered.empty())
+                rendered += "  ";
+            rendered.append(line.text.substr(comment));
         }
-        m_indent_level -= 1;
-        break;
-    }
-    case AST::Fa_Stmt::Kind::IMPORT: {
-        auto const* import = as_import(stmt);
-        if (import->imports_member()) {
-            write("من ");
-            write(import->get_module());
-            write(" استورد ");
-            write(import->get_name());
-            if (import->get_alias() != import->get_name()) {
-                write(" باسم ");
-                write(import->get_alias());
-            }
-        } else {
-            write("استورد ");
-            write(import->get_module());
-            std::string_view module(import->get_module().data(), import->get_module().len());
-            size_t dot = module.find_last_of('.');
-            std::string_view default_alias = dot == std::string_view::npos ? module : module.substr(dot + 1);
-            if (std::string_view(import->get_alias().data(), import->get_alias().len()) != default_alias) {
-                write(" باسم ");
-                write(import->get_alias());
-            }
+        while (!rendered.empty() && (rendered.back() == ' ' || rendered.back() == '\t'))
+            rendered.pop_back();
+        if (!rendered.empty()) {
+            output.append(indent, ' ');
+            output += rendered;
         }
-        break;
+        output += eol;
     }
-    case AST::Fa_Stmt::Kind::CONTINUE:
-        write("اكمل");
-        break;
-    case AST::Fa_Stmt::Kind::EXPR: {
-        auto const* expr_stmt = as_expr_stmt(stmt);
-        format_expression(expr_stmt->get_expr());
-        break;
+
+    // Exactly one final newline for nonempty documents; empty input stays empty.
+    while (!output.empty() && (output.back() == '\n' || output.back() == '\r'))
+        output.pop_back();
+    if (!output.empty())
+        output += eol;
+
+    lex::Fa_FileManager formatted;
+    formatted.buffer() = Fa_StringRef(output.c_str());
+    auto before = significant(tokens);
+    auto after = significant(tokenize(formatted));
+    if (before.size() != after.size())
+        throw std::runtime_error("Formatting changed the token stream; input left unchanged");
+    for (size_t i = 0; i < before.size(); ++i) {
+        Kind kind = before[i]->type();
+        if (kind != after[i]->type()
+            || (kind != Kind::COMMA && kind != Kind::NEWLINE && before[i]->lexeme() != after[i]->lexeme()))
+            throw std::runtime_error("Formatting changed a token; input left unchanged");
     }
-    case AST::Fa_Stmt::Kind::FOR: {
-        auto const* for_stmt = as_for(stmt);
-        write("بكل ");
-        format_expression(for_stmt->get_target());
-        write(" في ");
-        format_expression(for_stmt->get_iter());
-        write(":");
-        format_body(for_stmt->get_body());
-        break;
-    }
-    case AST::Fa_Stmt::Kind::FUNC: {
-        auto const* fn_stmt = as_function_def(stmt);
-        write("دالة ");
-        format_expression(fn_stmt->get_name());
-        write('(');
-        format_comma_separated(fn_stmt->get_parameters());
-        write("):");
-        format_body(fn_stmt->get_body());
-        break;
-    }
-    case AST::Fa_Stmt::Kind::IF:
-        format_if_statement(as_if(stmt));
-        break;
-    case AST::Fa_Stmt::Kind::RETURN: {
-        auto const* ret_stmt = as_return(stmt);
-        write("ارجع");
-        if (ret_stmt->has_value()) {
-            write(" ");
-            format_expression(ret_stmt->get_value());
-        }
-        break;
-    }
-    case AST::Fa_Stmt::Kind::WHILE: {
-        auto const* while_stmt = as_while(stmt);
-        write("طالما ");
-        format_expression(while_stmt->get_condition());
-        write(":");
-        format_body(while_stmt->get_body());
-        break;
-    }
-    case AST::Fa_Stmt::Kind::INVALID:
-        break;
-    }
+    parser::Fa_Parser parser(&formatted);
+    (void)parser.parse_program();
+    if (diagnostic::has_errors())
+        throw std::runtime_error("Formatted output is invalid; input left unchanged");
+    return formatted.buffer();
 }
 
 } // namespace fairuz

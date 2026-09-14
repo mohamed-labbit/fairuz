@@ -732,13 +732,13 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
     //   current_chunk()->functions.push(ch);
     // so we reconstruct those indices here by scanning for each chunk pointer.
     Fa_Array<u32> vtable_indices;
-    for (u32 i = 0; i < vtable.size();++i) {
+    for (u32 i = 0; i < vtable.size(); ++i) {
         if (vtable[i] == nullptr) {
             vtable_indices.push(Fa_ClassDescriptor::NULL_SLOT);
             continue;
         }
         u32 fn_idx = UINT32_MAX;
-        for (u32 j = 0; j < current_chunk()->functions.size();++j) {
+        for (u32 j = 0; j < current_chunk()->functions.size(); ++j) {
             if (current_chunk()->functions[j] == vtable[i]) {
                 fn_idx = j;
                 break;

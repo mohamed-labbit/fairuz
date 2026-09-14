@@ -171,8 +171,8 @@ public:
         if constexpr (!std::is_trivially_destructible_v<T>) {
             try {
                 m_destructors.push_back({ object, [](void* pointer) {
-                    static_cast<T*>(pointer)->~T();
-                } });
+                                             static_cast<T*>(pointer)->~T();
+                                         } });
             } catch (...) {
                 object->~T();
                 throw;

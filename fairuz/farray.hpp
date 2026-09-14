@@ -648,7 +648,7 @@ public:
 
     bool array_contains(T const& val) const
     {
-        for (u32 i = 0, n = m_arr.size(); i < n;++i) {
+        for (u32 i = 0, n = m_arr.size(); i < n; ++i) {
             if (m_arr[i] == val)
                 return true;
         }
