@@ -55,7 +55,7 @@ public:
 
     void OnTestStart(::testing::TestInfo const& test_info) override
     {
-       ++current_;
+        ++current_;
         failures_.clear();
 
         // Print (and flush) the line FIRST, while nothing is captured, so

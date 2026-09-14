@@ -179,3 +179,27 @@ TEST(CliE2E, FormatRejectsSymbolicLinks)
     std::filesystem::remove(link);
     std::filesystem::remove(target);
 }
+
+TEST(CliE2E, FormatPreservesProgramBehaviorAndIsIdempotent)
+{
+    auto program = write_program(
+        "# formatting must not erase this\n"
+        "ن:=0\n"
+        "لكل عنصر في [1,2,3]:\n"
+        "  ن+=عنصر\n"
+        "تاكد ن=6, 'sum'\n"
+        "اكتب(ن, 0.0000001, (1+2)*3)\n");
+    auto before = run_cli(shell_quote(program.string()));
+    ASSERT_EQ(before.exit_code, 0) << before.err;
+    auto result = run_cli("format " + shell_quote(program.string()));
+    ASSERT_EQ(result.exit_code, 0) << result.err;
+    auto once = read_file(program);
+    EXPECT_NE(once.find("# formatting must not erase this"), std::string::npos);
+    EXPECT_NE(once.find("ن += عنصر"), std::string::npos);
+    auto after = run_cli(shell_quote(program.string()));
+    EXPECT_EQ(after.exit_code, before.exit_code) << after.err;
+    EXPECT_EQ(after.out, before.out);
+    EXPECT_EQ(run_cli("format " + shell_quote(program.string())).exit_code, 0);
+    EXPECT_EQ(read_file(program), once);
+    std::filesystem::remove(program);
+}

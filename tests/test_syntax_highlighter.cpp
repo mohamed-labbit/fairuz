@@ -1,5 +1,5 @@
-#include "../fairuz/fsyntax_highlighter.hpp"
 #include "../fairuz/farena.hpp"
+#include "../fairuz/fsyntax_highlighter.hpp"
 
 #include <gtest/gtest.h>
 
@@ -35,14 +35,13 @@ protected:
 
 TEST_F(SyntaxHighlighterTest, AstClassifiesDeclarationsCallsAndMembers)
 {
-    Fa_StringRef source =
-        "# نموذج\n"
-        "نوع حيوان:\n"
-        "    دالة صوت(الاسم):\n"
-        "        رسالة := \"مرحبا\"\n"
-        "        ارجع الاسم\n"
-        "دالة ناد(القيمة):\n"
-        "    ارجع القيمة.صوت(\"فيروز\")\n";
+    Fa_StringRef source = "# نموذج\n"
+                          "نوع حيوان:\n"
+                          "    دالة صوت(الاسم):\n"
+                          "        رسالة := \"مرحبا\"\n"
+                          "        ارجع الاسم\n"
+                          "دالة ناد(القيمة):\n"
+                          "    ارجع القيمة.صوت(\"فيروز\")\n";
     Result result = Highlighter().highlight(source);
     ASSERT_TRUE(result.ast_valid);
     EXPECT_NE(find_token(result, 0, 0, "comment"), nullptr);
@@ -82,9 +81,8 @@ TEST_F(SyntaxHighlighterTest, RecognizesEveryNumericLiteralForm)
 
 TEST_F(SyntaxHighlighterTest, ClassifiesModuleMemberAndAliasImports)
 {
-    Fa_StringRef source =
-        "استورد math.util باسم حساب\n"
-        "من runtime استورد هو_عدد باسم عدد\n";
+    Fa_StringRef source = "استورد math.util باسم حساب\n"
+                          "من runtime استورد هو_عدد باسم عدد\n";
     Result result = Highlighter().highlight(source);
     ASSERT_TRUE(result.ast_valid);
     auto* module = find_token(result, 0, 7, "namespace");

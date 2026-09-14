@@ -366,8 +366,13 @@ TEST(StdlibDatetime, EpochFieldsConstructionParsingAndFormatting)
     EXPECT_EQ(fields.as_list()->elements[2].as_int(), 1);
 
     Fa_Value construct[] = {
-        Fa_Value::from_int(2020), Fa_Value::from_int(5), Fa_Value::from_int(6),
-        Fa_Value::from_int(7), Fa_Value::from_int(8), Fa_Value::from_int(9), utc,
+        Fa_Value::from_int(2020),
+        Fa_Value::from_int(5),
+        Fa_Value::from_int(6),
+        Fa_Value::from_int(7),
+        Fa_Value::from_int(8),
+        Fa_Value::from_int(9),
+        utc,
     };
     Fa_Value timestamp = vm.Fa_datetime_from_fields(7, construct);
     ASSERT_TRUE(timestamp.is_int());
@@ -593,8 +598,10 @@ TEST(StdlibDictionary, KeysPreserveInsertionOrderAndReassignmentPosition)
 {
     Fa_VM vm;
     Fa_Value args[] = {
-        str("first"), Fa_Value::from_int(1),
-        str("second"), Fa_Value::from_int(2),
+        str("first"),
+        Fa_Value::from_int(1),
+        str("second"),
+        Fa_Value::from_int(2),
     };
     Fa_Value dict = vm.Fa_dict(4, args);
     Fa_Value replacement[] = { dict, args[0], Fa_Value::from_int(9) };

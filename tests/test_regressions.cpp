@@ -95,7 +95,6 @@ TEST(RegressionNatives, NumericDemoOutput)
     EXPECT_NE(r.out.find("190"), std::string::npos);
 }
 
-
 TEST(HardeningRegression, NumericLiteralsUseCorrectBaseAndUtf8Cursor)
 {
     auto program = write_program("اكتب(0xFF)\nاكتب(0b1010)\nاكتب(0o17)\nاكتب(١٢)\n");

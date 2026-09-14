@@ -128,12 +128,11 @@ TEST(ModuleParser, ParsesImportsAliasesAndParentClass)
 {
     diagnostic::reset();
     Fa_FileManager source;
-    source.buffer() =
-        "استورد collections باسم c\n"
-        "من result استورد نجاح باسم ok\n"
-        "نوع طفل(اصل):\n"
-        "    دالة قيمة():\n"
-        "        ارجع 1\n";
+    source.buffer() = "استورد collections باسم c\n"
+                      "من result استورد نجاح باسم ok\n"
+                      "نوع طفل(اصل):\n"
+                      "    دالة قيمة():\n"
+                      "        ارجع 1\n";
     Fa_Parser parser(&source);
     auto statements = parser.parse_program();
     ASSERT_FALSE(diagnostic::has_errors());
@@ -152,11 +151,10 @@ TEST(ModuleCompiler, EmitsImportAndParentDescriptor)
 {
     diagnostic::reset();
     Fa_FileManager source;
-    source.buffer() =
-        "استورد collections\n"
-        "نوع طفل(اصل):\n"
-        "    دالة قيمة():\n"
-        "        ارجع 1\n";
+    source.buffer() = "استورد collections\n"
+                      "نوع طفل(اصل):\n"
+                      "    دالة قيمة():\n"
+                      "        ارجع 1\n";
     Fa_Parser parser(&source);
     Fa_Chunk* chunk = Compiler().compile(parser.parse_program());
     ASSERT_NE(chunk, nullptr);
