@@ -315,7 +315,7 @@ int main(int argc, char** argv)
 
         if (options.format_file) {
             fairuz::Fa_Formatter fmter;
-            fairuz::Fa_StringRef fmted = fmter.format(stmts);
+            fairuz::Fa_StringRef fmted = fmter.format(fm.buffer());
             char const* data = fmted.empty() ? "" : fmted.data();
             std::string error;
             if (!writeFileAtomic(options.input_path, data, fmted.len(), error)) {
