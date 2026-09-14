@@ -123,6 +123,10 @@ Options:
 | `-V`, `--version` | Show the language version |
 
 `fairuz format <file.fa>` rewrites a file in place with canonical formatting.
+It preserves comments, literal spellings, grouping, and existing line breaks;
+normalizes indentation to four spaces and comma/operator spacing; and validates
+the result before replacing the file. Long lines remain intact. Invalid source
+is left unchanged.
 Diagnostics disable ANSI styling when stderr is redirected or `NO_COLOR` is
 set, and escape terminal control bytes from source text and paths.
 
