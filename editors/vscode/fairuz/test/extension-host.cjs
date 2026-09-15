@@ -9,7 +9,7 @@ const { DocumentSync } = require("../src/documentSync");
 
 async function run() {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "fairuz-host-fixture-"));
-  const uri = vscode.Uri.file(path.join(directory, "تجربة.fa"));
+  const uri = vscode.Uri.file(path.join(directory, "تجربة.ف"));
   const initial = '# عنوان\r\nاكتب("مرحبا")\r\n';
   await fs.writeFile(uri.fsPath, initial);
   const document = await vscode.workspace.openTextDocument(uri);
@@ -39,7 +39,7 @@ async function run() {
     assert.ok(extension, "development extension is loaded");
     await extension.activate();
     const commands = await vscode.commands.getCommands(true);
-    for (const command of ["fairuz.save", "fairuz.run", "fairuz.outline", "fairuz.undo"]) assert.ok(commands.includes(command));
+    for (const command of ["fairuz.save", "fairuz.run", "fairuz.outline", "fairuz.goToLine", "fairuz.undo"]) assert.ok(commands.includes(command));
     await provider.resolveCustomTextEditor(document, panel);
     const state = [...provider.editors.values()][0];
     await provider.handleMessage(state, { type: "ready" });

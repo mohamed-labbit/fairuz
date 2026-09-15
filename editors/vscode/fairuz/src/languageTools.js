@@ -76,6 +76,25 @@ function indentation(line, unit = 4) {
   return width;
 }
 
+// User-facing columns count code points, just like the cursor status. Keep
+// conversion at the boundary so navigation never splits a surrogate pair.
+function lineLocation(doc, query) {
+  const normalized = query.trim().replace(/[٠-٩۰-۹]/g, digit =>
+    String(digit.charCodeAt(0) - (digit <= "٩" ? 0x660 : 0x6f0)));
+  const match = normalized.match(/^(\d+)(?:\s*:\s*(\d+))?$/);
+  if (!match) return null;
+  const number = Number(match[1]), column = Number(match[2] || 1);
+  if (!Number.isSafeInteger(number) || !Number.isSafeInteger(column)
+      || number < 1 || number > doc.lines || column < 1) return null;
+  const line = doc.line(number);
+  let offset = 0, remaining = column - 1;
+  for (const char of line.text) {
+    if (remaining-- === 0) break;
+    offset += char.length;
+  }
+  return line.from + offset;
+}
+
 function parseDiagnostics(stderr, source) {
   const lines = source.split(/\r?\n/), diagnostics = [];
   let current = null;
@@ -100,4 +119,4 @@ function parseDiagnostics(stderr, source) {
   return diagnostics.slice(0, 30);
 }
 
-module.exports = { keywords, builtins, scanLine, formatWhitespace, indentation, parseDiagnostics, documentOutline };
+module.exports = { keywords, builtins, scanLine, formatWhitespace, indentation, parseDiagnostics, documentOutline, lineLocation };

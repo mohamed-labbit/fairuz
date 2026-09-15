@@ -83,7 +83,7 @@
           "fairuz"
         ],
         "extensions": [
-          ".fa"
+          ".ف"
         ],
         "configuration": "./language-configuration.json"
       }
@@ -101,7 +101,7 @@
         "displayName": "Fairuz RTL Editor",
         "selector": [
           {
-            "filenamePattern": "*.fa"
+            "filenamePattern": "*.ف"
           }
         ],
         "priority": "default"
@@ -163,6 +163,11 @@
         "enablement": "activeCustomEditorId == 'fairuz.rtlEditor'"
       },
       {
+        "command": "fairuz.goToLine",
+        "title": "Fairuz: Go to Line/Column",
+        "enablement": "activeCustomEditorId == 'fairuz.rtlEditor'"
+      },
+      {
         "command": "fairuz.outline",
         "title": "Fairuz: Go to Symbol",
         "enablement": "activeCustomEditorId == 'fairuz.rtlEditor'"
@@ -221,6 +226,12 @@
         "command": "fairuz.wrap",
         "key": "alt+z",
         "mac": "alt+z",
+        "when": "activeCustomEditorId == 'fairuz.rtlEditor'"
+      },
+      {
+        "command": "fairuz.goToLine",
+        "key": "ctrl+g",
+        "mac": "ctrl+g",
         "when": "activeCustomEditorId == 'fairuz.rtlEditor'"
       },
       {

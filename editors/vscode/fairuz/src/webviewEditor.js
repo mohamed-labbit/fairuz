@@ -5,7 +5,7 @@ import { autocompletion, snippetCompletion, acceptCompletion, nextSnippetField, 
 import { openSearchPanel } from "@codemirror/search";
 import { setDiagnostics, lintGutter } from "@codemirror/lint";
 import { DocumentSync, textChange } from "./documentSync";
-import { keywords, builtins, scanLine, indentation, documentOutline } from "./languageTools";
+import { keywords, builtins, scanLine, indentation, documentOutline, lineLocation } from "./languageTools";
 import {
   Compartment,
   EditorState,
@@ -189,7 +189,17 @@ app.innerHTML = `
   </section>
   <div id="container"></div>
   <section id="problems-panel" class="problems" aria-label="مشكلات الملف" hidden><div class="panel-heading"><strong>مشكلات الملف</strong><button id="close-problems" aria-label="إغلاق المشكلات">×</button></div><div id="problem-list"></div></section>
-  <footer class="statusbar"><div><span id="cursor-position" dir="auto"></span><span class="status-separator">·</span><span id="indent-status">4 مسافات</span><span class="direction-badge">RTL</span></div><button id="sync-status" title="إعادة الاتصال بالملف">جارٍ فتح الملف…</button><button id="check-status" title="فحص الملف وعرض المشكلات">بانتظار الملف</button></footer>
+  <footer class="statusbar"><div><button id="cursor-position" data-action="goToLine" dir="auto" title="الانتقال إلى سطر وعمود · Ctrl G" aria-haspopup="dialog"></button><span class="status-separator">·</span><span id="indent-status">4 مسافات</span><span class="direction-badge">RTL</span></div><button id="sync-status" title="إعادة الاتصال بالملف">جارٍ فتح الملف…</button><button id="check-status" title="فحص الملف وعرض المشكلات">بانتظار الملف</button></footer>
+  <dialog id="line-dialog" aria-labelledby="line-title" dir="rtl">
+    <form id="line-form" novalidate>
+      <div class="panel-heading"><strong id="line-title">الانتقال إلى سطر وعمود</strong><button id="close-line" type="button" aria-label="إغلاق الانتقال">×</button></div>
+      <label for="line-query">السطر أو السطر:العمود</label>
+      <input id="line-query" type="text" placeholder="١٢:٣" autocomplete="off" spellcheck="false" dir="ltr" aria-describedby="line-hint line-error">
+      <p id="line-hint" class="navigation-hint"></p>
+      <p id="line-error" role="status" aria-live="polite" hidden>أدخل رقم سطر ضمن الملف وعموداً أكبر من صفر.</p>
+      <button type="submit" class="primary">انتقل</button>
+    </form>
+  </dialog>
   <dialog id="outline-dialog" aria-labelledby="outline-title">
     <div class="panel-heading"><strong id="outline-title">الانتقال إلى رمز</strong><button id="close-outline" aria-label="إغلاق الرموز">×</button></div>
     <input id="outline-query" type="search" placeholder="ابحث عن دالة أو نوع…" aria-label="البحث في الرموز" autocomplete="off" dir="auto">
@@ -260,6 +270,7 @@ const view = new EditorView({
       { key: "Mod-f", run: () => command("find"), preventDefault: true },
       { key: "Mod-h", run: () => command("replace"), preventDefault: true },
       { key: "Mod-Shift-o", run: () => command("outline"), preventDefault: true },
+      { key: "Ctrl-g", run: () => command("goToLine"), preventDefault: true },
       { key: "Alt-Shift-f", run: () => command("format"), preventDefault: true },
       { key: "Alt-z", run: () => command("wrap"), preventDefault: true },
       { key: "Mod-/", run: toggleLineComment, preventDefault: true },
@@ -329,6 +340,7 @@ function watchConnection() {
 }
 function handleEditorUpdate(update) {
   if (update.docChanged) {
+    if ($("line-dialog").open) validateLineLocation();
     outlineCache = null;
     if ($("outline-dialog").open) {
       outlineCache = documentOutline(update.state.doc.toString(), settings.tabSize);
@@ -403,7 +415,7 @@ function flushAction() {
   queuedAction = null;
 }
 function command(action) {
-  if (sync.version === null && ["save", "run", "format", "undo", "redo"].includes(action)) {
+  if (sync.version === null && ["save", "run", "format", "undo", "redo", "goToLine"].includes(action)) {
     showNotice("انتظر حتى يكتمل فتح الملف.");
     return true;
   }
@@ -411,6 +423,7 @@ function command(action) {
   else if (action === "redo") redo(view);
   else if (action === "find" || action === "replace") openSearchPanel(view);
   else if (action === "outline") openOutline();
+  else if (action === "goToLine") openLineNavigation();
   else if (action === "format") {
     if (!trusted || sync.conflict) {
       showNotice(!trusted ? "التنسيق يتطلب مساحة عمل موثوقة." : "حل تعارض الملف قبل التنسيق.", true);
@@ -433,9 +446,35 @@ function command(action) {
       flushAction();
     }
   }
-  if (!["find", "replace", "outline"].includes(action)) view.focus();
+  if (!["find", "replace", "outline", "goToLine"].includes(action)) view.focus();
   return true;
 }
+function validateLineLocation() {
+  const anchor = lineLocation(view.state.doc, $("line-query").value);
+  $("line-hint").textContent = `الأسطر: 1–${view.state.doc.lines}. مثال: ١٢:٣. العمود بعد نهاية السطر ينتقل إلى نهايته.`;
+  $("line-query").setAttribute("aria-invalid", String(anchor === null));
+  $("line-error").hidden = anchor !== null;
+  return anchor;
+}
+function openLineNavigation() {
+  const head = view.state.selection.main.head, line = view.state.doc.lineAt(head);
+  $("line-query").value = `${line.number}:${[...line.text.slice(0, head - line.from)].length + 1}`;
+  validateLineLocation();
+  if (!$("line-dialog").open) $("line-dialog").showModal();
+  $("line-query").focus();
+  $("line-query").select();
+}
+$("line-query").addEventListener("input", validateLineLocation);
+$("line-form").addEventListener("submit", event => {
+  event.preventDefault();
+  const anchor = validateLineLocation();
+  if (anchor === null) { $("line-query").focus(); return; }
+  $("line-dialog").close();
+  view.dispatch({ selection: { anchor }, scrollIntoView: true });
+  view.focus();
+});
+$("close-line").addEventListener("click", () => $("line-dialog").close());
+$("line-dialog").addEventListener("close", () => view.focus());
 function openOutline() {
   if (!outlineCache) outlineCache = documentOutline(view.state.doc.toString(), settings.tabSize);
   outlineIndex = 0;

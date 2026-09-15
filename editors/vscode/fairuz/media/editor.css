@@ -78,10 +78,14 @@ button:focus-visible, summary:focus-visible { outline: 2px solid var(--vscode-fo
 .problem { display: block; text-align: start; width: 100%; white-space: normal; padding: 7px; color: var(--vscode-errorForeground, #f39991); }
 .notice { position: absolute; bottom: 42px; inset-inline-end: 20px; max-width: min(470px, 90vw); padding: 10px 16px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); box-shadow: 0 4px 18px #0003; line-height: 1.7; z-index: 90; }
 .notice.error { border-color: var(--vscode-errorForeground, #f39991); }
-#outline-dialog { color: var(--foreground); background: var(--panel); border: 1px solid var(--border); border-radius: 10px; width: min(560px, calc(100vw - 28px)); max-height: min(520px, 80vh); padding: 14px; box-shadow: 0 14px 45px #0005; }
-#outline-dialog::backdrop { background: #0005; }
-#outline-query { display: block; width: 100%; margin-top: 12px; padding: 10px 12px; font: inherit; color: var(--vscode-input-foreground, var(--foreground)); background: var(--vscode-input-background, var(--surface)); border: 1px solid var(--border); border-radius: 5px; }
-#outline-query:focus { outline: 2px solid var(--vscode-focusBorder, #69c9c7); outline-offset: -1px; }
+#outline-dialog, #line-dialog { color: var(--foreground); background: var(--panel); border: 1px solid var(--border); border-radius: 10px; width: min(560px, calc(100vw - 28px)); max-height: min(520px, 80vh); padding: 14px; box-shadow: 0 14px 45px #0005; }
+#outline-dialog::backdrop, #line-dialog::backdrop { background: #0005; }
+#outline-query, #line-query { display: block; width: 100%; margin-top: 12px; padding: 10px 12px; font: inherit; color: var(--vscode-input-foreground, var(--foreground)); background: var(--vscode-input-background, var(--surface)); border: 1px solid var(--border); border-radius: 5px; }
+#outline-query:focus, #line-query:focus { outline: 2px solid var(--vscode-focusBorder, #69c9c7); outline-offset: -1px; }
+#line-form label { display: block; margin-top: 12px; }
+.navigation-hint { color: var(--muted); line-height: 1.7; }
+#line-error { color: var(--vscode-errorForeground, #f39991); line-height: 1.7; }
+#line-query[aria-invalid="true"] { border-color: var(--vscode-inputValidation-errorBorder, #f39991); }
 #outline-count, .outline-hint { color: var(--muted); font-size: 11px; margin: 10px 3px; }
 #outline-list { max-height: 300px; overflow-y: auto; }
 .outline-symbol { display: flex; flex-direction: column; gap: 4px; text-align: start; width: 100%; padding: 9px 12px; white-space: normal; }

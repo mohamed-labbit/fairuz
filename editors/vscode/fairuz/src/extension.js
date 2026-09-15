@@ -27,7 +27,7 @@ function activate(context) {
 
   const rtlEditor = FairuzRtlEditorProvider.register(context, highlighter);
   context.subscriptions.push(rtlEditor);
-  for (const action of ["undo", "redo", "save", "run", "stop", "format", "find", "replace", "check", "wrap", "outline"]) {
+  for (const action of ["undo", "redo", "save", "run", "stop", "format", "find", "replace", "check", "wrap", "outline", "goToLine"]) {
     context.subscriptions.push(vscode.commands.registerCommand(`fairuz.${action}`, () => {
       const handled = rtlEditor.runCommand(action);
       if (!handled && action === "format") return vscode.commands.executeCommand("editor.action.formatDocument");

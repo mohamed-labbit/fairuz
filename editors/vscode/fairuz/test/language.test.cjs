@@ -1,6 +1,25 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { formatWhitespace, parseDiagnostics, scanLine, documentOutline } = require("../src/languageTools");
+const { formatWhitespace, parseDiagnostics, scanLine, documentOutline, lineLocation } = require("../src/languageTools");
+const { EditorState } = require("@codemirror/state");
+
+test("line navigation accepts Western, Arabic and Persian digits and one-based columns", () => {
+  const doc = EditorState.create({ doc: 'عنوان\nا😀ب قيمة\n' }).doc;
+  for (const query of ['2:3', ' ٢ : ٣ ', '۲:۳']) {
+    assert.equal(lineLocation(doc, query), doc.line(2).from + 3);
+  }
+  assert.equal(lineLocation(doc, '2'), doc.line(2).from);
+  assert.equal(lineLocation(doc, '2:2'), doc.line(2).from + 1);
+  assert.equal(lineLocation(doc, '2:999'), doc.line(2).to);
+  assert.equal(lineLocation(doc, '3:1'), doc.length);
+});
+test("line navigation rejects malformed or out-of-range locations without moving the caret", () => {
+  const doc = EditorState.create({ doc: 'أ\nب' }).doc;
+  for (const query of ['', '0', '3', '-1', '1.5', '1:', ':2', '1:0', '1:-2', '1:2:3', '1e0', '١س', '1:9007199254740992']) {
+    assert.equal(lineLocation(doc, query), null, query);
+  }
+  assert.equal(lineLocation(EditorState.create().doc, '١'), 0);
+});
 
 test("formatting preserves comments, quoted whitespace, Arabic and CRLF", () => {
   const source = '# مقدمة  \r\nدالة مثال():   \r\n\tاكتب("نص  ") # شرح  \r\n';
@@ -19,7 +38,7 @@ test("colons and hashes inside strings do not start blocks or comments", () => {
   assert.ok(scanLine('اذا صحيح: # comment').code.trimEnd().endsWith(":"));
 });
 test("diagnostics map codepoint columns to UTF-16 after Arabic and emoji", () => {
-  const result = parseDiagnostics('buffer.fa: error: Unexpected token\n  --> line 1:5\n', 'ا😀ب +');
+  const result = parseDiagnostics('buffer.ف: error: Unexpected token\n  --> line 1:5\n', 'ا😀ب +');
   assert.equal(result[0].start, 5);
   assert.equal(result[0].length, 1);
   assert.equal(result[0].message, 'Unexpected token');

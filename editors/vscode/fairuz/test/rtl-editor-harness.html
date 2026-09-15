@@ -14,11 +14,11 @@
 <div id="app"></div>
 <div id="harness"><button id="theme">Light / dark</button><button id="external">External edit</button><button id="error">Diagnostic</button><button id="delay">Slow sync: off</button><button id="drop-ack">Drop next ack</button><output id="test-state">Ready</output></div>
 <script>
-let hostText = `# تقرير المبيعات — مثال صغير بلغة فيروز\nمن json استورد JSON_رمز\n\nدالة مجموع_المبيعات(المبيعات):\n    المجموع := 0\n    لكل قيمة في المبيعات:\n        المجموع := المجموع + قيمة\n    ارجع المجموع\n\nالمبيعات := [120، 85، 210، 95]\nالإجمالي := مجموع_المبيعات(المبيعات)\n\nاكتب("إجمالي المبيعات:", الإجمالي)\nاكتب(JSON_رمز(قاموس("total", الإجمالي)))\n`;
+let hostText = `# تقرير المبيعات — مثال صغير بلغة فيروز\nمن جيسون استورد JSON_رمز\n\nدالة مجموع_المبيعات(المبيعات):\n    المجموع := 0\n    لكل قيمة في المبيعات:\n        المجموع := المجموع + قيمة\n    ارجع المجموع\n\nالمبيعات := [120، 85، 210، 95]\nالإجمالي := مجموع_المبيعات(المبيعات)\n\nاكتب("إجمالي المبيعات:", الإجمالي)\nاكتب(JSON_رمز(قاموس("total", الإجمالي)))\n`;
 let version = 1, slow = false, dirty = false, persisted = null, invalid = false, dropAck = false;
 let hostQueue = Promise.resolve();
 const post = message => window.postMessage(message, '*');
-const metadata = () => post({ type: 'metadata', name: 'تقرير_المبيعات.fa', dirty, trusted: true,
+const metadata = () => post({ type: 'metadata', name: 'تقرير_المبيعات.ف', dirty, trusted: true,
   settings: { fontSize: 16, lineHeight: 1.8, wordWrap: true, tabSize: 4, liveDiagnostics: true } });
 const report = text => document.getElementById('test-state').textContent = text;
 window.acquireVsCodeApi = () => ({

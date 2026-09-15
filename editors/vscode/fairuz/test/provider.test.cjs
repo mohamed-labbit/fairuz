@@ -42,7 +42,7 @@ Module._load = load;
 function harness(text = '', eol = 1) {
   const messages = [];
   const provider = new FairuzRtlEditorProvider({}, {});
-  const document = { uri: { toString: () => 'file:///test.fa' }, version: 1, eol, getText: () => text };
+  const document = { uri: { toString: () => 'file:///test.ف' }, version: 1, eol, getText: () => text };
   const state = { document, webviewPanel: { webview: { postMessage: message => messages.push(message) } }, ready: true };
   mock.workspace.applyEdit = async edit => {
     const { range, text: replacement } = edit.edits[0];
@@ -139,6 +139,8 @@ test('commands target only the active editor', () => {
   h.state.webviewPanel.active = true;
   assert.equal(h.provider.runCommand('undo'), true);
   assert.equal(h.messages[0].action, 'undo');
+  assert.equal(h.provider.runCommand('goToLine'), true);
+  assert.deepEqual(h.messages[1], { type: 'command', action: 'goToLine' });
 });
 test('save refuses a stale snapshot and waits for document.save', async () => {
   const h = harness('saved');
@@ -160,7 +162,7 @@ test('workspace trust gates program execution', async () => {
 test('Run saves first and passes paths directly to a VS Code process task', async () => {
   const h = harness();
   const events = [];
-  h.state.document.uri = { fsPath: '/tmp/a folder/تجربة;literal.fa', scheme: 'file', toString: () => 'file:///test' };
+  h.state.document.uri = { fsPath: '/tmp/a folder/تجربة;literal.ف', scheme: 'file', toString: () => 'file:///test' };
   h.state.document.save = async () => { events.push('save'); return true; };
   h.provider.highlighter = { executable: () => '/tmp/compiler folder/fairuz' };
   mock.workspace.getWorkspaceFolder = () => undefined;
@@ -174,7 +176,7 @@ test('Run saves first and passes paths directly to a VS Code process task', asyn
   mock.tasks.executeTask = async value => { task = value; events.push('run'); return execution; };
   await h.provider.runDocument(h.state);
   assert.deepEqual(events, ['save', 'run']);
-  assert.deepEqual(task.execution.args, ['/tmp/a folder/تجربة;literal.fa']);
+  assert.deepEqual(task.execution.args, ['/tmp/a folder/تجربة;literal.ف']);
   assert.equal(task.execution.process, '/tmp/compiler folder/fairuz');
   assert.equal(task.execution.options.cwd, '/tmp/a folder');
   await h.provider.handleMessage(h.state, { type: 'action', action: 'stop' });

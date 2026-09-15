@@ -4,7 +4,7 @@ const crypto = require("crypto");
 const { normalize } = require("./documentSync");
 const { checkSource, formatSource } = require("./compilerService");
 const FAIRUZ_RTL_VIEW = "fairuz.rtlEditor";
-const ACTIONS = new Set(["save", "run", "stop", "format", "find", "replace", "undo", "redo", "check", "wrap", "outline"]);
+const ACTIONS = new Set(["save", "run", "stop", "format", "find", "replace", "undo", "redo", "check", "wrap", "outline", "goToLine"]);
 
 class FairuzRtlEditorProvider {
   constructor(context, highlighter) {
@@ -201,7 +201,7 @@ class FairuzRtlEditorProvider {
     state.startingRun = true;
     try {
       if (!await state.document.save()) return;
-      if (state.document.uri.scheme !== "file") throw new Error("Save this program to a local .fa file before running it.");
+      if (state.document.uri.scheme !== "file") throw new Error("Save this program to a local .ف file before running it.");
       const task = new vscode.Task(
         { type: "fairuz", file: state.document.uri.toString() },
         vscode.workspace.getWorkspaceFolder(state.document.uri) || vscode.TaskScope.Global,

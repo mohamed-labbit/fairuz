@@ -1,7 +1,7 @@
 # Fairuz RTL Editor
 
 A comfortable Arabic editing surface for Fairuz, with native bidirectional text
-layout, a right-side gutter, and parser-backed syntax colors. Version **0.3.1**.
+layout, a right-side gutter, and parser-backed syntax colors. Version **0.3.2**.
 
 ## Daily editing
 
@@ -12,6 +12,9 @@ layout, a right-side gutter, and parser-backed syntax colors. Version **0.3.1**.
 - Light, dark, and high-contrast colors that follow VS Code's active theme.
 - Cursor position, unsaved indicator, and clickable compiler errors.
 - Saved cursor/scroll state when the webview is restored.
+- Go to a line or `line:column` with Ctrl+G or by clicking the cursor status.
+  Accepts Western and Arabic digits (for example, `١٢:٣`). Columns count Unicode
+  code points, matching the status bar; columns past the line end stop at its end.
 - Searchable function, type, and method navigator with keyboard selection.
   It reads the current buffer and remains useful while code is incomplete.
 
@@ -80,6 +83,7 @@ if the document changes during formatting. RTL formatting is undoable.
 | Undo / redo | Cmd+Z / Cmd+Shift+Z | Ctrl+Z / Ctrl+Y |
 | Find | Cmd+F | Ctrl+F |
 | Go to symbol | Cmd+Shift+O | Ctrl+Shift+O |
+| Go to line / column | Ctrl+G | Ctrl+G |
 | Replace | Cmd+Alt+F | Ctrl+H |
 | Format document | Shift+Alt+F | Shift+Alt+F |
 | Completion | Ctrl+Space | Ctrl+Space |
@@ -108,10 +112,10 @@ All main actions are also available in the Command Palette under **Fairuz**.
 npm ci
 npm test
 npm run package
-code --install-extension fairuz-language-0.3.1.vsix --force
+code --install-extension fairuz-language-0.3.2.vsix --force
 ```
 
-After updating, run **Developer: Reload Window** in VS Code. Open a `.fa` file,
+After updating, run **Developer: Reload Window** in VS Code. Open a `.ف` file,
 or use **Reopen Editor With… → Fairuz RTL Editor**. Use
 **Reopen Editor With… → Text Editor** for the standard VS Code editor.
 

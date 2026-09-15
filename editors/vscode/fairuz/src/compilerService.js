@@ -46,7 +46,7 @@ async function checkSource(executable, source, options = {}) {
     return { error: "This file is too large for live checking.", diagnostics: [] };
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "fairuz-editor-"));
   try {
-    const file = path.join(directory, "buffer.fa");
+    const file = path.join(directory, "buffer.ف");
     await fs.writeFile(file, source, { mode: 0o600 });
     const result = await runCompiler(executable, ["--check", file], options);
     if (result.cancelled || result.error) return { ...result, diagnostics: [] };
@@ -65,7 +65,7 @@ async function formatSource(executable, source, options = {}) {
   let directory;
   try {
     directory = await fs.mkdtemp(path.join(os.tmpdir(), "fairuz-format-"));
-    const file = path.join(directory, "buffer.fa");
+    const file = path.join(directory, "buffer.ف");
     await fs.writeFile(file, source, { mode: 0o600 });
     const result = await runCompiler(executable, ["format", file], options);
     if (result.cancelled || result.error) return result;
