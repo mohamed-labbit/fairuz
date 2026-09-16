@@ -184,6 +184,7 @@ public:
     bool m_is_dead { false };
 
     Fa_Value execute(int stop_frame_depth = 0);
+    void unwind_failed_run();
     Fa_Value call_special_sync(Fa_Value receiver, int special_slot);
     Fa_Value call_value_sync(Fa_Value callee, Fa_ObjList* arguments);
 
