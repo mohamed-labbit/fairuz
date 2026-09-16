@@ -129,13 +129,13 @@ install(FILES
 install(DIRECTORY
     ${CMAKE_SOURCE_DIR}/examples/
     DESTINATION ${CMAKE_INSTALL_DATADIR}/fairuz/examples
-    FILES_MATCHING PATTERN "*.fa"
+    FILES_MATCHING PATTERN "*.ف"
 )
 
 install(DIRECTORY
     ${CMAKE_SOURCE_DIR}/stdlib/
     DESTINATION ${CMAKE_INSTALL_DATADIR}/fairuz/stdlib
-    FILES_MATCHING PATTERN "*.fa"
+    FILES_MATCHING PATTERN "*.ف"
 )
 
 if(BUILD_TESTS)
@@ -211,10 +211,10 @@ if(BUILD_TESTS)
     add_test(NAME AllTestsInMain COMMAND fairuz_tests)
 
     # Every Fairuz standard-library test is also a first-class CTest case.
-    # CONFIGURE_DEPENDS makes newly added test_*.fa files appear after the
+    # CONFIGURE_DEPENDS makes newly added test_*.ف files appear after the
     # next build without maintaining a second handwritten manifest.
     file(GLOB fairuz_STDLIB_TESTS CONFIGURE_DEPENDS
-        ${CMAKE_SOURCE_DIR}/stdlib/tests/test_*.fa)
+        ${CMAKE_SOURCE_DIR}/stdlib/tests/test_*.ف)
     foreach(stdlib_test_file IN LISTS fairuz_STDLIB_TESTS)
         get_filename_component(stdlib_test_name ${stdlib_test_file} NAME_WE)
         add_test(
