@@ -648,7 +648,7 @@ if [[ "$RUN_TESTS" == true ]]; then
 
     echo "-- Running Fairuz standard-library tests"
     stdlib_test_count=0
-    for stdlib_test_file in "$PROJECT_ROOT"/stdlib/tests/test_*.fa; do
+    for stdlib_test_file in "$PROJECT_ROOT"/stdlib/tests/اختبار_*.ف; do
         [[ -f "$stdlib_test_file" ]] || continue
         stdlib_test_count=$((stdlib_test_count + 1))
         echo "[$stdlib_test_count] $(basename "$stdlib_test_file")"
