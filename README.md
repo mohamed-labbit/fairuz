@@ -51,6 +51,10 @@ Core keywords:
 
 ## Standard library
 
+The standard library's canonical module names are Arabic. See
+[ARABIC_STDLIB_NAMES.md](ARABIC_STDLIB_NAMES.md) for the complete module map,
+naming rules, and the migration plan for existing English imports.
+
 Grouped by area, all accessed as global functions:
 
 - **Collections** — `طول` (len), `اضف` (append), `احذف` (pop), `مقطع` (slice), `قائمة` (list), `قاموس` (dict)
@@ -86,9 +90,9 @@ cmake --build build --target fairuz_tests -j4
 ## Run
 
 ```bash
-./build/fairuz examples/hello.fa
-./build/fairuz examples/fibonacci.fa
-./build/fairuz --check examples/sum_list.fa
+./build/fairuz examples/hello.ف
+./build/fairuz examples/fibonacci.ف
+./build/fairuz --check examples/sum_list.ف
 ```
 
 Install to a custom prefix:
@@ -102,13 +106,13 @@ Installed files:
 - `bin/fairuz`
 - `share/doc/Fairuz/README.md`
 - `share/doc/Fairuz/LICENSE`
-- `share/fairuz/examples/*.fa`
+- `share/fairuz/examples/*.ف`
 
 ## Command line
 
 ```bash
-fairuz <file.fa> [options]
-fairuz format <file.fa>
+fairuz <file.ف> [options]
+fairuz format <file.ف>
 ```
 
 Options:
@@ -122,7 +126,7 @@ Options:
 | `-h`, `--help` | Show usage |
 | `-V`, `--version` | Show the language version |
 
-`fairuz format <file.fa>` rewrites a file in place with canonical formatting.
+`fairuz format <file.ف>` rewrites a file in place with canonical formatting.
 It preserves comments, literal spellings, grouping, and existing line breaks;
 normalizes indentation to four spaces and comma/operator spacing; and validates
 the result before replacing the file. Long lines remain intact. Invalid source
@@ -142,7 +146,7 @@ directory:
 
 ```bash
 docker build -t fairuz .
-docker run --rm -v "$PWD:/work:ro" fairuz examples/hello.fa
+docker run --rm -v "$PWD:/work:ro" fairuz examples/hello.ف
 ```
 
 ## Project layout
@@ -150,7 +154,7 @@ docker run --rm -v "$PWD:/work:ro" fairuz examples/hello.fa
 ```
 fairuz/          Compiler and VM sources (lexer, parser, compiler, VM, GC, stdlib)
 tests/           600+ unit and regression tests (GoogleTest), plus data-driven test_cases/
-examples/        Sample .fa programs
+examples/        Sample .ف programs
 editors/vscode/  VS Code syntax/language extension
 packaging/       Homebrew formula template
 main.cpp         CLI entry point
