@@ -26,6 +26,76 @@ namespace {
 
 using ComparedObjects = std::set<std::pair<Fa_ObjHeader const*, Fa_ObjHeader const*>>;
 
+char const* value_type_name(Fa_Value value)
+{
+    if (value.is_nil())
+        return "عدم";
+    if (value.is_bool())
+        return "منطقي";
+    if (value.is_int())
+        return "طبيعي";
+    if (value.is_double())
+        return "حقيقي";
+    if (value.is_string())
+        return "سلسلة";
+    if (value.is_list())
+        return "قائمة";
+    if (value.is_dict())
+        return "قاموس";
+    if (value.is_function() || value.is_native())
+        return "دالة";
+    if (value.is_class())
+        return "نوع";
+    if (value.is_instance())
+        return "كائن";
+    if (value.is_module())
+        return "وحدة";
+    return "مورد";
+}
+
+std::string similar_name(Fa_GlobalEnvironment* environment, std::string const& missing)
+{
+    auto points = [](Fa_StringRef const& name) {
+        std::vector<u32> result;
+        for (size_t i = 0; i < name.len() && result.size() < 65;) {
+            u64 bytes = 0;
+            result.push_back(util::decode_utf8_at(name, i, &bytes));
+            i += bytes;
+        }
+        return result;
+    };
+    auto wanted = points(Fa_StringRef(missing.c_str()));
+    if (wanted.size() < 3 || wanted.size() > 64)
+        return { };
+    size_t best = wanted.size() < 6 ? 2 : 3;
+    std::string match;
+    size_t examined = 0;
+    for (auto* env = environment; env && examined < 1000; env = env->fallback) {
+        for (auto const& [name, slot] : env->index) {
+            if (++examined > 1000)
+                break;
+            auto candidate = points(name);
+            if (candidate.size() > 64 || candidate.size() + best < wanted.size() || wanted.size() + best < candidate.size())
+                continue;
+            std::vector<size_t> previous(candidate.size() + 1), current(candidate.size() + 1);
+            for (size_t j = 0; j <= candidate.size(); ++j)
+                previous[j] = j;
+            for (size_t i = 1; i <= wanted.size(); ++i) {
+                current[0] = i;
+                for (size_t j = 1; j <= candidate.size(); ++j)
+                    current[j] = std::min({ previous[j] + 1, current[j - 1] + 1, previous[j - 1] + (wanted[i - 1] != candidate[j - 1]) });
+                previous.swap(current);
+            }
+            std::string text(name.data(), name.len());
+            if (previous.back() < best || (previous.back() == best && !match.empty() && text < match)) {
+                best = previous.back();
+                match = std::move(text);
+            }
+        }
+    }
+    return match;
+}
+
 bool values_equal_impl(Fa_Value lhs, Fa_Value rhs, ComparedObjects& seen)
 {
     if (lhs == rhs)
@@ -300,11 +370,11 @@ std::filesystem::path Fa_VM::resolve_module_path(std::string const& name) const
             break;
         begin = dot + 1;
     }
-    relative += ".fa";
+    relative += ".ف";
 
     std::vector<std::filesystem::path> roots;
     // Standard-library roots are authoritative for module names they contain.
-    // This prevents a project file such as `file.fa` from accidentally
+    // This prevents a project file such as `file.ف` from accidentally
     // shadowing the bundled module. Names absent from these roots still fall
     // through to the importing module's directory for normal relative imports.
     if (char const* configured = std::getenv("FAIRUZ_STDLIB"))
@@ -336,7 +406,7 @@ Fa_ObjModule* Fa_VM::load_module(std::string const& name)
 {
     std::filesystem::path path = resolve_module_path(name);
     if (path.empty())
-        runtime_error(ErrorCode::UNDEFINED_GLOBAL, "module not found: " + name);
+        runtime_error(ErrorCode::MODULE_NOT_FOUND, "'" + name + "'");
     std::string key = path.string();
     if (auto found = m_module_cache.find(key); found != m_module_cache.end())
         return found->second;
@@ -350,7 +420,7 @@ Fa_ObjModule* Fa_VM::load_module(std::string const& name)
     m_module_cache.emplace(key, module); // publish first so import cycles terminate
 
     auto source = std::make_unique<lex::Fa_FileManager>(key);
-    diagnostic::set_source(source.get());
+    diagnostic::SourceScope source_scope(source.get());
     parser::Fa_Parser parser(source.get());
     Fa_Array<AST::Fa_Stmt*> statements = parser.parse_program();
     if (diagnostic::has_errors())
@@ -372,6 +442,8 @@ Fa_Value Fa_VM::run(Fa_Chunk* chunk)
     if (chunk == nullptr)
         return Fa_Value::nil();
 
+    diagnostic::reset();
+    diagnostic::SourceScope source_scope(chunk->source);
     m_stack_top = 0;
     m_frames_top = 0;
 
@@ -391,7 +463,12 @@ Fa_Value Fa_VM::run(Fa_Chunk* chunk)
     if (m_gc.current_memory() >= GC_THRESHOLD)
         m_gc.collect(this);
 
-    return execute();
+    try {
+        return execute();
+    } catch (...) {
+        unwind_failed_run();
+        throw;
+    }
 }
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -957,7 +1034,7 @@ Fa_Value Fa_VM::execute(int stop_frame_depth)
             if (idx < 0)
                 idx += static_cast<i64>(elems.size());
             if (idx < 0 || idx >= static_cast<i64>(elems.size()))
-                runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
+                runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS, "index " + std::to_string(index_v.as_int()) + " for list of length " + std::to_string(elems.size()));
 
             elems[static_cast<u32>(idx)] = new_val;
         } else {
@@ -1252,7 +1329,7 @@ Fa_Value Fa_VM::execute(int stop_frame_depth)
             i64 idx_int = idx.as_int();
             Fa_ListType list = obj.as_list()->elements;
             if (UNLIKELY(idx_int >= list.size() || idx_int < 0))
-                runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
+                runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS, "index " + std::to_string(idx_int) + " for list of length " + std::to_string(list.size()));
 
             res = obj.as_list()->elements[idx_int];
         } else if (obj.is_dict()) {
@@ -1638,7 +1715,7 @@ void Fa_VM::call_value(Fa_Value callee, int argc, int call_base, bool tail)
         int local_count = fchk->local_count;
 
         if (argc != arity)
-            runtime_error(ErrorCode::WRONG_ARG_COUNT, "expected " + std::to_string(arity) + " arguments but got " + std::to_string(argc));
+            runtime_error(ErrorCode::WRONG_ARG_COUNT, std::string(fchk->name.data(), fchk->name.len()) + "() expected " + std::to_string(arity) + " arguments but got " + std::to_string(argc));
 
         if (local_count < argc)
             runtime_error(ErrorCode::WRONG_ARG_COUNT);
@@ -2027,10 +2104,15 @@ Fa_SourceLocation Fa_VM::current_location() const
 void Fa_VM::_runtime_error(u16 errc, std::string const& detail)
 {
     Fa_SourceLocation loc = current_location();
+    diagnostic::SourceScope source_scope(m_frames_top > 0 ? frame().chunk->source : diagnostic::engine.source());
     auto id = diagnostic::report_deferred(diagnostic::Severity::ERROR, loc, static_cast<u16>(errc), detail);
+    if (errc == static_cast<u16>(ErrorCode::UNDEFINED_GLOBAL) && !detail.empty()) {
+        auto candidate = similar_name(current_globals(), detail);
+        if (!candidate.empty())
+            diagnostic::engine.add_suggestion(id, "Did you mean '" + candidate + "'?");
+    }
 
-    int frame_no = 0;
-    for (int i = m_frames_top - 1; i >= 0; i -= 1) {
+    for (int i = 0; i < m_frames_top; ++i) {
         Fa_CallFrame* p = &m_frames[i];
         if (p->chunk == nullptr)
             continue;
@@ -2041,16 +2123,8 @@ void Fa_VM::_runtime_error(u16 errc, std::string const& detail)
             continue;
 
         Fa_SourceLocation frame_loc = ch.locations[off];
-        std::string note = "stack trace #" + std::to_string(frame_no++) + ": at "
-            + std::to_string(frame_loc.line) + ":" + std::to_string(frame_loc.column);
-        if (p->func) {
-            Fa_StringRef fname = p->func->name();
-            note = "in '" + std::string(fname.data(), fname.len()) + "' " + note;
-        } else if (!p->chunk->name.empty()) {
-            note = "in '" + std::string(p->chunk->name.data(), p->chunk->name.len()) + "' " + note;
-        }
-
-        diagnostic::engine.add_note(id, frame_loc.line, note);
+        auto name = p->func ? p->func->name() : ch.name;
+        diagnostic::engine.add_frame(id, ch.source, frame_loc, name.empty() ? "<main>" : std::string(name.data(), name.len()));
     }
 
     diagnostic::dump();
@@ -2059,6 +2133,25 @@ void Fa_VM::_runtime_error(u16 errc, std::string const& detail)
 
 void Fa_VM::runtime_error(ErrorCode errc, std::string const& detail)
 {
+    if (errc == ErrorCode::TYPE_ERROR_ARITH && detail.empty() && m_frames_top > 0) {
+        auto const& current = frame();
+        if (current.ip > 0 && current.ip <= current.chunk->code.size()) {
+            u32 instruction = current.chunk->code[current.ip - 1];
+            char const* operation = nullptr;
+            switch (Fa_instr_op(instruction)) {
+            case Fa_OpCode::OP_ADD: operation = "+"; break;
+            case Fa_OpCode::OP_SUB: operation = "-"; break;
+            case Fa_OpCode::OP_MUL: operation = "*"; break;
+            case Fa_OpCode::OP_DIV: operation = "/"; break;
+            case Fa_OpCode::OP_MOD: operation = "%"; break;
+            default: break;
+            }
+            if (operation) {
+                _runtime_error(static_cast<u16>(errc), std::string("operator '") + operation + "' received " + value_type_name(get_reg(current, Fa_instr_B(instruction))) + " and " + value_type_name(get_reg(current, Fa_instr_C(instruction))));
+                return;
+            }
+        }
+    }
     _runtime_error(static_cast<u16>(errc), detail);
 }
 
@@ -2067,10 +2160,26 @@ void Fa_VM::stdlib_error(diagnostic::errc::stdlib::Code errc, std::string const&
     _runtime_error(static_cast<u16>(errc), detail);
 }
 
-void Fa_VM::halt()
+void Fa_VM::unwind_failed_run()
 {
+    // A partially initialized module is useful only while breaking an active
+    // import cycle. It must never masquerade as a successful import on retry.
+    for (auto it = m_module_cache.begin(); it != m_module_cache.end();) {
+        if (!it->second->initialized) {
+            it->second->executing = false;
+            it = m_module_cache.erase(it);
+        } else
+            ++it;
+    }
+    std::fill(m_stack, m_stack + std::clamp(m_stack_top, 0, STACK_SIZE), Fa_Value::nil());
+    std::fill(m_frames, m_frames + std::clamp(m_frames_top, 0, MAX_FRAMES), Fa_CallFrame());
     m_frames_top = 0;
     m_stack_top = 0;
+}
+
+void Fa_VM::halt()
+{
+    unwind_failed_run();
     throw Fa_RuntimeHalt();
 }
 
