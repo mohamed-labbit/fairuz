@@ -1158,15 +1158,15 @@ public:
 class Fa_ImportStmt final : public Fa_Stmt {
 private:
     Fa_StringRef m_module;
-    Fa_StringRef m_name;
-    Fa_StringRef m_alias;
+    Fa_Array<Fa_StringRef> m_names;
+    Fa_Array<Fa_StringRef> m_aliases;
 
 public:
-    Fa_ImportStmt(Fa_StringRef module, Fa_StringRef name, Fa_StringRef alias, Fa_SourceLocation loc)
+    Fa_ImportStmt(Fa_StringRef module, Fa_Array<Fa_StringRef> names, Fa_Array<Fa_StringRef> aliases, Fa_SourceLocation loc)
         : Fa_Stmt(loc, Kind::IMPORT)
         , m_module(module)
-        , m_name(name)
-        , m_alias(alias)
+        , m_names(names)
+        , m_aliases(aliases)
     {
     }
 
@@ -1175,17 +1175,17 @@ public:
         if (other == nullptr || other->get_kind() != Kind::IMPORT)
             return false;
         auto const* import = static_cast<Fa_ImportStmt const*>(other);
-        return m_module == import->m_module && m_name == import->m_name && m_alias == import->m_alias;
+        return m_module == import->m_module && m_names == import->m_names && m_aliases == import->m_aliases;
     }
     [[nodiscard]] Fa_ImportStmt* clone() const override
     {
-        return ALLOCATE_AST_NODE(Fa_ImportStmt, m_module, m_name, m_alias, get_location());
+        return ALLOCATE_AST_NODE(Fa_ImportStmt, m_module, m_names, m_aliases, get_location());
     }
     void accept(Fa_StmtVisitor& v) override { v.visit(*this); }
     [[nodiscard]] Fa_StringRef const& get_module() const { return m_module; }
-    [[nodiscard]] Fa_StringRef const& get_name() const { return m_name; }
-    [[nodiscard]] Fa_StringRef const& get_alias() const { return m_alias; }
-    [[nodiscard]] bool imports_member() const { return !m_name.empty(); }
+    [[nodiscard]] Fa_Array<Fa_StringRef> const& get_names() const { return m_names; }
+    [[nodiscard]] Fa_Array<Fa_StringRef> const& get_aliases() const { return m_aliases; }
+    [[nodiscard]] bool imports_member() const { return !m_names.empty(); }
 };
 
 class Fa_BreakStmt final : public Fa_Stmt {
@@ -1320,10 +1320,10 @@ static inline Fa_ClassDef* Fa_make_class_def(Fa_Expr* name, Fa_Expr* parent,
 {
     return ALLOCATE_AST_NODE(Fa_ClassDef, name, parent, members, methods, loc);
 }
-static inline Fa_ImportStmt* Fa_make_import(Fa_StringRef module, Fa_StringRef name,
-    Fa_StringRef alias, Fa_SourceLocation loc)
+static inline Fa_ImportStmt* Fa_make_import(Fa_StringRef module, Fa_Array<Fa_StringRef> name,
+    Fa_Array<Fa_StringRef> aliases, Fa_SourceLocation loc)
 {
-    return ALLOCATE_AST_NODE(Fa_ImportStmt, module, name, alias, loc);
+    return ALLOCATE_AST_NODE(Fa_ImportStmt, module, name, aliases, loc);
 }
 static inline Fa_BreakStmt* Fa_make_break(Fa_SourceLocation loc)
 {

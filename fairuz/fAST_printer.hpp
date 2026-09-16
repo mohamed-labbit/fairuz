@@ -286,8 +286,8 @@ private:
             auto import = as_import(s);
             std::cout << color("Import", Color::BOLD) << " " << import->get_module();
             if (import->imports_member())
-                std::cout << "." << import->get_name();
-            std::cout << " as " << import->get_alias() << "\n";
+                std::cout << "." << import->get_names()[0];
+            std::cout << " as " << import->get_aliases()[0] << "\n";
         } break;
 
         default: std::cout << color("<unknown stmt>", Color::RED) << "\n";

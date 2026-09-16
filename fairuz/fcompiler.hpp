@@ -269,6 +269,8 @@ private:
     Fa_ErrorOr<bool> compile_break(AST::Fa_BreakStmt* s);
     Fa_ErrorOr<bool> compile_continue(AST::Fa_ContinueStmt* s);
     Fa_ErrorOr<bool> compile_class_def(AST::Fa_ClassDef* s);
+    Fa_ErrorOr<bool> compile_import_single(
+        Fa_StringRef const& module, Fa_StringRef const& name, Fa_StringRef const& alias, Fa_SourceLocation loc, bool imports_member);
     Fa_ErrorOr<bool> compile_import(AST::Fa_ImportStmt* s);
     Fa_ErrorOr<bool> compile_class_method(AST::Fa_Stmt* s);
     Fa_ErrorOr<Fa_ExprResult> compile_expr_impl(AST::Fa_Expr* e);

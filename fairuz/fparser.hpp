@@ -106,6 +106,9 @@ public:
 private:
     lex::Fa_Lexer m_lexer;
     u32 m_nesting_level { 0 };
+    /// keeping a stack of open parentheses
+    /// using bool for minimal memory use
+    std::vector<bool> m_parenths;
 
     // Each syntactic level currently traverses several mutually-recursive
     // parser helpers. Keep a bounded implementation-depth budget large

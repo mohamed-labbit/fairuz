@@ -96,6 +96,9 @@ Fa_Chunk* Compiler::compile(Fa_Array<AST::Fa_Stmt*> const& stmts)
 {
     Fa_Chunk* chunk = Fa_make_chunk();
     chunk->name = "<main>";
+    chunk->source = diagnostic::engine.source();
+    if (chunk->source)
+        chunk->source_path = chunk->source->path;
 
     CompilerState state;
     state.chunk = chunk;
@@ -171,6 +174,27 @@ Fa_ErrorOr<bool> Compiler::compile_import(AST::Fa_ImportStmt* s)
     if (!m_current->is_top_level || m_current->scope_depth != 0)
         return report_error(CompilerError::INVALID_STATEMENT_NODE, s->get_location());
 
+    Fa_SourceLocation loc = s->get_location();
+    Fa_StringRef const& module = s->get_module();
+    Fa_Array<Fa_StringRef> const& names = s->get_names();
+    Fa_Array<Fa_StringRef> const& aliases = s->get_aliases();
+    if (!s->imports_member()) {
+        // Whole-module imports have no member names, but still bind one alias.
+        if (aliases.size() != 1)
+            return report_error(CompilerError::INVALID_STATEMENT_NODE, loc);
+        return compile_import_single(module, { }, aliases[0], loc, false);
+    }
+    if (names.size() != aliases.size())
+        return report_error(CompilerError::INVALID_STATEMENT_NODE, loc);
+    for (size_t i = 0; i < names.size(); ++i)
+        Fa_TRY_DISCARD(compile_import_single(module, names[i], aliases[i], loc, true));
+
+    return true;
+}
+
+Fa_ErrorOr<bool> Compiler::compile_import_single(
+    Fa_StringRef const& module, Fa_StringRef const& name, Fa_StringRef const& alias, Fa_SourceLocation loc, bool imports_member)
+{
     // Imported bindings live in the module's global environment. Keeping a
     // permanent local register for every import makes a large module exhaust
     // the 8-bit register file even though those temporary values are already
@@ -179,19 +203,19 @@ Fa_ErrorOr<bool> Compiler::compile_import(AST::Fa_ImportStmt* s)
     RegMark mark(m_current);
     reg_t module_reg;
     ALLOC_REG(&module_reg);
-    emit(Fa_make_ABx(Fa_OpCode::IMPORT_MODULE, module_reg, intern_string(s->get_module())), s->get_location());
+    emit(Fa_make_ABx(Fa_OpCode::IMPORT_MODULE, module_reg, intern_string(module)), loc);
 
     reg_t value_reg = module_reg;
-    if (s->imports_member()) {
+    if (imports_member) {
         ALLOC_REG(&value_reg);
-        emit(Fa_make_ABC(Fa_OpCode::GET_FIELD, value_reg, module_reg, 0xFF), s->get_location());
-        emit(Fa_make_ABx(Fa_OpCode::NOP, 0, intern_string(s->get_name())), s->get_location());
+        emit(Fa_make_ABC(Fa_OpCode::GET_FIELD, value_reg, module_reg, 0xFF), loc);
+        emit(Fa_make_ABx(Fa_OpCode::NOP, 0, intern_string(name)), loc);
     }
 
-    emit(Fa_make_ABx(Fa_OpCode::STORE_GLOBAL, value_reg, intern_string(s->get_alias())), s->get_location());
-    m_globals[s->get_alias()] = true;
-    if (!s->imports_member())
-        m_module_names[s->get_alias()] = true;
+    emit(Fa_make_ABx(Fa_OpCode::STORE_GLOBAL, value_reg, intern_string(alias)), loc);
+    m_globals[alias] = true;
+    if (!imports_member)
+        m_module_names[alias] = true;
     return true;
 }
 
@@ -334,6 +358,8 @@ Fa_ErrorOr<bool> Compiler::compile_function_def(AST::Fa_FunctionDef* f)
         return report_error(CompilerError::TOO_MANY_FUNCTIONS, loc);
 
     Fa_Chunk* fn_chunk = Fa_make_chunk();
+    fn_chunk->source = current_chunk()->source;
+    fn_chunk->source_path = current_chunk()->source_path;
     fn_chunk->name = name->get_value();
     fn_chunk->arity = f->has_parameters() ? static_cast<int>(f->get_parameters().size()) : 0;
 
@@ -570,6 +596,8 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
             return report_error(CompilerError::TOO_MANY_FUNCTIONS, method_loc);
 
         Fa_Chunk* ch = Fa_make_chunk();
+        ch->source = current_chunk()->source;
+        ch->source_path = current_chunk()->source_path;
         ch->name = class_name + "." + method_name->get_value();
         int ex_param_count = method->has_parameters() ? static_cast<int>(method->get_parameters().size()) : 0;
         ch->arity = ex_param_count + 1;
