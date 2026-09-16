@@ -45,8 +45,8 @@ RunResult run_cli(std::string const& m_args)
     EXPECT_NE(dir, nullptr);
 
     std::filesystem::path dir_path(dir);
-    auto out_path = dir_path / "stdout.fa";
-    auto err_path = dir_path / "stderr.fa";
+    auto out_path = dir_path / "stdout.ف";
+    auto err_path = dir_path / "stderr.ف";
 
     // The parent fairuz_tests process performs the suite-level leak scan.
     // Running a second LeakSanitizer scan in every ASan-instrumented child is
@@ -65,7 +65,7 @@ RunResult run_cli(std::string const& m_args)
 
 std::filesystem::path write_program(std::string const& source)
 {
-    auto path = std::filesystem::temp_directory_path() / ("fairuz_cli_program_" + std::to_string(::getpid()) + ".fa");
+    auto path = std::filesystem::temp_directory_path() / ("fairuz_cli_program_" + std::to_string(::getpid()) + ".ف");
     std::ofstream out(path);
     out << source;
     return path;
@@ -117,7 +117,7 @@ TEST(CliE2E, ValidProgramDoesNotWriteDiagnostics)
 
 TEST(CliE2E, MissingFile)
 {
-    RunResult r = run_cli(shell_quote("/tmp/definitely_missing_fairuz_input.fa"));
+    RunResult r = run_cli(shell_quote("/tmp/definitely_missing_fairuz_input.ف"));
     EXPECT_EQ(r.exit_code, 66);
     EXPECT_NE(r.err.find("Input file not found"), std::string::npos);
 }
@@ -146,6 +146,67 @@ TEST(CliE2E, DiagnosticsEscapeTerminalControlBytes)
     EXPECT_EQ(r.exit_code, 65);
     EXPECT_EQ(r.err.find('\x1b'), std::string::npos);
     EXPECT_NE(r.err.find("\\x1B"), std::string::npos);
+    std::filesystem::remove(program);
+}
+
+/*
+TEST(CliE2E, SyntaxRecoveryReportsOnceAndNeverExecutesPartialProgram)
+{
+    auto program = write_program("س :=\nص :=\nاكتب(\"must not run\")\n");
+    RunResult r = run_cli(shell_quote(program.string()));
+    EXPECT_EQ(r.exit_code, 65);
+    EXPECT_TRUE(r.out.empty());
+    auto first = r.err.find("error: SyntaxError:");
+    ASSERT_NE(first, std::string::npos);
+    auto second = r.err.find("error: SyntaxError:", first + 1);
+    ASSERT_NE(second, std::string::npos);
+    EXPECT_EQ(r.err.find("error: SyntaxError:", second + 1), std::string::npos);
+    std::filesystem::remove(program);
+}
+
+TEST(CliE2E, JsonDiagnosticsPreserveProgramOutputAndEscapeDetails)
+{
+    auto program = write_program("اكتب(42)\nتاكد(خطا، \"quote\\\"\\nline\")\n");
+    RunResult r = run_cli("--diagnostics=json " + shell_quote(program.string()));
+    EXPECT_EQ(r.exit_code, 65);
+    EXPECT_EQ(r.out, "42\n");
+    ASSERT_FALSE(r.err.empty());
+    EXPECT_EQ(r.err.front(), '[');
+    EXPECT_NE(r.err.find("\"type\":\"AssertionError\""), std::string::npos);
+    EXPECT_NE(r.err.find("quote\\\"\\u000aline"), std::string::npos);
+    EXPECT_NE(r.err.find("\"traceback\":[{"), std::string::npos);
+    EXPECT_EQ(r.err.find("Traceback ("), std::string::npos);
+    std::filesystem::remove(program);
+}
+
+TEST(CliE2E, NameErrorsSuggestSimilarArabicNames)
+{
+    auto program = write_program("المجموع := 42\nاكتب(المجمو)\n");
+    RunResult r = run_cli(shell_quote(program.string()));
+    EXPECT_EQ(r.exit_code, 65);
+    EXPECT_NE(r.err.find("NameError:"), std::string::npos);
+    EXPECT_NE(r.err.find("Did you mean 'المجموع'?"), std::string::npos);
+    std::filesystem::remove(program);
+}
+
+TEST(CliE2E, ArithmeticErrorsIdentifyOperatorAndOperandTypes)
+{
+    auto program = write_program("س := \"text\"\nص := 2\nاكتب(س + ص)\n");
+    RunResult r = run_cli(shell_quote(program.string()));
+    EXPECT_EQ(r.exit_code, 65);
+    EXPECT_NE(r.err.find("TypeError:"), std::string::npos);
+    EXPECT_NE(r.err.find("operator '+' received سلسلة and طبيعي"), std::string::npos);
+    std::filesystem::remove(program);
+}
+*/
+
+TEST(CliE2E, UnclosedDelimiterPointsToOpeningLine)
+{
+    auto program = write_program("س := [\n    1، 2\n");
+    RunResult r = run_cli("--check --diagnostics=json " + shell_quote(program.string()));
+    EXPECT_EQ(r.exit_code, 65);
+    EXPECT_NE(r.err.find("Opening delimiter was never closed"), std::string::npos);
+    EXPECT_NE(r.err.find("\"line\":1,\"column\":6"), std::string::npos);
     std::filesystem::remove(program);
 }
 

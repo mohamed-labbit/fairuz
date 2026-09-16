@@ -99,7 +99,7 @@ TEST(ModuleLexer, RecognizesImportKeywords)
 {
     diagnostic::reset();
     Fa_FileManager source;
-    source.buffer() = "من math استورد قاسم باسم gcd\n";
+    source.buffer() = "من رياضيات استورد قاسم باسم gcd\n";
     Fa_Lexer lexer(&source);
     auto tokens = lexer.tokenize();
     ASSERT_GE(tokens.size(), 8u);
@@ -128,8 +128,8 @@ TEST(ModuleParser, ParsesImportsAliasesAndParentClass)
 {
     diagnostic::reset();
     Fa_FileManager source;
-    source.buffer() = "استورد collections باسم c\n"
-                      "من result استورد نجاح باسم ok\n"
+    source.buffer() = "استورد مجموعات باسم c\n"
+                      "من نتيجة استورد نجاح باسم ok\n"
                       "نوع طفل(اصل):\n"
                       "    دالة قيمة():\n"
                       "        ارجع 1\n";
@@ -138,10 +138,10 @@ TEST(ModuleParser, ParsesImportsAliasesAndParentClass)
     ASSERT_FALSE(diagnostic::has_errors());
     ASSERT_EQ(statements.size(), 3u);
     ASSERT_TRUE(AST::is_import(statements[0]));
-    EXPECT_EQ(AST::as_import(statements[0])->get_module(), "collections");
-    EXPECT_EQ(AST::as_import(statements[0])->get_alias(), "c");
+    EXPECT_EQ(AST::as_import(statements[0])->get_module(), "مجموعات");
+    EXPECT_EQ(AST::as_import(statements[0])->get_aliases()[0], "c");
     ASSERT_TRUE(AST::as_import(statements[1])->imports_member());
-    EXPECT_EQ(AST::as_import(statements[1])->get_name(), "نجاح");
+    EXPECT_EQ(AST::as_import(statements[1])->get_names()[0], "نجاح");
     auto* klass = AST::as_class_def(statements[2]);
     ASSERT_NE(klass->get_parent(), nullptr);
     EXPECT_EQ(AST::as_name(klass->get_parent())->get_value(), "اصل");
@@ -151,7 +151,7 @@ TEST(ModuleCompiler, EmitsImportAndParentDescriptor)
 {
     diagnostic::reset();
     Fa_FileManager source;
-    source.buffer() = "استورد collections\n"
+    source.buffer() = "استورد مجموعات\n"
                       "نوع طفل(اصل):\n"
                       "    دالة قيمة():\n"
                       "        ارجع 1\n";
@@ -170,7 +170,7 @@ TEST(ModuleCompiler, HundredsOfImportsReuseTemporaryRegisters)
     diagnostic::reset();
     Fa_FileManager source;
     for (int i = 0; i < 300; ++i) {
-        source.buffer() += "من collections استورد مدى باسم اسم";
+        source.buffer() += "من مجموعات استورد مدى باسم اسم";
         source.buffer() += Fa_StringRef(std::to_string(i).c_str());
         source.buffer() += "\n";
     }
@@ -183,9 +183,44 @@ TEST(ModuleCompiler, HundredsOfImportsReuseTemporaryRegisters)
     EXPECT_LT(chunk->local_count, 16u);
 }
 
+TEST(ModuleCompiler, RejectsMismatchedImportAliases)
+{
+    auto rejects = [](Fa_Array<Fa_StringRef> names, Fa_Array<Fa_StringRef> aliases) {
+        diagnostic::reset();
+        diagnostic::set_source(nullptr);
+        auto* statement = AST::Fa_make_import("example", names, aliases, { });
+        Compiler().compile({ statement });
+        EXPECT_TRUE(diagnostic::has_errors());
+        diagnostic::reset();
+    };
+    rejects({ }, { });
+    rejects({ }, { "first", "second" });
+    rejects({ "first", "second" }, { "first" });
+    rejects({ "first" }, { "first", "second" });
+}
+
+TEST(ModuleCompiler, HundredsOfMembersInOneImportReuseTemporaryRegisters)
+{
+    diagnostic::reset();
+    Fa_FileManager source;
+    source.buffer() = "من مجموعات استورد ";
+    for (int i = 0; i < 300; ++i) {
+        if (i != 0)
+            source.buffer() += "، ";
+        source.buffer() += "مدى باسم اسم";
+        source.buffer() += Fa_StringRef(std::to_string(i).c_str());
+    }
+    source.buffer() += "\nاسم299(0، 1، 1)\n";
+    Fa_Parser parser(&source);
+    Fa_Chunk* chunk = Compiler().compile(parser.parse_program());
+    ASSERT_NE(chunk, nullptr);
+    EXPECT_FALSE(diagnostic::has_errors());
+    EXPECT_LT(chunk->local_count, 16u);
+}
+
 TEST_F(ModuleFixture, ChainedMethodCallsKeepArgumentsContiguous)
 {
-    auto path = write("chained.fa",
+    auto path = write("chained.ف",
         "نوع صندوق:\n"
         "    دالة بداية():\n"
         "        هذا.قيم := قائمة()\n"
@@ -209,12 +244,12 @@ TEST_F(ModuleFixture, ChainedMethodCallsKeepArgumentsContiguous)
 
 TEST_F(ModuleFixture, LoadsOnceAndSupportsFromImport)
 {
-    write("counter.fa",
+    write("counter.ف",
         "قيمة := قائمة()\n"
         "اضف(قيمة، 1)\n"
         "دالة عدد():\n"
         "    ارجع طول(قيمة)\n");
-    auto main = write("main.fa",
+    auto main = write("main.ف",
         "استورد counter باسم اول\n"
         "استورد counter باسم ثان\n"
         "من counter استورد عدد\n"
@@ -234,21 +269,21 @@ TEST_F(ModuleFixture, ExplicitStdlibDirectoryWinsOverLocalNameCollision)
     std::filesystem::create_directories(stdlib);
 
     {
-        std::ofstream local(project / "file.fa", std::ios::binary);
+        std::ofstream local(project / "ملفات.ف", std::ios::binary);
         local << "دالة قيمة():\n    ارجع 1\n";
     }
     {
-        std::ofstream standard(stdlib / "file.fa", std::ios::binary);
+        std::ofstream standard(stdlib / "ملفات.ف", std::ios::binary);
         standard << "دالة قيمة():\n    ارجع 2\n";
     }
     {
-        std::ofstream main(project / "main.fa", std::ios::binary);
-        main << "من file استورد قيمة\nقيمة()\n";
+        std::ofstream main(project / "main.ف", std::ios::binary);
+        main << "من ملفات استورد قيمة\nقيمة()\n";
     }
 
     EnvironmentGuard configured_stdlib("FAIRUZ_STDLIB", stdlib.string());
     Fa_VM vm;
-    Fa_Value result = run(project / "main.fa", vm);
+    Fa_Value result = run(project / "main.ف", vm);
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 2);
 }
@@ -258,26 +293,26 @@ TEST_F(ModuleFixture, BundledStdlibWinsOverLocalNameCollisionWithoutEnvironmentO
     auto project = directory / "project";
     std::filesystem::create_directories(project);
     {
-        std::ofstream local(project / "file.fa", std::ios::binary);
+        std::ofstream local(project / "ملفات.ف", std::ios::binary);
         local << "دالة ملف(المسار، الوضع):\n    ارجع 1\n";
     }
     {
-        std::ofstream main(project / "main.fa", std::ios::binary);
-        main << "من file استورد ملف\nملف(\"x\"، \"قراءة\").يعمل()\n";
+        std::ofstream main(project / "main.ف", std::ios::binary);
+        main << "من ملفات استورد ملف\nملف(\"x\"، \"قراءة\").يعمل()\n";
     }
 
     EnvironmentGuard no_override("FAIRUZ_STDLIB");
     Fa_VM vm;
-    Fa_Value result = run(project / "main.fa", vm);
+    Fa_Value result = run(project / "main.ف", vm);
     ASSERT_TRUE(result.is_bool());
     EXPECT_FALSE(result.as_bool());
 }
 
 TEST_F(ModuleFixture, KeepsModuleGlobalsIsolated)
 {
-    write("a.fa", "سر := 10\nدالة قيمة():\n    ارجع سر\n");
-    write("b.fa", "سر := 20\nدالة قيمة():\n    ارجع سر\n");
-    auto main = write("main.fa",
+    write("a.ف", "سر := 10\nدالة قيمة():\n    ارجع سر\n");
+    write("b.ف", "سر := 20\nدالة قيمة():\n    ارجع سر\n");
+    auto main = write("main.ف",
         "استورد a\n"
         "استورد b\n"
         "دالة الناتج():\n"
@@ -291,9 +326,9 @@ TEST_F(ModuleFixture, KeepsModuleGlobalsIsolated)
 
 TEST_F(ModuleFixture, BreaksImportCyclesWithPartialModules)
 {
-    write("a.fa", "قيمة := 7\nاستورد b\n");
-    write("b.fa", "استورد a\nدالة اقرا():\n    ارجع a.قيمة\n");
-    auto main = write("main.fa", "استورد b\nb.اقرا()\n");
+    write("a.ف", "قيمة := 7\nاستورد b\n");
+    write("b.ف", "استورد a\nدالة اقرا():\n    ارجع a.قيمة\n");
+    auto main = write("main.ف", "استورد b\nb.اقرا()\n");
     Fa_VM vm;
     Fa_Value result = run(main, vm);
     ASSERT_TRUE(result.is_int());
@@ -302,8 +337,8 @@ TEST_F(ModuleFixture, BreaksImportCyclesWithPartialModules)
 
 TEST_F(ModuleFixture, ImportedFunctionsRetainDefiningEnvironment)
 {
-    write("base.fa", "سر := 40\nدالة زد(قيمة):\n    ارجع قيمة + سر\n");
-    auto main = write("main.fa", "من base استورد زد\nسر := 1000\nزد(2)\n");
+    write("base.ف", "سر := 40\nدالة زد(قيمة):\n    ارجع قيمة + سر\n");
+    auto main = write("main.ف", "من base استورد زد\nسر := 1000\nزد(2)\n");
     Fa_VM vm;
     Fa_Value result = run(main, vm);
     ASSERT_TRUE(result.is_int());
@@ -312,7 +347,7 @@ TEST_F(ModuleFixture, ImportedFunctionsRetainDefiningEnvironment)
 
 TEST_F(ModuleFixture, SingleInheritancePreservesFieldsAndOverridesMethods)
 {
-    write("base.fa",
+    write("base.ف",
         "نوع اصل:\n"
         "    دالة بداية(قيمة):\n"
         "        هذا.قيمة := قيمة\n"
@@ -320,7 +355,7 @@ TEST_F(ModuleFixture, SingleInheritancePreservesFieldsAndOverridesMethods)
         "        ارجع هذا.قيمة\n"
         "    دالة وصف():\n"
         "        ارجع 1\n");
-    auto main = write("main.fa",
+    auto main = write("main.ف",
         "من base استورد اصل\n"
         "نوع فرع(اصل):\n"
         "    دالة وصف():\n"
@@ -339,12 +374,12 @@ TEST_F(ModuleFixture, SingleInheritancePreservesFieldsAndOverridesMethods)
 
 TEST_F(ModuleFixture, InheritedMethodRetainsParentModuleEnvironment)
 {
-    write("base.fa",
+    write("base.ف",
         "سر := 9\n"
         "نوع اصل:\n"
         "    دالة قيمة():\n"
         "        ارجع سر\n");
-    auto main = write("main.fa",
+    auto main = write("main.ف",
         "من base استورد اصل\n"
         "سر := 99\n"
         "نوع فرع(اصل):\n"
@@ -358,3 +393,100 @@ TEST_F(ModuleFixture, InheritedMethodRetainsParentModuleEnvironment)
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 9);
 }
+
+TEST_F(ModuleFixture, MultipleNamesInOneImportStmt)
+{
+    write("values.ف",
+        "قيمة := 7\n"
+        "دالة زد(س):\n"
+        "    ارجع س + قيمة\n"
+        "دالة ضاعف(س):\n"
+        "    ارجع س * 2\n");
+    auto main = write("main.ف",
+        "من values استورد قيمة باسم عدد، زد، ضاعف باسم مرتين\n"
+        "مرتين(زد(عدد))\n");
+    Fa_VM vm;
+    Fa_Value result = Fa_Value::nil();
+    ASSERT_NO_THROW(result = run(main, vm));
+    ASSERT_TRUE(result.is_int());
+    EXPECT_EQ(result.as_int(), 28);
+}
+
+TEST_F(ModuleFixture, WholeModuleImportsBindDefaultAndExplicitAliases)
+{
+    write("values.ف",
+        "دالة زد(س):\n"
+        "    ارجع س + 1\n");
+    auto main = write("main.ف",
+        "استورد values\n"
+        "استورد values باسم قيم\n"
+        "قيم.زد(values.زد(40))\n");
+    Fa_VM vm;
+    Fa_Value result = Fa_Value::nil();
+    ASSERT_NO_THROW(result = run(main, vm));
+    ASSERT_TRUE(result.is_int());
+    EXPECT_EQ(result.as_int(), 42);
+}
+
+TEST_F(ModuleFixture, FailedModuleExecutionCanBeRetriedInSameVM)
+{
+    write("broken.ف", "تاكد(خطا)\n");
+    auto main = write("main.ف", "استورد broken\nbroken.قيمة()\n");
+    Fa_VM vm;
+    EXPECT_THROW(run(main, vm), Fa_RuntimeHalt);
+    write("broken.ف", "دالة قيمة():\n    ارجع 42\n");
+    diagnostic::reset();
+    Fa_Value result = Fa_Value::nil();
+    ASSERT_NO_THROW(result = run(main, vm));
+    ASSERT_TRUE(result.is_int());
+    EXPECT_EQ(result.as_int(), 42);
+}
+
+TEST_F(ModuleFixture, FailedModuleParseCanBeRetriedInSameVM)
+{
+    write("broken.ف", "دالة قيمة():\n    ارجع (\n");
+    auto main = write("main.ف", "استورد broken\nbroken.قيمة()\n");
+    Fa_VM vm;
+    EXPECT_THROW(run(main, vm), Fa_RuntimeHalt);
+    write("broken.ف", "دالة قيمة():\n    ارجع 7\n");
+    diagnostic::reset();
+    Fa_Value result = Fa_Value::nil();
+    ASSERT_NO_THROW(result = run(main, vm));
+    ASSERT_TRUE(result.is_int());
+    EXPECT_EQ(result.as_int(), 7);
+}
+
+/*
+TEST_F(ModuleFixture, RuntimeTracebackRetainsEachDefiningSource)
+{
+    auto inner = write("inner.ف", "دالة افشل():\n    تاكد(خطا، \"inner failure\")\n");
+    auto outer = write("outer.ف", "من inner استورد افشل\nدالة نفذ():\n    افشل()\n");
+    auto main = write("main.ف", "من outer استورد نفذ\nنفذ()\n");
+    Fa_VM vm;
+    EXPECT_THROW(run(main, vm), Fa_RuntimeHalt);
+    auto json = diagnostic::engine.to_json();
+    auto frames = json.substr(json.find("\"traceback\""));
+    auto main_position = frames.find(main.string());
+    auto outer_position = frames.find(outer.string());
+    auto inner_position = frames.find(inner.string());
+    ASSERT_NE(main_position, std::string::npos);
+    ASSERT_NE(outer_position, std::string::npos);
+    ASSERT_NE(inner_position, std::string::npos);
+    EXPECT_LT(main_position, outer_position);
+    EXPECT_LT(outer_position, inner_position);
+    EXPECT_NE(json.find("\"type\":\"AssertionError\""), std::string::npos);
+    EXPECT_NE(frames.find("inner failure"), std::string::npos);
+}
+
+TEST_F(ModuleFixture, ErrorAfterImportUsesMainSource)
+{
+    write("loaded.ف", "قيمة := 1\n");
+    auto main = write("main.ف", "استورد loaded\nتاكد(خطا، \"main failure\")\n");
+    Fa_VM vm;
+    EXPECT_THROW(run(main, vm), Fa_RuntimeHalt);
+    auto json = diagnostic::engine.to_json();
+    EXPECT_NE(json.find("\"path\":\"" + main.string() + "\""), std::string::npos);
+    EXPECT_EQ(json.find("loaded.ف"), std::string::npos);
+}
+
+*/
