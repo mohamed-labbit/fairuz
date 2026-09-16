@@ -280,6 +280,7 @@ class Fa_Value;
 struct Fa_Chunk {
     Fa_StringRef name { "" };
     std::string source_path;
+    diagnostic::SourcePtr source;
     Fa_GlobalEnvironment* globals { nullptr };
     int arity { 0 };
     u32 local_count { 0 };
