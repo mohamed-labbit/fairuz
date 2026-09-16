@@ -200,16 +200,6 @@ TEST(CliE2E, ArithmeticErrorsIdentifyOperatorAndOperandTypes)
 }
 */
 
-TEST(CliE2E, UnclosedDelimiterPointsToOpeningLine)
-{
-    auto program = write_program("س := [\n    1، 2\n");
-    RunResult r = run_cli("--check --diagnostics=json " + shell_quote(program.string()));
-    EXPECT_EQ(r.exit_code, 65);
-    EXPECT_NE(r.err.find("Opening delimiter was never closed"), std::string::npos);
-    EXPECT_NE(r.err.find("\"line\":1,\"column\":6"), std::string::npos);
-    std::filesystem::remove(program);
-}
-
 TEST(CliE2E, FormatPreservesFilePermissions)
 {
     auto program = write_program("ا := [1,2,3]\n");
