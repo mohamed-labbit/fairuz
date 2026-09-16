@@ -6,22 +6,25 @@
 #include "fobject.hpp"
 #include "fvalue.hpp"
 
+#include <cstdint>
+#include <iostream>
+
 namespace fairuz::runtime {
 
 static inline void print_value(Fa_Value v)
 {
     if (v.is_nil())
-        ::printf("nil");
+        std::cout << "nil";
     else if (v.is_bool())
-        ::printf("%s", v.as_bool() ? "صحيح" : "خطا");
+        std::cout << (v.as_bool() ? "صحيح" : "خطا"); 
     else if (v.is_int())
-        ::printf("%lli", v.as_int());
+        std::cout << std::to_string(v.as_int());
     else if (v.is_double())
-        ::printf("%g", v.as_double());
+        std::cout << std::to_string(v.as_double());
     else if (v.is_string())
-        ::printf("\"%s\"", v.as_string()->str.data());
+        std::cout << "\"" << v.as_string() << "\"";
     else if (v.is_obj())
-        ::printf("<obj %p>", (void*)(v.as_obj()));
+        std::cout << "<obj " << std::to_string(reinterpret_cast<uintptr_t>(v.as_obj())) << ">";
 
     ::printf("?");
 }
