@@ -143,20 +143,20 @@ std::optional<Fa_Value> _try_fold_binary(AST::Fa_BinaryExpr const* e)
     i64 ri = both_ints ? R->as_int() : 0;
 
     auto checked_int = [](auto value) -> std::optional<Fa_Value> {
-        if (value < static_cast<__int128>(Fa_Value::int_min()) || value > static_cast<__int128>(Fa_Value::int_max()))
+        if (value < Fa_Value::int_min() || value > Fa_Value::int_max())
             return std::nullopt;
         return Fa_Value::from_int(static_cast<i64>(value));
     };
 
     switch (op) {
     case AST::Fa_BinaryOp::OP_ADD:
-        return both_ints ? checked_int(static_cast<__int128>(li) + ri)
+        return both_ints ? checked_int(li + ri)
                          : std::optional<Fa_Value> { Fa_Value::from_real(ld + rd) };
     case AST::Fa_BinaryOp::OP_SUB:
-        return both_ints ? checked_int(static_cast<__int128>(li) - ri)
+        return both_ints ? checked_int(li - ri)
                          : std::optional<Fa_Value> { Fa_Value::from_real(ld - rd) };
     case AST::Fa_BinaryOp::OP_MUL:
-        return both_ints ? checked_int(static_cast<__int128>(li) * ri)
+        return both_ints ? checked_int(static_cast<i64>(li) * ri)
                          : std::optional<Fa_Value> { Fa_Value::from_real(ld * rd) };
     case AST::Fa_BinaryOp::OP_DIV:
         if (rd == 0.0)
@@ -182,7 +182,7 @@ std::optional<Fa_Value> _try_fold_binary(AST::Fa_BinaryExpr const* e)
     case AST::Fa_BinaryOp::OP_LSHIFT:
         if (!both_ints || ri < 0 || ri >= 64)
             return std::nullopt;
-        return checked_int(static_cast<__int128>(li) * (static_cast<__int128>(1) << ri));
+        return checked_int(static_cast<i64>(li) * (static_cast<i64>(1) << ri));
     case AST::Fa_BinaryOp::OP_RSHIFT: {
         if (!both_ints || ri < 0 || ri >= 64)
             return std::nullopt;
