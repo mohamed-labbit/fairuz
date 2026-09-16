@@ -3,8 +3,10 @@
 
 #include "fmacros.hpp"
 
+#include <memory>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <vector>
 
@@ -62,6 +64,9 @@ enum class Code : u16 {
     INVALID_CHARACTER = 0x010A,
     INVALID_OPERATOR = 0x010B,
     INVALID_NUMBER_LITERAL = 0x010C,
+    UNTERMINATED_STRING = 0x010D,
+    UNCLOSED_DELIMITER = 0x010E,
+    MISMATCHED_DELIMITER = 0x010F,
 }; // enum Code
 
 } // namespace lexer
@@ -184,6 +189,7 @@ enum class Code : u16 {
     UNDEFINED_METHOD = 0x0514,
     UNDEFINED_FIELD = 0x0515,
     NUMERIC_OUT_OF_RANGE = 0x0516,
+    MODULE_NOT_FOUND = 0x0517,
 }; // enum Code
 
 } // namespace runtime
@@ -288,6 +294,9 @@ static constexpr char const* error_message_for(u16 code)
     case /*INVALID_CHARACTER =*/0x010A: return "Invalid character";
     case /*INVALID_OPERATOR =*/0x010B: return "Invalid operator token";
     case /*INVALID_NUMBER_LITERAL =*/0x010C: return "Invalid numeric literal";
+    case /*UNTERMINATED_STRING =*/0x010D: return "Unterminated string literal";
+    case /*UNCLOSED_DELIMITER =*/0x010E: return "Opening delimiter was never closed";
+    case /*MISMATCHED_DELIMITER =*/0x010F: return "Unmatched closing delimiter";
     // parser
     case /*EXPECTED_INDENT =*/0x0201: return "Expected indented block";
     case /*EXPECTED_DEDENT =*/0x0202: return "Expected dedent after block";
@@ -385,6 +394,7 @@ static constexpr char const* error_message_for(u16 code)
     case /*UNDEFINED_METHOD =*/0x0514: return "Call to undefined method";
     case /*UNDEFINED_FIELD =*/0x0515: return "Undefined field";
     case /*NUMERIC_OUT_OF_RANGE =*/0x0516: return "Integer result is outside the signed 48-bit range";
+    case /*MODULE_NOT_FOUND =*/0x0517: return "No module named";
     // stdlib
     case /*APPEND_ARG_COUNT =*/0x0600: return "append() expects at least two arguments";
     case /*APPEND_TYPE_ERROR =*/0x0601: return "append() expects a list as the first argument";
@@ -445,6 +455,19 @@ struct Fa_DiagnosticAbort final : public std::runtime_error {
     }
 };
 
+// Immutable source text survives parser/file-manager destruction and imports.
+// One snapshot is shared by a compilation unit, its functions and diagnostics.
+struct Source {
+    std::string path;
+    std::string text;
+    std::vector<size_t> lines;
+    Source(std::string path, std::string text);
+    std::string_view line(u32 number) const;
+};
+using SourcePtr = std::shared_ptr<Source const>;
+
+char const* error_type_for(u16 code);
+
 class Fa_DiagnosticEngine {
 public:
     // Stable handle to a single accumulated diagnostic, returned by
@@ -472,6 +495,13 @@ public:
         std::string code { "" };
         std::vector<std::string> suggestions;
         std::vector<std::pair<i32, std::string>> notes;
+        SourcePtr source;
+        struct Frame {
+            SourcePtr source;
+            Fa_SourceLocation location;
+            std::string function;
+        };
+        std::vector<Frame> traceback;
     }; // struct Diagnostic
 
     // Maximum number of errors before the engine stops accumulating and
@@ -487,8 +517,6 @@ public:
 
     [[noreturn]] constexpr void panic(std::string const& msg)
     {
-        if (has_errors())
-            pretty_print();
         _panic(msg);
     }
 
@@ -520,6 +548,7 @@ public:
     // keep calling these unconditionally without checking first.
     void add_suggestion(DiagnosticId id, std::string const& suggestion);
     void add_note(DiagnosticId id, i32 line, std::string const& note);
+    void add_frame(DiagnosticId id, SourcePtr source, Fa_SourceLocation loc, std::string function);
 
     std::string to_json() const;
 
@@ -548,29 +577,29 @@ public:
         m_error_count = 0;
         m_warning_count = 0;
         m_source = nullptr;
+        m_printed = 0;
+        m_printed_limit = false;
     }
 
-    // Registers the active source file so pretty_print() can render a
-    // source-line snippet with a caret under the error location. Purely
-    // additive: if never called, pretty_print() falls back to its
-    // existing line:column-only output. Takes a non-owning pointer —
-    // caller (main.cpp) is responsible for keeping the Fa_FileManager
-    // alive for as long as diagnostics might be printed, which in
-    // practice means: construct it before the parser/compiler/VM and
-    // don't destroy it until after vm.run() returns (or throws).
-    void set_source(lex::Fa_FileManager const* fm) noexcept { m_source = fm; }
+    void set_source(lex::Fa_FileManager const* fm);
+    void set_source(SourcePtr source) { m_source = std::move(source); }
+    SourcePtr source() const { return m_source; }
+    void set_json_output(bool enabled) { m_json_output = enabled; }
 
 private:
     std::vector<Diagnostic> m_diagnostics;
     u32 m_error_count { 0 };
     u32 m_warning_count { 0 };
-    lex::Fa_FileManager const* m_source { nullptr };
+    SourcePtr m_source;
+    mutable size_t m_printed { 0 };
+    mutable bool m_printed_limit { false };
+    bool m_json_output { false };
 
     void emit_error(std::string const& msg, Severity const sv);
     [[noreturn]] void _panic(std::string const& msg) const;
     static std::string sv_to_str(Severity const sv);
     std::vector<std::string> split_lines(std::string const& text) const;
-    void print_snippet(Fa_SourceLocation const& loc) const;
+    void print_snippet(SourcePtr const& source, Fa_SourceLocation const& loc) const;
 }; // class Fa_DiagnosticEngine
 
 // --- module-level singletons and forwarding functions, unchanged ---
@@ -614,16 +643,15 @@ static inline void emit(CodeEnum code, std::string const& detail, Severity const
 template<typename CodeEnum>
 [[noreturn]] static inline void panic(CodeEnum code)
 {
-    engine.panic(error_message_for(code_value(code)));
+    engine.report_deferred(Severity::ERROR, { }, code_value(code));
+    engine.panic("");
 }
 
 template<typename CodeEnum>
 [[noreturn]] static inline void panic(CodeEnum code, std::string const& detail)
 {
-    std::string message = error_message_for(code_value(code));
-    if (!detail.empty())
-        message += ": " + detail;
-    engine.panic(message);
+    engine.report_deferred(Severity::ERROR, { }, code_value(code), detail);
+    engine.panic("");
 }
 
 static inline Fa_DiagnosticEngine::DiagnosticId report(Severity const sev, Fa_SourceLocation const loc, u16 err_code, std::string const& code = "")
@@ -651,7 +679,27 @@ static inline bool is_saturated() noexcept { return engine.is_saturated(); }
 static inline u32 error_count() noexcept { return engine.error_count(); }
 static inline u32 warning_count() noexcept { return engine.get_warning_count(); }
 static inline void reset() noexcept { engine.reset(); }
-static inline void set_source(lex::Fa_FileManager const* fm) noexcept { engine.set_source(fm); }
+static inline void set_source(lex::Fa_FileManager const* fm) { engine.set_source(fm); }
+
+class SourceScope {
+public:
+    explicit SourceScope(SourcePtr source)
+        : m_previous(engine.source())
+    {
+        engine.set_source(std::move(source));
+    }
+    explicit SourceScope(lex::Fa_FileManager const* source)
+        : m_previous(engine.source())
+    {
+        engine.set_source(source);
+    }
+    ~SourceScope() { engine.set_source(std::move(m_previous)); }
+    SourceScope(SourceScope const&) = delete;
+    SourceScope& operator=(SourceScope const&) = delete;
+
+private:
+    SourcePtr m_previous;
+};
 static inline Fa_DiagnosticEngine::DiagnosticId report_deferred(Severity const sev, Fa_SourceLocation const loc, u16 err_code, std::string const& code = "")
 {
     return engine.report_deferred(sev, loc, err_code, code);
