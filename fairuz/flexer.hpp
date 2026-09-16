@@ -155,6 +155,8 @@ public:
     TokenPtr peek(size_t n = 1);
     Fa_Array<TokenPtr> tokenize();
     Fa_StringRef get_line_at(u32 const line_idx) const { return m_source_manager.get_line_at(line_idx); }
+    diagnostic::SourcePtr source() const { return m_source; }
+    auto take_error() { return std::exchange(m_pending_error, std::nullopt); }
 
 private:
     Fa_SourceManager m_source_manager;
@@ -166,6 +168,10 @@ private:
     Fa_Array<u32> m_alt_indent_stack;
     bool m_at_bol { true };
     u32 m_bracket_depth { 0 };
+    diagnostic::SourcePtr m_source;
+    std::vector<std::pair<u32, Fa_SourceLocation>> m_brackets;
+    std::optional<std::pair<u16, diagnostic::Fa_DiagnosticEngine::DiagnosticId>> m_pending_error;
+    [[noreturn]] void fail(diagnostic::errc::lexer::Code code, Fa_SourceLocation loc, std::string const& detail = "");
 
     // main lexer loop
     TokenPtr lex_token();
