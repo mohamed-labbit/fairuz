@@ -7,6 +7,7 @@ RUN apt-get update \
         cmake \
         g++ \
         ninja-build \
+        zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
