@@ -20,7 +20,7 @@ class Fairuz < Formula
   end
 
   test do
-    (testpath/"smoke.fa").write <<~EOS
+    (testpath/"smoke.ف").write <<~EOS
       ف := 20
       اذا ف + 5 < 400:
           اكتب("صحيح")
@@ -28,6 +28,6 @@ class Fairuz < Formula
           اكتب("خطأ")
     EOS
 
-    assert_match "صحيح", shell_output("#{bin}/fairuz #{testpath}/smoke.fa")
+    assert_match "صحيح", shell_output("#{bin}/fairuz #{testpath}/smoke.ف")
   end
 end
