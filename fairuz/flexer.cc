@@ -9,6 +9,7 @@
 #include "ftoken.hpp"
 #include "futil.hpp"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
@@ -28,23 +29,23 @@
             any = true;                                                                                      \
         }                                                                                                    \
         if (!any)                                                                                            \
-            diagnostic::panic(err_code, detail);                                                             \
+            fail(err_code, src_loc, detail);                                                                 \
         Fa_StringRef number = m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset()); \
         return finish(token_type, number, src_loc);                                                          \
     } while (0)
 
-#define OCTAL_DIGIT(c)                                                             \
-    ((c) >= '0' && (c) <= '7'                                                      \
-            ? true                                                                 \
-            : (IS_DIGIT(c)                                                         \
-                      ? (diagnostic::panic(ErrorCode::INVALID_OCTAL_DIGIT), false) \
+#define OCTAL_DIGIT(c)                                                         \
+    ((c) >= '0' && (c) <= '7'                                                  \
+            ? true                                                             \
+            : (IS_DIGIT(c)                                                     \
+                      ? (fail(ErrorCode::INVALID_OCTAL_DIGIT, src_loc), false) \
                       : false))
 
-#define BINARY_DIGIT(c)                                                             \
-    ((c) == '0' || (c) == '1'                                                       \
-            ? true                                                                  \
-            : (IS_DIGIT(c)                                                          \
-                      ? (diagnostic::panic(ErrorCode::INVALID_BINARY_DIGIT), false) \
+#define BINARY_DIGIT(c)                                                         \
+    ((c) == '0' || (c) == '1'                                                   \
+            ? true                                                              \
+            : (IS_DIGIT(c)                                                      \
+                      ? (fail(ErrorCode::INVALID_BINARY_DIGIT, src_loc), false) \
                       : false))
 
 namespace fairuz::lex {
@@ -205,6 +206,8 @@ Fa_Lexer::Fa_Lexer(Fa_FileManager* fm)
     , m_indent_level(0)
     , m_at_bol(true)
 {
+    diagnostic::set_source(fm);
+    m_source = diagnostic::engine.source();
     m_tok_stream = Fa_Array<TokenPtr>::with_capacity(1024);
     m_indent_stack = Fa_Array<u32>::with_capacity(8);
     m_alt_indent_stack = Fa_Array<u32>::with_capacity(8);
@@ -223,9 +226,28 @@ Fa_Lexer::Fa_Lexer(Fa_Array<TokenPtr>& seq)
     m_alt_indent_stack.push(0);
 }
 
+void Fa_Lexer::fail(ErrorCode code, Fa_SourceLocation loc, std::string const& detail)
+{
+    diagnostic::SourceScope source_scope(m_source);
+    loc.length = std::max<u16>(loc.length, 1);
+    auto id = diagnostic::report(diagnostic::Severity::ERROR, loc, code, detail);
+    if (code == ErrorCode::INVALID_UNINDENT || code == ErrorCode::INCONSISTENT_INDENTATION || code == ErrorCode::MIXED_INDENTATION)
+        diagnostic::engine.add_suggestion(id, "Use spaces consistently and align with an enclosing block.");
+    diagnostic::engine.panic("");
+}
+
 TokenPtr Fa_Lexer::lex_token()
 {
+    diagnostic::SourceScope source_scope(m_source);
+    auto delimiter_error = [this](ErrorCode code, Fa_SourceLocation loc, std::string const& detail) {
+        loc.length = 1;
+        auto id = diagnostic::report(diagnostic::Severity::ERROR, loc, code, detail);
+        m_pending_error = std::make_pair(static_cast<u16>(code), id);
+    };
     auto finish = [this](tok::Fa_TokenType tt, Fa_StringRef str, Fa_SourceLocation src_loc) {
+        auto end = m_source_manager.get_source_location();
+        if (src_loc.line == end.line && end.column >= src_loc.column)
+            src_loc.length = end.column - src_loc.column;
         TokenPtr ret = Fa_make_token(tt, str, src_loc);
         store(ret);
         return m_tok_stream.back();
@@ -239,6 +261,7 @@ TokenPtr Fa_Lexer::lex_token()
             return;
 
         m_at_bol = false;
+        src_loc = m_source_manager.get_source_location();
 
         u32 size = 0;
         u32 alt_size = 0;
@@ -282,13 +305,13 @@ TokenPtr Fa_Lexer::lex_token()
 
         if (size == m_indent_stack.back()) {
             if (alt_size != m_alt_indent_stack.back())
-                diagnostic::panic(ErrorCode::INCONSISTENT_INDENTATION);
+                fail(ErrorCode::INCONSISTENT_INDENTATION, src_loc);
 
         } else if (size > m_indent_stack.back()) {
             if (m_indent_level + 1 > MAX_ALLOWED_INDENT)
-                diagnostic::panic(ErrorCode::TOO_MANY_INDENT_LEVELS);
+                fail(ErrorCode::TOO_MANY_INDENT_LEVELS, src_loc);
             if (alt_size <= m_alt_indent_stack.back())
-                diagnostic::panic(ErrorCode::MIXED_INDENTATION);
+                fail(ErrorCode::MIXED_INDENTATION, src_loc);
 
             m_indent_level++;
             m_indent_stack.push(size);
@@ -305,9 +328,9 @@ TokenPtr Fa_Lexer::lex_token()
             }
 
             if (size != m_indent_stack.back())
-                diagnostic::panic(ErrorCode::INVALID_UNINDENT);
+                fail(ErrorCode::INVALID_UNINDENT, src_loc);
             if (alt_size != m_alt_indent_stack.back())
-                diagnostic::panic(ErrorCode::INCONSISTENT_INDENTATION);
+                fail(ErrorCode::INCONSISTENT_INDENTATION, src_loc);
 
             for (u32 i = 0; i < dedent_count; i++)
                 store(Fa_make_token(tok::Fa_TokenType::DEDENT, "", src_loc));
@@ -320,7 +343,7 @@ TokenPtr Fa_Lexer::lex_token()
 
         if (current == 0) {
             if (!m_source_manager.done())
-                diagnostic::panic(ErrorCode::INVALID_CHARACTER, "U+0000");
+                fail(ErrorCode::INVALID_CHARACTER, src_loc, "U+0000");
             break;
         }
 
@@ -390,28 +413,24 @@ TokenPtr Fa_Lexer::lex_token()
                         else if (current >= 'A' && current <= 'F')
                             digit = static_cast<int>(current - 'A' + 10);
                         if (digit < 0)
-                            return finish(tok::Fa_TokenType::INVALID,
-                                m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset()), src_loc);
+                            fail(ErrorCode::INVALID_ESCAPE_SEQUENCE, src_loc, "\\u must be followed by four hexadecimal digits");
                         codepoint = (codepoint << 4) | static_cast<u32>(digit);
                     }
                     if (codepoint >= 0xD800 && codepoint <= 0xDFFF)
-                        return finish(tok::Fa_TokenType::INVALID,
-                            m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset()), src_loc);
+                        fail(ErrorCode::INVALID_ESCAPE_SEQUENCE, src_loc, "surrogate code points are not valid Unicode characters");
                     Fa_StringRef bytes = util::encode_utf8_str(codepoint);
                     decoded.append(bytes.data(), bytes.len());
                     current = m_source_manager.next_char();
                     continue;
                 }
                 default:
-                    return finish(tok::Fa_TokenType::INVALID,
-                        m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset()), src_loc);
+                    fail(ErrorCode::INVALID_ESCAPE_SEQUENCE, src_loc);
                 }
                 current = m_source_manager.next_char();
             }
 
             if (current != quote) {
-                Fa_StringRef str_lit = m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset());
-                return finish(tok::Fa_TokenType::INVALID, str_lit, src_loc);
+                fail(ErrorCode::UNTERMINATED_STRING, src_loc, std::string("expected closing ") + static_cast<char>(quote));
             }
 
             Fa_StringRef str_lit = escaped
@@ -429,6 +448,22 @@ TokenPtr Fa_Lexer::lex_token()
         }
 
         if (current == '{' || current == '}' || current == '[' || current == ']' || current == '(' || current == ')' || current == ':') {
+            if (current == '{' || current == '[' || current == '(')
+                m_brackets.push_back({ current, src_loc });
+            else if (current != ':') {
+                u32 opening = current == '}' ? '{' : current == ']' ? '['
+                                                                    : '(';
+                if (m_brackets.empty()) {
+                    delimiter_error(ErrorCode::MISMATCHED_DELIMITER, src_loc, std::string(1, static_cast<char>(current)));
+                } else if (m_brackets.back().first != opening) {
+                    auto const& [character, location] = m_brackets.back();
+                    delimiter_error(ErrorCode::MISMATCHED_DELIMITER, src_loc,
+                        std::string(1, static_cast<char>(current)) + " does not match '" + static_cast<char>(character)
+                            + "' opened on line " + std::to_string(location.line));
+                }
+                if (!m_brackets.empty())
+                    m_brackets.pop_back();
+            }
             u32 const start_byte = m_source_manager.get_file_offset();
             m_source_manager.consume_char();
 
@@ -596,16 +631,19 @@ TokenPtr Fa_Lexer::lex_token()
             return finish(tt, ident, src_loc);
         }
 
-        Fa_StringRef source_line = get_line_at(src_loc.line);
-        std::string snippet = source_line.empty() ? std::string() : std::string(source_line.data(), source_line.len());
-        diagnostic::report(diagnostic::Severity::ERROR, src_loc, ErrorCode::INVALID_CHARACTER, snippet);
-        diagnostic::panic(ErrorCode::INVALID_CHARACTER, "U+" + [](u32 cp) {char buf[8]; std::snprintf(buf, sizeof(buf), "%04X", cp); return std::string(buf); }(current));
+        fail(ErrorCode::INVALID_CHARACTER, src_loc, "U+" + [](u32 cp) {char buf[8]; std::snprintf(buf, sizeof(buf), "%04X", cp); return std::string(buf); }(current));
     }
 
     if (!m_tok_stream.empty() && m_tok_stream.back()->type() == tok::Fa_TokenType::ENDMARKER)
         return m_tok_stream.back();
 
     Fa_SourceLocation last_loc = m_source_manager.get_source_location();
+    if (!m_brackets.empty()) {
+        delimiter_error(ErrorCode::UNCLOSED_DELIMITER, m_brackets.back().second,
+            std::string(1, static_cast<char>(m_brackets.back().first)));
+        m_brackets.clear();
+        m_bracket_depth = 0;
+    }
 
     while (m_indent_level > 0) {
         m_indent_level -= 1;
