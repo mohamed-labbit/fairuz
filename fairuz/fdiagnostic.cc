@@ -11,12 +11,82 @@
 #include <algorithm>
 #include <cstdlib>
 #include <exception>
+#include <iomanip>
 #include <iostream>
+#include <locale.h>
 #include <sstream>
 #include <string_view>
 #include <unistd.h>
+#include <wchar.h>
 
 namespace fairuz::diagnostic {
+
+Source::Source(std::string file_path, std::string contents)
+    : path(file_path.empty() ? "<input>" : std::move(file_path))
+    , text(std::move(contents))
+    , lines { 0 }
+{
+    for (size_t i = 0; i < text.size(); ++i)
+        if (text[i] == '\n')
+            lines.push_back(i + 1);
+}
+
+std::string_view Source::line(u32 number) const
+{
+    if (number == 0 || number > lines.size())
+        return { };
+    size_t from = lines[number - 1];
+    size_t to = number < lines.size() ? lines[number] - 1 : text.size();
+    if (to > from && text[to - 1] == '\r')
+        --to;
+    return std::string_view(text).substr(from, to - from);
+}
+
+void Fa_DiagnosticEngine::set_source(lex::Fa_FileManager const* fm)
+{
+    if (fm == nullptr) {
+        m_source.reset();
+        return;
+    }
+    auto const& buffer = fm->buffer();
+    m_source = std::make_shared<Source>(fm->get_path(), buffer.empty() ? "" : std::string(buffer.data(), buffer.len()));
+}
+
+char const* error_type_for(u16 code)
+{
+    if (code == 0x0105 || code == 0x0108 || code == 0x0201 || code == 0x0202)
+        return "IndentationError";
+    if (code == 0x0107)
+        return "TabError";
+    if (code >= 0x0100 && code < 0x0300)
+        return "SyntaxError";
+    if (code == 0x0410 || code == 0x0411)
+        return "SyntaxError";
+    if (code == 0x0502 || code == 0x0503)
+        return "ZeroDivisionError";
+    if (code == 0x0508 || code == 0x0509)
+        return "NameError";
+    if (code == 0x050A || code == 0x0625)
+        return "IndexError";
+    if (code == 0x0514 || code == 0x0515)
+        return "AttributeError";
+    if (code == 0x0500 || code == 0x050F)
+        return "RecursionError";
+    if (code == 0x0516)
+        return "OverflowError";
+    if (code == 0x0618)
+        return "AssertionError";
+    if (code == 0x0517)
+        return "ModuleNotFoundError";
+    if (code == 0x0504 || code == 0x0505 || code == 0x0506 || code == 0x0507
+        || (code >= 0x050B && code <= 0x050D) || (code >= 0x0511 && code <= 0x0513))
+        return "TypeError";
+    if (code < 0x0100)
+        return "OSError";
+    if (code >= 0x0400 && code < 0x0500)
+        return "CompileError";
+    return "RuntimeError";
+}
 
 namespace {
 
@@ -46,6 +116,66 @@ std::string escape_terminal(std::string_view text)
     return escaped;
 }
 
+// Diagnostics must never throw another diagnostic while decoding bad input.
+u32 next_codepoint(std::string_view text, size_t& offset)
+{
+    auto first = static_cast<unsigned char>(text[offset++]);
+    if (first < 0x80)
+        return first;
+    int extra = first >= 0xC2 && first <= 0xDF ? 1 : first >= 0xE0 && first <= 0xEF ? 2
+        : first >= 0xF0 && first <= 0xF4                                            ? 3
+                                                                                    : 0;
+    if (!extra || offset + extra > text.size())
+        return 0xFFFD;
+    u32 cp = first & ((1u << (6 - extra)) - 1);
+    for (int i = 0; i < extra; ++i) {
+        auto byte = static_cast<unsigned char>(text[offset + i]);
+        if ((byte & 0xC0) != 0x80)
+            return 0xFFFD;
+        cp = (cp << 6) | (byte & 0x3F);
+    }
+    offset += extra;
+    if (cp < (extra == 1 ? 0x80u : extra == 2 ? 0x800u
+                                              : 0x10000u)
+        || cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF))
+        return 0xFFFD;
+    return cp;
+}
+
+std::string json_string(std::string_view text)
+{
+    std::ostringstream out;
+    out << '"';
+    for (unsigned char c : text) {
+        if (c == '"' || c == '\\')
+            out << '\\' << c;
+        else if (c < 0x20)
+            out << "\\u" << std::hex << std::setw(4) << std::setfill('0') << static_cast<unsigned>(c) << std::dec;
+        else
+            out << c;
+    }
+    out << '"';
+    return out.str();
+}
+
+// Use a private UTF-8 locale for terminal cell widths, without changing the
+// process locale (number parsing and embedding applications rely on it).
+int cell_width(u32 cp)
+{
+    static locale_t locale = [] {
+        auto result = newlocale(LC_CTYPE_MASK, "C.UTF-8", nullptr);
+        if (!result)
+            result = newlocale(LC_CTYPE_MASK, "en_US.UTF-8", nullptr);
+        return result;
+    }();
+    if (!locale)
+        return 1;
+    auto previous = uselocale(locale);
+    int width = wcwidth(static_cast<wchar_t>(cp));
+    uselocale(previous);
+    return std::max(0, width);
+}
+
 } // namespace
 
 /*Fa_DiagnosticEngine::DiagnosticId Fa_DiagnosticEngine::report(
@@ -66,13 +196,14 @@ std::string escape_terminal(std::string_view text)
 Fa_DiagnosticEngine::DiagnosticId Fa_DiagnosticEngine::report_deferred(
     Severity const sev, Fa_SourceLocation const loc, u16 err_code, std::string const& code)
 {
-    if (sev == Severity::ERROR && m_error_count >= LIMIT)
-        _panic("Too many errors (error limit = 20)");
+    if (sev != Severity::FATAL && m_error_count >= LIMIT)
+        return INVALID_ID;
 
     DiagnosticId const id = static_cast<DiagnosticId>(m_diagnostics.size());
-    m_diagnostics.push_back({ sev, loc, err_code, code, { }, { } });
+    m_diagnostics.push_back({ sev, loc, err_code, code, { }, { }, m_source, { } });
 
     if (sev == Severity::FATAL) {
+        m_error_count++;
         _panic("");
     }
 
@@ -109,6 +240,13 @@ void Fa_DiagnosticEngine::add_note(DiagnosticId id, i32 line, std::string const&
     if (id == INVALID_ID || id >= m_diagnostics.size())
         return;
     m_diagnostics[id].notes.push_back({ line, note });
+}
+
+void Fa_DiagnosticEngine::add_frame(DiagnosticId id, SourcePtr source, Fa_SourceLocation loc, std::string function)
+{
+    if (id == INVALID_ID || id >= m_diagnostics.size())
+        return;
+    m_diagnostics[id].traceback.push_back({ std::move(source), loc, std::move(function) });
 }
 
 void Fa_DiagnosticEngine::emit_error(std::string const& msg, Severity const sv)
@@ -149,128 +287,152 @@ std::vector<std::string> Fa_DiagnosticEngine::split_lines(std::string const& tex
     return lines;
 }
 
-// Renders the offending source line with a caret (or underline, for
-// spans wider than one column) beneath the error location, e.g.:
-//
-//   12 |     نتيجة := ١٠ / صفر
-//      |                  ^^^^
-//
-// No-op if no source has been registered (set_source() never called) or
-// the location is empty/out of range — callers always get at least the
-// existing "--> line N:col" text either way, this is purely additive.
-void Fa_DiagnosticEngine::print_snippet(Fa_SourceLocation const& loc) const
+// Columns and lengths are Unicode code points, not UTF-8 byte offsets.
+void Fa_DiagnosticEngine::print_snippet(SourcePtr const& source, Fa_SourceLocation const& loc) const
 {
-    if (m_source == nullptr || loc.line == 0)
+    if (!source || loc.line == 0 || loc.line > source->lines.size())
         return;
-
-    Fa_StringRef line_text = m_source->get_line_at(loc.line);
-    if (line_text.empty())
-        return; // line out of range, or file has no such line — say nothing
-                // rather than print a misleading blank snippet
-
-    std::string line_str(line_text.data(), line_text.len());
-    // Fa_FileManager::get_line_at() slices on '\n'; a trailing '\r' from
-    // CRLF source files would otherwise print as a stray character after
-    // the line and misalign the caret row beneath it.
-    if (!line_str.empty() && line_str.back() == '\r')
-        line_str.pop_back();
-
-    std::string line_num_str = std::to_string(loc.line);
-    std::string gutter(line_num_str.size(), ' ');
-
-    // column is 1-based (matches how the lexer/parser report it
-    // elsewhere in this file, e.g. the "--> line N:col" text above);
-    // guard against 0 so the caret math below can't underflow.
-    u32 caret_col = loc.column > 0 ? loc.column - 1 : 0;
-    u32 caret_len = loc.length > 0 ? loc.length : 1;
-
-    // Clamp the underline so a stale/mismatched length (e.g. a
-    // multi-line span whose stored `length` outruns this single
-    // printed line) can't spill past the actual line content.
-    if (caret_col < line_str.size() && caret_col + caret_len > line_str.size())
-        caret_len = static_cast<u32>(line_str.size() - caret_col);
-
-    size_t source_col = std::min<size_t>(caret_col, line_str.size());
-    size_t source_len = std::min<size_t>(caret_len, line_str.size() - source_col);
-    size_t display_col = escape_terminal(
-        std::string_view(line_str).substr(0, source_col))
-                             .size();
-    size_t display_len = std::max<size_t>(1, escape_terminal(std::string_view(line_str).substr(source_col, source_len)).size());
-
-    std::cerr << "  " << terminal_color(Color::BOLD) << terminal_color(Color::BLUE)
-              << line_num_str << " |" << terminal_color(Color::RESET)
-              << " " << escape_terminal(line_str) << "\n";
-    std::cerr << "  " << gutter << " |" << terminal_color(Color::RESET) << " "
-              << std::string(display_col, ' ') << terminal_color(Color::BOLD)
-              << terminal_color(Color::RED) << std::string(display_len, '^')
-              << terminal_color(Color::RESET) << "\n";
+    auto line = source->line(loc.line);
+    std::string rendered;
+    size_t cells = 0, start_cells = 0, end_cells = 0, column = 0;
+    size_t target = loc.column ? loc.column - 1 : 0;
+    size_t end = target + std::max<u16>(loc.length, 1);
+    // Bound output even for generated source with enormous physical lines.
+    size_t window_start = target > 100 ? target - 100 : 0;
+    if (window_start) {
+        rendered = "...";
+        cells = 3;
+    }
+    for (size_t offset = 0; offset < line.size();) {
+        size_t from = offset;
+        u32 cp = next_codepoint(line, offset);
+        if (column < window_start) {
+            ++column;
+            continue;
+        }
+        if (column == target)
+            start_cells = cells;
+        if (column == end)
+            end_cells = cells;
+        if (column > target + 140) {
+            rendered += "...";
+            break;
+        }
+        if (cp == '\t') {
+            size_t width = 4 - cells % 4;
+            rendered += std::string(width, ' ');
+            cells += width;
+        } else if (cp < 0x20 || cp == 0x7F || (cp >= 0x80 && cp <= 0x9F)
+            || cp == 0x061C || cp == 0x200E || cp == 0x200F
+            || (cp >= 0x202A && cp <= 0x202E) || (cp >= 0x2066 && cp <= 0x2069)) {
+            std::ostringstream escaped;
+            escaped << (cp <= 0xFF ? "\\x" : "\\u") << std::hex << std::uppercase
+                    << std::setw(cp <= 0xFF ? 2 : 4) << std::setfill('0') << cp;
+            rendered += escaped.str();
+            cells += escaped.str().size();
+        } else {
+            rendered += cp == 0xFFFD ? "\xEF\xBF\xBD" : std::string(line.substr(from, offset - from));
+            cells += cell_width(cp);
+        }
+        ++column;
+    }
+    if (target >= column)
+        start_cells = cells;
+    if (end >= column)
+        end_cells = cells;
+    size_t width = end_cells > start_cells ? end_cells - start_cells : 1;
+    auto number = std::to_string(loc.line);
+    std::cerr << "  " << number << " | " << rendered << '\n'
+              << "  " << std::string(number.size(), ' ') << " | " << std::string(start_cells, ' ')
+              << terminal_color(Color::RED) << std::string(std::min<size_t>(width, 140), '^')
+              << terminal_color(Color::RESET) << '\n';
 }
 
 std::string Fa_DiagnosticEngine::to_json() const
 {
-    std::stringstream ss;
-    ss << "[\n";
-    for (size_t i = 0; i < m_diagnostics.size(); i++) {
-        Diagnostic const& d = m_diagnostics[i];
-        ss << "  {\n";
-        ss << "    \"severity\": " << static_cast<i32>(d.severity) << ",\n";
-        ss << "    \"line\": " << d.src_loc.line << ",\n";
-        ss << "    \"column\": " << d.src_loc.column << ",\n";
-        ss << "    \"message\": \"" << error_message_for(d.err_code) << "\",\n";
-        ss << "    \"code\": \"" << d.code << "\"\n";
-        ss << "  }";
-        if (i + 1 < m_diagnostics.size())
-            ss << ",";
-        ss << "\n";
+    std::ostringstream out;
+    out << '[';
+    bool first = true;
+    for (auto const& d : m_diagnostics) {
+        if (!first)
+            out << ',';
+        first = false;
+        out << "{\"severity\":" << static_cast<int>(d.severity)
+            << ",\"type\":" << json_string(error_type_for(d.err_code))
+            << ",\"errorCode\":" << d.err_code
+            << ",\"path\":" << json_string(d.source ? d.source->path : "")
+            << ",\"line\":" << d.src_loc.line << ",\"column\":" << d.src_loc.column
+            << ",\"length\":" << d.src_loc.length
+            << ",\"message\":" << json_string(error_message_for(d.err_code))
+            << ",\"code\":" << json_string(d.code)
+            << ",\"source\":" << json_string(d.source ? d.source->line(d.src_loc.line) : "")
+            << ",\"suggestions\":[";
+        for (size_t i = 0; i < d.suggestions.size(); ++i) {
+            if (i)
+                out << ',';
+            out << json_string(d.suggestions[i]);
+        }
+        out << "],\"notes\":[";
+        for (size_t i = 0; i < d.notes.size(); ++i) {
+            if (i)
+                out << ',';
+            out << "{\"line\":" << d.notes[i].first << ",\"message\":" << json_string(d.notes[i].second) << '}';
+        }
+        out << "],\"traceback\":[";
+        for (size_t i = 0; i < d.traceback.size(); ++i) {
+            if (i)
+                out << ',';
+            auto const& frame = d.traceback[i];
+            out << "{\"path\":" << json_string(frame.source ? frame.source->path : "")
+                << ",\"line\":" << frame.location.line << ",\"column\":" << frame.location.column
+                << ",\"function\":" << json_string(frame.function)
+                << ",\"source\":" << json_string(frame.source ? frame.source->line(frame.location.line) : "") << '}';
+        }
+        out << "]}";
     }
-    ss << "]\n";
-    return ss.str();
+    out << "]\n";
+    return out.str();
 }
 
 void Fa_DiagnosticEngine::pretty_print() const
 {
-    if (m_diagnostics.empty())
-        return;
-
-    for (Diagnostic const& diag : m_diagnostics) {
-        std::string sev_str = sv_to_str(diag.severity);
-
-        if (m_source != nullptr)
-            std::cerr << terminal_color(Color::BOLD) << terminal_color(Color::RESET)
-                      << escape_terminal(m_source->get_path()) << ": "
-                      << terminal_color(Color::RESET);
-
-        std::cerr << sev_str << terminal_color(Color::RESET) << ":" << " "
-                  << error_message_for(diag.err_code) << " "
-                  << escape_terminal(diag.code) << "\n";
-
+    if (m_json_output)
+        return; // The CLI emits one complete JSON array on exit.
+    for (; m_printed < m_diagnostics.size(); ++m_printed) {
+        auto const& diag = m_diagnostics[m_printed];
+        if (!diag.traceback.empty()) {
+            std::cerr << "Traceback (most recent call last):\n";
+            for (auto const& frame : diag.traceback) {
+                std::cerr << "  File " << json_string(frame.source ? frame.source->path : "<input>")
+                          << ", line " << frame.location.line << ", in " << escape_terminal(frame.function) << '\n';
+                print_snippet(frame.source, frame.location);
+            }
+        }
+        if (diag.source)
+            std::cerr << escape_terminal(diag.source->path) << ": ";
+        std::cerr << sv_to_str(diag.severity) << terminal_color(Color::RESET) << ": "
+                  << error_type_for(diag.err_code) << ": " << error_message_for(diag.err_code);
+        if (!diag.code.empty())
+            std::cerr << ": " << escape_terminal(diag.code);
+        std::cerr << '\n';
         if (diag.src_loc.line > 0) {
-            std::cerr << "  --> line " << diag.src_loc.line << ":" << diag.src_loc.column << "\n";
-            print_snippet(diag.src_loc);
+            std::cerr << "  --> line " << diag.src_loc.line << ':' << diag.src_loc.column << '\n';
+            if (diag.traceback.empty())
+                print_snippet(diag.source, diag.src_loc);
         }
-
-        if (!diag.suggestions.empty()) {
-            std::cerr << terminal_color(Color::BOLD) << terminal_color(Color::CYAN)
-                      << "help" << terminal_color(Color::RESET) << ":\n";
-            for (std::string const& sugg : diag.suggestions)
-                std::cerr << "    • " << escape_terminal(sugg) << "\n";
+        for (auto const& suggestion : diag.suggestions)
+            std::cerr << "help: " << escape_terminal(suggestion) << '\n';
+        for (auto const& [line, message] : diag.notes) {
+            std::cerr << "note: " << escape_terminal(message) << '\n';
+            if (line > 0)
+                std::cerr << "  --> line " << line << '\n';
         }
-
-        for (auto const& [note_line, note_msg] : diag.notes) {
-            std::cerr << terminal_color(Color::BOLD) << terminal_color(Color::CYAN)
-                      << "note" << terminal_color(Color::RESET) << ": "
-                      << escape_terminal(note_msg) << "\n";
-            if (note_line > 0)
-                std::cerr << "  --> line " << note_line << "\n";
-        }
-
-        std::cerr << "\n";
+        std::cerr << '\n';
     }
-
-    if (is_saturated())
-        std::cerr << terminal_color(Color::BOLD) << terminal_color(Color::YELLOW)
-                  << "warning" << terminal_color(Color::RESET) << ": " << m_error_count << " errors reported, "
-                  << "further errors suppressed (limit: " << LIMIT << ")\n\n";
+    if (is_saturated() && !m_printed_limit) {
+        m_printed_limit = true;
+        std::cerr << "note: further errors suppressed (limit: " << LIMIT << ")\n";
+    }
 }
 
 } // namespace fairuz::diagnostic
