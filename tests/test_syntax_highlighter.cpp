@@ -81,20 +81,20 @@ TEST_F(SyntaxHighlighterTest, RecognizesEveryNumericLiteralForm)
 
 TEST_F(SyntaxHighlighterTest, ClassifiesModuleMemberAndAliasImports)
 {
-    Fa_StringRef source = "استورد math.util باسم حساب\n"
-                          "من runtime استورد هو_عدد باسم عدد\n";
+    Fa_StringRef source = "استورد رياضيات.ادوات باسم حساب\n"
+                          "من وقت_التشغيل استورد هو_عدد باسم عدد\n";
     Result result = Highlighter().highlight(source);
     ASSERT_TRUE(result.ast_valid);
     auto* module = find_token(result, 0, 7, "namespace");
     ASSERT_NE(module, nullptr);
     EXPECT_FALSE(module->declaration);
-    auto* alias = find_token(result, 0, 22, "namespace");
+    auto* alias = find_token(result, 0, 26, "namespace");
     ASSERT_NE(alias, nullptr);
     EXPECT_TRUE(alias->declaration);
-    auto* member = find_token(result, 1, 18, "variable");
+    auto* member = find_token(result, 1, 22, "variable");
     ASSERT_NE(member, nullptr);
     EXPECT_TRUE(member->declaration);
-    auto* member_alias = find_token(result, 1, 30, "variable");
+    auto* member_alias = find_token(result, 1, 34, "variable");
     ASSERT_NE(member_alias, nullptr);
     EXPECT_TRUE(member_alias->declaration);
 }
