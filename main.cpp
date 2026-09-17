@@ -153,7 +153,7 @@ void printSemanticTokens(fairuz::syntax::Result const& result)
     std::cout << "]}\n";
 }
 
-void printAst(fairuz::Fa_Array<fairuz::AST::Fa_Stmt*> const& stmts)
+void printAst(fairuz::Array<fairuz::AST::Stmt*> const& stmts)
 {
     fairuz::AST::ASTPrinter printer(true);
     for (u32 i = 0; i < stmts.size(); i++)
@@ -302,7 +302,7 @@ int main(int argc, char** argv)
 
     try {
 
-        fairuz::Fa_AllocatorContext allocator_context;
+        fairuz::AllocatorContext allocator_context;
         fairuz::set_context(&allocator_context);
         if (options.semantic_tokens) {
             std::string input;
@@ -312,15 +312,15 @@ int main(int argc, char** argv)
                 std::ifstream stream(options.input_path, std::ios::binary);
                 input.assign(std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>());
             }
-            fairuz::Fa_StringRef source(input.size(), '\0');
+            fairuz::StringRef source(input.size(), '\0');
             if (!input.empty()) std::memcpy(source.data(), input.data(), input.size());
             printSemanticTokens(fairuz::syntax::Highlighter().highlight(source));
             return static_cast<int>(ExitCode::Success);
         }
-        fairuz::lex::Fa_FileManager fm(options.input_path);
+        fairuz::lex::FileManager fm(options.input_path);
         fairuz::diagnostic::set_source(&fm);
-        fairuz::parser::Fa_Parser parser(&fm);
-        fairuz::Fa_Array<fairuz::AST::Fa_Stmt*> stmts = parser.parse_program();
+        fairuz::parser::Parser parser(&fm);
+        fairuz::Array<fairuz::AST::Stmt*> stmts = parser.parse_program();
 
         if (fairuz::diagnostic::has_errors()) {
             fairuz::diagnostic::dump();
@@ -328,8 +328,8 @@ int main(int argc, char** argv)
         }
 
         if (options.format_file) {
-            fairuz::Fa_Formatter fmter;
-            fairuz::Fa_StringRef fmted = fmter.format(fm.buffer());
+            fairuz::Formatter fmter;
+            fairuz::StringRef fmted = fmter.format(fm.buffer());
             char const* data = fmted.empty() ? "" : fmted.data();
             std::string error;
             if (!writeFileAtomic(options.input_path, data, fmted.len(), error)) {
@@ -343,7 +343,7 @@ int main(int argc, char** argv)
             printAst(stmts);
 
         fairuz::runtime::Compiler compiler;
-        fairuz::runtime::Fa_Chunk* chunk = compiler.compile(stmts);
+        fairuz::runtime::Chunk* chunk = compiler.compile(stmts);
         if (!chunk) {
             std::cerr << "Compilation failed: no bytecode was produced\n";
             return static_cast<int>(ExitCode::Software);
@@ -358,7 +358,7 @@ int main(int argc, char** argv)
         if (options.check_only)
             return static_cast<int>(ExitCode::Success);
 
-        fairuz::runtime::Fa_VM vm;
+        fairuz::runtime::VM vm;
         auto const start = std::chrono::steady_clock::now();
         vm.run(chunk);
         auto const end = std::chrono::steady_clock::now();
@@ -369,9 +369,9 @@ int main(int argc, char** argv)
         }
 
         return static_cast<int>(ExitCode::Success);
-    } catch (fairuz::runtime::Fa_RuntimeHalt const&) {
+    } catch (fairuz::runtime::RuntimeHalt const&) {
         return static_cast<int>(ExitCode::DataError);
-    } catch (fairuz::diagnostic::Fa_DiagnosticAbort const&) {
+    } catch (fairuz::diagnostic::DiagnosticAbort const&) {
         return static_cast<int>(ExitCode::DataError);
     } catch (std::exception const& ex) {
         fairuz::diagnostic::report(fairuz::diagnostic::Severity::ERROR, {}, fairuz::ErrorCode::INTERNAL_ERROR, ex.what());

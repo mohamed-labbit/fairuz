@@ -37,21 +37,21 @@ namespace fairuz::runtime {
 
 static constexpr u32 MAX_RENDER_DEPTH = 128;
 
-static Fa_StringRef format_double_string(f64 value)
+static StringRef format_double_string(f64 value)
 {
     char buf[64];
     auto [ptr, ec] = std::to_chars(buf, buf + sizeof(buf), value);
     if (ec == std::errc())
-        return Fa_StringRef(std::string(buf, static_cast<size_t>(ptr - buf)).c_str());
+        return StringRef(std::string(buf, static_cast<size_t>(ptr - buf)).c_str());
 
     std::ostringstream oss;
     oss.imbue(std::locale::classic());
     oss << std::setprecision(14) << std::noshowpoint << value;
-    return Fa_StringRef(oss.str().c_str());
+    return StringRef(oss.str().c_str());
 }
 
-static void append_rendered_value(Fa_StringRef& out, Fa_Value v, bool quote_strings,
-    std::unordered_set<Fa_ObjHeader*>& active_containers, u32 depth)
+static void append_rendered_value(StringRef& out, Value v, bool quote_strings,
+    std::unordered_set<ObjHeader*>& active_containers, u32 depth)
 {
     if (v.is_nil()) {
         out += "nil";
@@ -62,13 +62,13 @@ static void append_rendered_value(Fa_StringRef& out, Fa_Value v, bool quote_stri
         return;
     }
     if (v.is_int()) {
-        out += Fa_StringRef(std::to_string(v.as_int()).c_str());
+        out += StringRef(std::to_string(v.as_int()).c_str());
         return;
     }
     if (v.is_double()) {
         f64 d = v.as_double();
         if (d == std::floor(d) && std::isfinite(d) && std::abs(d) < 1e15)
-            out += Fa_StringRef(std::to_string(static_cast<i64>(d)).c_str());
+            out += StringRef(std::to_string(static_cast<i64>(d)).c_str());
         else
             out += format_double_string(d);
         return;
@@ -86,7 +86,7 @@ static void append_rendered_value(Fa_StringRef& out, Fa_Value v, bool quote_stri
         return;
     }
     if (v.is_list()) {
-        Fa_ObjList* list = v.as_list();
+        ObjList* list = v.as_list();
         if (!active_containers.insert(&list->obj).second) {
             out += "<cycle>";
             return;
@@ -102,7 +102,7 @@ static void append_rendered_value(Fa_StringRef& out, Fa_Value v, bool quote_stri
         return;
     }
     if (v.is_dict()) {
-        Fa_ObjDict* dict = v.as_dict();
+        ObjDict* dict = v.as_dict();
         if (!active_containers.insert(&dict->obj).second) {
             out += "<cycle>";
             return;
@@ -133,42 +133,42 @@ static void append_rendered_value(Fa_StringRef& out, Fa_Value v, bool quote_stri
     }
     if (v.is_class()) {
         out += "<class ";
-        Fa_ObjClass* klass = v.as_class();
+        ObjClass* klass = v.as_class();
         out += klass->name;
         out += '>';
         return;
     }
     if (v.is_instance()) {
         out += '<';
-        Fa_ObjInstance* instance = v.as_instance();
+        ObjInstance* instance = v.as_instance();
         out += instance->klass->name;
         out += " instance>";
         return;
     }
 }
 
-static Fa_StringRef value_to_string(Fa_Value v)
+static StringRef value_to_string(Value v)
 {
-    Fa_StringRef out = "";
-    std::unordered_set<Fa_ObjHeader*> active_containers;
+    StringRef out = "";
+    std::unordered_set<ObjHeader*> active_containers;
     append_rendered_value(out, v, false, active_containers, 0);
     return out;
 }
 
-Fa_Value Fa_VM::Fa_len(int argc, Fa_Value* argv)
+Value VM::len(int argc, Value* argv)
 {
     if (argc == 0 || argv == nullptr)
-        return Fa_Value::nil();
+        return Value::nil();
 
     if (argc == 1) {
         if (argv[0].is_string()) {
-            Fa_StringRef const& str = argv[0].as_string()->str;
+            StringRef const& str = argv[0].as_string()->str;
             // Strings also serve as the language's byte container at native
             // boundaries (files, codecs, compression).  Preserve Unicode
             // code-point length for text, but never try to decode arbitrary
             // binary payloads such as gzip streams.
             if (!simdutf::validate_utf8(str.data(), str.len()))
-                return Fa_Value::from_int(static_cast<i64>(str.len()));
+                return Value::from_int(static_cast<i64>(str.len()));
             size_t byte_pos = 0;
             i64 char_count = 0;
 
@@ -179,21 +179,21 @@ Fa_Value Fa_VM::Fa_len(int argc, Fa_Value* argv)
                 char_count++;
             }
 
-            return Fa_Value::from_int(char_count);
+            return Value::from_int(char_count);
         }
 
         if (argv[0].is_list())
-            return Fa_Value::from_int(argv[0].as_list()->elements.size());
+            return Value::from_int(argv[0].as_list()->elements.size());
         if (argv[0].is_dict())
-            return Fa_Value::from_int(argv[0].as_dict()->data.size());
+            return Value::from_int(argv[0].as_dict()->data.size());
     }
 
     /// do not accept multiple args for len
-    return Fa_Value::nil();
+    return Value::nil();
 }
 
-static void print_runtime_value_impl(Fa_Value v,
-    std::unordered_set<Fa_ObjHeader*>& active_containers, u32 depth)
+static void print_runtime_value_impl(Value v,
+    std::unordered_set<ObjHeader*>& active_containers, u32 depth)
 {
     if (v.is_nil()) {
         std::cout << "nil";
@@ -211,21 +211,21 @@ static void print_runtime_value_impl(Fa_Value v,
     }
 
     if (v.is_obj()) {
-        Fa_ObjHeader* obj = v.as_obj();
+        ObjHeader* obj = v.as_obj();
 
-        if ((obj->type == Fa_ObjType::LIST || obj->type == Fa_ObjType::DICT)
+        if ((obj->type == ObjType::LIST || obj->type == ObjType::DICT)
             && depth >= MAX_RENDER_DEPTH) {
             std::cout << "<max-depth>";
             return;
         }
 
         switch (obj->type) {
-        case Fa_ObjType::STRING:
-            std::cout << Fa_obj_cast<Fa_ObjString>(obj, Fa_ObjType::STRING)->str;
+        case ObjType::STRING:
+            std::cout << obj_cast<ObjString>(obj, ObjType::STRING)->str;
             return;
 
-        case Fa_ObjType::LIST: {
-            auto list = Fa_obj_cast<Fa_ObjList>(obj, Fa_ObjType::LIST);
+        case ObjType::LIST: {
+            auto list = obj_cast<ObjList>(obj, ObjType::LIST);
             if (!active_containers.insert(&list->obj).second) {
                 std::cout << "<cycle>";
                 return;
@@ -234,8 +234,8 @@ static void print_runtime_value_impl(Fa_Value v,
             for (u32 i = 0, n = list->size(); i < n; i++) {
                 if (i > 0)
                     std::cout << ", ";
-                Fa_Value elem = list->elements[i];
-                if (elem.is_obj() && elem.as_obj()->type == Fa_ObjType::STRING) {
+                Value elem = list->elements[i];
+                if (elem.is_obj() && elem.as_obj()->type == ObjType::STRING) {
                     std::cout << '"';
                     std::cout << elem.as_string()->str;
                     std::cout << '"';
@@ -248,8 +248,8 @@ static void print_runtime_value_impl(Fa_Value v,
             return;
         }
 
-        case Fa_ObjType::DICT: {
-            auto dict = Fa_obj_cast<Fa_ObjDict>(obj, Fa_ObjType::DICT);
+        case ObjType::DICT: {
+            auto dict = obj_cast<ObjDict>(obj, ObjType::DICT);
             if (!active_containers.insert(&dict->obj).second) {
                 std::cout << "<cycle>";
                 return;
@@ -278,8 +278,8 @@ static void print_runtime_value_impl(Fa_Value v,
             return;
         }
 
-        case Fa_ObjType::NATIVE: {
-            auto nat = Fa_obj_cast<Fa_ObjNative>(obj, Fa_ObjType::NATIVE);
+        case ObjType::NATIVE: {
+            auto nat = obj_cast<ObjNative>(obj, ObjType::NATIVE);
             std::cout << "<native ";
             if (nat->name)
                 std::cout << nat->name->str;
@@ -289,22 +289,22 @@ static void print_runtime_value_impl(Fa_Value v,
             return;
         }
 
-        case Fa_ObjType::FUNCTION: {
-            auto* fn = Fa_obj_cast<Fa_ObjFunction>(obj, Fa_ObjType::FUNCTION);
+        case ObjType::FUNCTION: {
+            auto* fn = obj_cast<ObjFunction>(obj, ObjType::FUNCTION);
             std::cout << "<function ";
             std::cout << fn->name();
             std::cout << '>';
             return;
         }
 
-        case Fa_ObjType::CLASS: {
-            auto klass = Fa_obj_cast<Fa_ObjClass>(obj, Fa_ObjType::CLASS);
+        case ObjType::CLASS: {
+            auto klass = obj_cast<ObjClass>(obj, ObjType::CLASS);
             std::cout << "<class " << klass->name << '>';
             return;
         }
 
-        case Fa_ObjType::INSTANCE: {
-            auto instance = Fa_obj_cast<Fa_ObjInstance>(obj, Fa_ObjType::INSTANCE);
+        case ObjType::INSTANCE: {
+            auto instance = obj_cast<ObjInstance>(obj, ObjType::INSTANCE);
             std::cout << '<';
             if (instance->klass)
                 std::cout << instance->klass->name;
@@ -314,8 +314,8 @@ static void print_runtime_value_impl(Fa_Value v,
             return;
         }
 
-        case Fa_ObjType::FILE_HANDLE: {
-            auto file_handle = Fa_obj_cast<Fa_ObjFileHandle>(obj, Fa_ObjType::FILE_HANDLE);
+        case ObjType::FILE_HANDLE: {
+            auto file_handle = obj_cast<ObjFileHandle>(obj, ObjType::FILE_HANDLE);
             std::cout << '{' << '\n';
             std::cout << '\t' << "ptr: " << file_handle->fp << '\n';
             std::cout << '\t' << "is_open: " << (file_handle->is_open ? "true" : "false") << '\n';
@@ -323,16 +323,16 @@ static void print_runtime_value_impl(Fa_Value v,
             return;
         }
 
-        case Fa_ObjType::MODULE: {
-            auto module = Fa_obj_cast<Fa_ObjModule>(obj, Fa_ObjType::MODULE);
+        case ObjType::MODULE: {
+            auto module = obj_cast<ObjModule>(obj, ObjType::MODULE);
             std::cout << "<module " << module->name << '>';
             return;
         }
 #if FA_USE_NANBOX
-        case fairuz::runtime::Fa_ObjType::INT: // TODO:
+        case fairuz::runtime::ObjType::INT: // TODO:
 #endif
 
-        case Fa_ObjType::_COUNT:
+        case ObjType::_COUNT:
             break;
         }
     }
@@ -345,17 +345,17 @@ static void print_runtime_value_impl(Fa_Value v,
     }
 }
 
-static void print_runtime_value(Fa_Value v)
+static void print_runtime_value(Value v)
 {
-    std::unordered_set<Fa_ObjHeader*> active_containers;
+    std::unordered_set<ObjHeader*> active_containers;
     print_runtime_value_impl(v, active_containers, 0);
 }
 
-Fa_Value Fa_VM::Fa_print(int argc, Fa_Value* argv)
+Value VM::print(int argc, Value* argv)
 {
     if (argc == 0 || argv == nullptr) {
         std::cout << '\n';
-        return Fa_Value::nil();
+        return Value::nil();
     }
 
     for (int i = 0; i < argc; i++) {
@@ -364,91 +364,91 @@ Fa_Value Fa_VM::Fa_print(int argc, Fa_Value* argv)
         print_runtime_value(argv[i]);
     }
     std::cout << '\n';
-    return Fa_Value::nil();
+    return Value::nil();
 }
 
-Fa_Value Fa_VM::Fa_type(int argc, Fa_Value* argv)
+Value VM::type(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr)
-        return Fa_Value::nil();
+        return Value::nil();
 
-    Fa_Value& v = argv[0];
-    Fa_TypeTag type = value_type_tag(v);
+    Value& v = argv[0];
+    TypeTag type = value_type_tag(v);
     switch (type) {
-    case Fa_TypeTag::NONE: return m_gc.make_string("لاشيء");
-    case Fa_TypeTag::NIL: return m_gc.make_string("عدم");
-    case Fa_TypeTag::BOOL: return m_gc.make_string("منطقي");
-    case Fa_TypeTag::INT: return m_gc.make_string("طبيعي");
-    case Fa_TypeTag::DOUBLE: return m_gc.make_string("حقيقي");
-    case Fa_TypeTag::STRING: return m_gc.make_string("سلسلة");
-    case Fa_TypeTag::LIST: return m_gc.make_string("قائمة");
-    case Fa_TypeTag::FUNCTION: return m_gc.make_string("دالة");
-    case Fa_TypeTag::NATIVE: return m_gc.make_string("دالة");
-    case Fa_TypeTag::CLASS: return m_gc.make_string(v.as_class()->name);
-    case Fa_TypeTag::INSTANCE: return m_gc.make_string(v.as_instance()->klass->name);
-    case Fa_TypeTag::DICT: return m_gc.make_string("قاموس");
-    case Fa_TypeTag::FILE_HANDLE: return m_gc.make_string("ملف");
-    case Fa_TypeTag::MODULE: return m_gc.make_string("وحدة");
+    case TypeTag::NONE: return m_gc.make_string("لاشيء");
+    case TypeTag::NIL: return m_gc.make_string("عدم");
+    case TypeTag::BOOL: return m_gc.make_string("منطقي");
+    case TypeTag::INT: return m_gc.make_string("طبيعي");
+    case TypeTag::DOUBLE: return m_gc.make_string("حقيقي");
+    case TypeTag::STRING: return m_gc.make_string("سلسلة");
+    case TypeTag::LIST: return m_gc.make_string("قائمة");
+    case TypeTag::FUNCTION: return m_gc.make_string("دالة");
+    case TypeTag::NATIVE: return m_gc.make_string("دالة");
+    case TypeTag::CLASS: return m_gc.make_string(v.as_class()->name);
+    case TypeTag::INSTANCE: return m_gc.make_string(v.as_instance()->klass->name);
+    case TypeTag::DICT: return m_gc.make_string("قاموس");
+    case TypeTag::FILE_HANDLE: return m_gc.make_string("ملف");
+    case TypeTag::MODULE: return m_gc.make_string("وحدة");
     }
 
-    return Fa_Value::nil(); // unreachable
+    return Value::nil(); // unreachable
 }
 
-Fa_Value Fa_VM::Fa_int(int argc, Fa_Value* argv)
+Value VM::Int(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr)
-        return Fa_Value::nil();
+        return Value::nil();
     if (argv[0].is_number())
-        return Fa_Value::from_int(static_cast<i64>(argv[0].as_double_any()));
-    return Fa_Value::nil();
+        return Value::from_int(static_cast<i64>(argv[0].as_double_any()));
+    return Value::nil();
 }
 
-Fa_Value Fa_VM::Fa_float(int argc, Fa_Value* argv)
+Value VM::Float(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr)
-        return Fa_Value::nil();
+        return Value::nil();
 
     if (argv[0].is_number())
-        return Fa_Value::from_real(argv[0].as_double_any());
+        return Value::from_real(argv[0].as_double_any());
 
-    return Fa_Value::nil();
+    return Value::nil();
 }
 
-Fa_Value Fa_VM::Fa_append(int argc, Fa_Value* argv)
+Value VM::append(int argc, Value* argv)
 {
     if (argc < 2 || argv == nullptr) {
         raise_error(ErrorCode::APPEND_ARG_COUNT, "got " + std::to_string(argc));
-        return Fa_Value::nil();
+        return Value::nil();
     }
 
-    Fa_Value& list_v = argv[0];
+    Value& list_v = argv[0];
     if (!list_v.is_list()) {
         raise_error(ErrorCode::APPEND_TYPE_ERROR);
-        return Fa_Value::nil();
+        return Value::nil();
     }
 
-    Fa_ObjList* list_obj = list_v.as_list();
+    ObjList* list_obj = list_v.as_list();
 
     for (int i = 1; i < argc; i++)
         list_obj->elements.push(argv[i]);
 
-    return Fa_Value::nil();
+    return Value::nil();
 }
 
-Fa_Value Fa_VM::Fa_pop(int argc, Fa_Value* argv)
+Value VM::pop(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr) {
         raise_error(ErrorCode::POP_ARG_COUNT, "got " + std::to_string(argc));
-        return Fa_Value::nil();
+        return Value::nil();
     }
 
-    Fa_Value& list_v = argv[0];
+    Value& list_v = argv[0];
     if (!list_v.is_list()) {
         raise_error(ErrorCode::POP_TYPE_ERROR);
-        return Fa_Value::nil();
+        return Value::nil();
     }
 
-    Fa_ObjList* list_obj = list_v.as_list();
+    ObjList* list_obj = list_v.as_list();
 
     if (list_obj->empty())
         raise_error(ErrorCode::POP_EMPTY_LIST);
@@ -457,7 +457,7 @@ Fa_Value Fa_VM::Fa_pop(int argc, Fa_Value* argv)
     return list_v;
 }
 
-Fa_Value Fa_VM::Fa_slice(int argc, Fa_Value* argv)
+Value VM::slice(int argc, Value* argv)
 {
     /// cut a copy of a container, with inclusive indices
     /// accept [container, start, end]
@@ -466,12 +466,12 @@ Fa_Value Fa_VM::Fa_slice(int argc, Fa_Value* argv)
 
     if (argc < 2 || argc > 3 || argv == nullptr) {
         raise_error(ErrorCode::SLICE_ARG_COUNT, "got " + std::to_string(argc));
-        return Fa_Value::nil();
+        return Value::nil();
     }
 
-    Fa_Value container = argv[0];
-    Fa_Value start_value = argv[1];
-    Fa_Value end_value = argc < 3 ? Fa_Value::nil() : argv[2];
+    Value container = argv[0];
+    Value start_value = argv[1];
+    Value end_value = argc < 3 ? Value::nil() : argv[2];
 
     if (UNLIKELY(!container.is_string() && !container.is_list()))
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
@@ -503,43 +503,43 @@ Fa_Value Fa_VM::Fa_slice(int argc, Fa_Value* argv)
     size_t end = static_cast<size_t>(end_i);
 
     if (container.is_string()) {
-        Fa_ObjString* str_obj = container.as_string();
+        ObjString* str_obj = container.as_string();
         return m_gc.make_string(str_obj->str.slice(start, end + 1));
     } else if (container.is_list()) {
-        Fa_ObjList* list_obj = container.as_list();
-        Fa_ObjList* ret_list = m_gc.make_obj_list();
+        ObjList* list_obj = container.as_list();
+        ObjList* ret_list = m_gc.make_obj_list();
         for (size_t i = start; i <= end; i++)
             ret_list->elements.push(list_obj->elements[static_cast<u32>(i)]);
 
-        return Fa_Value::from_list(ret_list);
+        return Value::from_list(ret_list);
     }
 
-    return Fa_Value::nil();
+    return Value::nil();
 }
 
-Fa_Value Fa_VM::Fa_input(int /*argc*/, Fa_Value* /*argv*/) // input takes no args for now
+Value VM::input(int /*argc*/, Value* /*argv*/) // input takes no args for now
 {
     // read until user hits ENTER
-    Fa_StringRef ret_str = "";
+    StringRef ret_str = "";
     std::string help = ""; // getline only accepts std::string
 
     if (!std::getline(std::cin, help))
         // don't know what error to report
-        return Fa_Value::nil();
+        return Value::nil();
 
     ret_str = help.data();
-    Fa_Value ret = m_gc.make_string(ret_str);
+    Value ret = m_gc.make_string(ret_str);
     return ret;
 }
 
-Fa_Value Fa_VM::Fa_str(int argc, Fa_Value* argv)
+Value VM::str(int argc, Value* argv)
 {
     if (argc > 1) {
         raise_error(ErrorCode::STR_ARG_COUNT, "got " + std::to_string(argc));
-        return Fa_Value::nil();
+        return Value::nil();
     }
 
-    Fa_StringRef output = "";
+    StringRef output = "";
 
     if (argc == 0 || argv == nullptr)
         return m_gc.make_string(output); // return empty on no arg
@@ -547,24 +547,24 @@ Fa_Value Fa_VM::Fa_str(int argc, Fa_Value* argv)
     if (argv[0].is_string())
         return m_gc.make_string(argv[0].as_string()->str);
 
-    Fa_StringRef rendered = value_to_string(argv[0]);
+    StringRef rendered = value_to_string(argv[0]);
     return m_gc.make_string(rendered);
 }
 
-Fa_Value Fa_VM::Fa_bool(int argc, Fa_Value* argv)
+Value VM::Bool(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr) {
         raise_error(ErrorCode::BOOL_ARG_COUNT, "got " + std::to_string(argc));
-        return Fa_Value::nil();
+        return Value::nil();
     }
 
-    return argv[0].is_truthy() ? Fa_Value::from_bool(true) : Fa_Value::from_bool(false);
+    return argv[0].is_truthy() ? Value::from_bool(true) : Value::from_bool(false);
 }
 
-Fa_Value Fa_VM::Fa_list(int argc, Fa_Value* argv)
+Value VM::list(int argc, Value* argv)
 {
-    Fa_Value ret = m_gc.make_list();
-    Fa_ObjList* list_obj = ret.as_list();
+    Value ret = m_gc.make_list();
+    ObjList* list_obj = ret.as_list();
 
     for (int i = 0; i < argc; i++)
         list_obj->elements.push(argv[i]);
@@ -572,62 +572,62 @@ Fa_Value Fa_VM::Fa_list(int argc, Fa_Value* argv)
     return ret;
 }
 
-Fa_Value Fa_VM::Fa_dict(int argc, Fa_Value* argv)
+Value VM::dict(int argc, Value* argv)
 {
-    Fa_Value ret = m_gc.make_dict();
+    Value ret = m_gc.make_dict();
     if (argc <= 0 || argv == nullptr)
         return ret;
 
-    Fa_ObjDict* dict_obj = ret.as_dict();
+    ObjDict* dict_obj = ret.as_dict();
     for (int i = 0; i + 1 < argc; i += 2)
         dict_obj->set(argv[i], argv[i + 1]);
 
     return ret;
 }
 
-Fa_Value Fa_VM::Fa_dict_keys(int argc, Fa_Value* argv)
+Value VM::dict_keys(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr || !argv[0].is_dict())
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
             "dictionary keys expects one dictionary");
 
-    Fa_Value result = m_gc.make_list();
-    Fa_ObjDict* dict = argv[0].as_dict();
-    for (Fa_Value key : dict->insertion_order)
+    Value result = m_gc.make_list();
+    ObjDict* dict = argv[0].as_dict();
+    for (Value key : dict->insertion_order)
         result.as_list()->elements.push(key);
     return result;
 }
 
-Fa_Value Fa_VM::Fa_dict_contains(int argc, Fa_Value* argv)
+Value VM::dict_contains(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_dict())
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
             "dictionary contains expects a dictionary and key");
-    return Fa_Value::from_bool(argv[0].as_dict()->data.contains(argv[1]));
+    return Value::from_bool(argv[0].as_dict()->data.contains(argv[1]));
 }
 
-Fa_Value Fa_VM::Fa_dict_delete(int argc, Fa_Value* argv)
+Value VM::dict_delete(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_dict())
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
             "dictionary delete expects a dictionary and key");
-    Fa_Value removed = Fa_Value::nil();
+    Value removed = Value::nil();
     argv[0].as_dict()->erase(argv[1], &removed);
     return removed;
 }
 
-Fa_Value Fa_VM::Fa_split(int argc, Fa_Value* argv)
+Value VM::split(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr)
-        return Fa_Value::nil();
+        return Value::nil();
     if (!argv[0].is_string() || !argv[1].is_string())
-        return Fa_Value::nil();
+        return Value::nil();
 
-    Fa_StringRef src = argv[0].as_string()->str;
-    Fa_StringRef delim = argv[1].as_string()->str;
+    StringRef src = argv[0].as_string()->str;
+    StringRef delim = argv[1].as_string()->str;
 
-    Fa_Value ret = m_gc.make_list();
-    Fa_ObjList* list = ret.as_list();
+    Value ret = m_gc.make_list();
+    ObjList* list = ret.as_list();
 
     if (delim.empty()) {
         list->elements.push(m_gc.make_string(src));
@@ -659,16 +659,16 @@ Fa_Value Fa_VM::Fa_split(int argc, Fa_Value* argv)
     return ret;
 }
 
-Fa_Value Fa_VM::Fa_join(int argc, Fa_Value* argv)
+Value VM::join(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr)
-        return Fa_Value::nil();
+        return Value::nil();
     if (!argv[0].is_list() || !argv[1].is_string())
-        return Fa_Value::nil();
+        return Value::nil();
 
-    Fa_ObjList* list = argv[0].as_list();
-    Fa_StringRef delim = argv[1].as_string()->str;
-    Fa_StringRef out = "";
+    ObjList* list = argv[0].as_list();
+    StringRef delim = argv[1].as_string()->str;
+    StringRef out = "";
 
     for (u32 i = 0; i < list->elements.size(); i++) {
         if (i > 0)
@@ -680,18 +680,18 @@ Fa_Value Fa_VM::Fa_join(int argc, Fa_Value* argv)
     return m_gc.make_string(out);
 }
 
-Fa_Value Fa_VM::Fa_substr(int argc, Fa_Value* argv)
+Value VM::substr(int argc, Value* argv)
 {
     if (argc != 3 || argv == nullptr) {
         raise_error(ErrorCode::SUBSTR_ARG_COUNT, "got " + std::to_string(argc));
-        return Fa_Value::nil();
+        return Value::nil();
     }
 
     if (UNLIKELY(!argv[0].is_string() || !argv[1].is_int() || !argv[2].is_int()))
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
             "substr expects (string, integer, integer)");
 
-    Fa_StringRef str = argv[0].as_string()->str;
+    StringRef str = argv[0].as_string()->str;
     i64 start_cp = argv[1].as_int();
     i64 end_cp = argv[2].as_int();
     if (start_cp < 0 || end_cp < start_cp)
@@ -722,29 +722,29 @@ Fa_Value Fa_VM::Fa_substr(int argc, Fa_Value* argv)
     return m_gc.make_string(str.slice(start_byte, end_byte));
 }
 
-Fa_Value Fa_VM::Fa_contains(int argc, Fa_Value* argv)
+Value VM::contains(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr)
-        return Fa_Value::nil();
+        return Value::nil();
     if (!argv[0].is_string() || !argv[1].is_string())
-        return Fa_Value::nil();
+        return Value::nil();
 
-    Fa_StringRef haystack = argv[0].as_string()->str;
-    Fa_StringRef needle = argv[1].as_string()->str;
+    StringRef haystack = argv[0].as_string()->str;
+    StringRef needle = argv[1].as_string()->str;
     if (needle.empty())
-        return Fa_Value::from_bool(true);
+        return Value::from_bool(true);
 
-    return Fa_Value::from_bool(haystack.find(needle));
+    return Value::from_bool(haystack.find(needle));
 }
 
-Fa_Value Fa_VM::Fa_trim(int argc, Fa_Value* argv)
+Value VM::trim(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr)
-        return Fa_Value::nil();
+        return Value::nil();
     if (!argv[0].is_string())
-        return Fa_Value::nil();
+        return Value::nil();
 
-    Fa_StringRef str = argv[0].as_string()->str;
+    StringRef str = argv[0].as_string()->str;
     size_t start = 0;
     size_t end = str.len();
 
@@ -760,7 +760,7 @@ Fa_Value Fa_VM::Fa_trim(int argc, Fa_Value* argv)
     return m_gc.make_string(str.substr_copy(start, end));
 }
 
-Fa_Value Fa_VM::Fa_char_from_codepoint(int argc, Fa_Value* argv)
+Value VM::char_from_codepoint(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr || !argv[0].is_int())
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
@@ -771,14 +771,14 @@ Fa_Value Fa_VM::Fa_char_from_codepoint(int argc, Fa_Value* argv)
     return m_gc.make_string(util::encode_utf8_str(static_cast<u32>(value)));
 }
 
-Fa_Value Fa_VM::Fa_number_from_text(int argc, Fa_Value* argv)
+Value VM::number_from_text(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr || !argv[0].is_string())
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
             "number parsing expects one string");
-    Fa_StringRef text = argv[0].as_string()->str;
+    StringRef text = argv[0].as_string()->str;
     if (text.empty() || text[0] == '+')
-        return Fa_Value::nil();
+        return Value::nil();
 
     bool integral = true;
     for (size_t i = 0; i < text.len(); ++i) {
@@ -791,8 +791,8 @@ Fa_Value Fa_VM::Fa_number_from_text(int argc, Fa_Value* argv)
         i64 value = 0;
         auto parsed = std::from_chars(text.data(), text.data() + text.len(), value);
         if (parsed.ec == std::errc() && parsed.ptr == text.data() + text.len())
-            return Fa_Value::from_int(value);
-        return Fa_Value::nil();
+            return Value::from_int(value);
+        return Value::nil();
     }
 
     std::string owned(text.data(), text.len());
@@ -800,30 +800,30 @@ Fa_Value Fa_VM::Fa_number_from_text(int argc, Fa_Value* argv)
     errno = 0;
     double value = std::strtod(owned.c_str(), &end);
     if (errno == ERANGE || end != owned.c_str() + owned.size() || !std::isfinite(value))
-        return Fa_Value::nil();
-    return Fa_Value::from_real(value);
+        return Value::nil();
+    return Value::from_real(value);
 }
 
-Fa_Value Fa_VM::Fa_number_finite(int argc, Fa_Value* argv)
+Value VM::number_finite(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr || !argv[0].is_number())
-        return Fa_Value::from_bool(false);
-    return Fa_Value::from_bool(argv[0].is_int() || std::isfinite(argv[0].as_double()));
+        return Value::from_bool(false);
+    return Value::from_bool(argv[0].is_int() || std::isfinite(argv[0].as_double()));
 }
 
-Fa_Value Fa_VM::Fa_number_is_nan(int argc, Fa_Value* argv)
+Value VM::number_is_nan(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr || !argv[0].is_number())
-        return Fa_Value::from_bool(false);
-    return Fa_Value::from_bool(argv[0].is_double() && std::isnan(argv[0].as_double()));
+        return Value::from_bool(false);
+    return Value::from_bool(argv[0].is_double() && std::isnan(argv[0].as_double()));
 }
 
-Fa_Value Fa_VM::Fa_json_escape(int argc, Fa_Value* argv)
+Value VM::json_escape(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr || !argv[0].is_string())
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
             "JSON escaping expects one string");
-    Fa_StringRef input = argv[0].as_string()->str;
+    StringRef input = argv[0].as_string()->str;
     std::string output;
     output.reserve(input.len());
     static constexpr char hex[] = "0123456789abcdef";
@@ -850,16 +850,16 @@ Fa_Value Fa_VM::Fa_json_escape(int argc, Fa_Value* argv)
     return m_gc.make_string(output.c_str());
 }
 
-Fa_Value Fa_VM::Fa_json_read_string(int argc, Fa_Value* argv)
+Value VM::json_read_string(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_string() || !argv[1].is_int())
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
             "JSON string parsing expects a string and integer position");
 
-    Fa_StringRef input = argv[0].as_string()->str;
+    StringRef input = argv[0].as_string()->str;
     i64 requested = argv[1].as_int();
     if (requested < 0)
-        return Fa_Value::nil();
+        return Value::nil();
 
     size_t byte_pos = 0;
     i64 cp_pos = 0;
@@ -870,7 +870,7 @@ Fa_Value Fa_VM::Fa_json_read_string(int argc, Fa_Value* argv)
         cp_pos++;
     }
     if (cp_pos != requested || byte_pos >= input.len() || input[byte_pos] != '"')
-        return Fa_Value::nil();
+        return Value::nil();
 
     byte_pos++;
     cp_pos++;
@@ -901,14 +901,14 @@ Fa_Value Fa_VM::Fa_json_read_string(int argc, Fa_Value* argv)
     while (byte_pos < input.len()) {
         unsigned char ch = static_cast<unsigned char>(input[byte_pos]);
         if (ch == '"') {
-            Fa_Value result = m_gc.make_list();
-            Fa_Value decoded = m_gc.make_string(output.c_str());
+            Value result = m_gc.make_list();
+            Value decoded = m_gc.make_string(output.c_str());
             result.as_list()->elements.push(decoded);
-            result.as_list()->elements.push(Fa_Value::from_int(cp_pos + 1));
+            result.as_list()->elements.push(Value::from_int(cp_pos + 1));
             return result;
         }
         if (ch < 0x20)
-            return Fa_Value::nil();
+            return Value::nil();
         if (ch != '\\') {
             u64 step = 0;
             util::decode_utf8_at(input, byte_pos, &step);
@@ -919,7 +919,7 @@ Fa_Value Fa_VM::Fa_json_read_string(int argc, Fa_Value* argv)
         }
 
         if (byte_pos + 1 >= input.len())
-            return Fa_Value::nil();
+            return Value::nil();
         char escape = input[byte_pos + 1];
         switch (escape) {
         case '"': output.push_back('"'); break;
@@ -933,35 +933,35 @@ Fa_Value Fa_VM::Fa_json_read_string(int argc, Fa_Value* argv)
         case 'u': {
             u32 codepoint = 0;
             if (!read_hex4(byte_pos + 2, &codepoint))
-                return Fa_Value::nil();
+                return Value::nil();
             size_t consumed = 6;
             if (codepoint >= 0xD800 && codepoint <= 0xDBFF) {
                 if (byte_pos + 12 > input.len() || input[byte_pos + 6] != '\\'
                     || input[byte_pos + 7] != 'u')
-                    return Fa_Value::nil();
+                    return Value::nil();
                 u32 low = 0;
                 if (!read_hex4(byte_pos + 8, &low) || low < 0xDC00 || low > 0xDFFF)
-                    return Fa_Value::nil();
+                    return Value::nil();
                 codepoint = 0x10000 + ((codepoint - 0xD800) << 10) + (low - 0xDC00);
                 consumed = 12;
             } else if (codepoint >= 0xDC00 && codepoint <= 0xDFFF) {
-                return Fa_Value::nil();
+                return Value::nil();
             }
-            Fa_StringRef encoded = util::encode_utf8_str(codepoint);
+            StringRef encoded = util::encode_utf8_str(codepoint);
             output.append(encoded.data(), encoded.len());
             byte_pos += consumed;
             cp_pos += static_cast<i64>(consumed);
             continue;
         }
-        default: return Fa_Value::nil();
+        default: return Value::nil();
         }
         byte_pos += 2;
         cp_pos += 2;
     }
-    return Fa_Value::nil();
+    return Value::nil();
 }
 
-Fa_Value Fa_VM::Fa_dynamic_call(int argc, Fa_Value* argv)
+Value VM::dynamic_call(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[1].is_list())
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
@@ -971,109 +971,109 @@ Fa_Value Fa_VM::Fa_dynamic_call(int argc, Fa_Value* argv)
 
 namespace {
 
-Fa_Value* dict_field(Fa_ObjDict* dict, Fa_Value key)
+Value* dict_field(ObjDict* dict, Value key)
 {
     return dict == nullptr ? nullptr : dict->data.find_ptr(key);
 }
 
 }
 
-Fa_Value Fa_VM::Fa_executor_new(int argc, Fa_Value* argv)
+Value VM::executor_new(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr || !argv[0].is_int() || argv[0].as_int() <= 0)
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
             "executor expects a positive worker count");
-    Fa_Value result = m_gc.make_dict();
+    Value result = m_gc.make_dict();
     result.as_dict()->set(m_gc.make_string("kind"), m_gc.make_string("executor"));
-    result.as_dict()->set(m_gc.make_string("closed"), Fa_Value::from_bool(false));
+    result.as_dict()->set(m_gc.make_string("closed"), Value::from_bool(false));
     return result;
 }
 
-Fa_Value Fa_VM::Fa_executor_close(int argc, Fa_Value* argv)
+Value VM::executor_close(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_dict() || !argv[1].is_bool())
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
             "executor close expects a handle and wait flag");
-    argv[0].as_dict()->set(m_gc.make_string("closed"), Fa_Value::from_bool(true));
-    return Fa_Value::from_bool(true);
+    argv[0].as_dict()->set(m_gc.make_string("closed"), Value::from_bool(true));
+    return Value::from_bool(true);
 }
 
-Fa_Value Fa_VM::Fa_task_start(int argc, Fa_Value* argv)
+Value VM::task_start(int argc, Value* argv)
 {
     if (argc != 3 || argv == nullptr || !argv[0].is_dict() || !argv[2].is_list())
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
             "task start expects executor, callable, and argument list");
-    Fa_Value closed_key = m_gc.make_string("closed");
-    Fa_Value* closed = dict_field(argv[0].as_dict(), closed_key);
+    Value closed_key = m_gc.make_string("closed");
+    Value* closed = dict_field(argv[0].as_dict(), closed_key);
     if (closed != nullptr && closed->is_truthy())
         raise_error(ErrorCode::TYPE_ERROR_CALL, "executor is closed");
 
-    Fa_Value value = call_value_sync(argv[1], argv[2].as_list());
-    Fa_Value task = m_gc.make_dict();
+    Value value = call_value_sync(argv[1], argv[2].as_list());
+    Value task = m_gc.make_dict();
     task.as_dict()->set(m_gc.make_string("kind"), m_gc.make_string("task"));
-    task.as_dict()->set(m_gc.make_string("done"), Fa_Value::from_bool(true));
-    task.as_dict()->set(m_gc.make_string("cancelled"), Fa_Value::from_bool(false));
+    task.as_dict()->set(m_gc.make_string("done"), Value::from_bool(true));
+    task.as_dict()->set(m_gc.make_string("cancelled"), Value::from_bool(false));
     task.as_dict()->set(m_gc.make_string("result"), value);
     return task;
 }
 
-Fa_Value Fa_VM::Fa_task_done(int argc, Fa_Value* argv)
+Value VM::task_done(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr || !argv[0].is_dict())
         raise_error(ErrorCode::NATIVE_TYPE_ERROR, "task done expects a handle");
-    Fa_Value key = m_gc.make_string("done");
-    Fa_Value* value = dict_field(argv[0].as_dict(), key);
-    return Fa_Value::from_bool(value != nullptr && value->is_truthy());
+    Value key = m_gc.make_string("done");
+    Value* value = dict_field(argv[0].as_dict(), key);
+    return Value::from_bool(value != nullptr && value->is_truthy());
 }
 
-Fa_Value Fa_VM::Fa_task_result(int argc, Fa_Value* argv)
+Value VM::task_result(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_dict() || !argv[1].is_number())
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
             "task result expects a handle and timeout");
-    Fa_Value key = m_gc.make_string("result");
-    Fa_Value* value = dict_field(argv[0].as_dict(), key);
-    return value == nullptr ? Fa_Value::nil() : *value;
+    Value key = m_gc.make_string("result");
+    Value* value = dict_field(argv[0].as_dict(), key);
+    return value == nullptr ? Value::nil() : *value;
 }
 
-Fa_Value Fa_VM::Fa_task_cancel(int argc, Fa_Value* argv)
+Value VM::task_cancel(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr || !argv[0].is_dict())
         raise_error(ErrorCode::NATIVE_TYPE_ERROR, "task cancel expects a handle");
-    Fa_Value done_key = m_gc.make_string("done");
-    Fa_Value* done = dict_field(argv[0].as_dict(), done_key);
+    Value done_key = m_gc.make_string("done");
+    Value* done = dict_field(argv[0].as_dict(), done_key);
     if (done != nullptr && done->is_truthy())
-        return Fa_Value::from_bool(false);
-    argv[0].as_dict()->set(m_gc.make_string("cancelled"), Fa_Value::from_bool(true));
-    argv[0].as_dict()->set(done_key, Fa_Value::from_bool(true));
-    return Fa_Value::from_bool(true);
+        return Value::from_bool(false);
+    argv[0].as_dict()->set(m_gc.make_string("cancelled"), Value::from_bool(true));
+    argv[0].as_dict()->set(done_key, Value::from_bool(true));
+    return Value::from_bool(true);
 }
 
-Fa_Value Fa_VM::Fa_task_wait_all(int argc, Fa_Value* argv)
+Value VM::task_wait_all(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_list() || !argv[1].is_number())
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
             "wait all expects task handles and timeout");
-    Fa_Value results = m_gc.make_list();
-    Fa_Value result_key = m_gc.make_string("result");
-    for (Fa_Value handle : argv[0].as_list()->elements) {
+    Value results = m_gc.make_list();
+    Value result_key = m_gc.make_string("result");
+    for (Value handle : argv[0].as_list()->elements) {
         if (!handle.is_dict())
             raise_error(ErrorCode::NATIVE_TYPE_ERROR, "invalid task handle");
-        Fa_Value* value = dict_field(handle.as_dict(), result_key);
-        results.as_list()->elements.push(value == nullptr ? Fa_Value::nil() : *value);
+        Value* value = dict_field(handle.as_dict(), result_key);
+        results.as_list()->elements.push(value == nullptr ? Value::nil() : *value);
     }
     return results;
 }
 
-Fa_Value Fa_VM::Fa_file_open(int argc, Fa_Value* argv)
+Value VM::file_open(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_string() || !argv[1].is_string())
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
             "file open expects path and mode strings");
-    Fa_StringRef path = argv[0].as_string()->str;
-    Fa_StringRef mode = argv[1].as_string()->str;
+    StringRef path = argv[0].as_string()->str;
+    StringRef mode = argv[1].as_string()->str;
     if (::memchr(path.data(), '\0', path.len()) != nullptr)
-        return Fa_Value::nil();
+        return Value::nil();
     char const* native_mode = nullptr;
     if (mode == "قراءة" || mode == "اقرا")
         native_mode = "rb";
@@ -1082,20 +1082,20 @@ Fa_Value Fa_VM::Fa_file_open(int argc, Fa_Value* argv)
     else if (mode == "اضافة" || mode == "اضف")
         native_mode = "ab+";
     else
-        return Fa_Value::nil();
+        return Value::nil();
     FILE* file = std::fopen(path.data(), native_mode);
-    return file == nullptr ? Fa_Value::nil() : m_gc.make_file_handle(file);
+    return file == nullptr ? Value::nil() : m_gc.make_file_handle(file);
 }
 
-Fa_Value Fa_VM::Fa_file_read(int argc, Fa_Value* argv)
+Value VM::file_read(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_file_handle() || !argv[1].is_int()
         || argv[1].as_int() < 0)
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
             "file read expects an open handle and non-negative byte count");
-    Fa_ObjFileHandle* handle = argv[0].as_file_handle();
+    ObjFileHandle* handle = argv[0].as_file_handle();
     if (!handle->is_open || handle->fp == nullptr)
-        return Fa_Value::nil();
+        return Value::nil();
     size_t requested = static_cast<size_t>(argv[1].as_int());
     std::string output(requested, '\0');
     size_t count = requested == 0 ? 0 : std::fread(output.data(), 1, requested, handle->fp);
@@ -1103,14 +1103,14 @@ Fa_Value Fa_VM::Fa_file_read(int argc, Fa_Value* argv)
     return m_gc.make_string(output.c_str());
 }
 
-Fa_Value Fa_VM::Fa_file_read_all(int argc, Fa_Value* argv)
+Value VM::file_read_all(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr || !argv[0].is_file_handle())
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
             "read all expects an open file handle");
-    Fa_ObjFileHandle* handle = argv[0].as_file_handle();
+    ObjFileHandle* handle = argv[0].as_file_handle();
     if (!handle->is_open || handle->fp == nullptr)
-        return Fa_Value::nil();
+        return Value::nil();
     std::string output;
     char buffer[8192];
     for (;;) {
@@ -1120,18 +1120,18 @@ Fa_Value Fa_VM::Fa_file_read_all(int argc, Fa_Value* argv)
             break;
     }
     if (std::ferror(handle->fp))
-        return Fa_Value::nil();
+        return Value::nil();
     return m_gc.make_string(output.c_str());
 }
 
-Fa_Value Fa_VM::Fa_file_read_line(int argc, Fa_Value* argv)
+Value VM::file_read_line(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr || !argv[0].is_file_handle())
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
             "read line expects an open file handle");
-    Fa_ObjFileHandle* handle = argv[0].as_file_handle();
+    ObjFileHandle* handle = argv[0].as_file_handle();
     if (!handle->is_open || handle->fp == nullptr)
-        return Fa_Value::nil();
+        return Value::nil();
     std::string output;
     int ch = 0;
     while ((ch = std::fgetc(handle->fp)) != EOF) {
@@ -1140,42 +1140,42 @@ Fa_Value Fa_VM::Fa_file_read_line(int argc, Fa_Value* argv)
         output.push_back(static_cast<char>(ch));
     }
     if (ch == EOF && output.empty())
-        return Fa_Value::nil();
+        return Value::nil();
     if (!output.empty() && output.back() == '\r')
         output.pop_back();
     return m_gc.make_string(output.c_str());
 }
 
-Fa_Value Fa_VM::Fa_file_write(int argc, Fa_Value* argv)
+Value VM::file_write(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_file_handle() || !argv[1].is_string())
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
             "file write expects an open handle and string");
-    Fa_ObjFileHandle* handle = argv[0].as_file_handle();
+    ObjFileHandle* handle = argv[0].as_file_handle();
     if (!handle->is_open || handle->fp == nullptr)
-        return Fa_Value::from_bool(false);
-    Fa_StringRef text = argv[1].as_string()->str;
+        return Value::from_bool(false);
+    StringRef text = argv[1].as_string()->str;
     size_t written = text.empty() ? 0 : std::fwrite(text.data(), 1, text.len(), handle->fp);
-    return Fa_Value::from_bool(written == text.len());
+    return Value::from_bool(written == text.len());
 }
 
-Fa_Value Fa_VM::Fa_file_flush(int argc, Fa_Value* argv)
+Value VM::file_flush(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr || !argv[0].is_file_handle())
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
             "file flush expects an open handle");
-    Fa_ObjFileHandle* handle = argv[0].as_file_handle();
-    return Fa_Value::from_bool(handle->is_open && handle->fp != nullptr
+    ObjFileHandle* handle = argv[0].as_file_handle();
+    return Value::from_bool(handle->is_open && handle->fp != nullptr
         && std::fflush(handle->fp) == 0);
 }
 
 namespace {
 
-std::string native_path(Fa_Value value)
+std::string native_path(Value value)
 {
     if (!value.is_string())
         return { };
-    Fa_StringRef path = value.as_string()->str;
+    StringRef path = value.as_string()->str;
     return std::string(path.data(), path.len());
 }
 
@@ -1198,7 +1198,7 @@ std::string wildcard_regex(std::string const& pattern)
     return result;
 }
 
-std::filesystem::path temporary_parent(Fa_Value value)
+std::filesystem::path temporary_parent(Value value)
 {
     if (value.is_nil())
         return std::filesystem::temp_directory_path();
@@ -1223,16 +1223,16 @@ std::filesystem::path unique_temporary_path(std::filesystem::path const& parent,
 
 }
 
-Fa_Value Fa_VM::Fa_path_delete(int argc, Fa_Value* argv)
+Value VM::path_delete(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr || !argv[0].is_string())
         raise_error(ErrorCode::NATIVE_TYPE_ERROR, "path delete expects a string");
     std::error_code error;
     auto count = std::filesystem::remove_all(native_path(argv[0]), error);
-    return Fa_Value::from_bool(!error && count > 0);
+    return Value::from_bool(!error && count > 0);
 }
 
-Fa_Value Fa_VM::Fa_path_glob(int argc, Fa_Value* argv)
+Value VM::path_glob(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_string() || !argv[1].is_bool())
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
@@ -1242,7 +1242,7 @@ Fa_Value Fa_VM::Fa_path_glob(int argc, Fa_Value* argv)
     if (parent.empty())
         parent = ".";
     std::regex matcher(wildcard_regex(pattern.filename().string()));
-    Fa_Value result = m_gc.make_list();
+    Value result = m_gc.make_list();
     std::error_code error;
     if (argv[1].as_bool()) {
         for (std::filesystem::recursive_directory_iterator it(parent, error), end; !error && it != end; it.increment(error)) {
@@ -1258,7 +1258,7 @@ Fa_Value Fa_VM::Fa_path_glob(int argc, Fa_Value* argv)
     return result;
 }
 
-Fa_Value Fa_VM::Fa_temp_file(int argc, Fa_Value* argv)
+Value VM::temp_file(int argc, Value* argv)
 {
     if (argc != 3 || argv == nullptr || !argv[0].is_string() || !argv[1].is_string()
         || !(argv[2].is_nil() || argv[2].is_string()))
@@ -1267,17 +1267,17 @@ Fa_Value Fa_VM::Fa_temp_file(int argc, Fa_Value* argv)
     std::filesystem::path path = unique_temporary_path(temporary_parent(argv[2]),
         native_path(argv[0]), native_path(argv[1]));
     if (path.empty())
-        return Fa_Value::nil();
+        return Value::nil();
     std::ofstream created(path, std::ios::binary | std::ios::trunc);
     if (!created)
-        return Fa_Value::nil();
+        return Value::nil();
     created.close();
-    Fa_Value result = m_gc.make_dict();
+    Value result = m_gc.make_dict();
     result.as_dict()->set(m_gc.make_string("path"), m_gc.make_string(path.string().c_str()));
     return result;
 }
 
-Fa_Value Fa_VM::Fa_temp_directory(int argc, Fa_Value* argv)
+Value VM::temp_directory(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_string()
         || !(argv[1].is_nil() || argv[1].is_string()))
@@ -1287,28 +1287,28 @@ Fa_Value Fa_VM::Fa_temp_directory(int argc, Fa_Value* argv)
         native_path(argv[0]), "");
     std::error_code error;
     if (path.empty() || !std::filesystem::create_directory(path, error) || error)
-        return Fa_Value::nil();
+        return Value::nil();
     return m_gc.make_string(path.string().c_str());
 }
 
-Fa_Value Fa_VM::Fa_remove_tree(int argc, Fa_Value* argv)
+Value VM::remove_tree(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr || !argv[0].is_string())
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
             "tree removal expects a path string");
     std::error_code error;
     std::filesystem::remove_all(native_path(argv[0]), error);
-    return Fa_Value::from_bool(!error);
+    return Value::from_bool(!error);
 }
 
 namespace {
 
-bool utc_zone(Fa_Value value)
+bool utc_zone(Value value)
 {
     return value.is_string() && value.as_string()->str == "UTC";
 }
 
-bool supported_zone(Fa_Value value)
+bool supported_zone(Value value)
 {
     return value.is_string()
         && (value.as_string()->str == "UTC" || value.as_string()->str == "محلي");
@@ -1334,16 +1334,16 @@ std::time_t utc_timestamp(std::tm* value)
 
 }
 
-Fa_Value Fa_VM::Fa_datetime_now(int argc, Fa_Value* argv)
+Value VM::datetime_now(int argc, Value* argv)
 {
     (void)argv;
     if (argc != 0)
         raise_error(ErrorCode::NATIVE_TYPE_ERROR, "current time takes no arguments");
     auto now = std::chrono::system_clock::now().time_since_epoch();
-    return Fa_Value::from_int(std::chrono::duration_cast<std::chrono::seconds>(now).count());
+    return Value::from_int(std::chrono::duration_cast<std::chrono::seconds>(now).count());
 }
 
-Fa_Value Fa_VM::Fa_datetime_from_fields(int argc, Fa_Value* argv)
+Value VM::datetime_from_fields(int argc, Value* argv)
 {
     if (argc != 7 || argv == nullptr || !supported_zone(argv[6]))
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
@@ -1363,11 +1363,11 @@ Fa_Value Fa_VM::Fa_datetime_from_fields(int argc, Fa_Value* argv)
     value.tm_isdst = -1;
     std::time_t timestamp = utc_zone(argv[6]) ? utc_timestamp(&value) : std::mktime(&value);
     if (timestamp == static_cast<std::time_t>(-1))
-        return Fa_Value::nil();
-    return Fa_Value::from_int(static_cast<i64>(timestamp));
+        return Value::nil();
+    return Value::from_int(static_cast<i64>(timestamp));
 }
 
-Fa_Value Fa_VM::Fa_datetime_to_fields(int argc, Fa_Value* argv)
+Value VM::datetime_to_fields(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_number() || !supported_zone(argv[1]))
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
@@ -1375,8 +1375,8 @@ Fa_Value Fa_VM::Fa_datetime_to_fields(int argc, Fa_Value* argv)
     std::time_t timestamp = static_cast<std::time_t>(argv[0].as_double_any());
     std::tm fields { };
     if (!calendar_fields(timestamp, utc_zone(argv[1]), &fields))
-        return Fa_Value::nil();
-    Fa_Value result = m_gc.make_list();
+        return Value::nil();
+    Value result = m_gc.make_list();
     i64 values[] = {
         fields.tm_year + 1900,
         fields.tm_mon + 1,
@@ -1388,11 +1388,11 @@ Fa_Value Fa_VM::Fa_datetime_to_fields(int argc, Fa_Value* argv)
         fields.tm_yday + 1,
     };
     for (i64 value : values)
-        result.as_list()->elements.push(Fa_Value::from_int(value));
+        result.as_list()->elements.push(Value::from_int(value));
     return result;
 }
 
-Fa_Value Fa_VM::Fa_datetime_parse(int argc, Fa_Value* argv)
+Value VM::datetime_parse(int argc, Value* argv)
 {
     if (argc != 3 || argv == nullptr || !argv[0].is_string() || !argv[1].is_string()
         || !supported_zone(argv[2]))
@@ -1406,15 +1406,15 @@ Fa_Value Fa_VM::Fa_datetime_parse(int argc, Fa_Value* argv)
     std::istringstream stream(text);
     stream >> std::get_time(&value, format.c_str());
     if (stream.fail() || stream.peek() != std::char_traits<char>::eof())
-        return Fa_Value::nil();
+        return Value::nil();
     value.tm_isdst = -1;
     std::time_t timestamp = utc_zone(argv[2]) ? utc_timestamp(&value) : std::mktime(&value);
     return timestamp == static_cast<std::time_t>(-1)
-        ? Fa_Value::nil()
-        : Fa_Value::from_int(static_cast<i64>(timestamp));
+        ? Value::nil()
+        : Value::from_int(static_cast<i64>(timestamp));
 }
 
-Fa_Value Fa_VM::Fa_datetime_format(int argc, Fa_Value* argv)
+Value VM::datetime_format(int argc, Value* argv)
 {
     if (argc != 3 || argv == nullptr || !argv[0].is_number() || !supported_zone(argv[1])
         || !argv[2].is_string())
@@ -1423,28 +1423,28 @@ Fa_Value Fa_VM::Fa_datetime_format(int argc, Fa_Value* argv)
     std::time_t timestamp = static_cast<std::time_t>(argv[0].as_double_any());
     std::tm fields { };
     if (!calendar_fields(timestamp, utc_zone(argv[1]), &fields))
-        return Fa_Value::nil();
+        return Value::nil();
     std::string format = native_path(argv[2]);
     if (format == "ISO8601")
         format = utc_zone(argv[1]) ? "%Y-%m-%dT%H:%M:%SZ" : "%Y-%m-%dT%H:%M:%S%z";
     char output[256];
     size_t size = std::strftime(output, sizeof(output), format.c_str(), &fields);
-    return size == 0 ? Fa_Value::nil() : m_gc.make_string(output);
+    return size == 0 ? Value::nil() : m_gc.make_string(output);
 }
 
 namespace {
 
-Fa_StringRef byte_string(std::string_view bytes)
+StringRef byte_string(std::string_view bytes)
 {
-    Fa_StringRef result(bytes.size(), '\0');
+    StringRef result(bytes.size(), '\0');
     if (!bytes.empty())
         std::memcpy(result.data(), bytes.data(), bytes.size());
     return result;
 }
 
-std::string_view string_bytes(Fa_Value value)
+std::string_view string_bytes(Value value)
 {
-    Fa_StringRef const& text = value.as_string()->str;
+    StringRef const& text = value.as_string()->str;
     return { text.data(), text.len() };
 }
 
@@ -1816,40 +1816,40 @@ bool gzip_decompress(std::string_view input, size_t maximum, std::string& output
 
 } // namespace
 
-Fa_Value Fa_VM::Fa_base64_encode(int argc, Fa_Value* argv)
+Value VM::base64_encode(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_string() || !argv[1].is_bool())
-        return Fa_Value::nil();
+        return Value::nil();
     std::string encoded = encode_base64(string_bytes(argv[0]), argv[1].as_bool());
     return m_gc.make_string(byte_string(encoded));
 }
 
-Fa_Value Fa_VM::Fa_base64_decode(int argc, Fa_Value* argv)
+Value VM::base64_decode(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_string() || !argv[1].is_bool())
-        return Fa_Value::nil();
+        return Value::nil();
     std::string decoded;
     if (!decode_base64(string_bytes(argv[0]), argv[1].as_bool(), decoded))
-        return Fa_Value::nil();
+        return Value::nil();
     return m_gc.make_string(byte_string(decoded));
 }
 
-Fa_Value Fa_VM::Fa_hex_encode(int argc, Fa_Value* argv)
+Value VM::hex_encode(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr || !argv[0].is_string())
-        return Fa_Value::nil();
+        return Value::nil();
     auto bytes = string_bytes(argv[0]);
     std::string encoded = hex_string(reinterpret_cast<u8 const*>(bytes.data()), bytes.size());
     return m_gc.make_string(byte_string(encoded));
 }
 
-Fa_Value Fa_VM::Fa_hex_decode(int argc, Fa_Value* argv)
+Value VM::hex_decode(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr || !argv[0].is_string())
-        return Fa_Value::nil();
+        return Value::nil();
     auto input = string_bytes(argv[0]);
     if (input.size() % 2 != 0)
-        return Fa_Value::nil();
+        return Value::nil();
 
     auto nibble = [](char character) -> int {
         if (character >= '0' && character <= '9')
@@ -1865,44 +1865,44 @@ Fa_Value Fa_VM::Fa_hex_decode(int argc, Fa_Value* argv)
         int high = nibble(input[i * 2]);
         int low = nibble(input[i * 2 + 1]);
         if (high < 0 || low < 0)
-            return Fa_Value::nil();
+            return Value::nil();
         decoded[i] = static_cast<char>((high << 4) | low);
     }
     return m_gc.make_string(byte_string(decoded));
 }
 
-Fa_Value Fa_VM::Fa_hash_new(int argc, Fa_Value* argv)
+Value VM::hash_new(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr || !argv[0].is_string() || string_bytes(argv[0]) != "sha256")
-        return Fa_Value::nil();
+        return Value::nil();
 
-    Fa_Value handle = Fa_dict(0, nullptr);
-    Fa_dict_put(&handle, m_gc.make_string("__algorithm"), argv[0]);
-    Fa_dict_put(&handle, m_gc.make_string("__data"), m_gc.make_string(""));
+    Value handle = dict(0, nullptr);
+    dict_put(&handle, m_gc.make_string("__algorithm"), argv[0]);
+    dict_put(&handle, m_gc.make_string("__data"), m_gc.make_string(""));
     return handle;
 }
 
-Fa_Value Fa_VM::Fa_hash_update(int argc, Fa_Value* argv)
+Value VM::hash_update(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_dict() || !argv[1].is_string())
-        return Fa_Value::nil();
-    Fa_Value key = m_gc.make_string("__data");
-    Fa_Value existing = Fa_dict_get(&argv[0], key);
+        return Value::nil();
+    Value key = m_gc.make_string("__data");
+    Value existing = dict_get(&argv[0], key);
     if (!existing.is_string())
-        return Fa_Value::nil();
-    Fa_StringRef combined = existing.as_string()->str + argv[1].as_string()->str;
-    Fa_dict_put(&argv[0], key, m_gc.make_string(combined));
-    return Fa_Value::from_bool(true);
+        return Value::nil();
+    StringRef combined = existing.as_string()->str + argv[1].as_string()->str;
+    dict_put(&argv[0], key, m_gc.make_string(combined));
+    return Value::from_bool(true);
 }
 
-Fa_Value Fa_VM::Fa_hash_digest(int argc, Fa_Value* argv)
+Value VM::hash_digest(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_dict() || !argv[1].is_bool())
-        return Fa_Value::nil();
-    Fa_Value algorithm = Fa_dict_get(&argv[0], m_gc.make_string("__algorithm"));
-    Fa_Value data = Fa_dict_get(&argv[0], m_gc.make_string("__data"));
+        return Value::nil();
+    Value algorithm = dict_get(&argv[0], m_gc.make_string("__algorithm"));
+    Value data = dict_get(&argv[0], m_gc.make_string("__data"));
     if (!algorithm.is_string() || string_bytes(algorithm) != "sha256" || !data.is_string())
-        return Fa_Value::nil();
+        return Value::nil();
 
     auto digest = sha256(string_bytes(data));
     if (argv[1].as_bool()) {
@@ -1912,121 +1912,121 @@ Fa_Value Fa_VM::Fa_hash_digest(int argc, Fa_Value* argv)
     return m_gc.make_string(byte_string({ reinterpret_cast<char const*>(digest.data()), digest.size() }));
 }
 
-Fa_Value Fa_VM::Fa_hmac(int argc, Fa_Value* argv)
+Value VM::hmac(int argc, Value* argv)
 {
     if (argc != 3 || argv == nullptr || !argv[0].is_string() || !argv[1].is_string()
         || !argv[2].is_string() || string_bytes(argv[0]) != "sha256")
-        return Fa_Value::nil();
+        return Value::nil();
     auto digest = hmac_sha256(string_bytes(argv[1]), string_bytes(argv[2]));
     std::string encoded = hex_string(digest.data(), digest.size());
     return m_gc.make_string(byte_string(encoded));
 }
 
-Fa_Value Fa_VM::Fa_compress(int argc, Fa_Value* argv)
+Value VM::compress(int argc, Value* argv)
 {
     if (argc != 3 || argv == nullptr || !argv[0].is_string() || !argv[1].is_string()
         || !argv[2].is_int() || string_bytes(argv[0]) != "gzip")
-        return Fa_Value::nil();
+        return Value::nil();
     i64 level = argv[2].as_int();
     if (level < 0 || level > 9)
-        return Fa_Value::nil();
+        return Value::nil();
     std::string output;
     if (!gzip_compress(string_bytes(argv[1]), static_cast<int>(level), output))
-        return Fa_Value::nil();
+        return Value::nil();
     return m_gc.make_string(byte_string(output));
 }
 
-Fa_Value Fa_VM::Fa_decompress(int argc, Fa_Value* argv)
+Value VM::decompress(int argc, Value* argv)
 {
     if (argc != 3 || argv == nullptr || !argv[0].is_string() || !argv[1].is_string()
         || !argv[2].is_int() || string_bytes(argv[0]) != "gzip" || argv[2].as_int() <= 0)
-        return Fa_Value::nil();
+        return Value::nil();
     std::string output;
     if (!gzip_decompress(string_bytes(argv[1]), static_cast<size_t>(argv[2].as_int()), output))
-        return Fa_Value::nil();
+        return Value::nil();
     return m_gc.make_string(byte_string(output));
 }
 
-Fa_Value Fa_VM::Fa_floor(int argc, Fa_Value* argv)
+Value VM::floor(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr) {
         raise_error(ErrorCode::FLOOR_ARG_COUNT, "got " + std::to_string(argc));
-        return Fa_Value::nil();
+        return Value::nil();
     }
 
     if (!argv[0].is_number()) {
         raise_error(ErrorCode::FLOOR_TYPE_ERROR);
-        return Fa_Value::nil();
+        return Value::nil();
     }
 
     if (argv[0].is_int())
         return argv[0];
 
-    return Fa_Value::from_int(static_cast<i64>(std::floor(argv[0].as_double())));
+    return Value::from_int(static_cast<i64>(std::floor(argv[0].as_double())));
 }
 
-Fa_Value Fa_VM::Fa_ceil(int argc, Fa_Value* argv)
+Value VM::ceil(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr) {
         raise_error(ErrorCode::CEIL_ARG_COUNT, "got " + std::to_string(argc));
-        return Fa_Value::nil();
+        return Value::nil();
     }
 
     if (!argv[0].is_number()) {
         raise_error(ErrorCode::CEIL_TYPE_ERROR);
-        return Fa_Value::nil();
+        return Value::nil();
     }
 
     if (argv[0].is_int())
         return argv[0];
 
-    return Fa_Value::from_int(static_cast<i64>(std::ceil(argv[0].as_double_any())));
+    return Value::from_int(static_cast<i64>(std::ceil(argv[0].as_double_any())));
 }
 
-Fa_Value Fa_VM::Fa_round(int argc, Fa_Value* argv)
+Value VM::round(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr) {
         raise_error(ErrorCode::ROUND_ARG_COUNT, "got " + std::to_string(argc));
-        return Fa_Value::nil();
+        return Value::nil();
     }
     if (!argv[0].is_number()) {
         raise_error(ErrorCode::ROUND_TYPE_ERROR);
-        return Fa_Value::nil();
+        return Value::nil();
     }
     if (argv[0].is_int())
         return argv[0];
 
-    return Fa_Value::from_int(static_cast<i64>(std::round(argv[0].as_double_any())));
+    return Value::from_int(static_cast<i64>(std::round(argv[0].as_double_any())));
 }
 
-Fa_Value Fa_VM::Fa_abs(int argc, Fa_Value* argv)
+Value VM::abs(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr) {
         raise_error(ErrorCode::ABS_ARG_COUNT, "got " + std::to_string(argc));
-        return Fa_Value::nil();
+        return Value::nil();
     }
 
     if (!argv[0].is_number()) {
         raise_error(ErrorCode::ABS_TYPE_ERROR);
-        return Fa_Value::nil();
+        return Value::nil();
     }
 
     if (argv[0].is_int()) {
         i64 v = argv[0].as_int();
         if (v == INT64_MIN) {
             raise_error(ErrorCode::ABS_OUT_OF_RANGE);
-            return Fa_Value::nil();
+            return Value::nil();
         }
-        return Fa_Value::from_int(std::abs(argv[0].as_int()));
+        return Value::from_int(std::abs(argv[0].as_int()));
     }
-    return Fa_Value::from_real(std::fabs(argv[0].as_double()));
+    return Value::from_real(std::fabs(argv[0].as_double()));
 }
 
-Fa_Value Fa_VM::Fa_min(int argc, Fa_Value* argv)
+Value VM::min(int argc, Value* argv)
 {
     if (argc < 1 || !argv) {
         raise_error(ErrorCode::MIN_ARG_COUNT, "got " + std::to_string(argc));
-        return Fa_Value::nil();
+        return Value::nil();
     }
 
     // Determine mode from argv[0]
@@ -2042,7 +2042,7 @@ Fa_Value Fa_VM::Fa_min(int argc, Fa_Value* argv)
     }
 
     if (all_strs) {
-        Fa_Value ret = argv[0];
+        Value ret = argv[0];
         for (int i = 1; i < argc; i++) {
             if (argv[i].as_string()->str < ret.as_string()->str)
                 ret = argv[i];
@@ -2055,21 +2055,21 @@ Fa_Value Fa_VM::Fa_min(int argc, Fa_Value* argv)
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
             "min expects either all numbers or all strings");
 
-    Fa_Value ret = Fa_Value::from_real(argv[0].as_double_any());
+    Value ret = Value::from_real(argv[0].as_double_any());
     for (int i = 1; i < argc; i++)
-        ret = Fa_Value::from_real(std::fmin(ret.as_double_any(), argv[i].as_double_any()));
+        ret = Value::from_real(std::fmin(ret.as_double_any(), argv[i].as_double_any()));
 
     if (all_ints)
-        return Fa_Value::from_int(static_cast<i64>(ret.as_double_any()));
+        return Value::from_int(static_cast<i64>(ret.as_double_any()));
 
     return ret;
 }
 
-Fa_Value Fa_VM::Fa_max(int argc, Fa_Value* argv)
+Value VM::max(int argc, Value* argv)
 {
     if (argc < 1 || argv == nullptr) {
         raise_error(ErrorCode::MAX_ARG_COUNT, "got " + std::to_string(argc));
-        return Fa_Value::nil();
+        return Value::nil();
     }
 
     // Determine mode from argv[0]
@@ -2085,7 +2085,7 @@ Fa_Value Fa_VM::Fa_max(int argc, Fa_Value* argv)
     }
 
     if (all_strs) {
-        Fa_Value ret = argv[0];
+        Value ret = argv[0];
         for (int i = 1; i < argc; i++) {
             if (argv[i].as_string()->str > ret.as_string()->str)
                 ret = argv[i];
@@ -2097,101 +2097,101 @@ Fa_Value Fa_VM::Fa_max(int argc, Fa_Value* argv)
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
             "max expects either all numbers or all strings");
 
-    Fa_Value ret = Fa_Value::from_real(argv[0].as_double_any());
+    Value ret = Value::from_real(argv[0].as_double_any());
     for (int i = 1; i < argc; i++)
-        ret = Fa_Value::from_real(std::fmax(ret.as_double_any(), argv[i].as_double_any()));
+        ret = Value::from_real(std::fmax(ret.as_double_any(), argv[i].as_double_any()));
 
     if (all_ints)
-        return Fa_Value::from_int(static_cast<i64>(ret.as_double_any()));
+        return Value::from_int(static_cast<i64>(ret.as_double_any()));
 
     return ret;
 }
 
-Fa_Value Fa_VM::Fa_pow(int argc, Fa_Value* argv)
+Value VM::pow(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr) {
         raise_error(ErrorCode::POW_ARG_COUNT, "got " + std::to_string(argc));
-        return Fa_Value::nil();
+        return Value::nil();
     }
 
-    Fa_Value base = argv[0];
-    Fa_Value exponent = argv[1];
+    Value base = argv[0];
+    Value exponent = argv[1];
 
     if (UNLIKELY(!base.is_number() || !exponent.is_number())) {
         raise_error(ErrorCode::POW_TYPE_ERROR);
-        return Fa_Value::nil();
+        return Value::nil();
     }
 
     if (base.is_int() && exponent.is_int())
         // return an int even if the result may be larger than 48 bit range
-        return Fa_Value::from_int(std::pow(base.as_int(), exponent.as_int()));
+        return Value::from_int(std::pow(base.as_int(), exponent.as_int()));
     else
-        return Fa_Value::from_real(std::pow(base.as_double_any(), exponent.as_double_any()));
+        return Value::from_real(std::pow(base.as_double_any(), exponent.as_double_any()));
 
-    return Fa_Value::nil();
+    return Value::nil();
 }
 
-Fa_Value Fa_VM::Fa_sqrt(int argc, Fa_Value* argv)
+Value VM::sqrt(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr) {
         raise_error(ErrorCode::SQRT_ARG_COUNT, "got " + std::to_string(argc));
-        return Fa_Value::nil();
+        return Value::nil();
     }
 
-    Fa_Value n = argv[0];
+    Value n = argv[0];
 
     if (UNLIKELY(!n.is_number())) {
         raise_error(ErrorCode::SQRT_TYPE_ERROR);
-        return Fa_Value::nil();
+        return Value::nil();
     }
 
     f64 val = n.as_double_any();
     if (val < 0.0)
-        return Fa_Value::nil();
+        return Value::nil();
 
-    return Fa_Value::from_real(std::sqrt(val));
+    return Value::from_real(std::sqrt(val));
 }
 
-Fa_Value Fa_VM::Fa_math_unary(int argc, Fa_Value* argv)
+Value VM::math_unary(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_string() || !argv[1].is_number())
-        return Fa_Value::nil();
+        return Value::nil();
 
     std::string_view operation = string_bytes(argv[0]);
     f64 value = argv[1].as_double_any();
     if (operation == "sin")
-        return Fa_Value::from_real(std::sin(value));
+        return Value::from_real(std::sin(value));
     if (operation == "cos")
-        return Fa_Value::from_real(std::cos(value));
+        return Value::from_real(std::cos(value));
     if (operation == "tan")
-        return Fa_Value::from_real(std::tan(value));
+        return Value::from_real(std::tan(value));
     if (operation == "log")
-        return Fa_Value::from_real(std::log(value));
+        return Value::from_real(std::log(value));
     if (operation == "exp")
-        return Fa_Value::from_real(std::exp(value));
-    return Fa_Value::nil();
+        return Value::from_real(std::exp(value));
+    return Value::nil();
 }
 
-Fa_Value Fa_VM::Fa_math_binary(int argc, Fa_Value* argv)
+Value VM::math_binary(int argc, Value* argv)
 {
     if (argc != 3 || argv == nullptr || !argv[0].is_string()
         || !argv[1].is_number() || !argv[2].is_number())
-        return Fa_Value::nil();
+        return Value::nil();
 
     std::string_view operation = string_bytes(argv[0]);
     f64 first = argv[1].as_double_any();
     f64 second = argv[2].as_double_any();
     if (operation == "hypot")
-        return Fa_Value::from_real(std::hypot(first, second));
+        return Value::from_real(std::hypot(first, second));
     if (operation == "atan2")
-        return Fa_Value::from_real(std::atan2(first, second));
-    return Fa_Value::nil();
+        return Value::from_real(std::atan2(first, second));
+    return Value::nil();
 }
 
-Fa_Value Fa_VM::Fa_url_encode(int argc, Fa_Value* argv)
+Value VM::url_encode(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr || !argv[0].is_string())
-        return Fa_Value::nil();
+        return Value::nil();
     constexpr char hex[] = "0123456789ABCDEF";
     std::string output;
     for (unsigned char byte : string_bytes(argv[0])) {
@@ -2208,10 +2208,10 @@ Fa_Value Fa_VM::Fa_url_encode(int argc, Fa_Value* argv)
     return m_gc.make_string(byte_string(output));
 }
 
-Fa_Value Fa_VM::Fa_url_decode(int argc, Fa_Value* argv)
+Value VM::url_decode(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr || !argv[0].is_string())
-        return Fa_Value::nil();
+        return Value::nil();
     auto hex_value = [](char ch) -> int {
         if (ch >= '0' && ch <= '9')
             return ch - '0';
@@ -2230,11 +2230,11 @@ Fa_Value Fa_VM::Fa_url_decode(int argc, Fa_Value* argv)
             int high = hex_value(input[i + 1]);
             int low = hex_value(input[i + 2]);
             if (high < 0 || low < 0)
-                return Fa_Value::nil();
+                return Value::nil();
             output.push_back(static_cast<char>((high << 4) | low));
             i += 2;
         } else if (input[i] == '%') {
-            return Fa_Value::nil();
+            return Value::nil();
         } else {
             output.push_back(input[i]);
         }
@@ -2242,50 +2242,50 @@ Fa_Value Fa_VM::Fa_url_decode(int argc, Fa_Value* argv)
     return m_gc.make_string(byte_string(output));
 }
 
-Fa_Value Fa_VM::Fa_url_parse(int argc, Fa_Value* argv)
+Value VM::url_parse(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr || !argv[0].is_string())
-        return Fa_Value::nil();
+        return Value::nil();
     static std::regex const pattern(
         R"(^([A-Za-z][A-Za-z0-9+.-]*)://(\[[^\]]+\]|[^/?#:]*)(?::([0-9]+))?([^?#]*)(?:\?([^#]*))?(?:#(.*))?$)");
     std::string input(string_bytes(argv[0]));
     std::smatch match;
     if (!std::regex_match(input, match, pattern) || match[2].str().empty())
-        return Fa_Value::nil();
+        return Value::nil();
 
-    Fa_Value result = m_gc.make_dict();
-    Fa_dict_put(&result, m_gc.make_string("scheme"), m_gc.make_string(match[1].str().c_str()));
-    Fa_dict_put(&result, m_gc.make_string("host"), m_gc.make_string(match[2].str().c_str()));
-    Fa_Value port = Fa_Value::nil();
+    Value result = m_gc.make_dict();
+    dict_put(&result, m_gc.make_string("scheme"), m_gc.make_string(match[1].str().c_str()));
+    dict_put(&result, m_gc.make_string("host"), m_gc.make_string(match[2].str().c_str()));
+    Value port = Value::nil();
     if (match[3].matched) {
         std::string port_text = match[3].str();
         i64 parsed_port = 0;
         auto conversion = std::from_chars(port_text.data(), port_text.data() + port_text.size(), parsed_port);
         if (conversion.ec != std::errc() || conversion.ptr != port_text.data() + port_text.size()
             || parsed_port < 0 || parsed_port > 65535)
-            return Fa_Value::nil();
-        port = Fa_Value::from_int(parsed_port);
+            return Value::nil();
+        port = Value::from_int(parsed_port);
     }
-    Fa_dict_put(&result, m_gc.make_string("port"), port);
-    Fa_dict_put(&result, m_gc.make_string("path"), m_gc.make_string(match[4].str().c_str()));
-    Fa_dict_put(&result, m_gc.make_string("query"), m_gc.make_string(match[5].str().c_str()));
-    Fa_dict_put(&result, m_gc.make_string("fragment"), m_gc.make_string(match[6].str().c_str()));
+    dict_put(&result, m_gc.make_string("port"), port);
+    dict_put(&result, m_gc.make_string("path"), m_gc.make_string(match[4].str().c_str()));
+    dict_put(&result, m_gc.make_string("query"), m_gc.make_string(match[5].str().c_str()));
+    dict_put(&result, m_gc.make_string("fragment"), m_gc.make_string(match[6].str().c_str()));
     return result;
 }
 
-Fa_Value Fa_VM::Fa_url_build(int argc, Fa_Value* argv)
+Value VM::url_build(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr || !argv[0].is_dict())
-        return Fa_Value::nil();
-    auto field = [&](char const* name) { return Fa_dict_get(&argv[0], m_gc.make_string(name)); };
-    Fa_Value scheme = field("scheme");
-    Fa_Value host = field("host");
-    Fa_Value port = field("port");
-    Fa_Value path = field("path");
-    Fa_Value query = field("query");
-    Fa_Value fragment = field("fragment");
+        return Value::nil();
+    auto field = [&](char const* name) { return dict_get(&argv[0], m_gc.make_string(name)); };
+    Value scheme = field("scheme");
+    Value host = field("host");
+    Value port = field("port");
+    Value path = field("path");
+    Value query = field("query");
+    Value fragment = field("fragment");
     if (!scheme.is_string() || !host.is_string())
-        return Fa_Value::nil();
+        return Value::nil();
     std::string output(string_bytes(scheme));
     output += "://";
     output += string_bytes(host);
@@ -2335,126 +2335,126 @@ i64 utf8_character_offset(std::string_view text, size_t byte_offset)
 
 }
 
-Fa_Value Fa_VM::make_regex_result(std::string const& input, std::smatch const& match, size_t base_offset)
+Value VM::make_regex_result(std::string const& input, std::smatch const& match, size_t base_offset)
 {
-    Fa_Value result = m_gc.make_dict();
+    Value result = m_gc.make_dict();
     size_t match_start = base_offset + static_cast<size_t>(match.position(0));
     size_t match_end = match_start + static_cast<size_t>(match.length(0));
-    Fa_dict_put(&result, m_gc.make_string("start"),
-        Fa_Value::from_int(utf8_character_offset(input, match_start)));
-    Fa_dict_put(&result, m_gc.make_string("end"),
-        Fa_Value::from_int(utf8_character_offset(input, match_end)));
+    dict_put(&result, m_gc.make_string("start"),
+        Value::from_int(utf8_character_offset(input, match_start)));
+    dict_put(&result, m_gc.make_string("end"),
+        Value::from_int(utf8_character_offset(input, match_end)));
 
-    Fa_Value groups = m_gc.make_list();
+    Value groups = m_gc.make_list();
     for (size_t i = 0; i < match.size(); ++i) {
         groups.as_list()->elements.push(match[i].matched
                 ? m_gc.make_string(byte_string(match[i].str()))
-                : Fa_Value::nil());
+                : Value::nil());
     }
-    Fa_dict_put(&result, m_gc.make_string("groups"), groups);
-    Fa_dict_put(&result, m_gc.make_string("named"), m_gc.make_dict());
+    dict_put(&result, m_gc.make_string("groups"), groups);
+    dict_put(&result, m_gc.make_string("named"), m_gc.make_dict());
     return result;
 }
 
-Fa_Value Fa_VM::Fa_regex_compile(int argc, Fa_Value* argv)
+Value VM::regex_compile(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_string() || !argv[1].is_int())
-        return Fa_Value::nil();
+        return Value::nil();
     try {
         std::regex validation(std::string(string_bytes(argv[0])));
         (void)validation;
     } catch (std::regex_error const&) {
-        return Fa_Value::nil();
+        return Value::nil();
     }
     return argv[0];
 }
 
-Fa_Value Fa_VM::Fa_regex_search(int argc, Fa_Value* argv)
+Value VM::regex_search(int argc, Value* argv)
 {
     if (argc != 3 || argv == nullptr || !argv[0].is_string()
         || !argv[1].is_string() || !argv[2].is_int())
-        return Fa_Value::nil();
+        return Value::nil();
     std::string input(string_bytes(argv[1]));
     size_t start = utf8_byte_offset(input, argv[2].as_int());
     if (start == std::string::npos)
-        return Fa_Value::nil();
+        return Value::nil();
     try {
         std::regex pattern(std::string(string_bytes(argv[0])));
         std::smatch match;
         std::string suffix = input.substr(start);
         if (!std::regex_search(suffix, match, pattern))
-            return Fa_Value::nil();
+            return Value::nil();
         return make_regex_result(input, match, start);
     } catch (std::regex_error const&) {
-        return Fa_Value::nil();
+        return Value::nil();
     }
 }
 
-Fa_Value Fa_VM::Fa_regex_match(int argc, Fa_Value* argv)
+Value VM::regex_match(int argc, Value* argv)
 {
     if (argc != 3 || argv == nullptr || !argv[0].is_string()
         || !argv[1].is_string() || !argv[2].is_int())
-        return Fa_Value::nil();
+        return Value::nil();
     std::string input(string_bytes(argv[1]));
     size_t start = utf8_byte_offset(input, argv[2].as_int());
     if (start == std::string::npos)
-        return Fa_Value::nil();
+        return Value::nil();
     try {
         std::regex pattern(std::string(string_bytes(argv[0])));
         std::smatch match;
         std::string suffix = input.substr(start);
         if (!std::regex_search(suffix, match, pattern, std::regex_constants::match_continuous))
-            return Fa_Value::nil();
+            return Value::nil();
         return make_regex_result(input, match, start);
     } catch (std::regex_error const&) {
-        return Fa_Value::nil();
+        return Value::nil();
     }
 }
 
-Fa_Value Fa_VM::Fa_regex_fullmatch(int argc, Fa_Value* argv)
+Value VM::regex_fullmatch(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_string() || !argv[1].is_string())
-        return Fa_Value::nil();
+        return Value::nil();
     try {
         std::regex pattern(std::string(string_bytes(argv[0])));
         std::string input(string_bytes(argv[1]));
         std::smatch match;
         if (!std::regex_match(input, match, pattern))
-            return Fa_Value::nil();
+            return Value::nil();
         return make_regex_result(input, match, 0);
     } catch (std::regex_error const&) {
-        return Fa_Value::nil();
+        return Value::nil();
     }
 }
 
-Fa_Value Fa_VM::Fa_regex_findall(int argc, Fa_Value* argv)
+Value VM::regex_findall(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_string() || !argv[1].is_string())
-        return Fa_Value::nil();
+        return Value::nil();
     try {
         std::regex pattern(std::string(string_bytes(argv[0])));
         std::string input(string_bytes(argv[1]));
-        Fa_Value results = m_gc.make_list();
+        Value results = m_gc.make_list();
         for (std::sregex_iterator it(input.begin(), input.end(), pattern), end; it != end; ++it)
             results.as_list()->elements.push(make_regex_result(input, *it, 0));
         return results;
     } catch (std::regex_error const&) {
-        return Fa_Value::nil();
+        return Value::nil();
     }
 }
 
-Fa_Value Fa_VM::Fa_regex_split(int argc, Fa_Value* argv)
+Value VM::regex_split(int argc, Value* argv)
 {
     if (argc != 3 || argv == nullptr || !argv[0].is_string()
         || !argv[1].is_string() || !argv[2].is_int() || argv[2].as_int() < 0)
-        return Fa_Value::nil();
+        return Value::nil();
     try {
         std::regex pattern(std::string(string_bytes(argv[0])));
         std::string input(string_bytes(argv[1]));
         i64 limit = argv[2].as_int();
         size_t previous = 0;
         i64 splits = 0;
-        Fa_Value results = m_gc.make_list();
+        Value results = m_gc.make_list();
         for (std::sregex_iterator it(input.begin(), input.end(), pattern), end;
             it != end && (limit == 0 || splits < limit); ++it, ++splits) {
             size_t position = static_cast<size_t>(it->position());
@@ -2465,15 +2465,15 @@ Fa_Value Fa_VM::Fa_regex_split(int argc, Fa_Value* argv)
         results.as_list()->elements.push(m_gc.make_string(byte_string(std::string_view(input).substr(previous))));
         return results;
     } catch (std::regex_error const&) {
-        return Fa_Value::nil();
+        return Value::nil();
     }
 }
 
-Fa_Value Fa_VM::Fa_regex_replace(int argc, Fa_Value* argv)
+Value VM::regex_replace(int argc, Value* argv)
 {
     if (argc != 4 || argv == nullptr || !argv[0].is_string() || !argv[1].is_string()
         || !argv[2].is_string() || !argv[3].is_int() || argv[3].as_int() < 0)
-        return Fa_Value::nil();
+        return Value::nil();
     try {
         std::regex pattern(std::string(string_bytes(argv[0])));
         std::string input(string_bytes(argv[1]));
@@ -2492,15 +2492,15 @@ Fa_Value Fa_VM::Fa_regex_replace(int argc, Fa_Value* argv)
         output.append(input, previous, std::string::npos);
         return m_gc.make_string(byte_string(output));
     } catch (std::regex_error const&) {
-        return Fa_Value::nil();
+        return Value::nil();
     }
 }
 
-Fa_Value Fa_VM::Fa_assert(int argc, Fa_Value* argv)
+Value VM::Assert(int argc, Value* argv)
 {
     if (argc < 1 || argc > 2 || argv == nullptr) {
         raise_error(ErrorCode::ASSERT_ARG_COUNT, "got" + std::to_string(argc));
-        return Fa_Value::nil();
+        return Value::nil();
     }
 
     // Python-style assert accepts an optional diagnostic value; that second
@@ -2508,35 +2508,35 @@ Fa_Value Fa_VM::Fa_assert(int argc, Fa_Value* argv)
     if (!argv[0].is_truthy()) {
         std::string detail;
         if (argc == 2) {
-            Fa_StringRef rendered = value_to_string(argv[1]);
+            StringRef rendered = value_to_string(argv[1]);
             detail.assign(rendered.data(), rendered.len());
         }
         raise_error(ErrorCode::ASSERT_FAILED, detail);
     }
 
-    return Fa_Value::nil(); // success
+    return Value::nil(); // success
 }
 
-Fa_Value Fa_VM::Fa_open(int argc, Fa_Value* argv)
+Value VM::open(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr) {
         raise_error(ErrorCode::OPEN_ARG_COUNT);
-        return Fa_Value::nil();
+        return Value::nil();
     }
 
     if (UNLIKELY(!argv[0].is_string() || !argv[1].is_string()))
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
             "open expects (string, string)");
 
-    Fa_StringRef const& filename_arg = argv[0].as_string()->str;
+    StringRef const& filename_arg = argv[0].as_string()->str;
     if (::memchr(filename_arg.data(), '\0', filename_arg.len()) != nullptr)
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
             "file path contains a NUL byte");
 
     char const* filename = filename_arg.data();
-    Fa_StringRef mode_arg = argv[1].as_string()->str;
+    StringRef mode_arg = argv[1].as_string()->str;
 
-    Fa_StringRef fmode;
+    StringRef fmode;
     if (mode_arg == "اضف")
         fmode = "a";
     else if (mode_arg == "اقرا")
@@ -2549,102 +2549,102 @@ Fa_Value Fa_VM::Fa_open(int argc, Fa_Value* argv)
     FILE* fp = fopen(filename, fmode.data());
     if (fp == NULL) {
         raise_error(ErrorCode::NATIVE_TYPE_ERROR);
-        return Fa_Value::nil();
+        return Value::nil();
     }
 
     return m_gc.make_file_handle(fp);
 }
 
-Fa_Value Fa_VM::Fa_append_file(int argc, Fa_Value* argv)
+Value VM::append_file(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr) {
         raise_error(ErrorCode::APPEND_FILE_ARG_COUNT);
-        return Fa_Value::nil();
+        return Value::nil();
     }
 
-    Fa_Value& file = argv[0];
-    Fa_Value& content = argv[1];
+    Value& file = argv[0];
+    Value& content = argv[1];
 
     if (!file.is_file_handle()) {
         raise_error(ErrorCode::APPEND_FILE_TYPE_ERROR);
-        return Fa_Value::nil();
+        return Value::nil();
     }
 
     if (!content.is_string()) {
         raise_error(ErrorCode::APPEND_FILE_TYPE_ERROR);
-        return Fa_Value::nil();
+        return Value::nil();
     }
 
-    Fa_ObjFileHandle* file_handle = file.as_file_handle();
+    ObjFileHandle* file_handle = file.as_file_handle();
     if (!file_handle->is_open || file_handle->fp == nullptr) {
         raise_error(ErrorCode::APPEND_FILE_TYPE_ERROR,
             "file handle is closed");
-        return Fa_Value::from_bool(false);
+        return Value::from_bool(false);
     }
-    Fa_ObjString* str_obj = content.as_string();
+    ObjString* str_obj = content.as_string();
     FILE* fp = file_handle->fp;
-    Fa_StringRef content_str = str_obj->str;
+    StringRef content_str = str_obj->str;
 
     if (content_str.empty())
-        return Fa_Value::from_bool(true); // nothing to write is trivially successful
+        return Value::from_bool(true); // nothing to write is trivially successful
 
     size_t const written = std::fwrite(content_str.data(), 1, content_str.len(), fp);
     // ::fflush(fp);
 
     if (written != content_str.len()) {
         raise_error(ErrorCode::APPEND_FILE_FAILED, std::strerror(errno));
-        return Fa_Value::from_bool(false);
+        return Value::from_bool(false);
     }
 
-    return Fa_Value::from_bool(true);
+    return Value::from_bool(true);
 }
 
-Fa_Value Fa_VM::Fa_close(int argc, Fa_Value* argv)
+Value VM::close(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr) {
         raise_error(ErrorCode::CLOSE_ARG_COUNT);
-        return Fa_Value::from_bool(false);
+        return Value::from_bool(false);
     }
 
     if (!argv[0].is_file_handle()) {
         raise_error(ErrorCode::CLOSE_TYPE_ERROR);
-        return Fa_Value::from_bool(false);
+        return Value::from_bool(false);
     }
 
-    Fa_ObjFileHandle* file_handle = argv[0].as_file_handle();
+    ObjFileHandle* file_handle = argv[0].as_file_handle();
     if (file_handle->close())
-        return Fa_Value::from_bool(true);
+        return Value::from_bool(true);
 
-    return Fa_Value::from_bool(false);
+    return Value::from_bool(false);
 }
 
-Fa_Value Fa_VM::Fa_clock(int argc, Fa_Value* argv)
+Value VM::clock(int argc, Value* argv)
 {
     if (argc != 0)
-        return Fa_Value::nil();
+        return Value::nil();
     (void)argv;
     auto elapsed = std::chrono::steady_clock::now().time_since_epoch();
-    return Fa_Value::from_real(std::chrono::duration<f64>(elapsed).count());
+    return Value::from_real(std::chrono::duration<f64>(elapsed).count());
 }
-Fa_Value Fa_VM::Fa_error(int /*argc*/, Fa_Value* /*argv*/) { return Fa_Value::nil(); }
-Fa_Value Fa_VM::Fa_time(int /*argc*/, Fa_Value* /*argv*/) { return Fa_Value::nil(); }
+Value VM::error(int /*argc*/, Value* /*argv*/) { return Value::nil(); }
+Value VM::time(int /*argc*/, Value* /*argv*/) { return Value::nil(); }
 
 // stdlib helpers
-void Fa_VM::Fa_dict_put(Fa_Value* dict_ptr, Fa_Value k, Fa_Value v)
+void VM::dict_put(Value* dict_ptr, Value k, Value v)
 {
     if (UNLIKELY(dict_ptr == nullptr))
         return;
 
-    Fa_ObjDict* as_dict = dict_ptr->as_dict();
+    ObjDict* as_dict = dict_ptr->as_dict();
     as_dict->set(k, v);
 }
 
-Fa_Value Fa_VM::Fa_dict_get(Fa_Value* dict_ptr, Fa_Value k)
+Value VM::dict_get(Value* dict_ptr, Value k)
 {
     if (UNLIKELY(dict_ptr == nullptr))
-        return Fa_Value::nil();
+        return Value::nil();
 
-    Fa_ObjDict* as_dict = dict_ptr->as_dict();
+    ObjDict* as_dict = dict_ptr->as_dict();
     return as_dict->data[k];
 }
 

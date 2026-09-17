@@ -86,7 +86,7 @@ static constexpr u8 MAX_REGS = 250;
         NEW_CLASS,
 
         // instances
-        NEW_INSTANCE, // A: new Fa_ObjInstance Bx: constant idx of Fa_ObjClass*
+        NEW_INSTANCE, // A: new ObjInstance Bx: constant idx of ObjClass*
         INVOKE,       // A: instance reg B: vtable idx reg C: args
         GET_FIELD,    // A: result reg, B: instance reg, C: field reg
         SET_FIELD,    // A: instance reg, B: field reg, C: src reg
@@ -158,69 +158,69 @@ static constexpr u8 MAX_REGS = 250;
     X(NOP)                 \
     X(HALT)
 
-enum class Fa_OpCode : u8 {
+enum class OpCode : u8 {
 #define X(name) name,
     FA_OPCODE_LIST(X)
 #undef X
         _COUNT
 };
 
-static inline Fa_StringRef Fa_opcode_name(Fa_OpCode op)
+static inline StringRef opcode_name(OpCode op)
 {
     switch (op) {
 #define X(name) \
-case Fa_OpCode::name: return #name;
+case OpCode::name: return #name;
         FA_OPCODE_LIST(X)
 #undef X
     default: return "???";
     }
 }
 
-inline Fa_OpCode Fa_instr_op(u32 const i) { return static_cast<Fa_OpCode>((i >> 24) & 0xFF); }
+inline OpCode instr_op(u32 const i) { return static_cast<OpCode>((i >> 24) & 0xFF); }
 
-inline u8 Fa_instr_A(u32 const i) { return (i >> 16) & 0xFF; }
+inline u8 instr_A(u32 const i) { return (i >> 16) & 0xFF; }
 
-inline u8 Fa_instr_B(u32 const i) { return (i >> 8) & 0xFF; }
+inline u8 instr_B(u32 const i) { return (i >> 8) & 0xFF; }
 
-inline u8 Fa_instr_C(u32 const i) { return i & 0xFF; }
+inline u8 instr_C(u32 const i) { return i & 0xFF; }
 
-inline u16 Fa_instr_Bx(u32 const i) { return i & 0xFFFF; }
+inline u16 instr_Bx(u32 const i) { return i & 0xFFFF; }
 
-inline i16 Fa_instr_sBx(u32 const i) { return static_cast<i16>(i & 0xFFFF) - 32767; }
+inline i16 instr_sBx(u32 const i) { return static_cast<i16>(i & 0xFFFF) - 32767; }
 
-inline u32 Fa_make_ABC(Fa_OpCode op, u8 A, u8 B, u8 C)
+inline u32 make_ABC(OpCode op, u8 A, u8 B, u8 C)
 {
     return (static_cast<u32>(op) << 24) | (static_cast<u32>(A) << 16) | (static_cast<u32>(B) << 8) | static_cast<u32>(C);
 }
 
-inline u32 Fa_make_ABx(Fa_OpCode op, u8 A, u16 Bx)
+inline u32 make_ABx(OpCode op, u8 A, u16 Bx)
 {
     return (static_cast<u32>(op) << 24) | (static_cast<u32>(A) << 16) | (static_cast<u32>(Bx));
 }
 
-inline u32 Fa_make_AsBx(Fa_OpCode op, u8 A, i64 s_bx)
+inline u32 make_AsBx(OpCode op, u8 A, i64 s_bx)
 {
     u16 _s_bx = static_cast<u16>(s_bx + JUMP_OFFSET);
     return (static_cast<u32>(op) << 24) | (static_cast<u32>(A) << 16) | (static_cast<u32>(_s_bx));
 }
 
-inline u32 Fa_make_ABSC(Fa_OpCode op, u8 A, u8 B, int8_t s_c)
+inline u32 make_ABSC(OpCode op, u8 A, u8 B, int8_t s_c)
 {
     return (static_cast<u32>(op) << 24) | (static_cast<u32>(A) << 16)
         | (static_cast<u32>(B) << 8) | static_cast<u32>(static_cast<u8>(s_c + 128));
 }
 
-inline int8_t Fa_instr_sC(u32 i) { return static_cast<int8_t>(i & 0xFF) - 128; }
+inline int8_t instr_sC(u32 i) { return static_cast<int8_t>(i & 0xFF) - 128; }
 
-enum class Fa_InstrFormat : u8 {
+enum class InstrFormat : u8 {
     ABC,
     ABx,
     AsBx,
     A,
     NONE
-}; // enum Fa_InstrFormat
+}; // enum InstrFormat
 
-struct Fa_ICSlot {
+struct ICSlot {
     u8 seen_lhs { 0 };
     u8 seen_rhs { 0 };
     u8 seen_ret { 0 };
@@ -230,96 +230,96 @@ struct Fa_ICSlot {
     // global ic
     u64* global_ptr { nullptr };
     u64 version { 0 };
-}; // struct Fa_ICSlot
+}; // struct ICSlot
 
-struct Fa_LineEntry {
+struct LineEntry {
     u32 start { 0 };
     u32 line { 0 };
 }; // struct LineEntry
 
-static inline Fa_InstrFormat opcode_format(Fa_OpCode op)
+static inline InstrFormat opcode_format(OpCode op)
 {
     switch (op) {
-    case Fa_OpCode::LOAD_CONST:
-    case Fa_OpCode::LOAD_INT:
-    case Fa_OpCode::LOAD_GLOBAL:
-    case Fa_OpCode::STORE_GLOBAL:
-    case Fa_OpCode::IMPORT_MODULE:
-    case Fa_OpCode::CLOSURE:
-        return Fa_InstrFormat::ABx;
-    case Fa_OpCode::JUMP:
-    case Fa_OpCode::JUMP_IF_TRUE:
-    case Fa_OpCode::JUMP_IF_FALSE:
-    case Fa_OpCode::LOOP:
-    case Fa_OpCode::FOR_PREP:
-    case Fa_OpCode::FOR_STEP:
-        return Fa_InstrFormat::AsBx;
-    case Fa_OpCode::RETURN_NIL:
-    case Fa_OpCode::HALT:
-    case Fa_OpCode::NOP:
-        return Fa_InstrFormat::NONE;
+    case OpCode::LOAD_CONST:
+    case OpCode::LOAD_INT:
+    case OpCode::LOAD_GLOBAL:
+    case OpCode::STORE_GLOBAL:
+    case OpCode::IMPORT_MODULE:
+    case OpCode::CLOSURE:
+        return InstrFormat::ABx;
+    case OpCode::JUMP:
+    case OpCode::JUMP_IF_TRUE:
+    case OpCode::JUMP_IF_FALSE:
+    case OpCode::LOOP:
+    case OpCode::FOR_PREP:
+    case OpCode::FOR_STEP:
+        return InstrFormat::AsBx;
+    case OpCode::RETURN_NIL:
+    case OpCode::HALT:
+    case OpCode::NOP:
+        return InstrFormat::NONE;
     default:
-        return Fa_InstrFormat::ABC;
+        return InstrFormat::ABC;
     }
 }
 
-struct Fa_ClassDescriptor {
-    Fa_StringRef name;
-    Fa_StringRef parent_name;
+struct ClassDescriptor {
+    StringRef name;
+    StringRef parent_name;
     u32 field_count { 0 };
-    Fa_Array<Fa_StringRef> field_names; // for runtime slot-map / debug info
+    Array<StringRef> field_names; // for runtime slot-map / debug info
     u32 vtable_size { 0 };
-    Fa_Array<Fa_StringRef> method_names; // parallel to vtable_indices
-    Fa_Array<u32> vtable_indices;        // indices into Fa_Chunk::functions[]
+    Array<StringRef> method_names; // parallel to vtable_indices
+    Array<u32> vtable_indices;        // indices into Chunk::functions[]
                                          // of the enclosing (top-level) chunk
     static constexpr u32 NULL_SLOT = UINT32_MAX;
 };
 
-class Fa_Value;
+class Value;
 
-struct Fa_Chunk {
-    Fa_StringRef name { "" };
+struct Chunk {
+    StringRef name { "" };
     std::string source_path;
     diagnostic::SourcePtr source;
-    Fa_GlobalEnvironment* globals { nullptr };
+    GlobalEnvironment* globals { nullptr };
     int arity { 0 };
     u32 local_count { 0 };
 
-    Fa_Array<u32> code;
-    Fa_Array<Fa_SourceLocation> locations;
-    Fa_Array<Fa_Value> constants;
-    Fa_Array<Fa_LineEntry> lines;
-    Fa_Array<Fa_Chunk*> functions;
-    Fa_Array<Fa_ICSlot> ic_slots;
-    Fa_Array<u64*> global_cache;
-    Fa_Array<Fa_ClassDescriptor> class_descriptors; // new
+    Array<u32> code;
+    Array<SourceLocation> locations;
+    Array<Value> constants;
+    Array<LineEntry> lines;
+    Array<Chunk*> functions;
+    Array<ICSlot> ic_slots;
+    Array<u64*> global_cache;
+    Array<ClassDescriptor> class_descriptors; // new
 
-    u16 add_class_descriptor(Fa_ClassDescriptor&& d)
+    u16 add_class_descriptor(ClassDescriptor&& d)
     {
         class_descriptors.push(std::move(d));
         return static_cast<u16>(class_descriptors.size() - 1);
     }
 
-    Fa_Chunk() = default;
-    ~Fa_Chunk() = default;
+    Chunk() = default;
+    ~Chunk() = default;
 
-    Fa_Chunk(Fa_Chunk const&) = delete;
-    Fa_Chunk(Fa_Chunk&&) = default;
+    Chunk(Chunk const&) = delete;
+    Chunk(Chunk&&) = default;
 
-    Fa_Chunk& operator=(Fa_Chunk const&) = delete;
-    Fa_Chunk& operator=(Fa_Chunk&&) = default;
+    Chunk& operator=(Chunk const&) = delete;
+    Chunk& operator=(Chunk&&) = default;
 
-    u32 emit(u32 instr, Fa_SourceLocation loc);
+    u32 emit(u32 instr, SourceLocation loc);
     bool patch_jump(u32 const instr_idx);
-    u16 add_constant(Fa_Value const v);
+    u16 add_constant(Value const v);
     u8 alloc_ic_slot();
     u32 get_line(u32 const instr_idx) const;
     void disassemble() const;
     void add_line(u32 line);
-}; // struct Fa_Chunk
+}; // struct Chunk
 
 template<typename... Args>
-static inline Fa_Chunk* Fa_make_chunk(Args&&... args) { return get_allocator().allocate_object<Fa_Chunk>(std::forward<Args>(args)...); }
+static inline Chunk* make_chunk(Args&&... args) { return get_allocator().allocate_object<Chunk>(std::forward<Args>(args)...); }
 
 } // namespace fairuz::runtime
 

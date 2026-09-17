@@ -11,7 +11,7 @@
 namespace fairuz {
 
 template<class Allocator>
-class Fa_StringRefImpl;
+class StringRefImpl;
 
 namespace detail {
 
@@ -20,7 +20,7 @@ Allocator* resolve_allocator(Allocator* allocator)
 {
     if (allocator != nullptr)
         return allocator;
-    if constexpr (std::is_same_v<Allocator, Fa_ArenaAllocator>) {
+    if constexpr (std::is_same_v<Allocator, ArenaAllocator>) {
         return &get_allocator();
     } else {
         static Allocator default_allocator;
@@ -30,10 +30,10 @@ Allocator* resolve_allocator(Allocator* allocator)
 
 } // namespace detail
 
-template<class Allocator = Fa_ArenaAllocator>
+template<class Allocator = ArenaAllocator>
 class StringBase {
     template<class>
-    friend class Fa_StringRefImpl;
+    friend class StringRefImpl;
 
 private:
     union Storage {
@@ -109,8 +109,8 @@ StringBase<Allocator>* empty_string_singleton() noexcept;
 
 } // namespace detail
 
-template<class Allocator = Fa_ArenaAllocator>
-class Fa_StringRefImpl {
+template<class Allocator = ArenaAllocator>
+class StringRefImpl {
 private:
     StringBase<Allocator>* m_string_data { nullptr };
     size_t m_offset { 0 };
@@ -120,7 +120,7 @@ private:
 public:
     // Default: points at the global empty singleton — zero heap allocation.
     // Uses the allocator fallback selected by resolve_allocator().
-    Fa_StringRefImpl() noexcept
+    StringRefImpl() noexcept
         : m_string_data(detail::empty_string_singleton<Allocator>())
         , m_offset(0)
         , m_length(0)
@@ -129,29 +129,29 @@ public:
         m_string_data->increment();
     }
 
-    explicit Fa_StringRefImpl(size_t const s, Allocator* allocator = nullptr);
+    explicit StringRefImpl(size_t const s, Allocator* allocator = nullptr);
 
-    Fa_StringRefImpl(Fa_StringRefImpl const& other, size_t offset = 0, size_t length = SIZE_MAX);
+    StringRefImpl(StringRefImpl const& other, size_t offset = 0, size_t length = SIZE_MAX);
 
-    Fa_StringRefImpl(char const* lit, Allocator* allocator = nullptr);
+    StringRefImpl(char const* lit, Allocator* allocator = nullptr);
 
-    Fa_StringRefImpl(char16_t const* u16_str, Allocator* allocator = nullptr);
+    StringRefImpl(char16_t const* u16_str, Allocator* allocator = nullptr);
 
-    Fa_StringRefImpl(size_t const s, char const c, Allocator* allocator = nullptr);
+    StringRefImpl(size_t const s, char const c, Allocator* allocator = nullptr);
 
-    explicit Fa_StringRefImpl(StringBase<Allocator>* data, size_t offset = 0, size_t length = SIZE_MAX);
+    explicit StringRefImpl(StringBase<Allocator>* data, size_t offset = 0, size_t length = SIZE_MAX);
 
-    Fa_StringRefImpl(Fa_StringRefImpl&& other) noexcept;
+    StringRefImpl(StringRefImpl&& other) noexcept;
 
-    Fa_StringRefImpl& operator=(Fa_StringRefImpl&& other) noexcept;
+    StringRefImpl& operator=(StringRefImpl&& other) noexcept;
 
-    ~Fa_StringRefImpl();
+    ~StringRefImpl();
 
-    Fa_StringRefImpl& operator=(Fa_StringRefImpl const& other);
+    StringRefImpl& operator=(StringRefImpl const& other);
 
     Allocator* allocator() const noexcept { return m_allocator; }
 
-    [[nodiscard]] bool operator==(Fa_StringRefImpl const& other) const noexcept
+    [[nodiscard]] bool operator==(StringRefImpl const& other) const noexcept
     {
         if (m_string_data == other.m_string_data && m_offset == other.m_offset && m_length == other.m_length)
             return true;
@@ -171,9 +171,9 @@ public:
         return ::memcmp(data(), other, m_length) == 0;
     }
 
-    [[nodiscard]] bool operator!=(Fa_StringRefImpl const& other) const noexcept { return !(*this == other); }
+    [[nodiscard]] bool operator!=(StringRefImpl const& other) const noexcept { return !(*this == other); }
 
-    [[nodiscard]] bool operator<(Fa_StringRefImpl const& other) const noexcept
+    [[nodiscard]] bool operator<(StringRefImpl const& other) const noexcept
     {
         if (m_string_data == other.m_string_data && m_offset == other.m_offset && m_length == other.m_length)
             return false;
@@ -187,16 +187,16 @@ public:
         return cmp != 0 ? cmp < 0 : m_length < other.m_length;
     }
 
-    [[nodiscard]] bool operator>(Fa_StringRefImpl const& other) const noexcept { return other < *this; }
-    [[nodiscard]] bool operator<=(Fa_StringRefImpl const& other) const noexcept { return !(*this > other); }
-    [[nodiscard]] bool operator>=(Fa_StringRefImpl const& other) const noexcept { return !(*this < other); }
+    [[nodiscard]] bool operator>(StringRefImpl const& other) const noexcept { return other < *this; }
+    [[nodiscard]] bool operator<=(StringRefImpl const& other) const noexcept { return !(*this > other); }
+    [[nodiscard]] bool operator>=(StringRefImpl const& other) const noexcept { return !(*this < other); }
 
     void expand(size_t const new_size);
     void reserve(size_t const new_capacity);
     void erase(size_t const at);
 
-    Fa_StringRefImpl& operator+=(Fa_StringRefImpl const& other);
-    Fa_StringRefImpl& operator+=(char c);
+    StringRefImpl& operator+=(StringRefImpl const& other);
+    StringRefImpl& operator+=(char c);
 
     char operator[](size_t const i) const;
     char& operator[](size_t const i);
@@ -204,13 +204,13 @@ public:
     [[nodiscard]] char at(size_t const i) const;
     char& at(size_t const i);
 
-    Fa_StringRefImpl& trim_whitespace(bool leading = true, bool trailing = true) noexcept;
+    StringRefImpl& trim_whitespace(bool leading = true, bool trailing = true) noexcept;
 
-    Fa_StringRefImpl operator+(Fa_StringRefImpl const& rhs) const
+    StringRefImpl operator+(StringRefImpl const& rhs) const
     {
         size_t const r_len = rhs.len();
         if (empty())
-            return Fa_StringRefImpl(rhs);
+            return StringRefImpl(rhs);
         if (r_len == 0)
             return *this;
 
@@ -222,35 +222,35 @@ public:
 
         result->ptr()[new_len] = 0;
 
-        return Fa_StringRefImpl(result);
+        return StringRefImpl(result);
     }
 
-    Fa_StringRefImpl operator+(char const* rhs) const
+    StringRefImpl operator+(char const* rhs) const
     {
         if (rhs == nullptr || !rhs[0])
             return *this;
-        Fa_StringRefImpl rhs_str(rhs, m_allocator);
+        StringRefImpl rhs_str(rhs, m_allocator);
         return *this + rhs_str;
     }
 
-    friend Fa_StringRefImpl operator+(char const* lhs, Fa_StringRefImpl const& rhs)
+    friend StringRefImpl operator+(char const* lhs, StringRefImpl const& rhs)
     {
         if (lhs == nullptr || !lhs[0])
-            return Fa_StringRefImpl(rhs);
-        Fa_StringRefImpl lhs_str(lhs, rhs.m_allocator);
+            return StringRefImpl(rhs);
+        StringRefImpl lhs_str(lhs, rhs.m_allocator);
         return lhs_str + rhs;
     }
 
-    friend Fa_StringRefImpl operator+(Fa_StringRefImpl const& lhs, char rhs)
+    friend StringRefImpl operator+(StringRefImpl const& lhs, char rhs)
     {
-        Fa_StringRefImpl result(lhs);
+        StringRefImpl result(lhs);
         result += rhs;
         return result;
     }
 
-    friend Fa_StringRefImpl operator+(char lhs, Fa_StringRefImpl const& rhs)
+    friend StringRefImpl operator+(char lhs, StringRefImpl const& rhs)
     {
-        Fa_StringRefImpl result(static_cast<size_t>(0), rhs.m_allocator);
+        StringRefImpl result(static_cast<size_t>(0), rhs.m_allocator);
         result.reserve(rhs.len() + 1);
         result += lhs;
         result += rhs;
@@ -272,7 +272,7 @@ public:
         return nullptr;
     }
 
-    friend std::ostream& operator<<(std::ostream& os, Fa_StringRefImpl const& str)
+    friend std::ostream& operator<<(std::ostream& os, StringRefImpl const& str)
     {
         if (!str.empty())
             os.write(str.data(), static_cast<std::streamsize>(str.len()));
@@ -289,29 +289,29 @@ public:
     void resize(size_t const s);
 
     [[nodiscard]] bool find(char const c) const noexcept;
-    [[nodiscard]] bool find(Fa_StringRefImpl const& s) const noexcept;
+    [[nodiscard]] bool find(StringRefImpl const& s) const noexcept;
 
     [[nodiscard]] std::optional<size_t> find_pos(char const c) const noexcept;
 
-    Fa_StringRefImpl& truncate(size_t const s) noexcept;
-    Fa_StringRefImpl slice(size_t start, size_t end = SIZE_MAX) const;
-    Fa_StringRefImpl substr(size_t start, size_t end = SIZE_MAX) const
+    StringRefImpl& truncate(size_t const s) noexcept;
+    StringRefImpl slice(size_t start, size_t end = SIZE_MAX) const;
+    StringRefImpl substr(size_t start, size_t end = SIZE_MAX) const
     {
         if (m_length == 0)
-            return Fa_StringRefImpl(static_cast<size_t>(0), m_allocator);
+            return StringRefImpl(static_cast<size_t>(0), m_allocator);
         if (start > m_length)
-            return Fa_StringRefImpl(static_cast<size_t>(0), m_allocator);
+            return StringRefImpl(static_cast<size_t>(0), m_allocator);
         if (end > m_length || end == SIZE_MAX)
             end = m_length;
         if (end < start)
-            return Fa_StringRefImpl(static_cast<size_t>(0), m_allocator);
+            return StringRefImpl(static_cast<size_t>(0), m_allocator);
         return substr_copy(start, end);
     }
-    Fa_StringRefImpl substr_copy(size_t start, size_t end = SIZE_MAX) const;
+    StringRefImpl substr_copy(size_t start, size_t end = SIZE_MAX) const;
 
     f64 to_double(size_t* pos = nullptr) const;
 
-    [[nodiscard]] static Fa_StringRefImpl from_utf16(char16_t const* utf16_cstr, Allocator* allocator = nullptr);
+    [[nodiscard]] static StringRefImpl from_utf16(char16_t const* utf16_cstr, Allocator* allocator = nullptr);
 
     void ensure_unique()
     {
@@ -323,7 +323,7 @@ public:
     }
 
     void detach();
-}; // class Fa_StringRefImpl
+}; // class StringRefImpl
 
 namespace detail {
 
@@ -431,11 +431,11 @@ inline u64 wyhash(void const* key, size_t len, u64 seed) noexcept
 
 } // namespace detail
 
-template<class Allocator = Fa_ArenaAllocator>
-struct Fa_StringRefHashImpl {
+template<class Allocator = ArenaAllocator>
+struct StringRefHashImpl {
     u64 seed { 0 };
 
-    size_t operator()(Fa_StringRefImpl<Allocator> const& str) const noexcept
+    size_t operator()(StringRefImpl<Allocator> const& str) const noexcept
     {
         if (str.empty())
             return 0;
@@ -443,29 +443,29 @@ struct Fa_StringRefHashImpl {
         return static_cast<size_t>(detail::wyhash(
             reinterpret_cast<u8 const*>(str.data()), str.len(), seed));
     }
-}; // struct Fa_StringRefHash
+}; // struct StringRefHash
 
-template<class Allocator = Fa_ArenaAllocator>
-struct Fa_StringRefEqualImpl {
-    bool operator()(Fa_StringRefImpl<Allocator> const& lhs, Fa_StringRefImpl<Allocator> const& rhs) const noexcept
+template<class Allocator = ArenaAllocator>
+struct StringRefEqualImpl {
+    bool operator()(StringRefImpl<Allocator> const& lhs, StringRefImpl<Allocator> const& rhs) const noexcept
     {
         return lhs == rhs;
     }
-}; // struct Fa_StringRefEqual
+}; // struct StringRefEqual
 
-using Fa_StringRef = Fa_StringRefImpl<>;
-using Fa_StringRefHash = Fa_StringRefHashImpl<>;
-using Fa_StringRefEqual = Fa_StringRefEqualImpl<>;
+using StringRef = StringRefImpl<>;
+using StringRefHash = StringRefHashImpl<>;
+using StringRefEqual = StringRefEqualImpl<>;
 
 } // namespace fairuz
 
 namespace std {
 
 template<class Allocator>
-struct hash<fairuz::Fa_StringRefImpl<Allocator>> {
-    size_t operator()(fairuz::Fa_StringRefImpl<Allocator> const& str) const noexcept
+struct hash<fairuz::StringRefImpl<Allocator>> {
+    size_t operator()(fairuz::StringRefImpl<Allocator> const& str) const noexcept
     {
-        return fairuz::Fa_StringRefHashImpl<Allocator> { }(str);
+        return fairuz::StringRefHashImpl<Allocator> { }(str);
     }
 }; // struct hash
 

@@ -14,14 +14,14 @@
 
 namespace fairuz {
 
-template<typename T, class _Alloc = Fa_ArenaAllocator>
-class Fa_Array {
+template<typename T, class _Alloc = ArenaAllocator>
+class Array {
 private:
     static constexpr u32 ARRAY_MAX = __UINT32_MAX__;
     static constexpr u32 DEFAULT_CAP = 8;
     static constexpr bool TRIVIAL_COPY = std::is_trivially_copyable_v<T>;
     static constexpr bool TRIVIAL_DTOR = std::is_trivially_destructible_v<T>;
-    static constexpr bool IS_ARENA = std::is_same_v<_Alloc, Fa_ArenaAllocator>;
+    static constexpr bool IS_ARENA = std::is_same_v<_Alloc, ArenaAllocator>;
 
     static void destroy_range(T* first, T* last) noexcept
     {
@@ -84,14 +84,14 @@ private:
 
     // -- allocator resolution, split at compile time instead of runtime --
     //
-    // For _Alloc == Fa_ArenaAllocator: allocator may be null; falls back to
+    // For _Alloc == ArenaAllocator: allocator may be null; falls back to
     // get_allocator_ptr(). This overload only participates in overload
     // resolution when IS_ARENA is true.
     void resolve_allocator(_Alloc* allocator)
     requires IS_ARENA
     {
         m_allocator = (allocator != nullptr) ? allocator : get_allocator_ptr();
-        assert(m_allocator != nullptr && "get_allocator_ptr() returned null for Fa_ArenaAllocator");
+        assert(m_allocator != nullptr && "get_allocator_ptr() returned null for ArenaAllocator");
     }
 
     // For any other _Alloc: allocator must be non-null. This overload only
@@ -101,24 +101,24 @@ private:
     void resolve_allocator(_Alloc* allocator)
     requires(!IS_ARENA)
     {
-        assert(allocator != nullptr && "null allocator only valid for Fa_ArenaAllocator");
+        assert(allocator != nullptr && "null allocator only valid for ArenaAllocator");
         m_allocator = allocator;
     }
 
 public:
     // Default/allocator constructor: split into two overloads so that the
-    // allocator parameter is *optional* only for Fa_ArenaAllocator. For any
+    // allocator parameter is *optional* only for ArenaAllocator. For any
     // other _Alloc, omitting it is a hard compile error rather than a
     // runtime assert/fprintf — the contract violation is caught by the
     // compiler at the call site, so "which instance violated it" becomes
     // "which line failed to build."
-    Fa_Array()
+    Array()
     requires IS_ARENA
     {
         resolve_allocator(nullptr);
     }
 
-    explicit Fa_Array(_Alloc* allocator)
+    explicit Array(_Alloc* allocator)
     {
         // Works for both branches: arena accepts an explicit pointer too,
         // non-arena requires it. Only ever called with a non-null pointer
@@ -127,28 +127,28 @@ public:
         resolve_allocator(allocator);
     }
 
-    explicit Fa_Array(u32 capacity, T fill_v, _Alloc* allocator)
+    explicit Array(u32 capacity, T fill_v, _Alloc* allocator)
     requires(!IS_ARENA);
-    explicit Fa_Array(u32 capacity, T fill_v = T(), _Alloc* allocator = nullptr)
+    explicit Array(u32 capacity, T fill_v = T(), _Alloc* allocator = nullptr)
     requires IS_ARENA;
 
-    Fa_Array(Fa_Array const& other);
-    Fa_Array(Fa_Array&& other) noexcept;
+    Array(Array const& other);
+    Array(Array&& other) noexcept;
 
-    Fa_Array(std::initializer_list<T> list, _Alloc* allocator)
+    Array(std::initializer_list<T> list, _Alloc* allocator)
     requires(!IS_ARENA);
-    Fa_Array(std::initializer_list<T> list, _Alloc* allocator = nullptr)
+    Array(std::initializer_list<T> list, _Alloc* allocator = nullptr)
     requires IS_ARENA;
 
-    Fa_Array& operator=(Fa_Array const& other);
-    Fa_Array& operator=(Fa_Array&& other) noexcept;
+    Array& operator=(Array const& other);
+    Array& operator=(Array&& other) noexcept;
 
-    [[nodiscard]] bool operator==(Fa_Array const& other) const
+    [[nodiscard]] bool operator==(Array const& other) const
     {
         return m_size == other.m_size && std::equal(m_arr, m_arr + m_size, other.m_arr);
     }
 
-    ~Fa_Array()
+    ~Array()
     {
         if (m_arr != nullptr)
             destroy_range(m_arr, m_arr + m_size);
@@ -158,10 +158,10 @@ public:
         }
     }
 
-    static Fa_Array with_capacity(u32 capacity)
+    static Array with_capacity(u32 capacity)
     requires IS_ARENA
     {
-        Fa_Array a;
+        Array a;
         if (capacity == 0)
             return a;
 
@@ -171,10 +171,10 @@ public:
         return a;
     }
 
-    static Fa_Array with_capacity(u32 capacity, _Alloc* allocator)
+    static Array with_capacity(u32 capacity, _Alloc* allocator)
     requires(!IS_ARENA)
     {
-        Fa_Array a(allocator);
+        Array a(allocator);
         if (capacity == 0)
             return a;
 
@@ -258,10 +258,10 @@ public:
     T* end() noexcept { return m_arr + m_size; }
     T const* begin() const noexcept { return m_arr; }
     T const* end() const noexcept { return m_arr + m_size; }
-}; // class Fa_Array
+}; // class Array
 
 template<typename T, class _Alloc>
-void Fa_Array<T, _Alloc>::ensure_push_capacity()
+void Array<T, _Alloc>::ensure_push_capacity()
 {
     if (m_size < m_cap)
         return;
@@ -279,8 +279,8 @@ void Fa_Array<T, _Alloc>::ensure_push_capacity()
 }
 
 template<typename T, class _Alloc>
-Fa_Array<T, _Alloc>::Fa_Array(u32 capacity, T fill_v, _Alloc* allocator)
-requires(!Fa_Array<T, _Alloc>::IS_ARENA)
+Array<T, _Alloc>::Array(u32 capacity, T fill_v, _Alloc* allocator)
+requires(!Array<T, _Alloc>::IS_ARENA)
 {
     resolve_allocator(allocator);
     if (capacity > ARRAY_MAX)
@@ -311,8 +311,8 @@ requires(!Fa_Array<T, _Alloc>::IS_ARENA)
 }
 
 template<typename T, class _Alloc>
-Fa_Array<T, _Alloc>::Fa_Array(u32 capacity, T fill_v, _Alloc* allocator)
-requires Fa_Array<T, _Alloc>::IS_ARENA
+Array<T, _Alloc>::Array(u32 capacity, T fill_v, _Alloc* allocator)
+requires Array<T, _Alloc>::IS_ARENA
 {
     resolve_allocator(allocator);
     if (capacity > ARRAY_MAX)
@@ -343,7 +343,7 @@ requires Fa_Array<T, _Alloc>::IS_ARENA
 }
 
 template<typename T, class _Alloc>
-Fa_Array<T, _Alloc>::Fa_Array(Fa_Array const& other)
+Array<T, _Alloc>::Array(Array const& other)
     : m_cap(other.m_cap)
     , m_allocator(other.m_allocator)
 {
@@ -357,7 +357,7 @@ Fa_Array<T, _Alloc>::Fa_Array(Fa_Array const& other)
 }
 
 template<typename T, class _Alloc>
-Fa_Array<T, _Alloc>::Fa_Array(Fa_Array&& other) noexcept
+Array<T, _Alloc>::Array(Array&& other) noexcept
     : m_arr(other.m_arr)
     , m_size(other.m_size)
     , m_cap(other.m_cap)
@@ -369,8 +369,8 @@ Fa_Array<T, _Alloc>::Fa_Array(Fa_Array&& other) noexcept
 }
 
 template<typename T, class _Alloc>
-Fa_Array<T, _Alloc>::Fa_Array(std::initializer_list<T> list, _Alloc* allocator)
-requires(!Fa_Array<T, _Alloc>::IS_ARENA)
+Array<T, _Alloc>::Array(std::initializer_list<T> list, _Alloc* allocator)
+requires(!Array<T, _Alloc>::IS_ARENA)
 {
     resolve_allocator(allocator);
     if (list.size() == 0)
@@ -402,8 +402,8 @@ requires(!Fa_Array<T, _Alloc>::IS_ARENA)
 }
 
 template<typename T, class _Alloc>
-Fa_Array<T, _Alloc>::Fa_Array(std::initializer_list<T> list, _Alloc* allocator)
-requires Fa_Array<T, _Alloc>::IS_ARENA
+Array<T, _Alloc>::Array(std::initializer_list<T> list, _Alloc* allocator)
+requires Array<T, _Alloc>::IS_ARENA
 {
     resolve_allocator(allocator);
     if (list.size() == 0)
@@ -435,7 +435,7 @@ requires Fa_Array<T, _Alloc>::IS_ARENA
 }
 
 template<typename T, class _Alloc>
-Fa_Array<T, _Alloc>& Fa_Array<T, _Alloc>::operator=(Fa_Array const& other)
+Array<T, _Alloc>& Array<T, _Alloc>::operator=(Array const& other)
 {
     if (this == &other)
         return *this;
@@ -470,7 +470,7 @@ Fa_Array<T, _Alloc>& Fa_Array<T, _Alloc>::operator=(Fa_Array const& other)
 }
 
 template<typename T, class _Alloc>
-Fa_Array<T, _Alloc>& Fa_Array<T, _Alloc>::operator=(Fa_Array&& other) noexcept
+Array<T, _Alloc>& Array<T, _Alloc>::operator=(Array&& other) noexcept
 {
     if (this == &other)
         return *this;
@@ -495,7 +495,7 @@ Fa_Array<T, _Alloc>& Fa_Array<T, _Alloc>::operator=(Fa_Array&& other) noexcept
 }
 
 template<typename T, class _Alloc>
-void Fa_Array<T, _Alloc>::push(T const& val)
+void Array<T, _Alloc>::push(T const& val)
 {
     ensure_push_capacity();
     if constexpr (TRIVIAL_COPY)
@@ -506,7 +506,7 @@ void Fa_Array<T, _Alloc>::push(T const& val)
 }
 
 template<typename T, class _Alloc>
-void Fa_Array<T, _Alloc>::push(T&& val)
+void Array<T, _Alloc>::push(T&& val)
 {
     ensure_push_capacity();
     if constexpr (TRIVIAL_COPY)
@@ -517,11 +517,11 @@ void Fa_Array<T, _Alloc>::push(T&& val)
 }
 
 template<typename T, class _Alloc>
-T Fa_Array<T, _Alloc>::pop()
+T Array<T, _Alloc>::pop()
 {
     if (UNLIKELY(m_size == 0))
         diagnostic::panic(ErrorCode::INTERNAL_ERROR,
-            "Fa_Array::pop called on an empty array");
+            "Array::pop called on an empty array");
     m_size -= 1;
     if constexpr (TRIVIAL_DTOR)
         return m_arr[m_size];
@@ -533,7 +533,7 @@ T Fa_Array<T, _Alloc>::pop()
 }
 
 template<typename T, class _Alloc>
-void Fa_Array<T, _Alloc>::reserve(u32 const s)
+void Array<T, _Alloc>::reserve(u32 const s)
 {
     if (s <= m_cap)
         return;
@@ -557,7 +557,7 @@ void Fa_Array<T, _Alloc>::reserve(u32 const s)
 }
 
 template<typename T, class _Alloc>
-void Fa_Array<T, _Alloc>::resize(u32 const s)
+void Array<T, _Alloc>::resize(u32 const s)
 {
     if (s < m_size) {
         destroy_range(m_arr + s, m_arr + m_size);
@@ -585,7 +585,7 @@ void Fa_Array<T, _Alloc>::resize(u32 const s)
 }
 
 template<typename T, class _Alloc>
-void Fa_Array<T, _Alloc>::erase(u32 const at)
+void Array<T, _Alloc>::erase(u32 const at)
 {
     if (at >= m_size)
         diagnostic::fatal_error(ErrorCode::ARRAY_OUT_OF_BOUNDS);
@@ -606,7 +606,7 @@ void Fa_Array<T, _Alloc>::erase(u32 const at)
 }
 
 template<typename T, class _Alloc>
-T* Fa_Array<T, _Alloc>::erase(T const* p)
+T* Array<T, _Alloc>::erase(T const* p)
 {
     if (p < m_arr || p >= m_arr + m_size)
         return const_cast<T*>(p);
@@ -630,18 +630,18 @@ T* Fa_Array<T, _Alloc>::erase(T const* p)
 }
 
 template<typename T, typename... Args>
-static inline Fa_Array<T> make_array(Args&&... args)
+static inline Array<T> make_array(Args&&... args)
 {
     return get_allocator().allocate_array<T>(std::forward<Args>(args)...);
 }
 
-template<typename T, class _Alloc = Fa_ArenaAllocator>
-class Fa_Set {
+template<typename T, class _Alloc = ArenaAllocator>
+class Set {
 private:
-    Fa_Array<T, _Alloc> m_arr;
+    Array<T, _Alloc> m_arr;
 
 public:
-    Fa_Set() = default;
+    Set() = default;
 
     bool array_contains(T const& val) const
     {

@@ -17,46 +17,46 @@
 
 namespace fairuz::runtime {
 
-static void fa_delete_object(Fa_ObjHeader* obj)
+static void fa_delete_object(ObjHeader* obj)
 {
     switch (obj->type) {
-    case Fa_ObjType::STRING: delete Fa_obj_cast<Fa_ObjString>(obj, Fa_ObjType::STRING); break;
-    case Fa_ObjType::LIST: delete Fa_obj_cast<Fa_ObjList>(obj, Fa_ObjType::LIST); break;
-    case Fa_ObjType::DICT: delete Fa_obj_cast<Fa_ObjDict>(obj, Fa_ObjType::DICT); break;
-    case Fa_ObjType::FUNCTION: delete Fa_obj_cast<Fa_ObjFunction>(obj, Fa_ObjType::FUNCTION); break;
-    case Fa_ObjType::NATIVE: delete Fa_obj_cast<Fa_ObjNative>(obj, Fa_ObjType::NATIVE); break;
-    case Fa_ObjType::CLASS: delete Fa_obj_cast<Fa_ObjClass>(obj, Fa_ObjType::CLASS); break;
-    case Fa_ObjType::INSTANCE: delete Fa_obj_cast<Fa_ObjInstance>(obj, Fa_ObjType::INSTANCE); break;
-    case Fa_ObjType::FILE_HANDLE: delete Fa_obj_cast<Fa_ObjFileHandle>(obj, Fa_ObjType::FILE_HANDLE); break;
-    case Fa_ObjType::MODULE: delete Fa_obj_cast<Fa_ObjModule>(obj, Fa_ObjType::MODULE); break;
+    case ObjType::STRING: delete obj_cast<ObjString>(obj, ObjType::STRING); break;
+    case ObjType::LIST: delete obj_cast<ObjList>(obj, ObjType::LIST); break;
+    case ObjType::DICT: delete obj_cast<ObjDict>(obj, ObjType::DICT); break;
+    case ObjType::FUNCTION: delete obj_cast<ObjFunction>(obj, ObjType::FUNCTION); break;
+    case ObjType::NATIVE: delete obj_cast<ObjNative>(obj, ObjType::NATIVE); break;
+    case ObjType::CLASS: delete obj_cast<ObjClass>(obj, ObjType::CLASS); break;
+    case ObjType::INSTANCE: delete obj_cast<ObjInstance>(obj, ObjType::INSTANCE); break;
+    case ObjType::FILE_HANDLE: delete obj_cast<ObjFileHandle>(obj, ObjType::FILE_HANDLE); break;
+    case ObjType::MODULE: delete obj_cast<ObjModule>(obj, ObjType::MODULE); break;
 #if FA_USE_NANBOX
-    case Fa_ObjType::INT: // TODO:
+    case ObjType::INT: // TODO:
 #endif
-    case Fa_ObjType::_COUNT: diagnostic::panic(ErrorCode::TYPE_ERROR_CALL, "attempting to delete an unknown type"); break; /// unreachable break
+    case ObjType::_COUNT: diagnostic::panic(ErrorCode::TYPE_ERROR_CALL, "attempting to delete an unknown type"); break; /// unreachable break
     }
 }
 
-static size_t fa_object_size(Fa_ObjHeader const* obj)
+static size_t fa_object_size(ObjHeader const* obj)
 {
     switch (obj->type) {
-    case Fa_ObjType::STRING: return sizeof(Fa_ObjString);
-    case Fa_ObjType::LIST: return sizeof(Fa_ObjList);
-    case Fa_ObjType::DICT: return sizeof(Fa_ObjDict);
-    case Fa_ObjType::FUNCTION: return sizeof(Fa_ObjFunction);
-    case Fa_ObjType::NATIVE: return sizeof(Fa_ObjNative);
-    case Fa_ObjType::CLASS: return sizeof(Fa_ObjClass);
-    case Fa_ObjType::INSTANCE: return sizeof(Fa_ObjInstance);
-    case Fa_ObjType::FILE_HANDLE: return sizeof(Fa_ObjFileHandle);
-    case Fa_ObjType::MODULE: return sizeof(Fa_ObjModule);
+    case ObjType::STRING: return sizeof(ObjString);
+    case ObjType::LIST: return sizeof(ObjList);
+    case ObjType::DICT: return sizeof(ObjDict);
+    case ObjType::FUNCTION: return sizeof(ObjFunction);
+    case ObjType::NATIVE: return sizeof(ObjNative);
+    case ObjType::CLASS: return sizeof(ObjClass);
+    case ObjType::INSTANCE: return sizeof(ObjInstance);
+    case ObjType::FILE_HANDLE: return sizeof(ObjFileHandle);
+    case ObjType::MODULE: return sizeof(ObjModule);
 #if FA_USE_NANBOX
-    case Fa_ObjType::INT: return 0;
+    case ObjType::INT: return 0;
 #endif
-    case Fa_ObjType::_COUNT: return 0;
+    case ObjType::_COUNT: return 0;
     }
     return 0;
 }
 
-void Fa_GarbageCollector::collect(Fa_VM* vm)
+void GarbageCollector::collect(VM* vm)
 {
     mark_roots(vm);
     trace_references();
@@ -64,14 +64,14 @@ void Fa_GarbageCollector::collect(Fa_VM* vm)
     m_next_collection = std::max<u64>(4096, m_current_size * 2);
 }
 
-void Fa_GarbageCollector::mark_roots(Fa_VM* vm)
+void GarbageCollector::mark_roots(VM* vm)
 {
-    for (int i = 0; i < vm->m_stack_top && i < Fa_VM::STACK_SIZE; i++) {
+    for (int i = 0; i < vm->m_stack_top && i < VM::STACK_SIZE; i++) {
         if (vm->m_stack[i].is_obj())
             mark_object(vm->m_stack[i].as_obj());
     }
 
-    for (int i = 0; i < vm->m_frames_top && i < Fa_VM::MAX_FRAMES; i++) {
+    for (int i = 0; i < vm->m_frames_top && i < VM::MAX_FRAMES; i++) {
         if (vm->m_frames[i].func != nullptr)
             mark_object(&vm->m_frames[i].func->obj);
     }
@@ -98,7 +98,7 @@ void Fa_GarbageCollector::mark_roots(Fa_VM* vm)
     }
 }
 
-void Fa_GarbageCollector::mark_object(Fa_ObjHeader* p)
+void GarbageCollector::mark_object(ObjHeader* p)
 {
     if (p == nullptr || p->is_marked)
         return;
@@ -107,7 +107,7 @@ void Fa_GarbageCollector::mark_object(Fa_ObjHeader* p)
     m_grays.push(p);
 }
 
-void Fa_GarbageCollector::mark_chunk_constants(Fa_Chunk* chunk)
+void GarbageCollector::mark_chunk_constants(Chunk* chunk)
 {
     if (chunk == nullptr)
         return;
@@ -118,23 +118,23 @@ void Fa_GarbageCollector::mark_chunk_constants(Fa_Chunk* chunk)
         mark_chunk_constants(fn);
 }
 
-void Fa_GarbageCollector::blacken_object(Fa_ObjHeader* obj)
+void GarbageCollector::blacken_object(ObjHeader* obj)
 {
     switch (obj->type) {
-    case Fa_ObjType::FUNCTION: {
-        Fa_ObjFunction* fn = Fa_obj_cast<Fa_ObjFunction>(obj, Fa_ObjType::FUNCTION);
+    case ObjType::FUNCTION: {
+        ObjFunction* fn = obj_cast<ObjFunction>(obj, ObjType::FUNCTION);
         if (fn->chunk != nullptr)
             mark_chunk_constants(fn->chunk);
         break;
     }
-    case Fa_ObjType::NATIVE: {
-        Fa_ObjNative* native = Fa_obj_cast<Fa_ObjNative>(obj, Fa_ObjType::NATIVE);
+    case ObjType::NATIVE: {
+        ObjNative* native = obj_cast<ObjNative>(obj, ObjType::NATIVE);
         if (native->name != nullptr)
             mark_object(&native->name->obj);
         break;
     }
-    case Fa_ObjType::CLASS: {
-        Fa_ObjClass* klass = Fa_obj_cast<Fa_ObjClass>(obj, Fa_ObjType::CLASS);
+    case ObjType::CLASS: {
+        ObjClass* klass = obj_cast<ObjClass>(obj, ObjType::CLASS);
         if (klass->parent != nullptr)
             mark_object(&klass->parent->obj);
         for (u32 i = 0, n = klass->vtable.size(); i < n; i++) {
@@ -143,19 +143,19 @@ void Fa_GarbageCollector::blacken_object(Fa_ObjHeader* obj)
         }
         break;
     }
-    case Fa_ObjType::INSTANCE: {
-        Fa_ObjInstance* inst = Fa_obj_cast<Fa_ObjInstance>(obj, Fa_ObjType::INSTANCE);
+    case ObjType::INSTANCE: {
+        ObjInstance* inst = obj_cast<ObjInstance>(obj, ObjType::INSTANCE);
         mark_object(&inst->klass->obj);
         mark_value_array(inst->fields);
         break;
     }
-    case Fa_ObjType::LIST: {
-        Fa_ObjList* list = Fa_obj_cast<Fa_ObjList>(obj, Fa_ObjType::LIST);
+    case ObjType::LIST: {
+        ObjList* list = obj_cast<ObjList>(obj, ObjType::LIST);
         mark_value_array(list->elements);
         break;
     }
-    case Fa_ObjType::DICT: {
-        Fa_ObjDict* dict = Fa_obj_cast<Fa_ObjDict>(obj, Fa_ObjType::DICT);
+    case ObjType::DICT: {
+        ObjDict* dict = obj_cast<ObjDict>(obj, ObjType::DICT);
         for (auto [k, v] : dict->data) {
             if (k.is_obj())
                 mark_object(k.as_obj());
@@ -164,28 +164,28 @@ void Fa_GarbageCollector::blacken_object(Fa_ObjHeader* obj)
         }
         break;
     }
-    case Fa_ObjType::FILE_HANDLE: break;
-    case Fa_ObjType::MODULE: {
-        Fa_ObjModule* module = Fa_obj_cast<Fa_ObjModule>(obj, Fa_ObjType::MODULE);
+    case ObjType::FILE_HANDLE: break;
+    case ObjType::MODULE: {
+        ObjModule* module = obj_cast<ObjModule>(obj, ObjType::MODULE);
         if (module->globals != nullptr)
             mark_value_array(module->globals->slots);
         if (module->chunk != nullptr)
             mark_chunk_constants(module->chunk);
         break;
     }
-    case Fa_ObjType::STRING: break;
+    case ObjType::STRING: break;
 #if FA_USE_NANBOX
-    case Fa_ObjType::INT: // TODO:
+    case ObjType::INT: // TODO:
 #endif
-    case Fa_ObjType::_COUNT: diagnostic::panic(ErrorCode::TYPE_ERROR_CALL, "attempting to blacken an unknown object type");
+    case ObjType::_COUNT: diagnostic::panic(ErrorCode::TYPE_ERROR_CALL, "attempting to blacken an unknown object type");
     }
 }
 
-void Fa_GarbageCollector::sweep()
+void GarbageCollector::sweep()
 {
     u32 i = 0;
     while (i < m_all.size()) {
-        Fa_ObjHeader* obj = m_all[i];
+        ObjHeader* obj = m_all[i];
         if (!obj->is_marked) {
             size_t object_size = fa_object_size(obj);
             fa_delete_object(obj);
@@ -198,7 +198,7 @@ void Fa_GarbageCollector::sweep()
     }
 }
 
-void Fa_GarbageCollector::sweep_all()
+void GarbageCollector::sweep_all()
 {
     for (auto* object : m_all) {
         if (object != nullptr)
@@ -210,45 +210,45 @@ void Fa_GarbageCollector::sweep_all()
     m_current_size = 0;
 }
 
-Fa_ObjString* Fa_GarbageCollector::make_obj_string(Fa_StringRef str)
+ObjString* GarbageCollector::make_obj_string(StringRef str)
 {
-    auto ret = make<Fa_ObjString>();
+    auto ret = make<ObjString>();
     ret->str = str;
-    ret->hash = Fa_StringRefHash()(ret->str);
+    ret->hash = StringRefHash()(ret->str);
     return ret;
 }
 
-Fa_ObjString* Fa_GarbageCollector::make_obj_string(char const* str)
+ObjString* GarbageCollector::make_obj_string(char const* str)
 {
-    auto ret = make<Fa_ObjString>();
+    auto ret = make<ObjString>();
     ret->str = str;
-    ret->hash = Fa_StringRefHash()(ret->str);
+    ret->hash = StringRefHash()(ret->str);
     return ret;
 }
 
-Fa_ObjString* Fa_GarbageCollector::make_obj_string(char* str)
+ObjString* GarbageCollector::make_obj_string(char* str)
 {
     return make_obj_string(static_cast<char const*>(str));
 }
 
-Fa_ObjList* Fa_GarbageCollector::make_obj_list()
+ObjList* GarbageCollector::make_obj_list()
 {
-    void* mem = ::operator new(sizeof(Fa_ObjList), std::nothrow);
+    void* mem = ::operator new(sizeof(ObjList), std::nothrow);
     if (mem == nullptr)
         diagnostic::panic(ErrorCode::ALLOC_FAILED);
 
-    auto elems = Fa_Array<Fa_Value, /*_Alloc=*/Fa_GarbageCollector> { this };
+    auto elems = Array<Value, /*_Alloc=*/GarbageCollector> { this };
 
-    Fa_ObjList* ret = new (mem) Fa_ObjList(elems);
+    ObjList* ret = new (mem) ObjList(elems);
 
     m_all.push(&ret->obj);
-    m_current_size += sizeof(Fa_ObjList);
+    m_current_size += sizeof(ObjList);
     return ret;
 }
 
-Fa_ObjDict* Fa_GarbageCollector::make_obj_dict(Fa_DictType data)
+ObjDict* GarbageCollector::make_obj_dict(DictType data)
 {
-    auto ret = make<Fa_ObjDict>();
+    auto ret = make<ObjDict>();
     ret->data = std::move(data);
     for (auto [key, value] : ret->data) {
         (void)value;
@@ -257,24 +257,24 @@ Fa_ObjDict* Fa_GarbageCollector::make_obj_dict(Fa_DictType data)
     return ret;
 }
 
-Fa_ObjFunction* Fa_GarbageCollector::make_obj_function(Fa_Chunk* chunk, Fa_GlobalEnvironment* globals)
+ObjFunction* GarbageCollector::make_obj_function(Chunk* chunk, GlobalEnvironment* globals)
 {
-    auto ret = make<Fa_ObjFunction>();
+    auto ret = make<ObjFunction>();
     ret->chunk = chunk;
     ret->globals = globals;
     return ret;
 }
 
-Fa_ObjModule* Fa_GarbageCollector::make_obj_module(std::string name, std::string path, Fa_GlobalEnvironment* globals)
+ObjModule* GarbageCollector::make_obj_module(std::string name, std::string path, GlobalEnvironment* globals)
 {
-    auto ret = make<Fa_ObjModule>();
+    auto ret = make<ObjModule>();
     ret->name = std::move(name);
     ret->path = std::move(path);
     ret->globals = globals;
     return ret;
 }
 
-Fa_ObjNative* Fa_GarbageCollector::make_obj_native(NativeFn fn, Fa_ObjString* name, int arity)
+ObjNative* GarbageCollector::make_obj_native(NativeFn fn, ObjString* name, int arity)
 {
     if (name == nullptr || fn == nullptr) {
         /// NOTE: this should never happen in production
@@ -283,44 +283,44 @@ Fa_ObjNative* Fa_GarbageCollector::make_obj_native(NativeFn fn, Fa_ObjString* na
         return nullptr;
     }
 
-    auto ret = make<Fa_ObjNative>();
+    auto ret = make<ObjNative>();
     ret->arity = arity;
     ret->name = name;
     ret->fn = fn;
     return ret;
 }
 
-Fa_ObjClass* Fa_GarbageCollector::make_obj_class(
-    Fa_StringRef name,
+ObjClass* GarbageCollector::make_obj_class(
+    StringRef name,
     StringArr& fields,
     StringArr& methods,
-    Fa_Array<Fa_Chunk*, /*_Alloc=*/Fa_GarbageCollector> vtable)
+    Array<Chunk*, /*_Alloc=*/GarbageCollector> vtable)
 {
-    auto ret = make<Fa_ObjClass>(fields, methods, vtable);
+    auto ret = make<ObjClass>(fields, methods, vtable);
     ret->name = name;
     ret->build_indices();
 
     return ret;
 }
 
-Fa_ObjInstance* Fa_GarbageCollector::make_obj_instance(Fa_ObjClass* klass)
+ObjInstance* GarbageCollector::make_obj_instance(ObjClass* klass)
 {
     assert(klass != nullptr && "instance must be constructed with a valid class");
 
-    Fa_Array<Fa_Value, /*_Alloc=*/Fa_GarbageCollector> fields {
-        klass->field_names.size(), Fa_Value::nil(), this
+    Array<Value, /*_Alloc=*/GarbageCollector> fields {
+        klass->field_names.size(), Value::nil(), this
     };
-    auto ret = make<Fa_ObjInstance>(fields);
+    auto ret = make<ObjInstance>(fields);
     ret->klass = klass;
 
     return ret;
 }
 
-Fa_ObjFileHandle* Fa_GarbageCollector::make_obj_file_handle(FILE* fp)
+ObjFileHandle* GarbageCollector::make_obj_file_handle(FILE* fp)
 {
     assert(fp != nullptr && "file handle object must be constructed with a valid file pointer");
 
-    auto ret = make<Fa_ObjFileHandle>();
+    auto ret = make<ObjFileHandle>();
     ret->fp = fp;
     ret->is_open = true;
 

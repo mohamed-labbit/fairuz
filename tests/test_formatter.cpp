@@ -14,13 +14,13 @@ namespace {
 std::string format_source(std::string const& source)
 {
     diagnostic::reset();
-    lex::Fa_FileManager file;
-    file.buffer() = Fa_StringRef(source.c_str());
-    parser::Fa_Parser parser(&file);
+    lex::FileManager file;
+    file.buffer() = StringRef(source.c_str());
+    parser::Parser parser(&file);
     (void)parser.parse_program();
     if (diagnostic::has_errors())
         throw std::runtime_error("Invalid test source");
-    auto result = Fa_Formatter().format(file.buffer());
+    auto result = Formatter().format(file.buffer());
     return result.empty() ? "" : std::string(result.data(), result.len());
 }
 

@@ -9,7 +9,7 @@
 
 namespace fairuz {
 
-Fa_ArenaBlock::Fa_ArenaBlock(size_t const size, size_t const alignment)
+ArenaBlock::ArenaBlock(size_t const size, size_t const alignment)
     : m_size(size)
 {
     (void)alignment; // silence no-use
@@ -29,7 +29,7 @@ Fa_ArenaBlock::Fa_ArenaBlock(size_t const size, size_t const alignment)
     m_end = m_begin + m_size;
 }
 
-Fa_ArenaBlock& Fa_ArenaBlock::operator=(Fa_ArenaBlock&& other) noexcept
+ArenaBlock& ArenaBlock::operator=(ArenaBlock&& other) noexcept
 {
     if (this != &other) {
         if (m_begin != nullptr)
@@ -48,7 +48,7 @@ Fa_ArenaBlock& Fa_ArenaBlock::operator=(Fa_ArenaBlock&& other) noexcept
     return *this;
 }
 
-unsigned char* Fa_ArenaBlock::allocate(size_t bytes, std::optional<size_t> alignment)
+unsigned char* ArenaBlock::allocate(size_t bytes, std::optional<size_t> alignment)
 {
     if (m_begin == nullptr || bytes == 0)
         return nullptr;
@@ -66,7 +66,7 @@ unsigned char* Fa_ArenaBlock::allocate(size_t bytes, std::optional<size_t> align
     return reinterpret_cast<unsigned char*>(aligned);
 }
 
-void* Fa_ArenaAllocator::allocate(size_t const size, size_t const alignment)
+void* ArenaAllocator::allocate(size_t const size, size_t const alignment)
 {
     if (UNLIKELY(size == 0))
         return nullptr;
@@ -94,7 +94,7 @@ void* Fa_ArenaAllocator::allocate(size_t const size, size_t const alignment)
     return ptr;
 }
 
-void* Fa_ArenaAllocator::allocate_slow(size_t size, size_t alignment)
+void* ArenaAllocator::allocate_slow(size_t size, size_t alignment)
 {
     size_t block_size = std::max(size + alignment, m_next_block_size);
 
@@ -125,7 +125,7 @@ void* Fa_ArenaAllocator::allocate_slow(size_t size, size_t alignment)
         }
     }
 
-    Fa_ArenaBlock& blk = m_blocks.back();
+    ArenaBlock& blk = m_blocks.back();
     m_next = blk.begin();
     m_end = blk.end();
 
@@ -144,7 +144,7 @@ void* Fa_ArenaAllocator::allocate_slow(size_t size, size_t alignment)
     return reinterpret_cast<void*>(aligned);
 }
 
-void Fa_ArenaAllocator::deallocate(void* ptr, size_t const size)
+void ArenaAllocator::deallocate(void* ptr, size_t const size)
 {
     if (ptr == nullptr || size == 0 || m_blocks.empty())
         return;
@@ -155,7 +155,7 @@ void Fa_ArenaAllocator::deallocate(void* ptr, size_t const size)
     if ((expected != last) || size != m_last_size)
         return;
 
-    Fa_ArenaBlock& block = m_blocks.back();
+    ArenaBlock& block = m_blocks.back();
     size_t bytes_to_pop = m_last_consumed;
     if (!block.pop(bytes_to_pop))
         return;
@@ -166,7 +166,7 @@ void Fa_ArenaAllocator::deallocate(void* ptr, size_t const size)
     m_last_consumed = 0;
 }
 
-unsigned char* Fa_ArenaAllocator::allocate_block(size_t requested, size_t alignment, bool retry_on_oom)
+unsigned char* ArenaAllocator::allocate_block(size_t requested, size_t alignment, bool retry_on_oom)
 {
     size_t block_size = std::max(requested + alignment, m_next_block_size);
 
@@ -179,7 +179,7 @@ unsigned char* Fa_ArenaAllocator::allocate_block(size_t requested, size_t alignm
 
     try {
         m_blocks.emplace_back(block_size, alignment);
-        Fa_ArenaBlock& blk = m_blocks.back();
+        ArenaBlock& blk = m_blocks.back();
         m_next = blk.begin();
         m_end = blk.end();
         return blk.begin();
@@ -191,7 +191,7 @@ unsigned char* Fa_ArenaAllocator::allocate_block(size_t requested, size_t alignm
     }
 }
 
-unsigned char* Fa_ArenaAllocator::allocate_from_blocks(size_t alloc_size, size_t align)
+unsigned char* ArenaAllocator::allocate_from_blocks(size_t alloc_size, size_t align)
 {
     if (!m_blocks.empty()) {
         unsigned char* mem = m_blocks.back().allocate(alloc_size, align);

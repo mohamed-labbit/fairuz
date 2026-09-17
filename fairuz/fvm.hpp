@@ -15,35 +15,35 @@
 
 namespace fairuz::lex {
 
-class Fa_FileManager;
+class FileManager;
 
 }
 
 namespace fairuz::runtime {
 
-struct Fa_RuntimeHalt final : public std::runtime_error {
-    Fa_RuntimeHalt()
+struct RuntimeHalt final : public std::runtime_error {
+    RuntimeHalt()
         : std::runtime_error("runtime error")
     {
     }
 };
 
-struct Fa_CallFrame {
-    Fa_ObjFunction* func { nullptr };
-    Fa_Chunk* chunk { nullptr };
+struct CallFrame {
+    ObjFunction* func { nullptr };
+    Chunk* chunk { nullptr };
     u32 ip { 0 };
     u16 base { 0 };
     u16 local_count { 0 };
     u16 return_slot { 0 };
     u16 caller_stack_top { 0 };
-    Fa_GlobalEnvironment* globals { nullptr };
-    Fa_ObjModule* module { nullptr };
+    GlobalEnvironment* globals { nullptr };
+    ObjModule* module { nullptr };
 
-    Fa_CallFrame() = default;
+    CallFrame() = default;
 
-    explicit Fa_CallFrame(Fa_ObjFunction* cl, Fa_Chunk* ch, u32 ip, u16 b, u16 lc,
-        u16 ret_slot, u16 saved_stack_top, Fa_GlobalEnvironment* env = nullptr,
-        Fa_ObjModule* module_obj = nullptr)
+    explicit CallFrame(ObjFunction* cl, Chunk* ch, u32 ip, u16 b, u16 lc,
+        u16 ret_slot, u16 saved_stack_top, GlobalEnvironment* env = nullptr,
+        ObjModule* module_obj = nullptr)
         : func(cl)
         , chunk(ch)
         , ip(ip)
@@ -55,170 +55,170 @@ struct Fa_CallFrame {
         , module(module_obj)
     {
     }
-}; // struct Fa_CallFrame
+}; // struct CallFrame
 
-class Fa_VM {
+class VM {
 public:
     static constexpr int MAX_FRAMES = 256;
     static constexpr int STACK_SIZE = 1024 * 8;   // 8kb
     static constexpr int GC_THRESHOLD = 1024 * 4; // 4kb
 
-    Fa_VM();
-    ~Fa_VM();
+    VM();
+    ~VM();
 
-    Fa_Value run(Fa_Chunk* chunk);
+    Value run(Chunk* chunk);
 
     /* STANDARD LIBRARY */
 
-    Fa_Value Fa_print(int argc, Fa_Value* argv);
-    Fa_Value Fa_open(int argc, Fa_Value* argv);
-    Fa_Value Fa_len(int argc, Fa_Value* argv);
-    Fa_Value Fa_type(int argc, Fa_Value* argv);
-    Fa_Value Fa_int(int argc, Fa_Value* argv);
-    Fa_Value Fa_float(int argc, Fa_Value* argv);
-    Fa_Value Fa_append(int argc, Fa_Value* argv);
-    Fa_Value Fa_pop(int argc, Fa_Value* argv);
-    Fa_Value Fa_slice(int argc, Fa_Value* argv);
-    Fa_Value Fa_input(int argc, Fa_Value* argv);
-    Fa_Value Fa_str(int argc, Fa_Value* argv);
-    Fa_Value Fa_bool(int argc, Fa_Value* argv);
-    Fa_Value Fa_list(int argc, Fa_Value* argv);
-    Fa_Value Fa_dict(int argc, Fa_Value* argv);
-    Fa_Value Fa_dict_keys(int argc, Fa_Value* argv);
-    Fa_Value Fa_dict_contains(int argc, Fa_Value* argv);
-    Fa_Value Fa_dict_delete(int argc, Fa_Value* argv);
-    Fa_Value Fa_split(int argc, Fa_Value* argv);
-    Fa_Value Fa_join(int argc, Fa_Value* argv);
-    Fa_Value Fa_substr(int argc, Fa_Value* argv);
-    Fa_Value Fa_contains(int argc, Fa_Value* argv);
-    Fa_Value Fa_trim(int argc, Fa_Value* argv);
-    Fa_Value Fa_char_from_codepoint(int argc, Fa_Value* argv);
-    Fa_Value Fa_number_from_text(int argc, Fa_Value* argv);
-    Fa_Value Fa_number_finite(int argc, Fa_Value* argv);
-    Fa_Value Fa_number_is_nan(int argc, Fa_Value* argv);
-    Fa_Value Fa_json_escape(int argc, Fa_Value* argv);
-    Fa_Value Fa_json_read_string(int argc, Fa_Value* argv);
-    Fa_Value Fa_dynamic_call(int argc, Fa_Value* argv);
-    Fa_Value Fa_executor_new(int argc, Fa_Value* argv);
-    Fa_Value Fa_executor_close(int argc, Fa_Value* argv);
-    Fa_Value Fa_task_start(int argc, Fa_Value* argv);
-    Fa_Value Fa_task_done(int argc, Fa_Value* argv);
-    Fa_Value Fa_task_result(int argc, Fa_Value* argv);
-    Fa_Value Fa_task_cancel(int argc, Fa_Value* argv);
-    Fa_Value Fa_task_wait_all(int argc, Fa_Value* argv);
-    Fa_Value Fa_file_open(int argc, Fa_Value* argv);
-    Fa_Value Fa_file_read(int argc, Fa_Value* argv);
-    Fa_Value Fa_file_read_all(int argc, Fa_Value* argv);
-    Fa_Value Fa_file_read_line(int argc, Fa_Value* argv);
-    Fa_Value Fa_file_write(int argc, Fa_Value* argv);
-    Fa_Value Fa_file_flush(int argc, Fa_Value* argv);
-    Fa_Value Fa_path_delete(int argc, Fa_Value* argv);
-    Fa_Value Fa_path_glob(int argc, Fa_Value* argv);
-    Fa_Value Fa_temp_file(int argc, Fa_Value* argv);
-    Fa_Value Fa_temp_directory(int argc, Fa_Value* argv);
-    Fa_Value Fa_remove_tree(int argc, Fa_Value* argv);
-    Fa_Value Fa_datetime_now(int argc, Fa_Value* argv);
-    Fa_Value Fa_datetime_from_fields(int argc, Fa_Value* argv);
-    Fa_Value Fa_datetime_to_fields(int argc, Fa_Value* argv);
-    Fa_Value Fa_datetime_parse(int argc, Fa_Value* argv);
-    Fa_Value Fa_datetime_format(int argc, Fa_Value* argv);
-    Fa_Value Fa_base64_encode(int argc, Fa_Value* argv);
-    Fa_Value Fa_base64_decode(int argc, Fa_Value* argv);
-    Fa_Value Fa_hex_encode(int argc, Fa_Value* argv);
-    Fa_Value Fa_hex_decode(int argc, Fa_Value* argv);
-    Fa_Value Fa_hash_new(int argc, Fa_Value* argv);
-    Fa_Value Fa_hash_update(int argc, Fa_Value* argv);
-    Fa_Value Fa_hash_digest(int argc, Fa_Value* argv);
-    Fa_Value Fa_hmac(int argc, Fa_Value* argv);
-    Fa_Value Fa_compress(int argc, Fa_Value* argv);
-    Fa_Value Fa_decompress(int argc, Fa_Value* argv);
-    Fa_Value Fa_floor(int argc, Fa_Value* argv);
-    Fa_Value Fa_ceil(int argc, Fa_Value* argv);
-    Fa_Value Fa_round(int argc, Fa_Value* argv);
-    Fa_Value Fa_abs(int argc, Fa_Value* argv);
-    Fa_Value Fa_min(int argc, Fa_Value* argv);
-    Fa_Value Fa_max(int argc, Fa_Value* argv);
-    Fa_Value Fa_pow(int argc, Fa_Value* argv);
-    Fa_Value Fa_sqrt(int argc, Fa_Value* argv);
-    Fa_Value Fa_math_unary(int argc, Fa_Value* argv);
-    Fa_Value Fa_math_binary(int argc, Fa_Value* argv);
-    Fa_Value Fa_url_encode(int argc, Fa_Value* argv);
-    Fa_Value Fa_url_decode(int argc, Fa_Value* argv);
-    Fa_Value Fa_url_parse(int argc, Fa_Value* argv);
-    Fa_Value Fa_url_build(int argc, Fa_Value* argv);
-    Fa_Value Fa_regex_compile(int argc, Fa_Value* argv);
-    Fa_Value Fa_regex_search(int argc, Fa_Value* argv);
-    Fa_Value Fa_regex_match(int argc, Fa_Value* argv);
-    Fa_Value Fa_regex_fullmatch(int argc, Fa_Value* argv);
-    Fa_Value Fa_regex_findall(int argc, Fa_Value* argv);
-    Fa_Value Fa_regex_split(int argc, Fa_Value* argv);
-    Fa_Value Fa_regex_replace(int argc, Fa_Value* argv);
-    Fa_Value make_regex_result(std::string const& input, std::smatch const& match, size_t base_offset);
-    Fa_Value Fa_assert(int argc, Fa_Value* argv);
-    Fa_Value Fa_clock(int argc, Fa_Value* argv);
-    Fa_Value Fa_error(int argc, Fa_Value* argv);
-    Fa_Value Fa_time(int argc, Fa_Value* argv);
-    Fa_Value Fa_append_file(int argc, Fa_Value* argv);
-    Fa_Value Fa_close(int argc, Fa_Value* argv);
+    Value print(int argc, Value* argv);
+    Value open(int argc, Value* argv);
+    Value len(int argc, Value* argv);
+    Value type(int argc, Value* argv);
+    Value Int(int argc, Value* argv);
+    Value Float(int argc, Value* argv);
+    Value append(int argc, Value* argv);
+    Value pop(int argc, Value* argv);
+    Value slice(int argc, Value* argv);
+    Value input(int argc, Value* argv);
+    Value str(int argc, Value* argv);
+    Value Bool(int argc, Value* argv);
+    Value list(int argc, Value* argv);
+    Value dict(int argc, Value* argv);
+    Value dict_keys(int argc, Value* argv);
+    Value dict_contains(int argc, Value* argv);
+    Value dict_delete(int argc, Value* argv);
+    Value split(int argc, Value* argv);
+    Value join(int argc, Value* argv);
+    Value substr(int argc, Value* argv);
+    Value contains(int argc, Value* argv);
+    Value trim(int argc, Value* argv);
+    Value char_from_codepoint(int argc, Value* argv);
+    Value number_from_text(int argc, Value* argv);
+    Value number_finite(int argc, Value* argv);
+    Value number_is_nan(int argc, Value* argv);
+    Value json_escape(int argc, Value* argv);
+    Value json_read_string(int argc, Value* argv);
+    Value dynamic_call(int argc, Value* argv);
+    Value executor_new(int argc, Value* argv);
+    Value executor_close(int argc, Value* argv);
+    Value task_start(int argc, Value* argv);
+    Value task_done(int argc, Value* argv);
+    Value task_result(int argc, Value* argv);
+    Value task_cancel(int argc, Value* argv);
+    Value task_wait_all(int argc, Value* argv);
+    Value file_open(int argc, Value* argv);
+    Value file_read(int argc, Value* argv);
+    Value file_read_all(int argc, Value* argv);
+    Value file_read_line(int argc, Value* argv);
+    Value file_write(int argc, Value* argv);
+    Value file_flush(int argc, Value* argv);
+    Value path_delete(int argc, Value* argv);
+    Value path_glob(int argc, Value* argv);
+    Value temp_file(int argc, Value* argv);
+    Value temp_directory(int argc, Value* argv);
+    Value remove_tree(int argc, Value* argv);
+    Value datetime_now(int argc, Value* argv);
+    Value datetime_from_fields(int argc, Value* argv);
+    Value datetime_to_fields(int argc, Value* argv);
+    Value datetime_parse(int argc, Value* argv);
+    Value datetime_format(int argc, Value* argv);
+    Value base64_encode(int argc, Value* argv);
+    Value base64_decode(int argc, Value* argv);
+    Value hex_encode(int argc, Value* argv);
+    Value hex_decode(int argc, Value* argv);
+    Value hash_new(int argc, Value* argv);
+    Value hash_update(int argc, Value* argv);
+    Value hash_digest(int argc, Value* argv);
+    Value hmac(int argc, Value* argv);
+    Value compress(int argc, Value* argv);
+    Value decompress(int argc, Value* argv);
+    Value floor(int argc, Value* argv);
+    Value ceil(int argc, Value* argv);
+    Value round(int argc, Value* argv);
+    Value abs(int argc, Value* argv);
+    Value min(int argc, Value* argv);
+    Value max(int argc, Value* argv);
+    Value pow(int argc, Value* argv);
+    Value sqrt(int argc, Value* argv);
+    Value math_unary(int argc, Value* argv);
+    Value math_binary(int argc, Value* argv);
+    Value url_encode(int argc, Value* argv);
+    Value url_decode(int argc, Value* argv);
+    Value url_parse(int argc, Value* argv);
+    Value url_build(int argc, Value* argv);
+    Value regex_compile(int argc, Value* argv);
+    Value regex_search(int argc, Value* argv);
+    Value regex_match(int argc, Value* argv);
+    Value regex_fullmatch(int argc, Value* argv);
+    Value regex_findall(int argc, Value* argv);
+    Value regex_split(int argc, Value* argv);
+    Value regex_replace(int argc, Value* argv);
+    Value make_regex_result(std::string const& input, std::smatch const& match, size_t base_offset);
+    Value Assert(int argc, Value* argv);
+    Value clock(int argc, Value* argv);
+    Value error(int argc, Value* argv);
+    Value time(int argc, Value* argv);
+    Value append_file(int argc, Value* argv);
+    Value close(int argc, Value* argv);
 
     // stdlib helpers
-    void Fa_dict_put(Fa_Value* dict_ptr, Fa_Value k, Fa_Value v);
-    Fa_Value Fa_dict_get(Fa_Value* dict_ptr, Fa_Value k);
+    void dict_put(Value* dict_ptr, Value k, Value v);
+    Value dict_get(Value* dict_ptr, Value k);
 
-    friend class Fa_GarbageCollector;
+    friend class GarbageCollector;
 
-    Fa_GarbageCollector m_gc;
-    Fa_Value m_stack[STACK_SIZE];
-    Fa_CallFrame m_frames[MAX_FRAMES];
+    GarbageCollector m_gc;
+    Value m_stack[STACK_SIZE];
+    CallFrame m_frames[MAX_FRAMES];
     int m_stack_top { 0 };
     int m_frames_top { 0 };
 
-    Fa_HashTable<Fa_StringRef, Fa_ObjString*, Fa_StringRefHash, Fa_StringRefEqual> m_string_table;
-    Fa_GlobalEnvironment m_builtin_environment;
-    Fa_GlobalEnvironment m_root_environment;
-    std::vector<std::unique_ptr<Fa_GlobalEnvironment>> m_module_environments;
-    std::vector<std::unique_ptr<lex::Fa_FileManager>> m_module_sources;
-    std::unordered_map<std::string, Fa_ObjModule*> m_module_cache;
+    HashTable<StringRef, ObjString*, StringRefHash, StringRefEqual> m_string_table;
+    GlobalEnvironment m_builtin_environment;
+    GlobalEnvironment m_root_environment;
+    std::vector<std::unique_ptr<GlobalEnvironment>> m_module_environments;
+    std::vector<std::unique_ptr<lex::FileManager>> m_module_sources;
+    std::unordered_map<std::string, ObjModule*> m_module_cache;
     bool m_is_dead { false };
 
-    Fa_Value execute(int stop_frame_depth = 0);
+    Value execute(int stop_frame_depth = 0);
     void unwind_failed_run();
-    Fa_Value call_special_sync(Fa_Value receiver, int special_slot);
-    Fa_Value call_value_sync(Fa_Value callee, Fa_ObjList* arguments);
+    Value call_special_sync(Value receiver, int special_slot);
+    Value call_value_sync(Value callee, ObjList* arguments);
 
-    Fa_CallFrame& frame();
-    Fa_CallFrame const& frame() const;
-    Fa_Chunk* chunk();
-    Fa_Value& reg(int r);
+    CallFrame& frame();
+    CallFrame const& frame() const;
+    Chunk* chunk();
+    Value& reg(int r);
 
-    Fa_ObjString* intern(Fa_StringRef const& str);
-    void update_ic_binary(Fa_Chunk* ch, u32 nop_ip, Fa_Value lhs, Fa_Value rhs, Fa_Value result);
-    void call_value(Fa_Value callee, int argc, int base, bool tail);
-    Fa_Value call_native(Fa_ObjNative* nat, int argc, int base);
+    ObjString* intern(StringRef const& str);
+    void update_ic_binary(Chunk* ch, u32 nop_ip, Value lhs, Value rhs, Value result);
+    void call_value(Value callee, int argc, int base, bool tail);
+    Value call_native(ObjNative* nat, int argc, int base);
 
     void open_stdlib();
-    bool register_native(Fa_StringRef const& name, NativeFn fn, int arity = -1);
+    bool register_native(StringRef const& name, NativeFn fn, int arity = -1);
 
-    Fa_SourceLocation current_location() const;
+    SourceLocation current_location() const;
     void raise_error(ErrorCode errc, std::string const& detail = "");
     void _raise_error(ErrorCode errc, std::string const& detail = "");
 
     [[noreturn]] void halt();
-    void intern_chunk_constants(Fa_Chunk* ch);
+    void intern_chunk_constants(Chunk* ch);
 
     void ensure_stack_slots(int needed);
-    Fa_CallFrame& top_frame();
-    Fa_CallFrame const& top_frame() const;
-    Fa_Value& get_reg(Fa_CallFrame const& f, int reg);
-    void invoke_method(Fa_Chunk* target_chunk, Fa_Value self_val, int result_slot,
+    CallFrame& top_frame();
+    CallFrame const& top_frame() const;
+    Value& get_reg(CallFrame const& f, int reg);
+    void invoke_method(Chunk* target_chunk, Value self_val, int result_slot,
         int call_base, int total_argc, u32 return_ip, int caller_stack_top,
-        Fa_GlobalEnvironment* globals = nullptr);
-    Fa_GlobalEnvironment* current_globals();
-    Fa_Value const* find_global(Fa_GlobalEnvironment* env, Fa_StringRef const& name) const;
-    void store_global(Fa_GlobalEnvironment* env, Fa_StringRef const& name, Fa_Value value);
+        GlobalEnvironment* globals = nullptr);
+    GlobalEnvironment* current_globals();
+    Value const* find_global(GlobalEnvironment* env, StringRef const& name) const;
+    void store_global(GlobalEnvironment* env, StringRef const& name, Value value);
     std::filesystem::path resolve_module_path(std::string const& name) const;
-    Fa_ObjModule* load_module(std::string const& name);
-}; // class Fa_VM
+    ObjModule* load_module(std::string const& name);
+}; // class VM
 
 } // namespace fairuz::runtime
 

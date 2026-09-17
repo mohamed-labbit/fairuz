@@ -7,55 +7,55 @@
 
 namespace fairuz {
 
-class [[nodiscard]] Fa_Error {
+class [[nodiscard]] Error {
 public:
-    explicit Fa_Error(ErrorCode code)
+    explicit Error(ErrorCode code)
         : m_code(code)
     {
     }
 
-    Fa_Error() = default;
+    Error() = default;
 
-    Fa_Error(Fa_Error const&) = default;
-    Fa_Error& operator=(Fa_Error const&) = default;
+    Error(Error const&) = default;
+    Error& operator=(Error const&) = default;
 
-    Fa_Error(Fa_Error&&) = default;
-    Fa_Error& operator=(Fa_Error&&) = default;
+    Error(Error&&) = default;
+    Error& operator=(Error&&) = default;
 
-    bool operator==(Fa_Error const& other) const { return m_code == other.m_code; }
+    bool operator==(Error const& other) const { return m_code == other.m_code; }
 
-    Fa_StringRef get_error_message() const { return diagnostic::error_message_for(m_code); }
+    StringRef get_error_message() const { return diagnostic::error_message_for(m_code); }
     ErrorCode get_code() const { return m_code; }
 
-    diagnostic::Fa_DiagnosticEngine::DiagnosticId diag_id() const { return m_diag_id; }
-    void set_diag_id(diagnostic::Fa_DiagnosticEngine::DiagnosticId id) { m_diag_id = id; }
+    diagnostic::DiagnosticEngine::DiagnosticId diag_id() const { return m_diag_id; }
+    void set_diag_id(diagnostic::DiagnosticEngine::DiagnosticId id) { m_diag_id = id; }
 
 private:
     ErrorCode m_code { 0xFFFF };
-    diagnostic::Fa_DiagnosticEngine::DiagnosticId m_diag_id { diagnostic::Fa_DiagnosticEngine::INVALID_ID };
-}; // class Fa_Error
+    diagnostic::DiagnosticEngine::DiagnosticId m_diag_id { diagnostic::DiagnosticEngine::INVALID_ID };
+}; // class Error
 
-template<typename T, typename E = Fa_Error>
-class [[nodiscard]] Fa_ErrorOr {
+template<typename T, typename E = Error>
+class [[nodiscard]] ErrorOr {
 public:
-    Fa_ErrorOr() = default;
+    ErrorOr() = default;
 
-    Fa_ErrorOr(T val)
+    ErrorOr(T val)
         : m_is_value(true)
     {
         ::new (static_cast<void*>(&m_storage)) T(static_cast<T&&>(val));
     }
 
-    Fa_ErrorOr(E err)
+    ErrorOr(E err)
         : m_is_value(false)
     {
         ::new (static_cast<void*>(&m_storage)) E(static_cast<E&&>(err));
     }
 
-    static Fa_ErrorOr from_value(T v) { return Fa_ErrorOr(static_cast<T&&>(v)); }
-    static Fa_ErrorOr from_error(E e) { return Fa_ErrorOr(static_cast<E&&>(e)); }
+    static ErrorOr from_value(T v) { return ErrorOr(static_cast<T&&>(v)); }
+    static ErrorOr from_error(E e) { return ErrorOr(static_cast<E&&>(e)); }
 
-    Fa_ErrorOr(Fa_ErrorOr const& other)
+    ErrorOr(ErrorOr const& other)
         : m_is_value(other.m_is_value)
     {
         if (m_is_value)
@@ -64,7 +64,7 @@ public:
             ::new (static_cast<void*>(&m_storage)) E(other.get_error());
     }
 
-    Fa_ErrorOr& operator=(Fa_ErrorOr const& other)
+    ErrorOr& operator=(ErrorOr const& other)
     {
         if (this == &other)
             return *this;
@@ -77,7 +77,7 @@ public:
         return *this;
     }
 
-    Fa_ErrorOr(Fa_ErrorOr&& other) noexcept
+    ErrorOr(ErrorOr&& other) noexcept
         : m_is_value(other.m_is_value)
     {
         if (m_is_value)
@@ -86,7 +86,7 @@ public:
             ::new (static_cast<void*>(&m_storage)) E(static_cast<E&&>(other.get_error()));
     }
 
-    Fa_ErrorOr& operator=(Fa_ErrorOr&& other) noexcept
+    ErrorOr& operator=(ErrorOr&& other) noexcept
     {
         if (this == &other)
             return *this;
@@ -99,20 +99,20 @@ public:
         return *this;
     }
 
-    ~Fa_ErrorOr() { destroy_active(); }
+    ~ErrorOr() { destroy_active(); }
 
     bool has_value() const noexcept { return m_is_value; }
     bool has_error() const noexcept { return !m_is_value; }
 
     T value() const
     {
-        assert(m_is_value && "called value() on an Fa_ErrorOr holding an error");
+        assert(m_is_value && "called value() on an ErrorOr holding an error");
         return get_value();
     }
 
     E error() const
     {
-        assert(!m_is_value && "called error() on an Fa_ErrorOr holding a value");
+        assert(!m_is_value && "called error() on an ErrorOr holding a value");
         return get_error();
     }
 
@@ -131,7 +131,7 @@ public:
     }
 
     template<typename _Tp>
-    Fa_ErrorOr<_Tp> error_or(_Tp v)
+    ErrorOr<_Tp> error_or(_Tp v)
     {
         if (has_error())
             return get_error();
@@ -155,12 +155,12 @@ private:
         else
             get_error().~E();
     }
-}; // class Fa_ErrorOr
+}; // class ErrorOr
 
-inline Fa_Error report_error(ErrorCode errc, Fa_SourceLocation loc, diagnostic::Severity sv = diagnostic::Severity::ERROR)
+inline Error report_error(ErrorCode errc, SourceLocation loc, diagnostic::Severity sv = diagnostic::Severity::ERROR)
 {
     auto id = diagnostic::report(sv, loc, errc);
-    Fa_Error err { Fa_Error { errc } };
+    Error err { Error { errc } };
     err.set_diag_id(id);
     return err;
 }

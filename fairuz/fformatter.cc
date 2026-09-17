@@ -11,7 +11,7 @@
 namespace fairuz {
 namespace {
 
-using Kind = tok::Fa_TokenType;
+using Kind = tok::TokenType;
 
 bool is_open(Kind kind)
 {
@@ -90,15 +90,15 @@ size_t token_end(TokenPtr token, std::string_view source)
     throw std::runtime_error("Cannot format an unterminated string");
 }
 
-Fa_Array<TokenPtr> tokenize(lex::Fa_FileManager& file)
+Array<TokenPtr> tokenize(lex::FileManager& file)
 {
-    lex::Fa_Lexer lexer(&file);
+    lex::Lexer lexer(&file);
     return lexer.tokenize();
 }
 
 // Retain logical statement boundaries and indentation, but ignore blank lines
 // and the optional final newline. Comma spellings are equivalent in Fairuz.
-std::vector<TokenPtr> significant(Fa_Array<TokenPtr> const& tokens)
+std::vector<TokenPtr> significant(Array<TokenPtr> const& tokens)
 {
     std::vector<TokenPtr> result;
     bool has_code = false;
@@ -128,9 +128,9 @@ std::vector<TokenPtr> significant(Fa_Array<TokenPtr> const& tokens)
 
 } // namespace
 
-Fa_StringRef Fa_Formatter::format(Fa_StringRef const& source)
+StringRef Formatter::format(StringRef const& source)
 {
-    lex::Fa_FileManager input;
+    lex::FileManager input;
     input.buffer() = source;
     auto tokens = tokenize(input);
     if (diagnostic::has_errors())
@@ -252,8 +252,8 @@ Fa_StringRef Fa_Formatter::format(Fa_StringRef const& source)
     if (!output.empty())
         output += eol;
 
-    lex::Fa_FileManager formatted;
-    formatted.buffer() = Fa_StringRef(output.c_str());
+    lex::FileManager formatted;
+    formatted.buffer() = StringRef(output.c_str());
     auto before = significant(tokens);
     auto after = significant(tokenize(formatted));
     if (before.size() != after.size())
@@ -264,7 +264,7 @@ Fa_StringRef Fa_Formatter::format(Fa_StringRef const& source)
             || (kind != Kind::COMMA && kind != Kind::NEWLINE && before[i]->lexeme() != after[i]->lexeme()))
             throw std::runtime_error("Formatting changed a token; input left unchanged");
     }
-    parser::Fa_Parser parser(&formatted);
+    parser::Parser parser(&formatted);
     (void)parser.parse_program();
     if (diagnostic::has_errors())
         throw std::runtime_error("Formatted output is invalid; input left unchanged");

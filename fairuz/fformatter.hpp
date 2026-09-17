@@ -5,11 +5,11 @@
 
 namespace fairuz {
 
-class Fa_Formatter {
+class Formatter {
 public:
     // Format validated source, preserving its tokens and comments. Throws if
     // the result does not parse or changes the significant token stream.
-    [[nodiscard]] Fa_StringRef format(Fa_StringRef const& source);
+    [[nodiscard]] StringRef format(StringRef const& source);
 };
 
 } // namespace fairuz

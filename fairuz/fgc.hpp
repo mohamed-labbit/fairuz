@@ -10,25 +10,25 @@
 
 namespace fairuz::runtime {
 
-class Fa_VM;
-using StringArr = Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector>;
+class VM;
+using StringArr = Array<StringRef, /*_Alloc=*/GarbageCollector>;
 
-class Fa_GarbageCollector {
+class GarbageCollector {
 private:
-    Fa_Set<Fa_ObjHeader*> m_all;   // all tracked objects list
-    Fa_Set<Fa_ObjHeader*> m_grays; // all gray objects list
+    Set<ObjHeader*> m_all;   // all tracked objects list
+    Set<ObjHeader*> m_grays; // all gray objects list
     u64 m_current_size { 0 };      // current tracked memory in bytes
     u64 m_next_collection { 4096 };
 
 public:
-    Fa_GarbageCollector() = default;
+    GarbageCollector() = default;
 
-    ~Fa_GarbageCollector()
+    ~GarbageCollector()
     {
         sweep_all();
     }
 
-    void collect(Fa_VM* vm);
+    void collect(VM* vm);
     bool should_collect() const { return m_current_size >= m_next_collection; }
 
     template<typename T, typename... Args>
@@ -47,21 +47,21 @@ public:
 
     /* --- obj factory --- */
 
-    Fa_ObjString* make_obj_string(Fa_StringRef str);
-    Fa_ObjString* make_obj_string(char const* str);
-    Fa_ObjString* make_obj_string(char* str);
-    Fa_ObjList* make_obj_list();
-    Fa_ObjDict* make_obj_dict(Fa_DictType data = { });
-    Fa_ObjFunction* make_obj_function(Fa_Chunk* chunk, Fa_GlobalEnvironment* globals = nullptr);
-    Fa_ObjNative* make_obj_native(NativeFn fn, Fa_ObjString* name, int arity);
-    Fa_ObjClass* make_obj_class(
-        Fa_StringRef name,
+    ObjString* make_obj_string(StringRef str);
+    ObjString* make_obj_string(char const* str);
+    ObjString* make_obj_string(char* str);
+    ObjList* make_obj_list();
+    ObjDict* make_obj_dict(DictType data = { });
+    ObjFunction* make_obj_function(Chunk* chunk, GlobalEnvironment* globals = nullptr);
+    ObjNative* make_obj_native(NativeFn fn, ObjString* name, int arity);
+    ObjClass* make_obj_class(
+        StringRef name,
         StringArr& fields,
         StringArr& methods,
-        Fa_Array<Fa_Chunk*, /*_Alloc=*/Fa_GarbageCollector> vtable);
-    Fa_ObjInstance* make_obj_instance(Fa_ObjClass* klass);
-    Fa_ObjFileHandle* make_obj_file_handle(FILE* fp);
-    Fa_ObjModule* make_obj_module(std::string name, std::string path, Fa_GlobalEnvironment* globals);
+        Array<Chunk*, /*_Alloc=*/GarbageCollector> vtable);
+    ObjInstance* make_obj_instance(ObjClass* klass);
+    ObjFileHandle* make_obj_file_handle(FILE* fp);
+    ObjModule* make_obj_module(std::string name, std::string path, GlobalEnvironment* globals);
 
     /* --- allocator api --- */
     template<typename T>
@@ -85,35 +85,35 @@ public:
         m_current_size = size > m_current_size ? 0 : m_current_size - size;
     }
 
-    /* --- Fa_Value constructors --- */
+    /* --- Value constructors --- */
 
-    Fa_Value make_string(Fa_StringRef str) { return Fa_Value::from_string(make_obj_string(str)); }
-    Fa_Value make_string(char const* str) { return Fa_Value::from_string(make_obj_string(str)); }
-    Fa_Value make_string(char* str) { return Fa_Value::from_string(make_obj_string(str)); }
-    Fa_Value make_list() { return Fa_Value::from_list(make_obj_list()); }
-    Fa_Value make_dict(Fa_DictType data = { }) { return Fa_Value::from_dict(make_obj_dict(data)); }
-    Fa_Value make_function(Fa_Chunk* chunk, Fa_GlobalEnvironment* globals = nullptr) { return Fa_Value::from_func(make_obj_function(chunk, globals)); }
-    Fa_Value make_native(NativeFn fn, Fa_ObjString* name, int arity) { return Fa_Value::from_native(make_obj_native(fn, name, arity)); }
-    Fa_Value make_instance(Fa_ObjClass* klass) { return Fa_Value::from_instance(make_obj_instance(klass)); }
-    Fa_Value make_file_handle(FILE* fp) { return Fa_Value::from_file_handle(make_obj_file_handle(fp)); }
-    Fa_Value make_module(std::string name, std::string path, Fa_GlobalEnvironment* globals)
+    Value make_string(StringRef str) { return Value::from_string(make_obj_string(str)); }
+    Value make_string(char const* str) { return Value::from_string(make_obj_string(str)); }
+    Value make_string(char* str) { return Value::from_string(make_obj_string(str)); }
+    Value make_list() { return Value::from_list(make_obj_list()); }
+    Value make_dict(DictType data = { }) { return Value::from_dict(make_obj_dict(data)); }
+    Value make_function(Chunk* chunk, GlobalEnvironment* globals = nullptr) { return Value::from_func(make_obj_function(chunk, globals)); }
+    Value make_native(NativeFn fn, ObjString* name, int arity) { return Value::from_native(make_obj_native(fn, name, arity)); }
+    Value make_instance(ObjClass* klass) { return Value::from_instance(make_obj_instance(klass)); }
+    Value make_file_handle(FILE* fp) { return Value::from_file_handle(make_obj_file_handle(fp)); }
+    Value make_module(std::string name, std::string path, GlobalEnvironment* globals)
     {
-        return Fa_Value::from_module(make_obj_module(std::move(name), std::move(path), globals));
+        return Value::from_module(make_obj_module(std::move(name), std::move(path), globals));
     }
-    Fa_Value make_class(Fa_StringRef name, StringArr fields, StringArr methods,
-        Fa_Array<Fa_Chunk*, /*_Alloc=*/Fa_GarbageCollector> vtable)
+    Value make_class(StringRef name, StringArr fields, StringArr methods,
+        Array<Chunk*, /*_Alloc=*/GarbageCollector> vtable)
     {
-        return Fa_Value::from_class(make_obj_class(name, fields, methods, vtable));
+        return Value::from_class(make_obj_class(name, fields, methods, vtable));
     }
 
 private:
-    void mark_roots(Fa_VM* vm);
-    void mark_object(Fa_ObjHeader* p);
-    void mark_chunk_constants(Fa_Chunk* chunk);
-    void blacken_object(Fa_ObjHeader* obj);
+    void mark_roots(VM* vm);
+    void mark_object(ObjHeader* p);
+    void mark_chunk_constants(Chunk* chunk);
+    void blacken_object(ObjHeader* obj);
     void sweep();
 
-    void mark_value_array(Fa_Array<Fa_Value, /*_Alloc=*/Fa_GarbageCollector> const& arr)
+    void mark_value_array(Array<Value, /*_Alloc=*/GarbageCollector> const& arr)
     {
         for (u32 i = 0, n = arr.size(); i < n; i++) {
             if (arr[i].is_obj())
@@ -121,7 +121,7 @@ private:
         }
     }
 
-    void mark_value_array(Fa_Array<Fa_Value> const& arr)
+    void mark_value_array(Array<Value> const& arr)
     {
         for (u32 i = 0, n = arr.size(); i < n; i++) {
             if (arr[i].is_obj())
@@ -132,13 +132,13 @@ private:
     void trace_references()
     {
         while (!m_grays.empty()) {
-            Fa_ObjHeader* obj = m_grays.back();
+            ObjHeader* obj = m_grays.back();
             m_grays.pop();
             blacken_object(obj);
         }
     }
 
-}; // class Fa_GarbageCollector
+}; // class GarbageCollector
 
 } // namespace fairuz::runtime
 

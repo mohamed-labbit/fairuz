@@ -21,17 +21,17 @@ static constexpr char kClassInstanceName[] = "__class$instance";
 
 namespace {
 
-Fa_GarbageCollector gc;
-static inline Fa_StringRef sp_method_name(int m)
+GarbageCollector gc;
+static inline StringRef sp_method_name(int m)
 {
     switch (m) {
-    case Fa_ObjClass::INIT: return "بداية";
-    case Fa_ObjClass::ADD: return "عملية+";
-    case Fa_ObjClass::SUB: return "عملية-";
-    case Fa_ObjClass::MUL: return "عملية*";
-    case Fa_ObjClass::DIV: return "عملية/";
-    case Fa_ObjClass::MOD: return "عملية%";
-    case Fa_ObjClass::REPR: return "كتابة";
+    case ObjClass::INIT: return "بداية";
+    case ObjClass::ADD: return "عملية+";
+    case ObjClass::SUB: return "عملية-";
+    case ObjClass::MUL: return "عملية*";
+    case ObjClass::DIV: return "عملية/";
+    case ObjClass::MOD: return "عملية%";
+    case ObjClass::REPR: return "كتابة";
     default:
         return { };
     }
@@ -39,7 +39,7 @@ static inline Fa_StringRef sp_method_name(int m)
 
 }
 
-class Fa_VMPerfTest : public ::testing::Test {
+class VMPerfTest : public ::testing::Test {
 protected:
     void SetUp() override { REQUIRE_PERF(); }
 
@@ -49,46 +49,46 @@ protected:
 static constexpr u16 BX(int v) { return static_cast<u16>(v + 32767); }
 
 struct CB {
-    Fa_Chunk* ch { nullptr };
+    Chunk* ch { nullptr };
 
     CB()
     {
-        ch = Fa_make_chunk();
+        ch = make_chunk();
         ch->name = "<test>";
     }
 
-    CB& ABC(Fa_OpCode op, u8 A, u8 B, u8 C, u32 ln = 1)
+    CB& ABC(OpCode op, u8 A, u8 B, u8 C, u32 ln = 1)
     {
-        ch->emit(Fa_make_ABC(op, A, B, C), { ln, 0, 0 });
+        ch->emit(make_ABC(op, A, B, C), { ln, 0, 0 });
         return *this;
     }
-    CB& ABx(Fa_OpCode op, u8 A, u16 Bx, u32 ln = 1)
+    CB& ABx(OpCode op, u8 A, u16 Bx, u32 ln = 1)
     {
-        ch->emit(Fa_make_ABx(op, A, Bx), { ln, 0, 0 });
+        ch->emit(make_ABx(op, A, Bx), { ln, 0, 0 });
         return *this;
     }
-    CB& AsBx(Fa_OpCode op, u8 A, int s_bx, u32 ln = 1)
+    CB& AsBx(OpCode op, u8 A, int s_bx, u32 ln = 1)
     {
-        ch->emit(Fa_make_AsBx(op, A, s_bx), { ln, 0, 0 });
+        ch->emit(make_AsBx(op, A, s_bx), { ln, 0, 0 });
         return *this;
     }
 
-    CB& load_int(u8 r, int v) { return ABx(Fa_OpCode::LOAD_INT, r, BX(v)); }
-    CB& ret(u8 r, u8 n = 1) { return ABC(Fa_OpCode::RETURN, r, n, 0); }
-    CB& ret_nil() { return ABC(Fa_OpCode::RETURN_NIL, 0, 0, 0); }
-    CB& nop(u8 slot = 0) { return ABC(Fa_OpCode::NOP, slot, 0, 0); }
-    CB& mov(u8 d, u8 s) { return ABC(Fa_OpCode::MOVE, d, s, 0); }
+    CB& load_int(u8 r, int v) { return ABx(OpCode::LOAD_INT, r, BX(v)); }
+    CB& ret(u8 r, u8 n = 1) { return ABC(OpCode::RETURN, r, n, 0); }
+    CB& ret_nil() { return ABC(OpCode::RETURN_NIL, 0, 0, 0); }
+    CB& nop(u8 slot = 0) { return ABC(OpCode::NOP, slot, 0, 0); }
+    CB& mov(u8 d, u8 s) { return ABC(OpCode::MOVE, d, s, 0); }
 
     u16 str(char const* s)
     {
-        auto p = std::make_unique<Fa_ObjString>();
+        auto p = std::make_unique<ObjString>();
         p->str = s;
         strs_.emplace_back(std::move(p));
-        return ch->add_constant(Fa_Value::from_obj(reinterpret_cast<Fa_ObjHeader*>(strs_.back().get())));
+        return ch->add_constant(Value::from_obj(reinterpret_cast<ObjHeader*>(strs_.back().get())));
     }
 
-    CB& ldg(u8 r, char const* name) { return ABx(Fa_OpCode::LOAD_GLOBAL, r, str(name)); }
-    CB& stg(u8 r, char const* name) { return ABx(Fa_OpCode::STORE_GLOBAL, r, str(name)); }
+    CB& ldg(u8 r, char const* name) { return ABx(OpCode::LOAD_GLOBAL, r, str(name)); }
+    CB& stg(u8 r, char const* name) { return ABx(OpCode::STORE_GLOBAL, r, str(name)); }
 
     CB& regs(int n)
     {
@@ -114,26 +114,26 @@ struct CB {
         if (v >= -32767 && v <= 32768) {
             return load_int(r, static_cast<int>(v)); // fits in LOAD_INT
         } else {
-            u16 k = ch->add_constant(Fa_Value::from_int(v));
-            return ABx(Fa_OpCode::LOAD_CONST, r, k); // spill to constant pool
+            u16 k = ch->add_constant(Value::from_int(v));
+            return ABx(OpCode::LOAD_CONST, r, k); // spill to constant pool
         }
     }
 
 private:
-    std::vector<std::unique_ptr<Fa_ObjString>> strs_;
+    std::vector<std::unique_ptr<ObjString>> strs_;
 };
 
 struct VMRunner {
-    Fa_VM vm;
-    Fa_Chunk* chunk_ = Fa_make_chunk();
+    VM vm;
+    Chunk* chunk_ = make_chunk();
 
-    Fa_Value run(CB& b)
+    Value run(CB& b)
     {
         diagnostic::reset();
         chunk_ = b.ch;
         return vm.run(chunk_);
     }
-    Fa_Value run(Fa_Chunk* c)
+    Value run(Chunk* c)
     {
         diagnostic::reset();
         chunk_ = c;
@@ -143,10 +143,10 @@ struct VMRunner {
 
 namespace {
 
-Fa_Chunk* compile_program(Fa_Array<AST::Fa_Stmt*> stmts)
+Chunk* compile_program(Array<AST::Stmt*> stmts)
 {
     diagnostic::reset();
-    Fa_Chunk* chunk = Compiler().compile(stmts);
+    Chunk* chunk = Compiler().compile(stmts);
     if (diagnostic::has_errors()) {
         diagnostic::dump(); // or whatever prints pending diagnostics
     }
@@ -155,7 +155,7 @@ Fa_Chunk* compile_program(Fa_Array<AST::Fa_Stmt*> stmts)
     return chunk;
 }
 
-Fa_Chunk* compile_calling(AST::Fa_Stmt* fn)
+Chunk* compile_calling(AST::Stmt* fn)
 {
     auto* name = as_function_def(fn)->get_name();
     return compile_program({ fn, expr_stmt(call_expr(name_expr(name->get_value()))) });
@@ -167,7 +167,7 @@ TEST(VMLoads, Nil)
 {
     VMRunner r;
     CB b;
-    b.regs(1).ABC(Fa_OpCode::LOAD_NIL, 0, 0, 1).ret(0);
+    b.regs(1).ABC(OpCode::LOAD_NIL, 0, 0, 1).ret(0);
     if (test_config::dump_bytecode)
         b.dump();
     EXPECT_TRUE(r.run(b).is_nil());
@@ -177,7 +177,7 @@ TEST(VMLoads, NilFillsMultiple)
 {
     VMRunner r;
     CB b;
-    b.regs(3).ABC(Fa_OpCode::LOAD_NIL, 0, 0, 3).ret(2);
+    b.regs(3).ABC(OpCode::LOAD_NIL, 0, 0, 3).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
     EXPECT_TRUE(r.run(b).is_nil());
@@ -187,10 +187,10 @@ TEST(VMLoads, True)
 {
     VMRunner r;
     CB b;
-    b.regs(1).ABC(Fa_OpCode::LOAD_TRUE, 0, 0, 0).ret(0);
+    b.regs(1).ABC(OpCode::LOAD_TRUE, 0, 0, 0).ret(0);
     if (test_config::dump_bytecode)
         b.dump();
-    Fa_Value v = r.run(b);
+    Value v = r.run(b);
     EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
@@ -198,10 +198,10 @@ TEST(VMLoads, False)
 {
     VMRunner r;
     CB b;
-    b.regs(1).ABC(Fa_OpCode::LOAD_FALSE, 0, 0, 0).ret(0);
+    b.regs(1).ABC(OpCode::LOAD_FALSE, 0, 0, 0).ret(0);
     if (test_config::dump_bytecode)
         b.dump();
-    Fa_Value v = r.run(b);
+    Value v = r.run(b);
     EXPECT_TRUE(v.is_bool() && !v.as_bool());
 }
 
@@ -210,7 +210,7 @@ TEST(VMLoads, IntPositive)
     VMRunner r;
     CB b;
     b.regs(1).load_int(0, 42).ret(0);
-    Fa_Value v = r.run(b);
+    Value v = r.run(b);
     EXPECT_TRUE(v.is_int());
     EXPECT_EQ(v.as_int(), 42);
 }
@@ -222,7 +222,7 @@ TEST(VMLoads, IntZero)
     b.regs(1).load_int(0, 0).ret(0);
     if (test_config::dump_bytecode)
         b.dump();
-    Fa_Value v = r.run(b);
+    Value v = r.run(b);
     EXPECT_TRUE(v.is_int());
     EXPECT_EQ(v.as_int(), 0);
 }
@@ -234,7 +234,7 @@ TEST(VMLoads, IntNegative)
     b.regs(1).load_int(0, -100).ret(0);
     if (test_config::dump_bytecode)
         b.dump();
-    Fa_Value v = r.run(b);
+    Value v = r.run(b);
     EXPECT_TRUE(v.is_int());
     EXPECT_EQ(v.as_int(), -100);
 }
@@ -243,10 +243,10 @@ TEST(VMLoads, IntMaxEncodable)
 {
     VMRunner r;
     CB b;
-    b.regs(1).ABx(Fa_OpCode::LOAD_INT, 0, 65535).ret(0);
+    b.regs(1).ABx(OpCode::LOAD_INT, 0, 65535).ret(0);
     if (test_config::dump_bytecode)
         b.dump();
-    Fa_Value v = r.run(b);
+    Value v = r.run(b);
     EXPECT_TRUE(v.is_int());
     EXPECT_EQ(v.as_int(), 32768);
 }
@@ -255,10 +255,10 @@ TEST(VMLoads, IntMinEncodable)
 {
     VMRunner r;
     CB b;
-    b.regs(1).ABx(Fa_OpCode::LOAD_INT, 0, 0).ret(0);
+    b.regs(1).ABx(OpCode::LOAD_INT, 0, 0).ret(0);
     if (test_config::dump_bytecode)
         b.dump();
-    Fa_Value v = r.run(b);
+    Value v = r.run(b);
     EXPECT_TRUE(v.is_int());
     EXPECT_EQ(v.as_int(), -32767);
 }
@@ -268,11 +268,11 @@ TEST(VMLoads, ConstDouble)
     VMRunner r;
     CB b;
     b.regs(1);
-    u16 k = b.ch->add_constant(Fa_Value::from_real(3.14));
-    b.ABx(Fa_OpCode::LOAD_CONST, 0, k).ret(0);
+    u16 k = b.ch->add_constant(Value::from_real(3.14));
+    b.ABx(OpCode::LOAD_CONST, 0, k).ret(0);
     if (test_config::dump_bytecode)
         b.dump();
-    Fa_Value v = r.run(b);
+    Value v = r.run(b);
     EXPECT_TRUE(v.is_double());
     EXPECT_DOUBLE_EQ(v.as_double(), 3.14);
 }
@@ -283,10 +283,10 @@ TEST(VMLoads, ConstString)
     CB b;
     b.regs(1);
     u16 k = b.str("hello");
-    b.ABx(Fa_OpCode::LOAD_CONST, 0, k).ret(0);
+    b.ABx(OpCode::LOAD_CONST, 0, k).ret(0);
     if (test_config::dump_bytecode)
         b.dump();
-    Fa_Value v = r.run(b);
+    Value v = r.run(b);
     EXPECT_TRUE(v.is_string());
     EXPECT_EQ(v.as_string()->str, "hello");
 }
@@ -296,11 +296,11 @@ TEST(VMLoads, ConstLargeInt)
     VMRunner r;
     CB b;
     b.regs(1);
-    u16 k = b.ch->add_constant(Fa_Value::from_int(1000000LL));
-    b.ABx(Fa_OpCode::LOAD_CONST, 0, k).ret(0);
+    u16 k = b.ch->add_constant(Value::from_int(1000000LL));
+    b.ABx(OpCode::LOAD_CONST, 0, k).ret(0);
     if (test_config::dump_bytecode)
         b.dump();
-    Fa_Value v = r.run(b);
+    Value v = r.run(b);
     EXPECT_TRUE(v.is_int());
     EXPECT_EQ(v.as_int(), 1000000LL);
 }
@@ -320,7 +320,7 @@ TEST(VMMove, Copies)
     b.regs(2).load_int(0, 77).mov(1, 0).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    Fa_Value v = r.run(b);
+    Value v = r.run(b);
     EXPECT_TRUE(v.is_int());
     EXPECT_EQ(v.as_int(), 77);
 }
@@ -332,7 +332,7 @@ TEST(VMMove, SourceUnchanged)
     b.regs(2).load_int(0, 55).mov(1, 0).ret(0);
     if (test_config::dump_bytecode)
         b.dump();
-    Fa_Value v = r.run(b);
+    Value v = r.run(b);
     EXPECT_EQ(v.as_int(), 55);
 }
 
@@ -340,10 +340,10 @@ TEST(VMArith, AddIntFastPath)
 {
     VMRunner r;
     CB b;
-    b.regs(3).slot().load_int(0, 10).load_int(1, 32).ABC(Fa_OpCode::OP_ADD, 2, 0, 1).nop().ret(2);
+    b.regs(3).slot().load_int(0, 10).load_int(1, 32).ABC(OpCode::OP_ADD, 2, 0, 1).nop().ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    Fa_Value v = r.run(b);
+    Value v = r.run(b);
     EXPECT_TRUE(v.is_int());
     EXPECT_EQ(v.as_int(), 42);
 }
@@ -353,12 +353,12 @@ TEST(VMArith, AddDoubles)
     VMRunner r;
     CB b;
     b.regs(3);
-    u16 k0 = b.ch->add_constant(Fa_Value::from_real(1.5));
-    u16 k1 = b.ch->add_constant(Fa_Value::from_real(2.5));
-    b.ABx(Fa_OpCode::LOAD_CONST, 0, k0).ABx(Fa_OpCode::LOAD_CONST, 1, k1).ABC(Fa_OpCode::OP_ADD, 2, 0, 1).ret(2);
+    u16 k0 = b.ch->add_constant(Value::from_real(1.5));
+    u16 k1 = b.ch->add_constant(Value::from_real(2.5));
+    b.ABx(OpCode::LOAD_CONST, 0, k0).ABx(OpCode::LOAD_CONST, 1, k1).ABC(OpCode::OP_ADD, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    Fa_Value v = r.run(b);
+    Value v = r.run(b);
     EXPECT_TRUE(v.is_double());
     EXPECT_DOUBLE_EQ(v.as_double(), 4.0);
 }
@@ -370,10 +370,10 @@ TEST(VMArith, AddStringsConcat)
     b.regs(3);
     u16 k0 = b.str("foo");
     u16 k1 = b.str("bar");
-    b.ABx(Fa_OpCode::LOAD_CONST, 0, k0).ABx(Fa_OpCode::LOAD_CONST, 1, k1).ABC(Fa_OpCode::OP_ADD, 2, 0, 1).ret(2);
+    b.ABx(OpCode::LOAD_CONST, 0, k0).ABx(OpCode::LOAD_CONST, 1, k1).ABC(OpCode::OP_ADD, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    Fa_Value v = r.run(b);
+    Value v = r.run(b);
     EXPECT_TRUE(v.is_string());
     EXPECT_EQ(v.as_string()->str, "foobar");
 }
@@ -382,7 +382,7 @@ TEST(VMArith, SubInt)
 {
     VMRunner r;
     CB b;
-    b.regs(3).load_int(0, 100).load_int(1, 58).ABC(Fa_OpCode::OP_SUB, 2, 0, 1).ret(2);
+    b.regs(3).load_int(0, 100).load_int(1, 58).ABC(OpCode::OP_SUB, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
     EXPECT_EQ(r.run(b).as_int(), 42);
@@ -392,7 +392,7 @@ TEST(VMArith, MulInt)
 {
     VMRunner r;
     CB b;
-    b.regs(3).load_int(0, 6).load_int(1, 7).ABC(Fa_OpCode::OP_MUL, 2, 0, 1).ret(2);
+    b.regs(3).load_int(0, 6).load_int(1, 7).ABC(OpCode::OP_MUL, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
     EXPECT_EQ(r.run(b).as_int(), 42);
@@ -403,9 +403,9 @@ TEST(VMArith, DivDouble)
     VMRunner r;
     CB b;
     b.regs(3);
-    u16 k0 = b.ch->add_constant(Fa_Value::from_real(84.0));
-    u16 k1 = b.ch->add_constant(Fa_Value::from_real(2.0));
-    b.ABx(Fa_OpCode::LOAD_CONST, 0, k0).ABx(Fa_OpCode::LOAD_CONST, 1, k1).ABC(Fa_OpCode::OP_DIV, 2, 0, 1).ret(2);
+    u16 k0 = b.ch->add_constant(Value::from_real(84.0));
+    u16 k1 = b.ch->add_constant(Value::from_real(2.0));
+    b.ABx(OpCode::LOAD_CONST, 0, k0).ABx(OpCode::LOAD_CONST, 1, k1).ABC(OpCode::OP_DIV, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
     EXPECT_DOUBLE_EQ(r.run(b).as_double(), 42.0);
@@ -415,10 +415,10 @@ TEST(VMArith, ModPositive)
 {
     VMRunner r;
     CB b;
-    b.regs(3).load_int(0, 17).load_int(1, 5).ABC(Fa_OpCode::OP_MOD, 2, 0, 1).ret(2);
+    b.regs(3).load_int(0, 17).load_int(1, 5).ABC(OpCode::OP_MOD, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    Fa_Value result = r.run(b);
+    Value result = r.run(b);
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 2);
 }
@@ -427,7 +427,7 @@ TEST(VMArith, Pow)
 {
     VMRunner r;
     CB b;
-    b.regs(3).load_int(0, 2).load_int(1, 10).ABC(Fa_OpCode::OP_POW, 2, 0, 1).ret(2);
+    b.regs(3).load_int(0, 2).load_int(1, 10).ABC(OpCode::OP_POW, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
     EXPECT_DOUBLE_EQ(r.run(b).as_double(), 1024.0);
@@ -437,7 +437,7 @@ TEST(VMArith, NegInt)
 {
     VMRunner r;
     CB b;
-    b.regs(2).load_int(0, 7).ABC(Fa_OpCode::OP_NEG, 1, 0, 0).ret(1);
+    b.regs(2).load_int(0, 7).ABC(OpCode::OP_NEG, 1, 0, 0).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
     EXPECT_EQ(r.run(b).as_int(), -7);
@@ -448,8 +448,8 @@ TEST(VMArith, NegDouble)
     VMRunner r;
     CB b;
     b.regs(2);
-    u16 k = b.ch->add_constant(Fa_Value::from_real(3.5));
-    b.ABx(Fa_OpCode::LOAD_CONST, 0, k).ABC(Fa_OpCode::OP_NEG, 1, 0, 0).ret(1);
+    u16 k = b.ch->add_constant(Value::from_real(3.5));
+    b.ABx(OpCode::LOAD_CONST, 0, k).ABC(OpCode::OP_NEG, 1, 0, 0).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
     EXPECT_DOUBLE_EQ(r.run(b).as_double(), -3.5);
@@ -460,9 +460,9 @@ TEST(VMArith, DivByZeroThrows)
     VMRunner r;
     CB b;
     b.regs(3);
-    u16 k0 = b.ch->add_constant(Fa_Value::from_real(1.0));
-    u16 k1 = b.ch->add_constant(Fa_Value::from_real(0.0));
-    b.ABx(Fa_OpCode::LOAD_CONST, 0, k0).ABx(Fa_OpCode::LOAD_CONST, 1, k1).ABC(Fa_OpCode::OP_DIV, 2, 0, 1).ret(2);
+    u16 k0 = b.ch->add_constant(Value::from_real(1.0));
+    u16 k1 = b.ch->add_constant(Value::from_real(0.0));
+    b.ABx(OpCode::LOAD_CONST, 0, k0).ABx(OpCode::LOAD_CONST, 1, k1).ABC(OpCode::OP_DIV, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
     EXPECT_THROW(r.run(b), std::runtime_error);
@@ -472,7 +472,7 @@ TEST(VMArith, NegOnStringThrows)
 {
     VMRunner r;
     CB b;
-    b.regs(2).ABx(Fa_OpCode::LOAD_CONST, 0, b.str("x")).ABC(Fa_OpCode::OP_NEG, 1, 0, 0).ret(1);
+    b.regs(2).ABx(OpCode::LOAD_CONST, 0, b.str("x")).ABC(OpCode::OP_NEG, 1, 0, 0).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
     EXPECT_THROW(r.run(b), std::runtime_error);
@@ -482,7 +482,7 @@ TEST(VMBitwise, And)
 {
     VMRunner r;
     CB b;
-    b.regs(3).load_int(0, 0b1111).load_int(1, 0b1010).ABC(Fa_OpCode::OP_BITAND, 2, 0, 1).ret(2);
+    b.regs(3).load_int(0, 0b1111).load_int(1, 0b1010).ABC(OpCode::OP_BITAND, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
     EXPECT_EQ(r.run(b).as_int(), 0b1010);
@@ -492,7 +492,7 @@ TEST(VMBitwise, Or)
 {
     VMRunner r;
     CB b;
-    b.regs(3).load_int(0, 0b1100).load_int(1, 0b0011).ABC(Fa_OpCode::OP_BITOR, 2, 0, 1).ret(2);
+    b.regs(3).load_int(0, 0b1100).load_int(1, 0b0011).ABC(OpCode::OP_BITOR, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
     EXPECT_EQ(r.run(b).as_int(), 0b1111);
@@ -502,7 +502,7 @@ TEST(VMBitwise, Xor)
 {
     VMRunner r;
     CB b;
-    b.regs(3).load_int(0, 0b1111).load_int(1, 0b0101).ABC(Fa_OpCode::OP_BITXOR, 2, 0, 1).ret(2);
+    b.regs(3).load_int(0, 0b1111).load_int(1, 0b0101).ABC(OpCode::OP_BITXOR, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
     EXPECT_EQ(r.run(b).as_int(), 0b1010);
@@ -512,7 +512,7 @@ TEST(VMBitwise, Not)
 {
     VMRunner r;
     CB b;
-    b.regs(2).load_int(0, 0).ABC(Fa_OpCode::OP_BITNOT, 1, 0, 0).ret(1);
+    b.regs(2).load_int(0, 0).ABC(OpCode::OP_BITNOT, 1, 0, 0).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
     EXPECT_EQ(r.run(b).as_int(), ~i64(0));
@@ -522,7 +522,7 @@ TEST(VMBitwise, Shl)
 {
     VMRunner r;
     CB b;
-    b.regs(2).load_int(0, 1).ABC(Fa_OpCode::OP_LSHIFT, 1, 0, 8).ret(1);
+    b.regs(2).load_int(0, 1).ABC(OpCode::OP_LSHIFT, 1, 0, 8).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
     EXPECT_EQ(r.run(b).as_int(), 256);
@@ -532,7 +532,7 @@ TEST(VMBitwise, Shr)
 {
     VMRunner r;
     CB b;
-    b.regs(2).load_int(0, 1024).ABC(Fa_OpCode::OP_RSHIFT, 1, 0, 3).ret(1);
+    b.regs(2).load_int(0, 1024).ABC(OpCode::OP_RSHIFT, 1, 0, 3).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
     EXPECT_EQ(r.run(b).as_int(), 128);
@@ -542,10 +542,10 @@ TEST(VMBitwise, ShrLogical_NegativeInput)
 {
     VMRunner r;
     CB b;
-    b.regs(3).load_int(0, -8).load_int(1, 1).ABC(Fa_OpCode::OP_RSHIFT, 2, 0, 1).ret(2);
+    b.regs(3).load_int(0, -8).load_int(1, 1).ABC(OpCode::OP_RSHIFT, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    Fa_Value v = r.run(b);
+    Value v = r.run(b);
     EXPECT_TRUE(v.is_double());
     EXPECT_GT(v.as_double(), 0.0);
 }
@@ -555,8 +555,8 @@ TEST(VMBitwise, AndOnDoubleThrows)
     VMRunner r;
     CB b;
     b.regs(3);
-    u16 k = b.ch->add_constant(Fa_Value::from_real(1.0));
-    b.ABx(Fa_OpCode::LOAD_CONST, 0, k).load_int(1, 1).ABC(Fa_OpCode::OP_BITAND, 2, 0, 1).ret(2);
+    u16 k = b.ch->add_constant(Value::from_real(1.0));
+    b.ABx(OpCode::LOAD_CONST, 0, k).load_int(1, 1).ABC(OpCode::OP_BITAND, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
     EXPECT_THROW(r.run(b), std::runtime_error);
@@ -566,10 +566,10 @@ TEST(VMCompare, EqIntsTrue)
 {
     VMRunner r;
     CB b;
-    b.regs(3).load_int(0, 5).load_int(1, 5).ABC(Fa_OpCode::OP_EQ, 2, 0, 1).ret(2);
+    b.regs(3).load_int(0, 5).load_int(1, 5).ABC(OpCode::OP_EQ, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    Fa_Value v = r.run(b);
+    Value v = r.run(b);
     EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
@@ -577,10 +577,10 @@ TEST(VMCompare, EqIntsFalse)
 {
     VMRunner r;
     CB b;
-    b.regs(3).load_int(0, 5).load_int(1, 6).ABC(Fa_OpCode::OP_EQ, 2, 0, 1).ret(2);
+    b.regs(3).load_int(0, 5).load_int(1, 6).ABC(OpCode::OP_EQ, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    Fa_Value v = r.run(b);
+    Value v = r.run(b);
     EXPECT_TRUE(v.is_bool() && !v.as_bool());
 }
 
@@ -588,8 +588,8 @@ TEST(VMCompare, NeqTrue)
 {
     VMRunner r;
     CB b;
-    b.regs(3).load_int(0, 5).load_int(1, 6).ABC(Fa_OpCode::OP_NEQ, 2, 0, 1).ret(2);
-    Fa_Value v = r.run(b);
+    b.regs(3).load_int(0, 5).load_int(1, 6).ABC(OpCode::OP_NEQ, 2, 0, 1).ret(2);
+    Value v = r.run(b);
     EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
@@ -597,10 +597,10 @@ TEST(VMCompare, LtTrue)
 {
     VMRunner r;
     CB b;
-    b.regs(3).load_int(0, 3).load_int(1, 7).ABC(Fa_OpCode::OP_LT, 2, 0, 1).ret(2);
+    b.regs(3).load_int(0, 3).load_int(1, 7).ABC(OpCode::OP_LT, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    Fa_Value v = r.run(b);
+    Value v = r.run(b);
     EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
@@ -608,10 +608,10 @@ TEST(VMCompare, LtFalseEqual)
 {
     VMRunner r;
     CB b;
-    b.regs(3).load_int(0, 5).load_int(1, 5).ABC(Fa_OpCode::OP_LT, 2, 0, 1).ret(2);
+    b.regs(3).load_int(0, 5).load_int(1, 5).ABC(OpCode::OP_LT, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    Fa_Value v = r.run(b);
+    Value v = r.run(b);
     EXPECT_TRUE(v.is_bool() && !v.as_bool());
 }
 
@@ -619,10 +619,10 @@ TEST(VMCompare, LeTrue_Equal)
 {
     VMRunner r;
     CB b;
-    b.regs(3).load_int(0, 5).load_int(1, 5).ABC(Fa_OpCode::OP_LTE, 2, 0, 1).ret(2);
+    b.regs(3).load_int(0, 5).load_int(1, 5).ABC(OpCode::OP_LTE, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    Fa_Value v = r.run(b);
+    Value v = r.run(b);
     EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
@@ -630,10 +630,10 @@ TEST(VMCompare, LeFalse)
 {
     VMRunner r;
     CB b;
-    b.regs(3).load_int(0, 6).load_int(1, 5).ABC(Fa_OpCode::OP_LTE, 2, 0, 1).ret(2);
+    b.regs(3).load_int(0, 6).load_int(1, 5).ABC(OpCode::OP_LTE, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    Fa_Value v = r.run(b);
+    Value v = r.run(b);
     EXPECT_TRUE(v.is_bool() && !v.as_bool());
 }
 
@@ -644,10 +644,10 @@ TEST(VMCompare, EqSameString)
     b.regs(3);
     u16 k0 = b.str("hello");
     u16 k1 = b.str("hello");
-    b.ABx(Fa_OpCode::LOAD_CONST, 0, k0).ABx(Fa_OpCode::LOAD_CONST, 1, k1).ABC(Fa_OpCode::OP_EQ, 2, 0, 1).ret(2);
+    b.ABx(OpCode::LOAD_CONST, 0, k0).ABx(OpCode::LOAD_CONST, 1, k1).ABC(OpCode::OP_EQ, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    Fa_Value v = r.run(b);
+    Value v = r.run(b);
     EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
@@ -655,10 +655,10 @@ TEST(VMCompare, NotFalseIsTrue)
 {
     VMRunner r;
     CB b;
-    b.regs(2).ABC(Fa_OpCode::LOAD_FALSE, 0, 0, 0).ABC(Fa_OpCode::OP_NOT, 1, 0, 0).ret(1);
+    b.regs(2).ABC(OpCode::LOAD_FALSE, 0, 0, 0).ABC(OpCode::OP_NOT, 1, 0, 0).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    Fa_Value v = r.run(b);
+    Value v = r.run(b);
     EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
@@ -666,10 +666,10 @@ TEST(VMCompare, NotTrueIsFalse)
 {
     VMRunner r;
     CB b;
-    b.regs(2).ABC(Fa_OpCode::LOAD_TRUE, 0, 0, 0).ABC(Fa_OpCode::OP_NOT, 1, 0, 0).ret(1);
+    b.regs(2).ABC(OpCode::LOAD_TRUE, 0, 0, 0).ABC(OpCode::OP_NOT, 1, 0, 0).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    Fa_Value v = r.run(b);
+    Value v = r.run(b);
     EXPECT_TRUE(v.is_bool() && !v.as_bool());
 }
 
@@ -677,10 +677,10 @@ TEST(VMCompare, NotNilIsTrue)
 {
     VMRunner r;
     CB b;
-    b.regs(2).ABC(Fa_OpCode::LOAD_NIL, 0, 0, 1).ABC(Fa_OpCode::OP_NOT, 1, 0, 0).ret(1);
+    b.regs(2).ABC(OpCode::LOAD_NIL, 0, 0, 1).ABC(OpCode::OP_NOT, 1, 0, 0).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    Fa_Value v = r.run(b);
+    Value v = r.run(b);
     EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
@@ -688,10 +688,10 @@ TEST(VMCompare, NotZeroIsTrue)
 {
     VMRunner r;
     CB b;
-    b.regs(2).load_int(0, 0).ABC(Fa_OpCode::OP_NOT, 1, 0, 0).ret(1);
+    b.regs(2).load_int(0, 0).ABC(OpCode::OP_NOT, 1, 0, 0).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    Fa_Value v = r.run(b);
+    Value v = r.run(b);
     EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
@@ -702,10 +702,10 @@ TEST(VMCompare, LtStrings)
     b.regs(3);
     u16 ka = b.str("apple");
     u16 kb = b.str("banana");
-    b.ABx(Fa_OpCode::LOAD_CONST, 0, ka).ABx(Fa_OpCode::LOAD_CONST, 1, kb).ABC(Fa_OpCode::OP_LT, 2, 0, 1).ret(2);
+    b.ABx(OpCode::LOAD_CONST, 0, ka).ABx(OpCode::LOAD_CONST, 1, kb).ABC(OpCode::OP_LT, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    Fa_Value v = r.run(b);
+    Value v = r.run(b);
     EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
@@ -742,7 +742,7 @@ TEST(VMLists, NewEmpty)
 {
     VMRunner r;
     CB b;
-    b.regs(2).ABC(Fa_OpCode::LIST_NEW, 0, 0, 0).ABC(Fa_OpCode::LIST_LEN, 1, 0, 0).ret(1);
+    b.regs(2).ABC(OpCode::LIST_NEW, 0, 0, 0).ABC(OpCode::LIST_LEN, 1, 0, 0).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
     EXPECT_EQ(r.run(b).as_int(), 0);
@@ -752,10 +752,10 @@ TEST(VMLists, AppendAndLen)
 {
     VMRunner r;
     CB b;
-    b.regs(2).ABC(Fa_OpCode::LIST_NEW, 0, 3, 0);
+    b.regs(2).ABC(OpCode::LIST_NEW, 0, 3, 0);
     for (int v : { 10, 20, 30 })
-        b.load_int(1, v).ABC(Fa_OpCode::LIST_APPEND, 0, 1, 0);
-    b.ABC(Fa_OpCode::LIST_LEN, 1, 0, 0).ret(1);
+        b.load_int(1, v).ABC(OpCode::LIST_APPEND, 0, 1, 0);
+    b.ABC(OpCode::LIST_LEN, 1, 0, 0).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
     EXPECT_EQ(r.run(b).as_int(), 3);
@@ -766,13 +766,13 @@ TEST(VMLists, GetFirst)
     VMRunner r;
     CB b;
     b.regs(3)
-        .ABC(Fa_OpCode::LIST_NEW, 0, 2, 0)
+        .ABC(OpCode::LIST_NEW, 0, 2, 0)
         .load_int(1, 77)
-        .ABC(Fa_OpCode::LIST_APPEND, 0, 1, 0)
+        .ABC(OpCode::LIST_APPEND, 0, 1, 0)
         .load_int(1, 88)
-        .ABC(Fa_OpCode::LIST_APPEND, 0, 1, 0)
+        .ABC(OpCode::LIST_APPEND, 0, 1, 0)
         .load_int(1, 0)
-        .ABC(Fa_OpCode::LIST_GET, 2, 0, 1)
+        .ABC(OpCode::LIST_GET, 2, 0, 1)
         .ret(2);
     if (test_config::dump_bytecode)
         b.dump();
@@ -784,13 +784,13 @@ TEST(VMLists, GetLast)
     VMRunner r;
     CB b;
     b.regs(3)
-        .ABC(Fa_OpCode::LIST_NEW, 0, 2, 0)
+        .ABC(OpCode::LIST_NEW, 0, 2, 0)
         .load_int(1, 10)
-        .ABC(Fa_OpCode::LIST_APPEND, 0, 1, 0)
+        .ABC(OpCode::LIST_APPEND, 0, 1, 0)
         .load_int(1, 20)
-        .ABC(Fa_OpCode::LIST_APPEND, 0, 1, 0)
+        .ABC(OpCode::LIST_APPEND, 0, 1, 0)
         .load_int(1, 1)
-        .ABC(Fa_OpCode::LIST_GET, 2, 0, 1)
+        .ABC(OpCode::LIST_GET, 2, 0, 1)
         .ret(2);
     if (test_config::dump_bytecode)
         b.dump();
@@ -802,14 +802,14 @@ TEST(VMLists, Set)
     VMRunner r;
     CB b;
     b.regs(3)
-        .ABC(Fa_OpCode::LIST_NEW, 0, 1, 0)
+        .ABC(OpCode::LIST_NEW, 0, 1, 0)
         .load_int(1, 0)
-        .ABC(Fa_OpCode::LIST_APPEND, 0, 1, 0)
+        .ABC(OpCode::LIST_APPEND, 0, 1, 0)
         .load_int(1, 0)
         .load_int(2, 99)
-        .ABC(Fa_OpCode::LIST_SET, 0, 1, 2)
+        .ABC(OpCode::LIST_SET, 0, 1, 2)
         .load_int(1, 0)
-        .ABC(Fa_OpCode::LIST_GET, 2, 0, 1)
+        .ABC(OpCode::LIST_GET, 2, 0, 1)
         .ret(2);
     if (test_config::dump_bytecode)
         b.dump();
@@ -820,7 +820,7 @@ TEST(VMLists, OutOfBoundsThrows)
 {
     VMRunner r;
     CB b;
-    b.regs(3).ABC(Fa_OpCode::LIST_NEW, 0, 0, 0).load_int(1, 0).ABC(Fa_OpCode::LIST_GET, 2, 0, 1).ret(2);
+    b.regs(3).ABC(OpCode::LIST_NEW, 0, 0, 0).load_int(1, 0).ABC(OpCode::LIST_GET, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
     EXPECT_THROW(r.run(b), std::runtime_error);
@@ -830,7 +830,7 @@ TEST(VMLists, LenOnNonListThrows)
 {
     VMRunner r;
     CB b;
-    b.regs(2).load_int(0, 5).ABC(Fa_OpCode::LIST_LEN, 1, 0, 0).ret(1);
+    b.regs(2).load_int(0, 5).ABC(OpCode::LIST_LEN, 1, 0, 0).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
     EXPECT_THROW(r.run(b), std::runtime_error);
@@ -840,7 +840,7 @@ TEST(VMDicts, IndexReturnsStoredValue)
 {
     VMRunner r;
 
-    Fa_Chunk* ch = compile_program(
+    Chunk* ch = compile_program(
         {
             func_def(
                 name_expr("func"),
@@ -857,7 +857,7 @@ TEST(VMDicts, IndexReturnsStoredValue)
     if (test_config::dump_bytecode)
         ch->disassemble();
 
-    Fa_Value result = r.run(ch);
+    Value result = r.run(ch);
 
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 7);
@@ -865,7 +865,7 @@ TEST(VMDicts, IndexReturnsStoredValue)
 
 TEST(VMDicts, SetUpdatesAndAppendsByKey)
 {
-    Fa_Chunk* ch = compile_program(
+    Chunk* ch = compile_program(
         {
             func_def(
                 name_expr("func"),
@@ -887,9 +887,9 @@ TEST(VMDicts, SetUpdatesAndAppendsByKey)
         ch->disassemble();
 
     VMRunner r;
-    Fa_Value result = r.run(ch);
+    Value result = r.run(ch);
     ASSERT_TRUE(result.is_list());
-    Fa_ObjList* ret_obj = result.as_list();
+    ObjList* ret_obj = result.as_list();
     ASSERT_EQ(ret_obj->size(), 2);
     EXPECT_EQ(ret_obj->elements[0].as_int(), 1);
     EXPECT_EQ(ret_obj->elements[1].as_int(), 2);
@@ -899,7 +899,7 @@ TEST(VMDicts, MissingKeyReturnsNil)
 {
     VMRunner r;
 
-    Fa_Chunk* ch = compile_program({
+    Chunk* ch = compile_program({
         decl_stmt("x", index_expr(dict_expr({ }), lit_str("missing"))),
     });
 
@@ -909,30 +909,30 @@ TEST(VMDicts, MissingKeyReturnsNil)
     EXPECT_TRUE(r.run(ch).is_nil());
 }
 
-static Fa_Chunk* make_adder_chunk()
+static Chunk* make_adder_chunk()
 {
-    auto fn = Fa_make_chunk();
+    auto fn = make_chunk();
     fn->name = "add2";
     fn->arity = 2;
     fn->local_count = 3;
     // r0=a r1=b (params); r2=a+b
-    fn->emit(Fa_make_ABC(Fa_OpCode::OP_ADD, 2, 0, 1), { });
-    fn->emit(Fa_make_ABC(Fa_OpCode::RETURN, 2, 1, 0), { });
+    fn->emit(make_ABC(OpCode::OP_ADD, 2, 0, 1), { });
+    fn->emit(make_ABC(OpCode::RETURN, 2, 1, 0), { });
     return fn;
 }
 
 TEST(VMCalls, CallClosure_TwoArgs)
 {
-    auto top = Fa_make_chunk();
+    auto top = make_chunk();
     top->name = "<test>";
     top->local_count = 4;
     top->functions.push(make_adder_chunk());
 
-    top->emit(Fa_make_ABx(Fa_OpCode::CLOSURE, 0, 0), { });
-    top->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 1, BX(3)), { });
-    top->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 2, BX(4)), { });
-    top->emit(Fa_make_ABC(Fa_OpCode::CALL, 0, 2, 0), { });
-    top->emit(Fa_make_ABC(Fa_OpCode::RETURN, 0, 1, 0), { });
+    top->emit(make_ABx(OpCode::CLOSURE, 0, 0), { });
+    top->emit(make_ABx(OpCode::LOAD_INT, 1, BX(3)), { });
+    top->emit(make_ABx(OpCode::LOAD_INT, 2, BX(4)), { });
+    top->emit(make_ABC(OpCode::CALL, 0, 2, 0), { });
+    top->emit(make_ABC(OpCode::RETURN, 0, 1, 0), { });
     if (test_config::dump_bytecode)
         top->disassemble();
     VMRunner r;
@@ -941,15 +941,15 @@ TEST(VMCalls, CallClosure_TwoArgs)
 
 TEST(VMCalls, WrongArgcThrows)
 {
-    auto top = Fa_make_chunk();
+    auto top = make_chunk();
     top->name = "<test>";
     top->local_count = 3;
     top->functions.push(make_adder_chunk());
 
-    top->emit(Fa_make_ABx(Fa_OpCode::CLOSURE, 0, 0), { });
-    top->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 1, BX(1)), { });
-    top->emit(Fa_make_ABC(Fa_OpCode::CALL, 0, 1, 0), { });
-    top->emit(Fa_make_ABC(Fa_OpCode::RETURN, 0, 1, 0), { });
+    top->emit(make_ABx(OpCode::CLOSURE, 0, 0), { });
+    top->emit(make_ABx(OpCode::LOAD_INT, 1, BX(1)), { });
+    top->emit(make_ABC(OpCode::CALL, 0, 1, 0), { });
+    top->emit(make_ABC(OpCode::RETURN, 0, 1, 0), { });
     if (test_config::dump_bytecode)
         top->disassemble();
     VMRunner r;
@@ -960,7 +960,7 @@ TEST(VMCalls, CallNonFunctionThrows)
 {
     VMRunner r;
     CB b;
-    b.regs(2).load_int(0, 5).ABC(Fa_OpCode::CALL, 0, 0, 0).ret(0);
+    b.regs(2).load_int(0, 5).ABC(OpCode::CALL, 0, 0, 0).ret(0);
     if (test_config::dump_bytecode)
         b.dump();
     EXPECT_THROW(r.run(b), std::runtime_error);
@@ -972,16 +972,16 @@ TEST(VMCalls, ICCallNativeLen)
     CB b;
     b.regs(3)
         .slot()
-        .ABC(Fa_OpCode::LIST_NEW, 0, 3, 0)
+        .ABC(OpCode::LIST_NEW, 0, 3, 0)
         .load_int(2, 1)
-        .ABC(Fa_OpCode::LIST_APPEND, 0, 2, 0)
+        .ABC(OpCode::LIST_APPEND, 0, 2, 0)
         .load_int(2, 2)
-        .ABC(Fa_OpCode::LIST_APPEND, 0, 2, 0)
+        .ABC(OpCode::LIST_APPEND, 0, 2, 0)
         .load_int(2, 3)
-        .ABC(Fa_OpCode::LIST_APPEND, 0, 2, 0)
+        .ABC(OpCode::LIST_APPEND, 0, 2, 0)
         .ldg(1, "طول")
         .mov(2, 0)
-        .ABC(Fa_OpCode::IC_CALL, 1, 1, 0)
+        .ABC(OpCode::IC_CALL, 1, 1, 0)
         .ret(1);
     if (test_config::dump_bytecode)
         b.dump();
@@ -990,38 +990,38 @@ TEST(VMCalls, ICCallNativeLen)
 
 TEST(VMCalls, TailCall_DoesNotOverflowFrames)
 {
-    auto fn = Fa_make_chunk();
+    auto fn = make_chunk();
     fn->name = "cd";
     fn->arity = 1;
     fn->local_count = 4;
 
     u16 nk = fn->add_constant(str("cd"));
 
-    fn->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 1, BX(0)), { });
-    fn->emit(Fa_make_ABC(Fa_OpCode::OP_EQ, 1, 0, 1), { });
-    fn->emit(Fa_make_AsBx(Fa_OpCode::JUMP_IF_FALSE, 1, 1), { });
-    fn->emit(Fa_make_ABC(Fa_OpCode::RETURN, 0, 1, 0), { });
-    fn->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 1, BX(1)), { });
-    fn->emit(Fa_make_ABC(Fa_OpCode::OP_SUB, 0, 0, 1), { });
-    fn->emit(Fa_make_ABx(Fa_OpCode::LOAD_GLOBAL, 2, nk), { });
-    fn->emit(Fa_make_ABC(Fa_OpCode::MOVE, 3, 0, 0), { });
-    fn->emit(Fa_make_ABC(Fa_OpCode::CALL_TAIL, 2, 1, 0), { });
+    fn->emit(make_ABx(OpCode::LOAD_INT, 1, BX(0)), { });
+    fn->emit(make_ABC(OpCode::OP_EQ, 1, 0, 1), { });
+    fn->emit(make_AsBx(OpCode::JUMP_IF_FALSE, 1, 1), { });
+    fn->emit(make_ABC(OpCode::RETURN, 0, 1, 0), { });
+    fn->emit(make_ABx(OpCode::LOAD_INT, 1, BX(1)), { });
+    fn->emit(make_ABC(OpCode::OP_SUB, 0, 0, 1), { });
+    fn->emit(make_ABx(OpCode::LOAD_GLOBAL, 2, nk), { });
+    fn->emit(make_ABC(OpCode::MOVE, 3, 0, 0), { });
+    fn->emit(make_ABC(OpCode::CALL_TAIL, 2, 1, 0), { });
 
-    auto top = Fa_make_chunk();
+    auto top = make_chunk();
     top->name = "<test>";
     top->local_count = 3;
     top->functions.push(fn);
 
     u16 tk = top->add_constant(str("cd"));
-    top->emit(Fa_make_ABx(Fa_OpCode::CLOSURE, 0, 0), { });
-    top->emit(Fa_make_ABx(Fa_OpCode::STORE_GLOBAL, 0, tk), { });
-    top->emit(Fa_make_ABx(Fa_OpCode::LOAD_INT, 1, BX(300)), { });
-    top->emit(Fa_make_ABC(Fa_OpCode::CALL, 0, 1, 0), { });
-    top->emit(Fa_make_ABC(Fa_OpCode::RETURN, 0, 1, 0), { });
+    top->emit(make_ABx(OpCode::CLOSURE, 0, 0), { });
+    top->emit(make_ABx(OpCode::STORE_GLOBAL, 0, tk), { });
+    top->emit(make_ABx(OpCode::LOAD_INT, 1, BX(300)), { });
+    top->emit(make_ABC(OpCode::CALL, 0, 1, 0), { });
+    top->emit(make_ABC(OpCode::RETURN, 0, 1, 0), { });
     if (test_config::dump_bytecode)
         top->disassemble();
     VMRunner r;
-    Fa_Value v = r.run(std::move(top));
+    Value v = r.run(std::move(top));
     EXPECT_EQ(v.as_int(), 0);
 }
 
@@ -1050,27 +1050,27 @@ TEST(VMGlobals, UndefinedGlobalRaisesRuntimeError)
     b.regs(1).ldg(0, "missing").ret(0);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_THROW(r.run(b), Fa_RuntimeHalt);
+    EXPECT_THROW(r.run(b), RuntimeHalt);
     diagnostic::reset();
 }
 
 TEST(VMIntegration, FunctionLocalDeclarationShadowsGlobal)
 {
-    AST::Fa_Stmt* make_local = func_def(
+    AST::Stmt* make_local = func_def(
         name_expr("make_local"),
         list_expr(),
         blk(
             { assign_stmt(name_expr("x"), lit_int(2)),
                 return_stmt(name_expr("x")) }));
 
-    AST::Fa_Stmt* read_global = func_def(
+    AST::Stmt* read_global = func_def(
         name_expr("read_global"),
         list_expr(),
         blk({
             return_stmt(name_expr("x")),
         }));
 
-    AST::Fa_Stmt* main_fn = func_def(
+    AST::Stmt* main_fn = func_def(
         name_expr("main"),
         list_expr(),
         blk({
@@ -1080,7 +1080,7 @@ TEST(VMIntegration, FunctionLocalDeclarationShadowsGlobal)
                         call_expr(name_expr("read_global")) })),
         }));
 
-    Fa_Chunk* top = compile_program({
+    Chunk* top = compile_program({
         expr_stmt(assign_expr(name_expr("x"), lit_int(1))),
         make_local,
         read_global,
@@ -1091,7 +1091,7 @@ TEST(VMIntegration, FunctionLocalDeclarationShadowsGlobal)
     if (test_config::dump_bytecode)
         top->disassemble();
     VMRunner r;
-    Fa_Value v = r.run(top);
+    Value v = r.run(top);
     ASSERT_TRUE(v.is_list());
     auto const& elems = v.as_list()->elements;
     ASSERT_EQ(elems.size(), 2u);
@@ -1104,14 +1104,14 @@ TEST(VMICProfile, BinaryOpUpdatesSlot)
 {
     VMRunner r;
     CB b;
-    b.regs(3).slot().load_int(0, 3).load_int(1, 4).ABC(Fa_OpCode::OP_ADD, 2, 0, 1).nop(0).ret(2);
+    b.regs(3).slot().load_int(0, 3).load_int(1, 4).ABC(OpCode::OP_ADD, 2, 0, 1).nop(0).ret(2);
     r.run(b);
     if (test_config::dump_bytecode)
         b.dump();
     auto const& s = r.chunk_->ic_slots[0];
-    EXPECT_TRUE(has_tag(Fa_TypeTag(s.seen_lhs), Fa_TypeTag::INT));
-    EXPECT_TRUE(has_tag(Fa_TypeTag(s.seen_rhs), Fa_TypeTag::INT));
-    EXPECT_TRUE(has_tag(Fa_TypeTag(s.seen_ret), Fa_TypeTag::INT));
+    EXPECT_TRUE(has_tag(TypeTag(s.seen_lhs), TypeTag::INT));
+    EXPECT_TRUE(has_tag(TypeTag(s.seen_rhs), TypeTag::INT));
+    EXPECT_TRUE(has_tag(TypeTag(s.seen_ret), TypeTag::INT));
     EXPECT_GE(s.hit_count, 1u);
 }
 #endif // FA_USE_NANBOX
@@ -1120,7 +1120,7 @@ TEST(VMICProfile, SubUpdatesSlot)
 {
     VMRunner r;
     CB b;
-    b.regs(3).slot().load_int(0, 10).load_int(1, 3).ABC(Fa_OpCode::OP_SUB, 2, 0, 1).nop(0).ret(2);
+    b.regs(3).slot().load_int(0, 10).load_int(1, 3).ABC(OpCode::OP_SUB, 2, 0, 1).nop(0).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
     r.run(b);
@@ -1136,12 +1136,12 @@ TEST(VMICProfile, SlotAccumulatesAcrossLoopIterations)
         .load_int(0, 0)
         .load_int(1, 5)
         .load_int(2, 0)
-        .ABC(Fa_OpCode::OP_LT, 3, 0, 1)
-        .AsBx(Fa_OpCode::JUMP_IF_FALSE, 3, 4)
+        .ABC(OpCode::OP_LT, 3, 0, 1)
+        .AsBx(OpCode::JUMP_IF_FALSE, 3, 4)
         .load_int(4, 1)
-        .ABC(Fa_OpCode::OP_ADD, 0, 0, 4)
+        .ABC(OpCode::OP_ADD, 0, 0, 4)
         .nop(0)
-        .AsBx(Fa_OpCode::LOOP, 0, -6)
+        .AsBx(OpCode::LOOP, 0, -6)
         .ret(0);
     if (test_config::dump_bytecode)
         b.dump();
@@ -1151,20 +1151,20 @@ TEST(VMICProfile, SlotAccumulatesAcrossLoopIterations)
 
 TEST(VMIntegration, TopLevelWhileAssignmentUpdatesGlobal)
 {
-    AST::Fa_Stmt* read_global = func_def(
+    AST::Stmt* read_global = func_def(
         name_expr("read_global"),
         list_expr(),
         blk({
             return_stmt(name_expr("x")),
         }));
 
-    Fa_Chunk* top = compile_program({
+    Chunk* top = compile_program({
         expr_stmt(assign_expr(name_expr("x"), lit_int(0))),
         expr_stmt(assign_expr(name_expr("limit"), lit_int(3))),
         while_stmt(
-            binary(name_expr("x"), name_expr("limit"), AST::Fa_BinaryOp::OP_LT),
+            binary(name_expr("x"), name_expr("limit"), AST::BinaryOp::OP_LT),
             blk({
-                assign_stmt(name_expr("x"), binary(name_expr("x"), lit_int(1), AST::Fa_BinaryOp::OP_ADD)),
+                assign_stmt(name_expr("x"), binary(name_expr("x"), lit_int(1), AST::BinaryOp::OP_ADD)),
             })),
         read_global,
         expr_stmt(call_expr(name_expr("read_global"), list_expr({ }))),
@@ -1174,19 +1174,19 @@ TEST(VMIntegration, TopLevelWhileAssignmentUpdatesGlobal)
         top->disassemble();
 
     VMRunner r;
-    Fa_Value v = r.run(top);
+    Value v = r.run(top);
     ASSERT_TRUE(v.is_int());
     EXPECT_EQ(v.as_int(), 3);
 }
 
 TEST(VMIntegration, Fibonacci_fib10_equals_55)
 {
-    AST::Fa_Stmt* fib = func_def(
+    AST::Stmt* fib = func_def(
         name_expr("fib"),
         list_expr({ name_expr("n") }),
         blk(
             { if_stmt(
-                  binary(name_expr("n"), lit_int(1), AST::Fa_BinaryOp::OP_LTE),
+                  binary(name_expr("n"), lit_int(1), AST::BinaryOp::OP_LTE),
                   blk({ return_stmt(name_expr("n")) }),
                   { }),
                 return_stmt(
@@ -1197,17 +1197,17 @@ TEST(VMIntegration, Fibonacci_fib10_equals_55)
                                 { binary(
                                     name_expr("n"),
                                     lit_int(1),
-                                    AST::Fa_BinaryOp::OP_SUB) })),
+                                    AST::BinaryOp::OP_SUB) })),
                         call_expr(
                             name_expr("fib"),
                             list_expr(
                                 { binary(
                                     name_expr("n"),
                                     lit_int(2),
-                                    AST::Fa_BinaryOp::OP_SUB) })),
-                        AST::Fa_BinaryOp::OP_ADD)) }));
+                                    AST::BinaryOp::OP_SUB) })),
+                        AST::BinaryOp::OP_ADD)) }));
 
-    Fa_Chunk* top = compile_program({ fib, expr_stmt(call_expr(name_expr("fib"), list_expr({ lit_int(10) }))) });
+    Chunk* top = compile_program({ fib, expr_stmt(call_expr(name_expr("fib"), list_expr({ lit_int(10) }))) });
     if (test_config::dump_bytecode)
         top->disassemble();
     VMRunner r;
@@ -1216,7 +1216,7 @@ TEST(VMIntegration, Fibonacci_fib10_equals_55)
 
 TEST(VMIntegration, SumForLoopOverList)
 {
-    AST::Fa_Stmt* sum = func_def(
+    AST::Stmt* sum = func_def(
         name_expr("sum"),
         list_expr(),
         blk(
@@ -1235,12 +1235,12 @@ TEST(VMIntegration, SumForLoopOverList)
                     blk({
                         assign_stmt(
                             name_expr("total"),
-                            binary(name_expr("total"), name_expr("item"), AST::Fa_BinaryOp::OP_ADD)),
+                            binary(name_expr("total"), name_expr("item"), AST::BinaryOp::OP_ADD)),
                     })),
                 return_stmt(name_expr("total")),
             }));
 
-    Fa_Chunk* top = compile_calling(sum);
+    Chunk* top = compile_calling(sum);
     if (test_config::dump_bytecode)
         top->disassemble();
     VMRunner r;
@@ -1249,26 +1249,26 @@ TEST(VMIntegration, SumForLoopOverList)
 
 TEST(VMIntegration, StringConcat_3Parts)
 {
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         return_stmt(
             binary(
-                binary(lit_str("hello"), lit_str(", "), AST::Fa_BinaryOp::OP_ADD),
+                binary(lit_str("hello"), lit_str(", "), AST::BinaryOp::OP_ADD),
                 lit_str("world"),
-                AST::Fa_BinaryOp::OP_ADD)));
+                AST::BinaryOp::OP_ADD)));
 
-    Fa_Chunk* top = compile_calling(test);
+    Chunk* top = compile_calling(test);
     if (test_config::dump_bytecode)
         top->disassemble();
     VMRunner r;
-    Fa_Value v = r.run(top);
+    Value v = r.run(top);
     EXPECT_EQ(v.as_string()->str, "hello, world");
 }
 
 TEST(VMIntegration, EmptyForLoopLeavesStateUnchanged)
 {
-    AST::Fa_Stmt* first = func_def(
+    AST::Stmt* first = func_def(
         name_expr("first"),
         list_expr(),
         blk({
@@ -1280,7 +1280,7 @@ TEST(VMIntegration, EmptyForLoopLeavesStateUnchanged)
             return_stmt(name_expr("seen")),
         }));
 
-    Fa_Chunk* top = compile_calling(first);
+    Chunk* top = compile_calling(first);
     if (test_config::dump_bytecode)
         top->disassemble();
     VMRunner r;
@@ -1289,7 +1289,7 @@ TEST(VMIntegration, EmptyForLoopLeavesStateUnchanged)
 
 TEST(VMIntegration, BreakAndContinueWorkInLoops)
 {
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         blk({
@@ -1306,14 +1306,14 @@ TEST(VMIntegration, BreakAndContinueWorkInLoops)
                 name_expr("item"),
                 name_expr("items"),
                 blk({
-                    if_stmt(binary(name_expr("item"), lit_int(2), AST::Fa_BinaryOp::OP_EQ), blk({ continue_stmt() })),
-                    if_stmt(binary(name_expr("item"), lit_int(5), AST::Fa_BinaryOp::OP_EQ), blk({ break_stmt() })),
-                    assign_stmt(name_expr("total"), binary(name_expr("total"), name_expr("item"), AST::Fa_BinaryOp::OP_ADD)),
+                    if_stmt(binary(name_expr("item"), lit_int(2), AST::BinaryOp::OP_EQ), blk({ continue_stmt() })),
+                    if_stmt(binary(name_expr("item"), lit_int(5), AST::BinaryOp::OP_EQ), blk({ break_stmt() })),
+                    assign_stmt(name_expr("total"), binary(name_expr("total"), name_expr("item"), AST::BinaryOp::OP_ADD)),
                 })),
             return_stmt(name_expr("total")),
         }));
 
-    Fa_Chunk* top = compile_calling(test);
+    Chunk* top = compile_calling(test);
     if (test_config::dump_bytecode)
         top->disassemble();
     VMRunner r;
@@ -1322,143 +1322,143 @@ TEST(VMIntegration, BreakAndContinueWorkInLoops)
 
 TEST(NativeLen, NullArgv)
 {
-    Fa_VM vm;
-    EXPECT_TRUE(vm.Fa_len(1, nullptr).is_nil());
+    VM vm;
+    EXPECT_TRUE(vm.len(1, nullptr).is_nil());
 }
 
 TEST(NativeLen, EmptyString)
 {
-    Fa_VM vm;
+    VM vm;
     auto s = str("");
-    EXPECT_EQ(vm.Fa_len(1, &s).as_int(), 0);
+    EXPECT_EQ(vm.len(1, &s).as_int(), 0);
 }
 
 TEST(NativeLen, NonEmptyString)
 {
-    Fa_VM vm;
+    VM vm;
     auto s = str("hello");
-    EXPECT_EQ(vm.Fa_len(1, &s).as_int(), 5);
+    EXPECT_EQ(vm.len(1, &s).as_int(), 5);
 }
 
 TEST(NativeLen, UnicodeString)
 {
-    Fa_VM vm;
+    VM vm;
     auto s = str("abc");
-    EXPECT_EQ(vm.Fa_len(1, &s).as_int(), 3);
+    EXPECT_EQ(vm.len(1, &s).as_int(), 3);
 }
 
 TEST(NativePrint, NoArgs_PrintsNewline)
 {
-    Fa_VM vm;
-    EXPECT_TRUE(vm.Fa_print(0, nullptr).is_nil());
+    VM vm;
+    EXPECT_TRUE(vm.print(0, nullptr).is_nil());
 }
 
 TEST(NativePrint, StringArg)
 {
-    Fa_VM vm;
+    VM vm;
     auto s = str("hello world");
-    EXPECT_TRUE(vm.Fa_print(1, &s).is_nil());
+    EXPECT_TRUE(vm.print(1, &s).is_nil());
 }
 
 TEST(NativePrint, IntegerArg)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_int(42);
-    EXPECT_TRUE(vm.Fa_print(1, &arg).is_nil());
+    VM vm;
+    Value arg = Value::from_int(42);
+    EXPECT_TRUE(vm.print(1, &arg).is_nil());
 }
 
 TEST(NativePrint, FloatArg)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_real(3.14);
-    EXPECT_TRUE(vm.Fa_print(1, &arg).is_nil());
+    VM vm;
+    Value arg = Value::from_real(3.14);
+    EXPECT_TRUE(vm.print(1, &arg).is_nil());
 }
 
 TEST(NativePrint, BoolArg_True)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_bool(true);
-    EXPECT_TRUE(vm.Fa_print(1, &arg).is_nil());
+    VM vm;
+    Value arg = Value::from_bool(true);
+    EXPECT_TRUE(vm.print(1, &arg).is_nil());
 }
 
 TEST(NativePrint, BoolArg_False)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_bool(false);
-    EXPECT_TRUE(vm.Fa_print(1, &arg).is_nil());
+    VM vm;
+    Value arg = Value::from_bool(false);
+    EXPECT_TRUE(vm.print(1, &arg).is_nil());
 }
 
 TEST(NativePrint, NilArg)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::nil();
-    EXPECT_TRUE(vm.Fa_print(1, &arg).is_nil());
+    VM vm;
+    Value arg = Value::nil();
+    EXPECT_TRUE(vm.print(1, &arg).is_nil());
 }
 
 TEST(NativePrint, TwoArgs_DoesNotCrash)
 {
-    Fa_VM vm;
+    VM vm;
     auto s = str("a");
-    Fa_Value m_args[] = { s, s };
-    EXPECT_TRUE(vm.Fa_print(2, m_args).is_nil());
+    Value m_args[] = { s, s };
+    EXPECT_TRUE(vm.print(2, m_args).is_nil());
 }
 
 TEST(NativeStr, NoArgs_ReturnsEmpty)
 {
-    Fa_VM vm;
-    EXPECT_TRUE(vm.Fa_str(0, nullptr).is_string());
+    VM vm;
+    EXPECT_TRUE(vm.str(0, nullptr).is_string());
 }
 
 TEST(NativeStr, Integer)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_int(42);
-    Fa_Value r = vm.Fa_str(1, &arg);
+    VM vm;
+    Value arg = Value::from_int(42);
+    Value r = vm.str(1, &arg);
     ASSERT_TRUE(r.is_string());
     EXPECT_EQ(std::string(r.as_string()->str.data()), "42");
 }
 
 TEST(NativeStr, NegativeInteger)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_int(-7);
-    Fa_Value r = vm.Fa_str(1, &arg);
+    VM vm;
+    Value arg = Value::from_int(-7);
+    Value r = vm.str(1, &arg);
     ASSERT_TRUE(r.is_string());
     EXPECT_EQ(std::string(r.as_string()->str.data()), "-7");
 }
 
 TEST(NativeStr, Zero)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_int(0);
-    Fa_Value r = vm.Fa_str(1, &arg);
+    VM vm;
+    Value arg = Value::from_int(0);
+    Value r = vm.str(1, &arg);
     ASSERT_TRUE(r.is_string());
     EXPECT_EQ(std::string(r.as_string()->str.data()), "0");
 }
 
 TEST(NativeStr, BoolTrue)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_bool(true);
-    Fa_Value r = vm.Fa_str(1, &arg);
+    VM vm;
+    Value arg = Value::from_bool(true);
+    Value r = vm.str(1, &arg);
     ASSERT_TRUE(r.is_string());
     EXPECT_EQ(std::string(r.as_string()->str.data()), "صحيح");
 }
 
 TEST(NativeStr, BoolFalse)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_bool(false);
-    Fa_Value r = vm.Fa_str(1, &arg);
+    VM vm;
+    Value arg = Value::from_bool(false);
+    Value r = vm.str(1, &arg);
     ASSERT_TRUE(r.is_string());
     EXPECT_EQ(std::string(r.as_string()->str.data()), "خطا");
 }
 
 TEST(NativeStr, Float)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_real(1.5);
-    Fa_Value r = vm.Fa_str(1, &arg);
+    VM vm;
+    Value arg = Value::from_real(1.5);
+    Value r = vm.str(1, &arg);
     ASSERT_TRUE(r.is_string());
     char const* text_ptr = r.as_string()->str.data();
     f64 parsed = 0.0;
@@ -1470,150 +1470,150 @@ TEST(NativeStr, Float)
 
 TEST(NativeStr, StringPassthrough)
 {
-    Fa_VM vm;
-    Fa_Value s = str("hello");
-    Fa_Value r = vm.Fa_str(1, &s);
+    VM vm;
+    Value s = str("hello");
+    Value r = vm.str(1, &s);
     ASSERT_TRUE(r.is_string());
     EXPECT_EQ(std::string(r.as_string()->str.data()), "hello");
 }
 
 TEST(NativeBool, TrueBoolean)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_bool(true);
-    Fa_Value r = vm.Fa_bool(1, &arg);
+    VM vm;
+    Value arg = Value::from_bool(true);
+    Value r = vm.Bool(1, &arg);
     ASSERT_TRUE(r.is_bool());
     EXPECT_TRUE(r.as_bool());
 }
 
 TEST(NativeBool, FalseBoolean)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_bool(false);
-    Fa_Value r = vm.Fa_bool(1, &arg);
+    VM vm;
+    Value arg = Value::from_bool(false);
+    Value r = vm.Bool(1, &arg);
     ASSERT_TRUE(r.is_bool());
     EXPECT_FALSE(r.as_bool());
 }
 
 TEST(NativeBool, NonZeroInteger_IsTrue)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_int(1);
-    Fa_Value r = vm.Fa_bool(1, &arg);
+    VM vm;
+    Value arg = Value::from_int(1);
+    Value r = vm.Bool(1, &arg);
     ASSERT_TRUE(r.is_bool());
     EXPECT_TRUE(r.as_bool());
 }
 
 TEST(NativeBool, ZeroInteger_IsFalsy)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_int(0);
-    Fa_Value r = vm.Fa_bool(1, &arg);
+    VM vm;
+    Value arg = Value::from_int(0);
+    Value r = vm.Bool(1, &arg);
     ASSERT_TRUE(r.is_bool());
     EXPECT_FALSE(r.as_bool());
 }
 
 TEST(NativeBool, NilArg)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::nil();
-    Fa_Value r = vm.Fa_bool(1, &arg);
+    VM vm;
+    Value arg = Value::nil();
+    Value r = vm.Bool(1, &arg);
     ASSERT_TRUE(r.is_bool());
     EXPECT_FALSE(r.as_bool());
 }
 
 TEST(NativeBool, NonEmptyString_IsTrue)
 {
-    Fa_VM vm;
-    Fa_Value arg = str("hi");
-    Fa_Value r = vm.Fa_bool(1, &arg);
+    VM vm;
+    Value arg = str("hi");
+    Value r = vm.Bool(1, &arg);
     ASSERT_TRUE(r.is_bool());
     EXPECT_TRUE(r.as_bool());
 }
 
 TEST(NativeInt, IntegerPassthrough)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_int(7);
-    Fa_Value r = vm.Fa_int(1, &arg);
+    VM vm;
+    Value arg = Value::from_int(7);
+    Value r = vm.Int(1, &arg);
     ASSERT_TRUE(r.is_int());
     EXPECT_EQ(r.as_int(), 7);
 }
 
 TEST(NativeInt, FloatTruncates)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_real(3.9);
-    Fa_Value r = vm.Fa_int(1, &arg);
+    VM vm;
+    Value arg = Value::from_real(3.9);
+    Value r = vm.Int(1, &arg);
     ASSERT_TRUE(r.is_int());
     EXPECT_EQ(r.as_int(), 3);
 }
 
 TEST(NativeInt, NegativeFloat)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_real(-2.7);
-    Fa_Value r = vm.Fa_int(1, &arg);
+    VM vm;
+    Value arg = Value::from_real(-2.7);
+    Value r = vm.Int(1, &arg);
     ASSERT_TRUE(r.is_int());
     EXPECT_EQ(r.as_int(), -2);
 }
 
 TEST(NativeFloat, IntegerToFloat)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_int(3);
-    Fa_Value r = vm.Fa_float(1, &arg);
+    VM vm;
+    Value arg = Value::from_int(3);
+    Value r = vm.Float(1, &arg);
     ASSERT_TRUE(r.is_double());
     EXPECT_DOUBLE_EQ(r.as_double(), 3.0);
 }
 
 TEST(NativeFloat, FloatPassthrough)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_real(2.5);
-    Fa_Value r = vm.Fa_float(1, &arg);
+    VM vm;
+    Value arg = Value::from_real(2.5);
+    Value r = vm.Float(1, &arg);
     ASSERT_TRUE(r.is_double());
     EXPECT_DOUBLE_EQ(r.as_double(), 2.5);
 }
 
 TEST(NativeFloat, NegativeInteger)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_int(-10);
-    Fa_Value r = vm.Fa_float(1, &arg);
+    VM vm;
+    Value arg = Value::from_int(-10);
+    Value r = vm.Float(1, &arg);
     ASSERT_TRUE(r.is_double());
     EXPECT_DOUBLE_EQ(r.as_double(), -10.0);
 }
 
 TEST(NativeType, ReturnsInteger)
 {
-    Fa_VM vm;
-    Fa_Value i = Fa_Value::from_int(0);
-    Fa_Value f = Fa_Value::from_real(0.0);
-    Fa_Value b = Fa_Value::from_bool(false);
-    Fa_Value n = Fa_Value::nil();
-    Fa_Value s = str("x");
+    VM vm;
+    Value i = Value::from_int(0);
+    Value f = Value::from_real(0.0);
+    Value b = Value::from_bool(false);
+    Value n = Value::nil();
+    Value s = str("x");
 
-    EXPECT_EQ(vm.Fa_type(1, &i).as_string()->str, "طبيعي");
-    EXPECT_EQ(vm.Fa_type(1, &f).as_string()->str, "حقيقي");
-    EXPECT_EQ(vm.Fa_type(1, &b).as_string()->str, "منطقي");
-    EXPECT_EQ(vm.Fa_type(1, &n).as_string()->str, "عدم");
-    EXPECT_EQ(vm.Fa_type(1, &s).as_string()->str, "سلسلة");
+    EXPECT_EQ(vm.type(1, &i).as_string()->str, "طبيعي");
+    EXPECT_EQ(vm.type(1, &f).as_string()->str, "حقيقي");
+    EXPECT_EQ(vm.type(1, &b).as_string()->str, "منطقي");
+    EXPECT_EQ(vm.type(1, &n).as_string()->str, "عدم");
+    EXPECT_EQ(vm.type(1, &s).as_string()->str, "سلسلة");
 }
 
 TEST(NativeType, DifferentTypesHaveDifferentTags)
 {
-    Fa_VM vm;
-    Fa_Value i = Fa_Value::from_int(0);
-    Fa_Value f = Fa_Value::from_real(0.0);
-    Fa_Value b = Fa_Value::from_bool(false);
-    Fa_Value n = Fa_Value::nil();
-    Fa_Value s = str("x");
-    i64 int_tag = vm.Fa_type(1, &i).as_int();
-    i64 flt_tag = vm.Fa_type(1, &f).as_int();
-    i64 bool_tag = vm.Fa_type(1, &b).as_int();
-    i64 nil_tag = vm.Fa_type(1, &n).as_int();
-    i64 str_tag = vm.Fa_type(1, &s).as_int();
+    VM vm;
+    Value i = Value::from_int(0);
+    Value f = Value::from_real(0.0);
+    Value b = Value::from_bool(false);
+    Value n = Value::nil();
+    Value s = str("x");
+    i64 int_tag = vm.type(1, &i).as_int();
+    i64 flt_tag = vm.type(1, &f).as_int();
+    i64 bool_tag = vm.type(1, &b).as_int();
+    i64 nil_tag = vm.type(1, &n).as_int();
+    i64 str_tag = vm.type(1, &s).as_int();
 
     EXPECT_NE(int_tag, flt_tag);
     EXPECT_NE(int_tag, nil_tag);
@@ -1623,413 +1623,413 @@ TEST(NativeType, DifferentTypesHaveDifferentTags)
 
 TEST(NativeFloor, IntegerPassthrough)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_int(5);
-    Fa_Value r = vm.Fa_floor(1, &arg);
+    VM vm;
+    Value arg = Value::from_int(5);
+    Value r = vm.floor(1, &arg);
     EXPECT_TRUE(r.is_int());
     EXPECT_EQ(r.as_int(), 5);
 }
 
 TEST(NativeFloor, PositiveFloat)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_real(3.7);
-    Fa_Value r = vm.Fa_floor(1, &arg);
+    VM vm;
+    Value arg = Value::from_real(3.7);
+    Value r = vm.floor(1, &arg);
     ASSERT_TRUE(r.is_int());
     EXPECT_EQ(r.as_int(), 3);
 }
 
 TEST(NativeFloor, NegativeFloat)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_real(-2.3);
-    Fa_Value r = vm.Fa_floor(1, &arg);
+    VM vm;
+    Value arg = Value::from_real(-2.3);
+    Value r = vm.floor(1, &arg);
     ASSERT_TRUE(r.is_int());
     EXPECT_EQ(r.as_int(), -3);
 }
 
 TEST(NativeFloor, ExactFloat)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_real(4.0);
-    Fa_Value r = vm.Fa_floor(1, &arg);
+    VM vm;
+    Value arg = Value::from_real(4.0);
+    Value r = vm.floor(1, &arg);
     ASSERT_TRUE(r.is_int());
     EXPECT_EQ(r.as_int(), 4);
 }
 
 TEST(NativeCeil, IntegerPassthrough)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_int(5);
-    Fa_Value r = vm.Fa_ceil(1, &arg);
+    VM vm;
+    Value arg = Value::from_int(5);
+    Value r = vm.ceil(1, &arg);
     EXPECT_TRUE(r.is_int());
     EXPECT_EQ(r.as_int(), 5);
 }
 
 TEST(NativeCeil, PositiveFloat)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_real(3.2);
-    Fa_Value r = vm.Fa_ceil(1, &arg);
+    VM vm;
+    Value arg = Value::from_real(3.2);
+    Value r = vm.ceil(1, &arg);
     ASSERT_TRUE(r.is_int());
     EXPECT_EQ(r.as_int(), 4);
 }
 
 TEST(NativeCeil, NegativeFloat)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_real(-2.7);
-    Fa_Value r = vm.Fa_ceil(1, &arg);
+    VM vm;
+    Value arg = Value::from_real(-2.7);
+    Value r = vm.ceil(1, &arg);
     ASSERT_TRUE(r.is_int());
     EXPECT_EQ(r.as_int(), -2);
 }
 
 TEST(NativeCeil, ExactFloat)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_real(4.0);
-    Fa_Value r = vm.Fa_ceil(1, &arg);
+    VM vm;
+    Value arg = Value::from_real(4.0);
+    Value r = vm.ceil(1, &arg);
     ASSERT_TRUE(r.is_int());
     EXPECT_EQ(r.as_int(), 4);
 }
 
 TEST(NativeAbs, PositiveInteger)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_int(5);
-    Fa_Value r = vm.Fa_abs(1, &arg);
+    VM vm;
+    Value arg = Value::from_int(5);
+    Value r = vm.abs(1, &arg);
     ASSERT_TRUE(r.is_int());
     EXPECT_EQ(r.as_int(), 5);
 }
 
 TEST(NativeAbs, NegativeInteger)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_int(-5);
-    Fa_Value r = vm.Fa_abs(1, &arg);
+    VM vm;
+    Value arg = Value::from_int(-5);
+    Value r = vm.abs(1, &arg);
     ASSERT_TRUE(r.is_int());
     EXPECT_EQ(r.as_int(), 5);
 }
 
 TEST(NativeAbs, ZeroInteger)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_int(0);
-    Fa_Value r = vm.Fa_abs(1, &arg);
+    VM vm;
+    Value arg = Value::from_int(0);
+    Value r = vm.abs(1, &arg);
     ASSERT_TRUE(r.is_int());
     EXPECT_EQ(r.as_int(), 0);
 }
 
 TEST(NativeAbs, PositiveFloat)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_real(3.5);
-    Fa_Value r = vm.Fa_abs(1, &arg);
+    VM vm;
+    Value arg = Value::from_real(3.5);
+    Value r = vm.abs(1, &arg);
     ASSERT_TRUE(r.is_double());
     EXPECT_DOUBLE_EQ(r.as_double(), 3.5);
 }
 
 TEST(NativeAbs, NegativeFloat)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_real(-3.5);
-    Fa_Value r = vm.Fa_abs(1, &arg);
+    VM vm;
+    Value arg = Value::from_real(-3.5);
+    Value r = vm.abs(1, &arg);
     ASSERT_TRUE(r.is_double());
     EXPECT_DOUBLE_EQ(r.as_double(), 3.5);
 }
 
 TEST(NativeMin, OneArg_ReturnsArg)
 {
-    Fa_VM vm;
+    VM vm;
     srand(static_cast<unsigned>(time(nullptr)));
-    Fa_Value n = Fa_Value::from_int(static_cast<i64>(rand()));
-    Fa_Value result = vm.Fa_min(1, &n);
+    Value n = Value::from_int(static_cast<i64>(rand()));
+    Value result = vm.min(1, &n);
     EXPECT_EQ(result.as_int(), n.as_int());
 }
 
 TEST(NativeMin, TwoPositiveIntegers)
 {
-    Fa_VM vm;
-    Fa_Value m_args[] = { Fa_Value::from_int(3), Fa_Value::from_int(7) };
-    Fa_Value r = vm.Fa_min(2, m_args);
+    VM vm;
+    Value m_args[] = { Value::from_int(3), Value::from_int(7) };
+    Value r = vm.min(2, m_args);
     EXPECT_EQ(r.as_int(), 3);
 }
 
 TEST(NativeMin, AllIntegersReturnsInteger)
 {
-    Fa_VM vm;
-    Fa_Value m_args[] = { Fa_Value::from_int(5), Fa_Value::from_int(2), Fa_Value::from_int(8) };
-    Fa_Value r = vm.Fa_min(3, m_args);
+    VM vm;
+    Value m_args[] = { Value::from_int(5), Value::from_int(2), Value::from_int(8) };
+    Value r = vm.min(3, m_args);
     EXPECT_TRUE(r.is_int());
     EXPECT_EQ(r.as_int(), 2);
 }
 
 TEST(NativeMin, MixedFloatAndInteger_ReturnsFloat)
 {
-    Fa_VM vm;
-    Fa_Value m_args[] = { Fa_Value::from_int(3), Fa_Value::from_real(1.5) };
-    Fa_Value r = vm.Fa_min(2, m_args);
+    VM vm;
+    Value m_args[] = { Value::from_int(3), Value::from_real(1.5) };
+    Value r = vm.min(2, m_args);
     EXPECT_TRUE(r.is_double());
     EXPECT_DOUBLE_EQ(r.as_double(), 1.5);
 }
 
 TEST(NativeMin, NegativeValues)
 {
-    Fa_VM vm;
-    Fa_Value m_args[] = { Fa_Value::from_int(-1), Fa_Value::from_int(-5), Fa_Value::from_int(-2) };
-    Fa_Value r = vm.Fa_min(3, m_args);
+    VM vm;
+    Value m_args[] = { Value::from_int(-1), Value::from_int(-5), Value::from_int(-2) };
+    Value r = vm.min(3, m_args);
     EXPECT_EQ(r.as_int(), -5);
 }
 
 TEST(NativeMax, OneArg_ReturnsArg)
 {
-    Fa_VM vm;
+    VM vm;
     srand(static_cast<unsigned>(time(nullptr)));
-    Fa_Value n = Fa_Value::from_int(static_cast<i64>(rand()));
-    Fa_Value result = vm.Fa_max(1, &n);
+    Value n = Value::from_int(static_cast<i64>(rand()));
+    Value result = vm.max(1, &n);
     EXPECT_EQ(result.as_int(), n.as_int());
 }
 
 TEST(NativeMax, TwoPositiveIntegers)
 {
-    Fa_VM vm;
-    Fa_Value m_args[] = { Fa_Value::from_int(3), Fa_Value::from_int(7) };
-    Fa_Value r = vm.Fa_max(2, m_args);
+    VM vm;
+    Value m_args[] = { Value::from_int(3), Value::from_int(7) };
+    Value r = vm.max(2, m_args);
     EXPECT_EQ(r.as_int(), 7);
 }
 
 TEST(NativeMax, NegativeValues)
 {
-    Fa_VM vm;
-    Fa_Value m_args[] = { Fa_Value::from_int(-3), Fa_Value::from_int(-1) };
-    Fa_Value r = vm.Fa_max(2, m_args);
+    VM vm;
+    Value m_args[] = { Value::from_int(-3), Value::from_int(-1) };
+    Value r = vm.max(2, m_args);
     EXPECT_EQ(r.as_int(), -1);
 }
 
 TEST(NativeMax, AllIntegersReturnsInteger)
 {
-    Fa_VM vm;
-    Fa_Value m_args[] = { Fa_Value::from_int(1), Fa_Value::from_int(9), Fa_Value::from_int(4) };
-    Fa_Value r = vm.Fa_max(3, m_args);
+    VM vm;
+    Value m_args[] = { Value::from_int(1), Value::from_int(9), Value::from_int(4) };
+    Value r = vm.max(3, m_args);
     EXPECT_TRUE(r.is_int());
     EXPECT_EQ(r.as_int(), 9);
 }
 
 TEST(NativeMax, MixedFloatAndInteger)
 {
-    Fa_VM vm;
-    Fa_Value m_args[] = { Fa_Value::from_int(3), Fa_Value::from_real(3.5) };
-    Fa_Value r = vm.Fa_max(2, m_args);
+    VM vm;
+    Value m_args[] = { Value::from_int(3), Value::from_real(3.5) };
+    Value r = vm.max(2, m_args);
     EXPECT_TRUE(r.is_double());
     EXPECT_DOUBLE_EQ(r.as_double(), 3.5);
 }
 
 TEST(NativeMax, StringFirstArg_ReturnsArg)
 {
-    Fa_VM vm;
-    Fa_Value m_args[] = { str("a"), str("b") };
-    EXPECT_EQ(vm.Fa_max(2, m_args).as_string()->str, "b");
+    VM vm;
+    Value m_args[] = { str("a"), str("b") };
+    EXPECT_EQ(vm.max(2, m_args).as_string()->str, "b");
 }
 
 TEST(NativeRound, HalfRoundsUp)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_real(2.5);
-    Fa_Value r = vm.Fa_round(1, &arg);
+    VM vm;
+    Value arg = Value::from_real(2.5);
+    Value r = vm.round(1, &arg);
     ASSERT_TRUE(r.is_int());
     EXPECT_EQ(r.as_int(), 3);
 }
 
 TEST(NativeRound, HalfNegativeRoundsDown)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_real(-2.5);
-    Fa_Value r = vm.Fa_round(1, &arg);
+    VM vm;
+    Value arg = Value::from_real(-2.5);
+    Value r = vm.round(1, &arg);
     ASSERT_TRUE(r.is_int());
     EXPECT_EQ(r.as_int(), -3);
 }
 
 TEST(NativeRound, IntegerPassthrough)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_int(4);
-    Fa_Value r = vm.Fa_round(1, &arg);
+    VM vm;
+    Value arg = Value::from_int(4);
+    Value r = vm.round(1, &arg);
     ASSERT_TRUE(r.is_int());
     EXPECT_EQ(r.as_int(), 4);
 }
 
 TEST(NativePow, BasicSquare)
 {
-    Fa_VM vm;
-    Fa_Value m_args[] = { Fa_Value::from_real(3.0), Fa_Value::from_real(2.0) };
-    Fa_Value r = vm.Fa_pow(2, m_args);
+    VM vm;
+    Value m_args[] = { Value::from_real(3.0), Value::from_real(2.0) };
+    Value r = vm.pow(2, m_args);
     if (!r.is_nil())
         EXPECT_DOUBLE_EQ(r.as_double(), 9.0);
 }
 
 TEST(NativePow, ZeroExponent)
 {
-    Fa_VM vm;
-    Fa_Value m_args[] = { Fa_Value::from_real(5.0), Fa_Value::from_real(0.0) };
-    Fa_Value r = vm.Fa_pow(2, m_args);
+    VM vm;
+    Value m_args[] = { Value::from_real(5.0), Value::from_real(0.0) };
+    Value r = vm.pow(2, m_args);
     if (!r.is_nil())
         EXPECT_DOUBLE_EQ(r.as_double(), 1.0);
 }
 
 TEST(NativePow, NegativeExponent)
 {
-    Fa_VM vm;
-    Fa_Value m_args[] = { Fa_Value::from_real(2.0), Fa_Value::from_real(-1.0) };
-    Fa_Value r = vm.Fa_pow(2, m_args);
+    VM vm;
+    Value m_args[] = { Value::from_real(2.0), Value::from_real(-1.0) };
+    Value r = vm.pow(2, m_args);
     if (!r.is_nil())
         EXPECT_DOUBLE_EQ(r.as_double(), 0.5);
 }
 
 TEST(NativeSqrt, PerfectSquare)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_real(9.0);
-    Fa_Value r = vm.Fa_sqrt(1, &arg);
+    VM vm;
+    Value arg = Value::from_real(9.0);
+    Value r = vm.sqrt(1, &arg);
     ASSERT_TRUE(r.is_double());
     EXPECT_DOUBLE_EQ(r.as_double(), 3.0);
 }
 
 TEST(NativeSqrt, Zero)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_real(0.0);
-    Fa_Value r = vm.Fa_sqrt(1, &arg);
+    VM vm;
+    Value arg = Value::from_real(0.0);
+    Value r = vm.sqrt(1, &arg);
     ASSERT_TRUE(r.is_double());
     EXPECT_DOUBLE_EQ(r.as_double(), 0.0);
 }
 
 TEST(NativeSqrt, NegativeInput_SpecBehavior)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_real(-1.0);
-    EXPECT_NO_FATAL_FAILURE(vm.Fa_sqrt(1, &arg));
+    VM vm;
+    Value arg = Value::from_real(-1.0);
+    EXPECT_NO_FATAL_FAILURE(vm.sqrt(1, &arg));
 }
 
 TEST(NativeMathDispatch, SupportsDocumentedUnaryOperations)
 {
-    Fa_VM vm;
-    Fa_Value sine_args[] = { str("sin"), Fa_Value::from_real(0.0) };
-    Fa_Value exp_args[] = { str("exp"), Fa_Value::from_real(0.0) };
-    EXPECT_DOUBLE_EQ(vm.Fa_math_unary(2, sine_args).as_double(), 0.0);
-    EXPECT_DOUBLE_EQ(vm.Fa_math_unary(2, exp_args).as_double(), 1.0);
+    VM vm;
+    Value sine_args[] = { str("sin"), Value::from_real(0.0) };
+    Value exp_args[] = { str("exp"), Value::from_real(0.0) };
+    EXPECT_DOUBLE_EQ(vm.math_unary(2, sine_args).as_double(), 0.0);
+    EXPECT_DOUBLE_EQ(vm.math_unary(2, exp_args).as_double(), 1.0);
 }
 
 TEST(NativeMathDispatch, SupportsDocumentedBinaryOperations)
 {
-    Fa_VM vm;
-    Fa_Value hypot_args[] = { str("hypot"), Fa_Value::from_int(3), Fa_Value::from_int(4) };
-    Fa_Value atan_args[] = { str("atan2"), Fa_Value::from_real(0.0), Fa_Value::from_real(1.0) };
-    EXPECT_DOUBLE_EQ(vm.Fa_math_binary(3, hypot_args).as_double(), 5.0);
-    EXPECT_DOUBLE_EQ(vm.Fa_math_binary(3, atan_args).as_double(), 0.0);
+    VM vm;
+    Value hypot_args[] = { str("hypot"), Value::from_int(3), Value::from_int(4) };
+    Value atan_args[] = { str("atan2"), Value::from_real(0.0), Value::from_real(1.0) };
+    EXPECT_DOUBLE_EQ(vm.math_binary(3, hypot_args).as_double(), 5.0);
+    EXPECT_DOUBLE_EQ(vm.math_binary(3, atan_args).as_double(), 0.0);
 }
 
 TEST(NativeMathDispatch, RejectsBadTypesAndUnknownOperations)
 {
-    Fa_VM vm;
-    Fa_Value bad_type[] = { str("sin"), str("not-a-number") };
-    Fa_Value unknown[] = { str("unknown"), Fa_Value::from_int(1) };
-    EXPECT_TRUE(vm.Fa_math_unary(2, bad_type).is_nil());
-    EXPECT_TRUE(vm.Fa_math_unary(2, unknown).is_nil());
-    EXPECT_TRUE(vm.Fa_math_binary(0, nullptr).is_nil());
+    VM vm;
+    Value bad_type[] = { str("sin"), str("not-a-number") };
+    Value unknown[] = { str("unknown"), Value::from_int(1) };
+    EXPECT_TRUE(vm.math_unary(2, bad_type).is_nil());
+    EXPECT_TRUE(vm.math_unary(2, unknown).is_nil());
+    EXPECT_TRUE(vm.math_binary(0, nullptr).is_nil());
 }
 
 TEST(NativeUrl, EncodesAndDecodesUtf8Bytes)
 {
-    Fa_VM vm;
-    Fa_Value input = str("لغة فيروز/1");
-    Fa_Value encoded = vm.Fa_url_encode(1, &input);
+    VM vm;
+    Value input = str("لغة فيروز/1");
+    Value encoded = vm.url_encode(1, &input);
     ASSERT_TRUE(encoded.is_string());
-    Fa_Value decoded = vm.Fa_url_decode(1, &encoded);
+    Value decoded = vm.url_decode(1, &encoded);
     ASSERT_TRUE(decoded.is_string());
     EXPECT_EQ(decoded.as_string()->str, input.as_string()->str);
-    Fa_Value malformed = str("%GG");
-    EXPECT_TRUE(vm.Fa_url_decode(1, &malformed).is_nil());
+    Value malformed = str("%GG");
+    EXPECT_TRUE(vm.url_decode(1, &malformed).is_nil());
 }
 
 TEST(NativeUrl, ParsesAndRebuildsStructuredUrl)
 {
-    Fa_VM vm;
-    Fa_Value input = str("https://example.test:443/api?q=1#part");
-    Fa_Value parsed = vm.Fa_url_parse(1, &input);
+    VM vm;
+    Value input = str("https://example.test:443/api?q=1#part");
+    Value parsed = vm.url_parse(1, &input);
     ASSERT_TRUE(parsed.is_dict());
-    Fa_Value port = vm.Fa_dict_get(&parsed, str("port"));
+    Value port = vm.dict_get(&parsed, str("port"));
     ASSERT_TRUE(port.is_int());
     EXPECT_EQ(port.as_int(), 443);
-    Fa_Value rebuilt = vm.Fa_url_build(1, &parsed);
+    Value rebuilt = vm.url_build(1, &parsed);
     ASSERT_TRUE(rebuilt.is_string());
     EXPECT_EQ(rebuilt.as_string()->str, input.as_string()->str);
 }
 
 TEST(NativeUrl, RejectsInvalidBoundaryArguments)
 {
-    Fa_VM vm;
-    Fa_Value number = Fa_Value::from_int(42);
-    EXPECT_TRUE(vm.Fa_url_encode(1, &number).is_nil());
-    EXPECT_TRUE(vm.Fa_url_parse(1, &number).is_nil());
-    EXPECT_TRUE(vm.Fa_url_build(1, &number).is_nil());
+    VM vm;
+    Value number = Value::from_int(42);
+    EXPECT_TRUE(vm.url_encode(1, &number).is_nil());
+    EXPECT_TRUE(vm.url_parse(1, &number).is_nil());
+    EXPECT_TRUE(vm.url_build(1, &number).is_nil());
 }
 
 TEST(NativeRegex, CompilesSearchesMatchesAndCaptures)
 {
-    Fa_VM vm;
-    Fa_Value compile_args[] = { str("([a-z])([0-9]+)"), Fa_Value::from_int(0) };
-    Fa_Value handle = vm.Fa_regex_compile(2, compile_args);
+    VM vm;
+    Value compile_args[] = { str("([a-z])([0-9]+)"), Value::from_int(0) };
+    Value handle = vm.regex_compile(2, compile_args);
     ASSERT_TRUE(handle.is_string());
-    Fa_Value search_args[] = { handle, str("قبل a12 بعد"), Fa_Value::from_int(0) };
-    Fa_Value found = vm.Fa_regex_search(3, search_args);
+    Value search_args[] = { handle, str("قبل a12 بعد"), Value::from_int(0) };
+    Value found = vm.regex_search(3, search_args);
     ASSERT_TRUE(found.is_dict());
-    EXPECT_EQ(vm.Fa_dict_get(&found, str("start")).as_int(), 4);
-    Fa_Value groups = vm.Fa_dict_get(&found, str("groups"));
+    EXPECT_EQ(vm.dict_get(&found, str("start")).as_int(), 4);
+    Value groups = vm.dict_get(&found, str("groups"));
     ASSERT_TRUE(groups.is_list());
     ASSERT_EQ(groups.as_list()->elements.size(), 3u);
-    EXPECT_EQ(groups.as_list()->elements[1].as_string()->str, Fa_StringRef("a"));
+    EXPECT_EQ(groups.as_list()->elements[1].as_string()->str, StringRef("a"));
 
-    Fa_Value match_args[] = { handle, str("a12 tail"), Fa_Value::from_int(0) };
-    EXPECT_TRUE(vm.Fa_regex_match(3, match_args).is_dict());
-    Fa_Value full_args[] = { handle, str("a12") };
-    EXPECT_TRUE(vm.Fa_regex_fullmatch(2, full_args).is_dict());
+    Value match_args[] = { handle, str("a12 tail"), Value::from_int(0) };
+    EXPECT_TRUE(vm.regex_match(3, match_args).is_dict());
+    Value full_args[] = { handle, str("a12") };
+    EXPECT_TRUE(vm.regex_fullmatch(2, full_args).is_dict());
 }
 
 TEST(NativeRegex, FindsAllSplitsAndReplacesWithLimits)
 {
-    Fa_VM vm;
-    Fa_Value handle = str("[0-9]+");
-    Fa_Value all_args[] = { handle, str("a1 b22 c333") };
-    Fa_Value all = vm.Fa_regex_findall(2, all_args);
+    VM vm;
+    Value handle = str("[0-9]+");
+    Value all_args[] = { handle, str("a1 b22 c333") };
+    Value all = vm.regex_findall(2, all_args);
     ASSERT_TRUE(all.is_list());
     EXPECT_EQ(all.as_list()->elements.size(), 3u);
 
-    Fa_Value split_args[] = { handle, str("a1b22c"), Fa_Value::from_int(1) };
-    Fa_Value split = vm.Fa_regex_split(3, split_args);
+    Value split_args[] = { handle, str("a1b22c"), Value::from_int(1) };
+    Value split = vm.regex_split(3, split_args);
     ASSERT_TRUE(split.is_list());
     EXPECT_EQ(split.as_list()->elements.size(), 2u);
 
-    Fa_Value replace_args[] = { handle, str("a1b22c"), str("#"), Fa_Value::from_int(1) };
-    Fa_Value replaced = vm.Fa_regex_replace(4, replace_args);
+    Value replace_args[] = { handle, str("a1b22c"), str("#"), Value::from_int(1) };
+    Value replaced = vm.regex_replace(4, replace_args);
     ASSERT_TRUE(replaced.is_string());
-    EXPECT_EQ(replaced.as_string()->str, Fa_StringRef("a#b22c"));
+    EXPECT_EQ(replaced.as_string()->str, StringRef("a#b22c"));
 }
 
 TEST(NativeRegex, RejectsInvalidPatternsAndArguments)
 {
-    Fa_VM vm;
-    Fa_Value invalid[] = { str("["), Fa_Value::from_int(0) };
-    EXPECT_TRUE(vm.Fa_regex_compile(2, invalid).is_nil());
-    EXPECT_TRUE(vm.Fa_regex_search(0, nullptr).is_nil());
-    EXPECT_TRUE(vm.Fa_regex_split(0, nullptr).is_nil());
-    EXPECT_TRUE(vm.Fa_regex_replace(0, nullptr).is_nil());
+    VM vm;
+    Value invalid[] = { str("["), Value::from_int(0) };
+    EXPECT_TRUE(vm.regex_compile(2, invalid).is_nil());
+    EXPECT_TRUE(vm.regex_search(0, nullptr).is_nil());
+    EXPECT_TRUE(vm.regex_split(0, nullptr).is_nil());
+    EXPECT_TRUE(vm.regex_replace(0, nullptr).is_nil());
 }
 
 TEST(NativeSplit, BasicSplit)
 {
-    Fa_VM vm;
-    Fa_Value m_args[] = { str("a,b,c"), str(",") };
-    Fa_Value r = vm.Fa_split(2, m_args);
+    VM vm;
+    Value m_args[] = { str("a,b,c"), str(",") };
+    Value r = vm.split(2, m_args);
 
     ASSERT_TRUE(r.is_list());
     EXPECT_EQ(r.as_list()->elements.size(), 3u);
@@ -2045,9 +2045,9 @@ TEST(NativeSplit, BasicSplit)
 
 TEST(NativeSplit, NoDelimiterFound)
 {
-    Fa_VM vm;
-    Fa_Value m_args[] = { str("hello"), str(",") };
-    Fa_Value r = vm.Fa_split(2, m_args);
+    VM vm;
+    Value m_args[] = { str("hello"), str(",") };
+    Value r = vm.split(2, m_args);
     ASSERT_TRUE(r.is_list());
     EXPECT_EQ(r.as_list()->elements.size(), 1u);
     ASSERT_TRUE(r.as_list()->elements[0].as_string());
@@ -2056,9 +2056,9 @@ TEST(NativeSplit, NoDelimiterFound)
 
 TEST(NativeSubstr, BasicSubstr)
 {
-    Fa_VM vm; // substr is exclusive
-    Fa_Value m_args[] = { str("hello"), Fa_Value::from_int(1), Fa_Value::from_int(4) };
-    Fa_Value r = vm.Fa_substr(3, m_args);
+    VM vm; // substr is exclusive
+    Value m_args[] = { str("hello"), Value::from_int(1), Value::from_int(4) };
+    Value r = vm.substr(3, m_args);
     if (!r.is_nil()) {
         ASSERT_TRUE(r.is_string());
         EXPECT_EQ(std::string(r.as_string()->str.data()), "ell");
@@ -2067,9 +2067,9 @@ TEST(NativeSubstr, BasicSubstr)
 
 TEST(NativeSubstr, FromStart)
 {
-    Fa_VM vm; // substr is exclusive
-    Fa_Value m_args[] = { str("hello"), Fa_Value::from_int(0), Fa_Value::from_int(3) };
-    Fa_Value r = vm.Fa_substr(3, m_args);
+    VM vm; // substr is exclusive
+    Value m_args[] = { str("hello"), Value::from_int(0), Value::from_int(3) };
+    Value r = vm.substr(3, m_args);
     if (!r.is_nil()) {
         ASSERT_TRUE(r.is_string());
         EXPECT_EQ(std::string(r.as_string()->str.data()), "hel");
@@ -2078,94 +2078,94 @@ TEST(NativeSubstr, FromStart)
 
 TEST(NativeContains, StringContains_True)
 {
-    Fa_VM vm;
-    Fa_Value m_args[] = { str("hello world"), str("world") };
-    Fa_Value r = vm.Fa_contains(2, m_args);
+    VM vm;
+    Value m_args[] = { str("hello world"), str("world") };
+    Value r = vm.contains(2, m_args);
     ASSERT_TRUE(r.is_bool());
     EXPECT_TRUE(r.as_bool());
 }
 
 TEST(NativeContains, StringContains_False)
 {
-    Fa_VM vm;
-    Fa_Value m_args[] = { str("hello"), str("xyz") };
-    Fa_Value r = vm.Fa_contains(2, m_args);
+    VM vm;
+    Value m_args[] = { str("hello"), str("xyz") };
+    Value r = vm.contains(2, m_args);
     ASSERT_TRUE(r.is_bool());
     EXPECT_FALSE(r.as_bool());
 }
 
 TEST(NativeTrim, LeadingAndTrailingSpaces)
 {
-    Fa_VM vm;
-    Fa_Value arg = str("  hello  ");
-    Fa_Value r = vm.Fa_trim(1, &arg);
+    VM vm;
+    Value arg = str("  hello  ");
+    Value r = vm.trim(1, &arg);
     ASSERT_TRUE(r.is_string());
     EXPECT_EQ(std::string(r.as_string()->str.data()), "hello");
 }
 
 TEST(NativeTrim, NoSpaces)
 {
-    Fa_VM vm;
-    Fa_Value arg = str("hello");
-    Fa_Value r = vm.Fa_trim(1, &arg);
+    VM vm;
+    Value arg = str("hello");
+    Value r = vm.trim(1, &arg);
     ASSERT_TRUE(r.is_string());
     EXPECT_EQ(std::string(r.as_string()->str.data()), "hello");
 }
 
 TEST(NativeTrim, OnlySpaces)
 {
-    Fa_VM vm;
-    Fa_Value arg = str("   ");
-    Fa_Value r = vm.Fa_trim(1, &arg);
+    VM vm;
+    Value arg = str("   ");
+    Value r = vm.trim(1, &arg);
     ASSERT_TRUE(r.is_string());
     EXPECT_EQ(std::string(r.as_string()->str.data()), "");
 }
 
 TEST(NativeJoin, BasicJoin)
 {
-    Fa_VM vm;
-    Fa_Value list = vm.Fa_list(0, nullptr);
-    Fa_ObjList* l = list.as_list();
+    VM vm;
+    Value list = vm.list(0, nullptr);
+    ObjList* l = list.as_list();
     l->elements.push(str("a"));
     l->elements.push(str("b"));
     l->elements.push(str("c"));
-    Fa_Value m_args[] = { list, str("|") };
-    Fa_Value r = vm.Fa_join(2, m_args);
+    Value m_args[] = { list, str("|") };
+    Value r = vm.join(2, m_args);
     ASSERT_TRUE(r.is_string());
     EXPECT_EQ(std::string(r.as_string()->str.data()), "a|b|c");
 }
 
 TEST(NativeAssert, TrueCondition_DoesNotCrash)
 {
-    Fa_VM vm;
-    Fa_Value arg = Fa_Value::from_bool(true);
-    EXPECT_NO_FATAL_FAILURE(vm.Fa_assert(1, &arg));
+    VM vm;
+    Value arg = Value::from_bool(true);
+    EXPECT_NO_FATAL_FAILURE(vm.Assert(1, &arg));
 }
 
 TEST(NativeAssert, OptionalMessageIsNotTreatedAsASecondCondition)
 {
-    Fa_VM vm;
-    Fa_Value args[] = { Fa_Value::from_bool(true), str("") };
-    EXPECT_NO_THROW(vm.Fa_assert(2, args));
+    VM vm;
+    Value args[] = { Value::from_bool(true), str("") };
+    EXPECT_NO_THROW(vm.Assert(2, args));
 }
 
 TEST(NativeClock, ReturnsFiniteMonotonicSeconds)
 {
-    Fa_VM vm;
-    Fa_Value first = vm.Fa_clock(0, nullptr);
-    Fa_Value second = vm.Fa_clock(0, nullptr);
+    VM vm;
+    Value first = vm.clock(0, nullptr);
+    Value second = vm.clock(0, nullptr);
     ASSERT_TRUE(first.is_double());
     ASSERT_TRUE(second.is_double());
     EXPECT_TRUE(std::isfinite(first.as_double()));
     EXPECT_GE(second.as_double(), first.as_double());
-    EXPECT_TRUE(vm.Fa_clock(0, &first).is_double());
-    EXPECT_TRUE(vm.Fa_clock(1, &first).is_nil());
+    EXPECT_TRUE(vm.clock(0, &first).is_double());
+    EXPECT_TRUE(vm.clock(1, &first).is_nil());
 }
 
 TEST(NativeTime, ReturnsNumber_WhenImplemented)
 {
-    Fa_VM vm;
-    Fa_Value r = vm.Fa_time(0, nullptr);
+    VM vm;
+    Value r = vm.time(0, nullptr);
     if (!r.is_nil())
         EXPECT_TRUE(r.is_int());
 }
@@ -2190,32 +2190,32 @@ static void do_not_optimize(T const& v)
 //   r0 = r2       (MOVE)
 // N iterations → N ADD + N MOVE dispatched.
 
-TEST_F(Fa_VMPerfTest, Dispatch_IntAdd_1M_Iterations)
+TEST_F(VMPerfTest, Dispatch_IntAdd_1M_Iterations)
 {
     constexpr int N = 1'000'000;
 
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         blk({ assign_stmt(name_expr("i"), lit_int(0)),
             assign_stmt(name_expr("step"), lit_int(1)),
             assign_stmt(name_expr("limit"), lit_int(N)),
             while_stmt(
-                binary(name_expr("i"), name_expr("limit"), AST::Fa_BinaryOp::OP_LT),
+                binary(name_expr("i"), name_expr("limit"), AST::BinaryOp::OP_LT),
                 blk({ assign_stmt(
                     name_expr("i"),
-                    binary(name_expr("i"), name_expr("step"), AST::Fa_BinaryOp::OP_ADD)) })),
+                    binary(name_expr("i"), name_expr("step"), AST::BinaryOp::OP_ADD)) })),
             return_stmt(name_expr("i")) }));
 
-    Fa_Chunk* top = compile_calling(test);
+    Chunk* top = compile_calling(test);
     if (test_config::dump_bytecode)
         top->disassemble();
-    Fa_VM vm;
+    VM vm;
     // Warm up — lets the IC quicken the ADD opcode.
     vm.run(top);
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Fa_Value result = vm.run(top);
+    Value result = vm.run(top);
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -2227,31 +2227,31 @@ TEST_F(Fa_VMPerfTest, Dispatch_IntAdd_1M_Iterations)
 // 2. Dispatch throughput — float arithmetic loop
 //    Same structure, but f64 accumulator — exercises the FF fast path.
 
-TEST_F(Fa_VMPerfTest, Dispatch_FloatAdd_500k_Iterations)
+TEST_F(VMPerfTest, Dispatch_FloatAdd_500k_Iterations)
 {
     constexpr int N = 500'000;
 
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         blk({ assign_stmt(name_expr("i"), lit_flt(0.0)),
             assign_stmt(name_expr("step"), lit_flt(1.0)),
             assign_stmt(name_expr("limit"), lit_flt(static_cast<f64>(N))),
             while_stmt(
-                binary(name_expr("i"), name_expr("limit"), AST::Fa_BinaryOp::OP_LT),
+                binary(name_expr("i"), name_expr("limit"), AST::BinaryOp::OP_LT),
                 blk({ assign_stmt(
                     name_expr("i"),
-                    binary(name_expr("i"), name_expr("step"), AST::Fa_BinaryOp::OP_ADD)) })),
+                    binary(name_expr("i"), name_expr("step"), AST::BinaryOp::OP_ADD)) })),
             return_stmt(name_expr("i")) }));
 
-    Fa_Chunk* top = compile_calling(test);
+    Chunk* top = compile_calling(test);
     if (test_config::dump_bytecode)
         top->disassemble();
-    Fa_VM vm;
+    VM vm;
     vm.run(top);
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Fa_Value result = vm.run(top);
+    Value result = vm.run(top);
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -2264,36 +2264,36 @@ TEST_F(Fa_VMPerfTest, Dispatch_FloatAdd_500k_Iterations)
 //    Cold: first run, generic opcode handlers.
 //    Warm: second run, quickened ADD_II / ADD_FF specialisations.
 
-TEST_F(Fa_VMPerfTest, IC_Quickening_ColdVsWarm_Ratio)
+TEST_F(VMPerfTest, IC_Quickening_ColdVsWarm_Ratio)
 {
     constexpr int N = 200'000;
 
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         blk({ decl_stmt("i", lit_int(0)),
             decl_stmt("step", lit_int(1)),
             decl_stmt("limit", lit_int(N)),
             while_stmt(
-                binary(name_expr("i"), name_expr("limit"), AST::Fa_BinaryOp::OP_LT),
+                binary(name_expr("i"), name_expr("limit"), AST::BinaryOp::OP_LT),
                 blk({ assign_stmt(
                     name_expr("i"),
-                    binary(name_expr("i"), name_expr("step"), AST::Fa_BinaryOp::OP_ADD)) })),
+                    binary(name_expr("i"), name_expr("step"), AST::BinaryOp::OP_ADD)) })),
             return_stmt(name_expr("i")) }));
 
-    Fa_Chunk* top = compile_calling(test);
+    Chunk* top = compile_calling(test);
     if (test_config::dump_bytecode)
         top->disassemble();
-    Fa_VM vm_cold, vm_warm;
+    VM vm_cold, vm_warm;
 
     // Cold — no prior run.
     auto t0 = std::chrono::high_resolution_clock::now();
-    Fa_Value cold_result = vm_cold.run(top);
+    Value cold_result = vm_cold.run(top);
     f64 cold_us = microseconds_since(t0);
 
     // Warm — opcodes already quickened by the cold run above.
     t0 = std::chrono::high_resolution_clock::now();
-    Fa_Value warm_result = vm_warm.run(top);
+    Value warm_result = vm_warm.run(top);
     f64 warm_us = microseconds_since(t0);
 
     do_not_optimize(cold_result);
@@ -2316,57 +2316,57 @@ TEST_F(Fa_VMPerfTest, IC_Quickening_ColdVsWarm_Ratio)
 //    STORE_GLOBAL + LOAD_GLOBAL in a loop — exercises the globals hash map.
 // ─────────────────────────────────────────────────────────────────────────────
 
-TEST_F(Fa_VMPerfTest, GlobalLookup_1M_Roundtrips)
+TEST_F(VMPerfTest, GlobalLookup_1M_Roundtrips)
 {
     constexpr int N = 1'000'000;
 
-    AST::Fa_AssignmentStmt* decl = assign_stmt(name_expr("a"), lit_int(0));
-    AST::Fa_WhileStmt* while_loop = while_stmt(
-        binary(name_expr("a"), lit_int(N), AST::Fa_BinaryOp::OP_LT),
-        assign_stmt(name_expr("a"), binary(name_expr("a"), lit_int(1), AST::Fa_BinaryOp::OP_ADD)));
+    AST::AssignmentStmt* decl = assign_stmt(name_expr("a"), lit_int(0));
+    AST::WhileStmt* while_loop = while_stmt(
+        binary(name_expr("a"), lit_int(N), AST::BinaryOp::OP_LT),
+        assign_stmt(name_expr("a"), binary(name_expr("a"), lit_int(1), AST::BinaryOp::OP_ADD)));
 
-    Fa_Chunk* top = compile_program({ decl, while_loop });
+    Chunk* top = compile_program({ decl, while_loop });
     if (top != nullptr && test_config::dump_bytecode)
         top->disassemble();
 
-    Fa_VM vm;
+    VM vm;
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Fa_Value result = vm.run(top);
+    Value result = vm.run(top);
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
     ::printf("  Global store+load %dk roundtrips:  %.1f µs  (%.2f ns/op)\n", N / 1000, us, us * 1000.0 / N);
 }
 
-TEST_F(Fa_VMPerfTest, CallOverhead_100k_Calls)
+TEST_F(VMPerfTest, CallOverhead_100k_Calls)
 {
     constexpr int N = 100;
 
-    AST::Fa_Stmt* m_body = blk(
+    AST::Stmt* m_body = blk(
         { assign_stmt(name_expr("i"), lit_int(0)),
             assign_stmt(name_expr("limit"), lit_int(N)),
             while_stmt(
-                binary(name_expr("i"), name_expr("limit"), AST::Fa_BinaryOp::OP_LT),
+                binary(name_expr("i"), name_expr("limit"), AST::BinaryOp::OP_LT),
                 blk({ expr_stmt(call_expr(name_expr("add"), list_expr({ lit_int(1), lit_int(2) }))),
-                    assign_stmt(name_expr("i"), binary(name_expr("i"), lit_int(1), AST::Fa_BinaryOp::OP_ADD)) })),
+                    assign_stmt(name_expr("i"), binary(name_expr("i"), lit_int(1), AST::BinaryOp::OP_ADD)) })),
             return_stmt(name_expr("i")) });
 
-    AST::Fa_Stmt* func = func_def(name_expr("test"), list_expr(), m_body);
+    AST::Stmt* func = func_def(name_expr("test"), list_expr(), m_body);
 
-    AST::Fa_Stmt* add = func_def(
+    AST::Stmt* add = func_def(
         name_expr("add"),
         list_expr({ name_expr("a"), name_expr("b") }),
-        return_stmt(binary(name_expr("a"), name_expr("b"), AST::Fa_BinaryOp::OP_ADD)));
-    AST::Fa_Stmt* call = expr_stmt(call_expr(name_expr("test"), list_expr()));
+        return_stmt(binary(name_expr("a"), name_expr("b"), AST::BinaryOp::OP_ADD)));
+    AST::Stmt* call = expr_stmt(call_expr(name_expr("test"), list_expr()));
 
     std::cout << "AUTO:" << '\n';
-    Fa_Chunk* top_ = compile_program({ add, func, call });
+    Chunk* top_ = compile_program({ add, func, call });
     if (test_config::dump_bytecode)
         top_->disassemble();
-    Fa_VM vm;
+    VM vm;
     auto t0 = std::chrono::high_resolution_clock::now();
-    Fa_Value result = vm.run(top_);
+    Value result = vm.run(top_);
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -2381,45 +2381,45 @@ TEST_F(Fa_VMPerfTest, CallOverhead_100k_Calls)
 //    We measure time; the tail-call version must not be significantly slower.
 // ─────────────────────────────────────────────────────────────────────────────
 
-TEST_F(Fa_VMPerfTest, TailCall_vs_RegularLoop_Ratio)
+TEST_F(VMPerfTest, TailCall_vs_RegularLoop_Ratio)
 {
     constexpr int DEPTH = 5000;
 
-    AST::Fa_Stmt* tc_fn = func_def(
+    AST::Stmt* tc_fn = func_def(
         name_expr("tc"),
         list_expr({ name_expr("n") }),
         blk({ if_stmt(
-                  binary(name_expr("n"), lit_int(0), AST::Fa_BinaryOp::OP_EQ),
+                  binary(name_expr("n"), lit_int(0), AST::BinaryOp::OP_EQ),
                   blk({ return_stmt(name_expr("n")) })),
-            return_stmt(call_expr(name_expr("tc"), list_expr({ binary(name_expr("n"), lit_int(1), AST::Fa_BinaryOp::OP_SUB) }))) }));
+            return_stmt(call_expr(name_expr("tc"), list_expr({ binary(name_expr("n"), lit_int(1), AST::BinaryOp::OP_SUB) }))) }));
 
-    Fa_Chunk* tc_top = compile_program({ tc_fn, expr_stmt(call_expr(name_expr("tc"), list_expr({ lit_int(DEPTH) }))) });
+    Chunk* tc_top = compile_program({ tc_fn, expr_stmt(call_expr(name_expr("tc"), list_expr({ lit_int(DEPTH) }))) });
 
     if (test_config::dump_bytecode)
         tc_top->disassemble();
-    Fa_VM vm_tc;
+    VM vm_tc;
     auto t0 = std::chrono::high_resolution_clock::now();
-    Fa_Value tc_result = vm_tc.run(tc_top);
+    Value tc_result = vm_tc.run(tc_top);
     f64 tc_us = microseconds_since(t0);
 
     // ── equivalent iterative loop (no calls) ─────────────────────────────
-    AST::Fa_Stmt* loop_fn = func_def(
+    AST::Stmt* loop_fn = func_def(
         name_expr("loop"),
         list_expr(),
         blk({ assign_stmt(name_expr("n"), lit_int(DEPTH)),
             while_stmt(
-                binary(name_expr("n"), lit_int(0), AST::Fa_BinaryOp::OP_NEQ),
+                binary(name_expr("n"), lit_int(0), AST::BinaryOp::OP_NEQ),
                 blk({ assign_stmt(
                     name_expr("n"),
-                    binary(name_expr("n"), lit_int(1), AST::Fa_BinaryOp::OP_SUB)) })),
+                    binary(name_expr("n"), lit_int(1), AST::BinaryOp::OP_SUB)) })),
             return_stmt(name_expr("n")) }));
 
-    Fa_Chunk* loop_top = compile_calling(loop_fn);
+    Chunk* loop_top = compile_calling(loop_fn);
     if (test_config::dump_bytecode)
         loop_top->disassemble();
-    Fa_VM vm_loop;
+    VM vm_loop;
     t0 = std::chrono::high_resolution_clock::now();
-    Fa_Value loop_result = vm_loop.run(loop_top);
+    Value loop_result = vm_loop.run(loop_top);
     f64 loop_us = microseconds_since(t0);
 
     do_not_optimize(tc_result);
@@ -2436,42 +2436,42 @@ TEST_F(Fa_VMPerfTest, TailCall_vs_RegularLoop_Ratio)
 //    Builds a list of N elements then iterates over it summing values.
 // ─────────────────────────────────────────────────────────────────────────────
 
-TEST_F(Fa_VMPerfTest, List_AppendAndSum_10k)
+TEST_F(VMPerfTest, List_AppendAndSum_10k)
 {
     constexpr int N = 10'000;
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         blk({ assign_stmt(name_expr("xs"), list_expr()),
             assign_stmt(name_expr("i"), lit_int(0)),
             assign_stmt(name_expr("limit"), lit_int(N)),
             while_stmt(
-                binary(name_expr("i"), name_expr("limit"), AST::Fa_BinaryOp::OP_LT),
+                binary(name_expr("i"), name_expr("limit"), AST::BinaryOp::OP_LT),
                 blk({ expr_stmt(call_expr(name_expr("اضف"), list_expr({ name_expr("xs"), name_expr("i") }))),
                     assign_stmt(
                         name_expr("i"),
-                        binary(name_expr("i"), lit_int(1), AST::Fa_BinaryOp::OP_ADD)) })),
+                        binary(name_expr("i"), lit_int(1), AST::BinaryOp::OP_ADD)) })),
             assign_stmt(name_expr("i"), lit_int(0)),
             assign_stmt(name_expr("sum"), lit_int(0)),
             while_stmt(
-                binary(name_expr("i"), name_expr("limit"), AST::Fa_BinaryOp::OP_LT),
+                binary(name_expr("i"), name_expr("limit"), AST::BinaryOp::OP_LT),
                 blk({ assign_stmt(
                           name_expr("sum"),
                           binary(
                               name_expr("sum"),
                               index_expr(name_expr("xs"), name_expr("i")),
-                              AST::Fa_BinaryOp::OP_ADD)),
+                              AST::BinaryOp::OP_ADD)),
                     assign_stmt(
                         name_expr("i"),
-                        binary(name_expr("i"), lit_int(1), AST::Fa_BinaryOp::OP_ADD)) })),
+                        binary(name_expr("i"), lit_int(1), AST::BinaryOp::OP_ADD)) })),
             return_stmt(name_expr("sum")) }));
 
-    Fa_Chunk* top = compile_calling(test);
+    Chunk* top = compile_calling(test);
     if (test_config::dump_bytecode)
         top->disassemble();
-    Fa_VM vm;
+    VM vm;
     auto t0 = std::chrono::high_resolution_clock::now();
-    Fa_Value result = vm.run(top);
+    Value result = vm.run(top);
     f64 us = microseconds_since(t0);
     do_not_optimize(result);
 
@@ -2481,15 +2481,15 @@ TEST_F(Fa_VMPerfTest, List_AppendAndSum_10k)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 9. Native function call throughput — Fa_len on a string, hot loop
+// 9. Native function call throughput — len on a string, hot loop
 //    IC_CALL path: first call warms the inline cache, subsequent calls hit it.
 // ─────────────────────────────────────────────────────────────────────────────
 
-TEST_F(Fa_VMPerfTest, NativeCall_Len_50k_ICHot)
+TEST_F(VMPerfTest, NativeCall_Len_50k_ICHot)
 {
     constexpr int N = 50'000;
 
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         blk({ assign_stmt(name_expr("s"), lit_str("hello world")),
@@ -2497,23 +2497,23 @@ TEST_F(Fa_VMPerfTest, NativeCall_Len_50k_ICHot)
             assign_stmt(name_expr("limit"), lit_int(N)),
             assign_stmt(name_expr("last"), lit_int(0)),
             while_stmt(
-                binary(name_expr("i"), name_expr("limit"), AST::Fa_BinaryOp::OP_LT),
+                binary(name_expr("i"), name_expr("limit"), AST::BinaryOp::OP_LT),
                 blk({ assign_stmt(name_expr("last"), call_expr(name_expr("طول"), list_expr({ name_expr("s") }))),
                     assign_stmt(
                         name_expr("i"),
-                        binary(name_expr("i"), lit_int(1), AST::Fa_BinaryOp::OP_ADD)) })),
+                        binary(name_expr("i"), lit_int(1), AST::BinaryOp::OP_ADD)) })),
             return_stmt(name_expr("last")) }));
 
-    Fa_Chunk* top = compile_calling(test);
+    Chunk* top = compile_calling(test);
     if (test_config::dump_bytecode)
         top->disassemble();
-    Fa_VM vm;
+    VM vm;
 
     // Cold run to prime the IC.
     vm.run(top);
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Fa_Value result = vm.run(top);
+    Value result = vm.run(top);
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -2528,52 +2528,52 @@ TEST_F(Fa_VMPerfTest, NativeCall_Len_50k_ICHot)
 //     fib(25) = 75025. We run it 100 times and report total + per-call time.
 // ─────────────────────────────────────────────────────────────────────────────
 
-static Fa_Chunk* make_fib_top(int n, int reps)
+static Chunk* make_fib_top(int n, int reps)
 {
-    AST::Fa_Stmt* fib = func_def(
+    AST::Stmt* fib = func_def(
         name_expr("fib"),
         list_expr({ name_expr("x") }),
         blk({ if_stmt(
-                  binary(name_expr("x"), lit_int(1), AST::Fa_BinaryOp::OP_LTE),
+                  binary(name_expr("x"), lit_int(1), AST::BinaryOp::OP_LTE),
                   blk({ return_stmt(name_expr("x")) })),
             return_stmt(
                 binary(
                     call_expr(
                         name_expr("fib"),
-                        list_expr({ binary(name_expr("x"), lit_int(1), AST::Fa_BinaryOp::OP_SUB) })),
+                        list_expr({ binary(name_expr("x"), lit_int(1), AST::BinaryOp::OP_SUB) })),
                     call_expr(
                         name_expr("fib"),
-                        list_expr({ binary(name_expr("x"), lit_int(2), AST::Fa_BinaryOp::OP_SUB) })),
-                    AST::Fa_BinaryOp::OP_ADD)) }));
+                        list_expr({ binary(name_expr("x"), lit_int(2), AST::BinaryOp::OP_SUB) })),
+                    AST::BinaryOp::OP_ADD)) }));
 
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         blk({ assign_stmt(name_expr("i"), lit_int(0)),
             assign_stmt(name_expr("limit"), lit_int(reps)),
             assign_stmt(name_expr("result"), lit_int(0)),
             while_stmt(
-                binary(name_expr("i"), name_expr("limit"), AST::Fa_BinaryOp::OP_LT),
+                binary(name_expr("i"), name_expr("limit"), AST::BinaryOp::OP_LT),
                 blk({ assign_stmt(name_expr("result"), call_expr(name_expr("fib"), list_expr({ lit_int(n) }))),
-                    assign_stmt(name_expr("i"), binary(name_expr("i"), lit_int(1), AST::Fa_BinaryOp::OP_ADD)) })),
+                    assign_stmt(name_expr("i"), binary(name_expr("i"), lit_int(1), AST::BinaryOp::OP_ADD)) })),
             return_stmt(name_expr("result")) }));
 
-    Fa_Chunk* top = compile_program({ fib, test, expr_stmt(call_expr(name_expr("test"), list_expr())) });
+    Chunk* top = compile_program({ fib, test, expr_stmt(call_expr(name_expr("test"), list_expr())) });
     if (test_config::dump_bytecode)
         top->disassemble();
     return top;
 }
 
-TEST_F(Fa_VMPerfTest, Fib20_100reps)
+TEST_F(VMPerfTest, Fib20_100reps)
 {
     constexpr int FIB_N = 20;
     constexpr int REPS = 100;
 
-    Fa_VM vm;
+    VM vm;
     auto* top = make_fib_top(FIB_N, REPS);
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Fa_Value result = vm.run(top);
+    Value result = vm.run(top);
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -2581,16 +2581,16 @@ TEST_F(Fa_VMPerfTest, Fib20_100reps)
     ::printf("  fib(%d) × %d reps:                  %.1f µs  (%.1f µs/call)\n", FIB_N, REPS, us, us / REPS);
 }
 
-TEST_F(Fa_VMPerfTest, Fib25_10reps)
+TEST_F(VMPerfTest, Fib25_10reps)
 {
     constexpr int FIB_N = 25;
     constexpr int REPS = 10;
 
-    Fa_VM vm;
+    VM vm;
     auto* top = make_fib_top(FIB_N, REPS);
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Fa_Value result = vm.run(top);
+    Value result = vm.run(top);
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -2605,29 +2605,29 @@ TEST_F(Fa_VMPerfTest, Fib25_10reps)
 //     test runs.
 // ─────────────────────────────────────────────────────────────────────────────
 
-TEST_F(Fa_VMPerfTest, Dispatch_IntAdd_10M_Iterations)
+TEST_F(VMPerfTest, Dispatch_IntAdd_10M_Iterations)
 {
     constexpr int N = 10'000'000;
 
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         blk({ assign_stmt(name_expr("i"), lit_int(0)),
             assign_stmt(name_expr("step"), lit_int(1)),
             assign_stmt(name_expr("limit"), lit_int(N)),
             while_stmt(
-                binary(name_expr("i"), name_expr("limit"), AST::Fa_BinaryOp::OP_LT),
+                binary(name_expr("i"), name_expr("limit"), AST::BinaryOp::OP_LT),
                 blk({ assign_stmt(
                     name_expr("i"),
-                    binary(name_expr("i"), name_expr("step"), AST::Fa_BinaryOp::OP_ADD)) })),
+                    binary(name_expr("i"), name_expr("step"), AST::BinaryOp::OP_ADD)) })),
             return_stmt(name_expr("i")) }));
 
-    Fa_Chunk* top = compile_calling(test);
-    Fa_VM vm;
+    Chunk* top = compile_calling(test);
+    VM vm;
     vm.run(top); // warm quickened arithmetic path
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Fa_Value result = vm.run(top);
+    Value result = vm.run(top);
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -2636,11 +2636,11 @@ TEST_F(Fa_VMPerfTest, Dispatch_IntAdd_10M_Iterations)
         N / 1'000'000, us, us * 1000.0 / N);
 }
 
-TEST_F(Fa_VMPerfTest, NativeCall_Len_1M_ICHot)
+TEST_F(VMPerfTest, NativeCall_Len_1M_ICHot)
 {
     constexpr int N = 1'000'000;
 
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         blk({ assign_stmt(name_expr("s"), lit_str("hello world")),
@@ -2648,19 +2648,19 @@ TEST_F(Fa_VMPerfTest, NativeCall_Len_1M_ICHot)
             assign_stmt(name_expr("limit"), lit_int(N)),
             assign_stmt(name_expr("last"), lit_int(0)),
             while_stmt(
-                binary(name_expr("i"), name_expr("limit"), AST::Fa_BinaryOp::OP_LT),
+                binary(name_expr("i"), name_expr("limit"), AST::BinaryOp::OP_LT),
                 blk({ assign_stmt(name_expr("last"), call_expr(name_expr("طول"), list_expr({ name_expr("s") }))),
                     assign_stmt(
                         name_expr("i"),
-                        binary(name_expr("i"), lit_int(1), AST::Fa_BinaryOp::OP_ADD)) })),
+                        binary(name_expr("i"), lit_int(1), AST::BinaryOp::OP_ADD)) })),
             return_stmt(name_expr("last")) }));
 
-    Fa_Chunk* top = compile_calling(test);
-    Fa_VM vm;
+    Chunk* top = compile_calling(test);
+    VM vm;
     vm.run(top); // warm IC_CALL -> CALL rewrite
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Fa_Value result = vm.run(top);
+    Value result = vm.run(top);
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -2669,42 +2669,42 @@ TEST_F(Fa_VMPerfTest, NativeCall_Len_1M_ICHot)
         N / 1'000'000, us, us * 1000.0 / N);
 }
 
-TEST_F(Fa_VMPerfTest, List_AppendAndSum_100k)
+TEST_F(VMPerfTest, List_AppendAndSum_100k)
 {
     constexpr int N = 100'000;
 
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         blk({ assign_stmt(name_expr("xs"), list_expr()),
             assign_stmt(name_expr("i"), lit_int(0)),
             assign_stmt(name_expr("limit"), lit_int(N)),
             while_stmt(
-                binary(name_expr("i"), name_expr("limit"), AST::Fa_BinaryOp::OP_LT),
+                binary(name_expr("i"), name_expr("limit"), AST::BinaryOp::OP_LT),
                 blk({ expr_stmt(call_expr(name_expr("اضف"), list_expr({ name_expr("xs"), name_expr("i") }))),
                     assign_stmt(
                         name_expr("i"),
-                        binary(name_expr("i"), lit_int(1), AST::Fa_BinaryOp::OP_ADD)) })),
+                        binary(name_expr("i"), lit_int(1), AST::BinaryOp::OP_ADD)) })),
             assign_stmt(name_expr("i"), lit_int(0)),
             assign_stmt(name_expr("sum"), lit_int(0)),
             while_stmt(
-                binary(name_expr("i"), name_expr("limit"), AST::Fa_BinaryOp::OP_LT),
+                binary(name_expr("i"), name_expr("limit"), AST::BinaryOp::OP_LT),
                 blk({ assign_stmt(
                           name_expr("sum"),
                           binary(
                               name_expr("sum"),
                               index_expr(name_expr("xs"), name_expr("i")),
-                              AST::Fa_BinaryOp::OP_ADD)),
+                              AST::BinaryOp::OP_ADD)),
                     assign_stmt(
                         name_expr("i"),
-                        binary(name_expr("i"), lit_int(1), AST::Fa_BinaryOp::OP_ADD)) })),
+                        binary(name_expr("i"), lit_int(1), AST::BinaryOp::OP_ADD)) })),
             return_stmt(name_expr("sum")) }));
 
-    Fa_Chunk* top = compile_calling(test);
-    Fa_VM vm;
+    Chunk* top = compile_calling(test);
+    VM vm;
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Fa_Value result = vm.run(top);
+    Value result = vm.run(top);
     f64 us = microseconds_since(t0);
 
     constexpr i64 expected = static_cast<i64>(N) * (N - 1) / 2;
@@ -2713,17 +2713,17 @@ TEST_F(Fa_VMPerfTest, List_AppendAndSum_100k)
     std::printf("  STRESS list append+sum N=%d:        %.1f µs\n", N, us);
 }
 
-TEST_F(Fa_VMPerfTest, Fib28_20reps_Hot)
+TEST_F(VMPerfTest, Fib28_20reps_Hot)
 {
     constexpr int FIB_N = 28;
     constexpr int REPS = 20;
 
-    Fa_VM vm;
+    VM vm;
     auto* top = make_fib_top(FIB_N, REPS);
     vm.run(top); // warm global lookup and call-site rewriting
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Fa_Value result = vm.run(top);
+    Value result = vm.run(top);
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -2732,15 +2732,15 @@ TEST_F(Fa_VMPerfTest, Fib28_20reps_Hot)
         FIB_N, REPS, us, us / REPS);
 }
 
-static Fa_FunctionDef* class_method(Fa_StringRef name, Fa_Array<Fa_Expr*> params, Fa_Array<Fa_Stmt*> body)
+static FunctionDef* class_method(StringRef name, Array<Expr*> params, Array<Stmt*> body)
 {
     return func_def(name_expr(name), list_expr(params), blk(body));
 }
 
 TEST(VMClass, TestConstruction)
 {
-    AST::Fa_Stmt* klass = class_def(name_expr("TestClass"), { }, { });
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* klass = class_def(name_expr("TestClass"), { }, { });
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         blk({
@@ -2748,45 +2748,45 @@ TEST(VMClass, TestConstruction)
             return_stmt(name_expr("instance")),
         }));
 
-    Fa_Chunk* top = compile_program({
+    Chunk* top = compile_program({
         klass,
         test,
         expr_stmt(call_expr(name_expr("test"))),
     });
 
     VMRunner r;
-    Fa_Value result = r.run(top);
+    Value result = r.run(top);
     ASSERT_TRUE(result.is_instance());
     EXPECT_EQ(result.as_instance()->klass->name, "TestClass");
 }
 
 TEST(VMClass, ClassDefinitionStoresRuntimeClass)
 {
-    AST::Fa_Stmt* klass = class_def(
+    AST::Stmt* klass = class_def(
         name_expr("Point"),
         {
             name_expr("x"),
             name_expr("y"),
         },
         { });
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         blk({
             return_stmt(name_expr("Point")),
         }));
 
-    Fa_Chunk* top = compile_program({
+    Chunk* top = compile_program({
         klass,
         test,
         expr_stmt(call_expr(name_expr("test"))),
     });
 
     VMRunner r;
-    Fa_Value point = r.run(top);
+    Value point = r.run(top);
     ASSERT_TRUE(point.is_class());
 
-    Fa_ObjClass* point_class = point.as_class();
+    ObjClass* point_class = point.as_class();
     EXPECT_EQ(point_class->name, "Point");
     ASSERT_EQ(point_class->field_names.size(), 2u);
     EXPECT_EQ(point_class->field_names[0], "x");
@@ -2795,16 +2795,16 @@ TEST(VMClass, ClassDefinitionStoresRuntimeClass)
 
 TEST(VMClass, ConstructorAcceptsArgumentsAndReturnsInstance)
 {
-    AST::Fa_Stmt* klass = class_def(
+    AST::Stmt* klass = class_def(
         name_expr("Box"),
         { name_expr("value") },
         {
             func_def(
-                name_expr(sp_method_name(Fa_ObjClass::INIT)),
+                name_expr(sp_method_name(ObjClass::INIT)),
                 list_expr({ name_expr("value") }),
                 blk({ })),
         });
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         blk({
@@ -2812,14 +2812,14 @@ TEST(VMClass, ConstructorAcceptsArgumentsAndReturnsInstance)
             return_stmt(name_expr("instance")),
         }));
 
-    Fa_Chunk* top = compile_program({
+    Chunk* top = compile_program({
         klass,
         test,
         expr_stmt(call_expr(name_expr("test"))),
     });
 
     VMRunner r;
-    Fa_Value result = r.run(top);
+    Value result = r.run(top);
     ASSERT_TRUE(result.is_instance());
     EXPECT_EQ(result.as_instance()->klass->name, "Box");
     EXPECT_EQ(result.as_instance()->fields.size(), 1);
@@ -2827,16 +2827,16 @@ TEST(VMClass, ConstructorAcceptsArgumentsAndReturnsInstance)
 
 TEST(VMClass, ConstructorRejectsWrongArgumentCount)
 {
-    AST::Fa_Stmt* klass = class_def(
+    AST::Stmt* klass = class_def(
         name_expr("NeedsArg"),
         { },
         {
             func_def(
-                name_expr(sp_method_name(Fa_ObjClass::INIT)),
+                name_expr(sp_method_name(ObjClass::INIT)),
                 list_expr({ name_expr("arg") }),
                 blk({ })),
         });
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         blk({
@@ -2844,7 +2844,7 @@ TEST(VMClass, ConstructorRejectsWrongArgumentCount)
             return_stmt(name_expr("instance")),
         }));
 
-    Fa_Chunk* top = compile_program({
+    Chunk* top = compile_program({
         klass,
         test,
         expr_stmt(call_expr(name_expr("test"))),
@@ -2856,8 +2856,8 @@ TEST(VMClass, ConstructorRejectsWrongArgumentCount)
 
 TEST(VMClass, ConstructorWithoutInitRejectsArguments)
 {
-    AST::Fa_Stmt* klass = class_def(name_expr("Plain"), { }, { });
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* klass = class_def(name_expr("Plain"), { }, { });
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         blk({
@@ -2865,7 +2865,7 @@ TEST(VMClass, ConstructorWithoutInitRejectsArguments)
             return_stmt(name_expr("instance")),
         }));
 
-    Fa_Chunk* top = compile_program({
+    Chunk* top = compile_program({
         klass,
         test,
         expr_stmt(call_expr(name_expr("test"))),
@@ -2877,14 +2877,14 @@ TEST(VMClass, ConstructorWithoutInitRejectsArguments)
 
 TEST(VMClass, InstanceFieldsDefaultToNil)
 {
-    AST::Fa_Stmt* klass = class_def(
+    AST::Stmt* klass = class_def(
         name_expr("Point"),
         {
             name_expr("x"),
             name_expr("y"),
         },
         { });
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         blk({
@@ -2892,18 +2892,18 @@ TEST(VMClass, InstanceFieldsDefaultToNil)
             return_stmt(name_expr("point")),
         }));
 
-    Fa_Chunk* top = compile_program({
+    Chunk* top = compile_program({
         klass,
         test,
         expr_stmt(call_expr(name_expr("test"))),
     });
 
     VMRunner r;
-    Fa_Value result = Fa_Value::nil();
+    Value result = Value::nil();
     ASSERT_NO_THROW(result = r.run(top));
     ASSERT_TRUE(result.is_instance());
 
-    Fa_ObjInstance* point = result.as_instance();
+    ObjInstance* point = result.as_instance();
     ASSERT_EQ(point->fields.size(), 2);
     EXPECT_TRUE(point->fields[0].is_nil());
     EXPECT_TRUE(point->fields[1].is_nil());
@@ -2911,7 +2911,7 @@ TEST(VMClass, InstanceFieldsDefaultToNil)
 
 TEST(VMClass, ConstructorInitializesFieldsFromParameters)
 {
-    AST::Fa_Stmt* klass = class_def(
+    AST::Stmt* klass = class_def(
         name_expr("Point"),
         {
             name_expr("x"),
@@ -2919,14 +2919,14 @@ TEST(VMClass, ConstructorInitializesFieldsFromParameters)
         },
         {
             class_method(
-                sp_method_name(Fa_ObjClass::INIT),
+                sp_method_name(ObjClass::INIT),
                 { name_expr("x"), name_expr("y") },
                 {
                     assign_stmt(name_expr("x"), name_expr("x")),
                     assign_stmt(name_expr("y"), name_expr("y")),
                 }),
         });
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         blk({
@@ -2934,14 +2934,14 @@ TEST(VMClass, ConstructorInitializesFieldsFromParameters)
             return_stmt(name_expr("point")),
         }));
 
-    Fa_Chunk* top = compile_program({ klass, test, expr_stmt(call_expr(name_expr("test"))) });
+    Chunk* top = compile_program({ klass, test, expr_stmt(call_expr(name_expr("test"))) });
 
     VMRunner r;
-    Fa_Value result = Fa_Value::nil();
+    Value result = Value::nil();
     ASSERT_NO_THROW(result = r.run(top));
     ASSERT_TRUE(result.is_instance());
 
-    Fa_ObjInstance* point = result.as_instance();
+    ObjInstance* point = result.as_instance();
     ASSERT_EQ(point->fields.size(), 2);
 
     ASSERT_TRUE(point->fields[0].is_int());
@@ -2963,12 +2963,12 @@ TEST(VMClass, FieldGetExpressionReadsInstanceField)
             return box.value
     */
 
-    AST::Fa_Stmt* klass = class_def(
+    AST::Stmt* klass = class_def(
         name_expr("Box"),
         { name_expr("value") },
         {
             class_method(
-                sp_method_name(Fa_ObjClass::INIT),
+                sp_method_name(ObjClass::INIT),
                 { name_expr("value") },
                 {
                     assign_stmt(get_expr(name_expr(kClassInstanceName),
@@ -2976,7 +2976,7 @@ TEST(VMClass, FieldGetExpressionReadsInstanceField)
                         name_expr("value")),
                 }),
         });
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         blk({
@@ -2984,7 +2984,7 @@ TEST(VMClass, FieldGetExpressionReadsInstanceField)
             return_stmt(get_expr(name_expr("box"), name_expr("value"))),
         }));
 
-    Fa_Chunk* top = compile_program({
+    Chunk* top = compile_program({
         klass,
         test,
         expr_stmt(call_expr(name_expr("test"))),
@@ -2994,7 +2994,7 @@ TEST(VMClass, FieldGetExpressionReadsInstanceField)
         top->disassemble();
 
     VMRunner r;
-    Fa_Value result = Fa_Value::nil();
+    Value result = Value::nil();
     ASSERT_NO_THROW(result = r.run(top));
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 12);
@@ -3002,11 +3002,11 @@ TEST(VMClass, FieldGetExpressionReadsInstanceField)
 
 TEST(VMClass, FieldAssignmentUpdatesInstanceField)
 {
-    AST::Fa_Stmt* klass = class_def(
+    AST::Stmt* klass = class_def(
         name_expr("Box"),
         { name_expr("value") },
         { });
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         blk({
@@ -3015,14 +3015,14 @@ TEST(VMClass, FieldAssignmentUpdatesInstanceField)
             return_stmt(get_expr(name_expr("box"), name_expr("value"))),
         }));
 
-    Fa_Chunk* top = compile_program({
+    Chunk* top = compile_program({
         klass,
         test,
         expr_stmt(call_expr(name_expr("test"))),
     });
 
     VMRunner r;
-    Fa_Value result = Fa_Value::nil();
+    Value result = Value::nil();
     ASSERT_NO_THROW(result = r.run(top));
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 25);
@@ -3040,7 +3040,7 @@ TEST(VMClass, MethodReceivesExplicitArguments)
             return adder.add(2, 5)
     */
 
-    AST::Fa_Stmt* klass = class_def(
+    AST::Stmt* klass = class_def(
         name_expr("Adder"),
         { },
         {
@@ -3048,10 +3048,10 @@ TEST(VMClass, MethodReceivesExplicitArguments)
                 "add",
                 { name_expr("a"), name_expr("b") },
                 {
-                    return_stmt(binary(name_expr("a"), name_expr("b"), AST::Fa_BinaryOp::OP_ADD)),
+                    return_stmt(binary(name_expr("a"), name_expr("b"), AST::BinaryOp::OP_ADD)),
                 }),
         });
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         blk({
@@ -3061,7 +3061,7 @@ TEST(VMClass, MethodReceivesExplicitArguments)
                     list_expr({ lit_int(2), lit_int(5) }))),
         }));
 
-    Fa_Chunk* top = compile_program({
+    Chunk* top = compile_program({
         klass,
         test,
         expr_stmt(call_expr(name_expr("test"))),
@@ -3071,7 +3071,7 @@ TEST(VMClass, MethodReceivesExplicitArguments)
         top->disassemble();
 
     VMRunner r;
-    Fa_Value result = Fa_Value::nil();
+    Value result = Value::nil();
     ASSERT_NO_THROW(result = r.run(top));
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 7);
@@ -3079,12 +3079,12 @@ TEST(VMClass, MethodReceivesExplicitArguments)
 
 TEST(VMClass, MethodReadsInstanceField)
 {
-    AST::Fa_Stmt* klass = class_def(
+    AST::Stmt* klass = class_def(
         name_expr("Box"),
         { name_expr("value") },
         {
             class_method(
-                sp_method_name(Fa_ObjClass::INIT),
+                sp_method_name(ObjClass::INIT),
                 { name_expr("value") },
                 {
                     assign_stmt(name_expr("value"), name_expr("value")),
@@ -3096,7 +3096,7 @@ TEST(VMClass, MethodReadsInstanceField)
                     return_stmt(name_expr("value")),
                 }),
         });
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         blk({
@@ -3104,14 +3104,14 @@ TEST(VMClass, MethodReadsInstanceField)
             return_stmt(call_expr(get_expr(name_expr("box"), name_expr("get_value")))),
         }));
 
-    Fa_Chunk* top = compile_program({
+    Chunk* top = compile_program({
         klass,
         test,
         expr_stmt(call_expr(name_expr("test"))),
     });
 
     VMRunner r;
-    Fa_Value result = Fa_Value::nil();
+    Value result = Value::nil();
     ASSERT_NO_THROW(result = r.run(top));
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 31);
@@ -3119,20 +3119,20 @@ TEST(VMClass, MethodReadsInstanceField)
 
 TEST(VMClass, MethodMutatesInstanceFieldAndPersists)
 {
-    auto get = [](AST::Fa_NameExpr* member) {
+    auto get = [](AST::NameExpr* member) {
         return get_expr(name_expr(kClassInstanceName), member);
     };
 
-    auto init = [&](AST::Fa_NameExpr* member, AST::Fa_Expr* value) -> AST::Fa_Stmt* {
+    auto init = [&](AST::NameExpr* member, AST::Expr* value) -> AST::Stmt* {
         return assign_stmt(get(member), value);
     };
 
-    AST::Fa_Stmt* klass = class_def(
+    AST::Stmt* klass = class_def(
         name_expr("Counter"),
         { name_expr("count") },
         {
             class_method(
-                sp_method_name(Fa_ObjClass::INIT),
+                sp_method_name(ObjClass::INIT),
                 { },
                 {
                     init(name_expr("count"), lit_int(0)),
@@ -3141,11 +3141,11 @@ TEST(VMClass, MethodMutatesInstanceFieldAndPersists)
                 "increment",
                 { },
                 {
-                    assign_stmt(get(name_expr("count")), binary(get(name_expr("count")), lit_int(1), AST::Fa_BinaryOp::OP_ADD)),
+                    assign_stmt(get(name_expr("count")), binary(get(name_expr("count")), lit_int(1), AST::BinaryOp::OP_ADD)),
                     return_stmt(get(name_expr("count"))),
                 }),
         });
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         blk({
@@ -3154,7 +3154,7 @@ TEST(VMClass, MethodMutatesInstanceFieldAndPersists)
             return_stmt(call_expr(get_expr(name_expr("counter"), name_expr("increment")))),
         }));
 
-    Fa_Chunk* top = compile_program({
+    Chunk* top = compile_program({
         klass,
         test,
         expr_stmt(call_expr(name_expr("test"))),
@@ -3163,7 +3163,7 @@ TEST(VMClass, MethodMutatesInstanceFieldAndPersists)
     top->disassemble();
 
     VMRunner r;
-    Fa_Value result = Fa_Value::nil();
+    Value result = Value::nil();
     ASSERT_NO_THROW(result = r.run(top));
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 2);
@@ -3171,12 +3171,12 @@ TEST(VMClass, MethodMutatesInstanceFieldAndPersists)
 
 TEST(VMClass, MultipleInstancesKeepIndependentFieldState)
 {
-    AST::Fa_Stmt* klass = class_def(
+    AST::Stmt* klass = class_def(
         name_expr("Box"),
         { name_expr("value") },
         {
             class_method(
-                sp_method_name(Fa_ObjClass::INIT),
+                sp_method_name(ObjClass::INIT),
                 { name_expr("value") },
                 {
                     assign_stmt(name_expr("value"), name_expr("value")),
@@ -3188,7 +3188,7 @@ TEST(VMClass, MultipleInstancesKeepIndependentFieldState)
                     return_stmt(name_expr("value")),
                 }),
         });
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         blk({
@@ -3197,17 +3197,17 @@ TEST(VMClass, MultipleInstancesKeepIndependentFieldState)
             return_stmt(binary(
                 call_expr(get_expr(name_expr("left"), name_expr("get_value"))),
                 call_expr(get_expr(name_expr("right"), name_expr("get_value"))),
-                AST::Fa_BinaryOp::OP_ADD)),
+                AST::BinaryOp::OP_ADD)),
         }));
 
-    Fa_Chunk* top = compile_program({
+    Chunk* top = compile_program({
         klass,
         test,
         expr_stmt(call_expr(name_expr("test"))),
     });
 
     VMRunner r;
-    Fa_Value result = Fa_Value::nil();
+    Value result = Value::nil();
     ASSERT_NO_THROW(result = r.run(top));
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 30);
@@ -3215,13 +3215,13 @@ TEST(VMClass, MultipleInstancesKeepIndependentFieldState)
 
 TEST(VMClass, MethodReturningNoValueReturnsSelf)
 {
-    AST::Fa_Stmt* klass = class_def(
+    AST::Stmt* klass = class_def(
         name_expr("Fluent"),
         { },
         {
             class_method("touch", { }, { }),
         });
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         blk({
@@ -3229,14 +3229,14 @@ TEST(VMClass, MethodReturningNoValueReturnsSelf)
             return_stmt(call_expr(get_expr(name_expr("fluent"), name_expr("touch")))),
         }));
 
-    Fa_Chunk* top = compile_program({
+    Chunk* top = compile_program({
         klass,
         test,
         expr_stmt(call_expr(name_expr("test"))),
     });
 
     VMRunner r;
-    Fa_Value result = Fa_Value::nil();
+    Value result = Value::nil();
     ASSERT_NO_THROW(result = r.run(top));
     ASSERT_TRUE(result.is_instance());
     EXPECT_EQ(result.as_instance()->klass->name, "Fluent");
@@ -3244,7 +3244,7 @@ TEST(VMClass, MethodReturningNoValueReturnsSelf)
 
 TEST(VMClass, MethodRejectsWrongArgumentCount)
 {
-    AST::Fa_Stmt* klass = class_def(
+    AST::Stmt* klass = class_def(
         name_expr("Adder"),
         { },
         {
@@ -3255,7 +3255,7 @@ TEST(VMClass, MethodRejectsWrongArgumentCount)
                     return_stmt(name_expr("value")),
                 }),
         });
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         blk({
@@ -3263,7 +3263,7 @@ TEST(VMClass, MethodRejectsWrongArgumentCount)
             return_stmt(call_expr(get_expr(name_expr("adder"), name_expr("add")))),
         }));
 
-    Fa_Chunk* top = compile_program({
+    Chunk* top = compile_program({
         klass,
         test,
         expr_stmt(call_expr(name_expr("test"))),
@@ -3275,8 +3275,8 @@ TEST(VMClass, MethodRejectsWrongArgumentCount)
 
 TEST(VMClass, UnknownMethodRaisesRuntimeError)
 {
-    AST::Fa_Stmt* klass = class_def(name_expr("Empty"), { }, { });
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* klass = class_def(name_expr("Empty"), { }, { });
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         blk({
@@ -3284,7 +3284,7 @@ TEST(VMClass, UnknownMethodRaisesRuntimeError)
             return_stmt(call_expr(get_expr(name_expr("empty"), name_expr("missing")))),
         }));
 
-    Fa_Chunk* top = compile_program({
+    Chunk* top = compile_program({
         klass,
         test,
         expr_stmt(call_expr(name_expr("test"))),
@@ -3296,7 +3296,7 @@ TEST(VMClass, UnknownMethodRaisesRuntimeError)
 
 TEST(VMClass, DuplicateFieldsAreDeduplicatedInDeclarationOrder)
 {
-    AST::Fa_Stmt* klass = class_def(
+    AST::Stmt* klass = class_def(
         name_expr("Record"),
         {
             name_expr("id"),
@@ -3304,25 +3304,25 @@ TEST(VMClass, DuplicateFieldsAreDeduplicatedInDeclarationOrder)
             name_expr("id"),
         },
         { });
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         blk({
             return_stmt(name_expr("Record")),
         }));
 
-    Fa_Chunk* top = compile_program({
+    Chunk* top = compile_program({
         klass,
         test,
         expr_stmt(call_expr(name_expr("test"))),
     });
 
     VMRunner r;
-    Fa_Value result = Fa_Value::nil();
+    Value result = Value::nil();
     ASSERT_NO_THROW(result = r.run(top));
     ASSERT_TRUE(result.is_class());
 
-    Fa_ObjClass* klass_obj = result.as_class();
+    ObjClass* klass_obj = result.as_class();
     ASSERT_EQ(klass_obj->field_names.size(), 2u);
     EXPECT_EQ(klass_obj->field_names[0], "id");
     EXPECT_EQ(klass_obj->field_names[1], "name");
@@ -3330,67 +3330,67 @@ TEST(VMClass, DuplicateFieldsAreDeduplicatedInDeclarationOrder)
 
 TEST(VMClass, MultipleMethodsAreStoredInRuntimeClass)
 {
-    AST::Fa_Stmt* klass = class_def(
+    AST::Stmt* klass = class_def(
         name_expr("Ops"),
         { },
         {
             class_method("first", { }, { return_stmt(lit_int(1)) }),
             class_method("second", { }, { return_stmt(lit_int(2)) }),
         });
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         blk({
             return_stmt(name_expr("Ops")),
         }));
 
-    Fa_Chunk* top = compile_program({
+    Chunk* top = compile_program({
         klass,
         test,
         expr_stmt(call_expr(name_expr("test"))),
     });
 
     VMRunner r;
-    Fa_Value result = Fa_Value::nil();
+    Value result = Value::nil();
     ASSERT_NO_THROW(result = r.run(top));
     ASSERT_TRUE(result.is_class());
 
-    Fa_ObjClass* klass_obj = result.as_class();
-    EXPECT_GE(klass_obj->method_names.size(), static_cast<u32>(Fa_ObjClass::_COUNT + 2));
+    ObjClass* klass_obj = result.as_class();
+    EXPECT_GE(klass_obj->method_names.size(), static_cast<u32>(ObjClass::_COUNT + 2));
     EXPECT_GE(klass_obj->method_slot("first"), 0);
     EXPECT_GE(klass_obj->method_slot("second"), 0);
 }
 
 TEST(VMClass, AddSpecialMethodHandlesBinaryPlus)
 {
-    AST::Fa_Stmt* klass = class_def(
+    AST::Stmt* klass = class_def(
         name_expr("Numberish"),
         { },
         {
             class_method(
-                sp_method_name(Fa_ObjClass::ADD),
+                sp_method_name(ObjClass::ADD),
                 { name_expr("other") },
                 {
                     return_stmt(lit_int(99)),
                 }),
         });
-    AST::Fa_Stmt* test = func_def(
+    AST::Stmt* test = func_def(
         name_expr("test"),
         list_expr(),
         blk({
             decl_stmt("left", call_expr(name_expr("Numberish"))),
             decl_stmt("right", call_expr(name_expr("Numberish"))),
-            return_stmt(binary(name_expr("left"), name_expr("right"), AST::Fa_BinaryOp::OP_ADD)),
+            return_stmt(binary(name_expr("left"), name_expr("right"), AST::BinaryOp::OP_ADD)),
         }));
 
-    Fa_Chunk* top = compile_program({
+    Chunk* top = compile_program({
         klass,
         test,
         expr_stmt(call_expr(name_expr("test"))),
     });
 
     VMRunner r;
-    Fa_Value result = Fa_Value::nil();
+    Value result = Value::nil();
     ASSERT_NO_THROW(result = r.run(top));
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 99);

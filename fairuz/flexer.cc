@@ -30,7 +30,7 @@
         }                                                                                                    \
         if (!any)                                                                                            \
             fail(err_code, src_loc, detail);                                                                 \
-        Fa_StringRef number = m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset()); \
+        StringRef number = m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset()); \
         return finish(token_type, number, src_loc);                                                          \
     } while (0)
 
@@ -52,7 +52,7 @@ namespace fairuz::lex {
 
 namespace fs = std::filesystem;
 
-Fa_FileManager::Fa_FileManager(std::string const& filepath)
+FileManager::FileManager(std::string const& filepath)
     : m_file_path(filepath)
 {
     std::ifstream in(filepath, std::ios::binary);
@@ -61,14 +61,14 @@ Fa_FileManager::Fa_FileManager(std::string const& filepath)
 
     std::string content { std::istreambuf_iterator<char> { in },
         std::istreambuf_iterator<char> { } };
-    m_input_buffer = Fa_StringRef(content.size(), '\0');
+    m_input_buffer = StringRef(content.size(), '\0');
     if (!content.empty())
         ::memcpy(m_input_buffer.data(), content.data(), content.size());
     m_input_buffer.trim_whitespace(false, true);
     m_last_known_write_time = fs::last_write_time(filepath);
 }
 
-Fa_StringRef Fa_FileManager::load(std::string const& filepath, bool replace)
+StringRef FileManager::load(std::string const& filepath, bool replace)
 {
     if (filepath.empty())
         return "";
@@ -76,7 +76,7 @@ Fa_StringRef Fa_FileManager::load(std::string const& filepath, bool replace)
     std::ifstream in(filepath, std::ios::binary);
     std::string content { std::istreambuf_iterator<char> { in },
         std::istreambuf_iterator<char> { } };
-    Fa_StringRef ret(content.size(), '\0');
+    StringRef ret(content.size(), '\0');
     if (!content.empty())
         ::memcpy(ret.data(), content.data(), content.size());
     if (!in)
@@ -91,7 +91,7 @@ Fa_StringRef Fa_FileManager::load(std::string const& filepath, bool replace)
     return ret;
 }
 
-Fa_StringRef Fa_FileManager::get_line_at(u32 const line_idx) const
+StringRef FileManager::get_line_at(u32 const line_idx) const
 {
     if (line_idx == 0 || m_input_buffer.empty())
         return { };
@@ -109,7 +109,7 @@ Fa_StringRef Fa_FileManager::get_line_at(u32 const line_idx) const
                 if (len > 0 && data[line_start + len - 1] == '\r')
                     len -= 1;
 
-                return Fa_StringRef(m_input_buffer.get(), line_start, len);
+                return StringRef(m_input_buffer.get(), line_start, len);
             }
             current_line++;
             line_start = i + 1;
@@ -119,7 +119,7 @@ Fa_StringRef Fa_FileManager::get_line_at(u32 const line_idx) const
     return { };
 }
 
-void Fa_SourceManager::refresh_current_()
+void SourceManager::refresh_current_()
 {
     if (!m_file_manager || m_context.offset >= m_file_manager->buffer().len()) {
         m_current = 0;
@@ -133,7 +133,7 @@ void Fa_SourceManager::refresh_current_()
         &m_current_bytes);
 }
 
-void Fa_SourceManager::reset()
+void SourceManager::reset()
 {
     m_context.line = 1;
     m_context.column = 1;
@@ -145,7 +145,7 @@ void Fa_SourceManager::reset()
     refresh_current_();
 }
 
-void Fa_SourceManager::advance(u32 const cp, u64 const bytes)
+void SourceManager::advance(u32 const cp, u64 const bytes)
 {
     m_context.offset += bytes;
 
@@ -157,10 +157,10 @@ void Fa_SourceManager::advance(u32 const cp, u64 const bytes)
     }
 }
 
-void Fa_SourceManager::rewind_position_(u32 const cp, u64 const bytes)
+void SourceManager::rewind_position_(u32 const cp, u64 const bytes)
 {
     if (m_context.offset < bytes)
-        diagnostic::panic(ErrorCode::INTERNAL_ERROR, "Fa_SourceManager: attempted to rewind past beginning of file");
+        diagnostic::panic(ErrorCode::INTERNAL_ERROR, "SourceManager: attempted to rewind past beginning of file");
 
     m_context.offset -= bytes;
 
@@ -172,9 +172,9 @@ void Fa_SourceManager::rewind_position_(u32 const cp, u64 const bytes)
     }
 }
 
-u32 Fa_SourceManager::calculate_column_at_offset(u64 const target_offset) const
+u32 SourceManager::calculate_column_at_offset(u64 const target_offset) const
 {
-    Fa_StringRef const& buf = m_file_manager->buffer();
+    StringRef const& buf = m_file_manager->buffer();
 
     u64 line_start = target_offset;
     while (line_start > 0) {
@@ -197,7 +197,7 @@ u32 Fa_SourceManager::calculate_column_at_offset(u64 const target_offset) const
     return column;
 }
 
-Fa_Lexer::Fa_Lexer(Fa_FileManager* fm)
+Lexer::Lexer(FileManager* fm)
     : m_source_manager(fm)
     , m_tok_index(0)
     , m_indent_size(4)
@@ -206,14 +206,14 @@ Fa_Lexer::Fa_Lexer(Fa_FileManager* fm)
 {
     diagnostic::set_source(fm);
     m_source = diagnostic::engine.source();
-    m_tok_stream = Fa_Array<TokenPtr>::with_capacity(1024);
-    m_indent_stack = Fa_Array<u32>::with_capacity(8);
-    m_alt_indent_stack = Fa_Array<u32>::with_capacity(8);
+    m_tok_stream = Array<TokenPtr>::with_capacity(1024);
+    m_indent_stack = Array<u32>::with_capacity(8);
+    m_alt_indent_stack = Array<u32>::with_capacity(8);
     m_indent_stack.push(0);
     m_alt_indent_stack.push(0);
 }
 
-Fa_Lexer::Fa_Lexer(Fa_Array<TokenPtr>& seq)
+Lexer::Lexer(Array<TokenPtr>& seq)
     : m_tok_index(0)
     , m_indent_size(4)
     , m_indent_level(0)
@@ -224,7 +224,7 @@ Fa_Lexer::Fa_Lexer(Fa_Array<TokenPtr>& seq)
     m_alt_indent_stack.push(0);
 }
 
-void Fa_Lexer::fail(ErrorCode code, Fa_SourceLocation loc, std::string const& detail)
+void Lexer::fail(ErrorCode code, SourceLocation loc, std::string const& detail)
 {
     diagnostic::SourceScope source_scope(m_source);
     loc.length = std::max<u16>(loc.length, 1);
@@ -234,27 +234,27 @@ void Fa_Lexer::fail(ErrorCode code, Fa_SourceLocation loc, std::string const& de
     diagnostic::engine.panic("");
 }
 
-TokenPtr Fa_Lexer::lex_token()
+TokenPtr Lexer::lex_token()
 {
     diagnostic::SourceScope source_scope(m_source);
-    auto delimiter_error = [this](ErrorCode code, Fa_SourceLocation loc, std::string const& detail) {
+    auto delimiter_error = [this](ErrorCode code, SourceLocation loc, std::string const& detail) {
         loc.length = 1;
         auto id = diagnostic::report(diagnostic::Severity::ERROR, loc, code, detail);
         m_pending_error = std::make_pair(static_cast<u16>(code), id);
     };
-    auto finish = [this](tok::Fa_TokenType tt, Fa_StringRef str, Fa_SourceLocation src_loc) {
+    auto finish = [this](tok::TokenType tt, StringRef str, SourceLocation src_loc) {
         auto end = m_source_manager.get_source_location();
         if (src_loc.line == end.line && end.column >= src_loc.column)
             src_loc.length = end.column - src_loc.column;
-        TokenPtr ret = Fa_make_token(tt, str, src_loc);
+        TokenPtr ret = make_token(tt, str, src_loc);
         store(ret);
         return m_tok_stream.back();
     };
 
     if (m_tok_stream.empty())
-        return finish(tok::Fa_TokenType::BEGINMARKER, "", { });
+        return finish(tok::TokenType::BEGINMARKER, "", { });
 
-    auto next_line = [this](Fa_SourceLocation src_loc) {
+    auto next_line = [this](SourceLocation src_loc) {
         if (!m_at_bol)
             return;
 
@@ -314,7 +314,7 @@ TokenPtr Fa_Lexer::lex_token()
             m_indent_level++;
             m_indent_stack.push(size);
             m_alt_indent_stack.push(alt_size);
-            store(Fa_make_token(tok::Fa_TokenType::INDENT, "", src_loc));
+            store(make_token(tok::TokenType::INDENT, "", src_loc));
 
         } else {
             u32 dedent_count = 0;
@@ -331,12 +331,12 @@ TokenPtr Fa_Lexer::lex_token()
                 fail(ErrorCode::INCONSISTENT_INDENTATION, src_loc);
 
             for (u32 i = 0; i < dedent_count; i++)
-                store(Fa_make_token(tok::Fa_TokenType::DEDENT, "", src_loc));
+                store(make_token(tok::TokenType::DEDENT, "", src_loc));
         }
     };
 
     for (;;) {
-        Fa_SourceLocation src_loc = m_source_manager.get_source_location();
+        SourceLocation src_loc = m_source_manager.get_source_location();
         u32 current = m_source_manager.current_char();
 
         if (current == 0) {
@@ -353,8 +353,8 @@ TokenPtr Fa_Lexer::lex_token()
             u32 const start_byte = m_source_manager.get_file_offset();
             m_source_manager.consume_char();
             m_at_bol = true;
-            Fa_StringRef endl_str = m_source_manager.source_slice(start_byte, start_byte + 1);
-            TokenPtr ret = Fa_make_token(tok::Fa_TokenType::NEWLINE, endl_str, src_loc);
+            StringRef endl_str = m_source_manager.source_slice(start_byte, start_byte + 1);
+            TokenPtr ret = make_token(tok::TokenType::NEWLINE, endl_str, src_loc);
             store(ret);
             next_line(src_loc);
             return ret;
@@ -381,7 +381,7 @@ TokenPtr Fa_Lexer::lex_token()
             bool escaped = false;
             while (current != '\n' && current != 0 && current != quote) {
                 if (current != '\\') {
-                    Fa_StringRef bytes = util::encode_utf8_str(current);
+                    StringRef bytes = util::encode_utf8_str(current);
                     decoded.append(bytes.data(), bytes.len());
                     current = m_source_manager.next_char();
                     continue;
@@ -416,7 +416,7 @@ TokenPtr Fa_Lexer::lex_token()
                     }
                     if (codepoint >= 0xD800 && codepoint <= 0xDFFF)
                         fail(ErrorCode::INVALID_ESCAPE_SEQUENCE, src_loc, "surrogate code points are not valid Unicode characters");
-                    Fa_StringRef bytes = util::encode_utf8_str(codepoint);
+                    StringRef bytes = util::encode_utf8_str(codepoint);
                     decoded.append(bytes.data(), bytes.len());
                     current = m_source_manager.next_char();
                     continue;
@@ -431,18 +431,18 @@ TokenPtr Fa_Lexer::lex_token()
                 fail(ErrorCode::UNTERMINATED_STRING, src_loc, std::string("expected closing ") + static_cast<char>(quote));
             }
 
-            Fa_StringRef str_lit = escaped
-                ? Fa_StringRef(decoded.c_str())
+            StringRef str_lit = escaped
+                ? StringRef(decoded.c_str())
                 : m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset());
             m_source_manager.consume_char(); // closing quote
-            return finish(tok::Fa_TokenType::STRING, str_lit, src_loc);
+            return finish(tok::TokenType::STRING, str_lit, src_loc);
         }
 
         if (current == ',' || current == '.' || current == u'،' || current == u'٬') {
             u32 const start_byte = m_source_manager.get_file_offset();
             m_source_manager.consume_char();
-            Fa_StringRef comma = m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset());
-            return finish((current == '.') ? tok::Fa_TokenType::DOT : tok::Fa_TokenType::COMMA, util::encode_utf8_str(current), src_loc);
+            StringRef comma = m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset());
+            return finish((current == '.') ? tok::TokenType::DOT : tok::TokenType::COMMA, util::encode_utf8_str(current), src_loc);
         }
 
         if (current == '{' || current == '}' || current == '[' || current == ']' || current == '(' || current == ')' || current == ':') {
@@ -465,50 +465,50 @@ TokenPtr Fa_Lexer::lex_token()
             u32 const start_byte = m_source_manager.get_file_offset();
             m_source_manager.consume_char();
 
-            tok::Fa_TokenType tt;
+            tok::TokenType tt;
             switch (current) {
             case '{':
-                tt = tok::Fa_TokenType::LBRACE;
+                tt = tok::TokenType::LBRACE;
                 m_bracket_depth++;
                 break;
             case '}':
-                tt = tok::Fa_TokenType::RBRACE;
+                tt = tok::TokenType::RBRACE;
                 if (m_bracket_depth > 0)
                     m_bracket_depth -= 1;
                 break;
             case '[':
-                tt = tok::Fa_TokenType::LBRACKET;
+                tt = tok::TokenType::LBRACKET;
                 m_bracket_depth++;
                 break;
             case ']':
-                tt = tok::Fa_TokenType::RBRACKET;
+                tt = tok::TokenType::RBRACKET;
                 if (m_bracket_depth > 0)
                     m_bracket_depth -= 1;
                 break;
             case '(':
-                tt = tok::Fa_TokenType::LPAREN;
+                tt = tok::TokenType::LPAREN;
                 m_bracket_depth++;
                 break;
             case ')':
-                tt = tok::Fa_TokenType::RPAREN;
+                tt = tok::TokenType::RPAREN;
                 if (m_bracket_depth > 0)
                     m_bracket_depth -= 1;
                 break;
             case ':': {
                 if (m_source_manager.current_char() == '=') {
                     m_source_manager.consume_char();
-                    tt = tok::Fa_TokenType::OP_ASSIGN;
+                    tt = tok::TokenType::OP_ASSIGN;
                 } else {
-                    tt = tok::Fa_TokenType::COLON;
+                    tt = tok::TokenType::COLON;
                 }
                 break;
             }
             default:
-                tt = tok::Fa_TokenType::INVALID;
+                tt = tok::TokenType::INVALID;
                 break;
             }
 
-            Fa_StringRef symbol = m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset());
+            StringRef symbol = m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset());
             return finish(tt, symbol, src_loc);
         }
 
@@ -529,15 +529,15 @@ TokenPtr Fa_Lexer::lex_token()
                     m_source_manager.consume_char(); // third
 
                     u32 const end_byte = m_source_manager.get_file_offset();
-                    Fa_StringRef op_str = m_source_manager.source_slice(start_byte, end_byte);
+                    StringRef op_str = m_source_manager.source_slice(start_byte, end_byte);
 
                     if (auto type = tok::lookup_operator(op_str))
                         return finish(*type, op_str, src_loc);
 
-                    return finish(tok::Fa_TokenType::INVALID, op_str, src_loc);
+                    return finish(tok::TokenType::INVALID, op_str, src_loc);
                 }
 
-                Fa_StringRef two = m_source_manager.source_slice(start_byte,
+                StringRef two = m_source_manager.source_slice(start_byte,
                     m_source_manager.get_file_offset() + util::utf8_codepoint_size(second));
                 if (auto type = tok::lookup_operator(two)) {
                     m_source_manager.consume_char();
@@ -545,12 +545,12 @@ TokenPtr Fa_Lexer::lex_token()
                 }
             }
 
-            Fa_StringRef operator_str = m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset());
+            StringRef operator_str = m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset());
 
             if (auto type = tok::lookup_operator(operator_str))
                 return finish(*type, operator_str, src_loc);
 
-            return finish(tok::Fa_TokenType::INVALID, operator_str, src_loc);
+            return finish(tok::TokenType::INVALID, operator_str, src_loc);
         }
 
         if (IS_DIGIT(current)) {
@@ -560,11 +560,11 @@ TokenPtr Fa_Lexer::lex_token()
             // numeric base prefix: 0x / 0o / 0b
             if (current == '0') {
                 if (next == 'x' || next == 'X')
-                    CONSUME_BASE_DIGITS(IS_XDIGIT(current), tok::Fa_TokenType::HEX, ErrorCode::INVALID_BASE_LITERAL, "no digits after 0x");
+                    CONSUME_BASE_DIGITS(IS_XDIGIT(current), tok::TokenType::HEX, ErrorCode::INVALID_BASE_LITERAL, "no digits after 0x");
                 if (next == 'o' || next == 'O')
-                    CONSUME_BASE_DIGITS(OCTAL_DIGIT(current), tok::Fa_TokenType::OCTAL, ErrorCode::INVALID_BASE_LITERAL, "no digits after 0o");
+                    CONSUME_BASE_DIGITS(OCTAL_DIGIT(current), tok::TokenType::OCTAL, ErrorCode::INVALID_BASE_LITERAL, "no digits after 0o");
                 if (next == 'b' || next == 'B')
-                    CONSUME_BASE_DIGITS(BINARY_DIGIT(current), tok::Fa_TokenType::BINARY, ErrorCode::INVALID_BASE_LITERAL, "no digits after 0b");
+                    CONSUME_BASE_DIGITS(BINARY_DIGIT(current), tok::TokenType::BINARY, ErrorCode::INVALID_BASE_LITERAL, "no digits after 0b");
             }
 
             current = m_source_manager.current_char();
@@ -595,12 +595,12 @@ TokenPtr Fa_Lexer::lex_token()
                     current = m_source_manager.next_char();
                 }
 
-                Fa_StringRef number = m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset());
-                return finish(tok::Fa_TokenType::DECIMAL, number, src_loc);
+                StringRef number = m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset());
+                return finish(tok::TokenType::DECIMAL, number, src_loc);
             }
 
-            Fa_StringRef number = m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset());
-            return finish(tok::Fa_TokenType::INTEGER, number, src_loc);
+            StringRef number = m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset());
+            return finish(tok::TokenType::INTEGER, number, src_loc);
         }
 
         if (IS_ARDIGIT(current)) {
@@ -610,7 +610,7 @@ TokenPtr Fa_Lexer::lex_token()
                 current = m_source_manager.next_char();
 
             u32 const end_byte = m_source_manager.get_file_offset();
-            return finish(tok::Fa_TokenType::INTEGER, m_source_manager.source_slice(start_byte, end_byte), src_loc);
+            return finish(tok::TokenType::INTEGER, m_source_manager.source_slice(start_byte, end_byte), src_loc);
         }
 
         if (IS_IDENT_S(current)) {
@@ -620,9 +620,9 @@ TokenPtr Fa_Lexer::lex_token()
                 current = m_source_manager.next_char();
 
             u32 const end_byte = m_source_manager.get_file_offset();
-            Fa_StringRef ident = m_source_manager.source_slice(start_byte, end_byte);
+            StringRef ident = m_source_manager.source_slice(start_byte, end_byte);
 
-            tok::Fa_TokenType tt = tok::Fa_TokenType::IDENTIFIER;
+            tok::TokenType tt = tok::TokenType::IDENTIFIER;
             if (auto m_type = tok::lookup_keyword(ident))
                 tt = *m_type;
 
@@ -632,10 +632,10 @@ TokenPtr Fa_Lexer::lex_token()
         fail(ErrorCode::INVALID_CHARACTER, src_loc, "U+" + [](u32 cp) {char buf[8]; std::snprintf(buf, sizeof(buf), "%04X", cp); return std::string(buf); }(current));
     }
 
-    if (!m_tok_stream.empty() && m_tok_stream.back()->type() == tok::Fa_TokenType::ENDMARKER)
+    if (!m_tok_stream.empty() && m_tok_stream.back()->type() == tok::TokenType::ENDMARKER)
         return m_tok_stream.back();
 
-    Fa_SourceLocation last_loc = m_source_manager.get_source_location();
+    SourceLocation last_loc = m_source_manager.get_source_location();
     if (!m_brackets.empty()) {
         delimiter_error(ErrorCode::UNCLOSED_DELIMITER, m_brackets.back().second,
             std::string(1, static_cast<char>(m_brackets.back().first)));
@@ -647,13 +647,13 @@ TokenPtr Fa_Lexer::lex_token()
         m_indent_level -= 1;
         m_indent_stack.pop();
         m_alt_indent_stack.pop();
-        store(Fa_make_token(tok::Fa_TokenType::DEDENT, "", last_loc));
+        store(make_token(tok::TokenType::DEDENT, "", last_loc));
     }
 
-    return finish(tok::Fa_TokenType::ENDMARKER, "", last_loc);
+    return finish(tok::TokenType::ENDMARKER, "", last_loc);
 }
 
-TokenPtr Fa_Lexer::next()
+TokenPtr Lexer::next()
 {
     if (m_tok_index + 1 < m_tok_stream.size()) {
         m_tok_index++;
@@ -663,7 +663,7 @@ TokenPtr Fa_Lexer::next()
     while (true) {
         lex_token();
 
-        if (!m_tok_stream.empty() && m_tok_stream.back()->type() == tok::Fa_TokenType::ENDMARKER)
+        if (!m_tok_stream.empty() && m_tok_stream.back()->type() == tok::TokenType::ENDMARKER)
             break;
         if (m_tok_index + 1 < m_tok_stream.size())
             break;
@@ -675,7 +675,7 @@ TokenPtr Fa_Lexer::next()
     return m_tok_stream[m_tok_index];
 }
 
-TokenPtr Fa_Lexer::current() const
+TokenPtr Lexer::current() const
 {
     if (m_tok_index < m_tok_stream.size())
         return m_tok_stream[m_tok_index];
@@ -685,10 +685,10 @@ TokenPtr Fa_Lexer::current() const
     return nullptr;
 }
 
-TokenPtr Fa_Lexer::peek(size_t n)
+TokenPtr Lexer::peek(size_t n)
 {
     while (m_tok_index + n >= m_tok_stream.size()) {
-        if (!m_tok_stream.empty() && m_tok_stream.back()->type() == tok::Fa_TokenType::ENDMARKER)
+        if (!m_tok_stream.empty() && m_tok_stream.back()->type() == tok::TokenType::ENDMARKER)
             return m_tok_stream.back();
 
         lex_token();
@@ -697,11 +697,11 @@ TokenPtr Fa_Lexer::peek(size_t n)
     return m_tok_stream[m_tok_index + n];
 }
 
-void Fa_Lexer::store(TokenPtr tok) { m_tok_stream.push(tok); }
+void Lexer::store(TokenPtr tok) { m_tok_stream.push(tok); }
 
-Fa_Array<TokenPtr> Fa_Lexer::tokenize()
+Array<TokenPtr> Lexer::tokenize()
 {
-    while (next()->type() != tok::Fa_TokenType::ENDMARKER)
+    while (next()->type() != tok::TokenType::ENDMARKER)
         ;
 
     return this->m_tok_stream;

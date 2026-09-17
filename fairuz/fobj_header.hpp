@@ -5,7 +5,7 @@
 
 namespace fairuz::runtime {
 
-enum class Fa_ObjType : u8 {
+enum class ObjType : u8 {
     INT,
     STRING,
     LIST,
@@ -19,13 +19,13 @@ enum class Fa_ObjType : u8 {
     _COUNT,
 };
 
-struct Fa_ObjHeader {
-    Fa_ObjType type { Fa_ObjType::STRING };
+struct ObjHeader {
+    ObjType type { ObjType::STRING };
     bool is_marked { false };
-    Fa_ObjHeader* next { nullptr };
+    ObjHeader* next { nullptr };
 
-    Fa_ObjHeader() = default;
-    explicit Fa_ObjHeader(Fa_ObjType t)
+    ObjHeader() = default;
+    explicit ObjHeader(ObjType t)
         : type(t)
     {
     }

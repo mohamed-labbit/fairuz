@@ -14,18 +14,18 @@
 
 namespace fairuz::runtime {
 
-struct Fa_Chunk;
-class Fa_VM;
-class Fa_GarbageCollector;
+struct Chunk;
+class VM;
+class GarbageCollector;
 
-struct Fa_GlobalEnvironment {
-    using IndexTable = Fa_HashTable<Fa_StringRef, u32, Fa_StringRefHash, Fa_StringRefEqual>;
+struct GlobalEnvironment {
+    using IndexTable = HashTable<StringRef, u32, StringRefHash, StringRefEqual>;
 
     IndexTable index;
-    Fa_Array<Fa_Value> slots;
-    Fa_GlobalEnvironment* fallback { nullptr };
+    Array<Value> slots;
+    GlobalEnvironment* fallback { nullptr };
 
-    Fa_Value const* find(Fa_StringRef const& name) const
+    Value const* find(StringRef const& name) const
     {
         if (u32 const* slot = index.find_ptr(name))
             return *slot < slots.size() ? &slots[*slot] : nullptr;
@@ -33,65 +33,65 @@ struct Fa_GlobalEnvironment {
     }
 };
 
-using Fa_DictType = Fa_HashTable<Fa_Value, Fa_Value, Fa_ValueHash, Fa_ValueEqual>;
-using NativeFn = Fa_Value (Fa_VM::*)(int, Fa_Value*);
-using Fa_ListType = Fa_Array<Fa_Value, /*_Alloc=*/Fa_GarbageCollector>;
+using DictType = HashTable<Value, Value, ValueHash, ValueEqual>;
+using NativeFn = Value (VM::*)(int, Value*);
+using ListType = Array<Value, /*_Alloc=*/GarbageCollector>;
 
-/// INVARIANT: Fa_ObjHeader is always the first member of every heap object below.
-/// Code casts Fa_ObjHeader* to concrete object pointers based on this layout and the
+/// INVARIANT: ObjHeader is always the first member of every heap object below.
+/// Code casts ObjHeader* to concrete object pointers based on this layout and the
 /// runtime type tag. Do not add C++ virtual functions or inheritance to these types.
 
 #if FA_USE_NANBOX
 
-struct Fa_ObjInt {
-    Fa_ObjHeader obj { Fa_ObjType::INT };
+struct ObjInt {
+    ObjHeader obj { ObjType::INT };
     i64 val { UINT64_C(0) };
 };
 
 #endif // FA_USE_NANBOX
 
-struct Fa_ObjString {
-    Fa_ObjHeader obj { Fa_ObjType::STRING };
-    Fa_StringRef str = "";
+struct ObjString {
+    ObjHeader obj { ObjType::STRING };
+    StringRef str = "";
     u64 hash { 0 };
 
-    ~Fa_ObjString() { }
+    ~ObjString() { }
 };
 
-struct Fa_ObjList {
-    Fa_ObjHeader obj;
-    Fa_ListType elements;
+struct ObjList {
+    ObjHeader obj;
+    ListType elements;
 
-    Fa_ObjList(Fa_ListType elems);
+    ObjList(ListType elems);
 
     void reserve(u32 cap);
     u32 size() const;
-    void push(Fa_Value& v);
+    void push(Value& v);
     bool empty() const;
 };
 
-struct Fa_ObjDict {
-    Fa_ObjHeader obj { Fa_ObjType::DICT };
-    Fa_DictType data = { };
-    Fa_Array<Fa_Value> insertion_order = { };
+struct ObjDict {
+    ObjHeader obj { ObjType::DICT };
+    DictType data = { };
+    Array<Value> insertion_order = { };
 
-    void set(Fa_Value key, Fa_Value value)
+    void set(Value key, Value value)
     {
         if (!data.contains(key))
             insertion_order.push(key);
         data.insert_or_assign(key, value);
     }
 
-    bool erase(Fa_Value key, Fa_Value* removed = nullptr)
+    bool erase(Value key, Value* removed = nullptr)
     {
-        Fa_Value* existing = data.find_ptr(key);
+        Value* existing = data.find_ptr(key);
         if (existing == nullptr)
             return false;
         if (removed != nullptr)
             *removed = *existing;
         if (!data.erase(key))
             return false;
-        Fa_ValueEqual equal;
+        ValueEqual equal;
         for (u32 i = 0; i < insertion_order.size(); ++i) {
             if (equal(insertion_order[i], key)) {
                 insertion_order.erase(i);
@@ -102,24 +102,24 @@ struct Fa_ObjDict {
     }
 };
 
-struct Fa_ObjFunction {
-    Fa_ObjHeader obj { Fa_ObjType::FUNCTION };
-    Fa_Chunk* chunk { nullptr };
-    Fa_GlobalEnvironment* globals { nullptr };
+struct ObjFunction {
+    ObjHeader obj { ObjType::FUNCTION };
+    Chunk* chunk { nullptr };
+    GlobalEnvironment* globals { nullptr };
 
-    Fa_StringRef name() const;
+    StringRef name() const;
     u32 arity() const;
 };
 
-struct Fa_ObjNative {
-    Fa_ObjHeader obj { Fa_ObjType::NATIVE };
+struct ObjNative {
+    ObjHeader obj { ObjType::NATIVE };
     NativeFn fn { nullptr };
-    Fa_ObjString* name { nullptr };
+    ObjString* name { nullptr };
     int arity { 0 };
 };
 
-struct Fa_ObjClass {
-    using IndexTable = Fa_HashTable<Fa_StringRef, u32, Fa_StringRefHash, Fa_StringRefEqual>;
+struct ObjClass {
+    using IndexTable = HashTable<StringRef, u32, StringRefHash, StringRefEqual>;
 
     enum : u32 {
         INIT,
@@ -140,55 +140,55 @@ struct Fa_ObjClass {
         _COUNT,
     };
 
-    Fa_ObjHeader obj { Fa_ObjType::CLASS };
-    Fa_StringRef name = "";
-    Fa_ObjClass* parent { nullptr };
-    Fa_GlobalEnvironment* globals { nullptr };
-    Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> field_names;
-    Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> method_names;
-    Fa_Array<Fa_Chunk*, /*_Alloc=*/Fa_GarbageCollector> vtable;
+    ObjHeader obj { ObjType::CLASS };
+    StringRef name = "";
+    ObjClass* parent { nullptr };
+    GlobalEnvironment* globals { nullptr };
+    Array<StringRef, /*_Alloc=*/GarbageCollector> field_names;
+    Array<StringRef, /*_Alloc=*/GarbageCollector> method_names;
+    Array<Chunk*, /*_Alloc=*/GarbageCollector> vtable;
     IndexTable field_index_map = { };
     IndexTable method_slot_map = { };
 
-    Fa_ObjClass(
-        Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> f,
-        Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> m,
-        Fa_Array<Fa_Chunk*, /*_Alloc=*/Fa_GarbageCollector> vt);
+    ObjClass(
+        Array<StringRef, /*_Alloc=*/GarbageCollector> f,
+        Array<StringRef, /*_Alloc=*/GarbageCollector> m,
+        Array<Chunk*, /*_Alloc=*/GarbageCollector> vt);
 
     void build_indices();
 
-    int field_index(Fa_StringRef field_name) const;
-    int method_slot(Fa_StringRef method_name) const;
+    int field_index(StringRef field_name) const;
+    int method_slot(StringRef method_name) const;
 };
 
-struct Fa_ObjModule {
-    Fa_ObjHeader obj { Fa_ObjType::MODULE };
+struct ObjModule {
+    ObjHeader obj { ObjType::MODULE };
     std::string name;
     std::string path;
-    Fa_GlobalEnvironment* globals { nullptr };
-    Fa_Chunk* chunk { nullptr };
+    GlobalEnvironment* globals { nullptr };
+    Chunk* chunk { nullptr };
     bool executing { false };
     bool initialized { false };
 };
 
-struct Fa_ObjInstance {
-    Fa_ObjHeader obj;
-    Fa_ObjClass* klass { nullptr };
-    Fa_Array<Fa_Value, /*_Alloc=*/Fa_GarbageCollector> fields;
+struct ObjInstance {
+    ObjHeader obj;
+    ObjClass* klass { nullptr };
+    Array<Value, /*_Alloc=*/GarbageCollector> fields;
 
-    Fa_ObjInstance(Fa_Array<Fa_Value, /*_Alloc=*/Fa_GarbageCollector> fields);
+    ObjInstance(Array<Value, /*_Alloc=*/GarbageCollector> fields);
 
-    ~Fa_ObjInstance() = default;
+    ~ObjInstance() = default;
 };
 
-struct Fa_ObjFileHandle {
-    Fa_ObjHeader obj { Fa_ObjType::FILE_HANDLE };
+struct ObjFileHandle {
+    ObjHeader obj { ObjType::FILE_HANDLE };
     FILE* fp { nullptr };
     bool is_open { false };
 
-    Fa_ObjFileHandle() = default;
-    Fa_ObjFileHandle(Fa_ObjFileHandle const&) = delete;
-    Fa_ObjFileHandle& operator=(Fa_ObjFileHandle const&) = delete;
+    ObjFileHandle() = default;
+    ObjFileHandle(ObjFileHandle const&) = delete;
+    ObjFileHandle& operator=(ObjFileHandle const&) = delete;
 
     bool close()
     {
@@ -204,37 +204,37 @@ struct Fa_ObjFileHandle {
         return ok;
     }
 
-    ~Fa_ObjFileHandle()
+    ~ObjFileHandle()
     {
         close();
     }
 };
 
-static_assert(std::is_standard_layout_v<Fa_ObjHeader>, "Fa_ObjHeader must remain standard-layout");
-static_assert(!std::is_polymorphic_v<Fa_ObjHeader>, "Fa_ObjHeader must not gain a vtable");
-static_assert(offsetof(Fa_ObjString, obj) == 0, "Fa_ObjHeader must be the first member of Fa_ObjString");
-static_assert(offsetof(Fa_ObjList, obj) == 0, "Fa_ObjHeader must be the first member of Fa_ObjList");
-static_assert(offsetof(Fa_ObjDict, obj) == 0, "Fa_ObjHeader must be the first member of Fa_ObjDict");
-static_assert(offsetof(Fa_ObjFunction, obj) == 0, "Fa_ObjHeader must be the first member of Fa_ObjFunction");
-static_assert(offsetof(Fa_ObjModule, obj) == 0, "Fa_ObjHeader must be the first member of Fa_ObjModule");
-static_assert(offsetof(Fa_ObjNative, obj) == 0, "Fa_ObjHeader must be the first member of Fa_ObjNative");
-static_assert(offsetof(Fa_ObjClass, obj) == 0, "Fa_ObjHeader must be the first member of Fa_ObjClass");
-static_assert(offsetof(Fa_ObjInstance, obj) == 0, "Fa_ObjHeader must be the first member of Fa_ObjInstance");
-static_assert(offsetof(Fa_ObjFileHandle, obj) == 0, "Fa_ObjHeader must be the first member of Fa_ObjFileHandle");
+static_assert(std::is_standard_layout_v<ObjHeader>, "ObjHeader must remain standard-layout");
+static_assert(!std::is_polymorphic_v<ObjHeader>, "ObjHeader must not gain a vtable");
+static_assert(offsetof(ObjString, obj) == 0, "ObjHeader must be the first member of ObjString");
+static_assert(offsetof(ObjList, obj) == 0, "ObjHeader must be the first member of ObjList");
+static_assert(offsetof(ObjDict, obj) == 0, "ObjHeader must be the first member of ObjDict");
+static_assert(offsetof(ObjFunction, obj) == 0, "ObjHeader must be the first member of ObjFunction");
+static_assert(offsetof(ObjModule, obj) == 0, "ObjHeader must be the first member of ObjModule");
+static_assert(offsetof(ObjNative, obj) == 0, "ObjHeader must be the first member of ObjNative");
+static_assert(offsetof(ObjClass, obj) == 0, "ObjHeader must be the first member of ObjClass");
+static_assert(offsetof(ObjInstance, obj) == 0, "ObjHeader must be the first member of ObjInstance");
+static_assert(offsetof(ObjFileHandle, obj) == 0, "ObjHeader must be the first member of ObjFileHandle");
 
 template<typename T>
-inline T* Fa_obj_cast(Fa_ObjHeader* obj, Fa_ObjType expected)
+inline T* obj_cast(ObjHeader* obj, ObjType expected)
 {
     assert(obj != nullptr && "cannot cast a null object");
-    assert(obj->type == expected && "Fa_Obj type tag mismatch on cast");
+    assert(obj->type == expected && "Obj type tag mismatch on cast");
     return reinterpret_cast<T*>(obj);
 }
 
 template<typename T>
-inline T const* Fa_obj_cast(Fa_ObjHeader const* obj, Fa_ObjType expected)
+inline T const* obj_cast(ObjHeader const* obj, ObjType expected)
 {
     assert(obj != nullptr && "cannot cast a null object");
-    assert(obj->type == expected && "Fa_Obj type tag mismatch on cast");
+    assert(obj->type == expected && "Obj type tag mismatch on cast");
     return reinterpret_cast<T const*>(obj);
 }
 

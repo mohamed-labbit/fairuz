@@ -12,116 +12,116 @@ using namespace fairuz::AST;
 using namespace fairuz::runtime;
 
 /// helpers that discard the location parameter for testing
-static inline Fa_BinaryExpr* binary(Fa_Expr* lhs, Fa_Expr* rhs, Fa_BinaryOp op)
+static inline BinaryExpr* binary(Expr* lhs, Expr* rhs, BinaryOp op)
 {
-    return Fa_make_binary(lhs, rhs, op, { });
+    return make_binary(lhs, rhs, op, { });
 }
-static inline Fa_UnaryExpr* unary(Fa_Expr* operand, Fa_UnaryOp op)
+static inline UnaryExpr* unary(Expr* operand, UnaryOp op)
 {
-    return Fa_make_unary(operand, op, { });
+    return make_unary(operand, op, { });
 }
-static inline Fa_LiteralExpr* lit_nil()
+static inline LiteralExpr* lit_nil()
 {
-    return Fa_make_literal_nil({ });
+    return make_literal_nil({ });
 }
-static inline Fa_LiteralExpr* lit_int(int v)
+static inline LiteralExpr* lit_int(int v)
 {
-    return Fa_make_literal_int(v, { });
+    return make_literal_int(v, { });
 }
-static inline Fa_LiteralExpr* lit_flt(double v)
+static inline LiteralExpr* lit_flt(double v)
 {
-    return Fa_make_literal_float(v, { });
+    return make_literal_float(v, { });
 }
-static inline Fa_LiteralExpr* lit_str(Fa_StringRef s)
+static inline LiteralExpr* lit_str(StringRef s)
 {
-    return Fa_make_literal_string(s, { });
+    return make_literal_string(s, { });
 }
-static inline Fa_LiteralExpr* lit_bool(bool v)
+static inline LiteralExpr* lit_bool(bool v)
 {
-    return Fa_make_literal_bool(v, { });
+    return make_literal_bool(v, { });
 }
-static inline Fa_NameExpr* name_expr(Fa_StringRef s)
+static inline NameExpr* name_expr(StringRef s)
 {
-    return Fa_make_name(s, { });
+    return make_name(s, { });
 }
-static inline Fa_ListExpr* list_expr(Fa_Array<Fa_Expr*> l = { })
+static inline ListExpr* list_expr(Array<Expr*> l = { })
 {
-    return Fa_make_list(l, { });
+    return make_list(l, { });
 }
-static inline Fa_DictExpr* dict_expr(Fa_Array<std::pair<Fa_Expr*, Fa_Expr*>> c)
+static inline DictExpr* dict_expr(Array<std::pair<Expr*, Expr*>> c)
 {
-    return Fa_make_dict(c, { });
+    return make_dict(c, { });
 }
-static inline Fa_CallExpr* call_expr(Fa_Expr* c, Fa_ListExpr* a = nullptr)
+static inline CallExpr* call_expr(Expr* c, ListExpr* a = nullptr)
 {
-    return Fa_make_call(c, a, { });
+    return make_call(c, a, { });
 }
-static inline Fa_AssignmentExpr* assign_expr(Fa_Expr* t, Fa_Expr* v)
+static inline AssignmentExpr* assign_expr(Expr* t, Expr* v)
 {
-    return Fa_make_assignment_expr(t, v, { });
+    return make_assignment_expr(t, v, { });
 }
-static inline Fa_IndexExpr* index_expr(Fa_Expr* obj, Fa_Expr* idx)
+static inline IndexExpr* index_expr(Expr* obj, Expr* idx)
 {
-    return Fa_make_index(obj, idx, { });
+    return make_index(obj, idx, { });
 }
-static inline Fa_GetExpr* get_expr(Fa_Expr* obj, Fa_Expr* member)
+static inline GetExpr* get_expr(Expr* obj, Expr* member)
 {
-    return Fa_make_get_expr(obj, member, { });
+    return make_get_expr(obj, member, { });
 }
-static inline Fa_BlockStmt* blk(Fa_Array<Fa_Stmt*> stmts)
+static inline BlockStmt* blk(Array<Stmt*> stmts)
 {
-    return Fa_make_block(stmts, { });
+    return make_block(stmts, { });
 }
-static inline Fa_ExprStmt* expr_stmt(Fa_Expr* e)
+static inline ExprStmt* expr_stmt(Expr* e)
 {
-    return Fa_make_expr_stmt(e, { });
+    return make_expr_stmt(e, { });
 }
-static inline Fa_AssignmentStmt* assign_stmt(Fa_Expr* t, Fa_Expr* v)
+static inline AssignmentStmt* assign_stmt(Expr* t, Expr* v)
 {
-    return Fa_make_assignment_stmt(t, v, { });
+    return make_assignment_stmt(t, v, { });
 }
-static inline Fa_AssignmentStmt* decl_stmt(Fa_StringRef nm, AST::Fa_Expr* val)
+static inline AssignmentStmt* decl_stmt(StringRef nm, AST::Expr* val)
 {
-    return Fa_make_assignment_stmt(name_expr(nm), val, { });
+    return make_assignment_stmt(name_expr(nm), val, { });
 }
-static inline Fa_IfStmt* if_stmt(Fa_Expr* c, Fa_Stmt* t, Fa_Stmt* e = nullptr)
+static inline IfStmt* if_stmt(Expr* c, Stmt* t, Stmt* e = nullptr)
 {
-    return Fa_make_if(c, t, { }, e);
+    return make_if(c, t, { }, e);
 }
-static inline Fa_WhileStmt* while_stmt(Fa_Expr* c, Fa_Stmt* b)
+static inline WhileStmt* while_stmt(Expr* c, Stmt* b)
 {
-    return Fa_make_while(c, b, { });
+    return make_while(c, b, { });
 }
-static inline Fa_ForStmt* for_stmt(Fa_NameExpr* t, Fa_Expr* i, Fa_Stmt* b)
+static inline ForStmt* for_stmt(NameExpr* t, Expr* i, Stmt* b)
 {
-    return Fa_make_for(t, i, b, { });
+    return make_for(t, i, b, { });
 }
-static inline Fa_FunctionDef* func_def(Fa_NameExpr* n, Fa_ListExpr* p, Fa_Stmt* b)
+static inline FunctionDef* func_def(NameExpr* n, ListExpr* p, Stmt* b)
 {
-    return Fa_make_function(n, p, b, { });
+    return make_function(n, p, b, { });
 }
-static inline Fa_ReturnStmt* return_stmt(Fa_Expr* v = nullptr)
+static inline ReturnStmt* return_stmt(Expr* v = nullptr)
 {
-    return Fa_make_return({ }, v);
+    return make_return({ }, v);
 }
-static inline Fa_ClassDef* class_def(Fa_Expr* n, Fa_Array<Fa_Expr*> mm, Fa_Array<Fa_Stmt*> me)
+static inline ClassDef* class_def(Expr* n, Array<Expr*> mm, Array<Stmt*> me)
 {
-    return Fa_make_class_def(n, mm, me, { });
+    return make_class_def(n, mm, me, { });
 }
-static inline Fa_BreakStmt* break_stmt()
+static inline BreakStmt* break_stmt()
 {
-    return Fa_make_break({ });
+    return make_break({ });
 }
-static inline Fa_ContinueStmt* continue_stmt()
+static inline ContinueStmt* continue_stmt()
 {
-    return Fa_make_continue({ });
+    return make_continue({ });
 }
 
-static inline Fa_Value str(char const* s) {
-    Fa_ObjString* obj =  get_allocator().allocate_object<Fa_ObjString>();
+static inline Value str(char const* s) {
+    ObjString* obj =  get_allocator().allocate_object<ObjString>();
     obj->str = s;
-    obj->hash = std::hash<Fa_StringRef>()(obj->str);
-    return Fa_Value::from_string(obj);
+    obj->hash = std::hash<StringRef>()(obj->str);
+    return Value::from_string(obj);
 }
 
 static inline bool require_perf()

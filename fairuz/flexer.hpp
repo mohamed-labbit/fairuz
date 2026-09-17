@@ -11,50 +11,50 @@
 
 namespace fairuz {
 
-using TokenPtr = tok::Fa_Token const*;
+using TokenPtr = tok::Token const*;
 
-static inline TokenPtr Fa_make_token(tok::Fa_TokenType tt, Fa_StringRef lexeme, Fa_SourceLocation loc)
+static inline TokenPtr make_token(tok::TokenType tt, StringRef lexeme, SourceLocation loc)
 {
-    return get_allocator().allocate_object<tok::Fa_Token>(lexeme, tt, loc);
+    return get_allocator().allocate_object<tok::Token>(lexeme, tt, loc);
 }
 
 } // namespace fairuz
 
 namespace fairuz::lex {
 
-class Fa_FileManager {
+class FileManager {
 public:
-    Fa_FileManager() = default;
-    explicit Fa_FileManager(std::string const& filepath);
+    FileManager() = default;
+    explicit FileManager(std::string const& filepath);
 
-    Fa_FileManager(Fa_FileManager&&) noexcept = delete;
-    Fa_FileManager& operator=(Fa_FileManager&&) noexcept = delete;
+    FileManager(FileManager&&) noexcept = delete;
+    FileManager& operator=(FileManager&&) noexcept = delete;
 
-    Fa_FileManager(Fa_FileManager const&) noexcept = delete;
-    Fa_FileManager& operator=(Fa_FileManager&) noexcept = delete;
+    FileManager(FileManager const&) noexcept = delete;
+    FileManager& operator=(FileManager&) noexcept = delete;
 
-    ~Fa_FileManager() = default;
+    ~FileManager() = default;
 
-    Fa_StringRef load(std::string const& filepath, bool const replace = false);
+    StringRef load(std::string const& filepath, bool const replace = false);
 
-    Fa_StringRef& buffer() { return m_input_buffer; }
-    Fa_StringRef const& buffer() const { return m_input_buffer; }
+    StringRef& buffer() { return m_input_buffer; }
+    StringRef const& buffer() const { return m_input_buffer; }
 
     std::string get_path() const { return m_file_path; }
 
-    Fa_StringRef get_line_at(u32 const line_idx) const;
+    StringRef get_line_at(u32 const line_idx) const;
 
 private:
     std::string m_file_path;
-    Fa_StringRef m_input_buffer;
+    StringRef m_input_buffer;
     std::filesystem::file_time_type m_last_known_write_time;
-}; // class Fa_FileManager
+}; // class FileManager
 
-class Fa_SourceManager {
+class SourceManager {
 public:
-    explicit Fa_SourceManager() = default;
+    explicit SourceManager() = default;
 
-    explicit Fa_SourceManager(Fa_FileManager* fm)
+    explicit SourceManager(FileManager* fm)
         : m_file_manager(fm)
     {
         if (m_file_manager == nullptr)
@@ -74,7 +74,7 @@ public:
 
     [[nodiscard]] u32 peek_char()
     {
-        Fa_SourceLocation saved_ctx = m_context;
+        SourceLocation saved_ctx = m_context;
         u32 saved_current = m_current;
         u64 saved_bytes = m_current_bytes;
 
@@ -115,23 +115,23 @@ public:
         m_unget_stack.push(e);
     }
 
-    Fa_StringRef get_line_at(u32 const line_idx) const { return m_file_manager->get_line_at(line_idx); }
+    StringRef get_line_at(u32 const line_idx) const { return m_file_manager->get_line_at(line_idx); }
 
-    Fa_SourceLocation get_source_location() const { return m_context; }
+    SourceLocation get_source_location() const { return m_context; }
 
-    Fa_StringRef source_slice(u64 const start, u64 const end) { return m_file_manager->buffer().slice(start, end); }
+    StringRef source_slice(u64 const start, u64 const end) { return m_file_manager->buffer().slice(start, end); }
 
     void refresh_current_();
 
 private:
     struct PushbackEntry {
         u32 ch { 0 };
-        Fa_SourceLocation ctx;
+        SourceLocation ctx;
         u64 bytes { 0 };
     }; // struct PushBackEntry
 
-    Fa_FileManager* m_file_manager { nullptr };
-    Fa_SourceLocation m_context;
+    FileManager* m_file_manager { nullptr };
+    SourceLocation m_context;
     u32 m_current { 0 };
     u64 m_current_bytes { 0 };
     std::stack<PushbackEntry> m_unget_stack;
@@ -139,44 +139,44 @@ private:
     void advance(u32 const cp, u64 const bytes);
     void rewind_position_(u32 const cp, u64 const bytes);
     u32 calculate_column_at_offset(u64 const target_offset) const;
-}; // class Fa_SourceManager
+}; // class SourceManager
 
-class Fa_Lexer {
+class Lexer {
 public:
-    explicit Fa_Lexer() = default;
-    explicit Fa_Lexer(Fa_FileManager* m_file_manager);
-    explicit Fa_Lexer(Fa_Lexer const&) = delete;
-    explicit Fa_Lexer(Fa_Array<TokenPtr>& seq);
+    explicit Lexer() = default;
+    explicit Lexer(FileManager* m_file_manager);
+    explicit Lexer(Lexer const&) = delete;
+    explicit Lexer(Array<TokenPtr>& seq);
 
     TokenPtr operator()() { return next(); }
     TokenPtr current() const;
     TokenPtr next();
     TokenPtr peek(size_t n = 1);
-    Fa_Array<TokenPtr> tokenize();
-    Fa_StringRef get_line_at(u32 const line_idx) const { return m_source_manager.get_line_at(line_idx); }
+    Array<TokenPtr> tokenize();
+    StringRef get_line_at(u32 const line_idx) const { return m_source_manager.get_line_at(line_idx); }
     diagnostic::SourcePtr source() const { return m_source; }
     auto take_error() { return std::exchange(m_pending_error, std::nullopt); }
 
 private:
-    Fa_SourceManager m_source_manager;
+    SourceManager m_source_manager;
     size_t m_tok_index { 0 };
     u32 m_indent_size { 0 };
     u32 m_indent_level { 0 };
-    Fa_Array<TokenPtr> m_tok_stream;
-    Fa_Array<u32> m_indent_stack;
-    Fa_Array<u32> m_alt_indent_stack;
+    Array<TokenPtr> m_tok_stream;
+    Array<u32> m_indent_stack;
+    Array<u32> m_alt_indent_stack;
     bool m_at_bol { true };
     u32 m_bracket_depth { 0 };
     diagnostic::SourcePtr m_source;
-    std::vector<std::pair<u32, Fa_SourceLocation>> m_brackets;
-    std::optional<std::pair<u16, diagnostic::Fa_DiagnosticEngine::DiagnosticId>> m_pending_error;
-    [[noreturn]] void fail(ErrorCode code, Fa_SourceLocation loc, std::string const& detail = "");
+    std::vector<std::pair<u32, SourceLocation>> m_brackets;
+    std::optional<std::pair<u16, diagnostic::DiagnosticEngine::DiagnosticId>> m_pending_error;
+    [[noreturn]] void fail(ErrorCode code, SourceLocation loc, std::string const& detail = "");
 
     // main lexer loop
     TokenPtr lex_token();
 
     void store(TokenPtr tok);
-}; // class Fa_Lexer
+}; // class Lexer
 
 } // namespace fairuz::lex
 

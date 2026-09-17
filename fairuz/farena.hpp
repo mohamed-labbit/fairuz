@@ -11,7 +11,7 @@
 
 namespace fairuz {
 
-class Fa_ArenaBlock {
+class ArenaBlock {
 private:
     size_t m_size { DEFAULT_BLOCK_SIZE };
     unsigned char* m_begin { nullptr };
@@ -19,9 +19,9 @@ private:
     unsigned char* m_end { nullptr };
 
 public:
-    explicit Fa_ArenaBlock(size_t const size = DEFAULT_BLOCK_SIZE, size_t const alignment = alignof(std::max_align_t));
+    explicit ArenaBlock(size_t const size = DEFAULT_BLOCK_SIZE, size_t const alignment = alignof(std::max_align_t));
 
-    ~Fa_ArenaBlock()
+    ~ArenaBlock()
     {
         if (m_begin != nullptr) {
             munmap(m_begin, m_size);
@@ -32,10 +32,10 @@ public:
     }
 
     // Non-copyable
-    Fa_ArenaBlock(Fa_ArenaBlock const&) = delete;
-    Fa_ArenaBlock& operator=(Fa_ArenaBlock const&) = delete;
+    ArenaBlock(ArenaBlock const&) = delete;
+    ArenaBlock& operator=(ArenaBlock const&) = delete;
 
-    Fa_ArenaBlock(Fa_ArenaBlock&& other) noexcept
+    ArenaBlock(ArenaBlock&& other) noexcept
         : m_size(other.m_size)
         , m_begin(other.m_begin)
         , m_next(other.m_next)
@@ -47,7 +47,7 @@ public:
         other.m_end = nullptr;
     }
 
-    Fa_ArenaBlock& operator=(Fa_ArenaBlock&& other) noexcept;
+    ArenaBlock& operator=(ArenaBlock&& other) noexcept;
 
     [[nodiscard]] unsigned char* begin() const { return m_begin; }
     [[nodiscard]] unsigned char* end() const { return m_end; }
@@ -83,9 +83,9 @@ public:
         m_next += bytes;
         return m_next;
     }
-}; // class Fa_ArenaBlock
+}; // class ArenaBlock
 
-class Fa_ArenaAllocator {
+class ArenaAllocator {
 public:
     enum class GrowthStrategy : i32 {
         LINEAR
@@ -99,7 +99,7 @@ private:
         void (*destroy)(void*) { nullptr };
     };
 
-    std::vector<Fa_ArenaBlock> m_blocks { };
+    std::vector<ArenaBlock> m_blocks { };
     std::vector<DestructorRecord> m_destructors { };
     size_t m_block_size { DEFAULT_BLOCK_SIZE };
     size_t m_next_block_size { DEFAULT_BLOCK_SIZE };
@@ -115,22 +115,22 @@ private:
     static constexpr size_t ALIGNMENT = alignof(std::max_align_t);
 
 public:
-    explicit Fa_ArenaAllocator(OutOfMemoryHandler oom_handler = nullptr)
+    explicit ArenaAllocator(OutOfMemoryHandler oom_handler = nullptr)
         : m_oom_handler(oom_handler)
     {
     }
 
-    ~Fa_ArenaAllocator()
+    ~ArenaAllocator()
     {
         destroy_objects();
         m_blocks.clear();
     }
 
-    Fa_ArenaAllocator(Fa_ArenaAllocator const&) = delete;
-    Fa_ArenaAllocator& operator=(Fa_ArenaAllocator const&) = delete;
+    ArenaAllocator(ArenaAllocator const&) = delete;
+    ArenaAllocator& operator=(ArenaAllocator const&) = delete;
 
-    Fa_ArenaAllocator(Fa_ArenaAllocator&&) noexcept = delete;
-    Fa_ArenaAllocator& operator=(Fa_ArenaAllocator&&) noexcept = delete;
+    ArenaAllocator(ArenaAllocator&&) noexcept = delete;
+    ArenaAllocator& operator=(ArenaAllocator&&) noexcept = delete;
 
     void set_name(std::string const& name) { m_name = name; }
 
@@ -219,35 +219,35 @@ private:
     {
         return (n + alignment - 1) & ~(alignment - 1);
     }
-}; // class Fa_ArenaAllocator
+}; // class ArenaAllocator
 
-struct Fa_AllocatorContext {
-    Fa_ArenaAllocator allocator { nullptr };
-}; // struct Fa_AllocatorContext
+struct AllocatorContext {
+    ArenaAllocator allocator { nullptr };
+}; // struct AllocatorContext
 
-inline Fa_AllocatorContext* g_context = nullptr;
+inline AllocatorContext* g_context = nullptr;
 
-inline void set_context(Fa_AllocatorContext* ctx) { g_context = ctx; }
+inline void set_context(AllocatorContext* ctx) { g_context = ctx; }
 
-inline Fa_AllocatorContext& get_context()
+inline AllocatorContext& get_context()
 {
     if (UNLIKELY(!g_context)) {
-        static Fa_AllocatorContext default_ctx;
+        static AllocatorContext default_ctx;
         g_context = &default_ctx;
     }
     return *g_context;
 }
 
-inline Fa_ArenaAllocator& get_allocator() { return get_context().allocator; }
-inline Fa_ArenaAllocator* get_allocator_ptr() { return &get_context().allocator; }
+inline ArenaAllocator& get_allocator() { return get_context().allocator; }
+inline ArenaAllocator* get_allocator_ptr() { return &get_context().allocator; }
 
-struct Fa_AllocatorContextScope {
-    explicit Fa_AllocatorContextScope(Fa_AllocatorContext& ctx) { g_context = &ctx; }
-    ~Fa_AllocatorContextScope() { g_context = nullptr; }
+struct AllocatorContextScope {
+    explicit AllocatorContextScope(AllocatorContext& ctx) { g_context = &ctx; }
+    ~AllocatorContextScope() { g_context = nullptr; }
 
-    Fa_AllocatorContextScope(Fa_AllocatorContextScope const&) = delete;
-    Fa_AllocatorContextScope& operator=(Fa_AllocatorContextScope const&) = delete;
-}; // struct Fa_AllocatorContextScope
+    AllocatorContextScope(AllocatorContextScope const&) = delete;
+    AllocatorContextScope& operator=(AllocatorContextScope const&) = delete;
+}; // struct AllocatorContextScope
 
 } // namespace fairuz
 

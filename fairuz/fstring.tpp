@@ -92,7 +92,7 @@ StringBase<Allocator>::StringBase(char const* s, Allocator* allocator)
 }
 
 template<class Allocator>
-Fa_StringRefImpl<Allocator>::Fa_StringRefImpl(size_t const s, Allocator* allocator)
+StringRefImpl<Allocator>::StringRefImpl(size_t const s, Allocator* allocator)
     : m_offset(0)
     , m_length(0)
     , m_allocator(detail::resolve_allocator<Allocator>(allocator))
@@ -101,7 +101,7 @@ Fa_StringRefImpl<Allocator>::Fa_StringRefImpl(size_t const s, Allocator* allocat
 }
 
 template<class Allocator>
-Fa_StringRefImpl<Allocator>::Fa_StringRefImpl(Fa_StringRefImpl const& other, size_t offset, size_t length)
+StringRefImpl<Allocator>::StringRefImpl(StringRefImpl const& other, size_t offset, size_t length)
     : m_string_data(other.m_string_data)
     , m_offset(other.m_offset + offset)
     , m_length(length != SIZE_MAX ? length : (offset <= other.m_length ? other.m_length - offset : 0))
@@ -113,7 +113,7 @@ Fa_StringRefImpl<Allocator>::Fa_StringRefImpl(Fa_StringRefImpl const& other, siz
 
 // relies on lit being nul terminated
 template<class Allocator>
-Fa_StringRefImpl<Allocator>::Fa_StringRefImpl(char const* lit, Allocator* allocator)
+StringRefImpl<Allocator>::StringRefImpl(char const* lit, Allocator* allocator)
     : m_allocator(detail::resolve_allocator<Allocator>(allocator))
 {
     if (lit == nullptr || !lit[0]) {
@@ -130,7 +130,7 @@ Fa_StringRefImpl<Allocator>::Fa_StringRefImpl(char const* lit, Allocator* alloca
 }
 
 template<class Allocator>
-Fa_StringRefImpl<Allocator>::Fa_StringRefImpl(char16_t const* u16_str, Allocator* allocator)
+StringRefImpl<Allocator>::StringRefImpl(char16_t const* u16_str, Allocator* allocator)
     : m_allocator(resolve_allocator(allocator))
 {
     if (u16_str == nullptr || !u16_str[0]) {
@@ -141,7 +141,7 @@ Fa_StringRefImpl<Allocator>::Fa_StringRefImpl(char16_t const* u16_str, Allocator
         return;
     }
 
-    Fa_StringRefImpl temp = from_utf16(u16_str, m_allocator);
+    StringRefImpl temp = from_utf16(u16_str, m_allocator);
     m_string_data = temp.m_string_data;
     m_offset = temp.m_offset;
     m_length = temp.m_length;
@@ -149,7 +149,7 @@ Fa_StringRefImpl<Allocator>::Fa_StringRefImpl(char16_t const* u16_str, Allocator
 }
 
 template<class Allocator>
-Fa_StringRefImpl<Allocator>::Fa_StringRefImpl(size_t const s, char const c, Allocator* allocator)
+StringRefImpl<Allocator>::StringRefImpl(size_t const s, char const c, Allocator* allocator)
     : m_offset(0)
     , m_length(s)
     , m_allocator(detail::resolve_allocator<Allocator>(allocator))
@@ -158,7 +158,7 @@ Fa_StringRefImpl<Allocator>::Fa_StringRefImpl(size_t const s, char const c, Allo
 }
 
 template<class Allocator>
-Fa_StringRefImpl<Allocator>::Fa_StringRefImpl(StringBase<Allocator>* data, size_t offset, size_t length)
+StringRefImpl<Allocator>::StringRefImpl(StringBase<Allocator>* data, size_t offset, size_t length)
     : m_offset(offset)
     , m_length(length)
 {
@@ -179,7 +179,7 @@ Fa_StringRefImpl<Allocator>::Fa_StringRefImpl(StringBase<Allocator>* data, size_
 }
 
 template<class Allocator>
-Fa_StringRefImpl<Allocator>::Fa_StringRefImpl(Fa_StringRefImpl&& other) noexcept
+StringRefImpl<Allocator>::StringRefImpl(StringRefImpl&& other) noexcept
     : m_string_data(other.m_string_data)
     , m_offset(other.m_offset)
     , m_length(other.m_length)
@@ -192,7 +192,7 @@ Fa_StringRefImpl<Allocator>::Fa_StringRefImpl(Fa_StringRefImpl&& other) noexcept
 }
 
 template<class Allocator>
-Fa_StringRefImpl<Allocator>& Fa_StringRefImpl<Allocator>::operator=(Fa_StringRefImpl&& other) noexcept
+StringRefImpl<Allocator>& StringRefImpl<Allocator>::operator=(StringRefImpl&& other) noexcept
 {
     if (this == &other)
         return *this;
@@ -223,7 +223,7 @@ Fa_StringRefImpl<Allocator>& Fa_StringRefImpl<Allocator>::operator=(Fa_StringRef
 }
 
 template<class Allocator>
-Fa_StringRefImpl<Allocator>::~Fa_StringRefImpl()
+StringRefImpl<Allocator>::~StringRefImpl()
 {
     if (m_string_data == nullptr)
         return;
@@ -242,7 +242,7 @@ Fa_StringRefImpl<Allocator>::~Fa_StringRefImpl()
 }
 
 template<class Allocator>
-Fa_StringRefImpl<Allocator>& Fa_StringRefImpl<Allocator>::operator=(Fa_StringRefImpl const& other)
+StringRefImpl<Allocator>& StringRefImpl<Allocator>::operator=(StringRefImpl const& other)
 {
     if (this == &other)
         return *this;
@@ -272,7 +272,7 @@ Fa_StringRefImpl<Allocator>& Fa_StringRefImpl<Allocator>::operator=(Fa_StringRef
 }
 
 template<class Allocator>
-void Fa_StringRefImpl<Allocator>::expand(size_t const new_size)
+void StringRefImpl<Allocator>::expand(size_t const new_size)
 {
     ensure_unique();
 
@@ -299,7 +299,7 @@ void Fa_StringRefImpl<Allocator>::expand(size_t const new_size)
 }
 
 template<class Allocator>
-void Fa_StringRefImpl<Allocator>::reserve(size_t const new_capacity)
+void StringRefImpl<Allocator>::reserve(size_t const new_capacity)
 {
     if (new_capacity <= cap())
         return;
@@ -308,7 +308,7 @@ void Fa_StringRefImpl<Allocator>::reserve(size_t const new_capacity)
 }
 
 template<class Allocator>
-void Fa_StringRefImpl<Allocator>::erase(size_t const at)
+void StringRefImpl<Allocator>::erase(size_t const at)
 {
     if (empty() || at >= len())
         return;
@@ -334,7 +334,7 @@ void Fa_StringRefImpl<Allocator>::erase(size_t const at)
 }
 
 template<class Allocator>
-Fa_StringRefImpl<Allocator>& Fa_StringRefImpl<Allocator>::operator+=(Fa_StringRefImpl const& other)
+StringRefImpl<Allocator>& StringRefImpl<Allocator>::operator+=(StringRefImpl const& other)
 {
     if (other.empty())
         return *this;
@@ -353,7 +353,7 @@ Fa_StringRefImpl<Allocator>& Fa_StringRefImpl<Allocator>::operator+=(Fa_StringRe
 }
 
 template<class Allocator>
-Fa_StringRefImpl<Allocator>& Fa_StringRefImpl<Allocator>::operator+=(char c)
+StringRefImpl<Allocator>& StringRefImpl<Allocator>::operator+=(char c)
 {
     ensure_unique();
 
@@ -368,41 +368,41 @@ Fa_StringRefImpl<Allocator>& Fa_StringRefImpl<Allocator>::operator+=(char c)
 }
 
 template<class Allocator>
-char Fa_StringRefImpl<Allocator>::operator[](size_t const i) const
+char StringRefImpl<Allocator>::operator[](size_t const i) const
 {
     return (*m_string_data)[i + m_offset];
 }
 
 template<class Allocator>
-char& Fa_StringRefImpl<Allocator>::operator[](size_t const i)
+char& StringRefImpl<Allocator>::operator[](size_t const i)
 {
     ensure_unique();
     return (*m_string_data)[i + m_offset];
 }
 
 template<class Allocator>
-char Fa_StringRefImpl<Allocator>::at(size_t const i) const
+char StringRefImpl<Allocator>::at(size_t const i) const
 {
     if (UNLIKELY(i >= m_length))
         diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR,
-            "Fa_StringRefImpl::at: index out of bounds");
+            "StringRefImpl::at: index out of bounds");
 
     return (*m_string_data)[i + m_offset];
 }
 
 template<class Allocator>
-char& Fa_StringRefImpl<Allocator>::at(size_t const i)
+char& StringRefImpl<Allocator>::at(size_t const i)
 {
     ensure_unique();
     if (UNLIKELY(i >= m_length))
         diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR,
-            "Fa_StringRefImpl::at: index out of bounds");
+            "StringRefImpl::at: index out of bounds");
 
     return (*m_string_data)[i + m_offset];
 }
 
 template<class Allocator>
-bool Fa_StringRefImpl<Allocator>::find(char const c) const noexcept
+bool StringRefImpl<Allocator>::find(char const c) const noexcept
 {
     char const* p = data();
     char const* end = p + m_length;
@@ -412,7 +412,7 @@ bool Fa_StringRefImpl<Allocator>::find(char const c) const noexcept
 }
 
 template<class Allocator>
-bool Fa_StringRefImpl<Allocator>::find(Fa_StringRefImpl const& s) const noexcept
+bool StringRefImpl<Allocator>::find(StringRefImpl const& s) const noexcept
 {
     if (s.empty() || s.len() > len())
         return false;
@@ -429,7 +429,7 @@ bool Fa_StringRefImpl<Allocator>::find(Fa_StringRefImpl const& s) const noexcept
 }
 
 template<class Allocator>
-std::optional<size_t> Fa_StringRefImpl<Allocator>::find_pos(char const c) const noexcept
+std::optional<size_t> StringRefImpl<Allocator>::find_pos(char const c) const noexcept
 {
     char const* p = data();
     char const* end = p + m_length;
@@ -441,7 +441,7 @@ std::optional<size_t> Fa_StringRefImpl<Allocator>::find_pos(char const c) const 
 }
 
 template<class Allocator>
-Fa_StringRefImpl<Allocator>& Fa_StringRefImpl<Allocator>::trim_whitespace(bool leading, bool trailing) noexcept
+StringRefImpl<Allocator>& StringRefImpl<Allocator>::trim_whitespace(bool leading, bool trailing) noexcept
 {
     if (leading) {
         while (m_length > 0 && util::is_whitespace(data()[0])) {
@@ -459,7 +459,7 @@ Fa_StringRefImpl<Allocator>& Fa_StringRefImpl<Allocator>::trim_whitespace(bool l
 }
 
 template<class Allocator>
-Fa_StringRefImpl<Allocator>& Fa_StringRefImpl<Allocator>::truncate(size_t const s) noexcept
+StringRefImpl<Allocator>& StringRefImpl<Allocator>::truncate(size_t const s) noexcept
 {
     if (s < m_length)
         m_length = s;
@@ -468,7 +468,7 @@ Fa_StringRefImpl<Allocator>& Fa_StringRefImpl<Allocator>::truncate(size_t const 
 }
 
 template<class Allocator>
-void Fa_StringRefImpl<Allocator>::resize(size_t const s)
+void StringRefImpl<Allocator>::resize(size_t const s)
 {
     ensure_unique();
     if (s > cap())
@@ -476,14 +476,14 @@ void Fa_StringRefImpl<Allocator>::resize(size_t const s)
 }
 
 template<class Allocator>
-Fa_StringRefImpl<Allocator> Fa_StringRefImpl<Allocator>::slice(size_t start, size_t end) const
+StringRefImpl<Allocator> StringRefImpl<Allocator>::slice(size_t start, size_t end) const
 {
     if (m_length == 0)
-        return Fa_StringRefImpl(static_cast<size_t>(0), m_allocator);
+        return StringRefImpl(static_cast<size_t>(0), m_allocator);
 
     if (start > m_length) {
         diagnostic::fatal_error(ErrorCode::STRING_SLICE_START_OOB);
-        return Fa_StringRefImpl(static_cast<size_t>(0), m_allocator);
+        return StringRefImpl(static_cast<size_t>(0), m_allocator);
     }
 
     if (end > m_length || end == SIZE_MAX)
@@ -491,56 +491,56 @@ Fa_StringRefImpl<Allocator> Fa_StringRefImpl<Allocator>::slice(size_t start, siz
 
     if (end < start) {
         diagnostic::fatal_error(ErrorCode::STRING_SLICE_END_BEFORE_START);
-        return Fa_StringRefImpl(static_cast<size_t>(0), m_allocator);
+        return StringRefImpl(static_cast<size_t>(0), m_allocator);
     }
 
-    return Fa_StringRefImpl(*this, start, end - start);
+    return StringRefImpl(*this, start, end - start);
 }
 
 template<class Allocator>
-Fa_StringRefImpl<Allocator> Fa_StringRefImpl<Allocator>::substr_copy(size_t start, size_t end) const
+StringRefImpl<Allocator> StringRefImpl<Allocator>::substr_copy(size_t start, size_t end) const
 {
     if (m_length == 0)
-        return Fa_StringRefImpl(static_cast<size_t>(0), m_allocator);
+        return StringRefImpl(static_cast<size_t>(0), m_allocator);
     if (start > m_length)
         diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR,
-            "Fa_StringRefImpl::substrCopy: start index out of range");
+            "StringRefImpl::substrCopy: start index out of range");
 
     if (end > m_length || end == SIZE_MAX)
         end = m_length;
     if (end < start)
         diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR,
-            "Fa_StringRefImpl::substrCopy: start index out of range");
+            "StringRefImpl::substrCopy: start index out of range");
 
     size_t copy_len = end - start;
 
     if (copy_len == 0)
-        return Fa_StringRefImpl(static_cast<size_t>(0), m_allocator);
+        return StringRefImpl(static_cast<size_t>(0), m_allocator);
 
     StringBase<Allocator>* ret = m_allocator->template allocate_object<StringBase<Allocator>>(copy_len, m_allocator);
 
     ::memcpy(ret->ptr(), data() + start, copy_len);
     ret->ptr()[copy_len] = 0;
 
-    return Fa_StringRefImpl(ret);
+    return StringRefImpl(ret);
 }
 
 template<class Allocator>
-f64 Fa_StringRefImpl<Allocator>::to_double(size_t* pos) const
+f64 StringRefImpl<Allocator>::to_double(size_t* pos) const
 {
     if (empty())
         diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR,
-            "Fa_StringRefImpl::toDouble: empty string");
+            "StringRefImpl::toDouble: empty string");
 
     f64 result { };
     auto [end_ptr, ec] = std::from_chars(data(), data() + m_length, result);
 
     if (ec == std::errc::invalid_argument)
         diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR,
-            "Fa_StringRefImpl::toDouble: invalid number format");
+            "StringRefImpl::toDouble: invalid number format");
     if (ec == std::errc::result_out_of_range)
         diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR,
-            "Fa_StringRefImpl::toDouble: number out of range");
+            "StringRefImpl::toDouble: number out of range");
 
     if (pos)
         *pos = static_cast<size_t>(end_ptr - data());
@@ -549,12 +549,12 @@ f64 Fa_StringRefImpl<Allocator>::to_double(size_t* pos) const
 }
 
 template<class Allocator>
-Fa_StringRefImpl<Allocator> Fa_StringRefImpl<Allocator>::from_utf16(char16_t const* src, Allocator* allocator)
+StringRefImpl<Allocator> StringRefImpl<Allocator>::from_utf16(char16_t const* src, Allocator* allocator)
 {
     Allocator* used_allocator = resolve_allocator(allocator);
 
     if (src == nullptr || !src[0])
-        return Fa_StringRefImpl(static_cast<size_t>(0), used_allocator);
+        return StringRefImpl(static_cast<size_t>(0), used_allocator);
 
     char16_t const* p = src;
     while (*p)
@@ -574,11 +574,11 @@ Fa_StringRefImpl<Allocator> Fa_StringRefImpl<Allocator>::from_utf16(char16_t con
     (void)written;
     ret_data->ptr()[utf8_len] = 0;
 
-    return Fa_StringRefImpl(ret_data);
+    return StringRefImpl(ret_data);
 }
 
 template<class Allocator>
-void Fa_StringRefImpl<Allocator>::detach()
+void StringRefImpl<Allocator>::detach()
 {
     size_t const copy_len = m_length;
     StringBase<Allocator>* s = m_allocator->template allocate_object<StringBase<Allocator>>(copy_len, m_allocator);

@@ -27,12 +27,12 @@ struct CollidingHash {
     }
 };
 
-using IntTable = Fa_HashTable<int, int, IntHash, IntEqual>;
-using CollidingIntTable = Fa_HashTable<int, int, CollidingHash, IntEqual>;
+using IntTable = HashTable<int, int, IntHash, IntEqual>;
+using CollidingIntTable = HashTable<int, int, CollidingHash, IntEqual>;
 
 } // namespace
 
-TEST(Fa_HashTable, InsertAndFindSingleEntry)
+TEST(HashTable, InsertAndFindSingleEntry)
 {
     IntTable table;
 
@@ -47,7 +47,7 @@ TEST(Fa_HashTable, InsertAndFindSingleEntry)
     EXPECT_FALSE(table.empty());
 }
 
-TEST(Fa_HashTable, OverwriteKeepsSizeStable)
+TEST(HashTable, OverwriteKeepsSizeStable)
 {
     IntTable table;
 
@@ -59,7 +59,7 @@ TEST(Fa_HashTable, OverwriteKeepsSizeStable)
     EXPECT_EQ(*table.find_ptr(3), 42);
 }
 
-TEST(Fa_HashTable, HandlesLinearProbingCollisions)
+TEST(HashTable, HandlesLinearProbingCollisions)
 {
     CollidingIntTable table;
 
@@ -74,7 +74,7 @@ TEST(Fa_HashTable, HandlesLinearProbingCollisions)
     }
 }
 
-TEST(Fa_HashTable, GrowthPreservesExistingEntries)
+TEST(HashTable, GrowthPreservesExistingEntries)
 {
     IntTable table;
 
@@ -89,7 +89,7 @@ TEST(Fa_HashTable, GrowthPreservesExistingEntries)
     }
 }
 
-TEST(Fa_HashTable, ClearRemovesEntriesAndAllowsReuse)
+TEST(HashTable, ClearRemovesEntriesAndAllowsReuse)
 {
     IntTable table;
 
@@ -109,7 +109,7 @@ TEST(Fa_HashTable, ClearRemovesEntriesAndAllowsReuse)
     EXPECT_EQ(table.size(), 1u);
 }
 
-TEST(Fa_HashTable, EraseRepairsCollidingProbeCluster)
+TEST(HashTable, EraseRepairsCollidingProbeCluster)
 {
     CollidingIntTable table;
     table.insert_or_assign(1, 10);

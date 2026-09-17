@@ -17,14 +17,14 @@ namespace fairuz::parser {
 // Macros
 
 // Consume a token, early-return the error code if the token doesn't match.
-#define Fa_VERIFY_TOKEN(expected, errc) \
+#define VERIFY_TOKEN(expected, errc) \
     do {                                \
         if (UNLIKELY(!match(expected))) \
             return report_error(errc, current_loc());  \
     } while (0)
 
-// Propagate an error from an Fa_ErrorOr expression without unwrapping.
-#define Fa_VERIFY_NODE(n)              \
+// Propagate an error from an ErrorOr expression without unwrapping.
+#define VERIFY_NODE(n)              \
     do {                               \
         if (UNLIKELY((n).has_error())) \
             return (n).error();        \
@@ -34,14 +34,14 @@ namespace fairuz::parser {
 #define FA_CONCAT_(a, b) a##b
 #define FA_CONCAT(a, b) FA_CONCAT_(a, b)
 
-// Fa_TRY — replaces the GNU ({...}) statement-expression macros.
+// TRY — replaces the GNU ({...}) statement-expression macros.
 //
 // Declares `var` as the unwrapped value of `expr` (which must return
-// Fa_ErrorOr<T>).  Early-returns the error from the *enclosing function* if
+// ErrorOr<T>).  Early-returns the error from the *enclosing function* if
 // any.  Each expansion creates a uniquely named temporary via __LINE__, so
-// multiple Fa_TRY calls in the same scope are safe as long as they appear on
+// multiple TRY calls in the same scope are safe as long as they appear on
 // different source lines (which they always should).
-#define Fa_TRY(var, expr)                                   \
+#define TRY(var, expr)                                   \
     auto FA_CONCAT(fa_try_, __LINE__) = (expr);             \
     if (UNLIKELY(FA_CONCAT(fa_try_, __LINE__).has_error())) \
         return FA_CONCAT(fa_try_, __LINE__).error();        \
@@ -49,9 +49,9 @@ namespace fairuz::parser {
 
 // Type aliases
 
-using TokType = tok::Fa_TokenType;
-using StmtPtr = AST::Fa_Stmt*;
-using ExprPtr = AST::Fa_Expr*;
+using TokType = tok::TokenType;
+using StmtPtr = AST::Stmt*;
+using ExprPtr = AST::Expr*;
 
 // Shared between the parser (parse_class_method) and the semantic analyser
 // (analyze_stmt CLASS_DEF).  Move to ast_constants.hpp if the two components
@@ -64,20 +64,20 @@ namespace {
 
 // Maps an augmented-assignment operator token to the corresponding binary op.
 // Replaces the fragile pointer-arithmetic enum indexing used previously.
-AST::Fa_BinaryOp augmented_assign_to_binary_op(TokType t)
+AST::BinaryOp augmented_assign_to_binary_op(TokType t)
 {
     switch (t) {
-    case TokType::OP_PLUSEQ: return AST::Fa_BinaryOp::OP_ADD;
-    case TokType::OP_MINUSEQ: return AST::Fa_BinaryOp::OP_SUB;
-    case TokType::OP_STAREQ: return AST::Fa_BinaryOp::OP_MUL;
-    case TokType::OP_SLASHEQ: return AST::Fa_BinaryOp::OP_DIV;
-    case TokType::OP_PERCENTEQ: return AST::Fa_BinaryOp::OP_MOD;
-    case TokType::OP_ANDEQ: return AST::Fa_BinaryOp::OP_BITAND;
-    case TokType::OP_OREQ: return AST::Fa_BinaryOp::OP_BITOR;
-    case TokType::OP_XOREQ: return AST::Fa_BinaryOp::OP_BITXOR;
-    case TokType::OP_LSHIFTEQ: return AST::Fa_BinaryOp::OP_LSHIFT;
-    case TokType::OP_RSHIFTEQ: return AST::Fa_BinaryOp::OP_RSHIFT;
-    default: return AST::Fa_BinaryOp::INVALID;
+    case TokType::OP_PLUSEQ: return AST::BinaryOp::OP_ADD;
+    case TokType::OP_MINUSEQ: return AST::BinaryOp::OP_SUB;
+    case TokType::OP_STAREQ: return AST::BinaryOp::OP_MUL;
+    case TokType::OP_SLASHEQ: return AST::BinaryOp::OP_DIV;
+    case TokType::OP_PERCENTEQ: return AST::BinaryOp::OP_MOD;
+    case TokType::OP_ANDEQ: return AST::BinaryOp::OP_BITAND;
+    case TokType::OP_OREQ: return AST::BinaryOp::OP_BITOR;
+    case TokType::OP_XOREQ: return AST::BinaryOp::OP_BITXOR;
+    case TokType::OP_LSHIFTEQ: return AST::BinaryOp::OP_LSHIFT;
+    case TokType::OP_RSHIFTEQ: return AST::BinaryOp::OP_RSHIFT;
+    default: return AST::BinaryOp::INVALID;
     }
 }
 
@@ -98,54 +98,54 @@ bool is_augmented_assign_tok(TokenPtr t)
 } // anonymous namespace
 
 /// NOTE: These are logically a property of the token type and would be better
-/// placed as methods on Fa_Token or in a token_ops.hpp utility header.
+/// placed as methods on Token or in a token_ops.hpp utility header.
 
-AST::Fa_BinaryOp to_binary_op(TokType const op)
+AST::BinaryOp to_binary_op(TokType const op)
 {
     switch (op) {
-    case TokType::OP_PLUS: return AST::Fa_BinaryOp::OP_ADD;
-    case TokType::OP_MINUS: return AST::Fa_BinaryOp::OP_SUB;
-    case TokType::OP_STAR: return AST::Fa_BinaryOp::OP_MUL;
-    case TokType::OP_SLASH: return AST::Fa_BinaryOp::OP_DIV;
-    case TokType::OP_PERCENT: return AST::Fa_BinaryOp::OP_MOD;
-    case TokType::OP_POWER: return AST::Fa_BinaryOp::OP_POW;
-    case TokType::OP_EQ: return AST::Fa_BinaryOp::OP_EQ;
-    case TokType::OP_NEQ: return AST::Fa_BinaryOp::OP_NEQ;
-    case TokType::OP_LT: return AST::Fa_BinaryOp::OP_LT;
-    case TokType::OP_GT: return AST::Fa_BinaryOp::OP_GT;
-    case TokType::OP_LTE: return AST::Fa_BinaryOp::OP_LTE;
-    case TokType::OP_GTE: return AST::Fa_BinaryOp::OP_GTE;
-    case TokType::OP_BITAND: return AST::Fa_BinaryOp::OP_BITAND;
-    case TokType::OP_BITOR: return AST::Fa_BinaryOp::OP_BITOR;
-    case TokType::OP_BITXOR: return AST::Fa_BinaryOp::OP_BITXOR;
-    case TokType::OP_LSHIFT: return AST::Fa_BinaryOp::OP_LSHIFT;
-    case TokType::OP_RSHIFT: return AST::Fa_BinaryOp::OP_RSHIFT;
-    case TokType::OP_AND: return AST::Fa_BinaryOp::OP_AND;
-    case TokType::OP_OR: return AST::Fa_BinaryOp::OP_OR;
-    default: return AST::Fa_BinaryOp::INVALID;
+    case TokType::OP_PLUS: return AST::BinaryOp::OP_ADD;
+    case TokType::OP_MINUS: return AST::BinaryOp::OP_SUB;
+    case TokType::OP_STAR: return AST::BinaryOp::OP_MUL;
+    case TokType::OP_SLASH: return AST::BinaryOp::OP_DIV;
+    case TokType::OP_PERCENT: return AST::BinaryOp::OP_MOD;
+    case TokType::OP_POWER: return AST::BinaryOp::OP_POW;
+    case TokType::OP_EQ: return AST::BinaryOp::OP_EQ;
+    case TokType::OP_NEQ: return AST::BinaryOp::OP_NEQ;
+    case TokType::OP_LT: return AST::BinaryOp::OP_LT;
+    case TokType::OP_GT: return AST::BinaryOp::OP_GT;
+    case TokType::OP_LTE: return AST::BinaryOp::OP_LTE;
+    case TokType::OP_GTE: return AST::BinaryOp::OP_GTE;
+    case TokType::OP_BITAND: return AST::BinaryOp::OP_BITAND;
+    case TokType::OP_BITOR: return AST::BinaryOp::OP_BITOR;
+    case TokType::OP_BITXOR: return AST::BinaryOp::OP_BITXOR;
+    case TokType::OP_LSHIFT: return AST::BinaryOp::OP_LSHIFT;
+    case TokType::OP_RSHIFT: return AST::BinaryOp::OP_RSHIFT;
+    case TokType::OP_AND: return AST::BinaryOp::OP_AND;
+    case TokType::OP_OR: return AST::BinaryOp::OP_OR;
+    default: return AST::BinaryOp::INVALID;
     }
 }
 
-AST::Fa_UnaryOp to_unary_op(TokType const op)
+AST::UnaryOp to_unary_op(TokType const op)
 {
     switch (op) {
-    case TokType::OP_PLUS: return AST::Fa_UnaryOp::OP_PLUS;
-    case TokType::OP_MINUS: return AST::Fa_UnaryOp::OP_NEG;
-    case TokType::OP_BITNOT: return AST::Fa_UnaryOp::OP_BITNOT;
-    case TokType::OP_NOT: return AST::Fa_UnaryOp::OP_NOT;
-    default: return AST::Fa_UnaryOp::INVALID;
+    case TokType::OP_PLUS: return AST::UnaryOp::OP_PLUS;
+    case TokType::OP_MINUS: return AST::UnaryOp::OP_NEG;
+    case TokType::OP_BITNOT: return AST::UnaryOp::OP_BITNOT;
+    case TokType::OP_NOT: return AST::UnaryOp::OP_NOT;
+    default: return AST::UnaryOp::INVALID;
     }
 }
 
-// Fa_Parser — utilities
+// Parser — utilities
 
-bool Fa_Parser::we_done() const { return current_token()->is(TokType::ENDMARKER); }
+bool Parser::we_done() const { return current_token()->is(TokType::ENDMARKER); }
 
-bool Fa_Parser::check(TokType t) const { return current_token()->is(t); }
+bool Parser::check(TokType t) const { return current_token()->is(t); }
 
-TokenPtr Fa_Parser::current_token() const { return m_lexer.current(); }
+TokenPtr Parser::current_token() const { return m_lexer.current(); }
 
-bool Fa_Parser::match(TokType const type)
+bool Parser::match(TokType const type)
 {
     if (check(type)) {
         advance();
@@ -154,7 +154,7 @@ bool Fa_Parser::match(TokType const type)
     return false;
 }
 
-void Fa_Parser::synchronize()
+void Parser::synchronize()
 {
     while (!we_done()) {
         if (check(TokType::DEDENT))
@@ -181,11 +181,11 @@ void Fa_Parser::synchronize()
         advance();
     }
 }
-// Fa_Parser — top-level
+// Parser — top-level
 
-Fa_Array<StmtPtr> Fa_Parser::parse_program()
+Array<StmtPtr> Parser::parse_program()
 {
-    Fa_Array<StmtPtr> stmts;
+    Array<StmtPtr> stmts;
 
     while (!we_done() && !diagnostic::is_saturated()) {
         skip_newlines();
@@ -215,7 +215,7 @@ Fa_Array<StmtPtr> Fa_Parser::parse_program()
     return stmts;
 }
 
-Fa_ErrorOr<StmtPtr> Fa_Parser::parse_statement()
+ErrorOr<StmtPtr> Parser::parse_statement()
 {
     skip_newlines();
 
@@ -243,81 +243,81 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_statement()
     return parse_expression_stmt();
 }
 
-// Fa_Parser — statement parsers
+// Parser — statement parsers
 
-Fa_ErrorOr<StmtPtr> Fa_Parser::parse_return_stmt()
+ErrorOr<StmtPtr> Parser::parse_return_stmt()
 {
     TokenPtr start = current_token();
-    Fa_VERIFY_TOKEN(TokType::KW_RETURN, ErrorCode::EXPECTED_RETURN);
+    VERIFY_TOKEN(TokType::KW_RETURN, ErrorCode::EXPECTED_RETURN);
 
     if (check(TokType::NEWLINE) || we_done())
-        return AST::Fa_make_return(start->location());
+        return AST::make_return(start->location());
 
-    Fa_TRY(ret, parse_expression());
-    return AST::Fa_make_return(start->location(), ret);
+    TRY(ret, parse_expression());
+    return AST::make_return(start->location(), ret);
 }
 
-Fa_ErrorOr<StmtPtr> Fa_Parser::parse_break_stmt()
+ErrorOr<StmtPtr> Parser::parse_break_stmt()
 {
     TokenPtr start = current_token();
     advance();
-    return AST::Fa_make_break(start->location());
+    return AST::make_break(start->location());
 }
 
-Fa_ErrorOr<StmtPtr> Fa_Parser::parse_continue_stmt()
+ErrorOr<StmtPtr> Parser::parse_continue_stmt()
 {
     TokenPtr start = current_token();
     advance();
-    return AST::Fa_make_continue(start->location());
+    return AST::make_continue(start->location());
 }
 
-Fa_ErrorOr<StmtPtr> Fa_Parser::parse_while_stmt()
+ErrorOr<StmtPtr> Parser::parse_while_stmt()
 {
     TokenPtr start = current_token();
-    Fa_VERIFY_TOKEN(TokType::KW_WHILE, ErrorCode::EXPECTED_WHILE_KEYWORD);
+    VERIFY_TOKEN(TokType::KW_WHILE, ErrorCode::EXPECTED_WHILE_KEYWORD);
 
-    Fa_TRY(condition, parse_expression());
-    Fa_VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_WHILE);
+    TRY(condition, parse_expression());
+    VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_WHILE);
 
     auto while_block = parse_indented_block();
-    Fa_VERIFY_NODE(while_block);
+    VERIFY_NODE(while_block);
 
-    return Fa_make_while(condition, as_block(while_block.value()), start->location());
+    return make_while(condition, as_block(while_block.value()), start->location());
 }
 
-Fa_ErrorOr<StmtPtr> Fa_Parser::parse_for_stmt()
+ErrorOr<StmtPtr> Parser::parse_for_stmt()
 {
     TokenPtr start = current_token();
-    Fa_VERIFY_TOKEN(TokType::KW_FOR, ErrorCode::UNEXPECTED_TOKEN);
+    VERIFY_TOKEN(TokType::KW_FOR, ErrorCode::UNEXPECTED_TOKEN);
 
     if (!check(TokType::IDENTIFIER))
         return report_error(ErrorCode::EXPECTED_FOR_TARGET, current_loc());
 
-    auto* target = AST::Fa_make_name(current_token()->lexeme(), current_token()->location());
+    auto* target = AST::make_name(current_token()->lexeme(), current_token()->location());
     advance();
 
     /// check 'in' after target
-    Fa_VERIFY_TOKEN(TokType::KW_IN, ErrorCode::EXPECTED_IN_KEYWORD);
+    VERIFY_TOKEN(TokType::KW_IN, ErrorCode::EXPECTED_IN_KEYWORD);
 
-    Fa_TRY(iter, parse_expression());
-    Fa_VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_FOR);
+    TRY(iter, parse_expression());
+    VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_FOR);
 
     auto body = parse_indented_block();
-    Fa_VERIFY_NODE(body);
+    VERIFY_NODE(body);
 
-    return AST::Fa_make_for(target, iter, body.value(), start->location());
+    return AST::make_for(target, iter, body.value(), start->location());
 }
 
-Fa_ErrorOr<StmtPtr> Fa_Parser::parse_if_stmt()
+ErrorOr<StmtPtr> Parser::parse_if_stmt()
 {
     TokenPtr start = current_token();
-    Fa_VERIFY_TOKEN(TokType::KW_IF, ErrorCode::EXPECTED_IF_KEYWORD);
+    VERIFY_TOKEN(TokType::KW_IF, ErrorCode::EXPECTED_IF_KEYWORD);
 
-    Fa_TRY(condition, parse_expression());
-    Fa_VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_IF);
+    TRY(condition, parse_expression());
+    VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_IF);
 
     auto then_block = parse_indented_block();
-    Fa_VERIFY_NODE(then_block);
+    VERIFY_NODE(then_block);
 
     StmtPtr else_block = nullptr;
     skip_newlines();
@@ -327,37 +327,37 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_if_stmt()
         if (check(TokType::KW_IF)) {
             // else-if: no colon between `else` and `if`.
             auto nested = parse_if_stmt();
-            Fa_VERIFY_NODE(nested);
+            VERIFY_NODE(nested);
             else_block = nested.value();
         } else {
-            Fa_VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_IF);
+            VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_IF);
             auto else_stmt = parse_indented_block();
-            Fa_VERIFY_NODE(else_stmt);
+            VERIFY_NODE(else_stmt);
             else_block = else_stmt.value();
         }
     }
 
-    return Fa_make_if(condition, as_block(then_block.value()), start->location(), else_block);
+    return make_if(condition, as_block(then_block.value()), start->location(), else_block);
 }
 
-Fa_ErrorOr<StmtPtr> Fa_Parser::parse_expression_stmt()
+ErrorOr<StmtPtr> Parser::parse_expression_stmt()
 {
-    Fa_TRY(expr, parse_expression());
+    TRY(expr, parse_expression());
     if (UNLIKELY(!(check(TokType::NEWLINE) || check(TokType::DEDENT) || check(TokType::ENDMARKER))))
         return report_error(ErrorCode::UNEXPECTED_TOKEN, current_loc());
-    return Fa_make_expr_stmt(expr, expr->get_location());
+    return make_expr_stmt(expr, expr->get_location());
 }
 
-Fa_ErrorOr<StmtPtr> Fa_Parser::parse_indented_block()
+ErrorOr<StmtPtr> Parser::parse_indented_block()
 {
     TokenPtr start = current_token();
     skip_newlines();
-    Fa_VERIFY_TOKEN(TokType::INDENT, ErrorCode::EXPECTED_INDENT);
+    VERIFY_TOKEN(TokType::INDENT, ErrorCode::EXPECTED_INDENT);
 
-    Fa_Array<StmtPtr> stmts;
+    Array<StmtPtr> stmts;
 
     if (match(TokType::DEDENT))
-        return Fa_make_block(stmts, start->location());
+        return make_block(stmts, start->location());
 
     while (!check(TokType::DEDENT) && !we_done() && !diagnostic::is_saturated()) {
         skip_newlines();
@@ -375,18 +375,18 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_indented_block()
     }
 
     if (check(TokType::ENDMARKER) || diagnostic::is_saturated())
-        return Fa_make_block(stmts, start->location());
+        return make_block(stmts, start->location());
 
-    Fa_VERIFY_TOKEN(TokType::DEDENT, ErrorCode::EXPECTED_DEDENT);
-    return Fa_make_block(stmts, start->location());
+    VERIFY_TOKEN(TokType::DEDENT, ErrorCode::EXPECTED_DEDENT);
+    return make_block(stmts, start->location());
 }
 
-// Fa_Parser — function and class parsers
+// Parser — function and class parsers
 
-Fa_ErrorOr<StmtPtr> Fa_Parser::parse_function_def()
+ErrorOr<StmtPtr> Parser::parse_function_def()
 {
     TokenPtr start = current_token();
-    Fa_VERIFY_TOKEN(TokType::KW_FN, ErrorCode::EXPECTED_FN_KEYWORD);
+    VERIFY_TOKEN(TokType::KW_FN, ErrorCode::EXPECTED_FN_KEYWORD);
 
     if (!check(TokType::IDENTIFIER))
         return report_error(ErrorCode::EXPECTED_FN_NAME, current_loc());
@@ -394,31 +394,31 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_function_def()
     advance();
 
     auto params = parse_parameters_list();
-    Fa_VERIFY_NODE(params);
+    VERIFY_NODE(params);
 
-    Fa_VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_FN);
+    VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_FN);
 
     auto body = parse_indented_block();
-    Fa_VERIFY_NODE(body);
+    VERIFY_NODE(body);
 
-    return Fa_make_function(
-        AST::Fa_make_name(name_tok->lexeme(), name_tok->location()),
+    return make_function(
+        AST::make_name(name_tok->lexeme(), name_tok->location()),
         as_list(params.value()),
         as_block(body.value()),
         start->location());
 }
 
-Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_def()
+ErrorOr<StmtPtr> Parser::parse_class_def()
 {
     TokenPtr start = current_token();
-    Fa_VERIFY_TOKEN(TokType::KW_CLASS, ErrorCode::EXPECTED_CLASS_KEYWORD);
+    VERIFY_TOKEN(TokType::KW_CLASS, ErrorCode::EXPECTED_CLASS_KEYWORD);
 
     if (!check(TokType::IDENTIFIER))
         return report_error(ErrorCode::EXPECTED_CLASS_NAME, current_loc());
 
     TokenPtr name_tok = current_token();
     advance();
-    ExprPtr class_name = AST::Fa_make_name(name_tok->lexeme(), name_tok->location());
+    ExprPtr class_name = AST::make_name(name_tok->lexeme(), name_tok->location());
 
     ExprPtr parent = nullptr;
     if (consume(TokType::LPAREN)) {
@@ -426,16 +426,16 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_def()
             return report_error(ErrorCode::EXPECTED_CLASS_NAME, current_loc());
         TokenPtr parent_tok = current_token();
         advance();
-        parent = AST::Fa_make_name(parent_tok->lexeme(), parent_tok->location());
-        Fa_VERIFY_TOKEN(TokType::RPAREN, ErrorCode::EXPECTED_RPAREN_CLASS);
+        parent = AST::make_name(parent_tok->lexeme(), parent_tok->location());
+        VERIFY_TOKEN(TokType::RPAREN, ErrorCode::EXPECTED_RPAREN_CLASS);
     }
 
-    Fa_VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_CLASS);
+    VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_CLASS);
     skip_newlines();
-    Fa_VERIFY_TOKEN(TokType::INDENT, ErrorCode::EXPECTED_INDENT);
+    VERIFY_TOKEN(TokType::INDENT, ErrorCode::EXPECTED_INDENT);
 
-    Fa_Array<ExprPtr> members = Fa_Array<ExprPtr>::with_capacity(4);
-    Fa_Array<StmtPtr> methods = Fa_Array<StmtPtr>::with_capacity(4);
+    Array<ExprPtr> members = Array<ExprPtr>::with_capacity(4);
+    Array<StmtPtr> methods = Array<StmtPtr>::with_capacity(4);
 
     while (!check(TokType::DEDENT) && !we_done()) {
         auto method = parse_class_method(members);
@@ -451,24 +451,24 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_def()
     }
 
     if (check(TokType::ENDMARKER))
-        return AST::Fa_make_class_def(class_name, parent, members, methods, start->location());
+        return AST::make_class_def(class_name, parent, members, methods, start->location());
 
-    Fa_VERIFY_TOKEN(TokType::DEDENT, ErrorCode::EXPECTED_DEDENT);
-    return AST::Fa_make_class_def(class_name, parent, members, methods, start->location());
+    VERIFY_TOKEN(TokType::DEDENT, ErrorCode::EXPECTED_DEDENT);
+    return AST::make_class_def(class_name, parent, members, methods, start->location());
 }
 
-Fa_ErrorOr<StmtPtr> Fa_Parser::parse_import_stmt()
+ErrorOr<StmtPtr> Parser::parse_import_stmt()
 {
     TokenPtr start = current_token();
     bool const from_import = consume(TokType::KW_FROM);
 
     if (!from_import)
-        Fa_VERIFY_TOKEN(TokType::KW_IMPORT, ErrorCode::EXPECTED_IMPORT_KEYWORD);
+        VERIFY_TOKEN(TokType::KW_IMPORT, ErrorCode::EXPECTED_IMPORT_KEYWORD);
 
     if (!check(TokType::IDENTIFIER))
         return report_error(ErrorCode::EXPECTED_MODULE_NAME, current_loc());
 
-    Fa_StringRef module = current_token()->lexeme();
+    StringRef module = current_token()->lexeme();
     advance();
 
     while (consume(TokType::DOT)) {
@@ -478,20 +478,20 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_import_stmt()
         advance();
     }
 
-    Fa_Array<Fa_StringRef> names;
-    Fa_Array<Fa_StringRef> aliases;
+    Array<StringRef> names;
+    Array<StringRef> aliases;
 
     if (from_import) {
-        Fa_VERIFY_TOKEN(TokType::KW_IMPORT, ErrorCode::EXPECTED_IMPORT_KEYWORD);
+        VERIFY_TOKEN(TokType::KW_IMPORT, ErrorCode::EXPECTED_IMPORT_KEYWORD);
 
         do {
             if (!check(TokType::IDENTIFIER))
                 return report_error(ErrorCode::EXPECTED_IMPORT_NAME, current_loc());
 
-            Fa_StringRef name = current_token()->lexeme();
+            StringRef name = current_token()->lexeme();
             advance();
             // Without `as`, the imported name is also its local name.
-            Fa_StringRef alias = name;
+            StringRef alias = name;
 
             if (consume(TokType::KW_AS)) {
                 if (!check(TokType::IDENTIFIER))
@@ -507,7 +507,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_import_stmt()
         // By default, `import foo.bar` binds the final component: `bar`.
         std::string_view const module_view(module.data(), module.len());
         size_t const last_dot = module_view.find_last_of('.');
-        Fa_StringRef alias = last_dot == std::string_view::npos ? module : module.slice(last_dot + 1, module.len());
+        StringRef alias = last_dot == std::string_view::npos ? module : module.slice(last_dot + 1, module.len());
 
         if (consume(TokType::KW_AS)) {
             if (!check(TokType::IDENTIFIER))
@@ -519,42 +519,42 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_import_stmt()
         aliases.push(alias);
     }
 
-    return AST::Fa_make_import(module, names, aliases, start->location());
+    return AST::make_import(module, names, aliases, start->location());
 }
 
-Fa_ErrorOr<StmtPtr> Fa_Parser::parse_assert_stmt()
+ErrorOr<StmtPtr> Parser::parse_assert_stmt()
 {
     TokenPtr start = current_token();
     advance();
-    Fa_TRY(condition, parse_expression());
-    Fa_Array<ExprPtr> args;
+    TRY(condition, parse_expression());
+    Array<ExprPtr> args;
     args.push(condition);
     if (consume(TokType::COMMA)) {
-        Fa_TRY(message, parse_expression());
+        TRY(message, parse_expression());
         args.push(message);
     }
-    auto* callee = AST::Fa_make_name("تاكد", start->location());
-    auto* call = AST::Fa_make_call(callee, AST::Fa_make_list(args, start->location()), start->location());
-    return AST::Fa_make_expr_stmt(call, start->location());
+    auto* callee = AST::make_name("تاكد", start->location());
+    auto* call = AST::make_call(callee, AST::make_list(args, start->location()), start->location());
+    return AST::make_expr_stmt(call, start->location());
 }
 
-bool same_name(AST::Fa_Expr const* e, Fa_StringRef const& n)
+bool same_name(AST::Expr const* e, StringRef const& n)
 {
     return e != nullptr
-        && e->get_kind() == AST::Fa_Expr::Kind::NAME
+        && e->get_kind() == AST::Expr::Kind::NAME
         && as_name(e)->get_value() == n;
 }
 
-void push_member_once(Fa_Array<ExprPtr>& members, AST::Fa_NameExpr* name)
+void push_member_once(Array<ExprPtr>& members, AST::NameExpr* name)
 {
     for (auto* member : members) {
         if (same_name(member, name->get_value()))
             return;
     }
-    members.push(AST::Fa_make_name(name->get_value(), name->get_location()));
+    members.push(AST::make_name(name->get_value(), name->get_location()));
 }
 
-void collect_this_field_assignment(Fa_Array<ExprPtr>& members, StmtPtr stmt)
+void collect_this_field_assignment(Array<ExprPtr>& members, StmtPtr stmt)
 {
     if (stmt == nullptr)
         return;
@@ -602,13 +602,13 @@ void collect_this_field_assignment(Fa_Array<ExprPtr>& members, StmtPtr stmt)
     }
 }
 
-Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_method(Fa_Array<ExprPtr>& members)
+ErrorOr<StmtPtr> Parser::parse_class_method(Array<ExprPtr>& members)
 {
     TokenPtr start = current_token();
-    Fa_VERIFY_TOKEN(TokType::KW_FN, ErrorCode::EXPECTED_FN_KEYWORD);
+    VERIFY_TOKEN(TokType::KW_FN, ErrorCode::EXPECTED_FN_KEYWORD);
 
     TokenPtr name_tok = current_token();
-    Fa_VERIFY_TOKEN(TokType::IDENTIFIER, ErrorCode::EXPECTED_FN_NAME);
+    VERIFY_TOKEN(TokType::IDENTIFIER, ErrorCode::EXPECTED_FN_NAME);
 
     auto fn_name = name_tok->lexeme();
     auto cur = current_token()->lexeme();
@@ -621,13 +621,13 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_method(Fa_Array<ExprPtr>& members)
     }
 
     auto params = parse_parameters_list();
-    Fa_VERIFY_NODE(params);
+    VERIFY_NODE(params);
 
-    Fa_VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_FN);
+    VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_FN);
     skip_newlines();
-    Fa_VERIFY_TOKEN(TokType::INDENT, ErrorCode::EXPECTED_INDENT);
+    VERIFY_TOKEN(TokType::INDENT, ErrorCode::EXPECTED_INDENT);
 
-    Fa_Array<StmtPtr> stmts;
+    Array<StmtPtr> stmts;
 
     while (!check(TokType::DEDENT) && !we_done()) {
         skip_newlines();
@@ -640,71 +640,71 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_method(Fa_Array<ExprPtr>& members)
                 return report_error(ErrorCode::INVALID_ASSIGN_TARGET, current_loc());
 
             TokenPtr member_tok = current_token();
-            Fa_StringRef mname = member_tok->lexeme();
+            StringRef mname = member_tok->lexeme();
             advance();
 
             // Desugar `.field` to a GET expression (instance.field), not an
             // INDEX_READ expression with a string key.  The compiler's fas
             // field-access path (compile_get_i / SET_FIELD) specifically looks
-            // for Fa_GetExpr with a NAME member; an index form would silently
+            // for GetExpr with a NAME member; an index form would silently
             // fall back to the slow dict-style path for every field access.
-            ExprPtr target = AST::Fa_make_get_expr(
-                AST::Fa_make_name(kClassInstanceName, member_tok->location()),
-                AST::Fa_make_name(mname, member_tok->location()),
+            ExprPtr target = AST::make_get_expr(
+                AST::make_name(kClassInstanceName, member_tok->location()),
+                AST::make_name(mname, member_tok->location()),
                 member_tok->location());
 
-            AST::Fa_AssignmentExpr* member_assign = nullptr;
+            AST::AssignmentExpr* member_assign = nullptr;
 
             if (check(TokType::OP_ASSIGN)) {
                 advance();
-                Fa_TRY(rhs, parse_assignment_expr());
-                member_assign = AST::Fa_make_assignment_expr(target, rhs, member_tok->location());
+                TRY(rhs, parse_assignment_expr());
+                member_assign = AST::make_assignment_expr(target, rhs, member_tok->location());
             } else if (is_augmented_assign_tok(current_token())) {
                 TokenPtr op_tok = current_token();
                 advance();
-                Fa_TRY(rhs, parse_assignment_expr());
-                AST::Fa_BinaryOp op = augmented_assign_to_binary_op(op_tok->type());
+                TRY(rhs, parse_assignment_expr());
+                AST::BinaryOp op = augmented_assign_to_binary_op(op_tok->type());
                 // target->clone() reads the current field value (GET read);
                 // `target` itself is the write target.
-                auto* bin = AST::Fa_make_binary(
+                auto* bin = AST::make_binary(
                     target->clone(), rhs, op, target->get_location());
-                member_assign = AST::Fa_make_assignment_expr(target, bin, member_tok->location());
+                member_assign = AST::make_assignment_expr(target, bin, member_tok->location());
             } else {
                 return report_error(ErrorCode::INVALID_ASSIGN_TARGET, current_loc());
             }
 
-            push_member_once(members, AST::Fa_make_name(mname, member_tok->location()));
-            stmts.push(AST::Fa_make_expr_stmt(member_assign, member_tok->location()));
+            push_member_once(members, AST::make_name(mname, member_tok->location()));
+            stmts.push(AST::make_expr_stmt(member_assign, member_tok->location()));
             continue;
         }
 
         // Regular statement inside the method body.
-        Fa_TRY(s, parse_statement());
+        TRY(s, parse_statement());
         collect_this_field_assignment(members, s);
         stmts.push(s);
     }
 
-    AST::Fa_BlockStmt* block = AST::Fa_make_block(
+    AST::BlockStmt* block = AST::make_block(
         stmts,
         stmts.empty() ? start->location() : stmts[0]->get_location());
 
     if (check(TokType::ENDMARKER))
-        return AST::Fa_make_function(
-            AST::Fa_make_name(fn_name, name_tok->location()),
+        return AST::make_function(
+            AST::make_name(fn_name, name_tok->location()),
             as_list(params.value()), block, start->location());
 
-    Fa_VERIFY_TOKEN(TokType::DEDENT, ErrorCode::EXPECTED_DEDENT);
-    return AST::Fa_make_function(
-        AST::Fa_make_name(fn_name, name_tok->location()),
+    VERIFY_TOKEN(TokType::DEDENT, ErrorCode::EXPECTED_DEDENT);
+    return AST::make_function(
+        AST::make_name(fn_name, name_tok->location()),
         as_list(params.value()), block, start->location());
 }
 
-Fa_ErrorOr<ExprPtr> Fa_Parser::parse_parameters_list()
+ErrorOr<ExprPtr> Parser::parse_parameters_list()
 {
     TokenPtr open = current_token();
-    Fa_VERIFY_TOKEN(TokType::LPAREN, ErrorCode::EXPECTED_LPAREN);
+    VERIFY_TOKEN(TokType::LPAREN, ErrorCode::EXPECTED_LPAREN);
 
-    Fa_Array<ExprPtr> params = Fa_Array<ExprPtr>::with_capacity(4);
+    Array<ExprPtr> params = Array<ExprPtr>::with_capacity(4);
 
     if (!check(TokType::RPAREN)) {
         do {
@@ -717,53 +717,53 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_parameters_list()
 
             TokenPtr param_tok = current_token();
             advance();
-            params.push(AST::Fa_make_name(param_tok->lexeme(), param_tok->location()));
+            params.push(AST::make_name(param_tok->lexeme(), param_tok->location()));
             skip_newlines();
         } while (match(TokType::COMMA) && !check(TokType::RPAREN));
     }
 
-    Fa_VERIFY_TOKEN(TokType::RPAREN, ErrorCode::EXPECTED_RPAREN_EXPR);
+    VERIFY_TOKEN(TokType::RPAREN, ErrorCode::EXPECTED_RPAREN_EXPR);
 
     // For an empty parameter list, use the '(' location (not the token after ')').
-    Fa_SourceLocation loc = params.empty() ? open->location() : params[0]->get_location();
+    SourceLocation loc = params.empty() ? open->location() : params[0]->get_location();
 
-    return Fa_make_list(params, loc);
+    return make_list(params, loc);
 }
 
-// Fa_Parser — expression parsers
+// Parser — expression parsers
 
-Fa_ErrorOr<ExprPtr> Fa_Parser::parse() { return parse_expression(); }
+ErrorOr<ExprPtr> Parser::parse() { return parse_expression(); }
 
 // parse_expression is the public entry point; it delegates to parse_assignment_expr.
-Fa_ErrorOr<ExprPtr> Fa_Parser::parse_expression() { return parse_assignment_expr(); }
+ErrorOr<ExprPtr> Parser::parse_expression() { return parse_assignment_expr(); }
 
-Fa_ErrorOr<ExprPtr> Fa_Parser::parse_assignment_expr()
+ErrorOr<ExprPtr> Parser::parse_assignment_expr()
 {
     NestingLevel n { &m_nesting_level, current_loc() };
     // LHS goes through the full expression hierarchy (via parse_conditional_expr
     // → parse_binary_expr_precedence).  The Pratt parser stops at '=' and
     // augmented-assignment tokens, leaving them for this function to handle.
-    Fa_TRY(lhs, parse_conditional_expr());
+    TRY(lhs, parse_conditional_expr());
 
     if (check(TokType::OP_ASSIGN) || is_augmented_assign_tok(current_token())) {
         ExprPtr target = lhs;
-        AST::Fa_Expr::Kind kind = target->get_kind();
+        AST::Expr::Kind kind = target->get_kind();
 
-        if (kind != AST::Fa_Expr::Kind::NAME && kind != AST::Fa_Expr::Kind::INDEX_READ && kind != AST::Fa_Expr::Kind::GET)
+        if (kind != AST::Expr::Kind::NAME && kind != AST::Expr::Kind::INDEX_READ && kind != AST::Expr::Kind::GET)
             return report_error(ErrorCode::INVALID_ASSIGN_TARGET, current_loc());
 
         if (is_augmented_assign_tok(current_token())) {
             TokenPtr op_tok = current_token();
             advance();
-            Fa_TRY(rhs, parse_assignment_expr());
-            AST::Fa_BinaryOp op = augmented_assign_to_binary_op(op_tok->type());
-            auto* bin = AST::Fa_make_binary(lhs->clone(), rhs, op, lhs->get_location());
-            return Fa_make_assignment_expr(target, bin, target->get_location());
+            TRY(rhs, parse_assignment_expr());
+            AST::BinaryOp op = augmented_assign_to_binary_op(op_tok->type());
+            auto* bin = AST::make_binary(lhs->clone(), rhs, op, lhs->get_location());
+            return make_assignment_expr(target, bin, target->get_location());
         }
 
         advance(); // consume '='
-        Fa_TRY(rhs, parse_assignment_expr());
-        return Fa_make_assignment_expr(target, rhs, target->get_location());
+        TRY(rhs, parse_assignment_expr());
+        return make_assignment_expr(target, rhs, target->get_location());
     }
 
     return lhs;
@@ -771,10 +771,10 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_assignment_expr()
 
 // Unified Pratt parser
 
-Fa_ErrorOr<ExprPtr> Fa_Parser::parse_binary_expr_precedence(u32 min_prec)
+ErrorOr<ExprPtr> Parser::parse_binary_expr_precedence(u32 min_prec)
 {
     NestingLevel n(&m_nesting_level, current_loc());
-    Fa_TRY(lhs, parse_unary_expr());
+    TRY(lhs, parse_unary_expr());
 
     for (;;) {
         TokenPtr cur = current_token();
@@ -793,71 +793,71 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_binary_expr_precedence(u32 min_prec)
         // recursive call accepts another power op of the same precedence.
         // All other operators are left-associative: pass `prec+1`.
         u32 next_min = (op_type == TokType::OP_POWER) ? prec : prec + 1;
-        Fa_TRY(rhs, parse_binary_expr_precedence(next_min));
+        TRY(rhs, parse_binary_expr_precedence(next_min));
 
         // FIX: assign to lhs and CONTINUE the loop — do not return here.
         // Returning inside the loop was the root cause of the left-associativity bug.
-        lhs = Fa_make_binary(lhs, rhs, to_binary_op(op_type), lhs->get_location());
+        lhs = make_binary(lhs, rhs, to_binary_op(op_type), lhs->get_location());
     }
 
     return lhs;
 }
 
-Fa_ErrorOr<ExprPtr> Fa_Parser::parse_unary_expr()
+ErrorOr<ExprPtr> Parser::parse_unary_expr()
 {
     NestingLevel n(&m_nesting_level, current_loc());
     TokenPtr op_tok = current_token();
     if (op_tok->is_unary_op()) {
         TokType op = op_tok->type();
         advance();
-        Fa_TRY(operand, parse_unary_expr());
+        TRY(operand, parse_unary_expr());
         // FIX: use the operator token's location (op_tok), not the operand's.
         // `!a` should report the location at `!`, not at `a`.
-        return Fa_make_unary(operand, to_unary_op(op), op_tok->location());
+        return make_unary(operand, to_unary_op(op), op_tok->location());
     }
     return parse_postfix_expr();
 }
 
-Fa_ErrorOr<ExprPtr> Fa_Parser::parse_postfix_expr()
+ErrorOr<ExprPtr> Parser::parse_postfix_expr()
 {
     NestingLevel n(&m_nesting_level, current_loc());
-    Fa_TRY(base, parse_primary_expr());
+    TRY(base, parse_primary_expr());
     ExprPtr expr = base;
 
     for (;;) {
         // Function call: expr(args...)
         if (check(TokType::LPAREN)) {
             advance();
-            Fa_Array<ExprPtr> args = Fa_Array<ExprPtr>::with_capacity(4);
+            Array<ExprPtr> args = Array<ExprPtr>::with_capacity(4);
 
             if (!check(TokType::RPAREN)) {
                 do {
                     skip_newlines();
                     if (check(TokType::RPAREN))
                         break;
-                    Fa_TRY(arg, parse_expression());
+                    TRY(arg, parse_expression());
                     args.push(arg);
                     skip_newlines();
                 } while (match(TokType::COMMA) && !check(TokType::RPAREN));
             }
 
-            Fa_VERIFY_TOKEN(TokType::RPAREN, ErrorCode::EXPECTED_RPAREN_EXPR);
-            Fa_SourceLocation loc = (!args.empty() && args[0])
+            VERIFY_TOKEN(TokType::RPAREN, ErrorCode::EXPECTED_RPAREN_EXPR);
+            SourceLocation loc = (!args.empty() && args[0])
                 ? args[0]->get_location()
-                : Fa_SourceLocation { };
-            expr = Fa_make_call(
-                expr, Fa_make_list(std::move(args), loc),
-                expr ? expr->get_location() : Fa_SourceLocation { });
+                : SourceLocation { };
+            expr = make_call(
+                expr, make_list(std::move(args), loc),
+                expr ? expr->get_location() : SourceLocation { });
             continue;
         }
 
         // Subscript: expr[index]
         if (match(TokType::LBRACKET)) {
-            Fa_TRY(index, parse_expression());
-            Fa_VERIFY_TOKEN(TokType::RBRACKET, ErrorCode::EXPECTED_RBRACKET);
-            expr = Fa_make_index(
+            TRY(index, parse_expression());
+            VERIFY_TOKEN(TokType::RBRACKET, ErrorCode::EXPECTED_RBRACKET);
+            expr = make_index(
                 expr, index,
-                expr ? expr->get_location() : Fa_SourceLocation { });
+                expr ? expr->get_location() : SourceLocation { });
             continue;
         }
 
@@ -866,12 +866,12 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_postfix_expr()
                 return report_error(ErrorCode::EXPECTED_MEMBER_NAME, current_loc());
             TokenPtr member_tok = current_token();
             advance();
-            expr = Fa_make_get_expr(
+            expr = make_get_expr(
                 expr,
-                AST::Fa_make_name(
+                AST::make_name(
                     member_tok->lexeme(),
                     member_tok->location()),
-                expr ? expr->get_location() : Fa_SourceLocation { });
+                expr ? expr->get_location() : SourceLocation { });
             continue;
         }
 
@@ -881,7 +881,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_postfix_expr()
     return expr;
 }
 
-Fa_ErrorOr<ExprPtr> Fa_Parser::parse_primary_expr()
+ErrorOr<ExprPtr> Parser::parse_primary_expr()
 {
     NestingLevel n(&m_nesting_level, current_loc());
     TokenPtr cur = current_token();
@@ -892,7 +892,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_primary_expr()
         TokType tt = cur->type();
 
         if (tt == TokType::DECIMAL)
-            return AST::Fa_make_literal_float(cur->lexeme().to_double(), cur->location());
+            return AST::make_literal_float(cur->lexeme().to_double(), cur->location());
 
         int base = 10;
         switch (tt) {
@@ -902,38 +902,38 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_primary_expr()
         case TokType::HEX: base = 16; break;
         default: break;
         }
-        return AST::Fa_make_literal_int(
+        return AST::make_literal_int(
             util::parse_integer_literal(cur->lexeme(), base),
             cur->location());
     }
 
     if (match(TokType::STRING))
-        return AST::Fa_make_literal_string(cur->lexeme(), cur->location());
+        return AST::make_literal_string(cur->lexeme(), cur->location());
 
     if (check(TokType::KW_TRUE) || check(TokType::KW_FALSE)) {
         bool val = cur->is(TokType::KW_TRUE);
         advance();
-        return AST::Fa_make_literal_bool(val, cur->location());
+        return AST::make_literal_bool(val, cur->location());
     }
 
     if (match(TokType::KW_NIL))
-        return AST::Fa_make_literal_nil(cur->location());
+        return AST::make_literal_nil(cur->location());
 
     if (match(TokType::KW_THIS))
-        return AST::Fa_make_name(kClassInstanceName, cur->location());
+        return AST::make_name(kClassInstanceName, cur->location());
 
     if (match(TokType::IDENTIFIER))
-        return AST::Fa_make_name(cur->lexeme(), cur->location());
+        return AST::make_name(cur->lexeme(), cur->location());
 
     if (match(TokType::LPAREN)) {
         m_parenths.push_back(true);
 
         if (match(TokType::RPAREN)) {
             m_parenths.pop_back();
-            return Fa_make_list(Fa_Array<ExprPtr> { }, cur->location());
+            return make_list(Array<ExprPtr> { }, cur->location());
         }
 
-        Fa_Array<ExprPtr> elements { };
+        Array<ExprPtr> elements { };
         bool trailing_comma = false;
 
         do {
@@ -941,7 +941,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_primary_expr()
                 break;
 
             auto inner = parse_expression();
-            Fa_VERIFY_NODE(inner);
+            VERIFY_NODE(inner);
             elements.push(inner.value());
 
             if (!match(TokType::COMMA)) {
@@ -958,7 +958,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_primary_expr()
         m_parenths.pop_back();
         if (elements.size() == 1 && !trailing_comma)
             return elements[0];
-        return Fa_make_list(std::move(elements), cur->location());
+        return make_list(std::move(elements), cur->location());
     }
 
     if (match(TokType::LBRACKET))
@@ -973,76 +973,76 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_primary_expr()
 );
 }
 
-Fa_ErrorOr<ExprPtr> Fa_Parser::parse_list_literal()
+ErrorOr<ExprPtr> Parser::parse_list_literal()
 {
     NestingLevel n(&m_nesting_level, current_loc());
     TokenPtr start = current_token();
-    Fa_Array<ExprPtr> elements = Fa_Array<ExprPtr>::with_capacity(4);
+    Array<ExprPtr> elements = Array<ExprPtr>::with_capacity(4);
 
     if (!check(TokType::RBRACKET)) {
         do {
             skip_newlines();
             if (check(TokType::RBRACKET))
                 break;
-            Fa_TRY(elem, parse_expression());
+            TRY(elem, parse_expression());
             elements.push(elem);
             skip_newlines();
         } while (match(TokType::COMMA) && !check(TokType::RBRACKET));
     }
 
-    Fa_VERIFY_TOKEN(TokType::RBRACKET, ErrorCode::EXPECTED_RBRACKET);
-    return Fa_make_list(std::move(elements), start->location());
+    VERIFY_TOKEN(TokType::RBRACKET, ErrorCode::EXPECTED_RBRACKET);
+    return make_list(std::move(elements), start->location());
 }
 
-Fa_ErrorOr<ExprPtr> Fa_Parser::parse_dict_literal()
+ErrorOr<ExprPtr> Parser::parse_dict_literal()
 {
     NestingLevel n(&m_nesting_level, current_loc());
     TokenPtr start = current_token();
-    Fa_Array<std::pair<ExprPtr, ExprPtr>> content;
+    Array<std::pair<ExprPtr, ExprPtr>> content;
 
     if (!check(TokType::RBRACE)) {
         do {
             skip_newlines();
             if (check(TokType::RBRACE))
                 break;
-            Fa_TRY(key, parse_expression());
-            Fa_VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_DICT);
-            Fa_TRY(val, parse_expression());
+            TRY(key, parse_expression());
+            VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_DICT);
+            TRY(val, parse_expression());
             content.push({ key, val });
             skip_newlines();
         } while (match(TokType::COMMA) && !check(TokType::RBRACE));
     }
 
-    Fa_VERIFY_TOKEN(TokType::RBRACE, ErrorCode::EXPECTED_RBRACE_EXPR);
-    return AST::Fa_make_dict(std::move(content), start->location());
+    VERIFY_TOKEN(TokType::RBRACE, ErrorCode::EXPECTED_RBRACE_EXPR);
+    return AST::make_dict(std::move(content), start->location());
 }
 
 // Compatibility stubs
 /// TODO: remove these declarations from parser.hpp, then delete the stubs.
 
-Fa_ErrorOr<ExprPtr> Fa_Parser::parse_conditional_expr()
+ErrorOr<ExprPtr> Parser::parse_conditional_expr()
 {
     // Entry point for the unified Pratt parser.  Ternary operator will be
     // inserted here once implemented (see the existing TODO in the design).
     return parse_binary_expr_precedence(0);
 }
 
-Fa_ErrorOr<ExprPtr> Fa_Parser::parse_logical_expr()
+ErrorOr<ExprPtr> Parser::parse_logical_expr()
 {
     return parse_binary_expr_precedence(0);
 }
 
-Fa_ErrorOr<ExprPtr> Fa_Parser::parse_logical_expr_precedence(u32 p)
+ErrorOr<ExprPtr> Parser::parse_logical_expr_precedence(u32 p)
 {
     return parse_binary_expr_precedence(p);
 }
 
-Fa_ErrorOr<ExprPtr> Fa_Parser::parse_comparison_expr()
+ErrorOr<ExprPtr> Parser::parse_comparison_expr()
 {
     return parse_binary_expr_precedence(0);
 }
 
-Fa_ErrorOr<ExprPtr> Fa_Parser::parse_binary_expr()
+ErrorOr<ExprPtr> Parser::parse_binary_expr()
 {
     return parse_binary_expr_precedence(0);
 }

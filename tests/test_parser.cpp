@@ -28,7 +28,7 @@ public:
     }
 
     template<typename T>
-    T* parse_and_cast(AST::Fa_Expr*& expr)
+    T* parse_and_cast(AST::Expr*& expr)
     {
         EXPECT_NE(expr, nullptr) << "Expression should not be null";
         if (!expr)
@@ -40,7 +40,7 @@ public:
     }
 
     template<typename T>
-    T* as(AST::Fa_Stmt* node)
+    T* as(AST::Stmt* node)
     {
         T* casted = dynamic_cast<T*>(node);
         EXPECT_NE(casted, nullptr);
@@ -48,7 +48,7 @@ public:
     }
 
     template<typename T>
-    T* as(AST::Fa_Expr* node)
+    T* as(AST::Expr* node)
     {
         T* casted = dynamic_cast<T*>(node);
         EXPECT_NE(casted, nullptr);
@@ -66,56 +66,56 @@ inline AST::ASTPrinter AST_Printer;
 
 TEST_F(ParserTest, ParseLiteral)
 {
-    Fa_FileManager file_manager_0(parser_test_cases_dir() / "number_literal.fa");
-    Fa_FileManager file_manager_1(parser_test_cases_dir() / "string_literal.fa");
-    Fa_FileManager file_manager_2(parser_test_cases_dir() / "boolean_literal_true.fa");
-    Fa_FileManager file_manager_3(parser_test_cases_dir() / "boolean_literal_false.fa");
+    FileManager file_manager_0(parser_test_cases_dir() / "number_literal.fa");
+    FileManager file_manager_1(parser_test_cases_dir() / "string_literal.fa");
+    FileManager file_manager_2(parser_test_cases_dir() / "boolean_literal_true.fa");
+    FileManager file_manager_3(parser_test_cases_dir() / "boolean_literal_false.fa");
 
-    Fa_Parser parser_0(&file_manager_0);
-    Fa_Parser parser_1(&file_manager_1);
-    Fa_Parser parser_2(&file_manager_2);
-    Fa_Parser parser_3(&file_manager_3);
+    Parser parser_0(&file_manager_0);
+    Parser parser_1(&file_manager_1);
+    Parser parser_2(&file_manager_2);
+    Parser parser_3(&file_manager_3);
 
-    EXPECT_EQ(as_literal(parser_0.parse().value())->get_type(), AST::Fa_LiteralExpr::Type::INTEGER) << "Should parse integer literal";
-    EXPECT_EQ(as_literal(parser_1.parse().value())->get_type(), AST::Fa_LiteralExpr::Type::STRING) << "Should parse string literal";
-    EXPECT_EQ(as_literal(parser_2.parse().value())->get_type(), AST::Fa_LiteralExpr::Type::BOOLEAN) << "Should parse true bool literal";
-    EXPECT_EQ(as_literal(parser_3.parse().value())->get_type(), AST::Fa_LiteralExpr::Type::BOOLEAN) << "Should parse false bool literal";
+    EXPECT_EQ(as_literal(parser_0.parse().value())->get_type(), AST::LiteralExpr::Type::INTEGER) << "Should parse integer literal";
+    EXPECT_EQ(as_literal(parser_1.parse().value())->get_type(), AST::LiteralExpr::Type::STRING) << "Should parse string literal";
+    EXPECT_EQ(as_literal(parser_2.parse().value())->get_type(), AST::LiteralExpr::Type::BOOLEAN) << "Should parse true bool literal";
+    EXPECT_EQ(as_literal(parser_3.parse().value())->get_type(), AST::LiteralExpr::Type::BOOLEAN) << "Should parse false bool literal";
 }
 
 TEST_F(ParserTest, ParseNoneLiteral)
 {
-    Fa_FileManager fm(parser_test_cases_dir() / "none_literal.fa");
-    Fa_Parser parser(&fm);
-    AST::Fa_Expr* expr = parser.parse().value();
-    AST::Fa_LiteralExpr* literal = as_literal(expr);
+    FileManager fm(parser_test_cases_dir() / "none_literal.fa");
+    Parser parser(&fm);
+    AST::Expr* expr = parser.parse().value();
+    AST::LiteralExpr* literal = as_literal(expr);
 
     if (test_config::print_ast)
         AST_Printer.print(literal);
 
     ASSERT_NE(literal, nullptr);
-    EXPECT_EQ(literal->get_type(), AST::Fa_LiteralExpr::Type::NIL);
+    EXPECT_EQ(literal->get_type(), AST::LiteralExpr::Type::NIL);
 }
 
 TEST_F(ParserTest, ParseParenthesizedNumberLiteral)
 {
-    Fa_FileManager fm(parser_test_cases_dir() / "parenthesized_number.fa");
-    Fa_Parser parser(&fm);
-    AST::Fa_Expr* expr = parser.parse().value();
-    AST::Fa_LiteralExpr* literal = as_literal(expr);
+    FileManager fm(parser_test_cases_dir() / "parenthesized_number.fa");
+    Parser parser(&fm);
+    AST::Expr* expr = parser.parse().value();
+    AST::LiteralExpr* literal = as_literal(expr);
 
     if (test_config::print_ast)
         AST_Printer.print(literal);
 
     ASSERT_NE(literal, nullptr);
-    EXPECT_EQ(literal->get_type(), AST::Fa_LiteralExpr::Type::INTEGER);
+    EXPECT_EQ(literal->get_type(), AST::LiteralExpr::Type::INTEGER);
 }
 
 TEST_F(ParserTest, ParseIdentifier)
 {
-    Fa_FileManager fm(parser_test_cases_dir() / "identifier.fa");
-    Fa_Parser parser(&fm);
-    AST::Fa_Expr* expr = parser.parse().value();
-    AST::Fa_NameExpr* name_fa_expr = as_name(expr);
+    FileManager fm(parser_test_cases_dir() / "identifier.fa");
+    Parser parser(&fm);
+    AST::Expr* expr = parser.parse().value();
+    AST::NameExpr* name_fa_expr = as_name(expr);
 
     if (test_config::print_ast)
         AST_Printer.print(name_fa_expr);
@@ -126,20 +126,20 @@ TEST_F(ParserTest, ParseIdentifier)
 
 TEST_F(ParserTest, ParseCallExpressionNoArgs)
 {
-    Fa_FileManager fm(parser_test_cases_dir() / "call_expression.fa");
-    Fa_Parser parser(&fm);
-    AST::Fa_Expr* expr = parser.parse().value();
+    FileManager fm(parser_test_cases_dir() / "call_expression.fa");
+    Parser parser(&fm);
+    AST::Expr* expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr);
 
-    AST::Fa_CallExpr* call_fa_expr = as_call(expr);
+    AST::CallExpr* call_fa_expr = as_call(expr);
     if (test_config::print_ast)
         AST_Printer.print(call_fa_expr);
 
     ASSERT_NE(call_fa_expr, nullptr);
     ASSERT_NE(call_fa_expr->get_callee(), nullptr);
 
-    AST::Fa_NameExpr* callee_name = as_name(call_fa_expr->get_callee());
+    AST::NameExpr* callee_name = as_name(call_fa_expr->get_callee());
 
     ASSERT_NE(callee_name, nullptr);
     EXPECT_EQ(callee_name->get_value(), "اطبع");
@@ -148,20 +148,20 @@ TEST_F(ParserTest, ParseCallExpressionNoArgs)
 
 TEST_F(ParserTest, ParseCallExpressionWithOneArg)
 {
-    Fa_FileManager fm(parser_test_cases_dir() / "call_expression_with_one_argument.fa");
-    Fa_Parser parser(&fm);
-    AST::Fa_Expr* expr = parser.parse().value();
+    FileManager fm(parser_test_cases_dir() / "call_expression_with_one_argument.fa");
+    Parser parser(&fm);
+    AST::Expr* expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr);
 
-    AST::Fa_CallExpr* call_expr = as_call(expr);
+    AST::CallExpr* call_expr = as_call(expr);
     if (test_config::print_ast)
         AST_Printer.print(call_expr);
 
     ASSERT_NE(call_expr, nullptr);
     ASSERT_NE(call_expr->get_callee(), nullptr);
 
-    AST::Fa_NameExpr* callee_name = as_name(call_expr->get_callee());
+    AST::NameExpr* callee_name = as_name(call_expr->get_callee());
 
     ASSERT_NE(callee_name, nullptr);
     EXPECT_EQ(callee_name->get_value(), "اطبع");
@@ -175,17 +175,17 @@ TEST_F(ParserTest, ParseCallExpressionWithOneArg)
 TEST_F(ParserTest, ParseNestedCallExpression)
 {
     // f(g(x))
-    Fa_FileManager fm(parser_test_cases_dir() / "nested_call_expression.fa");
-    Fa_Parser parser(&fm);
+    FileManager fm(parser_test_cases_dir() / "nested_call_expression.fa");
+    Parser parser(&fm);
 
-    AST::Fa_CallExpr* outer_call = as_call(parser.parse().value());
+    AST::CallExpr* outer_call = as_call(parser.parse().value());
 
     if (test_config::print_ast)
         AST_Printer.print(outer_call);
 
     EXPECT_EQ(as_name(outer_call->get_callee())->get_value(), "ا");
 
-    AST::Fa_CallExpr* inner_call = as_call(outer_call->get_args_as_list_expr()->get_elements()[0]);
+    AST::CallExpr* inner_call = as_call(outer_call->get_args_as_list_expr()->get_elements()[0]);
 
     EXPECT_EQ(as_name(inner_call->get_callee())->get_value(), "ب");
     EXPECT_EQ(as_name(inner_call->get_args_as_list_expr()->get_elements()[0])->get_value(), "د");
@@ -193,48 +193,48 @@ TEST_F(ParserTest, ParseNestedCallExpression)
 
 TEST_F(ParserTest, ParseSimpleAddition)
 {
-    Fa_FileManager fm(parser_test_cases_dir() / "simple_addition.fa");
-    Fa_Parser parser(&fm);
+    FileManager fm(parser_test_cases_dir() / "simple_addition.fa");
+    Parser parser(&fm);
 
-    AST::Fa_BinaryExpr* bin = as_binary(parser.parse().value());
+    AST::BinaryExpr* bin = as_binary(parser.parse().value());
 
     if (test_config::print_ast)
         AST_Printer.print(bin);
 
-    EXPECT_EQ(bin->get_operator(), AST::Fa_BinaryOp::OP_ADD);
+    EXPECT_EQ(bin->get_operator(), AST::BinaryOp::OP_ADD);
     EXPECT_EQ(as_name(bin->get_left())->get_value(), "ا");
     EXPECT_EQ(as_name(bin->get_right())->get_value(), "ب");
 }
 
 TEST_F(ParserTest, ParseSimpleMultiplication)
 {
-    Fa_FileManager fm(parser_test_cases_dir() / "simple_multiplication.fa");
-    Fa_Parser parser(&fm);
+    FileManager fm(parser_test_cases_dir() / "simple_multiplication.fa");
+    Parser parser(&fm);
 
-    AST::Fa_BinaryExpr* bin = as_binary(parser.parse().value());
+    AST::BinaryExpr* bin = as_binary(parser.parse().value());
 
     if (test_config::print_ast)
         AST_Printer.print(bin);
 
-    EXPECT_EQ(bin->get_operator(), AST::Fa_BinaryOp::OP_MUL);
+    EXPECT_EQ(bin->get_operator(), AST::BinaryOp::OP_MUL);
     EXPECT_EQ(as_name(bin->get_left())->get_value(), "ا");
     EXPECT_EQ(as_name(bin->get_right())->get_value(), "ب");
 }
 
 TEST_F(ParserTest, ParseSimpleSubtraction)
 {
-    Fa_FileManager fm(parser_test_cases_dir() / "simple_subtraction.fa");
-    Fa_Parser parser(&fm);
+    FileManager fm(parser_test_cases_dir() / "simple_subtraction.fa");
+    Parser parser(&fm);
 
-    AST::Fa_BinaryExpr* bin = as_binary(parser.parse().value());
+    AST::BinaryExpr* bin = as_binary(parser.parse().value());
 
     if (test_config::print_ast)
         AST_Printer.print(bin);
 
-    EXPECT_EQ(bin->get_operator(), AST::Fa_BinaryOp::OP_SUB);
+    EXPECT_EQ(bin->get_operator(), AST::BinaryOp::OP_SUB);
 
-    AST::Fa_NameExpr* lhs = as_name(bin->get_left());
-    AST::Fa_NameExpr* rhs = as_name(bin->get_right());
+    AST::NameExpr* lhs = as_name(bin->get_left());
+    AST::NameExpr* rhs = as_name(bin->get_right());
 
     EXPECT_EQ(lhs->get_value(), "ا");
     EXPECT_EQ(rhs->get_value(), "ب");
@@ -242,18 +242,18 @@ TEST_F(ParserTest, ParseSimpleSubtraction)
 
 TEST_F(ParserTest, ParseSimpleDivision)
 {
-    Fa_FileManager fm(parser_test_cases_dir() / "simple_division.fa");
-    Fa_Parser parser(&fm);
+    FileManager fm(parser_test_cases_dir() / "simple_division.fa");
+    Parser parser(&fm);
 
-    AST::Fa_BinaryExpr* bin = as_binary(parser.parse().value());
+    AST::BinaryExpr* bin = as_binary(parser.parse().value());
 
     if (test_config::print_ast)
         AST_Printer.print(bin);
 
-    EXPECT_EQ(bin->get_operator(), AST::Fa_BinaryOp::OP_DIV);
+    EXPECT_EQ(bin->get_operator(), AST::BinaryOp::OP_DIV);
 
-    AST::Fa_NameExpr* lhs = as_name(bin->get_left());
-    AST::Fa_NameExpr* rhs = as_name(bin->get_right());
+    AST::NameExpr* lhs = as_name(bin->get_left());
+    AST::NameExpr* rhs = as_name(bin->get_right());
 
     EXPECT_EQ(lhs->get_value(), "ا");
     EXPECT_EQ(rhs->get_value(), "ب");
@@ -262,22 +262,22 @@ TEST_F(ParserTest, ParseSimpleDivision)
 TEST_F(ParserTest, ParseComplexExpression)
 {
     // 2 + 3 * 4  →  2 + (3 * 4)
-    Fa_FileManager fm(parser_test_cases_dir() / "complex_expression.fa");
-    Fa_Parser parser(&fm);
+    FileManager fm(parser_test_cases_dir() / "complex_expression.fa");
+    Parser parser(&fm);
 
-    AST::Fa_BinaryExpr* root = as_binary(parser.parse().value());
+    AST::BinaryExpr* root = as_binary(parser.parse().value());
 
     if (test_config::print_ast)
         AST_Printer.print(root);
 
-    EXPECT_EQ(root->get_operator(), AST::Fa_BinaryOp::OP_ADD);
+    EXPECT_EQ(root->get_operator(), AST::BinaryOp::OP_ADD);
 
-    AST::Fa_LiteralExpr* left = as_literal(root->get_left());
-    EXPECT_EQ(left->get_type(), AST::Fa_LiteralExpr::Type::INTEGER);
+    AST::LiteralExpr* left = as_literal(root->get_left());
+    EXPECT_EQ(left->get_type(), AST::LiteralExpr::Type::INTEGER);
     EXPECT_EQ(left->as_number(), 2);
 
-    AST::Fa_BinaryExpr* mul = as_binary(root->get_right());
-    EXPECT_EQ(mul->get_operator(), AST::Fa_BinaryOp::OP_MUL);
+    AST::BinaryExpr* mul = as_binary(root->get_right());
+    EXPECT_EQ(mul->get_operator(), AST::BinaryOp::OP_MUL);
 
     EXPECT_EQ(as_literal(mul->get_left())->as_number(), 3);
     EXPECT_EQ(as_literal(mul->get_right())->as_number(), 4);
@@ -286,23 +286,23 @@ TEST_F(ParserTest, ParseComplexExpression)
 TEST_F(ParserTest, ParseNestedParentheses)
 {
     // Test: ((2 + 3) * 4)
-    Fa_FileManager fm(parser_test_cases_dir() / "nested_parens.fa");
-    Fa_Parser parser(&fm);
-    AST::Fa_Expr* expr = parser.parse().value();
+    FileManager fm(parser_test_cases_dir() / "nested_parens.fa");
+    Parser parser(&fm);
+    AST::Expr* expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr) << "Failed to parse nested parentheses expression";
 
-    // Should be: AST::Fa_BinaryExpr((2 + 3), *, 4)
-    AST::Fa_BinaryExpr* root = as_binary(expr);
+    // Should be: AST::BinaryExpr((2 + 3), *, 4)
+    AST::BinaryExpr* root = as_binary(expr);
 
-    ASSERT_NE(root, nullptr) << "Root should be a AST::Fa_BinaryExpr";
-    EXPECT_EQ(root->get_operator(), AST::Fa_BinaryOp::OP_MUL);
+    ASSERT_NE(root, nullptr) << "Root should be a AST::BinaryExpr";
+    EXPECT_EQ(root->get_operator(), AST::BinaryOp::OP_MUL);
 
     // Left should be (2 + 3)
-    AST::Fa_BinaryExpr* left_add = as_binary(root->get_left());
+    AST::BinaryExpr* left_add = as_binary(root->get_left());
 
     ASSERT_NE(left_add, nullptr) << "Left should be addition expression";
-    EXPECT_EQ(left_add->get_operator(), AST::Fa_BinaryOp::OP_ADD);
+    EXPECT_EQ(left_add->get_operator(), AST::BinaryOp::OP_ADD);
 
     if (test_config::print_ast)
         AST_Printer.print(expr);
@@ -311,22 +311,22 @@ TEST_F(ParserTest, ParseNestedParentheses)
 TEST_F(ParserTest, ParseLogicalExpression)
 {
     // Test: a and b or c (should be (a and b) or c)
-    Fa_FileManager fm(parser_test_cases_dir() / "logical_expression.fa");
-    Fa_Parser parser(&fm);
-    AST::Fa_Expr* expr = parser.parse().value();
+    FileManager fm(parser_test_cases_dir() / "logical_expression.fa");
+    Parser parser(&fm);
+    AST::Expr* expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr) << "Failed to parse logical expression";
 
-    AST::Fa_BinaryExpr* root = as_binary(expr);
+    AST::BinaryExpr* root = as_binary(expr);
 
-    ASSERT_NE(root, nullptr) << "Root should be AST::Fa_BinaryExpr";
-    EXPECT_EQ(root->get_operator(), AST::Fa_BinaryOp::OP_OR) << "Root should be OR (lower precedence)";
+    ASSERT_NE(root, nullptr) << "Root should be AST::BinaryExpr";
+    EXPECT_EQ(root->get_operator(), AST::BinaryOp::OP_OR) << "Root should be OR (lower precedence)";
 
     // Left should be (a and b)
-    AST::Fa_BinaryExpr* left_and = as_binary(root->get_left());
+    AST::BinaryExpr* left_and = as_binary(root->get_left());
 
     ASSERT_NE(left_and, nullptr) << "Left should be AND expression";
-    EXPECT_EQ(left_and->get_operator(), AST::Fa_BinaryOp::OP_AND);
+    EXPECT_EQ(left_and->get_operator(), AST::BinaryOp::OP_AND);
 
     if (test_config::print_ast)
         AST_Printer.print(expr);
@@ -335,25 +335,25 @@ TEST_F(ParserTest, ParseLogicalExpression)
 TEST_F(ParserTest, ParseUnaryChain)
 {
     // Test: --x (f64 negation)
-    Fa_FileManager fm(parser_test_cases_dir() / "unary_chain.fa");
-    Fa_Parser parser(&fm);
-    AST::Fa_Expr* expr = parser.parse().value();
+    FileManager fm(parser_test_cases_dir() / "unary_chain.fa");
+    Parser parser(&fm);
+    AST::Expr* expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr) << "Failed to parse unary chain";
 
-    AST::Fa_UnaryExpr* outer = as_unary(expr);
+    AST::UnaryExpr* outer = as_unary(expr);
 
-    ASSERT_NE(outer, nullptr) << "Outer should be AST::Fa_UnaryExpr";
-    EXPECT_EQ(outer->get_operator(), AST::Fa_UnaryOp::OP_NEG);
+    ASSERT_NE(outer, nullptr) << "Outer should be AST::UnaryExpr";
+    EXPECT_EQ(outer->get_operator(), AST::UnaryOp::OP_NEG);
 
-    AST::Fa_UnaryExpr* inner = as_unary(outer->get_operand());
+    AST::UnaryExpr* inner = as_unary(outer->get_operand());
 
-    ASSERT_NE(inner, nullptr) << "Inner should be AST::Fa_UnaryExpr";
-    EXPECT_EQ(inner->get_operator(), AST::Fa_UnaryOp::OP_NEG);
+    ASSERT_NE(inner, nullptr) << "Inner should be AST::UnaryExpr";
+    EXPECT_EQ(inner->get_operator(), AST::UnaryOp::OP_NEG);
 
-    AST::Fa_NameExpr* name = as_name(inner->get_operand());
+    AST::NameExpr* name = as_name(inner->get_operand());
 
-    ASSERT_NE(name, nullptr) << "Innermost should be AST::Fa_NameExpr";
+    ASSERT_NE(name, nullptr) << "Innermost should be AST::NameExpr";
 
     if (test_config::print_ast)
         AST_Printer.print(expr);
@@ -362,52 +362,52 @@ TEST_F(ParserTest, ParseUnaryChain)
 TEST_F(ParserTest, ParseComplexFunctionCall)
 {
     // func(a + b, c * d)
-    Fa_FileManager fm(parser_test_cases_dir() / "complex_function_call.fa");
-    Fa_Parser parser(&fm);
+    FileManager fm(parser_test_cases_dir() / "complex_function_call.fa");
+    Parser parser(&fm);
 
-    AST::Fa_CallExpr* call = as_call(parser.parse().value());
+    AST::CallExpr* call = as_call(parser.parse().value());
 
     if (test_config::print_ast)
         AST_Printer.print(call);
 
     EXPECT_EQ(as_name(call->get_callee())->get_value(), "علم");
 
-    AST::Fa_ListExpr* args = call->get_args_as_list_expr();
+    AST::ListExpr* args = call->get_args_as_list_expr();
     ASSERT_NE(args, nullptr);
     ASSERT_FALSE(args->is_empty());
 
     auto const& arg_list = args->get_elements();
     ASSERT_EQ(arg_list.size(), 2);
 
-    AST::Fa_BinaryExpr* arg1 = as_binary(arg_list[0]);
-    EXPECT_EQ(arg1->get_operator(), AST::Fa_BinaryOp::OP_ADD);
+    AST::BinaryExpr* arg1 = as_binary(arg_list[0]);
+    EXPECT_EQ(arg1->get_operator(), AST::BinaryOp::OP_ADD);
     EXPECT_EQ(as_name(arg1->get_left())->get_value(), "ا");
     EXPECT_EQ(as_name(arg1->get_right())->get_value(), "ب");
 
-    AST::Fa_BinaryExpr* arg2 = as_binary(arg_list[1]);
-    EXPECT_EQ(arg2->get_operator(), AST::Fa_BinaryOp::OP_MUL);
+    AST::BinaryExpr* arg2 = as_binary(arg_list[1]);
+    EXPECT_EQ(arg2->get_operator(), AST::BinaryOp::OP_MUL);
     EXPECT_EQ(as_name(arg2->get_left())->get_value(), "ت");
     EXPECT_EQ(as_name(arg2->get_right())->get_value(), "ث");
 }
 
 TEST_F(ParserTest, ParseUnmatchedParenthesis)
 {
-    Fa_FileManager fm(parser_test_cases_dir() / "unmatched_paren.fa");
-    Fa_Parser parser(&fm);
+    FileManager fm(parser_test_cases_dir() / "unmatched_paren.fa");
+    Parser parser(&fm);
     auto expr = parser.parse();
 
-    EXPECT_TRUE(expr.has_error()) << "Fa_Parser should detect unmatched parenthesis";
+    EXPECT_TRUE(expr.has_error()) << "Parser should detect unmatched parenthesis";
 }
 
 TEST_F(ParserTest, ParseExtraClosingParenthesis)
 {
-    Fa_FileManager fm(parser_test_cases_dir() / "extra_paren.fa");
-    Fa_Parser parser(&fm);
-    AST::Fa_Expr* expr = parser.parse().value();
+    FileManager fm(parser_test_cases_dir() / "extra_paren.fa");
+    Parser parser(&fm);
+    AST::Expr* expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr) << "Should parse the valid part";
     EXPECT_FALSE(parser.we_done()) << "Should have unparsed tokens remaining";
-    EXPECT_TRUE(parser.check(tok::Fa_TokenType::RPAREN)) << "Remaining token should be RPAREN";
+    EXPECT_TRUE(parser.check(tok::TokenType::RPAREN)) << "Remaining token should be RPAREN";
 
     if (test_config::print_ast)
         AST_Printer.print(expr);
@@ -415,14 +415,14 @@ TEST_F(ParserTest, ParseExtraClosingParenthesis)
 
 TEST_F(ParserTest, ParseInvalidOperatorSequence)
 {
-    Fa_FileManager fm(parser_test_cases_dir() / "invalid_operator_seq.fa");
-    Fa_Parser parser(&fm);
-    AST::Fa_Expr* expr = parser.parse().value();
+    FileManager fm(parser_test_cases_dir() / "invalid_operator_seq.fa");
+    Parser parser(&fm);
+    AST::Expr* expr = parser.parse().value();
 
     if (expr != nullptr) {
         if (test_config::print_ast)
             AST_Printer.print(expr);
-        AST::Fa_BinaryExpr* binary = as_binary(expr);
+        AST::BinaryExpr* binary = as_binary(expr);
         if (binary != nullptr) {
             EXPECT_NE(binary->get_left(), nullptr) << "Left operand should exist";
             EXPECT_NE(binary->get_right(), nullptr) << "Right operand should exist";
@@ -435,15 +435,15 @@ TEST_F(ParserTest, ParseInvalidOperatorSequence)
 
 TEST_F(ParserTest, ParseSingleIdentifier)
 {
-    Fa_FileManager fm(parser_test_cases_dir() / "single_identifier.fa");
-    Fa_Parser parser(&fm);
-    AST::Fa_Expr* expr = parser.parse().value();
+    FileManager fm(parser_test_cases_dir() / "single_identifier.fa");
+    Parser parser(&fm);
+    AST::Expr* expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr) << "Should parse single identifier";
 
-    AST::Fa_NameExpr* name = as_name(expr);
+    AST::NameExpr* name = as_name(expr);
 
-    ASSERT_NE(name, nullptr) << "Should be AST::Fa_NameExpr";
+    ASSERT_NE(name, nullptr) << "Should be AST::NameExpr";
     EXPECT_EQ(name->get_value(), "ا") << "Identifier value should be 'x'";
     EXPECT_TRUE(parser.we_done()) << "Should be at end after single identifier";
 
@@ -453,17 +453,17 @@ TEST_F(ParserTest, ParseSingleIdentifier)
 
 TEST_F(ParserTest, ParseVeryLongIdentifier)
 {
-    Fa_FileManager fm(parser_test_cases_dir() / "long_identifier.fa");
-    Fa_Parser parser(&fm);
-    AST::Fa_Expr* expr = parser.parse().value();
+    FileManager fm(parser_test_cases_dir() / "long_identifier.fa");
+    Parser parser(&fm);
+    AST::Expr* expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr) << "Should parse very long identifier";
 
-    AST::Fa_NameExpr* name = as_name(expr);
+    AST::NameExpr* name = as_name(expr);
 
-    ASSERT_NE(name, nullptr) << "Should be AST::Fa_NameExpr";
+    ASSERT_NE(name, nullptr) << "Should be AST::NameExpr";
 
-    Fa_StringRef value = name->get_value();
+    StringRef value = name->get_value();
 
     EXPECT_GT(value.len(), 100) << "Identifier should be very long";
     EXPECT_LT(value.len(), 10000) << "Identifier should have reasonable upper bound";
@@ -474,21 +474,21 @@ TEST_F(ParserTest, ParseVeryLongIdentifier)
 
 TEST_F(ParserTest, ParseUnicodeIdentifiers)
 {
-    Fa_FileManager fm(parser_test_cases_dir() / "unicode_identifiers.fa");
-    Fa_Parser parser(&fm);
-    AST::Fa_Expr* expr = parser.parse().value();
+    FileManager fm(parser_test_cases_dir() / "unicode_identifiers.fa");
+    Parser parser(&fm);
+    AST::Expr* expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr) << "Should parse Unicode identifiers";
 
-    AST::Fa_BinaryExpr* binary = as_binary(expr);
+    AST::BinaryExpr* binary = as_binary(expr);
 
-    ASSERT_NE(binary, nullptr) << "Should be AST::Fa_BinaryExpr";
+    ASSERT_NE(binary, nullptr) << "Should be AST::BinaryExpr";
 
-    AST::Fa_NameExpr* left = as_name(binary->get_left());
-    AST::Fa_NameExpr* right = as_name(binary->get_right());
+    AST::NameExpr* left = as_name(binary->get_left());
+    AST::NameExpr* right = as_name(binary->get_right());
 
-    ASSERT_NE(left, nullptr) << "Left should be AST::Fa_NameExpr";
-    ASSERT_NE(right, nullptr) << "Right should be AST::Fa_NameExpr";
+    ASSERT_NE(left, nullptr) << "Left should be AST::NameExpr";
+    ASSERT_NE(right, nullptr) << "Right should be AST::NameExpr";
 
     EXPECT_GT(left->get_value().len(), 0) << "Left identifier should not be empty";
     EXPECT_GT(right->get_value().len(), 0) << "Right identifier should not be empty";
@@ -499,15 +499,15 @@ TEST_F(ParserTest, ParseUnicodeIdentifiers)
 
 TEST_F(ParserTest, ParseEmptyList)
 {
-    Fa_FileManager fm(parser_test_cases_dir() / "empty_list.fa");
-    Fa_Parser parser(&fm);
-    AST::Fa_Expr* expr = parser.parse().value();
+    FileManager fm(parser_test_cases_dir() / "empty_list.fa");
+    Parser parser(&fm);
+    AST::Expr* expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr) << "Should parse empty list";
 
-    AST::Fa_ListExpr* list = dynamic_cast<AST::Fa_ListExpr*>(expr);
+    AST::ListExpr* list = dynamic_cast<AST::ListExpr*>(expr);
 
-    ASSERT_NE(list, nullptr) << "Should be AST::Fa_ListExpr";
+    ASSERT_NE(list, nullptr) << "Should be AST::ListExpr";
     EXPECT_EQ(list->get_elements().size(), 0) << "List should be empty";
 
     if (test_config::print_ast)
@@ -516,15 +516,15 @@ TEST_F(ParserTest, ParseEmptyList)
 
 TEST_F(ParserTest, ParseEmptyTuple)
 {
-    Fa_FileManager fm(parser_test_cases_dir() / "empty_tuple.fa");
-    Fa_Parser parser(&fm);
-    AST::Fa_Expr* expr = parser.parse().value();
+    FileManager fm(parser_test_cases_dir() / "empty_tuple.fa");
+    Parser parser(&fm);
+    AST::Expr* expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr) << "Should parse empty tuple";
 
-    AST::Fa_ListExpr* tuple = dynamic_cast<AST::Fa_ListExpr*>(expr);
+    AST::ListExpr* tuple = dynamic_cast<AST::ListExpr*>(expr);
 
-    ASSERT_NE(tuple, nullptr) << "Should be AST::Fa_ListExpr (representing tuple)";
+    ASSERT_NE(tuple, nullptr) << "Should be AST::ListExpr (representing tuple)";
     EXPECT_EQ(tuple->get_elements().size(), 0) << "Tuple should be empty";
 
     if (test_config::print_ast)
@@ -533,15 +533,15 @@ TEST_F(ParserTest, ParseEmptyTuple)
 
 TEST_F(ParserTest, ParseListWithTrailingComma)
 {
-    Fa_FileManager fm(parser_test_cases_dir() / "list_trailing_comma.fa");
-    Fa_Parser parser(&fm);
-    AST::Fa_Expr* expr = parser.parse().value();
+    FileManager fm(parser_test_cases_dir() / "list_trailing_comma.fa");
+    Parser parser(&fm);
+    AST::Expr* expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr) << "Should parse list with trailing comma";
 
-    AST::Fa_ListExpr* list = dynamic_cast<AST::Fa_ListExpr*>(expr);
+    AST::ListExpr* list = dynamic_cast<AST::ListExpr*>(expr);
 
-    ASSERT_NE(list, nullptr) << "Should be AST::Fa_ListExpr";
+    ASSERT_NE(list, nullptr) << "Should be AST::ListExpr";
     EXPECT_EQ(list->get_elements().size(), 3) << "Should have 3 elements despite trailing comma";
 
     if (test_config::print_ast)
@@ -550,25 +550,25 @@ TEST_F(ParserTest, ParseListWithTrailingComma)
 
 TEST_F(ParserTest, ParseNestedLists)
 {
-    Fa_FileManager fm(parser_test_cases_dir() / "nested_lists.fa");
-    Fa_Parser parser(&fm);
-    AST::Fa_Expr* expr = parser.parse().value();
+    FileManager fm(parser_test_cases_dir() / "nested_lists.fa");
+    Parser parser(&fm);
+    AST::Expr* expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr) << "Should parse nested lists";
 
-    AST::Fa_ListExpr* outer_list = dynamic_cast<AST::Fa_ListExpr*>(expr);
+    AST::ListExpr* outer_list = dynamic_cast<AST::ListExpr*>(expr);
 
-    ASSERT_NE(outer_list, nullptr) << "Should be AST::Fa_ListExpr";
+    ASSERT_NE(outer_list, nullptr) << "Should be AST::ListExpr";
     EXPECT_EQ(outer_list->get_elements().size(), 2) << "Outer list should have 2 elements";
 
-    AST::Fa_ListExpr* inner1 = dynamic_cast<AST::Fa_ListExpr*>(outer_list->get_elements()[0]);
+    AST::ListExpr* inner1 = dynamic_cast<AST::ListExpr*>(outer_list->get_elements()[0]);
 
-    ASSERT_NE(inner1, nullptr) << "First element should be AST::Fa_ListExpr";
+    ASSERT_NE(inner1, nullptr) << "First element should be AST::ListExpr";
     EXPECT_EQ(inner1->get_elements().size(), 2) << "First inner list should have 2 elements";
 
-    AST::Fa_ListExpr* inner2 = dynamic_cast<AST::Fa_ListExpr*>(outer_list->get_elements()[1]);
+    AST::ListExpr* inner2 = dynamic_cast<AST::ListExpr*>(outer_list->get_elements()[1]);
 
-    ASSERT_NE(inner2, nullptr) << "Second element should be AST::Fa_ListExpr";
+    ASSERT_NE(inner2, nullptr) << "Second element should be AST::ListExpr";
     EXPECT_EQ(inner2->get_elements().size(), 2) << "Second inner list should have 2 elements";
 
     if (test_config::print_ast)
@@ -577,22 +577,22 @@ TEST_F(ParserTest, ParseNestedLists)
 
 TEST_F(ParserTest, ParseAssignment)
 {
-    Fa_FileManager fm(parser_test_cases_dir() / "assignment.fa");
-    Fa_Parser parser(&fm);
-    AST::Fa_Expr* node = parser.parse().value();
+    FileManager fm(parser_test_cases_dir() / "assignment.fa");
+    Parser parser(&fm);
+    AST::Expr* node = parser.parse().value();
     ASSERT_NE(node, nullptr) << "Should parse assignment";
 
-    AST::Fa_AssignmentExpr* assign = dynamic_cast<AST::Fa_AssignmentExpr*>(node);
-    ASSERT_NE(assign, nullptr) << "Should be Fa_AssignmentExpr";
+    AST::AssignmentExpr* assign = dynamic_cast<AST::AssignmentExpr*>(node);
+    ASSERT_NE(assign, nullptr) << "Should be AssignmentExpr";
 
-    AST::Fa_NameExpr* target = as_name(assign->get_target());
+    AST::NameExpr* target = as_name(assign->get_target());
 
     ASSERT_NE(target, nullptr) << "Assignment target should not be null";
     EXPECT_EQ(target->get_value(), "ا") << "Target should be 'ا'";
 
-    AST::Fa_LiteralExpr* value = as_literal(assign->get_value());
+    AST::LiteralExpr* value = as_literal(assign->get_value());
 
-    ASSERT_NE(value, nullptr) << "Fa_Value should be AST::Fa_LiteralExpr";
+    ASSERT_NE(value, nullptr) << "Value should be AST::LiteralExpr";
     EXPECT_EQ(value->as_number(), 42);
 
     if (test_config::print_ast)
@@ -601,20 +601,20 @@ TEST_F(ParserTest, ParseAssignment)
 
 TEST_F(ParserTest, ParseChainedAssignment)
 {
-    Fa_FileManager fm(parser_test_cases_dir() / "chained_assignment.fa");
-    Fa_Parser parser(&fm);
-    AST::Fa_Expr* expr = parser.parse().value();
+    FileManager fm(parser_test_cases_dir() / "chained_assignment.fa");
+    Parser parser(&fm);
+    AST::Expr* expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr) << "Should parse chained assignment";
 
-    AST::Fa_AssignmentExpr* outer = dynamic_cast<AST::Fa_AssignmentExpr*>(expr);
+    AST::AssignmentExpr* outer = dynamic_cast<AST::AssignmentExpr*>(expr);
 
-    ASSERT_NE(outer, nullptr) << "Outer should be Fa_AssignmentExpr";
+    ASSERT_NE(outer, nullptr) << "Outer should be AssignmentExpr";
     EXPECT_EQ(as_name(outer->get_target())->get_value(), "ا");
 
-    AST::Fa_AssignmentExpr* inner = dynamic_cast<AST::Fa_AssignmentExpr*>(outer->get_value());
+    AST::AssignmentExpr* inner = dynamic_cast<AST::AssignmentExpr*>(outer->get_value());
 
-    ASSERT_NE(inner, nullptr) << "Inner value should be Fa_AssignmentExpr";
+    ASSERT_NE(inner, nullptr) << "Inner value should be AssignmentExpr";
     EXPECT_EQ(as_name(inner->get_target())->get_value(), "ب");
 
     if (test_config::print_ast)
@@ -623,29 +623,29 @@ TEST_F(ParserTest, ParseChainedAssignment)
 
 TEST_F(ParserTest, ParseChainedAssignmentWithExpr)
 {
-    Fa_FileManager fm(parser_test_cases_dir() / "chained_assignment_with_expression.fa");
-    Fa_Parser parser(&fm);
+    FileManager fm(parser_test_cases_dir() / "chained_assignment_with_expression.fa");
+    Parser parser(&fm);
 
-    AST::Fa_AssignmentExpr* outer = as_assignment_expr(parser.parse().value());
+    AST::AssignmentExpr* outer = as_assignment_expr(parser.parse().value());
 
     if (test_config::print_ast)
         AST_Printer.print(outer);
 
-    AST::Fa_AssignmentExpr* inner = as_assignment_expr(outer->get_value());
-    AST::Fa_BinaryExpr* binary = as_binary(inner->get_value());
+    AST::AssignmentExpr* inner = as_assignment_expr(outer->get_value());
+    AST::BinaryExpr* binary = as_binary(inner->get_value());
 
     EXPECT_EQ(as_name(outer->get_target())->get_value(), "ا");
     EXPECT_EQ(as_name(inner->get_target())->get_value(), "ب");
-    EXPECT_EQ(binary->get_operator(), AST::Fa_BinaryOp::OP_ADD);
+    EXPECT_EQ(binary->get_operator(), AST::BinaryOp::OP_ADD);
     EXPECT_EQ(as_name(binary->get_left())->get_value(), "م");
     EXPECT_EQ(as_name(binary->get_right())->get_value(), "ل");
 }
 
 TEST_F(ParserTest, ParseDeeplyNestedExpression)
 {
-    Fa_FileManager fm(parser_test_cases_dir() / "deeply_nested.fa");
-    Fa_Parser parser(&fm);
-    AST::Fa_Expr* expr = parser.parse().value();
+    FileManager fm(parser_test_cases_dir() / "deeply_nested.fa");
+    Parser parser(&fm);
+    AST::Expr* expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr) << "Should parse deeply nested expression without stack overflow";
 
@@ -656,21 +656,21 @@ TEST_F(ParserTest, ParseDeeplyNestedExpression)
 
 TEST_F(ParserTest, ParseWhileLoop)
 {
-    Fa_FileManager fm(parser_test_cases_dir() / "while_loop.fa");
-    Fa_Parser parser(&fm);
+    FileManager fm(parser_test_cases_dir() / "while_loop.fa");
+    Parser parser(&fm);
 
-    AST::Fa_WhileStmt* while_stmt = as_while(parser.parse_while_stmt().value());
+    AST::WhileStmt* while_stmt = as_while(parser.parse_while_stmt().value());
 
     if (test_config::print_ast)
         AST_Printer.print(while_stmt);
 
-    AST::Fa_BinaryExpr* cond = as_binary(while_stmt->get_condition());
-    AST::Fa_BlockStmt* block = as_block(while_stmt->get_body());
-    AST::Fa_AssignmentExpr* assign = as_assignment_expr(as_expr_stmt(block->get_statements()[0])->get_expr());
+    AST::BinaryExpr* cond = as_binary(while_stmt->get_condition());
+    AST::BlockStmt* block = as_block(while_stmt->get_body());
+    AST::AssignmentExpr* assign = as_assignment_expr(as_expr_stmt(block->get_statements()[0])->get_expr());
 
     EXPECT_EQ(as_name(cond->get_left())->get_value(), "شيء");
     EXPECT_TRUE(as_literal(cond->get_right())->get_bool());
-    EXPECT_EQ(cond->get_operator(), AST::Fa_BinaryOp::OP_EQ);
+    EXPECT_EQ(cond->get_operator(), AST::BinaryOp::OP_EQ);
     ASSERT_FALSE(block->get_statements().empty());
     EXPECT_EQ(as_name(assign->get_target())->get_value(), "بسبسمياو");
     EXPECT_FALSE(as_literal(assign->get_value())->get_bool());
@@ -678,10 +678,10 @@ TEST_F(ParserTest, ParseWhileLoop)
 
 TEST_F(ParserTest, ParseForLoop)
 {
-    Fa_FileManager fm(parser_test_cases_dir() / "for_loop.fa");
-    Fa_Parser parser(&fm);
+    FileManager fm(parser_test_cases_dir() / "for_loop.fa");
+    Parser parser(&fm);
 
-    AST::Fa_ForStmt* for_stmt = as_for(parser.parse_for_stmt().value());
+    AST::ForStmt* for_stmt = as_for(parser.parse_for_stmt().value());
 
     if (test_config::print_ast)
         AST_Printer.print(for_stmt);
@@ -698,45 +698,45 @@ TEST_F(ParserTest, ParseForLoop)
 
 TEST_F(ParserTest, ParseBreakStatement)
 {
-    Fa_FileManager fm(parser_test_cases_dir() / "break_stmt.fa");
-    Fa_Parser parser(&fm);
+    FileManager fm(parser_test_cases_dir() / "break_stmt.fa");
+    Parser parser(&fm);
 
-    AST::Fa_BreakStmt* break_stmt = as_break(parser.parse_break_stmt().value());
+    AST::BreakStmt* break_stmt = as_break(parser.parse_break_stmt().value());
     ASSERT_NE(break_stmt, nullptr);
 }
 
 TEST_F(ParserTest, ParseContinueStatement)
 {
-    Fa_FileManager fm(parser_test_cases_dir() / "continue_stmt.fa");
-    Fa_Parser parser(&fm);
+    FileManager fm(parser_test_cases_dir() / "continue_stmt.fa");
+    Parser parser(&fm);
 
-    AST::Fa_ContinueStmt* continue_stmt = as_continue(parser.parse_continue_stmt().value());
+    AST::ContinueStmt* continue_stmt = as_continue(parser.parse_continue_stmt().value());
     ASSERT_NE(continue_stmt, nullptr);
 }
 
 TEST_F(ParserTest, ParseComplexeIfStatement)
 {
-    Fa_FileManager fm(parser_test_cases_dir() / "complexe_if_statement.fa");
-    Fa_Parser parser(&fm);
+    FileManager fm(parser_test_cases_dir() / "complexe_if_statement.fa");
+    Parser parser(&fm);
 
-    AST::Fa_IfStmt* if_stmt = as_if(parser.parse_if_stmt().value());
+    AST::IfStmt* if_stmt = as_if(parser.parse_if_stmt().value());
 
     if (test_config::print_ast)
         AST_Printer.print(if_stmt);
 
-    AST::Fa_BinaryExpr* cond = as_binary(if_stmt->get_condition());
+    AST::BinaryExpr* cond = as_binary(if_stmt->get_condition());
     // the while statement is wrapped in a block inside the else clause
-    AST::Fa_WhileStmt* while_stmt = as_while(as_block(if_stmt->get_then())->get_statements()[0]);
-    AST::Fa_BinaryExpr* while_cond = as_binary(while_stmt->get_condition());
-    AST::Fa_BlockStmt* block = as_block(while_stmt->get_body());
-    AST::Fa_AssignmentExpr* assign = as_assignment_expr(as_expr_stmt(block->get_statements()[0])->get_expr());
+    AST::WhileStmt* while_stmt = as_while(as_block(if_stmt->get_then())->get_statements()[0]);
+    AST::BinaryExpr* while_cond = as_binary(while_stmt->get_condition());
+    AST::BlockStmt* block = as_block(while_stmt->get_body());
+    AST::AssignmentExpr* assign = as_assignment_expr(as_expr_stmt(block->get_statements()[0])->get_expr());
 
     EXPECT_EQ(as_name(cond->get_left())->get_value(), "شيء");
     EXPECT_TRUE(as_literal(cond->get_right())->get_bool());
-    EXPECT_EQ(cond->get_operator(), AST::Fa_BinaryOp::OP_NEQ);
+    EXPECT_EQ(cond->get_operator(), AST::BinaryOp::OP_NEQ);
     EXPECT_EQ(as_name(while_cond->get_left())->get_value(), "شيء");
     EXPECT_TRUE(as_literal(while_cond->get_right())->get_bool());
-    EXPECT_EQ(while_cond->get_operator(), AST::Fa_BinaryOp::OP_EQ);
+    EXPECT_EQ(while_cond->get_operator(), AST::BinaryOp::OP_EQ);
     ASSERT_FALSE(block->get_statements().empty());
     EXPECT_EQ(as_name(assign->get_target())->get_value(), "بسبسمياو");
     EXPECT_FALSE(as_literal(assign->get_value())->get_bool());
@@ -745,8 +745,8 @@ TEST_F(ParserTest, ParseComplexeIfStatement)
 TEST_F(ParserTest, ParseAugmentedAssignmentPlus)
 {
     // a += b -> a := a + b
-    Fa_FileManager fm(parser_test_cases_dir() / "augmented_assign_plus.fa");
-    Fa_Parser parser(&fm);
+    FileManager fm(parser_test_cases_dir() / "augmented_assign_plus.fa");
+    Parser parser(&fm);
 
     auto assign_expr = as_assignment_expr(parser.parse_assignment_expr().value());
     if (test_config::print_ast)
@@ -758,14 +758,14 @@ TEST_F(ParserTest, ParseAugmentedAssignmentPlus)
     EXPECT_EQ(as_name(target)->get_value(), "ا");
     EXPECT_EQ(as_name(value_as_binary->get_left())->get_value(), "ا");
     EXPECT_EQ(as_name(value_as_binary->get_right())->get_value(), "ب");
-    EXPECT_EQ(value_as_binary->get_operator(), AST::Fa_BinaryOp::OP_ADD);
+    EXPECT_EQ(value_as_binary->get_operator(), AST::BinaryOp::OP_ADD);
 }
 
 TEST_F(ParserTest, ParseAugmentedAssignmentMinus)
 {
     // a -= b -> a := a - b
-    Fa_FileManager fm(parser_test_cases_dir() / "augmented_assign_minus.fa");
-    Fa_Parser parser(&fm);
+    FileManager fm(parser_test_cases_dir() / "augmented_assign_minus.fa");
+    Parser parser(&fm);
 
     auto assign_expr = as_assignment_expr(parser.parse_assignment_expr().value());
     if (test_config::print_ast)
@@ -777,14 +777,14 @@ TEST_F(ParserTest, ParseAugmentedAssignmentMinus)
     EXPECT_EQ(as_name(target)->get_value(), "ا");
     EXPECT_EQ(as_name(value_as_binary->get_left())->get_value(), "ا");
     EXPECT_EQ(as_name(value_as_binary->get_right())->get_value(), "ب");
-    EXPECT_EQ(value_as_binary->get_operator(), AST::Fa_BinaryOp::OP_SUB);
+    EXPECT_EQ(value_as_binary->get_operator(), AST::BinaryOp::OP_SUB);
 }
 
 TEST_F(ParserTest, ParseAugmentedAssignmentTimes)
 {
     // a *= b -> a := a * b
-    Fa_FileManager fm(parser_test_cases_dir() / "augmented_assign_times.fa");
-    Fa_Parser parser(&fm);
+    FileManager fm(parser_test_cases_dir() / "augmented_assign_times.fa");
+    Parser parser(&fm);
 
     auto assign_expr = as_assignment_expr(parser.parse_assignment_expr().value());
     if (test_config::print_ast)
@@ -796,14 +796,14 @@ TEST_F(ParserTest, ParseAugmentedAssignmentTimes)
     EXPECT_EQ(as_name(target)->get_value(), "ا");
     EXPECT_EQ(as_name(value_as_binary->get_left())->get_value(), "ا");
     EXPECT_EQ(as_name(value_as_binary->get_right())->get_value(), "ب");
-    EXPECT_EQ(value_as_binary->get_operator(), AST::Fa_BinaryOp::OP_MUL);
+    EXPECT_EQ(value_as_binary->get_operator(), AST::BinaryOp::OP_MUL);
 }
 
 TEST_F(ParserTest, ParseAugmentedAssignmentDiv)
 {
     // a /= b -> a := a / b
-    Fa_FileManager fm(parser_test_cases_dir() / "augmented_assign_div.fa");
-    Fa_Parser parser(&fm);
+    FileManager fm(parser_test_cases_dir() / "augmented_assign_div.fa");
+    Parser parser(&fm);
 
     auto assign_expr = as_assignment_expr(parser.parse_assignment_expr().value());
     if (test_config::print_ast)
@@ -815,14 +815,14 @@ TEST_F(ParserTest, ParseAugmentedAssignmentDiv)
     EXPECT_EQ(as_name(target)->get_value(), "ا");
     EXPECT_EQ(as_name(value_as_binary->get_left())->get_value(), "ا");
     EXPECT_EQ(as_name(value_as_binary->get_right())->get_value(), "ب");
-    EXPECT_EQ(value_as_binary->get_operator(), AST::Fa_BinaryOp::OP_DIV);
+    EXPECT_EQ(value_as_binary->get_operator(), AST::BinaryOp::OP_DIV);
 }
 
 TEST_F(ParserTest, ParseAugmentedAssignmentMod)
 {
     // a %= b -> a := a % b
-    Fa_FileManager fm(parser_test_cases_dir() / "augmented_assign_mod.fa");
-    Fa_Parser parser(&fm);
+    FileManager fm(parser_test_cases_dir() / "augmented_assign_mod.fa");
+    Parser parser(&fm);
 
     auto assign_expr = as_assignment_expr(parser.parse_assignment_expr().value());
     if (test_config::print_ast)
@@ -834,5 +834,5 @@ TEST_F(ParserTest, ParseAugmentedAssignmentMod)
     EXPECT_EQ(as_name(target)->get_value(), "ا");
     EXPECT_EQ(as_name(value_as_binary->get_left())->get_value(), "ا");
     EXPECT_EQ(as_name(value_as_binary->get_right())->get_value(), "ب");
-    EXPECT_EQ(value_as_binary->get_operator(), AST::Fa_BinaryOp::OP_MOD);
+    EXPECT_EQ(value_as_binary->get_operator(), AST::BinaryOp::OP_MOD);
 }

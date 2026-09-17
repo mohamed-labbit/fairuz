@@ -7,7 +7,7 @@
 namespace fairuz {
 
 template<typename K, typename V, typename Hash, typename Equal>
-class Fa_HashTable {
+class HashTable {
     struct Entry {
         K key { };
         V val { };
@@ -18,7 +18,7 @@ class Fa_HashTable {
     static constexpr u32 k_min_capacity = 16;
     static constexpr u32 k_load_percent = 70;
 
-    Fa_Array<Entry> m_buckets;
+    Array<Entry> m_buckets;
     u32 m_size { 0 };
     Hash m_hash { };
     Equal m_equal { };
@@ -42,7 +42,7 @@ class Fa_HashTable {
         return static_cast<u32>(hash) & mask();
     }
 
-    void reinsert_into(Fa_Array<Entry>& dst, Entry const& src)
+    void reinsert_into(Array<Entry>& dst, Entry const& src)
     {
         u32 dst_mask = dst.size() - 1;
         u32 idx = static_cast<u32>(src.hash) & dst_mask;
@@ -54,14 +54,14 @@ class Fa_HashTable {
     void grow_if_needed()
     {
         if (m_buckets.empty()) {
-            m_buckets = Fa_Array<Entry>(k_min_capacity, Entry { });
+            m_buckets = Array<Entry>(k_min_capacity, Entry { });
             return;
         }
 
         if ((m_size + 1) * 100 < m_buckets.size() * k_load_percent)
             return;
 
-        Fa_Array<Entry> grown(next_power_of_two(m_buckets.size() << 1), Entry { });
+        Array<Entry> grown(next_power_of_two(m_buckets.size() << 1), Entry { });
         for (u32 i = 0; i < m_buckets.size(); i++) {
             if (m_buckets[i].occupied)
                 reinsert_into(grown, m_buckets[i]);
@@ -100,9 +100,9 @@ class Fa_HashTable {
     }
 
 public:
-    Fa_HashTable() = default;
+    HashTable() = default;
 
-    explicit Fa_HashTable(std::initializer_list<std::pair<K, V>> list)
+    explicit HashTable(std::initializer_list<std::pair<K, V>> list)
     {
         if (list.size() == 0)
             return;
@@ -111,7 +111,7 @@ public:
             insert_or_assign(pair.first, pair.second);
     }
 
-    ~Fa_HashTable() { }
+    ~HashTable() { }
 
     V& operator[](K const& key)
     {
@@ -238,7 +238,7 @@ public:
         Entry* e = m_buckets.end();
         return { e, e };
     }
-}; // class Fa_HashTable
+}; // class HashTable
 
 } // namespace fairuz
 

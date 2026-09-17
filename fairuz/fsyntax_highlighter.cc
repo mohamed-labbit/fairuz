@@ -16,7 +16,7 @@ namespace {
 struct Span {
     u64 offset { 0 };
     Token token;
-    tok::Fa_TokenType lexical_type { tok::Fa_TokenType::INVALID };
+    tok::TokenType lexical_type { tok::TokenType::INVALID };
     std::string text;
 };
 
@@ -24,7 +24,7 @@ u32 utf16_width(u32 cp) { return cp > 0xffff ? 2 : 1; }
 
 class Scanner {
 public:
-    explicit Scanner(Fa_StringRef const& source)
+    explicit Scanner(StringRef const& source)
         : m_source(source)
     {
     }
@@ -45,7 +45,7 @@ public:
             if (cp == '#') {
                 while (m_offset < m_source.len() && current() != '\n')
                     advance();
-                add(start, start_line, start_column, "comment", tok::Fa_TokenType::INVALID);
+                add(start, start_line, start_column, "comment", tok::TokenType::INVALID);
                 continue;
             }
             if (cp == '\'' || cp == '"') {
@@ -64,20 +64,20 @@ public:
                     else
                         escaped = false;
                 }
-                add(start, start_line, start_column, "string", tok::Fa_TokenType::STRING);
+                add(start, start_line, start_column, "string", tok::TokenType::STRING);
                 continue;
             }
             if (IS_IDENT_S(cp)) {
                 advance();
                 while (m_offset < m_source.len() && IS_IDENT_C(current()))
                     advance();
-                Fa_StringRef word = m_source.slice(start, m_offset);
+                StringRef word = m_source.slice(start, m_offset);
                 auto keyword = tok::lookup_keyword(word);
-                tok::Fa_TokenType kind = keyword.value_or(tok::Fa_TokenType::NAME);
+                tok::TokenType kind = keyword.value_or(tok::TokenType::NAME);
                 std::string type = "variable";
-                if (kind == tok::Fa_TokenType::KW_TRUE || kind == tok::Fa_TokenType::KW_FALSE)
+                if (kind == tok::TokenType::KW_TRUE || kind == tok::TokenType::KW_FALSE)
                     type = "boolean";
-                else if (kind == tok::Fa_TokenType::KW_NIL)
+                else if (kind == tok::TokenType::KW_NIL)
                     type = "null";
                 else if (keyword.has_value())
                     type = "keyword";
@@ -105,14 +105,14 @@ public:
                             advance();
                     }
                 }
-                add(start, start_line, start_column, "number", tok::Fa_TokenType::INTEGER);
+                add(start, start_line, start_column, "number", tok::TokenType::INTEGER);
                 continue;
             }
             if (is_operator(cp)) {
                 advance();
                 while (m_offset < m_source.len() && is_operator(current()))
                     advance();
-                add(start, start_line, start_column, "operator", tok::Fa_TokenType::OP_PLUS);
+                add(start, start_line, start_column, "operator", tok::TokenType::OP_PLUS);
                 continue;
             }
             advance();
@@ -122,7 +122,7 @@ public:
     }
 
 private:
-    Fa_StringRef const& m_source;
+    StringRef const& m_source;
     u64 m_offset { 0 };
     u32 m_line { 0 };
     u32 m_column { 0 };
@@ -149,13 +149,13 @@ private:
             || cp == '<' || cp == '>' || cp == '=' || cp == '!' || cp == ':';
     }
 
-    void add(u64 offset, u32 line, u32 column, char const* type, tok::Fa_TokenType lexical)
+    void add(u64 offset, u32 line, u32 column, char const* type, tok::TokenType lexical)
     {
         Span span;
         span.offset = offset;
         span.token = { line, column, m_column - column, type, false };
         span.lexical_type = lexical;
-        Fa_StringRef raw = m_source.slice(offset, m_offset);
+        StringRef raw = m_source.slice(offset, m_offset);
         span.text.assign(raw.data(), raw.len());
         m_spans.push_back(std::move(span));
     }
@@ -178,17 +178,17 @@ private:
                 direct_binding = nullptr;
             }
             switch (span.lexical_type) {
-            case tok::Fa_TokenType::KW_FROM:
+            case tok::TokenType::KW_FROM:
                 from_import = true;
                 state = State::FromModule;
                 break;
-            case tok::Fa_TokenType::KW_IMPORT:
+            case tok::TokenType::KW_IMPORT:
                 state = from_import ? State::Member : State::DirectModule;
                 break;
-            case tok::Fa_TokenType::KW_AS:
+            case tok::TokenType::KW_AS:
                 state = State::Alias;
                 break;
-            case tok::Fa_TokenType::NAME:
+            case tok::TokenType::NAME:
                 if (state == State::FromModule) {
                     span.token.type = "namespace";
                 } else if (state == State::DirectModule) {
@@ -222,16 +222,16 @@ public:
     {
     }
 
-    void program(Fa_Array<AST::Fa_Stmt*> const& statements)
+    void program(Array<AST::Stmt*> const& statements)
     {
-        for (AST::Fa_Stmt* statement : statements)
+        for (AST::Stmt* statement : statements)
             stmt(statement, false);
     }
 
 private:
     std::unordered_map<u64, Token*>& m_tokens;
 
-    void mark(AST::Fa_ASTNode const* node, char const* type, bool declaration = false)
+    void mark(AST::ASTNode const* node, char const* type, bool declaration = false)
     {
         if (!node)
             return;
@@ -242,14 +242,14 @@ private:
         found->second->declaration = declaration;
     }
 
-    void target(AST::Fa_Expr* expression)
+    void target(AST::Expr* expression)
     {
         if (!expression)
             return;
-        if (expression->get_kind() == AST::Fa_Expr::Kind::NAME) {
+        if (expression->get_kind() == AST::Expr::Kind::NAME) {
             mark(expression, "variable", true);
-        } else if (expression->get_kind() == AST::Fa_Expr::Kind::GET) {
-            auto* get = static_cast<AST::Fa_GetExpr*>(expression);
+        } else if (expression->get_kind() == AST::Expr::Kind::GET) {
+            auto* get = static_cast<AST::GetExpr*>(expression);
             expr(get->get_object());
             mark(get->get_member(), "property", true);
         } else {
@@ -257,58 +257,58 @@ private:
         }
     }
 
-    void expr(AST::Fa_Expr* expression)
+    void expr(AST::Expr* expression)
     {
         if (!expression)
             return;
         switch (expression->get_kind()) {
-        case AST::Fa_Expr::Kind::BINARY: {
-            auto* value = static_cast<AST::Fa_BinaryExpr*>(expression);
+        case AST::Expr::Kind::BINARY: {
+            auto* value = static_cast<AST::BinaryExpr*>(expression);
             expr(value->get_left());
             expr(value->get_right());
             break;
         }
-        case AST::Fa_Expr::Kind::UNARY:
-            expr(static_cast<AST::Fa_UnaryExpr*>(expression)->get_operand());
+        case AST::Expr::Kind::UNARY:
+            expr(static_cast<AST::UnaryExpr*>(expression)->get_operand());
             break;
-        case AST::Fa_Expr::Kind::CALL: {
-            auto* call = static_cast<AST::Fa_CallExpr*>(expression);
-            if (call->get_callee()->get_kind() == AST::Fa_Expr::Kind::NAME)
+        case AST::Expr::Kind::CALL: {
+            auto* call = static_cast<AST::CallExpr*>(expression);
+            if (call->get_callee()->get_kind() == AST::Expr::Kind::NAME)
                 mark(call->get_callee(), "function");
-            else if (call->get_callee()->get_kind() == AST::Fa_Expr::Kind::GET) {
-                auto* get = static_cast<AST::Fa_GetExpr*>(call->get_callee());
+            else if (call->get_callee()->get_kind() == AST::Expr::Kind::GET) {
+                auto* get = static_cast<AST::GetExpr*>(call->get_callee());
                 expr(get->get_object());
                 mark(get->get_member(), "method");
             } else
                 expr(call->get_callee());
-            for (AST::Fa_Expr* argument : call->get_args())
+            for (AST::Expr* argument : call->get_args())
                 expr(argument);
             break;
         }
-        case AST::Fa_Expr::Kind::ASSIGNMENT: {
-            auto* assignment = static_cast<AST::Fa_AssignmentExpr*>(expression);
+        case AST::Expr::Kind::ASSIGNMENT: {
+            auto* assignment = static_cast<AST::AssignmentExpr*>(expression);
             target(assignment->get_target());
             expr(assignment->get_value());
             break;
         }
-        case AST::Fa_Expr::Kind::LIST:
-            for (AST::Fa_Expr* item : static_cast<AST::Fa_ListExpr*>(expression)->get_elements())
+        case AST::Expr::Kind::LIST:
+            for (AST::Expr* item : static_cast<AST::ListExpr*>(expression)->get_elements())
                 expr(item);
             break;
-        case AST::Fa_Expr::Kind::DICT:
-            for (auto const& item : static_cast<AST::Fa_DictExpr*>(expression)->get_content()) {
+        case AST::Expr::Kind::DICT:
+            for (auto const& item : static_cast<AST::DictExpr*>(expression)->get_content()) {
                 expr(item.first);
                 expr(item.second);
             }
             break;
-        case AST::Fa_Expr::Kind::INDEX_READ: {
-            auto* index = static_cast<AST::Fa_IndexExpr*>(expression);
+        case AST::Expr::Kind::INDEX_READ: {
+            auto* index = static_cast<AST::IndexExpr*>(expression);
             expr(index->get_object());
             expr(index->get_index());
             break;
         }
-        case AST::Fa_Expr::Kind::GET: {
-            auto* get = static_cast<AST::Fa_GetExpr*>(expression);
+        case AST::Expr::Kind::GET: {
+            auto* get = static_cast<AST::GetExpr*>(expression);
             expr(get->get_object());
             mark(get->get_member(), "property");
             break;
@@ -317,59 +317,59 @@ private:
         }
     }
 
-    void function(AST::Fa_FunctionDef* value, bool method)
+    void function(AST::FunctionDef* value, bool method)
     {
         mark(value->get_name(), method ? "method" : "function", true);
-        for (AST::Fa_Expr* parameter : value->get_parameters())
+        for (AST::Expr* parameter : value->get_parameters())
             mark(parameter, "parameter", true);
         stmt(value->get_body(), false);
     }
 
-    void stmt(AST::Fa_Stmt* statement, bool class_member)
+    void stmt(AST::Stmt* statement, bool class_member)
     {
         if (!statement)
             return;
         switch (statement->get_kind()) {
-        case AST::Fa_Stmt::Kind::BLOCK:
-            for (AST::Fa_Stmt* child : static_cast<AST::Fa_BlockStmt*>(statement)->get_statements())
+        case AST::Stmt::Kind::BLOCK:
+            for (AST::Stmt* child : static_cast<AST::BlockStmt*>(statement)->get_statements())
                 stmt(child, class_member);
             break;
-        case AST::Fa_Stmt::Kind::EXPR: expr(static_cast<AST::Fa_ExprStmt*>(statement)->get_expr()); break;
-        case AST::Fa_Stmt::Kind::ASSIGNMENT: {
-            auto* assignment = static_cast<AST::Fa_AssignmentStmt*>(statement);
+        case AST::Stmt::Kind::EXPR: expr(static_cast<AST::ExprStmt*>(statement)->get_expr()); break;
+        case AST::Stmt::Kind::ASSIGNMENT: {
+            auto* assignment = static_cast<AST::AssignmentStmt*>(statement);
             target(assignment->get_target());
             expr(assignment->get_expr()->get_value());
             break;
         }
-        case AST::Fa_Stmt::Kind::IF: {
-            auto* value = static_cast<AST::Fa_IfStmt*>(statement);
+        case AST::Stmt::Kind::IF: {
+            auto* value = static_cast<AST::IfStmt*>(statement);
             expr(value->get_condition());
             stmt(value->get_then(), false);
             stmt(value->get_else(), false);
             break;
         }
-        case AST::Fa_Stmt::Kind::WHILE: {
-            auto* value = static_cast<AST::Fa_WhileStmt*>(statement);
+        case AST::Stmt::Kind::WHILE: {
+            auto* value = static_cast<AST::WhileStmt*>(statement);
             expr(value->get_condition());
             stmt(value->get_body(), false);
             break;
         }
-        case AST::Fa_Stmt::Kind::FOR: {
-            auto* value = static_cast<AST::Fa_ForStmt*>(statement);
+        case AST::Stmt::Kind::FOR: {
+            auto* value = static_cast<AST::ForStmt*>(statement);
             mark(value->get_target(), "variable", true);
             expr(value->get_iter());
             stmt(value->get_body(), false);
             break;
         }
-        case AST::Fa_Stmt::Kind::FUNC: function(static_cast<AST::Fa_FunctionDef*>(statement), class_member); break;
-        case AST::Fa_Stmt::Kind::RETURN: expr(static_cast<AST::Fa_ReturnStmt*>(statement)->get_value()); break;
-        case AST::Fa_Stmt::Kind::CLASS_DEF: {
-            auto* value = static_cast<AST::Fa_ClassDef*>(statement);
+        case AST::Stmt::Kind::FUNC: function(static_cast<AST::FunctionDef*>(statement), class_member); break;
+        case AST::Stmt::Kind::RETURN: expr(static_cast<AST::ReturnStmt*>(statement)->get_value()); break;
+        case AST::Stmt::Kind::CLASS_DEF: {
+            auto* value = static_cast<AST::ClassDef*>(statement);
             mark(value->get_name(), "class", true);
             mark(value->get_parent(), "class");
-            for (AST::Fa_Expr* member : value->get_members())
+            for (AST::Expr* member : value->get_members())
                 target(member);
-            for (AST::Fa_Stmt* method : value->get_methods())
+            for (AST::Stmt* method : value->get_methods())
                 stmt(method, true);
             break;
         }
@@ -380,25 +380,25 @@ private:
 
 } // namespace
 
-Result Highlighter::highlight(Fa_StringRef const& source)
+Result Highlighter::highlight(StringRef const& source)
 {
     std::vector<Span> spans = Scanner(source).run();
     Result result;
     std::unordered_map<u64, Token*> by_offset;
     for (Span& span : spans)
-        if (span.lexical_type == tok::Fa_TokenType::NAME)
+        if (span.lexical_type == tok::TokenType::NAME)
             by_offset[span.offset] = &span.token;
 
     diagnostic::reset();
-    lex::Fa_FileManager file;
+    lex::FileManager file;
     file.buffer() = source;
     diagnostic::set_source(&file);
     try {
-        parser::Fa_Parser parser(&file);
-        Fa_Array<AST::Fa_Stmt*> statements = parser.parse_program();
+        parser::Parser parser(&file);
+        Array<AST::Stmt*> statements = parser.parse_program();
         result.ast_valid = !diagnostic::has_errors();
         AstClassifier(by_offset).program(statements);
-    } catch (diagnostic::Fa_DiagnosticAbort const&) {
+    } catch (diagnostic::DiagnosticAbort const&) {
         result.ast_valid = false;
     }
     diagnostic::reset();

@@ -12,7 +12,7 @@
 
 namespace fairuz::lex {
 
-class Fa_FileManager; // full definition in flexer.hpp; only a pointer is
+class FileManager; // full definition in flexer.hpp; only a pointer is
                       // needed here, and including flexer.hpp would be
                       // circular (flexer.hpp already includes this file).
 
@@ -369,10 +369,10 @@ static constexpr char const* error_message_for(ErrorCode const code)
     case ErrorCode::CLOSE_TYPE_ERROR: return "close() expects a file value as argument";
     case ErrorCode::POP_EMPTY_LIST: return "pop() on an empty list";
     // containers
-    case ErrorCode::ARRAY_EMPTY_BACK: return "Fa_Array::back() called on an empty array";
-    case ErrorCode::ARRAY_EMPTY_FRONT: return "Fa_Array::front() called on an empty array";
+    case ErrorCode::ARRAY_EMPTY_BACK: return "Array::back() called on an empty array";
+    case ErrorCode::ARRAY_EMPTY_FRONT: return "Array::front() called on an empty array";
     case ErrorCode::ARRAY_CAPACITY_EXCEEDED: return "Requested array capacity exceeds the maximum";
-    case ErrorCode::ARRAY_OUT_OF_BOUNDS: return "Fa_Array index is out of bounds";
+    case ErrorCode::ARRAY_OUT_OF_BOUNDS: return "Array index is out of bounds";
     case ErrorCode::STRING_SLICE_START_OOB: return "String slice start index is out of range";
     case ErrorCode::STRING_SLICE_END_BEFORE_START: return "String slice end must not precede start";
     // general
@@ -380,7 +380,7 @@ static constexpr char const* error_message_for(ErrorCode const code)
     case ErrorCode::ARENA_EXHAUSTED: return "Arena allocator exhausted";
     case ErrorCode::INTERNAL_ERROR: return "Internal compiler error";
     case ErrorCode::UNKNOWN: return "Unknown error";
-    case ErrorCode::ALLOCATOR_CONTEXT_NOT_INITIALIZED: return "Fa_AllocatorContext is not initialized";
+    case ErrorCode::ALLOCATOR_CONTEXT_NOT_INITIALIZED: return "AllocatorContext is not initialized";
     case ErrorCode::MMAP_FAILED: return "mmap failed";
     case ErrorCode::NANBOX_ADDRESS_UNSAFE: return "mmap returned an address unsafe for NaN-boxing";
     case ErrorCode::INVALID_PARAMETER: return "Invalid parameters to function";
@@ -388,8 +388,8 @@ static constexpr char const* error_message_for(ErrorCode const code)
     }
 }
 
-struct Fa_DiagnosticAbort final : public std::runtime_error {
-    Fa_DiagnosticAbort()
+struct DiagnosticAbort final : public std::runtime_error {
+    DiagnosticAbort()
         : std::runtime_error("fatal diagnostic")
     {
     }
@@ -408,7 +408,7 @@ using SourcePtr = std::shared_ptr<Source const>;
 
 char const* error_type_for(u16 code);
 
-class Fa_DiagnosticEngine {
+class DiagnosticEngine {
 public:
     // Stable handle to a single accumulated diagnostic, returned by
     // report() so a caller can immediately attach a suggestion/note to
@@ -430,7 +430,7 @@ public:
 
     struct Diagnostic {
         Severity severity { Severity::ERROR };
-        Fa_SourceLocation src_loc;
+        SourceLocation src_loc;
         ErrorCode err_code { 0 };
         std::string code { "" };
         std::vector<std::string> suggestions;
@@ -438,7 +438,7 @@ public:
         SourcePtr source;
         struct Frame {
             SourcePtr source;
-            Fa_SourceLocation location;
+            SourceLocation location;
             std::string function;
         };
         std::vector<Frame> traceback;
@@ -449,7 +449,7 @@ public:
     // this limit and always get recorded.
     static constexpr u32 LIMIT = 20;
 
-    Fa_DiagnosticEngine() = default;
+    DiagnosticEngine() = default;
 
     // --- existing API, unchanged ---
 
@@ -468,8 +468,8 @@ public:
     // and non-FATAL) — callers that don't need the id can ignore the
     // return value as before; this is a source-compatible change from the
     // previous void-returning signature.
-    // DiagnosticId report(Severity const sev, Fa_SourceLocation const loc, u16 err_code, std::string const& code = "");
-    DiagnosticId report_deferred(Severity const sev, Fa_SourceLocation const loc, ErrorCode err_code, std::string const& code = "");
+    // DiagnosticId report(Severity const sev, SourceLocation const loc, u16 err_code, std::string const& code = "");
+    DiagnosticId report_deferred(Severity const sev, SourceLocation const loc, ErrorCode err_code, std::string const& code = "");
 
     // Existing behavior, unchanged: attaches to whichever diagnostic was
     // reported most recently. Convenient for the common case (report,
@@ -488,7 +488,7 @@ public:
     // keep calling these unconditionally without checking first.
     void add_suggestion(DiagnosticId id, std::string const& suggestion);
     void add_note(DiagnosticId id, i32 line, std::string const& note);
-    void add_frame(DiagnosticId id, SourcePtr source, Fa_SourceLocation loc, std::string function);
+    void add_frame(DiagnosticId id, SourcePtr source, SourceLocation loc, std::string function);
 
     std::string to_json() const;
 
@@ -521,7 +521,7 @@ public:
         m_printed_limit = false;
     }
 
-    void set_source(lex::Fa_FileManager const* fm);
+    void set_source(lex::FileManager const* fm);
     void set_source(SourcePtr source) { m_source = std::move(source); }
     SourcePtr source() const { return m_source; }
     void set_json_output(bool enabled) { m_json_output = enabled; }
@@ -539,12 +539,12 @@ private:
     [[noreturn]] void _panic(std::string const& msg) const;
     static std::string sv_to_str(Severity const sv);
     std::vector<std::string> split_lines(std::string const& text) const;
-    void print_snippet(SourcePtr const& source, Fa_SourceLocation const& loc) const;
-}; // class Fa_DiagnosticEngine
+    void print_snippet(SourcePtr const& source, SourceLocation const& loc) const;
+}; // class DiagnosticEngine
 
 // --- module-level singletons and forwarding functions, unchanged ---
 
-inline Fa_DiagnosticEngine engine;
+inline DiagnosticEngine engine;
 
 static inline void emit(ErrorCode code, Severity const sv = Severity::ERROR)
 {
@@ -576,8 +576,8 @@ static inline void emit(ErrorCode code, std::string const& detail, Severity cons
     engine.panic("");
 }
 
-static inline Fa_DiagnosticEngine::DiagnosticId report(
-    Severity const sev, Fa_SourceLocation const loc, ErrorCode err_code, std::string const& code = "")
+static inline DiagnosticEngine::DiagnosticId report(
+    Severity const sev, SourceLocation const loc, ErrorCode err_code, std::string const& code = "")
 {
     return engine.report_deferred(sev, loc, err_code, code);
 }
@@ -593,7 +593,7 @@ static inline bool is_saturated() noexcept { return engine.is_saturated(); }
 static inline u32 error_count() noexcept { return engine.error_count(); }
 static inline u32 warning_count() noexcept { return engine.get_warning_count(); }
 static inline void reset() noexcept { engine.reset(); }
-static inline void set_source(lex::Fa_FileManager const* fm) { engine.set_source(fm); }
+static inline void set_source(lex::FileManager const* fm) { engine.set_source(fm); }
 
 class SourceScope {
 public:
@@ -602,7 +602,7 @@ public:
     {
         engine.set_source(std::move(source));
     }
-    explicit SourceScope(lex::Fa_FileManager const* source)
+    explicit SourceScope(lex::FileManager const* source)
         : m_previous(engine.source())
     {
         engine.set_source(source);

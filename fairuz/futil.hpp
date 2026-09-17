@@ -79,7 +79,7 @@ static inline bool isalpha_arabic(u32 const c)
     return (c >= 0x0600 && c <= 0x06FF);
 }
 
-static u32 decode_utf8_at(Fa_StringRef const& buf, size_t const byte_pos, u64* out_bytes)
+static u32 decode_utf8_at(StringRef const& buf, size_t const byte_pos, u64* out_bytes)
 {
     if (byte_pos >= buf.len())
         diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR, "UTF8 decode past end of buffer");
@@ -215,11 +215,11 @@ static size_t encode_utf8(u32 const cp, unsigned char* out_bytes)
     return -1; // unreachable
 }
 
-static inline Fa_StringRef encode_utf8_str(u32 const cp)
+static inline StringRef encode_utf8_str(u32 const cp)
 {
     unsigned char bytes[5];
     size_t const len = encode_utf8(cp, bytes);
-    return Fa_StringRef(reinterpret_cast<char*>(bytes)).truncate(len);
+    return StringRef(reinterpret_cast<char*>(bytes)).truncate(len);
 }
 
 static bool is_arab_digit(u32 const cp)
@@ -258,7 +258,7 @@ static u8 arab_digit_to_canon(u32 const cp)
     }
 }
 
-static inline i64 parse_integer_literal(Fa_StringRef const& literal, int base)
+static inline i64 parse_integer_literal(StringRef const& literal, int base)
 {
     if (base == -1) /*false call*/
         return INT16_MIN;

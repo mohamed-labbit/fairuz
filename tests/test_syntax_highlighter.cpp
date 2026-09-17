@@ -19,8 +19,8 @@ Token const* find_token(Result const& result, u32 line, u32 start, std::string c
 
 class SyntaxHighlighterTest : public ::testing::Test {
 protected:
-    Fa_AllocatorContext allocator;
-    Fa_AllocatorContext* previous_allocator { nullptr };
+    AllocatorContext allocator;
+    AllocatorContext* previous_allocator { nullptr };
 
     void SetUp() override
     {
@@ -35,7 +35,7 @@ protected:
 
 TEST_F(SyntaxHighlighterTest, AstClassifiesDeclarationsCallsAndMembers)
 {
-    Fa_StringRef source = "# نموذج\n"
+    StringRef source = "# نموذج\n"
                           "نوع حيوان:\n"
                           "    دالة صوت(الاسم):\n"
                           "        رسالة := \"مرحبا\"\n"
@@ -58,7 +58,7 @@ TEST_F(SyntaxHighlighterTest, AstClassifiesDeclarationsCallsAndMembers)
 
 TEST_F(SyntaxHighlighterTest, UsesUtf16ColumnsAndLengths)
 {
-    Fa_StringRef source = "قيمة := \"😀\" + 2 # شرح\n";
+    StringRef source = "قيمة := \"😀\" + 2 # شرح\n";
     Result result = Highlighter().highlight(source);
     ASSERT_TRUE(result.ast_valid);
     auto* string = find_token(result, 0, 8, "string");
@@ -70,7 +70,7 @@ TEST_F(SyntaxHighlighterTest, UsesUtf16ColumnsAndLengths)
 
 TEST_F(SyntaxHighlighterTest, RecognizesEveryNumericLiteralForm)
 {
-    Fa_StringRef source = "س := 0xFF + 0o17 + 0b10 + ١٢ + 3.14\n";
+    StringRef source = "س := 0xFF + 0o17 + 0b10 + ١٢ + 3.14\n";
     Result result = Highlighter().highlight(source);
     EXPECT_NE(find_token(result, 0, 5, "number"), nullptr);
     EXPECT_NE(find_token(result, 0, 12, "number"), nullptr);
@@ -81,7 +81,7 @@ TEST_F(SyntaxHighlighterTest, RecognizesEveryNumericLiteralForm)
 
 TEST_F(SyntaxHighlighterTest, ClassifiesModuleMemberAndAliasImports)
 {
-    Fa_StringRef source = "استورد رياضيات.ادوات باسم حساب\n"
+    StringRef source = "استورد رياضيات.ادوات باسم حساب\n"
                           "من وقت_التشغيل استورد هو_عدد باسم عدد\n";
     Result result = Highlighter().highlight(source);
     ASSERT_TRUE(result.ast_valid);
@@ -101,7 +101,7 @@ TEST_F(SyntaxHighlighterTest, ClassifiesModuleMemberAndAliasImports)
 
 TEST_F(SyntaxHighlighterTest, KeepsLexicalHighlightingForIncompleteEdits)
 {
-    Fa_StringRef source = "دالة غير_مكتملة(القيمة:\n    ارجع \"نص";
+    StringRef source = "دالة غير_مكتملة(القيمة:\n    ارجع \"نص";
     Result result;
     EXPECT_NO_THROW(result = Highlighter().highlight(source));
     EXPECT_FALSE(result.ast_valid);

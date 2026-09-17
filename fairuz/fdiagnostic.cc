@@ -3,7 +3,7 @@
 //
 
 #include "fdiagnostic.hpp"
-#include "flexer.hpp" // for Fa_FileManager::get_line_at() — kept out of the
+#include "flexer.hpp" // for FileManager::get_line_at() — kept out of the
 #include "fmacros.hpp"
 // header to avoid the circular include (flexer.hpp
 // includes fdiagnostic.hpp)
@@ -40,7 +40,7 @@ std::string_view Source::line(u32 number) const
     return std::string_view(text).substr(from, to - from);
 }
 
-void Fa_DiagnosticEngine::set_source(lex::Fa_FileManager const* fm)
+void DiagnosticEngine::set_source(lex::FileManager const* fm)
 {
     if (fm == nullptr) {
         m_source.reset();
@@ -147,8 +147,8 @@ int cell_width(u32 cp)
 
 } // namespace
 
-/*Fa_DiagnosticEngine::DiagnosticId Fa_DiagnosticEngine::report(
-    Severity const sev, Fa_SourceLocation const loc, u16 err_code, std::string const& code)
+/*DiagnosticEngine::DiagnosticId DiagnosticEngine::report(
+    Severity const sev, SourceLocation const loc, u16 err_code, std::string const& code)
 {
     DiagnosticId const id = report_deferred(sev, loc, err_code, code);
 
@@ -162,8 +162,8 @@ int cell_width(u32 cp)
     return id;
 }*/
 
-Fa_DiagnosticEngine::DiagnosticId Fa_DiagnosticEngine::report_deferred(
-    Severity const sev, Fa_SourceLocation const loc, ErrorCode err_code, std::string const& code)
+DiagnosticEngine::DiagnosticId DiagnosticEngine::report_deferred(
+    Severity const sev, SourceLocation const loc, ErrorCode err_code, std::string const& code)
 {
     if (sev != Severity::FATAL && m_error_count >= LIMIT)
         return INVALID_ID;
@@ -185,55 +185,55 @@ Fa_DiagnosticEngine::DiagnosticId Fa_DiagnosticEngine::report_deferred(
     return id;
 }
 
-void Fa_DiagnosticEngine::add_suggestion(std::string const& suggestion)
+void DiagnosticEngine::add_suggestion(std::string const& suggestion)
 {
     if (!m_diagnostics.empty())
         m_diagnostics.back().suggestions.push_back(suggestion);
 }
 
-void Fa_DiagnosticEngine::add_note(i32 line, std::string const& note)
+void DiagnosticEngine::add_note(i32 line, std::string const& note)
 {
     if (!m_diagnostics.empty())
         m_diagnostics.back().notes.push_back({ line, note });
 }
 
-void Fa_DiagnosticEngine::add_suggestion(DiagnosticId id, std::string const& suggestion)
+void DiagnosticEngine::add_suggestion(DiagnosticId id, std::string const& suggestion)
 {
     if (id == INVALID_ID || id >= m_diagnostics.size())
         return;
     m_diagnostics[id].suggestions.push_back(suggestion);
 }
 
-void Fa_DiagnosticEngine::add_note(DiagnosticId id, i32 line, std::string const& note)
+void DiagnosticEngine::add_note(DiagnosticId id, i32 line, std::string const& note)
 {
     if (id == INVALID_ID || id >= m_diagnostics.size())
         return;
     m_diagnostics[id].notes.push_back({ line, note });
 }
 
-void Fa_DiagnosticEngine::add_frame(DiagnosticId id, SourcePtr source, Fa_SourceLocation loc, std::string function)
+void DiagnosticEngine::add_frame(DiagnosticId id, SourcePtr source, SourceLocation loc, std::string function)
 {
     if (id == INVALID_ID || id >= m_diagnostics.size())
         return;
     m_diagnostics[id].traceback.push_back({ std::move(source), loc, std::move(function) });
 }
 
-void Fa_DiagnosticEngine::emit_error(std::string const& msg, Severity const sv)
+void DiagnosticEngine::emit_error(std::string const& msg, Severity const sv)
 {
     std::cerr << sv_to_str(sv) << ": " << escape_terminal(msg) << "\n";
     if (sv == Severity::FATAL)
         panic("");
 }
 
-[[noreturn]] void Fa_DiagnosticEngine::_panic(std::string const& msg) const
+[[noreturn]] void DiagnosticEngine::_panic(std::string const& msg) const
 {
     pretty_print();
     if (!msg.empty())
         std::cerr << terminal_color(Color::RESET) << escape_terminal(msg) << "\n";
-    throw Fa_DiagnosticAbort();
+    throw DiagnosticAbort();
 }
 
-std::string Fa_DiagnosticEngine::sv_to_str(Severity const sv)
+std::string DiagnosticEngine::sv_to_str(Severity const sv)
 {
     switch (sv) {
     case Severity::NOTE: return terminal_color(Color::BOLD) + terminal_color(Color::CYAN) + "note";
@@ -244,7 +244,7 @@ std::string Fa_DiagnosticEngine::sv_to_str(Severity const sv)
     }
 }
 
-std::vector<std::string> Fa_DiagnosticEngine::split_lines(std::string const& text) const
+std::vector<std::string> DiagnosticEngine::split_lines(std::string const& text) const
 {
     std::vector<std::string> lines;
     std::stringstream ss(text);
@@ -257,7 +257,7 @@ std::vector<std::string> Fa_DiagnosticEngine::split_lines(std::string const& tex
 }
 
 // Columns and lengths are Unicode code points, not UTF-8 byte offsets.
-void Fa_DiagnosticEngine::print_snippet(SourcePtr const& source, Fa_SourceLocation const& loc) const
+void DiagnosticEngine::print_snippet(SourcePtr const& source, SourceLocation const& loc) const
 {
     if (!source || loc.line == 0 || loc.line > source->lines.size())
         return;
@@ -317,7 +317,7 @@ void Fa_DiagnosticEngine::print_snippet(SourcePtr const& source, Fa_SourceLocati
               << terminal_color(Color::RESET) << '\n';
 }
 
-std::string Fa_DiagnosticEngine::to_json() const
+std::string DiagnosticEngine::to_json() const
 {
     std::ostringstream out;
     out << '[';
@@ -363,7 +363,7 @@ std::string Fa_DiagnosticEngine::to_json() const
     return out.str();
 }
 
-void Fa_DiagnosticEngine::pretty_print() const
+void DiagnosticEngine::pretty_print() const
 {
     if (m_json_output)
         return; // The CLI emits one complete JSON array on exit.

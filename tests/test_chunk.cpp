@@ -4,13 +4,13 @@
 
 using namespace fairuz::runtime;
 
-TEST(Fa_Chunk, EmitReturnsCorrectIndex)
+TEST(Chunk, EmitReturnsCorrectIndex)
 {
-    Fa_Chunk c;
+    Chunk c;
 
-    u32 i0 = c.emit(Fa_make_ABC(Fa_OpCode::NOP, 0, 0, 0), { });
-    u32 i1 = c.emit(Fa_make_ABC(Fa_OpCode::NOP, 0, 0, 0), { });
-    u32 i2 = c.emit(Fa_make_ABC(Fa_OpCode::NOP, 0, 0, 0), { });
+    u32 i0 = c.emit(make_ABC(OpCode::NOP, 0, 0, 0), { });
+    u32 i1 = c.emit(make_ABC(OpCode::NOP, 0, 0, 0), { });
+    u32 i2 = c.emit(make_ABC(OpCode::NOP, 0, 0, 0), { });
 
     EXPECT_EQ(i0, 0u);
     EXPECT_EQ(i1, 1u);
@@ -18,104 +18,104 @@ TEST(Fa_Chunk, EmitReturnsCorrectIndex)
     EXPECT_EQ(c.code.size(), 3u);
 }
 
-TEST(Fa_Chunk, EmittedInstructionPreserved)
+TEST(Chunk, EmittedInstructionPreserved)
 {
-    Fa_Chunk c;
-    u32 instr = Fa_make_ABC(Fa_OpCode::OP_ADD, 1, 2, { });
+    Chunk c;
+    u32 instr = make_ABC(OpCode::OP_ADD, 1, 2, { });
     c.emit(instr, { });
     EXPECT_EQ(c.code[0], instr);
 }
 
-TEST(Fa_Chunk, PatchJumpForward)
+TEST(Chunk, PatchJumpForward)
 {
-    Fa_Chunk c;
-    u32 jump_idx = c.emit(Fa_make_AsBx(Fa_OpCode::JUMP_IF_FALSE, 0, 0), { });
+    Chunk c;
+    u32 jump_idx = c.emit(make_AsBx(OpCode::JUMP_IF_FALSE, 0, 0), { });
 
-    c.emit(Fa_make_ABC(Fa_OpCode::NOP, 0, 0, 0), { });
-    c.emit(Fa_make_ABC(Fa_OpCode::NOP, 0, 0, 0), { });
-    c.emit(Fa_make_ABC(Fa_OpCode::NOP, 0, 0, 0), { });
+    c.emit(make_ABC(OpCode::NOP, 0, 0, 0), { });
+    c.emit(make_ABC(OpCode::NOP, 0, 0, 0), { });
+    c.emit(make_ABC(OpCode::NOP, 0, 0, 0), { });
 
     bool ok = c.patch_jump(jump_idx);
     EXPECT_TRUE(ok);
-    EXPECT_EQ(Fa_instr_sBx(c.code[jump_idx]), 3);
+    EXPECT_EQ(instr_sBx(c.code[jump_idx]), 3);
 }
 
-TEST(Fa_Chunk, PatchJumpToSelf_OffsetZero)
+TEST(Chunk, PatchJumpToSelf_OffsetZero)
 {
-    Fa_Chunk c;
-    u32 idx = c.emit(Fa_make_AsBx(Fa_OpCode::JUMP, 0, 0), { });
+    Chunk c;
+    u32 idx = c.emit(make_AsBx(OpCode::JUMP, 0, 0), { });
     bool ok = c.patch_jump(idx);
     EXPECT_TRUE(ok);
-    EXPECT_EQ(Fa_instr_sBx(c.code[idx]), 0);
+    EXPECT_EQ(instr_sBx(c.code[idx]), 0);
 }
 
-TEST(Fa_Chunk, PatchJumpPreservesOpAndA)
+TEST(Chunk, PatchJumpPreservesOpAndA)
 {
-    Fa_Chunk c;
-    u32 idx = c.emit(Fa_make_AsBx(Fa_OpCode::JUMP_IF_FALSE, 7, 0), { });
-    c.emit(Fa_make_ABC(Fa_OpCode::NOP, 0, 0, 0), { });
+    Chunk c;
+    u32 idx = c.emit(make_AsBx(OpCode::JUMP_IF_FALSE, 7, 0), { });
+    c.emit(make_ABC(OpCode::NOP, 0, 0, 0), { });
     c.patch_jump(idx);
-    EXPECT_EQ(static_cast<Fa_OpCode>(Fa_instr_op(c.code[idx])), Fa_OpCode::JUMP_IF_FALSE);
-    EXPECT_EQ(Fa_instr_A(c.code[idx]), 7u);
+    EXPECT_EQ(static_cast<OpCode>(instr_op(c.code[idx])), OpCode::JUMP_IF_FALSE);
+    EXPECT_EQ(instr_A(c.code[idx]), 7u);
 }
 
-TEST(Fa_Chunk, AddConstantDeduplicatesIntegers)
+TEST(Chunk, AddConstantDeduplicatesIntegers)
 {
-    Fa_Chunk c;
-    u16 i0 = c.add_constant(Fa_Value::from_int(42));
-    u16 i1 = c.add_constant(Fa_Value::from_int(42));
+    Chunk c;
+    u16 i0 = c.add_constant(Value::from_int(42));
+    u16 i1 = c.add_constant(Value::from_int(42));
     EXPECT_EQ(i0, i1);
     EXPECT_EQ(c.constants.size(), 1u);
 }
 
-TEST(Fa_Chunk, AddConstantDeduplicatesDoubles)
+TEST(Chunk, AddConstantDeduplicatesDoubles)
 {
-    Fa_Chunk c;
-    u16 i0 = c.add_constant(Fa_Value::from_real(3.14));
-    u16 i1 = c.add_constant(Fa_Value::from_real(3.14));
+    Chunk c;
+    u16 i0 = c.add_constant(Value::from_real(3.14));
+    u16 i1 = c.add_constant(Value::from_real(3.14));
     EXPECT_EQ(i0, i1);
     EXPECT_EQ(c.constants.size(), 1u);
 }
 
-TEST(Fa_Chunk, AddConstantDeduplicatesNil)
+TEST(Chunk, AddConstantDeduplicatesNil)
 {
-    Fa_Chunk c;
-    u16 i0 = c.add_constant(Fa_Value::nil());
-    u16 i1 = c.add_constant(Fa_Value::nil());
+    Chunk c;
+    u16 i0 = c.add_constant(Value::nil());
+    u16 i1 = c.add_constant(Value::nil());
     EXPECT_EQ(i0, i1);
     EXPECT_EQ(c.constants.size(), 1u);
 }
 
-TEST(Fa_Chunk, AddConstantDistinguishesDifferentValues)
+TEST(Chunk, AddConstantDistinguishesDifferentValues)
 {
-    Fa_Chunk c;
-    u16 i0 = c.add_constant(Fa_Value::from_int(1));
-    u16 i1 = c.add_constant(Fa_Value::from_int(2));
+    Chunk c;
+    u16 i0 = c.add_constant(Value::from_int(1));
+    u16 i1 = c.add_constant(Value::from_int(2));
     EXPECT_NE(i0, i1);
     EXPECT_EQ(c.constants.size(), 2u);
 }
 
-TEST(Fa_Chunk, AddConstantIntAndDoubleNotDeduplicated)
+TEST(Chunk, AddConstantIntAndDoubleNotDeduplicated)
 {
-    Fa_Chunk c;
-    u16 i0 = c.add_constant(Fa_Value::from_int(1));
-    u16 i1 = c.add_constant(Fa_Value::from_real(1.0));
+    Chunk c;
+    u16 i0 = c.add_constant(Value::from_int(1));
+    u16 i1 = c.add_constant(Value::from_real(1.0));
     EXPECT_NE(i0, i1);
     EXPECT_EQ(c.constants.size(), 2u);
 }
 
-TEST(Fa_Chunk, AddConstantReturnSequentialIndices)
+TEST(Chunk, AddConstantReturnSequentialIndices)
 {
-    Fa_Chunk c;
+    Chunk c;
     for (int i = 0; i < 10; i++) {
-        u16 idx = c.add_constant(Fa_Value::from_int(i * 1000));
+        u16 idx = c.add_constant(Value::from_int(i * 1000));
         EXPECT_EQ(idx, static_cast<u16>(i));
     }
 }
 
-TEST(Fa_Chunk, AllocICSlotSequential)
+TEST(Chunk, AllocICSlotSequential)
 {
-    Fa_Chunk c;
+    Chunk c;
     u8 s0 = c.alloc_ic_slot();
     u8 s1 = c.alloc_ic_slot();
     u8 s2 = c.alloc_ic_slot();
@@ -125,95 +125,95 @@ TEST(Fa_Chunk, AllocICSlotSequential)
     EXPECT_EQ(c.ic_slots.size(), 3u);
 }
 
-TEST(Fa_Chunk, AllocICSlotDefaultState)
+TEST(Chunk, AllocICSlotDefaultState)
 {
-    Fa_Chunk c;
+    Chunk c;
     c.alloc_ic_slot();
     auto& slot = c.ic_slots[0];
-    EXPECT_EQ(slot.seen_lhs, static_cast<u8>(Fa_TypeTag::NONE));
-    EXPECT_EQ(slot.seen_rhs, static_cast<u8>(Fa_TypeTag::NONE));
-    EXPECT_EQ(slot.seen_ret, static_cast<u8>(Fa_TypeTag::NONE));
+    EXPECT_EQ(slot.seen_lhs, static_cast<u8>(TypeTag::NONE));
+    EXPECT_EQ(slot.seen_rhs, static_cast<u8>(TypeTag::NONE));
+    EXPECT_EQ(slot.seen_ret, static_cast<u8>(TypeTag::NONE));
     EXPECT_EQ(slot.hit_count, 0u);
     EXPECT_EQ(slot.jit_stub, nullptr);
 }
 
-TEST(Fa_Chunk, ICSlotCanBeUpdated)
+TEST(Chunk, ICSlotCanBeUpdated)
 {
-    Fa_Chunk c;
+    Chunk c;
     c.alloc_ic_slot();
     auto& slot = c.ic_slots[0];
-    slot.seen_lhs = static_cast<u8>(Fa_TypeTag::INT);
-    slot.seen_rhs = static_cast<u8>(Fa_TypeTag::INT);
+    slot.seen_lhs = static_cast<u8>(TypeTag::INT);
+    slot.seen_rhs = static_cast<u8>(TypeTag::INT);
     slot.hit_count = 500;
-    EXPECT_EQ(slot.seen_lhs, static_cast<u8>(Fa_TypeTag::INT));
+    EXPECT_EQ(slot.seen_lhs, static_cast<u8>(TypeTag::INT));
     EXPECT_EQ(slot.hit_count, 500u);
 }
 
-TEST(Fa_Chunk, RejectsMoreInlineCacheSlotsThanBytecodeCanEncode)
+TEST(Chunk, RejectsMoreInlineCacheSlotsThanBytecodeCanEncode)
 {
-    Fa_Chunk c;
+    Chunk c;
     for (u32 i = 0; i <= MAX_IC_SLOTS; i++)
         c.alloc_ic_slot();
 
-    EXPECT_THROW(c.alloc_ic_slot(), fairuz::diagnostic::Fa_DiagnosticAbort);
+    EXPECT_THROW(c.alloc_ic_slot(), fairuz::diagnostic::DiagnosticAbort);
 }
 
-TEST(Fa_Chunk, GetLineSingleLine)
+TEST(Chunk, GetLineSingleLine)
 {
-    Fa_Chunk c;
-    c.emit(Fa_make_ABC(Fa_OpCode::NOP, 0, 0, 0), { 10, 0, 0 });
-    c.emit(Fa_make_ABC(Fa_OpCode::NOP, 0, 0, 0), { 10, 0, 0 });
+    Chunk c;
+    c.emit(make_ABC(OpCode::NOP, 0, 0, 0), { 10, 0, 0 });
+    c.emit(make_ABC(OpCode::NOP, 0, 0, 0), { 10, 0, 0 });
     EXPECT_EQ(c.get_line(0), 10u);
     EXPECT_EQ(c.get_line(1), 10u);
 }
 
-TEST(Fa_Chunk, GetLineMultipleLines)
+TEST(Chunk, GetLineMultipleLines)
 {
-    Fa_Chunk c;
-    c.emit(Fa_make_ABC(Fa_OpCode::NOP, 0, 0, 0), { 1, 0, 0 });
-    c.emit(Fa_make_ABC(Fa_OpCode::NOP, 0, 0, 0), { 1, 0, 0 });
-    c.emit(Fa_make_ABC(Fa_OpCode::NOP, 0, 0, 0), { 5, 0, 0 });
-    c.emit(Fa_make_ABC(Fa_OpCode::NOP, 0, 0, 0), { 9, 0, 0 });
+    Chunk c;
+    c.emit(make_ABC(OpCode::NOP, 0, 0, 0), { 1, 0, 0 });
+    c.emit(make_ABC(OpCode::NOP, 0, 0, 0), { 1, 0, 0 });
+    c.emit(make_ABC(OpCode::NOP, 0, 0, 0), { 5, 0, 0 });
+    c.emit(make_ABC(OpCode::NOP, 0, 0, 0), { 9, 0, 0 });
     EXPECT_EQ(c.get_line(0), 1u);
     EXPECT_EQ(c.get_line(1), 1u);
     EXPECT_EQ(c.get_line(2), 5u);
     EXPECT_EQ(c.get_line(3), 9u);
 }
 
-TEST(Fa_Chunk, GetLineRunLengthCompressed)
+TEST(Chunk, GetLineRunLengthCompressed)
 {
-    Fa_Chunk c;
+    Chunk c;
     for (int i = 0; i < 10; i++)
-        c.emit(Fa_make_ABC(Fa_OpCode::NOP, 0, 0, 0), { 42 });
+        c.emit(make_ABC(OpCode::NOP, 0, 0, 0), { 42 });
     EXPECT_EQ(c.lines.size(), 1u);
     for (int i = 0; i < 10; i++)
         EXPECT_EQ(c.get_line(i), 42u);
 }
 
-TEST(Fa_Chunk, GetLineNewEntryOnLineChange)
+TEST(Chunk, GetLineNewEntryOnLineChange)
 {
-    Fa_Chunk c;
-    c.emit(Fa_make_ABC(Fa_OpCode::NOP, 0, 0, 0), { 0, 0, 0 });
-    c.emit(Fa_make_ABC(Fa_OpCode::NOP, 0, 0, 0), { 1, 0, 0 });
+    Chunk c;
+    c.emit(make_ABC(OpCode::NOP, 0, 0, 0), { 0, 0, 0 });
+    c.emit(make_ABC(OpCode::NOP, 0, 0, 0), { 1, 0, 0 });
     EXPECT_EQ(c.lines.size(), 2u);
 }
 
-TEST(Fa_Chunk, OwnsSubFunctions)
+TEST(Chunk, OwnsSubFunctions)
 {
-    auto* m_parent = fairuz::runtime::Fa_make_chunk();
-    auto* child = fairuz::runtime::Fa_make_chunk();
+    auto* m_parent = fairuz::runtime::make_chunk();
+    auto* child = fairuz::runtime::make_chunk();
     child->name = "child";
     m_parent->functions.push(child);
     SUCCEED();
 }
 
-TEST(Fa_Chunk, SubFunctionPreservesData)
+TEST(Chunk, SubFunctionPreservesData)
 {
-    Fa_Chunk m_parent;
-    auto* child = fairuz::runtime::Fa_make_chunk();
+    Chunk m_parent;
+    auto* child = fairuz::runtime::make_chunk();
     child->name = "myfunc";
     child->arity = 2;
-    child->emit(Fa_make_ABC(Fa_OpCode::RETURN_NIL, 0, 0, 0), { });
+    child->emit(make_ABC(OpCode::RETURN_NIL, 0, 0, 0), { });
     m_parent.functions.push(child);
 
     EXPECT_EQ(m_parent.functions.size(), 1u);
@@ -222,28 +222,28 @@ TEST(Fa_Chunk, SubFunctionPreservesData)
     EXPECT_EQ(m_parent.functions[0]->code.size(), 1u);
 }
 
-TEST(Fa_Chunk, IsMoveConstructible)
+TEST(Chunk, IsMoveConstructible)
 {
-    Fa_Chunk a;
+    Chunk a;
     a.name = "moved";
-    a.emit(Fa_make_ABC(Fa_OpCode::NOP, 0, 0, 0), { });
-    Fa_Chunk b(std::move(a));
+    a.emit(make_ABC(OpCode::NOP, 0, 0, 0), { });
+    Chunk b(std::move(a));
     EXPECT_EQ(b.name, "moved");
     EXPECT_EQ(b.code.size(), 1u);
 }
 
-TEST(Fa_Chunk, IsMoveAssignable)
+TEST(Chunk, IsMoveAssignable)
 {
-    Fa_Chunk a;
+    Chunk a;
     a.name = "src";
-    Fa_Chunk b;
+    Chunk b;
     b = std::move(a);
     EXPECT_EQ(b.name, "src");
 }
 
 TEST(CompilerState, AllocRegIncrementsWatermark)
 {
-    Fa_Chunk c;
+    Chunk c;
     CompilerState s;
     s.chunk = &c;
     EXPECT_EQ(s.alloc_register(), 0u);
@@ -255,7 +255,7 @@ TEST(CompilerState, AllocRegIncrementsWatermark)
 
 TEST(CompilerState, FreeRegDecrements)
 {
-    Fa_Chunk c;
+    Chunk c;
     CompilerState s;
     s.chunk = &c;
     s.alloc_register();
@@ -267,7 +267,7 @@ TEST(CompilerState, FreeRegDecrements)
 
 TEST(CompilerState, FreeRegsToWatermark)
 {
-    Fa_Chunk c;
+    Chunk c;
     CompilerState s;
     s.chunk = &c;
     s.alloc_register(); // 0
@@ -280,7 +280,7 @@ TEST(CompilerState, FreeRegsToWatermark)
 
 TEST(CompilerState, MaxRegTracksHighWatermark)
 {
-    Fa_Chunk c;
+    Chunk c;
     CompilerState s;
     s.chunk = &c;
     s.alloc_register();
@@ -293,7 +293,7 @@ TEST(CompilerState, MaxRegTracksHighWatermark)
 
 TEST(CompilerState, FreeRegAtZeroIsNoOp)
 {
-    Fa_Chunk c;
+    Chunk c;
     CompilerState s;
     s.chunk = &c;
     EXPECT_EQ(s.next_reg, 0u);

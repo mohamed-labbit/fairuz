@@ -6,12 +6,12 @@
 
 namespace fairuz {
 
-struct Fa_SourceLocation {
+struct SourceLocation {
     uint32_t line { 0 };
     uint16_t column { 0 };
     uint16_t length { 0 };
     uint64_t offset { 0 }; // byte offset
-}; // struct Fa_SourceLocation
+}; // struct SourceLocation
 
 struct VoidPtrHash {
     size_t operator()(void const* ptr) const noexcept { return std::hash<uintptr_t>()(reinterpret_cast<uintptr_t>(ptr)); }

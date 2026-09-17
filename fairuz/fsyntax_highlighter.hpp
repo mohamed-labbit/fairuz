@@ -24,7 +24,7 @@ struct Result {
 
 class Highlighter {
 public:
-    Result highlight(Fa_StringRef const& source);
+    Result highlight(StringRef const& source);
 };
 
 } // namespace fairuz::syntax

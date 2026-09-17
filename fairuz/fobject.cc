@@ -10,30 +10,30 @@ namespace fairuz::runtime {
 
 // object defs
 
-Fa_ObjList::Fa_ObjList(Fa_ListType elems)
+ObjList::ObjList(ListType elems)
     : elements(std::move(elems))
 {
-    obj = Fa_ObjHeader { Fa_ObjType::LIST };
+    obj = ObjHeader { ObjType::LIST };
 }
-void Fa_ObjList::reserve(u32 cap) { elements.reserve(cap); }
-u32 Fa_ObjList::size() const { return elements.size(); }
-void Fa_ObjList::push(Fa_Value& v) { elements.push(v); }
-bool Fa_ObjList::empty() const { return elements.empty(); }
+void ObjList::reserve(u32 cap) { elements.reserve(cap); }
+u32 ObjList::size() const { return elements.size(); }
+void ObjList::push(Value& v) { elements.push(v); }
+bool ObjList::empty() const { return elements.empty(); }
 
-Fa_StringRef Fa_ObjFunction::name() const { return chunk->name; }
-u32 Fa_ObjFunction::arity() const { return chunk->arity; }
+StringRef ObjFunction::name() const { return chunk->name; }
+u32 ObjFunction::arity() const { return chunk->arity; }
 
-Fa_ObjClass::Fa_ObjClass(
-    Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> f,
-    Fa_Array<Fa_StringRef, /*_Alloc=*/Fa_GarbageCollector> m,
-    Fa_Array<Fa_Chunk*, /*_Alloc=*/Fa_GarbageCollector> vt)
+ObjClass::ObjClass(
+    Array<StringRef, /*_Alloc=*/GarbageCollector> f,
+    Array<StringRef, /*_Alloc=*/GarbageCollector> m,
+    Array<Chunk*, /*_Alloc=*/GarbageCollector> vt)
     : field_names(f)
     , method_names(m)
     , vtable(vt)
 {
 }
 
-void Fa_ObjClass::build_indices()
+void ObjClass::build_indices()
 {
     for (u32 i = 0, n = field_names.size(); i < n; i++)
         field_index_map[field_names[i]] = i;
@@ -41,20 +41,20 @@ void Fa_ObjClass::build_indices()
         method_slot_map[method_names[i]] = i;
 }
 
-int Fa_ObjClass::field_index(Fa_StringRef field_name) const
+int ObjClass::field_index(StringRef field_name) const
 {
     u32 const* p = field_index_map.find_ptr(field_name);
     return p != nullptr ? static_cast<int>(*p) : -1;
 }
 
-int Fa_ObjClass::method_slot(Fa_StringRef method_name) const
+int ObjClass::method_slot(StringRef method_name) const
 {
     u32 const* p = method_slot_map.find_ptr(method_name);
     return p != nullptr ? static_cast<int>(*p) : -1;
 }
 
-Fa_ObjInstance::Fa_ObjInstance(Fa_Array<Fa_Value, /*_Alloc=*/Fa_GarbageCollector> fields)
-    : obj(Fa_ObjType::INSTANCE)
+ObjInstance::ObjInstance(Array<Value, /*_Alloc=*/GarbageCollector> fields)
+    : obj(ObjType::INSTANCE)
     , fields(fields)
 {
 }

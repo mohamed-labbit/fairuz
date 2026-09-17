@@ -7,7 +7,7 @@ using namespace fairuz;
 
 class TestAllocator {
 private:
-    Fa_ArenaAllocator allocator_;
+    ArenaAllocator allocator_;
 
 public:
     TestAllocator()
@@ -15,7 +15,7 @@ public:
     {
     }
 
-    Fa_ArenaAllocator& get() noexcept { return std::ref<Fa_ArenaAllocator>(allocator_); }
+    ArenaAllocator& get() noexcept { return std::ref<ArenaAllocator>(allocator_); }
 
     template<typename T, typename... Args>
     T* allocate(size_t count, Args&&... m_args)
@@ -40,7 +40,7 @@ struct DestructionProbe {
 
 TEST(ArenaAllocatorTest, ResetDestroysNonTrivialObjects)
 {
-    Fa_ArenaAllocator allocator;
+    ArenaAllocator allocator;
     int destructions = 0;
     (void)allocator.allocate_object<DestructionProbe>(&destructions);
     EXPECT_EQ(destructions, 0);
@@ -52,7 +52,7 @@ TEST(ArenaAllocatorTest, AllocatorDestructionDestroysNonTrivialObjects)
 {
     int destructions = 0;
     {
-        Fa_ArenaAllocator allocator;
+        ArenaAllocator allocator;
         (void)allocator.allocate_object<DestructionProbe>(&destructions);
     }
     EXPECT_EQ(destructions, 1);
@@ -90,7 +90,7 @@ TEST(ArrayAllocatorTest, ReserveAndDestructionTrackAllocatedBytes)
 {
     CountingAllocator allocator;
     {
-        Fa_Array<int, CountingAllocator> values(&allocator);
+        Array<int, CountingAllocator> values(&allocator);
         values.reserve(8);
         EXPECT_EQ(allocator.bytes, values.cap() * sizeof(int));
 
@@ -105,11 +105,11 @@ TEST(ArrayAllocatorTest, CopyAssignmentTransfersAllocatorOwnership)
     CountingAllocator source_allocator;
     CountingAllocator destination_allocator;
     {
-        Fa_Array<int, CountingAllocator> source(&source_allocator);
+        Array<int, CountingAllocator> source(&source_allocator);
         source.reserve(8);
         source.push(42);
 
-        Fa_Array<int, CountingAllocator> destination(&destination_allocator);
+        Array<int, CountingAllocator> destination(&destination_allocator);
         destination.reserve(64);
         destination = source;
 
@@ -125,12 +125,12 @@ TEST(ArrayAllocatorTest, MoveAssignmentReleasesDestinationStorage)
 {
     CountingAllocator allocator;
     {
-        Fa_Array<int, CountingAllocator> source(&allocator);
+        Array<int, CountingAllocator> source(&allocator);
         source.reserve(8);
         source.push(7);
         size_t const source_bytes = source.cap() * sizeof(int);
 
-        Fa_Array<int, CountingAllocator> destination(&allocator);
+        Array<int, CountingAllocator> destination(&allocator);
         destination.reserve(64);
         destination = std::move(source);
 
@@ -147,7 +147,7 @@ TEST(ArrayAllocatorTest, ClearDestroysLiveElements)
     CountingAllocator allocator;
     LifetimeCounter::live = 0;
     {
-        Fa_Array<LifetimeCounter, CountingAllocator> values(&allocator);
+        Array<LifetimeCounter, CountingAllocator> values(&allocator);
         values.emplace();
         values.emplace();
         ASSERT_EQ(LifetimeCounter::live, 2);
@@ -554,20 +554,20 @@ TEST(ArenaAllocatorTest, ConsecutiveAllocations)
 
 TEST(F_ArenaBlockTest, DefaultConstruction)
 {
-    Fa_ArenaBlock block;
+    ArenaBlock block;
     EXPECT_EQ(block.size(), DEFAULT_BLOCK_SIZE);
     EXPECT_NE(block.begin(), nullptr);
 }
 
 TEST(F_ArenaBlockTest, CustomSize)
 {
-    Fa_ArenaBlock block(1024);
+    ArenaBlock block(1024);
     EXPECT_EQ(block.size(), 1024);
 }
 
 TEST(F_ArenaBlockTest, AllocateFromBlock)
 {
-    Fa_ArenaBlock block(1024);
+    ArenaBlock block(1024);
     unsigned char* ptr = block.reserve(128);
     ASSERT_NE(ptr, nullptr);
     EXPECT_LE(block.remaining(), 1024);
@@ -575,7 +575,7 @@ TEST(F_ArenaBlockTest, AllocateFromBlock)
 
 TEST(F_ArenaBlockTest, BlockExhaustion)
 {
-    Fa_ArenaBlock block(128);
+    ArenaBlock block(128);
     unsigned char* ptr1 = block.reserve(64);
     ASSERT_NE(ptr1, nullptr);
 
@@ -588,11 +588,11 @@ TEST(F_ArenaBlockTest, BlockExhaustion)
 
 TEST(F_ArenaBlockTest, MoveConstruction)
 {
-    Fa_ArenaBlock block1(1024);
+    ArenaBlock block1(1024);
     unsigned char* ptr = block1.reserve(128);
     ASSERT_NE(ptr, nullptr);
 
-    Fa_ArenaBlock block2(std::move(block1));
+    ArenaBlock block2(std::move(block1));
     EXPECT_EQ(block2.size(), 1024);
     EXPECT_EQ(block1.size(), 0);
     EXPECT_EQ(block1.begin(), nullptr);
@@ -601,7 +601,7 @@ TEST(F_ArenaBlockTest, MoveConstruction)
 #ifdef FAIRUZ_DEBUG
 TEST(ArenaAllocatorStatsTest, TracksRequestedBytesPeakAndBlocks)
 {
-    Fa_ArenaAllocator allocator(Fa_ArenaAllocator::GrowthStrategy::LINEAR, nullptr, true);
+    ArenaAllocator allocator(ArenaAllocator::GrowthStrategy::LINEAR, nullptr, true);
 
     void* first = allocator.allocate(13);
     void* second = allocator.allocate(29);
@@ -636,7 +636,7 @@ TEST(ArenaAllocatorStatsTest, TracksRequestedBytesPeakAndBlocks)
 
 TEST(ArenaAllocatorStatsTest, DeallocateReclaimsAlignmentPadding)
 {
-    Fa_ArenaAllocator allocator(Fa_ArenaAllocator::GrowthStrategy::LINEAR, nullptr, true);
+    ArenaAllocator allocator(ArenaAllocator::GrowthStrategy::LINEAR, nullptr, true);
 
     void* first = allocator.allocate(1);
     void* aligned = allocator.allocate(1, 64);
@@ -658,7 +658,7 @@ TEST(ArenaAllocatorStatsTest, DeallocateReclaimsAlignmentPadding)
 
 TEST(ArenaAllocatorStatsTest, DistinguishesInvalidAndDoubleFreeAttempts)
 {
-    Fa_ArenaAllocator allocator(Fa_ArenaAllocator::GrowthStrategy::LINEAR, nullptr, true);
+    ArenaAllocator allocator(ArenaAllocator::GrowthStrategy::LINEAR, nullptr, true);
 
     void* first = allocator.allocate(8);
     void* second = allocator.allocate(16);
@@ -686,7 +686,7 @@ TEST(ArenaAllocatorStatsTest, DistinguishesInvalidAndDoubleFreeAttempts)
 
 TEST(ArenaAllocatorStatsTest, TracksBlockAllocationAndExpansionCounts)
 {
-    Fa_ArenaAllocator allocator(Fa_ArenaAllocator::GrowthStrategy::LINEAR, nullptr, true);
+    ArenaAllocator allocator(ArenaAllocator::GrowthStrategy::LINEAR, nullptr, true);
 
     ASSERT_NE(allocator.allocate(DEFAULT_BLOCK_SIZE), nullptr);
     ASSERT_NE(allocator.allocate(DEFAULT_BLOCK_SIZE), nullptr);

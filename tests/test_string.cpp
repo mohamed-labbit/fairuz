@@ -9,80 +9,80 @@
 
 using namespace fairuz;
 
-class Fa_StringRefTest : public ::testing::Test {
+class StringRefTest : public ::testing::Test {
 protected:
     void SetUp() override { }
 
     void TearDown() override { }
 };
 
-class Fa_StringRefPerfTest : public ::testing::Test {
+class StringRefPerfTest : public ::testing::Test {
 protected:
     void SetUp() override { REQUIRE_PERF(); }
 
     void TearDown() override { }
 };
 
-TEST_F(Fa_StringRefTest, SizeConstructor_Zero)
+TEST_F(StringRefTest, SizeConstructor_Zero)
 {
-    Fa_StringRef s(static_cast<size_t>(0));
+    StringRef s(static_cast<size_t>(0));
     EXPECT_TRUE(s.empty());
     EXPECT_EQ(s.len(), 0);
 }
 
-TEST_F(Fa_StringRefTest, SizeConstructor_SmallSize)
+TEST_F(StringRefTest, SizeConstructor_SmallSize)
 {
-    Fa_StringRef s(10);
+    StringRef s(10);
     EXPECT_TRUE(s.empty());
     EXPECT_EQ(s.len(), 0);
     EXPECT_GE(s.cap(), 10);
 }
 
-TEST_F(Fa_StringRefTest, SizeConstructor_LargeSize)
+TEST_F(StringRefTest, SizeConstructor_LargeSize)
 {
-    Fa_StringRef s(10000);
+    StringRef s(10000);
     EXPECT_TRUE(s.empty());
     EXPECT_EQ(s.len(), 0);
     EXPECT_GE(s.cap(), 10000);
 }
 
-TEST_F(Fa_StringRefTest, CopyConstructor_Empty)
+TEST_F(StringRefTest, CopyConstructor_Empty)
 {
-    Fa_StringRef s1;
-    Fa_StringRef s2(s1);
+    StringRef s1;
+    StringRef s2(s1);
     EXPECT_TRUE(s2.empty());
     EXPECT_EQ(s2.len(), 0);
 }
 
-TEST_F(Fa_StringRefTest, CopyConstructorDetailed)
+TEST_F(StringRefTest, CopyConstructorDetailed)
 {
-    Fa_StringRef s1("Hell");
-    Fa_StringRef s2(s1);
+    StringRef s1("Hell");
+    StringRef s2(s1);
 
     EXPECT_EQ(s1, s2);
     EXPECT_EQ(s1.len(), s2.len());
     s1 += 'H';
 
     EXPECT_NE(s1, s2);
-    EXPECT_EQ(s1, Fa_StringRef("HellH"));
-    EXPECT_EQ(s2, Fa_StringRef("Hell"));
+    EXPECT_EQ(s1, StringRef("HellH"));
+    EXPECT_EQ(s2, StringRef("Hell"));
 
     EXPECT_NE(s1.data(), s2.data());
 }
 
-TEST_F(Fa_StringRefTest, CopyConstructorArabic)
+TEST_F(StringRefTest, CopyConstructorArabic)
 {
-    Fa_StringRef s1("مرحبا");
-    Fa_StringRef s2(s1);
+    StringRef s1("مرحبا");
+    StringRef s2(s1);
 
     EXPECT_EQ(s1, s2);
-    EXPECT_EQ(s2, Fa_StringRef("مرحبا"));
+    EXPECT_EQ(s2, StringRef("مرحبا"));
 }
 
-TEST_F(Fa_StringRefTest, CheckMemoryIndependence)
+TEST_F(StringRefTest, CheckMemoryIndependence)
 {
-    Fa_StringRef s1("Test");
-    Fa_StringRef s2(s1);
+    StringRef s1("Test");
+    StringRef s2(s1);
 
     s1[0] = 'X';
 
@@ -96,29 +96,29 @@ TEST_F(Fa_StringRefTest, CheckMemoryIndependence)
     EXPECT_EQ(s2, "Test");
 }
 
-TEST_F(Fa_StringRefTest, CopyConstructor_NonEmpty)
+TEST_F(StringRefTest, CopyConstructor_NonEmpty)
 {
-    Fa_StringRef s1("Hello");
-    Fa_StringRef s2(s1);
+    StringRef s1("Hello");
+    StringRef s2(s1);
     EXPECT_EQ(s2.len(), s1.len());
     EXPECT_EQ(s2, s1);
 }
 
-TEST_F(Fa_StringRefTest, CopyConstructor_Arabic)
+TEST_F(StringRefTest, CopyConstructor_Arabic)
 {
-    Fa_StringRef s1("مرحبا");
-    Fa_StringRef s2(s1);
+    StringRef s1("مرحبا");
+    StringRef s2(s1);
     EXPECT_EQ(s2, s1);
     EXPECT_EQ(s2, "مرحبا");
 }
 
-TEST_F(Fa_StringRefTest, MoveConstructor_NonEmpty)
+TEST_F(StringRefTest, MoveConstructor_NonEmpty)
 {
-    Fa_StringRef s1("Hello");
+    StringRef s1("Hello");
     char const* old_ptr = s1.data();
     size_t old_len = s1.len();
 
-    Fa_StringRef s2(std::move(s1));
+    StringRef s2(std::move(s1));
 
     EXPECT_EQ(s2.len(), old_len);
     EXPECT_EQ(s2.data(), old_ptr);
@@ -126,87 +126,87 @@ TEST_F(Fa_StringRefTest, MoveConstructor_NonEmpty)
     EXPECT_EQ(s1.data(), nullptr);
 }
 
-TEST_F(Fa_StringRefTest, CStyleConstructor_Null)
+TEST_F(StringRefTest, CStyleConstructor_Null)
 {
     char const* null_ptr = nullptr;
-    Fa_StringRef s(null_ptr);
+    StringRef s(null_ptr);
     EXPECT_TRUE(s.empty());
 }
 
-TEST_F(Fa_StringRefTest, CStyleConstructor_Empty)
+TEST_F(StringRefTest, CStyleConstructor_Empty)
 {
     char empty[] = { char { 0 } };
-    Fa_StringRef s(empty);
+    StringRef s(empty);
     EXPECT_TRUE(s.empty());
 }
 
-TEST_F(Fa_StringRefTest, CStyleConstructor_NonEmpty)
+TEST_F(StringRefTest, CStyleConstructor_NonEmpty)
 {
     char hello[] = { 'H', 'e', 'l', 'l', 'o', char { 0 } };
-    Fa_StringRef s(hello);
+    StringRef s(hello);
     EXPECT_EQ(s.len(), 5);
     EXPECT_EQ(s[0], 'H');
     EXPECT_EQ(s[4], 'o');
 }
 
-TEST_F(Fa_StringRefTest, CopyAssignment_SelfAssignment)
+TEST_F(StringRefTest, CopyAssignment_SelfAssignment)
 {
-    Fa_StringRef s("Test");
+    StringRef s("Test");
     s = s; // will trigger warning, but ignore it
     EXPECT_EQ(s, "Test");
 }
 
-TEST_F(Fa_StringRefTest, CopyAssignment_SharedData)
+TEST_F(StringRefTest, CopyAssignment_SharedData)
 {
-    Fa_StringRef s1("Hello");
-    Fa_StringRef s2 = s1.slice(0, 2);
+    StringRef s1("Hello");
+    StringRef s2 = s1.slice(0, 2);
 
     s1 = s2;
     EXPECT_EQ(s1, s2);
 }
 
-TEST_F(Fa_StringRefTest, CopyAssignment_EmptyToEmpty)
+TEST_F(StringRefTest, CopyAssignment_EmptyToEmpty)
 {
-    Fa_StringRef s1, s2;
+    StringRef s1, s2;
     s2 = s1;
     EXPECT_TRUE(s2.empty());
 }
 
-TEST_F(Fa_StringRefTest, CopyAssignment_NonEmptyToEmpty)
+TEST_F(StringRefTest, CopyAssignment_NonEmptyToEmpty)
 {
-    Fa_StringRef s1("Hello");
-    Fa_StringRef s2;
+    StringRef s1("Hello");
+    StringRef s2;
     s2 = s1;
     EXPECT_EQ(s2, s1);
 }
 
-TEST_F(Fa_StringRefTest, CopyAssignment_EmptyToNonEmpty)
+TEST_F(StringRefTest, CopyAssignment_EmptyToNonEmpty)
 {
-    Fa_StringRef s1("Hello");
-    Fa_StringRef s2;
+    StringRef s1("Hello");
+    StringRef s2;
     s1 = s2;
     EXPECT_TRUE(s1.empty());
 }
 
-TEST_F(Fa_StringRefTest, CopyAssignment_ReplaceContent)
+TEST_F(StringRefTest, CopyAssignment_ReplaceContent)
 {
-    Fa_StringRef s1("Hello");
-    Fa_StringRef s2("World");
+    StringRef s1("Hello");
+    StringRef s2("World");
     s1 = s2;
     EXPECT_EQ(s1, "World");
 }
 
-TEST_F(Fa_StringRefTest, MoveAssignment_SelfAssignment)
+TEST_F(StringRefTest, MoveAssignment_SelfAssignment)
 {
-    Fa_StringRef s("Test");
+    StringRef s("Test");
     s = std::move(s); // will trigger warning, but ignore it
     EXPECT_EQ(s, "Test");
 }
 
-TEST_F(Fa_StringRefTest, MoveAssignment_NonEmpty)
+TEST_F(StringRefTest, MoveAssignment_NonEmpty)
 {
-    Fa_StringRef s1("Hello");
-    Fa_StringRef s2("World");
+    StringRef s1("Hello");
+    StringRef s2("World");
     char const* old_ptr = s2.data();
 
     s1 = std::move(s2);
@@ -216,512 +216,512 @@ TEST_F(Fa_StringRefTest, MoveAssignment_NonEmpty)
     EXPECT_TRUE(s2.empty());
 }
 
-TEST_F(Fa_StringRefTest, Utf8Assignment_FromCString)
+TEST_F(StringRefTest, Utf8Assignment_FromCString)
 {
-    Fa_StringRef s;
+    StringRef s;
     s = "Hello";
     EXPECT_EQ(s, "Hello");
 }
 
-TEST_F(Fa_StringRefTest, Utf8Assignment_NullPtr)
+TEST_F(StringRefTest, Utf8Assignment_NullPtr)
 {
-    Fa_StringRef s("Hello");
+    StringRef s("Hello");
     s = static_cast<char const*>(nullptr);
     EXPECT_TRUE(s.empty());
 }
 
-TEST_F(Fa_StringRefTest, Equality_BothEmpty)
+TEST_F(StringRefTest, Equality_BothEmpty)
 {
-    Fa_StringRef s1, s2;
+    StringRef s1, s2;
     EXPECT_EQ(s1, s2);
 }
 
-TEST_F(Fa_StringRefTest, Equality_SameContent)
+TEST_F(StringRefTest, Equality_SameContent)
 {
-    Fa_StringRef s1("Hello");
-    Fa_StringRef s2("Hello");
+    StringRef s1("Hello");
+    StringRef s2("Hello");
     EXPECT_EQ(s1, s2);
 }
 
-TEST_F(Fa_StringRefTest, Equality_DifferentContent)
+TEST_F(StringRefTest, Equality_DifferentContent)
 {
-    Fa_StringRef s1("Hello");
-    Fa_StringRef s2("World");
+    StringRef s1("Hello");
+    StringRef s2("World");
     EXPECT_NE(s1, s2);
 }
 
-TEST_F(Fa_StringRefTest, Equality_DifferentLength)
+TEST_F(StringRefTest, Equality_DifferentLength)
 {
-    Fa_StringRef s1("Hello");
-    Fa_StringRef s2("Hi");
+    StringRef s1("Hello");
+    StringRef s2("Hi");
     EXPECT_NE(s1, s2);
 }
 
-TEST_F(Fa_StringRefTest, Equality_SelfComparison)
+TEST_F(StringRefTest, Equality_SelfComparison)
 {
-    Fa_StringRef s("Test");
+    StringRef s("Test");
     EXPECT_EQ(s, s);
 }
 
-TEST_F(Fa_StringRefTest, Equality_ArabicText)
+TEST_F(StringRefTest, Equality_ArabicText)
 {
-    Fa_StringRef s1("مرحبا بك");
-    Fa_StringRef s2("مرحبا بك");
+    StringRef s1("مرحبا بك");
+    StringRef s2("مرحبا بك");
     EXPECT_EQ(s1, s2);
 }
 
-TEST_F(Fa_StringRefTest, Equality_ChineseText)
+TEST_F(StringRefTest, Equality_ChineseText)
 {
-    Fa_StringRef s1("你好世界");
-    Fa_StringRef s2("你好世界");
+    StringRef s1("你好世界");
+    StringRef s2("你好世界");
     EXPECT_EQ(s1, s2);
 }
 
-TEST_F(Fa_StringRefTest, Equality_Emoji)
+TEST_F(StringRefTest, Equality_Emoji)
 {
-    Fa_StringRef s1("Hello 😀🎉");
-    Fa_StringRef s2("Hello 😀🎉");
+    StringRef s1("Hello 😀🎉");
+    StringRef s2("Hello 😀🎉");
     EXPECT_EQ(s1, s2);
 }
 
-TEST_F(Fa_StringRefTest, Expand_FromEmpty)
+TEST_F(StringRefTest, Expand_FromEmpty)
 {
-    Fa_StringRef s;
+    StringRef s;
     s.expand(100);
     EXPECT_GE(s.cap(), 100);
     EXPECT_EQ(s.len(), 0);
 }
 
-TEST_F(Fa_StringRefTest, Expand_AlreadyLargeEnough)
+TEST_F(StringRefTest, Expand_AlreadyLargeEnough)
 {
-    Fa_StringRef s(100);
+    StringRef s(100);
     size_t old_cap = s.cap();
     s.expand(50);
     EXPECT_EQ(s.cap(), old_cap);
 }
 
-TEST_F(Fa_StringRefTest, Expand_GrowthFactor)
+TEST_F(StringRefTest, Expand_GrowthFactor)
 {
-    Fa_StringRef s(10);
+    StringRef s(10);
     s.expand(100);
     EXPECT_GE(s.cap(), 100);
 }
 
-TEST_F(Fa_StringRefTest, Reserve_IncreasesCapacity)
+TEST_F(StringRefTest, Reserve_IncreasesCapacity)
 {
-    Fa_StringRef s;
+    StringRef s;
     s.reserve(1000);
     EXPECT_GE(s.cap(), 1000);
     EXPECT_EQ(s.len(), 0);
 }
 
-TEST_F(Fa_StringRefTest, Reserve_PreservesContent)
+TEST_F(StringRefTest, Reserve_PreservesContent)
 {
-    Fa_StringRef s("Hello");
+    StringRef s("Hello");
     s.reserve(1000);
     EXPECT_EQ(s, "Hello");
     EXPECT_GE(s.cap(), 1000);
 }
 
-TEST_F(Fa_StringRefTest, Clear_EmptiesString)
+TEST_F(StringRefTest, Clear_EmptiesString)
 {
-    Fa_StringRef s("Hello");
+    StringRef s("Hello");
     s.clear();
     EXPECT_EQ(s.len(), 0);
     EXPECT_TRUE(s.empty());
     EXPECT_GT(s.cap(), 0);
 }
 
-TEST_F(Fa_StringRefTest, Clear_MultipleTime)
+TEST_F(StringRefTest, Clear_MultipleTime)
 {
-    Fa_StringRef s("Hello");
+    StringRef s("Hello");
     s.clear();
     s.clear();
     s.clear();
     EXPECT_EQ(s.len(), 0);
 }
 
-TEST_F(Fa_StringRefTest, Resize_IncreasesCapacity)
+TEST_F(StringRefTest, Resize_IncreasesCapacity)
 {
-    Fa_StringRef s;
+    StringRef s;
     s.resize(500);
     EXPECT_GE(s.cap(), 500);
 }
 
-TEST_F(Fa_StringRefTest, AppendChar_ToEmpty)
+TEST_F(StringRefTest, AppendChar_ToEmpty)
 {
-    Fa_StringRef s;
+    StringRef s;
     s += 'A';
     EXPECT_EQ(s.len(), 1);
     EXPECT_EQ(s[0], 'A');
 }
 
-TEST_F(Fa_StringRefTest, AppendChar_Multiple)
+TEST_F(StringRefTest, AppendChar_Multiple)
 {
-    Fa_StringRef s;
+    StringRef s;
     s += 'H';
     s += 'i';
     EXPECT_EQ(s.len(), 2);
     EXPECT_EQ(s, "Hi");
 }
 
-TEST_F(Fa_StringRefTest, AppendChar_UnicodeChar)
+TEST_F(StringRefTest, AppendChar_UnicodeChar)
 {
-    Fa_StringRef s;
+    StringRef s;
     s += char(0x0645);
     EXPECT_GE(s.len(), 1);
 }
 
-TEST_F(Fa_StringRefTest, AppendChar_TriggerExpansion)
+TEST_F(StringRefTest, AppendChar_TriggerExpansion)
 {
-    Fa_StringRef s(2);
+    StringRef s(2);
     for (int i = 0; i < 100; i++)
         s += 'A';
     EXPECT_EQ(s.len(), 100);
 }
 
-TEST_F(Fa_StringRefTest, AppendString_ToEmpty)
+TEST_F(StringRefTest, AppendString_ToEmpty)
 {
-    Fa_StringRef s1;
-    Fa_StringRef s2("Hello");
+    StringRef s1;
+    StringRef s2("Hello");
     s1 += s2;
     EXPECT_EQ(s1, "Hello");
 }
 
-TEST_F(Fa_StringRefTest, AppendString_EmptyToNonEmpty)
+TEST_F(StringRefTest, AppendString_EmptyToNonEmpty)
 {
-    Fa_StringRef s1("Hello");
-    Fa_StringRef s2;
+    StringRef s1("Hello");
+    StringRef s2;
     s1 += s2;
     EXPECT_EQ(s1, "Hello");
 }
 
-TEST_F(Fa_StringRefTest, AppendString_NonEmptyToNonEmpty)
+TEST_F(StringRefTest, AppendString_NonEmptyToNonEmpty)
 {
-    Fa_StringRef s1("Hello");
-    Fa_StringRef s2(" World");
+    StringRef s1("Hello");
+    StringRef s2(" World");
     s1 += s2;
     EXPECT_EQ(s1, "Hello World");
 }
 
-TEST_F(Fa_StringRefTest, AppendString_Arabic)
+TEST_F(StringRefTest, AppendString_Arabic)
 {
-    Fa_StringRef s1("مرحبا");
-    Fa_StringRef s2(" بك");
+    StringRef s1("مرحبا");
+    StringRef s2(" بك");
     s1 += s2;
     EXPECT_EQ(s1, "مرحبا بك");
 }
 
-TEST_F(Fa_StringRefTest, AppendString_TriggerReallocation)
+TEST_F(StringRefTest, AppendString_TriggerReallocation)
 {
-    Fa_StringRef s1(5);
-    Fa_StringRef s2("This is a very long string that will trigger reallocation");
+    StringRef s1(5);
+    StringRef s2("This is a very long string that will trigger reallocation");
     s1 += s2;
     EXPECT_EQ(s1, s2);
 }
 
 // concatenation
 
-TEST_F(Fa_StringRefTest, Concat_StringPlusString)
+TEST_F(StringRefTest, Concat_StringPlusString)
 {
-    Fa_StringRef s1("Hello");
-    Fa_StringRef s2(" World");
-    Fa_StringRef s3 = s1 + s2;
+    StringRef s1("Hello");
+    StringRef s2(" World");
+    StringRef s3 = s1 + s2;
     EXPECT_EQ(s3, "Hello World");
 }
 
-TEST_F(Fa_StringRefTest, Concat_EmptyPlusEmpty)
+TEST_F(StringRefTest, Concat_EmptyPlusEmpty)
 {
-    Fa_StringRef s1, s2;
-    Fa_StringRef s3 = s1 + s2;
+    StringRef s1, s2;
+    StringRef s3 = s1 + s2;
     EXPECT_TRUE(s3.empty());
 }
 
-TEST_F(Fa_StringRefTest, Concat_EmptyPlusNonEmpty)
+TEST_F(StringRefTest, Concat_EmptyPlusNonEmpty)
 {
-    Fa_StringRef s1;
-    Fa_StringRef s2("Hello");
-    Fa_StringRef s3 = s1 + s2;
+    StringRef s1;
+    StringRef s2("Hello");
+    StringRef s3 = s1 + s2;
     EXPECT_EQ(s3, "Hello");
 }
 
-TEST_F(Fa_StringRefTest, Concat_StringPlusCString)
+TEST_F(StringRefTest, Concat_StringPlusCString)
 {
-    Fa_StringRef s1("Hello");
-    Fa_StringRef s2 = s1 + " World";
+    StringRef s1("Hello");
+    StringRef s2 = s1 + " World";
     EXPECT_EQ(s2, "Hello World");
 }
 
-TEST_F(Fa_StringRefTest, Concat_CStringPlusString)
+TEST_F(StringRefTest, Concat_CStringPlusString)
 {
-    Fa_StringRef s1(" World");
-    Fa_StringRef s2 = "Hello" + s1;
+    StringRef s1(" World");
+    StringRef s2 = "Hello" + s1;
     EXPECT_EQ(s2, "Hello World");
 }
 
-TEST_F(Fa_StringRefTest, Concat_StringPlusChar)
+TEST_F(StringRefTest, Concat_StringPlusChar)
 {
-    Fa_StringRef s1("Hell");
-    Fa_StringRef s2 = s1 + char('o');
+    StringRef s1("Hell");
+    StringRef s2 = s1 + char('o');
     EXPECT_EQ(s2, "Hello");
 }
 
-TEST_F(Fa_StringRefTest, Concat_CharPlusString)
+TEST_F(StringRefTest, Concat_CharPlusString)
 {
-    Fa_StringRef s1("ello");
-    Fa_StringRef s2 = char('H') + s1;
+    StringRef s1("ello");
+    StringRef s2 = char('H') + s1;
     EXPECT_EQ(s2, "Hello");
 }
 
-TEST_F(Fa_StringRefTest, Concat_Chain)
+TEST_F(StringRefTest, Concat_Chain)
 {
-    Fa_StringRef s1("A");
-    Fa_StringRef s2("B");
-    Fa_StringRef s3("C");
-    Fa_StringRef result = s1 + s2 + s3;
+    StringRef s1("A");
+    StringRef s2("B");
+    StringRef s3("C");
+    StringRef result = s1 + s2 + s3;
     EXPECT_EQ(result, "ABC");
 }
 
-TEST_F(Fa_StringRefTest, Concat_NullCString)
+TEST_F(StringRefTest, Concat_NullCString)
 {
-    Fa_StringRef s1("Hello");
-    Fa_StringRef s2 = s1 + static_cast<char const*>(nullptr);
+    StringRef s1("Hello");
+    StringRef s2 = s1 + static_cast<char const*>(nullptr);
     EXPECT_EQ(s2, "Hello");
 }
 
-TEST_F(Fa_StringRefTest, IndexOperator_ValidAccess)
+TEST_F(StringRefTest, IndexOperator_ValidAccess)
 {
-    Fa_StringRef s("Hello");
+    StringRef s("Hello");
     EXPECT_EQ(s[0], 'H');
     EXPECT_EQ(s[4], 'o');
 }
 
-TEST_F(Fa_StringRefTest, IndexOperator_Mutable)
+TEST_F(StringRefTest, IndexOperator_Mutable)
 {
-    Fa_StringRef s("Hello");
+    StringRef s("Hello");
     s[0] = 'J';
     EXPECT_EQ(s[0], 'J');
 }
 
-TEST_F(Fa_StringRefTest, At_ValidAccess)
+TEST_F(StringRefTest, At_ValidAccess)
 {
-    Fa_StringRef s("Hello");
+    StringRef s("Hello");
     EXPECT_EQ(s.at(0), 'H');
     EXPECT_EQ(s.at(4), 'o');
 }
 
-TEST_F(Fa_StringRefTest, At_MutableAccess)
+TEST_F(StringRefTest, At_MutableAccess)
 {
-    Fa_StringRef s("Hello");
+    StringRef s("Hello");
     s.at(0) = 'J';
     EXPECT_EQ(s.at(0), 'J');
 }
 
-TEST_F(Fa_StringRefTest, Erase_FirstChar)
+TEST_F(StringRefTest, Erase_FirstChar)
 {
-    Fa_StringRef s("Hello");
+    StringRef s("Hello");
     s.erase(0);
     EXPECT_EQ(s, "ello");
 }
 
-TEST_F(Fa_StringRefTest, Erase_LastChar)
+TEST_F(StringRefTest, Erase_LastChar)
 {
-    Fa_StringRef s("Hello");
+    StringRef s("Hello");
     s.erase(4);
     EXPECT_EQ(s, "Hell");
 }
 
-TEST_F(Fa_StringRefTest, Erase_MiddleChar)
+TEST_F(StringRefTest, Erase_MiddleChar)
 {
-    Fa_StringRef s("Hello");
+    StringRef s("Hello");
     s.erase(2);
     EXPECT_EQ(s, "Helo");
 }
 
-TEST_F(Fa_StringRefTest, Erase_OutOfBounds)
+TEST_F(StringRefTest, Erase_OutOfBounds)
 {
-    Fa_StringRef s("Hello");
+    StringRef s("Hello");
     s.erase(100);
     EXPECT_EQ(s, "Hello");
 }
 
-TEST_F(Fa_StringRefTest, Erase_EmptyString)
+TEST_F(StringRefTest, Erase_EmptyString)
 {
-    Fa_StringRef s;
+    StringRef s;
     s.erase(0);
     EXPECT_TRUE(s.empty());
 }
 
-TEST_F(Fa_StringRefTest, Erase_AllChars)
+TEST_F(StringRefTest, Erase_AllChars)
 {
-    Fa_StringRef s("Hi");
+    StringRef s("Hi");
     s.erase(0);
     s.erase(0);
     EXPECT_TRUE(s.empty());
 }
 
-TEST_F(Fa_StringRefTest, Find_CharExists)
+TEST_F(StringRefTest, Find_CharExists)
 {
-    Fa_StringRef s("Hello");
+    StringRef s("Hello");
     EXPECT_TRUE(s.find('H'));
     EXPECT_TRUE(s.find('o'));
 }
 
-TEST_F(Fa_StringRefTest, Find_CharNotExists)
+TEST_F(StringRefTest, Find_CharNotExists)
 {
-    Fa_StringRef s("Hello");
+    StringRef s("Hello");
     EXPECT_FALSE(s.find('X'));
 }
 
-TEST_F(Fa_StringRefTest, Find_EmptyString)
+TEST_F(StringRefTest, Find_EmptyString)
 {
-    Fa_StringRef s;
+    StringRef s;
     EXPECT_FALSE(s.find('A'));
 }
 
-TEST_F(Fa_StringRefTest, FindPos_CharExists)
+TEST_F(StringRefTest, FindPos_CharExists)
 {
-    Fa_StringRef s("Hello");
+    StringRef s("Hello");
     auto pos = s.find_pos('e');
     ASSERT_TRUE(pos.has_value());
     EXPECT_EQ(pos.value(), 1);
 }
 
-TEST_F(Fa_StringRefTest, FindPos_CharNotExists)
+TEST_F(StringRefTest, FindPos_CharNotExists)
 {
-    Fa_StringRef s("Hello");
+    StringRef s("Hello");
     auto pos = s.find_pos('X');
     EXPECT_FALSE(pos.has_value());
 }
 
-TEST_F(Fa_StringRefTest, FindPos_FirstOccurrence)
+TEST_F(StringRefTest, FindPos_FirstOccurrence)
 {
-    Fa_StringRef s("Hello");
+    StringRef s("Hello");
     auto pos = s.find_pos('l');
     ASSERT_TRUE(pos.has_value());
     EXPECT_EQ(pos.value(), 2);
 }
 
-TEST_F(Fa_StringRefTest, Truncate_ToShorter)
+TEST_F(StringRefTest, Truncate_ToShorter)
 {
-    Fa_StringRef s("Hello");
+    StringRef s("Hello");
     s.truncate(3);
     EXPECT_EQ(s.len(), 3);
     EXPECT_EQ(s, "Hel");
 }
 
-TEST_F(Fa_StringRefTest, Truncate_ToZero)
+TEST_F(StringRefTest, Truncate_ToZero)
 {
-    Fa_StringRef s("Hello");
+    StringRef s("Hello");
     s.truncate(0);
     EXPECT_TRUE(s.empty());
 }
 
-TEST_F(Fa_StringRefTest, Truncate_ToLargerSize)
+TEST_F(StringRefTest, Truncate_ToLargerSize)
 {
-    Fa_StringRef s("Hello");
+    StringRef s("Hello");
     s.truncate(100);
     EXPECT_EQ(s, "Hello");
 }
 
-TEST_F(Fa_StringRefTest, Truncate_EmptyString)
+TEST_F(StringRefTest, Truncate_EmptyString)
 {
-    Fa_StringRef s;
+    StringRef s;
     s.truncate(5);
     EXPECT_TRUE(s.empty());
 }
 
-TEST_F(Fa_StringRefTest, Substr_FullString)
+TEST_F(StringRefTest, Substr_FullString)
 {
-    Fa_StringRef s("Hello");
-    Fa_StringRef sub = s.substr(0, 5);
+    StringRef s("Hello");
+    StringRef sub = s.substr(0, 5);
     EXPECT_EQ(sub, "Hello");
 }
 
-TEST_F(Fa_StringRefTest, Substr_MiddlePortion)
+TEST_F(StringRefTest, Substr_MiddlePortion)
 {
-    Fa_StringRef s("Hello World");
-    Fa_StringRef sub = s.substr(6, 11);
+    StringRef s("Hello World");
+    StringRef sub = s.substr(6, 11);
     EXPECT_EQ(sub, "World");
 }
 
-TEST_F(Fa_StringRefTest, Substr_FirstChar)
+TEST_F(StringRefTest, Substr_FirstChar)
 {
-    Fa_StringRef s("Hello");
-    Fa_StringRef sub = s.substr(0, 1);
+    StringRef s("Hello");
+    StringRef sub = s.substr(0, 1);
     EXPECT_EQ(sub.len(), 1);
     EXPECT_EQ(sub[0], 'H');
 }
 
-TEST_F(Fa_StringRefTest, Substr_LastChar)
+TEST_F(StringRefTest, Substr_LastChar)
 {
-    Fa_StringRef s("Hello");
-    Fa_StringRef sub = s.substr(4, 5);
+    StringRef s("Hello");
+    StringRef sub = s.substr(4, 5);
     EXPECT_EQ(sub.len(), 1);
     EXPECT_EQ(sub[0], 'o');
 }
 
-TEST_F(Fa_StringRefTest, Substr_DefaultEnd)
+TEST_F(StringRefTest, Substr_DefaultEnd)
 {
-    Fa_StringRef s("Hello");
-    Fa_StringRef sub = s.substr(2);
+    StringRef s("Hello");
+    StringRef sub = s.substr(2);
     EXPECT_EQ(sub, "llo");
 }
 
-TEST_F(Fa_StringRefTest, Substr_EmptyString)
+TEST_F(StringRefTest, Substr_EmptyString)
 {
-    Fa_StringRef s;
-    Fa_StringRef sub = s.substr(0, 1);
+    StringRef s;
+    StringRef sub = s.substr(0, 1);
     EXPECT_TRUE(sub.empty());
 }
 
-TEST_F(Fa_StringRefTest, Substr_StartOutOfBounds)
+TEST_F(StringRefTest, Substr_StartOutOfBounds)
 {
-    Fa_StringRef s("Hello");
-    EXPECT_EQ(s.substr(100, 101), Fa_StringRef { });
+    StringRef s("Hello");
+    EXPECT_EQ(s.substr(100, 101), StringRef { });
 }
 
-TEST_F(Fa_StringRefTest, Substr_EndLargerThanLength)
+TEST_F(StringRefTest, Substr_EndLargerThanLength)
 {
-    Fa_StringRef s("Hello");
-    Fa_StringRef sub = s.substr(0, 101);
+    StringRef s("Hello");
+    StringRef sub = s.substr(0, 101);
     EXPECT_EQ(sub, "Hello");
 }
 
-TEST_F(Fa_StringRefTest, Substr_EndBeforeStart)
+TEST_F(StringRefTest, Substr_EndBeforeStart)
 {
-    Fa_StringRef s("Hello");
-    EXPECT_EQ(s.substr(4, 3), Fa_StringRef { });
+    StringRef s("Hello");
+    EXPECT_EQ(s.substr(4, 3), StringRef { });
 }
 
-TEST_F(Fa_StringRefTest, Substr_ArabicText)
+TEST_F(StringRefTest, Substr_ArabicText)
 {
-    Fa_StringRef s("مرحبا بك في العالم");
-    Fa_StringRef sub = s.substr(0, 10);
+    StringRef s("مرحبا بك في العالم");
+    StringRef sub = s.substr(0, 10);
     EXPECT_EQ(sub, "مرحبا");
 }
 
 // ADDED: slice tests
-TEST_F(Fa_StringRefTest, Slice_FullString)
+TEST_F(StringRefTest, Slice_FullString)
 {
-    Fa_StringRef s("Hello");
-    Fa_StringRef sliced = s.slice(0, 5);
+    StringRef s("Hello");
+    StringRef sliced = s.slice(0, 5);
     EXPECT_EQ(sliced, "Hello");
 }
 
-TEST_F(Fa_StringRefTest, Slice_ChainedSlices)
+TEST_F(StringRefTest, Slice_ChainedSlices)
 {
-    Fa_StringRef s("Hello World");
-    Fa_StringRef s1 = s.slice(0, 5);
-    Fa_StringRef s2 = s1.slice(1, 4);
+    StringRef s("Hello World");
+    StringRef s1 = s.slice(0, 5);
+    StringRef s2 = s1.slice(1, 4);
     EXPECT_EQ(s1, "Hello");
     EXPECT_EQ(s2, "ell");
 }
 
-TEST_F(Fa_StringRefTest, Slice_SharesMemory)
+TEST_F(StringRefTest, Slice_SharesMemory)
 {
-    Fa_StringRef s1("Hello");
-    Fa_StringRef s2 = s1.slice(0, 3);
+    StringRef s1("Hello");
+    StringRef s2 = s1.slice(0, 3);
 
     EXPECT_EQ(s1.get(), s2.get());
 
@@ -731,157 +731,157 @@ TEST_F(Fa_StringRefTest, Slice_SharesMemory)
     EXPECT_EQ(s2, "Jel");
 }
 
-TEST_F(Fa_StringRefTest, FromUtf8_EmptyString)
+TEST_F(StringRefTest, FromUtf8_EmptyString)
 {
-    Fa_StringRef s("");
+    StringRef s("");
     EXPECT_TRUE(s.empty());
 }
 
-TEST_F(Fa_StringRefTest, FromUtf8_AsciiString)
+TEST_F(StringRefTest, FromUtf8_AsciiString)
 {
-    Fa_StringRef s("Hello World");
+    StringRef s("Hello World");
     EXPECT_EQ(s, "Hello World");
 }
 
-TEST_F(Fa_StringRefTest, FromUtf8_ArabicString)
+TEST_F(StringRefTest, FromUtf8_ArabicString)
 {
-    Fa_StringRef s("مرحبا");
+    StringRef s("مرحبا");
     EXPECT_EQ(s, "مرحبا");
 }
 
-TEST_F(Fa_StringRefTest, FromUtf8_ChineseString)
+TEST_F(StringRefTest, FromUtf8_ChineseString)
 {
-    Fa_StringRef s("你好世界");
+    StringRef s("你好世界");
     EXPECT_EQ(s, "你好世界");
 }
 
-TEST_F(Fa_StringRefTest, FromUtf8_JapaneseString)
+TEST_F(StringRefTest, FromUtf8_JapaneseString)
 {
-    Fa_StringRef s("こんにちは");
+    StringRef s("こんにちは");
     EXPECT_EQ(s, "こんにちは");
 }
 
-TEST_F(Fa_StringRefTest, FromUtf8_RussianString)
+TEST_F(StringRefTest, FromUtf8_RussianString)
 {
-    Fa_StringRef s("Привет мир");
+    StringRef s("Привет мир");
     EXPECT_EQ(s, "Привет мир");
 }
 
-TEST_F(Fa_StringRefTest, FromUtf8_EmojiString)
+TEST_F(StringRefTest, FromUtf8_EmojiString)
 {
-    Fa_StringRef s("Hello 😀 World 🎉");
+    StringRef s("Hello 😀 World 🎉");
     EXPECT_EQ(s, "Hello 😀 World 🎉");
 }
 
-TEST_F(Fa_StringRefTest, FromUtf8_MixedScript)
+TEST_F(StringRefTest, FromUtf8_MixedScript)
 {
-    Fa_StringRef s("Hello مرحبا 你好 🌍");
+    StringRef s("Hello مرحبا 你好 🌍");
     EXPECT_EQ(s, "Hello مرحبا 你好 🌍");
 }
 
-TEST_F(Fa_StringRefTest, FromUtf8_NullPtr)
+TEST_F(StringRefTest, FromUtf8_NullPtr)
 {
-    Fa_StringRef s(static_cast<char const*>(nullptr));
+    StringRef s(static_cast<char const*>(nullptr));
     EXPECT_TRUE(s.empty());
 }
 
-TEST_F(Fa_StringRefTest, ToUtf8_EmptyString)
+TEST_F(StringRefTest, ToUtf8_EmptyString)
 {
-    Fa_StringRef s;
+    StringRef s;
     EXPECT_EQ(s, "");
 }
 
-TEST_F(Fa_StringRefTest, ToUtf8_RoundTrip)
+TEST_F(StringRefTest, ToUtf8_RoundTrip)
 {
     std::string original = "Hello World مرحبا 你好 😀";
-    Fa_StringRef s(original.data());
+    StringRef s(original.data());
     std::string result = s.data();
     EXPECT_EQ(result, original);
 }
 
-TEST_F(Fa_StringRefTest, ToDouble_Integer)
+TEST_F(StringRefTest, ToDouble_Integer)
 {
-    Fa_StringRef s("42");
+    StringRef s("42");
     EXPECT_DOUBLE_EQ(s.to_double(), 42.0);
 }
 
-TEST_F(Fa_StringRefTest, ToDouble_Float)
+TEST_F(StringRefTest, ToDouble_Float)
 {
-    Fa_StringRef s("3.14159");
+    StringRef s("3.14159");
     EXPECT_DOUBLE_EQ(s.to_double(), 3.14159);
 }
 
-TEST_F(Fa_StringRefTest, ToDouble_Negative)
+TEST_F(StringRefTest, ToDouble_Negative)
 {
-    Fa_StringRef s("-123.456");
+    StringRef s("-123.456");
     EXPECT_DOUBLE_EQ(s.to_double(), -123.456);
 }
 
-TEST_F(Fa_StringRefTest, ToDouble_Scientific)
+TEST_F(StringRefTest, ToDouble_Scientific)
 {
-    Fa_StringRef s("1.5e10");
+    StringRef s("1.5e10");
     EXPECT_DOUBLE_EQ(s.to_double(), 1.5e10);
 }
 
-TEST_F(Fa_StringRefTest, ToDouble_WithPosition)
+TEST_F(StringRefTest, ToDouble_WithPosition)
 {
-    Fa_StringRef s("123.456abc");
+    StringRef s("123.456abc");
     size_t pos = 0;
     f64 result = s.to_double(&pos);
     EXPECT_DOUBLE_EQ(result, 123.456);
     EXPECT_GT(pos, 0);
 }
 
-TEST_F(Fa_StringRefTest, Hash_EmptyString)
+TEST_F(StringRefTest, Hash_EmptyString)
 {
-    Fa_StringRefHash hasher;
-    Fa_StringRef s;
+    StringRefHash hasher;
+    StringRef s;
     EXPECT_EQ(hasher(s), 0);
 }
 
-TEST_F(Fa_StringRefTest, Hash_NonEmpty)
+TEST_F(StringRefTest, Hash_NonEmpty)
 {
-    Fa_StringRefHash hasher;
-    Fa_StringRef s("Hello");
+    StringRefHash hasher;
+    StringRef s("Hello");
     size_t m_hash = hasher(s);
     EXPECT_NE(m_hash, 0);
 }
 
-TEST_F(Fa_StringRefTest, Hash_SameContent)
+TEST_F(StringRefTest, Hash_SameContent)
 {
-    Fa_StringRefHash hasher;
-    Fa_StringRef s1("Hello");
-    Fa_StringRef s2("Hello");
+    StringRefHash hasher;
+    StringRef s1("Hello");
+    StringRef s2("Hello");
     EXPECT_EQ(hasher(s1), hasher(s2));
 }
 
-TEST_F(Fa_StringRefTest, Hash_DifferentContent)
+TEST_F(StringRefTest, Hash_DifferentContent)
 {
-    Fa_StringRefHash hasher;
-    Fa_StringRef s1("Hello");
-    Fa_StringRef s2("World");
+    StringRefHash hasher;
+    StringRef s1("Hello");
+    StringRef s2("World");
     EXPECT_NE(hasher(s1), hasher(s2));
 }
 
-TEST_F(Fa_StringRefTest, StdHash_Works)
+TEST_F(StringRefTest, StdHash_Works)
 {
-    std::hash<Fa_StringRef> hasher;
-    Fa_StringRef s("Test");
+    std::hash<StringRef> hasher;
+    StringRef s("Test");
     size_t m_hash = hasher(s);
     EXPECT_NE(m_hash, 0);
 }
 
-TEST_F(Fa_StringRefPerfTest, Stress_ManyAppends)
+TEST_F(StringRefPerfTest, Stress_ManyAppends)
 {
-    Fa_StringRef s;
+    StringRef s;
     for (int i = 0; i < 10000; i++)
         s += char('A' + (i % 26));
     EXPECT_EQ(s.len(), 10000);
 }
 
-TEST_F(Fa_StringRefPerfTest, Stress_ManyErases)
+TEST_F(StringRefPerfTest, Stress_ManyErases)
 {
-    Fa_StringRef s;
+    StringRef s;
     for (int i = 0; i < 1000; i++)
         s += char('A');
     for (int i = 0; i < 500; i++)
@@ -889,10 +889,10 @@ TEST_F(Fa_StringRefPerfTest, Stress_ManyErases)
     EXPECT_EQ(s.len(), 500);
 }
 
-TEST_F(Fa_StringRefPerfTest, Stress_CopyAndModify)
+TEST_F(StringRefPerfTest, Stress_CopyAndModify)
 {
-    Fa_StringRef original("Original");
-    std::vector<Fa_StringRef> copies;
+    StringRef original("Original");
+    std::vector<StringRef> copies;
 
     for (int i = 0; i < 100; i++) {
         copies.push_back(original);
@@ -904,26 +904,26 @@ TEST_F(Fa_StringRefPerfTest, Stress_CopyAndModify)
         EXPECT_NE(copies[i], original);
 }
 
-TEST_F(Fa_StringRefPerfTest, Stress_LargeString)
+TEST_F(StringRefPerfTest, Stress_LargeString)
 {
     std::string large(100000, 'A');
-    Fa_StringRef s(large.data());
+    StringRef s(large.data());
     EXPECT_EQ(s.len(), 100000);
 }
 
-TEST_F(Fa_StringRefPerfTest, Stress_UnicodeAppends)
+TEST_F(StringRefPerfTest, Stress_UnicodeAppends)
 {
-    Fa_StringRef s;
+    StringRef s;
     for (int i = 0; i < 1000; i++)
         s = s + "مرحبا";
 
     EXPECT_EQ(s.len(), 10000);
 }
 
-TEST_F(Fa_StringRefPerfTest, Stress_ManySubstrings)
+TEST_F(StringRefPerfTest, Stress_ManySubstrings)
 {
-    Fa_StringRef s("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-    std::vector<Fa_StringRef> subs;
+    StringRef s("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+    std::vector<StringRef> subs;
 
     for (size_t i = 0; i < s.len(); i++) {
         for (size_t j = i; j < s.len(); j++)
@@ -933,13 +933,13 @@ TEST_F(Fa_StringRefPerfTest, Stress_ManySubstrings)
     EXPECT_GT(subs.size(), 100);
 }
 
-TEST_F(Fa_StringRefPerfTest, Stress_RandomOperations)
+TEST_F(StringRefPerfTest, Stress_RandomOperations)
 {
     std::mt19937 rng(42);
     std::uniform_int_distribution<> op_dist(0, 4);
     std::uniform_int_distribution<> char_dist('A', 'Z');
 
-    Fa_StringRef s;
+    StringRef s;
 
     for (int i = 0; i < 1000; i++) {
         int op = op_dist(rng);
@@ -955,7 +955,7 @@ TEST_F(Fa_StringRefPerfTest, Stress_RandomOperations)
                 s.truncate(s.len() / 2);
             break;
         case 4: {
-            Fa_StringRef copy = s;
+            StringRef copy = s;
             s = copy;
         } break;
         }
@@ -964,26 +964,26 @@ TEST_F(Fa_StringRefPerfTest, Stress_RandomOperations)
     EXPECT_TRUE(true);
 }
 
-TEST_F(Fa_StringRefTest, EdgeCase_NullTerminatorInMiddle)
+TEST_F(StringRefTest, EdgeCase_NullTerminatorInMiddle)
 {
-    Fa_StringRef s("Hello");
+    StringRef s("Hello");
     s[2] = char { 0 };
     EXPECT_LE(s.len(), 5);
 }
 
-TEST_F(Fa_StringRefPerfTest, EdgeCase_MaxSizeString)
+TEST_F(StringRefPerfTest, EdgeCase_MaxSizeString)
 {
     size_t const large_size = 1000000;
-    Fa_StringRef s(large_size);
+    StringRef s(large_size);
     for (size_t i = 0; i < 100; i++)
         s += 'A';
     EXPECT_EQ(s.len(), 100);
 }
 
-TEST_F(Fa_StringRefTest, EdgeCase_EmptyOperations)
+TEST_F(StringRefTest, EdgeCase_EmptyOperations)
 {
-    Fa_StringRef s;
-    s += Fa_StringRef();
+    StringRef s;
+    s += StringRef();
     s.clear();
     s.erase(0);
     s.truncate(0);
@@ -992,57 +992,57 @@ TEST_F(Fa_StringRefTest, EdgeCase_EmptyOperations)
     EXPECT_TRUE(sub.empty());
 }
 
-TEST_F(Fa_StringRefTest, EdgeCase_SurrogatesPairs)
+TEST_F(StringRefTest, EdgeCase_SurrogatesPairs)
 {
-    Fa_StringRef s("😀😃😄😁");
+    StringRef s("😀😃😄😁");
     EXPECT_GT(s.len(), 4);
 }
 
-TEST_F(Fa_StringRefTest, EdgeCase_AllZeros)
+TEST_F(StringRefTest, EdgeCase_AllZeros)
 {
-    Fa_StringRef s(10);
+    StringRef s(10);
     for (int i = 0; i < 10; i++)
         s += char { 0 };
     EXPECT_EQ(s.len(), 10);
 }
 
-TEST_F(Fa_StringRefTest, EdgeCase_HighUnicodeValues)
+TEST_F(StringRefTest, EdgeCase_HighUnicodeValues)
 {
-    Fa_StringRef s("𝕳𝖊𝖑𝖑𝖔");
+    StringRef s("𝕳𝖊𝖑𝖑𝖔");
     EXPECT_GT(s.len(), 5);
 }
 
-TEST_F(Fa_StringRefTest, NoLeak_MultipleConstructDestruct)
+TEST_F(StringRefTest, NoLeak_MultipleConstructDestruct)
 {
     for (int i = 0; i < 1000; i++)
-        Fa_StringRef s("Test String");
+        StringRef s("Test String");
     EXPECT_TRUE(true);
 }
 
-TEST_F(Fa_StringRefTest, NoLeak_CopyAssignmentLoop)
+TEST_F(StringRefTest, NoLeak_CopyAssignmentLoop)
 {
-    Fa_StringRef original("Original");
+    StringRef original("Original");
     for (int i = 0; i < 100; i++) {
-        Fa_StringRef copy;
+        StringRef copy;
         copy = original;
     }
     EXPECT_TRUE(true);
 }
 
-TEST_F(Fa_StringRefTest, NoLeak_MoveAssignmentLoop)
+TEST_F(StringRefTest, NoLeak_MoveAssignmentLoop)
 {
     for (int i = 0; i < 100; i++) {
-        Fa_StringRef s1("Test");
-        Fa_StringRef s2 = std::move(s1);
+        StringRef s1("Test");
+        StringRef s2 = std::move(s1);
     }
     EXPECT_TRUE(true);
 }
 
-TEST_F(Fa_StringRefPerfTest, Performance_AppendChars)
+TEST_F(StringRefPerfTest, Performance_AppendChars)
 {
     auto start = std::chrono::high_resolution_clock::now();
 
-    Fa_StringRef s;
+    StringRef s;
     s.reserve(10000);
     for (int i = 0; i < 10000; i++)
         s += char('A');
@@ -1054,12 +1054,12 @@ TEST_F(Fa_StringRefPerfTest, Performance_AppendChars)
     std::cout << "Append 10000 chars took: " << duration.count() << "ms\n";
 }
 
-TEST_F(Fa_StringRefPerfTest, Performance_Concatenation)
+TEST_F(StringRefPerfTest, Performance_Concatenation)
 {
     auto start = std::chrono::high_resolution_clock::now();
 
-    Fa_StringRef result;
-    Fa_StringRef part("Part");
+    StringRef result;
+    StringRef part("Part");
 
     for (int i = 0; i < 1000; i++)
         result = result + part;
@@ -1071,14 +1071,14 @@ TEST_F(Fa_StringRefPerfTest, Performance_Concatenation)
     std::cout << "1000 concatenations took: " << duration.count() << "ms\n";
 }
 
-TEST_F(Fa_StringRefPerfTest, Performance_Utf8Conversion)
+TEST_F(StringRefPerfTest, Performance_Utf8Conversion)
 {
     std::string utf8(10000, 'A');
 
     auto start = std::chrono::high_resolution_clock::now();
 
     for (int i = 0; i < 100; i++) {
-        Fa_StringRef s(utf8.data());
+        StringRef s(utf8.data());
         std::string back = s.data();
     }
 
@@ -1088,25 +1088,25 @@ TEST_F(Fa_StringRefPerfTest, Performance_Utf8Conversion)
     std::cout << "100 UTF-8 round-trips (10k chars) took: " << duration.count() << "ms\n";
 }
 
-TEST_F(Fa_StringRefTest, TestTrim)
+TEST_F(StringRefTest, TestTrim)
 {
-    Fa_StringRef s1 = "abc   ";
-    Fa_StringRef s2 = "   abc";
-    Fa_StringRef s3 = "   abc    ";
+    StringRef s1 = "abc   ";
+    StringRef s2 = "   abc";
+    StringRef s3 = "   abc    ";
 
     s1.trim_whitespace();
     s2.trim_whitespace();
     s3.trim_whitespace();
 
-    EXPECT_EQ(s1, Fa_StringRef("abc"));
-    EXPECT_EQ(s2, Fa_StringRef("abc"));
-    EXPECT_EQ(s3, Fa_StringRef("abc"));
+    EXPECT_EQ(s1, StringRef("abc"));
+    EXPECT_EQ(s2, StringRef("abc"));
+    EXPECT_EQ(s3, StringRef("abc"));
 }
 
-TEST_F(Fa_StringRefTest, CoW_BasicSharing)
+TEST_F(StringRefTest, CoW_BasicSharing)
 {
-    Fa_StringRef s1("Hello");
-    Fa_StringRef s2 = s1;
+    StringRef s1("Hello");
+    StringRef s2 = s1;
 
     EXPECT_EQ(s1.get(), s2.get());
 
@@ -1116,10 +1116,10 @@ TEST_F(Fa_StringRefTest, CoW_BasicSharing)
     EXPECT_EQ(s2, "Hello");
 }
 
-TEST_F(Fa_StringRefTest, CoW_NonConstData)
+TEST_F(StringRefTest, CoW_NonConstData)
 {
-    Fa_StringRef s1("Test");
-    Fa_StringRef s2 = s1;
+    StringRef s1("Test");
+    StringRef s2 = s1;
 
     char* ptr1 = s1.data();
     char const* ptr2 = s2.data();
@@ -1149,11 +1149,11 @@ static void do_not_optimize(T const& v)
 // ---------------------------------------------------------------------------
 
 // Baseline: 1 M single-char appends with pre-reserved buffer (pure write path).
-TEST_F(Fa_StringRefPerfTest, Append_1M_Chars_PreReserved)
+TEST_F(StringRefPerfTest, Append_1M_Chars_PreReserved)
 {
     constexpr int N = 1'000'000;
 
-    Fa_StringRef s;
+    StringRef s;
     s.reserve(N);
 
     auto t0 = std::chrono::high_resolution_clock::now();
@@ -1167,11 +1167,11 @@ TEST_F(Fa_StringRefPerfTest, Append_1M_Chars_PreReserved)
 }
 
 // Append with no pre-reservation — measures reallocation overhead.
-TEST_F(Fa_StringRefPerfTest, Append_1M_Chars_NoReserve)
+TEST_F(StringRefPerfTest, Append_1M_Chars_NoReserve)
 {
     constexpr int N = 1'000'000;
 
-    Fa_StringRef s;
+    StringRef s;
 
     auto t0 = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < N; i++)
@@ -1184,12 +1184,12 @@ TEST_F(Fa_StringRefPerfTest, Append_1M_Chars_NoReserve)
 }
 
 // Append short string chunks — 250k * 4 bytes = 1 MB total.
-TEST_F(Fa_StringRefPerfTest, Append_250k_ShortStrings)
+TEST_F(StringRefPerfTest, Append_250k_ShortStrings)
 {
     constexpr int N = 250'000;
-    Fa_StringRef chunk("abcd");
+    StringRef chunk("abcd");
 
-    Fa_StringRef s;
+    StringRef s;
     s.reserve(N * 4);
 
     auto t0 = std::chrono::high_resolution_clock::now();
@@ -1208,11 +1208,11 @@ TEST_F(Fa_StringRefPerfTest, Append_250k_ShortStrings)
 
 // 10k concatenations via operator+ building a growing string.
 // If operator+ is naive this is O(n²); a good impl should stay linear-ish.
-TEST_F(Fa_StringRefPerfTest, Concat_10k_Growing)
+TEST_F(StringRefPerfTest, Concat_10k_Growing)
 {
     constexpr int N = 10'000;
-    Fa_StringRef part("X");
-    Fa_StringRef result;
+    StringRef part("X");
+    StringRef result;
 
     auto t0 = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < N; i++)
@@ -1225,11 +1225,11 @@ TEST_F(Fa_StringRefPerfTest, Concat_10k_Growing)
 }
 
 // Same total bytes but using += — should be significantly faster.
-TEST_F(Fa_StringRefPerfTest, Concat_10k_AppendAssign)
+TEST_F(StringRefPerfTest, Concat_10k_AppendAssign)
 {
     constexpr int N = 10'000;
-    Fa_StringRef part("X");
-    Fa_StringRef result;
+    StringRef part("X");
+    StringRef result;
     result.reserve(N);
 
     auto t0 = std::chrono::high_resolution_clock::now();
@@ -1247,14 +1247,14 @@ TEST_F(Fa_StringRefPerfTest, Concat_10k_AppendAssign)
 // ---------------------------------------------------------------------------
 
 // 100k shallow copies (no mutation) — should be near-free if CoW shares data.
-TEST_F(Fa_StringRefPerfTest, CoW_100k_ShallowCopies)
+TEST_F(StringRefPerfTest, CoW_100k_ShallowCopies)
 {
     constexpr int N = 100'000;
-    Fa_StringRef original("The quick brown fox jumps over the lazy dog");
+    StringRef original("The quick brown fox jumps over the lazy dog");
 
     auto t0 = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < N; i++) {
-        Fa_StringRef copy = original;
+        StringRef copy = original;
         do_not_optimize(copy);
     }
     f64 us = microseconds_since(t0);
@@ -1263,14 +1263,14 @@ TEST_F(Fa_StringRefPerfTest, CoW_100k_ShallowCopies)
 }
 
 // 100k copy-then-mutate — each forces a real allocation (CoW break).
-TEST_F(Fa_StringRefPerfTest, CoW_100k_CopyThenMutate)
+TEST_F(StringRefPerfTest, CoW_100k_CopyThenMutate)
 {
     constexpr int N = 100'000;
-    Fa_StringRef original("The quick brown fox jumps over the lazy dog");
+    StringRef original("The quick brown fox jumps over the lazy dog");
 
     auto t0 = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < N; i++) {
-        Fa_StringRef copy = original;
+        StringRef copy = original;
         copy[0] = 'X'; // triggers CoW detach
         do_not_optimize(copy);
     }
@@ -1280,15 +1280,15 @@ TEST_F(Fa_StringRefPerfTest, CoW_100k_CopyThenMutate)
 }
 
 // Ratio test: shallow copy should be substantially faster than copy+mutate.
-TEST_F(Fa_StringRefPerfTest, CoW_ShallowVsMutate_Ratio)
+TEST_F(StringRefPerfTest, CoW_ShallowVsMutate_Ratio)
 {
     constexpr int N = 50'000;
-    Fa_StringRef original("The quick brown fox jumps over the lazy dog");
+    StringRef original("The quick brown fox jumps over the lazy dog");
 
     // shallow
     auto t0 = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < N; i++) {
-        Fa_StringRef copy = original;
+        StringRef copy = original;
         do_not_optimize(copy);
     }
     f64 shallow_us = microseconds_since(t0);
@@ -1296,7 +1296,7 @@ TEST_F(Fa_StringRefPerfTest, CoW_ShallowVsMutate_Ratio)
     // mutating
     t0 = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < N; i++) {
-        Fa_StringRef copy = original;
+        StringRef copy = original;
         copy[0] = 'X';
         do_not_optimize(copy);
     }
@@ -1317,11 +1317,11 @@ TEST_F(Fa_StringRefPerfTest, CoW_ShallowVsMutate_Ratio)
 // ---------------------------------------------------------------------------
 
 // Hash 1M times — exercises the hot path in hash maps.
-TEST_F(Fa_StringRefPerfTest, Hash_1M_Short)
+TEST_F(StringRefPerfTest, Hash_1M_Short)
 {
     constexpr int N = 1'000'000;
-    Fa_StringRefHash hasher;
-    Fa_StringRef s("identifier_name");
+    StringRefHash hasher;
+    StringRef s("identifier_name");
     size_t acc = 0;
 
     auto t0 = std::chrono::high_resolution_clock::now();
@@ -1333,12 +1333,12 @@ TEST_F(Fa_StringRefPerfTest, Hash_1M_Short)
     std::printf("  Hash 1M (15-byte string):        %.1f µs  (%.1f ns/op)\n", us, us * 1000.0 / N);
 }
 
-TEST_F(Fa_StringRefPerfTest, Hash_1M_Long)
+TEST_F(StringRefPerfTest, Hash_1M_Long)
 {
     constexpr int N = 1'000'000;
-    Fa_StringRefHash hasher;
+    StringRefHash hasher;
     std::string buf(256, 'x');
-    Fa_StringRef s(buf.data());
+    StringRef s(buf.data());
     size_t acc = 0;
 
     auto t0 = std::chrono::high_resolution_clock::now();
@@ -1351,15 +1351,15 @@ TEST_F(Fa_StringRefPerfTest, Hash_1M_Long)
 }
 
 // Hash throughput should scale roughly linearly with length, not quadratically.
-TEST_F(Fa_StringRefPerfTest, Hash_ScalesWithLength)
+TEST_F(StringRefPerfTest, Hash_ScalesWithLength)
 {
     constexpr int N = 500'000;
-    Fa_StringRefHash hasher;
+    StringRefHash hasher;
 
     std::string short_buf(16, 'a');
     std::string long_buf(1024, 'a');
-    Fa_StringRef s_short(short_buf.data());
-    Fa_StringRef s_long(long_buf.data());
+    StringRef s_short(short_buf.data());
+    StringRef s_long(long_buf.data());
     size_t acc = 0;
 
     auto t0 = std::chrono::high_resolution_clock::now();
@@ -1388,11 +1388,11 @@ TEST_F(Fa_StringRefPerfTest, Hash_ScalesWithLength)
 // ---------------------------------------------------------------------------
 
 // find_pos over a 1 MB string — worst case (char not present).
-TEST_F(Fa_StringRefPerfTest, FindPos_1MB_Miss)
+TEST_F(StringRefPerfTest, FindPos_1MB_Miss)
 {
     constexpr size_t SZ = 1'000'000;
     std::string buf(SZ, 'A');
-    Fa_StringRef s(buf.data());
+    StringRef s(buf.data());
 
     auto t0 = std::chrono::high_resolution_clock::now();
     auto result = s.find_pos('Z'); // not present
@@ -1404,12 +1404,12 @@ TEST_F(Fa_StringRefPerfTest, FindPos_1MB_Miss)
 }
 
 // find_pos hit at the very end.
-TEST_F(Fa_StringRefPerfTest, FindPos_1MB_HitAtEnd)
+TEST_F(StringRefPerfTest, FindPos_1MB_HitAtEnd)
 {
     constexpr size_t SZ = 1'000'000;
     std::string buf(SZ, 'A');
     buf.back() = 'Z';
-    Fa_StringRef s(buf.data());
+    StringRef s(buf.data());
 
     auto t0 = std::chrono::high_resolution_clock::now();
     auto result = s.find_pos('Z');
@@ -1426,15 +1426,15 @@ TEST_F(Fa_StringRefPerfTest, FindPos_1MB_HitAtEnd)
 // ---------------------------------------------------------------------------
 
 // 1M slices of a large string — should not allocate if slice is zero-copy.
-TEST_F(Fa_StringRefPerfTest, Slice_1M_NoAlloc)
+TEST_F(StringRefPerfTest, Slice_1M_NoAlloc)
 {
     constexpr int N = 1'000'000;
     std::string buf(1000, 'X');
-    Fa_StringRef s(buf.data());
+    StringRef s(buf.data());
 
     auto t0 = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < N; i++) {
-        Fa_StringRef sl = s.slice(0, 500);
+        StringRef sl = s.slice(0, 500);
         do_not_optimize(sl);
     }
     f64 us = microseconds_since(t0);
@@ -1443,22 +1443,22 @@ TEST_F(Fa_StringRefPerfTest, Slice_1M_NoAlloc)
 }
 
 // Slice should be significantly faster than substr (no alloc vs alloc).
-TEST_F(Fa_StringRefPerfTest, Slice_vs_Substr_Ratio)
+TEST_F(StringRefPerfTest, Slice_vs_Substr_Ratio)
 {
     constexpr int N = 200'000;
     std::string buf(500, 'Y');
-    Fa_StringRef s(buf.data());
+    StringRef s(buf.data());
 
     auto t0 = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < N; i++) {
-        Fa_StringRef sl = s.slice(0, 250);
+        StringRef sl = s.slice(0, 250);
         do_not_optimize(sl);
     }
     f64 slice_us = microseconds_since(t0);
 
     t0 = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < N; i++) {
-        Fa_StringRef sub = s.substr(0, 250);
+        StringRef sub = s.substr(0, 250);
         do_not_optimize(sub);
     }
     f64 substr_us = microseconds_since(t0);
@@ -1474,11 +1474,11 @@ TEST_F(Fa_StringRefPerfTest, Slice_vs_Substr_Ratio)
 // ---------------------------------------------------------------------------
 
 // 2M equality checks on equal strings — hot path in interning / hash maps.
-TEST_F(Fa_StringRefPerfTest, Equality_2M_Equal)
+TEST_F(StringRefPerfTest, Equality_2M_Equal)
 {
     constexpr int N = 2'000'000;
-    Fa_StringRef s1("some_variable_name");
-    Fa_StringRef s2("some_variable_name");
+    StringRef s1("some_variable_name");
+    StringRef s2("some_variable_name");
     int hits = 0;
 
     auto t0 = std::chrono::high_resolution_clock::now();
@@ -1492,15 +1492,15 @@ TEST_F(Fa_StringRefPerfTest, Equality_2M_Equal)
 }
 
 // 2M equality checks on strings that differ in the last byte — worst case.
-TEST_F(Fa_StringRefPerfTest, Equality_2M_DifferLastByte)
+TEST_F(StringRefPerfTest, Equality_2M_DifferLastByte)
 {
     constexpr int N = 2'000'000;
     std::string a(64, 'A');
     a.back() = 'X';
     std::string b(64, 'A');
     b.back() = 'Y';
-    Fa_StringRef s1(a.data());
-    Fa_StringRef s2(b.data());
+    StringRef s1(a.data());
+    StringRef s2(b.data());
     int hits = 0;
 
     auto t0 = std::chrono::high_resolution_clock::now();
@@ -1520,10 +1520,10 @@ TEST_F(Fa_StringRefPerfTest, Equality_2M_DifferLastByte)
 
 // Erase first char 100k times from the front — O(n) per erase → O(n²) total.
 // Documents the cost so regressions are visible.
-TEST_F(Fa_StringRefPerfTest, Erase_100k_FromFront)
+TEST_F(StringRefPerfTest, Erase_100k_FromFront)
 {
     constexpr int N = 100'000;
-    Fa_StringRef s;
+    StringRef s;
     s.reserve(N);
     for (int i = 0; i < N; i++)
         s += char('A' + i % 26);
@@ -1543,11 +1543,11 @@ TEST_F(Fa_StringRefPerfTest, Erase_100k_FromFront)
 // ---------------------------------------------------------------------------
 
 // Append 100k Arabic codepoints (2 bytes each in UTF-8).
-TEST_F(Fa_StringRefPerfTest, Append_100k_ArabicChunks)
+TEST_F(StringRefPerfTest, Append_100k_ArabicChunks)
 {
     constexpr int N = 100'000;
-    Fa_StringRef chunk("مرحبا"); // 10 UTF-8 bytes
-    Fa_StringRef s;
+    StringRef chunk("مرحبا"); // 10 UTF-8 bytes
+    StringRef s;
     s.reserve(N * 10);
 
     auto t0 = std::chrono::high_resolution_clock::now();
@@ -1564,10 +1564,10 @@ TEST_F(Fa_StringRefPerfTest, Append_100k_ArabicChunks)
 // toDouble throughput
 // ---------------------------------------------------------------------------
 
-TEST_F(Fa_StringRefPerfTest, ToDouble_1M_Integer)
+TEST_F(StringRefPerfTest, ToDouble_1M_Integer)
 {
     constexpr int N = 1'000'000;
-    Fa_StringRef s("123456");
+    StringRef s("123456");
     f64 acc = 0;
 
     auto t0 = std::chrono::high_resolution_clock::now();
@@ -1579,10 +1579,10 @@ TEST_F(Fa_StringRefPerfTest, ToDouble_1M_Integer)
     std::printf("  toDouble() 1M integer parses:    %.1f µs  (%.1f ns/op)\n", us, us * 1000.0 / N);
 }
 
-TEST_F(Fa_StringRefPerfTest, ToDouble_1M_Float)
+TEST_F(StringRefPerfTest, ToDouble_1M_Float)
 {
     constexpr int N = 1'000'000;
-    Fa_StringRef s("3.14159265");
+    StringRef s("3.14159265");
     f64 acc = 0;
 
     auto t0 = std::chrono::high_resolution_clock::now();
@@ -1598,30 +1598,30 @@ TEST_F(Fa_StringRefPerfTest, ToDouble_1M_Float)
 // Mixed workload — simulates a realistic interpreter inner loop:
 // intern a name, look it up, compare, slice.
 // ---------------------------------------------------------------------------
-TEST_F(Fa_StringRefPerfTest, Mixed_InterpreterInnerLoop)
+TEST_F(StringRefPerfTest, Mixed_InterpreterInnerLoop)
 {
     constexpr int N = 500'000;
 
     // Simulate identifier table with a small set of names.
-    std::vector<Fa_StringRef> identifiers = {
-        Fa_StringRef("counter"),
-        Fa_StringRef("result"),
-        Fa_StringRef("index"),
-        Fa_StringRef("value"),
-        Fa_StringRef("accumulator"),
+    std::vector<StringRef> identifiers = {
+        StringRef("counter"),
+        StringRef("result"),
+        StringRef("index"),
+        StringRef("value"),
+        StringRef("accumulator"),
     };
 
-    Fa_StringRefHash hasher;
+    StringRefHash hasher;
     size_t acc = 0;
     int matches = 0;
-    Fa_StringRef target("result");
+    StringRef target("result");
 
     auto t0 = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < N; i++) {
-        Fa_StringRef const& id = identifiers[i % identifiers.size()];
+        StringRef const& id = identifiers[i % identifiers.size()];
         acc ^= hasher(id);                                          // hash lookup
         matches += (id == target);                                  // equality check
-        Fa_StringRef sl = id.slice(0, id.len() > 3 ? 3 : id.len()); // prefix slice
+        StringRef sl = id.slice(0, id.len() > 3 ? 3 : id.len()); // prefix slice
         do_not_optimize(sl);
     }
     f64 us = microseconds_since(t0);

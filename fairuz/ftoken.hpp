@@ -7,7 +7,7 @@
 
 namespace fairuz::tok {
 
-enum class Fa_TokenType : int {
+enum class TokenType : int {
     KW_IF,
     KW_ELSE,
     KW_WHILE,
@@ -81,10 +81,10 @@ enum class Fa_TokenType : int {
     ENDMARKER,
     IDENTIFIER,
     INVALID
-}; // enum Fa_TokenType
+}; // enum TokenType
 
-[[nodiscard]] std::optional<Fa_TokenType> lookup_keyword(Fa_StringRef const& s);
-[[nodiscard]] std::optional<Fa_TokenType> lookup_operator(Fa_StringRef const& s);
+[[nodiscard]] std::optional<TokenType> lookup_keyword(StringRef const& s);
+[[nodiscard]] std::optional<TokenType> lookup_operator(StringRef const& s);
 
 enum {
     PREC_COMMA,
@@ -105,9 +105,9 @@ enum {
     PREC_NONE
 }; // enum
 
-class Fa_Token {
+class Token {
 public:
-    Fa_Token(Fa_StringRef val, Fa_TokenType tt, Fa_SourceLocation loc, bool atbol = false)
+    Token(StringRef val, TokenType tt, SourceLocation loc, bool atbol = false)
         : m_value(val)
         , m_type(tt)
         , m_location(loc)
@@ -115,37 +115,37 @@ public:
     {
     }
 
-    Fa_Token()
+    Token()
         : m_value()
-        , m_type(Fa_TokenType::INVALID)
+        , m_type(TokenType::INVALID)
         , m_location()
         , m_atbol(false)
     {
     }
 
-    Fa_Token(Fa_Token const&) = default;
-    Fa_Token(Fa_Token&&) noexcept = default;
+    Token(Token const&) = default;
+    Token(Token&&) noexcept = default;
 
-    bool operator==(Fa_Token const& other) const;
-    bool operator!=(Fa_Token const& other) const;
+    bool operator==(Token const& other) const;
+    bool operator!=(Token const& other) const;
 
-    Fa_Token& operator=(Fa_Token const&) = default;
-    Fa_Token& operator=(Fa_Token&&) noexcept = default;
+    Token& operator=(Token const&) = default;
+    Token& operator=(Token&&) noexcept = default;
 
     // Return const references to avoid copies
-    [[nodiscard]] Fa_StringRef const& lexeme() const;
+    [[nodiscard]] StringRef const& lexeme() const;
 
-    [[nodiscard]] Fa_TokenType const& type() const;
+    [[nodiscard]] TokenType const& type() const;
 
     [[nodiscard]] u32 const& line() const;
 
     [[nodiscard]] u16 const& column() const;
 
-    [[nodiscard]] Fa_SourceLocation const& location() const;
+    [[nodiscard]] SourceLocation const& location() const;
 
     [[nodiscard]] std::string const& filepath() const;
 
-    [[nodiscard]] bool is(Fa_TokenType const tt) const;
+    [[nodiscard]] bool is(TokenType const tt) const;
 
     // is at beginning of a newline
     [[nodiscard]] bool atbol() const;
@@ -163,21 +163,21 @@ public:
     [[nodiscard]] int get_precedence(bool is_unary = false) const;
 
     // friend ostream operator for pretty-printing in tests/logs
-    friend std::ostream& operator<<(std::ostream& os, Fa_Token const& tok)
+    friend std::ostream& operator<<(std::ostream& os, Token const& tok)
     {
-        os << "Fa_Token(\"" << tok.m_value << "\", type=" << static_cast<i32>(tok.m_type) << ", line=" << tok.m_location.line
+        os << "Token(\"" << tok.m_value << "\", type=" << static_cast<i32>(tok.m_type) << ", line=" << tok.m_location.line
            << ", col=" << tok.m_location.column << ", file_pos=" << tok.m_location.offset << ")";
         return os;
     }
 
-    static Fa_StringRef const to_string(Fa_TokenType const tt);
+    static StringRef const to_string(TokenType const tt);
 
 private:
-    Fa_StringRef m_value;
-    Fa_TokenType m_type;
-    Fa_SourceLocation m_location;
+    StringRef m_value;
+    TokenType m_type;
+    SourceLocation m_location;
     bool m_atbol;
-}; // class Fa_Token
+}; // class Token
 
 } // namespace fairuz::tok
 
