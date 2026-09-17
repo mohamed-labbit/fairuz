@@ -270,8 +270,8 @@ struct ClassDescriptor {
     Array<StringRef> field_names; // for runtime slot-map / debug info
     u32 vtable_size { 0 };
     Array<StringRef> method_names; // parallel to vtable_indices
-    Array<u32> vtable_indices;        // indices into Chunk::functions[]
-                                         // of the enclosing (top-level) chunk
+    Array<u32> vtable_indices;     // indices into Chunk::functions[]
+                                   // of the enclosing (top-level) chunk
     static constexpr u32 NULL_SLOT = UINT32_MAX;
 };
 

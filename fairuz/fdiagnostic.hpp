@@ -13,8 +13,8 @@
 namespace fairuz::lex {
 
 class FileManager; // full definition in flexer.hpp; only a pointer is
-                      // needed here, and including flexer.hpp would be
-                      // circular (flexer.hpp already includes this file).
+                   // needed here, and including flexer.hpp would be
+                   // circular (flexer.hpp already includes this file).
 
 } // namespace fairuz::lex
 

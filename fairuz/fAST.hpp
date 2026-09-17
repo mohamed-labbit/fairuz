@@ -1056,8 +1056,7 @@ static inline ExprStmt* make_expr_stmt(Expr* expr, SourceLocation loc)
 }
 static inline ExprStmt* make_assignment_stmt(Expr* target, Expr* value, SourceLocation loc)
 {
-    auto e = ALLOCATE_AST_NODE(AssignExpr, target, value, loc)
-    return ALLOCATE_AST_NODE(ExprStmt, e, loc);
+    auto e = ALLOCATE_AST_NODE(AssignExpr, target, value, loc) return ALLOCATE_AST_NODE(ExprStmt, e, loc);
 }
 static inline IfElseStmt* make_if(Expr* cond, Stmt* then_block, SourceLocation loc, Stmt* else_block = nullptr)
 {

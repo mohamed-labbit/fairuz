@@ -148,7 +148,7 @@ bool values_equal(Value lhs, Value rhs)
 
 } // namespace
 
-#define DISPATCH()                                                                    \
+#define DISPATCH()                                                                       \
     do {                                                                                 \
         if (UNLIKELY(m_gc.should_collect()))                                             \
             m_gc.collect(this);                                                          \
@@ -157,8 +157,8 @@ bool values_equal(Value lhs, Value rhs)
         instr = cur_chunk->code[ip];                                                     \
         ip++;                                                                            \
         SAVE_IP();                                                                       \
-        u8 opcode = static_cast<u8>(instr_op(instr));                                 \
-        if (UNLIKELY(opcode >= static_cast<u8>(OpCode::_COUNT)))                      \
+        u8 opcode = static_cast<u8>(instr_op(instr));                                    \
+        if (UNLIKELY(opcode >= static_cast<u8>(OpCode::_COUNT)))                         \
             raise_error(ErrorCode::INVALID_OPCODE);                                      \
         goto* dispatch_table[opcode];                                                    \
     } while (0)
@@ -179,38 +179,38 @@ bool values_equal(Value lhs, Value rhs)
 #define VM_MULF(lhs, rhs) VMOPF(lhs, rhs, *)
 #define VM_DIVF(lhs, rhs) VMOPF(lhs, rhs, /)
 #define VM_INSTANCE_OP(op_name)                                                \
-    do {                                                                          \
+    do {                                                                       \
         ObjClass* self_klass = nullptr;                                        \
-        Value self_val, arg_val = Value::nil();                             \
-        int slot = -1;                                                            \
-        if (lhs.is_instance()) {                                                  \
-            self_klass = lhs.as_instance()->klass;                                \
+        Value self_val, arg_val = Value::nil();                                \
+        int slot = -1;                                                         \
+        if (lhs.is_instance()) {                                               \
+            self_klass = lhs.as_instance()->klass;                             \
             slot = self_klass->method_slot(sp_method_name(ObjClass::op_name)); \
-            if (slot >= 0) {                                                      \
-                self_val = lhs;                                                   \
-                arg_val = rhs;                                                    \
-            }                                                                     \
-        }                                                                         \
-        if (slot < 0 && rhs.is_instance()) {                                      \
-            self_klass = rhs.as_instance()->klass;                                \
+            if (slot >= 0) {                                                   \
+                self_val = lhs;                                                \
+                arg_val = rhs;                                                 \
+            }                                                                  \
+        }                                                                      \
+        if (slot < 0 && rhs.is_instance()) {                                   \
+            self_klass = rhs.as_instance()->klass;                             \
             slot = self_klass->method_slot(sp_method_name(ObjClass::op_name)); \
-            if (slot >= 0) {                                                      \
-                self_val = rhs;                                                   \
-                arg_val = lhs;                                                    \
-            }                                                                     \
-        }                                                                         \
-        if (UNLIKELY(slot < 0))                                                   \
-            raise_error(ErrorCode::TYPE_ERROR_ARITH);                             \
-        if (UNLIKELY(static_cast<u32>(slot) >= self_klass->vtable.size()))        \
-            raise_error(ErrorCode::UNDEFINED_METHOD);                             \
+            if (slot >= 0) {                                                   \
+                self_val = rhs;                                                \
+                arg_val = lhs;                                                 \
+            }                                                                  \
+        }                                                                      \
+        if (UNLIKELY(slot < 0))                                                \
+            raise_error(ErrorCode::TYPE_ERROR_ARITH);                          \
+        if (UNLIKELY(static_cast<u32>(slot) >= self_klass->vtable.size()))     \
+            raise_error(ErrorCode::UNDEFINED_METHOD);                          \
         Chunk* target_chunk = self_klass->vtable[static_cast<u32>(slot)];      \
-        int caller_stack_top = m_stack_top;                                       \
-        int call_base = caller_stack_top;                                         \
-        if (UNLIKELY(call_base + 2 >= STACK_SIZE))                                \
-            raise_error(ErrorCode::STACK_OVERFLOW);                               \
-        m_stack[call_base + 1] = arg_val;                                         \
+        int caller_stack_top = m_stack_top;                                    \
+        int call_base = caller_stack_top;                                      \
+        if (UNLIKELY(call_base + 2 >= STACK_SIZE))                             \
+            raise_error(ErrorCode::STACK_OVERFLOW);                            \
+        m_stack[call_base + 1] = arg_val;                                      \
         invoke_method(target_chunk, self_val, cur_frame_base + instr_A(instr), \
-            call_base, 2, ip, caller_stack_top, target_chunk->globals);           \
+            call_base, 2, ip, caller_stack_top, target_chunk->globals);        \
     } while (0)
 
 #define RA() cur_base[instr_A(instr)]
@@ -219,7 +219,7 @@ bool values_equal(Value lhs, Value rhs)
 
 #define LOAD_FRAME()                 \
     do {                             \
-        CallFrame& f = frame();   \
+        CallFrame& f = frame();      \
         cur_chunk = f.chunk;         \
         cur_frame_base = f.base;     \
         cur_base = &m_stack[f.base]; \
@@ -231,11 +231,11 @@ bool values_equal(Value lhs, Value rhs)
         frame().ip = ip; \
     } while (0)
 
-#define RECORD_BINARY_IC(lhs, rhs, result)                      \
-    do {                                                           \
-        if (ip < cur_chunk->code.size()                            \
-            && instr_op(cur_chunk->code[ip]) == OpCode::NOP) \
-            update_ic_binary(cur_chunk, ip, lhs, rhs, result);     \
+#define RECORD_BINARY_IC(lhs, rhs, result)                     \
+    do {                                                       \
+        if (ip < cur_chunk->code.size()                        \
+            && instr_op(cur_chunk->code[ip]) == OpCode::NOP)   \
+            update_ic_binary(cur_chunk, ip, lhs, rhs, result); \
     } while (0)
 
 #define REQUIRE_NUMBER(v)                             \

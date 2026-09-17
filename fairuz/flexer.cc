@@ -14,24 +14,24 @@
 #include <cstring>
 #include <fstream>
 
-#define CONSUME_BASE_DIGITS(valid_fa_expr, token_type, err_code, detail)                                     \
-    do {                                                                                                     \
-        current = m_source_manager.next_char();                                                              \
-        bool any = false;                                                                                    \
-        for (;;) {                                                                                           \
-            if (current == '_') {                                                                            \
-                current = m_source_manager.next_char();                                                      \
-                continue;                                                                                    \
-            }                                                                                                \
-            if (!(valid_fa_expr))                                                                            \
-                break;                                                                                       \
-            current = m_source_manager.next_char();                                                          \
-            any = true;                                                                                      \
-        }                                                                                                    \
-        if (!any)                                                                                            \
-            fail(err_code, src_loc, detail);                                                                 \
+#define CONSUME_BASE_DIGITS(valid_fa_expr, token_type, err_code, detail)                                  \
+    do {                                                                                                  \
+        current = m_source_manager.next_char();                                                           \
+        bool any = false;                                                                                 \
+        for (;;) {                                                                                        \
+            if (current == '_') {                                                                         \
+                current = m_source_manager.next_char();                                                   \
+                continue;                                                                                 \
+            }                                                                                             \
+            if (!(valid_fa_expr))                                                                         \
+                break;                                                                                    \
+            current = m_source_manager.next_char();                                                       \
+            any = true;                                                                                   \
+        }                                                                                                 \
+        if (!any)                                                                                         \
+            fail(err_code, src_loc, detail);                                                              \
         StringRef number = m_source_manager.source_slice(start_byte, m_source_manager.get_file_offset()); \
-        return finish(token_type, number, src_loc);                                                          \
+        return finish(token_type, number, src_loc);                                                       \
     } while (0)
 
 #define OCTAL_DIGIT(c)                                                         \

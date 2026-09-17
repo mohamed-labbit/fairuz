@@ -15,9 +15,9 @@ using StringArr = Array<StringRef, /*_Alloc=*/GarbageCollector>;
 
 class GarbageCollector {
 private:
-    Set<ObjHeader*> m_all;   // all tracked objects list
-    Set<ObjHeader*> m_grays; // all gray objects list
-    u64 m_current_size { 0 };      // current tracked memory in bytes
+    Set<ObjHeader*> m_all;    // all tracked objects list
+    Set<ObjHeader*> m_grays;  // all gray objects list
+    u64 m_current_size { 0 }; // current tracked memory in bytes
     u64 m_next_collection { 4096 };
 
 public:

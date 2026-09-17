@@ -10,6 +10,7 @@
 #if FA_USE_NANBOX
 
 #    include <cstdint>
+#    include <cstring>
 
 #endif
 

@@ -16,7 +16,7 @@ static inline void print_value(Value v)
     if (v.is_nil())
         std::cout << "nil";
     else if (v.is_bool())
-        std::cout << (v.as_bool() ? "صحيح" : "خطا"); 
+        std::cout << (v.as_bool() ? "صحيح" : "خطا");
     else if (v.is_int())
         std::cout << std::to_string(v.as_int());
     else if (v.is_double())

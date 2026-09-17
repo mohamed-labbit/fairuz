@@ -21,22 +21,22 @@
 #include <cstdio>
 #include <utility>
 
-#define VERIFY_RESULT(r)            \
+#define VERIFY_RESULT(r)               \
     do {                               \
         if (UNLIKELY((r).has_error())) \
             return (r).error();        \
     } while (0)
 #define TRY_ASSIGN(out, expr) \
-    do {                         \
-        auto _r = (expr);        \
-        VERIFY_RESULT(_r);    \
-        *(out) = _r.value();     \
-    } while (0)
-#define TRY_DISCARD(expr)  \
     do {                      \
         auto _r = (expr);     \
+        VERIFY_RESULT(_r);    \
+        *(out) = _r.value();  \
+    } while (0)
+#define TRY_DISCARD(expr)  \
+    do {                   \
+        auto _r = (expr);  \
         VERIFY_RESULT(_r); \
-        (void)_r;             \
+        (void)_r;          \
     } while (0)
 
 #define COMPILE_EXPR_IMPL(e, r) TRY_ASSIGN(r, compile_expr_impl(e))
@@ -660,7 +660,7 @@ ErrorOr<bool> Compiler::compile_class_def(AST::ClassDef const* s)
     // itself — needs the complete name/slot table to resolve through
     // current_method_slot(), not just whatever happened to compile earlier.
     Array<StringRef> seen_names; // dedup guard across BOTH special and ordinary methods
-    Array<int> method_slots;        // parallel to `methods`: final vtable slot per method
+    Array<int> method_slots;     // parallel to `methods`: final vtable slot per method
 
     for (AST::Stmt* m : methods) {
         if (m->get_kind() != AST::Stmt::Kind::FUNC)
@@ -1494,7 +1494,7 @@ ErrorOr<ExprResult> Compiler::compile_get_impl(AST::GetExpr const* e)
     ALLOC_REG(&member_reg);
 
     emit(make_ABx(OpCode::LOAD_CONST, member_reg,
-                intern_string(e->member->spelling)),
+             intern_string(e->member->spelling)),
         e->member->get_location());
 
     u32 pc = emit(make_ABC(OpCode::INDEX_READ, 0, object_reg, member_reg), loc);

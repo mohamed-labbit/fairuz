@@ -95,6 +95,7 @@ private:
         }
         case ExprKind::NIL: {
             std::cout << color("Nil Literal", Color::GREEN) << "(عدم)\n";
+            break;
         }
 
         case ExprKind::OP_PLUS:
