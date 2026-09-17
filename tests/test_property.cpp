@@ -2,7 +2,9 @@
 #include "../fairuz/fcompiler.hpp"
 #include "../fairuz/fparser.hpp"
 #include "../fairuz/fvm.hpp"
+#include "fAST_printer.hpp"
 #include "test_common.h"
+#include "test_config.h"
 
 #include <gtest/gtest.h>
 #include <memory>
@@ -15,6 +17,8 @@ using namespace fairuz::parser;
 using namespace fairuz::runtime;
 
 namespace {
+
+inline AST::ASTPrinter ast_printer;
 
 struct ExprSpec {
     enum class Kind {
@@ -109,13 +113,13 @@ AST::Expr* build_ast(ExprSpec const& m_expr)
     case ExprSpec::Kind::Lit:
         return lit_int(m_expr.m_value);
     case ExprSpec::Kind::Neg:
-        return unary(build_ast(*m_expr.m_left), AST::UnaryOp::OP_NEG);
+        return unary(build_ast(*m_expr.m_left), AST::Expr::Kind::OP_NEG);
     case ExprSpec::Kind::Add:
-        return binary(build_ast(*m_expr.m_left), build_ast(*m_expr.m_right), AST::BinaryOp::OP_ADD);
+        return binary(build_ast(*m_expr.m_left), build_ast(*m_expr.m_right), AST::Expr::Kind::OP_ADD);
     case ExprSpec::Kind::Sub:
-        return binary(build_ast(*m_expr.m_left), build_ast(*m_expr.m_right), AST::BinaryOp::OP_SUB);
+        return binary(build_ast(*m_expr.m_left), build_ast(*m_expr.m_right), AST::Expr::Kind::OP_SUB);
     case ExprSpec::Kind::Mul:
-        return binary(build_ast(*m_expr.m_left), build_ast(*m_expr.m_right), AST::BinaryOp::OP_MUL);
+        return binary(build_ast(*m_expr.m_left), build_ast(*m_expr.m_right), AST::Expr::Kind::OP_MUL);
     }
     return lit_int(0);
 }
@@ -127,14 +131,18 @@ Value run_fa_expr_source(std::string const& source)
     Parser parser(&fm);
     auto parsed = parser.parse();
     EXPECT_TRUE(parsed.has_value()) << source;
-    Chunk* chunk = Compiler().compile({ expr_stmt(call_expr(name_expr("طبيعي"), list_expr({ parsed.value() }))) });
+    if (test_config::print_ast)
+        ast_printer.print(parsed.value());
+    Chunk* chunk = Compiler().compile({ expr_stmt(call_expr(ident("طبيعي"), list_expr({ parsed.value() }))) });
+    if (test_config::dump_bytecode)
+        chunk->disassemble();
     VM vm;
     return vm.run(chunk);
 }
 
 Value run_fa_expr_ast(AST::Expr* m_expr)
 {
-    Chunk* chunk = Compiler().compile({ expr_stmt(call_expr(name_expr("طبيعي"), list_expr({ m_expr }))) });
+    Chunk* chunk = Compiler().compile({ expr_stmt(call_expr(ident("طبيعي"), list_expr({ m_expr }))) });
     VM vm;
     return vm.run(chunk);
 }

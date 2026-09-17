@@ -34,7 +34,7 @@ public:
     BytecodeChecker& op(OpCode expected)
     {
         EXPECT_EQ(instr_op(cur_), expected) << at() << "  expected op=" << opcode_name(expected)
-                                               << "  got=" << opcode_name(static_cast<OpCode>(instr_op(cur_)));
+                                            << "  got=" << opcode_name(static_cast<OpCode>(instr_op(cur_)));
         return *this;
     }
     BytecodeChecker& A(u8 expected)
@@ -105,7 +105,7 @@ static void dump(Chunk const* c)
 
 static Chunk* compile_ok_local(Array<AST::Stmt*> stmts)
 {
-    AST::Stmt* f = func_def(name_expr("test_function"), list_expr(), blk(stmts));
+    AST::Stmt* f = func_def(ident("test_function"), list_expr(), blk(stmts));
     Compiler c;
     Chunk* ch = compile_ok({ f }, c);
     EXPECT_NE(ch, nullptr);
@@ -156,7 +156,7 @@ static u16 load_int_bx(i64 i) { return static_cast<u16>(i + 32767); }
 
 TEST(CompilerLiteral, NilExpression)
 {
-    Chunk* chunk = compile_ok(expr_stmt(lit_nil()));
+    Chunk* chunk = compile_ok(expr_stmt(nil()));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -307,7 +307,7 @@ TEST(CompilerVar, LocalAssignmentWritesBackToSameRegister)
 {
     Chunk* ch = compile_ok_local({
         decl_stmt("x", lit_int(1)),
-        assign_stmt(name_expr("x"), lit_int(2)),
+        expr_stmt(assign_expr(ident("x"), lit_int(2))),
     });
 
     BytecodeChecker bc(*ch);
@@ -319,7 +319,7 @@ TEST(CompilerVar, LocalAssignmentWritesBackToSameRegister)
 
 TEST(CompilerVar, GlobalLoadAndStore)
 {
-    Chunk* chunk = compile_ok({ assign_stmt(name_expr("g"), lit_int(7)), expr_stmt(name_expr("g")) });
+    Chunk* chunk = compile_ok({ expr_stmt(assign_expr(ident("g"), lit_int(7))), expr_stmt(ident("g")) });
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -334,7 +334,7 @@ TEST(CompilerVar, GlobalLoadAndStore)
         if (v.is_string() && v.as_string()->str == "g")
             found = true;
     }
-    EXPECT_TRUE(found) << "global name_expr 'g' not interned into constant pool";
+    EXPECT_TRUE(found) << "global ident 'g' not interned into constant pool";
 }
 
 TEST(CompilerUnary, NegateVariable)
@@ -342,7 +342,7 @@ TEST(CompilerUnary, NegateVariable)
     Chunk* ch = compile_ok_local(
         {
             decl_stmt("x", lit_int(5)),
-            expr_stmt(unary(name_expr("x"), AST::UnaryOp::OP_NEG)),
+            expr_stmt(unary(ident("x"), AST::Expr::Kind::OP_NEG)),
         });
 
     BytecodeChecker bc(*ch);
@@ -356,7 +356,7 @@ TEST(CompilerUnary, NotVariable)
 {
     Chunk* ch = compile_ok_local({
         decl_stmt("b", lit_bool(true)),
-        expr_stmt(unary(name_expr("b"), AST::UnaryOp::OP_NOT)),
+        expr_stmt(unary(ident("b"), AST::Expr::Kind::OP_NOT)),
     });
 
     BytecodeChecker bc(*ch);
@@ -370,7 +370,7 @@ TEST(CompilerUnary, BitwiseNotVariable)
 {
     Chunk* ch = compile_ok_local({
         decl_stmt("n", lit_int(0xFF)),
-        expr_stmt(unary(name_expr("n"), AST::UnaryOp::OP_BITNOT)),
+        expr_stmt(unary(ident("n"), AST::Expr::Kind::OP_BITNOT)),
     });
 
     BytecodeChecker bc(*ch);
@@ -382,7 +382,7 @@ TEST(CompilerUnary, BitwiseNotVariable)
 
 TEST(CompilerUnary, NegLiteralFolded)
 {
-    Chunk* chunk = compile_ok(expr_stmt(unary(lit_int(3), AST::UnaryOp::OP_NEG)));
+    Chunk* chunk = compile_ok(expr_stmt(unary(lit_int(3), AST::Expr::Kind::OP_NEG)));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -395,7 +395,7 @@ TEST(CompilerUnary, NegLiteralFolded)
 
 TEST(CompilerUnary, NotTrueFolded)
 {
-    Chunk* chunk = compile_ok(expr_stmt(unary(lit_bool(true), AST::UnaryOp::OP_NOT)));
+    Chunk* chunk = compile_ok(expr_stmt(unary(lit_bool(true), AST::Expr::Kind::OP_NOT)));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -407,7 +407,7 @@ TEST(CompilerUnary, NotTrueFolded)
 
 TEST(CompilerUnary, NotFalseFolded)
 {
-    Chunk* chunk = compile_ok(expr_stmt(unary(lit_bool(false), AST::UnaryOp::OP_NOT)));
+    Chunk* chunk = compile_ok(expr_stmt(unary(lit_bool(false), AST::Expr::Kind::OP_NOT)));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -419,7 +419,7 @@ TEST(CompilerUnary, NotFalseFolded)
 
 TEST(CompilerUnary, BNotLiteralFolded)
 {
-    Chunk* chunk = compile_ok(expr_stmt(unary(lit_int(0), AST::UnaryOp::OP_BITNOT)));
+    Chunk* chunk = compile_ok(expr_stmt(unary(lit_int(0), AST::Expr::Kind::OP_BITNOT)));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -433,7 +433,7 @@ TEST(CompilerBinary, AddTwoLocals)
 {
     Chunk* ch = compile_ok_local(
         { decl_stmt("a", lit_int(1)), decl_stmt("b", lit_int(2)),
-            expr_stmt(binary(name_expr("a"), name_expr("b"), AST::BinaryOp::OP_ADD)) });
+            expr_stmt(binary(ident("a"), ident("b"), AST::Expr::Kind::OP_ADD)) });
     BytecodeChecker bc(*ch);
     bc.next("decl_stmt a").op(OpCode::LOAD_INT).A(0).Bx(load_int_bx(1));
     bc.next("decl_stmt b").op(OpCode::LOAD_INT).A(1).Bx(load_int_bx(2));
@@ -446,7 +446,7 @@ TEST(CompilerBinary, AddTwoLocals)
 
 TEST(CompilerBinary, SubtractLiterals)
 {
-    Chunk* chunk = compile_ok(expr_stmt(binary(lit_int(10), lit_int(3), AST::BinaryOp::OP_SUB)));
+    Chunk* chunk = compile_ok(expr_stmt(binary(lit_int(10), lit_int(3), AST::Expr::Kind::OP_SUB)));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -459,7 +459,7 @@ TEST(CompilerBinary, SubtractLiterals)
 
 TEST(CompilerBinary, MultiplyLiterals)
 {
-    Chunk* chunk = compile_ok(expr_stmt(binary(lit_int(6), lit_int(7), AST::BinaryOp::OP_MUL)));
+    Chunk* chunk = compile_ok(expr_stmt(binary(lit_int(6), lit_int(7), AST::Expr::Kind::OP_MUL)));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -471,7 +471,7 @@ TEST(CompilerBinary, MultiplyLiterals)
 
 TEST(CompilerBinary, DivisionFolded)
 {
-    Chunk* chunk = compile_ok(expr_stmt(binary(lit_flt(1.0), lit_flt(2.0), AST::BinaryOp::OP_DIV)));
+    Chunk* chunk = compile_ok(expr_stmt(binary(lit_flt(1.0), lit_flt(2.0), AST::Expr::Kind::OP_DIV)));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -484,7 +484,7 @@ TEST(CompilerBinary, DivisionFolded)
 TEST(CompilerBinary, DivisionByZeroNotFolded)
 {
     Chunk* ch = compile_ok_local({ decl_stmt("x", lit_int(5)),
-        expr_stmt(binary(name_expr("x"), lit_int(0), AST::BinaryOp::OP_DIV)) });
+        expr_stmt(binary(ident("x"), lit_int(0), AST::Expr::Kind::OP_DIV)) });
 
     BytecodeChecker bc(*ch);
     bc.next("decl_stmt x").op(OpCode::LOAD_INT).A(0);
@@ -499,7 +499,7 @@ TEST(CompilerBinary, GreaterThanNormalizedToLT)
 {
     Chunk* chunk = compile_ok_local(
         { decl_stmt("a", lit_int(3)), decl_stmt("b", lit_int(1)),
-            expr_stmt(binary(name_expr("a"), name_expr("b"), AST::BinaryOp::OP_GT)) });
+            expr_stmt(binary(ident("a"), ident("b"), AST::Expr::Kind::OP_GT)) });
 
     BytecodeChecker bc(*chunk);
     bc.next("decl_stmt a").op(OpCode::LOAD_INT).A(0);
@@ -516,7 +516,7 @@ TEST(CompilerBinary, GreaterEqualNormalizedToLE)
     Chunk* ch = compile_ok_local({
         decl_stmt("a", lit_int(5)),
         decl_stmt("b", lit_int(5)),
-        expr_stmt(binary(name_expr("a"), name_expr("b"), AST::BinaryOp::OP_GTE)),
+        expr_stmt(binary(ident("a"), ident("b"), AST::Expr::Kind::OP_GTE)),
     });
 
     BytecodeChecker bc(*ch);
@@ -530,8 +530,8 @@ TEST(CompilerBinary, GreaterEqualNormalizedToLE)
 TEST(CompilerBinary, ICSlotAllocatedPerBinaryOp)
 {
     Chunk* chunk = compile_ok({ decl_stmt("x", lit_int(1)), decl_stmt("y", lit_int(2)),
-        expr_stmt(binary(name_expr("x"), name_expr("y"), AST::BinaryOp::OP_ADD)),
-        expr_stmt(binary(name_expr("x"), name_expr("y"), AST::BinaryOp::OP_MUL)) });
+        expr_stmt(binary(ident("x"), ident("y"), AST::Expr::Kind::OP_ADD)),
+        expr_stmt(binary(ident("x"), ident("y"), AST::Expr::Kind::OP_MUL)) });
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -540,7 +540,7 @@ TEST(CompilerBinary, ICSlotAllocatedPerBinaryOp)
 
 TEST(CompilerBinary, EqualityLiteralsFolded)
 {
-    Chunk* chunk = compile_ok(expr_stmt(binary(lit_int(1), lit_int(1), AST::BinaryOp::OP_EQ)));
+    Chunk* chunk = compile_ok(expr_stmt(binary(lit_int(1), lit_int(1), AST::Expr::Kind::OP_EQ)));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -552,7 +552,7 @@ TEST(CompilerBinary, EqualityLiteralsFolded)
 
 TEST(CompilerBinary, InequalityLiteralsFolded)
 {
-    Chunk* chunk = compile_ok(expr_stmt(binary(lit_int(1), lit_int(2), AST::BinaryOp::OP_NEQ)));
+    Chunk* chunk = compile_ok(expr_stmt(binary(lit_int(1), lit_int(2), AST::Expr::Kind::OP_NEQ)));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -564,7 +564,7 @@ TEST(CompilerBinary, InequalityLiteralsFolded)
 
 TEST(CompilerBinary, BitwiseAndFolded)
 {
-    Chunk* chunk = compile_ok(expr_stmt(binary(lit_int(0b1100), lit_int(0b1010), AST::BinaryOp::OP_BITAND)));
+    Chunk* chunk = compile_ok(expr_stmt(binary(lit_int(0b1100), lit_int(0b1010), AST::Expr::Kind::OP_BITAND)));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -576,7 +576,7 @@ TEST(CompilerBinary, BitwiseAndFolded)
 
 TEST(CompilerBinary, ShiftLeftFolded)
 {
-    Chunk* chunk = compile_ok(expr_stmt(binary(lit_int(1), lit_int(3), AST::BinaryOp::OP_LSHIFT)));
+    Chunk* chunk = compile_ok(expr_stmt(binary(lit_int(1), lit_int(3), AST::Expr::Kind::OP_LSHIFT)));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -591,7 +591,7 @@ TEST(CompilerBinary, LogicalAndShortCircuit)
     Chunk* ch = compile_ok_local({
         decl_stmt("a", lit_bool(true)),
         decl_stmt("b", lit_bool(false)),
-        expr_stmt(binary(name_expr("a"), name_expr("b"), AST::BinaryOp::OP_AND)),
+        expr_stmt(binary(ident("a"), ident("b"), AST::Expr::Kind::OP_AND)),
     });
 
     BytecodeChecker bc(*ch);
@@ -616,7 +616,7 @@ TEST(CompilerBinary, LogicalOrShortCircuit)
     Chunk* chunk = compile_ok_local({
         decl_stmt("a", lit_bool(false)),
         decl_stmt("b", lit_bool(true)),
-        expr_stmt(binary(name_expr("a"), name_expr("b"), AST::BinaryOp::OP_OR)),
+        expr_stmt(binary(ident("a"), ident("b"), AST::Expr::Kind::OP_OR)),
     });
 
     bool found_jit = false;
@@ -629,7 +629,7 @@ TEST(CompilerBinary, LogicalOrShortCircuit)
 
 TEST(CompilerBinary, AndWithBothLiteralsTrueNotFolded)
 {
-    Chunk* chunk = compile_ok(expr_stmt(binary(lit_bool(true), lit_bool(true), AST::BinaryOp::OP_AND)));
+    Chunk* chunk = compile_ok(expr_stmt(binary(lit_bool(true), lit_bool(true), AST::Expr::Kind::OP_AND)));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -638,7 +638,7 @@ TEST(CompilerBinary, AndWithBothLiteralsTrueNotFolded)
 
 TEST(CompilerIf, SimpleIfNoElse)
 {
-    Chunk* chunk = compile_ok(if_stmt(name_expr("x"), blk({ decl_stmt("y", lit_int(1)) })));
+    Chunk* chunk = compile_ok(if_stmt(ident("x"), blk({ decl_stmt("y", lit_int(1)) })));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -657,7 +657,7 @@ TEST(CompilerIf, IfElse)
 {
     Chunk* chunk = compile_ok(
         if_stmt(
-            name_expr("x"),
+            ident("x"),
             blk({ decl_stmt("a", lit_int(1)) }),
             blk({ decl_stmt("b", lit_int(2)) })));
     ASSERT_NE(chunk, nullptr);
@@ -723,7 +723,7 @@ TEST(CompilerIf, ConstantFalseNoElseEmitsNothing)
 
 TEST(CompilerWhile, BasicWhile)
 {
-    Chunk* chunk = compile_ok(while_stmt(name_expr("x"), blk({ decl_stmt("a", lit_int(1)) })));
+    Chunk* chunk = compile_ok(while_stmt(ident("x"), blk({ decl_stmt("a", lit_int(1)) })));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -774,7 +774,7 @@ TEST(CompilerWhile, WhileTrueEmitsUnconditionalLoop)
 
 TEST(CompilerWhile, JumpIfFalsePointsPastLoop)
 {
-    Chunk* chunk = compile_ok(while_stmt(name_expr("cond"), blk({ decl_stmt("x", lit_int(0)) })));
+    Chunk* chunk = compile_ok(while_stmt(ident("cond"), blk({ decl_stmt("x", lit_int(0)) })));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -793,9 +793,9 @@ TEST(CompilerFor, ListIterationLowersToLoopBytecode)
     Chunk* chunk = compile_ok({ decl_stmt("items", list_expr({ lit_int(1), lit_int(2), lit_int(3) })),
         decl_stmt("sum", lit_int(0)),
         for_stmt(
-            name_expr("item"),
-            name_expr("items"),
-            blk({ assign_stmt(name_expr("sum"), binary(name_expr("sum"), name_expr("item"), AST::BinaryOp::OP_ADD)) })) });
+            ident("item"),
+            ident("items"),
+            blk({ expr_stmt(assign_expr(ident("sum"), binary(ident("sum"), ident("item"), AST::Expr::Kind::OP_ADD))) })) });
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -935,7 +935,7 @@ TEST(CompilerDict, NestedListValueKeepsLaterEntriesContiguous)
 
 TEST(CompilerReturn, ReturnNilEmitsReturnNil)
 {
-    Chunk* chunk = compile_ok(return_stmt(lit_nil()));
+    Chunk* chunk = compile_ok(return_stmt(nil()));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -974,7 +974,7 @@ TEST(CompilerReturn, ReturnIsDeadCodeBarrier)
 
 TEST(CompilerReturn, TailCallEmitsCallTail)
 {
-    Chunk* chunk = compile_ok(func_def(name_expr("wrapper"), list_expr(), blk({ return_stmt(call_expr(name_expr("f"))) })));
+    Chunk* chunk = compile_ok(func_def(ident("wrapper"), list_expr(), blk({ return_stmt(call_expr(ident("f"))) })));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -990,7 +990,7 @@ TEST(CompilerReturn, TailCallEmitsCallTail)
 
 TEST(CompilerFunc, EmptyFunction)
 {
-    Chunk* chunk = compile_ok(func_def(name_expr("foo"), list_expr(), blk({ })));
+    Chunk* chunk = compile_ok(func_def(ident("foo"), list_expr(), blk({ })));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -1011,8 +1011,8 @@ TEST(CompilerFunc, EmptyFunction)
 
 TEST(CompilerFunc, FunctionWithParams)
 {
-    Chunk* chunk = compile_ok(func_def(name_expr("add"), list_expr({ name_expr("a"), name_expr("b") }),
-        blk({ return_stmt(binary(name_expr("a"), name_expr("b"), AST::BinaryOp::OP_ADD)) })));
+    Chunk* chunk = compile_ok(func_def(ident("add"), list_expr({ ident("a"), ident("b") }),
+        blk({ return_stmt(binary(ident("a"), ident("b"), AST::Expr::Kind::OP_ADD)) })));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -1031,7 +1031,7 @@ TEST(CompilerFunc, FunctionWithParams)
 
 TEST(CompilerFunc, FunctionStoredAsLocal)
 {
-    Chunk* chunk = compile_ok(func_def(name_expr("foo"), list_expr(), blk({ })));
+    Chunk* chunk = compile_ok(func_def(ident("foo"), list_expr(), blk({ })));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -1040,7 +1040,7 @@ TEST(CompilerFunc, FunctionStoredAsLocal)
 
 TEST(CompilerFunc, NestedFunctionIndexing)
 {
-    Chunk* chunk = compile_ok({ func_def(name_expr("a"), list_expr(), blk({ })), func_def(name_expr("b"), list_expr(), blk({ })) });
+    Chunk* chunk = compile_ok({ func_def(ident("a"), list_expr(), blk({ })), func_def(ident("b"), list_expr(), blk({ })) });
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -1059,12 +1059,12 @@ TEST(CompilerFunc, RecursiveFunctionBodyCompiles)
     // fn fact(n) { if (n) { return n } return 1 }
     Chunk* chunk = compile_ok(
         func_def(
-            name_expr("fact"),
-            list_expr({ name_expr("n") }),
+            ident("fact"),
+            list_expr({ ident("n") }),
             blk({ if_stmt(
-                      name_expr("n"),
+                      ident("n"),
                       blk(
-                          { return_stmt(name_expr("n")) })),
+                          { return_stmt(ident("n")) })),
                 return_stmt(lit_int(1)) })));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
@@ -1075,7 +1075,7 @@ TEST(CompilerFunc, RecursiveFunctionBodyCompiles)
 
 TEST(CompilerFunc, FunctionInsideTopLevelBlockRejected)
 {
-    Chunk* chunk = compile_fail(blk({ func_def(name_expr("inner"), list_expr(), blk({ })) }));
+    Chunk* chunk = compile_fail(blk({ func_def(ident("inner"), list_expr(), blk({ })) }));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -1084,7 +1084,7 @@ TEST(CompilerFunc, FunctionInsideTopLevelBlockRejected)
 
 TEST(CompilerCall, CallWithNoArgs)
 {
-    Chunk* chunk = compile_ok(expr_stmt(call_expr(name_expr("f"))));
+    Chunk* chunk = compile_ok(expr_stmt(call_expr(ident("f"))));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -1099,7 +1099,7 @@ TEST(CompilerCall, CallWithNoArgs)
 TEST(CompilerCall, CallWithTwoArgs)
 {
     Array<AST::Expr*> args { lit_int(1), lit_int(2) };
-    Chunk* chunk = compile_ok(expr_stmt(call_expr(name_expr("f"), list_expr(std::move(args)))));
+    Chunk* chunk = compile_ok(expr_stmt(call_expr(ident("f"), list_expr(std::move(args)))));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -1114,9 +1114,9 @@ TEST(CompilerCall, CallWithTwoArgs)
 
 TEST(CompilerCall, CallResultUsed)
 {
-    Chunk* chunk = compile_ok(decl_stmt("r", call_expr(name_expr("f"), [] {
+    Chunk* chunk = compile_ok(decl_stmt("r", call_expr(ident("f"), [] {
         Array<AST::Expr*> a;
-        a.push(name_expr("x"));
+        a.push(ident("x"));
         return list_expr(a);
     }())));
     ASSERT_NE(chunk, nullptr);
@@ -1131,7 +1131,7 @@ TEST(CompilerCall, CallResultUsed)
 
 TEST(CompilerCall, ICSlotAllocatedPerCallSite)
 {
-    Chunk* chunk = compile_ok({ expr_stmt(call_expr(name_expr("f"))), expr_stmt(call_expr(name_expr("g"))) });
+    Chunk* chunk = compile_ok({ expr_stmt(call_expr(ident("f"))), expr_stmt(call_expr(ident("g"))) });
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -1197,7 +1197,7 @@ TEST(CompilerScope, NestedScopesBothVisible)
         decl_stmt("a", lit_int(1)),
         blk({
             decl_stmt("b", lit_int(2)),
-            decl_stmt("c", binary(name_expr("a"), name_expr("b"), AST::BinaryOp::OP_ADD)),
+            decl_stmt("c", binary(ident("a"), ident("b"), AST::Expr::Kind::OP_ADD)),
         }),
     });
 
@@ -1223,7 +1223,7 @@ TEST(CompilerMeta, TopLevelChunkNameIsMain)
 
 TEST(CompilerMeta, FunctionAritySetCorrectly)
 {
-    Chunk* chunk = compile_ok(func_def(name_expr("f"), list_expr({ name_expr("x"), name_expr("y"), name_expr("z") }), blk({ })));
+    Chunk* chunk = compile_ok(func_def(ident("f"), list_expr({ ident("x"), ident("y"), ident("z") }), blk({ })));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -1233,7 +1233,7 @@ TEST(CompilerMeta, FunctionAritySetCorrectly)
 
 TEST(CompilerMeta, FunctionNameSetCorrectly)
 {
-    Chunk* chunk = compile_ok(func_def(name_expr("compute"), list_expr(), blk({ })));
+    Chunk* chunk = compile_ok(func_def(ident("compute"), list_expr(), blk({ })));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -1253,21 +1253,21 @@ TEST(CompilerMeta, LineInfoPresent)
 TEST(CompilerIntegration, Fibonacci)
 {
     Array<AST::Expr*> args_n1, args_n2;
-    args_n1.push(binary(name_expr("n"), lit_int(1), AST::BinaryOp::OP_SUB));
-    args_n2.push(binary(name_expr("n"), lit_int(2), AST::BinaryOp::OP_SUB));
+    args_n1.push(binary(ident("n"), lit_int(1), AST::Expr::Kind::OP_SUB));
+    args_n2.push(binary(ident("n"), lit_int(2), AST::Expr::Kind::OP_SUB));
 
     Chunk* chunk = compile_ok(
-        func_def(name_expr("fib"),
-            list_expr({ name_expr("n") }),
+        func_def(ident("fib"),
+            list_expr({ ident("n") }),
             blk(
                 { if_stmt(
-                      binary(name_expr("n"), lit_int(1), AST::BinaryOp::OP_LTE),
-                      blk({ return_stmt(name_expr("n")) })),
+                      binary(ident("n"), lit_int(1), AST::Expr::Kind::OP_LTE),
+                      blk({ return_stmt(ident("n")) })),
                     return_stmt(
                         binary(
-                            call_expr(name_expr("fib"), list_expr(std::move(args_n1))),
-                            call_expr(name_expr("fib"), list_expr(std::move(args_n2))),
-                            AST::BinaryOp::OP_ADD)) })));
+                            call_expr(ident("fib"), list_expr(std::move(args_n1))),
+                            call_expr(ident("fib"), list_expr(std::move(args_n2))),
+                            AST::Expr::Kind::OP_ADD)) })));
 
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
@@ -1284,7 +1284,7 @@ TEST(CompilerLoop, BreakPatchesToLoopExit)
 {
     Chunk* chunk = compile_ok(
         while_stmt(
-            name_expr("cond"),
+            ident("cond"),
             blk({ break_stmt(),
                 decl_stmt("x", lit_int(1)) })));
     ASSERT_NE(chunk, nullptr);
@@ -1309,7 +1309,7 @@ TEST(CompilerLoop, ContinuePatchesToLoopLatch)
 {
     Chunk* chunk = compile_ok(
         while_stmt(
-            name_expr("cond"),
+            ident("cond"),
             blk({ continue_stmt(),
                 decl_stmt("x", lit_int(1)) })));
     ASSERT_NE(chunk, nullptr);
@@ -1350,12 +1350,12 @@ TEST(CompilerIntegration, NestedArithmetic)
             binary(
                 lit_int(2),
                 lit_int(3),
-                AST::BinaryOp::OP_ADD),
+                AST::Expr::Kind::OP_ADD),
             binary(
                 lit_int(4),
                 lit_int(1),
-                AST::BinaryOp::OP_SUB),
-            AST::BinaryOp::OP_MUL)) });
+                AST::Expr::Kind::OP_SUB),
+            AST::Expr::Kind::OP_MUL)) });
 
     BytecodeChecker bc(*ch);
     bc.next("LOAD_INT 15").op(OpCode::LOAD_INT).A(0).Bx(load_int_bx(15));

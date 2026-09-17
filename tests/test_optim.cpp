@@ -17,16 +17,16 @@ TEST(OptimTest, DoesNotRewriteBitnotAsLogicalOperations)
     // ~(x <= y) => x > y
     // ~(x >= y) => x < y
 
-    NameExpr* x = name_expr("x");
-    NameExpr* y = name_expr("y");
+    IdentifierExpr* x = ident("x");
+    IdentifierExpr* y = ident("y");
 
-    UnaryExpr* ast_1 = unary(unary(x, UnaryOp::OP_BITNOT), UnaryOp::OP_BITNOT);
-    UnaryExpr* ast_2 = unary(binary(x, y, BinaryOp::OP_EQ), UnaryOp::OP_BITNOT);
-    UnaryExpr* ast_3 = unary(binary(x, y, BinaryOp::OP_NEQ), UnaryOp::OP_BITNOT);
-    UnaryExpr* ast_4 = unary(binary(x, y, BinaryOp::OP_LT), UnaryOp::OP_BITNOT);
-    UnaryExpr* ast_5 = unary(binary(x, y, BinaryOp::OP_GT), UnaryOp::OP_BITNOT);
-    UnaryExpr* ast_6 = unary(binary(x, y, BinaryOp::OP_LTE), UnaryOp::OP_BITNOT);
-    UnaryExpr* ast_7 = unary(binary(x, y, BinaryOp::OP_GTE), UnaryOp::OP_BITNOT);
+    UnaryExpr* ast_1 = unary(unary(x, Expr::Kind::OP_BITNOT), Expr::Kind::OP_BITNOT);
+    UnaryExpr* ast_2 = unary(binary(x, y, Expr::Kind::OP_EQ), Expr::Kind::OP_BITNOT);
+    UnaryExpr* ast_3 = unary(binary(x, y, Expr::Kind::OP_NEQ), Expr::Kind::OP_BITNOT);
+    UnaryExpr* ast_4 = unary(binary(x, y, Expr::Kind::OP_LT), Expr::Kind::OP_BITNOT);
+    UnaryExpr* ast_5 = unary(binary(x, y, Expr::Kind::OP_GT), Expr::Kind::OP_BITNOT);
+    UnaryExpr* ast_6 = unary(binary(x, y, Expr::Kind::OP_LTE), Expr::Kind::OP_BITNOT);
+    UnaryExpr* ast_7 = unary(binary(x, y, Expr::Kind::OP_GTE), Expr::Kind::OP_BITNOT);
 
     auto ret_1 = try_strength_reduce_unary(ast_1);
     auto ret_2 = try_strength_reduce_unary(ast_2);
@@ -61,25 +61,25 @@ TEST(OptimTest, DoesNotDiscardDynamicOperandErrorsOrOverloads)
     // x << 0 = x
     // x >> 0 = x
 
-    Expr* x = name_expr("x");
+    Expr* x = ident("x");
     Expr* zero = lit_int(0);
     Expr* one = lit_int(1);
     Expr* two = lit_int(2);
     Expr* neg = lit_int(-1);
 
-    auto ret_1 = try_strength_reduce_binary(binary(x, zero, BinaryOp::OP_MUL));
-    auto ret_2 = try_strength_reduce_binary(binary(x, one, BinaryOp::OP_MUL));
-    auto ret_3 = try_strength_reduce_binary(binary(x, two, BinaryOp::OP_MUL));
-    auto ret_4 = try_strength_reduce_binary(binary(x, one, BinaryOp::OP_DIV));
-    auto ret_5 = try_strength_reduce_binary(binary(x, neg, BinaryOp::OP_DIV));
-    auto ret_6 = try_strength_reduce_binary(binary(x, zero, BinaryOp::OP_BITAND));
-    auto ret_7 = try_strength_reduce_binary(binary(x, neg, BinaryOp::OP_BITAND));
-    auto ret_8 = try_strength_reduce_binary(binary(x, zero, BinaryOp::OP_BITOR));
-    auto ret_9 = try_strength_reduce_binary(binary(x, neg, BinaryOp::OP_BITOR));
-    auto ret_10 = try_strength_reduce_binary(binary(x, zero, BinaryOp::OP_BITXOR));
-    auto ret_11 = try_strength_reduce_binary(binary(x, neg, BinaryOp::OP_BITXOR));
-    auto ret_12 = try_strength_reduce_binary(binary(x, zero, BinaryOp::OP_LSHIFT));
-    auto ret_13 = try_strength_reduce_binary(binary(x, zero, BinaryOp::OP_RSHIFT));
+    auto ret_1 = try_strength_reduce_binary(binary(x, zero, Expr::Kind::OP_MUL));
+    auto ret_2 = try_strength_reduce_binary(binary(x, one, Expr::Kind::OP_MUL));
+    auto ret_3 = try_strength_reduce_binary(binary(x, two, Expr::Kind::OP_MUL));
+    auto ret_4 = try_strength_reduce_binary(binary(x, one, Expr::Kind::OP_DIV));
+    auto ret_5 = try_strength_reduce_binary(binary(x, neg, Expr::Kind::OP_DIV));
+    auto ret_6 = try_strength_reduce_binary(binary(x, zero, Expr::Kind::OP_BITAND));
+    auto ret_7 = try_strength_reduce_binary(binary(x, neg, Expr::Kind::OP_BITAND));
+    auto ret_8 = try_strength_reduce_binary(binary(x, zero, Expr::Kind::OP_BITOR));
+    auto ret_9 = try_strength_reduce_binary(binary(x, neg, Expr::Kind::OP_BITOR));
+    auto ret_10 = try_strength_reduce_binary(binary(x, zero, Expr::Kind::OP_BITXOR));
+    auto ret_11 = try_strength_reduce_binary(binary(x, neg, Expr::Kind::OP_BITXOR));
+    auto ret_12 = try_strength_reduce_binary(binary(x, zero, Expr::Kind::OP_LSHIFT));
+    auto ret_13 = try_strength_reduce_binary(binary(x, zero, Expr::Kind::OP_RSHIFT));
 
     EXPECT_FALSE(ret_1.has_value());
     EXPECT_FALSE(ret_2.has_value());
@@ -99,24 +99,24 @@ TEST(OptimTest, DoesNotDiscardDynamicOperandErrorsOrOverloads)
 TEST(OptimTest, PurityChecks)
 {
     auto def = func_def(
-        name_expr("def"),
-        list_expr({ name_expr("x") }),
-        blk({ return_stmt(binary(name_expr("x"), name_expr("x"), BinaryOp::OP_ADD)) }));
-    Expr* call = call_expr(def->get_name());
-    Expr* var = name_expr("x");
+        ident("def"),
+        list_expr({ ident("x") }),
+        blk({ return_stmt(binary(ident("x"), ident("x"), Expr::Kind::OP_ADD)) }));
+    Expr* call = call_expr(def->name->clone());
+    Expr* var = ident("x");
     Expr* assign = assign_expr(var, lit_int(0));
 
     EXPECT_TRUE(is_pure(lit_int(0)));
     EXPECT_TRUE(is_pure(var));
-    EXPECT_TRUE(is_pure(binary(var, var, BinaryOp::OP_ADD)));
-    EXPECT_TRUE(is_pure(unary(var, UnaryOp::OP_NEG)));
+    EXPECT_TRUE(is_pure(binary(var, var, Expr::Kind::OP_ADD)));
+    EXPECT_TRUE(is_pure(unary(var, Expr::Kind::OP_NEG)));
     EXPECT_TRUE(is_pure(list_expr({ var, lit_int(0) })));
     EXPECT_TRUE(is_pure(index_expr(list_expr(), var)));
 
     EXPECT_FALSE(is_pure(call));
     EXPECT_FALSE(is_pure(assign));
-    EXPECT_FALSE(is_pure(binary(var, call, BinaryOp::OP_ADD)));
-    EXPECT_FALSE(is_pure(unary(call, UnaryOp::OP_NEG)));
+    EXPECT_FALSE(is_pure(binary(var, call, Expr::Kind::OP_ADD)));
+    EXPECT_FALSE(is_pure(unary(call, Expr::Kind::OP_NEG)));
     EXPECT_FALSE(is_pure(list_expr({ assign, var, call })));
     EXPECT_FALSE(is_pure(index_expr(list_expr(), call)));
 }

@@ -9,9 +9,6 @@
 
 #if FA_USE_NANBOX
 
-#    include "fstring.hpp"
-#    include "ftable.hpp"
-
 #    include <cstdint>
 
 #endif

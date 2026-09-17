@@ -8,7 +8,6 @@
 
 #include <cassert>
 #include <cstddef>
-#include <tuple>
 
 #define ALLOCATE_AST_NODE(type, ...) get_allocator().allocate_object<type>(__VA_ARGS__);
 
@@ -23,18 +22,22 @@ class Expr;
 class Stmt;
 class BinaryExpr;
 class UnaryExpr;
-class LiteralExpr;
-class NameExpr;
+class IntLiteralExpr;
+class FloatLiteralExpr;
+class StringLiteralExpr;
+class BoolLiteralExpr;
+class NilExpr;
+class IdentifierExpr;
 class CallExpr;
-class AssignmentExpr;
+class AssignExpr;
 class ListExpr;
 class IndexExpr;
 class DictExpr;
 class GetExpr;
 
 class ExprStmt;
-class AssignmentStmt;
-class IfStmt;
+class AssignStmt;
+class IfElseStmt;
 class WhileStmt;
 class ForStmt;
 class FunctionDef;
@@ -84,82 +87,84 @@ class ExprVisitor {
 public:
     virtual ~ExprVisitor() = default;
 
-    virtual void visit(BinaryExpr&) = 0;
-    virtual void visit(UnaryExpr&) = 0;
-    virtual void visit(LiteralExpr&) = 0;
-    virtual void visit(NameExpr&) = 0;
-    virtual void visit(CallExpr&) = 0;
-    virtual void visit(AssignmentExpr&) = 0;
-    virtual void visit(ListExpr&) = 0;
-    virtual void visit(IndexExpr&) = 0;
-    virtual void visit(DictExpr&) = 0;
-    virtual void visit(GetExpr&) = 0;
+    virtual void visit(BinaryExpr const&) const = 0;
+    virtual void visit(UnaryExpr const&) const = 0;
+    virtual void visit(IntLiteralExpr const&) const = 0;
+    virtual void visit(FloatLiteralExpr const&) const = 0;
+    virtual void visit(StringLiteralExpr const&) const = 0;
+    virtual void visit(BoolLiteralExpr const&) const = 0;
+    virtual void visit(NilExpr const&) const = 0;
+    virtual void visit(IdentifierExpr const&) const = 0;
+    virtual void visit(CallExpr const&) const = 0;
+    virtual void visit(AssignExpr const&) const = 0;
+    virtual void visit(ListExpr const&) const = 0;
+    virtual void visit(IndexExpr const&) const = 0;
+    virtual void visit(DictExpr const&) const = 0;
+    virtual void visit(GetExpr const&) const = 0;
 };
 
 class StmtVisitor {
 public:
     virtual ~StmtVisitor() = default;
 
-    virtual void visit(ExprStmt&) = 0;
-    virtual void visit(AssignmentStmt&) = 0;
-    virtual void visit(IfStmt&) = 0;
-    virtual void visit(WhileStmt&) = 0;
-    virtual void visit(ForStmt&) = 0;
-    virtual void visit(FunctionDef&) = 0;
-    virtual void visit(ReturnStmt&) = 0;
-    virtual void visit(BreakStmt&) = 0;
-    virtual void visit(ContinueStmt&) = 0;
-    virtual void visit(BlockStmt&) = 0;
-    virtual void visit(ClassDef&) = 0;
-    virtual void visit(ImportStmt&) = 0;
+    virtual void visit(ExprStmt const&) const = 0;
+    virtual void visit(AssignStmt const&) const = 0;
+    virtual void visit(IfElseStmt const&) const = 0;
+    virtual void visit(WhileStmt const&) const = 0;
+    virtual void visit(ForStmt const&) const = 0;
+    virtual void visit(FunctionDef const&) const = 0;
+    virtual void visit(ReturnStmt const&) const = 0;
+    virtual void visit(BreakStmt const&) const = 0;
+    virtual void visit(ContinueStmt const&) const = 0;
+    virtual void visit(BlockStmt const&) const = 0;
+    virtual void visit(ClassDef const&) const = 0;
+    virtual void visit(ImportStmt const&) const = 0;
 };
-
-enum class BinaryOp : u8 {
-    OP_ADD,
-    OP_SUB,
-    OP_MUL,
-    OP_DIV,
-    OP_MOD,
-    OP_POW,
-    OP_EQ,
-    OP_NEQ,
-    OP_LT,
-    OP_GT,
-    OP_LTE,
-    OP_GTE,
-    OP_BITAND,
-    OP_BITOR,
-    OP_BITXOR,
-    OP_LSHIFT,
-    OP_RSHIFT,
-    OP_AND,
-    OP_OR,
-    INVALID
-}; // enum BinaryOp
-
-enum class UnaryOp : u8 {
-    OP_PLUS,
-    OP_NEG,
-    OP_BITNOT,
-    OP_NOT,
-    INVALID
-}; // enum UnaryOp
 
 /// NOTE: do not know if the assert for the costructors args is a good idea
 
 class Expr : public ASTNode {
 public:
     enum class Kind : int {
-        BINARY,
-        UNARY,
-        LITERAL,
-        NAME,
+        /// final node kind
+        INT_LITERAL,
+        FLOAT_LITERAL,
+        STRING_LITERAL,
+        BOOL_LITERAL,
+        IDENTIFIER,
         CALL,
         ASSIGNMENT,
         LIST,
         INDEX_READ,
         DICT,
         GET,
+        /// bin op
+        OP_ADD,
+        OP_SUB,
+        OP_MUL,
+        OP_DIV,
+        OP_MOD,
+        OP_POW,
+        OP_EQ,
+        OP_NEQ,
+        OP_LT,
+        OP_GT,
+        OP_LTE,
+        OP_GTE,
+        OP_BITAND,
+        OP_BITOR,
+        OP_BITXOR,
+        OP_LSHIFT,
+        OP_RSHIFT,
+        OP_AND,
+        OP_OR,
+        /// un op
+        OP_PLUS,
+        OP_NEG,
+        OP_BITNOT,
+        OP_NOT,
+        //
+        NIL,
         INVALID,
     }; // enum Kind
 
@@ -182,29 +187,24 @@ public:
 
     virtual bool equals(Expr const* other) const = 0;
     virtual Expr* clone() const = 0;
-    virtual void accept(ExprVisitor& v) = 0;
+    virtual void accept(ExprVisitor const& v) const = 0;
 
     Kind get_kind() const { return m_kind; }
     NodeType get_node_type() const override { return NodeType::EXPRESSION; }
 }; // class Expr
 
 class BinaryExpr final : public Expr {
-private:
-    Expr* m_left { nullptr };
-    Expr* m_right { nullptr };
-    BinaryOp m_operator { BinaryOp::INVALID };
-
 public:
-    BinaryExpr() = delete;
+    Expr const* lhs;
+    Expr const* rhs;
 
-    BinaryExpr(Expr* l, Expr* r, BinaryOp op, SourceLocation loc)
-        : Expr(loc, Kind::BINARY)
-        , m_left(l)
-        , m_right(r)
-        , m_operator(op)
+    BinaryExpr(Kind kind, Expr* l, Expr* r, SourceLocation loc)
+        : Expr(loc, kind)
+        , lhs(l)
+        , rhs(r)
     {
-        assert(m_left != nullptr);
-        assert(m_right != nullptr);
+        assert(lhs != nullptr);
+        assert(rhs != nullptr);
     }
 
     [[nodiscard]] bool equals(Expr const* other) const override
@@ -213,37 +213,24 @@ public:
             return false;
 
         auto bin = static_cast<BinaryExpr const*>(other);
-        return m_operator == bin->get_operator() && m_left->equals(bin->get_left()) && m_right->equals(bin->get_right());
+        return lhs->equals(bin->lhs) && rhs->equals(bin->rhs);
     }
     [[nodiscard]] BinaryExpr* clone() const override
     {
-        return ALLOCATE_AST_NODE(BinaryExpr, m_left->clone(), m_right->clone(), m_operator, get_location());
+        return ALLOCATE_AST_NODE(BinaryExpr, m_kind, lhs->clone(), rhs->clone(), get_location());
     }
-    void accept(ExprVisitor& v) override { v.visit(*this); }
-
-    [[nodiscard]] Expr* get_left() const { return m_left; }
-    [[nodiscard]] Expr* get_right() const { return m_right; }
-    [[nodiscard]] BinaryOp get_operator() const { return m_operator; }
-
-    void set_left(Expr* l) { m_left = l; }
-    void set_right(Expr* r) { m_right = r; }
-    void set_operator(BinaryOp op) { m_operator = op; }
+    void accept(ExprVisitor const& v) const override { v.visit(*this); }
 }; // class BinaryExpr
 
 class UnaryExpr final : public Expr {
-private:
-    Expr* m_operand { nullptr };
-    UnaryOp m_operator { UnaryOp::INVALID };
-
 public:
-    UnaryExpr() = delete;
+    Expr const* operand;
 
-    UnaryExpr(Expr* operand, UnaryOp op, SourceLocation loc)
-        : Expr(loc, Kind::UNARY)
-        , m_operand(operand)
-        , m_operator(op)
+    UnaryExpr(Kind kind, Expr* o, SourceLocation loc)
+        : Expr(loc, kind)
+        , operand(o)
     {
-        assert(m_operand != nullptr);
+        assert(operand != nullptr);
     }
 
     [[nodiscard]] bool equals(Expr const* other) const override
@@ -252,112 +239,23 @@ public:
             return false;
 
         auto un = static_cast<UnaryExpr const*>(other);
-        return m_operator == un->get_operator() && m_operand->equals(un->get_operand());
+        return operand->equals(un->operand);
     }
     [[nodiscard]] UnaryExpr* clone() const override
     {
-        return ALLOCATE_AST_NODE(UnaryExpr, m_operand->clone(), m_operator, get_location());
+        return ALLOCATE_AST_NODE(UnaryExpr, m_kind, operand->clone(), get_location());
     }
-    void accept(ExprVisitor& v) override { v.visit(*this); }
-
-    [[nodiscard]] Expr* get_operand() const { return m_operand; }
-    [[nodiscard]] UnaryOp get_operator() const { return m_operator; }
+    void accept(ExprVisitor const& v) const override { v.visit(*this); }
 }; // class UnaryExpr
 
-class LiteralExpr final : public Expr {
+class IntLiteralExpr final : public Expr {
 public:
-    enum class Type {
-        INTEGER,
-        FLOAT,
-        STRING,
-        BOOLEAN,
-        NIL
-    }; // enum Type
+    i64 const value { INT64_C(0) };
 
-private:
-    Type m_type { Type::NIL };
-
-    union {
-        i64 int_value;
-        f64 float_value;
-        bool bool_value;
-    }; // union
-
-    StringRef str_value;
-
-public:
-    explicit LiteralExpr(SourceLocation loc)
-        : Expr(loc, Kind::LITERAL)
-        , m_type(Type::NIL)
+    IntLiteralExpr(i64 v, SourceLocation loc)
+        : Expr(loc, Kind::INT_LITERAL)
+        , value(v)
     {
-    }
-
-    LiteralExpr(i64 value, Type type, SourceLocation loc)
-        : Expr(loc, Kind::LITERAL)
-        , m_type(type)
-        , int_value(value)
-    {
-    }
-    LiteralExpr(f64 value, Type type, SourceLocation loc)
-        : Expr(loc, Kind::LITERAL)
-        , m_type(type)
-        , float_value(value)
-    {
-    }
-    explicit LiteralExpr(bool value, SourceLocation loc)
-        : Expr(loc, Kind::LITERAL)
-        , m_type(Type::BOOLEAN)
-        , bool_value(value)
-    {
-    }
-    explicit LiteralExpr(StringRef str, SourceLocation loc)
-        : Expr(loc, Kind::LITERAL)
-        , m_type(Type::STRING)
-        , str_value(std::move(str))
-    {
-    }
-
-    [[nodiscard]] Type get_type() const { return m_type; }
-
-    [[nodiscard]] i64 get_int() const
-    {
-        assert(is_integer());
-        return int_value;
-    }
-
-    [[nodiscard]] f64 get_float() const
-    {
-        assert(is_float());
-        return float_value;
-    }
-
-    [[nodiscard]] bool get_bool() const
-    {
-        assert(is_bool());
-        return bool_value;
-    }
-
-    [[nodiscard]] StringRef get_str() const
-    {
-        assert(is_string());
-        return str_value;
-    }
-
-    [[nodiscard]] bool is_integer() const { return m_type == Type::INTEGER; }
-    [[nodiscard]] bool is_float() const { return m_type == Type::FLOAT; }
-    [[nodiscard]] bool is_bool() const { return m_type == Type::BOOLEAN; }
-    [[nodiscard]] bool is_string() const { return m_type == Type::STRING; }
-    [[nodiscard]] bool is_numeric() const { return is_integer() || is_float(); }
-    [[nodiscard]] bool is_nil() const { return m_type == Type::NIL; }
-
-    [[nodiscard]] f64 as_number() const
-    {
-        if (is_integer())
-            return static_cast<f64>(int_value);
-        if (is_float())
-            return float_value;
-
-        return 0.0;
     }
 
     [[nodiscard]] bool equals(Expr const* other) const override
@@ -365,45 +263,115 @@ public:
         if (other == nullptr || other->get_kind() != m_kind)
             return false;
 
-        auto lit = static_cast<LiteralExpr const*>(other);
-        if (lit == nullptr || m_type != lit->m_type)
+        return value == static_cast<IntLiteralExpr const*>(other)->value;
+    }
+    [[nodiscard]] IntLiteralExpr* clone() const override
+    {
+        return ALLOCATE_AST_NODE(IntLiteralExpr, value, get_location());
+    }
+    void accept(ExprVisitor const& v) const override { v.visit(*this); }
+};
+
+class FloatLiteralExpr final : public Expr {
+public:
+    f64 const value { 0.0f };
+
+    FloatLiteralExpr(f64 v, SourceLocation loc)
+        : Expr(loc, Kind::FLOAT_LITERAL)
+        , value(v)
+    {
+    }
+
+    [[nodiscard]] bool equals(Expr const* other) const override
+    {
+        if (other == nullptr || other->get_kind() != m_kind)
             return false;
 
-        switch (m_type) {
-        case Type::INTEGER: return int_value == lit->int_value;
-        case Type::FLOAT: return float_value == lit->float_value;
-        case Type::BOOLEAN: return bool_value == lit->bool_value;
-        case Type::STRING: return str_value == lit->str_value;
-        case Type::NIL: return true; // two nil objects are always equal
-        }
-
-        return false;
+        return value == static_cast<FloatLiteralExpr const*>(other)->value;
     }
-    [[nodiscard]] LiteralExpr* clone() const override
+    [[nodiscard]] FloatLiteralExpr* clone() const override
     {
-        switch (m_type) {
-        case Type::INTEGER: return ALLOCATE_AST_NODE(LiteralExpr, int_value, Type::INTEGER, get_location());
-        case Type::FLOAT: return ALLOCATE_AST_NODE(LiteralExpr, float_value, Type::FLOAT, get_location());
-        case Type::BOOLEAN: return ALLOCATE_AST_NODE(LiteralExpr, bool_value, get_location());
-        case Type::STRING: return ALLOCATE_AST_NODE(LiteralExpr, str_value, get_location());
-        case Type::NIL: return ALLOCATE_AST_NODE(LiteralExpr, get_location());
-        default: return nullptr; // should never happen
-        }
+        return ALLOCATE_AST_NODE(FloatLiteralExpr, value, get_location());
     }
-    void accept(ExprVisitor& v) override { v.visit(*this); }
-}; // class LiteralExpr
+    void accept(ExprVisitor const& v) const override { v.visit(*this); }
+};
 
-class NameExpr final : public Expr {
-private:
-    StringRef m_value;
-    bool m_is_local { false };
-
+class StringLiteralExpr final : public Expr {
 public:
-    NameExpr() = default;
+    StringRef const str;
 
-    explicit NameExpr(StringRef s, SourceLocation loc)
-        : Expr(loc, Kind::NAME)
-        , m_value(std::move(s))
+    StringLiteralExpr(StringRef s, SourceLocation loc)
+        : Expr(loc, Kind::STRING_LITERAL)
+        , str(s)
+    {
+    }
+
+    [[nodiscard]] bool equals(Expr const* other) const override
+    {
+        if (other == nullptr || other->get_kind() != m_kind)
+            return false;
+
+        return str == static_cast<StringLiteralExpr const*>(other)->str;
+    }
+    [[nodiscard]] StringLiteralExpr* clone() const override
+    {
+        return ALLOCATE_AST_NODE(StringLiteralExpr, str, get_location());
+    }
+    void accept(ExprVisitor const& v) const override { v.visit(*this); }
+};
+
+class BoolLiteralExpr final : public Expr {
+public:
+    bool const value;
+
+    BoolLiteralExpr(bool v, SourceLocation loc)
+        : Expr(loc, Kind::BOOL_LITERAL)
+        , value(v)
+    {
+    }
+
+    [[nodiscard]] bool equals(Expr const* other) const override
+    {
+        if (other == nullptr || other->get_kind() != m_kind)
+            return false;
+
+        return value == static_cast<BoolLiteralExpr const*>(other)->value;
+    }
+    [[nodiscard]] BoolLiteralExpr* clone() const override
+    {
+        return ALLOCATE_AST_NODE(BoolLiteralExpr, value, get_location());
+    }
+    void accept(ExprVisitor const& v) const override { v.visit(*this); }
+};
+
+class NilExpr final : public Expr {
+public:
+    NilExpr(SourceLocation loc)
+        : Expr(loc, Kind::NIL)
+    {
+    }
+
+    [[nodiscard]] bool equals(Expr const* other) const override
+    {
+        if (other == nullptr || other->get_kind() != m_kind)
+            return false;
+
+        return true;
+    }
+    [[nodiscard]] NilExpr* clone() const override
+    {
+        return ALLOCATE_AST_NODE(NilExpr, get_location());
+    }
+    void accept(ExprVisitor const& v) const override { v.visit(*this); }
+};
+
+class IdentifierExpr final : public Expr {
+public:
+    StringRef const spelling;
+
+    explicit IdentifierExpr(StringRef s, SourceLocation loc)
+        : Expr(loc, Kind::IDENTIFIER)
+        , spelling(std::move(s))
     {
     }
 
@@ -412,36 +380,25 @@ public:
         if (other->get_kind() != m_kind)
             return false;
 
-        auto name = static_cast<NameExpr const*>(other);
-        return m_value == name->get_value();
+        auto name = static_cast<IdentifierExpr const*>(other);
+        return spelling == name->spelling;
     }
-    [[nodiscard]] NameExpr* clone() const override
+    [[nodiscard]] IdentifierExpr* clone() const override
     {
-        return ALLOCATE_AST_NODE(NameExpr, m_value, get_location());
+        return ALLOCATE_AST_NODE(IdentifierExpr, spelling, get_location());
     }
-    void accept(ExprVisitor& v) override { v.visit(*this); }
-
-    [[nodiscard]] StringRef get_value() const { return m_value; }
-    [[nodiscard]] bool is_local() const { return m_is_local; }
-
-    void set_local() { m_is_local = true; }
-}; // class NameExpr
+    void accept(ExprVisitor const& v) const override { v.visit(*this); }
+}; // class IdentifierExpr
 
 class ListExpr final : public Expr {
-private:
-    Array<Expr*> m_elements;
-
 public:
-    ListExpr() = default;
+    Array<Expr*> const elements;
 
     explicit ListExpr(Array<Expr*> elements, SourceLocation loc)
         : Expr(loc, Kind::LIST)
-        , m_elements(std::move(elements))
+        , elements(std::move(elements))
     {
     }
-
-    Expr* operator[](size_t const i) { return m_elements[i]; }
-    Expr const* operator[](size_t const i) const { return m_elements[i]; }
 
     [[nodiscard]] bool equals(Expr const* other) const override
     {
@@ -450,11 +407,11 @@ public:
 
         auto list = static_cast<ListExpr const*>(other);
 
-        if (m_elements.size() != list->m_elements.size())
+        if (elements.size() != list->elements.size())
             return false;
 
-        for (size_t i = 0; i < m_elements.size(); i++) {
-            if (!m_elements[i]->equals(list->m_elements[i]))
+        for (size_t i = 0; i < elements.size(); i++) {
+            if (!elements[i]->equals(list->elements[i]))
                 return false;
         }
 
@@ -462,25 +419,21 @@ public:
     }
     [[nodiscard]] ListExpr* clone() const override
     {
-        return ALLOCATE_AST_NODE(ListExpr, m_elements, get_location());
+        return ALLOCATE_AST_NODE(ListExpr, elements, get_location());
     }
-    void accept(ExprVisitor& v) override { v.visit(*this); }
+    void accept(ExprVisitor const& v) const override { v.visit(*this); }
 
-    [[nodiscard]] Array<Expr*> const& get_elements() const { return m_elements; }
-    [[nodiscard]] Array<Expr*>& get_elements() { return m_elements; }
-
-    [[nodiscard]] bool is_empty() const { return m_elements.empty(); }
-    [[nodiscard]] size_t size() const { return m_elements.size(); }
+    [[nodiscard]] bool is_empty() const { return elements.empty(); }
+    [[nodiscard]] size_t size() const { return elements.size(); }
 }; // class ListExpr
 
 class DictExpr final : public Expr {
-private:
-    Array<std::pair<Expr*, Expr*>> content;
-
 public:
-    DictExpr(Array<std::pair<Expr*, Expr*>> content, SourceLocation loc)
+    Array<std::pair<Expr*, Expr*>> const content;
+
+    DictExpr(Array<std::pair<Expr*, Expr*>> c, SourceLocation loc)
         : Expr(loc, Kind::DICT)
-        , content(content)
+        , content(c)
     {
     }
 
@@ -509,44 +462,29 @@ public:
     {
         return ALLOCATE_AST_NODE(DictExpr, content, get_location());
     }
-    void accept(ExprVisitor& v) override { v.visit(*this); }
+    void accept(ExprVisitor const& v) const override { v.visit(*this); }
 
     Array<std::pair<Expr*, Expr*>> get_content() const
     {
         return content;
     }
-    void set_content(Array<std::pair<Expr*, Expr*>> c)
-    {
-        content = c;
-    }
 };
 
 class CallExpr final : public Expr {
 public:
-    enum class CallLocation : int {
-        GLOBAL,
-        LOCAL
-    }; // enum CallLocation
+    Expr const* callee;
+    ListExpr const* args;
 
-private:
-    Expr* m_callee { nullptr };
-    ListExpr* m_args { nullptr };
-    CallLocation m_call_location { CallLocation::GLOBAL }; // FIXED: Initialize member
-
-public:
-    CallExpr() = delete;
-
-    explicit CallExpr(Expr* c, ListExpr* a, SourceLocation loc, CallLocation call_loc = CallLocation::GLOBAL)
+    explicit CallExpr(Expr* c, ListExpr* a, SourceLocation loc)
         : Expr(loc, Kind::CALL)
-        , m_callee(c)
-        , m_args(a)
-        , m_call_location(call_loc)
+        , callee(c)
+        , args(a)
     {
-        if (m_args == nullptr)
-            m_args = ALLOCATE_AST_NODE(ListExpr, Array<Expr*> { }, loc);
+        if (args == nullptr)
+            args = ALLOCATE_AST_NODE(ListExpr, Array<Expr*> { }, loc);
 
-        assert(m_callee != nullptr);
-        assert(m_args != nullptr);
+        assert(callee != nullptr);
+        assert(args != nullptr);
     }
 
     [[nodiscard]] bool equals(Expr const* other) const override
@@ -555,47 +493,29 @@ public:
             return false;
 
         auto call = static_cast<CallExpr const*>(other);
-        return m_callee->equals(call->get_callee())
-            && m_args->equals(call->get_args_as_list_expr())
-            && m_call_location == call->get_call_location();
+        return callee->equals(call->callee) && args->equals(call->args);
     }
     [[nodiscard]] CallExpr* clone() const override
     {
-        return ALLOCATE_AST_NODE(CallExpr, m_callee->clone(), m_args->clone(), get_location());
+        return ALLOCATE_AST_NODE(CallExpr, callee->clone(), args->clone(), get_location());
     }
-    void accept(ExprVisitor& v) override { v.visit(*this); }
+    void accept(ExprVisitor const& v) const override { v.visit(*this); }
 
-    [[nodiscard]] Expr* get_callee() const { return m_callee; }
-
-    [[nodiscard]] Array<Expr*> const& get_args() const { return m_args->get_elements(); }
-    [[nodiscard]] Array<Expr*>& get_args() { return m_args->get_elements(); }
-
-    [[nodiscard]] ListExpr* get_args_as_list_expr() { return m_args; }
-    [[nodiscard]] ListExpr const* get_args_as_list_expr() const { return m_args; }
-
-    [[nodiscard]] CallLocation get_call_location() const
-    {
-        return m_call_location;
-    }
-    [[nodiscard]] bool has_arguments() const
-    {
-        return m_args != nullptr && !m_args->is_empty();
-    }
+    [[nodiscard]] bool has_arguments() const { return !args->is_empty(); }
 }; // class CallExpr
 
-class AssignmentExpr final : public Expr {
-private:
-    Expr* m_target { nullptr };
-    Expr* m_value { nullptr };
-
+class AssignExpr final : public Expr {
 public:
-    AssignmentExpr(Expr* target, Expr* value, SourceLocation loc)
+    Expr const* target;
+    Expr const* value;
+
+    AssignExpr(Expr* t, Expr* v, SourceLocation loc)
         : Expr(loc, Kind::ASSIGNMENT)
-        , m_target(target)
-        , m_value(value)
+        , target(t)
+        , value(v)
     {
-        assert(m_target != nullptr);
-        assert(m_value != nullptr);
+        assert(target != nullptr);
+        assert(value != nullptr);
     }
 
     [[nodiscard]] bool equals(Expr const* other) const override
@@ -603,37 +523,28 @@ public:
         if (other->get_kind() != m_kind)
             return false;
 
-        auto bin = static_cast<AssignmentExpr const*>(other);
-        return m_target->equals(bin->get_target()) && m_value->equals(bin->get_value());
+        auto bin = static_cast<AssignExpr const*>(other);
+        return target->equals(bin->target) && value->equals(bin->value);
     }
-    [[nodiscard]] AssignmentExpr* clone() const override
+    [[nodiscard]] AssignExpr* clone() const override
     {
-        return ALLOCATE_AST_NODE(AssignmentExpr, m_target->clone(), m_value->clone(), get_location());
+        return ALLOCATE_AST_NODE(AssignExpr, target->clone(), value->clone(), get_location());
     }
-    void accept(ExprVisitor& v) override { v.visit(*this); }
-
-    [[nodiscard]] Expr* get_target() const { return m_target; }
-    [[nodiscard]] Expr* get_value() const { return m_value; }
-
-    void set_target(Expr* t) { m_target = t; }
-    void set_value(Expr* v) { m_value = v; }
-}; // AssignmentExpr
+    void accept(ExprVisitor const& v) const override { v.visit(*this); }
+}; // AssignExpr
 
 class IndexExpr final : public Expr {
-private:
-    Expr* m_object { nullptr };
-    Expr* m_index { nullptr };
-
-    bool m_safe { false };
-
 public:
+    Expr const* object;
+    Expr const* index;
+
     IndexExpr(Expr* obj, Expr* idx, SourceLocation loc)
         : Expr(loc, Kind::INDEX_READ)
-        , m_object(obj)
-        , m_index(idx)
+        , object(obj)
+        , index(idx)
     {
-        assert(m_object != nullptr);
-        assert(m_index != nullptr);
+        assert(object != nullptr);
+        assert(index != nullptr);
     }
 
     [[nodiscard]] bool equals(Expr const* other) const override
@@ -642,35 +553,27 @@ public:
             return false;
 
         auto idx = static_cast<IndexExpr const*>(other);
-        return m_object->equals(idx->get_object()) && m_index->equals(idx->get_index());
+        return object->equals(idx->object) && index->equals(idx->index);
     }
     [[nodiscard]] IndexExpr* clone() const override
     {
-        return ALLOCATE_AST_NODE(IndexExpr, m_object->clone(), m_index->clone(), get_location());
+        return ALLOCATE_AST_NODE(IndexExpr, object->clone(), index->clone(), get_location());
     }
-    void accept(ExprVisitor& v) override { v.visit(*this); }
-
-    [[nodiscard]] Expr* get_object() const { return m_object; }
-    [[nodiscard]] Expr* get_index() const { return m_index; }
-
-    [[nodiscard]] bool is_safe() const { return m_safe; }
-    void make_safe() { m_safe = true; }
-
+    void accept(ExprVisitor const& v) const override { v.visit(*this); }
 }; // class IndexExpr
 
 class GetExpr final : public Expr {
-private:
-    Expr* m_object { nullptr };
-    Expr* m_member { nullptr };
-
 public:
-    GetExpr(Expr* obj, Expr* mem, SourceLocation loc)
+    Expr const* object;
+    IdentifierExpr const* member;
+
+    GetExpr(Expr* obj, IdentifierExpr* mem, SourceLocation loc)
         : Expr(loc, Kind::GET)
-        , m_object(obj)
-        , m_member(mem)
+        , object(obj)
+        , member(mem)
     {
-        assert(m_object != nullptr);
-        assert(m_member != nullptr);
+        assert(object != nullptr);
+        assert(member != nullptr);
     }
 
     [[nodiscard]] bool equals(Expr const* other) const override
@@ -679,16 +582,13 @@ public:
             return false;
 
         auto get_expr = static_cast<GetExpr const*>(other);
-        return m_object->equals(get_expr->get_object()) && m_member->equals(get_expr->get_member());
+        return object->equals(get_expr->object) && member->equals(get_expr->member);
     }
     [[nodiscard]] GetExpr* clone() const override
     {
-        return ALLOCATE_AST_NODE(GetExpr, m_object->clone(), m_member->clone(), get_location());
+        return ALLOCATE_AST_NODE(GetExpr, object->clone(), member->clone(), get_location());
     }
-    void accept(ExprVisitor& v) override { v.visit(*this); }
-
-    [[nodiscard]] Expr* get_object() const { return m_object; }
-    [[nodiscard]] Expr* get_member() const { return m_member; }
+    void accept(ExprVisitor const& v) const override { v.visit(*this); }
 };
 
 class Stmt : public ASTNode {
@@ -732,13 +632,12 @@ public:
 }; // class Stmt
 
 class BlockStmt final : public Stmt {
-private:
-    Array<Stmt*> m_statements;
-
 public:
-    explicit BlockStmt(Array<Stmt*> stmts, SourceLocation loc)
+    Array<Stmt*> const stmts;
+
+    explicit BlockStmt(Array<Stmt*> s, SourceLocation loc)
         : Stmt(loc, Kind::BLOCK)
-        , m_statements(stmts)
+        , stmts(s)
     {
     }
 
@@ -749,11 +648,11 @@ public:
 
         auto block = static_cast<BlockStmt const*>(other);
 
-        if (m_statements.size() != block->m_statements.size())
+        if (stmts.size() != block->stmts.size())
             return false;
 
-        for (size_t i = 0; i < m_statements.size(); i++) {
-            if (!m_statements[i]->equals(block->m_statements[i]))
+        for (size_t i = 0; i < stmts.size(); i++) {
+            if (!stmts[i]->equals(block->stmts[i]))
                 return false;
         }
 
@@ -761,33 +660,21 @@ public:
     }
     [[nodiscard]] BlockStmt* clone() const override
     {
-        return ALLOCATE_AST_NODE(BlockStmt, m_statements, get_location());
+        return ALLOCATE_AST_NODE(BlockStmt, stmts, get_location());
     }
     void accept(StmtVisitor& v) override { v.visit(*this); }
-    [[nodiscard]] Array<Stmt*> const& get_statements() const
-    {
-        return m_statements;
-    }
-    [[nodiscard]] bool is_empty() const
-    {
-        return m_statements.empty();
-    }
-    void set_statements(Array<Stmt*>& stmts)
-    {
-        m_statements = stmts;
-    }
+    [[nodiscard]] bool is_empty() const { return stmts.empty(); }
 }; // class BlockStmt
 
 class ExprStmt final : public Stmt {
-private:
-    Expr* m_expr { nullptr };
-
 public:
-    explicit ExprStmt(Expr* expr, SourceLocation loc)
+    Expr const* expr;
+
+    explicit ExprStmt(Expr* e, SourceLocation loc)
         : Stmt(loc, Kind::EXPR)
-        , m_expr(expr)
+        , expr(e)
     {
-        assert(m_expr != nullptr);
+        assert(expr != nullptr);
     }
 
     [[nodiscard]] bool equals(Stmt const* other) const override
@@ -796,91 +683,29 @@ public:
             return false;
 
         auto block = static_cast<ExprStmt const*>(other);
-        return m_expr->equals(block->get_expr());
+        return expr->equals(block->expr);
     }
     [[nodiscard]] ExprStmt* clone() const override
     {
-        return ALLOCATE_AST_NODE(ExprStmt, m_expr->clone(), get_location());
+        return ALLOCATE_AST_NODE(ExprStmt, expr->clone(), get_location());
     }
     void accept(StmtVisitor& v) override { v.visit(*this); }
-    [[nodiscard]] Expr* get_expr() const
-    {
-        return m_expr;
-    }
-    void set_expr(Expr* e)
-    {
-        m_expr = e;
-    }
 }; // class ExprStmt
 
-class AssignmentStmt final : public Stmt {
-private:
-    AssignmentExpr* m_expr;
-
+class IfElseStmt final : public Stmt {
 public:
-    explicit AssignmentStmt(AssignmentExpr* e, SourceLocation loc)
-        : Stmt(loc, Kind::ASSIGNMENT)
-        , m_expr(e->clone())
-    {
-        assert(m_expr != nullptr);
-    }
+    Expr const* condition;
+    Stmt const* then_stmt;
+    Stmt const* else_stmt;
 
-    AssignmentStmt(Expr* target, Expr* value, SourceLocation loc)
-        : Stmt(loc, Kind::ASSIGNMENT)
-    {
-        m_expr = ALLOCATE_AST_NODE(AssignmentExpr, target, value, loc); // AssignmentExpr will assert args for us
-    }
-
-    [[nodiscard]] bool equals(Stmt const* other) const override
-    {
-        if (m_kind != other->get_kind())
-            return false;
-
-        auto block = static_cast<AssignmentStmt const*>(other);
-        return m_expr->get_value()->equals(block->get_value()) && m_expr->get_target()->equals(block->get_target());
-    }
-    [[nodiscard]] AssignmentStmt* clone() const override
-    {
-        return ALLOCATE_AST_NODE(AssignmentStmt, m_expr->get_target(), m_expr->get_value(), get_location());
-    }
-    void accept(StmtVisitor& v) override { v.visit(*this); }
-    [[nodiscard]] Expr* get_value() const
-    {
-        return m_expr->get_value();
-    }
-    [[nodiscard]] Expr* get_target() const
-    {
-        return m_expr->get_target();
-    }
-    [[nodiscard]] bool is_declaration() const;
-    void set_value(Expr* v)
-    {
-        m_expr->set_value(v);
-    }
-    void set_target(Expr* t)
-    {
-        m_expr->set_target(t);
-    }
-    void set_decl();
-
-    AssignmentExpr* get_expr() const { return m_expr; }
-}; // class AssignmentExpr
-
-class IfStmt final : public Stmt {
-private:
-    Expr* m_condition { nullptr };
-    Stmt* m_then_stmt { nullptr };
-    Stmt* m_else_stmt { nullptr };
-
-public:
-    IfStmt(Expr* condition, Stmt* then_stmt, SourceLocation loc, Stmt* else_stmt)
+    IfElseStmt(Expr* c, Stmt* t, SourceLocation loc, Stmt* e)
         : Stmt(loc, Kind::IF)
-        , m_condition(condition)
-        , m_then_stmt(then_stmt)
-        , m_else_stmt(else_stmt)
+        , condition(c)
+        , then_stmt(t)
+        , else_stmt(e)
     {
-        assert(m_condition != nullptr);
-        assert(m_then_stmt != nullptr);
+        assert(condition != nullptr);
+        assert(then_stmt != nullptr);
     }
 
     [[nodiscard]] bool equals(Stmt const* other) const override
@@ -888,57 +713,36 @@ public:
         if (m_kind != other->get_kind())
             return false;
 
-        auto if_stmt = static_cast<IfStmt const*>(other);
+        auto if_stmt = static_cast<IfElseStmt const*>(other);
         bool eq_else = false;
 
-        if (m_else_stmt != nullptr && if_stmt->get_else())
-            eq_else = m_else_stmt->equals(if_stmt->get_else());
+        if (else_stmt != nullptr && if_stmt->else_stmt)
+            eq_else = else_stmt->equals(if_stmt->else_stmt);
 
-        return m_condition->equals(if_stmt->get_condition()) && m_then_stmt->equals(if_stmt->get_then()) && eq_else;
+        return condition->equals(if_stmt->condition) && then_stmt->equals(if_stmt->then_stmt) && eq_else;
     }
-    [[nodiscard]] IfStmt* clone() const override
+    [[nodiscard]] IfElseStmt* clone() const override
     {
-        return ALLOCATE_AST_NODE(IfStmt,
-            m_condition->clone(),
-            m_then_stmt->clone(), get_location(),
-            LIKELY(m_else_stmt == nullptr) ? nullptr : m_else_stmt->clone());
+        return ALLOCATE_AST_NODE(IfElseStmt,
+            condition->clone(),
+            then_stmt->clone(), get_location(),
+            LIKELY(else_stmt == nullptr) ? nullptr : else_stmt->clone());
     }
     void accept(StmtVisitor& v) override { v.visit(*this); }
-    [[nodiscard]] Expr* get_condition() const
-    {
-        return m_condition;
-    }
-    [[nodiscard]] Stmt* get_then() const
-    {
-        return m_then_stmt;
-    }
-    [[nodiscard]] Stmt* get_else() const
-    {
-        return m_else_stmt;
-    }
-    void set_then(Stmt* t)
-    {
-        m_then_stmt = t;
-    }
-    void set_else(Stmt* e)
-    {
-        m_else_stmt = e;
-    }
-}; // class IfStmt
+}; // class IfElseStmt
 
 class WhileStmt final : public Stmt {
-private:
-    Expr* m_condition { nullptr };
-    Stmt* m_body { nullptr };
-
 public:
-    WhileStmt(Expr* cond, Stmt* body, SourceLocation loc)
+    Expr const* condition;
+    Stmt const* body;
+
+    WhileStmt(Expr* c, Stmt* b, SourceLocation loc)
         : Stmt(loc, Kind::WHILE)
-        , m_condition(cond)
-        , m_body(body)
+        , condition(c)
+        , body(b)
     {
-        assert(m_condition != nullptr);
-        assert(m_body != nullptr);
+        assert(condition != nullptr);
+        assert(body != nullptr);
     }
 
     [[nodiscard]] bool equals(Stmt const* other) const override
@@ -947,48 +751,30 @@ public:
             return false;
 
         auto block = static_cast<WhileStmt const*>(other);
-        return m_condition->equals(block->get_condition()) && m_body->equals(block->get_body());
+        return condition->equals(block->condition) && body->equals(block->body);
     }
     [[nodiscard]] WhileStmt* clone() const override
     {
-        return ALLOCATE_AST_NODE(WhileStmt, m_condition->clone(), m_body->clone(), get_location());
+        return ALLOCATE_AST_NODE(WhileStmt, condition->clone(), body->clone(), get_location());
     }
     void accept(StmtVisitor& v) override { v.visit(*this); }
-    [[nodiscard]] Expr* get_condition() const
-    {
-        return m_condition;
-    }
-    [[nodiscard]] Stmt* get_body()
-    {
-        return m_body;
-    }
-    [[nodiscard]] Stmt const* get_body() const
-    {
-        return m_body;
-    }
-
-    void set_body(Stmt* b)
-    {
-        m_body = b;
-    }
 }; // class WhileStmt
 
 class ForStmt final : public Stmt {
-private:
-    Expr* m_container { nullptr };
-    Expr* m_iter { nullptr };
-    Stmt* m_body { nullptr };
-
 public:
-    ForStmt(Expr* target, Expr* iter, Stmt* body, SourceLocation loc)
+    Expr const* container;
+    Expr const* iter;
+    Stmt const* body;
+
+    ForStmt(Expr* t, Expr* i, Stmt* b, SourceLocation loc)
         : Stmt(loc, Kind::FOR)
-        , m_container(target)
-        , m_iter(iter)
-        , m_body(body)
+        , container(t)
+        , iter(i)
+        , body(b)
     {
-        assert(m_container != nullptr);
-        assert(m_iter != nullptr);
-        assert(m_body != nullptr);
+        assert(container != nullptr);
+        assert(iter != nullptr);
+        assert(body != nullptr);
     }
 
     [[nodiscard]] bool equals(Stmt const* other) const override
@@ -997,37 +783,30 @@ public:
             return false;
 
         auto block = static_cast<ForStmt const*>(other);
-        return m_container->equals(block->get_container()) && m_iter->equals(block->get_iter()) && m_body->equals(block->get_body());
+        return container->equals(block->container) && iter->equals(block->iter) && body->equals(block->body);
     }
     [[nodiscard]] ForStmt* clone() const override
     {
-        return get_allocator().allocate_object<ForStmt>(m_container->clone(), m_iter->clone(), m_body->clone(), get_location());
+        return get_allocator().allocate_object<ForStmt>(container->clone(), iter->clone(), body->clone(), get_location());
     }
     void accept(StmtVisitor& v) override { v.visit(*this); }
-    [[nodiscard]] Expr* get_container() const { return m_container; }
-    [[nodiscard]] NameExpr* get_target() const { return static_cast<NameExpr*>(m_container); }
-    [[nodiscard]] Expr* get_iter() const { return m_iter; }
-    [[nodiscard]] Stmt* get_body() const { return m_body; }
-
-    void set_body(Stmt* b) { m_body = b; }
 }; // class ForStmt
 
 class FunctionDef final : public Stmt {
-private:
-    NameExpr* m_name { nullptr };
-    ListExpr* m_params { nullptr };
-    Stmt* m_body { nullptr };
-
 public:
-    FunctionDef(NameExpr* name, ListExpr* params, Stmt* body, SourceLocation loc)
+    IdentifierExpr const* name;
+    ListExpr const* params;
+    Stmt const* body;
+
+    FunctionDef(IdentifierExpr* n, ListExpr* p, Stmt* b, SourceLocation loc)
         : Stmt(loc, Kind::FUNC)
-        , m_name(name)
-        , m_params(params)
-        , m_body(body)
+        , name(n)
+        , params(p)
+        , body(b)
     {
-        assert(m_name != nullptr);
-        assert(m_params != nullptr);
-        assert(m_body != nullptr);
+        assert(name != nullptr);
+        assert(params != nullptr);
+        assert(body != nullptr);
     }
 
     [[nodiscard]] bool equals(Stmt const* other) const override
@@ -1036,30 +815,23 @@ public:
             return false;
 
         auto block = static_cast<FunctionDef const*>(other);
-        return m_name->equals(block->get_name()) && m_params->equals(block->get_parameter_list()) && m_body->equals(block->get_body());
+        return name->equals(block->name) && params->equals(block->params) && body->equals(block->body);
     }
     [[nodiscard]] FunctionDef* clone() const override
     {
-        return ALLOCATE_AST_NODE(FunctionDef, m_name->clone(), m_params->clone(), m_body->clone(), get_location());
+        return ALLOCATE_AST_NODE(FunctionDef, name->clone(), params->clone(), body->clone(), get_location());
     }
     void accept(StmtVisitor& v) override { v.visit(*this); }
-    [[nodiscard]] NameExpr* get_name() const { return m_name; }
-    [[nodiscard]] Array<Expr*> const& get_parameters() const { return m_params->get_elements(); }
-    [[nodiscard]] ListExpr* get_parameter_list() const { return m_params; }
-    [[nodiscard]] Stmt* get_body() const { return m_body; }
-    [[nodiscard]] bool has_parameters() const { return m_params && !m_params->is_empty(); }
-
-    void set_body(Stmt* b) { m_body = b; }
+    [[nodiscard]] bool has_parameters() const { return !params->is_empty(); }
 }; // class FunctionDef
 
 class ReturnStmt final : public Stmt {
-private:
-    Expr* m_value { nullptr };
-
 public:
-    explicit ReturnStmt(Expr* value, SourceLocation loc)
+    Expr const* value;
+
+    explicit ReturnStmt(Expr* v, SourceLocation loc)
         : Stmt(loc, Kind::RETURN)
-        , m_value(value)
+        , value(v)
     {
     }
 
@@ -1069,31 +841,27 @@ public:
             return false;
 
         auto ret_stmt = static_cast<ReturnStmt const*>(other);
-        if (m_value == nullptr || ret_stmt->get_value() == nullptr)
-            return m_value == ret_stmt->get_value();
+        if (value == nullptr || !ret_stmt->has_value())
+            return value == ret_stmt->value;
 
-        return m_value->equals(ret_stmt->get_value());
+        return value->equals(ret_stmt->value);
     }
     [[nodiscard]] ReturnStmt* clone() const override
     {
-        auto ret_value = m_value == nullptr ? nullptr : m_value->clone();
+        auto ret_value = value == nullptr ? nullptr : value->clone();
         return ALLOCATE_AST_NODE(ReturnStmt, ret_value, get_location());
     }
     void accept(StmtVisitor& v) override { v.visit(*this); }
-    [[nodiscard]] Expr* get_value() { return m_value; }
-    [[nodiscard]] Expr const* get_value() const { return m_value; }
-    [[nodiscard]] bool has_value() const { return m_value != nullptr; }
-
-    void set_value(Expr* v) { m_value = v; }
+    [[nodiscard]] bool has_value() const { return value != nullptr; }
 }; // class ReturnStmt
 
 class ClassDef final : public Stmt {
 private:
-    Expr* m_name { nullptr };
-    Expr* m_parent { nullptr };
-    Array<Expr*> m_members { nullptr };
-    Array<Stmt*> m_methods { nullptr };
-    Array<Stmt*> m_sp_methods { nullptr };
+    Expr* m_name;
+    Expr* m_parent;
+    Array<Expr*> m_members;
+    Array<Stmt*> m_methods;
+    Array<Stmt*> m_sp_methods;
 
 public:
     explicit ClassDef(
@@ -1218,41 +986,41 @@ public:
     void accept(StmtVisitor& v) override { v.visit(*this); }
 }; // class ContinueStmt
 
-static inline BinaryExpr* make_binary(Expr* lhs, Expr* rhs, BinaryOp const op, SourceLocation loc)
+static inline BinaryExpr* make_binary(Expr::Kind kind, Expr* lhs, Expr* rhs, SourceLocation loc)
 {
-    return ALLOCATE_AST_NODE(BinaryExpr, lhs, rhs, op, loc);
+    return ALLOCATE_AST_NODE(BinaryExpr, kind, lhs, rhs, loc);
 }
-static inline UnaryExpr* make_unary(Expr* operand, UnaryOp const op, SourceLocation loc)
+static inline UnaryExpr* make_unary(Expr::Kind kind, Expr* operand, SourceLocation loc)
 {
-    return ALLOCATE_AST_NODE(UnaryExpr, operand, op, loc);
+    return ALLOCATE_AST_NODE(UnaryExpr, kind, operand, loc);
 }
-static inline LiteralExpr* make_literal_nil(SourceLocation loc)
+static inline NilExpr* make_nil(SourceLocation loc)
 {
-    return ALLOCATE_AST_NODE(LiteralExpr, loc);
+    return ALLOCATE_AST_NODE(NilExpr, loc);
 }
-static inline LiteralExpr* make_literal_int(int value, SourceLocation loc)
+static inline IntLiteralExpr* make_literal_int(int value, SourceLocation loc)
 {
-    return ALLOCATE_AST_NODE(LiteralExpr, static_cast<i64>(value), LiteralExpr::Type::INTEGER, loc);
+    return ALLOCATE_AST_NODE(IntLiteralExpr, static_cast<i64>(value), loc);
 }
-static inline LiteralExpr* make_literal_int(i64 value, SourceLocation loc)
+static inline IntLiteralExpr* make_literal_int(i64 value, SourceLocation loc)
 {
-    return ALLOCATE_AST_NODE(LiteralExpr, value, LiteralExpr::Type::INTEGER, loc);
+    return ALLOCATE_AST_NODE(IntLiteralExpr, value, loc);
 }
-static inline LiteralExpr* make_literal_float(f64 value, SourceLocation loc)
+static inline FloatLiteralExpr* make_literal_float(f64 value, SourceLocation loc)
 {
-    return ALLOCATE_AST_NODE(LiteralExpr, value, LiteralExpr::Type::FLOAT, loc);
+    return ALLOCATE_AST_NODE(FloatLiteralExpr, value, loc);
 }
-static inline LiteralExpr* make_literal_string(StringRef value, SourceLocation loc)
+static inline StringLiteralExpr* make_literal_string(StringRef str, SourceLocation loc)
 {
-    return ALLOCATE_AST_NODE(LiteralExpr, value, loc);
+    return ALLOCATE_AST_NODE(StringLiteralExpr, str, loc);
 }
-static inline LiteralExpr* make_literal_bool(bool value, SourceLocation loc)
+static inline BoolLiteralExpr* make_literal_bool(bool value, SourceLocation loc)
 {
-    return ALLOCATE_AST_NODE(LiteralExpr, value, loc);
+    return ALLOCATE_AST_NODE(BoolLiteralExpr, value, loc);
 }
-static inline NameExpr* make_name(StringRef const str, SourceLocation loc)
+static inline IdentifierExpr* make_identifier(StringRef const str, SourceLocation loc)
 {
-    return ALLOCATE_AST_NODE(NameExpr, str, loc);
+    return ALLOCATE_AST_NODE(IdentifierExpr, str, loc);
 }
 static inline ListExpr* make_list(Array<Expr*> elements, SourceLocation loc)
 {
@@ -1262,7 +1030,7 @@ static inline DictExpr* make_dict(Array<std::pair<Expr*, Expr*>> content, Source
 {
     return ALLOCATE_AST_NODE(DictExpr, content, loc);
 }
-static inline GetExpr* make_get_expr(Expr* obj, Expr* member, SourceLocation loc)
+static inline GetExpr* make_get_expr(Expr* obj, IdentifierExpr* member, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(GetExpr, obj, member, loc)
 }
@@ -1270,9 +1038,9 @@ static inline CallExpr* make_call(Expr* callee, ListExpr* args, SourceLocation l
 {
     return ALLOCATE_AST_NODE(CallExpr, callee, args, loc);
 }
-static inline AssignmentExpr* make_assignment_expr(Expr* target, Expr* value, SourceLocation loc)
+static inline AssignExpr* make_assignment_expr(Expr* target, Expr* value, SourceLocation loc)
 {
-    return ALLOCATE_AST_NODE(AssignmentExpr, target, value, loc);
+    return ALLOCATE_AST_NODE(AssignExpr, target, value, loc);
 }
 static inline IndexExpr* make_index(Expr* obj, Expr* idx, SourceLocation loc)
 {
@@ -1286,23 +1054,24 @@ static inline ExprStmt* make_expr_stmt(Expr* expr, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(ExprStmt, expr, loc);
 }
-static inline AssignmentStmt* make_assignment_stmt(Expr* target, Expr* value, SourceLocation loc)
+static inline ExprStmt* make_assignment_stmt(Expr* target, Expr* value, SourceLocation loc)
 {
-    return ALLOCATE_AST_NODE(AssignmentStmt, target, value, loc);
+    auto e = ALLOCATE_AST_NODE(AssignExpr, target, value, loc)
+    return ALLOCATE_AST_NODE(ExprStmt, e, loc);
 }
-static inline IfStmt* make_if(Expr* cond, Stmt* then_block, SourceLocation loc, Stmt* else_block = nullptr)
+static inline IfElseStmt* make_if(Expr* cond, Stmt* then_block, SourceLocation loc, Stmt* else_block = nullptr)
 {
-    return ALLOCATE_AST_NODE(IfStmt, cond, then_block, loc, else_block);
+    return ALLOCATE_AST_NODE(IfElseStmt, cond, then_block, loc, else_block);
 }
 static inline WhileStmt* make_while(Expr* cond, Stmt* body, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(WhileStmt, cond, body, loc);
 }
-static inline ForStmt* make_for(NameExpr* target, Expr* iter, Stmt* body, SourceLocation loc)
+static inline ForStmt* make_for(IdentifierExpr* target, Expr* iter, Stmt* body, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(ForStmt, target, iter, body, loc);
 }
-static inline FunctionDef* make_function(NameExpr* name, ListExpr* params, Stmt* body, SourceLocation loc)
+static inline FunctionDef* make_function(IdentifierExpr* name, ListExpr* params, Stmt* body, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(FunctionDef, name, params, body, loc);
 }
@@ -1336,41 +1105,9 @@ static inline ContinueStmt* make_continue(SourceLocation loc)
 
 #undef ALLOCATE_AST_NODE
 
-static inline AssignmentExpr* as_assignment(Stmt* s)
-{
-    if (s == nullptr)
-        return nullptr;
-
-    if (s->get_kind() == Stmt::Kind::ASSIGNMENT)
-        return static_cast<AssignmentStmt*>(s)->get_expr();
-    if (s->get_kind() == Stmt::Kind::EXPR) {
-        auto e = static_cast<ExprStmt*>(s)->get_expr();
-        if (e->get_kind() == Expr::Kind::ASSIGNMENT)
-            return static_cast<AssignmentExpr*>(e);
-    }
-
-    return nullptr;
-}
-
-static inline AssignmentExpr const* as_assignment(Stmt const* s)
-{
-    if (s == nullptr)
-        return nullptr;
-
-    if (s->get_kind() == Stmt::Kind::ASSIGNMENT)
-        return static_cast<AssignmentStmt const*>(s)->get_expr();
-    if (s->get_kind() == Stmt::Kind::EXPR) {
-        auto e = static_cast<ExprStmt const*>(s)->get_expr();
-        if (e->get_kind() == Expr::Kind::ASSIGNMENT)
-            return static_cast<AssignmentExpr const*>(e);
-    }
-
-    return nullptr;
-}
-
 // helper macros
 
-inline IfStmt* as_if(Stmt* s) { return static_cast<IfStmt*>(s); }
+inline IfElseStmt* as_if(Stmt* s) { return static_cast<IfElseStmt*>(s); }
 inline WhileStmt* as_while(Stmt* s) { return static_cast<WhileStmt*>(s); }
 inline ForStmt* as_for(Stmt* s) { return static_cast<ForStmt*>(s); }
 inline ReturnStmt* as_return(Stmt* s) { return static_cast<ReturnStmt*>(s); }
@@ -1380,21 +1117,24 @@ inline BlockStmt* as_block(Stmt* s) { return static_cast<BlockStmt*>(s); }
 inline FunctionDef* as_function_def(Stmt* s) { return static_cast<FunctionDef*>(s); }
 inline ClassDef* as_class_def(Stmt* s) { return static_cast<ClassDef*>(s); }
 inline ImportStmt* as_import(Stmt* s) { return static_cast<ImportStmt*>(s); }
-inline AssignmentStmt* as_assignment_stmt(Stmt* s) { return static_cast<AssignmentStmt*>(s); }
 inline ExprStmt* as_expr_stmt(Stmt* s) { return static_cast<ExprStmt*>(s); }
 
 inline BinaryExpr* as_binary(Expr* e) { return static_cast<BinaryExpr*>(e); }
 inline UnaryExpr* as_unary(Expr* e) { return static_cast<UnaryExpr*>(e); }
-inline LiteralExpr* as_literal(Expr* e) { return static_cast<LiteralExpr*>(e); }
-inline NameExpr* as_name(Expr* e) { return static_cast<NameExpr*>(e); }
+inline IntLiteralExpr* as_literal_int(Expr* e) { return static_cast<IntLiteralExpr*>(e); }
+inline FloatLiteralExpr* as_literal_float(Expr* e) { return static_cast<FloatLiteralExpr*>(e); }
+inline BoolLiteralExpr* as_literal_bool(Expr* e) { return static_cast<BoolLiteralExpr*>(e); }
+inline StringLiteralExpr* as_literal_string(Expr* e) { return static_cast<StringLiteralExpr*>(e); }
+inline NilExpr* as_nil(Expr* e) { return static_cast<NilExpr*>(e); }
+inline IdentifierExpr* as_identifier(Expr* e) { return static_cast<IdentifierExpr*>(e); }
 inline IndexExpr* as_index(Expr* e) { return static_cast<IndexExpr*>(e); }
 inline DictExpr* as_dict(Expr* e) { return static_cast<DictExpr*>(e); }
 inline ListExpr* as_list(Expr* e) { return static_cast<ListExpr*>(e); }
 inline CallExpr* as_call(Expr* e) { return static_cast<CallExpr*>(e); }
-inline AssignmentExpr* as_assignment_expr(Expr* e) { return static_cast<AssignmentExpr*>(e); }
+inline AssignExpr* as_assignment_expr(Expr* e) { return static_cast<AssignExpr*>(e); }
 inline GetExpr* as_get(Expr* e) { return static_cast<GetExpr*>(e); }
 
-inline IfStmt const* as_if(Stmt const* s) { return static_cast<IfStmt const*>(s); }
+inline IfElseStmt const* as_if(Stmt const* s) { return static_cast<IfElseStmt const*>(s); }
 inline WhileStmt const* as_while(Stmt const* s) { return static_cast<WhileStmt const*>(s); }
 inline ForStmt const* as_for(Stmt const* s) { return static_cast<ForStmt const*>(s); }
 inline ReturnStmt const* as_return(Stmt const* s) { return static_cast<ReturnStmt const*>(s); }
@@ -1404,18 +1144,21 @@ inline BlockStmt const* as_block(Stmt const* s) { return static_cast<BlockStmt c
 inline FunctionDef const* as_function_def(Stmt const* s) { return static_cast<FunctionDef const*>(s); }
 inline ClassDef const* as_class_def(Stmt const* s) { return static_cast<ClassDef const*>(s); }
 inline ImportStmt const* as_import(Stmt const* s) { return static_cast<ImportStmt const*>(s); }
-inline AssignmentStmt const* as_assignment_stmt(Stmt const* s) { return static_cast<AssignmentStmt const*>(s); }
 inline ExprStmt const* as_expr_stmt(Stmt const* s) { return static_cast<ExprStmt const*>(s); }
 
 inline BinaryExpr const* as_binary(Expr const* e) { return static_cast<BinaryExpr const*>(e); }
 inline UnaryExpr const* as_unary(Expr const* e) { return static_cast<UnaryExpr const*>(e); }
-inline LiteralExpr const* as_literal(Expr const* e) { return static_cast<LiteralExpr const*>(e); }
-inline NameExpr const* as_name(Expr const* e) { return static_cast<NameExpr const*>(e); }
+inline IntLiteralExpr const* as_literal_int(Expr const* e) { return static_cast<IntLiteralExpr const*>(e); }
+inline FloatLiteralExpr const* as_literal_float(Expr const* e) { return static_cast<FloatLiteralExpr const*>(e); }
+inline BoolLiteralExpr const* as_literal_bool(Expr const* e) { return static_cast<BoolLiteralExpr const*>(e); }
+inline StringLiteralExpr const* as_literal_string(Expr const* e) { return static_cast<StringLiteralExpr const*>(e); }
+inline NilExpr const* as_nil(Expr const* e) { return static_cast<NilExpr const*>(e); }
+inline IdentifierExpr const* as_identifier(Expr const* e) { return static_cast<IdentifierExpr const*>(e); }
 inline IndexExpr const* as_index(Expr const* e) { return static_cast<IndexExpr const*>(e); }
 inline DictExpr const* as_dict(Expr const* e) { return static_cast<DictExpr const*>(e); }
 inline ListExpr const* as_list(Expr const* e) { return static_cast<ListExpr const*>(e); }
 inline CallExpr const* as_call(Expr const* e) { return static_cast<CallExpr const*>(e); }
-inline AssignmentExpr const* as_assignment_expr(Expr const* e) { return static_cast<AssignmentExpr const*>(e); }
+inline AssignExpr const* as_assignment_expr(Expr const* e) { return static_cast<AssignExpr const*>(e); }
 inline GetExpr const* as_get(Expr const* e) { return static_cast<GetExpr const*>(e); }
 
 static inline bool is_class_def(Stmt const* s) { return s->get_kind() == Stmt::Kind::CLASS_DEF; }
@@ -1430,30 +1173,20 @@ static inline bool is_func(Stmt const* s) { return s->get_kind() == Stmt::Kind::
 static inline bool is_expr(Stmt const* s) { return s->get_kind() == Stmt::Kind::EXPR; }
 static inline bool is_block(Stmt const* s) { return s->get_kind() == Stmt::Kind::BLOCK; }
 
-static inline bool is_binary(Expr const* e) { return e->get_kind() == Expr::Kind::BINARY; }
-static inline bool is_unary(Expr const* e) { return e->get_kind() == Expr::Kind::UNARY; }
-static inline bool is_literal(Expr const* e) { return e->get_kind() == Expr::Kind::LITERAL; }
-static inline bool is_name(Expr const* e) { return e->get_kind() == Expr::Kind::NAME; }
+static inline bool is_binary(Expr const* e) { return dynamic_cast<BinaryExpr const*>(e) != nullptr; }
+static inline bool is_unary(Expr const* e) { return dynamic_cast<UnaryExpr const*>(e) != nullptr; }
+static inline bool is_literal_int(Expr const* e) { return e->get_kind() == Expr::Kind::INT_LITERAL; }
+static inline bool is_literal_float(Expr const* e) { return e->get_kind() == Expr::Kind::FLOAT_LITERAL; }
+static inline bool is_literal_bool(Expr const* e) { return e->get_kind() == Expr::Kind::BOOL_LITERAL; }
+static inline bool is_literal_string(Expr const* e) { return e->get_kind() == Expr::Kind::STRING_LITERAL; }
+static inline bool is_nil(Expr const* e) { return e->get_kind() == Expr::Kind::NIL; }
+static inline bool is_identifier(Expr const* e) { return e->get_kind() == Expr::Kind::IDENTIFIER; }
 static inline bool is_index(Expr const* e) { return e->get_kind() == Expr::Kind::INDEX_READ; }
 static inline bool is_dict(Expr const* e) { return e->get_kind() == Expr::Kind::DICT; }
 static inline bool is_list(Expr const* e) { return e->get_kind() == Expr::Kind::LIST; }
 static inline bool is_call(Expr const* e) { return e->get_kind() == Expr::Kind::CALL; }
 static inline bool is_assignment(Expr const* e) { return e->get_kind() == Expr::Kind::ASSIGNMENT; }
 static inline bool is_get(Expr const* e) { return e->get_kind() == Expr::Kind::GET; }
-
-static inline std::tuple<Expr*, Expr*> assignment_parts(AssignmentExpr* e)
-{
-    return std::make_tuple<Expr*, Expr*>(e->get_target(), e->get_value());
-}
-static inline std::tuple<Expr*, Expr*> assignment_parts(AssignmentExpr const* e)
-{
-    return std::make_tuple<Expr*, Expr*>(e->get_target(), e->get_value());
-}
-
-static inline int literal_int(Expr const* e) { return as_literal(e)->get_int(); }
-static inline StringRef literal_str(Expr const* e) { return as_literal(e)->get_str(); }
-static inline float literal_float(Expr const* e) { return as_literal(e)->get_float(); }
-static inline bool literal_bool(Expr const* e) { return as_literal(e)->get_bool(); }
 
 } // namespace fairuz::ast
 

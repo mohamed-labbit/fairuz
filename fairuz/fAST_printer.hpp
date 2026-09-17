@@ -2,10 +2,13 @@
 #define FA_AST_PRINTER_HPP
 
 #include "fAST.hpp"
+#include "fmacros.hpp"
 
 #include <iostream>
 
 namespace fairuz::AST {
+
+using ExprKind = AST::Expr::Kind;
 
 class ASTPrinter {
 private:
@@ -17,39 +20,32 @@ private:
         bool last { false };
     }; // struct Prefix
 
-    StringRef const to_string(UnaryOp const op)
+    StringRef const to_string(ExprKind const op)
     {
         switch (op) {
-        case UnaryOp::OP_PLUS: return "+";
-        case UnaryOp::OP_NEG: return "-";
-        case UnaryOp::OP_BITNOT: return "~";
-        case UnaryOp::OP_NOT: return "ليس";
-        default: return "";
-        }
-    }
-
-    StringRef const to_string(BinaryOp const op)
-    {
-        switch (op) {
-        case BinaryOp::OP_EQ: return "=";
-        case BinaryOp::OP_ADD: return "+";
-        case BinaryOp::OP_SUB: return "-";
-        case BinaryOp::OP_MUL: return "*";
-        case BinaryOp::OP_DIV: return "/";
-        case BinaryOp::OP_MOD: return "%";
-        case BinaryOp::OP_POW: return "**";
-        case BinaryOp::OP_LT: return "<";
-        case BinaryOp::OP_GT: return ">";
-        case BinaryOp::OP_LTE: return "<=";
-        case BinaryOp::OP_GTE: return ">=";
-        case BinaryOp::OP_NEQ: return "!=";
-        case BinaryOp::OP_BITAND: return "&";
-        case BinaryOp::OP_BITOR: return "|";
-        case BinaryOp::OP_BITXOR: return "^";
-        case BinaryOp::OP_LSHIFT: return "<<";
-        case BinaryOp::OP_RSHIFT: return ">>";
-        case BinaryOp::OP_AND: return "و"; // logical and
-        case BinaryOp::OP_OR: return "أو"; // logical or
+        case ExprKind::OP_PLUS: return "+";
+        case ExprKind::OP_NEG: return "-";
+        case ExprKind::OP_BITNOT: return "~";
+        case ExprKind::OP_NOT: return "ليس";
+        case ExprKind::OP_EQ: return "=";
+        case ExprKind::OP_ADD: return "+";
+        case ExprKind::OP_SUB: return "-";
+        case ExprKind::OP_MUL: return "*";
+        case ExprKind::OP_DIV: return "/";
+        case ExprKind::OP_MOD: return "%";
+        case ExprKind::OP_POW: return "**";
+        case ExprKind::OP_LT: return "<";
+        case ExprKind::OP_GT: return ">";
+        case ExprKind::OP_LTE: return "<=";
+        case ExprKind::OP_GTE: return ">=";
+        case ExprKind::OP_NEQ: return "!=";
+        case ExprKind::OP_BITAND: return "&";
+        case ExprKind::OP_BITOR: return "|";
+        case ExprKind::OP_BITXOR: return "^";
+        case ExprKind::OP_LSHIFT: return "<<";
+        case ExprKind::OP_RSHIFT: return ">>";
+        case ExprKind::OP_AND: return "و"; // logical and
+        case ExprKind::OP_OR: return "أو"; // logical or
         default: return "";
         }
     }
@@ -75,76 +71,104 @@ private:
         std::cout << p.indent << glyph(p.last);
 
         switch (e->get_kind()) {
-        case Expr::Kind::NAME: {
-            auto n = as_name(e);
-            std::cout << color("Name", Color::CYAN) << "(" << n->get_value() << ")\n";
+        case ExprKind::IDENTIFIER: {
+            auto n = as_identifier(e);
+            std::cout << color("Name", Color::CYAN) << "(" << n->spelling << ")\n";
             break;
         }
 
-        case Expr::Kind::LITERAL: {
-            auto l = as_literal(e);
-            if (l->is_numeric())
-                std::cout << color("Literal", Color::GREEN) << "(" << l->is_numeric() << ")\n";
-            else if (l->is_string())
-                std::cout << color("Literal", Color::GREEN) << "(" << l->get_str() << ")\n";
-            else if (l->is_bool())
-                std::cout << color("Literal", Color::GREEN) << "(" << (l->get_bool() ? "true" : "false") << ")\n";
-            else if (l->is_nil())
-                std::cout << color("Literal", Color::GREEN) << "(nil)\n";
+        case ExprKind::INT_LITERAL: {
+            std::cout << color("Int Literal", Color::GREEN) << "(" << as_literal_int(e)->value << ")\n";
             break;
         }
+        case ExprKind::FLOAT_LITERAL: {
+            std::cout << color("Float Literal", Color::GREEN) << "(" << as_literal_float(e)->value << ")\n";
+            break;
+        }
+        case ExprKind::BOOL_LITERAL: {
+            std::cout << color("Bool Literal", Color::GREEN) << "(" << (as_literal_bool(e)->value ? "صحيح" : "خطا") << ")\n";
+            break;
+        }
+        case ExprKind::STRING_LITERAL: {
+            std::cout << color("String Literal", Color::GREEN) << "(" << as_literal_string(e)->str << ")\n";
+            break;
+        }
+        case ExprKind::NIL: {
+            std::cout << color("Nil Literal", Color::GREEN) << "(عدم)\n";
+        }
 
-        case Expr::Kind::UNARY: {
+        case ExprKind::OP_PLUS:
+        case ExprKind::OP_NEG:
+        case ExprKind::OP_BITNOT:
+        case ExprKind::OP_NOT: {
             auto u = static_cast<UnaryExpr const*>(e);
-            std::cout << color("Unary", Color::BOLD) << " " << to_string(u->get_operator()) << "\n";
-            print_expr(u->get_operand(), { p.indent + pipe(p.last), true });
+            std::cout << color("Unary", Color::BOLD) << " " << to_string(u->get_kind()) << "\n";
+            print_expr(u->operand, { p.indent + pipe(p.last), true });
             break;
         }
 
-        case Expr::Kind::BINARY: {
+        case ExprKind::OP_ADD:
+        case ExprKind::OP_SUB:
+        case ExprKind::OP_MUL:
+        case ExprKind::OP_DIV:
+        case ExprKind::OP_MOD:
+        case ExprKind::OP_POW:
+        case ExprKind::OP_EQ:
+        case ExprKind::OP_NEQ:
+        case ExprKind::OP_LT:
+        case ExprKind::OP_GT:
+        case ExprKind::OP_LTE:
+        case ExprKind::OP_GTE:
+        case ExprKind::OP_BITAND:
+        case ExprKind::OP_BITOR:
+        case ExprKind::OP_BITXOR:
+        case ExprKind::OP_LSHIFT:
+        case ExprKind::OP_RSHIFT:
+        case ExprKind::OP_AND:
+        case ExprKind::OP_OR: {
             auto b = as_binary(e);
-            std::cout << color("Binary", Color::BOLD) << " " << to_string(b->get_operator()) << "\n";
-            print_expr(b->get_left(), { p.indent + pipe(p.last), false });
-            print_expr(b->get_right(), { p.indent + pipe(p.last), true });
+            std::cout << color("Binary", Color::BOLD) << " " << to_string(b->get_kind()) << "\n";
+            print_expr(b->lhs, { p.indent + pipe(p.last), false });
+            print_expr(b->rhs, { p.indent + pipe(p.last), true });
             break;
         }
 
         case Expr::Kind::CALL: {
             auto c = static_cast<CallExpr const*>(e);
-            std::cout << color("Call", Color::MAGENTA) << " (" << c->get_args().size() << " args)\n";
+            std::cout << color("Call", Color::MAGENTA) << " (" << c->args->size() << " args)\n";
             std::cout << p.indent + pipe(p.last) << "├─ callee:\n";
-            print_expr(c->get_callee(), { p.indent + pipe(p.last) + "│  ", true });
+            print_expr(c->callee, { p.indent + pipe(p.last) + "│  ", true });
             std::cout << p.indent + pipe(p.last) << "└─ args:\n";
-            for (size_t i = 0; i < c->get_args().size(); i++)
-                print_expr(c->get_args()[i], { p.indent + pipe(p.last) + "   ", i + 1 == c->get_args().size() });
+            for (size_t i = 0; i < c->args->size(); i++)
+                print_expr(c->args->elements[i], { p.indent + pipe(p.last) + "   ", i + 1 == c->args->size() });
             break;
         }
 
         case Expr::Kind::LIST: {
             auto l = as_list(e);
-            std::cout << color("List", Color::BLUE) << " [" << l->get_elements().size() << "]\n";
-            for (size_t i = 0; i < l->get_elements().size(); i++)
-                print_expr(l->get_elements()[i], { p.indent + pipe(p.last), i + 1 == l->get_elements().size() });
+            std::cout << color("List", Color::BLUE) << " [" << l->elements.size() << "]\n";
+            for (size_t i = 0; i < l->elements.size(); i++)
+                print_expr(l->elements[i], { p.indent + pipe(p.last), i + 1 == l->elements.size() });
             break;
         }
 
         case Expr::Kind::ASSIGNMENT: {
-            auto a = static_cast<AssignmentExpr const*>(e);
+            auto a = static_cast<AssignExpr const*>(e);
             std::cout << color("Assignment", Color::YELLOW) << " :=\n";
             std::cout << p.indent + pipe(p.last) << "├─ target:\n";
-            print_expr(a->get_target(), { p.indent + pipe(p.last) + "│  ", true });
+            print_expr(a->target, { p.indent + pipe(p.last) + "│  ", true });
             std::cout << p.indent + pipe(p.last) << "└─ value:\n";
-            print_expr(a->get_value(), { p.indent + pipe(p.last) + "   ", true });
+            print_expr(a->value, { p.indent + pipe(p.last) + "   ", true });
             break;
         }
 
         case Expr::Kind::INDEX_READ: {
             auto ix = static_cast<IndexExpr const*>(e);
-            std::cout << color("Index", Color::MAGENTA) << (ix->is_safe() ? " (safe)" : "") << "\n";
+            std::cout << color("Index", Color::MAGENTA) << "\n";
             std::cout << p.indent + pipe(p.last) << "├─ object:\n";
-            print_expr(ix->get_object(), { p.indent + pipe(p.last) + "│  ", true });
+            print_expr(ix->object, { p.indent + pipe(p.last) + "│  ", true });
             std::cout << p.indent + pipe(p.last) << "└─ index:\n";
-            print_expr(ix->get_index(), { p.indent + pipe(p.last) + "   ", true });
+            print_expr(ix->index, { p.indent + pipe(p.last) + "   ", true });
             break;
         }
 
@@ -166,9 +190,9 @@ private:
             auto g = as_get(e);
             std::cout << color("Get", Color::MAGENTA) << " .\n";
             std::cout << p.indent + pipe(p.last) << "├─ object:\n";
-            print_expr(g->get_object(), { p.indent + pipe(p.last) + "│  ", true });
+            print_expr(g->object, { p.indent + pipe(p.last) + "│  ", true });
             std::cout << p.indent + pipe(p.last) << "└─ member:\n";
-            print_expr(g->get_member(), { p.indent + pipe(p.last) + "   ", true });
+            print_expr(g->member, { p.indent + pipe(p.last) + "   ", true });
             break;
         }
 
@@ -189,73 +213,64 @@ private:
         switch (s->get_kind()) {
         case Stmt::Kind::FUNC: {
             auto f = static_cast<FunctionDef const*>(s);
-            std::cout << color("FunctionDef", Color::BOLD) << " " << f->get_name()->get_value() << "\n";
+            std::cout << color("FunctionDef", Color::BOLD) << " " << f->name->spelling << "\n";
             std::cout << p.indent + pipe(p.last) << "├─ params:\n";
-            for (size_t i = 0; i < f->get_parameters().size(); i++)
-                print_expr(f->get_parameters()[i], { p.indent + pipe(p.last) + "│  ", i + 1 == f->get_parameters().size() });
+            for (size_t i = 0; i < f->params->size(); i++)
+                print_expr(f->params->elements[i], { p.indent + pipe(p.last) + "│  ", i + 1 == f->params->size() });
             std::cout << p.indent + pipe(p.last) << "└─ body:\n";
-            print_stmt(f->get_body(), { p.indent + pipe(p.last) + "    ", true });
+            print_stmt(f->body, { p.indent + pipe(p.last) + "    ", true });
         } break;
 
         case Stmt::Kind::RETURN: {
             auto r = static_cast<ReturnStmt const*>(s);
             std::cout << color("Return", Color::BOLD) << "\n";
-            print_expr(r->get_value(), { p.indent + pipe(p.last), true });
+            print_expr(r->value, { p.indent + pipe(p.last), true });
         } break;
 
         case Stmt::Kind::EXPR: {
             auto e = static_cast<ExprStmt const*>(s);
             std::cout << color("ExprStmt", Color::BOLD) << "\n";
-            print_expr(e->get_expr(), { p.indent + pipe(p.last), true });
+            print_expr(e->expr, { p.indent + pipe(p.last), true });
         } break;
 
         case Stmt::Kind::WHILE: {
             auto w = static_cast<WhileStmt const*>(s);
             std::cout << color("While", Color::BOLD) << "\n";
             std::cout << p.indent + pipe(p.last) << "├─ condition:\n";
-            print_expr(w->get_condition(), { p.indent + pipe(p.last) + "│  ", true });
+            print_expr(w->condition, { p.indent + pipe(p.last) + "│  ", true });
             std::cout << p.indent + pipe(p.last) << "└─ body:\n";
-            print_stmt(w->get_body(), { p.indent + pipe(p.last) + "   ", true });
+            print_stmt(w->body, { p.indent + pipe(p.last) + "   ", true });
         } break;
 
         case Stmt::Kind::IF: {
-            auto i = static_cast<IfStmt const*>(s);
+            auto i = static_cast<IfElseStmt const*>(s);
             std::cout << color("If", Color::BOLD) << "\n";
             std::cout << p.indent + pipe(p.last) << "├─ condition:\n";
-            print_expr(i->get_condition(), { p.indent + pipe(p.last) + "│  ", true });
-            std::cout << p.indent + pipe(p.last) << (i->get_else() ? "├─" : "└─") << " then:\n";
-            print_stmt(i->get_then(), { p.indent + pipe(p.last) + (i->get_else() ? "│  " : "   "), true });
-            if (i->get_else() != nullptr) {
+            print_expr(i->condition, { p.indent + pipe(p.last) + "│  ", true });
+            std::cout << p.indent + pipe(p.last) << (i->else_stmt ? "├─" : "└─") << " then:\n";
+            print_stmt(i->then_stmt, { p.indent + pipe(p.last) + (i->else_stmt ? "│  " : "   "), true });
+            if (i->else_stmt != nullptr) {
                 std::cout << p.indent + pipe(p.last) << "└─ else:\n";
-                print_stmt(i->get_else(), { p.indent + pipe(p.last) + "   ", true });
+                print_stmt(i->else_stmt, { p.indent + pipe(p.last) + "   ", true });
             }
         } break;
 
         case Stmt::Kind::BLOCK: {
             auto b = static_cast<BlockStmt const*>(s);
-            std::cout << color("Block", Color::BOLD) << " {" << b->get_statements().size() << " stmts}\n";
-            for (size_t i = 0; i < b->get_statements().size(); i++)
-                print_stmt(b->get_statements()[i], { p.indent + pipe(p.last), i + 1 == b->get_statements().size() });
-        } break;
-
-        case Stmt::Kind::ASSIGNMENT: {
-            auto a = as_assignment_stmt(s);
-            std::cout << color("AssignmentStmt", Color::YELLOW) << " :=" << "\n";
-            std::cout << p.indent + pipe(p.last) << "├─ target:\n";
-            print_expr(a->get_target(), { p.indent + pipe(p.last) + "│  ", true });
-            std::cout << p.indent + pipe(p.last) << "└─ value:\n";
-            print_expr(a->get_value(), { p.indent + pipe(p.last) + "   ", true });
+            std::cout << color("Block", Color::BOLD) << " {" << b->stmts.size() << " stmts}\n";
+            for (size_t i = 0; i < b->stmts.size(); i++)
+                print_stmt(b->stmts[i], { p.indent + pipe(p.last), i + 1 == b->stmts.size() });
         } break;
 
         case Stmt::Kind::FOR: {
             auto f = as_for(s);
             std::cout << color("For", Color::BOLD) << "\n";
-            std::cout << p.indent + pipe(p.last) << "├─ target:\n";
-            print_expr(f->get_target(), { p.indent + pipe(p.last) + "│  ", true });
+            std::cout << p.indent + pipe(p.last) << "├─ container:\n";
+            print_expr(f->container, { p.indent + pipe(p.last) + "│  ", true });
             std::cout << p.indent + pipe(p.last) << "├─ iter:\n";
-            print_expr(f->get_iter(), { p.indent + pipe(p.last) + "│  ", true });
+            print_expr(f->iter, { p.indent + pipe(p.last) + "│  ", true });
             std::cout << p.indent + pipe(p.last) << "└─ body:\n";
-            print_stmt(f->get_body(), { p.indent + pipe(p.last) + "   ", true });
+            print_stmt(f->body, { p.indent + pipe(p.last) + "   ", true });
         } break;
 
         case Stmt::Kind::BREAK: std::cout << color("Break", Color::BOLD) << "\n"; break;

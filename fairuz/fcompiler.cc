@@ -51,29 +51,26 @@ namespace fairuz::runtime {
 
 using ExprPtr = AST::Expr*;
 using StmtPtr = AST::Stmt*;
+using ConstExprPtr = AST::Expr const*;
+using ConstStmtPtr = AST::Stmt const*;
 using cmp_ret = ErrorOr<ExprResult>;
 using reg_t = u8;
 
 static constexpr char kClassInstanceName[] = "__class$instance";
 
-static bool is_terminal_top_level_call(AST::Stmt const* s)
+static bool is_terminal_top_level_call(ConstStmtPtr s)
 {
     auto const* expr_stmt = dynamic_cast<AST::ExprStmt const*>(s);
     if (expr_stmt == nullptr)
         return false;
 
-    return dynamic_cast<AST::CallExpr const*>(expr_stmt->get_expr()) != nullptr;
+    return dynamic_cast<AST::CallExpr const*>(expr_stmt->expr) != nullptr;
 }
 
 static void patch_a(Chunk* chunk, u32 pc, reg_t a)
 {
     u32 instr = chunk->code[pc];
     chunk->code[pc] = (instr & 0xFF00FFFFu) | (static_cast<u32>(a) << 16);
-}
-
-static AST::NameExpr* as_simple_member_name(AST::Expr* e)
-{
-    return e != nullptr && e->get_kind() == AST::Expr::Kind::NAME ? as_name(e) : nullptr;
 }
 
 // Mirrors fairuz::parser::same_name (fparser.cc), which is file-local to
@@ -84,11 +81,10 @@ static AST::NameExpr* as_simple_member_name(AST::Expr* e)
 // class currently being compiled is NOT YET in m_class_registry while its
 // own methods are still being compiled (see compile_class_def: the
 // registry insert happens only after the full method-compilation loop).
-static bool is_this_reference(AST::Expr const* e)
+static bool is_this_reference(ConstExprPtr e)
 {
-    return e != nullptr
-        && e->get_kind() == AST::Expr::Kind::NAME
-        && as_name(e)->get_value() == StringRef(kClassInstanceName);
+    return e->get_kind() == AST::Expr::Kind::IDENTIFIER
+        && AST::as_identifier(e)->spelling == kClassInstanceName;
 }
 
 Chunk* Compiler::compile(Array<AST::Stmt*> const& stmts)
@@ -112,7 +108,7 @@ Chunk* Compiler::compile(Array<AST::Stmt*> const& stmts)
             auto const* expr_stmt = as_expr_stmt(stmt);
             SourceLocation loc = expr_stmt->get_location();
             RegMark mark(m_current);
-            auto expr_result = compile_expr_impl(expr_stmt->get_expr());
+            auto expr_result = compile_expr_impl(expr_stmt->expr);
             if (expr_result.has_error())
                 break;
             auto src = any_reg(expr_result.value(), loc);
@@ -142,15 +138,14 @@ Chunk* Compiler::compile(Array<AST::Stmt*> const& stmts)
     return chunk;
 }
 
-ErrorOr<bool> Compiler::compile_stmt(AST::Stmt* s)
+ErrorOr<bool> Compiler::compile_stmt(ConstStmtPtr s)
 {
-    if (s == nullptr || m_current->is_dead)
+    if (m_current->is_dead)
         return true;
 
     switch (s->get_kind()) {
     case AST::Stmt::Kind::BLOCK: return compile_block(as_block(s));
     case AST::Stmt::Kind::EXPR: return compile_expr_stmt(as_expr_stmt(s));
-    case AST::Stmt::Kind::ASSIGNMENT: return compile_assignment_stmt(as_assignment_stmt(s));
     case AST::Stmt::Kind::IF: return compile_if(as_if(s));
     case AST::Stmt::Kind::WHILE: return compile_while(as_while(s));
     case AST::Stmt::Kind::FUNC: return compile_function_def(as_function_def(s));
@@ -166,10 +161,8 @@ ErrorOr<bool> Compiler::compile_stmt(AST::Stmt* s)
     }
 }
 
-ErrorOr<bool> Compiler::compile_import(AST::ImportStmt* s)
+ErrorOr<bool> Compiler::compile_import(AST::ImportStmt const* s)
 {
-    if (s == nullptr)
-        return true;
     if (!m_current->is_top_level || m_current->scope_depth != 0)
         return report_error(ErrorCode::INVALID_STATEMENT_NODE, s->get_location());
 
@@ -218,59 +211,44 @@ ErrorOr<bool> Compiler::compile_import_single(
     return true;
 }
 
-ErrorOr<bool> Compiler::compile_block(AST::BlockStmt* s)
+ErrorOr<bool> Compiler::compile_block(AST::BlockStmt const* s)
 {
     ScopeGuard scope(m_current);
 
-    for (AST::Stmt* child : s->get_statements()) {
+    for (AST::Stmt* child : s->stmts) {
         auto r = compile_stmt(child);
         VERIFY_RESULT(r);
     }
 
     SourceLocation loc = { 1, 1, 0 };
-    if (!s->get_statements().empty() && s->get_statements().back())
-        loc = s->get_statements().back()->get_location();
+    if (!s->stmts.empty() && s->stmts.back())
+        loc = s->stmts.back()->get_location();
     return true;
 }
 
-ErrorOr<bool> Compiler::compile_expr_stmt(AST::ExprStmt* s)
+ErrorOr<bool> Compiler::compile_expr_stmt(AST::ExprStmt const* s)
 {
     RegMark mark(m_current);
     ExprResult r;
-    COMPILE_EXPR_IMPL(s->get_expr(), &r);
+    COMPILE_EXPR_IMPL(s->expr, &r);
     reg_t tmp;
     ANY_REG(r, s->get_location(), &tmp);
     return true;
 }
 
-ErrorOr<bool> Compiler::compile_assignment_stmt(AST::AssignmentStmt* s)
+ErrorOr<bool> Compiler::compile_if(AST::IfElseStmt const* s)
 {
-    SourceLocation loc = s->get_location();
-
-    ExprResult r;
-    reg_t reg;
-    COMPILE_EXPR_IMPL(s->get_expr(), &r);
-    ANY_REG(r, loc, &reg);
-
-    return true;
-}
-
-ErrorOr<bool> Compiler::compile_if(AST::IfStmt* s)
-{
-    if (s == nullptr)
-        return true;
-
     SourceLocation loc = s->get_location();
     ScopeGuard scope(m_current);
     bool incoming_dead = m_current->is_dead;
 
-    if (auto folded = try_fold_expr(s->get_condition())) {
+    if (auto folded = try_fold_expr(s->condition)) {
         if (folded->is_truthy()) {
-            auto ret = compile_stmt(s->get_then());
+            auto ret = compile_stmt(s->then_stmt);
             m_current->is_dead = incoming_dead;
             return ret;
-        } else if (AST::Stmt* m_else_stmt = s->get_else()) {
-            auto ret = compile_stmt(m_else_stmt);
+        } else if (s->else_stmt) {
+            auto ret = compile_stmt(s->else_stmt);
             m_current->is_dead = incoming_dead;
             return ret;
         }
@@ -280,15 +258,15 @@ ErrorOr<bool> Compiler::compile_if(AST::IfStmt* s)
     RegMark mark(m_current);
     ExprResult expr_result;
     reg_t cond;
-    COMPILE_EXPR_IMPL(s->get_condition(), &expr_result);
+    COMPILE_EXPR_IMPL(s->condition, &expr_result);
     ANY_REG(expr_result, loc, &cond);
     u32 jump_false = emit_jump(OpCode::JUMP_IF_FALSE, cond, loc);
-    COMPILE_STMT_DISCARD(s->get_then());
+    COMPILE_STMT_DISCARD(s->then_stmt);
 
-    if (AST::Stmt* else_stmt = s->get_else()) {
+    if (s->else_stmt) {
         u32 jump_end = emit_jump(OpCode::JUMP, 0, loc);
         patch_jump(jump_false);
-        auto else_ret = compile_stmt(else_stmt);
+        auto else_ret = compile_stmt(s->else_stmt);
         VERIFY_RESULT(else_ret);
         (void)else_ret;
         patch_jump(jump_end);
@@ -300,7 +278,7 @@ ErrorOr<bool> Compiler::compile_if(AST::IfStmt* s)
     return true;
 }
 
-ErrorOr<bool> Compiler::compile_while(AST::WhileStmt* s)
+ErrorOr<bool> Compiler::compile_while(AST::WhileStmt const* s)
 {
     if (s == nullptr)
         return true;
@@ -309,11 +287,11 @@ ErrorOr<bool> Compiler::compile_while(AST::WhileStmt* s)
     ScopeGuard scope(m_current);
 
     bool incoming_dead = m_current->is_dead;
-    if (auto folded = try_fold_expr(s->get_condition())) {
+    if (auto folded = try_fold_expr(s->condition)) {
         if (folded->is_truthy()) {
             u32 loop_start = current_offset();
             push_loop(loop_start);
-            COMPILE_STMT_DISCARD(s->get_body());
+            COMPILE_STMT_DISCARD(s->body);
             u32 continue_target = current_offset();
             emit(make_AsBx(OpCode::LOOP, 0, static_cast<i32>(loop_start) - static_cast<i32>(current_offset()) - 1), loc);
             pop_loop(current_offset(), continue_target, loc.line);
@@ -330,10 +308,10 @@ ErrorOr<bool> Compiler::compile_while(AST::WhileStmt* s)
         RegMark mark(m_current);
         ExprResult expr_result;
         reg_t cond;
-        COMPILE_EXPR_IMPL(s->get_condition(), &expr_result);
+        COMPILE_EXPR_IMPL(s->condition, &expr_result);
         ANY_REG(expr_result, loc, &cond);
         u32 exit_jump = emit_jump(OpCode::JUMP_IF_FALSE, cond, loc);
-        COMPILE_STMT_DISCARD(s->get_body());
+        COMPILE_STMT_DISCARD(s->body);
         u32 continue_target = current_offset();
         emit(make_AsBx(OpCode::LOOP, 0, static_cast<i32>(loop_start) - static_cast<i32>(current_offset()) - 1), loc);
         patch_jump(exit_jump);
@@ -343,15 +321,11 @@ ErrorOr<bool> Compiler::compile_while(AST::WhileStmt* s)
     return true;
 }
 
-ErrorOr<bool> Compiler::compile_function_def(AST::FunctionDef* f)
+ErrorOr<bool> Compiler::compile_function_def(AST::FunctionDef const* f)
 {
     SourceLocation loc = f->get_location();
     if (!m_current->is_top_level || m_current->scope_depth != 0)
         return report_error(ErrorCode::NESTED_FUNCTION_UNSUPPORTED, f->get_location());
-
-    AST::NameExpr* name = f->get_name();
-    if (name == nullptr)
-        return report_error(ErrorCode::NULL_FUNCTION_NAME, f->get_location());
 
     if (current_chunk()->functions.size() > MAX_CONSTANTS)
         return report_error(ErrorCode::TOO_MANY_FUNCTIONS, loc);
@@ -359,33 +333,33 @@ ErrorOr<bool> Compiler::compile_function_def(AST::FunctionDef* f)
     Chunk* fn_chunk = make_chunk();
     fn_chunk->source = current_chunk()->source;
     fn_chunk->source_path = current_chunk()->source_path;
-    fn_chunk->name = name->get_value();
-    fn_chunk->arity = f->has_parameters() ? static_cast<int>(f->get_parameters().size()) : 0;
+    fn_chunk->name = f->name->spelling;
+    fn_chunk->arity = f->has_parameters() ? static_cast<int>(f->params->size()) : 0;
 
     auto fn_idx = static_cast<u16>(current_chunk()->functions.size());
     current_chunk()->functions.push(fn_chunk);
 
     CompilerState fn_state;
     fn_state.chunk = fn_chunk;
-    fn_state.func_name = name->get_value();
+    fn_state.func_name = f->name->spelling;
     fn_state.enclosing = m_current;
     CompilerStateGuard state_guard(m_current, &fn_state);
     ScopeGuard scope(m_current);
 
     if (f->has_parameters()) {
-        for (AST::Expr* param : f->get_parameters()) {
-            auto param_name = dynamic_cast<AST::NameExpr*>(param);
+        for (AST::Expr* param : f->params->elements) {
+            auto param_name = dynamic_cast<AST::IdentifierExpr*>(param);
             if (param_name == nullptr)
                 return report_error(ErrorCode::INVALID_FUNCTION_PARAMETER,
                     param ? param->get_location() : f->get_location());
 
             reg_t reg;
             ALLOC_REG(&reg);
-            declare_local(param_name->get_value(), reg);
+            declare_local(param_name->spelling, reg);
         }
     }
 
-    COMPILE_STMT_DISCARD(f->get_body());
+    COMPILE_STMT_DISCARD(f->body);
 
     if (!fn_state.is_dead)
         emit(make_ABC(OpCode::RETURN_NIL, 0, 0, 0), loc);
@@ -398,15 +372,15 @@ ErrorOr<bool> Compiler::compile_function_def(AST::FunctionDef* f)
     emit(make_ABx(OpCode::CLOSURE, dst, fn_idx), loc);
 
     if (m_current != nullptr && m_current->is_top_level) {
-        u16 name_idx = intern_string(name->get_value());
+        u16 name_idx = intern_string(f->name->spelling);
         emit(make_ABx(OpCode::STORE_GLOBAL, dst, name_idx), loc);
     }
 
-    declare_local(name->get_value(), dst);
+    declare_local(f->name->spelling, dst);
     return true;
 }
 
-ErrorOr<bool> Compiler::compile_return(AST::ReturnStmt* s)
+ErrorOr<bool> Compiler::compile_return(AST::ReturnStmt const* s)
 {
     SourceLocation loc = s->get_location();
 
@@ -416,18 +390,18 @@ ErrorOr<bool> Compiler::compile_return(AST::ReturnStmt* s)
         return true;
     }
 
-    AST::Expr* value = s->get_value();
-    if (value->get_kind() == AST::Expr::Kind::LITERAL && as_literal(value)->is_nil()) {
+    ConstExprPtr value = s->value;
+    if (AST::is_nil(value)) {
         emit(make_ABC(OpCode::RETURN_NIL, 0, 0, 0), loc);
         m_current->is_dead = true;
         return true;
     }
 
-    if (value->get_kind() == AST::Expr::Kind::CALL && !m_current->is_top_level) {
+    if (AST::is_call(value) && !m_current->is_top_level) {
         auto* call_expr = as_call(value);
-        bool is_ctor_call = !AST::is_get(call_expr->get_callee())
-            && call_expr->get_callee()->get_kind() == AST::Expr::Kind::NAME
-            && m_class_registry.find_ptr(as_name(call_expr->get_callee())->get_value()) != nullptr;
+        bool is_ctor_call = !AST::is_get(call_expr->callee)
+            && AST::is_identifier(call_expr->callee)
+            && m_class_registry.find_ptr(AST::as_identifier(call_expr->callee)->spelling) != nullptr;
 
         RegMark mark(m_current);
         auto call_ret = compile_call_impl(call_expr, nullptr, /*tail=*/!is_ctor_call);
@@ -454,12 +428,12 @@ ErrorOr<bool> Compiler::compile_return(AST::ReturnStmt* s)
     return true;
 }
 
-ErrorOr<bool> Compiler::compile_for(AST::ForStmt* s)
+ErrorOr<bool> Compiler::compile_for(AST::ForStmt const* s)
 {
     SourceLocation loc = s->get_location();
     ScopeGuard scope(m_current);
 
-    auto target = as_name(s->get_target());
+    auto target = AST::as_identifier(s->container);
     bool incoming_dead = m_current->is_dead;
 
     reg_t iter_reg;
@@ -468,7 +442,7 @@ ErrorOr<bool> Compiler::compile_for(AST::ForStmt* s)
         declare_local("__for_iter", iter_reg);
         RegMark mark(m_current);
         ExprResult expr_result;
-        COMPILE_EXPR_IMPL(s->get_iter(), &expr_result);
+        COMPILE_EXPR_IMPL(s->iter, &expr_result);
         discharge(expr_result, iter_reg, loc);
     }
 
@@ -482,7 +456,7 @@ ErrorOr<bool> Compiler::compile_for(AST::ForStmt* s)
 
     declare_local("__for_len", len_reg);
     declare_local("__for_index", index_reg);
-    declare_local(target->get_value(), target_reg);
+    declare_local(target->spelling, target_reg);
     declare_local("__for_cond", cond_reg);
     declare_local("__for_step", step_reg);
 
@@ -497,7 +471,7 @@ ErrorOr<bool> Compiler::compile_for(AST::ForStmt* s)
 
     u32 exit_jump = emit_jump(OpCode::JUMP_IF_FALSE, cond_reg, loc);
     emit(make_ABC(OpCode::LIST_GET, target_reg, iter_reg, index_reg), loc);
-    COMPILE_STMT_DISCARD(s->get_body());
+    COMPILE_STMT_DISCARD(s->body);
 
     u32 continue_target = current_offset();
     emit(make_ABC(OpCode::OP_ADD, index_reg, index_reg, step_reg), loc);
@@ -511,7 +485,7 @@ ErrorOr<bool> Compiler::compile_for(AST::ForStmt* s)
     return true;
 }
 
-ErrorOr<bool> Compiler::compile_break(AST::BreakStmt* s)
+ErrorOr<bool> Compiler::compile_break(AST::BreakStmt const* s)
 {
     if (m_current->loop_stack.empty())
         return report_error(ErrorCode::BREAK_OUTSIDE_LOOP, s->get_location());
@@ -522,7 +496,7 @@ ErrorOr<bool> Compiler::compile_break(AST::BreakStmt* s)
     return true;
 }
 
-ErrorOr<bool> Compiler::compile_continue(AST::ContinueStmt* s)
+ErrorOr<bool> Compiler::compile_continue(AST::ContinueStmt const* s)
 {
     if (m_current->loop_stack.empty())
         return report_error(ErrorCode::CONTINUE_OUTSIDE_LOOP, s->get_location());
@@ -533,7 +507,7 @@ ErrorOr<bool> Compiler::compile_continue(AST::ContinueStmt* s)
     return true;
 }
 
-ErrorOr<bool> Compiler::compile_class_def(AST::ClassDef* s)
+ErrorOr<bool> Compiler::compile_class_def(AST::ClassDef const* s)
 {
     if (s == nullptr)
         return true;
@@ -544,11 +518,11 @@ ErrorOr<bool> Compiler::compile_class_def(AST::ClassDef* s)
 
     Array<AST::Expr*> fields = s->get_members();
     Array<AST::Stmt*> methods = s->get_methods();
-    StringRef class_name = as_name(s->get_name())->get_value();
+    StringRef class_name = AST::as_identifier(s->get_name())->spelling;
     StringRef parent_name;
     ClassDesc const* parent_desc = nullptr;
     if (s->get_parent() != nullptr) {
-        parent_name = as_name(s->get_parent())->get_value();
+        parent_name = AST::as_identifier(s->get_parent())->spelling;
         parent_desc = m_class_registry.find_ptr(parent_name);
     }
 
@@ -561,8 +535,8 @@ ErrorOr<bool> Compiler::compile_class_def(AST::ClassDef* s)
     }
 
     for (AST::Expr* field : fields) {
-        auto* name = as_name(field);
-        StringRef fname = name->get_value();
+        auto* name = AST::as_identifier(field);
+        StringRef fname = name->spelling;
 
         bool seen = false;
         for (auto& existing : own_field_names) {
@@ -587,9 +561,6 @@ ErrorOr<bool> Compiler::compile_class_def(AST::ClassDef* s)
 
     auto compile_method_closure = [&](AST::FunctionDef* method) -> ErrorOr<std::tuple<reg_t, Chunk*>> {
         SourceLocation method_loc = method->get_location();
-        AST::NameExpr* method_name = method->get_name();
-        if (method_name == nullptr)
-            return report_error(ErrorCode::NULL_FUNCTION_NAME, method_loc);
 
         if (current_chunk()->functions.size() > MAX_CONSTANTS)
             return report_error(ErrorCode::TOO_MANY_FUNCTIONS, method_loc);
@@ -597,8 +568,8 @@ ErrorOr<bool> Compiler::compile_class_def(AST::ClassDef* s)
         Chunk* ch = make_chunk();
         ch->source = current_chunk()->source;
         ch->source_path = current_chunk()->source_path;
-        ch->name = class_name + "." + method_name->get_value();
-        int ex_param_count = method->has_parameters() ? static_cast<int>(method->get_parameters().size()) : 0;
+        ch->name = class_name + "." + method->name->spelling;
+        int ex_param_count = method->has_parameters() ? static_cast<int>(method->params->size()) : 0;
         ch->arity = ex_param_count + 1;
 
         auto fn_idx = static_cast<u16>(current_chunk()->functions.size());
@@ -606,7 +577,7 @@ ErrorOr<bool> Compiler::compile_class_def(AST::ClassDef* s)
 
         CompilerState state;
         state.chunk = ch;
-        state.func_name = method_name->get_value();
+        state.func_name = method->name->spelling;
         state.enclosing = m_current;
         state.is_class_method = true;
         state.class_field_names = field_names;
@@ -620,19 +591,19 @@ ErrorOr<bool> Compiler::compile_class_def(AST::ClassDef* s)
         declare_local(kClassInstanceName, inst_reg, class_name);
 
         if (method->has_parameters()) {
-            for (AST::Expr* p : method->get_parameters()) {
-                auto* p_name = dynamic_cast<AST::NameExpr*>(p);
+            for (AST::Expr* p : method->params->elements) {
+                auto* p_name = dynamic_cast<AST::IdentifierExpr*>(p);
                 if (p_name == nullptr)
                     return report_error(ErrorCode::INVALID_FUNCTION_PARAMETER,
                         p ? p->get_location() : method_loc);
 
                 reg_t reg;
                 ALLOC_REG(&reg);
-                declare_local(p_name->get_value(), reg);
+                declare_local(p_name->spelling, reg);
             }
         }
 
-        COMPILE_STMT_DISCARD(method->get_body());
+        COMPILE_STMT_DISCARD(method->body);
         if (!state.is_dead)
             emit(make_ABC(OpCode::RETURN, inst_reg, 1, 0), method_loc);
 
@@ -696,7 +667,7 @@ ErrorOr<bool> Compiler::compile_class_def(AST::ClassDef* s)
             return report_error(ErrorCode::INVALID_STATEMENT_NODE, m->get_location());
 
         auto* method = as_function_def(m);
-        StringRef method_name = method->get_name()->get_value();
+        StringRef method_name = method->name->spelling;
 
         bool seen = false;
         for (auto& existing : seen_names) {
@@ -811,61 +782,70 @@ ErrorOr<bool> Compiler::compile_class_def(AST::ClassDef* s)
     return true;
 }
 
-ErrorOr<ExprResult> Compiler::compile_expr_impl(AST::Expr* e)
+ErrorOr<ExprResult> Compiler::compile_expr_impl(ConstExprPtr e)
 {
     if (e == nullptr)
         return ExprResult::knil();
 
+    if (AST::is_unary(e))
+        return compile_unary_impl(AST::as_unary(e));
+
+    if (AST::is_binary(e))
+        return compile_binary_impl(AST::as_binary(e));
+
     switch (e->get_kind()) {
-    case AST::Expr::Kind::LITERAL: return compile_literal_impl(as_literal(e));
-    case AST::Expr::Kind::NAME: return compile_name_impl(as_name(e));
-    case AST::Expr::Kind::UNARY: return compile_unary_impl(as_unary(e));
-    case AST::Expr::Kind::BINARY: return compile_binary_impl(as_binary(e));
-    case AST::Expr::Kind::ASSIGNMENT: return compile_assign_impl(as_assignment_expr(e));
-    case AST::Expr::Kind::CALL: return compile_call_impl(as_call(e), nullptr, false);
-    case AST::Expr::Kind::LIST: return compile_list_impl(as_list(e));
-    case AST::Expr::Kind::DICT: return compile_dict_impl(as_dict(e));
+    case AST::Expr::Kind::INT_LITERAL: return compile_literal_int_impl(AST::as_literal_int(e));
+    case AST::Expr::Kind::FLOAT_LITERAL: return compile_literal_float_impl(AST::as_literal_float(e));
+    case AST::Expr::Kind::BOOL_LITERAL: return compile_literal_bool_impl(AST::as_literal_bool(e));
+    case AST::Expr::Kind::STRING_LITERAL: return compile_literal_string_impl(AST::as_literal_string(e));
+    case AST::Expr::Kind::NIL: return compile_nil_impl(AST::as_nil(e));
+    case AST::Expr::Kind::IDENTIFIER: return compile_identifier_impl(AST::as_identifier(e));
+    case AST::Expr::Kind::ASSIGNMENT: return compile_assign_impl(AST::as_assignment_expr(e));
+    case AST::Expr::Kind::CALL: return compile_call_impl(AST::as_call(e), nullptr, false);
+    case AST::Expr::Kind::LIST: return compile_list_impl(AST::as_list(e));
+    case AST::Expr::Kind::DICT: return compile_dict_impl(AST::as_dict(e));
     case AST::Expr::Kind::INDEX_READ: return compile_index_impl(as_index(e));
     case AST::Expr::Kind::GET: return compile_get_impl_(as_get(e));
-    case AST::Expr::Kind::INVALID:
+    default:
         return report_error(ErrorCode::INVALID_EXPRESSION_NODE, e->get_location());
     }
 
     return ExprResult::knil();
 }
 
-ErrorOr<ExprResult> Compiler::compile_literal_impl(AST::LiteralExpr* e)
+ErrorOr<ExprResult> Compiler::compile_literal_int_impl(AST::IntLiteralExpr const* e)
 {
-    /// string literals are immutable constants
-    if (e->is_string()) {
-        u16 kidx = intern_string(e->get_str());
-        u32 pc = emit(make_ABx(OpCode::LOAD_CONST, 0, kidx), e->get_location());
-        return ExprResult::reloc(pc);
-    }
-
-    if (e->is_integer())
-        return ExprResult::kint(e->get_int());
-    if (e->is_float())
-        return ExprResult::kfloat(e->get_float());
-    if (e->is_bool())
-        return ExprResult::kbool(e->get_bool());
-    if (e->is_nil())
-        return ExprResult::knil();
-
-    // semantically unreachable, the structure of the literal expression ast node
-    // should guarantee that it always holds a valid literal expression
-    return report_error(ErrorCode::UNKNOWN_LITERAL_TYPE, e->get_location());
+    return ExprResult::kint(e->value);
+}
+ErrorOr<ExprResult> Compiler::compile_literal_float_impl(AST::FloatLiteralExpr const* e)
+{
+    return ExprResult::kfloat(e->value);
+}
+ErrorOr<ExprResult> Compiler::compile_literal_bool_impl(AST::BoolLiteralExpr const* e)
+{
+    return ExprResult::kbool(e->value);
+}
+ErrorOr<ExprResult> Compiler::compile_literal_string_impl(AST::StringLiteralExpr const* e)
+{
+    u16 kidx = intern_string(e->str);
+    u32 pc = emit(make_ABx(OpCode::LOAD_CONST, 0, kidx), e->get_location());
+    return ExprResult::reloc(pc);
+}
+ErrorOr<ExprResult> Compiler::compile_nil_impl(AST::NilExpr const* e)
+{
+    (void)e;
+    return ExprResult::knil();
 }
 
-ErrorOr<ExprResult> Compiler::compile_name_impl(AST::NameExpr* e)
+ErrorOr<ExprResult> Compiler::compile_identifier_impl(AST::IdentifierExpr const* e)
 {
     SourceLocation loc = e->get_location();
-    VarInfo vi = resolve_name(e->get_value());
+    VarInfo vi = resolve_name(e->spelling);
 
     if (vi.kind == VarInfo::Kind::LOCAL)
         return ExprResult::reg(vi.index);
 
-    if (int field_idx = current_method_field_index(e->get_value()); field_idx >= 0) {
+    if (int field_idx = current_method_field_index(e->spelling); field_idx >= 0) {
         LocalVar const* self = lookup_local(kClassInstanceName);
         if (self == nullptr)
             return report_error(ErrorCode::INVALID_EXPRESSION_NODE, e->get_location());
@@ -874,12 +854,12 @@ ErrorOr<ExprResult> Compiler::compile_name_impl(AST::NameExpr* e)
         return ExprResult::reloc(pc);
     }
 
-    u16 kidx = intern_string(e->get_value());
+    u16 kidx = intern_string(e->spelling);
     u32 pc = emit(make_ABx(OpCode::LOAD_GLOBAL, 0, kidx), loc);
     return ExprResult::reloc(pc);
 }
 
-ErrorOr<ExprResult> Compiler::compile_unary_impl(AST::UnaryExpr* e)
+ErrorOr<ExprResult> Compiler::compile_unary_impl(AST::UnaryExpr const* e)
 {
     SourceLocation loc = e->get_location();
 
@@ -899,24 +879,24 @@ ErrorOr<ExprResult> Compiler::compile_unary_impl(AST::UnaryExpr* e)
         return compile_expr_impl(*reduced);
 
     OpCode op = OpCode::NOP;
-    switch (e->get_operator()) {
-    case AST::UnaryOp::OP_NEG: op = OpCode::OP_NEG; break;
-    case AST::UnaryOp::OP_BITNOT: op = OpCode::OP_BITNOT; break;
-    case AST::UnaryOp::OP_NOT: op = OpCode::OP_NOT; break;
+    switch (e->get_kind()) {
+    case AST::Expr::Kind::OP_NEG: op = OpCode::OP_NEG; break;
+    case AST::Expr::Kind::OP_BITNOT: op = OpCode::OP_BITNOT; break;
+    case AST::Expr::Kind::OP_NOT: op = OpCode::OP_NOT; break;
     default:
         return report_error(ErrorCode::UNKNOWN_UNARY_OPERATOR, e->get_location());
     }
 
     RegMark mark(m_current);
     ExprResult expr_result;
-    COMPILE_EXPR_IMPL(e->get_operand(), &expr_result);
+    COMPILE_EXPR_IMPL(e->operand, &expr_result);
     reg_t src;
     ANY_REG(expr_result, loc, &src);
     u32 pc = emit(make_ABC(op, 0, src, 0), loc);
     return ExprResult::reloc(pc);
 }
 
-ErrorOr<ExprResult> Compiler::compile_binary_impl(AST::BinaryExpr* e)
+ErrorOr<ExprResult> Compiler::compile_binary_impl(AST::BinaryExpr const* e)
 {
     SourceLocation loc = e->get_location();
 
@@ -935,15 +915,15 @@ ErrorOr<ExprResult> Compiler::compile_binary_impl(AST::BinaryExpr* e)
     if (auto reduced = try_strength_reduce_binary(e))
         return compile_expr_impl(*reduced);
 
-    AST::BinaryOp op = e->get_operator();
-    if (op == AST::BinaryOp::OP_AND) {
+    AST::Expr::Kind op = e->get_kind();
+    if (op == AST::Expr::Kind::OP_AND) {
         reg_t dst;
         ALLOC_REG(&dst);
 
         {
             RegMark mark(m_current);
             ExprResult expr_result;
-            COMPILE_EXPR_IMPL(e->get_left(), &expr_result);
+            COMPILE_EXPR_IMPL(e->lhs, &expr_result);
             discharge(expr_result, dst, loc);
         }
 
@@ -952,7 +932,7 @@ ErrorOr<ExprResult> Compiler::compile_binary_impl(AST::BinaryExpr* e)
         {
             RegMark mark(m_current);
             ExprResult expr_result;
-            COMPILE_EXPR_IMPL(e->get_right(), &expr_result);
+            COMPILE_EXPR_IMPL(e->rhs, &expr_result);
             discharge(expr_result, dst, loc);
         }
 
@@ -960,14 +940,14 @@ ErrorOr<ExprResult> Compiler::compile_binary_impl(AST::BinaryExpr* e)
         return ExprResult::reg(dst);
     }
 
-    if (op == AST::BinaryOp::OP_OR) {
+    if (op == AST::Expr::Kind::OP_OR) {
         reg_t dst;
         ALLOC_REG(&dst);
 
         {
             RegMark mark(m_current);
             ExprResult expr_result;
-            COMPILE_EXPR_IMPL(e->get_left(), &expr_result);
+            COMPILE_EXPR_IMPL(e->lhs, &expr_result);
             discharge(expr_result, dst, loc);
         }
 
@@ -976,7 +956,7 @@ ErrorOr<ExprResult> Compiler::compile_binary_impl(AST::BinaryExpr* e)
         {
             RegMark mark(m_current);
             ExprResult expr_result;
-            COMPILE_EXPR_IMPL(e->get_right(), &expr_result);
+            COMPILE_EXPR_IMPL(e->rhs, &expr_result);
             discharge(expr_result, dst, loc);
         }
 
@@ -988,33 +968,30 @@ ErrorOr<ExprResult> Compiler::compile_binary_impl(AST::BinaryExpr* e)
     bool swapped = false;
 
     switch (op) {
-    case AST::BinaryOp::OP_ADD: bc_op = OpCode::OP_ADD; break;
-    case AST::BinaryOp::OP_SUB: bc_op = OpCode::OP_SUB; break;
-    case AST::BinaryOp::OP_MUL: bc_op = OpCode::OP_MUL; break;
-    case AST::BinaryOp::OP_DIV: bc_op = OpCode::OP_DIV; break;
-    case AST::BinaryOp::OP_MOD: bc_op = OpCode::OP_MOD; break;
-    case AST::BinaryOp::OP_POW: bc_op = OpCode::OP_POW; break;
-    case AST::BinaryOp::OP_EQ: bc_op = OpCode::OP_EQ; break;
-    case AST::BinaryOp::OP_NEQ: bc_op = OpCode::OP_NEQ; break;
-    case AST::BinaryOp::OP_LT: bc_op = OpCode::OP_LT; break;
-    case AST::BinaryOp::OP_LTE: bc_op = OpCode::OP_LTE; break;
-    case AST::BinaryOp::OP_GT: bc_op = OpCode::OP_LT, swapped = true; break;
-    case AST::BinaryOp::OP_GTE: bc_op = OpCode::OP_LTE, swapped = true; break;
-    case AST::BinaryOp::OP_BITAND: bc_op = OpCode::OP_BITAND; break;
-    case AST::BinaryOp::OP_BITOR: bc_op = OpCode::OP_BITOR; break;
-    case AST::BinaryOp::OP_BITXOR: bc_op = OpCode::OP_BITXOR; break;
-    case AST::BinaryOp::OP_LSHIFT: bc_op = OpCode::OP_LSHIFT; break;
-    case AST::BinaryOp::OP_RSHIFT: bc_op = OpCode::OP_RSHIFT; break;
+    case AST::Expr::Kind::OP_ADD: bc_op = OpCode::OP_ADD; break;
+    case AST::Expr::Kind::OP_SUB: bc_op = OpCode::OP_SUB; break;
+    case AST::Expr::Kind::OP_MUL: bc_op = OpCode::OP_MUL; break;
+    case AST::Expr::Kind::OP_DIV: bc_op = OpCode::OP_DIV; break;
+    case AST::Expr::Kind::OP_MOD: bc_op = OpCode::OP_MOD; break;
+    case AST::Expr::Kind::OP_POW: bc_op = OpCode::OP_POW; break;
+    case AST::Expr::Kind::OP_EQ: bc_op = OpCode::OP_EQ; break;
+    case AST::Expr::Kind::OP_NEQ: bc_op = OpCode::OP_NEQ; break;
+    case AST::Expr::Kind::OP_LT: bc_op = OpCode::OP_LT; break;
+    case AST::Expr::Kind::OP_LTE: bc_op = OpCode::OP_LTE; break;
+    case AST::Expr::Kind::OP_GT: bc_op = OpCode::OP_LT, swapped = true; break;
+    case AST::Expr::Kind::OP_GTE: bc_op = OpCode::OP_LTE, swapped = true; break;
+    case AST::Expr::Kind::OP_BITAND: bc_op = OpCode::OP_BITAND; break;
+    case AST::Expr::Kind::OP_BITOR: bc_op = OpCode::OP_BITOR; break;
+    case AST::Expr::Kind::OP_BITXOR: bc_op = OpCode::OP_BITXOR; break;
+    case AST::Expr::Kind::OP_LSHIFT: bc_op = OpCode::OP_LSHIFT; break;
+    case AST::Expr::Kind::OP_RSHIFT: bc_op = OpCode::OP_RSHIFT; break;
     default:
         return report_error(ErrorCode::UNKNOWN_BINARY_OPERATOR, e->get_location());
     }
 
-    if ((bc_op == OpCode::OP_LSHIFT || bc_op == OpCode::OP_RSHIFT) && AST::is_literal(e->get_right())) {
-        auto* amount_expr = AST::as_literal(e->get_right());
-        if (!amount_expr->is_integer())
-            return report_error(ErrorCode::SHIFT_AMOUNT_NOT_CONSTANT, e->get_right()->get_location());
-
-        i64 amount = amount_expr->get_int();
+    if ((bc_op == OpCode::OP_LSHIFT || bc_op == OpCode::OP_RSHIFT) && AST::is_literal_int(e->rhs)) {
+        auto* amount_expr = AST::as_literal_int(e->rhs);
+        i64 amount = amount_expr->value;
         if (amount < 0 || amount > 63)
             return report_error(ErrorCode::SHIFT_AMOUNT_OUT_OF_RANGE, amount_expr->get_location());
 
@@ -1022,7 +999,7 @@ ErrorOr<ExprResult> Compiler::compile_binary_impl(AST::BinaryExpr* e)
         ExprResult expr_result;
         reg_t lhs;
 
-        COMPILE_EXPR_IMPL(e->get_left(), &expr_result);
+        COMPILE_EXPR_IMPL(e->lhs, &expr_result);
         ANY_REG(expr_result, loc, &lhs);
         u32 pc = emit(make_ABC(bc_op, 0, lhs, static_cast<reg_t>(amount)), loc);
         reg_t ic = current_chunk()->alloc_ic_slot();
@@ -1034,9 +1011,9 @@ ErrorOr<ExprResult> Compiler::compile_binary_impl(AST::BinaryExpr* e)
     ExprResult lhs_ret, rhs_ret;
     reg_t lhs, rhs;
 
-    COMPILE_EXPR_IMPL(e->get_left(), &lhs_ret);
+    COMPILE_EXPR_IMPL(e->lhs, &lhs_ret);
     ANY_REG(lhs_ret, loc, &lhs);
-    COMPILE_EXPR_IMPL(e->get_right(), &rhs_ret);
+    COMPILE_EXPR_IMPL(e->rhs, &rhs_ret);
     ANY_REG(rhs_ret, loc, &rhs);
 
     if (swapped)
@@ -1048,42 +1025,40 @@ ErrorOr<ExprResult> Compiler::compile_binary_impl(AST::BinaryExpr* e)
     return ExprResult::reloc(pc);
 }
 
-bool Compiler::is_declaration(AST::AssignmentExpr const* e) const
+bool Compiler::is_declaration(AST::AssignExpr const* e) const
 {
-    if (!AST::is_name(e->get_target()))
+    if (!AST::is_identifier(e->target))
         return false;
 
-    auto name = as_name(e->get_target());
-    if (lookup_local(name->get_value()))
+    auto name = AST::as_identifier(e->target);
+    if (lookup_local(name->spelling))
         return false;
-    if (m_globals.find_ptr(name->get_value()) != nullptr)
+    if (m_globals.find_ptr(name->spelling) != nullptr)
         return false;
     return true;
 }
 
-ErrorOr<ExprResult> Compiler::compile_assign_impl(AST::AssignmentExpr* e)
+ErrorOr<ExprResult> Compiler::compile_assign_impl(AST::AssignExpr const* e)
 {
-    if (e == nullptr || e->get_target() == nullptr || e->get_value() == nullptr)
+    if (e == nullptr || e->target == nullptr || e->value == nullptr)
         return report_error(ErrorCode::INVALID_EXPRESSION_NODE,
             e ? e->get_location() : SourceLocation { });
 
     SourceLocation loc = e->get_location();
-    AST::Expr* target = e->get_target();
-    AST::Expr* value = e->get_value();
 
     // Indexed assignment: evaluate the object and index before the value,
     // then write the resulting value into the computed location.
-    if (AST::is_index(target)) {
-        auto index_expr = as_index(target);
+    if (AST::is_index(e->target)) {
+        auto index_expr = as_index(e->target);
         RegMark mark(m_current);
         ExprResult object_expr_result, index_expr_result, value_expr_result;
         reg_t target_object_reg, index_reg, value_reg;
 
-        COMPILE_EXPR_IMPL(index_expr->get_object(), &object_expr_result);
+        COMPILE_EXPR_IMPL(index_expr->object, &object_expr_result);
         ANY_REG(object_expr_result, loc, &target_object_reg);
-        COMPILE_EXPR_IMPL(index_expr->get_index(), &index_expr_result);
+        COMPILE_EXPR_IMPL(index_expr->index, &index_expr_result);
         ANY_REG(index_expr_result, loc, &index_reg);
-        COMPILE_EXPR_IMPL(value, &value_expr_result);
+        COMPILE_EXPR_IMPL(e->value, &value_expr_result);
         ANY_REG(value_expr_result, loc, &value_reg);
 
         emit(make_ABC(OpCode::INDEX_WRITE, target_object_reg, index_reg, value_reg), loc);
@@ -1092,25 +1067,25 @@ ErrorOr<ExprResult> Compiler::compile_assign_impl(AST::AssignmentExpr* e)
 
     // Member assignment. Prefer a statically known field slot, but retain a
     // named payload for receivers whose class is only known at runtime.
-    if (AST::is_get(target)) {
-        auto get_expr = as_get(target);
-        auto* member_name = as_simple_member_name(get_expr->get_member());
+    if (AST::is_get(e->target)) {
+        auto get_expr = as_get(e->target);
+        auto* member_name = AST::as_identifier(get_expr->member);
         if (member_name == nullptr)
             return report_error(ErrorCode::INVALID_EXPRESSION_NODE, loc);
 
         int field_idx = -1;
-        if (ClassDesc const* desc = resolve_receiver_class(get_expr->get_object()))
-            field_idx = desc->field_index(member_name->get_value());
-        if (field_idx < 0 && is_this_reference(get_expr->get_object()))
-            field_idx = current_method_field_index(member_name->get_value());
+        if (ClassDesc const* desc = resolve_receiver_class(get_expr->object))
+            field_idx = desc->field_index(member_name->spelling);
+        if (field_idx < 0 && is_this_reference(get_expr->object))
+            field_idx = current_method_field_index(member_name->spelling);
 
         RegMark mark(m_current);
         ExprResult object_expr_result, value_expr_result;
         reg_t object_reg, value_reg;
 
-        COMPILE_EXPR_IMPL(get_expr->get_object(), &object_expr_result);
+        COMPILE_EXPR_IMPL(get_expr->object, &object_expr_result);
         ANY_REG(object_expr_result, loc, &object_reg);
-        COMPILE_EXPR_IMPL(value, &value_expr_result);
+        COMPILE_EXPR_IMPL(e->value, &value_expr_result);
         ANY_REG(value_expr_result, loc, &value_reg);
 
         if (field_idx >= 0) {
@@ -1120,7 +1095,7 @@ ErrorOr<ExprResult> Compiler::compile_assign_impl(AST::AssignmentExpr* e)
         } else {
             emit(make_ABC(OpCode::SET_FIELD, object_reg, 0xFF, value_reg), loc);
             emit(make_ABx(OpCode::NOP, 0,
-                     static_cast<u16>(intern_string(member_name->get_value()))),
+                     static_cast<u16>(intern_string(member_name->spelling))),
                 loc);
         }
         return ExprResult::reg(value_reg);
@@ -1128,20 +1103,19 @@ ErrorOr<ExprResult> Compiler::compile_assign_impl(AST::AssignmentExpr* e)
 
     // Name assignment: write into an existing local, create a local inside a
     // function/method, or store a top-level name globally.
-    if (!AST::is_name(target))
+    if (!AST::is_identifier(e->target))
         return report_error(ErrorCode::INVALID_EXPRESSION_NODE, loc);
 
-    auto* name = as_name(target);
-    StringRef const& name_value = name->get_value();
+    StringRef const& name_value = AST::as_identifier(e->target)->spelling;
 
     if (is_declaration(e)) {
         if (m_current->is_top_level && m_current->scope_depth == 0
-            && infer_constructed_class(value).empty()) {
+            && infer_constructed_class(e->value).empty()) {
             RegMark mark(m_current);
             ExprResult value_result;
             reg_t src;
 
-            COMPILE_EXPR_IMPL(value, &value_result);
+            COMPILE_EXPR_IMPL(e->value, &value_result);
             ANY_REG(value_result, loc, &src);
             emit(make_ABx(OpCode::STORE_GLOBAL, src,
                      static_cast<u16>(intern_string(name_value))),
@@ -1154,9 +1128,9 @@ ErrorOr<ExprResult> Compiler::compile_assign_impl(AST::AssignmentExpr* e)
         ALLOC_REG(&dst);
 
         ExprResult value_result;
-        COMPILE_EXPR_IMPL(value, &value_result);
+        COMPILE_EXPR_IMPL(e->value, &value_result);
         discharge(value_result, dst, loc);
-        declare_local(name_value, dst, infer_constructed_class(value));
+        declare_local(name_value, dst, infer_constructed_class(e->value));
         return ExprResult::reg(dst);
     }
 
@@ -1171,7 +1145,7 @@ ErrorOr<ExprResult> Compiler::compile_assign_impl(AST::AssignmentExpr* e)
         RegMark mark(m_current);
         ExprResult value_result;
         reg_t value_reg;
-        COMPILE_EXPR_IMPL(value, &value_result);
+        COMPILE_EXPR_IMPL(e->value, &value_result);
         ANY_REG(value_result, loc, &value_reg);
         emit(make_ABC(OpCode::SET_FIELD, self->reg,
                  static_cast<reg_t>(field_idx), value_reg),
@@ -1181,7 +1155,7 @@ ErrorOr<ExprResult> Compiler::compile_assign_impl(AST::AssignmentExpr* e)
 
     if (LocalVar const* local = lookup_local(name_value)) {
         reg_t dst = local->reg;
-        auto result = compile_expr(value, &dst);
+        auto result = compile_expr(e->value, &dst);
         VERIFY_RESULT(result);
         return ExprResult::reg(dst);
     }
@@ -1193,15 +1167,15 @@ ErrorOr<ExprResult> Compiler::compile_assign_impl(AST::AssignmentExpr* e)
         ALLOC_REG(&dst);
 
         ExprResult value_result;
-        COMPILE_EXPR_IMPL(value, &value_result);
+        COMPILE_EXPR_IMPL(e->value, &value_result);
         discharge(value_result, dst, loc);
-        declare_local(name_value, dst, infer_constructed_class(value));
+        declare_local(name_value, dst, infer_constructed_class(e->value));
         return ExprResult::reg(dst);
     }
 
     RegMark mark(m_current);
     ExprResult value_result;
-    COMPILE_EXPR_IMPL(value, &value_result);
+    COMPILE_EXPR_IMPL(e->value, &value_result);
     reg_t src;
     ANY_REG(value_result, loc, &src);
 
@@ -1212,17 +1186,15 @@ ErrorOr<ExprResult> Compiler::compile_assign_impl(AST::AssignmentExpr* e)
     return ExprResult::reg(src);
 }
 
-ErrorOr<ExprResult> Compiler::compile_call_impl(AST::CallExpr* e, reg_t* dst, bool tail)
+ErrorOr<ExprResult> Compiler::compile_call_impl(AST::CallExpr const* e, reg_t* dst, bool tail)
 {
     SourceLocation loc = e->get_location();
     auto fn_reg_ret = dst == nullptr ? alloc_register() : *dst;
     VERIFY_RESULT(fn_reg_ret);
     reg_t fn_reg = fn_reg_ret.value();
-    AST::Expr* callee = e->get_callee();
-    Array<AST::Expr*>& args = e->get_args();
 
     auto compile_args = [&]() -> ErrorOr<bool> {
-        for (AST::Expr* arg : args) {
+        for (ConstExprPtr arg : e->args->elements) {
             reg_t arg_reg;
             ExprResult arg_cmp_ret;
             ALLOC_REG(&arg_reg);
@@ -1234,24 +1206,24 @@ ErrorOr<ExprResult> Compiler::compile_call_impl(AST::CallExpr* e, reg_t* dst, bo
     };
 
     bool module_member_call = false;
-    if (AST::is_get(callee)) {
-        AST::Expr* object = AST::as_get(callee)->get_object();
-        module_member_call = AST::is_name(object)
-            && m_module_names.find_ptr(AST::as_name(object)->get_value()) != nullptr;
+    if (AST::is_get(e->callee)) {
+        ConstExprPtr object = AST::as_get(e->callee)->object;
+        module_member_call = AST::is_identifier(object)
+            && m_module_names.find_ptr(AST::as_identifier(object)->spelling) != nullptr;
     }
 
     /// calling a method (module attributes are ordinary callable values)
-    if (AST::is_get(callee) && !module_member_call) {
-        AST::GetExpr* get_expr = AST::as_get(callee);
+    if (AST::is_get(e->callee) && !module_member_call) {
+        AST::GetExpr const* get_expr = AST::as_get(e->callee);
         /// NOTE: we don't have to verify if this is in fact a method call
         /// and not a semantic error of calling a non-callable plain field
         /// because the parser already will enforce this for us
-        AST::Expr* object = get_expr->get_object();
-        AST::Expr* member = get_expr->get_member();
+        ConstExprPtr object = get_expr->object;
+        ConstExprPtr member = get_expr->member;
 
-        if (AST::is_name(object) && AST::as_name(object)->get_value() == kClassInstanceName) {
+        if (AST::is_identifier(object) && AST::as_identifier(object)->spelling == kClassInstanceName) {
             /// internal method call 'this.method(implicit this, ...)'
-            auto method_name = AST::as_name(member)->get_value();
+            auto method_name = AST::as_identifier(member)->spelling;
             int slot = current_method_slot(method_name);
             if (slot >= 0) {
                 reg_t object_reg;
@@ -1268,7 +1240,7 @@ ErrorOr<ExprResult> Compiler::compile_call_impl(AST::CallExpr* e, reg_t* dst, bo
                 m_current->free_regs_to(object_reg + 1);
                 ALLOC_REG(&reserved_reg);
 
-                for (AST::Expr* arg : args) {
+                for (AST::Expr* arg : e->args->elements) {
                     reg_t arg_reg;
                     ExprResult arg_cmp_ret;
                     ALLOC_REG(&arg_reg);
@@ -1276,7 +1248,7 @@ ErrorOr<ExprResult> Compiler::compile_call_impl(AST::CallExpr* e, reg_t* dst, bo
                     discharge(arg_cmp_ret, arg_reg, loc);
                 }
 
-                u8 argc = static_cast<u8>(e->get_args().size() + 1);
+                u8 argc = static_cast<u8>(e->args->size() + 1);
                 emit(make_ABC(OpCode::INVOKE, object_reg, static_cast<reg_t>(slot), argc), loc);
                 emit(make_ABC(OpCode::NOP, current_chunk()->alloc_ic_slot(), 0, 0), loc);
 
@@ -1290,7 +1262,7 @@ ErrorOr<ExprResult> Compiler::compile_call_impl(AST::CallExpr* e, reg_t* dst, bo
             // method slot exists, load the member value and use the ordinary
             // CALL path instead of rejecting valid higher-order code.
             ExprResult callee_cmp_ret;
-            COMPILE_EXPR_IMPL(callee, &callee_cmp_ret);
+            COMPILE_EXPR_IMPL(e->callee, &callee_cmp_ret);
             discharge(callee_cmp_ret, fn_reg, loc);
             m_current->free_regs_to(fn_reg + 1);
         } else {
@@ -1308,9 +1280,9 @@ ErrorOr<ExprResult> Compiler::compile_call_impl(AST::CallExpr* e, reg_t* dst, bo
             m_current->free_regs_to(object_reg + 1);
             ALLOC_REG(&member_reg);
 
-            if (AST::is_name(member)) {
+            if (AST::is_identifier(member)) {
                 /// if it's a simple name then load it from the constant table
-                emit(make_ABx(OpCode::LOAD_CONST, member_reg, intern_string(AST::as_name(member)->get_value())),
+                emit(make_ABx(OpCode::LOAD_CONST, member_reg, intern_string(AST::as_identifier(member)->spelling)),
                     member->get_location());
             } else {
                 /// compile complex member expression
@@ -1321,9 +1293,9 @@ ErrorOr<ExprResult> Compiler::compile_call_impl(AST::CallExpr* e, reg_t* dst, bo
             auto args_cmp_ret = compile_args();
             VERIFY_RESULT(args_cmp_ret);
 
-            u8 argc = static_cast<u8>(args.size() + 1); // +1 for implicit 'this'
+            u8 argc = static_cast<u8>(e->args->size() + 1); // +1 for implicit 'this'
             /// emit INVOKE_NAMED to invoke this method by it's name from the vtable of the instance class
-            u16 idx = static_cast<u16>(intern_string(AST::as_name(member)->get_value()));
+            u16 idx = static_cast<u16>(intern_string(AST::as_identifier(member)->spelling));
             emit(make_ABC(OpCode::INVOKE_NAMED, object_reg, 0, argc), loc);
             emit(make_ABx(OpCode::NOP, 0, idx), loc);
             if (tail && !m_current->is_top_level)
@@ -1335,7 +1307,7 @@ ErrorOr<ExprResult> Compiler::compile_call_impl(AST::CallExpr* e, reg_t* dst, bo
     } else {
         /// plain function call 'expr()'
         ExprResult callee_cmp_ret;
-        COMPILE_EXPR_IMPL(callee, &callee_cmp_ret);
+        COMPILE_EXPR_IMPL(e->callee, &callee_cmp_ret);
         discharge(callee_cmp_ret, fn_reg, loc);
         // A computed callee can leave temporary registers live. Arguments must
         // begin immediately after fn_reg for CALL/IC_CALL.
@@ -1345,7 +1317,7 @@ ErrorOr<ExprResult> Compiler::compile_call_impl(AST::CallExpr* e, reg_t* dst, bo
     auto args_cmp_ret = compile_args();
     VERIFY_RESULT(args_cmp_ret);
 
-    u8 argc = static_cast<u8>(args.size());
+    u8 argc = static_cast<u8>(e->args->size());
     if (tail && !m_current->is_top_level) {
         emit(make_ABC(OpCode::CALL_TAIL, fn_reg, argc, 0), loc);
         m_current->free_regs_to(fn_reg);
@@ -1358,7 +1330,7 @@ ErrorOr<ExprResult> Compiler::compile_call_impl(AST::CallExpr* e, reg_t* dst, bo
     return ExprResult::reg(fn_reg);
 }
 
-ErrorOr<ExprResult> Compiler::compile_list_impl(AST::ListExpr* e)
+ErrorOr<ExprResult> Compiler::compile_list_impl(AST::ListExpr const* e)
 {
     SourceLocation loc = e->get_location();
 
@@ -1373,7 +1345,7 @@ ErrorOr<ExprResult> Compiler::compile_list_impl(AST::ListExpr* e)
     auto cap = static_cast<reg_t>(e->size());
     emit(make_ABC(OpCode::LIST_NEW, list_reg, cap, 0), loc);
 
-    for (AST::Expr* elem : e->get_elements()) {
+    for (AST::Expr* elem : e->elements) {
         ExprResult expr_result;
         reg_t reg;
         ALLOC_REG(&reg);
@@ -1390,21 +1362,21 @@ ErrorOr<ExprResult> Compiler::compile_list_impl(AST::ListExpr* e)
     return ExprResult::reg(dst);
 }
 
-ErrorOr<ExprResult> Compiler::compile_index_impl(AST::IndexExpr* e)
+ErrorOr<ExprResult> Compiler::compile_index_impl(AST::IndexExpr const* e)
 {
     SourceLocation loc = e->get_location();
     RegMark mark(m_current);
     ExprResult object_expr_result, index_expr_result;
     reg_t object_reg, index_reg;
-    COMPILE_EXPR_IMPL(e->get_object(), &object_expr_result);
+    COMPILE_EXPR_IMPL(e->object, &object_expr_result);
     ANY_REG(object_expr_result, loc, &object_reg);
-    COMPILE_EXPR_IMPL(e->get_index(), &index_expr_result);
+    COMPILE_EXPR_IMPL(e->index, &index_expr_result);
     ANY_REG(index_expr_result, loc, &index_reg);
     u32 pc = emit(make_ABC(OpCode::INDEX_READ, 0, object_reg, index_reg), loc);
     return ExprResult::reloc(pc);
 }
 
-ErrorOr<ExprResult> Compiler::compile_dict_impl(AST::DictExpr* e)
+ErrorOr<ExprResult> Compiler::compile_dict_impl(AST::DictExpr const* e)
 {
     SourceLocation loc = e->get_location();
 
@@ -1443,74 +1415,70 @@ ErrorOr<ExprResult> Compiler::compile_dict_impl(AST::DictExpr* e)
     return ExprResult::reg(dst);
 }
 
-ErrorOr<ExprResult> Compiler::compile_get_impl_(AST::GetExpr* e)
+ErrorOr<ExprResult> Compiler::compile_get_impl_(AST::GetExpr const* e)
 {
     SourceLocation loc = e->get_location();
-    AST::Expr* object = e->get_object();
-    /// the parser should guarantee that this is a NameExpr
-    AST::NameExpr* member = AST::as_name(e->get_member());
-    if (AST::is_name(object) && AST::as_name(object)->get_value() == kClassInstanceName) {
-        int idx = current_method_field_index(member->get_value());
+    /// the parser should guarantee that this is an IdentifierExpr
+    if (AST::is_identifier(e->object) && AST::as_identifier(e->object)->spelling == kClassInstanceName) {
+        int idx = current_method_field_index(e->member->spelling);
         LocalVar const* self = lookup_local(kClassInstanceName);
         if (self != nullptr) {
             if (idx >= 0) {
                 u32 pc = emit(make_ABC(OpCode::GET_FIELD, 0, self->reg, static_cast<u8>(idx)), loc);
                 return ExprResult::reloc(pc);
             }
-            u32 name_idx = intern_string(member->get_value());
+            u32 name_idx = intern_string(e->member->spelling);
             u32 pc = emit(make_ABC(OpCode::GET_FIELD, 0, self->reg, 0xFF), loc);
             emit(make_ABx(OpCode::NOP, 0, static_cast<u16>(name_idx)), loc);
             return ExprResult::reloc(pc);
         }
-        return report_error(ErrorCode::UNDEFINED_LOCAL, member->get_location());
+        return report_error(ErrorCode::UNDEFINED_LOCAL, e->member->get_location());
     }
 
-    u32 name_idx = intern_string(member->get_value());
+    u32 name_idx = intern_string(e->member->spelling);
     reg_t object_reg;
     ExprResult object_cmp_ret;
     ALLOC_REG(&object_reg);
-    COMPILE_EXPR_IMPL(object, &object_cmp_ret);
-    discharge(object_cmp_ret, object_reg, object->get_location());
+    COMPILE_EXPR_IMPL(e->object, &object_cmp_ret);
+    discharge(object_cmp_ret, object_reg, e->object->get_location());
     u32 pc = emit(make_ABC(OpCode::GET_FIELD, 0, object_reg, 0xFF), loc);
     emit(make_ABx(OpCode::NOP, 0, static_cast<u16>(name_idx)), loc);
     return ExprResult::reloc(pc);
 }
 
-ErrorOr<ExprResult> Compiler::compile_get_impl(AST::GetExpr* e)
+ErrorOr<ExprResult> Compiler::compile_get_impl(AST::GetExpr const* e)
 {
     SourceLocation loc = e->get_location();
 
-    if (AST::NameExpr* member_name = as_simple_member_name(e->get_member())) {
-        if (ClassDesc const* desc = resolve_receiver_class(e->get_object())) {
-            int idx = desc->field_index(member_name->get_value());
-            if (idx >= 0) {
-                RegMark mark(m_current);
-                ExprResult expr_result;
-                reg_t obj_reg;
+    if (ClassDesc const* desc = resolve_receiver_class(e->object)) {
+        int idx = desc->field_index(e->member->spelling);
+        if (idx >= 0) {
+            RegMark mark(m_current);
+            ExprResult expr_result;
+            reg_t obj_reg;
 
-                COMPILE_EXPR_IMPL(e->get_object(), &expr_result);
-                ANY_REG(expr_result, loc, &obj_reg);
+            COMPILE_EXPR_IMPL(e->object, &expr_result);
+            ANY_REG(expr_result, loc, &obj_reg);
 
-                u32 pc = emit(make_ABC(OpCode::GET_FIELD, 0, obj_reg, static_cast<reg_t>(idx)), loc);
-                return ExprResult::reloc(pc);
-            }
-            // Name matches the class but isn't a field — could be a bound
-            // method reference; fall through to the slow path below.
+            u32 pc = emit(make_ABC(OpCode::GET_FIELD, 0, obj_reg, static_cast<reg_t>(idx)), loc);
+            return ExprResult::reloc(pc);
         }
+        // Name matches the class but isn't a field — could be a bound
+        // method reference; fall through to the slow path below.
+    }
 
-        // `this.field` read inside the class's own method body, while that
-        // class is still being compiled — same m_class_registry-not-yet-
-        // populated situation as compile_assign_impl/compile_assignment_stmt.
-        // Use current_method_field_index() instead, which was pre-populated
-        // before any method body started compiling.
-        if (is_this_reference(e->get_object())) {
-            int idx = current_method_field_index(member_name->get_value());
-            if (idx >= 0) {
-                LocalVar const* self = lookup_local(kClassInstanceName);
-                if (self != nullptr) {
-                    u32 pc = emit(make_ABC(OpCode::GET_FIELD, 0, self->reg, static_cast<reg_t>(idx)), loc);
-                    return ExprResult::reloc(pc);
-                }
+    // `this.field` read inside the class's own method body, while that
+    // class is still being compiled — same m_class_registry-not-yet-
+    // populated situation as compile_assign_impl/compile_assignment_stmt.
+    // Use current_method_field_index() instead, which was pre-populated
+    // before any method body started compiling.
+    if (is_this_reference(e->object)) {
+        int idx = current_method_field_index(e->member->spelling);
+        if (idx >= 0) {
+            LocalVar const* self = lookup_local(kClassInstanceName);
+            if (self != nullptr) {
+                u32 pc = emit(make_ABC(OpCode::GET_FIELD, 0, self->reg, static_cast<reg_t>(idx)), loc);
+                return ExprResult::reloc(pc);
             }
         }
     }
@@ -1519,21 +1487,15 @@ ErrorOr<ExprResult> Compiler::compile_get_impl(AST::GetExpr* e)
     ExprResult object_expr_result;
     reg_t object_reg;
 
-    COMPILE_EXPR_IMPL(e->get_object(), &object_expr_result);
+    COMPILE_EXPR_IMPL(e->object, &object_expr_result);
     ANY_REG(object_expr_result, loc, &object_reg);
 
     reg_t member_reg;
     ALLOC_REG(&member_reg);
 
-    if (AST::NameExpr* member_name = as_simple_member_name(e->get_member())) {
-        emit(make_ABx(OpCode::LOAD_CONST, member_reg,
-                 intern_string(member_name->get_value())),
-            e->get_member()->get_location());
-    } else {
-        ExprResult expr_result;
-        COMPILE_EXPR_IMPL(e->get_member(), &expr_result);
-        discharge(expr_result, member_reg, e->get_member()->get_location());
-    }
+    emit(make_ABx(OpCode::LOAD_CONST, member_reg,
+                intern_string(e->member->spelling)),
+        e->member->get_location());
 
     u32 pc = emit(make_ABC(OpCode::INDEX_READ, 0, object_reg, member_reg), loc);
     return ExprResult::reloc(pc);
@@ -1565,7 +1527,7 @@ ErrorOr<reg_t> Compiler::any_reg(ExprResult const& r, SourceLocation loc)
     return dst;
 }
 
-ErrorOr<reg_t> Compiler::compile_expr(AST::Expr* e, reg_t* dst)
+ErrorOr<reg_t> Compiler::compile_expr(ConstExprPtr e, reg_t* dst)
 {
     if (e == nullptr)
         /// TODO: report error
@@ -1668,14 +1630,13 @@ u32 Compiler::intern_string(StringRef const& str)
     return idx;
 }
 
-Compiler::ClassDesc const* Compiler::resolve_receiver_class(AST::Expr const* e) const
+Compiler::ClassDesc const* Compiler::resolve_receiver_class(ConstExprPtr e) const
 {
     using EK = AST::Expr::Kind;
-    EK e_kind = e->get_kind();
-    if (e_kind != EK::NAME)
+    if (!AST::is_identifier(e))
         return nullptr;
 
-    StringRef const name = as_name(e)->get_value();
+    StringRef const name = AST::as_identifier(e)->spelling;
 
     // Case 1: the expression IS the class name itself (e.g. كلب.بداية()).
     if (auto* d = m_class_registry.find_ptr(name))
@@ -1693,17 +1654,16 @@ Compiler::ClassDesc const* Compiler::resolve_receiver_class(AST::Expr const* e) 
     return nullptr;
 }
 
-StringRef Compiler::infer_constructed_class(AST::Expr const* e) const
+StringRef Compiler::infer_constructed_class(ConstExprPtr e) const
 {
     if (e == nullptr || e->get_kind() != AST::Expr::Kind::CALL)
         return "";
 
     auto const* call = as_call(e);
-    AST::Expr const* callee = call->get_callee();
-    if (callee == nullptr || callee->get_kind() != AST::Expr::Kind::NAME)
+    if (call->callee == nullptr || !AST::is_identifier(call->callee))
         return "";
 
-    StringRef name = as_name(callee)->get_value();
+    StringRef name = AST::as_identifier(call->callee)->spelling;
     return m_class_registry.find_ptr(name) != nullptr ? name : StringRef { "" };
 }
 

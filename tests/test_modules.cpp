@@ -4,6 +4,7 @@
 #include "../fairuz/fopcode.hpp"
 #include "../fairuz/fparser.hpp"
 #include "../fairuz/fvm.hpp"
+#include "fAST.hpp"
 
 #include <cstdlib>
 #include <filesystem>
@@ -117,11 +118,11 @@ TEST(ModuleParser, PythonStyleAssertLowersToNativeCall)
     auto statements = parser.parse_program();
     ASSERT_FALSE(diagnostic::has_errors());
     ASSERT_EQ(statements.size(), 1u);
-    auto* expression = AST::as_expr_stmt(statements[0])->get_expr();
+    auto* expression = AST::as_expr_stmt(statements[0])->expr;
     ASSERT_TRUE(AST::is_call(expression));
     auto* call = AST::as_call(expression);
-    EXPECT_EQ(AST::as_name(call->get_callee())->get_value(), "تاكد");
-    EXPECT_EQ(call->get_args().size(), 2u);
+    EXPECT_EQ(AST::as_identifier(call->callee)->spelling, "تاكد");
+    EXPECT_EQ(call->args->size(), 2u);
 }
 
 TEST(ModuleParser, ParsesImportsAliasesAndParentClass)
@@ -144,7 +145,7 @@ TEST(ModuleParser, ParsesImportsAliasesAndParentClass)
     EXPECT_EQ(AST::as_import(statements[1])->get_names()[0], "نجاح");
     auto* klass = AST::as_class_def(statements[2]);
     ASSERT_NE(klass->get_parent(), nullptr);
-    EXPECT_EQ(AST::as_name(klass->get_parent())->get_value(), "اصل");
+    EXPECT_EQ(AST::as_identifier(klass->get_parent())->spelling, "اصل");
 }
 
 TEST(ModuleCompiler, EmitsImportAndParentDescriptor)

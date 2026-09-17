@@ -2,47 +2,44 @@
 #define TEST_COMMON_H
 
 #include "../fairuz/fAST.hpp"
-#include "../fairuz/fgc.hpp"
-#include "farena.hpp"
-#include "fstring.hpp"
-#include <functional>
+#include "../fairuz/fobject.hpp"
 
 using namespace fairuz;
 using namespace fairuz::AST;
 using namespace fairuz::runtime;
 
 /// helpers that discard the location parameter for testing
-static inline BinaryExpr* binary(Expr* lhs, Expr* rhs, BinaryOp op)
+static inline BinaryExpr* binary(Expr* lhs, Expr* rhs, Expr::Kind op)
 {
-    return make_binary(lhs, rhs, op, { });
+    return make_binary(op, lhs, rhs, { });
 }
-static inline UnaryExpr* unary(Expr* operand, UnaryOp op)
+static inline UnaryExpr* unary(Expr* operand, Expr::Kind op)
 {
-    return make_unary(operand, op, { });
+    return make_unary(op, operand, { });
 }
-static inline LiteralExpr* lit_nil()
+static inline NilExpr* nil()
 {
-    return make_literal_nil({ });
+    return make_nil({ });
 }
-static inline LiteralExpr* lit_int(int v)
+static inline IntLiteralExpr* lit_int(int v)
 {
     return make_literal_int(v, { });
 }
-static inline LiteralExpr* lit_flt(double v)
+static inline FloatLiteralExpr* lit_flt(double v)
 {
     return make_literal_float(v, { });
 }
-static inline LiteralExpr* lit_str(StringRef s)
+static inline StringLiteralExpr* lit_str(StringRef s)
 {
     return make_literal_string(s, { });
 }
-static inline LiteralExpr* lit_bool(bool v)
+static inline BoolLiteralExpr* lit_bool(bool v)
 {
     return make_literal_bool(v, { });
 }
-static inline NameExpr* name_expr(StringRef s)
+static inline IdentifierExpr* ident(StringRef s)
 {
-    return make_name(s, { });
+    return make_identifier(s, { });
 }
 static inline ListExpr* list_expr(Array<Expr*> l = { })
 {
@@ -56,7 +53,7 @@ static inline CallExpr* call_expr(Expr* c, ListExpr* a = nullptr)
 {
     return make_call(c, a, { });
 }
-static inline AssignmentExpr* assign_expr(Expr* t, Expr* v)
+static inline AssignExpr* assign_expr(Expr* t, Expr* v)
 {
     return make_assignment_expr(t, v, { });
 }
@@ -64,7 +61,7 @@ static inline IndexExpr* index_expr(Expr* obj, Expr* idx)
 {
     return make_index(obj, idx, { });
 }
-static inline GetExpr* get_expr(Expr* obj, Expr* member)
+static inline GetExpr* get_expr(Expr* obj, IdentifierExpr* member)
 {
     return make_get_expr(obj, member, { });
 }
@@ -76,15 +73,11 @@ static inline ExprStmt* expr_stmt(Expr* e)
 {
     return make_expr_stmt(e, { });
 }
-static inline AssignmentStmt* assign_stmt(Expr* t, Expr* v)
+static inline ExprStmt* decl_stmt(StringRef nm, AST::Expr* val)
 {
-    return make_assignment_stmt(t, v, { });
+    return make_expr_stmt(make_assignment_expr(ident(nm), val, { }), { });
 }
-static inline AssignmentStmt* decl_stmt(StringRef nm, AST::Expr* val)
-{
-    return make_assignment_stmt(name_expr(nm), val, { });
-}
-static inline IfStmt* if_stmt(Expr* c, Stmt* t, Stmt* e = nullptr)
+static inline IfElseStmt* if_stmt(Expr* c, Stmt* t, Stmt* e = nullptr)
 {
     return make_if(c, t, { }, e);
 }
@@ -92,11 +85,11 @@ static inline WhileStmt* while_stmt(Expr* c, Stmt* b)
 {
     return make_while(c, b, { });
 }
-static inline ForStmt* for_stmt(NameExpr* t, Expr* i, Stmt* b)
+static inline ForStmt* for_stmt(IdentifierExpr* t, Expr* i, Stmt* b)
 {
     return make_for(t, i, b, { });
 }
-static inline FunctionDef* func_def(NameExpr* n, ListExpr* p, Stmt* b)
+static inline FunctionDef* func_def(IdentifierExpr* n, ListExpr* p, Stmt* b)
 {
     return make_function(n, p, b, { });
 }

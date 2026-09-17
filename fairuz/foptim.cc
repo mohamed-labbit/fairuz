@@ -4,63 +4,68 @@
 
 #include "foptim.hpp"
 #include "fAST.hpp"
+#include <cstdio>
 #include <optional>
 
 namespace fairuz::runtime {
 
 class PurityVisitor : public AST::ExprVisitor {
 private:
-    bool m_is_pure { true };
+    mutable bool m_is_pure { true };
 
 public:
     bool is_pure() const { return m_is_pure; }
 
-    void visit(AST::BinaryExpr& v) override
+    void visit(AST::BinaryExpr const & v) const override
     {
-        v.get_left()->accept(*this);
+        v.lhs->accept(*const_cast<PurityVisitor*>(this));
         if (!m_is_pure)
             return;
-        v.get_right()->accept(*this);
+        v.rhs->accept(*const_cast<PurityVisitor*>(this));
     }
-    void visit(AST::UnaryExpr& e) override { e.get_operand()->accept(*this); }
-    void visit(AST::LiteralExpr&) override { /* pure - no op */ }
-    void visit(AST::NameExpr&) override { /* pure - no op */ }
-    void visit(AST::CallExpr&) override { m_is_pure = false; }
-    void visit(AST::AssignmentExpr&) override { m_is_pure = false; }
-    void visit(AST::ListExpr& e) override
+    void visit(AST::UnaryExpr const & e) const override { e.operand->accept(*const_cast<PurityVisitor*>(this)); }
+    void visit(AST::IntLiteralExpr const &) const override { /* pure - no op */ }
+    void visit(AST::FloatLiteralExpr const &) const override { /* pure - no op */ }
+    void visit(AST::BoolLiteralExpr const &) const override { /* pure - no op */ }
+    void visit(AST::StringLiteralExpr const &) const override { /* pure - no op */ }
+    void visit(AST::NilExpr const &) const override { /* pure - no op */ }
+    void visit(AST::IdentifierExpr const &) const override { /* pure - no op */ }
+    void visit(AST::CallExpr const &) const override { m_is_pure = false; }
+    void visit(AST::AssignExpr const &) const override { m_is_pure = false; }
+    void visit(AST::ListExpr const & e) const override
     {
-        for (auto expr : e.get_elements()) {
-            expr->accept(*this);
+        for (auto expr : e.elements) {
+            expr->accept(*const_cast<PurityVisitor*>(this));
             if (!m_is_pure)
                 return;
         }
     }
-    void visit(AST::IndexExpr& e) override
+    void visit(AST::IndexExpr const & e) const override
     {
-        e.get_index()->accept(*this);
+        e.index->accept(*const_cast<PurityVisitor*>(this));
         if (!m_is_pure)
             return;
-        e.get_object()->accept(*this);
+        e.object->accept(*const_cast<PurityVisitor*>(this));
     }
-    void visit(AST::DictExpr& e) override
+    void visit(AST::DictExpr const & e) const override
     {
         for (auto [k, v] : e.get_content()) {
-            k->accept(*this);
+            k->accept(*const_cast<PurityVisitor*>(this));
             if (!m_is_pure)
                 return;
-            v->accept(*this);
+            v->accept(*const_cast<PurityVisitor*>(this));
         }
     }
-    void visit(AST::GetExpr& e) override
+    void visit(AST::GetExpr const & e) const override
     {
-        e.get_member()->accept(*this); // for methods are in members here
+        e.member->accept(*const_cast<PurityVisitor*>(this)); // for methods are in members here
         if (!m_is_pure)
             return;
-        e.get_object()->accept(*this);
+        e.object->accept(*const_cast<PurityVisitor*>(this));
     }
 };
 
-bool is_pure(AST::Expr* e)
+bool is_pure(AST::Expr const* e)
 {
     PurityVisitor visitor;
     e->accept(visitor);
@@ -69,39 +74,34 @@ bool is_pure(AST::Expr* e)
 
 std::optional<Value> const_value(AST::Expr const* e)
 {
-    if (e == nullptr || e->get_kind() != AST::Expr::Kind::LITERAL)
-        return std::nullopt;
-
-    auto lit = as_literal(e);
-
-    if (lit->is_nil())
+    if (AST::is_nil(e))
         return Value::nil();
-    if (lit->is_bool())
-        return Value::from_bool(lit->get_bool());
-    if (lit->is_integer())
-        return Value::from_int(lit->get_int());
-    if (lit->is_float())
-        return Value::from_real(lit->get_float());
+    if (AST::is_literal_bool(e))
+        return Value::from_bool(AST::as_literal_bool(e)->value);
+    if (AST::is_literal_int(e))
+        return Value::from_int(AST::as_literal_int(e)->value);
+    if (AST::is_literal_float(e))
+        return Value::from_real(AST::as_literal_float(e)->value);
 
     return std::nullopt;
 }
 
 std::optional<Value> try_fold_unary(AST::UnaryExpr const* e)
 {
-    std::optional<Value> cv = const_value(e->get_operand());
+    std::optional<Value> cv = const_value(e->operand);
     if (!cv)
         return std::nullopt;
 
-    switch (e->get_operator()) {
-    case AST::UnaryOp::OP_NEG:
+    switch (e->get_kind()) {
+    case AST::Expr::Kind::OP_NEG:
         if (cv->is_int() && cv->as_int() != Value::int_min())
             return Value::from_int(-cv->as_int());
         if (cv->is_double())
             return Value::from_real(-cv->as_double());
         return std::nullopt;
-    case AST::UnaryOp::OP_NOT:
+    case AST::Expr::Kind::OP_NOT:
         return Value::from_bool(!cv->is_truthy());
-    case AST::UnaryOp::OP_BITNOT:
+    case AST::Expr::Kind::OP_BITNOT:
         if (cv->is_int())
             return Value::from_int(~cv->as_int());
         return std::nullopt;
@@ -112,18 +112,20 @@ std::optional<Value> try_fold_unary(AST::UnaryExpr const* e)
 
 std::optional<Value> _try_fold_binary(AST::BinaryExpr const* e)
 {
-    auto L = const_value(e->get_left());
-    auto R = const_value(e->get_right());
+    auto L = const_value(e->lhs);
+    auto R = const_value(e->rhs);
 
     if (!L || !R)
         return std::nullopt;
 
-    AST::BinaryOp op = e->get_operator();
+    using Op = AST::Expr::Kind;
+
+    Op op = e->get_kind();
 
     bool both_ints = L->is_int() && R->is_int();
     bool both_numbers = L->is_number() && R->is_number();
 
-    if (op == AST::BinaryOp::OP_EQ || op == AST::BinaryOp::OP_NEQ) {
+    if (op == Op::OP_EQ || op == Op::OP_NEQ) {
         bool equal;
         if (L->is_nil() || R->is_nil())
             equal = L->is_nil() && R->is_nil();
@@ -131,7 +133,7 @@ std::optional<Value> _try_fold_binary(AST::BinaryExpr const* e)
             equal = L->as_double_any() == R->as_double_any();
         else
             return std::nullopt;
-        return Value::from_bool(op == AST::BinaryOp::OP_EQ ? equal : !equal);
+        return Value::from_bool(op == Op::OP_EQ ? equal : !equal);
     }
 
     if (!both_numbers)
@@ -149,41 +151,41 @@ std::optional<Value> _try_fold_binary(AST::BinaryExpr const* e)
     };
 
     switch (op) {
-    case AST::BinaryOp::OP_ADD:
+    case Op::OP_ADD:
         return both_ints ? checked_int(li + ri)
                          : std::optional<Value> { Value::from_real(ld + rd) };
-    case AST::BinaryOp::OP_SUB:
+    case Op::OP_SUB:
         return both_ints ? checked_int(li - ri)
                          : std::optional<Value> { Value::from_real(ld - rd) };
-    case AST::BinaryOp::OP_MUL:
+    case Op::OP_MUL:
         return both_ints ? checked_int(static_cast<i64>(li) * ri)
                          : std::optional<Value> { Value::from_real(ld * rd) };
-    case AST::BinaryOp::OP_DIV:
+    case Op::OP_DIV:
         if (rd == 0.0)
             return std::nullopt;
         if (both_ints && li % ri == 0)
             return Value::from_int(li / ri);
         return Value::from_real(ld / rd);
-    case AST::BinaryOp::OP_MOD: {
+    case Op::OP_MOD: {
         if (rd == 0.0)
             return std::nullopt;
         if (both_ints)
             return Value::from_real(static_cast<f64>(li % ri));
         return Value::from_real(std::fmod(ld, rd));
     }
-    case AST::BinaryOp::OP_POW: return Value::from_real(std::pow(ld, rd));
-    case AST::BinaryOp::OP_LT: return Value::from_bool(ld < rd);
-    case AST::BinaryOp::OP_GT: return Value::from_bool(ld > rd);
-    case AST::BinaryOp::OP_LTE: return Value::from_bool(ld <= rd);
-    case AST::BinaryOp::OP_GTE: return Value::from_bool(ld >= rd);
-    case AST::BinaryOp::OP_BITAND: return both_ints ? Value::from_int(li & ri) : std::optional<Value> { };
-    case AST::BinaryOp::OP_BITOR: return both_ints ? Value::from_int(li | ri) : std::optional<Value> { };
-    case AST::BinaryOp::OP_BITXOR: return both_ints ? Value::from_int(li ^ ri) : std::optional<Value> { };
-    case AST::BinaryOp::OP_LSHIFT:
+    case Op::OP_POW: return Value::from_real(std::pow(ld, rd));
+    case Op::OP_LT: return Value::from_bool(ld < rd);
+    case Op::OP_GT: return Value::from_bool(ld > rd);
+    case Op::OP_LTE: return Value::from_bool(ld <= rd);
+    case Op::OP_GTE: return Value::from_bool(ld >= rd);
+    case Op::OP_BITAND: return both_ints ? Value::from_int(li & ri) : std::optional<Value> { };
+    case Op::OP_BITOR: return both_ints ? Value::from_int(li | ri) : std::optional<Value> { };
+    case Op::OP_BITXOR: return both_ints ? Value::from_int(li ^ ri) : std::optional<Value> { };
+    case Op::OP_LSHIFT:
         if (!both_ints || ri < 0 || ri >= 64)
             return std::nullopt;
         return checked_int(static_cast<i64>(li) * (static_cast<i64>(1) << ri));
-    case AST::BinaryOp::OP_RSHIFT: {
+    case Op::OP_RSHIFT: {
         if (!both_ints || ri < 0 || ri >= 64)
             return std::nullopt;
         u64 shifted = static_cast<u64>(li) >> ri;
@@ -198,36 +200,25 @@ std::optional<Value> _try_fold_binary(AST::BinaryExpr const* e)
 
 std::optional<Value> try_fold_binary(AST::BinaryExpr const* e)
 {
-    if (e == nullptr)
-        return std::nullopt;
-
-    AST::Expr* LE = e->get_left();
-    AST::Expr* RE = e->get_right();
-
-    if (!LE || !RE)
-        return std::nullopt;
-
-    if (LE->get_kind() == AST::Expr::Kind::LITERAL && RE->get_kind() == AST::Expr::Kind::LITERAL)
-        return _try_fold_binary(e);
+    if (auto bin_folded = _try_fold_binary(e))
+        return bin_folded;
 
     std::optional<Value> L, R;
 
-    if (LE->get_kind() == AST::Expr::Kind::BINARY)
-        L = try_fold_binary(as_binary(LE));
-    else if (LE->get_kind() == AST::Expr::Kind::UNARY)
-        L = try_fold_unary(as_unary(LE));
+    if (AST::is_binary(e->lhs))
+        L = try_fold_binary(as_binary(e->lhs));
+    else if (AST::is_unary(e->lhs))
+        L = try_fold_unary(as_unary(e->lhs));
 
-    if (RE->get_kind() == AST::Expr::Kind::BINARY)
-        R = try_fold_binary(as_binary(RE));
-    else if (RE->get_kind() == AST::Expr::Kind::UNARY)
-        R = try_fold_unary(as_unary(RE));
+    if (AST::is_binary(e->rhs))
+        R = try_fold_binary(as_binary(e->rhs));
+    else if (AST::is_unary(e->rhs))
+        R = try_fold_unary(as_unary(e->rhs));
 
-    if (!R && !L)
+    if (!L || !R)
         return std::nullopt;
 
-    AST::BinaryExpr* ce = e->clone();
-
-    auto make_literal_from_val = [](Value const v, SourceLocation loc) {
+    auto make_literal_from_val = [](Value const v, SourceLocation loc) -> AST::Expr* {
         if (v.is_double())
             return AST::make_literal_float(v.as_double(), loc);
         if (v.is_int())
@@ -235,37 +226,39 @@ std::optional<Value> try_fold_binary(AST::BinaryExpr const* e)
         if (v.is_bool())
             return AST::make_literal_bool(v.as_bool(), loc);
 
-        return AST::make_literal_nil(loc);
+        return AST::make_nil(loc);
     };
 
-    if (L)
-        ce->set_left(make_literal_from_val(*L, ce->get_location()));
-    if (R)
-        ce->set_right(make_literal_from_val(*R, ce->get_location()));
+    AST::BinaryExpr* ce = AST::make_binary(e->get_kind(), make_literal_from_val(*L, e->get_location()), 
+                    make_literal_from_val(*R, e->get_location()), e->get_location());
 
     return _try_fold_binary(ce);
 }
 
 class ConstFoldVisitor : public AST::ExprVisitor {
 private:
-    std::optional<Value> m_result { std::nullopt };
+    mutable std::optional<Value> m_result { std::nullopt };
 
 public:
     std::optional<Value> result() const { return m_result; }
 
-    void visit(AST::BinaryExpr& e) override { m_result = try_fold_binary(&e); }
-    void visit(AST::UnaryExpr& e) override { m_result = try_fold_unary(&e); }
-    void visit(AST::LiteralExpr& e) override { m_result = const_value(&e); }
-    void visit(AST::NameExpr&) override { /* no op */ }
-    void visit(AST::CallExpr&) override { /* no op */ }
-    void visit(AST::AssignmentExpr&) override { /* no op */ }
-    void visit(AST::ListExpr&) override { /* no op */ }
-    void visit(AST::IndexExpr& e) override { e.get_index()->accept(*this); }
-    void visit(AST::DictExpr&) override { /* no op */ }
-    void visit(AST::GetExpr&) override { /* no op */ }
+    void visit(AST::BinaryExpr const& e) const override { m_result = try_fold_binary(&e); }
+    void visit(AST::UnaryExpr const& e) const override { m_result = try_fold_unary(&e); }
+    void visit(AST::IntLiteralExpr const& e) const override { m_result = const_value(&e); }
+    void visit(AST::FloatLiteralExpr const& e) const override { m_result = const_value(&e); }
+    void visit(AST::BoolLiteralExpr const& e) const override { m_result = const_value(&e); }
+    void visit(AST::StringLiteralExpr const& e) const override { m_result = const_value(&e); }
+    void visit(AST::NilExpr const& e) const override { m_result = const_value(&e); }
+    void visit(AST::IdentifierExpr const&) const override { /* no op */ }
+    void visit(AST::CallExpr const&) const override { /* no op */ }
+    void visit(AST::AssignExpr const&) const override { /* no op */ }
+    void visit(AST::ListExpr const&) const override { /* no op */ }
+    void visit(AST::IndexExpr const& e) const override { e.index->accept(*const_cast<ConstFoldVisitor*>(this)); }
+    void visit(AST::DictExpr const&) const override { /* no op */ }
+    void visit(AST::GetExpr const&) const override { /* no op */ }
 };
 
-std::optional<Value> try_fold_expr(AST::Expr* e)
+std::optional<Value> try_fold_expr(AST::Expr const* e)
 {
     if (e == nullptr)
         return std::nullopt;
@@ -275,7 +268,7 @@ std::optional<Value> try_fold_expr(AST::Expr* e)
     return visitor.result();
 }
 
-std::optional<AST::Expr*> try_strength_reduce_binary(AST::Expr*)
+std::optional<AST::Expr*> try_strength_reduce_binary(AST::Expr const*)
 {
     // Algebraic identities are not generally semantics-preserving in a
     // dynamic language: evaluating a discarded operand may throw, and an
@@ -284,7 +277,7 @@ std::optional<AST::Expr*> try_strength_reduce_binary(AST::Expr*)
     return std::nullopt;
 }
 
-std::optional<AST::Expr*> try_strength_reduce_unary(AST::Expr*)
+std::optional<AST::Expr*> try_strength_reduce_unary(AST::Expr const*)
 {
     // Bitwise complement is not logical negation, and dynamic operands may
     // dispatch user code. No untyped unary rewrite is safe here.
