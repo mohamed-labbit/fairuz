@@ -50,8 +50,6 @@
 
 namespace fairuz::lex {
 
-using ErrorCode = diagnostic::errc::lexer::Code;
-
 namespace fs = std::filesystem;
 
 Fa_FileManager::Fa_FileManager(std::string const& filepath)
@@ -162,7 +160,7 @@ void Fa_SourceManager::advance(u32 const cp, u64 const bytes)
 void Fa_SourceManager::rewind_position_(u32 const cp, u64 const bytes)
 {
     if (m_context.offset < bytes)
-        diagnostic::panic(diagnostic::errc::general::Code::INTERNAL_ERROR, "Fa_SourceManager: attempted to rewind past beginning of file");
+        diagnostic::panic(ErrorCode::INTERNAL_ERROR, "Fa_SourceManager: attempted to rewind past beginning of file");
 
     m_context.offset -= bytes;
 

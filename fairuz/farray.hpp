@@ -14,9 +14,6 @@
 
 namespace fairuz {
 
-using ArrayErrorCode = diagnostic::errc::container::Code;
-using GenericErrorCode = diagnostic::errc::general::Code;
-
 template<typename T, class _Alloc = Fa_ArenaAllocator>
 class Fa_Array {
 private:
@@ -63,7 +60,7 @@ private:
                     ::new (static_cast<void*>(dst + i)) T(src[i]);
             } catch (...) {
                 destroy_range(dst, dst + i);
-                diagnostic::panic(GenericErrorCode::INTERNAL_ERROR);
+                diagnostic::panic(ErrorCode::INTERNAL_ERROR);
             }
         }
     }
@@ -222,7 +219,7 @@ public:
     T& back()
     {
         if (m_size == 0)
-            diagnostic::fatal_error(ArrayErrorCode::ARRAY_EMPTY_BACK);
+            diagnostic::fatal_error(ErrorCode::ARRAY_EMPTY_BACK);
 
         return m_arr[m_size - 1];
     }
@@ -230,7 +227,7 @@ public:
     T const& back() const
     {
         if (m_size == 0)
-            diagnostic::fatal_error(ArrayErrorCode::ARRAY_EMPTY_BACK);
+            diagnostic::fatal_error(ErrorCode::ARRAY_EMPTY_BACK);
 
         return m_arr[m_size - 1];
     }
@@ -238,7 +235,7 @@ public:
     T& front()
     {
         if (m_size == 0)
-            diagnostic::fatal_error(ArrayErrorCode::ARRAY_EMPTY_FRONT);
+            diagnostic::fatal_error(ErrorCode::ARRAY_EMPTY_FRONT);
 
         return m_arr[0];
     }
@@ -246,7 +243,7 @@ public:
     T const& front() const
     {
         if (m_size == 0)
-            diagnostic::fatal_error(ArrayErrorCode::ARRAY_EMPTY_FRONT);
+            diagnostic::fatal_error(ErrorCode::ARRAY_EMPTY_FRONT);
 
         return m_arr[0];
     }
@@ -287,7 +284,7 @@ requires(!Fa_Array<T, _Alloc>::IS_ARENA)
 {
     resolve_allocator(allocator);
     if (capacity > ARRAY_MAX)
-        diagnostic::fatal_error(ArrayErrorCode::ARRAY_CAPACITY_EXCEEDED,
+        diagnostic::fatal_error(ErrorCode::ARRAY_CAPACITY_EXCEEDED,
             std::to_string(capacity) + " > " + std::to_string(ARRAY_MAX));
 
     if (capacity == 0)
@@ -307,7 +304,7 @@ requires(!Fa_Array<T, _Alloc>::IS_ARENA)
         }
     } catch (...) {
         destroy_range(m_arr, m_arr + i);
-        diagnostic::fatal_error(GenericErrorCode::INTERNAL_ERROR);
+        diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR);
     }
 
     m_size = capacity;
@@ -319,7 +316,7 @@ requires Fa_Array<T, _Alloc>::IS_ARENA
 {
     resolve_allocator(allocator);
     if (capacity > ARRAY_MAX)
-        diagnostic::fatal_error(ArrayErrorCode::ARRAY_CAPACITY_EXCEEDED,
+        diagnostic::fatal_error(ErrorCode::ARRAY_CAPACITY_EXCEEDED,
             std::to_string(capacity) + " > " + std::to_string(ARRAY_MAX));
 
     if (capacity == 0)
@@ -339,7 +336,7 @@ requires Fa_Array<T, _Alloc>::IS_ARENA
         }
     } catch (...) {
         destroy_range(m_arr, m_arr + i);
-        diagnostic::fatal_error(GenericErrorCode::INTERNAL_ERROR);
+        diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR);
     }
 
     m_size = capacity;
@@ -400,7 +397,7 @@ requires(!Fa_Array<T, _Alloc>::IS_ARENA)
     } catch (...) {
         destroy_range(m_arr, m_arr + i);
         m_size = 0;
-        diagnostic::fatal_error(GenericErrorCode::INTERNAL_ERROR);
+        diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR);
     }
 }
 
@@ -433,7 +430,7 @@ requires Fa_Array<T, _Alloc>::IS_ARENA
     } catch (...) {
         destroy_range(m_arr, m_arr + i);
         m_size = 0;
-        diagnostic::fatal_error(GenericErrorCode::INTERNAL_ERROR);
+        diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR);
     }
 }
 
@@ -523,7 +520,7 @@ template<typename T, class _Alloc>
 T Fa_Array<T, _Alloc>::pop()
 {
     if (UNLIKELY(m_size == 0))
-        diagnostic::panic(GenericErrorCode::INTERNAL_ERROR,
+        diagnostic::panic(ErrorCode::INTERNAL_ERROR,
             "Fa_Array::pop called on an empty array");
     m_size -= 1;
     if constexpr (TRIVIAL_DTOR)
@@ -580,7 +577,7 @@ void Fa_Array<T, _Alloc>::resize(u32 const s)
             }
         } catch (...) {
             m_size = i;
-            diagnostic::fatal_error(GenericErrorCode::INTERNAL_ERROR);
+            diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR);
         }
 
         m_size = s;
@@ -591,7 +588,7 @@ template<typename T, class _Alloc>
 void Fa_Array<T, _Alloc>::erase(u32 const at)
 {
     if (at >= m_size)
-        diagnostic::fatal_error(ArrayErrorCode::ARRAY_OUT_OF_BOUNDS);
+        diagnostic::fatal_error(ErrorCode::ARRAY_OUT_OF_BOUNDS);
 
     if constexpr (TRIVIAL_COPY) {
         u32 const remaining = m_size - at - 1;

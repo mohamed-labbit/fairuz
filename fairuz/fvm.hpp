@@ -21,8 +21,6 @@ class Fa_FileManager;
 
 namespace fairuz::runtime {
 
-using ErrorCode = diagnostic::errc::runtime::Code;
-
 struct Fa_RuntimeHalt final : public std::runtime_error {
     Fa_RuntimeHalt()
         : std::runtime_error("runtime error")
@@ -202,9 +200,8 @@ public:
     bool register_native(Fa_StringRef const& name, NativeFn fn, int arity = -1);
 
     Fa_SourceLocation current_location() const;
-    void runtime_error(ErrorCode errc, std::string const& detail = "");
-    void stdlib_error(diagnostic::errc::stdlib::Code errc, std::string const& detail = "");
-    void _runtime_error(u16 errc, std::string const& detail = "");
+    void raise_error(ErrorCode errc, std::string const& detail = "");
+    void _raise_error(ErrorCode errc, std::string const& detail = "");
 
     [[noreturn]] void halt();
     void intern_chunk_constants(Fa_Chunk* ch);

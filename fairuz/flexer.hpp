@@ -22,8 +22,6 @@ static inline TokenPtr Fa_make_token(tok::Fa_TokenType tt, Fa_StringRef lexeme, 
 
 namespace fairuz::lex {
 
-using FileManagerError = diagnostic::errc::FileManager::Code;
-
 class Fa_FileManager {
 public:
     Fa_FileManager() = default;
@@ -60,7 +58,7 @@ public:
         : m_file_manager(fm)
     {
         if (m_file_manager == nullptr)
-            diagnostic::fatal_error(diagnostic::errc::general::Code::INTERNAL_ERROR);
+            diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR);
 
         reset();
     }
@@ -172,7 +170,7 @@ private:
     diagnostic::SourcePtr m_source;
     std::vector<std::pair<u32, Fa_SourceLocation>> m_brackets;
     std::optional<std::pair<u16, diagnostic::Fa_DiagnosticEngine::DiagnosticId>> m_pending_error;
-    [[noreturn]] void fail(diagnostic::errc::lexer::Code code, Fa_SourceLocation loc, std::string const& detail = "");
+    [[noreturn]] void fail(ErrorCode code, Fa_SourceLocation loc, std::string const& detail = "");
 
     // main lexer loop
     TokenPtr lex_token();

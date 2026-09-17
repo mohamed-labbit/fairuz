@@ -10,10 +10,8 @@
 
 #include <algorithm>
 #include <cstdlib>
-#include <exception>
 #include <iomanip>
 #include <iostream>
-#include <locale.h>
 #include <sstream>
 #include <string_view>
 #include <unistd.h>
@@ -52,40 +50,11 @@ void Fa_DiagnosticEngine::set_source(lex::Fa_FileManager const* fm)
     m_source = std::make_shared<Source>(fm->get_path(), buffer.empty() ? "" : std::string(buffer.data(), buffer.len()));
 }
 
-char const* error_type_for(u16 code)
+char const* error_type_for(ErrorCode code)
 {
-    if (code == 0x0105 || code == 0x0108 || code == 0x0201 || code == 0x0202)
-        return "IndentationError";
-    if (code == 0x0107)
-        return "TabError";
-    if (code >= 0x0100 && code < 0x0300)
-        return "SyntaxError";
-    if (code == 0x0410 || code == 0x0411)
-        return "SyntaxError";
-    if (code == 0x0502 || code == 0x0503)
-        return "ZeroDivisionError";
-    if (code == 0x0508 || code == 0x0509)
-        return "NameError";
-    if (code == 0x050A || code == 0x0625)
-        return "IndexError";
-    if (code == 0x0514 || code == 0x0515)
-        return "AttributeError";
-    if (code == 0x0500 || code == 0x050F)
-        return "RecursionError";
-    if (code == 0x0516)
-        return "OverflowError";
-    if (code == 0x0618)
-        return "AssertionError";
-    if (code == 0x0517)
-        return "ModuleNotFoundError";
-    if (code == 0x0504 || code == 0x0505 || code == 0x0506 || code == 0x0507
-        || (code >= 0x050B && code <= 0x050D) || (code >= 0x0511 && code <= 0x0513))
-        return "TypeError";
-    if (code < 0x0100)
-        return "OSError";
-    if (code >= 0x0400 && code < 0x0500)
-        return "CompileError";
-    return "RuntimeError";
+    /// TODO:
+    (void)code;
+    return "";
 }
 
 namespace {
@@ -194,7 +163,7 @@ int cell_width(u32 cp)
 }*/
 
 Fa_DiagnosticEngine::DiagnosticId Fa_DiagnosticEngine::report_deferred(
-    Severity const sev, Fa_SourceLocation const loc, u16 err_code, std::string const& code)
+    Severity const sev, Fa_SourceLocation const loc, ErrorCode err_code, std::string const& code)
 {
     if (sev != Severity::FATAL && m_error_count >= LIMIT)
         return INVALID_ID;
@@ -359,7 +328,7 @@ std::string Fa_DiagnosticEngine::to_json() const
         first = false;
         out << "{\"severity\":" << static_cast<int>(d.severity)
             << ",\"type\":" << json_string(error_type_for(d.err_code))
-            << ",\"errorCode\":" << d.err_code
+            << ",\"errorCode\":" << error_type_for(d.err_code)
             << ",\"path\":" << json_string(d.source ? d.source->path : "")
             << ",\"line\":" << d.src_loc.line << ",\"column\":" << d.src_loc.column
             << ",\"length\":" << d.src_loc.length

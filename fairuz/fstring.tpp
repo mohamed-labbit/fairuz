@@ -11,8 +11,6 @@
 
 namespace fairuz {
 
-using ErrorCode = diagnostic::errc::container::Code;
-
 template<class Allocator>
 StringBase<Allocator>::StringBase(size_t const s, Allocator* allocator)
     : m_is_heap(s >= SSO_SIZE)
@@ -62,8 +60,7 @@ StringBase<Allocator>::StringBase(char const* s, size_t n, Allocator* allocator)
         m_storage.heap.cap = n + 1;
         m_storage.heap.ptr = m_allocator->template allocate_array<char>(m_storage.heap.cap);
         if (m_storage.heap.ptr == nullptr)
-            diagnostic::panic(diagnostic::errc::general::Code::ALLOC_FAILED,
-                "allocateArray<char>(size=" + std::to_string(m_storage.heap.cap) + ") failed!");
+            diagnostic::panic(ErrorCode::ALLOC_FAILED, "allocateArray<char>(size=" + std::to_string(m_storage.heap.cap) + ") failed!");
         ::memcpy(m_storage.heap.ptr, s, n);
         m_storage.heap.ptr[n] = 0;
     }
@@ -88,7 +85,7 @@ StringBase<Allocator>::StringBase(char const* s, Allocator* allocator)
         m_storage.heap.cap = n + 1;
         m_storage.heap.ptr = m_allocator->template allocate_array<char>(m_storage.heap.cap);
         if (m_storage.heap.ptr == nullptr)
-            diagnostic::panic(diagnostic::errc::general::Code::ALLOC_FAILED,
+            diagnostic::panic(ErrorCode::ALLOC_FAILED,
                 "allocateArray<char>(size=" + std::to_string(m_storage.heap.cap) + ") failed!");
         ::memcpy(m_storage.heap.ptr, s, n + 1);
     }
@@ -387,7 +384,7 @@ template<class Allocator>
 char Fa_StringRefImpl<Allocator>::at(size_t const i) const
 {
     if (UNLIKELY(i >= m_length))
-        diagnostic::fatal_error(diagnostic::errc::general::Code::INTERNAL_ERROR,
+        diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR,
             "Fa_StringRefImpl::at: index out of bounds");
 
     return (*m_string_data)[i + m_offset];
@@ -398,7 +395,7 @@ char& Fa_StringRefImpl<Allocator>::at(size_t const i)
 {
     ensure_unique();
     if (UNLIKELY(i >= m_length))
-        diagnostic::fatal_error(diagnostic::errc::general::Code::INTERNAL_ERROR,
+        diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR,
             "Fa_StringRefImpl::at: index out of bounds");
 
     return (*m_string_data)[i + m_offset];
@@ -506,13 +503,13 @@ Fa_StringRefImpl<Allocator> Fa_StringRefImpl<Allocator>::substr_copy(size_t star
     if (m_length == 0)
         return Fa_StringRefImpl(static_cast<size_t>(0), m_allocator);
     if (start > m_length)
-        diagnostic::fatal_error(diagnostic::errc::general::Code::INTERNAL_ERROR,
+        diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR,
             "Fa_StringRefImpl::substrCopy: start index out of range");
 
     if (end > m_length || end == SIZE_MAX)
         end = m_length;
     if (end < start)
-        diagnostic::fatal_error(diagnostic::errc::general::Code::INTERNAL_ERROR,
+        diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR,
             "Fa_StringRefImpl::substrCopy: start index out of range");
 
     size_t copy_len = end - start;
@@ -532,17 +529,17 @@ template<class Allocator>
 f64 Fa_StringRefImpl<Allocator>::to_double(size_t* pos) const
 {
     if (empty())
-        diagnostic::fatal_error(diagnostic::errc::general::Code::INTERNAL_ERROR,
+        diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR,
             "Fa_StringRefImpl::toDouble: empty string");
 
     f64 result { };
     auto [end_ptr, ec] = std::from_chars(data(), data() + m_length, result);
 
     if (ec == std::errc::invalid_argument)
-        diagnostic::fatal_error(diagnostic::errc::general::Code::INTERNAL_ERROR,
+        diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR,
             "Fa_StringRefImpl::toDouble: invalid number format");
     if (ec == std::errc::result_out_of_range)
-        diagnostic::fatal_error(diagnostic::errc::general::Code::INTERNAL_ERROR,
+        diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR,
             "Fa_StringRefImpl::toDouble: number out of range");
 
     if (pos)
@@ -566,7 +563,7 @@ Fa_StringRefImpl<Allocator> Fa_StringRefImpl<Allocator>::from_utf16(char16_t con
 
     simdutf::result validation = simdutf::validate_utf16_with_errors(src, src_len);
     if (validation.error != simdutf::error_code::SUCCESS)
-        diagnostic::fatal_error(diagnostic::errc::general::Code::INTERNAL_ERROR,
+        diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR,
             "Invalid UTF-16 at code unit " + std::to_string(validation.count));
 
     size_t utf8_len = simdutf::utf8_length_from_utf16(src, src_len);
@@ -574,6 +571,7 @@ Fa_StringRefImpl<Allocator> Fa_StringRefImpl<Allocator>::from_utf16(char16_t con
     char* dest = ret_data->ptr();
     size_t written = simdutf::convert_utf16_to_utf8(src, src_len, dest);
     assert(written == utf8_len);
+    (void)written;
     ret_data->ptr()[utf8_len] = 0;
 
     return Fa_StringRefImpl(ret_data);

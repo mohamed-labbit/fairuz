@@ -9,8 +9,6 @@
 
 namespace fairuz {
 
-using GeneralErrorCode = diagnostic::errc::general::Code;
-
 Fa_ArenaBlock::Fa_ArenaBlock(size_t const size, size_t const alignment)
     : m_size(size)
 {
@@ -19,12 +17,12 @@ Fa_ArenaBlock::Fa_ArenaBlock(size_t const size, size_t const alignment)
     m_begin = reinterpret_cast<unsigned char*>(mmap(reinterpret_cast<void*>(0x200000000ULL), m_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
 
     if (m_begin == MAP_FAILED)
-        diagnostic::panic(GeneralErrorCode::MMAP_FAILED);
+        diagnostic::panic(ErrorCode::MMAP_FAILED);
 
     if (reinterpret_cast<uintptr_t>(m_begin) > UINT64_C(0x0000FFFFFFFFFFFF)) {
         munmap(m_begin, m_size);
         m_begin = nullptr;
-        diagnostic::panic(GeneralErrorCode::NANBOX_ADDRESS_UNSAFE);
+        diagnostic::panic(ErrorCode::NANBOX_ADDRESS_UNSAFE);
     }
 
     m_next = m_begin;
@@ -74,7 +72,7 @@ void* Fa_ArenaAllocator::allocate(size_t const size, size_t const alignment)
         return nullptr;
 
     if (UNLIKELY(size > MAX_BLOCK_SIZE))
-        diagnostic::panic(GeneralErrorCode::ALLOC_FAILED, "allocation size is too large: " + std::to_string(size));
+        diagnostic::panic(ErrorCode::ALLOC_FAILED, "allocation size is too large: " + std::to_string(size));
 
     uintptr_t cur = reinterpret_cast<uintptr_t>(m_next);
     uintptr_t aligned = (cur + alignment - 1) & ~(alignment - 1);
@@ -91,7 +89,7 @@ void* Fa_ArenaAllocator::allocate(size_t const size, size_t const alignment)
 
     void* ptr = allocate_slow(size, alignment);
     if (ptr == nullptr)
-        diagnostic::panic(diagnostic::errc::general::Code::ALLOC_FAILED);
+        diagnostic::panic(ErrorCode::ALLOC_FAILED);
 
     return ptr;
 }

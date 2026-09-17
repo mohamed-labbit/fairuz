@@ -49,6 +49,7 @@ struct Options {
     bool show_version { false };
     bool format_file { false };
     bool semantic_tokens { false };
+    bool json_diagnostics { false };
     std::string input_path;
 };
 
@@ -64,6 +65,7 @@ void printUsage(std::ostream& out, std::string_view program)
         << "  --dump-bytecode      Print compiled bytecode\n"
         << "  --time               Print execution time to stderr\n"
         << "  --check              Parse and compile only, do not execute\n"
+        << "  --diagnostics=json   Write structured diagnostics to stderr\n"
         << "  --semantic-tokens    Emit parser-backed semantic tokens as JSON\n"
         << "  format               Rewrite the input file with canonical formatting\n"
         << "\n"
@@ -106,6 +108,10 @@ bool parseArgs(int argc, char** argv, Options& options)
         }
         if (arg == "--semantic-tokens") {
             options.semantic_tokens = true;
+            continue;
+        }
+        if (arg == "--diagnostics=json" || arg == "--diagnostics=text") {
+            options.json_diagnostics = arg == "--diagnostics=json";
             continue;
         }
         if (arg == "format") {
@@ -285,8 +291,16 @@ int main(int argc, char** argv)
         return static_cast<int>(ExitCode::NoInput);
     }
 
+    fairuz::diagnostic::reset();
+    fairuz::diagnostic::engine.set_json_output(options.json_diagnostics);
+    struct DiagnosticOutput {
+        bool json;
+        ~DiagnosticOutput() {
+            if (json) std::cerr << fairuz::diagnostic::engine.to_json();
+        }
+    } diagnostic_output { options.json_diagnostics };
+
     try {
-        fairuz::diagnostic::reset();
 
         fairuz::Fa_AllocatorContext allocator_context;
         fairuz::set_context(&allocator_context);
@@ -360,10 +374,12 @@ int main(int argc, char** argv)
     } catch (fairuz::diagnostic::Fa_DiagnosticAbort const&) {
         return static_cast<int>(ExitCode::DataError);
     } catch (std::exception const& ex) {
-        std::cerr << "fatal: " << ex.what() << "\n";
+        fairuz::diagnostic::report(fairuz::diagnostic::Severity::ERROR, {}, fairuz::ErrorCode::INTERNAL_ERROR, ex.what());
+        fairuz::diagnostic::dump();
         return static_cast<int>(ExitCode::Software);
     } catch (...) {
-        std::cerr << "fatal: unknown exception\n";
+        fairuz::diagnostic::report(fairuz::diagnostic::Severity::ERROR, {}, fairuz::ErrorCode::INTERNAL_ERROR, "unknown exception");
+        fairuz::diagnostic::dump();
         return static_cast<int>(ExitCode::Software);
     }
 }

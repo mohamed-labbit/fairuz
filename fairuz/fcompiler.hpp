@@ -14,8 +14,6 @@
 
 namespace fairuz::runtime {
 
-using CompilerError = diagnostic::errc::compiler::Code;
-
 struct LocalVar {
     Fa_StringRef name { "" };
     u32 depth { 0 };
@@ -304,7 +302,7 @@ private:
     {
         u8 reg = m_current->alloc_register();
         if (reg >= MAX_REGS)
-            return report_error(CompilerError::TOO_MANY_REGISTERS, { });
+            return report_error(ErrorCode::TOO_MANY_REGISTERS, { });
         return reg;
     }
 
@@ -336,7 +334,7 @@ private:
     void patch_jump(u32 idx)
     {
         if (!current_chunk()->patch_jump(idx))
-            diagnostic::panic(CompilerError::JUMP_OFFSET_OVERFLOW);
+            diagnostic::panic(ErrorCode::JUMP_OFFSET_OVERFLOW);
     }
     void push_loop(u32 loop_start)
     {

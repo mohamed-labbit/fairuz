@@ -54,7 +54,7 @@ public:
         : m_lexer(fm)
     {
         if (fm == nullptr)
-            diagnostic::panic(diagnostic::errc::general::Code::INTERNAL_ERROR, "parser received a null Fa_FileManager");
+            diagnostic::panic(ErrorCode::INTERNAL_ERROR, "parser received a null Fa_FileManager");
 
         m_lexer.next();
         if (current_token() != nullptr && current_token()->type() == tok::Fa_TokenType::BEGINMARKER)
@@ -123,7 +123,7 @@ private:
         {
             assert(p != nullptr);
             if (*p >= MAX_NESTING_LEVEL)
-                diagnostic::report(diagnostic::Severity::FATAL, loc, diagnostic::errc::parser::Code::EXCEEDED_MAX_NESTING_LIMIT);
+                diagnostic::report(diagnostic::Severity::FATAL, loc, ErrorCode::EXCEEDED_MAX_NESTING_LIMIT);
             (*p)++;
         }
         ~NestingLevel()
@@ -147,8 +147,6 @@ private:
         }
         return false;
     }
-
-    Fa_Error report_error(diagnostic::errc::parser::Code err_code, diagnostic::Severity sv = diagnostic::Severity::ERROR);
 
     void skip_newlines()
     {

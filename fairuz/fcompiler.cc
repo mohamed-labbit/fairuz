@@ -14,7 +14,6 @@
 #include "foptim.hpp"
 #include "fstring.hpp"
 #include "fvalue.hpp"
-#include "fvm.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -163,7 +162,7 @@ Fa_ErrorOr<bool> Compiler::compile_stmt(AST::Fa_Stmt* s)
     case AST::Fa_Stmt::Kind::IMPORT: return compile_import(as_import(s));
     case AST::Fa_Stmt::Kind::INVALID:
     default:
-        return report_error(CompilerError::INVALID_STATEMENT_NODE, s->get_location());
+        return report_error(ErrorCode::INVALID_STATEMENT_NODE, s->get_location());
     }
 }
 
@@ -172,7 +171,7 @@ Fa_ErrorOr<bool> Compiler::compile_import(AST::Fa_ImportStmt* s)
     if (s == nullptr)
         return true;
     if (!m_current->is_top_level || m_current->scope_depth != 0)
-        return report_error(CompilerError::INVALID_STATEMENT_NODE, s->get_location());
+        return report_error(ErrorCode::INVALID_STATEMENT_NODE, s->get_location());
 
     Fa_SourceLocation loc = s->get_location();
     Fa_StringRef const& module = s->get_module();
@@ -181,11 +180,11 @@ Fa_ErrorOr<bool> Compiler::compile_import(AST::Fa_ImportStmt* s)
     if (!s->imports_member()) {
         // Whole-module imports have no member names, but still bind one alias.
         if (aliases.size() != 1)
-            return report_error(CompilerError::INVALID_STATEMENT_NODE, loc);
+            return report_error(ErrorCode::INVALID_STATEMENT_NODE, loc);
         return compile_import_single(module, { }, aliases[0], loc, false);
     }
     if (names.size() != aliases.size())
-        return report_error(CompilerError::INVALID_STATEMENT_NODE, loc);
+        return report_error(ErrorCode::INVALID_STATEMENT_NODE, loc);
     for (size_t i = 0; i < names.size(); ++i)
         Fa_TRY_DISCARD(compile_import_single(module, names[i], aliases[i], loc, true));
 
@@ -348,14 +347,14 @@ Fa_ErrorOr<bool> Compiler::compile_function_def(AST::Fa_FunctionDef* f)
 {
     Fa_SourceLocation loc = f->get_location();
     if (!m_current->is_top_level || m_current->scope_depth != 0)
-        return report_error(CompilerError::NESTED_FUNCTION_UNSUPPORTED, f->get_location());
+        return report_error(ErrorCode::NESTED_FUNCTION_UNSUPPORTED, f->get_location());
 
     AST::Fa_NameExpr* name = f->get_name();
     if (name == nullptr)
-        return report_error(CompilerError::NULL_FUNCTION_NAME, f->get_location());
+        return report_error(ErrorCode::NULL_FUNCTION_NAME, f->get_location());
 
     if (current_chunk()->functions.size() > MAX_CONSTANTS)
-        return report_error(CompilerError::TOO_MANY_FUNCTIONS, loc);
+        return report_error(ErrorCode::TOO_MANY_FUNCTIONS, loc);
 
     Fa_Chunk* fn_chunk = Fa_make_chunk();
     fn_chunk->source = current_chunk()->source;
@@ -377,7 +376,7 @@ Fa_ErrorOr<bool> Compiler::compile_function_def(AST::Fa_FunctionDef* f)
         for (AST::Fa_Expr* param : f->get_parameters()) {
             auto param_name = dynamic_cast<AST::Fa_NameExpr*>(param);
             if (param_name == nullptr)
-                return report_error(CompilerError::INVALID_FUNCTION_PARAMETER,
+                return report_error(ErrorCode::INVALID_FUNCTION_PARAMETER,
                     param ? param->get_location() : f->get_location());
 
             reg_t reg;
@@ -515,7 +514,7 @@ Fa_ErrorOr<bool> Compiler::compile_for(AST::Fa_ForStmt* s)
 Fa_ErrorOr<bool> Compiler::compile_break(AST::Fa_BreakStmt* s)
 {
     if (m_current->loop_stack.empty())
-        return report_error(CompilerError::BREAK_OUTSIDE_LOOP, s->get_location());
+        return report_error(ErrorCode::BREAK_OUTSIDE_LOOP, s->get_location());
 
     Fa_SourceLocation loc = s->get_location();
     m_current->loop_stack.back().break_patches.push(emit_jump(Fa_OpCode::JUMP, 0, loc));
@@ -526,7 +525,7 @@ Fa_ErrorOr<bool> Compiler::compile_break(AST::Fa_BreakStmt* s)
 Fa_ErrorOr<bool> Compiler::compile_continue(AST::Fa_ContinueStmt* s)
 {
     if (m_current->loop_stack.empty())
-        return report_error(CompilerError::CONTINUE_OUTSIDE_LOOP, s->get_location());
+        return report_error(ErrorCode::CONTINUE_OUTSIDE_LOOP, s->get_location());
 
     Fa_SourceLocation loc = s->get_location();
     m_current->loop_stack.back().continue_patches.push(emit_jump(Fa_OpCode::JUMP, 0, loc));
@@ -541,7 +540,7 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
 
     Fa_SourceLocation loc = s->get_location();
     if (!m_current->is_top_level || m_current->scope_depth != 0)
-        return report_error(CompilerError::NESTED_CLASS_UNSUPPORTED, loc);
+        return report_error(ErrorCode::NESTED_CLASS_UNSUPPORTED, loc);
 
     Fa_Array<AST::Fa_Expr*> fields = s->get_members();
     Fa_Array<AST::Fa_Stmt*> methods = s->get_methods();
@@ -590,10 +589,10 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
         Fa_SourceLocation method_loc = method->get_location();
         AST::Fa_NameExpr* method_name = method->get_name();
         if (method_name == nullptr)
-            return report_error(CompilerError::NULL_FUNCTION_NAME, method_loc);
+            return report_error(ErrorCode::NULL_FUNCTION_NAME, method_loc);
 
         if (current_chunk()->functions.size() > MAX_CONSTANTS)
-            return report_error(CompilerError::TOO_MANY_FUNCTIONS, method_loc);
+            return report_error(ErrorCode::TOO_MANY_FUNCTIONS, method_loc);
 
         Fa_Chunk* ch = Fa_make_chunk();
         ch->source = current_chunk()->source;
@@ -624,7 +623,7 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
             for (AST::Fa_Expr* p : method->get_parameters()) {
                 auto* p_name = dynamic_cast<AST::Fa_NameExpr*>(p);
                 if (p_name == nullptr)
-                    return report_error(CompilerError::INVALID_FUNCTION_PARAMETER,
+                    return report_error(ErrorCode::INVALID_FUNCTION_PARAMETER,
                         p ? p->get_location() : method_loc);
 
                 reg_t reg;
@@ -694,7 +693,7 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
 
     for (AST::Fa_Stmt* m : methods) {
         if (m->get_kind() != AST::Fa_Stmt::Kind::FUNC)
-            return report_error(CompilerError::INVALID_STATEMENT_NODE, m->get_location());
+            return report_error(ErrorCode::INVALID_STATEMENT_NODE, m->get_location());
 
         auto* method = as_function_def(m);
         Fa_StringRef method_name = method->get_name()->get_value();
@@ -708,7 +707,7 @@ Fa_ErrorOr<bool> Compiler::compile_class_def(AST::Fa_ClassDef* s)
         }
 
         if (seen)
-            return report_error(CompilerError::INVALID_STATEMENT_NODE, method->get_location());
+            return report_error(ErrorCode::INVALID_STATEMENT_NODE, method->get_location());
 
         seen_names.push(method_name);
 
@@ -829,7 +828,7 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_expr_impl(AST::Fa_Expr* e)
     case AST::Fa_Expr::Kind::INDEX_READ: return compile_index_impl(as_index(e));
     case AST::Fa_Expr::Kind::GET: return compile_get_impl_(as_get(e));
     case AST::Fa_Expr::Kind::INVALID:
-        return report_error(CompilerError::INVALID_EXPRESSION_NODE, e->get_location());
+        return report_error(ErrorCode::INVALID_EXPRESSION_NODE, e->get_location());
     }
 
     return Fa_ExprResult::knil();
@@ -855,7 +854,7 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_literal_impl(AST::Fa_LiteralExpr* e)
 
     // semantically unreachable, the structure of the literal expression ast node
     // should guarantee that it always holds a valid literal expression
-    return report_error(CompilerError::UNKNOWN_LITERAL_TYPE, e->get_location());
+    return report_error(ErrorCode::UNKNOWN_LITERAL_TYPE, e->get_location());
 }
 
 Fa_ErrorOr<Fa_ExprResult> Compiler::compile_name_impl(AST::Fa_NameExpr* e)
@@ -869,7 +868,7 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_name_impl(AST::Fa_NameExpr* e)
     if (int field_idx = current_method_field_index(e->get_value()); field_idx >= 0) {
         LocalVar const* self = lookup_local(kClassInstanceName);
         if (self == nullptr)
-            return report_error(CompilerError::INVALID_EXPRESSION_NODE, e->get_location());
+            return report_error(ErrorCode::INVALID_EXPRESSION_NODE, e->get_location());
 
         u32 pc = emit(Fa_make_ABC(Fa_OpCode::GET_FIELD, 0, self->reg, static_cast<reg_t>(field_idx)), loc);
         return Fa_ExprResult::reloc(pc);
@@ -905,7 +904,7 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_unary_impl(AST::Fa_UnaryExpr* e)
     case AST::Fa_UnaryOp::OP_BITNOT: op = Fa_OpCode::OP_BITNOT; break;
     case AST::Fa_UnaryOp::OP_NOT: op = Fa_OpCode::OP_NOT; break;
     default:
-        return report_error(CompilerError::UNKNOWN_UNARY_OPERATOR, e->get_location());
+        return report_error(ErrorCode::UNKNOWN_UNARY_OPERATOR, e->get_location());
     }
 
     RegMark mark(m_current);
@@ -1007,17 +1006,17 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_binary_impl(AST::Fa_BinaryExpr* e)
     case AST::Fa_BinaryOp::OP_LSHIFT: bc_op = Fa_OpCode::OP_LSHIFT; break;
     case AST::Fa_BinaryOp::OP_RSHIFT: bc_op = Fa_OpCode::OP_RSHIFT; break;
     default:
-        return report_error(CompilerError::UNKNOWN_BINARY_OPERATOR, e->get_location());
+        return report_error(ErrorCode::UNKNOWN_BINARY_OPERATOR, e->get_location());
     }
 
     if ((bc_op == Fa_OpCode::OP_LSHIFT || bc_op == Fa_OpCode::OP_RSHIFT) && AST::is_literal(e->get_right())) {
         auto* amount_expr = AST::as_literal(e->get_right());
         if (!amount_expr->is_integer())
-            return report_error(CompilerError::SHIFT_AMOUNT_NOT_CONSTANT, e->get_right()->get_location());
+            return report_error(ErrorCode::SHIFT_AMOUNT_NOT_CONSTANT, e->get_right()->get_location());
 
         i64 amount = amount_expr->get_int();
         if (amount < 0 || amount > 63)
-            return report_error(CompilerError::SHIFT_AMOUNT_OUT_OF_RANGE, amount_expr->get_location());
+            return report_error(ErrorCode::SHIFT_AMOUNT_OUT_OF_RANGE, amount_expr->get_location());
 
         RegMark mark(m_current);
         Fa_ExprResult expr_result;
@@ -1065,7 +1064,7 @@ bool Compiler::is_declaration(AST::Fa_AssignmentExpr const* e) const
 Fa_ErrorOr<Fa_ExprResult> Compiler::compile_assign_impl(AST::Fa_AssignmentExpr* e)
 {
     if (e == nullptr || e->get_target() == nullptr || e->get_value() == nullptr)
-        return report_error(CompilerError::INVALID_EXPRESSION_NODE,
+        return report_error(ErrorCode::INVALID_EXPRESSION_NODE,
             e ? e->get_location() : Fa_SourceLocation { });
 
     Fa_SourceLocation loc = e->get_location();
@@ -1097,7 +1096,7 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_assign_impl(AST::Fa_AssignmentExpr* 
         auto get_expr = as_get(target);
         auto* member_name = as_simple_member_name(get_expr->get_member());
         if (member_name == nullptr)
-            return report_error(CompilerError::INVALID_EXPRESSION_NODE, loc);
+            return report_error(ErrorCode::INVALID_EXPRESSION_NODE, loc);
 
         int field_idx = -1;
         if (ClassDesc const* desc = resolve_receiver_class(get_expr->get_object()))
@@ -1130,7 +1129,7 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_assign_impl(AST::Fa_AssignmentExpr* 
     // Name assignment: write into an existing local, create a local inside a
     // function/method, or store a top-level name globally.
     if (!AST::is_name(target))
-        return report_error(CompilerError::INVALID_EXPRESSION_NODE, loc);
+        return report_error(ErrorCode::INVALID_EXPRESSION_NODE, loc);
 
     auto* name = as_name(target);
     Fa_StringRef const& name_value = name->get_value();
@@ -1167,7 +1166,7 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_assign_impl(AST::Fa_AssignmentExpr* 
     if (int field_idx = current_method_field_index(name_value); field_idx >= 0) {
         LocalVar const* self = lookup_local(kClassInstanceName);
         if (self == nullptr)
-            return report_error(CompilerError::INVALID_EXPRESSION_NODE, loc);
+            return report_error(ErrorCode::INVALID_EXPRESSION_NODE, loc);
 
         RegMark mark(m_current);
         Fa_ExprResult value_result;
@@ -1364,7 +1363,7 @@ Fa_ErrorOr<Fa_ExprResult> Compiler::compile_list_impl(AST::Fa_ListExpr* e)
     Fa_SourceLocation loc = e->get_location();
 
     if (e->size() > 0xFF)
-        return report_error(CompilerError::TOO_MANY_LIST_ELEMENTS, loc);
+        return report_error(ErrorCode::TOO_MANY_LIST_ELEMENTS, loc);
 
     reg_t dst;
     ALLOC_REG(&dst);
@@ -1626,7 +1625,7 @@ void Compiler::patch_jump_to(u32 instr_idx, u32 target)
 {
     auto offset = static_cast<i32>(target) - static_cast<i32>(instr_idx) - 1;
     if (offset > JUMP_OFFSET || offset < -JUMP_OFFSET)
-        diagnostic::panic(CompilerError::LOOP_JUMP_OFFSET_OVERFLOW);
+        diagnostic::panic(ErrorCode::LOOP_JUMP_OFFSET_OVERFLOW);
 
     u32 word = current_chunk()->code[instr_idx];
     current_chunk()->code[instr_idx] = Fa_make_AsBx(Fa_instr_op(word), Fa_instr_A(word), offset);

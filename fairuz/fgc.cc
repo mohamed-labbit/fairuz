@@ -235,7 +235,7 @@ Fa_ObjList* Fa_GarbageCollector::make_obj_list()
 {
     void* mem = ::operator new(sizeof(Fa_ObjList), std::nothrow);
     if (mem == nullptr)
-        diagnostic::panic(diagnostic::errc::general::Code::ALLOC_FAILED);
+        diagnostic::panic(ErrorCode::ALLOC_FAILED);
 
     auto elems = Fa_Array<Fa_Value, /*_Alloc=*/Fa_GarbageCollector> { this };
 
@@ -279,7 +279,7 @@ Fa_ObjNative* Fa_GarbageCollector::make_obj_native(NativeFn fn, Fa_ObjString* na
     if (name == nullptr || fn == nullptr) {
         /// NOTE: this should never happen in production
         /// if it was ever detected, it must be patched right away
-        diagnostic::panic(diagnostic::errc::general::Code::INVALID_PARAMETER);
+        diagnostic::panic(ErrorCode::INVALID_PARAMETER);
         return nullptr;
     }
 

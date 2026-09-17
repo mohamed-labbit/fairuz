@@ -11,8 +11,6 @@
 
 namespace fairuz::util {
 
-using ErrorCode = diagnostic::errc::general::Code;
-
 static inline bool is_whitespace(u32 const& ch) { return ch == u' ' || ch == u'\t' || ch == u'\r'; }
 
 static inline bool is_operator(u32 const& ch)
@@ -301,16 +299,14 @@ static inline i64 parse_integer_literal(Fa_StringRef const& literal, int base)
         else if (cp >= 'A' && cp <= 'F')
             digit = cp - 'A' + 10;
         if (digit < 0)
-            diagnostic::fatal_error(diagnostic::errc::lexer::Code::INVALID_NUMBER_LITERAL,
+            diagnostic::fatal_error(ErrorCode::INVALID_NUMBER_LITERAL,
                 "invalid digit in integer literal");
 
         if (digit >= base)
-            diagnostic::fatal_error(diagnostic::errc::lexer::Code::INVALID_NUMBER_LITERAL,
-                "digit is not valid for the literal base");
+            diagnostic::fatal_error(ErrorCode::INVALID_NUMBER_LITERAL, "digit is not valid for the literal base");
 
         if (value > (INT64_MAX - digit) / base)
-            diagnostic::fatal_error(diagnostic::errc::lexer::Code::INVALID_NUMBER_LITERAL,
-                "integer literal is out of range");
+            diagnostic::fatal_error(ErrorCode::INVALID_NUMBER_LITERAL, "integer literal is out of range");
 
         value = value * base + digit;
     }

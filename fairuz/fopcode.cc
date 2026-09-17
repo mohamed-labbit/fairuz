@@ -57,7 +57,7 @@ u16 Fa_Chunk::add_constant(Fa_Value const v)
     }
 
     if (constants.size() > MAX_CONSTANTS)
-        diagnostic::panic(diagnostic::errc::compiler::Code::TOO_MANY_CONSTANTS);
+        diagnostic::panic(ErrorCode::TOO_MANY_CONSTANTS);
 
     constants.push(v);
     return static_cast<u16>(constants.size() - 1);
@@ -66,7 +66,7 @@ u16 Fa_Chunk::add_constant(Fa_Value const v)
 u8 Fa_Chunk::alloc_ic_slot()
 {
     if (ic_slots.size() > MAX_IC_SLOTS)
-        diagnostic::panic(diagnostic::errc::compiler::Code::TOO_MANY_INLINE_CACHES);
+        diagnostic::panic(ErrorCode::TOO_MANY_INLINE_CACHES);
 
     ic_slots.push(Fa_ICSlot());
     return static_cast<u8>(ic_slots.size() - 1);

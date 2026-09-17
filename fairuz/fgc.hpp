@@ -36,7 +36,7 @@ public:
     {
         T* obj = new T(std::forward<Args>(m_args)...);
         if (obj == nullptr)
-            diagnostic::panic(diagnostic::errc::general::Code::ALLOC_FAILED);
+            diagnostic::panic(ErrorCode::ALLOC_FAILED);
         m_all.push(&obj->obj);
         m_current_size += sizeof(T); // reasonable estimate
         return obj;
@@ -74,7 +74,7 @@ public:
     {
         void* mem = ::operator new(size, std::nothrow);
         if (mem == nullptr)
-            diagnostic::panic(diagnostic::errc::general::Code::ALLOC_FAILED);
+            diagnostic::panic(ErrorCode::ALLOC_FAILED);
         m_current_size += size;
         return mem;
     }

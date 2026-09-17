@@ -9,17 +9,8 @@ namespace fairuz {
 
 class [[nodiscard]] Fa_Error {
 public:
-    template<typename CodeEnum>
-    explicit Fa_Error(CodeEnum code)
-        : m_code(static_cast<u16>(code))
-    {
-    }
-
-    struct RawCode {
-        u16 value;
-    };
-    explicit Fa_Error(RawCode raw)
-        : m_code(raw.value)
+    explicit Fa_Error(ErrorCode code)
+        : m_code(code)
     {
     }
 
@@ -34,13 +25,13 @@ public:
     bool operator==(Fa_Error const& other) const { return m_code == other.m_code; }
 
     Fa_StringRef get_error_message() const { return diagnostic::error_message_for(m_code); }
-    u16 get_code() const { return m_code; }
+    ErrorCode get_code() const { return m_code; }
 
     diagnostic::Fa_DiagnosticEngine::DiagnosticId diag_id() const { return m_diag_id; }
     void set_diag_id(diagnostic::Fa_DiagnosticEngine::DiagnosticId id) { m_diag_id = id; }
 
 private:
-    u16 m_code { 0xFFFF };
+    ErrorCode m_code { 0xFFFF };
     diagnostic::Fa_DiagnosticEngine::DiagnosticId m_diag_id { diagnostic::Fa_DiagnosticEngine::INVALID_ID };
 }; // class Fa_Error
 
@@ -166,37 +157,12 @@ private:
     }
 }; // class Fa_ErrorOr
 
-static Fa_Error _report_error(u16 errc, Fa_SourceLocation loc, diagnostic::Severity sv = diagnostic::Severity::ERROR)
+inline Fa_Error report_error(ErrorCode errc, Fa_SourceLocation loc, diagnostic::Severity sv = diagnostic::Severity::ERROR)
 {
     auto id = diagnostic::report(sv, loc, errc);
-    Fa_Error err { Fa_Error::RawCode { errc } };
+    Fa_Error err { Fa_Error { errc } };
     err.set_diag_id(id);
     return err;
-}
-
-static inline Fa_Error report_error(diagnostic::errc::compiler::Code errc, Fa_SourceLocation loc)
-{
-    return _report_error(static_cast<u16>(errc), loc);
-}
-static inline Fa_Error report_error(diagnostic::errc::parser::Code errc, Fa_SourceLocation loc, diagnostic::Severity sv = diagnostic::Severity::ERROR)
-{
-    return _report_error(static_cast<u16>(errc), loc, sv);
-}
-static inline Fa_Error report_error(diagnostic::errc::sema::Code errc, Fa_SourceLocation loc)
-{
-    return _report_error(static_cast<u16>(errc), loc);
-}
-static inline Fa_Error report_error(diagnostic::errc::runtime::Code errc, Fa_SourceLocation loc)
-{
-    return _report_error(static_cast<u16>(errc), loc);
-}
-static inline Fa_Error report_error(diagnostic::errc::general::Code errc, Fa_SourceLocation loc)
-{
-    return _report_error(static_cast<u16>(errc), loc);
-}
-static inline Fa_Error report_error(diagnostic::errc::stdlib::Code errc, Fa_SourceLocation loc)
-{
-    return _report_error(static_cast<u16>(errc), loc);
 }
 
 } // namespace fairuz

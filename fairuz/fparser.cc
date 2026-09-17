@@ -10,6 +10,7 @@
 #include "fmacros.hpp"
 #include "ftoken.hpp"
 #include "futil.hpp"
+#include "ferror.hpp"
 
 namespace fairuz::parser {
 
@@ -19,7 +20,7 @@ namespace fairuz::parser {
 #define Fa_VERIFY_TOKEN(expected, errc) \
     do {                                \
         if (UNLIKELY(!match(expected))) \
-            return report_error(errc);  \
+            return report_error(errc, current_loc());  \
     } while (0)
 
 // Propagate an error from an Fa_ErrorOr expression without unwrapping.
@@ -51,8 +52,6 @@ namespace fairuz::parser {
 using TokType = tok::Fa_TokenType;
 using StmtPtr = AST::Fa_Stmt*;
 using ExprPtr = AST::Fa_Expr*;
-using ParserErrorCode = diagnostic::errc::parser::Code;
-using SemaCode = diagnostic::errc::sema::Code;
 
 // Shared between the parser (parse_class_method) and the semantic analyser
 // (analyze_stmt CLASS_DEF).  Move to ast_constants.hpp if the two components
@@ -139,39 +138,6 @@ AST::Fa_UnaryOp to_unary_op(TokType const op)
 }
 
 // Fa_Parser — utilities
-
-Fa_Error Fa_Parser::report_error(ParserErrorCode err_code, diagnostic::Severity sv)
-{
-    diagnostic::SourceScope source_scope(m_lexer.source());
-    if (auto lexical_error = m_lexer.take_error()) {
-        Fa_Error error { Fa_Error::RawCode { lexical_error->first } };
-        error.set_diag_id(lexical_error->second);
-        return error;
-    }
-    auto* tok = current_token();
-    auto error = fairuz::report_error(err_code, tok->location(), sv);
-    char const* suggestion = nullptr;
-    switch (err_code) {
-    case ParserErrorCode::EXPECTED_COLON_IF:
-    case ParserErrorCode::EXPECTED_COLON_WHILE:
-    case ParserErrorCode::EXPECTED_COLON_FOR:
-    case ParserErrorCode::EXPECTED_COLON_FN:
-    case ParserErrorCode::EXPECTED_COLON_CLASS: suggestion = "Add ':' at the end of the block header."; break;
-    case ParserErrorCode::EXPECTED_INDENT: suggestion = "Indent the block body by four spaces."; break;
-    case ParserErrorCode::EXPECTED_RPAREN_PARAMS:
-    case ParserErrorCode::EXPECTED_RPAREN_ARGS:
-    case ParserErrorCode::EXPECTED_RPAREN_EXPR: suggestion = "Close the opening '(' with ')'."; break;
-    case ParserErrorCode::EXPECTED_RBRACKET: suggestion = "Close the opening '[' with ']'."; break;
-    case ParserErrorCode::EXPECTED_RBRACE_EXPR: suggestion = "Close the opening '{' with '}'."; break;
-    case ParserErrorCode::INVALID_ASSIGN_TARGET: suggestion = "Assign to a name, field, or indexed element."; break;
-    case ParserErrorCode::UNEXPECTED_EOF: suggestion = "Complete the expression before the end of the file."; break;
-    case ParserErrorCode::UNEXPECTED_TOKEN: suggestion = "Check for a missing value or an extra operator before this token."; break;
-    default: break;
-    }
-    if (suggestion)
-        diagnostic::engine.add_suggestion(error.diag_id(), suggestion);
-    return error;
-}
 
 bool Fa_Parser::we_done() const { return current_token()->is(TokType::ENDMARKER); }
 
@@ -282,7 +248,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_statement()
 Fa_ErrorOr<StmtPtr> Fa_Parser::parse_return_stmt()
 {
     TokenPtr start = current_token();
-    Fa_VERIFY_TOKEN(TokType::KW_RETURN, ParserErrorCode::EXPECTED_RETURN);
+    Fa_VERIFY_TOKEN(TokType::KW_RETURN, ErrorCode::EXPECTED_RETURN);
 
     if (check(TokType::NEWLINE) || we_done())
         return AST::Fa_make_return(start->location());
@@ -308,10 +274,10 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_continue_stmt()
 Fa_ErrorOr<StmtPtr> Fa_Parser::parse_while_stmt()
 {
     TokenPtr start = current_token();
-    Fa_VERIFY_TOKEN(TokType::KW_WHILE, ParserErrorCode::EXPECTED_WHILE_KEYWORD);
+    Fa_VERIFY_TOKEN(TokType::KW_WHILE, ErrorCode::EXPECTED_WHILE_KEYWORD);
 
     Fa_TRY(condition, parse_expression());
-    Fa_VERIFY_TOKEN(TokType::COLON, ParserErrorCode::EXPECTED_COLON_WHILE);
+    Fa_VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_WHILE);
 
     auto while_block = parse_indented_block();
     Fa_VERIFY_NODE(while_block);
@@ -322,19 +288,19 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_while_stmt()
 Fa_ErrorOr<StmtPtr> Fa_Parser::parse_for_stmt()
 {
     TokenPtr start = current_token();
-    Fa_VERIFY_TOKEN(TokType::KW_FOR, ParserErrorCode::UNEXPECTED_TOKEN);
+    Fa_VERIFY_TOKEN(TokType::KW_FOR, ErrorCode::UNEXPECTED_TOKEN);
 
     if (!check(TokType::IDENTIFIER))
-        return report_error(ParserErrorCode::EXPECTED_FOR_TARGET);
+        return report_error(ErrorCode::EXPECTED_FOR_TARGET, current_loc());
 
     auto* target = AST::Fa_make_name(current_token()->lexeme(), current_token()->location());
     advance();
 
     /// check 'in' after target
-    Fa_VERIFY_TOKEN(TokType::KW_IN, diagnostic::errc::parser::Code::EXPECTED_IN_KEYWORD);
+    Fa_VERIFY_TOKEN(TokType::KW_IN, ErrorCode::EXPECTED_IN_KEYWORD);
 
     Fa_TRY(iter, parse_expression());
-    Fa_VERIFY_TOKEN(TokType::COLON, ParserErrorCode::EXPECTED_COLON_FOR);
+    Fa_VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_FOR);
 
     auto body = parse_indented_block();
     Fa_VERIFY_NODE(body);
@@ -345,10 +311,10 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_for_stmt()
 Fa_ErrorOr<StmtPtr> Fa_Parser::parse_if_stmt()
 {
     TokenPtr start = current_token();
-    Fa_VERIFY_TOKEN(TokType::KW_IF, ParserErrorCode::EXPECTED_IF_KEYWORD);
+    Fa_VERIFY_TOKEN(TokType::KW_IF, ErrorCode::EXPECTED_IF_KEYWORD);
 
     Fa_TRY(condition, parse_expression());
-    Fa_VERIFY_TOKEN(TokType::COLON, ParserErrorCode::EXPECTED_COLON_IF);
+    Fa_VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_IF);
 
     auto then_block = parse_indented_block();
     Fa_VERIFY_NODE(then_block);
@@ -364,7 +330,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_if_stmt()
             Fa_VERIFY_NODE(nested);
             else_block = nested.value();
         } else {
-            Fa_VERIFY_TOKEN(TokType::COLON, ParserErrorCode::EXPECTED_COLON_IF);
+            Fa_VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_IF);
             auto else_stmt = parse_indented_block();
             Fa_VERIFY_NODE(else_stmt);
             else_block = else_stmt.value();
@@ -378,7 +344,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_expression_stmt()
 {
     Fa_TRY(expr, parse_expression());
     if (UNLIKELY(!(check(TokType::NEWLINE) || check(TokType::DEDENT) || check(TokType::ENDMARKER))))
-        return report_error(ParserErrorCode::UNEXPECTED_TOKEN);
+        return report_error(ErrorCode::UNEXPECTED_TOKEN, current_loc());
     return Fa_make_expr_stmt(expr, expr->get_location());
 }
 
@@ -386,7 +352,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_indented_block()
 {
     TokenPtr start = current_token();
     skip_newlines();
-    Fa_VERIFY_TOKEN(TokType::INDENT, ParserErrorCode::EXPECTED_INDENT);
+    Fa_VERIFY_TOKEN(TokType::INDENT, ErrorCode::EXPECTED_INDENT);
 
     Fa_Array<StmtPtr> stmts;
 
@@ -411,7 +377,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_indented_block()
     if (check(TokType::ENDMARKER) || diagnostic::is_saturated())
         return Fa_make_block(stmts, start->location());
 
-    Fa_VERIFY_TOKEN(TokType::DEDENT, ParserErrorCode::EXPECTED_DEDENT);
+    Fa_VERIFY_TOKEN(TokType::DEDENT, ErrorCode::EXPECTED_DEDENT);
     return Fa_make_block(stmts, start->location());
 }
 
@@ -420,17 +386,17 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_indented_block()
 Fa_ErrorOr<StmtPtr> Fa_Parser::parse_function_def()
 {
     TokenPtr start = current_token();
-    Fa_VERIFY_TOKEN(TokType::KW_FN, ParserErrorCode::EXPECTED_FN_KEYWORD);
+    Fa_VERIFY_TOKEN(TokType::KW_FN, ErrorCode::EXPECTED_FN_KEYWORD);
 
     if (!check(TokType::IDENTIFIER))
-        return report_error(ParserErrorCode::EXPECTED_FN_NAME);
+        return report_error(ErrorCode::EXPECTED_FN_NAME, current_loc());
     TokenPtr name_tok = current_token();
     advance();
 
     auto params = parse_parameters_list();
     Fa_VERIFY_NODE(params);
 
-    Fa_VERIFY_TOKEN(TokType::COLON, ParserErrorCode::EXPECTED_COLON_FN);
+    Fa_VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_FN);
 
     auto body = parse_indented_block();
     Fa_VERIFY_NODE(body);
@@ -445,10 +411,10 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_function_def()
 Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_def()
 {
     TokenPtr start = current_token();
-    Fa_VERIFY_TOKEN(TokType::KW_CLASS, ParserErrorCode::EXPECTED_CLASS_KEYWORD);
+    Fa_VERIFY_TOKEN(TokType::KW_CLASS, ErrorCode::EXPECTED_CLASS_KEYWORD);
 
     if (!check(TokType::IDENTIFIER))
-        return report_error(ParserErrorCode::EXPECTED_CLASS_NAME);
+        return report_error(ErrorCode::EXPECTED_CLASS_NAME, current_loc());
 
     TokenPtr name_tok = current_token();
     advance();
@@ -457,16 +423,16 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_def()
     ExprPtr parent = nullptr;
     if (consume(TokType::LPAREN)) {
         if (!check(TokType::IDENTIFIER))
-            return report_error(ParserErrorCode::EXPECTED_CLASS_NAME);
+            return report_error(ErrorCode::EXPECTED_CLASS_NAME, current_loc());
         TokenPtr parent_tok = current_token();
         advance();
         parent = AST::Fa_make_name(parent_tok->lexeme(), parent_tok->location());
-        Fa_VERIFY_TOKEN(TokType::RPAREN, ParserErrorCode::EXPECTED_RPAREN_CLASS);
+        Fa_VERIFY_TOKEN(TokType::RPAREN, ErrorCode::EXPECTED_RPAREN_CLASS);
     }
 
-    Fa_VERIFY_TOKEN(TokType::COLON, ParserErrorCode::EXPECTED_COLON_CLASS);
+    Fa_VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_CLASS);
     skip_newlines();
-    Fa_VERIFY_TOKEN(TokType::INDENT, ParserErrorCode::EXPECTED_INDENT);
+    Fa_VERIFY_TOKEN(TokType::INDENT, ErrorCode::EXPECTED_INDENT);
 
     Fa_Array<ExprPtr> members = Fa_Array<ExprPtr>::with_capacity(4);
     Fa_Array<StmtPtr> methods = Fa_Array<StmtPtr>::with_capacity(4);
@@ -487,7 +453,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_def()
     if (check(TokType::ENDMARKER))
         return AST::Fa_make_class_def(class_name, parent, members, methods, start->location());
 
-    Fa_VERIFY_TOKEN(TokType::DEDENT, ParserErrorCode::EXPECTED_DEDENT);
+    Fa_VERIFY_TOKEN(TokType::DEDENT, ErrorCode::EXPECTED_DEDENT);
     return AST::Fa_make_class_def(class_name, parent, members, methods, start->location());
 }
 
@@ -497,17 +463,17 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_import_stmt()
     bool const from_import = consume(TokType::KW_FROM);
 
     if (!from_import)
-        Fa_VERIFY_TOKEN(TokType::KW_IMPORT, ParserErrorCode::EXPECTED_IMPORT_KEYWORD);
+        Fa_VERIFY_TOKEN(TokType::KW_IMPORT, ErrorCode::EXPECTED_IMPORT_KEYWORD);
 
     if (!check(TokType::IDENTIFIER))
-        return report_error(ParserErrorCode::EXPECTED_MODULE_NAME);
+        return report_error(ErrorCode::EXPECTED_MODULE_NAME, current_loc());
 
     Fa_StringRef module = current_token()->lexeme();
     advance();
 
     while (consume(TokType::DOT)) {
         if (!check(TokType::IDENTIFIER))
-            return report_error(ParserErrorCode::EXPECTED_MODULE_NAME);
+            return report_error(ErrorCode::EXPECTED_MODULE_NAME, current_loc());
         module = module + "." + current_token()->lexeme();
         advance();
     }
@@ -516,11 +482,11 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_import_stmt()
     Fa_Array<Fa_StringRef> aliases;
 
     if (from_import) {
-        Fa_VERIFY_TOKEN(TokType::KW_IMPORT, ParserErrorCode::EXPECTED_IMPORT_KEYWORD);
+        Fa_VERIFY_TOKEN(TokType::KW_IMPORT, ErrorCode::EXPECTED_IMPORT_KEYWORD);
 
         do {
             if (!check(TokType::IDENTIFIER))
-                return report_error(ParserErrorCode::EXPECTED_IMPORT_NAME);
+                return report_error(ErrorCode::EXPECTED_IMPORT_NAME, current_loc());
 
             Fa_StringRef name = current_token()->lexeme();
             advance();
@@ -529,7 +495,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_import_stmt()
 
             if (consume(TokType::KW_AS)) {
                 if (!check(TokType::IDENTIFIER))
-                    return report_error(ParserErrorCode::EXPECTED_ALIAS_NAME);
+                    return report_error(ErrorCode::EXPECTED_ALIAS_NAME, current_loc());
                 alias = current_token()->lexeme();
                 advance();
             }
@@ -545,7 +511,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_import_stmt()
 
         if (consume(TokType::KW_AS)) {
             if (!check(TokType::IDENTIFIER))
-                return report_error(ParserErrorCode::EXPECTED_ALIAS_NAME);
+                return report_error(ErrorCode::EXPECTED_ALIAS_NAME, current_loc());
             alias = current_token()->lexeme();
             advance();
         }
@@ -639,10 +605,10 @@ void collect_this_field_assignment(Fa_Array<ExprPtr>& members, StmtPtr stmt)
 Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_method(Fa_Array<ExprPtr>& members)
 {
     TokenPtr start = current_token();
-    Fa_VERIFY_TOKEN(TokType::KW_FN, ParserErrorCode::EXPECTED_FN_KEYWORD);
+    Fa_VERIFY_TOKEN(TokType::KW_FN, ErrorCode::EXPECTED_FN_KEYWORD);
 
     TokenPtr name_tok = current_token();
-    Fa_VERIFY_TOKEN(TokType::IDENTIFIER, ParserErrorCode::EXPECTED_FN_NAME);
+    Fa_VERIFY_TOKEN(TokType::IDENTIFIER, ErrorCode::EXPECTED_FN_NAME);
 
     auto fn_name = name_tok->lexeme();
     auto cur = current_token()->lexeme();
@@ -657,9 +623,9 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_method(Fa_Array<ExprPtr>& members)
     auto params = parse_parameters_list();
     Fa_VERIFY_NODE(params);
 
-    Fa_VERIFY_TOKEN(TokType::COLON, ParserErrorCode::EXPECTED_COLON_FN);
+    Fa_VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_FN);
     skip_newlines();
-    Fa_VERIFY_TOKEN(TokType::INDENT, ParserErrorCode::EXPECTED_INDENT);
+    Fa_VERIFY_TOKEN(TokType::INDENT, ErrorCode::EXPECTED_INDENT);
 
     Fa_Array<StmtPtr> stmts;
 
@@ -671,7 +637,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_method(Fa_Array<ExprPtr>& members)
         if (match(TokType::DOT)) {
             // `.field = expr` member-initializer syntax inside a method body.
             if (!check(TokType::IDENTIFIER))
-                return report_error(ParserErrorCode::INVALID_ASSIGN_TARGET);
+                return report_error(ErrorCode::INVALID_ASSIGN_TARGET, current_loc());
 
             TokenPtr member_tok = current_token();
             Fa_StringRef mname = member_tok->lexeme();
@@ -704,7 +670,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_method(Fa_Array<ExprPtr>& members)
                     target->clone(), rhs, op, target->get_location());
                 member_assign = AST::Fa_make_assignment_expr(target, bin, member_tok->location());
             } else {
-                return report_error(ParserErrorCode::INVALID_ASSIGN_TARGET);
+                return report_error(ErrorCode::INVALID_ASSIGN_TARGET, current_loc());
             }
 
             push_member_once(members, AST::Fa_make_name(mname, member_tok->location()));
@@ -727,7 +693,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_method(Fa_Array<ExprPtr>& members)
             AST::Fa_make_name(fn_name, name_tok->location()),
             as_list(params.value()), block, start->location());
 
-    Fa_VERIFY_TOKEN(TokType::DEDENT, ParserErrorCode::EXPECTED_DEDENT);
+    Fa_VERIFY_TOKEN(TokType::DEDENT, ErrorCode::EXPECTED_DEDENT);
     return AST::Fa_make_function(
         AST::Fa_make_name(fn_name, name_tok->location()),
         as_list(params.value()), block, start->location());
@@ -736,7 +702,7 @@ Fa_ErrorOr<StmtPtr> Fa_Parser::parse_class_method(Fa_Array<ExprPtr>& members)
 Fa_ErrorOr<ExprPtr> Fa_Parser::parse_parameters_list()
 {
     TokenPtr open = current_token();
-    Fa_VERIFY_TOKEN(TokType::LPAREN, ParserErrorCode::EXPECTED_LPAREN);
+    Fa_VERIFY_TOKEN(TokType::LPAREN, ErrorCode::EXPECTED_LPAREN);
 
     Fa_Array<ExprPtr> params = Fa_Array<ExprPtr>::with_capacity(4);
 
@@ -747,7 +713,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_parameters_list()
                 break;
 
             if (!check(TokType::IDENTIFIER))
-                return report_error(ParserErrorCode::EXPECTED_PARAM_NAME);
+                return report_error(ErrorCode::EXPECTED_PARAM_NAME, current_loc());
 
             TokenPtr param_tok = current_token();
             advance();
@@ -756,7 +722,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_parameters_list()
         } while (match(TokType::COMMA) && !check(TokType::RPAREN));
     }
 
-    Fa_VERIFY_TOKEN(TokType::RPAREN, ParserErrorCode::EXPECTED_RPAREN_EXPR);
+    Fa_VERIFY_TOKEN(TokType::RPAREN, ErrorCode::EXPECTED_RPAREN_EXPR);
 
     // For an empty parameter list, use the '(' location (not the token after ')').
     Fa_SourceLocation loc = params.empty() ? open->location() : params[0]->get_location();
@@ -784,7 +750,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_assignment_expr()
         AST::Fa_Expr::Kind kind = target->get_kind();
 
         if (kind != AST::Fa_Expr::Kind::NAME && kind != AST::Fa_Expr::Kind::INDEX_READ && kind != AST::Fa_Expr::Kind::GET)
-            return report_error(ParserErrorCode::INVALID_ASSIGN_TARGET);
+            return report_error(ErrorCode::INVALID_ASSIGN_TARGET, current_loc());
 
         if (is_augmented_assign_tok(current_token())) {
             TokenPtr op_tok = current_token();
@@ -875,7 +841,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_postfix_expr()
                 } while (match(TokType::COMMA) && !check(TokType::RPAREN));
             }
 
-            Fa_VERIFY_TOKEN(TokType::RPAREN, ParserErrorCode::EXPECTED_RPAREN_EXPR);
+            Fa_VERIFY_TOKEN(TokType::RPAREN, ErrorCode::EXPECTED_RPAREN_EXPR);
             Fa_SourceLocation loc = (!args.empty() && args[0])
                 ? args[0]->get_location()
                 : Fa_SourceLocation { };
@@ -888,7 +854,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_postfix_expr()
         // Subscript: expr[index]
         if (match(TokType::LBRACKET)) {
             Fa_TRY(index, parse_expression());
-            Fa_VERIFY_TOKEN(TokType::RBRACKET, ParserErrorCode::EXPECTED_RBRACKET);
+            Fa_VERIFY_TOKEN(TokType::RBRACKET, ErrorCode::EXPECTED_RBRACKET);
             expr = Fa_make_index(
                 expr, index,
                 expr ? expr->get_location() : Fa_SourceLocation { });
@@ -897,7 +863,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_postfix_expr()
 
         if (match(TokType::DOT)) {
             if (!check(TokType::IDENTIFIER))
-                return report_error(ParserErrorCode::EXPECTED_MEMBER_NAME);
+                return report_error(ErrorCode::EXPECTED_MEMBER_NAME, current_loc());
             TokenPtr member_tok = current_token();
             advance();
             expr = Fa_make_get_expr(
@@ -987,7 +953,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_primary_expr()
 
         if (!match(TokType::RPAREN)) {
             m_parenths.pop_back();
-            return report_error(ParserErrorCode::EXPECTED_RPAREN_EXPR);
+            return report_error(ErrorCode::EXPECTED_RPAREN_EXPR, current_loc());
         }
         m_parenths.pop_back();
         if (elements.size() == 1 && !trailing_comma)
@@ -1001,9 +967,10 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_primary_expr()
         return parse_dict_literal();
 
     if (we_done())
-        return report_error(ParserErrorCode::UNEXPECTED_EOF);
+        return report_error(ErrorCode::UNEXPECTED_EOF, current_loc());
 
-    return report_error(ParserErrorCode::UNEXPECTED_TOKEN);
+    return report_error(ErrorCode::UNEXPECTED_TOKEN, current_loc()
+);
 }
 
 Fa_ErrorOr<ExprPtr> Fa_Parser::parse_list_literal()
@@ -1023,7 +990,7 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_list_literal()
         } while (match(TokType::COMMA) && !check(TokType::RBRACKET));
     }
 
-    Fa_VERIFY_TOKEN(TokType::RBRACKET, ParserErrorCode::EXPECTED_RBRACKET);
+    Fa_VERIFY_TOKEN(TokType::RBRACKET, ErrorCode::EXPECTED_RBRACKET);
     return Fa_make_list(std::move(elements), start->location());
 }
 
@@ -1039,14 +1006,14 @@ Fa_ErrorOr<ExprPtr> Fa_Parser::parse_dict_literal()
             if (check(TokType::RBRACE))
                 break;
             Fa_TRY(key, parse_expression());
-            Fa_VERIFY_TOKEN(TokType::COLON, ParserErrorCode::EXPECTED_COLON_DICT);
+            Fa_VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_DICT);
             Fa_TRY(val, parse_expression());
             content.push({ key, val });
             skip_newlines();
         } while (match(TokType::COMMA) && !check(TokType::RBRACE));
     }
 
-    Fa_VERIFY_TOKEN(TokType::RBRACE, ParserErrorCode::EXPECTED_RBRACE_EXPR);
+    Fa_VERIFY_TOKEN(TokType::RBRACE, ErrorCode::EXPECTED_RBRACE_EXPR);
     return AST::Fa_make_dict(std::move(content), start->location());
 }
 
