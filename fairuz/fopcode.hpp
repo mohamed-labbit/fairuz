@@ -286,7 +286,7 @@ struct Chunk {
     u32 local_count { 0 };
 
     Array<u32> code;
-    Array<SourceLocation> locations;
+    Array<SrcLoc> locations;
     Array<Value> constants;
     Array<LineEntry> lines;
     Array<Chunk*> functions;
@@ -309,7 +309,7 @@ struct Chunk {
     Chunk& operator=(Chunk const&) = delete;
     Chunk& operator=(Chunk&&) = default;
 
-    u32 emit(u32 instr, SourceLocation loc);
+    u32 emit(u32 instr, SrcLoc loc);
     bool patch_jump(u32 const instr_idx);
     u16 add_constant(Value const v);
     u8 alloc_ic_slot();

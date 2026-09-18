@@ -107,7 +107,7 @@ enum {
 
 class Token {
 public:
-    Token(StringRef val, TokenType tt, SourceLocation loc, bool atbol = false)
+    Token(StringRef val, TokenType tt, SrcLoc loc, bool atbol = false)
         : m_value(val)
         , m_type(tt)
         , m_location(loc)
@@ -141,7 +141,7 @@ public:
 
     [[nodiscard]] u16 const& column() const;
 
-    [[nodiscard]] SourceLocation const& location() const;
+    [[nodiscard]] SrcLoc const& location() const;
 
     [[nodiscard]] std::string const& filepath() const;
 
@@ -175,7 +175,7 @@ public:
 private:
     StringRef m_value;
     TokenType m_type;
-    SourceLocation m_location;
+    SrcLoc m_location;
     bool m_atbol;
 }; // class Token
 

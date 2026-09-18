@@ -16,10 +16,18 @@ namespace fairuz::parser {
 
 // Macros
 
-// Consume a token, early-return the error code if the token doesn't match.
+/// Consume a token, early-return the error code if the token doesn't match.
 #define VERIFY_TOKEN(expected, errc)                  \
     do {                                              \
         if (UNLIKELY(!match(expected)))               \
+            return report_error(errc, current_loc()); \
+    } while (0)
+
+/// Checking is different, it doesn't consume the current token
+/// but force checking it to an expected type, return error if false.
+#define CHECK_TOKEN(expected, errc)                   \
+    do {                                              \
+        if (UNLIKELY(!check(expected)))               \
             return report_error(errc, current_loc()); \
     } while (0)
 
@@ -50,10 +58,6 @@ namespace fairuz::parser {
 // Type aliases
 
 using TokType = tok::TokenType;
-using StmtPtr = AST::Stmt*;
-using ExprPtr = AST::Expr*;
-using ConstStmtPtr = AST::Stmt const*;
-using ExprKind = AST::Expr::Kind;
 
 // Shared between the parser (parse_class_method) and the semantic analyser
 // (analyze_stmt CLASS_DEF).  Move to ast_constants.hpp if the two components
@@ -83,41 +87,41 @@ bool is_augmented_assign_tok(TokenPtr t)
 /// NOTE: These are logically a property of the token type and would be better
 /// placed as methods on Token or in a token_ops.hpp utility header.
 
-ExprKind to_op(TokType const op, bool is_unary)
+AST::ExprKind to_op(TokType const op, bool is_unary)
 {
     switch (op) {
-    case TokType::OP_PLUS: return is_unary ? ExprKind::OP_PLUS : ExprKind::OP_ADD;
-    case TokType::OP_MINUS: return is_unary ? ExprKind::OP_NEG : ExprKind::OP_SUB;
-    case TokType::OP_BITNOT: return ExprKind::OP_BITNOT;
-    case TokType::OP_NOT: return ExprKind::OP_NOT;
-    case TokType::OP_STAR: return ExprKind::OP_MUL;
-    case TokType::OP_SLASH: return ExprKind::OP_DIV;
-    case TokType::OP_PERCENT: return ExprKind::OP_MOD;
-    case TokType::OP_POWER: return ExprKind::OP_POW;
-    case TokType::OP_EQ: return ExprKind::OP_EQ;
-    case TokType::OP_NEQ: return ExprKind::OP_NEQ;
-    case TokType::OP_LT: return ExprKind::OP_LT;
-    case TokType::OP_GT: return ExprKind::OP_GT;
-    case TokType::OP_LTE: return ExprKind::OP_LTE;
-    case TokType::OP_GTE: return ExprKind::OP_GTE;
-    case TokType::OP_BITAND: return ExprKind::OP_BITAND;
-    case TokType::OP_BITOR: return ExprKind::OP_BITOR;
-    case TokType::OP_BITXOR: return ExprKind::OP_BITXOR;
-    case TokType::OP_LSHIFT: return ExprKind::OP_LSHIFT;
-    case TokType::OP_RSHIFT: return ExprKind::OP_RSHIFT;
-    case TokType::OP_AND: return ExprKind::OP_AND;
-    case TokType::OP_OR: return ExprKind::OP_OR;
-    case TokType::OP_PLUSEQ: return ExprKind::OP_ADD;
-    case TokType::OP_MINUSEQ: return ExprKind::OP_SUB;
-    case TokType::OP_STAREQ: return ExprKind::OP_MUL;
-    case TokType::OP_SLASHEQ: return ExprKind::OP_DIV;
-    case TokType::OP_PERCENTEQ: return ExprKind::OP_MOD;
-    case TokType::OP_ANDEQ: return ExprKind::OP_BITAND;
-    case TokType::OP_OREQ: return ExprKind::OP_BITOR;
-    case TokType::OP_XOREQ: return ExprKind::OP_BITXOR;
-    case TokType::OP_LSHIFTEQ: return ExprKind::OP_LSHIFT;
-    case TokType::OP_RSHIFTEQ: return ExprKind::OP_RSHIFT;
-    default: return ExprKind::INVALID;
+    case TokType::OP_PLUS: return is_unary ? AST::ExprKind::OP_PLUS : AST::ExprKind::OP_ADD;
+    case TokType::OP_MINUS: return is_unary ? AST::ExprKind::OP_NEG : AST::ExprKind::OP_SUB;
+    case TokType::OP_BITNOT: return AST::ExprKind::OP_BITNOT;
+    case TokType::OP_NOT: return AST::ExprKind::OP_NOT;
+    case TokType::OP_STAR: return AST::ExprKind::OP_MUL;
+    case TokType::OP_SLASH: return AST::ExprKind::OP_DIV;
+    case TokType::OP_PERCENT: return AST::ExprKind::OP_MOD;
+    case TokType::OP_POWER: return AST::ExprKind::OP_POW;
+    case TokType::OP_EQ: return AST::ExprKind::OP_EQ;
+    case TokType::OP_NEQ: return AST::ExprKind::OP_NEQ;
+    case TokType::OP_LT: return AST::ExprKind::OP_LT;
+    case TokType::OP_GT: return AST::ExprKind::OP_GT;
+    case TokType::OP_LTE: return AST::ExprKind::OP_LTE;
+    case TokType::OP_GTE: return AST::ExprKind::OP_GTE;
+    case TokType::OP_BITAND: return AST::ExprKind::OP_BITAND;
+    case TokType::OP_BITOR: return AST::ExprKind::OP_BITOR;
+    case TokType::OP_BITXOR: return AST::ExprKind::OP_BITXOR;
+    case TokType::OP_LSHIFT: return AST::ExprKind::OP_LSHIFT;
+    case TokType::OP_RSHIFT: return AST::ExprKind::OP_RSHIFT;
+    case TokType::OP_AND: return AST::ExprKind::OP_AND;
+    case TokType::OP_OR: return AST::ExprKind::OP_OR;
+    case TokType::OP_PLUSEQ: return AST::ExprKind::OP_ADD;
+    case TokType::OP_MINUSEQ: return AST::ExprKind::OP_SUB;
+    case TokType::OP_STAREQ: return AST::ExprKind::OP_MUL;
+    case TokType::OP_SLASHEQ: return AST::ExprKind::OP_DIV;
+    case TokType::OP_PERCENTEQ: return AST::ExprKind::OP_MOD;
+    case TokType::OP_ANDEQ: return AST::ExprKind::OP_BITAND;
+    case TokType::OP_OREQ: return AST::ExprKind::OP_BITOR;
+    case TokType::OP_XOREQ: return AST::ExprKind::OP_BITXOR;
+    case TokType::OP_LSHIFTEQ: return AST::ExprKind::OP_LSHIFT;
+    case TokType::OP_RSHIFTEQ: return AST::ExprKind::OP_RSHIFT;
+    default: return AST::ExprKind::INVALID;
     }
 }
 
@@ -167,9 +171,9 @@ void Parser::synchronize()
 }
 // Parser — top-level
 
-Array<StmtPtr> Parser::parse_program()
+Array<AST::StmtPtr> Parser::parse_program()
 {
-    Array<StmtPtr> stmts;
+    Array<AST::StmtPtr> stmts;
 
     while (!we_done() && !diagnostic::is_saturated()) {
         skip_newlines();
@@ -199,7 +203,7 @@ Array<StmtPtr> Parser::parse_program()
     return stmts;
 }
 
-ErrorOr<StmtPtr> Parser::parse_statement()
+ErrorOr<AST::StmtPtr> Parser::parse_statement()
 {
     skip_newlines();
 
@@ -229,7 +233,7 @@ ErrorOr<StmtPtr> Parser::parse_statement()
 
 // Parser — statement parsers
 
-ErrorOr<StmtPtr> Parser::parse_return_stmt()
+ErrorOr<AST::StmtPtr> Parser::parse_return_stmt()
 {
     TokenPtr start = current_token();
     VERIFY_TOKEN(TokType::KW_RETURN, ErrorCode::EXPECTED_RETURN);
@@ -241,21 +245,21 @@ ErrorOr<StmtPtr> Parser::parse_return_stmt()
     return AST::make_return(start->location(), ret);
 }
 
-ErrorOr<StmtPtr> Parser::parse_break_stmt()
+ErrorOr<AST::StmtPtr> Parser::parse_break_stmt()
 {
     TokenPtr start = current_token();
     advance();
     return AST::make_break(start->location());
 }
 
-ErrorOr<StmtPtr> Parser::parse_continue_stmt()
+ErrorOr<AST::StmtPtr> Parser::parse_continue_stmt()
 {
     TokenPtr start = current_token();
     advance();
     return AST::make_continue(start->location());
 }
 
-ErrorOr<StmtPtr> Parser::parse_while_stmt()
+ErrorOr<AST::StmtPtr> Parser::parse_while_stmt()
 {
     TokenPtr start = current_token();
     VERIFY_TOKEN(TokType::KW_WHILE, ErrorCode::EXPECTED_WHILE_KEYWORD);
@@ -269,7 +273,7 @@ ErrorOr<StmtPtr> Parser::parse_while_stmt()
     return make_while(condition, as_block(while_block.value()), start->location());
 }
 
-ErrorOr<StmtPtr> Parser::parse_for_stmt()
+ErrorOr<AST::StmtPtr> Parser::parse_for_stmt()
 {
     TokenPtr start = current_token();
     VERIFY_TOKEN(TokType::KW_FOR, ErrorCode::UNEXPECTED_TOKEN);
@@ -292,7 +296,7 @@ ErrorOr<StmtPtr> Parser::parse_for_stmt()
     return AST::make_for(target, iter, body.value(), start->location());
 }
 
-ErrorOr<StmtPtr> Parser::parse_if_stmt()
+ErrorOr<AST::StmtPtr> Parser::parse_if_stmt()
 {
     TokenPtr start = current_token();
     VERIFY_TOKEN(TokType::KW_IF, ErrorCode::EXPECTED_IF_KEYWORD);
@@ -303,7 +307,7 @@ ErrorOr<StmtPtr> Parser::parse_if_stmt()
     auto then_block = parse_indented_block();
     VERIFY_NODE(then_block);
 
-    StmtPtr else_block = nullptr;
+    AST::StmtPtr else_block = nullptr;
     skip_newlines();
 
     if (match(TokType::KW_ELSE)) {
@@ -324,7 +328,7 @@ ErrorOr<StmtPtr> Parser::parse_if_stmt()
     return make_if(condition, as_block(then_block.value()), start->location(), else_block);
 }
 
-ErrorOr<StmtPtr> Parser::parse_expression_stmt()
+ErrorOr<AST::StmtPtr> Parser::parse_expression_stmt()
 {
     TRY(expr, parse_expression());
     if (UNLIKELY(!(check(TokType::NEWLINE) || check(TokType::DEDENT) || check(TokType::ENDMARKER))))
@@ -332,13 +336,13 @@ ErrorOr<StmtPtr> Parser::parse_expression_stmt()
     return make_expr_stmt(expr, expr->get_location());
 }
 
-ErrorOr<StmtPtr> Parser::parse_indented_block()
+ErrorOr<AST::StmtPtr> Parser::parse_indented_block()
 {
     TokenPtr start = current_token();
     skip_newlines();
     VERIFY_TOKEN(TokType::INDENT, ErrorCode::EXPECTED_INDENT);
 
-    Array<StmtPtr> stmts;
+    Array<AST::StmtPtr> stmts;
 
     if (match(TokType::DEDENT))
         return make_block(stmts, start->location());
@@ -367,7 +371,7 @@ ErrorOr<StmtPtr> Parser::parse_indented_block()
 
 // Parser — function and class parsers
 
-ErrorOr<StmtPtr> Parser::parse_function_def()
+ErrorOr<AST::StmtPtr> Parser::parse_function_def()
 {
     TokenPtr start = current_token();
     VERIFY_TOKEN(TokType::KW_FN, ErrorCode::EXPECTED_FN_KEYWORD);
@@ -387,30 +391,34 @@ ErrorOr<StmtPtr> Parser::parse_function_def()
 
     return make_function(
         AST::make_identifier(name_tok->lexeme(), name_tok->location()),
-        as_list(params.value()),
+        { params.value() },
         as_block(body.value()),
         start->location());
 }
 
-ErrorOr<StmtPtr> Parser::parse_class_def()
+/// Parse a class def of form 'class foo(Optional)', emit an error if not.
+/// Members are parsed as an array of AST::ExprPtr.
+/// Methods are parsed as an array of AST::StmtPtr.
+/// Calling 'parse_class_method' to parse every defined method,
+ErrorOr<AST::StmtPtr> Parser::parse_class_def()
 {
     TokenPtr start = current_token();
+
+    /// Discard 'class' keyword, and force check class name is specified
     VERIFY_TOKEN(TokType::KW_CLASS, ErrorCode::EXPECTED_CLASS_KEYWORD);
+    CHECK_TOKEN(TokType::IDENTIFIER, ErrorCode::EXPECTED_CLASS_NAME);
 
-    if (!check(TokType::IDENTIFIER))
-        return report_error(ErrorCode::EXPECTED_CLASS_NAME, current_loc());
-
-    TokenPtr name_tok = current_token();
+    AST::ExprPtr class_name = AST::make_identifier(
+        current_token()->lexeme(), current_loc());
     advance();
-    ExprPtr class_name = AST::make_identifier(name_tok->lexeme(), name_tok->location());
 
-    ExprPtr parent = nullptr;
+    /// allow for specifying parent class in the form of 'name(Parent)'
+    AST::ExprPtr parent = nullptr;
     if (consume(TokType::LPAREN)) {
         if (!check(TokType::IDENTIFIER))
             return report_error(ErrorCode::EXPECTED_CLASS_NAME, current_loc());
-        TokenPtr parent_tok = current_token();
+        parent = AST::make_identifier(current_token()->lexeme(), current_loc());
         advance();
-        parent = AST::make_identifier(parent_tok->lexeme(), parent_tok->location());
         VERIFY_TOKEN(TokType::RPAREN, ErrorCode::EXPECTED_RPAREN_CLASS);
     }
 
@@ -418,14 +426,19 @@ ErrorOr<StmtPtr> Parser::parse_class_def()
     skip_newlines();
     VERIFY_TOKEN(TokType::INDENT, ErrorCode::EXPECTED_INDENT);
 
-    Array<ExprPtr> members = Array<ExprPtr>::with_capacity(4);
-    Array<StmtPtr> methods = Array<StmtPtr>::with_capacity(4);
+    /// Collect members and / or methods
+    /// member values must be defined inside 'init' method
+    /// member def outside is not supported as of now
+    Array<AST::ExprPtr> members = Array<AST::ExprPtr>::with_capacity(4);
+    Array<AST::StmtPtr> methods = Array<AST::StmtPtr>::with_capacity(4);
 
     while (!check(TokType::DEDENT) && !we_done()) {
         auto method = parse_class_method(members);
         if (method.has_value()) {
             methods.push(method.value());
         } else {
+            /// Error recovery after method parsing
+            /// keeps parsing until error LIMIT is reached
             if (diagnostic::is_saturated())
                 break;
             synchronize();
@@ -441,7 +454,7 @@ ErrorOr<StmtPtr> Parser::parse_class_def()
     return AST::make_class_def(class_name, parent, members, methods, start->location());
 }
 
-ErrorOr<StmtPtr> Parser::parse_import_stmt()
+ErrorOr<AST::StmtPtr> Parser::parse_import_stmt()
 {
     TokenPtr start = current_token();
     bool const from_import = consume(TokType::KW_FROM);
@@ -506,12 +519,12 @@ ErrorOr<StmtPtr> Parser::parse_import_stmt()
     return AST::make_import(module, names, aliases, start->location());
 }
 
-ErrorOr<StmtPtr> Parser::parse_assert_stmt()
+ErrorOr<AST::StmtPtr> Parser::parse_assert_stmt()
 {
     TokenPtr start = current_token();
     advance();
     TRY(condition, parse_expression());
-    Array<ExprPtr> args;
+    Array<AST::ExprPtr> args;
     args.push(condition);
     if (consume(TokType::COMMA)) {
         TRY(message, parse_expression());
@@ -522,14 +535,14 @@ ErrorOr<StmtPtr> Parser::parse_assert_stmt()
     return AST::make_expr_stmt(call, start->location());
 }
 
-bool same_name(AST::Expr const* e, StringRef const& n)
+bool same_name(AST::ConstExprPtr e, StringRef const& n)
 {
     return e != nullptr
         && AST::is_identifier(e)
         && AST::as_identifier(e)->spelling == n;
 }
 
-void push_member_once(Array<ExprPtr>& members, AST::IdentifierExpr const* name)
+void push_member_once(Array<AST::ExprPtr>& members, AST::IdentifierExpr const* name)
 {
     for (auto* member : members) {
         if (same_name(member, name->spelling))
@@ -538,7 +551,7 @@ void push_member_once(Array<ExprPtr>& members, AST::IdentifierExpr const* name)
     members.push(AST::make_identifier(name->spelling, name->get_location()));
 }
 
-void collect_this_field_assignment(Array<ExprPtr>& members, ConstStmtPtr stmt)
+void collect_this_field_assignment(Array<AST::ExprPtr>& members, AST::ConstStmtPtr stmt)
 {
     if (stmt == nullptr)
         return;
@@ -586,7 +599,7 @@ void collect_this_field_assignment(Array<ExprPtr>& members, ConstStmtPtr stmt)
     }
 }
 
-ErrorOr<StmtPtr> Parser::parse_class_method(Array<ExprPtr>& members)
+ErrorOr<AST::StmtPtr> Parser::parse_class_method(Array<AST::ExprPtr>& members)
 {
     TokenPtr start = current_token();
     VERIFY_TOKEN(TokType::KW_FN, ErrorCode::EXPECTED_FN_KEYWORD);
@@ -611,7 +624,7 @@ ErrorOr<StmtPtr> Parser::parse_class_method(Array<ExprPtr>& members)
     skip_newlines();
     VERIFY_TOKEN(TokType::INDENT, ErrorCode::EXPECTED_INDENT);
 
-    Array<StmtPtr> stmts;
+    Array<AST::StmtPtr> stmts;
 
     while (!check(TokType::DEDENT) && !we_done()) {
         skip_newlines();
@@ -632,7 +645,7 @@ ErrorOr<StmtPtr> Parser::parse_class_method(Array<ExprPtr>& members)
             // field-access path (compile_get_i / SET_FIELD) specifically looks
             // for GetExpr with a NAME member; an index form would silently
             // fall back to the slow dict-style path for every field access.
-            ExprPtr target = AST::make_get_expr(
+            AST::ExprPtr target = AST::make_get_expr(
                 AST::make_identifier(kClassInstanceName, member_tok->location()),
                 AST::make_identifier(mname, member_tok->location()),
                 member_tok->location());
@@ -647,7 +660,7 @@ ErrorOr<StmtPtr> Parser::parse_class_method(Array<ExprPtr>& members)
                 TokenPtr op_tok = current_token();
                 advance();
                 TRY(rhs, parse_assignment_expr());
-                ExprKind op = to_op(op_tok->type(), false);
+                AST::ExprKind op = to_op(op_tok->type(), false);
                 // target->clone() reads the current field value (GET read);
                 // `target` itself is the write target.
                 auto* bin = AST::make_binary(op, target->clone(), rhs, target->get_location());
@@ -674,20 +687,18 @@ ErrorOr<StmtPtr> Parser::parse_class_method(Array<ExprPtr>& members)
     if (check(TokType::ENDMARKER))
         return AST::make_function(
             AST::make_identifier(fn_name, name_tok->location()),
-            as_list(params.value()), block, start->location());
+            { params.value() }, block, start->location());
 
     VERIFY_TOKEN(TokType::DEDENT, ErrorCode::EXPECTED_DEDENT);
     return AST::make_function(
         AST::make_identifier(fn_name, name_tok->location()),
-        as_list(params.value()), block, start->location());
+        params.value().empty() ? Array<AST::ExprPtr> { } : params.value(), block, start->location());
 }
 
-ErrorOr<ExprPtr> Parser::parse_parameters_list()
+ErrorOr<Array<AST::ExprPtr>> Parser::parse_parameters_list()
 {
-    TokenPtr open = current_token();
     VERIFY_TOKEN(TokType::LPAREN, ErrorCode::EXPECTED_LPAREN);
-
-    Array<ExprPtr> params = Array<ExprPtr>::with_capacity(4);
+    Array<AST::ExprPtr> params = Array<AST::ExprPtr>::with_capacity(4);
 
     if (!check(TokType::RPAREN)) {
         do {
@@ -704,23 +715,18 @@ ErrorOr<ExprPtr> Parser::parse_parameters_list()
             skip_newlines();
         } while (match(TokType::COMMA) && !check(TokType::RPAREN));
     }
-
     VERIFY_TOKEN(TokType::RPAREN, ErrorCode::EXPECTED_RPAREN_EXPR);
-
-    // For an empty parameter list, use the '(' location (not the token after ')').
-    SourceLocation loc = params.empty() ? open->location() : params[0]->get_location();
-
-    return make_list(params, loc);
+    return params;
 }
 
 // Parser — expression parsers
 
-ErrorOr<ExprPtr> Parser::parse() { return parse_expression(); }
+ErrorOr<AST::ExprPtr> Parser::parse() { return parse_expression(); }
 
 // parse_expression is the public entry point; it delegates to parse_assignment_expr.
-ErrorOr<ExprPtr> Parser::parse_expression() { return parse_assignment_expr(); }
+ErrorOr<AST::ExprPtr> Parser::parse_expression() { return parse_assignment_expr(); }
 
-ErrorOr<ExprPtr> Parser::parse_assignment_expr()
+ErrorOr<AST::ExprPtr> Parser::parse_assignment_expr()
 {
     NestingLevel n { &m_nesting_level, current_loc() };
     // LHS goes through the full expression hierarchy (via parse_conditional_expr
@@ -729,7 +735,7 @@ ErrorOr<ExprPtr> Parser::parse_assignment_expr()
     TRY(lhs, parse_conditional_expr());
 
     if (check(TokType::OP_ASSIGN) || is_augmented_assign_tok(current_token())) {
-        ExprPtr target = lhs;
+        AST::ExprPtr target = lhs;
 
         if (!AST::is_identifier(target) && !AST::is_index(target) && !AST::is_get(target))
             return report_error(ErrorCode::INVALID_ASSIGN_TARGET, current_loc());
@@ -738,7 +744,7 @@ ErrorOr<ExprPtr> Parser::parse_assignment_expr()
             TokenPtr op_tok = current_token();
             advance();
             TRY(rhs, parse_assignment_expr());
-            ExprKind op = to_op(op_tok->type(), false);
+            AST::ExprKind op = to_op(op_tok->type(), false);
             auto* bin = AST::make_binary(op, lhs->clone(), rhs, lhs->get_location());
             return make_assignment_expr(target, bin, target->get_location());
         }
@@ -753,7 +759,7 @@ ErrorOr<ExprPtr> Parser::parse_assignment_expr()
 
 // Unified Pratt parser
 
-ErrorOr<ExprPtr> Parser::parse_binary_expr_precedence(u32 min_prec)
+ErrorOr<AST::ExprPtr> Parser::parse_binary_expr_precedence(u32 min_prec)
 {
     NestingLevel n(&m_nesting_level, current_loc());
     TRY(lhs, parse_unary_expr());
@@ -785,7 +791,7 @@ ErrorOr<ExprPtr> Parser::parse_binary_expr_precedence(u32 min_prec)
     return lhs;
 }
 
-ErrorOr<ExprPtr> Parser::parse_unary_expr()
+ErrorOr<AST::ExprPtr> Parser::parse_unary_expr()
 {
     NestingLevel n(&m_nesting_level, current_loc());
     TokenPtr op_tok = current_token();
@@ -800,17 +806,17 @@ ErrorOr<ExprPtr> Parser::parse_unary_expr()
     return parse_postfix_expr();
 }
 
-ErrorOr<ExprPtr> Parser::parse_postfix_expr()
+ErrorOr<AST::ExprPtr> Parser::parse_postfix_expr()
 {
     NestingLevel n(&m_nesting_level, current_loc());
     TRY(base, parse_primary_expr());
-    ExprPtr expr = base;
+    AST::ExprPtr expr = base;
 
     for (;;) {
         // Function call: expr(args...)
         if (check(TokType::LPAREN)) {
             advance();
-            Array<ExprPtr> args = Array<ExprPtr>::with_capacity(4);
+            Array<AST::ExprPtr> args = Array<AST::ExprPtr>::with_capacity(4);
 
             if (!check(TokType::RPAREN)) {
                 do {
@@ -824,12 +830,12 @@ ErrorOr<ExprPtr> Parser::parse_postfix_expr()
             }
 
             VERIFY_TOKEN(TokType::RPAREN, ErrorCode::EXPECTED_RPAREN_EXPR);
-            SourceLocation loc = (!args.empty() && args[0])
+            SrcLoc loc = (!args.empty() && args[0])
                 ? args[0]->get_location()
-                : SourceLocation { };
+                : SrcLoc { };
             expr = make_call(
                 expr, make_list(std::move(args), loc),
-                expr ? expr->get_location() : SourceLocation { });
+                expr ? expr->get_location() : SrcLoc { });
             continue;
         }
 
@@ -839,7 +845,7 @@ ErrorOr<ExprPtr> Parser::parse_postfix_expr()
             VERIFY_TOKEN(TokType::RBRACKET, ErrorCode::EXPECTED_RBRACKET);
             expr = make_index(
                 expr, index,
-                expr ? expr->get_location() : SourceLocation { });
+                expr ? expr->get_location() : SrcLoc { });
             continue;
         }
 
@@ -853,7 +859,7 @@ ErrorOr<ExprPtr> Parser::parse_postfix_expr()
                 AST::make_identifier(
                     member_tok->lexeme(),
                     member_tok->location()),
-                expr ? expr->get_location() : SourceLocation { });
+                expr ? expr->get_location() : SrcLoc { });
             continue;
         }
 
@@ -863,7 +869,7 @@ ErrorOr<ExprPtr> Parser::parse_postfix_expr()
     return expr;
 }
 
-ErrorOr<ExprPtr> Parser::parse_primary_expr()
+ErrorOr<AST::ExprPtr> Parser::parse_primary_expr()
 {
     NestingLevel n(&m_nesting_level, current_loc());
     TokenPtr cur = current_token();
@@ -912,10 +918,10 @@ ErrorOr<ExprPtr> Parser::parse_primary_expr()
 
         if (match(TokType::RPAREN)) {
             m_parenths.pop_back();
-            return make_list(Array<ExprPtr> { }, cur->location());
+            return make_list(Array<AST::ExprPtr> { }, cur->location());
         }
 
-        Array<ExprPtr> elements { };
+        Array<AST::ExprPtr> elements { };
         bool trailing_comma = false;
 
         do {
@@ -954,11 +960,11 @@ ErrorOr<ExprPtr> Parser::parse_primary_expr()
     return report_error(ErrorCode::UNEXPECTED_TOKEN, current_loc());
 }
 
-ErrorOr<ExprPtr> Parser::parse_list_literal()
+ErrorOr<AST::ExprPtr> Parser::parse_list_literal()
 {
     NestingLevel n(&m_nesting_level, current_loc());
     TokenPtr start = current_token();
-    Array<ExprPtr> elements = Array<ExprPtr>::with_capacity(4);
+    Array<AST::ExprPtr> elements = Array<AST::ExprPtr>::with_capacity(4);
 
     if (!check(TokType::RBRACKET)) {
         do {
@@ -975,11 +981,11 @@ ErrorOr<ExprPtr> Parser::parse_list_literal()
     return make_list(std::move(elements), start->location());
 }
 
-ErrorOr<ExprPtr> Parser::parse_dict_literal()
+ErrorOr<AST::ExprPtr> Parser::parse_dict_literal()
 {
     NestingLevel n(&m_nesting_level, current_loc());
     TokenPtr start = current_token();
-    Array<std::pair<ExprPtr, ExprPtr>> content;
+    Array<std::pair<AST::ExprPtr, AST::ExprPtr>> content;
 
     if (!check(TokType::RBRACE)) {
         do {
@@ -1001,29 +1007,29 @@ ErrorOr<ExprPtr> Parser::parse_dict_literal()
 // Compatibility stubs
 /// TODO: remove these declarations from parser.hpp, then delete the stubs.
 
-ErrorOr<ExprPtr> Parser::parse_conditional_expr()
+ErrorOr<AST::ExprPtr> Parser::parse_conditional_expr()
 {
     // Entry point for the unified Pratt parser.  Ternary operator will be
     // inserted here once implemented (see the existing TODO in the design).
     return parse_binary_expr_precedence(0);
 }
 
-ErrorOr<ExprPtr> Parser::parse_logical_expr()
+ErrorOr<AST::ExprPtr> Parser::parse_logical_expr()
 {
     return parse_binary_expr_precedence(0);
 }
 
-ErrorOr<ExprPtr> Parser::parse_logical_expr_precedence(u32 p)
+ErrorOr<AST::ExprPtr> Parser::parse_logical_expr_precedence(u32 p)
 {
     return parse_binary_expr_precedence(p);
 }
 
-ErrorOr<ExprPtr> Parser::parse_comparison_expr()
+ErrorOr<AST::ExprPtr> Parser::parse_comparison_expr()
 {
     return parse_binary_expr_precedence(0);
 }
 
-ErrorOr<ExprPtr> Parser::parse_binary_expr()
+ErrorOr<AST::ExprPtr> Parser::parse_binary_expr()
 {
     return parse_binary_expr_precedence(0);
 }

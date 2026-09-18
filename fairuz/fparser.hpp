@@ -74,34 +74,34 @@ public:
     ErrorOr<AST::Stmt*> parse_break_stmt();
     ErrorOr<AST::Stmt*> parse_continue_stmt();
     ErrorOr<AST::Stmt*> parse_function_def();
-    ErrorOr<AST::Expr*> parse_expression();
-    ErrorOr<AST::Expr*> parse_assignment_expr();
-    ErrorOr<AST::Expr*> parse_list_literal();
-    ErrorOr<AST::Expr*> parse_dict_literal();
-    ErrorOr<AST::Expr*> parse_conditional_expr();
-    ErrorOr<AST::Expr*> parse_logical_expr();
-    ErrorOr<AST::Expr*> parse_logical_expr_precedence(u32 min_precedence);
-    ErrorOr<AST::Expr*> parse_binary_expr_precedence(u32 min_precedence);
-    ErrorOr<AST::Expr*> parse_comparison_expr();
-    ErrorOr<AST::Expr*> parse_binary_expr();
-    ErrorOr<AST::Expr*> parse_unary_expr();
-    ErrorOr<AST::Expr*> parse_primary_expr();
-    ErrorOr<AST::Expr*> parse_postfix_expr();
-    ErrorOr<AST::Expr*> parse();
-    ErrorOr<AST::Expr*> parse_parameters_list();
+    ErrorOr<AST::ExprPtr> parse_expression();
+    ErrorOr<AST::ExprPtr> parse_assignment_expr();
+    ErrorOr<AST::ExprPtr> parse_list_literal();
+    ErrorOr<AST::ExprPtr> parse_dict_literal();
+    ErrorOr<AST::ExprPtr> parse_conditional_expr();
+    ErrorOr<AST::ExprPtr> parse_logical_expr();
+    ErrorOr<AST::ExprPtr> parse_logical_expr_precedence(u32 min_precedence);
+    ErrorOr<AST::ExprPtr> parse_binary_expr_precedence(u32 min_precedence);
+    ErrorOr<AST::ExprPtr> parse_comparison_expr();
+    ErrorOr<AST::ExprPtr> parse_binary_expr();
+    ErrorOr<AST::ExprPtr> parse_unary_expr();
+    ErrorOr<AST::ExprPtr> parse_primary_expr();
+    ErrorOr<AST::ExprPtr> parse_postfix_expr();
+    ErrorOr<AST::ExprPtr> parse();
+    ErrorOr<Array<AST::ExprPtr>> parse_parameters_list();
     ErrorOr<AST::Stmt*> parse_indented_block();
     ErrorOr<AST::Stmt*> parse_class_def();
     ErrorOr<AST::Stmt*> parse_import_stmt();
     ErrorOr<AST::Stmt*> parse_assert_stmt();
-    ErrorOr<AST::Stmt*> parse_class_method(Array<AST::Expr*>& members);
-    ErrorOr<AST::Expr*> parse_member_access();
+    ErrorOr<AST::Stmt*> parse_class_method(Array<AST::ExprPtr>& members);
+    ErrorOr<AST::ExprPtr> parse_member_access();
 
     bool we_done() const;
 
     bool check(tok::TokenType type) const;
 
     TokenPtr current_token() const;
-    SourceLocation current_loc() const { return current_token()->location(); }
+    SrcLoc current_loc() const { return current_token()->location(); }
 
 private:
     lex::Lexer m_lexer;
@@ -118,7 +118,7 @@ private:
 
     struct NestingLevel {
         u32* p { nullptr };
-        NestingLevel(u32* c, SourceLocation loc)
+        NestingLevel(u32* c, SrcLoc loc)
             : p(c)
         {
             assert(p != nullptr);

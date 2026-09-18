@@ -148,7 +148,7 @@ int cell_width(u32 cp)
 } // namespace
 
 /*DiagnosticEngine::DiagnosticId DiagnosticEngine::report(
-    Severity const sev, SourceLocation const loc, u16 err_code, std::string const& code)
+    Severity const sev, SrcLoc const loc, u16 err_code, std::string const& code)
 {
     DiagnosticId const id = report_deferred(sev, loc, err_code, code);
 
@@ -163,7 +163,7 @@ int cell_width(u32 cp)
 }*/
 
 DiagnosticEngine::DiagnosticId DiagnosticEngine::report_deferred(
-    Severity const sev, SourceLocation const loc, ErrorCode err_code, std::string const& code)
+    Severity const sev, SrcLoc const loc, ErrorCode err_code, std::string const& code)
 {
     if (sev != Severity::FATAL && m_error_count >= LIMIT)
         return INVALID_ID;
@@ -211,7 +211,7 @@ void DiagnosticEngine::add_note(DiagnosticId id, i32 line, std::string const& no
     m_diagnostics[id].notes.push_back({ line, note });
 }
 
-void DiagnosticEngine::add_frame(DiagnosticId id, SourcePtr source, SourceLocation loc, std::string function)
+void DiagnosticEngine::add_frame(DiagnosticId id, SourcePtr source, SrcLoc loc, std::string function)
 {
     if (id == INVALID_ID || id >= m_diagnostics.size())
         return;
@@ -257,7 +257,7 @@ std::vector<std::string> DiagnosticEngine::split_lines(std::string const& text) 
 }
 
 // Columns and lengths are Unicode code points, not UTF-8 byte offsets.
-void DiagnosticEngine::print_snippet(SourcePtr const& source, SourceLocation const& loc) const
+void DiagnosticEngine::print_snippet(SourcePtr const& source, SrcLoc const& loc) const
 {
     if (!source || loc.line == 0 || loc.line > source->lines.size())
         return;

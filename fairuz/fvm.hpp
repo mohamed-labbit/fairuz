@@ -199,7 +199,7 @@ public:
     void open_stdlib();
     bool register_native(StringRef const& name, NativeFn fn, int arity = -1);
 
-    SourceLocation current_location() const;
+    SrcLoc current_location() const;
     void raise_error(ErrorCode errc, std::string const& detail = "");
     void _raise_error(ErrorCode errc, std::string const& detail = "");
 

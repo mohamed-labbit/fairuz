@@ -29,7 +29,7 @@ static inline void print_value(Value v)
     ::printf("?");
 }
 
-u32 Chunk::emit(u32 instr, SourceLocation loc)
+u32 Chunk::emit(u32 instr, SrcLoc loc)
 {
     locations.push(loc);
     code.push(instr);

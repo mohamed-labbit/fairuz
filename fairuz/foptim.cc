@@ -65,14 +65,14 @@ public:
     }
 };
 
-bool is_pure(AST::Expr const* e)
+bool is_pure(AST::ConstExprPtr e)
 {
     PurityVisitor visitor;
     e->accept(visitor);
     return visitor.is_pure();
 }
 
-std::optional<Value> const_value(AST::Expr const* e)
+std::optional<Value> const_value(AST::ConstExprPtr e)
 {
     if (AST::is_nil(e))
         return Value::nil();
@@ -118,14 +118,12 @@ std::optional<Value> _try_fold_binary(AST::BinaryExpr const* e)
     if (!L || !R)
         return std::nullopt;
 
-    using Op = AST::Expr::Kind;
-
-    Op op = e->get_kind();
+    AST::ExprKind op = e->get_kind();
 
     bool both_ints = L->is_int() && R->is_int();
     bool both_numbers = L->is_number() && R->is_number();
 
-    if (op == Op::OP_EQ || op == Op::OP_NEQ) {
+    if (op == AST::ExprKind::OP_EQ || op == AST::ExprKind::OP_NEQ) {
         bool equal;
         if (L->is_nil() || R->is_nil())
             equal = L->is_nil() && R->is_nil();
@@ -133,7 +131,7 @@ std::optional<Value> _try_fold_binary(AST::BinaryExpr const* e)
             equal = L->as_double_any() == R->as_double_any();
         else
             return std::nullopt;
-        return Value::from_bool(op == Op::OP_EQ ? equal : !equal);
+        return Value::from_bool(op == AST::ExprKind::OP_EQ ? equal : !equal);
     }
 
     if (!both_numbers)
@@ -151,41 +149,41 @@ std::optional<Value> _try_fold_binary(AST::BinaryExpr const* e)
     };
 
     switch (op) {
-    case Op::OP_ADD:
+    case AST::ExprKind::OP_ADD:
         return both_ints ? checked_int(li + ri)
                          : std::optional<Value> { Value::from_real(ld + rd) };
-    case Op::OP_SUB:
+    case AST::ExprKind::OP_SUB:
         return both_ints ? checked_int(li - ri)
                          : std::optional<Value> { Value::from_real(ld - rd) };
-    case Op::OP_MUL:
+    case AST::ExprKind::OP_MUL:
         return both_ints ? checked_int(static_cast<i64>(li) * ri)
                          : std::optional<Value> { Value::from_real(ld * rd) };
-    case Op::OP_DIV:
+    case AST::ExprKind::OP_DIV:
         if (rd == 0.0)
             return std::nullopt;
         if (both_ints && li % ri == 0)
             return Value::from_int(li / ri);
         return Value::from_real(ld / rd);
-    case Op::OP_MOD: {
+    case AST::ExprKind::OP_MOD: {
         if (rd == 0.0)
             return std::nullopt;
         if (both_ints)
             return Value::from_real(static_cast<f64>(li % ri));
         return Value::from_real(std::fmod(ld, rd));
     }
-    case Op::OP_POW: return Value::from_real(std::pow(ld, rd));
-    case Op::OP_LT: return Value::from_bool(ld < rd);
-    case Op::OP_GT: return Value::from_bool(ld > rd);
-    case Op::OP_LTE: return Value::from_bool(ld <= rd);
-    case Op::OP_GTE: return Value::from_bool(ld >= rd);
-    case Op::OP_BITAND: return both_ints ? Value::from_int(li & ri) : std::optional<Value> { };
-    case Op::OP_BITOR: return both_ints ? Value::from_int(li | ri) : std::optional<Value> { };
-    case Op::OP_BITXOR: return both_ints ? Value::from_int(li ^ ri) : std::optional<Value> { };
-    case Op::OP_LSHIFT:
+    case AST::ExprKind::OP_POW: return Value::from_real(std::pow(ld, rd));
+    case AST::ExprKind::OP_LT: return Value::from_bool(ld < rd);
+    case AST::ExprKind::OP_GT: return Value::from_bool(ld > rd);
+    case AST::ExprKind::OP_LTE: return Value::from_bool(ld <= rd);
+    case AST::ExprKind::OP_GTE: return Value::from_bool(ld >= rd);
+    case AST::ExprKind::OP_BITAND: return both_ints ? Value::from_int(li & ri) : std::optional<Value> { };
+    case AST::ExprKind::OP_BITOR: return both_ints ? Value::from_int(li | ri) : std::optional<Value> { };
+    case AST::ExprKind::OP_BITXOR: return both_ints ? Value::from_int(li ^ ri) : std::optional<Value> { };
+    case AST::ExprKind::OP_LSHIFT:
         if (!both_ints || ri < 0 || ri >= 64)
             return std::nullopt;
         return checked_int(static_cast<i64>(li) * (static_cast<i64>(1) << ri));
-    case Op::OP_RSHIFT: {
+    case AST::ExprKind::OP_RSHIFT: {
         if (!both_ints || ri < 0 || ri >= 64)
             return std::nullopt;
         u64 shifted = static_cast<u64>(li) >> ri;
@@ -218,7 +216,7 @@ std::optional<Value> try_fold_binary(AST::BinaryExpr const* e)
     if (!L || !R)
         return std::nullopt;
 
-    auto make_literal_from_val = [](Value const v, SourceLocation loc) -> AST::Expr* {
+    auto make_literal_from_val = [](Value const v, SrcLoc loc) -> AST::ExprPtr {
         if (v.is_double())
             return AST::make_literal_float(v.as_double(), loc);
         if (v.is_int())
@@ -258,7 +256,7 @@ public:
     void visit(AST::GetExpr const&) const override { /* no op */ }
 };
 
-std::optional<Value> try_fold_expr(AST::Expr const* e)
+std::optional<Value> try_fold_expr(AST::ConstExprPtr e)
 {
     if (e == nullptr)
         return std::nullopt;
@@ -268,7 +266,7 @@ std::optional<Value> try_fold_expr(AST::Expr const* e)
     return visitor.result();
 }
 
-std::optional<AST::Expr*> try_strength_reduce_binary(AST::Expr const*)
+std::optional<AST::ExprPtr> try_strength_reduce_binary(AST::ConstExprPtr)
 {
     // Algebraic identities are not generally semantics-preserving in a
     // dynamic language: evaluating a discarded operand may throw, and an
@@ -277,7 +275,7 @@ std::optional<AST::Expr*> try_strength_reduce_binary(AST::Expr const*)
     return std::nullopt;
 }
 
-std::optional<AST::Expr*> try_strength_reduce_unary(AST::Expr const*)
+std::optional<AST::ExprPtr> try_strength_reduce_unary(AST::ConstExprPtr)
 {
     // Bitwise complement is not logical negation, and dynamic operands may
     // dispatch user code. No untyped unary rewrite is safe here.

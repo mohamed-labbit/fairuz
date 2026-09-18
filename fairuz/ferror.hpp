@@ -157,7 +157,7 @@ private:
     }
 }; // class ErrorOr
 
-inline Error report_error(ErrorCode errc, SourceLocation loc, diagnostic::Severity sv = diagnostic::Severity::ERROR)
+inline Error report_error(ErrorCode errc, SrcLoc loc, diagnostic::Severity sv = diagnostic::Severity::ERROR)
 {
     auto id = diagnostic::report(sv, loc, errc);
     Error err { Error { errc } };

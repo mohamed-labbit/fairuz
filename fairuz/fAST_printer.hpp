@@ -8,8 +8,6 @@
 
 namespace fairuz::AST {
 
-using ExprKind = AST::Expr::Kind;
-
 class ASTPrinter {
 private:
     bool m_use_color;
@@ -216,8 +214,8 @@ private:
             auto f = static_cast<FunctionDef const*>(s);
             std::cout << color("FunctionDef", Color::BOLD) << " " << f->name->spelling << "\n";
             std::cout << p.indent + pipe(p.last) << "├─ params:\n";
-            for (size_t i = 0; i < f->params->size(); i++)
-                print_expr(f->params->elements[i], { p.indent + pipe(p.last) + "│  ", i + 1 == f->params->size() });
+            for (size_t i = 0; i < f->params.size(); i++)
+                print_expr(f->params[i], { p.indent + pipe(p.last) + "│  ", i + 1 == f->params.size() });
             std::cout << p.indent + pipe(p.last) << "└─ body:\n";
             print_stmt(f->body, { p.indent + pipe(p.last) + "    ", true });
         } break;
@@ -279,11 +277,11 @@ private:
 
         case Stmt::Kind::CLASS_DEF: {
             auto c = as_class_def(s);
-            auto members = c->get_members();
-            auto methods = c->get_methods();
+            auto members = c->members;
+            auto methods = c->methods;
             std::cout << color("ClassDef", Color::BOLD) << "\n";
             std::cout << p.indent + pipe(p.last) << "├─ name:\n";
-            print_expr(c->get_name(), { p.indent + pipe(p.last) + "│  ", true });
+            print_expr(c->name, { p.indent + pipe(p.last) + "│  ", true });
 
             bool const has_methods = !methods.empty();
             std::cout << p.indent + pipe(p.last) << (has_methods ? "├─" : "└─") << " members:\n";

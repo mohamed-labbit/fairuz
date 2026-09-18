@@ -430,7 +430,7 @@ public:
 
     struct Diagnostic {
         Severity severity { Severity::ERROR };
-        SourceLocation src_loc;
+        SrcLoc src_loc;
         ErrorCode err_code { 0 };
         std::string code { "" };
         std::vector<std::string> suggestions;
@@ -438,7 +438,7 @@ public:
         SourcePtr source;
         struct Frame {
             SourcePtr source;
-            SourceLocation location;
+            SrcLoc location;
             std::string function;
         };
         std::vector<Frame> traceback;
@@ -468,8 +468,8 @@ public:
     // and non-FATAL) — callers that don't need the id can ignore the
     // return value as before; this is a source-compatible change from the
     // previous void-returning signature.
-    // DiagnosticId report(Severity const sev, SourceLocation const loc, u16 err_code, std::string const& code = "");
-    DiagnosticId report_deferred(Severity const sev, SourceLocation const loc, ErrorCode err_code, std::string const& code = "");
+    // DiagnosticId report(Severity const sev, SrcLoc const loc, u16 err_code, std::string const& code = "");
+    DiagnosticId report_deferred(Severity const sev, SrcLoc const loc, ErrorCode err_code, std::string const& code = "");
 
     // Existing behavior, unchanged: attaches to whichever diagnostic was
     // reported most recently. Convenient for the common case (report,
@@ -488,7 +488,7 @@ public:
     // keep calling these unconditionally without checking first.
     void add_suggestion(DiagnosticId id, std::string const& suggestion);
     void add_note(DiagnosticId id, i32 line, std::string const& note);
-    void add_frame(DiagnosticId id, SourcePtr source, SourceLocation loc, std::string function);
+    void add_frame(DiagnosticId id, SourcePtr source, SrcLoc loc, std::string function);
 
     std::string to_json() const;
 
@@ -539,7 +539,7 @@ private:
     [[noreturn]] void _panic(std::string const& msg) const;
     static std::string sv_to_str(Severity const sv);
     std::vector<std::string> split_lines(std::string const& text) const;
-    void print_snippet(SourcePtr const& source, SourceLocation const& loc) const;
+    void print_snippet(SourcePtr const& source, SrcLoc const& loc) const;
 }; // class DiagnosticEngine
 
 // --- module-level singletons and forwarding functions, unchanged ---
@@ -577,7 +577,7 @@ static inline void emit(ErrorCode code, std::string const& detail, Severity cons
 }
 
 static inline DiagnosticEngine::DiagnosticId report(
-    Severity const sev, SourceLocation const loc, ErrorCode err_code, std::string const& code = "")
+    Severity const sev, SrcLoc const loc, ErrorCode err_code, std::string const& code = "")
 {
     return engine.report_deferred(sev, loc, err_code, code);
 }
