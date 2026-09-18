@@ -844,7 +844,7 @@ TEST(VMDicts, IndexReturnsStoredValue)
         {
             func_def(
                 ident("func"),
-                list_expr(),
+                { },
                 blk({
                     decl_stmt("k", lit_str("lang")),
                     decl_stmt("dict", dict_expr({ })),
@@ -869,7 +869,7 @@ TEST(VMDicts, SetUpdatesAndAppendsByKey)
         {
             func_def(
                 ident("func"),
-                list_expr(),
+                { },
                 blk({
                     decl_stmt("dict", dict_expr({ })),
                     expr_stmt(assign_expr(index_expr(ident("dict"), lit_str("fk")), lit_int(1))),
@@ -1027,10 +1027,10 @@ TEST(VMCalls, TailCall_DoesNotOverflowFrames)
 
 TEST(VMCalls, StackOverflowDetected)
 {
-    auto fn = func_def(ident("inf"), list_expr(), blk({
-                                                      expr_stmt(call_expr(ident("inf"))),
-                                                      return_stmt(nil()),
-                                                  }));
+    auto fn = func_def(ident("inf"), { }, blk({
+                                              expr_stmt(call_expr(ident("inf"))),
+                                              return_stmt(nil()),
+                                          }));
 
     auto ch = compile_program({
         fn,
@@ -1058,21 +1058,21 @@ TEST(VMIntegration, FunctionLocalDeclarationShadowsGlobal)
 {
     AST::Stmt* make_local = func_def(
         ident("make_local"),
-        list_expr(),
+        { },
         blk(
             { expr_stmt(assign_expr(ident("x"), lit_int(2))),
                 return_stmt(ident("x")) }));
 
     AST::Stmt* read_global = func_def(
         ident("read_global"),
-        list_expr(),
+        { },
         blk({
             return_stmt(ident("x")),
         }));
 
     AST::Stmt* main_fn = func_def(
         ident("main"),
-        list_expr(),
+        { },
         blk({
             return_stmt(
                 list_expr(
@@ -1153,7 +1153,7 @@ TEST(VMIntegration, TopLevelWhileAssignmentUpdatesGlobal)
 {
     AST::Stmt* read_global = func_def(
         ident("read_global"),
-        list_expr(),
+        { },
         blk({
             return_stmt(ident("x")),
         }));
@@ -1183,7 +1183,7 @@ TEST(VMIntegration, Fibonacci_fib10_equals_55)
 {
     AST::Stmt* fib = func_def(
         ident("fib"),
-        list_expr({ ident("n") }),
+        { ident("n") },
         blk(
             { if_stmt(
                   binary(ident("n"), lit_int(1), AST::Expr::Kind::OP_LTE),
@@ -1218,7 +1218,7 @@ TEST(VMIntegration, SumForLoopOverList)
 {
     AST::Stmt* sum = func_def(
         ident("sum"),
-        list_expr(),
+        { },
         blk(
             {
                 expr_stmt(assign_expr(
@@ -1251,7 +1251,7 @@ TEST(VMIntegration, StringConcat_3Parts)
 {
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         return_stmt(
             binary(
                 binary(lit_str("hello"), lit_str(", "), AST::Expr::Kind::OP_ADD),
@@ -1270,7 +1270,7 @@ TEST(VMIntegration, EmptyForLoopLeavesStateUnchanged)
 {
     AST::Stmt* first = func_def(
         ident("first"),
-        list_expr(),
+        { },
         blk({
             expr_stmt(assign_expr(ident("items"), list_expr())),
             expr_stmt(assign_expr(ident("seen"), lit_int(99))),
@@ -1291,7 +1291,7 @@ TEST(VMIntegration, BreakAndContinueWorkInLoops)
 {
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         blk({
             expr_stmt(assign_expr(ident("items"),
                 list_expr({
@@ -2196,7 +2196,7 @@ TEST_F(VMPerfTest, Dispatch_IntAdd_1M_Iterations)
 
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         blk({ expr_stmt(assign_expr(ident("i"), lit_int(0))),
             expr_stmt(assign_expr(ident("step"), lit_int(1))),
             expr_stmt(assign_expr(ident("limit"), lit_int(N))),
@@ -2233,7 +2233,7 @@ TEST_F(VMPerfTest, Dispatch_FloatAdd_500k_Iterations)
 
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         blk({ expr_stmt(assign_expr(ident("i"), lit_flt(0.0))),
             expr_stmt(assign_expr(ident("step"), lit_flt(1.0))),
             expr_stmt(assign_expr(ident("limit"), lit_flt(static_cast<f64>(N)))),
@@ -2270,7 +2270,7 @@ TEST_F(VMPerfTest, IC_Quickening_ColdVsWarm_Ratio)
 
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         blk({ decl_stmt("i", lit_int(0)),
             decl_stmt("step", lit_int(1)),
             decl_stmt("limit", lit_int(N)),
@@ -2352,11 +2352,11 @@ TEST_F(VMPerfTest, CallOverhead_100k_Calls)
                     expr_stmt(assign_expr(ident("i"), binary(ident("i"), lit_int(1), AST::Expr::Kind::OP_ADD))) })),
             return_stmt(ident("i")) });
 
-    AST::Stmt* func = func_def(ident("test"), list_expr(), m_body);
+    AST::Stmt* func = func_def(ident("test"), { }, m_body);
 
     AST::Stmt* add = func_def(
         ident("add"),
-        list_expr({ ident("a"), ident("b") }),
+        { ident("a"), ident("b") },
         return_stmt(binary(ident("a"), ident("b"), AST::Expr::Kind::OP_ADD)));
     AST::Stmt* call = expr_stmt(call_expr(ident("test"), list_expr()));
 
@@ -2387,7 +2387,7 @@ TEST_F(VMPerfTest, TailCall_vs_RegularLoop_Ratio)
 
     AST::Stmt* tc_fn = func_def(
         ident("tc"),
-        list_expr({ ident("n") }),
+        { ident("n") },
         blk({ if_stmt(
                   binary(ident("n"), lit_int(0), AST::Expr::Kind::OP_EQ),
                   blk({ return_stmt(ident("n")) })),
@@ -2405,7 +2405,7 @@ TEST_F(VMPerfTest, TailCall_vs_RegularLoop_Ratio)
     // ── equivalent iterative loop (no calls) ─────────────────────────────
     AST::Stmt* loop_fn = func_def(
         ident("loop"),
-        list_expr(),
+        { },
         blk({ expr_stmt(assign_expr(ident("n"), lit_int(DEPTH))),
             while_stmt(
                 binary(ident("n"), lit_int(0), AST::Expr::Kind::OP_NEQ),
@@ -2441,7 +2441,7 @@ TEST_F(VMPerfTest, List_AppendAndSum_10k)
     constexpr int N = 10'000;
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         blk({ expr_stmt(assign_expr(ident("xs"), list_expr())),
             expr_stmt(assign_expr(ident("i"), lit_int(0))),
             expr_stmt(assign_expr(ident("limit"), lit_int(N))),
@@ -2491,7 +2491,7 @@ TEST_F(VMPerfTest, NativeCall_Len_50k_ICHot)
 
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         blk({ expr_stmt(assign_expr(ident("s"), lit_str("hello world"))),
             expr_stmt(assign_expr(ident("i"), lit_int(0))),
             expr_stmt(assign_expr(ident("limit"), lit_int(N))),
@@ -2532,7 +2532,7 @@ static Chunk* make_fib_top(int n, int reps)
 {
     AST::Stmt* fib = func_def(
         ident("fib"),
-        list_expr({ ident("x") }),
+        { ident("x") },
         blk({ if_stmt(
                   binary(ident("x"), lit_int(1), AST::Expr::Kind::OP_LTE),
                   blk({ return_stmt(ident("x")) })),
@@ -2548,7 +2548,7 @@ static Chunk* make_fib_top(int n, int reps)
 
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         blk({ expr_stmt(assign_expr(ident("i"), lit_int(0))),
             expr_stmt(assign_expr(ident("limit"), lit_int(reps))),
             expr_stmt(assign_expr(ident("result"), lit_int(0))),
@@ -2611,7 +2611,7 @@ TEST_F(VMPerfTest, Dispatch_IntAdd_10M_Iterations)
 
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         blk({ expr_stmt(assign_expr(ident("i"), lit_int(0))),
             expr_stmt(assign_expr(ident("step"), lit_int(1))),
             expr_stmt(assign_expr(ident("limit"), lit_int(N))),
@@ -2642,7 +2642,7 @@ TEST_F(VMPerfTest, NativeCall_Len_1M_ICHot)
 
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         blk({ expr_stmt(assign_expr(ident("s"), lit_str("hello world"))),
             expr_stmt(assign_expr(ident("i"), lit_int(0))),
             expr_stmt(assign_expr(ident("limit"), lit_int(N))),
@@ -2675,7 +2675,7 @@ TEST_F(VMPerfTest, List_AppendAndSum_100k)
 
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         blk({ expr_stmt(assign_expr(ident("xs"), list_expr())),
             expr_stmt(assign_expr(ident("i"), lit_int(0))),
             expr_stmt(assign_expr(ident("limit"), lit_int(N))),
@@ -2734,7 +2734,7 @@ TEST_F(VMPerfTest, Fib28_20reps_Hot)
 
 static FunctionDef* class_method(StringRef name, Array<Expr*> params, Array<Stmt*> body)
 {
-    return func_def(ident(name), list_expr(params), blk(body));
+    return func_def(ident(name), params, blk(body));
 }
 
 TEST(VMClass, TestConstruction)
@@ -2742,7 +2742,7 @@ TEST(VMClass, TestConstruction)
     AST::Stmt* klass = class_def(ident("TestClass"), { }, { });
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         blk({
             decl_stmt("instance", call_expr(ident("TestClass"))),
             return_stmt(ident("instance")),
@@ -2771,7 +2771,7 @@ TEST(VMClass, ClassDefinitionStoresRuntimeClass)
         { });
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         blk({
             return_stmt(ident("Point")),
         }));
@@ -2801,12 +2801,12 @@ TEST(VMClass, ConstructorAcceptsArgumentsAndReturnsInstance)
         {
             func_def(
                 ident(sp_method_name(ObjClass::INIT)),
-                list_expr({ ident("value") }),
+                { ident("value") },
                 blk({ })),
         });
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         blk({
             decl_stmt("instance", call_expr(ident("Box"), list_expr({ lit_int(42) }))),
             return_stmt(ident("instance")),
@@ -2833,12 +2833,12 @@ TEST(VMClass, ConstructorRejectsWrongArgumentCount)
         {
             func_def(
                 ident(sp_method_name(ObjClass::INIT)),
-                list_expr({ ident("arg") }),
+                { ident("arg") },
                 blk({ })),
         });
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         blk({
             decl_stmt("instance", call_expr(ident("NeedsArg"))),
             return_stmt(ident("instance")),
@@ -2859,7 +2859,7 @@ TEST(VMClass, ConstructorWithoutInitRejectsArguments)
     AST::Stmt* klass = class_def(ident("Plain"), { }, { });
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         blk({
             decl_stmt("instance", call_expr(ident("Plain"), list_expr({ lit_int(1) }))),
             return_stmt(ident("instance")),
@@ -2886,7 +2886,7 @@ TEST(VMClass, InstanceFieldsDefaultToNil)
         { });
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         blk({
             decl_stmt("point", call_expr(ident("Point"))),
             return_stmt(ident("point")),
@@ -2928,7 +2928,7 @@ TEST(VMClass, ConstructorInitializesFieldsFromParameters)
         });
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         blk({
             decl_stmt("point", call_expr(ident("Point"), list_expr({ lit_int(3), lit_int(4) }))),
             return_stmt(ident("point")),
@@ -2978,7 +2978,7 @@ TEST(VMClass, FieldGetExpressionReadsInstanceField)
         });
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         blk({
             decl_stmt("box", call_expr(ident("Box"), list_expr({ lit_int(12) }))),
             return_stmt(get_expr(ident("box"), ident("value"))),
@@ -3008,7 +3008,7 @@ TEST(VMClass, FieldAssignmentUpdatesInstanceField)
         { });
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         blk({
             decl_stmt("box", call_expr(ident("Box"))),
             expr_stmt(assign_expr(get_expr(ident("box"), ident("value")), lit_int(25))),
@@ -3053,7 +3053,7 @@ TEST(VMClass, MethodReceivesExplicitArguments)
         });
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         blk({
             decl_stmt("adder", call_expr(ident("Adder"))),
             return_stmt(
@@ -3098,7 +3098,7 @@ TEST(VMClass, MethodReadsInstanceField)
         });
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         blk({
             decl_stmt("box", call_expr(ident("Box"), list_expr({ lit_int(31) }))),
             return_stmt(call_expr(get_expr(ident("box"), ident("get_value")))),
@@ -3123,7 +3123,7 @@ TEST(VMClass, MethodMutatesInstanceFieldAndPersists)
         return get_expr(ident(kClassInstanceName), member);
     };
 
-    auto init = [&](AST::IdentifierExpr* member, AST::Expr* value) -> AST::Stmt* {
+    auto init = [&](AST::IdentifierExpr* member, AST::ExprPtr value) -> AST::Stmt* {
         return expr_stmt(assign_expr(get(member), value));
     };
 
@@ -3147,7 +3147,7 @@ TEST(VMClass, MethodMutatesInstanceFieldAndPersists)
         });
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         blk({
             decl_stmt("counter", call_expr(ident("Counter"))),
             expr_stmt(call_expr(get_expr(ident("counter"), ident("increment")))),
@@ -3190,7 +3190,7 @@ TEST(VMClass, MultipleInstancesKeepIndependentFieldState)
         });
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         blk({
             decl_stmt("left", call_expr(ident("Box"), list_expr({ lit_int(10) }))),
             decl_stmt("right", call_expr(ident("Box"), list_expr({ lit_int(20) }))),
@@ -3223,7 +3223,7 @@ TEST(VMClass, MethodReturningNoValueReturnsSelf)
         });
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         blk({
             decl_stmt("fluent", call_expr(ident("Fluent"))),
             return_stmt(call_expr(get_expr(ident("fluent"), ident("touch")))),
@@ -3257,7 +3257,7 @@ TEST(VMClass, MethodRejectsWrongArgumentCount)
         });
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         blk({
             decl_stmt("adder", call_expr(ident("Adder"))),
             return_stmt(call_expr(get_expr(ident("adder"), ident("add")))),
@@ -3278,7 +3278,7 @@ TEST(VMClass, UnknownMethodRaisesRuntimeError)
     AST::Stmt* klass = class_def(ident("Empty"), { }, { });
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         blk({
             decl_stmt("empty", call_expr(ident("Empty"))),
             return_stmt(call_expr(get_expr(ident("empty"), ident("missing")))),
@@ -3306,7 +3306,7 @@ TEST(VMClass, DuplicateFieldsAreDeduplicatedInDeclarationOrder)
         { });
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         blk({
             return_stmt(ident("Record")),
         }));
@@ -3339,7 +3339,7 @@ TEST(VMClass, MultipleMethodsAreStoredInRuntimeClass)
         });
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         blk({
             return_stmt(ident("Ops")),
         }));
@@ -3376,7 +3376,7 @@ TEST(VMClass, AddSpecialMethodHandlesBinaryPlus)
         });
     AST::Stmt* test = func_def(
         ident("test"),
-        list_expr(),
+        { },
         blk({
             decl_stmt("left", call_expr(ident("Numberish"))),
             decl_stmt("right", call_expr(ident("Numberish"))),

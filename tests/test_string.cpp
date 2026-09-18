@@ -1619,8 +1619,8 @@ TEST_F(StringRefPerfTest, Mixed_InterpreterInnerLoop)
     auto t0 = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < N; i++) {
         StringRef const& id = identifiers[i % identifiers.size()];
-        acc ^= hasher(id);                                          // hash lookup
-        matches += (id == target);                                  // equality check
+        acc ^= hasher(id);                                       // hash lookup
+        matches += (id == target);                               // equality check
         StringRef sl = id.slice(0, id.len() > 3 ? 3 : id.len()); // prefix slice
         do_not_optimize(sl);
     }

@@ -100,7 +100,7 @@ TEST(OptimTest, PurityChecks)
 {
     auto def = func_def(
         ident("def"),
-        list_expr({ ident("x") }),
+        { ident("x") },
         blk({ return_stmt(binary(ident("x"), ident("x"), Expr::Kind::OP_ADD)) }));
     Expr* call = call_expr(def->name->clone());
     Expr* var = ident("x");

@@ -144,8 +144,8 @@ TEST(ModuleParser, ParsesImportsAliasesAndParentClass)
     ASSERT_TRUE(AST::as_import(statements[1])->imports_member());
     EXPECT_EQ(AST::as_import(statements[1])->get_names()[0], "نجاح");
     auto* klass = AST::as_class_def(statements[2]);
-    ASSERT_NE(klass->get_parent(), nullptr);
-    EXPECT_EQ(AST::as_identifier(klass->get_parent())->spelling, "اصل");
+    ASSERT_NE(klass->parent, nullptr);
+    EXPECT_EQ(AST::as_identifier(klass->parent)->spelling, "اصل");
 }
 
 TEST(ModuleCompiler, EmitsImportAndParentDescriptor)

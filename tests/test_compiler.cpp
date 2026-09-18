@@ -105,7 +105,7 @@ static void dump(Chunk const* c)
 
 static Chunk* compile_ok_local(Array<AST::Stmt*> stmts)
 {
-    AST::Stmt* f = func_def(ident("test_function"), list_expr(), blk(stmts));
+    AST::Stmt* f = func_def(ident("test_function"), { }, blk(stmts));
     Compiler c;
     Chunk* ch = compile_ok({ f }, c);
     EXPECT_NE(ch, nullptr);
@@ -974,7 +974,7 @@ TEST(CompilerReturn, ReturnIsDeadCodeBarrier)
 
 TEST(CompilerReturn, TailCallEmitsCallTail)
 {
-    Chunk* chunk = compile_ok(func_def(ident("wrapper"), list_expr(), blk({ return_stmt(call_expr(ident("f"))) })));
+    Chunk* chunk = compile_ok(func_def(ident("wrapper"), { }, blk({ return_stmt(call_expr(ident("f"))) })));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -990,7 +990,7 @@ TEST(CompilerReturn, TailCallEmitsCallTail)
 
 TEST(CompilerFunc, EmptyFunction)
 {
-    Chunk* chunk = compile_ok(func_def(ident("foo"), list_expr(), blk({ })));
+    Chunk* chunk = compile_ok(func_def(ident("foo"), { }, blk({ })));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -1011,7 +1011,7 @@ TEST(CompilerFunc, EmptyFunction)
 
 TEST(CompilerFunc, FunctionWithParams)
 {
-    Chunk* chunk = compile_ok(func_def(ident("add"), list_expr({ ident("a"), ident("b") }),
+    Chunk* chunk = compile_ok(func_def(ident("add"), { ident("a"), ident("b") },
         blk({ return_stmt(binary(ident("a"), ident("b"), AST::Expr::Kind::OP_ADD)) })));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
@@ -1031,7 +1031,7 @@ TEST(CompilerFunc, FunctionWithParams)
 
 TEST(CompilerFunc, FunctionStoredAsLocal)
 {
-    Chunk* chunk = compile_ok(func_def(ident("foo"), list_expr(), blk({ })));
+    Chunk* chunk = compile_ok(func_def(ident("foo"), { }, blk({ })));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -1040,7 +1040,7 @@ TEST(CompilerFunc, FunctionStoredAsLocal)
 
 TEST(CompilerFunc, NestedFunctionIndexing)
 {
-    Chunk* chunk = compile_ok({ func_def(ident("a"), list_expr(), blk({ })), func_def(ident("b"), list_expr(), blk({ })) });
+    Chunk* chunk = compile_ok({ func_def(ident("a"), { }, blk({ })), func_def(ident("b"), { }, blk({ })) });
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -1060,7 +1060,7 @@ TEST(CompilerFunc, RecursiveFunctionBodyCompiles)
     Chunk* chunk = compile_ok(
         func_def(
             ident("fact"),
-            list_expr({ ident("n") }),
+            { ident("n") },
             blk({ if_stmt(
                       ident("n"),
                       blk(
@@ -1075,7 +1075,7 @@ TEST(CompilerFunc, RecursiveFunctionBodyCompiles)
 
 TEST(CompilerFunc, FunctionInsideTopLevelBlockRejected)
 {
-    Chunk* chunk = compile_fail(blk({ func_def(ident("inner"), list_expr(), blk({ })) }));
+    Chunk* chunk = compile_fail(blk({ func_def(ident("inner"), { }, blk({ })) }));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -1098,7 +1098,7 @@ TEST(CompilerCall, CallWithNoArgs)
 
 TEST(CompilerCall, CallWithTwoArgs)
 {
-    Array<AST::Expr*> args { lit_int(1), lit_int(2) };
+    Array<AST::ExprPtr> args { lit_int(1), lit_int(2) };
     Chunk* chunk = compile_ok(expr_stmt(call_expr(ident("f"), list_expr(std::move(args)))));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
@@ -1115,7 +1115,7 @@ TEST(CompilerCall, CallWithTwoArgs)
 TEST(CompilerCall, CallResultUsed)
 {
     Chunk* chunk = compile_ok(decl_stmt("r", call_expr(ident("f"), [] {
-        Array<AST::Expr*> a;
+        Array<AST::ExprPtr> a;
         a.push(ident("x"));
         return list_expr(a);
     }())));
@@ -1153,7 +1153,7 @@ TEST(CompilerList, EmptyList)
 
 TEST(CompilerList, ListWithElements)
 {
-    Array<AST::Expr*> elems;
+    Array<AST::ExprPtr> elems;
     elems.push(lit_int(1));
     elems.push(lit_int(2));
     elems.push(lit_int(3));
@@ -1223,7 +1223,7 @@ TEST(CompilerMeta, TopLevelChunkNameIsMain)
 
 TEST(CompilerMeta, FunctionAritySetCorrectly)
 {
-    Chunk* chunk = compile_ok(func_def(ident("f"), list_expr({ ident("x"), ident("y"), ident("z") }), blk({ })));
+    Chunk* chunk = compile_ok(func_def(ident("f"), { ident("x"), ident("y"), ident("z") }, blk({ })));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -1233,7 +1233,7 @@ TEST(CompilerMeta, FunctionAritySetCorrectly)
 
 TEST(CompilerMeta, FunctionNameSetCorrectly)
 {
-    Chunk* chunk = compile_ok(func_def(ident("compute"), list_expr(), blk({ })));
+    Chunk* chunk = compile_ok(func_def(ident("compute"), { }, blk({ })));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -1252,13 +1252,13 @@ TEST(CompilerMeta, LineInfoPresent)
 
 TEST(CompilerIntegration, Fibonacci)
 {
-    Array<AST::Expr*> args_n1, args_n2;
+    Array<AST::ExprPtr> args_n1, args_n2;
     args_n1.push(binary(ident("n"), lit_int(1), AST::Expr::Kind::OP_SUB));
     args_n2.push(binary(ident("n"), lit_int(2), AST::Expr::Kind::OP_SUB));
 
     Chunk* chunk = compile_ok(
         func_def(ident("fib"),
-            list_expr({ ident("n") }),
+            { ident("n") },
             blk(
                 { if_stmt(
                       binary(ident("n"), lit_int(1), AST::Expr::Kind::OP_LTE),
@@ -1386,7 +1386,7 @@ TEST(CompilerIntegration, StringConstantPoolDedup)
 
 TEST(CompilerIntegration, MixedLiteralsInList)
 {
-    Array<AST::Expr*> elems;
+    Array<AST::ExprPtr> elems;
     elems.push(lit_bool(true));
     elems.push(lit_int(42));
     elems.push(lit_flt(3.14));

@@ -73,7 +73,7 @@ static inline ExprStmt* expr_stmt(Expr* e)
 {
     return make_expr_stmt(e, { });
 }
-static inline ExprStmt* decl_stmt(StringRef nm, AST::Expr* val)
+static inline ExprStmt* decl_stmt(StringRef nm, AST::ExprPtr val)
 {
     return make_expr_stmt(make_assignment_expr(ident(nm), val, { }), { });
 }
@@ -89,7 +89,7 @@ static inline ForStmt* for_stmt(IdentifierExpr* t, Expr* i, Stmt* b)
 {
     return make_for(t, i, b, { });
 }
-static inline FunctionDef* func_def(IdentifierExpr* n, ListExpr* p, Stmt* b)
+static inline FunctionDef* func_def(IdentifierExpr* n, Array<Expr*> p, Stmt* b)
 {
     return make_function(n, p, b, { });
 }

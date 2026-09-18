@@ -29,7 +29,7 @@ public:
     }
 
     template<typename T>
-    T* parse_and_cast(AST::Expr*& expr)
+    T* parse_and_cast(AST::ExprPtr& expr)
     {
         EXPECT_NE(expr, nullptr) << "Expression should not be null";
         if (!expr)
@@ -49,7 +49,7 @@ public:
     }
 
     template<typename T>
-    T* as(AST::Expr* node)
+    T* as(AST::ExprPtr node)
     {
         T* casted = dynamic_cast<T*>(node);
         EXPECT_NE(casted, nullptr);
@@ -87,7 +87,7 @@ TEST_F(ParserTest, ParseNil)
 {
     FileManager fm(parser_test_cases_dir() / "none_literal.fa");
     Parser parser(&fm);
-    AST::Expr* expr = parser.parse().value();
+    AST::ExprPtr expr = parser.parse().value();
     EXPECT_TRUE(AST::is_nil(expr));
     if (test_config::print_ast)
         AST_Printer.print(AST::as_nil(expr));
@@ -97,7 +97,7 @@ TEST_F(ParserTest, ParseParenthesizedNumberLiteral)
 {
     FileManager fm(parser_test_cases_dir() / "parenthesized_number.fa");
     Parser parser(&fm);
-    AST::Expr* expr = parser.parse().value();
+    AST::ExprPtr expr = parser.parse().value();
     EXPECT_TRUE(AST::is_literal_int(expr));
     if (test_config::print_ast)
         AST_Printer.print(AST::as_literal_int(expr));
@@ -107,7 +107,7 @@ TEST_F(ParserTest, ParseIdentifier)
 {
     FileManager fm(parser_test_cases_dir() / "identifier.fa");
     Parser parser(&fm);
-    AST::Expr* expr = parser.parse().value();
+    AST::ExprPtr expr = parser.parse().value();
     AST::IdentifierExpr* name_fa_expr = AST::as_identifier(expr);
 
     if (test_config::print_ast)
@@ -121,7 +121,7 @@ TEST_F(ParserTest, ParseCallExpressionNoArgs)
 {
     FileManager fm(parser_test_cases_dir() / "call_expression.fa");
     Parser parser(&fm);
-    AST::Expr* expr = parser.parse().value();
+    AST::ExprPtr expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr);
 
@@ -143,7 +143,7 @@ TEST_F(ParserTest, ParseCallExpressionWithOneArg)
 {
     FileManager fm(parser_test_cases_dir() / "call_expression_with_one_argument.fa");
     Parser parser(&fm);
-    AST::Expr* expr = parser.parse().value();
+    AST::ExprPtr expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr);
 
@@ -280,7 +280,7 @@ TEST_F(ParserTest, ParseNestedParentheses)
     // Test: ((2 + 3) * 4)
     FileManager fm(parser_test_cases_dir() / "nested_parens.fa");
     Parser parser(&fm);
-    AST::Expr* expr = parser.parse().value();
+    AST::ExprPtr expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr) << "Failed to parse nested parentheses expression";
 
@@ -305,7 +305,7 @@ TEST_F(ParserTest, ParseLogicalExpression)
     // Test: a and b or c (should be (a and b) or c)
     FileManager fm(parser_test_cases_dir() / "logical_expression.fa");
     Parser parser(&fm);
-    AST::Expr* expr = parser.parse().value();
+    AST::ExprPtr expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr) << "Failed to parse logical expression";
 
@@ -329,7 +329,7 @@ TEST_F(ParserTest, ParseUnaryChain)
     // Test: --x (f64 negation)
     FileManager fm(parser_test_cases_dir() / "unary_chain.fa");
     Parser parser(&fm);
-    AST::Expr* expr = parser.parse().value();
+    AST::ExprPtr expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr) << "Failed to parse unary chain";
 
@@ -394,7 +394,7 @@ TEST_F(ParserTest, ParseExtraClosingParenthesis)
 {
     FileManager fm(parser_test_cases_dir() / "extra_paren.fa");
     Parser parser(&fm);
-    AST::Expr* expr = parser.parse().value();
+    AST::ExprPtr expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr) << "Should parse the valid part";
     EXPECT_FALSE(parser.we_done()) << "Should have unparsed tokens remaining";
@@ -408,7 +408,7 @@ TEST_F(ParserTest, ParseInvalidOperatorSequence)
 {
     FileManager fm(parser_test_cases_dir() / "invalid_operator_seq.fa");
     Parser parser(&fm);
-    AST::Expr* expr = parser.parse().value();
+    AST::ExprPtr expr = parser.parse().value();
 
     if (expr != nullptr) {
         if (test_config::print_ast)
@@ -428,7 +428,7 @@ TEST_F(ParserTest, ParseSingleIdentifier)
 {
     FileManager fm(parser_test_cases_dir() / "single_identifier.fa");
     Parser parser(&fm);
-    AST::Expr* expr = parser.parse().value();
+    AST::ExprPtr expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr) << "Should parse single identifier";
 
@@ -446,7 +446,7 @@ TEST_F(ParserTest, ParseVeryLongIdentifier)
 {
     FileManager fm(parser_test_cases_dir() / "long_identifier.fa");
     Parser parser(&fm);
-    AST::Expr* expr = parser.parse().value();
+    AST::ExprPtr expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr) << "Should parse very long identifier";
 
@@ -467,7 +467,7 @@ TEST_F(ParserTest, ParseUnicodeIdentifiers)
 {
     FileManager fm(parser_test_cases_dir() / "unicode_identifiers.fa");
     Parser parser(&fm);
-    AST::Expr* expr = parser.parse().value();
+    AST::ExprPtr expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr) << "Should parse Unicode identifiers";
 
@@ -492,7 +492,7 @@ TEST_F(ParserTest, ParseEmptyList)
 {
     FileManager fm(parser_test_cases_dir() / "empty_list.fa");
     Parser parser(&fm);
-    AST::Expr* expr = parser.parse().value();
+    AST::ExprPtr expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr) << "Should parse empty list";
 
@@ -509,7 +509,7 @@ TEST_F(ParserTest, ParseEmptyTuple)
 {
     FileManager fm(parser_test_cases_dir() / "empty_tuple.fa");
     Parser parser(&fm);
-    AST::Expr* expr = parser.parse().value();
+    AST::ExprPtr expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr) << "Should parse empty tuple";
 
@@ -526,7 +526,7 @@ TEST_F(ParserTest, ParseListWithTrailingComma)
 {
     FileManager fm(parser_test_cases_dir() / "list_trailing_comma.fa");
     Parser parser(&fm);
-    AST::Expr* expr = parser.parse().value();
+    AST::ExprPtr expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr) << "Should parse list with trailing comma";
 
@@ -543,7 +543,7 @@ TEST_F(ParserTest, ParseNestedLists)
 {
     FileManager fm(parser_test_cases_dir() / "nested_lists.fa");
     Parser parser(&fm);
-    AST::Expr* expr = parser.parse().value();
+    AST::ExprPtr expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr) << "Should parse nested lists";
 
@@ -570,7 +570,7 @@ TEST_F(ParserTest, ParseAssignment)
 {
     FileManager fm(parser_test_cases_dir() / "assignment.fa");
     Parser parser(&fm);
-    AST::Expr* node = parser.parse().value();
+    AST::ExprPtr node = parser.parse().value();
     ASSERT_NE(node, nullptr) << "Should parse assignment";
 
     AST::AssignExpr* assign = dynamic_cast<AST::AssignExpr*>(node);
@@ -584,7 +584,7 @@ TEST_F(ParserTest, ParseAssignment)
     AST::IntLiteralExpr const* value = as_literal_int(assign->value);
 
     EXPECT_EQ(value->value, 42);
-    
+
     if (test_config::print_ast)
         AST_Printer.print(assign);
 }
@@ -593,7 +593,7 @@ TEST_F(ParserTest, ParseChainedAssignment)
 {
     FileManager fm(parser_test_cases_dir() / "chained_assignment.fa");
     Parser parser(&fm);
-    AST::Expr* expr = parser.parse().value();
+    AST::ExprPtr expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr) << "Should parse chained assignment";
 
@@ -635,7 +635,7 @@ TEST_F(ParserTest, ParseDeeplyNestedExpression)
 {
     FileManager fm(parser_test_cases_dir() / "deeply_nested.fa");
     Parser parser(&fm);
-    AST::Expr* expr = parser.parse().value();
+    AST::ExprPtr expr = parser.parse().value();
 
     ASSERT_NE(expr, nullptr) << "Should parse deeply nested expression without stack overflow";
 

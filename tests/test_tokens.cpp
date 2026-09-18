@@ -23,7 +23,7 @@ TEST(LexerTest, RecognizesPlus)
     lex::FileManager m_file_manager(test_cases_path / "recognizes_plus.fa");
     lex::Lexer m_lexer(&m_file_manager);
     auto tokens = m_lexer.tokenize();
-    SourceLocation loc = { 1, 1, 0, 0 };
+    SrcLoc loc = { 1, 1, 0, 0 };
     TokenPtr expected = make_token(tok::TokenType::OP_PLUS, "+", loc);
     EXPECT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0]->type(), tok::TokenType::BEGINMARKER);
@@ -36,7 +36,7 @@ TEST(LexerTest, RecognizesInteger)
     lex::FileManager m_file_manager(test_cases_path / "recognizes_integer.fa");
     lex::Lexer m_lexer(&m_file_manager);
     auto tokens = m_lexer.tokenize();
-    SourceLocation loc = { 1, 1, 0, 0 };
+    SrcLoc loc = { 1, 1, 0, 0 };
     TokenPtr expected = make_token(tok::TokenType::INTEGER, "123", loc);
     EXPECT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0]->type(), tok::TokenType::BEGINMARKER);
@@ -49,7 +49,7 @@ TEST(LexerTest, RecognizesFloat)
     lex::FileManager m_file_manager(test_cases_path / "recognizes_float.fa");
     lex::Lexer m_lexer(&m_file_manager);
     auto tokens = m_lexer.tokenize();
-    SourceLocation loc = { 1, 1, 0, 0 };
+    SrcLoc loc = { 1, 1, 0, 0 };
     TokenPtr expected = make_token(tok::TokenType::DECIMAL, "123.456", loc);
     EXPECT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0]->type(), tok::TokenType::BEGINMARKER);
@@ -62,7 +62,7 @@ TEST(LexerTest, RecognizesIdentifier)
     lex::FileManager m_file_manager(test_cases_path / "recognizes_identifier.fa");
     lex::Lexer m_lexer(&m_file_manager);
     auto tokens = m_lexer.tokenize();
-    SourceLocation loc = { 1, 1, 0, 0 };
+    SrcLoc loc = { 1, 1, 0, 0 };
     TokenPtr expected = make_token(tok::TokenType::IDENTIFIER, "مرحبا", loc);
     EXPECT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0]->type(), tok::TokenType::BEGINMARKER);
@@ -107,7 +107,7 @@ TEST(LexerTest, RecognizesStringLiteral)
     lex::FileManager m_file_manager(test_cases_path / "recognizes_string_literal.fa");
     lex::Lexer m_lexer(&m_file_manager);
     auto tokens = m_lexer.tokenize();
-    SourceLocation loc = { 1, 1, 0, 0 };
+    SrcLoc loc = { 1, 1, 0, 0 };
     TokenPtr expected = make_token(tok::TokenType::STRING, "العالم", loc);
     EXPECT_EQ(tokens.size(), 3);
     EXPECT_EQ(tokens[0]->type(), tok::TokenType::BEGINMARKER);

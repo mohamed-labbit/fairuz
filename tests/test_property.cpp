@@ -107,7 +107,7 @@ i64 eval_host(ExprSpec const& m_expr)
     return 0;
 }
 
-AST::Expr* build_ast(ExprSpec const& m_expr)
+AST::ExprPtr build_ast(ExprSpec const& m_expr)
 {
     switch (m_expr.kind) {
     case ExprSpec::Kind::Lit:
@@ -140,7 +140,7 @@ Value run_fa_expr_source(std::string const& source)
     return vm.run(chunk);
 }
 
-Value run_fa_expr_ast(AST::Expr* m_expr)
+Value run_fa_expr_ast(AST::ExprPtr m_expr)
 {
     Chunk* chunk = Compiler().compile({ expr_stmt(call_expr(ident("طبيعي"), list_expr({ m_expr }))) });
     VM vm;

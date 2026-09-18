@@ -66,11 +66,11 @@ TEST(StdlibRegression, JoinStringifiesMixedScalarValues)
 {
     VM vm;
     Value list = make_list(vm, {
-                                      Value::from_int(7),
-                                      Value::from_bool(true),
-                                      str("ok"),
-                                      Value::nil(),
-                                  });
+                                   Value::from_int(7),
+                                   Value::from_bool(true),
+                                   str("ok"),
+                                   Value::nil(),
+                               });
     Value m_args[] = { list, str("|") };
     Value result = vm.join(2, m_args);
 
@@ -107,10 +107,10 @@ TEST(StdlibRegression, PopRemovesLastElementFromList)
 {
     VM vm;
     Value list = make_list(vm, {
-                                      Value::from_int(10),
-                                      Value::from_int(20),
-                                      Value::from_int(30),
-                                  });
+                                   Value::from_int(10),
+                                   Value::from_int(20),
+                                   Value::from_int(30),
+                               });
     Value result = vm.pop(1, &list);
 
     EXPECT_TRUE(result.is_list());
@@ -123,11 +123,11 @@ TEST(StdlibRegression, SliceReturnsCopyNotAlias)
 {
     VM vm;
     Value source = make_list(vm, {
-                                        Value::from_int(1),
-                                        Value::from_int(2),
-                                        Value::from_int(3),
-                                        Value::from_int(4),
-                                    });
+                                     Value::from_int(1),
+                                     Value::from_int(2),
+                                     Value::from_int(3),
+                                     Value::from_int(4),
+                                 });
     Value args[] = { source, Value::from_int(1), Value::from_int(2) };
     Value result = vm.slice(3, args);
 
@@ -144,11 +144,11 @@ TEST(StdlibRegression, SliceTwoArgsReturnsTail)
 {
     VM vm;
     Value source = make_list(vm, {
-                                        Value::from_int(4),
-                                        Value::from_int(5),
-                                        Value::from_int(6),
-                                        Value::from_int(7),
-                                    });
+                                     Value::from_int(4),
+                                     Value::from_int(5),
+                                     Value::from_int(6),
+                                     Value::from_int(7),
+                                 });
     Value args[] = { source, Value::from_int(2) };
     Value result = vm.slice(2, args);
 
@@ -535,10 +535,10 @@ TEST(StdlibRegression, StrStringifiesListsLikePrint)
 {
     VM vm;
     Value list = make_list(vm, {
-                                      Value::from_int(1),
-                                      Value::from_bool(false),
-                                      str("z"),
-                                  });
+                                   Value::from_int(1),
+                                   Value::from_bool(false),
+                                   str("z"),
+                               });
     Value result = vm.str(1, &list);
 
     ASSERT_TRUE(result.is_string());

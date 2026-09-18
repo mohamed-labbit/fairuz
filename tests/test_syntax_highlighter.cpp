@@ -36,12 +36,12 @@ protected:
 TEST_F(SyntaxHighlighterTest, AstClassifiesDeclarationsCallsAndMembers)
 {
     StringRef source = "# نموذج\n"
-                          "نوع حيوان:\n"
-                          "    دالة صوت(الاسم):\n"
-                          "        رسالة := \"مرحبا\"\n"
-                          "        ارجع الاسم\n"
-                          "دالة ناد(القيمة):\n"
-                          "    ارجع القيمة.صوت(\"فيروز\")\n";
+                       "نوع حيوان:\n"
+                       "    دالة صوت(الاسم):\n"
+                       "        رسالة := \"مرحبا\"\n"
+                       "        ارجع الاسم\n"
+                       "دالة ناد(القيمة):\n"
+                       "    ارجع القيمة.صوت(\"فيروز\")\n";
     Result result = Highlighter().highlight(source);
     ASSERT_TRUE(result.ast_valid);
     EXPECT_NE(find_token(result, 0, 0, "comment"), nullptr);
@@ -82,7 +82,7 @@ TEST_F(SyntaxHighlighterTest, RecognizesEveryNumericLiteralForm)
 TEST_F(SyntaxHighlighterTest, ClassifiesModuleMemberAndAliasImports)
 {
     StringRef source = "استورد رياضيات.ادوات باسم حساب\n"
-                          "من وقت_التشغيل استورد هو_عدد باسم عدد\n";
+                       "من وقت_التشغيل استورد هو_عدد باسم عدد\n";
     Result result = Highlighter().highlight(source);
     ASSERT_TRUE(result.ast_valid);
     auto* module = find_token(result, 0, 7, "namespace");
