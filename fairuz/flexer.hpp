@@ -13,7 +13,7 @@ namespace fairuz {
 
 using TokenPtr = tok::Token const*;
 
-static inline TokenPtr make_token(tok::TokenType tt, StringRef lexeme, SrcLoc loc)
+static inline TokenPtr make_token(tok::TokenType tt, StringRef lexeme, SourceLocation loc)
 {
     return get_allocator().allocate_object<tok::Token>(lexeme, tt, loc);
 }
@@ -74,7 +74,7 @@ public:
 
     [[nodiscard]] u32 peek_char()
     {
-        SrcLoc saved_ctx = m_context;
+        SourceLocation saved_ctx = m_context;
         u32 saved_current = m_current;
         u64 saved_bytes = m_current_bytes;
 
@@ -117,7 +117,7 @@ public:
 
     StringRef get_line_at(u32 const line_idx) const { return m_file_manager->get_line_at(line_idx); }
 
-    SrcLoc get_source_location() const { return m_context; }
+    SourceLocation get_source_location() const { return m_context; }
 
     StringRef source_slice(u64 const start, u64 const end) { return m_file_manager->buffer().slice(start, end); }
 
@@ -126,12 +126,12 @@ public:
 private:
     struct PushbackEntry {
         u32 ch { 0 };
-        SrcLoc ctx;
+        SourceLocation ctx;
         u64 bytes { 0 };
     }; // struct PushBackEntry
 
     FileManager* m_file_manager { nullptr };
-    SrcLoc m_context;
+    SourceLocation m_context;
     u32 m_current { 0 };
     u64 m_current_bytes { 0 };
     std::stack<PushbackEntry> m_unget_stack;
@@ -168,9 +168,9 @@ private:
     bool m_at_bol { true };
     u32 m_bracket_depth { 0 };
     diagnostic::SourcePtr m_source;
-    std::vector<std::pair<u32, SrcLoc>> m_brackets;
+    std::vector<std::pair<u32, SourceLocation>> m_brackets;
     std::optional<std::pair<u16, diagnostic::DiagnosticEngine::DiagnosticId>> m_pending_error;
-    [[noreturn]] void fail(ErrorCode code, SrcLoc loc, std::string const& detail = "");
+    [[noreturn]] void fail(ErrorCode code, SourceLocation loc, std::string const& detail = "");
 
     // main lexer loop
     TokenPtr lex_token();

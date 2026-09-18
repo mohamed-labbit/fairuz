@@ -1,7 +1,6 @@
 #include "fsyntax_highlighter.hpp"
 
 #include "fAST.hpp"
-#include "fAST_printer.hpp"
 #include "fctype.hpp"
 #include "fdiagnostic.hpp"
 #include "flexer.hpp"

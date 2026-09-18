@@ -268,7 +268,7 @@ private:
     ErrorOr<bool> compile_continue(AST::ContinueStmt const* s);
     ErrorOr<bool> compile_class_def(AST::ClassDef const* s);
     ErrorOr<bool> compile_import_single(
-        StringRef const& module, StringRef const& name, StringRef const& alias, SrcLoc loc, bool imports_member);
+        StringRef const& module, StringRef const& name, StringRef const& alias, SourceLocation loc, bool imports_member);
     ErrorOr<bool> compile_import(AST::ImportStmt const* s);
     ErrorOr<bool> compile_class_method(AST::Stmt const* s);
     ErrorOr<ExprResult> compile_expr_impl(AST::ConstExprPtr e);
@@ -303,8 +303,8 @@ private:
     ErrorOr<u8> compile_dict(AST::DictExpr const* e, u8* dst);
     ErrorOr<u8> compile_get(AST::GetExpr const* e, u8* dst);
 
-    void discharge(ExprResult const& r, u8 dst, SrcLoc loc);
-    ErrorOr<u8> any_reg(ExprResult const& r, SrcLoc loc);
+    void discharge(ExprResult const& r, u8 dst, SourceLocation loc);
+    ErrorOr<u8> any_reg(ExprResult const& r, SourceLocation loc);
     u8 error_reg() const;
     ErrorOr<u8> alloc_register()
     {
@@ -329,12 +329,12 @@ private:
     int current_method_field_index(StringRef const& name) const;
     int current_method_slot(StringRef const& name) const;
 
-    u32 emit(u32 instr, SrcLoc loc)
+    u32 emit(u32 instr, SourceLocation loc)
     {
         return current_chunk()->emit(instr, loc);
     }
 
-    u32 emit_jump(OpCode op, u8 cond, SrcLoc loc)
+    u32 emit_jump(OpCode op, u8 cond, SourceLocation loc)
     {
         return emit(make_AsBx(op, cond, 0), loc);
     }
@@ -351,7 +351,7 @@ private:
 
     void pop_loop(u32 loop_exit, u32 continue_target, u32 line);
     void patch_jump_to(u32 instr_idx, u32 target);
-    void emit_load_value(u8 dst, Value v, SrcLoc loc);
+    void emit_load_value(u8 dst, Value v, SourceLocation loc);
 
     Chunk* current_chunk() const { return m_current->chunk; }
 

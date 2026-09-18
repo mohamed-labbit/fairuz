@@ -216,7 +216,7 @@ std::optional<Value> try_fold_binary(AST::BinaryExpr const* e)
     if (!L || !R)
         return std::nullopt;
 
-    auto make_literal_from_val = [](Value const v, SrcLoc loc) -> AST::ExprPtr {
+    auto make_literal_from_val = [](Value const v, SourceLocation loc) -> AST::ExprPtr {
         if (v.is_double())
             return AST::make_literal_float(v.as_double(), loc);
         if (v.is_int())

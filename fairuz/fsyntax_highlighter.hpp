@@ -1,7 +1,6 @@
 #ifndef FA_SYNTAX_HIGHLIGHTER_HPP
 #define FA_SYNTAX_HIGHLIGHTER_HPP
 
-#include "fAST.hpp"
 #include "fstring.hpp"
 
 #include <string>

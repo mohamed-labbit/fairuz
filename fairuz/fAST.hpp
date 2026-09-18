@@ -69,11 +69,11 @@ public:
 
 private:
     NodeType node_type { NodeType::INVALID };
-    SrcLoc m_loc { };
+    SourceLocation m_loc { };
 
 public:
     ASTNode() = default;
-    ASTNode(SrcLoc loc)
+    ASTNode(SourceLocation loc)
         : m_loc(loc)
     {
     }
@@ -90,7 +90,7 @@ public:
     [[nodiscard]] virtual NodeType get_node_type() const { return node_type; }
     [[nodiscard]] u32 get_line() const;
     [[nodiscard]] u16 get_column() const;
-    SrcLoc get_location() const { return m_loc; }
+    SourceLocation get_location() const { return m_loc; }
 
     virtual ~ASTNode() = default;
 }; // class ASTNode
@@ -200,7 +200,7 @@ public:
     {
     }
 
-    Expr(SrcLoc loc, Kind kind)
+    Expr(SourceLocation loc, Kind kind)
         : ASTNode(loc)
         , m_kind(kind)
     {
@@ -221,7 +221,7 @@ public:
     ConstExprPtr lhs;
     ConstExprPtr rhs;
 
-    BinaryExpr(Kind kind, ExprPtr l, ExprPtr r, SrcLoc loc)
+    BinaryExpr(Kind kind, ExprPtr l, ExprPtr r, SourceLocation loc)
         : Expr(loc, kind)
         , lhs(l)
         , rhs(r)
@@ -249,7 +249,7 @@ class UnaryExpr final : public Expr {
 public:
     ConstExprPtr operand;
 
-    UnaryExpr(Kind kind, ExprPtr o, SrcLoc loc)
+    UnaryExpr(Kind kind, ExprPtr o, SourceLocation loc)
         : Expr(loc, kind)
         , operand(o)
     {
@@ -275,7 +275,7 @@ class IntLiteralExpr final : public Expr {
 public:
     i64 const value { INT64_C(0) };
 
-    IntLiteralExpr(i64 v, SrcLoc loc)
+    IntLiteralExpr(i64 v, SourceLocation loc)
         : Expr(loc, Kind::INT_LITERAL)
         , value(v)
     {
@@ -299,7 +299,7 @@ class FloatLiteralExpr final : public Expr {
 public:
     f64 const value { 0.0f };
 
-    FloatLiteralExpr(f64 v, SrcLoc loc)
+    FloatLiteralExpr(f64 v, SourceLocation loc)
         : Expr(loc, Kind::FLOAT_LITERAL)
         , value(v)
     {
@@ -323,7 +323,7 @@ class StringLiteralExpr final : public Expr {
 public:
     StringRef const str;
 
-    StringLiteralExpr(StringRef s, SrcLoc loc)
+    StringLiteralExpr(StringRef s, SourceLocation loc)
         : Expr(loc, Kind::STRING_LITERAL)
         , str(s)
     {
@@ -347,7 +347,7 @@ class BoolLiteralExpr final : public Expr {
 public:
     bool const value;
 
-    BoolLiteralExpr(bool v, SrcLoc loc)
+    BoolLiteralExpr(bool v, SourceLocation loc)
         : Expr(loc, Kind::BOOL_LITERAL)
         , value(v)
     {
@@ -369,7 +369,7 @@ public:
 
 class NilExpr final : public Expr {
 public:
-    NilExpr(SrcLoc loc)
+    NilExpr(SourceLocation loc)
         : Expr(loc, Kind::NIL)
     {
     }
@@ -392,7 +392,7 @@ class IdentifierExpr final : public Expr {
 public:
     StringRef const spelling;
 
-    explicit IdentifierExpr(StringRef s, SrcLoc loc)
+    explicit IdentifierExpr(StringRef s, SourceLocation loc)
         : Expr(loc, Kind::IDENTIFIER)
         , spelling(std::move(s))
     {
@@ -417,7 +417,7 @@ class ListExpr final : public Expr {
 public:
     Array<ExprPtr> const elements;
 
-    explicit ListExpr(Array<ExprPtr> elements, SrcLoc loc)
+    explicit ListExpr(Array<ExprPtr> elements, SourceLocation loc)
         : Expr(loc, Kind::LIST)
         , elements(std::move(elements))
     {
@@ -454,7 +454,7 @@ class DictExpr final : public Expr {
 public:
     Array<std::pair<ExprPtr, ExprPtr>> const content;
 
-    DictExpr(Array<std::pair<ExprPtr, ExprPtr>> c, SrcLoc loc)
+    DictExpr(Array<std::pair<ExprPtr, ExprPtr>> c, SourceLocation loc)
         : Expr(loc, Kind::DICT)
         , content(c)
     {
@@ -495,7 +495,7 @@ public:
     ConstExprPtr callee;
     ListExpr const* args;
 
-    explicit CallExpr(ExprPtr c, ListExpr* a, SrcLoc loc)
+    explicit CallExpr(ExprPtr c, ListExpr* a, SourceLocation loc)
         : Expr(loc, Kind::CALL)
         , callee(c)
         , args(a)
@@ -529,7 +529,7 @@ public:
     ConstExprPtr target;
     ConstExprPtr value;
 
-    AssignExpr(ExprPtr t, ExprPtr v, SrcLoc loc)
+    AssignExpr(ExprPtr t, ExprPtr v, SourceLocation loc)
         : Expr(loc, Kind::ASSIGNMENT)
         , target(t)
         , value(v)
@@ -558,7 +558,7 @@ public:
     ConstExprPtr object;
     ConstExprPtr index;
 
-    IndexExpr(ExprPtr obj, ExprPtr idx, SrcLoc loc)
+    IndexExpr(ExprPtr obj, ExprPtr idx, SourceLocation loc)
         : Expr(loc, Kind::INDEX_READ)
         , object(obj)
         , index(idx)
@@ -587,7 +587,7 @@ public:
     ConstExprPtr object;
     IdentifierExpr const* member;
 
-    GetExpr(ExprPtr obj, IdentifierExpr* mem, SrcLoc loc)
+    GetExpr(ExprPtr obj, IdentifierExpr* mem, SourceLocation loc)
         : Expr(loc, Kind::GET)
         , object(obj)
         , member(mem)
@@ -638,7 +638,7 @@ protected:
 public:
     Stmt() = default;
 
-    explicit Stmt(SrcLoc loc, Kind kind)
+    explicit Stmt(SourceLocation loc, Kind kind)
         : ASTNode(loc)
         , m_kind(kind)
     {
@@ -658,7 +658,7 @@ class BlockStmt final : public Stmt {
 public:
     Array<StmtPtr> const stmts;
 
-    explicit BlockStmt(Array<StmtPtr> s, SrcLoc loc)
+    explicit BlockStmt(Array<StmtPtr> s, SourceLocation loc)
         : Stmt(loc, Kind::BLOCK)
         , stmts(s)
     {
@@ -693,7 +693,7 @@ class ExprStmt final : public Stmt {
 public:
     ConstExprPtr expr;
 
-    explicit ExprStmt(ExprPtr e, SrcLoc loc)
+    explicit ExprStmt(ExprPtr e, SourceLocation loc)
         : Stmt(loc, Kind::EXPR)
         , expr(e)
     {
@@ -721,7 +721,7 @@ public:
     ConstStmtPtr then_stmt;
     ConstStmtPtr else_stmt;
 
-    IfElseStmt(ExprPtr c, StmtPtr t, SrcLoc loc, StmtPtr e)
+    IfElseStmt(ExprPtr c, StmtPtr t, SourceLocation loc, StmtPtr e)
         : Stmt(loc, Kind::IF)
         , condition(c)
         , then_stmt(t)
@@ -759,7 +759,7 @@ public:
     ConstExprPtr condition;
     ConstStmtPtr body;
 
-    WhileStmt(ExprPtr c, StmtPtr b, SrcLoc loc)
+    WhileStmt(ExprPtr c, StmtPtr b, SourceLocation loc)
         : Stmt(loc, Kind::WHILE)
         , condition(c)
         , body(b)
@@ -789,7 +789,7 @@ public:
     ConstExprPtr iter;
     ConstStmtPtr body;
 
-    ForStmt(ExprPtr t, ExprPtr i, StmtPtr b, SrcLoc loc)
+    ForStmt(ExprPtr t, ExprPtr i, StmtPtr b, SourceLocation loc)
         : Stmt(loc, Kind::FOR)
         , container(t)
         , iter(i)
@@ -821,7 +821,7 @@ public:
     Array<ExprPtr> const params;
     ConstStmtPtr body;
 
-    FunctionDef(IdentifierExpr* n, Array<ExprPtr> p, StmtPtr b, SrcLoc loc)
+    FunctionDef(IdentifierExpr* n, Array<ExprPtr> p, StmtPtr b, SourceLocation loc)
         : Stmt(loc, Kind::FUNC)
         , name(n)
         , params(std::move(p))
@@ -856,7 +856,7 @@ class ReturnStmt final : public Stmt {
 public:
     ConstExprPtr value;
 
-    explicit ReturnStmt(ExprPtr v, SrcLoc loc)
+    explicit ReturnStmt(ExprPtr v, SourceLocation loc)
         : Stmt(loc, Kind::RETURN)
         , value(v)
     {
@@ -894,7 +894,7 @@ public:
         ExprPtr p,
         Array<ExprPtr> members,
         Array<StmtPtr> methods,
-        SrcLoc loc)
+        SourceLocation loc)
         : Stmt(loc, Kind::CLASS_DEF)
         , name(n)
         , parent(p)
@@ -950,7 +950,7 @@ private:
     Array<StringRef> m_aliases;
 
 public:
-    ImportStmt(StringRef module, Array<StringRef> names, Array<StringRef> aliases, SrcLoc loc)
+    ImportStmt(StringRef module, Array<StringRef> names, Array<StringRef> aliases, SourceLocation loc)
         : Stmt(loc, Kind::IMPORT)
         , m_module(module)
         , m_names(names)
@@ -978,7 +978,7 @@ public:
 
 class BreakStmt final : public Stmt {
 public:
-    explicit BreakStmt(SrcLoc loc)
+    explicit BreakStmt(SourceLocation loc)
         : Stmt(loc, Kind::BREAK)
     {
     }
@@ -993,7 +993,7 @@ public:
 
 class ContinueStmt final : public Stmt {
 public:
-    explicit ContinueStmt(SrcLoc loc)
+    explicit ContinueStmt(SourceLocation loc)
         : Stmt(loc, Kind::CONTINUE)
     {
     }
@@ -1006,118 +1006,118 @@ public:
     void accept(StmtVisitor& v) override { v.visit(*this); }
 }; // class ContinueStmt
 
-static inline BinaryExpr* make_binary(Expr::Kind kind, ExprPtr lhs, ExprPtr rhs, SrcLoc loc)
+static inline BinaryExpr* make_binary(Expr::Kind kind, ExprPtr lhs, ExprPtr rhs, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(BinaryExpr, kind, lhs, rhs, loc);
 }
-static inline UnaryExpr* make_unary(Expr::Kind kind, ExprPtr operand, SrcLoc loc)
+static inline UnaryExpr* make_unary(Expr::Kind kind, ExprPtr operand, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(UnaryExpr, kind, operand, loc);
 }
-static inline NilExpr* make_nil(SrcLoc loc)
+static inline NilExpr* make_nil(SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(NilExpr, loc);
 }
-static inline IntLiteralExpr* make_literal_int(int value, SrcLoc loc)
+static inline IntLiteralExpr* make_literal_int(int value, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(IntLiteralExpr, static_cast<i64>(value), loc);
 }
-static inline IntLiteralExpr* make_literal_int(i64 value, SrcLoc loc)
+static inline IntLiteralExpr* make_literal_int(i64 value, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(IntLiteralExpr, value, loc);
 }
-static inline FloatLiteralExpr* make_literal_float(f64 value, SrcLoc loc)
+static inline FloatLiteralExpr* make_literal_float(f64 value, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(FloatLiteralExpr, value, loc);
 }
-static inline StringLiteralExpr* make_literal_string(StringRef str, SrcLoc loc)
+static inline StringLiteralExpr* make_literal_string(StringRef str, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(StringLiteralExpr, str, loc);
 }
-static inline BoolLiteralExpr* make_literal_bool(bool value, SrcLoc loc)
+static inline BoolLiteralExpr* make_literal_bool(bool value, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(BoolLiteralExpr, value, loc);
 }
-static inline IdentifierExpr* make_identifier(StringRef const str, SrcLoc loc)
+static inline IdentifierExpr* make_identifier(StringRef const str, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(IdentifierExpr, str, loc);
 }
-static inline ListExpr* make_list(Array<ExprPtr> elements, SrcLoc loc)
+static inline ListExpr* make_list(Array<ExprPtr> elements, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(ListExpr, elements, loc);
 }
-static inline DictExpr* make_dict(Array<std::pair<ExprPtr, ExprPtr>> content, SrcLoc loc)
+static inline DictExpr* make_dict(Array<std::pair<ExprPtr, ExprPtr>> content, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(DictExpr, content, loc);
 }
-static inline GetExpr* make_get_expr(ExprPtr obj, IdentifierExpr* member, SrcLoc loc)
+static inline GetExpr* make_get_expr(ExprPtr obj, IdentifierExpr* member, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(GetExpr, obj, member, loc)
 }
-static inline CallExpr* make_call(ExprPtr callee, ListExpr* args, SrcLoc loc)
+static inline CallExpr* make_call(ExprPtr callee, ListExpr* args, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(CallExpr, callee, args, loc);
 }
-static inline AssignExpr* make_assignment_expr(ExprPtr target, ExprPtr value, SrcLoc loc)
+static inline AssignExpr* make_assignment_expr(ExprPtr target, ExprPtr value, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(AssignExpr, target, value, loc);
 }
-static inline IndexExpr* make_index(ExprPtr obj, ExprPtr idx, SrcLoc loc)
+static inline IndexExpr* make_index(ExprPtr obj, ExprPtr idx, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(IndexExpr, obj, idx, loc);
 }
-static inline BlockStmt* make_block(Array<StmtPtr> stmts, SrcLoc loc)
+static inline BlockStmt* make_block(Array<StmtPtr> stmts, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(BlockStmt, stmts, loc);
 }
-static inline ExprStmt* make_expr_stmt(ExprPtr expr, SrcLoc loc)
+static inline ExprStmt* make_expr_stmt(ExprPtr expr, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(ExprStmt, expr, loc);
 }
-static inline ExprStmt* make_assignment_stmt(ExprPtr target, ExprPtr value, SrcLoc loc)
+static inline ExprStmt* make_assignment_stmt(ExprPtr target, ExprPtr value, SourceLocation loc)
 {
     auto e = ALLOCATE_AST_NODE(AssignExpr, target, value, loc) return ALLOCATE_AST_NODE(ExprStmt, e, loc);
 }
-static inline IfElseStmt* make_if(ExprPtr cond, StmtPtr then_block, SrcLoc loc, StmtPtr else_block = nullptr)
+static inline IfElseStmt* make_if(ExprPtr cond, StmtPtr then_block, SourceLocation loc, StmtPtr else_block = nullptr)
 {
     return ALLOCATE_AST_NODE(IfElseStmt, cond, then_block, loc, else_block);
 }
-static inline WhileStmt* make_while(ExprPtr cond, StmtPtr body, SrcLoc loc)
+static inline WhileStmt* make_while(ExprPtr cond, StmtPtr body, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(WhileStmt, cond, body, loc);
 }
-static inline ForStmt* make_for(IdentifierExpr* target, ExprPtr iter, StmtPtr body, SrcLoc loc)
+static inline ForStmt* make_for(IdentifierExpr* target, ExprPtr iter, StmtPtr body, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(ForStmt, target, iter, body, loc);
 }
-static inline FunctionDef* make_function(IdentifierExpr* name, Array<ExprPtr> params, StmtPtr body, SrcLoc loc)
+static inline FunctionDef* make_function(IdentifierExpr* name, Array<ExprPtr> params, StmtPtr body, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(FunctionDef, name, params, body, loc);
 }
-static inline ReturnStmt* make_return(SrcLoc loc, ExprPtr value = nullptr)
+static inline ReturnStmt* make_return(SourceLocation loc, ExprPtr value = nullptr)
 {
     return ALLOCATE_AST_NODE(ReturnStmt, value, loc);
 }
 static inline ClassDef* make_class_def(ExprPtr name, Array<ExprPtr> members,
-    Array<StmtPtr> methods, SrcLoc loc)
+    Array<StmtPtr> methods, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(ClassDef, name, nullptr, members, methods, loc);
 }
 static inline ClassDef* make_class_def(ExprPtr name, ExprPtr parent,
-    Array<ExprPtr> members, Array<StmtPtr> methods, SrcLoc loc)
+    Array<ExprPtr> members, Array<StmtPtr> methods, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(ClassDef, name, parent, members, methods, loc);
 }
 static inline ImportStmt* make_import(StringRef module, Array<StringRef> name,
-    Array<StringRef> aliases, SrcLoc loc)
+    Array<StringRef> aliases, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(ImportStmt, module, name, aliases, loc);
 }
-static inline BreakStmt* make_break(SrcLoc loc)
+static inline BreakStmt* make_break(SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(BreakStmt, loc);
 }
-static inline ContinueStmt* make_continue(SrcLoc loc)
+static inline ContinueStmt* make_continue(SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(ContinueStmt, loc);
 }

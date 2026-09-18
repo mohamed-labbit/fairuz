@@ -109,7 +109,7 @@ u32 const& Token::line() const { return m_location.line; }
 
 u16 const& Token::column() const { return m_location.column; }
 
-SrcLoc const& Token::location() const { return m_location; }
+SourceLocation const& Token::location() const { return m_location; }
 
 bool Token::is(TokenType const tt) const { return tt == m_type; }
 

@@ -101,7 +101,7 @@ public:
     bool check(tok::TokenType type) const;
 
     TokenPtr current_token() const;
-    SrcLoc current_loc() const { return current_token()->location(); }
+    SourceLocation current_loc() const { return current_token()->location(); }
 
 private:
     lex::Lexer m_lexer;
@@ -118,7 +118,7 @@ private:
 
     struct NestingLevel {
         u32* p { nullptr };
-        NestingLevel(u32* c, SrcLoc loc)
+        NestingLevel(u32* c, SourceLocation loc)
             : p(c)
         {
             assert(p != nullptr);

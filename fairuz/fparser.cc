@@ -830,12 +830,12 @@ ErrorOr<AST::ExprPtr> Parser::parse_postfix_expr()
             }
 
             VERIFY_TOKEN(TokType::RPAREN, ErrorCode::EXPECTED_RPAREN_EXPR);
-            SrcLoc loc = (!args.empty() && args[0])
+            SourceLocation loc = (!args.empty() && args[0])
                 ? args[0]->get_location()
-                : SrcLoc { };
+                : SourceLocation { };
             expr = make_call(
                 expr, make_list(std::move(args), loc),
-                expr ? expr->get_location() : SrcLoc { });
+                expr ? expr->get_location() : SourceLocation { });
             continue;
         }
 
@@ -845,7 +845,7 @@ ErrorOr<AST::ExprPtr> Parser::parse_postfix_expr()
             VERIFY_TOKEN(TokType::RBRACKET, ErrorCode::EXPECTED_RBRACKET);
             expr = make_index(
                 expr, index,
-                expr ? expr->get_location() : SrcLoc { });
+                expr ? expr->get_location() : SourceLocation { });
             continue;
         }
 
@@ -859,7 +859,7 @@ ErrorOr<AST::ExprPtr> Parser::parse_postfix_expr()
                 AST::make_identifier(
                     member_tok->lexeme(),
                     member_tok->location()),
-                expr ? expr->get_location() : SrcLoc { });
+                expr ? expr->get_location() : SourceLocation { });
             continue;
         }
 

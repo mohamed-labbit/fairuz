@@ -2086,7 +2086,7 @@ bool VM::register_native(StringRef const& name, NativeFn fn, int arity)
     return true;
 }
 
-SrcLoc VM::current_location() const
+SourceLocation VM::current_location() const
 {
     if (m_frames_top == 0)
         return { };
@@ -2103,7 +2103,7 @@ SrcLoc VM::current_location() const
 
 void VM::_raise_error(ErrorCode errc, std::string const& detail)
 {
-    SrcLoc loc = current_location();
+    SourceLocation loc = current_location();
     diagnostic::SourceScope source_scope(m_frames_top > 0 ? frame().chunk->source : diagnostic::engine.source());
     auto id = diagnostic::report(diagnostic::Severity::ERROR, loc, errc, detail);
     if (errc == ErrorCode::UNDEFINED_GLOBAL && !detail.empty()) {
@@ -2122,7 +2122,7 @@ void VM::_raise_error(ErrorCode errc, std::string const& detail)
         if (off >= ch.locations.size())
             continue;
 
-        SrcLoc frame_loc = ch.locations[off];
+        SourceLocation frame_loc = ch.locations[off];
         auto name = p->func ? p->func->name() : ch.name;
         diagnostic::engine.add_frame(id, ch.source, frame_loc, name.empty() ? "<main>" : std::string(name.data(), name.len()));
     }

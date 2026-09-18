@@ -102,7 +102,7 @@ Chunk* Compiler::compile(Array<AST::Stmt*> const& stmts)
         AST::Stmt* stmt = stmts[i];
         if (i + 1 == stmts.size() && stmt && !state.is_dead && is_terminal_top_level_call(stmt)) {
             auto const* expr_stmt = as_expr_stmt(stmt);
-            SrcLoc loc = expr_stmt->get_location();
+            SourceLocation loc = expr_stmt->get_location();
             RegMark mark(m_current);
             auto expr_result = compile_expr_impl(expr_stmt->expr);
             if (expr_result.has_error())
@@ -119,7 +119,7 @@ Chunk* Compiler::compile(Array<AST::Stmt*> const& stmts)
             break;
     }
 
-    SrcLoc loc = { 1, 1, 0 };
+    SourceLocation loc = { 1, 1, 0 };
     if (!stmts.empty() && stmts.back())
         loc = stmts.back()->get_location();
 
@@ -162,7 +162,7 @@ ErrorOr<bool> Compiler::compile_import(AST::ImportStmt const* s)
     if (!m_current->is_top_level || m_current->scope_depth != 0)
         return report_error(ErrorCode::INVALID_STATEMENT_NODE, s->get_location());
 
-    SrcLoc loc = s->get_location();
+    SourceLocation loc = s->get_location();
     StringRef const& module = s->get_module();
     Array<StringRef> const& names = s->get_names();
     Array<StringRef> const& aliases = s->get_aliases();
@@ -181,7 +181,7 @@ ErrorOr<bool> Compiler::compile_import(AST::ImportStmt const* s)
 }
 
 ErrorOr<bool> Compiler::compile_import_single(
-    StringRef const& module, StringRef const& name, StringRef const& alias, SrcLoc loc, bool imports_member)
+    StringRef const& module, StringRef const& name, StringRef const& alias, SourceLocation loc, bool imports_member)
 {
     // Imported bindings live in the module's global environment. Keeping a
     // permanent local register for every import makes a large module exhaust
@@ -216,7 +216,7 @@ ErrorOr<bool> Compiler::compile_block(AST::BlockStmt const* s)
         VERIFY_RESULT(r);
     }
 
-    SrcLoc loc = { 1, 1, 0 };
+    SourceLocation loc = { 1, 1, 0 };
     if (!s->stmts.empty() && s->stmts.back())
         loc = s->stmts.back()->get_location();
     return true;
@@ -234,7 +234,7 @@ ErrorOr<bool> Compiler::compile_expr_stmt(AST::ExprStmt const* s)
 
 ErrorOr<bool> Compiler::compile_if(AST::IfElseStmt const* s)
 {
-    SrcLoc loc = s->get_location();
+    SourceLocation loc = s->get_location();
     ScopeGuard scope(m_current);
     bool incoming_dead = m_current->is_dead;
 
@@ -279,7 +279,7 @@ ErrorOr<bool> Compiler::compile_while(AST::WhileStmt const* s)
     if (s == nullptr)
         return true;
 
-    SrcLoc loc = s->get_location();
+    SourceLocation loc = s->get_location();
     ScopeGuard scope(m_current);
 
     bool incoming_dead = m_current->is_dead;
@@ -319,7 +319,7 @@ ErrorOr<bool> Compiler::compile_while(AST::WhileStmt const* s)
 
 ErrorOr<bool> Compiler::compile_function_def(AST::FunctionDef const* f)
 {
-    SrcLoc loc = f->get_location();
+    SourceLocation loc = f->get_location();
     if (!m_current->is_top_level || m_current->scope_depth != 0)
         return report_error(ErrorCode::NESTED_FUNCTION_UNSUPPORTED, f->get_location());
 
@@ -374,7 +374,7 @@ ErrorOr<bool> Compiler::compile_function_def(AST::FunctionDef const* f)
 
 ErrorOr<bool> Compiler::compile_return(AST::ReturnStmt const* s)
 {
-    SrcLoc loc = s->get_location();
+    SourceLocation loc = s->get_location();
 
     if (!s->has_value()) {
         emit(make_ABC(OpCode::RETURN_NIL, 0, 0, 0), loc);
@@ -422,7 +422,7 @@ ErrorOr<bool> Compiler::compile_return(AST::ReturnStmt const* s)
 
 ErrorOr<bool> Compiler::compile_for(AST::ForStmt const* s)
 {
-    SrcLoc loc = s->get_location();
+    SourceLocation loc = s->get_location();
     ScopeGuard scope(m_current);
 
     auto target = AST::as_identifier(s->container);
@@ -482,7 +482,7 @@ ErrorOr<bool> Compiler::compile_break(AST::BreakStmt const* s)
     if (m_current->loop_stack.empty())
         return report_error(ErrorCode::BREAK_OUTSIDE_LOOP, s->get_location());
 
-    SrcLoc loc = s->get_location();
+    SourceLocation loc = s->get_location();
     m_current->loop_stack.back().break_patches.push(emit_jump(OpCode::JUMP, 0, loc));
     m_current->is_dead = true;
     return true;
@@ -493,7 +493,7 @@ ErrorOr<bool> Compiler::compile_continue(AST::ContinueStmt const* s)
     if (m_current->loop_stack.empty())
         return report_error(ErrorCode::CONTINUE_OUTSIDE_LOOP, s->get_location());
 
-    SrcLoc loc = s->get_location();
+    SourceLocation loc = s->get_location();
     m_current->loop_stack.back().continue_patches.push(emit_jump(OpCode::JUMP, 0, loc));
     m_current->is_dead = true;
     return true;
@@ -504,7 +504,7 @@ ErrorOr<bool> Compiler::compile_class_def(AST::ClassDef const* s)
     if (s == nullptr)
         return true;
 
-    SrcLoc loc = s->get_location();
+    SourceLocation loc = s->get_location();
     if (!m_current->is_top_level || m_current->scope_depth != 0)
         return report_error(ErrorCode::NESTED_CLASS_UNSUPPORTED, loc);
 
@@ -550,7 +550,7 @@ ErrorOr<bool> Compiler::compile_class_def(AST::ClassDef const* s)
     }
 
     auto compile_method_closure = [&](AST::FunctionDef* method) -> ErrorOr<std::tuple<reg_t, Chunk*>> {
-        SrcLoc method_loc = method->get_location();
+        SourceLocation method_loc = method->get_location();
 
         if (current_chunk()->functions.size() > MAX_CONSTANTS)
             return report_error(ErrorCode::TOO_MANY_FUNCTIONS, method_loc);
@@ -825,7 +825,7 @@ ErrorOr<ExprResult> Compiler::compile_nil_impl(AST::NilExpr const* e)
 
 ErrorOr<ExprResult> Compiler::compile_identifier_impl(AST::IdentifierExpr const* e)
 {
-    SrcLoc loc = e->get_location();
+    SourceLocation loc = e->get_location();
     VarInfo vi = resolve_name(e->spelling);
 
     if (vi.kind == VarInfo::Kind::LOCAL)
@@ -847,7 +847,7 @@ ErrorOr<ExprResult> Compiler::compile_identifier_impl(AST::IdentifierExpr const*
 
 ErrorOr<ExprResult> Compiler::compile_unary_impl(AST::UnaryExpr const* e)
 {
-    SrcLoc loc = e->get_location();
+    SourceLocation loc = e->get_location();
 
     if (auto folded = try_fold_unary(e)) {
         Value v = *folded;
@@ -884,7 +884,7 @@ ErrorOr<ExprResult> Compiler::compile_unary_impl(AST::UnaryExpr const* e)
 
 ErrorOr<ExprResult> Compiler::compile_binary_impl(AST::BinaryExpr const* e)
 {
-    SrcLoc loc = e->get_location();
+    SourceLocation loc = e->get_location();
 
     if (auto folded = try_fold_binary(e)) {
         Value v = *folded;
@@ -1028,9 +1028,9 @@ ErrorOr<ExprResult> Compiler::compile_assign_impl(AST::AssignExpr const* e)
 {
     if (e == nullptr || e->target == nullptr || e->value == nullptr)
         return report_error(ErrorCode::INVALID_EXPRESSION_NODE,
-            e ? e->get_location() : SrcLoc { });
+            e ? e->get_location() : SourceLocation { });
 
-    SrcLoc loc = e->get_location();
+    SourceLocation loc = e->get_location();
 
     // Indexed assignment: evaluate the object and index before the value,
     // then write the resulting value into the computed location.
@@ -1174,7 +1174,7 @@ ErrorOr<ExprResult> Compiler::compile_assign_impl(AST::AssignExpr const* e)
 
 ErrorOr<ExprResult> Compiler::compile_call_impl(AST::CallExpr const* e, reg_t* dst, bool tail)
 {
-    SrcLoc loc = e->get_location();
+    SourceLocation loc = e->get_location();
     auto fn_reg_ret = dst == nullptr ? alloc_register() : *dst;
     VERIFY_RESULT(fn_reg_ret);
     reg_t fn_reg = fn_reg_ret.value();
@@ -1318,7 +1318,7 @@ ErrorOr<ExprResult> Compiler::compile_call_impl(AST::CallExpr const* e, reg_t* d
 
 ErrorOr<ExprResult> Compiler::compile_list_impl(AST::ListExpr const* e)
 {
-    SrcLoc loc = e->get_location();
+    SourceLocation loc = e->get_location();
 
     if (e->size() > 0xFF)
         return report_error(ErrorCode::TOO_MANY_LIST_ELEMENTS, loc);
@@ -1350,7 +1350,7 @@ ErrorOr<ExprResult> Compiler::compile_list_impl(AST::ListExpr const* e)
 
 ErrorOr<ExprResult> Compiler::compile_index_impl(AST::IndexExpr const* e)
 {
-    SrcLoc loc = e->get_location();
+    SourceLocation loc = e->get_location();
     RegMark mark(m_current);
     ExprResult object_expr_result, index_expr_result;
     reg_t object_reg, index_reg;
@@ -1364,7 +1364,7 @@ ErrorOr<ExprResult> Compiler::compile_index_impl(AST::IndexExpr const* e)
 
 ErrorOr<ExprResult> Compiler::compile_dict_impl(AST::DictExpr const* e)
 {
-    SrcLoc loc = e->get_location();
+    SourceLocation loc = e->get_location();
 
     reg_t dst;
     ALLOC_REG(&dst); // reserve the expression's result register FIRST
@@ -1403,7 +1403,7 @@ ErrorOr<ExprResult> Compiler::compile_dict_impl(AST::DictExpr const* e)
 
 ErrorOr<ExprResult> Compiler::compile_get_impl_(AST::GetExpr const* e)
 {
-    SrcLoc loc = e->get_location();
+    SourceLocation loc = e->get_location();
     /// the parser should guarantee that this is an IdentifierExpr
     if (AST::is_identifier(e->object) && AST::as_identifier(e->object)->spelling == kClassInstanceName) {
         int idx = current_method_field_index(e->member->spelling);
@@ -1434,7 +1434,7 @@ ErrorOr<ExprResult> Compiler::compile_get_impl_(AST::GetExpr const* e)
 
 ErrorOr<ExprResult> Compiler::compile_get_impl(AST::GetExpr const* e)
 {
-    SrcLoc loc = e->get_location();
+    SourceLocation loc = e->get_location();
 
     if (ClassDesc const* desc = resolve_receiver_class(e->object)) {
         int idx = desc->field_index(e->member->spelling);
@@ -1487,7 +1487,7 @@ ErrorOr<ExprResult> Compiler::compile_get_impl(AST::GetExpr const* e)
     return ExprResult::reloc(pc);
 }
 
-void Compiler::discharge(ExprResult const& r, reg_t dst, SrcLoc loc)
+void Compiler::discharge(ExprResult const& r, reg_t dst, SourceLocation loc)
 {
     switch (r.kind) {
     case ExprResult::Kind::REG:
@@ -1502,7 +1502,7 @@ void Compiler::discharge(ExprResult const& r, reg_t dst, SrcLoc loc)
     }
 }
 
-ErrorOr<reg_t> Compiler::any_reg(ExprResult const& r, SrcLoc loc)
+ErrorOr<reg_t> Compiler::any_reg(ExprResult const& r, SourceLocation loc)
 {
     if (r.kind == ExprResult::Kind::REG)
         return r.reg_;
@@ -1522,7 +1522,7 @@ ErrorOr<reg_t> Compiler::compile_expr(AST::ConstExprPtr e, reg_t* dst)
     if (dst != nullptr)
         reserve_register(*dst);
 
-    SrcLoc loc = e->get_location();
+    SourceLocation loc = e->get_location();
     ExprResult r;
     COMPILE_EXPR_IMPL(e, &r);
     if (dst != nullptr) {
@@ -1579,7 +1579,7 @@ void Compiler::patch_jump_to(u32 instr_idx, u32 target)
     current_chunk()->code[instr_idx] = make_AsBx(instr_op(word), instr_A(word), offset);
 }
 
-void Compiler::emit_load_value(reg_t dst, Value v, SrcLoc loc)
+void Compiler::emit_load_value(reg_t dst, Value v, SourceLocation loc)
 {
     if (v.is_nil()) {
         emit(make_ABC(OpCode::LOAD_NIL, dst, dst, 1), loc);

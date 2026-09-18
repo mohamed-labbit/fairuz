@@ -224,7 +224,7 @@ Lexer::Lexer(Array<TokenPtr>& seq)
     m_alt_indent_stack.push(0);
 }
 
-void Lexer::fail(ErrorCode code, SrcLoc loc, std::string const& detail)
+void Lexer::fail(ErrorCode code, SourceLocation loc, std::string const& detail)
 {
     diagnostic::SourceScope source_scope(m_source);
     loc.length = std::max<u16>(loc.length, 1);
@@ -237,12 +237,12 @@ void Lexer::fail(ErrorCode code, SrcLoc loc, std::string const& detail)
 TokenPtr Lexer::lex_token()
 {
     diagnostic::SourceScope source_scope(m_source);
-    auto delimiter_error = [this](ErrorCode code, SrcLoc loc, std::string const& detail) {
+    auto delimiter_error = [this](ErrorCode code, SourceLocation loc, std::string const& detail) {
         loc.length = 1;
         auto id = diagnostic::report(diagnostic::Severity::ERROR, loc, code, detail);
         m_pending_error = std::make_pair(static_cast<u16>(code), id);
     };
-    auto finish = [this](tok::TokenType tt, StringRef str, SrcLoc src_loc) {
+    auto finish = [this](tok::TokenType tt, StringRef str, SourceLocation src_loc) {
         auto end = m_source_manager.get_source_location();
         if (src_loc.line == end.line && end.column >= src_loc.column)
             src_loc.length = end.column - src_loc.column;
@@ -254,7 +254,7 @@ TokenPtr Lexer::lex_token()
     if (m_tok_stream.empty())
         return finish(tok::TokenType::BEGINMARKER, "", { });
 
-    auto next_line = [this](SrcLoc src_loc) {
+    auto next_line = [this](SourceLocation src_loc) {
         if (!m_at_bol)
             return;
 
@@ -336,7 +336,7 @@ TokenPtr Lexer::lex_token()
     };
 
     for (;;) {
-        SrcLoc src_loc = m_source_manager.get_source_location();
+        SourceLocation src_loc = m_source_manager.get_source_location();
         u32 current = m_source_manager.current_char();
 
         if (current == 0) {
@@ -635,7 +635,7 @@ TokenPtr Lexer::lex_token()
     if (!m_tok_stream.empty() && m_tok_stream.back()->type() == tok::TokenType::ENDMARKER)
         return m_tok_stream.back();
 
-    SrcLoc last_loc = m_source_manager.get_source_location();
+    SourceLocation last_loc = m_source_manager.get_source_location();
     if (!m_brackets.empty()) {
         delimiter_error(ErrorCode::UNCLOSED_DELIMITER, m_brackets.back().second,
             std::string(1, static_cast<char>(m_brackets.back().first)));
