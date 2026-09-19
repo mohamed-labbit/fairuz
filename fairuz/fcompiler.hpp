@@ -177,7 +177,7 @@ public:
     Compiler() = default;
     ~Compiler() = default;
 
-    Chunk* compile(Array<AST::Stmt*> const& stmts);
+    Chunk* compile(Array<AST::StmtPtr> const& stmts);
 
 private:
     CompilerState* m_current { nullptr };
@@ -255,53 +255,53 @@ private:
 
     HashTable<StringRef, ClassDesc, StringRefHash, StringRefEqual> m_class_registry;
 
-    ErrorOr<bool> compile_stmt(AST::Stmt const* s);
-    ErrorOr<bool> compile_block(AST::BlockStmt const* s);
-    ErrorOr<bool> compile_expr_stmt(AST::ExprStmt const* s);
-    ErrorOr<bool> compile_assignment_stmt(AST::AssignStmt const* s);
-    ErrorOr<bool> compile_if(AST::IfElseStmt const* s);
-    ErrorOr<bool> compile_while(AST::WhileStmt const* s);
-    ErrorOr<bool> compile_function_def(AST::FunctionDef const* f);
-    ErrorOr<bool> compile_return(AST::ReturnStmt const* s);
-    ErrorOr<bool> compile_for(AST::ForStmt const* s);
-    ErrorOr<bool> compile_break(AST::BreakStmt const* s);
-    ErrorOr<bool> compile_continue(AST::ContinueStmt const* s);
-    ErrorOr<bool> compile_class_def(AST::ClassDef const* s);
+    ErrorOr<bool> compile_stmt(AST::Stmt* s);
+    ErrorOr<bool> compile_block(AST::BlockStmt* s);
+    ErrorOr<bool> compile_expr_stmt(AST::ExprStmt* s);
+    ErrorOr<bool> compile_assignment_stmt(AST::AssignStmt* s);
+    ErrorOr<bool> compile_if(AST::IfElseStmt* s);
+    ErrorOr<bool> compile_while(AST::WhileStmt* s);
+    ErrorOr<bool> compile_function_def(AST::FuncDefStmt* f);
+    ErrorOr<bool> compile_return(AST::ReturnStmt* s);
+    ErrorOr<bool> compile_for(AST::ForStmt* s);
+    ErrorOr<bool> compile_break(AST::BreakStmt* s);
+    ErrorOr<bool> compile_continue(AST::ContinueStmt* s);
+    ErrorOr<bool> compile_class_def(AST::ClassDefStmt* s);
     ErrorOr<bool> compile_import_single(
         StringRef const& module, StringRef const& name, StringRef const& alias, SourceLocation loc, bool imports_member);
-    ErrorOr<bool> compile_import(AST::ImportStmt const* s);
-    ErrorOr<bool> compile_class_method(AST::Stmt const* s);
-    ErrorOr<ExprResult> compile_expr_impl(AST::ConstExprPtr e);
-    ErrorOr<ExprResult> compile_literal_int_impl(AST::IntLiteralExpr const* e);
-    ErrorOr<ExprResult> compile_literal_float_impl(AST::FloatLiteralExpr const* e);
-    ErrorOr<ExprResult> compile_literal_bool_impl(AST::BoolLiteralExpr const* e);
-    ErrorOr<ExprResult> compile_literal_string_impl(AST::StringLiteralExpr const* e);
-    ErrorOr<ExprResult> compile_nil_impl(AST::NilExpr const* e);
-    ErrorOr<ExprResult> compile_identifier_impl(AST::IdentifierExpr const* e);
-    ErrorOr<ExprResult> compile_unary_impl(AST::UnaryExpr const* e);
-    ErrorOr<ExprResult> compile_binary_impl(AST::BinaryExpr const* e);
-    ErrorOr<ExprResult> compile_assign_impl(AST::AssignExpr const* e);
-    ErrorOr<ExprResult> compile_call_impl(AST::CallExpr const* e, u8* dst, bool tail = false);
-    ErrorOr<ExprResult> compile_list_impl(AST::ListExpr const* e);
-    ErrorOr<ExprResult> compile_index_impl(AST::IndexExpr const* e);
-    ErrorOr<ExprResult> compile_dict_impl(AST::DictExpr const* e);
-    ErrorOr<ExprResult> compile_get_impl(AST::GetExpr const* e);
-    ErrorOr<ExprResult> compile_get_impl_(AST::GetExpr const* e);
-    ErrorOr<u8> compile_expr(AST::ConstExprPtr e, u8* dst = nullptr);
-    ErrorOr<u8> compile_literal_int(AST::IntLiteralExpr const* e, u8* dst);
-    ErrorOr<u8> compile_literal_float(AST::FloatLiteralExpr const* e, u8* dst);
-    ErrorOr<u8> compile_literal_bool(AST::BoolLiteralExpr const* e, u8* dst);
-    ErrorOr<u8> compile_literal_string(AST::StringLiteralExpr const* e, u8* dst);
-    ErrorOr<u8> compile_nil(AST::NilExpr const* e, u8* dst);
-    ErrorOr<u8> compile_identifier(AST::IdentifierExpr const* e, u8* dst);
-    ErrorOr<u8> compile_unary(AST::UnaryExpr const* e, u8* dst);
-    ErrorOr<u8> compile_binary(AST::BinaryExpr const* e, u8* dst);
-    ErrorOr<u8> compile_assignment_expr(AST::AssignExpr const* e, u8* dst);
-    ErrorOr<u8> compile_call(AST::CallExpr const* e, u8* dst, bool tail = false);
-    ErrorOr<u8> compile_list(AST::ListExpr const* e, u8* dst);
-    ErrorOr<u8> compile_index(AST::IndexExpr const* e, u8* dst);
-    ErrorOr<u8> compile_dict(AST::DictExpr const* e, u8* dst);
-    ErrorOr<u8> compile_get(AST::GetExpr const* e, u8* dst);
+    ErrorOr<bool> compile_import(AST::ImportStmt* s);
+    ErrorOr<bool> compile_class_method(AST::Stmt* s);
+    ErrorOr<ExprResult> compile_expr_impl(AST::ExprPtr);
+    ErrorOr<ExprResult> compile_literal_int_impl(AST::IntLiteralExpr* e);
+    ErrorOr<ExprResult> compile_literal_float_impl(AST::FloatLiteralExpr* e);
+    ErrorOr<ExprResult> compile_literal_bool_impl(AST::BoolLiteralExpr* e);
+    ErrorOr<ExprResult> compile_literal_string_impl(AST::StringLiteralExpr* e);
+    ErrorOr<ExprResult> compile_nil_impl(AST::NilExpr* e);
+    ErrorOr<ExprResult> compile_identifier_impl(AST::IdentifierExpr* e);
+    ErrorOr<ExprResult> compile_unary_impl(AST::UnaryExpr* e);
+    ErrorOr<ExprResult> compile_binary_impl(AST::BinaryExpr* e);
+    ErrorOr<ExprResult> compile_assign_impl(AST::AssignExpr* e);
+    ErrorOr<ExprResult> compile_call_impl(AST::CallExpr* e, u8* dst, bool tail = false);
+    ErrorOr<ExprResult> compile_list_impl(AST::ListExpr* e);
+    ErrorOr<ExprResult> compile_index_impl(AST::IndexExpr* e);
+    ErrorOr<ExprResult> compile_dict_impl(AST::DictExpr* e);
+    ErrorOr<ExprResult> compile_get_impl(AST::GetExpr* e);
+    ErrorOr<ExprResult> compile_get_impl_(AST::GetExpr* e);
+    ErrorOr<u8> compile_expr(AST::ExprPtr e, u8* dst = nullptr);
+    ErrorOr<u8> compile_literal_int(AST::IntLiteralExpr* e, u8* dst);
+    ErrorOr<u8> compile_literal_float(AST::FloatLiteralExpr* e, u8* dst);
+    ErrorOr<u8> compile_literal_bool(AST::BoolLiteralExpr* e, u8* dst);
+    ErrorOr<u8> compile_literal_string(AST::StringLiteralExpr* e, u8* dst);
+    ErrorOr<u8> compile_nil(AST::NilExpr* e, u8* dst);
+    ErrorOr<u8> compile_identifier(AST::IdentifierExpr* e, u8* dst);
+    ErrorOr<u8> compile_unary(AST::UnaryExpr* e, u8* dst);
+    ErrorOr<u8> compile_binary(AST::BinaryExpr* e, u8* dst);
+    ErrorOr<u8> compile_assignment_expr(AST::AssignExpr* e, u8* dst);
+    ErrorOr<u8> compile_call(AST::CallExpr* e, u8* dst, bool tail = false);
+    ErrorOr<u8> compile_list(AST::ListExpr* e, u8* dst);
+    ErrorOr<u8> compile_index(AST::IndexExpr* e, u8* dst);
+    ErrorOr<u8> compile_dict(AST::DictExpr* e, u8* dst);
+    ErrorOr<u8> compile_get(AST::GetExpr* e, u8* dst);
 
     void discharge(ExprResult const& r, u8 dst, SourceLocation loc);
     ErrorOr<u8> any_reg(ExprResult const& r, SourceLocation loc);
@@ -325,7 +325,7 @@ private:
 
     LocalVar const* lookup_local(StringRef const& name) const;
     VarInfo resolve_name(StringRef const& name);
-    StringRef infer_constructed_class(AST::ConstExprPtr e) const;
+    StringRef infer_constructed_class(AST::ExprPtr e) const;
     int current_method_field_index(StringRef const& name) const;
     int current_method_slot(StringRef const& name) const;
 
@@ -359,7 +359,7 @@ private:
 
     u32 intern_string(StringRef const& str);
 
-    ClassDesc const* resolve_receiver_class(AST::ConstExprPtr e) const;
+    ClassDesc const* resolve_receiver_class(AST::ExprPtr e) const;
     bool is_declaration(AST::AssignExpr const* e) const;
 
     // fcompiler.cc

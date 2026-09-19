@@ -7,14 +7,14 @@
 
 namespace fairuz::runtime {
 
-std::optional<Value> const_value(AST::ConstExprPtr e);
+std::optional<Value> const_value(AST::ExprPtr e);
 std::optional<Value> try_fold_unary(AST::UnaryExpr const* e);
 std::optional<Value> _try_fold_binary(AST::BinaryExpr const* e);
 std::optional<Value> try_fold_binary(AST::BinaryExpr const* e);
-std::optional<Value> try_fold_expr(AST::ConstExprPtr e);
-std::optional<AST::ExprPtr> try_strength_reduce_binary(AST::ConstExprPtr e);
-std::optional<AST::ExprPtr> try_strength_reduce_unary(AST::ConstExprPtr e);
-bool is_pure(AST::ConstExprPtr e);
+std::optional<Value> try_fold_expr(AST::ExprPtr e);
+std::optional<AST::ExprPtr> try_strength_reduce_binary(AST::ExprPtr e);
+std::optional<AST::ExprPtr> try_strength_reduce_unary(AST::ExprPtr e);
+bool is_pure(AST::ExprPtr e);
 
 } // namespace fairuz::runtime
 

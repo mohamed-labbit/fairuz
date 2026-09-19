@@ -63,17 +63,17 @@ public:
 
     explicit Parser(Array<tok::Token> seq, std::optional<size_t> s = std::nullopt);
 
-    Array<AST::Stmt*> parse_program();
+    Array<AST::StmtPtr> parse_program();
 
-    ErrorOr<AST::Stmt*> parse_statement();
-    ErrorOr<AST::Stmt*> parse_expression_stmt();
-    ErrorOr<AST::Stmt*> parse_if_stmt();
-    ErrorOr<AST::Stmt*> parse_while_stmt();
-    ErrorOr<AST::Stmt*> parse_for_stmt();
-    ErrorOr<AST::Stmt*> parse_return_stmt();
-    ErrorOr<AST::Stmt*> parse_break_stmt();
-    ErrorOr<AST::Stmt*> parse_continue_stmt();
-    ErrorOr<AST::Stmt*> parse_function_def();
+    ErrorOr<AST::StmtPtr> parse_statement();
+    ErrorOr<AST::StmtPtr> parse_expression_stmt();
+    ErrorOr<AST::StmtPtr> parse_if_stmt();
+    ErrorOr<AST::StmtPtr> parse_while_stmt();
+    ErrorOr<AST::StmtPtr> parse_for_stmt();
+    ErrorOr<AST::StmtPtr> parse_return_stmt();
+    ErrorOr<AST::StmtPtr> parse_break_stmt();
+    ErrorOr<AST::StmtPtr> parse_continue_stmt();
+    ErrorOr<AST::StmtPtr> parse_function_def();
     ErrorOr<AST::ExprPtr> parse_expression();
     ErrorOr<AST::ExprPtr> parse_assignment_expr();
     ErrorOr<AST::ExprPtr> parse_list_literal();
@@ -89,11 +89,11 @@ public:
     ErrorOr<AST::ExprPtr> parse_postfix_expr();
     ErrorOr<AST::ExprPtr> parse();
     ErrorOr<Array<AST::ExprPtr>> parse_parameters_list();
-    ErrorOr<AST::Stmt*> parse_indented_block();
-    ErrorOr<AST::Stmt*> parse_class_def();
-    ErrorOr<AST::Stmt*> parse_import_stmt();
-    ErrorOr<AST::Stmt*> parse_assert_stmt();
-    ErrorOr<AST::Stmt*> parse_class_method(Array<AST::ExprPtr>& members);
+    ErrorOr<AST::StmtPtr> parse_indented_block();
+    ErrorOr<AST::StmtPtr> parse_class_def();
+    ErrorOr<AST::StmtPtr> parse_import_stmt();
+    ErrorOr<AST::StmtPtr> parse_assert_stmt();
+    ErrorOr<AST::StmtPtr> parse_class_method(Array<AST::ExprPtr>& members);
     ErrorOr<AST::ExprPtr> parse_member_access();
 
     bool we_done() const;

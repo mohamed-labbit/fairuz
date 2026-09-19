@@ -59,7 +59,7 @@ private:
         return c + s + Color::RESET;
     }
 
-    void print_expr(Expr const* e, Prefix p)
+    void print_expr(ExprPtr e, Prefix p)
     {
         if (e == nullptr)
             return;
@@ -134,12 +134,12 @@ private:
 
         case Expr::Kind::CALL: {
             auto c = static_cast<CallExpr const*>(e);
-            std::cout << color("Call", Color::MAGENTA) << " (" << c->args->size() << " args)\n";
+            std::cout << color("Call", Color::MAGENTA) << " (" << c->args.size() << " args)\n";
             std::cout << p.indent + pipe(p.last) << "├─ callee:\n";
             print_expr(c->callee, { p.indent + pipe(p.last) + "│  ", true });
             std::cout << p.indent + pipe(p.last) << "└─ args:\n";
-            for (size_t i = 0; i < c->args->size(); i++)
-                print_expr(c->args->elements[i], { p.indent + pipe(p.last) + "   ", i + 1 == c->args->size() });
+            for (size_t i = 0; i < c->args.size(); i++)
+                print_expr(c->args[i], { p.indent + pipe(p.last) + "   ", i + 1 == c->args.size() });
             break;
         }
 
@@ -173,7 +173,7 @@ private:
 
         case Expr::Kind::DICT: {
             auto d = as_dict(e);
-            auto content = d->get_content();
+            auto content = d->content;
             std::cout << color("Dict", Color::BLUE) << " {" << content.size() << "}\n";
             for (size_t i = 0; i < content.size(); i++) {
                 bool const last_pair = i + 1 == content.size();
@@ -200,7 +200,7 @@ private:
         }
     }
 
-    void print_stmt(Stmt const* s, Prefix p)
+    void print_stmt(StmtPtr s, Prefix p)
     {
         if (s == nullptr)
             return;
@@ -211,8 +211,8 @@ private:
 
         switch (s->get_kind()) {
         case Stmt::Kind::FUNC: {
-            auto f = static_cast<FunctionDef const*>(s);
-            std::cout << color("FunctionDef", Color::BOLD) << " " << f->name->spelling << "\n";
+            auto f = static_cast<FuncDefStmt const*>(s);
+            std::cout << color("FuncDefStmt", Color::BOLD) << " " << f->name->spelling << "\n";
             std::cout << p.indent + pipe(p.last) << "├─ params:\n";
             for (size_t i = 0; i < f->params.size(); i++)
                 print_expr(f->params[i], { p.indent + pipe(p.last) + "│  ", i + 1 == f->params.size() });
@@ -279,7 +279,7 @@ private:
             auto c = as_class_def(s);
             auto members = c->members;
             auto methods = c->methods;
-            std::cout << color("ClassDef", Color::BOLD) << "\n";
+            std::cout << color("ClassDefStmt", Color::BOLD) << "\n";
             std::cout << p.indent + pipe(p.last) << "├─ name:\n";
             print_expr(c->name, { p.indent + pipe(p.last) + "│  ", true });
 
@@ -314,8 +314,8 @@ public:
     {
     }
 
-    void print(Expr const* e) { print_expr(e, { "", true }); }
-    void print(Stmt const* s) { print_stmt(s, { "", true }); }
+    void print(ExprPtr e) { print_expr(e, { "", true }); }
+    void print(StmtPtr s) { print_stmt(s, { "", true }); }
 
     u32 get_node_count() const { return m_node_count; }
 }; // class ASTPrinter

@@ -16,63 +16,63 @@ private:
 public:
     bool is_pure() const { return m_is_pure; }
 
-    void visit(AST::BinaryExpr const& v) const override
+    void visit(AST::BinaryExpr& v) override
     {
-        v.lhs->accept(*const_cast<PurityVisitor*>(this));
+        v.lhs->accept(*this);
         if (!m_is_pure)
             return;
-        v.rhs->accept(*const_cast<PurityVisitor*>(this));
+        v.rhs->accept(*this);
     }
-    void visit(AST::UnaryExpr const& e) const override { e.operand->accept(*const_cast<PurityVisitor*>(this)); }
-    void visit(AST::IntLiteralExpr const&) const override { /* pure - no op */ }
-    void visit(AST::FloatLiteralExpr const&) const override { /* pure - no op */ }
-    void visit(AST::BoolLiteralExpr const&) const override { /* pure - no op */ }
-    void visit(AST::StringLiteralExpr const&) const override { /* pure - no op */ }
-    void visit(AST::NilExpr const&) const override { /* pure - no op */ }
-    void visit(AST::IdentifierExpr const&) const override { /* pure - no op */ }
-    void visit(AST::CallExpr const&) const override { m_is_pure = false; }
-    void visit(AST::AssignExpr const&) const override { m_is_pure = false; }
-    void visit(AST::ListExpr const& e) const override
+    void visit(AST::UnaryExpr& e) override { e.operand->accept(*this); }
+    void visit(AST::IntLiteralExpr&) override { /* pure - no op */ }
+    void visit(AST::FloatLiteralExpr&) override { /* pure - no op */ }
+    void visit(AST::BoolLiteralExpr&) override { /* pure - no op */ }
+    void visit(AST::StringLiteralExpr&) override { /* pure - no op */ }
+    void visit(AST::NilExpr&) override { /* pure - no op */ }
+    void visit(AST::IdentifierExpr&) override { /* pure - no op */ }
+    void visit(AST::CallExpr&) override { m_is_pure = false; }
+    void visit(AST::AssignExpr&) override { m_is_pure = false; }
+    void visit(AST::ListExpr& e) override
     {
         for (auto expr : e.elements) {
-            expr->accept(*const_cast<PurityVisitor*>(this));
+            expr->accept(*this);
             if (!m_is_pure)
                 return;
         }
     }
-    void visit(AST::IndexExpr const& e) const override
+    void visit(AST::IndexExpr& e) override
     {
-        e.index->accept(*const_cast<PurityVisitor*>(this));
+        e.index->accept(*this);
         if (!m_is_pure)
             return;
-        e.object->accept(*const_cast<PurityVisitor*>(this));
+        e.object->accept(*this);
     }
-    void visit(AST::DictExpr const& e) const override
+    void visit(AST::DictExpr& e) override
     {
-        for (auto [k, v] : e.get_content()) {
-            k->accept(*const_cast<PurityVisitor*>(this));
+        for (auto [k, v] : e.content) {
+            k->accept(*this);
             if (!m_is_pure)
                 return;
-            v->accept(*const_cast<PurityVisitor*>(this));
+            v->accept(*this);
         }
     }
-    void visit(AST::GetExpr const& e) const override
+    void visit(AST::GetExpr& e) override
     {
-        e.member->accept(*const_cast<PurityVisitor*>(this)); // for methods are in members here
+        e.member->accept(*this); // for methods are in members here
         if (!m_is_pure)
             return;
-        e.object->accept(*const_cast<PurityVisitor*>(this));
+        e.object->accept(*this);
     }
 };
 
-bool is_pure(AST::ConstExprPtr e)
+bool is_pure(AST::ExprPtr e)
 {
     PurityVisitor visitor;
     e->accept(visitor);
     return visitor.is_pure();
 }
 
-std::optional<Value> const_value(AST::ConstExprPtr e)
+std::optional<Value> const_value(AST::ExprPtr e)
 {
     if (AST::is_nil(e))
         return Value::nil();
@@ -227,7 +227,7 @@ std::optional<Value> try_fold_binary(AST::BinaryExpr const* e)
         return AST::make_nil(loc);
     };
 
-    AST::BinaryExpr* ce = AST::make_binary(e->get_kind(), make_literal_from_val(*L, e->get_location()),
+    AST::BinaryExpr const* ce = AST::make_binary(e->get_kind(), make_literal_from_val(*L, e->get_location()),
         make_literal_from_val(*R, e->get_location()), e->get_location());
 
     return _try_fold_binary(ce);
@@ -240,23 +240,23 @@ private:
 public:
     std::optional<Value> result() const { return m_result; }
 
-    void visit(AST::BinaryExpr const& e) const override { m_result = try_fold_binary(&e); }
-    void visit(AST::UnaryExpr const& e) const override { m_result = try_fold_unary(&e); }
-    void visit(AST::IntLiteralExpr const& e) const override { m_result = const_value(&e); }
-    void visit(AST::FloatLiteralExpr const& e) const override { m_result = const_value(&e); }
-    void visit(AST::BoolLiteralExpr const& e) const override { m_result = const_value(&e); }
-    void visit(AST::StringLiteralExpr const& e) const override { m_result = const_value(&e); }
-    void visit(AST::NilExpr const& e) const override { m_result = const_value(&e); }
-    void visit(AST::IdentifierExpr const&) const override { /* no op */ }
-    void visit(AST::CallExpr const&) const override { /* no op */ }
-    void visit(AST::AssignExpr const&) const override { /* no op */ }
-    void visit(AST::ListExpr const&) const override { /* no op */ }
-    void visit(AST::IndexExpr const& e) const override { e.index->accept(*const_cast<ConstFoldVisitor*>(this)); }
-    void visit(AST::DictExpr const&) const override { /* no op */ }
-    void visit(AST::GetExpr const&) const override { /* no op */ }
+    void visit(AST::BinaryExpr& e) override { m_result = try_fold_binary(&e); }
+    void visit(AST::UnaryExpr& e) override { m_result = try_fold_unary(&e); }
+    void visit(AST::IntLiteralExpr& e) override { m_result = const_value(&e); }
+    void visit(AST::FloatLiteralExpr& e) override { m_result = const_value(&e); }
+    void visit(AST::BoolLiteralExpr& e) override { m_result = const_value(&e); }
+    void visit(AST::StringLiteralExpr& e) override { m_result = const_value(&e); }
+    void visit(AST::NilExpr& e) override { m_result = const_value(&e); }
+    void visit(AST::IdentifierExpr&) override { /* no op */ }
+    void visit(AST::CallExpr&) override { /* no op */ }
+    void visit(AST::AssignExpr&) override { /* no op */ }
+    void visit(AST::ListExpr&) override { /* no op */ }
+    void visit(AST::IndexExpr& e) override { e.index->accept(*this); }
+    void visit(AST::DictExpr&) override { /* no op */ }
+    void visit(AST::GetExpr&) override { /* no op */ }
 };
 
-std::optional<Value> try_fold_expr(AST::ConstExprPtr e)
+std::optional<Value> try_fold_expr(AST::ExprPtr e)
 {
     if (e == nullptr)
         return std::nullopt;
@@ -266,7 +266,7 @@ std::optional<Value> try_fold_expr(AST::ConstExprPtr e)
     return visitor.result();
 }
 
-std::optional<AST::ExprPtr> try_strength_reduce_binary(AST::ConstExprPtr)
+std::optional<AST::ExprPtr> try_strength_reduce_binary(AST::ExprPtr)
 {
     // Algebraic identities are not generally semantics-preserving in a
     // dynamic language: evaluating a discarded operand may throw, and an
@@ -275,7 +275,7 @@ std::optional<AST::ExprPtr> try_strength_reduce_binary(AST::ConstExprPtr)
     return std::nullopt;
 }
 
-std::optional<AST::ExprPtr> try_strength_reduce_unary(AST::ConstExprPtr)
+std::optional<AST::ExprPtr> try_strength_reduce_unary(AST::ExprPtr)
 {
     // Bitwise complement is not logical negation, and dynamic operands may
     // dispatch user code. No untyped unary rewrite is safe here.

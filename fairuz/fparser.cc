@@ -454,6 +454,11 @@ ErrorOr<AST::StmtPtr> Parser::parse_class_def()
     return AST::make_class_def(class_name, parent, members, methods, start->location());
 }
 
+/// TODO: Make it parse multiple imported names inside parentheses
+/// if we have a lot of imported names from one module, then we either
+/// repeat the import stmt or write one very long line we have to scroll
+/// horizontally through, some standard library modules do that now, especially
+/// in test files, fix it as well once this is implemented.
 ErrorOr<AST::StmtPtr> Parser::parse_import_stmt()
 {
     TokenPtr start = current_token();
@@ -531,11 +536,11 @@ ErrorOr<AST::StmtPtr> Parser::parse_assert_stmt()
         args.push(message);
     }
     auto* callee = AST::make_identifier("تاكد", start->location());
-    auto* call = AST::make_call(callee, AST::make_list(args, start->location()), start->location());
+    auto* call = AST::make_call(callee, args, start->location());
     return AST::make_expr_stmt(call, start->location());
 }
 
-bool same_name(AST::ConstExprPtr e, StringRef const& n)
+bool same_name(AST::ExprPtr e, StringRef const& n)
 {
     return e != nullptr
         && AST::is_identifier(e)
@@ -551,7 +556,7 @@ void push_member_once(Array<AST::ExprPtr>& members, AST::IdentifierExpr const* n
     members.push(AST::make_identifier(name->spelling, name->get_location()));
 }
 
-void collect_this_field_assignment(Array<AST::ExprPtr>& members, AST::ConstStmtPtr stmt)
+void collect_this_field_assignment(Array<AST::ExprPtr>& members, AST::StmtPtr stmt)
 {
     if (stmt == nullptr)
         return;
@@ -830,11 +835,8 @@ ErrorOr<AST::ExprPtr> Parser::parse_postfix_expr()
             }
 
             VERIFY_TOKEN(TokType::RPAREN, ErrorCode::EXPECTED_RPAREN_EXPR);
-            SourceLocation loc = (!args.empty() && args[0])
-                ? args[0]->get_location()
-                : SourceLocation { };
             expr = make_call(
-                expr, make_list(std::move(args), loc),
+                expr, args,
                 expr ? expr->get_location() : SourceLocation { });
             continue;
         }

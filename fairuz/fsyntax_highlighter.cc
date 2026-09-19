@@ -223,9 +223,9 @@ public:
     {
     }
 
-    void program(Array<AST::Stmt*> const& statements)
+    void program(Array<AST::StmtPtr> const& statements)
     {
-        for (AST::Stmt* statement : statements)
+        for (AST::StmtPtr statement : statements)
             stmt(statement, false);
     }
 
@@ -243,7 +243,7 @@ private:
         found->second->declaration = declaration;
     }
 
-    void target(AST::ConstExprPtr expression)
+    void target(AST::ExprPtr expression)
     {
         if (!expression)
             return;
@@ -258,7 +258,7 @@ private:
         }
     }
 
-    void expr(AST::ConstExprPtr expression)
+    void expr(AST::ExprPtr expression)
     {
         if (!expression)
             return;
@@ -303,7 +303,7 @@ private:
                 mark(get->member, "method");
             } else
                 expr(call->callee);
-            for (AST::ExprPtr argument : call->args->elements)
+            for (AST::ExprPtr argument : call->args)
                 expr(argument);
             break;
         }
@@ -318,7 +318,7 @@ private:
                 expr(item);
             break;
         case AST::ExprKind::DICT:
-            for (auto const& item : AST::as_dict(expression)->get_content()) {
+            for (auto const& item : AST::as_dict(expression)->content) {
                 expr(item.first);
                 expr(item.second);
             }
@@ -339,7 +339,7 @@ private:
         }
     }
 
-    void function(AST::FunctionDef const* value, bool method)
+    void function(AST::FuncDefStmt const* value, bool method)
     {
         mark(value->name, method ? "method" : "function", true);
         for (AST::ExprPtr parameter : value->params)
@@ -347,13 +347,13 @@ private:
         stmt(value->body, false);
     }
 
-    void stmt(AST::Stmt const* statement, bool class_member)
+    void stmt(AST::StmtPtr statement, bool class_member)
     {
         if (!statement)
             return;
         switch (statement->get_kind()) {
         case AST::Stmt::Kind::BLOCK:
-            for (AST::Stmt* child : AST::as_block(statement)->stmts)
+            for (AST::StmtPtr child : AST::as_block(statement)->stmts)
                 stmt(child, class_member);
             break;
         case AST::Stmt::Kind::EXPR: expr(AST::as_expr_stmt(statement)->expr); break;
@@ -385,7 +385,7 @@ private:
             mark(value->parent, "class");
             for (AST::ExprPtr member : value->members)
                 target(member);
-            for (AST::Stmt* method : value->methods)
+            for (AST::StmtPtr method : value->methods)
                 stmt(method, true);
             break;
         }
@@ -411,7 +411,7 @@ Result Highlighter::highlight(StringRef const& source)
     diagnostic::set_source(&file);
     try {
         parser::Parser parser(&file);
-        Array<AST::Stmt*> statements = parser.parse_program();
+        Array<AST::StmtPtr> statements = parser.parse_program();
         result.ast_valid = !diagnostic::has_errors();
         AstClassifier(by_offset).program(statements);
     } catch (diagnostic::DiagnosticAbort const&) {

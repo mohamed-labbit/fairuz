@@ -3,6 +3,7 @@
 //
 
 #include "fvm.hpp"
+#include "fAST.hpp"
 #include "fcompiler.hpp"
 #include "fdiagnostic.hpp"
 #include "flexer.hpp"
@@ -422,7 +423,7 @@ ObjModule* VM::load_module(std::string const& name)
     auto source = std::make_unique<lex::FileManager>(key);
     diagnostic::SourceScope source_scope(source.get());
     parser::Parser parser(source.get());
-    Array<AST::Stmt*> statements = parser.parse_program();
+    Array<AST::StmtPtr> statements = parser.parse_program();
     if (diagnostic::has_errors())
         halt();
 
