@@ -27,6 +27,10 @@ static inline IntLiteralExpr* lit_int(int v)
 {
     return make_literal_int(v, { });
 }
+static inline IntLiteralExpr* lit_int(i64 v)
+{
+    return make_literal_int(v, {});
+}
 static inline FloatLiteralExpr* lit_flt(double v)
 {
     return make_literal_float(v, { });

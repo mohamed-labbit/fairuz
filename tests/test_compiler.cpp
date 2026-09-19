@@ -3,10 +3,12 @@
 #include "../fairuz/fcompiler.hpp"
 #include "../fairuz/fdiagnostic.hpp"
 #include "../fairuz/fstring.hpp"
+#include "fopcode.hpp"
 #include "test_common.h"
 #include "test_config.h"
 
 #include <algorithm>
+#include <cstddef>
 #include <gtest/gtest.h>
 
 using namespace fairuz::runtime;
@@ -202,6 +204,38 @@ TEST(CompilerLiteral, SmallIntegerUsesLoadInt)
     bc.done();
     EXPECT_TRUE(chunk->constants.empty());
 }
+
+#if FA_USE_NANBOX
+
+TEST(CompilerLiteral, VeryBigPositiveIntegerUsesLoadBigInt)
+{
+    i64 big_int = static_cast<i64>(Value::int_max() + 2);
+    Chunk* chunk = compile_ok(expr_stmt(lit_int(big_int)));
+    ASSERT_NE(chunk, nullptr);
+    if (test_config::dump_bytecode)
+        dump(chunk);
+    BytecodeChecker bc(*chunk);
+    bc.next("LOAD_BIG_INT").op(OpCode::LOAD_BIG_INT).A(0);
+    bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
+    bc.done();
+    EXPECT_FALSE(chunk->big_ints.empty());
+}
+
+TEST(CompilerLiteral, VeryBigNegativeIntegerUsesLoadBigInt)
+{
+    i64 big_int = static_cast<i64>(Value::int_min() - 2);
+    Chunk* chunk = compile_ok(expr_stmt(lit_int(big_int)));
+    ASSERT_NE(chunk, nullptr);
+    if (test_config::dump_bytecode)
+        dump(chunk);
+    BytecodeChecker bc(*chunk);
+    bc.next("LOAD_BIG_INT").op(OpCode::LOAD_BIG_INT).A(0);
+    bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
+    bc.done();
+    EXPECT_FALSE(chunk->big_ints.empty());
+}
+
+#endif
 
 TEST(CompilerLiteral, NegativeSmallIntegerUsesLoadInt)
 {
