@@ -3,17 +3,19 @@
 
 #include "../fairuz/fAST.hpp"
 #include "../fairuz/fobject.hpp"
+#include "farray.hpp"
+#include <initializer_list>
 
 using namespace fairuz;
 using namespace fairuz::AST;
 using namespace fairuz::runtime;
 
 /// helpers that discard the location parameter for testing
-static inline BinaryExpr* binary(Expr* lhs, Expr* rhs, Expr::Kind op)
+static inline BinaryExpr* binary(ExprPtr lhs, ExprPtr rhs, Expr::Kind op)
 {
     return make_binary(op, lhs, rhs, { });
 }
-static inline UnaryExpr* unary(Expr* operand, Expr::Kind op)
+static inline UnaryExpr * unary(ExprPtr operand, Expr::Kind op)
 {
     return make_unary(op, operand, { });
 }
@@ -29,7 +31,7 @@ static inline FloatLiteralExpr* lit_flt(double v)
 {
     return make_literal_float(v, { });
 }
-static inline StringLiteralExpr* lit_str(StringRef s)
+static inline StringLiteralExpr* lit_str(StringRef const s)
 {
     return make_literal_string(s, { });
 }
@@ -37,69 +39,73 @@ static inline BoolLiteralExpr* lit_bool(bool v)
 {
     return make_literal_bool(v, { });
 }
-static inline IdentifierExpr* ident(StringRef s)
+static inline IdentifierExpr* ident(StringRef const s)
 {
     return make_identifier(s, { });
 }
-static inline ListExpr* list_expr(Array<Expr*> l = { })
+static inline ListExpr* list_expr(Array<ExprPtr> l = { })
 {
     return make_list(l, { });
 }
-static inline DictExpr* dict_expr(Array<std::pair<Expr*, Expr*>> c)
+static inline DictExpr* dict_expr(Array<std::pair<ExprPtr, ExprPtr>> c)
 {
     return make_dict(c, { });
 }
-static inline CallExpr* call_expr(Expr* c, ListExpr* a = nullptr)
+static inline CallExpr* call_expr(ExprPtr c, Array<ExprPtr> a = {})
 {
     return make_call(c, a, { });
 }
-static inline AssignExpr* assign_expr(Expr* t, Expr* v)
+static inline AssignExpr* assign_expr(ExprPtr t, ExprPtr v)
 {
     return make_assignment_expr(t, v, { });
 }
-static inline IndexExpr* index_expr(Expr* obj, Expr* idx)
+static inline IndexExpr* index_expr(ExprPtr obj, ExprPtr idx)
 {
     return make_index(obj, idx, { });
 }
-static inline GetExpr* get_expr(Expr* obj, IdentifierExpr* member)
+static inline GetExpr* get_expr(ExprPtr obj, IdentifierExpr* member)
 {
     return make_get_expr(obj, member, { });
 }
-static inline BlockStmt* blk(Array<Stmt*> stmts)
+static inline BlockStmt* blk(std::initializer_list<StmtPtr> stmts)
+{
+    return make_block(Array<StmtPtr>(stmts), { });
+}
+static inline BlockStmt* blk(Array<StmtPtr> stmts)
 {
     return make_block(stmts, { });
 }
-static inline ExprStmt* expr_stmt(Expr* e)
+static inline ExprStmt* expr_stmt(ExprPtr e)
 {
     return make_expr_stmt(e, { });
 }
-static inline ExprStmt* decl_stmt(StringRef nm, AST::ExprPtr val)
+static inline ExprStmt* decl_stmt(StringRef const nm, AST::ExprPtr val)
 {
     return make_expr_stmt(make_assignment_expr(ident(nm), val, { }), { });
 }
-static inline IfElseStmt* if_stmt(Expr* c, Stmt* t, Stmt* e = nullptr)
+static inline IfElseStmt* if_stmt(ExprPtr c, StmtPtr t, StmtPtr e = nullptr)
 {
     return make_if(c, t, { }, e);
 }
-static inline WhileStmt* while_stmt(Expr* c, Stmt* b)
+static inline WhileStmt* while_stmt(ExprPtr c, StmtPtr b)
 {
     return make_while(c, b, { });
 }
-static inline ForStmt* for_stmt(IdentifierExpr* t, Expr* i, Stmt* b)
+static inline ForStmt* for_stmt(IdentifierExpr * t, ExprPtr i, StmtPtr b)
 {
     return make_for(t, i, b, { });
 }
-static inline FunctionDef* func_def(IdentifierExpr* n, Array<Expr*> p, Stmt* b)
+static inline FuncDefStmt* func_def(IdentifierExpr * n, Array<ExprPtr> p, StmtPtr b)
 {
     return make_function(n, p, b, { });
 }
-static inline ReturnStmt* return_stmt(Expr* v = nullptr)
+static inline ReturnStmt* return_stmt(ExprPtr v = nullptr)
 {
     return make_return({ }, v);
 }
-static inline ClassDef* class_def(Expr* n, Array<Expr*> mm, Array<Stmt*> me)
+static inline ClassDefStmt* class_def(ExprPtr n, std::initializer_list<ExprPtr> mm, std::initializer_list<StmtPtr> me)
 {
-    return make_class_def(n, mm, me, { });
+    return make_class_def(n, Array<ExprPtr>(mm), Array<StmtPtr>(me), { });
 }
 static inline BreakStmt* break_stmt()
 {

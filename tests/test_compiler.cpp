@@ -86,7 +86,7 @@ private:
     StringRef label_;
 };
 
-static Chunk* compile_ok(Array<AST::Stmt*> stmts, Compiler& c)
+static Chunk* compile_ok(Array<AST::StmtPtr> stmts, Compiler& c)
 {
     diagnostic::reset();
     Chunk* chunk = c.compile(stmts);
@@ -103,9 +103,9 @@ static void dump(Chunk const* c)
     std::cout << '\n';
 }
 
-static Chunk* compile_ok_local(Array<AST::Stmt*> stmts)
+static Chunk* compile_ok_local(Array<AST::StmtPtr> stmts)
 {
-    AST::Stmt* f = func_def(ident("test_function"), { }, blk(stmts));
+    AST::StmtPtr f = func_def(ident("test_function"), { }, blk(stmts));
     Compiler c;
     Chunk* ch = compile_ok({ f }, c);
     EXPECT_NE(ch, nullptr);
@@ -123,20 +123,20 @@ static Chunk* compile_ok_local(Array<AST::Stmt*> stmts)
     return def_chunk;
 }
 
-static Chunk* compile_ok(Array<AST::Stmt*> stmts)
+static Chunk* compile_ok(Array<AST::StmtPtr> stmts)
 {
     Compiler c;
     return compile_ok(stmts, c);
 }
 
-static Chunk* compile_ok(AST::Stmt* root)
+static Chunk* compile_ok(AST::StmtPtr root)
 {
-    Array<AST::Stmt*> stmts;
+    Array<AST::StmtPtr> stmts;
     stmts.push(root);
     return compile_ok(stmts);
 }
 
-static Chunk* compile_fail(Array<AST::Stmt*> stmts)
+static Chunk* compile_fail(Array<AST::StmtPtr> stmts)
 {
     diagnostic::reset();
     Chunk* chunk = Compiler().compile(stmts);
@@ -145,9 +145,9 @@ static Chunk* compile_fail(Array<AST::Stmt*> stmts)
     return chunk;
 }
 
-static Chunk* compile_fail(AST::Stmt* root)
+static Chunk* compile_fail(AST::StmtPtr root)
 {
-    Array<AST::Stmt*> stmts;
+    Array<AST::StmtPtr> stmts;
     stmts.push(root);
     return compile_fail(stmts);
 }
@@ -266,7 +266,7 @@ TEST(CompilerLiteral, StringUsesConstantPool)
 
 TEST(CompilerLiteral, StringsDeduplicated)
 {
-    Array<AST::Stmt*> stmts;
+    Array<AST::StmtPtr> stmts;
     stmts.push(expr_stmt(lit_str("dup")));
     stmts.push(expr_stmt(lit_str("dup")));
     Chunk* chunk = compile_ok(blk(std::move(stmts)));
@@ -1099,7 +1099,7 @@ TEST(CompilerCall, CallWithNoArgs)
 TEST(CompilerCall, CallWithTwoArgs)
 {
     Array<AST::ExprPtr> args { lit_int(1), lit_int(2) };
-    Chunk* chunk = compile_ok(expr_stmt(call_expr(ident("f"), list_expr(std::move(args)))));
+    Chunk* chunk = compile_ok(expr_stmt(call_expr(ident("f"), args)));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -1114,11 +1114,7 @@ TEST(CompilerCall, CallWithTwoArgs)
 
 TEST(CompilerCall, CallResultUsed)
 {
-    Chunk* chunk = compile_ok(decl_stmt("r", call_expr(ident("f"), [] {
-        Array<AST::ExprPtr> a;
-        a.push(ident("x"));
-        return list_expr(a);
-    }())));
+    Chunk* chunk = compile_ok(decl_stmt("r", call_expr(ident("f"), { ident("x") })));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
@@ -1153,10 +1149,7 @@ TEST(CompilerList, EmptyList)
 
 TEST(CompilerList, ListWithElements)
 {
-    Array<AST::ExprPtr> elems;
-    elems.push(lit_int(1));
-    elems.push(lit_int(2));
-    elems.push(lit_int(3));
+    Array<AST::ExprPtr> elems = { lit_int(1), lit_int(2), lit_int(3) };
     Chunk* chunk = compile_ok(expr_stmt(list_expr(std::move(elems))));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
@@ -1265,8 +1258,8 @@ TEST(CompilerIntegration, Fibonacci)
                       blk({ return_stmt(ident("n")) })),
                     return_stmt(
                         binary(
-                            call_expr(ident("fib"), list_expr(std::move(args_n1))),
-                            call_expr(ident("fib"), list_expr(std::move(args_n2))),
+                            call_expr(ident("fib"), args_n1),
+                            call_expr(ident("fib"), args_n2),
                             AST::Expr::Kind::OP_ADD)) })));
 
     ASSERT_NE(chunk, nullptr);
@@ -1386,11 +1379,7 @@ TEST(CompilerIntegration, StringConstantPoolDedup)
 
 TEST(CompilerIntegration, MixedLiteralsInList)
 {
-    Array<AST::ExprPtr> elems;
-    elems.push(lit_bool(true));
-    elems.push(lit_int(42));
-    elems.push(lit_flt(3.14));
-    elems.push(lit_str("hi"));
+    Array<AST::ExprPtr> elems = { lit_bool(true), lit_int(42), lit_flt(3.14), lit_str("mohamed") };
     Chunk* chunk = compile_ok(expr_stmt(list_expr(std::move(elems))));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)

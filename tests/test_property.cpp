@@ -133,7 +133,7 @@ Value run_fa_expr_source(std::string const& source)
     EXPECT_TRUE(parsed.has_value()) << source;
     if (test_config::print_ast)
         ast_printer.print(parsed.value());
-    Chunk* chunk = Compiler().compile({ expr_stmt(call_expr(ident("طبيعي"), list_expr({ parsed.value() }))) });
+    Chunk* chunk = Compiler().compile({ expr_stmt(call_expr(ident("طبيعي"), { parsed.value() })) });
     if (test_config::dump_bytecode)
         chunk->disassemble();
     VM vm;
@@ -142,7 +142,7 @@ Value run_fa_expr_source(std::string const& source)
 
 Value run_fa_expr_ast(AST::ExprPtr m_expr)
 {
-    Chunk* chunk = Compiler().compile({ expr_stmt(call_expr(ident("طبيعي"), list_expr({ m_expr }))) });
+    Chunk* chunk = Compiler().compile({ expr_stmt(call_expr(ident("طبيعي"), { m_expr })) });
     VM vm;
     return vm.run(chunk);
 }

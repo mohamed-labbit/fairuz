@@ -122,7 +122,7 @@ TEST(ModuleParser, PythonStyleAssertLowersToNativeCall)
     ASSERT_TRUE(AST::is_call(expression));
     auto* call = AST::as_call(expression);
     EXPECT_EQ(AST::as_identifier(call->callee)->spelling, "تاكد");
-    EXPECT_EQ(call->args->size(), 2u);
+    EXPECT_EQ(call->args.size(), 2u);
 }
 
 TEST(ModuleParser, ParsesImportsAliasesAndParentClass)
