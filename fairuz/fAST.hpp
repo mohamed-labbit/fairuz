@@ -9,7 +9,7 @@
 #include <cassert>
 #include <cstddef>
 
-#define ALLOCATE_AST_NODE(type, ...) get_allocator().allocate_object<type>(__VA_ARGS__);
+#define ALLOCATE_AST_NODE(type, ...) get_allocator().allocate_object<type>(__VA_ARGS__)
 
 namespace fairuz::AST {
 
@@ -40,18 +40,18 @@ class AssignStmt;
 class IfElseStmt;
 class WhileStmt;
 class ForStmt;
-class FunctionDef;
+class FuncDefStmt;
 class ReturnStmt;
 class BreakStmt;
 class ContinueStmt;
 class BlockStmt;
-class ClassDef;
+class ClassDefStmt;
 class ImportStmt;
 
 using ExprPtr = Expr*;
 using StmtPtr = Stmt*;
-using ConstExprPtr = Expr const*;
-using ConstStmtPtr = Stmt const*;
+using ConstExprPtr = Expr*;
+using ConstStmtPtr = Stmt*;
 
 /// AST Node that is the parent class of any derived node in this file
 /// NOTE: An AST node pointer must always be a valid pointer (not nullptr)
@@ -105,38 +105,38 @@ class ExprVisitor {
 public:
     virtual ~ExprVisitor() = default;
 
-    virtual void visit(BinaryExpr const&) const = 0;
-    virtual void visit(UnaryExpr const&) const = 0;
-    virtual void visit(IntLiteralExpr const&) const = 0;
-    virtual void visit(FloatLiteralExpr const&) const = 0;
-    virtual void visit(StringLiteralExpr const&) const = 0;
-    virtual void visit(BoolLiteralExpr const&) const = 0;
-    virtual void visit(NilExpr const&) const = 0;
-    virtual void visit(IdentifierExpr const&) const = 0;
-    virtual void visit(CallExpr const&) const = 0;
-    virtual void visit(AssignExpr const&) const = 0;
-    virtual void visit(ListExpr const&) const = 0;
-    virtual void visit(IndexExpr const&) const = 0;
-    virtual void visit(DictExpr const&) const = 0;
-    virtual void visit(GetExpr const&) const = 0;
+    virtual void visit(BinaryExpr&) = 0;
+    virtual void visit(UnaryExpr&) = 0;
+    virtual void visit(IntLiteralExpr&) = 0;
+    virtual void visit(FloatLiteralExpr&) = 0;
+    virtual void visit(StringLiteralExpr&) = 0;
+    virtual void visit(BoolLiteralExpr&) = 0;
+    virtual void visit(NilExpr&) = 0;
+    virtual void visit(IdentifierExpr&) = 0;
+    virtual void visit(CallExpr&) = 0;
+    virtual void visit(AssignExpr&) = 0;
+    virtual void visit(ListExpr&) = 0;
+    virtual void visit(IndexExpr&) = 0;
+    virtual void visit(DictExpr&) = 0;
+    virtual void visit(GetExpr&) = 0;
 };
 
 class StmtVisitor {
 public:
     virtual ~StmtVisitor() = default;
 
-    virtual void visit(ExprStmt const&) const = 0;
-    virtual void visit(AssignStmt const&) const = 0;
-    virtual void visit(IfElseStmt const&) const = 0;
-    virtual void visit(WhileStmt const&) const = 0;
-    virtual void visit(ForStmt const&) const = 0;
-    virtual void visit(FunctionDef const&) const = 0;
-    virtual void visit(ReturnStmt const&) const = 0;
-    virtual void visit(BreakStmt const&) const = 0;
-    virtual void visit(ContinueStmt const&) const = 0;
-    virtual void visit(BlockStmt const&) const = 0;
-    virtual void visit(ClassDef const&) const = 0;
-    virtual void visit(ImportStmt const&) const = 0;
+    virtual void visit(ExprStmt&) = 0;
+    virtual void visit(AssignStmt&) = 0;
+    virtual void visit(IfElseStmt&) = 0;
+    virtual void visit(WhileStmt&) = 0;
+    virtual void visit(ForStmt&) = 0;
+    virtual void visit(FuncDefStmt&) = 0;
+    virtual void visit(ReturnStmt&) = 0;
+    virtual void visit(BreakStmt&) = 0;
+    virtual void visit(ContinueStmt&) = 0;
+    virtual void visit(BlockStmt&) = 0;
+    virtual void visit(ClassDefStmt&) = 0;
+    virtual void visit(ImportStmt&) = 0;
 };
 
 /// -----------------------------------------------------------------------
@@ -210,7 +210,7 @@ public:
 
     virtual bool equals(ConstExprPtr other) const = 0;
     virtual ExprPtr clone() const = 0;
-    virtual void accept(ExprVisitor const& v) const = 0;
+    virtual void accept(ExprVisitor& v) = 0;
 
     Kind get_kind() const { return m_kind; }
     NodeType get_node_type() const override { return NodeType::EXPR; }
@@ -235,14 +235,14 @@ public:
         if (other->get_kind() != m_kind)
             return false;
 
-        auto bin = static_cast<BinaryExpr const*>(other);
+        auto bin = static_cast<BinaryExpr*>(other);
         return lhs->equals(bin->lhs) && rhs->equals(bin->rhs);
     }
     [[nodiscard]] BinaryExpr* clone() const override
     {
         return ALLOCATE_AST_NODE(BinaryExpr, m_kind, lhs->clone(), rhs->clone(), get_location());
     }
-    void accept(ExprVisitor const& v) const override { v.visit(*this); }
+    void accept(ExprVisitor& v) override { v.visit(*this); }
 }; // class BinaryExpr
 
 class UnaryExpr final : public Expr {
@@ -261,14 +261,14 @@ public:
         if (other->get_kind() != m_kind)
             return false;
 
-        auto un = static_cast<UnaryExpr const*>(other);
+        auto un = static_cast<UnaryExpr*>(other);
         return operand->equals(un->operand);
     }
     [[nodiscard]] UnaryExpr* clone() const override
     {
         return ALLOCATE_AST_NODE(UnaryExpr, m_kind, operand->clone(), get_location());
     }
-    void accept(ExprVisitor const& v) const override { v.visit(*this); }
+    void accept(ExprVisitor& v) override { v.visit(*this); }
 }; // class UnaryExpr
 
 class IntLiteralExpr final : public Expr {
@@ -286,13 +286,13 @@ public:
         if (other == nullptr || other->get_kind() != m_kind)
             return false;
 
-        return value == static_cast<IntLiteralExpr const*>(other)->value;
+        return value == static_cast<IntLiteralExpr*>(other)->value;
     }
     [[nodiscard]] IntLiteralExpr* clone() const override
     {
         return ALLOCATE_AST_NODE(IntLiteralExpr, value, get_location());
     }
-    void accept(ExprVisitor const& v) const override { v.visit(*this); }
+    void accept(ExprVisitor& v) override { v.visit(*this); }
 };
 
 class FloatLiteralExpr final : public Expr {
@@ -310,13 +310,13 @@ public:
         if (other == nullptr || other->get_kind() != m_kind)
             return false;
 
-        return value == static_cast<FloatLiteralExpr const*>(other)->value;
+        return value == static_cast<FloatLiteralExpr*>(other)->value;
     }
     [[nodiscard]] FloatLiteralExpr* clone() const override
     {
         return ALLOCATE_AST_NODE(FloatLiteralExpr, value, get_location());
     }
-    void accept(ExprVisitor const& v) const override { v.visit(*this); }
+    void accept(ExprVisitor& v) override { v.visit(*this); }
 };
 
 class StringLiteralExpr final : public Expr {
@@ -334,13 +334,13 @@ public:
         if (other == nullptr || other->get_kind() != m_kind)
             return false;
 
-        return str == static_cast<StringLiteralExpr const*>(other)->str;
+        return str == static_cast<StringLiteralExpr*>(other)->str;
     }
     [[nodiscard]] StringLiteralExpr* clone() const override
     {
         return ALLOCATE_AST_NODE(StringLiteralExpr, str, get_location());
     }
-    void accept(ExprVisitor const& v) const override { v.visit(*this); }
+    void accept(ExprVisitor& v) override { v.visit(*this); }
 };
 
 class BoolLiteralExpr final : public Expr {
@@ -358,13 +358,13 @@ public:
         if (other == nullptr || other->get_kind() != m_kind)
             return false;
 
-        return value == static_cast<BoolLiteralExpr const*>(other)->value;
+        return value == static_cast<BoolLiteralExpr*>(other)->value;
     }
     [[nodiscard]] BoolLiteralExpr* clone() const override
     {
         return ALLOCATE_AST_NODE(BoolLiteralExpr, value, get_location());
     }
-    void accept(ExprVisitor const& v) const override { v.visit(*this); }
+    void accept(ExprVisitor& v) override { v.visit(*this); }
 };
 
 class NilExpr final : public Expr {
@@ -385,7 +385,7 @@ public:
     {
         return ALLOCATE_AST_NODE(NilExpr, get_location());
     }
-    void accept(ExprVisitor const& v) const override { v.visit(*this); }
+    void accept(ExprVisitor& v) override { v.visit(*this); }
 };
 
 class IdentifierExpr final : public Expr {
@@ -403,14 +403,14 @@ public:
         if (other->get_kind() != m_kind)
             return false;
 
-        auto name = static_cast<IdentifierExpr const*>(other);
+        auto name = static_cast<IdentifierExpr*>(other);
         return spelling == name->spelling;
     }
     [[nodiscard]] IdentifierExpr* clone() const override
     {
         return ALLOCATE_AST_NODE(IdentifierExpr, spelling, get_location());
     }
-    void accept(ExprVisitor const& v) const override { v.visit(*this); }
+    void accept(ExprVisitor& v) override { v.visit(*this); }
 }; // class IdentifierExpr
 
 class ListExpr final : public Expr {
@@ -428,7 +428,7 @@ public:
         if (other->get_kind() != m_kind)
             return false;
 
-        auto list = static_cast<ListExpr const*>(other);
+        auto list = static_cast<ListExpr*>(other);
 
         if (elements.size() != list->elements.size())
             return false;
@@ -444,7 +444,7 @@ public:
     {
         return ALLOCATE_AST_NODE(ListExpr, elements, get_location());
     }
-    void accept(ExprVisitor const& v) const override { v.visit(*this); }
+    void accept(ExprVisitor& v) override { v.visit(*this); }
 
     [[nodiscard]] bool is_empty() const { return elements.empty(); }
     [[nodiscard]] size_t size() const { return elements.size(); }
@@ -467,7 +467,7 @@ public:
 
         // a dictionary normally doesn't care about order so this is logically not correct
         // but we gonna stub an implementation that requires order until someone fixes this
-        auto dict = static_cast<DictExpr const*>(other)->get_content();
+        auto dict = static_cast<DictExpr*>(other)->content;
         u32 const s1 = content.size();
         u32 const s2 = dict.size();
 
@@ -485,26 +485,20 @@ public:
     {
         return ALLOCATE_AST_NODE(DictExpr, content, get_location());
     }
-    void accept(ExprVisitor const& v) const override { v.visit(*this); }
-
-    Array<std::pair<ExprPtr, ExprPtr>> get_content() const { return content; }
+    void accept(ExprVisitor& v) override { v.visit(*this); }
 };
 
 class CallExpr final : public Expr {
 public:
     ConstExprPtr callee;
-    ListExpr const* args;
+    Array<ExprPtr> const args;
 
-    explicit CallExpr(ExprPtr c, ListExpr* a, SourceLocation loc)
+    explicit CallExpr(ExprPtr c, Array<ExprPtr> a, SourceLocation loc)
         : Expr(loc, Kind::CALL)
         , callee(c)
-        , args(a)
+        , args(std::move(a))
     {
-        if (args == nullptr)
-            args = ALLOCATE_AST_NODE(ListExpr, Array<ExprPtr> { }, loc);
-
         assert(callee != nullptr);
-        assert(args != nullptr);
     }
 
     [[nodiscard]] bool equals(ConstExprPtr other) const override
@@ -512,16 +506,25 @@ public:
         if (other->get_kind() != m_kind)
             return false;
 
-        auto call = static_cast<CallExpr const*>(other);
-        return callee->equals(call->callee) && args->equals(call->args);
+        auto call = static_cast<CallExpr*>(other);
+        if (args.size() != call->args.size())
+            return false;
+        for (u32 i = 0, n = args.size(); i < n; ++i) {
+            if (!args[i]->equals(call->args[i]))
+                return false;
+        }
+        return callee->equals(call->callee);
     }
     [[nodiscard]] CallExpr* clone() const override
     {
-        return ALLOCATE_AST_NODE(CallExpr, callee->clone(), args->clone(), get_location());
+        Array<ExprPtr> args_clone;
+        for (auto a : args)
+            args_clone.push(a->clone());
+        return ALLOCATE_AST_NODE(CallExpr, callee->clone(), args_clone, get_location());
     }
-    void accept(ExprVisitor const& v) const override { v.visit(*this); }
+    void accept(ExprVisitor& v) override { v.visit(*this); }
 
-    [[nodiscard]] bool has_arguments() const { return !args->is_empty(); }
+    [[nodiscard]] bool has_arguments() const { return !args.empty(); }
 }; // class CallExpr
 
 class AssignExpr final : public Expr {
@@ -543,14 +546,14 @@ public:
         if (other->get_kind() != m_kind)
             return false;
 
-        auto bin = static_cast<AssignExpr const*>(other);
+        auto bin = static_cast<AssignExpr*>(other);
         return target->equals(bin->target) && value->equals(bin->value);
     }
     [[nodiscard]] AssignExpr* clone() const override
     {
         return ALLOCATE_AST_NODE(AssignExpr, target->clone(), value->clone(), get_location());
     }
-    void accept(ExprVisitor const& v) const override { v.visit(*this); }
+    void accept(ExprVisitor& v) override { v.visit(*this); }
 }; // AssignExpr
 
 class IndexExpr final : public Expr {
@@ -572,20 +575,20 @@ public:
         if (other == nullptr || other->get_kind() != Kind::INDEX_READ)
             return false;
 
-        auto idx = static_cast<IndexExpr const*>(other);
+        auto idx = static_cast<IndexExpr*>(other);
         return object->equals(idx->object) && index->equals(idx->index);
     }
     [[nodiscard]] IndexExpr* clone() const override
     {
         return ALLOCATE_AST_NODE(IndexExpr, object->clone(), index->clone(), get_location());
     }
-    void accept(ExprVisitor const& v) const override { v.visit(*this); }
+    void accept(ExprVisitor& v) override { v.visit(*this); }
 }; // class IndexExpr
 
 class GetExpr final : public Expr {
 public:
     ConstExprPtr object;
-    IdentifierExpr const* member;
+    IdentifierExpr* member;
 
     GetExpr(ExprPtr obj, IdentifierExpr* mem, SourceLocation loc)
         : Expr(loc, Kind::GET)
@@ -601,14 +604,14 @@ public:
         if (other == nullptr || other->get_kind() != m_kind)
             return false;
 
-        auto get_expr = static_cast<GetExpr const*>(other);
+        auto get_expr = static_cast<GetExpr*>(other);
         return object->equals(get_expr->object) && member->equals(get_expr->member);
     }
     [[nodiscard]] GetExpr* clone() const override
     {
         return ALLOCATE_AST_NODE(GetExpr, object->clone(), member->clone(), get_location());
     }
-    void accept(ExprVisitor const& v) const override { v.visit(*this); }
+    void accept(ExprVisitor& v) override { v.visit(*this); }
 };
 
 /// -----------------------------------------------------------------------
@@ -660,7 +663,7 @@ public:
 
     explicit BlockStmt(Array<StmtPtr> s, SourceLocation loc)
         : Stmt(loc, Kind::BLOCK)
-        , stmts(s)
+        , stmts(std::move(s))
     {
     }
 
@@ -669,7 +672,7 @@ public:
         if (other == nullptr || other->get_kind() != Kind::BLOCK)
             return false;
 
-        auto block = static_cast<BlockStmt const*>(other);
+        auto block = static_cast<BlockStmt*>(other);
 
         if (stmts.size() != block->stmts.size())
             return false;
@@ -683,7 +686,10 @@ public:
     }
     [[nodiscard]] BlockStmt* clone() const override
     {
-        return ALLOCATE_AST_NODE(BlockStmt, stmts, get_location());
+        Array<StmtPtr> stmts_clone;
+        for (auto s : stmts)
+            stmts_clone.push(s->clone());
+        return ALLOCATE_AST_NODE(BlockStmt, stmts_clone, get_location());
     }
     void accept(StmtVisitor& v) override { v.visit(*this); }
     [[nodiscard]] bool is_empty() const { return stmts.empty(); }
@@ -705,7 +711,7 @@ public:
         if (m_kind != other->get_kind())
             return false;
 
-        auto block = static_cast<ExprStmt const*>(other);
+        auto block = static_cast<ExprStmt*>(other);
         return expr->equals(block->expr);
     }
     [[nodiscard]] ExprStmt* clone() const override
@@ -736,7 +742,7 @@ public:
         if (m_kind != other->get_kind())
             return false;
 
-        auto if_stmt = static_cast<IfElseStmt const*>(other);
+        auto if_stmt = static_cast<IfElseStmt*>(other);
         bool eq_else = false;
 
         if (else_stmt != nullptr && if_stmt->else_stmt)
@@ -773,7 +779,7 @@ public:
         if (m_kind != other->get_kind())
             return false;
 
-        auto block = static_cast<WhileStmt const*>(other);
+        auto block = static_cast<WhileStmt*>(other);
         return condition->equals(block->condition) && body->equals(block->body);
     }
     [[nodiscard]] WhileStmt* clone() const override
@@ -805,7 +811,7 @@ public:
         if (m_kind != other->get_kind())
             return false;
 
-        auto block = static_cast<ForStmt const*>(other);
+        auto block = static_cast<ForStmt*>(other);
         return container->equals(block->container) && iter->equals(block->iter) && body->equals(block->body);
     }
     [[nodiscard]] ForStmt* clone() const override
@@ -815,13 +821,13 @@ public:
     void accept(StmtVisitor& v) override { v.visit(*this); }
 }; // class ForStmt
 
-class FunctionDef final : public Stmt {
+class FuncDefStmt final : public Stmt {
 public:
-    IdentifierExpr const* name;
+    IdentifierExpr* name;
     Array<ExprPtr> const params;
     ConstStmtPtr body;
 
-    FunctionDef(IdentifierExpr* n, Array<ExprPtr> p, StmtPtr b, SourceLocation loc)
+    FuncDefStmt(IdentifierExpr* n, Array<ExprPtr> p, StmtPtr b, SourceLocation loc)
         : Stmt(loc, Kind::FUNC)
         , name(n)
         , params(std::move(p))
@@ -836,21 +842,21 @@ public:
         if (m_kind != other->get_kind())
             return false;
 
-        auto block = static_cast<FunctionDef const*>(other);
+        auto block = static_cast<FuncDefStmt const*>(other);
         /// overloading is not supported therefor equality
         // can be resolved by the name of the function
         return name->equals(block->name);
     }
-    [[nodiscard]] FunctionDef* clone() const override
+    [[nodiscard]] FuncDefStmt* clone() const override
     {
         Array<ExprPtr> params_clone;
         for (auto p : params)
             params_clone.push(p->clone());
-        return ALLOCATE_AST_NODE(FunctionDef, name->clone(), params_clone, body->clone(), get_location());
+        return ALLOCATE_AST_NODE(FuncDefStmt, name->clone(), params_clone, body->clone(), get_location());
     }
     void accept(StmtVisitor& v) override { v.visit(*this); }
     [[nodiscard]] bool has_parameters() const { return !params.empty(); }
-}; // class FunctionDef
+}; // class FuncDefStmt
 
 class ReturnStmt final : public Stmt {
 public:
@@ -867,7 +873,7 @@ public:
         if (m_kind != other->get_kind())
             return false;
 
-        auto ret_stmt = static_cast<ReturnStmt const*>(other);
+        auto ret_stmt = static_cast<ReturnStmt*>(other);
         if (value == nullptr || !ret_stmt->has_value())
             return value == ret_stmt->value;
 
@@ -882,14 +888,14 @@ public:
     [[nodiscard]] bool has_value() const { return value != nullptr; }
 }; // class ReturnStmt
 
-class ClassDef final : public Stmt {
+class ClassDefStmt final : public Stmt {
 public:
     ConstExprPtr name;
     ConstExprPtr parent;
     Array<ExprPtr> const members;
     Array<StmtPtr> const methods;
 
-    explicit ClassDef(
+    explicit ClassDefStmt(
         ExprPtr n,
         ExprPtr p,
         Array<ExprPtr> members,
@@ -909,7 +915,7 @@ public:
         if (m_kind != other->get_kind())
             return false;
 
-        auto class_def = static_cast<ClassDef const*>(other);
+        auto class_def = static_cast<ClassDefStmt const*>(other);
 
         if (class_def->members.size() != members.size() || class_def->methods.size() != methods.size())
             return false;
@@ -929,7 +935,7 @@ public:
             : parent->equals(class_def->parent);
         return parents_equal && name->equals(class_def->name);
     }
-    [[nodiscard]] ClassDef* clone() const override
+    [[nodiscard]] ClassDefStmt* clone() const override
     {
         Array<ExprPtr> member_clones;
         Array<StmtPtr> method_clones;
@@ -937,11 +943,11 @@ public:
             member_clones.push(mem->clone());
         for (StmtPtr met : methods)
             method_clones.push(met->clone());
-        return ALLOCATE_AST_NODE(ClassDef, name->clone(),
+        return ALLOCATE_AST_NODE(ClassDefStmt, name->clone(),
             parent == nullptr ? nullptr : parent->clone(), member_clones, method_clones, get_location());
     }
     void accept(StmtVisitor& v) override { v.visit(*this); }
-}; // class ClassDef
+}; // class ClassDefStmt
 
 class ImportStmt final : public Stmt {
 private:
@@ -962,7 +968,7 @@ public:
     {
         if (other == nullptr || other->get_kind() != Kind::IMPORT)
             return false;
-        auto const* import = static_cast<ImportStmt const*>(other);
+        auto const* import = static_cast<ImportStmt*>(other);
         return m_module == import->m_module && m_names == import->m_names && m_aliases == import->m_aliases;
     }
     [[nodiscard]] ImportStmt* clone() const override
@@ -1006,6 +1012,12 @@ public:
     void accept(StmtVisitor& v) override { v.visit(*this); }
 }; // class ContinueStmt
 
+/// -----------------------------------------------------------------------
+///                            Helper Makers
+/// -----------------------------------------------------------------------
+
+/// These are wrappers of ALLOCATE_AST_NODE to introdude type checking
+/// for arguments and readability
 static inline BinaryExpr* make_binary(Expr::Kind kind, ExprPtr lhs, ExprPtr rhs, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(BinaryExpr, kind, lhs, rhs, loc);
@@ -1030,7 +1042,7 @@ static inline FloatLiteralExpr* make_literal_float(f64 value, SourceLocation loc
 {
     return ALLOCATE_AST_NODE(FloatLiteralExpr, value, loc);
 }
-static inline StringLiteralExpr* make_literal_string(StringRef str, SourceLocation loc)
+static inline StringLiteralExpr* make_literal_string(StringRef const str, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(StringLiteralExpr, str, loc);
 }
@@ -1052,9 +1064,9 @@ static inline DictExpr* make_dict(Array<std::pair<ExprPtr, ExprPtr>> content, So
 }
 static inline GetExpr* make_get_expr(ExprPtr obj, IdentifierExpr* member, SourceLocation loc)
 {
-    return ALLOCATE_AST_NODE(GetExpr, obj, member, loc)
+    return ALLOCATE_AST_NODE(GetExpr, obj, member, loc);
 }
-static inline CallExpr* make_call(ExprPtr callee, ListExpr* args, SourceLocation loc)
+static inline CallExpr* make_call(ExprPtr callee, Array<ExprPtr> args, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(CallExpr, callee, args, loc);
 }
@@ -1074,9 +1086,12 @@ static inline ExprStmt* make_expr_stmt(ExprPtr expr, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(ExprStmt, expr, loc);
 }
+/// This one creates an assignment stmt expr that wrappes an assignment expr
+/// just so we don't have to write  the exact same two line sequence
 static inline ExprStmt* make_assignment_stmt(ExprPtr target, ExprPtr value, SourceLocation loc)
 {
-    auto e = ALLOCATE_AST_NODE(AssignExpr, target, value, loc) return ALLOCATE_AST_NODE(ExprStmt, e, loc);
+    auto e = ALLOCATE_AST_NODE(AssignExpr, target, value, loc);
+    return ALLOCATE_AST_NODE(ExprStmt, e, loc);
 }
 static inline IfElseStmt* make_if(ExprPtr cond, StmtPtr then_block, SourceLocation loc, StmtPtr else_block = nullptr)
 {
@@ -1090,25 +1105,25 @@ static inline ForStmt* make_for(IdentifierExpr* target, ExprPtr iter, StmtPtr bo
 {
     return ALLOCATE_AST_NODE(ForStmt, target, iter, body, loc);
 }
-static inline FunctionDef* make_function(IdentifierExpr* name, Array<ExprPtr> params, StmtPtr body, SourceLocation loc)
+static inline FuncDefStmt* make_function(IdentifierExpr* name, Array<ExprPtr> params, StmtPtr body, SourceLocation loc)
 {
-    return ALLOCATE_AST_NODE(FunctionDef, name, params, body, loc);
+    return ALLOCATE_AST_NODE(FuncDefStmt, name, params, body, loc);
 }
 static inline ReturnStmt* make_return(SourceLocation loc, ExprPtr value = nullptr)
 {
     return ALLOCATE_AST_NODE(ReturnStmt, value, loc);
 }
-static inline ClassDef* make_class_def(ExprPtr name, Array<ExprPtr> members,
+static inline ClassDefStmt* make_class_def(ExprPtr name, Array<ExprPtr> members,
     Array<StmtPtr> methods, SourceLocation loc)
 {
-    return ALLOCATE_AST_NODE(ClassDef, name, nullptr, members, methods, loc);
+    return ALLOCATE_AST_NODE(ClassDefStmt, name, nullptr, members, methods, loc);
 }
-static inline ClassDef* make_class_def(ExprPtr name, ExprPtr parent,
+static inline ClassDefStmt* make_class_def(ExprPtr name, ExprPtr parent,
     Array<ExprPtr> members, Array<StmtPtr> methods, SourceLocation loc)
 {
-    return ALLOCATE_AST_NODE(ClassDef, name, parent, members, methods, loc);
+    return ALLOCATE_AST_NODE(ClassDefStmt, name, parent, members, methods, loc);
 }
-static inline ImportStmt* make_import(StringRef module, Array<StringRef> name,
+static inline ImportStmt* make_import(StringRef const module, Array<StringRef> name,
     Array<StringRef> aliases, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(ImportStmt, module, name, aliases, loc);
@@ -1124,8 +1139,13 @@ static inline ContinueStmt* make_continue(SourceLocation loc)
 
 #undef ALLOCATE_AST_NODE
 
-// helper macros
+/// -----------------------------------------------------------------------
+///                     helper inline global functions
+/// -----------------------------------------------------------------------
 
+/// Casting is only done for constant pointers since AST nodes are immutable data
+/// NOTE: Every casting of AST nodes in this project must use these helpers exclusively
+/// no dynamic_cast or const_cast is allowed, even if these helpers are essentially just aliases
 inline IfElseStmt* as_if(StmtPtr s) { return static_cast<IfElseStmt*>(s); }
 inline WhileStmt* as_while(StmtPtr s) { return static_cast<WhileStmt*>(s); }
 inline ForStmt* as_for(StmtPtr s) { return static_cast<ForStmt*>(s); }
@@ -1133,8 +1153,8 @@ inline ReturnStmt* as_return(StmtPtr s) { return static_cast<ReturnStmt*>(s); }
 inline BreakStmt* as_break(StmtPtr s) { return static_cast<BreakStmt*>(s); }
 inline ContinueStmt* as_continue(StmtPtr s) { return static_cast<ContinueStmt*>(s); }
 inline BlockStmt* as_block(StmtPtr s) { return static_cast<BlockStmt*>(s); }
-inline FunctionDef* as_function_def(StmtPtr s) { return static_cast<FunctionDef*>(s); }
-inline ClassDef* as_class_def(StmtPtr s) { return static_cast<ClassDef*>(s); }
+inline FuncDefStmt* as_function_def(StmtPtr s) { return static_cast<FuncDefStmt*>(s); }
+inline ClassDefStmt* as_class_def(StmtPtr s) { return static_cast<ClassDefStmt*>(s); }
 inline ImportStmt* as_import(StmtPtr s) { return static_cast<ImportStmt*>(s); }
 inline ExprStmt* as_expr_stmt(StmtPtr s) { return static_cast<ExprStmt*>(s); }
 
@@ -1153,59 +1173,32 @@ inline CallExpr* as_call(ExprPtr e) { return static_cast<CallExpr*>(e); }
 inline AssignExpr* as_assignment_expr(ExprPtr e) { return static_cast<AssignExpr*>(e); }
 inline GetExpr* as_get(ExprPtr e) { return static_cast<GetExpr*>(e); }
 
-inline IfElseStmt const* as_if(ConstStmtPtr s) { return static_cast<IfElseStmt const*>(s); }
-inline WhileStmt const* as_while(ConstStmtPtr s) { return static_cast<WhileStmt const*>(s); }
-inline ForStmt const* as_for(ConstStmtPtr s) { return static_cast<ForStmt const*>(s); }
-inline ReturnStmt const* as_return(ConstStmtPtr s) { return static_cast<ReturnStmt const*>(s); }
-inline BreakStmt const* as_break(ConstStmtPtr s) { return static_cast<BreakStmt const*>(s); }
-inline ContinueStmt const* as_continue(ConstStmtPtr s) { return static_cast<ContinueStmt const*>(s); }
-inline BlockStmt const* as_block(ConstStmtPtr s) { return static_cast<BlockStmt const*>(s); }
-inline FunctionDef const* as_function_def(ConstStmtPtr s) { return static_cast<FunctionDef const*>(s); }
-inline ClassDef const* as_class_def(ConstStmtPtr s) { return static_cast<ClassDef const*>(s); }
-inline ImportStmt const* as_import(ConstStmtPtr s) { return static_cast<ImportStmt const*>(s); }
-inline ExprStmt const* as_expr_stmt(ConstStmtPtr s) { return static_cast<ExprStmt const*>(s); }
+static inline bool is_class_def(StmtPtr s) { return s->get_kind() == Stmt::Kind::CLASS_DEF; }
+static inline bool is_import(StmtPtr s) { return s->get_kind() == Stmt::Kind::IMPORT; }
+static inline bool is_if(StmtPtr s) { return s->get_kind() == Stmt::Kind::IF; }
+static inline bool is_while(StmtPtr s) { return s->get_kind() == Stmt::Kind::WHILE; }
+static inline bool is_for(StmtPtr s) { return s->get_kind() == Stmt::Kind::FOR; }
+static inline bool is_return(StmtPtr s) { return s->get_kind() == Stmt::Kind::RETURN; }
+static inline bool is_break(StmtPtr s) { return s->get_kind() == Stmt::Kind::BREAK; }
+static inline bool is_continue(StmtPtr s) { return s->get_kind() == Stmt::Kind::CONTINUE; }
+static inline bool is_func(StmtPtr s) { return s->get_kind() == Stmt::Kind::FUNC; }
+static inline bool is_expr(StmtPtr s) { return s->get_kind() == Stmt::Kind::EXPR; }
+static inline bool is_block(StmtPtr s) { return s->get_kind() == Stmt::Kind::BLOCK; }
 
-inline BinaryExpr const* as_binary(ConstExprPtr e) { return static_cast<BinaryExpr const*>(e); }
-inline UnaryExpr const* as_unary(ConstExprPtr e) { return static_cast<UnaryExpr const*>(e); }
-inline IntLiteralExpr const* as_literal_int(ConstExprPtr e) { return static_cast<IntLiteralExpr const*>(e); }
-inline FloatLiteralExpr const* as_literal_float(ConstExprPtr e) { return static_cast<FloatLiteralExpr const*>(e); }
-inline BoolLiteralExpr const* as_literal_bool(ConstExprPtr e) { return static_cast<BoolLiteralExpr const*>(e); }
-inline StringLiteralExpr const* as_literal_string(ConstExprPtr e) { return static_cast<StringLiteralExpr const*>(e); }
-inline NilExpr const* as_nil(ConstExprPtr e) { return static_cast<NilExpr const*>(e); }
-inline IdentifierExpr const* as_identifier(ConstExprPtr e) { return static_cast<IdentifierExpr const*>(e); }
-inline IndexExpr const* as_index(ConstExprPtr e) { return static_cast<IndexExpr const*>(e); }
-inline DictExpr const* as_dict(ConstExprPtr e) { return static_cast<DictExpr const*>(e); }
-inline ListExpr const* as_list(ConstExprPtr e) { return static_cast<ListExpr const*>(e); }
-inline CallExpr const* as_call(ConstExprPtr e) { return static_cast<CallExpr const*>(e); }
-inline AssignExpr const* as_assignment_expr(ConstExprPtr e) { return static_cast<AssignExpr const*>(e); }
-inline GetExpr const* as_get(ConstExprPtr e) { return static_cast<GetExpr const*>(e); }
-
-static inline bool is_class_def(ConstStmtPtr s) { return s->get_kind() == Stmt::Kind::CLASS_DEF; }
-static inline bool is_import(ConstStmtPtr s) { return s->get_kind() == Stmt::Kind::IMPORT; }
-static inline bool is_if(ConstStmtPtr s) { return s->get_kind() == Stmt::Kind::IF; }
-static inline bool is_while(ConstStmtPtr s) { return s->get_kind() == Stmt::Kind::WHILE; }
-static inline bool is_for(ConstStmtPtr s) { return s->get_kind() == Stmt::Kind::FOR; }
-static inline bool is_return(ConstStmtPtr s) { return s->get_kind() == Stmt::Kind::RETURN; }
-static inline bool is_break(ConstStmtPtr s) { return s->get_kind() == Stmt::Kind::BREAK; }
-static inline bool is_continue(ConstStmtPtr s) { return s->get_kind() == Stmt::Kind::CONTINUE; }
-static inline bool is_func(ConstStmtPtr s) { return s->get_kind() == Stmt::Kind::FUNC; }
-static inline bool is_expr(ConstStmtPtr s) { return s->get_kind() == Stmt::Kind::EXPR; }
-static inline bool is_block(ConstStmtPtr s) { return s->get_kind() == Stmt::Kind::BLOCK; }
-
-static inline bool is_binary(ConstExprPtr e) { return dynamic_cast<BinaryExpr const*>(e) != nullptr; }
-static inline bool is_unary(ConstExprPtr e) { return dynamic_cast<UnaryExpr const*>(e) != nullptr; }
-static inline bool is_literal_int(ConstExprPtr e) { return e->get_kind() == Expr::Kind::INT_LITERAL; }
-static inline bool is_literal_float(ConstExprPtr e) { return e->get_kind() == Expr::Kind::FLOAT_LITERAL; }
-static inline bool is_literal_bool(ConstExprPtr e) { return e->get_kind() == Expr::Kind::BOOL_LITERAL; }
-static inline bool is_literal_string(ConstExprPtr e) { return e->get_kind() == Expr::Kind::STRING_LITERAL; }
-static inline bool is_nil(ConstExprPtr e) { return e->get_kind() == Expr::Kind::NIL; }
-static inline bool is_identifier(ConstExprPtr e) { return e->get_kind() == Expr::Kind::IDENTIFIER; }
-static inline bool is_index(ConstExprPtr e) { return e->get_kind() == Expr::Kind::INDEX_READ; }
-static inline bool is_dict(ConstExprPtr e) { return e->get_kind() == Expr::Kind::DICT; }
-static inline bool is_list(ConstExprPtr e) { return e->get_kind() == Expr::Kind::LIST; }
-static inline bool is_call(ConstExprPtr e) { return e->get_kind() == Expr::Kind::CALL; }
-static inline bool is_assignment(ConstExprPtr e) { return e->get_kind() == Expr::Kind::ASSIGNMENT; }
-static inline bool is_get(ConstExprPtr e) { return e->get_kind() == Expr::Kind::GET; }
+static inline bool is_binary(ExprPtr e) { return dynamic_cast<BinaryExpr*>(e) != nullptr; }
+static inline bool is_unary(ExprPtr e) { return dynamic_cast<UnaryExpr*>(e) != nullptr; }
+static inline bool is_literal_int(ExprPtr e) { return e->get_kind() == Expr::Kind::INT_LITERAL; }
+static inline bool is_literal_float(ExprPtr e) { return e->get_kind() == Expr::Kind::FLOAT_LITERAL; }
+static inline bool is_literal_bool(ExprPtr e) { return e->get_kind() == Expr::Kind::BOOL_LITERAL; }
+static inline bool is_literal_string(ExprPtr e) { return e->get_kind() == Expr::Kind::STRING_LITERAL; }
+static inline bool is_nil(ExprPtr e) { return e->get_kind() == Expr::Kind::NIL; }
+static inline bool is_identifier(ExprPtr e) { return e->get_kind() == Expr::Kind::IDENTIFIER; }
+static inline bool is_index(ExprPtr e) { return e->get_kind() == Expr::Kind::INDEX_READ; }
+static inline bool is_dict(ExprPtr e) { return e->get_kind() == Expr::Kind::DICT; }
+static inline bool is_list(ExprPtr e) { return e->get_kind() == Expr::Kind::LIST; }
+static inline bool is_call(ExprPtr e) { return e->get_kind() == Expr::Kind::CALL; }
+static inline bool is_assignment(ExprPtr e) { return e->get_kind() == Expr::Kind::ASSIGNMENT; }
+static inline bool is_get(ExprPtr e) { return e->get_kind() == Expr::Kind::GET; }
 
 using ExprKind = Expr::Kind;
 using StmtKind = Stmt::Kind;
