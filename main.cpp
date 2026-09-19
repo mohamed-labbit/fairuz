@@ -1,3 +1,4 @@
+#include "fAST.hpp"
 #include "fairuz/fAST_printer.hpp"
 #include "fairuz/fcompiler.hpp"
 #include "fairuz/fdiagnostic.hpp"
@@ -153,7 +154,7 @@ void printSemanticTokens(fairuz::syntax::Result const& result)
     std::cout << "]}\n";
 }
 
-void printAst(fairuz::Array<fairuz::AST::Stmt*> const& stmts)
+void printAst(fairuz::Array<fairuz::AST::StmtPtr> const& stmts)
 {
     fairuz::AST::ASTPrinter printer(true);
     for (u32 i = 0; i < stmts.size(); i++)
@@ -320,7 +321,7 @@ int main(int argc, char** argv)
         fairuz::lex::FileManager fm(options.input_path);
         fairuz::diagnostic::set_source(&fm);
         fairuz::parser::Parser parser(&fm);
-        fairuz::Array<fairuz::AST::Stmt*> stmts = parser.parse_program();
+        fairuz::Array<fairuz::AST::StmtPtr> stmts = parser.parse_program();
 
         if (fairuz::diagnostic::has_errors()) {
             fairuz::diagnostic::dump();
