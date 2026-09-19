@@ -30,7 +30,7 @@ static void fa_delete_object(ObjHeader* obj)
     case ObjType::FILE_HANDLE: delete reinterpret_cast<ObjFileHandle*>(obj); break;
     case ObjType::MODULE: delete reinterpret_cast<ObjModule*>(obj); break;
 #if FA_USE_NANBOX
-    case ObjType::INT: // TODO:
+    case ObjType::INT: delete reinterpret_cast<ObjBigInt*>(obj); break;
 #endif
     case ObjType::_COUNT: diagnostic::panic(ErrorCode::TYPE_ERROR_CALL, "attempting to delete an unknown type"); break; /// unreachable break
     }
@@ -49,7 +49,7 @@ static size_t fa_object_size(ObjHeader const* obj)
     case ObjType::FILE_HANDLE: return sizeof(ObjFileHandle);
     case ObjType::MODULE: return sizeof(ObjModule);
 #if FA_USE_NANBOX
-    case ObjType::INT: return 0;
+    case ObjType::INT: return sizeof(ObjBigInt);
 #endif
     case ObjType::_COUNT: return 0;
     }
@@ -175,7 +175,8 @@ void GarbageCollector::blacken_object(ObjHeader* obj)
     }
     case ObjType::STRING: break;
 #if FA_USE_NANBOX
-    case ObjType::INT: // TODO:
+    /// ObjBigInt is the simplest object and it can be marked directly
+    case ObjType::INT: mark_object(obj); break;
 #endif
     case ObjType::_COUNT: diagnostic::panic(ErrorCode::TYPE_ERROR_CALL, "attempting to blacken an unknown object type");
     }
@@ -209,6 +210,13 @@ void GarbageCollector::sweep_all()
     m_grays.clear();
     m_current_size = 0;
 }
+
+#if FA_USE_NANBOX
+ObjBigInt* GarbageCollector::make_obj_int(i64 const v)
+{
+    return make<ObjBigInt>(v);
+}
+#endif
 
 ObjString* GarbageCollector::make_obj_string(StringRef str)
 {
