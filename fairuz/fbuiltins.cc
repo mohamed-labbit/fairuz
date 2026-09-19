@@ -221,11 +221,11 @@ static void print_runtime_value_impl(Value v,
 
         switch (obj->type) {
         case ObjType::STRING:
-            std::cout << obj_cast<ObjString>(obj, ObjType::STRING)->str;
+            std::cout << reinterpret_cast<ObjString*>(obj)->str;
             return;
 
         case ObjType::LIST: {
-            auto list = obj_cast<ObjList>(obj, ObjType::LIST);
+            auto list = reinterpret_cast<ObjList*>(obj);
             if (!active_containers.insert(&list->obj).second) {
                 std::cout << "<cycle>";
                 return;
@@ -249,7 +249,7 @@ static void print_runtime_value_impl(Value v,
         }
 
         case ObjType::DICT: {
-            auto dict = obj_cast<ObjDict>(obj, ObjType::DICT);
+            auto dict = reinterpret_cast<ObjDict*>(obj);
             if (!active_containers.insert(&dict->obj).second) {
                 std::cout << "<cycle>";
                 return;
@@ -279,7 +279,7 @@ static void print_runtime_value_impl(Value v,
         }
 
         case ObjType::NATIVE: {
-            auto nat = obj_cast<ObjNative>(obj, ObjType::NATIVE);
+            auto nat = reinterpret_cast<ObjNative*>(obj);
             std::cout << "<native ";
             if (nat->name)
                 std::cout << nat->name->str;
@@ -290,7 +290,7 @@ static void print_runtime_value_impl(Value v,
         }
 
         case ObjType::FUNCTION: {
-            auto* fn = obj_cast<ObjFunction>(obj, ObjType::FUNCTION);
+            auto* fn = reinterpret_cast<ObjFunction*>(obj);
             std::cout << "<function ";
             std::cout << fn->name();
             std::cout << '>';
@@ -298,13 +298,13 @@ static void print_runtime_value_impl(Value v,
         }
 
         case ObjType::CLASS: {
-            auto klass = obj_cast<ObjClass>(obj, ObjType::CLASS);
+            auto klass = reinterpret_cast<ObjClass*>(obj);
             std::cout << "<class " << klass->name << '>';
             return;
         }
 
         case ObjType::INSTANCE: {
-            auto instance = obj_cast<ObjInstance>(obj, ObjType::INSTANCE);
+            auto instance = reinterpret_cast<ObjInstance*>(obj);
             std::cout << '<';
             if (instance->klass)
                 std::cout << instance->klass->name;
@@ -315,7 +315,7 @@ static void print_runtime_value_impl(Value v,
         }
 
         case ObjType::FILE_HANDLE: {
-            auto file_handle = obj_cast<ObjFileHandle>(obj, ObjType::FILE_HANDLE);
+            auto file_handle = reinterpret_cast<ObjFileHandle*>(obj);
             std::cout << '{' << '\n';
             std::cout << '\t' << "ptr: " << file_handle->fp << '\n';
             std::cout << '\t' << "is_open: " << (file_handle->is_open ? "true" : "false") << '\n';
@@ -324,7 +324,7 @@ static void print_runtime_value_impl(Value v,
         }
 
         case ObjType::MODULE: {
-            auto module = obj_cast<ObjModule>(obj, ObjType::MODULE);
+            auto module = reinterpret_cast<ObjModule*>(obj);
             std::cout << "<module " << module->name << '>';
             return;
         }

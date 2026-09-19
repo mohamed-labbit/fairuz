@@ -20,15 +20,15 @@ namespace fairuz::runtime {
 static void fa_delete_object(ObjHeader* obj)
 {
     switch (obj->type) {
-    case ObjType::STRING: delete obj_cast<ObjString>(obj, ObjType::STRING); break;
-    case ObjType::LIST: delete obj_cast<ObjList>(obj, ObjType::LIST); break;
-    case ObjType::DICT: delete obj_cast<ObjDict>(obj, ObjType::DICT); break;
-    case ObjType::FUNCTION: delete obj_cast<ObjFunction>(obj, ObjType::FUNCTION); break;
-    case ObjType::NATIVE: delete obj_cast<ObjNative>(obj, ObjType::NATIVE); break;
-    case ObjType::CLASS: delete obj_cast<ObjClass>(obj, ObjType::CLASS); break;
-    case ObjType::INSTANCE: delete obj_cast<ObjInstance>(obj, ObjType::INSTANCE); break;
-    case ObjType::FILE_HANDLE: delete obj_cast<ObjFileHandle>(obj, ObjType::FILE_HANDLE); break;
-    case ObjType::MODULE: delete obj_cast<ObjModule>(obj, ObjType::MODULE); break;
+    case ObjType::STRING: delete reinterpret_cast<ObjString*>(obj); break;
+    case ObjType::LIST: delete reinterpret_cast<ObjList*>(obj); break;
+    case ObjType::DICT: delete reinterpret_cast<ObjDict*>(obj); break;
+    case ObjType::FUNCTION: delete reinterpret_cast<ObjFunction*>(obj); break;
+    case ObjType::NATIVE: delete reinterpret_cast<ObjNative*>(obj); break;
+    case ObjType::CLASS: delete reinterpret_cast<ObjClass*>(obj); break;
+    case ObjType::INSTANCE: delete reinterpret_cast<ObjInstance*>(obj); break;
+    case ObjType::FILE_HANDLE: delete reinterpret_cast<ObjFileHandle*>(obj); break;
+    case ObjType::MODULE: delete reinterpret_cast<ObjModule*>(obj); break;
 #if FA_USE_NANBOX
     case ObjType::INT: // TODO:
 #endif
@@ -122,19 +122,19 @@ void GarbageCollector::blacken_object(ObjHeader* obj)
 {
     switch (obj->type) {
     case ObjType::FUNCTION: {
-        ObjFunction* fn = obj_cast<ObjFunction>(obj, ObjType::FUNCTION);
+        ObjFunction* fn = reinterpret_cast<ObjFunction*>(obj);
         if (fn->chunk != nullptr)
             mark_chunk_constants(fn->chunk);
         break;
     }
     case ObjType::NATIVE: {
-        ObjNative* native = obj_cast<ObjNative>(obj, ObjType::NATIVE);
+        ObjNative* native = reinterpret_cast<ObjNative*>(obj);
         if (native->name != nullptr)
             mark_object(&native->name->obj);
         break;
     }
     case ObjType::CLASS: {
-        ObjClass* klass = obj_cast<ObjClass>(obj, ObjType::CLASS);
+        ObjClass* klass = reinterpret_cast<ObjClass*>(obj);
         if (klass->parent != nullptr)
             mark_object(&klass->parent->obj);
         for (u32 i = 0, n = klass->vtable.size(); i < n; i++) {
@@ -144,18 +144,18 @@ void GarbageCollector::blacken_object(ObjHeader* obj)
         break;
     }
     case ObjType::INSTANCE: {
-        ObjInstance* inst = obj_cast<ObjInstance>(obj, ObjType::INSTANCE);
+        ObjInstance* inst = reinterpret_cast<ObjInstance*>(obj);
         mark_object(&inst->klass->obj);
         mark_value_array(inst->fields);
         break;
     }
     case ObjType::LIST: {
-        ObjList* list = obj_cast<ObjList>(obj, ObjType::LIST);
+        ObjList* list = reinterpret_cast<ObjList*>(obj);
         mark_value_array(list->elements);
         break;
     }
     case ObjType::DICT: {
-        ObjDict* dict = obj_cast<ObjDict>(obj, ObjType::DICT);
+        ObjDict* dict = reinterpret_cast<ObjDict*>(obj);
         for (auto [k, v] : dict->data) {
             if (k.is_obj())
                 mark_object(k.as_obj());
@@ -166,7 +166,7 @@ void GarbageCollector::blacken_object(ObjHeader* obj)
     }
     case ObjType::FILE_HANDLE: break;
     case ObjType::MODULE: {
-        ObjModule* module = obj_cast<ObjModule>(obj, ObjType::MODULE);
+        ObjModule* module = reinterpret_cast<ObjModule*>(obj);
         if (module->globals != nullptr)
             mark_value_array(module->globals->slots);
         if (module->chunk != nullptr)

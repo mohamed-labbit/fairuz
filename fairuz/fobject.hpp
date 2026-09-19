@@ -222,22 +222,6 @@ static_assert(offsetof(ObjClass, obj) == 0, "ObjHeader must be the first member 
 static_assert(offsetof(ObjInstance, obj) == 0, "ObjHeader must be the first member of ObjInstance");
 static_assert(offsetof(ObjFileHandle, obj) == 0, "ObjHeader must be the first member of ObjFileHandle");
 
-template<typename T>
-inline T* obj_cast(ObjHeader* obj, ObjType expected)
-{
-    assert(obj != nullptr && "cannot cast a null object");
-    assert(obj->type == expected && "Obj type tag mismatch on cast");
-    return reinterpret_cast<T*>(obj);
-}
-
-template<typename T>
-inline T const* obj_cast(ObjHeader const* obj, ObjType expected)
-{
-    assert(obj != nullptr && "cannot cast a null object");
-    assert(obj->type == expected && "Obj type tag mismatch on cast");
-    return reinterpret_cast<T const*>(obj);
-}
-
 } // namespace fairuz::runtime
 
 #endif // FA_OBJECT_HPP
