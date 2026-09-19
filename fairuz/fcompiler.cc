@@ -1493,12 +1493,21 @@ void Compiler::discharge(ExprResult const& r, reg_t dst, SourceLocation loc)
     case ExprResult::Kind::REG:
         if (r.reg_ != dst)
             emit(make_ABC(OpCode::MOVE, dst, r.reg_, 0), loc);
-        break;
-    case ExprResult::Kind::RELOC: patch_a(current_chunk(), r.reloc_pc, dst); break;
-    case ExprResult::Kind::KINT: emit_load_value(dst, Value::from_int(r.ival), loc); break;
-    case ExprResult::Kind::KFLOAT: emit_load_value(dst, Value::from_real(r.dval), loc); break;
-    case ExprResult::Kind::KBOOL: emit_load_value(dst, Value::from_bool(r.bval), loc); break;
-    case ExprResult::Kind::KNIL: emit_load_value(dst, Value::nil(), loc); break;
+        return;
+    case ExprResult::Kind::RELOC: patch_a(current_chunk(), r.reloc_pc, dst); return;
+    case ExprResult::Kind::KINT: {
+#if FA_USE_NANBOX
+        if (r.ival > Value::int_max() || r.ival < Value::int_min()) {
+            emit(make_ABx(OpCode::LOAD_BIG_INT, dst, current_chunk()->add_big_int(r.ival)), loc);
+            return;
+        }
+#endif
+        emit_load_value(dst, Value::from_int(r.ival), loc);
+        return;
+    }
+    case ExprResult::Kind::KFLOAT: emit_load_value(dst, Value::from_real(r.dval), loc); return;
+    case ExprResult::Kind::KBOOL: emit_load_value(dst, Value::from_bool(r.bval), loc); return;
+    case ExprResult::Kind::KNIL: emit_load_value(dst, Value::nil(), loc); return;
     }
 }
 
