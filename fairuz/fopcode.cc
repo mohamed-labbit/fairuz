@@ -49,6 +49,22 @@ bool Chunk::patch_jump(u32 const instr_idx)
     return true;
 }
 
+#if FA_USE_NANBOX
+u16 Chunk::add_big_int(i64 const v)
+{
+    for (u32 i = 0, n = big_ints.size(); i < n; i++) {
+        if (big_ints[i] == v)
+            return static_cast<u16>(i);
+    }
+
+    if (big_ints.size() > MAX_CONSTANTS)
+        diagnostic::panic(ErrorCode::TOO_MANY_CONSTANTS);
+
+    big_ints.push(v);
+    return static_cast<u16>(constants.size() - 1);
+}
+#endif
+
 u16 Chunk::add_constant(Value const v)
 {
     for (u32 i = 0, n = constants.size(); i < n; i++) {
