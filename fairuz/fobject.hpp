@@ -43,9 +43,17 @@ using ListType = Array<Value, /*_Alloc=*/GarbageCollector>;
 
 #if FA_USE_NANBOX
 
-struct ObjInt {
+struct ObjBigInt {
     ObjHeader obj { ObjType::INT };
     i64 val { UINT64_C(0) };
+
+    explicit ObjBigInt(i64 const v)
+        : obj(ObjType::INT)
+        , val(v)
+    {
+    }
+
+    ~ObjBigInt() = default;
 };
 
 #endif // FA_USE_NANBOX
