@@ -329,7 +329,12 @@ static void print_runtime_value_impl(Value v,
             return;
         }
 #if FA_USE_NANBOX
-        case fairuz::runtime::ObjType::INT: // TODO:
+        case fairuz::runtime::ObjType::INT: {
+            auto int_obj = reinterpret_cast<ObjBigInt*>(obj);
+            /// add '<' and '>' to distinguish a fallback int object from a NAN-BOXed int value
+            std::cout << "<" << int_obj->val << ">" << '\n';
+            return;
+        }
 #endif
 
         case ObjType::_COUNT:
