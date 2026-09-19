@@ -499,6 +499,10 @@ Value VM::execute(int stop_frame_depth)
         if (value < static_cast<__int128>(Value::int_min())
             || value > static_cast<__int128>(Value::int_max()))
             raise_error(ErrorCode::NUMERIC_OUT_OF_RANGE);
+#if FA_USE_NANBOX
+        if (value > static_cast<__int128>(Value::int_max()) || value < static_cast<__int128>(Value::int_min()))
+            return m_gc.make_int(static_cast<i64>(value));
+#endif
         return Value::from_int(static_cast<i64>(value));
     };
 
@@ -534,11 +538,16 @@ Value VM::execute(int stop_frame_depth)
     }
     CASE(LOAD_INT)
     {
-        Value& ret = RA();
-        /// TODO: create a ObjInt if using nanboxing and v is larger than 48 bits
-        ret = Value::from_int(static_cast<i32>(static_cast<u16>(instr_Bx(instr))) - JUMP_OFFSET);
+        RA() = Value::from_int(static_cast<i32>(static_cast<u16>(instr_Bx(instr))) - JUMP_OFFSET);
         DISPATCH();
     }
+#if FA_USE_NANBOX
+    CASE(LOAD_BIG_INT)
+    {
+        RA() = m_gc.make_int(cur_chunk->big_ints[instr_Bx(instr)]);
+        DISPATCH();
+    }
+#endif
     CASE(LOAD_GLOBAL)
     {
         {
