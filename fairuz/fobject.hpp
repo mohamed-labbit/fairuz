@@ -17,6 +17,7 @@ namespace fairuz::runtime {
 struct Chunk;
 class VM;
 class GarbageCollector;
+struct BuiltinsList;
 
 struct GlobalEnvironment {
     using IndexTable = HashTable<StringRef, u32, StringRefHash, StringRefEqual>;
@@ -25,12 +26,9 @@ struct GlobalEnvironment {
     Array<Value> slots;
     GlobalEnvironment* fallback { nullptr };
 
-    Value const* find(StringRef const& name) const
-    {
-        if (u32 const* slot = index.find_ptr(name))
-            return *slot < slots.size() ? &slots[*slot] : nullptr;
-        return fallback == nullptr ? nullptr : fallback->find(name);
-    }
+    BuiltinsList* builtins { nullptr };
+
+    Value const* find(StringRef const& name) const;
 };
 
 using DictType = HashTable<Value, Value, ValueHash, ValueEqual>;

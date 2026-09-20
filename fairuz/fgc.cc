@@ -76,6 +76,10 @@ void GarbageCollector::mark_roots(VM* vm)
             mark_object(&vm->m_frames[i].func->obj);
     }
 
+    for (Value value : vm->m_builtin_functions.values()) {
+        if (value.is_obj())
+            mark_object(value.as_obj());
+    }
     mark_value_array(vm->m_builtin_environment.slots);
     mark_value_array(vm->m_root_environment.slots);
     for (auto const& env : vm->m_module_environments) {

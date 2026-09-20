@@ -3,10 +3,22 @@
 //
 
 #include "fobject.hpp"
+#include "fbuiltins.hpp"
 #include "fgc.hpp"
 #include "fopcode.hpp"
 
 namespace fairuz::runtime {
+
+Value const* GlobalEnvironment::find(StringRef const& name) const
+{
+    if (u32 const* slot = index.find_ptr(name))
+        return *slot < slots.size() ? &slots[*slot] : nullptr;
+    if (builtins != nullptr) {
+        if (auto* value = builtins->find(name))
+            return value;
+    }
+    return fallback == nullptr ? nullptr : fallback->find(name);
+}
 
 // object defs
 

@@ -71,27 +71,36 @@ std::string similar_name(GlobalEnvironment* environment, std::string const& miss
     size_t best = wanted.size() < 6 ? 2 : 3;
     std::string match;
     size_t examined = 0;
+    auto consider = [&](StringRef const& name) {
+        if (++examined > 1000)
+            return;
+        auto candidate = points(name);
+        if (candidate.size() > 64 || candidate.size() + best < wanted.size() || wanted.size() + best < candidate.size())
+            return;
+        std::vector<size_t> previous(candidate.size() + 1), current(candidate.size() + 1);
+        for (size_t j = 0; j <= candidate.size(); ++j)
+            previous[j] = j;
+        for (size_t i = 1; i <= wanted.size(); ++i) {
+            current[0] = i;
+            for (size_t j = 1; j <= candidate.size(); ++j)
+                current[j] = std::min({ previous[j] + 1, current[j - 1] + 1, previous[j - 1] + (wanted[i - 1] != candidate[j - 1]) });
+            previous.swap(current);
+        }
+        std::string text(name.data(), name.len());
+        if (previous.back() < best || (previous.back() == best && !match.empty() && text < match)) {
+            best = previous.back();
+            match = std::move(text);
+        }
+    };
     for (auto* env = environment; env && examined < 1000; env = env->fallback) {
         for (auto const& [name, slot] : env->index) {
-            if (++examined > 1000)
+            consider(name);
+            if (examined >= 1000)
                 break;
-            auto candidate = points(name);
-            if (candidate.size() > 64 || candidate.size() + best < wanted.size() || wanted.size() + best < candidate.size())
-                continue;
-            std::vector<size_t> previous(candidate.size() + 1), current(candidate.size() + 1);
-            for (size_t j = 0; j <= candidate.size(); ++j)
-                previous[j] = j;
-            for (size_t i = 1; i <= wanted.size(); ++i) {
-                current[0] = i;
-                for (size_t j = 1; j <= candidate.size(); ++j)
-                    current[j] = std::min({ previous[j] + 1, current[j - 1] + 1, previous[j - 1] + (wanted[i - 1] != candidate[j - 1]) });
-                previous.swap(current);
-            }
-            std::string text(name.data(), name.len());
-            if (previous.back() < best || (previous.back() == best && !match.empty() && text < match)) {
-                best = previous.back();
-                match = std::move(text);
-            }
+        }
+        if (env->builtins != nullptr) {
+            for (auto const& builtin : BuiltinsList::definitions())
+                consider(StringRef(builtin.name.data()));
         }
     }
     return match;
@@ -278,6 +287,7 @@ static void check_stack_index(int index, int stack_size, char const* m_context)
 }
 
 VM::VM()
+    : m_builtin_functions(*this)
 {
     diagnostic::reset();
 
@@ -286,7 +296,7 @@ VM::VM()
 
     m_root_environment.fallback = &m_builtin_environment;
 
-    open_stdlib();
+    m_builtin_environment.builtins = &m_builtin_functions;
 }
 
 VM::~VM()
@@ -1983,117 +1993,6 @@ void VM::intern_chunk_constants(Chunk* ch)
 
     for (auto* fn : ch->functions)
         intern_chunk_constants(fn);
-}
-
-void VM::open_stdlib()
-{
-    // Collections
-    (void)register_native("طول", &VM::len, 1);
-    (void)register_native("اضف", &VM::append, -1);
-    (void)register_native("احذف", &VM::pop, 1);
-    (void)register_native("مقطع", &VM::slice, -1);
-    (void)register_native("قائمة", &VM::list, -1);
-    (void)register_native("قاموس", &VM::dict, -1);
-    (void)register_native("__قاموس_مفاتيح__", &VM::dict_keys, 1);
-    (void)register_native("__قاموس_يحتوي__", &VM::dict_contains, 2);
-    (void)register_native("__قاموس_احذف__", &VM::dict_delete, 2);
-    // I/O
-    (void)register_native("اكتب", &VM::print, -1);
-    (void)register_native("ادخل", &VM::input, 0);
-    (void)register_native("افتح", &VM::open, 2);
-    (void)register_native("اضف_ملف", &VM::append_file, 2);
-    (void)register_native("اغلق", &VM::close, 1);
-    // Type system / conversion
-    (void)register_native("صنف", &VM::type, 1);
-    (void)register_native("طبيعي", &VM::Int, 1);
-    (void)register_native("حقيقي", &VM::Float, 1);
-    (void)register_native("سلسلة", &VM::str, -1);
-    (void)register_native("منطقي", &VM::Bool, 1);
-    // String ops
-    (void)register_native("اقسم", &VM::split, 2);
-    (void)register_native("اجمع", &VM::join, 2);
-    (void)register_native("جزء", &VM::substr, 3);
-    (void)register_native("يحتوي", &VM::contains, 2);
-    (void)register_native("قص", &VM::trim, 1);
-    (void)register_native("__نص_من_رمز__", &VM::char_from_codepoint, 1);
-    (void)register_native("__عدد_من_نص__", &VM::number_from_text, 1);
-    (void)register_native("__عدد_منته__", &VM::number_finite, 1);
-    (void)register_native("__عدد_ليس_رقما__", &VM::number_is_nan, 1);
-    (void)register_native("__JSON_اهرب__", &VM::json_escape, 1);
-    (void)register_native("__JSON_اقرا_سلسلة__", &VM::json_read_string, 2);
-    (void)register_native("__استدعاء__", &VM::dynamic_call, 2);
-    (void)register_native("__منفذ_جديد__", &VM::executor_new, 1);
-    (void)register_native("__منفذ_اغلق__", &VM::executor_close, 2);
-    (void)register_native("__مهمة_ابدأ__", &VM::task_start, 3);
-    (void)register_native("__مهمة_تمت__", &VM::task_done, 1);
-    (void)register_native("__مهمة_نتيجة__", &VM::task_result, 2);
-    (void)register_native("__مهمة_الغ__", &VM::task_cancel, 1);
-    (void)register_native("__مهمة_انتظر_الكل__", &VM::task_wait_all, 2);
-    (void)register_native("__ملف_افتح__", &VM::file_open, 2);
-    (void)register_native("__ملف_اقرا__", &VM::file_read, 2);
-    (void)register_native("__ملف_اقرا_الكل__", &VM::file_read_all, 1);
-    (void)register_native("__ملف_اقرا_سطر__", &VM::file_read_line, 1);
-    (void)register_native("__ملف_اكتب__", &VM::file_write, 2);
-    (void)register_native("__ملف_اضف__", &VM::file_write, 2);
-    (void)register_native("__ملف_ادفع__", &VM::file_flush, 1);
-    (void)register_native("__ملف_اغلق__", &VM::close, 1);
-    (void)register_native("__مسار_احذف__", &VM::path_delete, 1);
-    (void)register_native("__مسار_glob__", &VM::path_glob, 2);
-    (void)register_native("__ملف_مؤقت__", &VM::temp_file, 3);
-    (void)register_native("__مجلد_مؤقت__", &VM::temp_directory, 2);
-    (void)register_native("__نظام_احذف_شجرة__", &VM::remove_tree, 1);
-    (void)register_native("__وقت_الان__", &VM::datetime_now, 0);
-    (void)register_native("__وقت_من_حقول__", &VM::datetime_from_fields, 7);
-    (void)register_native("__وقت_الى_حقول__", &VM::datetime_to_fields, 2);
-    (void)register_native("__وقت_حلل__", &VM::datetime_parse, 3);
-    (void)register_native("__وقت_نسق__", &VM::datetime_format, 3);
-    (void)register_native("__64_رمز__", &VM::base64_encode, 2);
-    (void)register_native("__64_فك__", &VM::base64_decode, 2);
-    (void)register_native("__16_رمز__", &VM::hex_encode, 1);
-    (void)register_native("__16_فك__", &VM::hex_decode, 1);
-    (void)register_native("__هاش_جديد__", &VM::hash_new, 1);
-    (void)register_native("__هاش_حدث__", &VM::hash_update, 2);
-    (void)register_native("__هاش_ناتج__", &VM::hash_digest, 2);
-    (void)register_native("__HMAC__", &VM::hmac, 3);
-    (void)register_native("__ضغط__", &VM::compress, 3);
-    (void)register_native("__فك_ضغط__", &VM::decompress, 3);
-    // Math
-    (void)register_native("ادنى", &VM::floor, 1);
-    (void)register_native("اعلى", &VM::ceil, 1);
-    (void)register_native("تقريب", &VM::round, 1);
-    (void)register_native("مطلق", &VM::abs, 1);
-    (void)register_native("اصغر", &VM::min, -1);
-    (void)register_native("اكبر", &VM::max, -1);
-    (void)register_native("قوة", &VM::pow, 2);
-    (void)register_native("جذر", &VM::sqrt, 1);
-    (void)register_native("__رياضيات__", &VM::math_unary, 2);
-    (void)register_native("__رياضيات2__", &VM::math_binary, 3);
-    (void)register_native("__URL_اهرب__", &VM::url_encode, 1);
-    (void)register_native("__URL_فك__", &VM::url_decode, 1);
-    (void)register_native("__URL_حلل__", &VM::url_parse, 1);
-    (void)register_native("__URL_ركب__", &VM::url_build, 1);
-    (void)register_native("__نمط_اجمع__", &VM::regex_compile, 2);
-    (void)register_native("__نمط_بحث__", &VM::regex_search, 3);
-    (void)register_native("__نمط_طابق__", &VM::regex_match, 3);
-    (void)register_native("__نمط_كامل__", &VM::regex_fullmatch, 2);
-    (void)register_native("__نمط_الكل__", &VM::regex_findall, 2);
-    (void)register_native("__نمط_اقسم__", &VM::regex_split, 3);
-    (void)register_native("__نمط_استبدل__", &VM::regex_replace, 4);
-    // Runtime / diagnostics
-    (void)register_native("تاكد", &VM::Assert, -1);
-    (void)register_native("ساعة", &VM::clock, 0);
-    (void)register_native("عطل", &VM::error, -1);
-    (void)register_native("وقت", &VM::time, 0);
-}
-
-bool VM::register_native(StringRef const& name, NativeFn fn, int arity)
-{
-    ObjString* name_obj = m_gc.make_obj_string(name);
-    Value val = m_gc.make_native(fn, name_obj, arity);
-
-    store_global(&m_builtin_environment, name, val);
-
-    return true;
 }
 
 SourceLocation VM::current_location() const

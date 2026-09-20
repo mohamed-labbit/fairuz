@@ -1,6 +1,7 @@
 #ifndef FA_VM_HPP
 #define FA_VM_HPP
 
+#include "fbuiltins.hpp"
 #include "fgc.hpp"
 #include "fopcode.hpp"
 #include "fstring.hpp"
@@ -68,7 +69,8 @@ public:
 
     Value run(Chunk* chunk);
 
-    /* STANDARD LIBRARY */
+    /// Builtin functions that require access to memory or internal interpreter
+    /// state, or maybe just have to be really efficient.
 
     Value print(int argc, Value* argv);
     Value open(int argc, Value* argv);
@@ -173,12 +175,15 @@ public:
     int m_stack_top { 0 };
     int m_frames_top { 0 };
 
+    friend struct BuiltinsList;
+
     HashTable<StringRef, ObjString*, StringRefHash, StringRefEqual> m_string_table;
     GlobalEnvironment m_builtin_environment;
     GlobalEnvironment m_root_environment;
     std::vector<std::unique_ptr<GlobalEnvironment>> m_module_environments;
     std::vector<std::unique_ptr<lex::FileManager>> m_module_sources;
     std::unordered_map<std::string, ObjModule*> m_module_cache;
+    BuiltinsList m_builtin_functions;
     bool m_is_dead { false };
 
     Value execute(int stop_frame_depth = 0);
@@ -195,9 +200,6 @@ public:
     void update_ic_binary(Chunk* ch, u32 nop_ip, Value lhs, Value rhs, Value result);
     void call_value(Value callee, int argc, int base, bool tail);
     Value call_native(ObjNative* nat, int argc, int base);
-
-    void open_stdlib();
-    bool register_native(StringRef const& name, NativeFn fn, int arity = -1);
 
     SourceLocation current_location() const;
     void raise_error(ErrorCode errc, std::string const& detail = "");
