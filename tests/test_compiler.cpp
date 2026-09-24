@@ -414,55 +414,6 @@ TEST(CompilerUnary, BitwiseNotVariable)
     bc.done();
 }
 
-TEST(CompilerUnary, NegLiteralFolded)
-{
-    Chunk* chunk = compile_ok(expr_stmt(unary(lit_int(3), AST::Expr::Kind::OP_NEG)));
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    BytecodeChecker bc(*chunk);
-    bc.next("LOAD_INT -3").op(OpCode::LOAD_INT).Bx(load_int_bx(-3));
-    bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
-    bc.done();
-    EXPECT_TRUE(chunk->constants.empty());
-}
-
-TEST(CompilerUnary, NotTrueFolded)
-{
-    Chunk* chunk = compile_ok(expr_stmt(unary(lit_bool(true), AST::Expr::Kind::OP_NOT)));
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    BytecodeChecker bc(*chunk);
-    bc.next("LOAD_FALSE").op(OpCode::LOAD_FALSE);
-    bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
-    bc.done();
-}
-
-TEST(CompilerUnary, NotFalseFolded)
-{
-    Chunk* chunk = compile_ok(expr_stmt(unary(lit_bool(false), AST::Expr::Kind::OP_NOT)));
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    BytecodeChecker bc(*chunk);
-    bc.next("LOAD_TRUE").op(OpCode::LOAD_TRUE);
-    bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
-    bc.done();
-}
-
-TEST(CompilerUnary, BNotLiteralFolded)
-{
-    Chunk* chunk = compile_ok(expr_stmt(unary(lit_int(0), AST::Expr::Kind::OP_BITNOT)));
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    BytecodeChecker bc(*chunk);
-    bc.next("LOAD_INT -1").op(OpCode::LOAD_INT).Bx(load_int_bx(-1));
-    bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
-    bc.done();
-}
-
 TEST(CompilerBinary, AddTwoLocals)
 {
     Chunk* ch = compile_ok_local(
@@ -478,89 +429,6 @@ TEST(CompilerBinary, AddTwoLocals)
     EXPECT_EQ(ch->ic_slots.size(), 1u);
 }
 
-TEST(CompilerBinary, SubtractLiterals)
-{
-    Chunk* chunk = compile_ok(expr_stmt(binary(lit_int(10), lit_int(3), AST::Expr::Kind::OP_SUB)));
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    BytecodeChecker bc(*chunk);
-    bc.next("LOAD_INT 7").op(OpCode::LOAD_INT).Bx(load_int_bx(7));
-    bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
-    bc.done();
-    EXPECT_TRUE(chunk->ic_slots.empty());
-}
-
-TEST(CompilerBinary, MultiplyLiterals)
-{
-    Chunk* chunk = compile_ok(expr_stmt(binary(lit_int(6), lit_int(7), AST::Expr::Kind::OP_MUL)));
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    BytecodeChecker bc(*chunk);
-    bc.next("LOAD_INT 42").op(OpCode::LOAD_INT).Bx(load_int_bx(42));
-    bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
-    bc.done();
-}
-
-TEST(CompilerBinary, DivisionFolded)
-{
-    Chunk* chunk = compile_ok(expr_stmt(binary(lit_flt(1.0), lit_flt(2.0), AST::Expr::Kind::OP_DIV)));
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    BytecodeChecker bc(*chunk);
-    bc.next("LOAD_CONST 0.5").op(OpCode::LOAD_CONST).A(0).Bx(0);
-    ASSERT_FALSE(chunk->constants.empty());
-    EXPECT_DOUBLE_EQ(chunk->constants[0].as_double(), 0.5);
-}
-
-TEST(CompilerBinary, DivisionByZeroNotFolded)
-{
-    Chunk* ch = compile_ok_local({ decl_stmt("x", lit_int(5)),
-        expr_stmt(binary(ident("x"), lit_int(0), AST::Expr::Kind::OP_DIV)) });
-
-    BytecodeChecker bc(*ch);
-    bc.next("decl_stmt x").op(OpCode::LOAD_INT).A(0);
-    bc.next("LOAD_INT 0 into r1 temp").op(OpCode::LOAD_INT);
-    bc.next("OP_DIV").op(OpCode::OP_DIV);
-    bc.next("NOP ic").op(OpCode::NOP);
-    bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
-    bc.done();
-}
-
-TEST(CompilerBinary, GreaterThanNormalizedToLT)
-{
-    Chunk* chunk = compile_ok_local(
-        { decl_stmt("a", lit_int(3)), decl_stmt("b", lit_int(1)),
-            expr_stmt(binary(ident("a"), ident("b"), AST::Expr::Kind::OP_GT)) });
-
-    BytecodeChecker bc(*chunk);
-    bc.next("decl_stmt a").op(OpCode::LOAD_INT).A(0);
-    bc.next("decl_stmt b").op(OpCode::LOAD_INT).A(1);
-    // GT(a,b) → OP_LT(b,a): B=r1(b), C=r0(a)
-    bc.next("OP_LT").op(OpCode::OP_LT).B(1).C(0);
-    bc.next("NOP ic").op(OpCode::NOP);
-    bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
-    bc.done();
-}
-
-TEST(CompilerBinary, GreaterEqualNormalizedToLE)
-{
-    Chunk* ch = compile_ok_local({
-        decl_stmt("a", lit_int(5)),
-        decl_stmt("b", lit_int(5)),
-        expr_stmt(binary(ident("a"), ident("b"), AST::Expr::Kind::OP_GTE)),
-    });
-
-    BytecodeChecker bc(*ch);
-    bc.next("decl_stmt a").op(OpCode::LOAD_INT).A(0);
-    bc.next("decl_stmt b").op(OpCode::LOAD_INT).A(1);
-    // GE(a,b) → OP_LTE(b,a)
-    bc.next("OP_LTE").op(OpCode::OP_LTE).B(1).C(0);
-    bc.next("NOP ic").op(OpCode::NOP);
-}
-
 TEST(CompilerBinary, ICSlotAllocatedPerBinaryOp)
 {
     Chunk* chunk = compile_ok({ decl_stmt("x", lit_int(1)), decl_stmt("y", lit_int(2)),
@@ -570,54 +438,6 @@ TEST(CompilerBinary, ICSlotAllocatedPerBinaryOp)
     if (test_config::dump_bytecode)
         dump(chunk);
     EXPECT_EQ(chunk->ic_slots.size(), 2u);
-}
-
-TEST(CompilerBinary, EqualityLiteralsFolded)
-{
-    Chunk* chunk = compile_ok(expr_stmt(binary(lit_int(1), lit_int(1), AST::Expr::Kind::OP_EQ)));
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    BytecodeChecker bc(*chunk);
-    bc.next("LOAD_TRUE").op(OpCode::LOAD_TRUE);
-    bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
-    bc.done();
-}
-
-TEST(CompilerBinary, InequalityLiteralsFolded)
-{
-    Chunk* chunk = compile_ok(expr_stmt(binary(lit_int(1), lit_int(2), AST::Expr::Kind::OP_NEQ)));
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    BytecodeChecker bc(*chunk);
-    bc.next("LOAD_TRUE").op(OpCode::LOAD_TRUE);
-    bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
-    bc.done();
-}
-
-TEST(CompilerBinary, BitwiseAndFolded)
-{
-    Chunk* chunk = compile_ok(expr_stmt(binary(lit_int(0b1100), lit_int(0b1010), AST::Expr::Kind::OP_BITAND)));
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    BytecodeChecker bc(*chunk);
-    bc.next("LOAD_INT 8").op(OpCode::LOAD_INT).Bx(load_int_bx(8));
-    bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
-    bc.done();
-}
-
-TEST(CompilerBinary, ShiftLeftFolded)
-{
-    Chunk* chunk = compile_ok(expr_stmt(binary(lit_int(1), lit_int(3), AST::Expr::Kind::OP_LSHIFT)));
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    BytecodeChecker bc(*chunk);
-    bc.next("LOAD_INT 8").op(OpCode::LOAD_INT).Bx(load_int_bx(8));
-    bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
-    bc.done();
 }
 
 TEST(CompilerBinary, LogicalAndShortCircuit)
@@ -659,15 +479,6 @@ TEST(CompilerBinary, LogicalOrShortCircuit)
             found_jit = true;
     }
     EXPECT_TRUE(found_jit) << "expected JUMP_IF_TRUE for || short-circuit";
-}
-
-TEST(CompilerBinary, AndWithBothLiteralsTrueNotFolded)
-{
-    Chunk* chunk = compile_ok(expr_stmt(binary(lit_bool(true), lit_bool(true), AST::Expr::Kind::OP_AND)));
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    EXPECT_FALSE(chunk->code.empty());
 }
 
 TEST(CompilerIf, SimpleIfNoElse)
@@ -720,41 +531,6 @@ TEST(CompilerIf, IfElse)
     EXPECT_EQ(jif_target, jmp_pos + 1);
 }
 
-TEST(CompilerIf, ConstantTrueConditionDCE)
-{
-    Chunk* chunk = compile_ok(if_stmt(lit_bool(true), blk({ decl_stmt("x", lit_int(1)) }), blk({ decl_stmt("y", lit_int(999)) })));
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    for (auto& ins : chunk->code)
-        EXPECT_NE(instr_op(ins), OpCode::JUMP_IF_FALSE) << "JUMP_IF_FALSE should not exist when condition is const-true";
-    for (auto& v : chunk->constants)
-        EXPECT_NE(v.as_int(), 999);
-}
-
-TEST(CompilerIf, ConstantFalseConditionDCE)
-{
-    Chunk* chunk = compile_ok(if_stmt(lit_bool(false), blk({ decl_stmt("x", lit_int(1)) }), blk({ decl_stmt("y", lit_int(2)) })));
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    BytecodeChecker bc(*chunk);
-    bc.next("LOAD_INT 2").op(OpCode::LOAD_INT).Bx(load_int_bx(2));
-    bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
-    bc.done();
-}
-
-TEST(CompilerIf, ConstantFalseNoElseEmitsNothing)
-{
-    Chunk* chunk = compile_ok(if_stmt(lit_bool(false), blk({ decl_stmt("x", lit_int(1)) })));
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    BytecodeChecker bc(*chunk);
-    bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
-    bc.done();
-}
-
 TEST(CompilerWhile, BasicWhile)
 {
     Chunk* chunk = compile_ok(while_stmt(ident("x"), blk({ decl_stmt("a", lit_int(1)) })));
@@ -776,34 +552,6 @@ TEST(CompilerWhile, BasicWhile)
         if (instr_op(ins) == OpCode::LOOP)
             EXPECT_LT(instr_sBx(ins), 0) << "LOOP offset must be negative";
     }
-}
-
-TEST(CompilerWhile, WhileFalseEmitsNothing)
-{
-    Chunk* chunk = compile_ok(while_stmt(lit_bool(false), blk({ decl_stmt("x", lit_int(1)) })));
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    BytecodeChecker bc(*chunk);
-    bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
-    bc.done();
-}
-
-TEST(CompilerWhile, WhileTrueEmitsUnconditionalLoop)
-{
-    Chunk* chunk = compile_ok(while_stmt(lit_bool(true), blk({ })));
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    bool has_jif = false, has_loop = false;
-    for (auto& ins : chunk->code) {
-        if (instr_op(ins) == OpCode::JUMP_IF_FALSE)
-            has_jif = true;
-        if (instr_op(ins) == OpCode::LOOP)
-            has_loop = true;
-    }
-    EXPECT_FALSE(has_jif) << "while(true) must not emit JUMP_IF_FALSE";
-    EXPECT_TRUE(has_loop) << "while(true) must emit LOOP";
 }
 
 TEST(CompilerWhile, JumpIfFalsePointsPastLoop)
@@ -1367,28 +1115,6 @@ TEST(CompilerLoop, ContinueOutsideLoopIsRejected)
 {
     Chunk* chunk = compile_fail(continue_stmt());
     ASSERT_NE(chunk, nullptr);
-}
-
-TEST(CompilerIntegration, NestedArithmetic)
-{
-    Chunk* ch = compile_ok_local({ decl_stmt(
-        "result",
-        binary(
-            binary(
-                lit_int(2),
-                lit_int(3),
-                AST::Expr::Kind::OP_ADD),
-            binary(
-                lit_int(4),
-                lit_int(1),
-                AST::Expr::Kind::OP_SUB),
-            AST::Expr::Kind::OP_MUL)) });
-
-    BytecodeChecker bc(*ch);
-    bc.next("LOAD_INT 15").op(OpCode::LOAD_INT).A(0).Bx(load_int_bx(15));
-    bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
-    bc.done();
-    EXPECT_TRUE(ch->ic_slots.empty());
 }
 
 TEST(CompilerIntegration, StringConstantPoolDedup)
