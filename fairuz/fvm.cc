@@ -108,8 +108,10 @@ std::string similar_name(GlobalEnvironment* environment, std::string const& miss
 
 bool values_equal_impl(Value lhs, Value rhs, ComparedObjects& seen)
 {
-    if (lhs == rhs)
+    if (lhs.value() == rhs.value())
         return true;
+    if (lhs.is_int() && rhs.is_int())
+        return lhs.as_int() == rhs.as_int();
     if (lhs.is_number() && rhs.is_number())
         return lhs.as_double_any() == rhs.as_double_any();
     if (lhs.is_nil() || rhs.is_nil() || lhs.is_bool() || rhs.is_bool())
@@ -506,8 +508,8 @@ Value VM::execute(int stop_frame_depth)
 
     using reg_t = u8;
     auto checked_int = [this](__int128 value) -> Value {
-        if (value < static_cast<__int128>(Value::int_min())
-            || value > static_cast<__int128>(Value::int_max()))
+        if (value < static_cast<__int128>(INT64_MIN)
+            || value > static_cast<__int128>(INT64_MAX))
             raise_error(ErrorCode::NUMERIC_OUT_OF_RANGE);
 #if FA_USE_NANBOX
         if (value > static_cast<__int128>(Value::int_max()) || value < static_cast<__int128>(Value::int_min()))
@@ -725,10 +727,9 @@ Value VM::execute(int stop_frame_depth)
         if (lhs.is_int() && rhs.is_int()) {
             if (rhs.as_int() == 0)
                 raise_error(ErrorCode::DIVISION_BY_ZERO);
-            if (lhs.as_int() == Value::int_min() && rhs.as_int() == -1)
-                raise_error(ErrorCode::NUMERIC_OUT_OF_RANGE);
-            if (lhs.as_int() % rhs.as_int() == INT64_C(0))
-                res = Value::from_int(VM_DIVI(lhs, rhs));
+            // Wide division also handles INT64_MIN / -1 without C++ UB.
+            if (static_cast<__int128>(lhs.as_int()) % rhs.as_int() == 0)
+                res = checked_int(static_cast<__int128>(lhs.as_int()) / rhs.as_int());
             else
                 res = Value::from_real(VM_DIVF(lhs, rhs));
             RECORD_BINARY_IC(lhs, rhs, res);
@@ -758,7 +759,7 @@ Value VM::execute(int stop_frame_depth)
                 raise_error(ErrorCode::MODULO_BY_ZERO);
             // Preserve integer type for integer modulo, matching arithmetic
             // closure and making the result valid for indexing/ranges.
-            res = Value::from_int(VMOPI(lhs, rhs, %));
+            res = checked_int(static_cast<__int128>(lhs.as_int()) % rhs.as_int());
             RECORD_BINARY_IC(lhs, rhs, res);
         } else if (lhs.is_number() && rhs.is_number()) {
             if (rhs.as_double_any() == 0.0)
@@ -831,7 +832,7 @@ Value VM::execute(int stop_frame_depth)
         if (UNLIKELY(!lhs.is_int() || !rhs.is_int()))
             raise_error(ErrorCode::TYPE_ERROR_ARITH);
 
-        res = Value::from_int(VMOPI(lhs, rhs, &));
+        res = checked_int(VMOPI(lhs, rhs, &));
         DISPATCH();
     }
     CASE(OP_BITOR)
@@ -843,7 +844,7 @@ Value VM::execute(int stop_frame_depth)
         if (UNLIKELY(!lhs.is_int() || !rhs.is_int()))
             raise_error(ErrorCode::TYPE_ERROR_ARITH);
 
-        res = Value::from_int(VMOPI(lhs, rhs, |));
+        res = checked_int(VMOPI(lhs, rhs, |));
         DISPATCH();
     }
     CASE(OP_BITXOR)
@@ -855,7 +856,7 @@ Value VM::execute(int stop_frame_depth)
         if (UNLIKELY(!lhs.is_int() || !rhs.is_int()))
             raise_error(ErrorCode::TYPE_ERROR_ARITH);
 
-        res = Value::from_int(VMOPI(lhs, rhs, ^));
+        res = checked_int(VMOPI(lhs, rhs, ^));
         DISPATCH();
     }
     CASE(OP_BITNOT)
@@ -865,40 +866,52 @@ Value VM::execute(int stop_frame_depth)
         if (UNLIKELY(!operand.is_int()))
             raise_error(ErrorCode::TYPE_ERROR_ARITH);
 
-        res = Value::from_int(~operand.as_int());
+        res = checked_int(~operand.as_int());
         DISPATCH();
     }
     CASE(OP_LSHIFT)
+    CASE(OP_LSHIFT_REG)
     {
         Value& res = RA();
         Value lhs = RB();
         if (UNLIKELY(!lhs.is_int()))
             raise_error(ErrorCode::TYPE_ERROR_ARITH);
 
-        reg_t imm = instr_C(instr);
-        if (imm >= 64)
-            raise_error(ErrorCode::INDEX_TYPE_ERROR);
+        i64 imm = instr_C(instr);
+        if (instr_op(instr) == OpCode::OP_LSHIFT_REG) {
+            if (!RC().is_int())
+                raise_error(ErrorCode::TYPE_ERROR_ARITH);
+            imm = RC().as_int();
+        }
+        if (imm < 0 || imm >= 64)
+            raise_error(ErrorCode::SHIFT_AMOUNT_OUT_OF_RANGE);
 
         res = checked_int(static_cast<__int128>(lhs.as_int())
             * (static_cast<__int128>(1) << imm));
         DISPATCH();
     }
     CASE(OP_RSHIFT)
+    CASE(OP_RSHIFT_REG)
     {
         Value& res = RA();
         Value lhs = RB();
         if (UNLIKELY(!lhs.is_int()))
             raise_error(ErrorCode::TYPE_ERROR_ARITH);
 
-        reg_t imm = instr_C(instr);
-        if (imm >= 64)
-            raise_error(ErrorCode::INDEX_TYPE_ERROR);
+        i64 imm = instr_C(instr);
+        if (instr_op(instr) == OpCode::OP_RSHIFT_REG) {
+            if (!RC().is_int())
+                raise_error(ErrorCode::TYPE_ERROR_ARITH);
+            imm = RC().as_int();
+        }
+        if (imm < 0 || imm >= 64)
+            raise_error(ErrorCode::SHIFT_AMOUNT_OUT_OF_RANGE);
 
         u64 shifted = static_cast<u64>(lhs.as_int()) >> imm;
         if (lhs.as_int() < 0)
             res = Value::from_real(static_cast<f64>(shifted));
         else
-            res = Value::from_int(static_cast<i64>(shifted));
+            res = checked_int(static_cast<i64>(shifted));
 
         DISPATCH();
     }
@@ -986,6 +999,56 @@ Value VM::execute(int stop_frame_depth)
             RECORD_BINARY_IC(lhs, rhs, res);
         } else if (lhs.is_instance() || rhs.is_instance()) {
             VM_INSTANCE_OP(LTE);
+            LOAD_FRAME();
+            DISPATCH();
+        } else {
+            raise_error(ErrorCode::TYPE_ERROR_COMPARE);
+        }
+
+        DISPATCH();
+    }
+    CASE(OP_GT)
+    {
+        Value& res = RA();
+        Value lhs = RB();
+        Value rhs = RC();
+
+        if (lhs.is_int() && rhs.is_int()) {
+            res = Value::from_bool(VMOPI(lhs, rhs, >));
+            RECORD_BINARY_IC(lhs, rhs, res);
+        } else if (lhs.is_string() && rhs.is_string()) {
+            res = Value::from_bool(lhs.as_string()->str > rhs.as_string()->str);
+            RECORD_BINARY_IC(lhs, rhs, res);
+        } else if (lhs.is_number() && rhs.is_number()) {
+            res = Value::from_bool(lhs.as_double_any() > rhs.as_double_any());
+            RECORD_BINARY_IC(lhs, rhs, res);
+        } else if (lhs.is_instance() || rhs.is_instance()) {
+            VM_INSTANCE_OP(GT);
+            LOAD_FRAME();
+            DISPATCH();
+        } else {
+            raise_error(ErrorCode::TYPE_ERROR_COMPARE);
+        }
+
+        DISPATCH();
+    }
+    CASE(OP_GTE)
+    {
+        Value& res = RA();
+        Value lhs = RB();
+        Value rhs = RC();
+
+        if (lhs.is_int() && rhs.is_int()) {
+            res = Value::from_bool(VMOPI(lhs, rhs, >=));
+            RECORD_BINARY_IC(lhs, rhs, res);
+        } else if (lhs.is_string() && rhs.is_string()) {
+            res = Value::from_bool(lhs.as_string()->str >= rhs.as_string()->str);
+            RECORD_BINARY_IC(lhs, rhs, res);
+        } else if (lhs.is_number() && rhs.is_number()) {
+            res = Value::from_bool(lhs.as_double_any() >= rhs.as_double_any());
+            RECORD_BINARY_IC(lhs, rhs, res);
+        } else if (lhs.is_instance() || rhs.is_instance()) {
+            VM_INSTANCE_OP(GTE);
             LOAD_FRAME();
             DISPATCH();
         } else {
@@ -2055,10 +2118,8 @@ void VM::raise_error(ErrorCode errc, std::string const& detail)
             case OpCode::OP_MOD: operation = "%"; break;
             default: break;
             }
-            if (operation) {
+            if (operation)
                 _raise_error(errc, std::string("operator '") + operation + "' received " + value_type_name(get_reg(current, instr_B(instruction))) + " and " + value_type_name(get_reg(current, instr_C(instruction))));
-                return;
-            }
         }
     }
     _raise_error(errc, detail);
