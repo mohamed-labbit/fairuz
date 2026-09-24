@@ -199,7 +199,7 @@ static void print_runtime_value_impl(Value v,
     std::unordered_set<ObjHeader*>& active_containers, u32 depth)
 {
     if (v.is_nil()) {
-        std::cout << "nil";
+        std::cout << "عدم";
         return;
     }
 
@@ -335,7 +335,7 @@ static void print_runtime_value_impl(Value v,
         case fairuz::runtime::ObjType::INT: {
             auto int_obj = reinterpret_cast<ObjBigInt*>(obj);
             /// add '<' and '>' to distinguish a fallback int object from a NAN-BOXed int value
-            std::cout << "<" << int_obj->val << ">" << '\n';
+            std::cout << int_obj->val;
             return;
         }
 #endif
@@ -406,9 +406,15 @@ Value VM::Int(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr)
         return Value::nil();
-    if (argv[0].is_number())
-        return Value::from_int(static_cast<i64>(argv[0].as_double_any()));
-    return Value::nil();
+    if (argv[0].is_int())
+        return argv[0];
+    if (!argv[0].is_double())
+        return Value::nil();
+    f64 value = argv[0].as_double();
+    // 2^63 is exactly representable as a double; INT64_MAX rounds up to it.
+    if (!std::isfinite(value) || value < -0x1p63 || value >= 0x1p63)
+        raise_error(ErrorCode::NUMERIC_OUT_OF_RANGE);
+    return Value::from_int(static_cast<i64>(value), m_gc);
 }
 
 Value VM::Float(int argc, Value* argv)
@@ -2130,10 +2136,11 @@ Value VM::pow(int argc, Value* argv)
         return Value::nil();
     }
 
-    if (base.is_int() && exponent.is_int())
-        // return an int even if the result may be larger than 48 bit range
-        return Value::from_int(std::pow(base.as_int(), exponent.as_int()));
-    else
+    if (base.is_int() && exponent.is_int()) {
+        if (exponent.as_int() < 0)
+            return Value::from_real(std::pow(base.as_int(), exponent.as_int()));
+        return Value::from_int(std::pow(base.as_int(), exponent.as_int()), m_gc);
+    } else
         return Value::from_real(std::pow(base.as_double_any(), exponent.as_double_any()));
 
     return Value::nil();
@@ -2634,7 +2641,11 @@ Value VM::clock(int argc, Value* argv)
     auto elapsed = std::chrono::steady_clock::now().time_since_epoch();
     return Value::from_real(std::chrono::duration<f64>(elapsed).count());
 }
-Value VM::error(int /*argc*/, Value* /*argv*/) { return Value::nil(); }
+Value VM::error(int /*argc*/, Value* /*argv*/)
+{
+    raise_error(ErrorCode::RUNTIME_ERROR);
+}
+
 Value VM::time(int /*argc*/, Value* /*argv*/) { return Value::nil(); }
 
 // stdlib helpers
