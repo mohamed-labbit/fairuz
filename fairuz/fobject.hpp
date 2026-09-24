@@ -16,7 +16,6 @@ namespace fairuz::runtime {
 
 struct Chunk;
 class VM;
-class GarbageCollector;
 struct BuiltinsList;
 
 struct GlobalEnvironment {
@@ -43,13 +42,25 @@ using ListType = Array<Value, /*_Alloc=*/GarbageCollector>;
 
 struct ObjBigInt {
     ObjHeader obj { ObjType::INT };
+    /// Make the sign bool so that it takes only 1 bit on the system
+    /// False => Negative, True => Positive
+    bool sign { true };
     i64 val { UINT64_C(0) };
+    u32 limb_count { 1 };
+    std::vector<u32> limbs;
 
     explicit ObjBigInt(i64 const v)
         : obj(ObjType::INT)
         , val(v)
     {
     }
+
+    /// arithmetic operations, these will use the GC reference
+    /// to allocate the result, but preserve the state of 'this'
+    Value add(Value const& other, GarbageCollector& alloc) const;
+    Value mul(Value const& other, GarbageCollector& alloc) const;
+    Value sub(Value const& other, GarbageCollector& alloc) const;
+    Value div(Value const& other, GarbageCollector& alloc) const;
 
     ~ObjBigInt() = default;
 };
