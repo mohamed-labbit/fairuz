@@ -26,6 +26,9 @@ struct ObjClass;
 struct ObjInstance;
 struct ObjFileHandle;
 struct ObjModule;
+struct ObjBigInt;
+
+class GarbageCollector;
 
 #if FA_USE_NANBOX
 
@@ -53,9 +56,12 @@ private:
 public:
     friend struct ValueHash;
 
+    u64 value() const { return m_value; }
+
     static Value nil() { return NIL_VAL; }
     static Value from_obj(ObjHeader const* p) { return TAG_OBJ | (reinterpret_cast<uintptr_t>(p) & PAYLOAD_MASK); }
     static Value from_bool(bool const b) { return b ? TRUE_VAL : FALSE_VAL; }
+    static Value from_int(i64 const v, GarbageCollector& gc);
     static Value from_int(i64 const v) { return (static_cast<u64>(v) & PAYLOAD_MASK) | TAG_INT; }
     static constexpr i64 int_min() { return INT48_MIN; }
     static constexpr i64 int_max() { return INT48_MAX; }
@@ -83,14 +89,16 @@ public:
     {
     }
 
-    bool operator==(Value const& other) const { return other.m_value == m_value; }
-    bool operator!=(Value const& other) const { return other.m_value != m_value; }
-
     ObjHeader* as_obj() const { return reinterpret_cast<ObjHeader*>(static_cast<uintptr_t>(m_value & PAYLOAD_MASK)); }
 
     bool is_nil() const { return m_value == NIL_VAL; }
     bool is_bool() const { return (m_value | 1) == TRUE_VAL; }
-    bool is_int() const { return (m_value >> 48) == INT_TAG16; }
+    bool is_int() const
+    {
+        if (is_big_int())
+            return true;
+        return (m_value >> 48) == INT_TAG16;
+    }
     bool is_obj() const { return (m_value >> 48) == OBJ_TAG16; }
     bool is_double() const
     {
@@ -122,13 +130,7 @@ public:
     }
 
     bool as_bool() const { return m_value & 1; }
-    i64 as_int() const
-    {
-        i64 payload = static_cast<i64>(m_value & PAYLOAD_MASK);
-        if (payload & (INT64_C(1) << 47))
-            return payload | ~PAYLOAD_MASK;
-        return payload;
-    }
+    i64 as_int() const;
     f64 as_double() const
     {
         f64 d;
@@ -150,8 +152,11 @@ public:
     ObjFileHandle* as_file_handle() const;
     ObjModule* as_module() const;
 
-private:
     static bool fits_in_int48(i64 v) { return v >= INT48_MIN && v <= INT48_MAX; }
+
+private:
+    bool is_big_int() const { return (is_obj() && as_obj()->type == ObjType::INT); }
+    ObjBigInt* as_big_int() const;
 };
 
 static_assert(sizeof(Value) == 8, "Size of Value must be 64 bits (8 bytes) when using NANBOX (FA_USE_NANBOX = 1)");

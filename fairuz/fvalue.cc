@@ -1,9 +1,32 @@
 #include "fvalue.hpp"
+#include "fgc.hpp"
 #include "fobject.hpp"
 
 namespace fairuz::runtime {
 
 #if FA_USE_NANBOX
+
+Value Value::from_int(i64 const v, GarbageCollector& gc)
+{
+    if (fits_in_int48(v))
+        return from_int(v);
+    return gc.make_int(v);
+}
+
+i64 Value::as_int() const
+{
+    if (is_big_int())
+        /// TODO: probably must make a custom int holder
+        /// that holds a variant between i64 and i32* so
+        /// that we can get the value once we migrate to
+        /// a vector of limbs for big ints.
+        return as_big_int()->val;
+    i64 payload = static_cast<i64>(m_value & PAYLOAD_MASK);
+    if (payload & (INT64_C(1) << 47))
+        return payload | ~PAYLOAD_MASK;
+    return payload;
+}
+
 ObjString* Value::as_string() const { return reinterpret_cast<ObjString*>(as_obj()); }
 ObjList* Value::as_list() const { return reinterpret_cast<ObjList*>(as_obj()); }
 ObjDict* Value::as_dict() const { return reinterpret_cast<ObjDict*>(as_obj()); }
@@ -13,6 +36,7 @@ ObjClass* Value::as_class() const { return reinterpret_cast<ObjClass*>(as_obj())
 ObjInstance* Value::as_instance() const { return reinterpret_cast<ObjInstance*>(as_obj()); }
 ObjFileHandle* Value::as_file_handle() const { return reinterpret_cast<ObjFileHandle*>(as_obj()); }
 ObjModule* Value::as_module() const { return reinterpret_cast<ObjModule*>(as_obj()); }
+ObjBigInt* Value::as_big_int() const { return reinterpret_cast<ObjBigInt*>(as_obj()); }
 
 #else
 
@@ -47,7 +71,7 @@ bool ValueEqual::operator()(Value const& lhs, Value const& rhs) const noexcept
         return lhs.as_string()->str == rhs.as_string()->str;
     if (lhs.is_number() && rhs.is_number())
         return lhs.as_double_any() == rhs.as_double_any();
-    return lhs == rhs;
+    return lhs.value() == rhs.value();
 }
 
 } // namespace fairuz::runtime
