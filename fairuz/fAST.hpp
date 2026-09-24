@@ -531,6 +531,8 @@ class AssignExpr final : public Expr {
 public:
     ConstExprPtr target;
     ConstExprPtr value;
+    // Codegen must evaluate an augmented target only once.
+    bool augmented { false };
 
     AssignExpr(ExprPtr t, ExprPtr v, SourceLocation loc)
         : Expr(loc, Kind::ASSIGNMENT)
@@ -547,11 +549,13 @@ public:
             return false;
 
         auto bin = static_cast<AssignExpr*>(other);
-        return target->equals(bin->target) && value->equals(bin->value);
+        return augmented == bin->augmented && target->equals(bin->target) && value->equals(bin->value);
     }
     [[nodiscard]] AssignExpr* clone() const override
     {
-        return ALLOCATE_AST_NODE(AssignExpr, target->clone(), value->clone(), get_location());
+        auto* result = ALLOCATE_AST_NODE(AssignExpr, target->clone(), value->clone(), get_location());
+        result->augmented = augmented;
+        return result;
     }
     void accept(ExprVisitor& v) override { v.visit(*this); }
 }; // AssignExpr
