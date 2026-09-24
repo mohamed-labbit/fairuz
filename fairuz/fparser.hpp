@@ -75,7 +75,9 @@ public:
     ErrorOr<AST::StmtPtr> parse_continue_stmt();
     ErrorOr<AST::StmtPtr> parse_function_def();
     ErrorOr<AST::ExprPtr> parse_expression();
-    ErrorOr<AST::ExprPtr> parse_assignment_expr();
+    // Statement-level assignment (including bare := chains). Nested value
+    // contexts must use parse_expression(), which rejects assignment.
+    ErrorOr<AST::ExprPtr> parse_assignment_expr(bool allow_augmented = true);
     ErrorOr<AST::ExprPtr> parse_list_literal();
     ErrorOr<AST::ExprPtr> parse_dict_literal();
     ErrorOr<AST::ExprPtr> parse_conditional_expr();

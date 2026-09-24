@@ -330,7 +330,7 @@ ErrorOr<AST::StmtPtr> Parser::parse_if_stmt()
 
 ErrorOr<AST::StmtPtr> Parser::parse_expression_stmt()
 {
-    TRY(expr, parse_expression());
+    TRY(expr, parse_assignment_expr());
     if (UNLIKELY(!(check(TokType::NEWLINE) || check(TokType::DEDENT) || check(TokType::ENDMARKER))))
         return report_error(ErrorCode::UNEXPECTED_TOKEN, current_loc());
     return make_expr_stmt(expr, expr->get_location());
@@ -659,17 +659,18 @@ ErrorOr<AST::StmtPtr> Parser::parse_class_method(Array<AST::ExprPtr>& members)
 
             if (check(TokType::OP_ASSIGN)) {
                 advance();
-                TRY(rhs, parse_assignment_expr());
+                TRY(rhs, parse_assignment_expr(false));
                 member_assign = AST::make_assignment_expr(target, rhs, member_tok->location());
             } else if (is_augmented_assign_tok(current_token())) {
                 TokenPtr op_tok = current_token();
                 advance();
-                TRY(rhs, parse_assignment_expr());
+                TRY(rhs, parse_expression());
                 AST::ExprKind op = to_op(op_tok->type(), false);
                 // target->clone() reads the current field value (GET read);
                 // `target` itself is the write target.
                 auto* bin = AST::make_binary(op, target->clone(), rhs, target->get_location());
                 member_assign = AST::make_assignment_expr(target, bin, member_tok->location());
+                member_assign->augmented = true;
             } else {
                 return report_error(ErrorCode::INVALID_ASSIGN_TARGET, current_loc());
             }
@@ -726,17 +727,24 @@ ErrorOr<Array<AST::ExprPtr>> Parser::parse_parameters_list()
 
 // Parser — expression parsers
 
-ErrorOr<AST::ExprPtr> Parser::parse() { return parse_expression(); }
+// Compatibility entry point for a single expression or assignment statement.
+ErrorOr<AST::ExprPtr> Parser::parse() { return parse_assignment_expr(); }
 
-// parse_expression is the public entry point; it delegates to parse_assignment_expr.
-ErrorOr<AST::ExprPtr> Parser::parse_expression() { return parse_assignment_expr(); }
+ErrorOr<AST::ExprPtr> Parser::parse_expression()
+{
+    NestingLevel n { &m_nesting_level, current_loc() };
+    TRY(expression, parse_conditional_expr());
+    if (check(TokType::OP_ASSIGN) || is_augmented_assign_tok(current_token()))
+        return report_error(ErrorCode::ASSIGNMENT_IN_EXPRESSION, current_loc());
+    return expression;
+}
 
-ErrorOr<AST::ExprPtr> Parser::parse_assignment_expr()
+ErrorOr<AST::ExprPtr> Parser::parse_assignment_expr(bool allow_augmented)
 {
     NestingLevel n { &m_nesting_level, current_loc() };
     // LHS goes through the full expression hierarchy (via parse_conditional_expr
-    // → parse_binary_expr_precedence).  The Pratt parser stops at '=' and
-    // augmented-assignment tokens, leaving them for this function to handle.
+    // → parse_binary_expr_precedence).  The Pratt parser stops at ':=' and
+    // augmented-assignment tokens, leaving them for this statement-level path.
     TRY(lhs, parse_conditional_expr());
 
     if (check(TokType::OP_ASSIGN) || is_augmented_assign_tok(current_token())) {
@@ -746,16 +754,20 @@ ErrorOr<AST::ExprPtr> Parser::parse_assignment_expr()
             return report_error(ErrorCode::INVALID_ASSIGN_TARGET, current_loc());
 
         if (is_augmented_assign_tok(current_token())) {
+            if (!allow_augmented)
+                return report_error(ErrorCode::ASSIGNMENT_IN_EXPRESSION, current_loc());
             TokenPtr op_tok = current_token();
             advance();
-            TRY(rhs, parse_assignment_expr());
+            TRY(rhs, parse_expression());
             AST::ExprKind op = to_op(op_tok->type(), false);
             auto* bin = AST::make_binary(op, lhs->clone(), rhs, lhs->get_location());
-            return make_assignment_expr(target, bin, target->get_location());
+            auto* assignment = make_assignment_expr(target, bin, target->get_location());
+            assignment->augmented = true;
+            return assignment;
         }
 
-        advance(); // consume '='
-        TRY(rhs, parse_assignment_expr());
+        advance(); // consume ':='; permit only bare plain-assignment chains
+        TRY(rhs, parse_assignment_expr(false));
         return make_assignment_expr(target, rhs, target->get_location());
     }
 
