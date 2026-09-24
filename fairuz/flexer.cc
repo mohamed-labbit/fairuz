@@ -526,7 +526,8 @@ TokenPtr Lexer::lex_token()
             if (second != 0) {
                 if (is_shift_eq_prefix(current, second)) {
                     m_source_manager.consume_char(); // second
-                    m_source_manager.consume_char(); // third
+                    if (m_source_manager.current_char() == '=')
+                        m_source_manager.consume_char(); // optional assignment suffix
 
                     u32 const end_byte = m_source_manager.get_file_offset();
                     StringRef op_str = m_source_manager.source_slice(start_byte, end_byte);
