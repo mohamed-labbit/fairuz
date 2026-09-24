@@ -93,6 +93,7 @@ enum class ErrorCode : u16 {
     EXPECTED_IMPORT_NAME,
     EXPECTED_ALIAS_NAME,
     EXPECTED_RPAREN_CLASS,
+    ASSIGNMENT_IN_EXPRESSION,
     /* --- Semantics --- */
     UNDEFINED_VARIABLE = 0x0300,
     UNDEFINED_FUNCTION,
@@ -131,7 +132,8 @@ enum class ErrorCode : u16 {
     TOO_MANY_FUNCTIONS,
     TOO_MANY_INLINE_CACHES,
     /* --- Runtime --- */
-    STACK_OVERFLOW = 0x0500,
+    RUNTIME_ERROR = 0x0500,
+    STACK_OVERFLOW,
     STACK_UNDERFLOW,
     DIVISION_BY_ZERO,
     MODULO_BY_ZERO,
@@ -256,6 +258,7 @@ static constexpr char const* error_message_for(ErrorCode const code)
     case ErrorCode::EXPECTED_IF_KEYWORD: return "Expected 'if' keyword";
     case ErrorCode::EXPECTED_WHILE_KEYWORD: return "Expected 'while' keyword";
     case ErrorCode::INVALID_ASSIGN_TARGET: return "Invalid assignment target";
+    case ErrorCode::ASSIGNMENT_IN_EXPRESSION: return "Assignment is a statement and cannot be used inside an expression";
     case ErrorCode::UNEXPECTED_TOKEN: return "Unexpected token";
     case ErrorCode::INVALID_OPERATOR_SEQ: return "Invalid operator sequence";
     case ErrorCode::EXPECTED_COLON_DICT: return "Expected ':' after dictionary key";
@@ -311,6 +314,7 @@ static constexpr char const* error_message_for(ErrorCode const code)
     case ErrorCode::TOO_MANY_FUNCTIONS: return "Too many nested function chunks (max 65536)";
     case ErrorCode::TOO_MANY_INLINE_CACHES: return "Too many inline-cache slots in function (max 256)";
     // runtime
+    case ErrorCode::RUNTIME_ERROR: return "Runtime error";
     case ErrorCode::STACK_OVERFLOW: return "Stack overflow";
     case ErrorCode::STACK_UNDERFLOW: return "Stack underflow";
     case ErrorCode::DIVISION_BY_ZERO: return "Division by zero";
@@ -333,7 +337,7 @@ static constexpr char const* error_message_for(ErrorCode const code)
     case ErrorCode::NATIVE_TYPE_ERROR: return "Native call received arguments of the wrong type";
     case ErrorCode::UNDEFINED_METHOD: return "Call to undefined method";
     case ErrorCode::UNDEFINED_FIELD: return "Undefined field";
-    case ErrorCode::NUMERIC_OUT_OF_RANGE: return "Integer result is outside the signed 48-bit range";
+    case ErrorCode::NUMERIC_OUT_OF_RANGE: return "Integer result is outside the signed 64-bit range";
     case ErrorCode::MODULE_NOT_FOUND: return "No module named";
     // stdlib
     case ErrorCode::APPEND_ARG_COUNT: return "append() expects at least two arguments";
