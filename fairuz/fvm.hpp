@@ -158,7 +158,7 @@ public:
     Value make_regex_result(std::string const& input, std::smatch const& match, size_t base_offset);
     Value Assert(int argc, Value* argv);
     Value clock(int argc, Value* argv);
-    Value error(int argc, Value* argv);
+    [[noreturn]] Value error(int argc, Value* argv);
     Value time(int argc, Value* argv);
     Value append_file(int argc, Value* argv);
     Value close(int argc, Value* argv);
@@ -202,10 +202,11 @@ public:
     Value call_native(ObjNative* nat, int argc, int base);
 
     SourceLocation current_location() const;
-    void raise_error(ErrorCode errc, std::string const& detail = "");
-    void _raise_error(ErrorCode errc, std::string const& detail = "");
 
+    [[noreturn]] void raise_error(ErrorCode errc, std::string const& detail = "");
+    [[noreturn]] void _raise_error(ErrorCode errc, std::string const& detail = "");
     [[noreturn]] void halt();
+
     void intern_chunk_constants(Chunk* ch);
 
     void ensure_stack_slots(int needed);
