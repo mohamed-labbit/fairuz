@@ -65,6 +65,85 @@ public:
 
 inline AST::ASTPrinter AST_Printer;
 
+class ParserAssignmentContext : public ::testing::TestWithParam<char const*> {
+protected:
+    void SetUp() override { diagnostic::reset(); }
+    void TearDown() override { diagnostic::reset(); }
+};
+
+TEST_P(ParserAssignmentContext, RejectsAssignmentInValueContext)
+{
+    SCOPED_TRACE(GetParam());
+    FileManager source;
+    source.buffer() = GetParam();
+    Parser parser(&source);
+    auto result = parser.parse_statement();
+    // Class/block recovery can return a partial AST; recorded errors still
+    // prevent compilation. Check the diagnostic as well as propagated errors.
+    ASSERT_TRUE(diagnostic::has_errors());
+    EXPECT_NE(diagnostic::engine.to_json().find(
+                  "Assignment is a statement and cannot be used inside an expression"),
+        std::string::npos);
+    if (result.has_error())
+        EXPECT_EQ(result.error().get_code(), ErrorCode::ASSIGNMENT_IN_EXPRESSION);
+}
+
+INSTANTIATE_TEST_SUITE_P(NestedAssignment, ParserAssignmentContext, testing::Values("س + (س := 2)\n", "(س := 2) + 1\n", "س := (ص := 2)\n", "س := ص += 2\n", "س += ص := 2\n", "س += (ص := 2)\n", "(س := 2)\n", "ليس (س := 2)\n", "صحيح او (س := 2)\n", "خطا و (س := 2)\n", "اكتب(س := 2)\n", "اكتب((س := 2))\n", "اكتب(1، س := 2)\n", "[س := 2]\n", "(1، س := 2)\n", "{س := 2: 3}\n", "{1: س := 2}\n", "ق[س := 2]\n", "ق[(س := 2)] := 3\n", "(س := ق)[0] := 3\n", "(س := ق).حقل := 3\n", "(س := دالة_اخرى)()\n", "ارجع س := 2\n", "اذا س := 2:\n    اكتب(س)\n", "طالما س := 2:\n    اخرج\n", "لكل س في ق := [1]:\n    اكتب(س)\n", "assert س := 2\n", "assert صحيح، س := 2\n", "نوع علبة:\n    دالة بداية():\n        .حقل := (س := 2)\n", "نوع علبة:\n    دالة بداية():\n        .حقل += س := 2\n"));
+
+TEST_F(ParserTest, AssignmentContextExpressionEntryPointRejectsAssignment)
+{
+    FileManager source;
+    source.buffer() = "س := 2";
+    Parser parser(&source);
+    auto result = parser.parse_expression();
+    ASSERT_TRUE(result.has_error());
+    EXPECT_EQ(result.error().get_code(), ErrorCode::ASSIGNMENT_IN_EXPRESSION);
+    EXPECT_EQ(parser.current_token()->lexeme(), ":=");
+    diagnostic::reset();
+}
+
+TEST_F(ParserTest, AssignmentContextPreservesStatementsAndEquality)
+{
+    for (char const* text : {
+             "س := 1 + (2 * 3)\n", "س := ص := 5\n",
+             "ق[فهرس()] := قيمة()\n", "س.حقل := 2\n",
+             "اكتب(س = 2)\n", "اذا س = 2:\n    ص := 3\n",
+             "دالة مثال():\n    س := 2\n    ارجع س + 1\n",
+             "نوع علبة:\n    دالة بداية():\n        .حقل := 2\n        .حقل += 3\n" }) {
+        SCOPED_TRACE(text);
+        diagnostic::reset();
+        FileManager source;
+        source.buffer() = text;
+        Parser parser(&source);
+        auto result = parser.parse_statement();
+        EXPECT_TRUE(result.has_value());
+        EXPECT_FALSE(diagnostic::has_errors());
+    }
+}
+
+TEST_F(ParserTest, AssignmentContextAugmentedOperatorsAreStatementOnly)
+{
+    for (char const* op : { "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "<<=", ">>=" }) {
+        SCOPED_TRACE(op);
+        diagnostic::reset();
+        std::string assignment = std::string("س ") + op + " 1";
+        FileManager statement_source;
+        statement_source.buffer() = assignment.c_str();
+        Parser statement_parser(&statement_source);
+        EXPECT_TRUE(statement_parser.parse_statement().has_value());
+        EXPECT_FALSE(diagnostic::has_errors());
+
+        std::string nested = "اكتب(" + assignment + ")";
+        FileManager expression_source;
+        expression_source.buffer() = nested.c_str();
+        Parser expression_parser(&expression_source);
+        auto result = expression_parser.parse_statement();
+        ASSERT_TRUE(result.has_error());
+        EXPECT_EQ(result.error().get_code(), ErrorCode::ASSIGNMENT_IN_EXPRESSION);
+    }
+    diagnostic::reset();
+}
+
 TEST_F(ParserTest, ParseLiteral)
 {
     FileManager file_manager_0(parser_test_cases_dir() / "number_literal.fa");

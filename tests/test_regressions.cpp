@@ -206,21 +206,21 @@ TEST(HardeningRegression, EmbeddedNulIsRejectedRatherThanTruncatingSource)
 
 TEST(HardeningRegression, IntegerOverflowIsDiagnosed)
 {
-    auto program = write_program("س := 140737488355327\nاكتب(س + 1)\n");
+    auto program = write_program("س := 9223372036854775807\nاكتب(س + 1)\n");
     RunResult r = run_installed(binary_path(), program);
     EXPECT_EQ(r.exit_code, 65);
-    EXPECT_NE(r.err.find("signed 48-bit"), std::string::npos);
+    EXPECT_NE(r.err.find("signed 64-bit"), std::string::npos);
 }
 
 TEST(RegressionOperators, OpShift)
 {
     std::string src = "x := 1\n"
                       "y := 2\n"
-                      "اكتب(x &= y)\n"
-                      "اكتب(x |= y)\n"
-                      "اكتب(x ^= y)\n"
-                      "اكتب(x <<= y)\n"
-                      "اكتب(x >>= y)\n";
+                      "x &= y\nاكتب(x)\n"
+                      "x |= y\nاكتب(x)\n"
+                      "x ^= y\nاكتب(x)\n"
+                      "x <<= y\nاكتب(x)\n"
+                      "x >>= y\nاكتب(x)\n";
 
     auto program = write_program(src);
     RunResult r = run_installed(binary_path(), program);

@@ -31,6 +31,33 @@ TEST(LexerTest, RecognizesPlus)
     EXPECT_EQ(tokens[2]->type(), tok::TokenType::ENDMARKER);
 }
 
+TEST(LexerTest, ShiftOperatorsPreserveFollowingToken)
+{
+    for (auto const& [spelling, type] : {
+             std::pair { "<<", tok::TokenType::OP_LSHIFT },
+             std::pair { ">>", tok::TokenType::OP_RSHIFT },
+             std::pair { "<<=", tok::TokenType::OP_LSHIFTEQ },
+             std::pair { ">>=", tok::TokenType::OP_RSHIFTEQ } }) {
+        for (char const* suffix : { "1", " 1", "س", " س", "" }) {
+            std::string source = std::string(spelling) + suffix;
+            SCOPED_TRACE(source);
+            lex::FileManager file;
+            file.buffer() = source.c_str();
+            lex::Lexer lexer(&file);
+            auto tokens = lexer.tokenize();
+            ASSERT_GE(tokens.size(), 3);
+            EXPECT_EQ(tokens[1]->type(), type);
+            EXPECT_EQ(tokens[1]->lexeme(), spelling);
+            if (*suffix != '\0') {
+                char const* operand = *suffix == ' ' ? suffix + 1 : suffix;
+                EXPECT_EQ(tokens[2]->lexeme(), operand);
+            } else {
+                EXPECT_EQ(tokens[2]->type(), tok::TokenType::ENDMARKER);
+            }
+        }
+    }
+}
+
 TEST(LexerTest, RecognizesInteger)
 {
     lex::FileManager m_file_manager(test_cases_path / "recognizes_integer.fa");

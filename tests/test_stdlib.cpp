@@ -242,6 +242,49 @@ TEST(StdlibJsonPrimitives, ReportsFiniteAndNanNumbers)
     EXPECT_TRUE(vm.number_is_nan(1, &nan).as_bool());
 }
 
+TEST(StdlibRegistry, LookupIsLazyAndCachedAcrossCollection)
+{
+    VM vm;
+    auto initial_memory = vm.m_gc.current_memory();
+    EXPECT_EQ(vm.m_builtin_environment.find("missing_builtin"), nullptr);
+    EXPECT_EQ(vm.m_gc.current_memory(), initial_memory);
+    for (Value value : vm.m_builtin_functions.values())
+        EXPECT_TRUE(value.is_nil());
+
+    Value const* length = vm.m_builtin_environment.find("طول");
+    ASSERT_NE(length, nullptr);
+    ASSERT_TRUE(length->is_native());
+    auto* native = length->as_native();
+    EXPECT_EQ(native->arity, 1);
+    EXPECT_EQ(native->fn, &VM::len);
+    auto loaded_memory = vm.m_gc.current_memory();
+    EXPECT_EQ(vm.m_builtin_environment.find("طول"), length);
+    EXPECT_EQ(vm.m_gc.current_memory(), loaded_memory);
+
+    vm.m_gc.collect(&vm);
+    EXPECT_EQ(vm.m_builtin_environment.find("طول")->as_native(), native);
+    EXPECT_EQ(native->name->str, StringRef("طول"));
+    Value argument = make_list(vm, { Value::from_int(1) });
+    EXPECT_EQ((vm.*native->fn)(1, &argument).as_int(), 1);
+}
+
+TEST(StdlibRegistry, GlobalShadowingDoesNotReplaceBuiltin)
+{
+    VM vm;
+    Value const* builtin = vm.find_global(nullptr, "طول");
+    ASSERT_NE(builtin, nullptr);
+    ASSERT_TRUE(builtin->is_native());
+    vm.store_global(nullptr, "طول", Value::from_int(42));
+    EXPECT_EQ(vm.find_global(nullptr, "طول")->as_int(), 42);
+    EXPECT_EQ(vm.m_builtin_environment.find("طول"), builtin);
+
+    VM other;
+    auto* other_builtin = other.find_global(nullptr, "طول");
+    ASSERT_NE(other_builtin, nullptr);
+    EXPECT_TRUE(other_builtin->is_native());
+    EXPECT_NE(other_builtin->as_native(), builtin->as_native());
+}
+
 TEST(StdlibCallable, DynamicCallInvokesCallableWithListArguments)
 {
     VM vm;
