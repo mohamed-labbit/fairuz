@@ -61,14 +61,14 @@ u16 Chunk::add_big_int(i64 const v)
         diagnostic::panic(ErrorCode::TOO_MANY_CONSTANTS);
 
     big_ints.push(v);
-    return static_cast<u16>(constants.size() - 1);
+    return static_cast<u16>(big_ints.size() - 1);
 }
 #endif
 
 u16 Chunk::add_constant(Value const v)
 {
     for (u32 i = 0, n = constants.size(); i < n; i++) {
-        if (constants[i] == v)
+        if (constants[i].value() == v.value())
             return static_cast<u16>(i);
     }
 
@@ -180,5 +180,38 @@ void Chunk::add_line(u32 line)
     if (lines.empty() || lines.back().line != line)
         lines.push({ static_cast<u32>(code.size() - 1), line });
 }
+
+#if FA_USE_NANBOX
+
+Value ObjBigInt::add(Value const& other, GarbageCollector& alloc) const
+{
+    /// FIXME:
+    (void)alloc;
+    (void)other;
+    return Value::nil();
+}
+Value ObjBigInt::mul(Value const& other, GarbageCollector& alloc) const
+{
+    /// FIXME:
+    (void)alloc;
+    (void)other;
+    return Value::nil();
+}
+Value ObjBigInt::sub(Value const& other, GarbageCollector& alloc) const
+{
+    /// FIXME:
+    (void)alloc;
+    (void)other;
+    return Value::nil();
+}
+Value ObjBigInt::div(Value const& other, GarbageCollector& alloc) const
+{
+    /// FIXME:
+    (void)alloc;
+    (void)other;
+    return Value::nil();
+}
+
+#endif // FA_USE_NANBOX
 
 } // namespace fairuz::runtime

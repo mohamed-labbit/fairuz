@@ -130,10 +130,14 @@ static constexpr u8 MAX_REGS = 250;
     X(OP_BITNOT)           \
     X(OP_LSHIFT)           \
     X(OP_RSHIFT)           \
+    X(OP_LSHIFT_REG)       \
+    X(OP_RSHIFT_REG)       \
     X(OP_EQ)               \
     X(OP_NEQ)              \
     X(OP_LT)               \
     X(OP_LTE)              \
+    X(OP_GT)               \
+    X(OP_GTE)              \
     X(OP_NOT)              \
     X(CONCAT)              \
     X(LIST_NEW)            \
