@@ -62,7 +62,13 @@ public:
     static Value from_obj(ObjHeader const* p) { return TAG_OBJ | (reinterpret_cast<uintptr_t>(p) & PAYLOAD_MASK); }
     static Value from_bool(bool const b) { return b ? TRUE_VAL : FALSE_VAL; }
     static Value from_int(i64 const v, GarbageCollector& gc);
-    static Value from_int(i64 const v) { return (static_cast<u64>(v) & PAYLOAD_MASK) | TAG_INT; }
+    // Unchecked packing: callers must prove signed 48-bit representability.
+    // Native inputs and expression results use the GC overload instead.
+    static Value from_int(i64 const v)
+    {
+        assert(fits_in_int48(v));
+        return (static_cast<u64>(v) & PAYLOAD_MASK) | TAG_INT;
+    }
     static constexpr i64 int_min() { return INT48_MIN; }
     static constexpr i64 int_max() { return INT48_MAX; }
     static Value from_real(f64 const d)
@@ -116,20 +122,11 @@ public:
     bool is_instance() const { return (is_obj() && as_obj()->type == ObjType::INSTANCE); }
     bool is_file_handle() const { return (is_obj() && as_obj()->type == ObjType::FILE_HANDLE); }
     bool is_module() const { return (is_obj() && as_obj()->type == ObjType::MODULE); }
-    bool is_truthy() const
-    {
-        if (is_nil())
-            return false;
-        else if (is_bool())
-            return m_value & 1;
-        else if (is_int())
-            return (m_value & PAYLOAD_MASK) != 0;
-        else if (is_obj())
-            return true;
-        return (m_value << 1) != 0;
-    }
+    bool is_big_int() const { return (is_obj() && as_obj()->type == ObjType::INT); }
+    bool is_truthy() const;
 
     bool as_bool() const { return m_value & 1; }
+    // Checked native extraction; arbitrary-size arithmetic must use integer::* instead.
     i64 as_int() const;
     f64 as_double() const
     {
@@ -137,10 +134,7 @@ public:
         ::memcpy(&d, &m_value, sizeof(d));
         return d;
     }
-    f64 as_double_any() const
-    {
-        return is_int() ? static_cast<f64>(as_int()) : as_double();
-    }
+    f64 as_double_any() const;
 
     ObjString* as_string() const;
     ObjList* as_list() const;
@@ -151,22 +145,21 @@ public:
     ObjInstance* as_instance() const;
     ObjFileHandle* as_file_handle() const;
     ObjModule* as_module() const;
+    ObjBigInt* as_big_int() const;
 
     static bool fits_in_int48(i64 v) { return v >= INT48_MIN && v <= INT48_MAX; }
 
 private:
-    bool is_big_int() const { return (is_obj() && as_obj()->type == ObjType::INT); }
-    ObjBigInt* as_big_int() const;
 };
 
 static_assert(sizeof(Value) == 8, "Size of Value must be 64 bits (8 bytes) when using NANBOX (FA_USE_NANBOX = 1)");
 
 struct ValueHash {
-    size_t operator()(Value const& v) const noexcept;
+    size_t operator()(Value const& v) const;
 };
 
 struct ValueEqual {
-    bool operator()(Value const& lhs, Value const& rhs) const noexcept;
+    bool operator()(Value const& lhs, Value const& rhs) const;
 };
 
 enum class TypeTag : u16 {
@@ -388,11 +381,11 @@ public:
 }
 
 struct ValueHash {
-    size_t operator()(Value const& v) const noexcept;
+    size_t operator()(Value const& v) const;
 };
 
 struct ValueEqual {
-    bool operator()(Value const& lhs, Value const& rhs) const noexcept;
+    bool operator()(Value const& lhs, Value const& rhs) const;
 };
 
 #endif // FA_USE_NAN_BOXING
