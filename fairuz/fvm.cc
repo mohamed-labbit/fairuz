@@ -108,12 +108,12 @@ std::string similar_name(GlobalEnvironment* environment, std::string const& miss
 
 bool values_equal_impl(Value lhs, Value rhs, ComparedObjects& seen)
 {
+    if (lhs.is_int() && rhs.is_int())
+        return integer::compare(lhs, rhs) == 0;
+    if (lhs.is_number() && rhs.is_number())
+        return integer::compare_numbers(lhs, rhs) == 0;
     if (lhs.value() == rhs.value())
         return true;
-    if (lhs.is_int() && rhs.is_int())
-        return lhs.as_int() == rhs.as_int();
-    if (lhs.is_number() && rhs.is_number())
-        return lhs.as_double_any() == rhs.as_double_any();
     if (lhs.is_nil() || rhs.is_nil() || lhs.is_bool() || rhs.is_bool())
         return false;
     if (lhs.is_string() && rhs.is_string())
@@ -149,7 +149,10 @@ bool values_equal_impl(Value lhs, Value rhs, ComparedObjects& seen)
         }
         return true;
     }
-    return false; // distinct functions, classes, instances, modules, and resources compare by identity
+
+    // Distinct functions, classes, instances, modules and resources are unequal.
+    // Numeric comparisons above deliberately precede identity so NaN != NaN.
+    return false;
 }
 
 bool values_equal(Value lhs, Value rhs)
@@ -478,10 +481,18 @@ Value VM::run(Chunk* chunk)
 
     try {
         return execute();
+    } catch (std::bad_alloc const&) {
+        unwind_failed_run();
+        diagnostic::fatal_error(ErrorCode::ALLOC_FAILED);
+    } catch (std::length_error const&) {
+        unwind_failed_run();
+        diagnostic::fatal_error(ErrorCode::ALLOC_FAILED);
     } catch (...) {
         unwind_failed_run();
         throw;
     }
+
+    return Value::nil();
 }
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -507,16 +518,6 @@ Value VM::execute(int stop_frame_depth)
     u32 ip = frame().ip;
 
     using reg_t = u8;
-    auto checked_int = [this](__int128 value) -> Value {
-        if (value < static_cast<__int128>(INT64_MIN)
-            || value > static_cast<__int128>(INT64_MAX))
-            raise_error(ErrorCode::NUMERIC_OUT_OF_RANGE);
-#if FA_USE_NANBOX
-        if (value > static_cast<__int128>(Value::int_max()) || value < static_cast<__int128>(Value::int_min()))
-            return m_gc.make_int(static_cast<i64>(value));
-#endif
-        return Value::from_int(static_cast<i64>(value));
-    };
 
     BEGIN_DISPATCH();
 
@@ -556,7 +557,7 @@ Value VM::execute(int stop_frame_depth)
 #if FA_USE_NANBOX
     CASE(LOAD_BIG_INT)
     {
-        RA() = m_gc.make_int(cur_chunk->big_ints[instr_Bx(instr)]);
+        RA() = integer::finish(cur_chunk->big_ints[instr_Bx(instr)], m_gc);
         DISPATCH();
     }
 #endif
@@ -658,7 +659,7 @@ Value VM::execute(int stop_frame_depth)
             // VM_ABC(OpCode::OP_ADD_SS);
         } else if (lhs.is_int() && rhs.is_int()) {
             // Integer addition
-            res = checked_int(static_cast<__int128>(lhs.as_int()) + rhs.as_int());
+            res = integer::add(lhs, rhs, m_gc);
             RECORD_BINARY_IC(lhs, rhs, res);
         } else if (lhs.is_number() && rhs.is_number()) {
             // Float addition (includes mixed int/float)
@@ -681,7 +682,7 @@ Value VM::execute(int stop_frame_depth)
         Value rhs = RC();
 
         if (lhs.is_int() && rhs.is_int()) {
-            res = checked_int(static_cast<__int128>(lhs.as_int()) - rhs.as_int());
+            res = integer::sub(lhs, rhs, m_gc);
             RECORD_BINARY_IC(lhs, rhs, res);
         } else if (lhs.is_number() && rhs.is_number()) {
             res = Value::from_real(VM_SUBF(lhs, rhs));
@@ -703,7 +704,7 @@ Value VM::execute(int stop_frame_depth)
         Value rhs = RC();
 
         if (lhs.is_int() && rhs.is_int()) {
-            res = checked_int(static_cast<__int128>(lhs.as_int()) * rhs.as_int());
+            res = integer::mul(lhs, rhs, m_gc);
             RECORD_BINARY_IC(lhs, rhs, res);
         } else if (lhs.is_number() && rhs.is_number()) {
             res = Value::from_real(VM_MULF(lhs, rhs));
@@ -725,13 +726,9 @@ Value VM::execute(int stop_frame_depth)
         Value rhs = RC();
 
         if (lhs.is_int() && rhs.is_int()) {
-            if (rhs.as_int() == 0)
+            if (!rhs.is_truthy())
                 raise_error(ErrorCode::DIVISION_BY_ZERO);
-            // Wide division also handles INT64_MIN / -1 without C++ UB.
-            if (static_cast<__int128>(lhs.as_int()) % rhs.as_int() == 0)
-                res = checked_int(static_cast<__int128>(lhs.as_int()) / rhs.as_int());
-            else
-                res = Value::from_real(VM_DIVF(lhs, rhs));
+            res = integer::div(lhs, rhs, m_gc);
             RECORD_BINARY_IC(lhs, rhs, res);
         } else if (lhs.is_number() && rhs.is_number()) {
             if (rhs.as_double_any() == 0.0)
@@ -755,11 +752,9 @@ Value VM::execute(int stop_frame_depth)
         Value rhs = RC();
 
         if (lhs.is_int() && rhs.is_int()) {
-            if (rhs.as_int() == 0)
+            if (!rhs.is_truthy())
                 raise_error(ErrorCode::MODULO_BY_ZERO);
-            // Preserve integer type for integer modulo, matching arithmetic
-            // closure and making the result valid for indexing/ranges.
-            res = checked_int(static_cast<__int128>(lhs.as_int()) % rhs.as_int());
+            res = integer::div(lhs, rhs, m_gc, true);
             RECORD_BINARY_IC(lhs, rhs, res);
         } else if (lhs.is_number() && rhs.is_number()) {
             if (rhs.as_double_any() == 0.0)
@@ -785,7 +780,7 @@ Value VM::execute(int stop_frame_depth)
         REQUIRE_NUMBER(lhs);
         REQUIRE_NUMBER(rhs);
 
-        res = Value::from_real(std::pow(lhs.as_double_any(), rhs.as_double_any()));
+        res = lhs.is_int() && rhs.is_int() ? integer::pow(lhs, rhs, m_gc) : Value::from_real(std::pow(lhs.as_double_any(), rhs.as_double_any()));
         DISPATCH();
     }
     CASE(OP_NEG)
@@ -794,7 +789,7 @@ Value VM::execute(int stop_frame_depth)
         Value operand = RB();
 
         if (operand.is_int()) {
-            res = checked_int(-static_cast<__int128>(operand.as_int()));
+            res = integer::neg(operand, m_gc);
         } else if (operand.is_double()) {
             res = Value::from_real(-operand.as_double_any());
         } else if (operand.is_instance()) {
@@ -832,7 +827,7 @@ Value VM::execute(int stop_frame_depth)
         if (UNLIKELY(!lhs.is_int() || !rhs.is_int()))
             raise_error(ErrorCode::TYPE_ERROR_ARITH);
 
-        res = checked_int(VMOPI(lhs, rhs, &));
+        res = integer::bitwise(lhs, rhs, '&', m_gc);
         DISPATCH();
     }
     CASE(OP_BITOR)
@@ -844,7 +839,7 @@ Value VM::execute(int stop_frame_depth)
         if (UNLIKELY(!lhs.is_int() || !rhs.is_int()))
             raise_error(ErrorCode::TYPE_ERROR_ARITH);
 
-        res = checked_int(VMOPI(lhs, rhs, |));
+        res = integer::bitwise(lhs, rhs, '|', m_gc);
         DISPATCH();
     }
     CASE(OP_BITXOR)
@@ -856,7 +851,7 @@ Value VM::execute(int stop_frame_depth)
         if (UNLIKELY(!lhs.is_int() || !rhs.is_int()))
             raise_error(ErrorCode::TYPE_ERROR_ARITH);
 
-        res = checked_int(VMOPI(lhs, rhs, ^));
+        res = integer::bitwise(lhs, rhs, '^', m_gc);
         DISPATCH();
     }
     CASE(OP_BITNOT)
@@ -866,7 +861,7 @@ Value VM::execute(int stop_frame_depth)
         if (UNLIKELY(!operand.is_int()))
             raise_error(ErrorCode::TYPE_ERROR_ARITH);
 
-        res = checked_int(~operand.as_int());
+        res = integer::bitwise(operand, Value::from_int(-1), '^', m_gc);
         DISPATCH();
     }
     CASE(OP_LSHIFT)
@@ -877,17 +872,15 @@ Value VM::execute(int stop_frame_depth)
         if (UNLIKELY(!lhs.is_int()))
             raise_error(ErrorCode::TYPE_ERROR_ARITH);
 
-        i64 imm = instr_C(instr);
+        Value count = Value::from_int(instr_C(instr));
         if (instr_op(instr) == OpCode::OP_LSHIFT_REG) {
             if (!RC().is_int())
                 raise_error(ErrorCode::TYPE_ERROR_ARITH);
-            imm = RC().as_int();
+            count = RC();
         }
-        if (imm < 0 || imm >= 64)
+        if (integer::compare(count, Value::from_int(0)) < 0)
             raise_error(ErrorCode::SHIFT_AMOUNT_OUT_OF_RANGE);
-
-        res = checked_int(static_cast<__int128>(lhs.as_int())
-            * (static_cast<__int128>(1) << imm));
+        res = integer::shift(lhs, count, true, m_gc);
         DISPATCH();
     }
     CASE(OP_RSHIFT)
@@ -898,21 +891,15 @@ Value VM::execute(int stop_frame_depth)
         if (UNLIKELY(!lhs.is_int()))
             raise_error(ErrorCode::TYPE_ERROR_ARITH);
 
-        i64 imm = instr_C(instr);
+        Value count = Value::from_int(instr_C(instr));
         if (instr_op(instr) == OpCode::OP_RSHIFT_REG) {
             if (!RC().is_int())
                 raise_error(ErrorCode::TYPE_ERROR_ARITH);
-            imm = RC().as_int();
+            count = RC();
         }
-        if (imm < 0 || imm >= 64)
+        if (integer::compare(count, Value::from_int(0)) < 0)
             raise_error(ErrorCode::SHIFT_AMOUNT_OUT_OF_RANGE);
-
-        u64 shifted = static_cast<u64>(lhs.as_int()) >> imm;
-        if (lhs.as_int() < 0)
-            res = Value::from_real(static_cast<f64>(shifted));
-        else
-            res = checked_int(static_cast<i64>(shifted));
-
+        res = integer::shift(lhs, count, false, m_gc);
         DISPATCH();
     }
     CASE(OP_EQ)
@@ -964,13 +951,13 @@ Value VM::execute(int stop_frame_depth)
         Value rhs = RC();
 
         if (lhs.is_int() && rhs.is_int()) {
-            res = Value::from_bool(VMOPI(lhs, rhs, <));
+            res = Value::from_bool(integer::compare(lhs, rhs) < 0);
             RECORD_BINARY_IC(lhs, rhs, res);
         } else if (lhs.is_string() && rhs.is_string()) {
             res = Value::from_bool(lhs.as_string()->str < rhs.as_string()->str);
             RECORD_BINARY_IC(lhs, rhs, res);
         } else if (lhs.is_number() && rhs.is_number()) {
-            res = Value::from_bool(lhs.as_double_any() < rhs.as_double_any());
+            res = Value::from_bool(integer::compare_numbers(lhs, rhs) == -1);
             RECORD_BINARY_IC(lhs, rhs, res);
         } else if (lhs.is_instance() || rhs.is_instance()) {
             VM_INSTANCE_OP(LT);
@@ -989,13 +976,13 @@ Value VM::execute(int stop_frame_depth)
         Value rhs = RC();
 
         if (lhs.is_int() && rhs.is_int()) {
-            res = Value::from_bool(VMOPI(lhs, rhs, <=));
+            res = Value::from_bool(integer::compare(lhs, rhs) <= 0);
             RECORD_BINARY_IC(lhs, rhs, res);
         } else if (lhs.is_string() && rhs.is_string()) {
             res = Value::from_bool(lhs.as_string()->str <= rhs.as_string()->str);
             RECORD_BINARY_IC(lhs, rhs, res);
         } else if (lhs.is_number() && rhs.is_number()) {
-            res = Value::from_bool(lhs.as_double_any() <= rhs.as_double_any());
+            res = Value::from_bool((integer::compare_numbers(lhs, rhs) == -1 || integer::compare_numbers(lhs, rhs) == 0));
             RECORD_BINARY_IC(lhs, rhs, res);
         } else if (lhs.is_instance() || rhs.is_instance()) {
             VM_INSTANCE_OP(LTE);
@@ -1014,13 +1001,13 @@ Value VM::execute(int stop_frame_depth)
         Value rhs = RC();
 
         if (lhs.is_int() && rhs.is_int()) {
-            res = Value::from_bool(VMOPI(lhs, rhs, >));
+            res = Value::from_bool(integer::compare(lhs, rhs) > 0);
             RECORD_BINARY_IC(lhs, rhs, res);
         } else if (lhs.is_string() && rhs.is_string()) {
             res = Value::from_bool(lhs.as_string()->str > rhs.as_string()->str);
             RECORD_BINARY_IC(lhs, rhs, res);
         } else if (lhs.is_number() && rhs.is_number()) {
-            res = Value::from_bool(lhs.as_double_any() > rhs.as_double_any());
+            res = Value::from_bool(integer::compare_numbers(lhs, rhs) == 1);
             RECORD_BINARY_IC(lhs, rhs, res);
         } else if (lhs.is_instance() || rhs.is_instance()) {
             VM_INSTANCE_OP(GT);
@@ -1039,13 +1026,13 @@ Value VM::execute(int stop_frame_depth)
         Value rhs = RC();
 
         if (lhs.is_int() && rhs.is_int()) {
-            res = Value::from_bool(VMOPI(lhs, rhs, >=));
+            res = Value::from_bool(integer::compare(lhs, rhs) >= 0);
             RECORD_BINARY_IC(lhs, rhs, res);
         } else if (lhs.is_string() && rhs.is_string()) {
             res = Value::from_bool(lhs.as_string()->str >= rhs.as_string()->str);
             RECORD_BINARY_IC(lhs, rhs, res);
         } else if (lhs.is_number() && rhs.is_number()) {
-            res = Value::from_bool(lhs.as_double_any() >= rhs.as_double_any());
+            res = Value::from_bool((integer::compare_numbers(lhs, rhs) == 1 || integer::compare_numbers(lhs, rhs) == 0));
             RECORD_BINARY_IC(lhs, rhs, res);
         } else if (lhs.is_instance() || rhs.is_instance()) {
             VM_INSTANCE_OP(GTE);
@@ -1169,16 +1156,14 @@ Value VM::execute(int stop_frame_depth)
         if (!init_v.is_int() || !limit_v.is_int() || !step_v.is_int())
             raise_error(ErrorCode::TYPE_ERROR_ARITH);
 
-        i64 init = init_v.as_int();
-        i64 limit = limit_v.as_int();
-        i64 step = step_v.as_int();
-        if (step == 0)
+        if (!step_v.is_truthy())
             raise_error(ErrorCode::DIVISION_BY_ZERO);
-
-        cur_base[base_reg] = Value::from_int(limit);
-        cur_base[base_reg + 1] = Value::from_int(step);
-        cur_base[base_reg + 2] = Value::from_int(init);
-        bool enters = (step > 0) ? (init <= limit) : (init >= limit);
+        cur_base[base_reg] = limit_v;
+        cur_base[base_reg + 1] = step_v;
+        cur_base[base_reg + 2] = init_v;
+        bool enters = integer::compare(step_v, Value::from_int(0)) > 0
+            ? integer::compare(init_v, limit_v) <= 0
+            : integer::compare(init_v, limit_v) >= 0;
         if (!enters)
             ip += instr_sBx(instr);
 
@@ -1192,11 +1177,11 @@ Value VM::execute(int stop_frame_depth)
         Value control_v = cur_base[base_reg + 2];
 
         if (control_v.is_int()) {
-            Value control_value = checked_int(static_cast<__int128>(control_v.as_int()) + step_v.as_int());
-            i64 control = control_value.as_int();
+            Value control_value = integer::add(control_v, step_v, m_gc);
             cur_base[base_reg + 2] = control_value;
-            bool continues = (step_v.as_int() > 0) ? (control <= limit_v.as_int())
-                                                   : (control >= limit_v.as_int());
+            bool continues = integer::compare(step_v, Value::from_int(0)) > 0
+                ? integer::compare(control_value, limit_v) <= 0
+                : integer::compare(control_value, limit_v) >= 0;
             if (continues)
                 ip += instr_sBx(instr);
         } else {
@@ -1614,10 +1599,6 @@ Value VM::execute(int stop_frame_depth)
                 raise_error(ErrorCode::INVALID_OPCODE, "invalid INVOKE_NAMED payload");
             u32 name_idx = instr_Bx(payload);
 
-            if (UNLIKELY(!inst.is_instance()))
-                raise_error(ErrorCode::TYPE_ERROR_CALL, "(method call on non-instance)");
-
-            ObjInstance* inst_obj = inst.as_instance();
             /// there many unchecked operations that may potentially fail here
             /// Compiler must guarantee that the name index in the constant table is valid
             /// otherwise it should throw an early error, also that index should always contain
@@ -1627,15 +1608,48 @@ Value VM::execute(int stop_frame_depth)
                     || !cur_chunk->constants[name_idx].is_string()))
                 raise_error(ErrorCode::INVALID_OPCODE, "invalid method-name constant");
             StringRef method_name = cur_chunk->constants[name_idx].as_string()->str;
-            int slot = inst_obj->klass->method_slot(method_name);
-            if (slot == -1)
-                raise_error(ErrorCode::TYPE_ERROR_CALL,
-                    "instance class does not define this method: " + std::string(method_name.data()));
+            Value callee = Value::nil();
+            bool callable_member = false;
+            if (inst.is_module()) {
+                ObjModule* module = inst.as_module();
+                Value const* value = module->globals == nullptr ? nullptr : module->globals->find(method_name);
+                if (value == nullptr || module->globals->index.find_ptr(method_name) == nullptr)
+                    raise_error(ErrorCode::UNDEFINED_GLOBAL, "module has no export '" + std::string(method_name.data(), method_name.len()) + "'");
+                callee = *value;
+                callable_member = true;
+            } else if (inst.is_instance()) {
+                ObjInstance* object = inst.as_instance();
+                int field = object->klass->field_index(method_name);
+                if (field >= 0 && object->klass->method_slot(method_name) < 0) {
+                    callee = object->fields[static_cast<u32>(field)];
+                    callable_member = true;
+                }
+            } else {
+                raise_error(ErrorCode::TYPE_ERROR_CALL, "(method call on non-instance)");
+            }
+            if (callable_member) {
+                if (argc == 0)
+                    raise_error(ErrorCode::INVALID_OPCODE, "missing member-call receiver slot");
+                int result_slot = cur_frame_base + instr_A(instr);
+                // Named calls reserve an implicit-self slot. Plain callable
+                // attributes receive only their explicit arguments.
+                for (u32 i = 0; i + 1 < argc; ++i)
+                    m_stack[result_slot + 1 + i] = m_stack[result_slot + 2 + i];
+                m_stack[result_slot] = callee;
+                SAVE_IP();
+                call_value(callee, static_cast<int>(argc - 1), result_slot + 1, false);
+            } else {
+                ObjInstance* inst_obj = inst.as_instance();
+                int slot = inst_obj->klass->method_slot(method_name);
+                if (slot == -1)
+                    raise_error(ErrorCode::TYPE_ERROR_CALL,
+                        "instance class does not define this method: " + std::string(method_name.data()));
 
-            invoke_method(inst_obj->klass->vtable[slot], inst,
-                cur_frame_base + instr_A(instr),
-                cur_frame_base + instr_A(instr) + 1,
-                static_cast<int>(argc), ip, m_stack_top, inst_obj->klass->vtable[slot]->globals);
+                invoke_method(inst_obj->klass->vtable[slot], inst,
+                    cur_frame_base + instr_A(instr),
+                    cur_frame_base + instr_A(instr) + 1,
+                    static_cast<int>(argc), ip, m_stack_top, inst_obj->klass->vtable[slot]->globals);
+            }
         }
         LOAD_FRAME();
         DISPATCH();
