@@ -75,6 +75,7 @@ public:
     Value print(int argc, Value* argv);
     Value open(int argc, Value* argv);
     Value len(int argc, Value* argv);
+    Value same_object(int argc, Value* argv);
     Value type(int argc, Value* argv);
     Value Int(int argc, Value* argv);
     Value Float(int argc, Value* argv);
