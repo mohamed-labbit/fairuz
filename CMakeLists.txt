@@ -211,10 +211,11 @@ if(BUILD_TESTS)
     add_test(NAME AllTestsInMain COMMAND fairuz_tests)
 
     # Every Fairuz standard-library test is also a first-class CTest case.
-    # CONFIGURE_DEPENDS makes newly added test_*.ف files appear after the
+    # CONFIGURE_DEPENDS makes newly added اختبار_*.ف / test_*.ف files appear after the
     # next build without maintaining a second handwritten manifest.
     file(GLOB fairuz_STDLIB_TESTS CONFIGURE_DEPENDS
-        ${CMAKE_SOURCE_DIR}/stdlib/tests/test_*.ف)
+        ${CMAKE_SOURCE_DIR}/stdlib/tests/test_*.ف
+        ${CMAKE_SOURCE_DIR}/stdlib/tests/اختبار_*.ف)
     foreach(stdlib_test_file IN LISTS fairuz_STDLIB_TESTS)
         get_filename_component(stdlib_test_name ${stdlib_test_file} NAME_WE)
         add_test(
