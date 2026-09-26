@@ -158,7 +158,7 @@ public:
     [[nodiscard]] bool is_numeric() const;
 
     [[nodiscard]] f64 to_double() const;
-    [[nodiscard]] int to_int() const;
+    [[nodiscard]] i64 to_int() const;
 
     [[nodiscard]] int get_precedence(bool is_unary = false) const;
 
