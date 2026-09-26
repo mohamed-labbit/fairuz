@@ -49,6 +49,7 @@ public:
     /* --- obj factory --- */
 
     ObjBigInt* make_obj_int(i64 const v);
+    ObjBigInt* make_obj_int(integer::Data data);
     ObjString* make_obj_string(StringRef str);
     ObjString* make_obj_string(char const* str);
     ObjString* make_obj_string(char* str);
@@ -90,7 +91,8 @@ public:
     /* --- Value constructors --- */
 
 #if FA_USE_NANBOX
-    Value make_int(i64 const v) { return Value::from_obj((ObjHeader*)(make_obj_int(v))); }
+    Value make_int(i64 const v) { return integer::finish(integer::from_i64(v), *this); }
+    Value make_int(Array<u32>& limbs, bool sign) { return integer::finish({ integer::Limbs(limbs.begin(), limbs.end()), sign }, *this); }
 #endif
     Value make_string(StringRef str) { return Value::from_string(make_obj_string(str)); }
     Value make_string(char const* str) { return Value::from_string(make_obj_string(str)); }
