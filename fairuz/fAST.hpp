@@ -273,6 +273,8 @@ public:
 
 class IntLiteralExpr final : public Expr {
 public:
+    StringRef large_literal;
+    int literal_base { 10 };
     i64 const value { INT64_C(0) };
 
     IntLiteralExpr(i64 v, SourceLocation loc)
@@ -286,11 +288,15 @@ public:
         if (other == nullptr || other->get_kind() != m_kind)
             return false;
 
-        return value == static_cast<IntLiteralExpr*>(other)->value;
+        auto* rhs = static_cast<IntLiteralExpr*>(other);
+        return value == rhs->value && large_literal == rhs->large_literal && literal_base == rhs->literal_base;
     }
     [[nodiscard]] IntLiteralExpr* clone() const override
     {
-        return ALLOCATE_AST_NODE(IntLiteralExpr, value, get_location());
+        auto* result = ALLOCATE_AST_NODE(IntLiteralExpr, value, get_location());
+        result->large_literal = large_literal;
+        result->literal_base = literal_base;
+        return result;
     }
     void accept(ExprVisitor& v) override { v.visit(*this); }
 };
