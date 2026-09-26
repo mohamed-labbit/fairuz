@@ -3,6 +3,8 @@
 //
 
 #include "fopcode.hpp"
+#include "farray.hpp"
+#include "fgc.hpp"
 #include "fobject.hpp"
 #include "fvalue.hpp"
 
@@ -18,7 +20,7 @@ static inline void print_value(Value v)
     else if (v.is_bool())
         std::cout << (v.as_bool() ? "صحيح" : "خطا");
     else if (v.is_int())
-        std::cout << std::to_string(v.as_int());
+        std::cout << integer::to_string(v);
     else if (v.is_double())
         std::cout << std::to_string(v.as_double());
     else if (v.is_string())
@@ -50,7 +52,7 @@ bool Chunk::patch_jump(u32 const instr_idx)
 }
 
 #if FA_USE_NANBOX
-u16 Chunk::add_big_int(i64 const v)
+u16 Chunk::add_big_int(integer::Data const& v)
 {
     for (u32 i = 0, n = big_ints.size(); i < n; i++) {
         if (big_ints[i] == v)
@@ -181,37 +183,9 @@ void Chunk::add_line(u32 line)
         lines.push({ static_cast<u32>(code.size() - 1), line });
 }
 
-#if FA_USE_NANBOX
-
-Value ObjBigInt::add(Value const& other, GarbageCollector& alloc) const
-{
-    /// FIXME:
-    (void)alloc;
-    (void)other;
-    return Value::nil();
-}
-Value ObjBigInt::mul(Value const& other, GarbageCollector& alloc) const
-{
-    /// FIXME:
-    (void)alloc;
-    (void)other;
-    return Value::nil();
-}
-Value ObjBigInt::sub(Value const& other, GarbageCollector& alloc) const
-{
-    /// FIXME:
-    (void)alloc;
-    (void)other;
-    return Value::nil();
-}
-Value ObjBigInt::div(Value const& other, GarbageCollector& alloc) const
-{
-    /// FIXME:
-    (void)alloc;
-    (void)other;
-    return Value::nil();
-}
-
-#endif // FA_USE_NANBOX
+Value ObjBigInt::add(Value const& a, Value const& b, GarbageCollector& gc) { return integer::add(a, b, gc); }
+Value ObjBigInt::sub(Value const& a, Value const& b, GarbageCollector& gc) { return integer::sub(a, b, gc); }
+Value ObjBigInt::mul(Value const& a, Value const& b, GarbageCollector& gc) { return integer::mul(a, b, gc); }
+Value ObjBigInt::div(Value const& a, Value const& b, GarbageCollector& gc) { return integer::div(a, b, gc); }
 
 } // namespace fairuz::runtime
