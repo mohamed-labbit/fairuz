@@ -300,9 +300,8 @@ struct Chunk {
     Array<SourceLocation> locations;
     Array<Value> constants;
 #if FA_USE_NANBOX
-    /// this is a 'constants' array sustitution for LOAD_BIG_INT, it does the same job
-    /// but sidesteps the lossless conversion from i64 to Value at compile time
-    Array<i64> big_ints;
+    // Large literals are parsed once into normalized, non-GC limb constants.
+    Array<integer::Data> big_ints;
 #endif
     Array<LineEntry> lines;
     Array<Chunk*> functions;
@@ -329,7 +328,8 @@ struct Chunk {
     bool patch_jump(u32 const instr_idx);
     u16 add_constant(Value const v);
 #if FA_USE_NANBOX
-    u16 add_big_int(i64 const v);
+    u16 add_big_int(integer::Data const& v);
+    u16 add_big_int(i64 v) { return add_big_int(integer::from_i64(v)); }
 #endif
     u8 alloc_ic_slot();
     u32 get_line(u32 const instr_idx) const;
