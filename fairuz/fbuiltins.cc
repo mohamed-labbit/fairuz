@@ -38,6 +38,10 @@
 
 namespace fairuz::runtime {
 
+namespace {
+StringRef byte_string(std::string_view bytes);
+}
+
 static constexpr u32 MAX_RENDER_DEPTH = 128;
 
 static StringRef format_double_string(f64 value)
@@ -65,7 +69,7 @@ static void append_rendered_value(StringRef& out, Value v, bool quote_strings,
         return;
     }
     if (v.is_int()) {
-        out += StringRef(std::to_string(v.as_int()).c_str());
+        out += StringRef(integer::to_string(v).c_str());
         return;
     }
     if (v.is_double()) {
@@ -158,6 +162,13 @@ static StringRef value_to_string(Value v)
     return out;
 }
 
+Value VM::same_object(int argc, Value* argv)
+{
+    if (argc != 2 || argv == nullptr)
+        raise_error(ErrorCode::NATIVE_ARG_COUNT);
+    return Value::from_bool(argv[0].value() == argv[1].value());
+}
+
 Value VM::len(int argc, Value* argv)
 {
     if (argc == 0 || argv == nullptr)
@@ -171,7 +182,7 @@ Value VM::len(int argc, Value* argv)
             // code-point length for text, but never try to decode arbitrary
             // binary payloads such as gzip streams.
             if (!simdutf::validate_utf8(str.data(), str.len()))
-                return Value::from_int(static_cast<i64>(str.len()));
+                return Value::from_int(static_cast<i64>(str.len()), m_gc);
             size_t byte_pos = 0;
             i64 char_count = 0;
 
@@ -182,13 +193,13 @@ Value VM::len(int argc, Value* argv)
                 char_count++;
             }
 
-            return Value::from_int(char_count);
+            return Value::from_int(char_count, m_gc);
         }
 
         if (argv[0].is_list())
-            return Value::from_int(argv[0].as_list()->elements.size());
+            return Value::from_int(argv[0].as_list()->elements.size(), m_gc);
         if (argv[0].is_dict())
-            return Value::from_int(argv[0].as_dict()->data.size());
+            return Value::from_int(argv[0].as_dict()->data.size(), m_gc);
     }
 
     /// do not accept multiple args for len
@@ -209,7 +220,7 @@ static void print_runtime_value_impl(Value v,
     }
 
     if (v.is_int()) {
-        std::cout << v.as_int();
+        std::cout << integer::to_string(v);
         return;
     }
 
@@ -335,7 +346,7 @@ static void print_runtime_value_impl(Value v,
         case fairuz::runtime::ObjType::INT: {
             auto int_obj = reinterpret_cast<ObjBigInt*>(obj);
             /// add '<' and '>' to distinguish a fallback int object from a NAN-BOXed int value
-            std::cout << int_obj->val;
+            std::cout << integer::to_string(Value::from_obj(&int_obj->obj));
             return;
         }
 #endif
@@ -410,11 +421,7 @@ Value VM::Int(int argc, Value* argv)
         return argv[0];
     if (!argv[0].is_double())
         return Value::nil();
-    f64 value = argv[0].as_double();
-    // 2^63 is exactly representable as a double; INT64_MAX rounds up to it.
-    if (!std::isfinite(value) || value < -0x1p63 || value >= 0x1p63)
-        raise_error(ErrorCode::NUMERIC_OUT_OF_RANGE);
-    return Value::from_int(static_cast<i64>(value), m_gc);
+    return integer::from_double(argv[0].as_double(), m_gc);
 }
 
 Value VM::Float(int argc, Value* argv)
@@ -495,7 +502,7 @@ Value VM::slice(int argc, Value* argv)
 
     i64 start_i = start_value.as_int();
     size_t container_size = container.is_string()
-        ? container.as_string()->str.len()
+        ? static_cast<size_t>(len(1, &container).as_int())
         : static_cast<size_t>(container.as_list()->size());
 
     if (container_size == 0) {
@@ -518,7 +525,10 @@ Value VM::slice(int argc, Value* argv)
 
     if (container.is_string()) {
         ObjString* str_obj = container.as_string();
-        return m_gc.make_string(str_obj->str.slice(start, end + 1));
+        if (!simdutf::validate_utf8(str_obj->str.data(), str_obj->str.len()))
+            return m_gc.make_string(str_obj->str.slice(start, end + 1));
+        Value args[] = { container, Value::from_int(start_i, m_gc), Value::from_int(end_i + 1, m_gc) };
+        return substr(3, args);
     } else if (container.is_list()) {
         ObjList* list_obj = container.as_list();
         ObjList* ret_list = m_gc.make_obj_list();
@@ -805,7 +815,9 @@ Value VM::number_from_text(int argc, Value* argv)
         i64 value = 0;
         auto parsed = std::from_chars(text.data(), text.data() + text.len(), value);
         if (parsed.ec == std::errc() && parsed.ptr == text.data() + text.len())
-            return Value::from_int(value);
+            return Value::from_int(value, m_gc);
+        if (parsed.ec == std::errc::result_out_of_range && parsed.ptr == text.data() + text.len())
+            return integer::finish(integer::parse(text, 10), m_gc);
         return Value::nil();
     }
 
@@ -861,7 +873,7 @@ Value VM::json_escape(int argc, Value* argv)
             }
         }
     }
-    return m_gc.make_string(output.c_str());
+    return m_gc.make_string(byte_string(output));
 }
 
 Value VM::json_read_string(int argc, Value* argv)
@@ -916,9 +928,9 @@ Value VM::json_read_string(int argc, Value* argv)
         unsigned char ch = static_cast<unsigned char>(input[byte_pos]);
         if (ch == '"') {
             Value result = m_gc.make_list();
-            Value decoded = m_gc.make_string(output.c_str());
+            Value decoded = m_gc.make_string(byte_string(output));
             result.as_list()->elements.push(decoded);
-            result.as_list()->elements.push(Value::from_int(cp_pos + 1));
+            result.as_list()->elements.push(Value::from_int(cp_pos + 1, m_gc));
             return result;
         }
         if (ch < 0x20)
@@ -1114,7 +1126,7 @@ Value VM::file_read(int argc, Value* argv)
     std::string output(requested, '\0');
     size_t count = requested == 0 ? 0 : std::fread(output.data(), 1, requested, handle->fp);
     output.resize(count);
-    return m_gc.make_string(output.c_str());
+    return m_gc.make_string(byte_string(output));
 }
 
 Value VM::file_read_all(int argc, Value* argv)
@@ -1135,7 +1147,7 @@ Value VM::file_read_all(int argc, Value* argv)
     }
     if (std::ferror(handle->fp))
         return Value::nil();
-    return m_gc.make_string(output.c_str());
+    return m_gc.make_string(byte_string(output));
 }
 
 Value VM::file_read_line(int argc, Value* argv)
@@ -1157,7 +1169,7 @@ Value VM::file_read_line(int argc, Value* argv)
         return Value::nil();
     if (!output.empty() && output.back() == '\r')
         output.pop_back();
-    return m_gc.make_string(output.c_str());
+    return m_gc.make_string(byte_string(output));
 }
 
 Value VM::file_write(int argc, Value* argv)
@@ -1354,7 +1366,7 @@ Value VM::datetime_now(int argc, Value* argv)
     if (argc != 0)
         raise_error(ErrorCode::NATIVE_TYPE_ERROR, "current time takes no arguments");
     auto now = std::chrono::system_clock::now().time_since_epoch();
-    return Value::from_int(std::chrono::duration_cast<std::chrono::seconds>(now).count());
+    return Value::from_int(std::chrono::duration_cast<std::chrono::seconds>(now).count(), m_gc);
 }
 
 Value VM::datetime_from_fields(int argc, Value* argv)
@@ -1367,18 +1379,25 @@ Value VM::datetime_from_fields(int argc, Value* argv)
             raise_error(ErrorCode::NATIVE_TYPE_ERROR,
                 "datetime fields must be integers");
     }
+    auto field = [&](int index, i64 offset = 0) {
+        i64 n = argv[index].as_int();
+        if (n < static_cast<i64>(std::numeric_limits<int>::min()) + offset
+            || n > static_cast<i64>(std::numeric_limits<int>::max()) + offset)
+            raise_error(ErrorCode::NUMERIC_OUT_OF_RANGE);
+        return static_cast<int>(n - offset);
+    };
     std::tm value { };
-    value.tm_year = static_cast<int>(argv[0].as_int() - 1900);
-    value.tm_mon = static_cast<int>(argv[1].as_int() - 1);
-    value.tm_mday = static_cast<int>(argv[2].as_int());
-    value.tm_hour = static_cast<int>(argv[3].as_int());
-    value.tm_min = static_cast<int>(argv[4].as_int());
-    value.tm_sec = static_cast<int>(argv[5].as_int());
+    value.tm_year = field(0, 1900);
+    value.tm_mon = field(1, 1);
+    value.tm_mday = field(2);
+    value.tm_hour = field(3);
+    value.tm_min = field(4);
+    value.tm_sec = field(5);
     value.tm_isdst = -1;
     std::time_t timestamp = utc_zone(argv[6]) ? utc_timestamp(&value) : std::mktime(&value);
     if (timestamp == static_cast<std::time_t>(-1))
         return Value::nil();
-    return Value::from_int(static_cast<i64>(timestamp));
+    return Value::from_int(static_cast<i64>(timestamp), m_gc);
 }
 
 Value VM::datetime_to_fields(int argc, Value* argv)
@@ -1386,7 +1405,9 @@ Value VM::datetime_to_fields(int argc, Value* argv)
     if (argc != 2 || argv == nullptr || !argv[0].is_number() || !supported_zone(argv[1]))
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
             "datetime fields expect epoch and supported zone");
-    std::time_t timestamp = static_cast<std::time_t>(argv[0].as_double_any());
+    std::time_t timestamp = static_cast<std::time_t>(argv[0].is_int()
+            ? argv[0].as_int()
+            : integer::from_double(argv[0].as_double(), m_gc).as_int());
     std::tm fields { };
     if (!calendar_fields(timestamp, utc_zone(argv[1]), &fields))
         return Value::nil();
@@ -1402,7 +1423,7 @@ Value VM::datetime_to_fields(int argc, Value* argv)
         fields.tm_yday + 1,
     };
     for (i64 value : values)
-        result.as_list()->elements.push(Value::from_int(value));
+        result.as_list()->elements.push(Value::from_int(value, m_gc));
     return result;
 }
 
@@ -1425,7 +1446,7 @@ Value VM::datetime_parse(int argc, Value* argv)
     std::time_t timestamp = utc_zone(argv[2]) ? utc_timestamp(&value) : std::mktime(&value);
     return timestamp == static_cast<std::time_t>(-1)
         ? Value::nil()
-        : Value::from_int(static_cast<i64>(timestamp));
+        : Value::from_int(static_cast<i64>(timestamp), m_gc);
 }
 
 Value VM::datetime_format(int argc, Value* argv)
@@ -1434,7 +1455,9 @@ Value VM::datetime_format(int argc, Value* argv)
         || !argv[2].is_string())
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
             "datetime format expects epoch, zone, and format");
-    std::time_t timestamp = static_cast<std::time_t>(argv[0].as_double_any());
+    std::time_t timestamp = static_cast<std::time_t>(argv[0].is_int()
+            ? argv[0].as_int()
+            : integer::from_double(argv[0].as_double(), m_gc).as_int());
     std::tm fields { };
     if (!calendar_fields(timestamp, utc_zone(argv[1]), &fields))
         return Value::nil();
@@ -1976,7 +1999,7 @@ Value VM::floor(int argc, Value* argv)
     if (argv[0].is_int())
         return argv[0];
 
-    return Value::from_int(static_cast<i64>(std::floor(argv[0].as_double())));
+    return integer::from_double(std::floor(argv[0].as_double()), m_gc);
 }
 
 Value VM::ceil(int argc, Value* argv)
@@ -1994,7 +2017,7 @@ Value VM::ceil(int argc, Value* argv)
     if (argv[0].is_int())
         return argv[0];
 
-    return Value::from_int(static_cast<i64>(std::ceil(argv[0].as_double_any())));
+    return integer::from_double(std::ceil(argv[0].as_double()), m_gc);
 }
 
 Value VM::round(int argc, Value* argv)
@@ -2010,7 +2033,7 @@ Value VM::round(int argc, Value* argv)
     if (argv[0].is_int())
         return argv[0];
 
-    return Value::from_int(static_cast<i64>(std::round(argv[0].as_double_any())));
+    return integer::from_double(std::round(argv[0].as_double()), m_gc);
 }
 
 Value VM::abs(int argc, Value* argv)
@@ -2026,12 +2049,9 @@ Value VM::abs(int argc, Value* argv)
     }
 
     if (argv[0].is_int()) {
-        i64 v = argv[0].as_int();
-        if (v == INT64_MIN) {
-            raise_error(ErrorCode::ABS_OUT_OF_RANGE);
-            return Value::nil();
-        }
-        return Value::from_int(std::abs(argv[0].as_int()));
+        return integer::compare(argv[0], Value::from_int(0, m_gc)) < 0
+            ? integer::neg(argv[0], m_gc)
+            : argv[0];
     }
     return Value::from_real(std::fabs(argv[0].as_double()));
 }
@@ -2069,12 +2089,16 @@ Value VM::min(int argc, Value* argv)
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
             "min expects either all numbers or all strings");
 
+    if (all_ints) {
+        Value ret = argv[0];
+        for (int i = 1; i < argc; ++i)
+            if (integer::compare(argv[i], ret) < 0)
+                ret = argv[i];
+        return ret;
+    }
     Value ret = Value::from_real(argv[0].as_double_any());
     for (int i = 1; i < argc; i++)
         ret = Value::from_real(std::fmin(ret.as_double_any(), argv[i].as_double_any()));
-
-    if (all_ints)
-        return Value::from_int(static_cast<i64>(ret.as_double_any()));
 
     return ret;
 }
@@ -2111,12 +2135,16 @@ Value VM::max(int argc, Value* argv)
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
             "max expects either all numbers or all strings");
 
+    if (all_ints) {
+        Value ret = argv[0];
+        for (int i = 1; i < argc; ++i)
+            if (integer::compare(argv[i], ret) > 0)
+                ret = argv[i];
+        return ret;
+    }
     Value ret = Value::from_real(argv[0].as_double_any());
     for (int i = 1; i < argc; i++)
         ret = Value::from_real(std::fmax(ret.as_double_any(), argv[i].as_double_any()));
-
-    if (all_ints)
-        return Value::from_int(static_cast<i64>(ret.as_double_any()));
 
     return ret;
 }
@@ -2136,14 +2164,9 @@ Value VM::pow(int argc, Value* argv)
         return Value::nil();
     }
 
-    if (base.is_int() && exponent.is_int()) {
-        if (exponent.as_int() < 0)
-            return Value::from_real(std::pow(base.as_int(), exponent.as_int()));
-        return Value::from_int(std::pow(base.as_int(), exponent.as_int()), m_gc);
-    } else
-        return Value::from_real(std::pow(base.as_double_any(), exponent.as_double_any()));
-
-    return Value::nil();
+    if (base.is_int() && exponent.is_int())
+        return integer::pow(base, exponent, m_gc);
+    return Value::from_real(std::pow(base.as_double_any(), exponent.as_double_any()));
 }
 
 Value VM::sqrt(int argc, Value* argv)
@@ -2279,7 +2302,7 @@ Value VM::url_parse(int argc, Value* argv)
         if (conversion.ec != std::errc() || conversion.ptr != port_text.data() + port_text.size()
             || parsed_port < 0 || parsed_port > 65535)
             return Value::nil();
-        port = Value::from_int(parsed_port);
+        port = Value::from_int(parsed_port, m_gc);
     }
     dict_put(&result, m_gc.make_string("port"), port);
     dict_put(&result, m_gc.make_string("path"), m_gc.make_string(match[4].str().c_str()));
@@ -2356,9 +2379,9 @@ Value VM::make_regex_result(std::string const& input, std::smatch const& match, 
     size_t match_start = base_offset + static_cast<size_t>(match.position(0));
     size_t match_end = match_start + static_cast<size_t>(match.length(0));
     dict_put(&result, m_gc.make_string("start"),
-        Value::from_int(utf8_character_offset(input, match_start)));
+        Value::from_int(utf8_character_offset(input, match_start), m_gc));
     dict_put(&result, m_gc.make_string("end"),
-        Value::from_int(utf8_character_offset(input, match_end)));
+        Value::from_int(utf8_character_offset(input, match_end), m_gc));
 
     Value groups = m_gc.make_list();
     for (size_t i = 0; i < match.size(); ++i) {
@@ -2673,6 +2696,7 @@ consteval auto make_builtin_registry()
 {
     auto entries = std::array {
         BuiltinDefinition { "طول", &VM::len, 1 },
+        BuiltinDefinition { "__نفس_الكائن__", &VM::same_object, 2 },
         BuiltinDefinition { "اضف", &VM::append, -1 },
         BuiltinDefinition { "احذف", &VM::pop, 1 },
         BuiltinDefinition { "مقطع", &VM::slice, -1 },
