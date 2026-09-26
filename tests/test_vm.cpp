@@ -3160,7 +3160,8 @@ TEST(VMClass, MethodMutatesInstanceFieldAndPersists)
         expr_stmt(call_expr(ident("test"))),
     });
 
-    top->disassemble();
+    if (test_config::dump_bytecode)
+        top->disassemble();
 
     VMRunner r;
     Value result = Value::nil();

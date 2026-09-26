@@ -953,8 +953,6 @@ TEST(CompilerScope, LocalslDontLeakOutOfBlock)
 {
     AST::BlockStmt* _ast = blk({ blk({ decl_stmt("x", lit_int(1)) }), decl_stmt("x", lit_int(2)) });
     Chunk* chunk = compile_ok(_ast);
-    AST::ASTPrinter printer;
-    printer.print(_ast);
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
