@@ -522,30 +522,7 @@ StringRefImpl<Allocator> StringRefImpl<Allocator>::substr_copy(size_t start, siz
     ::memcpy(ret->ptr(), data() + start, copy_len);
     ret->ptr()[copy_len] = 0;
 
-    return StringRefImpl(ret);
-}
-
-template<class Allocator>
-f64 StringRefImpl<Allocator>::to_double(size_t* pos) const
-{
-    if (empty())
-        diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR,
-            "StringRefImpl::toDouble: empty string");
-
-    f64 result { };
-    auto [end_ptr, ec] = std::from_chars(data(), data() + m_length, result);
-
-    if (ec == std::errc::invalid_argument)
-        diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR,
-            "StringRefImpl::toDouble: invalid number format");
-    if (ec == std::errc::result_out_of_range)
-        diagnostic::fatal_error(ErrorCode::INTERNAL_ERROR,
-            "StringRefImpl::toDouble: number out of range");
-
-    if (pos)
-        *pos = static_cast<size_t>(end_ptr - data());
-
-    return result;
+    return StringRefImpl(ret, 0, copy_len);
 }
 
 template<class Allocator>
