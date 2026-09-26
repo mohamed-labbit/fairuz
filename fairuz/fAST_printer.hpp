@@ -76,7 +76,7 @@ private:
         }
 
         case ExprKind::INT_LITERAL: {
-            std::cout << color("Int Literal", Color::GREEN) << "(" << as_literal_int(e)->value << ")\n";
+            std::cout << color("Int Literal", Color::GREEN) << "(" << (as_literal_int(e)->large_literal.empty() ? std::to_string(as_literal_int(e)->value) : std::string(as_literal_int(e)->large_literal.data(), as_literal_int(e)->large_literal.len())) << ")\n";
             break;
         }
         case ExprKind::FLOAT_LITERAL: {
