@@ -776,6 +776,18 @@ ErrorOr<AST::ExprPtr> Parser::parse_assignment_expr(bool allow_augmented)
 
 // Unified Pratt parser
 
+ErrorOr<AST::ExprPtr> Parser::parse_power_expr()
+{
+    NestingLevel n(&m_nesting_level, current_loc());
+    TRY(base, parse_postfix_expr());
+    if (check(TokType::OP_POWER)) {
+        advance();
+        TRY(exp, parse_unary_expr()); // rhs may itself be unary: 2 ** -2
+        return make_binary(AST::ExprKind::OP_POW, base, exp, base->get_location());
+    }
+    return base;
+}
+
 ErrorOr<AST::ExprPtr> Parser::parse_binary_expr_precedence(u32 min_prec)
 {
     NestingLevel n(&m_nesting_level, current_loc());
@@ -793,12 +805,9 @@ ErrorOr<AST::ExprPtr> Parser::parse_binary_expr_precedence(u32 min_prec)
 
         TokType op_type = cur->type();
         advance();
-
-        // OP_POWER is right-associative: pass `prec` (not `prec+1`) so the
-        // recursive call accepts another power op of the same precedence.
-        // All other operators are left-associative: pass `prec+1`.
-        u32 next_min = (op_type == TokType::OP_POWER) ? prec : prec + 1;
-        TRY(rhs, parse_binary_expr_precedence(next_min));
+        // Power is handled by parse_power_expr. The remaining operators
+        // associate left, so the RHS must bind more tightly than this one.
+        TRY(rhs, parse_binary_expr_precedence(prec + 1));
 
         // FIX: assign to lhs and CONTINUE the loop — do not return here.
         // Returning inside the loop was the root cause of the left-associativity bug.
@@ -820,7 +829,7 @@ ErrorOr<AST::ExprPtr> Parser::parse_unary_expr()
         // `!a` should report the location at `!`, not at `a`.
         return make_unary(to_op(op, true), operand, op_tok->location());
     }
-    return parse_postfix_expr();
+    return parse_power_expr();
 }
 
 ErrorOr<AST::ExprPtr> Parser::parse_postfix_expr()
@@ -845,11 +854,8 @@ ErrorOr<AST::ExprPtr> Parser::parse_postfix_expr()
                     skip_newlines();
                 } while (match(TokType::COMMA) && !check(TokType::RPAREN));
             }
-
             VERIFY_TOKEN(TokType::RPAREN, ErrorCode::EXPECTED_RPAREN_EXPR);
-            expr = make_call(
-                expr, args,
-                expr ? expr->get_location() : SourceLocation { });
+            expr = make_call(expr, args, expr ? expr->get_location() : SourceLocation { });
             continue;
         }
 
@@ -893,9 +899,12 @@ ErrorOr<AST::ExprPtr> Parser::parse_primary_expr()
         advance();
         TokType tt = cur->type();
 
-        if (tt == TokType::DECIMAL)
-            return AST::make_literal_float(cur->lexeme().to_double(), cur->location());
-
+        if (tt == TokType::DECIMAL) {
+            f64 value = 0.0;
+            if (util::try_parse_float_literal(cur->lexeme(), value))
+                return AST::make_literal_float(value, cur->location());
+            return report_error(ErrorCode::INVALID_NUMBER_LITERAL, cur->location());
+        }
         int base = 10;
         switch (tt) {
         case TokType::BINARY: base = 2; break;
@@ -904,9 +913,14 @@ ErrorOr<AST::ExprPtr> Parser::parse_primary_expr()
         case TokType::HEX: base = 16; break;
         default: break;
         }
-        return AST::make_literal_int(
-            util::parse_integer_literal(cur->lexeme(), base),
-            cur->location());
+        i64 value = 0;
+        if (util::try_parse_integer_literal(cur->lexeme(), base, value))
+            return AST::make_literal_int(value, cur->location());
+        // Keep large spelling in the AST; compile it once into normalized limbs.
+        auto* literal = AST::make_literal_int(i64 { 0 }, cur->location());
+        literal->large_literal = cur->lexeme();
+        literal->literal_base = base;
+        return literal;
     }
 
     if (match(TokType::STRING))
