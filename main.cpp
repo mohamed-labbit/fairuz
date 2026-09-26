@@ -374,6 +374,14 @@ int main(int argc, char** argv)
         return static_cast<int>(ExitCode::DataError);
     } catch (fairuz::diagnostic::DiagnosticAbort const&) {
         return static_cast<int>(ExitCode::DataError);
+    } catch (std::bad_alloc const&) {
+        fairuz::diagnostic::report(fairuz::diagnostic::Severity::ERROR, {}, fairuz::ErrorCode::ALLOC_FAILED);
+        fairuz::diagnostic::dump();
+        return static_cast<int>(ExitCode::DataError);
+    } catch (std::length_error const&) {
+        fairuz::diagnostic::report(fairuz::diagnostic::Severity::ERROR, {}, fairuz::ErrorCode::ALLOC_FAILED);
+        fairuz::diagnostic::dump();
+        return static_cast<int>(ExitCode::DataError);
     } catch (std::exception const& ex) {
         fairuz::diagnostic::report(fairuz::diagnostic::Severity::ERROR, {}, fairuz::ErrorCode::INTERNAL_ERROR, ex.what());
         fairuz::diagnostic::dump();
