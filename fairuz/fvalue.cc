@@ -15,17 +15,33 @@ Value Value::from_int(i64 const v, GarbageCollector& gc)
 
 i64 Value::as_int() const
 {
-    if (is_big_int())
-        /// TODO: probably must make a custom int holder
-        /// that holds a variant between i64 and i32* so
-        /// that we can get the value once we migrate to
-        /// a vector of limbs for big ints.
-        return as_big_int()->val;
+    if (is_big_int()) {
+        i64 result;
+        if (!integer::to_i64(*this, result))
+            diagnostic::fatal_error(ErrorCode::NUMERIC_OUT_OF_RANGE, "integer does not fit the native API's signed 64-bit parameter");
+        return result;
+    }
     i64 payload = static_cast<i64>(m_value & PAYLOAD_MASK);
     if (payload & (INT64_C(1) << 47))
-        return payload | ~PAYLOAD_MASK;
+        return payload - (INT64_C(1) << 48);
     return payload;
 }
+
+bool Value::is_truthy() const
+{
+    if (is_nil())
+        return false;
+    if (is_bool())
+        return as_bool();
+    if (is_big_int())
+        return !as_big_int()->limbs.empty();
+    if (is_int())
+        return as_int() != 0;
+    if (is_obj())
+        return true;
+    return as_double() != 0;
+}
+f64 Value::as_double_any() const { return is_int() ? integer::to_double(*this) : as_double(); }
 
 ObjString* Value::as_string() const { return reinterpret_cast<ObjString*>(as_obj()); }
 ObjList* Value::as_list() const { return reinterpret_cast<ObjList*>(as_obj()); }
@@ -52,25 +68,25 @@ ObjModule* Value::as_module() const { return reinterpret_cast<ObjModule>(as_obj(
 
 #endif
 
-size_t ValueHash::operator()(Value const& v) const noexcept
+size_t ValueHash::operator()(Value const& v) const
 {
     switch (value_type_tag(v)) {
     case TypeTag::NONE: return 0;
     case TypeTag::NIL: return 0;
     case TypeTag::BOOL: return std::hash<bool> { }(v.as_bool());
-    case TypeTag::INT: return std::hash<f64> { }(static_cast<f64>(v.as_int()));
+    case TypeTag::INT: return std::hash<f64> { }(v.as_double_any());
     case TypeTag::DOUBLE: return std::hash<f64> { }(v.as_double());
     case TypeTag::STRING: return v.as_string()->hash;
     default: return std::hash<void*> { }(v.as_obj());
     }
 }
 
-bool ValueEqual::operator()(Value const& lhs, Value const& rhs) const noexcept
+bool ValueEqual::operator()(Value const& lhs, Value const& rhs) const
 {
     if (lhs.is_string() && rhs.is_string())
         return lhs.as_string()->str == rhs.as_string()->str;
     if (lhs.is_number() && rhs.is_number())
-        return lhs.as_double_any() == rhs.as_double_any();
+        return integer::compare_numbers(lhs, rhs) == 0;
     return lhs.value() == rhs.value();
 }
 
