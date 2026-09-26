@@ -764,6 +764,11 @@ ErrorOr<ExprResult> Compiler::compile_expr_impl(AST::ExprPtr e)
 
 ErrorOr<ExprResult> Compiler::compile_literal_int_impl(AST::IntLiteralExpr* e)
 {
+    if (!e->large_literal.empty()) {
+        auto data = integer::parse(e->large_literal, e->literal_base);
+        u32 pc = emit(make_ABx(OpCode::LOAD_BIG_INT, 0, current_chunk()->add_big_int(data)), e->get_location());
+        return ExprResult::reloc(pc);
+    }
     return ExprResult::kint(e->value);
 }
 ErrorOr<ExprResult> Compiler::compile_literal_float_impl(AST::FloatLiteralExpr* e)
@@ -908,10 +913,12 @@ ErrorOr<ExprResult> Compiler::compile_binary_impl(AST::BinaryExpr* e)
         return report_error(ErrorCode::UNKNOWN_BINARY_OPERATOR, e->get_location());
     }
 
-    if ((bc_op == OpCode::OP_LSHIFT || bc_op == OpCode::OP_RSHIFT) && AST::is_literal_int(e->rhs)) {
+    if ((bc_op == OpCode::OP_LSHIFT || bc_op == OpCode::OP_RSHIFT) && AST::is_literal_int(e->rhs)
+        && AST::as_literal_int(e->rhs)->large_literal.empty()
+        && AST::as_literal_int(e->rhs)->value >= 0 && AST::as_literal_int(e->rhs)->value <= 255) {
         auto* amount_expr = AST::as_literal_int(e->rhs);
         i64 amount = amount_expr->value;
-        if (amount < 0 || amount > 63)
+        if (amount < 0 || amount > 255)
             return report_error(ErrorCode::SHIFT_AMOUNT_OUT_OF_RANGE, amount_expr->get_location());
 
         RegMark mark(m_current);
@@ -1188,15 +1195,9 @@ ErrorOr<ExprResult> Compiler::compile_call_impl(AST::CallExpr* e, reg_t* dst, bo
         return true;
     };
 
-    bool module_member_call = false;
+    // Resolve external members from the actual receiver at runtime, including
+    // modules carried through aliases and locals shadowing an import name.
     if (AST::is_get(e->callee)) {
-        AST::ExprPtr object = AST::as_get(e->callee)->object;
-        module_member_call = AST::is_identifier(object)
-            && m_module_names.find_ptr(AST::as_identifier(object)->spelling) != nullptr;
-    }
-
-    /// calling a method (module attributes are ordinary callable values)
-    if (AST::is_get(e->callee) && !module_member_call) {
         AST::GetExpr const* get_expr = AST::as_get(e->callee);
         /// NOTE: we don't have to verify if this is in fact a method call
         /// and not a semantic error of calling a non-callable plain field
