@@ -799,39 +799,6 @@ TEST_F(StringRefTest, ToUtf8_RoundTrip)
     EXPECT_EQ(result, original);
 }
 
-TEST_F(StringRefTest, ToDouble_Integer)
-{
-    StringRef s("42");
-    EXPECT_DOUBLE_EQ(s.to_double(), 42.0);
-}
-
-TEST_F(StringRefTest, ToDouble_Float)
-{
-    StringRef s("3.14159");
-    EXPECT_DOUBLE_EQ(s.to_double(), 3.14159);
-}
-
-TEST_F(StringRefTest, ToDouble_Negative)
-{
-    StringRef s("-123.456");
-    EXPECT_DOUBLE_EQ(s.to_double(), -123.456);
-}
-
-TEST_F(StringRefTest, ToDouble_Scientific)
-{
-    StringRef s("1.5e10");
-    EXPECT_DOUBLE_EQ(s.to_double(), 1.5e10);
-}
-
-TEST_F(StringRefTest, ToDouble_WithPosition)
-{
-    StringRef s("123.456abc");
-    size_t pos = 0;
-    f64 result = s.to_double(&pos);
-    EXPECT_DOUBLE_EQ(result, 123.456);
-    EXPECT_GT(pos, 0);
-}
-
 TEST_F(StringRefTest, Hash_EmptyString)
 {
     StringRefHash hasher;
@@ -1558,40 +1525,6 @@ TEST_F(StringRefPerfTest, Append_100k_ArabicChunks)
     do_not_optimize(s);
     EXPECT_EQ(s.len(), static_cast<size_t>(N * 10));
     std::printf("  Append 100k Arabic chunks:       %.1f µs  (%.1f ns/op)\n", us, us * 1000.0 / N);
-}
-
-// ---------------------------------------------------------------------------
-// toDouble throughput
-// ---------------------------------------------------------------------------
-
-TEST_F(StringRefPerfTest, ToDouble_1M_Integer)
-{
-    constexpr int N = 1'000'000;
-    StringRef s("123456");
-    f64 acc = 0;
-
-    auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; i++)
-        acc += s.to_double();
-    f64 us = microseconds_since(t0);
-
-    do_not_optimize(acc);
-    std::printf("  toDouble() 1M integer parses:    %.1f µs  (%.1f ns/op)\n", us, us * 1000.0 / N);
-}
-
-TEST_F(StringRefPerfTest, ToDouble_1M_Float)
-{
-    constexpr int N = 1'000'000;
-    StringRef s("3.14159265");
-    f64 acc = 0;
-
-    auto t0 = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < N; i++)
-        acc += s.to_double();
-    f64 us = microseconds_since(t0);
-
-    do_not_optimize(acc);
-    std::printf("  toDouble() 1M float parses:      %.1f µs  (%.1f ns/op)\n", us, us * 1000.0 / N);
 }
 
 // ---------------------------------------------------------------------------

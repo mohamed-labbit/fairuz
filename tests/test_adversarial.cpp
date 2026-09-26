@@ -1,3 +1,4 @@
+#include "test_config.h"
 #include <gtest/gtest.h>
 
 #include <chrono>
@@ -79,7 +80,8 @@ TEST_P(AdversarialInterpreter, PreservesSemanticsAndReportsErrorsWithoutCrashing
     ASSERT_TRUE(std::filesystem::exists(binary)) << "Build the fairuz target before running these tests";
     std::string input_string = input.string();
     char check_flag[] = "--check";
-    char* argv[] = { binary.data(), input_string.data(), test.check_only ? check_flag : nullptr, nullptr };
+    char bt_flag[] = "--dump-bytecode";
+    char* argv[] = { binary.data(), input_string.data(), test_config::dump_bytecode ? bt_flag : nullptr, test.check_only ? check_flag : nullptr, nullptr };
     posix_spawn_file_actions_t actions;
     ASSERT_EQ(posix_spawn_file_actions_init(&actions), 0);
     int setup_error = posix_spawn_file_actions_addopen(&actions, STDOUT_FILENO, output.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600);
@@ -181,14 +183,13 @@ std::vector<AdversarialCase> semantic_cases()
         { "ConstantModuloCanIndexList", "ا := [10، 20، 30]\nاكتب(ا[5 % 3])\n", "30\n" },
         { "RuntimeModuloCanIndexList", "ا := [10، 20، 30]\nب := 5\nاكتب(ا[ب % 3])\n", "30\n" },
         { "ModuloTypesAgree", "ا := 5\nاكتب(صنف(5 % 3) = صنف(ا % 3))\n", "صحيح\n" },
-        // Boxed integers extend the immediate range to signed 64-bit;
-        // results outside that range must still be rejected.
-        { "ConstantMultiplyOverflow", "اكتب(4294967296 * 4294967296)\n", "", Expectation::Error },
-        { "RuntimeMultiplyOverflow", "ا := 4294967296\nاكتب(ا * ا)\n", "", Expectation::Error },
-        { "ConstantDivideOverflow", "اكتب((-9223372036854775807 - 1) / -1)\n", "", Expectation::Error },
-        { "RuntimeDivideOverflow", "ا := -9223372036854775807 - 1\nاكتب(ا / -1)\n", "", Expectation::Error },
-        { "ConstantShiftOverflow", "اكتب(4 << 62)\n", "", Expectation::Error },
-        { "RuntimeShiftOverflow", "ا := 4\nاكتب(ا << 62)\n", "", Expectation::Error },
+        // Overflow promotes to an exact arbitrary-precision integer.
+        { "ConstantMultiplyOverflow", "اكتب(4294967296 * 4294967296)\n", "18446744073709551616\n" },
+        { "RuntimeMultiplyOverflow", "ا := 4294967296\nاكتب(ا * ا)\n", "18446744073709551616\n" },
+        { "ConstantDivideOverflow", "اكتب((-9223372036854775807 - 1) / -1)\n", "9223372036854775808\n" },
+        { "RuntimeDivideOverflow", "ا := -9223372036854775807 - 1\nاكتب(ا / -1)\n", "9223372036854775808\n" },
+        { "ConstantShiftOverflow", "اكتب(4 << 62)\n", "18446744073709551616\n" },
+        { "RuntimeShiftOverflow", "ا := 4\nاكتب(ا << 62)\n", "18446744073709551616\n" },
         { "NegativePower", "اكتب(قوة(2، -1))\n", "0.5\n" },
         { "IntegerConversionDoesNotWrap", "اكتب(طبيعي(281474976710656.0))\n", "281474976710656\n" },
         { "NonfiniteIntegerConversion", "اكتب(طبيعي(1e300 * 1e300))\n", "", Expectation::Error },
@@ -219,7 +220,7 @@ std::vector<AdversarialCase> semantic_cases()
         { "DivideByZero", "ا := 1\nاكتب(ا / 0)\n", "", Expectation::Error },
         { "ModuloByZero", "ا := 1\nاكتب(ا % 0)\n", "", Expectation::Error },
         { "NegativeShift", "ا := 1\nاكتب(ا << -1)\n", "", Expectation::Error },
-        { "OversizedShift", "ا := 1\nاكتب(ا >> 64)\n", "", Expectation::Error },
+        { "OversizedShift", "ا := 1\nاكتب(ا >> 64)\n", "0\n" },
         { "ListReadPastEnd", "اكتب([1][1])\n", "", Expectation::Error },
         { "ListReadNegativePastEnd", "اكتب([1][-2])\n", "", Expectation::Error },
         { "ListFloatIndex", "اكتب([1][0.0])\n", "", Expectation::Error },
@@ -626,15 +627,26 @@ std::vector<AdversarialCase> arithmetic_cases()
         case 7: value = a > b; break;
         case 8: value = a >= b; break;
         }
-        bool overflow = value < INT64_MIN || value > INT64_MAX;
-        std::string expected = overflow ? "" : op >= 4 ? (value ? "صحيح\n" : "خطا\n")
-                                                       : std::to_string(static_cast<int64_t>(value)) + "\n";
+        auto decimal = [](__int128 number) {
+            bool negative = number < 0;
+            unsigned __int128 magnitude = negative ? -static_cast<unsigned __int128>(number) : number;
+            std::string text;
+            do {
+                text.push_back('0' + magnitude % 10);
+                magnitude /= 10;
+            } while (magnitude);
+            if (negative)
+                text.push_back('-');
+            std::reverse(text.begin(), text.end());
+            return text;
+        };
+        std::string expected = op >= 4 ? (value ? "صحيح\n" : "خطا\n") : decimal(value) + "\n";
         for (bool literal : { true, false }) {
             auto source = literal
                 ? "اكتب((" + std::to_string(a) + ") " + operators[op] + " (" + std::to_string(b) + "))\n"
                 : "ا := " + std::to_string(a) + "\nب := " + std::to_string(b) + "\nاكتب(ا " + operators[op] + " ب)\n";
             result.push_back({ "Case" + std::to_string(i) + (literal ? "Literal" : "Runtime"), source, expected,
-                overflow ? Expectation::Error : Expectation::Output });
+                Expectation::Output });
         }
     }
     return result;
@@ -653,14 +665,14 @@ std::vector<AdversarialCase> repair_regression_cases()
         { "ImmediateArithmeticPromotes", "اكتب(140737488355327 + 1)\nاكتب((-140737488355328) / -1)\nاكتب(1 << 48)\n",
             "140737488355328\n140737488355328\n281474976710656\n" },
         { "IntegerConversionPreservesPrecision", "اكتب(طبيعي(9223372036854775807))\n", "9223372036854775807\n" },
-        { "IntegerConversionRejectsUpperBound", "اكتب(طبيعي(9223372036854775808.0))\n", "", Expectation::Error },
-        { "IntegerConversionRejectsLowerOverflow", "اكتب(طبيعي(-18446744073709551616.0))\n", "", Expectation::Error },
+        { "IntegerConversionRejectsUpperBound", "اكتب(طبيعي(9223372036854775808.0))\n", "9223372036854775808\n" },
+        { "IntegerConversionRejectsLowerOverflow", "اكتب(طبيعي(-18446744073709551616.0))\n", "-18446744073709551616\n" },
         { "IntegerConversionAcceptsLowerBound", "اكتب(طبيعي(-9223372036854775808.0))\n", "-9223372036854775808\n" },
         { "MinimumIntegerModuloMinusOne", "س := -9223372036854775807 - 1\nاكتب(س % -1)\n", "0\n" },
-        { "MinimumIntegerNegationOverflow", "س := -9223372036854775807 - 1\nاكتب(-س)\n", "", Expectation::Error },
+        { "MinimumIntegerNegationOverflow", "س := -9223372036854775807 - 1\nاكتب(-س)\n", "9223372036854775808\n" },
         { "DynamicShiftsUseValueNotRegister", "س := 3\nز := 99\nن := 5\nاكتب(س << ن)\nاكتب(96 >> ن)\n", "96\n3\n" },
         { "DynamicShiftNegative", "ن := -1\nاكتب(1 << ن)\n", "", Expectation::Error },
-        { "DynamicShiftOversized", "ن := 64\nاكتب(1 >> ن)\n", "", Expectation::Error },
+        { "DynamicShiftOversized", "ن := 64\nاكتب(1 >> ن)\n", "0\n" },
         { "DynamicShiftNonInteger", "ن := 1.5\nاكتب(1 << ن)\n", "", Expectation::Error },
         { "AugmentedReadBeforeRhsMutation", "ق := [10]\nدالة غير():\n    ق[0] := 100\n    ارجع 5\nق[0] += غير()\nاكتب(ق[0])\n", "15\n" },
         { "AugmentedReadErrorStopsRhs", "ق := []\nدالة اثر():\n    اكتب(99)\n    ارجع 5\nق[0] += اثر()\n", "", Expectation::Error, false, true },
@@ -749,6 +761,13 @@ std::vector<AdversarialCase> parser_cases()
     return result;
 }
 
+std::vector<AdversarialCase> discovered_failure_cases()
+{
+    return {
+#include "test_cases/discovered_failures.inc"
+    };
+}
+
 auto case_name = [](testing::TestParamInfo<AdversarialCase> const& info) { return info.param.name; };
 INSTANTIATE_TEST_SUITE_P(Semantics, AdversarialInterpreter, testing::ValuesIn(semantic_cases()), case_name);
 INSTANTIATE_TEST_SUITE_P(Arithmetic, AdversarialInterpreter, testing::ValuesIn(arithmetic_cases()), case_name);
@@ -756,5 +775,6 @@ INSTANTIATE_TEST_SUITE_P(Parser, AdversarialInterpreter, testing::ValuesIn(parse
 INSTANTIATE_TEST_SUITE_P(Interactions, AdversarialInterpreter, testing::ValuesIn(interaction_cases()), case_name);
 INSTANTIATE_TEST_SUITE_P(AssignmentSyntax, AdversarialInterpreter, testing::ValuesIn(assignment_syntax_cases()), case_name);
 INSTANTIATE_TEST_SUITE_P(RepairRegression, AdversarialInterpreter, testing::ValuesIn(repair_regression_cases()), case_name);
+INSTANTIATE_TEST_SUITE_P(DiscoveredFailures, AdversarialInterpreter, testing::ValuesIn(discovered_failure_cases()), case_name);
 
 } // namespace

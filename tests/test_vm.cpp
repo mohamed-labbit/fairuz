@@ -431,7 +431,9 @@ TEST(VMArith, Pow)
     b.regs(3).load_int(0, 2).load_int(1, 10).ABC(OpCode::OP_POW, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_DOUBLE_EQ(r.run(b).as_double(), 1024.0);
+    Value result = r.run(b);
+    ASSERT_TRUE(result.is_int());
+    EXPECT_EQ(result.as_int(), 1024);
 }
 
 TEST(VMArith, NegInt)
@@ -539,7 +541,7 @@ TEST(VMBitwise, Shr)
     EXPECT_EQ(r.run(b).as_int(), 128);
 }
 
-TEST(VMBitwise, ShrLogical_NegativeInput)
+TEST(VMBitwise, ShrArithmetic_NegativeInput)
 {
     VMRunner r;
     CB b;
@@ -547,8 +549,8 @@ TEST(VMBitwise, ShrLogical_NegativeInput)
     if (test_config::dump_bytecode)
         b.dump();
     Value v = r.run(b);
-    EXPECT_TRUE(v.is_double());
-    EXPECT_GT(v.as_double(), 0.0);
+    EXPECT_TRUE(v.is_int());
+    EXPECT_EQ(v.as_int(), -4);
 }
 
 TEST(VMBitwise, AndOnDoubleThrows)

@@ -162,6 +162,44 @@ TEST_F(ParserTest, ParseLiteral)
     EXPECT_TRUE(AST::is_literal_bool(parser_3.parse().value())) << "Should parse false bool literal";
 }
 
+TEST_F(ParserTest, DecimalLiteralsRoundOnce)
+{
+    struct Case {
+        char const* source;
+        double expected;
+    };
+    for (auto const& test : {
+             Case { "9223372036854775808.0", 0x1p63 },
+             Case { "9_223_372_036_854_775_808.0", 0x1p63 },
+             Case { "0.1", 0.1 },
+             Case { "0.1234567890123456789", 0.1234567890123456789 } }) {
+        SCOPED_TRACE(test.source);
+        FileManager source;
+        source.buffer() = test.source;
+        Parser parser(&source);
+        auto result = parser.parse_expression();
+        ASSERT_TRUE(result.has_value());
+        auto* literal = as<AST::FloatLiteralExpr>(result.value());
+        ASSERT_NE(literal, nullptr);
+        EXPECT_EQ(literal->value, test.expected);
+        EXPECT_FALSE(diagnostic::has_errors());
+    }
+}
+
+TEST_F(ParserTest, OutOfRangeDecimalDoesNotBecomeInteger)
+{
+    std::string text(400, '9');
+    text += ".0";
+    FileManager source;
+    source.buffer() = text.c_str();
+    Parser parser(&source);
+    auto result = parser.parse_expression();
+    ASSERT_TRUE(result.has_error());
+    EXPECT_EQ(result.error().get_code(), ErrorCode::INVALID_NUMBER_LITERAL);
+    EXPECT_TRUE(diagnostic::has_errors());
+    diagnostic::reset();
+}
+
 TEST_F(ParserTest, ParseNil)
 {
     FileManager fm(parser_test_cases_dir() / "none_literal.fa");
@@ -352,6 +390,64 @@ TEST_F(ParserTest, ParseComplexExpression)
 
     EXPECT_EQ(as_literal_int(mul->lhs)->value, 3);
     EXPECT_EQ(as_literal_int(mul->rhs)->value, 4);
+}
+
+TEST_F(ParserTest, BinaryOperatorsAssociateLeft)
+{
+    struct Case {
+        char const* source;
+        AST::ExprKind outer;
+        AST::ExprKind inner;
+    };
+    for (auto const& test : {
+             Case { "8 - 3 - 1", AST::ExprKind::OP_SUB, AST::ExprKind::OP_SUB },
+             Case { "8 + 3 - 1", AST::ExprKind::OP_SUB, AST::ExprKind::OP_ADD },
+             Case { "8 / 4 / 2", AST::ExprKind::OP_DIV, AST::ExprKind::OP_DIV },
+             Case { "8 / 4 * 2", AST::ExprKind::OP_MUL, AST::ExprKind::OP_DIV },
+             Case { "8 >> 2 << 1", AST::ExprKind::OP_LSHIFT, AST::ExprKind::OP_RSHIFT } }) {
+        SCOPED_TRACE(test.source);
+        FileManager source;
+        source.buffer() = test.source;
+        Parser parser(&source);
+        auto result = parser.parse_expression();
+        ASSERT_TRUE(result.has_value());
+        auto* root = as<AST::BinaryExpr>(result.value());
+        ASSERT_NE(root, nullptr);
+        EXPECT_EQ(root->get_kind(), test.outer);
+        auto* left = as<AST::BinaryExpr>(root->lhs);
+        ASSERT_NE(left, nullptr);
+        EXPECT_EQ(left->get_kind(), test.inner);
+        EXPECT_NE(dynamic_cast<AST::IntLiteralExpr*>(root->rhs), nullptr);
+        EXPECT_FALSE(diagnostic::has_errors());
+    }
+}
+
+TEST_F(ParserTest, PowerAssociatesRightAndBindsInsideUnary)
+{
+    FileManager source;
+    source.buffer() = "-2 ** 3 ** -4";
+    Parser parser(&source);
+    auto result = parser.parse_expression();
+    ASSERT_TRUE(result.has_value());
+    auto* negation = as<AST::UnaryExpr>(result.value());
+    ASSERT_NE(negation, nullptr);
+    EXPECT_EQ(negation->get_kind(), AST::ExprKind::OP_NEG);
+    auto* power = as<AST::BinaryExpr>(negation->operand);
+    ASSERT_NE(power, nullptr);
+    EXPECT_EQ(power->get_kind(), AST::ExprKind::OP_POW);
+    ASSERT_NE(dynamic_cast<AST::IntLiteralExpr*>(power->lhs), nullptr);
+    EXPECT_EQ(as_literal_int(power->lhs)->value, 2);
+    auto* exponent = as<AST::BinaryExpr>(power->rhs);
+    ASSERT_NE(exponent, nullptr);
+    EXPECT_EQ(exponent->get_kind(), AST::ExprKind::OP_POW);
+    ASSERT_NE(dynamic_cast<AST::IntLiteralExpr*>(exponent->lhs), nullptr);
+    EXPECT_EQ(as_literal_int(exponent->lhs)->value, 3);
+    auto* negative_exponent = as<AST::UnaryExpr>(exponent->rhs);
+    ASSERT_NE(negative_exponent, nullptr);
+    EXPECT_EQ(negative_exponent->get_kind(), AST::ExprKind::OP_NEG);
+    ASSERT_NE(dynamic_cast<AST::IntLiteralExpr*>(negative_exponent->operand), nullptr);
+    EXPECT_EQ(as_literal_int(negative_exponent->operand)->value, 4);
+    EXPECT_FALSE(diagnostic::has_errors());
 }
 
 TEST_F(ParserTest, ParseNestedParentheses)
