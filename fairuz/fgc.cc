@@ -49,7 +49,7 @@ static size_t fa_object_size(ObjHeader const* obj)
     case ObjType::FILE_HANDLE: return sizeof(ObjFileHandle);
     case ObjType::MODULE: return sizeof(ObjModule);
 #if FA_USE_NANBOX
-    case ObjType::INT: return sizeof(ObjBigInt);
+    case ObjType::INT: return sizeof(ObjBigInt) + reinterpret_cast<ObjBigInt const*>(obj)->limbs.capacity() * sizeof(u32);
 #endif
     case ObjType::_COUNT: return 0;
     }
@@ -180,7 +180,7 @@ void GarbageCollector::blacken_object(ObjHeader* obj)
     case ObjType::STRING: break;
 #if FA_USE_NANBOX
     /// ObjBigInt is the simplest object and it can be marked directly
-    case ObjType::INT: mark_object(obj); break;
+    case ObjType::INT: break;
 #endif
     case ObjType::_COUNT: diagnostic::panic(ErrorCode::TYPE_ERROR_CALL, "attempting to blacken an unknown object type");
     }
@@ -218,7 +218,13 @@ void GarbageCollector::sweep_all()
 #if FA_USE_NANBOX
 ObjBigInt* GarbageCollector::make_obj_int(i64 const v)
 {
-    return make<ObjBigInt>(v);
+    return make_obj_int(integer::from_i64(v));
+}
+ObjBigInt* GarbageCollector::make_obj_int(integer::Data data)
+{
+    auto* result = make<ObjBigInt>(std::move(data));
+    m_current_size += result->limbs.capacity() * sizeof(u32);
+    return result;
 }
 #endif
 
