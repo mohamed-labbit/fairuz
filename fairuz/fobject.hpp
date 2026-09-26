@@ -2,6 +2,7 @@
 #define FA_OBJECT_HPP
 
 #include "farray.hpp"
+#include "finteger.hpp"
 #include "fmacros.hpp"
 #include "fobj_header.hpp"
 #include "fstring.hpp"
@@ -42,25 +43,30 @@ using ListType = Array<Value, /*_Alloc=*/GarbageCollector>;
 
 struct ObjBigInt {
     ObjHeader obj { ObjType::INT };
-    /// Make the sign bool so that it takes only 1 bit on the system
-    /// False => Negative, True => Positive
+    // Existing convention: true is positive. Zero has empty limbs and is positive.
     bool sign { true };
-    i64 val { UINT64_C(0) };
-    u32 limb_count { 1 };
-    std::vector<u32> limbs;
+    integer::Limbs limbs;
 
-    explicit ObjBigInt(i64 const v)
-        : obj(ObjType::INT)
-        , val(v)
+    explicit ObjBigInt(i64 v)
+        : ObjBigInt(integer::from_i64(v))
     {
+    }
+    explicit ObjBigInt(integer::Data data)
+        : sign(data.positive)
+        , limbs(std::move(data.limbs))
+    {
+        while (!limbs.empty() && limbs.back() == 0)
+            limbs.pop_back();
+        if (limbs.empty())
+            sign = true;
     }
 
     /// arithmetic operations, these will use the GC reference
     /// to allocate the result, but preserve the state of 'this'
-    Value add(Value const& other, GarbageCollector& alloc) const;
-    Value mul(Value const& other, GarbageCollector& alloc) const;
-    Value sub(Value const& other, GarbageCollector& alloc) const;
-    Value div(Value const& other, GarbageCollector& alloc) const;
+    static Value add(Value const& lhs, Value const& rhs, GarbageCollector& alloc);
+    static Value mul(Value const& lhs, Value const& rhs, GarbageCollector& alloc);
+    static Value sub(Value const& lhs, Value const& rhs, GarbageCollector& alloc);
+    static Value div(Value const& lhs, Value const& rhs, GarbageCollector& alloc);
 
     ~ObjBigInt() = default;
 };
