@@ -85,6 +85,7 @@ public:
     ErrorOr<AST::ExprPtr> parse_logical_expr_precedence(u32 min_precedence);
     ErrorOr<AST::ExprPtr> parse_binary_expr_precedence(u32 min_precedence);
     ErrorOr<AST::ExprPtr> parse_comparison_expr();
+    ErrorOr<AST::ExprPtr> parse_power_expr();
     ErrorOr<AST::ExprPtr> parse_binary_expr();
     ErrorOr<AST::ExprPtr> parse_unary_expr();
     ErrorOr<AST::ExprPtr> parse_primary_expr();
