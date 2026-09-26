@@ -222,7 +222,7 @@ public:
 
         result->ptr()[new_len] = 0;
 
-        return StringRefImpl(result);
+        return StringRefImpl(result, 0, new_len);
     }
 
     StringRefImpl operator+(char const* rhs) const
@@ -308,8 +308,6 @@ public:
         return substr_copy(start, end);
     }
     StringRefImpl substr_copy(size_t start, size_t end = SIZE_MAX) const;
-
-    f64 to_double(size_t* pos = nullptr) const;
 
     [[nodiscard]] static StringRefImpl from_utf16(char16_t const* utf16_cstr, Allocator* allocator = nullptr);
 
