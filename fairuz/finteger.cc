@@ -1,5 +1,6 @@
 #include "finteger.hpp"
 #include "fgc.hpp"
+#include "fobject.hpp"
 #include "futil.hpp"
 #include <algorithm>
 #include <bit>
@@ -216,8 +217,11 @@ Value finish(Data d, GarbageCollector& gc)
             mag |= u64(d.limbs[1]) << 32;
 
         u64 bound = d.positive ? u64(Value::int_max()) : u64 { 0 } - u64(Value::int_min());
-        if (mag <= bound)
+        if (mag <= bound) {
+            if (!d.positive && mag == (u64 { 1 } << 63))
+                return Value::from_int(INT64_MIN);
             return Value::from_int(d.positive ? static_cast<i64>(mag) : -static_cast<i64>(mag));
+        }
     }
 
     // GC is nonmoving and collection occurs only at VM dispatch boundaries.
@@ -291,8 +295,8 @@ Value mul(Value lhs, Value rhs, GarbageCollector& gc)
 
 Value neg(Value v, GarbageCollector& gc)
 {
-    if (!v.is_big_int())
-        return Value::from_int(-v.as_int(), gc); // signed 48-bit payload
+    if (!v.is_big_int() && v.as_int() != INT64_MIN)
+        return Value::from_int(-v.as_int(), gc);
 
     Data d = copy(v);
     d.positive = !d.positive;
@@ -356,7 +360,14 @@ Value div(Value lhs, Value rhs, GarbageCollector& gc, bool remainder)
         i64 a = lhs.as_int(), b = rhs.as_int();
         if (b == 0)
             diagnostic::fatal_error(remainder ? ErrorCode::MODULO_BY_ZERO : ErrorCode::DIVISION_BY_ZERO);
-        // Signed 48-bit operands cannot hit INT64_MIN / -1.
+
+        /// the pair INT64_MIN and -1 cannot fit the quotient in 64 bits
+        if (a == INT64_MIN && b == -1) {
+            if (remainder)
+                return Value::from_int(0);
+            return finish(parse("9223372036854775808", 10), gc);
+        }
+
         i64 rem = a % b;
         if (remainder)
             return Value::from_int(rem);
@@ -368,6 +379,12 @@ Value div(Value lhs, Value rhs, GarbageCollector& gc, bool remainder)
     Operand a(lhs), b(rhs);
     if (b.limbs.empty())
         diagnostic::fatal_error(remainder ? ErrorCode::MODULO_BY_ZERO : ErrorCode::DIVISION_BY_ZERO);
+
+    if (b.limbs.size() == 1 && b.limbs[0] == 1) {
+        return remainder
+            ? Value::from_int(0)
+            : finish({ std::vector<u32>(a.limbs.begin(), a.limbs.end()), a.positive == b.positive }, gc);
+    }
 
     auto [q, r] = divmod(a.limbs, b.limbs);
     if (remainder)
