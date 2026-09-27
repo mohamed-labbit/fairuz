@@ -239,6 +239,7 @@ enum class TypeTag : u16 {
     INSTANCE,
     DICT,
     FILE_HANDLE,
+    BIG_INT,
     MODULE,
 }; // enum TypeTag
 
@@ -256,6 +257,9 @@ private:
 public:
     TypeTag type_tag() const { return m_type; }
 
+    static i64 int_max() { return INT64_MAX; }
+    static i64 int_min() { return INT64_MIN; }
+
     static Value nil()
     {
         Value v;
@@ -268,6 +272,14 @@ public:
         v.m_type = TypeTag::BOOL;
         v.as.b = bval;
         return v;
+    }
+    /// NOTE: This is introduced only to preserve the ABI compatibility
+    /// between the NANBOXED implementation and the tagged union fallback
+    /// the garbage collector is not used here because the 64 int is stored
+    /// as is without the 48 bit constraint of NANBOXing
+    static Value from_int(i64 ival, GarbageCollector&)
+    {
+        return from_int(ival);
     }
     static Value from_int(i64 ival)
     {
@@ -297,7 +309,8 @@ public:
         case ObjType::STRING: v.m_type = TypeTag::STRING; break;
         case ObjType::FILE_HANDLE: v.m_type = TypeTag::FILE_HANDLE; break;
         case ObjType::MODULE: v.m_type = TypeTag::MODULE; break;
-        default: v.m_type = TypeTag::NONE;
+        case ObjType::INT: v.m_type = TypeTag::BIG_INT; break;
+        case ObjType::_COUNT: break;
         }
         v.as.o = oval;
         return v;
@@ -305,27 +318,17 @@ public:
 
     bool is_nil() const { return m_type == TypeTag::NIL; }
     bool is_bool() const { return m_type == TypeTag::BOOL; }
-    bool is_int() const { return m_type == TypeTag::INT; }
+    bool is_int() const { return m_type == TypeTag::INT || m_type == TypeTag::BIG_INT; }
     bool is_double() const { return m_type == TypeTag::DOUBLE; }
     bool is_obj() const { return m_type >= TypeTag::STRING && m_type <= TypeTag::MODULE; }
     bool is_number() const { return is_double() || is_int(); }
-    bool is_truthy() const
-    {
-        if (is_nil())
-            return false;
-        else if (is_bool())
-            return as_bool();
-        else if (is_int())
-            return as_int() != 0;
-        else if (is_obj())
-            return true;
-        return as_double() != 0.0f;
-    }
+    bool is_truthy() const;
+    bool is_big_int() const { return is_obj() && m_type == TypeTag::BIG_INT; }
 
     bool as_bool() const { return as.b; }
-    i64 as_int() const { return as.i; }
+    i64 as_int() const;
     f64 as_double() const { return as.f; }
-    f64 as_double_any() const { return is_int() ? static_cast<f64>(as_int()) : as_double(); }
+    f64 as_double_any() const;
     ObjHeader* as_obj() const { return as.o; }
 
     ObjString* as_string() const;
@@ -337,6 +340,7 @@ public:
     ObjInstance* as_instance() const;
     ObjFileHandle* as_file_handle() const;
     ObjModule* as_module() const;
+    ObjBigInt* as_big_int() const;
 
     bool operator==(Value const& other) const
     {
@@ -375,9 +379,14 @@ public:
     bool is_module() const { return is_obj() && m_type == TypeTag::MODULE; }
 };
 
+[[nodiscard]] inline bool has_tag(TypeTag mask, TypeTag t) noexcept
+{
+    return (static_cast<u16>(mask) & static_cast<u16>(t)) != 0;
+}
+
 [[nodiscard]] inline TypeTag value_type_tag(Value v) noexcept
 {
-    return v.type_tag();
+    return v.is_int() ? TypeTag::INT : v.type_tag();
 }
 
 struct ValueHash {
