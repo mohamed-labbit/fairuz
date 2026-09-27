@@ -39,8 +39,6 @@ using ListType = Array<Value, /*_Alloc=*/GarbageCollector>;
 /// Code casts ObjHeader* to concrete object pointers based on this layout and the
 /// runtime type tag. Do not add C++ virtual functions or inheritance to these types.
 
-#if FA_USE_NANBOX
-
 struct ObjBigInt {
     ObjHeader obj { ObjType::INT };
     // Existing convention: true is positive. Zero has empty limbs and is positive.
@@ -70,8 +68,6 @@ struct ObjBigInt {
 
     ~ObjBigInt() = default;
 };
-
-#endif // FA_USE_NANBOX
 
 struct ObjString {
     ObjHeader obj { ObjType::STRING };
