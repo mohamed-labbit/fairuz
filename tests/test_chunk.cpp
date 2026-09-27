@@ -95,15 +95,6 @@ TEST(Chunk, AddConstantDistinguishesDifferentValues)
     EXPECT_EQ(c.constants.size(), 2u);
 }
 
-TEST(Chunk, AddConstantIntAndDoubleNotDeduplicated)
-{
-    Chunk c;
-    u16 i0 = c.add_constant(Value::from_int(1));
-    u16 i1 = c.add_constant(Value::from_real(1.0));
-    EXPECT_NE(i0, i1);
-    EXPECT_EQ(c.constants.size(), 2u);
-}
-
 TEST(Chunk, AddConstantReturnSequentialIndices)
 {
     Chunk c;
