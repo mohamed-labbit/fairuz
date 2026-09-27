@@ -1351,49 +1351,49 @@ TEST(NativeLen, UnicodeString)
 TEST(NativePrint, NoArgs_PrintsNewline)
 {
     VM vm;
-    EXPECT_TRUE(vm.print(0, nullptr).is_nil());
+    EXPECT_TRUE(vm.print(0, nullptr).is_truthy());
 }
 
 TEST(NativePrint, StringArg)
 {
     VM vm;
     auto s = str("hello world");
-    EXPECT_TRUE(vm.print(1, &s).is_nil());
+    EXPECT_TRUE(vm.print(1, &s).is_truthy());
 }
 
 TEST(NativePrint, IntegerArg)
 {
     VM vm;
     Value arg = Value::from_int(42);
-    EXPECT_TRUE(vm.print(1, &arg).is_nil());
+    EXPECT_TRUE(vm.print(1, &arg).is_truthy());
 }
 
 TEST(NativePrint, FloatArg)
 {
     VM vm;
     Value arg = Value::from_real(3.14);
-    EXPECT_TRUE(vm.print(1, &arg).is_nil());
+    EXPECT_TRUE(vm.print(1, &arg).is_truthy());
 }
 
 TEST(NativePrint, BoolArg_True)
 {
     VM vm;
     Value arg = Value::from_bool(true);
-    EXPECT_TRUE(vm.print(1, &arg).is_nil());
+    EXPECT_TRUE(vm.print(1, &arg).is_truthy());
 }
 
 TEST(NativePrint, BoolArg_False)
 {
     VM vm;
     Value arg = Value::from_bool(false);
-    EXPECT_TRUE(vm.print(1, &arg).is_nil());
+    EXPECT_TRUE(vm.print(1, &arg).is_truthy());
 }
 
 TEST(NativePrint, NilArg)
 {
     VM vm;
     Value arg = Value::nil();
-    EXPECT_TRUE(vm.print(1, &arg).is_nil());
+    EXPECT_TRUE(vm.print(1, &arg).is_truthy());
 }
 
 TEST(NativePrint, TwoArgs_DoesNotCrash)
@@ -1401,7 +1401,7 @@ TEST(NativePrint, TwoArgs_DoesNotCrash)
     VM vm;
     auto s = str("a");
     Value m_args[] = { s, s };
-    EXPECT_TRUE(vm.print(2, m_args).is_nil());
+    EXPECT_TRUE(vm.print(2, m_args).is_truthy());
 }
 
 TEST(NativeStr, NoArgs_ReturnsEmpty)
