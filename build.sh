@@ -21,6 +21,7 @@ DETECT_LEAKS=""
 LEAK_CHECK_EXPLICIT=false
 CLEAN_BUILD=false
 RUN_TESTS=false
+RUN_STDLIB_TESTS=false
 RUN_MAIN=false
 RUN_INCLUDES=false
 RUN_INSTALL=false
@@ -70,6 +71,9 @@ for arg in "$@"; do
         test)
             RUN_TESTS=true
             ;;
+        test-stdlib)
+            RUN_STDLIB_TESTS=true
+            ;;
         run)
             RUN_MAIN=true
             ;;
@@ -107,14 +111,8 @@ done
 # makes run/format independent of fairuz's current working directory.
 if [[ "$RUN_MAIN" == true || "$FORMAT" == true ]]; then
     if [[ ${#MAIN_ARGS[@]} -gt 0 ]]; then
-        INPUT_FILE="${MAIN_ARGS[0]}"
-
-        if [[ ! -f "$INPUT_FILE" ]]; then
-            echo "error: input file not found: $INPUT_FILE" >&2
-            exit 1
-        fi
-
-        MAIN_ARGS[0]="$(cd "$(dirname "$INPUT_FILE")" && pwd)/$(basename "$INPUT_FILE")"
+        INPUT_PATH="${MAIN_ARGS[0]}"
+        MAIN_ARGS[0]="$(cd "$(dirname "$INPUT_PATH")" && pwd)/$(basename "$INPUT_PATH")"
     fi
 fi
 
@@ -265,6 +263,11 @@ find_versioned_compiler() {
 #
 # Any other failure is treated as a real error and terminates the script.
 detect_leaks_supported() {
+    # The sanitizer we're looking for is llvm's asan, gcc does not support it
+    if [[ "$USE_GCC" == true ]]; then
+        return 1
+    fi
+
     local probe_dir
     local probe_source
     local probe_binary
@@ -308,7 +311,7 @@ int main()
 }
 EOF
 
-    echo "🔎 Checking LeakSanitizer support..."
+    echo "-- Checking LeakSanitizer support ..."
 
     # Compile using the exact C++ compiler selected by build.sh.
     #
@@ -611,7 +614,7 @@ fi
 #   - explicit --leak-check remains a hard error
 if [[ "$DETECT_LEAKS" == 1 && "$RUN_TESTS" == true ]]; then
     if detect_leaks_supported; then
-        echo "✓ LeakSanitizer supported; leak detection enabled"
+        echo "-- LeakSanitizer supported; leak detection enabled"
     else
         # Fall back to disabled regardless of whether --leak-check was
         # explicit — an unsupported runtime shouldn't hard-fail the whole
@@ -645,18 +648,34 @@ if [[ "$RUN_TESTS" == true ]]; then
     # including macOS's stock bash 3.2.
     ASAN_OPTIONS="detect_leaks=$DETECT_LEAKS" \
         "$PROJECT_ROOT/build/fairuz_tests" ${TEST_ARGS[@]+"${TEST_ARGS[@]}"}
-
+    
     echo "-- Running Fairuz standard-library tests"
     stdlib_test_count=0
     for stdlib_test_file in "$PROJECT_ROOT"/stdlib/tests/اختبار_*.ف; do
         [[ -f "$stdlib_test_file" ]] || continue
         stdlib_test_count=$((stdlib_test_count + 1))
-        echo "[$stdlib_test_count] $(basename "$stdlib_test_file")"
+        echo "[ RUN ] $(basename "$stdlib_test_file")"
         FAIRUZ_STDLIB="$PROJECT_ROOT/stdlib" \
         ASAN_OPTIONS="detect_leaks=$DETECT_LEAKS" \
             "$PROJECT_ROOT/build/fairuz" "$stdlib_test_file"
+        echo "[ PASSED ] $(basename "$stdlib_test_file")"
     done
-    echo "✓ $stdlib_test_count Fairuz standard-library tests passed"
+    echo "-- $stdlib_test_count Fairuz standard-library tests passed"
+fi
+
+if [[ "$RUN_STDLIB_TESTS" == true ]]; then
+    echo "-- Running Fairuz standard-library tests"
+    stdlib_test_count=0
+    for stdlib_test_file in "$PROJECT_ROOT"/stdlib/tests/اختبار_*.ف; do
+        [[ -f "$stdlib_test_file" ]] || continue
+        stdlib_test_count=$((stdlib_test_count + 1))
+        echo "[ RUN ] $(basename "$stdlib_test_file")"
+        FAIRUZ_STDLIB="$PROJECT_ROOT/stdlib" \
+        ASAN_OPTIONS="detect_leaks=$DETECT_LEAKS" \
+            "$PROJECT_ROOT/build/fairuz" "$stdlib_test_file"
+        echo "[ PASSED ] $(basename "$stdlib_test_file")"
+    done
+    echo "-- $stdlib_test_count Fairuz standard-library tests passed"
 fi
 
 if [[ "$RUN_MAIN" == true ]]; then
