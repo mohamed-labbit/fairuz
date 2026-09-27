@@ -51,7 +51,6 @@ bool Chunk::patch_jump(u32 const instr_idx)
     return true;
 }
 
-#if FA_USE_NANBOX
 u16 Chunk::add_big_int(integer::Data const& v)
 {
     for (u32 i = 0, n = big_ints.size(); i < n; i++) {
@@ -65,12 +64,11 @@ u16 Chunk::add_big_int(integer::Data const& v)
     big_ints.push(v);
     return static_cast<u16>(big_ints.size() - 1);
 }
-#endif
 
 u16 Chunk::add_constant(Value const v)
 {
     for (u32 i = 0, n = constants.size(); i < n; i++) {
-        if (constants[i].value() == v.value())
+        if (ValueEqual { }(constants[i], v))
             return static_cast<u16>(i);
     }
 
