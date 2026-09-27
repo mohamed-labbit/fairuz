@@ -25,6 +25,7 @@ static constexpr u8 MAX_REGS = 250;
         LOAD_FALSE,         // dst, - , -
         LOAD_CONST,         // dst, Const pool index
         LOAD_INT,           // dst, signed 16-bit int (with bias, for larger ints use u64)
+        LOAD_BIG_INT,       // dst, int value index in big_ints
         LOAD_GLOBAL,        // dst, name const index
         STORE_GLOBAL,       // src, name const index
         LOAD_GLOBAL_CACHED, // A = dst, Bx = index into GlobalSlots_
@@ -98,19 +99,13 @@ static constexpr u8 MAX_REGS = 250;
         _COUNT
 */
 
-#if FA_USE_NANBOX
-#    define FA_OPCODE_BIG_INT() X(LOAD_BIG_INT)
-#else
-#    define FA_OPCODE_BIG_INT()
-#endif
-
 #define FA_OPCODE_LIST(X)  \
     X(LOAD_NIL)            \
     X(LOAD_TRUE)           \
     X(LOAD_FALSE)          \
     X(LOAD_CONST)          \
     X(LOAD_INT)            \
-    FA_OPCODE_BIG_INT()    \
+    X(LOAD_BIG_INT)        \
     X(LOAD_GLOBAL)         \
     X(STORE_GLOBAL)        \
     X(LOAD_GLOBAL_CACHED)  \
@@ -299,10 +294,8 @@ struct Chunk {
     Array<u32> code;
     Array<SourceLocation> locations;
     Array<Value> constants;
-#if FA_USE_NANBOX
     // Large literals are parsed once into normalized, non-GC limb constants.
     Array<integer::Data> big_ints;
-#endif
     Array<LineEntry> lines;
     Array<Chunk*> functions;
     Array<ICSlot> ic_slots;
@@ -327,10 +320,8 @@ struct Chunk {
     u32 emit(u32 instr, SourceLocation loc);
     bool patch_jump(u32 const instr_idx);
     u16 add_constant(Value const v);
-#if FA_USE_NANBOX
     u16 add_big_int(integer::Data const& v);
     u16 add_big_int(i64 v) { return add_big_int(integer::from_i64(v)); }
-#endif
     u8 alloc_ic_slot();
     u32 get_line(u32 const instr_idx) const;
     void disassemble() const;
