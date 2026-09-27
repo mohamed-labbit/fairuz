@@ -8,8 +8,9 @@
 #include "fairuz/fsyntax_highlighter.hpp"
 #include "fairuz/fvm.hpp"
 
-#include <chrono>
 #include <cerrno>
+#include <chrono>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -143,7 +144,8 @@ void printSemanticTokens(fairuz::syntax::Result const& result)
     std::cout << "{\"astValid\":" << (result.ast_valid ? "true" : "false") << ",\"tokens\":[";
     bool first = true;
     for (auto const& token : result.tokens) {
-        if (!first) std::cout << ',';
+        if (!first)
+            std::cout << ',';
         first = false;
         std::cout << "{\"line\":" << token.line
                   << ",\"start\":" << token.start
@@ -185,8 +187,7 @@ bool writeFileAtomic(std::string const& path, char const* data, size_t len, std:
     std::filesystem::path parent = target.parent_path();
     if (parent.empty())
         parent = ".";
-    std::string template_path =
-        (parent / (target.filename().string() + ".fairuz-fmt-XXXXXX")).string();
+    std::string template_path = (parent / (target.filename().string() + ".fairuz-fmt-XXXXXX")).string();
     std::vector<char> writable_template(template_path.begin(), template_path.end());
     writable_template.push_back('\0');
 
@@ -263,6 +264,74 @@ bool writeFileAtomic(std::string const& path, char const* data, size_t len, std:
 
 } // namespace
 
+ExitCode format_file(std::string filename, fairuz::Formatter& fmter, ssize_t& file_count)
+{
+    fairuz::lex::FileManager fm(filename);
+    fairuz::diagnostic::set_source(&fm);
+    fairuz::parser::Parser parser(&fm);
+    fairuz::Array<fairuz::AST::StmtPtr> stmts = parser.parse_program();
+    if (fairuz::diagnostic::has_errors()) {
+        fairuz::diagnostic::dump();
+        return ExitCode::DataError;
+    }
+    fairuz::StringRef fmted = fmter.format(fm.buffer());
+    char const* data = fmted.empty() ? "" : fmted.data();
+    if (data != fm.buffer()) {
+        std::string error;
+        if (!writeFileAtomic(filename, data, fmted.len(), error)) {
+            std::cerr << error << "\n";
+            return ExitCode::Software;
+        }
+        file_count++;
+    }
+    return ExitCode::Success;
+}
+
+static bool is_fairuz_extension(std::string ext) { return ext == ".fa" || ext == ".ف"; }
+
+ExitCode format_directory(std::string dirpath, fairuz::Formatter& fmter, ssize_t& file_count)
+{
+    for (auto e : std::filesystem::directory_iterator(dirpath)) {
+        if (std::filesystem::is_directory(e)) {
+            format_directory(e.path().string(), fmter, file_count);
+        } else if (std::filesystem::is_regular_file(e)) {
+            auto ext = e.path().extension().string();
+            if (is_fairuz_extension(e.path().extension().string()))
+                format_file(e.path().string(), fmter, file_count);
+        }
+    }
+
+    return ExitCode::Success;
+}
+
+ExitCode format(std::string filename)
+{
+    ssize_t file_count = 0;
+
+    fairuz::Formatter fmter;
+    fairuz::AllocatorContext allocator_context;
+    fairuz::set_context(&allocator_context);
+    if (std::filesystem::is_directory(filename)) {
+        auto ret = format_directory(filename, fmter, file_count);
+        if (file_count > 0)
+            std::cout << "Formatted " << file_count << (file_count == 1 ? " file" : " files") << '\n';
+        else
+            std::cout << "All files are formatted!" << '\n';
+        return ret;
+    }
+
+    auto ext = std::filesystem::directory_entry(filename).path().extension().string();
+    if (std::filesystem::is_regular_file(filename) && is_fairuz_extension(ext)) {
+        auto ret = format_file(filename, fmter, file_count);
+        if (file_count > 0)
+            std::cout << "Formatted " << file_count << (file_count == 1 ? " file" : " files") << '\n';
+        else
+            std::cout << "File already formatted!" << '\n';
+        return ret;
+    }
+    return ExitCode::Software;
+}
+
 int main(int argc, char** argv)
 {
     Options options;
@@ -296,12 +365,16 @@ int main(int argc, char** argv)
     fairuz::diagnostic::engine.set_json_output(options.json_diagnostics);
     struct DiagnosticOutput {
         bool json;
-        ~DiagnosticOutput() {
-            if (json) std::cerr << fairuz::diagnostic::engine.to_json();
+        ~DiagnosticOutput()
+        {
+            if (json)
+                std::cerr << fairuz::diagnostic::engine.to_json();
         }
     } diagnostic_output { options.json_diagnostics };
 
     try {
+        if (options.format_file)
+            return static_cast<int>(format(options.input_path));
 
         fairuz::AllocatorContext allocator_context;
         fairuz::set_context(&allocator_context);
@@ -314,7 +387,8 @@ int main(int argc, char** argv)
                 input.assign(std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>());
             }
             fairuz::StringRef source(input.size(), '\0');
-            if (!input.empty()) std::memcpy(source.data(), input.data(), input.size());
+            if (!input.empty())
+                std::memcpy(source.data(), input.data(), input.size());
             printSemanticTokens(fairuz::syntax::Highlighter().highlight(source));
             return static_cast<int>(ExitCode::Success);
         }
@@ -326,18 +400,6 @@ int main(int argc, char** argv)
         if (fairuz::diagnostic::has_errors()) {
             fairuz::diagnostic::dump();
             return static_cast<int>(ExitCode::DataError);
-        }
-
-        if (options.format_file) {
-            fairuz::Formatter fmter;
-            fairuz::StringRef fmted = fmter.format(fm.buffer());
-            char const* data = fmted.empty() ? "" : fmted.data();
-            std::string error;
-            if (!writeFileAtomic(options.input_path, data, fmted.len(), error)) {
-                std::cerr << error << "\n";
-                return static_cast<int>(ExitCode::Software);
-            }
-            return static_cast<int>(ExitCode::Success);
         }
 
         if (options.dump_ast)
@@ -375,19 +437,19 @@ int main(int argc, char** argv)
     } catch (fairuz::diagnostic::DiagnosticAbort const&) {
         return static_cast<int>(ExitCode::DataError);
     } catch (std::bad_alloc const&) {
-        fairuz::diagnostic::report(fairuz::diagnostic::Severity::ERROR, {}, fairuz::ErrorCode::ALLOC_FAILED);
+        fairuz::diagnostic::report(fairuz::diagnostic::Severity::ERROR, { }, fairuz::ErrorCode::ALLOC_FAILED);
         fairuz::diagnostic::dump();
         return static_cast<int>(ExitCode::DataError);
     } catch (std::length_error const&) {
-        fairuz::diagnostic::report(fairuz::diagnostic::Severity::ERROR, {}, fairuz::ErrorCode::ALLOC_FAILED);
+        fairuz::diagnostic::report(fairuz::diagnostic::Severity::ERROR, { }, fairuz::ErrorCode::ALLOC_FAILED);
         fairuz::diagnostic::dump();
         return static_cast<int>(ExitCode::DataError);
     } catch (std::exception const& ex) {
-        fairuz::diagnostic::report(fairuz::diagnostic::Severity::ERROR, {}, fairuz::ErrorCode::INTERNAL_ERROR, ex.what());
+        fairuz::diagnostic::report(fairuz::diagnostic::Severity::ERROR, { }, fairuz::ErrorCode::INTERNAL_ERROR, ex.what());
         fairuz::diagnostic::dump();
         return static_cast<int>(ExitCode::Software);
     } catch (...) {
-        fairuz::diagnostic::report(fairuz::diagnostic::Severity::ERROR, {}, fairuz::ErrorCode::INTERNAL_ERROR, "unknown exception");
+        fairuz::diagnostic::report(fairuz::diagnostic::Severity::ERROR, { }, fairuz::ErrorCode::INTERNAL_ERROR, "unknown exception");
         fairuz::diagnostic::dump();
         return static_cast<int>(ExitCode::Software);
     }
