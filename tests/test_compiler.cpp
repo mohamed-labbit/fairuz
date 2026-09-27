@@ -3,6 +3,7 @@
 #include "../fairuz/fcompiler.hpp"
 #include "../fairuz/fdiagnostic.hpp"
 #include "../fairuz/fstring.hpp"
+#include "fgc.hpp"
 #include "fopcode.hpp"
 #include "test_common.h"
 #include "test_config.h"
@@ -225,6 +226,41 @@ TEST(CompilerLiteral, VeryBigNegativeIntegerUsesLoadBigInt)
 {
     i64 big_int = static_cast<i64>(Value::int_min() - 2);
     Chunk* chunk = compile_ok(expr_stmt(lit_int(big_int)));
+    ASSERT_NE(chunk, nullptr);
+    if (test_config::dump_bytecode)
+        dump(chunk);
+    BytecodeChecker bc(*chunk);
+    bc.next("LOAD_BIG_INT").op(OpCode::LOAD_BIG_INT).A(0);
+    bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
+    bc.done();
+    EXPECT_FALSE(chunk->big_ints.empty());
+}
+#else
+
+TEST(CompilerLiteral, VeryBigPositiveIntegerUsesLoadBigInt)
+{
+    IntLiteralExpr* lit = lit_int(0);
+    /// 9223372036854775807LL + 1 to overflow INT64_MAX
+    lit->large_literal = "9223372036854775808";
+    lit->literal_base = 10;
+    Chunk* chunk = compile_ok(expr_stmt(lit));
+    ASSERT_NE(chunk, nullptr);
+    if (test_config::dump_bytecode)
+        dump(chunk);
+    BytecodeChecker bc(*chunk);
+    bc.next("LOAD_BIG_INT").op(OpCode::LOAD_BIG_INT).A(0);
+    bc.next("RETURN_NIL").op(OpCode::RETURN_NIL);
+    bc.done();
+    EXPECT_FALSE(chunk->big_ints.empty());
+}
+
+TEST(CompilerLiteral, VeryBigNegativeIntegerUsesLoadBigInt)
+{
+    IntLiteralExpr* lit = lit_int(0);
+    /// -9223372036854775807LL - 1 - 1 to underflow INT64_MIN
+    lit->large_literal = "-9223372036854775809";
+    lit->literal_base = 10;
+    Chunk* chunk = compile_ok(expr_stmt(lit));
     ASSERT_NE(chunk, nullptr);
     if (test_config::dump_bytecode)
         dump(chunk);
