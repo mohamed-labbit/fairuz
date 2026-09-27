@@ -112,10 +112,12 @@ bool values_equal_impl(Value lhs, Value rhs, ComparedObjects& seen)
         return integer::compare(lhs, rhs) == 0;
     if (lhs.is_number() && rhs.is_number())
         return integer::compare_numbers(lhs, rhs) == 0;
-    if (lhs.value() == rhs.value())
+    if ((lhs.is_obj() && rhs.is_obj()) && (lhs.as_obj() == rhs.as_obj()))
         return true;
-    if (lhs.is_nil() || rhs.is_nil() || lhs.is_bool() || rhs.is_bool())
-        return false;
+    if (lhs.is_nil() || rhs.is_nil())
+        return lhs.is_nil() && rhs.is_nil();
+    if (lhs.is_bool() || rhs.is_bool())
+        return lhs.is_bool() && rhs.is_bool() && lhs.as_bool() == rhs.as_bool();
     if (lhs.is_string() && rhs.is_string())
         return lhs.as_string()->str == rhs.as_string()->str;
     if (!lhs.is_obj() || !rhs.is_obj() || lhs.as_obj()->type != rhs.as_obj()->type)
@@ -554,13 +556,11 @@ Value VM::execute(int stop_frame_depth)
         RA() = Value::from_int(static_cast<i32>(static_cast<u16>(instr_Bx(instr))) - JUMP_OFFSET);
         DISPATCH();
     }
-#if FA_USE_NANBOX
     CASE(LOAD_BIG_INT)
     {
         RA() = integer::finish(cur_chunk->big_ints[instr_Bx(instr)], m_gc);
         DISPATCH();
     }
-#endif
     CASE(LOAD_GLOBAL)
     {
         {
