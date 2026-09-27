@@ -168,7 +168,14 @@ Value VM::same_object(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr)
         raise_error(ErrorCode::NATIVE_ARG_COUNT);
-    return Value::from_bool(argv[0].value() == argv[1].value());
+
+    Value lhs = argv[0];
+    Value rhs = argv[1];
+
+    // Deep-copy memoization needs object identity, including for cyclic containers.
+    if (lhs.is_obj() || rhs.is_obj())
+        return Value::from_bool(lhs.is_obj() && rhs.is_obj() && lhs.as_obj() == rhs.as_obj());
+    return Value::from_bool(ValueEqual { }(lhs, rhs));
 }
 
 Value VM::len(int argc, Value* argv)
@@ -344,14 +351,11 @@ static void print_runtime_value_impl(Value v,
             std::cout << "<module " << module->name << '>';
             return;
         }
-#if FA_USE_NANBOX
-        case fairuz::runtime::ObjType::INT: {
+        case ObjType::INT: {
             auto int_obj = reinterpret_cast<ObjBigInt*>(obj);
-            /// add '<' and '>' to distinguish a fallback int object from a NAN-BOXed int value
             std::cout << integer::to_string(Value::from_obj(&int_obj->obj));
             return;
         }
-#endif
 
         case ObjType::_COUNT:
             break;
