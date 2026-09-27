@@ -55,6 +55,27 @@ namespace fairuz::parser {
         return FA_CONCAT(fa_try_, __LINE__).error();        \
     auto var = std::move(FA_CONCAT(fa_try_, __LINE__)).value()
 
+#define PARSE_IMPORT_NAME()                                                         \
+    do {                                                                            \
+        skip_newlines();                                                            \
+        if (!check(TokType::IDENTIFIER))                                            \
+            return report_error(ErrorCode::EXPECTED_IMPORT_NAME, current_loc());    \
+        if (check(tok::TokenType::RPAREN))                                          \
+            break;                                                                  \
+        StringRef name = current_token()->lexeme();                                 \
+        advance();                                                                  \
+        StringRef alias = name;                                                     \
+        if (consume(TokType::KW_AS)) {                                              \
+            if (!check(TokType::IDENTIFIER))                                        \
+                return report_error(ErrorCode::EXPECTED_ALIAS_NAME, current_loc()); \
+            alias = current_token()->lexeme();                                      \
+            advance();                                                              \
+        }                                                                           \
+        names.push(name);                                                           \
+        aliases.push(alias);                                                        \
+        skip_newlines();                                                            \
+    } while (0);
+
 // Type aliases
 
 using TokType = tok::TokenType;
@@ -485,10 +506,22 @@ ErrorOr<AST::StmtPtr> Parser::parse_import_stmt()
 
     if (from_import) {
         VERIFY_TOKEN(TokType::KW_IMPORT, ErrorCode::EXPECTED_IMPORT_KEYWORD);
-
+        /// Parse imported names inside parentheses these names in this case are allowed
+        // to be layed on multiple lines instead of a single line in the general case
+        if (match(tok::TokenType::LPAREN)) {
+            do {
+                PARSE_IMPORT_NAME();
+            } while (match(TokType::COMMA) && !check(TokType::RPAREN));
+            VERIFY_TOKEN(tok::TokenType::RPAREN, diagnostic::ErrorCode::EXPECTED_RPAREN_EXPR);
+        } else {
+            do {
+                PARSE_IMPORT_NAME();
+            } while (consume(tok::TokenType::COMMA));
+        }
+        /*
         do {
             if (!check(TokType::IDENTIFIER))
-                return report_error(ErrorCode::EXPECTED_IMPORT_NAME, current_loc());
+            return report_error(ErrorCode::EXPECTED_IMPORT_NAME, current_loc());
 
             StringRef name = current_token()->lexeme();
             advance();
@@ -497,7 +530,7 @@ ErrorOr<AST::StmtPtr> Parser::parse_import_stmt()
 
             if (consume(TokType::KW_AS)) {
                 if (!check(TokType::IDENTIFIER))
-                    return report_error(ErrorCode::EXPECTED_ALIAS_NAME, current_loc());
+                return report_error(ErrorCode::EXPECTED_ALIAS_NAME, current_loc());
                 alias = current_token()->lexeme();
                 advance();
             }
@@ -505,6 +538,7 @@ ErrorOr<AST::StmtPtr> Parser::parse_import_stmt()
             names.push(name);
             aliases.push(alias);
         } while (consume(TokType::COMMA));
+        */
     } else {
         // By default, `import foo.bar` binds the final component: `bar`.
         std::string_view const module_view(module.data(), module.len());
