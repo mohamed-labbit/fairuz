@@ -374,7 +374,17 @@ int main(int argc, char** argv)
 
     try {
         if (options.format_file)
+        {
+            /// check whether or not the provided filename is a symlink
+            struct stat s;
+            lstat(options.input_path.c_str(), &s);
+            if (S_ISLNK(s.st_mode))
+            {
+                std::cerr << "Path provided is not an ordinary file" << std::endl;
+                return static_cast<int>(ExitCode::Usage);
+            }
             return static_cast<int>(format(options.input_path));
+        }
 
         fairuz::AllocatorContext allocator_context;
         fairuz::set_context(&allocator_context);
