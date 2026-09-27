@@ -39,7 +39,9 @@
 namespace fairuz::runtime {
 
 namespace {
+
 StringRef byte_string(std::string_view bytes);
+
 }
 
 static constexpr u32 MAX_RENDER_DEPTH = 128;
@@ -374,7 +376,7 @@ Value VM::print(int argc, Value* argv)
 {
     if (argc == 0 || argv == nullptr) {
         std::cout << '\n';
-        return Value::nil();
+        return Value::from_bool(true);
     }
 
     for (int i = 0; i < argc; i++) {
@@ -383,7 +385,7 @@ Value VM::print(int argc, Value* argv)
         print_runtime_value(argv[i]);
     }
     std::cout << '\n';
-    return Value::nil();
+    return Value::from_bool(true);
 }
 
 Value VM::type(int argc, Value* argv)
