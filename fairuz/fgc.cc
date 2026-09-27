@@ -29,9 +29,7 @@ static void fa_delete_object(ObjHeader* obj)
     case ObjType::INSTANCE: delete reinterpret_cast<ObjInstance*>(obj); break;
     case ObjType::FILE_HANDLE: delete reinterpret_cast<ObjFileHandle*>(obj); break;
     case ObjType::MODULE: delete reinterpret_cast<ObjModule*>(obj); break;
-#if FA_USE_NANBOX
     case ObjType::INT: delete reinterpret_cast<ObjBigInt*>(obj); break;
-#endif
     case ObjType::_COUNT: diagnostic::panic(ErrorCode::TYPE_ERROR_CALL, "attempting to delete an unknown type"); break; /// unreachable break
     }
 }
@@ -48,9 +46,7 @@ static size_t fa_object_size(ObjHeader const* obj)
     case ObjType::INSTANCE: return sizeof(ObjInstance);
     case ObjType::FILE_HANDLE: return sizeof(ObjFileHandle);
     case ObjType::MODULE: return sizeof(ObjModule);
-#if FA_USE_NANBOX
     case ObjType::INT: return sizeof(ObjBigInt) + reinterpret_cast<ObjBigInt const*>(obj)->limbs.capacity() * sizeof(u32);
-#endif
     case ObjType::_COUNT: return 0;
     }
     return 0;
@@ -178,10 +174,8 @@ void GarbageCollector::blacken_object(ObjHeader* obj)
         break;
     }
     case ObjType::STRING: break;
-#if FA_USE_NANBOX
     /// ObjBigInt is the simplest object and it can be marked directly
     case ObjType::INT: break;
-#endif
     case ObjType::_COUNT: diagnostic::panic(ErrorCode::TYPE_ERROR_CALL, "attempting to blacken an unknown object type");
     }
 }
@@ -215,7 +209,6 @@ void GarbageCollector::sweep_all()
     m_current_size = 0;
 }
 
-#if FA_USE_NANBOX
 ObjBigInt* GarbageCollector::make_obj_int(i64 const v)
 {
     return make_obj_int(integer::from_i64(v));
@@ -226,7 +219,6 @@ ObjBigInt* GarbageCollector::make_obj_int(integer::Data data)
     m_current_size += result->limbs.capacity() * sizeof(u32);
     return result;
 }
-#endif
 
 ObjString* GarbageCollector::make_obj_string(StringRef str)
 {
