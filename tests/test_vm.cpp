@@ -1102,7 +1102,6 @@ TEST(VMIntegration, FunctionLocalDeclarationShadowsGlobal)
     EXPECT_EQ(elems[1].as_int(), 1);
 }
 
-#if FA_USE_NANBOX
 TEST(VMICProfile, BinaryOpUpdatesSlot)
 {
     VMRunner r;
@@ -1117,7 +1116,6 @@ TEST(VMICProfile, BinaryOpUpdatesSlot)
     EXPECT_TRUE(has_tag(TypeTag(s.seen_ret), TypeTag::INT));
     EXPECT_GE(s.hit_count, 1u);
 }
-#endif // FA_USE_NANBOX
 
 TEST(VMICProfile, SubUpdatesSlot)
 {
