@@ -2664,8 +2664,10 @@ Value VM::close(int argc, Value* argv)
 
 Value VM::clock(int argc, Value* argv)
 {
-    if (argc != 0)
+    if (argc != 0) {
+        raise_error(ErrorCode::CLOCK_ARG_COUNT);
         return Value::nil();
+    }
     (void)argv;
     auto elapsed = std::chrono::steady_clock::now().time_since_epoch();
     return Value::from_real(std::chrono::duration<f64>(elapsed).count());
