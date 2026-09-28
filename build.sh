@@ -517,35 +517,19 @@ if [[ "$OSTYPE" == darwin* ]] && command -v xcrun >/dev/null 2>&1; then
     )
 fi
 
-# On this machine, the dsymutil binary GCC's Darwin linker driver
-# (collect2) automatically invokes after linking any binary with a `-g*`
-# flag crashes with SIGILL — but only for a realistic multi-TU, template-
-# heavy link (the actual fairuz executable); a trivial single-file probe
-# links cleanly every time and does not reproduce it. Since there's no
-# lightweight, reliable way to detect this in advance without essentially
-# rebuilding the real project as a probe, don't try — just always skip the
-# automatic dsymutil step for GCC builds on Darwin via -save-temps (the
-# flag GCC's own DSYMUTIL_SPEC checks to suppress that step). No dSYM
-# bundle is produced for GCC builds as a result. Clang is unaffected: this
-# whole failure mode is specific to the GCC/dsymutil pairing, and dsymutil
-# isn't invoked at all outside Darwin.
-DSYMUTIL_WORKAROUND=false
-
-if [[ "$OSTYPE" == darwin* && "$USE_GCC" == true ]]; then
-    echo "-- Skipping automatic dSYM generation for this GCC build (adding -save-temps) — dsymutil is known to crash on this system's GCC/dsymutil pairing for a real multi-file link. No dSYM bundle will be produced."
-    DSYMUTIL_WORKAROUND=true
-fi
-
 # Assemble CXX flags into a single string rather than pushing multiple
 # -DCMAKE_CXX_FLAGS= entries onto COMMON_FLAGS: cmake only keeps the last
 # occurrence of a given -D flag on its command line, so a second
 # -DCMAKE_CXX_FLAGS entry would silently clobber the first instead of
 # combining with it.
 CXX_EXTRA_FLAGS=""
+EXE_LINKER_FLAGS=""
 
 if [[ "$DEBUG" == 1 || "$RUN_TESTS" == true ]]; then
+    # Explicitly undo a previous Release configure's cached LTO setting.
     COMMON_FLAGS+=(
         -DCMAKE_BUILD_TYPE=Debug
+        -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF
     )
     CXX_EXTRA_FLAGS="-fsanitize=address -g -Wall -Wextra -Wpedantic"
 else
@@ -555,25 +539,22 @@ else
     )
 fi
 
-if [[ "$DSYMUTIL_WORKAROUND" == true ]]; then
-    CXX_EXTRA_FLAGS="${CXX_EXTRA_FLAGS:+$CXX_EXTRA_FLAGS }-save-temps"
-
-    # -save-temps needs to be on the actual link command line to suppress
-    # collect2's automatic dsymutil call (it's checked in GCC's
-    # DSYMUTIL_SPEC, which only applies to the link step). CMake normally
-    # forwards CMAKE_CXX_FLAGS to the link line too for a compiled-language
-    # executable, but setting it on CMAKE_EXE_LINKER_FLAGS as well makes
-    # that not depend on that CMake forwarding behavior.
-    COMMON_FLAGS+=(
-        -DCMAKE_EXE_LINKER_FLAGS="-save-temps"
-    )
+if [[ "$OSTYPE" == darwin* && "$USE_GCC" == true ]]; then
+    # GCC's automatic dsymutil step crashes on this system's debug info.
+    # GCC 16 does not suppress it with -save-temps; that flag also lets
+    # parallel LTO reuse stale saved objects on subsequent links. Use -g0
+    # only at link time, after CMake's -g flags. Debug builds still compile
+    # objects with debug info and ASan, but do not produce a dSYM bundle.
+    echo "-- Skipping automatic dSYM generation for GCC on macOS (link-only -g0)."
+    EXE_LINKER_FLAGS="-g0"
 fi
 
-if [[ -n "$CXX_EXTRA_FLAGS" ]]; then
-    COMMON_FLAGS+=(
-        -DCMAKE_CXX_FLAGS="$CXX_EXTRA_FLAGS"
-    )
-fi
+# Always reset flags managed by this script, including empty values, so
+# switching build modes cannot retain ASan or the old -save-temps flags.
+COMMON_FLAGS+=(
+    -DCMAKE_CXX_FLAGS="$CXX_EXTRA_FLAGS"
+    -DCMAKE_EXE_LINKER_FLAGS="$EXE_LINKER_FLAGS"
+)
 
 if [[ "$RUN_TESTS" == true ]]; then
     cmake "${COMMON_FLAGS[@]}" -DBUILD_TESTS=ON .. || exit 1
