@@ -190,6 +190,8 @@ enum class ErrorCode : u16 {
     CLOSE_ARG_COUNT,
     CLOSE_TYPE_ERROR,
     POP_EMPTY_LIST,
+    CLOCK_ARG_COUNT,
+    IS_INSTANCE_ARG_COUNT,
     /* --- Containers --- */
     ARRAY_EMPTY_BACK = 0x0700,
     ARRAY_EMPTY_FRONT,
@@ -372,6 +374,7 @@ static constexpr char const* error_message_for(ErrorCode const code)
     case ErrorCode::CLOSE_ARG_COUNT: return "close() expects exactly one argument";
     case ErrorCode::CLOSE_TYPE_ERROR: return "close() expects a file value as argument";
     case ErrorCode::POP_EMPTY_LIST: return "pop() on an empty list";
+    case ErrorCode::CLOCK_ARG_COUNT: return "clock() expects no arguments at all";
     // containers
     case ErrorCode::ARRAY_EMPTY_BACK: return "Array::back() called on an empty array";
     case ErrorCode::ARRAY_EMPTY_FRONT: return "Array::front() called on an empty array";
