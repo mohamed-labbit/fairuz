@@ -2158,7 +2158,7 @@ TEST(NativeClock, ReturnsFiniteMonotonicSeconds)
     EXPECT_TRUE(std::isfinite(first.as_double()));
     EXPECT_GE(second.as_double(), first.as_double());
     EXPECT_TRUE(vm.clock(0, &first).is_double());
-    EXPECT_TRUE(vm.clock(1, &first).is_nil());
+    EXPECT_THROW(vm.clock(1, &first), std::runtime_error);
 }
 
 TEST(NativeTime, ReturnsNumber_WhenImplemented)
