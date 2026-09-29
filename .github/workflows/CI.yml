@@ -80,6 +80,60 @@ jobs:
             echo "::endgroup::"
           done
 
+  windows-test:
+    name: test (MSVC, Windows, ${{ matrix.configuration }})
+    runs-on: windows-2022
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        configuration: [Debug, Release]
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install zlib
+        run: '& "$env:VCPKG_INSTALLATION_ROOT/vcpkg.exe" install zlib:x64-windows'
+
+      - name: Configure native Windows build
+        # Explicit compilers bypass the project's Clang/GCC auto-selection.
+        # UTF-8 is required for Arabic source literals on Windows.
+        run: |
+          cmake -S . -B build-windows -G "Visual Studio 17 2022" -A x64 `
+            -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl `
+            -DCMAKE_CXX_FLAGS=/utf-8 `
+            "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows -DBUILD_TESTS=ON
+
+      - name: Build interpreter and tests
+        run: |
+          cmake --build build-windows --config ${{ matrix.configuration }} --parallel 4 -- `
+            /fl "/flp:logfile=$env:GITHUB_WORKSPACE/build-windows/build.log;verbosity=normal"
+
+      - name: Run C++ and standard-library tests
+        run: |
+          ctest --test-dir build-windows -C ${{ matrix.configuration }} `
+            --output-on-failure --no-tests=error --timeout 300 `
+            --output-junit "$env:GITHUB_WORKSPACE/build-windows/test-results.xml"
+
+      - name: Upload Windows diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-${{ matrix.configuration }}-diagnostics
+          path: |
+            build-windows/build.log
+            build-windows/CMakeFiles/CMakeConfigureLog.yaml
+            build-windows/Testing/Temporary/
+            build-windows/test-results.xml
+          if-no-files-found: ignore
+          retention-days: 14
+
   release-build:
     name: release build (no sanitizers)
     runs-on: ubuntu-latest
