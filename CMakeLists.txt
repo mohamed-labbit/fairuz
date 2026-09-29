@@ -178,6 +178,12 @@ if(BUILD_TESTS)
         ${fairuz_TEST_SOURCES}
         $<TARGET_OBJECTS:fairuz_objects>
     )
+    # Public API tests execute the interpreter from this build directory.
+    add_dependencies(fairuz_tests fairuz)
+    target_compile_definitions(fairuz_tests PRIVATE
+        FAIRUZ_TEST_EXECUTABLE="$<TARGET_FILE:fairuz>"
+        FAIRUZ_TEST_STDLIB_DIR="${CMAKE_SOURCE_DIR}/stdlib"
+    )
 
     # Test-build flags favor catching bugs over raw speed:
     #  - no -march=native: the test binary must run correctly on whatever
