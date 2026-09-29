@@ -75,6 +75,10 @@ public:
     {
         u64 bits;
         ::memcpy(&bits, &d, sizeof(bits));
+        // NaN signs and payloads can overlap object, integer, and singleton
+        // tags. Normalize every NaN before it enters the tagged value space.
+        if ((bits & ~NANBOX_SIGN_BIT) > UINT64_C(0x7FF0000000000000))
+            bits = NANBOX_QNAN;
         return bits;
     }
 
