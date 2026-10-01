@@ -1,23 +1,19 @@
 #include "test_config.h"
+#include "test_integer_oracle.hpp"
+#include "test_process.hpp"
 #include <gtest/gtest.h>
 
 #include <chrono>
 #include <csignal>
 #include <cstdint>
 #include <cstdlib>
-#include <fcntl.h>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <random>
-#include <spawn.h>
 #include <string>
-#include <sys/wait.h>
 #include <thread>
-#include <unistd.h>
 #include <vector>
-
-extern char** environ;
 
 namespace {
 
@@ -43,10 +39,7 @@ protected:
 
     void SetUp() override
     {
-        std::string pattern = (std::filesystem::temp_directory_path() / "fairuz-adversarial-XXXXXX").string();
-        char* path = mkdtemp(pattern.data());
-        ASSERT_NE(path, nullptr);
-        directory = path;
+        directory = test_process::temporary_directory();
     }
 
     void TearDown() override
@@ -68,7 +61,7 @@ TEST_P(AdversarialInterpreter, PreservesSemanticsAndReportsErrorsWithoutCrashing
 {
     auto const& test = GetParam();
     SCOPED_TRACE(test.name + "\nFairuz source:\n" + test.source);
-    auto input = directory / "program.ف";
+    auto input = directory / fairuz::platform::path("program.ف");
     auto output = directory / "stdout.txt";
     auto errors = directory / "stderr.txt";
     {
@@ -76,59 +69,23 @@ TEST_P(AdversarialInterpreter, PreservesSemanticsAndReportsErrorsWithoutCrashing
         file << test.source;
         ASSERT_TRUE(file.good());
     }
-    std::string binary = (std::filesystem::path(__FILE__).parent_path().parent_path() / "build/fairuz").string();
-    ASSERT_TRUE(std::filesystem::exists(binary)) << "Build the fairuz target before running these tests";
-    std::string input_string = input.string();
-    char check_flag[] = "--check";
-    char bt_flag[] = "--dump-bytecode";
-    char* argv[] = { binary.data(), input_string.data(), test_config::dump_bytecode ? bt_flag : nullptr, test.check_only ? check_flag : nullptr, nullptr };
-    posix_spawn_file_actions_t actions;
-    ASSERT_EQ(posix_spawn_file_actions_init(&actions), 0);
-    int setup_error = posix_spawn_file_actions_addopen(&actions, STDOUT_FILENO, output.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600);
-    if (setup_error == 0)
-        setup_error = posix_spawn_file_actions_addopen(&actions, STDERR_FILENO, errors.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600);
-    if (setup_error == 0)
-        setup_error = posix_spawn_file_actions_addopen(&actions, STDIN_FILENO, "/dev/null", O_RDONLY, 0);
-    if (setup_error != 0) {
-        posix_spawn_file_actions_destroy(&actions);
-        FAIL() << "Could not configure child descriptors: " << setup_error;
-    }
-    pid_t child = -1;
-    int spawned = posix_spawn(&child, binary.c_str(), &actions, nullptr, argv, environ);
-    posix_spawn_file_actions_destroy(&actions);
-    ASSERT_EQ(spawned, 0);
-    int status = 0;
-    bool timed_out = false;
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
-    for (;;) {
-        pid_t waited = waitpid(child, &status, WNOHANG);
-        if (waited == child)
-            break;
-        if (waited < 0) {
-            kill(child, SIGKILL);
-            waitpid(child, &status, 0);
-            FAIL() << "waitpid failed";
-        }
-        if (std::chrono::steady_clock::now() >= deadline) {
-            timed_out = true;
-            kill(child, SIGKILL);
-            waitpid(child, &status, 0);
-            break;
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    }
-    auto out = read(output);
-    auto err = read(errors);
+    std::vector<std::string> args { fairuz::platform::utf8(input) };
+    if (test_config::dump_bytecode)
+        args.push_back("--dump-bytecode");
+    if (test.check_only)
+        args.push_back("--check");
+    auto result = test_process::run(test_process::executable(), args, { }, std::chrono::seconds(5));
+    auto const& out = result.out;
+    auto const& err = result.err;
     if (test.require_empty_stdout)
         EXPECT_TRUE(out.empty()) << "Execution continued past the expected error: " << out;
-    ASSERT_FALSE(timed_out) << "Interpreter exceeded five seconds\n"
-                            << err;
-    ASSERT_TRUE(WIFEXITED(status)) << "Interpreter terminated by signal "
-                                   << (WIFSIGNALED(status) ? WTERMSIG(status) : 0) << "\n"
+    ASSERT_FALSE(result.timed_out) << "Interpreter exceeded five seconds\n"
                                    << err;
+    ASSERT_FALSE(result.crashed) << "Interpreter crashed\n"
+                                 << err;
     EXPECT_EQ(err.find("AddressSanitizer"), std::string::npos) << err;
     EXPECT_EQ(err.find("UndefinedBehaviorSanitizer"), std::string::npos) << err;
-    int exit_code = WEXITSTATUS(status);
+    int exit_code = result.exit_code;
     switch (test.expectation) {
     case Expectation::Output:
         ASSERT_EQ(exit_code, 0) << err;
@@ -613,34 +570,19 @@ std::vector<AdversarialCase> arithmetic_cases()
         unsigned op = random() % 9;
         if (op == 3 && b == 0)
             b = 1;
-        // The oracle deliberately uses wider arithmetic, so multiplying two
-        // legal 48-bit operands cannot overflow the C++ reference calculation.
-        __int128 value = 0;
+        std::string expected;
         switch (op) {
-        case 0: value = static_cast<__int128>(a) + b; break;
-        case 1: value = static_cast<__int128>(a) - b; break;
-        case 2: value = static_cast<__int128>(a) * b; break;
-        case 3: value = a % b; break;
-        case 4: value = a == b; break;
-        case 5: value = a < b; break;
-        case 6: value = a <= b; break;
-        case 7: value = a > b; break;
-        case 8: value = a >= b; break;
+        case 0: expected = integer_oracle::add(a, b); break;
+        case 1: expected = integer_oracle::add(a, b, true); break;
+        case 2: expected = integer_oracle::multiply(a, b); break;
+        case 3: expected = std::to_string(a % b); break;
+        case 4: expected = a == b ? "صحيح" : "خطا"; break;
+        case 5: expected = a < b ? "صحيح" : "خطا"; break;
+        case 6: expected = a <= b ? "صحيح" : "خطا"; break;
+        case 7: expected = a > b ? "صحيح" : "خطا"; break;
+        case 8: expected = a >= b ? "صحيح" : "خطا"; break;
         }
-        auto decimal = [](__int128 number) {
-            bool negative = number < 0;
-            unsigned __int128 magnitude = negative ? -static_cast<unsigned __int128>(number) : number;
-            std::string text;
-            do {
-                text.push_back('0' + magnitude % 10);
-                magnitude /= 10;
-            } while (magnitude);
-            if (negative)
-                text.push_back('-');
-            std::reverse(text.begin(), text.end());
-            return text;
-        };
-        std::string expected = op >= 4 ? (value ? "صحيح\n" : "خطا\n") : decimal(value) + "\n";
+        expected += "\n";
         for (bool literal : { true, false }) {
             auto source = literal
                 ? "اكتب((" + std::to_string(a) + ") " + operators[op] + " (" + std::to_string(b) + "))\n"

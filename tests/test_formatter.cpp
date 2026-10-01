@@ -1,5 +1,6 @@
 #include "../fairuz/fformatter.hpp"
 #include "../fairuz/fparser.hpp"
+#include "fplatform.hpp"
 
 #include <filesystem>
 #include <fstream>
@@ -46,6 +47,23 @@ TEST(Formatter, PreservesLoopsAssertionsImportsAndAugmentedAssignment)
         "    تاكد عنصر > 0، 'positive'\n");
 }
 
+TEST(Formatter, PreservesInlineBlockBodies)
+{
+    expect_format(
+        "اذا صحيح:اكتب(1)\n"
+        "غيره:اكتب(2)\n"
+        "طالما س<2:س+=1\n"
+        "لكل س في [1,2]:اكتب(س)\n"
+        "دالة ضعف(س):ارجع س*2\n"
+        "نوع علبة:دالة بداية(س):هذا.قيمة:=س\n",
+        "اذا صحيح: اكتب(1)\n"
+        "غيره: اكتب(2)\n"
+        "طالما س < 2: س += 1\n"
+        "لكل س في [1، 2]: اكتب(س)\n"
+        "دالة ضعف(س): ارجع س * 2\n"
+        "نوع علبة: دالة بداية(س): هذا.قيمة := س\n");
+}
+
 TEST(Formatter, PreservesCommentsBlankLinesAndCommentOnlyFiles)
 {
     expect_format("# header\n\nدالة مثال():\n  # body\n  ارجع 1 # inline\n\n# footer\n",
@@ -80,6 +98,85 @@ TEST(Formatter, PreservesLongArabicStringsAndExpressionsWithoutUnsafeWrapping)
     expect_format(expression, expression);
 }
 
+TEST(Formatter, WrapsLongCallsAndCollectionsAtSafeCommas)
+{
+    expect_format(
+        "نتيجة:=اجمع(العدد_الأول_الطويل,العدد_الثاني_الطويل,العدد_الثالث_الطويل,العدد_الرابع_الطويل)\n",
+        "نتيجة := اجمع(\n"
+        "    العدد_الأول_الطويل،\n"
+        "    العدد_الثاني_الطويل،\n"
+        "    العدد_الثالث_الطويل،\n"
+        "    العدد_الرابع_الطويل\n"
+        ")\n");
+    expect_format(
+        "قيم:=[11111111111111111111,22222222222222222222,33333333333333333333,44444444444444444444]\n",
+        "قيم := [\n"
+        "    11111111111111111111،\n"
+        "    22222222222222222222،\n"
+        "    33333333333333333333،\n"
+        "    44444444444444444444\n"
+        "]\n");
+}
+
+TEST(Formatter, HonorsFormatControlComments)
+{
+    expect_format(
+        "س:=\"# fmt: off\"\n"
+        "# fmt: off\n"
+        "ا  :=[ 1,2 ]\n"
+        "# fmt: on\n"
+        "ب:=[3,4] # fmt: skip\n"
+        "ج:=[5,6]\n",
+        "س := \"# fmt: off\"\n"
+        "# fmt: off\n"
+        "ا  :=[ 1,2 ]\n"
+        "# fmt: on\n"
+        "ب:=[3,4] # fmt: skip\n"
+        "ج := [5، 6]\n");
+}
+
+TEST(Formatter, WrapsLongNestedCallInsideExistingMultilineGroup)
+{
+    expect_format(
+        "نتيجة := خارج(\n"
+        "    داخل(الوسيط_الأول_الطويل_للغاية، الوسيط_الثاني_الطويل_للغاية، الوسيط_الثالث_الطويل_للغاية)،\n"
+        "    ١\n"
+        ")\n",
+        "نتيجة := خارج(\n"
+        "    داخل(\n"
+        "        الوسيط_الأول_الطويل_للغاية،\n"
+        "        الوسيط_الثاني_الطويل_للغاية،\n"
+        "        الوسيط_الثالث_الطويل_للغاية\n"
+        "    )،\n"
+        "    ١\n"
+        ")\n");
+}
+
+TEST(Formatter, PreservesTrailingCommasAndSuffixesWhenWrapping)
+{
+    expect_format(
+        "دالة احسب(الوسيط_الأول_الطويل_للغاية,الوسيط_الثاني_الطويل_للغاية,الوسيط_الثالث_الطويل_للغاية,):\n"
+        "  ارجع الوسيط_الأول_الطويل_للغاية\n",
+        "دالة احسب(\n"
+        "    الوسيط_الأول_الطويل_للغاية،\n"
+        "    الوسيط_الثاني_الطويل_للغاية،\n"
+        "    الوسيط_الثالث_الطويل_للغاية،\n"
+        "):\n"
+        "    ارجع الوسيط_الأول_الطويل_للغاية\n");
+}
+
+TEST(Formatter, CountsUnicodeCharactersInsteadOfUtf8BytesForLineWidth)
+{
+    std::string source = "نتيجة := اجمع(";
+    for (int i = 0; i < 3; ++i) {
+        if (i)
+            source += "، ";
+        source += "الوسيط_العربي_الطويل";
+    }
+    source += ")\n";
+    expect_format(source, source);
+}
+
 TEST(Formatter, FormatsMultilineContainersAndNestedComments)
 {
     expect_format(
@@ -107,9 +204,9 @@ TEST(Formatter, FormatsEveryLibraryAndExampleIdempotently)
     size_t count = 0;
     for (auto directory : { "stdlib", "examples" }) {
         for (auto const& entry : std::filesystem::recursive_directory_iterator(root / directory)) {
-            if (!entry.is_regular_file() || entry.path().extension() != ".ف")
+            if (!entry.is_regular_file() || entry.path().extension() != platform::path(".ف"))
                 continue;
-            SCOPED_TRACE(entry.path().string());
+            SCOPED_TRACE(platform::utf8(entry.path()));
             std::ifstream input(entry.path(), std::ios::binary);
             std::string source { std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>() };
             auto once = format_source(source);

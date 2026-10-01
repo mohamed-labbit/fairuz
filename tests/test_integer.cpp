@@ -1,6 +1,7 @@
 #include "fgc.hpp"
 #include "finteger.hpp"
 #include "fvm.hpp"
+#include "test_integer_oracle.hpp"
 #include <gtest/gtest.h>
 #include <limits>
 #include <random>
@@ -11,20 +12,6 @@ using namespace fairuz::runtime;
 namespace {
 
 Value decimal(char const* text, GarbageCollector& gc) { return integer::finish(integer::parse(StringRef(text), 10), gc); }
-std::string wide_string(__int128 value)
-{
-    bool negative = value < 0;
-    unsigned __int128 n = negative ? -static_cast<unsigned __int128>(value) : value;
-    std::string out;
-    do {
-        out.push_back('0' + n % 10);
-        n /= 10;
-    } while (n);
-    if (negative)
-        out.push_back('-');
-    std::reverse(out.begin(), out.end());
-    return out;
-}
 
 }
 
@@ -83,9 +70,9 @@ TEST(IntegerContract, SignedArithmeticMatchesWideOracle)
         if (i % 4 == 1)
             b %= 1000;
         Value x = Value::from_int(a, gc), y = Value::from_int(b, gc);
-        EXPECT_EQ(integer::to_string(integer::add(x, y, gc)), wide_string(static_cast<__int128>(a) + b));
-        EXPECT_EQ(integer::to_string(integer::sub(x, y, gc)), wide_string(static_cast<__int128>(a) - b));
-        EXPECT_EQ(integer::to_string(integer::mul(x, y, gc)), wide_string(static_cast<__int128>(a) * b));
+        EXPECT_EQ(integer::to_string(integer::add(x, y, gc)), integer_oracle::add(a, b));
+        EXPECT_EQ(integer::to_string(integer::sub(x, y, gc)), integer_oracle::add(a, b, true));
+        EXPECT_EQ(integer::to_string(integer::mul(x, y, gc)), integer_oracle::multiply(a, b));
         if (b)
             EXPECT_EQ(integer::to_string(integer::div(x, y, gc, true)), std::to_string(a % b));
         EXPECT_EQ(integer::compare(x, y), a < b ? -1 : a > b ? 1
@@ -135,7 +122,7 @@ TEST(IntegerContract, DivisionRemainderAndPower)
     ASSERT_FALSE(minimum.is_big_int());
     Value quotient = integer::div(minimum, Value::from_int(-1), gc);
     EXPECT_TRUE(quotient.is_big_int());
-    EXPECT_EQ(integer::to_string(quotient), wide_string(-static_cast<__int128>(Value::int_min())));
+    EXPECT_EQ(integer::to_string(quotient), integer_oracle::magnitude(Value::int_min()));
     EXPECT_EQ(integer::div(minimum, Value::from_int(-1), gc, true).as_int(), 0);
 
     // Keep the native overflow case covered even when the payload is only 48 bits.
@@ -146,7 +133,7 @@ TEST(IntegerContract, DivisionRemainderAndPower)
     for (i64 exponent : { boundary_exponent - 1, boundary_exponent }) {
         Value power = integer::pow(Value::from_int(2), Value::from_int(exponent), gc);
         EXPECT_EQ(power.is_big_int(), exponent == boundary_exponent);
-        EXPECT_EQ(integer::to_string(power), wide_string(static_cast<__int128>(1) << exponent));
+        EXPECT_EQ(integer::to_string(power), std::to_string(uint64_t { 1 } << exponent));
     }
     EXPECT_EQ(integer::to_string(integer::pow(Value::from_int(2), Value::from_int(128), gc)), "340282366920938463463374607431768211456");
 }

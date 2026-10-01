@@ -1,61 +1,28 @@
+#include "test_process.hpp"
 #include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
 #include <sstream>
 #include <string>
-#include <sys/wait.h>
-#include <unistd.h>
 
 namespace {
 
-struct RunResult {
-    int exit_code;
-    std::string out;
-    std::string err;
-};
-
-std::string shell_quote(std::string const& s) { return "'" + s + "'"; }
-
-std::string read_file(std::filesystem::path const& path)
-{
-    std::ifstream in(path);
-    std::ostringstream ss;
-    ss << in.rdbuf();
-    return ss.str();
-}
+using RunResult = test_process::Result;
 
 RunResult run_installed(std::filesystem::path const& binary, std::filesystem::path const& input, std::string const& extra = "")
 {
-    auto const base = std::filesystem::temp_directory_path() / std::filesystem::path("fairuz_regression_XXXXXX");
-    std::string tmpl = base.string();
-    std::vector<char> writable(tmpl.begin(), tmpl.end());
-    writable.push_back('\0');
-    char* dir = mkdtemp(writable.data());
-    EXPECT_NE(dir, nullptr);
-
-    std::filesystem::path dir_path(dir);
-    auto out_path = dir_path / "stdout.fa";
-    auto err_path = dir_path / "stderr.fa";
-    // LeakSanitizer remains enabled for the parent suite. Avoid nested leak
-    // scans in repeatedly spawned interpreter processes; ASan itself remains
-    // active and still reports memory-safety violations from these children.
-    std::string cmd = "ASAN_OPTIONS=detect_leaks=0 " + shell_quote(binary.string())
-        + " " + shell_quote(input.string());
+    std::vector<std::string> args { fairuz::platform::utf8(input) };
     if (!extra.empty())
-        cmd += " " + extra;
-    cmd += " >" + shell_quote(out_path.string()) + " 2>" + shell_quote(err_path.string());
-
-    int raw = std::system(cmd.c_str());
-    int code = WIFEXITED(raw) ? WEXITSTATUS(raw) : raw;
-
-    RunResult result { code, read_file(out_path), read_file(err_path) };
-    std::filesystem::remove_all(dir_path);
+        args.push_back(extra);
+    auto result = test_process::run(binary, args);
+    EXPECT_FALSE(result.timed_out);
+    EXPECT_FALSE(result.crashed) << result.err;
     return result;
 }
 
 std::filesystem::path write_program(std::string const& source)
 {
-    auto path = std::filesystem::temp_directory_path() / ("fairuz_regression_program_" + std::to_string(::getpid()) + ".fa");
+    auto path = std::filesystem::temp_directory_path() / ("fairuz_regression_program_" + std::to_string(test_process::process_id()) + ".fa");
     std::ofstream out(path);
     out << source;
     return path;
@@ -63,7 +30,7 @@ std::filesystem::path write_program(std::string const& source)
 
 std::filesystem::path binary_path()
 {
-    return std::filesystem::path(__FILE__).parent_path().parent_path() / "build" / "fairuz";
+    return test_process::executable();
 }
 
 } // namespace
@@ -75,6 +42,93 @@ TEST(RegressionCli, DemoElseAcceptsTrailingTimeFlag)
     EXPECT_EQ(r.exit_code, 0);
     EXPECT_NE(r.out.find("صحيح"), std::string::npos);
     EXPECT_NE(r.err.find("time:"), std::string::npos);
+}
+
+TEST(RegressionInlineBlocks, ConditionalsMixInlineAndIndentedBranches)
+{
+    auto program = write_program(
+        "دالة اختر(س):\n"
+        "    اذا س = 1: ارجع 10 # inline return\n"
+        "    غيره اذا س = 2:\n"
+        "        ارجع 20\n"
+        "    غيره اذا س = 3: ارجع 30\n"
+        "    غيره: ارجع 40\n"
+        "تاكد اختر(1) = 10\n"
+        "تاكد اختر(2) = 20\n"
+        "تاكد اختر(3) = 30\n"
+        "تاكد اختر(4) = 40\n"
+        "س := 0\n"
+        "اذا صحيح:\n"
+        "    اذا خطا: س := 1\n"
+        "    غيره: س := 2\n"
+        "غيره: س := 3\n"
+        "تاكد س = 2\n"
+        "اذا خطا: اذا صحيح: س := 4\n"
+        "غيره: س := 5\n"
+        "تاكد س = 5\n"
+        "اكتب(س)\n");
+    auto result = run_installed(binary_path(), program);
+    EXPECT_EQ(result.exit_code, 0) << result.err;
+    EXPECT_EQ(result.out, "5\n");
+}
+
+TEST(RegressionInlineBlocks, LoopsSupportAssignmentsBreakContinueAndReturn)
+{
+    auto program = write_program(
+        "مجموع := 0\n"
+        "لكل س في [1، 2، 3]: مجموع += س\n"
+        "تاكد مجموع = 6\n"
+        "عدد := 0\n"
+        "طالما عدد < 3: عدد += 1\n"
+        "تاكد عدد = 3\n"
+        "طالما صحيح: اخرج\n"
+        "لكل س في [1، 2، 3]: اكمل\n"
+        "لكل س في [1، 2، 3]:\n"
+        "    اذا س = 2: اكمل\n"
+        "    مجموع += س\n"
+        "تاكد مجموع = 10\n"
+        "طالما عدد < 9:\n"
+        "    عدد += 1\n"
+        "    اذا عدد = 5: اكمل\n"
+        "    اذا عدد = 7: اخرج\n"
+        "تاكد عدد = 7\n"
+        "لكل س في [1، 2]: لكل ص في [3، 4]: مجموع += س * ص\n"
+        "تاكد مجموع = 31\n"
+        "دالة اول(قيم):\n"
+        "    لكل س في قيم: ارجع س\n"
+        "    ارجع 0\n"
+        "تاكد اول([7، 8]) = 7\n"
+        "تاكد اول([]) = 0\n"
+        "اكتب(مجموع)\n");
+    auto result = run_installed(binary_path(), program);
+    EXPECT_EQ(result.exit_code, 0) << result.err;
+    EXPECT_EQ(result.out, "31\n");
+}
+
+TEST(RegressionInlineBlocks, InlineClassesAndMethodsKeepFieldAndScopeSemantics)
+{
+    auto program = write_program(
+        "نوع علبة: دالة بداية(قيمة): .قيمة := قيمة\n"
+        "اول := علبة(9)\n"
+        "تاكد اول.قيمة = 9\n"
+        "نوع عداد:\n"
+        "    دالة بداية(): .قيمة := 0\n"
+        "    دالة زد(): .قيمة += 1\n"
+        "    دالة اضبط(قيمة): اذا قيمة > 0: هذا.قيمة := قيمة\n"
+        "    دالة اقرأ(): ارجع هذا.قيمة\n"
+        "ثاني := عداد()\n"
+        "ثاني.زد()\n"
+        "تاكد ثاني.اقرأ() = 1\n"
+        "ثاني.اضبط(12)\n"
+        "تاكد ثاني.اقرأ() = 12\n"
+        "ثاني.اضبط(0)\n"
+        "تاكد ثاني.اقرأ() = 12\n"
+        "دالة مضاعف(قيمة): ارجع قيمة * 2\n"
+        "تاكد مضاعف(3) = 6\n"
+        "اكتب(ثاني.اقرأ())\n");
+    auto result = run_installed(binary_path(), program);
+    EXPECT_EQ(result.exit_code, 0) << result.err;
+    EXPECT_EQ(result.out, "12\n");
 }
 
 TEST(RegressionNatives, StringListDemoOutput)
@@ -146,8 +200,8 @@ TEST(HardeningRegression, NativeBoundaryRejectsBadArgumentsWithoutCrash)
     EXPECT_EQ(min_result.exit_code, 65);
 
     auto output = std::filesystem::temp_directory_path()
-        / ("fairuz_closed_handle_" + std::to_string(::getpid()) + ".txt");
-    std::string file_source = "م := افتح(\"" + output.string()
+        / ("fairuz_closed_handle_" + std::to_string(test_process::process_id()) + ".txt");
+    std::string file_source = "م := افتح(\"" + fairuz::platform::utf8(output)
         + "\", \"اكتب\")\nاغلق(م)\nاضف_ملف(م، \"x\")\n";
     auto closed_file = write_program(file_source);
     RunResult closed_result = run_installed(binary_path(), closed_file);

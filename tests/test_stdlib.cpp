@@ -1,4 +1,5 @@
 #include "../fairuz/fvm.hpp"
+#include "fplatform.hpp"
 #include "test_common.h"
 
 #include <chrono>
@@ -343,7 +344,7 @@ TEST(StdlibFiles, WriteFlushReadLineReadBytesAndReadAll)
 {
     VM vm;
     auto path = std::filesystem::temp_directory_path() / "fairuz-native-file-test.txt";
-    Value path_value = vm.m_gc.make_string(path.string().c_str());
+    Value path_value = vm.m_gc.make_string(platform::utf8(path).c_str());
     Value write_mode = vm.m_gc.make_string("كتابة");
     Value open_write[] = { path_value, write_mode };
     Value handle = vm.file_open(2, open_write);
@@ -377,10 +378,10 @@ TEST(StdlibFilesystem, TemporaryResourcesGlobAndDeletion)
     ASSERT_TRUE(file_info.is_dict());
     Value path_key = vm.m_gc.make_string("path");
     Value file_path = *file_info.as_dict()->data.find_ptr(path_key);
-    EXPECT_TRUE(std::filesystem::exists(as_std_string(file_path)));
+    EXPECT_TRUE(std::filesystem::exists(platform::path(as_std_string(file_path))));
 
     Value pattern = vm.m_gc.make_string(
-        (std::filesystem::temp_directory_path() / "fairuz-native-*.tmp").string().c_str());
+        platform::utf8(std::filesystem::temp_directory_path() / "fairuz-native-*.tmp").c_str());
     Value recursive = Value::from_bool(false);
     Value glob_args[] = { pattern, recursive };
     Value matches = vm.path_glob(2, glob_args);
@@ -391,7 +392,7 @@ TEST(StdlibFilesystem, TemporaryResourcesGlobAndDeletion)
     Value dir_args[] = { prefix, none };
     Value directory = vm.temp_directory(2, dir_args);
     ASSERT_TRUE(directory.is_string());
-    EXPECT_TRUE(std::filesystem::is_directory(as_std_string(directory)));
+    EXPECT_TRUE(std::filesystem::is_directory(platform::path(as_std_string(directory))));
     EXPECT_TRUE(vm.remove_tree(1, &directory).as_bool());
     EXPECT_FALSE(std::filesystem::exists(as_std_string(directory)));
 }

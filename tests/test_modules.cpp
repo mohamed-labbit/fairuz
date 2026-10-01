@@ -5,6 +5,7 @@
 #include "../fairuz/fparser.hpp"
 #include "../fairuz/fvm.hpp"
 #include "fAST.hpp"
+#include "fplatform.hpp"
 
 #include <cstdlib>
 #include <filesystem>
@@ -19,30 +20,49 @@ using namespace fairuz::runtime;
 
 namespace {
 
+void set_environment(std::string const& name, std::string const& value)
+{
+#ifdef _WIN32
+    if (_wputenv_s(platform::path(name).c_str(), platform::path(value).c_str()) != 0)
+        throw std::runtime_error("Failed to update test environment");
+#else
+    if (setenv(name.c_str(), value.c_str(), 1) != 0)
+        throw std::runtime_error("Failed to update test environment");
+#endif
+}
+void unset_environment(std::string const& name)
+{
+#ifdef _WIN32
+    set_environment(name, "");
+#else
+    unsetenv(name.c_str());
+#endif
+}
+
 class EnvironmentGuard {
 public:
     explicit EnvironmentGuard(char const* name)
         : m_name(name)
     {
-        if (char const* old = std::getenv(name))
+        if (auto old = platform::environment(name); !old.empty())
             m_old_value = old;
-        unsetenv(m_name.c_str());
+        unset_environment(m_name);
     }
 
     EnvironmentGuard(char const* name, std::string const& value)
         : m_name(name)
     {
-        if (char const* old = std::getenv(name))
+        if (auto old = platform::environment(name); !old.empty())
             m_old_value = old;
-        setenv(m_name.c_str(), value.c_str(), 1);
+        set_environment(m_name, value);
     }
 
     ~EnvironmentGuard()
     {
         if (m_old_value.has_value())
-            setenv(m_name.c_str(), m_old_value->c_str(), 1);
+            set_environment(m_name, *m_old_value);
         else
-            unsetenv(m_name.c_str());
+            unset_environment(m_name);
     }
 
 private:
@@ -71,7 +91,7 @@ protected:
 
     std::filesystem::path write(std::string const& name, std::string const& source)
     {
-        auto path = directory / name;
+        auto path = directory / platform::path(name);
         std::ofstream out(path, std::ios::binary);
         out << source;
         out.close();
@@ -81,7 +101,7 @@ protected:
 
     Value run(std::filesystem::path const& path, VM& vm)
     {
-        FileManager source(path.string());
+        FileManager source(platform::utf8(path));
         diagnostic::set_source(&source);
         Parser parser(&source);
         auto statements = parser.parse_program();
@@ -89,7 +109,7 @@ protected:
         Chunk* chunk = Compiler().compile(statements);
         EXPECT_NE(chunk, nullptr);
         EXPECT_FALSE(diagnostic::has_errors());
-        chunk->source_path = path.string();
+        chunk->source_path = platform::utf8(path);
         return vm.run(chunk);
     }
 };
@@ -270,21 +290,21 @@ TEST_F(ModuleFixture, ExplicitStdlibDirectoryWinsOverLocalNameCollision)
     std::filesystem::create_directories(stdlib);
 
     {
-        std::ofstream local(project / "ملفات.ف", std::ios::binary);
+        std::ofstream local(project / platform::path("ملفات.ف"), std::ios::binary);
         local << "دالة قيمة():\n    ارجع 1\n";
     }
     {
-        std::ofstream standard(stdlib / "ملفات.ف", std::ios::binary);
+        std::ofstream standard(stdlib / platform::path("ملفات.ف"), std::ios::binary);
         standard << "دالة قيمة():\n    ارجع 2\n";
     }
     {
-        std::ofstream main(project / "main.ف", std::ios::binary);
+        std::ofstream main(project / platform::path("main.ف"), std::ios::binary);
         main << "من ملفات استورد قيمة\nقيمة()\n";
     }
 
-    EnvironmentGuard configured_stdlib("FAIRUZ_STDLIB", stdlib.string());
+    EnvironmentGuard configured_stdlib("FAIRUZ_STDLIB", platform::utf8(stdlib));
     VM vm;
-    Value result = run(project / "main.ف", vm);
+    Value result = run(project / platform::path("main.ف"), vm);
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 2);
 }
@@ -294,17 +314,17 @@ TEST_F(ModuleFixture, BundledStdlibWinsOverLocalNameCollisionWithoutEnvironmentO
     auto project = directory / "project";
     std::filesystem::create_directories(project);
     {
-        std::ofstream local(project / "ملفات.ف", std::ios::binary);
+        std::ofstream local(project / platform::path("ملفات.ف"), std::ios::binary);
         local << "دالة ملف(المسار، الوضع):\n    ارجع 1\n";
     }
     {
-        std::ofstream main(project / "main.ف", std::ios::binary);
+        std::ofstream main(project / platform::path("main.ف"), std::ios::binary);
         main << "من ملفات استورد ملف\nملف(\"x\"، \"قراءة\").يعمل()\n";
     }
 
     EnvironmentGuard no_override("FAIRUZ_STDLIB");
     VM vm;
-    Value result = run(project / "main.ف", vm);
+    Value result = run(project / platform::path("main.ف"), vm);
     ASSERT_TRUE(result.is_bool());
     EXPECT_FALSE(result.as_bool());
 }
@@ -467,9 +487,9 @@ TEST_F(ModuleFixture, RuntimeTracebackRetainsEachDefiningSource)
     EXPECT_THROW(run(main, vm), RuntimeHalt);
     auto json = diagnostic::engine.to_json();
     auto frames = json.substr(json.find("\"traceback\""));
-    auto main_position = frames.find(main.string());
-    auto outer_position = frames.find(outer.string());
-    auto inner_position = frames.find(inner.string());
+    auto main_position = frames.find(platform::utf8(main));
+    auto outer_position = frames.find(platform::utf8(outer));
+    auto inner_position = frames.find(platform::utf8(inner));
     ASSERT_NE(main_position, std::string::npos);
     ASSERT_NE(outer_position, std::string::npos);
     ASSERT_NE(inner_position, std::string::npos);
@@ -486,7 +506,7 @@ TEST_F(ModuleFixture, ErrorAfterImportUsesMainSource)
     VM vm;
     EXPECT_THROW(run(main, vm), RuntimeHalt);
     auto json = diagnostic::engine.to_json();
-    EXPECT_NE(json.find("\"path\":\"" + main.string() + "\""), std::string::npos);
+    EXPECT_NE(json.find("\"path\":\"" + platform::utf8(main) + "\""), std::string::npos);
     EXPECT_EQ(json.find("loaded.ف"), std::string::npos);
 }
 

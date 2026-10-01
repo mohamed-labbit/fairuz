@@ -65,6 +65,153 @@ public:
 
 inline AST::ASTPrinter AST_Printer;
 
+TEST_F(ParserTest, InlineMethodsPreserveClassAndStatementBoundaries)
+{
+    FileManager source;
+    source.buffer() = "نوع اول:\n"
+                      "    دالة بداية(): هذا.قيمة := 1\n"
+                      "    # A comment between inline methods.\n"
+                      "\n"
+                      "    دالة اقرأ(): ارجع هذا.قيمة\n"
+                      "    دالة متعدد():\n"
+                      "        ارجع 2\n"
+                      "    دالة اخير(): ارجع 3\n"
+                      "\n"
+                      "نوع ثاني:\n"
+                      "    دالة اقرأ():\n"
+                      "        ارجع 4\n"
+                      "دالة مستقل(): ارجع 5\n"
+                      "نتيجة := مستقل()\n";
+    Parser parser(&source);
+    auto program = parser.parse_program();
+
+    ASSERT_FALSE(diagnostic::has_errors());
+    ASSERT_EQ(program.size(), 4u);
+    auto* first = as<AST::ClassDefStmt>(program[0]);
+    ASSERT_NE(first, nullptr);
+    ASSERT_EQ(first->methods.size(), 4u);
+    EXPECT_EQ(first->members.size(), 1u);
+    for (auto method : first->methods) {
+        auto* function = as<AST::FuncDefStmt>(method);
+        ASSERT_NE(function, nullptr);
+        auto* body = as<AST::BlockStmt>(function->body);
+        ASSERT_NE(body, nullptr);
+        EXPECT_EQ(body->stmts.size(), 1u);
+    }
+    auto* second = as<AST::ClassDefStmt>(program[1]);
+    ASSERT_NE(second, nullptr);
+    EXPECT_EQ(second->methods.size(), 1u);
+    auto* standalone = as<AST::FuncDefStmt>(program[2]);
+    ASSERT_NE(standalone, nullptr);
+    auto* standalone_body = as<AST::BlockStmt>(standalone->body);
+    ASSERT_NE(standalone_body, nullptr);
+    EXPECT_EQ(standalone_body->stmts.size(), 1u);
+    EXPECT_TRUE(AST::is_expr(program[3]));
+}
+
+TEST_F(ParserTest, InlineMethodAtEndOfFilePreservesEnclosingDedents)
+{
+    for (char const* ending : { "", "\n", "\n\n" }) {
+        SCOPED_TRACE(ending);
+        diagnostic::reset();
+        std::string text = "دالة مستقل():\n"
+                           "    نوع مثال:\n"
+                           "        دالة قيمة(): ارجع 1";
+        text += ending;
+        FileManager source;
+        source.buffer() = text.c_str();
+        Parser parser(&source);
+        auto program = parser.parse_program();
+
+        ASSERT_FALSE(diagnostic::has_errors());
+        ASSERT_EQ(program.size(), 1u);
+        auto* function = as<AST::FuncDefStmt>(program[0]);
+        ASSERT_NE(function, nullptr);
+        auto* body = as<AST::BlockStmt>(function->body);
+        ASSERT_NE(body, nullptr);
+        ASSERT_EQ(body->stmts.size(), 1u);
+        auto* klass = as<AST::ClassDefStmt>(body->stmts[0]);
+        ASSERT_NE(klass, nullptr);
+        EXPECT_EQ(klass->methods.size(), 1u);
+    }
+}
+
+TEST_F(ParserTest, InlineBlocksLeaveFollowingStatementsOutside)
+{
+    for (char const* text : {
+             "اذا صحيح: س := 1\nص := 2\n",
+             "اذا خطا: س := 1\nغيره اذا صحيح: س := 2\nغيره: س := 3\nص := 2\n",
+             "طالما صحيح: اخرج\nص := 2\n",
+             "لكل س في [1]: اكمل\nص := 2\n",
+             "دالة مثال(): ارجع 1\nص := 2\n",
+             "نوع مثال: دالة قيمة(): ارجع 1\nص := 2\n",
+             "نوع مثال: دالة بداية(): .قيمة := 1\nص := 2\n" }) {
+        SCOPED_TRACE(text);
+        diagnostic::reset();
+        FileManager source;
+        source.buffer() = text;
+        Parser parser(&source);
+        auto program = parser.parse_program();
+        ASSERT_FALSE(diagnostic::has_errors());
+        ASSERT_EQ(program.size(), 2u);
+        EXPECT_TRUE(AST::is_expr(program[1]));
+    }
+}
+
+TEST_F(ParserTest, InlineBlocksRejectMissingBodies)
+{
+    for (char const* header : { "اذا صحيح:", "طالما صحيح:", "لكل س في [1]:", "دالة مثال():", "نوع مثال:" }) {
+        for (char const* ending : { "", " # no body", "\nس := 1\n", "\n    # no body\nس := 1\n" }) {
+            std::string text = std::string(header) + ending;
+            SCOPED_TRACE(text);
+            diagnostic::reset();
+            FileManager source;
+            source.buffer() = text.c_str();
+            Parser parser(&source);
+            (void)parser.parse_program();
+            EXPECT_TRUE(diagnostic::has_errors());
+        }
+    }
+    diagnostic::reset();
+}
+
+TEST_F(ParserTest, InlineBareReturnAtEndOfFile)
+{
+    for (char const* text : {
+             "دالة مثال(): ارجع",
+             "نوع مثال:\n    دالة قيمة(): ارجع",
+             "دالة مثال():\n    اذا صحيح: ارجع",
+             "نوع مثال: دالة قيمة(): ارجع" }) {
+        SCOPED_TRACE(text);
+        diagnostic::reset();
+        FileManager source;
+        source.buffer() = text;
+        Parser parser(&source);
+        auto program = parser.parse_program();
+        EXPECT_FALSE(diagnostic::has_errors());
+        EXPECT_EQ(program.size(), 1u);
+    }
+}
+
+TEST_F(ParserTest, InlineBodiesRejectExtraStatementsOnTheSameLine)
+{
+    for (char const* text : {
+             "دالة مثال(): ارجع 1 ارجع 2\n",
+             "طالما صحيح: اخرج اكمل\n",
+             "لكل س في [1]: اكمل اخرج\n",
+             "اذا صحيح: تاكد صحيح س := 1\n",
+             "نوع مثال: دالة بداية(): .قيمة := 1 ارجع 2\n" }) {
+        SCOPED_TRACE(text);
+        diagnostic::reset();
+        FileManager source;
+        source.buffer() = text;
+        Parser parser(&source);
+        (void)parser.parse_program();
+        EXPECT_TRUE(diagnostic::has_errors());
+    }
+    diagnostic::reset();
+}
+
 class ParserAssignmentContext : public ::testing::TestWithParam<char const*> {
 protected:
     void SetUp() override { diagnostic::reset(); }

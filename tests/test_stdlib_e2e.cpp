@@ -1,3 +1,4 @@
+#include "test_process.hpp"
 #include <gtest/gtest.h>
 
 #include <cerrno>
@@ -10,10 +11,6 @@
 #include <string>
 #include <thread>
 #include <vector>
-
-#include <signal.h>
-#include <sys/wait.h>
-#include <unistd.h>
 
 namespace {
 
@@ -33,16 +30,9 @@ protected:
 
     void SetUp() override
     {
-        std::string pattern = (std::filesystem::temp_directory_path()
-            / "fairuz-stdlib-e2e-XXXXXX")
-                                  .string();
-        std::vector<char> writable(pattern.begin(), pattern.end());
-        writable.push_back('\0');
-        char* created = ::mkdtemp(writable.data());
-        ASSERT_NE(created, nullptr);
-        directory = created;
+        directory = test_process::temporary_directory();
         std::filesystem::create_directory(directory / "nested");
-        ASSERT_TRUE(std::filesystem::is_regular_file(FAIRUZ_TEST_EXECUTABLE));
+        ASSERT_TRUE(std::filesystem::is_regular_file(test_process::executable()));
     }
 
     void TearDown() override
@@ -63,58 +53,27 @@ protected:
     void run(PublicApiCase const& test)
     {
         {
-            std::ofstream program(directory / "main.ف");
+            std::ofstream program(directory / fairuz::platform::path("main.ف"));
             program << "اكتب(\"stdlib-e2e-start\")\n"
                     << test.source
                     << "\nاكتب(\"stdlib-e2e-ok\")\n";
             ASSERT_TRUE(program.good());
         }
 
-        pid_t child = ::fork();
-        ASSERT_GE(child, 0);
-        if (child == 0) {
-            if (::chdir(directory.c_str()) != 0
-                || std::freopen("stdout", "w", stdout) == nullptr
-                || std::freopen("stderr", "w", stderr) == nullptr)
-                ::_exit(126);
-            // Keep ASan active, without nested leak-at-exit scans on macOS.
-            if (::setenv("ASAN_OPTIONS", "detect_leaks=0", 1) != 0
-                || ::setenv("FAIRUZ_STDLIB", FAIRUZ_TEST_STDLIB_DIR, 1) != 0
-                || ::setenv("NO_COLOR", "1", 1) != 0)
-                ::_exit(126);
-            ::execl(FAIRUZ_TEST_EXECUTABLE, FAIRUZ_TEST_EXECUTABLE,
-                "main.ف", "--diagnostics=text", static_cast<char*>(nullptr));
-            ::_exit(127);
-        }
-
-        int status = 0;
-        auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(15);
-        for (;;) {
-            pid_t waited = ::waitpid(child, &status, WNOHANG);
-            if (waited == child)
-                break;
-            if (waited < 0 && errno != EINTR) {
-                FAIL() << "waitpid failed: " << errno;
-            }
-            if (std::chrono::steady_clock::now() >= deadline) {
-                ::kill(child, SIGKILL);
-                while (::waitpid(child, &status, 0) < 0 && errno == EINTR) { }
-                FAIL() << "Interpreter timed out\n"
-                       << read("stderr");
-            }
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        }
-
-        std::string output = read("stdout");
-        std::string error = read("stderr");
-        ASSERT_TRUE(WIFEXITED(status)) << "Interpreter crashed: " << status << '\n'
+        auto result = test_process::run(test_process::executable(),
+            { "main.ف", "--diagnostics=text" }, directory);
+        auto const& output = result.out;
+        auto const& error = result.err;
+        ASSERT_FALSE(result.timed_out) << "Interpreter timed out\n"
                                        << error;
+        ASSERT_FALSE(result.crashed) << "Interpreter crashed\n"
+                                     << error;
         if (test.error == nullptr) {
-            EXPECT_EQ(WEXITSTATUS(status), 0) << error;
+            EXPECT_EQ(result.exit_code, 0) << error;
             EXPECT_EQ(output, "stdlib-e2e-start\nstdlib-e2e-ok\n") << error;
             EXPECT_TRUE(error.empty()) << error;
         } else {
-            EXPECT_EQ(WEXITSTATUS(status), 65) << error;
+            EXPECT_EQ(result.exit_code, 65) << error;
             EXPECT_EQ(output, "stdlib-e2e-start\n") << "Execution continued after failure";
             EXPECT_NE(error.find(test.error), std::string::npos) << error;
             EXPECT_EQ(error.find("AddressSanitizer"), std::string::npos) << error;
