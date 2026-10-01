@@ -328,13 +328,13 @@ namespace detail {
 inline u64 wy_read8(void const* p) noexcept
 {
     u64 v;
-    __builtin_memcpy(&v, p, 8);
+    std::memcpy(&v, p, 8);
     return v;
 }
 inline u32 wy_read4(void const* p) noexcept
 {
     u32 v;
-    __builtin_memcpy(&v, p, 4);
+    std::memcpy(&v, p, 4);
     return v;
 }
 
