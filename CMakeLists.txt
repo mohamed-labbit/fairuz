@@ -11,7 +11,7 @@ endif()
 # and it will not pick up a CMAKE_CXX_COMPILER set afterward.
 option(USE_GCC "Force compiling with GCC instead of Clang" OFF)
 
-if(NOT CMAKE_C_COMPILER AND NOT CMAKE_CXX_COMPILER)
+if(NOT CMAKE_HOST_WIN32 AND NOT CMAKE_C_COMPILER AND NOT CMAKE_CXX_COMPILER)
     find_program(CLANG_C_COMPILER NAMES clang)
     find_program(CLANG_CXX_COMPILER NAMES clang++)
     find_program(GCC_C_COMPILER NAMES gcc)
@@ -39,6 +39,11 @@ if(NOT CMAKE_C_COMPILER AND NOT CMAKE_CXX_COMPILER)
 endif()
 
 project(Fairuz VERSION 0.1.0 LANGUAGES C CXX)
+
+if(MSVC)
+    add_compile_options(/utf-8 /Zc:__cplusplus)
+    add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+endif()
 
 # Compression is part of the core standard-library boundary.  Use the
 # platform zlib rather than carrying a second gzip implementation.
@@ -179,8 +184,10 @@ if(BUILD_TESTS)
         $<TARGET_OBJECTS:fairuz_objects>
     )
     # Public API tests execute the interpreter from this build directory.
-    add_dependencies(fairuz_tests fairuz)
+    add_executable(fairuz_process_probe tests/support/process_probe.cc)
+    add_dependencies(fairuz_tests fairuz fairuz_process_probe)
     target_compile_definitions(fairuz_tests PRIVATE
+        FAIRUZ_TEST_PROCESS_PROBE="$<TARGET_FILE:fairuz_process_probe>"
         FAIRUZ_TEST_EXECUTABLE="$<TARGET_FILE:fairuz>"
         FAIRUZ_TEST_STDLIB_DIR="${CMAKE_SOURCE_DIR}/stdlib"
     )
@@ -197,11 +204,10 @@ if(BUILD_TESTS)
     #    of the test build keeps rebuild-after-single-file-change fast and
     #    avoids LTO/ASan interaction issues on some toolchains.
     target_compile_options(fairuz_tests PRIVATE
-        -Wunused-variable
-        -Wunused-parameter
+        $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Wunused-variable;-Wunused-parameter>
         $<$<CXX_COMPILER_ID:GNU,Clang>:-O0>
         $<$<CXX_COMPILER_ID:MSVC>:/Od>
-        -fno-strict-aliasing
+        $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-fno-strict-aliasing>
     )
 
     target_link_libraries(fairuz_tests

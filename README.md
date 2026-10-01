@@ -16,6 +16,20 @@ development, and some library APIs still need runtime support (see below).
 Blocks use indentation. `:=` assigns a value; `=` tests equality. Both Arabic
 `،` and ASCII `,` commas are accepted.
 
+A body containing one statement can also follow the colon on the same line.
+This works for `اذا`, `غيره اذا`, `غيره`, `طالما`, `لكل`, functions, and methods.
+A class can contain a single inline method. A newline immediately after the
+colon still requires an indented body; `غيره` aligns with its `اذا` header.
+
+```fa
+قيمة := -3
+اذا قيمة < 0: قيمة := -قيمة
+لكل عنصر في [1، 2، 3]: اكتب(عنصر)
+طالما قيمة > 0: قيمة -= 1
+دالة ضعف(س): ارجع س * 2
+نوع علبة: دالة بداية(قيمة): هذا.قيمة := قيمة
+```
+
 ```fa
 دالة فيب(ن):
     اذا ن <= 1:
@@ -208,6 +222,31 @@ CTest includes both the C++ suite and individual stdlib programs. To select only
 stdlib cases, add `-R '^Stdlib\.'`. Use `./build.sh --gcc` for the macOS GCC
 workaround; a direct CMake configuration does not apply the script's flags.
 
+The GoogleTest suite also includes public stdlib API tests that launch the
+interpreter in isolated temporary directories. They exercise complete workflows
+and check exit status, output, and diagnostics for rejected inputs. Run just
+these cases after building `fairuz_tests`:
+
+```bash
+ASAN_OPTIONS=detect_leaks=0 ./build/fairuz_tests '--gtest_filter=*StdlibE2E*'
+```
+
+### Windows CI
+
+The `CI` workflow runs native x64 Windows builds on `windows-2022` with Visual
+Studio 2022 (MSVC), in both Debug and Release. It installs zlib through vcpkg,
+builds the interpreter and all C++ tests, then runs the full CTest suite,
+including the standard-library programs. Compilation failures, test failures,
+and an empty test suite fail the job. Windows compatibility is still in
+progress: existing POSIX dependencies must be ported before these jobs can pass.
+
+After committing and pushing the workflow and source changes, open a pull
+request targeting `main` to run CI, or use **Actions → CI → Run workflow** on a
+branch containing the workflow. Pushes to `main` also run CI. Inspect the
+`test (MSVC, Windows, Debug)` and `test (MSVC, Windows, Release)` jobs; available
+build/configuration logs and test reports are saved as
+`windows-Debug-diagnostics` and `windows-Release-diagnostics` artifacts.
+
 ## Run and install
 
 ```bash
@@ -241,7 +280,7 @@ FAIRUZ_STDLIB=/tmp/fairuz/share/fairuz/stdlib /tmp/fairuz/bin/fairuz program.ف
 
 ```bash
 fairuz <file> [options]
-fairuz format <file>
+fairuz format [--check] <file-or-directory>
 ```
 
 | Flag | Effect |
@@ -262,11 +301,15 @@ Imports execute at runtime, so `--check` does not verify imported modules or
 native functions used only during execution. Semantic-token mode accepts `-`
 as its input path to read source from standard input.
 
-`fairuz format <file>` rewrites a file in place with canonical formatting.
+`fairuz format <file-or-directory>` rewrites Fairuz files with canonical formatting.
 It preserves comments, literal spellings, grouping, and existing line breaks;
-normalizes indentation to four spaces and comma/operator spacing; and validates
-the result before replacing the file. Long lines remain intact. Invalid source
-is left unchanged.
+normalizes indentation to four spaces and comma/operator spacing; wraps long
+single-line calls and collections at commas; and validates the result before
+replacing a file. Lines without a safe comma break remain intact. Use
+`# fmt: off` and `# fmt: on` to preserve a region, or `# fmt: skip` on one line.
+`fairuz format --check <path>` leaves files unchanged and exits with 0 when
+everything is formatted, 1 when changes are needed, or an error code for
+invalid input. Invalid source is left unchanged.
 Diagnostics disable ANSI styling when stderr is redirected or `NO_COLOR` is
 set, and escape terminal control bytes from source text and paths.
 
