@@ -248,6 +248,8 @@ ErrorOr<bool> Compiler::compile_if(AST::IfElseStmt* s)
     if (s->else_stmt) {
         u32 jump_end = emit_jump(OpCode::JUMP, 0, loc);
         patch_jump(jump_false);
+        // A return/break/continue in the then branch does not make else dead.
+        m_current->is_dead = incoming_dead;
         auto else_ret = compile_stmt(s->else_stmt);
         VERIFY_RESULT(else_ret);
         (void)else_ret;
@@ -1492,6 +1494,7 @@ void Compiler::discharge(ExprResult const& r, reg_t dst, SourceLocation loc)
     case ExprResult::Kind::RELOC: patch_a(current_chunk(), r.reloc_pc, dst); return;
     case ExprResult::Kind::KINT: {
 #if FA_USE_NANBOX
+        /// r.ival only holds 64 bit int, so this is only applicable on NAN-BOXed Value
         if (r.ival > Value::int_max() || r.ival < Value::int_min()) {
             emit(make_ABx(OpCode::LOAD_BIG_INT, dst, current_chunk()->add_big_int(r.ival)), loc);
             return;
