@@ -170,14 +170,16 @@ bool Token::is_numeric() const
         || m_type == TokenType::BINARY || m_type == TokenType::DECIMAL;
 }
 
-f64 Token::to_double() const { 
+f64 Token::to_double() const
+{
     f64 value = 0;
     util::try_parse_float_literal(lexeme(), value);
     /// FIXME: trow an error
     return value;
 }
 
-i64 Token::to_int() const {
+i64 Token::to_int() const
+{
     i64 value = 0;
     util::try_parse_integer_literal(lexeme(), 10, value);
     return value;
