@@ -22,9 +22,13 @@
 #include <string_view>
 #include <vector>
 
+#include "fairuz/fplatform.hpp"
+#include "fairuz/fwindows.hpp"
+#include <algorithm>
+#ifdef _WIN32
 #include <fcntl.h>
-#include <sys/stat.h>
-#include <unistd.h>
+#include <io.h>
+#endif
 
 namespace {
 
@@ -36,6 +40,7 @@ constexpr char const* kVersion = fairuz_VERSION;
 
 enum class ExitCode : int {
     Success = 0,
+    NeedsFormatting = 1,
     Usage = 64,
     DataError = 65,
     NoInput = 66,
@@ -58,7 +63,7 @@ struct Options {
 void printUsage(std::ostream& out, std::string_view program)
 {
     out << "Usage: " << program << " <file> [options]\n"
-        << "       " << program << " format <file>\n"
+        << "       " << program << " format [--check] <file-or-directory>\n"
         << "\n"
         << "Options:\n"
         << "  -h, --help           Show this help message\n"
@@ -69,7 +74,8 @@ void printUsage(std::ostream& out, std::string_view program)
         << "  --check              Parse and compile only, do not execute\n"
         << "  --diagnostics=json   Write structured diagnostics to stderr\n"
         << "  --semantic-tokens    Emit parser-backed semantic tokens as JSON\n"
-        << "  format               Rewrite the input file with canonical formatting\n"
+        << "  format               Rewrite files with canonical formatting\n"
+        << "  format --check       Report files needing formatting without changing them\n"
         << "\n"
         << "Options may appear before or after <file>.\n";
 }
@@ -131,8 +137,8 @@ bool parseArgs(int argc, char** argv, Options& options)
         options.input_path = std::string(arg);
     }
 
-    if (options.format_file && (options.dump_ast || options.dump_bytecode || options.print_time || options.check_only || options.semantic_tokens)) {
-        std::cerr << "format cannot be combined with --dump-ast, --dump-bytecode, --time, or --check\n";
+    if (options.format_file && (options.dump_ast || options.dump_bytecode || options.print_time || options.semantic_tokens)) {
+        std::cerr << "format cannot be combined with --dump-ast, --dump-bytecode, --time, or --semantic-tokens\n";
         return false;
     }
 
@@ -163,108 +169,10 @@ void printAst(fairuz::Array<fairuz::AST::StmtPtr> const& stmts)
         printer.print(stmts[i]);
 }
 
-bool writeFileAtomic(std::string const& path, char const* data, size_t len, std::string& error_out)
-{
-    std::filesystem::path target(path);
-    struct stat original { };
-    if (::lstat(path.c_str(), &original) != 0) {
-        error_out = "Failed to inspect input file: " + std::string(std::strerror(errno));
-        return false;
-    }
-    if (S_ISLNK(original.st_mode)) {
-        error_out = "Refusing to format a symbolic link";
-        return false;
-    }
-    if (!S_ISREG(original.st_mode)) {
-        error_out = "Refusing to format a non-regular file";
-        return false;
-    }
-    if (data == nullptr && len != 0) {
-        error_out = "No formatted data was provided";
-        return false;
-    }
-
-    std::filesystem::path parent = target.parent_path();
-    if (parent.empty())
-        parent = ".";
-    std::string template_path = (parent / (target.filename().string() + ".fairuz-fmt-XXXXXX")).string();
-    std::vector<char> writable_template(template_path.begin(), template_path.end());
-    writable_template.push_back('\0');
-
-    int fd = ::mkstemp(writable_template.data());
-    if (fd < 0) {
-        error_out = "Failed to create a temporary file for formatting: "
-            + std::string(std::strerror(errno));
-        return false;
-    }
-
-    std::string tmp_path(writable_template.data());
-    auto fail = [&](std::string const& prefix) {
-        int saved_errno = errno;
-        if (fd >= 0)
-            ::close(fd);
-        ::unlink(tmp_path.c_str());
-        error_out = prefix + ": " + std::string(std::strerror(saved_errno));
-        return false;
-    };
-
-    if (::fchmod(fd, original.st_mode & 07777) != 0)
-        return fail("Failed to preserve input file permissions");
-
-    size_t written = 0;
-    while (written < len) {
-        ssize_t result = ::write(fd, data + written, len - written);
-        if (result < 0) {
-            if (errno == EINTR)
-                continue;
-            return fail("Failed to write formatted output");
-        }
-        if (result == 0) {
-            errno = EIO;
-            return fail("Failed to write formatted output");
-        }
-        written += static_cast<size_t>(result);
-    }
-
-    if (::fsync(fd) != 0)
-        return fail("Failed to flush formatted output");
-    if (::close(fd) != 0) {
-        fd = -1;
-        return fail("Failed to close formatted output");
-    }
-    fd = -1;
-
-    // Do not replace a file that changed while it was being formatted.
-    struct stat current { };
-    if (::lstat(path.c_str(), &current) != 0)
-        return fail("Failed to re-inspect input file");
-    if (!S_ISREG(current.st_mode) || current.st_dev != original.st_dev
-        || current.st_ino != original.st_ino) {
-        errno = EBUSY;
-        return fail("Input file changed while formatting");
-    }
-
-    if (::rename(tmp_path.c_str(), path.c_str()) != 0)
-        return fail("Failed to replace the original file");
-
-    // Persist the directory entry where the platform supports directory
-    // fsync. The file itself has already been atomically replaced.
-    int directory_flags = O_RDONLY;
-#ifdef O_DIRECTORY
-    directory_flags |= O_DIRECTORY;
-#endif
-    int directory_fd = ::open(parent.c_str(), directory_flags);
-    if (directory_fd >= 0) {
-        (void)::fsync(directory_fd);
-        (void)::close(directory_fd);
-    }
-
-    return true;
-}
 
 } // namespace
 
-ExitCode format_file(std::string filename, fairuz::Formatter& fmter, ssize_t& file_count)
+ExitCode format_file(std::string filename, fairuz::Formatter& fmter, size_t& file_count, bool check_only)
 {
     fairuz::lex::FileManager fm(filename);
     fairuz::diagnostic::set_source(&fm);
@@ -277,10 +185,14 @@ ExitCode format_file(std::string filename, fairuz::Formatter& fmter, ssize_t& fi
     fairuz::StringRef fmted = fmter.format(fm.buffer());
     char const* data = fmted.empty() ? "" : fmted.data();
     if (data != fm.buffer()) {
-        std::string error;
-        if (!writeFileAtomic(filename, data, fmted.len(), error)) {
-            std::cerr << error << "\n";
-            return ExitCode::Software;
+        if (check_only) {
+            std::cout << filename << '\n';
+        } else {
+            std::string error;
+            if (!fairuz::platform::write_file_atomic(filename, data, fmted.len(), error)) {
+                std::cerr << error << "\n";
+                return ExitCode::Software;
+            }
         }
         file_count++;
     }
@@ -289,30 +201,46 @@ ExitCode format_file(std::string filename, fairuz::Formatter& fmter, ssize_t& fi
 
 static bool is_fairuz_extension(std::string ext) { return ext == ".fa" || ext == ".ف"; }
 
-ExitCode format_directory(std::string dirpath, fairuz::Formatter& fmter, ssize_t& file_count)
+ExitCode format_directory(std::string dirpath, fairuz::Formatter& fmter, size_t& file_count, bool check_only)
 {
-    for (auto e : std::filesystem::directory_iterator(dirpath)) {
+    ExitCode result = ExitCode::Success;
+    std::vector<std::filesystem::directory_entry> entries;
+    for (auto const& entry : std::filesystem::directory_iterator(fairuz::platform::path(dirpath)))
+        entries.push_back(entry);
+    std::sort(entries.begin(), entries.end(), [](auto const& left, auto const& right) {
+        return left.path() < right.path();
+    });
+    for (auto const& e : entries) {
+        if (e.is_symlink())
+            continue;
         if (std::filesystem::is_directory(e)) {
-            format_directory(e.path().string(), fmter, file_count);
+            auto current = format_directory(fairuz::platform::utf8(e.path()), fmter, file_count, check_only);
+            if (current != ExitCode::Success)
+                result = current;
         } else if (std::filesystem::is_regular_file(e)) {
-            auto ext = e.path().extension().string();
-            if (is_fairuz_extension(e.path().extension().string()))
-                format_file(e.path().string(), fmter, file_count);
+            auto ext = fairuz::platform::utf8(e.path().extension());
+            if (is_fairuz_extension(ext)) {
+                auto current = format_file(fairuz::platform::utf8(e.path()), fmter, file_count, check_only);
+                if (current != ExitCode::Success)
+                    result = current;
+            }
         }
     }
 
-    return ExitCode::Success;
+    return result;
 }
 
-ExitCode format(std::string filename)
+ExitCode format(std::string filename, bool check_only)
 {
-    ssize_t file_count = 0;
+    size_t file_count = 0;
 
     fairuz::Formatter fmter;
     fairuz::AllocatorContext allocator_context;
     fairuz::set_context(&allocator_context);
-    if (std::filesystem::is_directory(filename)) {
-        auto ret = format_directory(filename, fmter, file_count);
+    if (std::filesystem::is_directory(fairuz::platform::path(filename))) {
+        auto ret = format_directory(filename, fmter, file_count, check_only);
+        if (check_only)
+            return ret != ExitCode::Success ? ret : (file_count ? ExitCode::NeedsFormatting : ExitCode::Success);
         if (file_count > 0)
             std::cout << "Formatted " << file_count << (file_count == 1 ? " file" : " files") << '\n';
         else
@@ -320,9 +248,11 @@ ExitCode format(std::string filename)
         return ret;
     }
 
-    auto ext = std::filesystem::directory_entry(filename).path().extension().string();
-    if (std::filesystem::is_regular_file(filename) && is_fairuz_extension(ext)) {
-        auto ret = format_file(filename, fmter, file_count);
+    auto ext = fairuz::platform::utf8(fairuz::platform::path(filename).extension());
+    if (std::filesystem::is_regular_file(fairuz::platform::path(filename)) && is_fairuz_extension(ext)) {
+        auto ret = format_file(filename, fmter, file_count, check_only);
+        if (check_only)
+            return ret != ExitCode::Success ? ret : (file_count ? ExitCode::NeedsFormatting : ExitCode::Success);
         if (file_count > 0)
             std::cout << "Formatted " << file_count << (file_count == 1 ? " file" : " files") << '\n';
         else
@@ -332,7 +262,7 @@ ExitCode format(std::string filename)
     return ExitCode::Software;
 }
 
-int main(int argc, char** argv)
+int run_main(int argc, char** argv)
 {
     Options options;
     if (!parseArgs(argc, argv, options)) {
@@ -356,7 +286,7 @@ int main(int argc, char** argv)
         return static_cast<int>(ExitCode::Usage);
     }
 
-    if (options.input_path != "-" && !std::filesystem::exists(options.input_path)) {
+    if (options.input_path != "-" && !std::filesystem::exists(fairuz::platform::path(options.input_path))) {
         std::cerr << "Input file not found: " << options.input_path << "\n";
         return static_cast<int>(ExitCode::NoInput);
     }
@@ -375,15 +305,11 @@ int main(int argc, char** argv)
     try {
         if (options.format_file)
         {
-            /// check whether or not the provided filename is a symlink
-            struct stat s;
-            lstat(options.input_path.c_str(), &s);
-            if (S_ISLNK(s.st_mode))
-            {
-                std::cerr << "Path provided is not an ordinary file" << std::endl;
+            if (std::filesystem::is_symlink(fairuz::platform::path(options.input_path))) {
+                std::cerr << "Path provided is not an ordinary file\n";
                 return static_cast<int>(ExitCode::Usage);
             }
-            return static_cast<int>(format(options.input_path));
+            return static_cast<int>(format(options.input_path, options.check_only));
         }
 
         fairuz::AllocatorContext allocator_context;
@@ -393,7 +319,7 @@ int main(int argc, char** argv)
             if (options.input_path == "-")
                 input.assign(std::istreambuf_iterator<char>(std::cin), std::istreambuf_iterator<char>());
             else {
-                std::ifstream stream(options.input_path, std::ios::binary);
+                std::ifstream stream(fairuz::platform::path(options.input_path), std::ios::binary);
                 input.assign(std::istreambuf_iterator<char>(stream), std::istreambuf_iterator<char>());
             }
             fairuz::StringRef source(input.size(), '\0');
@@ -464,3 +390,25 @@ int main(int argc, char** argv)
         return static_cast<int>(ExitCode::Software);
     }
 }
+
+#ifdef _WIN32
+int wmain(int argc, wchar_t** argv)
+{
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+    _setmode(_fileno(stdin), _O_BINARY);
+    _setmode(_fileno(stdout), _O_BINARY);
+    _setmode(_fileno(stderr), _O_BINARY);
+    std::vector<std::string> arguments;
+    for (int i = 0; i < argc; ++i) {
+        auto text = std::filesystem::path(argv[i]).u8string();
+        arguments.emplace_back(reinterpret_cast<char const*>(text.data()), text.size());
+    }
+    std::vector<char*> pointers;
+    for (auto& arg : arguments) pointers.push_back(arg.data());
+    pointers.push_back(nullptr);
+    return run_main(argc, pointers.data());
+}
+#else
+int main(int argc, char** argv) { return run_main(argc, argv); }
+#endif
