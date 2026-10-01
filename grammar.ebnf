@@ -101,7 +101,13 @@ statement-list
     = [ statement, { NEWLINE, statement }, { NEWLINE } ] ;
 
 block
-    = { NEWLINE }, INDENT, statement-list, DEDENT ;
+    = statement | indented-block ;
+
+(* An inline body starts immediately after the colon and owns one statement.
+   A newline after the colon requires an indented body. Else clauses align
+   with their original if header, including in an else-if chain. *)
+indented-block
+    = NEWLINE, { NEWLINE }, INDENT, statement-list, DEDENT ;
 
 (* ------------------------------------------------------------------------- *)
 (* Statements                                                                *)
@@ -151,7 +157,7 @@ if-statement
     = IF, expression, COLON, block, [ else-clause ] ;
 
 else-clause
-    = ELSE, IF, expression, COLON, block
+    = ELSE, if-statement
     | ELSE, COLON, block ;
 
 function-definition
@@ -161,7 +167,8 @@ class-definition
     = CLASS, IDENTIFIER, COLON, class-body ;
 
 class-body
-    = { NEWLINE }, INDENT, { function-definition }, DEDENT ;
+    = function-definition
+    | NEWLINE, { NEWLINE }, INDENT, { function-definition, { NEWLINE } }, DEDENT ;
 
 (* ------------------------------------------------------------------------- *)
 (* Expressions                                                               *)
