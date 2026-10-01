@@ -66,6 +66,16 @@ size_t indentation(std::string_view line)
     return width;
 }
 
+size_t display_width(std::string_view text)
+{
+    size_t width = 0;
+    for (unsigned char ch : text) {
+        if ((ch & 0xc0) != 0x80)
+            ++width;
+    }
+    return width;
+}
+
 struct Line {
     size_t start;
     std::string_view text;
@@ -179,8 +189,10 @@ StringRef Formatter::format(StringRef const& source)
     std::string_view eol = text.find("\r\n") != std::string_view::npos ? "\r\n" : "\n";
     Kind previous = Kind::NEWLINE;
     bool previous_unary = false;
+    bool formatting_disabled = false;
 
     for (auto const& line : lines) {
+        size_t bracket_depth_at_start = brackets.size();
         size_t indent = line.depth * 4;
         if (!brackets.empty()) {
             indent = brackets.back().indent + 4;
@@ -209,18 +221,22 @@ StringRef Formatter::format(StringRef const& source)
         }
 
         std::string rendered;
+        std::vector<size_t> starts;
+        std::vector<size_t> ends;
         size_t consumed = line.start;
         for (auto token : line.tokens) {
             Kind kind = token->type();
             bool unary = is_symbolic_unary(kind) && !ends_expression(previous);
             if (!rendered.empty() && needs_space(previous, kind, previous_unary))
                 rendered += ' ';
+            starts.push_back(rendered.size());
             size_t start = token->location().offset;
             consumed = token_end(token, text);
             if (kind == Kind::COMMA)
                 rendered += "،";
             else
                 rendered.append(text.substr(start, consumed - start));
+            ends.push_back(rendered.size());
             if (is_open(kind))
                 brackets.push_back({ indent });
             else if (is_close(kind) && !brackets.empty())
@@ -232,6 +248,12 @@ StringRef Formatter::format(StringRef const& source)
         // Everything after the last token is whitespace or a comment. Hashes
         // inside strings are already consumed with the raw string token.
         size_t comment = line.text.find('#', consumed - line.start);
+        std::string_view comment_text = comment == std::string_view::npos
+            ? std::string_view { }
+            : line.text.substr(comment);
+        bool disable_here = comment_text.find("# fmt: off") != std::string_view::npos;
+        bool enable_here = comment_text.find("# fmt: on") != std::string_view::npos;
+        bool skip_here = comment_text.find("# fmt: skip") != std::string_view::npos;
         if (comment != std::string_view::npos) {
             if (!rendered.empty())
                 rendered += "  ";
@@ -239,9 +261,74 @@ StringRef Formatter::format(StringRef const& source)
         }
         while (!rendered.empty() && (rendered.back() == ' ' || rendered.back() == '\t'))
             rendered.pop_back();
+        if (formatting_disabled || disable_here || enable_here || skip_here) {
+            output.append(line.text);
+            output += eol;
+            if (disable_here)
+                formatting_disabled = true;
+            if (enable_here)
+                formatting_disabled = false;
+            continue;
+        }
         if (!rendered.empty()) {
-            output.append(indent, ' ');
-            output += rendered;
+            bool wrapped = false;
+            // A single-line bracket group can be split at its own commas.
+            // Leave lines with comments and already multiline groups alone.
+            if (comment == std::string_view::npos && brackets.size() == bracket_depth_at_start
+                && indent + display_width(rendered) > 88) {
+                size_t open = line.tokens.size();
+                size_t close = line.tokens.size();
+                size_t nesting = 0;
+                std::vector<size_t> commas;
+                for (size_t i = 0; i < line.tokens.size(); ++i) {
+                    Kind kind = line.tokens[i]->type();
+                    if (is_open(kind)) {
+                        if (nesting == 0 && open == line.tokens.size())
+                            open = i;
+                        ++nesting;
+                    } else if (is_close(kind)) {
+                        if (nesting == 0)
+                            break;
+                        --nesting;
+                        if (nesting == 0 && open != line.tokens.size()) {
+                            close = i;
+                            break;
+                        }
+                    } else if (kind == Kind::COMMA && nesting == 1) {
+                        commas.push_back(i);
+                    }
+                }
+                if (open < close && close < line.tokens.size() && !commas.empty()) {
+                    output.append(indent, ' ');
+                    output.append(rendered.substr(0, ends[open]));
+                    output += eol;
+                    size_t segment = ends[open];
+                    for (size_t comma : commas) {
+                        while (segment < starts[comma] && rendered[segment] == ' ')
+                            ++segment;
+                        if (segment < ends[comma]) {
+                            output.append(indent + 4, ' ');
+                            output.append(rendered.substr(segment, ends[comma] - segment));
+                            output += eol;
+                        }
+                        segment = ends[comma];
+                    }
+                    while (segment < starts[close] && rendered[segment] == ' ')
+                        ++segment;
+                    if (segment < starts[close]) {
+                        output.append(indent + 4, ' ');
+                        output.append(rendered.substr(segment, starts[close] - segment));
+                        output += eol;
+                    }
+                    output.append(indent, ' ');
+                    output.append(rendered.substr(starts[close]));
+                    wrapped = true;
+                }
+            }
+            if (!wrapped) {
+                output.append(indent, ' ');
+                output += rendered;
+            }
         }
         output += eol;
     }
