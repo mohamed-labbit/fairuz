@@ -5,22 +5,50 @@
 #include "farena.hpp"
 #include "fdiagnostic.hpp"
 
-#include <sys/mman.h>
+#include "fwindows.hpp"
+#ifndef _WIN32
+#    include <sys/mman.h>
+#endif
 
 namespace fairuz {
+namespace {
+
+void release_pages(void* address, size_t size)
+{
+#ifdef _WIN32
+    (void)size;
+    VirtualFree(address, 0, MEM_RELEASE);
+#else
+    munmap(address, size);
+#endif
+}
+
+}
+
+ArenaBlock::~ArenaBlock()
+{
+    if (m_begin)
+        release_pages(m_begin, m_size);
+}
 
 ArenaBlock::ArenaBlock(size_t const size, size_t const alignment)
     : m_size(size)
 {
     (void)alignment; // silence no-use
 
+#ifdef _WIN32
+    m_begin = static_cast<unsigned char*>(VirtualAlloc(nullptr, m_size,
+        MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE));
+    if (!m_begin)
+        diagnostic::panic(ErrorCode::MMAP_FAILED);
+#else
     m_begin = reinterpret_cast<unsigned char*>(mmap(reinterpret_cast<void*>(0x200000000ULL), m_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0));
-
     if (m_begin == MAP_FAILED)
         diagnostic::panic(ErrorCode::MMAP_FAILED);
+#endif
 
     if (reinterpret_cast<uintptr_t>(m_begin) > UINT64_C(0x0000FFFFFFFFFFFF)) {
-        munmap(m_begin, m_size);
+        release_pages(m_begin, m_size);
         m_begin = nullptr;
         diagnostic::panic(ErrorCode::NANBOX_ADDRESS_UNSAFE);
     }
@@ -33,7 +61,7 @@ ArenaBlock& ArenaBlock::operator=(ArenaBlock&& other) noexcept
 {
     if (this != &other) {
         if (m_begin != nullptr)
-            munmap(m_begin, m_size);
+            release_pages(m_begin, m_size);
 
         m_size = other.m_size;
         m_begin = other.m_begin;

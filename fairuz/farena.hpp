@@ -5,7 +5,6 @@
 
 #include <functional>
 #include <optional>
-#include <sys/mman.h>
 #include <type_traits>
 #include <vector>
 
@@ -21,15 +20,7 @@ private:
 public:
     explicit ArenaBlock(size_t const size = DEFAULT_BLOCK_SIZE, size_t const alignment = alignof(std::max_align_t));
 
-    ~ArenaBlock()
-    {
-        if (m_begin != nullptr) {
-            munmap(m_begin, m_size);
-            m_begin = nullptr;
-            m_next = nullptr;
-            m_end = nullptr;
-        }
-    }
+    ~ArenaBlock();
 
     // Non-copyable
     ArenaBlock(ArenaBlock const&) = delete;
