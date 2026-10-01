@@ -1,3 +1,4 @@
+#include "fplatform.hpp"
 //
 // stdlib.cc
 //
@@ -7,6 +8,7 @@
 #include "fmacros.hpp"
 #include "fobj_header.hpp"
 #include "fobject.hpp"
+#include "fstring.hpp"
 #include "futil.hpp"
 #include "fvalue.hpp"
 #include "fvm.hpp"
@@ -1115,7 +1117,7 @@ Value VM::file_open(int argc, Value* argv)
         native_mode = "ab+";
     else
         return Value::nil();
-    FILE* file = std::fopen(path.data(), native_mode);
+    FILE* file = platform::open_file(std::string_view(path.data(), path.len()), native_mode);
     return file == nullptr ? Value::nil() : m_gc.make_file_handle(file);
 }
 
@@ -1235,7 +1237,7 @@ std::filesystem::path temporary_parent(Value value)
     if (value.is_nil())
         return std::filesystem::temp_directory_path();
     std::string path = native_path(value);
-    return path.empty() ? std::filesystem::temp_directory_path() : std::filesystem::path(path);
+    return path.empty() ? std::filesystem::temp_directory_path() : platform::path(path);
 }
 
 std::filesystem::path unique_temporary_path(std::filesystem::path const& parent,
@@ -1246,7 +1248,7 @@ std::filesystem::path unique_temporary_path(std::filesystem::path const& parent,
         std::chrono::high_resolution_clock::now().time_since_epoch().count());
     for (unsigned attempt = 0; attempt < 1000; ++attempt) {
         auto id = seed ^ (++counter * 0x9E3779B97F4A7C15ULL) ^ attempt;
-        auto candidate = parent / (prefix + std::to_string(id) + suffix);
+        auto candidate = parent / platform::path(prefix + std::to_string(id) + suffix);
         if (!std::filesystem::exists(candidate))
             return candidate;
     }
@@ -1260,7 +1262,7 @@ Value VM::path_delete(int argc, Value* argv)
     if (argc != 1 || argv == nullptr || !argv[0].is_string())
         raise_error(ErrorCode::NATIVE_TYPE_ERROR, "path delete expects a string");
     std::error_code error;
-    auto count = std::filesystem::remove_all(native_path(argv[0]), error);
+    auto count = std::filesystem::remove_all(platform::path(native_path(argv[0])), error);
     return Value::from_bool(!error && count > 0);
 }
 
@@ -1269,22 +1271,22 @@ Value VM::path_glob(int argc, Value* argv)
     if (argc != 2 || argv == nullptr || !argv[0].is_string() || !argv[1].is_bool())
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
             "glob expects a pattern and recursive flag");
-    std::filesystem::path pattern(native_path(argv[0]));
+    std::filesystem::path pattern(platform::path(native_path(argv[0])));
     std::filesystem::path parent = pattern.parent_path();
     if (parent.empty())
         parent = ".";
-    std::regex matcher(wildcard_regex(pattern.filename().string()));
+    std::regex matcher(wildcard_regex(platform::utf8(pattern.filename())));
     Value result = m_gc.make_list();
     std::error_code error;
     if (argv[1].as_bool()) {
         for (std::filesystem::recursive_directory_iterator it(parent, error), end; !error && it != end; it.increment(error)) {
-            if (std::regex_match(it->path().filename().string(), matcher))
-                result.as_list()->elements.push(m_gc.make_string(it->path().string().c_str()));
+            if (std::regex_match(platform::utf8(it->path().filename()), matcher))
+                result.as_list()->elements.push(m_gc.make_string(platform::utf8(it->path()).c_str()));
         }
     } else {
         for (std::filesystem::directory_iterator it(parent, error), end; !error && it != end; it.increment(error)) {
-            if (std::regex_match(it->path().filename().string(), matcher))
-                result.as_list()->elements.push(m_gc.make_string(it->path().string().c_str()));
+            if (std::regex_match(platform::utf8(it->path().filename()), matcher))
+                result.as_list()->elements.push(m_gc.make_string(platform::utf8(it->path()).c_str()));
         }
     }
     return result;
@@ -1305,7 +1307,7 @@ Value VM::temp_file(int argc, Value* argv)
         return Value::nil();
     created.close();
     Value result = m_gc.make_dict();
-    result.as_dict()->set(m_gc.make_string("path"), m_gc.make_string(path.string().c_str()));
+    result.as_dict()->set(m_gc.make_string("path"), m_gc.make_string(platform::utf8(path).c_str()));
     return result;
 }
 
@@ -1320,7 +1322,7 @@ Value VM::temp_directory(int argc, Value* argv)
     std::error_code error;
     if (path.empty() || !std::filesystem::create_directory(path, error) || error)
         return Value::nil();
-    return m_gc.make_string(path.string().c_str());
+    return m_gc.make_string(platform::utf8(path).c_str());
 }
 
 Value VM::remove_tree(int argc, Value* argv)
@@ -1329,7 +1331,7 @@ Value VM::remove_tree(int argc, Value* argv)
         raise_error(ErrorCode::NATIVE_TYPE_ERROR,
             "tree removal expects a path string");
     std::error_code error;
-    std::filesystem::remove_all(native_path(argv[0]), error);
+    std::filesystem::remove_all(platform::path(native_path(argv[0])), error);
     return Value::from_bool(!error);
 }
 
@@ -2590,7 +2592,7 @@ Value VM::open(int argc, Value* argv)
     else
         raise_error(ErrorCode::NATIVE_TYPE_ERROR);
 
-    FILE* fp = fopen(filename, fmode.data());
+    FILE* fp = platform::open_file(filename, fmode.data());
     if (fp == NULL) {
         raise_error(ErrorCode::NATIVE_TYPE_ERROR);
         return Value::nil();
