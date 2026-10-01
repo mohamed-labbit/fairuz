@@ -1,0 +1,363 @@
+(*
+  قواعد لغة فيروز
+
+  قواعد المصدر قورنت يدويًا مع fairuz/fparser.cc وfairuz/ftoken.cc
+  في الالتزام 86d706f83f9adc67cf2f4828a40dd6c11a3fb9b4 وحالة
+  شجرة العمل المفحوصة. هذا وصف، وليس تحققًا آليًا من القواعد.
+  ترميز EBNF: = للتعريف، ; للإنهاء، | للاختيار، [] للاختيارية،
+  {} للتكرار، والنص المقتبس رمز حرفي. القواعد المعجمية منفصلة أدناه.
+*)
+
+(* ------------------------------------------------------------------------- *)
+(* الرموز المعجمية                                                        *)
+(* ------------------------------------------------------------------------- *)
+
+(* الرموز LEXER_* يحددها المحلل المعجمي؛ راجع lexical-structure.md. *)
+IDENTIFIER       = LEXER_IDENTIFIER ;
+INTEGER          = LEXER_DECIMAL_INTEGER ;
+BINARY_INTEGER   = LEXER_BINARY_INTEGER ;
+OCTAL_INTEGER    = LEXER_OCTAL_INTEGER ;
+HEX_INTEGER      = LEXER_HEX_INTEGER ;
+DECIMAL          = LEXER_REAL_LITERAL ;
+STRING           = LEXER_STRING_LITERAL ;
+
+TRUE             = KW_TRUE ;
+FALSE            = KW_FALSE ;
+NIL              = KW_NIL ;
+THIS             = KW_THIS ;
+IF               = KW_IF ;
+ELSE             = KW_ELSE ;
+WHILE            = KW_WHILE ;
+FOR              = KW_FOR ;
+IN               = KW_IN ;
+RETURN           = KW_RETURN ;
+BREAK            = KW_BREAK ;
+CONTINUE         = KW_CONTINUE ;
+FN               = KW_FN ;
+CLASS            = KW_CLASS ;
+
+ASSIGN           = OP_ASSIGN ;
+ADD_ASSIGN       = OP_PLUSEQ ;
+SUB_ASSIGN       = OP_MINUSEQ ;
+MUL_ASSIGN       = OP_STAREQ ;
+DIV_ASSIGN       = OP_SLASHEQ ;
+MOD_ASSIGN       = OP_PERCENTEQ ;
+BITAND_ASSIGN    = OP_ANDEQ ;
+BITOR_ASSIGN     = OP_OREQ ;
+BITXOR_ASSIGN    = OP_XOREQ ;
+LSHIFT_ASSIGN    = OP_LSHIFTEQ ;
+RSHIFT_ASSIGN    = OP_RSHIFTEQ ;
+
+ADD              = OP_PLUS ;
+SUB              = OP_MINUS ;
+MUL              = OP_STAR ;
+DIV              = OP_SLASH ;
+MOD              = OP_PERCENT ;
+POWER            = OP_POWER ;
+EQUAL            = OP_EQ ;
+NOT_EQUAL        = OP_NEQ ;
+LESS             = OP_LT ;
+GREATER          = OP_GT ;
+LESS_EQUAL       = OP_LTE ;
+GREATER_EQUAL    = OP_GTE ;
+BITAND           = OP_BITAND ;
+BITOR            = OP_BITOR ;
+BITXOR           = OP_BITXOR ;
+LSHIFT           = OP_LSHIFT ;
+RSHIFT           = OP_RSHIFT ;
+LOGICAL_AND      = OP_AND ;
+LOGICAL_OR       = OP_OR ;
+
+UNARY_PLUS       = OP_PLUS ;
+UNARY_MINUS      = OP_MINUS ;
+BITWISE_NOT      = OP_BITNOT ;
+LOGICAL_NOT      = OP_NOT ;
+
+LPAREN           = "(" ;
+RPAREN           = ")" ;
+LBRACKET         = "[" ;
+RBRACKET         = "]" ;
+LBRACE           = "{" ;
+RBRACE           = "}" ;
+COMMA            = "," ;
+COLON            = ":" ;
+DOT              = "." ;
+NEWLINE          = LEXER_LOGICAL_NEWLINE ;
+INDENT           = LEXER_INDENT ;
+DEDENT           = LEXER_DEDENT ;
+EOF              = ENDMARKER ;
+
+(* تهجئة الكلمات: IF="اذا", ELSE="غيره", WHILE="طالما",
+   FOR="لكل", IN="في", RETURN="ارجع", BREAK="اخرج",
+   CONTINUE="اكمل", FN="دالة", CLASS="نوع", THIS="هذا",
+   TRUE="صحيح", FALSE="خطا", NIL="عدم", ASSERT="تاكد" أو "assert",
+   IMPORT="استورد", FROM="من", AS="باسم".
+   تقبل COMMA أيضًا ، و٬؛ ويقبل MOD الرمز ٪.
+   ينتج المحلل المعجمي NEWLINE/INDENT/DEDENT. راجع lexical-structure.md. *)
+ASSERT           = KW_ASSERT ;
+IMPORT           = KW_IMPORT ;
+FROM             = KW_FROM ;
+AS               = KW_AS ;
+
+(* ------------------------------------------------------------------------- *)
+(* البرنامج وتخطيط الأسطر                                                   *)
+(* ------------------------------------------------------------------------- *)
+
+program
+    = leading-newlines, statement-list, EOF ;
+
+leading-newlines
+    = { NEWLINE } ;
+
+statement-list
+    = [ statement, { NEWLINE, statement }, { NEWLINE } ] ;
+
+(* يحتوي المتن في السطر نفسه تعليمة واحدة. يلزم متن مزاح بعد سطر جديد يلي النقطتين.
+   تبدأ فروع غيره في أسطر مستقلة وتحاذي رأس اذا الأصلي.
+   حُدّث الوصف لصيغة السطر الواحد في شجرة العمل بتاريخ 1 أكتوبر 2026. *)
+
+block
+    = statement | indented-block ;
+
+indented-block
+    = NEWLINE, { NEWLINE }, INDENT, statement-list, DEDENT ;
+
+(* ------------------------------------------------------------------------- *)
+(* التعليمات                                                                 *)
+(* ------------------------------------------------------------------------- *)
+
+statement
+    = if-statement
+    | while-statement
+    | for-statement
+    | return-statement
+    | break-statement
+    | continue-statement
+    | function-definition
+    | class-definition
+    | import-statement
+    | assert-statement
+    | expression-statement ;
+
+expression-statement
+    = assignment-statement | expression ;
+
+assignment-statement
+    = plain-assignment-statement
+    | assignment-target, augmented-assignment-operator, expression ;
+
+plain-assignment-statement
+    = assignment-target, ASSIGN, ( plain-assignment-statement | expression ) ;
+
+(* يحصر المحلل أهداف الإسناد في الأسماء والفهارس والحقول. *)
+assignment-target
+    = postfix-expression ;
+
+return-statement
+    = RETURN, [ expression ] ;
+
+break-statement
+    = BREAK ;
+
+continue-statement
+    = CONTINUE ;
+
+while-statement
+    = WHILE, expression, COLON, block ;
+
+for-statement
+    = FOR, IDENTIFIER, IN, expression, COLON, block ;
+
+if-statement
+    = IF, expression, COLON, block, [ else-clause ] ;
+
+else-clause
+    = ELSE, if-statement
+    | ELSE, COLON, block ;
+
+function-definition
+    = FN, IDENTIFIER, parameter-list, COLON, block ;
+
+parameter-list
+    = LPAREN, [ IDENTIFIER, { COMMA, IDENTIFIER }, [ COMMA ] ], RPAREN ;
+
+class-definition
+    = CLASS, IDENTIFIER, [ LPAREN, IDENTIFIER, RPAREN ], COLON, class-body ;
+
+class-body
+    = class-method
+    | NEWLINE, { NEWLINE }, INDENT, { class-method, { NEWLINE } }, DEDENT ;
+
+class-method
+    = FN, method-name, parameter-list, COLON, method-block ;
+
+method-name
+    = IDENTIFIER, [ ADD | SUB | MUL | DIV | MOD ] ;
+
+(* لا يُقبل رمز العامل الاختياري إلا بعد الاسم "عملية". *)
+
+method-block
+    = statement | field-initializer
+    | NEWLINE, { NEWLINE }, INDENT, { ( statement | field-initializer ), { NEWLINE } }, DEDENT ;
+
+field-initializer
+    = DOT, IDENTIFIER, ( ASSIGN | augmented-assignment-operator ), expression ;
+
+import-statement
+    = IMPORT, dotted-name, [ AS, IDENTIFIER ]
+    | FROM, dotted-name, IMPORT, imported-names ;
+
+dotted-name
+    = IDENTIFIER, { DOT, IDENTIFIER } ;
+
+imported-names
+    = imported-name, { COMMA, imported-name }
+    | LPAREN, [ imported-name, { COMMA, imported-name }, [ COMMA ] ], RPAREN ;
+
+imported-name
+    = IDENTIFIER, [ AS, IDENTIFIER ] ;
+
+assert-statement
+    = ASSERT, expression, [ COMMA, expression ] ;
+
+(* ------------------------------------------------------------------------- *)
+(* التعبيرات                                                                  *)
+(*                                                                            *)
+(* تعكس مستويات الأولوية أدناه عائلات العوامل في المحلل. *)
+(* يحدد جدول الرموز قيم الأولوية العددية الدقيقة.          *)
+(* ------------------------------------------------------------------------- *)
+
+expression
+    = logical-or-expression ;
+
+augmented-assignment-operator
+    = ADD_ASSIGN
+    | SUB_ASSIGN
+    | MUL_ASSIGN
+    | DIV_ASSIGN
+    | MOD_ASSIGN
+    | BITAND_ASSIGN
+    | BITOR_ASSIGN
+    | BITXOR_ASSIGN
+    | LSHIFT_ASSIGN
+    | RSHIFT_ASSIGN ;
+
+logical-or-expression
+    = logical-and-expression, { LOGICAL_OR, logical-and-expression } ;
+
+logical-and-expression
+    = bitwise-or-expression, { LOGICAL_AND, bitwise-or-expression } ;
+
+comparison-expression
+    = shift-expression,
+      { ( LESS | GREATER | LESS_EQUAL | GREATER_EQUAL ), shift-expression } ;
+
+equality-expression
+    = comparison-expression,
+      { ( EQUAL | NOT_EQUAL ), comparison-expression } ;
+
+comparison-operator
+    = EQUAL
+    | NOT_EQUAL
+    | LESS
+    | GREATER
+    | LESS_EQUAL
+    | GREATER_EQUAL ;
+
+bitwise-or-expression
+    = bitwise-xor-expression, { BITOR, bitwise-xor-expression } ;
+
+bitwise-xor-expression
+    = bitwise-and-expression, { BITXOR, bitwise-and-expression } ;
+
+bitwise-and-expression
+    = equality-expression, { BITAND, equality-expression } ;
+
+shift-expression
+    = additive-expression,
+      { ( LSHIFT | RSHIFT ), additive-expression } ;
+
+additive-expression
+    = multiplicative-expression,
+      { ( ADD | SUB ), multiplicative-expression } ;
+
+multiplicative-expression
+    = power-expression,
+      { ( MUL | DIV | MOD ), power-expression } ;
+
+power-expression
+    = postfix-expression, [ POWER, unary-expression ] ;
+
+unary-expression
+    = unary-operator, unary-expression
+    | power-expression ;
+
+unary-operator
+    = UNARY_PLUS
+    | UNARY_MINUS
+    | BITWISE_NOT
+    | LOGICAL_NOT ;
+
+postfix-expression
+    = primary-expression, { postfix-operation } ;
+
+postfix-operation
+    = call-expression
+    | index-expression
+    | member-expression ;
+
+call-expression
+    = LPAREN, [ argument-list ], RPAREN ;
+
+argument-list
+    = expression, { COMMA, expression }, [ COMMA ] ;
+
+index-expression
+    = LBRACKET, expression, RBRACKET ;
+
+member-expression
+    = DOT, IDENTIFIER ;
+
+(* ------------------------------------------------------------------------- *)
+(* التعبيرات الأولية                                                          *)
+(* ------------------------------------------------------------------------- *)
+
+primary-expression
+    = numeric-literal
+    | STRING
+    | TRUE
+    | FALSE
+    | NIL
+    | THIS
+    | IDENTIFIER
+    | parenthesized-or-list-expression
+    | list-literal
+    | dictionary-literal ;
+
+numeric-literal
+    = INTEGER
+    | BINARY_INTEGER
+    | OCTAL_INTEGER
+    | HEX_INTEGER
+    | DECIMAL ;
+
+parenthesized-or-list-expression
+    = LPAREN, [ expression, { COMMA, expression }, [ COMMA ] ], RPAREN ;
+
+(* التعبير الواحد بلا فاصلة يُجمَّع بالأقواس. الصفر أو أكثر من تعبير واحد،
+   أو وجود فاصلة أخيرة، ينشئ قائمة. لا يوجد نوع صف مستقل وقت التشغيل. *)
+
+list-literal
+    = LBRACKET, [ element-list ], RBRACKET ;
+
+element-list
+    = expression, { COMMA, expression }, [ COMMA ] ;
+
+dictionary-literal
+    = LBRACE, [ dictionary-entry-list ], RBRACE ;
+
+dictionary-entry-list
+    = dictionary-entry, { COMMA, dictionary-entry }, [ COMMA ] ;
+
+dictionary-entry
+    = expression, COLON, expression ;

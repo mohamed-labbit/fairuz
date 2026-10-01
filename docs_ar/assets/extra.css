@@ -1,0 +1,17 @@
+html { direction: rtl; }
+body { direction: rtl; text-align: right; }
+.navbar, .bs-sidebar, .col-md-9, .col-md-3, .container { direction: rtl; }
+.bs-sidebar .nav > li > a { text-align: right; }
+pre, code { direction: ltr; unicode-bidi: normal; text-align: left; font-variant-ligatures: none; }
+pre { overflow-x: auto; max-width: 100%; }
+pre code { white-space: pre; }
+.rst-content pre, .md-content pre { tab-size: 4; }
+td, th { text-align: right; }
+.col-md-9 { min-width: 0; }
+.col-md-9 p, .col-md-9 li, .col-md-9 td { overflow-wrap: anywhere; }
+.col-md-9 table { display: block; max-width: 100%; overflow-x: auto; }
+.fa-keyword { color: #a126a1; font-weight: 600; }
+.fa-string { color: #a31515; }
+.fa-number { color: #116644; }
+.fa-comment { color: #667785; font-style: italic; }
+.fa-operator { color: #205a9e; }
