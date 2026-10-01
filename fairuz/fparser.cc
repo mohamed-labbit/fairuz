@@ -259,7 +259,7 @@ ErrorOr<AST::StmtPtr> Parser::parse_return_stmt()
     TokenPtr start = current_token();
     VERIFY_TOKEN(TokType::KW_RETURN, ErrorCode::EXPECTED_RETURN);
 
-    if (check(TokType::NEWLINE) || we_done())
+    if (check(TokType::NEWLINE) || check(TokType::DEDENT) || we_done())
         return AST::make_return(start->location());
 
     TRY(ret, parse_expression());
@@ -288,7 +288,7 @@ ErrorOr<AST::StmtPtr> Parser::parse_while_stmt()
     TRY(condition, parse_expression());
     VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_WHILE);
 
-    auto while_block = parse_indented_block();
+    auto while_block = parse_block();
     VERIFY_NODE(while_block);
 
     return make_while(condition, as_block(while_block.value()), start->location());
@@ -311,36 +311,41 @@ ErrorOr<AST::StmtPtr> Parser::parse_for_stmt()
     TRY(iter, parse_expression());
     VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_FOR);
 
-    auto body = parse_indented_block();
+    auto body = parse_block();
     VERIFY_NODE(body);
 
     return AST::make_for(target, iter, body.value(), start->location());
 }
 
-ErrorOr<AST::StmtPtr> Parser::parse_if_stmt()
+ErrorOr<AST::StmtPtr> Parser::parse_if_stmt(u16 clause_column)
 {
     TokenPtr start = current_token();
+    if (clause_column == 0)
+        clause_column = start->location().column;
     VERIFY_TOKEN(TokType::KW_IF, ErrorCode::EXPECTED_IF_KEYWORD);
 
     TRY(condition, parse_expression());
     VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_IF);
 
-    auto then_block = parse_indented_block();
+    auto then_block = parse_block();
     VERIFY_NODE(then_block);
 
     AST::StmtPtr else_block = nullptr;
     skip_newlines();
 
-    if (match(TokType::KW_ELSE)) {
+    // An inline nested `if` must not capture an outer, aligned else clause.
+    // Else-if recursion retains the column of the original clause header.
+    if (check(TokType::KW_ELSE) && current_loc().column == clause_column) {
+        advance();
         skip_newlines();
         if (check(TokType::KW_IF)) {
             // else-if: no colon between `else` and `if`.
-            auto nested = parse_if_stmt();
+            auto nested = parse_if_stmt(clause_column);
             VERIFY_NODE(nested);
             else_block = nested.value();
         } else {
             VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_IF);
-            auto else_stmt = parse_indented_block();
+            auto else_stmt = parse_block();
             VERIFY_NODE(else_stmt);
             else_block = else_stmt.value();
         }
@@ -357,7 +362,25 @@ ErrorOr<AST::StmtPtr> Parser::parse_expression_stmt()
     return make_expr_stmt(expr, expr->get_location());
 }
 
-ErrorOr<AST::StmtPtr> Parser::parse_indented_block()
+ErrorOr<AST::StmtPtr> Parser::parse_block(Array<AST::ExprPtr>* members)
+{
+    NestingLevel nesting(&m_nesting_level, current_loc());
+    if (check(TokType::NEWLINE) || check(TokType::INDENT))
+        return parse_indented_block(members);
+
+    if (check(TokType::DEDENT) || we_done())
+        return report_error(ErrorCode::EXPECTED_INDENT, current_loc());
+
+    TRY(stmt, members ? parse_class_method_statement(*members) : parse_statement());
+    // Simple inline bodies own exactly one statement on their logical line.
+    // Compound statements may already have consumed intervening newlines.
+    if ((AST::is_return(stmt) || AST::is_break(stmt) || AST::is_continue(stmt) || AST::is_expr(stmt))
+        && !(check(TokType::NEWLINE) || check(TokType::DEDENT) || we_done()))
+        return report_error(ErrorCode::UNEXPECTED_TOKEN, current_loc());
+    return AST::make_block({ stmt }, stmt->get_location());
+}
+
+ErrorOr<AST::StmtPtr> Parser::parse_indented_block(Array<AST::ExprPtr>* members)
 {
     TokenPtr start = current_token();
     skip_newlines();
@@ -370,10 +393,10 @@ ErrorOr<AST::StmtPtr> Parser::parse_indented_block()
 
     while (!check(TokType::DEDENT) && !we_done() && !diagnostic::is_saturated()) {
         skip_newlines();
-        if (check(TokType::DEDENT))
+        if (check(TokType::DEDENT) || we_done())
             break;
 
-        auto stmt = parse_statement();
+        auto stmt = members ? parse_class_method_statement(*members) : parse_statement();
         if (stmt.has_value()) {
             stmts.push(stmt.value());
         } else {
@@ -407,9 +430,8 @@ ErrorOr<AST::StmtPtr> Parser::parse_function_def()
 
     VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_FN);
 
-    auto body = parse_indented_block();
+    auto body = parse_block();
     VERIFY_NODE(body);
-
     return make_function(
         AST::make_identifier(name_tok->lexeme(), name_tok->location()),
         { params.value() },
@@ -444,8 +466,6 @@ ErrorOr<AST::StmtPtr> Parser::parse_class_def()
     }
 
     VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_CLASS);
-    skip_newlines();
-    VERIFY_TOKEN(TokType::INDENT, ErrorCode::EXPECTED_INDENT);
 
     /// Collect members and / or methods
     /// member values must be defined inside 'init' method
@@ -453,7 +473,20 @@ ErrorOr<AST::StmtPtr> Parser::parse_class_def()
     Array<AST::ExprPtr> members = Array<AST::ExprPtr>::with_capacity(4);
     Array<AST::StmtPtr> methods = Array<AST::StmtPtr>::with_capacity(4);
 
+    if (!check(TokType::NEWLINE) && !check(TokType::INDENT)) {
+        TRY(method, parse_class_method(members));
+        methods.push(method);
+        return AST::make_class_def(class_name, parent, members, methods, start->location());
+    }
+
+    skip_newlines();
+    VERIFY_TOKEN(TokType::INDENT, ErrorCode::EXPECTED_INDENT);
+
     while (!check(TokType::DEDENT) && !we_done()) {
+        skip_newlines();
+        if (check(TokType::DEDENT) || we_done())
+            break;
+
         auto method = parse_class_method(members);
         if (method.has_value()) {
             methods.push(method.value());
@@ -660,79 +693,56 @@ ErrorOr<AST::StmtPtr> Parser::parse_class_method(Array<AST::ExprPtr>& members)
     VERIFY_NODE(params);
 
     VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_FN);
-    skip_newlines();
-    VERIFY_TOKEN(TokType::INDENT, ErrorCode::EXPECTED_INDENT);
-
-    Array<AST::StmtPtr> stmts;
-
-    while (!check(TokType::DEDENT) && !we_done()) {
-        skip_newlines();
-        if (check(TokType::DEDENT))
-            break;
-
-        if (match(TokType::DOT)) {
-            // `.field = expr` member-initializer syntax inside a method body.
-            if (!check(TokType::IDENTIFIER))
-                return report_error(ErrorCode::INVALID_ASSIGN_TARGET, current_loc());
-
-            TokenPtr member_tok = current_token();
-            StringRef mname = member_tok->lexeme();
-            advance();
-
-            // Desugar `.field` to a GET expression (instance.field), not an
-            // INDEX_READ expression with a string key.  The compiler's fas
-            // field-access path (compile_get_i / SET_FIELD) specifically looks
-            // for GetExpr with a NAME member; an index form would silently
-            // fall back to the slow dict-style path for every field access.
-            AST::ExprPtr target = AST::make_get_expr(
-                AST::make_identifier(kClassInstanceName, member_tok->location()),
-                AST::make_identifier(mname, member_tok->location()),
-                member_tok->location());
-
-            AST::AssignExpr* member_assign = nullptr;
-
-            if (check(TokType::OP_ASSIGN)) {
-                advance();
-                TRY(rhs, parse_assignment_expr(false));
-                member_assign = AST::make_assignment_expr(target, rhs, member_tok->location());
-            } else if (is_augmented_assign_tok(current_token())) {
-                TokenPtr op_tok = current_token();
-                advance();
-                TRY(rhs, parse_expression());
-                AST::ExprKind op = to_op(op_tok->type(), false);
-                // target->clone() reads the current field value (GET read);
-                // `target` itself is the write target.
-                auto* bin = AST::make_binary(op, target->clone(), rhs, target->get_location());
-                member_assign = AST::make_assignment_expr(target, bin, member_tok->location());
-                member_assign->augmented = true;
-            } else {
-                return report_error(ErrorCode::INVALID_ASSIGN_TARGET, current_loc());
-            }
-
-            push_member_once(members, AST::make_identifier(mname, member_tok->location()));
-            stmts.push(AST::make_expr_stmt(member_assign, member_tok->location()));
-            continue;
-        }
-
-        // Regular statement inside the method body.
-        TRY(s, parse_statement());
-        collect_this_field_assignment(members, s);
-        stmts.push(s);
-    }
-
-    AST::BlockStmt* block = AST::make_block(
-        stmts,
-        stmts.empty() ? start->location() : stmts[0]->get_location());
-
-    if (check(TokType::ENDMARKER))
-        return AST::make_function(
-            AST::make_identifier(fn_name, name_tok->location()),
-            { params.value() }, block, start->location());
-
-    VERIFY_TOKEN(TokType::DEDENT, ErrorCode::EXPECTED_DEDENT);
+    TRY(body, parse_block(&members));
     return AST::make_function(
         AST::make_identifier(fn_name, name_tok->location()),
-        params.value().empty() ? Array<AST::ExprPtr> { } : params.value(), block, start->location());
+        params.value(), body, start->location());
+}
+
+ErrorOr<AST::StmtPtr> Parser::parse_class_method_statement(Array<AST::ExprPtr>& members)
+{
+    if (!match(TokType::DOT)) {
+        TRY(stmt, parse_statement());
+        collect_this_field_assignment(members, stmt);
+        return stmt;
+    }
+
+    // `.field := expr` has the same meaning in inline and indented methods.
+    if (!check(TokType::IDENTIFIER))
+        return report_error(ErrorCode::INVALID_ASSIGN_TARGET, current_loc());
+
+    TokenPtr member_tok = current_token();
+    StringRef mname = member_tok->lexeme();
+    advance();
+
+    // Use a GET target so the compiler emits field access, not dictionary access.
+    AST::ExprPtr target = AST::make_get_expr(
+        AST::make_identifier(kClassInstanceName, member_tok->location()),
+        AST::make_identifier(mname, member_tok->location()),
+        member_tok->location());
+
+    AST::AssignExpr* member_assign = nullptr;
+    if (check(TokType::OP_ASSIGN)) {
+        advance();
+        TRY(rhs, parse_assignment_expr(false));
+        member_assign = AST::make_assignment_expr(target, rhs, member_tok->location());
+    } else if (is_augmented_assign_tok(current_token())) {
+        TokenPtr op_tok = current_token();
+        advance();
+        TRY(rhs, parse_expression());
+        AST::ExprKind op = to_op(op_tok->type(), false);
+        auto* bin = AST::make_binary(op, target->clone(), rhs, target->get_location());
+        member_assign = AST::make_assignment_expr(target, bin, member_tok->location());
+        member_assign->augmented = true;
+    } else {
+        return report_error(ErrorCode::INVALID_ASSIGN_TARGET, current_loc());
+    }
+
+    if (!(check(TokType::NEWLINE) || check(TokType::DEDENT) || we_done()))
+        return report_error(ErrorCode::UNEXPECTED_TOKEN, current_loc());
+
+    push_member_once(members, AST::make_identifier(mname, member_tok->location()));
+    return AST::make_expr_stmt(member_assign, member_tok->location());
 }
 
 ErrorOr<Array<AST::ExprPtr>> Parser::parse_parameters_list()
