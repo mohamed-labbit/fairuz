@@ -1,0 +1,24 @@
+site_name: Fairuz documentation
+site_description: Language, runtime, and standard library reference for Fairuz
+docs_dir: docs
+site_dir: site
+use_directory_urls: false
+theme:
+  name: mkdocs
+  locale: en
+  highlightjs: true
+  hljs_languages:
+    - python
+plugins:
+  - search
+markdown_extensions:
+  - fenced_code
+  - tables
+  - attr_list
+  - toc:
+      permalink: true
+extra_css:
+  - assets/extra.css
+extra_javascript:
+  - assets/fairuz-highlight.js
+  - assets/arabic-search.js

@@ -1,0 +1,99 @@
+site_name: توثيق فيروز
+site_description: مرجع لغة فيروز ووقت تشغيلها ومكتبتها القياسية
+docs_dir: docs_ar
+site_dir: site_ar
+use_directory_urls: false
+theme:
+  name: mkdocs
+  locale: ar
+  highlightjs: true
+plugins:
+  - search
+markdown_extensions:
+  - fenced_code
+  - tables
+  - attr_list
+  - toc:
+      permalink: true
+extra_css:
+  - assets/extra.css
+extra_javascript:
+  - assets/fairuz-highlight.js
+  - assets/arabic-search.js
+  - assets/ui-ar.js
+# BEGIN GENERATED NAV
+nav:
+  - الرئيسية: index.md
+  - البدء:
+      - 'البناء والتثبيت': getting-started/installation.md
+      - 'البرنامج الأول': getting-started/first-program.md
+      - 'تشغيل البرامج': getting-started/running-programs.md
+  - الدروس:
+      - 'دروس فيروز': tutorial/index.md
+  - اللغة:
+      - 'المدخل': language/index.md
+      - 'البنية المعجمية': language/lexical-structure.md
+      - 'القيم والأنواع': language/types-and-values.md
+      - 'التعبيرات': language/expressions.md
+      - 'التعليمات': language/statements.md
+      - 'الدوال والأصناف': language/functions.md
+      - 'النطاقات': language/scope-and-bindings.md
+      - 'الوحدات والاستيراد': language/modules-and-imports.md
+      - 'الأخطاء': language/errors.md
+  - وقت التشغيل:
+      - 'المدخل': runtime/index.md
+      - 'آلية التنفيذ': runtime/execution-model.md
+      - 'سلوك الأعداد': runtime/numeric-behavior.md
+      - 'الذاكرة والمراجع': runtime/memory-management.md
+      - 'تحميل الوحدات': runtime/module-loading.md
+  - المكتبة القياسية:
+      - 'فهرس الوحدات': standard-library/index.md
+      - 'الدوال المدمجة': standard-library/builtins.md
+      - '`أدوات_التكرار`': standard-library/modules/أدوات_التكرار.md
+      - '`أسرار`': standard-library/modules/أسرار.md
+      - '`أعداد`': standard-library/modules/أعداد.md
+      - '`إحصاء`': standard-library/modules/إحصاء.md
+      - '`إعدادات`': standard-library/modules/إعدادات.md
+      - '`اختبار`': standard-library/modules/اختبار.md
+      - '`انواع`': standard-library/modules/انواع.md
+      - '`تاريخ_ووقت`': standard-library/modules/تاريخ_ووقت.md
+      - '`تراكيب`': standard-library/modules/تراكيب.md
+      - '`ترميزات`': standard-library/modules/ترميزات.md
+      - '`تعابير_نمطية`': standard-library/modules/تعابير_نمطية.md
+      - '`جيسون`': standard-library/modules/جيسون.md
+      - '`حزمة`': standard-library/modules/حزمة.md
+      - '`دوالية`': standard-library/modules/دوالية.md
+      - '`رياضيات`': standard-library/modules/رياضيات.md
+      - '`زمن`': standard-library/modules/زمن.md
+      - '`سجل`': standard-library/modules/سجل.md
+      - '`سلاسل`': standard-library/modules/سلاسل.md
+      - '`ضغط`': standard-library/modules/ضغط.md
+      - '`طرفية`': standard-library/modules/طرفية.md
+      - '`عشوائي`': standard-library/modules/عشوائي.md
+      - '`عقد_البدائيات`': standard-library/modules/عقد_البدائيات.md
+      - '`عمليات_فرعية`': standard-library/modules/عمليات_فرعية.md
+      - '`عناوين_شبكية`': standard-library/modules/عناوين_شبكية.md
+      - '`قاعدة_سكليت`': standard-library/modules/قاعدة_سكليت.md
+      - '`قواميس`': standard-library/modules/قواميس.md
+      - '`قيم_مفصولة`': standard-library/modules/قيم_مفصولة.md
+      - '`لا_متزامن`': standard-library/modules/لا_متزامن.md
+      - '`لف_النص`': standard-library/modules/لف_النص.md
+      - '`مجموعات`': standard-library/modules/مجموعات.md
+      - '`محلل_وسائط`': standard-library/modules/محلل_وسائط.md
+      - '`مسارات`': standard-library/modules/مسارات.md
+      - '`معرفات_فريدة`': standard-library/modules/معرفات_فريدة.md
+      - '`مكررات`': standard-library/modules/مكررات.md
+      - '`ملفات`': standard-library/modules/ملفات.md
+      - '`نتيجة`': standard-library/modules/نتيجة.md
+      - '`نسخ`': standard-library/modules/نسخ.md
+      - '`نظام_التشغيل`': standard-library/modules/نظام_التشغيل.md
+      - '`نظام_الملفات`': standard-library/modules/نظام_الملفات.md
+      - '`وقت_التشغيل`': standard-library/modules/وقت_التشغيل.md
+  - التنفيذ الداخلي:
+      - 'المدخل': implementation/index.md
+      - 'البنية': implementation/architecture.md
+  - صيانة التوثيق:
+      - 'المساهمة': documentation/contributing.md
+      - 'التغطية': documentation/coverage.md
+      - 'المسائل غير المحسومة': documentation/unresolved.md
+# END GENERATED NAV

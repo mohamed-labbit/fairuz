@@ -1,0 +1,44 @@
+# Standard library modules
+
+Each page lists source-level declarations in its `.ف` file. A declaration does not prove that every runtime hook it calls exists. Signatures contain positional parameters only; there are no source-level defaults. `__` names are internal and omitted here. See [unresolved behavior](../documentation/unresolved.md).
+
+- [`أدوات_التكرار`](modules/أدوات_التكرار.md) — 11 public declarations, 0 module-level bindings
+- [`أسرار`](modules/أسرار.md) — 5 public declarations, 0 module-level bindings
+- [`أعداد`](modules/أعداد.md) — 23 public declarations, 0 module-level bindings
+- [`إحصاء`](modules/إحصاء.md) — 11 public declarations, 0 module-level bindings
+- [`إعدادات`](modules/إعدادات.md) — 8 public declarations, 0 module-level bindings
+- [`اختبار`](modules/اختبار.md) — 14 public declarations, 0 module-level bindings
+- [`انواع`](modules/انواع.md) — 4 public declarations, 0 module-level bindings
+- [`تاريخ_ووقت`](modules/تاريخ_ووقت.md) — 20 public declarations, 0 module-level bindings
+- [`تراكيب`](modules/تراكيب.md) — 44 public declarations, 0 module-level bindings
+- [`ترميزات`](modules/ترميزات.md) — 13 public declarations, 0 module-level bindings
+- [`تعابير_نمطية`](modules/تعابير_نمطية.md) — 18 public declarations, 0 module-level bindings
+- [`جيسون`](modules/جيسون.md) — 13 public declarations, 0 module-level bindings
+- [`حزمة`](modules/حزمة.md) — 1 public declarations, 1 module-level bindings
+- [`دوالية`](modules/دوالية.md) — 18 public declarations, 0 module-level bindings
+- [`رياضيات`](modules/رياضيات.md) — 22 public declarations, 0 module-level bindings
+- [`زمن`](modules/زمن.md) — 7 public declarations, 0 module-level bindings
+- [`سجل`](modules/سجل.md) — 23 public declarations, 6 module-level bindings
+- [`سلاسل`](modules/سلاسل.md) — 20 public declarations, 0 module-level bindings
+- [`ضغط`](modules/ضغط.md) — 4 public declarations, 0 module-level bindings
+- [`طرفية`](modules/طرفية.md) — 4 public declarations, 0 module-level bindings
+- [`عشوائي`](modules/عشوائي.md) — 6 public declarations, 0 module-level bindings
+- [`عقد_البدائيات`](modules/عقد_البدائيات.md) — 1 public declarations, 3 module-level bindings
+- [`عمليات_فرعية`](modules/عمليات_فرعية.md) — 11 public declarations, 0 module-level bindings
+- [`عناوين_شبكية`](modules/عناوين_شبكية.md) — 10 public declarations, 0 module-level bindings
+- [`قاعدة_سكليت`](modules/قاعدة_سكليت.md) — 10 public declarations, 0 module-level bindings
+- [`قواميس`](modules/قواميس.md) — 11 public declarations, 0 module-level bindings
+- [`قيم_مفصولة`](modules/قيم_مفصولة.md) — 2 public declarations, 0 module-level bindings
+- [`لا_متزامن`](modules/لا_متزامن.md) — 10 public declarations, 0 module-level bindings
+- [`لف_النص`](modules/لف_النص.md) — 4 public declarations, 0 module-level bindings
+- [`مجموعات`](modules/مجموعات.md) — 35 public declarations, 0 module-level bindings
+- [`محلل_وسائط`](modules/محلل_وسائط.md) — 6 public declarations, 0 module-level bindings
+- [`مسارات`](modules/مسارات.md) — 28 public declarations, 0 module-level bindings
+- [`معرفات_فريدة`](modules/معرفات_فريدة.md) — 7 public declarations, 0 module-level bindings
+- [`مكررات`](modules/مكررات.md) — 33 public declarations, 0 module-level bindings
+- [`ملفات`](modules/ملفات.md) — 26 public declarations, 0 module-level bindings
+- [`نتيجة`](modules/نتيجة.md) — 25 public declarations, 0 module-level bindings
+- [`نسخ`](modules/نسخ.md) — 2 public declarations, 0 module-level bindings
+- [`نظام_التشغيل`](modules/نظام_التشغيل.md) — 10 public declarations, 0 module-level bindings
+- [`نظام_الملفات`](modules/نظام_الملفات.md) — 12 public declarations, 0 module-level bindings
+- [`وقت_التشغيل`](modules/وقت_التشغيل.md) — 14 public declarations, 0 module-level bindings
