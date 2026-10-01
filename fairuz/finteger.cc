@@ -237,8 +237,9 @@ Value add(Value lhs, Value rhs, GarbageCollector& gc)
         if (!__builtin_add_overflow(lhs.as_int(), rhs.as_int(), &result))
             return Value::from_int(result, gc);
 #else
-        // Two signed 48-bit payloads have a signed 49-bit sum.
-        return Value::from_int(lhs.as_int() + rhs.as_int(), gc);
+        i64 a = lhs.as_int(), b = rhs.as_int();
+        if (!((b > 0 && a > INT64_MAX - b) || (b < 0 && a < INT64_MIN - b)))
+            return Value::from_int(a + b, gc);
 #endif
     }
 
@@ -254,8 +255,9 @@ Value sub(Value lhs, Value rhs, GarbageCollector& gc)
         if (!__builtin_sub_overflow(lhs.as_int(), rhs.as_int(), &result))
             return Value::from_int(result, gc);
 #else
-        // The difference of signed 48-bit payloads also fits signed 49 bits.
-        return Value::from_int(lhs.as_int() - rhs.as_int(), gc);
+        i64 a = lhs.as_int(), b = rhs.as_int();
+        if (!((b < 0 && a > INT64_MAX + b) || (b > 0 && a < INT64_MIN + b)))
+            return Value::from_int(a - b, gc);
 #endif
     }
 
