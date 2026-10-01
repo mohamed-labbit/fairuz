@@ -67,7 +67,7 @@ public:
 
     ErrorOr<AST::StmtPtr> parse_statement();
     ErrorOr<AST::StmtPtr> parse_expression_stmt();
-    ErrorOr<AST::StmtPtr> parse_if_stmt();
+    ErrorOr<AST::StmtPtr> parse_if_stmt(u16 clause_column = 0);
     ErrorOr<AST::StmtPtr> parse_while_stmt();
     ErrorOr<AST::StmtPtr> parse_for_stmt();
     ErrorOr<AST::StmtPtr> parse_return_stmt();
@@ -92,11 +92,13 @@ public:
     ErrorOr<AST::ExprPtr> parse_postfix_expr();
     ErrorOr<AST::ExprPtr> parse();
     ErrorOr<Array<AST::ExprPtr>> parse_parameters_list();
-    ErrorOr<AST::StmtPtr> parse_indented_block();
+    ErrorOr<AST::StmtPtr> parse_block(Array<AST::ExprPtr>* members = nullptr);
+    ErrorOr<AST::StmtPtr> parse_indented_block(Array<AST::ExprPtr>* members = nullptr);
     ErrorOr<AST::StmtPtr> parse_class_def();
     ErrorOr<AST::StmtPtr> parse_import_stmt();
     ErrorOr<AST::StmtPtr> parse_assert_stmt();
     ErrorOr<AST::StmtPtr> parse_class_method(Array<AST::ExprPtr>& members);
+    ErrorOr<AST::StmtPtr> parse_class_method_statement(Array<AST::ExprPtr>& members);
     ErrorOr<AST::ExprPtr> parse_member_access();
 
     bool we_done() const;
