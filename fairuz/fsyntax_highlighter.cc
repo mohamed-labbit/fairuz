@@ -163,11 +163,13 @@ private:
 
     void classify_imports()
     {
-        enum class State { None,
+        enum class State {
+            None,
             FromModule,
             DirectModule,
             Member,
-            Alias } state = State::None;
+            Alias
+        } state = State::None;
         bool from_import = false;
         Token* direct_binding = nullptr;
         u32 line = 0;
