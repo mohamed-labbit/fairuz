@@ -460,9 +460,9 @@ public:
 
     // --- existing API, unchanged ---
 
-    constexpr void emit(std::string const& msg, Severity const sv = Severity::ERROR) { emit_error(msg, sv); }
+    void emit(std::string const& msg, Severity const sv = Severity::ERROR) { emit_error(msg, sv); }
 
-    [[noreturn]] constexpr void panic(std::string const& msg)
+    [[noreturn]] void panic(std::string const& msg)
     {
         _panic(msg);
     }
