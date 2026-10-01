@@ -5,8 +5,8 @@
 #include "fmacros.hpp"
 #include "fstring.hpp"
 
-#include <cmath>
 #include <charconv>
+#include <cmath>
 #include <cstdint>
 #include <string>
 
@@ -264,12 +264,12 @@ static u8 arab_digit_to_canon(u32 const cp)
 
 static inline bool try_parse_float_literal(StringRef const& literal, f64& result);
 
-static inline bool try_parse_indoarab_float_literal(StringRef const&literal, f64&result) {
+static inline bool try_parse_indoarab_float_literal(StringRef const& literal, f64& result)
+{
     StringRef ascii_copy = "";
-    for (u64 i = 0; i < literal.len();)
-    {
+    for (u64 i = 0; i < literal.len();) {
         u64 cp_bytes = 0;
-        const u32 cp = decode_utf8_at(literal, i, &cp_bytes);
+        u32 const cp = decode_utf8_at(literal, i, &cp_bytes);
         i += cp_bytes;
         switch (cp) {
         case u'-': ascii_copy += "-"; break;
@@ -419,7 +419,7 @@ static inline bool try_parse_float_literal(StringRef const& literal, f64& result
             normalized.push_back(ch);
     }
     auto parsed = std::from_chars(normalized.data(), normalized.data() + normalized.size(), result);
-    return parsed.ec == std::errc {} && parsed.ptr == normalized.data() + normalized.size();
+    return parsed.ec == std::errc { } && parsed.ptr == normalized.data() + normalized.size();
 }
 
 static inline bool try_parse_integer_literal(StringRef const& literal, int base, i64& result)
