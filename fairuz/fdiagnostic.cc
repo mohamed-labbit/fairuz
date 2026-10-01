@@ -8,13 +8,18 @@
 // header to avoid the circular include (flexer.hpp
 // includes fdiagnostic.hpp)
 
+#include "fwindows.hpp"
 #include <algorithm>
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <string_view>
-#include <unistd.h>
+#ifdef _WIN32
+#    include <io.h>
+#else
+#    include <unistd.h>
+#endif
 #include <wchar.h>
 
 namespace fairuz::diagnostic {
@@ -62,7 +67,12 @@ namespace {
 std::string const& terminal_color(std::string const& color)
 {
     static std::string const empty;
-    static bool const enabled = ::isatty(STDERR_FILENO) != 0
+    static bool const enabled =
+#ifdef _WIN32
+        ::_isatty(::_fileno(stderr)) != 0
+#else
+        ::isatty(STDERR_FILENO) != 0
+#endif
         && std::getenv("NO_COLOR") == nullptr;
     return enabled ? color : empty;
 }
@@ -131,6 +141,29 @@ std::string json_string(std::string_view text)
 // process locale (number parsing and embedding applications rely on it).
 int cell_width(u32 cp)
 {
+#ifdef _WIN32
+    // UTF-16 character classification handles Arabic combining marks without
+    // changing the process locale. Supplementary characters use a surrogate pair.
+    wchar_t text[2];
+    int count = 1;
+    if (cp > 0xffff) {
+        text[0] = static_cast<wchar_t>(0xd800 + ((cp - 0x10000) >> 10));
+        text[1] = static_cast<wchar_t>(0xdc00 + ((cp - 0x10000) & 0x3ff));
+        count = 2;
+    } else {
+        text[0] = static_cast<wchar_t>(cp);
+    }
+    WORD type[2] { };
+    if (GetStringTypeW(CT_CTYPE3, text, count, type)
+        && (type[0] & (C3_NONSPACING | C3_DIACRITIC | C3_VOWELMARK)))
+        return 0;
+    if (cp == 0x200b || cp == 0x200c || cp == 0x200d || cp == 0xfeff
+        || (cp >= 0xfe00 && cp <= 0xfe0f))
+        return 0;
+    if (cp >= 0x1100 && (cp <= 0x115f || cp == 0x2329 || cp == 0x232a || (cp >= 0x2e80 && cp <= 0xa4cf && cp != 0x303f) || (cp >= 0xac00 && cp <= 0xd7a3) || (cp >= 0xf900 && cp <= 0xfaff) || (cp >= 0xfe10 && cp <= 0xfe19) || (cp >= 0xfe30 && cp <= 0xfe6f) || (cp >= 0xff00 && cp <= 0xff60) || (cp >= 0xffe0 && cp <= 0xffe6) || (cp >= 0x1f300 && cp <= 0x1faff) || (cp >= 0x20000 && cp <= 0x3fffd)))
+        return 2;
+    return 1;
+#else
     static locale_t locale = [] {
         auto result = newlocale(LC_CTYPE_MASK, "C.UTF-8", nullptr);
         if (!result)
@@ -143,6 +176,7 @@ int cell_width(u32 cp)
     int width = wcwidth(static_cast<wchar_t>(cp));
     uselocale(previous);
     return std::max(0, width);
+#endif
 }
 
 } // namespace
