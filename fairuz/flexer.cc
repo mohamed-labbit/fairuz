@@ -5,6 +5,7 @@
 #include "flexer.hpp"
 #include "fctype.hpp"
 #include "fmacros.hpp"
+#include "fplatform.hpp"
 #include "fstring.hpp"
 #include "ftoken.hpp"
 #include "futil.hpp"
@@ -55,7 +56,7 @@ namespace fs = std::filesystem;
 FileManager::FileManager(std::string const& filepath)
     : m_file_path(filepath)
 {
-    std::ifstream in(filepath, std::ios::binary);
+    std::ifstream in(platform::path(filepath), std::ios::binary);
     if (!in)
         diagnostic::panic(ErrorCode::FILE_NOT_OPEN, filepath);
 
@@ -65,7 +66,7 @@ FileManager::FileManager(std::string const& filepath)
     if (!content.empty())
         ::memcpy(m_input_buffer.data(), content.data(), content.size());
     m_input_buffer.trim_whitespace(false, true);
-    m_last_known_write_time = fs::last_write_time(filepath);
+    m_last_known_write_time = fs::last_write_time(platform::path(filepath));
 }
 
 StringRef FileManager::load(std::string const& filepath, bool replace)
@@ -73,7 +74,7 @@ StringRef FileManager::load(std::string const& filepath, bool replace)
     if (filepath.empty())
         return "";
 
-    std::ifstream in(filepath, std::ios::binary);
+    std::ifstream in(platform::path(filepath), std::ios::binary);
     std::string content { std::istreambuf_iterator<char> { in },
         std::istreambuf_iterator<char> { } };
     StringRef ret(content.size(), '\0');
@@ -85,7 +86,7 @@ StringRef FileManager::load(std::string const& filepath, bool replace)
     if (replace || m_file_path.empty()) {
         m_input_buffer = ret;
         m_file_path = filepath;
-        m_last_known_write_time = fs::last_write_time(filepath);
+        m_last_known_write_time = fs::last_write_time(platform::path(filepath));
     }
 
     return ret;
