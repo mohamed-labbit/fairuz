@@ -1,8 +1,8 @@
+#include "fplatform.hpp"
 //
 // vm.cc
 //
 
-#include "fvm.hpp"
 #include "fAST.hpp"
 #include "fcompiler.hpp"
 #include "fdiagnostic.hpp"
@@ -15,6 +15,7 @@
 #include "fstring.hpp"
 #include "futil.hpp"
 #include "fvalue.hpp"
+#include "fvm.hpp"
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -383,28 +384,28 @@ std::filesystem::path VM::resolve_module_path(std::string const& name) const
     size_t begin = 0;
     while (begin < name.size()) {
         size_t dot = name.find('.', begin);
-        relative /= name.substr(begin, dot == std::string::npos ? std::string::npos : dot - begin);
+        relative /= platform::path(name.substr(begin, dot == std::string::npos ? std::string::npos : dot - begin));
         if (dot == std::string::npos)
             break;
         begin = dot + 1;
     }
-    relative += ".ف";
+    relative += platform::path(".ف");
 
     std::vector<std::filesystem::path> roots;
     // Standard-library roots are authoritative for module names they contain.
     // This prevents a project file such as `file.ف` from accidentally
     // shadowing the bundled module. Names absent from these roots still fall
     // through to the importing module's directory for normal relative imports.
-    if (char const* configured = std::getenv("FAIRUZ_STDLIB"))
-        roots.emplace_back(configured);
+    if (auto configured = platform::environment("FAIRUZ_STDLIB"); !configured.empty())
+        roots.emplace_back(platform::path(configured));
 #ifdef FAIRUZ_SOURCE_STDLIB_DIR
-    roots.emplace_back(FAIRUZ_SOURCE_STDLIB_DIR);
+    roots.emplace_back(platform::path(FAIRUZ_SOURCE_STDLIB_DIR));
 #endif
 #ifdef FAIRUZ_INSTALL_STDLIB_DIR
-    roots.emplace_back(FAIRUZ_INSTALL_STDLIB_DIR);
+    roots.emplace_back(platform::path(FAIRUZ_INSTALL_STDLIB_DIR));
 #endif
     if (m_frames_top > 0 && !frame().chunk->source_path.empty())
-        roots.push_back(std::filesystem::path(frame().chunk->source_path).parent_path());
+        roots.push_back(platform::path(frame().chunk->source_path).parent_path());
     roots.push_back(std::filesystem::current_path());
 
     std::error_code ec;
@@ -425,7 +426,7 @@ ObjModule* VM::load_module(std::string const& name)
     std::filesystem::path path = resolve_module_path(name);
     if (path.empty())
         raise_error(ErrorCode::MODULE_NOT_FOUND, "'" + name + "'");
-    std::string key = path.string();
+    std::string key = platform::utf8(path);
     if (auto found = m_module_cache.find(key); found != m_module_cache.end())
         return found->second;
 
