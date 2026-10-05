@@ -26,8 +26,8 @@
 #include "fairuz/fwindows.hpp"
 #include <algorithm>
 #ifdef _WIN32
-#include <fcntl.h>
-#include <io.h>
+#    include <fcntl.h>
+#    include <io.h>
 #endif
 
 namespace {
@@ -169,7 +169,6 @@ void printAst(fairuz::Array<fairuz::AST::StmtPtr> const& stmts)
         printer.print(stmts[i]);
 }
 
-
 } // namespace
 
 ExitCode format_file(std::string filename, fairuz::Formatter& fmter, size_t& file_count, bool check_only)
@@ -303,8 +302,7 @@ int run_main(int argc, char** argv)
     } diagnostic_output { options.json_diagnostics };
 
     try {
-        if (options.format_file)
-        {
+        if (options.format_file) {
             if (std::filesystem::is_symlink(fairuz::platform::path(options.input_path))) {
                 std::cerr << "Path provided is not an ordinary file\n";
                 return static_cast<int>(ExitCode::Usage);
@@ -351,6 +349,11 @@ int run_main(int argc, char** argv)
             return static_cast<int>(ExitCode::DataError);
         chunk->source_path = options.input_path;
 
+        if (options.check_only && !fairuz::runtime::Compiler::compile_all(chunk)) {
+            fairuz::diagnostic::dump();
+            return static_cast<int>(ExitCode::DataError);
+        }
+
         if (options.dump_bytecode)
             chunk->disassemble();
 
@@ -359,7 +362,7 @@ int run_main(int argc, char** argv)
 
         fairuz::runtime::VM vm;
         auto const start = std::chrono::steady_clock::now();
-        vm.run(chunk);
+        vm.run(chunk, &compiler);
         auto const end = std::chrono::steady_clock::now();
 
         if (options.print_time) {
@@ -405,7 +408,8 @@ int wmain(int argc, wchar_t** argv)
         arguments.emplace_back(reinterpret_cast<char const*>(text.data()), text.size());
     }
     std::vector<char*> pointers;
-    for (auto& arg : arguments) pointers.push_back(arg.data());
+    for (auto& arg : arguments)
+        pointers.push_back(arg.data());
     pointers.push_back(nullptr);
     return run_main(argc, pointers.data());
 }
