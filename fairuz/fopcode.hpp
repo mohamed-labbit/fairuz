@@ -5,6 +5,8 @@
 #include "fobject.hpp"
 #include "fstring.hpp"
 
+#include <functional>
+
 namespace fairuz::runtime {
 
 static constexpr u16 JUMP_OFFSET = 32767;
@@ -290,6 +292,9 @@ struct Chunk {
     GlobalEnvironment* globals { nullptr };
     int arity { 0 };
     u32 local_count { 0 };
+
+    // Empty after successful first-call compilation. Captures definition-time context.
+    std::function<bool(Chunk*)> deferred_body;
 
     Array<u32> code;
     Array<SourceLocation> locations;
