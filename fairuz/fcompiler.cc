@@ -288,6 +288,85 @@ ErrorOr<bool> Compiler::compile_while(AST::WhileStmt* s)
     return true;
 }
 
+bool Compiler::compile_function_deferred(Chunk* chunk)
+{
+    if (!chunk->deferred_body)
+        return true;
+
+    diagnostic::SourceScope source_scope(chunk->source);
+    // Compile transactionally: a failed attempt must leave a callable stub,
+    // never partial bytecode or stale constant-cache indices.
+    Chunk compiled;
+    compiled.name = chunk->name;
+    compiled.source = chunk->source;
+    compiled.source_path = chunk->source_path;
+    compiled.globals = chunk->globals;
+    compiled.arity = chunk->arity;
+    if (!chunk->deferred_body(&compiled))
+        return false;
+    *chunk = std::move(compiled);
+    return true;
+}
+
+bool Compiler::compile_all(Chunk* chunk)
+{
+    if (!compile_function_deferred(chunk))
+        return false;
+    for (Chunk* function : chunk->functions) {
+        if (!compile_all(function))
+            return false;
+    }
+    return true;
+}
+
+void Compiler::defer_function_body(Chunk* chunk, AST::FuncDefStmt const* node,
+    CompilerState state, StringRef receiver_class)
+{
+    // AST nodes and their spellings live in the same arena as chunks. Capture
+    // compiler tables by value so neither stack state nor the original Compiler
+    // needs to survive (in particular, for imported modules).
+    state.chunk = nullptr;
+    state.enclosing = nullptr;
+    chunk->deferred_body = [node, state, receiver_class,
+                               globals = m_globals, modules = m_module_names,
+                               classes = m_class_registry](Chunk* target) {
+        Compiler compiler;
+        compiler.m_globals = globals;
+        compiler.m_module_names = modules;
+        compiler.m_class_registry = classes;
+        CompilerState function_state = state;
+        function_state.chunk = target;
+        auto result = compiler.compile_function_body(node, function_state, receiver_class);
+        return !result.has_error() && !diagnostic::has_errors();
+    };
+}
+
+ErrorOr<bool> Compiler::compile_function_body(AST::FuncDefStmt const* node,
+    CompilerState& state, StringRef receiver_class)
+{
+    CompilerStateGuard state_guard(m_current, &state);
+    ScopeGuard scope(m_current);
+    reg_t receiver = 0;
+    if (state.is_class_method) {
+        ALLOC_REG(&receiver);
+        declare_local(kClassInstanceName, receiver, receiver_class);
+    }
+    for (AST::ExprPtr param : node->params) {
+        reg_t reg;
+        ALLOC_REG(&reg);
+        declare_local(AST::as_identifier(param)->spelling, reg);
+    }
+    COMPILE_STMT_DISCARD(node->body);
+    if (!state.is_dead) {
+        emit(state.is_class_method
+                ? make_ABC(OpCode::RETURN, receiver, 1, 0)
+                : make_ABC(OpCode::RETURN_NIL, 0, 0, 0),
+            node->get_location());
+    }
+    state.chunk->local_count = state.max_reg;
+    return true;
+}
+
 ErrorOr<bool> Compiler::compile_function_def(AST::FuncDefStmt* f)
 {
     SourceLocation loc = f->get_location();
@@ -309,26 +388,7 @@ ErrorOr<bool> Compiler::compile_function_def(AST::FuncDefStmt* f)
     CompilerState fn_state;
     fn_state.chunk = fn_chunk;
     fn_state.func_name = f->name->spelling;
-    fn_state.enclosing = m_current;
-    CompilerStateGuard state_guard(m_current, &fn_state);
-    ScopeGuard scope(m_current);
-
-    if (f->has_parameters()) {
-        for (AST::ExprPtr param : f->params) {
-            auto p_name = AST::as_identifier(param);
-            reg_t reg;
-            ALLOC_REG(&reg);
-            declare_local(p_name->spelling, reg);
-        }
-    }
-
-    COMPILE_STMT_DISCARD(f->body);
-
-    if (!fn_state.is_dead)
-        emit(make_ABC(OpCode::RETURN_NIL, 0, 0, 0), loc);
-
-    fn_chunk->local_count = fn_state.max_reg;
-    state_guard.restore();
+    defer_function_body(fn_chunk, f, fn_state);
 
     reg_t dst;
     ALLOC_REG(&dst);
@@ -536,33 +596,11 @@ ErrorOr<bool> Compiler::compile_class_def(AST::ClassDefStmt* s)
         CompilerState state;
         state.chunk = ch;
         state.func_name = method->name->spelling;
-        state.enclosing = m_current;
         state.is_class_method = true;
         state.class_field_names = field_names;
         state.class_layout_dynamic = s->parent != nullptr && parent_desc == nullptr;
         state.class_method_names = method_names;
-        CompilerStateGuard state_guard(m_current, &state);
-        ScopeGuard scope(m_current);
-
-        reg_t inst_reg;
-        ALLOC_REG(&inst_reg);
-        declare_local(kClassInstanceName, inst_reg, class_name);
-
-        if (method->has_parameters()) {
-            for (AST::ExprPtr p : method->params) {
-                auto* p_name = AST::as_identifier(p);
-                reg_t reg;
-                ALLOC_REG(&reg);
-                declare_local(p_name->spelling, reg);
-            }
-        }
-
-        COMPILE_STMT_DISCARD(method->body);
-        if (!state.is_dead)
-            emit(make_ABC(OpCode::RETURN, inst_reg, 1, 0), method_loc);
-
-        ch->local_count = state.max_reg;
-        state_guard.restore();
+        defer_function_body(ch, method, state, class_name);
 
         reg_t dst;
         ALLOC_REG(&dst);

@@ -178,6 +178,8 @@ public:
     ~Compiler() = default;
 
     Chunk* compile(Array<AST::StmtPtr> const& stmts);
+    static bool compile_function_deferred(Chunk* chunk);
+    static bool compile_all(Chunk* chunk);
 
 private:
     CompilerState* m_current { nullptr };
@@ -262,6 +264,10 @@ private:
     ErrorOr<bool> compile_if(AST::IfElseStmt* s);
     ErrorOr<bool> compile_while(AST::WhileStmt* s);
     ErrorOr<bool> compile_function_def(AST::FuncDefStmt* f);
+    void defer_function_body(Chunk* chunk, AST::FuncDefStmt const* node,
+        CompilerState state, StringRef receiver_class = { });
+    ErrorOr<bool> compile_function_body(AST::FuncDefStmt const* node,
+        CompilerState& state, StringRef receiver_class);
     ErrorOr<bool> compile_return(AST::ReturnStmt* s);
     ErrorOr<bool> compile_for(AST::ForStmt* s);
     ErrorOr<bool> compile_break(AST::BreakStmt* s);
