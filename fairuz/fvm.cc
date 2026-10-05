@@ -1,8 +1,8 @@
-#include "fplatform.hpp"
 //
 // vm.cc
 //
 
+#include "fvm.hpp"
 #include "fAST.hpp"
 #include "fcompiler.hpp"
 #include "fdiagnostic.hpp"
@@ -12,10 +12,11 @@
 #include "fobject.hpp"
 #include "fopcode.hpp"
 #include "fparser.hpp"
+#include "fplatform.hpp"
 #include "fstring.hpp"
 #include "futil.hpp"
 #include "fvalue.hpp"
-#include "fvm.hpp"
+
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -456,7 +457,7 @@ ObjModule* VM::load_module(std::string const& name)
     return module;
 }
 
-Value VM::run(Chunk* chunk)
+Value VM::run(Chunk* chunk, Compiler*)
 {
     if (chunk == nullptr)
         return Value::nil();
@@ -1212,7 +1213,6 @@ Value VM::execute(int stop_frame_depth)
         reg_t argc = instr_B(instr);
         Value callee = cur_base[fn_reg];
         int base = cur_frame_base + fn_reg + 1;
-
         SAVE_IP();
         call_value(callee, argc, base, false);
 
@@ -1774,6 +1774,7 @@ void VM::invoke_method(Chunk* target_chunk, Value self_val,
     if (UNLIKELY(m_frames_top >= MAX_FRAMES))
         raise_error(ErrorCode::STACK_OVERFLOW);
 
+    ensure_compiled(target_chunk);
     int local_count = target_chunk->local_count;
     int new_top = call_base + local_count + 1;
     if (UNLIKELY(new_top > STACK_SIZE))
@@ -1810,10 +1811,12 @@ void VM::call_value(Value callee, int argc, int call_base, bool tail)
         ObjFunction* fn = callee.as_func();
         Chunk* fchk = fn->chunk;
         int arity = fchk->arity;
-        int local_count = fchk->local_count;
 
         if (argc != arity)
             raise_error(ErrorCode::WRONG_ARG_COUNT, std::string(fchk->name.data(), fchk->name.len()) + "() expected " + std::to_string(arity) + " arguments but got " + std::to_string(argc));
+
+        ensure_compiled(fchk);
+        int local_count = fchk->local_count;
 
         if (local_count < argc)
             raise_error(ErrorCode::WRONG_ARG_COUNT);
@@ -1898,6 +1901,7 @@ void VM::call_value(Value callee, int argc, int call_base, bool tail)
         if (UNLIKELY(argc + 1 != ctor_chunk->arity))
             raise_error(ErrorCode::WRONG_ARG_COUNT);
 
+        ensure_compiled(ctor_chunk);
         int local_count = ctor_chunk->local_count;
 
         // NEW: honor tail — reuse the caller's own frame slot instead of
@@ -1956,6 +1960,7 @@ void VM::call_value(Value callee, int argc, int call_base, bool tail)
         Chunk* target = inst->klass->vtable[static_cast<u32>(slot)];
         if (UNLIKELY(argc + 1 != target->arity))
             raise_error(ErrorCode::WRONG_ARG_COUNT);
+        ensure_compiled(target);
 
         if (tail && m_frames_top > 0) {
             CallFrame old_frame = m_frames[m_frames_top - 1];
@@ -2057,6 +2062,17 @@ ObjString* VM::intern(StringRef const& str)
     ObjString* obj = m_gc.make_obj_string(str);
     m_string_table.insert_or_assign(str, obj);
     return obj;
+}
+
+void VM::ensure_compiled(Chunk* ch)
+{
+    if (!ch->deferred_body)
+        return;
+    if (!Compiler::compile_function_deferred(ch)) {
+        diagnostic::dump();
+        halt();
+    }
+    intern_chunk_constants(ch);
 }
 
 void VM::intern_chunk_constants(Chunk* ch)

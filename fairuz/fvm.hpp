@@ -22,6 +22,8 @@ class FileManager;
 
 namespace fairuz::runtime {
 
+class Compiler;
+
 struct RuntimeHalt final : public std::runtime_error {
     RuntimeHalt()
         : std::runtime_error("runtime error")
@@ -67,7 +69,8 @@ public:
     VM();
     ~VM();
 
-    Value run(Chunk* chunk);
+    // The optional compiler argument is retained for existing callers; chunks own their context.
+    Value run(Chunk* chunk, Compiler* cmp = nullptr);
 
     /// Builtin functions that require access to memory or internal interpreter
     /// state, or maybe just have to be really efficient.
@@ -208,6 +211,7 @@ public:
     [[noreturn]] void _raise_error(ErrorCode errc, std::string const& detail = "");
     [[noreturn]] void halt();
 
+    void ensure_compiled(Chunk* ch);
     void intern_chunk_constants(Chunk* ch);
 
     void ensure_stack_slots(int needed);
