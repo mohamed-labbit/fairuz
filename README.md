@@ -297,6 +297,11 @@ fairuz format [--check] <file-or-directory>
 
 Options may appear before or after the input path. The CLI accepts one input
 file; it does not currently forward arbitrary arguments to Fairuz programs.
+Normal execution parses the whole input but compiles function and method bodies
+only on their first call, then reuses their bytecode. Unused bodies remain
+uncompiled, so body compilation errors are reported when called. `--check`
+compiles every body in the input without running it. `--dump-bytecode` shows
+the initial bytecode; combine it with `--check` to include all function bodies.
 Imports execute at runtime, so `--check` does not verify imported modules or
 native functions used only during execution. Semantic-token mode accepts `-`
 as its input path to read source from standard input.
