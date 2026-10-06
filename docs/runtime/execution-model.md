@@ -1,6 +1,8 @@
 # Execution model
 
-The CLI reads a UTF-8 source file, lexes and parses it, compiles it, then runs bytecode. Top-level statements execute in order. A function runs only when called. A module's top-level statements execute when its import is first reached. `--check` stops after compilation.
+The CLI reads a UTF-8 source file, lexes and parses it, compiles it, then runs bytecode. Top-level statements execute in order. A function runs only when called. A module's top-level statements execute when its import is first reached. Ordinary function headers are parsed immediately, but their bodies are parsed and compiled on first invocation. An unused function can therefore contain a body syntax or compilation error that normal execution does not report. If a call discovers an invalid body, earlier top-level side effects have already occurred. Lexical errors, indentation errors, and malformed function headers are still diagnosed immediately. Class methods are parsed eagerly to discover fields, then compiled on first invocation.
+
+`--check` parses and compiles unused bodies too, without executing the program or its imports. Formatting and `--dump-ast` parse complete bodies eagerly. See [AST construction and lazy function bodies](../implementation/architecture.md#ast-construction-and-lazy-function-bodies) for the implementation and lifetime rules.
 
 Operands and call arguments are evaluated in source order. Logical `و` and `او` skip the right operand when the left decides the result. `اذا` and `طالما` test [truthiness](../language/types-and-values.md); native `لكل` traverses a list. An uncaught runtime error terminates execution and produces a diagnostic. Recursion, allocation, container sizes, and source nesting have implementation limits rather than unlimited guarantees.
 

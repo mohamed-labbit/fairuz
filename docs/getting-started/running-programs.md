@@ -4,8 +4,8 @@
 
 | Option | Behavior |
 |---|---|
-| `--check` | Parse and compile without executing, including without executing imports. |
-| `--dump-ast` | Print the parsed tree. |
+| `--check` | Parse and compile all bodies, including unused functions, without executing the program or imports. |
+| `--dump-ast` | Eagerly parse function bodies and print the complete tree. |
 | `--dump-bytecode` | Print compiled bytecode. |
 | `--time` | Print execution time to standard error. |
 | `--diagnostics=json` | Emit structured diagnostics on standard error. |
