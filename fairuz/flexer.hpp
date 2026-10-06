@@ -119,7 +119,7 @@ public:
 
     SourceLocation get_source_location() const { return m_context; }
 
-    StringRef source_slice(u64 const start, u64 const end) { return m_file_manager->buffer().slice(start, end); }
+    StringRef source_slice(u64 const start, u64 const end) const { return m_file_manager->buffer().slice(start, end); }
 
     void refresh_current_();
 
@@ -146,7 +146,7 @@ public:
     explicit Lexer() = default;
     explicit Lexer(FileManager* m_file_manager);
     explicit Lexer(Lexer const&) = delete;
-    explicit Lexer(Array<TokenPtr>& seq);
+    explicit Lexer(Array<TokenPtr> const& seq, diagnostic::SourcePtr source = nullptr);
 
     TokenPtr operator()() { return next(); }
     TokenPtr current() const;
@@ -155,6 +155,10 @@ public:
     Array<TokenPtr> tokenize();
     StringRef get_line_at(u32 const line_idx) const { return m_source_manager.get_line_at(line_idx); }
     diagnostic::SourcePtr source() const { return m_source; }
+    StringRef source_slice(size_t start, size_t end) const
+    {
+        return m_source_manager.source_slice(start, end);
+    }
     auto take_error() { return std::exchange(m_pending_error, std::nullopt); }
 
 private:
