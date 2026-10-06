@@ -3,7 +3,9 @@
 
 #include <gtest/gtest.h>
 
+#include <chrono>
 #include <cstdio>
+#include <iomanip>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -191,7 +193,11 @@ int main(int argc, char** argv)
 
     std::cout << "-- If you want to enable performance tests, set TEST_PERF=1 or TEST_PERF=true\n";
 
+    auto const start = std::chrono::steady_clock::now();
     int ret = RUN_ALL_TESTS();
+    auto const elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - start);
+    std::cout << "Total test time: " << std::fixed << std::setprecision(3)
+              << elapsed.count() << " seconds\n";
     fairuz::g_context = nullptr;
 
     return ret;
