@@ -4,6 +4,7 @@
 
 #include "fcompiler.hpp"
 #include "fAST.hpp"
+#include "fASTBuilder.hpp"
 #include "farray.hpp"
 #include "fdiagnostic.hpp"
 #include "ferror.hpp"
@@ -356,7 +357,15 @@ ErrorOr<bool> Compiler::compile_function_body(AST::FuncDefStmt const* node,
         ALLOC_REG(&reg);
         declare_local(AST::as_identifier(param)->spelling, reg);
     }
-    COMPILE_STMT_DISCARD(node->body);
+    AST::StmtPtr body = node->body;
+    if (AST::is_function_stub(body)) {
+        AST::ASTBuilder builder;
+        auto parsed = builder.materialize(*AST::as_function_stub(body));
+        if (parsed.has_error())
+            return parsed.error();
+        body = parsed.value();
+    }
+    COMPILE_STMT_DISCARD(body);
     if (!state.is_dead) {
         emit(state.is_class_method
                 ? make_ABC(OpCode::RETURN, receiver, 1, 0)
