@@ -210,6 +210,9 @@ private:
         std::cout << p.indent << glyph(p.last);
 
         switch (s->get_kind()) {
+        case Stmt::Kind::FUNCTION_STUB:
+            std::cout << color("FunctionStub (unparsed body)", Color::BOLD) << "\n";
+            break;
         case Stmt::Kind::FUNC: {
             auto f = static_cast<FuncDefStmt const*>(s);
             std::cout << color("FuncDefStmt", Color::BOLD) << " " << f->name->spelling << "\n";
