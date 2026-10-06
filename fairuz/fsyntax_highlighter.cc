@@ -412,7 +412,7 @@ Result Highlighter::highlight(StringRef const& source)
     file.buffer() = source;
     diagnostic::set_source(&file);
     try {
-        parser::Parser parser(&file);
+        parser::Parser parser(&file, parser::BodyParsing::Eager);
         Array<AST::StmtPtr> statements = parser.parse_program();
         result.ast_valid = !diagnostic::has_errors();
         AstClassifier(by_offset).program(statements);
