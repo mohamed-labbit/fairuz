@@ -119,6 +119,10 @@ static inline ContinueStmt* continue_stmt()
 {
     return make_continue({ });
 }
+static inline ExprStmt* call_stmt(StringRef const s)
+{
+    return expr_stmt(call_expr(ident(s)));
+}
 
 static inline Value str(char const* s) {
     ObjString* obj =  get_allocator().allocate_object<ObjString>();

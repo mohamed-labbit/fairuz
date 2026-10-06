@@ -159,35 +159,6 @@ TEST(ArrayAllocatorTest, ClearDestroysLiveElements)
     EXPECT_EQ(allocator.bytes, 0u);
 }
 
-TEST(ArenaAllocatorTest, SingleIntAllocation)
-{
-    TestAllocator arena;
-    int* ptr = arena.allocate<int>(1);
-    ASSERT_NE(ptr, nullptr);
-    *ptr = 42;
-    EXPECT_EQ(*ptr, 42);
-}
-
-TEST(ArenaAllocatorTest, MultipleIntAllocations)
-{
-    TestAllocator arena;
-    int* ptr1 = arena.allocate<int>(1);
-    int* ptr2 = arena.allocate<int>(1);
-    int* ptr3 = arena.allocate<int>(1);
-
-    ASSERT_NE(ptr1, nullptr);
-    ASSERT_NE(ptr2, nullptr);
-    ASSERT_NE(ptr3, nullptr);
-
-    *ptr1 = 1;
-    *ptr2 = 2;
-    *ptr3 = 3;
-
-    EXPECT_EQ(*ptr1, 1);
-    EXPECT_EQ(*ptr2, 2);
-    EXPECT_EQ(*ptr3, 3);
-}
-
 TEST(ArenaAllocatorTest, AllocateZeroCount)
 {
     TestAllocator arena;
@@ -294,96 +265,6 @@ TEST(ArenaAllocatorTest, AllocateLargeStruct)
     ptr->data[1023] = 'Y';
     EXPECT_EQ(ptr->data[0], 'X');
     EXPECT_EQ(ptr->data[1023], 'Y');
-}
-
-TEST(ArenaAllocatorTest, FastPool8Bytes)
-{
-    TestAllocator arena;
-    struct Small8 {
-        char data[8];
-    };
-    Small8* ptr = arena.allocate<Small8>(100);
-    ASSERT_NE(ptr, nullptr);
-    ptr[0].data[0] = 'A';
-    EXPECT_EQ(ptr[0].data[0], 'A');
-}
-
-TEST(ArenaAllocatorTest, FastPool16Bytes)
-{
-    TestAllocator arena;
-    struct Small16 {
-        char data[16];
-    };
-    Small16* ptr = arena.allocate<Small16>(100);
-    ASSERT_NE(ptr, nullptr);
-}
-
-TEST(ArenaAllocatorTest, FastPool32Bytes)
-{
-    TestAllocator arena;
-    struct Small32 {
-        char data[32];
-    };
-    Small32* ptr = arena.allocate<Small32>(100);
-    ASSERT_NE(ptr, nullptr);
-}
-
-TEST(ArenaAllocatorTest, FastPool64Bytes)
-{
-    TestAllocator arena;
-    struct Small64 {
-        char data[64];
-    };
-    Small64* ptr = arena.allocate<Small64>(100);
-    ASSERT_NE(ptr, nullptr);
-}
-
-TEST(ArenaAllocatorTest, FastPool128Bytes)
-{
-    TestAllocator arena;
-    struct Small128 {
-        char data[128];
-    };
-    Small128* ptr = arena.allocate<Small128>(100);
-    ASSERT_NE(ptr, nullptr);
-}
-
-TEST(ArenaAllocatorTest, FastPool256Bytes)
-{
-    TestAllocator arena;
-    struct Small256 {
-        char data[256];
-    };
-    Small256* ptr = arena.allocate<Small256>(100);
-    ASSERT_NE(ptr, nullptr);
-}
-
-TEST(ArenaAllocatorTest, FastPoolMixedSizes)
-{
-    TestAllocator arena;
-
-    struct S8 {
-        char data[8];
-    };
-    struct S16 {
-        char data[16];
-    };
-    struct S32 {
-        char data[32];
-    };
-    struct S64 {
-        char data[64];
-    };
-
-    S8* p8 = arena.allocate<S8>(10);
-    S16* p16 = arena.allocate<S16>(10);
-    S32* p32 = arena.allocate<S32>(10);
-    S64* p64 = arena.allocate<S64>(10);
-
-    ASSERT_NE(p8, nullptr);
-    ASSERT_NE(p16, nullptr);
-    ASSERT_NE(p32, nullptr);
-    ASSERT_NE(p64, nullptr);
 }
 
 TEST(ArenaAllocatorTest, ReuseAfterReset)
@@ -522,15 +403,6 @@ TEST(ArenaAllocatorTest, AllocateBlockDirect)
     ptr[1023] = 'Z';
     EXPECT_EQ(ptr[0], 'A');
     EXPECT_EQ(ptr[1023], 'Z');
-}
-
-TEST(ArenaAllocatorTest, AllocateOne)
-{
-    TestAllocator arena;
-    char* ptr = arena.allocate<char>(1);
-    ASSERT_NE(ptr, nullptr);
-    *ptr = 'X';
-    EXPECT_EQ(*ptr, 'X');
 }
 
 TEST(ArenaAllocatorTest, ConsecutiveAllocations)

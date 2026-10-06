@@ -60,6 +60,40 @@ TEST(CliE2E, CheckOnly)
     EXPECT_TRUE(r.out.empty());
 }
 
+TEST(CliE2E, CheckValidatesUnusedFunctionBodies)
+{
+    auto program = write_program("دالة غير_مستعملة():\n    اخرج\nاكتب(42)\n");
+    RunResult normal = run_cli({ fairuz::platform::utf8(program) });
+    EXPECT_EQ(normal.exit_code, 0);
+    EXPECT_EQ(normal.out, "42\n");
+    RunResult checked = run_cli({ "--check", fairuz::platform::utf8(program) });
+    EXPECT_EQ(checked.exit_code, 65);
+    EXPECT_TRUE(checked.out.empty());
+    EXPECT_FALSE(checked.err.empty());
+    std::filesystem::remove(program);
+}
+
+TEST(CliE2E, LazyBodySyntaxErrorsAreValidatedByCheckAstDumpAndFormatter)
+{
+    std::string source = "دالة غير_مستعملة():\n    ارجع +\nاكتب(42)\n";
+    auto program = write_program(source);
+    auto path = fairuz::platform::utf8(program);
+    RunResult normal = run_cli({ path });
+    EXPECT_EQ(normal.exit_code, 0);
+    EXPECT_EQ(normal.out, "42\n");
+    for (auto* option : { "--check", "--dump-ast", "format" }) {
+        SCOPED_TRACE(option);
+        RunResult validated = run_cli({ option, path });
+        EXPECT_EQ(validated.exit_code, 65);
+        if (std::string(option) != "format")
+            EXPECT_TRUE(validated.out.empty());
+        EXPECT_NE(validated.out, "42\n");
+        EXPECT_FALSE(validated.err.empty());
+        EXPECT_EQ(read_file(program), source);
+    }
+    std::filesystem::remove(program);
+}
+
 TEST(CliE2E, FileThenTrailingOption)
 {
     auto program = write_program("اذا 20 + 5 < 400:\n    اكتب(\"صحيح\")\nغيره:\n    اكتب(\"خطأ\")\n");

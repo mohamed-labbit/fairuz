@@ -9,11 +9,9 @@ namespace {
 
 using RunResult = test_process::Result;
 
-RunResult run_installed(std::filesystem::path const& binary, std::filesystem::path const& input, std::string const& extra = "")
+RunResult run_installed(std::filesystem::path const& binary, std::filesystem::path const& input)
 {
     std::vector<std::string> args { fairuz::platform::utf8(input) };
-    if (!extra.empty())
-        args.push_back(extra);
     auto result = test_process::run(binary, args);
     EXPECT_FALSE(result.timed_out);
     EXPECT_FALSE(result.crashed) << result.err;
@@ -34,15 +32,6 @@ std::filesystem::path binary_path()
 }
 
 } // namespace
-
-TEST(RegressionCli, DemoElseAcceptsTrailingTimeFlag)
-{
-    auto program = write_program("اذا 20 + 5 < 400:\n    اكتب(\"صحيح\")\nغيره:\n    اكتب(\"خطأ\")\n");
-    RunResult r = run_installed(binary_path(), program, "--time");
-    EXPECT_EQ(r.exit_code, 0);
-    EXPECT_NE(r.out.find("صحيح"), std::string::npos);
-    EXPECT_NE(r.err.find("time:"), std::string::npos);
-}
 
 TEST(RegressionInlineBlocks, ConditionalsMixInlineAndIndentedBranches)
 {

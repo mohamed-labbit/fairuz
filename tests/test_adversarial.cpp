@@ -93,7 +93,7 @@ TEST_P(AdversarialInterpreter, PreservesSemanticsAndReportsErrorsWithoutCrashing
         break;
     case Expectation::AssignmentError:
         EXPECT_NE(err.find("Assignment is a statement and cannot be used inside an expression"), std::string::npos) << err;
-        EXPECT_TRUE(out.empty()) << "Rejected program executed: " << out;
+        EXPECT_EQ(out, test.output) << "Unexpected execution before assignment error: " << out;
         [[fallthrough]];
     case Expectation::Error:
         EXPECT_EQ(exit_code, 65) << "Expected a language diagnostic\nstdout: " << out << "\nstderr: " << err;
@@ -186,7 +186,9 @@ std::vector<AdversarialCase> semantic_cases()
         { "InvalidNativeArgument", "اضف(1، 2)\n", "", Expectation::Error },
         { "CallNonCallable", "ا := 7\nا()\n", "", Expectation::Error },
         { "WrongFunctionArity", "دالة مثال(ا):\n    ارجع ا\nمثال()\n", "", Expectation::Error },
-        { "UnsupportedNestedFunction", "دالة ا():\n    دالة ب():\n        ارجع 1\n    ارجع ب()\n", "", Expectation::Error },
+        // Body errors are deferred until invocation, or forced by --check.
+        { "UnsupportedNestedFunction", "دالة ا():\n    دالة ب():\n        ارجع 1\n    ارجع ب()\nا()\n", "", Expectation::Error },
+        { "UnsupportedNestedFunctionCheck", "دالة ا():\n    دالة ب():\n        ارجع 1\n    ارجع ب()\n", "", Expectation::Error, true },
         { "BreakOutsideLoop", "اخرج\n", "", Expectation::Error },
         { "ContinueOutsideLoop", "اكمل\n", "", Expectation::Error },
         { "UndefinedTimesZero", "اكتب(مفقود * 0)\n", "", Expectation::Error },
@@ -547,9 +549,12 @@ std::vector<AdversarialCase> assignment_syntax_cases()
     std::vector<AdversarialCase> result;
     for (auto const& test : invalid) {
         for (bool check_only : { false, true }) {
+            // A body error is discovered at first call; earlier top-level
+            // effects remain visible. --check still executes nothing.
+            bool deferred = std::string(test.name) == "Return" && !check_only;
             result.push_back({ std::string(test.name) + (check_only ? "Check" : "Run"),
-                std::string("اكتب(\"must not run\")\n") + test.source,
-                "", Expectation::AssignmentError, check_only });
+                std::string(deferred ? "اكتب(\"before body\")\n" : "اكتب(\"must not run\")\n") + test.source,
+                deferred ? "before body\n" : "", Expectation::AssignmentError, check_only });
         }
     }
     result.push_back({ "StandaloneAndChained",

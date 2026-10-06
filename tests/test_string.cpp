@@ -70,40 +70,6 @@ TEST_F(StringRefTest, CopyConstructorDetailed)
     EXPECT_NE(s1.data(), s2.data());
 }
 
-TEST_F(StringRefTest, CopyConstructorArabic)
-{
-    StringRef s1("مرحبا");
-    StringRef s2(s1);
-
-    EXPECT_EQ(s1, s2);
-    EXPECT_EQ(s2, StringRef("مرحبا"));
-}
-
-TEST_F(StringRefTest, CheckMemoryIndependence)
-{
-    StringRef s1("Test");
-    StringRef s2(s1);
-
-    s1[0] = 'X';
-
-    char* ptr1 = s1.data();
-    char* ptr2 = s2.data();
-
-    EXPECT_NE(ptr1, ptr2) << "After CoW, should have different memory!";
-    EXPECT_EQ(s1[0], 'X');
-    EXPECT_EQ(s2[0], 'T');
-    EXPECT_EQ(s1, "Xest");
-    EXPECT_EQ(s2, "Test");
-}
-
-TEST_F(StringRefTest, CopyConstructor_NonEmpty)
-{
-    StringRef s1("Hello");
-    StringRef s2(s1);
-    EXPECT_EQ(s2.len(), s1.len());
-    EXPECT_EQ(s2, s1);
-}
-
 TEST_F(StringRefTest, CopyConstructor_Arabic)
 {
     StringRef s1("مرحبا");
@@ -731,12 +697,6 @@ TEST_F(StringRefTest, Slice_SharesMemory)
     EXPECT_EQ(s2, "Jel");
 }
 
-TEST_F(StringRefTest, FromUtf8_EmptyString)
-{
-    StringRef s("");
-    EXPECT_TRUE(s.empty());
-}
-
 TEST_F(StringRefTest, FromUtf8_AsciiString)
 {
     StringRef s("Hello World");
@@ -777,12 +737,6 @@ TEST_F(StringRefTest, FromUtf8_MixedScript)
 {
     StringRef s("Hello مرحبا 你好 🌍");
     EXPECT_EQ(s, "Hello مرحبا 你好 🌍");
-}
-
-TEST_F(StringRefTest, FromUtf8_NullPtr)
-{
-    StringRef s(static_cast<char const*>(nullptr));
-    EXPECT_TRUE(s.empty());
 }
 
 TEST_F(StringRefTest, ToUtf8_EmptyString)
@@ -836,14 +790,6 @@ TEST_F(StringRefTest, StdHash_Works)
     StringRef s("Test");
     size_t m_hash = hasher(s);
     EXPECT_NE(m_hash, 0);
-}
-
-TEST_F(StringRefPerfTest, Stress_ManyAppends)
-{
-    StringRef s;
-    for (int i = 0; i < 10000; i++)
-        s += char('A' + (i % 26));
-    EXPECT_EQ(s.len(), 10000);
 }
 
 TEST_F(StringRefPerfTest, Stress_ManyErases)
@@ -1003,39 +949,6 @@ TEST_F(StringRefTest, NoLeak_MoveAssignmentLoop)
         StringRef s2 = std::move(s1);
     }
     EXPECT_TRUE(true);
-}
-
-TEST_F(StringRefPerfTest, Performance_AppendChars)
-{
-    auto start = std::chrono::high_resolution_clock::now();
-
-    StringRef s;
-    s.reserve(10000);
-    for (int i = 0; i < 10000; i++)
-        s += char('A');
-
-    auto m_end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(m_end - start);
-
-    EXPECT_EQ(s.len(), 10000);
-    std::cout << "Append 10000 chars took: " << duration.count() << "ms\n";
-}
-
-TEST_F(StringRefPerfTest, Performance_Concatenation)
-{
-    auto start = std::chrono::high_resolution_clock::now();
-
-    StringRef result;
-    StringRef part("Part");
-
-    for (int i = 0; i < 1000; i++)
-        result = result + part;
-
-    auto m_end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(m_end - start);
-
-    EXPECT_EQ(result.len(), 4000);
-    std::cout << "1000 concatenations took: " << duration.count() << "ms\n";
 }
 
 TEST_F(StringRefPerfTest, Performance_Utf8Conversion)

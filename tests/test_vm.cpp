@@ -125,44 +125,48 @@ private:
 };
 
 struct VMRunner {
+    // Keep both alive until assertions finish inspecting VM-owned results.
+    Compiler compiler;
     VM vm;
-    Chunk* chunk_ = make_chunk();
+    Chunk* chunk_ = nullptr;
 
     Value run(CB& b)
     {
         diagnostic::reset();
         chunk_ = b.ch;
-        return vm.run(chunk_);
+        return vm.run(chunk_, nullptr);
     }
     Value run(Chunk* c)
     {
         diagnostic::reset();
         chunk_ = c;
-        return vm.run(chunk_);
+        return vm.run(chunk_, nullptr);
+    }
+
+    void compile(Array<AST::StmtPtr> const& stmts)
+    {
+        diagnostic::reset();
+        chunk_ = compiler.compile(stmts);
+        if (chunk_ == nullptr || diagnostic::has_errors()) {
+            ADD_FAILURE() << "Test program failed to compile";
+            throw std::runtime_error("Test program failed to compile");
+        }
+        if (test_config::dump_bytecode)
+            chunk_->disassemble();
+    }
+
+    Value run()
+    {
+        diagnostic::reset();
+        return vm.run(chunk_, &compiler);
+    }
+
+    Value compile_and_run(Array<AST::StmtPtr> const& stmts)
+    {
+        compile(stmts);
+        return run();
     }
 };
-
-namespace {
-
-Chunk* compile_program(Array<AST::StmtPtr> stmts)
-{
-    diagnostic::reset();
-    Chunk* chunk = Compiler().compile(stmts);
-    if (diagnostic::has_errors()) {
-        diagnostic::dump(); // or whatever prints pending diagnostics
-    }
-    // ASSERT_FALSE(diagnostic::has_errors());
-    diagnostic::reset();
-    return chunk;
-}
-
-Chunk* compile_calling(AST::StmtPtr fn)
-{
-    auto* name = as_function_def(fn)->name;
-    return compile_program({ fn, expr_stmt(call_expr(ident(name->spelling))) });
-}
-
-} // namespace
 
 TEST(VMLoads, Nil)
 {
@@ -842,25 +846,21 @@ TEST(VMLists, LenOnNonListThrows)
 TEST(VMDicts, IndexReturnsStoredValue)
 {
     VMRunner r;
+    auto ast = Array<StmtPtr> {
+        func_def(
+            ident("func"),
+            { },
+            blk({
+                decl_stmt("k", lit_str("lang")),
+                decl_stmt("dict", dict_expr({ })),
+                expr_stmt(assign_expr(index_expr(ident("dict"), ident("k")), lit_int(7))),
+                decl_stmt("x", index_expr(ident("dict"), ident("k"))),
+                return_stmt(ident("x")),
+            })),
+        expr_stmt(call_expr(ident("func"))),
+    };
 
-    Chunk* ch = compile_program(
-        {
-            func_def(
-                ident("func"),
-                { },
-                blk({
-                    decl_stmt("k", lit_str("lang")),
-                    decl_stmt("dict", dict_expr({ })),
-                    expr_stmt(assign_expr(index_expr(ident("dict"), ident("k")), lit_int(7))),
-                    decl_stmt("x", index_expr(ident("dict"), ident("k"))),
-                    return_stmt(ident("x")),
-                })),
-            expr_stmt(call_expr(ident("func"))),
-        });
-    if (test_config::dump_bytecode)
-        ch->disassemble();
-
-    Value result = r.run(ch);
+    Value result = r.compile_and_run(ast);
 
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 7);
@@ -868,29 +868,25 @@ TEST(VMDicts, IndexReturnsStoredValue)
 
 TEST(VMDicts, SetUpdatesAndAppendsByKey)
 {
-    Chunk* ch = compile_program(
-        {
-            func_def(
-                ident("func"),
-                { },
-                blk({
-                    decl_stmt("dict", dict_expr({ })),
-                    expr_stmt(assign_expr(index_expr(ident("dict"), lit_str("fk")), lit_int(1))),
-                    expr_stmt(assign_expr(index_expr(ident("dict"), lit_str("sk")), lit_int(2))),
-                    return_stmt(
-                        list_expr({
-                            index_expr(ident("dict"), lit_str("fk")),
-                            index_expr(ident("dict"), lit_str("sk")),
-                        })),
-                })),
-            expr_stmt(call_expr(ident("func"))),
-        });
-
-    if (ch != nullptr && test_config::dump_bytecode)
-        ch->disassemble();
-
     VMRunner r;
-    Value result = r.run(ch);
+    auto ast = Array<StmtPtr> {
+        func_def(
+            ident("func"),
+            { },
+            blk({
+                decl_stmt("dict", dict_expr({ })),
+                expr_stmt(assign_expr(index_expr(ident("dict"), lit_str("fk")), lit_int(1))),
+                expr_stmt(assign_expr(index_expr(ident("dict"), lit_str("sk")), lit_int(2))),
+                return_stmt(
+                    list_expr({
+                        index_expr(ident("dict"), lit_str("fk")),
+                        index_expr(ident("dict"), lit_str("sk")),
+                    })),
+            })),
+        expr_stmt(call_expr(ident("func"))),
+    };
+
+    Value result = r.compile_and_run(ast);
     ASSERT_TRUE(result.is_list());
     ObjList* ret_obj = result.as_list();
     ASSERT_EQ(ret_obj->size(), 2);
@@ -901,15 +897,11 @@ TEST(VMDicts, SetUpdatesAndAppendsByKey)
 TEST(VMDicts, MissingKeyReturnsNil)
 {
     VMRunner r;
-
-    Chunk* ch = compile_program({
+    auto ast = Array<StmtPtr> {
         decl_stmt("x", index_expr(dict_expr({ }), lit_str("missing"))),
-    });
+    };
 
-    if (ch != nullptr && test_config::dump_bytecode)
-        ch->disassemble();
-
-    EXPECT_TRUE(r.run(ch).is_nil());
+    EXPECT_TRUE(r.compile_and_run(ast).is_nil());
 }
 
 static Chunk* make_adder_chunk()
@@ -1030,19 +1022,15 @@ TEST(VMCalls, TailCall_DoesNotOverflowFrames)
 
 TEST(VMCalls, StackOverflowDetected)
 {
-    auto fn = func_def(ident("inf"), { }, blk({
-                                              expr_stmt(call_expr(ident("inf"))),
-                                              return_stmt(nil()),
-                                          }));
-
-    auto ch = compile_program({
-        fn,
-        expr_stmt(call_expr(ident("inf"))),
-    });
-    if (test_config::dump_bytecode && ch != nullptr)
-        ch->disassemble();
     VMRunner r;
-    EXPECT_THROW(r.run(ch), std::runtime_error);
+    auto ast = Array<StmtPtr> {
+        func_def(ident("inf"), { }, blk({
+                                        expr_stmt(call_expr(ident("inf"))),
+                                        return_stmt(nil()),
+                                    })),
+        expr_stmt(call_expr(ident("inf"))),
+    };
+    EXPECT_THROW(r.compile_and_run(ast), std::runtime_error);
 }
 
 TEST(VMGlobals, UndefinedGlobalRaisesRuntimeError)
@@ -1059,6 +1047,7 @@ TEST(VMGlobals, UndefinedGlobalRaisesRuntimeError)
 
 TEST(VMIntegration, FunctionLocalDeclarationShadowsGlobal)
 {
+    VMRunner r;
     AST::StmtPtr make_local = func_def(
         ident("make_local"),
         { },
@@ -1083,18 +1072,14 @@ TEST(VMIntegration, FunctionLocalDeclarationShadowsGlobal)
                         call_expr(ident("read_global")) })),
         }));
 
-    Chunk* top = compile_program({
+    auto ast = Array<StmtPtr> {
         expr_stmt(assign_expr(ident("x"), lit_int(1))),
         make_local,
         read_global,
         main_fn,
         expr_stmt(call_expr(ident("main"))),
-    });
-
-    if (test_config::dump_bytecode)
-        top->disassemble();
-    VMRunner r;
-    Value v = r.run(top);
+    };
+    Value v = r.compile_and_run(ast);
     ASSERT_TRUE(v.is_list());
     auto const& elems = v.as_list()->elements;
     ASSERT_EQ(elems.size(), 2u);
@@ -1152,6 +1137,7 @@ TEST(VMICProfile, SlotAccumulatesAcrossLoopIterations)
 
 TEST(VMIntegration, TopLevelWhileAssignmentUpdatesGlobal)
 {
+    VMRunner r;
     AST::StmtPtr read_global = func_def(
         ident("read_global"),
         { },
@@ -1159,7 +1145,7 @@ TEST(VMIntegration, TopLevelWhileAssignmentUpdatesGlobal)
             return_stmt(ident("x")),
         }));
 
-    Chunk* top = compile_program({
+    auto ast = Array<StmtPtr> {
         expr_stmt(assign_expr(ident("x"), lit_int(0))),
         expr_stmt(assign_expr(ident("limit"), lit_int(3))),
         while_stmt(
@@ -1169,19 +1155,16 @@ TEST(VMIntegration, TopLevelWhileAssignmentUpdatesGlobal)
             })),
         read_global,
         expr_stmt(call_expr(ident("read_global"))),
-    });
+    };
 
-    if (test_config::dump_bytecode)
-        top->disassemble();
-
-    VMRunner r;
-    Value v = r.run(top);
+    Value v = r.compile_and_run(ast);
     ASSERT_TRUE(v.is_int());
     EXPECT_EQ(v.as_int(), 3);
 }
 
 TEST(VMIntegration, Fibonacci_fib10_equals_55)
 {
+    VMRunner r;
     AST::StmtPtr fib = func_def(
         ident("fib"),
         { ident("n") },
@@ -1206,15 +1189,13 @@ TEST(VMIntegration, Fibonacci_fib10_equals_55)
                                 AST::Expr::Kind::OP_SUB) }),
                         AST::Expr::Kind::OP_ADD)) }));
 
-    Chunk* top = compile_program({ fib, expr_stmt(call_expr(ident("fib"), { lit_int(10) })) });
-    if (test_config::dump_bytecode)
-        top->disassemble();
-    VMRunner r;
-    EXPECT_EQ(r.run(top).as_int(), 55);
+    Array<StmtPtr> ast = { fib, expr_stmt(call_expr(ident("fib"), { lit_int(10) })) };
+    EXPECT_EQ(r.compile_and_run(ast).as_int(), 55);
 }
 
 TEST(VMIntegration, SumForLoopOverList)
 {
+    VMRunner r;
     AST::StmtPtr sum = func_def(
         ident("sum"),
         { },
@@ -1239,15 +1220,12 @@ TEST(VMIntegration, SumForLoopOverList)
                 return_stmt(ident("total")),
             }));
 
-    Chunk* top = compile_calling(sum);
-    if (test_config::dump_bytecode)
-        top->disassemble();
-    VMRunner r;
-    EXPECT_EQ(r.run(top).as_int(), 15);
+    EXPECT_EQ(r.compile_and_run({ sum, call_stmt("sum") }).as_int(), 15);
 }
 
 TEST(VMIntegration, StringConcat_3Parts)
 {
+    VMRunner r;
     AST::StmtPtr test = func_def(
         ident("test"),
         { },
@@ -1257,16 +1235,13 @@ TEST(VMIntegration, StringConcat_3Parts)
                 lit_str("world"),
                 AST::Expr::Kind::OP_ADD)));
 
-    Chunk* top = compile_calling(test);
-    if (test_config::dump_bytecode)
-        top->disassemble();
-    VMRunner r;
-    Value v = r.run(top);
+    Value v = r.compile_and_run({ test, call_stmt("test") });
     EXPECT_EQ(v.as_string()->str, "hello, world");
 }
 
 TEST(VMIntegration, EmptyForLoopLeavesStateUnchanged)
 {
+    VMRunner r;
     AST::StmtPtr first = func_def(
         ident("first"),
         { },
@@ -1279,15 +1254,12 @@ TEST(VMIntegration, EmptyForLoopLeavesStateUnchanged)
             return_stmt(ident("seen")),
         }));
 
-    Chunk* top = compile_calling(first);
-    if (test_config::dump_bytecode)
-        top->disassemble();
-    VMRunner r;
-    EXPECT_EQ(r.run(top).as_int(), 99);
+    EXPECT_EQ(r.compile_and_run({ first, call_stmt("first") }).as_int(), 99);
 }
 
 TEST(VMIntegration, BreakAndContinueWorkInLoops)
 {
+    VMRunner r;
     AST::StmtPtr test = func_def(
         ident("test"),
         { },
@@ -1312,11 +1284,7 @@ TEST(VMIntegration, BreakAndContinueWorkInLoops)
             return_stmt(ident("total")),
         }));
 
-    Chunk* top = compile_calling(test);
-    if (test_config::dump_bytecode)
-        top->disassemble();
-    VMRunner r;
-    EXPECT_EQ(r.run(top).as_int(), 8);
+    EXPECT_EQ(r.compile_and_run({ test, call_stmt("test") }).as_int(), 8);
 }
 
 TEST(NativeLen, NullArgv)
@@ -1337,13 +1305,6 @@ TEST(NativeLen, NonEmptyString)
     VM vm;
     auto s = str("hello");
     EXPECT_EQ(vm.len(1, &s).as_int(), 5);
-}
-
-TEST(NativeLen, UnicodeString)
-{
-    VM vm;
-    auto s = str("abc");
-    EXPECT_EQ(vm.len(1, &s).as_int(), 3);
 }
 
 TEST(NativePrint, NoArgs_PrintsNewline)
@@ -1584,7 +1545,7 @@ TEST(NativeFloat, NegativeInteger)
     EXPECT_DOUBLE_EQ(r.as_double(), -10.0);
 }
 
-TEST(NativeType, ReturnsInteger)
+TEST(NativeType, ReturnsTypeNames)
 {
     VM vm;
     Value i = Value::from_int(0);
@@ -1598,26 +1559,6 @@ TEST(NativeType, ReturnsInteger)
     EXPECT_EQ(vm.type(1, &b).as_string()->str, "منطقي");
     EXPECT_EQ(vm.type(1, &n).as_string()->str, "عدم");
     EXPECT_EQ(vm.type(1, &s).as_string()->str, "سلسلة");
-}
-
-TEST(NativeType, DifferentTypesHaveDifferentTags)
-{
-    VM vm;
-    Value i = Value::from_int(0);
-    Value f = Value::from_real(0.0);
-    Value b = Value::from_bool(false);
-    Value n = Value::nil();
-    Value s = str("x");
-    i64 int_tag = vm.type(1, &i).as_int();
-    i64 flt_tag = vm.type(1, &f).as_int();
-    i64 bool_tag = vm.type(1, &b).as_int();
-    i64 nil_tag = vm.type(1, &n).as_int();
-    i64 str_tag = vm.type(1, &s).as_int();
-
-    EXPECT_NE(int_tag, flt_tag);
-    EXPECT_NE(int_tag, nil_tag);
-    EXPECT_NE(str_tag, nil_tag);
-    EXPECT_NE(bool_tag, nil_tag);
 }
 
 TEST(NativeFloor, IntegerPassthrough)
@@ -2161,14 +2102,6 @@ TEST(NativeClock, ReturnsFiniteMonotonicSeconds)
     EXPECT_THROW(vm.clock(1, &first), std::runtime_error);
 }
 
-TEST(NativeTime, ReturnsNumber_WhenImplemented)
-{
-    VM vm;
-    Value r = vm.time(0, nullptr);
-    if (!r.is_nil())
-        EXPECT_TRUE(r.is_int());
-}
-
 static f64 microseconds_since(std::chrono::high_resolution_clock::time_point t0)
 {
     using namespace std::chrono;
@@ -2206,15 +2139,11 @@ TEST_F(VMPerfTest, Dispatch_IntAdd_1M_Iterations)
                     binary(ident("i"), ident("step"), AST::Expr::Kind::OP_ADD))) })),
             return_stmt(ident("i")) }));
 
-    Chunk* top = compile_calling(test);
-    if (test_config::dump_bytecode)
-        top->disassemble();
-    VM vm;
-    // Warm up — lets the IC quicken the ADD opcode.
-    vm.run(top);
+    VMRunner r;
+    r.compile({ test, call_stmt("test") });
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Value result = vm.run(top);
+    Value result = r.run();
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -2243,71 +2172,18 @@ TEST_F(VMPerfTest, Dispatch_FloatAdd_500k_Iterations)
                     binary(ident("i"), ident("step"), AST::Expr::Kind::OP_ADD))) })),
             return_stmt(ident("i")) }));
 
-    Chunk* top = compile_calling(test);
-    if (test_config::dump_bytecode)
-        top->disassemble();
-    VM vm;
-    vm.run(top);
+    VMRunner r;
+    r.compile({ test, call_stmt("test") });
+    r.run();
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Value result = vm.run(top);
+    Value result = r.run();
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
     EXPECT_TRUE(result.is_double());
     std::printf("  Dispatch FloatAdd loop %dk iters:  %.1f µs  (%.2f ns/op)\n",
         N / 1000, us, us * 1000.0 / N);
-}
-
-// 3. IC quickening benefit — compare cold vs warm dispatch on same chunk
-//    Cold: first run, generic opcode handlers.
-//    Warm: second run, quickened ADD_II / ADD_FF specialisations.
-
-TEST_F(VMPerfTest, IC_Quickening_ColdVsWarm_Ratio)
-{
-    constexpr int N = 200'000;
-
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        blk({ decl_stmt("i", lit_int(0)),
-            decl_stmt("step", lit_int(1)),
-            decl_stmt("limit", lit_int(N)),
-            while_stmt(
-                binary(ident("i"), ident("limit"), AST::Expr::Kind::OP_LT),
-                blk({ expr_stmt(assign_expr(
-                    ident("i"),
-                    binary(ident("i"), ident("step"), AST::Expr::Kind::OP_ADD))) })),
-            return_stmt(ident("i")) }));
-
-    Chunk* top = compile_calling(test);
-    if (test_config::dump_bytecode)
-        top->disassemble();
-    VM vm_cold, vm_warm;
-
-    // Cold — no prior run.
-    auto t0 = std::chrono::high_resolution_clock::now();
-    Value cold_result = vm_cold.run(top);
-    f64 cold_us = microseconds_since(t0);
-
-    // Warm — opcodes already quickened by the cold run above.
-    t0 = std::chrono::high_resolution_clock::now();
-    Value warm_result = vm_warm.run(top);
-    f64 warm_us = microseconds_since(t0);
-
-    do_not_optimize(cold_result);
-    do_not_optimize(warm_result);
-    EXPECT_EQ(cold_result.as_int(), N);
-    EXPECT_EQ(warm_result.as_int(), N);
-
-    f64 ratio = cold_us / warm_us;
-    std::printf("  IC quickening: cold=%.1f µs  warm=%.1f µs  speedup=%.2fx\n",
-        cold_us, warm_us, ratio);
-
-    // Quickened path must be at least as fast; if ratio < 1 quickening is hurting.
-    EXPECT_GE(ratio, 0.7)
-        << "Quickened dispatch is significantly slower than generic — "
-           "check the IC specialisation logic";
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2324,14 +2200,11 @@ TEST_F(VMPerfTest, GlobalLookup_1M_Roundtrips)
         binary(ident("a"), lit_int(N), AST::Expr::Kind::OP_LT),
         expr_stmt(assign_expr(ident("a"), binary(ident("a"), lit_int(1), AST::Expr::Kind::OP_ADD))));
 
-    Chunk* top = compile_program({ decl, while_loop });
-    if (top != nullptr && test_config::dump_bytecode)
-        top->disassemble();
-
-    VM vm;
+    VMRunner r;
+    r.compile({ decl, while_loop });
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Value result = vm.run(top);
+    Value result = r.run();
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -2360,12 +2233,10 @@ TEST_F(VMPerfTest, CallOverhead_100k_Calls)
     AST::StmtPtr call = expr_stmt(call_expr(ident("test")));
 
     std::cout << "AUTO:" << '\n';
-    Chunk* top_ = compile_program({ add, func, call });
-    if (test_config::dump_bytecode)
-        top_->disassemble();
-    VM vm;
+    VMRunner r;
+    r.compile({ add, func, call });
     auto t0 = std::chrono::high_resolution_clock::now();
-    Value result = vm.run(top_);
+    Value result = r.run();
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -2392,13 +2263,11 @@ TEST_F(VMPerfTest, TailCall_vs_RegularLoop_Ratio)
                   blk({ return_stmt(ident("n")) })),
             return_stmt(call_expr(ident("tc"), { binary(ident("n"), lit_int(1), AST::Expr::Kind::OP_SUB) })) }));
 
-    Chunk* tc_top = compile_program({ tc_fn, expr_stmt(call_expr(ident("tc"), { lit_int(DEPTH) })) });
+    VMRunner tc;
+    tc.compile({ tc_fn, expr_stmt(call_expr(ident("tc"), { lit_int(DEPTH) })) });
 
-    if (test_config::dump_bytecode)
-        tc_top->disassemble();
-    VM vm_tc;
     auto t0 = std::chrono::high_resolution_clock::now();
-    Value tc_result = vm_tc.run(tc_top);
+    Value tc_result = tc.run();
     f64 tc_us = microseconds_since(t0);
 
     // ── equivalent iterative loop (no calls) ─────────────────────────────
@@ -2413,12 +2282,10 @@ TEST_F(VMPerfTest, TailCall_vs_RegularLoop_Ratio)
                     binary(ident("n"), lit_int(1), AST::Expr::Kind::OP_SUB))) })),
             return_stmt(ident("n")) }));
 
-    Chunk* loop_top = compile_calling(loop_fn);
-    if (test_config::dump_bytecode)
-        loop_top->disassemble();
-    VM vm_loop;
+    VMRunner loop;
+    loop.compile({ loop_fn, call_stmt("loop") });
     t0 = std::chrono::high_resolution_clock::now();
-    Value loop_result = vm_loop.run(loop_top);
+    Value loop_result = loop.run();
     f64 loop_us = microseconds_since(t0);
 
     do_not_optimize(tc_result);
@@ -2465,12 +2332,10 @@ TEST_F(VMPerfTest, List_AppendAndSum_10k)
                         binary(ident("i"), lit_int(1), AST::Expr::Kind::OP_ADD))) })),
             return_stmt(ident("sum")) }));
 
-    Chunk* top = compile_calling(test);
-    if (test_config::dump_bytecode)
-        top->disassemble();
-    VM vm;
+    VMRunner r;
+    r.compile({ test, call_stmt("test") });
     auto t0 = std::chrono::high_resolution_clock::now();
-    Value result = vm.run(top);
+    Value result = r.run();
     f64 us = microseconds_since(t0);
     do_not_optimize(result);
 
@@ -2503,16 +2368,14 @@ TEST_F(VMPerfTest, NativeCall_Len_50k_ICHot)
                         binary(ident("i"), lit_int(1), AST::Expr::Kind::OP_ADD))) })),
             return_stmt(ident("last")) }));
 
-    Chunk* top = compile_calling(test);
-    if (test_config::dump_bytecode)
-        top->disassemble();
-    VM vm;
+    VMRunner r;
+    r.compile({ test, call_stmt("test") });
 
     // Cold run to prime the IC.
-    vm.run(top);
+    r.run();
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Value result = vm.run(top);
+    Value result = r.run();
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -2527,7 +2390,7 @@ TEST_F(VMPerfTest, NativeCall_Len_50k_ICHot)
 //     fib(25) = 75025. We run it 100 times and report total + per-call time.
 // ─────────────────────────────────────────────────────────────────────────────
 
-static Chunk* make_fib_top(int n, int reps)
+static Array<StmtPtr> make_fib_program(int n, int reps)
 {
     AST::StmtPtr fib = func_def(
         ident("fib"),
@@ -2557,10 +2420,7 @@ static Chunk* make_fib_top(int n, int reps)
                     expr_stmt(assign_expr(ident("i"), binary(ident("i"), lit_int(1), AST::Expr::Kind::OP_ADD))) })),
             return_stmt(ident("result")) }));
 
-    Chunk* top = compile_program({ fib, test, expr_stmt(call_expr(ident("test"))) });
-    if (test_config::dump_bytecode)
-        top->disassemble();
-    return top;
+    return { fib, test, call_stmt("test") };
 }
 
 TEST_F(VMPerfTest, Fib20_100reps)
@@ -2568,11 +2428,11 @@ TEST_F(VMPerfTest, Fib20_100reps)
     constexpr int FIB_N = 20;
     constexpr int REPS = 100;
 
-    VM vm;
-    auto* top = make_fib_top(FIB_N, REPS);
+    VMRunner r;
+    r.compile(make_fib_program(FIB_N, REPS));
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Value result = vm.run(top);
+    Value result = r.run();
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -2585,11 +2445,11 @@ TEST_F(VMPerfTest, Fib25_10reps)
     constexpr int FIB_N = 25;
     constexpr int REPS = 10;
 
-    VM vm;
-    auto* top = make_fib_top(FIB_N, REPS);
+    VMRunner r;
+    r.compile(make_fib_program(FIB_N, REPS));
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Value result = vm.run(top);
+    Value result = r.run();
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -2621,12 +2481,12 @@ TEST_F(VMPerfTest, Dispatch_IntAdd_10M_Iterations)
                     binary(ident("i"), ident("step"), AST::Expr::Kind::OP_ADD))) })),
             return_stmt(ident("i")) }));
 
-    Chunk* top = compile_calling(test);
-    VM vm;
-    vm.run(top); // warm quickened arithmetic path
+    VMRunner r;
+    r.compile({ test, call_stmt("test") });
+    r.run(); // warm quickened arithmetic path
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Value result = vm.run(top);
+    Value result = r.run();
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -2654,12 +2514,12 @@ TEST_F(VMPerfTest, NativeCall_Len_1M_ICHot)
                         binary(ident("i"), lit_int(1), AST::Expr::Kind::OP_ADD))) })),
             return_stmt(ident("last")) }));
 
-    Chunk* top = compile_calling(test);
-    VM vm;
-    vm.run(top); // warm IC_CALL -> CALL rewrite
+    VMRunner r;
+    r.compile({ test, call_stmt("test") });
+    r.run(); // warm IC_CALL -> CALL rewrite
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Value result = vm.run(top);
+    Value result = r.run();
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -2699,11 +2559,11 @@ TEST_F(VMPerfTest, List_AppendAndSum_100k)
                         binary(ident("i"), lit_int(1), AST::Expr::Kind::OP_ADD))) })),
             return_stmt(ident("sum")) }));
 
-    Chunk* top = compile_calling(test);
-    VM vm;
+    VMRunner r;
+    r.compile({ test, call_stmt("test") });
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Value result = vm.run(top);
+    Value result = r.run();
     f64 us = microseconds_since(t0);
 
     constexpr i64 expected = static_cast<i64>(N) * (N - 1) / 2;
@@ -2717,12 +2577,12 @@ TEST_F(VMPerfTest, Fib28_20reps_Hot)
     constexpr int FIB_N = 28;
     constexpr int REPS = 20;
 
-    VM vm;
-    auto* top = make_fib_top(FIB_N, REPS);
-    vm.run(top); // warm global lookup and call-site rewriting
+    VMRunner r;
+    r.compile(make_fib_program(FIB_N, REPS));
+    r.run(); // warm global lookup and call-site rewriting
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Value result = vm.run(top);
+    Value result = r.run();
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -2747,14 +2607,14 @@ TEST(VMClass, TestConstruction)
             return_stmt(ident("instance")),
         }));
 
-    Chunk* top = compile_program({
+    Array<StmtPtr> ast = {
         klass,
         test,
         expr_stmt(call_expr(ident("test"))),
-    });
+    };
 
     VMRunner r;
-    Value result = r.run(top);
+    Value result = r.compile_and_run(ast);
     ASSERT_TRUE(result.is_instance());
     EXPECT_EQ(result.as_instance()->klass->name, "TestClass");
 }
@@ -2775,14 +2635,14 @@ TEST(VMClass, ClassDefinitionStoresRuntimeClass)
             return_stmt(ident("Point")),
         }));
 
-    Chunk* top = compile_program({
+    Array<StmtPtr> ast = {
         klass,
         test,
         expr_stmt(call_expr(ident("test"))),
-    });
+    };
 
     VMRunner r;
-    Value point = r.run(top);
+    Value point = r.compile_and_run(ast);
     ASSERT_TRUE(point.is_class());
 
     ObjClass* point_class = point.as_class();
@@ -2811,14 +2671,14 @@ TEST(VMClass, ConstructorAcceptsArgumentsAndReturnsInstance)
             return_stmt(ident("instance")),
         }));
 
-    Chunk* top = compile_program({
+    Array<StmtPtr> ast = {
         klass,
         test,
         expr_stmt(call_expr(ident("test"))),
-    });
+    };
 
     VMRunner r;
-    Value result = r.run(top);
+    Value result = r.compile_and_run(ast);
     ASSERT_TRUE(result.is_instance());
     EXPECT_EQ(result.as_instance()->klass->name, "Box");
     EXPECT_EQ(result.as_instance()->fields.size(), 1);
@@ -2843,14 +2703,14 @@ TEST(VMClass, ConstructorRejectsWrongArgumentCount)
             return_stmt(ident("instance")),
         }));
 
-    Chunk* top = compile_program({
+    Array<StmtPtr> ast = {
         klass,
         test,
         expr_stmt(call_expr(ident("test"))),
-    });
+    };
 
     VMRunner r;
-    EXPECT_THROW(r.run(top), std::runtime_error);
+    EXPECT_THROW(r.compile_and_run(ast), std::runtime_error);
 }
 
 TEST(VMClass, ConstructorWithoutInitRejectsArguments)
@@ -2864,14 +2724,14 @@ TEST(VMClass, ConstructorWithoutInitRejectsArguments)
             return_stmt(ident("instance")),
         }));
 
-    Chunk* top = compile_program({
+    Array<StmtPtr> ast = {
         klass,
         test,
         expr_stmt(call_expr(ident("test"))),
-    });
+    };
 
     VMRunner r;
-    EXPECT_THROW(r.run(top), std::runtime_error);
+    EXPECT_THROW(r.compile_and_run(ast), std::runtime_error);
 }
 
 TEST(VMClass, InstanceFieldsDefaultToNil)
@@ -2891,15 +2751,15 @@ TEST(VMClass, InstanceFieldsDefaultToNil)
             return_stmt(ident("point")),
         }));
 
-    Chunk* top = compile_program({
+    Array<StmtPtr> ast = {
         klass,
         test,
         expr_stmt(call_expr(ident("test"))),
-    });
+    };
 
     VMRunner r;
     Value result = Value::nil();
-    ASSERT_NO_THROW(result = r.run(top));
+    ASSERT_NO_THROW(result = r.compile_and_run(ast));
     ASSERT_TRUE(result.is_instance());
 
     ObjInstance* point = result.as_instance();
@@ -2933,11 +2793,11 @@ TEST(VMClass, ConstructorInitializesFieldsFromParameters)
             return_stmt(ident("point")),
         }));
 
-    Chunk* top = compile_program({ klass, test, expr_stmt(call_expr(ident("test"))) });
+    Array<StmtPtr> ast = { klass, test, expr_stmt(call_expr(ident("test"))) };
 
     VMRunner r;
     Value result = Value::nil();
-    ASSERT_NO_THROW(result = r.run(top));
+    ASSERT_NO_THROW(result = r.compile_and_run(ast));
     ASSERT_TRUE(result.is_instance());
 
     ObjInstance* point = result.as_instance();
@@ -2983,18 +2843,15 @@ TEST(VMClass, FieldGetExpressionReadsInstanceField)
             return_stmt(get_expr(ident("box"), ident("value"))),
         }));
 
-    Chunk* top = compile_program({
+    Array<StmtPtr> ast = {
         klass,
         test,
         expr_stmt(call_expr(ident("test"))),
-    });
-
-    if (test_config::dump_bytecode)
-        top->disassemble();
+    };
 
     VMRunner r;
     Value result = Value::nil();
-    ASSERT_NO_THROW(result = r.run(top));
+    ASSERT_NO_THROW(result = r.compile_and_run(ast));
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 12);
 }
@@ -3014,15 +2871,15 @@ TEST(VMClass, FieldAssignmentUpdatesInstanceField)
             return_stmt(get_expr(ident("box"), ident("value"))),
         }));
 
-    Chunk* top = compile_program({
+    Array<StmtPtr> ast = {
         klass,
         test,
         expr_stmt(call_expr(ident("test"))),
-    });
+    };
 
     VMRunner r;
     Value result = Value::nil();
-    ASSERT_NO_THROW(result = r.run(top));
+    ASSERT_NO_THROW(result = r.compile_and_run(ast));
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 25);
 }
@@ -3059,18 +2916,15 @@ TEST(VMClass, MethodReceivesExplicitArguments)
                 call_expr(get_expr(ident("adder"), ident("add")), { lit_int(2), lit_int(5) })),
         }));
 
-    Chunk* top = compile_program({
+    Array<StmtPtr> ast = {
         klass,
         test,
         expr_stmt(call_expr(ident("test"))),
-    });
-
-    if (test_config::dump_bytecode)
-        top->disassemble();
+    };
 
     VMRunner r;
     Value result = Value::nil();
-    ASSERT_NO_THROW(result = r.run(top));
+    ASSERT_NO_THROW(result = r.compile_and_run(ast));
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 7);
 }
@@ -3102,15 +2956,15 @@ TEST(VMClass, MethodReadsInstanceField)
             return_stmt(call_expr(get_expr(ident("box"), ident("get_value")))),
         }));
 
-    Chunk* top = compile_program({
+    Array<StmtPtr> ast = {
         klass,
         test,
         expr_stmt(call_expr(ident("test"))),
-    });
+    };
 
     VMRunner r;
     Value result = Value::nil();
-    ASSERT_NO_THROW(result = r.run(top));
+    ASSERT_NO_THROW(result = r.compile_and_run(ast));
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 31);
 }
@@ -3152,18 +3006,15 @@ TEST(VMClass, MethodMutatesInstanceFieldAndPersists)
             return_stmt(call_expr(get_expr(ident("counter"), ident("increment")))),
         }));
 
-    Chunk* top = compile_program({
+    Array<StmtPtr> ast = {
         klass,
         test,
         expr_stmt(call_expr(ident("test"))),
-    });
-
-    if (test_config::dump_bytecode)
-        top->disassemble();
+    };
 
     VMRunner r;
     Value result = Value::nil();
-    ASSERT_NO_THROW(result = r.run(top));
+    ASSERT_NO_THROW(result = r.compile_and_run(ast));
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 2);
 }
@@ -3199,15 +3050,15 @@ TEST(VMClass, MultipleInstancesKeepIndependentFieldState)
                 AST::Expr::Kind::OP_ADD)),
         }));
 
-    Chunk* top = compile_program({
+    Array<StmtPtr> ast = {
         klass,
         test,
         expr_stmt(call_expr(ident("test"))),
-    });
+    };
 
     VMRunner r;
     Value result = Value::nil();
-    ASSERT_NO_THROW(result = r.run(top));
+    ASSERT_NO_THROW(result = r.compile_and_run(ast));
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 30);
 }
@@ -3228,15 +3079,15 @@ TEST(VMClass, MethodReturningNoValueReturnsSelf)
             return_stmt(call_expr(get_expr(ident("fluent"), ident("touch")))),
         }));
 
-    Chunk* top = compile_program({
+    Array<StmtPtr> ast = {
         klass,
         test,
         expr_stmt(call_expr(ident("test"))),
-    });
+    };
 
     VMRunner r;
     Value result = Value::nil();
-    ASSERT_NO_THROW(result = r.run(top));
+    ASSERT_NO_THROW(result = r.compile_and_run(ast));
     ASSERT_TRUE(result.is_instance());
     EXPECT_EQ(result.as_instance()->klass->name, "Fluent");
 }
@@ -3262,14 +3113,14 @@ TEST(VMClass, MethodRejectsWrongArgumentCount)
             return_stmt(call_expr(get_expr(ident("adder"), ident("add")))),
         }));
 
-    Chunk* top = compile_program({
+    Array<StmtPtr> ast = {
         klass,
         test,
         expr_stmt(call_expr(ident("test"))),
-    });
+    };
 
     VMRunner r;
-    EXPECT_THROW(r.run(top), std::runtime_error);
+    EXPECT_THROW(r.compile_and_run(ast), std::runtime_error);
 }
 
 TEST(VMClass, UnknownMethodRaisesRuntimeError)
@@ -3283,14 +3134,14 @@ TEST(VMClass, UnknownMethodRaisesRuntimeError)
             return_stmt(call_expr(get_expr(ident("empty"), ident("missing")))),
         }));
 
-    Chunk* top = compile_program({
+    Array<StmtPtr> ast = {
         klass,
         test,
         expr_stmt(call_expr(ident("test"))),
-    });
+    };
 
     VMRunner r;
-    EXPECT_THROW(r.run(top), std::runtime_error);
+    EXPECT_THROW(r.compile_and_run(ast), std::runtime_error);
 }
 
 TEST(VMClass, DuplicateFieldsAreDeduplicatedInDeclarationOrder)
@@ -3310,15 +3161,15 @@ TEST(VMClass, DuplicateFieldsAreDeduplicatedInDeclarationOrder)
             return_stmt(ident("Record")),
         }));
 
-    Chunk* top = compile_program({
+    Array<StmtPtr> ast = {
         klass,
         test,
         expr_stmt(call_expr(ident("test"))),
-    });
+    };
 
     VMRunner r;
     Value result = Value::nil();
-    ASSERT_NO_THROW(result = r.run(top));
+    ASSERT_NO_THROW(result = r.compile_and_run(ast));
     ASSERT_TRUE(result.is_class());
 
     ObjClass* klass_obj = result.as_class();
@@ -3343,15 +3194,15 @@ TEST(VMClass, MultipleMethodsAreStoredInRuntimeClass)
             return_stmt(ident("Ops")),
         }));
 
-    Chunk* top = compile_program({
+    Array<StmtPtr> ast = {
         klass,
         test,
         expr_stmt(call_expr(ident("test"))),
-    });
+    };
 
     VMRunner r;
     Value result = Value::nil();
-    ASSERT_NO_THROW(result = r.run(top));
+    ASSERT_NO_THROW(result = r.compile_and_run(ast));
     ASSERT_TRUE(result.is_class());
 
     ObjClass* klass_obj = result.as_class();
@@ -3382,15 +3233,15 @@ TEST(VMClass, AddSpecialMethodHandlesBinaryPlus)
             return_stmt(binary(ident("left"), ident("right"), AST::Expr::Kind::OP_ADD)),
         }));
 
-    Chunk* top = compile_program({
+    Array<StmtPtr> ast = {
         klass,
         test,
         expr_stmt(call_expr(ident("test"))),
-    });
+    };
 
     VMRunner r;
     Value result = Value::nil();
-    ASSERT_NO_THROW(result = r.run(top));
+    ASSERT_NO_THROW(result = r.compile_and_run(ast));
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 99);
 }

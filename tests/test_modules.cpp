@@ -6,6 +6,7 @@
 #include "../fairuz/fvm.hpp"
 #include "fAST.hpp"
 #include "fplatform.hpp"
+#include "test_config.h"
 
 #include <cstdlib>
 #include <filesystem>
@@ -106,11 +107,14 @@ protected:
         Parser parser(&source);
         auto statements = parser.parse_program();
         EXPECT_FALSE(diagnostic::has_errors());
-        Chunk* chunk = Compiler().compile(statements);
+        Compiler compiler;
+        Chunk* chunk = compiler.compile(statements);
+        if (test_config::dump_bytecode)
+            chunk->disassemble();
         EXPECT_NE(chunk, nullptr);
         EXPECT_FALSE(diagnostic::has_errors());
         chunk->source_path = platform::utf8(path);
-        return vm.run(chunk);
+        return vm.run(chunk, &compiler);
     }
 };
 
@@ -360,6 +364,21 @@ TEST_F(ModuleFixture, ImportedFunctionsRetainDefiningEnvironment)
 {
     write("base.ف", "سر := 40\nدالة زد(قيمة):\n    ارجع قيمة + سر\n");
     auto main = write("main.ف", "من base استورد زد\nسر := 1000\nزد(2)\n");
+    VM vm;
+    Value result = run(main, vm);
+    ASSERT_TRUE(result.is_int());
+    EXPECT_EQ(result.as_int(), 42);
+}
+
+TEST_F(ModuleFixture, LazyFunctionsWithSameNameKeepTheirModuleContext)
+{
+    write("lazy_left.ف", "سر := 10\nدالة قيمة():\n    ارجع سر\nدالة غير_مستعملة():\n    اخرج\n");
+    write("lazy_right.ف", "سر := 32\nدالة قيمة():\n    ارجع سر\n");
+    auto main = write("main.ف",
+        "من lazy_left استورد قيمة باسم اول\n"
+        "استورد lazy_right باسم ثان\n"
+        "دالة قيمة():\n    ارجع 1000\n"
+        "طبيعي(اول() + ثان.قيمة())\n");
     VM vm;
     Value result = run(main, vm);
     ASSERT_TRUE(result.is_int());

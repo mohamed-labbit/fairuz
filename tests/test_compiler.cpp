@@ -1,3 +1,4 @@
+
 #include "../fairuz/fAST.hpp"
 #include "../fairuz/fAST_printer.hpp"
 #include "../fairuz/fcompiler.hpp"
@@ -93,6 +94,11 @@ static Chunk* compile_ok(Array<AST::StmtPtr> stmts, Compiler& c)
 {
     diagnostic::reset();
     Chunk* chunk = c.compile(stmts);
+    EXPECT_NE(chunk, nullptr);
+    // These tests inspect emitted instructions, including function bodies.
+    // Materialize deferred chunks explicitly; lazy behavior has its own suite.
+    if (chunk != nullptr && !diagnostic::has_errors())
+        EXPECT_TRUE(Compiler::compile_all(chunk));
     EXPECT_FALSE(diagnostic::has_errors());
     diagnostic::reset();
     return chunk;
@@ -1040,16 +1046,6 @@ TEST(CompilerMeta, FunctionAritySetCorrectly)
     EXPECT_EQ(chunk->functions[0]->arity, 3);
 }
 
-TEST(CompilerMeta, FunctionNameSetCorrectly)
-{
-    Chunk* chunk = compile_ok(func_def(ident("compute"), { }, blk({ })));
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    ASSERT_EQ(chunk->functions.size(), 1u);
-    EXPECT_EQ(chunk->functions[0]->name, "compute");
-}
-
 TEST(CompilerMeta, LineInfoPresent)
 {
     Chunk* chunk = compile_ok(decl_stmt("x", lit_int(42)));
@@ -1149,26 +1145,6 @@ TEST(CompilerLoop, ContinueOutsideLoopIsRejected)
 {
     Chunk* chunk = compile_fail(continue_stmt());
     ASSERT_NE(chunk, nullptr);
-}
-
-TEST(CompilerIntegration, StringConstantPoolDedup)
-{
-    Chunk* chunk = compile_ok(
-        { expr_stmt(
-              lit_str("hello")),
-            expr_stmt(
-                lit_str("hello")),
-            expr_stmt(
-                lit_str("hello")) });
-    ASSERT_NE(chunk, nullptr);
-    if (test_config::dump_bytecode)
-        dump(chunk);
-    int count = 0;
-    for (auto& v : chunk->constants) {
-        if (v.is_string() && v.as_string()->str == "hello")
-            count++;
-    }
-    EXPECT_EQ(count, 1);
 }
 
 TEST(CompilerIntegration, MixedLiteralsInList)

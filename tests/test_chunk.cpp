@@ -128,18 +128,6 @@ TEST(Chunk, AllocICSlotDefaultState)
     EXPECT_EQ(slot.jit_stub, nullptr);
 }
 
-TEST(Chunk, ICSlotCanBeUpdated)
-{
-    Chunk c;
-    c.alloc_ic_slot();
-    auto& slot = c.ic_slots[0];
-    slot.seen_lhs = static_cast<u8>(TypeTag::INT);
-    slot.seen_rhs = static_cast<u8>(TypeTag::INT);
-    slot.hit_count = 500;
-    EXPECT_EQ(slot.seen_lhs, static_cast<u8>(TypeTag::INT));
-    EXPECT_EQ(slot.hit_count, 500u);
-}
-
 TEST(Chunk, RejectsMoreInlineCacheSlotsThanBytecodeCanEncode)
 {
     Chunk c;
@@ -147,15 +135,6 @@ TEST(Chunk, RejectsMoreInlineCacheSlotsThanBytecodeCanEncode)
         c.alloc_ic_slot();
 
     EXPECT_THROW(c.alloc_ic_slot(), fairuz::diagnostic::DiagnosticAbort);
-}
-
-TEST(Chunk, GetLineSingleLine)
-{
-    Chunk c;
-    c.emit(make_ABC(OpCode::NOP, 0, 0, 0), { 10, 0, 0 });
-    c.emit(make_ABC(OpCode::NOP, 0, 0, 0), { 10, 0, 0 });
-    EXPECT_EQ(c.get_line(0), 10u);
-    EXPECT_EQ(c.get_line(1), 10u);
 }
 
 TEST(Chunk, GetLineMultipleLines)
@@ -187,15 +166,6 @@ TEST(Chunk, GetLineNewEntryOnLineChange)
     c.emit(make_ABC(OpCode::NOP, 0, 0, 0), { 0, 0, 0 });
     c.emit(make_ABC(OpCode::NOP, 0, 0, 0), { 1, 0, 0 });
     EXPECT_EQ(c.lines.size(), 2u);
-}
-
-TEST(Chunk, OwnsSubFunctions)
-{
-    auto* m_parent = fairuz::runtime::make_chunk();
-    auto* child = fairuz::runtime::make_chunk();
-    child->name = "child";
-    m_parent->functions.push(child);
-    SUCCEED();
 }
 
 TEST(Chunk, SubFunctionPreservesData)
