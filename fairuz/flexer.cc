@@ -214,12 +214,13 @@ Lexer::Lexer(FileManager* fm)
     m_alt_indent_stack.push(0);
 }
 
-Lexer::Lexer(Array<TokenPtr>& seq)
+Lexer::Lexer(Array<TokenPtr> const& seq, diagnostic::SourcePtr source)
     : m_tok_index(0)
     , m_indent_size(4)
     , m_indent_level(0)
     , m_tok_stream(seq)
     , m_at_bol(true)
+    , m_source(std::move(source))
 {
     m_indent_stack.push(0);
     m_alt_indent_stack.push(0);
@@ -657,6 +658,8 @@ TokenPtr Lexer::lex_token()
 
 TokenPtr Lexer::next()
 {
+    if (current() != nullptr && current()->is(tok::TokenType::ENDMARKER))
+        return current();
     if (m_tok_index + 1 < m_tok_stream.size()) {
         m_tok_index++;
         return m_tok_stream[m_tok_index];
