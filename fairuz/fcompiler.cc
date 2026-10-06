@@ -46,9 +46,6 @@
 
 namespace fairuz::runtime {
 
-/// TODO: run an analysis of whether or not null checks for AST nodes
-/// can be safely removed matching the AST validity invariant
-
 using cmp_ret = ErrorOr<ExprResult>;
 using reg_t = u8;
 
