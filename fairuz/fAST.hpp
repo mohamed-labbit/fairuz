@@ -5,6 +5,7 @@
 #include "farray.hpp"
 #include "fmacros.hpp"
 #include "fstring.hpp"
+#include "ftoken.hpp"
 
 #include <cassert>
 #include <cstddef>
@@ -47,6 +48,7 @@ class ContinueStmt;
 class BlockStmt;
 class ClassDefStmt;
 class ImportStmt;
+class FunctionStub;
 
 using ExprPtr = Expr*;
 using StmtPtr = Stmt*;
@@ -137,6 +139,7 @@ public:
     virtual void visit(BlockStmt&) = 0;
     virtual void visit(ClassDefStmt&) = 0;
     virtual void visit(ImportStmt&) = 0;
+    virtual void visit(FunctionStub&) = 0;
 };
 
 /// -----------------------------------------------------------------------
@@ -636,6 +639,7 @@ public:
         WHILE,
         FOR,
         FUNC,
+        FUNCTION_STUB,
         RETURN,
         BREAK,
         CONTINUE,
@@ -830,6 +834,43 @@ public:
     }
     void accept(StmtVisitor& v) override { v.visit(*this); }
 }; // class ForStmt
+
+// A deferred body, owned by a normal FuncDefStmt. Tokens retain their original
+// locations; the source snapshot survives the FileManager and Parser.
+class FunctionStub final : public Stmt {
+public:
+    Array<tok::Token const*> const tokens;
+    diagnostic::SourcePtr const source;
+    StringRef const body_view;
+    StmtPtr parsed_body { nullptr };
+
+    FunctionStub(Array<tok::Token const*> body_tokens, diagnostic::SourcePtr origin,
+        StringRef text, SourceLocation loc)
+        : Stmt(loc, Kind::FUNCTION_STUB)
+        , tokens(std::move(body_tokens))
+        , source(std::move(origin))
+        , body_view(text)
+    {
+        assert(!tokens.empty());
+        assert(tokens.back()->is(tok::TokenType::ENDMARKER));
+    }
+
+    [[nodiscard]] bool equals(ConstStmtPtr other) const override
+    {
+        if (other == nullptr || other->get_kind() != m_kind)
+            return false;
+        auto* stub = static_cast<FunctionStub const*>(other);
+        return body_view == stub->body_view && tokens.size() == stub->tokens.size();
+    }
+    [[nodiscard]] FunctionStub* clone() const override
+    {
+        auto* stub = ALLOCATE_AST_NODE(FunctionStub, tokens, source, body_view, get_location());
+        if (parsed_body != nullptr)
+            stub->parsed_body = parsed_body->clone();
+        return stub;
+    }
+    void accept(StmtVisitor& v) override { v.visit(*this); }
+};
 
 class FuncDefStmt final : public Stmt {
 public:
@@ -1115,6 +1156,11 @@ static inline ForStmt* make_for(IdentifierExpr* target, ExprPtr iter, StmtPtr bo
 {
     return ALLOCATE_AST_NODE(ForStmt, target, iter, body, loc);
 }
+static inline FunctionStub* make_function_stub(Array<tok::Token const*> tokens,
+    diagnostic::SourcePtr source, StringRef body_span, SourceLocation loc)
+{
+    return ALLOCATE_AST_NODE(FunctionStub, std::move(tokens), std::move(source), body_span, loc);
+}
 static inline FuncDefStmt* make_function(IdentifierExpr* name, Array<ExprPtr> params, StmtPtr body, SourceLocation loc)
 {
     return ALLOCATE_AST_NODE(FuncDefStmt, name, params, body, loc);
@@ -1163,6 +1209,7 @@ inline ReturnStmt* as_return(StmtPtr s) { return static_cast<ReturnStmt*>(s); }
 inline BreakStmt* as_break(StmtPtr s) { return static_cast<BreakStmt*>(s); }
 inline ContinueStmt* as_continue(StmtPtr s) { return static_cast<ContinueStmt*>(s); }
 inline BlockStmt* as_block(StmtPtr s) { return static_cast<BlockStmt*>(s); }
+inline FunctionStub* as_function_stub(StmtPtr s) { return static_cast<FunctionStub*>(s); }
 inline FuncDefStmt* as_function_def(StmtPtr s) { return static_cast<FuncDefStmt*>(s); }
 inline ClassDefStmt* as_class_def(StmtPtr s) { return static_cast<ClassDefStmt*>(s); }
 inline ImportStmt* as_import(StmtPtr s) { return static_cast<ImportStmt*>(s); }
@@ -1191,6 +1238,7 @@ static inline bool is_for(StmtPtr s) { return s->get_kind() == Stmt::Kind::FOR; 
 static inline bool is_return(StmtPtr s) { return s->get_kind() == Stmt::Kind::RETURN; }
 static inline bool is_break(StmtPtr s) { return s->get_kind() == Stmt::Kind::BREAK; }
 static inline bool is_continue(StmtPtr s) { return s->get_kind() == Stmt::Kind::CONTINUE; }
+static inline bool is_function_stub(StmtPtr s) { return s->get_kind() == Stmt::Kind::FUNCTION_STUB; }
 static inline bool is_func(StmtPtr s) { return s->get_kind() == Stmt::Kind::FUNC; }
 static inline bool is_expr(StmtPtr s) { return s->get_kind() == Stmt::Kind::EXPR; }
 static inline bool is_block(StmtPtr s) { return s->get_kind() == Stmt::Kind::BLOCK; }
