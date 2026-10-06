@@ -12,6 +12,8 @@
 #include "ftoken.hpp"
 #include "futil.hpp"
 
+#include <cstring>
+
 namespace fairuz::parser {
 
 // Macros
@@ -190,6 +192,7 @@ void Parser::synchronize()
         advance();
     }
 }
+
 // Parser — top-level
 
 Array<AST::StmtPtr> Parser::parse_program()
@@ -260,24 +263,24 @@ ErrorOr<AST::StmtPtr> Parser::parse_return_stmt()
     VERIFY_TOKEN(TokType::KW_RETURN, ErrorCode::EXPECTED_RETURN);
 
     if (check(TokType::NEWLINE) || check(TokType::DEDENT) || we_done())
-        return AST::make_return(start->location());
+        return m_builder.make_return(start->location());
 
     TRY(ret, parse_expression());
-    return AST::make_return(start->location(), ret);
+    return m_builder.make_return(start->location(), ret);
 }
 
 ErrorOr<AST::StmtPtr> Parser::parse_break_stmt()
 {
     TokenPtr start = current_token();
     advance();
-    return AST::make_break(start->location());
+    return m_builder.make_break(start->location());
 }
 
 ErrorOr<AST::StmtPtr> Parser::parse_continue_stmt()
 {
     TokenPtr start = current_token();
     advance();
-    return AST::make_continue(start->location());
+    return m_builder.make_continue(start->location());
 }
 
 ErrorOr<AST::StmtPtr> Parser::parse_while_stmt()
@@ -291,7 +294,7 @@ ErrorOr<AST::StmtPtr> Parser::parse_while_stmt()
     auto while_block = parse_block();
     VERIFY_NODE(while_block);
 
-    return make_while(condition, as_block(while_block.value()), start->location());
+    return m_builder.make_while(condition, as_block(while_block.value()), start->location());
 }
 
 ErrorOr<AST::StmtPtr> Parser::parse_for_stmt()
@@ -302,7 +305,7 @@ ErrorOr<AST::StmtPtr> Parser::parse_for_stmt()
     if (!check(TokType::IDENTIFIER))
         return report_error(ErrorCode::EXPECTED_FOR_TARGET, current_loc());
 
-    auto* target = AST::make_identifier(current_token()->lexeme(), current_token()->location());
+    auto* target = m_builder.make_identifier(current_token()->lexeme(), current_token()->location());
     advance();
 
     /// check 'in' after target
@@ -314,7 +317,7 @@ ErrorOr<AST::StmtPtr> Parser::parse_for_stmt()
     auto body = parse_block();
     VERIFY_NODE(body);
 
-    return AST::make_for(target, iter, body.value(), start->location());
+    return m_builder.make_for(target, iter, body.value(), start->location());
 }
 
 ErrorOr<AST::StmtPtr> Parser::parse_if_stmt(u16 clause_column)
@@ -351,7 +354,7 @@ ErrorOr<AST::StmtPtr> Parser::parse_if_stmt(u16 clause_column)
         }
     }
 
-    return make_if(condition, as_block(then_block.value()), start->location(), else_block);
+    return m_builder.make_if(condition, as_block(then_block.value()), start->location(), else_block);
 }
 
 ErrorOr<AST::StmtPtr> Parser::parse_expression_stmt()
@@ -359,7 +362,7 @@ ErrorOr<AST::StmtPtr> Parser::parse_expression_stmt()
     TRY(expr, parse_assignment_expr());
     if (UNLIKELY(!(check(TokType::NEWLINE) || check(TokType::DEDENT) || check(TokType::ENDMARKER))))
         return report_error(ErrorCode::UNEXPECTED_TOKEN, current_loc());
-    return make_expr_stmt(expr, expr->get_location());
+    return m_builder.make_expr_stmt(expr, expr->get_location());
 }
 
 ErrorOr<AST::StmtPtr> Parser::parse_block(Array<AST::ExprPtr>* members)
@@ -377,7 +380,7 @@ ErrorOr<AST::StmtPtr> Parser::parse_block(Array<AST::ExprPtr>* members)
     if ((AST::is_return(stmt) || AST::is_break(stmt) || AST::is_continue(stmt) || AST::is_expr(stmt))
         && !(check(TokType::NEWLINE) || check(TokType::DEDENT) || we_done()))
         return report_error(ErrorCode::UNEXPECTED_TOKEN, current_loc());
-    return AST::make_block({ stmt }, stmt->get_location());
+    return m_builder.make_block({ stmt }, stmt->get_location());
 }
 
 ErrorOr<AST::StmtPtr> Parser::parse_indented_block(Array<AST::ExprPtr>* members)
@@ -389,7 +392,7 @@ ErrorOr<AST::StmtPtr> Parser::parse_indented_block(Array<AST::ExprPtr>* members)
     Array<AST::StmtPtr> stmts;
 
     if (match(TokType::DEDENT))
-        return make_block(stmts, start->location());
+        return m_builder.make_block(stmts, start->location());
 
     while (!check(TokType::DEDENT) && !we_done() && !diagnostic::is_saturated()) {
         skip_newlines();
@@ -407,13 +410,96 @@ ErrorOr<AST::StmtPtr> Parser::parse_indented_block(Array<AST::ExprPtr>* members)
     }
 
     if (check(TokType::ENDMARKER) || diagnostic::is_saturated())
-        return make_block(stmts, start->location());
+        return m_builder.make_block(stmts, start->location());
 
     VERIFY_TOKEN(TokType::DEDENT, ErrorCode::EXPECTED_DEDENT);
-    return make_block(stmts, start->location());
+    return m_builder.make_block(stmts, start->location());
 }
 
 // Parser — function and class parsers
+
+ErrorOr<AST::StmtPtr> Parser::parse_function_body()
+{
+    TRY(body, parse_block());
+    skip_newlines();
+    CHECK_TOKEN(TokType::ENDMARKER, ErrorCode::UNEXPECTED_TOKEN);
+    return body;
+}
+
+ErrorOr<AST::StmtPtr> Parser::defer_body(SourceLocation definition)
+{
+    SourceLocation start = current_loc();
+    Array<TokenPtr> tokens;
+    auto take = [&] {
+        tokens.push(current_token());
+        advance();
+    };
+    bool indented = check(TokType::NEWLINE) || check(TokType::INDENT);
+    bool compound = check(TokType::KW_IF) || check(TokType::KW_WHILE)
+        || check(TokType::KW_FOR) || check(TokType::KW_FN) || check(TokType::KW_CLASS);
+    if (indented) {
+        while (check(TokType::NEWLINE))
+            take();
+        CHECK_TOKEN(TokType::INDENT, ErrorCode::EXPECTED_INDENT);
+    } else if (check(TokType::DEDENT) || we_done()) {
+        return report_error(ErrorCode::EXPECTED_INDENT, current_loc());
+    }
+
+    u32 depth = 0;
+    while (!we_done()) {
+        if (check(TokType::INDENT)) {
+            ++depth;
+        } else if (check(TokType::DEDENT)) {
+            if (depth == 0)
+                break;
+            --depth;
+            take();
+            if (depth == 0) {
+                if (indented)
+                    break;
+                // An inline compound suite may own aligned else clauses,
+                // but never an enclosing statement's else.
+                if (!(check(TokType::KW_ELSE) && current_loc().column > definition.column))
+                    break;
+            }
+            continue;
+        } else if (check(TokType::NEWLINE) && depth == 0) {
+            take();
+            if (!compound)
+                break;
+            while (check(TokType::NEWLINE))
+                take();
+            if (!check(TokType::INDENT)
+                && !(check(TokType::KW_ELSE) && current_loc().column > definition.column))
+                break;
+            continue;
+        }
+        take();
+    }
+
+    SourceLocation end = current_loc();
+    tokens.push(make_token(TokType::ENDMARKER, "", end));
+    // Source snapshots are also available for replay parsers, with absolute
+    // offsets, so nested definitions need no re-lexing or location rebasing.
+    StringRef text;
+    auto source = m_lexer.source();
+    if (source && end.offset >= start.offset && end.offset <= source->text.size()) {
+        text = StringRef(end.offset - start.offset, '\0');
+        if (!text.empty())
+            std::memcpy(text.data(), source->text.data() + start.offset, text.len());
+    }
+    return m_builder.make_function_stub(std::move(tokens), source, text, start);
+}
+
+Parser::Parser(Array<TokenPtr> const& seq, diagnostic::SourcePtr source, BodyParsing bodies)
+    : m_lexer(seq, std::move(source))
+    , m_body_parsing(bodies)
+{
+    if (seq.empty() || !seq.back()->is(TokType::ENDMARKER))
+        diagnostic::panic(ErrorCode::INTERNAL_ERROR, "body token stream must end in ENDMARKER");
+    if (current_token()->is(TokType::BEGINMARKER))
+        advance();
+}
 
 ErrorOr<AST::StmtPtr> Parser::parse_function_def()
 {
@@ -430,12 +516,12 @@ ErrorOr<AST::StmtPtr> Parser::parse_function_def()
 
     VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_FN);
 
-    auto body = parse_block();
+    auto body = m_body_parsing == BodyParsing::Lazy ? defer_body(start->location()) : parse_block();
     VERIFY_NODE(body);
-    return make_function(
-        AST::make_identifier(name_tok->lexeme(), name_tok->location()),
+    return m_builder.make_function(
+        m_builder.make_identifier(name_tok->lexeme(), name_tok->location()),
         { params.value() },
-        as_block(body.value()),
+        body.value(),
         start->location());
 }
 
@@ -451,7 +537,7 @@ ErrorOr<AST::StmtPtr> Parser::parse_class_def()
     VERIFY_TOKEN(TokType::KW_CLASS, ErrorCode::EXPECTED_CLASS_KEYWORD);
     CHECK_TOKEN(TokType::IDENTIFIER, ErrorCode::EXPECTED_CLASS_NAME);
 
-    AST::ExprPtr class_name = AST::make_identifier(
+    AST::ExprPtr class_name = m_builder.make_identifier(
         current_token()->lexeme(), current_loc());
     advance();
 
@@ -460,7 +546,7 @@ ErrorOr<AST::StmtPtr> Parser::parse_class_def()
     if (consume(TokType::LPAREN)) {
         if (!check(TokType::IDENTIFIER))
             return report_error(ErrorCode::EXPECTED_CLASS_NAME, current_loc());
-        parent = AST::make_identifier(current_token()->lexeme(), current_loc());
+        parent = m_builder.make_identifier(current_token()->lexeme(), current_loc());
         advance();
         VERIFY_TOKEN(TokType::RPAREN, ErrorCode::EXPECTED_RPAREN_CLASS);
     }
@@ -476,7 +562,7 @@ ErrorOr<AST::StmtPtr> Parser::parse_class_def()
     if (!check(TokType::NEWLINE) && !check(TokType::INDENT)) {
         TRY(method, parse_class_method(members));
         methods.push(method);
-        return AST::make_class_def(class_name, parent, members, methods, start->location());
+        return m_builder.make_class_def(class_name, parent, members, methods, start->location());
     }
 
     skip_newlines();
@@ -502,10 +588,10 @@ ErrorOr<AST::StmtPtr> Parser::parse_class_def()
     }
 
     if (check(TokType::ENDMARKER))
-        return AST::make_class_def(class_name, parent, members, methods, start->location());
+        return m_builder.make_class_def(class_name, parent, members, methods, start->location());
 
     VERIFY_TOKEN(TokType::DEDENT, ErrorCode::EXPECTED_DEDENT);
-    return AST::make_class_def(class_name, parent, members, methods, start->location());
+    return m_builder.make_class_def(class_name, parent, members, methods, start->location());
 }
 
 /// TODO: Make it parse multiple imported names inside parentheses
@@ -588,7 +674,7 @@ ErrorOr<AST::StmtPtr> Parser::parse_import_stmt()
         aliases.push(alias);
     }
 
-    return AST::make_import(module, names, aliases, start->location());
+    return m_builder.make_import(module, names, aliases, start->location());
 }
 
 ErrorOr<AST::StmtPtr> Parser::parse_assert_stmt()
@@ -602,9 +688,9 @@ ErrorOr<AST::StmtPtr> Parser::parse_assert_stmt()
         TRY(message, parse_expression());
         args.push(message);
     }
-    auto* callee = AST::make_identifier("تاكد", start->location());
-    auto* call = AST::make_call(callee, args, start->location());
-    return AST::make_expr_stmt(call, start->location());
+    auto* callee = m_builder.make_identifier("تاكد", start->location());
+    auto* call = m_builder.make_call(callee, args, start->location());
+    return m_builder.make_expr_stmt(call, start->location());
 }
 
 bool same_name(AST::ExprPtr e, StringRef const& n)
@@ -614,16 +700,16 @@ bool same_name(AST::ExprPtr e, StringRef const& n)
         && AST::as_identifier(e)->spelling == n;
 }
 
-void push_member_once(Array<AST::ExprPtr>& members, AST::IdentifierExpr const* name)
+void Parser::push_member_once(Array<AST::ExprPtr>& members, AST::IdentifierExpr const* name)
 {
     for (auto* member : members) {
         if (same_name(member, name->spelling))
             return;
     }
-    members.push(AST::make_identifier(name->spelling, name->get_location()));
+    members.push(m_builder.make_identifier(name->spelling, name->get_location()));
 }
 
-void collect_this_field_assignment(Array<AST::ExprPtr>& members, AST::StmtPtr stmt)
+void Parser::collect_this_field_assignment(Array<AST::ExprPtr>& members, AST::StmtPtr stmt)
 {
     if (stmt == nullptr)
         return;
@@ -694,8 +780,8 @@ ErrorOr<AST::StmtPtr> Parser::parse_class_method(Array<AST::ExprPtr>& members)
 
     VERIFY_TOKEN(TokType::COLON, ErrorCode::EXPECTED_COLON_FN);
     TRY(body, parse_block(&members));
-    return AST::make_function(
-        AST::make_identifier(fn_name, name_tok->location()),
+    return m_builder.make_function(
+        m_builder.make_identifier(fn_name, name_tok->location()),
         params.value(), body, start->location());
 }
 
@@ -716,23 +802,23 @@ ErrorOr<AST::StmtPtr> Parser::parse_class_method_statement(Array<AST::ExprPtr>& 
     advance();
 
     // Use a GET target so the compiler emits field access, not dictionary access.
-    AST::ExprPtr target = AST::make_get_expr(
-        AST::make_identifier(kClassInstanceName, member_tok->location()),
-        AST::make_identifier(mname, member_tok->location()),
+    AST::ExprPtr target = m_builder.make_get_expr(
+        m_builder.make_identifier(kClassInstanceName, member_tok->location()),
+        m_builder.make_identifier(mname, member_tok->location()),
         member_tok->location());
 
     AST::AssignExpr* member_assign = nullptr;
     if (check(TokType::OP_ASSIGN)) {
         advance();
         TRY(rhs, parse_assignment_expr(false));
-        member_assign = AST::make_assignment_expr(target, rhs, member_tok->location());
+        member_assign = m_builder.make_assignment_expr(target, rhs, member_tok->location());
     } else if (is_augmented_assign_tok(current_token())) {
         TokenPtr op_tok = current_token();
         advance();
         TRY(rhs, parse_expression());
         AST::ExprKind op = to_op(op_tok->type(), false);
-        auto* bin = AST::make_binary(op, target->clone(), rhs, target->get_location());
-        member_assign = AST::make_assignment_expr(target, bin, member_tok->location());
+        auto* bin = m_builder.make_binary(op, target->clone(), rhs, target->get_location());
+        member_assign = m_builder.make_assignment_expr(target, bin, member_tok->location());
         member_assign->augmented = true;
     } else {
         return report_error(ErrorCode::INVALID_ASSIGN_TARGET, current_loc());
@@ -741,8 +827,8 @@ ErrorOr<AST::StmtPtr> Parser::parse_class_method_statement(Array<AST::ExprPtr>& 
     if (!(check(TokType::NEWLINE) || check(TokType::DEDENT) || we_done()))
         return report_error(ErrorCode::UNEXPECTED_TOKEN, current_loc());
 
-    push_member_once(members, AST::make_identifier(mname, member_tok->location()));
-    return AST::make_expr_stmt(member_assign, member_tok->location());
+    push_member_once(members, m_builder.make_identifier(mname, member_tok->location()));
+    return m_builder.make_expr_stmt(member_assign, member_tok->location());
 }
 
 ErrorOr<Array<AST::ExprPtr>> Parser::parse_parameters_list()
@@ -761,7 +847,7 @@ ErrorOr<Array<AST::ExprPtr>> Parser::parse_parameters_list()
 
             TokenPtr param_tok = current_token();
             advance();
-            params.push(AST::make_identifier(param_tok->lexeme(), param_tok->location()));
+            params.push(m_builder.make_identifier(param_tok->lexeme(), param_tok->location()));
             skip_newlines();
         } while (match(TokType::COMMA) && !check(TokType::RPAREN));
     }
@@ -804,15 +890,15 @@ ErrorOr<AST::ExprPtr> Parser::parse_assignment_expr(bool allow_augmented)
             advance();
             TRY(rhs, parse_expression());
             AST::ExprKind op = to_op(op_tok->type(), false);
-            auto* bin = AST::make_binary(op, lhs->clone(), rhs, lhs->get_location());
-            auto* assignment = make_assignment_expr(target, bin, target->get_location());
+            auto* bin = m_builder.make_binary(op, lhs->clone(), rhs, lhs->get_location());
+            auto* assignment = m_builder.make_assignment_expr(target, bin, target->get_location());
             assignment->augmented = true;
             return assignment;
         }
 
         advance(); // consume ':='; permit only bare plain-assignment chains
         TRY(rhs, parse_assignment_expr(false));
-        return make_assignment_expr(target, rhs, target->get_location());
+        return m_builder.make_assignment_expr(target, rhs, target->get_location());
     }
 
     return lhs;
@@ -827,7 +913,7 @@ ErrorOr<AST::ExprPtr> Parser::parse_power_expr()
     if (check(TokType::OP_POWER)) {
         advance();
         TRY(exp, parse_unary_expr()); // rhs may itself be unary: 2 ** -2
-        return make_binary(AST::ExprKind::OP_POW, base, exp, base->get_location());
+        return m_builder.make_binary(AST::ExprKind::OP_POW, base, exp, base->get_location());
     }
     return base;
 }
@@ -855,7 +941,7 @@ ErrorOr<AST::ExprPtr> Parser::parse_binary_expr_precedence(u32 min_prec)
 
         // FIX: assign to lhs and CONTINUE the loop — do not return here.
         // Returning inside the loop was the root cause of the left-associativity bug.
-        lhs = make_binary(to_op(op_type, false), lhs, rhs, lhs->get_location());
+        lhs = m_builder.make_binary(to_op(op_type, false), lhs, rhs, lhs->get_location());
     }
 
     return lhs;
@@ -871,7 +957,7 @@ ErrorOr<AST::ExprPtr> Parser::parse_unary_expr()
         TRY(operand, parse_unary_expr());
         // FIX: use the operator token's location (op_tok), not the operand's.
         // `!a` should report the location at `!`, not at `a`.
-        return make_unary(to_op(op, true), operand, op_tok->location());
+        return m_builder.make_unary(to_op(op, true), operand, op_tok->location());
     }
     return parse_power_expr();
 }
@@ -899,7 +985,7 @@ ErrorOr<AST::ExprPtr> Parser::parse_postfix_expr()
                 } while (match(TokType::COMMA) && !check(TokType::RPAREN));
             }
             VERIFY_TOKEN(TokType::RPAREN, ErrorCode::EXPECTED_RPAREN_EXPR);
-            expr = make_call(expr, args, expr ? expr->get_location() : SourceLocation { });
+            expr = m_builder.make_call(expr, args, expr ? expr->get_location() : SourceLocation { });
             continue;
         }
 
@@ -907,7 +993,7 @@ ErrorOr<AST::ExprPtr> Parser::parse_postfix_expr()
         if (match(TokType::LBRACKET)) {
             TRY(index, parse_expression());
             VERIFY_TOKEN(TokType::RBRACKET, ErrorCode::EXPECTED_RBRACKET);
-            expr = make_index(
+            expr = m_builder.make_index(
                 expr, index,
                 expr ? expr->get_location() : SourceLocation { });
             continue;
@@ -918,9 +1004,9 @@ ErrorOr<AST::ExprPtr> Parser::parse_postfix_expr()
                 return report_error(ErrorCode::EXPECTED_MEMBER_NAME, current_loc());
             TokenPtr member_tok = current_token();
             advance();
-            expr = make_get_expr(
+            expr = m_builder.make_get_expr(
                 expr,
-                AST::make_identifier(
+                m_builder.make_identifier(
                     member_tok->lexeme(),
                     member_tok->location()),
                 expr ? expr->get_location() : SourceLocation { });
@@ -946,7 +1032,7 @@ ErrorOr<AST::ExprPtr> Parser::parse_primary_expr()
         if (tt == TokType::DECIMAL) {
             f64 value = 0.0;
             if (util::try_parse_float_literal(cur->lexeme(), value))
-                return AST::make_literal_float(value, cur->location());
+                return m_builder.make_literal_float(value, cur->location());
             return report_error(ErrorCode::INVALID_NUMBER_LITERAL, cur->location());
         }
         int base = 10;
@@ -959,38 +1045,38 @@ ErrorOr<AST::ExprPtr> Parser::parse_primary_expr()
         }
         i64 value = 0;
         if (util::try_parse_integer_literal(cur->lexeme(), base, value))
-            return AST::make_literal_int(value, cur->location());
+            return m_builder.make_literal_int(value, cur->location());
         // Keep large spelling in the AST; compile it once into normalized limbs.
-        auto* literal = AST::make_literal_int(i64 { 0 }, cur->location());
+        auto* literal = m_builder.make_literal_int(i64 { 0 }, cur->location());
         literal->large_literal = cur->lexeme();
         literal->literal_base = base;
         return literal;
     }
 
     if (match(TokType::STRING))
-        return AST::make_literal_string(cur->lexeme(), cur->location());
+        return m_builder.make_literal_string(cur->lexeme(), cur->location());
 
     if (check(TokType::KW_TRUE) || check(TokType::KW_FALSE)) {
         bool val = cur->is(TokType::KW_TRUE);
         advance();
-        return AST::make_literal_bool(val, cur->location());
+        return m_builder.make_literal_bool(val, cur->location());
     }
 
     if (match(TokType::KW_NIL))
-        return AST::make_nil(cur->location());
+        return m_builder.make_nil(cur->location());
 
     if (match(TokType::KW_THIS))
-        return AST::make_identifier(kClassInstanceName, cur->location());
+        return m_builder.make_identifier(kClassInstanceName, cur->location());
 
     if (match(TokType::IDENTIFIER))
-        return AST::make_identifier(cur->lexeme(), cur->location());
+        return m_builder.make_identifier(cur->lexeme(), cur->location());
 
     if (match(TokType::LPAREN)) {
         m_parenths.push_back(true);
 
         if (match(TokType::RPAREN)) {
             m_parenths.pop_back();
-            return make_list(Array<AST::ExprPtr> { }, cur->location());
+            return m_builder.make_list(Array<AST::ExprPtr> { }, cur->location());
         }
 
         Array<AST::ExprPtr> elements { };
@@ -1018,7 +1104,7 @@ ErrorOr<AST::ExprPtr> Parser::parse_primary_expr()
         m_parenths.pop_back();
         if (elements.size() == 1 && !trailing_comma)
             return elements[0];
-        return make_list(std::move(elements), cur->location());
+        return m_builder.make_list(std::move(elements), cur->location());
     }
 
     if (match(TokType::LBRACKET))
@@ -1050,7 +1136,7 @@ ErrorOr<AST::ExprPtr> Parser::parse_list_literal()
     }
 
     VERIFY_TOKEN(TokType::RBRACKET, ErrorCode::EXPECTED_RBRACKET);
-    return make_list(std::move(elements), start->location());
+    return m_builder.make_list(std::move(elements), start->location());
 }
 
 ErrorOr<AST::ExprPtr> Parser::parse_dict_literal()
@@ -1073,7 +1159,7 @@ ErrorOr<AST::ExprPtr> Parser::parse_dict_literal()
     }
 
     VERIFY_TOKEN(TokType::RBRACE, ErrorCode::EXPECTED_RBRACE_EXPR);
-    return AST::make_dict(std::move(content), start->location());
+    return m_builder.make_dict(std::move(content), start->location());
 }
 
 // Compatibility stubs
