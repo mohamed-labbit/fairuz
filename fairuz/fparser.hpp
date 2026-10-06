@@ -1,7 +1,7 @@
 #ifndef FA_PARSER_HPP
 #define FA_PARSER_HPP
 
-#include "fAST.hpp"
+#include "fASTBuilder.hpp"
 #include "fdiagnostic.hpp"
 #include "ferror.hpp"
 #include "flexer.hpp"
@@ -46,12 +46,16 @@ public:
     }
 }; // class ParseError
 
+enum class BodyParsing { Lazy,
+    Eager };
+
 class Parser {
 public:
     explicit Parser() = default;
 
-    explicit Parser(lex::FileManager* fm)
+    explicit Parser(lex::FileManager* fm, BodyParsing bodies = BodyParsing::Lazy)
         : m_lexer(fm)
+        , m_body_parsing(bodies)
     {
         if (fm == nullptr)
             diagnostic::panic(ErrorCode::INTERNAL_ERROR, "parser received a null FileManager");
@@ -61,7 +65,9 @@ public:
             m_lexer.next();
     }
 
-    explicit Parser(Array<tok::Token> seq, std::optional<size_t> s = std::nullopt);
+    // A bounded replay stream must end in ENDMARKER.
+    explicit Parser(Array<TokenPtr> const& seq, diagnostic::SourcePtr source,
+        BodyParsing bodies = BodyParsing::Lazy);
 
     Array<AST::StmtPtr> parse_program();
 
@@ -74,6 +80,7 @@ public:
     ErrorOr<AST::StmtPtr> parse_break_stmt();
     ErrorOr<AST::StmtPtr> parse_continue_stmt();
     ErrorOr<AST::StmtPtr> parse_function_def();
+    ErrorOr<AST::StmtPtr> parse_function_body();
     ErrorOr<AST::ExprPtr> parse_expression();
     // Statement-level assignment (including bare := chains). Nested value
     // contexts must use parse_expression(), which rejects assignment.
@@ -110,6 +117,8 @@ public:
 
 private:
     lex::Lexer m_lexer;
+    AST::ASTBuilder m_builder;
+    BodyParsing m_body_parsing { BodyParsing::Lazy };
     u32 m_nesting_level { 0 };
     /// keeping a stack of open parentheses
     /// using bool for minimal memory use
@@ -160,6 +169,10 @@ private:
     }
 
     void synchronize();
+
+    ErrorOr<AST::StmtPtr> defer_body(SourceLocation definition);
+    void push_member_once(Array<AST::ExprPtr>& members, AST::IdentifierExpr const* name);
+    void collect_this_field_assignment(Array<AST::ExprPtr>& members, AST::StmtPtr stmt);
 }; // class Parser
 
 } // namespace fairuz::parser
