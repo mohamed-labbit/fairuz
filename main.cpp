@@ -175,7 +175,7 @@ ExitCode format_file(std::string filename, fairuz::Formatter& fmter, size_t& fil
 {
     fairuz::lex::FileManager fm(filename);
     fairuz::diagnostic::set_source(&fm);
-    fairuz::parser::Parser parser(&fm);
+    fairuz::parser::Parser parser(&fm, fairuz::parser::BodyParsing::Eager);
     fairuz::Array<fairuz::AST::StmtPtr> stmts = parser.parse_program();
     if (fairuz::diagnostic::has_errors()) {
         fairuz::diagnostic::dump();
@@ -328,7 +328,8 @@ int run_main(int argc, char** argv)
         }
         fairuz::lex::FileManager fm(options.input_path);
         fairuz::diagnostic::set_source(&fm);
-        fairuz::parser::Parser parser(&fm);
+        fairuz::parser::Parser parser(&fm, options.dump_ast
+                ? fairuz::parser::BodyParsing::Eager : fairuz::parser::BodyParsing::Lazy);
         fairuz::Array<fairuz::AST::StmtPtr> stmts = parser.parse_program();
 
         if (fairuz::diagnostic::has_errors()) {
