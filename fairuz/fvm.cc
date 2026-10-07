@@ -14,10 +14,10 @@
 #include "fparser.hpp"
 #include "fplatform.hpp"
 #include "fstring.hpp"
-#include "futil.hpp"
+#include "futf8.hpp"
 #include "fvalue.hpp"
 
-#include <cstdint>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <set>
