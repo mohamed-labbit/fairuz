@@ -3,7 +3,7 @@
 //
 
 #include "ftoken.hpp"
-#include "futil.hpp"
+#include "fnumeric_literals.hpp"
 
 namespace fairuz::tok {
 
