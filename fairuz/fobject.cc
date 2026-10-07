@@ -4,8 +4,8 @@
 
 #include "fobject.hpp"
 #include "fbuiltins.hpp"
+#include "fchunk.hpp"
 #include "fgc.hpp"
-#include "fopcode.hpp"
 
 namespace fairuz::runtime {
 
