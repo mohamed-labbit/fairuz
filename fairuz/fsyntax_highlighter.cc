@@ -6,7 +6,7 @@
 #include "flexer.hpp"
 #include "fparser.hpp"
 #include "ftoken.hpp"
-#include "futil.hpp"
+#include "futf8.hpp"
 
 #include <algorithm>
 #include <unordered_map>
