@@ -8,7 +8,7 @@
 #include "fplatform.hpp"
 #include "fstring.hpp"
 #include "ftoken.hpp"
-#include "futil.hpp"
+#include "futf8.hpp"
 
 #include <algorithm>
 #include <cstdio>
