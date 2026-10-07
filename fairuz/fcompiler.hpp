@@ -3,6 +3,7 @@
 
 #include "fAST.hpp"
 #include "farray.hpp"
+#include "fchunk.hpp"
 #include "ferror.hpp"
 #include "fmacros.hpp"
 #include "fopcode.hpp"
