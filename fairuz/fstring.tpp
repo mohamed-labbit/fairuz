@@ -3,7 +3,7 @@
 //
 
 #include "fdiagnostic.hpp"
-#include "futil.hpp"
+#include "fchars.hpp"
 
 #include <cassert>
 #include <charconv>
