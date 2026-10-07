@@ -4,6 +4,7 @@
 
 #include "fgc.hpp"
 #include "farray.hpp"
+#include "fchunk.hpp"
 #include "fdiagnostic.hpp"
 #include "fmacros.hpp"
 #include "fobj_header.hpp"
