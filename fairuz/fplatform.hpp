@@ -8,6 +8,15 @@
 
 namespace fairuz::platform {
 
+inline void configure_locale()
+{
+    try {
+        std::locale::global(std::locale("ar_SA.UTF-8"));
+    } catch (std::runtime_error const&) {
+        std::locale::global(std::locale::classic());
+    }
+}
+
 inline std::filesystem::path path(std::string_view utf8)
 {
     if (utf8.empty())
