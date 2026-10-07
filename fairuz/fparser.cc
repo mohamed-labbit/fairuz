@@ -9,8 +9,8 @@
 #include "ferror.hpp"
 #include "flexer.hpp"
 #include "fmacros.hpp"
+#include "fnumeric_literals.hpp"
 #include "ftoken.hpp"
-#include "futil.hpp"
 
 #include <cstring>
 
