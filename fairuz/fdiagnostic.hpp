@@ -1,7 +1,9 @@
 #ifndef FA_DIAGNOSTIC_HPP
 #define FA_DIAGNOSTIC_HPP
 
+#include "ferrc.hpp"
 #include "fmacros.hpp"
+#include "fsource_manager.hpp"
 
 #include <memory>
 #include <stdexcept>
@@ -9,14 +11,6 @@
 #include <string_view>
 #include <type_traits>
 #include <vector>
-
-namespace fairuz::lex {
-
-class FileManager; // full definition in flexer.hpp; only a pointer is
-                   // needed here, and including flexer.hpp would be
-                   // circular (flexer.hpp already includes this file).
-
-} // namespace fairuz::lex
 
 namespace fairuz {
 namespace diagnostic {
@@ -28,372 +22,8 @@ enum class Severity : u8 {
     WARNING
 }; // enum Severity
 
-enum class ErrorCode : u16 {
-    /* --- File Manager --- */
-    FILE_NOT_FOUND = 0x0001,
-    FILE_NOT_OPEN,
-    SEEK_OUT_OF_BOUND,
-    READ_ERROR,
-    INVALID_UTF8,
-    INVALID_CHAR_OFFSET,
-    PERMISSION_DENIED,
-    UNEXPECTED_EOF,
-    SYSTEM_ERROR,
-    ENCODING_ERROR,
-    CACHE_ERROR,
-    INVALID_LINE_NUMBER,
-    BUFFER_TOO_SMALL,
-    /* --- Lexer --- */
-    INVALID_OCTAL_DIGIT = 0x0101,
-    INVALID_BINARY_DIGIT,
-    INVALID_BASE_LITERAL,
-    INCONSISTENT_INDENTATION,
-    TOO_MANY_INDENT_LEVELS,
-    MIXED_INDENTATION,
-    INVALID_UNINDENT,
-    INVALID_ESCAPE_SEQUENCE,
-    INVALID_CHARACTER,
-    INVALID_OPERATOR,
-    INVALID_NUMBER_LITERAL,
-    UNTERMINATED_STRING,
-    UNCLOSED_DELIMITER,
-    MISMATCHED_DELIMITER,
-    /* --- Parser --- */
-    EXPECTED_INDENT = 0x0201,
-    EXPECTED_DEDENT,
-    EXPECTED_LPAREN,
-    EXPECTED_RPAREN_PARAMS,
-    EXPECTED_RPAREN_ARGS,
-    EXPECTED_RPAREN_EXPR,
-    EXPECTED_RBRACKET,
-    EXPECTED_COLON_IF,
-    EXPECTED_COLON_WHILE,
-    EXPECTED_COLON_FN,
-    EXPECTED_FN_KEYWORD,
-    EXPECTED_FN_NAME,
-    EXPECTED_PARAM_NAME,
-    EXPECTED_RETURN,
-    EXPECTED_IF_KEYWORD,
-    EXPECTED_WHILE_KEYWORD,
-    INVALID_ASSIGN_TARGET,
-    UNEXPECTED_TOKEN,
-    INVALID_OPERATOR_SEQ,
-    EXPECTED_COLON_DICT,
-    EXPECTED_RBRACE_EXPR,
-    EXPECTED_FOR_TARGET,
-    EXPECTED_IN_KEYWORD,
-    EXPECTED_COLON_FOR,
-    EXPECTED_CLASS_KEYWORD,
-    EXPECTED_COLON_CLASS,
-    EXPECTED_CLASS_NAME,
-    EXPECTED_MEMBER_NAME,
-    EXCEEDED_MAX_NESTING_LIMIT,
-    EXPECTED_MODULE_NAME,
-    EXPECTED_IMPORT_KEYWORD,
-    EXPECTED_IMPORT_NAME,
-    EXPECTED_ALIAS_NAME,
-    EXPECTED_RPAREN_CLASS,
-    ASSIGNMENT_IN_EXPRESSION,
-    /* --- Semantics --- */
-    UNDEFINED_VARIABLE = 0x0300,
-    UNDEFINED_FUNCTION,
-    NOT_CALLABLE,
-    REDECLARATION,
-    TYPE_MISMATCH,
-    INVALID_STRING_OP,
-    DIVISION_BY_ZERO_CONST,
-    MISSING_RETURN,
-    UNUSED_VARIABLE,
-    LOOP_VAR_SHADOW,
-    CONSTANT_CONDITION,
-    INFINITE_LOOP,
-    UNUSED_EXPR_RESULT,
-    /* --- Compiler --- */
-    NULL_AST_ROOT = 0x0400,
-    INVALID_STATEMENT_NODE,
-    INVALID_EXPRESSION_NODE,
-    NULL_FUNCTION_NAME,
-    INVALID_FUNCTION_PARAMETER,
-    FOR_NOT_IMPLEMENTED,
-    UNKNOWN_LITERAL_TYPE,
-    UNKNOWN_UNARY_OPERATOR,
-    UNKNOWN_BINARY_OPERATOR,
-    SHIFT_AMOUNT_NOT_CONSTANT,
-    SHIFT_AMOUNT_OUT_OF_RANGE,
-    TOO_MANY_CONSTANTS,
-    TOO_MANY_REGISTERS,
-    JUMP_OFFSET_OVERFLOW,
-    LOOP_JUMP_OFFSET_OVERFLOW,
-    NESTED_FUNCTION_UNSUPPORTED,
-    BREAK_OUTSIDE_LOOP,
-    CONTINUE_OUTSIDE_LOOP,
-    NESTED_CLASS_UNSUPPORTED,
-    TOO_MANY_LIST_ELEMENTS,
-    TOO_MANY_FUNCTIONS,
-    TOO_MANY_INLINE_CACHES,
-    /* --- Runtime --- */
-    RUNTIME_ERROR = 0x0500,
-    STACK_OVERFLOW,
-    STACK_UNDERFLOW,
-    DIVISION_BY_ZERO,
-    MODULO_BY_ZERO,
-    TYPE_ERROR_ARITH,
-    TYPE_ERROR_COMPARE,
-    TYPE_ERROR_CALL,
-    WRONG_ARG_COUNT,
-    UNDEFINED_GLOBAL,
-    UNDEFINED_LOCAL,
-    INDEX_OUT_OF_BOUNDS,
-    INDEX_TYPE_ERROR,
-    INDEX_ASSIGN_TYPE_ERROR,
-    INDEX_OBJECT_TYPE_ERROR,
-    INVALID_OPCODE,
-    FRAME_OVERFLOW,
-    NEGATIVE_EXPONENT,
-    NON_FUNCTION_CALL,
-    NATIVE_ARG_COUNT,
-    NATIVE_TYPE_ERROR,
-    UNDEFINED_METHOD,
-    UNDEFINED_FIELD,
-    NUMERIC_OUT_OF_RANGE,
-    MODULE_NOT_FOUND,
-    /* --- Builtins --- */
-    APPEND_ARG_COUNT = 0x0600,
-    APPEND_TYPE_ERROR,
-    POP_ARG_COUNT,
-    POP_TYPE_ERROR,
-    SLICE_ARG_COUNT,
-    STR_ARG_COUNT,
-    BOOL_ARG_COUNT,
-    SUBSTR_ARG_COUNT,
-    FLOOR_ARG_COUNT,
-    FLOOR_TYPE_ERROR,
-    CEIL_ARG_COUNT,
-    CEIL_TYPE_ERROR,
-    ROUND_ARG_COUNT,
-    ROUND_TYPE_ERROR,
-    ABS_ARG_COUNT,
-    ABS_TYPE_ERROR,
-    ABS_OUT_OF_RANGE,
-    MIN_ARG_COUNT,
-    MAX_ARG_COUNT,
-    POW_ARG_COUNT,
-    POW_TYPE_ERROR,
-    SQRT_ARG_COUNT,
-    SQRT_TYPE_ERROR,
-    ASSERT_ARG_COUNT,
-    ASSERT_FAILED,
-    OPEN_ARG_COUNT,
-    APPEND_FILE_ARG_COUNT,
-    APPEND_FILE_TYPE_ERROR,
-    APPEND_FILE_FAILED,
-    CLOSE_ARG_COUNT,
-    CLOSE_TYPE_ERROR,
-    POP_EMPTY_LIST,
-    CLOCK_ARG_COUNT,
-    IS_INSTANCE_ARG_COUNT,
-    /* --- Containers --- */
-    ARRAY_EMPTY_BACK = 0x0700,
-    ARRAY_EMPTY_FRONT,
-    ARRAY_CAPACITY_EXCEEDED,
-    ARRAY_OUT_OF_BOUNDS,
-    STRING_SLICE_START_OOB,
-    STRING_SLICE_END_BEFORE_START,
-    /* --- General --- */
-    ALLOC_FAILED = 0x0800,
-    ARENA_EXHAUSTED,
-    INTERNAL_ERROR,
-    UNKNOWN,
-    ALLOCATOR_CONTEXT_NOT_INITIALIZED,
-    MMAP_FAILED,
-    NANBOX_ADDRESS_UNSAFE,
-    INVALID_PARAMETER,
-}; // enum ErrorCode
-
-static constexpr char const* error_message_for(ErrorCode const code)
-{
-    switch (code) {
-    // file manager
-    case ErrorCode::FILE_NOT_FOUND: return "File not found";
-    case ErrorCode::FILE_NOT_OPEN: return "File is not open";
-    case ErrorCode::SEEK_OUT_OF_BOUND: return "Seek position out of bounds";
-    case ErrorCode::READ_ERROR: return "Failed to read from file";
-    case ErrorCode::INVALID_UTF8: return "Invalid UTF-8 sequence encountered";
-    case ErrorCode::INVALID_CHAR_OFFSET: return "Invalid character offset";
-    case ErrorCode::PERMISSION_DENIED: return "Permission denied";
-    case ErrorCode::UNEXPECTED_EOF: return "Unexpected end of file";
-    case ErrorCode::SYSTEM_ERROR: return "System error occurred";
-    case ErrorCode::ENCODING_ERROR: return "Encoding conversion error";
-    case ErrorCode::CACHE_ERROR: return "Cache operation failed";
-    case ErrorCode::INVALID_LINE_NUMBER: return "Invalid line number";
-    case ErrorCode::BUFFER_TOO_SMALL: return "Buffer too small for operation";
-    // lexer
-    case ErrorCode::INVALID_OCTAL_DIGIT: return "Invalid digit in octal literal";
-    case ErrorCode::INVALID_BINARY_DIGIT: return "Invalid digit in binary literal";
-    case ErrorCode::INVALID_BASE_LITERAL: return "Invalid base-prefixed numeric literal";
-    case ErrorCode::INCONSISTENT_INDENTATION: return "Inconsistent indentation";
-    case ErrorCode::TOO_MANY_INDENT_LEVELS: return "Too many indentation levels";
-    case ErrorCode::MIXED_INDENTATION: return "Mixed tabs and spaces in indentation";
-    case ErrorCode::INVALID_UNINDENT: return "Unindent does not match an outer indentation level";
-    case ErrorCode::INVALID_ESCAPE_SEQUENCE: return "Invalid escape sequence in string literal";
-    case ErrorCode::INVALID_CHARACTER: return "Invalid character";
-    case ErrorCode::INVALID_OPERATOR: return "Invalid operator token";
-    case ErrorCode::INVALID_NUMBER_LITERAL: return "Invalid numeric literal";
-    case ErrorCode::UNTERMINATED_STRING: return "Unterminated string literal";
-    case ErrorCode::UNCLOSED_DELIMITER: return "Opening delimiter was never closed";
-    case ErrorCode::MISMATCHED_DELIMITER: return "Unmatched closing delimiter";
-    // parser
-    case ErrorCode::EXPECTED_INDENT: return "Expected indented block";
-    case ErrorCode::EXPECTED_DEDENT: return "Expected dedent after block";
-    case ErrorCode::EXPECTED_LPAREN: return "Expected '(' before parameters";
-    case ErrorCode::EXPECTED_RPAREN_PARAMS: return "Expected ')' after parameters";
-    case ErrorCode::EXPECTED_RPAREN_ARGS: return "Expected ')' after arguments";
-    case ErrorCode::EXPECTED_RPAREN_EXPR: return "Expected ')' after expression";
-    case ErrorCode::EXPECTED_RBRACKET: return "Expected ']' after list elements";
-    case ErrorCode::EXPECTED_COLON_IF: return "Expected ':' after if condition";
-    case ErrorCode::EXPECTED_COLON_WHILE: return "Expected ':' after while condition";
-    case ErrorCode::EXPECTED_COLON_FN: return "Expected ':' after function parameters";
-    case ErrorCode::EXPECTED_FN_KEYWORD: return "Expected 'fn' keyword";
-    case ErrorCode::EXPECTED_FN_NAME: return "Expected function name after 'fn'";
-    case ErrorCode::EXPECTED_PARAM_NAME: return "Expected parameter name";
-    case ErrorCode::EXPECTED_RETURN: return "Expected 'return' keyword";
-    case ErrorCode::EXPECTED_IF_KEYWORD: return "Expected 'if' keyword";
-    case ErrorCode::EXPECTED_WHILE_KEYWORD: return "Expected 'while' keyword";
-    case ErrorCode::INVALID_ASSIGN_TARGET: return "Invalid assignment target";
-    case ErrorCode::ASSIGNMENT_IN_EXPRESSION: return "Assignment is a statement and cannot be used inside an expression";
-    case ErrorCode::UNEXPECTED_TOKEN: return "Unexpected token";
-    case ErrorCode::INVALID_OPERATOR_SEQ: return "Invalid operator sequence";
-    case ErrorCode::EXPECTED_COLON_DICT: return "Expected ':' after dictionary key";
-    case ErrorCode::EXPECTED_RBRACE_EXPR: return "Expected '}' after dictionary literal";
-    case ErrorCode::EXPECTED_FOR_TARGET: return "Expected loop variable name after 'for'";
-    case ErrorCode::EXPECTED_IN_KEYWORD: return "Expected 'in' after loop variable";
-    case ErrorCode::EXPECTED_COLON_FOR: return "Expected ':' after for loop header";
-    case ErrorCode::EXPECTED_CLASS_KEYWORD: return "Expected class keyword";
-    case ErrorCode::EXPECTED_COLON_CLASS: return "Expected ':' after class name";
-    case ErrorCode::EXPECTED_CLASS_NAME: return "Expected class name";
-    case ErrorCode::EXPECTED_MEMBER_NAME: return "Expected member name";
-    case ErrorCode::EXCEEDED_MAX_NESTING_LIMIT: return "Exceeded max nesting limit";
-    case ErrorCode::EXPECTED_MODULE_NAME: return "Expected module name";
-    case ErrorCode::EXPECTED_IMPORT_KEYWORD: return "Expected 'import' keyword";
-    case ErrorCode::EXPECTED_IMPORT_NAME: return "Expected imported name";
-    case ErrorCode::EXPECTED_ALIAS_NAME: return "Expected alias name";
-    case ErrorCode::EXPECTED_RPAREN_CLASS: return "Expected ')' after parent class";
-    // sema
-    case ErrorCode::UNDEFINED_VARIABLE: return "Undefined variable";
-    case ErrorCode::UNDEFINED_FUNCTION: return "Undefined function";
-    case ErrorCode::NOT_CALLABLE: return "Expression is not callable";
-    case ErrorCode::REDECLARATION: return "Redeclaration of identifier";
-    case ErrorCode::TYPE_MISMATCH: return "Type mismatch in binary expression";
-    case ErrorCode::INVALID_STRING_OP: return "Only '+' is valid for string operands";
-    case ErrorCode::DIVISION_BY_ZERO_CONST: return "Division by zero (constant expression)";
-    case ErrorCode::MISSING_RETURN: return "Not all code paths return a value";
-    case ErrorCode::UNUSED_VARIABLE: return "Unused variable";
-    case ErrorCode::LOOP_VAR_SHADOW: return "Loop variable shadows outer variable";
-    case ErrorCode::CONSTANT_CONDITION: return "Condition is always true or always false";
-    case ErrorCode::INFINITE_LOOP: return "Infinite loop detected (condition is always true)";
-    case ErrorCode::UNUSED_EXPR_RESULT: return "Expression result is not used";
-    // compiler
-    case ErrorCode::NULL_AST_ROOT: return "Compiler received a null AST root";
-    case ErrorCode::INVALID_STATEMENT_NODE: return "Invalid statement node";
-    case ErrorCode::INVALID_EXPRESSION_NODE: return "Invalid expression node";
-    case ErrorCode::NULL_FUNCTION_NAME: return "Function name is missing";
-    case ErrorCode::INVALID_FUNCTION_PARAMETER: return "Function parameter must be a name";
-    case ErrorCode::FOR_NOT_IMPLEMENTED: return "For loops are not implemented in the compiler";
-    case ErrorCode::UNKNOWN_LITERAL_TYPE: return "Unknown literal type";
-    case ErrorCode::UNKNOWN_UNARY_OPERATOR: return "Unknown unary operator";
-    case ErrorCode::UNKNOWN_BINARY_OPERATOR: return "Unknown binary operator";
-    case ErrorCode::SHIFT_AMOUNT_NOT_CONSTANT: return "Shift amount must be a constant integer";
-    case ErrorCode::SHIFT_AMOUNT_OUT_OF_RANGE: return "Shift amount is out of range";
-    case ErrorCode::TOO_MANY_CONSTANTS: return "Too many constants in function (max 65536)";
-    case ErrorCode::TOO_MANY_REGISTERS: return "Too many registers allocated for function";
-    case ErrorCode::JUMP_OFFSET_OVERFLOW: return "Jump offset overflow";
-    case ErrorCode::LOOP_JUMP_OFFSET_OVERFLOW: return "Loop jump offset overflow";
-    case ErrorCode::NESTED_FUNCTION_UNSUPPORTED: return "Nested function definitions are not supported";
-    case ErrorCode::BREAK_OUTSIDE_LOOP: return "'break' used outside of a loop";
-    case ErrorCode::CONTINUE_OUTSIDE_LOOP: return "'continue' used outside of a loop";
-    case ErrorCode::NESTED_CLASS_UNSUPPORTED: return "Nested class definition is not supported";
-    case ErrorCode::TOO_MANY_LIST_ELEMENTS: return "Too many elements in list object (max 255)";
-    case ErrorCode::TOO_MANY_FUNCTIONS: return "Too many nested function chunks (max 65536)";
-    case ErrorCode::TOO_MANY_INLINE_CACHES: return "Too many inline-cache slots in function (max 256)";
-    // runtime
-    case ErrorCode::RUNTIME_ERROR: return "Runtime error";
-    case ErrorCode::STACK_OVERFLOW: return "Stack overflow";
-    case ErrorCode::STACK_UNDERFLOW: return "Stack underflow";
-    case ErrorCode::DIVISION_BY_ZERO: return "Division by zero";
-    case ErrorCode::MODULO_BY_ZERO: return "Modulo by zero";
-    case ErrorCode::TYPE_ERROR_ARITH: return "Arithmetic on non-numeric value";
-    case ErrorCode::TYPE_ERROR_COMPARE: return "Comparison between incompatible types";
-    case ErrorCode::TYPE_ERROR_CALL: return "Attempted to call a non-callable value";
-    case ErrorCode::WRONG_ARG_COUNT: return "Wrong number of arguments";
-    case ErrorCode::UNDEFINED_GLOBAL: return "Undefined global variable";
-    case ErrorCode::UNDEFINED_LOCAL: return "Undefined local variable";
-    case ErrorCode::INDEX_OUT_OF_BOUNDS: return "Index out of bounds";
-    case ErrorCode::INDEX_TYPE_ERROR: return "Index must be an integer";
-    case ErrorCode::INDEX_ASSIGN_TYPE_ERROR: return "Assignment target does not support index assignment";
-    case ErrorCode::INDEX_OBJECT_TYPE_ERROR: return "Indexing into object which doesn't support index operator";
-    case ErrorCode::INVALID_OPCODE: return "Invalid opcode in dispatch loop";
-    case ErrorCode::FRAME_OVERFLOW: return "Call frame limit exceeded";
-    case ErrorCode::NEGATIVE_EXPONENT: return "Integer exponentiation with negative exponent";
-    case ErrorCode::NON_FUNCTION_CALL: return "Attempted to call a non-function value";
-    case ErrorCode::NATIVE_ARG_COUNT: return "Native call received the wrong number of arguments";
-    case ErrorCode::NATIVE_TYPE_ERROR: return "Native call received arguments of the wrong type";
-    case ErrorCode::UNDEFINED_METHOD: return "Call to undefined method";
-    case ErrorCode::UNDEFINED_FIELD: return "Undefined field";
-    case ErrorCode::NUMERIC_OUT_OF_RANGE: return "Integer result is outside the signed 64-bit range";
-    case ErrorCode::MODULE_NOT_FOUND: return "No module named";
-    // stdlib
-    case ErrorCode::APPEND_ARG_COUNT: return "append() expects at least two arguments";
-    case ErrorCode::APPEND_TYPE_ERROR: return "append() expects a list as the first argument";
-    case ErrorCode::POP_ARG_COUNT: return "pop() expects exactly one argument";
-    case ErrorCode::POP_TYPE_ERROR: return "pop() expects a list argument";
-    case ErrorCode::SLICE_ARG_COUNT: return "slice() expects exactly two or three arguments";
-    case ErrorCode::STR_ARG_COUNT: return "str() expects zero or one argument";
-    case ErrorCode::BOOL_ARG_COUNT: return "bool() expects exactly one argument";
-    case ErrorCode::SUBSTR_ARG_COUNT: return "substr() expects exactly three arguments";
-    case ErrorCode::FLOOR_ARG_COUNT: return "floor() expects exactly one argument";
-    case ErrorCode::FLOOR_TYPE_ERROR: return "floor() expects a numeric argument";
-    case ErrorCode::CEIL_ARG_COUNT: return "ceil() expects exactly one argument";
-    case ErrorCode::CEIL_TYPE_ERROR: return "ceil() expects a numeric argument";
-    case ErrorCode::ROUND_ARG_COUNT: return "round() expects exactly one argument";
-    case ErrorCode::ROUND_TYPE_ERROR: return "round() expects a numeric argument";
-    case ErrorCode::ABS_ARG_COUNT: return "abs() expects exactly one argument";
-    case ErrorCode::ABS_TYPE_ERROR: return "abs() expects a numeric argument";
-    case ErrorCode::ABS_OUT_OF_RANGE: return "abs() argument is out of range";
-    case ErrorCode::MIN_ARG_COUNT: return "min() expects at least one argument";
-    case ErrorCode::MAX_ARG_COUNT: return "max() expects at least one argument";
-    case ErrorCode::POW_ARG_COUNT: return "pow() expects exactly two arguments";
-    case ErrorCode::POW_TYPE_ERROR: return "pow() expects numeric arguments";
-    case ErrorCode::SQRT_ARG_COUNT: return "sqrt() expects exactly one argument";
-    case ErrorCode::SQRT_TYPE_ERROR: return "sqrt() expects a numeric argument";
-    case ErrorCode::ASSERT_ARG_COUNT: return "assert expects at least one argument";
-    case ErrorCode::ASSERT_FAILED: return "assertion failed";
-    case ErrorCode::OPEN_ARG_COUNT: return "open() expects at least one argument";
-    case ErrorCode::APPEND_FILE_ARG_COUNT: return "append_file() expects at least two arguments";
-    case ErrorCode::APPEND_FILE_TYPE_ERROR: return "append_file() expects a file as first argument and a string as second argument";
-    case ErrorCode::APPEND_FILE_FAILED: return "append_file() failed to write";
-    case ErrorCode::CLOSE_ARG_COUNT: return "close() expects exactly one argument";
-    case ErrorCode::CLOSE_TYPE_ERROR: return "close() expects a file value as argument";
-    case ErrorCode::POP_EMPTY_LIST: return "pop() on an empty list";
-    case ErrorCode::CLOCK_ARG_COUNT: return "clock() expects no arguments at all";
-    // containers
-    case ErrorCode::ARRAY_EMPTY_BACK: return "Array::back() called on an empty array";
-    case ErrorCode::ARRAY_EMPTY_FRONT: return "Array::front() called on an empty array";
-    case ErrorCode::ARRAY_CAPACITY_EXCEEDED: return "Requested array capacity exceeds the maximum";
-    case ErrorCode::ARRAY_OUT_OF_BOUNDS: return "Array index is out of bounds";
-    case ErrorCode::STRING_SLICE_START_OOB: return "String slice start index is out of range";
-    case ErrorCode::STRING_SLICE_END_BEFORE_START: return "String slice end must not precede start";
-    // general
-    case ErrorCode::ALLOC_FAILED: return "Memory allocation failed";
-    case ErrorCode::ARENA_EXHAUSTED: return "Arena allocator exhausted";
-    case ErrorCode::INTERNAL_ERROR: return "Internal compiler error";
-    case ErrorCode::UNKNOWN: return "Unknown error";
-    case ErrorCode::ALLOCATOR_CONTEXT_NOT_INITIALIZED: return "AllocatorContext is not initialized";
-    case ErrorCode::MMAP_FAILED: return "mmap failed";
-    case ErrorCode::NANBOX_ADDRESS_UNSAFE: return "mmap returned an address unsafe for NaN-boxing";
-    case ErrorCode::INVALID_PARAMETER: return "Invalid parameters to function";
-    default: return "Unknown error";
-    }
-}
+// Compatibility for existing qualified diagnostic error-code users.
+using ErrorCode = fairuz::ErrorCode;
 
 struct DiagnosticAbort final : public std::runtime_error {
     DiagnosticAbort()
@@ -402,18 +32,10 @@ struct DiagnosticAbort final : public std::runtime_error {
     }
 };
 
-// Immutable source text survives parser/file-manager destruction and imports.
-// One snapshot is shared by a compilation unit, its functions and diagnostics.
-struct Source {
-    std::string path;
-    std::string text;
-    std::vector<size_t> lines;
-    Source(std::string path, std::string text);
-    std::string_view line(u32 number) const;
-};
-using SourcePtr = std::shared_ptr<Source const>;
+using Source = SourceManager;
+using SourcePtr = fairuz::SourcePtr;
 
-char const* error_type_for(u16 code);
+char const* error_type_for(ErrorCode code) noexcept;
 
 class DiagnosticEngine {
 public:
@@ -467,7 +89,7 @@ public:
         _panic(msg);
     }
 
-    // Accumulates a diagnostic. Does NOT emit to stderr.
+    // Accumulates a diagnostic. Does not emit or abort, for any severity.
     // If the engine is saturated (error count >= LIMIT), non-FATAL diagnostics
     // are silently dropped — the existing diagnostic list is still valid and
     // will be emitted in full when dump() is called. Returns the id of the
@@ -528,7 +150,7 @@ public:
         m_printed_limit = false;
     }
 
-    void set_source(lex::FileManager const* fm);
+    void set_source(FileManager const* fm);
     void set_source(SourcePtr source) { m_source = std::move(source); }
     SourcePtr source() const { return m_source; }
     void set_json_output(bool enabled) { m_json_output = enabled; }
@@ -559,13 +181,11 @@ static inline void emit(ErrorCode code, Severity const sv = Severity::ERROR)
     engine.emit(error_message_for(code), sv);
 }
 
-static inline void fatal_error(ErrorCode code, std::string const& detail = "")
+// Aborting is explicit. Reporting or emitting FATAL severity alone does not throw.
+[[noreturn]] static inline void fatal_error(ErrorCode code, std::string const& detail = "")
 {
     engine.report_deferred(Severity::FATAL, { }, code, detail);
-    std::string message = error_message_for(code);
-    if (!detail.empty())
-        message += ": " + detail;
-    engine.emit(message, Severity::FATAL);
+    engine.panic("");
 }
 
 static inline void emit(ErrorCode code, std::string const& detail, Severity const sv = Severity::ERROR)
@@ -600,7 +220,7 @@ static inline bool is_saturated() noexcept { return engine.is_saturated(); }
 static inline u32 error_count() noexcept { return engine.error_count(); }
 static inline u32 warning_count() noexcept { return engine.get_warning_count(); }
 static inline void reset() noexcept { engine.reset(); }
-static inline void set_source(lex::FileManager const* fm) { engine.set_source(fm); }
+static inline void set_source(FileManager const* fm) { engine.set_source(fm); }
 
 class SourceScope {
 public:
@@ -609,7 +229,7 @@ public:
     {
         engine.set_source(std::move(source));
     }
-    explicit SourceScope(lex::FileManager const* source)
+    explicit SourceScope(FileManager const* source)
         : m_previous(engine.source())
     {
         engine.set_source(source);
@@ -623,8 +243,6 @@ private:
 };
 
 } // namespace diagnostic
-
-using ErrorCode = fairuz::diagnostic::ErrorCode;
 
 } // namespace fairuz
 
