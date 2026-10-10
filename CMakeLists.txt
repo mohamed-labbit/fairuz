@@ -222,6 +222,17 @@ if(BUILD_TESTS)
     enable_testing()
     add_test(NAME AllTestsInMain COMMAND fairuz_tests)
 
+    # An independent JSON parser catches serialization defects, including bad UTF-8.
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    add_executable(fairuz_diagnostic_probe tests/support/diagnostic_probe.cc
+        fairuz/fdiagnostic.cc fairuz/fsource_manager.cc fairuz/ffile.cc)
+    target_include_directories(fairuz_diagnostic_probe PRIVATE ${CMAKE_SOURCE_DIR}/fairuz)
+    add_dependencies(fairuz_tests fairuz_diagnostic_probe)
+    add_test(NAME DiagnosticsJson COMMAND ${Python3_EXECUTABLE}
+        ${CMAKE_SOURCE_DIR}/tests/test_diagnostic_json.py
+        $<TARGET_FILE:fairuz_diagnostic_probe> $<TARGET_FILE:fairuz>
+        ${CMAKE_SOURCE_DIR}/fairuz/ferrc.def)
+
     # Every Fairuz standard-library test is also a first-class CTest case.
     # CONFIGURE_DEPENDS makes newly added اختبار_*.ف / test_*.ف files appear after the
     # next build without maintaining a second handwritten manifest.
