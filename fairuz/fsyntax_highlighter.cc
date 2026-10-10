@@ -409,7 +409,7 @@ Result Highlighter::highlight(StringRef const& source)
 
     diagnostic::reset();
     lex::FileManager file;
-    file.buffer() = source;
+    file.buffer().assign(source.data(), source.len());
     diagnostic::set_source(&file);
     try {
         parser::Parser parser(&file, parser::BodyParsing::Eager);
