@@ -181,7 +181,7 @@ ExitCode format_file(std::string filename, fairuz::Formatter& fmter, size_t& fil
         fairuz::diagnostic::dump();
         return ExitCode::DataError;
     }
-    fairuz::StringRef fmted = fmter.format(fm.buffer());
+    fairuz::StringRef fmted = fmter.format(fairuz::StringRef(fm.buffer().c_str()));
     char const* data = fmted.empty() ? "" : fmted.data();
     if (data != fm.buffer()) {
         if (check_only) {
@@ -375,6 +375,13 @@ int run_main(int argc, char** argv)
     } catch (fairuz::runtime::RuntimeHalt const&) {
         return static_cast<int>(ExitCode::DataError);
     } catch (fairuz::diagnostic::DiagnosticAbort const&) {
+        return static_cast<int>(ExitCode::DataError);
+    } catch (fairuz::FileError const& ex) {
+        auto code = ex.kind() == fairuz::FileError::Kind::NotFound ? fairuz::ErrorCode::FILE_NOT_FOUND
+            : ex.kind() == fairuz::FileError::Kind::Read ? fairuz::ErrorCode::READ_ERROR : fairuz::ErrorCode::FILE_NOT_OPEN;
+        fairuz::diagnostic::SourceScope source_scope(fairuz::diagnostic::SourcePtr {});
+        fairuz::diagnostic::report(fairuz::diagnostic::Severity::ERROR, {}, code, ex.path());
+        fairuz::diagnostic::dump();
         return static_cast<int>(ExitCode::DataError);
     } catch (std::bad_alloc const&) {
         fairuz::diagnostic::report(fairuz::diagnostic::Severity::ERROR, { }, fairuz::ErrorCode::ALLOC_FAILED);
