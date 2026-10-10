@@ -14,12 +14,6 @@
 #include <unordered_map>
 #include <vector>
 
-namespace fairuz::lex {
-
-class FileManager;
-
-}
-
 namespace fairuz::runtime {
 
 class Compiler;
@@ -185,7 +179,7 @@ public:
     GlobalEnvironment m_builtin_environment;
     GlobalEnvironment m_root_environment;
     std::vector<std::unique_ptr<GlobalEnvironment>> m_module_environments;
-    std::vector<std::unique_ptr<lex::FileManager>> m_module_sources;
+    std::vector<std::unique_ptr<FileManager>> m_module_sources;
     std::unordered_map<std::string, ObjModule*> m_module_cache;
     BuiltinsList m_builtin_functions;
     bool m_is_dead { false };
