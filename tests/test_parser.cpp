@@ -2,6 +2,7 @@
 #include "../fairuz/fparser.hpp"
 #include "fAST.hpp"
 #include "test_config.h"
+#include <filesystem>
 
 #include <gtest/gtest.h>
 #include <iostream>

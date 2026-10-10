@@ -1,4 +1,5 @@
 #include "../fairuz/flexer.hpp"
+#include <filesystem>
 
 #include <gtest/gtest.h>
 

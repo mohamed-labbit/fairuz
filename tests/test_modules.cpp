@@ -196,7 +196,7 @@ TEST(ModuleCompiler, HundredsOfImportsReuseTemporaryRegisters)
     FileManager source;
     for (int i = 0; i < 300; ++i) {
         source.buffer() += "من مجموعات استورد مدى باسم اسم";
-        source.buffer() += StringRef(std::to_string(i).c_str());
+        source.buffer() += std::to_string(i);
         source.buffer() += "\n";
     }
     source.buffer() += "اسم299(0، 1، 1)\n";
@@ -233,7 +233,7 @@ TEST(ModuleCompiler, HundredsOfMembersInOneImportReuseTemporaryRegisters)
         if (i != 0)
             source.buffer() += "، ";
         source.buffer() += "مدى باسم اسم";
-        source.buffer() += StringRef(std::to_string(i).c_str());
+        source.buffer() += std::to_string(i);
     }
     source.buffer() += "\nاسم299(0، 1، 1)\n";
     Parser parser(&source);

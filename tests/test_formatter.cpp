@@ -16,12 +16,12 @@ std::string format_source(std::string const& source)
 {
     diagnostic::reset();
     lex::FileManager file;
-    file.buffer() = StringRef(source.c_str());
+    file.buffer() = source;
     parser::Parser parser(&file);
     (void)parser.parse_program();
     if (diagnostic::has_errors())
         throw std::runtime_error("Invalid test source");
-    auto result = Formatter().format(file.buffer());
+    auto result = Formatter().format(StringRef(file.buffer().c_str()));
     return result.empty() ? "" : std::string(result.data(), result.len());
 }
 

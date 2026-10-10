@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
+#include <sstream>
 
 using namespace fairuz;
 
@@ -253,4 +254,77 @@ TEST(LexerTest, RecognizesStmt04)
     EXPECT_EQ(tokens.size(), expected.size());
     for (size_t i = 0; i < tokens.size(); i++)
         EXPECT_EQ(*tokens[i], *expected[i]);
+}
+
+TEST(LexerTest, UnicodeColumnsAndByteOffsetsAreIndependent)
+{
+    diagnostic::reset();
+    lex::FileManager file;
+    file.buffer() = "س + \"€😀\"\r\nص";
+    lex::Lexer lexer(&file);
+    auto tokens = lexer.tokenize();
+    ASSERT_EQ(tokens.size(), 7);
+    EXPECT_EQ(tokens[1]->lexeme(), "س");
+    EXPECT_EQ(tokens[2]->location().column, 3);
+    EXPECT_EQ(tokens[2]->location().offset, 3);
+    EXPECT_EQ(tokens[3]->lexeme(), "€😀");
+    EXPECT_EQ(tokens[3]->location().column, 5);
+    EXPECT_EQ(tokens[3]->location().length, 4);
+    EXPECT_EQ(tokens[3]->location().offset, 5);
+    EXPECT_EQ(tokens[5]->lexeme(), "ص");
+    EXPECT_EQ(tokens[5]->location().line, 2);
+    EXPECT_EQ(tokens[5]->location().column, 1);
+    EXPECT_EQ(tokens[5]->location().offset, 16);
+    diagnostic::reset();
+}
+
+TEST(LexerTest, MalformedUtf8IsALocatedLexicalError)
+{
+    for (std::string const bad : {
+             std::string("\x80"), std::string("\xc0\xaf"), std::string("\xc2"),
+             std::string("\xe2\x82"), std::string("\xf0\x9f\x98"),
+             std::string("\xc2x"), std::string("\xe2\x82x"), std::string("\xf0\x9f\x98x"),
+             std::string("\xe0\x80\x80"), std::string("\xf0\x80\x80\x80"),
+             std::string("\xed\xa0\x80"), std::string("\xf4\x90\x80\x80"), std::string("\xff") }) {
+        for (std::string const prefix : { std::string(), std::string("س\nص ") }) {
+            diagnostic::reset();
+            lex::FileManager file;
+            file.buffer() = prefix + bad;
+            std::ostringstream captured;
+            auto* previous = std::cerr.rdbuf(captured.rdbuf());
+            EXPECT_THROW({
+                lex::Lexer lexer(&file);
+                lexer.tokenize(); }, diagnostic::DiagnosticAbort);
+            std::cerr.rdbuf(previous);
+            auto output = captured.str();
+            EXPECT_EQ(diagnostic::error_count(), 1);
+            EXPECT_NE(output.find("Invalid UTF-8"), std::string::npos);
+            EXPECT_EQ(output.find("Internal compiler error"), std::string::npos);
+            auto json = diagnostic::engine.to_json();
+            EXPECT_NE(json.find(prefix.empty() ? "\"line\":1" : "\"line\":2"), std::string::npos);
+            EXPECT_NE(json.find(prefix.empty() ? "\"column\":1" : "\"column\":3"), std::string::npos);
+        }
+    }
+    diagnostic::reset();
+}
+
+TEST(LexerTest, TokensAndDiagnosticSourceOutliveFileManager)
+{
+    diagnostic::reset();
+    Array<TokenPtr> tokens;
+    diagnostic::SourcePtr snapshot;
+    {
+        lex::FileManager file;
+        file.buffer() = "س + 1\n";
+        lex::Lexer lexer(&file);
+        snapshot = lexer.source();
+        file.buffer() = "different";
+        tokens = lexer.tokenize();
+    }
+    diagnostic::reset();
+    EXPECT_EQ(snapshot->line(1), "س + 1");
+    EXPECT_EQ(tokens[1]->lexeme(), "س");
+    lex::Lexer replay(tokens, snapshot);
+    EXPECT_EQ(replay.source_slice(0, 2), "س");
+    EXPECT_EQ(replay.get_line_at(1), "س + 1");
 }
