@@ -3,16 +3,12 @@
 //
 
 #include "fdiagnostic.hpp"
-#include "flexer.hpp" // for FileManager::get_line_at() — kept out of the
-#include "fmacros.hpp"
-// header to avoid the circular include (flexer.hpp
-// includes fdiagnostic.hpp)
-
 #include "fwindows.hpp"
 #include <algorithm>
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
+#include <locale>
 #include <sstream>
 #include <string_view>
 #ifdef _WIN32
@@ -24,42 +20,18 @@
 
 namespace fairuz::diagnostic {
 
-Source::Source(std::string file_path, std::string contents)
-    : path(file_path.empty() ? "<input>" : std::move(file_path))
-    , text(std::move(contents))
-    , lines { 0 }
-{
-    for (size_t i = 0; i < text.size(); ++i)
-        if (text[i] == '\n')
-            lines.push_back(i + 1);
-}
-
-std::string_view Source::line(u32 number) const
-{
-    if (number == 0 || number > lines.size())
-        return { };
-    size_t from = lines[number - 1];
-    size_t to = number < lines.size() ? lines[number] - 1 : text.size();
-    if (to > from && text[to - 1] == '\r')
-        --to;
-    return std::string_view(text).substr(from, to - from);
-}
-
-void DiagnosticEngine::set_source(lex::FileManager const* fm)
+void DiagnosticEngine::set_source(FileManager const* fm)
 {
     if (fm == nullptr) {
         m_source.reset();
         return;
     }
-    auto const& buffer = fm->buffer();
-    m_source = std::make_shared<Source>(fm->get_path(), buffer.empty() ? "" : std::string(buffer.data(), buffer.len()));
+    m_source = std::make_shared<Source>(*fm);
 }
 
-char const* error_type_for(ErrorCode code)
+char const* error_type_for(ErrorCode code) noexcept
 {
-    /// TODO:
-    (void)code;
-    return "";
+    return error_category_name(error_category_for(code));
 }
 
 namespace {
@@ -124,8 +96,22 @@ u32 next_codepoint(std::string_view text, size_t& offset)
 std::string json_string(std::string_view text)
 {
     std::ostringstream out;
+    out.imbue(std::locale::classic());
     out << '"';
-    for (unsigned char c : text) {
+    for (size_t offset = 0; offset < text.size();) {
+        size_t from = offset;
+        unsigned char c = text[offset];
+        if (c >= 0x80) {
+            // File names, source snippets and user messages may contain invalid
+            // UTF-8. JSON must still be valid Unicode without raising a diagnostic.
+            u32 cp = next_codepoint(text, offset);
+            if (cp == 0xFFFD)
+                out << "\xEF\xBF\xBD";
+            else
+                out << text.substr(from, offset - from);
+            continue;
+        }
+        ++offset;
         if (c == '"' || c == '\\')
             out << '\\' << c;
         else if (c < 0x20)
@@ -181,21 +167,6 @@ int cell_width(u32 cp)
 
 } // namespace
 
-/*DiagnosticEngine::DiagnosticId DiagnosticEngine::report(
-    Severity const sev, SourceLocation const loc, u16 err_code, std::string const& code)
-{
-    DiagnosticId const id = report_deferred(sev, loc, err_code, code);
-
-    if (sev == Severity::ERROR || sev == Severity::FATAL || sev == Severity::WARNING) {
-        pretty_print();
-        m_diagnostics.clear();
-        if (sev == Severity::FATAL)
-            panic("exited on fatal error");
-    }
-
-    return id;
-}*/
-
 DiagnosticEngine::DiagnosticId DiagnosticEngine::report_deferred(
     Severity const sev, SourceLocation const loc, ErrorCode err_code, std::string const& code)
 {
@@ -205,12 +176,7 @@ DiagnosticEngine::DiagnosticId DiagnosticEngine::report_deferred(
     DiagnosticId const id = static_cast<DiagnosticId>(m_diagnostics.size());
     m_diagnostics.push_back({ sev, loc, err_code, code, { }, { }, m_source, { } });
 
-    if (sev == Severity::FATAL) {
-        m_error_count++;
-        _panic("");
-    }
-
-    if (sev == Severity::ERROR) {
+    if (sev == Severity::ERROR || sev == Severity::FATAL) {
         m_error_count++;
     } else if (sev == Severity::WARNING) {
         m_warning_count++;
@@ -255,8 +221,6 @@ void DiagnosticEngine::add_frame(DiagnosticId id, SourcePtr source, SourceLocati
 void DiagnosticEngine::emit_error(std::string const& msg, Severity const sv)
 {
     std::cerr << sv_to_str(sv) << ": " << escape_terminal(msg) << "\n";
-    if (sv == Severity::FATAL)
-        panic("");
 }
 
 [[noreturn]] void DiagnosticEngine::_panic(std::string const& msg) const
@@ -354,6 +318,7 @@ void DiagnosticEngine::print_snippet(SourcePtr const& source, SourceLocation con
 std::string DiagnosticEngine::to_json() const
 {
     std::ostringstream out;
+    out.imbue(std::locale::classic());
     out << '[';
     bool first = true;
     for (auto const& d : m_diagnostics) {
@@ -362,7 +327,8 @@ std::string DiagnosticEngine::to_json() const
         first = false;
         out << "{\"severity\":" << static_cast<int>(d.severity)
             << ",\"type\":" << json_string(error_type_for(d.err_code))
-            << ",\"errorCode\":" << error_type_for(d.err_code)
+            << ",\"errorCode\":" << json_string(error_name_for(d.err_code))
+            << ",\"errorNumber\":" << static_cast<u16>(d.err_code)
             << ",\"path\":" << json_string(d.source ? d.source->path : "")
             << ",\"line\":" << d.src_loc.line << ",\"column\":" << d.src_loc.column
             << ",\"length\":" << d.src_loc.length
