@@ -141,7 +141,7 @@ std::vector<TokenPtr> significant(Array<TokenPtr> const& tokens)
 StringRef Formatter::format(StringRef const& source)
 {
     lex::FileManager input;
-    input.buffer() = source;
+    input.buffer().assign(source.data(), source.len());
     auto tokens = tokenize(input);
     if (diagnostic::has_errors())
         throw std::runtime_error("Cannot format invalid source");
@@ -340,7 +340,7 @@ StringRef Formatter::format(StringRef const& source)
         output += eol;
 
     lex::FileManager formatted;
-    formatted.buffer() = StringRef(output.c_str());
+    formatted.buffer() = output;
     auto before = significant(tokens);
     auto after = significant(tokenize(formatted));
     if (before.size() != after.size())
@@ -355,7 +355,7 @@ StringRef Formatter::format(StringRef const& source)
     (void)parser.parse_program();
     if (diagnostic::has_errors())
         throw std::runtime_error("Formatted output is invalid; input left unchanged");
-    return formatted.buffer();
+    return StringRef(output.c_str());
 }
 
 } // namespace fairuz
