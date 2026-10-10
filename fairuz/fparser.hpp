@@ -136,8 +136,10 @@ private:
             : p(c)
         {
             assert(p != nullptr);
-            if (*p >= MAX_NESTING_LEVEL)
+            if (*p >= MAX_NESTING_LEVEL) {
                 diagnostic::report(diagnostic::Severity::FATAL, loc, ErrorCode::EXCEEDED_MAX_NESTING_LIMIT);
+                diagnostic::engine.panic("");
+            }
             (*p)++;
         }
         ~NestingLevel()
