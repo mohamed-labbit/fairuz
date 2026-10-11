@@ -6,9 +6,6 @@
 #include "Support/error.hpp"
 
 #include <cassert>
-#include <filesystem>
-#include <fstream>
-#include <sstream>
 #include <stack>
 #include <string>
 
@@ -60,20 +57,6 @@ struct RuntimeError : public Error {
     {
         if (!rtf.is_main())
             traceback.push(rtf);
-    }
-
-    std::string get_source_line()
-    {
-        namespace fs = std::filesystem;
-
-        if (loc.line == 0 || !fs::exists(src->path))
-            return { };
-
-        std::ifstream stream(src->path, std::ios::binary);
-        if (!stream.is_open())
-            return { };
-
-        std::stringstream ss;
     }
 };
 

@@ -18,8 +18,6 @@
 using namespace fairuz;
 using namespace fairuz::runtime;
 
-static constexpr char kClassInstanceName[] = "__class$instance";
-
 namespace {
 
 GarbageCollector gc;
@@ -2830,7 +2828,7 @@ TEST(VMClass, FieldGetExpressionReadsInstanceField)
                 sp_method_name(ObjClass::INIT),
                 { ident("value") },
                 {
-                    expr_stmt(assign_expr(get_expr(ident(kClassInstanceName),
+                    expr_stmt(assign_expr(get_expr(ident(fairuz::runtime::kClassInstanceName),
                                               ident("value")),
                         ident("value"))),
                 }),
@@ -2972,7 +2970,7 @@ TEST(VMClass, MethodReadsInstanceField)
 TEST(VMClass, MethodMutatesInstanceFieldAndPersists)
 {
     auto get = [](AST::IdentifierExpr* member) {
-        return get_expr(ident(kClassInstanceName), member);
+        return get_expr(ident(fairuz::runtime::kClassInstanceName), member);
     };
 
     auto init = [&](AST::IdentifierExpr* member, AST::ExprPtr value) -> AST::StmtPtr {

@@ -258,6 +258,226 @@ JSON_رمز(القيم)
 JSON_رمز({1: "value"})
 )fa",
         "مفاتيح JSON يجب أن تكون سلاسل" },
+// Invalid format inputs must report a language error and stop before the success marker.
+    { "CsvParseRejectsEmptySeparator", R"fa(
+من قيم_مفصولة استورد CSV_حلل، CSV_رمز
+CSV_حلل(""، "")
+)fa",
+        "فاصل CSV يجب أن يكون حرفاً واحداً" },
+    { "CsvParseRejectsMultipleSeparator", R"fa(
+من قيم_مفصولة استورد CSV_حلل، CSV_رمز
+CSV_حلل(""، "::")
+)fa",
+        "فاصل CSV يجب أن يكون حرفاً واحداً" },
+    { "CsvParseRejectsQuoteSeparator", R"fa(
+من قيم_مفصولة استورد CSV_حلل، CSV_رمز
+CSV_حلل(""، "\"")
+)fa",
+        "فاصل CSV لا يمكن أن يكون اقتباساً أو نهاية سطر" },
+    { "CsvParseRejectsLfSeparator", R"fa(
+من قيم_مفصولة استورد CSV_حلل، CSV_رمز
+CSV_حلل(""، "\n")
+)fa",
+        "فاصل CSV لا يمكن أن يكون اقتباساً أو نهاية سطر" },
+    { "CsvParseRejectsCrSeparator", R"fa(
+من قيم_مفصولة استورد CSV_حلل، CSV_رمز
+CSV_حلل(""، "\r")
+)fa",
+        "فاصل CSV لا يمكن أن يكون اقتباساً أو نهاية سطر" },
+    { "CsvParseRejectsNonStringSeparator", R"fa(
+من قيم_مفصولة استورد CSV_حلل، CSV_رمز
+CSV_حلل(""، [","])
+)fa",
+        "فاصل CSV يجب أن يكون نصاً" },
+    { "CsvEncodeRejectsEmptySeparator", R"fa(
+من قيم_مفصولة استورد CSV_حلل، CSV_رمز
+CSV_رمز([]، "")
+)fa",
+        "فاصل CSV يجب أن يكون حرفاً واحداً" },
+    { "CsvEncodeRejectsMultipleSeparator", R"fa(
+من قيم_مفصولة استورد CSV_حلل، CSV_رمز
+CSV_رمز([]، "::")
+)fa",
+        "فاصل CSV يجب أن يكون حرفاً واحداً" },
+    { "CsvEncodeRejectsQuoteSeparator", R"fa(
+من قيم_مفصولة استورد CSV_حلل، CSV_رمز
+CSV_رمز([]، "\"")
+)fa",
+        "فاصل CSV لا يمكن أن يكون اقتباساً أو نهاية سطر" },
+    { "CsvEncodeRejectsLfSeparator", R"fa(
+من قيم_مفصولة استورد CSV_حلل، CSV_رمز
+CSV_رمز([]، "\n")
+)fa",
+        "فاصل CSV لا يمكن أن يكون اقتباساً أو نهاية سطر" },
+    { "CsvEncodeRejectsCrSeparator", R"fa(
+من قيم_مفصولة استورد CSV_حلل، CSV_رمز
+CSV_رمز([]، "\r")
+)fa",
+        "فاصل CSV لا يمكن أن يكون اقتباساً أو نهاية سطر" },
+    { "CsvEncodeRejectsNonStringSeparator", R"fa(
+من قيم_مفصولة استورد CSV_حلل، CSV_رمز
+CSV_رمز([]، [","])
+)fa",
+        "فاصل CSV يجب أن يكون نصاً" },
+    { "CsvRejectsNonText", R"fa(
+من قيم_مفصولة استورد CSV_حلل، CSV_رمز
+CSV_حلل([]، ",")
+)fa",
+        "مدخل CSV يجب أن يكون نصاً" },
+    { "CsvRejectsNonList", R"fa(
+من قيم_مفصولة استورد CSV_حلل، CSV_رمز
+CSV_رمز("ab"، ",")
+)fa",
+        "صفوف CSV يجب أن تكون قائمة" },
+    { "CsvRejectsNonListRow", R"fa(
+من قيم_مفصولة استورد CSV_حلل، CSV_رمز
+CSV_رمز(["ab"]، ",")
+)fa",
+        "صف CSV يجب أن يكون قائمة" },
+    { "CsvRejectsEmptyRow", R"fa(
+من قيم_مفصولة استورد CSV_حلل، CSV_رمز
+CSV_رمز([[]]، ",")
+)fa",
+        "صف CSV يجب أن يحتوي حقلاً واحداً على الأقل" },
+    { "CsvRejectsTrailingEmptyRow", R"fa(
+من قيم_مفصولة استورد CSV_حلل، CSV_رمز
+CSV_رمز([["a"]، []]، ",")
+)fa",
+        "صف CSV يجب أن يحتوي حقلاً واحداً على الأقل" },
+    { "CsvRejectsBareQuote", R"fa(
+من قيم_مفصولة استورد CSV_حلل، CSV_رمز
+CSV_حلل("a\"b"، ",")
+)fa",
+        "اقتباس داخل حقل CSV غير مقتبس" },
+    { "CsvRejectsTextAfterQuote", R"fa(
+من قيم_مفصولة استورد CSV_حلل، CSV_رمز
+CSV_حلل("\"a\"b"، ",")
+)fa",
+        "محارف بعد إغلاق حقل CSV مقتبس" },
+    { "CsvRejectsSpaceAfterQuote", R"fa(
+من قيم_مفصولة استورد CSV_حلل، CSV_رمز
+CSV_حلل("\"a\" "، ",")
+)fa",
+        "محارف بعد إغلاق حقل CSV مقتبس" },
+    { "IniRejectsEmptySection", R"fa(
+من إعدادات استورد اعدادات_INI
+اعدادات_INI().حلل("[]")
+)fa",
+        "اسم قسم INI غير صالح" },
+    { "IniRejectsWhitespaceSection", R"fa(
+من إعدادات استورد اعدادات_INI
+اعدادات_INI().حلل("[  ]")
+)fa",
+        "اسم قسم INI غير صالح" },
+    { "IniRejectsNestedSection", R"fa(
+من إعدادات استورد اعدادات_INI
+اعدادات_INI().حلل("[[bad]]")
+)fa",
+        "اسم قسم INI غير صالح" },
+    { "IniRejectsUnclosedSection", R"fa(
+من إعدادات استورد اعدادات_INI
+اعدادات_INI().حلل("[bad = value")
+)fa",
+        "عنوان قسم INI غير صالح" },
+    { "IniRejectsSectionSuffix", R"fa(
+من إعدادات استورد اعدادات_INI
+اعدادات_INI().حلل("[bad] trailing")
+)fa",
+        "عنوان قسم INI غير صالح" },
+    { "IniRejectsEmptyKey", R"fa(
+من إعدادات استورد اعدادات_INI
+اعدادات_INI().حلل("=value")
+)fa",
+        "مفتاح INI غير صالح" },
+    { "IniRejectsWhitespaceKey", R"fa(
+من إعدادات استورد اعدادات_INI
+اعدادات_INI().حلل(" : value")
+)fa",
+        "مفتاح INI غير صالح" },
+    { "IniRejectsMissingDelimiter", R"fa(
+من إعدادات استورد اعدادات_INI
+اعدادات_INI().حلل("key")
+)fa",
+        "سطر إعداد غير صالح" },
+    { "IniRejectsNewlineSection", R"fa(
+من إعدادات استورد اعدادات_INI
+اعدادات_INI().ضع("a\nb"، "key"، "value")
+)fa",
+        "اسم قسم INI غير صالح" },
+    { "IniRejectsPaddedSection", R"fa(
+من إعدادات استورد اعدادات_INI
+اعدادات_INI().ضع(" a "، "key"، "value")
+)fa",
+        "اسم قسم INI غير صالح" },
+    { "IniRejectsNumericSection", R"fa(
+من إعدادات استورد اعدادات_INI
+اعدادات_INI().ضع(1، "key"، "value")
+)fa",
+        "اسم قسم INI يجب أن يكون نصاً" },
+    { "IniRejectsNumericKey", R"fa(
+من إعدادات استورد اعدادات_INI
+اعدادات_INI().ضع("s"، 1، "value")
+)fa",
+        "مفتاح INI يجب أن يكون نصاً" },
+    { "IniRejectsCommentKey", R"fa(
+من إعدادات استورد اعدادات_INI
+اعدادات_INI().ضع("s"، "#key"، "value")
+)fa",
+        "مفتاح INI غير صالح" },
+    { "IniRejectsSemicolonKey", R"fa(
+من إعدادات استورد اعدادات_INI
+اعدادات_INI().ضع("s"، ";key"، "value")
+)fa",
+        "مفتاح INI غير صالح" },
+    { "IniRejectsHeaderKey", R"fa(
+من إعدادات استورد اعدادات_INI
+اعدادات_INI().ضع("s"، "[key]"، "value")
+)fa",
+        "مفتاح INI غير صالح" },
+    { "IniRejectsSeparatorKey", R"fa(
+من إعدادات استورد اعدادات_INI
+اعدادات_INI().ضع("s"، "a:b"، "value")
+)fa",
+        "مفتاح INI غير صالح" },
+    { "IniRejectsEqualsKey", R"fa(
+من إعدادات استورد اعدادات_INI
+اعدادات_INI().ضع("s"، "a=b"، "value")
+)fa",
+        "مفتاح INI غير صالح" },
+    { "IniRejectsPaddedKey", R"fa(
+من إعدادات استورد اعدادات_INI
+اعدادات_INI().ضع("s"، " key"، "value")
+)fa",
+        "مفتاح INI غير صالح" },
+    { "IniRejectsNewlineKey", R"fa(
+من إعدادات استورد اعدادات_INI
+اعدادات_INI().ضع("s"، "a\nb"، "value")
+)fa",
+        "مفتاح INI غير صالح" },
+    { "IniSerializationRejectsLf", R"fa(
+من إعدادات استورد اعدادات_INI
+الاعدادات := اعدادات_INI().ضع("s"، "key"، "a\nb")
+الاعدادات.نص()
+)fa",
+        "قيمة INI لا يمكن تمثيلها دون فقد" },
+    { "IniSerializationRejectsCr", R"fa(
+من إعدادات استورد اعدادات_INI
+الاعدادات := اعدادات_INI().ضع("s"، "key"، "a\rb")
+الاعدادات.نص()
+)fa",
+        "قيمة INI لا يمكن تمثيلها دون فقد" },
+    { "IniSerializationRejectsLeadingSpace", R"fa(
+من إعدادات استورد اعدادات_INI
+الاعدادات := اعدادات_INI().ضع("s"، "key"، " value")
+الاعدادات.نص()
+)fa",
+        "قيمة INI لا يمكن تمثيلها دون فقد" },
+    { "IniSerializationRejectsTrailingSpace", R"fa(
+من إعدادات استورد اعدادات_INI
+الاعدادات := اعدادات_INI().ضع("s"، "key"، "value ")
+الاعدادات.نص()
+)fa",
+        "قيمة INI لا يمكن تمثيلها دون فقد" },
     { "CsvInvalidSeparator", R"fa(
 من قيم_مفصولة استورد CSV_حلل
 CSV_حلل("a,b"، "::")

@@ -61,10 +61,10 @@ struct ObjBigInt {
 
     /// arithmetic operations, these will use the GC reference
     /// to allocate the result, but preserve the state of 'this'
-    static Value add(Value const& lhs, Value const& rhs, GarbageCollector& alloc);
-    static Value mul(Value const& lhs, Value const& rhs, GarbageCollector& alloc);
-    static Value sub(Value const& lhs, Value const& rhs, GarbageCollector& alloc);
-    static Value div(Value const& lhs, Value const& rhs, GarbageCollector& alloc);
+    static Value add(Value const& a, Value const& b, GarbageCollector& gc) { return integer::add(a, b, gc); }
+    static Value sub(Value const& a, Value const& b, GarbageCollector& gc) { return integer::sub(a, b, gc); }
+    static Value mul(Value const& a, Value const& b, GarbageCollector& gc) { return integer::mul(a, b, gc); }
+    static Value div(Value const& a, Value const& b, GarbageCollector& gc) { return integer::div(a, b, gc); }
 
     ~ObjBigInt() = default;
 };

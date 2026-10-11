@@ -3,8 +3,6 @@
 
 #include "Support/string.hpp"
 
-#include <sstream>
-
 namespace fairuz::tok {
 
 enum class TokenType : int {
