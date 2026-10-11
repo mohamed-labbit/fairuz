@@ -1,5 +1,5 @@
 #include "test_config.h"
-#include "test_integer_oracle.hpp"
+#include "test_parser/test_integer_oracle.hpp"
 #include "test_process.hpp"
 #include <gtest/gtest.h>
 
@@ -711,7 +711,7 @@ std::vector<AdversarialCase> parser_cases()
 std::vector<AdversarialCase> discovered_failure_cases()
 {
     return {
-#include "test_cases/discovered_failures.inc"
+#include "test_parser/test_cases/discovered_failures.inc"
     };
 }
 

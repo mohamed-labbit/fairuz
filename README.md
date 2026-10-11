@@ -335,10 +335,13 @@ docker run --rm -v "$PWD:/work:ro" \
 ## Project layout
 
 ```
-fairuz/          Lexer, parser, compiler, VM, GC, integer runtime, native builtins
+include/         Public headers grouped by compiler, parser, interpreter, and support
+lib/             Core implementation and native builtins
+tools/           Formatter and syntax highlighter
 stdlib/          Standard-library modules written in Fairuz (.ف)
 stdlib/tests/    Executable Fairuz library tests
-tests/           GoogleTest unit/regression tests and data-driven test_cases/
+tests/           GoogleTest suites grouped by component
+tests/test_parser/test_cases/  Data-driven parser tests and generated regressions
 examples/        Sample entrypoint programs (.fa)
 editors/vscode/  VS Code syntax/language extension
 packaging/       Homebrew formula template

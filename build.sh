@@ -612,10 +612,11 @@ fi
 if [[ "$RUN_INCLUDES" == true ]]; then
     echo "-- Running clang include-cleaner..."
 
-    # Fairuz's sources are fairuz/*.cc (plus main.cpp), not src/*.cpp.
-    find fairuz -name "*.cc" -o -name "*.hpp" -o -name "*.tpp" \
+    # Check the reorganized source and header trees from the project root.
+    find "$PROJECT_ROOT/lib" "$PROJECT_ROOT/include" "$PROJECT_ROOT/tools" "$PROJECT_ROOT/main.cpp" \
+        \( -name "*.cc" -o -name "*.cpp" -o -name "*.hpp" -o -name "*.tpp" \) \
     | xargs -P 8 -I {} clangd --check="{}" \
-        --compile-commands-dir=build \
+        --compile-commands-dir="$PROJECT_ROOT/build" \
         --enable-config
 fi
 

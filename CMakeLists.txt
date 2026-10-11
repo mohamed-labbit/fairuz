@@ -65,11 +65,8 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Fairuz's own headers live flat inside fairuz/, next to their matching .cc
-# files (e.g. fairuz/fvm.hpp), not under a separate include/ tree — so no
-# extra include_directories() call is needed for them. Headers are found via
-# each target's own target_include_directories(... ${CMAKE_SOURCE_DIR}/fairuz)
-# below.
+# Project layout: headers under include/, implementation files under lib/.
+# Includes are relative to include/ (for example, "File.hpp" or "Diag/...").
 
 # Optional: build tests (pass -DBUILD_TESTS=ON or use the 'test' preset)
 option(BUILD_TESTS "Build the test suite" OFF)
@@ -97,13 +94,15 @@ else()
     message(STATUS "Found simdutf via package manager")
 endif()
 
-# Collect source files from fairuz/
-file(GLOB_RECURSE fairuz_SOURCES CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/fairuz/*.cc)
+# Collect implementation files from lib/, including subdirectories.
+file(GLOB_RECURSE FAIRUZ_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/lib/*.cc")
+file(GLOB FAIRUZ_TOOL_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/tools/*.cc")
 
 # Build an object library from your language sources
-add_library(fairuz_objects OBJECT ${fairuz_SOURCES})
+add_library(fairuz_objects OBJECT ${FAIRUZ_SOURCES} ${FAIRUZ_TOOL_SOURCES})
 target_include_directories(fairuz_objects PUBLIC
-    ${CMAKE_SOURCE_DIR}/fairuz
+    "${CMAKE_SOURCE_DIR}/include"
+    "${CMAKE_SOURCE_DIR}"
 )
 target_link_libraries(fairuz_objects PUBLIC simdutf::simdutf ZLIB::ZLIB)
 target_compile_definitions(fairuz_objects PRIVATE
@@ -117,7 +116,7 @@ add_executable(fairuz
     $<TARGET_OBJECTS:fairuz_objects>
 )
 
-target_include_directories(fairuz PRIVATE ${CMAKE_SOURCE_DIR}/fairuz)
+target_include_directories(fairuz PRIVATE "${CMAKE_SOURCE_DIR}/include")
 target_link_libraries(fairuz PRIVATE simdutf::simdutf ZLIB::ZLIB)
 target_compile_definitions(fairuz PRIVATE fairuz_VERSION="${PROJECT_VERSION}")
 
@@ -217,7 +216,11 @@ if(BUILD_TESTS)
         ZLIB::ZLIB
     )
 
-    target_include_directories(fairuz_tests PRIVATE ${CMAKE_SOURCE_DIR}/fairuz)
+    target_include_directories(fairuz_tests PRIVATE
+        "${CMAKE_SOURCE_DIR}/include"
+        "${CMAKE_SOURCE_DIR}"
+        "${CMAKE_SOURCE_DIR}/tests"
+    )
 
     enable_testing()
     add_test(NAME AllTestsInMain COMMAND fairuz_tests)
@@ -225,13 +228,20 @@ if(BUILD_TESTS)
     # An independent JSON parser catches serialization defects, including bad UTF-8.
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
     add_executable(fairuz_diagnostic_probe tests/support/diagnostic_probe.cc
-        fairuz/fdiagnostic.cc fairuz/fsource_manager.cc fairuz/ffile.cc)
-    target_include_directories(fairuz_diagnostic_probe PRIVATE ${CMAKE_SOURCE_DIR}/fairuz)
+        lib/Diag/diagnotic.cc lib/SourceManager.cc lib/File.cc lib/Platform.cc)
+    target_include_directories(fairuz_diagnostic_probe PRIVATE "${CMAKE_SOURCE_DIR}/include")
     add_dependencies(fairuz_tests fairuz_diagnostic_probe)
+    # Migrate the old default in existing build directories, preserving overrides.
+    if(FAIRUZ_ERROR_CODES_FILE STREQUAL "${CMAKE_SOURCE_DIR}/include/ferrc.def")
+        unset(FAIRUZ_ERROR_CODES_FILE CACHE)
+    endif()
+    # Allow an explicit error-code definition override for diagnostic tests.
+    set(FAIRUZ_ERROR_CODES_FILE "${CMAKE_SOURCE_DIR}/include/Diag/errc.def"
+        CACHE FILEPATH "Error-code definitions used by the diagnostic JSON test")
     add_test(NAME DiagnosticsJson COMMAND ${Python3_EXECUTABLE}
-        ${CMAKE_SOURCE_DIR}/tests/test_diagnostic_json.py
+        ${CMAKE_SOURCE_DIR}/tests/test_diag/test_diagnostic_json.py
         $<TARGET_FILE:fairuz_diagnostic_probe> $<TARGET_FILE:fairuz>
-        ${CMAKE_SOURCE_DIR}/fairuz/ferrc.def)
+        "${FAIRUZ_ERROR_CODES_FILE}")
 
     # Every Fairuz standard-library test is also a first-class CTest case.
     # CONFIGURE_DEPENDS makes newly added اختبار_*.ف / test_*.ف files appear after the

@@ -1,12 +1,12 @@
-#include "fAST.hpp"
-#include "fairuz/fAST_printer.hpp"
-#include "fairuz/fcompiler.hpp"
-#include "fairuz/fdiagnostic.hpp"
-#include "fairuz/fformatter.hpp"
-#include "fairuz/flexer.hpp"
-#include "fairuz/fparser.hpp"
-#include "fairuz/fsyntax_highlighter.hpp"
-#include "fairuz/fvm.hpp"
+#include "Parser/ast.hpp"
+#include "Parser/ast_printer.hpp"
+#include "Compiler/compiler.hpp"
+#include "Diag/diagnostic.hpp"
+#include "tools/formatter.hpp"
+#include "Parser/lexer.hpp"
+#include "Parser/parser.hpp"
+#include "tools/syntax_highlighter.hpp"
+#include "Interpreter/vm.hpp"
 
 #include <cerrno>
 #include <chrono>
@@ -22,8 +22,8 @@
 #include <string_view>
 #include <vector>
 
-#include "fairuz/fplatform.hpp"
-#include "fairuz/fwindows.hpp"
+#include "Platform.hpp"
+#include "Windows.hpp"
 #include <algorithm>
 #ifdef _WIN32
 #    include <fcntl.h>

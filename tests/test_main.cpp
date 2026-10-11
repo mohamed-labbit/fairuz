@@ -1,4 +1,4 @@
-#include "../fairuz/../fairuz/farena.hpp"
+#include "Support/arena.hpp"
 #include "test_config.h"
 
 #include <gtest/gtest.h>

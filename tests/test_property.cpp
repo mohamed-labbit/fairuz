@@ -1,8 +1,8 @@
-#include "../fairuz/fAST.hpp"
-#include "../fairuz/fcompiler.hpp"
-#include "../fairuz/fparser.hpp"
-#include "../fairuz/fvm.hpp"
-#include "fAST_printer.hpp"
+#include "Compiler/compiler.hpp"
+#include "Interpreter/vm.hpp"
+#include "Parser/ast.hpp"
+#include "Parser/ast_printer.hpp"
+#include "Parser/parser.hpp"
 #include "test_common.h"
 #include "test_config.h"
 

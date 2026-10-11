@@ -1,9 +1,9 @@
 #ifndef TEST_COMMON_H
 #define TEST_COMMON_H
 
-#include "../fairuz/fAST.hpp"
-#include "../fairuz/fobject.hpp"
-#include "farray.hpp"
+#include "Interpreter/object.hpp"
+#include "Parser/ast.hpp"
+#include "Support/array.hpp"
 #include <initializer_list>
 
 using namespace fairuz;
@@ -15,7 +15,7 @@ static inline BinaryExpr* binary(ExprPtr lhs, ExprPtr rhs, Expr::Kind op)
 {
     return make_binary(op, lhs, rhs, { });
 }
-static inline UnaryExpr * unary(ExprPtr operand, Expr::Kind op)
+static inline UnaryExpr* unary(ExprPtr operand, Expr::Kind op)
 {
     return make_unary(op, operand, { });
 }
@@ -29,7 +29,7 @@ static inline IntLiteralExpr* lit_int(int v)
 }
 static inline IntLiteralExpr* lit_int(i64 v)
 {
-    return make_literal_int(v, {});
+    return make_literal_int(v, { });
 }
 static inline FloatLiteralExpr* lit_flt(double v)
 {
@@ -55,7 +55,7 @@ static inline DictExpr* dict_expr(Array<std::pair<ExprPtr, ExprPtr>> c)
 {
     return make_dict(c, { });
 }
-static inline CallExpr* call_expr(ExprPtr c, Array<ExprPtr> a = {})
+static inline CallExpr* call_expr(ExprPtr c, Array<ExprPtr> a = { })
 {
     return make_call(c, a, { });
 }
@@ -95,11 +95,11 @@ static inline WhileStmt* while_stmt(ExprPtr c, StmtPtr b)
 {
     return make_while(c, b, { });
 }
-static inline ForStmt* for_stmt(IdentifierExpr * t, ExprPtr i, StmtPtr b)
+static inline ForStmt* for_stmt(IdentifierExpr* t, ExprPtr i, StmtPtr b)
 {
     return make_for(t, i, b, { });
 }
-static inline FuncDefStmt* func_def(IdentifierExpr * n, Array<ExprPtr> p, StmtPtr b)
+static inline FuncDefStmt* func_def(IdentifierExpr* n, Array<ExprPtr> p, StmtPtr b)
 {
     return make_function(n, p, b, { });
 }
@@ -124,8 +124,9 @@ static inline ExprStmt* call_stmt(StringRef const s)
     return expr_stmt(call_expr(ident(s)));
 }
 
-static inline Value str(char const* s) {
-    ObjString* obj =  get_allocator().allocate_object<ObjString>();
+static inline Value str(char const* s)
+{
+    ObjString* obj = get_allocator().allocate_object<ObjString>();
     obj->str = s;
     obj->hash = std::hash<StringRef>()(obj->str);
     return Value::from_string(obj);
@@ -140,11 +141,10 @@ static inline bool require_perf()
     return false;
 }
 
-#define REQUIRE_PERF()                                                                                   \
-    do {                                                                                                 \
-        if (!require_perf())                                                                             \
-            GTEST_SKIP(); \
+#define REQUIRE_PERF()       \
+    do {                     \
+        if (!require_perf()) \
+            GTEST_SKIP();    \
     } while (0);
-
 
 #endif // TEST_COMMON_H

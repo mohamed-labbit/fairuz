@@ -1,7 +1,7 @@
 #ifndef FAIRUZ_TEST_PROCESS_HPP
 #define FAIRUZ_TEST_PROCESS_HPP
 
-#include "fplatform.hpp"
+#include "Platform.hpp"
 #include <chrono>
 #include <filesystem>
 #include <string>

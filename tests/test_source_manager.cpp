@@ -1,4 +1,4 @@
-#include "../fairuz/fsource_manager.hpp"
+#include "SourceManager.hpp"
 
 #include <chrono>
 #include <filesystem>

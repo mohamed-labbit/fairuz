@@ -1,5 +1,5 @@
-#include "fplatform.hpp"
-#include "test_integer_oracle.hpp"
+#include "Platform.hpp"
+#include "test_parser/test_integer_oracle.hpp"
 #include "test_process.hpp"
 #include <fstream>
 #include <gtest/gtest.h>

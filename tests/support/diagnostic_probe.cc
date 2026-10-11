@@ -1,4 +1,4 @@
-#include "fdiagnostic.hpp"
+#include "Diag/diagnostic.hpp"
 
 #include <iostream>
 #include <locale>

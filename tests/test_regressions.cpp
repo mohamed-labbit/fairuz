@@ -343,7 +343,7 @@ TEST(IntegerRuntimeContract, PythonOracle1400Comparisons)
         char const* expected;
     };
     static constexpr OracleCase cases[] = {
-#include "test_cases/integer_oracle.inc"
+#include "test_parser/test_cases/integer_oracle.inc"
     };
     static_assert(std::size(cases) == 1400);
     // Small batches stay below the compiler's per-function inline-cache limit.
