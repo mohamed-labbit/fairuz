@@ -1,3 +1,13 @@
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Verifies arena allocation and cleanup.
+//===----------------------------------------------------------------------===//
+
 #include "Support/arena.hpp"
 #include "Support/array.hpp"
 

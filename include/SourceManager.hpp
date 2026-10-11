@@ -1,4 +1,15 @@
-#pragma once
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Tracks source files and diagnostic locations.
+//===----------------------------------------------------------------------===//
+
+#ifndef FAIRUZ_SOURCE_MANAGER_HPP
+#define FAIRUZ_SOURCE_MANAGER_HPP
 
 #include "File.hpp"
 
@@ -29,3 +40,5 @@ public:
 using SourcePtr = std::shared_ptr<SourceManager const>;
 
 } // namespace fairuz
+
+#endif // FAIRUZ_SOURCE_MANAGER_HPP

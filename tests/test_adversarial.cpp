@@ -1,7 +1,16 @@
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Exercises malformed and resource-intensive programs.
+//===----------------------------------------------------------------------===//
+
 #include "test_config.h"
 #include "test_parser/test_integer_oracle.hpp"
 #include "test_process.hpp"
-#include <gtest/gtest.h>
 
 #include <chrono>
 #include <csignal>
@@ -9,6 +18,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <gtest/gtest.h>
 #include <iterator>
 #include <random>
 #include <string>

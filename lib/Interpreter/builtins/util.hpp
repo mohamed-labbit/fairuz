@@ -1,8 +1,19 @@
-#pragma once
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Provides shared helpers for native builtins.
+//===----------------------------------------------------------------------===//
+
+#ifndef FAIRUZ_INTERPRETER_BUILTINS_UTIL_HPP
+#define FAIRUZ_INTERPRETER_BUILTINS_UTIL_HPP
 
 #include "Interpreter/object.hpp"
-#include "Support/string.hpp"
 #include "Interpreter/value.hpp"
+#include "Support/string.hpp"
 
 #include <cmath>
 #include <iomanip>
@@ -346,3 +357,5 @@ static inline StringRef value_to_string(Value v)
 }
 
 }
+
+#endif // FAIRUZ_INTERPRETER_BUILTINS_UTIL_HPP

@@ -1,6 +1,12 @@
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
 //
-// ast_builder.cc
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
 //
+// Provides focused coverage for this Fairuz subsystem.
+//===----------------------------------------------------------------------===//
 
 #include "Parser/ast_builder.hpp"
 #include "Parser/parser.hpp"

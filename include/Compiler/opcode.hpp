@@ -1,5 +1,15 @@
-#ifndef FA_OPCODE_HPP
-#define FA_OPCODE_HPP
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Defines the register VM instruction set.
+//===----------------------------------------------------------------------===//
+
+#ifndef FAIRUZ_COMPILER_OPCODE_HPP
+#define FAIRUZ_COMPILER_OPCODE_HPP
 
 #include "Interpreter/object.hpp"
 #include "Support/array.hpp"
@@ -273,4 +283,4 @@ static inline InstrFormat opcode_format(OpCode op)
 
 } // namespace fairuz::runtime
 
-#endif // FA_OPCODE_HPP
+#endif // FAIRUZ_COMPILER_OPCODE_HPP

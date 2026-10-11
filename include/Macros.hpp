@@ -1,5 +1,15 @@
-#ifndef FA_MACROS_HPP
-#define FA_MACROS_HPP
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Defines compiler and portability macros.
+//===----------------------------------------------------------------------===//
+
+#ifndef FAIRUZ_MACROS_HPP
+#define FAIRUZ_MACROS_HPP
 
 #include <cstdint>
 #include <string>
@@ -35,7 +45,7 @@ std::string const GRAY = "\033[90m";
 
 } // namespace Color
 
-#define SSO_SIZE 20 // to make sizeof(String) = 64 bytes
+#define SSO_SIZE 22
 #define TABWIDTH 8
 #define MAX_ALLOWED_INDENT 100
 #define DEFAULT_CAPACITY 4096
@@ -70,4 +80,4 @@ using f64 = double;
 #    define FA_USE_NANBOX 0
 #endif
 
-#endif // FA_MACROS_HPP
+#endif // FAIRUZ_MACROS_HPP

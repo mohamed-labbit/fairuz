@@ -1,9 +1,20 @@
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Provides a standalone subprocess test probe.
+//===----------------------------------------------------------------------===//
+
 #include <chrono>
 #include <filesystem>
 #include <iostream>
 #include <string>
 #include <thread>
 #include <vector>
+
 #ifdef _WIN32
 #    include <fcntl.h>
 #    include <io.h>

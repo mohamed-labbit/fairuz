@@ -1,10 +1,19 @@
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Provides shared GoogleTest fixtures and configuration.
+//===----------------------------------------------------------------------===//
+
 #include "Support/arena.hpp"
 #include "test_config.h"
 
-#include <gtest/gtest.h>
-
 #include <chrono>
 #include <cstdio>
+#include <gtest/gtest.h>
 #include <iomanip>
 #include <sstream>
 #include <string>

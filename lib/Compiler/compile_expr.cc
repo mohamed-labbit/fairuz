@@ -1,6 +1,13 @@
+//===----------------------------------------------------------------------===//
 //
-// compile_expr.cc
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
 //
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Compiles Fairuz Expression AST nodes into bytecode.
+//===----------------------------------------------------------------------===//
 
 #include "Compiler/compiler.hpp"
 #include "Compiler/opcode.hpp"

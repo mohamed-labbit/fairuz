@@ -1,5 +1,15 @@
-#ifndef FA_ARENA_HPP
-#define FA_ARENA_HPP
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Provides arena allocation and lifetime management.
+//===----------------------------------------------------------------------===//
+
+#ifndef FAIRUZ_SUPPORT_ARENA_HPP
+#define FAIRUZ_SUPPORT_ARENA_HPP
 
 #include "Macros.hpp"
 
@@ -242,4 +252,4 @@ struct AllocatorContextScope {
 
 } // namespace fairuz
 
-#endif // FA_ARENA_HPP
+#endif // FAIRUZ_SUPPORT_ARENA_HPP

@@ -1,3 +1,13 @@
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Produces syntax highlighting and semantic tokens.
+//===----------------------------------------------------------------------===//
+
 #ifndef FA_SYNTAX_HIGHLIGHTER_HPP
 #define FA_SYNTAX_HIGHLIGHTER_HPP
 

@@ -1,5 +1,15 @@
-#ifndef FA_DIAGNOSTIC_HPP
-#define FA_DIAGNOSTIC_HPP
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Collects and renders structured source diagnostics.
+//===----------------------------------------------------------------------===//
+
+#ifndef FAIRUZ_DIAG_DIAGNOSTIC_HPP
+#define FAIRUZ_DIAG_DIAGNOSTIC_HPP
 
 #include "Diag/errc.hpp"
 #include "Macros.hpp"
@@ -246,4 +256,4 @@ private:
 
 } // namespace fairuz
 
-#endif // FA_DIAGNOSTIC_HPP
+#endif // FAIRUZ_DIAG_DIAGNOSTIC_HPP

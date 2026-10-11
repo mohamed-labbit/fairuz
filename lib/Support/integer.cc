@@ -1,6 +1,12 @@
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
 //
-// integer.cc
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
 //
+// Provides arbitrary-precision integer arithmetic.
+//===----------------------------------------------------------------------===//
 
 #include "Support/integer.hpp"
 #include "Interpreter/gc.hpp"

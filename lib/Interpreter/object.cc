@@ -1,6 +1,12 @@
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
 //
-// object.cc
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
 //
+// Defines heap objects used by the VM.
+//===----------------------------------------------------------------------===//
 
 #include "Interpreter/object.hpp"
 #include "Compiler/chunk.hpp"

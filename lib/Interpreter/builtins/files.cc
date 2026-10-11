@@ -1,6 +1,13 @@
+//===----------------------------------------------------------------------===//
 //
-// files.cc
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
 //
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Builtin file manipulation utilities implementation.
+//===----------------------------------------------------------------------===//
 
 #include "Interpreter/vm.hpp"
 #include "Platform.hpp"

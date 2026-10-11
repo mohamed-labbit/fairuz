@@ -1,3 +1,13 @@
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Verifies lexical tokenization and keyword recognition.
+//===----------------------------------------------------------------------===//
+
 #include "Parser/lexer.hpp"
 
 #include <algorithm>
@@ -280,13 +290,13 @@ TEST(LexerTest, UnicodeColumnsAndByteOffsetsAreIndependent)
 
 TEST(LexerTest, MalformedUtf8IsALocatedLexicalError)
 {
-    for (std::string const bad : {
+    for (std::string const& bad : {
              std::string("\x80"), std::string("\xc0\xaf"), std::string("\xc2"),
              std::string("\xe2\x82"), std::string("\xf0\x9f\x98"),
              std::string("\xc2x"), std::string("\xe2\x82x"), std::string("\xf0\x9f\x98x"),
              std::string("\xe0\x80\x80"), std::string("\xf0\x80\x80\x80"),
              std::string("\xed\xa0\x80"), std::string("\xf4\x90\x80\x80"), std::string("\xff") }) {
-        for (std::string const prefix : { std::string(), std::string("س\nص ") }) {
+        for (std::string const& prefix : { std::string(), std::string("س\nص ") }) {
             diagnostic::reset();
             lex::FileManager file;
             file.buffer() = prefix + bad;

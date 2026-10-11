@@ -1,5 +1,15 @@
-#ifndef FA_TOKEN_HPP
-#define FA_TOKEN_HPP
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Defines and renders Fairuz tokens.
+//===----------------------------------------------------------------------===//
+
+#ifndef FAIRUZ_PARSER_TOKEN_HPP
+#define FAIRUZ_PARSER_TOKEN_HPP
 
 #include "Support/string.hpp"
 
@@ -179,4 +189,4 @@ private:
 
 } // namespace fairuz::tok
 
-#endif // FA_TOKEN_HPP
+#endif // FAIRUZ_PARSER_TOKEN_HPP

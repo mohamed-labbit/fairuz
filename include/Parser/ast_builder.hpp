@@ -1,6 +1,17 @@
-#ifndef FA_AST_BUILDER_HPP
-#define FA_AST_BUILDER_HPP
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Builds AST nodes from parser productions.
+//===----------------------------------------------------------------------===//
 
+#ifndef FAIRUZ_PARSER_AST_BUILDER_HPP
+#define FAIRUZ_PARSER_AST_BUILDER_HPP
+
+#include "Support/arena.hpp"
 #include "Support/error.hpp"
 #include "ast.hpp"
 
@@ -14,129 +25,130 @@ public:
     // Parse and cache a deferred body only after a successful parse.
     ErrorOr<StmtPtr> materialize(FunctionStub& stub);
 
-    BinaryExpr* make_binary(Expr::Kind kind, ExprPtr lhs, ExprPtr rhs, SourceLocation loc)
+    static BinaryExpr* make_binary(Expr::Kind kind, ExprPtr lhs, ExprPtr rhs, SourceLocation loc)
     {
-        return AST::make_binary(kind, lhs, rhs, loc);
+        return get_allocator().allocate_object<BinaryExpr>(kind, lhs, rhs, loc);
     }
-    UnaryExpr* make_unary(Expr::Kind kind, ExprPtr operand, SourceLocation loc)
+    static UnaryExpr* make_unary(Expr::Kind kind, ExprPtr operand, SourceLocation loc)
     {
-        return AST::make_unary(kind, operand, loc);
+        return get_allocator().allocate_object<UnaryExpr>(kind, operand, loc);
     }
-    NilExpr* make_nil(SourceLocation loc)
+    static NilExpr* make_nil(SourceLocation loc)
     {
-        return AST::make_nil(loc);
+        return get_allocator().allocate_object<NilExpr>(loc);
     }
-    IntLiteralExpr* make_literal_int(int value, SourceLocation loc)
+    static IntLiteralExpr* make_literal_int(int value, SourceLocation loc)
     {
-        return AST::make_literal_int(value, loc);
+        return get_allocator().allocate_object<IntLiteralExpr>(value, loc);
     }
-    IntLiteralExpr* make_literal_int(i64 value, SourceLocation loc)
+    static IntLiteralExpr* make_literal_int(i64 value, SourceLocation loc)
     {
-        return AST::make_literal_int(value, loc);
+        return get_allocator().allocate_object<IntLiteralExpr>(value, loc);
     }
-    FloatLiteralExpr* make_literal_float(f64 value, SourceLocation loc)
+    static FloatLiteralExpr* make_literal_float(f64 value, SourceLocation loc)
     {
-        return AST::make_literal_float(value, loc);
+        return get_allocator().allocate_object<FloatLiteralExpr>(value, loc);
     }
-    StringLiteralExpr* make_literal_string(StringRef const str, SourceLocation loc)
+    static StringLiteralExpr* make_literal_string(StringRef const str, SourceLocation loc)
     {
-        return AST::make_literal_string(str, loc);
+        return get_allocator().allocate_object<StringLiteralExpr>(str, loc);
     }
-    BoolLiteralExpr* make_literal_bool(bool value, SourceLocation loc)
+    static BoolLiteralExpr* make_literal_bool(bool value, SourceLocation loc)
     {
-        return AST::make_literal_bool(value, loc);
+        return get_allocator().allocate_object<BoolLiteralExpr>(value, loc);
     }
-    IdentifierExpr* make_identifier(StringRef const str, SourceLocation loc)
+    static IdentifierExpr* make_identifier(StringRef const str, SourceLocation loc)
     {
-        return AST::make_identifier(str, loc);
+        return get_allocator().allocate_object<IdentifierExpr>(str, loc);
     }
-    ListExpr* make_list(Array<ExprPtr> elements, SourceLocation loc)
+    static ListExpr* make_list(Array<ExprPtr> elements, SourceLocation loc)
     {
-        return AST::make_list(std::move(elements), loc);
+        return get_allocator().allocate_object<ListExpr>(std::move(elements), loc);
     }
-    DictExpr* make_dict(Array<std::pair<ExprPtr, ExprPtr>> content, SourceLocation loc)
+    static DictExpr* make_dict(Array<std::pair<ExprPtr, ExprPtr>> content, SourceLocation loc)
     {
-        return AST::make_dict(std::move(content), loc);
+        return get_allocator().allocate_object<DictExpr>(std::move(content), loc);
     }
-    GetExpr* make_get_expr(ExprPtr obj, IdentifierExpr* member, SourceLocation loc)
+    static GetExpr* make_get_expr(ExprPtr obj, IdentifierExpr* member, SourceLocation loc)
     {
-        return AST::make_get_expr(obj, member, loc);
+        return get_allocator().allocate_object<GetExpr>(obj, member, loc);
     }
-    CallExpr* make_call(ExprPtr callee, Array<ExprPtr> args, SourceLocation loc)
+    static CallExpr* make_call(ExprPtr callee, Array<ExprPtr> args, SourceLocation loc)
     {
-        return AST::make_call(callee, std::move(args), loc);
+        return get_allocator().allocate_object<CallExpr>(callee, std::move(args), loc);
     }
-    AssignExpr* make_assignment_expr(ExprPtr target, ExprPtr value, SourceLocation loc)
+    static AssignExpr* make_assignment_expr(ExprPtr target, ExprPtr value, SourceLocation loc)
     {
-        return AST::make_assignment_expr(target, value, loc);
+        return get_allocator().allocate_object<AssignExpr>(target, value, loc);
     }
-    IndexExpr* make_index(ExprPtr obj, ExprPtr idx, SourceLocation loc)
+    static IndexExpr* make_index(ExprPtr obj, ExprPtr idx, SourceLocation loc)
     {
-        return AST::make_index(obj, idx, loc);
+        return get_allocator().allocate_object<IndexExpr>(obj, idx, loc);
     }
-    BlockStmt* make_block(Array<StmtPtr> stmts, SourceLocation loc)
+    static BlockStmt* make_block(Array<StmtPtr> stmts, SourceLocation loc)
     {
-        return AST::make_block(std::move(stmts), loc);
+        return get_allocator().allocate_object<BlockStmt>(std::move(stmts), loc);
     }
-    ExprStmt* make_expr_stmt(ExprPtr expr, SourceLocation loc)
+    static ExprStmt* make_expr_stmt(ExprPtr expr, SourceLocation loc)
     {
-        return AST::make_expr_stmt(expr, loc);
+        return get_allocator().allocate_object<ExprStmt>(expr, loc);
     }
     // Wrap an assignment expression in a statement.
-    ExprStmt* make_assignment_stmt(ExprPtr target, ExprPtr value, SourceLocation loc)
+    static ExprStmt* make_assignment_stmt(ExprPtr target, ExprPtr value, SourceLocation loc)
     {
-        return AST::make_assignment_stmt(target, value, loc);
+        auto e = get_allocator().allocate_object<AssignExpr>(target, value, loc);
+        return get_allocator().allocate_object<ExprStmt>(e, loc);
     }
-    IfElseStmt* make_if(ExprPtr cond, StmtPtr then_block, SourceLocation loc, StmtPtr else_block = nullptr)
+    static IfElseStmt* make_if(ExprPtr cond, StmtPtr then_block, SourceLocation loc, StmtPtr else_block = nullptr)
     {
-        return AST::make_if(cond, then_block, loc, else_block);
+        return get_allocator().allocate_object<IfElseStmt>(cond, then_block, loc, else_block);
     }
-    WhileStmt* make_while(ExprPtr cond, StmtPtr body, SourceLocation loc)
+    static WhileStmt* make_while(ExprPtr cond, StmtPtr body, SourceLocation loc)
     {
-        return AST::make_while(cond, body, loc);
+        return get_allocator().allocate_object<WhileStmt>(cond, body, loc);
     }
-    ForStmt* make_for(IdentifierExpr* target, ExprPtr iter, StmtPtr body, SourceLocation loc)
+    static ForStmt* make_for(IdentifierExpr* target, ExprPtr iter, StmtPtr body, SourceLocation loc)
     {
-        return AST::make_for(target, iter, body, loc);
+        return get_allocator().allocate_object<ForStmt>(target, iter, body, loc);
     }
-    FunctionStub* make_function_stub(Array<tok::Token const*> tokens,
+    static FunctionStub* make_function_stub(Array<tok::Token const*> tokens,
         diagnostic::SourcePtr source, StringRef body_span, SourceLocation loc)
     {
-        return AST::make_function_stub(std::move(tokens), std::move(source), body_span, loc);
+        return get_allocator().allocate_object<FunctionStub>(std::move(tokens), std::move(source), body_span, loc);
     }
-    FuncDefStmt* make_function(IdentifierExpr* name, Array<ExprPtr> params, StmtPtr body, SourceLocation loc)
+    static FuncDefStmt* make_function(IdentifierExpr* name, Array<ExprPtr> params, StmtPtr body, SourceLocation loc)
     {
-        return AST::make_function(name, std::move(params), body, loc);
+        return get_allocator().allocate_object<FuncDefStmt>(name, std::move(params), body, loc);
     }
-    ReturnStmt* make_return(SourceLocation loc, ExprPtr value = nullptr)
+    static ReturnStmt* make_return(SourceLocation loc, ExprPtr value = nullptr)
     {
-        return AST::make_return(loc, value);
+        return get_allocator().allocate_object<ReturnStmt>(value, loc);
     }
-    ClassDefStmt* make_class_def(ExprPtr name, Array<ExprPtr> members,
+    static ClassDefStmt* make_class_def(ExprPtr name, Array<ExprPtr> members,
         Array<StmtPtr> methods, SourceLocation loc)
     {
-        return AST::make_class_def(name, std::move(members), std::move(methods), loc);
+        return get_allocator().allocate_object<ClassDefStmt>(name, nullptr, members, methods, loc);
     }
-    ClassDefStmt* make_class_def(ExprPtr name, ExprPtr parent,
+    static ClassDefStmt* make_class_def(ExprPtr name, ExprPtr parent,
         Array<ExprPtr> members, Array<StmtPtr> methods, SourceLocation loc)
     {
-        return AST::make_class_def(name, parent, std::move(members), std::move(methods), loc);
+        return get_allocator().allocate_object<ClassDefStmt>(name, parent, std::move(members), std::move(methods), loc);
     }
-    ImportStmt* make_import(StringRef const module, Array<StringRef> name,
+    static ImportStmt* make_import(StringRef const module, Array<StringRef> name,
         Array<StringRef> aliases, SourceLocation loc)
     {
-        return AST::make_import(module, name, std::move(aliases), loc);
+        return get_allocator().allocate_object<ImportStmt>(module, name, std::move(aliases), loc);
     }
-    BreakStmt* make_break(SourceLocation loc)
+    static BreakStmt* make_break(SourceLocation loc)
     {
-        return AST::make_break(loc);
+        return get_allocator().allocate_object<BreakStmt>(loc);
     }
-    ContinueStmt* make_continue(SourceLocation loc)
+    static ContinueStmt* make_continue(SourceLocation loc)
     {
-        return AST::make_continue(loc);
+        return get_allocator().allocate_object<ContinueStmt>(loc);
     }
 };
 
 } // namespace AST
 
-#endif // FA_AST_BUILDER_HPP
+#endif // FAIRUZ_PARSER_AST_BUILDER_HPP

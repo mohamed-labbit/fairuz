@@ -1,5 +1,15 @@
-#ifndef FA_COMPILER_HPP
-#define FA_COMPILER_HPP
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Defines the AST-to-bytecode compiler interface.
+//===----------------------------------------------------------------------===//
+
+#ifndef FAIRUZ_COMPILER_COMPILER_HPP
+#define FAIRUZ_COMPILER_COMPILER_HPP
 
 #include "Compiler/chunk.hpp"
 #include "Compiler/opcode.hpp"
@@ -397,4 +407,4 @@ private:
 
 } // namespace fairuz::runtime
 
-#endif // FA_COMPILER_HPP
+#endif // FAIRUZ_COMPILER_COMPILER_HPP

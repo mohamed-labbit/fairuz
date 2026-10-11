@@ -1,5 +1,15 @@
-#ifndef FA_ERROR_HPP
-#define FA_ERROR_HPP
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Provides typed error-or-value propagation.
+//===----------------------------------------------------------------------===//
+
+#ifndef FAIRUZ_SUPPORT_ERROR_HPP
+#define FAIRUZ_SUPPORT_ERROR_HPP
 
 #include "Diag/diagnostic.hpp"
 #include "Macros.hpp"
@@ -153,4 +163,4 @@ inline Error report_error(ErrorCode errc, SourceLocation loc, diagnostic::Severi
 
 } // namespace fairuz
 
-#endif // FA_ERROR_HPP
+#endif // FAIRUZ_SUPPORT_ERROR_HPP

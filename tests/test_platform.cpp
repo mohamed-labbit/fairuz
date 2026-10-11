@@ -1,3 +1,13 @@
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Verifies platform abstraction behavior.
+//===----------------------------------------------------------------------===//
+
 #include "Platform.hpp"
 #include "test_parser/test_integer_oracle.hpp"
 #include "test_process.hpp"

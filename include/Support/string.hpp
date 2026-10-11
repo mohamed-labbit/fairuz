@@ -1,5 +1,15 @@
-#ifndef FA_STRING_HPP
-#define FA_STRING_HPP
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Provides UTF-8-aware string storage and operations.
+//===----------------------------------------------------------------------===//
+
+#ifndef FAIRUZ_SUPPORT_STRING_HPP
+#define FAIRUZ_SUPPORT_STRING_HPP
 
 #include "Diag/diagnostic.hpp"
 #include "Support/arena.hpp"
@@ -471,4 +481,4 @@ struct hash<fairuz::StringRefImpl<Allocator>> {
 
 #include "string.tpp"
 
-#endif // FA_STRING_HPP
+#endif // FAIRUZ_SUPPORT_STRING_HPP

@@ -1,6 +1,12 @@
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
 //
-// string.tpp
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
 //
+// Provides UTF-8-aware string storage and operations.
+//===----------------------------------------------------------------------===//
 
 #include "Diag/diagnostic.hpp"
 #include "Util/char.hpp"

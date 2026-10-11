@@ -1,4 +1,15 @@
-#pragma once
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Provides character classification and conversion helpers.
+//===----------------------------------------------------------------------===//
+
+#ifndef FAIRUZ_UTIL_CHAR_HPP
+#define FAIRUZ_UTIL_CHAR_HPP
 
 #include "Macros.hpp"
 
@@ -92,3 +103,5 @@ static inline bool is_arab_digit(u32 const cp)
 }
 
 } // namespace fairuz::util
+
+#endif // FAIRUZ_UTIL_CHAR_HPP

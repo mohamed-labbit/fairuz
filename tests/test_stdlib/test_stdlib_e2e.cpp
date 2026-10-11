@@ -1,3 +1,13 @@
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Verifies standard-library behavior through the CLI.
+//===----------------------------------------------------------------------===//
+
 #include "test_process.hpp"
 #include <gtest/gtest.h>
 
@@ -258,7 +268,7 @@ JSON_رمز(القيم)
 JSON_رمز({1: "value"})
 )fa",
         "مفاتيح JSON يجب أن تكون سلاسل" },
-// Invalid format inputs must report a language error and stop before the success marker.
+    // Invalid format inputs must report a language error and stop before the success marker.
     { "CsvParseRejectsEmptySeparator", R"fa(
 من قيم_مفصولة استورد CSV_حلل، CSV_رمز
 CSV_حلل(""، "")

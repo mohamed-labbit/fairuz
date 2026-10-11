@@ -1,5 +1,15 @@
-#ifndef FA_OBJECT_HPP
-#define FA_OBJECT_HPP
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Defines heap objects used by the VM.
+//===----------------------------------------------------------------------===//
+
+#ifndef FAIRUZ_INTERPRETER_OBJECT_HPP
+#define FAIRUZ_INTERPRETER_OBJECT_HPP
 
 #include "Interpreter/obj_header.hpp"
 #include "Interpreter/value.hpp"
@@ -243,4 +253,4 @@ static_assert(offsetof(ObjFileHandle, obj) == 0, "ObjHeader must be the first me
 
 } // namespace fairuz::runtime
 
-#endif // FA_OBJECT_HPP
+#endif // FAIRUZ_INTERPRETER_OBJECT_HPP

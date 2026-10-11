@@ -1,6 +1,12 @@
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
 //
-// value.cc
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
 //
+// Defines tagged runtime values and conversions.
+//===----------------------------------------------------------------------===//
 
 #include "Interpreter/value.hpp"
 #include "Interpreter/gc.hpp"

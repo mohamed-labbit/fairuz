@@ -1,3 +1,13 @@
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Verifies module loading, caching, and recovery.
+//===----------------------------------------------------------------------===//
+
 #include "Compiler/compiler.hpp"
 #include "Compiler/opcode.hpp"
 #include "Diag/diagnostic.hpp"
@@ -6,6 +16,7 @@
 #include "Parser/lexer.hpp"
 #include "Parser/parser.hpp"
 #include "Platform.hpp"
+#include "test_common.h"
 #include "test_config.h"
 
 #include <cstdlib>
@@ -213,7 +224,7 @@ TEST(ModuleCompiler, RejectsMismatchedImportAliases)
     auto rejects = [](Array<StringRef> names, Array<StringRef> aliases) {
         diagnostic::reset();
         diagnostic::set_source(nullptr);
-        auto* statement = AST::make_import("example", names, aliases, { });
+        auto* statement = imp("example", names, aliases);
         Compiler().compile({ statement });
         EXPECT_TRUE(diagnostic::has_errors());
         diagnostic::reset();

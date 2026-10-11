@@ -1,6 +1,12 @@
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
 //
-// vm.cc
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
 //
+// Executes Fairuz bytecode and native calls.
+//===----------------------------------------------------------------------===//
 
 #include "Interpreter/vm.hpp"
 #include "Compiler/compiler.hpp"

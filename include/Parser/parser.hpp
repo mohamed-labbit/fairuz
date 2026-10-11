@@ -1,5 +1,15 @@
-#ifndef FA_PARSER_HPP
-#define FA_PARSER_HPP
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Parses Fairuz tokens into syntax trees.
+//===----------------------------------------------------------------------===//
+
+#ifndef FAIRUZ_PARSER_PARSER_HPP
+#define FAIRUZ_PARSER_PARSER_HPP
 
 #include "Diag/diagnostic.hpp"
 #include "Macros.hpp"
@@ -7,6 +17,8 @@
 #include "Support/string.hpp"
 #include "ast_builder.hpp"
 #include "lexer.hpp"
+
+#include <sstream>
 
 namespace fairuz::parser {
 
@@ -179,4 +191,4 @@ private:
 
 } // namespace fairuz::parser
 
-#endif // FA_PARSER_HPP
+#endif // FAIRUZ_PARSER_PARSER_HPP

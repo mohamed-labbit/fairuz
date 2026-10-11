@@ -1,4 +1,15 @@
-#pragma once
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Represents runtime failures with source tracebacks.
+//===----------------------------------------------------------------------===//
+
+#ifndef FAIRUZ_DIAG_RUNTIME_ERROR_HPP
+#define FAIRUZ_DIAG_RUNTIME_ERROR_HPP
 
 #include "Diag/diagnostic.hpp"
 #include "Interpreter/value.hpp"
@@ -86,3 +97,5 @@ struct ExecutionCheckpoint {
 static constexpr ErrorKind error_kind(ErrorCode errc);
 
 } // namespace fairuz::runtime
+
+#endif // FAIRUZ_DIAG_RUNTIME_ERROR_HPP

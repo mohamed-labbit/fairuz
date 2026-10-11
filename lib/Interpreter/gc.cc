@@ -1,6 +1,12 @@
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
 //
-// gc.cc
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
 //
+// Implements mark-and-sweep garbage collection.
+//===----------------------------------------------------------------------===//
 
 #include "Interpreter/gc.hpp"
 #include "Compiler/chunk.hpp"

@@ -1,5 +1,15 @@
-#ifndef FA_VALUE_HPP
-#define FA_VALUE_HPP
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Defines tagged runtime values and conversions.
+//===----------------------------------------------------------------------===//
+
+#ifndef FAIRUZ_INTERPRETER_VALUE_HPP
+#define FAIRUZ_INTERPRETER_VALUE_HPP
 
 #include "Interpreter/obj_header.hpp"
 #include "Macros.hpp"
@@ -405,4 +415,4 @@ struct ValueEqual {
 
 } // namespace fairuz::runtime
 
-#endif // FA_VALUE_HPP
+#endif // FAIRUZ_INTERPRETER_VALUE_HPP

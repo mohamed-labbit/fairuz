@@ -1,5 +1,15 @@
-#ifndef FA_GC_HPP
-#define FA_GC_HPP
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Implements mark-and-sweep garbage collection.
+//===----------------------------------------------------------------------===//
+
+#ifndef FAIRUZ_INTERPRETER_GC_HPP
+#define FAIRUZ_INTERPRETER_GC_HPP
 
 #include "Diag/diagnostic.hpp"
 #include "Support/array.hpp"
@@ -147,4 +157,4 @@ private:
 
 } // namespace fairuz::runtime
 
-#endif // FA_GC_HPP
+#endif // FAIRUZ_INTERPRETER_GC_HPP

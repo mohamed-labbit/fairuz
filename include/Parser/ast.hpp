@@ -1,5 +1,15 @@
-#ifndef FA_AST_HPP
-#define FA_AST_HPP
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Defines the Fairuz abstract syntax tree.
+//===----------------------------------------------------------------------===//
+
+#ifndef FAIRUZ_PARSER_AST_HPP
+#define FAIRUZ_PARSER_AST_HPP
 
 #include "Macros.hpp"
 #include "Support/arena.hpp"
@@ -1063,145 +1073,16 @@ public:
     void accept(StmtVisitor& v) override { v.visit(*this); }
 }; // class ContinueStmt
 
-/// -----------------------------------------------------------------------
-///                            Helper Makers
-/// -----------------------------------------------------------------------
-
-/// These are wrappers of ALLOCATE_AST_NODE to introdude type checking
-/// for arguments and readability
-static inline BinaryExpr* make_binary(Expr::Kind kind, ExprPtr lhs, ExprPtr rhs, SourceLocation loc)
-{
-    return ALLOCATE_AST_NODE(BinaryExpr, kind, lhs, rhs, loc);
-}
-static inline UnaryExpr* make_unary(Expr::Kind kind, ExprPtr operand, SourceLocation loc)
-{
-    return ALLOCATE_AST_NODE(UnaryExpr, kind, operand, loc);
-}
-static inline NilExpr* make_nil(SourceLocation loc)
-{
-    return ALLOCATE_AST_NODE(NilExpr, loc);
-}
-static inline IntLiteralExpr* make_literal_int(int value, SourceLocation loc)
-{
-    return ALLOCATE_AST_NODE(IntLiteralExpr, static_cast<i64>(value), loc);
-}
-static inline IntLiteralExpr* make_literal_int(i64 value, SourceLocation loc)
-{
-    return ALLOCATE_AST_NODE(IntLiteralExpr, value, loc);
-}
-static inline FloatLiteralExpr* make_literal_float(f64 value, SourceLocation loc)
-{
-    return ALLOCATE_AST_NODE(FloatLiteralExpr, value, loc);
-}
-static inline StringLiteralExpr* make_literal_string(StringRef const str, SourceLocation loc)
-{
-    return ALLOCATE_AST_NODE(StringLiteralExpr, str, loc);
-}
-static inline BoolLiteralExpr* make_literal_bool(bool value, SourceLocation loc)
-{
-    return ALLOCATE_AST_NODE(BoolLiteralExpr, value, loc);
-}
-static inline IdentifierExpr* make_identifier(StringRef const str, SourceLocation loc)
-{
-    return ALLOCATE_AST_NODE(IdentifierExpr, str, loc);
-}
-static inline ListExpr* make_list(Array<ExprPtr> elements, SourceLocation loc)
-{
-    return ALLOCATE_AST_NODE(ListExpr, elements, loc);
-}
-static inline DictExpr* make_dict(Array<std::pair<ExprPtr, ExprPtr>> content, SourceLocation loc)
-{
-    return ALLOCATE_AST_NODE(DictExpr, content, loc);
-}
-static inline GetExpr* make_get_expr(ExprPtr obj, IdentifierExpr* member, SourceLocation loc)
-{
-    return ALLOCATE_AST_NODE(GetExpr, obj, member, loc);
-}
-static inline CallExpr* make_call(ExprPtr callee, Array<ExprPtr> args, SourceLocation loc)
-{
-    return ALLOCATE_AST_NODE(CallExpr, callee, args, loc);
-}
-static inline AssignExpr* make_assignment_expr(ExprPtr target, ExprPtr value, SourceLocation loc)
-{
-    return ALLOCATE_AST_NODE(AssignExpr, target, value, loc);
-}
-static inline IndexExpr* make_index(ExprPtr obj, ExprPtr idx, SourceLocation loc)
-{
-    return ALLOCATE_AST_NODE(IndexExpr, obj, idx, loc);
-}
-static inline BlockStmt* make_block(Array<StmtPtr> stmts, SourceLocation loc)
-{
-    return ALLOCATE_AST_NODE(BlockStmt, stmts, loc);
-}
-static inline ExprStmt* make_expr_stmt(ExprPtr expr, SourceLocation loc)
-{
-    return ALLOCATE_AST_NODE(ExprStmt, expr, loc);
-}
-/// This one creates an assignment stmt expr that wrappes an assignment expr
-/// just so we don't have to write  the exact same two line sequence
-static inline ExprStmt* make_assignment_stmt(ExprPtr target, ExprPtr value, SourceLocation loc)
-{
-    auto e = ALLOCATE_AST_NODE(AssignExpr, target, value, loc);
-    return ALLOCATE_AST_NODE(ExprStmt, e, loc);
-}
-static inline IfElseStmt* make_if(ExprPtr cond, StmtPtr then_block, SourceLocation loc, StmtPtr else_block = nullptr)
-{
-    return ALLOCATE_AST_NODE(IfElseStmt, cond, then_block, loc, else_block);
-}
-static inline WhileStmt* make_while(ExprPtr cond, StmtPtr body, SourceLocation loc)
-{
-    return ALLOCATE_AST_NODE(WhileStmt, cond, body, loc);
-}
-static inline ForStmt* make_for(IdentifierExpr* target, ExprPtr iter, StmtPtr body, SourceLocation loc)
-{
-    return ALLOCATE_AST_NODE(ForStmt, target, iter, body, loc);
-}
-static inline FunctionStub* make_function_stub(Array<tok::Token const*> tokens,
-    diagnostic::SourcePtr source, StringRef body_span, SourceLocation loc)
-{
-    return ALLOCATE_AST_NODE(FunctionStub, std::move(tokens), std::move(source), body_span, loc);
-}
-static inline FuncDefStmt* make_function(IdentifierExpr* name, Array<ExprPtr> params, StmtPtr body, SourceLocation loc)
-{
-    return ALLOCATE_AST_NODE(FuncDefStmt, name, params, body, loc);
-}
-static inline ReturnStmt* make_return(SourceLocation loc, ExprPtr value = nullptr)
-{
-    return ALLOCATE_AST_NODE(ReturnStmt, value, loc);
-}
-static inline ClassDefStmt* make_class_def(ExprPtr name, Array<ExprPtr> members,
-    Array<StmtPtr> methods, SourceLocation loc)
-{
-    return ALLOCATE_AST_NODE(ClassDefStmt, name, nullptr, members, methods, loc);
-}
-static inline ClassDefStmt* make_class_def(ExprPtr name, ExprPtr parent,
-    Array<ExprPtr> members, Array<StmtPtr> methods, SourceLocation loc)
-{
-    return ALLOCATE_AST_NODE(ClassDefStmt, name, parent, members, methods, loc);
-}
-static inline ImportStmt* make_import(StringRef const module, Array<StringRef> name,
-    Array<StringRef> aliases, SourceLocation loc)
-{
-    return ALLOCATE_AST_NODE(ImportStmt, module, name, aliases, loc);
-}
-static inline BreakStmt* make_break(SourceLocation loc)
-{
-    return ALLOCATE_AST_NODE(BreakStmt, loc);
-}
-static inline ContinueStmt* make_continue(SourceLocation loc)
-{
-    return ALLOCATE_AST_NODE(ContinueStmt, loc);
-}
-
 #undef ALLOCATE_AST_NODE
 
 /// -----------------------------------------------------------------------
 ///                     helper inline global functions
 /// -----------------------------------------------------------------------
 
-/// Casting is only done for constant pointers since AST nodes are immutable data
+/// Casting doesn't have to be on constant pointers since AST nodes are immutable data
 /// NOTE: Every casting of AST nodes in this project must use these helpers exclusively
 /// no dynamic_cast or const_cast is allowed, even if these helpers are essentially just aliases
+
 inline IfElseStmt* as_if(StmtPtr s) { return static_cast<IfElseStmt*>(s); }
 inline WhileStmt* as_while(StmtPtr s) { return static_cast<WhileStmt*>(s); }
 inline ForStmt* as_for(StmtPtr s) { return static_cast<ForStmt*>(s); }
@@ -1263,4 +1144,4 @@ using StmtKind = Stmt::Kind;
 
 } // namespace fairuz::ast
 
-#endif // FA_AST_HPP
+#endif // FAIRUZ_PARSER_AST_HPP

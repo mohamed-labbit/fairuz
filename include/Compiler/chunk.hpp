@@ -1,5 +1,15 @@
-#ifndef FA_CHUNK_HPP
-#define FA_CHUNK_HPP
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Defines bytecode chunks, constants, and source locations.
+//===----------------------------------------------------------------------===//
+
+#ifndef FAIRUZ_COMPILER_CHUNK_HPP
+#define FAIRUZ_COMPILER_CHUNK_HPP
 
 #include "Compiler/opcode.hpp"
 #include "Interpreter/object.hpp"
@@ -75,4 +85,4 @@ static inline Chunk* make_chunk(Args&&... args) { return get_allocator().allocat
 
 } // namespace fairuz::runtime
 
-#endif // FA_CHUNK_HPP
+#endif // FAIRUZ_COMPILER_CHUNK_HPP

@@ -1,5 +1,15 @@
-#ifndef NARROW_TABLE_HPP
-#define NARROW_TABLE_HPP
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Provides hash-table and associative-container support.
+//===----------------------------------------------------------------------===//
+
+#ifndef FAIRUZ_SUPPORT_NARROW_TABLE_HPP
+#define FAIRUZ_SUPPORT_NARROW_TABLE_HPP
 
 #include "Support/array.hpp"
 #include <initializer_list>
@@ -242,4 +252,4 @@ public:
 
 } // namespace fairuz
 
-#endif // NARROW_TABLE_HPP
+#endif // FAIRUZ_SUPPORT_NARROW_TABLE_HPP

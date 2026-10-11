@@ -1,5 +1,15 @@
-#ifndef FA_ARRAY_HPP
-#define FA_ARRAY_HPP
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Provides allocator-aware dynamic arrays.
+//===----------------------------------------------------------------------===//
+
+#ifndef FAIRUZ_SUPPORT_ARRAY_HPP
+#define FAIRUZ_SUPPORT_ARRAY_HPP
 
 #include "Diag/diagnostic.hpp"
 #include "Macros.hpp"
@@ -690,4 +700,4 @@ public:
 
 } // namespace fairuz
 
-#endif // FA_ARRAY_HPP
+#endif // FAIRUZ_SUPPORT_ARRAY_HPP

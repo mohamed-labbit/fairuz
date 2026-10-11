@@ -1,3 +1,13 @@
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Provides cross-platform filesystem and process helpers.
+//===----------------------------------------------------------------------===//
+
 #ifndef FAIRUZ_PLATFORM_HPP
 #define FAIRUZ_PLATFORM_HPP
 
@@ -36,4 +46,5 @@ std::string environment(char const* name);
 bool write_file_atomic(std::string const& filename, char const* data, size_t size, std::string& error);
 
 } // namespace fairuz::platform
-#endif
+
+#endif // FAIRUZ_PLATFORM_HPP

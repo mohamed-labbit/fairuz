@@ -1,5 +1,15 @@
-#ifndef FA_FOBJ_HEADER_HPP
-#define FA_FOBJ_HEADER_HPP
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Defines common heap-object metadata.
+//===----------------------------------------------------------------------===//
+
+#ifndef FAIRUZ_INTERPRETER_OBJECT_HEADER_HPP
+#define FAIRUZ_INTERPRETER_OBJECT_HEADER_HPP
 
 #include "Macros.hpp"
 
@@ -33,4 +43,4 @@ struct ObjHeader {
 
 } // namespace fairuz::runtime
 
-#endif // FA_FOBJ_HEADER_HPP
+#endif // FAIRUZ_INTERPRETER_OBJECT_HEADER_HPP

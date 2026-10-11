@@ -1,5 +1,15 @@
-#ifndef FA_INTEGER_HPP
-#define FA_INTEGER_HPP
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Provides arbitrary-precision integer arithmetic.
+//===----------------------------------------------------------------------===//
+
+#ifndef FAIRUZ_SUPPORT_INTEGER_HPP
+#define FAIRUZ_SUPPORT_INTEGER_HPP
 
 #include "Interpreter/value.hpp"
 #include "Support/string.hpp"
@@ -39,4 +49,5 @@ double to_double(Value value) noexcept;
 std::string to_string(Value value);
 
 }
-#endif
+
+#endif // FAIRUZ_SUPPORT_INTEGER_HPP

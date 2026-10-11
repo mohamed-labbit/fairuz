@@ -1,3 +1,13 @@
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Provides Windows compatibility definitions.
+//===----------------------------------------------------------------------===//
+
 #ifndef FAIRUZ_WINDOWS_HPP
 #define FAIRUZ_WINDOWS_HPP
 
@@ -39,5 +49,6 @@ inline std::system_error windows_error(char const* operation)
 }
 
 }
-#endif
-#endif
+
+#endif // _WIN32
+#endif // FAIRUZ_WINDOWS_HPP

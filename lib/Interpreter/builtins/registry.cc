@@ -1,6 +1,13 @@
+//===----------------------------------------------------------------------===//
 //
-// registry.cc
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
 //
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Registers builtin functions in BuiltinsList at compile time.
+//===----------------------------------------------------------------------===//
 
 #include "Interpreter/builtins.hpp"
 #include "Interpreter/vm.hpp"

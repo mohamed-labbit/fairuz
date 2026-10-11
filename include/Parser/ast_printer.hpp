@@ -1,5 +1,15 @@
-#ifndef FA_AST_PRINTER_HPP
-#define FA_AST_PRINTER_HPP
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Formats AST nodes for diagnostics and debugging.
+//===----------------------------------------------------------------------===//
+
+#ifndef FAIRUZ_PARSER_AST_PRINTER_HPP
+#define FAIRUZ_PARSER_AST_PRINTER_HPP
 
 #include "Macros.hpp"
 #include "ast.hpp"
@@ -325,4 +335,4 @@ public:
 
 } // namespace fairuz::ast
 
-#endif // FA_AST_PRINTER_HPP
+#endif // FAIRUZ_PARSER_AST_PRINTER_HPP

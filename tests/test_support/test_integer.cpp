@@ -1,7 +1,18 @@
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Verifies arbitrary-precision integer behavior.
+//===----------------------------------------------------------------------===//
+
 #include "Interpreter/gc.hpp"
 #include "Interpreter/vm.hpp"
 #include "Support/integer.hpp"
 #include "test_parser/test_integer_oracle.hpp"
+
 #include <gtest/gtest.h>
 #include <limits>
 #include <random>

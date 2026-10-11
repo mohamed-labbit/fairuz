@@ -1,4 +1,15 @@
-#pragma once
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Defines diagnostic error codes and messages.
+//===----------------------------------------------------------------------===//
+
+#ifndef FAIRUZ_DIAG_ERRC_HPP
+#define FAIRUZ_DIAG_ERRC_HPP
 
 #include "Macros.hpp"
 
@@ -35,7 +46,7 @@ constexpr char const* error_name_for(ErrorCode code) noexcept
 {
     switch (code) {
 #define FAIRUZ_ERROR(name, number, category, message) \
-    case ErrorCode::name: return #name;
+case ErrorCode::name: return #name;
 #include "errc.def"
 #undef FAIRUZ_ERROR
     default: return "UNKNOWN";
@@ -46,7 +57,7 @@ constexpr char const* error_message_for(ErrorCode code) noexcept
 {
     switch (code) {
 #define FAIRUZ_ERROR(name, number, category, message) \
-    case ErrorCode::name: return message;
+case ErrorCode::name: return message;
 #include "errc.def"
 #undef FAIRUZ_ERROR
     default: return "Unknown error";
@@ -57,7 +68,7 @@ constexpr ErrorCategory error_category_for(ErrorCode code) noexcept
 {
     switch (code) {
 #define FAIRUZ_ERROR(name, number, category, message) \
-    case ErrorCode::name: return ErrorCategory::category;
+case ErrorCode::name: return ErrorCategory::category;
 #include "errc.def"
 #undef FAIRUZ_ERROR
     default: return ErrorCategory::UNKNOWN;
@@ -82,3 +93,5 @@ constexpr char const* error_category_name(ErrorCategory category) noexcept
 }
 
 } // namespace fairuz
+
+#endif // FAIRUZ_DIAG_ERRC_HPP

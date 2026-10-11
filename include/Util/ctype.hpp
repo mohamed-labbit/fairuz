@@ -1,5 +1,15 @@
-#ifndef FA_CTYPE_HPP
-#define FA_CTYPE_HPP
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Provides Unicode-aware character predicates.
+//===----------------------------------------------------------------------===//
+
+#ifndef FAIRUZ_UTIL_CTYPE_HPP
+#define FAIRUZ_UTIL_CTYPE_HPP
 
 #include "Macros.hpp"
 
@@ -457,4 +467,4 @@ inline constexpr u8 ml_arabic_ctype[256] = {
 
 } // namespace fairuz
 
-#endif // FA_CTYPE_HPP
+#endif // FAIRUZ_UTIL_CTYPE_HPP

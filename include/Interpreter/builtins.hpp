@@ -1,5 +1,15 @@
-#ifndef FA_BUILTINS_HPP
-#define FA_BUILTINS_HPP
+//===----------------------------------------------------------------------===//
+// Fairuz — Arabic programming language
+// Copyright (c) 2026 Mohamed labbit
+//
+// SPDX-License-Identifier: MIT
+// See LICENSE in the project root for the full license text.
+//
+// Declares the native builtin function registry.
+//===----------------------------------------------------------------------===//
+
+#ifndef FAIRUZ_INTERPRETER_BUILTINS_HPP
+#define FAIRUZ_INTERPRETER_BUILTINS_HPP
 
 #include "Interpreter/object.hpp"
 
@@ -31,4 +41,4 @@ private:
 
 } // namespace fairuz::runtime
 
-#endif // FA_BUILTINS_HPP
+#endif // FAIRUZ_INTERPRETER_BUILTINS_HPP
