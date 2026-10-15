@@ -26,7 +26,7 @@ ErrorOr<StmtPtr> ASTBuilder::materialize(FunctionStub& stub)
         return body.error();
     // Block parsing recovers from errors; never cache its partial result.
     if (diagnostic::error_count() != errors_before)
-        return Error(ErrorCode::INVALID_STATEMENT_NODE);
+        return Error(ErrorCode::INVALID_STATEMENT_NODE, stub.get_location());
     stub.parsed_body = body.value();
     return stub.parsed_body;
 }
