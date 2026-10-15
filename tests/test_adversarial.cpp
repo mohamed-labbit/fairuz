@@ -19,6 +19,7 @@
 #include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
+#include <iostream>
 #include <iterator>
 #include <random>
 #include <string>
@@ -70,7 +71,9 @@ protected:
 TEST_P(AdversarialInterpreter, PreservesSemanticsAndReportsErrorsWithoutCrashing)
 {
     auto const& test = GetParam();
-    SCOPED_TRACE(test.name + "\nFairuz source:\n" + test.source);
+    SCOPED_TRACE(test.name + "\n"
+                             "Fairuz source:\n"
+        + test.source);
     auto input = directory / fairuz::platform::path("program.ف");
     auto output = directory / "stdout.txt";
     auto errors = directory / "stderr.txt";
@@ -80,10 +83,20 @@ TEST_P(AdversarialInterpreter, PreservesSemanticsAndReportsErrorsWithoutCrashing
         ASSERT_TRUE(file.good());
     }
     std::vector<std::string> args { fairuz::platform::utf8(input) };
-    if (test_config::dump_bytecode)
-        args.push_back("--dump-bytecode");
     if (test.check_only)
         args.push_back("--check");
+    if (test_config::dump_bytecode) {
+        // Keep debug output out of the process whose stdout is checked below.
+        // Compile-only inspection also avoids repeating program side effects.
+        auto inspection = test_process::run(test_process::executable(),
+            { fairuz::platform::utf8(input), "--check", "--dump-bytecode" },
+            { }, std::chrono::seconds(5));
+        std::cout << inspection.out;
+        std::cerr << inspection.err;
+        ASSERT_FALSE(inspection.timed_out) << "Bytecode inspection timed out";
+        ASSERT_FALSE(inspection.crashed) << "Bytecode inspection crashed\n"
+                                         << inspection.err;
+    }
     auto result = test_process::run(test_process::executable(), args, { }, std::chrono::seconds(5));
     auto const& out = result.out;
     auto const& err = result.err;
@@ -106,7 +119,11 @@ TEST_P(AdversarialInterpreter, PreservesSemanticsAndReportsErrorsWithoutCrashing
         EXPECT_EQ(out, test.output) << "Unexpected execution before assignment error: " << out;
         [[fallthrough]];
     case Expectation::Error:
-        EXPECT_EQ(exit_code, 65) << "Expected a language diagnostic\nstdout: " << out << "\nstderr: " << err;
+        EXPECT_EQ(exit_code, 65) << "Expected a language diagnostic\n"
+                                    "stdout: "
+                                 << out << "\n"
+                                           "stderr: "
+                                 << err;
         break;
     case Expectation::NoCrash:
         EXPECT_TRUE(exit_code == 0 || exit_code == 65) << err;
@@ -142,63 +159,214 @@ std::vector<AdversarialCase> semantic_cases()
     std::vector<AdversarialCase> result {
         { "SmallIntegerSmoke", "اكتب(1 + 2)\n", "3\n" },
         { "LargeIntegerPrint", "اكتب(140737488355328)\n", "140737488355328\n" },
-        { "LargeIntegerEquality", "ا := 140737488355328\nب := 140737488355328\nاكتب(ا = ب)\n", "صحيح\n" },
-        { "LargeIntegerCancellation", "ا := 140737488355328\nاكتب(ا - ا)\n", "0\n" },
+        { "LargeIntegerEquality", "ا := 140737488355328\n"
+                                  "ب := 140737488355328\n"
+                                  "اكتب(ا = ب)\n",
+            "صحيح\n" },
+        { "LargeIntegerCancellation", "ا := 140737488355328\n"
+                                      "اكتب(ا - ا)\n",
+            "0\n" },
         { "LargeLiteralDoesNotEqualZero", "اكتب(281474976710656 = 0)\n", "خطا\n" },
         { "LargeLiteralAddition", "اكتب(281474976710656 + 1)\n", "281474976710657\n" },
         { "LargeLiteralNegation", "اكتب(-281474976710657)\n", "-281474976710657\n" },
-        { "ConstantModuloCanIndexList", "ا := [10، 20، 30]\nاكتب(ا[5 % 3])\n", "30\n" },
-        { "RuntimeModuloCanIndexList", "ا := [10، 20، 30]\nب := 5\nاكتب(ا[ب % 3])\n", "30\n" },
-        { "ModuloTypesAgree", "ا := 5\nاكتب(صنف(5 % 3) = صنف(ا % 3))\n", "صحيح\n" },
+        { "ConstantModuloCanIndexList", "ا := [10، 20، 30]\n"
+                                        "اكتب(ا[5 % 3])\n",
+            "30\n" },
+        { "RuntimeModuloCanIndexList", "ا := [10، 20، 30]\n"
+                                       "ب := 5\n"
+                                       "اكتب(ا[ب % 3])\n",
+            "30\n" },
+        { "ModuloTypesAgree", "ا := 5\n"
+                              "اكتب(صنف(5 % 3) = صنف(ا % 3))\n",
+            "صحيح\n" },
         // Overflow promotes to an exact arbitrary-precision integer.
         { "ConstantMultiplyOverflow", "اكتب(4294967296 * 4294967296)\n", "18446744073709551616\n" },
-        { "RuntimeMultiplyOverflow", "ا := 4294967296\nاكتب(ا * ا)\n", "18446744073709551616\n" },
+        { "RuntimeMultiplyOverflow", "ا := 4294967296\n"
+                                     "اكتب(ا * ا)\n",
+            "18446744073709551616\n" },
         { "ConstantDivideOverflow", "اكتب((-9223372036854775807 - 1) / -1)\n", "9223372036854775808\n" },
-        { "RuntimeDivideOverflow", "ا := -9223372036854775807 - 1\nاكتب(ا / -1)\n", "9223372036854775808\n" },
+        { "RuntimeDivideOverflow", "ا := -9223372036854775807 - 1\n"
+                                   "اكتب(ا / -1)\n",
+            "9223372036854775808\n" },
         { "ConstantShiftOverflow", "اكتب(4 << 62)\n", "18446744073709551616\n" },
-        { "RuntimeShiftOverflow", "ا := 4\nاكتب(ا << 62)\n", "18446744073709551616\n" },
+        { "RuntimeShiftOverflow", "ا := 4\n"
+                                  "اكتب(ا << 62)\n",
+            "18446744073709551616\n" },
         { "NegativePower", "اكتب(قوة(2، -1))\n", "0.5\n" },
         { "IntegerConversionDoesNotWrap", "اكتب(طبيعي(281474976710656.0))\n", "281474976710656\n" },
         { "NonfiniteIntegerConversion", "اكتب(طبيعي(1e300 * 1e300))\n", "", Expectation::Error },
         { "PowerNanDoesNotCrash", "اكتب(قوة(-1.0، 0.5))\n", "", Expectation::NoCrash },
-        { "OperatorNanDoesNotCrash", "ا := -1.0\nاكتب(ا ** 0.5)\n", "", Expectation::NoCrash },
-        { "InfinityDifferenceDoesNotCrash", "ا := 1e300 * 1e300\nاكتب(ا - ا)\n", "", Expectation::NoCrash },
-        { "ExplicitErrorStopsExecution", "عطل(\"stop\")\nاكتب(\"continued\")\n", "", Expectation::Error },
-        { "ShortCircuitSkipsUndefinedName", "اكتب(خطا و مفقود)\nاكتب(صحيح او مفقود)\n", "خطا\nصحيح\n" },
-        { "ShortCircuitReturnsOperands", "اكتب(0 او 7)\nاكتب(2 و 9)\n", "7\n9\n" },
-        { "NegativeZeroTruthAndEquality", "ا := -0.0\nاكتب(ليس ا)\nاكتب(ا = 0)\n", "صحيح\nصحيح\n" },
-        { "DictionaryNumericKey", "د := {1: 10}\nد[1.0] := 20\nاكتب(طول(د))\nاكتب(د[1])\n", "1\n20\n" },
-        { "DictionaryNegativeZeroKey", "د := {-0.0: 10}\nاكتب(د[0.0])\nاكتب(د[0])\n", "10\n10\n" },
-        { "DictionaryBooleanKeyIsDistinct", "د := {1: 10، صحيح: 20}\nاكتب(طول(د))\nاكتب(د[1])\n", "2\n10\n" },
-        { "NestedCollectionEquality", "اكتب([1، [2]] = [1.0، [2.0]])\nاكتب({\"a\": [1]} = {\"a\": [1]})\n", "صحيح\nصحيح\n" },
-        { "CyclicCollectionEquality", "ا := []\nب := []\nاضف(ا، ا)\nاضف(ب، ب)\nاكتب(ا = ب)\nاضف(ب، 1)\nاكتب(ا = ب)\n", "صحيح\nخطا\n" },
-        { "UnicodeIndexing", "ا := \"أ🙂ب\"\nاكتب(طول(ا))\nاكتب(ا[1])\n", "3\n🙂\n" },
-        { "NestedCallRegisters", "دالة جمع(ا، ب، ج):\n    ارجع ا * 100 + ب * 10 + ج\nدالة هو(ا):\n    ارجع ا\nاكتب(جمع(هو(1)، هو(2)، هو(3)))\n", "123\n" },
-        { "RecursiveLocals", "دالة مجموع(ن):\n    اذا ن = 0:\n        ارجع 0\n    س := ن\n    ارجع مجموع(ن - 1) + س\nاكتب(مجموع(100))\n", "5050\n" },
-        { "ListEvaluationOrder", "سجل := []\nدالة علم(ن):\n    اضف(سجل، ن)\n    ارجع ن\nا := [علم(1)، علم(2)، علم(3)]\nاكتب(سجل)\n", "[1, 2, 3]\n" },
-        { "GreaterThanEvaluationOrder", "سجل := []\nدالة علم(ن):\n    اضف(سجل، ن)\n    ارجع ن\nا := علم(1) > علم(2)\nاكتب(سجل)\n", "[1, 2]\n" },
-        { "AugmentedIndexEvaluatedOnce", "عدد := [0]\nق := [10]\nدالة فهرس():\n    عدد[0] += 1\n    ارجع 0\nق[فهرس()] += 5\nاكتب(عدد[0])\nاكتب(ق[0])\n", "1\n15\n" },
-        { "IndexedAssignmentResultLifetime", "دالة مثال():\n    ق := [0]\n    ارجع (ق[0] := 7) + (2 * 3)\nاكتب(مثال())\n", "13\n" },
-        { "LeftOperandSnapshot", "دالة مثال():\n    س := 1\n    ارجع س + (س := 2)\nاكتب(مثال())\n", "3\n" },
-        { "NestedBreakAndContinue", "س := 0\nلكل ا في [1، 2، 3، 4]:\n    اذا ا = 2:\n        اكمل\n    لكل ب في [10، 20، 30]:\n        اذا ب = 30:\n            اخرج\n        س += ا + ب\nاكتب(س)\n", "106\n" },
-        { "EmptyLoopPreservesState", "س := 9\nلكل ا في []:\n    س := 0\nاكتب(س)\n", "9\n" },
-        { "ReturnInsideLoop", "دالة مثال():\n    لكل ا في [1، 2، 3]:\n        اذا ا = 2:\n            ارجع ا\n    ارجع 0\nاكتب(مثال())\n", "2\n" },
-        { "GreaterThanOverload", "نوع علبة:\n    دالة بداية(ق):\n        هذا.ق := ق\n    دالة اكبر_من(اخر):\n        ارجع هذا.ق > اخر.ق\nاكتب(علبة(9) > علبة(7))\n", "صحيح\n" },
-        { "DivideByZero", "ا := 1\nاكتب(ا / 0)\n", "", Expectation::Error },
-        { "ModuloByZero", "ا := 1\nاكتب(ا % 0)\n", "", Expectation::Error },
-        { "NegativeShift", "ا := 1\nاكتب(ا << -1)\n", "", Expectation::Error },
-        { "OversizedShift", "ا := 1\nاكتب(ا >> 64)\n", "0\n" },
+        { "OperatorNanDoesNotCrash", "ا := -1.0\n"
+                                     "اكتب(ا ** 0.5)\n",
+            "", Expectation::NoCrash },
+        { "InfinityDifferenceDoesNotCrash", "ا := 1e300 * 1e300\n"
+                                            "اكتب(ا - ا)\n",
+            "", Expectation::NoCrash },
+        { "ExplicitErrorStopsExecution", "عطل(\"stop\")\n"
+                                         "اكتب(\"continued\")\n",
+            "", Expectation::Error },
+        { "ShortCircuitSkipsUndefinedName", "اكتب(خطا و مفقود)\n"
+                                            "اكتب(صحيح او مفقود)\n",
+            "خطا\n"
+            "صحيح\n" },
+        { "ShortCircuitReturnsOperands", "اكتب(0 او 7)\n"
+                                         "اكتب(2 و 9)\n",
+            "7\n"
+            "9\n" },
+        { "NegativeZeroTruthAndEquality", "ا := -0.0\n"
+                                          "اكتب(ليس ا)\n"
+                                          "اكتب(ا = 0)\n",
+            "صحيح\n"
+            "صحيح\n" },
+        { "DictionaryNumericKey", "د := {1: 10}\n"
+                                  "د[1.0] := 20\n"
+                                  "اكتب(طول(د))\n"
+                                  "اكتب(د[1])\n",
+            "1\n"
+            "20\n" },
+        { "DictionaryNegativeZeroKey", "د := {-0.0: 10}\n"
+                                       "اكتب(د[0.0])\n"
+                                       "اكتب(د[0])\n",
+            "10\n"
+            "10\n" },
+        { "DictionaryBooleanKeyIsDistinct", "د := {1: 10، صحيح: 20}\n"
+                                            "اكتب(طول(د))\n"
+                                            "اكتب(د[1])\n",
+            "2\n"
+            "10\n" },
+        { "NestedCollectionEquality", "اكتب([1، [2]] = [1.0، [2.0]])\n"
+                                      "اكتب({\"a\": [1]} = {\"a\": [1]})\n",
+            "صحيح\n"
+            "صحيح\n" },
+        { "CyclicCollectionEquality", "ا := []\n"
+                                      "ب := []\n"
+                                      "اضف(ا، ا)\n"
+                                      "اضف(ب، ب)\n"
+                                      "اكتب(ا = ب)\n"
+                                      "اضف(ب، 1)\n"
+                                      "اكتب(ا = ب)\n",
+            "صحيح\n"
+            "خطا\n" },
+        { "UnicodeIndexing", "ا := \"أ🙂ب\"\n"
+                             "اكتب(طول(ا))\n"
+                             "اكتب(ا[1])\n",
+            "3\n"
+            "🙂\n" },
+        { "NestedCallRegisters", "دالة جمع(ا، ب، ج):\n"
+                                 "    ارجع ا * 100 + ب * 10 + ج\n"
+                                 "دالة هو(ا):\n"
+                                 "    ارجع ا\n"
+                                 "اكتب(جمع(هو(1)، هو(2)، هو(3)))\n",
+            "123\n" },
+        { "RecursiveLocals", "دالة مجموع(ن):\n"
+                             "    اذا ن = 0:\n"
+                             "        ارجع 0\n"
+                             "    س := ن\n"
+                             "    ارجع مجموع(ن - 1) + س\n"
+                             "اكتب(مجموع(100))\n",
+            "5050\n" },
+        { "ListEvaluationOrder", "سجل := []\n"
+                                 "دالة علم(ن):\n"
+                                 "    اضف(سجل، ن)\n"
+                                 "    ارجع ن\n"
+                                 "ا := [علم(1)، علم(2)، علم(3)]\n"
+                                 "اكتب(سجل)\n",
+            "[1, 2, 3]\n" },
+        { "GreaterThanEvaluationOrder", "سجل := []\n"
+                                        "دالة علم(ن):\n"
+                                        "    اضف(سجل، ن)\n"
+                                        "    ارجع ن\n"
+                                        "ا := علم(1) > علم(2)\n"
+                                        "اكتب(سجل)\n",
+            "[1, 2]\n" },
+        { "AugmentedIndexEvaluatedOnce", "عدد := [0]\n"
+                                         "ق := [10]\n"
+                                         "دالة فهرس():\n"
+                                         "    عدد[0] += 1\n"
+                                         "    ارجع 0\n"
+                                         "ق[فهرس()] += 5\n"
+                                         "اكتب(عدد[0])\n"
+                                         "اكتب(ق[0])\n",
+            "1\n"
+            "15\n" },
+        { "IndexedAssignmentResultLifetime", "دالة مثال():\n"
+                                             "    ق := [0]\n"
+                                             "    ارجع (ق[0] := 7) + (2 * 3)\n"
+                                             "اكتب(مثال())\n",
+            "13\n" },
+        { "LeftOperandSnapshot", "دالة مثال():\n"
+                                 "    س := 1\n"
+                                 "    ارجع س + (س := 2)\n"
+                                 "اكتب(مثال())\n",
+            "3\n" },
+        { "NestedBreakAndContinue", "س := 0\n"
+                                    "لكل ا في [1، 2، 3، 4]:\n"
+                                    "    اذا ا = 2:\n"
+                                    "        اكمل\n"
+                                    "    لكل ب في [10، 20، 30]:\n"
+                                    "        اذا ب = 30:\n"
+                                    "            اخرج\n"
+                                    "        س += ا + ب\n"
+                                    "اكتب(س)\n",
+            "106\n" },
+        { "EmptyLoopPreservesState", "س := 9\n"
+                                     "لكل ا في []:\n"
+                                     "    س := 0\n"
+                                     "اكتب(س)\n",
+            "9\n" },
+        { "ReturnInsideLoop", "دالة مثال():\n"
+                              "    لكل ا في [1، 2، 3]:\n"
+                              "        اذا ا = 2:\n"
+                              "            ارجع ا\n"
+                              "    ارجع 0\n"
+                              "اكتب(مثال())\n",
+            "2\n" },
+        { "GreaterThanOverload", "نوع علبة:\n"
+                                 "    دالة بداية(ق):\n"
+                                 "        هذا.ق := ق\n"
+                                 "    دالة اكبر_من(اخر):\n"
+                                 "        ارجع هذا.ق > اخر.ق\n"
+                                 "اكتب(علبة(9) > علبة(7))\n",
+            "صحيح\n" },
+        { "DivideByZero", "ا := 1\n"
+                          "اكتب(ا / 0)\n",
+            "", Expectation::Error },
+        { "ModuloByZero", "ا := 1\n"
+                          "اكتب(ا % 0)\n",
+            "", Expectation::Error },
+        { "NegativeShift", "ا := 1\n"
+                           "اكتب(ا << -1)\n",
+            "", Expectation::Error },
+        { "OversizedShift", "ا := 1\n"
+                            "اكتب(ا >> 64)\n",
+            "0\n" },
         { "ListReadPastEnd", "اكتب([1][1])\n", "", Expectation::Error },
         { "ListReadNegativePastEnd", "اكتب([1][-2])\n", "", Expectation::Error },
         { "ListFloatIndex", "اكتب([1][0.0])\n", "", Expectation::Error },
-        { "ListWritePastEnd", "ا := [1]\nا[1] := 2\n", "", Expectation::Error },
+        { "ListWritePastEnd", "ا := [1]\n"
+                              "ا[1] := 2\n",
+            "", Expectation::Error },
         { "EmptyPop", "احذف([])\n", "", Expectation::Error },
         { "InvalidNativeArgument", "اضف(1، 2)\n", "", Expectation::Error },
-        { "CallNonCallable", "ا := 7\nا()\n", "", Expectation::Error },
-        { "WrongFunctionArity", "دالة مثال(ا):\n    ارجع ا\nمثال()\n", "", Expectation::Error },
+        { "CallNonCallable", "ا := 7\n"
+                             "ا()\n",
+            "", Expectation::Error },
+        { "WrongFunctionArity", "دالة مثال(ا):\n"
+                                "    ارجع ا\n"
+                                "مثال()\n",
+            "", Expectation::Error },
         // Body errors are deferred until invocation, or forced by --check.
-        { "UnsupportedNestedFunction", "دالة ا():\n    دالة ب():\n        ارجع 1\n    ارجع ب()\nا()\n", "", Expectation::Error },
-        { "UnsupportedNestedFunctionCheck", "دالة ا():\n    دالة ب():\n        ارجع 1\n    ارجع ب()\n", "", Expectation::Error, true },
+        { "UnsupportedNestedFunction", "دالة ا():\n"
+                                       "    دالة ب():\n"
+                                       "        ارجع 1\n"
+                                       "    ارجع ب()\n"
+                                       "ا()\n",
+            "", Expectation::Error },
+        { "UnsupportedNestedFunctionCheck", "دالة ا():\n"
+                                            "    دالة ب():\n"
+                                            "        ارجع 1\n"
+                                            "    ارجع ب()\n",
+            "", Expectation::Error, true },
         { "BreakOutsideLoop", "اخرج\n", "", Expectation::Error },
         { "ContinueOutsideLoop", "اكمل\n", "", Expectation::Error },
         { "UndefinedTimesZero", "اكتب(مفقود * 0)\n", "", Expectation::Error },
@@ -260,7 +428,8 @@ std::vector<AdversarialCase> interaction_cases()
 اكتب(عدد[0])
 اكتب(ق[0])
 )fa",
-            "1\n15\n" },
+            "1\n"
+            "15\n" },
         { "AugmentedIndexUsesOriginalElement", R"fa(عدد := [0]
 ق := [10، 100]
 دالة التالي():
@@ -271,7 +440,8 @@ std::vector<AdversarialCase> interaction_cases()
 اكتب(ق)
 اكتب(عدد[0])
 )fa",
-            "[15, 100]\n1\n" },
+            "[15, 100]\n"
+            "1\n" },
         { "AugmentedMemberReceiverEvaluatedOnce", R"fa(نوع علبة:
     دالة بداية(ق):
         هذا.ق := ق
@@ -284,7 +454,8 @@ std::vector<AdversarialCase> interaction_cases()
 اكتب(عدد[0])
 اكتب(حاويات[0].ق)
 )fa",
-            "1\n15\n" },
+            "1\n"
+            "15\n" },
         { "IndexedAssignmentResultSurvivesCall", R"fa(دالة هو(س):
     ارجع س
 دالة مثال():
@@ -336,7 +507,9 @@ std::vector<AdversarialCase> interaction_cases()
 اكتب(طول(د))
 اكتب(د[1])
 )fa",
-            "[1, 10, 1, 20]\n1\n20\n" },
+            "[1, 10, 1, 20]\n"
+            "1\n"
+            "20\n" },
         // Different field layouts expose stale inferred types after a local
         // variable is assigned an instance of another class.
         { "FieldReadAfterClassReassignment", R"fa(نوع اول:
@@ -364,7 +537,8 @@ std::vector<AdversarialCase> interaction_cases()
 اكتب(س.حاجز)
 اكتب(س.هدف)
 )fa",
-            "99\n7\n" },
+            "99\n"
+            "7\n" },
         { "FieldReadAfterConditionalClassReassignment", R"fa(نوع اول:
     دالة بداية():
         هذا.هدف := 10
@@ -432,7 +606,8 @@ std::vector<AdversarialCase> interaction_cases()
 اكتب(علبة(9) > علبة(7))
 اكتب(اجمع(سجل، ","))
 )fa",
-            "صحيح\ngt\n" },
+            "صحيح\n"
+            "gt\n" },
         { "PolymorphicMethodCallSite", R"fa(نوع اول:
     دالة خذ():
         ارجع 10
@@ -449,7 +624,9 @@ std::vector<AdversarialCase> interaction_cases()
 اكتب(نداء(ب))
 اكتب(نداء(ا))
 )fa",
-            "10\n20\n10\n" },
+            "10\n"
+            "20\n"
+            "10\n" },
         { "PolymorphicBinaryCallSite", R"fa(دالة جمع(ا، ب):
     ارجع ا + ب
 اكتب(جمع(1، 2))
@@ -457,7 +634,10 @@ std::vector<AdversarialCase> interaction_cases()
 اكتب(جمع(1.5، 2.5))
 اكتب(جمع(3، 4))
 )fa",
-            "3\nab\n4\n7\n" },
+            "3\n"
+            "ab\n"
+            "4\n"
+            "7\n" },
         { "ForIterableExpressionEvaluatedOnce", R"fa(عدد := [0]
 دالة عناصر():
     عدد[0] += 1
@@ -468,7 +648,8 @@ std::vector<AdversarialCase> interaction_cases()
 اكتب(مجموع)
 اكتب(عدد[0])
 )fa",
-            "6\n1\n" },
+            "6\n"
+            "1\n" },
         { "WhileConditionRunsBeforeEachIteration", R"fa(عدد := [0]
 دالة شرط():
     عدد[0] += 1
@@ -479,7 +660,8 @@ std::vector<AdversarialCase> interaction_cases()
 اكتب(مجموع)
 اكتب(عدد[0])
 )fa",
-            "30\n4\n" },
+            "30\n"
+            "4\n" },
         { "ListAliasesSurviveGrowth", R"fa(ق := [7]
 نسخة := ق
 س := 0
@@ -491,7 +673,9 @@ std::vector<AdversarialCase> interaction_cases()
 اكتب(ق[0])
 اكتب(نسخة[2048])
 )fa",
-            "2049\n9\n2047\n" },
+            "2049\n"
+            "9\n"
+            "2047\n" },
         { "DictionaryValuesSurviveGrowth", R"fa(د := {}
 ق := [7]
 د[0] := ق
@@ -504,7 +688,9 @@ std::vector<AdversarialCase> interaction_cases()
 اكتب(د[0][0])
 اكتب(د[1023])
 )fa",
-            "1024\n9\n1023\n" },
+            "1024\n"
+            "9\n"
+            "1023\n" },
         { "ListAccessFailureStopsLaterSideEffects", R"fa(ق := []
 اكتب(ق[0])
 اكتب("must not execute")
@@ -531,7 +717,11 @@ std::vector<AdversarialCase> interaction_cases()
     };
     for (auto const& probe : probes) {
         result.push_back({ std::string("OperandSnapshot") + probe.name,
-            std::string("دالة مثال():\n    س := 1\n    ارجع ") + probe.expression + "\nاكتب(مثال())\n",
+            std::string("دالة مثال():\n"
+                        "    س := 1\n"
+                        "    ارجع ")
+                + probe.expression + "\n"
+                                     "اكتب(مثال())\n",
             probe.expected });
     }
     expect_statement_only_assignments(result);
@@ -547,14 +737,23 @@ std::vector<AdversarialCase> assignment_syntax_cases()
     InvalidAssignment invalid[] = {
         { "Binary", "اكتب(1 + (س := 2))\n" },
         { "Argument", "اكتب(س := 2)\n" },
-        { "Condition", "اذا س := 2:\n    اكتب(س)\n" },
-        { "Return", "دالة مثال():\n    ارجع س := 2\nمثال()\n" },
+        { "Condition", "اذا س := 2:\n"
+                       "    اكتب(س)\n" },
+        { "Return", "دالة مثال():\n"
+                    "    ارجع س := 2\n"
+                    "مثال()\n" },
         { "List", "ق := [س := 2]\n" },
-        { "Index", "ق := [0]\nق[س := 0] := 2\n" },
-        { "Augmented", "س := 1\nاكتب(س += 2)\n" },
+        { "Index", "ق := [0]\n"
+                   "ق[س := 0] := 2\n" },
+        { "Augmented", "س := 1\n"
+                       "اكتب(س += 2)\n" },
         { "ShortCircuit", "اكتب(خطا و (س := 2))\n" },
-        { "ClassField", "نوع علبة:\n    دالة بداية():\n        .حقل := (س := 2)\n" },
-        { "ClassAugmentedField", "نوع علبة:\n    دالة بداية():\n        .حقل += س := 2\n" },
+        { "ClassField", "نوع علبة:\n"
+                        "    دالة بداية():\n"
+                        "        .حقل := (س := 2)\n" },
+        { "ClassAugmentedField", "نوع علبة:\n"
+                                 "    دالة بداية():\n"
+                                 "        .حقل += س := 2\n" },
     };
     std::vector<AdversarialCase> result;
     for (auto const& test : invalid) {
@@ -568,7 +767,14 @@ std::vector<AdversarialCase> assignment_syntax_cases()
         }
     }
     result.push_back({ "StandaloneAndChained",
-        "ا := ب := 5\nا += 2\nاكتب(ا)\nاكتب(ب)\nاكتب(ا = 7)\n", "7\n5\nصحيح\n" });
+        "ا := ب := 5\n"
+        "ا += 2\n"
+        "اكتب(ا)\n"
+        "اكتب(ب)\n"
+        "اكتب(ا = 7)\n",
+        "7\n"
+        "5\n"
+        "صحيح\n" });
     return result;
 }
 
@@ -601,7 +807,11 @@ std::vector<AdversarialCase> arithmetic_cases()
         for (bool literal : { true, false }) {
             auto source = literal
                 ? "اكتب((" + std::to_string(a) + ") " + operators[op] + " (" + std::to_string(b) + "))\n"
-                : "ا := " + std::to_string(a) + "\nب := " + std::to_string(b) + "\nاكتب(ا " + operators[op] + " ب)\n";
+                : "ا := " + std::to_string(a) + "\n"
+                                                "ب := "
+                    + std::to_string(b) + "\n"
+                                          "اكتب(ا "
+                    + operators[op] + " ب)\n";
             result.push_back({ "Case" + std::to_string(i) + (literal ? "Literal" : "Runtime"), source, expected,
                 Expectation::Output });
         }
@@ -612,27 +822,90 @@ std::vector<AdversarialCase> arithmetic_cases()
 std::vector<AdversarialCase> repair_regression_cases()
 {
     std::vector<AdversarialCase> result {
-        { "ArgumentParserDefaultMayBeNil", "من محلل_وسائط استورد محلل_وسائط\nم := محلل_وسائط(\"app\"، \"\")\nم.اضف_موضع(\"x\"، {\"default\": عدم})\nاكتب(م.حلل([])[\"x\"])\n", "عدم\n" },
-        { "ArgumentParserRequiredOverridesDefault", "من محلل_وسائط استورد محلل_وسائط\nم := محلل_وسائط(\"app\"، \"\")\nم.اضف_موضع(\"x\"، {\"default\": 7، \"required\": صحيح})\nم.حلل([])\nاكتب(99)\n", "", Expectation::Error, false, true },
-        { "ArgumentParserPositionWithoutDefaultRequired", "من محلل_وسائط استورد محلل_وسائط\nم := محلل_وسائط(\"app\"، \"\")\nم.اضف_موضع(\"x\"، {})\nم.حلل([])\nاكتب(99)\n", "", Expectation::Error, false, true },
-        { "BoxedArithmetic", "س := 281474976710656\nاكتب(س + 1)\nاكتب(س - 1)\nاكتب(س * 2)\nاكتب(س / 1)\nاكتب(س % (س + 1))\n",
-            "281474976710657\n281474976710655\n562949953421312\n281474976710656\n281474976710656\n" },
-        { "BoxedBitwise", "س := 281474976710656\nاكتب(س | 1)\nاكتب(س ^ 1)\nاكتب(س & س)\nاكتب(~س)\nاكتب(س >> 0)\n",
-            "281474976710657\n281474976710657\n281474976710656\n-281474976710657\n281474976710656\n" },
-        { "ImmediateArithmeticPromotes", "اكتب(140737488355327 + 1)\nاكتب((-140737488355328) / -1)\nاكتب(1 << 48)\n",
-            "140737488355328\n140737488355328\n281474976710656\n" },
+        { "ArgumentParserDefaultMayBeNil", "من محلل_وسائط استورد محلل_وسائط\n"
+                                           "م := محلل_وسائط(\"app\"، \"\")\n"
+                                           "م.اضف_موضع(\"x\"، {\"default\": عدم})\n"
+                                           "اكتب(م.حلل([])[\"x\"])\n",
+            "عدم\n" },
+        { "ArgumentParserRequiredOverridesDefault", "من محلل_وسائط استورد محلل_وسائط\n"
+                                                    "م := محلل_وسائط(\"app\"، \"\")\n"
+                                                    "م.اضف_موضع(\"x\"، {\"default\": 7، \"required\": صحيح})\n"
+                                                    "م.حلل([])\n"
+                                                    "اكتب(99)\n",
+            "", Expectation::Error, false, true },
+        { "ArgumentParserPositionWithoutDefaultRequired", "من محلل_وسائط استورد محلل_وسائط\n"
+                                                          "م := محلل_وسائط(\"app\"، \"\")\n"
+                                                          "م.اضف_موضع(\"x\"، {})\n"
+                                                          "م.حلل([])\n"
+                                                          "اكتب(99)\n",
+            "", Expectation::Error, false, true },
+        { "BoxedArithmetic", "س := 281474976710656\n"
+                             "اكتب(س + 1)\n"
+                             "اكتب(س - 1)\n"
+                             "اكتب(س * 2)\n"
+                             "اكتب(س / 1)\n"
+                             "اكتب(س % (س + 1))\n",
+            "281474976710657\n"
+            "281474976710655\n"
+            "562949953421312\n"
+            "281474976710656\n"
+            "281474976710656\n" },
+        { "BoxedBitwise", "س := 281474976710656\n"
+                          "اكتب(س | 1)\n"
+                          "اكتب(س ^ 1)\n"
+                          "اكتب(س & س)\n"
+                          "اكتب(~س)\n"
+                          "اكتب(س >> 0)\n",
+            "281474976710657\n"
+            "281474976710657\n"
+            "281474976710656\n"
+            "-281474976710657\n"
+            "281474976710656\n" },
+        { "ImmediateArithmeticPromotes", "اكتب(140737488355327 + 1)\n"
+                                         "اكتب((-140737488355328) / -1)\n"
+                                         "اكتب(1 << 48)\n",
+            "140737488355328\n"
+            "140737488355328\n"
+            "281474976710656\n" },
         { "IntegerConversionPreservesPrecision", "اكتب(طبيعي(9223372036854775807))\n", "9223372036854775807\n" },
         { "IntegerConversionRejectsUpperBound", "اكتب(طبيعي(9223372036854775808.0))\n", "9223372036854775808\n" },
         { "IntegerConversionRejectsLowerOverflow", "اكتب(طبيعي(-18446744073709551616.0))\n", "-18446744073709551616\n" },
         { "IntegerConversionAcceptsLowerBound", "اكتب(طبيعي(-9223372036854775808.0))\n", "-9223372036854775808\n" },
-        { "MinimumIntegerModuloMinusOne", "س := -9223372036854775807 - 1\nاكتب(س % -1)\n", "0\n" },
-        { "MinimumIntegerNegationOverflow", "س := -9223372036854775807 - 1\nاكتب(-س)\n", "9223372036854775808\n" },
-        { "DynamicShiftsUseValueNotRegister", "س := 3\nز := 99\nن := 5\nاكتب(س << ن)\nاكتب(96 >> ن)\n", "96\n3\n" },
-        { "DynamicShiftNegative", "ن := -1\nاكتب(1 << ن)\n", "", Expectation::Error },
-        { "DynamicShiftOversized", "ن := 64\nاكتب(1 >> ن)\n", "0\n" },
-        { "DynamicShiftNonInteger", "ن := 1.5\nاكتب(1 << ن)\n", "", Expectation::Error },
-        { "AugmentedReadBeforeRhsMutation", "ق := [10]\nدالة غير():\n    ق[0] := 100\n    ارجع 5\nق[0] += غير()\nاكتب(ق[0])\n", "15\n" },
-        { "AugmentedReadErrorStopsRhs", "ق := []\nدالة اثر():\n    اكتب(99)\n    ارجع 5\nق[0] += اثر()\n", "", Expectation::Error, false, true },
+        { "MinimumIntegerModuloMinusOne", "س := -9223372036854775807 - 1\n"
+                                          "اكتب(س % -1)\n",
+            "0\n" },
+        { "MinimumIntegerNegationOverflow", "س := -9223372036854775807 - 1\n"
+                                            "اكتب(-س)\n",
+            "9223372036854775808\n" },
+        { "DynamicShiftsUseValueNotRegister", "س := 3\n"
+                                              "ز := 99\n"
+                                              "ن := 5\n"
+                                              "اكتب(س << ن)\n"
+                                              "اكتب(96 >> ن)\n",
+            "96\n"
+            "3\n" },
+        { "DynamicShiftNegative", "ن := -1\n"
+                                  "اكتب(1 << ن)\n",
+            "", Expectation::Error },
+        { "DynamicShiftOversized", "ن := 64\n"
+                                   "اكتب(1 >> ن)\n",
+            "0\n" },
+        { "DynamicShiftNonInteger", "ن := 1.5\n"
+                                    "اكتب(1 << ن)\n",
+            "", Expectation::Error },
+        { "AugmentedReadBeforeRhsMutation", "ق := [10]\n"
+                                            "دالة غير():\n"
+                                            "    ق[0] := 100\n"
+                                            "    ارجع 5\n"
+                                            "ق[0] += غير()\n"
+                                            "اكتب(ق[0])\n",
+            "15\n" },
+        { "AugmentedReadErrorStopsRhs", "ق := []\n"
+                                        "دالة اثر():\n"
+                                        "    اكتب(99)\n"
+                                        "    ارجع 5\n"
+                                        "ق[0] += اثر()\n",
+            "", Expectation::Error, false, true },
         { "FieldWriteAcrossLoopBackedge", R"fa(نوع اول:
     دالة بداية():
         هذا.هدف := 10
@@ -650,7 +923,8 @@ std::vector<AdversarialCase> repair_regression_cases()
 اكتب(س.حاجز)
 اكتب(س.هدف)
 )fa",
-            "99\n7\n" },
+            "99\n"
+            "7\n" },
         { "FieldWriteAfterUntakenBranch", R"fa(نوع اول:
     دالة بداية():
         هذا.هدف := 10
@@ -685,9 +959,18 @@ std::vector<AdversarialCase> repair_regression_cases()
     };
     for (auto const& op : operators) {
         result.push_back({ std::string("AugmentedIndex") + op.name,
-            std::string("ق := [12]\nعدد := [0]\nدالة فهرس():\n    عدد[0] += 1\n    ارجع 0\nن := 2\nق[فهرس()] ")
-                + op.op + " ن\nاكتب(ق[0])\nاكتب(عدد[0])\n",
-            std::string(op.expected) + "\n1\n" });
+            std::string("ق := [12]\n"
+                        "عدد := [0]\n"
+                        "دالة فهرس():\n"
+                        "    عدد[0] += 1\n"
+                        "    ارجع 0\n"
+                        "ن := 2\n"
+                        "ق[فهرس()] ")
+                + op.op + " ن\n"
+                          "اكتب(ق[0])\n"
+                          "اكتب(عدد[0])\n",
+            std::string(op.expected) + "\n"
+                                       "1\n" });
     }
     return result;
 }
@@ -703,7 +986,13 @@ std::vector<AdversarialCase> parser_cases()
             arguments += "، 1";
         result.push_back({ "ArgumentLimit" + std::to_string(count), arguments + ")\n", "", Expectation::NoCrash, true });
     }
-    std::string seeds[] = { "اكتب(1 + 2)\n", "ا := [1، 2، 3]\nاكتب(ا[0])\n", "اذا صحيح:\n    اكتب(1)\n", "دالة ا(ب):\n    ارجع ب + 1\nاكتب(ا(2))\n" };
+    std::string seeds[] = { "اكتب(1 + 2)\n", "ا := [1، 2، 3]\n"
+                                             "اكتب(ا[0])\n",
+        "اذا صحيح:\n"
+        "    اكتب(1)\n",
+        "دالة ا(ب):\n"
+        "    ارجع ب + 1\n"
+        "اكتب(ا(2))\n" };
     std::vector<std::string> mutations = { "(", ")", "[", "]", "{", "}", ":", "،", "\n", "\t", "\"", "'", "0", "9", "+", "*", "=", "ا", std::string(1, '\0'), "\xff" };
     std::mt19937 random(20260921);
     for (int i = 0; i < 60; ++i) {
