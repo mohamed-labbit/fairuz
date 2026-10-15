@@ -15,10 +15,10 @@
 
 namespace fairuz::runtime {
 
-Value VM::json_escape(int argc, Value* argv)
+VM::RuntimeResult VM::json_escape(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr || !argv[0].is_string())
-        raise_error(ErrorCode::NATIVE_TYPE_ERROR,
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR,
             "JSON escaping expects one string");
     StringRef input = argv[0].as_string()->str;
     std::string output;
@@ -47,16 +47,16 @@ Value VM::json_escape(int argc, Value* argv)
     return m_gc.make_string(byte_string(output));
 }
 
-Value VM::json_read_string(int argc, Value* argv)
+VM::RuntimeResult VM::json_read_string(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_string() || !argv[1].is_int())
-        raise_error(ErrorCode::NATIVE_TYPE_ERROR,
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR,
             "JSON string parsing expects a string and integer position");
 
     StringRef input = argv[0].as_string()->str;
     i64 requested = argv[1].as_int();
     if (requested < 0)
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
 
     size_t byte_pos = 0;
     i64 cp_pos = 0;
@@ -67,7 +67,7 @@ Value VM::json_read_string(int argc, Value* argv)
         cp_pos++;
     }
     if (cp_pos != requested || byte_pos >= input.len() || input[byte_pos] != '"')
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
 
     byte_pos++;
     cp_pos++;
@@ -105,7 +105,7 @@ Value VM::json_read_string(int argc, Value* argv)
             return result;
         }
         if (ch < 0x20)
-            return Value::nil();
+            return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
         if (ch != '\\') {
             u64 step = 0;
             util::decode_utf8_at(input, byte_pos, &step);
@@ -116,7 +116,7 @@ Value VM::json_read_string(int argc, Value* argv)
         }
 
         if (byte_pos + 1 >= input.len())
-            return Value::nil();
+            return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
         char escape = input[byte_pos + 1];
         switch (escape) {
         case '"': output.push_back('"'); break;
@@ -130,19 +130,19 @@ Value VM::json_read_string(int argc, Value* argv)
         case 'u': {
             u32 codepoint = 0;
             if (!read_hex4(byte_pos + 2, &codepoint))
-                return Value::nil();
+                return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
             size_t consumed = 6;
             if (codepoint >= 0xD800 && codepoint <= 0xDBFF) {
                 if (byte_pos + 12 > input.len() || input[byte_pos + 6] != '\\'
                     || input[byte_pos + 7] != 'u')
-                    return Value::nil();
+                    return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
                 u32 low = 0;
                 if (!read_hex4(byte_pos + 8, &low) || low < 0xDC00 || low > 0xDFFF)
-                    return Value::nil();
+                    return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
                 codepoint = 0x10000 + ((codepoint - 0xD800) << 10) + (low - 0xDC00);
                 consumed = 12;
             } else if (codepoint >= 0xDC00 && codepoint <= 0xDFFF) {
-                return Value::nil();
+                return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
             }
             StringRef encoded = util::encode_utf8_str(codepoint);
             output.append(encoded.data(), encoded.len());
@@ -150,7 +150,7 @@ Value VM::json_read_string(int argc, Value* argv)
             cp_pos += static_cast<i64>(consumed);
             continue;
         }
-        default: return Value::nil();
+        default: return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
         }
         byte_pos += 2;
         cp_pos += 2;
