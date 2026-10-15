@@ -282,11 +282,11 @@ ObjFunction* GarbageCollector::make_obj_function(Chunk* chunk, GlobalEnvironment
     return ret;
 }
 
-ObjModule* GarbageCollector::make_obj_module(std::string name, std::string path, GlobalEnvironment* globals)
+ObjModule* GarbageCollector::make_obj_module(StringRef name, StringRef path, GlobalEnvironment* globals)
 {
     auto ret = make<ObjModule>();
-    ret->name = std::move(name);
-    ret->path = std::move(path);
+    ret->name = name;
+    ret->path = path;
     ret->globals = globals;
     return ret;
 }
