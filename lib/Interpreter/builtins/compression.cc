@@ -9,9 +9,11 @@
 // Builtin compression utilities implementation.
 //===----------------------------------------------------------------------===//
 
+#include "Diag/errc.hpp"
 #include "Interpreter/vm.hpp"
 #include "util.hpp"
 
+#include <string>
 #include <zlib.h>
 
 namespace fairuz::runtime {
@@ -81,28 +83,34 @@ bool gzip_decompress(std::string_view input, size_t maximum, std::string& output
 
 } // anonymous namespace
 
-Value VM::compress(int argc, Value* argv)
+VM::RuntimeResult VM::compress(int argc, Value* argv)
 {
-    if (argc != 3 || argv == nullptr || !argv[0].is_string() || !argv[1].is_string()
+    if (argc != 3 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT,
+            "got " + std::to_string(argc));
+    if (!argv[0].is_string() || !argv[1].is_string()
         || !argv[2].is_int() || string_bytes(argv[0]) != "gzip")
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
     i64 level = argv[2].as_int();
     if (level < 0 || level > 9)
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
     std::string output;
     if (!gzip_compress(string_bytes(argv[1]), static_cast<int>(level), output))
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::RUNTIME_ERROR, "compress failed");
     return m_gc.make_string(byte_string(output));
 }
 
-Value VM::decompress(int argc, Value* argv)
+VM::RuntimeResult VM::decompress(int argc, Value* argv)
 {
-    if (argc != 3 || argv == nullptr || !argv[0].is_string() || !argv[1].is_string()
+    if (argc != 3 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT,
+            "got " + std::to_string(argc));
+    if (!argv[0].is_string() || !argv[1].is_string()
         || !argv[2].is_int() || string_bytes(argv[0]) != "gzip" || argv[2].as_int() <= 0)
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
     std::string output;
     if (!gzip_decompress(string_bytes(argv[1]), static_cast<size_t>(argv[2].as_int()), output))
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
     return m_gc.make_string(byte_string(output));
 }
 
