@@ -4,8 +4,6 @@
 //
 // SPDX-License-Identifier: MIT
 // See LICENSE in the project root for the full license text.
-//
-// Parses Fairuz tokens into syntax trees.
 //===----------------------------------------------------------------------===//
 
 #ifndef FAIRUZ_PARSER_PARSER_HPP
@@ -13,76 +11,79 @@
 
 #include "Diag/diagnostic.hpp"
 #include "Macros.hpp"
+#include "Parser/ast_builder.hpp"
+#include "Parser/lexer.hpp"
 #include "Support/error.hpp"
 #include "Support/string.hpp"
-#include "ast_builder.hpp"
-#include "lexer.hpp"
 
-#include <sstream>
+#include <cstddef>
+#include <optional>
+#include <stdexcept>
 
 namespace fairuz::parser {
 
+// Compatibility exception. The parser reports syntax errors through ErrorOr.
+// StringRef is Fairuz's arena-backed string, not std::string_view. Its storage,
+// like token and AST storage, must outlive every reference to this object.
 class ParseError : public std::runtime_error {
 public:
-    i32 m_line;
-    i32 m_column;
+    u32 m_line;
+    u32 m_column;
     StringRef m_context;
     Array<StringRef> m_suggestions;
 
-    ParseError(StringRef const& msg, u32 l, u32 c, StringRef ctx = "", Array<StringRef> sugg = { })
-        : std::runtime_error(msg.data())
-        , m_line(l)
-        , m_column(c)
-        , m_context(ctx)
-        , m_suggestions(sugg)
-    {
-    }
-
-    StringRef format() const
-    {
-        std::stringstream ss;
-        ss << "Line " << m_line << ":" << m_column << " - " << what() << "\n";
-
-        if (!m_context.empty()) {
-            ss << "  | " << m_context << "\n";
-            ss << "  | " << std::string(m_column - 1, ' ') << "^\n";
-        }
-
-        if (!m_suggestions.empty()) {
-            ss << "Suggestions:\n";
-            for (StringRef const& s : m_suggestions)
-                ss << "  - " << s << "\n";
-        }
-
-        return StringRef(ss.str().data());
-    }
-}; // class ParseError
+    ParseError(StringRef const& message, u32 line, u32 column,
+        StringRef context = "", Array<StringRef> suggestions = { });
+    StringRef format() const;
+};
 
 enum class BodyParsing { Lazy,
     Eager };
 
+// Parser contract
+// ---------------
+// 1. current_token() is non-null after construction. ENDMARKER is a stable
+//    sentinel: consuming it cannot move the cursor. Replay streams contain
+//    exactly one ENDMARKER, at the end, and no null token pointers.
+// 2. A production starts at its first unconsumed token. On success it leaves
+//    the first token outside that production. Expressions leave separators;
+//    delimited productions consume their closer; suites consume their DEDENT.
+// 3. A simple statement ends at NEWLINE, DEDENT, or ENDMARKER. It checks but
+//    does not consume that terminator. Only sequence/suite owners skip lines.
+// 4. Failure is not a transaction on the cursor or arena. Recovery belongs
+//    to statement sequences and never consumes an enclosing suite's DEDENT.
+//    Every sequence iteration advances, exits, or transfers that DEDENT to
+//    its owner. Depth guards are restored on every return/exception path.
+// 5. Successful AST pointers and required children are non-null. Optional
+//    return values, else branches, and class parents may be null. Blocks may
+//    contain successfully recovered statements: any recorded error invalidates
+//    the program for execution. Check diagnostics even after a value result.
+// 6. Assignment is admitted only at statement level. Plain assignment chains
+//    associate right. Other infix operators associate left; power associates
+//    right and admits unary operators on its right operand.
+// 7. Lazy bodies retain tokens and their source snapshot, ending in a fresh
+//    sentinel. Capturing a body establishes its boundary, not its grammatical
+//    validity. Methods remain eager so that their fields can be discovered.
+// 8. The arena outlives this parser, its token streams, and its ASTs. No parser
+//    failure resets the shared arena. Allocation/lexer exceptions propagate;
+//    after such an exception the caller must abandon the parser instance.
+//    syntactic depth exhaustion is a recoverable ErrorOr error.
+// 9. This object is not reentrant or thread-safe. Fairuz's diagnostic engine
+//    and allocator are shared. Parser diagnostics use this stream's source.
 class Parser {
 public:
-    explicit Parser() = default;
+    // An empty parser is a valid, already-complete bounded stream.
+    Parser();
+    explicit Parser(lex::FileManager*, BodyParsing = BodyParsing::Lazy);
+    explicit Parser(Array<TokenPtr> const&, diagnostic::SourcePtr,
+        BodyParsing = BodyParsing::Lazy);
 
-    explicit Parser(lex::FileManager* fm, BodyParsing bodies = BodyParsing::Lazy)
-        : m_lexer(fm)
-        , m_body_parsing(bodies)
-    {
-        if (fm == nullptr)
-            diagnostic::panic(ErrorCode::INTERNAL_ERROR, "parser received a null FileManager");
-
-        m_lexer.next();
-        if (current_token() != nullptr && current_token()->type() == tok::TokenType::BEGINMARKER)
-            m_lexer.next();
-    }
-
-    // A bounded replay stream must end in ENDMARKER.
-    explicit Parser(Array<TokenPtr> const& seq, diagnostic::SourcePtr source,
-        BodyParsing bodies = BodyParsing::Lazy);
+    Parser(Parser const&) = delete;
+    Parser& operator=(Parser const&) = delete;
+    Parser(Parser&&) = delete;
+    Parser& operator=(Parser&&) = delete;
 
     Array<AST::StmtPtr> parse_program();
-
     ErrorOr<AST::StmtPtr> parse_statement();
     ErrorOr<AST::StmtPtr> parse_expression_stmt();
     ErrorOr<AST::StmtPtr> parse_if_stmt(u16 clause_column = 0);
@@ -93,24 +94,6 @@ public:
     ErrorOr<AST::StmtPtr> parse_continue_stmt();
     ErrorOr<AST::StmtPtr> parse_function_def();
     ErrorOr<AST::StmtPtr> parse_function_body();
-    ErrorOr<AST::ExprPtr> parse_expression();
-    // Statement-level assignment (including bare := chains). Nested value
-    // contexts must use parse_expression(), which rejects assignment.
-    ErrorOr<AST::ExprPtr> parse_assignment_expr(bool allow_augmented = true);
-    ErrorOr<AST::ExprPtr> parse_list_literal();
-    ErrorOr<AST::ExprPtr> parse_dict_literal();
-    ErrorOr<AST::ExprPtr> parse_conditional_expr();
-    ErrorOr<AST::ExprPtr> parse_logical_expr();
-    ErrorOr<AST::ExprPtr> parse_logical_expr_precedence(u32 min_precedence);
-    ErrorOr<AST::ExprPtr> parse_binary_expr_precedence(u32 min_precedence);
-    ErrorOr<AST::ExprPtr> parse_comparison_expr();
-    ErrorOr<AST::ExprPtr> parse_power_expr();
-    ErrorOr<AST::ExprPtr> parse_binary_expr();
-    ErrorOr<AST::ExprPtr> parse_unary_expr();
-    ErrorOr<AST::ExprPtr> parse_primary_expr();
-    ErrorOr<AST::ExprPtr> parse_postfix_expr();
-    ErrorOr<AST::ExprPtr> parse();
-    ErrorOr<Array<AST::ExprPtr>> parse_parameters_list();
     ErrorOr<AST::StmtPtr> parse_block(Array<AST::ExprPtr>* members = nullptr);
     ErrorOr<AST::StmtPtr> parse_indented_block(Array<AST::ExprPtr>* members = nullptr);
     ErrorOr<AST::StmtPtr> parse_class_def();
@@ -118,76 +101,92 @@ public:
     ErrorOr<AST::StmtPtr> parse_assert_stmt();
     ErrorOr<AST::StmtPtr> parse_class_method(Array<AST::ExprPtr>& members);
     ErrorOr<AST::StmtPtr> parse_class_method_statement(Array<AST::ExprPtr>& members);
+
+    ErrorOr<AST::ExprPtr> parse_expression();
+    ErrorOr<AST::ExprPtr> parse_assignment_expr(bool allow_augmented = true);
+    ErrorOr<AST::ExprPtr> parse_binary_expr_precedence(u32 min_precedence);
+    ErrorOr<AST::ExprPtr> parse_unary_expr();
+    ErrorOr<AST::ExprPtr> parse_power_expr();
+    ErrorOr<AST::ExprPtr> parse_postfix_expr();
+    ErrorOr<AST::ExprPtr> parse_primary_expr();
+    ErrorOr<Array<AST::ExprPtr>> parse_parameters_list();
+
+    // Compatibility entry points. parse() permits statement-level assignment;
+    // the expression aliases do not. The literal entry points below begin
+    // AFTER '['/'{'; primary parsing additionally supplies the opener's location.
+    ErrorOr<AST::ExprPtr> parse();
+    ErrorOr<AST::ExprPtr> parse_list_literal();
+    ErrorOr<AST::ExprPtr> parse_dict_literal();
+    ErrorOr<AST::ExprPtr> parse_conditional_expr();
+    ErrorOr<AST::ExprPtr> parse_logical_expr();
+    ErrorOr<AST::ExprPtr> parse_logical_expr_precedence(u32 min_precedence);
+    ErrorOr<AST::ExprPtr> parse_comparison_expr();
+    ErrorOr<AST::ExprPtr> parse_binary_expr();
     ErrorOr<AST::ExprPtr> parse_member_access();
 
     bool we_done() const;
-
-    bool check(tok::TokenType type) const;
-
+    bool check(tok::TokenType) const;
     TokenPtr current_token() const;
-    SourceLocation current_loc() const { return current_token()->location(); }
+    SourceLocation current_loc() const;
 
 private:
     lex::Lexer m_lexer;
     AST::ASTBuilder m_builder;
     BodyParsing m_body_parsing { BodyParsing::Lazy };
-    u32 m_nesting_level { 0 };
-    /// keeping a stack of open parentheses
-    /// using bool for minimal memory use
-    std::vector<bool> m_parenths;
+    size_t m_consumed { 0 };
+    size_t m_indent_depth { 0 };
+    std::optional<size_t> m_recovery_boundary;
+    u32 m_depth { 0 };
 
-    // Each syntactic level currently traverses several mutually-recursive
-    // parser helpers. Keep a bounded implementation-depth budget large
-    // enough for 255 source nesting levels while still protecting the C++
-    // stack from hostile input.
-    static constexpr u32 MAX_NESTING_LEVEL = 1280;
+    // Counts active unary/power/expression nesting and active suites, not all
+    // helper calls. Standalone expressions permit 255 nested parentheses.
+    // Every recursive grammar cycle passes a guard; precedence recursion is
+    // independently bounded by the finite operator table. This is not a byte
+    // guarantee for arbitrarily small host stacks. AST visitors need their own
+    // limits for long, iteratively constructed assignment/infix/postfix chains.
+    static constexpr u32 MAX_PARSE_DEPTH = 256;
 
-    struct NestingLevel {
-        u32* p { nullptr };
-        NestingLevel(u32* c, SourceLocation loc)
-            : p(c)
-        {
-            assert(p != nullptr);
-            if (*p >= MAX_NESTING_LEVEL) {
-                diagnostic::report(diagnostic::Severity::FATAL, loc, ErrorCode::EXCEEDED_MAX_NESTING_LIMIT);
-                diagnostic::engine.panic("");
-            }
-            (*p)++;
-        }
-        ~NestingLevel()
-        {
-            if (p != nullptr)
-                (*p)--;
-        }
+    class DepthScope {
+    public:
+        explicit DepthScope(Parser&) noexcept;
+        ~DepthScope();
+        DepthScope(DepthScope const&) = delete;
+        DepthScope& operator=(DepthScope const&) = delete;
+        explicit operator bool() const noexcept { return m_parser != nullptr; }
+
+    private:
+        Parser* m_parser;
     };
 
-    TokenPtr peek(size_t offset = 1) { return m_lexer.peek(offset); }
-    TokenPtr advance() { return m_lexer.next(); }
+    enum class Sequence { Program,
+        Block,
+        Method,
+        Class };
+    Array<AST::StmtPtr> parse_sequence(Sequence, Array<AST::ExprPtr>* = nullptr);
+    void synchronize(size_t statement_indent);
+    void skip_newlines();
+    TokenPtr advance();
+    [[nodiscard]] bool consume(tok::TokenType);
+    ErrorOr<TokenPtr> expect(tok::TokenType, ErrorCode);
+    ErrorOr<bool> expect_statement_end();
+    bool at_statement_end() const;
+    Error fail(ErrorCode, SourceLocation);
+    Error fail(ErrorCode code) { return fail(code, current_loc()); }
 
-    bool match(tok::TokenType const type);
+    // The opening delimiter has already been consumed. This helper owns the
+    // matching closer and permits an empty list and one trailing comma.
+    template<class T, class ReadItem>
+    ErrorOr<Array<T>> parse_delimited(tok::TokenType close, ErrorCode,
+        ReadItem&&, bool* had_comma = nullptr);
 
-    [[nodiscard]]
-    bool consume(tok::TokenType type)
-    {
-        if (check(type)) {
-            advance();
-            return true;
-        }
-        return false;
-    }
-
-    void skip_newlines()
-    {
-        while (match(tok::TokenType::NEWLINE))
-            ;
-    }
-
-    void synchronize();
-
+    ErrorOr<AST::ExprPtr> parse_assignment_tail(AST::ExprPtr, bool allow_augmented);
+    AST::AssignExpr* make_augmented(AST::ExprPtr, AST::ExprPtr, AST::ExprKind);
+    ErrorOr<AST::ExprPtr> parse_list_literal(SourceLocation opening);
+    ErrorOr<AST::ExprPtr> parse_dict_literal(SourceLocation opening);
     ErrorOr<AST::StmtPtr> defer_body(SourceLocation definition);
-    void push_member_once(Array<AST::ExprPtr>& members, AST::IdentifierExpr const* name);
-    void collect_this_field_assignment(Array<AST::ExprPtr>& members, AST::StmtPtr stmt);
-}; // class Parser
+    void push_member_once(Array<AST::ExprPtr>&, AST::IdentifierExpr const*);
+    void collect_this_field_assignment(Array<AST::ExprPtr>&, AST::StmtPtr);
+};
 
 } // namespace fairuz::parser
 
