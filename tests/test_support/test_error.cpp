@@ -92,6 +92,7 @@ TEST_F(ErrorOrLifetime, FailedCopyAssignmentPreservesBothAlternatives)
     EXPECT_THROW(error = value, std::runtime_error);
     ASSERT_TRUE(error.has_error());
     EXPECT_EQ(error.error(), 42);
+    ASSERT_TRUE(value.has_value());
     EXPECT_EQ(value.value().id, 7);
     EXPECT_EQ(Payload::alive, 1);
 
@@ -111,7 +112,7 @@ TEST_F(ErrorOrLifetime, FailedMoveConstructionAndAssignmentDoNotTerminateOrDestr
     EXPECT_THROW({ auto moved = std::move(source); (void)moved; }, std::runtime_error);
     EXPECT_THROW(target = std::move(source), std::runtime_error);
     EXPECT_TRUE(source.has_error());
-    EXPECT_TRUE(target.has_value());
+    ASSERT_TRUE(target.has_value());
     EXPECT_EQ(target.value(), 11);
     EXPECT_EQ(Payload::alive, 1);
 
@@ -135,6 +136,7 @@ TEST_F(ErrorOrLifetime, ThrowingSettersPreserveAValidAlternative)
     EXPECT_EQ(result.error(), 42);
     Payload::fail_move = false;
     result.set_value(value);
+    ASSERT_TRUE(result.has_value());
     EXPECT_EQ(result.value().id, 7);
     result.set_error(8);
     EXPECT_EQ(result.error(), 8);
@@ -142,10 +144,12 @@ TEST_F(ErrorOrLifetime, ThrowingSettersPreserveAValidAlternative)
     ErrorOr<int, Payload> other(12);
     Payload::fail_copy = true;
     EXPECT_THROW(other.set_error(value), std::runtime_error);
+    ASSERT_TRUE(other.has_value());
     EXPECT_EQ(other.value(), 12);
     Payload::fail_copy = false;
     Payload::fail_move = true;
     EXPECT_THROW(other.set_error(value), std::runtime_error);
+    ASSERT_TRUE(other.has_value());
     EXPECT_EQ(other.value(), 12);
 }
 
@@ -154,13 +158,13 @@ TEST_F(ErrorOrLifetime, SameAlternativeAssignmentAndSelfAssignmentRemainValid)
     ErrorOr<Payload, int> first(Payload(1)), second(Payload(2));
     Payload::fail_assign = true;
     EXPECT_THROW(first = second, std::runtime_error);
-    EXPECT_TRUE(first.has_value());
+    ASSERT_TRUE(first.has_value());
     EXPECT_EQ(Payload::alive, 2);
     Payload::fail_assign = false;
     auto& alias = first;
     first = alias;
     first = std::move(alias);
-    EXPECT_TRUE(first.has_value());
+    ASSERT_TRUE(first.has_value());
     first.set_value(first.value());
     EXPECT_EQ(first.value().id, 1);
     EXPECT_EQ(Payload::alive, 2);
@@ -173,6 +177,7 @@ TEST(ErrorOrTest, CustomErrorTypeSurvivesRebinding)
     static_assert(std::is_same_v<decltype(rebound), ErrorOr<double, std::string>>);
     EXPECT_EQ(rebound.error(), "retained");
     auto success = ErrorOr<int, std::string>::from_value(7).error_or(2.5);
+    ASSERT_TRUE(success.has_value());
     EXPECT_DOUBLE_EQ(success.value(), 2.5);
 }
 
@@ -182,10 +187,12 @@ TEST(ErrorOrTest, MoveOnlyErrorsValuesAndEqualAlternativeTypes)
     auto rebound = std::move(failure).error_or(2.5);
     EXPECT_EQ(*rebound.error(), 7);
     auto success = ErrorOr<std::unique_ptr<int>, int>::from_value(std::make_unique<int>(9));
+    ASSERT_TRUE(success.has_value());
     auto pointer = std::move(success).value();
     EXPECT_EQ(*pointer, 9);
     auto same_value = ErrorOr<int, int>::from_value(1);
     auto same_error = ErrorOr<int, int>::from_error(2);
+    ASSERT_TRUE(same_value.has_value());
     EXPECT_EQ(same_value.value(), 1);
     EXPECT_EQ(same_error.error(), 2);
 }
