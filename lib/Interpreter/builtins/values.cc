@@ -8,14 +8,16 @@
 // Implements native value predicates and conversions.
 //===----------------------------------------------------------------------===//
 
+#include "Diag/errc.hpp"
 #include "Interpreter/vm.hpp"
 #include "util.hpp"
 
 #include <iostream>
+#include <string>
 
 namespace fairuz::runtime {
 
-Value VM::print(int argc, Value* argv)
+VM::RuntimeResult VM::print(int argc, Value* argv)
 {
     if (argc == 0 || argv == nullptr) {
         std::cout << '\n';
@@ -31,10 +33,11 @@ Value VM::print(int argc, Value* argv)
     return Value::from_bool(true);
 }
 
-Value VM::type(int argc, Value* argv)
+VM::RuntimeResult VM::type(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr)
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT,
+            "got " + std::to_string(argc));
 
     Value& v = argv[0];
     TypeTag type = value_type_tag(v);
@@ -55,13 +58,13 @@ Value VM::type(int argc, Value* argv)
     case TypeTag::MODULE: return m_gc.make_string("وحدة");
     }
 
-    return Value::nil(); // unreachable
+    return raise_runtime_error(ErrorCode::RUNTIME_ERROR); // unreachable
 }
 
-Value VM::same_object(int argc, Value* argv)
+VM::RuntimeResult VM::same_object(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr)
-        raise_error(ErrorCode::NATIVE_ARG_COUNT);
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT);
 
     Value lhs = argv[0];
     Value rhs = argv[1];
@@ -74,34 +77,35 @@ Value VM::same_object(int argc, Value* argv)
 
 /// Type conversions
 
-Value VM::Int(int argc, Value* argv)
+VM::RuntimeResult VM::Int(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr)
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT,
+            "got " + std::to_string(argc));
     if (argv[0].is_int())
         return argv[0];
     if (!argv[0].is_double())
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
     return integer::from_double(argv[0].as_double(), m_gc);
 }
 
-Value VM::Float(int argc, Value* argv)
+VM::RuntimeResult VM::Float(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr)
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT,
+            "got " + std::to_string(argc));
 
     if (argv[0].is_number())
         return Value::from_real(argv[0].as_double_any());
 
-    return Value::nil();
+    return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
 }
 
-Value VM::str(int argc, Value* argv)
+VM::RuntimeResult VM::str(int argc, Value* argv)
 {
-    if (argc > 1) {
-        raise_error(ErrorCode::STR_ARG_COUNT, "got " + std::to_string(argc));
-        return Value::nil();
-    }
+    if (argc > 1)
+        return raise_runtime_error(ErrorCode::STR_ARG_COUNT,
+            "got " + std::to_string(argc));
 
     StringRef output = "";
 
@@ -115,22 +119,20 @@ Value VM::str(int argc, Value* argv)
     return m_gc.make_string(rendered);
 }
 
-Value VM::Bool(int argc, Value* argv)
+VM::RuntimeResult VM::Bool(int argc, Value* argv)
 {
-    if (argc != 1 || argv == nullptr) {
-        raise_error(ErrorCode::BOOL_ARG_COUNT, "got " + std::to_string(argc));
-        return Value::nil();
-    }
+    if (argc != 1 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::BOOL_ARG_COUNT,
+            "got " + std::to_string(argc));
 
     return argv[0].is_truthy() ? Value::from_bool(true) : Value::from_bool(false);
 }
 
-Value VM::Assert(int argc, Value* argv)
+VM::RuntimeResult VM::Assert(int argc, Value* argv)
 {
-    if (argc < 1 || argc > 2 || argv == nullptr) {
-        raise_error(ErrorCode::ASSERT_ARG_COUNT, "got" + std::to_string(argc));
-        return Value::nil();
-    }
+    if (argc < 1 || argc > 2 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::ASSERT_ARG_COUNT,
+            "got" + std::to_string(argc));
 
     // Python-style assert accepts an optional diagnostic value; that second
     // argument describes a failed assertion and is not itself a condition.
@@ -140,7 +142,7 @@ Value VM::Assert(int argc, Value* argv)
             StringRef rendered = value_to_string(argv[1]);
             detail.assign(rendered.data(), rendered.len());
         }
-        raise_error(ErrorCode::ASSERT_FAILED, detail);
+        return raise_runtime_error(ErrorCode::ASSERT_FAILED, detail);
     }
 
     return Value::nil(); // success
