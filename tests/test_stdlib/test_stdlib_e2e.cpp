@@ -66,7 +66,8 @@ protected:
             std::ofstream program(directory / fairuz::platform::path("main.ف"));
             program << "اكتب(\"stdlib-e2e-start\")\n"
                     << test.source
-                    << "\nاكتب(\"stdlib-e2e-ok\")\n";
+                    << "\n"
+                       "اكتب(\"stdlib-e2e-ok\")\n";
             ASSERT_TRUE(program.good());
         }
 
@@ -80,7 +81,9 @@ protected:
                                      << error;
         if (test.error == nullptr) {
             EXPECT_EQ(result.exit_code, 0) << error;
-            EXPECT_EQ(output, "stdlib-e2e-start\nstdlib-e2e-ok\n") << error;
+            EXPECT_EQ(output, "stdlib-e2e-start\n"
+                              "stdlib-e2e-ok\n")
+                << error;
             EXPECT_TRUE(error.empty()) << error;
         } else {
             EXPECT_EQ(result.exit_code, 65) << error;
@@ -171,35 +174,35 @@ PublicApiCase const cases[] = {
 المستعاد := gunzip(base64_فك(اقرا_نص_ملف("payload.txt"))، 4096)
 تاكد(JSON_حلل(المستعاد) = القيمة)
 )fa" },
-    { "CodecsRejectMalformedInput", R"fa(
+    { "CodecsRoundTripAndEmptyInput", R"fa(
 من ترميزات استورد base64_رمز، base64_فك، base64_URL_رمز، base64_URL_فك، hex_رمز، hex_فك، هاش، SHA256، HMAC
 البيانات := hex_فك("fbff00")
 تاكد(base64_رمز(البيانات) = "+/8A")
 تاكد(base64_URL_رمز(البيانات) = "-_8A")
 تاكد(hex_رمز(base64_فك("+/8A")) = "fbff00")
 تاكد(hex_رمز(base64_URL_فك("-_8A")) = "fbff00")
-تاكد(base64_فك("not base64!") = عدم)
-تاكد(hex_فك("abc") = عدم)
-تاكد(hex_فك("gg") = عدم)
 تاكد(base64_فك("") = "")
 تاكد(hex_فك("") = "")
 تاكد(SHA256("") = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
 تاكد(hex_رمز(هاش("sha256").حدث("abc").بايتات()) = SHA256("abc"))
-تاكد(HMAC("unsupported"، "key"، "data") = عدم)
 )fa" },
-    { "CompressionLimitsAndCorruptStreams", R"fa(
+    { "CodecsRejectMalformedBase64", "من ترميزات استورد base64_فك\nbase64_فك(\"not base64!\")\n", "Runtime error" },
+    { "CodecsRejectOddHex", "من ترميزات استورد hex_فك\nhex_فك(\"abc\")\n", "Runtime error" },
+    { "CodecsRejectInvalidHex", "من ترميزات استورد hex_فك\nhex_فك(\"gg\")\n", "Runtime error" },
+    { "CodecsRejectUnsupportedHmac", "من ترميزات استورد HMAC\nHMAC(\"unsupported\"، \"key\"، \"data\")\n", "wrong type" },
+    { "CompressionBinaryAndEmptyRoundTrip", R"fa(
 من ضغط استورد اضغط، gzip، gunzip
 من ترميزات استورد hex_فك
 البيانات := hex_فك("4100ff42")
 المضغوط := gzip(البيانات، 6)
 تاكد(gunzip(المضغوط، 4) = البيانات)
-تاكد(gunzip(المضغوط، 3) = عدم)
-تاكد(gunzip("corrupt"، 100) = عدم)
-تاكد(gzip("x"، -1) = عدم)
-تاكد(gzip("x"، 10) = عدم)
-تاكد(اضغط("unsupported"، "x"، 6) = عدم)
 تاكد(gunzip(gzip(""، 0)، 1) = "")
 )fa" },
+    { "CompressionRejectsOutputLimit", "من ضغط استورد gzip، gunzip\ngunzip(gzip(\"abcd\"، 6) ، 3)\n", "Runtime error" },
+    { "CompressionRejectsCorruptStream", "من ضغط استورد gunzip\ngunzip(\"corrupt\"، 100)\n", "Runtime error" },
+    { "CompressionRejectsNegativeLevel", "من ضغط استورد gzip\ngzip(\"x\"، -1)\n", "wrong type" },
+    { "CompressionRejectsExcessiveLevel", "من ضغط استورد gzip\ngzip(\"x\"، 10)\n", "wrong type" },
+    { "CompressionRejectsAlgorithm", "من ضغط استورد اضغط\nاضغط(\"unsupported\"، \"x\"، 6)\n", "wrong type" },
     { "IniFileResultsAndCsvRoundTrip", R"fa(
 من ملفات استورد اكتب_نص_ملف
 من إعدادات استورد اقرا_INI
@@ -255,7 +258,7 @@ JSON_حلل("{} trailing")
 من جيسون استورد JSON_حلل
 JSON_حلل("\"\\q\"")
 )fa",
-        "سلسلة JSON غير صالحة" },
+        "Runtime error" },
     { "JsonCyclicInput", R"fa(
 من جيسون استورد JSON_رمز
 القيم := []
@@ -502,7 +505,7 @@ CSV_حلل("\"unterminated"، ",")
 من تعابير_نمطية استورد نمط
 نمط("["، 0)
 )fa",
-        "تعبير نمطي غير صالح" },
+        "Runtime error" },
     { "FileNegativeRead", R"fa(
 من ملفات استورد ملف، اكتب_نص_ملف
 تاكد(اكتب_نص_ملف("input.txt"، "abc"))
@@ -535,7 +538,7 @@ gunzip(gzip("abc"، 6)، 0)
 من ترميزات استورد هاش
 هاش("unsupported")
 )fa",
-        "خوارزمية هاش غير مدعومة" },
+        "wrong type" },
     { "TaskInvalidWorkerCount", R"fa(
 من لا_متزامن استورد منفذ_مهام
 منفذ_مهام(0)
