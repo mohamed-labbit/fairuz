@@ -113,7 +113,8 @@ public:
         std::cout << "\n";
 
         for (auto const& failure : failures_)
-            std::cout << failure << "\n\n";
+            std::cout << failure << "\n"
+                                    "\n";
         if (!out.empty())
             std::cout << "----- stdout -----\n"
                       << out << "\n";
