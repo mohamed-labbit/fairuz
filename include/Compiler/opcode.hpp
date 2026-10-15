@@ -11,11 +11,7 @@
 #ifndef FAIRUZ_COMPILER_OPCODE_HPP
 #define FAIRUZ_COMPILER_OPCODE_HPP
 
-#include "Interpreter/object.hpp"
-#include "Support/array.hpp"
 #include "Support/string.hpp"
-
-#include <functional>
 
 namespace fairuz::runtime {
 
@@ -106,7 +102,6 @@ static constexpr u8 MAX_REGS = 250;
 
         // misc
         NOP,
-        HALT,
 
         _COUNT
 */
@@ -173,8 +168,7 @@ static constexpr u8 MAX_REGS = 250;
     X(INVOKE_NAMED)        \
     X(GET_FIELD)           \
     X(SET_FIELD)           \
-    X(NOP)                 \
-    X(HALT)
+    X(NOP)
 
 enum class OpCode : u8 {
 #define X(name) name,
@@ -273,7 +267,6 @@ static inline InstrFormat opcode_format(OpCode op)
     case OpCode::FOR_STEP:
         return InstrFormat::AsBx;
     case OpCode::RETURN_NIL:
-    case OpCode::HALT:
     case OpCode::NOP:
         return InstrFormat::NONE;
     default:
