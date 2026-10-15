@@ -11,10 +11,12 @@
 #ifndef FAIRUZ_INTERPRETER_OBJECT_HPP
 #define FAIRUZ_INTERPRETER_OBJECT_HPP
 
+#include "Diag/runtime_error.hpp"
 #include "Interpreter/obj_header.hpp"
 #include "Interpreter/value.hpp"
 #include "Macros.hpp"
 #include "Support/array.hpp"
+#include "Support/error.hpp"
 #include "Support/integer.hpp"
 #include "Support/string.hpp"
 #include "Support/table.hpp"
@@ -42,7 +44,7 @@ struct GlobalEnvironment {
 };
 
 using DictType = HashTable<Value, Value, ValueHash, ValueEqual>;
-using NativeFn = Value (VM::*)(int, Value*);
+using NativeFn = ErrorOr<Value, RuntimeError> (VM::*)(int, Value*);
 using ListType = Array<Value, /*_Alloc=*/GarbageCollector>;
 
 /// INVARIANT: ObjHeader is always the first member of every heap object below.
@@ -192,8 +194,8 @@ struct ObjClass {
 
 struct ObjModule {
     ObjHeader obj { ObjType::MODULE };
-    std::string name;
-    std::string path;
+    StringRef name;
+    StringRef path;
     GlobalEnvironment* globals { nullptr };
     Chunk* chunk { nullptr };
     bool executing { false };
