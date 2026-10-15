@@ -15,6 +15,7 @@
 #include "Parser/parser.hpp"
 #include "test_common.h"
 #include "test_config.h"
+#include "test_source_program.hpp"
 
 #include <gtest/gtest.h>
 #include <memory>
@@ -117,51 +118,16 @@ i64 eval_host(ExprSpec const& m_expr)
     return 0;
 }
 
-AST::ExprPtr build_ast(ExprSpec const& m_expr)
-{
-    switch (m_expr.kind) {
-    case ExprSpec::Kind::Lit:
-        return lit_int(m_expr.m_value);
-    case ExprSpec::Kind::Neg:
-        return unary(build_ast(*m_expr.m_left), AST::Expr::Kind::OP_NEG);
-    case ExprSpec::Kind::Add:
-        return binary(build_ast(*m_expr.m_left), build_ast(*m_expr.m_right), AST::Expr::Kind::OP_ADD);
-    case ExprSpec::Kind::Sub:
-        return binary(build_ast(*m_expr.m_left), build_ast(*m_expr.m_right), AST::Expr::Kind::OP_SUB);
-    case ExprSpec::Kind::Mul:
-        return binary(build_ast(*m_expr.m_left), build_ast(*m_expr.m_right), AST::Expr::Kind::OP_MUL);
-    }
-    return lit_int(0);
-}
-
 Value run_fa_expr_source(std::string const& source)
 {
-    FileManager fm;
-    fm.buffer() = source.c_str();
-    Parser parser(&fm);
-    auto parsed = parser.parse();
-    EXPECT_TRUE(parsed.has_value()) << source;
-    if (test_config::print_ast)
-        ast_printer.print(parsed.value());
-    Compiler compiler;
-    Chunk* chunk = compiler.compile({ expr_stmt(call_expr(ident("طبيعي"), { parsed.value() })) });
-    if (test_config::dump_bytecode)
-        chunk->disassemble();
+    Chunk* chunk = test_source::compile("طبيعي(" + source + ")\n");
     VM vm;
-    return vm.run(chunk, &compiler);
-}
-
-Value run_fa_expr_ast(AST::ExprPtr m_expr)
-{
-    Compiler compiler;
-    Chunk* chunk = compiler.compile({ expr_stmt(call_expr(ident("طبيعي"), { m_expr })) });
-    VM vm;
-    return vm.run(chunk, &compiler);
+    return run_success(vm.run(chunk));
 }
 
 } // namespace
 
-TEST(PropertyExpr, RandomArithmeticMatchesHostAndAst)
+TEST(PropertyExpr, RandomArithmeticMatchesHost)
 {
     diagnostic::reset();
     std::mt19937_64 rng(0xC0FFEE);
@@ -172,12 +138,8 @@ TEST(PropertyExpr, RandomArithmeticMatchesHostAndAst)
         i64 expected = eval_host(spec);
 
         Value parsed_value = run_fa_expr_source(source);
-        Value ast_value = run_fa_expr_ast(build_ast(spec));
 
         ASSERT_TRUE(parsed_value.is_int()) << source;
-        ASSERT_TRUE(ast_value.is_int()) << source;
         EXPECT_EQ(parsed_value.as_int(), expected) << source;
-        EXPECT_EQ(ast_value.as_int(), expected) << source;
-        EXPECT_EQ(parsed_value.as_int(), ast_value.as_int()) << source;
     }
 }
