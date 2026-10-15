@@ -10,12 +10,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "Compiler/compiler.hpp"
+#include "Diag/runtime_error.hpp"
+#include "Macros.hpp"
 #include "Parser/ast_builder.hpp"
 #include "compile_macros.hpp"
 
 namespace fairuz::runtime {
 
-ErrorOr<bool> Compiler::compile_stmt(AST::StmtPtr s)
+Compiler::CompileStmtResult Compiler::compile_stmt(AST::StmtPtr s)
 {
     if (m_current->is_dead)
         return true;
@@ -34,21 +36,21 @@ ErrorOr<bool> Compiler::compile_stmt(AST::StmtPtr s)
     case AST::Stmt::Kind::CLASS_DEF: return compile_class_def(as_class_def(s));
     case AST::Stmt::Kind::IMPORT: return compile_import(as_import(s));
     case AST::Stmt::Kind::INVALID:
-        return report_error(ErrorCode::INVALID_STATEMENT_NODE, s->get_location());
+        return raise_compile_error(ErrorCode::INVALID_STATEMENT_NODE, s->get_location());
     }
 }
 
-ErrorOr<bool> Compiler::compile_expr_stmt(AST::ExprStmt* s)
+Compiler::CompileStmtResult Compiler::compile_expr_stmt(AST::ExprStmt* s)
 {
     RegMark mark(m_current);
     ExprResult r;
     COMPILE_EXPR_IMPL(s->expr, &r);
-    reg_type tmp;
+    RegType tmp;
     ANY_REG(r, s->get_location(), &tmp);
     return true;
 }
 
-ErrorOr<bool> Compiler::compile_if(AST::IfElseStmt* s)
+Compiler::CompileStmtResult Compiler::compile_if(AST::IfElseStmt* s)
 {
     SourceLocation loc = s->get_location();
     ScopeGuard scope(m_current);
@@ -56,7 +58,7 @@ ErrorOr<bool> Compiler::compile_if(AST::IfElseStmt* s)
 
     RegMark mark(m_current);
     ExprResult expr_result;
-    reg_type cond;
+    RegType cond;
     COMPILE_EXPR_IMPL(s->condition, &expr_result);
     ANY_REG(expr_result, loc, &cond);
     u32 jump_false = emit_jump(OpCode::JUMP_IF_FALSE, cond, loc);
@@ -68,7 +70,7 @@ ErrorOr<bool> Compiler::compile_if(AST::IfElseStmt* s)
         // A return/break/continue in the then branch does not make else dead.
         m_current->is_dead = incoming_dead;
         auto else_ret = compile_stmt(s->else_stmt);
-        VERIFY_RESULT(else_ret);
+        VERIFY_COMPILE_RESULT(else_ret);
         (void)else_ret;
         patch_jump(jump_end);
     } else {
@@ -79,7 +81,7 @@ ErrorOr<bool> Compiler::compile_if(AST::IfElseStmt* s)
     return true;
 }
 
-ErrorOr<bool> Compiler::compile_while(AST::WhileStmt* s)
+Compiler::CompileStmtResult Compiler::compile_while(AST::WhileStmt* s)
 {
     SourceLocation loc = s->get_location();
     ScopeGuard scope(m_current);
@@ -91,7 +93,7 @@ ErrorOr<bool> Compiler::compile_while(AST::WhileStmt* s)
     {
         RegMark mark(m_current);
         ExprResult expr_result;
-        reg_type cond;
+        RegType cond;
         COMPILE_EXPR_IMPL(s->condition, &expr_result);
         ANY_REG(expr_result, loc, &cond);
         u32 exit_jump = emit_jump(OpCode::JUMP_IF_FALSE, cond, loc);
@@ -105,7 +107,7 @@ ErrorOr<bool> Compiler::compile_while(AST::WhileStmt* s)
     return true;
 }
 
-ErrorOr<bool> Compiler::compile_for(AST::ForStmt* s)
+Compiler::CompileStmtResult Compiler::compile_for(AST::ForStmt* s)
 {
     SourceLocation loc = s->get_location();
     ScopeGuard scope(m_current);
@@ -113,7 +115,7 @@ ErrorOr<bool> Compiler::compile_for(AST::ForStmt* s)
     auto target = AST::as_identifier(s->container);
     bool incoming_dead = m_current->is_dead;
 
-    reg_type iter_reg;
+    RegType iter_reg;
     ALLOC_REG(&iter_reg);
     {
         declare_local("__for_iter", iter_reg);
@@ -123,7 +125,7 @@ ErrorOr<bool> Compiler::compile_for(AST::ForStmt* s)
         discharge(expr_result, iter_reg, loc);
     }
 
-    reg_type len_reg, index_reg, target_reg, cond_reg, step_reg;
+    RegType len_reg, index_reg, target_reg, cond_reg, step_reg;
 
     ALLOC_REG(&len_reg);
     ALLOC_REG(&index_reg);
@@ -162,14 +164,14 @@ ErrorOr<bool> Compiler::compile_for(AST::ForStmt* s)
     return true;
 }
 
-ErrorOr<bool> Compiler::compile_function_def(AST::FuncDefStmt* f)
+Compiler::CompileStmtResult Compiler::compile_function_def(AST::FuncDefStmt* f)
 {
     SourceLocation loc = f->get_location();
     if (!m_current->is_top_level || m_current->scope_depth != 0)
-        return report_error(ErrorCode::NESTED_FUNCTION_UNSUPPORTED, f->get_location());
+        return raise_compile_error(ErrorCode::NESTED_FUNCTION_UNSUPPORTED, f->get_location());
 
     if (current_chunk()->functions.size() > MAX_CONSTANTS)
-        return report_error(ErrorCode::TOO_MANY_FUNCTIONS, loc);
+        return raise_compile_error(ErrorCode::TOO_MANY_FUNCTIONS, loc);
 
     Chunk* fn_chunk = make_chunk();
     fn_chunk->source = current_chunk()->source;
@@ -185,7 +187,7 @@ ErrorOr<bool> Compiler::compile_function_def(AST::FuncDefStmt* f)
     fn_state.func_name = f->name->spelling;
     defer_function_body(fn_chunk, f, fn_state);
 
-    reg_type dst;
+    RegType dst;
     ALLOC_REG(&dst);
     emit(make_ABx(OpCode::CLOSURE, dst, fn_idx), loc);
 
@@ -198,18 +200,18 @@ ErrorOr<bool> Compiler::compile_function_def(AST::FuncDefStmt* f)
     return true;
 }
 
-ErrorOr<bool> Compiler::compile_function_body(AST::FuncDefStmt const* node,
+Compiler::CompileStmtResult Compiler::compile_function_body(AST::FuncDefStmt const* node,
     CompilerState& state, StringRef receiver_class)
 {
     CompilerStateGuard state_guard(m_current, &state);
     ScopeGuard scope(m_current);
-    reg_type receiver = 0;
+    RegType receiver = 0;
     if (state.is_class_method) {
         ALLOC_REG(&receiver);
         declare_local(kClassInstanceName, receiver, receiver_class);
     }
     for (AST::ExprPtr param : node->params) {
-        reg_type reg;
+        RegType reg;
         ALLOC_REG(&reg);
         declare_local(AST::as_identifier(param)->spelling, reg);
     }
@@ -218,7 +220,7 @@ ErrorOr<bool> Compiler::compile_function_body(AST::FuncDefStmt const* node,
         AST::ASTBuilder builder;
         auto parsed = builder.materialize(*AST::as_function_stub(body));
         if (parsed.has_error())
-            return parsed.error();
+            return raise_compile_error(parsed.error());
         body = parsed.value();
     }
     COMPILE_STMT_DISCARD(body);
@@ -243,18 +245,17 @@ void Compiler::defer_function_body(Chunk* chunk, AST::FuncDefStmt const* node,
     chunk->deferred_body = [node, state, receiver_class,
                                globals = m_globals, modules = m_module_names,
                                classes = m_class_registry](Chunk* target) {
-        Compiler compiler;
+        Compiler compiler(target->source);
         compiler.m_globals = globals;
         compiler.m_module_names = modules;
         compiler.m_class_registry = classes;
         CompilerState function_state = state;
         function_state.chunk = target;
-        auto result = compiler.compile_function_body(node, function_state, receiver_class);
-        return !result.has_error() && !diagnostic::has_errors();
+        return compiler.compile_function_body(node, function_state, receiver_class);
     };
 }
 
-bool Compiler::compile_function_deferred(Chunk* chunk)
+ErrorOr<bool, RuntimeError> Compiler::compile_function_deferred(Chunk* chunk)
 {
     if (!chunk->deferred_body)
         return true;
@@ -268,13 +269,14 @@ bool Compiler::compile_function_deferred(Chunk* chunk)
     compiled.source_path = chunk->source_path;
     compiled.globals = chunk->globals;
     compiled.arity = chunk->arity;
-    if (!chunk->deferred_body(&compiled))
-        return false;
+    auto result = chunk->deferred_body(&compiled);
+    if (result.has_error())
+        return result.error();
     *chunk = std::move(compiled);
     return true;
 }
 
-ErrorOr<bool> Compiler::compile_return(AST::ReturnStmt* s)
+Compiler::CompileStmtResult Compiler::compile_return(AST::ReturnStmt* s)
 {
     SourceLocation loc = s->get_location();
 
@@ -299,12 +301,12 @@ ErrorOr<bool> Compiler::compile_return(AST::ReturnStmt* s)
 
         RegMark mark(m_current);
         auto call_ret = compile_call_impl(call_expr, nullptr, /*tail=*/!is_ctor_call);
-        VERIFY_RESULT(call_ret);
+        VERIFY_COMPILE_RESULT(call_ret);
         (void)call_ret;
 
         if (is_ctor_call) {
             // compile_call_impl didn't emit a RETURN for a non-tail call; do it here.
-            reg_type src;
+            RegType src;
             ANY_REG(call_ret.value(), loc, &src);
             emit(make_ABC(OpCode::RETURN, src, 1, 0), loc);
         }
@@ -314,7 +316,7 @@ ErrorOr<bool> Compiler::compile_return(AST::ReturnStmt* s)
 
     RegMark mark(m_current);
     ExprResult expr_result;
-    reg_type src;
+    RegType src;
     COMPILE_EXPR_IMPL(value, &expr_result);
     ANY_REG(expr_result, loc, &src);
     emit(make_ABC(OpCode::RETURN, src, 1, 0), loc);
@@ -322,10 +324,10 @@ ErrorOr<bool> Compiler::compile_return(AST::ReturnStmt* s)
     return true;
 }
 
-ErrorOr<bool> Compiler::compile_break(AST::BreakStmt* s)
+Compiler::CompileStmtResult Compiler::compile_break(AST::BreakStmt* s)
 {
     if (m_current->loop_stack.empty())
-        return report_error(ErrorCode::BREAK_OUTSIDE_LOOP, s->get_location());
+        return raise_compile_error(ErrorCode::BREAK_OUTSIDE_LOOP, s->get_location());
 
     SourceLocation loc = s->get_location();
     m_current->loop_stack.back().break_patches.push(emit_jump(OpCode::JUMP, 0, loc));
@@ -333,10 +335,10 @@ ErrorOr<bool> Compiler::compile_break(AST::BreakStmt* s)
     return true;
 }
 
-ErrorOr<bool> Compiler::compile_continue(AST::ContinueStmt* s)
+Compiler::CompileStmtResult Compiler::compile_continue(AST::ContinueStmt* s)
 {
     if (m_current->loop_stack.empty())
-        return report_error(ErrorCode::CONTINUE_OUTSIDE_LOOP, s->get_location());
+        return raise_compile_error(ErrorCode::CONTINUE_OUTSIDE_LOOP, s->get_location());
 
     SourceLocation loc = s->get_location();
     m_current->loop_stack.back().continue_patches.push(emit_jump(OpCode::JUMP, 0, loc));
@@ -344,13 +346,13 @@ ErrorOr<bool> Compiler::compile_continue(AST::ContinueStmt* s)
     return true;
 }
 
-ErrorOr<bool> Compiler::compile_block(AST::BlockStmt* s)
+Compiler::CompileStmtResult Compiler::compile_block(AST::BlockStmt* s)
 {
     ScopeGuard scope(m_current);
 
     for (AST::StmtPtr child : s->stmts) {
         auto r = compile_stmt(child);
-        VERIFY_RESULT(r);
+        VERIFY_COMPILE_RESULT(r);
     }
 
     SourceLocation loc = { 1, 1, 0 };
@@ -359,11 +361,11 @@ ErrorOr<bool> Compiler::compile_block(AST::BlockStmt* s)
     return true;
 }
 
-ErrorOr<bool> Compiler::compile_class_def(AST::ClassDefStmt* s)
+Compiler::CompileStmtResult Compiler::compile_class_def(AST::ClassDefStmt* s)
 {
     SourceLocation loc = s->get_location();
     if (!m_current->is_top_level || m_current->scope_depth != 0)
-        return report_error(ErrorCode::NESTED_CLASS_UNSUPPORTED, loc);
+        return raise_compile_error(ErrorCode::NESTED_CLASS_UNSUPPORTED, loc);
 
     StringRef class_name = AST::as_identifier(s->name)->spelling;
     StringRef parent_name;
@@ -406,11 +408,11 @@ ErrorOr<bool> Compiler::compile_class_def(AST::ClassDefStmt* s)
         }
     }
 
-    auto compile_method_closure = [&](AST::FuncDefStmt const* method) -> ErrorOr<std::tuple<reg_type, Chunk*>> {
+    auto compile_method_closure = [&](AST::FuncDefStmt const* method) -> ErrorOr<std::tuple<RegType, Chunk*>, RuntimeError> {
         SourceLocation method_loc = method->get_location();
 
         if (current_chunk()->functions.size() > MAX_CONSTANTS)
-            return report_error(ErrorCode::TOO_MANY_FUNCTIONS, method_loc);
+            return raise_compile_error(ErrorCode::TOO_MANY_FUNCTIONS, method_loc);
 
         Chunk* ch = make_chunk();
         ch->source = current_chunk()->source;
@@ -431,10 +433,10 @@ ErrorOr<bool> Compiler::compile_class_def(AST::ClassDefStmt* s)
         state.class_method_names = method_names;
         defer_function_body(ch, method, state, class_name);
 
-        reg_type dst;
+        RegType dst;
         ALLOC_REG(&dst);
         emit(make_ABx(OpCode::CLOSURE, dst, fn_idx), method_loc);
-        return std::tuple<reg_type, Chunk*> { dst, ch };
+        return std::tuple<RegType, Chunk*> { dst, ch };
     };
 
     // Map a method name to its reserved special slot, or -1 if it's an
@@ -485,7 +487,7 @@ ErrorOr<bool> Compiler::compile_class_def(AST::ClassDefStmt* s)
 
     for (AST::StmtPtr m : s->methods) {
         if (m->get_kind() != AST::Stmt::Kind::FUNC)
-            return report_error(ErrorCode::INVALID_STATEMENT_NODE, m->get_location());
+            return raise_compile_error(ErrorCode::INVALID_STATEMENT_NODE, m->get_location());
 
         auto* method = as_function_def(m);
         StringRef method_name = method->name->spelling;
@@ -499,7 +501,7 @@ ErrorOr<bool> Compiler::compile_class_def(AST::ClassDefStmt* s)
         }
 
         if (seen)
-            return report_error(ErrorCode::INVALID_STATEMENT_NODE, method->get_location());
+            return raise_compile_error(ErrorCode::INVALID_STATEMENT_NODE, method->get_location());
 
         seen_names.push(method_name);
 
@@ -533,7 +535,7 @@ ErrorOr<bool> Compiler::compile_class_def(AST::ClassDefStmt* s)
     for (u32 i = 0, n = static_cast<u32>(s->methods.size()); i < n; i++) {
         auto* method = as_function_def(s->methods[i]);
         auto result = compile_method_closure(method);
-        VERIFY_RESULT(result);
+        VERIFY_COMPILE_RESULT(result);
         auto [reg, chunk] = result.value();
 
         if (chunk == nullptr)
@@ -577,7 +579,7 @@ ErrorOr<bool> Compiler::compile_class_def(AST::ClassDefStmt* s)
     desc_data.vtable_indices = std::move(vtable_indices);
 
     u16 desc_idx = current_chunk()->add_class_descriptor(std::move(desc_data));
-    reg_type class_reg;
+    RegType class_reg;
 
     ALLOC_REG(&class_reg);
     emit(make_ABx(OpCode::NEW_CLASS, class_reg, desc_idx), loc);
@@ -603,10 +605,10 @@ ErrorOr<bool> Compiler::compile_class_def(AST::ClassDefStmt* s)
     return true;
 }
 
-ErrorOr<bool> Compiler::compile_import(AST::ImportStmt* s)
+Compiler::CompileStmtResult Compiler::compile_import(AST::ImportStmt* s)
 {
     if (!m_current->is_top_level || m_current->scope_depth != 0)
-        return report_error(ErrorCode::INVALID_STATEMENT_NODE, s->get_location());
+        return raise_compile_error(ErrorCode::INVALID_STATEMENT_NODE, s->get_location());
 
     SourceLocation loc = s->get_location();
     StringRef const& module = s->get_module();
@@ -615,18 +617,18 @@ ErrorOr<bool> Compiler::compile_import(AST::ImportStmt* s)
     if (!s->imports_member()) {
         // Whole-module imports have no member names, but still bind one alias.
         if (aliases.size() != 1)
-            return report_error(ErrorCode::INVALID_STATEMENT_NODE, loc);
+            return raise_compile_error(ErrorCode::INVALID_STATEMENT_NODE, loc);
         return compile_import_single(module, { }, aliases[0], loc, false);
     }
     if (names.size() != aliases.size())
-        return report_error(ErrorCode::INVALID_STATEMENT_NODE, loc);
+        return raise_compile_error(ErrorCode::INVALID_STATEMENT_NODE, loc);
     for (size_t i = 0; i < names.size(); ++i)
         TRY_DISCARD(compile_import_single(module, names[i], aliases[i], loc, true));
 
     return true;
 }
 
-Compiler::compile_stmt_result Compiler::compile_import_single(
+Compiler::CompileStmtResult Compiler::compile_import_single(
     StringRef const& module, StringRef const& name, StringRef const& alias, SourceLocation loc, bool imports_member)
 {
     // Imported bindings live in the module's global environment. Keeping a
@@ -635,11 +637,11 @@ Compiler::compile_stmt_result Compiler::compile_import_single(
     // stored globally. Rewind the load/extract temporaries after this
     // statement and resolve later references through LOAD_GLOBAL.
     RegMark mark(m_current);
-    reg_type module_reg;
+    RegType module_reg;
     ALLOC_REG(&module_reg);
     emit(make_ABx(OpCode::IMPORT_MODULE, module_reg, intern_string(module)), loc);
 
-    reg_type value_reg = module_reg;
+    RegType value_reg = module_reg;
     if (imports_member) {
         ALLOC_REG(&value_reg);
         emit(make_ABC(OpCode::GET_FIELD, value_reg, module_reg, 0xFF), loc);
