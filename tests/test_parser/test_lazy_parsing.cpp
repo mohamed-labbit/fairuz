@@ -9,12 +9,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "Compiler/compiler.hpp"
+#include "Diag/diagnostic.hpp"
 #include "Interpreter/vm.hpp"
 #include "Parser/ast_builder.hpp"
 #include "Parser/parser.hpp"
-#include "test_common.h"
 
+#include "test_runtime.hpp"
 #include <gtest/gtest.h>
+
+using namespace fairuz;
+using namespace fairuz::runtime;
+using namespace fairuz::AST;
 
 namespace {
 
@@ -38,7 +43,10 @@ protected:
 
 TEST_F(LazyParsing, HeadersAreParsedAndUnusedBodiesHaveNoStatementTree)
 {
-    auto program = parse("دالة جمع(س، ص):\n    ارجع س + ص\nدالة خطأ(): ارجع +\n42\n");
+    auto program = parse("دالة جمع(س، ص):\n"
+                         "    ارجع س + ص\n"
+                         "دالة خطأ(): ارجع +\n"
+                         "42\n");
     ASSERT_FALSE(diagnostic::has_errors());
     ASSERT_EQ(program.size(), 3u);
     auto* function = as_function_def(program[0]);
@@ -51,43 +59,47 @@ TEST_F(LazyParsing, HeadersAreParsedAndUnusedBodiesHaveNoStatementTree)
     ASSERT_NE(stub->source, nullptr);
     EXPECT_EQ(stub->tokens.back()->type(), tok::TokenType::ENDMARKER);
     EXPECT_TRUE(is_function_stub(as_function_def(program[1])->body));
-    Chunk* chunk = Compiler().compile(program);
+    Chunk* chunk = run_success(Compiler(diagnostic::engine.source()).compile(program));
     VM vm;
-    EXPECT_NO_THROW(vm.run(chunk));
+    run_success(vm.run(chunk));
     EXPECT_EQ(stub->parsed_body, nullptr);
     EXPECT_TRUE(chunk->functions[0]->code.empty());
 }
 
 TEST_F(LazyParsing, FirstCallMaterializesOnceAfterParserAndSourceDestruction)
 {
-    auto program = parse("دالة جمع(س، ص):\n    ارجع س + ص\nجمع(20، 22)\n");
+    auto program = parse("دالة جمع(س، ص):\n"
+                         "    ارجع س + ص\n"
+                         "جمع(20، 22)\n");
     ASSERT_FALSE(diagnostic::has_errors());
     auto* stub = as_function_stub(as_function_def(program[0])->body);
-    Chunk* chunk = Compiler().compile(program);
+    Chunk* chunk = run_success(Compiler(diagnostic::engine.source()).compile(program));
     EXPECT_EQ(stub->parsed_body, nullptr);
     VM vm;
-    EXPECT_EQ(vm.run(chunk).as_int(), 42);
+    EXPECT_EQ(run_success(vm.run(chunk)).as_int(), 42);
     ASSERT_NE(stub->parsed_body, nullptr);
     auto* body = stub->parsed_body;
     EXPECT_EQ(as_block(body)->stmts[0]->get_location().line, 2u);
-    EXPECT_EQ(vm.run(chunk).as_int(), 42);
+    EXPECT_EQ(run_success(vm.run(chunk)).as_int(), 42);
     EXPECT_EQ(stub->parsed_body, body);
     ASTBuilder builder;
     auto repeated = builder.materialize(*stub);
     ASSERT_TRUE(repeated.has_value());
-    EXPECT_EQ(repeated.value(), body);
+    EXPECT_EQ(run_success(repeated), body);
 }
 
 TEST_F(LazyParsing, FailedBodyParsingIsNotCachedAndReportsOriginalSource)
 {
-    auto program = parse("دالة خطأ():\n    ارجع +\nخطأ()\n");
+    auto program = parse("دالة خطأ():\n"
+                         "    ارجع +\n"
+                         "خطأ()\n");
     ASSERT_FALSE(diagnostic::has_errors());
     auto* stub = as_function_stub(as_function_def(program[0])->body);
-    Chunk* chunk = Compiler().compile(program);
+    Chunk* chunk = run_success(Compiler(diagnostic::engine.source()).compile(program));
     VM vm;
     for (int attempt = 0; attempt < 2; ++attempt) {
         diagnostic::reset();
-        EXPECT_THROW(vm.run(chunk), RuntimeHalt);
+        run_failed(vm.run(chunk));
         EXPECT_TRUE(diagnostic::has_errors());
         EXPECT_EQ(stub->parsed_body, nullptr);
         EXPECT_TRUE(chunk->functions[0]->deferred_body);
@@ -100,10 +112,11 @@ TEST_F(LazyParsing, FailedBodyParsingIsNotCachedAndReportsOriginalSource)
 
 TEST_F(LazyParsing, ExplicitValidationFindsUnusedSyntaxErrors)
 {
-    auto program = parse("دالة خطأ(): ارجع +\n42\n");
+    auto program = parse("دالة خطأ(): ارجع +\n"
+                         "42\n");
     ASSERT_FALSE(diagnostic::has_errors());
-    Chunk* chunk = Compiler().compile(program);
-    EXPECT_FALSE(Compiler::compile_all(chunk));
+    Chunk* chunk = run_success(Compiler(diagnostic::engine.source()).compile(program));
+    EXPECT_TRUE(Compiler::compile_all(chunk).has_error());
     EXPECT_TRUE(diagnostic::has_errors());
 }
 
@@ -120,7 +133,9 @@ TEST_F(LazyParsing, EagerModeBuildsBodiesAndReportsSyntaxErrorsImmediately)
 TEST_F(LazyParsing, HeadersAndMissingSuitesAreStillValidatedImmediately)
 {
     for (auto* text : { "دالة قيمة() ارجع 1\n", "دالة قيمة(1): ارجع 1\n",
-             "دالة قيمة():\n42\n", "دالة قيمة():" }) {
+             "دالة قيمة():\n"
+             "42\n",
+             "دالة قيمة():" }) {
         SCOPED_TRACE(text);
         diagnostic::reset();
         parse(text);
@@ -131,28 +146,50 @@ TEST_F(LazyParsing, HeadersAndMissingSuitesAreStillValidatedImmediately)
 TEST_F(LazyParsing, InlineAndIndentedSuitesPreserveFollowingDefinitions)
 {
     for (auto* text : {
-             "دالة قيمة(): ارجع 42\nدالة اخر(): ارجع 0\nقيمة()",
-             "دالة قيمة():\n    # comment\n\n    اذا صحيح:\n        ارجع 42\n    غيره:\n        ارجع 0\nدالة اخر(): ارجع 0\nقيمة()\n",
-             "دالة قيمة(): اذا صحيح: ارجع 42\nدالة اخر(): ارجع 0\nقيمة()\n",
-             "دالة قيمة(): اذا صحيح:\n    ارجع 42\nدالة اخر(): ارجع 0\nقيمة()\n",
-             "دالة قيمة(): ارجع (\n    20 +\n    22\n)\nدالة اخر(): ارجع 0\nقيمة()\n" }) {
+             "دالة قيمة(): ارجع 42\n"
+             "دالة اخر(): ارجع 0\n"
+             "قيمة()",
+             "دالة قيمة():\n"
+             "    # comment\n"
+             "\n"
+             "    اذا صحيح:\n"
+             "        ارجع 42\n"
+             "    غيره:\n"
+             "        ارجع 0\n"
+             "دالة اخر(): ارجع 0\n"
+             "قيمة()\n",
+             "دالة قيمة(): اذا صحيح: ارجع 42\n"
+             "دالة اخر(): ارجع 0\n"
+             "قيمة()\n",
+             "دالة قيمة(): اذا صحيح:\n"
+             "    ارجع 42\n"
+             "دالة اخر(): ارجع 0\n"
+             "قيمة()\n",
+             "دالة قيمة(): ارجع (\n"
+             "    20 +\n"
+             "    22\n"
+             ")\n"
+             "دالة اخر(): ارجع 0\n"
+             "قيمة()\n" }) {
         SCOPED_TRACE(text);
         diagnostic::reset();
         auto program = parse(text);
         ASSERT_FALSE(diagnostic::has_errors());
         ASSERT_EQ(program.size(), 3u);
-        Chunk* chunk = Compiler().compile(program);
+        Chunk* chunk = run_success(Compiler(diagnostic::engine.source()).compile(program));
         VM vm;
-        EXPECT_EQ(vm.run(chunk).as_int(), 42);
+        EXPECT_EQ(run_success(vm.run(chunk)).as_int(), 42);
         EXPECT_EQ(as_function_stub(as_function_def(program[1])->body)->parsed_body, nullptr);
     }
 }
 
 TEST_F(LazyParsing, EndOfFileAndNestedDefinitionsPreserveReplayBoundaries)
 {
-    for (auto* ending : { "", "\n", "\n\n" }) {
+    for (auto* ending : { "", "\n", "\n"
+                                    "\n" }) {
         diagnostic::reset();
-        std::string text = "دالة خارج():\n    دالة داخل(): ارجع 42";
+        std::string text = "دالة خارج():\n"
+                           "    دالة داخل(): ارجع 42";
         text += ending;
         auto program = parse(text.c_str());
         ASSERT_FALSE(diagnostic::has_errors());
@@ -161,11 +198,11 @@ TEST_F(LazyParsing, EndOfFileAndNestedDefinitionsPreserveReplayBoundaries)
         ASTBuilder builder;
         auto body = builder.materialize(*outer);
         ASSERT_TRUE(body.has_value());
-        ASSERT_EQ(as_block(body.value())->stmts.size(), 1u);
-        auto* inner = as_function_stub(as_function_def(as_block(body.value())->stmts[0])->body);
+        ASSERT_EQ(as_block(run_success(body))->stmts.size(), 1u);
+        auto* inner = as_function_stub(as_function_def(as_block(run_success(body))->stmts[0])->body);
         auto inner_body = builder.materialize(*inner);
         ASSERT_TRUE(inner_body.has_value());
-        EXPECT_EQ(as_block(inner_body.value())->stmts[0]->get_location().line, 2u);
+        EXPECT_EQ(as_block(run_success(inner_body))->stmts[0]->get_location().line, 2u);
         lex::Lexer replay(inner->tokens, inner->source);
         while (!replay.current()->is(tok::TokenType::ENDMARKER))
             replay.next();
@@ -192,14 +229,17 @@ TEST_F(LazyParsing, StubClonesKeepTheirNodeKindAndSource)
 
 TEST_F(LazyParsing, MethodsRemainEagerForFieldDiscovery)
 {
-    auto program = parse("نوع صندوق:\n    دالة بداية(ق): .قيمة := ق\n    دالة اقرأ(): ارجع هذا.قيمة\nصندوق(42).اقرأ()\n");
+    auto program = parse("نوع صندوق:\n"
+                         "    دالة بداية(ق): .قيمة := ق\n"
+                         "    دالة اقرأ(): ارجع هذا.قيمة\n"
+                         "صندوق(42).اقرأ()\n");
     ASSERT_FALSE(diagnostic::has_errors());
     auto* klass = as_class_def(program[0]);
     ASSERT_EQ(klass->members.size(), 1u);
     EXPECT_TRUE(is_block(as_function_def(klass->methods[0])->body));
-    Chunk* chunk = Compiler().compile(program);
+    Chunk* chunk = run_success(Compiler(diagnostic::engine.source()).compile(program));
     VM vm;
-    EXPECT_EQ(vm.run(chunk).as_int(), 42);
+    EXPECT_EQ(run_success(vm.run(chunk)).as_int(), 42);
 }
 
 } // namespace
