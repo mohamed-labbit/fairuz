@@ -10,181 +10,49 @@
 //===----------------------------------------------------------------------===//
 
 #include "Diag/runtime_error.hpp"
+#include "Compiler/chunk.hpp"
+#include "Diag/errc.hpp"
+#include "Interpreter/vm.hpp"
+#include "Macros.hpp"
+#include <cassert>
+#include <string>
 
 namespace fairuz::runtime {
 
-constexpr ErrorKind error_kind(ErrorCode errc)
+/// Constructors
+
+FrameTrace::FrameTrace(CallFrame const& frame)
 {
-    switch (errc) {
-    case ErrorCode::FILE_NOT_FOUND:
-    case ErrorCode::FILE_NOT_OPEN:
-    case ErrorCode::INVALID_UTF8:
-    case ErrorCode::PERMISSION_DENIED:
-    case ErrorCode::UNEXPECTED_EOF:
-    case ErrorCode::SYSTEM_ERROR:
-    case ErrorCode::ENCODING_ERROR:
-    case ErrorCode::UNDEFINED_VARIABLE:
-    case ErrorCode::UNDEFINED_FUNCTION:
-    case ErrorCode::NOT_CALLABLE:
-    case ErrorCode::REDECLARATION:
-    case ErrorCode::TYPE_MISMATCH:
-    case ErrorCode::INVALID_STRING_OP:
-    case ErrorCode::DIVISION_BY_ZERO_CONST:
-    case ErrorCode::MISSING_RETURN:
-    case ErrorCode::LOOP_VAR_SHADOW:
-    case ErrorCode::INVALID_FUNCTION_PARAMETER:
-    case ErrorCode::JUMP_OFFSET_OVERFLOW:
-    case ErrorCode::LOOP_JUMP_OFFSET_OVERFLOW:
-    case ErrorCode::SHIFT_AMOUNT_OUT_OF_RANGE:
-    case ErrorCode::TOO_MANY_LIST_ELEMENTS:
-    case ErrorCode::RUNTIME_ERROR:
-    case ErrorCode::STACK_OVERFLOW:
-    case ErrorCode::STACK_UNDERFLOW:
-    case ErrorCode::DIVISION_BY_ZERO:
-    case ErrorCode::MODULO_BY_ZERO:
-    case ErrorCode::TYPE_ERROR_ARITH:
-    case ErrorCode::TYPE_ERROR_COMPARE:
-    case ErrorCode::TYPE_ERROR_CALL:
-    case ErrorCode::WRONG_ARG_COUNT:
-    case ErrorCode::UNDEFINED_GLOBAL:
-    case ErrorCode::UNDEFINED_LOCAL:
-    case ErrorCode::INDEX_OUT_OF_BOUNDS:
-    case ErrorCode::INDEX_TYPE_ERROR:
-    case ErrorCode::INDEX_ASSIGN_TYPE_ERROR:
-    case ErrorCode::INDEX_OBJECT_TYPE_ERROR:
-    case ErrorCode::FRAME_OVERFLOW:
-    case ErrorCode::NATIVE_ARG_COUNT:
-    case ErrorCode::NATIVE_TYPE_ERROR:
-    case ErrorCode::UNDEFINED_METHOD:
-    case ErrorCode::UNDEFINED_FIELD:
-    case ErrorCode::NUMERIC_OUT_OF_RANGE:
-    case ErrorCode::APPEND_ARG_COUNT:
-    case ErrorCode::APPEND_TYPE_ERROR:
-    case ErrorCode::POP_ARG_COUNT:
-    case ErrorCode::POP_TYPE_ERROR:
-    case ErrorCode::SLICE_ARG_COUNT:
-    case ErrorCode::STR_ARG_COUNT:
-    case ErrorCode::BOOL_ARG_COUNT:
-    case ErrorCode::SUBSTR_ARG_COUNT:
-    case ErrorCode::FLOOR_ARG_COUNT:
-    case ErrorCode::FLOOR_TYPE_ERROR:
-    case ErrorCode::CEIL_ARG_COUNT:
-    case ErrorCode::CEIL_TYPE_ERROR:
-    case ErrorCode::ROUND_ARG_COUNT:
-    case ErrorCode::ROUND_TYPE_ERROR:
-    case ErrorCode::ABS_ARG_COUNT:
-    case ErrorCode::ABS_TYPE_ERROR:
-    case ErrorCode::ABS_OUT_OF_RANGE:
-    case ErrorCode::MIN_ARG_COUNT:
-    case ErrorCode::MAX_ARG_COUNT:
-    case ErrorCode::POW_ARG_COUNT:
-    case ErrorCode::POW_TYPE_ERROR:
-    case ErrorCode::SQRT_ARG_COUNT:
-    case ErrorCode::SQRT_TYPE_ERROR:
-    case ErrorCode::ASSERT_ARG_COUNT:
-    case ErrorCode::ASSERT_FAILED:
-    case ErrorCode::OPEN_ARG_COUNT:
-    case ErrorCode::APPEND_FILE_ARG_COUNT:
-    case ErrorCode::APPEND_FILE_TYPE_ERROR:
-    case ErrorCode::APPEND_FILE_FAILED:
-    case ErrorCode::CLOSE_ARG_COUNT:
-    case ErrorCode::CLOSE_TYPE_ERROR:
-    case ErrorCode::POP_EMPTY_LIST:
-    case ErrorCode::IS_INSTANCE_ARG_COUNT:
-    case ErrorCode::CLOCK_ARG_COUNT:
-    case ErrorCode::ARRAY_EMPTY_BACK:
-    case ErrorCode::ARRAY_EMPTY_FRONT:
-    case ErrorCode::ARRAY_CAPACITY_EXCEEDED:
-    case ErrorCode::ARRAY_OUT_OF_BOUNDS:
-    case ErrorCode::STRING_SLICE_START_OOB:
-    case ErrorCode::STRING_SLICE_END_BEFORE_START:
-        return ErrorKind::RUNTIME_ERROR;
-    case ErrorCode::SEEK_OUT_OF_BOUND:
-    case ErrorCode::READ_ERROR:
-    case ErrorCode::INVALID_CHAR_OFFSET:
-    case ErrorCode::CACHE_ERROR:
-    case ErrorCode::INVALID_LINE_NUMBER:
-    case ErrorCode::BUFFER_TOO_SMALL:
-    case ErrorCode::INTERNAL_ERROR:
-    case ErrorCode::UNKNOWN:
-    case ErrorCode::ALLOCATOR_CONTEXT_NOT_INITIALIZED:
-    case ErrorCode::NANBOX_ADDRESS_UNSAFE:
-    case ErrorCode::INVALID_PARAMETER:
-        return ErrorKind::IMPL_EXCEPT;
-    case ErrorCode::INVALID_OCTAL_DIGIT:
-    case ErrorCode::INVALID_BINARY_DIGIT:
-    case ErrorCode::INVALID_BASE_LITERAL:
-    case ErrorCode::INCONSISTENT_INDENTATION:
-    case ErrorCode::TOO_MANY_INDENT_LEVELS:
-    case ErrorCode::MIXED_INDENTATION:
-    case ErrorCode::INVALID_UNINDENT:
-    case ErrorCode::INVALID_ESCAPE_SEQUENCE:
-    case ErrorCode::INVALID_CHARACTER:
-    case ErrorCode::INVALID_OPERATOR:
-    case ErrorCode::INVALID_NUMBER_LITERAL:
-    case ErrorCode::UNTERMINATED_STRING:
-    case ErrorCode::UNCLOSED_DELIMITER:
-    case ErrorCode::MISMATCHED_DELIMITER:
-    case ErrorCode::EXPECTED_INDENT:
-    case ErrorCode::EXPECTED_DEDENT:
-    case ErrorCode::EXPECTED_LPAREN:
-    case ErrorCode::EXPECTED_RPAREN_PARAMS:
-    case ErrorCode::EXPECTED_RPAREN_ARGS:
-    case ErrorCode::EXPECTED_RPAREN_EXPR:
-    case ErrorCode::EXPECTED_RBRACKET:
-    case ErrorCode::EXPECTED_COLON_IF:
-    case ErrorCode::EXPECTED_COLON_WHILE:
-    case ErrorCode::EXPECTED_COLON_FN:
-    case ErrorCode::EXPECTED_FN_KEYWORD:
-    case ErrorCode::EXPECTED_FN_NAME:
-    case ErrorCode::EXPECTED_PARAM_NAME:
-    case ErrorCode::EXPECTED_RETURN:
-    case ErrorCode::EXPECTED_IF_KEYWORD:
-    case ErrorCode::EXPECTED_WHILE_KEYWORD:
-    case ErrorCode::INVALID_ASSIGN_TARGET:
-    case ErrorCode::ASSIGNMENT_IN_EXPRESSION:
-    case ErrorCode::UNEXPECTED_TOKEN:
-    case ErrorCode::INVALID_OPERATOR_SEQ:
-    case ErrorCode::EXPECTED_COLON_DICT:
-    case ErrorCode::EXPECTED_RBRACE_EXPR:
-    case ErrorCode::EXPECTED_FOR_TARGET:
-    case ErrorCode::EXPECTED_IN_KEYWORD:
-    case ErrorCode::EXPECTED_COLON_FOR:
-    case ErrorCode::EXPECTED_CLASS_KEYWORD:
-    case ErrorCode::EXPECTED_COLON_CLASS:
-    case ErrorCode::EXPECTED_CLASS_NAME:
-    case ErrorCode::EXPECTED_MEMBER_NAME:
-    case ErrorCode::EXCEEDED_MAX_NESTING_LIMIT:
-    case ErrorCode::EXPECTED_MODULE_NAME:
-    case ErrorCode::EXPECTED_IMPORT_KEYWORD:
-    case ErrorCode::EXPECTED_IMPORT_NAME:
-    case ErrorCode::EXPECTED_ALIAS_NAME:
-    case ErrorCode::EXPECTED_RPAREN_CLASS:
-    case ErrorCode::INVALID_STATEMENT_NODE:
-    case ErrorCode::INVALID_EXPRESSION_NODE:
-    case ErrorCode::NULL_FUNCTION_NAME:
-    case ErrorCode::UNKNOWN_LITERAL_TYPE:
-    case ErrorCode::UNKNOWN_UNARY_OPERATOR:
-    case ErrorCode::UNKNOWN_BINARY_OPERATOR:
-    case ErrorCode::NESTED_FUNCTION_UNSUPPORTED:
-    case ErrorCode::BREAK_OUTSIDE_LOOP:
-    case ErrorCode::CONTINUE_OUTSIDE_LOOP:
-    case ErrorCode::NESTED_CLASS_UNSUPPORTED:
-        return ErrorKind::PARSE_ERROR;
-    case ErrorCode::NULL_AST_ROOT:
-    case ErrorCode::TOO_MANY_CONSTANTS:
-    case ErrorCode::TOO_MANY_REGISTERS:
-    case ErrorCode::TOO_MANY_FUNCTIONS:
-    case ErrorCode::TOO_MANY_INLINE_CACHES:
-    case ErrorCode::INVALID_OPCODE:
-        return ErrorKind::COMPILE_ERROR;
-    case ErrorCode::ALLOC_FAILED:
-    case ErrorCode::ARENA_EXHAUSTED:
-    case ErrorCode::MMAP_FAILED:
-        return ErrorKind::RESOURCE_LIMIT;
-    case ErrorCode::MODULE_NOT_FOUND:
-        return ErrorKind::IMPORT_ERROR;
+    if (frame.func != nullptr)
+        function_name = std::string(frame.func->name().data(), frame.func->name().len());
+    else if (frame.chunk != nullptr)
+        function_name = std::string(frame.chunk->name.data(), frame.chunk->name.len());
+    if (frame.module != nullptr)
+        module_name = std::string(frame.module->name.data(), frame.module->name.len());
+    if (frame.chunk != nullptr) {
+        source = frame.chunk->source;
+        size_t off = frame.ip > 0 ? frame.ip - 1 : 0;
+        if (off < frame.chunk->locations.size())
+            loc = frame.chunk->locations[off];
     }
+}
+
+RuntimeError::RuntimeError(ErrorCode errc, SourcePtr source, SourceLocation loc, std::string detail)
+    : kind(error_category_for(errc))
+    , errc(errc)
+    , source(std::move(source))
+    , loc(loc)
+    , detail(detail)
+{
+    // Native host calls and setup failures need not have a source location.
+}
+
+void RuntimeError::add_trace(CallFrame const& frame) { traceback.push(frame); }
+
+std::string RuntimeError::str() const
+{
+    ErrorRenderer renderer;
+    return renderer.error_string(*this);
 }
 
 }; // fairuz::runtime
