@@ -173,7 +173,6 @@ TEST(OpCodeMeta, KnownNames)
     EXPECT_EQ(opcode_name(OpCode::CALL), "CALL");
     EXPECT_EQ(opcode_name(OpCode::IC_CALL), "IC_CALL");
     EXPECT_EQ(opcode_name(OpCode::NOP), "NOP");
-    EXPECT_EQ(opcode_name(OpCode::HALT), "HALT");
     EXPECT_EQ(opcode_name(OpCode::FOR_PREP), "FOR_PREP");
     EXPECT_EQ(opcode_name(OpCode::FOR_STEP), "FOR_STEP");
     EXPECT_EQ(opcode_name(OpCode::LIST_NEW), "LIST_NEW");
@@ -226,6 +225,5 @@ TEST(OpCodeMeta, ArithmeticFormatIsABC)
 TEST(OpCodeMeta, NoOpFormatIsNONE)
 {
     EXPECT_EQ(opcode_format(OpCode::NOP), InstrFormat::NONE);
-    EXPECT_EQ(opcode_format(OpCode::HALT), InstrFormat::NONE);
     EXPECT_EQ(opcode_format(OpCode::RETURN_NIL), InstrFormat::NONE);
 }
