@@ -8,15 +8,17 @@
 // Implements the Fairuz command-line entry point.
 //===----------------------------------------------------------------------===//
 
-#include "Parser/ast.hpp"
-#include "Parser/ast_printer.hpp"
 #include "Compiler/compiler.hpp"
 #include "Diag/diagnostic.hpp"
-#include "tools/formatter.hpp"
+#include "Diag/runtime_error.hpp"
+#include "Interpreter/vm.hpp"
+#include "Macros.hpp"
+#include "Parser/ast.hpp"
+#include "Parser/ast_printer.hpp"
 #include "Parser/lexer.hpp"
 #include "Parser/parser.hpp"
+#include "tools/formatter.hpp"
 #include "tools/syntax_highlighter.hpp"
-#include "Interpreter/vm.hpp"
 
 #include <cerrno>
 #include <chrono>
@@ -296,7 +298,8 @@ int run_main(int argc, char** argv)
     }
 
     if (options.input_path != "-" && !std::filesystem::exists(fairuz::platform::path(options.input_path))) {
-        std::cerr << "Input file not found: " << options.input_path << "\n";
+        std::cerr << fairuz::Color::RED << "error: " << fairuz::Color::RESET
+                << "Input file not found: " << options.input_path << "\n";
         return static_cast<int>(ExitCode::NoInput);
     }
 
@@ -338,8 +341,7 @@ int run_main(int argc, char** argv)
         }
         fairuz::lex::FileManager fm(options.input_path);
         fairuz::diagnostic::set_source(&fm);
-        fairuz::parser::Parser parser(&fm, options.dump_ast
-                ? fairuz::parser::BodyParsing::Eager : fairuz::parser::BodyParsing::Lazy);
+        fairuz::parser::Parser parser(&fm, options.dump_ast ? fairuz::parser::BodyParsing::Eager : fairuz::parser::BodyParsing::Lazy);
         fairuz::Array<fairuz::AST::StmtPtr> stmts = parser.parse_program();
 
         if (fairuz::diagnostic::has_errors()) {
@@ -350,19 +352,31 @@ int run_main(int argc, char** argv)
         if (options.dump_ast)
             printAst(stmts);
 
-        fairuz::runtime::Compiler compiler;
-        fairuz::runtime::Chunk* chunk = compiler.compile(stmts);
+        fairuz::runtime::Compiler compiler(fairuz::diagnostic::engine.source());
+        auto compile_result = compiler.compile(stmts);
+        if (compile_result.has_error())
+        {
+            fairuz::runtime::ErrorRenderer().report(compile_result.error());
+            fairuz::diagnostic::dump();
+            return static_cast<int>(ExitCode::DataError);
+        }
+        auto chunk = compile_result.value();
         if (!chunk) {
             std::cerr << "Compilation failed: no bytecode was produced\n";
             return static_cast<int>(ExitCode::Software);
         }
+        chunk = compile_result.value();
         if (fairuz::diagnostic::has_errors())
             return static_cast<int>(ExitCode::DataError);
         chunk->source_path = options.input_path;
 
-        if (options.check_only && !fairuz::runtime::Compiler::compile_all(chunk)) {
-            fairuz::diagnostic::dump();
-            return static_cast<int>(ExitCode::DataError);
+        if (options.check_only) {
+            auto validation = fairuz::runtime::Compiler::compile_all(chunk);
+            if (validation.has_error()) {
+                fairuz::runtime::ErrorRenderer().report(validation.error());
+                fairuz::diagnostic::dump();
+                return static_cast<int>(ExitCode::DataError);
+            }
         }
 
         if (options.dump_bytecode)
@@ -373,7 +387,15 @@ int run_main(int argc, char** argv)
 
         fairuz::runtime::VM vm;
         auto const start = std::chrono::steady_clock::now();
-        vm.run(chunk, &compiler);
+        auto result = vm.run(chunk, &compiler);
+        if (result.has_error())
+        {
+            fairuz::runtime::ErrorRenderer render;
+            render.report(result.error());
+            fairuz::diagnostic::dump();
+            return static_cast<int>(result.error().kind == fairuz::ErrorCategory::INTERNAL
+                    ? ExitCode::Software : ExitCode::DataError);
+        }
         auto const end = std::chrono::steady_clock::now();
 
         if (options.print_time) {
@@ -388,9 +410,10 @@ int run_main(int argc, char** argv)
         return static_cast<int>(ExitCode::DataError);
     } catch (fairuz::FileError const& ex) {
         auto code = ex.kind() == fairuz::FileError::Kind::NotFound ? fairuz::ErrorCode::FILE_NOT_FOUND
-            : ex.kind() == fairuz::FileError::Kind::Read ? fairuz::ErrorCode::READ_ERROR : fairuz::ErrorCode::FILE_NOT_OPEN;
-        fairuz::diagnostic::SourceScope source_scope(fairuz::diagnostic::SourcePtr {});
-        fairuz::diagnostic::report(fairuz::diagnostic::Severity::ERROR, {}, code, ex.path());
+            : ex.kind() == fairuz::FileError::Kind::Read           ? fairuz::ErrorCode::READ_ERROR
+                                                                   : fairuz::ErrorCode::FILE_NOT_OPEN;
+        fairuz::diagnostic::SourceScope source_scope(fairuz::diagnostic::SourcePtr { });
+        fairuz::diagnostic::report(fairuz::diagnostic::Severity::ERROR, { }, code, ex.path());
         fairuz::diagnostic::dump();
         return static_cast<int>(ExitCode::DataError);
     } catch (std::bad_alloc const&) {
