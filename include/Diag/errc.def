@@ -154,6 +154,8 @@ FAIRUZ_ERROR(ARRAY_CAPACITY_EXCEEDED, 0x0702, CONTAINER, "Requested array capaci
 FAIRUZ_ERROR(ARRAY_OUT_OF_BOUNDS, 0x0703, CONTAINER, "Array index is out of bounds")
 FAIRUZ_ERROR(STRING_SLICE_START_OOB, 0x0704, CONTAINER, "String slice start index is out of range")
 FAIRUZ_ERROR(STRING_SLICE_END_BEFORE_START, 0x0705, CONTAINER, "String slice end must not precede start")
+FAIRUZ_ERROR(SLICE_TYPE_ERROR, 0x0706, CONTAINER, "slice expects a container")
+FAIRUZ_ERROR(LEN_ARG_COUNT, 0x0707, BUILTIN, "len expects exactly one argument")
 FAIRUZ_ERROR(ALLOC_FAILED, 0x0800, INTERNAL, "Memory allocation failed")
 FAIRUZ_ERROR(ARENA_EXHAUSTED, 0x0801, INTERNAL, "Arena allocator exhausted")
 FAIRUZ_ERROR(INTERNAL_ERROR, 0x0802, INTERNAL, "Internal compiler error")
