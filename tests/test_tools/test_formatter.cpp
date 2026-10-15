@@ -76,21 +76,39 @@ TEST(Formatter, PreservesInlineBlockBodies)
 
 TEST(Formatter, PreservesCommentsBlankLinesAndCommentOnlyFiles)
 {
-    expect_format("# header\n\nدالة مثال():\n  # body\n  ارجع 1 # inline\n\n# footer\n",
-        "# header\n\nدالة مثال():\n    # body\n    ارجع 1  # inline\n\n# footer\n");
+    expect_format("# header\n"
+                  "\n"
+                  "دالة مثال():\n"
+                  "  # body\n"
+                  "  ارجع 1 # inline\n"
+                  "\n"
+                  "# footer\n",
+        "# header\n"
+        "\n"
+        "دالة مثال():\n"
+        "    # body\n"
+        "    ارجع 1  # inline\n"
+        "\n"
+        "# footer\n");
     expect_format("# only a comment", "# only a comment\n");
     expect_format("", "");
-    expect_format(" \n\t\n", "");
+    expect_format(" \n"
+                  "\t\n",
+        "");
 }
 
 TEST(Formatter, PreservesRawLiteralsAndGrouping)
 {
     expect_format(
-        "ص:=0.0000001\nك:=100000000000.0\n"
-        "ن:=0xFF\nس:='\\u0645 # \\t \\' \\\\'\n"
+        "ص:=0.0000001\n"
+        "ك:=100000000000.0\n"
+        "ن:=0xFF\n"
+        "س:='\\u0645 # \\t \\' \\\\'\n"
         "اكتب((1+2)*3, 1-(2-3), -(-2))\n",
-        "ص := 0.0000001\nك := 100000000000.0\n"
-        "ن := 0xFF\nس := '\\u0645 # \\t \\' \\\\'\n"
+        "ص := 0.0000001\n"
+        "ك := 100000000000.0\n"
+        "ن := 0xFF\n"
+        "س := '\\u0645 # \\t \\' \\\\'\n"
         "اكتب((1 + 2) * 3، 1 - (2 - 3)، -(-2))\n");
 }
 
@@ -99,7 +117,9 @@ TEST(Formatter, PreservesLongArabicStringsAndExpressionsWithoutUnsafeWrapping)
     std::string value;
     for (int i = 0; i < 80; ++i)
         value += "مرحباً";
-    auto source = "دالة مثال():\n    ارجع \"" + value + "\"\n";
+    auto source = "دالة مثال():\n"
+                  "    ارجع \""
+        + value + "\"\n";
     expect_format(source, source);
     std::string expression = "ن := 1";
     for (int i = 0; i < 80; ++i)
@@ -190,22 +210,53 @@ TEST(Formatter, CountsUnicodeCharactersInsteadOfUtf8BytesForLineWidth)
 TEST(Formatter, FormatsMultilineContainersAndNestedComments)
 {
     expect_format(
-        "دالة مثال():\n  ن:={\n'س':[\n1, # first\n# second\n2\n],\n'ع':3\n}\n  ارجع ن\n",
-        "دالة مثال():\n    ن := {\n        'س': [\n            1،  # first\n            # second\n            2\n        ]،\n        'ع': 3\n    }\n    ارجع ن\n");
+        "دالة مثال():\n"
+        "  ن:={\n"
+        "'س':[\n"
+        "1, # first\n"
+        "# second\n"
+        "2\n"
+        "],\n"
+        "'ع':3\n"
+        "}\n"
+        "  ارجع ن\n",
+        "دالة مثال():\n"
+        "    ن := {\n"
+        "        'س': [\n"
+        "            1،  # first\n"
+        "            # second\n"
+        "            2\n"
+        "        ]،\n"
+        "        'ع': 3\n"
+        "    }\n"
+        "    ارجع ن\n");
 }
 
 TEST(Formatter, PreservesClassesFieldsAndMethodCalls)
 {
-    expect_format("نوع مثال:\n  دالة بداية(ن):\n    هذا.قيمة:=ن\n  دالة خذ():\n    ارجع هذا.قيمة\n",
-        "نوع مثال:\n    دالة بداية(ن):\n        هذا.قيمة := ن\n    دالة خذ():\n        ارجع هذا.قيمة\n");
+    expect_format("نوع مثال:\n"
+                  "  دالة بداية(ن):\n"
+                  "    هذا.قيمة:=ن\n"
+                  "  دالة خذ():\n"
+                  "    ارجع هذا.قيمة\n",
+        "نوع مثال:\n"
+        "    دالة بداية(ن):\n"
+        "        هذا.قيمة := ن\n"
+        "    دالة خذ():\n"
+        "        ارجع هذا.قيمة\n");
 }
 
 TEST(Formatter, PreservesCRLFAndNormalizesTabs)
 {
-    expect_format("اذا صحيح:\r\n\tاكتب( 1,2 )  # hi\r\n",
-        "اذا صحيح:\r\n    اكتب(1، 2)  # hi\r\n");
+    expect_format("اذا صحيح:\r\n"
+                  "\tاكتب( 1,2 )  # hi\r\n",
+        "اذا صحيح:\r\n"
+        "    اكتب(1، 2)  # hi\r\n");
     expect_format("ن:=1", "ن := 1\n");
-    expect_format("اذا صحيح:\n  ن:=1", "اذا صحيح:\n    ن := 1\n");
+    expect_format("اذا صحيح:\n"
+                  "  ن:=1",
+        "اذا صحيح:\n"
+        "    ن := 1\n");
 }
 
 TEST(Formatter, FormatsEveryLibraryAndExampleIdempotently)
