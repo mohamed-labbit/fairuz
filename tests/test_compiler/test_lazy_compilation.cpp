@@ -12,6 +12,7 @@
 #include "Interpreter/vm.hpp"
 #include "Parser/parser.hpp"
 #include "test_common.h"
+#include "test_source_program.hpp"
 
 #include <gtest/gtest.h>
 
@@ -31,27 +32,29 @@ protected:
         diagnostic::set_source(nullptr);
     }
 
-    Chunk* compile(Array<StmtPtr> const& statements)
+    Chunk* compile(std::string const& text) { return test_source::compile(text); }
+    Chunk* compile(std::initializer_list<std::string> text)
     {
-        // Intentionally destroy the original compiler before execution.
-        Chunk* chunk = Compiler().compile(statements);
-        EXPECT_FALSE(diagnostic::has_errors());
-        return chunk;
+        return compile(test_source::join(Array<std::string>(text)));
     }
 };
 
 TEST_F(LazyCompilation, UnusedBodiesStayEmptyWhileDefinitionsAreBound)
 {
-    auto* fn = func_def(ident("unused"), { }, blk({ break_stmt() }));
+    auto fn = "دالة غير_مستخدم():\n"
+              "    اخرج\n";
     Chunk* main = compile({ fn });
     ASSERT_EQ(main->functions.size(), 1u);
     Chunk* body = main->functions[0];
     ASSERT_TRUE(body->deferred_body);
     EXPECT_TRUE(body->code.empty());
     VM vm;
-    EXPECT_NO_THROW(vm.run(main));
-    ASSERT_NE(vm.m_root_environment.find("unused"), nullptr);
-    EXPECT_TRUE(vm.m_root_environment.find("unused")->is_function());
+    run_success(vm.run(main));
+    Chunk* lookup = compile("دالة ابحث():\n"
+                            "    ارجع غير_مستخدم\n"
+                            "ابحث()\n");
+    auto binding = run_success(vm.run(lookup));
+    EXPECT_TRUE(binding.is_function());
     EXPECT_TRUE(body->deferred_body);
     EXPECT_TRUE(body->code.empty());
     EXPECT_FALSE(diagnostic::has_errors());
@@ -59,9 +62,9 @@ TEST_F(LazyCompilation, UnusedBodiesStayEmptyWhileDefinitionsAreBound)
 
 TEST_F(LazyCompilation, FirstInlineCacheCallCompilesOnceAndBindsParameters)
 {
-    auto* fn = func_def(ident("add"), { ident("x"), ident("y") },
-        blk({ return_stmt(binary(ident("x"), ident("y"), Expr::Kind::OP_ADD)) }));
-    Chunk* main = compile({ fn, expr_stmt(call_expr(ident("add"), { lit_int(20), lit_int(22) })) });
+    auto fn = "دالة اجمع(س, ص):\n"
+              "    ارجع (س + ص)\n";
+    Chunk* main = compile({ fn, "اجمع(20, 22)\n" });
     Chunk* body = main->functions[0];
     EXPECT_TRUE(body->code.empty());
     EXPECT_EQ(body->arity, 2);
@@ -71,28 +74,25 @@ TEST_F(LazyCompilation, FirstInlineCacheCallCompilesOnceAndBindsParameters)
     ASSERT_TRUE(has_ic_call);
 
     VM vm;
-    EXPECT_EQ(vm.run(main).as_int(), 42);
+    EXPECT_EQ(run_success(vm.run(main)).as_int(), 42);
     EXPECT_FALSE(body->deferred_body);
     EXPECT_FALSE(body->code.empty());
     u32* code = body->code.data();
-    EXPECT_EQ(vm.run(main).as_int(), 42);
+    EXPECT_EQ(run_success(vm.run(main)).as_int(), 42);
     EXPECT_EQ(body->code.data(), code);
 }
 
 TEST_F(LazyCompilation, FirstTailCallCompilesCalleeAndSupportsMutualRecursion)
 {
     auto recursive = [](char const* name, char const* other) {
-        return func_def(ident(name), { ident("n") }, blk({
-                                                         if_stmt(binary(ident("n"), lit_int(0), Expr::Kind::OP_EQ), return_stmt(lit_int(42))),
-                                                         return_stmt(call_expr(ident(other), {
-                                                                                                 binary(ident("n"), lit_int(1), Expr::Kind::OP_SUB),
-                                                                                             })),
-                                                     }));
+        return (std::string("دالة ") + name + "(ن):\n" + test_source::indent((std::string("اذا (ن = 0):\n"
+                                                                                          "    ارجع 42\n")
+                    + (std::string("ارجع") + (std::string(" ") + (std::string(other) + "((ن - 1))")) + "\n"))));
     };
-    Chunk* main = compile({ recursive("left", "right"), recursive("right", "left"),
-        expr_stmt(call_expr(ident("left"), { lit_int(1000) })) });
+    Chunk* main = compile({ recursive("يسار", "يمين"), recursive("يمين", "يسار"),
+        "يسار(1000)\n" });
     VM vm;
-    EXPECT_EQ(vm.run(main).as_int(), 42);
+    EXPECT_EQ(run_success(vm.run(main)).as_int(), 42);
     for (Chunk* body : main->functions) {
         EXPECT_FALSE(body->deferred_body);
         bool has_tail_call = false;
@@ -105,15 +105,15 @@ TEST_F(LazyCompilation, FirstTailCallCompilesCalleeAndSupportsMutualRecursion)
 TEST_F(LazyCompilation, AliasesKeepDistinctBodiesWithTheSameName)
 {
     Chunk* main = compile({
-        func_def(ident("value"), { }, return_stmt(lit_int(10))),
-        decl_stmt("old", ident("value")),
-        func_def(ident("value"), { }, return_stmt(lit_int(32))),
-        expr_stmt(call_expr(ident("طبيعي"), {
-                                                binary(call_expr(ident("old")), call_expr(ident("value")), Expr::Kind::OP_ADD),
-                                            })),
+        "دالة قيمة():\n"
+        "    ارجع 10\n",
+        "قديم := قيمة\n",
+        "دالة قيمة():\n"
+        "    ارجع 32\n",
+        "طبيعي((قديم() + قيمة()))\n",
     });
     VM vm;
-    EXPECT_EQ(vm.run(main).as_int(), 42);
+    EXPECT_EQ(run_success(vm.run(main)).as_int(), 42);
     for (Chunk* body : main->functions)
         EXPECT_FALSE(body->deferred_body);
 }
@@ -121,32 +121,29 @@ TEST_F(LazyCompilation, AliasesKeepDistinctBodiesWithTheSameName)
 TEST_F(LazyCompilation, NativeCallbackCompilesOnFirstInvocation)
 {
     Chunk* main = compile({
-        func_def(ident("callback"), { ident("x") }, return_stmt(ident("x"))),
-        expr_stmt(call_expr(ident("__استدعاء__"), { ident("callback"), list_expr({ lit_int(42) }) })),
+        "دالة استجابة(س):\n"
+        "    ارجع س\n",
+        "__استدعاء__(استجابة, [42])\n",
     });
     VM vm;
-    EXPECT_EQ(vm.run(main).as_int(), 42);
+    EXPECT_EQ(run_success(vm.run(main)).as_int(), 42);
     EXPECT_FALSE(main->functions[0]->deferred_body);
 }
 
 TEST_F(LazyCompilation, OnlyInvokedMethodsCompileIncludingConstructors)
 {
-    Chunk* main = compile({
-        class_def(ident("Box"), { ident("value") }, {
-                                                        func_def(ident("بداية"), { ident("value") }, blk({
-                                                                                                         expr_stmt(assign_expr(ident("value"), ident("value"))),
-                                                                                                     })),
-                                                        func_def(ident("get"), { }, return_stmt(ident("value"))),
-                                                        func_def(ident("unused"), { }, blk({ break_stmt() })),
-                                                    }),
-        decl_stmt("box", call_expr(ident("Box"), { lit_int(42) })),
-        expr_stmt(call_expr(get_expr(ident("box"), ident("get")))),
-    });
+    Chunk* main = compile("نوع علبة:\n"
+                          "    دالة بداية(قيمة): .قيمة := قيمة\n"
+                          "    دالة احصل(): ارجع هذا.قيمة\n"
+                          "    دالة غير_مستخدم(): اخرج\n"
+                          "العلبة := علبة(42)\n"
+                          "العلبة.احصل()\n");
     ASSERT_EQ(main->functions.size(), 3u);
     for (Chunk* body : main->functions)
         EXPECT_TRUE(body->code.empty());
     VM vm;
-    Value result = vm.run(main);
+    auto result_or_error = run_success(vm.run(main));
+    Value result = result_or_error;
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 42);
     EXPECT_FALSE(main->functions[0]->deferred_body);
@@ -158,14 +155,14 @@ TEST_F(LazyCompilation, OnlyInvokedMethodsCompileIncludingConstructors)
 TEST_F(LazyCompilation, FailedCompilationLeavesStubIntactForRetry)
 {
     Chunk* main = compile({
-        func_def(ident("bad"), { }, blk({ expr_stmt(lit_str("before error")), break_stmt() })),
-        call_stmt("bad"),
+        "دالة معيب():\n"
+        "    \"before error\"\n"
+        "    اخرج\n",
+        "معيب()\n",
     });
     VM vm;
     for (int attempt = 0; attempt < 2; ++attempt) {
-        diagnostic::reset();
-        EXPECT_THROW(vm.run(main), RuntimeHalt);
-        EXPECT_TRUE(diagnostic::has_errors());
+        run_failed(vm.run(main));
         EXPECT_TRUE(main->functions[0]->deferred_body);
         EXPECT_TRUE(main->functions[0]->code.empty());
         EXPECT_TRUE(main->functions[0]->constants.empty());
@@ -174,27 +171,25 @@ TEST_F(LazyCompilation, FailedCompilationLeavesStubIntactForRetry)
 
 TEST_F(LazyCompilation, DeferredErrorsRetainSourceAfterParserDestruction)
 {
-    Chunk* main;
-    {
-        lex::FileManager source;
-        source.buffer() = "دالة خطأ():\n    اخرج\nخطأ()\n";
-        diagnostic::SourceScope source_scope(&source);
-        parser::Parser parser(&source);
-        main = compile(parser.parse_program());
-    }
+    Chunk* main = compile("دالة خطأ():\n"
+                          "    اخرج\n"
+                          "خطأ()\n");
     VM vm;
-    EXPECT_THROW(vm.run(main), RuntimeHalt);
-    auto json = diagnostic::engine.to_json();
-    EXPECT_NE(json.find("اخرج"), std::string::npos);
-    EXPECT_NE(json.find("\"line\":2"), std::string::npos);
+    auto error = run_failed(vm.run(main));
+    ASSERT_NE(error.source, nullptr);
+    EXPECT_NE(error.source->line(2).find("اخرج"), std::string::npos);
+    EXPECT_EQ(error.loc.line, 2u);
+    EXPECT_FALSE(diagnostic::has_errors());
 }
 
 TEST_F(LazyCompilation, ExplicitValidationCompilesUnusedBodiesWithoutRunningThem)
 {
     Chunk* main = compile({
-        func_def(ident("unused"), { }, blk({ call_stmt("missing"), return_stmt(lit_int(42)) })),
+        "دالة غير_مستخدم():\n"
+        "    مفقود()\n"
+        "    ارجع 42\n",
     });
-    EXPECT_TRUE(Compiler::compile_all(main));
+    EXPECT_FALSE(Compiler::compile_all(main).has_error());
     EXPECT_FALSE(main->functions[0]->deferred_body);
     EXPECT_FALSE(main->functions[0]->code.empty());
     EXPECT_FALSE(diagnostic::has_errors());
