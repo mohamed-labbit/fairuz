@@ -15,10 +15,13 @@ demo.py
 build-llvm
 .plan.txt
 build_fmt.sh
-fib.fa
+fib.ف
 .zed/
 *.vsix
+node_modules/
 INVARIANTS.md
 format_mylang.sh
 build-codex/
+site/
+site_ar/
 .gpt.txt
