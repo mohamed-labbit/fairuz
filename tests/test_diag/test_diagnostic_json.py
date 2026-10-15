@@ -43,4 +43,21 @@ with tempfile.TemporaryDirectory(prefix='fairuz-diagnostic-json-') as directory:
         diagnostics = json.loads(result.stderr.decode('utf-8'))
         assert any(item['errorCode'] == name for item in diagnostics), diagnostics
         assert all(item['type'] and item['errorCode'] for item in diagnostics)
-print(f'Parsed {len(records)} diagnostic records and three CLI failures successfully.')
+    # Returned compiler/runtime errors are reported once by the CLI boundary.
+    for source, name, options in [
+        ('اخرج\n', 'BREAK_OUTSIDE_LOOP', []),
+        ('دالة خطأ():\n    اخرج\nخطأ()\n', 'BREAK_OUTSIDE_LOOP', []),
+        ('دالة خطأ():\n    اخرج\n', 'BREAK_OUTSIDE_LOOP', ['--check']),
+        ('تاكد خطا، "retained detail"\nاكتب("continued")\n', 'ASSERT_FAILED', []),
+    ]:
+        program.write_text(source, encoding='utf-8')
+        result = subprocess.run([cli, '--diagnostics=json', *options, str(program)], capture_output=True)
+        assert result.returncode == 65, result
+        assert not result.stdout, result.stdout
+        diagnostics = json.loads(result.stderr.decode('utf-8'))
+        assert len(diagnostics) == 1, diagnostics
+        assert diagnostics[0]['errorCode'] == name, diagnostics
+        assert diagnostics[0]['path'] == str(program), diagnostics
+        if name == 'ASSERT_FAILED':
+            assert 'retained detail' in diagnostics[0]['code'], diagnostics
+print(f'Parsed {len(records)} diagnostic records and seven CLI failures successfully.')
