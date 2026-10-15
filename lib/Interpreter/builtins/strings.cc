@@ -15,12 +15,13 @@
 
 namespace fairuz::runtime {
 
-Value VM::join(int argc, Value* argv)
+VM::RuntimeResult VM::join(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr)
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT,
+            "got " + std::to_string(argc));
     if (!argv[0].is_list() || !argv[1].is_string())
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
 
     ObjList* list = argv[0].as_list();
     StringRef delim = argv[1].as_string()->str;
@@ -36,22 +37,21 @@ Value VM::join(int argc, Value* argv)
     return m_gc.make_string(out);
 }
 
-Value VM::substr(int argc, Value* argv)
+VM::RuntimeResult VM::substr(int argc, Value* argv)
 {
-    if (argc != 3 || argv == nullptr) {
-        raise_error(ErrorCode::SUBSTR_ARG_COUNT, "got " + std::to_string(argc));
-        return Value::nil();
-    }
+    if (argc != 3 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::SUBSTR_ARG_COUNT,
+            "got " + std::to_string(argc));
 
     if (UNLIKELY(!argv[0].is_string() || !argv[1].is_int() || !argv[2].is_int()))
-        raise_error(ErrorCode::NATIVE_TYPE_ERROR,
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR,
             "substr expects (string, integer, integer)");
 
     StringRef str = argv[0].as_string()->str;
     i64 start_cp = argv[1].as_int();
     i64 end_cp = argv[2].as_int();
     if (start_cp < 0 || end_cp < start_cp)
-        raise_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
+        return raise_runtime_error(ErrorCode::INDEX_OUT_OF_BOUNDS);
 
     size_t byte_pos = 0;
     i64 cp_pos = 0;
@@ -78,12 +78,13 @@ Value VM::substr(int argc, Value* argv)
     return m_gc.make_string(str.slice(start_byte, end_byte));
 }
 
-Value VM::contains(int argc, Value* argv)
+VM::RuntimeResult VM::contains(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr)
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT,
+            "got " + std::to_string(argc));
     if (!argv[0].is_string() || !argv[1].is_string())
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
 
     StringRef haystack = argv[0].as_string()->str;
     StringRef needle = argv[1].as_string()->str;
@@ -93,12 +94,13 @@ Value VM::contains(int argc, Value* argv)
     return Value::from_bool(haystack.find(needle));
 }
 
-Value VM::trim(int argc, Value* argv)
+VM::RuntimeResult VM::trim(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr)
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT,
+            "got " + std::to_string(argc));
     if (!argv[0].is_string())
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
 
     StringRef str = argv[0].as_string()->str;
     size_t start = 0;
@@ -116,12 +118,13 @@ Value VM::trim(int argc, Value* argv)
     return m_gc.make_string(str.substr_copy(start, end));
 }
 
-Value VM::split(int argc, Value* argv)
+VM::RuntimeResult VM::split(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr)
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT,
+            "got " + std::to_string(argc));
     if (!argv[0].is_string() || !argv[1].is_string())
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
 
     StringRef src = argv[0].as_string()->str;
     StringRef delim = argv[1].as_string()->str;
