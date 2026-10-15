@@ -13,6 +13,7 @@
 
 #include "Diag/diagnostic.hpp"
 #include "Support/array.hpp"
+#include "Support/string.hpp"
 #include "obj_header.hpp"
 #include "object.hpp"
 #include "value.hpp"
@@ -74,7 +75,7 @@ public:
         Array<Chunk*, /*_Alloc=*/GarbageCollector> vtable);
     ObjInstance* make_obj_instance(ObjClass* klass);
     ObjFileHandle* make_obj_file_handle(FILE* fp);
-    ObjModule* make_obj_module(std::string name, std::string path, GlobalEnvironment* globals);
+    ObjModule* make_obj_module(StringRef name, StringRef path, GlobalEnvironment* globals);
 
     /* --- allocator api --- */
     template<typename T>
@@ -111,9 +112,9 @@ public:
     Value make_native(NativeFn fn, ObjString* name, int arity) { return Value::from_native(make_obj_native(fn, name, arity)); }
     Value make_instance(ObjClass* klass) { return Value::from_instance(make_obj_instance(klass)); }
     Value make_file_handle(FILE* fp) { return Value::from_file_handle(make_obj_file_handle(fp)); }
-    Value make_module(std::string name, std::string path, GlobalEnvironment* globals)
+    Value make_module(StringRef name, StringRef path, GlobalEnvironment* globals)
     {
-        return Value::from_module(make_obj_module(std::move(name), std::move(path), globals));
+        return Value::from_module(make_obj_module(name, path, globals));
     }
     Value make_class(StringRef name, StringArr fields, StringArr methods,
         Array<Chunk*, /*_Alloc=*/GarbageCollector> vtable)
