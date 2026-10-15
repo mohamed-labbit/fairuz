@@ -224,6 +224,9 @@ if(BUILD_TESTS)
 
     enable_testing()
     add_test(NAME AllTestsInMain COMMAND fairuz_tests)
+    add_test(NAME AdversarialBytecodeOutput COMMAND fairuz_tests
+        --gtest_filter=Semantics/AdversarialInterpreter.PreservesSemanticsAndReportsErrorsWithoutCrashing/SmallIntegerSmoke
+        --dump-bytecode)
 
     # An independent JSON parser catches serialization defects, including bad UTF-8.
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
