@@ -111,7 +111,8 @@ TEST_F(SyntaxHighlighterTest, ClassifiesModuleMemberAndAliasImports)
 
 TEST_F(SyntaxHighlighterTest, KeepsLexicalHighlightingForIncompleteEdits)
 {
-    StringRef source = "دالة غير_مكتملة(القيمة:\n    ارجع \"نص";
+    StringRef source = "دالة غير_مكتملة(القيمة:\n"
+                       "    ارجع \"نص";
     Result result;
     EXPECT_NO_THROW(result = Highlighter().highlight(source));
     EXPECT_FALSE(result.ast_valid);
