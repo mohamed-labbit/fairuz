@@ -24,8 +24,9 @@ namespace fairuz {
 
 class [[nodiscard]] Error {
 public:
-    explicit Error(ErrorCode code)
+    explicit Error(ErrorCode code, SourceLocation loc)
         : m_code(code)
+        , m_loc(loc)
     {
     }
 
@@ -41,12 +42,16 @@ public:
 
     StringRef get_error_message() const { return error_message_for(m_code); }
     ErrorCode get_code() const { return m_code; }
+    SourceLocation get_location() const { return m_loc; }
 
     diagnostic::DiagnosticEngine::DiagnosticId diag_id() const { return m_diag_id; }
     void set_diag_id(diagnostic::DiagnosticEngine::DiagnosticId id) { m_diag_id = id; }
 
+    std::string str() const { return get_error_message().data(); }
+
 private:
     ErrorCode m_code { 0xFFFF };
+    SourceLocation m_loc;
     diagnostic::DiagnosticEngine::DiagnosticId m_diag_id { diagnostic::DiagnosticEngine::INVALID_ID };
 }; // class Error
 
@@ -156,7 +161,7 @@ private:
 inline Error report_error(ErrorCode errc, SourceLocation loc, diagnostic::Severity sv = diagnostic::Severity::ERROR)
 {
     auto id = diagnostic::report(sv, loc, errc);
-    Error err { Error { errc } };
+    Error err { Error { errc, loc } };
     err.set_diag_id(id);
     return err;
 }
