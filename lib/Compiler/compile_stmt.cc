@@ -38,6 +38,7 @@ Compiler::CompileStmtResult Compiler::compile_stmt(AST::StmtPtr s)
     case AST::Stmt::Kind::INVALID:
         return raise_compile_error(ErrorCode::INVALID_STATEMENT_NODE, s->get_location());
     }
+    return raise_compile_error(ErrorCode::INVALID_STATEMENT_NODE, s->get_location());
 }
 
 Compiler::CompileStmtResult Compiler::compile_expr_stmt(AST::ExprStmt* s)
