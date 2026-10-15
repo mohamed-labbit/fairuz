@@ -140,6 +140,15 @@ public:
     // True if any ERROR or FATAL diagnostic has been recorded.
     bool has_errors() const noexcept { return m_error_count > 0; }
 
+    Diagnostic const* first_error() const noexcept
+    {
+        for (auto const& diagnostic : m_diagnostics) {
+            if (diagnostic.severity == Severity::ERROR || diagnostic.severity == Severity::FATAL)
+                return &diagnostic;
+        }
+        return nullptr;
+    }
+
     // True once ErrorCount_ hits LIMIT. The parser should stop recovery
     // attempts and return early when this is true — continuing will only
     // produce noise.
