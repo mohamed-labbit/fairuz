@@ -61,11 +61,11 @@ std::filesystem::path VM::resolve_module_path(std::string const& name) const
     return { };
 }
 
-ObjModule* VM::load_module(std::string const& name)
+ErrorOr<ObjModule*, RuntimeError> VM::load_module(StringRef const& name)
 {
-    std::filesystem::path path = resolve_module_path(name);
+    std::filesystem::path path = resolve_module_path(std::string(name.data(), name.len()));
     if (path.empty())
-        raise_error(ErrorCode::MODULE_NOT_FOUND, "'" + name + "'");
+        return raise_runtime_error(ErrorCode::MODULE_NOT_FOUND, "'" + std::string(name.data(), name.len()) + "'");
     std::string key = platform::utf8(path);
     if (auto found = m_module_cache.find(key); found != m_module_cache.end())
         return found->second;
@@ -75,7 +75,7 @@ ObjModule* VM::load_module(std::string const& name)
     GlobalEnvironment* globals_ptr = globals.get();
     m_module_environments.push_back(std::move(globals));
 
-    ObjModule* module = m_gc.make_obj_module(name, key, globals_ptr);
+    ObjModule* module = m_gc.make_obj_module(name, key.c_str(), globals_ptr);
     m_module_cache.emplace(key, module); // publish first so import cycles terminate
 
     std::unique_ptr<lex::FileManager> source;
@@ -85,20 +85,21 @@ ObjModule* VM::load_module(std::string const& name)
         auto code = error.kind() == FileError::Kind::NotFound ? ErrorCode::FILE_NOT_FOUND
             : error.kind() == FileError::Kind::Read           ? ErrorCode::READ_ERROR
                                                               : ErrorCode::FILE_NOT_OPEN;
-        raise_error(code, error.path());
+        return raise_runtime_error(code, error.path());
     }
     diagnostic::SourceScope source_scope(source.get());
     parser::Parser parser(source.get());
     Array<AST::StmtPtr> statements = parser.parse_program();
-    if (diagnostic::has_errors())
-        halt();
+    if (auto const* error = diagnostic::engine.first_error())
+        return RuntimeError(error->err_code, error->source, error->src_loc);
 
-    Compiler compiler;
-    Chunk* imported_chunk = compiler.compile(statements);
-    if (imported_chunk == nullptr || diagnostic::has_errors())
-        halt();
+    Compiler compiler(diagnostic::engine.source());
+    auto compile_result = compiler.compile(statements);
+    if (compile_result.has_error())
+        return compile_result.error();
+    Chunk* imported_chunk = compile_result.value();
     imported_chunk->source_path = key;
-    imported_chunk->name = StringRef(module->name.data(), module->name.size());
+    imported_chunk->name = StringRef(module->name.data(), module->name.len());
     module->chunk = imported_chunk;
     m_module_sources.push_back(std::move(source));
     return module;
