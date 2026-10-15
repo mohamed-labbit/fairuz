@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Compiler/compiler.hpp"
+#include "Diag/runtime_error.hpp"
 #include "compile_macros.hpp"
 
 namespace fairuz::runtime {
@@ -33,20 +34,19 @@ static bool is_terminal_top_level_call(AST::StmtPtr s)
 
 } // anonymous namespace
 
-Chunk* Compiler::compile(Array<AST::StmtPtr> const& stmts)
+ErrorOr<Chunk*, RuntimeError> Compiler::compile(Array<AST::StmtPtr> const& stmts)
 {
     Chunk* chunk = make_chunk();
     chunk->name = "<main>";
-    chunk->source = diagnostic::engine.source();
-    if (chunk->source)
-        chunk->source_path = chunk->source->path;
+    chunk->source = m_source;
+    chunk->source_path = m_source->path;
 
     CompilerState state;
     state.chunk = chunk;
     state.func_name = "<main>";
     state.is_top_level = true;
     state.enclosing = nullptr;
-    m_current = &state;
+    CompilerStateGuard state_guard(m_current, &state);
 
     for (size_t i = 0; i < stmts.size(); i++) {
         AST::StmtPtr stmt = stmts[i];
@@ -56,17 +56,17 @@ Chunk* Compiler::compile(Array<AST::StmtPtr> const& stmts)
             RegMark mark(m_current);
             auto expr_result = compile_expr_impl(expr_stmt->expr);
             if (expr_result.has_error())
-                break;
+                return expr_result.error();
             auto src = any_reg(expr_result.value(), loc);
             if (src.has_error())
-                break;
+                return raise_compile_error(src.error().errc, src.error().loc);
             emit(make_ABC(OpCode::RETURN, src.value(), 1, 0), loc);
             state.is_dead = true;
             break;
         }
         auto stmt_result = compile_stmt(stmt);
         if (stmt_result.has_error())
-            break;
+            return stmt_result.error();
     }
 
     SourceLocation loc = { 1, 1, 0 };
@@ -77,25 +77,27 @@ Chunk* Compiler::compile(Array<AST::StmtPtr> const& stmts)
         emit(make_ABC(OpCode::RETURN_NIL, 0, 0, 0), loc);
 
     chunk->local_count = state.max_reg;
-    m_current = nullptr;
+    state_guard.restore();
 
     if (diagnostic::has_errors())
         diagnostic::dump();
     return chunk;
 }
 
-bool Compiler::compile_all(Chunk* chunk)
+ErrorOr<bool, RuntimeError> Compiler::compile_all(Chunk* chunk)
 {
-    if (!compile_function_deferred(chunk))
-        return false;
+    auto compile_result = compile_function_deferred(chunk);
+    if (compile_result.has_error())
+        return compile_result.error();
     for (Chunk* function : chunk->functions) {
-        if (!compile_all(function))
-            return false;
+        auto comp_all = compile_all(function);
+        if (comp_all.has_error())
+            return comp_all.error();
     }
     return true;
 }
 
-void Compiler::discharge(ExprResult const& r, reg_type dst, SourceLocation loc)
+void Compiler::discharge(ExprResult const& r, RegType dst, SourceLocation loc)
 {
     switch (r.kind) {
     case ExprResult::Kind::REG:
@@ -167,22 +169,24 @@ void Compiler::patch_jump_to(u32 instr_idx, u32 target)
     current_chunk()->code[instr_idx] = make_AsBx(instr_op(word), instr_A(word), offset);
 }
 
-ErrorOr<Compiler::reg_type> Compiler::any_reg(ExprResult const& r, SourceLocation loc)
+ErrorOr<Compiler::RegType, RuntimeError> Compiler::any_reg(ExprResult const& r, SourceLocation loc)
 {
     if (r.kind == ExprResult::Kind::REG)
         return r.reg_;
 
-    reg_type dst;
-    ALLOC_REG(&dst);
+    auto allocated = alloc_register();
+    if (allocated.has_error())
+        return raise_compile_error(allocated.error().errc, loc);
+    RegType dst = allocated.value();
     discharge(r, dst, loc);
     return dst;
 }
 
-ErrorOr<Compiler::reg_type> Compiler::alloc_register()
+ErrorOr<Compiler::RegType, RuntimeError> Compiler::alloc_register()
 {
     u8 reg = m_current->alloc_register();
     if (reg >= MAX_REGS)
-        return report_error(ErrorCode::TOO_MANY_REGISTERS, { });
+        return raise_compile_error(ErrorCode::TOO_MANY_REGISTERS, { });
     return reg;
 }
 
@@ -261,7 +265,7 @@ u32 Compiler::intern_string(StringRef const& str)
     return idx;
 }
 
-void Compiler::reserve_register(reg_type r)
+void Compiler::reserve_register(RegType r)
 {
     if (r >= m_current->next_reg) {
         m_current->next_reg = r + 1;
