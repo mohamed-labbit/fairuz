@@ -13,6 +13,7 @@
 #include "Support/integer.hpp"
 #include "test_parser/test_integer_oracle.hpp"
 
+#include "test_runtime.hpp"
 #include <gtest/gtest.h>
 #include <limits>
 #include <random>
@@ -236,10 +237,10 @@ TEST(IntegerContract, NativeIntegerConversionChecksBigIntegerRange)
 TEST(IntegerContract, NativeTextConversionPreservesLargeIntegers)
 {
     VM vm;
-    Value text = vm.m_gc.make_string("18446744073709551616000000000000000000");
-    EXPECT_EQ(integer::to_string(vm.number_from_text(1, &text)), "18446744073709551616000000000000000000");
-    text = vm.m_gc.make_string("-18446744073709551616000000000000000000");
-    EXPECT_EQ(integer::to_string(vm.number_from_text(1, &text)), "-18446744073709551616000000000000000000");
-    text = vm.m_gc.make_string("18446744073709551616000000000000000000x");
-    EXPECT_TRUE(vm.number_from_text(1, &text).is_nil());
+    Value text = vm.gc().make_string("18446744073709551616000000000000000000");
+    EXPECT_EQ(integer::to_string(run_success(vm.number_from_text(1, &text))), "18446744073709551616000000000000000000");
+    text = vm.gc().make_string("-18446744073709551616000000000000000000");
+    EXPECT_EQ(integer::to_string(run_success(vm.number_from_text(1, &text))), "-18446744073709551616000000000000000000");
+    text = vm.gc().make_string("18446744073709551616000000000000000000x");
+    EXPECT_EQ(run_failed(vm.number_from_text(1, &text)).errc, ErrorCode::RUNTIME_ERROR);
 }
