@@ -9,6 +9,7 @@
 // Builtin file manipulation utilities implementation.
 //===----------------------------------------------------------------------===//
 
+#include "Diag/errc.hpp"
 #include "Interpreter/vm.hpp"
 #include "Platform.hpp"
 #include "util.hpp"
@@ -45,29 +46,28 @@ std::filesystem::path unique_temporary_path(std::filesystem::path const& parent,
 
 } // anonymous namespace
 
-Value VM::input(int /*argc*/, Value* /*argv*/) // input takes no args for now
+VM::RuntimeResult VM::input(int /*argc*/, Value* /*argv*/) // input takes no args for now
 {
     // read until user hits ENTER
     StringRef ret_str = "";
     std::string help = ""; // getline only accepts std::string
 
     if (!std::getline(std::cin, help))
-        // don't know what error to report
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
 
     ret_str = help.data();
     Value ret = m_gc.make_string(ret_str);
     return ret;
 }
 
-Value VM::file_read_all(int argc, Value* argv)
+VM::RuntimeResult VM::file_read_all(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr || !argv[0].is_file_handle())
-        raise_error(ErrorCode::NATIVE_TYPE_ERROR,
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR,
             "read all expects an open file handle");
     ObjFileHandle* handle = argv[0].as_file_handle();
     if (!handle->is_open || handle->fp == nullptr)
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
     std::string output;
     char buffer[8192];
     for (;;) {
@@ -77,18 +77,18 @@ Value VM::file_read_all(int argc, Value* argv)
             break;
     }
     if (std::ferror(handle->fp))
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
     return m_gc.make_string(byte_string(output));
 }
 
-Value VM::file_read_line(int argc, Value* argv)
+VM::RuntimeResult VM::file_read_line(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr || !argv[0].is_file_handle())
-        raise_error(ErrorCode::NATIVE_TYPE_ERROR,
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR,
             "read line expects an open file handle");
     ObjFileHandle* handle = argv[0].as_file_handle();
     if (!handle->is_open || handle->fp == nullptr)
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
     std::string output;
     int ch = 0;
     while ((ch = std::fgetc(handle->fp)) != EOF) {
@@ -96,17 +96,20 @@ Value VM::file_read_line(int argc, Value* argv)
             break;
         output.push_back(static_cast<char>(ch));
     }
-    if (ch == EOF && output.empty())
+    if (ch == EOF && output.empty()) {
+        if (std::ferror(handle->fp))
+            return raise_runtime_error(ErrorCode::READ_ERROR);
         return Value::nil();
+    }
     if (!output.empty() && output.back() == '\r')
         output.pop_back();
     return m_gc.make_string(byte_string(output));
 }
 
-Value VM::file_write(int argc, Value* argv)
+VM::RuntimeResult VM::file_write(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_file_handle() || !argv[1].is_string())
-        raise_error(ErrorCode::NATIVE_TYPE_ERROR,
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR,
             "file write expects an open handle and string");
     ObjFileHandle* handle = argv[0].as_file_handle();
     if (!handle->is_open || handle->fp == nullptr)
@@ -116,25 +119,25 @@ Value VM::file_write(int argc, Value* argv)
     return Value::from_bool(written == text.len());
 }
 
-Value VM::file_flush(int argc, Value* argv)
+VM::RuntimeResult VM::file_flush(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr || !argv[0].is_file_handle())
-        raise_error(ErrorCode::NATIVE_TYPE_ERROR,
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR,
             "file flush expects an open handle");
     ObjFileHandle* handle = argv[0].as_file_handle();
     return Value::from_bool(handle->is_open && handle->fp != nullptr
         && std::fflush(handle->fp) == 0);
 }
 
-Value VM::file_open(int argc, Value* argv)
+VM::RuntimeResult VM::file_open(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_string() || !argv[1].is_string())
-        raise_error(ErrorCode::NATIVE_TYPE_ERROR,
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR,
             "file open expects path and mode strings");
     StringRef path = argv[0].as_string()->str;
     StringRef mode = argv[1].as_string()->str;
     if (::memchr(path.data(), '\0', path.len()) != nullptr)
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
     char const* native_mode = nullptr;
     if (mode == "قراءة" || mode == "اقرا")
         native_mode = "rb";
@@ -143,20 +146,20 @@ Value VM::file_open(int argc, Value* argv)
     else if (mode == "اضافة" || mode == "اضف")
         native_mode = "ab+";
     else
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
     FILE* file = platform::open_file(std::string_view(path.data(), path.len()), native_mode);
     return file == nullptr ? Value::nil() : m_gc.make_file_handle(file);
 }
 
-Value VM::file_read(int argc, Value* argv)
+VM::RuntimeResult VM::file_read(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_file_handle() || !argv[1].is_int()
         || argv[1].as_int() < 0)
-        raise_error(ErrorCode::NATIVE_TYPE_ERROR,
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR,
             "file read expects an open handle and non-negative byte count");
     ObjFileHandle* handle = argv[0].as_file_handle();
     if (!handle->is_open || handle->fp == nullptr)
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
     size_t requested = static_cast<size_t>(argv[1].as_int());
     std::string output(requested, '\0');
     size_t count = requested == 0 ? 0 : std::fread(output.data(), 1, requested, handle->fp);
@@ -164,19 +167,19 @@ Value VM::file_read(int argc, Value* argv)
     return m_gc.make_string(byte_string(output));
 }
 
-Value VM::path_delete(int argc, Value* argv)
+VM::RuntimeResult VM::path_delete(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr || !argv[0].is_string())
-        raise_error(ErrorCode::NATIVE_TYPE_ERROR, "path delete expects a string");
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR, "path delete expects a string");
     std::error_code error;
     auto count = std::filesystem::remove_all(platform::path(native_path(argv[0])), error);
     return Value::from_bool(!error && count > 0);
 }
 
-Value VM::path_glob(int argc, Value* argv)
+VM::RuntimeResult VM::path_glob(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_string() || !argv[1].is_bool())
-        raise_error(ErrorCode::NATIVE_TYPE_ERROR,
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR,
             "glob expects a pattern and recursive flag");
     std::filesystem::path pattern(platform::path(native_path(argv[0])));
     std::filesystem::path parent = pattern.parent_path();
@@ -199,63 +202,61 @@ Value VM::path_glob(int argc, Value* argv)
     return result;
 }
 
-Value VM::temp_file(int argc, Value* argv)
+VM::RuntimeResult VM::temp_file(int argc, Value* argv)
 {
     if (argc != 3 || argv == nullptr || !argv[0].is_string() || !argv[1].is_string()
         || !(argv[2].is_nil() || argv[2].is_string()))
-        raise_error(ErrorCode::NATIVE_TYPE_ERROR,
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR,
             "temporary file expects prefix, suffix, and optional directory");
     std::filesystem::path path = unique_temporary_path(temporary_parent(argv[2]),
         native_path(argv[0]), native_path(argv[1]));
     if (path.empty())
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
     std::ofstream created(path, std::ios::binary | std::ios::trunc);
     if (!created)
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
     created.close();
     Value result = m_gc.make_dict();
     result.as_dict()->set(m_gc.make_string("path"), m_gc.make_string(platform::utf8(path).c_str()));
     return result;
 }
 
-Value VM::temp_directory(int argc, Value* argv)
+VM::RuntimeResult VM::temp_directory(int argc, Value* argv)
 {
     if (argc != 2 || argv == nullptr || !argv[0].is_string()
         || !(argv[1].is_nil() || argv[1].is_string()))
-        raise_error(ErrorCode::NATIVE_TYPE_ERROR,
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR,
             "temporary directory expects prefix and optional parent");
     std::filesystem::path path = unique_temporary_path(temporary_parent(argv[1]),
         native_path(argv[0]), "");
     std::error_code error;
     if (path.empty() || !std::filesystem::create_directory(path, error) || error)
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
     return m_gc.make_string(platform::utf8(path).c_str());
 }
 
-Value VM::remove_tree(int argc, Value* argv)
+VM::RuntimeResult VM::remove_tree(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr || !argv[0].is_string())
-        raise_error(ErrorCode::NATIVE_TYPE_ERROR,
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR,
             "tree removal expects a path string");
     std::error_code error;
     std::filesystem::remove_all(platform::path(native_path(argv[0])), error);
     return Value::from_bool(!error);
 }
 
-Value VM::open(int argc, Value* argv)
+VM::RuntimeResult VM::open(int argc, Value* argv)
 {
-    if (argc != 2 || argv == nullptr) {
-        raise_error(ErrorCode::OPEN_ARG_COUNT);
-        return Value::nil();
-    }
+    if (argc != 2 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::OPEN_ARG_COUNT);
 
     if (UNLIKELY(!argv[0].is_string() || !argv[1].is_string()))
-        raise_error(ErrorCode::NATIVE_TYPE_ERROR,
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR,
             "open expects (string, string)");
 
     StringRef const& filename_arg = argv[0].as_string()->str;
     if (::memchr(filename_arg.data(), '\0', filename_arg.len()) != nullptr)
-        raise_error(ErrorCode::NATIVE_TYPE_ERROR,
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR,
             "file path contains a NUL byte");
 
     char const* filename = filename_arg.data();
@@ -269,43 +270,34 @@ Value VM::open(int argc, Value* argv)
     else if (mode_arg == "اكتب")
         fmode = "w";
     else
-        raise_error(ErrorCode::NATIVE_TYPE_ERROR);
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
 
     FILE* fp = platform::open_file(filename, fmode.data());
-    if (fp == NULL) {
-        raise_error(ErrorCode::NATIVE_TYPE_ERROR);
-        return Value::nil();
-    }
+    if (fp == NULL)
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
 
     return m_gc.make_file_handle(fp);
 }
 
-Value VM::append_file(int argc, Value* argv)
+VM::RuntimeResult VM::append_file(int argc, Value* argv)
 {
-    if (argc != 2 || argv == nullptr) {
-        raise_error(ErrorCode::APPEND_FILE_ARG_COUNT);
-        return Value::nil();
-    }
+    if (argc != 2 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::APPEND_FILE_ARG_COUNT);
 
     Value& file = argv[0];
     Value& content = argv[1];
 
-    if (!file.is_file_handle()) {
-        raise_error(ErrorCode::APPEND_FILE_TYPE_ERROR);
-        return Value::nil();
-    }
+    if (!file.is_file_handle())
+        return raise_runtime_error(ErrorCode::APPEND_FILE_TYPE_ERROR);
 
-    if (!content.is_string()) {
-        raise_error(ErrorCode::APPEND_FILE_TYPE_ERROR);
-        return Value::nil();
-    }
+    if (!content.is_string())
+        return raise_runtime_error(ErrorCode::APPEND_FILE_TYPE_ERROR);
 
     ObjFileHandle* file_handle = file.as_file_handle();
-    if (!file_handle->is_open || file_handle->fp == nullptr) {
-        raise_error(ErrorCode::APPEND_FILE_TYPE_ERROR,
+    if (!file_handle->is_open || file_handle->fp == nullptr)
+        return raise_runtime_error(ErrorCode::APPEND_FILE_TYPE_ERROR,
             "file handle is closed");
-        return Value::from_bool(false);
-    }
+
     ObjString* str_obj = content.as_string();
     FILE* fp = file_handle->fp;
     StringRef content_str = str_obj->str;
@@ -316,31 +308,26 @@ Value VM::append_file(int argc, Value* argv)
     size_t const written = std::fwrite(content_str.data(), 1, content_str.len(), fp);
     // ::fflush(fp);
 
-    if (written != content_str.len()) {
-        raise_error(ErrorCode::APPEND_FILE_FAILED, std::strerror(errno));
-        return Value::from_bool(false);
-    }
+    if (written != content_str.len())
+        return raise_runtime_error(ErrorCode::APPEND_FILE_FAILED,
+            std::strerror(errno));
 
     return Value::from_bool(true);
 }
 
-Value VM::close(int argc, Value* argv)
+VM::RuntimeResult VM::close(int argc, Value* argv)
 {
-    if (argc != 1 || argv == nullptr) {
-        raise_error(ErrorCode::CLOSE_ARG_COUNT);
-        return Value::from_bool(false);
-    }
+    if (argc != 1 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::CLOSE_ARG_COUNT);
 
-    if (!argv[0].is_file_handle()) {
-        raise_error(ErrorCode::CLOSE_TYPE_ERROR);
-        return Value::from_bool(false);
-    }
+    if (!argv[0].is_file_handle())
+        return raise_runtime_error(ErrorCode::CLOSE_TYPE_ERROR);
 
     ObjFileHandle* file_handle = argv[0].as_file_handle();
     if (file_handle->close())
         return Value::from_bool(true);
 
-    return Value::from_bool(false);
+    return raise_runtime_error(/**/ ErrorCode::CLOSE_TYPE_ERROR);
 }
 
 } // fairuz::runtime
