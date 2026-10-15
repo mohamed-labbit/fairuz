@@ -12,10 +12,10 @@
 #include "Parser/ast_printer.hpp"
 #include "Parser/parser.hpp"
 #include "test_config.h"
+#include "test_runtime.hpp"
 #include <filesystem>
 
 #include <gtest/gtest.h>
-#include <iostream>
 
 using namespace fairuz;
 using namespace fairuz::parser;
@@ -122,7 +122,8 @@ TEST_F(ParserTest, InlineMethodsPreserveClassAndStatementBoundaries)
 
 TEST_F(ParserTest, InlineMethodAtEndOfFilePreservesEnclosingDedents)
 {
-    for (char const* ending : { "", "\n", "\n\n" }) {
+    for (char const* ending : { "", "\n", "\n"
+                                          "\n" }) {
         SCOPED_TRACE(ending);
         diagnostic::reset();
         std::string text = "دالة مستقل():\n"
@@ -150,13 +151,22 @@ TEST_F(ParserTest, InlineMethodAtEndOfFilePreservesEnclosingDedents)
 TEST_F(ParserTest, InlineBlocksLeaveFollowingStatementsOutside)
 {
     for (char const* text : {
-             "اذا صحيح: س := 1\nص := 2\n",
-             "اذا خطا: س := 1\nغيره اذا صحيح: س := 2\nغيره: س := 3\nص := 2\n",
-             "طالما صحيح: اخرج\nص := 2\n",
-             "لكل س في [1]: اكمل\nص := 2\n",
-             "دالة مثال(): ارجع 1\nص := 2\n",
-             "نوع مثال: دالة قيمة(): ارجع 1\nص := 2\n",
-             "نوع مثال: دالة بداية(): .قيمة := 1\nص := 2\n" }) {
+             "اذا صحيح: س := 1\n"
+             "ص := 2\n",
+             "اذا خطا: س := 1\n"
+             "غيره اذا صحيح: س := 2\n"
+             "غيره: س := 3\n"
+             "ص := 2\n",
+             "طالما صحيح: اخرج\n"
+             "ص := 2\n",
+             "لكل س في [1]: اكمل\n"
+             "ص := 2\n",
+             "دالة مثال(): ارجع 1\n"
+             "ص := 2\n",
+             "نوع مثال: دالة قيمة(): ارجع 1\n"
+             "ص := 2\n",
+             "نوع مثال: دالة بداية(): .قيمة := 1\n"
+             "ص := 2\n" }) {
         SCOPED_TRACE(text);
         diagnostic::reset();
         FileManager source;
@@ -172,7 +182,11 @@ TEST_F(ParserTest, InlineBlocksLeaveFollowingStatementsOutside)
 TEST_F(ParserTest, InlineBlocksRejectMissingBodies)
 {
     for (char const* header : { "اذا صحيح:", "طالما صحيح:", "لكل س في [1]:", "دالة مثال():", "نوع مثال:" }) {
-        for (char const* ending : { "", " # no body", "\nس := 1\n", "\n    # no body\nس := 1\n" }) {
+        for (char const* ending : { "", " # no body", "\n"
+                                                      "س := 1\n",
+                 "\n"
+                 "    # no body\n"
+                 "س := 1\n" }) {
             std::string text = std::string(header) + ending;
             SCOPED_TRACE(text);
             diagnostic::reset();
@@ -190,8 +204,10 @@ TEST_F(ParserTest, InlineBareReturnAtEndOfFile)
 {
     for (char const* text : {
              "دالة مثال(): ارجع",
-             "نوع مثال:\n    دالة قيمة(): ارجع",
-             "دالة مثال():\n    اذا صحيح: ارجع",
+             "نوع مثال:\n"
+             "    دالة قيمة(): ارجع",
+             "دالة مثال():\n"
+             "    اذا صحيح: ارجع",
              "نوع مثال: دالة قيمة(): ارجع" }) {
         SCOPED_TRACE(text);
         diagnostic::reset();
@@ -246,7 +262,18 @@ TEST_P(ParserAssignmentContext, RejectsAssignmentInValueContext)
         EXPECT_EQ(result.error().get_code(), ErrorCode::ASSIGNMENT_IN_EXPRESSION);
 }
 
-INSTANTIATE_TEST_SUITE_P(NestedAssignment, ParserAssignmentContext, testing::Values("س + (س := 2)\n", "(س := 2) + 1\n", "س := (ص := 2)\n", "س := ص += 2\n", "س += ص := 2\n", "س += (ص := 2)\n", "(س := 2)\n", "ليس (س := 2)\n", "صحيح او (س := 2)\n", "خطا و (س := 2)\n", "اكتب(س := 2)\n", "اكتب((س := 2))\n", "اكتب(1، س := 2)\n", "[س := 2]\n", "(1، س := 2)\n", "{س := 2: 3}\n", "{1: س := 2}\n", "ق[س := 2]\n", "ق[(س := 2)] := 3\n", "(س := ق)[0] := 3\n", "(س := ق).حقل := 3\n", "(س := دالة_اخرى)()\n", "ارجع س := 2\n", "اذا س := 2:\n    اكتب(س)\n", "طالما س := 2:\n    اخرج\n", "لكل س في ق := [1]:\n    اكتب(س)\n", "assert س := 2\n", "assert صحيح، س := 2\n", "نوع علبة:\n    دالة بداية():\n        .حقل := (س := 2)\n", "نوع علبة:\n    دالة بداية():\n        .حقل += س := 2\n"));
+INSTANTIATE_TEST_SUITE_P(NestedAssignment, ParserAssignmentContext, testing::Values("س + (س := 2)\n", "(س := 2) + 1\n", "س := (ص := 2)\n", "س := ص += 2\n", "س += ص := 2\n", "س += (ص := 2)\n", "(س := 2)\n", "ليس (س := 2)\n", "صحيح او (س := 2)\n", "خطا و (س := 2)\n", "اكتب(س := 2)\n", "اكتب((س := 2))\n", "اكتب(1، س := 2)\n", "[س := 2]\n", "(1، س := 2)\n", "{س := 2: 3}\n", "{1: س := 2}\n", "ق[س := 2]\n", "ق[(س := 2)] := 3\n", "(س := ق)[0] := 3\n", "(س := ق).حقل := 3\n", "(س := دالة_اخرى)()\n", "ارجع س := 2\n", "اذا س := 2:\n"
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 "    اكتب(س)\n",
+                                                                        "طالما س := 2:\n"
+                                                                        "    اخرج\n",
+                                                                        "لكل س في ق := [1]:\n"
+                                                                        "    اكتب(س)\n",
+                                                                        "assert س := 2\n", "assert صحيح، س := 2\n", "نوع علبة:\n"
+                                                                                                                    "    دالة بداية():\n"
+                                                                                                                    "        .حقل := (س := 2)\n",
+                                                                        "نوع علبة:\n"
+                                                                        "    دالة بداية():\n"
+                                                                        "        .حقل += س := 2\n"));
 
 TEST_F(ParserTest, AssignmentContextExpressionEntryPointRejectsAssignment)
 {
@@ -265,9 +292,15 @@ TEST_F(ParserTest, AssignmentContextPreservesStatementsAndEquality)
     for (char const* text : {
              "س := 1 + (2 * 3)\n", "س := ص := 5\n",
              "ق[فهرس()] := قيمة()\n", "س.حقل := 2\n",
-             "اكتب(س = 2)\n", "اذا س = 2:\n    ص := 3\n",
-             "دالة مثال():\n    س := 2\n    ارجع س + 1\n",
-             "نوع علبة:\n    دالة بداية():\n        .حقل := 2\n        .حقل += 3\n" }) {
+             "اكتب(س = 2)\n", "اذا س = 2:\n"
+                              "    ص := 3\n",
+             "دالة مثال():\n"
+             "    س := 2\n"
+             "    ارجع س + 1\n",
+             "نوع علبة:\n"
+             "    دالة بداية():\n"
+             "        .حقل := 2\n"
+             "        .حقل += 3\n" }) {
         SCOPED_TRACE(text);
         diagnostic::reset();
         FileManager source;
@@ -314,10 +347,10 @@ TEST_F(ParserTest, ParseLiteral)
     Parser parser_2(&file_manager_2, BodyParsing::Eager);
     Parser parser_3(&file_manager_3, BodyParsing::Eager);
 
-    EXPECT_TRUE(AST::is_literal_int(parser_0.parse().value())) << "Should parse integer literal";
-    EXPECT_TRUE(AST::is_literal_string(parser_1.parse().value())) << "Should parse string literal";
-    EXPECT_TRUE(AST::is_literal_bool(parser_2.parse().value())) << "Should parse true bool literal";
-    EXPECT_TRUE(AST::is_literal_bool(parser_3.parse().value())) << "Should parse false bool literal";
+    EXPECT_TRUE(AST::is_literal_int(run_success(parser_0.parse()))) << "Should parse integer literal";
+    EXPECT_TRUE(AST::is_literal_string(run_success(parser_1.parse()))) << "Should parse string literal";
+    EXPECT_TRUE(AST::is_literal_bool(run_success(parser_2.parse()))) << "Should parse true bool literal";
+    EXPECT_TRUE(AST::is_literal_bool(run_success(parser_3.parse()))) << "Should parse false bool literal";
 }
 
 TEST_F(ParserTest, DecimalLiteralsRoundOnce)
@@ -337,7 +370,7 @@ TEST_F(ParserTest, DecimalLiteralsRoundOnce)
         Parser parser(&source, BodyParsing::Eager);
         auto result = parser.parse_expression();
         ASSERT_TRUE(result.has_value());
-        auto* literal = as<AST::FloatLiteralExpr>(result.value());
+        auto* literal = as<AST::FloatLiteralExpr>(run_success(result));
         ASSERT_NE(literal, nullptr);
         EXPECT_EQ(literal->value, test.expected);
         EXPECT_FALSE(diagnostic::has_errors());
@@ -362,7 +395,7 @@ TEST_F(ParserTest, ParseNil)
 {
     FileManager fm(parser_test_cases_dir() / "none_literal.fa");
     Parser parser(&fm, BodyParsing::Eager);
-    AST::ExprPtr expr = parser.parse().value();
+    AST::ExprPtr expr = run_success(parser.parse());
     EXPECT_TRUE(AST::is_nil(expr));
     if (test_config::print_ast)
         AST_Printer.print(AST::as_nil(expr));
@@ -372,7 +405,7 @@ TEST_F(ParserTest, ParseParenthesizedNumberLiteral)
 {
     FileManager fm(parser_test_cases_dir() / "parenthesized_number.fa");
     Parser parser(&fm, BodyParsing::Eager);
-    AST::ExprPtr expr = parser.parse().value();
+    AST::ExprPtr expr = run_success(parser.parse());
     EXPECT_TRUE(AST::is_literal_int(expr));
     if (test_config::print_ast)
         AST_Printer.print(AST::as_literal_int(expr));
@@ -382,7 +415,7 @@ TEST_F(ParserTest, ParseIdentifier)
 {
     FileManager fm(parser_test_cases_dir() / "identifier.fa");
     Parser parser(&fm, BodyParsing::Eager);
-    AST::ExprPtr expr = parser.parse().value();
+    AST::ExprPtr expr = run_success(parser.parse());
     AST::IdentifierExpr* name_fa_expr = AST::as_identifier(expr);
 
     if (test_config::print_ast)
@@ -396,7 +429,7 @@ TEST_F(ParserTest, ParseCallExpressionNoArgs)
 {
     FileManager fm(parser_test_cases_dir() / "call_expression.fa");
     Parser parser(&fm, BodyParsing::Eager);
-    AST::ExprPtr expr = parser.parse().value();
+    AST::ExprPtr expr = run_success(parser.parse());
 
     ASSERT_NE(expr, nullptr);
 
@@ -418,7 +451,7 @@ TEST_F(ParserTest, ParseCallExpressionWithOneArg)
 {
     FileManager fm(parser_test_cases_dir() / "call_expression_with_one_argument.fa");
     Parser parser(&fm, BodyParsing::Eager);
-    AST::ExprPtr expr = parser.parse().value();
+    AST::ExprPtr expr = run_success(parser.parse());
 
     ASSERT_NE(expr, nullptr);
 
@@ -446,7 +479,7 @@ TEST_F(ParserTest, ParseNestedCallExpression)
     FileManager fm(parser_test_cases_dir() / "nested_call_expression.fa");
     Parser parser(&fm, BodyParsing::Eager);
 
-    AST::CallExpr* outer_call = as_call(parser.parse().value());
+    AST::CallExpr* outer_call = as_call(run_success(parser.parse()));
 
     if (test_config::print_ast)
         AST_Printer.print(outer_call);
@@ -464,7 +497,7 @@ TEST_F(ParserTest, ParseSimpleAddition)
     FileManager fm(parser_test_cases_dir() / "simple_addition.fa");
     Parser parser(&fm, BodyParsing::Eager);
 
-    AST::BinaryExpr* bin = as_binary(parser.parse().value());
+    AST::BinaryExpr* bin = as_binary(run_success(parser.parse()));
 
     if (test_config::print_ast)
         AST_Printer.print(bin);
@@ -479,7 +512,7 @@ TEST_F(ParserTest, ParseSimpleMultiplication)
     FileManager fm(parser_test_cases_dir() / "simple_multiplication.fa");
     Parser parser(&fm, BodyParsing::Eager);
 
-    AST::BinaryExpr* bin = as_binary(parser.parse().value());
+    AST::BinaryExpr* bin = as_binary(run_success(parser.parse()));
 
     if (test_config::print_ast)
         AST_Printer.print(bin);
@@ -494,7 +527,7 @@ TEST_F(ParserTest, ParseSimpleSubtraction)
     FileManager fm(parser_test_cases_dir() / "simple_subtraction.fa");
     Parser parser(&fm, BodyParsing::Eager);
 
-    AST::BinaryExpr* bin = as_binary(parser.parse().value());
+    AST::BinaryExpr* bin = as_binary(run_success(parser.parse()));
 
     if (test_config::print_ast)
         AST_Printer.print(bin);
@@ -513,7 +546,7 @@ TEST_F(ParserTest, ParseSimpleDivision)
     FileManager fm(parser_test_cases_dir() / "simple_division.fa");
     Parser parser(&fm, BodyParsing::Eager);
 
-    AST::BinaryExpr* bin = as_binary(parser.parse().value());
+    AST::BinaryExpr* bin = as_binary(run_success(parser.parse()));
 
     if (test_config::print_ast)
         AST_Printer.print(bin);
@@ -533,7 +566,7 @@ TEST_F(ParserTest, ParseComplexExpression)
     FileManager fm(parser_test_cases_dir() / "complex_expression.fa");
     Parser parser(&fm, BodyParsing::Eager);
 
-    AST::BinaryExpr* root = as_binary(parser.parse().value());
+    AST::BinaryExpr* root = as_binary(run_success(parser.parse()));
 
     if (test_config::print_ast)
         AST_Printer.print(root);
@@ -569,7 +602,7 @@ TEST_F(ParserTest, BinaryOperatorsAssociateLeft)
         Parser parser(&source, BodyParsing::Eager);
         auto result = parser.parse_expression();
         ASSERT_TRUE(result.has_value());
-        auto* root = as<AST::BinaryExpr>(result.value());
+        auto* root = as<AST::BinaryExpr>(run_success(result));
         ASSERT_NE(root, nullptr);
         EXPECT_EQ(root->get_kind(), test.outer);
         auto* left = as<AST::BinaryExpr>(root->lhs);
@@ -587,7 +620,7 @@ TEST_F(ParserTest, PowerAssociatesRightAndBindsInsideUnary)
     Parser parser(&source, BodyParsing::Eager);
     auto result = parser.parse_expression();
     ASSERT_TRUE(result.has_value());
-    auto* negation = as<AST::UnaryExpr>(result.value());
+    auto* negation = as<AST::UnaryExpr>(run_success(result));
     ASSERT_NE(negation, nullptr);
     EXPECT_EQ(negation->get_kind(), AST::ExprKind::OP_NEG);
     auto* power = as<AST::BinaryExpr>(negation->operand);
@@ -613,7 +646,7 @@ TEST_F(ParserTest, ParseNestedParentheses)
     // Test: ((2 + 3) * 4)
     FileManager fm(parser_test_cases_dir() / "nested_parens.fa");
     Parser parser(&fm, BodyParsing::Eager);
-    AST::ExprPtr expr = parser.parse().value();
+    AST::ExprPtr expr = run_success(parser.parse());
 
     ASSERT_NE(expr, nullptr) << "Failed to parse nested parentheses expression";
 
@@ -638,7 +671,7 @@ TEST_F(ParserTest, ParseLogicalExpression)
     // Test: a and b or c (should be (a and b) or c)
     FileManager fm(parser_test_cases_dir() / "logical_expression.fa");
     Parser parser(&fm, BodyParsing::Eager);
-    AST::ExprPtr expr = parser.parse().value();
+    AST::ExprPtr expr = run_success(parser.parse());
 
     ASSERT_NE(expr, nullptr) << "Failed to parse logical expression";
 
@@ -662,7 +695,7 @@ TEST_F(ParserTest, ParseUnaryChain)
     // Test: --x (f64 negation)
     FileManager fm(parser_test_cases_dir() / "unary_chain.fa");
     Parser parser(&fm, BodyParsing::Eager);
-    AST::ExprPtr expr = parser.parse().value();
+    AST::ExprPtr expr = run_success(parser.parse());
 
     ASSERT_NE(expr, nullptr) << "Failed to parse unary chain";
 
@@ -690,7 +723,7 @@ TEST_F(ParserTest, ParseComplexFunctionCall)
     FileManager fm(parser_test_cases_dir() / "complex_function_call.fa");
     Parser parser(&fm, BodyParsing::Eager);
 
-    AST::CallExpr* call = as_call(parser.parse().value());
+    AST::CallExpr* call = as_call(run_success(parser.parse()));
 
     if (test_config::print_ast)
         AST_Printer.print(call);
@@ -726,7 +759,7 @@ TEST_F(ParserTest, ParseExtraClosingParenthesis)
 {
     FileManager fm(parser_test_cases_dir() / "extra_paren.fa");
     Parser parser(&fm, BodyParsing::Eager);
-    AST::ExprPtr expr = parser.parse().value();
+    AST::ExprPtr expr = run_success(parser.parse());
 
     ASSERT_NE(expr, nullptr) << "Should parse the valid part";
     EXPECT_FALSE(parser.we_done()) << "Should have unparsed tokens remaining";
@@ -740,7 +773,7 @@ TEST_F(ParserTest, ParseInvalidOperatorSequence)
 {
     FileManager fm(parser_test_cases_dir() / "invalid_operator_seq.fa");
     Parser parser(&fm, BodyParsing::Eager);
-    AST::ExprPtr expr = parser.parse().value();
+    AST::ExprPtr expr = run_success(parser.parse());
 
     if (expr != nullptr) {
         if (test_config::print_ast)
@@ -760,7 +793,7 @@ TEST_F(ParserTest, ParseSingleIdentifier)
 {
     FileManager fm(parser_test_cases_dir() / "single_identifier.fa");
     Parser parser(&fm, BodyParsing::Eager);
-    AST::ExprPtr expr = parser.parse().value();
+    AST::ExprPtr expr = run_success(parser.parse());
 
     ASSERT_NE(expr, nullptr) << "Should parse single identifier";
 
@@ -778,7 +811,7 @@ TEST_F(ParserTest, ParseVeryLongIdentifier)
 {
     FileManager fm(parser_test_cases_dir() / "long_identifier.fa");
     Parser parser(&fm, BodyParsing::Eager);
-    AST::ExprPtr expr = parser.parse().value();
+    AST::ExprPtr expr = run_success(parser.parse());
 
     ASSERT_NE(expr, nullptr) << "Should parse very long identifier";
 
@@ -799,7 +832,7 @@ TEST_F(ParserTest, ParseUnicodeIdentifiers)
 {
     FileManager fm(parser_test_cases_dir() / "unicode_identifiers.fa");
     Parser parser(&fm, BodyParsing::Eager);
-    AST::ExprPtr expr = parser.parse().value();
+    AST::ExprPtr expr = run_success(parser.parse());
 
     ASSERT_NE(expr, nullptr) << "Should parse Unicode identifiers";
 
@@ -824,7 +857,7 @@ TEST_F(ParserTest, ParseEmptyList)
 {
     FileManager fm(parser_test_cases_dir() / "empty_list.fa");
     Parser parser(&fm, BodyParsing::Eager);
-    AST::ExprPtr expr = parser.parse().value();
+    AST::ExprPtr expr = run_success(parser.parse());
 
     ASSERT_NE(expr, nullptr) << "Should parse empty list";
 
@@ -841,7 +874,7 @@ TEST_F(ParserTest, ParseEmptyTuple)
 {
     FileManager fm(parser_test_cases_dir() / "empty_tuple.fa");
     Parser parser(&fm, BodyParsing::Eager);
-    AST::ExprPtr expr = parser.parse().value();
+    AST::ExprPtr expr = run_success(parser.parse());
 
     ASSERT_NE(expr, nullptr) << "Should parse empty tuple";
 
@@ -858,7 +891,7 @@ TEST_F(ParserTest, ParseListWithTrailingComma)
 {
     FileManager fm(parser_test_cases_dir() / "list_trailing_comma.fa");
     Parser parser(&fm, BodyParsing::Eager);
-    AST::ExprPtr expr = parser.parse().value();
+    AST::ExprPtr expr = run_success(parser.parse());
 
     ASSERT_NE(expr, nullptr) << "Should parse list with trailing comma";
 
@@ -875,7 +908,7 @@ TEST_F(ParserTest, ParseNestedLists)
 {
     FileManager fm(parser_test_cases_dir() / "nested_lists.fa");
     Parser parser(&fm, BodyParsing::Eager);
-    AST::ExprPtr expr = parser.parse().value();
+    AST::ExprPtr expr = run_success(parser.parse());
 
     ASSERT_NE(expr, nullptr) << "Should parse nested lists";
 
@@ -902,7 +935,7 @@ TEST_F(ParserTest, ParseAssignment)
 {
     FileManager fm(parser_test_cases_dir() / "assignment.fa");
     Parser parser(&fm, BodyParsing::Eager);
-    AST::ExprPtr node = parser.parse().value();
+    AST::ExprPtr node = run_success(parser.parse());
     ASSERT_NE(node, nullptr) << "Should parse assignment";
 
     AST::AssignExpr* assign = dynamic_cast<AST::AssignExpr*>(node);
@@ -925,7 +958,7 @@ TEST_F(ParserTest, ParseChainedAssignment)
 {
     FileManager fm(parser_test_cases_dir() / "chained_assignment.fa");
     Parser parser(&fm, BodyParsing::Eager);
-    AST::ExprPtr expr = parser.parse().value();
+    AST::ExprPtr expr = run_success(parser.parse());
 
     ASSERT_NE(expr, nullptr) << "Should parse chained assignment";
 
@@ -948,7 +981,7 @@ TEST_F(ParserTest, ParseChainedAssignmentWithExpr)
     FileManager fm(parser_test_cases_dir() / "chained_assignment_with_expression.fa");
     Parser parser(&fm, BodyParsing::Eager);
 
-    AST::AssignExpr* outer = as_assignment_expr(parser.parse().value());
+    AST::AssignExpr* outer = as_assignment_expr(run_success(parser.parse()));
 
     if (test_config::print_ast)
         AST_Printer.print(outer);
@@ -967,7 +1000,7 @@ TEST_F(ParserTest, ParseDeeplyNestedExpression)
 {
     FileManager fm(parser_test_cases_dir() / "deeply_nested.fa");
     Parser parser(&fm, BodyParsing::Eager);
-    AST::ExprPtr expr = parser.parse().value();
+    AST::ExprPtr expr = run_success(parser.parse());
 
     ASSERT_NE(expr, nullptr) << "Should parse deeply nested expression without stack overflow";
 
@@ -981,7 +1014,7 @@ TEST_F(ParserTest, ParseWhileLoop)
     FileManager fm(parser_test_cases_dir() / "while_loop.fa");
     Parser parser(&fm, BodyParsing::Eager);
 
-    AST::WhileStmt* while_stmt = as_while(parser.parse_while_stmt().value());
+    AST::WhileStmt* while_stmt = as_while(run_success(parser.parse_while_stmt()));
 
     if (test_config::print_ast)
         AST_Printer.print(while_stmt);
@@ -1003,7 +1036,7 @@ TEST_F(ParserTest, ParseForLoop)
     FileManager fm(parser_test_cases_dir() / "for_loop.fa");
     Parser parser(&fm, BodyParsing::Eager);
 
-    AST::ForStmt* for_stmt = as_for(parser.parse_for_stmt().value());
+    AST::ForStmt* for_stmt = as_for(run_success(parser.parse_for_stmt()));
 
     if (test_config::print_ast)
         AST_Printer.print(for_stmt);
@@ -1023,7 +1056,7 @@ TEST_F(ParserTest, ParseBreakStatement)
     FileManager fm(parser_test_cases_dir() / "break_stmt.fa");
     Parser parser(&fm, BodyParsing::Eager);
 
-    AST::BreakStmt* break_stmt = as_break(parser.parse_break_stmt().value());
+    AST::BreakStmt* break_stmt = as_break(run_success(parser.parse_break_stmt()));
     ASSERT_NE(break_stmt, nullptr);
 }
 
@@ -1032,7 +1065,7 @@ TEST_F(ParserTest, ParseContinueStatement)
     FileManager fm(parser_test_cases_dir() / "continue_stmt.fa");
     Parser parser(&fm, BodyParsing::Eager);
 
-    AST::ContinueStmt* continue_stmt = as_continue(parser.parse_continue_stmt().value());
+    AST::ContinueStmt* continue_stmt = as_continue(run_success(parser.parse_continue_stmt()));
     ASSERT_NE(continue_stmt, nullptr);
 }
 
@@ -1041,7 +1074,7 @@ TEST_F(ParserTest, ParseComplexeIfStatement)
     FileManager fm(parser_test_cases_dir() / "complexe_if_statement.fa");
     Parser parser(&fm, BodyParsing::Eager);
 
-    AST::IfElseStmt* if_stmt = as_if(parser.parse_if_stmt().value());
+    AST::IfElseStmt* if_stmt = as_if(run_success(parser.parse_if_stmt()));
 
     if (test_config::print_ast)
         AST_Printer.print(if_stmt);
@@ -1070,7 +1103,7 @@ TEST_F(ParserTest, ParseAugmentedAssignmentPlus)
     FileManager fm(parser_test_cases_dir() / "augmented_assign_plus.fa");
     Parser parser(&fm, BodyParsing::Eager);
 
-    auto assign_expr = as_assignment_expr(parser.parse_assignment_expr().value());
+    auto assign_expr = as_assignment_expr(run_success(parser.parse_assignment_expr()));
     if (test_config::print_ast)
         AST_Printer.print(assign_expr);
 
@@ -1089,7 +1122,7 @@ TEST_F(ParserTest, ParseAugmentedAssignmentMinus)
     FileManager fm(parser_test_cases_dir() / "augmented_assign_minus.fa");
     Parser parser(&fm, BodyParsing::Eager);
 
-    auto assign_expr = as_assignment_expr(parser.parse_assignment_expr().value());
+    auto assign_expr = as_assignment_expr(run_success(parser.parse_assignment_expr()));
     if (test_config::print_ast)
         AST_Printer.print(assign_expr);
 
@@ -1108,7 +1141,7 @@ TEST_F(ParserTest, ParseAugmentedAssignmentTimes)
     FileManager fm(parser_test_cases_dir() / "augmented_assign_times.fa");
     Parser parser(&fm, BodyParsing::Eager);
 
-    auto assign_expr = as_assignment_expr(parser.parse_assignment_expr().value());
+    auto assign_expr = as_assignment_expr(run_success(parser.parse_assignment_expr()));
     if (test_config::print_ast)
         AST_Printer.print(assign_expr);
 
@@ -1127,7 +1160,7 @@ TEST_F(ParserTest, ParseAugmentedAssignmentDiv)
     FileManager fm(parser_test_cases_dir() / "augmented_assign_div.fa");
     Parser parser(&fm, BodyParsing::Eager);
 
-    auto assign_expr = as_assignment_expr(parser.parse_assignment_expr().value());
+    auto assign_expr = as_assignment_expr(run_success(parser.parse_assignment_expr()));
     if (test_config::print_ast)
         AST_Printer.print(assign_expr);
 
@@ -1146,7 +1179,7 @@ TEST_F(ParserTest, ParseAugmentedAssignmentMod)
     FileManager fm(parser_test_cases_dir() / "augmented_assign_mod.fa");
     Parser parser(&fm, BodyParsing::Eager);
 
-    auto assign_expr = as_assignment_expr(parser.parse_assignment_expr().value());
+    auto assign_expr = as_assignment_expr(run_success(parser.parse_assignment_expr()));
     if (test_config::print_ast)
         AST_Printer.print(assign_expr);
 
