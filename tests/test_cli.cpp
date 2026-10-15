@@ -73,7 +73,9 @@ TEST(CliE2E, CheckOnly)
 
 TEST(CliE2E, CheckValidatesUnusedFunctionBodies)
 {
-    auto program = write_program("دالة غير_مستعملة():\n    اخرج\nاكتب(42)\n");
+    auto program = write_program("دالة غير_مستعملة():\n"
+                                 "    اخرج\n"
+                                 "اكتب(42)\n");
     RunResult normal = run_cli({ fairuz::platform::utf8(program) });
     EXPECT_EQ(normal.exit_code, 0);
     EXPECT_EQ(normal.out, "42\n");
@@ -86,7 +88,9 @@ TEST(CliE2E, CheckValidatesUnusedFunctionBodies)
 
 TEST(CliE2E, LazyBodySyntaxErrorsAreValidatedByCheckAstDumpAndFormatter)
 {
-    std::string source = "دالة غير_مستعملة():\n    ارجع +\nاكتب(42)\n";
+    std::string source = "دالة غير_مستعملة():\n"
+                         "    ارجع +\n"
+                         "اكتب(42)\n";
     auto program = write_program(source);
     auto path = fairuz::platform::utf8(program);
     RunResult normal = run_cli({ path });
@@ -107,7 +111,10 @@ TEST(CliE2E, LazyBodySyntaxErrorsAreValidatedByCheckAstDumpAndFormatter)
 
 TEST(CliE2E, FileThenTrailingOption)
 {
-    auto program = write_program("اذا 20 + 5 < 400:\n    اكتب(\"صحيح\")\nغيره:\n    اكتب(\"خطأ\")\n");
+    auto program = write_program("اذا 20 + 5 < 400:\n"
+                                 "    اكتب(\"صحيح\")\n"
+                                 "غيره:\n"
+                                 "    اكتب(\"خطأ\")\n");
     RunResult r = run_cli({ fairuz::platform::utf8(program), "--time" });
     EXPECT_EQ(r.exit_code, 0);
     EXPECT_NE(r.out.find("صحيح"), std::string::npos);
@@ -116,7 +123,8 @@ TEST(CliE2E, FileThenTrailingOption)
 
 TEST(CliE2E, ValidProgramDoesNotWriteDiagnostics)
 {
-    auto program = write_program("اذا 1 <= 2:\n    اكتب(1)\n");
+    auto program = write_program("اذا 1 <= 2:\n"
+                                 "    اكتب(1)\n");
     RunResult r = run_cli({ fairuz::platform::utf8(program) });
     EXPECT_EQ(r.exit_code, 0);
     EXPECT_EQ(r.out, "1\n");
@@ -133,7 +141,8 @@ TEST(CliE2E, MissingFile)
 
 TEST(CliE2E, FormatDoesNotOverwriteInvalidSource)
 {
-    std::string const source = "اذا صحيح\n    اكتب(1)\n";
+    std::string const source = "اذا صحيح\n"
+                               "    اكتب(1)\n";
     auto program = write_program(source);
 
     RunResult r = run_cli({ "format", fairuz::platform::utf8(program) });
@@ -167,7 +176,8 @@ TEST(CliE2E, FormatDirectoryReportsInvalidSource)
         / ("fairuz_format_dir_" + std::to_string(test_process::process_id()));
     std::filesystem::create_directory(directory);
     auto invalid = directory / fairuz::platform::path("invalid.ف");
-    std::string const source = "اذا صحيح\n    اكتب(1)\n";
+    std::string const source = "اذا صحيح\n"
+                               "    اكتب(1)\n";
     {
         std::ofstream out(invalid);
         out << source;
