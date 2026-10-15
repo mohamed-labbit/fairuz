@@ -9,9 +9,12 @@
 // Builtin enconding utilities implementation.
 //===----------------------------------------------------------------------===//
 
+#include "Diag/errc.hpp"
 #include "Interpreter/vm.hpp"
 #include "Util/utf8.hpp"
 #include "util.hpp"
+
+#include <string>
 
 namespace fairuz::runtime {
 
@@ -108,51 +111,63 @@ bool decode_base64(std::string_view input, bool url_safe, std::string& output)
 
 } // anonymous namespace
 
-Value VM::char_from_codepoint(int argc, Value* argv)
+VM::RuntimeResult VM::char_from_codepoint(int argc, Value* argv)
 {
     if (argc != 1 || argv == nullptr || !argv[0].is_int())
-        raise_error(ErrorCode::NATIVE_TYPE_ERROR,
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR,
             "character conversion expects one integer");
     i64 value = argv[0].as_int();
     if (value < 0 || value > 0x10FFFF || (value >= 0xD800 && value <= 0xDFFF))
-        raise_error(ErrorCode::NUMERIC_OUT_OF_RANGE);
+        return raise_runtime_error(ErrorCode::NUMERIC_OUT_OF_RANGE);
     return m_gc.make_string(util::encode_utf8_str(static_cast<u32>(value)));
 }
 
-Value VM::base64_encode(int argc, Value* argv)
+VM::RuntimeResult VM::base64_encode(int argc, Value* argv)
 {
-    if (argc != 2 || argv == nullptr || !argv[0].is_string() || !argv[1].is_bool())
-        return Value::nil();
+    if (argc != 2 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT,
+            "got " + std::to_string(argc));
+    if (!argv[0].is_string() || !argv[1].is_bool())
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
     std::string encoded = encode_base64(string_bytes(argv[0]), argv[1].as_bool());
     return m_gc.make_string(byte_string(encoded));
 }
 
-Value VM::base64_decode(int argc, Value* argv)
+VM::RuntimeResult VM::base64_decode(int argc, Value* argv)
 {
-    if (argc != 2 || argv == nullptr || !argv[0].is_string() || !argv[1].is_bool())
-        return Value::nil();
+    if (argc != 2 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT,
+            "got " + std::to_string(argc));
+    if (!argv[0].is_string() || !argv[1].is_bool())
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
     std::string decoded;
     if (!decode_base64(string_bytes(argv[0]), argv[1].as_bool(), decoded))
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
     return m_gc.make_string(byte_string(decoded));
 }
 
-Value VM::hex_encode(int argc, Value* argv)
+VM::RuntimeResult VM::hex_encode(int argc, Value* argv)
 {
-    if (argc != 1 || argv == nullptr || !argv[0].is_string())
-        return Value::nil();
+    if (argc != 1 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT,
+            "got " + std::to_string(argc));
+    if (!argv[0].is_string())
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
     auto bytes = string_bytes(argv[0]);
     std::string encoded = hex_string(reinterpret_cast<u8 const*>(bytes.data()), bytes.size());
     return m_gc.make_string(byte_string(encoded));
 }
 
-Value VM::hex_decode(int argc, Value* argv)
+VM::RuntimeResult VM::hex_decode(int argc, Value* argv)
 {
-    if (argc != 1 || argv == nullptr || !argv[0].is_string())
-        return Value::nil();
+    if (argc != 1 || argv == nullptr)
+        return raise_runtime_error(ErrorCode::NATIVE_ARG_COUNT,
+            "got " + std::to_string(argc));
+    if (!argv[0].is_string())
+        return raise_runtime_error(ErrorCode::NATIVE_TYPE_ERROR);
     auto input = string_bytes(argv[0]);
     if (input.size() % 2 != 0)
-        return Value::nil();
+        return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
 
     auto nibble = [](char character) -> int {
         if (character >= '0' && character <= '9')
@@ -168,7 +183,7 @@ Value VM::hex_decode(int argc, Value* argv)
         int high = nibble(input[i * 2]);
         int low = nibble(input[i * 2 + 1]);
         if (high < 0 || low < 0)
-            return Value::nil();
+            return raise_runtime_error(ErrorCode::RUNTIME_ERROR);
         decoded[i] = static_cast<char>((high << 4) | low);
     }
     return m_gc.make_string(byte_string(decoded));
