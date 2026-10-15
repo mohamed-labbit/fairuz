@@ -133,7 +133,8 @@ TEST(RegressionInlineBlocks, InlineClassesAndMethodsKeepFieldAndScopeSemantics)
 
 TEST(RegressionNatives, StringListDemoOutput)
 {
-    auto program = write_program("اكتب(اجمع([\"alpha\", \"beta\", \"gamma\", \"delta\"], \"|\"))\nاكتب(يحتوي(\"alphabet\", \"alpha\"))\n");
+    auto program = write_program("اكتب(اجمع([\"alpha\", \"beta\", \"gamma\", \"delta\"], \"|\"))\n"
+                                 "اكتب(يحتوي(\"alphabet\", \"alpha\"))\n");
     RunResult r = run_installed(binary_path(), program);
     EXPECT_EQ(r.exit_code, 0);
     EXPECT_NE(r.out.find("alpha|beta|gamma|delta"), std::string::npos);
@@ -142,7 +143,8 @@ TEST(RegressionNatives, StringListDemoOutput)
 
 TEST(RegressionNatives, NumericDemoOutput)
 {
-    auto program = write_program("اكتب(ادنى(1024.9))\nاكتب(اعلى(189.1))\n");
+    auto program = write_program("اكتب(ادنى(1024.9))\n"
+                                 "اكتب(اعلى(189.1))\n");
     RunResult r = run_installed(binary_path(), program);
     EXPECT_EQ(r.exit_code, 0);
     EXPECT_NE(r.out.find("1024"), std::string::npos);
@@ -151,10 +153,16 @@ TEST(RegressionNatives, NumericDemoOutput)
 
 TEST(HardeningRegression, NumericLiteralsUseCorrectBaseAndUtf8Cursor)
 {
-    auto program = write_program("اكتب(0xFF)\nاكتب(0b1010)\nاكتب(0o17)\nاكتب(١٢)\n");
+    auto program = write_program("اكتب(0xFF)\n"
+                                 "اكتب(0b1010)\n"
+                                 "اكتب(0o17)\n"
+                                 "اكتب(١٢)\n");
     RunResult r = run_installed(binary_path(), program);
     EXPECT_EQ(r.exit_code, 0);
-    EXPECT_EQ(r.out, "255\n10\n15\n12\n");
+    EXPECT_EQ(r.out, "255\n"
+                     "10\n"
+                     "15\n"
+                     "12\n");
 }
 
 TEST(HardeningRegression, OptimizerPreservesRuntimeTypesAndErrors)
@@ -171,7 +179,8 @@ TEST(HardeningRegression, OptimizerPreservesRuntimeTypesAndErrors)
 
 TEST(HardeningRegression, StrengthReductionDoesNotChangeMeaning)
 {
-    auto valid = write_program("س := 5\nاكتب(~~س)\n");
+    auto valid = write_program("س := 5\n"
+                               "اكتب(~~س)\n");
     RunResult ok = run_installed(binary_path(), valid);
     EXPECT_EQ(ok.exit_code, 0);
     EXPECT_EQ(ok.out, "5\n");
@@ -202,7 +211,9 @@ TEST(HardeningRegression, NativeBoundaryRejectsBadArgumentsWithoutCrash)
     auto output = std::filesystem::temp_directory_path()
         / ("fairuz_closed_handle_" + std::to_string(test_process::process_id()) + ".txt");
     std::string file_source = "م := افتح(\"" + fairuz::platform::utf8(output)
-        + "\", \"اكتب\")\nاغلق(م)\nاضف_ملف(م، \"x\")\n";
+        + "\", \"اكتب\")\n"
+          "اغلق(م)\n"
+          "اضف_ملف(م، \"x\")\n";
     auto closed_file = write_program(file_source);
     RunResult closed_result = run_installed(binary_path(), closed_file);
     EXPECT_EQ(closed_result.exit_code, 65);
@@ -211,10 +222,14 @@ TEST(HardeningRegression, NativeBoundaryRejectsBadArgumentsWithoutCrash)
 
 TEST(HardeningRegression, CyclicContainersRenderWithMarker)
 {
-    auto program = write_program("س := قائمة()\nاضف(س، س)\nاكتب(س)\nاكتب(سلسلة(س))\n");
+    auto program = write_program("س := قائمة()\n"
+                                 "اضف(س، س)\n"
+                                 "اكتب(س)\n"
+                                 "اكتب(سلسلة(س))\n");
     RunResult r = run_installed(binary_path(), program);
     EXPECT_EQ(r.exit_code, 0);
-    EXPECT_EQ(r.out, "[<cycle>]\n[<cycle>]\n");
+    EXPECT_EQ(r.out, "[<cycle>]\n"
+                     "[<cycle>]\n");
 }
 
 TEST(HardeningRegression, DeepContainersRenderWithoutOverflowingTheHostStack)
@@ -233,18 +248,22 @@ TEST(HardeningRegression, DeepContainersRenderWithoutOverflowingTheHostStack)
 
 TEST(HardeningRegression, SliceUsesInclusiveEndForStringsAndLists)
 {
-    auto program = write_program("اكتب(مقطع(\"abc\", 1, 1))\nاكتب(مقطع([1, 2, 3], 1, 1))\n");
+    auto program = write_program("اكتب(مقطع(\"أبج\", 1, 1))\n"
+                                 "اكتب(مقطع([1, 2, 3], 1, 1))\n");
     RunResult r = run_installed(binary_path(), program);
     EXPECT_EQ(r.exit_code, 0);
-    EXPECT_EQ(r.out, "b\n[2]\n");
+    EXPECT_EQ(r.out, "ب\n"
+                     "[2]\n");
 }
 
 TEST(HardeningRegression, SliceAllowsAnEmptyContainerTail)
 {
-    auto program = write_program("اكتب(مقطع([], 0))\nاكتب(مقطع(\"\", 0))\n");
+    auto program = write_program("اكتب(مقطع([], 0))\n"
+                                 "اكتب(مقطع(\"\", 0))\n");
     RunResult r = run_installed(binary_path(), program);
     EXPECT_EQ(r.exit_code, 0);
-    EXPECT_EQ(r.out, "[]\n\n");
+    EXPECT_EQ(r.out, "[]\n"
+                     "\n");
 }
 
 TEST(HardeningRegression, EmbeddedNulIsRejectedRatherThanTruncatingSource)
@@ -260,7 +279,8 @@ TEST(HardeningRegression, EmbeddedNulIsRejectedRatherThanTruncatingSource)
 
 TEST(HardeningRegression, IntegerOverflowPromotes)
 {
-    auto program = write_program("س := 9223372036854775807\nاكتب(س + 1)\n");
+    auto program = write_program("س := 9223372036854775807\n"
+                                 "اكتب(س + 1)\n");
     RunResult r = run_installed(binary_path(), program);
     EXPECT_EQ(r.exit_code, 0);
     EXPECT_EQ(r.out, "9223372036854775808\n");
@@ -268,18 +288,27 @@ TEST(HardeningRegression, IntegerOverflowPromotes)
 
 TEST(RegressionOperators, OpShift)
 {
-    std::string src = "x := 1\n"
-                      "y := 2\n"
-                      "x &= y\nاكتب(x)\n"
-                      "x |= y\nاكتب(x)\n"
-                      "x ^= y\nاكتب(x)\n"
-                      "x <<= y\nاكتب(x)\n"
-                      "x >>= y\nاكتب(x)\n";
+    std::string src = "س := 1\n"
+                      "ص := 2\n"
+                      "س &= ص\n"
+                      "اكتب(س)\n"
+                      "س |= ص\n"
+                      "اكتب(س)\n"
+                      "س ^= ص\n"
+                      "اكتب(س)\n"
+                      "س <<= ص\n"
+                      "اكتب(س)\n"
+                      "س >>= ص\n"
+                      "اكتب(س)\n";
 
     auto program = write_program(src);
     RunResult r = run_installed(binary_path(), program);
     EXPECT_EQ(r.exit_code, 0);
-    EXPECT_EQ(r.out, "0\n2\n0\n0\n0\n");
+    EXPECT_EQ(r.out, "0\n"
+                     "2\n"
+                     "0\n"
+                     "0\n"
+                     "0\n");
 }
 
 TEST(RegressionConstruct, IterateForLoop)
@@ -287,10 +316,14 @@ TEST(RegressionConstruct, IterateForLoop)
     std::string src = "ارقام := [1 , 2 , 3]\n"
                       "لكل رقم في ارقام:\n"
                       "    اكتب(رقم)\n";
-    auto program = write_program("ارقام := [1 , 2 , 3]\nلكل رقم في ارقام:\n    اكتب(رقم)");
+    auto program = write_program("ارقام := [1 , 2 , 3]\n"
+                                 "لكل رقم في ارقام:\n"
+                                 "    اكتب(رقم)");
     RunResult r = run_installed(binary_path(), program);
     EXPECT_EQ(r.exit_code, 0);
-    EXPECT_EQ(r.out, "1\n2\n3\n");
+    EXPECT_EQ(r.out, "1\n"
+                     "2\n"
+                     "3\n");
 }
 
 TEST(IntegerRuntimeContract, LiteralsBuiltinsAndCollections)
@@ -323,7 +356,12 @@ TEST(IntegerRuntimeContract, LiteralsBuiltinsAndCollections)
         "18446744073709551616\n"
         "-18446744073709551616\n"
         "340282366920938463463374607431768211456\n"
-        "2\n10\n20\nخطا\nصحيح\n-2\n"
+        "2\n"
+        "10\n"
+        "20\n"
+        "خطا\n"
+        "صحيح\n"
+        "-2\n"
         "340282366920938463463374607431768211456\n");
 }
 
@@ -344,7 +382,9 @@ TEST(IntegerRuntimeContract, OperandsAndLiteralsSurviveCollections)
         "اكتب(اصل)\n");
     RunResult r = run_installed(binary_path(), program);
     EXPECT_EQ(r.exit_code, 0) << r.err;
-    EXPECT_EQ(r.out, "4000\nصحيح\n340282366920938463463374607431768211456\n");
+    EXPECT_EQ(r.out, "4000\n"
+                     "صحيح\n"
+                     "340282366920938463463374607431768211456\n");
 }
 
 TEST(IntegerRuntimeContract, PythonOracle1400Comparisons)
