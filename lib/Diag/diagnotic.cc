@@ -10,7 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Diag/diagnostic.hpp"
-#include "Windows.hpp"
+#include "File.hpp"
 
 #include <algorithm>
 #include <cstdlib>
@@ -40,7 +40,19 @@ void DiagnosticEngine::set_source(FileManager const* fm)
 
 char const* error_type_for(ErrorCode code) noexcept
 {
-    return error_category_name(error_category_for(code));
+    switch (error_category_for(code)) {
+    case ErrorCategory::FILE: return "file";
+    case ErrorCategory::LEXICAL: return "lexical";
+    case ErrorCategory::SYNTAX: return "syntax";
+    case ErrorCategory::SEMANTIC: return "semantic";
+    case ErrorCategory::COMPILE: return "compile";
+    case ErrorCategory::RUNTIME: return "runtime";
+    case ErrorCategory::BUILTIN: return "builtin";
+    case ErrorCategory::CONTAINER: return "container";
+    case ErrorCategory::INTERNAL: return "internal";
+    case ErrorCategory::UNKNOWN: return "unknown";
+    }
+    return "unknown";
 }
 
 namespace {
