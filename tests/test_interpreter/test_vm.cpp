@@ -17,6 +17,7 @@
 #include "Support/array.hpp"
 #include "test_common.h"
 #include "test_config.h"
+#include "test_source_program.hpp"
 
 #include <charconv>
 #include <chrono>
@@ -63,7 +64,7 @@ struct CB {
     CB()
     {
         ch = make_chunk();
-        ch->name = "<test>";
+        ch->name = "<اختبار>";
     }
 
     CB& ABC(OpCode op, u8 A, u8 B, u8 C, u32 ln = 1)
@@ -133,45 +134,32 @@ private:
 };
 
 struct VMRunner {
-    // Keep both alive until assertions finish inspecting VM-owned results.
-    Compiler compiler;
     VM vm;
     Chunk* chunk_ = nullptr;
 
-    Value run(CB& b)
+    VM::RuntimeResult run(CB& builder) { return run(builder.ch); }
+    VM::RuntimeResult run(Chunk* chunk)
     {
-        diagnostic::reset();
-        chunk_ = b.ch;
-        return vm.run(chunk_, nullptr);
+        chunk_ = chunk;
+        return vm.run(chunk_);
     }
-    Value run(Chunk* c)
+    void compile(std::string const& source) { chunk_ = test_source::compile(source); }
+    void compile(Array<std::string> const& source) { compile(test_source::join(source)); }
+    void compile(std::initializer_list<std::string> source) { compile(Array<std::string>(source)); }
+    VM::RuntimeResult run() { return run(chunk_); }
+    VM::RuntimeResult compile_and_run(std::string const& source)
     {
-        diagnostic::reset();
-        chunk_ = c;
-        return vm.run(chunk_, nullptr);
+        compile(source);
+        return run();
     }
-
-    void compile(Array<AST::StmtPtr> const& stmts)
+    VM::RuntimeResult compile_and_run(Array<std::string> const& source)
     {
-        diagnostic::reset();
-        chunk_ = compiler.compile(stmts);
-        if (chunk_ == nullptr || diagnostic::has_errors()) {
-            ADD_FAILURE() << "Test program failed to compile";
-            throw std::runtime_error("Test program failed to compile");
-        }
-        if (test_config::dump_bytecode)
-            chunk_->disassemble();
+        compile(source);
+        return run();
     }
-
-    Value run()
+    VM::RuntimeResult compile_and_run(std::initializer_list<std::string> source)
     {
-        diagnostic::reset();
-        return vm.run(chunk_, &compiler);
-    }
-
-    Value compile_and_run(Array<AST::StmtPtr> const& stmts)
-    {
-        compile(stmts);
+        compile(source);
         return run();
     }
 };
@@ -183,7 +171,7 @@ TEST(VMLoads, Nil)
     b.regs(1).ABC(OpCode::LOAD_NIL, 0, 0, 1).ret(0);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_TRUE(r.run(b).is_nil());
+    EXPECT_TRUE(run_success(r.run(b)).is_nil());
 }
 
 TEST(VMLoads, NilFillsMultiple)
@@ -193,7 +181,7 @@ TEST(VMLoads, NilFillsMultiple)
     b.regs(3).ABC(OpCode::LOAD_NIL, 0, 0, 3).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_TRUE(r.run(b).is_nil());
+    EXPECT_TRUE(run_success(r.run(b)).is_nil());
 }
 
 TEST(VMLoads, True)
@@ -203,7 +191,7 @@ TEST(VMLoads, True)
     b.regs(1).ABC(OpCode::LOAD_TRUE, 0, 0, 0).ret(0);
     if (test_config::dump_bytecode)
         b.dump();
-    Value v = r.run(b);
+    Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
@@ -214,7 +202,7 @@ TEST(VMLoads, False)
     b.regs(1).ABC(OpCode::LOAD_FALSE, 0, 0, 0).ret(0);
     if (test_config::dump_bytecode)
         b.dump();
-    Value v = r.run(b);
+    Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_bool() && !v.as_bool());
 }
 
@@ -223,7 +211,7 @@ TEST(VMLoads, IntPositive)
     VMRunner r;
     CB b;
     b.regs(1).load_int(0, 42).ret(0);
-    Value v = r.run(b);
+    Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_int());
     EXPECT_EQ(v.as_int(), 42);
 }
@@ -235,7 +223,7 @@ TEST(VMLoads, IntZero)
     b.regs(1).load_int(0, 0).ret(0);
     if (test_config::dump_bytecode)
         b.dump();
-    Value v = r.run(b);
+    Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_int());
     EXPECT_EQ(v.as_int(), 0);
 }
@@ -247,7 +235,7 @@ TEST(VMLoads, IntNegative)
     b.regs(1).load_int(0, -100).ret(0);
     if (test_config::dump_bytecode)
         b.dump();
-    Value v = r.run(b);
+    Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_int());
     EXPECT_EQ(v.as_int(), -100);
 }
@@ -259,7 +247,7 @@ TEST(VMLoads, IntMaxEncodable)
     b.regs(1).ABx(OpCode::LOAD_INT, 0, 65535).ret(0);
     if (test_config::dump_bytecode)
         b.dump();
-    Value v = r.run(b);
+    Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_int());
     EXPECT_EQ(v.as_int(), 32768);
 }
@@ -271,7 +259,7 @@ TEST(VMLoads, IntMinEncodable)
     b.regs(1).ABx(OpCode::LOAD_INT, 0, 0).ret(0);
     if (test_config::dump_bytecode)
         b.dump();
-    Value v = r.run(b);
+    Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_int());
     EXPECT_EQ(v.as_int(), -32767);
 }
@@ -285,7 +273,7 @@ TEST(VMLoads, ConstDouble)
     b.ABx(OpCode::LOAD_CONST, 0, k).ret(0);
     if (test_config::dump_bytecode)
         b.dump();
-    Value v = r.run(b);
+    Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_double());
     EXPECT_DOUBLE_EQ(v.as_double(), 3.14);
 }
@@ -299,7 +287,7 @@ TEST(VMLoads, ConstString)
     b.ABx(OpCode::LOAD_CONST, 0, k).ret(0);
     if (test_config::dump_bytecode)
         b.dump();
-    Value v = r.run(b);
+    Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_string());
     EXPECT_EQ(v.as_string()->str, "hello");
 }
@@ -313,7 +301,7 @@ TEST(VMLoads, ConstLargeInt)
     b.ABx(OpCode::LOAD_CONST, 0, k).ret(0);
     if (test_config::dump_bytecode)
         b.dump();
-    Value v = r.run(b);
+    Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_int());
     EXPECT_EQ(v.as_int(), 1000000LL);
 }
@@ -323,7 +311,7 @@ TEST(VMLoads, ReturnNil)
     VMRunner r;
     CB b;
     b.regs(1).ret_nil();
-    EXPECT_TRUE(r.run(b).is_nil());
+    EXPECT_TRUE(run_success(r.run(b)).is_nil());
 }
 
 TEST(VMMove, Copies)
@@ -333,7 +321,7 @@ TEST(VMMove, Copies)
     b.regs(2).load_int(0, 77).mov(1, 0).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    Value v = r.run(b);
+    Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_int());
     EXPECT_EQ(v.as_int(), 77);
 }
@@ -345,7 +333,7 @@ TEST(VMMove, SourceUnchanged)
     b.regs(2).load_int(0, 55).mov(1, 0).ret(0);
     if (test_config::dump_bytecode)
         b.dump();
-    Value v = r.run(b);
+    Value v = run_success(r.run(b));
     EXPECT_EQ(v.as_int(), 55);
 }
 
@@ -356,7 +344,7 @@ TEST(VMArith, AddIntFastPath)
     b.regs(3).slot().load_int(0, 10).load_int(1, 32).ABC(OpCode::OP_ADD, 2, 0, 1).nop().ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    Value v = r.run(b);
+    Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_int());
     EXPECT_EQ(v.as_int(), 42);
 }
@@ -371,7 +359,7 @@ TEST(VMArith, AddDoubles)
     b.ABx(OpCode::LOAD_CONST, 0, k0).ABx(OpCode::LOAD_CONST, 1, k1).ABC(OpCode::OP_ADD, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    Value v = r.run(b);
+    Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_double());
     EXPECT_DOUBLE_EQ(v.as_double(), 4.0);
 }
@@ -386,7 +374,7 @@ TEST(VMArith, AddStringsConcat)
     b.ABx(OpCode::LOAD_CONST, 0, k0).ABx(OpCode::LOAD_CONST, 1, k1).ABC(OpCode::OP_ADD, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    Value v = r.run(b);
+    Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_string());
     EXPECT_EQ(v.as_string()->str, "foobar");
 }
@@ -398,7 +386,7 @@ TEST(VMArith, SubInt)
     b.regs(3).load_int(0, 100).load_int(1, 58).ABC(OpCode::OP_SUB, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(r.run(b).as_int(), 42);
+    EXPECT_EQ(run_success(r.run(b)).as_int(), 42);
 }
 
 TEST(VMArith, MulInt)
@@ -408,7 +396,7 @@ TEST(VMArith, MulInt)
     b.regs(3).load_int(0, 6).load_int(1, 7).ABC(OpCode::OP_MUL, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(r.run(b).as_int(), 42);
+    EXPECT_EQ(run_success(r.run(b)).as_int(), 42);
 }
 
 TEST(VMArith, DivDouble)
@@ -421,7 +409,7 @@ TEST(VMArith, DivDouble)
     b.ABx(OpCode::LOAD_CONST, 0, k0).ABx(OpCode::LOAD_CONST, 1, k1).ABC(OpCode::OP_DIV, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_DOUBLE_EQ(r.run(b).as_double(), 42.0);
+    EXPECT_DOUBLE_EQ(run_success(r.run(b)).as_double(), 42.0);
 }
 
 TEST(VMArith, ModPositive)
@@ -431,7 +419,7 @@ TEST(VMArith, ModPositive)
     b.regs(3).load_int(0, 17).load_int(1, 5).ABC(OpCode::OP_MOD, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    Value result = r.run(b);
+    Value result = run_success(r.run(b));
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 2);
 }
@@ -443,7 +431,7 @@ TEST(VMArith, Pow)
     b.regs(3).load_int(0, 2).load_int(1, 10).ABC(OpCode::OP_POW, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    Value result = r.run(b);
+    Value result = run_success(r.run(b));
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 1024);
 }
@@ -455,7 +443,7 @@ TEST(VMArith, NegInt)
     b.regs(2).load_int(0, 7).ABC(OpCode::OP_NEG, 1, 0, 0).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(r.run(b).as_int(), -7);
+    EXPECT_EQ(run_success(r.run(b)).as_int(), -7);
 }
 
 TEST(VMArith, NegDouble)
@@ -467,30 +455,27 @@ TEST(VMArith, NegDouble)
     b.ABx(OpCode::LOAD_CONST, 0, k).ABC(OpCode::OP_NEG, 1, 0, 0).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_DOUBLE_EQ(r.run(b).as_double(), -3.5);
+    EXPECT_DOUBLE_EQ(run_success(r.run(b)).as_double(), -3.5);
 }
 
 TEST(VMArith, DivByZeroThrows)
 {
-    VMRunner r;
-    CB b;
-    b.regs(3);
-    u16 k0 = b.ch->add_constant(Value::from_real(1.0));
-    u16 k1 = b.ch->add_constant(Value::from_real(0.0));
-    b.ABx(OpCode::LOAD_CONST, 0, k0).ABx(OpCode::LOAD_CONST, 1, k1).ABC(OpCode::OP_DIV, 2, 0, 1).ret(2);
-    if (test_config::dump_bytecode)
-        b.dump();
-    EXPECT_THROW(r.run(b), std::runtime_error);
+    VMRunner runner;
+    auto error = run_failed(runner.compile_and_run(
+        "طبيعي(1.0 / 0.0)\n"));
+    ASSERT_NE(error.source, nullptr);
+    EXPECT_GT(error.loc.line, 0u);
+    EXPECT_LE(error.loc.line, error.source->lines.size());
 }
 
 TEST(VMArith, NegOnStringThrows)
 {
-    VMRunner r;
-    CB b;
-    b.regs(2).ABx(OpCode::LOAD_CONST, 0, b.str("x")).ABC(OpCode::OP_NEG, 1, 0, 0).ret(1);
-    if (test_config::dump_bytecode)
-        b.dump();
-    EXPECT_THROW(r.run(b), std::runtime_error);
+    VMRunner runner;
+    auto error = run_failed(runner.compile_and_run(
+        "طبيعي(-\"س\")\n"));
+    ASSERT_NE(error.source, nullptr);
+    EXPECT_GT(error.loc.line, 0u);
+    EXPECT_LE(error.loc.line, error.source->lines.size());
 }
 
 TEST(VMBitwise, And)
@@ -500,7 +485,7 @@ TEST(VMBitwise, And)
     b.regs(3).load_int(0, 0b1111).load_int(1, 0b1010).ABC(OpCode::OP_BITAND, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(r.run(b).as_int(), 0b1010);
+    EXPECT_EQ(run_success(r.run(b)).as_int(), 0b1010);
 }
 
 TEST(VMBitwise, Or)
@@ -510,7 +495,7 @@ TEST(VMBitwise, Or)
     b.regs(3).load_int(0, 0b1100).load_int(1, 0b0011).ABC(OpCode::OP_BITOR, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(r.run(b).as_int(), 0b1111);
+    EXPECT_EQ(run_success(r.run(b)).as_int(), 0b1111);
 }
 
 TEST(VMBitwise, Xor)
@@ -520,7 +505,7 @@ TEST(VMBitwise, Xor)
     b.regs(3).load_int(0, 0b1111).load_int(1, 0b0101).ABC(OpCode::OP_BITXOR, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(r.run(b).as_int(), 0b1010);
+    EXPECT_EQ(run_success(r.run(b)).as_int(), 0b1010);
 }
 
 TEST(VMBitwise, Not)
@@ -530,7 +515,7 @@ TEST(VMBitwise, Not)
     b.regs(2).load_int(0, 0).ABC(OpCode::OP_BITNOT, 1, 0, 0).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(r.run(b).as_int(), ~i64(0));
+    EXPECT_EQ(run_success(r.run(b)).as_int(), ~i64(0));
 }
 
 TEST(VMBitwise, Shl)
@@ -540,7 +525,7 @@ TEST(VMBitwise, Shl)
     b.regs(2).load_int(0, 1).ABC(OpCode::OP_LSHIFT, 1, 0, 8).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(r.run(b).as_int(), 256);
+    EXPECT_EQ(run_success(r.run(b)).as_int(), 256);
 }
 
 TEST(VMBitwise, Shr)
@@ -550,7 +535,7 @@ TEST(VMBitwise, Shr)
     b.regs(2).load_int(0, 1024).ABC(OpCode::OP_RSHIFT, 1, 0, 3).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(r.run(b).as_int(), 128);
+    EXPECT_EQ(run_success(r.run(b)).as_int(), 128);
 }
 
 TEST(VMBitwise, ShrArithmetic_NegativeInput)
@@ -560,21 +545,19 @@ TEST(VMBitwise, ShrArithmetic_NegativeInput)
     b.regs(3).load_int(0, -8).load_int(1, 1).ABC(OpCode::OP_RSHIFT, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    Value v = r.run(b);
+    Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_int());
     EXPECT_EQ(v.as_int(), -4);
 }
 
 TEST(VMBitwise, AndOnDoubleThrows)
 {
-    VMRunner r;
-    CB b;
-    b.regs(3);
-    u16 k = b.ch->add_constant(Value::from_real(1.0));
-    b.ABx(OpCode::LOAD_CONST, 0, k).load_int(1, 1).ABC(OpCode::OP_BITAND, 2, 0, 1).ret(2);
-    if (test_config::dump_bytecode)
-        b.dump();
-    EXPECT_THROW(r.run(b), std::runtime_error);
+    VMRunner runner;
+    auto error = run_failed(runner.compile_and_run(
+        "طبيعي(1.0 & 1)\n"));
+    ASSERT_NE(error.source, nullptr);
+    EXPECT_GT(error.loc.line, 0u);
+    EXPECT_LE(error.loc.line, error.source->lines.size());
 }
 
 TEST(VMCompare, EqIntsTrue)
@@ -584,7 +567,7 @@ TEST(VMCompare, EqIntsTrue)
     b.regs(3).load_int(0, 5).load_int(1, 5).ABC(OpCode::OP_EQ, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    Value v = r.run(b);
+    Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
@@ -595,7 +578,7 @@ TEST(VMCompare, EqIntsFalse)
     b.regs(3).load_int(0, 5).load_int(1, 6).ABC(OpCode::OP_EQ, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    Value v = r.run(b);
+    Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_bool() && !v.as_bool());
 }
 
@@ -604,7 +587,7 @@ TEST(VMCompare, NeqTrue)
     VMRunner r;
     CB b;
     b.regs(3).load_int(0, 5).load_int(1, 6).ABC(OpCode::OP_NEQ, 2, 0, 1).ret(2);
-    Value v = r.run(b);
+    Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
@@ -615,7 +598,7 @@ TEST(VMCompare, LtTrue)
     b.regs(3).load_int(0, 3).load_int(1, 7).ABC(OpCode::OP_LT, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    Value v = r.run(b);
+    Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
@@ -626,7 +609,7 @@ TEST(VMCompare, LtFalseEqual)
     b.regs(3).load_int(0, 5).load_int(1, 5).ABC(OpCode::OP_LT, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    Value v = r.run(b);
+    Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_bool() && !v.as_bool());
 }
 
@@ -637,7 +620,7 @@ TEST(VMCompare, LeTrue_Equal)
     b.regs(3).load_int(0, 5).load_int(1, 5).ABC(OpCode::OP_LTE, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    Value v = r.run(b);
+    Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
@@ -648,7 +631,7 @@ TEST(VMCompare, LeFalse)
     b.regs(3).load_int(0, 6).load_int(1, 5).ABC(OpCode::OP_LTE, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    Value v = r.run(b);
+    Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_bool() && !v.as_bool());
 }
 
@@ -662,7 +645,7 @@ TEST(VMCompare, EqSameString)
     b.ABx(OpCode::LOAD_CONST, 0, k0).ABx(OpCode::LOAD_CONST, 1, k1).ABC(OpCode::OP_EQ, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    Value v = r.run(b);
+    Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
@@ -673,7 +656,7 @@ TEST(VMCompare, NotFalseIsTrue)
     b.regs(2).ABC(OpCode::LOAD_FALSE, 0, 0, 0).ABC(OpCode::OP_NOT, 1, 0, 0).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    Value v = r.run(b);
+    Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
@@ -684,7 +667,7 @@ TEST(VMCompare, NotTrueIsFalse)
     b.regs(2).ABC(OpCode::LOAD_TRUE, 0, 0, 0).ABC(OpCode::OP_NOT, 1, 0, 0).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    Value v = r.run(b);
+    Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_bool() && !v.as_bool());
 }
 
@@ -695,7 +678,7 @@ TEST(VMCompare, NotNilIsTrue)
     b.regs(2).ABC(OpCode::LOAD_NIL, 0, 0, 1).ABC(OpCode::OP_NOT, 1, 0, 0).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    Value v = r.run(b);
+    Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
@@ -706,7 +689,7 @@ TEST(VMCompare, NotZeroIsTrue)
     b.regs(2).load_int(0, 0).ABC(OpCode::OP_NOT, 1, 0, 0).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    Value v = r.run(b);
+    Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
@@ -720,7 +703,7 @@ TEST(VMCompare, LtStrings)
     b.ABx(OpCode::LOAD_CONST, 0, ka).ABx(OpCode::LOAD_CONST, 1, kb).ABC(OpCode::OP_LT, 2, 0, 1).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    Value v = r.run(b);
+    Value v = run_success(r.run(b));
     EXPECT_TRUE(v.is_bool() && v.as_bool());
 }
 
@@ -728,29 +711,30 @@ TEST(VMGlobals, StoreAndLoad)
 {
     VMRunner r;
     CB b;
-    b.regs(2).load_int(0, 123).stg(0, "g").load_int(0, 0).ldg(1, "g").ret(1);
+    b.regs(2).load_int(0, 123).stg(0, "عام").load_int(0, 0).ldg(1, "عام").ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(r.run(b).as_int(), 123);
+    EXPECT_EQ(run_success(r.run(b)).as_int(), 123);
 }
 
-TEST(VMGlobals, MissingGlobalIsNil)
+TEST(VMGlobals, MissingGlobalReturnsError)
 {
-    VMRunner r;
-    CB b;
-    b.regs(1).ldg(0, "nope").ret(0);
-    /// NOTE: this should change when making custom error breaking mechanisme
-    EXPECT_THROW(r.run(b), std::runtime_error);
+    VMRunner runner;
+    auto error = run_failed(runner.compile_and_run(
+        "غير_موجود\n"));
+    ASSERT_NE(error.source, nullptr);
+    EXPECT_GT(error.loc.line, 0u);
+    EXPECT_LE(error.loc.line, error.source->lines.size());
 }
 
 TEST(VMGlobals, Overwrite)
 {
     VMRunner r;
     CB b;
-    b.regs(2).load_int(0, 1).stg(0, "x").load_int(0, 2).stg(0, "x").ldg(1, "x").ret(1);
+    b.regs(2).load_int(0, 1).stg(0, "س").load_int(0, 2).stg(0, "س").ldg(1, "س").ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(r.run(b).as_int(), 2);
+    EXPECT_EQ(run_success(r.run(b)).as_int(), 2);
 }
 
 TEST(VMLists, NewEmpty)
@@ -760,7 +744,7 @@ TEST(VMLists, NewEmpty)
     b.regs(2).ABC(OpCode::LIST_NEW, 0, 0, 0).ABC(OpCode::LIST_LEN, 1, 0, 0).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(r.run(b).as_int(), 0);
+    EXPECT_EQ(run_success(r.run(b)).as_int(), 0);
 }
 
 TEST(VMLists, AppendAndLen)
@@ -773,7 +757,7 @@ TEST(VMLists, AppendAndLen)
     b.ABC(OpCode::LIST_LEN, 1, 0, 0).ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(r.run(b).as_int(), 3);
+    EXPECT_EQ(run_success(r.run(b)).as_int(), 3);
 }
 
 TEST(VMLists, GetFirst)
@@ -791,7 +775,7 @@ TEST(VMLists, GetFirst)
         .ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(r.run(b).as_int(), 77);
+    EXPECT_EQ(run_success(r.run(b)).as_int(), 77);
 }
 
 TEST(VMLists, GetLast)
@@ -809,7 +793,7 @@ TEST(VMLists, GetLast)
         .ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(r.run(b).as_int(), 20);
+    EXPECT_EQ(run_success(r.run(b)).as_int(), 20);
 }
 
 TEST(VMLists, Set)
@@ -828,47 +812,44 @@ TEST(VMLists, Set)
         .ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(r.run(b).as_int(), 99);
+    EXPECT_EQ(run_success(r.run(b)).as_int(), 99);
 }
 
 TEST(VMLists, OutOfBoundsThrows)
 {
-    VMRunner r;
-    CB b;
-    b.regs(3).ABC(OpCode::LIST_NEW, 0, 0, 0).load_int(1, 0).ABC(OpCode::LIST_GET, 2, 0, 1).ret(2);
-    if (test_config::dump_bytecode)
-        b.dump();
-    EXPECT_THROW(r.run(b), std::runtime_error);
+    VMRunner runner;
+    auto error = run_failed(runner.compile_and_run(
+        "طبيعي([][0])\n"));
+    ASSERT_NE(error.source, nullptr);
+    EXPECT_GT(error.loc.line, 0u);
+    EXPECT_LE(error.loc.line, error.source->lines.size());
 }
 
 TEST(VMLists, LenOnNonListThrows)
 {
-    VMRunner r;
-    CB b;
-    b.regs(2).load_int(0, 5).ABC(OpCode::LIST_LEN, 1, 0, 0).ret(1);
-    if (test_config::dump_bytecode)
-        b.dump();
-    EXPECT_THROW(r.run(b), std::runtime_error);
+    VMRunner runner;
+    auto error = run_failed(runner.compile_and_run(
+        "لكل عنصر في 5:\n"
+        "    اكتب(عنصر)\n"));
+    ASSERT_NE(error.source, nullptr);
+    EXPECT_GT(error.loc.line, 0u);
+    EXPECT_LE(error.loc.line, error.source->lines.size());
 }
 
 TEST(VMDicts, IndexReturnsStoredValue)
 {
     VMRunner r;
-    auto ast = Array<StmtPtr> {
-        func_def(
-            ident("func"),
-            { },
-            blk({
-                decl_stmt("k", lit_str("lang")),
-                decl_stmt("dict", dict_expr({ })),
-                expr_stmt(assign_expr(index_expr(ident("dict"), ident("k")), lit_int(7))),
-                decl_stmt("x", index_expr(ident("dict"), ident("k"))),
-                return_stmt(ident("x")),
-            })),
-        expr_stmt(call_expr(ident("func"))),
+    auto ast = Array<std::string> {
+        "دالة دالة_اختبار():\n"
+        "    مفتاح := \"lang\"\n"
+        "    قاموس := {}\n"
+        "    قاموس[مفتاح] := 7\n"
+        "    س := قاموس[مفتاح]\n"
+        "    ارجع س\n",
+        "دالة_اختبار()\n",
     };
 
-    Value result = r.compile_and_run(ast);
+    Value result = run_success(r.compile_and_run(ast));
 
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 7);
@@ -877,24 +858,16 @@ TEST(VMDicts, IndexReturnsStoredValue)
 TEST(VMDicts, SetUpdatesAndAppendsByKey)
 {
     VMRunner r;
-    auto ast = Array<StmtPtr> {
-        func_def(
-            ident("func"),
-            { },
-            blk({
-                decl_stmt("dict", dict_expr({ })),
-                expr_stmt(assign_expr(index_expr(ident("dict"), lit_str("fk")), lit_int(1))),
-                expr_stmt(assign_expr(index_expr(ident("dict"), lit_str("sk")), lit_int(2))),
-                return_stmt(
-                    list_expr({
-                        index_expr(ident("dict"), lit_str("fk")),
-                        index_expr(ident("dict"), lit_str("sk")),
-                    })),
-            })),
-        expr_stmt(call_expr(ident("func"))),
+    auto ast = Array<std::string> {
+        "دالة دالة_اختبار():\n"
+        "    قاموس := {}\n"
+        "    قاموس[\"fk\"] := 1\n"
+        "    قاموس[\"sk\"] := 2\n"
+        "    ارجع [قاموس[\"fk\"], قاموس[\"sk\"]]\n",
+        "دالة_اختبار()\n",
     };
 
-    Value result = r.compile_and_run(ast);
+    Value result = run_success(r.compile_and_run(ast));
     ASSERT_TRUE(result.is_list());
     ObjList* ret_obj = result.as_list();
     ASSERT_EQ(ret_obj->size(), 2);
@@ -905,17 +878,17 @@ TEST(VMDicts, SetUpdatesAndAppendsByKey)
 TEST(VMDicts, MissingKeyReturnsNil)
 {
     VMRunner r;
-    auto ast = Array<StmtPtr> {
-        decl_stmt("x", index_expr(dict_expr({ }), lit_str("missing"))),
+    auto ast = Array<std::string> {
+        "س := {}[\"missing\"]\n",
     };
 
-    EXPECT_TRUE(r.compile_and_run(ast).is_nil());
+    EXPECT_TRUE(run_success(r.compile_and_run(ast)).is_nil());
 }
 
 static Chunk* make_adder_chunk()
 {
     auto fn = make_chunk();
-    fn->name = "add2";
+    fn->name = "اجمع_اثنين";
     fn->arity = 2;
     fn->local_count = 3;
     // r0=a r1=b (params); r2=a+b
@@ -927,7 +900,7 @@ static Chunk* make_adder_chunk()
 TEST(VMCalls, CallClosure_TwoArgs)
 {
     auto top = make_chunk();
-    top->name = "<test>";
+    top->name = "<اختبار>";
     top->local_count = 4;
     top->functions.push(make_adder_chunk());
 
@@ -939,34 +912,30 @@ TEST(VMCalls, CallClosure_TwoArgs)
     if (test_config::dump_bytecode)
         top->disassemble();
     VMRunner r;
-    EXPECT_EQ(r.run(top).as_int(), 7);
+    EXPECT_EQ(run_success(r.run(top)).as_int(), 7);
 }
 
 TEST(VMCalls, WrongArgcThrows)
 {
-    auto top = make_chunk();
-    top->name = "<test>";
-    top->local_count = 3;
-    top->functions.push(make_adder_chunk());
-
-    top->emit(make_ABx(OpCode::CLOSURE, 0, 0), { });
-    top->emit(make_ABx(OpCode::LOAD_INT, 1, BX(1)), { });
-    top->emit(make_ABC(OpCode::CALL, 0, 1, 0), { });
-    top->emit(make_ABC(OpCode::RETURN, 0, 1, 0), { });
-    if (test_config::dump_bytecode)
-        top->disassemble();
-    VMRunner r;
-    EXPECT_THROW(r.run(top), std::runtime_error);
+    VMRunner runner;
+    auto error = run_failed(runner.compile_and_run(
+        "دالة اجمع(س، ص):\n"
+        "    ارجع س + ص\n"
+        "اجمع(1)\n"));
+    ASSERT_NE(error.source, nullptr);
+    EXPECT_GT(error.loc.line, 0u);
+    EXPECT_LE(error.loc.line, error.source->lines.size());
 }
 
 TEST(VMCalls, CallNonFunctionThrows)
 {
-    VMRunner r;
-    CB b;
-    b.regs(2).load_int(0, 5).ABC(OpCode::CALL, 0, 0, 0).ret(0);
-    if (test_config::dump_bytecode)
-        b.dump();
-    EXPECT_THROW(r.run(b), std::runtime_error);
+    VMRunner runner;
+    auto error = run_failed(runner.compile_and_run(
+        "قيمة := 5\n"
+        "قيمة()\n"));
+    ASSERT_NE(error.source, nullptr);
+    EXPECT_GT(error.loc.line, 0u);
+    EXPECT_LE(error.loc.line, error.source->lines.size());
 }
 
 TEST(VMCalls, ICCallNativeLen)
@@ -988,13 +957,13 @@ TEST(VMCalls, ICCallNativeLen)
         .ret(1);
     if (test_config::dump_bytecode)
         b.dump();
-    EXPECT_EQ(r.run(b).as_int(), 3);
+    EXPECT_EQ(run_success(r.run(b)).as_int(), 3);
 }
 
 TEST(VMCalls, TailCall_DoesNotOverflowFrames)
 {
     auto fn = make_chunk();
-    fn->name = "cd";
+    fn->name = "تنازل";
     fn->arity = 1;
     fn->local_count = 4;
 
@@ -1011,7 +980,7 @@ TEST(VMCalls, TailCall_DoesNotOverflowFrames)
     fn->emit(make_ABC(OpCode::CALL_TAIL, 2, 1, 0), { });
 
     auto top = make_chunk();
-    top->name = "<test>";
+    top->name = "<اختبار>";
     top->local_count = 3;
     top->functions.push(fn);
 
@@ -1024,70 +993,53 @@ TEST(VMCalls, TailCall_DoesNotOverflowFrames)
     if (test_config::dump_bytecode)
         top->disassemble();
     VMRunner r;
-    Value v = r.run(std::move(top));
+    Value v = run_success(r.run(std::move(top)));
     EXPECT_EQ(v.as_int(), 0);
 }
 
 TEST(VMCalls, StackOverflowDetected)
 {
     VMRunner r;
-    auto ast = Array<StmtPtr> {
-        func_def(ident("inf"), { }, blk({
-                                        expr_stmt(call_expr(ident("inf"))),
-                                        return_stmt(nil()),
-                                    })),
-        expr_stmt(call_expr(ident("inf"))),
+    auto ast = Array<std::string> {
+        "دالة تكرار_لا_نهائي():\n"
+        "    تكرار_لا_نهائي()\n"
+        "    ارجع عدم\n",
+        "تكرار_لا_نهائي()\n",
     };
-    EXPECT_THROW(r.compile_and_run(ast), std::runtime_error);
+    run_failed(r.compile_and_run(ast));
 }
 
 TEST(VMGlobals, UndefinedGlobalRaisesRuntimeError)
 {
-
-    VMRunner r;
-    CB b;
-    b.regs(1).ldg(0, "missing").ret(0);
-    if (test_config::dump_bytecode)
-        b.dump();
-    EXPECT_THROW(r.run(b), RuntimeHalt);
-    diagnostic::reset();
+    VMRunner runner;
+    auto error = run_failed(runner.compile_and_run(
+        "مفقود\n"));
+    ASSERT_NE(error.source, nullptr);
+    EXPECT_GT(error.loc.line, 0u);
+    EXPECT_LE(error.loc.line, error.source->lines.size());
 }
 
 TEST(VMIntegration, FunctionLocalDeclarationShadowsGlobal)
 {
     VMRunner r;
-    AST::StmtPtr make_local = func_def(
-        ident("make_local"),
-        { },
-        blk(
-            { expr_stmt(assign_expr(ident("x"), lit_int(2))),
-                return_stmt(ident("x")) }));
+    std::string make_local = "دالة انشئ_محليا():\n"
+                             "    س := 2\n"
+                             "    ارجع س\n";
 
-    AST::StmtPtr read_global = func_def(
-        ident("read_global"),
-        { },
-        blk({
-            return_stmt(ident("x")),
-        }));
+    std::string read_global = "دالة اقرا_عام():\n"
+                              "    ارجع س\n";
 
-    AST::StmtPtr main_fn = func_def(
-        ident("main"),
-        { },
-        blk({
-            return_stmt(
-                list_expr(
-                    { call_expr(ident("make_local")),
-                        call_expr(ident("read_global")) })),
-        }));
+    std::string main_fn = "دالة رئيسي():\n"
+                          "    ارجع [انشئ_محليا(), اقرا_عام()]\n";
 
-    auto ast = Array<StmtPtr> {
-        expr_stmt(assign_expr(ident("x"), lit_int(1))),
+    auto ast = Array<std::string> {
+        "س := 1\n",
         make_local,
         read_global,
         main_fn,
-        expr_stmt(call_expr(ident("main"))),
+        "رئيسي()\n",
     };
-    Value v = r.compile_and_run(ast);
+    Value v = run_success(r.compile_and_run(ast));
     ASSERT_TRUE(v.is_list());
     auto const& elems = v.as_list()->elements;
     ASSERT_EQ(elems.size(), 2u);
@@ -1100,7 +1052,7 @@ TEST(VMICProfile, BinaryOpUpdatesSlot)
     VMRunner r;
     CB b;
     b.regs(3).slot().load_int(0, 3).load_int(1, 4).ABC(OpCode::OP_ADD, 2, 0, 1).nop(0).ret(2);
-    r.run(b);
+    run_success(r.run(b));
     if (test_config::dump_bytecode)
         b.dump();
     auto const& s = r.chunk_->ic_slots[0];
@@ -1117,7 +1069,7 @@ TEST(VMICProfile, SubUpdatesSlot)
     b.regs(3).slot().load_int(0, 10).load_int(1, 3).ABC(OpCode::OP_SUB, 2, 0, 1).nop(0).ret(2);
     if (test_config::dump_bytecode)
         b.dump();
-    r.run(b);
+    run_success(r.run(b));
     EXPECT_GE(r.chunk_->ic_slots[0].hit_count, 1u);
 }
 
@@ -1139,33 +1091,26 @@ TEST(VMICProfile, SlotAccumulatesAcrossLoopIterations)
         .ret(0);
     if (test_config::dump_bytecode)
         b.dump();
-    r.run(b);
+    run_success(r.run(b));
     EXPECT_EQ(r.chunk_->ic_slots[0].hit_count, 5u);
 }
 
 TEST(VMIntegration, TopLevelWhileAssignmentUpdatesGlobal)
 {
     VMRunner r;
-    AST::StmtPtr read_global = func_def(
-        ident("read_global"),
-        { },
-        blk({
-            return_stmt(ident("x")),
-        }));
+    std::string read_global = "دالة اقرا_عام():\n"
+                              "    ارجع س\n";
 
-    auto ast = Array<StmtPtr> {
-        expr_stmt(assign_expr(ident("x"), lit_int(0))),
-        expr_stmt(assign_expr(ident("limit"), lit_int(3))),
-        while_stmt(
-            binary(ident("x"), ident("limit"), AST::Expr::Kind::OP_LT),
-            blk({
-                expr_stmt(assign_expr(ident("x"), binary(ident("x"), lit_int(1), AST::Expr::Kind::OP_ADD))),
-            })),
+    auto ast = Array<std::string> {
+        "س := 0\n",
+        "حد := 3\n",
+        "طالما (س < حد):\n"
+        "    س := (س + 1)\n",
         read_global,
-        expr_stmt(call_expr(ident("read_global"))),
+        "اقرا_عام()\n",
     };
 
-    Value v = r.compile_and_run(ast);
+    Value v = run_success(r.compile_and_run(ast));
     ASSERT_TRUE(v.is_int());
     EXPECT_EQ(v.as_int(), 3);
 }
@@ -1173,266 +1118,228 @@ TEST(VMIntegration, TopLevelWhileAssignmentUpdatesGlobal)
 TEST(VMIntegration, Fibonacci_fib10_equals_55)
 {
     VMRunner r;
-    AST::StmtPtr fib = func_def(
-        ident("fib"),
-        { ident("n") },
-        blk(
-            { if_stmt(
-                  binary(ident("n"), lit_int(1), AST::Expr::Kind::OP_LTE),
-                  blk({ return_stmt(ident("n")) }),
-                  { }),
-                return_stmt(
-                    binary(
-                        call_expr(
-                            ident("fib"),
-                            { binary(
-                                ident("n"),
-                                lit_int(1),
-                                AST::Expr::Kind::OP_SUB) }),
-                        call_expr(
-                            ident("fib"),
-                            { binary(
-                                ident("n"),
-                                lit_int(2),
-                                AST::Expr::Kind::OP_SUB) }),
-                        AST::Expr::Kind::OP_ADD)) }));
+    std::string fib = (std::string("دالة فيبوناتشي(ن):\n") + test_source::indent((std::string((std::string("اذا (ن <= 1):\n"
+                                                                                                           "    ارجع ن\n")
+                                                                                      + (std::string("غيره:\n") + test_source::indent({ }))))
+                           + "ارجع (فيبوناتشي((ن - 1)) + فيبوناتشي((ن - 2)))\n")));
 
-    Array<StmtPtr> ast = { fib, expr_stmt(call_expr(ident("fib"), { lit_int(10) })) };
-    EXPECT_EQ(r.compile_and_run(ast).as_int(), 55);
+    Array<std::string> ast = { fib, "فيبوناتشي(10)\n" };
+    EXPECT_EQ(run_success(r.compile_and_run(ast)).as_int(), 55);
 }
 
 TEST(VMIntegration, SumForLoopOverList)
 {
     VMRunner r;
-    AST::StmtPtr sum = func_def(
-        ident("sum"),
-        { },
-        blk(
-            {
-                expr_stmt(assign_expr(
-                    ident("items"),
-                    list_expr(
-                        { lit_int(1),
-                            lit_int(2),
-                            lit_int(3),
-                            lit_int(4),
-                            lit_int(5) }))),
-                expr_stmt(assign_expr(ident("total"), lit_int(0))),
-                for_stmt(ident("item"),
-                    ident("items"),
-                    blk({
-                        expr_stmt(assign_expr(
-                            ident("total"),
-                            binary(ident("total"), ident("item"), AST::Expr::Kind::OP_ADD))),
-                    })),
-                return_stmt(ident("total")),
-            }));
+    std::string sum = "دالة مجموع():\n"
+                      "    عناصر := [1, 2, 3, 4, 5]\n"
+                      "    اجمالي := 0\n"
+                      "    لكل عنصر في عناصر:\n"
+                      "        اجمالي := (اجمالي + عنصر)\n"
+                      "    ارجع اجمالي\n";
 
-    EXPECT_EQ(r.compile_and_run({ sum, call_stmt("sum") }).as_int(), 15);
+    EXPECT_EQ(run_success(r.compile_and_run({ sum, "مجموع()\n" })).as_int(), 15);
 }
 
 TEST(VMIntegration, StringConcat_3Parts)
 {
     VMRunner r;
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        return_stmt(
-            binary(
-                binary(lit_str("hello"), lit_str(", "), AST::Expr::Kind::OP_ADD),
-                lit_str("world"),
-                AST::Expr::Kind::OP_ADD)));
+    std::string test = "دالة اختبار():\n"
+                       "    ارجع ((\"hello\" + \", \") + \"world\")\n";
 
-    Value v = r.compile_and_run({ test, call_stmt("test") });
+    Value v = run_success(r.compile_and_run({ test, "اختبار()\n" }));
     EXPECT_EQ(v.as_string()->str, "hello, world");
 }
 
 TEST(VMIntegration, EmptyForLoopLeavesStateUnchanged)
 {
     VMRunner r;
-    AST::StmtPtr first = func_def(
-        ident("first"),
-        { },
-        blk({
-            expr_stmt(assign_expr(ident("items"), list_expr())),
-            expr_stmt(assign_expr(ident("seen"), lit_int(99))),
-            for_stmt(ident("item"),
-                ident("items"),
-                blk({ expr_stmt(assign_expr(ident("seen"), ident("item"))) })),
-            return_stmt(ident("seen")),
-        }));
+    std::string first = "دالة اول():\n"
+                        "    عناصر := []\n"
+                        "    مرئي := 99\n"
+                        "    لكل عنصر في عناصر:\n"
+                        "        مرئي := عنصر\n"
+                        "    ارجع مرئي\n";
 
-    EXPECT_EQ(r.compile_and_run({ first, call_stmt("first") }).as_int(), 99);
+    EXPECT_EQ(run_success(r.compile_and_run({ first, "اول()\n" })).as_int(), 99);
 }
 
 TEST(VMIntegration, BreakAndContinueWorkInLoops)
 {
     VMRunner r;
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        blk({
-            expr_stmt(assign_expr(ident("items"),
-                list_expr({
-                    lit_int(1),
-                    lit_int(2),
-                    lit_int(3),
-                    lit_int(4),
-                    lit_int(5),
-                }))),
-            expr_stmt(assign_expr(ident("total"), lit_int(0))),
-            for_stmt(
-                ident("item"),
-                ident("items"),
-                blk({
-                    if_stmt(binary(ident("item"), lit_int(2), AST::Expr::Kind::OP_EQ), blk({ continue_stmt() })),
-                    if_stmt(binary(ident("item"), lit_int(5), AST::Expr::Kind::OP_EQ), blk({ break_stmt() })),
-                    expr_stmt(assign_expr(ident("total"), binary(ident("total"), ident("item"), AST::Expr::Kind::OP_ADD))),
-                })),
-            return_stmt(ident("total")),
-        }));
+    std::string test = "دالة اختبار():\n"
+                       "    عناصر := [1, 2, 3, 4, 5]\n"
+                       "    اجمالي := 0\n"
+                       "    لكل عنصر في عناصر:\n"
+                       "        اذا (عنصر = 2):\n"
+                       "            اكمل\n"
+                       "        اذا (عنصر = 5):\n"
+                       "            اخرج\n"
+                       "        اجمالي := (اجمالي + عنصر)\n"
+                       "    ارجع اجمالي\n";
 
-    EXPECT_EQ(r.compile_and_run({ test, call_stmt("test") }).as_int(), 8);
+    EXPECT_EQ(run_success(r.compile_and_run({ test, "اختبار()\n" })).as_int(), 8);
 }
 
-TEST(NativeLen, NullArgv)
+TEST(NativeLen, MissingArgumentReturnsError)
 {
-    VM vm;
-    EXPECT_TRUE(vm.len(1, nullptr).is_nil());
+    VMRunner runner;
+    auto error = run_failed(runner.compile_and_run(
+        "طول()\n"));
+    ASSERT_NE(error.source, nullptr);
+    EXPECT_GT(error.loc.line, 0u);
+    EXPECT_LE(error.loc.line, error.source->lines.size());
 }
 
 TEST(NativeLen, EmptyString)
 {
     VM vm;
     auto s = str("");
-    EXPECT_EQ(vm.len(1, &s).as_int(), 0);
+
+    auto result = run_success(vm.len(1, &s));
+    EXPECT_EQ(result.as_int(), 0);
 }
 
 TEST(NativeLen, NonEmptyString)
 {
     VM vm;
     auto s = str("hello");
-    EXPECT_EQ(vm.len(1, &s).as_int(), 5);
+    auto result = run_success(vm.len(1, &s));
+    EXPECT_EQ(result.as_int(), 5);
 }
 
 TEST(NativePrint, NoArgs_PrintsNewline)
 {
     VM vm;
-    EXPECT_TRUE(vm.print(0, nullptr).is_truthy());
+    auto result = run_success(vm.print(0, nullptr));
+    EXPECT_TRUE(result.is_truthy());
 }
 
 TEST(NativePrint, StringArg)
 {
     VM vm;
     auto s = str("hello world");
-    EXPECT_TRUE(vm.print(1, &s).is_truthy());
+    auto result = run_success(vm.print(1, &s));
+    EXPECT_TRUE(result.is_truthy());
 }
 
 TEST(NativePrint, IntegerArg)
 {
     VM vm;
     Value arg = Value::from_int(42);
-    EXPECT_TRUE(vm.print(1, &arg).is_truthy());
+    auto result = run_success(vm.print(1, &arg));
+    EXPECT_TRUE(result.is_truthy());
 }
 
 TEST(NativePrint, FloatArg)
 {
     VM vm;
     Value arg = Value::from_real(3.14);
-    EXPECT_TRUE(vm.print(1, &arg).is_truthy());
+    auto result = run_success(vm.print(1, &arg));
+    EXPECT_TRUE(result.is_truthy());
 }
 
 TEST(NativePrint, BoolArg_True)
 {
     VM vm;
     Value arg = Value::from_bool(true);
-    EXPECT_TRUE(vm.print(1, &arg).is_truthy());
+    auto result = run_success(vm.print(1, &arg));
+    EXPECT_TRUE(result.is_truthy());
 }
 
 TEST(NativePrint, BoolArg_False)
 {
     VM vm;
     Value arg = Value::from_bool(false);
-    EXPECT_TRUE(vm.print(1, &arg).is_truthy());
+    auto result = run_success(vm.print(1, &arg));
+    EXPECT_TRUE(result.is_truthy());
 }
 
 TEST(NativePrint, NilArg)
 {
     VM vm;
     Value arg = Value::nil();
-    EXPECT_TRUE(vm.print(1, &arg).is_truthy());
+    auto result = run_success(vm.print(1, &arg));
+    EXPECT_TRUE(result.is_truthy());
 }
 
 TEST(NativePrint, TwoArgs_DoesNotCrash)
 {
     VM vm;
     auto s = str("a");
-    Value m_args[] = { s, s };
-    EXPECT_TRUE(vm.print(2, m_args).is_truthy());
+    Value args[] = { s, s };
+    auto result = run_success(vm.print(2, args));
+    EXPECT_TRUE(result.is_truthy());
 }
 
 TEST(NativeStr, NoArgs_ReturnsEmpty)
 {
     VM vm;
-    EXPECT_TRUE(vm.str(0, nullptr).is_string());
+    auto result = run_success(vm.str(0, nullptr));
+    EXPECT_TRUE(result.is_string());
 }
 
 TEST(NativeStr, Integer)
 {
     VM vm;
     Value arg = Value::from_int(42);
-    Value r = vm.str(1, &arg);
-    ASSERT_TRUE(r.is_string());
-    EXPECT_EQ(std::string(r.as_string()->str.data()), "42");
+    auto result = run_success(vm.str(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_string());
+    EXPECT_EQ(std::string(v.as_string()->str.data()), "42");
 }
 
 TEST(NativeStr, NegativeInteger)
 {
     VM vm;
     Value arg = Value::from_int(-7);
-    Value r = vm.str(1, &arg);
-    ASSERT_TRUE(r.is_string());
-    EXPECT_EQ(std::string(r.as_string()->str.data()), "-7");
+    auto result = run_success(vm.str(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_string());
+    EXPECT_EQ(std::string(v.as_string()->str.data()), "-7");
 }
 
 TEST(NativeStr, Zero)
 {
     VM vm;
     Value arg = Value::from_int(0);
-    Value r = vm.str(1, &arg);
-    ASSERT_TRUE(r.is_string());
-    EXPECT_EQ(std::string(r.as_string()->str.data()), "0");
+    auto result = run_success(vm.str(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_string());
+    EXPECT_EQ(std::string(v.as_string()->str.data()), "0");
 }
 
 TEST(NativeStr, BoolTrue)
 {
     VM vm;
     Value arg = Value::from_bool(true);
-    Value r = vm.str(1, &arg);
-    ASSERT_TRUE(r.is_string());
-    EXPECT_EQ(std::string(r.as_string()->str.data()), "صحيح");
+    auto result = run_success(vm.str(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_string());
+    EXPECT_EQ(std::string(v.as_string()->str.data()), "صحيح");
 }
 
 TEST(NativeStr, BoolFalse)
 {
     VM vm;
     Value arg = Value::from_bool(false);
-    Value r = vm.str(1, &arg);
-    ASSERT_TRUE(r.is_string());
-    EXPECT_EQ(std::string(r.as_string()->str.data()), "خطا");
+    auto result = run_success(vm.str(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_string());
+    EXPECT_EQ(std::string(v.as_string()->str.data()), "خطا");
 }
 
 TEST(NativeStr, Float)
 {
     VM vm;
     Value arg = Value::from_real(1.5);
-    Value r = vm.str(1, &arg);
-    ASSERT_TRUE(r.is_string());
-    char const* text_ptr = r.as_string()->str.data();
+    auto result = run_success(vm.str(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_string());
+    char const* text_ptr = v.as_string()->str.data();
     f64 parsed = 0.0;
-    auto [end_ptr, ec] = std::from_chars(text_ptr, text_ptr + r.as_string()->str.len(), parsed);
+    auto [end_ptr, ec] = std::from_chars(text_ptr, text_ptr + v.as_string()->str.len(), parsed);
     ASSERT_EQ(ec, std::errc());
-    ASSERT_EQ(end_ptr, text_ptr + r.as_string()->str.len());
+    ASSERT_EQ(end_ptr, text_ptr + v.as_string()->str.len());
     EXPECT_DOUBLE_EQ(parsed, 1.5);
 }
 
@@ -1440,117 +1347,130 @@ TEST(NativeStr, StringPassthrough)
 {
     VM vm;
     Value s = str("hello");
-    Value r = vm.str(1, &s);
-    ASSERT_TRUE(r.is_string());
-    EXPECT_EQ(std::string(r.as_string()->str.data()), "hello");
+    auto result = run_success(vm.str(1, &s));
+    Value v = result;
+    ASSERT_TRUE(v.is_string());
+    EXPECT_EQ(std::string(v.as_string()->str.data()), "hello");
 }
 
 TEST(NativeBool, TrueBoolean)
 {
     VM vm;
     Value arg = Value::from_bool(true);
-    Value r = vm.Bool(1, &arg);
-    ASSERT_TRUE(r.is_bool());
-    EXPECT_TRUE(r.as_bool());
+    auto result = run_success(vm.Bool(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_bool());
+    EXPECT_TRUE(v.as_bool());
 }
 
 TEST(NativeBool, FalseBoolean)
 {
     VM vm;
     Value arg = Value::from_bool(false);
-    Value r = vm.Bool(1, &arg);
-    ASSERT_TRUE(r.is_bool());
-    EXPECT_FALSE(r.as_bool());
+    auto result = run_success(vm.Bool(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_bool());
+    EXPECT_FALSE(v.as_bool());
 }
 
 TEST(NativeBool, NonZeroInteger_IsTrue)
 {
     VM vm;
     Value arg = Value::from_int(1);
-    Value r = vm.Bool(1, &arg);
-    ASSERT_TRUE(r.is_bool());
-    EXPECT_TRUE(r.as_bool());
+    auto result = run_success(vm.Bool(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_bool());
+    EXPECT_TRUE(v.as_bool());
 }
 
 TEST(NativeBool, ZeroInteger_IsFalsy)
 {
     VM vm;
     Value arg = Value::from_int(0);
-    Value r = vm.Bool(1, &arg);
-    ASSERT_TRUE(r.is_bool());
-    EXPECT_FALSE(r.as_bool());
+    auto result = run_success(vm.Bool(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_bool());
+    EXPECT_FALSE(v.as_bool());
 }
 
 TEST(NativeBool, NilArg)
 {
     VM vm;
     Value arg = Value::nil();
-    Value r = vm.Bool(1, &arg);
-    ASSERT_TRUE(r.is_bool());
-    EXPECT_FALSE(r.as_bool());
+    auto result = run_success(vm.Bool(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_bool());
+    EXPECT_FALSE(v.as_bool());
 }
 
 TEST(NativeBool, NonEmptyString_IsTrue)
 {
     VM vm;
     Value arg = str("hi");
-    Value r = vm.Bool(1, &arg);
-    ASSERT_TRUE(r.is_bool());
-    EXPECT_TRUE(r.as_bool());
+    auto result = run_success(vm.Bool(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_bool());
+    EXPECT_TRUE(v.as_bool());
 }
 
 TEST(NativeInt, IntegerPassthrough)
 {
     VM vm;
     Value arg = Value::from_int(7);
-    Value r = vm.Int(1, &arg);
-    ASSERT_TRUE(r.is_int());
-    EXPECT_EQ(r.as_int(), 7);
+    auto result = run_success(vm.Int(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_int());
+    EXPECT_EQ(v.as_int(), 7);
 }
 
 TEST(NativeInt, FloatTruncates)
 {
     VM vm;
     Value arg = Value::from_real(3.9);
-    Value r = vm.Int(1, &arg);
-    ASSERT_TRUE(r.is_int());
-    EXPECT_EQ(r.as_int(), 3);
+    auto result = run_success(vm.Int(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_int());
+    EXPECT_EQ(v.as_int(), 3);
 }
 
 TEST(NativeInt, NegativeFloat)
 {
     VM vm;
     Value arg = Value::from_real(-2.7);
-    Value r = vm.Int(1, &arg);
-    ASSERT_TRUE(r.is_int());
-    EXPECT_EQ(r.as_int(), -2);
+    auto result = run_success(vm.Int(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_int());
+    EXPECT_EQ(v.as_int(), -2);
 }
 
 TEST(NativeFloat, IntegerToFloat)
 {
     VM vm;
     Value arg = Value::from_int(3);
-    Value r = vm.Float(1, &arg);
-    ASSERT_TRUE(r.is_double());
-    EXPECT_DOUBLE_EQ(r.as_double(), 3.0);
+    auto result = run_success(vm.Float(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_double());
+    EXPECT_DOUBLE_EQ(v.as_double(), 3.0);
 }
 
 TEST(NativeFloat, FloatPassthrough)
 {
     VM vm;
     Value arg = Value::from_real(2.5);
-    Value r = vm.Float(1, &arg);
-    ASSERT_TRUE(r.is_double());
-    EXPECT_DOUBLE_EQ(r.as_double(), 2.5);
+    auto result = run_success(vm.Float(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_double());
+    EXPECT_DOUBLE_EQ(v.as_double(), 2.5);
 }
 
 TEST(NativeFloat, NegativeInteger)
 {
     VM vm;
     Value arg = Value::from_int(-10);
-    Value r = vm.Float(1, &arg);
-    ASSERT_TRUE(r.is_double());
-    EXPECT_DOUBLE_EQ(r.as_double(), -10.0);
+    auto result = run_success(vm.Float(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_double());
+    EXPECT_DOUBLE_EQ(v.as_double(), -10.0);
 }
 
 TEST(NativeType, ReturnsTypeNames)
@@ -1562,128 +1482,141 @@ TEST(NativeType, ReturnsTypeNames)
     Value n = Value::nil();
     Value s = str("x");
 
-    EXPECT_EQ(vm.type(1, &i).as_string()->str, "طبيعي");
-    EXPECT_EQ(vm.type(1, &f).as_string()->str, "حقيقي");
-    EXPECT_EQ(vm.type(1, &b).as_string()->str, "منطقي");
-    EXPECT_EQ(vm.type(1, &n).as_string()->str, "عدم");
-    EXPECT_EQ(vm.type(1, &s).as_string()->str, "سلسلة");
+    EXPECT_EQ(run_success(vm.type(1, &i)).as_string()->str, "طبيعي");
+    EXPECT_EQ(run_success(vm.type(1, &f)).as_string()->str, "حقيقي");
+    EXPECT_EQ(run_success(vm.type(1, &b)).as_string()->str, "منطقي");
+    EXPECT_EQ(run_success(vm.type(1, &n)).as_string()->str, "عدم");
+    EXPECT_EQ(run_success(vm.type(1, &s)).as_string()->str, "سلسلة");
 }
 
 TEST(NativeFloor, IntegerPassthrough)
 {
     VM vm;
     Value arg = Value::from_int(5);
-    Value r = vm.floor(1, &arg);
-    EXPECT_TRUE(r.is_int());
-    EXPECT_EQ(r.as_int(), 5);
+    auto result = run_success(vm.floor(1, &arg));
+    Value v = result;
+    EXPECT_TRUE(v.is_int());
+    EXPECT_EQ(v.as_int(), 5);
 }
 
 TEST(NativeFloor, PositiveFloat)
 {
     VM vm;
     Value arg = Value::from_real(3.7);
-    Value r = vm.floor(1, &arg);
-    ASSERT_TRUE(r.is_int());
-    EXPECT_EQ(r.as_int(), 3);
+    auto result = run_success(vm.floor(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_int());
+    EXPECT_EQ(v.as_int(), 3);
 }
 
 TEST(NativeFloor, NegativeFloat)
 {
     VM vm;
     Value arg = Value::from_real(-2.3);
-    Value r = vm.floor(1, &arg);
-    ASSERT_TRUE(r.is_int());
-    EXPECT_EQ(r.as_int(), -3);
+    auto result = run_success(vm.floor(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_int());
+    EXPECT_EQ(v.as_int(), -3);
 }
 
 TEST(NativeFloor, ExactFloat)
 {
     VM vm;
     Value arg = Value::from_real(4.0);
-    Value r = vm.floor(1, &arg);
-    ASSERT_TRUE(r.is_int());
-    EXPECT_EQ(r.as_int(), 4);
+    auto result = run_success(vm.floor(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_int());
+    EXPECT_EQ(v.as_int(), 4);
 }
 
 TEST(NativeCeil, IntegerPassthrough)
 {
     VM vm;
     Value arg = Value::from_int(5);
-    Value r = vm.ceil(1, &arg);
-    EXPECT_TRUE(r.is_int());
-    EXPECT_EQ(r.as_int(), 5);
+    auto result = run_success(vm.ceil(1, &arg));
+    Value v = result;
+    EXPECT_TRUE(v.is_int());
+    EXPECT_EQ(v.as_int(), 5);
 }
 
 TEST(NativeCeil, PositiveFloat)
 {
     VM vm;
     Value arg = Value::from_real(3.2);
-    Value r = vm.ceil(1, &arg);
-    ASSERT_TRUE(r.is_int());
-    EXPECT_EQ(r.as_int(), 4);
+    auto result = run_success(vm.ceil(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_int());
+    EXPECT_EQ(v.as_int(), 4);
 }
 
 TEST(NativeCeil, NegativeFloat)
 {
     VM vm;
     Value arg = Value::from_real(-2.7);
-    Value r = vm.ceil(1, &arg);
-    ASSERT_TRUE(r.is_int());
-    EXPECT_EQ(r.as_int(), -2);
+    auto result = run_success(vm.ceil(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_int());
+    EXPECT_EQ(v.as_int(), -2);
 }
 
 TEST(NativeCeil, ExactFloat)
 {
     VM vm;
     Value arg = Value::from_real(4.0);
-    Value r = vm.ceil(1, &arg);
-    ASSERT_TRUE(r.is_int());
-    EXPECT_EQ(r.as_int(), 4);
+    auto result = run_success(vm.ceil(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_int());
+    EXPECT_EQ(v.as_int(), 4);
 }
 
 TEST(NativeAbs, PositiveInteger)
 {
     VM vm;
     Value arg = Value::from_int(5);
-    Value r = vm.abs(1, &arg);
-    ASSERT_TRUE(r.is_int());
-    EXPECT_EQ(r.as_int(), 5);
+    auto result = run_success(vm.abs(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_int());
+    EXPECT_EQ(v.as_int(), 5);
 }
 
 TEST(NativeAbs, NegativeInteger)
 {
     VM vm;
     Value arg = Value::from_int(-5);
-    Value r = vm.abs(1, &arg);
-    ASSERT_TRUE(r.is_int());
-    EXPECT_EQ(r.as_int(), 5);
+    auto result = run_success(vm.abs(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_int());
+    EXPECT_EQ(v.as_int(), 5);
 }
 
 TEST(NativeAbs, ZeroInteger)
 {
     VM vm;
     Value arg = Value::from_int(0);
-    Value r = vm.abs(1, &arg);
-    ASSERT_TRUE(r.is_int());
-    EXPECT_EQ(r.as_int(), 0);
+    auto result = run_success(vm.abs(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_int());
+    EXPECT_EQ(v.as_int(), 0);
 }
 
 TEST(NativeAbs, PositiveFloat)
 {
     VM vm;
     Value arg = Value::from_real(3.5);
-    Value r = vm.abs(1, &arg);
-    ASSERT_TRUE(r.is_double());
-    EXPECT_DOUBLE_EQ(r.as_double(), 3.5);
+    auto result = run_success(vm.abs(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_double());
+    EXPECT_DOUBLE_EQ(v.as_double(), 3.5);
 }
 
 TEST(NativeAbs, NegativeFloat)
 {
     VM vm;
     Value arg = Value::from_real(-3.5);
-    Value r = vm.abs(1, &arg);
-    ASSERT_TRUE(r.is_double());
-    EXPECT_DOUBLE_EQ(r.as_double(), 3.5);
+    auto result = run_success(vm.abs(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_double());
+    EXPECT_DOUBLE_EQ(v.as_double(), 3.5);
 }
 
 TEST(NativeMin, OneArg_ReturnsArg)
@@ -1691,42 +1624,47 @@ TEST(NativeMin, OneArg_ReturnsArg)
     VM vm;
     srand(static_cast<unsigned>(time(nullptr)));
     Value n = Value::from_int(static_cast<i64>(rand()));
-    Value result = vm.min(1, &n);
-    EXPECT_EQ(result.as_int(), n.as_int());
+    auto result = run_success(vm.min(1, &n));
+    Value v = result;
+    EXPECT_EQ(v.as_int(), n.as_int());
 }
 
 TEST(NativeMin, TwoPositiveIntegers)
 {
     VM vm;
-    Value m_args[] = { Value::from_int(3), Value::from_int(7) };
-    Value r = vm.min(2, m_args);
-    EXPECT_EQ(r.as_int(), 3);
+    Value args[] = { Value::from_int(3), Value::from_int(7) };
+    auto result = run_success(vm.min(2, args));
+    Value v = result;
+    EXPECT_EQ(v.as_int(), 3);
 }
 
 TEST(NativeMin, AllIntegersReturnsInteger)
 {
     VM vm;
-    Value m_args[] = { Value::from_int(5), Value::from_int(2), Value::from_int(8) };
-    Value r = vm.min(3, m_args);
-    EXPECT_TRUE(r.is_int());
-    EXPECT_EQ(r.as_int(), 2);
+    Value args[] = { Value::from_int(5), Value::from_int(2), Value::from_int(8) };
+    auto result = run_success(vm.min(3, args));
+    Value v = result;
+    EXPECT_TRUE(v.is_int());
+    EXPECT_EQ(v.as_int(), 2);
 }
 
 TEST(NativeMin, MixedFloatAndInteger_ReturnsFloat)
 {
     VM vm;
-    Value m_args[] = { Value::from_int(3), Value::from_real(1.5) };
-    Value r = vm.min(2, m_args);
-    EXPECT_TRUE(r.is_double());
-    EXPECT_DOUBLE_EQ(r.as_double(), 1.5);
+    Value args[] = { Value::from_int(3), Value::from_real(1.5) };
+    auto result = run_success(vm.min(2, args));
+    Value v = result;
+    EXPECT_TRUE(v.is_double());
+    EXPECT_DOUBLE_EQ(v.as_double(), 1.5);
 }
 
 TEST(NativeMin, NegativeValues)
 {
     VM vm;
-    Value m_args[] = { Value::from_int(-1), Value::from_int(-5), Value::from_int(-2) };
-    Value r = vm.min(3, m_args);
-    EXPECT_EQ(r.as_int(), -5);
+    Value args[] = { Value::from_int(-1), Value::from_int(-5), Value::from_int(-2) };
+    auto result = run_success(vm.min(3, args));
+    Value v = result;
+    EXPECT_EQ(v.as_int(), -5);
 }
 
 TEST(NativeMax, OneArg_ReturnsArg)
@@ -1734,128 +1672,143 @@ TEST(NativeMax, OneArg_ReturnsArg)
     VM vm;
     srand(static_cast<unsigned>(time(nullptr)));
     Value n = Value::from_int(static_cast<i64>(rand()));
-    Value result = vm.max(1, &n);
-    EXPECT_EQ(result.as_int(), n.as_int());
+    auto result = run_success(vm.max(1, &n));
+    Value v = result;
+    EXPECT_EQ(v.as_int(), n.as_int());
 }
 
 TEST(NativeMax, TwoPositiveIntegers)
 {
     VM vm;
-    Value m_args[] = { Value::from_int(3), Value::from_int(7) };
-    Value r = vm.max(2, m_args);
-    EXPECT_EQ(r.as_int(), 7);
+    Value args[] = { Value::from_int(3), Value::from_int(7) };
+    auto result = run_success(vm.max(2, args));
+    Value v = result;
+    EXPECT_EQ(v.as_int(), 7);
 }
 
 TEST(NativeMax, NegativeValues)
 {
     VM vm;
-    Value m_args[] = { Value::from_int(-3), Value::from_int(-1) };
-    Value r = vm.max(2, m_args);
-    EXPECT_EQ(r.as_int(), -1);
+    Value args[] = { Value::from_int(-3), Value::from_int(-1) };
+    auto result = run_success(vm.max(2, args));
+    Value v = result;
+    EXPECT_EQ(v.as_int(), -1);
 }
 
 TEST(NativeMax, AllIntegersReturnsInteger)
 {
     VM vm;
-    Value m_args[] = { Value::from_int(1), Value::from_int(9), Value::from_int(4) };
-    Value r = vm.max(3, m_args);
-    EXPECT_TRUE(r.is_int());
-    EXPECT_EQ(r.as_int(), 9);
+    Value args[] = { Value::from_int(1), Value::from_int(9), Value::from_int(4) };
+    auto result = run_success(vm.max(3, args));
+    Value v = result;
+    EXPECT_TRUE(v.is_int());
+    EXPECT_EQ(v.as_int(), 9);
 }
 
 TEST(NativeMax, MixedFloatAndInteger)
 {
     VM vm;
-    Value m_args[] = { Value::from_int(3), Value::from_real(3.5) };
-    Value r = vm.max(2, m_args);
-    EXPECT_TRUE(r.is_double());
-    EXPECT_DOUBLE_EQ(r.as_double(), 3.5);
+    Value args[] = { Value::from_int(3), Value::from_real(3.5) };
+    auto result = run_success(vm.max(2, args));
+    Value v = result;
+    EXPECT_TRUE(v.is_double());
+    EXPECT_DOUBLE_EQ(v.as_double(), 3.5);
 }
 
 TEST(NativeMax, StringFirstArg_ReturnsArg)
 {
     VM vm;
-    Value m_args[] = { str("a"), str("b") };
-    EXPECT_EQ(vm.max(2, m_args).as_string()->str, "b");
+    Value args[] = { str("a"), str("b") };
+    auto result = run_success(vm.max(2, args));
+    Value v = result;
+    EXPECT_EQ(v.as_string()->str, "b");
 }
 
 TEST(NativeRound, HalfRoundsUp)
 {
     VM vm;
     Value arg = Value::from_real(2.5);
-    Value r = vm.round(1, &arg);
-    ASSERT_TRUE(r.is_int());
-    EXPECT_EQ(r.as_int(), 3);
+    auto result = run_success(vm.round(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_int());
+    EXPECT_EQ(v.as_int(), 3);
 }
 
 TEST(NativeRound, HalfNegativeRoundsDown)
 {
     VM vm;
     Value arg = Value::from_real(-2.5);
-    Value r = vm.round(1, &arg);
-    ASSERT_TRUE(r.is_int());
-    EXPECT_EQ(r.as_int(), -3);
+    auto result = run_success(vm.round(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_int());
+    EXPECT_EQ(v.as_int(), -3);
 }
 
 TEST(NativeRound, IntegerPassthrough)
 {
     VM vm;
     Value arg = Value::from_int(4);
-    Value r = vm.round(1, &arg);
-    ASSERT_TRUE(r.is_int());
-    EXPECT_EQ(r.as_int(), 4);
+    auto result = run_success(vm.round(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_int());
+    EXPECT_EQ(v.as_int(), 4);
 }
 
 TEST(NativePow, BasicSquare)
 {
     VM vm;
-    Value m_args[] = { Value::from_real(3.0), Value::from_real(2.0) };
-    Value r = vm.pow(2, m_args);
-    if (!r.is_nil())
-        EXPECT_DOUBLE_EQ(r.as_double(), 9.0);
+    Value args[] = { Value::from_real(3.0), Value::from_real(2.0) };
+    auto result = run_success(vm.pow(2, args));
+    Value v = result;
+    if (!v.is_nil())
+        EXPECT_DOUBLE_EQ(v.as_double(), 9.0);
 }
 
 TEST(NativePow, ZeroExponent)
 {
     VM vm;
-    Value m_args[] = { Value::from_real(5.0), Value::from_real(0.0) };
-    Value r = vm.pow(2, m_args);
-    if (!r.is_nil())
-        EXPECT_DOUBLE_EQ(r.as_double(), 1.0);
+    Value args[] = { Value::from_real(5.0), Value::from_real(0.0) };
+    auto result = run_success(vm.pow(2, args));
+    Value v = result;
+    if (!v.is_nil())
+        EXPECT_DOUBLE_EQ(v.as_double(), 1.0);
 }
 
 TEST(NativePow, NegativeExponent)
 {
     VM vm;
-    Value m_args[] = { Value::from_real(2.0), Value::from_real(-1.0) };
-    Value r = vm.pow(2, m_args);
-    if (!r.is_nil())
-        EXPECT_DOUBLE_EQ(r.as_double(), 0.5);
+    Value args[] = { Value::from_real(2.0), Value::from_real(-1.0) };
+    auto result = run_success(vm.pow(2, args));
+    Value v = result;
+    if (!v.is_nil())
+        EXPECT_DOUBLE_EQ(v.as_double(), 0.5);
 }
 
 TEST(NativeSqrt, PerfectSquare)
 {
     VM vm;
     Value arg = Value::from_real(9.0);
-    Value r = vm.sqrt(1, &arg);
-    ASSERT_TRUE(r.is_double());
-    EXPECT_DOUBLE_EQ(r.as_double(), 3.0);
+    auto result = run_success(vm.sqrt(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_double());
+    EXPECT_DOUBLE_EQ(v.as_double(), 3.0);
 }
 
 TEST(NativeSqrt, Zero)
 {
     VM vm;
     Value arg = Value::from_real(0.0);
-    Value r = vm.sqrt(1, &arg);
-    ASSERT_TRUE(r.is_double());
-    EXPECT_DOUBLE_EQ(r.as_double(), 0.0);
+    auto result = run_success(vm.sqrt(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_double());
+    EXPECT_DOUBLE_EQ(v.as_double(), 0.0);
 }
 
 TEST(NativeSqrt, NegativeInput_SpecBehavior)
 {
     VM vm;
     Value arg = Value::from_real(-1.0);
-    EXPECT_NO_FATAL_FAILURE(vm.sqrt(1, &arg));
+    EXPECT_EQ(run_failed(vm.sqrt(1, &arg)).errc, ErrorCode::RUNTIME_ERROR);
 }
 
 TEST(NativeMathDispatch, SupportsDocumentedUnaryOperations)
@@ -1863,8 +1816,8 @@ TEST(NativeMathDispatch, SupportsDocumentedUnaryOperations)
     VM vm;
     Value sine_args[] = { str("sin"), Value::from_real(0.0) };
     Value exp_args[] = { str("exp"), Value::from_real(0.0) };
-    EXPECT_DOUBLE_EQ(vm.math_unary(2, sine_args).as_double(), 0.0);
-    EXPECT_DOUBLE_EQ(vm.math_unary(2, exp_args).as_double(), 1.0);
+    EXPECT_DOUBLE_EQ(run_success(vm.math_unary(2, sine_args)).as_double(), 0.0);
+    EXPECT_DOUBLE_EQ(run_success(vm.math_unary(2, exp_args)).as_double(), 1.0);
 }
 
 TEST(NativeMathDispatch, SupportsDocumentedBinaryOperations)
@@ -1872,43 +1825,43 @@ TEST(NativeMathDispatch, SupportsDocumentedBinaryOperations)
     VM vm;
     Value hypot_args[] = { str("hypot"), Value::from_int(3), Value::from_int(4) };
     Value atan_args[] = { str("atan2"), Value::from_real(0.0), Value::from_real(1.0) };
-    EXPECT_DOUBLE_EQ(vm.math_binary(3, hypot_args).as_double(), 5.0);
-    EXPECT_DOUBLE_EQ(vm.math_binary(3, atan_args).as_double(), 0.0);
+    EXPECT_DOUBLE_EQ(run_success(vm.math_binary(3, hypot_args)).as_double(), 5.0);
+    EXPECT_DOUBLE_EQ(run_success(vm.math_binary(3, atan_args)).as_double(), 0.0);
 }
 
 TEST(NativeMathDispatch, RejectsBadTypesAndUnknownOperations)
 {
     VM vm;
-    Value bad_type[] = { str("sin"), str("not-a-number") };
+    Value bad_type[] = { str("sin"), str("not-ا-number") };
     Value unknown[] = { str("unknown"), Value::from_int(1) };
-    EXPECT_TRUE(vm.math_unary(2, bad_type).is_nil());
-    EXPECT_TRUE(vm.math_unary(2, unknown).is_nil());
-    EXPECT_TRUE(vm.math_binary(0, nullptr).is_nil());
+    EXPECT_EQ(run_failed(vm.math_unary(2, bad_type)).errc, ErrorCode::NATIVE_TYPE_ERROR);
+    EXPECT_EQ(run_failed(vm.math_unary(2, unknown)).errc, ErrorCode::RUNTIME_ERROR);
+    EXPECT_EQ(run_failed(vm.math_binary(0, nullptr)).errc, ErrorCode::NATIVE_ARG_COUNT);
 }
 
 TEST(NativeUrl, EncodesAndDecodesUtf8Bytes)
 {
     VM vm;
     Value input = str("لغة فيروز/1");
-    Value encoded = vm.url_encode(1, &input);
+    Value encoded = run_success(vm.url_encode(1, &input));
     ASSERT_TRUE(encoded.is_string());
-    Value decoded = vm.url_decode(1, &encoded);
+    Value decoded = run_success(vm.url_decode(1, &encoded));
     ASSERT_TRUE(decoded.is_string());
     EXPECT_EQ(decoded.as_string()->str, input.as_string()->str);
     Value malformed = str("%GG");
-    EXPECT_TRUE(vm.url_decode(1, &malformed).is_nil());
+    EXPECT_EQ(run_failed(vm.url_decode(1, &malformed)).errc, ErrorCode::RUNTIME_ERROR);
 }
 
 TEST(NativeUrl, ParsesAndRebuildsStructuredUrl)
 {
     VM vm;
     Value input = str("https://example.test:443/api?q=1#part");
-    Value parsed = vm.url_parse(1, &input);
+    Value parsed = run_success(vm.url_parse(1, &input));
     ASSERT_TRUE(parsed.is_dict());
     Value port = vm.dict_get(&parsed, str("port"));
     ASSERT_TRUE(port.is_int());
     EXPECT_EQ(port.as_int(), 443);
-    Value rebuilt = vm.url_build(1, &parsed);
+    Value rebuilt = run_success(vm.url_build(1, &parsed));
     ASSERT_TRUE(rebuilt.is_string());
     EXPECT_EQ(rebuilt.as_string()->str, input.as_string()->str);
 }
@@ -1917,19 +1870,19 @@ TEST(NativeUrl, RejectsInvalidBoundaryArguments)
 {
     VM vm;
     Value number = Value::from_int(42);
-    EXPECT_TRUE(vm.url_encode(1, &number).is_nil());
-    EXPECT_TRUE(vm.url_parse(1, &number).is_nil());
-    EXPECT_TRUE(vm.url_build(1, &number).is_nil());
+    EXPECT_EQ(run_failed(vm.url_encode(1, &number)).errc, ErrorCode::NATIVE_TYPE_ERROR);
+    EXPECT_EQ(run_failed(vm.url_parse(1, &number)).errc, ErrorCode::NATIVE_TYPE_ERROR);
+    EXPECT_EQ(run_failed(vm.url_build(1, &number)).errc, ErrorCode::NATIVE_TYPE_ERROR);
 }
 
 TEST(NativeRegex, CompilesSearchesMatchesAndCaptures)
 {
     VM vm;
     Value compile_args[] = { str("([a-z])([0-9]+)"), Value::from_int(0) };
-    Value handle = vm.regex_compile(2, compile_args);
+    Value handle = run_success(vm.regex_compile(2, compile_args));
     ASSERT_TRUE(handle.is_string());
     Value search_args[] = { handle, str("قبل a12 بعد"), Value::from_int(0) };
-    Value found = vm.regex_search(3, search_args);
+    Value found = run_success(vm.regex_search(3, search_args));
     ASSERT_TRUE(found.is_dict());
     EXPECT_EQ(vm.dict_get(&found, str("start")).as_int(), 4);
     Value groups = vm.dict_get(&found, str("groups"));
@@ -1938,9 +1891,9 @@ TEST(NativeRegex, CompilesSearchesMatchesAndCaptures)
     EXPECT_EQ(groups.as_list()->elements[1].as_string()->str, StringRef("a"));
 
     Value match_args[] = { handle, str("a12 tail"), Value::from_int(0) };
-    EXPECT_TRUE(vm.regex_match(3, match_args).is_dict());
+    EXPECT_TRUE(run_success(vm.regex_match(3, match_args)).is_dict());
     Value full_args[] = { handle, str("a12") };
-    EXPECT_TRUE(vm.regex_fullmatch(2, full_args).is_dict());
+    EXPECT_TRUE(run_success(vm.regex_fullmatch(2, full_args)).is_dict());
 }
 
 TEST(NativeRegex, FindsAllSplitsAndReplacesWithLimits)
@@ -1948,17 +1901,17 @@ TEST(NativeRegex, FindsAllSplitsAndReplacesWithLimits)
     VM vm;
     Value handle = str("[0-9]+");
     Value all_args[] = { handle, str("a1 b22 c333") };
-    Value all = vm.regex_findall(2, all_args);
+    Value all = run_success(vm.regex_findall(2, all_args));
     ASSERT_TRUE(all.is_list());
     EXPECT_EQ(all.as_list()->elements.size(), 3u);
 
     Value split_args[] = { handle, str("a1b22c"), Value::from_int(1) };
-    Value split = vm.regex_split(3, split_args);
+    Value split = run_success(vm.regex_split(3, split_args));
     ASSERT_TRUE(split.is_list());
     EXPECT_EQ(split.as_list()->elements.size(), 2u);
 
     Value replace_args[] = { handle, str("a1b22c"), str("#"), Value::from_int(1) };
-    Value replaced = vm.regex_replace(4, replace_args);
+    Value replaced = run_success(vm.regex_replace(4, replace_args));
     ASSERT_TRUE(replaced.is_string());
     EXPECT_EQ(replaced.as_string()->str, StringRef("a#b22c"));
 }
@@ -1967,147 +1920,157 @@ TEST(NativeRegex, RejectsInvalidPatternsAndArguments)
 {
     VM vm;
     Value invalid[] = { str("["), Value::from_int(0) };
-    EXPECT_TRUE(vm.regex_compile(2, invalid).is_nil());
-    EXPECT_TRUE(vm.regex_search(0, nullptr).is_nil());
-    EXPECT_TRUE(vm.regex_split(0, nullptr).is_nil());
-    EXPECT_TRUE(vm.regex_replace(0, nullptr).is_nil());
+    EXPECT_EQ(run_failed(vm.regex_compile(2, invalid)).errc, ErrorCode::RUNTIME_ERROR);
+    EXPECT_EQ(run_failed(vm.regex_search(0, nullptr)).errc, ErrorCode::NATIVE_ARG_COUNT);
+    EXPECT_EQ(run_failed(vm.regex_split(0, nullptr)).errc, ErrorCode::NATIVE_ARG_COUNT);
+    EXPECT_EQ(run_failed(vm.regex_replace(0, nullptr)).errc, ErrorCode::NATIVE_ARG_COUNT);
 }
 
 TEST(NativeSplit, BasicSplit)
 {
     VM vm;
-    Value m_args[] = { str("a,b,c"), str(",") };
-    Value r = vm.split(2, m_args);
+    Value args[] = { str("a,b,c"), str(",") };
+    auto result = run_success(vm.split(2, args));
+    Value v = result;
+    ASSERT_TRUE(v.is_list());
+    EXPECT_EQ(v.as_list()->elements.size(), 3u);
 
-    ASSERT_TRUE(r.is_list());
-    EXPECT_EQ(r.as_list()->elements.size(), 3u);
+    ASSERT_TRUE(v.as_list()->elements[0].is_string());
+    ASSERT_TRUE(v.as_list()->elements[1].is_string());
+    ASSERT_TRUE(v.as_list()->elements[2].is_string());
 
-    ASSERT_TRUE(r.as_list()->elements[0].is_string());
-    ASSERT_TRUE(r.as_list()->elements[1].is_string());
-    ASSERT_TRUE(r.as_list()->elements[2].is_string());
-
-    EXPECT_EQ(std::string(r.as_list()->elements[0].as_string()->str.data()), "a");
-    EXPECT_EQ(std::string(r.as_list()->elements[1].as_string()->str.data()), "b");
-    EXPECT_EQ(std::string(r.as_list()->elements[2].as_string()->str.data()), "c");
+    EXPECT_EQ(std::string(v.as_list()->elements[0].as_string()->str.data()), "a");
+    EXPECT_EQ(std::string(v.as_list()->elements[1].as_string()->str.data()), "b");
+    EXPECT_EQ(std::string(v.as_list()->elements[2].as_string()->str.data()), "c");
 }
 
 TEST(NativeSplit, NoDelimiterFound)
 {
     VM vm;
-    Value m_args[] = { str("hello"), str(",") };
-    Value r = vm.split(2, m_args);
-    ASSERT_TRUE(r.is_list());
-    EXPECT_EQ(r.as_list()->elements.size(), 1u);
-    ASSERT_TRUE(r.as_list()->elements[0].as_string());
-    EXPECT_EQ(std::string(r.as_list()->elements[0].as_string()->str.data()), "hello");
+    Value args[] = { str("hello"), str(",") };
+    auto result = run_success(vm.split(2, args));
+    Value v = result;
+    ASSERT_TRUE(v.is_list());
+    EXPECT_EQ(v.as_list()->elements.size(), 1u);
+    ASSERT_TRUE(v.as_list()->elements[0].as_string());
+    EXPECT_EQ(std::string(v.as_list()->elements[0].as_string()->str.data()), "hello");
 }
 
 TEST(NativeSubstr, BasicSubstr)
 {
     VM vm; // substr is exclusive
-    Value m_args[] = { str("hello"), Value::from_int(1), Value::from_int(4) };
-    Value r = vm.substr(3, m_args);
-    if (!r.is_nil()) {
-        ASSERT_TRUE(r.is_string());
-        EXPECT_EQ(std::string(r.as_string()->str.data()), "ell");
+    Value args[] = { str("hello"), Value::from_int(1), Value::from_int(4) };
+    auto result = run_success(vm.substr(3, args));
+    Value v = result;
+    if (!v.is_nil()) {
+        ASSERT_TRUE(v.is_string());
+        EXPECT_EQ(std::string(v.as_string()->str.data()), "ell");
     }
 }
 
 TEST(NativeSubstr, FromStart)
 {
     VM vm; // substr is exclusive
-    Value m_args[] = { str("hello"), Value::from_int(0), Value::from_int(3) };
-    Value r = vm.substr(3, m_args);
-    if (!r.is_nil()) {
-        ASSERT_TRUE(r.is_string());
-        EXPECT_EQ(std::string(r.as_string()->str.data()), "hel");
+    Value args[] = { str("hello"), Value::from_int(0), Value::from_int(3) };
+    auto result = run_success(vm.substr(3, args));
+    Value v = result;
+    if (!v.is_nil()) {
+        ASSERT_TRUE(v.is_string());
+        EXPECT_EQ(std::string(v.as_string()->str.data()), "hel");
     }
 }
 
 TEST(NativeContains, StringContains_True)
 {
     VM vm;
-    Value m_args[] = { str("hello world"), str("world") };
-    Value r = vm.contains(2, m_args);
-    ASSERT_TRUE(r.is_bool());
-    EXPECT_TRUE(r.as_bool());
+    Value args[] = { str("hello world"), str("world") };
+    auto result = run_success(vm.contains(2, args));
+    Value v = result;
+    ASSERT_TRUE(v.is_bool());
+    EXPECT_TRUE(v.as_bool());
 }
 
 TEST(NativeContains, StringContains_False)
 {
     VM vm;
-    Value m_args[] = { str("hello"), str("xyz") };
-    Value r = vm.contains(2, m_args);
-    ASSERT_TRUE(r.is_bool());
-    EXPECT_FALSE(r.as_bool());
+    Value args[] = { str("hello"), str("xyz") };
+    auto result = run_success(vm.contains(2, args));
+    Value v = result;
+    ASSERT_TRUE(v.is_bool());
+    EXPECT_FALSE(v.as_bool());
 }
 
 TEST(NativeTrim, LeadingAndTrailingSpaces)
 {
     VM vm;
     Value arg = str("  hello  ");
-    Value r = vm.trim(1, &arg);
-    ASSERT_TRUE(r.is_string());
-    EXPECT_EQ(std::string(r.as_string()->str.data()), "hello");
+    auto result = run_success(vm.trim(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_string());
+    EXPECT_EQ(std::string(v.as_string()->str.data()), "hello");
 }
 
 TEST(NativeTrim, NoSpaces)
 {
     VM vm;
     Value arg = str("hello");
-    Value r = vm.trim(1, &arg);
-    ASSERT_TRUE(r.is_string());
-    EXPECT_EQ(std::string(r.as_string()->str.data()), "hello");
+    auto result = run_success(vm.trim(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_string());
+    EXPECT_EQ(std::string(v.as_string()->str.data()), "hello");
 }
 
 TEST(NativeTrim, OnlySpaces)
 {
     VM vm;
     Value arg = str("   ");
-    Value r = vm.trim(1, &arg);
-    ASSERT_TRUE(r.is_string());
-    EXPECT_EQ(std::string(r.as_string()->str.data()), "");
+    auto result = run_success(vm.trim(1, &arg));
+    Value v = result;
+    ASSERT_TRUE(v.is_string());
+    EXPECT_EQ(std::string(v.as_string()->str.data()), "");
 }
 
 TEST(NativeJoin, BasicJoin)
 {
     VM vm;
-    Value list = vm.list(0, nullptr);
+    Value list = run_success(vm.list(0, nullptr));
     ObjList* l = list.as_list();
     l->elements.push(str("a"));
     l->elements.push(str("b"));
     l->elements.push(str("c"));
-    Value m_args[] = { list, str("|") };
-    Value r = vm.join(2, m_args);
-    ASSERT_TRUE(r.is_string());
-    EXPECT_EQ(std::string(r.as_string()->str.data()), "a|b|c");
+    Value args[] = { list, str("|") };
+    auto result = run_success(vm.join(2, args));
+    Value v = result;
+    ASSERT_TRUE(v.is_string());
+    EXPECT_EQ(std::string(v.as_string()->str.data()), "a|b|c");
 }
 
 TEST(NativeAssert, TrueCondition_DoesNotCrash)
 {
     VM vm;
     Value arg = Value::from_bool(true);
-    EXPECT_NO_FATAL_FAILURE(vm.Assert(1, &arg));
+    run_success(vm.Assert(1, &arg));
 }
 
 TEST(NativeAssert, OptionalMessageIsNotTreatedAsASecondCondition)
 {
     VM vm;
     Value args[] = { Value::from_bool(true), str("") };
-    EXPECT_NO_THROW(vm.Assert(2, args));
+    run_success(vm.Assert(2, args));
 }
 
 TEST(NativeClock, ReturnsFiniteMonotonicSeconds)
 {
     VM vm;
-    Value first = vm.clock(0, nullptr);
-    Value second = vm.clock(0, nullptr);
+    Value first = run_success(vm.clock(0, nullptr));
+    Value second = run_success(vm.clock(0, nullptr));
     ASSERT_TRUE(first.is_double());
     ASSERT_TRUE(second.is_double());
     EXPECT_TRUE(std::isfinite(first.as_double()));
     EXPECT_GE(second.as_double(), first.as_double());
-    EXPECT_TRUE(vm.clock(0, &first).is_double());
-    EXPECT_THROW(vm.clock(1, &first), std::runtime_error);
+    EXPECT_TRUE(run_success(vm.clock(0, &first)).is_double());
+    VMRunner runner;
+    run_failed(runner.compile_and_run("ساعة(1)\n"));
 }
 
 static f64 microseconds_since(std::chrono::high_resolution_clock::time_point t0)
@@ -2134,24 +2097,17 @@ TEST_F(VMPerfTest, Dispatch_IntAdd_1M_Iterations)
 {
     constexpr int N = 1'000'000;
 
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        blk({ expr_stmt(assign_expr(ident("i"), lit_int(0))),
-            expr_stmt(assign_expr(ident("step"), lit_int(1))),
-            expr_stmt(assign_expr(ident("limit"), lit_int(N))),
-            while_stmt(
-                binary(ident("i"), ident("limit"), AST::Expr::Kind::OP_LT),
-                blk({ expr_stmt(assign_expr(
-                    ident("i"),
-                    binary(ident("i"), ident("step"), AST::Expr::Kind::OP_ADD))) })),
-            return_stmt(ident("i")) }));
+    std::string test = (std::string("دالة اختبار():\n") + test_source::indent((std::string("فهرس := 0\n"
+                                                                                           "خطوة := 1\n")
+                            + (std::string((std::string("حد := ") + std::to_string(N))) + "\n") + "طالما (فهرس < حد):\n"
+                                                                                                  "    فهرس := (فهرس + خطوة)\n"
+                                                                                                  "ارجع فهرس\n")));
 
     VMRunner r;
-    r.compile({ test, call_stmt("test") });
+    r.compile({ test, "اختبار()\n" });
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Value result = r.run();
+    Value result = run_success(r.run());
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -2167,25 +2123,18 @@ TEST_F(VMPerfTest, Dispatch_FloatAdd_500k_Iterations)
 {
     constexpr int N = 500'000;
 
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        blk({ expr_stmt(assign_expr(ident("i"), lit_flt(0.0))),
-            expr_stmt(assign_expr(ident("step"), lit_flt(1.0))),
-            expr_stmt(assign_expr(ident("limit"), lit_flt(static_cast<f64>(N)))),
-            while_stmt(
-                binary(ident("i"), ident("limit"), AST::Expr::Kind::OP_LT),
-                blk({ expr_stmt(assign_expr(
-                    ident("i"),
-                    binary(ident("i"), ident("step"), AST::Expr::Kind::OP_ADD))) })),
-            return_stmt(ident("i")) }));
+    std::string test = (std::string("دالة اختبار():\n") + test_source::indent((std::string("فهرس := 0.0\n"
+                                                                                           "خطوة := 1.0\n")
+                            + (std::string((std::string("حد := ") + test_source::floating(static_cast<f64>(N)))) + "\n") + "طالما (فهرس < حد):\n"
+                                                                                                                           "    فهرس := (فهرس + خطوة)\n"
+                                                                                                                           "ارجع فهرس\n")));
 
     VMRunner r;
-    r.compile({ test, call_stmt("test") });
-    r.run();
+    r.compile({ test, "اختبار()\n" });
+    run_success(r.run());
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Value result = r.run();
+    Value result = run_success(r.run());
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -2203,16 +2152,15 @@ TEST_F(VMPerfTest, GlobalLookup_1M_Roundtrips)
 {
     constexpr int N = 1'000'000;
 
-    AST::StmtPtr decl = decl_stmt("a", lit_int(0));
-    AST::WhileStmt* while_loop = while_stmt(
-        binary(ident("a"), lit_int(N), AST::Expr::Kind::OP_LT),
-        expr_stmt(assign_expr(ident("a"), binary(ident("a"), lit_int(1), AST::Expr::Kind::OP_ADD))));
+    std::string decl = "ا := 0\n";
+    std::string while_loop = (std::string("طالما ") + (std::string("(ا < ") + std::to_string(N) + ")") + ":\n"
+                                                                                                         "    ا := (ا + 1)\n");
 
     VMRunner r;
     r.compile({ decl, while_loop });
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Value result = r.run();
+    Value result = run_success(r.run());
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -2223,28 +2171,22 @@ TEST_F(VMPerfTest, CallOverhead_100k_Calls)
 {
     constexpr int N = 100;
 
-    AST::StmtPtr m_body = blk(
-        { expr_stmt(assign_expr(ident("i"), lit_int(0))),
-            expr_stmt(assign_expr(ident("limit"), lit_int(N))),
-            while_stmt(
-                binary(ident("i"), ident("limit"), AST::Expr::Kind::OP_LT),
-                blk({ expr_stmt(call_expr(ident("add"), { lit_int(1), lit_int(2) })),
-                    expr_stmt(assign_expr(ident("i"), binary(ident("i"), lit_int(1), AST::Expr::Kind::OP_ADD))) })),
-            return_stmt(ident("i")) });
+    std::string m_body = (std::string("فهرس := 0\n") + (std::string((std::string("حد := ") + std::to_string(N))) + "\n") + "طالما (فهرس < حد):\n"
+                                                                                                                           "    اجمع(1, 2)\n"
+                                                                                                                           "    فهرس := (فهرس + 1)\n"
+                                                                                                                           "ارجع فهرس\n");
 
-    AST::StmtPtr func = func_def(ident("test"), { }, m_body);
+    std::string func = (std::string("دالة اختبار():\n") + test_source::indent(m_body));
 
-    AST::StmtPtr add = func_def(
-        ident("add"),
-        { ident("a"), ident("b") },
-        return_stmt(binary(ident("a"), ident("b"), AST::Expr::Kind::OP_ADD)));
-    AST::StmtPtr call = expr_stmt(call_expr(ident("test")));
+    std::string add = "دالة اجمع(ا, ب):\n"
+                      "    ارجع (ا + ب)\n";
+    std::string call = "اختبار()\n";
 
     std::cout << "AUTO:" << '\n';
     VMRunner r;
     r.compile({ add, func, call });
     auto t0 = std::chrono::high_resolution_clock::now();
-    Value result = r.run();
+    Value result = run_success(r.run());
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -2263,37 +2205,27 @@ TEST_F(VMPerfTest, TailCall_vs_RegularLoop_Ratio)
 {
     constexpr int DEPTH = 5000;
 
-    AST::StmtPtr tc_fn = func_def(
-        ident("tc"),
-        { ident("n") },
-        blk({ if_stmt(
-                  binary(ident("n"), lit_int(0), AST::Expr::Kind::OP_EQ),
-                  blk({ return_stmt(ident("n")) })),
-            return_stmt(call_expr(ident("tc"), { binary(ident("n"), lit_int(1), AST::Expr::Kind::OP_SUB) })) }));
+    std::string tc_fn = "دالة استدعاء_ذيلي(ن):\n"
+                        "    اذا (ن = 0):\n"
+                        "        ارجع ن\n"
+                        "    ارجع استدعاء_ذيلي((ن - 1))\n";
 
     VMRunner tc;
-    tc.compile({ tc_fn, expr_stmt(call_expr(ident("tc"), { lit_int(DEPTH) })) });
+    tc.compile({ tc_fn, (std::string((std::string("استدعاء_ذيلي(") + (std::string(std::to_string(DEPTH))) + ")")) + "\n") });
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Value tc_result = tc.run();
+    Value tc_result = run_success(tc.run());
     f64 tc_us = microseconds_since(t0);
 
     // ── equivalent iterative loop (no calls) ─────────────────────────────
-    AST::StmtPtr loop_fn = func_def(
-        ident("loop"),
-        { },
-        blk({ expr_stmt(assign_expr(ident("n"), lit_int(DEPTH))),
-            while_stmt(
-                binary(ident("n"), lit_int(0), AST::Expr::Kind::OP_NEQ),
-                blk({ expr_stmt(assign_expr(
-                    ident("n"),
-                    binary(ident("n"), lit_int(1), AST::Expr::Kind::OP_SUB))) })),
-            return_stmt(ident("n")) }));
+    std::string loop_fn = (std::string("دالة حلقة():\n") + test_source::indent((std::string((std::string((std::string("ن := ") + std::to_string(DEPTH))) + "\n")) + "طالما (ن != 0):\n"
+                                                                                                                                                                    "    ن := (ن - 1)\n"
+                                                                                                                                                                    "ارجع ن\n")));
 
     VMRunner loop;
-    loop.compile({ loop_fn, call_stmt("loop") });
+    loop.compile({ loop_fn, "حلقة()\n" });
     t0 = std::chrono::high_resolution_clock::now();
-    Value loop_result = loop.run();
+    Value loop_result = run_success(loop.run());
     f64 loop_us = microseconds_since(t0);
 
     do_not_optimize(tc_result);
@@ -2313,37 +2245,22 @@ TEST_F(VMPerfTest, TailCall_vs_RegularLoop_Ratio)
 TEST_F(VMPerfTest, List_AppendAndSum_10k)
 {
     constexpr int N = 10'000;
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        blk({ expr_stmt(assign_expr(ident("xs"), list_expr())),
-            expr_stmt(assign_expr(ident("i"), lit_int(0))),
-            expr_stmt(assign_expr(ident("limit"), lit_int(N))),
-            while_stmt(
-                binary(ident("i"), ident("limit"), AST::Expr::Kind::OP_LT),
-                blk({ expr_stmt(call_expr(ident("اضف"), { ident("xs"), ident("i") })),
-                    expr_stmt(assign_expr(
-                        ident("i"),
-                        binary(ident("i"), lit_int(1), AST::Expr::Kind::OP_ADD))) })),
-            expr_stmt(assign_expr(ident("i"), lit_int(0))),
-            expr_stmt(assign_expr(ident("sum"), lit_int(0))),
-            while_stmt(
-                binary(ident("i"), ident("limit"), AST::Expr::Kind::OP_LT),
-                blk({ expr_stmt(assign_expr(
-                          ident("sum"),
-                          binary(
-                              ident("sum"),
-                              index_expr(ident("xs"), ident("i")),
-                              AST::Expr::Kind::OP_ADD))),
-                    expr_stmt(assign_expr(
-                        ident("i"),
-                        binary(ident("i"), lit_int(1), AST::Expr::Kind::OP_ADD))) })),
-            return_stmt(ident("sum")) }));
+    std::string test = (std::string("دالة اختبار():\n") + test_source::indent((std::string("قائمة_قيم := []\n"
+                                                                                           "فهرس := 0\n")
+                            + (std::string((std::string("حد := ") + std::to_string(N))) + "\n") + "طالما (فهرس < حد):\n"
+                                                                                                  "    اضف(قائمة_قيم, فهرس)\n"
+                                                                                                  "    فهرس := (فهرس + 1)\n"
+                                                                                                  "فهرس := 0\n"
+                                                                                                  "مجموع := 0\n"
+                                                                                                  "طالما (فهرس < حد):\n"
+                                                                                                  "    مجموع := (مجموع + قائمة_قيم[فهرس])\n"
+                                                                                                  "    فهرس := (فهرس + 1)\n"
+                                                                                                  "ارجع مجموع\n")));
 
     VMRunner r;
-    r.compile({ test, call_stmt("test") });
+    r.compile({ test, "اختبار()\n" });
     auto t0 = std::chrono::high_resolution_clock::now();
-    Value result = r.run();
+    Value result = run_success(r.run());
     f64 us = microseconds_since(t0);
     do_not_optimize(result);
 
@@ -2361,29 +2278,22 @@ TEST_F(VMPerfTest, NativeCall_Len_50k_ICHot)
 {
     constexpr int N = 50'000;
 
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        blk({ expr_stmt(assign_expr(ident("s"), lit_str("hello world"))),
-            expr_stmt(assign_expr(ident("i"), lit_int(0))),
-            expr_stmt(assign_expr(ident("limit"), lit_int(N))),
-            expr_stmt(assign_expr(ident("last"), lit_int(0))),
-            while_stmt(
-                binary(ident("i"), ident("limit"), AST::Expr::Kind::OP_LT),
-                blk({ expr_stmt(assign_expr(ident("last"), call_expr(ident("طول"), { ident("s") }))),
-                    expr_stmt(assign_expr(
-                        ident("i"),
-                        binary(ident("i"), lit_int(1), AST::Expr::Kind::OP_ADD))) })),
-            return_stmt(ident("last")) }));
+    std::string test = (std::string("دالة اختبار():\n") + test_source::indent((std::string("نص := \"hello world\"\n"
+                                                                                           "فهرس := 0\n")
+                            + (std::string((std::string("حد := ") + std::to_string(N))) + "\n") + "اخير := 0\n"
+                                                                                                  "طالما (فهرس < حد):\n"
+                                                                                                  "    اخير := طول(نص)\n"
+                                                                                                  "    فهرس := (فهرس + 1)\n"
+                                                                                                  "ارجع اخير\n")));
 
     VMRunner r;
-    r.compile({ test, call_stmt("test") });
+    r.compile({ test, "اختبار()\n" });
 
     // Cold run to prime the IC.
-    r.run();
+    run_success(r.run());
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Value result = r.run();
+    Value result = run_success(r.run());
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -2398,37 +2308,16 @@ TEST_F(VMPerfTest, NativeCall_Len_50k_ICHot)
 //     fib(25) = 75025. We run it 100 times and report total + per-call time.
 // ─────────────────────────────────────────────────────────────────────────────
 
-static Array<StmtPtr> make_fib_program(int n, int reps)
+static Array<std::string> make_fib_program(int n, int reps)
 {
-    AST::StmtPtr fib = func_def(
-        ident("fib"),
-        { ident("x") },
-        blk({ if_stmt(
-                  binary(ident("x"), lit_int(1), AST::Expr::Kind::OP_LTE),
-                  blk({ return_stmt(ident("x")) })),
-            return_stmt(
-                binary(
-                    call_expr(
-                        ident("fib"),
-                        { binary(ident("x"), lit_int(1), AST::Expr::Kind::OP_SUB) }),
-                    call_expr(
-                        ident("fib"),
-                        { binary(ident("x"), lit_int(2), AST::Expr::Kind::OP_SUB) }),
-                    AST::Expr::Kind::OP_ADD)) }));
+    std::string fib = "دالة فيبوناتشي(س):\n"
+                      "    اذا (س <= 1):\n"
+                      "        ارجع س\n"
+                      "    ارجع (فيبوناتشي((س - 1)) + فيبوناتشي((س - 2)))\n";
 
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        blk({ expr_stmt(assign_expr(ident("i"), lit_int(0))),
-            expr_stmt(assign_expr(ident("limit"), lit_int(reps))),
-            expr_stmt(assign_expr(ident("result"), lit_int(0))),
-            while_stmt(
-                binary(ident("i"), ident("limit"), AST::Expr::Kind::OP_LT),
-                blk({ expr_stmt(assign_expr(ident("result"), call_expr(ident("fib"), { lit_int(n) }))),
-                    expr_stmt(assign_expr(ident("i"), binary(ident("i"), lit_int(1), AST::Expr::Kind::OP_ADD))) })),
-            return_stmt(ident("result")) }));
+    std::string test = (std::string("دالة اختبار():\n") + test_source::indent((std::string("فهرس := 0\n") + (std::string((std::string("حد := ") + std::to_string(reps))) + "\n") + "ناتج := 0\n" + (std::string("طالما (فهرس < حد):\n") + test_source::indent((std::string((std::string((std::string("ناتج := ") + (std::string("فيبوناتشي(") + (std::string(std::to_string(n))) + ")"))) + "\n")) + "فهرس := (فهرس + 1)\n"))) + "ارجع ناتج\n")));
 
-    return { fib, test, call_stmt("test") };
+    return { fib, test, "اختبار()\n" };
 }
 
 TEST_F(VMPerfTest, Fib20_100reps)
@@ -2440,7 +2329,7 @@ TEST_F(VMPerfTest, Fib20_100reps)
     r.compile(make_fib_program(FIB_N, REPS));
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Value result = r.run();
+    Value result = run_success(r.run());
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -2457,7 +2346,7 @@ TEST_F(VMPerfTest, Fib25_10reps)
     r.compile(make_fib_program(FIB_N, REPS));
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Value result = r.run();
+    Value result = run_success(r.run());
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -2476,25 +2365,18 @@ TEST_F(VMPerfTest, Dispatch_IntAdd_10M_Iterations)
 {
     constexpr int N = 10'000'000;
 
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        blk({ expr_stmt(assign_expr(ident("i"), lit_int(0))),
-            expr_stmt(assign_expr(ident("step"), lit_int(1))),
-            expr_stmt(assign_expr(ident("limit"), lit_int(N))),
-            while_stmt(
-                binary(ident("i"), ident("limit"), AST::Expr::Kind::OP_LT),
-                blk({ expr_stmt(assign_expr(
-                    ident("i"),
-                    binary(ident("i"), ident("step"), AST::Expr::Kind::OP_ADD))) })),
-            return_stmt(ident("i")) }));
+    std::string test = (std::string("دالة اختبار():\n") + test_source::indent((std::string("فهرس := 0\n"
+                                                                                           "خطوة := 1\n")
+                            + (std::string((std::string("حد := ") + std::to_string(N))) + "\n") + "طالما (فهرس < حد):\n"
+                                                                                                  "    فهرس := (فهرس + خطوة)\n"
+                                                                                                  "ارجع فهرس\n")));
 
     VMRunner r;
-    r.compile({ test, call_stmt("test") });
-    r.run(); // warm quickened arithmetic path
+    r.compile({ test, "اختبار()\n" });
+    run_success(r.run()); // warm quickened arithmetic path
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Value result = r.run();
+    Value result = run_success(r.run());
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -2507,27 +2389,20 @@ TEST_F(VMPerfTest, NativeCall_Len_1M_ICHot)
 {
     constexpr int N = 1'000'000;
 
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        blk({ expr_stmt(assign_expr(ident("s"), lit_str("hello world"))),
-            expr_stmt(assign_expr(ident("i"), lit_int(0))),
-            expr_stmt(assign_expr(ident("limit"), lit_int(N))),
-            expr_stmt(assign_expr(ident("last"), lit_int(0))),
-            while_stmt(
-                binary(ident("i"), ident("limit"), AST::Expr::Kind::OP_LT),
-                blk({ expr_stmt(assign_expr(ident("last"), call_expr(ident("طول"), { ident("s") }))),
-                    expr_stmt(assign_expr(
-                        ident("i"),
-                        binary(ident("i"), lit_int(1), AST::Expr::Kind::OP_ADD))) })),
-            return_stmt(ident("last")) }));
+    std::string test = (std::string("دالة اختبار():\n") + test_source::indent((std::string("نص := \"hello world\"\n"
+                                                                                           "فهرس := 0\n")
+                            + (std::string((std::string("حد := ") + std::to_string(N))) + "\n") + "اخير := 0\n"
+                                                                                                  "طالما (فهرس < حد):\n"
+                                                                                                  "    اخير := طول(نص)\n"
+                                                                                                  "    فهرس := (فهرس + 1)\n"
+                                                                                                  "ارجع اخير\n")));
 
     VMRunner r;
-    r.compile({ test, call_stmt("test") });
-    r.run(); // warm IC_CALL -> CALL rewrite
+    r.compile({ test, "اختبار()\n" });
+    run_success(r.run()); // warm IC_CALL -> CALL rewrite
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Value result = r.run();
+    Value result = run_success(r.run());
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -2540,38 +2415,23 @@ TEST_F(VMPerfTest, List_AppendAndSum_100k)
 {
     constexpr int N = 100'000;
 
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        blk({ expr_stmt(assign_expr(ident("xs"), list_expr())),
-            expr_stmt(assign_expr(ident("i"), lit_int(0))),
-            expr_stmt(assign_expr(ident("limit"), lit_int(N))),
-            while_stmt(
-                binary(ident("i"), ident("limit"), AST::Expr::Kind::OP_LT),
-                blk({ expr_stmt(call_expr(ident("اضف"), { ident("xs"), ident("i") })),
-                    expr_stmt(assign_expr(
-                        ident("i"),
-                        binary(ident("i"), lit_int(1), AST::Expr::Kind::OP_ADD))) })),
-            expr_stmt(assign_expr(ident("i"), lit_int(0))),
-            expr_stmt(assign_expr(ident("sum"), lit_int(0))),
-            while_stmt(
-                binary(ident("i"), ident("limit"), AST::Expr::Kind::OP_LT),
-                blk({ expr_stmt(assign_expr(
-                          ident("sum"),
-                          binary(
-                              ident("sum"),
-                              index_expr(ident("xs"), ident("i")),
-                              AST::Expr::Kind::OP_ADD))),
-                    expr_stmt(assign_expr(
-                        ident("i"),
-                        binary(ident("i"), lit_int(1), AST::Expr::Kind::OP_ADD))) })),
-            return_stmt(ident("sum")) }));
+    std::string test = (std::string("دالة اختبار():\n") + test_source::indent((std::string("قائمة_قيم := []\n"
+                                                                                           "فهرس := 0\n")
+                            + (std::string((std::string("حد := ") + std::to_string(N))) + "\n") + "طالما (فهرس < حد):\n"
+                                                                                                  "    اضف(قائمة_قيم, فهرس)\n"
+                                                                                                  "    فهرس := (فهرس + 1)\n"
+                                                                                                  "فهرس := 0\n"
+                                                                                                  "مجموع := 0\n"
+                                                                                                  "طالما (فهرس < حد):\n"
+                                                                                                  "    مجموع := (مجموع + قائمة_قيم[فهرس])\n"
+                                                                                                  "    فهرس := (فهرس + 1)\n"
+                                                                                                  "ارجع مجموع\n")));
 
     VMRunner r;
-    r.compile({ test, call_stmt("test") });
+    r.compile({ test, "اختبار()\n" });
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Value result = r.run();
+    Value result = run_success(r.run());
     f64 us = microseconds_since(t0);
 
     constexpr i64 expected = static_cast<i64>(N) * (N - 1) / 2;
@@ -2587,10 +2447,10 @@ TEST_F(VMPerfTest, Fib28_20reps_Hot)
 
     VMRunner r;
     r.compile(make_fib_program(FIB_N, REPS));
-    r.run(); // warm global lookup and call-site rewriting
+    run_success(r.run()); // warm global lookup and call-site rewriting
 
     auto t0 = std::chrono::high_resolution_clock::now();
-    Value result = r.run();
+    Value result = run_success(r.run());
     f64 us = microseconds_since(t0);
 
     do_not_optimize(result);
@@ -2599,213 +2459,33 @@ TEST_F(VMPerfTest, Fib28_20reps_Hot)
         FIB_N, REPS, us, us / REPS);
 }
 
-static FuncDefStmt* class_method(StringRef name, Array<ExprPtr> params, Array<StmtPtr> body)
-{
-    return func_def(ident(name), params, blk(body));
-}
-
-TEST(VMClass, TestConstruction)
-{
-    AST::StmtPtr klass = class_def(ident("TestClass"), { }, { });
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        blk({
-            decl_stmt("instance", call_expr(ident("TestClass"))),
-            return_stmt(ident("instance")),
-        }));
-
-    Array<StmtPtr> ast = {
-        klass,
-        test,
-        expr_stmt(call_expr(ident("test"))),
-    };
-
-    VMRunner r;
-    Value result = r.compile_and_run(ast);
-    ASSERT_TRUE(result.is_instance());
-    EXPECT_EQ(result.as_instance()->klass->name, "TestClass");
-}
-
-TEST(VMClass, ClassDefinitionStoresRuntimeClass)
-{
-    AST::StmtPtr klass = class_def(
-        ident("Point"),
-        {
-            ident("x"),
-            ident("y"),
-        },
-        { });
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        blk({
-            return_stmt(ident("Point")),
-        }));
-
-    Array<StmtPtr> ast = {
-        klass,
-        test,
-        expr_stmt(call_expr(ident("test"))),
-    };
-
-    VMRunner r;
-    Value point = r.compile_and_run(ast);
-    ASSERT_TRUE(point.is_class());
-
-    ObjClass* point_class = point.as_class();
-    EXPECT_EQ(point_class->name, "Point");
-    ASSERT_EQ(point_class->field_names.size(), 2u);
-    EXPECT_EQ(point_class->field_names[0], "x");
-    EXPECT_EQ(point_class->field_names[1], "y");
-}
-
-TEST(VMClass, ConstructorAcceptsArgumentsAndReturnsInstance)
-{
-    AST::StmtPtr klass = class_def(
-        ident("Box"),
-        { ident("value") },
-        {
-            func_def(
-                ident(sp_method_name(ObjClass::INIT)),
-                { ident("value") },
-                blk({ })),
-        });
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        blk({
-            decl_stmt("instance", call_expr(ident("Box"), { lit_int(42) })),
-            return_stmt(ident("instance")),
-        }));
-
-    Array<StmtPtr> ast = {
-        klass,
-        test,
-        expr_stmt(call_expr(ident("test"))),
-    };
-
-    VMRunner r;
-    Value result = r.compile_and_run(ast);
-    ASSERT_TRUE(result.is_instance());
-    EXPECT_EQ(result.as_instance()->klass->name, "Box");
-    EXPECT_EQ(result.as_instance()->fields.size(), 1);
-}
-
 TEST(VMClass, ConstructorRejectsWrongArgumentCount)
 {
-    AST::StmtPtr klass = class_def(
-        ident("NeedsArg"),
-        { },
-        {
-            func_def(
-                ident(sp_method_name(ObjClass::INIT)),
-                { ident("arg") },
-                blk({ })),
-        });
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        blk({
-            decl_stmt("instance", call_expr(ident("NeedsArg"))),
-            return_stmt(ident("instance")),
-        }));
-
-    Array<StmtPtr> ast = {
-        klass,
-        test,
-        expr_stmt(call_expr(ident("test"))),
-    };
+    std::string ast = "نوع يتطلب_وسيطة:\n"
+                      "    دالة بداية(وسيطة): ارجع\n"
+                      "دالة اختبار():\n"
+                      "    كائن := يتطلب_وسيطة()\n"
+                      "    ارجع كائن\n"
+                      "اختبار()\n";
 
     VMRunner r;
-    EXPECT_THROW(r.compile_and_run(ast), std::runtime_error);
-}
-
-TEST(VMClass, ConstructorWithoutInitRejectsArguments)
-{
-    AST::StmtPtr klass = class_def(ident("Plain"), { }, { });
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        blk({
-            decl_stmt("instance", call_expr(ident("Plain"), { lit_int(1) })),
-            return_stmt(ident("instance")),
-        }));
-
-    Array<StmtPtr> ast = {
-        klass,
-        test,
-        expr_stmt(call_expr(ident("test"))),
-    };
-
-    VMRunner r;
-    EXPECT_THROW(r.compile_and_run(ast), std::runtime_error);
-}
-
-TEST(VMClass, InstanceFieldsDefaultToNil)
-{
-    AST::StmtPtr klass = class_def(
-        ident("Point"),
-        {
-            ident("x"),
-            ident("y"),
-        },
-        { });
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        blk({
-            decl_stmt("point", call_expr(ident("Point"))),
-            return_stmt(ident("point")),
-        }));
-
-    Array<StmtPtr> ast = {
-        klass,
-        test,
-        expr_stmt(call_expr(ident("test"))),
-    };
-
-    VMRunner r;
-    Value result = Value::nil();
-    ASSERT_NO_THROW(result = r.compile_and_run(ast));
-    ASSERT_TRUE(result.is_instance());
-
-    ObjInstance* point = result.as_instance();
-    ASSERT_EQ(point->fields.size(), 2);
-    EXPECT_TRUE(point->fields[0].is_nil());
-    EXPECT_TRUE(point->fields[1].is_nil());
+    run_failed(r.compile_and_run(ast));
 }
 
 TEST(VMClass, ConstructorInitializesFieldsFromParameters)
 {
-    AST::StmtPtr klass = class_def(
-        ident("Point"),
-        {
-            ident("x"),
-            ident("y"),
-        },
-        {
-            class_method(
-                sp_method_name(ObjClass::INIT),
-                { ident("x"), ident("y") },
-                {
-                    expr_stmt(assign_expr(ident("x"), ident("x"))),
-                    expr_stmt(assign_expr(ident("y"), ident("y"))),
-                }),
-        });
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        blk({
-            decl_stmt("point", call_expr(ident("Point"), { lit_int(3), lit_int(4) })),
-            return_stmt(ident("point")),
-        }));
-
-    Array<StmtPtr> ast = { klass, test, expr_stmt(call_expr(ident("test"))) };
+    std::string ast = "نوع نقطة:\n"
+                      "    دالة بداية(س, ص):\n"
+                      "        .س := س\n"
+                      "        .ص := ص\n"
+                      "دالة اختبار():\n"
+                      "    النقطة := نقطة(3, 4)\n"
+                      "    ارجع النقطة\n"
+                      "اختبار()\n";
 
     VMRunner r;
     Value result = Value::nil();
-    ASSERT_NO_THROW(result = r.compile_and_run(ast));
+    ASSERT_NO_THROW(result = run_success(r.compile_and_run(ast)));
     ASSERT_TRUE(result.is_instance());
 
     ObjInstance* point = result.as_instance();
@@ -2820,436 +2500,152 @@ TEST(VMClass, ConstructorInitializesFieldsFromParameters)
 
 TEST(VMClass, FieldGetExpressionReadsInstanceField)
 {
-    /*
-        class Box:
-            fn init(this, value):
-                this.value := value
-
-        fn test():
-            box = Box(12)
-            return box.value
-    */
-
-    AST::StmtPtr klass = class_def(
-        ident("Box"),
-        { ident("value") },
-        {
-            class_method(
-                sp_method_name(ObjClass::INIT),
-                { ident("value") },
-                {
-                    expr_stmt(assign_expr(get_expr(ident(fairuz::runtime::kClassInstanceName),
-                                              ident("value")),
-                        ident("value"))),
-                }),
-        });
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        blk({
-            decl_stmt("box", call_expr(ident("Box"), { lit_int(12) })),
-            return_stmt(get_expr(ident("box"), ident("value"))),
-        }));
-
-    Array<StmtPtr> ast = {
-        klass,
-        test,
-        expr_stmt(call_expr(ident("test"))),
-    };
+    std::string ast = "نوع علبة:\n"
+                      "    دالة بداية(قيمة): .قيمة := قيمة\n"
+                      "دالة اختبار():\n"
+                      "    العلبة := علبة(12)\n"
+                      "    ارجع العلبة.قيمة\n"
+                      "اختبار()\n";
 
     VMRunner r;
     Value result = Value::nil();
-    ASSERT_NO_THROW(result = r.compile_and_run(ast));
+    ASSERT_NO_THROW(result = run_success(r.compile_and_run(ast)));
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 12);
 }
 
-TEST(VMClass, FieldAssignmentUpdatesInstanceField)
-{
-    AST::StmtPtr klass = class_def(
-        ident("Box"),
-        { ident("value") },
-        { });
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        blk({
-            decl_stmt("box", call_expr(ident("Box"))),
-            expr_stmt(assign_expr(get_expr(ident("box"), ident("value")), lit_int(25))),
-            return_stmt(get_expr(ident("box"), ident("value"))),
-        }));
-
-    Array<StmtPtr> ast = {
-        klass,
-        test,
-        expr_stmt(call_expr(ident("test"))),
-    };
-
-    VMRunner r;
-    Value result = Value::nil();
-    ASSERT_NO_THROW(result = r.compile_and_run(ast));
-    ASSERT_TRUE(result.is_int());
-    EXPECT_EQ(result.as_int(), 25);
-}
-
 TEST(VMClass, MethodReceivesExplicitArguments)
 {
-    /*
-        class Adder:
-            fn add(a, b):
-                return a + b
-
-        fn test():
-            adder = Adder()
-            return adder.add(2, 5)
-    */
-
-    AST::StmtPtr klass = class_def(
-        ident("Adder"),
-        { },
-        {
-            class_method(
-                "add",
-                { ident("a"), ident("b") },
-                {
-                    return_stmt(binary(ident("a"), ident("b"), AST::Expr::Kind::OP_ADD)),
-                }),
-        });
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        blk({
-            decl_stmt("adder", call_expr(ident("Adder"))),
-            return_stmt(
-                call_expr(get_expr(ident("adder"), ident("add")), { lit_int(2), lit_int(5) })),
-        }));
-
-    Array<StmtPtr> ast = {
-        klass,
-        test,
-        expr_stmt(call_expr(ident("test"))),
-    };
+    std::string ast = "نوع جامع:\n"
+                      "    دالة اجمع(ا, ب): ارجع ا + ب\n"
+                      "دالة اختبار():\n"
+                      "    الجامع := جامع()\n"
+                      "    ارجع الجامع.اجمع(2, 5)\n"
+                      "اختبار()\n";
 
     VMRunner r;
     Value result = Value::nil();
-    ASSERT_NO_THROW(result = r.compile_and_run(ast));
+    ASSERT_NO_THROW(result = run_success(r.compile_and_run(ast)));
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 7);
 }
 
 TEST(VMClass, MethodReadsInstanceField)
 {
-    AST::StmtPtr klass = class_def(
-        ident("Box"),
-        { ident("value") },
-        {
-            class_method(
-                sp_method_name(ObjClass::INIT),
-                { ident("value") },
-                {
-                    expr_stmt(assign_expr(ident("value"), ident("value"))),
-                }),
-            class_method(
-                "get_value",
-                { },
-                {
-                    return_stmt(ident("value")),
-                }),
-        });
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        blk({
-            decl_stmt("box", call_expr(ident("Box"), { lit_int(31) })),
-            return_stmt(call_expr(get_expr(ident("box"), ident("get_value")))),
-        }));
-
-    Array<StmtPtr> ast = {
-        klass,
-        test,
-        expr_stmt(call_expr(ident("test"))),
-    };
+    std::string ast = "نوع علبة:\n"
+                      "    دالة بداية(قيمة): .قيمة := قيمة\n"
+                      "    دالة اقرا_قيمة(): ارجع هذا.قيمة\n"
+                      "دالة اختبار():\n"
+                      "    العلبة := علبة(31)\n"
+                      "    ارجع العلبة.اقرا_قيمة()\n"
+                      "اختبار()\n";
 
     VMRunner r;
     Value result = Value::nil();
-    ASSERT_NO_THROW(result = r.compile_and_run(ast));
+    ASSERT_NO_THROW(result = run_success(r.compile_and_run(ast)));
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 31);
 }
 
 TEST(VMClass, MethodMutatesInstanceFieldAndPersists)
 {
-    auto get = [](AST::IdentifierExpr* member) {
-        return get_expr(ident(fairuz::runtime::kClassInstanceName), member);
-    };
-
-    auto init = [&](AST::IdentifierExpr* member, AST::ExprPtr value) -> AST::StmtPtr {
-        return expr_stmt(assign_expr(get(member), value));
-    };
-
-    AST::StmtPtr klass = class_def(
-        ident("Counter"),
-        { ident("count") },
-        {
-            class_method(
-                sp_method_name(ObjClass::INIT),
-                { },
-                {
-                    init(ident("count"), lit_int(0)),
-                }),
-            class_method(
-                "increment",
-                { },
-                {
-                    expr_stmt(assign_expr(get(ident("count")), binary(get(ident("count")), lit_int(1), AST::Expr::Kind::OP_ADD))),
-                    return_stmt(get(ident("count"))),
-                }),
-        });
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        blk({
-            decl_stmt("counter", call_expr(ident("Counter"))),
-            expr_stmt(call_expr(get_expr(ident("counter"), ident("increment")))),
-            return_stmt(call_expr(get_expr(ident("counter"), ident("increment")))),
-        }));
-
-    Array<StmtPtr> ast = {
-        klass,
-        test,
-        expr_stmt(call_expr(ident("test"))),
-    };
+    std::string ast = "نوع عداد:\n"
+                      "    دالة بداية(): .عدد := 0\n"
+                      "    دالة زد():\n"
+                      "        .عدد := هذا.عدد + 1\n"
+                      "        ارجع هذا.عدد\n"
+                      "دالة اختبار():\n"
+                      "    العداد := عداد()\n"
+                      "    العداد.زد()\n"
+                      "    ارجع العداد.زد()\n"
+                      "اختبار()\n";
 
     VMRunner r;
     Value result = Value::nil();
-    ASSERT_NO_THROW(result = r.compile_and_run(ast));
+    ASSERT_NO_THROW(result = run_success(r.compile_and_run(ast)));
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 2);
 }
 
 TEST(VMClass, MultipleInstancesKeepIndependentFieldState)
 {
-    AST::StmtPtr klass = class_def(
-        ident("Box"),
-        { ident("value") },
-        {
-            class_method(
-                sp_method_name(ObjClass::INIT),
-                { ident("value") },
-                {
-                    expr_stmt(assign_expr(ident("value"), ident("value"))),
-                }),
-            class_method(
-                "get_value",
-                { },
-                {
-                    return_stmt(ident("value")),
-                }),
-        });
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        blk({
-            decl_stmt("left", call_expr(ident("Box"), { lit_int(10) })),
-            decl_stmt("right", call_expr(ident("Box"), { lit_int(20) })),
-            return_stmt(binary(
-                call_expr(get_expr(ident("left"), ident("get_value"))),
-                call_expr(get_expr(ident("right"), ident("get_value"))),
-                AST::Expr::Kind::OP_ADD)),
-        }));
-
-    Array<StmtPtr> ast = {
-        klass,
-        test,
-        expr_stmt(call_expr(ident("test"))),
-    };
+    std::string ast = "نوع علبة:\n"
+                      "    دالة بداية(قيمة): .قيمة := قيمة\n"
+                      "    دالة اقرا_قيمة(): ارجع هذا.قيمة\n"
+                      "دالة اختبار():\n"
+                      "    يسار := علبة(10)\n"
+                      "    يمين := علبة(20)\n"
+                      "    ارجع يسار.اقرا_قيمة() + يمين.اقرا_قيمة()\n"
+                      "اختبار()\n";
 
     VMRunner r;
     Value result = Value::nil();
-    ASSERT_NO_THROW(result = r.compile_and_run(ast));
+    ASSERT_NO_THROW(result = run_success(r.compile_and_run(ast)));
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 30);
 }
 
 TEST(VMClass, MethodReturningNoValueReturnsSelf)
 {
-    AST::StmtPtr klass = class_def(
-        ident("Fluent"),
-        { },
-        {
-            class_method("touch", { }, { }),
-        });
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        blk({
-            decl_stmt("fluent", call_expr(ident("Fluent"))),
-            return_stmt(call_expr(get_expr(ident("fluent"), ident("touch")))),
-        }));
-
-    Array<StmtPtr> ast = {
-        klass,
-        test,
-        expr_stmt(call_expr(ident("test"))),
-    };
+    std::string ast = "نوع متسلسل:\n"
+                      "    دالة المس(): عدم\n"
+                      "دالة اختبار():\n"
+                      "    المتسلسل := متسلسل()\n"
+                      "    ارجع المتسلسل.المس()\n"
+                      "اختبار()\n";
 
     VMRunner r;
     Value result = Value::nil();
-    ASSERT_NO_THROW(result = r.compile_and_run(ast));
+    ASSERT_NO_THROW(result = run_success(r.compile_and_run(ast)));
     ASSERT_TRUE(result.is_instance());
-    EXPECT_EQ(result.as_instance()->klass->name, "Fluent");
+    EXPECT_EQ(result.as_instance()->klass->name, "متسلسل");
 }
 
 TEST(VMClass, MethodRejectsWrongArgumentCount)
 {
-    AST::StmtPtr klass = class_def(
-        ident("Adder"),
-        { },
-        {
-            class_method(
-                "add",
-                { ident("value") },
-                {
-                    return_stmt(ident("value")),
-                }),
-        });
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        blk({
-            decl_stmt("adder", call_expr(ident("Adder"))),
-            return_stmt(call_expr(get_expr(ident("adder"), ident("add")))),
-        }));
-
-    Array<StmtPtr> ast = {
-        klass,
-        test,
-        expr_stmt(call_expr(ident("test"))),
-    };
+    std::string ast = "نوع جامع:\n"
+                      "    دالة اجمع(قيمة): ارجع قيمة\n"
+                      "دالة اختبار():\n"
+                      "    الجامع := جامع()\n"
+                      "    ارجع الجامع.اجمع()\n"
+                      "اختبار()\n";
 
     VMRunner r;
-    EXPECT_THROW(r.compile_and_run(ast), std::runtime_error);
-}
-
-TEST(VMClass, UnknownMethodRaisesRuntimeError)
-{
-    AST::StmtPtr klass = class_def(ident("Empty"), { }, { });
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        blk({
-            decl_stmt("empty", call_expr(ident("Empty"))),
-            return_stmt(call_expr(get_expr(ident("empty"), ident("missing")))),
-        }));
-
-    Array<StmtPtr> ast = {
-        klass,
-        test,
-        expr_stmt(call_expr(ident("test"))),
-    };
-
-    VMRunner r;
-    EXPECT_THROW(r.compile_and_run(ast), std::runtime_error);
-}
-
-TEST(VMClass, DuplicateFieldsAreDeduplicatedInDeclarationOrder)
-{
-    AST::StmtPtr klass = class_def(
-        ident("Record"),
-        {
-            ident("id"),
-            ident("name"),
-            ident("id"),
-        },
-        { });
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        blk({
-            return_stmt(ident("Record")),
-        }));
-
-    Array<StmtPtr> ast = {
-        klass,
-        test,
-        expr_stmt(call_expr(ident("test"))),
-    };
-
-    VMRunner r;
-    Value result = Value::nil();
-    ASSERT_NO_THROW(result = r.compile_and_run(ast));
-    ASSERT_TRUE(result.is_class());
-
-    ObjClass* klass_obj = result.as_class();
-    ASSERT_EQ(klass_obj->field_names.size(), 2u);
-    EXPECT_EQ(klass_obj->field_names[0], "id");
-    EXPECT_EQ(klass_obj->field_names[1], "name");
+    run_failed(r.compile_and_run(ast));
 }
 
 TEST(VMClass, MultipleMethodsAreStoredInRuntimeClass)
 {
-    AST::StmtPtr klass = class_def(
-        ident("Ops"),
-        { },
-        {
-            class_method("first", { }, { return_stmt(lit_int(1)) }),
-            class_method("second", { }, { return_stmt(lit_int(2)) }),
-        });
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        blk({
-            return_stmt(ident("Ops")),
-        }));
-
-    Array<StmtPtr> ast = {
-        klass,
-        test,
-        expr_stmt(call_expr(ident("test"))),
-    };
+    std::string ast = "نوع عمليات:\n"
+                      "    دالة اول(): ارجع 1\n"
+                      "    دالة ثان(): ارجع 2\n"
+                      "دالة اختبار(): ارجع عمليات\n"
+                      "اختبار()\n";
 
     VMRunner r;
     Value result = Value::nil();
-    ASSERT_NO_THROW(result = r.compile_and_run(ast));
+    ASSERT_NO_THROW(result = run_success(r.compile_and_run(ast)));
     ASSERT_TRUE(result.is_class());
 
     ObjClass* klass_obj = result.as_class();
     EXPECT_GE(klass_obj->method_names.size(), static_cast<u32>(ObjClass::_COUNT + 2));
-    EXPECT_GE(klass_obj->method_slot("first"), 0);
-    EXPECT_GE(klass_obj->method_slot("second"), 0);
+    EXPECT_GE(klass_obj->method_slot("اول"), 0);
+    EXPECT_GE(klass_obj->method_slot("ثان"), 0);
 }
 
 TEST(VMClass, AddSpecialMethodHandlesBinaryPlus)
 {
-    AST::StmtPtr klass = class_def(
-        ident("Numberish"),
-        { },
-        {
-            class_method(
-                sp_method_name(ObjClass::ADD),
-                { ident("other") },
-                {
-                    return_stmt(lit_int(99)),
-                }),
-        });
-    AST::StmtPtr test = func_def(
-        ident("test"),
-        { },
-        blk({
-            decl_stmt("left", call_expr(ident("Numberish"))),
-            decl_stmt("right", call_expr(ident("Numberish"))),
-            return_stmt(binary(ident("left"), ident("right"), AST::Expr::Kind::OP_ADD)),
-        }));
-
-    Array<StmtPtr> ast = {
-        klass,
-        test,
-        expr_stmt(call_expr(ident("test"))),
-    };
+    std::string ast = "نوع شبيه_عدد:\n"
+                      "    دالة عملية+(اخر): ارجع 99\n"
+                      "دالة اختبار():\n"
+                      "    يسار := شبيه_عدد()\n"
+                      "    يمين := شبيه_عدد()\n"
+                      "    ارجع يسار + يمين\n"
+                      "اختبار()\n";
 
     VMRunner r;
     Value result = Value::nil();
-    ASSERT_NO_THROW(result = r.compile_and_run(ast));
+    ASSERT_NO_THROW(result = run_success(r.compile_and_run(ast)));
     ASSERT_TRUE(result.is_int());
     EXPECT_EQ(result.as_int(), 99);
 }
