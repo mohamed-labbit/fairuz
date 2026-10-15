@@ -162,7 +162,8 @@ TEST(LexerTest, DecodesStringEscapesAndKeepsEscapedQuoteInsideLiteral)
 
     ASSERT_EQ(tokens.size(), 3u);
     ASSERT_EQ(tokens[1]->type(), tok::TokenType::STRING);
-    EXPECT_EQ(tokens[1]->lexeme(), "quote: \" slash: \\ newline:\n tab:\t unicode:م");
+    EXPECT_EQ(tokens[1]->lexeme(), "quote: \" slash: \\ newline:\n"
+                                   " tab:\t unicode:م");
 }
 
 TEST(LexerTest, RecognizesExpression00)
@@ -270,7 +271,8 @@ TEST(LexerTest, UnicodeColumnsAndByteOffsetsAreIndependent)
 {
     diagnostic::reset();
     lex::FileManager file;
-    file.buffer() = "س + \"€😀\"\r\nص";
+    file.buffer() = "س + \"€😀\"\r\n"
+                    "ص";
     lex::Lexer lexer(&file);
     auto tokens = lexer.tokenize();
     ASSERT_EQ(tokens.size(), 7);
@@ -296,7 +298,8 @@ TEST(LexerTest, MalformedUtf8IsALocatedLexicalError)
              std::string("\xc2x"), std::string("\xe2\x82x"), std::string("\xf0\x9f\x98x"),
              std::string("\xe0\x80\x80"), std::string("\xf0\x80\x80\x80"),
              std::string("\xed\xa0\x80"), std::string("\xf4\x90\x80\x80"), std::string("\xff") }) {
-        for (std::string const& prefix : { std::string(), std::string("س\nص ") }) {
+        for (std::string const& prefix : { std::string(), std::string("س\n"
+                                                                      "ص ") }) {
             diagnostic::reset();
             lex::FileManager file;
             file.buffer() = prefix + bad;
